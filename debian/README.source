@@ -1,0 +1,42 @@
+srb2 for Debian
+---------------
+
+Here it is! SRB2 v2.0 source code!
+
+GNU/Linux
+~~~
+
+Dependencies:
+  SDL 1.2.7 or better (from libsdl.org)
+  SDL_Mixer 1.2.2(.7 for file-less music playback) (from libsdl.org)
+  Nasm (use NOASM=1 if you don't have it or have an non-i386 system, I think)
+  libPNG 1.2.7
+  Zlib 1.2.3
+  The Xiph.org libogg and libvorbis libraries
+  The OpenGL headers (from Mesa, usually shipped with your X.org or XFree
+    installation, so you needn't worry, most likely)
+  GCC 3.x toolchain and binutils
+  GNU Make
+
+Build instructions:
+
+make -C src LINUX=1
+
+Build instructions to build for Wii Linux/SRB2Wii on a PowerPC system,
+follow cross-compiling instructions for cross-compiling on a x86 system:
+
+make -C src LINUX=1 WIILINUX=1
+
+Build instructions to build for Pandora (Linux) on a ARM system,
+follow cross-compiling instructions for cross-compiling on a x86 system:
+
+make -C src PANDORA=1
+
+-------------------------------------------------------------------------------
+
+binaries will turn in up in bin/
+
+note: read the src/makefile for more options
+
+- Sonic Team Junior
+http://www.srb2.org

@@ -1,0 +1,93 @@
+   ================================================================
+   How to add Low-res modes to your XF86Config under Linux MANUALLY
+   ================================================================
+
+   I TAKE NO RESPONSIBILITY FOR ANY DAMAGE DONE TO YOUR EQUIPMENT!!!
+
+   This document explains how to add low-res modes like 320x200 to your
+   X-Server configuration, because some new setup tools for the X-Server
+   do not support this. ONLY RECOMMENDED FOR USERS WHO KNOW WHAT THEY DO!
+
+   I do not take any responsibility for damage done to your monitor, your
+   videocard, your harddisk, your cat, your dog or anything else!!!
+   IMPORTANT IS, THAT YOUR "HorizSync" AND "VertRefresh" VALUES REALLY
+   MATCH YOUR MONITOR! OTHERWISE YOUR MONITOR CAN BLOW UP!!!
+
+   OK, if you have read up to here, you either know what you do or really
+   die-hard want those low-res modes. Here is what to do:
+   Look up your XF86Config. Is is either in /etc or in /etc/X11. Here is
+   what you have to add to the definition of your modeslines:
+
+# Low-res Doublescan modes
+# If your chipset does not support doublescan, you get a 'squashed'
+# resolution like 320x400.
+
+# 320x200 @ 70 Hz, 31.5 kHz hsync, 8:5 aspect ratio
+Modeline "320x200"     12.588 320  336  384  400   200  204  205  225 Doublescan
+# 320x240 @ 60 Hz, 31.5 kHz hsync, 4:3 aspect ratio
+Modeline "320x240"     12.588 320  336  384  400   240  245  246  262 Doublescan
+# 320x240 @ 72 Hz, 36.5 kHz hsync
+Modeline "320x240"     15.750 320  336  384  400   240  244  246  262 Doublescan
+# 400x300 @ 56 Hz, 35.2 kHz hsync, 4:3 aspect ratio
+ModeLine "400x300"     18     400  416  448  512   300  301  302  312 Doublescan
+# 400x300 @ 60 Hz, 37.8 kHz hsync
+Modeline "400x300"     20     400  416  480  528   300  301  303  314 Doublescan
+# 400x300 @ 72 Hz, 48.0 kHz hsync
+Modeline "400x300"     25     400  424  488  520   300  319  322  333 Doublescan
+
+   If your video card only supports a specific set of discrete dotclocks
+   (RAMDAC) you may have to replace the dotclocks given here by one of the
+   specified (e.g in the first modeline the dotclock is 12.588 MHz). I believe
+   that nowadays all cards and monitors should work with these settings, but
+   if you have outdated hardware you better check the frequencies yourself. If
+   there is any uncertainty, please check the "XFree86 Video Timings HOWTO".
+
+
+   Then have a look at the section "Screen" with the appropriate driver
+   (usually either "svga" or "accel"). Under Subsection "Display" there
+   are modes for the given color depth. Add the desired modes. As an
+   example I give you my screens definition here with low-res modes in
+   16 bit color depth:
+
+Section "Screen"
+    Driver      "accel"
+    Device      "3D Charger"
+    Monitor     "Iiyama Pro 450"
+    DefaultColorDepth 16
+
+    Subsection "Display"
+        Depth       8
+        Modes       "1280x1024" "1024x768" "800x600" "640x480"
+        ViewPort    0 0
+        Virtual     1280 1024
+    EndSubsection
+    Subsection "Display"
+        Depth       16
+        Modes       "1152x864" "1024x768" "800x600" "640x480" "400x300" "320x200" <- THIS IS ACTUALLY WHAT YOU WANT!!!
+        ViewPort    0 0                                       ^^^^^^^^^^^^^^^^^^^
+        Virtual     1152 864
+    EndSubsection
+    Subsection "Display"
+        Depth       24
+        Modes       "800x600" "640x480"
+        ViewPort    0 0
+        Virtual     800 600
+    EndSubsection
+    Subsection "Display"
+        Depth       32
+        Modes       "800x600" "640x480"
+        ViewPort    0 0
+        Virtual     800 600
+    EndSubsection
+EndSection
+
+   Once again: important is, that you edit the correct Screen section.
+   If you use the SVGA Server and edit the ACCEL Server, you might
+   wonder where your new modes have gone.
+
+   If everything went fine and you want to say thank you, just write
+   to "metzgermeister@users.sourceforge.net". If your monitor blew
+   up and you want to kill me, find me playing Legacy or Q3A on the net
+   and frag me (with your second monitor, hehe).
+
+   - metzgermeister

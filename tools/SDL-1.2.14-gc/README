@@ -1,0 +1,1 @@
+Once patched, run autogen.sh, configure with "./configure --without-x --disable-video-x11 --disable-video-fbcon --disable-video-aalib --disable-video-directfb --disable-video-opengl --enable-video-gc" and then compile.

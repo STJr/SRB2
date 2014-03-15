@@ -1,0 +1,39 @@
+SVN-RULES
+
+- As you can see, there is sub-directory in the repository, one for eatch
+  platform (djgpp (dos),win32,SDL) the root directory is for all platform,
+  so take care of the order we have put in.
+- do not commit/upload tests of bugged code, try to fix a maximum of know
+  bugs and update know bugs list in source.txt. If you must commit your source
+  make your code in #ifdef so we can disable it
+- SRB2 is a modification of doom/Doom Legacy source. We allow additionnal feature
+  and visual addition.
+- Maximize communications between members, do not impose your changes, if your
+  are not sure about a feature/change, talk about it in irc://irc.esper.net/srb2 chat room.
+
+CODE-RULES
+
+- We use no tab, 4 space indent, and tab size 8 (in case some tab have filtred
+  and for makefile)
+- Self documented code, variable and function must have a name that help
+  understand the code, so do not call variable and function a,b, a2, ...
+- the usage of extern in a c file is prohibited, except for declaration of a
+  function with body (so it is like public keyword in c++)
+  Also function protos haren't allowed for external function, put it un the
+  corresponding h file.
+- Try to minimize #ifdef usage for :
+  - code readability
+  - the main code is for all port so if something is good for a platform all
+    platform can benefit by this feature
+- Take care of platform dependent code, we would like to have code that work
+  on Dos, Win32, SDL, ... little and big endian, software/Glide/OpenGl.
+
+GOOD PRACTICE
+
+- Try to put as mush static variable and function on module so it help to
+  understand the role of the varaible/function in the module also this
+  help the compiler to optimize
+- minimise global variable
+- make a log of your work, so you don't need to put a lot of comment in
+  the code, this will also help us to update the what's new section of doc
+  when doing final release

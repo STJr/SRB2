@@ -1,0 +1,4023 @@
+# Sonic Robo Blast 2 translation PO file.
+
+# Copyright (C) Sonic Team Junior
+
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	See the
+# GNU General Public License for more details.
+
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: 2.1\n"
+"Report-Msgid-Bugs-To: Callum Dickinson <callum@huttradio.co.nz>\n"
+"POT-Creation-Date: 2011-02-04 23:01+1300\n"
+"PO-Revision-Date: 2011-02-04 23:01+1300\n"
+"Last-Translator: Callum Dickinson <callum@huttradio.co.nz>\n"
+"Language-Team: Sonic Team Junior <stjr@srb2.org>\n"
+"Language: English\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: command.c:103
+msgid "Command buffer full!\n"
+msgstr ""
+
+#: command.c:480
+#, c-format
+msgid "Unknown command '%s'\n"
+msgstr ""
+
+#: command.c:497
+msgid "alias <name> <command>\n"
+msgstr ""
+
+#: command.c:574
+msgid "exec <filename> : run a script file\n"
+msgstr ""
+
+#: command.c:584
+#, c-format
+msgid "couldn't execute file %s\n"
+msgstr ""
+
+#: command.c:589
+#, c-format
+msgid "executing %s\n"
+msgstr ""
+
+#: command.c:623
+#, c-format
+msgid "Variable %s:\n"
+msgstr ""
+
+#: command.c:624
+msgid "  flags :"
+msgstr ""
+
+#: command.c:643
+#, c-format
+msgid "  range from %d to %d\n"
+msgstr ""
+
+#: command.c:645 command.c:662 command.c:666
+#, c-format
+msgid " Current value: %d\n"
+msgstr ""
+
+#: command.c:650
+#, c-format
+msgid "  possible value : %s\n"
+msgstr ""
+
+#: command.c:660
+#, c-format
+msgid " Current value: %s\n"
+msgstr ""
+
+#: command.c:669
+msgid "No Help for this command/variable\n"
+msgstr ""
+
+#: command.c:674
+msgid "Commands\n"
+msgstr ""
+
+#: command.c:688
+msgid ""
+"\n"
+"Variables\n"
+msgstr ""
+
+#: command.c:696
+msgid ""
+"\n"
+"read help file for more or type help <command or variable>\n"
+msgstr ""
+
+#: command.c:698
+#, c-format
+msgid "Total : %d\n"
+msgstr ""
+
+#: command.c:712
+msgid "Toggle <cvar_name> : Toggle the value of a cvar\n"
+msgstr ""
+
+#: command.c:718
+#, c-format
+msgid "%s is not a cvar\n"
+msgstr ""
+
+#: command.c:724
+#, c-format
+msgid "%s is not a boolean value\n"
+msgstr ""
+
+#: command.c:912
+#, c-format
+msgid "Variable %s is already defined\n"
+msgstr ""
+
+#: command.c:919
+#, c-format
+msgid "%s is a command name\n"
+msgstr ""
+
+#: command.c:942
+#, c-format
+msgid "variable %s has CV_NOINIT without CV_CALL"
+msgstr ""
+
+#: command.c:945
+#, c-format
+msgid "variable %s has CV_CALL without a function"
+msgstr ""
+
+#: command.c:1025
+#, c-format
+msgid "Bounded cvar \"%s\" without maximum!"
+msgstr ""
+
+#: command.c:1086 r_things.c:2527
+#, c-format
+msgid "\"%s\" is not a possible value for \"%s\"\n"
+msgstr ""
+
+#: command.c:1089
+#, c-format
+msgid "Variable %s default value \"%s\" is not a possible value\n"
+msgstr ""
+
+#: command.c:1117 command.c:1120
+#, c-format
+msgid "%s set to %s\n"
+msgstr ""
+
+#: command.c:1145
+#, c-format
+msgid "Illegal netvar command received from %s\n"
+msgstr ""
+
+#: command.c:1165
+#, c-format
+msgid "Netvar not found with netid %hu\n"
+msgstr ""
+
+#: command.c:1169 command.c:1171
+#, c-format
+msgid "Netvar received: %s [netid=%d] value %s\n"
+msgstr ""
+
+#: command.c:1227
+msgid "CV_Set: no variable\n"
+msgstr ""
+
+#: command.c:1249
+#, c-format
+msgid "Only the server can change this variable: %s %s\n"
+msgstr ""
+
+#: command.c:1258 d_netcmd.c:4290
+msgid ""
+"Changing this variable\n"
+"requires cheats to be enabled.\n"
+"Do you wish to enable cheats? (Y/N)\n"
+msgstr ""
+
+#: command.c:1260
+msgid "Cheats must be enabled to use this.\n"
+msgstr ""
+
+#: command.c:1282
+#, c-format
+msgid "This variable can't be changed while in netgame: %s %s\n"
+msgstr ""
+
+#: command.c:1516
+#, c-format
+msgid "\"%s\" is \"%s\" default is \"%s\"\n"
+msgstr ""
+
+#: console.c:165
+#, c-format
+msgid "Number of console HUD lines is now %d\n"
+msgstr ""
+
+#: console.c:193
+msgid "English keymap.\n"
+msgstr ""
+
+#: console.c:207
+msgid "bind <keyname> [<command>]\n"
+msgstr ""
+
+#: console.c:208
+msgid "bind table :\n"
+msgstr ""
+
+#: console.c:217
+msgid "Empty\n"
+msgstr ""
+
+#: console.c:224
+msgid "Invalid key name\n"
+msgstr ""
+
+#: console.c:1072
+msgid "Press ENTER to continue\n"
+msgstr ""
+
+#: d_clisrv.c:201 d_clisrv.c:203
+#, c-format
+msgid ""
+"No more place in the buffer for netcmd %d\n"
+"localtextcmd is %d\n"
+"nparam is %s\n"
+msgstr ""
+
+#: d_clisrv.c:275
+#, c-format
+msgid "Got unknown net command [%s]=%d (max %d)\n"
+msgstr ""
+
+#: d_clisrv.c:381
+msgid "Sending join request...\n"
+msgstr ""
+
+#: d_clisrv.c:577 d_clisrv.c:599 d_clisrv.c:649
+msgid "No more free memory for savegame\n"
+msgstr ""
+
+#: d_clisrv.c:665
+#, c-format
+msgid "Didn't save %s for netgame"
+msgstr ""
+
+#: d_clisrv.c:686
+#, c-format
+msgid "Loading savegame length %s\n"
+msgstr ""
+
+#: d_clisrv.c:689
+msgid "Can't read savegame sent"
+msgstr ""
+
+#: d_clisrv.c:715 g_game.c:2976
+#, c-format
+msgid "Map is now \"%s"
+msgstr ""
+
+#: d_clisrv.c:720 g_game.c:2981 st_stuff.c:776 st_stuff.c:788 st_stuff.c:799
+#: st_stuff.c:810 st_stuff.c:821 st_stuff.c:832 st_stuff.c:843 st_stuff.c:854
+#: st_stuff.c:865 st_stuff.c:876 st_stuff.c:887 st_stuff.c:898 st_stuff.c:909
+#: st_stuff.c:920
+msgid "ZONE"
+msgstr ""
+
+#: d_clisrv.c:728
+msgid "Can't load the level!\n"
+msgstr ""
+
+#: d_clisrv.c:732 d_clisrv.c:740
+#, c-format
+msgid "WARNING: Can't delete %s"
+msgstr ""
+
+#: d_clisrv.c:933
+#, c-format
+msgid "Can't delete %s"
+msgstr ""
+
+#: d_clisrv.c:936
+msgid "Press ESC to abort\n"
+msgstr ""
+
+#: d_clisrv.c:938
+msgid "Searching the server...\n"
+msgstr ""
+
+#: d_clisrv.c:940
+msgid "Contacting the server...\n"
+msgstr ""
+
+#: d_clisrv.c:958
+#, c-format
+msgid "Connecting to: %s\n"
+msgstr ""
+
+#: d_clisrv.c:968
+#, c-format
+msgid "Gametype: %s\n"
+msgstr ""
+
+#: d_clisrv.c:969
+#, c-format
+msgid "Version: %d.%.2d.%u\n"
+msgstr ""
+
+#: d_clisrv.c:986
+msgid "Found, "
+msgstr ""
+
+#: d_clisrv.c:998
+#, c-format
+msgid ""
+"Maximum players reached: %d\n"
+"Press ESC"
+msgstr ""
+
+#: d_clisrv.c:1009
+msgid "Checking files...\n"
+msgstr ""
+
+#: d_clisrv.c:1096
+msgid "Network game synchronization aborted.\n"
+msgstr ""
+
+#: d_clisrv.c:1126
+msgid "Cheats have been activated.\n"
+msgstr ""
+
+#: d_clisrv.c:1149
+msgid "Ban List:\n"
+msgstr ""
+
+#: d_clisrv.c:1161
+#, c-format
+msgid "Why: %s\n"
+msgstr ""
+
+#: d_clisrv.c:1167
+msgid " None\n"
+msgstr ""
+
+#: d_clisrv.c:1184
+msgid "Could not save ban list into ban.txt\n"
+msgstr ""
+
+#: d_clisrv.c:1254
+msgid "Could not open ban.txt for ban list\n"
+msgstr ""
+
+#: d_clisrv.c:1288
+msgid ""
+"Connect <serveraddress>: connect to a server\n"
+"Connect ANY: connect to the first lan server found\n"
+"Connect SELF: connect to your own server.\n"
+msgstr ""
+
+#: d_clisrv.c:1296 d_clisrv.c:1327
+msgid ""
+"You cannot connect while in a game\n"
+"End this game first\n"
+msgstr ""
+
+#: d_clisrv.c:1302
+msgid ""
+"You have wad files loaded and/or\n"
+"modified the game in some way.\n"
+"Please restart SRB2 before\n"
+"connecting."
+msgstr ""
+
+#: d_clisrv.c:1343
+msgid "There is no server identification with this network driver\n"
+msgstr ""
+
+#: d_clisrv.c:1349
+msgid "There is no network driver\n"
+msgstr ""
+
+#: d_clisrv.c:1509
+#, c-format
+msgid "num:%2d  node:%2d  %s\n"
+msgstr ""
+
+#: d_clisrv.c:1511
+#, c-format
+msgid "num:%2d  node:%2d  %s\n"
+msgstr ""
+
+#: d_clisrv.c:1539
+#, c-format
+msgid "There is no player named \"%s\"\n"
+msgstr ""
+
+#: d_clisrv.c:1571
+msgid " (verified admin)"
+msgstr ""
+
+#: d_clisrv.c:1574
+msgid " (spectator)"
+msgstr ""
+
+#: d_clisrv.c:1585
+msgid "Ban <playername> or <playernum> <reason>: ban and kick a player\n"
+msgstr ""
+
+#: d_clisrv.c:1602 d_clisrv.c:1757
+msgid "Too many bans! Geez, that's a lot of people you're excluding...\n"
+msgstr ""
+
+#: d_clisrv.c:1635 d_clisrv.c:1680 d_net.c:1142 d_netcmd.c:1911
+#: d_netcmd.c:2207 d_netcmd.c:2577 d_netcmd.c:2928 d_netcmd.c:3007
+#: d_netcmd.c:3068 d_netcmd.c:3141 d_netcmd.c:3238 d_netcmd.c:3301
+#: d_netcmd.c:4406 g_game.c:1611
+msgid "You are not the server. You cannot do this.\n"
+msgstr ""
+
+#: d_clisrv.c:1646
+msgid "Kick <playername> or <playernum> <reason>: kick a player\n"
+msgstr ""
+
+#: d_clisrv.c:1695
+msgid "Server is being shut down remotely. Goodbye!\n"
+msgstr ""
+
+#: d_clisrv.c:1724
+#, c-format
+msgid "Illegal kick command received from %s for player %d\n"
+msgstr ""
+
+#: d_clisrv.c:1727
+#, c-format
+msgid ""
+"So, you must be asking, why is this an illegal kick?\n"
+"Well, let's take a look at the facts, shall we?\n"
+"\n"
+"playernum (this is the guy who did it), he's %d.\n"
+"pnum (the guy he's trying to kick) is %d.\n"
+"playernum's node is %d.\n"
+"That node has %d players.\n"
+"Player 2 on that node is %d.\n"
+"pnum's node is %d.\n"
+"That node has %d players.\n"
+"Player 2 on that node is %d.\n"
+"\n"
+"If you think this is a bug, please report it, including all of the details above.\n"
+msgstr ""
+
+#: d_clisrv.c:1764
+msgid "has been kicked (Go away)\n"
+msgstr ""
+
+#: d_clisrv.c:1768
+msgid "left the game (Broke ping limit)\n"
+msgstr ""
+
+#: d_clisrv.c:1772
+msgid "left the game (Consistency failure)\n"
+msgstr ""
+
+#: d_clisrv.c:1778
+#, c-format
+msgid "Player kicked is #%d\n"
+msgstr ""
+
+#: d_clisrv.c:1784
+#, c-format
+msgid "Player %d is at %d, %d, %d\n"
+msgstr ""
+
+#: d_clisrv.c:1786
+#, c-format
+msgid "Player %d has a null mo\n"
+msgstr ""
+
+#: d_clisrv.c:1792
+msgid "left the game (Connection timeout)\n"
+msgstr ""
+
+#: d_clisrv.c:1795
+msgid "left the game\n"
+msgstr ""
+
+#: d_clisrv.c:1798
+msgid "has been banned (Don't come back)\n"
+msgstr ""
+
+#: d_clisrv.c:1802
+#, c-format
+msgid "has been kicked (%s)\n"
+msgstr ""
+
+#: d_clisrv.c:1806
+#, c-format
+msgid "has been banned (%s)\n"
+msgstr ""
+
+#: d_clisrv.c:1820
+msgid ""
+"Server closed connection\n"
+"(consistency failure)\n"
+"Press ESC\n"
+msgstr ""
+
+#: d_clisrv.c:1825
+msgid ""
+"Server closed connection\n"
+"(Broke ping limit)\n"
+"Press ESC\n"
+msgstr ""
+
+#: d_clisrv.c:1828
+msgid ""
+"You have been banned by the server\n"
+"\n"
+"Press ESC\n"
+msgstr ""
+
+#: d_clisrv.c:1830
+#, c-format
+msgid ""
+"You have been kicked\n"
+"(%s)\n"
+"Press ESC\n"
+msgstr ""
+
+#: d_clisrv.c:1832
+#, c-format
+msgid ""
+"You have been banned\n"
+"(%s)\n"
+"Press ESC\n"
+msgstr ""
+
+#: d_clisrv.c:1834
+msgid ""
+"You have been kicked by the server\n"
+"\n"
+"Press ESC\n"
+msgstr ""
+
+#: d_clisrv.c:2017
+#, c-format
+msgid "Illegal add player command received from %s\n"
+msgstr ""
+
+#: d_clisrv.c:2039
+#, c-format
+msgid "Player %d has joined the game (node %d)\n"
+msgstr ""
+
+#: d_clisrv.c:2063
+#, c-format
+msgid "Player Address is %s\n"
+msgstr ""
+
+#: d_clisrv.c:2135
+#, c-format
+msgid "Server added player %d node %d\n"
+msgstr ""
+
+#: d_clisrv.c:2175
+msgid "Starting Server....\n"
+msgstr ""
+
+#: d_clisrv.c:2666
+msgid ""
+"You have been banned\n"
+"from the server"
+msgstr ""
+
+#: d_clisrv.c:2669
+#, c-format
+msgid ""
+"Different SRB2 versions cannot\n"
+"play a netgame!\n"
+"(server version %d.%d.%d)"
+msgstr ""
+
+#: d_clisrv.c:2671
+msgid ""
+"The server is not accepting\n"
+"joins for the moment"
+msgstr ""
+
+#: d_clisrv.c:2673
+#, c-format
+msgid "Maximum players reached: %d"
+msgstr ""
+
+#: d_clisrv.c:2675
+msgid ""
+"Too many players from\n"
+"this node."
+msgstr ""
+
+#: d_clisrv.c:2677
+msgid ""
+"No players from\n"
+"this node."
+msgstr ""
+
+#: d_clisrv.c:2695
+msgid "Server couldn't send info, please try again"
+msgstr ""
+
+#: d_clisrv.c:2719
+msgid ""
+"Server has shutdown\n"
+"\n"
+"Press Esc"
+msgstr ""
+
+#: d_clisrv.c:2728
+msgid ""
+"Server Timeout\n"
+"\n"
+"Press Esc"
+msgstr ""
+
+#: d_clisrv.c:2754
+#, c-format
+msgid "Received packet from unknown host %d\n"
+msgstr ""
+
+#: d_clisrv.c:2781
+#, c-format
+msgid ""
+"Server refuses connection\n"
+"\n"
+"Reason:\n"
+"%s"
+msgstr ""
+
+#: d_clisrv.c:2816
+msgid "Join accepted, waiting for next level change...\n"
+msgstr ""
+
+#: d_clisrv.c:2817
+#, c-format
+msgid "Server accept join gametic=%u mynode=%d\n"
+msgstr ""
+
+#: d_clisrv.c:2855
+#, c-format
+msgid "unknown packet received (%d) from unknown host\n"
+msgstr ""
+
+#: d_clisrv.c:2915
+#, c-format
+msgid "Illegal movement value recieved from node %d\n"
+msgstr ""
+
+#: d_clisrv.c:2940
+#, c-format
+msgid "Consistency failure for player %d, restoring...\n"
+msgstr ""
+
+#: d_clisrv.c:3052 d_clisrv.c:3057
+#, c-format
+msgid "PT_SERVERTICS recieved from non-host %d\n"
+msgstr ""
+
+#: d_clisrv.c:3112 d_clisrv.c:3117
+#, c-format
+msgid "PT_CONSISTENCY recieved from non-host %d\n"
+msgstr ""
+
+#: d_clisrv.c:3135 d_clisrv.c:3140
+#, c-format
+msgid "PT_PING recieved from non-host %d\n"
+msgstr ""
+
+#: d_main.c:822
+#, c-format
+msgid "SRB2.SRB/SRB2.WAD not found! Expected in %s, ss files: %s and %s\n"
+msgstr ""
+
+#: d_main.c:982
+msgid "Development mode ON.\n"
+msgstr ""
+
+#: d_main.c:995
+msgid "Please set $HOME to your home directory\n"
+msgstr ""
+
+#: d_main.c:1098
+msgid "Z_Init: Init zone memory allocation daemon. \n"
+msgstr ""
+
+#: d_main.c:1104
+msgid "W_Init: Init WADfiles.\n"
+msgstr ""
+
+#: d_main.c:1118 d_main.c:1120
+msgid "A WAD file was not found or not valid\n"
+msgstr ""
+
+#: d_main.c:1169
+msgid "HU_Init: Setting up heads up display.\n"
+msgstr ""
+
+#: d_main.c:1214
+msgid "M_Init: Init miscellaneous info.\n"
+msgstr ""
+
+#: d_main.c:1217
+msgid "R_Init: Init SRB2 refresh daemon - "
+msgstr ""
+
+#: d_main.c:1221
+msgid "S_Init: Setting up sound.\n"
+msgstr ""
+
+#: d_main.c:1237
+msgid "ST_Init: Init status bar.\n"
+msgstr ""
+
+#: d_main.c:1244
+msgid "D_CheckNetGame: Checking network game status.\n"
+msgstr ""
+
+#: d_main.c:1284
+#, c-format
+msgid "Playing demo %s.\n"
+msgstr ""
+
+#: d_net.c:1046
+#, c-format
+msgid "Set extratics to %d\n"
+msgstr ""
+
+#: d_net.c:1058
+#, c-format
+msgid "Network bandwidth set to %d\n"
+msgstr ""
+
+#: d_net.c:1061
+msgid "usage: -bandwidth <byte_per_sec>"
+msgstr ""
+
+#: d_net.c:1077
+msgid "usage: -packetsize <bytes_per_packet>"
+msgstr ""
+
+#: d_net.c:1084
+msgid "Doomcom buffer invalid!"
+msgstr ""
+
+#: d_net.c:1086
+#, c-format
+msgid "Too many nodes (%d), max:%d"
+msgstr ""
+
+#: d_net.c:1094 d_net.c:1109
+#, c-format
+msgid "debug output to: %s\n"
+msgstr ""
+
+#: d_net.c:1111
+#, c-format
+msgid "cannot debug output to file %s!\n"
+msgstr ""
+
+#: d_net.c:1133
+#, c-format
+msgid ""
+"%.2d : %s\n"
+" %d tics, %d ms.\n"
+msgstr ""
+
+#: d_net.c:1137
+#, c-format
+msgid ""
+"%.2d : %s\n"
+" %d ms\n"
+msgstr ""
+
+#: d_netcmd.c:1000
+#, c-format
+msgid "%s renamed to %s\n"
+msgstr ""
+
+#: d_netcmd.c:1007
+#, c-format
+msgid "Player %d sent a bad name change\n"
+msgstr ""
+
+#: d_netcmd.c:1381
+#, c-format
+msgid "There is no player %d!"
+msgstr ""
+
+#: d_netcmd.c:1486
+#, c-format
+msgid "Illegal color change received from %s (team: %d), color: %d)\n"
+msgstr ""
+
+#: d_netcmd.c:1590 d_netcmd.c:1932 d_netcmd.c:3500 d_netcmd.c:4453
+#: m_cheat.c:309 m_cheat.c:343 m_cheat.c:369 m_cheat.c:398 m_cheat.c:432
+#: m_cheat.c:508 m_cheat.c:532 m_cheat.c:551 m_cheat.c:570
+msgid "DEVMODE must be enabled.\n"
+msgstr ""
+
+#: d_netcmd.c:1596
+msgid "rteleport -x <value> -y <value> -z <value>: relative teleport to a location\n"
+msgstr ""
+
+#: d_netcmd.c:1602 d_netcmd.c:1672
+msgid "You can't teleport while in a netgame!\n"
+msgstr ""
+
+#: d_netcmd.c:1608 d_netcmd.c:1678
+msgid "Player is dead, etc.\n"
+msgstr ""
+
+#: d_netcmd.c:1627 d_netcmd.c:1703
+msgid "Not a valid location\n"
+msgstr ""
+
+#: d_netcmd.c:1644
+#, c-format
+msgid "Teleporting by %d, %d, %d...\n"
+msgstr ""
+
+#: d_netcmd.c:1648 d_netcmd.c:1723
+msgid "Unable to teleport to that spot!\n"
+msgstr ""
+
+#: d_netcmd.c:1666
+msgid "teleport -x <value> -y <value> -z <value>: teleport to a location\n"
+msgstr ""
+
+#: d_netcmd.c:1687
+msgid "X value not specified\n"
+msgstr ""
+
+#: d_netcmd.c:1696
+msgid "Y value not specified\n"
+msgstr ""
+
+#: d_netcmd.c:1719
+#, c-format
+msgid "Teleporting to %d, %d, %d...\n"
+msgstr ""
+
+#: d_netcmd.c:1741
+msgid "playdemo <demoname>: playback a demo\n"
+msgstr ""
+
+#: d_netcmd.c:1750 d_netcmd.c:1778
+msgid ""
+"\n"
+"You can't play a demo while in a netgame.\n"
+msgstr ""
+
+#: d_netcmd.c:1758
+#, c-format
+msgid "Playing back demo '%s'.\n"
+msgstr ""
+
+#: d_netcmd.c:1769
+msgid "timedemo <demoname>: time a demo\n"
+msgstr ""
+
+#: d_netcmd.c:1786
+#, c-format
+msgid "Timing demo '%s'.\n"
+msgstr ""
+
+#: d_netcmd.c:1795
+msgid "Stopped demo.\n"
+msgstr ""
+
+#: d_netcmd.c:1840
+#, c-format
+msgid "Map change: mapnum=%d gametype=%d ultmode=%d resetplayers=%d delay=%d skipprecutscene=%d\n"
+msgstr ""
+
+#: d_netcmd.c:1905
+msgid "map <mapname> [-gametype <type> [-force]: warp to map\n"
+msgstr ""
+
+#: d_netcmd.c:1918
+#, c-format
+msgid "Internal game level '%s' not found\n"
+msgstr ""
+
+#: d_netcmd.c:1924
+msgid "Sorry, level change disabled in single player.\n"
+msgstr ""
+
+#: d_netcmd.c:1940
+#, c-format
+msgid "Invalid level name %s\n"
+msgstr ""
+
+#: d_netcmd.c:1965
+msgid "You can't switch gametypes in single player!\n"
+msgstr ""
+
+#: d_netcmd.c:2039
+#, c-format
+msgid ""
+"That level doesn't support %s mode!\n"
+"(Use -force to override)\n"
+msgstr ""
+
+#: d_netcmd.c:2045
+msgid "That level doesn't support Single Player mode!\n"
+msgstr ""
+
+#: d_netcmd.c:2068
+#, c-format
+msgid "Illegal map change received from %s\n"
+msgstr ""
+
+#: d_netcmd.c:2145
+#, c-format
+msgid "Speeding off to %s...\n"
+msgstr ""
+
+#: d_netcmd.c:2201 g_game.c:1604
+msgid "You can't pause here.\n"
+msgstr ""
+
+#: d_netcmd.c:2217
+#, c-format
+msgid "Illegal pause command received from %s\n"
+msgstr ""
+
+#: d_netcmd.c:2242
+#, c-format
+msgid "Game paused by %s\n"
+msgstr ""
+
+#: d_netcmd.c:2244
+#, c-format
+msgid "Game unpaused by %s\n"
+msgstr ""
+
+#: d_netcmd.c:2267 d_netcmd.c:3541 d_netcmd.c:4394 d_netcmd.c:4410
+#: m_cheat.c:337 m_cheat.c:363 m_cheat.c:392 m_cheat.c:426 p_tick.c:51
+#: p_tick.c:119
+msgid "You must be in a level to use this.\n"
+msgstr ""
+
+#: d_netcmd.c:2273
+msgid "You may only use this in co-op and single player!"
+msgstr ""
+
+#: d_netcmd.c:2286
+#, c-format
+msgid "Illegal suicide command recieved from %s\n"
+msgstr ""
+
+#: d_netcmd.c:2355
+#, c-format
+msgid "Illegal clear scores command received from %s\n"
+msgstr ""
+
+#: d_netcmd.c:2370
+msgid "Scores have been reset by the server.\n"
+msgstr ""
+
+#: d_netcmd.c:2387 d_netcmd.c:2424
+msgid "changeteam <team>: switch to a new team (spectator or playing)\n"
+msgstr ""
+
+#: d_netcmd.c:2389 d_netcmd.c:2426
+msgid "changeteam <team>: switch to a new team (red, blue or spectator)\n"
+msgstr ""
+
+#: d_netcmd.c:2391 d_netcmd.c:2417 d_netcmd.c:2488 d_netcmd.c:2514
+#: d_netcmd.c:2593 d_netcmd.c:2632
+msgid "This command cannot be used outside of Match, Tag or CTF.\n"
+msgstr ""
+
+#: d_netcmd.c:2443 d_netcmd.c:2540 d_netcmd.c:2670
+msgid "Invalid gametype after initial checks!"
+msgstr ""
+
+#: d_netcmd.c:2447 d_netcmd.c:2544
+msgid "You're already on that team!\n"
+msgstr ""
+
+#: d_netcmd.c:2453 d_netcmd.c:2550
+msgid "The server does not allow team change.\n"
+msgstr ""
+
+#: d_netcmd.c:2462 d_netcmd.c:2559 d_netcmd.c:2683
+msgid "No tag status changes after hidetime!\n"
+msgstr ""
+
+#: d_netcmd.c:2484 d_netcmd.c:2521
+msgid "changeteam2 <team>: switch to a new team (spectator or playing)\n"
+msgstr ""
+
+#: d_netcmd.c:2486 d_netcmd.c:2523
+msgid "changeteam2 <team>: switch to a new team (red, blue or spectator)\n"
+msgstr ""
+
+#: d_netcmd.c:2587 d_netcmd.c:2639
+msgid "serverchangeteam <playernum> <team>: switch player to a new team (spectator or playing)\n"
+msgstr ""
+
+#: d_netcmd.c:2589 d_netcmd.c:2641
+msgid "serverchangeteam <playernum> <team>: switch player to a new team (it, notit, playing, or spectator)\n"
+msgstr ""
+
+#: d_netcmd.c:2591 d_netcmd.c:2643
+msgid "serverchangeteam <playernum> <team>: switch player to a new team (red, blue or spectator)\n"
+msgstr ""
+
+#: d_netcmd.c:2674
+msgid "That player is already on that team!\n"
+msgstr ""
+
+#: d_netcmd.c:2704 d_netcmd.c:2719 d_netcmd.c:2758
+#, c-format
+msgid "Illegal team change received from player %s\n"
+msgstr ""
+
+#: d_netcmd.c:2808
+#, c-format
+msgid "Player %s sent illegal team change to team %d\n"
+msgstr ""
+
+#: d_netcmd.c:2872
+#, c-format
+msgid "%s was autobalanced to even the teams.\n"
+msgstr ""
+
+#: d_netcmd.c:2874
+#, c-format
+msgid "%s was scrambled to a different team.\n"
+msgstr ""
+
+#: d_netcmd.c:2878 p_inter.c:2042 p_inter.c:2297 p_inter.c:2569 p_tick.c:507
+#: p_user.c:5529
+#, c-format
+msgid "%s is now IT!\n"
+msgstr ""
+
+#: d_netcmd.c:2880
+#, c-format
+msgid "%s switched to the red team\n"
+msgstr ""
+
+#: d_netcmd.c:2885
+#, c-format
+msgid "%s is no longer IT!\n"
+msgstr ""
+
+#: d_netcmd.c:2887
+#, c-format
+msgid "%s switched to the blue team\n"
+msgstr ""
+
+#: d_netcmd.c:2890 p_user.c:5540
+#, c-format
+msgid "%s entered the game.\n"
+msgstr ""
+
+#: d_netcmd.c:2892
+#, c-format
+msgid "%s became a spectator.\n"
+msgstr ""
+
+#: d_netcmd.c:2934
+msgid "password <password>: change password\n"
+msgstr ""
+
+#: d_netcmd.c:2958
+msgid "login <password>: Administrator login\n"
+msgstr ""
+
+#: d_netcmd.c:2974
+#, c-format
+msgid ""
+"Sending Login...%s\n"
+"(Notice only given if password is correct.)\n"
+msgstr ""
+
+#: d_netcmd.c:2992
+#, c-format
+msgid "%s passed authentication. (%s)\n"
+msgstr ""
+
+#: d_netcmd.c:2996
+#, c-format
+msgid "Password from %d failed (%s)\n"
+msgstr ""
+
+#: d_netcmd.c:3013
+msgid "verify <node>: give admin privileges to a node\n"
+msgstr ""
+
+#: d_netcmd.c:3035
+#, c-format
+msgid "Illegal verification received from %s (serverplayer is %s)\n"
+msgstr ""
+
+#: d_netcmd.c:3052
+msgid "Password correct. You are now a server administrator.\n"
+msgstr ""
+
+#: d_netcmd.c:3062
+msgid "motd <message>: Set a message that clients see upon join.\n"
+msgstr ""
+
+#: d_netcmd.c:3089 d_netcmd.c:3122
+msgid "Message of the day set.\n"
+msgstr ""
+
+#: d_netcmd.c:3108
+#, c-format
+msgid "Illegal motd change received from %s\n"
+msgstr ""
+
+#: d_netcmd.c:3133
+msgid "runsoc <socfile.soc> or <lumpname>: run a soc\n"
+msgstr ""
+
+#: d_netcmd.c:3148
+msgid "Could not find SOC.\n"
+msgstr ""
+
+#: d_netcmd.c:3152 d_netcmd.c:3242 d_netcmd.c:3585 d_netcmd.c:3632
+#: d_netcmd.c:3976 d_netcmd.c:4006 d_netcmd.c:4038 d_netcmd.c:4067
+#: d_netcmd.c:4550 m_cheat.c:279 m_cheat.c:299 m_cheat.c:602 p_mobj.c:2682
+msgid "WARNING: Game must be restarted to record statistics.\n"
+msgstr ""
+
+#: d_netcmd.c:3170
+#, c-format
+msgid "Illegal runsoc command received from %s\n"
+msgstr ""
+
+#: d_netcmd.c:3194 d_netcmd.c:3433
+#, c-format
+msgid ""
+"The server tried to add %s,\n"
+"but you don't have this file.\n"
+"You need to find it in order\n"
+"to play on this server."
+msgstr ""
+
+#: d_netcmd.c:3199
+#, c-format
+msgid "Unknown error finding soc file (%s) the server added.\n"
+msgstr ""
+
+#: d_netcmd.c:3222
+msgid "addfile <wadfile.wad>: load wad file\n"
+msgstr ""
+
+#: d_netcmd.c:3268
+#, c-format
+msgid "MD5 calc for %s took %f second\n"
+msgstr ""
+
+#: d_netcmd.c:3273 w_wad.c:246
+#, c-format
+msgid "File %s not found.\n"
+msgstr ""
+
+#: d_netcmd.c:3295
+msgid "You must NOT be in a level to use this.\n"
+msgstr ""
+
+#: d_netcmd.c:3344 d_netcmd.c:3414
+#, c-format
+msgid "Illegal addfile command received from %s\n"
+msgstr ""
+
+#: d_netcmd.c:3359
+#, c-format
+msgid "The server doesn't have %s\n"
+msgstr ""
+
+#: d_netcmd.c:3361
+#, c-format
+msgid "Checksum mismatch on %s\n"
+msgstr ""
+
+#: d_netcmd.c:3363
+#, c-format
+msgid "Unknown error finding wad file (%s)\n"
+msgstr ""
+
+#: d_netcmd.c:3381
+#, c-format
+msgid "Illegal delfile command received from %s\n"
+msgstr ""
+
+#: d_netcmd.c:3438
+#, c-format
+msgid ""
+"Checksum mismatch while loading %s.\n"
+"Make sure you have the copy of\n"
+"this file that the server has.\n"
+msgstr ""
+
+#: d_netcmd.c:3443
+#, c-format
+msgid "Unknown error finding wad file (%s) the server added.\n"
+msgstr ""
+
+#: d_netcmd.c:3457
+#, c-format
+msgid "There are %d wads loaded:\n"
+msgstr ""
+
+#: d_netcmd.c:3477
+#, c-format
+msgid "SRB2%s (%s %s %s)\n"
+msgstr ""
+
+#: d_netcmd.c:3483
+#, c-format
+msgid ""
+"Mod ID: %d\n"
+"Mod Version: %d\n"
+"Code Base:%d\n"
+msgstr ""
+
+#: d_netcmd.c:3491
+#, c-format
+msgid "Current gametype is %d\n"
+msgstr ""
+
+#: d_netcmd.c:3504
+msgid "jumptoaxis <axisnum>: Jump to axis within current mare.\n"
+msgstr ""
+
+#: d_netcmd.c:3549 d_netcmd.c:4466 m_cheat.c:375 m_cheat.c:410 m_cheat.c:444
+msgid "You can't use this in a netgame.\n"
+msgstr ""
+
+#: d_netcmd.c:3637
+msgid "Objectplace Controls:\\\\Camera L: Cycle backwards      \\Camera R: Cycle forwards       \\     Jump: Float up             \\     Spin: Float down           \\    Throw: Place object         \\Toss Flag: Remove object (buggy)\\"
+msgstr ""
+
+#: d_netcmd.c:3702
+#, c-format
+msgid "Levels will end after %s scores %d point%s.\n"
+msgstr ""
+
+#: d_netcmd.c:3704
+msgid "a team"
+msgstr ""
+
+#: d_netcmd.c:3704
+msgid "someone"
+msgstr ""
+
+#: d_netcmd.c:3709
+msgid "Point limit disabled\n"
+msgstr ""
+
+#: d_netcmd.c:3717
+#, c-format
+msgid "Number of laps set to %d\n"
+msgstr ""
+
+#: d_netcmd.c:3747
+#, c-format
+msgid "Levels will end after %d minute%s.\n"
+msgstr ""
+
+#: d_netcmd.c:3759
+msgid "Time limit disabled\n"
+msgstr ""
+
+#: d_netcmd.c:3783
+#, c-format
+msgid "Gametype was changed from %s to %s\n"
+msgstr ""
+
+#: d_netcmd.c:3948
+#, c-format
+msgid "Illegal color change received from %s (team: %d, color: %d)\n"
+msgstr ""
+
+#: d_netcmd.c:3964 d_netcmd.c:3985 d_netcmd.c:4018 d_netcmd.c:4050
+#: d_netcmd.c:4080
+msgid "You haven't earned this yet.\n"
+msgstr ""
+
+#: d_netcmd.c:4137
+msgid "This command cannot be used outside of Team Match or CTF.\n"
+msgstr ""
+
+#: d_netcmd.c:4264
+msgid "Teams will be scrambled next round.\n"
+msgstr ""
+
+#: d_netcmd.c:4272
+msgid "Cheats cannot be disabled after they are activated. You must restart the server to disable cheats.\n"
+msgstr ""
+
+#: d_netcmd.c:4279 d_netcmd.c:4401
+msgid "You can't use this in single player.\n"
+msgstr ""
+
+#: d_netcmd.c:4373
+msgid "HIDETIME cannot be greater or equal to the time limit!\n"
+msgstr ""
+
+#: d_netcmd.c:4425
+#, c-format
+msgid "Illegal exitlevel command received from %s\n"
+msgstr ""
+
+#: d_netcmd.c:4446
+#, c-format
+msgid "Displayplayer is %d\n"
+msgstr ""
+
+#: d_netcmd.c:4454
+msgid "If you want to change the sky interactively on a map, use the linedef executor feature instead.\n"
+msgstr ""
+
+#: d_netcmd.c:4460
+msgid "skynum <sky#>: change the sky\n"
+msgstr ""
+
+#: d_netcmd.c:4470
+#, c-format
+msgid "Previewing sky %s...\n"
+msgstr ""
+
+#: d_netcmd.c:4482
+#, c-format
+msgid "tunes <slot#/default> <speed>: play a slot or the default stage tune at the specified speed(100%%)\n"
+msgstr ""
+
+#: d_netcmd.c:4483
+#, c-format
+msgid "The current tune is: %d\n"
+msgstr ""
+
+#: d_netcmd.c:4491
+#, c-format
+msgid "Valid slots are 1 to %d, or 0 to stop music\n"
+msgstr ""
+
+#: d_netcmd.c:4568
+msgid "modifiedgame is true, but you can save emblem and time data in this mod.\n"
+msgstr ""
+
+#: d_netcmd.c:4570
+msgid "modifiedgame is true, secrets will not be unlocked\n"
+msgstr ""
+
+#: d_netcmd.c:4572
+msgid "modifiedgame is false, you can unlock secrets\n"
+msgstr ""
+
+#: d_netcmd.c:4599
+#, c-format
+msgid "Valid skin numbers are 0 to %d (-1 disables)\n"
+msgstr ""
+
+#: d_netcmd.c:4617 d_netcmd.c:4629
+msgid "You may not change your name when chat is muted.\n"
+msgstr ""
+
+#: d_netcmd.c:4755
+msgid "Chat has been muted.\n"
+msgstr ""
+
+#: d_netcmd.c:4757
+msgid "Chat is no longer muted.\n"
+msgstr ""
+
+#: d_netcmd.c:4789 d_netcmd.c:4807
+msgid "This only works in a netgame.\n"
+msgstr ""
+
+#: d_netcmd.c:4797
+#, c-format
+msgid "%s's score is %u\n"
+msgstr ""
+
+#: d_netcmd.c:4799
+#, c-format
+msgid "The pointlimit is %d\n"
+msgstr ""
+
+#: d_netcmd.c:4811
+#, c-format
+msgid ""
+"The current time is %f.\n"
+"The timelimit is %f\n"
+msgstr ""
+
+#: d_netfil.c:308
+#, c-format
+msgid "searching for '%s' "
+msgstr ""
+
+#: d_netfil.c:317
+msgid "already loaded\n"
+msgstr ""
+
+#: d_netfil.c:326
+#, c-format
+msgid "found %d\n"
+msgstr ""
+
+#: d_netfil.c:654
+#, c-format
+msgid "Downloading %s...(done)\n"
+msgstr ""
+
+#: dehacked.c:2148
+#, c-format
+msgid "Thing %d doesn't exist"
+msgstr ""
+
+#: dehacked.c:2166
+#, c-format
+msgid "Character %d out of range"
+msgstr ""
+
+#: dehacked.c:2201
+#, c-format
+msgid "Level number %d out of range"
+msgstr ""
+
+#: dehacked.c:2209
+#, c-format
+msgid "Cutscene number %d out of range"
+msgstr ""
+
+#: dehacked.c:2217
+#, c-format
+msgid "Unlockable number %d out of range"
+msgstr ""
+
+#: dehacked.c:2225
+#, c-format
+msgid "Frame %d doesn't exist"
+msgstr ""
+
+#: dehacked.c:2252
+#, c-format
+msgid "Sound %d doesn't exist"
+msgstr ""
+
+#: dehacked.c:2277
+#, c-format
+msgid "HUD item number %d out of range"
+msgstr ""
+
+#: dehacked.c:2285
+#, c-format
+msgid "Emblem number %d out of range"
+msgstr ""
+
+#: dehacked.c:2298
+#, c-format
+msgid "Warning: patch from a different SRB2 version (%d), "
+msgstr ""
+
+#: dehacked.c:2300
+msgid "only version 2.0 is supported\n"
+msgstr ""
+
+#: dehacked.c:2305
+#, c-format
+msgid "Unknown word: %s"
+msgstr ""
+
+#: dehacked.c:2308
+#, c-format
+msgid "missing argument for '%s'"
+msgstr ""
+
+#: dehacked.c:2311
+#, c-format
+msgid "No word in this line: %s"
+msgstr ""
+
+#: dehacked.c:2315
+#, c-format
+msgid "%d warning%s in the SOC lump\n"
+msgstr ""
+
+#: dehacked.c:2361
+msgid "Unloading WAD SOC edits\n"
+msgstr ""
+
+#: f_finale.c:227
+msgid "Sonic Team Junior\n"
+msgstr ""
+
+#: f_finale.c:228 f_finale.c:230
+msgid "Staff\n"
+msgstr ""
+
+#: f_finale.c:233
+msgid "Producer\n"
+msgstr ""
+
+#: f_finale.c:237 f_finale.c:242
+msgid "Director\n"
+msgstr ""
+
+#: f_finale.c:246
+msgid "Game Designers\n"
+msgstr ""
+
+#: f_finale.c:257
+msgid "Character Designers\n"
+msgstr ""
+
+#: f_finale.c:266
+msgid "Visual Design\n"
+msgstr ""
+
+#: f_finale.c:273
+msgid "Landscape Design\n"
+msgstr ""
+
+#: f_finale.c:282
+msgid "Chief Programmer\n"
+msgstr ""
+
+#: f_finale.c:289
+msgid "Programmers\n"
+msgstr ""
+
+#: f_finale.c:304
+msgid "Coding Assistants\n"
+msgstr ""
+
+#: f_finale.c:321
+msgid "Level Designers\n"
+msgstr ""
+
+#: f_finale.c:349
+msgid "Texture Artists\n"
+msgstr ""
+
+#: f_finale.c:364
+msgid "Music Production\n"
+msgstr ""
+
+#: f_finale.c:386
+msgid "Lead Guitar\n"
+msgstr ""
+
+#: f_finale.c:395
+msgid "Sound Effects\n"
+msgstr ""
+
+#: f_finale.c:406
+msgid "Official Mascot\n"
+msgstr ""
+
+#: f_finale.c:413
+msgid "Sky Sanctuary Team\n"
+msgstr ""
+
+#: f_finale.c:457
+msgid "Special Thanks\n"
+msgstr ""
+
+#: f_finale.c:472
+msgid "In Fond Memory Of\n"
+msgstr ""
+
+#: f_finale.c:487
+msgid "Modification By\n"
+msgstr ""
+
+#: f_finale.c:557
+msgid ""
+"Two months had passed since Dr. Eggman\n"
+"tried to take over the world using his\n"
+"Ring Satellite.\n"
+"#"
+msgstr ""
+
+#: f_finale.c:561
+msgid ""
+"As it was about to drain the rings\n"
+"away from the planet, Sonic burst into\n"
+"the Satellite and for what he thought\n"
+"would be the last time, defeated\n"
+"Dr. Eggman.\n"
+"#"
+msgstr ""
+
+#: f_finale.c:567
+msgid ""
+"\n"
+"What Sonic, Tails, and Knuckles had\n"
+"not anticipated was that Eggman would\n"
+"return, bringing an all new threat.\n"
+"#"
+msgstr ""
+
+#: f_finale.c:571
+msgid ""
+"About once every year, a strange asteroid\n"
+"hovers around the planet. it suddenly\n"
+"appears from nowhere, circles around, and\n"
+"- just as mysteriously as it arrives, it\n"
+"vanishes after about two months.\n"
+"No one knows why it appears, or how.\n"
+"#"
+msgstr ""
+
+#: f_finale.c:578
+msgid ""
+"\"Curses!\" Eggman yelled. \"That hedgehog\n"
+"and his ridiculous friends will pay\n"
+"dearly for this!\" Just then his scanner\n"
+"blipped as the Black Rock made its\n"
+"appearance from nowhere. Eggman looked at\n"
+"the screen, and just shrugged it off.\n"
+"#"
+msgstr ""
+
+#: f_finale.c:585
+msgid ""
+"It was only later\n"
+"that he had an\n"
+"idea. \"The Black\n"
+"Rock usually has a\n"
+"lot of energy\n"
+"within it... if I\n"
+"can somehow\n"
+"harness this, I\n"
+"can turn it into\n"
+"the ultimate\n"
+"battle station,\n"
+"and every last\n"
+"person will be\n"
+"begging for mercy,\n"
+"including Sonic!\"\n"
+"#"
+msgstr ""
+
+#: f_finale.c:601
+msgid ""
+"\n"
+"\n"
+"Before beginning his scheme,\n"
+"Eggman decided to give Sonic\n"
+"a reunion party...\n"
+"#"
+msgstr ""
+
+#: f_finale.c:605
+msgid ""
+"\"We're ready to fire in 15 seconds!\"\n"
+"The robot said, his voice crackling a\n"
+"little down the com-link. \"Good!\"\n"
+"Eggman sat back in his Egg-Mobile and\n"
+"began to count down as he saw the\n"
+"GreenFlower city on the main monitor.\n"
+"#"
+msgstr ""
+
+#: f_finale.c:612
+msgid ""
+"\"10...9...8...\"\n"
+"Meanwhile, Sonic was tearing across the\n"
+"zones, and everything became nothing but\n"
+"a blur as he ran around loops, skimmed\n"
+"over water, and catapulted himself off\n"
+"rocks with his phenomenal speed.\n"
+"#"
+msgstr ""
+
+#: f_finale.c:619
+msgid ""
+"\"5...4...3...\"\n"
+"Sonic knew he was getting closer to the\n"
+"City, and pushed himself harder. Finally,\n"
+"the city appeared in the horizon.\n"
+"\"2...1...Zero.\"\n"
+"#"
+msgstr ""
+
+#: f_finale.c:625
+msgid ""
+"GreenFlower City was gone.\n"
+"Sonic arrived just in time to see what\n"
+"little of the 'ruins' were left. Everyone\n"
+"and everything in the city had been\n"
+"obliterated.\n"
+"#"
+msgstr ""
+
+#: f_finale.c:631
+msgid ""
+"\"You're not quite as dead as we thought,\n"
+"huh? Are you going to tell us your plan as\n"
+"usual or will I 'have to work it out' or\n"
+"something?\"                         \n"
+"\"We'll see... let's give you a quick warm\n"
+"up, Sonic! JETTYSYNS! Open fire!\"\n"
+"#"
+msgstr ""
+
+#: f_finale.c:638
+msgid ""
+"Eggman took this\n"
+"as his cue and\n"
+"blasted off,\n"
+"leaving Sonic\n"
+"and Tails behind.\n"
+"Tails looked at\n"
+"the ruins of the\n"
+"Greenflower City\n"
+"with a grim face\n"
+"and sighed.           \n"
+"\"Now what do we\n"
+"do?\", he asked.\n"
+"#"
+msgstr ""
+
+#: f_finale.c:651
+msgid ""
+"\"Easy! We go\n"
+"find Eggman\n"
+"and stop his\n"
+"latest\n"
+"insane plan.\n"
+"Just like\n"
+"we've always\n"
+"done, right?                 \n"
+"\n"
+"...                    \n"
+"\n"
+"\"Tails,what\n"
+"*ARE* you\n"
+"doing?\"\n"
+"#"
+msgstr ""
+
+#: f_finale.c:664
+msgid ""
+"\"I'm just finding what mission obje...\n"
+"a-ha! Here it is! This will only give\n"
+"the robot's primary objective. It says,\n"
+"* LOCATE AND RETRIEVE CHAOS EMERALD.\n"
+"ESTIMATED LOCATION: GREENFLOWER ZONE *\"\n"
+"\"All right, then let's go!\"\n"
+"#"
+msgstr ""
+
+#: g_game.c:1514
+#, c-format
+msgid "Viewpoint: %s\n"
+msgstr ""
+
+#: g_game.c:2007
+#, c-format
+msgid "Current mare is %d\n"
+msgstr ""
+
+#: g_game.c:2094
+msgid "No deathmatch start in this map - shifting to player starts to avoid crash...\n"
+msgstr ""
+
+#: g_game.c:2098
+msgid "There aren't enough starts in this map!\n"
+msgstr ""
+
+#: g_game.c:2118
+msgid "No Red Team start in this map, resorting to Deathmatch starts!\n"
+msgstr ""
+
+#: g_game.c:2135
+msgid "No Blue Team start in this map, resorting to Deathmatch starts!\n"
+msgstr ""
+
+#: g_game.c:2300
+msgid "The round has ended.\n"
+msgstr ""
+
+#: g_game.c:2337
+#, c-format
+msgid "Unknown gametype! %d\n"
+msgstr ""
+
+#: g_game.c:2432
+#, c-format
+msgid "Next map given (MAP %d) doesn't exist! Reverting to MAP01.\n"
+msgstr ""
+
+#: g_game.c:2445
+#, c-format
+msgid "Warning: Can't find a compatible map after map %d; using map %d even though it is not compatible with the current gametype\n"
+msgstr ""
+
+#: g_game.c:2708 g_game.c:2837
+msgid "No more free memory for saving game data\n"
+msgstr ""
+
+#: g_game.c:2767
+#, c-format
+msgid "Couldn't read file %s\n"
+msgstr ""
+
+#: g_game.c:2859
+msgid "Game saved.\n"
+msgstr ""
+
+#: g_game.c:2861
+#, c-format
+msgid "Error while writing to %s for save slot %u, base: %s\n"
+msgstr ""
+
+#: g_game.c:3187
+#, c-format
+msgid "ERROR: cannot open file '%s'.\n"
+msgstr ""
+
+#: g_game.c:3257
+msgid "Movie mode enabled.\n"
+msgstr ""
+
+#: g_game.c:3266
+msgid "Movie mode disabled.\n"
+msgstr ""
+
+#: g_game.c:3277
+#, c-format
+msgid "Loaded level in %f sec\n"
+msgstr ""
+
+#: g_game.c:3325
+#, c-format
+msgid ""
+"timed %u gametics in %d realtics\n"
+"%f seconds, %f avg fps\n"
+msgstr ""
+
+#: g_game.c:3354
+#, c-format
+msgid "Demo %s recorded\n"
+msgstr ""
+
+#: g_game.c:3356
+#, c-format
+msgid "Demo %s not saved\n"
+msgstr ""
+
+#: g_input.c:1299
+#, c-format
+msgid "Control '%s' unknown\n"
+msgstr ""
+
+#: g_input.c:1320
+msgid "setcontrol <controlname> <keyname> [<2nd keyname>]\n"
+msgstr ""
+
+#: g_input.c:1335
+msgid "setcontrol2 <controlname> <keyname> [<2nd keyname>]\n"
+msgstr ""
+
+#: hardware/hw_main.c:4346
+#, c-format
+msgid "Patch info headers: %7s kb\n"
+msgstr ""
+
+#: hardware/hw_main.c:4347
+#, c-format
+msgid "3D Texture cache  : %7s kb\n"
+msgstr ""
+
+#: hardware/hw_main.c:4348
+#, c-format
+msgid "Plane polygon     : %7s kb\n"
+msgstr ""
+
+#: hardware/hw_md2.c:898
+msgid "Error while loading md2.dat\n"
+msgstr ""
+
+#: hardware/hw_md2.c:915
+#, c-format
+msgid "    Not found: %s\n"
+msgstr ""
+
+#: hardware/s_ds3d/s_ds3d.c:617 p_tick.c:168 sdl/i_sound.c:1347
+#: win32/win_snd.c:1073 win32/win_snd.c:1431
+msgid "Done\n"
+msgstr ""
+
+#: hardware/s_ds3d/s_ds3d.c:617 win32/win_snd.c:1073
+msgid "Failed\n"
+msgstr ""
+
+#: hu_stuff.c:375
+msgid "The chat is muted. You can't say anything at the moment.\n"
+msgstr ""
+
+#: hu_stuff.c:410
+msgid "say <message>: send a message\n"
+msgstr ""
+
+#: hu_stuff.c:427
+msgid "sayto <playername|playernum> <message>: send a message to a player\n"
+msgstr ""
+
+#: hu_stuff.c:434
+msgid "sayto: No player with that name!\n"
+msgstr ""
+
+#: hu_stuff.c:450
+msgid "sayteam <message>: send a message to your team\n"
+msgstr ""
+
+#: hu_stuff.c:456
+msgid "Dedicated servers can't send team messages. Use \"say\".\n"
+msgstr ""
+
+#: hu_stuff.c:470
+msgid "csay <message>: send a message to be shown in the middle of the screen\n"
+msgstr ""
+
+#: hu_stuff.c:476
+msgid "Only servers and admins can use csay.\n"
+msgstr ""
+
+#: hu_stuff.c:502
+#, c-format
+msgid "Illegal csay command received from non-admin %s\n"
+msgstr ""
+
+#: hu_stuff.c:502
+#, c-format
+msgid "Illegal say command received from %s while muted\n"
+msgstr ""
+
+#: hu_stuff.c:526
+#, c-format
+msgid "Illegal say command received from %s containing invalid characters\n"
+msgstr ""
+
+#: hu_stuff.c:723 m_menu.c:6989
+msgid "[Message unsent]\n"
+msgstr ""
+
+#: i_tcp.c:710
+msgid "failed to bind with IPv6 stack"
+msgstr ""
+
+#: i_tcp.c:717
+msgid "UDP_Socket error. Could not set socket to non blocking mode"
+msgstr ""
+
+#: i_tcp.c:724
+msgid "UDP_Socket error. Could not set socket to allow broadcast"
+msgstr ""
+
+#: i_tcp.c:729
+#, c-format
+msgid "Network system buffer: %dKb\n"
+msgstr ""
+
+#: i_tcp.c:738
+msgid "Can't set buffer length to 64k, file transfer will be bad\n"
+msgstr ""
+
+#: i_tcp.c:740
+#, c-format
+msgid "Network system buffer set to: %dKb\n"
+msgstr ""
+
+#: i_tcp.c:799
+#, c-format
+msgid "Network system receive buffer: %dKb\n"
+msgstr ""
+
+#: i_tcp.c:805 i_tcp.c:810
+#, c-format
+msgid "Network system receive buffer set to: %dKb\n"
+msgstr ""
+
+#: i_tcp.c:806
+msgid "Can't set receive buffer length to 64k, file transfer will be bad\n"
+msgstr ""
+
+#: i_tcp.c:991 sdl/i_cdmus.c:383 sdl/i_sound.c:1138 sdl/i_sound.c:1463
+#: sdl/i_video.c:2162
+msgid "shut down\n"
+msgstr ""
+
+#: i_tcp.c:1043
+#, c-format
+msgid "Resolving %s\n"
+msgstr ""
+
+#: i_tcp.c:1047
+#, c-format
+msgid "%s unknown\n"
+msgstr ""
+
+#: i_tcp.c:1054
+#, c-format
+msgid "Resolved %s\n"
+msgstr ""
+
+#: m_argv.c:161
+#, c-format
+msgid "Response file %s not found"
+msgstr ""
+
+#: m_argv.c:163
+#, c-format
+msgid "Found response file %s\n"
+msgstr ""
+
+#: m_argv.c:169
+msgid "No more free memory for the respone file"
+msgstr ""
+
+#: m_argv.c:171
+#, c-format
+msgid "Couldn't read response file because %s"
+msgstr ""
+
+#: m_argv.c:183
+msgid "Not enough memory to read response file"
+msgstr ""
+
+#: m_argv.c:214
+#, c-format
+msgid "%d command-line args:\n"
+msgstr ""
+
+#: m_cheat.c:272
+#, c-format
+msgid "No Clipping %s\n"
+msgstr ""
+
+#: m_cheat.c:272 m_cheat.c:292
+msgid "Off"
+msgstr ""
+
+#: m_cheat.c:272 m_cheat.c:292
+msgid "On"
+msgstr ""
+
+#: m_cheat.c:292
+#, c-format
+msgid "Sissy Mode %s\n"
+msgstr ""
+
+#: m_cheat.c:315 m_cheat.c:349 m_cheat.c:514 m_cheat.c:538 m_cheat.c:557
+#: m_cheat.c:576
+msgid "This only works in single player.\n"
+msgstr ""
+
+#: m_cheat.c:321
+msgid "scale <value> (5-400): set player scale size\n"
+msgstr ""
+
+#: m_cheat.c:330
+#, c-format
+msgid "Scale set to %d\n"
+msgstr ""
+
+#: m_cheat.c:381
+msgid "hurtme <damage>\n"
+msgstr ""
+
+#: m_cheat.c:404 m_cheat.c:419
+msgid "charability <1/2> <value>\n"
+msgstr ""
+
+#: m_cheat.c:438 m_cheat.c:461
+msgid "charspeed <normalspeed/runspeed/thrustfactor/accelstart/acceleration/actionspd> <value>\n"
+msgstr ""
+
+#: m_cheat.c:473
+msgid "Your reality is everyone's reality. Therefore, you should not use this command.\n"
+msgstr ""
+
+#: m_cheat.c:524
+#, c-format
+msgid "Temporary checkpoint created at %d, %d, %d\n"
+msgstr ""
+
+#: m_cheat.c:544
+msgid "You now have all 7 emeralds.\n"
+msgstr ""
+
+#: m_cheat.c:563
+msgid "Emeralds reset to zero.\n"
+msgstr ""
+
+#: m_cheat.c:582
+msgid "All secrets unlocked.\n"
+msgstr ""
+
+#: m_menu.c:4123 m_menu.c:4140 m_menu.c:4157 m_menu.c:4174 m_menu.c:4190
+#: m_menu.c:4669
+msgid ""
+"You are in a network game.\n"
+"End it?\n"
+"(Y/N).\n"
+msgstr ""
+
+#: m_menu.c:7116
+msgid ""
+"Only the server can do a load net game!\n"
+"\n"
+"press a key."
+msgstr ""
+
+#: m_menu.c:7169
+msgid ""
+"Are you sure you want to end the game?\n"
+"\n"
+"press Y or N."
+msgstr ""
+
+#: m_menu.c:7227
+#, c-format
+msgid ""
+"%s\n"
+"\n"
+"(Press 'Y' to quit)"
+msgstr ""
+
+#: m_menu.c:8195
+msgid ""
+"Eggman's tied explosives\n"
+"to your girlfriend, and\n"
+"will activate them if\n"
+"you press the 'Y' key!\n"
+"Press 'N' to save her!"
+msgstr ""
+
+#: m_menu.c:8196
+msgid ""
+"What would Tails say if\n"
+"he saw you quitting the game?"
+msgstr ""
+
+#: m_menu.c:8197
+msgid ""
+"Hey!\n"
+"Where do ya think you're goin'?"
+msgstr ""
+
+#: m_menu.c:8198
+msgid ""
+"Forget your studies!\n"
+"Play some more!"
+msgstr ""
+
+#: m_menu.c:8199
+msgid ""
+"You're trying to say you\n"
+"like Sonic 2K6 better than\n"
+"this, right?"
+msgstr ""
+
+#: m_menu.c:8200
+msgid ""
+"Don't leave yet -- there's a\n"
+"super emerald around that corner!"
+msgstr ""
+
+#: m_menu.c:8201
+msgid "You'd rather work than play?"
+msgstr ""
+
+#: m_menu.c:8202
+msgid ""
+"Go ahead and leave. See if I care...\n"
+"*sniffle*"
+msgstr ""
+
+#: m_menu.c:8204
+msgid ""
+"If you leave now,\n"
+"Eggman will take over the world!"
+msgstr ""
+
+#: m_menu.c:8205
+msgid ""
+"Don't quit!\n"
+"There are animals\n"
+"to save!"
+msgstr ""
+
+#: m_menu.c:8206
+msgid ""
+"Aw c'mon, just bop\n"
+"a few more robots!"
+msgstr ""
+
+#: m_menu.c:8207
+msgid "Did you get all those Chaos Emeralds?"
+msgstr ""
+
+#: m_menu.c:8208
+msgid ""
+"If you leave, I'll use\n"
+"my spin attack on you!"
+msgstr ""
+
+#: m_menu.c:8209
+msgid ""
+"Don't go!\n"
+"You might find the hidden\n"
+"levels!"
+msgstr ""
+
+#: m_menu.c:8210
+msgid ""
+"Hit the 'N' key, Sonic!\n"
+"The 'N' key!"
+msgstr ""
+
+#: m_menu.c:8212
+msgid ""
+"Are you really going to\n"
+"give up?\n"
+"We certainly would never give you up."
+msgstr ""
+
+#: m_menu.c:8213
+msgid "Come on, just ONE more netgame!"
+msgstr ""
+
+#: m_menu.c:8214
+msgid ""
+"Press 'N' to unlock\n"
+"the Ultimate Cheat!"
+msgstr ""
+
+#: m_menu.c:8215
+msgid ""
+"Why don't you go back and try\n"
+"jumping on that house to\n"
+"see what happens?"
+msgstr ""
+
+#: m_menu.c:8216
+msgid ""
+"Every time you press 'Y', an\n"
+"SRB2 Developer cries..."
+msgstr ""
+
+#: m_menu.c:8217
+msgid ""
+"You'll be back to play soon, though...\n"
+"......right?"
+msgstr ""
+
+#: m_menu.c:8218
+msgid ""
+"Aww, is Egg Rock Zone too\n"
+"difficult for you?"
+msgstr ""
+
+#: m_misc.c:398
+msgid "saveconfig <filename[.cfg]> [-silent] : save config to a file\n"
+msgstr ""
+
+#: m_misc.c:406
+#, c-format
+msgid "config saved as %s\n"
+msgstr ""
+
+#: m_misc.c:417
+msgid "loadconfig <filename[.cfg]> : load config from a file\n"
+msgstr ""
+
+#: m_misc.c:434
+msgid "changeconfig <filename[.cfg]> : save current config and load another\n"
+msgstr ""
+
+#: m_misc.c:454
+#, c-format
+msgid "config file: %s\n"
+msgstr ""
+
+#: m_misc.c:487 m_misc.c:505
+msgid "Config filename must be .cfg\n"
+msgstr ""
+
+#: m_misc.c:497 m_misc.c:512
+#, c-format
+msgid "Couldn't save game config file %s\n"
+msgstr ""
+
+#: m_misc.c:1048
+msgid "Recording into next new file\n"
+msgstr ""
+
+#: m_misc.c:1340
+#, c-format
+msgid "screen shot %s saved in %s\n"
+msgstr ""
+
+#: m_misc.c:1345
+#, c-format
+msgid "Couldn't create screen shot %s in %s\n"
+msgstr ""
+
+#: m_misc.c:1347
+#, c-format
+msgid "Couldn't create screen shot (all 10000 slots used!) in %s\n"
+msgstr ""
+
+#: mserv.c:337 mserv.c:364
+msgid "No servers currently running.\n"
+msgstr ""
+
+#: mserv.c:465 mserv.c:506 mserv.c:572 mserv.c:610 mserv.c:850 mserv.c:947
+msgid "cannot connect to the master server\n"
+msgstr ""
+
+#: mserv.c:466 mserv.c:507 mserv.c:573
+msgid ""
+"There was a problem connecting to\n"
+"the Master Server"
+msgstr ""
+
+#: mserv.c:532
+#, c-format
+msgid ""
+"You have been banned from\n"
+"hosting netgames.\n"
+"\n"
+"Under the following IP Range:\n"
+"%s - %s\n"
+"\n"
+"For the following reason:\n"
+"%s\n"
+"\n"
+"Your ban will expire on:\n"
+"%s"
+msgstr ""
+
+#: mserv.c:534
+#, c-format
+msgid ""
+"You have been banned from\n"
+"joining netgames.\n"
+"\n"
+"Under the following IP Range:\n"
+"%s - %s\n"
+"\n"
+"For the following reason:\n"
+"%s\n"
+"\n"
+"Your ban will expire on:\n"
+"%s"
+msgstr ""
+
+#: mserv.c:557
+msgid "Master Server Offline."
+msgstr ""
+
+#: mserv.c:558
+msgid "Offline"
+msgstr ""
+
+#: mserv.c:602
+msgid "Not yet registered to the master server.\n"
+msgstr ""
+
+#: mserv.c:606
+msgid "Retrieving server list...\n"
+msgstr ""
+
+#: mserv.c:615
+msgid "cannot get server list\n"
+msgstr ""
+
+#: mserv.c:637
+msgid "Connection to master server failed\n"
+msgstr ""
+
+#: mserv.c:668
+msgid "Timeout on masterserver\n"
+msgstr ""
+
+#: mserv.c:679
+#, c-format
+msgid "Masterserver error on select #%u: %s\n"
+msgstr ""
+
+#: mserv.c:691
+#, c-format
+msgid "Masterserver getsockopt error #%u: %s\n"
+msgstr ""
+
+#: mserv.c:703
+msgid "Dedicated internet servers must use the -room parameter!"
+msgstr ""
+
+#: mserv.c:734
+msgid "Master Server Updated Successfully!\n"
+msgstr ""
+
+#: mserv.c:843
+msgid "Registering this server to the master server...\n"
+msgstr ""
+
+#: mserv.c:943
+msgid "Unregistering this server to the master server...\n"
+msgstr ""
+
+#: mserv.c:952
+msgid "cannot remove this server from the master server\n"
+msgstr ""
+
+#: mserv.c:980
+msgid "You cannot register on the Master Server mid-game,  please end your current session and re-host ifyou wish to advertise your server on the Master Server.\n"
+msgstr ""
+
+#: p_enemy.c:2057
+msgid "Note: All monitors turned off.\n"
+msgstr ""
+
+#: p_enemy.c:2252 p_enemy.c:2291 p_enemy.c:2321 p_enemy.c:2352 p_enemy.c:2383
+#: p_enemy.c:2407 p_enemy.c:2437 p_enemy.c:2470 p_enemy.c:2509 p_enemy.c:2540
+#: p_enemy.c:2581 p_enemy.c:2614 p_enemy.c:4957
+msgid "ERROR: Powerup has no target!\n"
+msgstr ""
+
+#: p_enemy.c:2258
+#, c-format
+msgid "Power #%d out of range!\n"
+msgstr ""
+
+#: p_enemy.c:2297
+#, c-format
+msgid "Weapon #%d out of range!\n"
+msgstr ""
+
+#: p_inter.c:1540
+#, c-format
+msgid "%s returned the red flag to base.\n"
+msgstr ""
+
+#: p_inter.c:1555
+#, c-format
+msgid "%s picked up the red flag!\n"
+msgstr ""
+
+#: p_inter.c:1591
+#, c-format
+msgid "%s returned the blue flag to base.\n"
+msgstr ""
+
+#: p_inter.c:1606
+#, c-format
+msgid "%s picked up the blue flag!\n"
+msgstr ""
+
+#: p_inter.c:1665 p_inter.c:1826
+#, c-format
+msgid "%s%s%s died.\n"
+msgstr ""
+
+#: p_inter.c:1679
+#, c-format
+msgid "%s%s%s crushed %s%s%s with a heavy object!\n"
+msgstr ""
+
+#: p_inter.c:1692
+#, c-format
+msgid "%s%s%s suicided.\n"
+msgstr ""
+
+#: p_inter.c:1703
+#, c-format
+msgid "%s%s%s was fried by %s%s%s's fire trail.\n"
+msgstr ""
+
+#: p_inter.c:1707 p_inter.c:1903
+#, c-format
+msgid "%s%s%s was %s by %s%s%s's %sbounce ring.\n"
+msgstr ""
+
+#: p_inter.c:1710 p_inter.c:1906
+#, c-format
+msgid "%s%s%s was %s by %s%s%s's %sautomatic ring.\n"
+msgstr ""
+
+#: p_inter.c:1713 p_inter.c:1909
+#, c-format
+msgid "%s%s%s was %s by %s%s%s's %sscatter ring.\n"
+msgstr ""
+
+#: p_inter.c:1716 p_inter.c:1912
+#, c-format
+msgid "%s%s%s was %s by %s%s%s's %sexplosion ring.\n"
+msgstr ""
+
+#: p_inter.c:1719 p_inter.c:1915
+#, c-format
+msgid "%s%s%s was %s by %s%s%s's %sgrenade ring.\n"
+msgstr ""
+
+#: p_inter.c:1722 p_inter.c:1918
+#, c-format
+msgid "%s%s%s was %s by %s%s%s's %sturbo ring.\n"
+msgstr ""
+
+#: p_inter.c:1725 p_inter.c:1921
+#, c-format
+msgid "%s%s%s was %s by %s%s%s's %smine ring.\n"
+msgstr ""
+
+#: p_inter.c:1728 p_inter.c:1924
+#, c-format
+msgid "%s%s%s was %s by %s%s%s's %sBFR blast.\n"
+msgstr ""
+
+#: p_inter.c:1732 p_inter.c:1928
+#, c-format
+msgid "%s%s%s was %s by %s%s%s's %sBFR laser.\n"
+msgstr ""
+
+#: p_inter.c:1734 p_inter.c:1930
+#, c-format
+msgid "%s%s%s was %s by %s%s%s's %srail ring.\n"
+msgstr ""
+
+#: p_inter.c:1738 p_inter.c:1934
+#, c-format
+msgid "%s%s%s was %s by %s%s%s's %sring.\n"
+msgstr ""
+
+#: p_inter.c:1742 p_inter.c:1884
+#, c-format
+msgid "%s%s%s was %s by %s%s%s.\n"
+msgstr ""
+
+#: p_inter.c:1751 p_inter.c:1844
+msgid "killed"
+msgstr ""
+
+#: p_inter.c:1755 p_inter.c:1944
+msgid "reflected "
+msgstr ""
+
+#: p_inter.c:1774
+#, c-format
+msgid "%s%s%s drowned.\n"
+msgstr ""
+
+#: p_inter.c:1779
+#, c-format
+msgid "%s%s%s was impaled by spikes!\n"
+msgstr ""
+
+#: p_inter.c:1784
+#, c-format
+msgid "%s%s%s was crushed.\n"
+msgstr ""
+
+#: p_inter.c:1790
+#, c-format
+msgid "%s%s%s was %s by a blue crawla!\n"
+msgstr ""
+
+#: p_inter.c:1794
+#, c-format
+msgid "%s%s%s was %s by a red crawla!\n"
+msgstr ""
+
+#: p_inter.c:1798
+#, c-format
+msgid "%s%s%s was %s by a jetty-syn gunner!\n"
+msgstr ""
+
+#: p_inter.c:1802
+#, c-format
+msgid "%s%s%s was %s by a jetty-syn bomber!\n"
+msgstr ""
+
+#: p_inter.c:1806
+#, c-format
+msgid "%s%s%s was %s by a crawla commander!\n"
+msgstr ""
+
+#: p_inter.c:1810
+#, c-format
+msgid "%s%s%s was %s by the Egg Mobile!\n"
+msgstr ""
+
+#: p_inter.c:1814
+#, c-format
+msgid "%s%s%s was %s by the Egg Slimer!\n"
+msgstr ""
+
+#: p_inter.c:1828
+#, c-format
+msgid "%s%s%s fell in some nasty goop!\n"
+msgstr ""
+
+#: p_inter.c:1830
+#, c-format
+msgid "%s%s%s burned to death!\n"
+msgstr ""
+
+#: p_inter.c:1832
+#, c-format
+msgid "%s%s%s was electrocuted!\n"
+msgstr ""
+
+#: p_inter.c:1835
+#, c-format
+msgid "%s%s%s fell into a bottomless pit.\n"
+msgstr ""
+
+#: p_inter.c:1837
+#, c-format
+msgid "%s%s%s asphyxiated in space!\n"
+msgstr ""
+
+#: p_inter.c:1854
+#, c-format
+msgid "%s got a game over.\n"
+msgstr ""
+
+#: p_inter.c:1856
+#, c-format
+msgid "%s has %d lives remaining.\n"
+msgstr ""
+
+#: p_inter.c:1891
+#, c-format
+msgid "%s%s%s got nuked by %s%s%s!\n"
+msgstr ""
+
+#: p_inter.c:1899
+#, c-format
+msgid "%s%s%s was burnt by %s%s%s's fire trail.\n"
+msgstr ""
+
+#: p_inter.c:1943
+msgid "hit"
+msgstr ""
+
+#: p_inter.c:2031
+msgid "The IT player has left the game.\n"
+msgstr ""
+
+#: p_inter.c:2051 p_inter.c:2075
+msgid "All players have been tagged!\n"
+msgstr ""
+
+#: p_inter.c:2063
+msgid "There are no players able to become IT.\n"
+msgstr ""
+
+#: p_inter.c:2315 p_inter.c:2574
+#, c-format
+msgid "%s was found!\n"
+msgstr ""
+
+#: p_inter.c:3981
+#, c-format
+msgid "%s tossed the %s flag.\n"
+msgstr ""
+
+#: p_inter.c:3983
+#, c-format
+msgid "%s dropped the %s flag.\n"
+msgstr ""
+
+#: p_mobj.c:202 p_mobj.c:264
+msgid "Warning: State Cycle Detected\n"
+msgstr ""
+
+#: p_mobj.c:5757
+msgid "The red flag has returned to base.\n"
+msgstr ""
+
+#: p_mobj.c:5767
+msgid "The blue flag has returned to base.\n"
+msgstr ""
+
+#: p_setup.c:603 p_setup.c:605 p_setup.c:611
+msgid "You need to unlock this level first!\n"
+msgstr ""
+
+#: p_setup.c:609
+msgid "You need to unlock this level in single player first!\n"
+msgstr ""
+
+#: p_setup.c:876
+msgid "No more free memory for thing writing!\n"
+msgstr ""
+
+#: p_setup.c:901
+#, c-format
+msgid "newthings%d.lmp saved.\n"
+msgstr ""
+
+#: p_setup.c:2228
+msgid "No player currently available to become IT. Awaiting available players.\n"
+msgstr ""
+
+#: p_setup.c:2355
+#, c-format
+msgid "Loading SOC lump: %s\n"
+msgstr ""
+
+#: p_setup.c:2377
+#, c-format
+msgid "Couldn't load wad file %s\n"
+msgstr ""
+
+#: p_setup.c:2420
+#, c-format
+msgid "%s sounds replaced\n"
+msgstr ""
+
+#: p_setup.c:2422
+#, c-format
+msgid "%s musics replaced\n"
+msgstr ""
+
+#: p_setup.c:2481
+msgid "No maps added\n"
+msgstr ""
+
+#: p_setup.c:2489
+#, c-format
+msgid "Current map %d replaced by added file, ending the level to ensure consistiency.\n"
+msgstr ""
+
+#: p_spec.c:3162
+#, c-format
+msgid "%s\\captured the blue flag.\\\\\\\\"
+msgstr ""
+
+#: p_spec.c:3197 p_spec.c:3276
+msgid "the enemy has returned\\their flag.\\\\\\\\"
+msgstr ""
+
+#: p_spec.c:3200 p_spec.c:3279
+msgid "your flag was returned\\to base.\\\\\\\\"
+msgstr ""
+
+#: p_spec.c:3244
+#, c-format
+msgid "%s\\captured the red flag.\\\\\\\\"
+msgstr ""
+
+#: p_spec.c:3482
+#, c-format
+msgid "%s has finished the race.\n"
+msgstr ""
+
+#: p_spec.c:3484
+#, c-format
+msgid "%s started lap %d\n"
+msgstr ""
+
+#: p_spec.c:4166
+#, c-format
+msgid "%s recieved double points for surviving the round.\n"
+msgstr ""
+
+#: p_tick.c:57
+msgid ""
+"numthinkers <#>: Count number of thinkers\n"
+"\t1: P_MobjThinker\n"
+"\t2: P_RainThinker\n"
+"\t3: P_SnowThinker\n"
+"\t4: P_NullPrecipThinker\n"
+"\t5: T_Friction\n"
+"\t6: T_Pusher\n"
+"\t7: P_RemoveThinkerDelayed\n"
+msgstr ""
+
+#: p_tick.c:69
+msgid "Number of P_MobjThinker: "
+msgstr ""
+
+#: p_tick.c:73
+msgid "Number of P_RainThinker: "
+msgstr ""
+
+#: p_tick.c:77
+msgid "Number of P_SnowThinker: "
+msgstr ""
+
+#: p_tick.c:81
+msgid "Number of P_NullPrecipThinker: "
+msgstr ""
+
+#: p_tick.c:85
+msgid "Number of T_Friction: "
+msgstr ""
+
+#: p_tick.c:89
+msgid "Number of T_Pusher: "
+msgstr ""
+
+#: p_tick.c:93
+msgid "Number of P_RemoveThinkerDelayed: "
+msgstr ""
+
+#: p_tick.c:96
+msgid "That is not a valid number.\n"
+msgstr ""
+
+#: p_tick.c:131
+#, c-format
+msgid "Object number %d out of range (max %d).\n"
+msgstr ""
+
+#: p_tick.c:146
+#, c-format
+msgid "There are %d objects of type %d currently in the level.\n"
+msgstr ""
+
+#: p_tick.c:151
+msgid "Count of active objects in level:\n"
+msgstr ""
+
+#: p_user.c:358
+#, c-format
+msgid "%s got a chain of %u!\n"
+msgstr ""
+
+#: p_user.c:1345
+#, c-format
+msgid "%s has completed the level.\n"
+msgstr ""
+
+#: p_user.c:4865 p_user.c:5004
+msgid "Sorry, you're too high to place this object (max: 4095 above bottom floor).\n"
+msgstr ""
+
+#: p_user.c:4999
+msgid "Sorry, you're too high to place this object (max: 2047 above bottom floor).\n"
+msgstr ""
+
+#: p_user.c:5051
+#, c-format
+msgid "Spawned at %d\n"
+msgstr ""
+
+#: p_user.c:5121 p_user.c:5138
+#, c-format
+msgid "Current mapthing is %d\n"
+msgstr ""
+
+#: p_user.c:5215 p_user.c:5225
+#, c-format
+msgid "Sorry, you're too %s to place this object (max: %d %s).\n"
+msgstr ""
+
+#: p_user.c:5215 p_user.c:5225
+msgid "high"
+msgstr ""
+
+#: p_user.c:5215 p_user.c:5225
+msgid "low"
+msgstr ""
+
+#: p_user.c:5216 p_user.c:5226
+msgid "above bottom floor"
+msgstr ""
+
+#: p_user.c:5216 p_user.c:5226
+msgid "below top ceiling"
+msgstr ""
+
+#: p_user.c:5273
+#, c-format
+msgid "Placed object mapthingum %d, not the one below.\n"
+msgstr ""
+
+#: p_user.c:5283
+#, c-format
+msgid "Placed object type %d at %d, %d, %d, %d\n"
+msgstr ""
+
+#: p_user.c:5329
+msgid "Deleting...\n"
+msgstr ""
+
+#: p_user.c:5343
+msgid "Deleted.\n"
+msgstr ""
+
+#: p_user.c:5364
+msgid "You cannot delete this item because it doesn't have a mapthing!\n"
+msgstr ""
+
+#: p_user.c:5545
+msgid "You must wait until next round to enter the game.\n"
+msgstr ""
+
+#: p_user.c:5551 p_user.c:5611
+msgid "Server does not allow team change.\n"
+msgstr ""
+
+#: p_user.c:8721
+#, c-format
+msgid "%s caused a world of pain.\n"
+msgstr ""
+
+#: p_user.c:9737
+#, c-format
+msgid "%s ran out of time.\n"
+msgstr ""
+
+#: r_data.c:481
+#, c-format
+msgid "Number of Extra Colormaps: %s\n"
+msgstr ""
+
+#: r_main.c:136
+msgid "Splitscreen not supported in netplay, sorry!\n"
+msgstr ""
+
+#: r_things.c:410
+#, c-format
+msgid "sprite %s set in pwad %d\n"
+msgstr ""
+
+#: r_things.c:414
+#, c-format
+msgid "%s sprites added from file %s\n"
+msgstr ""
+
+#: r_things.c:460
+#, c-format
+msgid "%s sprites removed from file %s\n"
+msgstr ""
+
+#: r_things.c:2377
+#, c-format
+msgid "Skin %s not found\n"
+msgstr ""
+
+#: r_things.c:2471
+#, c-format
+msgid "Skin %d not found\n"
+msgstr ""
+
+#: r_things.c:2788
+#, c-format
+msgid "Added skin '%s'\n"
+msgstr ""
+
+#: r_things.c:2850
+#, c-format
+msgid "Removed skin '%s'\n"
+msgstr ""
+
+#: s_sound.c:349
+msgid "Loading sounds... "
+msgstr ""
+
+#: s_sound.c:355
+msgid " pre-cached all sound data\n"
+msgstr ""
+
+#: s_sound.c:1081
+#, c-format
+msgid "ERROR: Music lump %.6s not found!\n"
+msgstr ""
+
+#: screen.c:169
+#, c-format
+msgid ""
+"WARNING: Resolution is not aspect-correct!\n"
+"Use a multiple of %dx%d\n"
+msgstr ""
+
+#: screen.c:311
+#, c-format
+msgid "Using resolution: %d x %d\n"
+msgstr ""
+
+#: screen.c:317
+#, c-format
+msgid "Default resolution: %d x %d (%d bits)\n"
+msgstr ""
+
+#: sdl/i_cdmus.c:99 sdl/i_cdmus.c:224 sdl/i_cdmus.c:436 win32/win_cd.c:401
+msgid "No CD in drive\n"
+msgstr ""
+
+#: sdl/i_cdmus.c:105
+#, c-format
+msgid "CD Error: %s\n"
+msgstr ""
+
+#: sdl/i_cdmus.c:132
+msgid "CD eject failed\n"
+msgstr ""
+
+#: sdl/i_cdmus.c:153 win32/win_cd.c:199
+msgid ""
+"cd [on] [off] [remap] [reset] [select]\n"
+"   [open] [info] [play <track>] [resume]\n"
+"   [stop] [pause] [loop <track>]\n"
+msgstr ""
+
+#: sdl/i_cdmus.c:186
+#, c-format
+msgid "Opened CD-ROM drive %s\n"
+msgstr ""
+
+#: sdl/i_cdmus.c:188 sdl/i_cdmus.c:422 sdl/i_cdmus.c:424
+#, c-format
+msgid "Couldn't open CD-ROM drive %s: %s\n"
+msgstr ""
+
+#: sdl/i_cdmus.c:238
+#, c-format
+msgid "%u tracks\n"
+msgstr ""
+
+#: sdl/i_cdmus.c:240 win32/win_cd.c:297
+#, c-format
+msgid "Currently %s track %u\n"
+msgstr ""
+
+#: sdl/i_cdmus.c:240 sdl/i_cdmus.c:242 win32/win_cd.c:297
+msgid "looping"
+msgstr ""
+
+#: sdl/i_cdmus.c:240 sdl/i_cdmus.c:242 win32/win_cd.c:297
+msgid "playing"
+msgstr ""
+
+#: sdl/i_cdmus.c:242
+#, c-format
+msgid "Paused %s track %u\n"
+msgstr ""
+
+#: sdl/i_cdmus.c:243
+#, c-format
+msgid "Volume is %d\n"
+msgstr ""
+
+#: sdl/i_cdmus.c:276 win32/win_cd.c:326
+#, c-format
+msgid "Invalid CD command \"CD %s\"\n"
+msgstr ""
+
+#: sdl/i_cdmus.c:406
+msgid "I_InitCD: Init CD audio\n"
+msgstr ""
+
+#: sdl/i_cdmus.c:411
+#, c-format
+msgid "Couldn't initialize SDL CDROM: %s\n"
+msgstr ""
+
+#: sdl/i_cdmus.c:442 win32/win_cd.c:389
+msgid "CD audio Initialized\n"
+msgstr ""
+
+#: sdl/i_cdmus.c:520
+#, c-format
+msgid "Bad track number %u.\n"
+msgstr ""
+
+#: sdl/i_cdmus.c:527
+#, c-format
+msgid "Track %u is not audio\n"
+msgstr ""
+
+#: sdl/i_cdmus.c:540
+#, c-format
+msgid "Error playing track %d: %s\n"
+msgstr ""
+
+#: sdl/i_main.c:183 win32/win_main.c:598
+msgid "Setting up SRB2...\n"
+msgstr ""
+
+#: sdl/i_main.c:185 win32/win_main.c:600
+msgid "Entering main game loop...\n"
+msgstr ""
+
+#: sdl/i_sound.c:1184 win32/win_snd.c:925
+#, c-format
+msgid " requested frequency of %d hz\n"
+msgstr ""
+
+#: sdl/i_sound.c:1264
+msgid " Using 3D sound driver\n"
+msgstr ""
+
+#: sdl/i_sound.c:1267 sdl/i_sound.c:1272
+msgid " Failed loading 3D sound driver\n"
+msgstr ""
+
+#: sdl/i_sound.c:1278 sdl/i_sound.c:1645
+msgid " couldn't open audio with desired format\n"
+msgstr ""
+
+#: sdl/i_sound.c:1285
+#, c-format
+msgid " Starting up with audio driver : %s\n"
+msgstr ""
+
+#: sdl/i_sound.c:1289
+#, c-format
+msgid " configured audio device with %d samples/slice at %ikhz(%dms buffer)\n"
+msgstr ""
+
+#: sdl/i_sound.c:1291
+msgid " Sound module ready\n"
+msgstr ""
+
+#: sdl/i_sound.c:1377
+#, c-format
+msgid "Couldn't load music lump: %s\n"
+msgstr ""
+
+#: sdl/i_sound.c:1387
+#, c-format
+msgid "Couldn't load music data: %s\n"
+msgstr ""
+
+#: sdl/i_sound.c:1421
+#, c-format
+msgid "Couldn't open file %s to write music in\n"
+msgstr ""
+
+#: sdl/i_sound.c:1428
+#, c-format
+msgid "Couldn't write music into file %s because %s\n"
+msgstr ""
+
+#: sdl/i_sound.c:1441
+#, c-format
+msgid "Couldn't load music file %s: %s\n"
+msgstr ""
+
+#: sdl/i_sound.c:1455
+msgid "I_ShutdownMusic: "
+msgstr ""
+
+#: sdl/i_sound.c:1494
+msgid " disabled loading FMOD\n"
+msgstr ""
+
+#: sdl/i_sound.c:1513
+msgid " failed to load FMOD\n"
+msgstr ""
+
+#: sdl/i_sound.c:1522 win32/win_snd.c:1237
+#, c-format
+msgid ""
+"Wrong FMOD DLL version.\n"
+"You should be using FMOD %s\n"
+msgstr ""
+
+#: sdl/i_sound.c:1611
+msgid "I_InitMusic:"
+msgstr ""
+
+#: sdl/i_sound.c:1617
+msgid " Unable to load FLAC support\n"
+msgstr ""
+
+#: sdl/i_sound.c:1621
+msgid " Unable to load MOD support\n"
+msgstr ""
+
+#: sdl/i_sound.c:1625
+msgid " Unable to load MP3 support\n"
+msgstr ""
+
+#: sdl/i_sound.c:1629
+msgid " Unable to load OGG support\n"
+msgstr ""
+
+#: sdl/i_sound.c:1635
+#, c-format
+msgid " Unable to open music: %s\n"
+msgstr ""
+
+#: sdl/i_sound.c:1651
+#, c-format
+msgid " Starting with audio driver : %s\n"
+msgstr ""
+
+#: sdl/i_sound.c:1657
+#, c-format
+msgid " Starting up with audio driver : %s with SDL_Mixer\n"
+msgstr ""
+
+#: sdl/i_sound.c:1671
+msgid "Music initialized\n"
+msgstr ""
+
+#: sdl/i_sound.c:1690
+#, c-format
+msgid "Couldn't play song because %s\n"
+msgstr ""
+
+#: sdl/i_sound.c:1816
+#, c-format
+msgid "Couldn't load MIDI: %s\n"
+msgstr ""
+
+#: sdl/i_system.c:1120 sdl/i_system.c:1414
+#, c-format
+msgid "Couldn't initialize joystick: %s\n"
+msgstr ""
+
+#: sdl/i_system.c:1130 sdl/i_system.c:1422
+#, c-format
+msgid "Cannot use joystick #%d/(%s), it doesn't exist\n"
+msgstr ""
+
+#: sdl/i_system.c:1151 sdl/i_system.c:1443
+#, c-format
+msgid "Found %d joysticks on this system\n"
+msgstr ""
+
+#: sdl/i_system.c:1156 sdl/i_system.c:1448
+msgid "Found no joysticks on this system\n"
+msgstr ""
+
+#: sdl/i_system.c:1161
+#, c-format
+msgid "Joystick: %s\n"
+msgstr ""
+
+#: sdl/i_system.c:1165
+#, c-format
+msgid "Couldn't open joystick: %s\n"
+msgstr ""
+
+#: sdl/i_system.c:1453
+#, c-format
+msgid "Joystick2: %s\n"
+msgstr ""
+
+#: sdl/i_system.c:1457
+#, c-format
+msgid "Couldn't open joystick2: %s\n"
+msgstr ""
+
+#: sdl/i_system.c:1782 win32/win_sys.c:977
+msgid "Read Error on secondary mouse port\n"
+msgstr ""
+
+#: sdl/i_system.c:1878 win32/win_sys.c:1038
+#, c-format
+msgid "Error opening %s!\n"
+msgstr ""
+
+#: sdl/i_system.c:1946
+#, c-format
+msgid "Can't open %s: Access denied\n"
+msgstr ""
+
+#: sdl/i_system.c:1948 win32/win_sys.c:1040
+#, c-format
+msgid "Can't open %s: error %d\n"
+msgstr ""
+
+#: sdl/i_system.c:2124 win32/win_sys.c:460
+msgid "Using GetTickCount()\n"
+msgstr ""
+
+#: sdl/i_video.c:553 win32/win_vid.c:1084
+#, c-format
+msgid "%d video mode(s) available(s)\n"
+msgstr ""
+
+#: sdl/i_video.c:565
+msgid "Unknown Surface"
+msgstr ""
+
+#: sdl/i_video.c:570
+#, c-format
+msgid " %ix%i at %i bit color\n"
+msgstr ""
+
+#: sdl/i_video.c:573
+msgid " Stored in video memory\n"
+msgstr ""
+
+#: sdl/i_video.c:575
+msgid " Stored in an OpenGL context\n"
+msgstr ""
+
+#: sdl/i_video.c:577
+msgid " Uses preallocated memory\n"
+msgstr ""
+
+#: sdl/i_video.c:579
+msgid " Stored in system memory\n"
+msgstr ""
+
+#: sdl/i_video.c:582
+msgid " Uses asynchronous blits if possible\n"
+msgstr ""
+
+#: sdl/i_video.c:584
+msgid " Uses synchronous blits if possible\n"
+msgstr ""
+
+#: sdl/i_video.c:587
+msgid " Allows any pixel-format\n"
+msgstr ""
+
+#: sdl/i_video.c:590
+msgid " Has exclusive palette access\n"
+msgstr ""
+
+#: sdl/i_video.c:592
+msgid " Has nonexclusive palette access\n"
+msgstr ""
+
+#: sdl/i_video.c:595
+msgid " Double buffered\n"
+msgstr ""
+
+#: sdl/i_video.c:597
+msgid " No hardware flipping\n"
+msgstr ""
+
+#: sdl/i_video.c:600
+msgid " Full screen\n"
+msgstr ""
+
+#: sdl/i_video.c:602
+msgid " Resizable window\n"
+msgstr ""
+
+#: sdl/i_video.c:604
+msgid " Nonresizable window\n"
+msgstr ""
+
+#: sdl/i_video.c:607
+msgid " Uses hardware acceleration blit\n"
+msgstr ""
+
+#: sdl/i_video.c:609
+msgid " Use colorkey blitting\n"
+msgstr ""
+
+#: sdl/i_video.c:611
+msgid " Colorkey RLE acceleration blit\n"
+msgstr ""
+
+#: sdl/i_video.c:613
+msgid " Use alpha blending acceleration blit\n"
+msgstr ""
+
+#: sdl/i_video.c:623
+msgid "Video Interface Capabilities:\n"
+msgstr ""
+
+#: sdl/i_video.c:625
+msgid " Hardware surfaces\n"
+msgstr ""
+
+#: sdl/i_video.c:627
+msgid " Window manager\n"
+msgstr ""
+
+#: sdl/i_video.c:631
+msgid " Accelerated blits HW-2-HW\n"
+msgstr ""
+
+#: sdl/i_video.c:633
+msgid " Accelerated blits HW-2-HW with Colorkey\n"
+msgstr ""
+
+#: sdl/i_video.c:635
+msgid " Accelerated blits HW-2-HW with Alpha\n"
+msgstr ""
+
+#: sdl/i_video.c:638
+msgid " Accelerated blits SW-2-HW\n"
+msgstr ""
+
+#: sdl/i_video.c:642
+msgid " Accelerated blits SW-2-HW with Colorkey\n"
+msgstr ""
+
+#: sdl/i_video.c:644
+msgid " Accelerated blits SW-2-HW with Alpha\n"
+msgstr ""
+
+#: sdl/i_video.c:646
+msgid " Accelerated Color filling\n"
+msgstr ""
+
+#: sdl/i_video.c:649
+#, c-format
+msgid " There is %i KB of video memory\n"
+msgstr ""
+
+#: sdl/i_video.c:651
+msgid " There no video memory for SDL\n"
+msgstr ""
+
+#: sdl/i_video.c:654
+msgid "Current Engine Mode"
+msgstr ""
+
+#: sdl/i_video.c:656
+msgid "Prebuffer Mode"
+msgstr ""
+
+#: sdl/i_video.c:657
+msgid "Postbuffer Mode"
+msgstr ""
+
+#: sdl/i_video.c:659
+msgid "Current Video Mode"
+msgstr ""
+
+#: sdl/i_video.c:675 win32/win_vid.c:1149
+msgid "No video modes present\n"
+msgstr ""
+
+#: sdl/i_video.c:686
+#, c-format
+msgid "Found %d FullScreen Video Modes:\n"
+msgstr ""
+
+#: sdl/i_video.c:693
+#, c-format
+msgid "%dx%d and "
+msgstr ""
+
+#: sdl/i_video.c:697
+msgid "None\n"
+msgstr ""
+
+#: sdl/i_video.c:707 win32/win_vid.c:1142
+#, c-format
+msgid "vid_mode <modenum> : set video mode, current video mode %i\n"
+msgstr ""
+
+#: sdl/i_video.c:714 win32/win_vid.c:1101
+msgid "No such video mode\n"
+msgstr ""
+
+#: sdl/i_video.c:1969
+#, c-format
+msgid "Couldn't initialize SDL's Audio System with Video System: %s\n"
+msgstr ""
+
+#: sdl/i_video.c:1973
+#, c-format
+msgid "Couldn't initialize SDL's Video System: %s\n"
+msgstr ""
+
+#: sdl/i_video.c:1985
+#, c-format
+msgid "Starting up with video driver : %s\n"
+msgstr ""
+
+#: sdl/i_video.c:2054
+msgid ""
+"The version of the renderer doesn't match the version of the executable\n"
+"Be sure you have installed SRB2 properly.\n"
+msgstr ""
+
+#: sdl/i_video.c:2097
+#, c-format
+msgid "Could not set vidmode: %s\n"
+msgstr ""
+
+#: sdl/i_video.c:2106
+msgid "Not enough memory for video buffer\n"
+msgstr ""
+
+#: sounds.c:1473
+msgid "No more free sound slots\n"
+msgstr ""
+
+#: st_stuff.c:1558
+msgid "WAITING FOR PLAYERS TO HIDE..."
+msgstr ""
+
+#: st_stuff.c:1564
+msgid "HIDE BEFORE TIME RUNS OUT!"
+msgstr ""
+
+#: st_stuff.c:1566
+msgid "FLEE BEFORE YOU ARE HUNTED!"
+msgstr ""
+
+#: st_stuff.c:1569
+msgid "HIDE TIME REMAINING:"
+msgstr ""
+
+#: st_stuff.c:1578
+msgid "YOU'RE IT!"
+msgstr ""
+
+#: st_stuff.c:1582
+msgid "TIME REMAINING:"
+msgstr ""
+
+#: st_stuff.c:1584
+msgid "NO TIME LIMIT"
+msgstr ""
+
+#: st_stuff.c:1727 st_stuff.c:1729 st_stuff.c:1773 st_stuff.c:1775
+msgid "RED TEAM"
+msgstr ""
+
+#: st_stuff.c:1734 st_stuff.c:1736 st_stuff.c:1779 st_stuff.c:1781
+msgid "BLUE TEAM"
+msgstr ""
+
+#: st_stuff.c:1741 st_stuff.c:1743 st_stuff.c:1785 st_stuff.c:1787
+msgid "SPECTATOR"
+msgstr ""
+
+#: st_stuff.c:1821
+msgid "TIME LEFT"
+msgstr ""
+
+#: st_stuff.c:1855
+msgid "CONTINUE?"
+msgstr ""
+
+#: st_stuff.c:2196 st_stuff.c:2198
+msgid "OVERTIME!"
+msgstr ""
+
+#: st_stuff.c:2251
+msgid "Viewpoint:"
+msgstr ""
+
+#: st_stuff.c:2269
+msgid "I, Pope Rededict XVI proclaim"
+msgstr ""
+
+#: st_stuff.c:2270
+msgid "AJ & Amy"
+msgstr ""
+
+#: st_stuff.c:2271
+msgid "Husband & Wife"
+msgstr ""
+
+#: st_stuff.c:2272
+msgid "on this day"
+msgstr ""
+
+#: st_stuff.c:2273
+msgid "May 16, 2009"
+msgstr ""
+
+#: st_stuff.c:2279
+msgid "Oh... it's you again..."
+msgstr ""
+
+#: st_stuff.c:2280
+msgid "Look, I wanted to apologize for the way"
+msgstr ""
+
+#: st_stuff.c:2281
+msgid "I've acted in the past."
+msgstr ""
+
+#: st_stuff.c:2282
+msgid "I've seen the error of my ways"
+msgstr ""
+
+#: st_stuff.c:2283
+msgid "and turned over a new leaf."
+msgstr ""
+
+#: st_stuff.c:2284
+msgid "Instead of sending people to hell,"
+msgstr ""
+
+#: st_stuff.c:2285
+msgid "I now send them to heaven!"
+msgstr ""
+
+#: st_stuff.c:2317
+msgid "Thank you!"
+msgstr ""
+
+#: st_stuff.c:2318
+msgid "But our earless leader is in"
+msgstr ""
+
+#: st_stuff.c:2319
+msgid "another castle!"
+msgstr ""
+
+#: st_stuff.c:2328 st_stuff.c:2334 st_stuff.c:2356
+msgid "Press F12 to watch another player."
+msgstr ""
+
+#: st_stuff.c:2333
+msgid "You cannot move while hiding."
+msgstr ""
+
+#: st_stuff.c:2344
+#, c-format
+msgid "Respawn in: %d seconds."
+msgstr ""
+
+#: st_stuff.c:2346
+msgid "Press Jump to respawn."
+msgstr ""
+
+#: st_stuff.c:2351
+msgid "You are a spectator."
+msgstr ""
+
+#: st_stuff.c:2353
+msgid "Press Fire to be assigned to a team."
+msgstr ""
+
+#: st_stuff.c:2355
+msgid "Press Fire to enter the game."
+msgstr ""
+
+#: st_stuff.c:2357
+msgid "Press Jump to float and Spin to sink."
+msgstr ""
+
+#: w_wad.c:138
+#, c-format
+msgid "Loading main config from %s\n"
+msgstr ""
+
+#: w_wad.c:148
+#, c-format
+msgid "Loading object config from %s\n"
+msgstr ""
+
+#: w_wad.c:219 w_wad.c:264
+msgid "Maximum wad files reached\n"
+msgstr ""
+
+#: w_wad.c:240
+#, c-format
+msgid "Can't open %s\n"
+msgstr ""
+
+#: w_wad.c:295
+#, c-format
+msgid "Can't read wad header from %s because %s\n"
+msgstr ""
+
+#: w_wad.c:305
+#, c-format
+msgid "%s doesn't have IWAD or PWAD id\n"
+msgstr ""
+
+#: w_wad.c:318
+#, c-format
+msgid "%s wadfile directory is corrupt; maybe %s\n"
+msgstr ""
+
+#: w_wad.c:398
+#, c-format
+msgid "Added file %s (%u lumps)\n"
+msgstr ""
+
+#: w_wad.c:414
+#, c-format
+msgid "You can't remove the IWAD %s!\n"
+msgstr ""
+
+#: w_wad.c:418
+#, c-format
+msgid "Removing WAD %s...\n"
+msgstr ""
+
+#: w_wad.c:438
+msgid " done unloading WAD\n"
+msgstr ""
+
+#: w_wad.c:953
+#, c-format
+msgid "File is corrupt or has been modified: %s (found md5: %s, wanted: %s)\n"
+msgstr ""
+
+#: win32/win_cd.c:229
+msgid "CD tracks remapped in that order :\n"
+msgstr ""
+
+#: win32/win_cd.c:256
+msgid "CD is not ready.\n"
+msgstr ""
+
+#: win32/win_cd.c:281
+msgid "No audio tracks\n"
+msgstr ""
+
+#: win32/win_cd.c:290
+msgid "audio"
+msgstr ""
+
+#: win32/win_cd.c:290
+msgid "data "
+msgstr ""
+
+#: win32/win_cd.c:293
+#, c-format
+msgid "Total time : %s\n"
+msgstr ""
+
+#: win32/win_main.c:335
+msgid "Hello, it's me, SRB2's Console Window\n"
+msgstr ""
+
+#: win32/win_main.c:339
+msgid "We have a console already.\n"
+msgstr ""
+
+#: win32/win_snd.c:987
+#, c-format
+msgid "Using external sound driver %s\n"
+msgstr ""
+
+#: win32/win_snd.c:992
+#, c-format
+msgid "Not using external sound driver %s\n"
+msgstr ""
+
+#: win32/win_snd.c:1003
+msgid " DirectSound DLL not loaded\n"
+msgstr ""
+
+#: win32/win_snd.c:1011
+msgid ""
+" DirectSoundCreate FAILED\n"
+" there is no sound device or the sound device is under\n"
+" the control of another application\n"
+msgstr ""
+
+#: win32/win_snd.c:1023
+msgid " SetCooperativeLevel FAILED\n"
+msgstr ""
+
+#: win32/win_snd.c:1049
+#, c-format
+msgid "CreateSoundBuffer FAILED: %s (ErrNo %ld)\n"
+msgstr ""
+
+#: win32/win_snd.c:1064
+msgid "Couldn't set primary buffer format.\n"
+msgstr ""
+
+#: win32/win_snd.c:1071
+msgid " Compacting onboard sound-memory..."
+msgstr ""
+
+#: win32/win_snd.c:1083
+msgid " Primary buffer continuous play FAILED\n"
+msgstr ""
+
+#: win32/win_snd.c:1120
+msgid "sound initialized.\n"
+msgstr ""
+
+#: win32/win_snd.c:1193
+#, c-format
+msgid "%d mixer devices available\n"
+msgstr ""
+
+#: win32/win_snd.c:1227
+msgid ""
+" failed to load FMOD\n"
+" no DigiMusic support\n"
+msgstr ""
+
+#: win32/win_snd.c:1289
+msgid "No MIDI devices available, music is disabled\n"
+msgstr ""
+
+#: win32/win_snd.c:1353
+msgid "No MIDI music\n"
+msgstr ""
+
+#: win32/win_snd.c:1365
+msgid "midiStreamOpen FAILED\n"
+msgstr ""
+
+#: win32/win_snd.c:1544
+msgid "Couldn't set volume\n"
+msgstr ""
+
+#: win32/win_snd.c:2116
+msgid "Music lump is not MID music format\n"
+msgstr ""
+
+#: win32/win_snd.c:2128
+msgid "I_RegisterSong: StreamBufferSetup FAILED"
+msgstr ""
+
+#: win32/win_sys.c:892
+msgid "Could not create IDirectInput device 2"
+msgstr ""
+
+#: win32/win_sys.c:1185
+msgid "\tMouse will not use DirectInput.\n"
+msgstr ""
+
+#: win32/win_sys.c:1722 win32/win_sys.c:2081
+#, c-format
+msgid "Capabilities: %lu axes, %lu buttons, %lu POVs, poll %u, Gamepad %d\n"
+msgstr ""
+
+#: win32/win_sys.c:1954
+msgid "Joystick disabled\n"
+msgstr ""
+
+#: win32/win_sys.c:1968 win32/win_sys.c:2330
+msgid "Looking for joystick devices:\n"
+msgstr ""
+
+#: win32/win_sys.c:1975 win32/win_sys.c:2338
+msgid "Joystick initialize failed.\n"
+msgstr ""
+
+#: win32/win_sys.c:1983 win32/win_sys.c:2346
+msgid "none found\n"
+msgstr ""
+
+#: win32/win_sys.c:1986 win32/win_sys.c:2349
+msgid "none used\n"
+msgstr ""
+
+#: win32/win_sys.c:1989
+msgid "Set the use_joystick variable to one of the enumerated joystick numbers\n"
+msgstr ""
+
+#: win32/win_sys.c:2002
+msgid "I_InitJoystick: SetCooperativeLevel FAILED"
+msgstr ""
+
+#: win32/win_sys.c:2006 win32/win_sys.c:2373
+msgid "Joystick already initialized\n"
+msgstr ""
+
+#: win32/win_sys.c:2316
+msgid "Joystick2 disabled\n"
+msgstr ""
+
+#: win32/win_sys.c:2353
+msgid "Set the use_joystick2 variable to one of the enumerated joysticks number\n"
+msgstr ""
+
+#: win32/win_sys.c:2364
+msgid "I_InitJoystick2: SetCooperativeLevel FAILED"
+msgstr ""
+
+#: win32/win_sys.c:3466
+#, c-format
+msgid "Couldn't create DirectInput (reason: %s)"
+msgstr ""
+
+#: win32/win_sys.c:3469
+msgid "Using DirectX3 interface\n"
+msgstr ""
+
+#: win32/win_vid.c:621
+msgid "mode skipped (too many)\n"
+msgstr ""
+
+#: win32/win_vid.c:769
+msgid "WARNING: This r_opengl version is not supported, use it at your own risk.\n"
+msgstr ""
+
+#: win32/win_vid.c:981
+#, c-format
+msgid "Mode changed to %d (%s)\n"
+msgstr ""
+
+#: win32/win_vid.c:1108
+#, c-format
+msgid ""
+"width: %d\n"
+"height: %d\n"
+msgstr ""
+
+#: win32/win_vid.c:1110
+#, c-format
+msgid ""
+"bytes per scanline: %d\n"
+"bytes per pixel: %d\n"
+"numpages: %d\n"
+msgstr ""
+
+#: y_inter.c:254
+msgid "GOT TIME BONUS EMBLEM!"
+msgstr ""
+
+#: y_inter.c:256
+msgid "GOT PERFECT BONUS EMBLEM!"
+msgstr ""
+
+#: y_inter.c:567
+msgid "Teams will be scrambled next round!"
+msgstr ""
+
+#: z_zone.c:113
+#, c-format
+msgid "system memory %uMB free %uMB\n"
+msgstr ""
+
+#: z_zone.c:446
+msgid "Memory Info\n"
+msgstr ""
+
+#: z_zone.c:447
+#, c-format
+msgid "Total heap used   : %7s KB\n"
+msgstr ""
+
+#: z_zone.c:448
+#, c-format
+msgid "Static            : %7s KB\n"
+msgstr ""
+
+#: z_zone.c:449
+#, c-format
+msgid "Static (sound)    : %7s KB\n"
+msgstr ""
+
+#: z_zone.c:450
+#, c-format
+msgid "Static (music)    : %7s KB\n"
+msgstr ""
+
+#: z_zone.c:451
+#, c-format
+msgid "Level             : %7s KB\n"
+msgstr ""
+
+#: z_zone.c:452
+#, c-format
+msgid "Special thinker   : %7s KB\n"
+msgstr ""
+
+#: z_zone.c:453
+#, c-format
+msgid "All purgable      : %7s KB\n"
+msgstr ""
+
+#: z_zone.c:458
+#, c-format
+msgid "Patch info headers: %7s KB\n"
+msgstr ""
+
+#: z_zone.c:459
+#, c-format
+msgid "Mipmap patches    : %7s KB\n"
+msgstr ""
+
+#: z_zone.c:460
+#, c-format
+msgid "HW Texture cache  : %7s KB\n"
+msgstr ""
+
+#: z_zone.c:461
+#, c-format
+msgid "Plane polygons    : %7s KB\n"
+msgstr ""
+
+#: z_zone.c:462
+#, c-format
+msgid "HW Texture used   : %7d KB\n"
+msgstr ""
+
+#: z_zone.c:466
+msgid "System Memory Info\n"
+msgstr ""
+
+#: z_zone.c:468
+#, c-format
+msgid "    Total physical memory: %7u KB\n"
+msgstr ""
+
+#: z_zone.c:469
+#, c-format
+msgid "Available physical memory: %7u KB\n"
+msgstr ""

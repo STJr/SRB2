@@ -1,0 +1,78 @@
+Removed:
+	- Buttons 1-20					690-709
+	- Button 21 (THZ2 A/740 B/741 D/742 E/745	710
+	- Close Door Blazing (Tag 743)			711
+	- Raise Ceiling to Highest (Tag 744)		981
+	- THZ2 Slime Raise (B/712 W713 P714 D715 S716)	986
+
+Stuff to Remove/Change:
+	- Light Blinks On Every 0.5 Seconds		2 Add Linedef Combine
+	- Light Blinks On Every 1 Second		3 Add Linedef Combine
+	- Light Pulses Smoothly			8 Remove
+	- Light Blinks On Every 0.5 Seconds (Sync)	12 Add Linedef Combine
+	- Lights Blinks On Every 1 Second (Sync)	13 Add Linedef Combine
+	- Light Flickers Like Fire			17 Remove
+	? - Damage (Fire) and Current			519 Remove (convert to combination)
+	? - Damage (Water) and Current			984 Remove (convert to combination)
+
+Section 1:
+	1 - Damage (Generic)				11
+	2 - Damage (Water)				983
+	3 - Damage (Fire)				7
+	4 - Damage (Electrical)				18
+	5 - Spikes					4
+	6 - Death Pit (Camera Mod)			16
+	7 - Death Pit (No Camera Mod)			5
+	8 - Instant Kill				10
+	9 - Ring Drainer (Floor Touch)			978
+	10 - Ring Drainer (No Floor Touch)		980
+	11 - Special Stage Damage			9
+	12 - Space Countdown				6
+	13 - Ramp Sector (Increase step-up)		992
+	14 - Non-Ramp Sector (Don't step-down)		996
+	15 - Bouncy Sector (FOF Control Only)		14
+
+Section 2:		<< 4
+	1 - Trigger Linedef Exec (Pushable Objects)	971
+	2 - Trigger LD Exec (Anywhere in Sec/All Pls)	972
+	3 - Trigger Linedef Exec (Floor Touch/All Pls)	973
+	4 - Trigger Linedef Exec (Anywhere in Sec)	974
+	5 - Trigger Linedef Exec (Floor Touch)		975
+	6 - Trigger Linedef Exec (Emerald Check)	967
+	7 - Trigger Linedef Exec (NiGHTS Mare)		968
+	8 - Check for linedef executor on FOFs (ANY)	970
+	9 - Egg Trap Capsule				666
+	10 - Special Stage Time/Rings, Par		990
+	11 - Custom Global Gravity			991
+
+Section 3:		<< 8
+	1 - Ice/Sludge (required?!)			256
+	2 - Wind/Current (required?!)			512
+	3 - Ice/Sludge and Wind/Current			768
+	4 - Conveyor Belt				985
+	5 - Speed Pad (No Spin)				976
+	6 - Speed Pad (Spin)				977
+	7 - Bustable Block Sprite Parameter		1500-1515
+	8 - "
+	9 - "
+	10 - "
+	11 - "
+	12 - "
+	13 - "
+	14 - "
+	15 - "
+
+Section 4:		<< 12
+	1 - Starpost Activator				993
+	2 - Special Stage Goal	Combine			33
+	2 - Exit Sector		Combine			982
+	2 - No Tag Zone		Combine			987
+	2 - CTF: Flag Return	Combine			995
+	3 - CTF: Red Team Base				988
+	4 - CTF: Blue Team Base				989
+	5 - Fan Sector					997
+	6 - Super Sonic Transform			969
+	7 - Spinner					979
+	8 - Zoom Tube Start				998
+	9 - Zoom Tube End				999
+	10 - Finish Line				994

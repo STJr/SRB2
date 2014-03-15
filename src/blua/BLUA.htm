@@ -1,0 +1,35 @@
+<html>
+<head>
+<title>BLUA: bastardized lua</title>
+</head>
+<body>
+<h1>BLUA: bastardized lua #5</h1>
+<hr>
+<p>
+Welcome to my personal lua bastardization - an effort to make lua syntax as bloated and useless like perl's or pythons. There are currently 13
+patches, available either as separate or one big un-#ifdefable patch, depending on your needs.
+<hr>
+<b>NEW: </b>Lua 5.1.4 port over <a href="blua-5.1.4.diff">here</a><br>
+All of the following patches merged (without #ifdefs): <a href="sep/merged.diff">merged.diff</a><br>
+All of the following patches merged (with #ifdefs <a href="http://freshmeat.net/projects/unifdef/">unifdef</a> friendly): <a href="sep/blua5.diff">blua5.diff</a><br>
+<table border=1>
+<tr><th>Name/ifdef	<th>Description		<th>syntax compatible	<th>bytecode compatible	<th>author
+<tr><td><a href="sep/ALTCMP_PATCH.patch">ALTCMP_PATCH</a>	<td>!= equals to ~=	<td>yep			<td>yep			<td>kt
+<tr><td><a href="sep/BITOPS_PATCH.patch">BITOPS_PATCH</a>	<td>and,or,xor,shl,shr,not => &,|,^^,<<,>>,~	<td>yep			<td>nope		<td>kt (orig. by <a href="http://www.wra1th.plus.com/lua/">RISClua</a>)
+<tr><td><a href="sep/BREAKN_PATCH.patch">BREAKN_PATCH</a>	<td>php-like break N (multiscope break)<td>yep		<td>yep		<td>kt
+<tr><td><a href="sep/CONTINUE_PATCH.patch">CONTINUE_PATCH</a>	<td>continue statement	<td>yep			<td>yep			<td>AKa
+<tr><td><a href="sep/DO_PATCH.patch">DO_PATCH</a>	<td>do ... end equals to function() .. end<td>yep<td>yep<td>AKa
+<tr><td><a href="sep/LITERALS_PATCH.patch">LITERALS_PATCH</a>	<td>hex(\xABCD) unicode(\uXXXX) literals<td>yep	<td>yep			<td>AKa
+<tr><td><a href="sep/OPTDO_PATCH.patch">OPTDO_PATCH</a>	<td>optional 'do' after for/while<td>yep	<td>yep			<td>kt (orig. by Eric Tetz)
+<tr><td><a href="sep/OPTTHEN_PATCH.patch">OPTTHEN_PATCH</a>	<td>optional 'then' after if<td>yep	<td>yep			<td>kt (orig. by Eric Tetz)
+<tr><td><a href="sep/PSEUDO_PATCH.patch">PSEUDO_PATCH</a>	<td>x.y,a.b = $2+1,$1+1 equals to x.y,a.b = a.b+1,x.y+1 etc<td>yep	<td>yep			<td>rici
+<tr><td><a href="sep/PUDATA_PATCH.patch">PUDATA_PATCH</a>	<td>lua_pushuserdata()<td>yep	<td>yep			<td>kt
+<tr><td><a href="sep/REFSTR_PATCH.patch">REFSTR_PATCH</a>	<td>print("Hello from \$_LUA_VERSION\ ..") equals print("Hello&nbsp;from&nbsp;".._LUA_VERSION.."&nbsp;..")<td>yep	<td>yep			<td>kt
+<tr><td><a href="sep/STRHOOK_PATCH.patch">STRHOOK_PATCH</a>	<td>Ever wanted to get mmap()ed memory from lua_tolstring()?<td>yep	<td>yep			<td>kt
+<tr><td><a href="sep/USEDINDEX_PATCH.patch">USEDINDEX_PATCH</a>	<td>__usedindex, like __newindex but for existing keys<td>yep<td>yep		<td>kt (orig. by Christopher Dunn)
+</table>
+USEDINDEX_PATCH has been reported to be broken with LuaJIT. BITOPS_PATCH, PSEUDO_PATCH, REFSTR_PATCH, OPTDO_PATCH, OPTTHEN_PATCH reported to work with LuaJIT.
+<hr>
+Found a bug or have some cool patches? <a href="http://leet.cz">http://leet.cz</a>
+</body>
+</html>

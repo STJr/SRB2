@@ -1,0 +1,307 @@
+ SRB2
+ Release v1.09, ? 2005.
+
+ Last Updated: June 2005
+
+ Original game & sources by: Id Software.
+ Additions: (c)1998 by: Fabrice Denis & Boris Pereira
+            (c)1999 by: Fabrice Denis, Boris Pereira & Thierry Van Elsuwe
+            (c)2000 by: Boris Pereira & Thierry Van Elsuwe
+            (c)2004 By: AJ, Graue, Alam Arias, Logan Arias & Andrew Clunis
+
+ Special thanks to Steven McGranahan,  Lee Killough, Robert Bäuml and Bell Kin for
+ their large contribution and to other DooM LEGACY & SRB2 Team members.
+
+ Web site: http://www.SRB2.org/
+   e-mail: none@none.com
+
+ OpenGL specific:
+ Web site: http://legacy.newdoom.com/gl
+
+
+ -----------------------------------------------------------------------
+ F.A.Q.
+ -----------------------------------------------------------------------
+
+
+ If you have any trouble with SRB2, you might find a solution
+ here.
+
+ If you find a solution to a problem that was not listed here,
+ please tell us so that we can update the FAQ and help other people!
+
+ Mail your hardware/software problems to:
+
+ None@none.com subject: FAQ
+
+
+ --------
+ CONTENTS
+ --------
+
+ [0] Miscellaneous
+ [1] Mouse/Joystick/Keyboard
+ [2] Video
+ [3] Sound
+ [4] Network
+ [5] Troubleshooting
+
+
+ -----------------
+ [0] MISCELLANEOUS
+ -----------------
+
+ * under win95 or OS/2, I don't have enough memory. How can i handle with ?
+
+   Tell win95 to put more dpmi memory for your dos box.
+   Or use the -mb option.
+
+
+
+ ---------------------------
+ [1] MOUSE/JOYSTICK/KEYBOARD
+ ---------------------------
+
+ * My mouse/joystick does not work in SRB2.
+
+   First, check that the mouse/joystick is activated : go at the
+   console and type either 'use_mouse' (or use the respective
+   menuitem) or 'use_joystick'.
+
+   If it tells '0' or off than the mouse/joystick is not used,
+   set the variable to 1. eg: 'use_mouse 1'.
+
+   For the joystick, different values will support different
+   types of joystick, check the console documentation for the
+   command 'use_joystick' for more.
+
+   Even if the mouse or joystick is activated, you have to
+   set up the contols into the Setup Controls menu. That is:
+   tell what use you will make of the mouse/joystick buttons.
+
+
+ ---------
+ [2] VIDEO
+ ---------
+
+
+ * Where are the other video modes ? I have only '320x200' in the
+   Video Modes menu.
+
+   DOS
+   ---
+
+   SRB2 adds new video modes only if a VESA2 (or better) driver
+   is present. The VESA2 driver is a standard of 'talking' between a
+   program and the huge amount of different graphics cards
+   available today.
+
+   If you don't have a VESA2 driver, you can download UNIVBE, or
+   SMART DISPLAY DOCTOR from
+
+   http://www.scitechsoft.com/products/ent/free_titles.html
+
+   or if you have an S3 based card, you can download the free
+   software called 'S3VBE'.
+
+   ftp://ftp.externet.hu/pub/mirror/sac/graph/s3vbe318.zip
+   ftp://ftp.digsys.bg/pub/simtelnet/msdos/graphics/s3vbe318.zip
+   http://www.filesearching.com/cgi-bin/s?q=s3vbe318.zip
+   http://www.google.com/search?q=s3vbe318.zip
+
+ * The game doesn't restore the video mode I have chosen the last time
+   I played SRB2.
+
+   The current video mode has to be made the 'default' so that it is
+   saved to the config : press the key 'D' on the Video Options menu
+   to set the current video mode the default.
+
+  * I have some problems with OpenGL mode
+
+   Have a look at the FAQ for OpenGL on the glLegacy web site:
+
+   http://www.doomnation.com/gllegacy/faqe.htm
+
+ # Linux: I only have a 1024x768 (or 800x600, 1280x1024, ...) resolution
+   in fullscreen mode under X and SRB2 is really really slow. Can I
+   have lower resolutions like 320x200 in fullscreen mode as well?
+
+   Probably yes. SRB2 can only use the resolutions offered by the
+   X-Server. So if all fullscreen modes have a very high resolution you
+   have to modify /etc/XF86Config (or /etc/X11/XF86Config). Use XF86Setup
+   (or the appropriate tool coming with your distribution - sax,
+   xf86config, ...) to do this.
+   If you do not succeed there, you can enter them manually into your
+   XF86Config file. ONLY RECOMMENDED FOR USERS WHO KNOW WHAT THEY DO!
+   For a short guide on how to do this, have a look at the file
+   "Doublescan.txt".
+   In case of doubt consult the XFree86-HOWTO (or ask your system
+   administrator :).
+
+ # Linux: I cannot have any fullscreen modes at all!
+
+   You have only modes above 1024x768 in your XF86Config. Proceed as
+   described above.
+
+ # Linux: After a certain idle time my screensaver jams the display of
+   SRB2. I can still operate SRB2, but I do not see what's happening
+   and the screensaver won't go away.
+
+   You probably have KDE. The KDE screensaver does not obey the screensaver
+   rules (at least mine, version 1.1). The solution is to deactivate the
+   KDE screensaver and use another screensaver (like the xscreensaver,
+   e.g.). But the hell, when you started SRB2 you should have played it
+   as well and not left it alone!!!
+
+ ---------
+ [3] SOUND
+ ---------
+
+ + DOS:I can't have CD audio music, why ?
+
+   Make sure that the MSCDEX driver version 2.0 or later is loaded.
+   If it says 'MSCDEX version xxx' at game startup, and you still
+   don't hear the cd music, then probably your card doesn't respond
+   when SRB2 tries to set the cd volume. If so, make sure your sound
+   card's mixer have the cd volume set up so that you can hear something.
+
+ + When the CD plays, the game is very 'jerky'. It doesn't do that when
+   I type 'cd off' in the console.
+
+   You have an old/bad cd driver, that can take up to a second to
+   respond to cd driver commands. Either get the latest version of
+   your driver, or turn cd update off. Check 'cd_udpate' in the
+   console documentation for more.
+
+ * DOS:How can I *ALWAYS* disable the sounds or music of the game ?
+
+   Edit the allegro.cfg file and set digicard/midicard to 0 (none)
+
+ * DOS:My sterero sound is reversed, how can I set it the right way ?
+
+   Change the console variable 'stereoreverse' to either 1 or 0.
+   Or, you can edit the allegro.cfg file, and set the 'flip_pan' variable.
+
+
+ * DOS:The sounds are too 'slow', or 'low-pitched'
+
+   It seems to be a problem of the auto-detection of some 8bit sound
+   cards. You will have to set manually the 'sb_freq' value in the
+   allegro.cfg file to a lower value : 11906, 16129.
+
+ * DOS:SRB2 doesn't play any sound/music, but I have a sound
+   blaster genuine/compatible card.
+
+   If you have a genuine or compatible SoundBlaster card, it is very
+   important that you set the BLASTER environment variable.
+
+   If you are playing under DOS, and never installed your sound card
+   under DOS, run the setup of your sound card for DOS.
+
+   Check if the BLASTER variable was set: type 'SET' under dos
+   (or DOSbox)
+
+   Do you see something like 'BLASTER=A220 I5 D1 ...' ?
+
+   Yes? If you don't hear sounds/music, then tweak the settings in the
+   allegro.cfg file until you get something, first try changing the
+   type of the sound card, it is not always properly detected.
+
+   No? You have to set this variable in order that your sound card is
+   detected. Run the setup that was shipped with your sound card, and
+   make sure you run the setup for DOS too, it will usually add a
+   line of the type 'SET BLASTER=... ...' in the autoexec.bat file.
+
+
+ * DOS:How can I have better midi music on my 8bit sound card ?
+
+   Use the DIGMID driver, it is supported in SRB2.
+
+   What the hell is this? Well, the Gravis Ultrasound uses digital
+   samples to play midi music. On a simple 8bit card, you can use digital
+   samples too, which will sound usually better than what is output
+   by the poor fm synthesis chip of 8bit cards.
+
+   You will need to get a Gravis Ultrasound patch set, you can find
+   several ones for free on internet, it consists of a bunch of '.pat'
+   files which are the digital samples to play the midi instruments
+   (eg: piano, conga, guitar, ect.).
+
+   Check the Allegro homepage for some links to GUS patches:
+   http://alleg.sourceforge.net/digmid.html
+   http://alleg.sourceforge.net/
+   http://www.talula.demon.co.uk/allegro/digmid.html
+   http://www.talula.demon.co.uk/allegro/
+
+   Now to activate the DIGMID driver:
+
+   Set the 'midi_card' value to 8 (DIGMID) in the allegro.cfg file.
+   Make sure you leave the 'digi_voices' blank, or set it to a low
+   value, because the midi music will use digital voices.
+   At the end of the allegro.cfg file, set the 'patches' value
+   to the path, where you have installed a Gravis Ultrasound midi
+   patch set. eg: patches = d:\music\midipat\
+
+ # Linux: CD music does not work or only works when run as root.
+
+   We do not encourage you to run SRB2 as root (you never know
+   what SRB2 can do to your system - it's a mighty piece of code :).
+   There is a common problem with ATAPI CD-rom drives, which are
+   treated as harddisks. Usually there is a link /dev/cdrom pointing to
+   device hd[b,c,d]. As harddisks are not supposed to be read directly
+   via this device (especially not by a common user), there are no read
+   permissions for "all". For CD-roms you can savely set read permissions
+   unless you are very paranoid. Assuming your CD-rom drive is /dev/hdc,
+   set permissions with "chmod +r /dev/hdc" (as root). SCSI CD-rom drives
+   should not have this problem. But if they do, proceed as described
+   with ATAPI drives.
+
+ # Linux: The CD music volume is not set properly.
+
+   Go to the console and type "jigglecdvolume 1".
+
+ -----------
+ [4] NETWORK
+ -----------
+
+ * Where can I find Internet servers ?
+
+   For the moment there is one public server.
+   http://srb2.servegame.org/ Master server web page
+   srb2.servegame.org:28910 current Master Server
+
+ * When I start SRB2 with -server or -connect it say :
+    "BinToPort: Address already in use (EADDRINUSE)"
+
+   It appears only when SRB2 crashes or when you leave with ctrl-break.
+   use -udpport 12345 (or any other free slot) on both sides (client and
+   server).
+
+   This can also happens when there is already a SRB2 running on your
+   computer if you whant to try two SRB2 running on the same computer
+   use -clientport 12345 (or any other free slot). Then the second will
+   connect to the first one.
+
+ * Do you use the tcp protocol ?
+
+   No, we use the udp protocol which is faster, but don't worry udp is a
+   part of the internet protocol.
+
+
+ -------------------
+ [5] Troubleshooting
+ -------------------
+
+ # Linux: SRB2 is hung in fullscreen mode and won´t let me leave.
+   What shall I do?
+
+   Some people press the reset button, but hey, we are not in the
+   stoneage of operating systems! There are two "proper" ways to
+   get out: kill your X-Server. You can usually do this by pressing
+   "CTRL-ALT-BACKSPACE". But if you have other open applications with
+   important data (probably hacked away on your diploma thesis for 3
+   weeks without saving once) you can also kill SRB2 directly. Press
+   "CTRL-ALT-F2" and you will get to a console. Log in, type
+   "killall llxSRB2" and switch back to the X-Server with "CTRL-ALT-F7".
+   Some X-Server crash on this procedure - blame the X-Server for the
+   loss of 3 weeks work on your diploma thesis :)

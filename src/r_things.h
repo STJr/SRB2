@@ -1,0 +1,194 @@
+// SONIC ROBO BLAST 2
+//-----------------------------------------------------------------------------
+// Copyright (C) 1993-1996 by id Software, Inc.
+// Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1999-2014 by Sonic Team Junior.
+//
+// This program is free software distributed under the
+// terms of the GNU General Public License, version 2.
+// See the 'LICENSE' file for more details.
+//-----------------------------------------------------------------------------
+/// \file  r_things.h
+/// \brief Rendering of moving objects, sprites
+
+#ifndef __R_THINGS__
+#define __R_THINGS__
+
+#include "sounds.h"
+#include "r_plane.h"
+
+// number of sprite lumps for spritewidth,offset,topoffset lookup tables
+// Fab: this is a hack : should allocate the lookup tables per sprite
+#define MAXVISSPRITES 2048 // added 2-2-98 was 128
+
+#define VISSPRITECHUNKBITS 6	// 2^6 = 64 sprites per chunk
+#define VISSPRITESPERCHUNK (1 << VISSPRITECHUNKBITS)
+#define VISSPRITEINDEXMASK (VISSPRITESPERCHUNK - 1)
+
+// Constant arrays used for psprite clipping
+//  and initializing clipping.
+extern INT16 negonearray[MAXVIDWIDTH];
+extern INT16 screenheightarray[MAXVIDWIDTH];
+
+// vars for R_DrawMaskedColumn
+extern INT16 *mfloorclip;
+extern INT16 *mceilingclip;
+extern fixed_t spryscale;
+extern fixed_t sprtopscreen;
+extern fixed_t sprbotscreen;
+extern fixed_t windowtop;
+extern fixed_t windowbottom;
+
+void R_DrawMaskedColumn(column_t *column);
+void R_SortVisSprites(void);
+
+//faB: find sprites in wadfile, replace existing, add new ones
+//     (only sprites from namelist are added or replaced)
+void R_AddSpriteDefs(UINT16 wadnum);
+
+#ifdef DELFILE
+void R_DelSpriteDefs(UINT16 wadnum);
+#endif
+
+//SoM: 6/5/2000: Light sprites correctly!
+void R_AddSprites(sector_t *sec, INT32 lightlevel);
+void R_InitSprites(void);
+void R_ClearSprites(void);
+void R_DrawMasked(void);
+
+// -----------
+// SKINS STUFF
+// -----------
+#define SKINNAMESIZE 16
+// should be all lowercase!! S_SKIN processing does a strlwr
+#define DEFAULTSKIN "sonic"
+#define DEFAULTSKIN2 "tails" // secondary player
+
+typedef struct
+{
+	char name[SKINNAMESIZE+1]; // INT16 descriptive name of the skin
+	spritedef_t spritedef;
+	UINT16 wadnum;
+	char sprite[4]; // Sprite name, if seperated from S_SKIN.
+	skinflags_t flags;
+
+	char realname[SKINNAMESIZE+1]; // Display name for level completion.
+	char hudname[SKINNAMESIZE+1]; // HUD name to display (officially exactly 5 characters long)
+	char charsel[8], face[8], superface[8]; // Arbitrarily named patch lumps
+
+	UINT8 ability; // ability definition
+	UINT8 ability2; // secondary ability definition
+	INT32 thokitem;
+	INT32 spinitem;
+	INT32 revitem;
+	fixed_t actionspd;
+	fixed_t mindash;
+	fixed_t maxdash;
+
+	fixed_t normalspeed; // Normal ground
+	fixed_t runspeed; // Speed that you break into your run animation
+
+	UINT8 thrustfactor; // Thrust = thrustfactor * acceleration
+	UINT8 accelstart; // Acceleration if speed = 0
+	UINT8 acceleration; // Acceleration
+
+	fixed_t jumpfactor; // multiple of standard jump height
+
+	// Definable color translation table
+	UINT8 starttranscolor;
+	UINT8 prefcolor;
+	fixed_t highresscale; // scale of highres, default is 0.5
+
+	// specific sounds per skin
+	sfxenum_t soundsid[NUMSKINSOUNDS]; // sound # in S_sfx table
+} skin_t;
+
+// -----------
+// NOT SKINS STUFF !
+// -----------
+typedef enum
+{
+	SC_NONE = 0,
+	SC_TOP = 1,
+	SC_BOTTOM = 2
+} spritecut_e;
+
+// A vissprite_t is a thing that will be drawn during a refresh,
+// i.e. a sprite object that is partly visible.
+typedef struct vissprite_s
+{
+	// Doubly linked list.
+	struct vissprite_s *prev;
+	struct vissprite_s *next;
+
+	mobj_t *mobj; // for easy access
+
+	INT32 x1, x2;
+
+	fixed_t gx, gy; // for line side calculation
+	fixed_t gz, gzt; // global bottom/top for silhouette clipping
+	fixed_t pz, pzt; // physical bottom/top for sorting with 3D floors
+
+	fixed_t startfrac; // horizontal position of x1
+	fixed_t scale;
+	fixed_t xiscale; // negative if flipped
+
+	fixed_t texturemid;
+	lumpnum_t patch;
+
+	lighttable_t *colormap; // for color translation and shadow draw
+	                        // maxbright frames as well
+
+	UINT8 *transmap; // for MF2_SHADOW sprites, which translucency table to use
+
+	INT32 mobjflags;
+
+	INT32 heightsec; // height sector for underwater/fake ceiling support
+
+	extracolormap_t *extra_colormap; // global colormaps
+
+	fixed_t xscale;
+
+	// Precalculated top and bottom screen coords for the sprite.
+	fixed_t thingheight; // The actual height of the thing (for 3D floors)
+	sector_t *sector; // The sector containing the thing.
+	INT16 sz, szt;
+
+	spritecut_e cut;
+
+	boolean precip;
+	boolean vflip; // Flip vertically
+	boolean isScaled;
+} vissprite_t;
+
+// A drawnode is something that points to a 3D floor, 3D side, or masked
+// middle texture. This is used for sorting with sprites.
+typedef struct drawnode_s
+{
+	visplane_t *plane;
+	drawseg_t *seg;
+	drawseg_t *thickseg;
+	ffloor_t *ffloor;
+	vissprite_t *sprite;
+
+	struct drawnode_s *next;
+	struct drawnode_s *prev;
+} drawnode_t;
+
+extern INT32 numskins;
+extern skin_t skins[MAXSKINS + 1];
+
+void SetPlayerSkin(INT32 playernum,const char *skinname);
+void SetPlayerSkinByNum(INT32 playernum,INT32 skinnum); // Tails 03-16-2002
+INT32 R_SkinAvailable(const char *name);
+void R_AddSkins(UINT16 wadnum);
+
+#ifdef DELFILE
+void R_DelSkins(UINT16 wadnum);
+#endif
+
+void R_InitDrawNodes(void);
+
+char *GetPlayerFacePic(INT32 skinnum);
+
+#endif //__R_THINGS__

@@ -1,0 +1,171 @@
+GDB Stub for DJGPP 0.2 Readme File
+==================================
+
+Copyright
+---------
+GDB Stub for DJGPP is distributed under the terms of the GNU Library
+General Public License (GNU LGPL) - please see the document LICENSE,
+which should be found in the same directory as this file.
+
+Copyright (c) 2000 by Jonathan Brogdon, 2002 by Gordon Schumacher
+
+What It Does
+------------
+The GDB stub is used to debug a DJGPP target remotely over a one of
+the PC COM ports.  GDB, running on a host machine, communicates with
+the target using the GDB serial protocol over the serial link.  For
+more information on the GDB stub, see "Debugging with GDB, The GNU
+Source-Level Debugger", by Richard M. Stallman and Roland H. Pesch
+(http://sources.redhat.com/gdb/download/onlinedocs/gdb.html)
+
+How It Works
+------------
+
+Exceptions:
+
+The GDB stub needs to handle all processor exceptions.  Since these
+exceptions already handled by DJGPP, we cannot handle them directly.
+DJGPP maps all processor exceptions to signals.  Therefore, we can
+install the GDB stub handler as the signal handler for those signals
+that represent processor exceptions.  The following table shows the
+processor exception to signal mapping:
+
+    Exception/Interrupt:    Exception #:        Signal:
+    -------------------     -----------         ------
+    Divide Error                 0              SIGFPE
+    Debug Exception              1              SIGTRAP
+    NMI Interrupt                2              No signal defined
+    Breakpoint                   3              SIGTRAP
+    INTO-detected overflow       4              SIGFPE
+    BOUND Range Exceeded         5              SIGSEGV
+    Invalid Opcode               6              No signal defined
+    Coprocessor not available    7              SIGNOFP
+    Double Fault                 8              SIGSEGV
+    Coprocessor Seg overrun      9              SIGSEGV
+    Invalid Task State Seg       10             No signal defined
+    Segment not present          11             SIGSEGV
+    Stack Fault                  12             SIGSEGV
+    General Protection Fault     13             SIGSEGV
+    Page Fault                   14             SIGSEGV
+    Intel Reserved               15			    No signal defined
+    Coprocessor Error            16             SIGFPE
+
+The GDB stub handler services requests from the GDB host.  These
+requests are seen by the GDB stub handler as command messages from
+the GDB host.  These commands and command formats are defined in
+"Debugging with GDB, The GNU Source-Level Debugger", by Richard M.
+Stallman and Roland H. Pesch (http://sources.redhat.com/gdb/
+download/onlinedocs/gdb.html -- one of many sources).
+
+Serial Interface:
+
+Interface functions for sending and receiving characters from the
+serial interface must be provided by the engineer porting the GDB
+stub.  The following funtions must be provided to support the
+implementation.
+
+	int getDebugChar(void);
+	void putDebugChar(int c);
+
+There are a variety of serial libraries for DJGPP.  The user may
+already be using one of these libraries in their application, and
+installing more than one serial library often causes conflicts.
+To this end, a modular function layer was written that allows any
+serial library to be used with the GDB stub.  Layers have been
+written to support SVAsync, DZComm, and the _bios_serialcom()
+function.  At the time of this writing, DZComm appears to work the
+best for serial debugging.
+
+Hard Coded Breakpoint:
+
+A breakpoint() function is provided to manually invoke the stub.
+This function, inserts a breakpoint instruction directly in the code
+to invoke the GDB stub handler.
+
+How You Use It
+--------------
+First, you need to select a serial library.  In the i386-supp.c file,
+there are lines of the form
+
+      // #include "some_layer.h"
+
+Uncomment the line for the serial library you intend to use - or add
+a new include line for a file written for some other library.
+In the main() function of your target program, you should initilize
+the GDB serial handlers and the GDB stub.  The following functions
+are provided in the GDB stub library for this purpose.
+
+	gdb_serial_init(unsigned int port, unsigned int speed);
+	gdb_target_init(void);
+
+Where, port is the COM port number, and speed is the baud rate for
+the serial link.
+
+After initialing the GDB serial interface and target, you should
+invoke the breakpoint() function somewhere.  You may choose to do
+this immediately after initialization, or at a specific location in
+your code where you wish to set a breakpoint.  By putting the
+breakpoint() function in the beginning of main(), you can use the
+GDB host to set a breakpoint at any place in your code.
+
+Make sure that you use the '-g' option when compiling your files with
+gcc.
+
+After the target executable is running, start up gdb on the host,
+passing the target executable as an argument.
+
+	Example:  gdb demo.exe
+
+Now, tell gdb which serial interface to use for communicating to
+the target.
+
+	Example:  (gdb) target remote COM1
+
+This example uses COM1 on the host to communicate with the target.
+GDB is now 'listening' on COM for a valid GDB serial packet.
+
+Once your GDB host finds your target, you may need to tell GDB where
+to find any source files which were used to generate your program.
+Use the directory command to do this.
+
+	Example:  (gdb) directory ../src/demo
+
+That's it.  You should now be able to single step through code, set
+breakpoints, set variables, examine variables, any anthing else that
+you would normally use GDB to accomplish.
+
+What You Build
+--------------
+Read the INSTALL file for more information on installing the GDB stub
+library.  After installing the library, your code should include
+i386-stub.h for function prototypes.  In addition, your code should
+link against the libgdb.a library.  The source for a demonstration
+program has been included with this distributias an example.
+As an alternative, you can simply include the i386-stub and i386-supp
+files and the layer header for the serial library you plan to use into
+your project and link them in directly.
+
+For More Info
+-------------
+See "Debugging with GDB, The GNU Source-Level Debugger", by Richard
+M. Stallman and Roland H. Pesch (http://sources.redhat.com/gdb/
+download/onlinedocs/gdb.html -- one of many sources).
+
+TODO
+----
+Port for network operation.
+
+Contact Info
+------------
+My contact info is below. If you have any comments, suggestions, bug
+reports or problems, please mail me, and I'll see what I can do.
+
+    Regards,
+    Jonathan Brogdon
+    <brogdon@austin.rr.com>
+    6th June 2000
+
+    Modular update:
+    Gordon Schumacher
+    <gordons@valleyhold.org>
+    12th February 2002

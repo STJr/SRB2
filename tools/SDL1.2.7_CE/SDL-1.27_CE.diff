@@ -1,0 +1,2260 @@
+diff -ruN SDL-1.2.7-orig/src/audio/windib/SDL_dibaudio.c SDL-1.2.7/src/audio/windib/SDL_dibaudio.c
+--- SDL-1.2.7-orig/src/audio/windib/SDL_dibaudio.c	Wed Feb 18 09:22:00 2004
++++ SDL-1.2.7/src/audio/windib/SDL_dibaudio.c	Thu Nov 18 12:07:29 2004
+@@ -146,8 +146,16 @@
+ 
+ /* Set high priority for the audio thread */
+ static void DIB_ThreadInit(_THIS)
+-{
+-	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
++{
++#ifdef _WIN32_WCE
++#ifdef SH3
++	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_NORMAL);
++#else
++	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL);
++#endif
++#else
++	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
++#endif
+ }
+ 
+ void DIB_WaitAudio(_THIS)
+diff -ruN SDL-1.2.7-orig/src/cpuinfo/SDL_cpuinfo.c SDL-1.2.7/src/cpuinfo/SDL_cpuinfo.c
+--- SDL-1.2.7-orig/src/cpuinfo/SDL_cpuinfo.c	Tue Feb 10 07:31:36 2004
++++ SDL-1.2.7/src/cpuinfo/SDL_cpuinfo.c	Fri Nov 19 20:53:01 2004
+@@ -38,6 +38,10 @@
+ 
+ #ifdef MACOSX
+ #include <sys/sysctl.h> /* For AltiVec check */
++#endif
++
++#if defined(_MSC_VER) && (defined(ARM) || defined(MIPS) || defined(SHx))
++#undef _MSC_VER
+ #endif
+ 
+ #define CPU_HAS_RDTSC	0x00000001
+diff -ruN SDL-1.2.7-orig/src/joystick/win32/SDL_mmjoystick.c SDL-1.2.7/src/joystick/win32/SDL_mmjoystick.c
+--- SDL-1.2.7-orig/src/joystick/win32/SDL_mmjoystick.c	Wed Feb 18 09:22:02 2004
++++ SDL-1.2.7/src/joystick/win32/SDL_mmjoystick.c	Fri Nov 19 20:47:22 2004
+@@ -37,6 +37,7 @@
+ 
+ #include <windows.h>
+ #include <mmsystem.h>
++#include <regstr.h>
+ 
+ #define MAX_JOYSTICKS	16
+ #define MAX_AXES	6	/* each joystick can have up to 6 axes */
+@@ -51,6 +52,7 @@
+ /* array to hold joystick ID values */
+ static UINT	SYS_JoystickID[MAX_JOYSTICKS];
+ static JOYCAPS	SYS_Joystick[MAX_JOYSTICKS];
++static char	*SYS_JoystickName[MAX_JOYSTICKS];
+ 
+ /* The private structure used to keep track of a joystick */
+ struct joystick_hwdata
+@@ -69,6 +71,78 @@
+ /* Convert a win32 Multimedia API return code to a text message */
+ static void SetMMerror(char *function, int code);
+ 
++static char *GetJoystickName(int index, const char *szRegKey)
++{
++	/* added 7/24/2004 by Eckhard Stolberg */
++	/*
++		see if there is a joystick for the current
++		index (1-16) listed in the registry
++	*/
++	char *name = NULL;
++	HKEY hKey;
++	DWORD regsize;
++	LONG regresult;
++	unsigned char regkey[256];
++	unsigned char regvalue[256];
++	unsigned char regname[256];
++
++	sprintf(regkey, "%s\\%s\\%s",
++		REGSTR_PATH_JOYCONFIG,
++		szRegKey,
++		REGSTR_KEY_JOYCURR);
++	regresult = RegOpenKeyExA(HKEY_LOCAL_MACHINE,
++		(LPTSTR) &regkey, 0, KEY_READ, &hKey);
++	if (regresult == ERROR_SUCCESS)
++	{
++		/*
++			find the registry key name for the
++			joystick's properties
++		*/
++		regsize = sizeof(regname);
++		sprintf(regvalue,
++			"Joystick%d%s", index+1,
++			REGSTR_VAL_JOYOEMNAME);
++		regresult = RegQueryValueExA(hKey,
++			regvalue, 0, 0, (LPBYTE) &regname,
++			(LPDWORD) &regsize);
++		RegCloseKey(hKey);
++		if (regresult == ERROR_SUCCESS)
++		{
++			/* open that registry key */
++			sprintf(regkey, "%s\\%s",
++				REGSTR_PATH_JOYOEM, regname);
++			regresult = RegOpenKeyExA(HKEY_LOCAL_MACHINE,
++				regkey, 0, KEY_READ, &hKey);
++			if (regresult == ERROR_SUCCESS)
++			{
++				/* find the size for the OEM name text */
++				regsize = sizeof(regvalue);
++				regresult =
++					RegQueryValueExA(hKey,
++					REGSTR_VAL_JOYOEMNAME,
++					0, 0, NULL,
++					(LPDWORD) &regsize);
++				if (regresult == ERROR_SUCCESS)
++				{
++					/*
++						allocate enough memory
++						for the OEM name text ...
++					*/
++					name = (char *) malloc(regsize);
++					/* ... and read it from the registry */
++					regresult =
++						RegQueryValueExA(hKey,
++						REGSTR_VAL_JOYOEMNAME, 0, 0,
++						(LPBYTE) name,
++						(LPDWORD) &regsize);
++					RegCloseKey(hKey);
++				}
++			}
++		}
++	}
++	return(name);
++}
++
+ 
+ /* Function to scan the system for joysticks.
+  * This function should set SDL_numjoysticks to the number of available
+@@ -94,6 +168,7 @@
+ 
+ 	for ( i = 0; i < MAX_JOYSTICKS; i++ ) {
+ 		SYS_JoystickID[i] = JOYSTICKID1 + i;
++		SYS_JoystickName[i] = NULL;
+ 	}
+ 
+ 
+@@ -110,6 +185,7 @@
+ 			if ( result == JOYERR_NOERROR ) {
+ 				SYS_JoystickID[numdevs] = SYS_JoystickID[i];
+ 				SYS_Joystick[numdevs] = joycaps;
++				SYS_JoystickName[numdevs] = GetJoystickName(numdevs, joycaps.szRegKey);
+ 				numdevs++;
+ 			}
+ 		}
+@@ -120,8 +196,11 @@
+ /* Function to get the device-dependent name of a joystick */
+ const char *SDL_SYS_JoystickName(int index)
+ {
+-	/***-> test for invalid index ? */
++	if ( SYS_JoystickName[index] != NULL ) {
++		return(SYS_JoystickName[index]);
++	} else {
+ 	return(SYS_Joystick[index].szPname);
++	}
+ }
+ 
+ /* Function to open a joystick for use.
+@@ -292,7 +371,12 @@
+ /* Function to perform any system-specific joystick related cleanup */
+ void SDL_SYS_JoystickQuit(void)
+ {
+-	return;
++	int i;
++	for (i = 0; i < MAX_JOYSTICKS; i++) {
++		if ( SYS_JoystickName[i] != NULL ) {
++			free(SYS_JoystickName[i]);
++		}
++	}
+ }
+ 
+ 
+diff -ruN SDL-1.2.7-orig/src/video/SDL_sysvideo.h SDL-1.2.7/src/video/SDL_sysvideo.h
+--- SDL-1.2.7-orig/src/video/SDL_sysvideo.h	Wed Feb 18 09:22:04 2004
++++ SDL-1.2.7/src/video/SDL_sysvideo.h	Thu Nov 18 12:08:48 2004
+@@ -361,6 +361,9 @@
+ #endif
+ #ifdef ENABLE_WINDIB
+ extern VideoBootStrap WINDIB_bootstrap;
++#endif
++#ifdef ENABLE_WINGAPI
++extern VideoBootStrap WINGAPI_bootstrap;
+ #endif
+ #ifdef ENABLE_DIRECTX
+ extern VideoBootStrap DIRECTX_bootstrap;
+diff -ruN SDL-1.2.7-orig/src/video/SDL_video.c SDL-1.2.7/src/video/SDL_video.c
+--- SDL-1.2.7-orig/src/video/SDL_video.c	Wed Feb 18 09:22:04 2004
++++ SDL-1.2.7/src/video/SDL_video.c	Thu Nov 18 12:11:01 2004
+@@ -80,6 +80,9 @@
+ #endif
+ #ifdef ENABLE_DIRECTX
+ 	&DIRECTX_bootstrap,
++#endif
++#ifdef ENABLE_WINGAPI
++	&WINGAPI_bootstrap,
+ #endif
+ #ifdef ENABLE_WINDIB
+ 	&WINDIB_bootstrap,
+diff -ruN SDL-1.2.7-orig/src/video/wincommon/SDL_sysevents.c SDL-1.2.7/src/video/wincommon/SDL_sysevents.c
+--- SDL-1.2.7-orig/src/video/wincommon/SDL_sysevents.c	Wed Feb 18 09:22:10 2004
++++ SDL-1.2.7/src/video/wincommon/SDL_sysevents.c	Thu Nov 18 12:28:03 2004
+@@ -40,6 +40,9 @@
+ #include "SDL_lowvideo.h"
+ #include "SDL_syswm_c.h"
+ #include "SDL_main.h"
++#ifdef _WIN32_CE
++#include "SDL_dibvideo.h"
++#endif
+ 
+ #ifdef WMMSG_DEBUG
+ #include "wmmsg.h"
+@@ -173,6 +176,39 @@
+ 	SDL_SetModState(state);
+ #endif /* !NO_GETKEYBOARDSTATE */
+ }
++
++#ifdef _WIN32_CE
++void transform(SDL_RotateAttr rotate, char ozone, Sint16 *x, Sint16 *y) {
++	Sint16 rotatedX;
++	Sint16 rotatedY;
++
++	if (ozone) {
++		*x = *x * 2;
++		*y = *y * 2;
++	}
++
++	switch(rotate) {
++		case SDL_ROTATE_NONE:
++			break;
++		case SDL_ROTATE_LEFT:
++			if (!SDL_VideoSurface)
++				break;
++			rotatedX = SDL_VideoSurface->w - *y;
++			rotatedY = *x;
++			*x = rotatedX;
++			*y = rotatedY;
++			break;
++		case SDL_ROTATE_RIGHT:
++			if (!SDL_VideoSurface)
++				break;
++			rotatedX = *y;
++			rotatedY = SDL_VideoSurface->h - *x;
++			*x = rotatedX;
++			*y = rotatedY;
++			break;
++	}
++}
++#endif
+ 
+ /* The main Win32 event handler
+ DJM: This is no longer static as (DX5/DIB)_CreateWindow needs it
+@@ -273,7 +309,11 @@
+ 						SetCursorPos(center.x, center.y);
+ 						posted = SDL_PrivateMouseMotion(0, 1, x, y);
+ 					}
+-				} else {
++				} else {
++#ifdef _WIN32_CE
++					if (SDL_VideoSurface)
++						transform(rotation, ozoneHack, &x, &y);
++#endif
+ 					posted = SDL_PrivateMouseMotion(0, 0, x, y);
+ 				}
+ 			}
+@@ -361,8 +401,16 @@
+ 					x = 0; y = 0;
+ 				} else {
+ 					x = (Sint16)LOWORD(lParam);
+-					y = (Sint16)HIWORD(lParam);
+-				}
++					y = (Sint16)HIWORD(lParam);
++#ifdef _WIN32_CE
++					if (SDL_VideoSurface)
++						transform(rotation, ozoneHack, &x, &y);
++#endif
++				}
++#ifdef _WIN32_WCE
++				/* Since stylus movements are not continuous */
++				posted = SDL_PrivateMouseMotion(0, 0, x, y);
++#endif
+ 				posted = SDL_PrivateMouseButton(
+ 							state, button, x, y);
+ 			}
+diff -ruN SDL-1.2.7-orig/src/video/wincommon/SDL_sysmouse.c SDL-1.2.7/src/video/wincommon/SDL_sysmouse.c
+--- SDL-1.2.7-orig/src/video/wincommon/SDL_sysmouse.c	Sat Aug 30 13:13:12 2003
++++ SDL-1.2.7/src/video/wincommon/SDL_sysmouse.c	Thu Nov 18 12:29:20 2004
+@@ -250,12 +250,16 @@
+ 
+ /* Check to see if we need to enter or leave mouse relative mode */
+ void WIN_CheckMouseMode(_THIS)
+-{
++{
++#ifdef _WIN32_WCE
++		mouse_relative = 0;
++#else
+         /* If the mouse is hidden and input is grabbed, we use relative mode */
+         if ( !(SDL_cursorstate & CURSOR_VISIBLE) &&
+              (this->input_grab != SDL_GRAB_OFF) ) {
+                 mouse_relative = 1;
+         } else {
+                 mouse_relative = 0;
+-        }
++        }
++#endif
+ }
+diff -ruN SDL-1.2.7-orig/src/video/windib/SDL_dibevents.c SDL-1.2.7/src/video/windib/SDL_dibevents.c
+--- SDL-1.2.7-orig/src/video/windib/SDL_dibevents.c	Wed Feb 18 09:22:10 2004
++++ SDL-1.2.7/src/video/windib/SDL_dibevents.c	Thu Nov 18 13:12:28 2004
+@@ -58,6 +58,29 @@
+ /* DJM: If the user setup the window for us, we want to save his window proc,
+    and give him a chance to handle some messages. */
+ static WNDPROC userWindowProc = NULL;
++
++#ifdef _WIN32_WCE
++
++WPARAM rotateKey(WPARAM key, SDL_RotateAttr direction) {
++	if (direction != SDL_ROTATE_LEFT)
++		return key;
++
++	switch (key) {
++		case 0x26: /* up */
++			return 0x27;
++		case 0x27: /* right */
++			return 0x28;
++		case 0x28: /* down */
++			return 0x25;
++		case 0x25: /* left */
++			return 0x26;
++	}
++
++	return key;
++}
++
++#endif
++
+ 
+ /* The main Win32 event handler */
+ LONG
+@@ -69,6 +92,16 @@
+ 		case WM_SYSKEYDOWN:
+ 		case WM_KEYDOWN: {
+ 			SDL_keysym keysym;
++
++#ifdef _WIN32_WCE
++			// Drop GAPI artefacts
++			if (wParam == 0x84 || wParam == 0x5B)
++				return 0;
++
++			// Rotate key if necessary
++			if (rotation != SDL_ROTATE_NONE)
++				wParam = rotateKey(wParam, rotation);	
++#endif
+ 
+ 			/* Ignore repeated keys */
+ 			if ( lParam&REPEATED_KEYMASK ) {
+@@ -129,6 +162,16 @@
+ 		case WM_KEYUP: {
+ 			SDL_keysym keysym;
+ 
++#ifdef _WIN32_WCE
++			// Drop GAPI artefacts
++			if (wParam == 0x84 || wParam == 0x5B)
++				return 0;
++
++			// Rotate key if necessary
++			if (rotation != SDL_ROTATE_NONE)
++				wParam = rotateKey(wParam, rotation);
++#endif
++
+ 			switch (wParam) {
+ 				case VK_CONTROL:
+ 					if ( lParam&EXTENDED_KEYMASK )
+@@ -333,7 +376,16 @@
+ 	VK_keymap[VK_APPS] = SDLK_MENU;
+ 
+ 	prev_shiftstates[0] = FALSE;
+-	prev_shiftstates[1] = FALSE;
++	prev_shiftstates[1] = FALSE;
++
++#ifdef _WIN32_WCE
++	/* Hardcode the 4 magic keys to F1 F2 F3 F4 - the actual location of the keys varies ... */
++	VK_keymap[0xC1] = SDLK_F1;
++	VK_keymap[0xC2] = SDLK_F2;
++	VK_keymap[0xC3] = SDLK_F3;
++	VK_keymap[0xC4] = SDLK_F4;
++#endif
++
+ }
+ 
+ static SDL_keysym *TranslateKey(UINT vkey, UINT scancode, SDL_keysym *keysym, int pressed)
+@@ -364,9 +416,15 @@
+ {
+ #ifndef CS_BYTEALIGNCLIENT
+ #define CS_BYTEALIGNCLIENT	0
++#endif
++#ifdef _WIN32_CE
++	SDL_RegisterApp("SDL_app", CS_BYTEALIGNCLIENT | CS_HREDRAW | CS_VREDRAW, 0);
++#else
++	SDL_RegisterApp("SDL_app", CS_BYTEALIGNCLIENT, 0);
+ #endif
+-	SDL_RegisterApp("SDL_app", CS_BYTEALIGNCLIENT, 0);
+-	if ( SDL_windowid ) {
++	if ( SDL_windowid ) {
++// FIXME 
++#ifndef _WIN32_WCE
+ 		SDL_Window = (HWND)strtol(SDL_windowid, NULL, 0);
+ 
+       /* DJM: we want all event's for the user specified
+@@ -375,11 +433,19 @@
+       if (SDL_Window) {
+          userWindowProc = (WNDPROC)GetWindowLong(SDL_Window, GWL_WNDPROC);
+          SetWindowLong(SDL_Window, GWL_WNDPROC, (LONG)WinMessage);
+-      }
+-	} else {
++      }
++ #endif
++	} else {
++#ifdef _WIN32_WCE
++
++		SDL_Window = CreateWindow(SDL_Appname, SDL_Appname, (WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU|WS_MINIMIZEBOX),
++						0, 0, GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN), 
++						NULL, NULL, SDL_Instance, NULL);
++#else
+ 		SDL_Window = CreateWindow(SDL_Appname, SDL_Appname,
+                         (WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU|WS_MINIMIZEBOX),
+-                        CW_USEDEFAULT, CW_USEDEFAULT, 0, 0, NULL, NULL, SDL_Instance, NULL);
++                        CW_USEDEFAULT, CW_USEDEFAULT, 0, 0, NULL, NULL, SDL_Instance, NULL);
++#endif
+ 		if ( SDL_Window == NULL ) {
+ 			SDL_SetError("Couldn't create window");
+ 			return(-1);
+diff -ruN SDL-1.2.7-orig/src/video/windib/SDL_dibvideo.c SDL-1.2.7/src/video/windib/SDL_dibvideo.c
+--- SDL-1.2.7-orig/src/video/windib/SDL_dibvideo.c	Wed Feb 18 09:22:10 2004
++++ SDL-1.2.7/src/video/windib/SDL_dibvideo.c	Mon Aug  8 18:27:52 2005
+@@ -29,15 +29,26 @@
+ #include <stdlib.h>
+ #include <malloc.h>
+ #include <windows.h>
+-#if defined(WIN32_PLATFORM_PSPC)
++#if (defined (UNDER_CE) && (UNDER_CE >= 420))
+ #include <aygshell.h>                      // Add Pocket PC includes
+ #pragma comment( lib, "aygshell" )         // Link Pocket PC library
+ #endif
++
++#ifdef _MSC_VER
++#pragma warning(disable: 4244)
++#define inline __inline
++#endif
++
+ 
+ /* Not yet in the mingw32 cross-compile headers */
+ #ifndef CDS_FULLSCREEN
+ #define CDS_FULLSCREEN	4
+ #endif
++
++#ifndef WS_THICKFRAME
++#define WS_THICKFRAME 0
++#endif
++
+ 
+ #include "SDL.h"
+ #include "SDL_mutex.h"
+@@ -55,7 +66,18 @@
+ #ifdef _WIN32_WCE
+ #define NO_GETDIBITS
+ #define NO_CHANGEDISPLAYSETTINGS
+-#define NO_GAMMA_SUPPORT
++#define NO_GAMMA_SUPPORT
++
++/* uncomment this line if you target WinCE 3.x platform: */
++//#define NO_SETDIBCOLORTABLE
++
++/* these 2 variables are used to suport paletted DIBs on WinCE 3.x that 
++   does not implement SetDIBColorTable, and when SetDIBColorTable is not working.
++   Slow. DIB is recreated every time.
++*/
++static BITMAPINFO *last_bitmapinfo;
++static void** last_bits;
++
+ #endif
+ #ifndef WS_MAXIMIZE
+ #define WS_MAXIMIZE	0
+@@ -96,6 +118,13 @@
+ 
+ /* helper fn */
+ static int DIB_SussScreenDepth();
++
++#ifdef _WIN32_WCE
++void DIB_ShowTaskBar(BOOL taskBarShown);
++#ifdef ENABLE_WINGAPI
++extern void GAPI_GrabHardwareKeys(BOOL grab);
++#endif
++#endif
+ 
+ /* DIB driver bootstrap functions */
+ 
+@@ -352,6 +381,9 @@
+ 
+ 	/* Fill in some window manager capabilities */
+ 	this->info.wm_available = 1;
++
++	/* Rotation information */
++	rotation = SDL_ROTATE_NONE;
+ 
+ 	/* We're done! */
+ 	return(0);
+@@ -370,7 +402,43 @@
+ 	}
+ #endif
+ }
+-
++
++#ifdef _WIN32_WCE
++
++void DIB_ShowTaskBar(BOOL taskBarShown) {
++#if (UNDER_CE < 420)
++	// Hide taskbar, WinCE 2.x style - from EasyCE
++	HKEY hKey=0;
++	DWORD dwValue = 0;
++	unsigned long lSize = sizeof( DWORD );
++	DWORD dwType = REG_DWORD;
++	HWND hWnd;
++
++	RegOpenKeyEx( HKEY_LOCAL_MACHINE, TEXT("\\software\\microsoft\\shell"), 0, KEY_ALL_ACCESS, &hKey );
++	RegQueryValueEx( hKey, TEXT("TBOpt"), 0, &dwType, (BYTE*)&dwValue, &lSize );
++	if (taskBarShown)
++		dwValue &= 0xFFFFFFFF - 8;	// reset bit to show taskbar
++    else 
++		dwValue |= 8;	// set bit to hide taskbar
++	RegSetValueEx( hKey, TEXT("TBOpt"), 0, REG_DWORD, (BYTE*)&dwValue, lSize );
++	hWnd = FindWindow( TEXT("HHTaskBar"), NULL );
++	SendMessage(hWnd, WM_COMMAND, 0x03EA, 0 );
++	SetForegroundWindow(SDL_Window);
++#else
++	if (taskBarShown) 
++		SHFullScreen(SDL_Window, SHFS_SHOWTASKBAR | SHFS_SHOWSIPBUTTON | SHFS_SHOWSTARTICON);
++	else 
++		SHFullScreen(SDL_Window, SHFS_HIDETASKBAR | SHFS_HIDESIPBUTTON | SHFS_HIDESTARTICON);
++#endif
++	if (FindWindow(TEXT("HHTaskBar"), NULL)) { // is it valid for HPC ?
++		if (taskBarShown) 
++			ShowWindow(FindWindow(TEXT("HHTaskBar"),NULL),SW_SHOWNORMAL);
++		else 
++			ShowWindow(FindWindow(TEXT("HHTaskBar"),NULL),SW_HIDE);
++	}
++}
++
++#endif
+ 
+ /*
+   Helper fn to work out which screen depth windows is currently using.
+@@ -444,7 +512,8 @@
+ 
+ 
+ /* Various screen update functions available */
+-static void DIB_NormalUpdate(_THIS, int numrects, SDL_Rect *rects);
++static void DIB_NormalUpdate(_THIS, int numrects, SDL_Rect *rects);
++static void DIB_RotatedUpdate(_THIS, int numrects, SDL_Rect *rects);
+ 
+ SDL_Surface *DIB_SetVideoMode(_THIS, SDL_Surface *current,
+ 				int width, int height, int bpp, Uint32 flags)
+@@ -463,12 +532,20 @@
+ 	HDC hdc;
+ 	RECT bounds;
+ 	int x, y;
+-	Uint32 Rmask, Gmask, Bmask;
+-
++	Uint32 Rmask, Gmask, Bmask;
++#ifdef _WIN32_CE
++	int screenWidth, screenHeight;
++#endif
++#ifdef UNDER_CE
++	int	i;
++#endif
++
++#ifdef HAVE_OPENGL
+ 	/* Clean up any GL context that may be hanging around */
+ 	if ( current->flags & SDL_OPENGL ) {
+ 		WIN_GL_ShutDown(this);
+-	}
++	}
++#endif
+ 
+ 	/* Recalculate the bitmasks if necessary */
+ 	if ( bpp == current->format->BitsPerPixel ) {
+@@ -517,20 +594,16 @@
+ 	video->h = height;
+ 	video->pitch = SDL_CalculatePitch(video);
+ 
+-#ifdef WIN32_PLATFORM_PSPC
++#ifdef _WIN32_CE
+ 	 /* Stuff to hide that $#!^%#$ WinCE taskbar in fullscreen... */
+ 	if ( flags & SDL_FULLSCREEN ) {
+ 		if ( !(prev_flags & SDL_FULLSCREEN) ) {
+-			SHFullScreen(SDL_Window, SHFS_HIDETASKBAR);
+-			SHFullScreen(SDL_Window, SHFS_HIDESIPBUTTON);
+-			ShowWindow(FindWindow(TEXT("HHTaskBar"),NULL),SW_HIDE);
++			DIB_ShowTaskBar(FALSE);
+ 		}
+ 		video->flags |= SDL_FULLSCREEN;
+ 	} else {
+ 		if ( prev_flags & SDL_FULLSCREEN ) {
+-			SHFullScreen(SDL_Window, SHFS_SHOWTASKBAR);
+-			SHFullScreen(SDL_Window, SHFS_SHOWSIPBUTTON);
+-			ShowWindow(FindWindow(TEXT("HHTaskBar"),NULL),SW_SHOWNORMAL);
++			DIB_ShowTaskBar(TRUE);
+ 		}
+ 	}
+ #endif
+@@ -640,28 +713,82 @@
+ 			((Uint32*)binfo->bmiColors)[0] = video->format->Rmask;
+ 			((Uint32*)binfo->bmiColors)[1] = video->format->Gmask;
+ 			((Uint32*)binfo->bmiColors)[2] = video->format->Bmask;
+-		} else {
++		} else {
++#ifdef UNDER_CE
++			binfo->bmiHeader.biCompression = BI_RGB;	/* 332 */
++			if ( video->format->palette ) {
++				binfo->bmiHeader.biClrUsed = video->format->palette->ncolors;
++				for(i=0; i<video->format->palette->ncolors; i++)
++				{
++					binfo->bmiColors[i].rgbRed=i&(7<<5);
++					binfo->bmiColors[i].rgbGreen=(i&(7<<2))<<3;
++					binfo->bmiColors[i].rgbBlue=(i&3)<<5;
++					binfo->bmiColors[i].rgbReserved=0;
++			   }
++			}
++#else
+ 			binfo->bmiHeader.biCompression = BI_RGB;	/* BI_BITFIELDS for 565 vs 555 */
+ 			if ( video->format->palette ) {
+ 				memset(binfo->bmiColors, 0,
+ 					video->format->palette->ncolors*sizeof(RGBQUAD));
+-			}
++			}
++#endif
+ 		}
+ 
+ 		/* Create the offscreen bitmap buffer */
+-		hdc = GetDC(SDL_Window);
++		hdc = GetDC(SDL_Window);
++#ifdef _WIN32_CE
++		/* See if we need to rotate the buffer (WinCE specific) */
++		screenWidth = GetDeviceCaps(hdc, HORZRES);
++		screenHeight = GetDeviceCaps(hdc, VERTRES);
++		rotation = SDL_ROTATE_NONE;
++		work_pixels = NULL;
++		if (rotation_pixels) {
++		free(rotation_pixels);
++			rotation_pixels = NULL;
++		}
++
++		if ((flags & SDL_FULLSCREEN) && (width>height) && (width > screenWidth) ) {
++			/* OK, we rotate the screen */
++		video->pixels = malloc(video->h * video->pitch);
++			rotation_pixels = video->pixels;
++			if (video->pixels)
++				rotation = SDL_ROTATE_LEFT;
++			OutputDebugString(TEXT("will rotate\r\n"));
++		}
++		screen_bmp = CreateDIBSection(hdc, binfo, DIB_RGB_COLORS,
++			(rotation == SDL_ROTATE_NONE ? (void **)(&video->pixels) : (void**)&work_pixels), NULL, 0);
++#else
+ 		screen_bmp = CreateDIBSection(hdc, binfo, DIB_RGB_COLORS,
+-					(void **)(&video->pixels), NULL, 0);
+-		ReleaseDC(SDL_Window, hdc);
+-		free(binfo);
++					(void **)(&video->pixels), NULL, 0);
++#endif
++		ReleaseDC(SDL_Window, hdc);
++#ifdef UNDER_CE
++/* keep bitmapinfo for palette in 8-bit modes for devices that don't have SetDIBColorTable */
++		last_bits = (rotation == SDL_ROTATE_NONE ? (void **)(&video->pixels) : (void**)&work_pixels);
++		if(last_bitmapinfo)
++			free(last_bitmapinfo);
++		if(is16bitmode)
++		{
++			last_bitmapinfo = 0;
++			free(binfo);
++		} else
++			last_bitmapinfo = binfo;
++#else
++		free(binfo);
++#endif
+ 		if ( screen_bmp == NULL ) {
+ 			if ( video != current ) {
+ 				SDL_FreeSurface(video);
+ 			}
+ 			SDL_SetError("Couldn't create DIB section");
+ 			return(NULL);
+-		}
+-		this->UpdateRects = DIB_NormalUpdate;
++		}
++#ifdef _WIN32_CE
++		this->UpdateRects = (work_pixels ? DIB_RotatedUpdate : DIB_NormalUpdate);
++#else
++		this->UpdateRects = DIB_NormalUpdate;
++#endif
+ 
+ 		/* Set video surface flags */
+ 		if ( bpp <= 8 ) {
+@@ -695,7 +822,15 @@
+ 		bounds.left = SDL_windowX;
+ 		bounds.top = SDL_windowY;
+ 		bounds.right = SDL_windowX+video->w;
+-		bounds.bottom = SDL_windowY+video->h;
++		bounds.bottom = SDL_windowY+video->h;
++#ifdef UNDER_CE
++		if(rotation != SDL_ROTATE_NONE)
++		{   
++			int t=bounds.right;
++			bounds.right = bounds.bottom;
++			bounds.bottom=t;
++		}
++#endif
+ 		AdjustWindowRectEx(&bounds, GetWindowLong(SDL_Window, GWL_STYLE), FALSE, 0);
+ 		width = bounds.right-bounds.left;
+ 		height = bounds.bottom-bounds.top;
+@@ -709,8 +844,10 @@
+ 			x = (GetSystemMetrics(SM_CXSCREEN)-width)/2;
+ 			y = (GetSystemMetrics(SM_CYSCREEN)-height)/2;
+ 		} else {
+-			x = y = -1;
+-			swp_flags |= SWP_NOMOVE;
++			x = y = -1;
++#ifndef UNDER_CE
++			swp_flags |= SWP_NOMOVE;
++#endif
+ 		}
+ 		if ( y < 0 ) { /* Cover up title bar for more client area */
+ 			y -= GetSystemMetrics(SM_CYCAPTION)/2;
+@@ -719,19 +856,44 @@
+ 			top = HWND_TOPMOST;
+ 		} else {
+ 			top = HWND_NOTOPMOST;
+-		}
+-		SetWindowPos(SDL_Window, top, x, y, width, height, swp_flags);
++		}
++#ifdef _WIN32_CE
++		if (flags & SDL_FULLSCREEN) {
++/* When WinCE program switches resolution from larger to smaller we should move its window so it would be visible in fullscreen */
++//			SetWindowPos(SDL_Window, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
++			DIB_ShowTaskBar(FALSE);
++			if(x>0) x=0;	// remove space from the left side of a screen in 320x200 mode
++			if(y>0) y=0;
++			SetWindowPos(SDL_Window, HWND_TOPMOST, x, y, width, height, SWP_NOCOPYBITS);
++			ShowWindow(SDL_Window, SW_SHOW);
++		}
++		else
++			SetWindowPos(SDL_Window, top, x, y, width, height, swp_flags);
++#else
++		SetWindowPos(SDL_Window, top, x, y, width, height, swp_flags);
++#endif
+ 		SDL_resizing = 0;
+ 		SetForegroundWindow(SDL_Window);
+ 	}
+ 
+ 	/* Set up for OpenGL */
+-	if ( flags & SDL_OPENGL ) {
++	if ( flags & SDL_OPENGL ) {
++#ifdef HAVE_OPENGL
+ 		if ( WIN_GL_SetupWindow(this) < 0 ) {
+ 			return(NULL);
+ 		}
+-		video->flags |= SDL_OPENGL;
+-	}
++		video->flags |= SDL_OPENGL;
++#else
++		return NULL;
++#endif
++	}
++
++#ifdef ENABLE_WINGAPI
++	/* Grab hardware keys if necessary */
++	if ( flags & SDL_FULLSCREEN ) {
++		GAPI_GrabHardwareKeys(TRUE);
++	}
++#endif
+ 
+ 	/* We're live! */
+ 	return(video);
+@@ -754,22 +916,169 @@
+ {
+ 	return;
+ }
++
++#ifdef _WIN32_CE
++ 
++static inline void rotateBlit(unsigned short *src, unsigned short *dest, SDL_Rect *rect, int pitch) {
++	int i=rect->w, j=rect->h;
++	src+=i;
++
++	for (;i--;) {
++		register unsigned short *S=src--;
++// I use loop unrolling to spedup things a little
++		int cnt = j;
++		if(cnt&1)
++		{
++			*(dest++) = *S;
++			S+=pitch;
++		}
++		cnt>>=1;
++		if(cnt&1)
++		{
++			*(dest++) = *S;
++			S+=pitch;
++			*(dest++) = *S;
++			S+=pitch;
++		}
++		cnt>>=1;
++		for (; cnt--; ) {
++			*(dest++) = *S;
++			S+=pitch;
++			*(dest++) = *S;
++			S+=pitch;
++			*(dest++) = *S;
++			S+=pitch;
++			*(dest++) = *S;
++			S+=pitch;
++		}
++	}
++/* tiny optimization
++	int i, j;
++	src+=rect->w;
++
++	for (i=0; i<rect->w; i++) {
++		register unsigned short *S=src--;
++		for (j=0; j<rect->h; j++) {
++			*(dest++) = *S;
++			S+=pitch;
++		}
++	}
++*/
++/* original unoptimized version
++	int i, j;
++
++	for (i=0; i<rect->w; i++) {
++		for (j=0; j<rect->h; j++) {
++			dest[i * rect->h + j] = src[pitch * j + (rect->w - i)];
++		}
++	}
++*/
++}
++
++static inline void rotateBlit8(unsigned char *src, unsigned char *dest, SDL_Rect *rect, int pitch) {
++	int i=rect->w, j=rect->h;
++	src+=i;
++
++	for (;i--;) {
++		register unsigned char *S=src--;
++// I use loop unrolling to spedup things a little
++		int cnt = j;
++		if(cnt&1)
++		{
++			*(dest++) = *S;
++			S+=pitch;
++		}
++		cnt>>=1;
++		if(cnt&1)
++		{
++			*(dest++) = *S;
++			S+=pitch;
++			*(dest++) = *S;
++			S+=pitch;
++		}
++		cnt>>=1;
++		for (; cnt--; ) {
++			*(dest++) = *S;
++			S+=pitch;
++			*(dest++) = *S;
++			S+=pitch;
++			*(dest++) = *S;
++			S+=pitch;
++			*(dest++) = *S;
++			S+=pitch;
++		}
++	}
++}
++
++static void DIB_RotatedUpdate(_THIS, int numrects, SDL_Rect *rects) 
++{
++	HDC hdc, mdc;
++	HBITMAP hb, old;
++	int i;
++
++	hdc = GetDC(SDL_Window);
++	if ( screen_pal ) {
++		SelectPalette(hdc, screen_pal, FALSE);
++	}
++	mdc = CreateCompatibleDC(hdc);
++	/*SelectObject(mdc, screen_bmp);*/
++	if(this->screen->format->BytesPerPixel == 2) {
++		for ( i=0; i<numrects; ++i ) {	
++			unsigned short *src = (unsigned short*)this->screen->pixels;
++			rotateBlit(src + (this->screen->w * rects[i].y) + rects[i].x, work_pixels, &rects[i], this->screen->w);		
++			hb = CreateBitmap(rects[i].h, rects[i].w, 1, 16, work_pixels);
++			old = (HBITMAP)SelectObject(mdc, hb);
++			BitBlt(hdc, rects[i].y, this->screen->w - (rects[i].x + rects[i].w), rects[i].h, rects[i].w,
++					mdc, 0, 0, SRCCOPY);
++			SelectObject(mdc, old);
++			DeleteObject(hb);
++		}
++	} else {
++		if ( screen_pal ) {
++			SelectPalette(mdc, screen_pal, FALSE);
++		}
++		for ( i=0; i<numrects; ++i ) {	
++			unsigned char *src = (unsigned char*)this->screen->pixels;
++			rotateBlit8(src + (this->screen->w * rects[i].y) + rects[i].x, work_pixels, &rects[i], this->screen->w);
++			hb = CreateBitmap(rects[i].h, rects[i].w, 1, 8, work_pixels);
++			old = (HBITMAP)SelectObject(mdc, hb);
++			BitBlt(hdc, rects[i].y, this->screen->w - (rects[i].x + rects[i].w), rects[i].h, rects[i].w,
++					mdc, 0, 0, SRCCOPY);
++			SelectObject(mdc, old);
++			DeleteObject(hb); 
++		}
++	}
++	DeleteDC(mdc);
++	ReleaseDC(SDL_Window, hdc);
++}
++#endif
++
+ 
+ static void DIB_NormalUpdate(_THIS, int numrects, SDL_Rect *rects)
+ {
+ 	HDC hdc, mdc;
+-	int i;
++	int i;
++#ifdef _WIN32_CE
++	HBITMAP old;
++#endif
+ 
+ 	hdc = GetDC(SDL_Window);
+ 	if ( screen_pal ) {
+ 		SelectPalette(hdc, screen_pal, FALSE);
+ 	}
+-	mdc = CreateCompatibleDC(hdc);
+-	SelectObject(mdc, screen_bmp);
++	mdc = CreateCompatibleDC(hdc);
++#ifdef _WIN32_CE
++	old = (HBITMAP)SelectObject(mdc, screen_bmp);
++#else
++	SelectObject(mdc, screen_bmp);
++#endif
+ 	for ( i=0; i<numrects; ++i ) {
+ 		BitBlt(hdc, rects[i].x, rects[i].y, rects[i].w, rects[i].h,
+ 					mdc, rects[i].x, rects[i].y, SRCCOPY);
+-	}
++	}
++#ifdef _WIN32_CE
++	SelectObject(mdc, old);
++#endif
+ 	DeleteDC(mdc);
+ 	ReleaseDC(SDL_Window, hdc);
+ }
+@@ -778,11 +1087,11 @@
+ {
+ 	RGBQUAD *pal;
+ 	int i;
+-#ifndef _WIN32_WCE
+-	HDC hdc, mdc;
+-#else
+-	HDC hdc;
+-#endif
++	HDC hdc, mdc;
++#if defined(UNDER_CE) && defined(NO_SETDIBCOLORTABLE)
++	if(last_bitmapinfo==0)
++		return 0;
++#endif
+ 
+ 	/* Update the display palette */
+ 	hdc = GetDC(SDL_Window);
+@@ -811,14 +1120,38 @@
+ 	}
+ 
+ 	/* Set the DIB palette and update the display */
+-#ifndef _WIN32_WCE
+-	mdc = CreateCompatibleDC(hdc);
++	mdc = CreateCompatibleDC(hdc);
++#ifdef UNDER_CE
++#ifdef NO_SETDIBCOLORTABLE
++	if(1)
++#else
++/* BUG: For some reason SetDIBColorTable is not working when screen is not rotated */
++	if(rotation == SDL_ROTATE_NONE && last_bitmapinfo)
++#endif
++	{
++		DeleteObject(screen_bmp);
++		last_bitmapinfo->bmiHeader.biClrUsed=256;
++		for ( i=firstcolor; i<firstcolor+ncolors; ++i )
++			last_bitmapinfo->bmiColors[i]=pal[i];
++		screen_bmp = CreateDIBSection(hdc, last_bitmapinfo, DIB_RGB_COLORS,
++			last_bits, NULL, 0);
++    }
++#else
+ 	SelectObject(mdc, screen_bmp);
+-	SetDIBColorTable(mdc, firstcolor, ncolors, pal);
++	SetDIBColorTable(mdc, firstcolor, ncolors, pal);
++#endif
++#ifndef UNDER_CE
+ 	BitBlt(hdc, 0, 0, this->screen->w, this->screen->h,
+-	       mdc, 0, 0, SRCCOPY);
++	       mdc, 0, 0, SRCCOPY);
++#else
++	{
++		SDL_Rect rect;
++		rect.x=0; rect.y=0;
++		rect.w=this->screen->w; rect.h=this->screen->h;
++// Fixme: screen flickers:		(this->UpdateRects)(this, 1, &rect) ;
++	}
++#endif
+ 	DeleteDC(mdc);
+-#endif
+ 	ReleaseDC(SDL_Window, hdc);
+ 	return(1);
+ }
+@@ -937,27 +1270,27 @@
+ 
+ void DIB_VideoQuit(_THIS)
+ {
+-	/* Destroy the window and everything associated with it */
++	/* Destroy the window and everything associated with it */
++#ifdef _WIN32_CE
++	DIB_ShowTaskBar(TRUE);
++#ifdef ENABLE_WINGAPI
++	GAPI_GrabHardwareKeys(FALSE);
++#endif
++#endif
+ 	if ( SDL_Window ) {
+ 		/* Delete the screen bitmap (also frees screen->pixels) */
+ 		if ( this->screen ) {
+-#ifdef WIN32_PLATFORM_PSPC
+-			if ( this->screen->flags & SDL_FULLSCREEN ) {
+-				/* Unhide taskbar, etc. */
+-				SHFullScreen(SDL_Window, SHFS_SHOWTASKBAR);
+-				SHFullScreen(SDL_Window, SHFS_SHOWSIPBUTTON);
+-				ShowWindow(FindWindow(TEXT("HHTaskBar"),NULL),SW_SHOWNORMAL);
+-			}
+-#endif
+ #ifndef NO_CHANGEDISPLAYSETTINGS
+ 			if ( this->screen->flags & SDL_FULLSCREEN ) {
+ 				ChangeDisplaySettings(NULL, 0);
+ 				ShowWindow(SDL_Window, SW_HIDE);
+ 			}
+-#endif
++#endif
++#ifdef HAVE_OPENGL
+ 			if ( this->screen->flags & SDL_OPENGL ) {
+ 				WIN_GL_ShutDown(this);
+-			}
++			}
++#endif
+ 			this->screen->pixels = NULL;
+ 		}
+ 		if ( screen_bmp ) {
+diff -ruN SDL-1.2.7-orig/src/video/windib/SDL_dibvideo.h SDL-1.2.7/src/video/windib/SDL_dibvideo.h
+--- SDL-1.2.7-orig/src/video/windib/SDL_dibvideo.h	Wed Feb 18 09:22:10 2004
++++ SDL-1.2.7/src/video/windib/SDL_dibvideo.h	Thu Nov 18 13:13:42 2004
+@@ -29,11 +29,26 @@
+ #define _SDL_dibvideo_h
+ 
+ #include <windows.h>
++
++//#ifdef _WIN32_CE
++/* Rotation direction */
++typedef enum {
++	SDL_ROTATE_NONE,
++	SDL_ROTATE_LEFT,
++	SDL_ROTATE_RIGHT
++} SDL_RotateAttr;
++//#endif
+ 
+ /* Private display data */
+ struct SDL_PrivateVideoData {
+     HBITMAP screen_bmp;
+-    HPALETTE screen_pal;
++    HPALETTE screen_pal;
++//#ifdef _WIN32_CE
++	void *work_pixels; /* if the display needs to be rotated, memory allocated by the API */
++	void *rotation_pixels; /* if the display needs to be rotated, memory allocated by the code */
++	SDL_RotateAttr rotation;
++	char ozoneHack; /* force stylus translation if running without Hi Res flag */
++//#endif
+ 
+ #define NUM_MODELISTS	4		/* 8, 16, 24, and 32 bits-per-pixel */
+     int SDL_nummodes[NUM_MODELISTS];
+@@ -43,6 +58,12 @@
+ #define screen_bmp		(this->hidden->screen_bmp)
+ #define screen_pal		(this->hidden->screen_pal)
+ #define SDL_nummodes		(this->hidden->SDL_nummodes)
+-#define SDL_modelist		(this->hidden->SDL_modelist)
++#define SDL_modelist		(this->hidden->SDL_modelist)
++//#ifdef _WIN32_CE
++#define work_pixels			(this->hidden->work_pixels)
++#define rotation			(this->hidden->rotation)
++#define rotation_pixels		(this->hidden->rotation_pixels)
++#define ozoneHack			(this->hidden->ozoneHack)
++//#endif
+ 
+ #endif /* _SDL_dibvideo_h */
+diff -ruN SDL-1.2.7-orig/src/video/wingapi/SDL_gapivideo.c SDL-1.2.7/src/video/wingapi/SDL_gapivideo.c
+--- SDL-1.2.7-orig/src/video/wingapi/SDL_gapivideo.c	Wed Dec 31 19:00:00 1969
++++ SDL-1.2.7/src/video/wingapi/SDL_gapivideo.c	Thu Nov 18 13:43:27 2004
+@@ -0,0 +1,956 @@
++/*
++    SDL - Simple DirectMedia Layer
++    Copyright (C) 1997, 1998, 1999, 2000, 2001, 2002  Sam Lantinga
++
++    This library is free software; you can redistribute it and/or
++    modify it under the terms of the GNU Library General Public
++    License as published by the Free Software Foundation; either
++    version 2 of the License, or (at your option) any later version.
++
++    This library is distributed in the hope that it will be useful,
++    but WITHOUT ANY WARRANTY; without even the implied warranty of
++    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++    Library General Public License for more details.
++
++    You should have received a copy of the GNU Library General Public
++    License along with this library; if not, write to the Free
++    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++
++    Sam Lantinga
++    slouken@libsdl.org
++*/
++
++#ifdef SAVE_RCSID
++static char rcsid =
++ "@(#) $Id: SDL_gapivideo.c,v 1.5 2004/02/29 21:54:11 lemure Exp $";
++#endif
++
++/* Dummy SDL video driver implementation; this is just enough to make an
++ *  SDL-based application THINK it's got a working video driver, for
++ *  applications that call SDL_Init(SDL_INIT_VIDEO) when they don't need it,
++ *  and also for use as a collection of stubs when porting SDL to a new
++ *  platform for which you haven't yet written a valid video driver.
++ *
++ * This is also a great way to determine bottlenecks: if you think that SDL
++ *  is a performance problem for a given platform, enable this driver, and
++ *  then see if your application runs faster without video overhead.
++ *
++ * Initial work by Ryan C. Gordon (icculus@linuxgames.com). A good portion
++ *  of this was cut-and-pasted from Stephane Peter's work in the AAlib
++ *  SDL video driver.  Renamed to "DUMMY" by Sam Lantinga.
++ */
++
++#include <stdio.h>
++#include <stdlib.h>
++#include <malloc.h>
++#include <windows.h>
++
++/* Not yet in the mingw32 cross-compile headers */
++#ifndef CDS_FULLSCREEN
++#define CDS_FULLSCREEN	4
++#endif
++
++#ifndef WS_THICKFRAME
++#define WS_THICKFRAME 0
++#endif
++
++#include "SDL.h"
++#include "SDL_mutex.h"
++#include "SDL_syswm.h"
++#include "SDL_sysvideo.h"
++#include "SDL_sysevents.h"
++#include "SDL_events_c.h"
++#include "SDL_pixels_c.h"
++#include "SDL_syswm_c.h"
++#include "SDL_sysmouse_c.h"
++#include "SDL_dibevents_c.h"
++#include "SDL_gapivideo.h"
++
++#if defined(WIN32_PLATFORM_PSPC)
++#include <aygshell.h>                      // Add Pocket PC includes
++#pragma comment( lib, "aygshell" )         // Link Pocket PC library
++#endif
++
++#ifdef _WIN32_WCE
++extern void DIB_ShowTaskBar(BOOL taskBarShown);
++#endif
++
++
++/* Initialization/Query functions */
++static int GAPI_VideoInit(_THIS, SDL_PixelFormat *vformat);
++static SDL_Rect **GAPI_ListModes(_THIS, SDL_PixelFormat *format, Uint32 flags);
++static SDL_Surface *GAPI_SetVideoMode(_THIS, SDL_Surface *current, int width, int height, int bpp, Uint32 flags);
++static int GAPI_SetColors(_THIS, int firstcolor, int ncolors, SDL_Color *colors);
++static void GAPI_VideoQuit(_THIS);
++
++
++/* Hardware surface functions */
++static int GAPI_AllocHWSurface(_THIS, SDL_Surface *surface);
++static int GAPI_LockHWSurface(_THIS, SDL_Surface *surface);
++static void GAPI_UnlockHWSurface(_THIS, SDL_Surface *surface);
++static void GAPI_FreeHWSurface(_THIS, SDL_Surface *surface);
++
++/* Windows message handling functions, will not be processed */
++static void GAPI_RealizePalette(_THIS);
++static void GAPI_PaletteChanged(_THIS, HWND window);
++static void GAPI_WinPAINT(_THIS, HDC hdc);
++
++static void GAPI_UpdateRects(_THIS, int numrects, SDL_Rect *rects); 
++/*static void GAPI_UpdateRectsMono(_THIS, int numrects, SDL_Rect *rects);*/
++
++static int GAPI_Available(void);
++static SDL_VideoDevice *GAPI_CreateDevice(int devindex);
++
++void GAPI_GrabHardwareKeys(BOOL grab);
++
++VideoBootStrap WINGAPI_bootstrap = {
++	"wingapi", "WinCE GAPI",
++	GAPI_Available, GAPI_CreateDevice
++};
++
++/* 2003 SE GAPI emulation */
++
++#define GETRAWFRAMEBUFFER   0x00020001
++
++#define FORMAT_565 1
++#define FORMAT_555 2
++#define FORMAT_OTHER 3
++
++static void* _OzoneFrameBuffer = NULL;
++static struct GXDisplayProperties _OzoneDisplayProperties;
++static char _OzoneAvailable = 0;
++
++typedef struct _RawFrameBufferInfo
++{
++   WORD wFormat;
++   WORD wBPP;
++   VOID *pFramePointer;
++   int  cxStride;
++   int  cyStride;
++   int  cxPixels;
++   int  cyPixels;
++} RawFrameBufferInfo;
++
++
++struct GXDisplayProperties Ozone_GetDisplayProperties(void) {
++	return _OzoneDisplayProperties;
++}
++
++int Ozone_OpenDisplay(HWND window, unsigned long flag) {
++	return 1;
++}
++
++int Ozone_CloseDisplay(void) {
++	return 1;
++}
++
++void* Ozone_BeginDraw(void) {
++	return _OzoneFrameBuffer;
++}
++
++int Ozone_EndDraw(void) {
++	return 1;
++}
++
++int Ozone_Suspend(void) {
++	return 1;
++}
++
++int Ozone_Resume(void) {
++	return 1;
++}
++
++static HINSTANCE checkOzone(tGXDisplayProperties *gxGetDisplayProperties, tGXOpenDisplay *gxOpenDisplay,
++					  tGXVoidFunction *gxCloseDisplay, tGXBeginDraw *gxBeginDraw, 
++					  tGXVoidFunction *gxEndDraw, tGXVoidFunction *gxSuspend, tGXVoidFunction *gxResume) {
++#ifdef ARM
++
++	int result;
++	RawFrameBufferInfo frameBufferInfo;
++	HDC hdc = GetDC(NULL);
++	result = ExtEscape(hdc, GETRAWFRAMEBUFFER, 0, NULL, sizeof(RawFrameBufferInfo), (char *)&frameBufferInfo);
++	ReleaseDC(NULL, hdc);
++	if (result < 0)
++		return NULL;
++	OutputDebugString(TEXT("Running on Ozone\r\n"));
++	_OzoneAvailable = 1;
++
++	// Initializing global parameters
++	_OzoneFrameBuffer = frameBufferInfo.pFramePointer;
++	_OzoneDisplayProperties.cBPP = frameBufferInfo.wBPP;
++	_OzoneDisplayProperties.cbxPitch = frameBufferInfo.cxStride;
++	_OzoneDisplayProperties.cbyPitch = frameBufferInfo.cyStride;
++	_OzoneDisplayProperties.cxWidth = frameBufferInfo.cxPixels;
++	_OzoneDisplayProperties.cyHeight = frameBufferInfo.cyPixels;
++	if (frameBufferInfo.wFormat == FORMAT_565)
++		_OzoneDisplayProperties.ffFormat = kfDirect565;
++	else
++	if (frameBufferInfo.wFormat == FORMAT_555)
++		_OzoneDisplayProperties.ffFormat = kfDirect555;
++	else {
++		OutputDebugString(TEXT("Ozone unknown screen format"));
++		return NULL;
++	}
++
++	if (gxGetDisplayProperties)
++		*gxGetDisplayProperties = Ozone_GetDisplayProperties;
++	if (gxOpenDisplay)
++		*gxOpenDisplay = Ozone_OpenDisplay;
++	if (gxCloseDisplay)
++		*gxCloseDisplay = Ozone_CloseDisplay;
++	if (gxBeginDraw)
++		*gxBeginDraw = Ozone_BeginDraw;
++	if (gxEndDraw)
++		*gxEndDraw = Ozone_EndDraw;
++	if (gxSuspend)
++		*gxSuspend = Ozone_Suspend;
++	if (gxResume)
++		*gxResume = Ozone_Resume;
++
++	return (HINSTANCE)1;
++
++#else
++
++	return NULL;
++
++#endif
++}
++
++int getScreenWidth() {
++	return (_OzoneFrameBuffer ? _OzoneDisplayProperties.cxWidth : GetSystemMetrics(SM_CXSCREEN));
++}
++
++int getScreenHeight() {
++	return (_OzoneFrameBuffer ? _OzoneDisplayProperties.cyHeight : GetSystemMetrics(SM_CYSCREEN));
++}
++
++
++/* Check GAPI library */
++
++#define IMPORT(Handle,Variable,Type,Function, Store) \
++        Variable = GetProcAddress(Handle, TEXT(Function)); \
++		if (!Variable) { \
++			FreeLibrary(Handle); \
++			return NULL; \
++		} \
++		if (Store) \
++			*Store = (Type)Variable;
++
++static HINSTANCE checkGAPI(tGXDisplayProperties *gxGetDisplayProperties, tGXOpenDisplay *gxOpenDisplay,
++					  tGXVoidFunction *gxCloseDisplay, tGXBeginDraw *gxBeginDraw, 
++					  tGXVoidFunction *gxEndDraw, tGXVoidFunction *gxSuspend, tGXVoidFunction *gxResume,
++					  BOOL bypassOzone) {
++	HMODULE gapiLibrary;
++	FARPROC proc;
++	HINSTANCE result;
++	// FIXME paletted !
++	tGXDisplayProperties temp_gxGetDisplayProperties;
++
++	// Workaround for Windows Mobile 2003 SE
++	_OzoneFrameBuffer = NULL;
++	if (!bypassOzone) {
++		result = checkOzone(gxGetDisplayProperties, gxOpenDisplay, gxCloseDisplay, gxBeginDraw, gxEndDraw, gxSuspend, gxResume);
++		if (result)
++			return result;
++	}
++
++	gapiLibrary = LoadLibrary(TEXT("gx.dll"));
++	if (!gapiLibrary)
++		return NULL;
++
++	IMPORT(gapiLibrary, proc, tGXDisplayProperties, "?GXGetDisplayProperties@@YA?AUGXDisplayProperties@@XZ", gxGetDisplayProperties)
++	IMPORT(gapiLibrary, proc, tGXOpenDisplay, "?GXOpenDisplay@@YAHPAUHWND__@@K@Z", gxOpenDisplay)
++	IMPORT(gapiLibrary, proc, tGXVoidFunction, "?GXCloseDisplay@@YAHXZ", gxCloseDisplay)
++	IMPORT(gapiLibrary, proc, tGXBeginDraw, "?GXBeginDraw@@YAPAXXZ", gxBeginDraw)
++	IMPORT(gapiLibrary, proc, tGXVoidFunction, "?GXEndDraw@@YAHXZ", gxEndDraw)
++	IMPORT(gapiLibrary, proc, tGXVoidFunction, "?GXSuspend@@YAHXZ", gxSuspend)
++	IMPORT(gapiLibrary, proc, tGXVoidFunction, "?GXResume@@YAHXZ", gxResume)
++	
++	// FIXME paletted ! for the moment we just bail out	
++	if (!gxGetDisplayProperties) {
++		IMPORT(gapiLibrary, proc, tGXDisplayProperties, "?GXGetDisplayProperties@@YA?AUGXDisplayProperties@@XZ", &temp_gxGetDisplayProperties)
++		if (temp_gxGetDisplayProperties().ffFormat & kfPalette) {
++			FreeLibrary(gapiLibrary);
++			return NULL;
++		}
++		FreeLibrary(gapiLibrary);		
++		gapiLibrary = (HINSTANCE)1;
++	}
++	
++	return gapiLibrary;
++}
++
++
++/* GAPI driver bootstrap functions */
++
++static int GAPI_Available(void)
++{
++	/* Check if the GAPI library is available */
++
++	if (!checkGAPI(NULL, NULL, NULL, NULL, NULL, NULL, NULL, FALSE)) {
++		OutputDebugString(TEXT("GAPI driver not available\r\n"));
++		return 0;
++	}
++	else {
++		OutputDebugString(TEXT("GAPI driver available\r\n"));
++		return 1;
++	}
++}
++
++static void GAPI_DeleteDevice(SDL_VideoDevice *device)
++{
++	if (device && device->hidden && device->hidden->gapiFuncs.dynamicGXCloseDisplay)
++		device->hidden->gapiFuncs.dynamicGXCloseDisplay();
++
++	if (device && device->hidden)	
++		free(device->hidden);
++	if (device)
++		free(device);
++
++}
++
++static SDL_VideoDevice *GAPI_CreateDevice(int devindex)
++{
++	SDL_VideoDevice *device;
++
++	/* Initialize all variables that we clean on shutdown */
++	device = (SDL_VideoDevice *)malloc(sizeof(SDL_VideoDevice));
++	if ( device ) {
++		memset(device, 0, (sizeof *device));
++		device->hidden = (struct SDL_PrivateVideoData *)
++				malloc((sizeof *device->hidden));
++	}
++	if ( (device == NULL) || (device->hidden == NULL) ) {
++		SDL_OutOfMemory();
++		if ( device ) {
++			free(device);
++		}
++		return(0);
++	}
++	memset(device->hidden, 0, (sizeof *device->hidden));
++
++	/* Set GAPI pointers */
++
++	checkGAPI(&device->hidden->gapiFuncs.dynamicGXGetDisplayProperties, 
++			  &device->hidden->gapiFuncs.dynamicGXOpenDisplay, 
++			  &device->hidden->gapiFuncs.dynamicGXCloseDisplay, 
++			  &device->hidden->gapiFuncs.dynamicGXBeginDraw, 
++			  &device->hidden->gapiFuncs.dynamicGXEndDraw, 
++			  &device->hidden->gapiFuncs.dynamicGXSuspend, 
++			  &device->hidden->gapiFuncs.dynamicGXResume, 
++			  FALSE);
++	device->hidden->displayProps = device->hidden->gapiFuncs.dynamicGXGetDisplayProperties();
++
++	/* Set the function pointers */
++
++	device->VideoInit = GAPI_VideoInit;
++	device->ListModes = GAPI_ListModes;
++	device->SetVideoMode = GAPI_SetVideoMode;
++	device->UpdateMouse = WIN_UpdateMouse;
++	device->SetColors = GAPI_SetColors;
++	device->UpdateRects = NULL;
++	device->VideoQuit = GAPI_VideoQuit;
++	device->AllocHWSurface = GAPI_AllocHWSurface;
++	device->CheckHWBlit = NULL;
++	device->FillHWRect = NULL;
++	device->SetHWColorKey = NULL;
++	device->SetHWAlpha = NULL;
++	device->LockHWSurface = GAPI_LockHWSurface;
++	device->UnlockHWSurface = GAPI_UnlockHWSurface;
++	device->FlipHWSurface = NULL;
++	device->FreeHWSurface = GAPI_FreeHWSurface;
++	device->SetCaption = WIN_SetWMCaption;
++	device->SetIcon = WIN_SetWMIcon;
++	device->IconifyWindow = WIN_IconifyWindow;
++	device->GrabInput = WIN_GrabInput;
++	device->GetWMInfo = WIN_GetWMInfo;
++	device->FreeWMCursor = WIN_FreeWMCursor;
++	device->CreateWMCursor = WIN_CreateWMCursor;
++	device->ShowWMCursor = WIN_ShowWMCursor;
++	device->WarpWMCursor = WIN_WarpWMCursor;
++	device->CheckMouseMode = WIN_CheckMouseMode;
++	device->InitOSKeymap = DIB_InitOSKeymap;
++	device->PumpEvents = DIB_PumpEvents;
++
++	device->SetColors = GAPI_SetColors;
++
++	/* Set up the windows message handling functions */
++	WIN_RealizePalette = GAPI_RealizePalette;
++	WIN_PaletteChanged = GAPI_PaletteChanged;
++	WIN_WinPAINT = GAPI_WinPAINT;
++	HandleMessage = DIB_HandleMessage;
++
++	device->free = GAPI_DeleteDevice;
++	
++	
++	/*
++	device->VideoInit = GAPI_VideoInit;
++	device->ListModes = GAPI_ListModes;
++	device->SetVideoMode = GAPI_SetVideoMode;
++	device->CreateYUVOverlay = NULL;
++	device->SetColors = DUMMY_SetColors;
++	device->UpdateRects = DUMMY_UpdateRects;
++	device->VideoQuit = DUMMY_VideoQuit;
++	device->AllocHWSurface = DUMMY_AllocHWSurface;
++	device->CheckHWBlit = NULL;
++	device->FillHWRect = NULL;
++	device->SetHWColorKey = NULL;
++	device->SetHWAlpha = NULL;
++	device->LockHWSurface = DUMMY_LockHWSurface;
++	device->UnlockHWSurface = DUMMY_UnlockHWSurface;
++	device->FlipHWSurface = NULL;
++	device->FreeHWSurface = DUMMY_FreeHWSurface;
++	device->SetCaption = NULL;
++	device->SetIcon = NULL;
++	device->IconifyWindow = NULL;
++	device->GrabInput = NULL;
++	device->GetWMInfo = NULL;
++	device->InitOSKeymap = DUMMY_InitOSKeymap;
++	device->PumpEvents = DUMMY_PumpEvents;
++
++	device->free = DUMMY_DeleteDevice;
++	*/
++
++	return device;
++}
++
++
++int GAPI_VideoInit(_THIS, SDL_PixelFormat *vformat)
++{
++
++	/* Create the window */
++	if ( DIB_CreateWindow(this) < 0 ) {
++		return(-1);
++	}
++
++	vformat->BitsPerPixel = (unsigned char)displayProperties.cBPP;	
++
++	// Get color mask
++	if (displayProperties.ffFormat & kfDirect565) {
++		vformat->BitsPerPixel = 16;
++		vformat->Rmask = 0x0000f800;
++		vformat->Gmask = 0x000007e0;
++		vformat->Bmask = 0x0000001f;
++		videoMode = GAPI_DIRECT_565;
++	}
++	else
++	if (displayProperties.ffFormat & kfDirect555) {
++		vformat->BitsPerPixel = 16;
++		vformat->Rmask = 0x00007c00;
++		vformat->Gmask = 0x000003e0;
++		vformat->Bmask = 0x0000001f;
++		videoMode = GAPI_DIRECT_555;
++	}
++	else
++	if ((displayProperties.ffFormat & kfDirect) && (displayProperties.cBPP <= 8)) {
++		// We'll perform the conversion
++		vformat->BitsPerPixel = 24;
++		vformat->Rmask = 0x00ff0000;
++		vformat->Gmask = 0x0000ff00;
++		vformat->Bmask = 0x000000ff;
++		if (displayProperties.ffFormat & kfDirectInverted)
++			invert = (1 << displayProperties.cBPP) - 1;
++		colorscale = displayProperties.cBPP < 8 ? 8 - displayProperties.cBPP : 0;
++		videoMode = GAPI_MONO;
++	}
++	else
++	if (displayProperties.ffFormat & kfPalette) {
++		videoMode = GAPI_PALETTE;
++	}
++
++	/* Set UpdateRect callback */
++	// FIXME
++	/*
++	if (videoMode != GAPI_MONO)
++		this->UpdateRects = GAPI_UpdateRects;
++	else
++		this->UpdateRects = GAPI_UpdateRectsMono;
++	*/
++
++	this->UpdateRects = GAPI_UpdateRects;
++	
++	/* We're done! */
++	return(0);
++}
++
++SDL_Rect **GAPI_ListModes(_THIS, SDL_PixelFormat *format, Uint32 flags)
++{
++   	 return (SDL_Rect **) -1;
++}
++
++SDL_Surface *GAPI_SetVideoMode(_THIS, SDL_Surface *current,
++				int width, int height, int bpp, Uint32 flags)
++{
++	SDL_Surface *video;
++	Uint32 Rmask, Gmask, Bmask;
++	Uint32 prev_flags;
++	DWORD style;
++	const DWORD directstyle =
++			(WS_POPUP);
++	const DWORD windowstyle = 
++			(WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU|WS_MINIMIZEBOX);
++	const DWORD resizestyle =
++			(WS_THICKFRAME|WS_MAXIMIZEBOX);
++	int screenWidth, screenHeight;
++	BOOL was_visible;
++
++	/* We negociate legacy GAPI if we want a screen that fits in QVGA */
++	if (_OzoneAvailable && _OzoneFrameBuffer && (width <= GetSystemMetrics(SM_CXSCREEN) || width <= GetSystemMetrics(SM_CYSCREEN)) &&
++						     (height <= GetSystemMetrics(SM_CXSCREEN) || height <= GetSystemMetrics(SM_CYSCREEN))) {
++			OutputDebugString(TEXT("Ozone workaround, switching back to GAPI\r\n"));
++			ozoneHack = 0;
++			checkGAPI(&this->hidden->gapiFuncs.dynamicGXGetDisplayProperties, 
++				&this->hidden->gapiFuncs.dynamicGXOpenDisplay, 
++				&this->hidden->gapiFuncs.dynamicGXCloseDisplay, 
++				&this->hidden->gapiFuncs.dynamicGXBeginDraw, 
++				&this->hidden->gapiFuncs.dynamicGXEndDraw, 
++				&this->hidden->gapiFuncs.dynamicGXSuspend, 
++				&this->hidden->gapiFuncs.dynamicGXResume, 
++				TRUE);
++			this->hidden->displayProps = this->hidden->gapiFuncs.dynamicGXGetDisplayProperties();
++	}
++	/* Otherwise we'll use the new system call */
++	if (_OzoneAvailable && !_OzoneFrameBuffer && (width > GetSystemMetrics(SM_CXSCREEN) && width > GetSystemMetrics(SM_CYSCREEN)) && 
++		                                         (height > GetSystemMetrics(SM_CXSCREEN) && height > GetSystemMetrics(SM_CYSCREEN))) {
++			OutputDebugString(TEXT("Ozone workaround, switching back to true Ozone\r\n"));
++			checkGAPI(&this->hidden->gapiFuncs.dynamicGXGetDisplayProperties, 
++				&this->hidden->gapiFuncs.dynamicGXOpenDisplay, 
++				&this->hidden->gapiFuncs.dynamicGXCloseDisplay, 
++				&this->hidden->gapiFuncs.dynamicGXBeginDraw, 
++				&this->hidden->gapiFuncs.dynamicGXEndDraw, 
++				&this->hidden->gapiFuncs.dynamicGXSuspend, 
++				&this->hidden->gapiFuncs.dynamicGXResume, 
++				FALSE);
++			this->hidden->displayProps = this->hidden->gapiFuncs.dynamicGXGetDisplayProperties();
++	}
++	/* Which will need a tiny input hack if the original code does not have the "Hi Res" aware ressource property set */
++	ozoneHack = 0;
++	if (_OzoneFrameBuffer && (GetSystemMetrics(SM_CXSCREEN) != (signed) _OzoneDisplayProperties.cxWidth ||
++							  GetSystemMetrics(SM_CYSCREEN) != (signed) _OzoneDisplayProperties.cyHeight)) {
++				OutputDebugString(TEXT("Running true Ozone with stylus hack\r\n"));
++				ozoneHack = 1;
++	}
++
++	/* See whether or not we should center the window */
++	was_visible = IsWindowVisible(SDL_Window);
++
++	/* Recalculate bitmasks if necessary */
++	if (bpp == current->format->BitsPerPixel) {
++		video = current;
++	}
++	else {
++		switch(bpp) {
++			case 8:
++				Rmask = 0;
++				Gmask = 0;
++				Bmask = 0;
++				break;
++			case 15:				
++			case 16:
++				/* Default is 565 unless the display is specifically 555 */
++				if (displayProperties.ffFormat & kfDirect555) {
++					Rmask = 0x00007c00;
++					Gmask = 0x000003e0;
++					Bmask = 0x0000001f;
++				}
++				else {
++					Rmask = 0x0000f800;
++					Gmask = 0x000007e0;
++					Bmask = 0x0000001f;
++				}
++				break;
++			case 24:
++			case 32:
++				Rmask = 0x00ff0000;
++				Gmask = 0x0000ff00;
++				Bmask = 0x000000ff;
++				break;
++			default:
++				SDL_SetError("Unsupported Bits Per Pixel format requested");
++				return NULL;
++		}
++		video = SDL_CreateRGBSurface(SDL_SWSURFACE,
++					0, 0, bpp, Rmask, Gmask, Bmask, 0);
++		if ( video == NULL ) {
++			SDL_OutOfMemory();
++			return(NULL);
++		}
++	}
++	
++	/* Fill in part of the video surface */
++	prev_flags = video->flags;
++	video->flags = 0;	/* Clear flags */
++	video->w = width;
++	video->h = height;
++	video->pitch = SDL_CalculatePitch(video);
++	mainSurfaceWidth = width;
++	mainSurfaceHeight = height;	
++
++//#ifdef WIN32_PLATFORM_PSPC
++	/* Hide taskbar */	
++	if ( flags & SDL_FULLSCREEN ) {
++		if ( !(prev_flags & SDL_FULLSCREEN) ) {
++			//SHFullScreen(SDL_Window, SHFS_HIDETASKBAR | SHFS_HIDESIPBUTTON | SHFS_HIDESTARTICON);
++			//ShowWindow(FindWindow(TEXT("HHTaskBar"),NULL),SW_HIDE);
++			DIB_ShowTaskBar(FALSE);
++		}
++		video->flags |= SDL_FULLSCREEN;
++	} else {
++		if ( prev_flags & SDL_FULLSCREEN ) {
++			//SHFullScreen(SDL_Window, SHFS_SHOWTASKBAR | SHFS_SHOWSIPBUTTON | SHFS_SHOWSTARTICON);
++			//ShowWindow(FindWindow(TEXT("HHTaskBar"),NULL),SW_SHOWNORMAL);
++			DIB_ShowTaskBar(TRUE);
++		}
++	}
++//#endif
++
++	/* Reset the palette and create a new one if necessary */	
++	if (screenPal != NULL) {
++		DeleteObject(screenPal);
++		screenPal = NULL;
++	}
++
++	/* See if we need to create a translation palette */
++	if (convertPalette != NULL) {
++		free(convertPalette);
++	}
++	if (bpp == 8) {
++		OutputDebugString(TEXT("creating palette\r\n"));
++		convertPalette = (unsigned short*)malloc(256 * sizeof(unsigned short));
++	}
++
++	if (displayProperties.ffFormat & kfPalette) {
++		/* Will only be able to support 256 colors in this mode */
++		// FIXME
++		//screenPal = GAPI_CreatePalette();
++	}
++
++	/* Set Window style */
++	style = GetWindowLong(SDL_Window, GWL_STYLE);
++	if ( (video->flags & SDL_FULLSCREEN) == SDL_FULLSCREEN ) {
++		style &= ~windowstyle;
++		style |= directstyle;
++	} else {
++		if ( flags & SDL_NOFRAME ) {
++			style &= ~windowstyle;
++			style |= directstyle;
++			video->flags |= SDL_NOFRAME;
++		} else {
++			style &= ~directstyle;
++			style |= windowstyle;
++			if ( flags & SDL_RESIZABLE ) {
++				style |= resizestyle;
++				video->flags |= SDL_RESIZABLE;
++			}
++		}
++#if WS_MAXIMIZE
++		if (IsZoomed(SDL_Window)) style |= WS_MAXIMIZE;
++#endif
++	}
++
++	if (!SDL_windowid)
++		SetWindowLong(SDL_Window, GWL_STYLE, style);
++
++	/* Allocate bitmap */
++	if (gapiBuffer) {
++		free(gapiBuffer);
++		gapiBuffer = NULL;
++	}
++	gapiBuffer = malloc(video->h * video->pitch);
++	video->pixels = gapiBuffer;
++
++	/* See if we will rotate */
++	rotation = SDL_ROTATE_NONE;
++	screenWidth = getScreenWidth();
++	screenHeight = getScreenHeight();
++	if ((flags & SDL_FULLSCREEN) && 
++		(width > screenWidth && width <= screenHeight)
++		) 
++	{
++			rotation = SDL_ROTATE_LEFT;
++	}
++	/* Compute the different drawing properties */
++	switch(rotation) {
++		case SDL_ROTATE_NONE:
++			dstPixelstep = displayProperties.cbxPitch;
++			dstLinestep = displayProperties.cbyPitch;
++			startOffset = 0;
++			break;
++		case SDL_ROTATE_LEFT:
++			dstPixelstep = -displayProperties.cbyPitch;
++			dstLinestep = displayProperties.cbxPitch;
++			startOffset = displayProperties.cbyPitch * (displayProperties.cyHeight - 1);
++			break;
++		case SDL_ROTATE_RIGHT:
++			dstPixelstep = displayProperties.cbyPitch;
++			dstLinestep = -displayProperties.cbxPitch;
++			startOffset = displayProperties.cbxPitch * (displayProperties.cxWidth - 1);
++			break;
++	}
++	/* Compute padding */
++	padWidth = 0;
++	padHeight = 0;
++	if (rotation == SDL_ROTATE_NONE) {
++		if (getScreenWidth() > width)
++			padWidth = (getScreenWidth() - width) / 2;
++		if (getScreenHeight() > height)
++			padHeight = (getScreenHeight() - height) / 2;
++	}
++	else {
++		if (getScreenWidth() > height)
++			padWidth = (getScreenWidth() - height) / 2;
++		if (getScreenHeight() > width)
++			padHeight = (getScreenHeight() - width) / 2;
++	}
++	srcLinestep = video->pitch;
++	srcPixelstep = (bpp == 15 ? 2 : bpp / 8);
++	
++	MoveWindow(SDL_Window, 0, 0, getScreenWidth(), getScreenHeight(), FALSE);
++	ShowWindow(SDL_Window, SW_SHOW);
++
++	/* Resize the window */
++	//if ( SDL_windowid == NULL ) {
++	if (0) {
++		HWND top;
++		UINT swp_flags;
++		RECT bounds;
++		int x,y;
++
++		SDL_resizing = 1;
++		bounds.left = 0;
++		bounds.top = 0;
++		bounds.right = video->w;
++		bounds.bottom = video->h;
++		AdjustWindowRectEx(&bounds, GetWindowLong(SDL_Window, GWL_STYLE), FALSE, 0);
++		width = bounds.right-bounds.left;
++		height = bounds.bottom-bounds.top;
++		x = (getScreenWidth()-width)/2;
++		y = (getScreenHeight()-height)/2;
++		if ( y < 0 ) { /* Cover up title bar for more client area */
++			y -= GetSystemMetrics(SM_CYCAPTION)/2;
++		}
++		swp_flags = (SWP_FRAMECHANGED | SWP_SHOWWINDOW);
++		if ( was_visible && !(flags & SDL_FULLSCREEN) ) {
++			swp_flags |= SWP_NOMOVE;
++		}
++		if ( flags & SDL_FULLSCREEN ) {
++			top = HWND_TOPMOST;
++		} else {
++			top = HWND_NOTOPMOST;
++		}
++
++		if (flags & SDL_FULLSCREEN) {
++			SetWindowPos(SDL_Window, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
++			ShowWindow(SDL_Window, SW_SHOW);
++		}
++		else
++			SetWindowPos(SDL_Window, top, x, y, width, height, swp_flags);
++		
++		SDL_resizing = 0;
++		SetForegroundWindow(SDL_Window);
++	}
++	
++	/* Open GAPI display */
++	GXOpenDisplay(SDL_Window, (flags & SDL_FULLSCREEN ? GX_FULLSCREEN : 0));
++
++	/* Grab hardware keys if necessary */
++	if (flags & SDL_FULLSCREEN)
++		GAPI_GrabHardwareKeys(TRUE);
++
++	/* Blank screen */
++	memset(GXBeginDraw(), 0, getScreenWidth() * getScreenHeight() * 2);
++	GXEndDraw();
++
++	/* We're done */
++	return(video);
++}
++
++/* We don't actually allow hardware surfaces other than the main one */
++static int GAPI_AllocHWSurface(_THIS, SDL_Surface *surface)
++{
++	return(-1);
++}
++static void GAPI_FreeHWSurface(_THIS, SDL_Surface *surface)
++{
++	return;
++}
++
++/* We need to wait for vertical retrace on page flipped displays */
++static int GAPI_LockHWSurface(_THIS, SDL_Surface *surface)
++{
++	return(0);
++}
++
++static void GAPI_UnlockHWSurface(_THIS, SDL_Surface *surface)
++{
++	return;
++}
++
++static void updateLine(_THIS, unsigned char *srcPointer, unsigned char *destPointer, int width) {
++	// FIXME, we assume everything is in the correct format, either 16 bits 565 or 555, or 8 bits
++	int i;
++	for (i=0; i<width; i++) {
++		if (!convertPalette) {
++			*(unsigned short*)destPointer = *(unsigned short*)srcPointer;
++		}
++		else {
++			*(unsigned short*)destPointer = convertPalette[*srcPointer];
++		}
++			
++		destPointer += dstPixelstep;
++		srcPointer += srcPixelstep;
++	}
++}
++
++static void GAPI_UpdateRects(_THIS, int numrects, SDL_Rect *rects)
++{
++	int i;
++	unsigned char *screenBuffer;
++
++	screenBuffer = GXBeginDraw();
++
++	for (i=0; i<numrects; i++) {
++		unsigned char *destPointer = screenBuffer + startOffset + ((rects[i].x + padWidth) * dstPixelstep) + ((rects[i].y + padHeight) * dstLinestep);
++		unsigned char *srcPointer = (unsigned char*)gapiBuffer + (rects[i].x * srcPixelstep) + (rects[i].y * srcLinestep);
++		int height = rects[i].h;
++
++		while (height) {
++			updateLine(this, srcPointer, destPointer, rects[i].w);
++			destPointer += dstLinestep;
++			srcPointer += srcLinestep;
++			height--;
++		}
++	}
++
++	GXEndDraw();
++}
++
++/*
++#define ADVANCE_PARTIAL(address, step) \
++	bitshift += displayProperties.cBPP;             \
++	if(bitshift >= 8)                  \
++	{                                  \
++		bitshift = 0;                  \
++		bitmask = (1<<displayProperties.cBPP)-1;    \
++		address += step;               \
++	}                                  \
++	else                               \
++		bitmask <<= displayProperties.cBPP;
++
++#define ADVANCE_REV_PARTIAL(address, step)        \
++	bitshift -= gxdp.cBPP;                        \
++	if(bitshift < 0)                              \
++	{                                             \
++		bitshift = 8-displayProperties.cBPP;                   \
++		bitmask = ((1<<displayProperties.cBPP)-1)<<bitshift;   \
++		address += step;                          \
++	}                                             \
++	else                                          \
++		bitmask >>= displayProperties.cBPP;
++
++
++static void GAPI_UpdateRectsMono(_THIS, int numrects, SDL_Rect *rects)
++{
++	int i;
++	unsigned char *screenBuffer;
++
++	screenBuffer = GXBeginDraw();
++
++	for (i=0; i<numrects; i++) {
++		unsigned char *destPointer = screenBuffer + startOffset + (rects[i].x * dstPixelstep) + (rects[i].y * dstLinestep);
++		unsigned char *srcPointer = (unsigned char*)gapiBuffer + (rects[i].x * srcPixelstep) + (rects[i].y * srcLinestep);
++		unsigned char bitmask;
++		int bitshift;
++
++		int height = rects[i].h;
++		while (height) {
++			updateLine(_THIS, srcPointer, destPointer, rects[i].w);
++			destPointer += dstLinestep;
++			srcPointer += srcLinestep;
++			height--;
++		}
++	}
++
++	GXEndDraw();
++}
++*/
++
++/* -------------------------------------------------------------------------------- */
++// Global fixme for paletted mode !
++
++#define COLORCONV565(r,g,b) (((r&0xf8)<<(11-3))|((g&0xfc)<<(5-2))|((b&0xf8)>>3))
++
++#define COLORCONV555(r,g,b) (((r&0xf8)<<(10-3))|((g&0xf8)<<(5-2))|((b&0xf8)>>3))
++
++int GAPI_SetColors(_THIS, int firstcolor, int ncolors, SDL_Color *colors)
++{
++	int i;
++	/* Convert colors to appropriate 565 or 555 mapping */
++	for (i=0; i<ncolors; i++) 
++		convertPalette[firstcolor + i] = (videoMode == GAPI_DIRECT_565 ? 
++			COLORCONV565(colors[i].r, colors[i].g, colors[i].b) :
++			COLORCONV555(colors[i].r, colors[i].g, colors[i].b));
++	return(1);
++}
++
++static void GAPI_RealizePalette(_THIS)
++{
++	OutputDebugString(TEXT("GAPI_RealizePalette NOT IMPLEMENTED !\r\n"));
++}
++
++static void GAPI_PaletteChanged(_THIS, HWND window)
++{
++	OutputDebugString(TEXT("GAPI_PaletteChanged NOT IMPLEMENTED !\r\n"));
++}
++
++/* Exported for the windows message loop only */
++static void GAPI_WinPAINT(_THIS, HDC hdc)
++{
++	OutputDebugString(TEXT("GAPI_WinPAINT NOT IMPLEMENTED !\r\n"));
++}
++
++
++/* Note:  If we are terminated, this could be called in the middle of
++   another SDL video routine -- notably UpdateRects.
++*/
++void GAPI_VideoQuit(_THIS)
++{
++	/* Destroy the window and everything associated with it */
++	if ( SDL_Window ) {
++		/* Delete the screen bitmap (also frees screen->pixels) */
++		if ( this->screen ) {
++//#ifdef WIN32_PLATFORM_PSPC
++			if ( this->screen->flags & SDL_FULLSCREEN ) {
++				/* Unhide taskbar, etc. */
++				//SHFullScreen(SDL_Window, SHFS_SHOWTASKBAR | SHFS_SHOWSIPBUTTON | SHFS_SHOWSTARTICON);
++				//ShowWindow(FindWindow(TEXT("HHTaskBar"),NULL),SW_SHOWNORMAL);
++				DIB_ShowTaskBar(TRUE);
++				GAPI_GrabHardwareKeys(FALSE);
++			}
++//#endif
++
++			if (this->screen->pixels != NULL)
++			{
++				free(this->screen->pixels);
++				this->screen->pixels = NULL;
++			}
++
++			if (GXCloseDisplay)
++				GXCloseDisplay();
++		}
++	}
++}
++
++void GAPI_GrabHardwareKeys(BOOL grab) {
++	HINSTANCE GAPI_handle;
++	tGXVoidFunction GAPIActionInput;
++
++	GAPI_handle = LoadLibrary(TEXT("gx.dll"));
++	if (!GAPI_handle)
++		return;
++	GAPIActionInput = (tGXVoidFunction)GetProcAddress(GAPI_handle, (grab ? TEXT("?GXOpenInput@@YAHXZ") : TEXT("?GXCloseInput@@YAHXZ")));
++	if (GAPIActionInput) {
++		GAPIActionInput();
++	}
++	FreeLibrary(GAPI_handle);
++}
+diff -ruN SDL-1.2.7-orig/src/video/wingapi/SDL_gapivideo.h SDL-1.2.7/src/video/wingapi/SDL_gapivideo.h
+--- SDL-1.2.7-orig/src/video/wingapi/SDL_gapivideo.h	Wed Dec 31 19:00:00 1969
++++ SDL-1.2.7/src/video/wingapi/SDL_gapivideo.h	Sun May 30 17:57:48 2004
+@@ -0,0 +1,192 @@
++/*
++    SDL - Simple DirectMedia Layer
++    Copyright (C) 1997, 1998, 1999, 2000, 2001, 2002  Sam Lantinga
++
++    This library is free software; you can redistribute it and/or
++    modify it under the terms of the GNU Library General Public
++    License as published by the Free Software Foundation; either
++    version 2 of the License, or (at your option) any later version.
++
++    This library is distributed in the hope that it will be useful,
++    but WITHOUT ANY WARRANTY; without even the implied warranty of
++    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++    Library General Public License for more details.
++
++    You should have received a copy of the GNU Library General Public
++    License along with this library; if not, write to the Free
++    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++
++    Sam Lantinga
++    slouken@libsdl.org
++*/
++
++#ifdef SAVE_RCSID
++static char rcsid =
++ "@(#) $Id: SDL_gapivideo.h,v 1.1 2004/02/02 23:25:35 lemure Exp $";
++#endif
++
++#ifndef _SDL_gapivideo_h
++#define _SDL_gapivideo_h
++
++#include <windows.h>
++
++/* -------------------------------------------------------------------------------------------- */
++
++/* From gx.h, since it's not really C compliant */
++
++struct GXDisplayProperties {
++    DWORD cxWidth;
++    DWORD cyHeight;         // notice lack of 'th' in the word height.
++    long cbxPitch;          // number of bytes to move right one x pixel - can be negative.
++    long cbyPitch;          // number of bytes to move down one y pixel - can be negative.
++    long cBPP;              // # of bits in each pixel
++    DWORD ffFormat;         // format flags.
++};
++
++struct GXKeyList {
++    short vkUp;             // key for up
++    POINT ptUp;             // x,y position of key/button.  Not on screen but in screen coordinates.
++    short vkDown;
++    POINT ptDown;
++    short vkLeft;
++    POINT ptLeft;
++    short vkRight;
++    POINT ptRight;
++    short vkA;
++    POINT ptA;
++    short vkB;
++    POINT ptB;
++    short vkC;
++    POINT ptC;
++    short vkStart;
++    POINT ptStart;
++};
++
++#define kfLandscape	0x8			// Screen is rotated 270 degrees
++#define kfPalette	0x10		// Pixel values are indexes into a palette
++#define kfDirect	0x20		// Pixel values contain actual level information
++#define kfDirect555	0x40		// 5 bits each for red, green and blue values in a pixel.
++#define kfDirect565	0x80		// 5 red bits, 6 green bits and 5 blue bits per pixel
++#define kfDirect888	0x100		// 8 bits each for red, green and blue values in a pixel.
++#define kfDirect444	0x200		// 4 red, 4 green, 4 blue
++#define kfDirectInverted 0x400
++
++#define GX_FULLSCREEN	0x01		// for OpenDisplay()
++
++/* -------------------------------------------------------------------------------------------- */
++
++/* Rotation direction */
++typedef enum {
++	SDL_ROTATE_NONE,
++	SDL_ROTATE_LEFT,
++	SDL_ROTATE_RIGHT
++} SDL_RotateAttr;
++
++/* GAPI video mode */
++typedef enum {
++	GAPI_NONE = 0,
++	GAPI_DIRECT_565,
++	GAPI_DIRECT_555,
++	GAPI_MONO,
++	GAPI_PALETTE
++} SDL_GAPIVideoMode;
++
++
++/* Hidden "this" pointer for the video functions */
++#define _THIS	SDL_VideoDevice *this
++
++/* GAPI functions definitions */
++
++typedef struct GXDisplayProperties (*tGXDisplayProperties)(void);
++typedef int (*tGXOpenDisplay)(HWND, unsigned long);
++typedef void* (*tGXBeginDraw)(void);
++typedef int (*tGXVoidFunction)(void);
++
++/* Private display data */
++
++struct GAPI_funcs {
++	tGXDisplayProperties dynamicGXGetDisplayProperties;
++	tGXOpenDisplay	dynamicGXOpenDisplay;
++	tGXVoidFunction	dynamicGXCloseDisplay;
++	tGXBeginDraw	dynamicGXBeginDraw;
++	tGXVoidFunction	dynamicGXEndDraw;
++	tGXVoidFunction	dynamicGXSuspend;
++	tGXVoidFunction	dynamicGXResume;
++};
++
++struct GAPI_properties {
++	unsigned char invert;
++	int colorscale;
++	int dstPixelstep;
++	int dstLinestep;
++	int startOffset;
++	SDL_GAPIVideoMode videoMode;
++};
++
++#define MAX_CLR         0x100
++
++struct palette_properties {
++	unsigned char *palRed;
++	unsigned char *palGreen;
++	unsigned char *palBlue;
++	unsigned short *pal;
++};
++
++
++struct SDL_PrivateVideoData {
++	/* --- <Hack> --- begin with DIB private structure to allow DIB events code sharing */
++	HBITMAP screen_bmp;
++    HPALETTE screen_pal;
++	void *work_pixels; /* if the display needs to be rotated, memory allocated by the API */
++	void *rotation_pixels; /* if the display needs to be rotated, memory allocated by the code */
++	SDL_RotateAttr rotation;
++	char ozoneHack; /* force stylus translation if running without Hi Res flag */
++
++#define NUM_MODELISTS	4		/* 8, 16, 24, and 32 bits-per-pixel */
++    int SDL_nummodes[NUM_MODELISTS];
++    SDL_Rect **SDL_modelist[NUM_MODELISTS];
++
++	/* --- </Hack> --- */
++
++    int w, h;
++    void *gapiBuffer;
++	HPALETTE screenPal;
++	struct GAPI_funcs gapiFuncs;
++	struct GAPI_properties gapiProperties;
++	struct GXDisplayProperties displayProps;
++	int srcLinestep;
++	int srcPixelstep;
++
++	int padWidth;
++	int padHeight;
++
++	unsigned short *convertPalette;
++};
++
++#define gapiBuffer (this->hidden->gapiBuffer)
++#define mainSurfaceWidth (this->hidden->w)
++#define mainSurfaceHeight (this->hidden->h)
++#define rotation (this->hidden->rotation)
++#define ozoneHack (this->hidden->ozoneHack)
++#define displayProperties (this->hidden->displayProps)
++#define screenPal (this->hidden->screenPal)
++#define GXGetDisplayProperties (this->hidden->gapiFuncs.dynamicGXGetDisplayProperties)
++#define GXOpenDisplay (this->hidden->gapiFuncs.dynamicGXOpenDisplay)
++#define GXCloseDisplay (this->hidden->gapiFuncs.dynamicGXCloseDisplay)
++#define GXBeginDraw (this->hidden->gapiFuncs.dynamicGXBeginDraw)
++#define GXEndDraw (this->hidden->gapiFuncs.dynamicGXEndDraw)
++#define GXSuspend (this->hidden->gapiFuncs.dynamicGXSuspend)
++#define GXResume (this->hidden->gapiFuncs.dynamicGXResume)
++#define invert (this->hidden->gapiProperties.invert)
++#define colorscale (this->hidden->gapiProperties.colorscale)
++#define videoMode (this->hidden->gapiProperties.videoMode)
++#define srcPixelstep (this->hidden->srcPixelstep)
++#define srcLinestep (this->hidden->srcLinestep)
++#define dstPixelstep (this->hidden->gapiProperties.dstPixelstep)
++#define dstLinestep (this->hidden->gapiProperties.dstLinestep)
++#define startOffset (this->hidden->gapiProperties.startOffset)
++#define padWidth (this->hidden->padWidth)
++#define padHeight (this->hidden->padHeight)
++#define convertPalette (this->hidden->convertPalette)
++
++#endif /* _SDL_gapivideo_h */

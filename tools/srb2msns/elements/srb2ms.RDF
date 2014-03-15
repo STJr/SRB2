@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE rdf:RDF [
+    <!ENTITY rdfns 'http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
+    <!ENTITY rdfsns 'http://www.w3.org/2000/01/rdf-schema#'>
+    <!ENTITY srb2msns 'http://srb2.servegame.org/srb2ms/elements/'>
+    <!ENTITY srb2mstypens 'http://srb2.servegame.org/srb2ms/srb2msmitype/'>
+]>
+<rdf:RDF xmlns:srb2ms="http://srb2.servegame.org/srb2ms/elements/" xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+<rdf:Description rdf:about="http://srb2.servegame.org/srb2ms/elements/">
+<srb2ms:title xml:lang="en-US">The SRB2MS Element Set namespace providing access 
+to its content by means of an RDF Schema</srb2ms:title>
+<srb2ms:publisher xml:lang="en-US">Logan Arias</srb2ms:publisher>
+<srb2ms:description xml:lang="en-US">The SRB2MS Element Set namespace provides 
+URIs for the SRB2MS Elements. Entries are declared using RDF Schema language 
+to support RDF applications.</srb2ms:description>
+<srb2ms:language xml:lang="en-US">English</srb2ms:language>
+</rdf:Description>
+<rdf:Property rdf:about="http://srb2.servegame.org/srb2ms/elements/#Address">
+<rdfs:label xml:lang="en-US">Address</rdfs:label>
+<rdfs:comment xml:lang="en-US">The IPv4 address of the server item.</rdfs:comment>
+<rdfs:isDefinedBy rdf:resource="http://srb2.servegame.org/srb2ms/elements/"/>
+<srb2ms:type rdf:resource="http://dublincore.org/usage/documents/principles/#element"/>
+</rdf:Property>
+<rdf:Property rdf:about="http://srb2.servegame.org/srb2ms/elements/#creator">
+<rdfs:label xml:lang="en-US">Port</rdfs:label>
+<rdfs:comment xml:lang="en-US">The Port number of the server item.</rdfs:comment>
+<rdfs:isDefinedBy rdf:resource="http://srb2.servegame.org/srb2ms/elements/"/>
+<srb2ms:type rdf:resource="http://dublincore.org/usage/documents/principles/#element"/>
+</rdf:Property>
+<rdf:Property rdf:about="http://srb2.servegame.org/srb2ms/elements/#subject">
+<rdfs:label xml:lang="en-US">Version</rdfs:label>
+<rdfs:comment xml:lang="en-US">Version number of the server item.</rdfs:comment>
+<rdfs:isDefinedBy rdf:resource="http://srb2.servegame.org/srb2ms/elements/"/>
+<srb2ms:type rdf:resource="http://dublincore.org/usage/documents/principles/#element"/>
+</rdf:Property>
+</rdf:RDF>

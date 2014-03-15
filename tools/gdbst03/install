@@ -1,0 +1,20 @@
+The makefile contains the information about the target products
+available.
+
+Note:  Makefile.cfg contains macros for various tools used during
+the build process.  Of particular note:  some folks use the echo.exe
+that is available from the DJGPP (or other) site(s).  Others may not
+have installed this, and therefore calls to echo during the build
+will use the built-in DOS echo command.  When attempting to echo a
+blank line, the arguments to these two echo commands are different.
+Therefore, makefile.cfg contains the macro ECHOBLANK.  Please set
+this macro according to the needs of your environment.  If you change
+this in makefile.cfg, it will be picked up by all other project
+makefiles.
+
+Type 'make' to see a list of targets. When the 'install'
+target is made, the libgdb.a will be copied into your $(DJDIR)/lib
+directory.  In addition, the i386-stub.h file will be copied into
+your $(DJDIR)/include directory.  The uninstall target will remove
+these files.
+

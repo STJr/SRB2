@@ -1,0 +1,27 @@
+GDB Stub for DJGPP 0.1 Announcement
+===================================
+
+GDB Stub for DJGPP Copyright 2000 by Jonathan Brogdon
+
+Hello.
+
+    I'd like to announce the GDB Stub for DJGPP for DJGPP, the latest version of
+a GDB stub for DJGPP targets. The GDB Stub for DJGPP conforms to the GNU GDB stub
+interface as specified in the GDB User's Manual.  It allows for debugging of a
+DJGPP target remotely over a serial link with GDB.
+
+    It comes with an example program for demonstrating remote debugging of
+DJGPP targets, and documentation (man and HTML pages).
+
+    The GDB Stub for DJGPP is distributed under the GNU Library General Public License
+(LGPL).
+
+    If you have any questions relating to libsocket, please mail me and I'll
+be happy to help.
+
+    Thanks,
+
+    Jonathan Brogdon
+    <brogdo@austin.rr.com>
+
+    June 29th 2000
