@@ -144,8 +144,8 @@ extern FILE *logstream;
 #define VERSIONSTRING "Trunk"
 #else
 #define VERSION    201 // Game version
-#define SUBVERSION 0   // more precise version number
-#define VERSIONSTRING "v2.1.0"
+#define SUBVERSION 1   // more precise version number
+#define VERSIONSTRING "v2.1.1"
 #endif
 
 // Modification options
@@ -201,7 +201,7 @@ extern FILE *logstream;
 // it's only for detection of the version the player is using so the MS can alert them of an update.
 // Only set it higher, not lower, obviously.
 // Note that we use this to help keep internal testing in check; this is why v2.1.0 is not version "1".
-#define MODVERSION 4
+#define MODVERSION 5
 
 
 

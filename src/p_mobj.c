@@ -1219,6 +1219,9 @@ void P_XYMovement(mobj_t *mo)
 	else if (mo->player)
 		moved = true;
 
+	if (P_MobjWasRemoved(mo)) // MF_SPECIAL touched a player! O_o;;
+		return;
+
 	// Check the gravity status.
 	P_CheckGravity(mo, false);
 

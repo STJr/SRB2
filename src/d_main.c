@@ -802,6 +802,9 @@ static void IdentifyVersion(void)
 	// Add the weapons
 	D_AddFile(va(pandf,srb2waddir,"rings.dta"));
 
+	// Add our crappy patches to fix our bugs
+	D_AddFile(va(pandf,srb2waddir,"patch.dta"));
+
 #if !defined (SDL) || defined (HAVE_MIXER)
 	{
 #if defined (DC) && 0
@@ -817,8 +820,6 @@ static void IdentifyVersion(void)
 			I_Error("File %s has been modified with non-music lumps",musicfile);
 	}
 #endif
-
-	// D_AddFile(va(pandf,srb2waddir,"patch.dta")); //for dev
 }
 
 /* ======================================================================== */
@@ -1095,7 +1096,7 @@ void D_SRB2Main(void)
 	W_VerifyFileMD5(1, "a894044b555dfcc71865cee16a996e88"); // zones.dta
 	W_VerifyFileMD5(2, "4c410c1de6e0440cc5b2858dcca80c3e"); // player.dta
 	W_VerifyFileMD5(3, "85901ad4bf94637e5753d2ac2c03ea26"); // rings.dta
-	//W_VerifyFileMD5(5, ""); // patch.dta (dev changable)
+	W_VerifyFileMD5(4, "c529930ee5aed6dbe33625dc8075520b"); // patch.dta
 
 	// don't check music.dta because people like to modify it, and it doesn't matter if they do
 	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.

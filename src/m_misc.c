@@ -1503,6 +1503,10 @@ void M_StartupLocale(void)
 	CONS_Printf("M_StartupLocale...\n");
 
 	setlocale(LC_ALL, "");
+
+	// Do not set numeric locale as that affects atof
+	setlocale(LC_NUMERIC, "C");
+
 	// FIXME: global name define anywhere?
 #ifdef GETTEXTDOMAIN1
 	textdomhandle = bindtextdomain("srb2", GETTEXTDOMAIN1);
