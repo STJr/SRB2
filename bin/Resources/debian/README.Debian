@@ -1,0 +1,12 @@
+srb2 for Debian
+---------------
+
+SRB2 Debian package!
+Hi there, to rebuild this package just use the SRB2 Makefile system, or, optionally, run
+dpkg-buildpackage in the in /bin/Resources directory. You can build these with or without a key
+if you want, but if you want to put these on a repo, generate your own GnuPG key as per the
+https://help.ubuntu.com/community/GnuPrivacyGuardHowto instructions and pass the -k<keyid>
+command to debuild. Make sure you export the key footprint and give them to your users to install
+with apt-key add. Thanks!
+
+ -- Callum Dickinson <gcfreak_ag20@hotmail.com>  Fri, 26 Nov 2010 18:25:31 +1300

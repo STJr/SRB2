@@ -1,0 +1,15 @@
+/data
+*.ncb
+*.opt
+*.plg
+*.suo
+*.vcproj.*.*.user
+Win32_LIB_ASM_Debug
+Win32_LIB_ASM_Release
+*.bsc
+/SRB2.layout
+/SRB2.depend
+/src/comptime.h
+*.dgb
+*.debug
+*.debug.txt

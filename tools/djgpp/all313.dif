@@ -1,0 +1,812 @@
+diff -ruN allegro.312/demo/alld/tmp.txt allegro.313/demo/alld/tmp.txt
+--- allegro.312/demo/alld/tmp.txt	Thu Jan  1 00:00:00 1970
++++ allegro.313/demo/alld/tmp.txt	Sat Feb 27 21:25:34 1999
+@@ -0,0 +1 @@
++This file is needed because some unzip programs skip empty directories.
+diff -ruN allegro.312/demo/alleg/tmp.txt allegro.313/demo/alleg/tmp.txt
+--- allegro.312/demo/alleg/tmp.txt	Thu Jan  1 00:00:00 1970
++++ allegro.313/demo/alleg/tmp.txt	Sat Feb 27 21:25:34 1999
+@@ -0,0 +1 @@
++This file is needed because some unzip programs skip empty directories.
+diff -ruN allegro.312/demo/allp/tmp.txt allegro.313/demo/allp/tmp.txt
+--- allegro.312/demo/allp/tmp.txt	Thu Jan  1 00:00:00 1970
++++ allegro.313/demo/allp/tmp.txt	Sat Feb 27 21:25:34 1999
+@@ -0,0 +1 @@
++This file is needed because some unzip programs skip empty directories.
+diff -ruN allegro.312/examples/alld/tmp.txt allegro.313/examples/alld/tmp.txt
+--- allegro.312/examples/alld/tmp.txt	Thu Jan  1 00:00:00 1970
++++ allegro.313/examples/alld/tmp.txt	Sat Feb 27 21:25:34 1999
+@@ -0,0 +1 @@
++This file is needed because some unzip programs skip empty directories.
+diff -ruN allegro.312/examples/alleg/tmp.txt allegro.313/examples/alleg/tmp.txt
+--- allegro.312/examples/alleg/tmp.txt	Thu Jan  1 00:00:00 1970
++++ allegro.313/examples/alleg/tmp.txt	Sat Feb 27 21:25:34 1999
+@@ -0,0 +1 @@
++This file is needed because some unzip programs skip empty directories.
+diff -ruN allegro.312/examples/allp/tmp.txt allegro.313/examples/allp/tmp.txt
+--- allegro.312/examples/allp/tmp.txt	Thu Jan  1 00:00:00 1970
++++ allegro.313/examples/allp/tmp.txt	Sat Feb 27 21:25:34 1999
+@@ -0,0 +1 @@
++This file is needed because some unzip programs skip empty directories.
+diff -ruN allegro.312/makefile allegro.313/makefile
+--- allegro.312/makefile	Sun Feb 21 00:31:48 1999
++++ allegro.313/makefile	Mon Jun 20 23:45:18 2005
+@@ -7,8 +7,10 @@
+ #                                               #
+ #################################################
+ 
+-# replace this definition if you are using PGCC
+-# PGCC=1
++# remline this definition if need Allegro for 486
++PGCC=1
++
++GCC=gcc-2
+ 
+ .PHONY: baddjgpp baddjdev badgcc badbnu badmake badtxi badpath badalleg
+ 
+@@ -22,23 +24,25 @@
+ # check that the djdev package is installed
+ ifeq ($(wildcard $(DJDIR)/bin/djasm.exe),)
+ baddjdev:
+-	@echo Missing djgpp package! You need to install djdev201.zip (or whatever the
++	@echo Missing djgpp package! You need to install djdev203.zip (or whatever the
+ 	@echo latest version is). Download this from wherever you got djgpp, and unzip
+ 	@echo it into the root of your djgpp directory.
+ endif
+ 
+ # check that the gcc package is installed
+-ifeq ($(wildcard $(DJDIR)/bin/gcc.exe),)
++ifeq ($(wildcard $(DJDIR)/bin/$(GCC).exe),)
+ badgcc:
+-	@echo Missing djgpp package! You need to install gcc2721b.zip (or whatever the
+-	@echo latest version is). Download this from wherever you got djgpp, and unzip
+-	@echo it into the root of your djgpp directory.
++	@echo Missing djgpp package! You need to install gcc2953b.zip. Download this
++	@echo from wherever you got djgpp, and unzip bin\gcc.exe , rename it as 
++	@echo $(GCC).exe into the of your bin directory.
+ endif
+ 
++GCC := @$(GCC)
++
+ # check that the binutils package is installed
+ ifeq ($(wildcard $(DJDIR)/bin/ld.exe),)
+ badbnu:
+-	@echo Missing djgpp package! You need to install bnu27b.zip (or whatever the
++	@echo Missing djgpp package! You need to install bnu216b.zip (or whatever the
+ 	@echo latest version is). Download this from wherever you got djgpp, and unzip
+ 	@echo it into the root of your djgpp directory.
+ endif
+@@ -46,7 +50,7 @@
+ # check that the make package is installed
+ ifeq ($(wildcard $(DJDIR)/bin/make.exe),)
+ badmake:
+-	@echo Missing djgpp package! You need to install mak3761b.zip (or whatever the
++	@echo Missing djgpp package! You need to install mak3791b.zip (or whatever the
+ 	@echo latest version is). Download this from wherever you got djgpp, and unzip
+ 	@echo it into the root of your djgpp directory.
+ endif
+@@ -54,7 +58,7 @@
+ # check that the texinfo package is installed
+ ifeq ($(wildcard $(DJDIR)/bin/makeinfo.exe),)
+ badtxi:
+-	@echo Missing djgpp package! You need to install txi390b.zip (or whatever the
++	@echo Missing djgpp package! You need to install txi48b.zip (or whatever the
+ 	@echo latest version is). Download this from wherever you got djgpp, and unzip
+ 	@echo it into the root of your djgpp directory. If you do not need the Info
+ 	@echo documentation, run make all to ignore this error.
+@@ -83,11 +87,32 @@
+ endif
+ endif
+ 
++# -------- check environment to see what type of library to build --------
++
++ifdef DEBUGMODE
++
++# -------- build a debugging library --------
++VERSION = alld
++
++else
++ifdef PROFILEMODE
++
++# -------- build a profiling library --------
++VERSION = allp
++
++else
++
++# -------- build a release library --------
++VERSION = alleg
++
++endif
++endif
++
++
+ # set some useful paths
+-OBJ = obj/djgpp
+-DOBJ = obj\djgpp
+-LIB = lib/djgpp/liballeg.a
+-LIBDEST = $(DJDIR)/lib/liballeg.a
++LIB = lib$(VERSION).a
++OBJ = obj/djgpp/$(VERSION)
++LIBDEST = $(DJDIR)/lib/$(LIB)
+ INCDEST = $(DJDIR)/include/allegro.h
+ DOCDEST = $(DJDIR)/info/allegro.inf
+ INTERNAL_H = src/internal.h src/djgpp/interndj.h
+@@ -113,19 +138,22 @@
+ else
+ ifdef PROFILEMODE
+ # build with profiling information
++OFLAGS = -pg -O3 -ffast-math
+ ifdef PGCC
+-OFLAGS = -pg -mpentium -O6 -ffast-math
++OFLAGS := $(OFLAGS) -mcpu=pentium
+ else
+-OFLAGS = -pg -m486 -O3 -ffast-math
++OFLAGS := $(OFLAGS) -mcpu=i486
+ endif
+ LFLAGS = -pg
+ 
++
+ else
+ # build a normal optimised version
++OFLAGS = -O3 -ffast-math -fomit-frame-pointer
+ ifdef PGCC
+-OFLAGS = -mpentium -O6 -ffast-math -fomit-frame-pointer
++OFLAGS := $(OFLAGS) -mcpu=pentium
+ else
+-OFLAGS = -m486 -O3 -ffast-math -fomit-frame-pointer
++OFLAGS := $(OFLAGS) -mcpu=i486
+ endif
+ 
+ ifdef SYMBOLMODE
+@@ -179,9 +207,18 @@
+ 
+ .PHONY: all msg lib install uninstall docs clean veryclean mmxtest $(PROGRAMS)
+ 
+-all: msg $(LIB) $(PROGRAMS) docs install
++all: msg lib/djgpp/$(LIB) $(PROGRAMS) docs
+ 	@echo All done.
+-	@echo To use Allegro, #include allegro.h and link with liballeg.a
++ifdef DEBUGMODE
++	@echo To install this version of Allegro, run make install DEBUGMODE=1
++else
++ifdef PROFILEMODE
++	@echo To install this version of Allegro, run make install PROFILEMODE=1
++else
++	@echo To install this version of Allegro, run make install 
++endif
++endif
++	@echo To use Allegro, #include allegro.h and link with $(LIB)
+ 	@echo Example command line: gcc foobar.c -o foobar.exe -lalleg
+ 	@echo Run make compress to run DJP or UPX on the executable files
+ 	@echo Enjoy!
+@@ -189,36 +226,36 @@
+ msg:
+ 	@echo Compiling Allegro. Please wait...
+ 
+-lib: $(LIB)
++lib: lib/djgpp/$(LIB)
+ 
+ install: $(LIBDEST) $(INCDEST) $(DOCDEST)
+ 
+ docs: $(DOCS)
+ 
+-$(LIBDEST): $(LIB)
+-	copy lib\djgpp\liballeg.a $(subst /,\,$(LIBDEST))
++$(LIBDEST): lib/djgpp/$(LIB)
++	cp lib/djgpp/$(LIB) $(LIBDEST)
+ 
+ $(INCDEST): allegro.h
+-	copy allegro.h $(subst /,\,$(INCDEST))
++	cp allegro.h $(INCDEST)
+ 
+ $(DOCDEST): docs/allegro.inf
+     ifneq ($(wildcard $(DJDIR)/bin/makeinfo.exe),)
+-	copy docs\allegro.inf $(subst /,\,$(DOCDEST))
++	cp docs\allegro.inf $(DOCDEST)
+     else
+ 	@echo makeinfo not installed: skipping copy of allegro.inf
+     endif
+ 
+ $(OBJ)/%.o: %.c allegro.h
+-	gcc $(CFLAGS) -o $@ -c $<
++	$(GCC) $(CFLAGS) -o $@ -c $<
+ 
+ $(OBJ)/%.o: %.S asmdefs.inc $(OBJ)/asmdef.inc
+-	gcc $(SFLAGS) -o $@ -c $<
++	$(GCC) $(SFLAGS) -o $@ -c $<
+ 
+ $(OBJ)/%.o: %.s asmdefs.inc $(OBJ)/asmdef.inc
+-	gcc -x assembler-with-cpp $(SFLAGS) -o $@ -c $<
++	$(GCC) -x assembler-with-cpp $(SFLAGS) -o $@ -c $<
+ 
+-*/%.exe: $(OBJ)/%.o $(LIB)
+-	gcc $(LFLAGS) -o $@ $< $(LIB)
++*/$(VERSION)/%.exe: $(OBJ)/%.o lib/djgpp/$(LIB)
++	$(GCC) $(LFLAGS) -o $@ $< lib/djgpp/$(LIB)
+ 
+ docs/%.inf: docs/%.txi
+     ifneq ($(wildcard $(DJDIR)/bin/makeinfo.exe),)
+@@ -252,38 +289,38 @@
+ 	$(OBJ)/makedoc.exe -part -ascii THANKS docs/thanks._tx
+ 
+ $(OBJ)/makedoc.exe: docs/makedoc.c
+-	gcc $(CFLAGS) $(LFLAGS) -o $@ docs/makedoc.c
++	$(GCC) $(CFLAGS) $(LFLAGS) -o $@ docs/makedoc.c
+ 
+ $(OBJ)/asmdef.inc: $(OBJ)/asmdef.exe
+ 	$(OBJ)/asmdef.exe $(OBJ)/asmdef.inc
+ 
+ $(OBJ)/asmdef.exe: src/asmdef.c allegro.h $(INTERNAL_H)
+-	gcc $(CFLAGS) $(LFLAGS) -o $@ src/asmdef.c
++	$(GCC) $(CFLAGS) $(LFLAGS) -o $@ src/asmdef.c
+ 
+ mmxtest:
+-	@echo // no MMX > $(DOBJ)\mmx.h
+-	@echo .text > $(DOBJ)\mmxtest.s
+-	@echo emms >> $(DOBJ)\mmxtest.s
+-	@gcc -c $(OBJ)/mmxtest.s -o $(OBJ)/mmxtest.o
+-	@echo #define ALLEGRO_MMX > $(DOBJ)\mmx.h
++	@echo // no MMX > $(subst /,\,$(OBJ))\mmx.h
++	@echo .text > $(subst /,\,$(OBJ))\mmxtest.s
++	@echo emms >> $(subst /,\,$(OBJ))\mmxtest.s
++	@$(GCC) -c $(OBJ)/mmxtest.s -o $(OBJ)/mmxtest.o
++	@echo #define ALLEGRO_MMX > $(subst /,\,$(OBJ))\mmx.h
+ 	@echo Your assembler supports MMX instructions!
+ 
+ $(OBJ)/mmx.h:
+ 	@echo Testing for MMX assembler support...
+ 	-$(MAKE) mmxtest
+ 
+-$(OBJ)/setupdat.s $(OBJ)/setupdat.h: setup/setup.dat tools/dat2s.exe
+-	tools/dat2s.exe setup/setup.dat -o $(OBJ)/setupdat.s -h $(OBJ)/setupdat.h
++$(OBJ)/setupdat.s $(OBJ)/setupdat.h: setup/setup.dat tools/$(VERSION)/dat2s.exe
++	tools/$(VERSION)/dat2s.exe setup/setup.dat -o $(OBJ)/setupdat.s -h $(OBJ)/setupdat.h
+ 
+ $(OBJ)/setupdat.o: $(OBJ)/setupdat.s
+-	gcc $(SFLAGS) -o $(OBJ)/setupdat.o -c $(OBJ)/setupdat.s
++	$(GCC) $(SFLAGS) -o $(OBJ)/setupdat.o -c $(OBJ)/setupdat.s
+ 
+-setup/setup.exe: $(OBJ)/setup.o $(OBJ)/setupdat.o $(LIB)
+-	gcc $(LFLAGS) -o setup/setup.exe $(OBJ)/setup.o $(OBJ)/setupdat.o $(LIB)
++setup/$(VERSION)/setup.exe: $(OBJ)/setup.o $(OBJ)/setupdat.o lib/djgpp/$(LIB)
++	$(GCC) $(LFLAGS) -o setup/$(VERSION)/setup.exe $(OBJ)/setup.o $(OBJ)/setupdat.o lib/djgpp/$(LIB)
+     ifndef DEBUGMODE
+     ifndef SYMBOLMODE
+     ifneq ($(DJP),)
+-	$(DJP) setup/setup.exe
++	$(DJP) setup/$(VERSION)/setup.exe
+     endif
+     endif
+     endif
+@@ -301,79 +338,79 @@
+ endif
+ 
+ $(OBJ)/plugins.h: $(wildcard tools/plugins/*.inc)
+-	copy tools\plugins\*.inc $(DOBJ)\plugins.h
++	cat tools/plugins/*.inc > $(OBJ)/plugins.h
+ 
+-tools/dat.exe: $(OBJ)/dat.o $(DATEDIT_DEPS) $(LIB)
+-	gcc $(LFLAGS) -o tools/dat.exe $(OBJ)/dat.o $(DATEDIT_LINK) $(LIB)
++tools/$(VERSION)/dat.exe: $(OBJ)/dat.o $(DATEDIT_DEPS) lib/djgpp/$(LIB)
++	$(GCC) $(LFLAGS) -o tools/$(VERSION)/dat.exe $(OBJ)/dat.o $(DATEDIT_LINK) lib/djgpp/$(LIB)
+ 
+-tools/dat2s.exe: $(OBJ)/dat2s.o $(DATEDIT_DEPS) $(LIB)
+-	gcc $(LFLAGS) -o tools/dat2s.exe $(OBJ)/dat2s.o $(DATEDIT_LINK) $(LIB)
++tools/$(VERSION)/dat2s.exe: $(OBJ)/dat2s.o $(DATEDIT_DEPS) lib/djgpp/$(LIB)
++	$(GCC) $(LFLAGS) -o tools/$(VERSION)/dat2s.exe $(OBJ)/dat2s.o $(DATEDIT_LINK) lib/djgpp/$(LIB)
+ 
+-tools/grabber.exe: $(OBJ)/grabber.o $(DATEDIT_DEPS) $(LIB)
+-	gcc $(LFLAGS) -o tools/grabber.exe $(OBJ)/grabber.o $(DATEDIT_LINK) $(LIB)
++tools/$(VERSION)/grabber.exe: $(OBJ)/grabber.o $(DATEDIT_DEPS) lib/djgpp/$(LIB)
++	$(GCC) $(LFLAGS) -o tools/$(VERSION)/grabber.exe $(OBJ)/grabber.o $(DATEDIT_LINK) lib/djgpp/$(LIB)
+ 
+-tools/pat2dat.exe: $(OBJ)/pat2dat.o $(DATEDIT_DEPS) $(LIB)
+-	gcc $(LFLAGS) -o tools/pat2dat.exe $(OBJ)/pat2dat.o $(DATEDIT_LINK) $(LIB)
++tools/$(VERSION)/pat2dat.exe: $(OBJ)/pat2dat.o $(DATEDIT_DEPS) lib/djgpp/$(LIB)
++	$(GCC) $(LFLAGS) -o tools/$(VERSION)/pat2dat.exe $(OBJ)/pat2dat.o $(DATEDIT_LINK) lib/djgpp/$(LIB)
+ 
+-$(LIB): $(LIB_OBJS)
+-	ar rs $(LIB) $(LIB_OBJS)
++lib/djgpp/$(LIB): $(LIB_OBJS)
++	ar rs lib/djgpp/$(LIB) $(LIB_OBJS)
+ 
+ compress: $(PROGRAMS)
+     ifneq ($(DJP),)
+-	$(DJP) demo/*.exe examples/*.exe tests/*.exe tools/*.exe setup/keyconf.exe obj/djgpp/*.exe
++	$(DJP) demo/$(VERSION)/*.exe examples/$(VERSION)/*.exe tests/$(VERSION)/*.exe tools/$(VERSION)/*.exe setup/$(VERSION)/keyconf.exe $(OBJ)*.exe
+     else
+ 	@echo No executable compressor found! This target requires either the
+ 	@echo DJP or UPX utilities to be installed in your djgpp bin directory.
+     endif
+ 
+ clean:
+-	-rm -v obj/djgpp/*.* lib/djgpp/*.* docs/*.$(HTML) docs/*.txi docs/*.inf docs/*.rtf
++	-rm -f -v $(OBJ)/*.* lib/djgpp/*.* docs/*.$(HTML) docs/*.txi docs/*.inf docs/*.rtf
+ 
+ veryclean: clean
+-	-rm -v allegro.txt AUTHORS CHANGES faq.txt help.txt NEWS THANKS \
+-	       demo/*.exe examples/*.exe setup/*.exe tests/*.exe tools/*.exe
++	-rm -f -v allegro.txt AUTHORS CHANGES faq.txt help.txt NEWS THANKS \
++	       demo/$(VERSION)/*.exe examples/$(VERSION)/*.exe setup/$(VERSION)/*.exe tests/$(VERSION)/*.exe tools/$(VERSION)/*.exe
+ 
+ uninstall:
+-	-rm $(LIBDEST)
+-	-rm $(INCDEST)
+-	-rm $(DOCDEST)
++	-rm -f $(LIBDEST)
++	-rm -f $(INCDEST)
++	-rm -f $(DOCDEST)
+ 	@echo All gone! (sulk)
+ 
+-demo: demo/demo.exe
+-keyconf: setup/keyconf.exe
+-setup: setup/setup.exe
+-afinfo: tests/afinfo.exe
+-akaitest: tests/akaitest.exe
+-digitest: tests/digitest.exe
+-mathtest: tests/mathtest.exe
+-miditest: tests/miditest.exe
+-play: tests/play.exe
+-playfli: tests/playfli.exe
+-test: tests/test.exe
+-vesainfo: tests/vesainfo.exe
+-colormap: tools/colormap.exe
+-dat: tools/dat.exe
+-dat2s: tools/dat2s.exe
+-exedat: tools/exedat.exe
+-grabber: tools/grabber.exe
+-pack: tools/pack.exe
+-pat2dat: tools/pat2dat.exe
+-rgbmap: tools/rgbmap.exe
+-
+-examples: examples/ex1.exe examples/ex2.exe examples/ex3.exe \
+-	  examples/ex4.exe examples/ex5.exe examples/ex6.exe \
+-	  examples/ex7.exe examples/ex8.exe examples/ex9.exe \
+-	  examples/ex10.exe examples/ex11.exe examples/ex12.exe \
+-	  examples/ex13.exe examples/ex14.exe examples/ex15.exe \
+-	  examples/ex16.exe examples/ex17.exe examples/ex18.exe \
+-	  examples/ex19.exe examples/ex20.exe examples/ex21.exe \
+-	  examples/ex22.exe examples/ex23.exe examples/ex24.exe \
+-	  examples/ex25.exe examples/ex26.exe examples/ex27.exe \
+-	  examples/ex28.exe examples/ex29.exe examples/ex30.exe \
+-	  examples/ex31.exe examples/ex32.exe examples/ex33.exe \
+-	  examples/ex34.exe examples/ex35.exe examples/ex36.exe \
+-	  examples/ex37.exe examples/ex38.exe examples/ex39.exe \
+-	  examples/ex40.exe
++demo: demo/$(VERSION)/demo.exe
++keyconf: setup/$(VERSION)/keyconf.exe
++setup: setup/$(VERSION)/setup.exe
++afinfo: tests/$(VERSION)/afinfo.exe
++akaitest: tests/$(VERSION)/akaitest.exe
++digitest: tests/$(VERSION)/digitest.exe
++mathtest: tests/$(VERSION)/mathtest.exe
++miditest: tests/$(VERSION)/miditest.exe
++play: tests/$(VERSION)/play.exe
++playfli: tests/$(VERSION)/playfli.exe
++test: tests/$(VERSION)/test.exe
++vesainfo: tests/$(VERSION)/vesainfo.exe
++colormap: tools/$(VERSION)/colormap.exe
++dat: tools/$(VERSION)/dat.exe
++dat2s: tools/$(VERSION)/dat2s.exe
++exedat: tools/$(VERSION)/exedat.exe
++grabber: tools/$(VERSION)/grabber.exe
++pack: tools/$(VERSION)/pack.exe
++pat2dat: tools/$(VERSION)/pat2dat.exe
++rgbmap: tools/$(VERSION)/rgbmap.exe
++
++examples: examples/$(VERSION)/ex1.exe examples/$(VERSION)/ex2.exe examples/$(VERSION)/ex3.exe \
++	  examples/$(VERSION)/ex4.exe examples/$(VERSION)/ex5.exe examples/$(VERSION)/ex6.exe \
++	  examples/$(VERSION)/ex7.exe examples/$(VERSION)/ex8.exe examples/$(VERSION)/ex9.exe \
++	  examples/$(VERSION)/ex10.exe examples/$(VERSION)/ex11.exe examples/$(VERSION)/ex12.exe \
++	  examples/$(VERSION)/ex13.exe examples/$(VERSION)/ex14.exe examples/$(VERSION)/ex15.exe \
++	  examples/$(VERSION)/ex16.exe examples/$(VERSION)/ex17.exe examples/$(VERSION)/ex18.exe \
++	  examples/$(VERSION)/ex19.exe examples/$(VERSION)/ex20.exe examples/$(VERSION)/ex21.exe \
++	  examples/$(VERSION)/ex22.exe examples/$(VERSION)/ex23.exe examples/$(VERSION)/ex24.exe \
++	  examples/$(VERSION)/ex25.exe examples/$(VERSION)/ex26.exe examples/$(VERSION)/ex27.exe \
++	  examples/$(VERSION)/ex28.exe examples/$(VERSION)/ex29.exe examples/$(VERSION)/ex30.exe \
++	  examples/$(VERSION)/ex31.exe examples/$(VERSION)/ex32.exe examples/$(VERSION)/ex33.exe \
++	  examples/$(VERSION)/ex34.exe examples/$(VERSION)/ex35.exe examples/$(VERSION)/ex36.exe \
++	  examples/$(VERSION)/ex37.exe examples/$(VERSION)/ex38.exe examples/$(VERSION)/ex39.exe \
++	  examples/$(VERSION)/ex40.exe
+ 
+ $(OBJ)/demo.o: demo.h
+ $(OBJ)/adlib.o: fm_instr.h
+diff -ruN allegro.312/obj/djgpp/alld/tmp.txt allegro.313/obj/djgpp/alld/tmp.txt
+--- allegro.312/obj/djgpp/alld/tmp.txt	Thu Jan  1 00:00:00 1970
++++ allegro.313/obj/djgpp/alld/tmp.txt	Sat Feb 27 21:25:34 1999
+@@ -0,0 +1 @@
++This file is needed because some unzip programs skip empty directories.
+diff -ruN allegro.312/obj/djgpp/alleg/tmp.txt allegro.313/obj/djgpp/alleg/tmp.txt
+--- allegro.312/obj/djgpp/alleg/tmp.txt	Thu Jan  1 00:00:00 1970
++++ allegro.313/obj/djgpp/alleg/tmp.txt	Sat Feb 27 21:25:34 1999
+@@ -0,0 +1 @@
++This file is needed because some unzip programs skip empty directories.
+diff -ruN allegro.312/obj/djgpp/allp/tmp.txt allegro.313/obj/djgpp/allp/tmp.txt
+--- allegro.312/obj/djgpp/allp/tmp.txt	Thu Jan  1 00:00:00 1970
++++ allegro.313/obj/djgpp/allp/tmp.txt	Sat Feb 27 21:25:34 1999
+@@ -0,0 +1 @@
++This file is needed because some unzip programs skip empty directories.
+diff -ruN allegro.312/obj/djgpp/tmp.txt allegro.313/obj/djgpp/tmp.txt
+--- allegro.312/obj/djgpp/tmp.txt	Sat Feb 27 21:25:34 1999
++++ allegro.313/obj/djgpp/tmp.txt	Thu Jan  1 00:00:00 1970
+@@ -1 +0,0 @@
+-This file is needed because some unzip programs skip empty directories.
+diff -ruN allegro.312/setup/alld/tmp.txt allegro.313/setup/alld/tmp.txt
+--- allegro.312/setup/alld/tmp.txt	Thu Jan  1 00:00:00 1970
++++ allegro.313/setup/alld/tmp.txt	Sat Feb 27 21:25:34 1999
+@@ -0,0 +1 @@
++This file is needed because some unzip programs skip empty directories.
+diff -ruN allegro.312/setup/alleg/tmp.txt allegro.313/setup/alleg/tmp.txt
+--- allegro.312/setup/alleg/tmp.txt	Thu Jan  1 00:00:00 1970
++++ allegro.313/setup/alleg/tmp.txt	Sat Feb 27 21:25:34 1999
+@@ -0,0 +1 @@
++This file is needed because some unzip programs skip empty directories.
+diff -ruN allegro.312/setup/allp/tmp.txt allegro.313/setup/allp/tmp.txt
+--- allegro.312/setup/allp/tmp.txt	Thu Jan  1 00:00:00 1970
++++ allegro.313/setup/allp/tmp.txt	Sat Feb 27 21:25:34 1999
+@@ -0,0 +1 @@
++This file is needed because some unzip programs skip empty directories.
+diff -ruN allegro.312/src/asmdefs.inc allegro.313/src/asmdefs.inc
+--- allegro.312/src/asmdefs.inc	Sat Feb 20 20:51:22 1999
++++ allegro.313/src/asmdefs.inc	Sun Jun 19 04:18:44 2005
+@@ -41,8 +41,8 @@
+  * %eax. Registers will be unchanged, except %eax will return a pointer 
+  * to the start of the selected scanline.
+  */
+-#define WRITE_BANK()    call BMP_WBANK(%edx)
+-#define READ_BANK()     call BMP_RBANK(%edx)
++#define WRITE_BANK()    call *BMP_WBANK(%edx)
++#define READ_BANK()     call *BMP_RBANK(%edx)
+ 
+ 
+ /* Helper macro for looking up a position in the pattern bitmap. Passed
+diff -ruN allegro.312/src/djgpp/gpro.c allegro.313/src/djgpp/gpro.c
+--- allegro.312/src/djgpp/gpro.c	Sat Feb 20 22:01:28 1999
++++ allegro.313/src/djgpp/gpro.c	Mon Jun 20 21:23:42 2005
+@@ -53,135 +53,79 @@
+  */
+ static int read_gpp(int pad_num)
+ {
+-   char samples[60];
+-   char clock_mask, data_mask;
+-   int ret;
+-
+-   asm (
+-      "  cmpb $0, %0 ; "
+-      "  jne 14f ; "
+-      "  movb $0x10, %b2 ; "
+-      "  movb $0x20, %b3 ; "
+-      "  jmp 15f ; "
+-      " 14: "
+-      "  movb $0x40, %b2 ; "
+-      "  movb $0x80, %b3 ; "
+-
+-      " 15: "
+-      "  xorl %%ebx, %%ebx ; "
+-      "  xorl %%edi, %%edi ; "
+-      "  movw $0x201, %%dx ; "
+-
+-      "  cli ; "
+-      "  inb %%dx, %%al ; "
+-      "  movb %%al, %%ah ; "
+-
+-      " 4: "
+-      "  xorl %%ecx, %%ecx ; "
+-      " 0: "
+-      "  inb %%dx, %%al ; "
+-      "  cmpb %%ah, %%al ; "
+-      "  jne 1f ; "
+-      "  incl %%ecx ; "
+-      "  cmpl $255, %%ecx ; "
+-      "  jl 0b ; "
+-
+-      " 1: "
+-      "  cmpl $255, %%ecx ; "
+-      "  je 16f ; "
+-
+-      "  testb %%ah, %b2 ; "
+-      "  jz 2f ; "
+-      "  testb %%al, %b2 ; "
+-      "  jnz 2f ; "
+-
+-      "  addl %4, %%edi ; "
+-      "  testb %%al, %b3 ; "
+-      "  jz 3f ; "
+-      "  movb $1, (%%edi) ; "
+-      "  jmp 12f ; "
+-      " 3: "
+-      "  movb $0, (%%edi) ; "
+-      " 12: "
+-      "  subl %4, %%edi ; "
+-      "  incl %%edi ; "
+-
+-      " 2: "
+-      "  movb %%al, %%ah ; "
+-      "  cmpl $200, %%ebx ; "
+-      "  je 13f ; "
+-      "  incl %%ebx ; "
+-      "  cmpl $50, %%edi ; "
+-      "  jl 4b ; "
+-
+-      " 13: "
+-      "  sti ; "
+-      "  xorl %%ecx, %%ecx ; "
+-      "  movl $1, %%esi ; "
+-      " 7: "
+-      "  addl %4, %%esi ; "
+-      "  movb (%%esi), %%dl ; "
+-      "  subl %4, %%esi ; "
+-      "  cmpb $1, %%dl ; "
+-      "  jg 16f ; "
+-      "  jne 6f ; "
+-      "  incl %%ecx ; "
+-      "  jmp 5f ; "
+-      " 6: "
+-      "  xorl %%ecx, %%ecx ; "
+-
+-      " 5: "
+-      "  cmpl $5, %%ecx ; "
+-      "  je 8f ; "
+-      "  cmpl %%edi, %%esi ; "
+-      "  je 8f ; "
+-      "  incl %%esi ; "
+-      "  jmp 7b ; "
+-
+-      " 8: "
+-      "  cmpl $5, %%ecx ; "
+-      "  jne 16f ; "
+-      "  addl $2, %%esi ; "
+-      "  xorl %%eax, %%eax ; "
+-      "  xorl %%ebx, %%ebx ; "
+-      "  xorl %%ecx, %%ecx ; "
+-      "  xorl %%edx, %%edx ; "
+-
+-      " 10: "
+-      "  incl %%ecx ; "
+-      "  cmpl $5, %%ecx ; "
+-      "  jne 11f ; "
+-      "  movl $1, %%ecx ; "
+-      "  incl %%esi ; "
+-      " 11: "
+-      "  addl %4, %%esi ; "
+-      "  movb (%%esi), %%dl ; "
+-      "  subl %4, %%esi ; "
+-      "  orl %%edx, %%eax ; "
+-      "  shll $1, %%eax ; "
+-      "  cmpl $13, %%ebx ; "
+-      "  je 9f ; "
+-      "  incl %%ebx ; "
+-      "  incl %%esi ; "
+-      "  jmp 10b ; "
+-
+-      " 16: "
+-      "  movl $1, %%eax ; "
+-
+-      " 9: "
+-      "  sti ; "
+-
+-   : "=a" (ret)
+-
+-   : "0" (pad_num),
+-     "m" (clock_mask),
+-     "m" (data_mask),
+-     "m" (samples)
++   int samples[50];
++   int clock_mask, data_mask, data, old_data;
++   int num_samples, timeout1, timeout2, sample_pos, c;
++
++   if (pad_num == 0) {
++      clock_mask = 0x10;
++      data_mask = 0x20;
++   }
++   else {
++      clock_mask = 0x40;
++      data_mask = 0x80;
++   }
++
++   num_samples = 0;
++   timeout1 = 0;
++
++   asm volatile ("cli");
++
++   old_data = inportb(0x201);
++   data = 0;
++
++   while (num_samples<50) {
++      for (timeout2=0; timeout2<255; timeout2++) {
++ data = inportb(0x201);
++ if (data != old_data)
++    break;
++      }
++
++      if (timeout2 == 255) {
++ asm volatile ("sti");
++ return 1;
++      }
++
++      if ((old_data & clock_mask) && (!(data & clock_mask))) {
++ samples[num_samples] = (data & data_mask) ? 1 : 0;
++ num_samples++;
++      }
++
++      old_data = data;
++
++      if (timeout1++ == 200)
++ break;
++   }
++
++   asm volatile ("sti");
++
++   c = 0;
++
++   for (sample_pos=1; sample_pos<num_samples; sample_pos++) {
++      if (samples[sample_pos])
++ c++;
++      else
++ c = 0;
++
++      if (c == 5)
++ break;
++   };
++
++   if (c != 5)
++      return 1;
++
++   sample_pos++;
++   data = 0;
++
++   for (c=0; c<14; c++) {
++      if ((c&3) == 0)
++ sample_pos++;
++      data |= samples[sample_pos];
++      data <<= 1;
++      sample_pos++;
++   }
+ 
+-   : "%ebx", "%ecx", "%edx", "%esi", "%edi"
+-   );
+-
+-   return ret;
++   return data;
+ }
+ 
+ 
+diff -ruN allegro.312/src/djgpp/irqwrap.s allegro.313/src/djgpp/irqwrap.s
+--- allegro.312/src/djgpp/irqwrap.s	Sat Feb 20 20:42:54 1999
++++ allegro.313/src/djgpp/irqwrap.s	Mon Jun 20 22:44:30 2005
+@@ -93,7 +93,7 @@
+    popw %fs                                                                ; \
+    popw %es                                                                ; \
+    popw %ds                                                                ; \
+-   ljmp %cs:__irq_handler + IRQ_OLDVEC + IRQ_SIZE*x                        ; \
++   ljmp %cs:*__irq_handler + IRQ_OLDVEC + IRQ_SIZE*x                       ; \
+ 									   ; \
+ get_out_##x:                                                               ; \
+    popal                                  /* iret */                       ; \
+diff -ruN allegro.312/src/djgpp/vbeafex.c allegro.313/src/djgpp/vbeafex.c
+--- allegro.312/src/djgpp/vbeafex.c	Sat Feb 20 20:43:30 1999
++++ allegro.313/src/djgpp/vbeafex.c	Mon Jun 20 22:46:42 2005
+@@ -605,9 +605,6 @@
+      "=m" (sregs->gs),
+      "=m" (sregs->ss)
+ 
+-   :           /* no inputs */
+-
+-   : "%eax"    /* clobbers %eax */
+    );
+ }
+ 
+diff -ruN allegro.312/src/gfx15.s allegro.313/src/gfx15.s
+--- allegro.312/src/gfx15.s	Sat Feb 20 20:50:30 1999
++++ allegro.313/src/gfx15.s	Mon Jun 20 22:46:02 2005
+@@ -367,9 +367,9 @@
+    movl BMP_CT(%edx), %esi       /* clip y1 */
+ 
+ vline_y1_ok:
+-   cmpw BMP_CB(%edx), %ecx       /* test y2, bmp->cb */
++   cmpw BMP_CB(%edx), %cx        /* test y2, bmp->cb */
+    jl vline_noclip
+-   cmpw BMP_CB(%edx), %esi       /* test y1, bmp->cb */
++   cmpw BMP_CB(%edx), %si        /* test y1, bmp->cb */
+    jge vline_done
+    movl BMP_CB(%edx), %ecx       /* clip y2 */
+    decl %ecx
+diff -ruN allegro.312/src/gfx16.s allegro.313/src/gfx16.s
+--- allegro.312/src/gfx16.s	Sat Feb 20 20:50:42 1999
++++ allegro.313/src/gfx16.s	Mon Jun 20 22:47:28 2005
+@@ -417,9 +417,9 @@
+    movl BMP_CT(%edx), %esi       /* clip y1 */
+ 
+ vline_y1_ok:
+-   cmpw BMP_CB(%edx), %ecx       /* test y2, bmp->cb */
++   cmpw BMP_CB(%edx), %cx        /* test y2, bmp->cb */
+    jl vline_noclip
+-   cmpw BMP_CB(%edx), %esi       /* test y1, bmp->cb */
++   cmpw BMP_CB(%edx), %si        /* test y1, bmp->cb */
+    jge vline_done
+    movl BMP_CB(%edx), %ecx       /* clip y2 */
+    decl %ecx
+diff -ruN allegro.312/src/gfx24.s allegro.313/src/gfx24.s
+--- allegro.312/src/gfx24.s	Sat Feb 20 20:46:30 1999
++++ allegro.313/src/gfx24.s	Mon Jun 20 22:48:22 2005
+@@ -265,7 +265,7 @@
+    movl %eax, ARG2               /* ARG2 == 12(%ebp) */
+    movl %eax, 15(%ebp)           /* overwrite ARG2, ARG3, ARG4 */
+    movl %eax, 18(%ebp)
+-   movw %eax, 21(%ebp)
++   movw %ax, 21(%ebp)
+    shrl $16, %eax
+    movb %al, 23(%ebp)
+    cmpl $4, %ecx
+@@ -503,9 +503,9 @@
+    movl BMP_CT(%edx), %esi       /* clip y1 */
+ 
+ vline_y1_ok:
+-   cmpw BMP_CB(%edx), %ecx       /* test y2, bmp->cb */
++   cmpw BMP_CB(%edx), %cx        /* test y2, bmp->cb */
+    jl vline_noclip
+-   cmpw BMP_CB(%edx), %esi       /* test y1, bmp->cb */
++   cmpw BMP_CB(%edx), %si        /* test y1, bmp->cb */
+    jge vline_done
+    movl BMP_CB(%edx), %ecx       /* clip y2 */
+    decl %ecx
+diff -ruN allegro.312/src/gfx32.s allegro.313/src/gfx32.s
+--- allegro.312/src/gfx32.s	Sat Feb 20 20:50:40 1999
++++ allegro.313/src/gfx32.s	Mon Jun 20 22:48:44 2005
+@@ -398,9 +398,9 @@
+    movl BMP_CT(%edx), %esi       /* clip y1 */
+ 
+ vline_y1_ok:
+-   cmpw BMP_CB(%edx), %ecx       /* test y2, bmp->cb */
++   cmpw BMP_CB(%edx), %cx        /* test y2, bmp->cb */
+    jl vline_noclip
+-   cmpw BMP_CB(%edx), %esi       /* test y1, bmp->cb */
++   cmpw BMP_CB(%edx), %si        /* test y1, bmp->cb */
+    jge vline_done
+    movl BMP_CB(%edx), %ecx       /* clip y2 */
+    decl %ecx
+diff -ruN allegro.312/src/gfx8.s allegro.313/src/gfx8.s
+--- allegro.312/src/gfx8.s	Sat Feb 20 20:50:54 1999
++++ allegro.313/src/gfx8.s	Mon Jun 20 22:49:02 2005
+@@ -455,9 +455,9 @@
+    movl BMP_CT(%edx), %esi       /* clip y1 */
+ 
+ vline_y1_ok:
+-   cmpw BMP_CB(%edx), %ecx       /* test y2, bmp->cb */
++   cmpw BMP_CB(%edx), %cx        /* test y2, bmp->cb */
+    jl vline_noclip
+-   cmpw BMP_CB(%edx), %esi       /* test y1, bmp->cb */
++   cmpw BMP_CB(%edx), %si        /* test y1, bmp->cb */
+    jge vline_done
+    movl BMP_CB(%edx), %ecx       /* clip y2 */
+    decl %ecx
+diff -ruN allegro.312/tests/alld/tmp.txt allegro.313/tests/alld/tmp.txt
+--- allegro.312/tests/alld/tmp.txt	Thu Jan  1 00:00:00 1970
++++ allegro.313/tests/alld/tmp.txt	Sat Feb 27 21:25:34 1999
+@@ -0,0 +1 @@
++This file is needed because some unzip programs skip empty directories.
+diff -ruN allegro.312/tests/alleg/tmp.txt allegro.313/tests/alleg/tmp.txt
+--- allegro.312/tests/alleg/tmp.txt	Thu Jan  1 00:00:00 1970
++++ allegro.313/tests/alleg/tmp.txt	Sat Feb 27 21:25:34 1999
+@@ -0,0 +1 @@
++This file is needed because some unzip programs skip empty directories.
+diff -ruN allegro.312/tests/allp/tmp.txt allegro.313/tests/allp/tmp.txt
+--- allegro.312/tests/allp/tmp.txt	Thu Jan  1 00:00:00 1970
++++ allegro.313/tests/allp/tmp.txt	Sat Feb 27 21:25:34 1999
+@@ -0,0 +1 @@
++This file is needed because some unzip programs skip empty directories.
+diff -ruN allegro.312/tools/alld/tmp.txt allegro.313/tools/alld/tmp.txt
+--- allegro.312/tools/alld/tmp.txt	Thu Jan  1 00:00:00 1970
++++ allegro.313/tools/alld/tmp.txt	Sat Feb 27 21:25:34 1999
+@@ -0,0 +1 @@
++This file is needed because some unzip programs skip empty directories.
+diff -ruN allegro.312/tools/alleg/tmp.txt allegro.313/tools/alleg/tmp.txt
+--- allegro.312/tools/alleg/tmp.txt	Thu Jan  1 00:00:00 1970
++++ allegro.313/tools/alleg/tmp.txt	Sat Feb 27 21:25:34 1999
+@@ -0,0 +1 @@
++This file is needed because some unzip programs skip empty directories.
+diff -ruN allegro.312/tools/allp/tmp.txt allegro.313/tools/allp/tmp.txt
+--- allegro.312/tools/allp/tmp.txt	Thu Jan  1 00:00:00 1970
++++ allegro.313/tools/allp/tmp.txt	Sat Feb 27 21:25:34 1999
+@@ -0,0 +1 @@
++This file is needed because some unzip programs skip empty directories.

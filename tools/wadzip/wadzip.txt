@@ -1,0 +1,30 @@
+Compressed wad format:
+
+Just like a normal wad, except:
+
+1. The header id at the very beginning says "ZWAD"
+instead of PWAD or IWAD.
+
+2. The first four bytes of each lump are (little
+endian) the uncompressed size. If this is zero,
+the lump is not compressed, and you can subtract
+four from the size given in the wadfile directory.
+
+3. Unless those first four bytes give a value of
+0, the lump is compressed with liblzf after that.
+
+
+
+To compile this program, just compiling all its
+source files should work, that is:
+    gcc *.c -o wadzip
+
+[On a big-endian CPU, add "-DWORDS_BIGENDIAN" to
+that command line.]
+
+Visual C++ should also work, as well as gcc.
+
+Compress a wad:
+    wadzip c original.wad compressed.wad
+Decompress a wad (restoring the original):
+    wadzip d compressed.wad original.wad

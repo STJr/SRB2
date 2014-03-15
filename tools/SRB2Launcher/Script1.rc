@@ -1,0 +1,355 @@
+//Microsoft Developer Studio generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_MAIN DIALOG DISCARDABLE  0, 0, 272, 226
+STYLE DS_3DLOOK | WS_MINIMIZEBOX | WS_POPUP | WS_VISIBLE | WS_CAPTION | 
+    WS_SYSMENU
+CAPTION "Official Sonic Robo Blast 2 Launcher v0.1"
+FONT 8, "MS Sans Serif"
+BEGIN
+    COMBOBOX        IDC_LAUNCHCONFIG,125,15,135,155,CBS_DROPDOWNLIST | 
+                    CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    GROUPBOX        "Saved Launch Configuration",IDC_STATIC,120,5,145,45
+    GROUPBOX        "WAD/SOC Files",IDC_STATIC,120,55,145,45
+    COMBOBOX        IDC_EXTFILECOMBO,125,65,135,95,CBS_DROPDOWNLIST | 
+                    WS_VSCROLL | WS_TABSTOP
+    CONTROL         102,IDC_STATIC,"Static",SS_BITMAP,5,90,107,79
+    PUSHBUTTON      "&About",IDC_ABOUT,125,210,25,10
+    DEFPUSHBUTTON   "&Go!",IDC_GO,60,150,50,14
+    PUSHBUTTON      "Add",IDC_ADDFILE,225,80,35,15
+    PUSHBUTTON      "Remove",IDC_REMOVEFILE,185,80,35,15
+    PUSHBUTTON      "Save",IDC_SAVELAUNCHCFG,220,30,40,15
+    GROUPBOX        "Multiplayer",IDC_STATIC,5,5,105,50
+    PUSHBUTTON      "&Join A Game",IDC_JOINGAME,10,15,50,15
+    PUSHBUTTON      "&Host A Game",IDC_HOSTGAME,55,35,50,15
+    EDITTEXT        IDC_PARAMETERS,160,190,105,30,ES_MULTILINE | 
+                    ES_AUTOVSCROLL | WS_VSCROLL
+    RTEXT           "Manual Parameters:",IDC_STATIC,115,190,40,15
+    GROUPBOX        "Executable Name",IDC_STATIC,120,105,145,50
+    EDITTEXT        IDC_EXENAME,125,115,95,12,ES_AUTOHSCROLL
+    PUSHBUTTON      "Choose...",IDC_FINDEXENAME,225,115,35,10
+    PUSHBUTTON      "General &Options",IDC_OPTIONS,55,60,50,20,BS_MULTILINE
+    EDITTEXT        IDC_CONFIGFILE,125,140,95,12,ES_AUTOHSCROLL
+    LTEXT           "Configuration File:",IDC_STATIC,125,130,60,10
+    PUSHBUTTON      "Choose...",IDC_FINDCONFIGNAME,225,140,35,10
+    CONTROL         "List1",IDC_LIST1,"SysListView32",WS_BORDER | WS_TABSTOP,
+                    20,180,85,40
+END
+
+IDD_JOINGAME DIALOG DISCARDABLE  0, 0, 367, 166
+STYLE DS_MODALFRAME | DS_3DLOOK | WS_POPUP | WS_VISIBLE | WS_CAPTION | 
+    WS_SYSMENU
+CAPTION "Join Game"
+FONT 8, "MS Sans Serif"
+BEGIN
+    PUSHBUTTON      "&Refresh List",IDC_SEARCHGAMES,5,140,55,20,BS_MULTILINE
+    CONTROL         "List1",IDC_GAMELIST,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | WS_BORDER | WS_TABSTOP,5,15,240,120
+    EDITTEXT        IDC_NAME,295,10,65,12,ES_AUTOHSCROLL
+    COMBOBOX        IDC_COLOR,295,30,65,130,CBS_DROPDOWNLIST | CBS_SORT | 
+                    WS_VSCROLL | WS_TABSTOP
+    RTEXT           "Name:",IDC_STATIC,265,10,25,10
+    RTEXT           "Color:",IDC_STATIC,265,30,25,10
+    COMBOBOX        IDC_SKIN,295,50,65,110,CBS_DROPDOWNLIST | CBS_SORT | 
+                    WS_VSCROLL | WS_TABSTOP
+    RTEXT           "Character:",IDC_STATIC,255,50,35,10
+    EDITTEXT        IDC_ADDRESS,255,115,70,12,ES_AUTOHSCROLL
+    LTEXT           "Manual Address:",IDC_STATIC,255,105,60,10
+    CONTROL         "Don't check server for files.",IDC_NOFILE,"Button",
+                    BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,255,70,105,
+                    10
+    DEFPUSHBUTTON   "&Go!",IDC_JOINSTART,330,115,30,15
+    LTEXT           "Double-Click on a game to join:",IDC_STATIC,5,5,215,10
+    CONTROL         "Don't download files",IDC_NODOWNLOAD,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,255,90,105,10
+END
+
+IDD_HOSTGAME DIALOG DISCARDABLE  0, 0, 287, 156
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Host Game"
+FONT 8, "MS Sans Serif"
+BEGIN
+    GROUPBOX        "Game Type",IDC_STATIC,5,5,110,65
+    PUSHBUTTON      "&Options...",IDC_OPTIONS,55,30,40,15
+    COMBOBOX        IDC_GAMETYPE,10,15,85,100,CBS_DROPDOWNLIST | WS_VSCROLL | 
+                    WS_TABSTOP
+    RTEXT           "Max # of players:",IDC_STATIC,35,86,70,10
+    EDITTEXT        IDC_MAXPLAYERS,110,86,20,12,ES_AUTOHSCROLL
+    GROUPBOX        "General Options",IDC_STATIC,5,75,275,75
+    COMBOBOX        IDC_STARTMAP,40,50,70,95,CBS_DROPDOWN | CBS_SORT | 
+                    WS_VSCROLL | WS_TABSTOP
+    RTEXT           "Start on map #:",IDC_STATIC,10,45,25,20
+    CONTROL         "Force players to use host's character",IDC_FORCESKIN,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,140,
+                    85,135,10
+    COMBOBOX        IDC_ADVANCEMAP,45,105,85,50,CBS_DROPDOWNLIST | 
+                    WS_VSCROLL | WS_TABSTOP
+    RTEXT           "Advance Stage:",IDC_STATIC,10,100,30,20
+    CONTROL         "Don't advertise server on Internet",IDC_INTERNETSERVER,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,140,
+                    130,120,10
+    RTEXT           "Intermission Delay Between Levels (in seconds):",
+                    IDC_STATIC,10,125,90,15
+    EDITTEXT        IDC_INTTIME,105,130,20,12,ES_AUTOHSCROLL | ES_NUMBER
+    CONTROL         "Don't allow autoaim",IDC_DISABLEAUTOAIM,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,140,100,75,10
+    CONTROL         "Disable WAD/SOC Downloading",IDC_NODOWNLOAD,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,140,115,120,10
+    PUSHBUTTON      "Monitor &Toggles...",IDC_MONITORTOGGLES,125,45,40,20,
+                    BS_MULTILINE
+END
+
+IDD_MATCHOPTIONS DIALOG DISCARDABLE  0, 0, 142, 141
+STYLE DS_MODALFRAME | DS_3DLOOK | WS_POPUP | WS_VISIBLE | WS_CAPTION | 
+    WS_SYSMENU
+CAPTION "Match Options"
+FONT 8, "MS Sans Serif"
+BEGIN
+    CONTROL         "Don't use special ring weapons.",IDC_SPECIALRINGS,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,15,5,115,10
+    RTEXT           "Item Box Behavior:",IDC_STATIC,5,50,60,10
+    EDITTEXT        IDC_RESPAWNITEMTIME,115,70,20,12,ES_AUTOHSCROLL | 
+                    ES_NUMBER
+    COMBOBOX        IDC_MATCHBOXES,70,50,65,65,CBS_DROPDOWN | CBS_SORT | 
+                    WS_VSCROLL | WS_TABSTOP
+    RTEXT           "Item Respawn Time (in seconds):",IDC_STATIC,5,70,105,10
+    EDITTEXT        IDC_TIMELIMIT,115,84,20,12,ES_AUTOHSCROLL | ES_NUMBER
+    RTEXT           "Time Limit (in minutes):",IDC_STATIC,35,84,75,10
+    RTEXT           "Point Limit:",IDC_STATIC,70,100,40,10
+    EDITTEXT        IDC_POINTLIMIT,115,100,20,12,ES_AUTOHSCROLL | ES_NUMBER
+    CONTROL         "Sudden Death Mode",IDC_SUDDENDEATH,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,15,20,80,10
+    COMBOBOX        IDC_MATCH_SCORING,70,35,65,65,CBS_DROPDOWNLIST | 
+                    CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    RTEXT           "Scoring Type:",IDC_STATIC,15,35,50,10
+    PUSHBUTTON      "Cance&l",IDC_CANCEL,100,120,35,15
+    DEFPUSHBUTTON   "O&K",IDC_OK,60,120,35,15
+END
+
+IDD_RACEOPTIONS DIALOG DISCARDABLE  0, 0, 142, 71
+STYLE DS_MODALFRAME | DS_3DLOOK | WS_POPUP | WS_VISIBLE | WS_CAPTION | 
+    WS_SYSMENU
+CAPTION "Race Options"
+FONT 8, "MS Sans Serif"
+BEGIN
+    RTEXT           "Item Box Behavior:",IDC_STATIC,5,10,60,10
+    COMBOBOX        IDC_RACEITEMBOXES,70,10,65,55,CBS_DROPDOWNLIST | 
+                    CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    EDITTEXT        IDC_NUMLAPS,115,30,20,12,ES_AUTOHSCROLL | ES_NUMBER
+    RTEXT           "Number of Laps:",IDC_STATIC,55,30,55,10
+    PUSHBUTTON      "Cance&l",IDC_CANCEL,100,50,35,15
+    DEFPUSHBUTTON   "O&K",IDC_OK,60,50,35,15
+END
+
+IDD_CTFOPTIONS DIALOG DISCARDABLE  0, 0, 142, 126
+STYLE DS_MODALFRAME | DS_3DLOOK | WS_POPUP | WS_VISIBLE | WS_CAPTION | 
+    WS_SYSMENU
+CAPTION "CTF Options"
+FONT 8, "MS Sans Serif"
+BEGIN
+    CONTROL         "Don't use special ring weapons.",IDC_SPECIALRINGS,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,15,5,115,10
+    RTEXT           "Item Box Behavior:",IDC_STATIC,5,20,60,10
+    COMBOBOX        IDC_MATCHBOXES,70,20,65,60,CBS_DROPDOWNLIST | WS_VSCROLL | 
+                    WS_TABSTOP
+    RTEXT           "Item Respawn Time (in seconds):",IDC_STATIC,5,40,105,10
+    EDITTEXT        IDC_RESPAWNITEMTIME,115,40,20,12,ES_AUTOHSCROLL | 
+                    ES_NUMBER
+    RTEXT           "Time Limit (in minutes):",IDC_STATIC,35,70,75,10
+    EDITTEXT        IDC_TIMELIMIT,115,70,20,12,ES_AUTOHSCROLL | ES_NUMBER
+    RTEXT           "Point Limit:",IDC_STATIC,70,86,40,10
+    EDITTEXT        IDC_POINTLIMIT,115,86,20,12,ES_AUTOHSCROLL | ES_NUMBER
+    RTEXT           "Flag Respawn Time (in seconds):",IDC_STATIC,5,55,105,10
+    EDITTEXT        IDC_FLAGTIME,115,55,20,12,ES_AUTOHSCROLL | ES_NUMBER
+    PUSHBUTTON      "Cance&l",IDC_CANCEL,100,105,35,15
+    DEFPUSHBUTTON   "O&K",IDC_OK,60,105,35,15
+END
+
+IDD_TAGOPTIONS DIALOG DISCARDABLE  0, 0, 142, 111
+STYLE DS_MODALFRAME | DS_3DLOOK | WS_POPUP | WS_VISIBLE | WS_CAPTION | 
+    WS_SYSMENU
+CAPTION "Tag Options"
+FONT 8, "MS Sans Serif"
+BEGIN
+    CONTROL         "Don't use special ring weapons.",IDC_SPECIALRINGS,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,15,5,115,10
+    COMBOBOX        IDC_MATCHBOXES,70,20,65,60,CBS_DROPDOWNLIST | WS_VSCROLL | 
+                    WS_TABSTOP
+    RTEXT           "Item Box Behavior:",IDC_STATIC,5,20,60,10
+    DEFPUSHBUTTON   "O&K",IDC_OK,60,90,35,15
+    PUSHBUTTON      "Cance&l",IDC_CANCEL,100,90,35,15
+    RTEXT           "Item Respawn Time (in seconds):",IDC_STATIC,5,40,105,10
+    EDITTEXT        IDC_RESPAWNITEMTIME,115,40,20,12,ES_AUTOHSCROLL | 
+                    ES_NUMBER
+    RTEXT           "Time Limit (in minutes):",IDC_STATIC,35,55,75,10
+    EDITTEXT        IDC_TIMELIMIT,115,55,20,12,ES_AUTOHSCROLL | ES_NUMBER
+    RTEXT           "Point Limit:",IDC_STATIC,70,70,40,10
+    EDITTEXT        IDC_POINTLIMIT,115,70,20,12,ES_AUTOHSCROLL | ES_NUMBER
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO DISCARDABLE 
+BEGIN
+    IDD_MAIN, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 265
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 219
+    END
+
+    IDD_JOINGAME, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 360
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 159
+    END
+
+    IDD_HOSTGAME, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 280
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 149
+    END
+
+    IDD_MATCHOPTIONS, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 135
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 134
+    END
+
+    IDD_RACEOPTIONS, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 135
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 64
+    END
+
+    IDD_CTFOPTIONS, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 135
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 119
+    END
+
+    IDD_TAGOPTIONS, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 135
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 104
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDB_BITMAP1             BITMAP  DISCARDABLE     "bitmap1.bmp"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDI_ICON1               ICON    DISCARDABLE     "icon1.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog Info
+//
+
+IDD_JOINGAME DLGINIT
+BEGIN
+    IDC_SKIN, 0x403, 6, 0
+0x6f53, 0x696e, 0x0063, 
+    IDC_SKIN, 0x403, 6, 0
+0x6154, 0x6c69, 0x0073, 
+    IDC_SKIN, 0x403, 9, 0
+0x6e4b, 0x6375, 0x6c6b, 0x7365, "\000" 
+    0
+END
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

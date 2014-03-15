@@ -1,0 +1,1992 @@
+<html>
+
+<head>
+<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+<title>Sonic Robo Blast II - Specials Reference Document</title>
+</head>
+
+<body bgcolor="white" text="black" link="blue" vlink="blue" alink="blue">
+
+<h1><big>SRB2 Specials Reference Document</big></h1>
+
+<p><i>Last updated May 27, 2008</i></p>
+
+<p><i>For v1.1 Private Beta</i></p>
+
+<p>This is the SRB2 Specials Reference Document. It is designed to be the ultimate
+reference for effects used in SRB2. As such, it is rather technical in areas and quite
+concise, and is not something a beginner with level design should be dealing with.</p>
+
+<h1><a name="things"></a>Thing Types</h1>
+
+<p>In general, thing bitsets have 4 flags and 3 digits for their height. The bitset is
+0xAAAB, where AAA is the object's height above ground, and B are the Easy, Normal, Hard,
+and Deaf flags. To get the bitset on a normal object, multiply the height desired by 16,
+and then add the existant B. Some objects use 32 as this number, and they will be noted.
+Objects that multiply by 16 can be placed up to 4095 units in the air, while objects that
+multiply by 32 can be placed up to 2047 units in the air. 
+
+<ul>
+  <li><u><big><big>Player Starts</big></big></u><ol>
+      <h3><a name="t1"></a>1 - Player 01 Start</h3>
+      <p>This is the start for the first player in single player mode, cooperative mode, or race
+      mode. This start must be placed on every map, as it is what the game defaults to if the
+      start it is attempting to find isn't there. If there is no Player 1 Start on the map, and
+      the game is confused over where to spawn the player, the game will crash outright.</p>
+      <p>The Deaf tag will make the player spawn from the ceiling, and the object needs to be
+      multiplied by 32 to give height, not 16.</p>
+      <h3><a name="t2"></a>2 - Player 02 Start</h3>
+      <p>This is the start for the second player in cooperative and race mode.</p>
+      <p>The Deaf tag will make the player spawn from the ceiling, and the object needs to be
+      multiplied by 32 to give height, not 16.</p>
+      <h3><a name="t3"></a>3 - Player 03 Start</h3>
+      <p>See Thing <a href="#t2">2</a> for more information.</p>
+      <h3><a name="t4"></a>4 - Player 04 Start</h3>
+      <p>See Thing <a href="#t2">2</a> for more information.</p>
+      <h3><a name="t5"></a>5 - Player 05 Start</h3>
+      <p>See Thing <a href="#t2">2</a> for more information.</p>
+      <h3><a name="t6"></a>6 - Player 06 Start</h3>
+      <p>See Thing <a href="#t2">2</a> for more information.</p>
+      <h3><a name="t7"></a>7 - Player 07 Start</h3>
+      <p>See Thing <a href="#t2">2</a> for more information.</p>
+      <h3><a name="t8"></a>8 - Player 08 Start</h3>
+      <p>See Thing <a href="#t2">2</a> for more information.</p>
+      <h3><a name="t9"></a>9 - Player 09 Start</h3>
+      <p>See Thing <a href="#t2">2</a> for more information.</p>
+      <h3><a name="t10"></a>10 - Player 10 Start</h3>
+      <p>See Thing <a href="#t2">2</a> for more information.</p>
+      <h3><a name="t11"></a>11 - Player 11 Start</h3>
+      <p>See Thing <a href="#t2">2</a> for more information.</p>
+      <h3><a name="t12"></a>12 - Player 12 Start</h3>
+      <p>See Thing <a href="#t2">2</a> for more information.</p>
+      <h3><a name="t13"></a>13 - Player 13 Start</h3>
+      <p>See Thing <a href="#t2">2</a> for more information.</p>
+      <h3><a name="t14"></a>14 - Player 14 Start</h3>
+      <p>See Thing <a href="#t2">2</a> for more information.</p>
+      <h3><a name="t15"></a>15 - Player 15 Start</h3>
+      <p>See Thing <a href="#t2">2</a> for more information.</p>
+      <h3><a name="t16"></a>16 - Player 16 Start</h3>
+      <p>See Thing <a href="#t2">2</a> for more information.</p>
+      <h3><a name="t17"></a>17 - Player 17 Start</h3>
+      <p>See Thing <a href="#t2">2</a> for more information.</p>
+      <h3><a name="t18"></a>18 - Player 18 Start</h3>
+      <p>See Thing <a href="#t2">2</a> for more information.</p>
+      <h3><a name="t19"></a>19 - Player 19 Start</h3>
+      <p>See Thing <a href="#t2">2</a> for more information.</p>
+      <h3><a name="t20"></a>20 - Player 20 Start</h3>
+      <p>See Thing <a href="#t2">2</a> for more information.</p>
+      <h3><a name="t21"></a>21 - Player 21 Start</h3>
+      <p>See Thing <a href="#t2">2</a> for more information.</p>
+      <h3><a name="t22"></a>22 - Player 22 Start</h3>
+      <p>See Thing <a href="#t2">2</a> for more information.</p>
+      <h3><a name="t23"></a>23 - Player 23 Start</h3>
+      <p>See Thing <a href="#t2">2</a> for more information.</p>
+      <h3><a name="t24"></a>24 - Player 24 Start</h3>
+      <p>See Thing <a href="#t2">2</a> for more information.</p>
+      <h3><a name="t25"></a>25 - Player 25 Start</h3>
+      <p>See Thing <a href="#t2">2</a> for more information.</p>
+      <h3><a name="t26"></a>26 - Player 26 Start</h3>
+      <p>See Thing <a href="#t2">2</a> for more information.</p>
+      <h3><a name="t27"></a>27 - Player 27 Start</h3>
+      <p>See Thing <a href="#t2">2</a> for more information.</p>
+      <h3><a name="t28"></a>28 - Player 28 Start</h3>
+      <p>See Thing <a href="#t2">2</a> for more information.</p>
+      <h3><a name="t29"></a>29 - Player 29 Start</h3>
+      <p>See Thing <a href="#t2">2</a> for more information.</p>
+      <h3><a name="t30"></a>30 - Player 30 Start</h3>
+      <p>See Thing <a href="#t2">2</a> for more information.</p>
+      <h3><a name="t31"></a>31 - Player 31 Start</h3>
+      <p>See Thing <a href="#t2">2</a> for more information.</p>
+      <h3><a name="t32"></a>32 - Player 32 Start</h3>
+      <p>See Thing <a href="#t2">2</a> for more information.</p>
+      <h3><a name="t33"></a>33 - Player Match Start</h3>
+      <p>This is the start for players in Match and Chaos modes. They should also be placed in
+      Capture the Flag maps as well. There should be 32 of these in a map to assure proper
+      randomization. While it's unelegant, they can be stacked on top of each other without
+      negative effect.</p>
+      <p>The Deaf tag will make the player spawn from the ceiling, and the object needs to be
+      multiplied by 32 to give height, not 16.</p>
+      <h3><a name="t34"></a>34 - CTF Team Start (Red)</h3>
+      <p>This is the start for players on the red team in Capture the Flag mode. There should be
+      32 of these in a map to assure proper randomization. While it's unelegant, they can be
+      stacked on top of each other without negative effect.</p>
+      <p>The Deaf tag will make the player spawn from the ceiling, and the object needs to be
+      multiplied by 32 to give height, not 16.</p>
+      <h3><a name="t35"></a>35 - CTF Team Start (Blue)</h3>
+      <p>This is the start for players on the blue team in Capture the Flag mode. There should
+      be 32 of these in a map to assure proper randomization. While it's unelegant, they can be
+      stacked on top of each other without negative effect.</p>
+      <p>The Deaf tag will make the player spawn from the ceiling, and the object needs to be
+      multiplied by 32 to give height, not 16.</p>
+      <p>&nbsp;</p>
+    </ol>
+  </li>
+  <li><u><big><big>Enemies</big></big></u><ol>
+      <h3><a name="t100"></a>100 - Crawla (Blue)</h3>
+      <p>These are the blue ground enemies found in the one player stages. They can't move off
+      of cliffs and are exceedingly slow.</p>
+      <h3><a name="t101"></a>101 - Crawla (Red)</h3>
+      <p>These are the red ground enemies found in the one player stages. They can't move off
+      cliffs and are relatively slow.</p>
+      <h3><a name="t102"></a>102 - Stupid Dumb Unnamed RoboFish (tm)</h3>
+      <p>This is the little fish in Greenflower Zone. The angle determines the jump height, with
+      0 being the old jump style. Note that the jump height is based on force, not units, so
+      experimentation will be necessary to get the correct height.</p>
+      <h3><a name="t103"></a>103 - Yellow Buzz</h3>
+      <p>This enemy flies at a moderate speed directly at the player.</p>
+      <h3><a name="t104"></a>104 - Red Buzz</h3>
+      <p>This enemy flies at a relatively high speed directly at the player.</p>
+      <h3><a name="t105"></a>105 - Jetty-Syn Bomber</h3>
+      <p>This is a highly mobile flying enemy with a bomb that it drops on the player from
+      directly above. It is considered highly difficult to kill, and should only be used in
+      situations where the stage is supposed to be difficult.</p>
+      <h3><a name="t106"></a>106 - Jetty-Syn Gunner</h3>
+      <p>This is a highly mobile flying enemy with a gun that it fires at the player with high
+      accuracy. It is considered highly difficult to kill, and should only be used in situations
+      where the stage is supposed to be difficult.</p>
+      <h3><a name="t107"></a>107 - Crawla Commander</h3>
+      <p>This is the grey floating enemy in the opening room of Techno Hill Zone Act 2. It is
+      quite fast and will start bouncing after taking the first hit. It is significantly
+      challenging, although a spindash will kill it given time.</p>
+      <h3><a name="t108"></a>108 - Deton</h3>
+      <p>This is the red spherical enemy in Techno Hill Zone Act 2. Upon seeing the player, it
+      makes a mad dash straight for them. With the exception of the <a href="#t404">Armageddon
+      Shield</a>, Detons are invincible, and must be avoided by running behind a wall or another
+      enemy.</p>
+      <h3><a name="t109"></a>109 - Skim</h3>
+      <p>This is an enemy that floats on the surface of the water, dropping bombs into the water
+      below. It is not currently used in any of the Single Player stages, but it is fully
+      operational. The designer does not have to put them on the surface of the water, they know
+      where it is.</p>
+      <h3><a name="t110"></a>110 - THZ Turret</h3>
+      <p>This is the turret from Techno Hill Zone Act 2. It fires large bursts of laser fire at
+      the player with high accuracy. It is invincible unless it is somehow dipped into water.</p>
+      <h3><a name="t111"></a>111 - Popup Turret</h3>
+      <p>This is a small turret that pops up now and then and shoots. The object's angle is a
+      value defining the delay between shooting.</p>
+      <h3><a name="t112"></a>112 - Sharp</h3>
+      <p>This is a blue enemy with spikes on top if it. It starts off by slowly chasing the player,
+      then it fades to red and runs after the player, and is invincible until it fades back to red.</p>
+      <h3><a name="t113"></a>113 – Jet Jaw</h3>
+      <p>This is an underwater enemy that tries to bite at the player, which can be found in
+      Deep Sea Zone.</p>
+      <h3><a name="t114"></a>114 – Snailer</h3>
+      <p>This is an incomplete enemy.</p>
+      <h3><a name="t115"></a>115 – Bird Aircraft Strike Hazard (B.A.S.H.)</h3>
+      <p>This is the red vulture-like enemy in Arid Canyon Zone. If it sees a player, it lifts off and
+      charges at him. Collision with a wall will send it plummeting.</p>
+      <h3><a name="t116"></a>116 – Pointy</h3>
+      <p>This is the orbinaut enemy that has spikes circling around it. None of the single player stages
+      currently use him. You have to place him in a map by using a WAD editor, he can't be placed using
+      objectplace.</p>
+      <h3><a name="t117"></a>117 – Robo-Hood</h3>
+      <p>This is the green enemy from Castle Eggman Zone, which shoots arrows at the player.</p>
+      <h3><a name="t118"></a>118 – CastleBot FaceStabber</h3>
+      <p>This is the large grey enemy from Castle Eggman Zone. It slowly trudges towards the player,
+      and if the player in range, lunges at them with his sword.</p>
+      <h3><a name="t119"></a>119 – Egg Guard</h3>
+      <p>This is the enemy from Castle Eggman Zone that wields a protective shield.</p>
+      <h3><a name="t120"></a>120 – Green Snapper</h3>
+      <p>This is the green turtle enemy from Arid Canyon Zone. This enemy behaves exactly like a blue
+      crawla does. The circumference of its shell is covered with spikes, so the only way to destroy it
+      is by jumping on top of it.</p>
+      <h3><a name="t121"></a>121 – Minus</h3>
+      <p>This is the digging enemy from Arid Canyon Zone. It burrows underground towards the player, and
+      once it's directly underneath, it bursts out from under the ground, jumping up and hurting the player.</p>
+      <p>&nbsp;</p>
+    </ol>
+  </li>
+  <li><u><big><big>Bosses and their associated items (if any)</big></big></u><ol>
+      <h3><a name="t200"></a>200 - Egg Mobile (Boss 1)</h3>
+      <p>The boss of Greenflower Zone and Castle Eggman Zone. He moves around firing at the
+      player, and after taking six hits, he dashes at the player.</p>
+      <p>Giving the boss the Deaf flag will make him have spikeballs, like CEZ3, and giving him
+      the Multi flag will make the level end when he is dead. To place him above ground,
+      multiply by 32 to give height, not 16.</p>
+      <h3><a name="t201"></a>201 - Egg Slimer (Boss 2)</h3>
+      <p>This is the boss of Techno Hill Zone. It requires an axis point at the center to
+      function, and it goes in a circle around the axis point dropping slime. After 6 hits, he
+      stops going in a circle, and bouncing at the player, spewing a lot more slime.</p>
+      <p>The Multi flag will make the level end when he is dead.</p>
+      <h3><a name="t201"></a>202 - Sea Egg (Boss 3)</h3>
+      <p>This is the boss of Deep Sea Zone. More information will be supplied later.</p>
+      <p>The Multi flag will make the level end when he is dead.</p>
+      <h3>203 - Eggscalibur (Boss 4)</h3>
+      <p>This is the boss of Castle Eggman Zone. More information will be supplied later.</p>
+      <p>The Multi flag will make the level end when he is dead.</p>
+      <h3><a name="t290"></a>290 - Boss Flypoint</h3>
+      <p>This is the location the boss will fly to after being killed.</p>
+      <h3><a name="t291"></a>291 - Egg Capsule Center</h3>
+      <p>&nbsp;</p>
+    </ol>
+  </li>
+  <li><u><big><big>Collectibles</big></big></u><ol>
+      <h3><a name="t300"></a>300 - Ring</h3>
+      <p>This is a normal ring. Pick this up to get one ring.</p>
+      <p>Giving the deaf tag to a ring will cause it to float 31 units above the ground. This
+      does stack with bitsets, allowing rings to be a total of 4127 units above the ground at
+      maximum.</p>
+      <h3><a name="t301"></a>301 - Bounce Ring</h3>
+      <p>Picking this up gives you more ammo for this particular ring weapon.  You cannot fire
+      the weapon, however, if you do not have the associated panel.
+      <h3><a name="t302"></a>302 - Rail Ring</h3>
+      <p>See thing <a href="#t301">#301</a>.</p>
+      <h3><a name="t304"></a>304 - Automatic Ring</h3>
+      <p>See thing <a href="#t301">#301</a>.</p>
+      <h3><a name="t305"></a>305 - Explosion Ring</h3>
+      <p>See thing <a href="#t301">#301</a>.</p>
+      <h3><a name="t305"></a>306 - Scatter Ring</h3>
+      <p>See thing <a href="#t301">#301</a>.</p>
+      <h3><a name="t305"></a>307 - Grenade Ring</h3>
+      <p>See thing <a href="#t301">#301</a>.</p>
+      <h3>310 - CTF Flag (Red)</h3>
+      <p>This is the red team's flag in capture the flag mode. If the blue team takes this to
+      their team base (sector type <a href="#s16384">16384</a>), they score a point.</p>
+      <h3><a name="t307"></a>311 - CTF Flag (Blue)</h3>
+      <p>This is the blue team's flag in capture the flag mode. If the red team takes this to
+      their team base (sector type <a href="#s12288">12288</a>), they score a point.</p>
+      <h3><a name="t308"></a>312 - Special Stage Token</h3>
+      <p>This token gives the player a chance at the special stage after the current stage has
+      ended. If more than one token is collected, the player gets that many chances at the
+      special stages, continuing until they run out of tokens or have all the emeralds.</p>
+      <h3><a name="t309"></a>313 - Emerald 1 (Green)</h3>
+      <p>This object gives the player the first emerald as a pickup object, instead of by
+      completing a special stage.</p>
+      <h3><a name="t310"></a>314 - Emerald 2 (Orange)</h3>
+      <p>This object gives the player the second emerald as a pickup object, instead of by
+      completing a special stage.</p>
+      <h3><a name="t311"></a>315 - Emerald 3 (Pink)</h3>
+      <p>This object gives the player the third emerald as a pickup object, instead of by
+      completing a special stage.</p>
+      <h3><a name="t312"></a>316 - Emerald 4 (Blue)</h3>
+      <p>This object gives the player the fourth emerald as a pickup object, instead of by
+      completing a special stage.</p>
+      <h3><a name="t313"></a>317 - Emerald 5 (Red)</h3>
+      <p>This object gives the player the fifth emerald as a pickup object, instead of by
+      completing a special stage.</p>
+      <h3><a name="t314"></a>318 - Emerald 6 (Light Blue)</h3>
+      <p>This object gives the player the sixth emerald as a pickup object, instead of by
+      completing a special stage.</p>
+      <h3><a name="t315"></a>319 - Emerald 7 (Grey)</h3>
+      <p>This object gives the player the seventh emerald as a pickup object, instead of by
+      completing a special stage.</p>
+      <h3><a name="t316"></a>320 - Emerald Hunt Location</h3>
+      <p>This is one of the three emeralds to be used in Hunting mode.</p>
+      <h3>323 - Emerald Spawn</h3>
+      <p>Spawn location for emeralds in Match mode.</p>
+      <h3><a name="t330"></a>330 - Bounce Ring Panel</h3>
+      <p>This is a match weapon panel. The Bounce Ring throws a slow ring that will bounce when
+      it hits walls.</p>
+      <p>Giving the deaf tag to a panel will cause it to float 31 units above the ground. This
+      does stack with bitsets, allowing panels to be a total of 4127 units above the ground at
+      maximum.</p>
+      <h3><a name="t331"></a>331 - Rail Ring Panel</h3>
+      <p>This is a match weapon panel. The Rail Ring gives the player an instantaneous shot, that
+      strikes its target the instant its fired, however there is a long downtime between shots.
+      Being shot by a rail ring causes more kickback than normal.</p>
+      <p>Giving the deaf tag to a panel will cause it to float 31 units above the ground. This
+      does stack with bitsets, allowing panels to be a total of 4127 units above the ground at
+      maximum.</p>
+      <h3><a name="t332"></a>332 - Automatic Ring Panel</h3>
+      <p>This is a match weapon panel. The Automatic Ring gives the player a fire rate of 17.5
+      rings per second.</p>
+      <p>Giving the deaf tag to a panel will cause it to float 31 units above the ground. This
+      does stack with bitsets, allowing panels to be a total of 4127 units above the ground at
+      maximum.</p>
+      <h3><a name="t333"></a>333 - Explosion Ring Panel</h3>
+      <p>This is a match weapon panel. The Explosion Ring throws a slow ring that explodes into
+      many fragments upon striking a wall or another player. Being struck directly by the
+      Explosion Ring causes more kickback than usual.</p>
+      <p>Giving the deaf tag to a panel will cause it to float 31 units above the ground. This
+      does stack with bitsets, allowing panels to be a total of 4127 units above the ground at
+      maximum.</p>
+      <h3><a name="t334"></a>334 - Scatter Ring Panel</h3>
+      <p>This is a match weapon panel. The Scatter Ring throws 5 rings in a plus-shape.</p>
+      <p>Giving the deaf tag to a panel will cause it to float 31 units above the ground. This
+      does stack with bitsets, allowing panels to be a total of 4127 units above the ground at
+      maximum.</p>
+      <h3><a name="t335"></a>335 - Grenade Ring Panel</h3>
+      <p>This is a match weapon panel. The Grenade Ring throws a grenade that will explode
+      if an opposing player gets too close to it.  It will also explode automatically after a
+      while if left untouched.</p>
+      <p>Giving the deaf tag to a panel will cause it to float 31 units above the ground. This
+      does stack with bitsets, allowing panels to be a total of 4127 units above the ground at
+      maximum.</p>
+      <p>&nbsp;</p>
+    </ol>
+  </li>
+  <li><u><big><big>Boxes</big></big></u><ol>
+      <h3><a name="t400"></a>400 - Super Ring (10 Rings)</h3>
+      <p>This monitor gives the player ten rings.</p>
+      <p>If monitors are given the Deaf tag, they will respawn as a random monitor type (not a ?
+      monitor) from the weighted table in modes that support respawn. Elsewise, they will
+      respawn as the same monitor.</p>
+      <h3><a name="t402"></a>402 - Attraction Shield</h3>
+      <p>Also known as the yellow shield and god shield, this shield protects the player from a
+      single hit, then disappears. It also attracts all normal rings, spilled or on the map to
+      the player with the shield. It also protects the player from electric damage.</p>
+      <p>If monitors are given the Deaf tag, they will respawn as a random monitor type (not a ?
+      monitor) from the weighted table in modes that support respawn. Elsewise, they will
+      respawn as the same monitor.</p>
+      <h3><a name="t403"></a>403 - Force Shield</h3>
+      <p>Also known as the blue shield, this shield protects the player from two hits, then
+      disappears. If the spin&nbsp; button is pressed while jumping, it is also possible to
+      reflect many projectiles.</p>
+      <p>If monitors are given the Deaf tag, they will respawn as a random monitor type (not a ?
+      monitor) from the weighted table in modes that support respawn. Elsewise, they will
+      respawn as the same monitor.</p>
+      <h3><a name="t404"></a>404 - Armageddon Shield</h3>
+      <p>Also known as the black shield, this shield protects the player from a single hit,
+      triggering upon a hit. The shield can also be triggered by jumping, and then hitting the
+      spin key in midair. When the shield is triggered, a flash of light damages everything
+      within a large radius, destroying the shield in the process.</p>
+      <p>If monitors are given the Deaf tag, they will respawn as a random monitor type (not a ?
+      monitor) from the weighted table in modes that support respawn. Elsewise, they will
+      respawn as the same monitor.</p>
+      <h3><a name="t405"></a>405 - Whirlwind Shield</h3>
+      <p>This shield protects the player from a single hit, then disappears. If the player does
+      a jump-spin, they will do a second jump in midair, making the maximum height that the
+      player can jump with the shield 224.</p>
+      <p>Versions of SRB2 previous to 1.09 had the Basic Shield in this object number, so make
+      sure to note that if the player loads the map in an older version, that is what they will
+      see.</p>
+      <p>If monitors are given the Deaf tag, they will respawn as a random monitor type (not a ?
+      monitor) from the weighted table in modes that support respawn. Elsewise, they will
+      respawn as the same monitor.</p>
+      <h3><a name="t406"></a>406 - Elemental Shield</h3>
+      <p>Also known as the green&nbsp; shield, this shield protects the player from a single
+      hit, then disappears. While this shield is active, the player cannot drown. It also
+      protects the player from water, fire, and other damage. When the player with this shield
+      spin-dashes, it leaves a trail of fire, which deals fire damage to any enemy that touches
+      it.</p>
+      <p>If monitors are given the Deaf tag, they will respawn as a random monitor type (not a ?
+      monitor) from the weighted table in modes that support respawn. Elsewise, they will
+      respawn as the same monitor.</p>
+      <h3><a name="t407"></a>407 - Super Sneakers</h3>
+      <p>This is a monitor powerup that gives the player about 2x running speed for 20 seconds.</p>
+      <h3><a name="t408"></a>408 - Invincibility</h3>
+      <p>This is a monitor powerup that prevents all damage to the player for 20 seconds.</p>
+      <h3><a name="t409"></a>409 - Extra Life</h3>
+      <p>This powerup monitor features the player's face, and provides an extra life when
+      struck.</p>
+      <p>If monitors are given the Deaf tag, they will respawn as a random monitor type (not a ?
+      monitor) from the weighted table in modes that support respawn. Elsewise, they will
+      respawn as the same monitor.</p>
+      <h3><a name="t410"></a>410 - Eggman</h3>
+      <p>This monitor damages the player if they strike it.</p>
+      <p>If monitors are given the Deaf tag, they will respawn as a random monitor type (not a ?
+      monitor) from the weighted table in modes that support respawn. Elsewise, they will
+      respawn as the same monitor.</p>
+      <h3><a name="t411"></a>411 - Teleporter</h3>
+      <p>This monitor mixes up all locations of players, teleporting them to the location of a
+      random other player. It has no effect in Single Player or in multiplayer modes while only
+      one player is in the game.</p>
+      <p>If monitors are given the Deaf tag, they will respawn as a random monitor type (not a ?
+      monitor) from the weighted table in modes that support respawn. Elsewise, they will
+      respawn as the same monitor.</p>
+      <h3><a name="t412"></a>412 - Random Box</h3>
+      <p>Destroy this monitor and you will get a random powerup, like the boxes in Sonic 2 race
+      mode.</p>
+      <h3><a name="t412"></a>413 - Gravity Boots Box</h3>
+      <p>Destroy this monitor and the gravity will be flipped for a short time.</p>
+      <p>&nbsp;</p>
+    </ol>
+  </li>
+  <li><u><big><big>Interactive Objects (friendly or otherwise)</big></big></u><ol>
+      <h3><a name="t500"></a>500 - Air Bubble Patch</h3>
+      <p>This is the air bubble patch used underwater to give players air. It spawns big bubbles
+      randomly which replenish the player's air.</p>
+      <h3><a name="t501"></a>501 - End Level Sign</h3>
+      <p>This is the sign at the end of the stage. When the player enters the <a href="#s8192">Exit
+      Sector</a>, this sign will start to spin, and end on the face of the player. This sign
+      does not make the stage end, it's just a visual effect for it.</p>
+      <h3><a name="t502"></a>502 - Star Post</h3>
+      <p>Star Posts allow the player to respawn after dying at a point other than the beginning
+      of the stage. There can be up to 32 Star Posts in a map, and they work with the bitsets.</p>
+      <p>Instead of controlling the difficulty and deaf flags, the final digit of the bitset
+      determines the number of the Star Post. 0x0000 is the first one and 0x000f is the
+      sixteenth one. Note that since this overwrites all of the difficulty flags, they will
+      appear in all difficulties, even though 0x0000 would normally mean it wouldn't appear in
+      any difficulty level.</p>
+      <h3><a name="t520"></a>520 - Spikeball</h3>
+      <p>Just like thing <a href="#t521">521</a>, except they do normal damage to the player on
+      contact. </p>
+      <h3><a name="t521"></a>521 - Spikeball (Special Stage)</h3>
+      <p>These are the spikeballs used in the special stages. They harm the player for damage on
+      contact, but only if they are carrying rings.</p>
+      <h3><a name="t522"></a>522 - Ceiling Spike</h3>
+      <p>This is a downward pointing spike for use on the ceiling. Touching the pointy end of
+      the spike deals damage to the player.</p>
+      <p>By default, it attaches itself to the ceiling, and the height part of the bitset
+      measures how far down from the ceiling, instead of up from the floor.</p>
+      <h3><a name="t523"></a>523 - Floor Spike</h3>
+      <p>This is a upward pointing spike for use on the floor. Touching the pointy end of the
+      spike deals damage to the player.</p>
+      <h3><a name="t524"></a>524 - Big Floating Mine</h3>
+      <p>When you get close, this mine will start to follow you. Touches you, and it explodes.</p>
+      <h3><a name="t540"></a>540 - THZ Fan</h3>
+      <p>This is the fan used inside the secret passage in Techno Hill Zone Act 1. It pushes the
+      player slowly up until it reaches the maximum height it can. The maximum height is
+      determined by the angle, measured in normal fracunits (It can go above 360 just fine).</p>
+      <h3><a name="t541"></a>541 - THZ Gas Jet</h3>
+      <p>This is the gas jet used at the end of Techno Hill Zone Act 1. It launches the player
+      straight up on regular intervals about the same height as a yellow spring pointing up.</p>
+      <h3><a name="t550"></a>550 - Yellow Spring (Up)</h3>
+      <p>This is a yellow spring pointing straight up. It has a medium amount of force behind
+      it.</p>
+      <h3><a name="t551"></a>551 - Red Spring (Up)</h3>
+      <p>This is a red spring pointing straight up. It has a large amount of force behind it.</p>
+      <h3><a name="t552"></a>552 - Blue Spring</h3>
+      <p>This is a blue spring pointing straight up. It has a small amount of force behind it.
+      The intent is for this spring to be used underwater. It has about the same effect
+      underwater as a yellow spring does above water.</p>
+      <h3><a name="t553"></a>553 - Yellow Spring (Down)</h3>
+      <p>This is a yellow spring pointing straight down. It has a medium amount of force behind
+      it.</p>
+      <h3><a name="t554"></a>554 - Red Spring (Down)</h3>
+      <p>This is a red spring pointing straight down. It has a large amount of force behind it.</p>
+      <h3><a name="t555"></a>555 - Yellow Spring (Diagonal Up)</h3>
+      <p>This is a yellow spring pointing upwards and in the direction the thing is facing. It
+      has a medium amount of force behind it. When the player touches this spring, he will
+      automatically turn to face the direction the spring is launching the player.</p>
+      <h3><a name="t556"></a>556 - Red Spring (Diagonal Up)</h3>
+      <p>This is a red spring pointing upwards and in the direction the thing is facing. It has
+      a large amount of force behind it. When the player touches this spring, he will
+      automatically turn to face the direction the spring is launching the player.</p>
+      <h3><a name="t557"></a>557 - Yellow Spring (Diagonal Down)</h3>
+      <p>This is a yellow spring pointing downwards and in the direction the thing is facing. It
+      has a medium amount of force behind it. When the player touches this spring, he will
+      automatically turn to face the direction the spring is launching the player.</p>
+      <h3><a name="t558"></a>558 - Red Spring (Diagonal Down)</h3>
+      <p>This is a red spring pointing downward and in the direction the thing is facing. It has
+      a large amount of force behind it. When the player touches this spring, he will
+      automatically turn to face the direction the spring is launching the player.</p>
+      <p>&nbsp;</p>
+    </ol>
+  </li>
+  <li><u><big><big>Special placement patterns</big></big></u><ol>
+      <h3><a name="t600"></a>600 - 5 Vertical Rings (Yellow Spring)</h3>
+      <p>This is a chain of five rings intended to be used with thing <a href="#t550">550</a>.
+      Do not use ring chain objects in any mode where items respawn, because ring chains do not
+      respawn. Use bitsets to create chains in any mode with item respawn.</p>
+      <h3><a name="t601"></a>601 - 5 Vertical Rings (Red Spring)</h3>
+      <p>This is a chain of five rings intended to be used with thing <a href="#t551">551</a>.
+      Do not use ring chain objects in any mode where items respawn, because ring chains do not
+      respawn. Use bitsets to create chains in any mode with item respawn.</p>
+      <h3><a name="t602"></a>602 - 5 Diagonal Rings (Yellow Spring)</h3>
+      <p>This is a chain of five rings intended to be used with thing <a href="#t555">555</a>.
+      Do not use ring chain objects in any mode where items respawn, because ring chains do not
+      respawn. Use bitsets to create chains in any mode with item respawn.</p>
+      <h3><a name="t603"></a>603 - 10 Diagonal Rings (Red Spring)</h3>
+      <p>This is a chain of ten rings intended to be used with thing <a href="#t556">556</a>. Do
+      not use ring chain objects in any mode where items respawn, because ring chains do not
+      respawn. Use bitsets to create chains in any mode with item respawn.</p>
+      <h3><a name="t604"></a>604 - Nights: Circle of Rings</h3>
+      <h3><a name="t605"></a>605 - Nights: Circle of Rings (Big)</h3>
+      <h3><a name="t606"></a>606 - Nights: Circle of Wing Logos</h3>
+      <h3><a name="t607"></a>607 - Nights: Circle of Wing Logos (Big)</h3>
+      <h3><a name="t608"></a>608 - Nights: Circle of Rings and Wings</h3>
+      <h3><a name="t609"></a>609 - Nights: Circle of Rings and Wings (Big)</h3>
+      <p>&nbsp;</p>
+    </ol>
+  </li>
+  <li><u><big><big>Powerup indicators/environmental effects/miscellany</big></big></u><ol>
+      <h3><a name="t700"></a>700 - Ambient Water SFX 1A (Small)</h3>
+      <h3><a name="t701"></a>701 - Ambient Water SFX 1B (Small)</h3>
+      <h3><a name="t702"></a>702 - Ambient Water SFX 2A (Medium)</h3>
+      <h3><a name="t703"></a>703 - Ambient Water SFX 2B (Medium)</h3>
+      <h3><a name="t704"></a>704 - Ambient Water SFX 3A (Large)</h3>
+      <h3><a name="t705"></a>705 - Ambient Water SFX 3B (Large)</h3>
+      <h3><a name="t706"></a>706 - Ambient Water SFX 4A (Extra Large)</h3>
+      <h3><a name="t707"></a>707 - Ambient Water SFX 4B (Extra Large)</h3>
+      <h3><a name="t708"></a>708 - Random Ambience 1</h3>
+      <h3><a name="t709"></a>709 - Random Ambience 2</h3>
+      <h3><a name="t750"></a>750 - Chaos Mode Enemy Spawn</h3>
+      <p>This is where the enemies spawn from in Chaos mode. There should be around 12 of these
+      points on a map with Chaos support.</p>
+      <h3><a name="t751"></a>751 - Teleport Destination</h3>
+      <p>This is the thing to be used with linedef type <a href="#l412">412</a>, the linedef
+      executor that teleports a player. This thing is where the player will spawn in the tagged
+      sector.</p>
+      <h3><a name="t752"></a>752 - Alternate View Point</h3>
+      <p>This is the thing to be used with linedef type <a href="#l422">422</a>, the linedef
+      executor that changes the camera view. This thing is where the camera will be moved to in
+      the tagged sector.</p>
+      <h3><a name="t753"></a>753 - Zoom Tube Waypoint</h3>
+      <p>Waypoints for zoom tubes. Think of Sonic 2's Metropolis Zone, Sonic 3 &amp; Knuckles's
+      Death Egg Zone, and Lava Reef Zone. The lower byte of the ANGLE field specifies the
+      waypoint's number in the sequence, and the upper byte specifies the sequence that the
+      waypoint belongs to. These are used in conjunction with sector type <a href="#s32768">32768</a>
+      and <a href="#s36864">36864</a>.</p>
+      <h3><a name="t754"></a>754 - Push</h3>
+      <h3><a name="t755"></a>755 - Pull</h3>
+      <h3><a name="t756"></a>756 - Street Light Source</h3>
+      <p>This produces a light in OpenGL. It is used in Starlit Warehouse Zone, one of the match
+      stages, as the street lights.</p>
+      <h3><a name="t760"></a>760 - PolyObject Anchor</h3>
+      <p>This is the first of the two points used to set up 'how much to move' a polyobject by
+      when creating it. Angle is the PolyObject ID#.</p>
+      <h3><a name="t761"></a>761 - PolyObject SpawnPoint</h3>
+      <p>This is the second of the two points used to set up 'how much to move' a polyobject by
+      when creating it. Angle is the PolyObject ID#.</p>
+      <h3><a name="t762"></a>762 - PolyObject SpawnPoint Crush</h3>
+      <p>This is the second of the two points used to set up 'how much to move' a polyobject by
+      when creating it. Angle is the PolyObject ID#. This item tells the PolyObject that it
+      should hurt the player.</p>
+      <p>&nbsp;</p>
+    </ol>
+  </li>
+  <li><u><big><big>Greenflower Scenery</big></big></u><ol>
+      <h3><a name="t800"></a>800 - GFZ Flower (Normal)</h3>
+      <p>This is a scenery object from Greenflower Zone. It is the orange flower seen all
+      throughout GFZ and most GFZ-themed custom maps.</p>
+      <h3><a name="t801"></a>801 - GFZ Sunflower</h3>
+      <p>This is a scenery object from Greenflower Zone. It is the large blue sunflower seen all
+      throughout GFZ and most GFZ-themed custom maps.</p>
+      <h3><a name="t802"></a>802 - GFZ Budding Flower</h3>
+      <p>This is a scenery object from Greenflower Zone. It is the small purple flower seen all
+      throughout GFZ and most GFZ-themed custom maps.</p>
+      <h3><a name="t804"></a>804 - Berry Bush</h3>
+      <p>This is a scenery object from Greenflower Zone. It is the green bush with red berries
+      seen all throughout GFZ and most GFZ-themed custom maps.</p>
+      <h3><a name="t805"></a>805 - Bush</h3>
+      <p>This is a scenery object from Greenflower Zone. It is the green bush without the
+      berries seen all throughout GFZ and most GFZ-themed custom maps.</p>
+      <p>&nbsp;</p>
+    </ol>
+  </li>
+  <li><u><big><big>Techno Hill Scenery</big></big></u><ol>
+      <h3><a name="t900"></a>900 - THZ Flower</h3>
+      <p>This is a scenery object from Techno Hill Zone Act 1. It is the metallic white flower.</p>
+      <h3><a name="t901"></a>901 - THZ Alarm</h3>
+      <p>This is a scenery object from Techno Hill Zone Act 2. It is the little alarm in the
+      passage with the first Star Post. It creates noise, but the red visual effect in THZ2 was
+      done with a colormap, not this object.</p>
+      <p>&nbsp;</p>
+    </ol>
+  </li>
+  <li><u><big><big>Deep Sea Scenery</big></big></u><ol>
+      <h3><a name="t1000"></a>1000 - Gargoyle</h3>
+      <p>Pushable gargoyle. Can be stood on top of as well.</p>
+      <p>Giving this the Deaf tag will prevent it from being pushable.</p>
+      <h3><a name="t1001"></a>1001 - Seaweed</h3>
+      <p>Animated seaweed. Intangible scenery.</p>
+      <h3><a name="t1002"></a>1002 - Dripping Water</h3>
+      <p>Water dripping from the ceiling. ANGLE value specifies start delay.</p>
+      <p>&nbsp;</p>
+    </ol>
+  </li>
+  <li><u><big><big>Castle Eggman Scenery</big></big></u><ol>
+      <h3><a name="t1100"></a>1100 - Hanging Chain</h3>
+      <p>This is a scenery object from Castle Eggman, a dungeon chain hanging from the ceiling.</p>
+      <p>By default, it attaches itself to the ceiling, and the height part of the bitset
+      measures how far down from the ceiling, instead of up from the floor.</p>
+      <h3><a name="t1101"></a>1101 - CEZ Torch</h3>
+      <p>This is the torch used in Castle Eggman Zone. It produces light in OpenGL, and it harms
+      the player for fire damage on contact.</p>
+      <h3><a name="t1102"></a>1102 - Eggman Statue </h3>
+      <p>This is the large Eggman statue in Castle Eggman Zone.</p>
+      <h3><a name="t1103"></a>1103 - CEZ Flower</h3>
+      <p>This is a scenery object from Castle Eggman Zone. It is the decaying flower.</p>
+      <p>&nbsp;</p>
+    </ol>
+  </li>
+  <li><u><big><big>Arid Canyon Scenery</big></big></u><ol>
+      <h3><a name="t1200"></a>1200 – Big Tumbleweed</h3>
+      <p>A large moveable tumbleweed that rolls along the floor.</p>
+      <h3><a name="t1201"></a>1201 – Little Tumbleweed</h3>
+      <p>A small movable tumbleweed that rolls along the floor.</p>
+      <h3><a name="t1202"></a>1202 – Rock Spawner</h3>
+      <p>An object which randomly spawns falling rocks, which damage the player on impact.<br>
+      Description on how to use goes here.</p>
+    </ol>
+  </li>
+  <li><u><big><big>Red Volcano Scenery</big></big></u><ol>
+      <h3><a name="t1300"></a>1300 – Horizontal Flame Jet</h3>
+      <p>A stready stream of flames comes out horizontally.</p>
+      <h3><a name="t1301"></a>1301 – Vertial Flame Jet</h3>
+      <p>A stready stream of flames comes out vertially.</p>
+    </ol>
+  </li>
+  <li><u><big><big>Dark City Scenery</big></big></u><ol>
+    </ol>
+  </li>
+  <li><u><big><big>Doom Ship Scenery</big></big></u><ol>
+    </ol>
+  </li>
+  <li><u><big><big>Egg Rock / Final Fight Scenery</big></big></u><ol>
+    </ol>
+  </li>
+  <li><u><big><big>NiGHTS Items</big></big></u><ol>
+      <h3><a name="t1700"></a>1700 - Nights: Axis</h3>
+      <p>Lower 10 bits: Axis number in the mare (0-based) Upper 6 bits: Mare that axis belongs
+      to (0-based). ANGLE value determines the size of the axis to rotate around. If 16384 is
+      added to the ANGLE value, the axis will be inverted.</p>
+      <h3><a name="t1701"></a>1701 - Nights: Axis Transfer (Normal)</h3>
+      <h3><a name="t1702"></a>1702 - Nights: Axis Transfer Line</h3>
+      <h3><a name="t1703"></a>1703 - Nights: Ideya Drone</h3>
+      <p>Angle value sets the NiGHTS timer, in seconds. </p>
+      <h3><a name="t1704"></a>1704 - Nights: Bumper</h3>
+      <p>Lower 4 bits of the flags specify the angle of the bumper in 30 degree increments.</p>
+      <h3><a name="t1705"></a>1705 - Nights: Hoop</h3>
+      <h3><a name="t1706"></a>1706 - Nights: Wing Logo</h3>
+      <h3><a name="t1707"></a>1707 - Nights: Super Loop</h3>
+      <h3><a name="t1708"></a>1708 - Nights: Drill Refill</h3>
+      <h3><a name="t1709"></a>1709 - Nights: Helper</h3>
+      <h3><a name="t1710"></a>1710 - Nights: Egg Capsule</h3>
+      <p>The capsule you need to collect rings to break in NiGHTS. The value of its ANGLE field
+      determines how many rings you need to break it. Just like the axis points, the upper bits
+      (value &gt;&gt; 10) determine the mare it belongs to. For example, an angle value of 1024
+      means it belongs to mare 1 (2nd mare, it's zero based), and requires 0 rings to break.
+      1030 would be mare 1, and 6 rings to break. 2048 would be mare 2, no rings.</p>
+      <p>&nbsp;</p>
+    </ol>
+  </li>
+  <li><u><big><big>Mario Items</big></big></u><ol>
+      <h3><a name="t1800"></a>1800 - Coin</h3>
+      <p>This is a coin, which is essentially a ring with Mario graphics and sound effects.</p>
+      <h3><a name="t1801"></a>1801 - Overworld Goomba</h3>
+      <p>These are the enemies in Mario Koopa Blast 1, and are essentially Crawlas with a Mario
+      graphic.</p>
+      <h3><a name="t1802"></a>1802 - Underworld Goomba</h3>
+      <p>These are the enemies in Mario Koopa Blast 2, and are essentially Crawlas with a Mario
+      graphic.</p>
+      <h3><a name="t1803"></a>1803 - Fire Flower</h3>
+      <p>This is the powerup from the Mario Koopa Blast stages. It changes the player to a white
+      palette, and allows the player to throw fireballs with the fire button. The fireballs fly
+      in a Mario-style bounce trajectory until they hit an enemy or a wall.</p>
+      <h3><a name="t1804"></a>1804 - Koopa Shell</h3>
+      <p>This is the Koopa Shell in Mario Koopa Blast 1. It will bounce around, striking enemies
+      and players.</p>
+      <h3><a name="t1805"></a>1805 - Puma (Mario Jumping Fireball)</h3>
+      <p>This is the fireball used in Mario Koopa Blast 3. The angle determines the jump height,
+      with 0 being the old jump style. Note that the jump height is based on force, not units,
+      so experimentation will be necessary to get the correct height.</p>
+      <h3><a name="t1806"></a>1806 - King Bowser</h3>
+      <h3><a name="t1807"></a>1807 - Axe</h3>
+      <p>The axe used to defeat Bowser in the third Mario level.</p>
+      <h3><a name="t1808"></a>1808 - Bush (Short)</h3>
+      <p>This is a scenery object from Mario Koopa Blast</p>
+      <h3><a name="t1809"></a>1809 - Bush (Tall)</h3>
+      <p>This is a scenery object from Mario Koopa Blast</p>
+      <h3><a name="t1810"></a>1810 - Toad</h3>
+      <p>This is Toad at the end of Mario Koopa Blast 3.</p>
+      <p>&nbsp;</p>
+    </ol>
+  </li>
+  <li><u><big><big>Xmas Items</big></big></u><ol>
+      <h3><a name="t1850"></a>1850 - Xmas Pole</h3>
+      <p>X-Mas scenery object. Looks like a little barber shop pole.</p>
+      <h3><a name="t1851"></a>1851 - Candy Cane</h3>
+      <p>X-Mas scenery object. Looks like a candy cane.</p>
+      <p>Note that Mystic Realm 4 replaces this object with the Sonic 1 palm tree, so any maps
+      loaded while Mystic Realm 4 is loaded will overwrite the image, making any candy canes
+      look like palm trees, which can look kinda stupid.</p>
+      <h3><a name="t1852"></a>1852 - Snowman</h3>
+      <p>X-Mas scenery object. Pushable snowman with a happy face. Can be stood on top of as
+      well. Acts the same as thing <a href="#t1000">1000</a>.</p>
+      <p>Giving this the Deaf tag will prevent it from being pushable.</p>
+      <p>&nbsp;</p>
+    </ol>
+  </li>
+  <h1><a name="linetypes"></a>Linedef Types</h1>
+  <p>Lines may have flags applied to them. The following is a reference of their values.
+  Unless specified otherwise in a line type, the flags behave as follows:</p>
+  <div align="left"><table border="1" width="83%">
+    <tr>
+      <td width="33%">NAME</td>
+      <td width="10%">VALUE</td>
+      <td width="57%">DESCRIPTION</td>
+    </tr>
+    <tr>
+      <td width="33%"><a name="#EFFECT6"></a>EFFECT6</td>
+      <td width="10%">1</td>
+      <td width="57%">Special use flag #6.</td>
+    </tr>
+    <tr>
+      <td width="33%"><a name="#BLOCKMONSTERS"></a>BLOCKMONSTERS</td>
+      <td width="10%">2</td>
+      <td width="57%">Prevents an enemy from crossing the line. May not work for especially
+      speedy enemies.</td>
+    </tr>
+    <tr>
+      <td width="33%"><a name="#TWOSIDED"></a>TWOSIDED</td>
+      <td width="10%">4</td>
+      <td width="57%">Flag used to indicate if a line is two sided. Do not modify.</td>
+    </tr>
+    <tr>
+      <td width="33%"><a name="#DONTPEGTOP"></a>DONTPEGTOP</td>
+      <td width="10%">8</td>
+      <td width="57%">Unpeg upper texture. Good for moving floors.</td>
+    </tr>
+    <tr>
+      <td width="33%"><a name="#DONTPEGBOTTOM"></a>DONTPEGBOTTOM</td>
+      <td width="10%">16</td>
+      <td width="57%">Unpeg bottom texture. Good for moving ceilings.</td>
+    </tr>
+    <tr>
+      <td width="33%"><a name="#EFFECT1"></a>EFFECT1</td>
+      <td width="10%">32</td>
+      <td width="57%">Special use flag #1.</td>
+    </tr>
+    <tr>
+      <td width="33%"><a name="#NOCLIMB"></a>NOCLIMB</td>
+      <td width="10%">64</td>
+      <td width="57%">Don't allow Knuckles to climb on this wall.</td>
+    </tr>
+    <tr>
+      <td width="33%"><a name="#EFFECT2"></a>EFFECT2</td>
+      <td width="10%">128</td>
+      <td width="57%">Special use flag #2.</td>
+    </tr>
+    <tr>
+      <td width="33%"><a name="#EFFECT3"></a>EFFECT3</td>
+      <td width="10%">256</td>
+      <td width="57%">Special use flag #3.</td>
+    </tr>
+    <tr>
+      <td width="33%"><a name="#EFFECT4"></a>EFFECT4</td>
+      <td width="10%">512</td>
+      <td width="57%">Special use flag #4.</td>
+    </tr>
+    <tr>
+      <td width="33%"><a name="#EFFECT5"></a>EFFECT5</td>
+      <td width="10%">1024</td>
+      <td width="57%">Special use flag #5.</td>
+    </tr>
+    <tr>
+      <td width="33%"><a name="#NOSONIC"></a>NOSONIC</td>
+      <td width="10%">2048</td>
+      <td width="57%">Disable line special if playing as Sonic (Single Player Only).</td>
+    </tr>
+    <tr>
+      <td width="33%"><a name="#NOTAILS"></a>NOTAILS</td>
+      <td width="10%">4096</td>
+      <td width="57%">Disable line special if playing as Tails (Single Player Only).</td>
+    </tr>
+    <tr>
+      <td width="33%"><a name="#NOKNUX"></a>NOKNUX</td>
+      <td width="10%">8192</td>
+      <td width="57%">Disable line special if playing as Knuckles (Single Player Only).</td>
+    </tr>
+    <tr>
+      <td width="33%"><a name="#BOUNCY"></a>BOUNCY</td>
+      <td width="10%">16384</td>
+      <td width="57%">Bounce the player off this line.</td>
+    </tr>
+    <tr>
+      <td width="33%"><a name="#TFERLINE"></a>TFERLINE</td>
+      <td width="10%">32768</td>
+      <td width="57%">Use this on a FOF line special to define the texture &amp; offsets for
+      each side of the FOF. The control sector must have at LEAST the same # of sides as the
+      target sector(s).</td>
+    </tr>
+  </table>
+  </div><hr>
+  <li><u><big><big>Level Parameters / Miscellany</big></big></u><ol>
+      <h3><a name="l1"></a>1 - Per-Sector Gravity</h3>
+      <p>Sets the gravity of the tagged sector or sectors, as a percentage of global gravity
+      (which can be set separately using sector type <a href="#s176">176</a>). The floor height
+      of the control sector is used. If it is 1000, then the target sector will have 100%
+      gravity. If it is 500, the target sector will have 50% of the global gravity. Negative
+      values work as well, but players can't jump down; they'll get stuck to the ceiling, unless
+      the <a href="#NOCLIMB">NOCLIMB</a> flag is checked.</p>
+      <p>You can apply this special to the control sector of an intangible FOF to change the
+      gravity only inside that FOF.</p>
+      <h3><a name="l2"></a>2 - Custom Exit</h3>
+      <p>Tag this to an Exit Sector (type <a href="#s8192">8192</a>) to exit to a custom level,
+      overriding the one set in the map header. The map number you go to is indicated by the
+      front sector's floor. Additionally, if the control linedef's bitset is set to disallow
+      climbing (with the <a href="#NOCLIMB">NOCLIMB</a> attribute, whose value is 64), skip the
+      score tally screen when switching to the new map.</p>
+      <p>If the control linedef has the <a href="#BLOCKMONSTERS">BLOCKMONSTERS</a> flag set,
+      this effect does something super complicated and fun, going to a different level depending
+      on whether the player has all emeralds or not. If the player has seven emeralds, the
+      linedef's front sector's ceiling height will be used. Otherwise, go to the map number
+      indicated by the linedef's front sector's floor. That's <i>only</i> if you set the <a
+      href="#BLOCKMONSTERS">BLOCKMONSTERS</a> flag.</p>
+      <p>If the <a href="#EFFECT4">EFFECT4</a> flag is set, the linedef's front side x offset
+      will be used as the new gametype after the map change, providing it is in range (from 0 to
+      4, inclusive).</p>
+      <h3><a name="l3"></a>3 - Zoom Tube Parameters</h3>
+      <p>X length = speed. Y length = waypoint sequence #. See sector type <a href="#s32768">32768</a>
+      for more information.</p>
+      <h3><a name="l4"></a>4 - Speed Pad</h3>
+      <p>Creates a speed pad. The linedef direction and indicates the direction of the pad. The
+      target sector must have type <a href="#s1280">1280</a> or <a href="#s1536">1536</a> for
+      this to work.</p>
+      <p>If the <a href="#EFFECT4">EFFECT4</a> flag is set, you will not be teleported to the
+      center of the sector when the speed pad is activated.</p>
+      <h3><a name="l5"></a>5 - Camera Scanner</h3>
+      <p>Modifies camera position while the player is in the target sector. The floor and
+      ceiling of the control sector and the angle of the control linedef are the values for
+      CAM_HEIGHT, CAM_DIST, and CAM_ROTATE, respectively. Camera position is reset when the
+      player steps outside the sector.</p>
+      <h3><a name="l6"></a>6 - Disable Linedef</h3>
+      <p>Disables any linedef specials that share the same tag. Will be used in the future to
+      check if a particular level has been previously cleared or not.</p>
+      <h3><a name="l7"></a>7 - Flat Alignment</h3>
+      <p>Aligns floor and/or ceiling flats. The x alignment is specified by the control
+      linedef's x distance (the difference between the x values of its two vertices), and the y
+      alignment is specified by the control linedef's y distance.</p>
+      <p>By default, works on both the floor and ceiling (however, note that skies cannot be
+      &quot;aligned&quot; ;). Adding the <a href="#NOCLIMB">NOCLIMB</a> flag to the linedef will
+      align the floor only, while the <a href="#BLOCKMONSTERS">BLOCKMONSTERS</a> flag will make
+      it align the ceiling only.</p>
+      <h3><a name="l8"></a>8 - Sector Special Parameters</h3>
+      <p>Sets special behavior of a sector's type depending on the flag(s) checked:</p>
+      <p><a href="#NOCLIMB">NOCLIMB</a> - Special only operates when touching ceiling</p>
+      <p><a href="#EFFECT4">EFFECT4</a> - Special operates when touching either the floor or the
+      ceiling</p>
+      <p><a href="#EFFECT3">EFFECT3</a> - Special operates by just touching the sector, rather
+      than having to be inside of it.</p>
+      <h3><a name="l9"></a>9 - Chain Parameters</h3>
+      <p>Sets special behavior of a moving chain as such:</p>
+      <p>x length - # of links on the chain</p>
+      <p>y length - Overall speed (0-15)</p>
+      <p>X offset - Rotation speed on the X axis (0-15)</p>
+      <p>Y offset - Rotation speed on the Z axis (0-15)</p>
+      <p>floorheight - angle to start at (0-15)</p>
+      <p>ceilingheight - maximum rotation speed</p>
+      <h3><a name="l10"></a>10 - Culling Plane</h3>
+      <p>Set like <a href="#l1">line 1</a>, this creates an invisible plane in the sector. If
+      your view is above this plane, lots of things drawn below the height of this plane will be
+      discarded, and if your view is below the plane, a lot of things drawn above the height of
+      the plane will be discarded. This is to tell the game to not draw stuff that you aren't
+      going to see anyway. Do note that the view doesn't have to be in the current sector, you
+      can also be viewing from the side, which may be undesirable. To prevent this problem, you
+      can check the <a href="#NOCLIMB">NOCLIMB</a> flag, which will allow you to 'group' a set
+      of sectors to one control sector in which the culling will only take effect. For example,
+      you have a control sector set up for culling, and have two culling lines in the control
+      sector, tagged to sectors 'A' and 'B'. If the player is in sector 'A' or 'B', the culling
+      will occur, but if the player is in sector 'C', it will not.</p>
+      <h3>11 - Rope Hang Parameters</h3>
+      <p>X length = speed. Y length = waypoint sequence #.</p>
+      <p>EFFECT1 - Don't wrap movement</p>
+      <p>See sector type 45056 for more information.</p>
+      <h3>12 - Rock Spawn Parameters</h3>
+      <p>Sets special behavior of a rock spawner (#1202) as such:</p>
+      <p>length - momentum strength</p>
+      <p>line angle - momentum angle</p>
+      <p>X offset - # of tics to wait until another is spawned</p>
+      <p>Y offset - Rock crumble sprite to use (0-15)</p>
+      <p>NOCLIMB - add some randomization to the momentum</p>
+      <p>&nbsp;</p>
+      <h3>13 - Heat Wave</h3>
+      <p>Applies a heat effect to the screen. Tag this to a sector, or to the control sector of a FOF.</p>
+      <p>&nbsp;</p>
+    </ol>
+  </li>
+  <li><u><big><big>Level Parameters / Miscellany</big></big></u><ol>
+      <h3><a name="l20"></a>20 - Marks first line in PolyObject</h3>
+      <p>Explain here.</p>
+      <h3><a name="l21"></a>21 - Explicitly include a PolyObject line</h3>
+      <p>Explain here.</p>
+      <h3><a name="l30"></a>30 - PolyObject Parameters</h3>
+      <p>Explain here.</p>
+      <p>&nbsp;</p>
+    </ol>
+  </li>
+  <li><u><big><big>Level-Load Effects</big></big></u><ol>
+      <h3><a name="l50"></a>50 - Instant Floor Lower</h3>
+      <p>Makes the floor instantly lower on level load to be at the same height as the lowest
+      floor of any bordering sector.</p>
+      <h3><a name="l51"></a>51 - Instant Ceiling Raise</h3>
+      <p>Makes the ceiling instantly rise on level load to be the same height as the highest
+      ceiling of any bordering sector.</p>
+      <h3><a name="l52"></a>52 - Continuously Falling Sector</h3>
+      <p>Requires two control sectors. Sector continuously falls until its ceiling reaches the
+      floor of the line's back sector, then returns to its original position and keeps falling.
+      Linedef length determines speed. Good for things like intermittently falling lava. If the <a
+      href="#NOCLIMB">NOCLIMB</a> flag is set, it falls upwards, instead of downwards.</p>
+      <h3><a name="l53"></a>53 - Continuous Floor/Ceiling Mover</h3>
+      <p>Must be a two-sided linedef, tagged to another sector on the map. The tagged sector's
+      floor and ceiling will move, first so that they're equal to the floor and ceiling of the
+      linedef's front sector, then so they're equal to the floor and ceiling of the linedef's
+      back sector, then the front sector again, and so on.</p>
+      <p>The speed of the movement is determined by the linedef's length and uses the same units
+      as linetype <a href="#l60">60</a>.</p>
+      <h3><a name="l54"></a>54 - Continuous Floor Mover</h3>
+      <p>Like linetype <a href="#l53">53</a>, but only moves the floor, not the ceiling. Can be
+      used to replace floating platforms in some cases, where only the floor was desired to
+      move.</p>
+      <h3><a name="l55"></a>55 - Continuous Ceiling Mover</h3>
+      <p>Like linetype <a href="#l53">53</a>, but only moves the ceiling, not the floor.</p>
+      <h3><a name="l56"></a>56 - Continuous Two-Speed Floor/Ceiling Mover</h3>
+      <p>Must be a two-sided linedef, tagged to another sector on the map. The tagged sector's
+      floor and ceiling will move, first so that they're equal to the floor and ceiling of the
+      linedef's front sector, then so they're equal to the floor and ceiling of the linedef's
+      back sector, then the front sector again, and so on.</p>
+      <p>The speed of the movement is determined by the linedef's x distance (the first way,
+      towards the front sector) and y distance (the second way, towards the back sector), using
+      the same units as linetype <a href="#l60">60</a>.</p>
+      <p>Unlike linetype <a href="#l53">53</a>, this effect does not slow down when it reaches
+      the end of its movement. Instead, it changes instantly from going in one direction to
+      going in the other. It's designed for making more sophisticated crushers than the crusher
+      type allows (i.e. crushers with varying rise/crush speeds, FOF crushers, crushers with
+      different start points).</p>
+      <h3><a name="l57"></a>57 - Continuous Two-Speed Floor Mover</h3>
+      <p>Like linetype <a href="#l56">56</a>, but only moves the floor, not the ceiling.</p>
+      <h3><a name="l58"></a>58 - Continuous Two-Speed Ceiling Mover</h3>
+      <p>Like linetype <a href="#l56">56</a>, but only moves the ceiling, not the floor.</p>
+      <h3><a name="l59"></a>59 - Activate Floating Platform</h3>
+      <p>This is used to make floating platforms (that move up and down) as well as moving
+      water. In fact, you can use this to make any type of block move vertically. The way it
+      works is somewhat confusing - You use three control sectors, all connected by at least one
+      linedef. Easiest thing to do is make three square sectors together in a row. One of the
+      linedefs on the middle sector should contain the Floor Over Floor line special that you
+      want. This will be the Floor Over Floor control sector. The other two sectors represent
+      the bottommost position you want the Floor Over Floor to reach, and the topmost position
+      you want the Floor Over Floor to reach. The 59 line can be on any of these sectors, as
+      long as you tag it to the middle one. If you still don't understand, look at Greenflower
+      Zone Act 2. If the <a href="#NOCLIMB">NOCLIMB</a> flag is set, the platform will begin
+      moving upwards, rather than downwards.</p>
+      <h3><a name="l60"></a>60 - Activate Floating Platform (Adjustable Speed)</h3>
+      <p>Speed is indicated by linedef length; one unit of speed here is 0.25 fracunits per tic.
+      (Floating platforms made with type <a href="#l59">59</a> move at 2 fracunits per tic.)
+      Aside from the linedef length controlling speed, works exactly like linedef type <a
+      href="#l59">59</a>.</p>
+      <h3><a name="l61"></a>61 - Crusher 1 (Ceiling to Floor)</h3>
+      <p>The crush motion is from the ceiling to the floor. Linedef length indicates crusher
+      speed. See also linetype <a href="#l62">62</a>, Crusher 2.</p>
+      <h3><a name="l62"></a>62 - Crusher 2 (Floor to Ceiling)</h3>
+      <p>Like linetype <a href="#l61">61</a>, Crusher 1, except that it starts in a different
+      place, not synchronised with any crushers that use the Crusher 1 type. The highest ceiling
+      this crusher reaches will be the highest ceiling height of any bordering sector.</p>
+      <h3><a name="l63"></a>63 - Fake Floor</h3>
+      <p>Creates two fake planes, fake floor and fake ceiling. Main textures are not affected,
+      but as far as above/below textures and floor/ceiling flats are concerned, the floor and
+      ceiling height are those of the control sector. As far as collisions, walking, etc. are
+      concerned, the floor and ceiling flats are whatever they normally would be.</p>
+      <p>Fake floor is useful for railings (THZRAIL and WOODRAIL; see THZ2 for examples) and
+      snow effects (making a fake floor of snow just a few units above normal floor, so it looks
+      like the player's feet are buried in the snow).</p>
+      <h3><a name="l64"></a>64 - Appearing/Disappearing FOF</h3>
+      <p>Tag this to any FOF <i>line</i> and this will cause it to appear and disappear
+      intermittently. The line's X length is the amount of time (in tics) that the FOF will
+      appear, and Y length is the amount of time (in tics) that the FOF will disappear. The
+      control sector's floor height allows you to specify an offset (in tics) of how much time
+      will pass before the appearing/disappearing kicks in.</p>
+      <p>&nbsp;</p>
+    </ol>
+  </li>
+  <li><u><big><big>Floor-Over-Floors (FOFs)</big></big></u><ol>
+      <h3><a name="l100"></a>100 - Floor Over Floor: Solid, Opaque, Shadowcasting</h3>
+      <p>This is just a regular old FOF. As with any block, the ceiling of the control sector is
+      the top of the block, and the floor of the control sector is the bottom.
+      &quot;Shadowcasting&quot; means that the light value used in the control sector is used
+      for the area below where the actual FOF appears, as opposed to above it.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL-->
+      <h3><a name="l101"></a>101 - Floor Over Floor: Solid, Opaque, Non-Shadowcasting</h3>
+      <p>See notes for <a href="#l100">100</a>. &quot;Non-shadowcasting&quot; means that the
+      light value you set in the control sector will be used for the area above the FOF, instead
+      of below it.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_NOSHADE|FF_CUTLEVEL-->
+      <h3><a name="l102"></a>102 - Floor Over Floor: Solid, Translucent</h3>
+      <p>Useful for windows. The GLASSTEX texture is good for this purpose. You can change the
+      alpha value of the translucency by setting the control linedef's Above texture to a #
+      followed by a three-digit decimal number, 000 to 255. #000 is most transparent, #255 is
+      most opaque. Note that in software mode, there are actually only ten different values that
+      serve as a 'best guess'.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_NOSHADE|FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA-->
+      <h3><a name="l103"></a>103 - Floor Over Floor: Solid, Sides Only</h3>
+      <p>A solid FOF that renders sides only, not planes (floor and ceiling). You were supposed
+      to be able to use it to place railings (THZRAIL, WOODRAIL, etc.) on FOFs. It doesn't work
+      for that, because the railings use a different kind of transparency and software mode
+      won't draw them on FOFs. So this one is going on the list of useless effects, right next
+      to linetype <a href="#l104">104</a>.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_SOLID|FF_RENDERSIDES|FF_NOSHADE|FF_CUTLEVEL-->
+      <h3><a name="l104"></a>104 - Floor Over Floor: Solid, No Sides</h3>
+      <p>Like a 3D floor of type <a href="#l101">101</a>, except that sides are not drawn.
+      Supposedly a little bit faster than a normal 3D floor. You can use it when the sides
+      wouldn't be visible anyway.</p>
+      <p>This type of 3D floor will have shadows if and only if you set the control linedef's <a
+      href="#NOCLIMB">NOCLIMB</a> flag.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_SOLID|FF_RENDERPLANES|FF_CUTLEVEL
+If the <a href="#NOCLIMB">NOCLIMB</a> flag is disabled, it also adds FF_NOSHADE-->
+      <h3><a name="l105"></a>105 - Floor Over Floor: Solid, Invisible</h3>
+      <p>For making invisible walls and other strange effects.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_SOLID|FF_NOSHADE-->
+      <hr>
+      <h3><a name="l120"></a>120 - Floor Over Floor: Water, Opaque</h3>
+      <p>This one looks exactly like linetype <a href="#l100">100</a> ingame, but is a block of
+      water instead of solid.</p>
+      <p>The block will have the attribute of linetype <a href="#l200">200</a> if the <a
+      href="#NOCLIMB">NOCLIMB</a> flag is set.</p>
+      <p>To use the light level of the target sector, utilize the <a href="#EFFECT4">EFFECT4</a>
+      flag.</p>
+      <p>If this is used as lava (Fire Damage), and you set the <a href="#BLOCKMONSTERS">BLOCKMONSTERS</a>
+      flag, you can still pass through the lava.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_RENDERALL|FF_SWIMMABLE|FF_BOTHPLANES|FF_ALLSIDES|FF_CUTEXTRA|FF_EXTRA|FF_CUTSPRITES-->
+      <h3><a name="l121"></a>121 - Floor Over Floor: Water, Translucent</h3>
+      <p>This one looks exactly like linetype <a href="#l102">102</a> ingame, but is a block of
+      water instead of solid.</p>
+      <p>The block will have the attribute of linetype <a href="#l200">200</a> if the <a
+      href="#NOCLIMB">NOCLIMB</a> flag is set.</p>
+      <p>To use the light level of the target sector, utilize the <a href="#EFFECT4">EFFECT4</a>
+      flag.</p>
+      <p>If this is used as lava (Fire Damage), and you set the <a href="#BLOCKMONSTERS">BLOCKMONSTERS</a>
+      flag, you can still pass through the lava.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_RENDERALL|FF_TRANSLUCENT|FF_SWIMMABLE|FF_BOTHPLANES|FF_ALLSIDES|FF_CUTEXTRA|FF_EXTRA|
+FF_CUTSPRITES-->
+      <h3><a name="l122"></a>122 - Floor Over Floor: Water, Opaque, No Sides</h3>
+      <p>Like linetype <a href="#l120">120</a>, but doesn't render sides.</p>
+      <p>The block will have the attribute of linetype <a href="#l200">200</a> if the <a
+      href="#NOCLIMB">NOCLIMB</a> flag is set.</p>
+      <p>To use the light level of the target sector, utilize the <a href="#EFFECT4">EFFECT4</a>
+      flag.</p>
+      <p>If this is used as lava (Fire Damage), and you set the <a href="#BLOCKMONSTERS">BLOCKMONSTERS</a>
+      flag, you can still pass through the lava.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_RENDERPLANES|FF_SWIMMABLE|FF_BOTHPLANES|FF_CUTEXTRA|FF_EXTRA|FF_CUTSPRITES-->
+      <h3><a name="l123"></a>123 - Floor Over Floor: Water, Translucent, No Sides</h3>
+      <p>Like linetype <a href="#l121">121</a>, but doesn't render sides. Most of the time this
+      won't make a difference. It can be useful, however, for windows that have water on one
+      side and not on the other.</p>
+      <p>The block will have the attribute of linetype <a href="#l200">200</a> if the <a
+      href="#NOCLIMB">NOCLIMB</a> flag is set.</p>
+      <p>To use the light level of the target sector, utilize the <a href="#EFFECT4">EFFECT4</a>
+      flag.</p>
+      <p>If this is used as lava (Fire Damage), and you set the <a href="#BLOCKMONSTERS">BLOCKMONSTERS</a>
+      flag, you can still pass through the lava.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_RENDERPLANES|FF_TRANSLUCENT|FF_SWIMMABLE|FF_BOTHPLANES|FF_CUTEXTRA|FF_EXTRA|
+FF_CUTSPRITES-->
+      <hr>
+      <h3><a name="l140"></a>140 - Floor Over Floor: Intangible from Bottom, Opaque </h3>
+      <p>This sector type is solid from the top and walls, but is not solid from the bottom.
+      This allows the designer to create one-way passages as well as simulate 2D design by
+      having platforms that players can jump up to from below.</p>
+      <p>This type of 3D floor will have shadows unless you set the control linedef's <a
+      href="#NOCLIMB">NOCLIMB</a> flag.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_PLATFORM|FF_BOTHPLANES|FF_ALLSIDES
+If the <a href="#NOCLIMB">NOCLIMB</a> flag is enabled, it also adds FF_NOSHADE-->
+      <h3><a name="l141"></a>141 - Floor Over Floor: Intangible from Bottom, Translucent</h3>
+      <p>A copy of linetype <a href="#l140">140</a> that is also translucent.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_PLATFORM|FF_TRANSLUCENT|FF_BOTHPLANES|FF_ALLSIDES
+If the <a href="#NOCLIMB">NOCLIMB</a> flag is enabled, it also adds FF_NOSHADE-->
+      <h3><a name="l142"></a>142 - Floor Over Floor: Intangible from Bottom, Translucent, No
+      Sides</h3>
+      <p>A platform you can jump up through, like linetype <a href="#l140">140</a> (and decides
+      the same way whether to have shadows or not), with translucency and that doesn't render
+      sides. Alpha value supported the same way as linetype <a href="#l102">102</a>.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_SOLID|FF_CUTLEVEL|FF_RENDERPLANES|FF_TRANSLUCENT|FF_PLATFORM|FF_BOTHPLANES
+If the <a href="#NOCLIMB">NOCLIMB</a> flag is enabled, it also adds FF_NOSHADE-->
+      <hr>
+      <h3><a name="l150"></a>150 - Floor Over Floor: Bobbing (Air)</h3>
+      <p>FOF that moves down 16 units when you step on, then returns to its former position when
+      you step off. The control sector must be connected to another sector with the same floor
+      and ceiling height. This seemingly redundant sector is used for resetting the heights. (If
+      you forget to put it in, the bobbing floor when stepped on will go down, keep going down,
+      and never stop or come back up.) See also linetypes <a href="#l151">151</a> and <a
+      href="#l152">152</a>. This linedef is obsolete. Please use linetype 190-195.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_AIRBOB-->
+      <h3><a name="l151"></a>151 - Floor Over Floor: Adjustable Bobbing (Air)</h3>
+      <p>Like linetype <a href="#l150">150</a>, except that instead of the floor moving down 16
+      units when you step on it, it moves down the number of units of the control linedef's
+      length. This linedef is obsolete. Please use linetype 190-195.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_AIRBOB-->
+      <h3><a name="l152"></a>152 - Floor Over Floor: Reverse Bobbing (Air)</h3>
+      <p>Like linetype <a href="#l151">151</a>, except in reverse. The platform goes <i>up</i>
+      when you step on it and back <i>down</i> when you step off. This linedef is obsolete.
+      Please use linetype 190-195.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_AIRBOB-->
+      <hr>
+      <h3><a name="l160"></a>160 - Floor Over Floor: Floating, Bobbing</h3>
+      <p>Bobs and floats in water. The floating part means that if the water moves or rises,
+      this platform will rise with it.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_FLOATBOB-->
+      <hr>
+      <h3><a name="l170"></a>170 - Floor Over Floor: Crumbling (Respawn)</h3>
+      <p>Crumbles and falls away, then reappears 15 seconds later.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_CRUMBLE-->
+      <h3><a name="l171"></a>171 - Floor Over Floor: Crumbling (No Respawn)</h3>
+      <p>Crumbles and falls away and never comes back.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_CRUMBLE|FF_NORETURN-->
+      <h3><a name="l172"></a>172 - Floor Over Floor: Crumbling (Respawn)</h3>
+      <p>A copy of linetype <a href="#l140">140</a> that also crumbles when stood on and
+      reappears after 15 seconds.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_PLATFORM|FF_CRUMBLE|FF_BOTHPLANES|FF_ALLSIDES
+If the <a href="#NOCLIMB">NOCLIMB</a> flag is enabled, it also adds FF_NOSHADE-->
+      <h3><a name="l173"></a>173 - Floor Over Floor: Crumbling (No Respawn)</h3>
+      <p>A copy of linetype <a href="#l172">172</a> that stays gone forever after crumbling.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_PLATFORM|FF_CRUMBLE|FF_NORETURN|FF_BOTHPLANES|
+FF_ALLSIDES
+If the <a href="#NOCLIMB">NOCLIMB</a> flag is enabled, it also adds FF_NOSHADE-->
+      <h3><a name="l174"></a>174 - Floor Over Floor: Intangible from Bottom, Crumbling
+      (Respawn), Translucent</h3>
+      <p>A copy of linetype <a href="#l141">141</a> that also crumbles when stood on and
+      reappears after 15 seconds.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_PLATFORM|FF_CRUMBLE|FF_TRANSLUCENT|FF_BOTHPLANES|
+FF_ALLSIDES
+If the <a href="#NOCLIMB">NOCLIMB</a> flag is enabled, it also adds FF_NOSHADE-->
+      <h3><a name="l175"></a>175 - Floor Over Floor: Intangible from Bottom, Crumbling (No
+      Respawn), Translucent</h3>
+      <p>A copy of linetype <a href="#l174">174</a> that stays gone forever after crumbling.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_PLATFORM|FF_CRUMBLE|FF_NORETURN|FF_TRANSLUCENT|
+FF_BOTHPLANES|FF_ALLSIDES
+If the <a href="#NOCLIMB">NOCLIMB</a> flag is enabled, it also adds FF_NOSHADE-->
+      <h3><a name="l176"></a>176 - Floor Over Floor: Crumbling (Respawn), Floating, Bobbing</h3>
+      <p>Crumbles and falls, then floats on water, then bobs when you step on it.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_FLOATBOB|FF_AIRBOB|FF_CRUMBLE-->
+      <h3><a name="l177"></a>177 - Floor Over Floor: Crumbling (No Respawn), Floating, Bobbing</h3>
+      <p>Crumbles and falls, then floats on water, then bobs when you step on it. Unlike
+      linetype <a href="#l176">176</a>, does not return to its former position.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_FLOATBOB|FF_AIRBOB|FF_CRUMBLE|FF_NORETURN-->
+      <h3><a name="l178"></a>178 - Floor Over Floor: Crumbling (Respawn), Floating</h3>
+      <p>Crumbles and falls, then floats on water, then reappears up in the air 15 seconds
+      later.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_CRUMBLE|FF_FLOATBOB-->
+      <h3><a name="l179"></a>179 - Floor Over Floor: Crumbling (No Respawn), Floating</h3>
+      <p>Crumbles and falls, then spends the rest of its days floating on water, never to
+      reappear up in the air.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_CRUMBLE|FF_FLOATBOB|FF_NORETURN-->
+      <h3><a name="l180"></a>180 - Floor Over Floor: Crumbling (Respawn), Bobbing (Air)</h3>
+      <p>Bobs, crumbles, and falls when stepped on.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_AIRBOB|FF_CRUMBLE-->
+      <hr>
+      <h3><a name="l190"></a>190 - Floor Over Floor: Rising Platform, Solid, Opaque,
+      Shadowcasting</h3>
+      <p>Just like <a href="#l100">100</a>, except when a player steps on it, it will rise up to
+      the control sector's highest adjacent sector. You set the control sectors for this up like
+      special <a href="#l59">59</a>. Linedef length controls speed like <a href="#l60">60</a>.
+      If the <a href="#NOCLIMB">NOCLIMB</a> flag is set, it will require the player to spindash
+      to raise the platform.</p>
+      <h3><a name="l191"></a>191 - Floor Over Floor: Rising Platform, Solid, Opaque,
+      Non-Shadowcasting</h3>
+      <p>Just like <a href="#l101">101</a>, except when a player steps on it, it will rise up to
+      the control sector's highest adjacent sector. You set the control sectors for this up like
+      special <a href="#l59">59</a>. Linedef length controls speed like <a href="#l60">60</a>.
+      If the <a href="#NOCLIMB">NOCLIMB</a> flag is set, it will require the player to spindash
+      to raise the platform.</p>
+      <h3><a name="l192"></a>192 - Floor Over Floor: Rising Platform, Solid, Translucent</h3>
+      <p>Just like <a href="#l102">102</a>, except when a player steps on it, it will rise up to
+      the control sector's highest adjacent sector. You set the control sectors for this up like
+      special <a href="#l59">59</a>. Linedef length controls speed like <a href="#l60">60</a>.
+      If the <a href="#NOCLIMB">NOCLIMB</a> flag is set, it will require the player to spindash
+      to raise the platform.</p>
+      <h3><a name="l193"></a>193 - Floor Over Floor: Rising Platform, Solid, Invisible</h3>
+      <p>Just like <a href="#l105">105</a>, except when a player steps on it, it will rise up to
+      the control sector's highest adjacent sector. You set the control sectors for this up like
+      special <a href="#l59">59</a>. Linedef length controls speed like <a href="#l60">60</a>.
+      If the <a href="#NOCLIMB">NOCLIMB</a> flag is set, it will require the player to spindash
+      to raise the platform.</p>
+      <h3><a name="l194"></a>194 - Floor Over Floor: Rising Platform, Intangible from Bottom,
+      Opaque</h3>
+      <p>Just like <a href="#l140">140</a>, except when a player steps on it, it will rise up to
+      the control sector's highest adjacent sector. You set the control sectors for this up like
+      special <a href="#l59">59</a>. Linedef length controls speed like <a href="#l60">60</a>.
+      If the <a href="#NOCLIMB">NOCLIMB</a> flag is set, it will require the player to spindash
+      to raise the platform.</p>
+      <h3><a name="l195"></a>195 - Floor Over Floor: Rising Platform, Intangible from Bottom,
+      Translucent</h3>
+      <p>Just like <a href="#l141">141</a>, except when a player steps on it, it will rise up to
+      the control sector's highest adjacent sector. You set the control sectors for this up like
+      special <a href="#l59">59</a>. Linedef length controls speed like <a href="#l60">60</a>.
+      If the <a href="#NOCLIMB">NOCLIMB</a> flag is set, it will require the player to spindash
+      to raise the platform.</p>
+      <hr>
+      <h3><a name="l200"></a>200 - Floor Over Floor: Light Block</h3>
+      <p>Like a half light block, but it's really an actual block. That is, the light only comes
+      down to the control sector's floor, not to the bottom of the level (as with linetype <a
+      href="#l201">201</a>.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_CUTSPRITES|FF_DOUBLESHADOW-->
+      <h3><a name="l201"></a>201 - Floor Over Floor: Half Light Block</h3>
+      <p>Light blocks can be used to set color maps and light values. The light value of the
+      control sector will be used and any colormap attached to it will be used also. Note that
+      only the ceiling of the control sector is used; the light goes all the way down to the
+      bottom of the level. If this isn't what you want, consider using linedef type <a
+      href="#l200">200</a> instead.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_CUTSPRITES
+Note: Although it's not a true FOF, it does still have the same kind of definition, so 
+the FOF flags are included despite not being a real block.-->
+      <h3><a name="l202"></a>202 - Floor Over Floor: Fog Block</h3>
+      <p>Creates a block of colored fog. Attach a colormap (linetype <a href="#l606">606</a>) to
+      the control sector for the fog block; otherwise you won't see anything out of the
+      ordinary.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_RENDERALL|FF_FOG|FF_BOTHPLANES|FF_INVERTPLANES|FF_ALLSIDES|FF_INVERTSIDES|FF_CUTEXTRA|
+FF_EXTRA|FF_DOUBLESHADOW|FF_CUTSPRITES-->
+      <hr>
+      <h3><a name="l220"></a>220 - Floor Over Floor: Intangible, Opaque </h3>
+      <p>Like <a href="#l120">opaque water</a>, but not swimmable. Good for a snow effect on
+      FOFs. Can also be used to make hidden rooms, like you would normally do by setting a Main
+      texture.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_RENDERALL|FF_BOTHPLANES|FF_ALLSIDES|FF_CUTEXTRA|FF_EXTRA|FF_CUTSPRITES-->
+      <h3><a name="l221"></a>221 - Floor Over Floor: Intangible, Translucent</h3>
+      <p>See linedef type <a href="#l102">102</a> for how to adjust the translucency, making the
+      3D floor more transparent or more opaque.</p>
+      <p>This type of 3D floor will have shadows if and only if you set the control linedef's <a
+      href="#NOCLIMB">NOCLIMB</a> flag.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_RENDERALL|FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA
+If the <a href="#NOCLIMB">NOCLIMB</a> flag is disabled, it also adds FF_NOSHADE-->
+      <h3><a name="l222"></a>222 - Floor Over Floor: Intangible, Sides Only</h3>
+      <p>An intangible FOF that renders sides only, not planes (floor and ceiling). It renders
+      both inside sides and outside sides. You can use it to place sector borders (GFZGRASS,
+      etc.) on FOFs.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_RENDERSIDES|FF_NOSHADE|FF_ALLSIDES-->
+      <h3><a name="l223"></a>223 - Floor Over Floor: Intangible, Invisible</h3>
+      <p>Useful for setting effects, such as wind and gravity.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_NOSHADE-->
+      <hr>
+      <h3><a name="l250"></a>250 - Floor Over Floor: Mario Block</h3>
+      <p>Like a normal FOF, except that the control linedef's Above texture is used after the
+      block has been hit (the Main texture is used before this). Any things in the control
+      sector will pop out the top of the block in the order in which they were placed. Rings
+      will be obtained and the effects of monitors will begin as soon as the block has been hit.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_MARIO-->
+      <h3><a name="l251"></a>251 - Floor Over Floor: Thwomp Block</h3>
+      <p>The thwomps are the crazy platforms with faces in Mario Koopa Blast 3. They can crush
+      you, but you can also ride on them.</p>
+      <p>Control sector is set up like a <a href="#l100">normal FOF</a>. When a player steps
+      underneath the thwomp, it will crush down to the floor. You don't need to tell it where
+      the floor is. It knows.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL-->
+      <h3><a name="l252"></a>252 - Floor Over Floor: Shatter Block</h3>
+      <p>Like the bustable block, linetype <a href="#l254">254</a>, except that it shatters on
+      any sort of contact, whether it's a spindash or not (and whether you're Knuckles or not).</p>
+      <p>If the <a href="#NOCLIMB">NOCLIMB</a> flag is set, the block is only shatterable from
+      the bottom, like some things you spring up and break in Launch Base Zone from Sonic 3.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_BUSTUP|FF_SHATTER-->
+      <h3><a name="l253"></a>253 - Floor Over Floor: Shatter Block, Translucent</h3>
+      <p>Translucent version of <a href="#l252">252</a> supporting alpha values.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_BUSTUP|FF_SPINBUST|FF_TRANSLUCENT-->
+      <h3><a name="l254"></a>254 - Floor Over Floor: Bustable Block</h3>
+      <p>Bustable blocks can be destroyed by spindashing. Additionally, Knuckles can destroy
+      them by walking or jumping into them, since he is very strong. If the <a href="#NOCLIMB">NOCLIMB</a>
+      flag is set, only Knuckles can break the block.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_BUSTUP (|FF_ONLYKNUX if <a href="#NOCLIMB">NOCLIMB</a>)-->
+      <h3><a name="l255"></a>255 - Floor Over Floor: Spin Bust Block</h3>
+      <p>Like the bustable block, linetype <a href="#l254">254</a>, set off in a different way.
+      To break, jump onto it or fall down onto it while spinning. Similar to blocks found in
+      Marble Zone, as well as the ice cubes that would encase buttons and monitors in parts of
+      Ice Cap Zone.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_BUSTUP|FF_SPINBUST-->
+      <h3><a name="l256"></a>256 - Floor Over Floor: Spin Bust Block, Translucent</h3>
+      <p>Translucent version of <a href="#l255">255</a> supporting alpha values.</p>
+      <h3><a name="l257"></a>257 - Floor Over Floor: Quicksand Block</h3>
+      <p>It's set up like any block. You can, of course, sink and die in it. X length of the
+      linedef determines sink speed, Y length determines how &quot;sludgy&quot; movement in the
+      quicksand is.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_QUICKSAND|FF_RENDERALL|FF_ALLSIDES|FF_CUTSPRITES-->
+      <h3><a name="l258"></a>258 - Floor Over Floor: Laser Block</h3>
+      <p>Creates a blinking FOF that zaps you if you touch it. You can set the flats and texture
+      to whatever you want. For a red laser like in THZ2, use REDFLR for the flats and REDWALL
+      for the texture.</p>
+      <p>You can also make other colors using BLUEFLR/BLUWALL (blue laser), GREENFLR/GRNWALL
+      (green laser), and YELFLR/YELWALL (yellow laser). Of course, those colors of lasers are
+      very expensive, so Eggman doesn't have nearly as many of them. He usually goes with the
+      cheap red lasers.</p>
+<!--Exact FOF flags:
+FF_EXISTS|FF_RENDERALL|FF_NOSHADE|FF_EXTRA|FF_CUTEXTRA-->
+      <h3><a name="l259"></a>259 - Floor Over Floor: Custom</h3>
+      <p>Place the appropriate flag values in hex (do not include the 0x in front of it) in the
+      line's UPPER TEXTURE field on the 2nd side of the linedef.</p>
+    </ol>
+  </li>
+  <li><u><big><big>Linedef Executor Triggers</big></big></u><ol>
+      <h3><a name="l300"></a>300 - Trigger Linedef Executor (Continuous)</h3>
+      <p>Triggers linedef executor in the control sector when a player touches the tagged
+      sector's floor or steps in the sector (depending on the sector special used). The linedef
+      executor will keep being triggered over and over again as long as a player is there, hence
+      the word &quot;continuous&quot; in this linetype's name. Tagged sector must have one of
+      the <a href="#sCat2">Trigger Linedef Executor</a> types for this to work.</p>
+      <h3><a name="l301"></a>301 - Trigger Linedef Executor (Each Time)</h3>
+      <p>Like <a href="#l300">300</a>, except that it only gets triggered once for each time you
+      fall or jump onto the floor. Tagged sector must have one of the <a href="#sCat2">Trigger
+      Linedef Executor</a> types for this to work.</p>
+      <h3><a name="l302"></a>302 - Trigger Linedef Executor (Once)</h3>
+      <p>Like <a href="#l300">300</a>, except that after that linedef executor executes its
+      linedefs, it's done. It's over. The linedefs will never be executed again.</p>
+      <h3><a name="l303"></a>303 - Trigger Linedef Executor (Ring Count - Continuous)</h3>
+      <p>Triggers linedef executor in the control sector when a player touches the tagged
+      sector's floor or steps in the sector (depending on the sector special used). The linedef
+      executor will keep being triggered over and over again as long as a player is there, hence
+      the word &quot;continuous&quot; in this linetype's name. Tagged sector must have one of
+      the <a href="#sCat2">Trigger Linedef Executor</a> types for this to work. Executor will be
+      triggered depending on how many rings the player has:</p>
+      <p>No flags -&gt; Runs if (rings = line length)</p>
+      <p><a href="#NOCLIMB">NOCLIMB</a> -&gt; Runs if (rings &lt;= line length)</p>
+      <p><a href="#BLOCKMONSTERS">BLOCKMONSTERS</a> -&gt; Runs if (rings &gt;= line length)</p>
+      <p><a href="#EFFECT4">EFFECT4</a> -&gt; Takes the rings of ALL players into account.</p>
+      <h3><a name="l304"></a>304 - Trigger Linedef Executor (Ring Count - Once)</h3>
+      <p>Like <a href="#l303">303</a>, except that after that linedef executor executes its
+      linedefs, it's done. It's over. The linedefs will never be executed again.</p>
+      <h3><a name="l305"></a>305 - Trigger Linedef Executor (Character Ability - Once)</h3>
+      <p>Like linetype <a href="#l302">302</a>, but is only activated when the character's
+      ability number matches the linedef length by multiples of 10. For example:</p>
+      <p>0-9 = Charability 0</p>
+      <p>10-19 = Charability 1</p>
+      <p>20-29 = Charability 2</p>
+      <p>etc...</p>
+      <h3><a name="l306"></a>306 - Trigger Linedef Executor (Character Ability - Continuous)</h3>
+      <p>Like <a href="#l300">300</a>, but only triggers when the character's ability number
+      matches the linedef length by multiples of 10. See linetype <a href="#l305">305</a> for a
+      futher description.</p>
+      <h3><a name="l307"></a>307 - Trigger Linedef Executor (Character Ability - Each Time)</h3>
+      <p>Like <a href="#l301">301</a>, but only triggers when the character's ability number
+      matches the linedef length by multiples of 10. See linetype <a href="#l305">305</a> for a
+      futher description.</p>
+      <h3><a name="l308"></a>308 - Trigger Linedef Executor (Race Only, Once)</h3>
+      <p>Like linetype <a href="#l302">302</a>, but is only activated when the gametype is Race.
+      Useful for doing things like opening doors, pre-solving puzzles, etc. to make race
+      smoother.</p>
+      <h3><a name="l309"></a>309 - Trigger Linedef Executor (CTF Red Team - Continuous)</h3>
+      <p>Like <a href="#l300">300</a>, but only triggers if you are in CTF and on the red team.</p>
+      <h3><a name="l310"></a>310 - Trigger Linedef Executor (CTF Red Team - Each Time)</h3>
+      <p>Like <a href="#l301">301</a>, but only triggers if you are in CTF and on the red team.</p>
+      <h3><a name="l311"></a>311 - Trigger Linedef Executor (CTF Blue Team - Continuous)</h3>
+      <p>Like <a href="#l300">300</a>, but only triggers if you are in CTF and on the blue team.</p>
+      <h3><a name="l312"></a>312 - Trigger Linedef Executor (CTF Blue Team - Each Time)</h3>
+      <p>Like <a href="#l301">301</a>, but only triggers if you are in CTF and on the blue team.</p>
+      <h3><a name="l313"></a>313 - Trigger Linedef Executor (No More Enemies - Once)</h3>
+      <p>Like linetype <a href="#l302">302</a>, but is only activated when no more objects of
+      type MF_ENEMY exist in its tagged area. Think &quot;destroy all enemies in this room for
+      the door to open to go to the next room&quot;. Tag this to a control sector. It will go
+      through the lines of the control sector, checking for any lines of type <a href="#l223">223</a>
+      and checking inside the area occupied by the invisible intangible FOF to see if any
+      enemies exist. If no alive enemies are in all of the type <a href="#l223">223</a> FOFs,
+      the linedef executor is run once. The line length is the tag number of the linedef
+      executor trigger to run.</p>
+      <h3><a name="l314"></a>314 - Trigger Linedef Executor (# of Pushables - Continuous)</h3>
+      <p>Like <a href="#l300">300</a>, but only triggers if the number of pushable objects in
+      the sector compared to the line length is:</p>
+      <p>No flags -&gt; Runs if (# pushables = line length)</p>
+      <p><a href="#NOCLIMB">NOCLIMB</a> -&gt; Runs if (# pushables &gt;= line length)</p>
+      <p><a href="#EFFECT4">EFFECT4</a> -&gt; Runs if (# pushables &lt; line length)</p>
+      <h3><a name="l315"></a>315 - Trigger Linedef Executor (# of Pushables - Once)</h3>
+      <p>Like <a href="#l314">314</a>, but only triggers once.</p>
+      <h3><a name="l316"></a>316 - Trigger Linedef Executor (PolyObject - Land On)</h3>
+      <p>This will trigger every time you land on the polyobject. Line's tag # is 32000 + the
+      PolyObject ID #. You must also flag the PolyObject Start (#20) line with <a
+      href="#NOCLIMB">NOCLIMB</a> to tell the game it has a linedef executor associated with it.</p>
+      <p>So if you had a PolyObject with an ID of 1, this line would have a tag of 32001.</p>
+      <p>&nbsp;</p>
+    </ol>
+  </li>
+  <li><u><big><big>Linedef Executor Options</big></big></u><ol>
+      <h3><a name="l400"></a>400 - Linedef Executor: Set Tagged Sector's Floor Height/Pic</h3>
+      <p>When executed, instantly changes the tagged sector's floor height and flat to the floor
+      height and flat of the linedef's front sector.</p>
+      <h3><a name="l401"></a>401 - Linedef Executor: Set Tagged Sector's Ceiling Height/Pic</h3>
+      <p>When executed, instantly changes the tagged sector's ceiling height and flat to the
+      ceiling height and flat of the linedef's front sector.</p>
+      <h3><a name="l402"></a>402 - Linedef Executor: Set Tagged Sector's Light Level</h3>
+      <p>When executed, instantly changes the tagged sector's light level to that of the
+      linedef's front sector. Floor and ceiling light settings done with linetypes <a
+      href="#l601">601</a> and <a href="#l600">600</a> are transferred as well; colormaps are
+      not.</p>
+      <p>If there is a lighting effect active in the target sector or sectors at the time (glow,
+      fade, strobe, flicker), it will be stopped.</p>
+      <h3><a name="l403"></a>403 - Linedef Executor: Move Tagged Sector's Floor</h3>
+      <p>When executed, starts moving the tagged sector's floor until it is at the same height
+      as the linedef's front sector's floor. Speed is indicated in the same units used by
+      linetype <a href="#l60">60</a>.</p>
+      <p>If the line used has <a href="#NOCLIMB">NOCLIMB</a> flag, the floor flat will change
+      after the move, to that on the front sector's floor. This is like what linetype <a
+      href="#l400">400</a> does.</p>
+      <p>If the line used has <a href="#BLOCKMONSTERS">BLOCKMONSTERS</a> flag, another linedef
+      executor will be run when the floor movement is finished. (If multiple sectors finish at
+      different times, it goes by the lowest numbered sector, but you should probably try to
+      avoid this scenario.) The tag of the new linedef executor to run is specified by the X
+      alignment on the front side of the line. The tag number you use must be positive, and this
+      functionality cannot be combined with changing the floor flat using the <a href="#NOCLIMB">NOCLIMB</a>
+      flag. Running a linedef executor will take precedence over changing the floor flat.</p>
+      <h3><a name="l404"></a>404 - Linedef Executor: Move Tagged Sector's Ceiling</h3>
+      <p>When executed, starts moving the tagged sector's ceiling until it is at the same height
+      as the linedef's front sector's ceiling. Speed is indicated in the same units used by
+      linetype <a href="#l60">60</a>.</p>
+      <p>If the line used has <a href="#NOCLIMB">NOCLIMB</a> flag, the ceiling flat will change
+      after the move, to that on the front sector's ceiling. This is like what linetype <a
+      href="#l401">401</a> does.</p>
+      <p>If the line used has <a href="#BLOCKMONSTERS">BLOCKMONSTERS</a> flag, another linedef
+      executor will be run when the ceiling movement is finished. (If multiple sectors finish at
+      different times, it goes by the lowest numbered sector, but you should probably try to
+      avoid this scenario.) The tag of the new linedef executor to run is specified by the X
+      alignment on the front side of the line. The tag number you use must be positive, and this
+      functionality cannot be combined with changing the ceiling flat using the <a
+      href="#NOCLIMB">NOCLIMB</a> flag. Running a linedef executor will take precedence over
+      changing the ceiling flat.</p>
+      <h3><a name="l405"></a>405 - Linedef Executor: Lower Floor by Line</h3>
+      <p>Speed is indicated by x distance; amount to lower is indicated by y distance.</p>
+      <h3><a name="l406"></a>406 - Linedef Executor: Raise Floor by Line</h3>
+      <p>Speed is indicated by x distance; amount to raise is indicated by y distance.</p>
+      <h3><a name="l407"></a>407 - Linedef Executor: Lower Ceiling by Line</h3>
+      <p>Speed is indicated by x distance; amount to lower is indicated by y distance.</p>
+      <h3><a name="l408"></a>408 - Linedef Executor: Raise Ceiling by Line</h3>
+      <p>Speed is indicated by x distance; amount to raise is indicated by y distance.</p>
+      <h3><a name="l409"></a>409 - Linedef Executor: Change Calling Sector's Tag</h3>
+      <p>Changes the tag of the calling sector; that is, the sector on the map that activated
+      this linedef executor. The new tag is the linedef's length.</p>
+      <h3><a name="l410"></a>410 - Linedef Executor: Change Front Sector's Tag</h3>
+      <p>Changes the tag of the linedef's front sector. The new tag is the linedef's length.</p>
+      <h3><a name="l411"></a>411 - Linedef Executor: Stop Plane Movement</h3>
+      <p>Stops any and all floor, ceiling, or elevator movement in the tagged sector or sectors.</p>
+      <h2><a name="l412"></a>412 - Linedef Executor: Teleport Player to Tagged Sector</h2>
+      <p>The player who triggered the linedef executor will be teleported to the tagged sector.
+      The player's exact X, Y, Z, and angle are determined by a teleport destination thing, type
+      <a href="#t751">751</a>, somewhere in the tagged sector.</p>
+      <p>If the <a href="#BLOCKMONSTERS">BLOCKMONSTERS</a> flag is used, it won't flash and make
+      the teleport sound effects. If the <a href="#NOCLIMB">NOCLIMB</a> flag is used, it won't
+      reset the angle to the angle of the teleport destination thing, and if the <a
+      href="#EFFECT4">EFFECT4</a> flag is used, it will not kill your acceleration/speed upon
+      teleport.</p>
+      <h2><a name="l413"></a>413 - Linedef Executor: Change Music</h2>
+      <p>Linedef length indicates the music slot to use. If the linedef's <a href="#NOCLIMB">NOCLIMB</a>
+      flag is set, play the music once, otherwise loop it.</p>
+      <p>If the player dies and goes back to a starpost, the beginning of the level, or the
+      appropriate multiplayer start, the map music from before will be restored. The linedef
+      flag <a href="#BLOCKMONSTERS">BLOCKMONSTERS</a> can be set to change this behavior, and
+      retain the new music even after dying.</p>
+      <p>If the linedef length isn't a valid music slot, the music is stopped.</p>
+      <h3><a name="l414"></a>414 - Linedef Executor: Play SFX</h3>
+      <p>Plays a sound effect. The line length is the sound number to use. The list of sound
+      effects can be found in sounds.h. The origin of the sound depends on which linedef flags
+      are set: <ul>
+        <li><a href="#NOCLIMB">NOCLIMB</a> : The sound is played from nowhere, but only for the
+          player who triggered it.</li>
+        <li><a href="#EFFECT4">EFFECT4</a>: The sound is played from nowhere for everyone.</li>
+        <li><a href="#BLOCKMONSTERS">BLOCKMONSTERS</a>: The sound is played from the center of the
+          sector that triggered the linedef executor.</li>
+      </ul>
+      <p>Otherwise, the sound is played from the location of the player or thing who triggered
+      it.</p>
+      <h3><a name="l415"></a>415 - Linedef Executor: Run Script</h3>
+      <p>Runs a script, the same kind of script you can run on level load with the level header
+      scriptname attribute. The script that will be run should have a lumpname of the form SCR<i>xxyyy</i>,
+      where <i>xx</i> is the two-digit map number and <i>yyy</i> is the linedef's sector's floor
+      height in decimal, with leading zeroes as necessary (or 000 if the floor height exceeds
+      999 fracunits). For instance, if the linedef is in MAP31 and the floor of its sector is
+      337 fracunits, the script named SCR31337 will be run.</p>
+      <h3><a name="l416"></a>416 - Linedef Executor: Start Adjustable Fire Flicker</h3>
+      <p>Essentially a copy of linetype <a href="#l603">603</a> that waits to activate until the
+      linedef executor is triggered. It does have an extra feature, though. If you use a
+      two-sided linedef with the <a href="#NOCLIMB">NOCLIMB</a> flag, the linedef's back sector
+      will be used as the maximum light level, allowing you to set the target sector (or
+      sectors) at a different starting light level entirely.</p>
+      <h3><a name="l417"></a>417 - Linedef Executor: Start Adjustable Glowing Light</h3>
+      <p>Essentially a copy of linetype <a href="#l602">602</a> that waits to activate until the
+      linedef executor is triggered. It does have an extra feature, though. If you use a
+      two-sided linedef with the <a href="#NOCLIMB">NOCLIMB</a> flag, the linedef's back sector
+      will be used as the maximum light level, allowing you to set the target sector (or
+      sectors) at a different starting light level entirely.</p>
+      <h3><a name="l418"></a>418 - Linedef Executor: Start Adjustable Blinking Light
+      (unsynchronized)</h3>
+      <p>Essentially a copy of linetype <a href="#l604">604</a> that waits to activate until the
+      linedef executor is triggered. It does have an extra feature, though. If you use a
+      two-sided linedef with the <a href="#NOCLIMB">NOCLIMB</a> flag, the linedef's back sector
+      will be used as the maximum light level, allowing you to set the target sector (or
+      sectors) at a different starting light level entirely.</p>
+      <h3><a name="l419"></a>419 - Linedef Executor: Start Adjustable Blinking Light
+      (synchronized)</h3>
+      <p>Essentially a copy of linetype <a href="#l605">605</a> that waits to activate until the
+      linedef executor is triggered. It does have an extra feature, though. If you use a
+      two-sided linedef with the <a href="#NOCLIMB">NOCLIMB</a> flag, the linedef's back sector
+      will be used as the maximum light level, allowing you to set the target sector (or
+      sectors) at a different starting light level entirely.</p>
+      <h3><a name="l420"></a>420 - Linedef Executor: Fade Light Level</h3>
+      <p>When executed, gradually fades the tagged sector's light level to that of the linedef's
+      front sector. Floor and ceiling light settings done with linetypes <a href="#l601">601</a>
+      and <a href="#l600">600</a> are not affected or used.</p>
+      <p>If there is a lighting effect already active in the target sector or sectors at the
+      time (glow, other fade, strobe, flicker), it will be halted in favor of this one.</p>
+      <p>Linedef length in fracunits indicates speed. Fading from 224 to 64 with a linedef
+      length of 4 will take 40 fracunits (224 - 64 = 160, 160 / 4 = 40). There are 35 fracunits
+      in a second.</p>
+      <h3><a name="l421"></a>421 - Linedef Executor: Stop Lighting Effect</h3>
+      <p>Stops any lighting effects active in the tagged sector or sectors: glow, fade, strobe,
+      flicker, etc. The light level, whatever it is at the moment this script line is run, will
+      be preserved until a new lighting effect or light level change is used.</p>
+      <p>Note that the lighting effects will all stop other lighting effects when activated. In
+      other words, you only need to use this when you really want the lighting effect to stop,
+      not when you want one effect to stop and another to start.</p>
+      <h3><a name="l422"></a>422 - Linedef Executor: Cut-Away View</h3>
+      <p>Cuts away to a view from a different place for a moment. Only works for linedef
+      executors triggered by a player. Tag the line to a sector with an alt view thing (map
+      thing type 5007) in it at the proper location with the proper Z and angle. The line length
+      indicates how long to stay in this view, in tics.</p>
+      <p>By giving the linedef a <a href="#NOCLIMB">NOCLIMB</a> flag, you can adjust the
+      vertical viewing angle from the cut-away view. Set the x offset on the linedef's front
+      side to an integer -90 to 90. In software mode the range of viewing angles is actually
+      about -68 to 68. This is in degrees.</p>
+      <h3><a name="l423"></a>423 - Linedef Executor: Change Sky</h3>
+      <p>Changes sky to the # of the control sector's floorheight. This only affects the player
+      who activates it. If you'd like it to affect all players, make sure you check the <a
+      href="#NOCLIMB">NOCLIMB</a> flag.</p>
+      <h3><a name="l424"></a>424 - Linedef Executor: Change Weather</h3>
+      <p>Changes weather to the control sector's floorheight in powers of 10.</p>
+      <p>Example:</p>
+      <div align="left"><table border="1" width="28%">
+        <tr>
+          <td width="50%">Linedef Length</td>
+          <td width="50%">Weather Type</td>
+        </tr>
+        <tr>
+          <td width="50%">10</td>
+          <td width="50%">None</td>
+        </tr>
+        <tr>
+          <td width="50%">20</td>
+          <td width="50%">Snow</td>
+        </tr>
+        <tr>
+          <td width="50%">30</td>
+          <td width="50%">Rain</td>
+        </tr>
+        <tr>
+          <td width="50%">40</td>
+          <td width="50%">Storm</td>
+        </tr>
+      </table>
+      </div><p>(higher numbers reserved for future use)</p>
+      <p>This only affects the player who activates it. If you'd like it to affect all players,
+      make sure you check the <a href="#NOCLIMB">NOCLIMB</a> flag.</p>
+      <h3><a name="l425"></a>425 - Linedef Executor: Change Object State</h3>
+      <p>Changes the animation frame of the activating object to the state # indicated by the
+      length of the control linedef. Be careful how you use this.</p>
+      <h3><a name="l426"></a>426 - Linedef Executor: Stop Object</h3>
+      <p>Makes the object that triggered the linedef executor stop moving, after being sent to
+      the center of the sector it's in (only if <a href="#NOCLIMB">NOCLIMB</a> flag is set), on
+      the floor. Although it comes to a complete stop, the object can begin moving right away
+      again. If the object is a player, the player will stop jumping, spinning, or anything
+      else.</p>
+      <h3><a name="l427"></a>427 - Linedef Executor: Award Score</h3>
+      <p>Adds to the score of the player who activated it. Control sector's floorheight = points
+      to award. This even works with negative values.</p>
+      <h3><a name="l428"></a>428 - Linedef Executor: Start Platform Movement</h3>
+      <p>Starts a moving platform in the nature of linetype <a href="#l59">59</a> or <a
+      href="#l60">60</a>. If the <a href="#NOCLIMB">NOCLIMB</a> flag is set, the platform will
+      begin moving upwards. Otherwise, it will start moving downwards. Speed of movement is set
+      just like with linetype <a href="#l60">60</a>.</p>
+      <h3><a name="l429"></a>429 - Linedef Executor: Crush Ceiling Once</h3>
+      <p>Ceiling moves down to the floor, then back up. Speed is determined by line length -
+      every 16 units equals 1 FRACUNIT/tic.</p>
+      <h3><a name="l430"></a>430 - Linedef Executor: Crush Floor Once</h3>
+      <p>Floor moves up to the ceiling, then back down. Speed is determined by line length -
+      every 16 units equals 1 FRACUNIT/tic.</p>
+      <h3><a name="l431"></a>431 - Linedef Executor: Crush Floor And Ceiling Once</h3>
+      <p>Floor and ceiling meet in the middle and then return, sandwiching anything that's
+      inbetween. Speed is determined by line length - every 16 units equals 1 FRACUNIT/tic.</p>
+      <h3><a name="l432"></a>432 - Linedef Executor: Enable 2D Mode</h3>
+      <p>Turns on 2D mode within the level. You'll probably only want to use this with a zoom
+      tube or teleport to guarantee that the player is in the correct position when it switches.</p>
+      <h3><a name="l433"></a>433 - Linedef Executor: Disable 2D Mode</h3>
+      <p>Turns off 2D mode within the level.</p>
+      <h3><a name="l434"></a>434 - Linedef Executor: Award Custom Power</h3>
+      <p>Awards (or removes!) a power to the calling player.</p>
+      <p>X length: Power Index + 1</p>
+      <p>Y length: Power Duration (in 35ths of a second)</p>
+      <h3><a name="l435"></a>435 - Linedef Executor: Change Scroller Direction</h3>
+      <p>Changes direction of a scroller (conveyor, texture). Also changes speed if this is not
+      an accelerative/displacement scroller.</p>
+      <h3><a name="l436"></a>436 - Linedef Executor: Shatter Block</h3>
+      <p>Shatters a FOF - of any type. Parameters are as follows:</p>
+      <p>Texture X Offset: Tag # of FOF target sector</p>
+      <p>Texture Y Offset: Tag # of FOF control sector</p>
+      <p>Note that the FOF should only have one target sector.</p>
+      <h3><a name="l437"></a>437 - Linedef Executor: Disable Player Control</h3>
+      <p>Disables the controls of the player that triggered the linedef executor. If the
+      <a href="#NOCLIMB">NOCLIMB</a> flag is set, they will be able to jump, however.</p>
+      <p>Giving the front texture of the linedef an X offset will make the effect last that amount
+      of time, in tics.  Otherwise, it ends immediately, so you would need to use a continuous
+      trigger.</p>
+      <h3><a name="l438"></a>438 - Linedef Executor: Set Object's Scale</h3>
+      <p>Length of this line determines the scale size of an object, in percentage. Note that there is a max of 400%.</p>
+      <h3><a name="l450"></a>450 - Linedef Executor: Execute Linedef Executor</h3>
+      <p>Just what it says. Can be used for recursion. Be careful, because you CAN make a loop
+      out of this that will freeze the game.</p>
+      <p>Tag is the linedef executor trigger tag to run.</p>
+      <h3><a name="l488"></a>488 - Linedef Executor: PolyObject - Move by Waypoints</h3>
+      <p>Moves a polyobject along a sequence of Zoom Tube waypoints.</p>
+      <p>Texture X offset: Speed (8 = 1 FRACUNIT).</p>
+      <p>Texture Y offset: Sequence # of Zoom Tube waypoints.</p>
+      <p>The movement also depends on which linedef flags are set: <ul>
+        <li><a href="#EFFECT1">EFFECT1</a> : Moves from highest waypoint # to lowest waypoint #.</li>
+        <li><a href="#EFFECT2">EFFECT2</a> : Comes back the way it came when the end is reached.</li>
+        <li><a href="#EFFECT3">EFFECT3</a> : Wrap around the waypoints.</li>
+        <li><a href="#EFFECT4">EFFECT4</a>:&nbsp; Continuously move (used with EFFECT2 or EFFECT3).</li>
+      </ul>
+      <p>&nbsp;</p>
+    </ol>
+  </li>
+  <li><u><big><big>Scrollers / Pushers</big></big></u><ol>
+      <h3><a name="l500"></a>500 - Scroll Wall First Side Left</h3>
+      <h3><a name="l501"></a>501 - Scroll Wall First Side Opposite Direction</h3>
+      <h3><a name="l502"></a>502 - Scroll Wall According to Linedef</h3>
+      <h3><a name="l503"></a>503 - Acc Scroll Wall According to Linedef</h3>
+      <p>Accelerative scrolling version of <a href="#l502">502</a>.</p>
+      <h3><a name="l504"></a>504 - Disp Scroll Wall According to Linedef</h3>
+      <p>Displacement scrolling version of <a href="#l502">502</a>.</p>
+      <h3><a name="l505"></a>505 - Scroll Texture by Offsets</h3>
+      <hr>
+      <h3><a name="l510"></a>510 - Scroll Floor Texture</h3>
+      <p>Linedef length and direction indicate speed and direction.</p>
+      <h3><a name="l511"></a>511 - Acc Scroll Floor Texture</h3>
+      <p>Accelerative scrolling version of <a href="#l510">510</a>.</p>
+      <h3><a name="l512"></a>512 - Disp Scroll Floor Texture</h3>
+      <p>Displacement scrolling version of <a href="#l510">510</a>.</p>
+      <h3><a name="l513"></a>513 - Scroll Ceiling Texture</h3>
+      <p>Linedef length and direction indicate speed and direction.</p>
+      <h3><a name="l514"></a>514 - Acc Scroll Ceiling Texture</h3>
+      <p>Accelerative scrolling version of <a href="#l513">513</a>.</p>
+      <h3><a name="l515"></a>515 - Disp Scroll Ceiling Texture</h3>
+      <p>Displacement scrolling version of <a href="#l513">513</a>.</p>
+      <hr>
+      <h3><a name="l520"></a>520 - Carry Objects on Floor</h3>
+      <p>Like linedef type <a href="#l530">530</a>, without scrolling the floor texture, so the
+      floor doesn't look like it's moving.</p>
+      <h3><a name="l521"></a>521 - Acc Carry Objects on Floor</h3>
+      <p>Accelerative scrolling version of <a href="#l520">520</a>.</p>
+      <h3><a name="l522"></a>522 - Disp Carry Objects on Floor</h3>
+      <p>Displacement scrolling version of <a href="#l520">520</a>.</p>
+      <h3><a name="l523"></a>523 - Carry Objects on Ceiling</h3>
+      <p>For FOF conveyor belts. Like <a href="#l533">533</a>, except without the scrolling to
+      accompany it.</p>
+      <h3><a name="l524"></a>524 - Acc Carry Objects on Ceiling</h3>
+      <p>Accelerative scrolling version of <a href="#l523">523</a>. Untested.</p>
+      <h3><a name="l525"></a>525 - Disp Carry Objects on Ceiling</h3>
+      <p>Displacement scrolling version of <a href="#l523">523</a>. Untested.</p>
+      <hr>
+      <h3><a name="l530"></a>530 - Scroll Floor Texture and Carry Objects</h3>
+      <p>Used for conveyor belts, in conjunction with sector type <a href="#s1024">1024</a>
+      (Conveyor Belt). Linedef length and direction indicate conveyor speed and direction,
+      respectively. This can also be used to convey items on the underneath of a FOF. See Egg
+      Rock Zone for an example.</p>
+      <h3><a name="l531"></a>531 - Acc Scroll Floor Texture and Carry Objects</h3>
+      <p>Accelerative scrolling version of <a href="#l530">530</a>.</p>
+      <h3><a name="l532"></a>532 - Disp Scroll Floor Texture and Carry Objects</h3>
+      <p>Displacement scrolling version of <a href="#l530">530</a>.</p>
+      <h3><a name="l533"></a>533 - Scroll Ceiling Texture and Carry Objects</h3>
+      <p>For conveyor belts on the top of FOFs, or for conveying items on a ceiling. Tag this to
+      the FOF control sector and give the FOF control sector a type of <a href="#s1024">1024</a>,
+      Conveyor Belt. For realism you might also want to scroll the control sector's floor
+      texture in the opposite direction (see linetype <a href="#l510">510</a>).</p>
+      <h3><a name="l534"></a>534 - Acc Scroll Ceiling Texture and Carry Objects</h3>
+      <p>Accelerative scrolling version of <a href="#l533">533</a>. Untested.</p>
+      <h3><a name="l535"></a>535 - Disp Scroll Ceiling Texture and Carry Objects</h3>
+      <p>Displacement scrolling version of <a href="#l533">533</a>. Untested.</p>
+      <hr>
+      <h3><a name="l540"></a>540 - Friction</h3>
+      <p>Linedef lengths greater than 100 indicate slippery ice, while linedef lengths less than
+      100 can be used for sludge, with extra friction.</p>
+      <p>If you want friction on a FOF, tag this line to the control sector of the FOF.
+      Otherwise, tag it to the sector of desired destination.</p>
+      <h3><a name="l541"></a>541 - Wind</h3>
+      <p>Speed and direction are indicated by linedef length and direction. The target sector
+      should be of type <a href="#s512">512</a>, Wind/Current. If being used in a 3D Floor, put
+      the 512/768 sector type in the control sector, not the target sector. Also tag the line to
+      the control sector, and not the target sector.</p>
+      <p>Special flags:</p>
+      <p><a href="#NOCLIMB">NOCLIMB</a> -&gt; Only this pusher will affect the object - the
+      object can't have multiple 'pushings' due to being on the edge of a sector, etc.</p>
+      <p><a href="#EFFECT4">EFFECT4</a> -&gt; Player will go into slide with limited control
+      (similar to the water and oil slides in Labyrinth and Oil Ocean).</p>
+      <h3><a name="l542"></a>542 - Upwards Wind</h3>
+      <p>The length of the linedef is the wind speed. The target sector will need type <a
+      href="#s512">512</a> or <a href="#s768">768</a>. If being used in a 3D Floor, put the
+      512/768 sector type in the control sector, not the target sector. Also tag the line to the
+      control sector, and not the target sector.</p>
+      <p>NOCLIMB/EFFECT4 flags operate the same as for line <a href="#l541">541</a>.</p>
+      <h3><a name="l543"></a>543 - Downwards Wind</h3>
+      <p>Wind speed is determined by the linedef's length. Type <a href="#s512">512</a> or <a
+      href="#s768">768</a> must be applied to the target sector. If being used in a 3D Floor,
+      put the 512/768 sector type in the control sector, not the target sector. Also tag the
+      line to the control sector, and not the target sector.</p>
+      <p>NOCLIMB/EFFECT4 flags operate the same as for line <a href="#l541">541</a>.</p>
+      <h3><a name="l544"></a>544 - Current</h3>
+      <p>Speed and direction are indicated by linedef length and direction. The target sector
+      should have type <a href="#s512">512</a>, Wind/Current. If being used in a 3D Floor, put
+      the 512/768 sector type in the control sector, not the target sector. Also tag the line to
+      the control sector, and not the target sector.</p>
+      <p>NOCLIMB/EFFECT4 flags operate the same as for line <a href="#l541">541</a>.</p>
+      <h3><a name="l545"></a>545 - Upwards Current</h3>
+      <p>Linedef length indicates speed. Target sector needs sector type <a href="#s512">512</a>
+      or <a href="#s768">768</a>. If being used in a 3D Floor, put the 512/768 sector type in
+      the control sector, not the target sector. Also tag the line to the control sector, and
+      not the target sector.</p>
+      <p>NOCLIMB/EFFECT4 flags operate the same as for line <a href="#l541">541</a>.</p>
+      <h3><a name="l546"></a>546 - Downwards Current</h3>
+      <p>Speed is indicated by linedef length. Assign a type of <a href="#s512">512</a> or <a
+      href="#s768">768</a> to the target sector. If being used in a 3D Floor, put the 512/768
+      sector type in the control sector, not the target sector. Also tag the line to the control
+      sector, and not the target sector.</p>
+      <p>NOCLIMB/EFFECT4 flags operate the same as for line <a href="#l541">541</a>.</p>
+      <h3><a name="l547"></a>547 - Boom Push/Pull Thing</h3>
+      <p>Creates a &quot;point pusher,&quot; or a point that pushes you away or pulls you toward
+      it if you get close enough. Tag the linedef to a sector with type <a href="#s512">512</a>,
+      Wind/Current, and with a thing on it of type 5001 (push) or 5002 (pull). The control
+      linedef's length indicates pushing/pulling strength; if length is L, the effect fades away
+      to nothing when you are 2L away from the point.</p>
+      <p>If you want to create multiple point pushers/pullers, you'll need to have them in
+      different target sectors, but they can share the same tag.</p>
+      <p>NOCLIMB/EFFECT4 flags operate the same as for line <a href="#l541">541</a>.</p>
+      <p>&nbsp;</p>
+    </ol>
+  </li>
+  <li><u><big><big>Lighting</big></big></u><ol>
+      <h3><a name="l600"></a>600 - Floor Lighting</h3>
+      <p>Sets the lighting for the floor only. The control sector's light value will be used for
+      the target sector's floor. Also see type <a href="#l601">601</a>.</p>
+      <h3><a name="l601"></a>601 - Ceiling Lighting</h3>
+      <p>Sets the lighting of the ceiling only. The light value of the control sector will be
+      used for the target sector's ceiling. Also see type <a href="#l600">600</a>.</p>
+      <h3><a name="l602"></a>602 - Adjustable Pulsating Light</h3>
+      <p>Linedef length indicates glow speed. The normal speed would be a linedef 32 units long.</p>
+      <p>The control sector (the linedef's front sector) is used to get what will be the minimum
+      light level for this effect, while the target sector's light level ends up being the
+      maximum.</p>
+      <h3><a name="l603"></a>603 - Adjustable Flickering Light</h3>
+      <p>Linedef length indicates flicker speed. Normal speed would be a 16 fracunit long
+      linedef. A longer linedef means more time in between flickers.</p>
+      <p>The control sector (the linedef's front sector) is used to get what will be the minimum
+      light level for this effect, while the target sector's light level ends up being the
+      maximum.</p>
+      <h3><a name="l604"></a>604 - Adjustable Blinking Light (unsynchronized)</h3>
+      <p>Line's X length is time for the light to be off, and Y length is the time for the light
+      to be on.</p>
+      <p>The control sector (the linedef's front sector) is used to get what will be the minimum
+      light level for this effect, while the target sector's light level ends up being the
+      maximum.</p>
+      <h3><a name="l605"></a>605 - Adjustable Blinking Light (synchronized)</h3>
+      <p>Line's X length is time for the light to be off, and Y length is the time for the light
+      to be on.</p>
+      <p>The control sector (the linedef's front sector) is used to get what will be the minimum
+      light level for this effect, while the target sector's light level ends up being the
+      maximum.</p>
+      <h3><a name="l606"></a>606 - Colormap</h3>
+      <p>Sets a colormap. Tag the linedef to the sector or sectors affected by the colormap. The
+      control linedef's front Above texture is used to determine the colormap. The format is
+      #rrggbba, where rr, gg, and bb are two hexadecimal digits for determining each color: red,
+      blue, and green. The a stands for alpha, and is a number or letter indicating the
+      translucency; from A-Z and 0-9, with A being most transparent and 9 being most opaque.</p>
+      <p>It does not generally matter what sector the colormap linedef belongs to. However, it
+      should not belong to the same sector as another colormap, as this can cause problems.</p>
+    </ol>
+  </li>
+  <h1><a name="sectortypes"></a>Sector Types</h1>
+  <p>You can apply up to four different types to one sector, provided that you only choose
+  ONE from EACH category. Add the numbers together to obtain the final value to use in level
+  editors.</p>
+  <li><u><big><big>Section 1</big></big></u><ol>
+      <h3><a name="s1"></a>1 - Damage (Generic)</h3>
+      <p>This special hurts, period. It doesn't matter whether you have a liquid shield, fire
+      shield, attraction shield, or whatever else; step on one of these and suffer.</p>
+      <h3><a name="s2"></a>2 - Damage (Water)</h3>
+      <p>Also known as Slime Hurt. Stepping here will be painful, as in shield/ring/life loss
+      (depending on how you are equipped), unless you happen to have the liquid shield.</p>
+      <h3><a name="s3"></a>3 - Damage (Fire)</h3>
+      <p>Stepping here will hurt, unless you happen to have a fire shield.</p>
+      <h3><a name="s4"></a>4 - Damage (Electrical)</h3>
+      <p>Hurts players whenever they're in the sector, unless they have the attraction shield.</p>
+      <p>Usage tip: Give the sector a floor flat that looks electrical and looks like it could
+      hurt you. </p>
+      <h3><a name="s5"></a>5 - Spikes</h3>
+      <p>Making spikes using sectors is rather tedious and difficult. You can use things instead
+      (<a href="#t523">Floor Spike</a> and <a href="#t522">Ceiling Spike</a>). But the sector
+      version DOES look cooler. ;)</p>
+      <h3><a name="s6"></a>6 - Death Pit (Camera Modifications)</h3>
+      <p>Used for bottomless pits. You'll probably want the sector's floor flat to be either
+      F_SKY1 (falling from the sky) or PIT (falling into a pit of complete blackness). The
+      camera modifications keep the camera from following you all the way down, for a Sonic
+      Adventure-style pit death. If you don't like the camera modifications, use sector type <a
+      href="#s7">5</a>.</p>
+      <h3><a name="s7"></a>7 - Death Pit (No Camera Modifications)</h3>
+      <p>For bottomless pits. Use if the camera modifications of sector type <a href="#s6">6</a>
+      are not to your taste.</p>
+      <h3><a name="s8"></a>8 - Instant Kill</h3>
+      <p>Die right away if you even step into this sector. No need to touch the floor as with
+      those sissy death pits.</p>
+      <h3><a name="s9"></a>9 - Ring Drainer (Floor Touch)</h3>
+      <p>Lose one ring per 15 tics while touching the floor.</p>
+      <h3><a name="s10"></a>10 - Ring Drainer (No Floor Touch)</h3>
+      <p>Like sector type <a href="#s9">9</a>, but doesn't require touching floor.</p>
+      <h3><a name="s11"></a>11 - Special Stage Damage</h3>
+      <p>If you have rings and no shield, and you step on it, you only lose 10 rings, maximum.
+      It's just like the special stages!</p>
+      <h3><a name="s12"></a>12 - Space Countdown</h3>
+      <p>In space, you have no chance to survive make your time, ha ha ha. Starts an immediate
+      five-second countdown, like when you drown.</p>
+      <h3><a name="s13"></a>13 - Ramp Sector</h3>
+      <p>Doubles the step-up height of the player. Default step-up height is 24 fracunits, but
+      with this, it becomes 48. Useful for steps and other things if your players seem to be
+      getting 'stopped' by the stairs while moving quickly.</p>
+      <h3><a name="s14"></a>14 - Non-Ramp Sector (Don't step down)</h3>
+      <p>Removes the 'step-down' that a player will normally do when moving to a nearby sector.</p>
+      <h3><a name="s15"></a>15 - Bouncy Sector (FOF Control Only)</h3>
+      <p>Use this on a 3D floor's control sector to make it bouncy. Players will bounce off the
+      top of it. If the 3D floor's control line has the BOUNCY flag set, the linedef length sets
+      the minimum bounce force. Otherwise, you will slowly come to a stop.</p>
+      <p>&nbsp;</p>
+    </ol>
+  </li>
+  <li><u><big><big><a name="sCat2"></a>Section 2</big></big></u><ol>
+      <h3><a name="s16"></a>16 - Trigger Linedef Executor (Pushable Objects)</h3>
+      <p>Works like <a href="#s80">80</a> but with a pushable object (gargoyle or snowman)
+      touching the floor rather than a player.</p>
+      <h3><a name="s32"></a>32 - Trigger Linedef Executor (Anywhere in Sector) (All Players)</h3>
+      <p>Sector type <a href="#s64">64</a> with the added requirement that all players who don't
+      have a game over need to be in the sector, not just one player. Currently does not work in
+      FOFs.</p>
+      <h3><a name="s48"></a>48 - Trigger Linedef Executor (Floor Touch) (All Players)</h3>
+      <p>Sector type <a href="#s80">80</a> with the added requirement that all players who don't
+      have a game over need to be in the sector, not just one player.</p>
+      <h3><a name="s64"></a>64 - Trigger Linedef Executor (Anywhere in Sector)</h3>
+      <p>Like sector type <a href="#s80">80</a>, but you don't have to be touching the floor to
+      do the triggering. You could be flying high in the air. You should also use this one for
+      linedef executors triggered by FOFs.</p>
+      <h3><a name="s80"></a>80 - Trigger Linedef Executor (Floor Touch)</h3>
+      <p>Required for any of the <a href="#ltriggers">Linedef Executor Triggers</a> to work in
+      the sector.</p>
+      <h3><a name="s96"></a>96 - Trigger Linedef Executor (Emerald Check)</h3>
+      <p>Sector type <a href="#s64">64</a> which will only execute if you have all 7 chaos
+      emeralds.</p>
+      <h3><a name="s112"></a>112 - Trigger Linedef Executor (NiGHTS Mare)</h3>
+      <p>Like sector type <a href="#s64">64</a>, but this is only triggered if you are in a
+      NiGHTS map, and checks what mare you're on using the following format, depending on what
+      flags you have set for this line:</p>
+      <p>No flags -&gt; Runs if (current mare = line length)</p>
+      <p><a href="#NOCLIMB">NOCLIMB</a> -&gt; Runs if (current mare &lt;= line length)</p>
+      <p><a href="#BLOCKMONSTERS">BLOCKMONSTERS</a> -&gt; Runs if (current mare &gt;= line
+      length)</p>
+      <h3><a name="s128"></a>128 - Check for linedef executor on 3D Floors (ANY object)</h3>
+      <p>For any item to detect sector type <a href="#l16">16</a> on a 3D floor, the target
+      sector on the map must have this type. This allows you to have any kind of object trigger
+      a linedef executor.</p>
+      <h3><a name="s144"></a>144 - Egg Trap Capsule</h3>
+      <h3><a name="s160"></a>160 - Special Stage Time/Rings, Par</h3>
+      <p>For special stages, floor height is time limit in seconds, and ceiling height is rings
+      required in seconds. If the ceiling height is 0, there is no ring requirement, only a time
+      limit to find an exit.</p>
+      <h3><a name="s176"></a>176 - Custom Global Gravity</h3>
+      <p>Floor height sets global gravity. 500 is normal. 1000 is twice the normal gravity, 250
+      is half. You can also set per-sector gravity with linetype <a href="#l1">1</a>. This can
+      also be adjusted in realtime, for some really cool effects.</p>
+      <p>&nbsp;</p>
+    </ol>
+  </li>
+  <li><u><big><big>Section 3</big></big></u><ol>
+      <h3><a name="s256"></a>256 - Ice/Sludge</h3>
+      <p>See linedef type <a href="#l540">540</a>.</p>
+      <h3><a name="s512"></a>512 - Wind/Current</h3>
+      <p>See linedef types <a href="#l541">541</a> and <a href="#l544">544</a>.</p>
+      <h3><a name="s768"></a>768 - Ice/Sludge and Wind/Current</h3>
+      <p>Combination of sector specials 256 and 512.</p>
+      <h3><a name="s1024"></a>1024 - Conveyor Belt</h3>
+      <p>See linedef type <a href="#l520">520</a>.</p>
+      <h3><a name="s1280"></a>1280 - Speed Pad (No Spin)</h3>
+      <p>See linedef type <a href="#l4">4</a>.</p>
+      <h3><a name="s1536"></a>1536 - Speed Pad (Spin)</h3>
+      <p>See linedef type <a href="#l4">4</a>. This type of speed pad forces you into a spin.</p>
+      <h3><a name="s1792"></a>1792, 2048, 2304, 2560, 2816, 3072, 3328, 3584, 3840 - Bustable
+      Block Sprite Parameter</h3>
+      <p>Used in a control sector of a bustable block. Chooses which debris sprite to spawn.</p>
+      <p>1792 = ROIA</p>
+      <p>2048 = ROIB</p>
+      <p>2304 = ROIC</p>
+      <p>2560 = ROID</p>
+      <p>2816 = ROIE</p>
+      <p>3072 = ROIF</p>
+      <p>3328 = ROIG</p>
+      <p>3584 = ROIH</p>
+      <p>3840 = ROII</p>
+      <p>&nbsp;</p>
+    </ol>
+  </li>
+  <li><u><big><big>Section 4</big></big></u><ol>
+      <h3><a name="s4096"></a>4096 - Starpost Activator</h3>
+      <p>Whenever a player steps in the sector, a starpost in that sector will be searched for
+      and, if found, activated.</p>
+      <h3><a name="s8192"></a>8192 - Special Stage Goal</h3>
+      <p>This is like the &quot;GOAL&quot; buttons in Sonic 1's special stages. Ends the special
+      stage when stepped on.</p>
+      <h3><a name="s8192a"></a>8192 - Exit Sector</h3>
+      <p>In single-player, cooperative, or race mode, being in this sector ends the level. You
+      don't necessarily have to be touching the floor. (If you want the player to have to be
+      touching the floor, you can use linedef type <a href="#l223">223</a>, an invisible,
+      intangible FOF, to do the trick. Give the FOF control sector a type of <a href="#s8192">8192</a>.)</p>
+      <p>See linedef type <a href="#l2">2</a> for a way to exit to any map, not just the one
+      whose number is specified in the map header. Linedef 2 also allows you to skip the score
+      tally screen.</p>
+      <h3><a name="s8192b"></a>8192 - No Tag Zone</h3>
+      <p>In games of tag, this sector is a safe spot. You cannot be tagged while in it.</p>
+      <h3><a name="s8192c"></a>8192 - CTF: Flag Return</h3>
+      <p>In CTF, if the red or blue flag enters this sector, it will automatically return to
+      base, much like how it behaves when it falls in a pit. This can also be set as a special
+      on a 3D floor.</p>
+      <h3><a name="s12288"></a>12288 - CTF: Red Team Base</h3>
+      <p>The red team has to bring the <a href="#t307">blue flag</a> onto this sector to score.
+      It's generally a good idea to have the <a href="#t306">red flag</a> here and the <a
+      href="#t34">red team player starts</a> somewhere close by.</p>
+      <h3><a name="s16384"></a>16384 - CTF: Blue Team Base</h3>
+      <p>The blue team has to bring the <a href="#t306">red flag</a> onto this sector to score.
+      It's generally a good idea to have the <a href="#t307">blue flag</a> here and the <a
+      href="#t35">blue team player starts</a> somewhere close by.</p>
+      <h3><a name="s20480"></a>20480 - Fan Sector</h3>
+      <p>Acts like a fan, pushing the player up at constant speed and activating the proper
+      animation. Can be used on intangible FOFs.</p>
+      <h3><a name="s24576"></a>24576 - Super Sonic Transform</h3>
+      <p>Transforms you into Super Sonic and gives you 50 rings, providing you have all of the
+      chaos emeralds.</p>
+      <h3><a name="s28672"></a>28672 - Spinner</h3>
+      <p>Forces the player into a spin.</p>
+      <h3><a name="s32768"></a>32768 - Zoom Tube Start</h3>
+      <p>When the player touches this sector, a line type <a href="#l3">3</a> with the same tag
+      as the sector is searched for, and if found, the line's X length determines the speed at
+      which the tube operates, while its Y length determines which zoom tube sequence to use.
+      Then the player is immediately put into a spin, loses control, and gravitates toward the
+      first Zoom Tube Waypoint (thing type <a href="#t753">753</a>), which does not have to be
+      in the same sector. Once they reach the first waypoint, they begin traveling to the 2nd,
+      3rd, and so on, until the last waypoint is reached.</p>
+      <p>This can be used with Floor-Over-Floors, just use these specials in the control sector
+      instead. </p>
+      <h3><a name="s36864"></a>36864 - Zoom Tube End</h3>
+      <p>Just like sector type <a href="#s32768">32768</a>, but starts from the last waypoint
+      and goes to the first.</p>
+      <h3><a name="s40960"></a>40960 - Finish Line</h3>
+      <p>The finish line for a race circuit. This increments a lap when you pass it, after
+      hitting all the star posts in the stage in sequential order. Once the number of laps
+      specified by the server is reached, the level is completed.</p>
+    </ol>
+  </li>
+</ul>
+</body>
+</html>

@@ -1,0 +1,212 @@
+1-99 : Player Starts
+	1 - Player 1 Start		1
+	2 - Player 2 Start		2
+	3 - Player 3 Start		3
+	4 - Player 4 Start		4
+	5 - Player 5 Start 		4001
+	6 - Player 6 Start 		4002
+	7 - Player 7 Start 		4003
+	8 - Player 8 Start 		4004
+	9 - Player 9 Start 		4005
+	10 - Player 10 Start 		4006
+	11 - Player 11 Start 		4007
+	12 - Player 12 Start 		4008
+	13 - Player 13 Start 		4009
+	14 - Player 14 Start 		4010
+	15 - Player 15 Start 		4011
+	16 - Player 16 Start 		4012
+	17 - Player 17 Start 		4013
+	18 - Player 18 Start 		4014
+	19 - Player 19 Start 		4015
+	20 - Player 20 Start 		4016
+	21 - Player 21 Start 		4017
+	22 - Player 22 Start 		4018
+	23 - Player 23 Start 		4019
+	24 - Player 24 Start 		4020
+	25 - Player 25 Start 		4021
+	26 - Player 26 Start 		4022
+	27 - Player 27 Start 		4023
+	28 - Player 28 Start 		4024
+	29 - Player 29 Start 		4025
+	30 - Player 30 Start 		4026
+	31 - Player 31 Start 		4027
+	32 - Player 32 Start 		4028
+	33 - Player Match Start 	11
+	34 - Red Team Start 		87
+	35 - Blue Team Start 		89
+	36 - Tag start			New
+
+100 - 199 : Enemies
+	100 - Blue Crawla		3004
+	101 - Red Crawla		9
+	102 - GFZ Fish			58
+	103 - Gold Buzz			5005
+	104 - Red Buzz			5006
+	105 - Jetty-Syn Bomber		3005
+	106 - Jetty-Syn Gunner		22
+	107 - Crawla Commander		21
+	108 - Deton			71
+	109 - Skim			56
+	110 - THZ Turret		2004
+	111 - Pop-up Turret		42
+
+200 - 299 : Bosses and their associated items (if any)
+	200 - Boss 1			16
+	201 - Boss 2			2008
+	290 - Boss Fly Point		17
+	291 - EggTrap Center		2049
+
+300 - 399 : Collectibles
+	300 - Ring			2014
+	301 - Homing Ring		69
+	302 - Rail Ring			3003
+	303 - Infinity Ring		80
+	304 - Automatic Ring		26
+	305 - Explosion Ring		54
+	306 - Red CTF Flag		31
+	307 - Blue CTF Flag		34
+	308 - Special Stage Token	2013
+	309 - Emerald 1			420
+	310 - Emerald 2			421
+	311 - Emerald 3			422
+	312 - Emerald 4			423
+	313 - Emerald 5			424
+	314 - Emerald 6			425
+	315 - Emerald 7			426
+	316 - Hunting Emerald 1		64
+	317 - Hunting Emerald 2		3002
+	318 - Hunting Emerald 3		3001
+
+400 - 499 : Boxes
+	400 - Super Ring Box		2011
+	401 - Grey Ring Box		2012
+	402 - Ring Shield Box		48
+	403 - Fire Shield Box		2002
+	404 - Bomb Shield Box		2018
+	405 - Jump Shield Box		35
+	406 - Water Shield Box		2028
+	407 - Sneaker Box		25
+	408 - Invincibility Box		2022
+	409 - 1-Up Box			41
+	410 - Eggman Box		2005
+	411 - Mixup Box			78
+	412 - Question Box		3000
+
+500 - 599 : Interactive Objects (friendly or otherwise - includes springs)
+	500 - Bubble Patch		33
+	501 - Level End Sign		86
+	502 - Starpost			3006
+	520 - Spike Ball		-1
+	521 - Special Stage Spike Ball	23
+	522 - Ceiling Spike		67
+	523 - Floor Spike		68
+	540 - Fan			32
+	541 - Steam Riser		30
+	550 - Yellow Spring		28
+	551 - Red Spring		79
+	552 - Blue Spring		5004
+	553 - Yellow Spring Down	65
+	554 - Red Spring Down		66
+	555 - Yellow Diagonal Spring	2015
+	556 - Red Diagonal Spring	38
+	557 - Yellow Diag Spring Down	20
+	558 - Red Diag Spring Down	39
+
+600 - 699 : Special placement patterns
+	600 - Vertical Rigns - Stack of 5 (suitable for Yellow Spring)	84
+	601 - Vertical Rings - Stack of 5 (suitable for Red Spring)	44
+	602 - Diagonal rings (5)					76
+	603 - Diagonal rings (10)					77
+	604 - A ring of rings						47
+	605 - A BIGGER ring of rings					2007
+	606 - A ring of wing items					2048
+	607 - A BIGGER ring of wing items				2010
+	608 - A ring of rings and wings (alternating)			2046
+	609 - A BIGGER ring of rings and wings (alternating)		2047
+
+700 - 799 : Powerup indicators/environmental effects/miscellany
+	700 - Ambient Water 1a (S)	2026
+	701 - Ambient Water 1b (S)	2024
+	702 - Ambient Water 2a (M)	2023
+	703 - Ambient Water 2b (M)	2045
+	704 - Ambient Water 3a (L)	83
+	705 - Ambient Water 3b (L)	2019
+	706 - Ambient Water 4a (XL)	2025
+	707 - Ambient Water 4b (XL)	27
+	708 - Random Ambient 1		14
+	709 - Random Ambient 2		43
+	750 - Chaos Spawner		8
+	751 - Teleport Point		5003
+	752 - Alternate View Point	5007
+	753 - Zoom Tube Waypoint	18
+	754 - Pusher			5001
+	755 - Puller			5002
+	756 - Street Light		2003
+	
+800 - 899 : Greenflower Scenery
+	800 - Flower 1			36
+	801 - Flower 2			70
+	802 - Flower 3			73
+	804 - Berry Bush		74
+	805 - Bush			75
+
+900 - 999 : Techno Hill Scenery
+	900 - THZ Plant			2035
+	901 - Alarm			2006
+
+1000 - 1099 : Deep Sea Scenery
+	1000 - Gargoyle			81
+
+1100 - 1199 : Castle Eggman Scenery
+	1100 - Ceiling Chain		49
+	1101 - Torch Flame		24
+	1102 - Eggman Statue		52
+	1103 - CEZ Flower		2001
+
+1200 - 1299 : Arid Canyon Scenery
+1300 - 1399 : Red Volcano Scenery
+1400 - 1499 : Dark City Scenery
+1500 - 1599 : Doom Ship Scenery
+1600 - 1699 : Egg Rock/Final Fight Scenery
+1700 - 1799 : NiGHTS Items
+	1700 - Axis			72
+	1701 - Axis Transfer (Normal)	61
+	1702 - Axis Transfer (Line)	46
+	1703 - Nights Drone		60
+	1704 - Nights Bumper		82
+	1705 - Hoop			57
+	1706 - Nights Wing		37
+	1707 - Super Loop Powerup	3007
+	1708 - Drill Refill Powerup	3008
+	1709 - Helper Powerup		3009
+	1710 - Egg Capsule		40
+
+1800 - 1849 : Mario Items
+	1800 - Coin			10005
+	1801 - Goomba			10000
+	1802 - Blue Goomba		10001
+	1803 - FireFlower		50
+	1804 - Shell			10
+	1805 - Puma			29
+	1806 - Koopa			19
+	1807 - Axe			12
+	1808 - Mario Bush 1		10002
+	1809 - Mario Bush 2		10003
+	1810 - Toad			10004
+
+1850 - 1899 : Christmas Items
+	1850 - Xmas Pole		5
+	1851 - Candy Cane		13
+	1852 - Snowman			6
+
+1900 - 1999 : Misc Scenery
+	1900 - Stalagmite 0
+	1901 - Stalagmite 1
+	1902 - Stalagmite 2
+	1903 - Stalagmite 3
+	1904 - Stalagmite 4
+	1905 - Stalagmite 5
+	1906 - Stalagmite 6
+	1907 - Stalagmite 7
+	1908 - Stalagmite 8
+	1909 - Stalagmite 9

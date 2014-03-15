@@ -1,0 +1,576 @@
+
+; Defines general parameters of the game for which wadfiles are intended.
+;
+;	Name		textual name for internal use
+;	IWAD		standard 8.3 base name and extension of main wadfile
+;	NewMap		default name for new map -- dictates format for all maps
+;	Directory	directory in which main wadfile (and game files) reside
+;	Run			command to execute (from the directory) for running a map
+
+[WadGame]
+Name=Sonic Robo Blast 2
+IWAD=srb2.srb
+NewMap=MAP01
+Directory=C:\Documents and Settings\Ben\My Documents\srb2
+Run=fd\srb2win.exe -file $_Wadfile -warp $_Wadmap
+
+; Defines parameters of the default sector motif created when no motif
+; file can be located at startup.
+
+[Default.Sector]
+Above=GFZROCK
+Main=GFZROCK
+Below=GFZROCK
+Ceiling=F_SKY1
+Floor=FLOOR0_6
+CeilingHeight=4096
+FloorHeight=0
+Lighting=255
+
+; Defines parameters of the default door motif created when no motif
+; file can be located at startup.
+
+[Default.Door]
+Base=FLAT1
+Door=BIGDOOR2
+Track=DOORTRAK
+Type=1
+
+; Defines parameters of the default stair motif created when no motif
+; file can be located at startup.
+
+[Default.Stair]
+FloorRunner=GFZROCK
+CeilingRunner=GFZROCK
+Stairwell=GFZROCK
+FloorInc=8
+CeilingInc=0
+LightingInc=0
+
+;	ID				used to classify things
+;	Flags			supplies some additional information:
+;						0x0001 - indicate thing facing angle
+;	Red				red value for drawing things of said class
+;	Green			green value for drawing things of said class
+;	Blue			blue value for drawing things of said class
+;	Name			textual description of class
+
+[Things.Classes]
+0x001   0x0001  255 255 255 Starts
+0x002   0x0000  192 0   224 Emeralds
+0x003   0x0001  255 0   0   Enemies
+0x004   0x0000  255 192 0   Nights Things
+0x005   0x0000  0   192 192 Power-Up Monitors
+0x006   0x0000  192 0   224 Misc.
+0x007   0x0000  192 192 192 Scenery
+0x008   0x0000  255 255 0   Mario
+0x009   0x0000  255 192 224 Christmas
+0x00b   0x0000  0   0   255 Rings
+0x00c   0x0000  0   224 0   Springs and Such
+
+;	ID				used to uniquely identify things in a map
+;	Class			classification (defined above section)
+;	Size			approximate thing size (in map units)
+;	Sprite			name of the sprite to use for display purposes
+;	Name			textual description of thing
+
+[Things.Types]
+0x001   1   32  suptd0      Player 01 Start
+0x002   1   32  suptd0      Player 02 Start
+0x003   1   32  suptd0      Player 03 Start
+0x004   1   32  suptd0      Player 04 Start
+0xfa1   1   32  suptd0      Player 05 Start
+0xfa2   1   32  suptd0      Player 06 Start
+0xfa3   1   32  suptd0      Player 07 Start
+0xfa4   1   32  suptd0      Player 08 Start
+0xfa5   1   32  suptd0      Player 09 Start
+0xfa6   1   32  suptd0      Player 10 Start
+0xfa7   1   32  suptd0      Player 11 Start
+0xfa8   1   32  suptd0      Player 12 Start
+0xfa9   1   32  suptd0      Player 13 Start
+0xfaa   1   32  suptd0      Player 14 Start
+0xfab   1   32  suptd0      Player 15 Start
+0xfac   1   32  suptd0      Player 16 Start
+0xfad   1   32  suptd0      Player 17 Start
+0xfae   1   32  suptd0      Player 18 Start
+0xfaf   1   32  suptd0      Player 19 Start
+0xfb0   1   32  suptd0      Player 20 Start
+0xfb1   1   32  suptd0      Player 21 Start
+0xfb2   1   32  suptd0      Player 22 Start
+0xfb3   1   32  suptd0      Player 23 Start
+0xfb4   1   32  suptd0      Player 24 Start
+0xfb5   1   32  suptd0      Player 25 Start
+0xfb6   1   32  suptd0      Player 26 Start
+0xfb7   1   32  suptd0      Player 27 Start
+0xfb8   1   32  suptd0      Player 28 Start
+0xfb9   1   32  suptd0      Player 29 Start
+0xfba   1   32  suptd0      Player 30 Start
+0xfbb   1   32  suptd0      Player 31 Start
+0xfbc   1   32  suptd0      Player 32 Start
+0x057   1   32  suptd0      CTF Team Start (Red)
+0x059   1   32  suptd0      CTF Team Start (Blue)
+0x00b   1   32  suptd0      Deathmatch Start
+0x1a4   2   20  cemga0      Emerald 1 (Green)
+0x1a5   2   20  cemoa0      Emerald 2 (Orange)
+0x1a6   2   20  cempa0      Emerald 3 (Pink)
+0x1a7   2   20  cemba0      Emerald 4 (Blue)
+0x1a8   2   20  cemra0      Emerald 5 (Red)
+0x1a9   2   20  cemla0      Emerald 6 (Light Blue)
+0x1aa   2   20  cemga0      Emerald 7 (Grey)
+0x1ab   2   20  cemka0      Emerald 8 (Master)
+0x009   3   40  sposa1      Crawla (Red)
+0xbbc   3   40  possa1      Crawla (Blue)
+0x02a   3   40  tfogi0      Pop-up Turret
+0xbbd   3   40  jetba1      Jetty-Syn Bomber
+0x016   3   40  jetga1      Jetty-Syn Gunner
+0x03a   3   40  fisha0      Stupid Dumb Unnamed Robofish (tm)
+0x047   3   40  detna1      Deton
+0x038   3   40  skima0      Skim
+0x7d4   3   40  treta1      THZ Turret
+0x010   3   80  eggma1      Egg Mobile (Boss 1)
+0x7d8   3   80  eggna1      Egg Slimer (Boss 2)
+0x015   3   40  ccoma1      Crawla Commander
+0x008   3   40  tfogi0      Chaos Mode Enemy Spawn
+0x138d  3   40  buzza0      Gold Buzz
+0x138e  3   40  rbuza0      Red Buzz
+0x034   4   20  dissa0      1024 Axis
+0x035   4   20  dissa0      512 Axis
+0x03b   4   20  dissa0      2048 Axis
+0x03e   4   20  dissa0      1024 Axis (Inverted)
+0x00f   4   20  dissa0      512 Axis (Inverted)
+0x02d   4   20  dissa0      2048 Axis (Inverted)
+0x03d   4   20  dissa0      Axis Transfer
+0x02e   4   20  dissa0      Axis Transfer Closest
+0x037   4   20  dissa0      Axis Transfer LastToFirst
+0x03c   4   20  ndrna1      Ideya Drone
+0x039   4   20  hoopa0      Hoop
+0x02f   4   20  bon1a0      Circle of Rings
+0x7d7   4   20  bon1a0      Circle of Rings (Big)
+0x800   4   20  nwnga0      Circle of Wing Logos
+0x7da   4   20  nwnga0      Circle of Wing Logos (Big)
+0x7fe   4   20  nwnga0      Circle of Rings and Wings
+0x7ff   4   20  nwnga0      Circle of Rings and Wings (Big)
+0x025   4   20  nwnga0      Wing Logo
+0x052   4   20  dissa0      Axis Transfer Condition
+0x055   4   20  dissa0      Axis Transfer Condition 2
+0xbbf   4   20  npraa0      Super Loop
+0xbc0   4   20  nprba0      Drill Refill
+0xbc1   4   20  nprca0      Helper
+0x019   5   20  shtva0      Super Sneakers
+0x023   5   20  whtva0      Whirlwind Shield
+0x029   5   20  prupa0      Extra Life
+0x030   5   20  yltva0      Attraction Shield
+0x7d2   5   20  rdtva0      Inferno Shield
+0x7e2   5   20  bktva0      Armageddon Shield
+0x7e6   5   20  pinva0      Invincibility
+0x7ec   5   20  bltva0      Liquid Shield
+0x7db   5   20  srbxa0      Super Ring (10 Rings)
+0x7dc   5   20  grbxa0      Silver Ring (25 Rings)
+0x04e   5   20  mixua0      Teleporter
+0x7d5   5   20  eggba0      Eggman
+0xbb8   5   20  quesa0      Random
+0x01f   6   20  rflga0      CTF Flag (Red)
+0x022   6   20  bflga0      CTF Flag (Blue)
+0x7dd   6   20  tokea0      Special Stage Token
+0x056   6   20  signd0      End Level Sign
+0x021   6   20  bubla0      Air Bubble Patch
+0x040   6   20  emera0      Emerald Hunt Location 1
+0xbba   6   20  emera0      Emerald Hunt Location 2
+0xbb9   6   20  emera0      Emerald Hunt Location 3
+0xbbe   6   20  stpta0      Star Post
+0x1389  6   20  ppsha0      Push
+0x138a  6   20  pplla0      Pull
+0x138b  6   20  dissa0      Teleport Destination
+0x138f  6   20  dissa0      Cut-Away View
+0x043   6   20  dspka0      Ceiling Spike
+0x044   6   20  uspka0      Floor Spike
+0x017   6   20  spika0      Spikeball (Special Stage)
+0x011   6   20  dissa0      Boss Flypoint
+0x012   6   20  dissa0      Zoom Tube Waypoint
+0x801   6   20  dissa0      Egg Capsule Center
+0x033   6   20  lasra0      Laser
+0x024   7   20  fwr1b0      GFZ Flower (Normal)
+0x046   7   20  fwr2a0      GFZ Sunflower
+0x049   7   20  fwr3a0      GFZ Budding Flower
+0x04a   7   20  bus1a0      Berry Bush
+0x04b   7   20  bus2a0      Bush
+0x7f3   7   20  thzpa0      THZ Flower
+0x00d   7   20  xms2a0      Palm Tree
+0x051   7   20  garga1      Gargoyle
+;wtraa0 through wtrha0 are empty sprites, formerly used for the below
+0x7ea   7   20  dumba0      Ambient Water SFX 1A (Large)
+0x7e8   7   20  dumba0      Ambient Water SFX 1B (Large)
+0x7e7   7   20  dumba0      Ambient Water SFX 2A (Medium)
+0x7fd   7   20  dumba0      Ambient Water SFX 2B (Medium)
+0x053   7   20  dumba0      Ambient Water SFX 3A (Small)
+0x7e3   7   20  dumba0      Ambient Water SFX 3B (Small)
+0x7e9   7   20  dumba0      Ambient Water SFX 4A (Extra Large)
+0x01b   7   20  dumba0      Ambient Water SFX 4B (Extra Large)
+0x00e   7   20  dumba0      Random Ambience 1
+0x02b   7   20  dumba0      Random Ambience 2
+0x031   7   20  chana0      Hanging Chain
+0x7d6   7   20  alrma0      THZ Alarm
+0x7d1   7   20  fwr4a0      CEZ Flower
+0x018   7   20  flama0      CEZ Torch
+0x7d3   7   20  dissa0      Light Source (MAP92)
+0x2710  8   20  gooma0      Overworld Goomba
+0x2711  8   20  bgoma0      Underworld Goomba
+0x2712  8   20  mus1a0      Bush (Short)
+0x2713  8   20  mus2a0      Bush (Tall)
+0x2714  8   20  toada0      Toad
+0x2715  8   20  coina0      Coin
+0x013   8   20  koopa0      King Bowser
+0x00a   8   20  shlla0      Koopa Shell
+0x00c   8   20  maxea0      Axe
+0x032   8   20  ffwra0      Fire Flower
+0x01d   8   20  pumaa0      Puma (Mario Fireball)
+0x005   9   20  xms1a0      Pole
+0x006   9   20  xms3a0      Snowman
+0x00d   9   20  xms2a0      Candy Cane
+0x054   11  20  bon1a0      5 Vertical Rings (Yellow Spring)
+0x02c   11  20  bon1a0      5 Vertical Rings (Red Spring)
+0x04c   11  20  bon1a0      5 Diagonal Rings (Yellow Spring)
+0x04d   11  20  bon1a0      10 Diagonal Rings (Red Spring)
+0x7de   11  20  bon1a0      Ring
+0x045   11  20  homra0      Homing Ring
+0xbbb   11  20  raila0      Rail Ring
+0x01a   11  20  autra0      Automatic Ring
+0x036   11  20  bomra0      Explosion Ring
+0x050   11  20  infra0      Infinity Ring
+0x138c  12  20  sprba0      Blue Spring
+0x01c   12  20  sprya0      Yellow Spring (Up)
+0x04f   12  20  sprra0      Red Spring (Up)
+0x7df   12  20  yspra1      Yellow Spring (Diagonal Up)
+0x026   12  20  rspra1      Red Spring (Diagonal Up)
+0x014   12  20  ysuda1      Yellow Spring (Diagonal Down)
+0x027   12  20  rsuda1      Red Spring (Diagonal Down)
+0x041   12  20  sudya0      Yellow Spring (Down)
+0x042   12  20  sudra0      Red Spring (Down)
+0x01e   12  20  stemd0      THZ Gas Jet
+0x020   12  20  fansa0      THZ Fan
+
+;	ID				used to classify linedefs
+;	Name			textual description of class
+;
+;	Note:	When converting a sector to a door, the linedef types
+;			available are those in class number two.
+
+[LineDefs.Classes]
+0x001   *Important
+0x002   Floor Over Floor
+0x003   Linedef Executor
+0x004   Plane Movement
+0x005   Lighting
+0x006	Scroll Effects
+0x007   Pushers
+0x008   Miscellaneous
+
+;	ID
+;	class
+;	codes
+;		n       does NOT require a tag number
+;		W       walk-over activation
+;		S       switch (triggered by player use)
+;		G       gunfire (pistol, shotgun, chaingun) cross or hit line
+;		1       the line may be activated once only
+;		R       potentially repeatable activation
+;		&       affected sectors locked out from further changes
+;		m       monster actions can activate the line's effect
+;	speed
+;		(slow=1, medium = 2, fast = 3, turbo = 4)
+;	time
+;	texture changes
+;	description
+
+[LineDefs.Types]
+; Commonly used types
+0x019 1 - - - - Floor Over Floor: Solid, Opaque, Shadowcasting
+0x02d 1 - - - - Floor Over Floor: Water, Translucent
+0x010 1 - - - - Colormap
+
+0x001 2 - - - - Crumbling (No Respawn), Floating, Bobbing
+0x002 4 - - - - Continuous Floor/Ceiling Mover
+0x003 4 - - - - Continuous Floor Mover
+0x004 4 - - - - Continuous Ceiling Mover
+0x005 5 - - - - Ceiling Lighting
+0x006 4 - - - - Continuous Two-Speed Floor/Ceiling Mover
+0x007 4 - - - - Continuous Two-Speed Floor Mover
+0x008 4 - - - - Continuous Two-Speed Ceiling Mover
+0x009 3 - - - - Trigger Linedef Executor (Race Only, Once)
+0x00a 3 - - - - Trigger Linedef Executor (CTF Red Team, Continuous)
+0x00b 3 - - - - Trigger Linedef Executor (CTF Red Team, Each Time)
+0x00c 3 - - - - Trigger Linedef Executor (CTF Blue Team, Continuous)
+0x00d 3 - - - - Trigger Linedef Executor (CTF Blue Team, Each Time)
+
+0x00f 3 - - - - Trigger Linedef Executor (No More Enemies, Once)
+0x010 5 - - - - Colormap
+
+0x012 8 - - - - Zoom Tube Parameters
+0x013 3 - - - - Trigger Linedef Executor (Character Ability, Continuous)
+0x014 3 - - - - Trigger Linedef Executor (Character Ability, Each Time)
+0x015 3 - - - - Trigger Linedef Executor (Character Ability, Once)
+
+0x018 4 - - - - Instant Ceiling Raise
+0x019 2 - - - - Solid, Opaque, Shadowcasting
+0x01a 4 - - - - Instant Floor Lower
+
+0x021 2 - - - - Solid, Opaque, Non-Shadowcasting
+0x022 2 - - - - Floating, Bobbing
+0x023 2 - - - - Crumbling (No Respawn)
+0x024 2 - - - - Crumbling (Respawn)
+0x025 2 - - - - Crumbling (Respawn), Floating
+0x026 2 - - - - Bobbing (Air)
+0x027 2 - - - - Crumbling (Respawn), Floating, Bobbing
+0x028 2 - - - - Crumbling (Respawn), Bobbing (Air)
+0x029 2 - - - - Mario Block
+0x02a 2 - - - - Crumbling (No Respawn), Floating
+0x02b 4 - - - - Crusher 1 (Ceiling to Floor)
+0x02c 2 - - - - Solid, Translucent
+0x02d 2 - - - - Water, Translucent
+0x02e 2 - - - - Fog Block
+0x02f 2 - - - - Half Light Block
+0x030 2 - - - - Water, Opaque
+0x031 2 - - - - Light Block
+0x032 4 - - - - Crusher 2 (Floor to Ceiling)
+0x033 2 - - - - Solid, No Sides
+0x034 2 - - - - Intangible, Translucent
+0x035 2 - - - - Laser Block
+0x036 2 - - - - Thwomp Block
+0x037 2 - - - - Bustable Block
+0x038 2 - - - - Quicksand Block
+0x039 2 - - - - Solid, Invisible
+0x03a 2 - - - - Intangible, Invisible
+0x03b 2 - - - - Intangible from Bottom, Opaque
+0x03c 5 - - - - Adjustable Pulsating Light
+0x03d 5 - - - - Adjustable Flickering Light
+0x03e 2 - - - - Intangible, Opaque
+0x03f 8 - - - - Camera Scanner
+0x040 8 - - - - Per-Sector Gravity
+0x041 8 - - - - Speed Pad
+0x042 8 - - - - Flat Alignment
+0x043 2 - - - - Intangible, Sides Only
+0x044 2 - - - - Adjustable Bobbing (Air)
+0x045 2 - - - - Solid, Sides Only
+0x046 8 - - - - Ideya Time Modifier
+0x047 8 - - - - Custom Exit
+0x048 2 - - - - Reverse Adjustable Bobbing (Air)
+0x049 8 - - - - Disable Linedef
+0x04a 2 - - - - Water, Translucent, No Sides
+0x04b 2 - - - - Water, Opaque, No Sides
+0x04c 2 - - - - Shatter Block
+0x04d 2 - - - - Intangible from Bottom, Translucent, No Sides
+0x04e 2 - - - - Spin Bust Block
+0x04f 2 - - - - Crumbling (Respawn)
+0x050 2 - - - - Crumbling (No Respawn)
+0x051 2 - - - - Intangible from Bottom, Translucent
+0x052 2 - - - - Intangible from Bottom, Crumbling (Respawn), Translucent
+0x053 2 - - - - Intangible from Bottom, Crumbling (No Respawn), Translucent
+0x054 2 - - - - Spin Bust Block, Translucent
+0x055 6 - - - - Scroll Wall First Side Opposite Direction
+0x056 2 - - - - Shatter Block, Translucent
+0x057 2 - - - - Custom
+0x058 4 - - - - Continuously Falling Sector
+0x059 2 - - - - Rising, Solid, Opaque, Shadowcasting
+0x05a 2 - - - - Rising, Solid, Opaque, Non-shadowcasting
+0x05b 2 - - - - Rising, Solid, Translucent
+0x05c 2 - - - - Rising, Intangible from Bottom, Opaque
+0x05d 2 - - - - Rising, Intangible from Bottom, Translucent
+0x05e 2 - - - - Rising, Solid, Invisible
+0x05f 3 - - - - Trigger Linedef Executor (Ring Count, Continuous)
+0x060 3 - - - - Trigger Linedef Executor (Continuous)
+0x061 3 - - - - Trigger Linedef Executor (Each Time)
+0x062 3 - - - - Trigger Linedef Executor (Once)
+0x063 3 - - - - Trigger Linedef Executor (Ring Count, Once)
+0x064 6 - - - - Scroll Wall First Side Left
+0x065 3 - - - - Set Tagged Sector's Floor Height/Pic
+0x066 3 - - - - Set Tagged Sector's Ceiling Height/Pic
+0x067 3 - - - - Set Tagged Sector's Light Level
+0x068 3 - - - - Teleport Player to Tagged Sector
+0x069 3 - - - - Change Music
+0x06a 3 - - - - Move Tagged Sector's Floor
+0x06b 3 - - - - Move Tagged Sector's Ceiling
+0x06c 3 - - - - Lower Floor by Line
+0x06d 3 - - - - Raise Floor by Line
+0x06e 3 - - - - Lower Ceiling by Line
+0x06f 3 - - - - Raise Ceiling by Line
+0x070 3 - - - - Change Tagged Sector's Tag
+0x071 3 - - - - Run Script
+0x072 3 - - - - Change Front Sector's Tag
+0x073 3 - - - - Play SFX
+0x074 3 - - - - Stop Plane Movement
+0x075 3 - - - - Fade Light Level
+0x076 3 - - - - Stop Lighting Effect
+0x077 3 - - - - Start Adjustable Fire Flicker
+0x078 3 - - - - Start Adjustable Glowing Light
+0x079 3 - - - - Cut-Away View
+0x07a 3 - - - - Stop Object
+0x07b 3 - - - - Change Sky
+0x07c 3 - - - - Change Weather
+0x07d 3 - - - - Change Object State
+0x07e 3 - - - - Stop Object
+0x07f 3 - - - - Award Score
+0x080 3 - - - - Start Platform Movement
+0x081 3 - - - - Crush Ceiling Once
+0x082 3 - - - - Crush Floor Once
+0x083 3 - - - - Crush Floor And Ceiling Once
+0x084 3 - - - - Enable/Disable 2D Mode
+0x085 3 - - - - Enable/Disable Gravity Flip
+0x086 3 - - - - Award Power-Up
+0x087 3 - - - - Change Plane Scroller Direction
+0x088 3 - - - - Shatter FOF
+0x089 3 - - - - Disable Player Control
+0x08a 3 - - - - Change Object Size
+0x08b 3 - - - - Change Tagged Linedef Textures
+0x08c 3 - - - - Start Metal Sonic Race
+0x08d 3 - - - - Unlockable Trigger
+0x08e 3 - - - - Change Object Type State
+0x08f 3 - - - - Call Lua Function
+0x090 3 - - - - Earthquake
+0x096 3 - - - - Execute Linedef Executor (from tag)
+0x097 3 - - - - Execute Linedef Executor (random range)
+
+0x0c8 6 - - - - Disp Scroll Ceiling Texture and Carry Objects
+0x0c9 6 - - - - Disp Carry Objects on Ceiling
+0x0ca 6 - - - - Scroll Ceiling Texture and Carry Objects
+0x0cb 6 - - - - Carry Objects on Ceiling
+0x0cc 6 - - - - Acc Scroll Ceiling Texture and Carry Objects
+0x0cd 6 - - - - Acc Carry Objects on Ceiling
+
+0x0d5 5 - - - - Floor Lighting
+0x0d6 6 - - - - Acc Scroll Ceiling Texture
+0x0d7 6 - - - - Acc Scroll Floor Texture
+0x0d8 6 - - - - Acc Carry Objects on Floor
+0x0d9 6 - - - - Acc Scroll Floor Texture and Carry Objects
+0x0da 6 - - - - Acc Scroll Wall According to Linedef
+
+0x0df 8 - - - - Friction
+0x0e0 7 - - - - Wind
+0x0e1 7 - - - - Current
+0x0e2 7 - - - - Boom Push/Pull Thing
+0x0e3 7 - - - - Upwards Current
+0x0e4 7 - - - - Downwards Current
+0x0e5 7 - - - - Upwards Wind
+0x0e6 7 - - - - Downwards Wind
+
+0x0e8 4 - - - - Activate Floating Platform
+0x0e9 4 - - - - Activate Floating Platform (Adjustable Speed)
+
+0x0f2 8 - - - - Fake Floor
+
+0x0f5 6 - - - - Disp Scroll Ceiling Texture
+0x0f6 6 - - - - Disp Scroll Floor Texture
+0x0f7 6 - - - - Disp Carry Objects on Floor
+0x0f8 6 - - - - Disp Scroll Floor Texture and Carry Objects
+0x0f9 6 - - - - Disp Scroll Wall According to Linedef
+0x0fa 6 - - - - Scroll Ceiling Texture
+0x0fb 6 - - - - Scroll Floor Texture
+0x0fc 6 - - - - Carry Objects on Floor
+0x0fd 6 - - - - Scroll Floor Texture and Carry Objects
+0x0fe 6 - - - - Scroll Wall According to Linedef
+0x0ff 6 - - - - Scroll Texture by Offsets
+
+[Sectors.Types]
+0x001 Blink (random)
+0x002 Blink (1/2 second)
+0x003 Blink (1 second)
+0x004 Spikes
+0x005 Death Pit (no camera modifications)
+0x006 Space Countdown
+0x007 Damage (Fire)
+0x008 Light oscillates
+0x009 Damage (Special Stage)
+0x00a Instant Kill
+0x00b Damage (Non-Elemental)
+0x00c Blink (1 second synch)
+0x00d Blink (1/2 second synch)
+0x00e Bouncy Sector (FOF Control Only)
+
+0x010 Death Pit (camera modifications)
+0x011 Light flickers like fire
+0x012 Damage (Electrical)
+
+0x021 Special Stage Goal
+
+0x100 Ice/Sludge
+
+0x200 Wind/Current
+
+0x207 Damage (Fire) and Current
+
+0x29a Egg Trap Capsule
+
+0x2b2 Button 1 (Open Door A/700 B/701)
+0x2b3 Button 2 (Open Door A/702 B/703)
+0x2b4 Button 3 (Open Door A/704 B/705)
+0x2b5 Button 4 (Open Door A/706 B/707)
+0x2b6 Button 5 (Open Door A/708 B/709)
+0x2b7 Button 6 (Open Door A/710 B/711)
+0x2b8 Button 7 (Open Door A/712 B/713)
+0x2b9 Button 8 (Open Door A/714 B/715)
+0x2ba Button 9 (Open Door A/716 B/717)
+0x2bb Button 10 (Open Door A/718 B/719)
+0x2bc Button 11 (Open Door A/720 B/721)
+0x2bd Button 12 (Open Door A/722 B/723)
+0x2be Button 13 (Open Door A/724 B/725)
+0x2bf Button 14 (Open Door A/726 B/727)
+0x2c0 Button 15 (Open Door A/728 B/729)
+0x2c1 Button 16 (Open Door A/730 B/731)
+0x2c2 Button 17 (Open Door A/732 B/733)
+0x2c3 Button 18 (Open Door A/734 B/735)
+0x2c4 Button 19 (Open Door A/736 B/737)
+0x2c5 Button 20 (Open Door A/738 B/739)
+0x2c6 Button 21 (THZ2 A/740 B/741 D/742)
+0x2c7 Close Door Blazing (Tag 743)
+
+0x300 Ice/Sludge and Wind/Current
+
+0x3c7 Linedef Executor (Emerald Check)
+0x3c8 Linedef Executor (NiGHTS Mare)
+0x3c9 Super Sonic Transform
+0x3ca Check 3DFloors for Linedef Executor
+0x3cb Linedef Executor (Pushable Objects)
+0x3cc Linedef Executor (No Floor Touch, All Players)
+0x3cd Linedef Executor (Floor Touch, All Players)
+0x3ce Linedef Executor (No Floor Touch)
+0x3cf Linedef Executor (Floor Touch)
+0x3d0 Speed Pad (No Spin)
+0x3d1 Speed Pad (Spin)
+0x3d2 Ring Drainer (Floor Touch)
+0x3d3 Spinner
+0x3d4 Ring Drainer (No Floor Touch)
+0x3d5 Raise Ceiling to Highest (Tag 744)
+0x3d6 Exit Sector
+0x3d7 Damage (Water)
+0x3d8 Damage (Water) and Current
+0x3d9 Conveyor Belt
+0x3da THZ2 Slime Raise (B/712 S/713 P/714 D/715 S/716)
+0x3db No Tag Zone
+0x3dc CTF - Red Team Base
+0x3dd CTF - Blue Team Base
+0x3de Special Stage (Floor=Time) (Ceiling=Rings)
+0x3df Custom Gravity
+0x3e0 Ramp Sector
+0x3e1 Starpost Activator
+0x3e2 Finish Line
+
+0x3e4 Non-Ramp Sector
+0x3e5 Fan Sector
+0x3e6 Zoom Tube Start
+0x3e7 Zoom Tube End
+
+0x5dc Bustable Block Sprite ROIA
+0x5dd Bustable Block Sprite ROIB
+0x5de Bustable Block Sprite ROIC
+0x5df Bustable Block Sprite ROID
+0x5e0 Bustable Block Sprite ROIE
+0x5e1 Bustable Block Sprite ROIF
+0x5e2 Bustable Block Sprite ROIG
+0x5e3 Bustable Block Sprite ROIH
+0x5e4 Bustable Block Sprite ROII
+0x5e5 Bustable Block Sprite ROIJ
+0x5e6 Bustable Block Sprite ROIK
+0x5e7 Bustable Block Sprite ROIL
+0x5e8 Bustable Block Sprite ROIM
+0x5e9 Bustable Block Sprite ROIN
+0x5ea Bustable Block Sprite ROIO
+0x5eb Bustable Block Sprite ROIP

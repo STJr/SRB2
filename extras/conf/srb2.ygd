@@ -1,0 +1,539 @@
+# Yadex game definition file version 4
+#
+#	srb2.ygd
+#	Yadex Game Definitions for Sonic Robo Blast 2
+#	See Yadex's doc/ygd.html for the specs.
+#
+
+# File made by Alam_GBC.
+# Updated by Graue, 2006-06-19
+
+# Yadex has only a few games like "doom2", etc. hardcoded into it.
+# Rather than hack the code, since I don't expect to ever edit Doom 2,
+# I went into /usr/local/share/games/yadex/1.7.0/ and renamed
+# doom2.ygd to doom2_real.ygd, then installed this file as srb2.ygd,
+# then made a hard link from doom2.ygd to srb2.ygd; that is:
+#   ln srb2.ygd /usr/local/share/games/yadex/1.7.0/doom2.ygd
+
+# If you do that, change "iwad2" in yadex.cfg to point to your copy of
+# srb2.srb.
+
+# It's not the most beautiful thing to do, but it works. Also, Doom 2
+# is the default game, so this way you don't have to do anything
+# special when starting Yadex.
+
+# I claim no copyright on this file. -- Graue <graue@oceanbase.org>
+
+level_format    doom
+level_name      map01
+picture_format  normal
+sky_flat        sky1
+texture_format  normal
+texture_lumps   normal
+
+#
+#	Definition of linedef type groups
+#	Format is : ldtgroup <ldtgroup> <description>
+#
+
+ldtgroup e "Linedef Executor"
+ldtgroup E "3D Floors"
+ldtgroup A "Water"
+ldtgroup t "Scroll Effects"
+ldtgroup x "Misc."
+ldtgroup L "Lighting"
+ldtgroup l "Pushers"
+ldtgroup P "Plane Movement"
+
+#
+#	Definition of linedef types
+#	Format is : ldt <number> <ldtgroup> <shortdesc> <longdesc>
+#	<shortdesc> must not exceed 16 characters.
+#
+
+# Linedef Executor
+ldt 00009   e "Trigger(Race1)"   "Trigger (Race, Once) (1.09)"
+ldt 00010   e "Trigger(RedCont)" "Trigger (CTF Red Team, Continuous) (1.09)"
+ldt 00011   e "Trigger(RedEach)" "Trigger (CTF Red Team, Once per Floor Touch) (1.09)"
+ldt 00012   e "Trigger(BluCont)" "Trigger (CTF Blue Team, Continuous) (1.09)"
+ldt 00013   e "Trigger(BluEach)" "Trigger (CTF Blue Team, Once per Floor Touch) (1.09)"
+ldt 00015   e "Trigger(NoEnemy)" "Trigger (Once when no more enemies) (1.09)"
+ldt 00019   e "Trigger(ChrCont)" "Trigger (Character Ability, Continuous) (1.09)"
+ldt 00020   e "Trigger(ChrEach)" "Trigger (Character Ability, Once per Floor Touch) (1.09)"
+ldt 00021   e "Trigger(Chr1)"    "Trigger (Character Ability, Once) (1.09)"
+ldt 00095   e "Trigger(RngCont)" "Trigger (Ring Count, Continuous) (1.09)"
+ldt 00096   e "Trigger (Cont)"   "Trigger (Continuous)"
+ldt 00097   e "Trigger (Each)"   "Trigger (Once per Floor Touch)"
+ldt 00098   e "Trigger (1)"      "Trigger (Once)"
+ldt 00099   e "Trigger (Rng1)"   "Trigger (Ring Count, Once) (1.09)"
+ldt 00101   e "Set Floor"        "Set Tagged Sector's Floor Height/Flat"
+ldt 00102   e "Set Ceiling"      "Set Tagged Sector's Ceiling Height/Flat"
+ldt 00103   e "Set Light Level"  "Set Tagged Sector's Light Level"
+ldt 00104   e "Teleport to"      "Teleport to Tagged Sector"
+ldt 00105   e "Music Change"     "Music Change"
+ldt 00106   e "Move Floor by FS" "Move Floor by Front Sector (Length=Speed)"
+ldt 00107   e "Move Ceil. by FS" "Move Ceiling by Front Sector (Length=Speed)"
+ldt 00108   e "Lower Flr by Ld"  "Lower Floor by Line (dx=speed, dy=amount)"
+ldt 00109   e "Raise Flr by Ld"  "Raise Floor by Line (dx=speed, dy=amount)"
+ldt 00110   e "Lower Ceil by Ld" "Lower Ceiling by Line (dx=speed, dy=amount)"
+ldt 00111   e "Raise Ceil by Ld" "Raise Ceiling by Line (dx=speed, dy=amount)"
+ldt 00112   e "Change Clg/T Tag" "Change Calling Sector's Tag (Change Tagged Sector's Tag in 1.09)"
+ldt 00113   e "Run Script"       "Run Script"
+ldt 00114   e "Change FS Tag"    "Change Front Sector's Tag"
+ldt 00115   e "Play SFX"         "Play SFX"
+ldt 00116   e "Stop Plane Move"  "Stop Plane Movement"
+ldt 00117   e "Fade Light to FS" "Fade Light Level to Front Sector (Length=Speed)"
+ldt 00118   e "Stop Light FX"    "Stop Lighting Effect"
+ldt 00119   e "Start Fire Flckr" "Start Adjustable Fire Flicker"
+ldt 00120   e "Start Pulsate"    "Start Adjustable Pulsating Light"
+ldt 00121   e "Cut-Away View"    "Cut-Away View"
+ldt 00122   e "Stop Object"      "Stop Object"
+ldt 00123   e "Change Sky"       "Change Sky (1.09)"
+ldt 00124   e "Change Weather"   "Change Weather (1.09)"
+ldt 00125   e "Change Obj State" "Change Object State (1.09)"
+ldt 00126   e "Award Score"      "Award Score (1.09)"
+ldt 00127   e "Start Platf Mvmt" "Start Platform Movement"
+
+# 3D Floors/Blocks
+ldt 00001   E "CrumBobFlt NoRet" "Crumbling Floating Bobbing FOF (Never Reappears)"
+ldt 00025   E "FOFSoliOpaquShad" "FOF (Solid, Opaque, Shadows)"
+ldt 00033   E "FOFSolOpaqNShado" "FOF (Solid, Opaque, No Shadows)"
+ldt 00034   E "BobbingFOFWater"  "Bobbing Platform (Water)"
+ldt 00035   E "CrumblingFOFNRea" "Crumbling FOF (Never Reappears)"
+ldt 00036   E "CrumblingFOFReap" "Crumbling FOF (Reappears)"
+ldt 00037   E "CrumblingFOFRaps" "Crumbling Floating FOF (Reappears)"
+ldt 00038   E "BobbingFOF(Air)"  "Bobbing FOF (Air)"
+ldt 00039   E "CrumBobbFOF(Rep)" "Crumbling Floating Bobbing FOF (Reappears)"
+ldt 00040   E "CrumBobbFOF(Air)" "Crumbling Bobbing FOF (Air)"
+ldt 00041   E "Mario Block"      "Mario Block"
+ldt 00042   E "CrumblingFOF(NR)" "Crumbling Floating FOF (Never Reappears)"
+ldt 00044   E "FOFSolidTransluc" "FOF (Solid, Translucent)"
+ldt 00046   E "Fog Block"        "Fog Block"
+ldt 00047   E "Light Block"      "Light Block"
+ldt 00049   E "2x Light Block"   "Double Light Block"
+ldt 00051   E "FOFSolid,NoSides" "FOF (Solid, No Sides)"
+ldt 00052   E "FOFIntangTranslu" "FOF (Intangible, Translucent)"
+ldt 00053   E "Laser Block"      "Laser Block"
+ldt 00054   E "Thwomp Block"     "Thwomp Block"
+ldt 00055   E "Bustable Block"   "Bustable Block"
+ldt 00056   E "Quicksand Block"  "Quicksand Block"
+ldt 00057   E "FOFSolidInv"      "FOF (Solid, Invisible)"
+ldt 00058   E "FOFIntangiInvisi" "FOF (Intangible, Invisible)"
+ldt 00059   E "Platform"         "Platform"
+ldt 00062   E "FOFIntangibOpaqu" "FOF (Intangible, Opaque)"
+ldt 00067   E "FOFIntaSidesOnly" "FOF (Intangible, Sides Only)"
+#removed: ldt 00068  E "AdjBobbFOF(Air)" "Adjustable Bobbing FOF (Air)"
+ldt 00069   E "FOFSoliSidesOnly" "FOF (Solid, Sides Only)"
+#removed: ldt 00072  E "RevAdjBobFOFAir" "Reverse Adjustable Bobbing FOF (Air)"
+ldt 00076   E "Shatter Block"    "Shatter Block"
+ldt 00077   E "Platf (Trnsl-NS)" "Platform (Translucent, No Sides)"
+ldt 00078   E "Spin Bust Block"  "Spin Bust Block"
+ldt 00079   E "CrumblPlatf(Rep)" "Crumbling Platform (Reappears)"
+ldt 00080   E "CrumblPlat(NRep)" "Crumbling Platform (Never Reappears)"
+ldt 00081   E "Platform (Trnsl)" "Platform (Translucent)"
+ldt 00082   E "CrmPlt(Trns,Rep)" "Crumbling Platform (Translucent, Reappears)"
+ldt 00083   E "CrmPlt(Trs,NRep)" "Crumbling Platform (Translucent, Never Reappears)"
+ldt 00084   E "SpinBust (Trnsl)" "Spin Bust Block (Translucent)"
+ldt 00086   E "Shatter (Trnsl.)" "Shatter Block (Translucent)"
+ldt 00087   E "Custom FOF"       "Custom FOF (1.09)"
+ldt 00089   E "Rising FOF Shado" "Rising FOF (Solid, Opaque, Shadows) (1.09)"
+ldt 00090   E "Rising FOF NShad" "Rising FOF (Solid, Opaque, No Shadows) (1.09)"
+ldt 00091   E "Rising FOF Trnsl" "Rising FOF (Translucent) (1.09)"
+ldt 00092   E "Rising Plat Opaq" "Rising Platform (Opaque) (1.09)"
+ldt 00093   E "Rising Plat Trsl" "Rising Platform (Translucent) (1.09)"
+ldt 00094   E "Rising FOF SlInv" "Rising FOF (Solid, Invisible) (1.09)"
+
+# Water
+ldt 00045   A "Water (Transl.)"  "Water (Translucent)"
+ldt 00048   A "Water (Opaque)"   "Water (Opaque)"
+ldt 00074   A "Water (Trnsl-NS)" "Water (Translucent, No Sides)"
+ldt 00075   A "Water (Opaq-NS)"  "Water (Opaque, No Sides)"
+
+# Scroll Effects
+ldt 00085   t "Scr Wl Front Opp" "Scroll Wall First Side Opposite Direction"
+ldt 00100   t "Scr Wl FrontLeft" "Scroll Wall First Side Left"
+ldt 00202   t "Scr&Carry Ceil"   "Scroll&Carry Things Sector Ceiling (FOF Conveyor)"
+ldt 00203   t "Carry Ceiling"    "Carry Things on Sector Ceiling (FOF Conveyor)"
+ldt 00214   t "AccScr Ceiling"   "Accel Scroll Sector's Ceiling"
+ldt 00215   t "AccScr Floor"     "Accel Scroll Sector's Floor"
+ldt 00216   t "AccCarry Floor"   "Accel Carry Things on Floor"
+ldt 00217   t "AccScr&Carry Flr" "Accel Scroll Floor & Carry Things"
+ldt 00218   t "AccScr Front"     "Accel Scroll 1st Side Tagged Line"
+ldt 00245   t "RemScr Ceiling"   "Remote Scroll Sector's Ceiling"
+ldt 00246   t "RemScr Floor"     "Remote Scroll Sector's Floor"
+ldt 00247   t "RemCarry Floor"   "Remote Carry Things on Floor"
+ldt 00248   t "RemScr&Carry Flr" "Remote Scroll Floor & Carry Things"
+ldt 00249   t "RemScr Front"     "Remote Scroll 1st Side Tagged Line"
+ldt 00250   t "Scroll Ceiling"   "Scroll Sector's Ceiling"
+ldt 00251   t "Scroll Floor"     "Scroll Sector's Floor"
+ldt 00252   t "Carry on Floor"   "Carry Things On Sector Floor"
+ldt 00253   t "Scroll&Carry Flr" "Scroll&Carry Things Sector Floor"
+ldt 00254   t "Scroll Front"     "Scroll First Side of Tagged Line"
+ldt 00255   t "Scroll by Offset" "Effect Scrolling From XY Offsets"
+
+# Misc.
+ldt 00018   x "Zoom Tube Params" "Zoom Tube Parameters (1.09)"
+ldt 00063   x "Camera Scanner"   "Camera Scanner"
+ldt 00064   x "Sector Gravity"   "Per-Sector Gravity"
+ldt 00065   x "Speed Pad"        "Speed Pad"
+ldt 00066   x "Flat Alignment"   "Flat Alignment"
+ldt 00070   x "IdeyaTimeModify " "Ideya Time Modifier"
+ldt 00071   x "Custom Exit"      "Custom Exit"
+ldt 00073   x "Disable Linedef"  "Disable Linedef (main game only)"
+ldt 00223   x "Friction"         "Friction (Ice>100, Sludge<100)"
+ldt 00242   x "Fake Floor"       "Fake Floor"
+
+# Lighting
+ldt 00005   L "Ceiling Lighting" "Ceiling Lighting"
+ldt 00016   L "Colormap"         "Colormap"
+ldt 00060   L "AdjPulsLight"     "Adjustable Pulsating Light"
+ldt 00061   L "AdjFlickLight"    "Adjustable Flickering Light"
+ldt 00213   L "Floor Lighting"   "Floor Lighting"
+
+# Plane Movement
+ldt 00002   P "ContMover F/C"    "Continuous Floor/Ceiling Mover"
+ldt 00003   P "ContMover Floor"  "Continuous Floor Mover"
+ldt 00004   P "ContMover Ceilng" "Continuous Ceiling Mover"
+ldt 00006   P "Cont2Mover F/C"   "Continuous 2-Speed Floor/Ceiling Mover"
+ldt 00007   P "Cont2Mover Floor" "Continuous 2-Speed Floor Mover"
+ldt 00008   P "Cont2Mover Ceilg" "Continuous 2-Speed Ceiling Mover"
+ldt 00024   P "InstCeilingRaise" "Instant Ceiling Raise"
+ldt 00026   P "InstFloorLower"   "Instant Floor Lower"
+ldt 00043   P "Crusher 1 (C2F)"  "Crusher 1 (Ceiling to Floor)"
+ldt 00050   P "Crusher 2 (F2C)"  "Crusher 2 (Floor to Ceiling)"
+ldt 00088   P "Continuous Fall"  "Continuously Falling Sector (1.09)"
+ldt 00232   P "FloatingPlatform" "Floating Platform"
+ldt 00233   P "FloatPFAdjuSpeed" "Floating Platform Adjustable Speed"
+
+# Pushers
+ldt 00224   l "Wind Force/Dir"   "Wind Force/Direction"
+ldt 00225   l "Water Force/Dir"  "Water Current Force/Direction"
+ldt 00226   l "Boom Push/Pull"   "Boom Push/Pull Thing"
+ldt 00227   l "Upwards Current"  "Upwards Current"
+ldt 00228   l "DownwardsCurrent" "Downwards Current"
+ldt 00229   l "Upwards Wind"     "Upwards Wind"
+ldt 00230   l "Downwards Wind"   "Downwards Wind"
+
+#
+#	Definition of sector types
+#	Format is : st <number> <shortdesc> <longdesc>
+#	<shortdesc> must not exceed 14 characters.
+#
+
+st 00000 "X Normal"       "X Normal"
+st 00001 "Blink random"   "Blink (random)"
+st 00002 "Blink halfsec"  "Blink (1/2 second)"
+st 00003 "Blink oneasec"  "Blink (1 second)"
+st 00004 "Spikes of Doom" "Spikes"
+st 00005 "DeathPit (ncm)" "Death Pit (no camera modifications)"
+st 00006 "SpaceCountdown" "Space Countdown"
+st 00007 "Fire Damage"    "Damage (Fire)"
+st 00008 "Lightoscilates" "Light oscillates"
+st 00009 "SS Damage"      "Damage (Special Stage)"
+st 00010 "Instant Kill"   "Instant Kill"
+st 00011 "Normal Damage"  "Damage (Non-elemental)"
+st 00012 "Blinks oneasec" "Blink (1 second synch)"
+st 00013 "Blinks hafasec" "Blink (1/2 second synch)"
+st 00014 "FOF Bouncy Con" "Bouncy Sector (FOF Control Only)"
+st 00016 "DeathPit (wcm)" "Death Pit (camera modifications)"
+st 00017 "Lightslikefire" "Light flickers like fire"
+
+st 00018 "Elec Damage"    "Damage (Electrical)"
+
+st 00256 "Ice/Sludge"     "Ice/Sludge"
+
+st 00512 "Wind/Current"   "Wind/Current"
+
+st 00680 "EggCapsule But" "Egg Capsule (Button)"
+st 00681 "EggCapsule Top" "Egg Capsule (Top)"
+st 00682 "EggCapsule Bot" "Egg Capsule (Bottom)"
+st 00683 "EggCapsule Cen" "Egg Capsule (Center)"
+
+st 00690 "Button 01"      "Button 1 (Open Door A/700 B/701)"
+st 00691 "Button 02"      "Button 2 (Open Door A/702 B/703)"
+st 00692 "Button 03"      "Button 3 (Open Door A/704 B/705)"
+st 00693 "Button 04"      "Button 4 (Open Door A/706 B/707)"
+st 00694 "Button 05"      "Button 5 (Open Door A/708 B/709)"
+st 00695 "Button 06"      "Button 6 (Open Door A/710 B/711)"
+st 00696 "Button 07"      "Button 7 (Open Door A/712 B/713)"
+st 00697 "Button 08"      "Button 8 (Open Door A/714 B/715)"
+st 00698 "Button 09"      "Button 9 (Open Door A/716 B/717)"
+st 00699 "Button 10"      "Button 10 (Open Door A/718 B/719)"
+st 00700 "Button 11"      "Button 11 (Open Door A/720 B/721)"
+st 00701 "Button 12"      "Button 12 (Open Door A/722 B/723)"
+st 00702 "Button 13"      "Button 13 (Open Door A/724 B/725)"
+st 00703 "Button 14"      "Button 14 (Open Door A/726 B/727)"
+st 00704 "Button 15"      "Button 15 (Open Door A/728 B/729)"
+st 00705 "Button 16"      "Button 16 (Open Door A/730 B/731)"
+st 00706 "Button 17"      "Button 17 (Open Door A/732 B/733)"
+st 00707 "Button 18"      "Button 18 (Open Door A/734 B/735)"
+st 00708 "Button 19"      "Button 19 (Open Door A/736 B/737)"
+st 00709 "Button 20"      "Button 20 (Open Door A/738 B/739)"
+st 00710 "Button 21"      "Button 21 (THZ2 A/740 B/741 D/742)"
+
+st 00768 "IceSluWindCurr" "Ice/Sludge and Wind/Current"
+
+st 00974 "Linedefx (NFT)" "Linedef Executor (No Floor Touch)"
+st 00975 "Linedefx (WFT)" "Linedef Executor (Floor Touch)"
+st 00976 "Speed Pad (NS)" "Speed Pad (No Spin)"
+st 00977 "Speed Pad (WS)" "Speed Pad (Spin)"
+st 00978 "Ring Drainer"   "Ring Drainer"
+st 00979 "Spinner"        "Spinner"
+st 00980 "Ring Drain NFT" "Ring Drainer (No Floor Touch)" # 1.09?
+st 00981 "RaiseCeilHghst" "Raise Ceiling to Highest (tag 744) (obsolete)"
+st 00982 "Exit"           "Exit Sector"
+st 00983 "Water Damage"   "Damage (Water)"
+st 00984 "WaterDm&Curent" "Damage (Water) and Current"
+st 00985 "ConveyorBelt"   "Conveyor Belt"
+st 00986 "Slime Raise"    "THZ2 Slime Raise (B/712 W/713 P/714 D/715 S/716)"
+st 00987 "No Tag Zone"    "No Tag Zone"
+st 00988 "CTF - Red"      "CTF - Red Team Base"
+st 00989 "CTF - Bule"     "CTF - Blue Team Base"
+st 00990 "SS Control"     "Special Stage (Floor=Time) (Ceiling=Rings)"
+st 00991 "Custom Gravity" "Custom Gravity"
+st 00992 "Ramp"           "Ramp Sector (Stairs)"
+st 00993 "Starpost Actor" "Starpost Activator"
+st 00994 "Hockey - Red"   "Hockey - Red Team Goal (Finish Line in 1.09)"
+st 00995 "Hockey - Blue"  "Hockey - Blue Team Goal (not in 1.09)"
+st 00996 "Non-Ramp"       "Non-Ramp Sector"
+st 00997 "Fan Sector"     "Fan Sector"
+st 00998 "Zoom Tube Strt" "Zoom Tube Start (1.09)"
+st 00999 "Zoom Tube End"  "Zoom Tube End (1.09)"
+st 01500 "BustSprt ROIA"  "Bustable Block Sprite ROIA (1.09)"
+st 01501 "BustSprt ROIB"  "Bustable Block Sprite ROIB (1.09)"
+st 01502 "BustSprt ROIC"  "Bustable Block Sprite ROIC (1.09)"
+st 01503 "BustSprt ROID"  "Bustable Block Sprite ROID (1.09)"
+st 01504 "BustSprt ROIE"  "Bustable Block Sprite ROIE (1.09)"
+st 01505 "BustSprt ROIF"  "Bustable Block Sprite ROIF (1.09)"
+st 01506 "BustSprt ROIG"  "Bustable Block Sprite ROIG (1.09)"
+st 01507 "BustSprt ROIH"  "Bustable Block Sprite ROIH (1.09)"
+st 01508 "BustSprt ROII"  "Bustable Block Sprite ROII (1.09)"
+st 01509 "BustSprt ROIJ"  "Bustable Block Sprite ROIJ (1.09)"
+st 01510 "BustSprt ROIK"  "Bustable Block Sprite ROIK (1.09)"
+st 01511 "BustSprt ROIL"  "Bustable Block Sprite ROIL (1.09)"
+st 01512 "BustSprt ROIM"  "Bustable Block Sprite ROIM (1.09)"
+st 01513 "BustSprt ROIN"  "Bustable Block Sprite ROIN (1.09)"
+st 01514 "BustSprt ROIO"  "Bustable Block Sprite ROIO (1.09)"
+st 01515 "BustSprt ROIP"  "Bustable Block Sprite ROIP (1.09)"
+
+#
+#	Definition of thing groups
+#	Format is : thinggroup <thinggroup> <colour> <description>
+#
+
+thinggroup b rgb:f/f/f "Starts"
+thinggroup e rgb:f/0/0 "Enemies"
+thinggroup n rgb:f/b/0 "Nights Things"
+thinggroup p rgb:0/b/b "Power-Up Monitors"
+thinggroup o rgb:b/0/c "Misc."
+thinggroup d rgb:b/b/b "Scenery"
+thinggroup m rgb:f/f/0 "Mario"
+thinggroup c rgb:f/b/c "Christmas"
+thinggroup r rgb:0/0/f "Rings"
+thinggroup s rgb:0/c/0 "Springs and Such"
+
+#
+#	Definition of things
+#	Format is :
+#	thing <number> <thinggroup> <flags> <radius> <desc> [<sprite>]
+#	<desc> must not exceed 19 characters. <flags> s for see-thur
+#
+
+# FIXME: replace dissa0 and dumba0 with sprites that are really there
+
+# FIXME: replace start images of ndrna1 with something better.
+# ndrna1 is really the nights drone
+#thig 00000   g  s   ##      "                   "  ?????#
+thing 00001   b  -   32      "Player 01 Start"  ndrna1
+thing 00002   b  -   32      "Player 02 Start"  ndrna1
+thing 00003   b  -   32      "Player 03 Start"  ndrna1
+thing 00004   b  -   32      "Player 04 Start"  ndrna1
+thing 04001   b  -   32      "Player 05 Start"  ndrna1
+thing 04002   b  -   32      "Player 06 Start"  ndrna1
+thing 04003   b  -   32      "Player 07 Start"  ndrna1
+thing 04004   b  -   32      "Player 08 Start"  ndrna1
+thing 04005   b  -   32      "Player 09 Start"  ndrna1
+thing 04006   b  -   32      "Player 10 Start"  ndrna1
+thing 04007   b  -   32      "Player 11 Start"  ndrna1
+thing 04008   b  -   32      "Player 12 Start"  ndrna1
+thing 04009   b  -   32      "Player 13 Start"  ndrna1
+thing 04010   b  -   32      "Player 14 Start"  ndrna1
+thing 04011   b  -   32      "Player 15 Start"  ndrna1
+thing 04012   b  -   32      "Player 16 Start"  ndrna1
+thing 04013   b  -   32      "Player 17 Start"  ndrna1
+thing 04014   b  -   32      "Player 18 Start"  ndrna1
+thing 04015   b  -   32      "Player 19 Start"  ndrna1
+thing 04016   b  -   32      "Player 20 Start"  ndrna1
+thing 04017   b  -   32      "Player 21 Start"  ndrna1
+thing 04018   b  -   32      "Player 22 Start"  ndrna1
+thing 04019   b  -   32      "Player 23 Start"  ndrna1
+thing 04020   b  -   32      "Player 24 Start"  ndrna1
+thing 04021   b  -   32      "Player 25 Start"  ndrna1
+thing 04022   b  -   32      "Player 26 Start"  ndrna1
+thing 04023   b  -   32      "Player 27 Start"  ndrna1
+thing 04024   b  -   32      "Player 28 Start"  ndrna1
+thing 04025   b  -   32      "Player 29 Start"  ndrna1
+thing 04026   b  -   32      "Player 30 Start"  ndrna1
+thing 04027   b  -   32      "Player 31 Start"  ndrna1
+thing 04028   b  -   32      "Player 32 Start"  ndrna1
+thing 00087   b  -   32      "CTF Red Team Start"  ndrna1
+thing 00089   b  -   32      "CTF Blue Team Start"  ndrna1
+thing 00011   b  -   32      "Deathmatch Start"  ndrna1
+#thig 00000   g  s   ##      "                   "  ?????#
+
+#thig 00000   g  s   ##      "                   "  ?????#
+thing 00009   e  -   40      "Crawla (Red)"  sposa1
+thing 03004   e  -   40      "Crawla (Blue)"  possa1
+thing 03005   e  -   40      "Jetty-Syn Bomber"  jetba1
+thing 00022   e  -   40      "Jetty-Syn Gunner"  jetga1
+thing 00058   e  -   40      "Robofish (tm)"  fisha0
+thing 00071   e  -   40      "Deton"  detna1
+thing 00056   e  -   40      "Skim"  skima0
+thing 05005   e  -   40      "Buzz (Yellow)"  buzza0
+thing 05006   e  -   40      "Buzz (Red)"  rbuza0
+thing 02004   e  -   40      "THZ Turret"  treta1
+thing 00042   e  -   40      "Popup Turret" turre1
+thing 00016   e  -   80      "Egg Mobile (Boss 1)"  eggma1
+thing 01008   e  -   80      "Egg Slimer (Boss 2)"  eggna1
+thing 00021   e  -   40      "Crawla Commander"  ccoma1
+thing 00008   e  s   20      "ChaosModeEnemySpawn"  tfogi0
+#thig 00000   g  s   ##      "                   "  ?????#
+
+#thig 00000   g  s   ##      "                   "  ?????#
+thing 00052   n  s   20      "1024 Axis"  dissa0
+thing 00053   n  s   20      "512 Axis"  dissa0
+thing 00059   n  s   20      "2048 Axis"  dissa0
+thing 00062   n  s   20      "1024 Axis(Inverted)"  dissa0
+thing 00015   n  s   20      "512 Axis (Inverted)"  dissa0
+thing 00045   n  s   20      "2048 Axis(Inverted)"  dissa0
+thing 00061   n  s   20      "Axis Transfer"  dissa0
+thing 00046   n  s   20      "Axis Transfer Closest"  dissa0
+thing 00055   n  s   20      "Axis Transfer LastToFirst"  dissa0
+thing 00060   n  -   20      "Ideya Drone"  ndrna1
+thing 00057   n  -   20      "Hoop"  hoopa0
+thing 00047   n  -   20      "Circle of Rings"  bon1a0
+thing 02007   n  -   20      "Circle ofRings(Big)"  bon1a0
+thing 02048   n  -   20      "Circle ofWing Logos"  nwnga0
+thing 02010   n  -   20      "CircleofWingLogos-B"  nwnga0
+thing 02046   n  -   20      "CircleofRings&Wings"  nwnga0
+thing 02047   n  -   20      "CirleofRngs&Wings-B"  nwnga0
+thing 00037   n  -   20      "Wing Logo"  nwnga0
+thing 00082   n  s   20      "AxisTrnsferCodtion"  dissa0
+thing 00085   n  s   20      "AxisTrnsferCodtion2"  dissa0
+thing 03007   n  -   20      "Super Loop"  npraa0
+thing 03008   n  -   20      "Drill Refill"  nprba0
+thing 03009   n  -   20      "Helper"  nprca0
+#thig 00000   g  s   ##      "                   "  ?????#
+
+#thig 00000   g  s   ##      "                   "  ?????#
+thing 00025   p  -   20      "Super Sneakers"  shtva0
+thing 00035   p  -   20      "Basic/WhirlShield"  bltva0
+thing 00041   p  -   20      "Extra Life"  prupa0
+thing 00048   p  -   20      "Attraction Shield"  yltva0
+thing 02002   p  -   20      "Inferno Shield"  rdtva0
+thing 02018   p  -   20      "Armageddon Shield"  bktva0
+thing 02022   p  -   20      "Invincibility"  pinva0
+thing 02028   p  -   20      "Liquid Shield"  grtva0
+thing 02011   p  -   20      "SuperRing(10 Rings)"  srbxa0
+thing 02012   p  -   20      "SilverRing(25Rings)"  grbxa0
+thing 00078   p  -   20      "Teleporter"  mixua0
+thing 02005   p  -   20      "Eggman"  eggba0
+thing 03000   p  -   20      "Random"  quesa0
+#thig 00000   g  s   ##      "                   "  ?????#
+
+#thig 00000   g  s   ##      "                   "  ?????#
+thing 00031   o  -   20      "CTF Flag (Red)"  rflga0
+thing 00034   o  -   20      "CTF Flag (Blue)"  bflga0
+thing 02013   o  -   20      "Special Stage Token"  tokea0
+thing 00086   o  -   20      "End Level Sign"  signd0
+thing 00033   o  -   20      "Air Bubble Patch"  bubla0
+thing 00064   o  -   20      "Emerald Hunt Place1"  emera0
+thing 03002   o  -   20      "Emerald Hunt Place2"  emera0
+thing 03001   o  -   20      "Emerald Hunt Place3"  emera0
+thing 03006   o  -   20      "Star Post"  stpta0
+thing 05001   o  s   20      "Push"  ppsha0
+thing 05002   o  s   20      "Pull"  pplla0
+thing 05003   o  s   20      "TeleportDestination"  dissa0
+thing 05007   o  s   20      "Cut-Away View Thing"  dissa0
+thing 00067   o  -   20      "Ceiling Spike"  dspka0
+thing 00068   o  -   20      "Floor Spike"  uspka0
+thing 00023   o  -   20      "Spikeball"  spika0
+thing 00017   o  s   20      "Boss Flypoint"  dissa0
+thing 02049   o  s   20      "Egg Capsule Center"  dissa0
+thing 00051   o  -   20      "Laser"  lasra0
+thing 00018   o  -   20      "ZoomTubeWaypoint109"  dissa0
+thing 00420   o  -   20      "Emerald 1 (Green)"  emmya0
+thing 00421   o  -   20      "Emerald 2 (Orange)"  emmyb0
+thing 00422   o  -   20      "Emerald 3 (Pink)"  emmyc0
+thing 00423   o  -   20      "Emerald 4 (Blue)"  emmyd0
+thing 00424   o  -   20      "Emerald 5 (Red)"  emmye0
+thing 00425   o  -   20      "Emerald 6 (LtBlue)"  emmyf0
+thing 00426   o  -   20      "Emerald 7 (Gray)"  emmyg0
+# FIXME: add correct sprite for this emerald
+thing 00427   o  -   20      "Emerald 8 (Master)"  dissa0
+
+#thig 00000   g  s   ##      "                   "  ?????#
+thing 00036   d  -   20      "GFZ Flower (Normal)"  fwr1b0
+thing 00070   d  -   20      "GFZ Sunflower"  fwr2a0
+thing 00073   d  -   20      "GFZ Budding Flower"  fwr3a0
+thing 00074   d  -   20      "Berry Bush"  bus1a0
+thing 00075   d  -   20      "Bush"  bus2a0
+thing 02035   d  -   20      "THZ Flower"  thzpa0
+thing 00081   d  -   20      "Gargoyle"  garga1
+thing 02026   d  s   20      "AmbientWaterSFX1A-L"  dumba0
+thing 02024   d  s   20      "AmbientWaterSFX1B-L"  dumba0
+thing 02025   d  s   20      "AmbientWaterSFX2A-M"  dumba0
+thing 02045   d  s   20      "AmbientWaterSFX2B-M"  dumba0
+thing 00083   d  s   20      "AmbientWaterSFX3A-S"  dumba0
+thing 02019   d  s   20      "AmbientWaterSFX3B-S"  dumba0
+thing 02025   d  s   20      "AmbientWaterSFX4A-E"  dumba0
+thing 00027   d  s   20      "AmbientWaterSFX4B-E"  dumba0
+thing 00014   d  s   20      "Random Ambience 1"  dumba0
+thing 00043   d  s   20      "Random Ambience 2" dumba0
+thing 00049   d  -   20      "Hanging Chain"  chana0
+thing 02006   d  -   20      "THZ Alarm"  alrma0
+thing 02001   d  -   20      "CEZ Flower"  fwr4a0
+thing 00024   d  -   20      "CEZ Torch"  flama0
+thing 02003   d  s   20      "LightSource (MAP92)"  dissa0
+#thig 00000   g  s   ##      "                   "  ?????#
+
+#thig 00000   g  s   ##      "                   "  ?????#
+thing 100000  m  -   20      "Overworld Goomba"  gooma0
+thing 100001  m  -   20      "Underworld Goomba"  bgoma0
+thing 100002  m  -   20      "Bush (Short)"  mus1a0
+thing 100003  m  -   20      "Bush (Tall)"  mus2a0
+thing 100004  m  -   20      "Toad"  toada0
+thing 100005  m  -   20      "Coin"  coina0
+thing 00019   m  -   20      "King Bowser"  koopa0
+thing 00010   m  -   20      "Koopa Shell"  shlla0
+thing 00012   m  -   20      "Axe"  maxea0
+thing 00050   m  -   20      "Fire Flower"  ffwra0
+thing 00029   m  -   20      "Puma(MarioFireball)"  pumaa0
+#thig 00000   g  s   ##      "                   "  ?????#
+
+#thig 00000   g  s   ##      "                   "  ?????#
+thing 00005   c  -   20      "Pole"  xms1a0
+thing 00006   c  -   20      "Snowman"  xms3a0
+thing 00013   c  -   20      "Candy Cane"  xms2a0
+thing 00084   r  -   20      "5VerticalRings-YwSg"  bon1a0
+thing 00044   r  -   20      "5VerticalRings-RdSg"  bon1a0
+thing 00076   r  -   20      "5DiagonalRings-YwSg"  bon1a0
+thing 00077   r  -   20      "10DiagonalRings-RSg"  bon1a0
+thing 02014   r  -   20      "Ring"  bon1a0
+thing 00069   r  -   20      "Homing Ring"  homra0
+thing 03003   r  -   20      "Rail Ring"  raila0
+thing 00026   r  -   20      "Automatic Ring"  autra0
+thing 00054   r  -   20      "Explosion Ring"  bomra0
+thing 00080   r  -   20      "Infinity Ring"  infra0
+thing 00028   s  -   20      "Yellow Spring (Up)"  sprya0
+thing 00079   s  -   20      "Red Spring (Up)"  sprra0
+thing 02015   s  -   20      "Yellow Spring (DU)"  yspra1
+thing 00038   s  -   20      "Red Spring (DU)"  rspra1
+thing 00020   s  -   20      "Yellow Spring (DD)"  ysuda1
+thing 00039   s  -   20      "Red Spring (DD)"  rsuda1
+thing 00065   s  -   20      "Yellow Spring (Dn)"  sudya0
+thing 00066   s  -   20      "Red Spring (Dn)"  sudra0
+thing 05004   s  -   20      "Blue Spring"  sprba0
+thing 00030   s  -   20      "THZ Gas Jet"  stemd0
+thing 00032   s  -   20      "THZ Fan"  fansa0
+#thig 00000   g  s   ##      "                   "  ?????#

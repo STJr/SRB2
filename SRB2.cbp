@@ -1,0 +1,4841 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="Sonic Robo Blast 2" />
+		<Option compiler="gcc" />
+		<Option show_notes="0">
+			<notes>
+				<![CDATA[This is the SRB2 Code:Blocks Project
+This Project file was created using Code::Blocks 8.02 on a Debian Lenny system by Alam Ed Arias
+
+If you are compiling for Windows, use Mingw targets
+
+Interface Defines:
+_WINDOWS for DirectX Interface
+SDL for SDL Interface
+HAVE_MIXER for SDL_Mixer
+
+HAVE_PNG for PNG support (for APNG support. compile libs/libpng-src)
+HWRENDER for hardware render support
+HW3SOUND for 3D hardware sound  support
+]]>
+			</notes>
+		</Option>
+		<Build>
+			<Target title="Debug Native/SDL">
+				<Option output="bin/SDL/Debug/srb2sdl" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="bin/Resources" />
+				<Option object_output="objs/SDL/Debug/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-g" />
+					<Add option="`sdl-config --cflags`" />
+					<Add option="-DDIRECTFULLSCREEN" />
+					<Add option="-DSDL" />
+					<Add option="-DPARANOIA" />
+					<Add option="-DRANGECHECK" />
+					<Add option="-D_DEBUG" />
+					<Add option="-DCOMPVERSION" />
+					<Add option="-DHAVE_BLUA" />
+				</Compiler>
+				<Linker>
+					<Add option="-g" />
+					<Add option="`sdl-config --libs`" />
+					<Add library="SDL_mixer" />
+				</Linker>
+			</Target>
+			<Target title="Release Native/SDL">
+				<Option output="bin/SDL/Release/srb2sdl" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="bin/Resources" />
+				<Option object_output="objs/SDL/Release/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+					<Add option="-g" />
+					<Add option="`sdl-config --cflags`" />
+					<Add option="-DDIRECTFULLSCREEN" />
+					<Add option="-DSDL" />
+					<Add option="-DNDEBUG" />
+					<Add option="-DCOMPVERSION" />
+					<Add option="-DHAVE_BLUA" />
+				</Compiler>
+				<Linker>
+					<Add option="-g" />
+					<Add option="`sdl-config --libs`" />
+					<Add library="SDL_mixer" />
+				</Linker>
+			</Target>
+			<Target title="Debug Linux/SDL">
+				<Option output="bin/Linux/Debug/lsdlsrb2" prefix_auto="1" extension_auto="0" />
+				<Option working_dir="bin/Resources" />
+				<Option object_output="objs/Linux/SDL/Debug" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-g" />
+					<Add option="`sdl-config --cflags`" />
+					<Add option="`libpng-config --cflags`" />
+					<Add option="-DDIRECTFULLSCREEN" />
+					<Add option="-DSDL" />
+					<Add option="-DHAVE_MIXER" />
+					<Add option="-DHWRENDER" />
+					<Add option="-DHW3SOUND" />
+					<Add option="-DHAVE_PNG" />
+					<Add option="-DPARANOIA" />
+					<Add option="-DRANGECHECK" />
+					<Add option="-D_DEBUG" />
+					<Add option="-DCOMPVERSION" />
+					<Add option="-DHAVE_BLUA" />
+				</Compiler>
+				<Linker>
+					<Add option="-g" />
+					<Add option="`sdl-config --libs`" />
+					<Add option="`libpng-config --libs`" />
+					<Add library="SDL_mixer" />
+					<Add library="rt" />
+				</Linker>
+			</Target>
+			<Target title="Release Linux/SDL">
+				<Option output="bin/Linux/Release/lsdlsrb2" prefix_auto="1" extension_auto="0" />
+				<Option working_dir="bin/Resources" />
+				<Option object_output="objs/Linux/SDL/Release" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+					<Add option="-g" />
+					<Add option="`sdl-config --cflags`" />
+					<Add option="`libpng-config --cflags`" />
+					<Add option="-DDIRECTFULLSCREEN" />
+					<Add option="-DSDL" />
+					<Add option="-DHAVE_MIXER" />
+					<Add option="-DHWRENDER" />
+					<Add option="-DHW3SOUND" />
+					<Add option="-DHAVE_PNG" />
+					<Add option="-DNDEBUG" />
+					<Add option="-DCOMPVERSION" />
+					<Add option="-DHAVE_BLUA" />
+				</Compiler>
+				<Linker>
+					<Add option="-g" />
+					<Add option="`sdl-config --libs`" />
+					<Add option="`libpng-config --libs`" />
+					<Add library="SDL_mixer" />
+					<Add library="rt" />
+				</Linker>
+			</Target>
+			<Target title="Debug Mingw/SDL">
+				<Option output="bin/Mingw/Debug/srb2sdl.exe" prefix_auto="1" extension_auto="0" />
+				<Option working_dir="bin/Resources" />
+				<Option object_output="objs/Mingw/SDL/Debug" />
+				<Option type="1" />
+				<Option compiler="gnu_gcc_compiler_for_mingw32" />
+				<Compiler>
+					<Add option="-march=i586" />
+					<Add option="-g" />
+					<Add option="-D_GNU_SOURCE=1" />
+					<Add option="-DSTDC_HEADERS" />
+					<Add option="-D__USE_MINGW_ANSI_STDIO=0" />
+					<Add option="-DUSE_WGL_SWAP" />
+					<Add option="-DDIRECTFULLSCREEN" />
+					<Add option="-DSDL" />
+					<Add option="-DHAVE_MIXER" />
+					<Add option="-DHWRENDER" />
+					<Add option="-DHW3SOUND" />
+					<Add option="-DHAVE_PNG" />
+					<Add option="-DPARANOIA" />
+					<Add option="-DRANGECHECK" />
+					<Add option="-D_DEBUG" />
+					<Add option="-DCOMPVERSION" />
+					<Add option="-DHAVE_BLUA" />
+					<Add option="-DHAVE_LIBGME" />
+					<Add directory="libs/libpng-src" />
+					<Add directory="libs/zlib" />
+					<Add directory="libs/gme/include" />
+				</Compiler>
+				<Linker>
+					<Add option="-g" />
+					<Add library="SDL" />
+					<Add library="SDL_mixer" />
+					<Add library="advapi32" />
+					<Add library="kernel32" />
+					<Add library="msvcrt" />
+					<Add library="user32" />
+					<Add library="ws2_32" />
+					<Add library="png32" />
+					<Add library="z32" />
+					<Add library="gme.dll" />
+					<Add directory="libs/zlib/win32" />
+					<Add directory="libs/libpng-src/projects" />
+					<Add directory="libs/gme/win32" />
+				</Linker>
+			</Target>
+			<Target title="Release Mingw/SDL">
+				<Option output="bin/Mingw/Release/srb2sdl.exe" prefix_auto="1" extension_auto="0" />
+				<Option working_dir="bin/Resources" />
+				<Option object_output="objs/Mingw/SDL/Release" />
+				<Option type="0" />
+				<Option compiler="gnu_gcc_compiler_for_mingw32" />
+				<Compiler>
+					<Add option="-march=i586" />
+					<Add option="-O2" />
+					<Add option="-g" />
+					<Add option="-D_GNU_SOURCE=1" />
+					<Add option="-DSTDC_HEADERS" />
+					<Add option="-D__USE_MINGW_ANSI_STDIO=0" />
+					<Add option="-DUSE_WGL_SWAP" />
+					<Add option="-DDIRECTFULLSCREEN" />
+					<Add option="-DSDL" />
+					<Add option="-DHAVE_MIXER" />
+					<Add option="-DHAVE_FMOD" />
+					<Add option="-DHWRENDER" />
+					<Add option="-DHW3SOUND" />
+					<Add option="-DHAVE_PNG" />
+					<Add option="-DNDEBUG" />
+					<Add option="-DCOMPVERSION" />
+					<Add option="-DHAVE_BLUA" />
+					<Add option="-DHAVE_LIBGME" />
+					<Add directory="libs/libpng-src" />
+					<Add directory="libs/zlib" />
+					<Add directory="libs/gme/include" />
+				</Compiler>
+				<Linker>
+					<Add option="-g" />
+					<Add library="SDL" />
+					<Add library="SDL_mixer" />
+					<Add library="advapi32" />
+					<Add library="kernel32" />
+					<Add library="msvcrt" />
+					<Add library="user32" />
+					<Add library="ws2_32" />
+					<Add library="png32" />
+					<Add library="z32" />
+					<Add library="gme.dll" />
+					<Add directory="libs/zlib/win32" />
+					<Add directory="libs/libpng-src/projects" />
+					<Add directory="libs/gme/win32" />
+				</Linker>
+			</Target>
+			<Target title="Debug Mingw/DirectX">
+				<Option output="bin/Mingw/Debug/srb2win.exe" prefix_auto="1" extension_auto="0" />
+				<Option working_dir="bin/Resources" />
+				<Option object_output="objs/Mingw/Debug" />
+				<Option type="0" />
+				<Option compiler="gnu_gcc_compiler_for_mingw32" />
+				<Compiler>
+					<Add option="-march=i586" />
+					<Add option="-O2" />
+					<Add option="-g" />
+					<Add option="-DSTDC_HEADERS" />
+					<Add option="-D_WINDOWS" />
+					<Add option="-DHWRENDER" />
+					<Add option="-DHAVE_PNG" />
+					<Add option="-DPARANOIA" />
+					<Add option="-DRANGECHECK" />
+					<Add option="-D_DEBUG" />
+					<Add option="-DCOMPVERSION" />
+					<Add option="-DHAVE_BLUA" />
+					<Add option="-DHAVE_LIBGME" />
+					<Add directory="libs/libpng-src" />
+					<Add directory="libs/zlib" />
+					<Add directory="libs/fmodex/inc" />
+					<Add directory="libs/gme/include" />
+				</Compiler>
+				<ResourceCompiler>
+					<Add directory="src/win32" />
+				</ResourceCompiler>
+				<Linker>
+					<Add option="-g" />
+					<Add library="advapi32" />
+					<Add library="dinput" />
+					<Add library="dxguid" />
+					<Add library="gdi32" />
+					<Add library="kernel32" />
+					<Add library="msvcrt" />
+					<Add library="winmm" />
+					<Add library="user32" />
+					<Add library="ws2_32" />
+					<Add library="png32" />
+					<Add library="z32" />
+					<Add library="fmodex" />
+					<Add library="gme.dll" />
+					<Add directory="libs/zlib/win32" />
+					<Add directory="libs/libpng-src/projects" />
+					<Add directory="libs/fmodex/lib" />
+					<Add directory="libs/gme/win32" />
+				</Linker>
+			</Target>
+			<Target title="Release Mingw/DirectX">
+				<Option output="bin/Mingw/Release/srb2win.exe" prefix_auto="1" extension_auto="0" />
+				<Option working_dir="bin/Resources" />
+				<Option object_output="objs/Mingw/Release" />
+				<Option type="0" />
+				<Option compiler="gnu_gcc_compiler_for_mingw32" />
+				<Compiler>
+					<Add option="-march=i586" />
+					<Add option="-O2" />
+					<Add option="-g" />
+					<Add option="-DSTDC_HEADERS" />
+					<Add option="-D_WINDOWS" />
+					<Add option="-DHWRENDER" />
+					<Add option="-DHW3SOUND" />
+					<Add option="-DHAVE_PNG" />
+					<Add option="-DNDEBUG" />
+					<Add option="-DCOMPVERSION" />
+					<Add option="-DHAVE_BLUA" />
+					<Add option="-DHAVE_LIBGME" />
+					<Add directory="libs/libpng-src" />
+					<Add directory="libs/zlib" />
+					<Add directory="libs/fmodex/inc" />
+					<Add directory="libs/gme/include" />
+				</Compiler>
+				<ResourceCompiler>
+					<Add directory="src/win32" />
+				</ResourceCompiler>
+				<Linker>
+					<Add option="-g" />
+					<Add library="advapi32" />
+					<Add library="dinput" />
+					<Add library="dxguid" />
+					<Add library="gdi32" />
+					<Add library="kernel32" />
+					<Add library="msvcrt" />
+					<Add library="user32" />
+					<Add library="winmm" />
+					<Add library="ws2_32" />
+					<Add library="png32" />
+					<Add library="z32" />
+					<Add library="fmodex" />
+					<Add library="gme.dll" />
+					<Add directory="libs/zlib/win32" />
+					<Add directory="libs/libpng-src/projects" />
+					<Add directory="libs/fmodex/lib" />
+					<Add directory="libs/gme/win32" />
+				</Linker>
+			</Target>
+			<Target title="Debug Any/Dummy">
+				<Option output="bin/dummy/Debug/srb2dummy" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="bin/Resources" />
+				<Option object_output="objs/dummy/Debug/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-g" />
+					<Add option="-DPARANOIA" />
+					<Add option="-DRANGECHECK" />
+					<Add option="-D_DEBUG" />
+					<Add option="-DCOMPVERSION" />
+				</Compiler>
+				<Linker>
+					<Add option="-g" />
+				</Linker>
+			</Target>
+			<Target title="Release Any/Dummy">
+				<Option output="bin/dummy/Release/srb2dummy" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="bin/Resources" />
+				<Option object_output="objs/dummy/Release/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+					<Add option="-g" />
+					<Add option="-DNDEBUG" />
+					<Add option="-DCOMPVERSION" />
+				</Compiler>
+				<Linker>
+					<Add option="-g" />
+				</Linker>
+			</Target>
+			<Target title="Debug Mingw R_OpenGL">
+				<Option output="bin/Mingw/Debug/r_opengl.dll" prefix_auto="1" extension_auto="0" />
+				<Option working_dir="bin/Mingw/Debug" />
+				<Option object_output="objs/Mingw/Debug" />
+				<Option type="3" />
+				<Option compiler="gnu_gcc_compiler_for_mingw32" />
+				<Compiler>
+					<Add option="-march=i586" />
+					<Add option="-D__USE_MINGW_ANSI_STDIO=0" />
+					<Add option="-D_WINDOWS" />
+				</Compiler>
+				<Linker>
+					<Add option="-Wl,--add-stdcall-alias" />
+					<Add library="gdi32" />
+				</Linker>
+			</Target>
+			<Target title="Release Mingw R_OpenGL">
+				<Option output="bin/Mingw/Release/r_opengl.dll" prefix_auto="1" extension_auto="0" />
+				<Option working_dir="bin/Mingw/Release" />
+				<Option object_output="objs/Mingw/Release" />
+				<Option type="3" />
+				<Option compiler="gnu_gcc_compiler_for_mingw32" />
+				<Compiler>
+					<Add option="-march=i586" />
+					<Add option="-O2" />
+					<Add option="-D__USE_MINGW_ANSI_STDIO=0" />
+					<Add option="-D_WINDOWS" />
+				</Compiler>
+				<Linker>
+					<Add option="-Wl,--add-stdcall-alias" />
+					<Add library="gdi32" />
+				</Linker>
+			</Target>
+			<Target title="Debug Mingw R_MiniGL">
+				<Option output="bin/Mingw/Debug/r_opengl.dll" prefix_auto="1" extension_auto="0" />
+				<Option working_dir="bin/Mingw/Debug" />
+				<Option object_output="objs/Mingw/Debug" />
+				<Option type="3" />
+				<Option compiler="gnu_gcc_compiler_for_mingw32" />
+				<Compiler>
+					<Add option="-march=i586" />
+					<Add option="-D__USE_MINGW_ANSI_STDIO=0" />
+					<Add option="-D_WINDOWS" />
+				</Compiler>
+				<Linker>
+					<Add option="-Wl,--add-stdcall-alias" />
+					<Add library="gdi32" />
+				</Linker>
+			</Target>
+			<Target title="Release Mingw R_MiniGL">
+				<Option output="bin/Mingw/Release/r_opengl.dll" prefix_auto="1" extension_auto="0" />
+				<Option working_dir="bin/Mingw/Release" />
+				<Option object_output="objs/Mingw/Release" />
+				<Option type="3" />
+				<Option compiler="gnu_gcc_compiler_for_mingw32" />
+				<Compiler>
+					<Add option="-march=i586" />
+					<Add option="-O2" />
+					<Add option="-D__USE_MINGW_ANSI_STDIO=0" />
+					<Add option="-D_WINDOWS" />
+				</Compiler>
+				<Linker>
+					<Add option="-Wl,--add-stdcall-alias" />
+					<Add library="gdi32" />
+				</Linker>
+			</Target>
+			<Target title="Debug Mingw S_DS3D">
+				<Option output="bin/Mingw/Debug/s_ds3d.dll" prefix_auto="1" extension_auto="0" />
+				<Option working_dir="bin/Mingw/Debug" />
+				<Option object_output="objs/Mingw/Debug" />
+				<Option type="3" />
+				<Option compiler="gnu_gcc_compiler_for_mingw32" />
+				<Compiler>
+					<Add option="-march=i586" />
+					<Add option="-D__USE_MINGW_ANSI_STDIO=0" />
+					<Add option="-D_WINDOWS" />
+				</Compiler>
+				<Linker>
+					<Add option="-Wl,--add-stdcall-alias" />
+					<Add library="dsound" />
+				</Linker>
+			</Target>
+			<Target title="Release Mingw S_DS3D">
+				<Option output="bin/Mingw/Release/s_ds3d.dll" prefix_auto="1" extension_auto="0" />
+				<Option working_dir="bin/Mingw/Release" />
+				<Option object_output="objs/Mingw/Release" />
+				<Option type="3" />
+				<Option compiler="gnu_gcc_compiler_for_mingw32" />
+				<Compiler>
+					<Add option="-march=i586" />
+					<Add option="-O2" />
+					<Add option="-D__USE_MINGW_ANSI_STDIO=0" />
+					<Add option="-D_WINDOWS" />
+				</Compiler>
+				<Linker>
+					<Add option="-Wl,--add-stdcall-alias" />
+					<Add library="dsound" />
+				</Linker>
+			</Target>
+			<Target title="Debug Mingw S_FMOD">
+				<Option output="bin/Mingw/Debug/s_fmod.dll" prefix_auto="1" extension_auto="0" />
+				<Option working_dir="bin/Mingw/Debug" />
+				<Option object_output="objs/Mingw/Debug" />
+				<Option type="3" />
+				<Option compiler="gnu_gcc_compiler_for_mingw32" />
+				<Compiler>
+					<Add option="-march=i586" />
+					<Add option="-D__USE_MINGW_ANSI_STDIO=0" />
+					<Add option="-D_WINDOWS" />
+				</Compiler>
+				<Linker>
+					<Add option="-Wl,--add-stdcall-alias" />
+					<Add library="fmod" />
+				</Linker>
+			</Target>
+			<Target title="Release Mingw S_FMOD">
+				<Option output="bin/Mingw/Release/s_fmod.dll" prefix_auto="1" extension_auto="0" />
+				<Option working_dir="bin/Mingw/Release" />
+				<Option object_output="objs/Mingw/Release" />
+				<Option type="3" />
+				<Option compiler="gnu_gcc_compiler_for_mingw32" />
+				<Compiler>
+					<Add option="-march=i586" />
+					<Add option="-O2" />
+					<Add option="-D__USE_MINGW_ANSI_STDIO=0" />
+					<Add option="-D_WINDOWS" />
+				</Compiler>
+				<Linker>
+					<Add option="-Wl,--add-stdcall-alias" />
+					<Add library="fmod" />
+				</Linker>
+			</Target>
+			<Target title="Debug Mingw S_OpenAL">
+				<Option output="bin/Mingw/Debug/s_opneal.dll" prefix_auto="1" extension_auto="0" />
+				<Option working_dir="bin/Mingw/Debug" />
+				<Option object_output="objs/Mingw/Debug" />
+				<Option type="3" />
+				<Option compiler="gnu_gcc_compiler_for_mingw32" />
+				<Compiler>
+					<Add option="-march=i586" />
+					<Add option="-D__USE_MINGW_ANSI_STDIO=0" />
+					<Add option="-D_WINDOWS" />
+				</Compiler>
+				<Linker>
+					<Add option="-Wl,--add-stdcall-alias" />
+					<Add library="openal32" />
+				</Linker>
+			</Target>
+			<Target title="Release Mingw S_OpenAL">
+				<Option output="bin/Mingw/Release/s_openal.dll" prefix_auto="1" extension_auto="0" />
+				<Option working_dir="bin/Mingw/Release" />
+				<Option object_output="objs/Mingw/Release" />
+				<Option type="3" />
+				<Option compiler="gnu_gcc_compiler_for_mingw32" />
+				<Compiler>
+					<Add option="-march=i586" />
+					<Add option="-O2" />
+					<Add option="-D__USE_MINGW_ANSI_STDIO=0" />
+					<Add option="-D_WINDOWS" />
+				</Compiler>
+				<Linker>
+					<Add option="-Wl,--add-stdcall-alias" />
+					<Add library="openal32" />
+				</Linker>
+			</Target>
+			<Target title="Debug Shared S_OpenAL">
+				<Option output="bin/Linux/Debug/s_openal.so" prefix_auto="1" extension_auto="0" />
+				<Option working_dir="bin/Linux/Debug" />
+				<Option object_output="objs/Linux/SDL/Debug" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-march=i586" />
+				</Compiler>
+				<Linker>
+					<Add option="-nostartfiles" />
+					<Add library="openal" />
+				</Linker>
+			</Target>
+			<Target title="Release Shared S_OpenAL">
+				<Option output="bin/Linux/Release/s_openal.so" prefix_auto="1" extension_auto="0" />
+				<Option working_dir="bin/Linux/Release" />
+				<Option object_output="objs/Linux/SDL/Release" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-march=i586" />
+					<Add option="-O2" />
+				</Compiler>
+				<Linker>
+					<Add option="-nostartfiles" />
+					<Add library="openal" />
+				</Linker>
+			</Target>
+			<Target title="Debug Mingw64/SDL">
+				<Option output="bin/Mingw/Debug/srb2sdl64.exe" prefix_auto="1" extension_auto="0" />
+				<Option working_dir="bin/Resources" />
+				<Option object_output="objs/Mingw64/SDL/Debug" />
+				<Option type="1" />
+				<Option compiler="gnu_gcc_compiler_for_mingw64" />
+				<Compiler>
+					<Add option="-g" />
+					<Add option="-D_GNU_SOURCE=1" />
+					<Add option="-DSTDC_HEADERS" />
+					<Add option="-DUSE_WGL_SWAP" />
+					<Add option="-DDIRECTFULLSCREEN" />
+					<Add option="-DSDL" />
+					<Add option="-DHAVE_MIXER" />
+					<Add option="-DHWRENDER" />
+					<Add option="-DHW3SOUND" />
+					<Add option="-DHAVE_PNG" />
+					<Add option="-DPARANOIA" />
+					<Add option="-DRANGECHECK" />
+					<Add option="-D_DEBUG" />
+					<Add option="-DCOMPVERSION" />
+					<Add option="-DHAVE_BLUA" />
+					<Add directory="libs/libpng-src" />
+					<Add directory="libs/zlib" />
+				</Compiler>
+				<Linker>
+					<Add option="-g" />
+					<Add library="SDL" />
+					<Add library="SDL_mixer" />
+					<Add library="advapi32" />
+					<Add library="kernel32" />
+					<Add library="msvcrt" />
+					<Add library="user32" />
+					<Add library="ws2_32" />
+					<Add library="png64" />
+					<Add library="z64" />
+					<Add directory="libs/zlib/win32" />
+					<Add directory="libs/libpng-src/projects" />
+				</Linker>
+			</Target>
+			<Target title="Release Mingw64/SDL">
+				<Option output="bin/Mingw/Release/srb2sdl64.exe" prefix_auto="1" extension_auto="0" />
+				<Option working_dir="bin/Resources" />
+				<Option object_output="objs/Mingw64/SDL/Release" />
+				<Option type="1" />
+				<Option compiler="gnu_gcc_compiler_for_mingw64" />
+				<Compiler>
+					<Add option="-O2" />
+					<Add option="-g" />
+					<Add option="-D_GNU_SOURCE=1" />
+					<Add option="-DSTDC_HEADERS" />
+					<Add option="-DUSE_WGL_SWAP" />
+					<Add option="-DDIRECTFULLSCREEN" />
+					<Add option="-DSDL" />
+					<Add option="-DHAVE_MIXER" />
+					<Add option="-DHWRENDER" />
+					<Add option="-DHW3SOUND" />
+					<Add option="-DHAVE_PNG" />
+					<Add option="-DNDEBUG" />
+					<Add option="-DCOMPVERSION" />
+					<Add option="-DHAVE_BLUA" />
+					<Add directory="libs/libpng-src" />
+					<Add directory="libs/zlib" />
+				</Compiler>
+				<Linker>
+					<Add option="-g" />
+					<Add library="SDL" />
+					<Add library="SDL_mixer" />
+					<Add library="advapi32" />
+					<Add library="kernel32" />
+					<Add library="msvcrt" />
+					<Add library="user32" />
+					<Add library="ws2_32" />
+					<Add library="png64" />
+					<Add library="z64" />
+					<Add directory="libs/zlib/win32" />
+					<Add directory="libs/libpng-src/projects" />
+				</Linker>
+			</Target>
+			<Target title="Debug Mingw64/DirectX">
+				<Option output="bin/Mingw/Debug/srb2win64.exe" prefix_auto="1" extension_auto="0" />
+				<Option working_dir="bin/Resources" />
+				<Option object_output="objs/Mingw64/Debug" />
+				<Option type="0" />
+				<Option compiler="gnu_gcc_compiler_for_mingw64" />
+				<Compiler>
+					<Add option="-g" />
+					<Add option="-DSTDC_HEADERS" />
+					<Add option="-D_WINDOWS" />
+					<Add option="-DHWRENDER" />
+					<Add option="-DHW3SOUND" />
+					<Add option="-DHAVE_PNG" />
+					<Add option="-DPARANOIA" />
+					<Add option="-DRANGECHECK" />
+					<Add option="-D_DEBUG" />
+					<Add option="-DCOMPVERSION" />
+					<Add option="-DHAVE_BLUA" />
+					<Add directory="libs/libpng-src" />
+					<Add directory="libs/zlib" />
+					<Add directory="libs/fmodex/inc" />
+				</Compiler>
+				<ResourceCompiler>
+					<Add directory="src/win32" />
+				</ResourceCompiler>
+				<Linker>
+					<Add option="-g" />
+					<Add library="advapi32" />
+					<Add library="dinput" />
+					<Add library="dxguid" />
+					<Add library="gdi32" />
+					<Add library="kernel32" />
+					<Add library="msvcrt" />
+					<Add library="user32" />
+					<Add library="winmm" />
+					<Add library="ws2_32" />
+					<Add library="png64" />
+					<Add library="z64" />
+					<Add library="fmodex64_vc.lib" />
+					<Add directory="libs/zlib/win32" />
+					<Add directory="libs/libpng-src/projects" />
+					<Add directory="libs/fmodex/lib" />
+				</Linker>
+			</Target>
+			<Target title="Release Mingw64/DirectX">
+				<Option output="bin/Mingw/Release/srb2win64.exe" prefix_auto="1" extension_auto="0" />
+				<Option working_dir="bin/Resources" />
+				<Option object_output="objs/Mingw64/Release" />
+				<Option type="0" />
+				<Option compiler="gnu_gcc_compiler_for_mingw64" />
+				<Compiler>
+					<Add option="-O2" />
+					<Add option="-g" />
+					<Add option="-DSTDC_HEADERS" />
+					<Add option="-D_WINDOWS" />
+					<Add option="-DHWRENDER" />
+					<Add option="-DHW3SOUND" />
+					<Add option="-DHAVE_PNG" />
+					<Add option="-DNDEBUG" />
+					<Add option="-DCOMPVERSION" />
+					<Add option="-DHAVE_BLUA" />
+					<Add directory="libs/libpng-src" />
+					<Add directory="libs/zlib" />
+					<Add directory="libs/fmodex/inc" />
+				</Compiler>
+				<ResourceCompiler>
+					<Add directory="src/win32" />
+				</ResourceCompiler>
+				<Linker>
+					<Add option="-g" />
+					<Add library="advapi32" />
+					<Add library="dinput" />
+					<Add library="dxguid" />
+					<Add library="gdi32" />
+					<Add library="kernel32" />
+					<Add library="msvcrt" />
+					<Add library="user32" />
+					<Add library="winmm" />
+					<Add library="ws2_32" />
+					<Add library="png64" />
+					<Add library="z64" />
+					<Add library="fmodex64_vc.lib" />
+					<Add directory="libs/zlib/win32" />
+					<Add directory="libs/libpng-src/projects" />
+					<Add directory="libs/fmodex/lib" />
+				</Linker>
+			</Target>
+			<Target title="Debug Mingw64 R_OpenGL">
+				<Option output="bin/Mingw64/Debug/r_opengl.dll" prefix_auto="1" extension_auto="0" />
+				<Option working_dir="bin/Mingw64/Debug" />
+				<Option object_output="objs/Mingw64/Debug" />
+				<Option type="3" />
+				<Option compiler="gnu_gcc_compiler_for_mingw64" />
+				<Compiler>
+					<Add option="-D__USE_MINGW_ANSI_STDIO=0" />
+					<Add option="-D_WINDOWS" />
+				</Compiler>
+				<Linker>
+					<Add option="-Wl,--add-stdcall-alias" />
+					<Add library="gdi32" />
+				</Linker>
+			</Target>
+			<Target title="Release Mingw64 R_OpenGL">
+				<Option output="bin/Mingw64/Release/r_opengl.dll" prefix_auto="1" extension_auto="0" />
+				<Option working_dir="bin/Mingw64/Release" />
+				<Option object_output="objs/Mingw64/Release" />
+				<Option type="3" />
+				<Option compiler="gnu_gcc_compiler_for_mingw64" />
+				<Compiler>
+					<Add option="-O2" />
+					<Add option="-D__USE_MINGW_ANSI_STDIO=0" />
+					<Add option="-D_WINDOWS" />
+				</Compiler>
+				<Linker>
+					<Add option="-Wl,--add-stdcall-alias" />
+					<Add library="gdi32" />
+				</Linker>
+			</Target>
+			<Target title="Debug Mingw64 R_MiniGL">
+				<Option output="bin/Mingw64/Debug/r_opengl.dll" prefix_auto="1" extension_auto="0" />
+				<Option working_dir="bin/Mingw64/Debug" />
+				<Option object_output="objs/Mingw64/Debug" />
+				<Option type="3" />
+				<Option compiler="gnu_gcc_compiler_for_mingw64" />
+				<Compiler>
+					<Add option="-Os" />
+					<Add option="-D__USE_MINGW_ANSI_STDIO=0" />
+					<Add option="-D_WINDOWS" />
+				</Compiler>
+				<Linker>
+					<Add option="-Wl,--add-stdcall-alias" />
+					<Add library="gdi32" />
+				</Linker>
+			</Target>
+			<Target title="Release Mingw64 R_MiniGL">
+				<Option output="bin/Mingw64/Release/r_opengl.dll" prefix_auto="1" extension_auto="0" />
+				<Option working_dir="bin/Mingw64/Release" />
+				<Option object_output="objs/Mingw64/Release" />
+				<Option type="3" />
+				<Option compiler="gnu_gcc_compiler_for_mingw64" />
+				<Compiler>
+					<Add option="-O2" />
+					<Add option="-D__USE_MINGW_ANSI_STDIO=0" />
+					<Add option="-D_WINDOWS" />
+				</Compiler>
+				<Linker>
+					<Add option="-Wl,--add-stdcall-alias" />
+					<Add library="gdi32" />
+				</Linker>
+			</Target>
+			<Target title="Debug Mingw64 S_DS3D">
+				<Option output="bin/Mingw64/Debug/s_ds3d.dll" prefix_auto="1" extension_auto="0" />
+				<Option working_dir="bin/Mingw64/Debug" />
+				<Option object_output="objs/Mingw64/Debug" />
+				<Option type="3" />
+				<Option compiler="gnu_gcc_compiler_for_mingw64" />
+				<Compiler>
+					<Add option="-D__USE_MINGW_ANSI_STDIO=0" />
+					<Add option="-D_WINDOWS" />
+				</Compiler>
+				<Linker>
+					<Add option="-Wl,--add-stdcall-alias" />
+					<Add library="dsound" />
+				</Linker>
+			</Target>
+			<Target title="Release Mingw64 S_DS3D">
+				<Option output="bin/Mingw64/Release/s_ds3d.dll" prefix_auto="1" extension_auto="0" />
+				<Option working_dir="bin/Mingw64/Release" />
+				<Option object_output="objs/Mingw64/Release" />
+				<Option type="3" />
+				<Option compiler="gnu_gcc_compiler_for_mingw64" />
+				<Compiler>
+					<Add option="-O2" />
+					<Add option="-D__USE_MINGW_ANSI_STDIO=0" />
+					<Add option="-D_WINDOWS" />
+				</Compiler>
+				<Linker>
+					<Add option="-Wl,--add-stdcall-alias" />
+					<Add library="dsound" />
+				</Linker>
+			</Target>
+			<Target title="Debug Mingw64 S_FMOD">
+				<Option output="bin/Mingw64/Debug/s_fmod.dll" prefix_auto="1" extension_auto="0" />
+				<Option working_dir="bin/Mingw64/Debug" />
+				<Option object_output="objs/Mingw64/Debug" />
+				<Option type="3" />
+				<Option compiler="gnu_gcc_compiler_for_mingw64" />
+				<Compiler>
+					<Add option="-D__USE_MINGW_ANSI_STDIO=0" />
+					<Add option="-D_WINDOWS" />
+				</Compiler>
+				<Linker>
+					<Add option="-Wl,--add-stdcall-alias" />
+					<Add library="fmod" />
+				</Linker>
+			</Target>
+			<Target title="Release Mingw64 S_FMOD">
+				<Option output="bin/Mingw64/Release/s_fmod.dll" prefix_auto="1" extension_auto="0" />
+				<Option working_dir="bin/Mingw64/Release" />
+				<Option object_output="objs/Mingw64/Release" />
+				<Option type="3" />
+				<Option compiler="gnu_gcc_compiler_for_mingw64" />
+				<Compiler>
+					<Add option="-O2" />
+					<Add option="-D__USE_MINGW_ANSI_STDIO=0" />
+					<Add option="-D_WINDOWS" />
+				</Compiler>
+				<Linker>
+					<Add option="-Wl,--add-stdcall-alias" />
+					<Add library="fmod" />
+				</Linker>
+			</Target>
+			<Target title="Debug Mingw64 S_OpenAL">
+				<Option output="bin/Mingw64/Debug/s_opneal.dll" prefix_auto="1" extension_auto="0" />
+				<Option working_dir="bin/Mingw64/Debug" />
+				<Option object_output="objs/Mingw64/Debug" />
+				<Option type="3" />
+				<Option compiler="gnu_gcc_compiler_for_mingw64" />
+				<Compiler>
+					<Add option="-D__USE_MINGW_ANSI_STDIO=0" />
+					<Add option="-D_WINDOWS" />
+				</Compiler>
+				<Linker>
+					<Add option="-Wl,--add-stdcall-alias" />
+					<Add library="openal32" />
+				</Linker>
+			</Target>
+			<Target title="Release Mingw64 S_OpenAL">
+				<Option output="bin/Mingw64/Release/s_openal.dll" prefix_auto="1" extension_auto="0" />
+				<Option working_dir="bin/Mingw64/Release" />
+				<Option object_output="objs/Mingw64/Release" />
+				<Option type="3" />
+				<Option compiler="gnu_gcc_compiler_for_mingw64" />
+				<Compiler>
+					<Add option="-O2" />
+					<Add option="-D__USE_MINGW_ANSI_STDIO=0" />
+					<Add option="-D_WINDOWS" />
+				</Compiler>
+				<Linker>
+					<Add option="-Wl,--add-stdcall-alias" />
+					<Add library="openal32" />
+				</Linker>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-W" />
+			<Add option="-Wall" />
+			<Add option="-g" />
+			<Add option="-fno-exceptions" />
+			<Add directory="src" />
+			<Add directory="src/hardware" />
+			<Add directory="src/sdl" />
+			<Add directory="src/win32" />
+			<Add directory="src/hardware/r_opengl" />
+		</Compiler>
+		<Linker>
+			<Add option="-g" />
+		</Linker>
+		<ExtraCommands>
+			<Add before="make -f comptime.mk all-before" />
+			<Add after="make -f cpdebug.mk all-after BIN=$(TARGET_OUTPUT_FILE)" />
+			<Mode after="always" />
+		</ExtraCommands>
+		<Unit filename="src/am_map.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/am_map.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/b_bot.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/b_bot.h" />
+		<Unit filename="src/blua/lapi.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/blua/lapi.h" />
+		<Unit filename="src/blua/lauxlib.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/blua/lauxlib.h" />
+		<Unit filename="src/blua/lbaselib.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/blua/lcode.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/blua/lcode.h" />
+		<Unit filename="src/blua/ldebug.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/blua/ldebug.h" />
+		<Unit filename="src/blua/ldo.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/blua/ldo.h" />
+		<Unit filename="src/blua/ldump.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/blua/lfunc.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/blua/lfunc.h" />
+		<Unit filename="src/blua/lgc.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/blua/lgc.h" />
+		<Unit filename="src/blua/linit.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/blua/llex.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/blua/llex.h" />
+		<Unit filename="src/blua/llimits.h" />
+		<Unit filename="src/blua/lmem.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/blua/lmem.h" />
+		<Unit filename="src/blua/lobject.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/blua/lobject.h" />
+		<Unit filename="src/blua/lopcodes.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/blua/lopcodes.h" />
+		<Unit filename="src/blua/lparser.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/blua/lparser.h" />
+		<Unit filename="src/blua/lstate.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/blua/lstate.h" />
+		<Unit filename="src/blua/lstring.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/blua/lstring.h" />
+		<Unit filename="src/blua/lstrlib.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/blua/ltable.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/blua/ltable.h" />
+		<Unit filename="src/blua/ltablib.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/blua/ltm.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/blua/ltm.h" />
+		<Unit filename="src/blua/lua.h" />
+		<Unit filename="src/blua/luaconf.h" />
+		<Unit filename="src/blua/lualib.h" />
+		<Unit filename="src/blua/lundump.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/blua/lundump.h" />
+		<Unit filename="src/blua/lvm.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/blua/lvm.h" />
+		<Unit filename="src/blua/lzio.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/blua/lzio.h" />
+		<Unit filename="src/byteptr.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/command.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/command.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/comptime.c">
+			<Option compilerVar="CC" />
+			<Option weight="100" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/console.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/console.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/d_clisrv.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/d_clisrv.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/d_event.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/d_main.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/d_main.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/d_net.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/d_net.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/d_netcmd.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/d_netcmd.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/d_netfil.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/d_netfil.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/d_player.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/d_think.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/d_ticcmd.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/dehacked.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/dehacked.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/doomdata.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/doomdef.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/doomstat.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/doomtype.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/dummy/i_cdmus.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+		</Unit>
+		<Unit filename="src/dummy/i_main.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+		</Unit>
+		<Unit filename="src/dummy/i_net.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+		</Unit>
+		<Unit filename="src/dummy/i_sound.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+		</Unit>
+		<Unit filename="src/dummy/i_system.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+		</Unit>
+		<Unit filename="src/dummy/i_video.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+		</Unit>
+		<Unit filename="src/f_finale.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/f_finale.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/f_wipe.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/fastcmp.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/filesrch.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/filesrch.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/g_game.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/g_game.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/g_input.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/g_input.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/g_state.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/hardware/hw3dsdrv.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/hardware/hw3sound.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/hardware/hw3sound.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/hardware/hw_bsp.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/hardware/hw_cache.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/hardware/hw_data.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/hardware/hw_defs.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/hardware/hw_dll.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/hardware/hw_draw.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/hardware/hw_drv.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/hardware/hw_glide.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/hardware/hw_glob.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/hardware/hw_light.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/hardware/hw_light.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/hardware/hw_main.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/hardware/hw_main.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/hardware/hw_md2.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/hardware/hw_md2.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/hardware/hw_trick.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/hardware/hws_data.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/hardware/r_minigl/r_minigl.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Mingw R_MiniGL" />
+			<Option target="Release Mingw R_MiniGL" />
+			<Option target="Debug Mingw64 R_MiniGL" />
+			<Option target="Release Mingw64 R_MiniGL" />
+		</Unit>
+		<Unit filename="src/hardware/r_opengl/ogl_win.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Mingw R_OpenGL" />
+			<Option target="Release Mingw R_OpenGL" />
+			<Option target="Debug Mingw64 R_OpenGL" />
+			<Option target="Release Mingw64 R_OpenGL" />
+		</Unit>
+		<Unit filename="src/hardware/r_opengl/r_opengl.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw R_OpenGL" />
+			<Option target="Release Mingw R_OpenGL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64 R_OpenGL" />
+			<Option target="Release Mingw64 R_OpenGL" />
+		</Unit>
+		<Unit filename="src/hardware/r_opengl/r_opengl.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Mingw R_OpenGL" />
+			<Option target="Release Mingw R_OpenGL" />
+			<Option target="Debug Mingw R_MiniGL" />
+			<Option target="Release Mingw R_MiniGL" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64 R_OpenGL" />
+			<Option target="Release Mingw64 R_OpenGL" />
+			<Option target="Debug Mingw64 R_MiniGL" />
+			<Option target="Release Mingw64 R_MiniGL" />
+		</Unit>
+		<Unit filename="src/hardware/s_ds3d/s_ds3d.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Mingw S_DS3D" />
+			<Option target="Release Mingw S_DS3D" />
+			<Option target="Debug Mingw64 S_DS3D" />
+			<Option target="Release Mingw64 S_DS3D" />
+		</Unit>
+		<Unit filename="src/hardware/s_fmod/s_fmod.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Mingw S_FMOD" />
+			<Option target="Release Mingw S_FMOD" />
+			<Option target="Debug Mingw64 S_FMOD" />
+			<Option target="Release Mingw64 S_FMOD" />
+		</Unit>
+		<Unit filename="src/hardware/s_openal/s_openal.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Mingw S_OpenAL" />
+			<Option target="Release Mingw S_OpenAL" />
+			<Option target="Debug Shared S_OpenAL" />
+			<Option target="Release Shared S_OpenAL" />
+			<Option target="Debug Mingw64 S_OpenAL" />
+			<Option target="Release Mingw64 S_OpenAL" />
+		</Unit>
+		<Unit filename="src/hu_stuff.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/hu_stuff.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/i_joy.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/i_net.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/i_sound.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/i_system.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/i_tcp.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/i_tcp.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/i_video.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/info.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/info.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/keys.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/lua_baselib.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/lua_consolelib.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/lua_hook.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/lua_hooklib.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/lua_hud.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/lua_hudlib.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/lua_infolib.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/lua_libs.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/lua_maplib.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/lua_mathlib.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/lua_mobjlib.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/lua_playerlib.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/lua_script.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/lua_script.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/lua_skinlib.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/lua_thinkerlib.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/lzf.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/lzf.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/m_anigif.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/m_anigif.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/m_argv.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/m_argv.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/m_bbox.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/m_bbox.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/m_cheat.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/m_cheat.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/m_cond.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/m_cond.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/m_dllist.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/m_fixed.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/m_fixed.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/m_menu.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/m_menu.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/m_misc.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/m_misc.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/m_queue.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/m_queue.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/m_random.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/m_random.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/m_swap.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/md5.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/md5.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/mserv.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/mserv.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/p5prof.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/p_ceilng.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/p_enemy.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/p_fab.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/p_floor.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/p_inter.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/p_lights.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/p_local.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/p_map.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/p_maputl.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/p_maputl.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/p_mobj.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/p_mobj.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/p_polyobj.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/p_polyobj.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/p_pspr.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/p_saveg.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/p_saveg.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/p_setup.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/p_setup.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/p_sight.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/p_spec.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/p_spec.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/p_telept.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/p_tick.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/p_tick.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/p_user.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/r_bsp.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/r_bsp.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/r_data.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/r_data.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/r_defs.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/r_draw.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/r_draw.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/r_draw16.c">
+			<Option compilerVar="CC" />
+			<Option compile="0" />
+			<Option link="0" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/r_draw8.c">
+			<Option compilerVar="CC" />
+			<Option compile="0" />
+			<Option link="0" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/r_local.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/r_main.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/r_main.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/r_plane.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/r_plane.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/r_segs.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/r_segs.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/r_sky.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/r_sky.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/r_splats.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/r_splats.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/r_state.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/r_things.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/r_things.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/s_sound.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/s_sound.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/screen.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/screen.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/sdl/IMG_xpm.c">
+			<Option compilerVar="CC" />
+			<Option compile="0" />
+			<Option link="0" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+		</Unit>
+		<Unit filename="src/sdl/dosstr.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+		</Unit>
+		<Unit filename="src/sdl/endtxt.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+		</Unit>
+		<Unit filename="src/sdl/endtxt.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+		</Unit>
+		<Unit filename="src/sdl/filter/filters.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+		</Unit>
+		<Unit filename="src/sdl/filter/filters.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+		</Unit>
+		<Unit filename="src/sdl/filter/hq2x.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+		</Unit>
+		<Unit filename="src/sdl/filter/hq2x.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+		</Unit>
+		<Unit filename="src/sdl/filter/interp.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+		</Unit>
+		<Unit filename="src/sdl/filter/lq2x.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+		</Unit>
+		<Unit filename="src/sdl/filter/lq2x.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+		</Unit>
+		<Unit filename="src/sdl/filter/main.c">
+			<Option compilerVar="CC" />
+			<Option compile="0" />
+			<Option link="0" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+		</Unit>
+		<Unit filename="src/sdl/hwsym_sdl.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+		</Unit>
+		<Unit filename="src/sdl/hwsym_sdl.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+		</Unit>
+		<Unit filename="src/sdl/i_cdmus.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+		</Unit>
+		<Unit filename="src/sdl/i_main.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+		</Unit>
+		<Unit filename="src/sdl/i_net.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+		</Unit>
+		<Unit filename="src/sdl/i_system.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+		</Unit>
+		<Unit filename="src/sdl/i_video.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+		</Unit>
+		<Unit filename="src/sdl/mixer_sound.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+		</Unit>
+		<Unit filename="src/sdl/ogl_sdl.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+		</Unit>
+		<Unit filename="src/sdl/ogl_sdl.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+		</Unit>
+		<Unit filename="src/sdl/sdl_sound.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+		</Unit>
+		<Unit filename="src/sdl/sdlmain.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+		</Unit>
+		<Unit filename="src/sounds.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/sounds.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/st_stuff.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/st_stuff.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/string.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/tables.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/tables.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/tmap.nas">
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/tmap_mmx.nas">
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/v_video.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/v_video.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/vid_copy.s">
+			<Option compilerVar="CC" />
+			<Option compiler="avrgcc" use="1" buildCommand="$compiler $options -x assembler-with-cpp -c $file -o $object" />
+			<Option compiler="gnu_gcc_compiler_for_mingw32" use="1" buildCommand="$compiler $options -x assembler-with-cpp -c $file -o $object" />
+			<Option compiler="gnu_gcc_compiler_for_mingw64" use="1" buildCommand="$compiler $options -x assembler-with-cpp -c $file -o $object" />
+			<Option compiler="armelfgcc" use="1" buildCommand="$compiler $options -x assembler-with-cpp -c $file -o $object" />
+			<Option compiler="tricoregcc" use="1" buildCommand="$compiler $options -x assembler-with-cpp -c $file -o $object" />
+			<Option compiler="ppcgcc" use="1" buildCommand="$compiler $options -x assembler-with-cpp -c $file -o $object" />
+			<Option compiler="gcc" use="1" buildCommand="$compiler $options -x assembler-with-cpp -c $file -o $object" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+		</Unit>
+		<Unit filename="src/w_wad.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/w_wad.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/win32/Srb2win.rc">
+			<Option compilerVar="WINDRES" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/win32/afxres.h">
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/win32/dx_error.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/win32/dx_error.h">
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/win32/fabdxlib.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/win32/fabdxlib.h">
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/win32/resource.h">
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/win32/win_cd.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/win32/win_dbg.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/win32/win_dbg.h">
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/win32/win_dll.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/win32/win_dll.h">
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/win32/win_main.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/win32/win_main.h">
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/win32/win_net.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/win32/win_snd.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/win32/win_sys.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/win32/win_vid.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/y_inter.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/y_inter.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/z_zone.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/z_zone.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Extensions>
+			<envvars />
+			<code_completion />
+			<debugger />
+			<lib_finder disable_auto="1" />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>

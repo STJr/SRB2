@@ -1,0 +1,177 @@
+--- gettext-runtime/intl/printf.c
++++ gettext-runtime/intl/printf.c
+@@ -69,7 +69,7 @@
+ #define STATIC static
+ 
+ /* This needs to be consistent with libgnuintl.h.in.  */
+-#if defined __NetBSD__ || defined __BEOS__ || defined __CYGWIN__ || defined __MINGW32__
++#if defined __NetBSD__ || defined __BEOS__ || defined __CYGWIN__
+ /* Don't break __attribute__((format(printf,M,N))).
+    This redefinition is only possible because the libc in NetBSD, Cygwin,
+    mingw does not have a function __printf__.  */
+--- gettext-runtime/intl/libgnuintl.h.in
++++ gettext-runtime/intl/libgnuintl.h.in
+@@ -330,7 +330,7 @@
+ 
+ #if !(defined printf && defined _GL_STDIO_H) /* don't override gnulib */
+ #undef printf
+-#if defined __NetBSD__ || defined __BEOS__ || defined __CYGWIN__ || defined __MINGW32__
++#if defined __NetBSD__ || defined __BEOS__ || defined __CYGWIN__
+ /* Don't break __attribute__((format(printf,M,N))).
+    This redefinition is only possible because the libc in NetBSD, Cygwin,
+    mingw does not have a function __printf__.
+---- gettext-tools/gnulib-lib/clean-temp.c
++++ gettext-tools/gnulib-lib/clean-temp.c
+@@ -66,9 +66,11 @@
+ # endif
+ #endif
+ 
++#ifndef _WIN64
+ #ifndef uintptr_t
+ # define uintptr_t unsigned long
+ #endif
++#endif
+ 
+ #if !GNULIB_FCNTL_SAFER
+ /* The results of open() in this file are not used with fchdir,
+--- gettext-tools/gnulib-lib/fstrcmp.c
++++ gettext-tools/gnulib-lib/fstrcmp.c
+@@ -55,9 +55,11 @@
+ #include "minmax.h"
+ #include "xalloc.h"
+ 
++#ifndef _WIN64
+ #ifndef uintptr_t
+ # define uintptr_t unsigned long
+ #endif
++#endif
+ 
+ 
+ #define ELEMENT char
+--- gettext-tools/gnulib-lib/gl_array_list.c
++++ gettext-tools/gnulib-lib/gl_array_list.c
+@@ -55,9 +55,11 @@
+ /* Checked size_t computations.  */
+ #include "xsize.h"
+ 
++#ifndef _WIN64
+ #ifndef uintptr_t
+ # define uintptr_t unsigned long
+ #endif
++#endif
+ 
+ /* -------------------------- gl_list_t Data Type -------------------------- */
+ 
+--- gettext-tools/gnulib-lib/gl_linkedhash_list.c
++++ gettext-tools/gnulib-lib/gl_linkedhash_list.c
+@@ -55,9 +55,11 @@
+ 
+ #include "xsize.h"
+ 
++#ifndef _WIN64
+ #ifndef uintptr_t
+ # define uintptr_t unsigned long
+ #endif
++#endif
+ 
+ #define WITH_HASHTABLE 1
+ 
+--- gettext-tools/gnulib-lib/stdio.in.h
++++ gettext-tools/gnulib-lib/stdio.in.h
+@@ -642,10 +642,6 @@
+ # if (@GNULIB_PRINTF_POSIX@ && @REPLACE_PRINTF@) \
+      || (@GNULIB_PRINTF@ && @REPLACE_STDIO_WRITE_FUNCS@ && @GNULIB_STDIO_H_SIGPIPE@)
+ #  if defined __GNUC__
+-#   if !(defined __cplusplus && defined GNULIB_NAMESPACE)
+-/* Don't break __attribute__((format(printf,M,N))).  */
+-#    define printf __printf__
+-#   endif
+ _GL_FUNCDECL_RPL_1 (__printf__, int,
+                     (const char *format, ...)
+                     __asm__ (@ASM_SYMBOL_PREFIX@
+--- gettext-tools/gnulib-lib/tempname.c
++++ gettext-tools/gnulib-lib/tempname.c
+@@ -54,6 +54,10 @@
+ #include <stdint.h>
+ #include <unistd.h>
+ 
++#ifdef _WIN32
++# include <direct.h>
++#endif
++
+ #include <sys/stat.h>
+ 
+ #if _LIBC
+@@ -73,6 +73,10 @@
+ # define __xstat64(version, file, buf) stat (file, buf)
+ #endif
+ 
++#ifdef _WIN32
++# define mkdir(path,mode) _mkdir(path)
++#endif
++
+ #if ! (HAVE___SECURE_GETENV || _LIBC)
+ # define __secure_getenv getenv
+ #endif
+--- gettext-tools/src/write-java.c
++++ gettext-tools/src/write-java.c
+@@ -30,6 +30,10 @@
+ #include <stdio.h>
+ #include <string.h>
+ 
++#ifdef _WIN32
++# include <direct.h>
++#endif
++
+ #include <sys/stat.h>
+ #if !defined S_ISDIR && defined S_IFDIR
+ # define S_ISDIR(mode) (((mode) & S_IFMT) == S_IFDIR)
+@@ -53,6 +53,10 @@
+ # define S_IXUSR 00100
+ #endif
+ 
++#ifdef _WIN32
++# define mkdir(path,mode) _mkdir(path)
++#endif
++
+ #include "c-ctype.h"
+ #include "error.h"
+ #include "xerror.h"
+--- gettext-tools/src/write-csharp.c
++++ gettext-tools/src/write-csharp.c
+@@ -29,6 +29,10 @@
+ #include <stdio.h>
+ #include <string.h>
+ 
++#ifdef _WIN32
++# include <direct.h>
++#endif
++
+ #include <sys/stat.h>
+ #if !defined S_ISDIR && defined S_IFDIR
+ # define S_ISDIR(mode) (((mode) & S_IFMT) == S_IFDIR)
+@@ -70,6 +70,10 @@
+ # define S_IXOTH (S_IXUSR >> 6)
+ #endif
+ 
++#ifdef _WIN32
++# define mkdir(path,mode) _mkdir(path)
++#endif
++
+ #include "c-ctype.h"
+ #include "relocatable.h"
+ #include "error.h"
+--- gettext-tools/woe32dll/export.h
++++ gettext-tools/woe32dll/export.h
+@@ -90,7 +90,11 @@
+    --export-all-symbols is used.  */
+ 
+  /* IMP(x) is a symbol that contains the address of x.  */
++#ifdef _WIN64
++#define IMP(x) __imp_##x
++#else
+ #define IMP(x) _imp__##x
++#endif
+ 
+  /* Ensure that the variable x is exported from the library, and that a
+     pseudo-variable IMP(x) is available.  */
