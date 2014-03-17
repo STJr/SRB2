@@ -93,7 +93,7 @@ UINT8 P_Random(void)
 #else
 UINT8 P_RandomD(const char *rfile, INT32 rline)
 {
-	CONS_Debug(DBG_RANDOMIZER, "P_Random() at: %sp %d\n", rfile, rline);
+	CONS_Printf("P_Random() at: %sp %d\n", rfile, rline);
 #endif
 	randomseed = (randomseed*746151647)+48205429;
 	return (UINT8)((randomseed >> 17)&255);
@@ -111,7 +111,7 @@ INT32 P_SignedRandom(void)
 #else
 INT32 P_SignedRandomD(const char *rfile, INT32 rline)
 {
-	CONS_Debug(DBG_RANDOMIZER, "P_SignedRandom() at: %sp %d\n", rfile, rline);
+	CONS_Printf("P_SignedRandom() at: %sp %d\n", rfile, rline);
 #endif
 	return P_Random() - 128;
 }
@@ -129,7 +129,7 @@ INT32 P_RandomKey(INT32 a)
 #else
 INT32 P_RandomKeyD(const char *rfile, INT32 rline, INT32 a)
 {
-	CONS_Debug(DBG_RANDOMIZER, "P_RandomKey() at: %sp %d\n", rfile, rline);
+	CONS_Printf("P_RandomKey() at: %sp %d\n", rfile, rline);
 #endif
 	return (INT32)(((P_Random()|(P_Random() << 8))/65536.0f)*a);
 }
@@ -146,7 +146,7 @@ INT32 P_RandomRange(INT32 a, INT32 b)
 #else
 INT32 P_RandomRangeD(const char *rfile, INT32 rline, INT32 a, INT32 b)
 {
-	CONS_Debug(DBG_RANDOMIZER, "P_RandomRange() at: %sp %d\n", rfile, rline);
+	CONS_Printf("P_RandomRange() at: %sp %d\n", rfile, rline);
 #endif
 	return (INT32)(((P_Random()|(P_Random() << 8))/65536.0f)*(b-a+1))+a;
 }
@@ -168,8 +168,14 @@ UINT8 P_RandomPeek(void)
   * \return Current random seed.
   * \sa P_SetRandSeed
   */
+#ifndef DEBUGRANDOM
 UINT32 P_GetRandSeed(void)
 {
+#else
+UINT32 P_GetRandSeedD(const char *rfile, INT32 rline)
+{
+	CONS_Printf("P_GetRandSeed() at: %sp %d\n", rfile, rline);
+#endif
 	return randomseed;
 }
 
@@ -178,8 +184,14 @@ UINT32 P_GetRandSeed(void)
   * \return Initial random seed.
   * \sa P_SetRandSeed
   */
+#ifndef DEBUGRANDOM
 UINT32 P_GetInitSeed(void)
 {
+#else
+UINT32 P_GetInitSeedD(const char *rfile, INT32 rline)
+{
+	CONS_Printf("P_GetInitSeed() at: %sp %d\n", rfile, rline);
+#endif
 	return initialseed;
 }
 
@@ -189,8 +201,14 @@ UINT32 P_GetInitSeed(void)
   * \param rindex New random index.
   * \sa P_GetRandSeed
   */
+#ifndef DEBUGRANDOM
 void P_SetRandSeed(UINT32 seed)
 {
+#else
+void P_SetRandSeedD(const char *rfile, INT32 rline, UINT32 seed)
+{
+	CONS_Printf("P_SetRandSeed() at: %sp %d\n", rfile, rline);
+#endif
 	randomseed = initialseed = seed;
 }
 

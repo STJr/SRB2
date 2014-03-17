@@ -1055,7 +1055,7 @@ static inline void P_SpawnEmblems(void)
 static void P_SpawnSecretItems(boolean loademblems)
 {
 	// Now let's spawn those funky emblem things! Tails 12-08-2002
-	if (netgame || multiplayer || (modifiedgame && !savemoddata) || modeattacking == ATTACKING_RECORD) // No cheating!!
+	if (netgame || multiplayer || (modifiedgame && !savemoddata)) // No cheating!!
 		return;
 
 	if (loademblems)

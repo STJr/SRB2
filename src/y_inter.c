@@ -1058,8 +1058,11 @@ void Y_StartIntermission(void)
 		case int_spec: // coop or single player, special stage
 		{
 			// Update visitation flags?
-			if (!stagefailed)
-				mapvisited[gamemap-1] |= MV_BEATEN;
+			if ((!modifiedgame || savemoddata) && !multiplayer && !demoplayback)
+			{
+				if (!stagefailed)
+					mapvisited[gamemap-1] |= MV_BEATEN;
+			}
 
 			// give out ring bonuses
 			Y_AwardSpecialStageBonus();

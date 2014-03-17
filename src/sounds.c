@@ -1233,7 +1233,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"statu1",  true,  64,  2, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"statu2",  true,  64,  2, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"strpst",  true, 192,  0, -1, NULL, 0,        -1,  -1, LUMPERROR}, // Starpost Sound Tails 07-04-2002
-  {"supert", false, 127,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
+  {"supert",  true, 127,  2, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"telept", false,  32,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"tink" ,  false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"token" ,  true, 224,  0, -1, NULL, 0,        -1,  -1, LUMPERROR}, // SS token

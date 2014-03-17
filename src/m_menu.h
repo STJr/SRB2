@@ -45,6 +45,9 @@ void M_StartControlPanel(void);
 // Called upon end of a mode attack run
 void M_EndModeAttackRun(void);
 
+// Called on new server add, or other reasons
+void M_SortServerList(void);
+
 // Draws a box with a texture inside as background for messages
 void M_DrawTextBox(INT32 x, INT32 y, INT32 width, INT32 boxlines);
 

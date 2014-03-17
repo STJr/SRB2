@@ -796,41 +796,54 @@ static void ST_drawFirstPersonHUD(void)
 {
 	player_t *player = stplyr;
 	patch_t *p = NULL;
+	UINT16 invulntime = 0;
+
+	if (player->playerstate != PST_LIVE)
+		return;
 
 	// Graue 06-18-2004: no V_NOSCALESTART, no SCX, no SCY, snap to right
 	if (player->powers[pw_shield] & SH_FORCE)
 	{
 		if ((player->powers[pw_shield] & 0xFF) > 0 || leveltime & 1)
-			V_DrawScaledPatch(304, STRINGY(32), V_SNAPTORIGHT|V_TRANSLUCENT, forceshield);
+			p = forceshield;
 	}
 	else switch (player->powers[pw_shield] & SH_NOSTACK)
 	{
-	case SH_JUMP:
-		V_DrawScaledPatch(304, STRINGY(32), V_SNAPTORIGHT|V_TRANSLUCENT, jumpshield);
-		break;
-	case SH_ELEMENTAL:
-		V_DrawScaledPatch(304, STRINGY(32), V_SNAPTORIGHT|V_TRANSLUCENT, watershield);
-		break;
-	case SH_BOMB:
-		V_DrawScaledPatch(304, STRINGY(32), V_SNAPTORIGHT|V_TRANSLUCENT, bombshield);
-		break;
-	case SH_ATTRACT:
-		V_DrawScaledPatch(304, STRINGY(32), V_SNAPTORIGHT|V_TRANSLUCENT, ringshield);
-		break;
-	case SH_PITY:
-		V_DrawScaledPatch(304, STRINGY(32), V_SNAPTORIGHT|V_TRANSLUCENT, pityshield);
-		break;
-	default:
-		break;
+	case SH_JUMP:      p = jumpshield;  break;
+	case SH_ELEMENTAL: p = watershield; break;
+	case SH_BOMB:      p = bombshield;  break;
+	case SH_ATTRACT:   p = ringshield;  break;
+	case SH_PITY:      p = pityshield;  break;
+	default: break;
 	}
 
-	if (player->playerstate != PST_DEAD && ((player->powers[pw_invulnerability] > 3*TICRATE || (player->powers[pw_invulnerability]
-		&& leveltime & 1)) || ((player->powers[pw_flashing] && leveltime & 1))))
-		V_DrawScaledPatch(304, STRINGY(60), V_SNAPTORIGHT|V_TRANSLUCENT, invincibility);
+	if (p)
+	{
+		if (splitscreen)
+			V_DrawSmallScaledPatch(312, STRINGY(24), V_SNAPTORIGHT|V_SNAPTOTOP|V_TRANSLUCENT, p);
+		else
+			V_DrawScaledPatch(304, 24, V_SNAPTORIGHT|V_SNAPTOTOP|V_TRANSLUCENT, p);
+	}
 
-	if (player->powers[pw_sneakers] > 3*TICRATE || (player->powers[pw_sneakers]
-		&& leveltime & 1))
-		V_DrawScaledPatch(304, STRINGY(88), V_SNAPTORIGHT|V_TRANSLUCENT, sneakers);
+	// pw_flashing just sets the icon to flash no matter what.
+	invulntime = player->powers[pw_flashing] ? 1 : player->powers[pw_invulnerability];
+	if (invulntime > 3*TICRATE || (invulntime && leveltime & 1))
+	{
+		if (splitscreen)
+			V_DrawSmallScaledPatch(312, STRINGY(24) + 14, V_SNAPTORIGHT|V_SNAPTOTOP|V_TRANSLUCENT, invincibility);
+		else
+			V_DrawScaledPatch(304, 24 + 28, V_SNAPTORIGHT|V_SNAPTOTOP|V_TRANSLUCENT, invincibility);
+	}
+
+	if (player->powers[pw_sneakers] > 3*TICRATE || (player->powers[pw_sneakers] && leveltime & 1))
+	{
+		if (splitscreen)
+			V_DrawSmallScaledPatch(312, STRINGY(24) + 28, V_SNAPTORIGHT|V_SNAPTOTOP|V_TRANSLUCENT, sneakers);
+		else
+			V_DrawScaledPatch(304, 24 + 56, V_SNAPTORIGHT|V_SNAPTOTOP|V_TRANSLUCENT, sneakers);
+	}
+
+	p = NULL;
 
 	// Display the countdown drown numbers!
 	if ((player->powers[pw_underwater] <= 11*TICRATE + 1
@@ -1505,15 +1518,15 @@ static void ST_drawCTFHUD(void)
 			break; // both flags were found, let's stop early
 	}
 
-	if (stplyr->gotflag & GF_REDFLAG)
+	// YOU have a flag. Display a monitor-like icon for it.
+	if (stplyr->gotflag)
 	{
-		// YOU HAVE THE RED FLAG
-		V_DrawScaledPatch(224, (splitscreen) ? STRINGY(160) : STRINGY(176), 0, gotrflag);
-	}
-	else if (stplyr->gotflag & GF_BLUEFLAG)
-	{
-		// YOU HAVE THE BLUE FLAG
-		V_DrawScaledPatch(224, (splitscreen) ? STRINGY(160) : STRINGY(176), 0, gotbflag);
+		patch_t *p = (stplyr->gotflag & GF_REDFLAG) ? gotrflag : gotbflag;
+
+		if (splitscreen)
+			V_DrawSmallScaledPatch(312, STRINGY(24) + 42, V_SNAPTORIGHT|V_SNAPTOTOP|V_TRANSLUCENT, p);
+		else
+			V_DrawScaledPatch(304, 24 + 84, V_SNAPTORIGHT|V_SNAPTOTOP|V_TRANSLUCENT, p);
 	}
 
 	// Display a countdown timer showing how much time left until the flag your team dropped returns to base.

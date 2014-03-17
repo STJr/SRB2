@@ -18,6 +18,8 @@
 #include "doomtype.h"
 #include "m_fixed.h"
 
+//#define DEBUGRANDOM
+
 // M_Random functions pull random numbers of various types that aren't network synced.
 // P_Random functions pulls random bytes from a LCG PRNG that is network synced.
 
@@ -46,9 +48,18 @@ INT32 P_RandomRange(INT32 a, INT32 b);
 UINT8 P_RandomPeek(void);
 
 // Working with the seed for PRNG
+#ifdef DEBUGRANDOM
+#define P_GetRandSeed() P_GetRandSeedD(__FILE__, __LINE__)
+#define P_GetInitSeed() P_GetInitSeedD(__FILE__, __LINE__)
+#define P_SetRandSeed(s) P_SetRandSeedD(__FILE__, __LINE__, s)
+UINT32 P_GetRandSeedD(const char *rfile, INT32 rline);
+UINT32 P_GetInitSeedD(const char *rfile, INT32 rline);
+void P_SetRandSeedD(const char *rfile, INT32 rline, UINT32 seed);
+#else
 UINT32 P_GetRandSeed(void);
 UINT32 P_GetInitSeed(void);
 void P_SetRandSeed(UINT32 seed);
+#endif
 UINT32 M_RandomizedSeed(void);
 
 #endif

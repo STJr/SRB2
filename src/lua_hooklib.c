@@ -408,7 +408,7 @@ void LUAh_ThinkFrame(void)
 			// Remove this function from the hook table to prevent further errors.
 			lua_pushvalue(gL, -1); // key
 			lua_pushnil(gL); // value
-			lua_rawset(gL, -5); // table
+			lua_rawset(gL, -4); // table
 			CONS_Printf("Hook removed.\n");
 		}
 	}

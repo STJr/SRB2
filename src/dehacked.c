@@ -6329,6 +6329,15 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_ORBITEM5",
 	"S_ORBITEM6",
 	"S_ORBITEM7",
+	"S_ORBITEM8",
+	"S_ORBITEM9",
+	"S_ORBITEM10",
+	"S_ORBITEM11",
+	"S_ORBITEM12",
+	"S_ORBITEM13",
+	"S_ORBITEM14",
+	"S_ORBITEM15",
+	"S_ORBITEM16",
 
 	// "Flicky" helper
 	"S_NIGHTOPIANHELPER1",

@@ -3127,8 +3127,15 @@ static void Command_Addfile(void)
 	}
 
 	p = fn+strlen(fn);
-	while(p > fn && *p != '\\' && *p != '/' && *p != ':')
+	while(p > fn)
+	{
 		--p;
+		if (*p == '\\' || *p == '/' || *p == ':')
+		{
+			++p;
+			break;
+		}
+	}
 	WRITESTRINGN(buf_p,p,240);
 
 	{

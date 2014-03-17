@@ -195,7 +195,6 @@ static void M_StopMessage(INT32 choice);
 static void M_HandleServerPage(INT32 choice);
 static void M_RoomMenu(INT32 choice);
 #endif
-static void M_SortServerList(void);
 
 // Prototyping is fun, innit?
 // ==========================================================================
@@ -396,8 +395,11 @@ consvar_t cv_newgametype = {"newgametype", "Co-op", CV_HIDEN|CV_CALL, gametype_c
 
 static CV_PossibleValue_t serversort_cons_t[] = {
 	{0,"Ping"},
-	{1,"Players"},
-	{2,"Gametype"},
+	{1,"Modified State"},
+	{2,"Most Players"},
+	{3,"Least Players"},
+	{4,"Max Players"},
+	{5,"Gametype"},
 	{0,NULL}
 };
 consvar_t cv_serversort = {"serversort", "Ping", CV_HIDEN | CV_CALL, serversort_cons_t, M_SortServerList, 0, NULL, NULL, 0, 0, NULL};
@@ -5770,15 +5772,46 @@ static boolean M_CancelConnect(void)
 #define SERVER_LIST_ENTRY_COMPARATOR(key) \
 static int ServerListEntryComparator_##key(const void *entry1, const void *entry2) \
 { \
-	return ((const serverelem_t*)entry1)->info.key - ((const serverelem_t*)entry2)->info.key; \
+	const serverelem_t *sa = (const serverelem_t*)entry1, *sb = (const serverelem_t*)entry2; \
+	if (sa->info.key != sb->info.key) \
+		return sa->info.key - sb->info.key; \
+	return strcmp(sa->info.servername, sb->info.servername); \
+}
+
+// This does descending instead of ascending.
+#define SERVER_LIST_ENTRY_COMPARATOR_REVERSE(key) \
+static int ServerListEntryComparator_##key##_reverse(const void *entry1, const void *entry2) \
+{ \
+	const serverelem_t *sa = (const serverelem_t*)entry1, *sb = (const serverelem_t*)entry2; \
+	if (sb->info.key != sa->info.key) \
+		return sb->info.key - sa->info.key; \
+	return strcmp(sb->info.servername, sa->info.servername); \
 }
 
 SERVER_LIST_ENTRY_COMPARATOR(time)
 SERVER_LIST_ENTRY_COMPARATOR(numberofplayer)
+SERVER_LIST_ENTRY_COMPARATOR_REVERSE(numberofplayer)
+SERVER_LIST_ENTRY_COMPARATOR_REVERSE(maxplayer)
 SERVER_LIST_ENTRY_COMPARATOR(gametype)
+
+// Special one for modified state.
+static int ServerListEntryComparator_modified(const void *entry1, const void *entry2)
+{
+	const serverelem_t *sa = (const serverelem_t*)entry1, *sb = (const serverelem_t*)entry2;
+
+	// Modified acts as 2 points, cheats act as one point.
+	int modstate_a = (sa->info.cheatsenabled ? 1 : 0) | (sa->info.modifiedgame ? 2 : 0);
+	int modstate_b = (sb->info.cheatsenabled ? 1 : 0) | (sb->info.modifiedgame ? 2 : 0);
+
+	if (modstate_a != modstate_b)
+		return modstate_a - modstate_b;
+
+	// Default to strcmp.
+	return strcmp(sa->info.servername, sb->info.servername);
+}
 #endif
 
-static void M_SortServerList(void)
+void M_SortServerList(void)
 {
 #ifndef NONET
 	switch(cv_serversort.value)
@@ -5786,10 +5819,19 @@ static void M_SortServerList(void)
 	case 0:		// Ping.
 		qsort(serverlist, serverlistcount, sizeof(serverelem_t), ServerListEntryComparator_time);
 		break;
-	case 1:		// Players.
+	case 1:		// Modified state.
+		qsort(serverlist, serverlistcount, sizeof(serverelem_t), ServerListEntryComparator_modified);
+		break;
+	case 2:		// Most players.
+		qsort(serverlist, serverlistcount, sizeof(serverelem_t), ServerListEntryComparator_numberofplayer_reverse);
+		break;
+	case 3:		// Least players.
 		qsort(serverlist, serverlistcount, sizeof(serverelem_t), ServerListEntryComparator_numberofplayer);
 		break;
-	case 2:		// Gametype.
+	case 4:		// Max players.
+		qsort(serverlist, serverlistcount, sizeof(serverelem_t), ServerListEntryComparator_maxplayer_reverse);
+		break;
+	case 5:		// Gametype.
 		qsort(serverlist, serverlistcount, sizeof(serverelem_t), ServerListEntryComparator_gametype);
 		break;
 	}

@@ -986,7 +986,6 @@ static UINT32 SL_SearchServer(INT32 node)
 static void SL_InsertServer(serverinfo_pak* info, SINT8 node)
 {
 	UINT32 i;
-	boolean moved;
 
 	// search if not already on it
 	i = SL_SearchServer(node);
@@ -1008,49 +1007,8 @@ static void SL_InsertServer(serverinfo_pak* info, SINT8 node)
 	serverlist[i].info = *info;
 	serverlist[i].node = node;
 
-	// list is sorted, so move the entry until it is sorted
-	do
-	{
-		INT32 keycurr = 0, keyprev = 0, keynext = 0;
-		switch(cv_serversort.value)
-		{
-		case 0:		// Ping.
-			keycurr = (tic_t)LONG(serverlist[i].info.time);
-			if (i > 0) keyprev = (tic_t)LONG(serverlist[i-1].info.time);
-			if (i < serverlistcount - 1) keynext = (tic_t)LONG(serverlist[i+1].info.time);
-			break;
-		case 1:		// Players.
-			keycurr = serverlist[i].info.numberofplayer;
-			if (i > 0) keyprev = serverlist[i-1].info.numberofplayer;
-			if (i < serverlistcount - 1) keynext = serverlist[i+1].info.numberofplayer;
-			break;
-		case 2:		// Gametype.
-			keycurr = serverlist[i].info.gametype;
-			if (i > 0) keyprev = serverlist[i-1].info.gametype;
-			if (i < serverlistcount - 1) keynext = serverlist[i+1].info.gametype;
-			break;
-		}
-
-		moved = false;
-		if (i > 0 && keycurr < keyprev)
-		{
-			serverelem_t s;
-			s = serverlist[i];
-			serverlist[i] = serverlist[i-1];
-			serverlist[i-1] = s;
-			i--;
-			moved = true;
-		}
-		else if (i < serverlistcount - 1 && keycurr > keynext)
-		{
-			serverelem_t s;
-			s = serverlist[i];
-			serverlist[i] = serverlist[i+1];
-			serverlist[i+1] = s;
-			i++;
-			moved = true;
-		}
-	} while (moved);
+	// resort server list
+	M_SortServerList();
 }
 
 void CL_UpdateServerList(boolean internetsearch, INT32 room)

@@ -604,8 +604,14 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 		if (tempchar)
 			Z_Free(tempchar);
 	}
+#ifdef _DEBUG
+	// I just want to point out while I'm here that because the data is still
+	// sent to all players, techincally anyone can see your chat if they really
+	// wanted to, even if you used sayto or sayteam.
+	// You should never send any sensitive info through sayto for that reason.
 	else
 		CONS_Printf("Dropped chat: %d %d %s\n", playernum, target, msg);
+#endif
 }
 #endif
 

@@ -550,7 +550,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		// Secret emblem thingy
 		case MT_EMBLEM:
 			{
-				if (modeattacking == ATTACKING_RECORD || demoplayback || player->bot)
+				if (demoplayback || player->bot)
 					return;
 				emblemlocations[special->health-1].collected = true;
 
@@ -636,6 +636,17 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					P_NightserizePlayer(player, special->health);
 					P_GiveEmerald(false);
 					// Don't play Ideya sound in special stage mode
+				}
+				else // Make sure that SOMEONE has the emerald, at least!
+				{
+					for (i = 0; i < MAXPLAYERS; i++)
+						if (playeringame[i] && players[i].playerstate == PST_LIVE
+						&& players[i].mo->tracer && players[i].mo->tracer->target
+						&& players[i].mo->tracer->target->type == MT_GOTEMERALD)
+							return;
+					// Well no one has an emerald, so exit anyway!
+					P_NightserizePlayer(player, special->health);
+					P_GiveEmerald(false);
 				}
 			}
 			else if (player->bonustime && !player->exiting) //After-mare bonus time/emerald reward in special stages.
@@ -1505,8 +1516,10 @@ static void P_HitDeathMessages(player_t *player, mobj_t *inflictor, mobj_t *sour
 				case MT_PLAYER:
 					if ((inflictor->player->powers[pw_shield] & SH_NOSTACK) == SH_BOMB)
 						str = M_GetText("%s%s's armageddon blast %s %s.\n");
-					else
+					else if (inflictor->player->powers[pw_invulnerability])
 						str = M_GetText("%s%s's invincibility aura %s %s.\n");
+					else
+						str = M_GetText("%s%s's tagging hand %s %s.\n");
 					break;
 				case MT_SPINFIRE:
 					str = M_GetText("%s%s's elemental fire trail %s %s.\n");
@@ -1534,7 +1547,7 @@ static void P_HitDeathMessages(player_t *player, mobj_t *inflictor, mobj_t *sour
 					if (inflictor->flags2 & MF2_RAILRING)
 						str = M_GetText("%s%s's rail ring %s %s.\n");
 					else
-						str = M_GetText("%s%s's red ring %s %s.\n");
+						str = M_GetText("%s%s's thrown ring %s %s.\n");
 					break;
 				default:
 					str = M_GetText("%s%s %s %s.\n");

@@ -9129,8 +9129,6 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 		else if (maptol & TOL_XMAS)
 			P_SetMobjState(mobj, mobj->info->seestate);
 
-		if (mobj->tics > 0)
-			mobj->tics = 1 + P_RandomKey(mobj->tics);
 		mobj->angle = FixedAngle(mthing->angle*FRACUNIT);
 		mobj->flags |= MF_AMBUSH;
 		mthing->mobj = mobj;
@@ -9199,8 +9197,6 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 			mobj->flags2 |= MF2_OBJECTFLIP;
 		}
 
-		if (mobj->tics > 0)
-			mobj->tics = 1 + P_RandomKey(mobj->tics);
 		mobj->angle = FixedAngle(mthing->angle*FRACUNIT);
 		mobj->flags |= MF_AMBUSH;
 		mthing->mobj = mobj;
@@ -9251,9 +9247,6 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 				mobj->eflags |= MFE_VERTICALFLIP;
 				mobj->flags2 |= MF2_OBJECTFLIP;
 			}
-
-			if (mobj->tics > 0)
-				mobj->tics = 1 + P_RandomKey(mobj->tics);
 
 			mobj->angle = FixedAngle(mthing->angle*FRACUNIT);
 			if (mthing->options & MTF_AMBUSH)
@@ -9308,9 +9301,6 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 				mobj->eflags |= MFE_VERTICALFLIP;
 				mobj->flags2 |= MF2_OBJECTFLIP;
 			}
-
-			if (mobj->tics > 0)
-				mobj->tics = 1 + P_RandomKey(mobj->tics);
 
 			mobj->angle = FixedAngle(mthing->angle*FRACUNIT);
 			if (mthing->options & MTF_AMBUSH)

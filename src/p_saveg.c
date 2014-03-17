@@ -34,6 +34,15 @@
 savedata_t savedata;
 UINT8 *save_p;
 
+// Block UINT32s to attempt to ensure that the correct data is
+// being sent and received
+#define ARCHIVEBLOCK_MISC     0x7FEEDEED
+#define ARCHIVEBLOCK_PLAYERS  0x7F448008
+#define ARCHIVEBLOCK_WORLD    0x7F8C08C0
+#define ARCHIVEBLOCK_POBJS    0x7F928546
+#define ARCHIVEBLOCK_THINKERS 0x7F37037C
+#define ARCHIVEBLOCK_SPECIALS 0x7F228378
+
 // Note: This cannot be bigger
 // than an UINT16
 typedef enum
@@ -101,6 +110,8 @@ static inline void P_NetArchivePlayers(void)
 	INT32 i, j;
 	UINT16 flags;
 //	size_t q;
+
+	WRITEUINT32(save_p, ARCHIVEBLOCK_PLAYERS);
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
@@ -272,6 +283,9 @@ static inline void P_NetUnArchivePlayers(void)
 	INT32 i, j;
 	UINT16 flags;
 
+	if (READUINT32(save_p) != ARCHIVEBLOCK_PLAYERS)
+		I_Error("Bad $$$.sav at archive block Players");
+
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
 		memset(&players[i], 0, sizeof (player_t));
@@ -414,7 +428,7 @@ static inline void P_NetUnArchivePlayers(void)
 		players[i].revitem = (mobjtype_t)READUINT32(save_p);
 		players[i].actionspd = READFIXED(save_p);
 		players[i].mindash = READFIXED(save_p);
-		players[i].maxdash = READINT32(save_p);
+		players[i].maxdash = READFIXED(save_p);
 		players[i].normalspeed = READFIXED(save_p);
 		players[i].runspeed = READFIXED(save_p);
 		players[i].thrustfactor = READUINT8(save_p);
@@ -464,7 +478,7 @@ static void P_NetArchiveWorld(void)
 	INT32 statsec = 0, statline = 0;
 	const line_t *li = lines;
 	const side_t *si;
-	UINT8 *put = save_p;
+	UINT8 *put;
 
 	// reload the map just to see difference
 	const mapsector_t *ms;
@@ -472,6 +486,9 @@ static void P_NetArchiveWorld(void)
 	const maplinedef_t *mld;
 	const sector_t *ss = sectors;
 	UINT8 diff, diff2;
+
+	WRITEUINT32(save_p, ARCHIVEBLOCK_WORLD);
+	put = save_p;
 
 	ms = W_CacheLumpNum(lastloadedmaplumpnum+ML_SECTORS, PU_CACHE);
 
@@ -652,6 +669,9 @@ static void P_NetUnArchiveWorld(void)
 	side_t *si;
 	UINT8 *get;
 	UINT8 diff, diff2;
+
+	if (READUINT32(save_p) != ARCHIVEBLOCK_WORLD)
+		I_Error("Bad $$$.sav at archive block World");
 
 	get = save_p;
 
@@ -1271,6 +1291,8 @@ static void P_NetArchiveThinkers(void)
 	const mobj_t *mobj;
 	UINT32 diff;
 	UINT16 diff2;
+
+	WRITEUINT32(save_p, ARCHIVEBLOCK_THINKERS);
 
 	// save off the current thinkers
 	for (th = thinkercap.next; th != &thinkercap; th = th->next)
@@ -2189,6 +2211,9 @@ static void P_NetUnArchiveThinkers(void)
 	UINT8 restoreNum = false;
 	fixed_t z, floorz, ceilingz;
 
+	if (READUINT32(save_p) != ARCHIVEBLOCK_THINKERS)
+		I_Error("Bad $$$.sav at archive block Thinkers");
+
 	// remove all the current thinkers
 	currentthinker = thinkercap.next;
 	for (currentthinker = thinkercap.next; currentthinker != &thinkercap; currentthinker = next)
@@ -2247,6 +2272,9 @@ static void P_NetUnArchiveThinkers(void)
 				else
 					mobj = Z_Calloc(sizeof (*mobj), PU_LEVEL, NULL);
 
+				// declare this as a valid mobj as soon as possible.
+				mobj->thinker.function.acp1 = (actionf_p1)P_MobjThinker;
+
 				mobj->z = z;
 				mobj->floorz = floorz;
 				mobj->ceilingz = ceilingz;
@@ -2279,7 +2307,7 @@ static void P_NetUnArchiveThinkers(void)
 				{
 					mobj->x = mobj->spawnpoint->x << FRACBITS;
 					mobj->y = mobj->spawnpoint->y << FRACBITS;
-					mobj->angle = ANGLE_45 * (mobj->spawnpoint->angle/45); /// \bug unknown
+					mobj->angle = FixedAngle(mobj->spawnpoint->angle*FRACUNIT);
 				}
 				if (diff & MD_MOM)
 				{
@@ -2421,7 +2449,6 @@ static void P_NetUnArchiveThinkers(void)
 						mobj->player->viewz = mobj->player->mo->z + mobj->player->viewheight;
 				}
 
-				mobj->thinker.function.acp1 = (actionf_p1)P_MobjThinker;
 				P_AddThinker(&mobj->thinker);
 
 				mobj->info = (mobjinfo_t *)next; // temporarily, set when leave this function
@@ -2628,6 +2655,8 @@ static inline void P_ArchivePolyObjects(void)
 {
 	INT32 i;
 
+	WRITEUINT32(save_p, ARCHIVEBLOCK_POBJS);
+
 	// save number of polyobjects
 	WRITEINT32(save_p, numPolyObjects);
 
@@ -2638,6 +2667,9 @@ static inline void P_ArchivePolyObjects(void)
 static inline void P_UnArchivePolyObjects(void)
 {
 	INT32 i, numSavedPolys;
+
+	if (READUINT32(save_p) != ARCHIVEBLOCK_POBJS)
+		I_Error("Bad $$$.sav at archive block Pobjs");
 
 	numSavedPolys = READINT32(save_p);
 
@@ -2752,6 +2784,8 @@ static inline void P_NetArchiveSpecials(void)
 {
 	size_t i, z;
 
+	WRITEUINT32(save_p, ARCHIVEBLOCK_SPECIALS);
+
 	// itemrespawn queue for deathmatch
 	i = iquetail;
 	while (iquehead != i)
@@ -2785,6 +2819,9 @@ static void P_NetUnArchiveSpecials(void)
 {
 	size_t i;
 	INT32 j;
+
+	if (READUINT32(save_p) != ARCHIVEBLOCK_SPECIALS)
+		I_Error("Bad $$$.sav at archive block Specials");
 
 	// BP: added save itemrespawn queue for deathmatch
 	iquetail = iquehead = 0;
@@ -2878,14 +2915,17 @@ static void P_NetArchiveMisc(void)
 	UINT32 pig = 0;
 	INT32 i;
 
+	WRITEUINT32(save_p, ARCHIVEBLOCK_MISC);
+
 	WRITEINT16(save_p, gamemap);
-	WRITEUINT16(save_p, gamestate);
+	WRITEINT16(save_p, gamestate);
 
 	for (i = 0; i < MAXPLAYERS; i++)
 		pig |= (playeringame[i] != 0)<<i;
 	WRITEUINT32(save_p, pig);
 
 	WRITEUINT32(save_p, P_GetRandSeed());
+
 	WRITEUINT32(save_p, tokenlist);
 
 	WRITEUINT32(save_p, leveltime);
@@ -2934,6 +2974,9 @@ static inline boolean P_NetUnArchiveMisc(void)
 	UINT32 pig;
 	INT32 i;
 
+	if (READUINT32(save_p) != ARCHIVEBLOCK_MISC)
+		I_Error("Bad $$$.sav at archive block Misc");
+
 	gamemap = READINT16(save_p);
 
 	// gamemap changed; we assume that its map header is always valid,
@@ -2941,13 +2984,17 @@ static inline boolean P_NetUnArchiveMisc(void)
 	if(!mapheaderinfo[gamemap-1])
 		P_AllocMapHeader(gamemap-1);
 
+	// tell the sound code to reset the music since we're skipping what
+	// normally sets this flag
+	mapmusic |= MUSIC_RELOADRESET;
+
 	G_SetGamestate(READINT16(save_p));
 
 	pig = READUINT32(save_p);
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
 		playeringame[i] = (pig & (1<<i)) != 0;
-		players[i].playerstate = PST_REBORN;
+		// playerstate is set in unarchiveplayers
 	}
 
 	P_SetRandSeed(READUINT32(save_p));
@@ -3085,6 +3132,9 @@ boolean P_LoadNetGame(void)
 #ifdef HAVE_BLUA
 	LUA_UnArchive();
 #endif
+
+	// This is stupid and hacky, but maybe it'll work!
+	P_SetRandSeed(P_GetInitSeed());
 
 	// The precipitation would normally be spawned in P_SetupLevel, which is called by
 	// P_NetUnArchiveMisc above. However, that would place it up before P_NetUnArchiveThinkers,
