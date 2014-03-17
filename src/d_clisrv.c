@@ -774,7 +774,7 @@ static void SV_SendSaveGame(INT32 node)
 	}
 
 	// Leave room for the uncompressed length.
-	save_p = savebuffer + sizeof(size_t);
+	save_p = savebuffer + sizeof(UINT32);
 
 	P_SaveNetGame();
 
@@ -796,7 +796,7 @@ static void SV_SendSaveGame(INT32 node)
 	}
 
 	// Attempt to compress it.
-	if((compressedlen = lzf_compress(savebuffer + sizeof(size_t), length - sizeof(size_t), compressedsave + sizeof(size_t), length - sizeof(size_t) - 1)))
+	if((compressedlen = lzf_compress(savebuffer + sizeof(UINT32), length - sizeof(UINT32), compressedsave + sizeof(UINT32), length - sizeof(UINT32) - 1)))
 	{
 		// Compressing succeeded; send compressed data
 
@@ -804,8 +804,8 @@ static void SV_SendSaveGame(INT32 node)
 
 		// State that we're compressed.
 		buffertosend = compressedsave;
-		WRITEUINT32(compressedsave, length - sizeof(size_t));
-		length = compressedlen + sizeof(size_t);
+		WRITEUINT32(compressedsave, length - sizeof(UINT32));
+		length = compressedlen + sizeof(UINT32);
 	}
 	else
 	{
@@ -892,7 +892,7 @@ static void CL_LoadReceivedSavegame(void)
 	if(decompressedlen > 0)
 	{
 		UINT8 *decompressedbuffer = Z_Malloc(decompressedlen, PU_STATIC, NULL);
-		lzf_decompress(save_p, length - sizeof(size_t), decompressedbuffer, decompressedlen);
+		lzf_decompress(save_p, length - sizeof(UINT32), decompressedbuffer, decompressedlen);
 		Z_Free(savebuffer);
 		save_p = savebuffer = decompressedbuffer;
 	}
