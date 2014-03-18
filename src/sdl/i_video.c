@@ -1843,7 +1843,12 @@ void I_StartupGraphics(void)
 	static char SDLNOMOUSE[] = "SDL_NOMOUSE=1";
 	static char SDLVIDEOMID[] = "SDL_VIDEO_CENTERED=center";
 
-	if (graphics_started || dedicated)
+	if (dedicated)
+	{
+		rendermode = render_none;
+		return;
+	}
+	if (graphics_started)
 		return;
 
 	COM_AddCommand ("vid_nummodes", VID_Command_NumModes_f);
