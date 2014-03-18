@@ -1359,7 +1359,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3k51",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"s3k52",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"s3k53",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
-  {"s3k54",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
+  {"s3k54",  false,  64, 64, -1, NULL, 0,        -1,  -1, LUMPERROR}, // MetalSonic shot fire
   {"s3k55",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"s3k56",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"s3k57",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
@@ -1570,8 +1570,7 @@ void S_InitRuntimeSounds (void)
 
 // Add a new sound fx into a free sfx slot.
 //
-sfxenum_t S_AddSoundFx(const char *name, INT32 singularity, INT32 pitch,
-	boolean skinsound)
+sfxenum_t S_AddSoundFx(const char *name, boolean singular, INT32 flags, boolean skinsound)
 {
 	sfxenum_t i, slot;
 
@@ -1585,9 +1584,9 @@ sfxenum_t S_AddSoundFx(const char *name, INT32 singularity, INT32 pitch,
 		if (!S_sfx[i].priority)
 		{
 			strncpy(freeslotnames[i-sfx_freeslot0], name, 6);
-			S_sfx[i].singularity = singularity;
+			S_sfx[i].singularity = singular;
 			S_sfx[i].priority = 60;
-			S_sfx[i].pitch = pitch;
+			S_sfx[i].pitch = flags;
 			S_sfx[i].volume = -1;
 			S_sfx[i].lumpnum = LUMPERROR;
 			S_sfx[i].skinsound = -1;

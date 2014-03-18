@@ -239,9 +239,6 @@ static size_t broadcastaddresses = 0;
 static boolean nodeconnected[MAXNETNODES+1];
 static mysockaddr_t banned[MAXBANS];
 static UINT8 bannedmask[MAXBANS];
-static mysockaddr_t shunned[MAXBANS];
-static UINT8 shunnedmask[MAXBANS];
-static size_t numshun = 0;
 #endif
 
 static size_t numbans = 0;
@@ -528,12 +525,6 @@ static void SOCK_Get(void)
 			(void *)&fromaddress, &fromlen);
 		if (c != ERRSOCKET)
 		{
-			// check if it's a DoS attacker and don't respond.
-			for (i = 0; i < numshun; i++)
-				if (SOCK_cmpaddr(&fromaddress, &shunned[i], shunnedmask[i]))
-					break;
-			if (i < numshun)
-				continue;
 			// find remote node number
 			for (j = 0; j <= MAXNETNODES; j++) //include LAN
 			{
@@ -1344,34 +1335,6 @@ static boolean SOCK_Ban(INT32 node)
 #endif
 }
 
-static boolean SOCK_Shun(INT32 node)
-{
-	if (node > MAXNETNODES)
-		return false;
-#ifdef NONET
-	return false;
-#else
-	if (numshun == MAXBANS)
-		return false;
-
-	M_Memcpy(&shunned[numshun], &clientaddress[node], sizeof (mysockaddr_t));
-	if (shunned[numshun].any.sa_family == AF_INET)
-	{
-		shunned[numshun].ip4.sin_port = 0;
-		shunnedmask[numshun] = 32;
-	}
-#ifdef HAVE_IPV6
-	else if (banned[numshun].any.sa_family == AF_INET6)
-	{
-		shunned[numshun].ip6.sin6_port = 0;
-		shunnedmask[numshun] = 128;
-	}
-#endif
-	numshun++;
-	return true;
-#endif
-}
-
 static boolean SOCK_SetBanAddress(const char *address, const char *mask)
 {
 #ifdef NONET
@@ -1511,7 +1474,6 @@ boolean I_InitTcpNetwork(void)
 
 	I_NetOpenSocket = SOCK_OpenSocket;
 	I_Ban = SOCK_Ban;
-	I_Shun = SOCK_Shun;
 	I_ClearBans = SOCK_ClearBans;
 	I_GetNodeAddress = SOCK_GetNodeAddress;
 	I_GetBanAddress = SOCK_GetBanAddress;

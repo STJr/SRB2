@@ -1711,18 +1711,8 @@ boolean G_Responder(event_t *ev)
 					// don't let busy scripts prevent pausing
 					pausedelay = NEWTICRATE/7;
 
-					if (cv_pause.value == 1 || server || (adminplayer == consoleplayer))
-					{
-						if (!(gamestate == GS_LEVEL || gamestate == GS_INTERMISSION))
-						{
-							CONS_Printf(M_GetText("You can't pause here.\n"));
-							return true;
-						}
-
-						COM_ImmedExecute("pause");
-					}
-					else
-						CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
+					// command will handle all the checks for us
+					COM_ImmedExecute("pause");
 					return true;
 				}
 				else
@@ -1794,15 +1784,8 @@ void G_Ticker(boolean run)
 		}
 
 		for (i = 0; i < MAXPLAYERS; i++)
-		{
-			if (playeringame[i])
-			{
-				if (players[i].playerstate == PST_REBORN)
-				{
-					G_DoReborn(i);
-				}
-			}
-		}
+			if (playeringame[i] && players[i].playerstate == PST_REBORN)
+				G_DoReborn(i);
 	}
 	P_MapEnd();
 
@@ -1988,7 +1971,7 @@ void G_PlayerReborn(INT32 player)
 	exiting = players[player].exiting;
 	jointime = players[player].jointime;
 	spectator = players[player].spectator;
-	pflags = (players[player].pflags & (PF_TIMEOVER|PF_FLIPCAM|PF_TAGIT|PF_TAGGED|PF_CONSISTANCY));
+	pflags = (players[player].pflags & (PF_TIMEOVER|PF_FLIPCAM|PF_TAGIT|PF_TAGGED));
 
 	// As long as we're not in multiplayer, carry over cheatcodes from map to map
 	if (!(netgame || multiplayer))
@@ -2501,6 +2484,9 @@ void G_ExitLevel(void)
 
 		if (gametype != GT_COOP)
 			CONS_Printf(M_GetText("The round has ended.\n"));
+
+		// Remove CEcho text on round end.
+		HU_DoCEcho("");
 	}
 }
 

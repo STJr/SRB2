@@ -1231,6 +1231,15 @@ static void R_ProjectSprite(mobj_t *thing)
 			return;
 	}
 
+	// quick check for possible overflows
+	// if either of these triggers then there's a possibility that drawing is unsafe
+	if (M_HighestBit(abs(gzt - viewz)) + M_HighestBit(abs(yscale)) > 47 // 31 bits + 16 from the division by FRACUNIT
+	 || M_HighestBit(abs(gz  - viewz)) + M_HighestBit(abs(yscale)) > 47)
+	{
+		CONS_Debug(DBG_RENDER, "Suspected overflow in ProjectSprite (sprite %s), ignoring\n", sprnames[thing->sprite]);
+		return;
+	}
+
 	// store information in a vissprite
 	vis = R_NewVisSprite();
 	vis->heightsec = heightsec; //SoM: 3/17/2000
@@ -1436,6 +1445,15 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 				return;
 		}
 	}
+
+	// quick check for possible overflows
+	// if either of these triggers then there's a possibility that drawing is unsafe
+	if (M_HighestBit(abs(gzt - viewz)) + M_HighestBit(abs(yscale)) > 47) // 31 bits + 16 from the division by FRACUNIT
+	{
+		CONS_Debug(DBG_RENDER, "Suspected overflow in ProjectPrecipitationSprite (sprite %s), ignoring\n", sprnames[thing->sprite]);
+		return;
+	}
+
 
 	// store information in a vissprite
 	vis = R_NewVisSprite();
@@ -2690,7 +2708,7 @@ void R_AddSkins(UINT16 wadnum)
 							stoken + 2))
 					{
 						skin->soundsid[S_sfx[i].skinsound] =
-							S_AddSoundFx(value+2,S_sfx[i].singularity,S_sfx[i].pitch, true);
+							S_AddSoundFx(value+2, S_sfx[i].singularity, S_sfx[i].pitch, true);
 						found = true;
 					}
 				}

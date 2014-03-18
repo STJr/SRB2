@@ -147,9 +147,7 @@ typedef enum
 	PF_TAGGED            = 1<<27, // Player has been tagged and awaits the next round in hide and seek.
 	PF_TAGIT             = 1<<28, // The player is it! For Tag Mode
 
-	// free: 1<<29, 1<<30
-
-	PF_CONSISTANCY       = 1<<31 // DON'T mess with this flag or horrible things will happen.
+	// free: 1<<29, 1<<31
 } pflags_t;
 
 typedef enum

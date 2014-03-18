@@ -131,7 +131,7 @@ static int player_get(lua_State *L)
 	else if (fastcmp(field,"powers"))
 		LUA_PushUserdata(L, plr->powers, META_POWERS);
 	else if (fastcmp(field,"pflags"))
-		lua_pushinteger(L, (plr->pflags & ~PF_CONSISTANCY));
+		lua_pushinteger(L, plr->pflags);
 	else if (fastcmp(field,"panim"))
 		lua_pushinteger(L, plr->panim);
 	else if (fastcmp(field,"flashcount"))
@@ -378,7 +378,7 @@ static int player_set(lua_State *L)
 	else if (fastcmp(field,"powers"))
 		return NOSET;
 	else if (fastcmp(field,"pflags"))
-		plr->pflags = (luaL_checkinteger(L, 3) & ~PF_CONSISTANCY)|(plr->pflags & PF_CONSISTANCY);
+		plr->pflags = luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"panim"))
 		plr->panim = luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"flashcount"))

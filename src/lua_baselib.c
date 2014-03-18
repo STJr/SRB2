@@ -218,7 +218,7 @@ static int lib_pNewChaseDir(lua_State *L)
 static int lib_pLookForPlayers(lua_State *L)
 {
 	mobj_t *actor = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
-	fixed_t dist = (fixed_t)luaL_checkinteger(L, 2);
+	fixed_t dist = (fixed_t)luaL_optinteger(L, 2, 0);
 	boolean allaround = lua_optboolean(L, 3);
 	boolean tracer = lua_optboolean(L, 4);
 	NOHUD
@@ -341,8 +341,8 @@ static int lib_pSPMAngle(lua_State *L)
 	mobj_t *source = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
 	mobjtype_t type = luaL_checkinteger(L, 2);
 	angle_t angle = (angle_t)luaL_checkinteger(L, 3);
-	UINT8 allowaim = (UINT8)luaL_checkinteger(L, 4);
-	UINT32 flags2 = (UINT32)luaL_checkinteger(L, 5);
+	UINT8 allowaim = (UINT8)luaL_optinteger(L, 4, 0);
+	UINT32 flags2 = (UINT32)luaL_optinteger(L, 5, 0);
 	NOHUD
 	if (!source)
 		return LUA_ErrInvalid(L, "mobj_t");
@@ -356,7 +356,7 @@ static int lib_pSpawnPlayerMissile(lua_State *L)
 {
 	mobj_t *source = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
 	mobjtype_t type = luaL_checkinteger(L, 2);
-	UINT32 flags2 = (UINT32)luaL_checkinteger(L, 3);
+	UINT32 flags2 = (UINT32)luaL_optinteger(L, 3, 0);
 	NOHUD
 	if (!source)
 		return LUA_ErrInvalid(L, "mobj_t");

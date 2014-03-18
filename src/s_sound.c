@@ -1447,7 +1447,7 @@ void S_StartSoundName(void *mo, const char *soundname)
 			return;
 		}
 
-		soundnum = S_AddSoundFx(soundname, false, -1, false);
+		soundnum = S_AddSoundFx(soundname, false, 0, false);
 		newsounds[i] = soundnum;
 	}
 

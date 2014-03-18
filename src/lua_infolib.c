@@ -26,21 +26,30 @@
 boolean LUA_CallAction(const char *action, mobj_t *actor);
 state_t *astate;
 
-enum sfxinfo_e {
-	sfxinfo_name = 0,
-	sfxinfo_singularity,
-	sfxinfo_priority,
-	sfxinfo_flags, // "pitch"
-	sfxinfo_volume,
-	sfxinfo_skinsound
+enum sfxinfo_read {
+	sfxinfor_name = 0,
+	sfxinfor_singular,
+	sfxinfor_priority,
+	sfxinfor_flags, // "pitch"
+	sfxinfor_skinsound
 };
-const char *const sfxinfo_opt[] = {
+const char *const sfxinfo_ropt[] = {
 	"name",
-	"singularity",
+	"singular",
 	"priority",
 	"flags",
-	"volume",
 	"skinsound",
+	NULL};
+
+enum sfxinfo_write {
+	sfxinfow_singular = 0,
+	sfxinfow_priority,
+	sfxinfow_flags // "pitch"
+};
+const char *const sfxinfo_wopt[] = {
+	"singular",
+	"priority",
+	"flags",
 	NULL};
 
 //
@@ -718,6 +727,7 @@ static int lib_getSfxInfo(lua_State *L)
 static int lib_setSfxInfo(lua_State *L)
 {
 	sfxinfo_t *info;
+
 	lua_remove(L, 1);
 	info = &S_sfx[luaL_checkinteger(L, 1)]; // get the mobjinfo to assign to.
 	luaL_checktype(L, 2, LUA_TTABLE); // check that we've been passed a table.
@@ -729,22 +739,27 @@ static int lib_setSfxInfo(lua_State *L)
 
 	lua_pushnil(L);
 	while (lua_next(L, 1)) {
-		lua_Integer i = 0;
-		const char *str = NULL;
+		enum sfxinfo_write i;
 
 		if (lua_isnumber(L, 2))
 			i = lua_tointeger(L, 2);
 		else
-			str = luaL_checkstring(L, 2);
+			i = luaL_checkoption(L, 2, NULL, sfxinfo_wopt);
 
-		if (i == 1 || (str && fastcmp(str,"singularity")))
+		switch(i)
+		{
+		case sfxinfow_singular:
 			info->singularity = luaL_checkboolean(L, 3);
-		else if (i == 2 || (str && fastcmp(str,"priority")))
+			break;
+		case sfxinfow_priority:
 			info->priority = (INT32)luaL_checkinteger(L, 3);
-		else if (i == 3 || (str && fastcmp(str,"pitch")) || (str && fastcmp(str,"flags")))
+			break;
+		case sfxinfow_flags:
 			info->pitch = (INT32)luaL_checkinteger(L, 3);
-		else if (i == 4 || (str && fastcmp(str,"volume")))
-			info->volume = (INT32)luaL_checkinteger(L, 3);
+			break;
+		default:
+			break;
+		}
 		lua_pop(L, 1);
 	}
 
@@ -761,39 +776,38 @@ static int lib_sfxlen(lua_State *L)
 static int sfxinfo_get(lua_State *L)
 {
 	sfxinfo_t *sfx = *((sfxinfo_t **)luaL_checkudata(L, 1, META_SFXINFO));
-	enum sfxinfo_e field = luaL_checkoption(L, 2, NULL, sfxinfo_opt);
+	enum sfxinfo_read field = luaL_checkoption(L, 2, NULL, sfxinfo_ropt);
 
 	I_Assert(sfx != NULL);
 
 	switch (field)
 	{
-	case sfxinfo_name:
+	case sfxinfor_name:
 		lua_pushstring(L, sfx->name);
 		return 1;
-	case sfxinfo_singularity:
+	case sfxinfor_singular:
 		lua_pushboolean(L, sfx->singularity);
 		return 1;
-	case sfxinfo_priority:
+	case sfxinfor_priority:
 		lua_pushinteger(L, sfx->priority);
 		return 1;
-	case sfxinfo_flags:
+	case sfxinfor_flags:
 		lua_pushinteger(L, sfx->pitch);
 		return 1;
-	case sfxinfo_volume:
-		lua_pushinteger(L, sfx->volume);
-		return 1;
-	case sfxinfo_skinsound:
+	case sfxinfor_skinsound:
 		lua_pushinteger(L, sfx->skinsound);
 		return 1;
+	default:
+		return luaL_error(L, "impossible error");
 	}
-	return luaL_error(L, "impossible error");
+	return 0;
 }
 
 // sfxinfo_t *, field, value
 static int sfxinfo_set(lua_State *L)
 {
 	sfxinfo_t *sfx = *((sfxinfo_t **)luaL_checkudata(L, 1, META_SFXINFO));
-	enum sfxinfo_e field = luaL_checkoption(L, 2, NULL, sfxinfo_opt);
+	enum sfxinfo_write field = luaL_checkoption(L, 2, NULL, sfxinfo_wopt);
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter S_sfx in HUD rendering code!");
@@ -806,22 +820,18 @@ static int sfxinfo_set(lua_State *L)
 
 	switch (field)
 	{
-	case sfxinfo_singularity:
+	case sfxinfow_singular:
 		sfx->singularity = luaL_checkboolean(L, 1);
 		break;
-	case sfxinfo_priority:
+	case sfxinfow_priority:
 		sfx->priority = luaL_checkinteger(L, 1);
 		break;
-	case sfxinfo_flags:
+	case sfxinfow_flags:
 		sfx->pitch = luaL_checkinteger(L, 1);
 		break;
-	case sfxinfo_volume:
-		sfx->volume = luaL_checkinteger(L, 1);
-		break;
 	default:
-		return luaL_error(L, "Can't set 'S_sfx[%u].%s' here.", (UINT32)(sfx-S_sfx), sfxinfo_opt[field]);
+		return luaL_error(L, "impossible error");
 	}
-
 	return 0;
 }
 

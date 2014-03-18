@@ -1598,7 +1598,7 @@ void P_LinedefExecute(INT16 tag, mobj_t *actor, sector_t *caller)
 					if (!playeringame[i] || players[i].spectator)
 						continue;
 
-					if (!players[i].mo)
+					if (!players[i].mo || players[i].mo->health < 1)
 						continue;
 
 					rings += players[i].mo->health-1;
@@ -2907,15 +2907,28 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo)
 
 			while ((secnum = P_FindSectorFromLineTag(line, secnum)) >= 0)
 			{
+				boolean tryagain;
 				sec = sectors + secnum;
-				for (thing = sec->thinglist; thing; thing = thing->snext)
-					if (thing->type == type)
-					{
-						if (state != NUMSTATES)
-							P_SetMobjState(thing, state);
-						else
-							P_SetMobjState(thing, thing->state->nextstate);
-					}
+				do {
+					tryagain = false;
+					for (thing = sec->thinglist; thing; thing = thing->snext)
+						if (thing->type == type)
+						{
+							if (state != NUMSTATES)
+							{
+								if (!P_SetMobjState(thing, state)) // set state to specific state
+								{ // mobj was removed
+									tryagain = true; // snext is corrupt, we'll have to start over.
+									break;
+								}
+							}
+							else if (!P_SetMobjState(thing, thing->state->nextstate)) // set state to nextstate
+							{ // mobj was removed
+								tryagain = true; // snext is corrupt, we'll have to start over.
+								break;
+							}
+						}
+				} while (tryagain);
 			}
 			break;
 		}

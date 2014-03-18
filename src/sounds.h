@@ -57,7 +57,7 @@ struct sfxinfo_struct
 	const char *name;
 
 	// Sfx singularity (only one at a time)
-	INT32 singularity;
+	boolean singularity;
 
 	// Sfx priority
 	INT32 priority;
@@ -1631,7 +1631,7 @@ typedef enum
 
 
 void S_InitRuntimeSounds(void);
-sfxenum_t S_AddSoundFx(const char *name, INT32 singularity, INT32 pitch, boolean skinsound);
+sfxenum_t S_AddSoundFx(const char *name, boolean singular, INT32 flags, boolean skinsound);
 void S_RemoveSoundFx(sfxenum_t id);
 
 #endif

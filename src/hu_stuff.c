@@ -1180,7 +1180,7 @@ void HU_DrawTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, I
 		if (players[tab[i].num].spectator)
 			continue; //ignore them.
 
-		V_DrawString(x + 24, y,
+		V_DrawString(x + 20, y,
 		             ((tab[i].num == whiteplayer) ? V_YELLOWMAP : 0)
 		             | ((players[tab[i].num].health > 0) ? 0 : V_60TRANS)
 		             | V_ALLOWLOWERCASE, tab[i].name);
@@ -1293,7 +1293,7 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 			continue;
 
 		strlcpy(name, tab[i].name, 9);
-		V_DrawString(x + 24, y,
+		V_DrawString(x + 20, y,
 		             ((tab[i].num == whiteplayer) ? V_YELLOWMAP : 0)
 		             | ((players[tab[i].num].health > 0) ? 0 : V_TRANSLUCENT)
 		             | V_ALLOWLOWERCASE, name);
@@ -1326,7 +1326,7 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 			else
 				V_DrawSmallMappedPatch (x, y-4, 0, faceprefix[players[tab[i].num].skin], colormap);
 		}
-		V_DrawRightAlignedString(x+120, y, ((players[tab[i].num].health > 0) ? 0 : V_TRANSLUCENT), va("%u", tab[i].count));
+		V_DrawRightAlignedThinString(x+120, y, ((players[tab[i].num].health > 0) ? 0 : V_TRANSLUCENT), va("%u", tab[i].count));
 	}
 }
 
@@ -1343,16 +1343,13 @@ void HU_DrawDualTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scoreline
 	V_DrawFill(1, 26, 318, 1, 0); //And a horizontal line to make a T.
 	V_DrawFill(1, 180, 318, 1, 0); //And a horizontal line near the bottom.
 
-	if (gametype == GT_RACE || gametype == GT_COOP)
-		x -= 32; //we need more room!
-
 	for (i = 0; i < scorelines; i++)
 	{
 		if (players[tab[i].num].spectator)
 			continue; //ignore them.
 
 		strlcpy(name, tab[i].name, 9);
-		V_DrawString(x + 24, y,
+		V_DrawString(x + 20, y,
 		             ((tab[i].num == whiteplayer) ? V_YELLOWMAP : 0)
 		             | ((players[tab[i].num].health > 0) ? 0 : V_TRANSLUCENT)
 		             | V_ALLOWLOWERCASE, name);
@@ -1400,20 +1397,21 @@ void HU_DrawDualTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scoreline
 			}
 		}
 
+		// All data drawn with thin string for space.
 		if (gametype == GT_RACE)
 		{
 			if (circuitmap)
 			{
 				if (players[tab[i].num].exiting)
-					V_DrawRightAlignedString(x+156, y, 0, va("%i:%02i.%02i", G_TicsToMinutes(players[tab[i].num].realtime,true), G_TicsToSeconds(players[tab[i].num].realtime), G_TicsToCentiseconds(players[tab[i].num].realtime)));
+					V_DrawRightAlignedThinString(x+156, y, 0, va("%i:%02i.%02i", G_TicsToMinutes(players[tab[i].num].realtime,true), G_TicsToSeconds(players[tab[i].num].realtime), G_TicsToCentiseconds(players[tab[i].num].realtime)));
 				else
-					V_DrawRightAlignedString(x+156, y, ((players[tab[i].num].health > 0) ? 0 : V_TRANSLUCENT), va("%u", tab[i].count));
+					V_DrawRightAlignedThinString(x+156, y, ((players[tab[i].num].health > 0) ? 0 : V_TRANSLUCENT), va("%u", tab[i].count));
 			}
 			else
-				V_DrawRightAlignedString(x+156, y, ((players[tab[i].num].health > 0) ? 0 : V_TRANSLUCENT), va("%i:%02i.%02i", G_TicsToMinutes(tab[i].count,true), G_TicsToSeconds(tab[i].count), G_TicsToCentiseconds(tab[i].count)));
+				V_DrawRightAlignedThinString(x+156, y, ((players[tab[i].num].health > 0) ? 0 : V_TRANSLUCENT), va("%i:%02i.%02i", G_TicsToMinutes(tab[i].count,true), G_TicsToSeconds(tab[i].count), G_TicsToCentiseconds(tab[i].count)));
 		}
 		else
-			V_DrawRightAlignedString(x+120, y, ((players[tab[i].num].health > 0) ? 0 : V_TRANSLUCENT), va("%u", tab[i].count));
+			V_DrawRightAlignedThinString(x+120, y, ((players[tab[i].num].health > 0) ? 0 : V_TRANSLUCENT), va("%u", tab[i].count));
 
 		y += 16;
 		if (y > 160)

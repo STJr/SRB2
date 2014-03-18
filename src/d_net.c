@@ -71,7 +71,6 @@ void (*I_NetFreeNodenum)(INT32 nodenum) = NULL;
 SINT8 (*I_NetMakeNodewPort)(const char *address, const char* port) = NULL;
 boolean (*I_NetOpenSocket)(void) = NULL;
 boolean (*I_Ban) (INT32 node) = NULL;
-boolean (*I_Shun) (INT32 node) = NULL;
 void (*I_ClearBans)(void) = NULL;
 const char *(*I_GetNodeAddress) (INT32 node) = NULL;
 const char *(*I_GetBanAddress) (size_t ban) = NULL;
@@ -990,8 +989,6 @@ boolean HGetPacket(void)
 		if (netbuffer->checksum != NetbufferChecksum())
 		{
 			DEBFILE("Bad packet checksum\n");
-			if (I_Shun)
-				I_Shun(doomcom->remotenode); // No more garbage from you!
 			Net_CloseConnection(doomcom->remotenode);
 			continue;
 		}

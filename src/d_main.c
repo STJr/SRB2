@@ -1087,16 +1087,14 @@ void D_SRB2Main(void)
 #endif
 	D_CleanFile();
 
-#if 1 // md5s last updated 3/15/14
-	// Yes, you read that right, that's the day of release.
-	// Aren't we batshit insane?
+#if 1 // md5s last updated 3/18/14
 
 	// Check MD5s of autoloaded files
 	W_VerifyFileMD5(0, "ac309fb3c7d4b5b685e2cd26beccf0e8"); // srb2.srb/srb2.wad
 	W_VerifyFileMD5(1, "a894044b555dfcc71865cee16a996e88"); // zones.dta
 	W_VerifyFileMD5(2, "4c410c1de6e0440cc5b2858dcca80c3e"); // player.dta
 	W_VerifyFileMD5(3, "85901ad4bf94637e5753d2ac2c03ea26"); // rings.dta
-	W_VerifyFileMD5(4, "17461512387ba6c5d7f2daa10346e1b5"); // patch.dta
+	W_VerifyFileMD5(4, "12c58561edf3be16a15505f1d5eacee0"); // patch.dta
 
 	// don't check music.dta because people like to modify it, and it doesn't matter if they do
 	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.
@@ -1191,12 +1189,11 @@ void D_SRB2Main(void)
 	{
 		if (!M_IsNextParm())
 			I_Error("usage: -room <room_id>\nCheck the Master Server's webpage for room ID numbers.\n");
+		ms_RoomId = atoi(M_GetNextParm());
 
 #ifdef UPDATE_ALERT
 		GetMODVersion_Console();
 #endif
-
-		ms_RoomId = atoi(M_GetNextParm());
 	}
 
 	// init all NETWORK

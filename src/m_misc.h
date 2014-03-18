@@ -94,7 +94,8 @@ void strcatbf(char *s1, const char *s2, const char *s3);
 void M_SetupMemcpy(void);
 
 // counting bits, for weapon ammo code, usually
-UINT8 M_CountBits(UINT32 num, UINT8 size);
+FUNCMATH UINT8 M_CountBits(UINT32 num, UINT8 size);
+FUNCMATH UINT8 M_HighestBit(UINT32 num);
 
 // Flags for AA trees.
 #define AATREE_ZUSER	1		// Treat values as z_zone-allocated blocks and set their user fields

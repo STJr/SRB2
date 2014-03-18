@@ -3044,8 +3044,6 @@ FILESTAMP
 				case PT_SERVERREFUSE: // negative response of client join request
 					if (server && serverrunning)
 					{ // but wait I thought I'm the server?
-						if (I_Shun)
-							I_Shun(node); // No more garbage from you!
 						Net_CloseConnection(node);
 						break;
 					}
@@ -3070,8 +3068,6 @@ FILESTAMP
 
 					if (server && serverrunning && node != servernode)
 					{ // but wait I thought I'm the server?
-						if (I_Shun)
-							I_Shun(node); // No more garbage from you!
 						Net_CloseConnection(node);
 						break;
 					}
@@ -3122,8 +3118,6 @@ FILESTAMP
 				case PT_FILEFRAGMENT:
 					if (server)
 					{ // but wait I thought I'm the server?
-						if (I_Shun)
-							I_Shun(node); // No more garbage from you!
 						Net_CloseConnection(node);
 						break;
 					}
@@ -3147,8 +3141,6 @@ FILESTAMP
 						break;
 				default:
 					DEBFILE(va("unknown packet received (%d) from unknown host\n",netbuffer->packettype));
-					if (I_Shun)
-						I_Shun(node); // No more garbage from you!
 					Net_CloseConnection(node);
 					break; // ignore it
 			} // switch
@@ -3225,11 +3217,13 @@ FILESTAMP
 				// Careful: When a consistency packet is sent, it overwrites the incoming packet containing the ticcmd.
 				//          Keep this in mind when changing the code that responds to these packets.
 				if (realstart <= gametic && realstart > gametic - BACKUPTICS+1
-					&& players[netconsole].pflags & PF_CONSISTANCY
-					&& consistancy[realstart%BACKUPTICS] != SHORT(netbuffer->u.clientpak.consistancy)
-					&& gamestate == GS_LEVEL)
+					&& gamestate == GS_LEVEL && playeringame[netconsole]
+					&& players[netconsole].playerstate == PST_LIVE
+					&& !players[netconsole].spectator
+					&& players[netconsole].jointime > 10
+					&& consistancy[realstart%BACKUPTICS] != SHORT(netbuffer->u.clientpak.consistancy))
 				{
-					if (cv_consfailprotect.value && playeringame[netconsole] && consfailcount[netconsole] < cv_consfailprotect.value)
+					if (cv_consfailprotect.value && consfailcount[netconsole] < cv_consfailprotect.value)
 					{
 						if (!consfailstatus[netconsole])
 						{
@@ -3266,7 +3260,6 @@ FILESTAMP
 						DEBFILE(va("player %d kicked (consistency failure) [%u] %d!=%d\n",
 							netconsole, realstart, consistancy[realstart%BACKUPTICS],
 							SHORT(netbuffer->u.clientpak.consistancy)));
-						players[netconsole].pflags &= ~PF_CONSISTANCY;
 						consfailstatus[netconsole] = 0;
 						consfailcount[netconsole] = 0;
 						break;
@@ -3477,7 +3470,6 @@ FILESTAMP
 // Builds ticcmds for console player,
 // sends out a packet
 //
-// no more use random generator, because at very first tic isn't yet synchronized
 // Note: It is called consistAncy on purpose.
 //
 static INT16 Consistancy(void)
@@ -3487,14 +3479,14 @@ static INT16 Consistancy(void)
 
 	DEBFILE(va("TIC %u ", gametic));
 	for (i = 0; i < MAXPLAYERS; i++)
-		if (playeringame[i] && players[i].mo && !players[i].spectator && players[i].pflags & PF_CONSISTANCY)
+		if (playeringame[i] && players[i].mo && players[i].playerstate == PST_LIVE && !players[i].spectator)
 		{
-			DEBFILE(va("p[%d].x = %f ", i, (double)FIXED_TO_FLOAT(players[i].mo->x)));
-			ret = (INT16)((ret + players[i].mo->x) & 0xFFFF);
+			//DEBFILE(va("p[%d].x = %f ", i, (double)FIXED_TO_FLOAT(players[i].mo->x)));
+			ret = (INT16)((ret + (players[i].mo->x>>8)) & 0xFFFF);
 			ret = (INT16)((ret + players[i].powers[pw_shield]) & 0xFFFF);
 		}
-	//DEBFILE(va("pos = %d, rnd %d\n", ret, P_GetRandSeed()));
-	//ret = (INT16)(ret + P_GetRandSeed());
+	DEBFILE(va("players = %d, rnd %d\n", ret, P_GetRandSeed()));
+	ret = (INT16)(ret + P_GetRandSeed());
 
 	return ret;
 }

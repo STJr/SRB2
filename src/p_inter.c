@@ -1518,6 +1518,8 @@ static void P_HitDeathMessages(player_t *player, mobj_t *inflictor, mobj_t *sour
 						str = M_GetText("%s%s's armageddon blast %s %s.\n");
 					else if (inflictor->player->powers[pw_invulnerability])
 						str = M_GetText("%s%s's invincibility aura %s %s.\n");
+					else if (inflictor->player->powers[pw_super])
+						str = M_GetText("%s%s's super aura %s %s.\n");
 					else
 						str = M_GetText("%s%s's tagging hand %s %s.\n");
 					break;
@@ -1578,6 +1580,10 @@ static void P_HitDeathMessages(player_t *player, mobj_t *inflictor, mobj_t *sour
 					str = M_GetText("%s was crushed.\n");
 					break;
 				}
+				break;
+			case MT_EGGMANICO:
+			case MT_EGGMANBOX:
+				str = M_GetText("%s was %s by Eggman's nefarious TV magic.\n");
 				break;
 			case MT_SPIKE:
 				str = M_GetText("%s was %s by spikes.\n");

@@ -1079,6 +1079,10 @@ static void SendNameAndColor(void)
 	&& !strcmp(cv_skin.string, skins[players[consoleplayer].skin].name))
 		return;
 
+	// We'll handle it later if we're not playing.
+	if (!Playing())
+		return;
+
 	// If you're not in a netgame, merely update the skin, color, and name.
 	if (!netgame)
 	{
@@ -1211,6 +1215,10 @@ static void SendNameAndColor2(void)
 		else
 			CV_StealthSet(&cv_playercolor2, cv_playercolor2.defaultvalue);
 	}
+
+	// We'll handle it later if we're not playing.
+	if (!Playing())
+		return;
 
 	// If you're not in a netgame, merely update the skin, color, and name.
 	if (botingame)
@@ -1365,8 +1373,6 @@ static void Got_NameAndColor(UINT8 **cp, INT32 playernum)
 	}
 	else
 		SetPlayerSkinByNum(playernum, skin);
-
-	players[playernum].pflags |= PF_CONSISTANCY;
 }
 
 void SendWeaponPref(void)
@@ -1983,7 +1989,7 @@ static void Command_Pause(void)
 
 	if (cv_pause.value || server || (adminplayer == consoleplayer))
 	{
-		if (!(gamestate == GS_LEVEL || gamestate == GS_INTERMISSION))
+		if (modeattacking || !(gamestate == GS_LEVEL || gamestate == GS_INTERMISSION))
 		{
 			CONS_Printf(M_GetText("You can't pause here.\n"));
 			return;
@@ -2012,6 +2018,9 @@ static void Got_Pause(UINT8 **cp, INT32 playernum)
 		}
 		return;
 	}
+
+	if (modeattacking)
+		return;
 
 	paused = READUINT8(*cp);
 	dedicatedpause = READUINT8(*cp);
@@ -3127,15 +3136,12 @@ static void Command_Addfile(void)
 	}
 
 	p = fn+strlen(fn);
-	while(p > fn)
-	{
-		--p;
+	while(--p >= fn)
 		if (*p == '\\' || *p == '/' || *p == ':')
 		{
 			++p;
 			break;
 		}
-	}
 	WRITESTRINGN(buf_p,p,240);
 
 	{
@@ -4240,24 +4246,11 @@ static void Color_OnChange(void)
 {
 	if (!P_PlayerMoving(consoleplayer))
 	{
-		// Color change menu scrolling fix
-		// Determine what direction you are scrolling
-		// and skip the proper colors.
-		if (menuactive)
-		{
-			UINT8 prevcolor = players[consoleplayer].skincolor;
-			if (cv_playercolor.value == 0) // no color
-			{
-				if (prevcolor == 1)
-					CV_StealthSetValue(&cv_playercolor, MAXSKINCOLORS-1);
-				else
-					CV_StealthSetValue(&cv_playercolor, 1);
-			}
-		}
-
+		// Color change menu scrolling fix is no longer necessary
 		SendNameAndColor();
 	}
-	else {
+	else
+	{
 		CV_StealthSetValue(&cv_playercolor,
 			players[consoleplayer].skincolor);
 	}
@@ -4272,24 +4265,11 @@ static void Color2_OnChange(void)
 {
 	if (!P_PlayerMoving(secondarydisplayplayer))
 	{
-		// Color change menu scrolling fix
-		// Determine what direction you are scrolling
-		// and skip the proper colors.
-		if (menuactive)
-		{
-			UINT8 prevcolor = players[secondarydisplayplayer].skincolor;
-			if (cv_playercolor2.value == 0) // no color
-			{
-				if (prevcolor == 1)
-					CV_StealthSetValue(&cv_playercolor2, MAXSKINCOLORS-1);
-				else
-					CV_StealthSetValue(&cv_playercolor2, 1);
-			}
-		}
-
+		// Color change menu scrolling fix is no longer necessary
 		SendNameAndColor2();
 	}
-	else {
+	else
+	{
 		CV_StealthSetValue(&cv_playercolor2,
 			players[secondarydisplayplayer].skincolor);
 	}

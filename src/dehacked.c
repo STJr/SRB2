@@ -628,7 +628,7 @@ static void readfreeslots(MYFILE *f)
 			// TODO: Out-of-slots warnings/errors.
 			// TODO: Name too long (truncated) warnings.
 			if (fastcmp(type, "SFX"))
-				S_AddSoundFx(word, false, -1, false);
+				S_AddSoundFx(word, false, 0, false);
 			else if (fastcmp(type, "SPR"))
 			{
 				for (i = SPR_FIRSTFREESLOT; i <= SPR_LASTFREESLOT; i++)
@@ -8112,7 +8112,7 @@ static inline int lib_freeslot(lua_State *L)
 			sfxenum_t sfx;
 			strlwr(word);
 			CONS_Printf("Sound sfx_%s allocated.\n",word);
-			sfx = S_AddSoundFx(word, false, -1, false);
+			sfx = S_AddSoundFx(word, false, 0, false);
 			if (sfx != sfx_None) {
 				lua_pushinteger(L, sfx);
 				r++;
@@ -8189,12 +8189,12 @@ static inline int lib_freeslot(lua_State *L)
 static inline int lib_action(lua_State *L)
 {
 	actionf_t *action = lua_touserdata(L,lua_upvalueindex(1));
-	mobj_t **actor = luaL_checkudata(L,1,META_MOBJ);
+	mobj_t *actor = *((mobj_t **)luaL_checkudata(L,1,META_MOBJ));
 	var1 = (INT32)luaL_optinteger(L,2,0);
 	var2 = (INT32)luaL_optinteger(L,3,0);
-	if (!*actor)
+	if (!actor)
 		return LUA_ErrInvalid(L, "mobj_t");
-	action->acp1(*actor);
+	action->acp1(actor);
 	return 0;
 }
 

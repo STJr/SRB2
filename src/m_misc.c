@@ -1778,8 +1778,18 @@ UINT8 M_CountBits(UINT32 num, UINT8 size)
 	for (i = 0; i < size; ++i)
 		if (num & (1 << i))
 			++sum;
-
 	return sum;
+}
+
+
+/** Get the most significant bit in a number.
+  * (integer log2)
+  */
+UINT8 M_HighestBit(UINT32 num)
+{
+	UINT8 i = 0;
+	while (num >>= 1) ++i;
+	return i;
 }
 
 const char *GetRevisionString(void)

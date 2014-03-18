@@ -98,6 +98,11 @@ angle_t FixedAngleC(fixed_t fa, fixed_t factor)
 	if (fa == 0)
 		return 0;
 
+	// -2,147,483,648 has no absolute value in a 32 bit signed integer
+	// so this code _would_ infinite loop if passed it
+	if (fa == INT32_MIN)
+		return 0;
+
 	if (factor == 0)
 		return FixedAngle(fa);
 	else if (factor > 0)
@@ -130,6 +135,11 @@ angle_t FixedAngle(fixed_t fa)
 	const fixed_t cwf = wf;
 
 	if (fa == 0)
+		return 0;
+
+	// -2,147,483,648 has no absolute value in a 32 bit signed integer
+	// so this code _would_ infinite loop if passed it
+	if (fa == INT32_MIN)
 		return 0;
 
 	fa = abs(fa);

@@ -1728,7 +1728,7 @@ void A_LobShot(mobj_t *actor)
 	if (LUA_CallAction("A_LobShot", actor))
 		return;
 #endif
-	if (!actor->target || P_MobjWasRemoved(actor->target))
+	if (!actor->target)
 		return;
 
 	A_FaceTarget(actor);
@@ -1829,7 +1829,7 @@ void A_FireShot(mobj_t *actor)
 	if (LUA_CallAction("A_FireShot", actor))
 		return;
 #endif
-	if (!actor->target || P_MobjWasRemoved(actor->target))
+	if (!actor->target)
 		return;
 
 	A_FaceTarget(actor);
@@ -1868,7 +1868,7 @@ void A_SuperFireShot(mobj_t *actor)
 	if (LUA_CallAction("A_SuperFireShot", actor))
 		return;
 #endif
-	if (!actor->target || P_MobjWasRemoved(actor->target))
+	if (!actor->target)
 		return;
 
 	A_FaceTarget(actor);
@@ -1915,7 +1915,7 @@ void A_BossFireShot(mobj_t *actor)
 	if (LUA_CallAction("A_BossFireShot", actor))
 		return;
 #endif
-	if (!actor->target || P_MobjWasRemoved(actor->target))
+	if (!actor->target)
 		return;
 
 	A_FaceTarget(actor);
@@ -1998,7 +1998,7 @@ void A_Boss7FireMissiles(mobj_t *actor)
 		return;
 #endif
 
-	if (!actor->target || P_MobjWasRemoved(actor->target))
+	if (!actor->target)
 	{
 		P_SetMobjState(actor, actor->info->spawnstate);
 		return;
@@ -2056,7 +2056,7 @@ void A_Boss1Laser(mobj_t *actor)
 	if (LUA_CallAction("A_Boss1Laser", actor))
 		return;
 #endif
-	if (!actor->target || P_MobjWasRemoved(actor->target))
+	if (!actor->target)
 		return;
 
 	switch (locvar2)
@@ -2279,7 +2279,7 @@ void A_SkullAttack(mobj_t *actor)
 	if (LUA_CallAction("A_SkullAttack", actor))
 		return;
 #endif
-	if (!actor->target || P_MobjWasRemoved(actor->target))
+	if (!actor->target)
 		return;
 
 	speed = FixedMul(SKULLSPEED, actor->scale);
@@ -2335,7 +2335,7 @@ void A_BossZoom(mobj_t *actor)
 	if (LUA_CallAction("A_BossZoom", actor))
 		return;
 #endif
-	if (!actor->target || P_MobjWasRemoved(actor->target))
+	if (!actor->target)
 		return;
 
 	dest = actor->target;
@@ -2499,6 +2499,9 @@ void A_1upThinker(mobj_t *actor)
 			continue;
 
 		if (!players[i].mo)
+			continue;
+
+		if ((netgame || multiplayer) && players[i].playerstate != PST_LIVE)
 			continue;
 
 		temp = P_AproxDistance(players[i].mo->x-actor->x, players[i].mo->y-actor->y);
@@ -4815,12 +4818,6 @@ void A_UnidusBall(mobj_t *actor)
 
 	actor->angle += ANGLE_11hh;
 
-	if (!actor->target)
-	{
-		CONS_Debug(DBG_GAMELOGIC, "A_UnidusBall: Spikeball has no target\n");
-		return;
-	}
-
 	if (actor->movecount)
 	{
 		if (P_AproxDistance(actor->momx, actor->momy) < FixedMul(actor->info->damage/2, actor->scale))
@@ -4828,15 +4825,16 @@ void A_UnidusBall(mobj_t *actor)
 		return;
 	}
 
-	if (!actor->target->health)
+	if (!actor->target || !actor->target->health)
 	{
+		CONS_Debug(DBG_GAMELOGIC, "A_UnidusBall: Removing unthrown spikeball from nonexistant Unidus\n");
 		P_RemoveMobj(actor);
 		return;
 	}
 
 	P_UnsetThingPosition(actor);
 	{
-		const angle_t angle = actor->movedir + FixedAngle(actor->info->speed*leveltime);
+		const angle_t angle = actor->movedir + FixedAngle(actor->info->speed*(leveltime%360));
 		const UINT16 fa = angle>>ANGLETOFINESHIFT;
 
 		actor->x = actor->target->x + FixedMul(FINECOSINE(fa),actor->threshold);
@@ -5030,27 +5028,9 @@ void A_MaceRotate(mobj_t *actor)
 		return;
 #endif
 
-	if (!actor->target) // This should NEVER happen.
-	{
-		CONS_Debug(DBG_GAMELOGIC, "Mace object (type %d) has no target!\n", actor->type);
-		P_RemoveMobj(actor);
-		return;
-	}
-
 	// Target was removed.
-	if (P_MobjWasRemoved(actor->target))
+	if (!actor->target)
 	{
-		UINT8 i;
-		if (actor->flags & MF_AMBUSH) // outermost chain only (no point checking the others for players)
-		{
-			for (i = 0; i < MAXPLAYERS; i++)
-				if (playeringame[i] && players[i].pflags & (PF_MACESPIN|PF_ITEMHANG) // is player in-game and attached to something?
-					&& players[i].mo && players[i].mo->tracer && players[i].mo->tracer == actor) // is player attached to YOU even?
-				{
-					players[i].pflags &= ~(PF_MACESPIN|PF_ITEMHANG);
-					P_SetTarget(&players[i].mo->tracer, NULL); // you're not going to exist in a sec anyway
-				} // don't stop yet, since apparently more than one player is able to grab onto these chains at a time
-		}
 		P_RemoveMobj(actor);
 		return;
 	}
@@ -6478,7 +6458,7 @@ void A_Boss2PogoTarget(mobj_t *actor)
 		return;
 #endif
 
-	if (!actor->target || !(actor->target->flags & MF_SHOOTABLE) || actor->target->player->powers[pw_flashing]
+	if (!actor->target || !(actor->target->flags & MF_SHOOTABLE) || (actor->target->player && actor->target->player->powers[pw_flashing])
 	|| P_AproxDistance(actor->x-actor->target->x, actor->y-actor->target->y) >= FixedMul(512*FRACUNIT, actor->scale))
 	{
 		// look for a new target
@@ -10064,7 +10044,7 @@ void A_BrakFireShot(mobj_t *actor)
 	if (LUA_CallAction("A_BrakFireShot", actor))
 		return;
 #endif
-	if (!actor->target || P_MobjWasRemoved(actor->target))
+	if (!actor->target)
 		return;
 
 	A_FaceTarget(actor);

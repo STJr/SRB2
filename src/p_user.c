@@ -261,6 +261,9 @@ boolean P_PlayerMoving(INT32 pnum)
 {
 	player_t *p = &players[pnum];
 
+	if (!Playing())
+		return false;
+
 	if (p->jointime < 5*TICRATE || p->playerstate == PST_DEAD || p->playerstate == PST_REBORN || p->spectator)
 		return false;
 
@@ -9134,7 +9137,7 @@ void P_PlayerAfterThink(player_t *player)
 				player->pflags &= ~PF_CARRIED;
 		}
 
-		if (player->mo->tracer->health <= 0 || (player->mo->tracer->player && player->mo->tracer->player->powers[pw_flashing]))
+		if (player->mo->tracer->health <= 0)
 			player->pflags &= ~PF_CARRIED;
 		else
 		{

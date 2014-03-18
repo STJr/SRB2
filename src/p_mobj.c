@@ -58,7 +58,7 @@ void P_RunCachedActions(void)
 #ifdef HAVE_BLUA
 		astate = &states[ac->statenum];
 #endif
-		if (ac->mobj) // just in case...
+		if (ac->mobj && !P_MobjWasRemoved(ac->mobj)) // just in case...
 			states[ac->statenum].action.acp1(ac->mobj);
 		next = ac->next;
 		Z_Free(ac);
@@ -288,6 +288,11 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 			astate = st;
 #endif
 			st->action.acp1(mobj);
+
+			// woah. a player was removed by an action.
+			// this sounds like a VERY BAD THING, but there's nothing we can do now...
+			if (P_MobjWasRemoved(mobj))
+				return false;
 		}
 
 		seenstate[state] = 1 + st->nextstate;
@@ -5237,19 +5242,27 @@ INT32 numshields = 0;
 void P_RunShields(void)
 {
 	INT32 i;
-	mobj_t *mo;
+	mobj_t *mo, *next;
 	fixed_t destx,desty,zoffs;
 
+	// run shields
 	for (i = 0; i < numshields; i++)
 	{
 		P_ShieldLook(shields[i], shields[i]->info->speed);
 		P_SetTarget(&shields[i], NULL);
 	}
-
 	numshields = 0;
 
-	for (mo = overlaycap; mo; mo = mo->hnext)
+	// run overlays
+	next = NULL;
+	for (mo = overlaycap; mo; mo = next)
 	{
+		I_Assert(!P_MobjWasRemoved(mo));
+
+		// grab next in chain, then unset the chain target
+		next = mo->hnext;
+		P_SetTarget(&mo->hnext, NULL);
+
 		if (!mo->target)
 			continue;
 		if (!splitscreen /*&& rendermode != render_soft*/)
@@ -5292,8 +5305,7 @@ void P_RunShields(void)
 			P_SetThingPosition(mo);
 		P_CheckPosition(mo, mo->x, mo->y);
 	}
-
-	overlaycap = NULL;
+	P_SetTarget(&overlaycap, NULL);
 }
 
 static boolean P_AddShield(mobj_t *thing)
@@ -5330,17 +5342,38 @@ static boolean P_AddShield(mobj_t *thing)
 	return true;
 }
 
+// Called only when MT_OVERLAY thinks.
 static void P_AddOverlay(mobj_t *thing)
 {
-	mobj_t *mo;
-	if (!overlaycap)
-		overlaycap = thing;
+	I_Assert(thing != NULL);
+
+	if (overlaycap == NULL)
+		P_SetTarget(&overlaycap, thing);
 	else {
+		mobj_t *mo;
 		for (mo = overlaycap; mo && mo->hnext; mo = mo->hnext)
 			;
-		mo->hnext = thing;
+
+		I_Assert(mo != NULL);
+		I_Assert(mo->hnext == NULL);
+
+		P_SetTarget(&mo->hnext, thing);
 	}
-	thing->hnext = NULL;
+	P_SetTarget(&thing->hnext, NULL);
+}
+
+// Called only when MT_OVERLAY (or anything else in the overlaycap list) is removed.
+// Keeps the hnext list from corrupting.
+static void P_RemoveOverlay(mobj_t *thing)
+{
+	mobj_t *mo;
+	for (mo = overlaycap; mo; mo = mo->hnext)
+		if (mo->hnext == thing)
+		{
+			P_SetTarget(&mo->hnext, thing->hnext);
+			P_SetTarget(&thing->hnext, NULL);
+			return;
+		}
 }
 
 void A_BossDeath(mobj_t *mo);
@@ -5528,7 +5561,7 @@ void P_MobjThinker(mobj_t *mobj)
 				// Don't touch my fuse!
 				return;
 			case MT_OVERLAY:
-				if (!mobj->target || P_MobjWasRemoved(mobj->target))
+				if (!mobj->target)
 				{
 					P_RemoveMobj(mobj);
 					return;
@@ -5577,7 +5610,7 @@ void P_MobjThinker(mobj_t *mobj)
 				}
 				break;
 			case MT_DROWNNUMBERS:
-				if (!mobj->target || P_MobjWasRemoved(mobj->target))
+				if (!mobj->target)
 				{
 					P_RemoveMobj(mobj);
 					return;
@@ -5972,7 +6005,6 @@ void P_MobjThinker(mobj_t *mobj)
 			break;
 		case MT_EGGMOBILE2_POGO:
 			if (!mobj->target
-			|| P_MobjWasRemoved(mobj->target)
 			|| !mobj->target->health
 			|| mobj->target->state == &states[mobj->target->info->spawnstate]
 			|| mobj->target->state == &states[mobj->target->info->raisestate])
@@ -6010,7 +6042,6 @@ void P_MobjThinker(mobj_t *mobj)
 				fixed_t jetx, jety;
 
 				if (!mobj->target // if you have no target
-				|| P_MobjWasRemoved(mobj->target) // or your target has been removed
 				|| (!(mobj->target->flags & MF_BOSS) && mobj->target->health <= 0)) // or your target isn't a boss and it's popped now
 				{ // then remove yourself as well!
 					P_RemoveMobj(mobj);
@@ -6090,7 +6121,6 @@ void P_MobjThinker(mobj_t *mobj)
 				fixed_t jetx, jety;
 
 				if (!mobj->target // if you have no target
-				|| P_MobjWasRemoved(mobj->target) // or your target has been removed
 				|| (!(mobj->target->flags & MF_BOSS) && mobj->target->health <= 0)) // or your target isn't a boss and it's popped now
 				{ // then remove yourself as well!
 					P_RemoveMobj(mobj);
@@ -6121,7 +6151,6 @@ void P_MobjThinker(mobj_t *mobj)
 		case MT_JETFLAME:
 			{
 				if (!mobj->target // if you have no target
-				|| P_MobjWasRemoved(mobj->target) // or your target has been removed
 				|| (!(mobj->target->flags & MF_BOSS) && mobj->target->health <= 0)) // or your target isn't a boss and it's popped now
 				{ // then remove yourself as well!
 					P_RemoveMobj(mobj);
@@ -6151,7 +6180,7 @@ void P_MobjThinker(mobj_t *mobj)
 				mobj->z = mobj->floorz + mobj->height + (mobj->spawnpoint->options >> ZSHIFT) * FRACUNIT;
 				mobj->angle = 0;
 
-				if (!mobj->target || P_MobjWasRemoved(mobj->target))
+				if (!mobj->target)
 				{
 					mobj_t *goalpost = P_SpawnMobj(mobj->x, mobj->y, mobj->z + FRACUNIT, MT_NIGHTSGOAL);
 					CONS_Debug(DBG_NIGHTSBASIC, "Adding goal post\n");
@@ -7325,6 +7354,10 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			astate = st;
 #endif
 			st->action.acp1(mobj);
+			// DANGER! This is the ONLY way for P_SpawnMobj to return NULL!
+			// Avoid using MF_RUNSPAWNFUNC on mobjs whose spawn state expects target or tracer to already be set!
+			if (P_MobjWasRemoved(mobj))
+				return NULL;
 		}
 	}
 
@@ -7433,6 +7466,9 @@ void P_RemoveMobj(mobj_t *mobj)
 		if (iquehead == iquetail)
 			iquetail = (iquetail+1)&(ITEMQUESIZE-1);
 	}
+
+	if (mobj->type == MT_OVERLAY)
+		P_RemoveOverlay(mobj);
 
 	mobj->health = 0; // Just because
 
@@ -7862,9 +7898,19 @@ void P_SpawnPlayer(INT32 playernum)
 			p->spectator = false;
 	}
 
-	// Fix stupid non spectator spectators.
-	if (G_GametypeHasTeams() && !p->spectator && !p->ctfteam)
-		p->spectator = true;
+	if (G_GametypeHasTeams())
+	{
+		// Fix stupid non spectator spectators.
+		if (!p->spectator && !p->ctfteam)
+			p->spectator = true;
+
+		// Fix team colors.
+		// This code isn't being done right somewhere else. Oh well.
+		if (p->ctfteam == 1)
+			p->skincolor = skincolor_redteam;
+		else if (p->ctfteam == 2)
+			p->skincolor = skincolor_blueteam;
+	}
 
 	mobj = P_SpawnMobj(0, 0, 0, MT_PLAYER);
 	(mobj->player = p)->mo = mobj;
