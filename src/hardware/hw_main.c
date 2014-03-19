@@ -3836,7 +3836,7 @@ static void HWR_DrawSprites(void)
 				HWR_DrawPrecipitationSprite(spr);
 			else
 #endif
-				if (spr->mobj->skin)
+				if (spr->mobj && spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)
 				{
 					if (!cv_grmd2.value || (cv_grmd2.value && md2_playermodels[(skin_t*)spr->mobj->skin-skins].notfound == true))
 						HWR_DrawSprite(spr);
@@ -3865,7 +3865,7 @@ static void HWR_DrawMD2S(void)
 			if (!spr->precip)
 			{
 #endif
-				if (spr->mobj && spr->mobj->skin)
+				if (spr->mobj && spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)
 				{
 					if ((md2_playermodels[(skin_t*)spr->mobj->skin-skins].notfound == false) && (md2_playermodels[(skin_t*)spr->mobj->skin-skins].scale > 0.0f))
 						HWR_DrawMD2(spr);
