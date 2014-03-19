@@ -202,7 +202,7 @@ LIBS+=-lm
 endif
 
 ifdef SDL
-include sdl/Makefile.cfg
+include sdl2/Makefile.cfg
 endif #ifdef SDL
 
 ifdef DISTCC

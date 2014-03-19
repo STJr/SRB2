@@ -49,6 +49,7 @@
 
 #ifdef SDL
 #include "sdl/hwsym_sdl.h"
+typedef off_t off64_t;
 #endif
 
 #if defined (_WIN32)
