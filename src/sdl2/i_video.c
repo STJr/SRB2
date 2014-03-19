@@ -19,9 +19,7 @@
 
 #include <stdlib.h>
 
-#ifndef _WIN32_WCE
 #include <signal.h>
-#endif
 
 #ifdef _MSC_VER
 #pragma warning(disable : 4214 4244)
@@ -38,16 +36,6 @@
 #pragma warning(default : 4214 4244)
 #endif
 
-#if SDL_VERSION_ATLEAST(1,2,9) && defined (_arch_dreamcast)
-#define HAVE_DCSDL
-#include "SDL_dreamcast.h"
-#endif
-
-#if SDL_VERSION_ATLEAST(1,2,9) && defined (GP2X)
-#define HAVE_GP2XSDL
-#include "SDL_gp2x.h"
-#endif
-
 #if SDL_VERSION_ATLEAST(1,3,0)
 #define SDLK_EQUALS SDLK_KP_EQUALSAS400
 #define SDLK_LMETA SDLK_LGUI
@@ -62,10 +50,6 @@
 
 #ifdef HAVE_IMAGE
 #include "SDL_image.h"
-#elseif !(defined (DC) || defined (_WIN32_WCE) || defined (PSP) || defined(GP2X))
-#define LOAD_XPM //I want XPM!
-#include "IMG_xpm.c" //Alam: I don't want to add SDL_Image.dll/so
-#define HAVE_IMAGE //I have SDL_Image, sortof
 #endif
 
 #ifdef HAVE_IMAGE
@@ -74,22 +58,8 @@
 
 #include "../doomdef.h"
 
-#if defined (_WIN32) && !defined (_XBOX)
+#if defined (_WIN32)
 #include "SDL_syswm.h"
-#endif
-
-#ifdef _arch_dreamcast
-#include <conio/conio.h>
-#include <dc/maple.h>
-#include <dc/maple/vmu.h>
-//#include "SRB2DC/VMU.xbm"
-//#include <dc/pvr.h>
-//#define malloc pvr_mem_malloc
-//#define free pvr_mem_free
-#endif
-
-#if defined (_XBOX) && defined (__GNUC__)
-#include <openxdk/debug.h>
 #endif
 
 #include "../doomstat.h"
@@ -115,27 +85,13 @@
 #include "ogl_sdl.h"
 #endif
 
-#ifdef REMOTE_DEBUGGING
-#ifdef _WII
-#include <debug.h>
-#endif
-#endif
-
 #ifdef HAVE_FILTER
 #define FILTERS
 #include "filter/filters.h"
 #endif
 
 // maximum number of windowed modes (see windowedModes[][])
-#if defined (_WIN32_WCE) || defined (DC) || defined (PSP) || defined(GP2X)
-#define MAXWINMODES (1)
-#elif defined (WII)
-#define MAXWINMODES (8)
-#elif defined (_PS3)
-#define MAXWINMODES (26)
-#else
 #define MAXWINMODES (27)
-#endif
 
 /**	\brief
 */
@@ -150,11 +106,7 @@ rendermode_t rendermode=render_soft;
 boolean highcolor = false;
 
 // synchronize page flipping with screen refresh
-#if defined(DC) || (defined(GP2X) && !defined(HAVE_GP2XSDL))
-consvar_t cv_vidwait = {"vid_wait", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-#else
 consvar_t cv_vidwait = {"vid_wait", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-#endif
 static consvar_t cv_stretch = {"stretch", "Off", CV_SAVE|CV_NOSHOWHELP, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 UINT8 graphics_started = 0; // Is used in console.c and screen.c
@@ -179,30 +131,14 @@ static      SDL_Surface *bufSurface = NULL;
 static      SDL_Surface *icoSurface = NULL;
 static      SDL_Color    localPalette[256];
 static      SDL_Rect   **modeList = NULL;
-#ifdef DC
-static       Uint8       BitsPerPixel = 15;
-#else
 static       Uint8       BitsPerPixel = 16;
-#endif
 static       Uint16      realwidth = BASEVIDWIDTH;
 static       Uint16      realheight = BASEVIDHEIGHT;
-#ifdef _WIN32_WCE
-static const Uint32      surfaceFlagsW = SDL_HWPALETTE; //Can't handle WinCE changing sides
-#else
 static const Uint32      surfaceFlagsW = 0/*|SDL_RESIZABLE*/;
-#endif
-#ifdef _PSP
-static const Uint32      surfaceFlagsF = SDL_HWSURFACE|SDL_FULLSCREEN;
-#else
 static const Uint32      surfaceFlagsF = 0;
-#endif
 static       SDL_bool    mousegrabok = SDL_TRUE;
 #define HalfWarpMouse(x,y) SDL_WarpMouse((Uint16)(x/2),(Uint16)(y/2))
-#if defined (_WIN32_WCE) || defined (DC) || defined (PSP) || defined(GP2X)
-static       SDL_bool    videoblitok = SDL_TRUE;
-#else
 static       SDL_bool    videoblitok = SDL_FALSE;
-#endif
 static       SDL_bool    exposevideo = SDL_FALSE;
 
 // SDL2 vars
@@ -213,11 +149,7 @@ static SDL_Texture  *texture;
 // windowed video modes from which to choose from.
 static INT32 windowedModes[MAXWINMODES][2] =
 {
-#if !(defined (_WIN32_WCE) || defined (DC) || defined (PSP) || defined (GP2X))
-#ifndef WII
-#ifndef _PS3
 	{1920,1200}, // 1.60,6.00
-#endif
 	{1680,1050}, // 1.60,5.25
 	{1600,1200}, // 1.33,5.00
 	{1600,1000}, // 1.60,5.00
@@ -236,7 +168,6 @@ static INT32 windowedModes[MAXWINMODES][2] =
 	{ 960, 600}, // 1.60,3.00
 	{ 800, 600}, // 1.33,2.50
 	{ 800, 500}, // 1.60,2.50
-#endif
 	{ 640, 480}, // 1.33,2.00
 	{ 640, 400}, // 1.60,2.00
 	{ 576, 432}, // 1.33,1.80
@@ -244,7 +175,6 @@ static INT32 windowedModes[MAXWINMODES][2] =
 	{ 416, 312}, // 1.33,1.30
 	{ 400, 300}, // 1.33,1.25
 	{ 320, 240}, // 1.33,1.00
-#endif
 	{ 320, 200}, // 1.60,1.00
 };
 
@@ -252,36 +182,11 @@ static void SDLSetMode(INT32 width, INT32 height, INT32 bpp, Uint32 flags)
 {
 #if 0
 	const char *SDLVD = I_GetEnv("SDL_VIDEODRIVER");
-#ifdef _WIN32_WCE
-	if (bpp < 16)
-		bpp = 16; // 256 mode poo
-#endif
-#ifdef _WII
-	bpp = 16; // 8-bit mode poo
-#endif
-#ifdef DC
-	if (bpp < 15)
-		bpp = 15;
-	height = 240;
-#endif
-#ifdef PSP
-	bpp = 16;
-#endif
-#ifdef GP2X
-	bpp = 16;
-#ifdef HAVE_GP2XSDL
-	height = 240;
-#endif
-#endif
 #ifdef FILTERS
 	bpp = Setupf2x(width, height, bpp);
 #endif
 	if (SDLVD && strncasecmp(SDLVD,"glSDL",6) == 0) //for glSDL videodriver
 		vidSurface = SDL_SetVideoMode(width, height,0,SDL_DOUBLEBUF);
-#ifdef _WII // don't want it to use HWSURFACE, so make it first here
-	else if (SDL_VideoModeOK(width, height, bpp, flags|SDL_SWSURFACE|SDL_DOUBLEBUF) >= bpp) // SDL Wii uses double buffering
-		vidSurface = SDL_SetVideoMode(width, height, bpp, flags|SDL_SWSURFACE|SDL_DOUBLEBUF);
-#endif
 	else if (cv_vidwait.value && videoblitok && SDL_VideoModeOK(width, height, bpp, flags|SDL_HWSURFACE|SDL_DOUBLEBUF) >= bpp)
 		vidSurface = SDL_SetVideoMode(width, height, bpp, flags|SDL_HWSURFACE|SDL_DOUBLEBUF);
 	else if (videoblitok && SDL_VideoModeOK(width, height, bpp, flags|SDL_HWSURFACE) >= bpp)
@@ -291,14 +196,6 @@ static void SDLSetMode(INT32 width, INT32 height, INT32 bpp, Uint32 flags)
 	else return;
 	realwidth = (Uint16)width;
 	realheight = (Uint16)height;
-#ifdef HAVE_DCSDL
-	//SDL_DC_SetWindow(320,200);
-	SDL_DC_EmulateMouse(SDL_FALSE);
-	SDL_DC_EmulateKeyboard(SDL_TRUE);
-#endif
-#ifdef HAVE_GP2XSDL
-	SDL_ShowCursor(SDL_DISABLE); //For GP2X Open2x
-#endif
 #ifdef FILTERS
 	if (vidSurface && preSurface && f2xSurface)
 	{
@@ -333,17 +230,6 @@ static INT32 SDLatekey(SDLKey sym)
 	return 0;
 #if 0 // TODO SDL2 overhaul
 	INT32 rc = sym + 0x80;
-
-#ifdef _WIN32_WCE
-	if (sym == SDLK_KP8)
-		sym = SDLK_UP;
-	else if (sym == SDLK_KP4)
-		sym = SDLK_LEFT;
-	else if (sym == SDLK_KP6)
-		sym = SDLK_RIGHT;
-	else if (sym == SDLK_KP2)
-		sym = SDLK_DOWN;
-#endif
 
 	switch (sym)
 	{
@@ -527,7 +413,6 @@ static INT32 SDLatekey(SDLKey sym)
 			rc = KEY_PLUSPAD;
 			break;
 
-#ifndef _arch_dreamcast
 		case SDLK_LSUPER:
 #ifdef HAVE_SDLMETAKEYS
 		case SDLK_LMETA:
@@ -544,7 +429,6 @@ static INT32 SDLatekey(SDLKey sym)
 		case SDLK_MENU:
 			rc = KEY_MENU;
 			break;
-#endif
 
 		default:
 			if (sym >= SDLK_SPACE && sym <= SDLK_DELETE)
@@ -769,7 +653,7 @@ static void VID_Command_Mode_f (void)
 #endif
 }
 
-#if defined(RPC_NO_WINDOWS_H) && !defined(_WIN32_WCE)
+#if defined(RPC_NO_WINDOWS_H)
 static VOID MainWndproc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	UNREFERENCED_PARAMETER(hWnd);
@@ -784,236 +668,15 @@ static VOID MainWndproc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 }
 #endif
 
-#if 0 //#ifdef _WIN32
-	// Disable Composition in Vista DWM (Desktop Window Manager) ----------------
-static HMODULE DMdll = NULL;
-typedef HRESULT (CALLBACK *P_DwmIsCompositionEnabled) (BOOL *pfEnabled);
-static P_DwmIsCompositionEnabled pfnDwmIsCompositionEnabled = NULL;
-typedef HRESULT (CALLBACK *P_DwmEnableComposition) (BOOL   fEnable);
-static P_DwmEnableComposition pfnDwmEnableComposition = NULL;
-static BOOL AeroWasEnabled = FALSE;
-
-static inline VOID UnloadDM(VOID)
-{
-	pfnDwmEnableComposition = NULL;
-	pfnDwmIsCompositionEnabled = NULL;
-	if (DMdll) FreeLibrary(DMdll);
-	DMdll = NULL;
-}
-
-static inline BOOL LoadDM(VOID)
-{
-	if (DMdll)
-		return TRUE;
-
-	DMdll = LoadLibraryA("dwmapi.dll");
-	if (DMdll)
-		I_OutputMsg("dmwapi.dll loaded, Vista's Desktop Window Manager API\n");
-	else
-		return FALSE;
-
-	pfnDwmIsCompositionEnabled = (P_DwmIsCompositionEnabled)GetProcAddress(DMdll, "DwmIsCompositionEnabled");
-	if (pfnDwmIsCompositionEnabled)
-		I_OutputMsg("Composition Aero API found, DwmIsCompositionEnabled\n");
-
-	pfnDwmEnableComposition = (P_DwmEnableComposition)GetProcAddress(DMdll, "DwmEnableComposition");
-	if (pfnDwmEnableComposition)
-		I_OutputMsg("Composition Aero API found, DwmEnableComposition\n");
-
-	return TRUE;
-}
-
-static inline VOID DisableAero(VOID)
-{
-	BOOL pfnDwmEnableCompositiond = FALSE;
-	AeroWasEnabled = FALSE;
-
-	if (!LoadDM())
-		return;
-
-	if (pfnDwmIsCompositionEnabled && SUCCEEDED(pfnDwmIsCompositionEnabled(&pfnDwmEnableCompositiond)))
-		I_OutputMsg("Got the result of DwmIsCompositionEnabled, %i\n", pfnDwmEnableCompositiond);
-	else
-		return;
-
-	if ((AeroWasEnabled = pfnDwmEnableCompositiond))
-		I_OutputMsg("Disable the Aero rendering\n");
-	else
-		return;
-
-	if (pfnDwmEnableComposition && SUCCEEDED(pfnDwmEnableComposition(FALSE)))
-		I_OutputMsg("Aero rendering disabled\n");
-	else
-		I_OutputMsg("We failed to disable the Aero rendering\n");
-}
-
-static inline VOID ResetAero(VOID)
-{
-	if (pfnDwmEnableComposition && AeroWasEnabled)
-	{
-		if (SUCCEEDED(pfnDwmEnableComposition(AeroWasEnabled)))
-			I_OutputMsg("Aero rendering setting restored\n");
-		else
-			I_OutputMsg("We failed to restore Aero rendering\n");
-	}
-	UnloadDM();
-}
-#endif
-
 static inline void SDLJoyRemap(event_t *event)
 {
-#if defined(GP2X)
-#define GP2X_BUTTON_UP              (0)
-#define GP2X_BUTTON_DOWN            (4)
-#define GP2X_BUTTON_LEFT            (2)
-#define GP2X_BUTTON_RIGHT           (6)
-#define GP2X_BUTTON_UPLEFT          (1)
-#define GP2X_BUTTON_UPRIGHT         (7)
-#define GP2X_BUTTON_DOWNLEFT        (3)
-#define GP2X_BUTTON_DOWNRIGHT       (5)
-#define GP2X_BUTTON_CLICK           (18)
-#define GP2X_BUTTON_A               (12)
-#define GP2X_BUTTON_B               (13)
-#define GP2X_BUTTON_X               (14)
-#define GP2X_BUTTON_Y               (15)
-#define GP2X_BUTTON_L               (10)
-#define GP2X_BUTTON_R               (11)
-#define GP2X_BUTTON_START           (8)
-#define GP2X_BUTTON_SELECT          (9)
-#define GP2X_BUTTON_VOLUP           (16)
-#define GP2X_BUTTON_VOLDOWN         (17)
-	if ((event->type == ev_keydown || event->type == ev_keyup) && (KEY_JOY1 <= event->data1 && event->data1 <= KEY_JOY1+JOYBUTTONS))
-	{
-		INT32 button = event->data1-KEY_JOY1;
-		if (button <= 7)
-		{
-			static UINT8 DPAD = 0;
-			if (event->type == ev_keyup)
-			{
-				event->type = ev_console;
-				DPAD &= ~(1<<button);
-			}
-			else
-			{
-				event->type = ev_joystick;
-				DPAD |= 1<<button;
-			}
-			event->data2 = event->data3 = INT32_MAX;
-			if ((DPAD & (1<<GP2X_BUTTON_UP)) && ((DPAD & (1<<GP2X_BUTTON_UPLEFT)) || (DPAD & (1<<GP2X_BUTTON_UPRIGHT))))
-				button = GP2X_BUTTON_UP;
-			if ((DPAD & (1<<GP2X_BUTTON_LEFT)) && ((DPAD & (1<<GP2X_BUTTON_UPLEFT)) || (DPAD & (1<<GP2X_BUTTON_DOWNLEFT))))
-				button = GP2X_BUTTON_LEFT;
-			if ((DPAD & (1<<GP2X_BUTTON_DOWN)) && ((DPAD & (1<<GP2X_BUTTON_DOWNLEFT)) || (DPAD & (1<<GP2X_BUTTON_DOWNRIGHT))))
-				button = GP2X_BUTTON_DOWN;
-			if ((DPAD & (1<<GP2X_BUTTON_RIGHT)) && ((DPAD & (1<<GP2X_BUTTON_UPRIGHT)) || (DPAD & (1<<GP2X_BUTTON_DOWNRIGHT))))
-				button = GP2X_BUTTON_RIGHT;
-			if (DPAD == 0)
-			{
-				event->type = ev_joystick;
-				event->data2 = event->data3 = 0;
-			}
-			else switch (button)
-			{
-				case GP2X_BUTTON_UP:
-					event->data3 = -1;
-					break;
-				case GP2X_BUTTON_DOWN:
-					event->data3 = 1;
-					break;
-				case GP2X_BUTTON_LEFT:
-					event->data2 = -1;
-					break;
-				case GP2X_BUTTON_RIGHT:
-					event->data2 = 1;
-					break;
-				case GP2X_BUTTON_UPLEFT:
-					event->data2 = -1;
-					event->data3 = -1;
-					break;
-				case GP2X_BUTTON_UPRIGHT:
-					event->data2 = 1;
-					event->data3 = -1;
-					break;
-				case GP2X_BUTTON_DOWNLEFT:
-					event->data2 = -1;
-					event->data3 = 1;
-					break;
-				case GP2X_BUTTON_DOWNRIGHT:
-					event->data2 = 1;
-					event->data3 = 1;
-				default:
-					break;
-			}
-			event->data1 = 0;
-			return;
-		}
-		else switch (button)
-		{
-			case GP2X_BUTTON_CLICK:
-				event->data1 = KEY_ENTER;
-				break;
-			case GP2X_BUTTON_A:
-				event->data1 = KEY_JOY1+0;
-				break;
-			case GP2X_BUTTON_B:
-				event->data1 = KEY_JOY1+2;
-				break;
-			case GP2X_BUTTON_X:
-				event->data1 = KEY_JOY1+3;
-				break;
-			case GP2X_BUTTON_Y:
-				event->data1 = KEY_JOY1+1;
-				break;
-			case GP2X_BUTTON_L:
-				event->data1 = KEY_JOY1+4;
-				break;
-			case GP2X_BUTTON_R:
-				event->data1 = KEY_JOY1+5;
-				break;
-			case GP2X_BUTTON_START:
-				event->data1 = KEY_ESCAPE;
-				break;
-			case GP2X_BUTTON_SELECT:
-				event->data1 = KEY_JOY1+8;
-				break;
-			case GP2X_BUTTON_VOLUP:
-				event->data1 = KEY_JOY1+6;
-				break;
-			case GP2X_BUTTON_VOLDOWN:
-				event->data1 = KEY_JOY1+7;
-				break;
-			default:
-				break;
-		}
-		//I_OutputMsg("Button %i: event key %i and type: %i\n", button, event->data1, event->type);
-	}
-#elif defined(_PSP)
-	if (event->data1 > KEY_JOY1 + 9 + 2) // All button after D-Pad and Select/Start
-		event->data1 -= 4; // remap D-pad to Hats, offset of -4
-	else if (event->data1 == KEY_JOY1 + 6) // Down
-		event->data1 = KEY_HAT1+1;
-	else if (event->data1 == KEY_JOY1 + 7) // Left
-		event->data1 = KEY_HAT1+2;
-	else if (event->data1 == KEY_JOY1 + 8) // Up
-		event->data1 = KEY_HAT1+0;
-	else if (event->data1 == KEY_JOY1 + 9) // Right
-		event->data1 = KEY_HAT1+3;
-	else if (event->data1 == KEY_JOY1 + 10) // Select
-		event->data1 = KEY_TAB;
-	else if (event->data1 == KEY_JOY1 + 11) // Start
-		event->data1 = KEY_ESCAPE;
-#else
 	(void)event;
-#endif
 }
 
 static INT32 SDLJoyAxis(const Sint16 axis, evtype_t which)
 {
-#ifdef _arch_dreamcast // -128 to 127 SDL for DC have give us a smaller range
-	INT32 raxis = axis*8;
-#else // -32768 to 32767
+	// -32768 to 32767
 	INT32 raxis = axis/32;
-#endif
 	if (which == ev_joystick)
 	{
 		if (Joystick.bGamepadStyle)
@@ -1237,7 +900,6 @@ void I_GetEvent(void)
 				SDLJoyRemap(&event);
 				if (event.type != ev_console) D_PostEvent(&event);
 				break;
-#ifndef  _WIN32_WCE
 			case SDL_QUIT:
 				if (!sdlquit)
 				{
@@ -1245,8 +907,7 @@ void I_GetEvent(void)
 					M_QuitResponse('y');
 				}
 				break;
-#endif
-#if defined(RPC_NO_WINDOWS_H) && !defined(_WIN32_WCE)
+#if defined(RPC_NO_WINDOWS_H)
 			case SDL_SYSWMEVENT:
 				MainWndproc(inputEvent.syswm.msg->hwnd,
 					inputEvent.syswm.msg->msg,
@@ -1319,9 +980,6 @@ void I_OsPolling(void)
 		I_GetJoystickEvents();
 		I_GetJoystick2Events();
 	}
-#ifdef _arch_dreamcast
-	//vmu_set_icon(VMU_bits);
-#endif
 
 	I_GetMouseEvents();
 
@@ -1366,10 +1024,6 @@ static inline boolean I_SkipFrame(void)
 		return false;
 
 	skip = !skip;
-
-#if 0 //(defined (GP2X) || defined (PSP) || defined (_arch_dreamcast))
-	return skip;
-#endif
 
 	switch (gamestate)
 	{
@@ -1538,10 +1192,6 @@ void I_FinishUpdate(void)
 		}
 #endif
 
-#ifdef HAVE_GP2XSDL
-		//if (blited == 0)
-			SDL_GP2X_WaitForBlitter();
-#endif
 #if 0
 		if (lockedsf == 0 && blited == 0 && vidSurface->flags&SDL_DOUBLEBUF)
 			SDL_Flip(vidSurface);
@@ -1727,34 +1377,7 @@ void VID_PrepareModeList(void)
 
 static inline void SDLESSet(void)
 {
-#ifdef HAVE_DCSDL
-	INT32 j;
-	SDL_DC_SetVideoDriver(SDL_DC_DIRECT_VIDEO); //SDL_DC_DMA_VIDEO
-	for (j=0;j<4;j++)
-	{
-		SDL_DC_MapKey(j,SDL_DC_START,SDLK_ESCAPE);
-		SDL_DC_MapKey(j,SDL_DC_A,SDLK_UNKNOWN);
-		SDL_DC_MapKey(j,SDL_DC_B,SDLK_UNKNOWN);
-		SDL_DC_MapKey(j,SDL_DC_X,SDLK_UNKNOWN);
-		SDL_DC_MapKey(j,SDL_DC_Y,SDLK_UNKNOWN);
-		SDL_DC_MapKey(j,SDL_DC_L,SDLK_UNKNOWN);
-		SDL_DC_MapKey(j,SDL_DC_R,SDLK_UNKNOWN);
-		//SDL_DC_MapKey(j,SDL_DC_LEFT,SDLK_UNKNOWN);
-		//SDL_DC_MapKey(j,SDL_DC_RIGHT,SDLK_UNKNOWN);
-		//SDL_DC_MapKey(j,SDL_DC_UP,SDLK_UNKNOWN);
-		//SDL_DC_MapKey(j,SDL_DC_DOWN,SDLK_UNKNOWN);
-	}
-	//SDL_DC_MapKey(0,SDL_DC_L,SDLK_LEFTBRACKET);
-	//SDL_DC_MapKey(0,SDL_DC_R,SDLK_RIGHTBRACKET);
-	//SDL_DC_MapKey(0,SDL_DC_START,SDLK_UNKNOWN);
-	//SDL_DC_MapKey(1,SDL_DC_L,SDLK_z);
-	//SDL_DC_MapKey(1,SDL_DC_R,SDLK_x);
-#endif
-#ifdef HAVE_GP2XSDL
-	SDL_GP2X_MiniDisplay(0,0);
-	//SDL_GP2X_DenyGfxMemory(NULL, 0);
-	SDL_GP2X_AllowGfxMemory(NULL, 0);
-#endif
+	SDL2STUB();
 }
 
 static void SDLWMSet(void)
@@ -1774,9 +1397,7 @@ static void SDLWMSet(void)
 		SetFocus(vid.WndParent);
 		ShowWindow(vid.WndParent, SW_SHOW);
 	}
-#ifndef _WIN32_WCE
 	SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
-#endif
 #endif
 	SDL_EventState(SDL_VIDEORESIZE, SDL_IGNORE);
 #endif
@@ -1784,13 +1405,7 @@ static void SDLWMSet(void)
 
 static void* SDLGetDirect(void)
 {
-#if 0 //#ifndef __MACH__ // Do not directly access the MacOSX's OpenGL memory
-	if (!SDL_MUSTLOCK(vidSurface) && SDLmatchVideoformat())
-	{
-		vid.rowbytes = vidSurface->pitch;
-		return vidSurface->pixels;
-	}
-#endif // you can not use the video memory in pixels member in fullscreen mode
+	// you can not use the video memory in pixels member in fullscreen mode
 	return NULL;
 }
 
@@ -1800,9 +1415,6 @@ INT32 VID_SetMode(INT32 modeNum)
 	SDL2STUB();
 	return SDL_TRUE;
 #if 0
-#ifdef _WIN32_WCE
-	(void)modeNum;
-#else
 	SDLdoUngrabMouse();
 	vid.recalc = true;
 	BitsPerPixel = (Uint8)cv_scr_depth.value;
@@ -1902,7 +1514,6 @@ INT32 VID_SetMode(INT32 modeNum)
 	if (!cv_stretch.value && (float)vid.width/vid.height != ((float)BASEVIDWIDTH/BASEVIDHEIGHT))
 		vid.height = (INT32)(vid.width * ((float)BASEVIDHEIGHT/BASEVIDWIDTH));// Adjust the height to match
 #endif
-#endif
 	I_StartupMouse();
 
 	SDLWMSet();
@@ -1933,11 +1544,7 @@ void I_StartupGraphics(void)
 #ifdef FILTERS
 	CV_RegisterVar (&cv_filter);
 #endif
-#ifdef _PSP // pitch is 0, mod of 0 crash
-	disable_mouse = true;
-#else
 	disable_mouse = M_CheckParm("-nomouse");
-#endif
 	if (disable_mouse)
 		I_PutEnv(SDLNOMOUSE);
 	if (!I_GetEnv("SDL_VIDEO_CENTERED"))
@@ -1945,9 +1552,6 @@ void I_StartupGraphics(void)
 	disable_fullscreen = M_CheckParm("-win");
 
 	keyboard_started = true;
-#ifdef _arch_dreamcast
-	conio_shutdown();
-#endif
 
 #if !defined(HAVE_TTF)
 #ifdef _WIN32 // Initialize Audio as well, otherwise Win32's DirectX can not use audio
@@ -1966,11 +1570,6 @@ void I_StartupGraphics(void)
 			return;
 		}
 	}
-#ifdef REMOTE_DEBUGGING
-#ifdef _WII
-	_break(); // break for debugger
-#endif
-#endif
 #endif
 	{
 		char vd[100]; //stack space for video name
@@ -1996,21 +1595,13 @@ void I_StartupGraphics(void)
 #endif
 
 	// Window title
-#ifdef _WIN32_WCE
-	SDL_WM_SetCaption("SRB2 "VERSIONSTRING, "SRB2");
-#else
 	//SDL_WM_SetCaption("SRB2: Starting up", "SRB2");
-#endif
 
 	// Window icon
 #ifdef HAVE_IMAGE
 	//icoSurface = IMG_ReadXPMFromArray(SDL_icon_xpm);
 #endif
 	//SDL_WM_SetIcon(icoSurface, NULL);
-
-#ifdef _WIN32
-	//DisableAero(); //also disable Aero on Vista
-#endif
 
 #ifdef HWRENDER
 	if (M_CheckParm("-opengl") || rendermode == render_opengl)
@@ -2044,13 +1635,8 @@ void I_StartupGraphics(void)
 		// check gl renderer lib
 		if (HWD.pfnGetRenderVersion() != VERSION)
 			I_Error("%s", M_GetText("The version of the renderer doesn't match the version of the executable\nBe sure you have installed SRB2 properly.\n"));
-#if 1 //#ifdef  _WIN32_WCE
 		vid.width = BASEVIDWIDTH;
 		vid.height = BASEVIDHEIGHT;
-#else
-		vid.width = 640; // hack to make voodoo cards work in 640x480
-		vid.height = 480;
-#endif
 		if (HWD.pfnInit(I_Error)) // let load the OpenGL library
 		{
 			/*
@@ -2073,16 +1659,8 @@ void I_StartupGraphics(void)
 #endif
 	if (render_soft == rendermode)
 	{
-#if defined(_WII)
-		vid.width = 640;
-		vid.height = 480;
-#elif defined(_PS3)
-		vid.width = 720;
-		vid.height = 480;
-#else
 		vid.width = BASEVIDWIDTH;
 		vid.height = BASEVIDHEIGHT;
-#endif
 		SDLSetMode(vid.width, vid.height, BitsPerPixel, surfaceFlagsW);
 		if (!vidSurface)
 		{
@@ -2147,18 +1725,13 @@ void I_ShutdownGraphics(void)
 	if (!graphics_started)
 		return;
 	CONS_Printf("I_ShutdownGraphics: ");
-#ifdef _WIN32
-	//ResetAero();
-#endif
 	graphics_started = false;
 	CONS_Printf("%s", M_GetText("shut down\n"));
 #ifdef HWRENDER
 	if (GLUhandle)
 		hwClose(GLUhandle);
 #endif
-#ifndef _arch_dreamcast
 	SDL_QuitSubSystem(SDL_INIT_VIDEO);
-#endif
 	framebuffer = SDL_FALSE;
 }
 #endif
