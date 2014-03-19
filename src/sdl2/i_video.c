@@ -85,11 +85,6 @@
 #include "ogl_sdl.h"
 #endif
 
-#ifdef HAVE_FILTER
-#define FILTERS
-#include "filter/filters.h"
-#endif
-
 // maximum number of windowed modes (see windowedModes[][])
 #define MAXWINMODES (27)
 
@@ -182,9 +177,6 @@ static void SDLSetMode(INT32 width, INT32 height, INT32 bpp, Uint32 flags)
 {
 #if 0
 	const char *SDLVD = I_GetEnv("SDL_VIDEODRIVER");
-#ifdef FILTERS
-	bpp = Setupf2x(width, height, bpp);
-#endif
 	if (SDLVD && strncasecmp(SDLVD,"glSDL",6) == 0) //for glSDL videodriver
 		vidSurface = SDL_SetVideoMode(width, height,0,SDL_DOUBLEBUF);
 	else if (cv_vidwait.value && videoblitok && SDL_VideoModeOK(width, height, bpp, flags|SDL_HWSURFACE|SDL_DOUBLEBUF) >= bpp)
@@ -196,13 +188,6 @@ static void SDLSetMode(INT32 width, INT32 height, INT32 bpp, Uint32 flags)
 	else return;
 	realwidth = (Uint16)width;
 	realheight = (Uint16)height;
-#ifdef FILTERS
-	if (vidSurface && preSurface && f2xSurface)
-	{
-		vid.width = width/2;
-		vid.height = height/2;
-	}
-#endif
 #endif
 	if (window == NULL)
 	{
@@ -582,10 +567,6 @@ static void VID_Command_Info_f (void)
 		//*vfmt
 	}
 	SurfaceInfo(bufSurface, M_GetText("Current Engine Mode"));
-#ifdef FILTERS
-	SurfaceInfo(preSurface, M_GetText("Prebuffer Mode"));
-	SurfaceInfo(f2xSurface, M_GetText("Postbuffer Mode"));
-#endif
 	SurfaceInfo(vidSurface, M_GetText("Current Video Mode"));
 #endif
 }
@@ -920,15 +901,8 @@ void I_GetEvent(void)
 				    setmodeneeded = VID_GetModeForSize(inputEvent.resize.w,inputEvent.resize.h)+1;
 				if (render_soft == rendermode)
 				{
-#ifdef FILTERS
-					INT32 filtervalue = cv_filter.value;
-					if (blitfilter) CV_SetValue(&cv_filter,1);
-#endif
 					SDLSetMode(realwidth, realheight, vid.bpp*8, surfaceFlagsW);
 					if (vidSurface) SDL_SetColors(vidSurface, localPalette, 0, 256);
-#ifdef FILTERS
-					CV_SetValue(&cv_filter,filtervalue);
-#endif
 				}
 				else
 					SDLSetMode(realwidth, realheight, vid.bpp*8, surfaceFlagsW);
@@ -1541,9 +1515,6 @@ void I_StartupGraphics(void)
 	COM_AddCommand ("vid_mode", VID_Command_Mode_f);
 	CV_RegisterVar (&cv_vidwait);
 	CV_RegisterVar (&cv_stretch);
-#ifdef FILTERS
-	CV_RegisterVar (&cv_filter);
-#endif
 	disable_mouse = M_CheckParm("-nomouse");
 	if (disable_mouse)
 		I_PutEnv(SDLNOMOUSE);
@@ -1713,12 +1684,6 @@ void I_ShutdownGraphics(void)
 		vid.buffer = NULL;
 		if (bufSurface) SDL_FreeSurface(bufSurface);
 		bufSurface = NULL;
-#ifdef FILTERS
-		if (preSurface) SDL_FreeSurface(preSurface);
-		preSurface = NULL;
-		if (f2xSurface) SDL_FreeSurface(f2xSurface);
-		f2xSurface = NULL;
-#endif
 	}
 
 	// was graphics initialized anyway?
