@@ -2225,7 +2225,7 @@ void I_Sleep(void)
 INT32 I_StartupSystem(void)
 {
 	SDL_version SDLcompiled;
-	SDL_version *SDLlinked = NULL;
+	SDL_version SDLlinked;
 #ifdef _XBOX
 #ifdef __GNUC__
 	char DP[] ="      Sonic Robo Blast 2!\n";
@@ -2246,12 +2246,12 @@ INT32 I_StartupSystem(void)
 #endif
 #endif
 	SDL_VERSION(&SDLcompiled)
-	SDL_GetVersion(SDLlinked);
+	SDL_GetVersion(&SDLlinked);
 	I_StartupConsole();
 	I_OutputMsg("Compiled for SDL version: %d.%d.%d\n",
 	 SDLcompiled.major, SDLcompiled.minor, SDLcompiled.patch);
 	I_OutputMsg("Linked with SDL version: %d.%d.%d\n",
-	 SDLlinked->major, SDLlinked->minor, SDLlinked->patch);
+	 SDLlinked.major, SDLlinked.minor, SDLlinked.patch);
 #if 0 //#ifdef GP2X //start up everything
 	if (SDL_Init(SDL_INIT_NOPARACHUTE|SDL_INIT_EVERYTHING) < 0)
 #else

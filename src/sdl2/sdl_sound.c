@@ -1320,8 +1320,8 @@ void I_StartupSound(void)
 	}
 	else
 	{
-		char ad[100];
-		CONS_Printf(M_GetText(" Starting up with audio driver : %s\n"), SDL_AudioDriverName(ad, (int)sizeof ad));
+		//char ad[100];
+		//CONS_Printf(M_GetText(" Starting up with audio driver : %s\n"), SDL_AudioDriverName(ad, (int)sizeof ad));
 	}
 	samplecount = audio.samples;
 	CV_SetValue(&cv_samplerate, audio.freq);
