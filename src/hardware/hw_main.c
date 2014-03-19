@@ -1212,23 +1212,17 @@ static void HWR_SplitFog(sector_t *sector, wallVert3D *wallVerts, FSurfaceInfo* 
 
 		if (list[i].caster)
 		{
-			if (sector->lightlist[i].caster->flags & FF_SOLID && !(cutflag & FF_EXTRA))
-				solid = true;
-			else if (sector->lightlist[i].caster->flags & FF_CUTEXTRA && cutflag & FF_EXTRA)
+			if (sector->lightlist[i].caster->flags & FF_FOG && cutflag & FF_FOG) // Only fog cuts fog
 			{
 				if (sector->lightlist[i].caster->flags & FF_EXTRA)
 				{
-					if (sector->lightlist[i].caster->flags == cutflag)
+					if (sector->lightlist[i].caster->flags == cutflag) // only cut by the same
 						solid = true;
 				}
 				else
 					solid = true;
 			}
-			else
-				solid = false;
 		}
-		else
-			solid = false;
 
 		height = FIXED_TO_FLOAT(list[i].height);
 
@@ -3385,30 +3379,17 @@ noshadow:
 
 		if (sector->numlights)
 		{
-			INT32 light = R_GetPlaneLight(sector, spr->mobj->z, false);
+			INT32 light;
 
-			if ((sector->lightlist[light].height > (spr->mobj->z + spr->mobj->height)) && !(sector->lightlist[light].flags & FF_NOSHADE))
-			{
-				if (!(spr->mobj->frame & FF_FULLBRIGHT))
-					lightlevel = LightLevelToLum(*sector->lightlist[light].lightlevel);
-				else
-					lightlevel = LightLevelToLum(255);
+			light = R_GetPlaneLight(sector, spr->mobj->z + spr->mobj->height, false); // Always use the light at the top instead of whatever I was doing before
 
-				if (sector->lightlist[light].extra_colormap)
-					colormap = sector->lightlist[light].extra_colormap;
-			}
-			else // If we can't use the light at its bottom, we'll use the light at its top
-			{
-				light = R_GetPlaneLight(sector, spr->mobj->z + spr->mobj->height, false);
+			if (!(spr->mobj->frame & FF_FULLBRIGHT))
+				lightlevel = LightLevelToLum(*sector->lightlist[light].lightlevel);
+			else
+				lightlevel = LightLevelToLum(255);
 
-				if (!(spr->mobj->frame & FF_FULLBRIGHT))
-					lightlevel = LightLevelToLum(*sector->lightlist[light].lightlevel);
-				else
-					lightlevel = LightLevelToLum(255);
-
-				if (sector->lightlist[light].extra_colormap)
-					colormap = sector->lightlist[light].extra_colormap;
-			}
+			if (sector->lightlist[light].extra_colormap)
+				colormap = sector->lightlist[light].extra_colormap;
 		}
 		else
 		{

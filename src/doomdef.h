@@ -469,7 +469,7 @@ extern const char *compdate, *comptime, *comprevision;
 
 #if !defined (_NDS) && !defined (_PSP)
 ///	Shuffle's incomplete OpenGL sorting code.
-//#define SHUFFLE
+#define SHUFFLE // This has nothing to do with sorting, why was it disabled?
 #endif
 
 #if !defined (_NDS) && !defined (_PSP)
