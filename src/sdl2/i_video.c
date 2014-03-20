@@ -111,7 +111,7 @@ boolean allow_fullscreen = false;
 static SDL_bool disable_fullscreen = SDL_FALSE;
 #define USE_FULLSCREEN (disable_fullscreen||!allow_fullscreen)?0:cv_fullscreen.value
 static SDL_bool disable_mouse = SDL_FALSE;
-#define USE_MOUSEINPUT (!disable_mouse && cv_usemouse.value && SDL_GetAppState() & SDL_APPACTIVE)
+#define USE_MOUSEINPUT (!disable_mouse && cv_usemouse.value && havefocus)
 #define MOUSE_MENU false //(!disable_mouse && cv_usemouse.value && menuactive && !USE_FULLSCREEN)
 #define MOUSEBUTTONS_MAX MOUSEBUTTONS
 
@@ -132,7 +132,7 @@ static       Uint16      realheight = BASEVIDHEIGHT;
 static const Uint32      surfaceFlagsW = 0/*|SDL_RESIZABLE*/;
 static const Uint32      surfaceFlagsF = 0;
 static       SDL_bool    mousegrabok = SDL_TRUE;
-#define HalfWarpMouse(x,y) SDL_WarpMouse((Uint16)(x/2),(Uint16)(y/2))
+#define HalfWarpMouse(x,y) SDL_WarpMouseInWindow(window, (Uint16)(x/2),(Uint16)(y/2))
 static       SDL_bool    videoblitok = SDL_FALSE;
 static       SDL_bool    exposevideo = SDL_FALSE;
 
@@ -140,6 +140,7 @@ static       SDL_bool    exposevideo = SDL_FALSE;
 static SDL_Window   *window;
 static SDL_Renderer *renderer;
 static SDL_Texture  *texture;
+static SDL_bool      havefocus = SDL_TRUE;
 
 // windowed video modes from which to choose from.
 static INT32 windowedModes[MAXWINMODES][2] =
@@ -172,6 +173,9 @@ static INT32 windowedModes[MAXWINMODES][2] =
 	{ 320, 240}, // 1.33,1.00
 	{ 320, 200}, // 1.60,1.00
 };
+
+static void Impl_VideoSetupSDLBuffer(void);
+static void Impl_VideoSetupBuffer(void);
 
 static void SDLSetMode(INT32 width, INT32 height, INT32 bpp, Uint32 flags)
 {
@@ -214,7 +218,7 @@ static void SDLSetMode(INT32 width, INT32 height, INT32 bpp, Uint32 flags)
 	gmask = 0x00FF0000;
 	bmask = 0x0000FF00;
 	amask = 0x000000FF;
-#else
+#else // HEAD HEADS UP THE ASSIGNMENT ORDER IS FLIPPED, I WAS LAZY --Fury
 	amask = 0xFF000000;
 	bmask = 0x00FF0000;
 	gmask = 0x0000FF00;
@@ -224,8 +228,6 @@ static void SDLSetMode(INT32 width, INT32 height, INT32 bpp, Uint32 flags)
 	
 	SDL_SetWindowSize(window, width, height);
 	SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
-
-	SDL2STUB();
 }
 
 //
@@ -447,15 +449,8 @@ static INT32 SDLatekey(SDL_Keycode sym)
 
 static void SDLdoUngrabMouse(void)
 {
-	// TODO SDL2 overhaul
 	SDL_SetWindowGrab(window, SDL_FALSE);
 	SDL2STUB();
-#if 0
-	if (SDL_GRAB_ON == SDL_WM_GrabInput(SDL_GRAB_QUERY))
-	{
-		SDL_WM_GrabInput(SDL_GRAB_OFF);
-	}
-#endif
 }
 
 void SDLforceUngrabMouse(void)
@@ -464,11 +459,6 @@ void SDLforceUngrabMouse(void)
 	{
 		SDL_SetWindowGrab(window, SDL_FALSE);
 	}
-	SDL2STUB();
-#if 0
-	if (SDL_WasInit(SDL_INIT_VIDEO)==SDL_INIT_VIDEO)
-		SDL_WM_GrabInput(SDL_GRAB_OFF);
-#endif
 }
 
 static void VID_Command_NumModes_f (void)
@@ -719,11 +709,41 @@ static INT32 SDLJoyAxis(const Sint16 axis, evtype_t which)
 
 static void Impl_HandleWindowEvent(SDL_WindowEvent evt)
 {
+	static SDL_bool firsttimeonmouse = SDL_TRUE;
 	switch (evt.type)
 	{
 		case SDL_WINDOWEVENT_FOCUS_GAINED:
+			if (!firsttimeonmouse)
+			{
+				if (cv_usemouse.value) I_StartupMouse();
+			}
+			else firsttimeonmouse = SDL_FALSE;
+			if (gamestate == GS_LEVEL)
+			{
+				if (!paused) I_ResumeSong(0); //resume it
+			}
 			break;
 		case SDL_WINDOWEVENT_FOCUS_LOST:
+			if (!disable_mouse)
+			{
+				SDLforceUngrabMouse();
+			}
+			if (!netgame && gamestate == GS_LEVEL)
+			{
+				paused = true;
+			}
+			memset(gamekeydown, 0, NUMKEYS); // TODO this is a scary memset
+			if (gamestate == GS_LEVEL)
+			{
+				I_PauseSong(0);
+			}
+
+			if (MOUSE_MENU)
+			{
+				SDLdoUngrabMouse();
+				return;
+			}
+
 			break;
 		case SDL_WINDOWEVENT_MAXIMIZED:
 			break;
@@ -751,12 +771,46 @@ static void Impl_HandleKeyboardEvent(SDL_KeyboardEvent evt, Uint32 type)
 
 static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
 {
+}
 
+static void Impl_HandleMouseButtonEvent(SDL_MouseButtonEvent evt, Uint32 type)
+{
+	event_t event;
+	/// \todo inputEvent.button.which
+	if (USE_MOUSEINPUT)
+	{
+		if (type == SDL_MOUSEBUTTONUP)
+			event.type = ev_keyup;
+		else if (type == SDL_MOUSEBUTTONDOWN)
+			event.type = ev_keydown;
+		else return;
+#if 0
+		if (evt.which == SDL_BUTTON_WHEELUP || evt.which == SDL_BUTTON_WHEELDOWN)
+		{
+			if (type == SDL_MOUSEBUTTONUP)
+				event.data1 = 0; //Alam: dumb! this could be a real button with some mice
+			else
+				event.data1 = KEY_MOUSEWHEELUP + evt.which - SDL_BUTTON_WHEELUP;
+		}
+#endif
+		if (evt.which == SDL_BUTTON_MIDDLE)
+			event.data1 = KEY_MOUSE1+2;
+		else if (evt.which == SDL_BUTTON_RIGHT)
+			event.data1 = KEY_MOUSE1+1;
+		else if (evt.which <= MOUSEBUTTONS)
+			event.data1 = KEY_MOUSE1 + evt.which - SDL_BUTTON_LEFT;
+		if (event.data1) D_PostEvent(&event);
+	}
 }
 
 void I_GetEvent(void)
 {
 	SDL_Event evt;
+
+	if (!graphics_started)
+	{
+		return;
+	}
 
 	while (SDL_PollEvent(&evt))
 	{
@@ -773,6 +827,11 @@ void I_GetEvent(void)
 		if (evt.type == SDL_MOUSEMOTION)
 		{
 			Impl_HandleMouseMotionEvent(evt.motion);
+		}
+
+		if (evt.type == SDL_MOUSEBUTTONUP || evt.type == SDL_MOUSEBUTTONDOWN)
+		{
+			Impl_HandleMouseButtonEvent(evt.button, evt.type);
 		}
 
 		if (evt.type == SDL_QUIT)
@@ -997,8 +1056,6 @@ void I_GetEvent(void)
 
 void I_StartupMouse(void)
 {
-	SDL2STUB();
-#if 0
 	static SDL_bool firsttimeonmouse = SDL_TRUE;
 
 	if (disable_mouse)
@@ -1012,7 +1069,6 @@ void I_StartupMouse(void)
 		return;
 	else
 		SDLdoUngrabMouse();
-#endif
 }
 
 //
@@ -1113,28 +1169,21 @@ void I_FinishUpdate(void)
 
 	if (render_soft == rendermode && screens[0])
 	{
-		SDL_Rect *dstrect = NULL;
-		SDL_Rect rect = {0, 0, 0, 0};
+		SDL_Rect rect;
 		SDL_PixelFormat *vidformat = vidSurface->format;
 		int lockedsf = 0, blited = 0;
 
-		rect.w = (Sint16)vid.width;
-		rect.h = (Sint16)vid.height;
+		rect.x = 0;
+		rect.y = 0;
+		rect.w = vid.width;
+		rect.h = vid.height;
 
 		if (vidSurface->h > vid.height)
 			rect.y = (Sint16)((vidSurface->h-vid.height)/2);
 
-		dstrect = &rect;
-
-
-		if (!bufSurface && !vid.direct) //Double-Check
+		if (!bufSurface) //Double-Check
 		{
-			if (vid.bpp == 1) bufSurface = SDL_CreateRGBSurfaceFrom(screens[0],vid.width,vid.height,8,
-				(int)vid.rowbytes,0x00000000,0x00000000,0x00000000,0x00000000); // 256 mode
-			else if (vid.bpp == 2) bufSurface = SDL_CreateRGBSurfaceFrom(screens[0],vid.width,vid.height,15,
-				(int)vid.rowbytes,0x00007C00,0x000003E0,0x0000001F,0x00000000); // 555 mode
-			if (bufSurface) SDL_SetPaletteColors(bufSurface->format->palette, localPalette, 0, 256);
-			else I_OutputMsg("No system memory for SDL buffer surface\n");
+			Impl_VideoSetupSDLBuffer();
 		}
 #if 0
 		if (SDLmatchVideoformat() && !vid.direct)//Alam: DOS Way
@@ -1163,7 +1212,7 @@ void I_FinishUpdate(void)
 #endif
 		if (bufSurface) //Alam: New Way to send video data
 		{
-			blited = SDL_BlitSurface(bufSurface,NULL,vidSurface,dstrect);
+			blited = SDL_BlitSurface(bufSurface, NULL, vidSurface, &rect);
 			SDL_UpdateTexture(texture, NULL, vidSurface->pixels, realwidth * 4);
 		}
 #if 0
@@ -1300,7 +1349,8 @@ void I_SetPalette(RGBA_t *palette)
 		localPalette[i].g = palette[i].s.green;
 		localPalette[i].b = palette[i].s.blue;
 	}
-	if (vidSurface) SDL_SetPaletteColors(vidSurface->format->palette, localPalette, 0, 256);
+	//if (vidSurface) SDL_SetPaletteColors(vidSurface->format->palette, localPalette, 0, 256);
+	// Fury -- SDL2 vidSurface is a 32-bit surface buffer copied to the texture. It's not palletized, like bufSurface.
 	if (bufSurface) SDL_SetPaletteColors(bufSurface->format->palette, localPalette, 0, 256);
 }
 
@@ -1315,6 +1365,7 @@ INT32 VID_NumModes(void)
 
 const char *VID_GetModeName(INT32 modeNum)
 {
+#if 0
 	if (USE_FULLSCREEN && numVidModes != -1) // fullscreen modes
 	{
 		modeNum += firstEntry;
@@ -1327,18 +1378,29 @@ const char *VID_GetModeName(INT32 modeNum)
 	}
 	else // windowed modes
 	{
+#endif
 		if (modeNum > MAXWINMODES)
 			return NULL;
 
 		sprintf(&vidModeName[modeNum][0], "%dx%d",
 			windowedModes[modeNum][0],
 			windowedModes[modeNum][1]);
-	}
+	//}
 	return &vidModeName[modeNum][0];
 }
 
 INT32 VID_GetModeForSize(INT32 w, INT32 h)
 {
+	int i;
+	for (i = 0; i < MAXWINMODES; i++)
+	{
+		if (windowedModes[i][0] == w && windowedModes[i][1] == h)
+		{
+			return i;
+		}
+	}
+	return -1;
+#if 0
 	INT32 matchMode = -1, i;
 	if (USE_FULLSCREEN && numVidModes != -1)
 	{
@@ -1398,10 +1460,13 @@ INT32 VID_GetModeForSize(INT32 w, INT32 h)
 		}
 	}
 	return matchMode;
+#endif
 }
 
 void VID_PrepareModeList(void)
 {
+	// Under SDL2, we just use the windowed modes list, and scale in windowed fullscreen.
+#if 0
 	INT32 i;
 
 	firstEntry = 0;
@@ -1421,6 +1486,7 @@ void VID_PrepareModeList(void)
 		}
 	}
 	allow_fullscreen = true;
+#endif
 }
 
 static inline void SDLESSet(void)
@@ -1459,8 +1525,27 @@ static void* SDLGetDirect(void)
 
 INT32 VID_SetMode(INT32 modeNum)
 {
-	SDL2STUB();
-	SDLSetMode(320, 200, 16, 0);
+	SDLdoUngrabMouse();
+
+	vid.width = windowedModes[modeNum][0];
+	vid.height = windowedModes[modeNum][1];
+	vid.bpp = 1;
+
+	vid.modenum = modeNum; //VID_GetModeForSize(vidSurface->w,vidSurface->h);
+
+	SDLSetMode(windowedModes[modeNum][0], windowedModes[modeNum][1], 16, 0);
+
+	if (render_soft == rendermode)
+	{
+		if (bufSurface)
+		{
+			SDL_FreeSurface(bufSurface);
+			bufSurface = NULL;
+		}
+
+		Impl_VideoSetupBuffer();
+	}
+
 	return SDL_TRUE;
 #if 0
 	SDLdoUngrabMouse();
@@ -1598,6 +1683,53 @@ static void Impl_SetWindowIcon()
 	}
 	SDL2STUB();
 	SDL_SetWindowIcon(window, icoSurface);
+}
+
+static void Impl_VideoSetupSDLBuffer()
+{
+	if (bufSurface != NULL)
+	{
+		SDL_FreeSurface(bufSurface);
+		bufSurface = NULL;
+	}
+	// Set up the SDL palletized buffer (copied to vidbuffer before being rendered to texture)
+	if (vid.bpp == 1)
+	{
+		bufSurface = SDL_CreateRGBSurfaceFrom(screens[0],vid.width,vid.height,8,
+			(int)vid.rowbytes,0x00000000,0x00000000,0x00000000,0x00000000); // 256 mode
+	}
+	else if (vid.bpp == 2) // Fury -- don't think this is used at all anymore
+	{
+		bufSurface = SDL_CreateRGBSurfaceFrom(screens[0],vid.width,vid.height,15,
+			(int)vid.rowbytes,0x00007C00,0x000003E0,0x0000001F,0x00000000); // 555 mode
+	}
+	if (bufSurface)
+	{
+		SDL_SetPaletteColors(bufSurface->format->palette, localPalette, 0, 256);
+	}
+	else
+	{
+		I_Error("%s", M_GetText("No system memory for SDL buffer surface\n"));
+	}
+}
+
+static void Impl_VideoSetupBuffer()
+{
+	// Set up game's software render buffer
+	if (rendermode == render_soft)
+	{
+		vid.rowbytes = vid.width * vid.bpp;
+		vid.direct = NULL;
+		vid.buffer = malloc(vid.rowbytes*vid.height*NUMSCREENS);
+		if (vid.buffer)
+		{
+			memset(vid.buffer,0x00,vid.rowbytes*vid.height*NUMSCREENS);
+		}
+		else
+		{
+			I_Error("%s", M_GetText("Not enough memory for video buffer\n"));
+		}
+	}
 }
 
 void I_StartupGraphics(void)
@@ -1738,6 +1870,8 @@ void I_StartupGraphics(void)
 #endif
 	if (render_soft == rendermode)
 	{
+		VID_SetMode(VID_GetModeForSize(BASEVIDWIDTH, BASEVIDHEIGHT));
+#if 0
 		vid.width = BASEVIDWIDTH;
 		vid.height = BASEVIDHEIGHT;
 		SDLSetMode(vid.width, vid.height, BitsPerPixel, surfaceFlagsW);
@@ -1748,11 +1882,8 @@ void I_StartupGraphics(void)
 			graphics_started = true;
 			return;
 		}
-		vid.rowbytes = vid.width * vid.bpp;
-		vid.direct = SDLGetDirect();
-		vid.buffer = malloc(vid.rowbytes*vid.height*NUMSCREENS);
-		if (vid.buffer) memset(vid.buffer,0x00,vid.rowbytes*vid.height*NUMSCREENS);
-		else CONS_Printf("%s", M_GetText("Not enough memory for video buffer\n"));
+		Impl_VideoSetupBuffer();
+#endif
 	}
 	if (M_CheckParm("-nomousegrab"))
 		mousegrabok = SDL_FALSE;
