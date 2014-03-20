@@ -2875,7 +2875,7 @@ const char *I_LocateWad(void)
 	return waddir;
 }
 
-#ifdef LINUX
+#if defined(LINUX) || defined(LINUX64)
 #define MEMINFO_FILE "/proc/meminfo"
 #define MEMTOTAL "MemTotal:"
 #define MEMFREE "MemFree:"
@@ -2931,7 +2931,25 @@ UINT32 I_GetFreeMem(UINT32 *total)
 	if (total)
 		*total = 32 << 20;
 	return 32 << 20;
-#elif defined (LINUX)
+#elif (defined (_WIN32) || (defined (_WIN32_WCE) && !defined (__GNUC__))) && !defined (_XBOX)
+	MEMORYSTATUS info;
+
+	info.dwLength = sizeof (MEMORYSTATUS);
+	GlobalMemoryStatus( &info );
+	if (total)
+		*total = (UINT32)info.dwTotalPhys;
+	return (UINT32)info.dwAvailPhys;
+#elif defined (__OS2__)
+	UINT32 pr_arena;
+
+	if (total)
+		DosQuerySysInfo( QSV_TOTPHYSMEM, QSV_TOTPHYSMEM,
+							(PVOID) total, sizeof (UINT32));
+	DosQuerySysInfo( QSV_MAXPRMEM, QSV_MAXPRMEM,
+				(PVOID) &pr_arena, sizeof (UINT32));
+
+	return pr_arena;
+#elif defined (LINUX) || defined (LINUX64)
 	/* Linux */
 	char buf[1024];
 	char *memTag;
@@ -2975,24 +2993,6 @@ UINT32 I_GetFreeMem(UINT32 *total)
 	if (total)
 		*total = totalKBytes << 10;
 	return freeKBytes << 10;
-#elif (defined (_WIN32) || (defined (_WIN32_WCE) && !defined (__GNUC__))) && !defined (_XBOX)
-	MEMORYSTATUS info;
-
-	info.dwLength = sizeof (MEMORYSTATUS);
-	GlobalMemoryStatus( &info );
-	if (total)
-		*total = (UINT32)info.dwTotalPhys;
-	return (UINT32)info.dwAvailPhys;
-#elif defined (__OS2__)
-	UINT32 pr_arena;
-
-	if (total)
-		DosQuerySysInfo( QSV_TOTPHYSMEM, QSV_TOTPHYSMEM,
-							(PVOID) total, sizeof (UINT32));
-	DosQuerySysInfo( QSV_MAXPRMEM, QSV_MAXPRMEM,
-				(PVOID) &pr_arena, sizeof (UINT32));
-
-	return pr_arena;
 #else
 	// Guess 48 MB.
 	if (total)
