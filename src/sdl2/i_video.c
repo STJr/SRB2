@@ -214,6 +214,8 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 		SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 	}
 
+	SDL_RenderSetLogicalSize(renderer, width, height);
+
 	// Set up Texture
 	realwidth = width;
 	realheight = height;
@@ -1313,6 +1315,7 @@ void I_FinishUpdate(void)
 #endif
 	// Blit buffer to texture
 	
+	SDL_RenderClear(renderer);
 	SDL_RenderCopy(renderer, texture, NULL, NULL);
 	SDL_RenderPresent(renderer);
 }
@@ -1685,6 +1688,8 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 	window = SDL_CreateWindow("SRB2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 			BASEVIDWIDTH, BASEVIDHEIGHT, flags);
 	renderer = SDL_CreateRenderer(window, -1, 0);
+
+	SDL_RenderSetLogicalSize(renderer, BASEVIDWIDTH, BASEVIDHEIGHT);
 	return SDL_TRUE;
 }
 
