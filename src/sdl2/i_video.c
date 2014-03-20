@@ -232,12 +232,8 @@ static void SDLSetMode(INT32 width, INT32 height, INT32 bpp, Uint32 flags)
 //  Translates the SDL key into SRB2 key
 //
 
-typedef int SDLKey; // TODO remove this
-static INT32 SDLatekey(SDLKey sym)
+static INT32 SDLatekey(SDL_Keycode sym)
 {
-	SDL2STUB();
-	return 0;
-#if 0 // TODO SDL2 overhaul
 	INT32 rc = sym + 0x80;
 
 	switch (sym)
@@ -352,10 +348,10 @@ static INT32 SDLatekey(SDLKey sym)
 			rc = KEY_RALT;
 			break;
 
-		case SDLK_NUMLOCK:
+		case SDLK_NUMLOCKCLEAR:
 			rc = KEY_NUMLOCK;
 			break;
-		case SDLK_SCROLLOCK:
+		case SDLK_SCROLLLOCK:
 			rc = KEY_SCROLLLOCK;
 			break;
 
@@ -375,34 +371,34 @@ static INT32 SDLatekey(SDLKey sym)
 			rc = KEY_INS;
 			break;
 
-		case SDLK_KP0:
+		case SDLK_KP_0:
 			rc = KEY_KEYPAD0;
 			break;
-		case SDLK_KP1:
+		case SDLK_KP_1:
 			rc = KEY_KEYPAD1;
 			break;
-		case SDLK_KP2:
+		case SDLK_KP_2:
 			rc = KEY_KEYPAD2;
 			break;
-		case SDLK_KP3:
+		case SDLK_KP_3:
 			rc = KEY_KEYPAD3;
 			break;
-		case SDLK_KP4:
+		case SDLK_KP_4:
 			rc = KEY_KEYPAD4;
 			break;
-		case SDLK_KP5:
+		case SDLK_KP_5:
 			rc = KEY_KEYPAD5;
 			break;
-		case SDLK_KP6:
+		case SDLK_KP_6:
 			rc = KEY_KEYPAD6;
 			break;
-		case SDLK_KP7:
+		case SDLK_KP_7:
 			rc = KEY_KEYPAD7;
 			break;
-		case SDLK_KP8:
+		case SDLK_KP_8:
 			rc = KEY_KEYPAD8;
 			break;
-		case SDLK_KP9:
+		case SDLK_KP_9:
 			rc = KEY_KEYPAD9;
 			break;
 
@@ -422,16 +418,10 @@ static INT32 SDLatekey(SDLKey sym)
 			rc = KEY_PLUSPAD;
 			break;
 
-		case SDLK_LSUPER:
-#ifdef HAVE_SDLMETAKEYS
 		case SDLK_LMETA:
-#endif
 			rc = KEY_LEFTWIN;
 			break;
-		case SDLK_RSUPER:
-#ifdef HAVE_SDLMETAKEYS
 		case SDLK_RMETA:
-#endif
 			rc = KEY_RIGHTWIN;
 			break;
 
@@ -453,7 +443,6 @@ static INT32 SDLatekey(SDLKey sym)
 	}
 
 	return rc;
-#endif
 }
 
 static void SDLdoUngrabMouse(void)
@@ -728,13 +717,69 @@ static INT32 SDLJoyAxis(const Sint16 axis, evtype_t which)
 	return raxis;
 }
 
+static void Impl_HandleWindowEvent(SDL_WindowEvent evt)
+{
+	switch (evt.type)
+	{
+		case SDL_WINDOWEVENT_FOCUS_GAINED:
+			break;
+		case SDL_WINDOWEVENT_FOCUS_LOST:
+			break;
+		case SDL_WINDOWEVENT_MAXIMIZED:
+			break;
+	}
+}
+
+static void Impl_HandleKeyboardEvent(SDL_KeyboardEvent evt, Uint32 type)
+{
+	event_t event;
+	if (type == SDL_KEYUP)
+	{
+		event.type = ev_keyup;
+	}
+	else if (type == SDL_KEYDOWN)
+	{
+		event.type = ev_keydown;
+	}
+	else
+	{
+		return;
+	}
+	event.data1 = SDLatekey(evt.keysym.sym);
+	if (event.data1) D_PostEvent(&event);
+}
+
+static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
+{
+
+}
+
 void I_GetEvent(void)
 {
-	SDL2STUB();
 	SDL_Event evt;
 
 	while (SDL_PollEvent(&evt))
 	{
+		if (evt.type == SDL_WINDOWEVENT)
+		{
+			Impl_HandleWindowEvent(evt.window);
+		}
+
+		if (evt.type == SDL_KEYUP || evt.type == SDL_KEYDOWN)
+		{
+			Impl_HandleKeyboardEvent(evt.key, evt.type);
+		}
+
+		if (evt.type == SDL_MOUSEMOTION)
+		{
+			Impl_HandleMouseMotionEvent(evt.motion);
+		}
+
+		if (evt.type == SDL_QUIT)
+		{
+			I_Quit();
+			M_QuitResponse('y');
+		}
 	}
 #if 0
 	SDL_Event inputEvent;
