@@ -30,7 +30,7 @@
 #include "SDL.h"
 
 // SDL2 stub macro
-#define SDL2STUB(name) CONS_Printf("SDL2: stubbed: %s\n", __func__)
+#define SDL2STUB(name) CONS_Printf("SDL2: stubbed: %s:%d\n", __func__, __LINE__)
 
 #ifdef _MSC_VER
 #pragma warning(default : 4214 4244)
@@ -189,18 +189,42 @@ static void SDLSetMode(INT32 width, INT32 height, INT32 bpp, Uint32 flags)
 	realwidth = (Uint16)width;
 	realheight = (Uint16)height;
 #endif
-	if (window == NULL)
-	{
-		window = SDL_CreateWindow("Sonic Robo Blast 2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, 0);
-		renderer = SDL_CreateRenderer(window, -1, 0);
-	}
+
+	int rmask;
+	int gmask;
+	int bmask;
+	int amask;
+
+	// Set up Texture
 	realwidth = width;
 	realheight = height;
 	if (texture != NULL)
 	{
 		SDL_DestroyTexture(texture);
 	}
-	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, width, height);
+	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, width, height);
+
+	// Set up SW surface
+	if (vidSurface != NULL)
+	{
+		SDL_FreeSurface(vidSurface);
+	}
+#ifdef SDL_BIG_ENDIAN
+	rmask = 0xFF000000;
+	gmask = 0x00FF0000;
+	bmask = 0x0000FF00;
+	amask = 0x000000FF;
+#else
+	amask = 0xFF000000;
+	bmask = 0x00FF0000;
+	gmask = 0x0000FF00;
+	rmask = 0x000000FF;
+#endif
+	vidSurface = SDL_CreateRGBSurface(0, width, height, 32, rmask, gmask, bmask, amask);
+	
+	SDL_SetWindowSize(window, width, height);
+	SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+
 	SDL2STUB();
 }
 
@@ -707,6 +731,11 @@ static INT32 SDLJoyAxis(const Sint16 axis, evtype_t which)
 void I_GetEvent(void)
 {
 	SDL2STUB();
+	SDL_Event evt;
+
+	while (SDL_PollEvent(&evt))
+	{
+	}
 #if 0
 	SDL_Event inputEvent;
 	static SDL_bool sdlquit = SDL_FALSE; //Alam: once, just once
@@ -1385,8 +1414,8 @@ static void* SDLGetDirect(void)
 
 INT32 VID_SetMode(INT32 modeNum)
 {
-	SDLSetMode(640, 400, 16, 0);
 	SDL2STUB();
+	SDLSetMode(320, 200, 16, 0);
 	return SDL_TRUE;
 #if 0
 	SDLdoUngrabMouse();
@@ -1496,6 +1525,36 @@ INT32 VID_SetMode(INT32 modeNum)
 #endif
 }
 
+static void Impl_CreateWindow(void)
+{
+	if (window != NULL)
+	{
+		return;
+	}
+	window = SDL_CreateWindow("SRB2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, BASEVIDWIDTH, BASEVIDHEIGHT, 0);
+	renderer = SDL_CreateRenderer(window, -1, 0);
+}
+
+static void Impl_SetWindowName(const char *title)
+{
+	if (window != NULL)
+	{
+		return;
+	}
+	SDL2STUB();
+	SDL_SetWindowTitle(window, title);
+}
+
+static void Impl_SetWindowIcon()
+{
+	if (window == NULL || icoSurface == NULL)
+	{
+		return;
+	}
+	SDL2STUB();
+	SDL_SetWindowIcon(window, icoSurface);
+}
+
 void I_StartupGraphics(void)
 {
 	static char SDLNOMOUSE[] = "SDL_NOMOUSE=1";
@@ -1553,6 +1612,10 @@ void I_StartupGraphics(void)
 	//SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY>>1,SDL_DEFAULT_REPEAT_INTERVAL<<2);
 	SDLESSet();
 	VID_Command_ModeList_f();
+	
+	// Create window
+	Impl_CreateWindow();
+	
 	vid.buffer = NULL;  // For software mode
 	vid.width = BASEVIDWIDTH; // Default size for startup
 	vid.height = BASEVIDHEIGHT; // BitsPerPixel is the SDL interface's
@@ -1566,13 +1629,13 @@ void I_StartupGraphics(void)
 #endif
 
 	// Window title
-	//SDL_WM_SetCaption("SRB2: Starting up", "SRB2");
+	Impl_SetWindowName("SRB2: Starting up");
 
 	// Window icon
 #ifdef HAVE_IMAGE
 	//icoSurface = IMG_ReadXPMFromArray(SDL_icon_xpm);
 #endif
-	//SDL_WM_SetIcon(icoSurface, NULL);
+	Impl_SetWindowIcon();
 
 #ifdef HWRENDER
 	if (M_CheckParm("-opengl") || rendermode == render_opengl)
