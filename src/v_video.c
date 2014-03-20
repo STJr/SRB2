@@ -1042,8 +1042,10 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, INT32 scrn, patch_t *patch, fixed_
 #ifdef HWRENDER
 	// Done
 	if (rendermode != render_soft && rendermode != render_none)
+	{
 		HWR_DrawCroppedPatch((GLPatch_t *)patch, x, y, scrn, science, sx, sy, w, h);
 		return;
+	}
 #endif
 
 	// only use one dup, to avoid stretching (har har)

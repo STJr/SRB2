@@ -227,7 +227,11 @@ void SCR_Startup(void)
 	vid.dupx = vid.dupy = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
 	vid.fdupx = FixedDiv(vid.width*FRACUNIT, BASEVIDWIDTH*FRACUNIT);
 	vid.fdupy = FixedDiv(vid.height*FRACUNIT, BASEVIDHEIGHT*FRACUNIT);
-	//vid.fdupx = vid.fdupy = (vid.fdupx < vid.fdupy ? vid.fdupx : vid.fdupy); // This was just placing it incorrectly at non aspect correct resolutions
+
+#ifdef HWRENDER
+	if (rendermode != render_opengl && rendermode != render_none) // This was just placing it incorrectly at non aspect correct resolutions, not sure if it does anything in software
+#endif
+		vid.fdupx = vid.fdupy = (vid.fdupx < vid.fdupy ? vid.fdupx : vid.fdupy);
 
 	vid.meddupx = (UINT8)(vid.dupx >> 1) + 1;
 	vid.meddupy = (UINT8)(vid.dupy >> 1) + 1;
@@ -269,7 +273,12 @@ void SCR_Recalc(void)
 	vid.dupx = vid.dupy = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
 	vid.fdupx = FixedDiv(vid.width*FRACUNIT, BASEVIDWIDTH*FRACUNIT);
 	vid.fdupy = FixedDiv(vid.height*FRACUNIT, BASEVIDHEIGHT*FRACUNIT);
-	//vid.fdupx = vid.fdupy = (vid.fdupx < vid.fdupy ? vid.fdupx : vid.fdupy); // This was just placing it incorrectly at non aspect correct resolutions
+
+#ifdef HWRENDER
+	if (rendermode != render_opengl && rendermode != render_none) // This was just placing it incorrectly at non aspect correct resolutions, not sure if it does anything in software
+#endif
+		vid.fdupx = vid.fdupy = (vid.fdupx < vid.fdupy ? vid.fdupx : vid.fdupy);
+
 	//vid.baseratio = FixedDiv(vid.height << FRACBITS, BASEVIDHEIGHT << FRACBITS);
 	vid.baseratio = FRACUNIT;
 
