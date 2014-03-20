@@ -196,21 +196,35 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 	realheight = (Uint16)height;
 #endif
 
+	static SDL_bool wasfullscreen = SDL_FALSE;
 	int rmask;
 	int gmask;
 	int bmask;
 	int amask;
 
-	if (fullscreen)
+	if (fullscreen && !wasfullscreen)
 	{
+		// Recreate window in fullscreen
 		SDL_DestroyRenderer(renderer);
 		renderer = NULL;
 		SDL_DestroyWindow(window);
 		window = NULL;
-		Impl_CreateWindow(fullscreen);
+		Impl_CreateWindow(SDL_TRUE);
+		wasfullscreen = SDL_TRUE;
 	}
-	else
+	else if (!fullscreen && wasfullscreen)
 	{
+		// Recreate window in windowed mode
+		SDL_DestroyRenderer(renderer);
+		renderer = NULL;
+		SDL_DestroyWindow(window);
+		window = NULL;
+		Impl_CreateWindow(SDL_FALSE);
+		wasfullscreen = SDL_FALSE;
+	}
+	else if (!wasfullscreen)
+	{
+		// Reposition window only in windowed mode
 		SDL_SetWindowSize(window, width, height);
 		SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 	}
