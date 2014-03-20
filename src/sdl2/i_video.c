@@ -176,8 +176,9 @@ static INT32 windowedModes[MAXWINMODES][2] =
 
 static void Impl_VideoSetupSDLBuffer(void);
 static void Impl_VideoSetupBuffer(void);
+static SDL_bool Impl_CreateWindow(SDL_bool fullscreen);
 
-static void SDLSetMode(INT32 width, INT32 height, INT32 bpp, Uint32 flags)
+static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 {
 #if 0
 	const char *SDLVD = I_GetEnv("SDL_VIDEODRIVER");
@@ -198,6 +199,20 @@ static void SDLSetMode(INT32 width, INT32 height, INT32 bpp, Uint32 flags)
 	int gmask;
 	int bmask;
 	int amask;
+
+	if (fullscreen)
+	{
+		SDL_DestroyRenderer(renderer);
+		renderer = NULL;
+		SDL_DestroyWindow(window);
+		window = NULL;
+		Impl_CreateWindow(fullscreen);
+	}
+	else
+	{
+		SDL_SetWindowSize(window, width, height);
+		SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+	}
 
 	// Set up Texture
 	realwidth = width;
@@ -225,9 +240,6 @@ static void SDLSetMode(INT32 width, INT32 height, INT32 bpp, Uint32 flags)
 	rmask = 0x000000FF;
 #endif
 	vidSurface = SDL_CreateRGBSurface(0, width, height, 32, rmask, gmask, bmask, amask);
-	
-	SDL_SetWindowSize(window, width, height);
-	SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 }
 
 //
@@ -1099,6 +1111,7 @@ void I_UpdateNoBlit(void)
 		return;
 	if (exposevideo)
 	{
+		SDL_RenderClear(renderer);
 		SDL_RenderCopy(renderer, texture, NULL, NULL);
 		SDL_RenderPresent(renderer);
 	}
@@ -1466,6 +1479,7 @@ INT32 VID_GetModeForSize(INT32 w, INT32 h)
 void VID_PrepareModeList(void)
 {
 	// Under SDL2, we just use the windowed modes list, and scale in windowed fullscreen.
+	allow_fullscreen = true;
 #if 0
 	INT32 i;
 
@@ -1533,7 +1547,7 @@ INT32 VID_SetMode(INT32 modeNum)
 
 	vid.modenum = modeNum; //VID_GetModeForSize(vidSurface->w,vidSurface->h);
 
-	SDLSetMode(windowedModes[modeNum][0], windowedModes[modeNum][1], 16, 0);
+	SDLSetMode(windowedModes[modeNum][0], windowedModes[modeNum][1], USE_FULLSCREEN);
 
 	if (render_soft == rendermode)
 	{
@@ -1655,14 +1669,23 @@ INT32 VID_SetMode(INT32 modeNum)
 #endif
 }
 
-static void Impl_CreateWindow(void)
+static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 {
+	int flags = 0;
 	if (window != NULL)
 	{
-		return;
+		return SDL_FALSE;
 	}
-	window = SDL_CreateWindow("SRB2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, BASEVIDWIDTH, BASEVIDHEIGHT, 0);
+
+	if (fullscreen)
+	{
+		flags = SDL_WINDOW_FULLSCREEN_DESKTOP;
+	}
+
+	window = SDL_CreateWindow("SRB2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+			BASEVIDWIDTH, BASEVIDHEIGHT, flags);
 	renderer = SDL_CreateRenderer(window, -1, 0);
+	return SDL_TRUE;
 }
 
 static void Impl_SetWindowName(const char *title)
@@ -1791,7 +1814,8 @@ void I_StartupGraphics(void)
 	VID_Command_ModeList_f();
 	
 	// Create window
-	Impl_CreateWindow();
+	Impl_CreateWindow(USE_FULLSCREEN);
+	Impl_SetWindowName("SRB2");
 	
 	vid.buffer = NULL;  // For software mode
 	vid.width = BASEVIDWIDTH; // Default size for startup
@@ -1804,13 +1828,9 @@ void I_StartupGraphics(void)
 #ifdef HAVE_TTF
 	I_ShutdownTTF();
 #endif
-
-	// Window title
-	Impl_SetWindowName("SRB2: Starting up");
-
 	// Window icon
 #ifdef HAVE_IMAGE
-	//icoSurface = IMG_ReadXPMFromArray(SDL_icon_xpm);
+	icoSurface = IMG_ReadXPMFromArray(SDL_icon_xpm);
 #endif
 	Impl_SetWindowIcon();
 
@@ -1874,7 +1894,7 @@ void I_StartupGraphics(void)
 #if 0
 		vid.width = BASEVIDWIDTH;
 		vid.height = BASEVIDHEIGHT;
-		SDLSetMode(vid.width, vid.height, BitsPerPixel, surfaceFlagsW);
+		SDLSetMode(vid.width, vid.height, USE_FULLSCREEN);
 		if (!vidSurface)
 		{
 			CONS_Printf(M_GetText("Could not set vidmode: %s\n") ,SDL_GetError());
