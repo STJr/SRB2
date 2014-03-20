@@ -732,7 +732,7 @@ static mobj_t *viewmobj;
 // WARNING: a should be unsigned but to add with 2048, it isn't!
 #define AIMINGTODY(a) ((FINETANGENT((2048+(((INT32)a)>>ANGLETOFINESHIFT)) & FINEMASK)*160)>>FRACBITS)
 
-static void R_SkyboxFrame(player_t *player)
+void R_SkyboxFrame(player_t *player)
 {
 	INT32 dy = 0;
 	camera_t *thiscam;
