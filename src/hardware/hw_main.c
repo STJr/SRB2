@@ -1639,7 +1639,12 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				blendmode = PF_Environment;
 
 			if (gr_frontsector->numlights)
-				HWR_SplitWall(gr_frontsector, wallVerts, gr_midtexture, &Surf, FF_CUTSOLIDS);
+			{
+				if (!(blendmode & PF_Masked))
+					HWR_SplitWall(gr_frontsector, wallVerts, gr_midtexture, &Surf, FF_CUTSOLIDS|FF_TRANSLUCENT);
+				else
+					HWR_SplitWall(gr_frontsector, wallVerts, gr_midtexture, &Surf, FF_CUTSOLIDS);
+			}
 			else if (!(blendmode & PF_Masked))
 				HWR_AddTransparentWall(wallVerts, &Surf, gr_midtexture, blendmode, false, lightnum, colormap);
 			else
