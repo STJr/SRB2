@@ -230,7 +230,6 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 	}
 
 	SDL_RenderSetLogicalSize(renderer, width, height);
-	//SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 
 	// Set up Texture
 	realwidth = width;
@@ -480,7 +479,6 @@ static INT32 SDLatekey(SDL_Keycode sym)
 static void SDLdoUngrabMouse(void)
 {
 	SDL_SetWindowGrab(window, SDL_FALSE);
-	SDL2STUB();
 }
 
 void SDLforceUngrabMouse(void)
@@ -1800,9 +1798,11 @@ void I_StartupGraphics(void)
 	disable_mouse = M_CheckParm("-nomouse");
 	if (disable_mouse)
 		I_PutEnv(SDLNOMOUSE);
+	/*
 	if (!I_GetEnv("SDL_VIDEO_CENTERED"))
 		I_PutEnv(SDLVIDEOMID);
-	disable_fullscreen = M_CheckParm("-win");
+	*/
+	CV_SetValue(&cv_fullscreen, M_CheckParm("-win") ? 0 : 1);
 
 	keyboard_started = true;
 
