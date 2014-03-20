@@ -177,6 +177,7 @@ static INT32 windowedModes[MAXWINMODES][2] =
 static void Impl_VideoSetupSDLBuffer(void);
 static void Impl_VideoSetupBuffer(void);
 static SDL_bool Impl_CreateWindow(SDL_bool fullscreen);
+static void Impl_SetWindowName(const char *title);
 
 static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 {
@@ -215,6 +216,7 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 	}
 
 	SDL_RenderSetLogicalSize(renderer, width, height);
+	//SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 
 	// Set up Texture
 	realwidth = width;
@@ -1544,10 +1546,12 @@ INT32 VID_SetMode(INT32 modeNum)
 {
 	SDLdoUngrabMouse();
 
+	vid.recalc = 1;
 	vid.width = windowedModes[modeNum][0];
 	vid.height = windowedModes[modeNum][1];
 	vid.bpp = 1;
 
+	Impl_SetWindowName("SRB2 "VERSIONSTRING);
 	vid.modenum = modeNum; //VID_GetModeForSize(vidSurface->w,vidSurface->h);
 
 	SDLSetMode(windowedModes[modeNum][0], windowedModes[modeNum][1], USE_FULLSCREEN);
