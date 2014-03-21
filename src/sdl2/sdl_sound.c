@@ -856,6 +856,7 @@ FUNCINLINE static ATTRINLINE void I_UpdateStream16S(Uint8 *stream, int len)
 
 	if (Snd_Mutex) SDL_LockMutex(Snd_Mutex);
 
+
 	// Mix sounds into the mixing buffer.
 	// Loop over len
 	while (len--)
@@ -944,6 +945,7 @@ FUNCINLINE static ATTRINLINE void I_UpdateStream16M(Uint8 *stream, int len)
 	len /= 2; // not 8bit mono samples, 16bit mono ones
 
 	if (Snd_Mutex) SDL_LockMutex(Snd_Mutex);
+
 
 	// Mix sounds into the mixing buffer.
 	// Loop over len
@@ -1050,10 +1052,7 @@ static void SDLCALL I_UpdateStream(void *userdata, Uint8 *stream, int len)
 	if (!sound_started || !userdata)
 		return;
 
-#if SDL_VERSION_ATLEAST(1,3,0)
-	if (musicStarted)
-		memset(stream, 0x00, len); // only work in !AUDIO_U8, that needs 0x80
-#endif
+	memset(stream, 0x00, len); // only work in !AUDIO_U8, that needs 0x80
 
 	if ((audio.channels != 1 && audio.channels != 2) ||
 	    (audio.format != AUDIO_S8 && audio.format != AUDIO_S16SYS))
