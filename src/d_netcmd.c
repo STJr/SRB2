@@ -3138,10 +3138,8 @@ static void Command_Addfile(void)
 	p = fn+strlen(fn);
 	while(--p >= fn)
 		if (*p == '\\' || *p == '/' || *p == ':')
-		{
-			++p;
 			break;
-		}
+	++p;
 	WRITESTRINGN(buf_p,p,240);
 
 	{
@@ -4094,8 +4092,17 @@ static void Command_Isgamemodified_f(void)
 
 static void Command_Cheats_f(void)
 {
+	if (COM_CheckParm("off"))
+	{
+		CV_ResetCheatNetVars();
+		return;
+	}
+
 	if (CV_CheatsEnabled())
+	{
 		CONS_Printf(M_GetText("At least one CHEAT-marked variable has been changed -- Cheats are enabled.\n"));
+		CONS_Printf(M_GetText("Type CHEATS OFF to reset all cheat variables to default."));
+	}
 	else
 		CONS_Printf(M_GetText("No CHEAT-marked variables are changed -- Cheats are disabled.\n"));
 }

@@ -120,6 +120,13 @@ static inline void P_NetArchivePlayers(void)
 
 		flags = 0;
 
+		// ticcmd write
+		WRITESINT8(save_p, players[i].cmd.forwardmove);
+		WRITESINT8(save_p, players[i].cmd.sidemove);
+		WRITEINT16(save_p, players[i].cmd.angleturn);
+		WRITEINT16(save_p, players[i].cmd.aiming);
+		WRITEUINT16(save_p, players[i].cmd.buttons);
+
 		WRITESTRINGN(save_p, player_names[i], MAXPLAYERNAME);
 		WRITEANGLE(save_p, players[i].aiming);
 		WRITEANGLE(save_p, players[i].awayviewaiming);
@@ -146,12 +153,12 @@ static inline void P_NetArchivePlayers(void)
 		WRITEUINT32(save_p, players[i].score);
 		WRITEINT32(save_p, players[i].dashspeed);
 		WRITEINT32(save_p, players[i].dashtime);
-		WRITEINT32(save_p, players[i].lives);
-		WRITEINT32(save_p, players[i].continues);
-		WRITEINT32(save_p, players[i].xtralife);
+		WRITESINT8(save_p, players[i].lives);
+		WRITESINT8(save_p, players[i].continues);
+		WRITESINT8(save_p, players[i].xtralife);
 		WRITEUINT8(save_p, players[i].gotcontinue);
 		WRITEINT32(save_p, players[i].speed);
-		WRITEINT32(save_p, players[i].jumping);
+		WRITEUINT8(save_p, players[i].jumping);
 		WRITEUINT8(save_p, players[i].secondjump);
 		WRITEUINT8(save_p, players[i].fly1);
 		WRITEUINT8(save_p, players[i].scoreadd);
@@ -176,7 +183,7 @@ static inline void P_NetArchivePlayers(void)
 		WRITEINT32(save_p, players[i].numboxes);
 		WRITEINT32(save_p, players[i].totalring);
 		WRITEUINT32(save_p, players[i].realtime);
-		WRITEUINT32(save_p, players[i].laps);
+		WRITEUINT8(save_p, players[i].laps);
 
 		////////////////////
 		// CTF Mode Stuff //
@@ -282,6 +289,7 @@ static inline void P_NetUnArchivePlayers(void)
 {
 	INT32 i, j;
 	UINT16 flags;
+	ticcmd_t tmptic;
 
 	if (READUINT32(save_p) != ARCHIVEBLOCK_PLAYERS)
 		I_Error("Bad $$$.sav at archive block Players");
@@ -291,6 +299,14 @@ static inline void P_NetUnArchivePlayers(void)
 		memset(&players[i], 0, sizeof (player_t));
 		if (!playeringame[i])
 			continue;
+
+		memset(&tmptic, 0, sizeof(ticcmd_t));
+		tmptic.forwardmove = READSINT8(save_p);
+		tmptic.sidemove = READSINT8(save_p);
+		tmptic.angleturn = READINT16(save_p);
+		tmptic.aiming = READINT16(save_p);
+		tmptic.buttons = READUINT16(save_p);
+		G_CopyTiccmd(&players[i].cmd, &tmptic, 1);
 
 		READSTRINGN(save_p, player_names[i], MAXPLAYERNAME);
 		players[i].aiming = READANGLE(save_p);
@@ -318,12 +334,12 @@ static inline void P_NetUnArchivePlayers(void)
 		players[i].score = READUINT32(save_p);
 		players[i].dashspeed = READINT32(save_p); // dashing speed
 		players[i].dashtime = READINT32(save_p); // dashing speed
-		players[i].lives = READINT32(save_p);
-		players[i].continues = READINT32(save_p); // continues that player has acquired
-		players[i].xtralife = READINT32(save_p); // Ring Extra Life counter
+		players[i].lives = READSINT8(save_p);
+		players[i].continues = READSINT8(save_p); // continues that player has acquired
+		players[i].xtralife = READSINT8(save_p); // Ring Extra Life counter
 		players[i].gotcontinue = READUINT8(save_p); // got continue from stage
 		players[i].speed = READINT32(save_p); // Player's speed (distance formula of MOMX and MOMY values)
-		players[i].jumping = READINT32(save_p); // Jump counter
+		players[i].jumping = READUINT8(save_p); // Jump counter
 		players[i].secondjump = READUINT8(save_p);
 		players[i].fly1 = READUINT8(save_p); // Tails flying
 		players[i].scoreadd = READUINT8(save_p); // Used for multiple enemy attack bonus
@@ -348,7 +364,7 @@ static inline void P_NetUnArchivePlayers(void)
 		players[i].numboxes = READINT32(save_p); // Number of item boxes obtained for Race Mode
 		players[i].totalring = READINT32(save_p); // Total number of rings obtained for Race Mode
 		players[i].realtime = READUINT32(save_p); // integer replacement for leveltime
-		players[i].laps = READUINT32(save_p); // Number of laps (optional)
+		players[i].laps = READUINT8(save_p); // Number of laps (optional)
 
 		////////////////////
 		// CTF Mode Stuff //

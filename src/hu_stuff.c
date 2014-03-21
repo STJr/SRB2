@@ -903,7 +903,7 @@ static inline void HU_DrawCrosshair(void)
 #endif
 		y = viewwindowy + (viewheight>>1);
 
-	V_DrawTranslucentPatch(vid.width>>1, y, V_NOSCALESTART|V_OFFSET, crosshair[i - 1]);
+	V_DrawScaledPatch(vid.width>>1, y, V_NOSCALESTART|V_OFFSET|V_TRANSLUCENT, crosshair[i - 1]);
 }
 
 static inline void HU_DrawCrosshair2(void)
@@ -933,7 +933,7 @@ static inline void HU_DrawCrosshair2(void)
 #endif
 			y += viewheight;
 
-		V_DrawTranslucentPatch(vid.width>>1, y, V_NOSCALESTART|V_OFFSET, crosshair[i - 1]);
+		V_DrawScaledPatch(vid.width>>1, y, V_NOSCALESTART|V_OFFSET|V_TRANSLUCENT, crosshair[i - 1]);
 	}
 }
 
@@ -1086,6 +1086,10 @@ void HU_Drawer(void)
 
 	if (!automapactive && cv_crosshair2.value && !demoplayback && !camera2.chase && !players[secondarydisplayplayer].spectator)
 		HU_DrawCrosshair2();
+
+	// draw desynch text
+	if (hu_resynching)
+		V_DrawCenteredString(BASEVIDWIDTH/2, 180, V_YELLOWMAP, "Resynching...");
 }
 
 //======================================================================
@@ -1619,7 +1623,7 @@ static void HU_DrawRankings(void)
 				{
 					if (circuitmap)
 					{
-						if (players[i].laps+1 >= tab[scorelines].count && completed[i] == false)
+						if ((unsigned)players[i].laps+1 >= tab[scorelines].count && completed[i] == false)
 						{
 							tab[scorelines].count = players[i].laps+1;
 							tab[scorelines].num = i;

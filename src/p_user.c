@@ -8113,19 +8113,15 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 					+ ((*rover->topheight - *rover->bottomheight)/2));
 				delta2 = thingtop - (*rover->bottomheight
 					+ ((*rover->topheight - *rover->bottomheight)/2));
-				if (*rover->topheight > tmfloorz && abs(delta1) < abs(delta2))
-				{
+				if (*rover->topheight > myfloorz && abs(delta1) < abs(delta2))
 					myfloorz = *rover->topheight;
-				}
-				if (*rover->bottomheight < tmceilingz && abs(delta1) >= abs(delta2))
-				{
+				if (*rover->bottomheight < myceilingz && abs(delta1) >= abs(delta2))
 					myceilingz = *rover->bottomheight;
-				}
 			}
 		}
 
 #ifdef POLYOBJECTS
-	// Check polyobjects and see if tmfloorz/tmceilingz need to be altered
+	// Check polyobjects and see if floorz/ceilingz need to be altered
 	{
 		INT32 xl, xh, yl, yh, bx, by;
 		validcount++;
@@ -8191,10 +8187,10 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 						delta1 = midz - (polybottom + ((polytop - polybottom)/2));
 						delta2 = thingtop - (polybottom + ((polytop - polybottom)/2));
 
-						if (polytop > tmfloorz && abs(delta1) < abs(delta2))
+						if (polytop > myfloorz && abs(delta1) < abs(delta2))
 							myfloorz = polytop;
 
-						if (polybottom < tmceilingz && abs(delta1) >= abs(delta2))
+						if (polybottom < myceilingz && abs(delta1) >= abs(delta2))
 							myceilingz = polybottom;
 					}
 					plink = (polymaplink_t *)(plink->link.next);
@@ -8204,7 +8200,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 #endif
 
 		// crushed camera
-		if (myceilingz <= myfloorz && !resetcalled && !cameranoclip)
+		if (myceilingz <= myfloorz + thiscam->height && !resetcalled && !cameranoclip)
 		{
 			P_ResetCamera(player, thiscam);
 			return true;
@@ -8645,7 +8641,7 @@ void P_PlayerThink(player_t *player)
 				if (players[i].lives <= 0)
 					continue;
 
-				if (!players[i].exiting)
+				if (!players[i].exiting || players[i].exiting > 3)
 					break;
 			}
 
