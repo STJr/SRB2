@@ -851,6 +851,7 @@ static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
 				(evt.y > (realheight/2)+(realheight/4) ) )
 		{
 			//if (SDL_GRAB_ON == SDL_WM_GrabInput(SDL_GRAB_QUERY) || !mousegrabok)
+			SDL_SetWindowGrab(window, mousegrabok);
 			HalfWarpMouse(realwidth, realheight);
 		}
 	}
@@ -859,30 +860,61 @@ static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
 static void Impl_HandleMouseButtonEvent(SDL_MouseButtonEvent evt, Uint32 type)
 {
 	event_t event;
+
+	SDL_memset(&event, 0, sizeof(event_t));
+
 	/// \todo inputEvent.button.which
 	if (USE_MOUSEINPUT)
 	{
 		if (type == SDL_MOUSEBUTTONUP)
-			event.type = ev_keyup;
-		else if (type == SDL_MOUSEBUTTONDOWN)
-			event.type = ev_keydown;
-		else return;
-#if 0
-		if (evt.which == SDL_BUTTON_WHEELUP || evt.which == SDL_BUTTON_WHEELDOWN)
 		{
-			if (type == SDL_MOUSEBUTTONUP)
-				event.data1 = 0; //Alam: dumb! this could be a real button with some mice
-			else
-				event.data1 = KEY_MOUSEWHEELUP + evt.which - SDL_BUTTON_WHEELUP;
+			event.type = ev_keyup;
 		}
-#endif
-		if (evt.which == SDL_BUTTON_MIDDLE)
+		else if (type == SDL_MOUSEBUTTONDOWN)
+		{
+			event.type = ev_keydown;
+		}
+		else return;
+		if (evt.button == SDL_BUTTON_MIDDLE)
 			event.data1 = KEY_MOUSE1+2;
-		else if (evt.which == SDL_BUTTON_RIGHT)
+		else if (evt.button == SDL_BUTTON_RIGHT)
 			event.data1 = KEY_MOUSE1+1;
-		else if (evt.which <= MOUSEBUTTONS)
+		else if (evt.button == SDL_BUTTON_LEFT)
+			event.data1= KEY_MOUSE1;
+		else if (evt.button <= MOUSEBUTTONS)
 			event.data1 = KEY_MOUSE1 + evt.which - SDL_BUTTON_LEFT;
-		if (event.data1) D_PostEvent(&event);
+		if (event.type == ev_keyup || event.type == ev_keydown)
+		{
+			CONS_Printf("Mouse button %d\n", evt.which);
+			D_PostEvent(&event);
+		}
+	}
+}
+
+static void Impl_HandleMouseWheelEvent(SDL_MouseWheelEvent evt)
+{
+	event_t event;
+
+	SDL_memset(&event, 0, sizeof(event_t));
+
+	if (evt.y > 0)
+	{
+		event.data1 = KEY_MOUSEWHEELUP;
+		event.type = ev_keydown;
+	}
+	if (evt.y < 0)
+	{
+		event.data1 = KEY_MOUSEWHEELDOWN;
+		event.type = ev_keydown;
+	}
+	if (evt.y == 0)
+	{
+		event.data1 = 0;
+		event.type = ev_keyup;
+	}
+	if (event.type == ev_keyup || event.type == ev_keydown)
+	{
+		D_PostEvent(&event);
 	}
 }
 
@@ -897,30 +929,29 @@ void I_GetEvent(void)
 
 	while (SDL_PollEvent(&evt))
 	{
-		if (evt.type == SDL_WINDOWEVENT)
+		switch (evt.type)
 		{
-			Impl_HandleWindowEvent(evt.window);
-		}
-
-		if (evt.type == SDL_KEYUP || evt.type == SDL_KEYDOWN)
-		{
-			Impl_HandleKeyboardEvent(evt.key, evt.type);
-		}
-
-		if (evt.type == SDL_MOUSEMOTION)
-		{
-			Impl_HandleMouseMotionEvent(evt.motion);
-		}
-
-		if (evt.type == SDL_MOUSEBUTTONUP || evt.type == SDL_MOUSEBUTTONDOWN)
-		{
-			Impl_HandleMouseButtonEvent(evt.button, evt.type);
-		}
-
-		if (evt.type == SDL_QUIT)
-		{
-			I_Quit();
-			M_QuitResponse('y');
+			case SDL_WINDOWEVENT:
+				Impl_HandleWindowEvent(evt.window);
+				break;
+			case SDL_KEYUP:
+			case SDL_KEYDOWN:
+				Impl_HandleKeyboardEvent(evt.key, evt.type);
+				break;
+			case SDL_MOUSEMOTION:
+				Impl_HandleMouseMotionEvent(evt.motion);
+				break;
+			case SDL_MOUSEBUTTONUP:
+			case SDL_MOUSEBUTTONDOWN:
+				Impl_HandleMouseButtonEvent(evt.button, evt.type);
+				break;
+			case SDL_MOUSEWHEEL:
+				Impl_HandleMouseWheelEvent(evt.wheel);
+				break;
+			case SDL_QUIT:
+				I_Quit();
+				M_QuitResponse('y');
+				break;
 		}
 	}
 #if 0
