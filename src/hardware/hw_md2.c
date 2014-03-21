@@ -1087,30 +1087,17 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 
 		if (sector->numlights)
 		{
-			INT32 light = R_GetPlaneLight(sector, spr->mobj->z, false);
+			INT32 light;
 
-			if (sector->lightlist[light].height > (spr->mobj->z + spr->mobj->height))
-			{
-				if (!(spr->mobj->frame & FF_FULLBRIGHT))
-					lightlevel = LightLevelToLum(*sector->lightlist[light].lightlevel);
-				else
-					lightlevel = LightLevelToLum(255);
+			light = R_GetPlaneLight(sector, spr->mobj->z + spr->mobj->height, false); // Always use the light at the top instead of whatever I was doing before
 
-				if (sector->lightlist[light].extra_colormap)
-					colormap = sector->lightlist[light].extra_colormap;
-			}
-			else // If we can't use the light at its bottom, we'll use the light at its top
-			{
-				light = R_GetPlaneLight(sector, spr->mobj->z + spr->mobj->height, false);
+			if (!(spr->mobj->frame & FF_FULLBRIGHT))
+				lightlevel = LightLevelToLum(*sector->lightlist[light].lightlevel);
+			else
+				lightlevel = LightLevelToLum(255);
 
-				if (!(spr->mobj->frame & FF_FULLBRIGHT))
-					lightlevel = LightLevelToLum(*sector->lightlist[light].lightlevel);
-				else
-					lightlevel = LightLevelToLum(255);
-
-				if (sector->lightlist[light].extra_colormap)
-					colormap = sector->lightlist[light].extra_colormap;
-			}
+			if (sector->lightlist[light].extra_colormap)
+				colormap = sector->lightlist[light].extra_colormap;
 		}
 		else
 		{
@@ -1156,7 +1143,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		else
 		{
 			Surf.FlatColor.s.alpha = 0xFF;
-			blend = PF_Translucent;
+			blend = PF_Translucent|PF_Occlude;
 		}
 
 		// dont forget to enabled the depth test because we can't do this like
@@ -1164,7 +1151,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 
 		// 1. load model+texture if not already loaded
 		// 2. draw model with correct position, rotation,...
-		if (spr->mobj->skin)
+		if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY) // Use the player MD2 list if the mobj has a skin and is using the player sprites
 		{
 			md2 = &md2_playermodels[(skin_t*)spr->mobj->skin-skins];
 			md2->skin = (skin_t*)spr->mobj->skin-skins;
@@ -1188,13 +1175,14 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 				return;
 			}
 		}
-		HWD.pfnSetBlend(blend);
+		//HWD.pfnSetBlend(blend); // This seems to actually break translucency?
 		finalscale = md2->scale;
 		//Hurdler: arf, I don't like that implementation at all... too much crappy
 		gpatch = md2->grpatch;
 		if (!gpatch || !gpatch->mipmap.grInfo.format || !gpatch->mipmap.downloaded)
 			md2_loadTexture(md2);
-		else if (gpatch->mipmap.grInfo.format)
+
+		if (gpatch && gpatch->mipmap.grInfo.format) // else if meant that if a texture couldn't be loaded, it would just end up using something else's texture
 		{
 			// This is safe, since we know the texture has been downloaded
 			HWD.pfnSetTexture(&gpatch->mipmap);
@@ -1211,7 +1199,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		buff = md2->model->glCommandBuffer;
 		curr = &md2->model->frames[frame];
 		if (cv_grmd2.value == 1
-		    && spr->mobj->state->nextstate != S_NULL
+		    && spr->mobj->state->nextstate != S_NULL && states[spr->mobj->state->nextstate].sprite != SPR_NULL
 		    && !(spr->mobj->player && (spr->mobj->state->nextstate == S_PLAY_TAP1 || spr->mobj->state->nextstate == S_PLAY_TAP2) && spr->mobj->state == &states[S_PLAY_STND]))
 		{
 			const INT32 nextframe = (states[spr->mobj->state->nextstate].frame & FF_FRAMEMASK) % md2->model->header.numFrames;

@@ -209,6 +209,76 @@ void HWR_DrawSciencePatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, INT32 option,
 		HWD.pfnDrawPolygon(NULL, v, 4, flags);
 }
 
+void HWR_DrawCroppedPatch(GLPatch_t *gpatch, INT32 x, INT32 y, INT32 option, fixed_t scale, fixed_t sx, fixed_t sy, fixed_t w, fixed_t h)
+{
+	FOutVector v[4];
+	FBITFIELD flags;
+
+	float cx = FIXED_TO_FLOAT(x);
+	float cy = FIXED_TO_FLOAT(y);
+
+//  3--2
+//  | /|
+//  |/ |
+//  0--1
+	float sdupx = FIXED_TO_FLOAT(vid.fdupx)*2.0f;
+	float sdupy = FIXED_TO_FLOAT(vid.fdupy)*2.0f;
+	float pdupx = FIXED_TO_FLOAT(vid.fdupx)*2.0f*FIXED_TO_FLOAT(scale);
+	float pdupy = FIXED_TO_FLOAT(vid.fdupy)*2.0f*FIXED_TO_FLOAT(scale);
+
+	// make patch ready in hardware cache
+	HWR_GetPatch(gpatch);
+
+	switch (option & V_SCALEPATCHMASK)
+	{
+	case V_NOSCALEPATCH:
+		pdupx = pdupy = 2.0f;
+		break;
+	case V_SMALLSCALEPATCH:
+		pdupx = 2.0f * FIXED_TO_FLOAT(vid.fsmalldupx);
+		pdupy = 2.0f * FIXED_TO_FLOAT(vid.fsmalldupy);
+		break;
+	case V_MEDSCALEPATCH:
+		pdupx = 2.0f * FIXED_TO_FLOAT(vid.fmeddupx);
+		pdupy = 2.0f * FIXED_TO_FLOAT(vid.fmeddupy);
+		break;
+	}
+
+	if (option & V_NOSCALESTART)
+		sdupx = sdupy = 2.0f;
+
+	v[0].x = v[3].x = (cx*sdupx-gpatch->leftoffset*pdupx)/vid.width - 1;
+	v[2].x = v[1].x = ((cx-sx)*sdupx+(w-gpatch->leftoffset)*pdupx)/vid.width - 1;
+	v[0].y = v[1].y = 1-(cy*sdupy-gpatch->topoffset*pdupy)/vid.height;
+	v[2].y = v[3].y = 1-((cy-sy)*sdupy+(h-gpatch->topoffset)*pdupy)/vid.height;
+
+	v[0].z = v[1].z = v[2].z = v[3].z = 1.0f;
+
+	v[0].sow = v[3].sow = ((float)sx/(float)gpatch->height);
+	v[2].sow = v[1].sow = gpatch->max_s*((float)w/(float)gpatch->width);
+	v[0].tow = v[1].tow = ((float)sy/(float)gpatch->height);
+	v[2].tow = v[3].tow = gpatch->max_t*((float)h/(float)gpatch->height);
+
+	flags = BLENDMODE|PF_Clip|PF_NoZClip|PF_NoDepthTest;
+
+	if (option & V_WRAPX)
+		flags |= PF_ForceWrapX;
+	if (option & V_WRAPY)
+		flags |= PF_ForceWrapY;
+
+	// clip it since it is used for bunny scroll in doom I
+	if (option & V_TRANSLUCENT)
+	{
+		FSurfaceInfo Surf;
+		Surf.FlatColor.s.red = Surf.FlatColor.s.green = Surf.FlatColor.s.blue = 0xff;
+		Surf.FlatColor.s.alpha = (UINT8)cv_grtranslucenthud.value;
+		flags |= PF_Modulated;
+		HWD.pfnDrawPolygon(&Surf, v, 4, flags);
+	}
+	else
+		HWD.pfnDrawPolygon(NULL, v, 4, flags);
+}
+
 void HWR_DrawClippedPatch (GLPatch_t *gpatch, INT32 x, INT32 y, INT32 option)
 {
 	// hardware clips the patch quite nicely anyway :)

@@ -1212,23 +1212,17 @@ static void HWR_SplitFog(sector_t *sector, wallVert3D *wallVerts, FSurfaceInfo* 
 
 		if (list[i].caster)
 		{
-			if (sector->lightlist[i].caster->flags & FF_SOLID && !(cutflag & FF_EXTRA))
-				solid = true;
-			else if (sector->lightlist[i].caster->flags & FF_CUTEXTRA && cutflag & FF_EXTRA)
+			if (sector->lightlist[i].caster->flags & FF_FOG && cutflag & FF_FOG) // Only fog cuts fog
 			{
 				if (sector->lightlist[i].caster->flags & FF_EXTRA)
 				{
-					if (sector->lightlist[i].caster->flags == cutflag)
+					if (sector->lightlist[i].caster->flags == cutflag) // only cut by the same
 						solid = true;
 				}
 				else
 					solid = true;
 			}
-			else
-				solid = false;
 		}
-		else
-			solid = false;
 
 		height = FIXED_TO_FLOAT(list[i].height);
 
@@ -1645,7 +1639,12 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				blendmode = PF_Environment;
 
 			if (gr_frontsector->numlights)
-				HWR_SplitWall(gr_frontsector, wallVerts, gr_midtexture, &Surf, FF_CUTSOLIDS);
+			{
+				if (!(blendmode & PF_Masked))
+					HWR_SplitWall(gr_frontsector, wallVerts, gr_midtexture, &Surf, FF_CUTSOLIDS|FF_TRANSLUCENT);
+				else
+					HWR_SplitWall(gr_frontsector, wallVerts, gr_midtexture, &Surf, FF_CUTSOLIDS);
+			}
 			else if (!(blendmode & PF_Masked))
 				HWR_AddTransparentWall(wallVerts, &Surf, gr_midtexture, blendmode, false, lightnum, colormap);
 			else
@@ -3385,30 +3384,17 @@ noshadow:
 
 		if (sector->numlights)
 		{
-			INT32 light = R_GetPlaneLight(sector, spr->mobj->z, false);
+			INT32 light;
 
-			if ((sector->lightlist[light].height > (spr->mobj->z + spr->mobj->height)) && !(sector->lightlist[light].flags & FF_NOSHADE))
-			{
-				if (!(spr->mobj->frame & FF_FULLBRIGHT))
-					lightlevel = LightLevelToLum(*sector->lightlist[light].lightlevel);
-				else
-					lightlevel = LightLevelToLum(255);
+			light = R_GetPlaneLight(sector, spr->mobj->z + spr->mobj->height, false); // Always use the light at the top instead of whatever I was doing before
 
-				if (sector->lightlist[light].extra_colormap)
-					colormap = sector->lightlist[light].extra_colormap;
-			}
-			else // If we can't use the light at its bottom, we'll use the light at its top
-			{
-				light = R_GetPlaneLight(sector, spr->mobj->z + spr->mobj->height, false);
+			if (!(spr->mobj->frame & FF_FULLBRIGHT))
+				lightlevel = LightLevelToLum(*sector->lightlist[light].lightlevel);
+			else
+				lightlevel = LightLevelToLum(255);
 
-				if (!(spr->mobj->frame & FF_FULLBRIGHT))
-					lightlevel = LightLevelToLum(*sector->lightlist[light].lightlevel);
-				else
-					lightlevel = LightLevelToLum(255);
-
-				if (sector->lightlist[light].extra_colormap)
-					colormap = sector->lightlist[light].extra_colormap;
-			}
+			if (sector->lightlist[light].extra_colormap)
+				colormap = sector->lightlist[light].extra_colormap;
 		}
 		else
 		{
@@ -3855,7 +3841,7 @@ static void HWR_DrawSprites(void)
 				HWR_DrawPrecipitationSprite(spr);
 			else
 #endif
-				if (spr->mobj->skin)
+				if (spr->mobj && spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)
 				{
 					if (!cv_grmd2.value || (cv_grmd2.value && md2_playermodels[(skin_t*)spr->mobj->skin-skins].notfound == true))
 						HWR_DrawSprite(spr);
@@ -3884,7 +3870,7 @@ static void HWR_DrawMD2S(void)
 			if (!spr->precip)
 			{
 #endif
-				if (spr->mobj && spr->mobj->skin)
+				if (spr->mobj && spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)
 				{
 					if ((md2_playermodels[(skin_t*)spr->mobj->skin-skins].notfound == false) && (md2_playermodels[(skin_t*)spr->mobj->skin-skins].scale > 0.0f))
 						HWR_DrawMD2(spr);
@@ -4323,6 +4309,8 @@ static void HWR_DrawSkyBackground(player_t *player)
 
 	v[0].z = v[1].z = v[2].z = v[3].z = 4.0f;
 
+	// X
+
 	if (textures[skytexture]->width > 256)
 		angle = (angle_t)((float)(dup_viewangle + gr_xtoviewangle[0])
 						/((float)textures[skytexture]->width/256.0f))
@@ -4337,9 +4325,19 @@ static void HWR_DrawSkyBackground(player_t *player)
 	v[0].sow = v[3].sow = 0.22f+(f)/(textures[skytexture]->width/2);
 	v[2].sow = v[1].sow = 0.22f+(f+(127))/(textures[skytexture]->width/2);
 
+
+	// Y
+
+	if (textures[skytexture]->height > 256)
+		angle = (angle_t)((float)(aimingangle)
+						*(256.0f/(float)textures[skytexture]->height))
+							%(ANGLE_90-1); // Just so that looking up and down scales right
+	else
+		angle = (aimingangle);
+
 	f = (float)((textures[skytexture]->height/2)
 	            * FIXED_TO_FLOAT(FINETANGENT((2048
-	 - ((INT32)aimingangle>>(ANGLETOFINESHIFT + 1))) & FINEMASK)));
+	 - ((INT32)angle>>(ANGLETOFINESHIFT + 1))) & FINEMASK)));
 
 	v[3].tow = v[2].tow = 0.22f+(f)/(textures[skytexture]->height/2);
 	v[0].tow = v[1].tow = 0.22f+(f+(127))/(textures[skytexture]->height/2);
@@ -4406,9 +4404,9 @@ void HWR_SetViewSize(void)
 }
 
 // ==========================================================================
-//
+// Same as rendering the player view, but from the skybox object
 // ==========================================================================
-void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
+void HWR_RenderSkyboxView(INT32 viewnumber, player_t *player)
 {
 	const float fpov = FIXED_TO_FLOAT(cv_grfov.value+player->fovadd);
 	FTransform stransform;
@@ -4425,7 +4423,7 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 	}
 
 	// note: sets viewangle, viewx, viewy, viewz
-	R_SetupFrame(player, false);
+	R_SkyboxFrame(player);
 
 	// copy view cam position for local use
 	dup_viewx = viewx;
@@ -4497,6 +4495,210 @@ if (0)
 
 #ifndef _NDS
 	if (drawsky)
+		HWR_DrawSkyBackground(player);
+#else
+	(void)HWR_DrawSkyBackground;
+#endif
+
+	//Hurdler: it doesn't work in splitscreen mode
+	drawsky = splitscreen;
+
+	HWR_ClearSprites();
+
+#ifdef SORTING
+	drawcount = 0;
+#endif
+	HWR_ClearClipSegs();
+
+	//04/01/2000: Hurdler: added for T&L
+	//                     Actually it only works on Walls and Planes
+	HWD.pfnSetTransform(&atransform);
+
+	validcount++;
+
+	HWR_RenderBSPNode((INT32)numnodes-1);
+
+	// Make a viewangle int so we can render things based on mouselook
+	if (player == &players[consoleplayer])
+		viewangle = localaiming;
+	else if (splitscreen && player == &players[secondarydisplayplayer])
+		viewangle = localaiming2;
+
+	// Handle stuff when you are looking farther up or down.
+	if ((aimingangle || cv_grfov.value+player->fovadd > 90*FRACUNIT))
+	{
+		dup_viewangle += ANGLE_90;
+		HWR_ClearClipSegs();
+		HWR_RenderBSPNode((INT32)numnodes-1); //left
+
+		dup_viewangle += ANGLE_90;
+		if (((INT32)aimingangle > ANGLE_45 || (INT32)aimingangle<-ANGLE_45))
+		{
+			HWR_ClearClipSegs();
+			HWR_RenderBSPNode((INT32)numnodes-1); //back
+		}
+
+		dup_viewangle += ANGLE_90;
+		HWR_ClearClipSegs();
+		HWR_RenderBSPNode((INT32)numnodes-1); //right
+
+		dup_viewangle += ANGLE_90;
+	}
+
+	// Check for new console commands.
+	NetUpdate();
+
+#ifdef ALAM_LIGHTING
+	//14/11/99: Hurdler: moved here because it doesn't work with
+	// subsector, see other comments;
+	HWR_ResetLights();
+#endif
+
+	// Draw MD2 and sprites
+#ifdef SORTING
+	HWR_SortVisSprites();
+#endif
+	HWR_DrawMD2S();
+
+	// Draw the sprites with trivial transform
+	HWD.pfnSetTransform(&stransform);
+#ifdef SORTING
+	HWR_DrawSprites();
+#endif
+#ifdef NEWCORONAS
+	//Hurdler: they must be drawn before translucent planes, what about gl fog?
+	HWR_DrawCoronas();
+#endif
+
+#ifdef SORTING
+	if (numplanes || numwalls) //Hurdler: render 3D water and transparent walls after everything
+	{
+		HWR_CreateDrawNodes();
+	}
+#else
+	if (numfloors || numwalls)
+	{
+		HWD.pfnSetTransform(&atransform);
+		if (numfloors)
+			HWR_Render3DWater();
+		if (numwalls)
+			HWR_RenderTransparentWalls();
+	}
+#endif
+
+	HWD.pfnSetTransform(NULL);
+
+	// put it off for menus etc
+	if (cv_grfog.value)
+		HWD.pfnSetSpecialState(HWD_SET_FOG_MODE, 0);
+
+	HWR_DoPostProcessor(player);
+
+	// Check for new console commands.
+	NetUpdate();
+
+	// added by Hurdler for correct splitscreen
+	// moved here by hurdler so it works with the new near clipping plane
+	HWD.pfnGClipRect(0, 0, vid.width, vid.height, NZCLIP_PLANE);
+}
+
+// ==========================================================================
+//
+// ==========================================================================
+void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
+{
+	const float fpov = FIXED_TO_FLOAT(cv_grfov.value+player->fovadd);
+	FTransform stransform;
+
+	const boolean skybox = (skyboxmo[0] && cv_skybox.value); // True if there's a skybox object and skyboxes are on
+
+	if (skybox && drawsky) // If there's a skybox and we should be drawing the sky, draw the skybox
+		HWR_RenderSkyboxView(viewnumber, player); // This is drawn before everything else so it is placed behind
+
+	{
+		// do we really need to save player (is it not the same)?
+		player_t *saved_player = stplyr;
+		stplyr = player;
+		ST_doPaletteStuff();
+		stplyr = saved_player;
+#ifdef ALAM_LIGHTING
+		HWR_SetLights(viewnumber);
+#endif
+	}
+
+	// note: sets viewangle, viewx, viewy, viewz
+	R_SetupFrame(player, false); // This can stay false because it is only used to set viewsky in r_main.c, which isn't used here
+
+	// copy view cam position for local use
+	dup_viewx = viewx;
+	dup_viewy = viewy;
+	dup_viewz = viewz;
+	dup_viewangle = viewangle;
+
+	// set window position
+	gr_centery = gr_basecentery;
+	gr_viewwindowy = gr_baseviewwindowy;
+	gr_windowcentery = gr_basewindowcentery;
+	if (splitscreen && viewnumber == 1)
+	{
+		gr_viewwindowy += (vid.height/2);
+		gr_windowcentery += (vid.height/2);
+	}
+
+	// check for new console commands.
+	NetUpdate();
+
+	gr_viewx = FIXED_TO_FLOAT(dup_viewx);
+	gr_viewy = FIXED_TO_FLOAT(dup_viewy);
+	gr_viewz = FIXED_TO_FLOAT(dup_viewz);
+	gr_viewsin = FIXED_TO_FLOAT(viewsin);
+	gr_viewcos = FIXED_TO_FLOAT(viewcos);
+
+	gr_viewludsin = FIXED_TO_FLOAT(FINECOSINE(aimingangle>>ANGLETOFINESHIFT));
+	gr_viewludcos = FIXED_TO_FLOAT(-FINESINE(aimingangle>>ANGLETOFINESHIFT));
+
+	//04/01/2000: Hurdler: added for T&L
+	//                     It should replace all other gr_viewxxx when finished
+	atransform.anglex = (float)(aimingangle>>ANGLETOFINESHIFT)*(360.0f/(float)FINEANGLES);
+	atransform.angley = (float)(viewangle>>ANGLETOFINESHIFT)*(360.0f/(float)FINEANGLES);
+	atransform.x      = gr_viewx;  // FIXED_TO_FLOAT(viewx)
+	atransform.y      = gr_viewy;  // FIXED_TO_FLOAT(viewy)
+	atransform.z      = gr_viewz;  // FIXED_TO_FLOAT(viewz)
+	atransform.scalex = 1;
+	atransform.scaley = ORIGINAL_ASPECT;
+	atransform.scalez = 1;
+	atransform.fovxangle = fpov; // Tails
+	atransform.fovyangle = fpov; // Tails
+	atransform.splitscreen = splitscreen;
+
+	// Transform for sprites
+	stransform.anglex = 0.0f;
+	stransform.angley = -270.0f;
+	stransform.x      = 0.0f;
+	stransform.y      = 0.0f;
+	stransform.z      = 0.0f;
+	stransform.scalex = 1;
+	stransform.scaley = 1;
+	stransform.scalez = 1;
+	stransform.fovxangle = 90.0f;
+	stransform.fovyangle = 90.0f;
+	stransform.splitscreen = splitscreen;
+
+	gr_fovlud = (float)(1.0l/tan((double)(fpov*M_PIl/360l)));
+
+	//------------------------------------------------------------------------
+	HWR_ClearView();
+
+if (0)
+{ // I don't think this is ever used.
+	if (cv_grfog.value)
+		HWR_FoggingOn(); // First of all, turn it on, set the default user settings too
+	else
+		HWD.pfnSetSpecialState(HWD_SET_FOG_MODE, 0); // Turn it off
+}
+
+#ifndef _NDS
+	if (!skybox && drawsky) // Don't draw the regular sky if there's a skybox
 		HWR_DrawSkyBackground(player);
 #else
 	(void)HWR_DrawSkyBackground;
