@@ -990,6 +990,10 @@ void Y_StartIntermission(void)
 			else
 			{
 				useinterpic = false;
+#ifdef HWRENDER
+				if (rendermode == render_opengl)
+					usebuffer = true; // This needs to be here for OpenGL, otherwise usebuffer is never set to true for it, and thus there's no screenshot in the intermission
+#endif
 			}
 			usetile = false;
 
