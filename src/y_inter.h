@@ -9,6 +9,8 @@
 /// \file  y_inter.h
 /// \brief Intermission
 
+extern boolean usebuffer;
+
 void Y_IntermissionDrawer(void);
 void Y_Ticker(void);
 void Y_StartIntermission(void);

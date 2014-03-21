@@ -138,7 +138,7 @@ static patch_t *widebgpatch = NULL; // INTERSCW
 static patch_t *bgtile = NULL;      // SPECTILE/SRB2BACK
 static patch_t *interpic = NULL;    // custom picture defined in map header
 static boolean usetile;
-static boolean usebuffer;
+boolean usebuffer = false;
 static boolean useinterpic;
 static INT32 timer;
 
@@ -990,7 +990,6 @@ void Y_StartIntermission(void)
 			else
 			{
 				useinterpic = false;
-				usebuffer = true;
 			}
 			usetile = false;
 
@@ -1712,6 +1711,7 @@ void Y_EndIntermission(void)
 
 	endtic = -1;
 	intertype = int_none;
+	usebuffer = false;
 }
 
 //

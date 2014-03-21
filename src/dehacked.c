@@ -1132,7 +1132,7 @@ static void readlevelheader(MYFILE *f, INT32 num)
 			else if (fastcmp(word, "PALETTE"))
 				mapheaderinfo[num-1]->palette = (UINT16)i;
 			else if (fastcmp(word, "NUMLAPS"))
-				mapheaderinfo[num-1]->numlaps = (UINT32)i;
+				mapheaderinfo[num-1]->numlaps = (UINT8)i;
 			else if (fastcmp(word, "UNLOCKABLE"))
 			{
 				if (i >= 0 && i <= MAXUNLOCKABLES) // 0 for no unlock required, anything else requires something
@@ -7325,24 +7325,29 @@ static const char *const HUDITEMS_LIST[] = {
 	"LIVESPIC",
 	"LIVESNUM",
 	"LIVESX",
-	"RINGSSPLIT",
-	"RINGSNUMSPLIT",
+
 	"RINGS",
+	"RINGSSPLIT",
 	"RINGSNUM",
+	"RINGSNUMSPLIT",
+
 	"SCORE",
 	"SCORENUM",
-	"TIMESPLIT",
-	"SECONDSSPLIT",
-	"MINUTESSPLIT",
-	"TIMECOLONSPLIT",
+
 	"TIME",
-	"TICS",
-	"SECONDS",
+	"TIMESPLIT",
 	"MINUTES",
+	"MINUTESSPLIT",
 	"TIMECOLON",
+	"TIMECOLONSPLIT",
+	"SECONDS",
+	"SECONDSSPLIT",
 	"TIMETICCOLON",
-	"SS_TOTALRINGS_SPLIT",
+	"TICS",
+
 	"SS_TOTALRINGS",
+	"SS_TOTALRINGS_SPLIT",
+
 	"GETRINGS",
 	"GETRINGSNUM",
 	"TIMELEFT",
@@ -7683,6 +7688,9 @@ struct {
 	{"V_70TRANS",V_70TRANS},
 	{"V_80TRANS",V_80TRANS},
 	{"V_90TRANS",V_90TRANS},
+	{"V_HUDTRANSHALF",V_HUDTRANSHALF},
+	{"V_HUDTRANS",V_HUDTRANS},
+	{"V_HUDTRANSDOUBLE",V_HUDTRANSDOUBLE},
 	{"V_AUTOFADEOUT",V_AUTOFADEOUT},
 	{"V_RETURN8",V_RETURN8},
 	{"V_OFFSET",V_OFFSET},

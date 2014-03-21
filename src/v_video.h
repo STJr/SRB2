@@ -51,6 +51,7 @@ extern RGBA_t *pLocalPalette;
 
 // flags hacked in scrn (not supported by all functions (see src))
 // patch scaling uses bits 9 and 10
+#define V_SCALEPATCHSHIFT    8
 #define V_SCALEPATCHMASK     0x00000300
 #define V_NOSCALEPATCH       0x00000100
 #define V_SMALLSCALEPATCH    0x00000200
@@ -84,11 +85,14 @@ extern RGBA_t *pLocalPalette;
 #define V_20TRANS            0x00020000
 #define V_30TRANS            0x00030000
 #define V_40TRANS            0x00040000
-#define V_TRANSLUCENT        0x00050000  // TRANS50
+#define V_TRANSLUCENT        0x00050000 // TRANS50
 #define V_60TRANS            0x00060000
 #define V_70TRANS            0x00070000
-#define V_80TRANS            0x00080000  // used to be V_8020TRANS
+#define V_80TRANS            0x00080000 // used to be V_8020TRANS
 #define V_90TRANS            0x00090000
+#define V_HUDTRANSHALF       0x000D0000
+#define V_HUDTRANS           0x000E0000 // draw the hud translucent
+#define V_HUDTRANSDOUBLE     0x000F0000
 
 #define V_AUTOFADEOUT        0x00100000 // used by CECHOs, automatic fade out when almost over
 #define V_RETURN8            0x00200000 // 8 pixel return instead of 12
@@ -107,24 +111,23 @@ extern RGBA_t *pLocalPalette;
 #define V_NOSCALESTART       0x40000000  // don't scale x, y, start coords
 #define V_SPLITSCREEN        0x80000000
 
-// default params: scale patch and scale start
-void V_DrawScaledPatch(INT32 x, INT32 y, INT32 scrn, patch_t *patch);
-void V_DrawMappedPatch(INT32 x, INT32 y, INT32 scrn, patch_t *patch, const UINT8 *colormap);
-void V_DrawTranslucentMappedPatch(INT32 x, INT32 y, INT32 scrn, patch_t *patch, const UINT8 *colormap);
-void V_DrawTranslucentPatch(INT32 x, INT32 y, INT32 scrn, patch_t *patch);
-void V_DrawSciencePatch(fixed_t x, fixed_t y, INT32 scrn, patch_t *patch, fixed_t science); // FOR SCIENCE!!
-void V_DrawCroppedPatch(fixed_t x, fixed_t y, INT32 scrn, patch_t *patch, fixed_t science, fixed_t sx, fixed_t sy, fixed_t w, fixed_t h);
-
-// default params: scale patch and scale start
-void V_DrawSmallScaledPatch(INT32 x, INT32 y, INT32 scrn, patch_t *patch);
-void V_DrawSmallMappedPatch(INT32 x, INT32 y, INT32 scrn, patch_t *patch, const UINT8 *colormap);
-void V_DrawSmallTranslucentMappedPatch(INT32 x, INT32 y, INT32 scrn, patch_t *patch, const UINT8 *colormap);
-void V_DrawSmallTranslucentPatch(INT32 x, INT32 y, INT32 scrn, patch_t *patch);
-
-void V_DrawTinyScaledPatch(INT32 x, INT32 y, INT32 scrn, patch_t *patch);
-void V_DrawTinyMappedPatch(INT32 x, INT32 y, INT32 scrn, patch_t *patch, const UINT8 *colormap);
-
-void V_DrawPatch(INT32 x, INT32 y, INT32 scrn, patch_t *patch);
+// defines for old functions
+#define V_DrawPatch(x,y,s,p) V_DrawFixedPatch((x)<<FRACBITS, (y)<<FRACBITS, FRACUNIT, s|V_NOSCALESTART|V_NOSCALEPATCH, p, NULL)
+#define V_DrawTranslucentMappedPatch(x,y,s,p,c) V_DrawFixedPatch((x)<<FRACBITS, (y)<<FRACBITS, FRACUNIT, s, p, c)
+#define V_DrawSmallTranslucentMappedPatch(x,y,s,p,c) V_DrawFixedPatch((x)<<FRACBITS, (y)<<FRACBITS, FRACUNIT/2, s, p, c)
+#define V_DrawTinyTranslucentMappedPatch(x,y,s,p,c) V_DrawFixedPatch((x)<<FRACBITS, (y)<<FRACBITS, FRACUNIT/4, s, p, c)
+#define V_DrawMappedPatch(x,y,s,p,c) V_DrawFixedPatch((x)<<FRACBITS, (y)<<FRACBITS, FRACUNIT, s, p, c)
+#define V_DrawSmallMappedPatch(x,y,s,p,c) V_DrawFixedPatch((x)<<FRACBITS, (y)<<FRACBITS, FRACUNIT/2, s, p, c)
+#define V_DrawTinyMappedPatch(x,y,s,p,c) V_DrawFixedPatch((x)<<FRACBITS, (y)<<FRACBITS, FRACUNIT/4, s, p, c)
+#define V_DrawScaledPatch(x,y,s,p) V_DrawFixedPatch((x)<<FRACBITS, (y)<<FRACBITS, FRACUNIT, s, p, NULL)
+#define V_DrawSmallScaledPatch(x,y,s,p) V_DrawFixedPatch((x)<<FRACBITS, (y)<<FRACBITS, FRACUNIT/2, s, p, NULL)
+#define V_DrawTinyScaledPatch(x,y,s,p) V_DrawFixedPatch((x)<<FRACBITS, (y)<<FRACBITS, FRACUNIT/4, s, p, NULL)
+#define V_DrawTranslucentPatch(x,y,s,p) V_DrawFixedPatch((x)<<FRACBITS, (y)<<FRACBITS, FRACUNIT, s, p, NULL)
+#define V_DrawSmallTranslucentPatch(x,y,s,p) V_DrawFixedPatch((x)<<FRACBITS, (y)<<FRACBITS, FRACUNIT/2, s, p, NULL)
+#define V_DrawTinyTranslucentPatch(x,y,s,p) V_DrawFixedPatch((x)<<FRACBITS, (y)<<FRACBITS, FRACUNIT/4, s, p, NULL)
+#define V_DrawSciencePatch(x,y,s,p,sc) V_DrawFixedPatch(x,y,sc,s,p,NULL)
+void V_DrawFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t *patch, const UINT8 *colormap);
+void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t *patch, fixed_t sx, fixed_t sy, fixed_t w, fixed_t h);
 
 void V_DrawContinueIcon(INT32 x, INT32 y, INT32 flags, INT32 skinnum, UINT8 skincolor);
 

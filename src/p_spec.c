@@ -3854,10 +3854,10 @@ DoneSection2:
 					if (player->pflags & PF_NIGHTSMODE)
 						player->drillmeter += 48*20;
 
-					if (player->laps >= (unsigned)cv_numlaps.value)
+					if (player->laps >= (UINT8)cv_numlaps.value)
 						CONS_Printf(M_GetText("%s has finished the race.\n"), player_names[player-players]);
 					else
-						CONS_Printf(M_GetText("%s started lap %d\n"), player_names[player-players],player->laps+1);
+						CONS_Printf(M_GetText("%s started lap %u\n"), player_names[player-players], (UINT32)player->laps+1);
 
 					// Reset starposts (checkpoints) info
 					player->starpostangle = player->starposttime = player->starpostnum = 0;
@@ -5342,10 +5342,14 @@ void P_SpawnSpecials(INT32 fromnetsave)
 		if (lines[i].special == 6)
 		{
 			// Ability flags can disable disable linedefs now, lol
-			if ((netgame || multiplayer)
-			|| (!(players[consoleplayer].charability == CA_THOK && (lines[i].flags & ML_NOSONIC))
-			&& !(players[consoleplayer].charability == CA_FLY && (lines[i].flags & ML_NOTAILS))
-			&& !(players[consoleplayer].charability == CA_GLIDEANDCLIMB && (lines[i].flags & ML_NOKNUX))))
+			if (netgame || multiplayer)
+			{
+				// future: nonet flag?
+			}
+			else if (((lines[i].flags & ML_NETONLY) != ML_NETONLY)
+			&& !(players[consoleplayer].charability == CA_THOK          && (lines[i].flags & ML_NOSONIC))
+			&& !(players[consoleplayer].charability == CA_FLY           && (lines[i].flags & ML_NOTAILS))
+			&& !(players[consoleplayer].charability == CA_GLIDEANDCLIMB && (lines[i].flags & ML_NOKNUX )))
 			{
 				for (j = -1; (j = P_FindLineFromLineTag(&lines[i], j)) >= 0;)
 				{
@@ -5404,7 +5408,16 @@ void P_SpawnSpecials(INT32 fromnetsave)
 	for (i = 0; i < numlines; i++)
 	{
 		// set line specials to 0 here too, same reason as above
-		if (!(netgame || multiplayer))
+		if (netgame || multiplayer)
+		{
+			// future: nonet flag?
+		}
+		else if ((lines[i].flags & ML_NETONLY) == ML_NETONLY)
+		{
+			lines[i].special = 0;
+			continue;
+		}
+		else
 		{
 			if (players[consoleplayer].charability == CA_THOK && (lines[i].flags & ML_NOSONIC))
 			{

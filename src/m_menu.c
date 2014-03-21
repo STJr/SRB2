@@ -1137,8 +1137,6 @@ static menuitem_t OP_OpenGLOptionsMenu[] =
 #ifdef _WINDOWS
 	{IT_STRING|IT_CVAR,         NULL, "Fullscreen",      &cv_fullscreen,       50},
 #endif
-	{IT_STRING|IT_CVAR|IT_CV_SLIDER,
-	                            NULL, "Translucent HUD", &cv_grtranslucenthud, 60},
 #ifdef ALAM_LIGHTING
 	{IT_SUBMENU|IT_STRING,      NULL, "Lighting...",     &OP_OpenGLLightingDef,     70},
 #endif
@@ -1245,17 +1243,19 @@ static menuitem_t OP_GameOptionsMenu[] =
 	                      NULL, "Master server",          &cv_masterserver,     10},
 #endif
 	{IT_STRING | IT_CVAR, NULL, "Show HUD",               &cv_showhud,     40},
-	{IT_STRING | IT_CVAR, NULL, "Timer Display",          &cv_timetic,     50},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
+	                      NULL, "HUD Visibility",         &cv_translucenthud, 50},
+	{IT_STRING | IT_CVAR, NULL, "Timer Display",          &cv_timetic,     60},
 #ifdef SEENAMES
-	{IT_STRING | IT_CVAR, NULL, "HUD Player Names",       &cv_seenames,    60},
+	{IT_STRING | IT_CVAR, NULL, "HUD Player Names",       &cv_seenames,    80},
 #endif
-	{IT_STRING | IT_CVAR, NULL, "Log Hazard Damage",      &cv_hazardlog,   70},
+	{IT_STRING | IT_CVAR, NULL, "Log Hazard Damage",      &cv_hazardlog,   90},
 
-	{IT_STRING | IT_CVAR, NULL, "Console Back Color",     &cons_backcolor,  90},
-	{IT_STRING | IT_CVAR, NULL, "Console Text Size",      &cv_constextsize,100},
-	{IT_STRING | IT_CVAR, NULL, "Uppercase Console",      &cv_allcaps,     110},
+	{IT_STRING | IT_CVAR, NULL, "Console Back Color",     &cons_backcolor, 100},
+	{IT_STRING | IT_CVAR, NULL, "Console Text Size",      &cv_constextsize,110},
+	{IT_STRING | IT_CVAR, NULL, "Uppercase Console",      &cv_allcaps,     120},
 
-	{IT_STRING | IT_CVAR, NULL, "Title Screen Demos",     &cv_rollingdemos, 130},
+	{IT_STRING | IT_CVAR, NULL, "Title Screen Demos",     &cv_rollingdemos, 140},
 };
 
 static menuitem_t OP_ServerOptionsMenu[] =
@@ -1276,7 +1276,7 @@ static menuitem_t OP_ServerOptionsMenu[] =
 	{IT_STRING | IT_CVAR,    NULL, "Max Players",                 &cv_maxplayers,        110},
 	{IT_STRING | IT_CVAR,    NULL, "Allow players to join",       &cv_allownewplayer,    120},
 	{IT_STRING | IT_CVAR,    NULL, "Allow WAD Downloading",       &cv_downloading,       130},
-	{IT_STRING | IT_CVAR,    NULL, "Consistency Protection",      &cv_consfailprotect,   140},
+	{IT_STRING | IT_CVAR,    NULL, "Attempts to Resynch",         &cv_resynchattempts,   140},
 #endif
 };
 
@@ -4681,9 +4681,9 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		}
 		patch = W_CachePatchName(picname, PU_CACHE);
 		if (SHORT(patch->width) >= 256)
-			V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, 0, patch, FRACUNIT/2, 0, SHORT(patch->height) - 64 + o*2, SHORT(patch->width), SHORT(patch->height));
+			V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT/2, 0, patch, 0, SHORT(patch->height) - 64 + o*2, SHORT(patch->width), SHORT(patch->height));
 		else
-			V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, 0, patch, FRACUNIT, 0, SHORT(patch->height) - 32 + o, SHORT(patch->width), SHORT(patch->height));
+			V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT, 0, patch, 0, SHORT(patch->height) - 32 + o, SHORT(patch->width), SHORT(patch->height));
 		W_UnlockCachedPatch(patch);
 	}
 
@@ -4707,9 +4707,9 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		}
 		patch = W_CachePatchName(picname, PU_CACHE);
 		if (SHORT(patch->width) >= 256)
-			V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, 0, patch, FRACUNIT/2, 0, 0, SHORT(patch->width), o*2);
+			V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, FRACUNIT/2, 0, patch, 0, 0, SHORT(patch->width), o*2);
 		else
-			V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, 0, patch, FRACUNIT, 0, 0, SHORT(patch->width), o);
+			V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, FRACUNIT, 0, patch, 0, 0, SHORT(patch->width), o);
 		W_UnlockCachedPatch(patch);
 	}
 
@@ -4741,9 +4741,9 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		else
 		{
 			if (SHORT(patch->width) >= 256)
-				V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, 0, patch, FRACUNIT/2, 0, (o - 32)*2, SHORT(patch->width), SHORT(patch->height));
+				V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT/2, 0, patch, 0, (o - 32)*2, SHORT(patch->width), SHORT(patch->height));
 			else
-				V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, 0, patch, FRACUNIT, 0, o - 32, SHORT(patch->width), SHORT(patch->height));
+				V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT, 0, patch, 0, o - 32, SHORT(patch->width), SHORT(patch->height));
 		}
 		W_UnlockCachedPatch(patch);
 	}

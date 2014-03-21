@@ -118,8 +118,6 @@ static int player_get(lua_State *L)
 		lua_pushinteger(L, plr->bob);
 	else if (fastcmp(field,"aiming"))
 		lua_pushinteger(L, plr->aiming);
-	else if (fastcmp(field,"awayviewaiming"))
-		lua_pushinteger(L, plr->awayviewaiming);
 	else if (fastcmp(field,"health"))
 		lua_pushinteger(L, plr->health);
 	else if (fastcmp(field,"pity"))
@@ -187,7 +185,7 @@ static int player_get(lua_State *L)
 	else if (fastcmp(field,"speed"))
 		lua_pushinteger(L, plr->speed);
 	else if (fastcmp(field,"jumping"))
-		lua_pushinteger(L, plr->jumping);
+		lua_pushboolean(L, plr->jumping);
 	else if (fastcmp(field,"secondjump"))
 		lua_pushinteger(L, plr->secondjump);
 	else if (fastcmp(field,"fly1"))
@@ -306,6 +304,8 @@ static int player_get(lua_State *L)
 		LUA_PushUserdata(L, plr->awayviewmobj, META_MOBJ);
 	else if (fastcmp(field,"awayviewtics"))
 		lua_pushinteger(L, plr->awayviewtics);
+	else if (fastcmp(field,"awayviewaiming"))
+		lua_pushinteger(L, plr->awayviewaiming);
 	else if (fastcmp(field,"spectator"))
 		lua_pushinteger(L, plr->spectator);
 	else if (fastcmp(field,"bot"))
@@ -365,8 +365,6 @@ static int player_set(lua_State *L)
 		else if (plr == &players[secondarydisplayplayer])
 			localaiming2 = plr->aiming;
 	}
-	else if (fastcmp(field,"awayviewaiming"))
-		plr->awayviewaiming = (angle_t)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"health"))
 		plr->health = (INT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"pity"))
@@ -424,17 +422,17 @@ static int player_set(lua_State *L)
 	else if (fastcmp(field,"jumpfactor"))
 		plr->jumpfactor = (INT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"lives"))
-		plr->lives = (INT32)luaL_checkinteger(L, 3);
+		plr->lives = (SINT8)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"continues"))
-		plr->continues = (INT32)luaL_checkinteger(L, 3);
+		plr->continues = (SINT8)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"xtralife"))
-		plr->xtralife = (INT32)luaL_checkinteger(L, 3);
+		plr->xtralife = (SINT8)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"gotcontinue"))
 		plr->gotcontinue = (UINT8)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"speed"))
 		plr->speed = (fixed_t)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"jumping"))
-		plr->jumping = (INT32)luaL_checkinteger(L, 3);
+		plr->jumping = luaL_checkboolean(L, 3);
 	else if (fastcmp(field,"secondjump"))
 		plr->secondjump = (UINT8)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"fly1"))
@@ -462,13 +460,13 @@ static int player_set(lua_State *L)
 	else if (fastcmp(field,"rmomy"))
 		plr->rmomy = (fixed_t)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"numboxes"))
-		plr->numboxes = (INT32)luaL_checkinteger(L, 3);
+		plr->numboxes = (INT16)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"totalring"))
-		plr->totalring = (INT32)luaL_checkinteger(L, 3);
+		plr->totalring = (INT16)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"realtime"))
 		plr->realtime = (tic_t)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"laps"))
-		plr->laps = (UINT32)luaL_checkinteger(L, 3);
+		plr->laps = (UINT8)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"ctfteam"))
 		plr->ctfteam = (INT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"gotflag"))
@@ -567,6 +565,8 @@ static int player_set(lua_State *L)
 		if (plr->awayviewtics && !plr->awayviewmobj) // awayviewtics must ALWAYS have an awayviewmobj set!!
 			P_SetTarget(&plr->awayviewmobj, plr->mo); // but since the script might set awayviewmobj immediately AFTER setting awayviewtics, use player mobj as filler for now.
 	}
+	else if (fastcmp(field,"awayviewaiming"))
+		plr->awayviewaiming = (angle_t)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"spectator"))
 		plr->spectator = lua_toboolean(L, 3);
 	else if (fastcmp(field,"bot"))

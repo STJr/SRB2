@@ -1467,10 +1467,12 @@ static void Analog_OnChange(void)
 {
 	if (!cv_cam_dist.string)
 		return;
+
+	// cameras are not initialized at this point
+
 	if (leveltime > 1)
 		CV_SetValue(&cv_cam_dist, 128);
-
-	if (netgame || !camera.chase)
+	if (netgame)
 		CV_StealthSetValue(&cv_analog, 0);
 	else if (cv_analog.value || demoplayback)
 		CV_SetValue(&cv_cam_dist, 192);
@@ -1480,9 +1482,12 @@ static void Analog2_OnChange(void)
 {
 	if (!splitscreen || !cv_cam2_dist.string)
 		return;
+
+	// cameras are not initialized at this point
+
 	if (leveltime > 1)
 		CV_SetValue(&cv_cam2_dist, 128);
-	if (netgame || !camera2.chase)
+	if (netgame)
 		CV_StealthSetValue(&cv_analog2, 0);
 	else if (cv_analog2.value)
 		CV_SetValue(&cv_cam2_dist, 192);
@@ -1927,7 +1932,6 @@ void G_PlayerReborn(INT32 player)
 	INT32 score;
 	INT32 lives;
 	INT32 continues;
-	INT32 xtralife;
 	UINT8 charability;
 	UINT8 charability2;
 	fixed_t normalspeed;
@@ -1952,9 +1956,9 @@ void G_PlayerReborn(INT32 player)
 	INT32 starpostangle;
 	fixed_t jumpfactor;
 	INT32 exiting;
-	INT32 numboxes;
-	INT32 laps;
-	INT32 totalring;
+	INT16 numboxes;
+	INT16 totalring;
+	UINT8 laps;
 	UINT8 mare;
 	UINT8 skincolor;
 	INT32 skin;
@@ -1966,7 +1970,6 @@ void G_PlayerReborn(INT32 player)
 	score = players[player].score;
 	lives = players[player].lives;
 	continues = players[player].continues;
-	xtralife = players[player].xtralife;
 	ctfteam = players[player].ctfteam;
 	exiting = players[player].exiting;
 	jointime = players[player].jointime;
@@ -2017,7 +2020,6 @@ void G_PlayerReborn(INT32 player)
 	p->lives = lives;
 	p->continues = continues;
 	p->pflags = pflags;
-	p->xtralife = xtralife;
 	p->ctfteam = ctfteam;
 	p->jointime = jointime;
 	p->spectator = spectator;
