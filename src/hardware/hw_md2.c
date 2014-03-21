@@ -1123,7 +1123,6 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 	if (cv_grmd2.value && ((md2_models[spr->mobj->sprite].scale > 0.0f) || (md2_playermodels[(skin_t*)spr->mobj->skin-skins].scale > 0.0f)) && !spr->precip)
 	{
 		GLPatch_t *gpatch;
-		FBITFIELD blend = 0;
 		INT32 *buff;
 		UINT32 durs = spr->mobj->state->tics;
 		UINT32 tics = spr->mobj->tics;
@@ -1136,14 +1135,12 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		if (spr->mobj->flags2 & MF2_SHADOW)
 		{
 			Surf.FlatColor.s.alpha = 0x40;
-			blend = PF_Translucent;
 		}
 		else if (spr->mobj->frame & FF_TRANSMASK)
-			blend = HWR_TranstableToAlpha((spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT, &Surf);
+			HWR_TranstableToAlpha((spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT, &Surf);
 		else
 		{
 			Surf.FlatColor.s.alpha = 0xFF;
-			blend = PF_Translucent|PF_Occlude;
 		}
 
 		// dont forget to enabled the depth test because we can't do this like
