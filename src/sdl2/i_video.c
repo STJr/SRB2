@@ -178,6 +178,7 @@ static void Impl_VideoSetupSDLBuffer(void);
 static void Impl_VideoSetupBuffer(void);
 static SDL_bool Impl_CreateWindow(SDL_bool fullscreen);
 static void Impl_SetWindowName(const char *title);
+static void Impl_SetWindowIcon(void);
 
 static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 {
@@ -210,6 +211,7 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 		SDL_DestroyWindow(window);
 		window = NULL;
 		Impl_CreateWindow(SDL_TRUE);
+		Impl_SetWindowIcon();
 		wasfullscreen = SDL_TRUE;
 	}
 	else if (!fullscreen && wasfullscreen)
@@ -220,6 +222,7 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 		SDL_DestroyWindow(window);
 		window = NULL;
 		Impl_CreateWindow(SDL_FALSE);
+		Impl_SetWindowIcon();
 		wasfullscreen = SDL_FALSE;
 	}
 	else if (!wasfullscreen)
@@ -738,44 +741,63 @@ static INT32 SDLJoyAxis(const Sint16 axis, evtype_t which)
 static void Impl_HandleWindowEvent(SDL_WindowEvent evt)
 {
 	static SDL_bool firsttimeonmouse = SDL_TRUE;
-	switch (evt.type)
+	static SDL_bool mousefocus = SDL_TRUE;
+	static SDL_bool kbfocus = SDL_TRUE;
+
+	switch (evt.event)
 	{
+		case SDL_WINDOWEVENT_ENTER:
+			mousefocus = SDL_TRUE;
+			break;
+		case SDL_WINDOWEVENT_LEAVE:
+			mousefocus = SDL_FALSE;
+			break;
 		case SDL_WINDOWEVENT_FOCUS_GAINED:
-			if (!firsttimeonmouse)
-			{
-				if (cv_usemouse.value) I_StartupMouse();
-			}
-			else firsttimeonmouse = SDL_FALSE;
-			if (gamestate == GS_LEVEL)
-			{
-				if (!paused) I_ResumeSong(0); //resume it
-			}
+			kbfocus = SDL_TRUE;
 			break;
 		case SDL_WINDOWEVENT_FOCUS_LOST:
-			if (!disable_mouse)
-			{
-				SDLforceUngrabMouse();
-			}
-			if (!netgame && gamestate == GS_LEVEL)
-			{
-				paused = true;
-			}
-			memset(gamekeydown, 0, NUMKEYS); // TODO this is a scary memset
-			if (gamestate == GS_LEVEL)
-			{
-				I_PauseSong(0);
-			}
-
-			if (MOUSE_MENU)
-			{
-				SDLdoUngrabMouse();
-				return;
-			}
-
+			kbfocus = SDL_FALSE;
+			mousefocus = SDL_FALSE;
 			break;
 		case SDL_WINDOWEVENT_MAXIMIZED:
 			break;
 	}
+
+	if (mousefocus && kbfocus)
+	{
+		if (!firsttimeonmouse)
+		{
+			if (cv_usemouse.value) I_StartupMouse();
+		}
+		else firsttimeonmouse = SDL_FALSE;
+		if (gamestate == GS_LEVEL)
+		{
+			if (!paused) I_ResumeSong(0); //resume it
+		}
+	}
+	else if (!mousefocus && !kbfocus)
+	{
+		if (!disable_mouse)
+		{
+			SDLforceUngrabMouse();
+		}
+		if (!netgame && gamestate == GS_LEVEL)
+		{
+			paused = true;
+		}
+		memset(gamekeydown, 0, NUMKEYS); // TODO this is a scary memset
+		if (gamestate == GS_LEVEL)
+		{
+			I_PauseSong(0);
+		}
+
+		if (MOUSE_MENU)
+		{
+			SDLdoUngrabMouse();
+			return;
+		}
+	}
+
 }
 
 static void Impl_HandleKeyboardEvent(SDL_KeyboardEvent evt, Uint32 type)
@@ -799,6 +821,39 @@ static void Impl_HandleKeyboardEvent(SDL_KeyboardEvent evt, Uint32 type)
 
 static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
 {
+	event_t event;
+	if (MOUSE_MENU)
+	{
+		SDLdoUngrabMouse();
+		return;
+	}
+	//if (USE_MOUSEINPUT) TODO SDL2 stub
+	{
+		// If the event is from warping the pointer back to middle
+		// of the screen then ignore it.
+		if ((evt.x == realwidth/2) &&
+				(evt.y == realheight/2))
+		{
+			return;
+		}
+		else
+		{
+			event.data2 = +evt.xrel;
+			event.data3 = -evt.yrel;
+		}
+		event.type = ev_mouse;
+		D_PostEvent(&event);
+		// Warp the pointer back to the middle of the window
+		//  or we cannot move any further if it's at a border.
+		if ((evt.x < (realwidth/2 )-(realwidth/4 )) ||
+				(evt.y < (realheight/2)-(realheight/4)) ||
+				(evt.x > (realwidth/2 )+(realwidth/4 )) ||
+				(evt.y > (realheight/2)+(realheight/4) ) )
+		{
+			//if (SDL_GRAB_ON == SDL_WM_GrabInput(SDL_GRAB_QUERY) || !mousegrabok)
+			HalfWarpMouse(realwidth, realheight);
+		}
+	}
 }
 
 static void Impl_HandleMouseButtonEvent(SDL_MouseButtonEvent evt, Uint32 type)
