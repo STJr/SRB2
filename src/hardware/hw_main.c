@@ -4592,8 +4592,6 @@ if (0)
 	if (cv_grfog.value)
 		HWD.pfnSetSpecialState(HWD_SET_FOG_MODE, 0);
 
-	HWR_DoPostProcessor(player);
-
 	// Check for new console commands.
 	NetUpdate();
 
