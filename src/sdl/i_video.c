@@ -1577,6 +1577,7 @@ const char *VID_GetModeName(INT32 modeNum)
 INT32 VID_GetModeForSize(INT32 w, INT32 h)
 {
 	INT32 matchMode = -1, i;
+	VID_PrepareModeList();
 	if (USE_FULLSCREEN && numVidModes != -1)
 	{
 		for (i=firstEntry; i<numVidModes; i++)
@@ -1642,6 +1643,14 @@ void VID_PrepareModeList(void)
 	INT32 i;
 
 	firstEntry = 0;
+
+#ifdef HWRENDER
+	if (rendermode == render_opengl)
+		modeList = SDL_ListModes(NULL, SDL_OPENGL|SDL_FULLSCREEN);
+	else
+#endif
+	modeList = SDL_ListModes(NULL, surfaceFlagsF|SDL_HWSURFACE); //Alam: At least hardware surface
+
 	if (disable_fullscreen?0:cv_fullscreen.value) // only fullscreen needs preparation
 	{
 		if (-1 != numVidModes)
