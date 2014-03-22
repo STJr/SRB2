@@ -976,11 +976,11 @@
 			buildConfigurationList = C01FCF4A08A954540054247B /* Build configuration list for PBXNativeTarget "Srb2mac" */;
 			buildPhases = (
 				8D1107290486CEB800E47090 /* Resources */,
-				677E4CB30E1765500034519D /* ShellScript */,
+				677E4CB30E1765500034519D /* Get SCM Info */,
 				8D11072C0486CEB800E47090 /* Sources */,
 				8D11072E0486CEB800E47090 /* Frameworks */,
 				002F39FD09D0883400EBEB88 /* Copy Frameworks into .app bundle */,
-				679B708A102B872300AA9E4C /* ShellScript */,
+				679B708A102B872300AA9E4C /* Make DMG */,
 			);
 			buildRules = (
 			);
@@ -1028,7 +1028,7 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		677E4CB30E1765500034519D /* ShellScript */ = {
+		677E4CB30E1765500034519D /* Get SCM Info */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			comments = "update the time and date stamps in src/comptime.c";
@@ -1036,13 +1036,14 @@
 			);
 			inputPaths = (
 			);
+			name = "Get SCM Info";
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "PATH=\"/usr/local/bin:$PATH\" $SRCROOT/../../../comptime.sh $SRCROOT/../../";
 		};
-		679B708A102B872300AA9E4C /* ShellScript */ = {
+		679B708A102B872300AA9E4C /* Make DMG */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			comments = "make DMG file for Release builds";
@@ -1051,13 +1052,14 @@
 			inputPaths = (
 				$BUILT_PRODUCTS_DIR/$WRAPPER_NAME,
 			);
+			name = "Make DMG";
 			outputPaths = (
 				$BUILT_PRODUCTS_DIR/$TARGET_NAME.nodata.dmg,
 				$BUILT_PRODUCTS_DIR/$TARGET_NAME.dmg,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -ex\n\n[ \"$ACTION\" = build ] || exit 0\n[ \"$CURRENT_VARIANT\" = \"normal\" ] || exit 0\n[ \"$BUILD_STYLE\" = \"Release\" ] || exit 0\n\ndir=\"$TEMP_FILES_DIR/$TARGET_NAME.disk\"\ndmg=\"$BUILT_PRODUCTS_DIR/$TARGET_NAME.dmg\"\ndmg_nodata=\"$BUILT_PRODUCTS_DIR/$TARGET_NAME.nodata.dmg\"\n\nrm -rf -- \"$dir\"\nmkdir \"$dir\"\ncp -R \"$BUILT_PRODUCTS_DIR/$WRAPPER_NAME\" \"$dir\"\nrm -f -- \"$dmg\"\nhdiutil create -ov -fs HFS+ -srcfolder \"$dir\" -volname \"$TARGET_NAME\" \"$dmg\"\nhdiutil internet-enable -yes \"$dmg\"\ncd \"$dir/$WRAPPER_NAME/Contents/Resources\"\nrm -f -- *.wad\nrm -f -- *.dta\nrm -f -- *.plr\nrm -f -- *.wpn\ncd \"$OLDPWD\"\nrm -f -- \"$dmg_nodata\"\nhdiutil create -ov -fs HFS+ -srcfolder \"$dir\" -volname \"$TARGET_NAME Lite\" \"$dmg_nodata\"\nhdiutil internet-enable -yes \"$dmg_nodata\"\nrm -rf -- \"$dir\"";
+			shellScript = "set -ex\n\n[ \"$ACTION\" = build ] || exit 0\n[ \"$CURRENT_VARIANT\" = \"normal\" ] || exit 0\n[ \"$BUILD_STYLE\" = \"Release\" ] || exit 0\n\ndir=\"$TEMP_FILES_DIR/$TARGET_NAME.disk\"\ndmg=\"$BUILT_PRODUCTS_DIR/$TARGET_NAME.dmg\"\ndmg_nodata=\"$BUILT_PRODUCTS_DIR/$TARGET_NAME.nodata.dmg\"\n\nrm -rf -- \"$dir\"\nmkdir \"$dir\"\ncp -R \"$BUILT_PRODUCTS_DIR/$WRAPPER_NAME\" \"$dir\"\nrm -f -- \"$dmg\"\nhdiutil create -ov -fs HFS+ -srcfolder \"$dir\" -volname \"$TARGET_NAME\" \"$dmg\"\nhdiutil internet-enable -yes \"$dmg\"\ncd \"$dir/$WRAPPER_NAME/Contents/Resources\"\nrm -f -- *.wad\nrm -f -- *.dta\nrm -f -- *.plr\nrm -f -- *.wpn\nrm -f -- *.srb2\ncd \"$OLDPWD\"\nrm -f -- \"$dmg_nodata\"\nhdiutil create -ov -fs HFS+ -srcfolder \"$dir\" -volname \"$TARGET_NAME Lite\" \"$dmg_nodata\"\nhdiutil internet-enable -yes \"$dmg_nodata\"\nrm -rf -- \"$dir\"";
 		};
 /* End PBXShellScriptBuildPhase section */
 
