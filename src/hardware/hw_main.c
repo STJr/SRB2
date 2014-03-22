@@ -4610,6 +4610,15 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 
 	const boolean skybox = (skyboxmo[0] && cv_skybox.value); // True if there's a skybox object and skyboxes are on
 
+	FRGBAFloat ClearColor;
+
+	ClearColor.red = 0.0f;
+	ClearColor.green = 0.0f;
+	ClearColor.blue = 0.0f;
+	ClearColor.alpha = 1.0f;
+
+	HWD.pfnClearBuffer(true, false, &ClearColor); // Clear the Color Buffer, stops HOMs. Also seems to fix the skybox issue on Intel GPUs.
+
 	if (skybox && drawsky) // If there's a skybox and we should be drawing the sky, draw the skybox
 		HWR_RenderSkyboxView(viewnumber, player); // This is drawn before everything else so it is placed behind
 
@@ -4685,7 +4694,7 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 	gr_fovlud = (float)(1.0l/tan((double)(fpov*M_PIl/360l)));
 
 	//------------------------------------------------------------------------
-	HWR_ClearView();
+	HWR_ClearView(); // Clears the depth buffer and resets the view I believe
 
 if (0)
 { // I don't think this is ever used.
