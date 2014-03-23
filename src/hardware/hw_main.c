@@ -4592,8 +4592,6 @@ if (0)
 	if (cv_grfog.value)
 		HWD.pfnSetSpecialState(HWD_SET_FOG_MODE, 0);
 
-	HWR_DoPostProcessor(player);
-
 	// Check for new console commands.
 	NetUpdate();
 
@@ -4611,6 +4609,15 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 	FTransform stransform;
 
 	const boolean skybox = (skyboxmo[0] && cv_skybox.value); // True if there's a skybox object and skyboxes are on
+
+	FRGBAFloat ClearColor;
+
+	ClearColor.red = 0.0f;
+	ClearColor.green = 0.0f;
+	ClearColor.blue = 0.0f;
+	ClearColor.alpha = 1.0f;
+
+	HWD.pfnClearBuffer(true, false, &ClearColor); // Clear the Color Buffer, stops HOMs. Also seems to fix the skybox issue on Intel GPUs.
 
 	if (skybox && drawsky) // If there's a skybox and we should be drawing the sky, draw the skybox
 		HWR_RenderSkyboxView(viewnumber, player); // This is drawn before everything else so it is placed behind
@@ -4687,7 +4694,7 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 	gr_fovlud = (float)(1.0l/tan((double)(fpov*M_PIl/360l)));
 
 	//------------------------------------------------------------------------
-	HWR_ClearView();
+	HWR_ClearView(); // Clears the depth buffer and resets the view I believe
 
 if (0)
 { // I don't think this is ever used.
@@ -5224,11 +5231,19 @@ void HWR_DoPostProcessor(player_t *player)
 		FOutVector      v[4];
 		FSurfaceInfo Surf;
 
-		v[0].x = v[2].y = v[3].x = v[3].y = -1.0f;
-		v[0].y = v[1].x = v[1].y = v[2].x = 1.0f;
-		v[0].z = v[1].z = v[2].z = v[3].z = 1.0f;
+		v[0].x = v[2].y = v[3].x = v[3].y = -4.0f;
+		v[0].y = v[1].x = v[1].y = v[2].x = 4.0f;
+		v[0].z = v[1].z = v[2].z = v[3].z = 4.0f; // 4.0 because of the same reason as with the sky, just after the screen is cleared so near clipping plane is 3.99
 
-		Surf.FlatColor.s.red = Surf.FlatColor.s.green = Surf.FlatColor.s.blue = 0xff;
+		// This won't change if the flash palettes are changed unfortunately, but it works for its purpose
+		if (player->flashpal == PAL_NUKE)
+		{
+			Surf.FlatColor.s.red = 0xff;
+			Surf.FlatColor.s.green = Surf.FlatColor.s.blue = 0x7F; // The nuke palette is kind of pink-ish
+		}
+		else
+			Surf.FlatColor.s.red = Surf.FlatColor.s.green = Surf.FlatColor.s.blue = 0xff;
+
 		Surf.FlatColor.s.alpha = 0xc0; // match software mode
 
 		HWD.pfnDrawPolygon(&Surf, v, 4, PF_Modulated|PF_Additive|PF_NoTexture|PF_NoDepthTest|PF_Clip|PF_NoZClip);
