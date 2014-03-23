@@ -7101,6 +7101,7 @@ static const char *const MOBJFLAG_LIST[] = {
 	"STICKY",
 	"NIGHTSITEM",
 	"NOCLIPTHING",
+	"GRENADEBOUNCE",
 	"RUNSPAWNFUNC",
 	NULL
 };
@@ -7648,6 +7649,9 @@ struct {
 	{"BT_TOSSFLAG",BT_TOSSFLAG},
 	{"BT_JUMP",BT_JUMP},
 	{"BT_FIRENORMAL",BT_FIRENORMAL}, // Fire a normal ring no matter what
+	{"BT_CUSTOM1",BT_CUSTOM1}, // Lua customizable
+	{"BT_CUSTOM2",BT_CUSTOM2}, // Lua customizable
+	{"BT_CUSTOM3",BT_CUSTOM3}, // Lua customizable
 
 	// cvflags_t
 	{"CV_SAVE",CV_SAVE},

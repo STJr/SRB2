@@ -2278,8 +2278,12 @@ void I_Quit(void)
 	G_SaveGameData(); // Tails 12-08-2002
 	//added:16-02-98: when recording a demo, should exit using 'q' key,
 	//        but sometimes we forget and use 'F10'.. so save here too.
-	if (demorecording || metalrecording)
+
+	if (demorecording)
 		G_CheckDemoStatus();
+	if (metalrecording)
+		G_StopMetalRecording();
+
 	D_QuitNetGame();
 	I_ShutdownMusic();
 	I_ShutdownSound();
@@ -2431,8 +2435,10 @@ void I_Error(const char *error, ...)
 	G_SaveGameData(); // Tails 12-08-2002
 
 	// Shutdown. Here might be other errors.
-	if (demorecording || metalrecording)
+	if (demorecording)
 		G_CheckDemoStatus();
+	if (metalrecording)
+		G_StopMetalRecording();
 
 	D_QuitNetGame();
 	I_ShutdownMusic();

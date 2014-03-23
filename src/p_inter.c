@@ -1861,7 +1861,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source)
 	if (target->player && !target->player->spectator)
 	{
 		if (metalrecording) // Ack! Metal Sonic shouldn't die! Cut the tape, end recording!
-			G_CheckDemoStatus();
+			G_StopMetalRecording();
 #ifdef CHAOSISNOTDEADYET
 		if (gametype == GT_CHAOS)
 			target->player->score /= 2; // Halve the player's score in Chaos Mode

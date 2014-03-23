@@ -231,14 +231,17 @@ boolean demorecording;
 boolean demoplayback;
 boolean titledemo; // Title Screen demo can be cancelled by any key
 static UINT8 *demobuffer = NULL;
-static UINT8 *metalbuffer = NULL;
-static UINT8 *demo_p, *metal_p, *demotime_p;
+static UINT8 *demo_p, *demotime_p;
 static UINT8 *demoend;
 static UINT8 demoflags;
 boolean singledemo; // quit after playing a demo from cmdline
+boolean demo_start; // don't start playing demo right away
+
 boolean metalrecording; // recording as metal sonic
 mobj_t *metalplayback;
-boolean demo_start; // don't start playing demo right away
+static UINT8 *metalbuffer = NULL;
+static UINT8 *metal_p;
+boolean metal_start;
 
 // extra data stuff (events registered this frame while recording)
 static struct {
@@ -1046,8 +1049,16 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	if (PLAYER1INPUTDOWN(gc_tossflag))
 		cmd->buttons |= BT_TOSSFLAG;
 
+	// Lua scriptable buttons
+	if (PLAYER1INPUTDOWN(gc_custom1))
+		cmd->buttons |= BT_CUSTOM1;
+	if (PLAYER1INPUTDOWN(gc_custom2))
+		cmd->buttons |= BT_CUSTOM2;
+	if (PLAYER1INPUTDOWN(gc_custom3))
+		cmd->buttons |= BT_CUSTOM3;
+
 	// use with any button/key
-	if (PLAYER1INPUTDOWN(gc_use) && !(player->pflags & PF_MACESPIN))
+	if (PLAYER1INPUTDOWN(gc_use))
 		cmd->buttons |= BT_USE;
 
 	// Camera Controls
@@ -1314,6 +1325,14 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 
 	if (PLAYER2INPUTDOWN(gc_tossflag))
 		cmd->buttons |= BT_TOSSFLAG;
+
+	// Lua scriptable buttons
+	if (PLAYER2INPUTDOWN(gc_custom1))
+		cmd->buttons |= BT_CUSTOM1;
+	if (PLAYER2INPUTDOWN(gc_custom2))
+		cmd->buttons |= BT_CUSTOM2;
+	if (PLAYER2INPUTDOWN(gc_custom3))
+		cmd->buttons |= BT_CUSTOM3;
 
 	// use with any button/key
 	if (PLAYER2INPUTDOWN(gc_use))
@@ -2645,8 +2664,10 @@ static void G_DoCompleted(void)
 
 	gameaction = ga_nothing;
 
-	if (metalrecording || metalplayback)
-		G_CheckDemoStatus();
+	if (metalplayback)
+		G_StopMetalDemo();
+	if (metalrecording)
+		G_StopMetalRecording();
 
 	for (i = 0; i < MAXPLAYERS; i++)
 		if (playeringame[i])
@@ -4200,7 +4221,7 @@ void G_ReadMetalTic(mobj_t *metal)
 	UINT16 speed;
 	UINT8 statetype;
 
-	if (!metal_p || !demo_start)
+	if (!metal_p || !metal_start)
 		return;
 	ziptic = READUINT8(metal_p);
 
@@ -4289,7 +4310,7 @@ void G_ReadMetalTic(mobj_t *metal)
 	if (*metal_p == DEMOMARKER)
 	{
 		// end of demo data stream
-		G_CheckDemoStatus();
+		G_StopMetalDemo();
 		return;
 	}
 }
@@ -4396,7 +4417,7 @@ void G_WriteMetalTic(mobj_t *metal)
 	// latest demos with mouse aiming byte in ticcmd
 	if (demo_p >= demoend - 32)
 	{
-		G_CheckDemoStatus(); // no more space
+		G_StopMetalRecording(); // no more space
 		return;
 	}
 }
@@ -4871,6 +4892,7 @@ void G_DoPlayDemo(char *defdemoname)
 
 	// didn't start recording right away.
 	demo_start = false;
+	metal_start = false;
 
 #ifdef HAVE_BLUA
 	LUAh_MapChange();
@@ -4916,6 +4938,7 @@ void G_DoPlayDemo(char *defdemoname)
 	players[0].jumpfactor = jumpfactor;
 
 	demo_start = true;
+	metal_start = true;
 }
 
 void G_AddGhost(char *defdemoname)
@@ -5168,6 +5191,7 @@ void G_DoPlayMetal(void)
 	if (!mo)
 	{
 		CONS_Alert(CONS_ERROR, M_GetText("Failed to find bot entity.\n"));
+		Z_Free(metalbuffer);
 		return;
 	}
 
@@ -5215,18 +5239,46 @@ void G_DoneLevelLoad(void)
 ===================
 */
 
+// Stops metal sonic's demo. Separate from other functions because metal + replays can coexist
+void G_StopMetalDemo(void)
+{
+
+	// Metal Sonic finishing doesn't end the game, dammit.
+	Z_Free(metalbuffer);
+	metalbuffer = NULL;
+	metalplayback = NULL;
+	metal_p = NULL;
+}
+
+// Stops metal sonic recording.
+ATTRNORETURN void FUNCNORETURN G_StopMetalRecording(void)
+{
+	boolean saved = false;
+	if (demo_p)
+	{
+		UINT8 *p = demobuffer+16; // checksum position
+#ifdef NOMD5
+		UINT8 i;
+		WRITEUINT8(demo_p, DEMOMARKER); // add the demo end marker
+		for (i = 0; i < 16; i++, p++)
+			*p = P_Random(); // This MD5 was chosen by fair dice roll and most likely < 50% correct.
+#else
+		WRITEUINT8(demo_p, DEMOMARKER); // add the demo end marker
+		md5_buffer((char *)p+16, demo_p - (p+16), (void *)p); // make a checksum of everything after the checksum in the file.
+#endif
+		saved = FIL_WriteFile(va("%sMS.LMP", G_BuildMapName(gamemap)), demobuffer, demo_p - demobuffer); // finally output the file.
+	}
+	free(demobuffer);
+	metalrecording = false;
+	if (saved)
+		I_Error("Saved to %sMS.LMP", G_BuildMapName(gamemap));
+	I_Error("Failed to save demo!");
+}
+
 // reset engine variable set for the demos
 // called from stopdemo command, map command, and g_checkdemoStatus.
 void G_StopDemo(void)
 {
-	if (metalplayback)
-	{ // Metal Sonic finishing doesn't end the game, dammit.
-		Z_Free(metalbuffer);
-		metalbuffer = NULL;
-		metalplayback = NULL;
-		if (!demoplayback)
-			return;
-	}
 	Z_Free(demobuffer);
 	demobuffer = NULL;
 	demoplayback = false;
@@ -5250,31 +5302,7 @@ boolean G_CheckDemoStatus(void)
 	if(ghosts) // ... ... ...
 		ghosts = NULL; // :)
 
-	if (metalrecording)
-	{
-		saved = false;
-		if (demo_p)
-		{
-			UINT8 *p = demobuffer+16; // checksum position
-#ifdef NOMD5
-			UINT8 i;
-			WRITEUINT8(demo_p, DEMOMARKER); // add the demo end marker
-			for (i = 0; i < 16; i++, p++)
-				*p = P_Random(); // This MD5 was chosen by fair dice roll and most likely < 50% correct.
-#else
-			WRITEUINT8(demo_p, DEMOMARKER); // add the demo end marker
-			md5_buffer((char *)p+16, demo_p - (p+16), (void *)p); // make a checksum of everything after the checksum in the file.
-#endif
-			saved = FIL_WriteFile(va("%sMS.LMP", G_BuildMapName(gamemap)), demobuffer, demo_p - demobuffer); // finally output the file.
-		}
-		free(demobuffer);
-		metalrecording = false;
-		if (saved)
-			I_Error("Saved to %sMS.LMP", G_BuildMapName(gamemap));
-		else
-			I_Error("Failed to save demo!");
-		return true;
-	}
+	// DO NOT end metal sonic demos here
 
 	if (timingdemo)
 	{
@@ -5332,12 +5360,6 @@ boolean G_CheckDemoStatus(void)
 				CONS_Alert(CONS_WARNING, M_GetText("Demo %s not saved\n"), demoname);
 		}
 		return true;
-	}
-
-	if (metalplayback)
-	{
-		G_StopDemo();
-		return false;
 	}
 
 	return false;

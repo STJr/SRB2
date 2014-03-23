@@ -195,6 +195,15 @@ static int patch_set(lua_State *L)
 // lib_draw
 //
 
+static int libd_patchExists(lua_State *L)
+{
+	if (!hud_running)
+		return luaL_error(L, "HUD rendering code should not be called outside of rendering hooks!");
+
+	lua_pushboolean(L, W_CheckNumForName(luaL_checkstring(L, 1)) != LUMPERROR);
+	return 1;
+}
+
 static int libd_cachePatch(lua_State *L)
 {
 	if (!hud_running)
@@ -342,6 +351,7 @@ static int libd_stringWidth(lua_State *L)
 }
 
 static luaL_Reg lib_draw[] = {
+	{"patchExists", libd_patchExists},
 	{"cachePatch", libd_cachePatch},
 	{"draw", libd_draw},
 	{"drawScaled", libd_drawScaled},

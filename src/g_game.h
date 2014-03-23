@@ -37,11 +37,13 @@ extern boolean playeringame[MAXPLAYERS];
 
 // demoplaying back and demo recording
 extern boolean demoplayback, titledemo, demorecording, timingdemo;
-extern mobj_t *metalplayback;
 
 // Quit after playing a demo from cmdline.
 extern boolean singledemo;
 extern boolean demo_start;
+
+extern mobj_t *metalplayback;
+extern boolean metal_start;
 
 // gametic at level start
 extern tic_t levelstarttic;
@@ -150,6 +152,8 @@ void G_TimeDemo(const char *name);
 void G_AddGhost(char *defdemoname);
 void G_DoPlayMetal(void);
 void G_DoneLevelLoad(void);
+void G_StopMetalDemo(void);
+ATTRNORETURN void FUNCNORETURN G_StopMetalRecording(void);
 void G_StopDemo(void);
 boolean G_CheckDemoStatus(void);
 

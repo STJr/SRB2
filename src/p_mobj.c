@@ -1669,16 +1669,21 @@ static boolean P_ZMovement(mobj_t *mo)
 				// another to prevent them from turning into hockey pucks.
 				// I'm sorry in advance. -SH
 				// PS: Oh, and Brak's napalm bombs too, now.
-				if (mo->type == MT_THROWNGRENADE || mo->type == MT_CYBRAKDEMON_NAPALM_BOMB_LARGE)
+				if (mo->flags & MF_GRENADEBOUNCE)
 				{
-					if (mo->momz <= 0)
+					// Going down? (Or up in reverse gravity?)
+					if (mo->momz*P_MobjFlip(mo) < 0)
 					{
-						if (mo->momz >= -FixedMul(FRACUNIT, mo->scale))
+						// If going slower than a fracunit, just stop.
+						if (abs(mo->momz) < FixedMul(FRACUNIT, mo->scale))
 						{
 							mo->momx = mo->momy = mo->momz = 0;
-							if (mo->type == MT_CYBRAKDEMON_NAPALM_BOMB_LARGE)
-								P_SetMobjState(mo, mo->info->deathstate);
+
+							// Napalm hack
+							if (mo->type == MT_CYBRAKDEMON_NAPALM_BOMB_LARGE && mo->fuse)
+								mo->fuse = 1;
 						}
+						// Otherwise bounce up at half speed.
 						else
 							mo->momz = -FixedMul(mo->momz, FRACUNIT/2);
 						S_StartSound(mo, mo->info->activesound);
@@ -4595,7 +4600,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 		// This is below threshold because we don't want to bob while zipping around
 
 		// Ohh you're in for it now..
-		if (mobj->flags2 & MF2_FRET && mobj->health <= 3)
+		if (mobj->flags2 & MF2_FRET && mobj->health <= mobj->info->damage)
 			mobj->fuse = 0;
 
 		// reactiontime is used for delays.
@@ -4657,11 +4662,13 @@ static void P_Boss9Thinker(mobj_t *mobj)
 
 			case 1: {
 				// Okay, we're up? Good, time to gather energy...
-				if (mobj->health > mobj->info->damage) { // No more bubble if we're broken (pinch phase)
+				if (mobj->health > mobj->info->damage)
+				{ // No more bubble if we're broken (pinch phase)
 					mobj_t *shield = P_SpawnMobj(mobj->x, mobj->y, mobj->z, MT_MSSHIELD_FRONT);
 					P_SetTarget(&mobj->tracer, shield);
 					P_SetTarget(&shield->target, mobj);
-				} else
+				}
+				else
 					P_LinedefExecute(LE_PINCHPHASE, mobj, NULL);
 				mobj->fuse = 4*TICRATE;
 				mobj->flags |= MF_PAIN;
@@ -4673,8 +4680,12 @@ static void P_Boss9Thinker(mobj_t *mobj)
 
 			case 2:
 				// We're all charged and ready now! Unleash the fury!!
-				P_RemoveMobj(mobj->tracer);
-				P_SetTarget(&mobj->tracer, mobj->hnext);
+				if (mobj->health > mobj->info->damage)
+				{
+					mobj_t *removemobj = mobj->tracer;
+					P_SetTarget(&mobj->tracer, mobj->hnext);
+					P_RemoveMobj(removemobj);
+				}
 				if (mobj->health <= mobj->info->damage) {
 					// Attack 1: Pinball dash!
 					if (mobj->health == 1)
@@ -6483,6 +6494,7 @@ void P_MobjThinker(mobj_t *mobj)
 			{
 				// gargoyle and snowman handled in P_PushableThinker, not here
 				case MT_THROWNGRENADE:
+				case MT_CYBRAKDEMON_NAPALM_BOMB_LARGE:
 					P_SetMobjState(mobj, mobj->info->deathstate);
 					break;
 				case MT_BLUEFLAG:
@@ -7231,6 +7243,8 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 #endif
 	switch (mobj->type)
 	{
+		case MT_CYBRAKDEMON_NAPALM_BOMB_LARGE:
+			mobj->fuse = mobj->info->mass;
 		case MT_BLACKEGGMAN:
 			{
 				mobj_t *spawn = P_SpawnMobj(mobj->x, mobj->z, mobj->z+mobj->height-16*FRACUNIT, MT_BLACKEGGMAN_HELPER);
@@ -9445,7 +9459,7 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 boolean P_CheckMissileSpawn(mobj_t *th)
 {
 	// move a little forward so an angle can be computed if it immediately explodes
-	if (th->type != MT_THROWNGRENADE) // hack: bad! should be a flag.
+	if (th->flags & MF_GRENADEBOUNCE) // hack: bad! should be a flag.
 	{
 		th->x += th->momx>>1;
 		th->y += th->momy>>1;

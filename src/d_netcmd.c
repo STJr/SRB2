@@ -1575,14 +1575,17 @@ static void Command_Playdemo_f(void)
 		return;
 	}
 
-	// disconnect from server here?
-	if (demoplayback || metalplayback)
-		G_StopDemo();
 	if (netgame)
 	{
 		CONS_Printf(M_GetText("You can't play a demo while in a netgame.\n"));
 		return;
 	}
+
+	// disconnect from server here?
+	if (demoplayback)
+		G_StopDemo();
+	if (metalplayback)
+		G_StopMetalDemo();
 
 	// open the demo file
 	strcpy(name, COM_Argv(1));
@@ -1603,14 +1606,17 @@ static void Command_Timedemo_f(void)
 		return;
 	}
 
-	// disconnect from server here?
-	if (demoplayback || metalplayback)
-		G_StopDemo();
 	if (netgame)
 	{
 		CONS_Printf(M_GetText("You can't play a demo while in a netgame.\n"));
 		return;
 	}
+
+	// disconnect from server here?
+	if (demoplayback)
+		G_StopDemo();
+	if (metalplayback)
+		G_StopMetalDemo();
 
 	// open the demo file
 	strcpy (name, COM_Argv(1));
@@ -1970,6 +1976,7 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	if (demorecording) // Okay, level loaded, character spawned and skinned,
 		G_BeginRecording(); // I AM NOW READY TO RECORD.
 	demo_start = true;
+	metal_start = true;
 }
 
 static void Command_Pause(void)

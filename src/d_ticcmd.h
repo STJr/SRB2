@@ -36,8 +36,11 @@ typedef enum
 	BT_CAMRIGHT   = 1<<9, // turn camera right
 	BT_TOSSFLAG   = 1<<10,
 	BT_JUMP       = 1<<11,
-	BT_FIRENORMAL = 1<<12 // Fire a normal ring no matter what
-	// free: up to and including 1<<15
+	BT_FIRENORMAL = 1<<12, // Fire a normal ring no matter what
+
+	BT_CUSTOM1    = 1<<13,
+	BT_CUSTOM2    = 1<<14,
+	BT_CUSTOM3    = 1<<15,
 } buttoncode_t;
 
 // The data sampled per tick (single player)

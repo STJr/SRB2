@@ -759,7 +759,10 @@ static inline void resynch_write_ctf(resynchend_pak *rst)
 			// Should be held by a player
 			for (j = 0; j < MAXPLAYERS; ++j)
 			{
-				if (!playeringame[j] || players[j].gotflag != i)
+				// GF_REDFLAG is 1, GF_BLUEFLAG is 2
+				// redflag handling is i=0, blueflag is i=1
+				// so check for gotflag == (i+1)
+				if (!playeringame[j] || players[j].gotflag != (i+1))
 					continue;
 				rst->flagplayer[i] = (SINT8)j;
 				break;
@@ -2229,7 +2232,11 @@ static void CL_RemovePlayer(INT32 playernum)
 
 void CL_Reset(void)
 {
-	if (demorecording || metalrecording)
+	if (metalrecording)
+		G_StopMetalRecording();
+	if (metalplayback)
+		G_StopMetalDemo();
+	if (demorecording)
 		G_CheckDemoStatus();
 
 	// reset client/server code
@@ -2954,8 +2961,10 @@ boolean Playing(void)
 
 boolean SV_SpawnServer(void)
 {
-	if (demoplayback || metalplayback)
+	if (demoplayback)
 		G_StopDemo(); // reset engine parameter
+	if (metalplayback)
+		G_StopMetalDemo();
 
 	if (!serverrunning)
 	{

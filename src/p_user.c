@@ -3178,12 +3178,26 @@ static void P_DoSuperStuff(player_t *player)
 			P_SetPlayerMobjState(player->mo, S_PLAY_STND);
 			P_RestoreMusic(player);
 			P_SpawnShieldOrb(player);
+
+			// Restore color
+			if (player->powers[pw_shield] & SH_FIREFLOWER)
+			{
+				player->mo->color = SKINCOLOR_WHITE;
+				G_GhostAddColor(GHC_FIREFLOWER);
+			}
+			else
+			{
+				player->mo->color = player->skincolor;
+				G_GhostAddColor(GHC_NORMAL);
+			}
+
 			if (gametype != GT_COOP)
 			{
 				HU_SetCEchoFlags(0);
 				HU_SetCEchoDuration(5);
 				HU_DoCEcho(va("%s\\is no longer super.\\\\\\\\", player_names[player-players]));
 			}
+			return;
 		}
 
 		// Deplete one ring every second while super
@@ -3200,7 +3214,7 @@ static void P_DoSuperStuff(player_t *player)
 		G_GhostAddColor(GHC_SUPER);
 
 		// Ran out of rings while super!
-		if ((player->powers[pw_super]) && (player->health <= 1 || player->exiting))
+		if (player->powers[pw_super] && (player->health <= 1 || player->exiting))
 		{
 			player->powers[pw_emeralds] = 0; // lost the power stones
 			P_SpawnGhostMobj(player->mo);
@@ -9194,7 +9208,7 @@ void P_PlayerAfterThink(player_t *player)
 			}
 		}
 	}
-	else if ((player->pflags & PF_MACESPIN) && player->mo->tracer)
+	else if ((player->pflags & PF_MACESPIN) && player->mo->tracer && player->mo->tracer->target)
 	{
 		player->mo->height = P_GetPlayerSpinHeight(player);
 		// tracer is what you're hanging onto....
@@ -9214,11 +9228,6 @@ void P_PlayerAfterThink(player_t *player)
 		if (!(player->mo->tracer->target->flags & MF_SLIDEME) // Noclimb on chain parameters gives this
 		&& !(twodlevel || player->mo->flags2 & MF2_TWOD)) // why on earth would you want to turn them in 2D mode?
 		{
-			if (cmd->buttons & BT_USE) // do we actually still want this?
-			{
-				player->mo->tracer->target->health += 50;
-				player->mo->angle += 50<<ANGLETOFINESHIFT; // 2048 --> ANGLE_MAX
-			}
 			player->mo->tracer->target->health += cmd->sidemove;
 			player->mo->angle += cmd->sidemove<<ANGLETOFINESHIFT; // 2048 --> ANGLE_MAX
 

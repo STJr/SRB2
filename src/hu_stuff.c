@@ -1714,19 +1714,19 @@ static void HU_DrawCoopOverlay(void)
 #endif
 
 	if (emeralds & EMERALD1)
-		V_DrawScaledPatch((BASEVIDWIDTH/2)-8   , (BASEVIDHEIGHT/3)-32, V_TRANSLUCENT, emeraldpics[0]);
+		V_DrawScaledPatch((BASEVIDWIDTH/2)-8   , (BASEVIDHEIGHT/3)-32, 0, emeraldpics[0]);
 	if (emeralds & EMERALD2)
-		V_DrawScaledPatch((BASEVIDWIDTH/2)-8+24, (BASEVIDHEIGHT/3)-16, V_TRANSLUCENT, emeraldpics[1]);
+		V_DrawScaledPatch((BASEVIDWIDTH/2)-8+24, (BASEVIDHEIGHT/3)-16, 0, emeraldpics[1]);
 	if (emeralds & EMERALD3)
-		V_DrawScaledPatch((BASEVIDWIDTH/2)-8+24, (BASEVIDHEIGHT/3)+16, V_TRANSLUCENT, emeraldpics[2]);
+		V_DrawScaledPatch((BASEVIDWIDTH/2)-8+24, (BASEVIDHEIGHT/3)+16, 0, emeraldpics[2]);
 	if (emeralds & EMERALD4)
-		V_DrawScaledPatch((BASEVIDWIDTH/2)-8   , (BASEVIDHEIGHT/3)+32, V_TRANSLUCENT, emeraldpics[3]);
+		V_DrawScaledPatch((BASEVIDWIDTH/2)-8   , (BASEVIDHEIGHT/3)+32, 0, emeraldpics[3]);
 	if (emeralds & EMERALD5)
-		V_DrawScaledPatch((BASEVIDWIDTH/2)-8-24, (BASEVIDHEIGHT/3)+16, V_TRANSLUCENT, emeraldpics[4]);
+		V_DrawScaledPatch((BASEVIDWIDTH/2)-8-24, (BASEVIDHEIGHT/3)+16, 0, emeraldpics[4]);
 	if (emeralds & EMERALD6)
-		V_DrawScaledPatch((BASEVIDWIDTH/2)-8-24, (BASEVIDHEIGHT/3)-16, V_TRANSLUCENT, emeraldpics[5]);
+		V_DrawScaledPatch((BASEVIDWIDTH/2)-8-24, (BASEVIDHEIGHT/3)-16, 0, emeraldpics[5]);
 	if (emeralds & EMERALD7)
-		V_DrawScaledPatch((BASEVIDWIDTH/2)-8   , (BASEVIDHEIGHT/3)   , V_TRANSLUCENT, emeraldpics[6]);
+		V_DrawScaledPatch((BASEVIDWIDTH/2)-8   , (BASEVIDHEIGHT/3)   , 0, emeraldpics[6]);
 }
 
 static void HU_DrawNetplayCoopOverlay(void)
@@ -1741,7 +1741,7 @@ static void HU_DrawNetplayCoopOverlay(void)
 	for (i = 0; i < 7; ++i)
 	{
 		if (emeralds & (1 << i))
-			V_DrawScaledPatch(20 + (i * 20), 6, V_TRANSLUCENT, emeraldpics[i]);
+			V_DrawScaledPatch(20 + (i * 20), 6, 0, emeraldpics[i]);
 	}
 }
 

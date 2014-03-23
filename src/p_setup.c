@@ -2315,7 +2315,7 @@ boolean P_SetupLevel(boolean skipprecip)
 		cv_debug = botskin = 0;
 
 	if (metalplayback)
-		G_StopDemo();
+		G_StopMetalDemo();
 
 	// Clear CECHO messages
 	HU_ClearCEcho();

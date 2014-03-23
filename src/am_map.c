@@ -25,36 +25,64 @@
 #endif
 
 // For use if I do walls with outsides/insides
-static const UINT8 GREENS     = (10*16);
-static const UINT8 GREENRANGE = 16;
-static const UINT8 GRAYS      = (0*16);
-static const UINT8 GRAYSRANGE = 16;
-static const UINT8 DBLACK     = 31;
-static const UINT8 DWHITE     = 0;
+static const UINT8 REDS        = (8*16);
+static const UINT8 REDRANGE    = 16;
+static const UINT8 GRAYS       = (1*16);
+static const UINT8 GRAYSRANGE  = 16;
+static const UINT8 BROWNS      = (3*16);
+static const UINT8 BROWNRANGE  = 16;
+static const UINT8 YELLOWS     = (7*16);
+static const UINT8 YELLOWRANGE = 8;
+static const UINT8 GREENS      = (10*16);
+static const UINT8 GREENRANGE  = 16;
+static const UINT8 DBLACK      = 31;
+static const UINT8 DWHITE      = 0;
+
+static const UINT8 NOCLIMBREDS        = 248;
+static const UINT8 NOCLIMBREDRANGE    = 8;
+static const UINT8 NOCLIMBGRAYS       = 204;
+static const UINT8 NOCLIMBGRAYSRANGE  = 4;
+static const UINT8 NOCLIMBBROWNS      = (2*16);
+static const UINT8 NOCLIMBBROWNRANGE  = 16;
+static const UINT8 NOCLIMBYELLOWS     = (11*16);
+static const UINT8 NOCLIMBYELLOWRANGE = 8;
+
 
 #ifdef _NDS
 #undef BACKGROUND
 #endif
 
 // Automap colors
-#define BACKGROUND       DBLACK
-#define YOURCOLORS       DWHITE
-#define YOURRANGE        0
-#define WALLCOLORS       REDS
-#define WALLRANGE        REDRANGE
-#define TSWALLCOLORS     GRAYS
-#define TSWALLRANGE      GRAYSRANGE
-#define FDWALLCOLORS     BROWNS
-#define FDWALLRANGE      BROWNRANGE
-#define CDWALLCOLORS     YELLOWS
-#define CDWALLRANGE      YELLOWRANGE
-#define THINGCOLORS      GREENS
-#define THINGRANGE       GREENRANGE
-#define SECRETWALLCOLORS WALLCOLORS
-#define SECRETWALLRANGE  WALLRANGE
-#define GRIDCOLORS       (GRAYS + GRAYSRANGE/2)
-#define GRIDRANGE        0
-#define XHAIRCOLORS      GRAYS
+#define BACKGROUND            DBLACK
+#define YOURCOLORS            DWHITE
+#define YOURRANGE             0
+#define WALLCOLORS            (REDS + REDRANGE/2)
+#define WALLRANGE             (REDRANGE/2)
+#define NOCLIMBWALLCOLORS     (NOCLIMBREDS + NOCLIMBREDRANGE/2)
+#define NOCLIMBWALLRANGE      (NOCLIMBREDRANGE/2)
+#define THOKWALLCOLORS        REDS
+#define THOKWALLRANGE         REDRANGE
+#define NOCLIMBTHOKWALLCOLORS NOCLIMBREDS
+#define NOCLIMBTHOKWALLRANGE  NOCLIMBREDRANGE
+#define TSWALLCOLORS          GRAYS
+#define TSWALLRANGE           GRAYSRANGE
+#define NOCLIMBTSWALLCOLORS   NOCLIMBGRAYS
+#define NOCLIMBTSWALLRANGE    NOCLIMBGRAYSRANGE
+#define FDWALLCOLORS          BROWNS
+#define FDWALLRANGE           BROWNRANGE
+#define NOCLIMBFDWALLCOLORS   NOCLIMBBROWNS
+#define NOCLIMBFDWALLRANGE    NOCLIMBBROWNRANGE
+#define CDWALLCOLORS          YELLOWS
+#define CDWALLRANGE           YELLOWRANGE
+#define NOCLIMBCDWALLCOLORS   NOCLIMBYELLOWS
+#define NOCLIMBCDWALLRANGE    NOCLIMBYELLOWRANGE
+#define THINGCOLORS           GREENS
+#define THINGRANGE            GREENRANGE
+#define SECRETWALLCOLORS      WALLCOLORS
+#define SECRETWALLRANGE       WALLRANGE
+#define GRIDCOLORS            (GRAYS + GRAYSRANGE/2)
+#define GRIDRANGE             0
+#define XHAIRCOLORS           GRAYS
 
 // drawing stuff
 #define FB 0
@@ -1009,7 +1037,75 @@ static inline void AM_drawWalls(void)
 		l.b.x = lines[i].v2->x;
 		l.b.y = lines[i].v2->y;
 
-		AM_drawMline(&l, GRAYS + 3);
+//		AM_drawMline(&l, GRAYS + 3); // Old, everything-is-gray automap
+		if (!lines[i].backsector) // 1-sided
+		{
+			if (lines[i].flags & ML_NOCLIMB)
+			{
+				AM_drawMline(&l, NOCLIMBWALLCOLORS+lightlev);
+			}
+			else
+			{
+				AM_drawMline(&l, WALLCOLORS+lightlev);
+			}
+		}
+		else if (lines[i].backsector->floorheight == lines[i].backsector->ceilingheight // Back is thok barrier
+				 || lines[i].frontsector->floorheight == lines[i].frontsector->ceilingheight) // Front is thok barrier
+		{
+			if (lines[i].backsector->floorheight == lines[i].backsector->ceilingheight
+				&& lines[i].frontsector->floorheight == lines[i].frontsector->ceilingheight) // BOTH are thok barriers
+			{
+				if (lines[i].flags & ML_NOCLIMB)
+				{
+					AM_drawMline(&l, NOCLIMBTSWALLCOLORS+lightlev);
+				}
+				else
+				{
+					AM_drawMline(&l, TSWALLCOLORS+lightlev);
+				}
+			}
+			else
+			{
+				if (lines[i].flags & ML_NOCLIMB)
+				{
+					AM_drawMline(&l, NOCLIMBTHOKWALLCOLORS+lightlev);
+				}
+				else
+				{
+					AM_drawMline(&l, THOKWALLCOLORS+lightlev);
+				}
+			}
+		}
+		else
+		{
+			if (lines[i].flags & ML_NOCLIMB) {
+				if (lines[i].backsector->floorheight
+						!= lines[i].frontsector->floorheight) {
+					AM_drawMline(&l, NOCLIMBFDWALLCOLORS + lightlev); // floor level change
+				}
+				else if (lines[i].backsector->ceilingheight
+						!= lines[i].frontsector->ceilingheight) {
+					AM_drawMline(&l, NOCLIMBCDWALLCOLORS+lightlev); // ceiling level change
+				}
+				else {
+					AM_drawMline(&l, NOCLIMBTSWALLCOLORS+lightlev);
+				}
+			}
+			else
+			{
+				if (lines[i].backsector->floorheight
+						!= lines[i].frontsector->floorheight) {
+					AM_drawMline(&l, FDWALLCOLORS + lightlev); // floor level change
+				}
+				else if (lines[i].backsector->ceilingheight
+						!= lines[i].frontsector->ceilingheight) {
+					AM_drawMline(&l, CDWALLCOLORS+lightlev); // ceiling level change
+				}
+				else {
+					AM_drawMline(&l, TSWALLCOLORS+lightlev);
+				}
+			}
+		}
 	}
 }
 

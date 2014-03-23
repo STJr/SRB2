@@ -129,10 +129,10 @@ boolean Net_GetNetStat(void)
 // -----------------------------------------------------------------
 // Some structs and functions for acknowledgement of packets
 // -----------------------------------------------------------------
-#define MAXACKPACKETS 64 // minimum number of nodes
-#define MAXACKTOSEND 64
-#define URGENTFREESLOTENUM 6
-#define ACKTOSENDTIMEOUT (TICRATE/17)
+#define MAXACKPACKETS 96 // minimum number of nodes
+#define MAXACKTOSEND 96
+#define URGENTFREESLOTENUM 10
+#define ACKTOSENDTIMEOUT (TICRATE/11)
 
 #ifndef NONET
 typedef struct
