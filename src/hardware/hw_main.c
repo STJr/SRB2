@@ -401,6 +401,12 @@ UINT32 HWR_Lighting(INT32 light, UINT32 color, UINT32 fadecolor, boolean fogbloc
 
 	(void)fogblockpoly;
 
+	// Don't go out of bounds
+	if (light < 0)
+		light = 0;
+	else if (light > 255)
+		light = 255;
+
 	realcolor.rgba = color;
 	fogcolor.rgba = fadecolor;
 
@@ -487,6 +493,12 @@ static UINT8 HWR_FogBlockAlpha(INT32 light, UINT32 color, UINT32 fadecolor) // L
 {
 	RGBA_t realcolor, fogcolor, surfcolor;
 	INT32 alpha, fogalpha;
+
+	// Don't go out of bounds
+	if (light < 0)
+		light = 0;
+	else if (light > 255)
+		light = 255;
 
 	realcolor.rgba = color;
 	fogcolor.rgba = fadecolor;
