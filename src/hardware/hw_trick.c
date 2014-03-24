@@ -888,7 +888,7 @@ void HWR_CorrectSWTricks(void)
 					if (sider->bottomtexture == 0)
 					{
 						if (sider->midtexture == 0)
-							sider->bottomtexture = R_TextureNumForName("REDWALL"); // Tails
+							sider->bottomtexture = 0; // Tails // More redwall sky shenanigans
 						else
 							sider->bottomtexture = sider->midtexture;
 					}
@@ -899,7 +899,7 @@ void HWR_CorrectSWTricks(void)
 					if (sidel->bottomtexture == 0)
 					{
 						if (sidel->midtexture == 0)
-							sidel->bottomtexture = R_TextureNumForName("REDWALL"); // Tails
+							sidel->bottomtexture = 0; // Tails // More redwall sky shenanigans
 						else
 							sidel->bottomtexture = sidel->midtexture;
 					}
