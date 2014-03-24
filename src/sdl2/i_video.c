@@ -2016,7 +2016,7 @@ void I_StartupGraphics(void)
 	}
 	if (M_CheckParm("-nomousegrab"))
 		mousegrabok = SDL_FALSE;
-#ifdef _DEBUG
+#if 0 // defined (_DEBUG)
 	else
 	{
 		char videodriver[4] = {'S','D','L',0};
