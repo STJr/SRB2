@@ -1,4 +1,4 @@
-Here it is! SRB2 v2.1.2 source code!
+Here it is! SRB2 v2.1.5 source code!
 
 
 Win32 with Visual C (6SP6+Processor Pack OR 7)
@@ -57,6 +57,10 @@ Dependencies:
 Build instructions:
 
 make -C src LINUX=1
+
+Build instructions (64 bit):
+
+make -C src LINUX64=1
 
 Build instructions to build for Wii Linux/SRB2Wii on a PowerPC system,
 follow cross-compiling instructions for cross-compiling on a x86 system:

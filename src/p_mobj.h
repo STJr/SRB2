@@ -156,9 +156,11 @@ typedef enum
 	// for chase camera, don't be blocked by things (partial clipping)
 	// (need comma at end of this for SOC editor)
 	MF_NOCLIPTHING      = 1<<27,
+	// Missile bounces like a grenade.
+	MF_GRENADEBOUNCE    = 1<<28,
 	// Run the action thinker on spawn.
-	MF_RUNSPAWNFUNC     = 1<<28,
-	// free: to and including 1<<31
+	MF_RUNSPAWNFUNC     = 1<<29,
+	// free: 1<<30 and 1<<31
 } mobjflag_t;
 
 typedef enum

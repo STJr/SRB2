@@ -81,9 +81,8 @@ subsector_t *R_IsPointInSubsector(fixed_t x, fixed_t y);
 // REFRESH - the actual rendering functions.
 //
 
-extern consvar_t cv_showhud;
+extern consvar_t cv_showhud, cv_translucenthud;
 extern consvar_t cv_homremoval;
-extern consvar_t cv_grtranslucenthud;
 extern consvar_t cv_chasecam, cv_chasecam2;
 extern consvar_t cv_flipcam, cv_flipcam2;
 extern consvar_t cv_shadow, cv_shadowoffs;
@@ -100,6 +99,8 @@ void R_SetViewSize(void);
 
 // do it (sometimes explicitly called)
 void R_ExecuteSetViewSize(void);
+
+void R_SkyboxFrame(player_t *player);
 
 void R_SetupFrame(player_t *player, boolean skybox);
 // Called by G_Drawer.

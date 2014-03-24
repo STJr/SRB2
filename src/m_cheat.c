@@ -464,9 +464,9 @@ void Command_Savecheckpoint_f(void)
 // Like M_GetAllEmeralds() but for console devmode junkies.
 void Command_Getallemeralds_f(void)
 {
-	REQUIRE_PANDORA;
 	REQUIRE_SINGLEPLAYER;
 	REQUIRE_NOULTIMATE;
+	REQUIRE_PANDORA;
 
 	emeralds = ((EMERALD7)*2)-1;
 
@@ -475,8 +475,8 @@ void Command_Getallemeralds_f(void)
 
 void Command_Resetemeralds_f(void)
 {
-	REQUIRE_PANDORA;
 	REQUIRE_SINGLEPLAYER;
+	REQUIRE_PANDORA;
 
 	emeralds = 0;
 
@@ -511,10 +511,10 @@ void Command_Devmode_f(void)
 
 void Command_Setrings_f(void)
 {
-	REQUIRE_PANDORA;
 	REQUIRE_INLEVEL;
 	REQUIRE_SINGLEPLAYER;
 	REQUIRE_NOULTIMATE;
+	REQUIRE_PANDORA;
 
 	if (COM_Argc() > 1)
 	{
@@ -530,10 +530,10 @@ void Command_Setrings_f(void)
 
 void Command_Setlives_f(void)
 {
-	REQUIRE_PANDORA;
 	REQUIRE_INLEVEL;
 	REQUIRE_SINGLEPLAYER;
 	REQUIRE_NOULTIMATE;
+	REQUIRE_PANDORA;
 
 	if (COM_Argc() > 1)
 	{
@@ -547,10 +547,10 @@ void Command_Setlives_f(void)
 
 void Command_Setcontinues_f(void)
 {
-	REQUIRE_PANDORA;
 	REQUIRE_INLEVEL;
 	REQUIRE_SINGLEPLAYER;
 	REQUIRE_NOULTIMATE;
+	REQUIRE_PANDORA;
 
 	if (COM_Argc() > 1)
 	{

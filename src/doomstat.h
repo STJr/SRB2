@@ -227,7 +227,7 @@ typedef struct
 	UINT8 cutscenenum;    ///< Cutscene number to use, 0 for none.
 	INT16 countdown;      ///< Countdown until level end?
 	UINT16 palette;       ///< PAL lump to use on this map
-	UINT32 numlaps;       ///< Number of laps in circuit mode, unless overridden.
+	UINT8 numlaps;        ///< Number of laps in circuit mode, unless overridden.
 	SINT8 unlockrequired; ///< Is an unlockable required to play this level? -1 if no.
 	UINT8 levelselect;    ///< Is this map available in the level select? If so, which map list is it available in?
 	SINT8 bonustype;      ///< What type of bonus does this level have? (-1 for null.)

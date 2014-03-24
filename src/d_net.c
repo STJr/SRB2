@@ -129,10 +129,10 @@ boolean Net_GetNetStat(void)
 // -----------------------------------------------------------------
 // Some structs and functions for acknowledgement of packets
 // -----------------------------------------------------------------
-#define MAXACKPACKETS 64 // minimum number of nodes
-#define MAXACKTOSEND 64
-#define URGENTFREESLOTENUM 6
-#define ACKTOSENDTIMEOUT (TICRATE/17)
+#define MAXACKPACKETS 96 // minimum number of nodes
+#define MAXACKTOSEND 96
+#define URGENTFREESLOTENUM 10
+#define ACKTOSENDTIMEOUT (TICRATE/11)
 
 #ifndef NONET
 typedef struct
@@ -784,18 +784,6 @@ static void DebugPrintpacket(const char *header)
 			fprintfstring((char *)&netbuffer->u.serverpak.cmds[netbuffer->u.serverpak.numslots*netbuffer->u.serverpak.numtics],(size_t)(
 				&((UINT8 *)netbuffer)[doomcom->datalength] - (UINT8 *)&netbuffer->u.serverpak.cmds[netbuffer->u.serverpak.numslots*netbuffer->u.serverpak.numtics]));
 			break;
-		case PT_CONSISTENCY:
-			fprintf(debugfile, "    randomseed %d playernum %d hasmo %d\n",
-				netbuffer->u.consistency.randomseed, netbuffer->u.consistency.playernum, netbuffer->u.consistency.hasmo);
-			fprintf(debugfile, "    x %d y %d z %d momx %d momy %d momz %d\n",
-				netbuffer->u.consistency.x, netbuffer->u.consistency.y, netbuffer->u.consistency.z,
-				netbuffer->u.consistency.momx, netbuffer->u.consistency.momy, netbuffer->u.consistency.momz);
-			fprintf(debugfile, "    angle %d health %d eflags %d flags %d flags2 %d\n",
-				netbuffer->u.consistency.angle, netbuffer->u.consistency.health, netbuffer->u.consistency.eflags,
-				netbuffer->u.consistency.flags, netbuffer->u.consistency.flags2);
-			fprintf(debugfile, "    friction %d movefactor %d tics %d statenum %d\n",
-				netbuffer->u.consistency.friction, netbuffer->u.consistency.movefactor,
-				netbuffer->u.consistency.tics, (INT32)netbuffer->u.consistency.statenum);
 		case PT_CLIENTCMD:
 		case PT_CLIENT2CMD:
 		case PT_CLIENTMIS:

@@ -4817,10 +4817,10 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		24*FRACUNIT,    // radius
 		24*FRACUNIT,    // height
 		0,              // display offset
-		100,            // mass
+		20*TICRATE,     // mass
 		48*FRACUNIT,    // damage
 		sfx_s3k5d,      // activesound
-		MF_NOBLOCKMAP|MF_MISSILE|MF_BOUNCE, // flags
+		MF_NOBLOCKMAP|MF_MISSILE|MF_BOUNCE|MF_GRENADEBOUNCE, // flags
 		S_NULL          // raisestate
 	},
 
@@ -11936,7 +11936,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		6*TICRATE,      // mass (<-- Looking for the Grenade Ring's fuse? It's right here!)
 		1,              // damage
 		sfx_s3k5d,      // activesound
-		MF_NOBLOCKMAP|MF_MISSILE|MF_BOUNCE, // flags
+		MF_NOBLOCKMAP|MF_MISSILE|MF_BOUNCE|MF_GRENADEBOUNCE, // flags
 		S_NULL          // raisestate
 	},
 

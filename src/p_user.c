@@ -3178,12 +3178,26 @@ static void P_DoSuperStuff(player_t *player)
 			P_SetPlayerMobjState(player->mo, S_PLAY_STND);
 			P_RestoreMusic(player);
 			P_SpawnShieldOrb(player);
+
+			// Restore color
+			if (player->powers[pw_shield] & SH_FIREFLOWER)
+			{
+				player->mo->color = SKINCOLOR_WHITE;
+				G_GhostAddColor(GHC_FIREFLOWER);
+			}
+			else
+			{
+				player->mo->color = player->skincolor;
+				G_GhostAddColor(GHC_NORMAL);
+			}
+
 			if (gametype != GT_COOP)
 			{
 				HU_SetCEchoFlags(0);
 				HU_SetCEchoDuration(5);
 				HU_DoCEcho(va("%s\\is no longer super.\\\\\\\\", player_names[player-players]));
 			}
+			return;
 		}
 
 		// Deplete one ring every second while super
@@ -3200,7 +3214,7 @@ static void P_DoSuperStuff(player_t *player)
 		G_GhostAddColor(GHC_SUPER);
 
 		// Ran out of rings while super!
-		if ((player->powers[pw_super]) && (player->health <= 1 || player->exiting))
+		if (player->powers[pw_super] && (player->health <= 1 || player->exiting))
 		{
 			player->powers[pw_emeralds] = 0; // lost the power stones
 			P_SpawnGhostMobj(player->mo);
@@ -8113,19 +8127,15 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 					+ ((*rover->topheight - *rover->bottomheight)/2));
 				delta2 = thingtop - (*rover->bottomheight
 					+ ((*rover->topheight - *rover->bottomheight)/2));
-				if (*rover->topheight > tmfloorz && abs(delta1) < abs(delta2))
-				{
+				if (*rover->topheight > myfloorz && abs(delta1) < abs(delta2))
 					myfloorz = *rover->topheight;
-				}
-				if (*rover->bottomheight < tmceilingz && abs(delta1) >= abs(delta2))
-				{
+				if (*rover->bottomheight < myceilingz && abs(delta1) >= abs(delta2))
 					myceilingz = *rover->bottomheight;
-				}
 			}
 		}
 
 #ifdef POLYOBJECTS
-	// Check polyobjects and see if tmfloorz/tmceilingz need to be altered
+	// Check polyobjects and see if floorz/ceilingz need to be altered
 	{
 		INT32 xl, xh, yl, yh, bx, by;
 		validcount++;
@@ -8191,10 +8201,10 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 						delta1 = midz - (polybottom + ((polytop - polybottom)/2));
 						delta2 = thingtop - (polybottom + ((polytop - polybottom)/2));
 
-						if (polytop > tmfloorz && abs(delta1) < abs(delta2))
+						if (polytop > myfloorz && abs(delta1) < abs(delta2))
 							myfloorz = polytop;
 
-						if (polybottom < tmceilingz && abs(delta1) >= abs(delta2))
+						if (polybottom < myceilingz && abs(delta1) >= abs(delta2))
 							myceilingz = polybottom;
 					}
 					plink = (polymaplink_t *)(plink->link.next);
@@ -8204,7 +8214,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 #endif
 
 		// crushed camera
-		if (myceilingz <= myfloorz && !resetcalled && !cameranoclip)
+		if (myceilingz <= myfloorz + thiscam->height && !resetcalled && !cameranoclip)
 		{
 			P_ResetCamera(player, thiscam);
 			return true;
@@ -8645,7 +8655,7 @@ void P_PlayerThink(player_t *player)
 				if (players[i].lives <= 0)
 					continue;
 
-				if (!players[i].exiting)
+				if (!players[i].exiting || players[i].exiting > 3)
 					break;
 			}
 
@@ -9198,7 +9208,7 @@ void P_PlayerAfterThink(player_t *player)
 			}
 		}
 	}
-	else if ((player->pflags & PF_MACESPIN) && player->mo->tracer)
+	else if ((player->pflags & PF_MACESPIN) && player->mo->tracer && player->mo->tracer->target)
 	{
 		player->mo->height = P_GetPlayerSpinHeight(player);
 		// tracer is what you're hanging onto....
@@ -9218,11 +9228,6 @@ void P_PlayerAfterThink(player_t *player)
 		if (!(player->mo->tracer->target->flags & MF_SLIDEME) // Noclimb on chain parameters gives this
 		&& !(twodlevel || player->mo->flags2 & MF2_TWOD)) // why on earth would you want to turn them in 2D mode?
 		{
-			if (cmd->buttons & BT_USE) // do we actually still want this?
-			{
-				player->mo->tracer->target->health += 50;
-				player->mo->angle += 50<<ANGLETOFINESHIFT; // 2048 --> ANGLE_MAX
-			}
 			player->mo->tracer->target->health += cmd->sidemove;
 			player->mo->angle += cmd->sidemove<<ANGLETOFINESHIFT; // 2048 --> ANGLE_MAX
 

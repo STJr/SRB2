@@ -144,8 +144,8 @@ extern FILE *logstream;
 #define VERSIONSTRING "Trunk"
 #else
 #define VERSION    201 // Game version
-#define SUBVERSION 3   // more precise version number
-#define VERSIONSTRING "v2.1.3"
+#define SUBVERSION 5  // more precise version number
+#define VERSIONSTRING "v2.1.5"
 #endif
 
 // Modification options
@@ -201,7 +201,7 @@ extern FILE *logstream;
 // it's only for detection of the version the player is using so the MS can alert them of an update.
 // Only set it higher, not lower, obviously.
 // Note that we use this to help keep internal testing in check; this is why v2.1.0 is not version "1".
-#define MODVERSION 7
+#define MODVERSION 10
 
 
 
@@ -469,7 +469,7 @@ extern const char *compdate, *comptime, *comprevision;
 
 #if !defined (_NDS) && !defined (_PSP)
 ///	Shuffle's incomplete OpenGL sorting code.
-//#define SHUFFLE
+#define SHUFFLE // This has nothing to do with sorting, why was it disabled?
 #endif
 
 #if !defined (_NDS) && !defined (_PSP)

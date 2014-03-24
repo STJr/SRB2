@@ -67,6 +67,10 @@ typedef UINT8 GLRGB[3];
 
 #define BLENDMODE PF_Translucent
 
+static UINT8 softwaretranstogl[11]    = {  0, 25, 51, 76,102,127,153,178,204,229,255};
+static UINT8 softwaretranstogl_hi[11] = {  0, 51,102,153,204,255,255,255,255,255,255};
+static UINT8 softwaretranstogl_lo[11] = {  0, 12, 24, 36, 48, 60, 71, 83, 95,111,127};
+
 //
 // -----------------+
 // HWR_DrawPatch    : Draw a 'tile' graphic
@@ -128,24 +132,16 @@ void HWR_DrawPatch(GLPatch_t *gpatch, INT32 x, INT32 y, INT32 option)
 		flags |= PF_ForceWrapY;
 
 	// clip it since it is used for bunny scroll in doom I
-	if (option & V_TRANSLUCENT)
-	{
-		FSurfaceInfo Surf;
-		Surf.FlatColor.s.red = Surf.FlatColor.s.green = Surf.FlatColor.s.blue = 0xff;
-		Surf.FlatColor.s.alpha = (UINT8)cv_grtranslucenthud.value;
-		flags |= PF_Modulated;
-		HWD.pfnDrawPolygon(&Surf, v, 4, flags);
-	}
-	else
-		HWD.pfnDrawPolygon(NULL, v, 4, flags);
+	HWD.pfnDrawPolygon(NULL, v, 4, flags);
 }
 
-void HWR_DrawSciencePatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, INT32 option, fixed_t scale)
+void HWR_DrawFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale, INT32 option, const UINT8 *colormap)
 {
 	FOutVector v[4];
 	FBITFIELD flags;
 	float cx = FIXED_TO_FLOAT(x);
 	float cy = FIXED_TO_FLOAT(y);
+	UINT8 alphalevel = ((option & V_ALPHAMASK) >> V_ALPHASHIFT);
 
 //  3--2
 //  | /|
@@ -153,11 +149,17 @@ void HWR_DrawSciencePatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, INT32 option,
 //  0--1
 	float sdupx = FIXED_TO_FLOAT(vid.fdupx)*2.0f;
 	float sdupy = FIXED_TO_FLOAT(vid.fdupy)*2.0f;
-	float pdupx = FIXED_TO_FLOAT(vid.fdupx)*2.0f*FIXED_TO_FLOAT(scale);
-	float pdupy = FIXED_TO_FLOAT(vid.fdupy)*2.0f*FIXED_TO_FLOAT(scale);
+	float pdupx = FIXED_TO_FLOAT(vid.fdupx)*2.0f*FIXED_TO_FLOAT(pscale);
+	float pdupy = FIXED_TO_FLOAT(vid.fdupy)*2.0f*FIXED_TO_FLOAT(pscale);
+
+	if (alphalevel >= 10 && alphalevel < 13)
+		return;
 
 	// make patch ready in hardware cache
-	HWR_GetPatch(gpatch);
+	if (!colormap)
+		HWR_GetPatch(gpatch);
+	else
+		HWR_GetMappedPatch(gpatch, colormap);
 
 	switch (option & V_SCALEPATCHMASK)
 	{
@@ -197,11 +199,14 @@ void HWR_DrawSciencePatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, INT32 option,
 		flags |= PF_ForceWrapY;
 
 	// clip it since it is used for bunny scroll in doom I
-	if (option & V_TRANSLUCENT)
+	if (alphalevel)
 	{
 		FSurfaceInfo Surf;
 		Surf.FlatColor.s.red = Surf.FlatColor.s.green = Surf.FlatColor.s.blue = 0xff;
-		Surf.FlatColor.s.alpha = (UINT8)cv_grtranslucenthud.value;
+		if (alphalevel == 13) Surf.FlatColor.s.alpha = softwaretranstogl_lo[cv_translucenthud.value];
+		else if (alphalevel == 14) Surf.FlatColor.s.alpha = softwaretranstogl[cv_translucenthud.value];
+		else if (alphalevel == 15) Surf.FlatColor.s.alpha = softwaretranstogl_hi[cv_translucenthud.value];
+		else Surf.FlatColor.s.alpha = softwaretranstogl[10-alphalevel];
 		flags |= PF_Modulated;
 		HWD.pfnDrawPolygon(&Surf, v, 4, flags);
 	}
@@ -209,19 +214,13 @@ void HWR_DrawSciencePatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, INT32 option,
 		HWD.pfnDrawPolygon(NULL, v, 4, flags);
 }
 
-void HWR_DrawClippedPatch (GLPatch_t *gpatch, INT32 x, INT32 y, INT32 option)
+void HWR_DrawCroppedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale, INT32 option, fixed_t sx, fixed_t sy, fixed_t w, fixed_t h)
 {
-	// hardware clips the patch quite nicely anyway :)
-	HWR_DrawPatch(gpatch, x, y, option); /// \todo do real cliping
-}
-
-// Only supports one kind of translucent for now. Tails 06-12-2003
-// Boked
-// Alam_GBC: Why? you could not get a FSurfaceInfo to set the alpha channel?
-void HWR_DrawTranslucentPatch (GLPatch_t *gpatch, INT32 x, INT32 y, INT32 option)
-{
-	FOutVector      v[4];
+	FOutVector v[4];
 	FBITFIELD flags;
+	float cx = FIXED_TO_FLOAT(x);
+	float cy = FIXED_TO_FLOAT(y);
+	UINT8 alphalevel = ((option & V_ALPHAMASK) >> V_ALPHASHIFT);
 
 //  3--2
 //  | /|
@@ -229,12 +228,14 @@ void HWR_DrawTranslucentPatch (GLPatch_t *gpatch, INT32 x, INT32 y, INT32 option
 //  0--1
 	float sdupx = FIXED_TO_FLOAT(vid.fdupx)*2.0f;
 	float sdupy = FIXED_TO_FLOAT(vid.fdupy)*2.0f;
-	float pdupx = FIXED_TO_FLOAT(vid.fdupx)*2.0f;
-	float pdupy = FIXED_TO_FLOAT(vid.fdupy)*2.0f;
-	FSurfaceInfo Surf;
+	float pdupx = FIXED_TO_FLOAT(vid.fdupx)*2.0f*FIXED_TO_FLOAT(pscale);
+	float pdupy = FIXED_TO_FLOAT(vid.fdupy)*2.0f*FIXED_TO_FLOAT(pscale);
+
+	if (alphalevel >= 10 && alphalevel < 13)
+		return;
 
 	// make patch ready in hardware cache
-	HWR_GetPatch (gpatch);
+	HWR_GetPatch(gpatch);
 
 	switch (option & V_SCALEPATCHMASK)
 	{
@@ -254,82 +255,19 @@ void HWR_DrawTranslucentPatch (GLPatch_t *gpatch, INT32 x, INT32 y, INT32 option
 	if (option & V_NOSCALESTART)
 		sdupx = sdupy = 2.0f;
 
-	v[0].x = v[3].x = (x*sdupx-gpatch->leftoffset*pdupx)/vid.width - 1;
-	v[2].x = v[1].x = (x*sdupx+(gpatch->width-gpatch->leftoffset)*pdupx)/vid.width - 1;
-	v[0].y = v[1].y = 1-(y*sdupy-gpatch->topoffset*pdupy)/vid.height;
-	v[2].y = v[3].y = 1-(y*sdupy+(gpatch->height-gpatch->topoffset)*pdupy)/vid.height;
+	v[0].x = v[3].x =     (cx*sdupx -           gpatch->leftoffset  * pdupx) / vid.width - 1;
+	v[2].x = v[1].x =     (cx*sdupx + ((w-sx) - gpatch->leftoffset) * pdupx) / vid.width - 1;
+	v[0].y = v[1].y = 1 - (cy*sdupy -           gpatch->topoffset   * pdupy) / vid.height;
+	v[2].y = v[3].y = 1 - (cy*sdupy + ((h-sy) - gpatch->topoffset)  * pdupy) / vid.height;
 
 	v[0].z = v[1].z = v[2].z = v[3].z = 1.0f;
 
-	v[0].sow = v[3].sow = 0.0f;
-	v[2].sow = v[1].sow = gpatch->max_s;
-	v[0].tow = v[1].tow = 0.0f;
-	v[2].tow = v[3].tow = gpatch->max_t;
+	v[0].sow = v[3].sow = ((sx)/(float)gpatch->width )*gpatch->max_s;
+	v[2].sow = v[1].sow = ((w )/(float)gpatch->width )*gpatch->max_s;
+	v[0].tow = v[1].tow = ((sy)/(float)gpatch->height)*gpatch->max_t;
+	v[2].tow = v[3].tow = ((h )/(float)gpatch->height)*gpatch->max_t;
 
-	flags = PF_Modulated | BLENDMODE | PF_Clip | PF_NoZClip | PF_NoDepthTest;
-
-	if (option & V_WRAPX)
-		flags |= PF_ForceWrapX;
-	if (option & V_WRAPY)
-		flags |= PF_ForceWrapY;
-
-	Surf.FlatColor.s.red = Surf.FlatColor.s.green = Surf.FlatColor.s.blue = 0xff;
-	// Alam_GBC: There, you have translucent HW Draw, OK?
-	if ((option & V_TRANSLUCENT) && cv_grtranslucenthud.value != 255)
-	{
-		Surf.FlatColor.s.alpha = (UINT8)(cv_grtranslucenthud.value/2);
-	}
-	else
-		Surf.FlatColor.s.alpha = 127;
-
-	HWD.pfnDrawPolygon(&Surf, v, 4, flags);
-}
-
-// Draws a patch 2x as small SSNTails 06-10-2003
-void HWR_DrawSmallPatch (GLPatch_t *gpatch, INT32 x, INT32 y, INT32 option, const UINT8 *colormap)
-{
-	FOutVector      v[4];
-	FBITFIELD flags;
-
-	float sdupx = FIXED_TO_FLOAT(vid.fdupx);
-	float sdupy = FIXED_TO_FLOAT(vid.fdupy);
-	float pdupx = FIXED_TO_FLOAT(vid.fdupx);
-	float pdupy = FIXED_TO_FLOAT(vid.fdupy);
-
-	// make patch ready in hardware cache
-	HWR_GetMappedPatch (gpatch, colormap);
-
-	switch (option & V_SCALEPATCHMASK)
-	{
-	case V_NOSCALEPATCH:
-		pdupx = pdupy = 2.0f;
-		break;
-	case V_SMALLSCALEPATCH:
-		pdupx = 2.0f * FIXED_TO_FLOAT(vid.fsmalldupx);
-		pdupy = 2.0f * FIXED_TO_FLOAT(vid.fsmalldupy);
-		break;
-	case V_MEDSCALEPATCH:
-		pdupx = 2.0f * FIXED_TO_FLOAT(vid.fmeddupx);
-		pdupy = 2.0f * FIXED_TO_FLOAT(vid.fmeddupy);
-		break;
-	}
-
-	if (option & V_NOSCALESTART)
-		sdupx = sdupy = 2.0f;
-
-	v[0].x = v[3].x = (x*sdupx-gpatch->leftoffset*pdupx)/vid.width - 1;
-	v[2].x = v[1].x = (x*sdupx+(gpatch->width-gpatch->leftoffset)*pdupx)/vid.width - 1;
-	v[0].y = v[1].y = 1-(y*sdupy-gpatch->topoffset*pdupy)/vid.height;
-	v[2].y = v[3].y = 1-(y*sdupy+(gpatch->height-gpatch->topoffset)*pdupy)/vid.height;
-
-	v[0].z = v[1].z = v[2].z = v[3].z = 1.0f;
-
-	v[0].sow = v[3].sow = 0.0f;
-	v[2].sow = v[1].sow = gpatch->max_s;
-	v[0].tow = v[1].tow = 0.0f;
-	v[2].tow = v[3].tow = gpatch->max_t;
-
-	flags = BLENDMODE | PF_Clip | PF_NoZClip | PF_NoDepthTest;
+	flags = BLENDMODE|PF_Clip|PF_NoZClip|PF_NoDepthTest;
 
 	if (option & V_WRAPX)
 		flags |= PF_ForceWrapX;
@@ -337,77 +275,14 @@ void HWR_DrawSmallPatch (GLPatch_t *gpatch, INT32 x, INT32 y, INT32 option, cons
 		flags |= PF_ForceWrapY;
 
 	// clip it since it is used for bunny scroll in doom I
-	if (option & V_TRANSLUCENT)
+	if (alphalevel)
 	{
 		FSurfaceInfo Surf;
 		Surf.FlatColor.s.red = Surf.FlatColor.s.green = Surf.FlatColor.s.blue = 0xff;
-		Surf.FlatColor.s.alpha = (UINT8)cv_grtranslucenthud.value;
-		flags |= PF_Modulated;
-		HWD.pfnDrawPolygon(&Surf, v, 4, flags);
-	}
-	else
-		HWD.pfnDrawPolygon(NULL, v, 4, flags);
-}
-
-//
-// HWR_DrawMappedPatch(): Like HWR_DrawPatch but with translated color
-//
-void HWR_DrawMappedPatch (GLPatch_t *gpatch, INT32 x, INT32 y, INT32 option, const UINT8 *colormap)
-{
-	FOutVector      v[4];
-	FBITFIELD flags;
-
-	float sdupx = FIXED_TO_FLOAT(vid.fdupx)*2.0f;
-	float sdupy = FIXED_TO_FLOAT(vid.fdupy)*2.0f;
-	float pdupx = FIXED_TO_FLOAT(vid.fdupx)*2.0f;
-	float pdupy = FIXED_TO_FLOAT(vid.fdupy)*2.0f;
-
-	// make patch ready in hardware cache
-	HWR_GetMappedPatch (gpatch, colormap);
-
-	switch (option & V_SCALEPATCHMASK)
-	{
-	case V_NOSCALEPATCH:
-		pdupx = pdupy = 2.0f;
-		break;
-	case V_SMALLSCALEPATCH:
-		pdupx = 2.0f * FIXED_TO_FLOAT(vid.fsmalldupx);
-		pdupy = 2.0f * FIXED_TO_FLOAT(vid.fsmalldupy);
-		break;
-	case V_MEDSCALEPATCH:
-		pdupx = 2.0f * FIXED_TO_FLOAT(vid.fmeddupx);
-		pdupy = 2.0f * FIXED_TO_FLOAT(vid.fmeddupy);
-		break;
-	}
-
-	if (option & V_NOSCALESTART)
-		sdupx = sdupy = 2.0f;
-
-	v[0].x = v[3].x = (x*sdupx-gpatch->leftoffset*pdupx)/vid.width - 1;
-	v[2].x = v[1].x = (x*sdupx+(gpatch->width-gpatch->leftoffset)*pdupx)/vid.width - 1;
-	v[0].y = v[1].y = 1-(y*sdupy-gpatch->topoffset*pdupy)/vid.height;
-	v[2].y = v[3].y = 1-(y*sdupy+(gpatch->height-gpatch->topoffset)*pdupy)/vid.height;
-
-	v[0].z = v[1].z = v[2].z = v[3].z = 1.0f;
-
-	v[0].sow = v[3].sow = 0.0f;
-	v[2].sow = v[1].sow = gpatch->max_s;
-	v[0].tow = v[1].tow = 0.0f;
-	v[2].tow = v[3].tow = gpatch->max_t;
-
-	flags = BLENDMODE | PF_Clip | PF_NoZClip | PF_NoDepthTest;
-
-	if (option & V_WRAPX)
-		flags |= PF_ForceWrapX;
-	if (option & V_WRAPY)
-		flags |= PF_ForceWrapY;
-
-	// clip it since it is used for bunny scroll in doom I
-	if (option & V_TRANSLUCENT)
-	{
-		FSurfaceInfo Surf;
-		Surf.FlatColor.s.red = Surf.FlatColor.s.green = Surf.FlatColor.s.blue = 0xff;
-		Surf.FlatColor.s.alpha = (UINT8)cv_grtranslucenthud.value;
+		if (alphalevel == 13) Surf.FlatColor.s.alpha = softwaretranstogl_lo[cv_translucenthud.value];
+		else if (alphalevel == 14) Surf.FlatColor.s.alpha = softwaretranstogl[cv_translucenthud.value];
+		else if (alphalevel == 15) Surf.FlatColor.s.alpha = softwaretranstogl_hi[cv_translucenthud.value];
+		else Surf.FlatColor.s.alpha = softwaretranstogl[10-alphalevel];
 		flags |= PF_Modulated;
 		HWD.pfnDrawPolygon(&Surf, v, 4, flags);
 	}
@@ -447,15 +322,7 @@ void HWR_DrawPic(INT32 x, INT32 y, lumpnum_t lumpnum)
 	// But then, the question is: why not 0 instead of PF_Masked ?
 	// or maybe PF_Environment ??? (like what I said above)
 	// BP: PF_Environment don't change anything ! and 0 is undifined
-	if (cv_grtranslucenthud.value != 255)
-	{
-		FSurfaceInfo Surf;
-		Surf.FlatColor.s.red = Surf.FlatColor.s.green = Surf.FlatColor.s.blue = 0xff;
-		Surf.FlatColor.s.alpha = (UINT8)cv_grtranslucenthud.value;
-		HWD.pfnDrawPolygon(&Surf, v, 4, PF_Modulated | BLENDMODE | PF_NoDepthTest | PF_Clip | PF_NoZClip);
-	}
-	else
-		HWD.pfnDrawPolygon(NULL, v, 4, BLENDMODE | PF_NoDepthTest | PF_Clip | PF_NoZClip);
+	HWD.pfnDrawPolygon(NULL, v, 4, BLENDMODE | PF_NoDepthTest | PF_Clip | PF_NoZClip);
 }
 
 // ==========================================================================

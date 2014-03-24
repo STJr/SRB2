@@ -2552,7 +2552,7 @@ static boolean PTR_SlideTraverse(intercept_t *in)
 	// one-sided linedef
 	if (!li->backsector)
 	{
-		if (P_PointOnLineSide(mapcampointer->x, mapcampointer->y, li))
+		if (P_PointOnLineSide(slidemo->x, slidemo->y, li))
 			return true; // don't hit the back side
 		goto isblocking;
 	}

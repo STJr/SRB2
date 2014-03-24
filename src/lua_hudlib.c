@@ -195,6 +195,15 @@ static int patch_set(lua_State *L)
 // lib_draw
 //
 
+static int libd_patchExists(lua_State *L)
+{
+	if (!hud_running)
+		return luaL_error(L, "HUD rendering code should not be called outside of rendering hooks!");
+
+	lua_pushboolean(L, W_CheckNumForName(luaL_checkstring(L, 1)) != LUMPERROR);
+	return 1;
+}
+
 static int libd_cachePatch(lua_State *L)
 {
 	if (!hud_running)
@@ -222,21 +231,7 @@ static int libd_draw(lua_State *L)
 
 	flags &= ~V_PARAMMASK; // Don't let crashes happen.
 
-	if (colormap)
-	{
-		if (flags & V_ALPHAMASK)
-			V_DrawTranslucentMappedPatch(x, y, flags, patch, colormap);
-		else
-			V_DrawMappedPatch(x, y, flags, patch, colormap);
-	}
-	else
-	{
-		if (flags & V_ALPHAMASK)
-			V_DrawTranslucentPatch(x, y, flags, patch);
-		else
-			V_DrawScaledPatch(x, y, flags, patch);
-	}
-
+	V_DrawFixedPatch(x<<FRACBITS, y<<FRACBITS, FRACUNIT, flags, patch, colormap);
 	return 0;
 }
 
@@ -245,18 +240,55 @@ static int libd_drawScaled(lua_State *L)
 	fixed_t x, y, scale;
 	INT32 flags;
 	patch_t *patch;
+	const UINT8 *colormap = NULL;
 
 	if (!hud_running)
 		return luaL_error(L, "HUD rendering code should not be called outside of rendering hooks!");
 
 	x = luaL_checkinteger(L, 1);
 	y = luaL_checkinteger(L, 2);
-	patch = *((patch_t **)luaL_checkudata(L, 3, META_PATCH));
-	scale = luaL_optinteger(L, 4, FRACUNIT);
+	scale = luaL_checkinteger(L, 3);
+	patch = *((patch_t **)luaL_checkudata(L, 4, META_PATCH));
+	flags = luaL_optinteger(L, 5, 0);
+	if (!lua_isnoneornil(L, 6))
+		colormap = luaL_checkudata(L, 6, META_COLORMAP);
+
+	flags &= ~V_PARAMMASK; // Don't let crashes happen.
+
+	V_DrawFixedPatch(x, y, scale, flags, patch, colormap);
+	return 0;
+}
+
+static int libd_drawNum(lua_State *L)
+{
+	INT32 x, y, flags, num;
+	if (!hud_running)
+		return luaL_error(L, "HUD rendering code should not be called outside of rendering hooks!");
+
+	x = luaL_checkinteger(L, 1);
+	y = luaL_checkinteger(L, 2);
+	num = luaL_checkinteger(L, 3);
+	flags = luaL_optinteger(L, 4, 0);
+	flags &= ~V_PARAMMASK; // Don't let crashes happen.
+
+	V_DrawTallNum(x, y, flags, num);
+	return 0;
+}
+
+static int libd_drawPaddedNum(lua_State *L)
+{
+	INT32 x, y, flags, num, digits;
+	if (!hud_running)
+		return luaL_error(L, "HUD rendering code should not be called outside of rendering hooks!");
+
+	x = luaL_checkinteger(L, 1);
+	y = luaL_checkinteger(L, 2);
+	num = abs(luaL_checkinteger(L, 3));
+	digits = luaL_optinteger(L, 4, 2);
 	flags = luaL_optinteger(L, 5, 0);
 	flags &= ~V_PARAMMASK; // Don't let crashes happen.
 
-	V_DrawSciencePatch(x, y, flags, patch, scale);
+	V_DrawPaddedTallNum(x, y, flags, num, digits);
 	return 0;
 }
 
@@ -319,9 +351,12 @@ static int libd_stringWidth(lua_State *L)
 }
 
 static luaL_Reg lib_draw[] = {
+	{"patchExists", libd_patchExists},
 	{"cachePatch", libd_cachePatch},
 	{"draw", libd_draw},
 	{"drawScaled", libd_drawScaled},
+	{"drawNum", libd_drawNum},
+	{"drawPaddedNum", libd_drawPaddedNum},
 	{"drawFill", libd_drawFill},
 	{"drawString", libd_drawString},
 	{"stringWidth", libd_stringWidth},

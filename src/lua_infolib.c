@@ -742,7 +742,7 @@ static int lib_setSfxInfo(lua_State *L)
 		enum sfxinfo_write i;
 
 		if (lua_isnumber(L, 2))
-			i = lua_tointeger(L, 2);
+			i = lua_tointeger(L, 2) - 1; // lua is one based, this enum is zero based.
 		else
 			i = luaL_checkoption(L, 2, NULL, sfxinfo_wopt);
 

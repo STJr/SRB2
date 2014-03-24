@@ -401,7 +401,10 @@ static void D_Display(void)
 		if (lastdraw)
 		{
 			if (rendermode == render_soft)
+			{
 				VID_BlitLinearScreen(screens[0], screens[1], vid.width*vid.bpp, vid.height, vid.width*vid.bpp, vid.rowbytes);
+				usebuffer = true;
+			}
 			lastdraw = false;
 		}
 
@@ -1087,14 +1090,14 @@ void D_SRB2Main(void)
 #endif
 	D_CleanFile();
 
-#if 1 // md5s last updated 3/18/14
+#if 1 // md5s last updated 3/22/14
 
 	// Check MD5s of autoloaded files
 	W_VerifyFileMD5(0, "ac309fb3c7d4b5b685e2cd26beccf0e8"); // srb2.srb/srb2.wad
 	W_VerifyFileMD5(1, "a894044b555dfcc71865cee16a996e88"); // zones.dta
 	W_VerifyFileMD5(2, "4c410c1de6e0440cc5b2858dcca80c3e"); // player.dta
 	W_VerifyFileMD5(3, "85901ad4bf94637e5753d2ac2c03ea26"); // rings.dta
-	W_VerifyFileMD5(4, "12c58561edf3be16a15505f1d5eacee0"); // patch.dta
+	W_VerifyFileMD5(4, "4d56695e194a6fd3bc5c87610a215186"); // patch.dta
 
 	// don't check music.dta because people like to modify it, and it doesn't matter if they do
 	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.

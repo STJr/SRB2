@@ -1037,6 +1037,10 @@ static menuitem_t OP_CameraControlsMenu[] =
 
 static menuitem_t OP_MiscControlsMenu[] =
 {
+	{IT_CALL | IT_STRING2, NULL, "Custom Action 1",  M_ChangeControl, gc_custom1      },
+	{IT_CALL | IT_STRING2, NULL, "Custom Action 2",  M_ChangeControl, gc_custom2      },
+	{IT_CALL | IT_STRING2, NULL, "Custom Action 3",  M_ChangeControl, gc_custom3      },
+
 	{IT_CALL | IT_STRING2, NULL, "Pause",            M_ChangeControl, gc_pause        },
 	{IT_CALL | IT_STRING2, NULL, "Console",          M_ChangeControl, gc_console      },
 };
@@ -1137,8 +1141,6 @@ static menuitem_t OP_OpenGLOptionsMenu[] =
 #ifdef _WINDOWS
 	{IT_STRING|IT_CVAR,         NULL, "Fullscreen",      &cv_fullscreen,       50},
 #endif
-	{IT_STRING|IT_CVAR|IT_CV_SLIDER,
-	                            NULL, "Translucent HUD", &cv_grtranslucenthud, 60},
 #ifdef ALAM_LIGHTING
 	{IT_SUBMENU|IT_STRING,      NULL, "Lighting...",     &OP_OpenGLLightingDef,     70},
 #endif
@@ -1245,17 +1247,19 @@ static menuitem_t OP_GameOptionsMenu[] =
 	                      NULL, "Master server",          &cv_masterserver,     10},
 #endif
 	{IT_STRING | IT_CVAR, NULL, "Show HUD",               &cv_showhud,     40},
-	{IT_STRING | IT_CVAR, NULL, "Timer Display",          &cv_timetic,     50},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
+	                      NULL, "HUD Visibility",         &cv_translucenthud, 50},
+	{IT_STRING | IT_CVAR, NULL, "Timer Display",          &cv_timetic,     60},
 #ifdef SEENAMES
-	{IT_STRING | IT_CVAR, NULL, "HUD Player Names",       &cv_seenames,    60},
+	{IT_STRING | IT_CVAR, NULL, "HUD Player Names",       &cv_seenames,    80},
 #endif
-	{IT_STRING | IT_CVAR, NULL, "Log Hazard Damage",      &cv_hazardlog,   70},
+	{IT_STRING | IT_CVAR, NULL, "Log Hazard Damage",      &cv_hazardlog,   90},
 
-	{IT_STRING | IT_CVAR, NULL, "Console Back Color",     &cons_backcolor,  90},
-	{IT_STRING | IT_CVAR, NULL, "Console Text Size",      &cv_constextsize,100},
-	{IT_STRING | IT_CVAR, NULL, "Uppercase Console",      &cv_allcaps,     110},
+	{IT_STRING | IT_CVAR, NULL, "Console Back Color",     &cons_backcolor, 100},
+	{IT_STRING | IT_CVAR, NULL, "Console Text Size",      &cv_constextsize,110},
+	{IT_STRING | IT_CVAR, NULL, "Uppercase Console",      &cv_allcaps,     120},
 
-	{IT_STRING | IT_CVAR, NULL, "Title Screen Demos",     &cv_rollingdemos, 130},
+	{IT_STRING | IT_CVAR, NULL, "Title Screen Demos",     &cv_rollingdemos, 140},
 };
 
 static menuitem_t OP_ServerOptionsMenu[] =
@@ -1276,7 +1280,7 @@ static menuitem_t OP_ServerOptionsMenu[] =
 	{IT_STRING | IT_CVAR,    NULL, "Max Players",                 &cv_maxplayers,        110},
 	{IT_STRING | IT_CVAR,    NULL, "Allow players to join",       &cv_allownewplayer,    120},
 	{IT_STRING | IT_CVAR,    NULL, "Allow WAD Downloading",       &cv_downloading,       130},
-	{IT_STRING | IT_CVAR,    NULL, "Consistency Protection",      &cv_consfailprotect,   140},
+	{IT_STRING | IT_CVAR,    NULL, "Attempts to Resynch",         &cv_resynchattempts,   140},
 #endif
 };
 
@@ -3764,8 +3768,8 @@ static void M_Options(INT32 choice)
 	// if the player is not admin or server, disable server options
 	OP_MainMenu[5].status = (Playing() && !(server || adminplayer == consoleplayer)) ? (IT_GRAYEDOUT) : (IT_STRING|IT_SUBMENU);
 
-	// if the player is playing _at all_, disable data options
-	OP_MainMenu[3].status = (Playing()) ? (IT_GRAYEDOUT) : (IT_STRING|IT_SUBMENU);
+	// if the player is playing _at all_, disable the erase data options
+	OP_DataOptionsMenu[1].status = (Playing()) ? (IT_GRAYEDOUT) : (IT_STRING|IT_SUBMENU);
 
 	OP_MainDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&OP_MainDef);
@@ -4681,9 +4685,9 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		}
 		patch = W_CachePatchName(picname, PU_CACHE);
 		if (SHORT(patch->width) >= 256)
-			V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, 0, patch, FRACUNIT/2, 0, SHORT(patch->height) - 64 + o*2, SHORT(patch->width), SHORT(patch->height));
+			V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT/2, 0, patch, 0, SHORT(patch->height) - 64 + o*2, SHORT(patch->width), SHORT(patch->height));
 		else
-			V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, 0, patch, FRACUNIT, 0, SHORT(patch->height) - 32 + o, SHORT(patch->width), SHORT(patch->height));
+			V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT, 0, patch, 0, SHORT(patch->height) - 32 + o, SHORT(patch->width), SHORT(patch->height));
 		W_UnlockCachedPatch(patch);
 	}
 
@@ -4707,9 +4711,9 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		}
 		patch = W_CachePatchName(picname, PU_CACHE);
 		if (SHORT(patch->width) >= 256)
-			V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, 0, patch, FRACUNIT/2, 0, 0, SHORT(patch->width), o*2);
+			V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, FRACUNIT/2, 0, patch, 0, 0, SHORT(patch->width), o*2);
 		else
-			V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, 0, patch, FRACUNIT, 0, 0, SHORT(patch->width), o);
+			V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, FRACUNIT, 0, patch, 0, 0, SHORT(patch->width), o);
 		W_UnlockCachedPatch(patch);
 	}
 
@@ -4741,9 +4745,9 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		else
 		{
 			if (SHORT(patch->width) >= 256)
-				V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, 0, patch, FRACUNIT/2, 0, (o - 32)*2, SHORT(patch->width), SHORT(patch->height));
+				V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT/2, 0, patch, 0, (o - 32)*2, SHORT(patch->width), SHORT(patch->height));
 			else
-				V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, 0, patch, FRACUNIT, 0, o - 32, SHORT(patch->width), SHORT(patch->height));
+				V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT, 0, patch, 0, o - 32, SHORT(patch->width), SHORT(patch->height));
 		}
 		W_UnlockCachedPatch(patch);
 	}
@@ -5709,7 +5713,7 @@ static void M_DrawConnectMenu(void)
 	// Room name
 	if (ms_RoomId < 0)
 		V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, currentMenu->y + MP_ConnectMenu[mp_connect_room].alphaKey,
-		                         V_YELLOWMAP, "<Offline Mode>");
+		                         V_YELLOWMAP, (itemOn == mp_connect_room) ? "<Select to change>" : "<Offline Mode>");
 	else
 		V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, currentMenu->y + MP_ConnectMenu[mp_connect_room].alphaKey,
 		                         V_YELLOWMAP, room_list[menuRoomIndex].name);
@@ -5963,8 +5967,10 @@ static void M_StartServer(INT32 choice)
 	// Still need to reset devmode
 	cv_debug = 0;
 
-	if (demoplayback || metalplayback)
+	if (demoplayback)
 		G_StopDemo();
+	if (metalrecording)
+		G_StopMetalDemo();
 
 	if (!StartSplitScreenGame)
 	{
@@ -5999,7 +6005,7 @@ static void M_DrawServerMenu(void)
 	{
 		if (ms_RoomId < 0)
 			V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, currentMenu->y + MP_ServerMenu[mp_server_room].alphaKey,
-			                         V_YELLOWMAP, "<Offline Mode>");
+			                         V_YELLOWMAP, (itemOn == mp_server_room) ? "<Select to change>" : "<Offline Mode>");
 		else
 			V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, currentMenu->y + MP_ServerMenu[mp_server_room].alphaKey,
 			                         V_YELLOWMAP, room_list[menuRoomIndex].name);
@@ -6560,8 +6566,9 @@ static void M_Setup1PControlsMenu(INT32 choice)
 	OP_MPControlsMenu[0].status = IT_CALL|IT_STRING2;
 	OP_MPControlsMenu[1].status = IT_CALL|IT_STRING2;
 	OP_MPControlsMenu[2].status = IT_CALL|IT_STRING2;
-	// Unhide the entire misc menu
-	OP_ControlListMenu[3].status = IT_SUBMENU | IT_STRING;
+	// Unide the pause/console controls too
+	OP_MiscControlsMenu[3].status = IT_CALL|IT_STRING2;
+	OP_MiscControlsMenu[4].status = IT_CALL|IT_STRING2;
 
 	OP_ControlListDef.prevMenu = &OP_P1ControlsDef;
 	M_SetupNextMenu(&OP_ControlListDef);
@@ -6578,8 +6585,9 @@ static void M_Setup2PControlsMenu(INT32 choice)
 	OP_MPControlsMenu[0].status = IT_GRAYEDOUT2;
 	OP_MPControlsMenu[1].status = IT_GRAYEDOUT2;
 	OP_MPControlsMenu[2].status = IT_GRAYEDOUT2;
-	// Hide the entire misc menu
-	OP_ControlListMenu[3].status = IT_GRAYEDOUT;
+	// Hide the pause/console controls too
+	OP_MiscControlsMenu[3].status = IT_GRAYEDOUT2;
+	OP_MiscControlsMenu[4].status = IT_GRAYEDOUT2;
 
 	OP_ControlListDef.prevMenu = &OP_P2ControlsDef;
 	M_SetupNextMenu(&OP_ControlListDef);

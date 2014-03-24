@@ -147,7 +147,7 @@ typedef enum
 	PF_TAGGED            = 1<<27, // Player has been tagged and awaits the next round in hide and seek.
 	PF_TAGIT             = 1<<28, // The player is it! For Tag Mode
 
-	// free: 1<<29, 1<<31
+	// free: 1<<29 through 1<<31
 } pflags_t;
 
 typedef enum
@@ -268,10 +268,9 @@ typedef struct player_s
 	// It is updated with cmd->aiming.
 	angle_t aiming;
 
-	angle_t awayviewaiming; // Used for cut-away view
-
 	// This is only used between levels,
 	// mo->health is used during levels.
+	/// \todo Remove this.  We don't need a second health definition for players.
 	INT32 health;
 
 	SINT8 pity; // i pity the fool.
@@ -324,15 +323,14 @@ typedef struct player_s
 
 	fixed_t jumpfactor; // How high can the player jump?
 
-	INT32 lives;
-	INT32 continues; // continues that player has acquired
+	SINT8 lives;
+	SINT8 continues; // continues that player has acquired
 
-	INT32 xtralife; // Ring Extra Life counter
+	SINT8 xtralife; // Ring Extra Life counter
 	UINT8 gotcontinue; // Got continue from this stage?
 
 	fixed_t speed; // Player's speed (distance formula of MOMX and MOMY values)
-	INT32 jumping; // Jump counter
-
+	UINT8 jumping; // Jump counter
 	UINT8 secondjump;
 
 	UINT8 fly1; // Tails flying
@@ -357,10 +355,10 @@ typedef struct player_s
 	/////////////////////
 	// Race Mode Stuff //
 	/////////////////////
-	INT32 numboxes; // Number of item boxes obtained for Race Mode
-	INT32 totalring; // Total number of rings obtained for Race Mode
+	INT16 numboxes; // Number of item boxes obtained for Race Mode
+	INT16 totalring; // Total number of rings obtained for Race Mode
 	tic_t realtime; // integer replacement for leveltime
-	UINT32 laps; // Number of laps (optional)
+	UINT8 laps; // Number of laps (optional)
 
 	////////////////////
 	// CTF Mode Stuff //
@@ -421,6 +419,7 @@ typedef struct player_s
 
 	mobj_t *awayviewmobj;
 	INT32 awayviewtics;
+	angle_t awayviewaiming; // Used for cut-away view
 
 	boolean spectator;
 	UINT8 bot;
