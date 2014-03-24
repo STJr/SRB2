@@ -3039,8 +3039,8 @@ const CPUInfoFlags *I_CPUInfo(void)
 		WIN_CPUInfo.SSE2        = SDL_HasSSE2();
 		WIN_CPUInfo.AltiVec     = SDL_HasAltiVec();
 	}
-	WIN_CPUInfo.MMXExt      = SDL_HasMMXExt();
-	WIN_CPUInfo.AMD3DNowExt = SDL_Has3DNowExt();
+	WIN_CPUInfo.MMXExt      = SDL_FALSE; //SDL_HasMMXExt(); No longer in SDL2
+	WIN_CPUInfo.AMD3DNowExt = SDL_FALSE; //SDL_Has3DNowExt(); No longer in SDL2
 #endif
 	GetSystemInfo(&SI);
 	WIN_CPUInfo.CPUs = SI.dwNumberOfProcessors;
