@@ -1097,7 +1097,7 @@ void D_SRB2Main(void)
 	W_VerifyFileMD5(1, "a894044b555dfcc71865cee16a996e88"); // zones.dta
 	W_VerifyFileMD5(2, "4c410c1de6e0440cc5b2858dcca80c3e"); // player.dta
 	W_VerifyFileMD5(3, "85901ad4bf94637e5753d2ac2c03ea26"); // rings.dta
-	W_VerifyFileMD5(4, "4d56695e194a6fd3bc5c87610a215186"); // patch.dta
+	W_VerifyFileMD5(4, "386ab4ffc8c9fb0fa62f788a16e5c218"); // patch.dta
 
 	// don't check music.dta because people like to modify it, and it doesn't matter if they do
 	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.

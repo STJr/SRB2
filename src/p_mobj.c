@@ -6529,7 +6529,7 @@ void P_MobjThinker(mobj_t *mobj)
 							if (players[consoleplayer].ctfteam == 1)
 								S_StartSound(NULL, sfx_hoop1);
 
-							redflag = NULL;
+							redflag = flagmo;
 						}
 						else // MT_BLUEFLAG
 						{
@@ -6539,7 +6539,7 @@ void P_MobjThinker(mobj_t *mobj)
 							if (players[consoleplayer].ctfteam == 2)
 								S_StartSound(NULL, sfx_hoop1);
 
-							blueflag = NULL;
+							blueflag = flagmo;
 						}
 					}
 					P_RemoveMobj(mobj);
@@ -9459,7 +9459,7 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 boolean P_CheckMissileSpawn(mobj_t *th)
 {
 	// move a little forward so an angle can be computed if it immediately explodes
-	if (th->flags & MF_GRENADEBOUNCE) // hack: bad! should be a flag.
+	if (!(th->flags & MF_GRENADEBOUNCE)) // hack: bad! should be a flag.
 	{
 		th->x += th->momx>>1;
 		th->y += th->momy>>1;

@@ -1069,7 +1069,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				tmsprung = true;
 			}
 			else if (thing->flags & MF_MONITOR
-				&& ((tmthing->player->pflags & PF_JUMPED) || (tmthing->player->pflags & PF_SPINNING)))
+				&& tmthing->player->pflags & (PF_JUMPED|PF_SPINNING|PF_GLIDING))
 			{
 				boolean flip = (thing->eflags & MFE_VERTICALFLIP) != 0; // Save this flag in case monitor gets removed.
 				fixed_t *momz = &tmthing->momz; // tmthing gets changed by P_DamageMobj, so we need a new pointer?! X_x;;

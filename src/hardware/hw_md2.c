@@ -1082,7 +1082,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 	// colormap test
 	{
 		sector_t *sector = spr->mobj->subsector->sector;
-		UINT8 lightlevel = LightLevelToLum(sector->lightlevel);
+		UINT8 lightlevel = sector->lightlevel;
 		extracolormap_t *colormap = sector->extra_colormap;
 
 		if (sector->numlights)
@@ -1092,9 +1092,9 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 			light = R_GetPlaneLight(sector, spr->mobj->z + spr->mobj->height, false); // Always use the light at the top instead of whatever I was doing before
 
 			if (!(spr->mobj->frame & FF_FULLBRIGHT))
-				lightlevel = LightLevelToLum(*sector->lightlist[light].lightlevel);
+				lightlevel = *sector->lightlist[light].lightlevel;
 			else
-				lightlevel = LightLevelToLum(255);
+				lightlevel = 255;
 
 			if (sector->lightlist[light].extra_colormap)
 				colormap = sector->lightlist[light].extra_colormap;
@@ -1102,16 +1102,16 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		else
 		{
 			if (!(spr->mobj->frame & FF_FULLBRIGHT))
-				lightlevel = LightLevelToLum(sector->lightlevel);
+				lightlevel = sector->lightlevel;
 			else
-				lightlevel = LightLevelToLum(255);
+				lightlevel = 255;
 
 			if (sector->extra_colormap)
 				colormap = sector->extra_colormap;
 		}
 
 		if (spr->mobj->frame & FF_FULLBRIGHT)
-			lightlevel = LightLevelToLum(255);
+			lightlevel = 255;
 
 		if (colormap)
 			Surf.FlatColor.rgba = HWR_Lighting(lightlevel, colormap->rgba, colormap->fadergba, false, false);

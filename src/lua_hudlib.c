@@ -200,7 +200,7 @@ static int libd_patchExists(lua_State *L)
 	if (!hud_running)
 		return luaL_error(L, "HUD rendering code should not be called outside of rendering hooks!");
 
-	lua_pushboolean(L, W_CheckNumForName(luaL_checkstring(L, 1)) != LUMPERROR);
+	lua_pushboolean(L, W_LumpExists(luaL_checkstring(L, 1)));
 	return 1;
 }
 

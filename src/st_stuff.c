@@ -60,7 +60,9 @@ patch_t *superprefix[MAXSKINS]; // super face status patches
 patch_t *sboscore; // Score logo
 patch_t *sbotime; // Time logo
 patch_t *sbocolon; // Colon for time
+patch_t *sboperiod; // Period for time centiseconds
 patch_t *livesback; // Lives icon background
+static patch_t *nrec_timer; // Timer for NiGHTS records
 static patch_t *sborings;
 static patch_t *sboover;
 static patch_t *timeover;
@@ -255,6 +257,8 @@ void ST_LoadGraphics(void)
 	rrings = W_CachePatchName("RRINGS", PU_HUDGFX);
 	sbotime = W_CachePatchName("SBOTIME", PU_HUDGFX); // Time logo
 	sbocolon = W_CachePatchName("SBOCOLON", PU_HUDGFX); // Colon for time
+	sboperiod = W_CachePatchName("SBOPERIO", PU_HUDGFX); // Period for time centiseconds
+	nrec_timer = W_CachePatchName("NGRTIMER", PU_HUDGFX); // Timer for NiGHTS
 	getall = W_CachePatchName("GETALL", PU_HUDGFX); // Special Stage HUD
 	timeup = W_CachePatchName("TIMEUP", PU_HUDGFX); // Special Stage HUD
 	race1 = W_CachePatchName("RACE1", PU_HUDGFX);
@@ -634,7 +638,7 @@ static void ST_drawTime(void)
 
 		if (!splitscreen && (cv_timetic.value == 2 || modeattacking)) // there's not enough room for tics in splitscreen, don't even bother trying!
 		{
-			ST_DrawPatchFromHud(HUD_TIMETICCOLON, sbocolon); // Colon
+			ST_DrawPatchFromHud(HUD_TIMETICCOLON, sboperiod); // Period
 			ST_DrawPadNumFromHud(HUD_TICS, tictrn, 2); // Tics
 		}
 	}
@@ -1201,7 +1205,34 @@ static void ST_drawNiGHTSHUD(void)
 	&& LUA_HudEnabled(hud_nightsscore)
 #endif
 	)
+	{
 		ST_DrawNightsOverlayNum(SCX(304), SCY(16), 0, stplyr->marescore, nightsnum, SKINCOLOR_STEELBLUE);
+	}
+
+	if (!stplyr->exiting
+#ifdef HAVE_BLUA
+	// TODO give this its own section for Lua
+	&& LUA_HudEnabled(hud_nightsscore)
+#endif
+	)
+	{
+		if (modeattacking == ATTACKING_NIGHTS)
+		{
+			INT32 maretime = max(stplyr->realtime - stplyr->marebegunat, 0);
+
+			ST_DrawOverlayPatch(SCX(298), SCY(180), W_CachePatchName("NGRTIMER", PU_HUDGFX));
+			ST_DrawPaddedOverlayNum(SCX(298), SCY(180), G_TicsToCentiseconds(maretime), 2);
+			ST_DrawOverlayPatch(SCX(274), SCY(180), sboperiod);
+			if (maretime < 60*TICRATE)
+				ST_DrawOverlayNum(SCX(274), SCY(180), G_TicsToSeconds(maretime));
+			else
+			{
+				ST_DrawPaddedOverlayNum(SCX(274), SCY(180), G_TicsToSeconds(maretime), 2);
+				ST_DrawOverlayPatch(SCX(250), SCY(180), sbocolon);
+				ST_DrawOverlayNum(SCX(250), SCY(180), G_TicsToMinutes(maretime, true));
+			}
+		}
+	}
 
 	// Ideya time remaining
 	if (!stplyr->exiting && stplyr->nightstime > 0

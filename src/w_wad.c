@@ -660,6 +660,21 @@ lumpnum_t W_GetNumForName(const char *name)
 	return i;
 }
 
+// Used by Lua. Case sensitive lump checking, quickly...
+#include "fastcmp.h"
+UINT8 W_LumpExists(const char *name)
+{
+	INT32 i,j;
+	for (i = numwadfiles - 1; i >= 0; i--)
+	{
+		lumpinfo_t *lump_p = wadfiles[i]->lumpinfo;
+		for (j = 0; j < wadfiles[i]->numlumps; ++j, ++lump_p)
+			if (fastcmp(lump_p->name,name))
+				return true;
+	}
+	return false;
+}
+
 size_t W_LumpLengthPwad(UINT16 wad, UINT16 lump)
 {
 	if (!TestValidLump(wad, lump))

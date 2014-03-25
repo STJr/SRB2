@@ -4071,8 +4071,17 @@ static void P_2dMovement(player_t *player)
 	if (player->exiting || player->pflags & PF_STASIS)
 	{
 		cmd->forwardmove = cmd->sidemove = 0;
-		if (player->pflags & PF_GLIDING && !player->skidtime)
-			player->pflags &= ~PF_GLIDING;
+		if (player->pflags & PF_GLIDING)
+		{
+			if (!player->skidtime)
+				player->pflags &= ~PF_GLIDING;
+			else if (player->exiting)
+			{
+				player->pflags &= ~PF_GLIDING;
+				P_SetPlayerMobjState(player->mo, S_PLAY_RUN1);
+				player->skidtime = 0;
+			}
+		}
 		if (player->pflags & PF_SPINNING && !player->exiting)
 		{
 			player->pflags &= ~PF_SPINNING;
@@ -4255,8 +4264,17 @@ static void P_3dMovement(player_t *player)
 	if (player->exiting || player->pflags & PF_STASIS)
 	{
 		cmd->forwardmove = cmd->sidemove = 0;
-		if (player->pflags & PF_GLIDING && !player->skidtime)
-			player->pflags &= ~PF_GLIDING;
+		if (player->pflags & PF_GLIDING)
+		{
+			if (!player->skidtime)
+				player->pflags &= ~PF_GLIDING;
+			else if (player->exiting)
+			{
+				player->pflags &= ~PF_GLIDING;
+				P_SetPlayerMobjState(player->mo, S_PLAY_RUN1);
+				player->skidtime = 0;
+			}
+		}
 		if (player->pflags & PF_SPINNING && !player->exiting)
 		{
 			player->pflags &= ~PF_SPINNING;
@@ -6184,9 +6202,24 @@ static void P_MovePlayer(player_t *player)
 		else if (G_GametypeHasTeams())
 		{
 			INT32 changeto = 0;
+			INT32 z, numplayersred = 0, numplayersblue = 0;
 
-			//find a team by score, or random if all else fails.
-			if (bluescore > redscore)
+			//find a team by num players, score, or random if all else fails.
+			for (z = 0; z < MAXPLAYERS; ++z)
+				if (playeringame[z])
+				{
+					if (players[z].ctfteam == 1)
+						++numplayersred;
+					else if (players[z].ctfteam == 2)
+						++numplayersblue;
+				}
+			// for z
+
+			if (numplayersblue > numplayersred)
+				changeto = 1;
+			else if (numplayersred > numplayersblue)
+				changeto = 2;
+			else if (bluescore > redscore)
 				changeto = 1;
 			else if (redscore > bluescore)
 				changeto = 2;
