@@ -350,7 +350,7 @@ consvar_t cv_usemapnumlaps = {"usemaplaps", "Yes", CV_NETVAR, CV_YesNo, NULL, 0,
 // log elemental hazards -- not a netvar, is local to current player
 consvar_t cv_hazardlog = {"hazardlog", "Yes", 0, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
 
-consvar_t cv_forceskin = {"forceskin", "-1", CV_NETVAR|CV_CALL, NULL, ForceSkin_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_forceskin = {"forceskin", "-1", CV_NETVAR|CV_CALL|CV_CHEAT, NULL, ForceSkin_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_downloading = {"downloading", "On", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_allowexitlevel = {"allowexitlevel", "No", CV_NETVAR, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
 
@@ -378,7 +378,6 @@ consvar_t cv_mute = {"mute", "Off", CV_NETVAR|CV_CALL, CV_OnOff, Mute_OnChange, 
 
 consvar_t cv_sleep = {"cpusleep", "-1", CV_SAVE, sleeping_cons_t, NULL, -1, NULL, NULL, 0, 0, NULL};
 
-static boolean triggerforcedskin = false;
 INT16 gametype = GT_COOP;
 boolean splitscreen = false;
 boolean circuitmap = false;
@@ -1042,6 +1041,26 @@ UINT8 CanChangeSkin(INT32 playernum)
 	return true;
 }
 
+static void ForceAllSkins(INT32 forcedskin)
+{
+	INT32 i;
+	for (i = 0; i < MAXPLAYERS; ++i)
+	{
+		if (!playeringame[i])
+			continue;
+
+		SetPlayerSkinByNum(i, forcedskin);
+
+		// If it's me (or my brother), set appropriate skin value in cv_skin/cv_skin2
+		if (!dedicated) // But don't do this for dedicated servers, of course.
+		{
+			if (i == consoleplayer)
+				CV_StealthSet(&cv_skin, skins[forcedskin].name);
+			else if (i == secondarydisplayplayer)
+				CV_StealthSet(&cv_skin2, skins[forcedskin].name);
+		}
+	}
+}
 
 static INT32 snacpending = 0, snac2pending = 0, chmappending = 0;
 
@@ -1100,35 +1119,6 @@ static void SendNameAndColor(void)
 		{ // Metal Sonic is Sonic, obviously.
 			SetPlayerSkinByNum(consoleplayer, 0);
 			CV_StealthSet(&cv_skin, skins[0].name);
-		}
-		else if (cv_forceskin.value >= 0 && (netgame || multiplayer)) // Server wants everyone to use the same player
-		{
-			const INT32 forcedskin = cv_forceskin.value;
-
-			if (triggerforcedskin)
-			{
-				INT32 i;
-
-				for (i = 0; i < MAXPLAYERS; i++)
-				{
-					if (playeringame[i])
-					{
-						SetPlayerSkinByNum(i, forcedskin);
-
-						// If it's me (or my brother), set appropriate skin value in cv_skin/cv_skin2
-						if (i == consoleplayer)
-							CV_StealthSet(&cv_skin, skins[forcedskin].name);
-						else if (i == secondarydisplayplayer)
-							CV_StealthSet(&cv_skin2, skins[forcedskin].name);
-					}
-				}
-				triggerforcedskin = false;
-			}
-			else
-			{
-				SetPlayerSkinByNum(consoleplayer, forcedskin);
-				CV_StealthSet(&cv_skin, skins[forcedskin].name);
-			}
 		}
 		else if ((foundskin = R_SkinAvailable(cv_skin.string)) != -1)
 		{
@@ -1277,7 +1267,6 @@ static void SendNameAndColor2(void)
 static void Got_NameAndColor(UINT8 **cp, INT32 playernum)
 {
 	player_t *p = &players[playernum];
-	INT32 i;
 	char name[MAXPLAYERNAME+1];
 	UINT8 color, skin;
 
@@ -1343,33 +1332,12 @@ static void Got_NameAndColor(UINT8 **cp, INT32 playernum)
 	if (cv_forceskin.value >= 0 && (netgame || multiplayer)) // Server wants everyone to use the same player
 	{
 		const INT32 forcedskin = cv_forceskin.value;
+		SetPlayerSkinByNum(playernum, forcedskin);
 
-		if (triggerforcedskin)
-		{
-			for (i = 0; i < MAXPLAYERS; i++)
-			{
-				if (playeringame[i])
-				{
-					SetPlayerSkinByNum(i, forcedskin);
-
-					// If it's me (or my brother), set appropriate skin value in cv_skin/cv_skin2
-					if (i == consoleplayer)
-						CV_StealthSet(&cv_skin, skins[forcedskin].name);
-					else if (i == secondarydisplayplayer)
-						CV_StealthSet(&cv_skin2, skins[forcedskin].name);
-				}
-			}
-			triggerforcedskin = false;
-		}
-		else
-		{
-			SetPlayerSkinByNum(playernum, forcedskin);
-
-			if (playernum == consoleplayer)
-				CV_StealthSet(&cv_skin, skins[forcedskin].name);
-			else if (playernum == secondarydisplayplayer)
-				CV_StealthSet(&cv_skin2, skins[forcedskin].name);
-		}
+		if (playernum == consoleplayer)
+			CV_StealthSet(&cv_skin, skins[forcedskin].name);
+		else if (playernum == secondarydisplayplayer)
+			CV_StealthSet(&cv_skin2, skins[forcedskin].name);
 	}
 	else
 		SetPlayerSkinByNum(playernum, skin);
@@ -4179,21 +4147,27 @@ static void ForceSkin_OnChange(void)
 	if ((server || adminplayer == consoleplayer) && (cv_forceskin.value < -1 || cv_forceskin.value >= numskins))
 	{
 		if (cv_forceskin.value == -2)
-			CV_StealthSetValue(&cv_forceskin, numskins-1);
+			CV_SetValue(&cv_forceskin, numskins-1);
 		else
 		{
 			// hack because I can't restrict this and still allow added skins to be used with forceskin.
 			if (!menuactive)
 				CONS_Printf(M_GetText("Valid skin numbers are 0 to %d (-1 disables)\n"), numskins - 1);
 			CV_SetValue(&cv_forceskin, -1);
-			return;
 		}
+		return;
 	}
 
-	if (cv_forceskin.value >= 0 && (netgame || multiplayer)) // NOT in SP, silly!
+	// NOT in SP, silly!
+	if (!(netgame || multiplayer))
+		return;
+
+	if (cv_forceskin.value < 0)
+		CONS_Printf("The server has lifted the forced skin restrictions.\n");
+	else
 	{
-		triggerforcedskin = true;
-		SendNameAndColor(); // have it take effect immediately
+		CONS_Printf("The server is restricting all players to skin \"%s\".\n",skins[cv_forceskin.value].name);
+		ForceAllSkins(cv_forceskin.value);
 	}
 }
 

@@ -296,7 +296,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		}
 
 		if (((toucher->player->pflags & PF_NIGHTSMODE) && (toucher->player->pflags & PF_DRILLING))
-		|| (toucher->player->pflags & (PF_JUMPED|PF_SPINNING))
+		|| (toucher->player->pflags & (PF_JUMPED|PF_SPINNING|PF_GLIDING))
 		|| toucher->player->powers[pw_invulnerability] || toucher->player->powers[pw_super]) // Do you possess the ability to subdue the object?
 		{
 			if (P_MobjFlip(toucher)*toucher->momz < 0)
@@ -339,7 +339,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			P_DamageMobj(toucher, special, special, 1);
 		}
 		else if (((toucher->player->pflags & PF_NIGHTSMODE) && (toucher->player->pflags & PF_DRILLING))
-		|| (toucher->player->pflags & (PF_JUMPED|PF_SPINNING))
+		|| (toucher->player->pflags & (PF_JUMPED|PF_SPINNING|PF_GLIDING))
 		|| toucher->player->powers[pw_invulnerability] || toucher->player->powers[pw_super]) // Do you possess the ability to subdue the object?
 		{
 			if (P_MobjFlip(toucher)*toucher->momz < 0)
@@ -1295,7 +1295,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					S_StartSound(toucher, special->info->painsound);
 					return;
 				}
-				else if (((toucher->player->pflags & PF_NIGHTSMODE) && (toucher->player->pflags & PF_DRILLING)) || (toucher->player->pflags & PF_JUMPED) || (toucher->player->pflags & PF_SPINNING)
+				else if (((toucher->player->pflags & PF_NIGHTSMODE) && (toucher->player->pflags & PF_DRILLING)) || (toucher->player->pflags & (PF_JUMPED|PF_SPINNING|PF_GLIDING))
 						|| toucher->player->powers[pw_invulnerability] || toucher->player->powers[pw_super]) // Do you possess the ability to subdue the object?
 				{
 					// Shatter the shield!
@@ -2649,11 +2649,12 @@ void P_RemoveShield(player_t *player)
 
 static void P_ShieldDamage(player_t *player, mobj_t *inflictor, mobj_t *source, INT32 damage)
 {
+	// Must do pain first to set flashing -- P_RemoveShield can cause damage
+	P_DoPlayerPain(player, source, inflictor);
+
 	P_RemoveShield(player);
 
 	P_ForceFeed(player, 40, 10, TICRATE, 40 + min(damage, 100)*2);
-
-	P_DoPlayerPain(player, source, inflictor);
 
 	if (source && (source->type == MT_SPIKE || (source->type == MT_NULL && source->threshold == 43))) // spikes
 		S_StartSound(player->mo, sfx_spkdth);

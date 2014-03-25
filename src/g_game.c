@@ -1624,7 +1624,7 @@ boolean G_Responder(event_t *ev)
 					 && (players[consoleplayer].pflags & PF_TAGIT) != (players[displayplayer].pflags & PF_TAGIT))
 						continue;
 				}
-				else if (G_RingSlingerGametype())
+				else if (G_GametypeHasSpectators() && G_RingSlingerGametype())
 				{
 					if (!players[consoleplayer].spectator)
 						continue;
