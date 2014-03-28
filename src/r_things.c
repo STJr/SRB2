@@ -2390,6 +2390,12 @@ void R_InitSkins(void)
 	skin->spritedef.numframes = sprites[SPR_PLAY].numframes;
 	skin->spritedef.spriteframes = sprites[SPR_PLAY].spriteframes;
 	ST_LoadFaceGraphics(skin->face, skin->superface, 0);
+
+	//MD2 for sonic doesn't want to load in Linux.
+#ifdef HWRENDER
+	if (rendermode == render_opengl)
+		HWR_AddPlayerMD2(0);
+#endif
 }
 
 // returns true if the skin name is found (loaded from pwad)
