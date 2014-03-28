@@ -1420,6 +1420,9 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 
 				texturevpegtop += gr_sidedef->rowoffset;
 
+				// This is so that it doesn't overflow and screw up the wall, it doesn't need to go higher than the texture's height anyway
+				texturevpegtop %= SHORT(textures[texturetranslation[gr_sidedef->toptexture]]->height)<<FRACBITS;
+
 				wallVerts[3].t = wallVerts[2].t = texturevpegtop * grTex->scaleY;
 				wallVerts[0].t = wallVerts[1].t = (texturevpegtop + worldtop - worldhigh) * grTex->scaleY;
 				wallVerts[0].s = wallVerts[3].s = cliplow * grTex->scaleX;
@@ -1458,6 +1461,9 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 					texturevpegbottom = 0;
 
 				texturevpegbottom += gr_sidedef->rowoffset;
+
+				// This is so that it doesn't overflow and screw up the wall, it doesn't need to go higher than the texture's height anyway
+				texturevpegbottom %= SHORT(textures[texturetranslation[gr_sidedef->bottomtexture]]->height)<<FRACBITS;
 
 				wallVerts[3].t = wallVerts[2].t = texturevpegbottom * grTex->scaleY;
 				wallVerts[0].t = wallVerts[1].t = (texturevpegbottom + worldlow - worldbottom) * grTex->scaleY;
