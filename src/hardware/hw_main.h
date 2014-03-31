@@ -64,7 +64,6 @@ void HWR_DoPostProcessor(player_t *player);
 void HWR_StartScreenWipe(void);
 void HWR_EndScreenWipe(void);
 void HWR_DoScreenWipe(void);
-void HWR_PrepFadeToBlack(void);
 void HWR_DrawIntermissionBG(void);
 
 // This stuff is put here so MD2's can use them

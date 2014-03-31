@@ -268,10 +268,6 @@ static void D_Display(void)
 			 && wipedefs[wipedefindex] != UINT8_MAX)
 			{
 				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
-#ifdef HWRENDER
-				if(rendermode != render_soft)
-					HWR_PrepFadeToBlack();
-#endif
 				F_WipeEndScreen();
 				F_RunWipe(wipedefs[wipedefindex], gamestate != GS_TIMEATTACK);
 			}

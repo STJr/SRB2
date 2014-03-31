@@ -2435,10 +2435,7 @@ noscript:
 	{
 		F_WipeStartScreen();
 		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
-#ifdef HWRENDER
-		if(rendermode != render_soft)
-			HWR_PrepFadeToBlack();
-#endif
+
 		F_WipeEndScreen();
 		F_RunWipe(wipedefs[wipe_level_toblack], false);
 

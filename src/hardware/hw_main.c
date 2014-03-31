@@ -5347,24 +5347,6 @@ void HWR_EndScreenWipe(void)
 	HWD.pfnEndScreenWipe();
 }
 
-// Prepare the screen for fading to black.
-void HWR_PrepFadeToBlack(void)
-{
-	FOutVector      v[4];
-	INT32 flags;
-	FSurfaceInfo Surf;
-
-	v[0].x = v[2].y = v[3].x = v[3].y = -1.0f;
-	v[0].y = v[1].x = v[1].y = v[2].x = 1.0f;
-	v[0].z = v[1].z = v[2].z = v[3].z = 1.0f;
-
-	flags = PF_Modulated | PF_Clip | PF_NoZClip | PF_NoDepthTest | PF_NoTexture;
-	Surf.FlatColor.s.red = Surf.FlatColor.s.green = Surf.FlatColor.s.blue = 0x00;
-	Surf.FlatColor.s.alpha = 0xff;
-
-	HWD.pfnDrawPolygon(&Surf, v, 4, flags);
-}
-
 void HWR_DrawIntermissionBG(void)
 {
 	HWD.pfnDrawIntermissionBG();
@@ -5372,14 +5354,15 @@ void HWR_DrawIntermissionBG(void)
 
 void HWR_DoScreenWipe(void)
 {
-	HWRWipeCounter -= 0.035f;
-
 	//CONS_Debug(DBG_RENDER, "In HWR_DoScreenWipe(). Alpha =%f\n", HWRWipeCounter);
 
 	HWD.pfnDoScreenWipe(HWRWipeCounter);
 
-	I_OsPolling();
-	I_FinishUpdate();
+	// This works for all the cases in vanilla until fade masks get done
+	HWRWipeCounter -= 0.05f; // Go less opaque after
+
+	if (HWRWipeCounter < 0)
+		HWRWipeCounter = 0;
 }
 
 #endif // HWRENDER
