@@ -767,9 +767,11 @@ static inline void resynch_write_ctf(resynchend_pak *rst)
 				rst->flagplayer[i] = (SINT8)j;
 				break;
 			}
-			if (j == MAXPLAYERS)
-				I_Error("One of the flags has gone completely missing!");
-
+			if (j == MAXPLAYERS) // fine, no I_Error
+			{
+				CONS_Alert(CONS_ERROR, "One of the flags has gone completely missing...");
+				rst->flagplayer[i] = -2;
+			}
 			continue;
 		}
 
@@ -789,7 +791,9 @@ static inline void resynch_read_ctf(resynchend_pak *p)
 		players[i].gotflag = 0;
 
 	// Red flag
-	if (p->flagplayer[0] != -1) // Held by a player
+	if (p->flagplayer[0] == -2)
+		; // The server doesn't even know what happened to it...
+	else if (p->flagplayer[0] != -1) // Held by a player
 	{
 		if (!playeringame[p->flagplayer[0]])
 			 I_Error("Invalid red flag player %d who isn't in the game!", (INT32)p->flagplayer[0]);
@@ -815,7 +819,9 @@ static inline void resynch_read_ctf(resynchend_pak *p)
 	}
 
 	// Blue flag
-	if (p->flagplayer[1] != -1) // Held by a player
+	if (p->flagplayer[1] == -2)
+		; // The server doesn't even know what happened to it...
+	else if (p->flagplayer[1] != -1) // Held by a player
 	{
 		if (!playeringame[p->flagplayer[1]])
 			 I_Error("Invalid blue flag player %d who isn't in the game!", (INT32)p->flagplayer[1]);
@@ -832,11 +838,11 @@ static inline void resynch_read_ctf(resynchend_pak *p)
 			blueflag = P_SpawnMobj(0,0,0,MT_BLUEFLAG);
 
 		P_UnsetThingPosition(blueflag);
-		blueflag->x = (fixed_t)LONG(p->flagx[0]);
-		blueflag->y = (fixed_t)LONG(p->flagy[0]);
-		blueflag->z = (fixed_t)LONG(p->flagz[0]);
-		blueflag->flags2 = LONG(p->flagflags[0]);
-		blueflag->fuse = LONG(p->flagloose[0]);
+		blueflag->x = (fixed_t)LONG(p->flagx[1]);
+		blueflag->y = (fixed_t)LONG(p->flagy[1]);
+		blueflag->z = (fixed_t)LONG(p->flagz[1]);
+		blueflag->flags2 = LONG(p->flagflags[1]);
+		blueflag->fuse = LONG(p->flagloose[1]);
 		P_SetThingPosition(blueflag);
 	}
 }
@@ -1683,7 +1689,7 @@ static void CL_ConnectToServer(boolean viams)
 		}
 		if (gametypestr)
 			CONS_Printf(M_GetText("Gametype: %s\n"), gametypestr);
-		CONS_Printf(M_GetText("Version: %d.%.2d.%u\n"), serverlist[i].info.version/100,
+		CONS_Printf(M_GetText("Version: %d.%d.%u\n"), serverlist[i].info.version/100,
 		 serverlist[i].info.version%100, serverlist[i].info.subversion);
 	}
 	SL_ClearServerList(servernode);

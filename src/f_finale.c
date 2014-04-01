@@ -1096,10 +1096,7 @@ void F_StartCredits(void)
 	CON_ClearHUD();
 	S_StopMusic();
 
-	if (!modifiedgame && (M_SecretUnlocked(SECRET_PANDORA)) && ALL7EMERALDS(emeralds))
-		S_ChangeMusic(mus_mapl4m, false);
-	else
-		S_ChangeMusic(mus_credit, false);
+	S_ChangeMusic(mus_credit, false);
 
 	finalecount = 0;
 	animtimer = 0;

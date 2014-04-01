@@ -65,6 +65,7 @@ extern patch_t *tallnum[10];
 extern patch_t *sboscore;
 extern patch_t *sbotime;
 extern patch_t *sbocolon;
+extern patch_t *sboperiod;
 extern patch_t *faceprefix[MAXSKINS]; // face status patches
 extern patch_t *superprefix[MAXSKINS]; // super face status patches
 extern patch_t *livesback;
