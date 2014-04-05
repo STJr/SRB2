@@ -1654,12 +1654,12 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 					break;
 			}
 			if (grTex->mipmap.flags & TF_TRANSPARENT)
-				blendmode = PF_Environment;
+				blendmode = PF_Translucent;
 
 			if (gr_frontsector->numlights)
 			{
 				if (!(blendmode & PF_Masked))
-					HWR_SplitWall(gr_frontsector, wallVerts, gr_midtexture, &Surf, FF_CUTSOLIDS|FF_TRANSLUCENT);
+					HWR_SplitWall(gr_frontsector, wallVerts, gr_midtexture, &Surf, FF_TRANSLUCENT);
 				else
 					HWR_SplitWall(gr_frontsector, wallVerts, gr_midtexture, &Surf, FF_CUTSOLIDS);
 			}
