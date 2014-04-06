@@ -2016,6 +2016,8 @@ EXPORT void HWRAPI(StartScreenWipe) (void)
 #ifndef KOS_GL_COMPATIBILITY
 	pglCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 0, 0, texsize, texsize, 0);
 #endif
+
+	tex_downloaded = 0; // 0 so it knows it doesn't have any of the cached patches downloaded right now
 }
 
 // Create Screen to fade to
@@ -2043,6 +2045,8 @@ EXPORT void HWRAPI(EndScreenWipe)(void)
 #ifndef KOS_GL_COMPATIBILITY
 	pglCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 0, 0, texsize, texsize, 0);
 #endif
+
+	tex_downloaded = 0; // 0 so it knows it doesn't have any of the cached patches downloaded right now
 }
 
 
@@ -2060,7 +2064,7 @@ EXPORT void HWRAPI(DrawIntermissionBG)(void)
 	xfix = 1/((float)(texsize)/((float)((screen_width))));
 	yfix = 1/((float)(texsize)/((float)((screen_height))));
 
-	//pglClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+	pglClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
 	pglBindTexture(GL_TEXTURE_2D, screentexture);
 	pglBegin(GL_QUADS);
@@ -2083,6 +2087,8 @@ EXPORT void HWRAPI(DrawIntermissionBG)(void)
 		pglVertex3f(1.0f, -1.0f, 1.0f);
 
 	pglEnd();
+
+	tex_downloaded = 0; // 0 so it knows it doesn't have any of the cached patches downloaded right now
 }
 
 // Do screen fades!
@@ -2101,6 +2107,8 @@ EXPORT void HWRAPI(DoScreenWipe)(float alpha)
 	yfix = 1/((float)(texsize)/((float)((screen_height))));
 
 	pglClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+
+	SetBlend(PF_Modulated|PF_NoDepthTest|PF_Clip|PF_NoZClip);
 
 	// Draw the screen on bottom to fade to
 	pglBindTexture(GL_TEXTURE_2D, endScreenWipe);
@@ -2124,6 +2132,8 @@ EXPORT void HWRAPI(DoScreenWipe)(float alpha)
 		pglVertex3f(1.0f, -1.0f, 1.0f);
 	pglEnd();
 
+	SetBlend(PF_Modulated|PF_Translucent|PF_NoDepthTest|PF_Clip|PF_NoZClip);
+
 	// Draw the screen on top that fades.
 	pglBindTexture(GL_TEXTURE_2D, startScreenWipe);
 	pglBegin(GL_QUADS);
@@ -2146,6 +2156,8 @@ EXPORT void HWRAPI(DoScreenWipe)(float alpha)
 		pglVertex3f(1.0f, -1.0f, 1.0f);
 
 	pglEnd();
+
+	tex_downloaded = 0; // 0 so it knows it doesn't have any of the cached patches downloaded right now
 }
 
 
@@ -2174,6 +2186,8 @@ EXPORT void HWRAPI(MakeScreenTexture) (void)
 #ifndef KOS_GL_COMPATIBILITY
 	pglCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 0, 0, texsize, texsize, 0);
 #endif
+
+	tex_downloaded = 0; // 0 so it knows it doesn't have any of the cached patches downloaded right now
 }
 
 #endif //HWRENDER

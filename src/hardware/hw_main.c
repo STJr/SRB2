@@ -1420,6 +1420,9 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 
 				texturevpegtop += gr_sidedef->rowoffset;
 
+				// This is so that it doesn't overflow and screw up the wall, it doesn't need to go higher than the texture's height anyway
+				texturevpegtop %= SHORT(textures[texturetranslation[gr_sidedef->toptexture]]->height)<<FRACBITS;
+
 				wallVerts[3].t = wallVerts[2].t = texturevpegtop * grTex->scaleY;
 				wallVerts[0].t = wallVerts[1].t = (texturevpegtop + worldtop - worldhigh) * grTex->scaleY;
 				wallVerts[0].s = wallVerts[3].s = cliplow * grTex->scaleX;
@@ -1458,6 +1461,9 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 					texturevpegbottom = 0;
 
 				texturevpegbottom += gr_sidedef->rowoffset;
+
+				// This is so that it doesn't overflow and screw up the wall, it doesn't need to go higher than the texture's height anyway
+				texturevpegbottom %= SHORT(textures[texturetranslation[gr_sidedef->bottomtexture]]->height)<<FRACBITS;
 
 				wallVerts[3].t = wallVerts[2].t = texturevpegbottom * grTex->scaleY;
 				wallVerts[0].t = wallVerts[1].t = (texturevpegbottom + worldlow - worldbottom) * grTex->scaleY;
@@ -1648,12 +1654,12 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 					break;
 			}
 			if (grTex->mipmap.flags & TF_TRANSPARENT)
-				blendmode = PF_Environment;
+				blendmode = PF_Translucent;
 
 			if (gr_frontsector->numlights)
 			{
 				if (!(blendmode & PF_Masked))
-					HWR_SplitWall(gr_frontsector, wallVerts, gr_midtexture, &Surf, FF_CUTSOLIDS|FF_TRANSLUCENT);
+					HWR_SplitWall(gr_frontsector, wallVerts, gr_midtexture, &Surf, FF_TRANSLUCENT);
 				else
 					HWR_SplitWall(gr_frontsector, wallVerts, gr_midtexture, &Surf, FF_CUTSOLIDS);
 			}
@@ -4629,7 +4635,8 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 	ClearColor.blue = 0.0f;
 	ClearColor.alpha = 1.0f;
 
-	HWD.pfnClearBuffer(true, false, &ClearColor); // Clear the Color Buffer, stops HOMs. Also seems to fix the skybox issue on Intel GPUs.
+	if (viewnumber == 0) // Only do it if it's the first screen being rendered
+		HWD.pfnClearBuffer(true, false, &ClearColor); // Clear the Color Buffer, stops HOMs. Also seems to fix the skybox issue on Intel GPUs.
 
 	if (skybox && drawsky) // If there's a skybox and we should be drawing the sky, draw the skybox
 		HWR_RenderSkyboxView(viewnumber, player); // This is drawn before everything else so it is placed behind
@@ -5340,24 +5347,6 @@ void HWR_EndScreenWipe(void)
 	HWD.pfnEndScreenWipe();
 }
 
-// Prepare the screen for fading to black.
-void HWR_PrepFadeToBlack(void)
-{
-	FOutVector      v[4];
-	INT32 flags;
-	FSurfaceInfo Surf;
-
-	v[0].x = v[2].y = v[3].x = v[3].y = -1.0f;
-	v[0].y = v[1].x = v[1].y = v[2].x = 1.0f;
-	v[0].z = v[1].z = v[2].z = v[3].z = 1.0f;
-
-	flags = PF_Modulated | PF_Clip | PF_NoZClip | PF_NoDepthTest | PF_NoTexture;
-	Surf.FlatColor.s.red = Surf.FlatColor.s.green = Surf.FlatColor.s.blue = 0x00;
-	Surf.FlatColor.s.alpha = 0xff;
-
-	HWD.pfnDrawPolygon(&Surf, v, 4, flags);
-}
-
 void HWR_DrawIntermissionBG(void)
 {
 	HWD.pfnDrawIntermissionBG();
@@ -5365,14 +5354,15 @@ void HWR_DrawIntermissionBG(void)
 
 void HWR_DoScreenWipe(void)
 {
-	HWRWipeCounter -= 0.035f;
-
 	//CONS_Debug(DBG_RENDER, "In HWR_DoScreenWipe(). Alpha =%f\n", HWRWipeCounter);
 
 	HWD.pfnDoScreenWipe(HWRWipeCounter);
 
-	I_OsPolling();
-	I_FinishUpdate();
+	// This works for all the cases in vanilla until fade masks get done
+	HWRWipeCounter -= 0.05f; // Go less opaque after
+
+	if (HWRWipeCounter < 0)
+		HWRWipeCounter = 0;
 }
 
 #endif // HWRENDER

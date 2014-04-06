@@ -1179,6 +1179,8 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		if (!gpatch || !gpatch->mipmap.grInfo.format || !gpatch->mipmap.downloaded)
 			md2_loadTexture(md2);
 
+		gpatch = md2->grpatch; // Load it again, because it isn't being loaded into gpatch after md2_loadtexture...
+
 		if (gpatch && gpatch->mipmap.grInfo.format) // else if meant that if a texture couldn't be loaded, it would just end up using something else's texture
 		{
 			// This is safe, since we know the texture has been downloaded
