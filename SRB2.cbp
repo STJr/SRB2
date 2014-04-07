@@ -41,7 +41,6 @@ HW3SOUND for 3D hardware sound  support
 					<Add option="-DHAVE_BLUA" />
 				</Compiler>
 				<Linker>
-					<Add option="-g" />
 					<Add option="`sdl-config --libs`" />
 					<Add library="SDL_mixer" />
 				</Linker>
@@ -63,7 +62,6 @@ HW3SOUND for 3D hardware sound  support
 					<Add option="-DHAVE_BLUA" />
 				</Compiler>
 				<Linker>
-					<Add option="-g" />
 					<Add option="`sdl-config --libs`" />
 					<Add library="SDL_mixer" />
 				</Linker>
@@ -91,7 +89,6 @@ HW3SOUND for 3D hardware sound  support
 					<Add option="-DHAVE_BLUA" />
 				</Compiler>
 				<Linker>
-					<Add option="-g" />
 					<Add option="`sdl-config --libs`" />
 					<Add option="`libpng-config --libs`" />
 					<Add library="SDL_mixer" />
@@ -120,7 +117,6 @@ HW3SOUND for 3D hardware sound  support
 					<Add option="-DHAVE_BLUA" />
 				</Compiler>
 				<Linker>
-					<Add option="-g" />
 					<Add option="`sdl-config --libs`" />
 					<Add option="`libpng-config --libs`" />
 					<Add library="SDL_mixer" />
@@ -136,6 +132,7 @@ HW3SOUND for 3D hardware sound  support
 				<Compiler>
 					<Add option="-march=i586" />
 					<Add option="-g" />
+					<Add option="-gdwarf-2" />
 					<Add option="-D_GNU_SOURCE=1" />
 					<Add option="-DSTDC_HEADERS" />
 					<Add option="-D__USE_MINGW_ANSI_STDIO=0" />
@@ -157,7 +154,6 @@ HW3SOUND for 3D hardware sound  support
 					<Add directory="libs/gme/include" />
 				</Compiler>
 				<Linker>
-					<Add option="-g" />
 					<Add library="SDL" />
 					<Add library="SDL_mixer" />
 					<Add library="advapi32" />
@@ -183,6 +179,7 @@ HW3SOUND for 3D hardware sound  support
 					<Add option="-march=i586" />
 					<Add option="-O2" />
 					<Add option="-g" />
+					<Add option="-gdwarf-2" />
 					<Add option="-D_GNU_SOURCE=1" />
 					<Add option="-DSTDC_HEADERS" />
 					<Add option="-D__USE_MINGW_ANSI_STDIO=0" />
@@ -203,7 +200,6 @@ HW3SOUND for 3D hardware sound  support
 					<Add directory="libs/gme/include" />
 				</Compiler>
 				<Linker>
-					<Add option="-g" />
 					<Add library="SDL" />
 					<Add library="SDL_mixer" />
 					<Add library="advapi32" />
@@ -229,6 +225,7 @@ HW3SOUND for 3D hardware sound  support
 					<Add option="-march=i586" />
 					<Add option="-O2" />
 					<Add option="-g" />
+					<Add option="-gdwarf-2" />
 					<Add option="-DSTDC_HEADERS" />
 					<Add option="-D_WINDOWS" />
 					<Add option="-DHWRENDER" />
@@ -248,7 +245,6 @@ HW3SOUND for 3D hardware sound  support
 					<Add directory="src/win32" />
 				</ResourceCompiler>
 				<Linker>
-					<Add option="-g" />
 					<Add library="advapi32" />
 					<Add library="dinput" />
 					<Add library="dxguid" />
@@ -278,6 +274,7 @@ HW3SOUND for 3D hardware sound  support
 					<Add option="-march=i586" />
 					<Add option="-O2" />
 					<Add option="-g" />
+					<Add option="-gdwarf-2" />
 					<Add option="-DSTDC_HEADERS" />
 					<Add option="-D_WINDOWS" />
 					<Add option="-DHWRENDER" />
@@ -296,7 +293,6 @@ HW3SOUND for 3D hardware sound  support
 					<Add directory="src/win32" />
 				</ResourceCompiler>
 				<Linker>
-					<Add option="-g" />
 					<Add library="advapi32" />
 					<Add library="dinput" />
 					<Add library="dxguid" />
@@ -877,14 +873,15 @@ HW3SOUND for 3D hardware sound  support
 			<Add directory="src/win32" />
 			<Add directory="src/hardware/r_opengl" />
 		</Compiler>
-		<Linker>
-			<Add option="-g" />
-		</Linker>
 		<ExtraCommands>
 			<Add before="make -f comptime.mk all-before" />
 			<Add after="make -f cpdebug.mk all-after BIN=$(TARGET_OUTPUT_FILE)" />
 			<Mode after="always" />
 		</ExtraCommands>
+		<Unit filename="comptime.bat" />
+		<Unit filename="comptime.mk" />
+		<Unit filename="comptime.sh" />
+		<Unit filename="cpdebug.mk" />
 		<Unit filename="src/am_map.c">
 			<Option compilerVar="CC" />
 			<Option target="Debug Native/SDL" />
