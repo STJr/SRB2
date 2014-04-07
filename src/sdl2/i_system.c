@@ -994,10 +994,8 @@ void I_GetJoystickEvents(void)
 	static event_t event = {0,0,0,0};
 	INT32 i = 0;
 	UINT64 joyhats = 0;
-#if 0
 	UINT64 joybuttons = 0;
 	Sint16 axisx, axisy;
-#endif
 
 	if (!joystick_started) return;
 
@@ -1070,7 +1068,6 @@ void I_GetJoystickEvents(void)
 		}
 	}
 
-#if 0
 	// send joystick axis positions
 	event.type = ev_joystick;
 
@@ -1123,7 +1120,6 @@ void I_GetJoystickEvents(void)
 		}
 		D_PostEvent(&event);
 	}
-#endif
 }
 
 /**	\brief	Open joystick handle
@@ -1136,8 +1132,6 @@ void I_GetJoystickEvents(void)
 */
 static int joy_open(const char *fname)
 {
-	return -1; // TODO SDL2 joystick overhaul
-#if 0
 	int joyindex = atoi(fname);
 	int num_joy = 0;
 	int i;
@@ -1225,7 +1219,6 @@ static int joy_open(const char *fname)
 
 		return JoyInfo.axises;
 	}
-#endif
 }
 
 //Joystick2
@@ -1291,10 +1284,8 @@ void I_GetJoystick2Events(void)
 	static event_t event = {0,0,0,0};
 	INT32 i = 0;
 	UINT64 joyhats = 0;
-#if 0
 	INT64 joybuttons = 0;
 	INT32 axisx, axisy;
-#endif
 
 	if (!joystick2_started)
 		return;
@@ -1364,7 +1355,6 @@ void I_GetJoystick2Events(void)
 		}
 	}
 
-#if 0
 	// send joystick axis positions
 	event.type = ev_joystick2;
 
@@ -1419,7 +1409,6 @@ void I_GetJoystick2Events(void)
 		}
 		D_PostEvent(&event);
 	}
-#endif
 
 }
 
@@ -1433,8 +1422,6 @@ void I_GetJoystick2Events(void)
 */
 static int joy_open2(const char *fname)
 {
-	return -1; // TODO SDL2 joystick overhaul
-#if 0
 	int joyindex = atoi(fname);
 	int num_joy = 0;
 	int i;
@@ -1520,7 +1507,6 @@ static int joy_open2(const char *fname)
 
 		return JoyInfo2.axises;
 	}
-#endif
 }
 
 //
