@@ -24,9 +24,9 @@ all-after:
 	$(OBJCOPY) $(BIN) $(DBGNAME)
 	$(OBJCOPY) --strip-debug $(BIN)
 	-$(OBJCOPY) --add-gnu-debuglink=$(DBGNAME) $(BIN)
-	-$(GZIP) $(GZIP_OPTS) $(DBGNAME).txt
+	-$(GZIP) $(GZIP_OPTS) "$(DBGNAME).txt"
 ifndef COMSPEC
-	$(GZIP) $(GZIP_OPT2) $(DBGNAME).txt
+	-$(GZIP) $(GZIP_OPT2) "$(DBGNAME).txt"
 endif
 	-$(UPX) $(UPX_OPTS) $(BIN)
 
