@@ -1244,6 +1244,11 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		// SRB2CBTODO: MD2 scaling support
 		finalscale *= FIXED_TO_FLOAT(spr->mobj->scale);
 
+		if (postimgtype == postimg_flip)
+			p.flip = true;
+		else
+			p.flip = false;
+
 		HWD.pfnDrawMD2i(buff, curr, durs, tics, next, &p, finalscale, flip, color);
 
 
