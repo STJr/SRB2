@@ -822,38 +822,40 @@ static void Impl_HandleKeyboardEvent(SDL_KeyboardEvent evt, Uint32 type)
 static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
 {
 	event_t event;
+	int wwidth, wheight;
+
+	SDL_GetWindowSize(window, &wwidth, &wheight);
+
 	if (MOUSE_MENU)
 	{
 		SDLdoUngrabMouse();
 		return;
 	}
-	//if (USE_MOUSEINPUT) TODO SDL2 stub
+	// If the event is from warping the pointer back to middle
+	// of the screen then ignore it.
+	/*if (ignorenext || ((evt.x == wwidth/2) && (evt.y == wheight/2)))
 	{
-		// If the event is from warping the pointer back to middle
-		// of the screen then ignore it.
-		if ((evt.x == realwidth/2) &&
-				(evt.y == realheight/2))
-		{
-			return;
-		}
-		else
-		{
-			event.data2 = +evt.xrel;
-			event.data3 = -evt.yrel;
-		}
-		event.type = ev_mouse;
-		D_PostEvent(&event);
-		// Warp the pointer back to the middle of the window
-		//  or we cannot move any further if it's at a border.
-		if ((evt.x < (realwidth/2 )-(realwidth/4 )) ||
-				(evt.y < (realheight/2)-(realheight/4)) ||
-				(evt.x > (realwidth/2 )+(realwidth/4 )) ||
-				(evt.y > (realheight/2)+(realheight/4) ) )
-		{
-			//if (SDL_GRAB_ON == SDL_WM_GrabInput(SDL_GRAB_QUERY) || !mousegrabok)
-			SDL_SetWindowGrab(window, mousegrabok);
-			HalfWarpMouse(realwidth, realheight);
-		}
+		ignorenext = SDL_FALSE;
+		return;
+	}
+	else
+	{*/
+	event.data2 = +evt.xrel;
+	event.data3 = -evt.yrel;
+	//}
+	event.type = ev_mouse;
+	D_PostEvent(&event);
+	// Warp the pointer back to the middle of the window
+	//  or we cannot move any further if it's at a border.
+	/*if ((evt.x < (wwidth/2 )-(wwidth/4 )) ||
+			(evt.y < (wheight/2)-(wheight/4)) ||
+			(evt.x > (wwidth/2 )+(wwidth/4 )) ||
+			(evt.y > (wheight/2)+(wheight/4) ) )*/
+	{
+		//if (SDL_GRAB_ON == SDL_WM_GrabInput(SDL_GRAB_QUERY) || !mousegrabok)
+		SDL_SetWindowGrab(window, mousegrabok);
+		//HalfWarpMouse(wwidth, wheight);
+		SDL_SetRelativeMouseMode(SDL_TRUE);
 	}
 }
 
@@ -885,7 +887,6 @@ static void Impl_HandleMouseButtonEvent(SDL_MouseButtonEvent evt, Uint32 type)
 			event.data1 = KEY_MOUSE1 + evt.which - SDL_BUTTON_LEFT;
 		if (event.type == ev_keyup || event.type == ev_keydown)
 		{
-			CONS_Printf("Mouse button %d\n", evt.which);
 			D_PostEvent(&event);
 		}
 	}
