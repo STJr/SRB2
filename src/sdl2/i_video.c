@@ -1797,7 +1797,7 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 	}
 
 	window = SDL_CreateWindow("SRB2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-			BASEVIDWIDTH, BASEVIDHEIGHT, flags);
+			realwidth, realheight, flags);
 	renderer = SDL_CreateRenderer(window, -1, 0);
 
 	SDL_RenderSetLogicalSize(renderer, BASEVIDWIDTH, BASEVIDHEIGHT);
@@ -1897,7 +1897,7 @@ void I_StartupGraphics(void)
 	if (!I_GetEnv("SDL_VIDEO_CENTERED"))
 		I_PutEnv(SDLVIDEOMID);
 	*/
-	CV_SetValue(&cv_fullscreen, M_CheckParm("-win") ? 0 : 1);
+  disable_fullscreen = M_CheckParm("-win") ? 1 : 0;
 
 	keyboard_started = true;
 
