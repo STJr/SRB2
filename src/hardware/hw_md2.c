@@ -1132,6 +1132,9 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		spriteframe_t *sprframe;
 		float finalscale;
 
+		if (tics > durs)
+			durs = tics;
+
 		if (spr->mobj->flags2 & MF2_SHADOW)
 		{
 			Surf.FlatColor.s.alpha = 0x40;
