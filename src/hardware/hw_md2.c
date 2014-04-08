@@ -1132,6 +1132,9 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		spriteframe_t *sprframe;
 		float finalscale;
 
+		if (tics > durs)
+			durs = tics;
+
 		if (spr->mobj->flags2 & MF2_SHADOW)
 		{
 			Surf.FlatColor.s.alpha = 0x40;
@@ -1240,6 +1243,11 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 
 		// SRB2CBTODO: MD2 scaling support
 		finalscale *= FIXED_TO_FLOAT(spr->mobj->scale);
+
+		if (postimgtype == postimg_flip)
+			p.flip = true;
+		else
+			p.flip = false;
 
 		HWD.pfnDrawMD2i(buff, curr, durs, tics, next, &p, finalscale, flip, color);
 

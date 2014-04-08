@@ -628,9 +628,6 @@ void SetStates(void)
 #ifdef GL_LIGHT_MODEL_AMBIENT
 	GLfloat LightDiffuse[] = {1.0f, 1.0f, 1.0f, 1.0f};
 #endif
-#ifndef KOS_GL_COMPATIBILITY
-	GLfloat LightPos[] = {0.0f, 1.0f, 0.0f, 0.0f};
-#endif
 
 	DBG_Printf("SetStates()\n");
 
@@ -692,9 +689,6 @@ void SetStates(void)
 #ifdef GL_LIGHT_MODEL_AMBIENT
 	pglLightModelfv(GL_LIGHT_MODEL_AMBIENT, LightDiffuse);
 	pglEnable(GL_LIGHT0);
-#endif
-#ifndef KOS_GL_COMPATIBILITY
-	pglLightfv(GL_LIGHT0, GL_POSITION, LightPos);
 #endif
 
 	// bp : when no t&l :)
@@ -1720,6 +1714,11 @@ EXPORT void HWRAPI(DrawMD2i) (INT32 *gl_cmd_buffer, md2_frame_t *frame, UINT32 d
 	float scalex, scaley, scalez;
 	scalex = scaley = scalez = scale;
 
+	// Because Otherwise, scaling the screen negatively vertically breaks the lighting
+#ifndef KOS_GL_COMPATIBILITY
+	GLfloat LightPos[] = {0.0f, 1.0f, 0.0f, 0.0f};
+#endif
+
 	if (duration == 0)
 		duration = 1;
 
@@ -1760,10 +1759,19 @@ EXPORT void HWRAPI(DrawMD2i) (INT32 *gl_cmd_buffer, md2_frame_t *frame, UINT32 d
 
 	pglEnable(GL_CULL_FACE);
 
-	if (flipped)
+	// pos->flip is if the screen is flipped too
+	if (flipped != pos->flip) // If either are active, but not both, invert the model's culling
+	{
 		pglCullFace(GL_FRONT);
+	}
 	else
+	{
 		pglCullFace(GL_BACK);
+	}
+
+#ifndef KOS_GL_COMPATIBILITY
+	pglLightfv(GL_LIGHT0, GL_POSITION, LightPos);
+#endif
 
 	pglShadeModel(GL_SMOOTH);
 	if (color)
@@ -1872,7 +1880,12 @@ EXPORT void HWRAPI(SetTransform) (FTransform *stransform)
 	{
 		// keep a trace of the transformation for md2
 		memcpy(&md2_transform, stransform, sizeof (md2_transform));
-		pglScalef(stransform->scalex, stransform->scaley, -stransform->scalez);
+
+		if (stransform->flip)
+			pglScalef(stransform->scalex, -stransform->scaley, -stransform->scalez);
+		else
+			pglScalef(stransform->scalex, stransform->scaley, -stransform->scalez);
+
 		pglRotatef(stransform->anglex       , 1.0f, 0.0f, 0.0f);
 		pglRotatef(stransform->angley+270.0f, 0.0f, 1.0f, 0.0f);
 		pglTranslatef(-stransform->x, -stransform->z, -stransform->y);
