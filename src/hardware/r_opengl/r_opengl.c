@@ -1711,8 +1711,7 @@ EXPORT void HWRAPI(DrawMD2i) (INT32 *gl_cmd_buffer, md2_frame_t *frame, UINT32 d
 
 	float pol;
 	UINT32 newtime;
-	float scalex, scaley, scalez;
-	scalex = scaley = scalez = scale;
+	float scalex = scale, scaley = scale, scalez = scale;
 
 	// Because Otherwise, scaling the screen negatively vertically breaks the lighting
 #ifndef KOS_GL_COMPATIBILITY
