@@ -994,7 +994,9 @@ void I_GetJoystickEvents(void)
 	static event_t event = {0,0,0,0};
 	INT32 i = 0;
 	UINT64 joyhats = 0;
+#if 0
 	UINT64 joybuttons = 0;
+#endif
 	Sint16 axisx, axisy;
 
 	if (!joystick_started) return;
@@ -1152,7 +1154,7 @@ static int joy_open(const char *fname)
 		{
 			CONS_Printf(M_GetText("Cannot use joystick #%d/(%s), it doesn't exist\n"),joyindex,fname);
 			for (i = 0; i < num_joy; i++)
-				CONS_Printf("#%d/(%s)\n", i+1, SDL_JoystickName(i));
+				CONS_Printf("#%d/(%s)\n", i+1, SDL_JoystickNameForIndex(i));
 			I_ShutdownJoystick();
 			return -1;
 		}
@@ -1173,7 +1175,7 @@ static int joy_open(const char *fname)
 		{
 			CONS_Printf(M_GetText("Found %d joysticks on this system\n"), num_joy);
 			for (i = 0; i < num_joy; i++)
-				CONS_Printf("#%d/(%s)\n", i+1, SDL_JoystickName(i));
+				CONS_Printf("#%d/(%s)\n", i+1, SDL_JoystickNameForIndex(i));
 		}
 		else
 			CONS_Printf("%s", M_GetText("Found no joysticks on this system\n"));
@@ -1181,7 +1183,6 @@ static int joy_open(const char *fname)
 	}
 
 	JoyInfo.dev = SDL_JoystickOpen(joyindex-1);
-	CONS_Printf(M_GetText("Joystick: %s\n"), SDL_JoystickName(joyindex-1));
 
 	if (JoyInfo.dev == NULL)
 	{
@@ -1191,6 +1192,7 @@ static int joy_open(const char *fname)
 	}
 	else
 	{
+		CONS_Printf(M_GetText("Joystick: %s\n"), SDL_JoystickName(JoyInfo.dev));
 		JoyInfo.axises = SDL_JoystickNumAxes(JoyInfo.dev);
 		if (JoyInfo.axises > JOYAXISSET*2)
 			JoyInfo.axises = JOYAXISSET*2;
@@ -1215,7 +1217,7 @@ static int joy_open(const char *fname)
 		JoyInfo.balls = SDL_JoystickNumBalls(JoyInfo.dev);
 #endif
 
-		//Joystick.bGamepadStyle = !stricmp(SDL_JoystickName(SDL_JoystickIndex(JoyInfo.dev)), "pad");
+		//Joystick.bGamepadStyle = !stricmp(SDL_JoystickName(JoyInfo.dev), "pad");
 
 		return JoyInfo.axises;
 	}
@@ -1284,7 +1286,9 @@ void I_GetJoystick2Events(void)
 	static event_t event = {0,0,0,0};
 	INT32 i = 0;
 	UINT64 joyhats = 0;
+#if 0
 	INT64 joybuttons = 0;
+#endif
 	INT32 axisx, axisy;
 
 	if (!joystick2_started)
@@ -1440,7 +1444,7 @@ static int joy_open2(const char *fname)
 		{
 			CONS_Printf(M_GetText("Cannot use joystick #%d/(%s), it doesn't exist\n"),joyindex,fname);
 			for (i = 0; i < num_joy; i++)
-				CONS_Printf("#%d/(%s)\n", i+1, SDL_JoystickName(i));
+				CONS_Printf("#%d/(%s)\n", i+1, SDL_JoystickNameForIndex(i));
 			I_ShutdownJoystick2();
 			return -1;
 		}
@@ -1461,7 +1465,7 @@ static int joy_open2(const char *fname)
 		{
 			CONS_Printf(M_GetText("Found %d joysticks on this system\n"), num_joy);
 			for (i = 0; i < num_joy; i++)
-				CONS_Printf("#%d/(%s)\n", i+1, SDL_JoystickName(i));
+				CONS_Printf("#%d/(%s)\n", i+1, SDL_JoystickNameForIndex(i));
 		}
 		else
 			CONS_Printf("%s", M_GetText("Found no joysticks on this system\n"));
@@ -1469,7 +1473,6 @@ static int joy_open2(const char *fname)
 	}
 
 	JoyInfo2.dev = SDL_JoystickOpen(joyindex-1);
-	CONS_Printf(M_GetText("Joystick2: %s\n"), SDL_JoystickName(joyindex-1));
 
 	if (!JoyInfo2.dev)
 	{
@@ -1479,6 +1482,7 @@ static int joy_open2(const char *fname)
 	}
 	else
 	{
+		CONS_Printf(M_GetText("Joystick2: %s\n"), SDL_JoystickName(JoyInfo2.dev));
 		JoyInfo2.axises = SDL_JoystickNumAxes(JoyInfo2.dev);
 		if (JoyInfo2.axises > JOYAXISSET*2)
 			JoyInfo2.axises = JOYAXISSET*2;
@@ -1503,7 +1507,7 @@ static int joy_open2(const char *fname)
 		JoyInfo2.balls = SDL_JoystickNumBalls(JoyInfo2.dev);
 #endif
 
-		//Joystick.bGamepadStyle = !stricmp(SDL_JoystickName(SDL_JoystickIndex(JoyInfo2.dev)), "pad");
+		//Joystick.bGamepadStyle = !stricmp(SDL_JoystickName(JoyInfo2.dev), "pad");
 
 		return JoyInfo2.axises;
 	}
