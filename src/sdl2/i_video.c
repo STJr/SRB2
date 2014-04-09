@@ -1983,13 +1983,14 @@ void I_StartupGraphics(void)
 	}
 	if (M_CheckParm("-nomousegrab"))
 		mousegrabok = SDL_FALSE;
-#if 0 // defined (_DEBUG)
+#if 1 // defined (_DEBUG)
 	else
 	{
 		char videodriver[4] = {'S','D','L',0};
 		if (!M_CheckParm("-mousegrab") &&
-		    SDL_VideoDriverName(videodriver,4) &&
-		    strncasecmp("X11",videodriver,4) == 0)
+		    *strncpy(videodriver, SDL_GetCurrentVideoDriver(), 4) != '\0' &&
+		    strncasecmp("x11",videodriver,4) == 0 &&
+		    SDL_SetRelativeMouseMode(1) == -1)
 			mousegrabok = SDL_FALSE; //X11's XGrabPointer not good
 	}
 #endif
