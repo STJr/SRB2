@@ -4475,6 +4475,12 @@ void HWR_RenderSkyboxView(INT32 viewnumber, player_t *player)
 	//                     It should replace all other gr_viewxxx when finished
 	atransform.anglex = (float)(aimingangle>>ANGLETOFINESHIFT)*(360.0f/(float)FINEANGLES);
 	atransform.angley = (float)(viewangle>>ANGLETOFINESHIFT)*(360.0f/(float)FINEANGLES);
+
+	if (postimgtype == postimg_flip)
+		atransform.flip = true;
+	else
+		atransform.flip = false;
+
 	atransform.x      = gr_viewx;  // FIXED_TO_FLOAT(viewx)
 	atransform.y      = gr_viewy;  // FIXED_TO_FLOAT(viewy)
 	atransform.z      = gr_viewz;  // FIXED_TO_FLOAT(viewz)
@@ -4488,6 +4494,12 @@ void HWR_RenderSkyboxView(INT32 viewnumber, player_t *player)
 	// Transform for sprites
 	stransform.anglex = 0.0f;
 	stransform.angley = -270.0f;
+
+	if (postimgtype == postimg_flip)
+		stransform.flip = true;
+	else
+		stransform.flip = false;
+
 	stransform.x      = 0.0f;
 	stransform.y      = 0.0f;
 	stransform.z      = 0.0f;
@@ -4687,6 +4699,12 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 	//                     It should replace all other gr_viewxxx when finished
 	atransform.anglex = (float)(aimingangle>>ANGLETOFINESHIFT)*(360.0f/(float)FINEANGLES);
 	atransform.angley = (float)(viewangle>>ANGLETOFINESHIFT)*(360.0f/(float)FINEANGLES);
+
+	if (postimgtype == postimg_flip)
+		atransform.flip = true;
+	else
+		atransform.flip = false;
+
 	atransform.x      = gr_viewx;  // FIXED_TO_FLOAT(viewx)
 	atransform.y      = gr_viewy;  // FIXED_TO_FLOAT(viewy)
 	atransform.z      = gr_viewz;  // FIXED_TO_FLOAT(viewz)
@@ -4700,6 +4718,12 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 	// Transform for sprites
 	stransform.anglex = 0.0f;
 	stransform.angley = -270.0f;
+
+	if (postimgtype == postimg_flip)
+		stransform.flip = true;
+	else
+		stransform.flip = false;
+
 	stransform.x      = 0.0f;
 	stransform.y      = 0.0f;
 	stransform.z      = 0.0f;
@@ -5312,25 +5336,12 @@ void HWR_DoPostProcessor(player_t *player)
 		}
 		HWD.pfnPostImgRedraw(v);
 		disStart += 1;
-	}
-	else if (postimgtype == postimg_flip) //We like our screens inverted.
-	{
-		// 10 by 10 grid. 2 coordinates (xy)
-		float v[SCREENVERTS][SCREENVERTS][2];
-		UINT8 x, y;
-		UINT8 flipy;
 
-		for (x = 0; x < SCREENVERTS; x++)
-		{
-			for (y = 0, flipy = SCREENVERTS; y < SCREENVERTS; y++, flipy--)
-			{
-				// Flip the screen.
-				v[x][y][0] = (x/((float)(SCREENVERTS-1.0f)/9.0f))-4.5f;
-				v[x][y][1] = (flipy/((float)(SCREENVERTS-1.0f)/9.0f))-5.5f;
-			}
-		}
-		HWD.pfnPostImgRedraw(v);
+		// Capture the screen again for screen waving on the intermission
+		if(gamestate != GS_INTERMISSION)
+			HWD.pfnMakeScreenTexture();
 	}
+	// Flipping of the screen isn't done here anymore
 #endif // SHUFFLE
 }
 

@@ -1501,7 +1501,7 @@ CompileCpp=0
 Link=1
 Priority=1000
 OverrideBuildCmd=1
-BuildCmd=$(CC) -g $(CFLAGS) -x assembler-with-cpp -c src/vid_copy.s -o $@
+BuildCmd=$(CC) $(CFLAGS) -x assembler-with-cpp -c src/vid_copy.s -o $@
 
 [Unit152]
 FileName=src\y_inter.h
@@ -2024,8 +2024,8 @@ Includes=libs/libpng-src;libs/zlib;libs/gme/include;libs/fmodex/inc;libs
 Libs=libs/libpng-src/projects;libs/zlib/win32;libs/miniupnpc/mingw32;libs/gme/win32;libs/gme/win32;libs/fmodex/lib
 ResourceIncludes=src/win32
 MakeIncludes=comptime.mk;cpdebug.mk
-Compiler=-DNDEBUG_@@_-fno-exceptions_@@_-DSTDC_HEADERS_@@_-Wall_@@_-Os_@@_-g_@@_-D_WINDOWS_@@_-DHAVE_PNG_@@_-DNOROPENGL_@@_-D__USE_MINGW_ANSI_STDIO=0_@@_-DHAVE_MINIUPNPC_@@_-DSTATIC_MINIUPNPC_@@_-DHAVE_BLUA_@@_-DHAVE_LIBGME_@@_
-CppCompiler=-Os_@@_-g_@@_
+Compiler=-DNDEBUG_@@_-fno-exceptions_@@_-DSTDC_HEADERS_@@_-Wall_@@_-Os_@@_-g_@@_-gdwarf-2_@@_-D_WINDOWS_@@_-DHAVE_PNG_@@_-DNOROPENGL_@@_-D__USE_MINGW_ANSI_STDIO=0_@@_-DHAVE_MINIUPNPC_@@_-DSTATIC_MINIUPNPC_@@_-DHAVE_BLUA_@@_-DHAVE_LIBGME_@@_
+CppCompiler=-Os_@@_-g_@@_-gdwarf-2_@@_
 Linker=-lgdi32_@@_-ldinput_@@_-ldxguid_@@_-lwinmm_@@_-lpng32_@@_-lz32_@@_-lminiupnpc_@@_-lws2_32_@@_-liphlpapi_@@_-mwindows_@@_-lgme.dll_@@_-lfmodex_@@_
 PreprocDefines=NORMALSRB2_@@_
 CompilerSettings=00000000001000000110e1
@@ -2051,8 +2051,8 @@ Includes=libs/libpng-src;libs/zlib;libs/gme/include;libs/fmodex/inc;libs
 Libs=libs/libpng-src/projects;libs/zlib/win32;libs/miniupnpc/mingw32;libs/gme/win32;libs/fmodex/lib
 ResourceIncludes=src/win32
 MakeIncludes=comptime.mk;cpdebug.mk
-Compiler=-D_DEBUG_@@_-fno-exceptions_@@_-DSTDC_HEADERS_@@_-Wall_@@_-O0_@@_-g_@@_-D_WINDOWS_@@_-DHAVE_PNG_@@_-DNOROPENGL_@@_-D__USE_MINGW_ANSI_STDIO=0_@@_-DHAVE_MINIUPNPC_@@_-DSTATIC_MINIUPNPC_@@_-DHAVE_BLUA_@@_-DHAVE_LIBGME_@@_
-CppCompiler=-O0_@@_-g_@@_
+Compiler=-D_DEBUG_@@_-fno-exceptions_@@_-DSTDC_HEADERS_@@_-Wall_@@_-O0_@@_-g_@@_-gdwarf-2_@@_-D_WINDOWS_@@_-DHAVE_PNG_@@_-DNOROPENGL_@@_-D__USE_MINGW_ANSI_STDIO=0_@@_-DHAVE_MINIUPNPC_@@_-DSTATIC_MINIUPNPC_@@_-DHAVE_BLUA_@@_-DHAVE_LIBGME_@@_
+CppCompiler=-O0_@@_-g_@@_-gdwarf-2_@@_
 Linker=-lgdi32_@@_-ldinput_@@_-ldxguid_@@_-lwinmm_@@_-lpng32_@@_-lz32_@@_-lminiupnpc_@@_-lws2_32_@@_-liphlpapi_@@_-mconsole_@@_-lgme.dll_@@_-lfmodex_@@_
 PreprocDefines=NORMALSRB2_@@_
 CompilerSettings=00000000000000100110e1
@@ -2228,8 +2228,8 @@ Includes=libs/libpng-src;libs/zlib;libs
 Libs=libs/libpng-src/projects;libs/zlib/win32;libs/miniupnpc/mingw32
 ResourceIncludes=src/win32
 MakeIncludes=comptime.mk;cpdebug.mk
-Compiler=-DNDEBUG_@@_-fno-exceptions_@@_-DSTDC_HEADERS_@@_-Wall_@@_-Os_@@_-g_@@_-DUSE_WGL_SWAP_@@_-DDIRECTFULLSCREEN_@@_-DSDL_@@_-DHWRENDER_@@_-DHW3SOUND_@@_-DHAVE_MIXER_@@_-DHAVE_PNG_@@_-D__USE_MINGW_ANSI_STDIO=0_@@_-DHAVE_MINIUPNPC_@@_-DSTATIC_MINIUPNPC_@@_-DHAVE_BLUA_@@_
-CppCompiler=-Os_@@_-g_@@_
+Compiler=-DNDEBUG_@@_-fno-exceptions_@@_-DSTDC_HEADERS_@@_-Wall_@@_-Os_@@_-g_@@_-gdwarf-2_@@_-DUSE_WGL_SWAP_@@_-DDIRECTFULLSCREEN_@@_-DSDL_@@_-DHWRENDER_@@_-DHW3SOUND_@@_-DHAVE_MIXER_@@_-DHAVE_PNG_@@_-D__USE_MINGW_ANSI_STDIO=0_@@_-DHAVE_MINIUPNPC_@@_-DSTATIC_MINIUPNPC_@@_-DHAVE_BLUA_@@_
+CppCompiler=-Os_@@_-g_@@_-gdwarf-2_@@_
 Linker=-lSDL_@@_-lSDL_Mixer_@@_-lpng32_@@_-lz32_@@_-lminiupnpc_@@_-lws2_32_@@_-liphlpapi_@@_-mconsole_@@_
 PreprocDefines=NORMALSRB2_@@_
 CompilerSettings=00000000001000000110e1
@@ -2305,8 +2305,8 @@ Includes=libs/libpng-src;libs/zlib;libs
 Libs=libs/libpng-src/projects;libs/zlib/win32;libs/miniupnpc/mingw32
 ResourceIncludes=src/win32
 MakeIncludes=comptime.mk;cpdebug.mk
-Compiler=-D_DEBUG_@@_-fno-exceptions_@@_-DSTDC_HEADERS_@@_-Wall_@@_-O0_@@_-g_@@_-DUSE_WGL_SWAP_@@_-DDIRECTFULLSCREEN_@@_-DSDL_@@_-DHWRENDER_@@_-DHW3SOUND_@@_-DHAVE_MIXER_@@_-DHAVE_PNG_@@_-D__USE_MINGW_ANSI_STDIO=0_@@_-DHAVE_MINIUPNPC_@@_-DSTATIC_MINIUPNPC_@@_-DHAVE_BLUA_@@_
-CppCompiler=-O0_@@_-g_@@_
+Compiler=-D_DEBUG_@@_-fno-exceptions_@@_-DSTDC_HEADERS_@@_-Wall_@@_-O0_@@_-g_@@_-gdwarf-2_@@_-DUSE_WGL_SWAP_@@_-DDIRECTFULLSCREEN_@@_-DSDL_@@_-DHWRENDER_@@_-DHW3SOUND_@@_-DHAVE_MIXER_@@_-DHAVE_PNG_@@_-D__USE_MINGW_ANSI_STDIO=0_@@_-DHAVE_MINIUPNPC_@@_-DSTATIC_MINIUPNPC_@@_-DHAVE_BLUA_@@_
+CppCompiler=-O0_@@_-g_@@_-gdwarf-2_@@_
 Linker=-lSDL_@@_-lSDL_Mixer_@@_-lpng32_@@_-lz32_@@_-lminiupnpc_@@_-lws2_32_@@_-liphlpapi_@@_-mconsole_@@_
 PreprocDefines=NORMALSRB2_@@_
 CompilerSettings=00000000000000100110e1
