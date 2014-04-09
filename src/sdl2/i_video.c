@@ -132,6 +132,7 @@ static       Uint16      realheight = BASEVIDHEIGHT;
 static const Uint32      surfaceFlagsW = 0/*|SDL_RESIZABLE*/;
 static const Uint32      surfaceFlagsF = 0;
 static       SDL_bool    mousegrabok = SDL_TRUE;
+static       SDL_bool    mousewarp = SDL_FALSE;
 #define HalfWarpMouse(x,y) SDL_WarpMouseInWindow(window, (Uint16)(x/2),(Uint16)(y/2))
 static       SDL_bool    videoblitok = SDL_FALSE;
 static       SDL_bool    exposevideo = SDL_FALSE;
@@ -832,30 +833,7 @@ static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
 		return;
 	}
 
-	// If LINUX64 is defined, LINUX isn't defined.  This code or another
-	// fix needs to be put in a more proper spot.
-#ifdef LINUX64
-#ifndef LINUX
-#define LINUX 1
-#endif
-#endif
-	
-#ifndef LINUX
-	// On most systems, grab the mouse and use relative input.
-	event.data2 = +evt.xrel;
-	event.data3 = -evt.yrel;
-	event.type = ev_mouse;
-	D_PostEvent(&event);
-	SDL_SetWindowGrab(window, mousegrabok);
-	SDL_SetRelativeMouseMode(SDL_TRUE);
-#else
-	// On Linux, SDL_SetWindowGrab is bugged and will also grab keyboard
-	// input, which breaks alt-tabbing.  Instead, we're warping the
-	// mouse as a workaround.
-
-	// If the event is from warping the pointer back to middle
-	// of the screen then ignore it.
-	if (((evt.x == wwidth/2) && (evt.y == wheight/2)))
+	if (mousewarp && (evt.x == wwidth/2) && (evt.y == wheight/2))
 	{
 		return;
 	}
@@ -864,18 +842,24 @@ static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
 		event.data2 = +evt.xrel;
 		event.data3 = -evt.yrel;
 	}
+	
 	event.type = ev_mouse;
 	D_PostEvent(&event);
-	// Warp the pointer back to the middle of the window
-	//  or we cannot move any further if it's at a border.
-	if ((evt.x < (wwidth/2 )-(wwidth/4 )) ||
-			(evt.y < (wheight/2)-(wheight/4)) ||
-			(evt.x > (wwidth/2 )+(wwidth/4 )) ||
-			(evt.y > (wheight/2)+(wheight/4) ) )
-	{
-		HalfWarpMouse(wwidth, wheight);
+
+	if (mousewarp){
+		// Warp the pointer back to the middle of the window
+		//  or we cannot move any further if it's at a border.
+		if ((evt.x < (wwidth/2 )-(wwidth/4 )) ||
+				(evt.y < (wheight/2)-(wheight/4)) ||
+				(evt.x > (wwidth/2 )+(wwidth/4 )) ||
+				(evt.y > (wheight/2)+(wheight/4) ) )
+		{
+			HalfWarpMouse(wwidth, wheight);
+		}
+	} else {
+		SDL_SetWindowGrab(window, mousegrabok);
+		SDL_SetRelativeMouseMode(SDL_TRUE);
 	}
-#endif
 
 }
 
@@ -2110,6 +2094,9 @@ void I_StartupGraphics(void)
 	}
 	if (M_CheckParm("-nomousegrab"))
 		mousegrabok = SDL_FALSE;
+	else if (M_CheckParm("-mousewarp")){
+		mousewarp = SDL_TRUE;
+	}
 #if 0 // defined (_DEBUG)
 	else
 	{
