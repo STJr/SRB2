@@ -831,32 +831,41 @@ static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
 		SDLdoUngrabMouse();
 		return;
 	}
+	
+#ifndef LINUX
+#ifndef LINUX64
+	event.data2 = +evt.xrel;
+	event.data3 = -evt.yrel;
+	event.type = ev_mouse;
+	D_PostEvent(&event);
+	SDL_SetWindowGrab(window, mousegrabok);
+	SDL_SetRelativeMouseMode(SDL_TRUE);
+#else
 	// If the event is from warping the pointer back to middle
 	// of the screen then ignore it.
-	/*if (ignorenext || ((evt.x == wwidth/2) && (evt.y == wheight/2)))
+	if (((evt.x == wwidth/2) && (evt.y == wheight/2)))
 	{
-		ignorenext = SDL_FALSE;
 		return;
 	}
 	else
-	{*/
-	event.data2 = +evt.xrel;
-	event.data3 = -evt.yrel;
-	//}
+	{
+		event.data2 = +evt.xrel;
+		event.data3 = -evt.yrel;
+	}
 	event.type = ev_mouse;
 	D_PostEvent(&event);
 	// Warp the pointer back to the middle of the window
 	//  or we cannot move any further if it's at a border.
-	/*if ((evt.x < (wwidth/2 )-(wwidth/4 )) ||
+	if ((evt.x < (wwidth/2 )-(wwidth/4 )) ||
 			(evt.y < (wheight/2)-(wheight/4)) ||
 			(evt.x > (wwidth/2 )+(wwidth/4 )) ||
-			(evt.y > (wheight/2)+(wheight/4) ) )*/
+			(evt.y > (wheight/2)+(wheight/4) ) )
 	{
-		//if (SDL_GRAB_ON == SDL_WM_GrabInput(SDL_GRAB_QUERY) || !mousegrabok)
-		SDL_SetWindowGrab(window, mousegrabok);
-		//HalfWarpMouse(wwidth, wheight);
-		SDL_SetRelativeMouseMode(SDL_TRUE);
+		HalfWarpMouse(wwidth, wheight);
 	}
+#endif
+#endif
+
 }
 
 static void Impl_HandleMouseButtonEvent(SDL_MouseButtonEvent evt, Uint32 type)
