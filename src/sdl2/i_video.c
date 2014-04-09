@@ -134,6 +134,7 @@ static       Uint16      realheight = BASEVIDHEIGHT;
 static const Uint32      surfaceFlagsW = 0/*|SDL_RESIZABLE*/;
 static const Uint32      surfaceFlagsF = 0;
 static       SDL_bool    mousegrabok = SDL_TRUE;
+static       SDL_bool    mousewarp = SDL_FALSE;
 #define HalfWarpMouse(x,y) SDL_WarpMouseInWindow(window, (Uint16)(x/2),(Uint16)(y/2))
 static       SDL_bool    videoblitok = SDL_FALSE;
 static       SDL_bool    exposevideo = SDL_FALSE;
@@ -842,32 +843,35 @@ static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
 		SDLdoUngrabMouse();
 		return;
 	}
-	// If the event is from warping the pointer back to middle
-	// of the screen then ignore it.
-	/*if (ignorenext || ((evt.x == wwidth/2) && (evt.y == wheight/2)))
+
+	if (mousewarp && (evt.x == wwidth/2) && (evt.y == wheight/2))
 	{
-		ignorenext = SDL_FALSE;
 		return;
 	}
 	else
-	{*/
-	event.data2 = +evt.xrel;
-	event.data3 = -evt.yrel;
-	//}
+	{
+		event.data2 = +evt.xrel;
+		event.data3 = -evt.yrel;
+	}
+	
 	event.type = ev_mouse;
 	D_PostEvent(&event);
-	// Warp the pointer back to the middle of the window
-	//  or we cannot move any further if it's at a border.
-	/*if ((evt.x < (wwidth/2 )-(wwidth/4 )) ||
-			(evt.y < (wheight/2)-(wheight/4)) ||
-			(evt.x > (wwidth/2 )+(wwidth/4 )) ||
-			(evt.y > (wheight/2)+(wheight/4) ) )*/
-	{
-		//if (SDL_GRAB_ON == SDL_WM_GrabInput(SDL_GRAB_QUERY) || !mousegrabok)
+
+	if (mousewarp){
+		// Warp the pointer back to the middle of the window
+		//  or we cannot move any further if it's at a border.
+		if ((evt.x < (wwidth/2 )-(wwidth/4 )) ||
+				(evt.y < (wheight/2)-(wheight/4)) ||
+				(evt.x > (wwidth/2 )+(wwidth/4 )) ||
+				(evt.y > (wheight/2)+(wheight/4) ) )
+		{
+			HalfWarpMouse(wwidth, wheight);
+		}
+	} else {
 		SDL_SetWindowGrab(window, mousegrabok);
-		//HalfWarpMouse(wwidth, wheight);
 		SDL_SetRelativeMouseMode(SDL_TRUE);
 	}
+
 }
 
 static void Impl_HandleMouseButtonEvent(SDL_MouseButtonEvent evt, Uint32 type)
@@ -1983,6 +1987,8 @@ void I_StartupGraphics(void)
 	}
 	if (M_CheckParm("-nomousegrab"))
 		mousegrabok = SDL_FALSE;
+	else if (M_CheckParm("-mousewarp") || SDL_SetRelativeMouseMode(SDL_TRUE) == -1)
+		mousewarp = SDL_TRUE;
 #if 1 // defined (_DEBUG)
 	else
 	{
@@ -1990,7 +1996,7 @@ void I_StartupGraphics(void)
 		if (!M_CheckParm("-mousegrab") &&
 		    *strncpy(videodriver, SDL_GetCurrentVideoDriver(), 4) != '\0' &&
 		    strncasecmp("x11",videodriver,4) == 0 &&
-		    SDL_SetRelativeMouseMode(1) == -1)
+		    SDL_SetRelativeMouseMode(SDL_TRUE) == -1)
 			mousegrabok = SDL_FALSE; //X11's XGrabPointer not good
 	}
 #endif
