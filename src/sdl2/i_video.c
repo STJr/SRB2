@@ -831,9 +831,17 @@ static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
 		SDLdoUngrabMouse();
 		return;
 	}
+
+	// If LINUX64 is defined, LINUX isn't defined.  This code or another
+	// fix needs to be put in a more proper spot.
+#ifdef LINUX64
+#ifndef LINUX
+#define LINUX 1
+#endif
+#endif
 	
 #ifndef LINUX
-#ifndef LINUX64
+	// On most systems, grab the mouse and use relative input.
 	event.data2 = +evt.xrel;
 	event.data3 = -evt.yrel;
 	event.type = ev_mouse;
@@ -841,6 +849,10 @@ static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
 	SDL_SetWindowGrab(window, mousegrabok);
 	SDL_SetRelativeMouseMode(SDL_TRUE);
 #else
+	// On Linux, SDL_SetWindowGrab is bugged and will also grab keyboard
+	// input, which breaks alt-tabbing.  Instead, we're warping the
+	// mouse as a workaround.
+
 	// If the event is from warping the pointer back to middle
 	// of the screen then ignore it.
 	if (((evt.x == wwidth/2) && (evt.y == wheight/2)))
@@ -863,7 +875,6 @@ static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
 	{
 		HalfWarpMouse(wwidth, wheight);
 	}
-#endif
 #endif
 
 }
