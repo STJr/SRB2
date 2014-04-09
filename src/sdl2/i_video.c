@@ -125,8 +125,10 @@ static      SDL_Surface *vidSurface = NULL;
 static      SDL_Surface *bufSurface = NULL;
 static      SDL_Surface *icoSurface = NULL;
 static      SDL_Color    localPalette[256];
+#if 0
 static      SDL_Rect   **modeList = NULL;
 static       Uint8       BitsPerPixel = 16;
+#endif
 static       Uint16      realwidth = BASEVIDWIDTH;
 static       Uint16      realheight = BASEVIDHEIGHT;
 static const Uint32      surfaceFlagsW = 0/*|SDL_RESIZABLE*/;
@@ -499,8 +501,11 @@ static void VID_Command_NumModes_f (void)
 
 static void SurfaceInfo(const SDL_Surface *infoSurface, const char *SurfaceText)
 {
+#if 1
+	(void)infoSurface;
+	(void)SurfaceText;
 	SDL2STUB();
-#if 0
+#else
 	INT32 vfBPP;
 	const SDL_Surface *VidSur = SDL_GetVideoSurface();
 
@@ -557,13 +562,14 @@ static void SurfaceInfo(const SDL_Surface *infoSurface, const char *SurfaceText)
 		CONS_Printf("%s", M_GetText(" Colorkey RLE acceleration blit\n"));
 	if (infoSurface->flags&SDL_SRCALPHA)
 		CONS_Printf("%s", M_GetText(" Use alpha blending acceleration blit\n"));
-
 #endif
 }
 
 static void VID_Command_Info_f (void)
 {
+#if 0
 	SDL2STUB();
+#else
 #if 0
 	const SDL_VideoInfo *videoInfo;
 	videoInfo = SDL_GetVideoInfo(); //Alam: Double-Check
@@ -600,6 +606,9 @@ static void VID_Command_Info_f (void)
 			CONS_Printf("%s", M_GetText(" There no video memory for SDL\n"));
 		//*vfmt
 	}
+#else
+	if (!M_CheckParm("-noblit")) videoblitok = SDL_TRUE;
+#endif
 	SurfaceInfo(bufSurface, M_GetText("Current Engine Mode"));
 	SurfaceInfo(vidSurface, M_GetText("Current Video Mode"));
 #endif
@@ -668,6 +677,7 @@ static void VID_Command_Mode_f (void)
 #endif
 }
 
+#if 0
 #if defined(RPC_NO_WINDOWS_H)
 static VOID MainWndproc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -681,6 +691,7 @@ static VOID MainWndproc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 	}
 }
+#endif
 #endif
 
 static inline void SDLJoyRemap(event_t *event)
@@ -1350,8 +1361,6 @@ void I_FinishUpdate(void)
 	if (render_soft == rendermode && screens[0])
 	{
 		SDL_Rect rect;
-		SDL_PixelFormat *vidformat = vidSurface->format;
-		int lockedsf = 0, blited = 0;
 
 		rect.x = 0;
 		rect.y = 0;
@@ -1365,125 +1374,16 @@ void I_FinishUpdate(void)
 		{
 			Impl_VideoSetupSDLBuffer();
 		}
-#if 0
-		if (SDLmatchVideoformat() && !vid.direct)//Alam: DOS Way
-		{
-			if (SDL_MUSTLOCK(vidSurface)) lockedsf = SDL_LockSurface(vidSurface);
-			if (lockedsf == 0)
-			{
-				if (vidSurface->pixels > vid.height)
-				{
-					UINT8 *ptr = vidSurface->pixels;
-					size_t half_excess = vidSurface->pitch*(vidSurface->height-vid.height)/2;
-					memset(ptr, 0x1F, half_excess);
-					ptr += half_excess;
-					VID_BlitLinearScreen(screens[0], ptr, vid.width*vid.bpp, vid.height,
-					                     vid.rowbytes, vidSurface->pitch);
-					ptr += vid.height*vidSurface->pitch;
-					memset(ptr, 0x1F, half_excess);
-				}
-				else
-				VID_BlitLinearScreen(screens[0], vidSurface->pixels, vid.width*vid.bpp,
-				                     vid.height, vid.rowbytes, vidSurface->pitch );
-				if (SDL_MUSTLOCK(vidSurface)) SDL_UnlockSurface(vidSurface);
-			}
-		}
-		else
-#endif
 		if (bufSurface) //Alam: New Way to send video data
 		{
-			blited = SDL_BlitSurface(bufSurface, NULL, vidSurface, &rect);
+			SDL_BlitSurface(bufSurface, NULL, vidSurface, &rect);
 			SDL_UpdateTexture(texture, NULL, vidSurface->pixels, realwidth * 4);
 		}
-#if 0
-		else if (vid.bpp == 1 && !vid.direct)
-		{
-			Uint8 *bP,*vP; //Src, Dst
-			Uint16 bW, vW; // Pitch Remainder
-			Sint32 pH, pW; //Height, Width
-			bP = (Uint8 *)screens[0];
-			bW = (Uint16)(vid.rowbytes - vid.width);
-			//I_OutputMsg("Old Copy Code\n");
-			if (SDL_MUSTLOCK(vidSurface)) lockedsf = SDL_LockSurface(vidSurface);
-			vP = (Uint8 *)vidSurface->pixels;
-			vW = (Uint16)(vidSurface->pitch - vidSurface->w*vidformat->BytesPerPixel);
-			if (vidSurface->h > vid.height)
-				vP += vidSurface->pitch*(vidSurface->h-vid.height)/2;
-			if (lockedsf == 0 && vidSurface->pixels)
-			{
-				if (vidformat->BytesPerPixel == 2)
-				{
-					for (pH=0;pH < vidSurface->h;pH++)
-					{
-						for (pW=0;pW < vidSurface->w;pW++)
-						{
-							*((Uint16 *)(void *)vP) = (Uint16)SDL_MapRGB(vidformat,
-								localPalette[*bP].r,localPalette[*bP].g,localPalette[*bP].b);
-							bP++;
-							vP += 2;
-						}
-						bP += bW;
-						vP += vW;
-					}
-				}
-				else if (vidformat->BytesPerPixel == 3)
-				{
-					for (pH=0;pH < vidSurface->h;pH++)
-					{
-						for (pW=0;pW < vidSurface->w;pW++)
-						{
-							*((Uint32 *)(void *)vP) = SDL_MapRGB(vidformat,
-								localPalette[*bP].r,localPalette[*bP].g,localPalette[*bP].b);
-							bP++;
-							vP += 3;
-						}
-						bP += bW;
-						vP += vW;
-					}
-				}
-				else if (vidformat->BytesPerPixel == 4)
-				{
-					for (pH=0;pH < vidSurface->h;pH++)
-					{
-						for (pW=0;pW < vidSurface->w;pW++)
-						{
-							*((Uint32 *)(void *)vP) = SDL_MapRGB(vidformat,
-								localPalette[*bP].r,localPalette[*bP].g,localPalette[*bP].b);
-							bP++;
-							vP += 4;
-						}
-						bP += bW;
-						vP += vW;
-					}
-				}
-				else
-				{
-					;//NOP
-				}
-			}
-			if (SDL_MUSTLOCK(vidSurface)) SDL_UnlockSurface(vidSurface);
-		}
-		else /// \todo 15t15,15tN, others?
-		{
-			;//NOP
-		}
-#endif
-
-#if 0
-		if (lockedsf == 0 && blited == 0 && vidSurface->flags&SDL_DOUBLEBUF)
-			SDL_Flip(vidSurface);
-		else if (blited != -2 && lockedsf == 0) //Alam: -2 for Win32 Direct, yea, i know
-			SDL_UpdateRect(vidSurface, rect.x, rect.y, 0, 0); //Alam: almost always
-		else
-			I_OutputMsg("%s\n",SDL_GetError());
+		// Blit buffer to texture
+		SDL_RenderClear(renderer);
+		SDL_RenderCopy(renderer, texture, NULL, NULL);
+		SDL_RenderPresent(renderer);
 	}
-#endif
-	// Blit buffer to texture
-	
-	SDL_RenderClear(renderer);
-	SDL_RenderCopy(renderer, texture, NULL, NULL);
-	SDL_RenderPresent(renderer);
-}
 
 #ifdef HWRENDER
 	else
@@ -1708,11 +1608,13 @@ static void SDLWMSet(void)
 #endif
 }
 
+#if 0
 static void* SDLGetDirect(void)
 {
 	// you can not use the video memory in pixels member in fullscreen mode
 	return NULL;
 }
+#endif
 
 INT32 VID_SetMode(INT32 modeNum)
 {
@@ -1879,7 +1781,7 @@ static void Impl_SetWindowName(const char *title)
 	SDL_SetWindowTitle(window, title);
 }
 
-static void Impl_SetWindowIcon()
+static void Impl_SetWindowIcon(void)
 {
 	if (window == NULL || icoSurface == NULL)
 	{
@@ -1889,7 +1791,7 @@ static void Impl_SetWindowIcon()
 	SDL_SetWindowIcon(window, icoSurface);
 }
 
-static void Impl_VideoSetupSDLBuffer()
+static void Impl_VideoSetupSDLBuffer(void)
 {
 	if (bufSurface != NULL)
 	{
@@ -1917,7 +1819,7 @@ static void Impl_VideoSetupSDLBuffer()
 	}
 }
 
-static void Impl_VideoSetupBuffer()
+static void Impl_VideoSetupBuffer(void)
 {
 	// Set up game's software render buffer
 	if (rendermode == render_soft)
@@ -1938,9 +1840,6 @@ static void Impl_VideoSetupBuffer()
 
 void I_StartupGraphics(void)
 {
-	static char SDLNOMOUSE[] = "SDL_NOMOUSE=1";
-	static char SDLVIDEOMID[] = "SDL_VIDEO_CENTERED=center";
-
 	if (dedicated)
 	{
 		rendermode = render_none;
@@ -1956,12 +1855,6 @@ void I_StartupGraphics(void)
 	CV_RegisterVar (&cv_vidwait);
 	CV_RegisterVar (&cv_stretch);
 	disable_mouse = M_CheckParm("-nomouse");
-	if (disable_mouse)
-		I_PutEnv(SDLNOMOUSE);
-	/*
-	if (!I_GetEnv("SDL_VIDEO_CENTERED"))
-		I_PutEnv(SDLVIDEOMID);
-	*/
 	disable_fullscreen = M_CheckParm("-win") ? 1 : 0;
 
 	keyboard_started = true;
