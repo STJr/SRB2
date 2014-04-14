@@ -79,7 +79,7 @@ void Got_Luacmd(UINT8 **cp, INT32 playernum)
 }
 
 // Wrapper for COM_AddCommand commands
-static void COM_Lua_f(void)
+void COM_Lua_f(void)
 {
 	char *buf, *p;
 	UINT8 i, flags;
@@ -90,9 +90,13 @@ static void COM_Lua_f(void)
 	lua_getfield(gL, LUA_REGISTRYINDEX, "COM_Command"); // push COM_Command
 	I_Assert(lua_istable(gL, -1));
 
-	lua_getfield(gL, -1, COM_Argv(0)); // push command info table
+	// use buf temporarily -- must use lowercased string
+	buf = Z_StrDup(COM_Argv(0));
+	strlwr(buf);
+	lua_getfield(gL, -1, buf); // push command info table
 	I_Assert(lua_istable(gL, -1));
 	lua_remove(gL, -2); // pop COM_Command
+	Z_Free(buf);
 
 	lua_rawgeti(gL, -1, 2); // push flags from command info table
 	if (lua_isboolean(gL, -1))
@@ -158,8 +162,13 @@ static void COM_Lua_f(void)
 // Wrapper for COM_AddCommand
 static int lib_comAddCommand(lua_State *L)
 {
-	boolean exists = false;
-	const char *name = luaL_checkstring(L, 1);
+	int com_return = -1;
+	const char *luaname = luaL_checkstring(L, 1);
+
+	// must store in all lowercase
+	char *name = Z_StrDup(luaname);
+	strlwr(name);
+
 	luaL_checktype(L, 2, LUA_TFUNCTION);
 	NOHUD
 	if (lua_gettop(L) >= 3)
@@ -177,11 +186,6 @@ static int lib_comAddCommand(lua_State *L)
 	lua_getfield(L, LUA_REGISTRYINDEX, "COM_Command");
 	I_Assert(lua_istable(L, -1));
 
-	lua_getfield(L, -1, name);
-	if (!lua_isnil(L, -1))
-		exists = true;
-	lua_pop(L, 1);
-
 	lua_createtable(L, 2, 0);
 		lua_pushvalue(L, 2);
 		lua_rawseti(L, -2, 1);
@@ -190,14 +194,23 @@ static int lib_comAddCommand(lua_State *L)
 		lua_rawseti(L, -2, 2);
 	lua_setfield(L, -2, name);
 
-	// This makes it only add a new command if another
-	// Lua command by the same name doesn't already exist.
-	//
-	// UNFORTUNATELY COM_AddCommand will still cause I_Errors
-	// if you attempt to override an existing hardcoded command.
-	//
-	if (!exists)
-		COM_AddCommand(name, COM_Lua_f);
+	// Try to add the Lua command
+	com_return = COM_AddLuaCommand(name);
+
+	if (com_return < 0)
+	{ // failed to add -- free the lowercased name and return error
+		Z_Free(name);
+		return luaL_error(L, "Couldn't add a new console command \"%s\"", luaname);
+	}
+	else if (com_return == 1)
+	{ // command existed already -- free our name as the old string will continue to be used
+		CONS_Printf("Replaced command \"%s\"\n", name);
+		Z_Free(name);
+	}
+	else
+	{ // new command was added -- do NOT free the string as it will forever be used by the console
+		CONS_Printf("Added command \"%s\"\n", name);
+	}
 	return 0;
 }
 

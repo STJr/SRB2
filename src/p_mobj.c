@@ -6565,179 +6565,27 @@ void P_MobjThinker(mobj_t *mobj)
 					if ((mobj->flags & MF_AMBUSH || mobj->flags2 & MF2_STRONGBOX) && mobj->type != MT_QUESTIONBOX)
 					{
 						mobjtype_t spawnchance[64];
-						INT32 i = 0;
-						INT32 oldi = 0;
-						INT32 increment = 0;
-						INT32 numchoices = 0;
+						INT32 numchoices = 0, i = 0;
 
-						//if (cv_superring.value)
-						{
-							oldi = i;
+// This define should make it a lot easier to organize and change monitor weights
+#define SETMONITORCHANCES(type, strongboxamt, weakboxamt) \
+for (i = ((mobj->flags2 & MF2_STRONGBOX) ? strongboxamt : weakboxamt); i; --i) spawnchance[numchoices++] = type
 
-							if (mobj->flags2 & MF2_STRONGBOX) //strong box
-								increment = 0;
-							else //weak box
-								increment = 0;
+						//                Type            SRM WRM
+						SETMONITORCHANCES(MT_SNEAKERTV,     0, 10); // Super Sneakers
+						SETMONITORCHANCES(MT_INV,           2,  0); // Invincibility
+						SETMONITORCHANCES(MT_WHITETV,       3,  8); // Whirlwind Shield
+						SETMONITORCHANCES(MT_GREENTV,       3,  8); // Elemental Shield
+						SETMONITORCHANCES(MT_YELLOWTV,      2,  0); // Attraction Shield
+						SETMONITORCHANCES(MT_BLUETV,        3,  3); // Force Shield
+						SETMONITORCHANCES(MT_BLACKTV,       2,  0); // Armageddon Shield
+						SETMONITORCHANCES(MT_MIXUPBOX,      0,  1); // Teleporters
+						SETMONITORCHANCES(MT_RECYCLETV,     0,  1); // Recycler
+						SETMONITORCHANCES(MT_PRUP,          1,  1); // 1-Up
+						// ======================================
+						//                Total            16  32
 
-							for (; i < oldi + increment; i++)
-							{
-								spawnchance[i] = MT_SUPERRINGBOX;
-								numchoices++;
-							}
-						}
-						//if (cv_supersneakers.value)
-						{
-							oldi = i;
-
-							if (mobj->flags2 & MF2_STRONGBOX) //strong box
-								increment = 0;
-							else //weak box
-								increment = 10;
-
-							for (; i < oldi + increment; i++)
-							{
-								spawnchance[i] = MT_SNEAKERTV;
-								numchoices++;
-							}
-						}
-						//if (cv_invincibility.value)
-						{
-							oldi = i;
-
-							if (mobj->flags2 & MF2_STRONGBOX) //strong box
-								increment = 4;
-							else //weak box
-								increment = 0;
-
-							for (; i < oldi + increment; i++)
-							{
-								spawnchance[i] = MT_INV;
-								numchoices++;
-							}
-						}
-						//if (cv_jumpshield.value)
-						{
-							oldi = i;
-
-							if (mobj->flags2 & MF2_STRONGBOX) //strong box
-								increment = 6;
-							else //weak box
-								increment = 8;
-
-							for (; i < oldi + increment; i++)
-							{
-								spawnchance[i] = MT_WHITETV;
-								numchoices++;
-							}
-						}
-						//if (cv_watershield.value)
-						{
-							oldi = i;
-
-							if (mobj->flags2 & MF2_STRONGBOX) //strong box
-								increment = 6;
-							else //weak box
-								increment = 8;
-
-							for (; i < oldi + increment; i++)
-							{
-								spawnchance[i] = MT_GREENTV;
-								numchoices++;
-							}
-						}
-						//if (cv_ringshield.value)
-						{
-							oldi = i;
-
-							if (mobj->flags2 & MF2_STRONGBOX) //strong box
-								increment = 4;
-							else //weak box
-								increment = 0;
-
-							for (; i < oldi + increment; i++)
-							{
-								spawnchance[i] = MT_YELLOWTV;
-								numchoices++;
-							}
-						}
-						//if (cv_forceshield.value)
-						{
-							oldi = i;
-
-							if (mobj->flags2 & MF2_STRONGBOX) //strong box
-								increment = 6;
-							else //weak box
-								increment = 3;
-
-							for (; i < oldi + increment; i++)
-							{
-								spawnchance[i] = MT_BLUETV;
-								numchoices++;
-							}
-						}
-						//if (cv_bombshield.value)
-						{
-							oldi = i;
-
-							if (mobj->flags2 & MF2_STRONGBOX) //strong box
-								increment = 4;
-							else //weak box
-								increment = 0;
-
-							for (; i < oldi + increment; i++)
-							{
-								spawnchance[i] = MT_BLACKTV;
-								numchoices++;
-							}
-						}
-
-						//if (cv_teleporters.value)
-						{
-							oldi = i;
-
-							if (mobj->flags2 & MF2_STRONGBOX) //strong box
-								increment = 0;
-							else //weak box
-								increment = 1;
-
-							for (; i < oldi + increment; i++)
-							{
-								spawnchance[i] = MT_MIXUPBOX;
-								numchoices++;
-							}
-						}
-
-						//if (cv_recycler.value)
-						{
-							oldi = i;
-
-							if (mobj->flags2 & MF2_STRONGBOX) //strong box
-								increment = 0;
-							else //weak box
-								increment = 1;
-
-							for (; i < oldi + increment; i++)
-							{
-								spawnchance[i] = MT_RECYCLETV;
-								numchoices++;
-							}
-						}
-
-						//if (cv_1up.value)
-						{
-							oldi = i;
-
-							if (mobj->flags2 & MF2_STRONGBOX) //strong box
-								increment = 2;
-							else //weak box
-								increment = 1;
-
-							for (; i < oldi + increment; i++)
-							{
-								spawnchance[i] = MT_PRUP;
-								numchoices++;
-							}
-						}
+#undef SETMONITORCHANCES
 
 						i = P_RandomKey(numchoices); // Gotta love those random numbers!
 						newmobj = P_SpawnMobj(mobj->x, mobj->y, mobj->z, spawnchance[i]);
@@ -8342,9 +8190,14 @@ void P_SpawnMapThing(mapthing_t *mthing)
 		}
 	}
 
-	if (ultimatemode && !G_IsSpecialStage(gamemap)
-	    && (i == MT_SUPERRINGBOX || i == MT_GREENTV || i == MT_YELLOWTV || i == MT_BLUETV || i == MT_BLACKTV || i == MT_WHITETV))
-		return; // No rings/shields in Ultimate mode
+	if (ultimatemode)
+	{
+		if (i == MT_PITYTV || i == MT_GREENTV || i == MT_YELLOWTV || i == MT_BLUETV || i == MT_BLACKTV || i == MT_WHITETV)
+			return; // No shields in Ultimate mode
+
+		if (i == MT_SUPERRINGBOX && !G_IsSpecialStage(gamemap))
+			return; // No rings in Ultimate mode (except special stages)
+	}
 
 	if (i == MT_EMMY && (gametype != GT_COOP || ultimatemode || tokenbits == 30 || tokenlist & (1 << tokenbits++)))
 		return; // you already got this token, or there are too many, or the gametype's not right
@@ -8853,27 +8706,36 @@ ML_NOCLIMB : Direction not controllable
 				mobj->flags2 |= MF2_STANDONME;
 			}
 
-			if (mthing->type != mobjinfo[MT_AXIS].doomednum &&
+			if (mobj->flags & MF_MONITOR)
+			{
+				// flag for strong/weak random boxes
+				if (mthing->type == mobjinfo[MT_SUPERRINGBOX].doomednum || mthing->type == mobjinfo[MT_PRUP].doomednum ||
+					mthing->type == mobjinfo[MT_SNEAKERTV].doomednum || mthing->type == mobjinfo[MT_INV].doomednum ||
+					mthing->type == mobjinfo[MT_WHITETV].doomednum || mthing->type == mobjinfo[MT_GREENTV].doomednum ||
+					mthing->type == mobjinfo[MT_YELLOWTV].doomednum || mthing->type == mobjinfo[MT_BLUETV].doomednum ||
+					mthing->type == mobjinfo[MT_BLACKTV].doomednum || mthing->type == mobjinfo[MT_PITYTV].doomednum ||
+					mthing->type == mobjinfo[MT_RECYCLETV].doomednum || mthing->type == mobjinfo[MT_MIXUPBOX].doomednum)
+						mobj->flags |= MF_AMBUSH;
+			}
+
+			else if (mthing->type != mobjinfo[MT_AXIS].doomednum &&
 				mthing->type != mobjinfo[MT_AXISTRANSFER].doomednum &&
 				mthing->type != mobjinfo[MT_AXISTRANSFERLINE].doomednum &&
 				mthing->type != mobjinfo[MT_NIGHTSBUMPER].doomednum &&
-				mthing->type != mobjinfo[MT_STARPOST].doomednum &&
-				mthing->type != mobjinfo[MT_GRAVITYBOX].doomednum &&
-				mthing->type != mobjinfo[MT_EGGMANBOX].doomednum)
+				mthing->type != mobjinfo[MT_STARPOST].doomednum)
 				mobj->flags |= MF_AMBUSH;
 		}
 
 		if (mthing->options & MTF_OBJECTSPECIAL)
 		{
 			// flag for strong/weak random boxes
-			if (mthing->type == mobjinfo[MT_QUESTIONBOX].doomednum || mthing->type == mobjinfo[MT_SUPERRINGBOX].doomednum ||
+			if (mthing->type == mobjinfo[MT_SUPERRINGBOX].doomednum || mthing->type == mobjinfo[MT_PRUP].doomednum ||
 				mthing->type == mobjinfo[MT_SNEAKERTV].doomednum || mthing->type == mobjinfo[MT_INV].doomednum ||
 				mthing->type == mobjinfo[MT_WHITETV].doomednum || mthing->type == mobjinfo[MT_GREENTV].doomednum ||
 				mthing->type == mobjinfo[MT_YELLOWTV].doomednum || mthing->type == mobjinfo[MT_BLUETV].doomednum ||
-				mthing->type == mobjinfo[MT_RECYCLETV].doomednum ||
-				mthing->type == mobjinfo[MT_BLACKTV].doomednum || mthing->type == mobjinfo[MT_MIXUPBOX].doomednum ||
-				mthing->type == mobjinfo[MT_PRUP].doomednum)
-				mobj->flags2 |= MF2_STRONGBOX;
+				mthing->type == mobjinfo[MT_BLACKTV].doomednum || mthing->type == mobjinfo[MT_PITYTV].doomednum ||
+				mthing->type == mobjinfo[MT_RECYCLETV].doomednum || mthing->type == mobjinfo[MT_MIXUPBOX].doomednum)
+					mobj->flags2 |= MF2_STRONGBOX;
 
 			// Requires you to be in bonus time to activate
 			if (mobj->flags & MF_NIGHTSITEM)

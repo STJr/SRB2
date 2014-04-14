@@ -26,6 +26,8 @@
 boolean hud_running = false;
 static UINT8 hud_enabled[(hud_MAX/8)+1];
 
+static UINT8 hudAvailable; // hud hooks field
+
 // must match enum hud in lua_hud.h
 static const char *const hud_disable_options[] = {
 	"stagetitle",
@@ -399,6 +401,8 @@ static int lib_hudadd(lua_State *L)
 
 	lua_pushvalue(L, 1);
 	lua_rawseti(L, -2, (int)(lua_objlen(L, -2) + 1));
+
+	hudAvailable |= 1<<field;
 	return 0;
 }
 
@@ -472,7 +476,7 @@ boolean LUA_HudEnabled(enum hud option)
 // Hook for HUD rendering
 void LUAh_GameHUD(player_t *stplyr)
 {
-	if (!gL)
+	if (!gL || !(hudAvailable & (1<<hudhook_game)))
 		return;
 
 	hud_running = true;
@@ -502,7 +506,7 @@ void LUAh_GameHUD(player_t *stplyr)
 
 void LUAh_ScoresHUD(void)
 {
-	if (!gL)
+	if (!gL || !(hudAvailable & (1<<hudhook_scores)))
 		return;
 
 	hud_running = true;

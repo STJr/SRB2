@@ -234,13 +234,16 @@ static UINT8 *demobuffer = NULL;
 static UINT8 *demo_p, *demotime_p;
 static UINT8 *demoend;
 static UINT8 demoflags;
+static UINT16 demoversion;
 boolean singledemo; // quit after playing a demo from cmdline
 boolean demo_start; // don't start playing demo right away
+static boolean demosynced = true; // console warning message
 
 boolean metalrecording; // recording as metal sonic
 mobj_t *metalplayback;
 static UINT8 *metalbuffer = NULL;
 static UINT8 *metal_p;
+static UINT16 metalversion;
 boolean metal_start;
 
 // extra data stuff (events registered this frame while recording)
@@ -262,7 +265,8 @@ static struct {
 // There is no conflict here.
 typedef struct demoghost {
 	UINT8 checksum[16];
-	UINT8 *buffer, *p;
+	UINT8 *buffer, *p, color;
+	UINT16 version;
 	mobj_t oldmo, *mo;
 	struct demoghost *next;
 } demoghost;
@@ -3577,7 +3581,7 @@ char *G_BuildMapTitle(INT32 mapnum)
 // DEMO RECORDING
 //
 
-#define DEMOVERSION 0x0008
+#define DEMOVERSION 0x0009
 #define DEMOHEADER  "\xF0" "SRB2Replay" "\x0F"
 
 #define DF_GHOST        0x01 // This demo contains ghost data too!
@@ -3608,6 +3612,8 @@ static ticcmd_t oldcmd;
 // GZT_EXTRA flags
 #define EZT_THOK   0x01 // Spawned a thok object
 #define EZT_SPIN   0x02 // Because one type of thok object apparently wasn't enough
+#define EZT_REV    0x03 // And two types wasn't enough either yet
+#define EZT_THOKMASK 0x03
 #define EZT_COLOR  0x04 // Changed color (Super transformation, Mario fireflowers/invulnerability, etc.)
 #define EZT_FLIP   0x08 // Reversed gravity
 #define EZT_SCALE  0x10 // Changed size
@@ -3725,14 +3731,21 @@ void G_GhostAddThok(void)
 {
 	if (!demorecording || !(demoflags & DF_GHOST))
 		return;
-	ghostext.flags |= EZT_THOK;
+	ghostext.flags = (ghostext.flags & ~EZT_THOKMASK) | EZT_THOK;
 }
 
 void G_GhostAddSpin(void)
 {
 	if (!demorecording || !(demoflags & DF_GHOST))
 		return;
-	ghostext.flags |= EZT_SPIN;
+	ghostext.flags = (ghostext.flags & ~EZT_THOKMASK) | EZT_SPIN;
+}
+
+void G_GhostAddRev(void)
+{
+	if (!demorecording || !(demoflags & DF_GHOST))
+		return;
+	ghostext.flags = (ghostext.flags & ~EZT_THOKMASK) | EZT_REV;
 }
 
 void G_GhostAddFlip(void)
@@ -3928,9 +3941,6 @@ void G_WriteGhostTic(mobj_t *ghost)
 	}
 }
 
-// console warning messages
-UINT8 demosynced = true;
-
 // Uses ghost data to do consistency checks on your position.
 // This fixes desynchronising demos when fighting eggman.
 void G_ConsGhostTic(void)
@@ -4017,12 +4027,12 @@ void G_ConsGhostTic(void)
 	}
 
 	// Re-synchronise
-	px = (players[0].mo->x>>8)&UINT16_MAX;
-	py = (players[0].mo->y>>8)&UINT16_MAX;
-	pz = (players[0].mo->z>>8)&UINT16_MAX;
-	gx = (oldghost.x>>8)&UINT16_MAX;
-	gy = (oldghost.y>>8)&UINT16_MAX;
-	gz = (oldghost.z>>8)&UINT16_MAX;
+	px = players[0].mo->x>>FRACBITS;
+	py = players[0].mo->y>>FRACBITS;
+	pz = players[0].mo->z>>FRACBITS;
+	gx = oldghost.x>>FRACBITS;
+	gy = oldghost.y>>FRACBITS;
+	gz = oldghost.z>>FRACBITS;
 
 	if (px != gx || py != gy || pz != gz)
 	{
@@ -4036,8 +4046,6 @@ void G_ConsGhostTic(void)
 		P_SetThingPosition(players[0].mo);
 		players[0].mo->z = oldghost.z;
 	}
-	else
-		demosynced = true;
 
 	if (*demo_p == DEMOMARKER)
 	{
@@ -4105,17 +4113,16 @@ void G_GhostTicker(void)
 			ziptic = READUINT8(g->p);
 			if (ziptic & EZT_COLOR)
 			{
-				switch(READUINT8(g->p))
+				g->color = READUINT8(g->p);
+				switch(g->color)
 				{
 				default:
 				case GHC_NORMAL: // Go back to skin color
 					g->mo->color = g->oldmo.color;
 					break;
-				case GHC_SUPER: // Super Sonic
-					g->mo->color = SKINCOLOR_SUPER4;
-					break;
-				case GHC_INVINCIBLE: /// \todo Mario invincibility
-					g->mo->color = SKINCOLOR_SUPER4;
+				// Handled below
+				case GHC_SUPER:
+				case GHC_INVINCIBLE:
 					break;
 				case GHC_FIREFLOWER: // Fireflower
 					g->mo->color = SKINCOLOR_WHITE;
@@ -4130,17 +4137,25 @@ void G_GhostTicker(void)
 				if (g->mo->destscale != g->mo->scale)
 					P_SetScale(g->mo, g->mo->destscale);
 			}
-			if (ziptic & (EZT_THOK|EZT_SPIN))
+			if (ziptic & EZT_THOKMASK)
 			{ // Let's only spawn ONE of these per frame, thanks.
 				mobj_t *mobj;
 				INT32 type = -1;
 				if (g->mo->skin)
 				{
 					skin_t *skin = (skin_t *)g->mo->skin;
-					if (ziptic & EZT_THOK)
+					switch (ziptic & EZT_THOKMASK)
+					{
+					case EZT_THOK:
 						type = skin->thokitem < 0 ? (UINT32)mobjinfo[MT_PLAYER].painchance : (UINT32)skin->thokitem;
-					else
+						break;
+					case EZT_SPIN:
 						type = skin->spinitem < 0 ? (UINT32)mobjinfo[MT_PLAYER].damage : (UINT32)skin->spinitem;
+						break;
+					case EZT_REV:
+						type = skin->revitem < 0 ? (UINT32)mobjinfo[MT_PLAYER].raisestate : (UINT32)skin->revitem;
+						break;
+					}
 				}
 				if (type == MT_GHOST)
 				{
@@ -4199,6 +4214,32 @@ void G_GhostTicker(void)
 			}
 			if (ziptic & EZT_SPRITE)
 				g->mo->sprite = READUINT8(g->p);
+		}
+
+		// Tick ghost colors (Super and Mario Invincibility flashing)
+		switch(g->color)
+		{
+		case GHC_SUPER: // Super Sonic (P_DoSuperStuff)
+			// Yousa yellow now!
+			g->mo->color = SKINCOLOR_SUPER1 + (leveltime/2) % 5;
+			if (g->mo->skin)
+				switch (((skin_t*)g->mo->skin)-skins)
+				{
+				case 1: // Golden orange supertails.
+					g->mo->color = SKINCOLOR_TSUPER1 + (leveltime/2) % 5;
+					break;
+				case 2: // Pink superknux.
+					g->mo->color = SKINCOLOR_KSUPER1 + (leveltime/2) % 5;
+					break;
+				default:
+					break;
+				}
+			break;
+		case GHC_INVINCIBLE: // Mario invincibility (P_CheckInvincibilityTimer)
+			g->mo->color = (UINT8)(leveltime % MAXSKINCOLORS);
+			break;
+		default:
+			break;
 		}
 
 		// Demo ends after ghost data.
@@ -4483,7 +4524,7 @@ void G_BeginRecording(void)
 
 	// game data
 	M_Memcpy(demo_p, "PLAY", 4); demo_p += 4;
-	WRITEUINT8(demo_p,gamemap);
+	WRITEINT16(demo_p,gamemap);
 	M_Memcpy(demo_p, mapmd5, 16); demo_p += 16;
 
 	WRITEUINT8(demo_p,demoflags);
@@ -4563,6 +4604,10 @@ void G_BeginRecording(void)
 		oldghost.y = player->mo->y;
 		oldghost.z = player->mo->z;
 		oldghost.angle = player->mo->angle;
+
+		// preticker started us gravity flipped
+		if (player->mo->eflags & MFE_VERTICALFLIP)
+			ghostext.flags |= EZT_FLIP;
 	}
 }
 
@@ -4613,7 +4658,7 @@ UINT8 G_CmpDemoTime(char *oldname, char *newname)
 	UINT8 *buffer,*p;
 	UINT8 flags;
 	UINT32 oldtime, newtime, oldscore, newscore;
-	UINT16 oldrings, newrings;
+	UINT16 oldrings, newrings, oldversion;
 	size_t bufsize ATTRUNUSED;
 	UINT8 c;
 	UINT16 s ATTRUNUSED;
@@ -4636,7 +4681,7 @@ UINT8 G_CmpDemoTime(char *oldname, char *newname)
 	p += 16; // demo checksum
 	I_Assert(!memcmp(p, "PLAY", 4));
 	p += 4; // PLAY
-	p++; // gamemap
+	p += 2; // gamemap
 	p += 16; // map md5
 	flags = READUINT8(p); // demoflags
 	I_Assert(flags & DF_RECORDATTACK);
@@ -4664,8 +4709,15 @@ UINT8 G_CmpDemoTime(char *oldname, char *newname)
 	} p += 12; // DEMOHEADER
 	p++; // VERSION
 	p++; // SUBVERSION
-	if (READUINT16(p) != DEMOVERSION)
+	oldversion = READUINT16(p);
+	switch(oldversion) // demoversion
 	{
+	case DEMOVERSION: // latest always supported
+	// compatibility available?
+	case 0x0008:
+		break;
+	// too old, cannot support.
+	default:
 		CONS_Alert(CONS_NOTICE, M_GetText("File '%s' invalid format. It will be overwritten.\n"), oldname);
 		Z_Free(buffer);
 		return UINT8_MAX;
@@ -4677,7 +4729,10 @@ UINT8 G_CmpDemoTime(char *oldname, char *newname)
 		Z_Free(buffer);
 		return UINT8_MAX;
 	} p += 4; // "PLAY"
-	p++; // gamemap
+	if (oldversion <= 0x0008)
+		p++; // gamemap
+	else
+		p += 2; // gamemap
 	p += 16; // mapmd5
 	flags = READUINT8(p);
 	if (!(flags & DF_RECORDATTACK))
@@ -4783,9 +4838,16 @@ void G_DoPlayDemo(char *defdemoname)
 
 	version = READUINT8(demo_p);
 	subversion = READUINT8(demo_p);
-	if (DEMOVERSION != READUINT16(demo_p))
+	demoversion = READUINT16(demo_p);
+	switch(demoversion)
 	{
-		snprintf(msg, 1024, M_GetText("%s is a different replay format and cannot be played.\n"), pdemoname);
+	case DEMOVERSION: // latest always supported
+	// compatibility available?
+	case 0x0008:
+		break;
+	// too old, cannot support.
+	default:
+		snprintf(msg, 1024, M_GetText("%s is an incompatible replay format and cannot be played.\n"), pdemoname);
 		CONS_Alert(CONS_ERROR, "%s", msg);
 		M_StartMessage(msg, NULL, MM_NOTHING);
 		Z_Free(pdemoname);
@@ -4807,7 +4869,10 @@ void G_DoPlayDemo(char *defdemoname)
 		return;
 	}
 	demo_p += 4; // "PLAY"
-	gamemap = READUINT8(demo_p);
+	if (demoversion <= 0x0008)
+		gamemap = READUINT8(demo_p);
+	else
+		gamemap = READINT16(demo_p);
 	demo_p += 16; // mapmd5
 
 	demoflags = READUINT8(demo_p);
@@ -4950,7 +5015,7 @@ void G_AddGhost(char *defdemoname)
 	UINT8 flags;
 	UINT8 *buffer,*p;
 	mapthing_t *mthing;
-	UINT16 count;
+	UINT16 count, ghostversion;
 
 	name[16] = '\0';
 	skin[16] = '\0';
@@ -4996,9 +5061,16 @@ void G_AddGhost(char *defdemoname)
 	} p += 12; // DEMOHEADER
 	p++; // VERSION
 	p++; // SUBVERSION
-	if (DEMOVERSION != READUINT16(p))
+	ghostversion = READUINT16(p);
+	switch(ghostversion)
 	{
-		CONS_Alert(CONS_NOTICE, M_GetText("Ghost %s: Demo format unacceptable.\n"), pdemoname);
+	case DEMOVERSION: // latest always supported
+	// compatibility available?
+	case 0x0008:
+		break;
+	// too old, cannot support.
+	default:
+		CONS_Alert(CONS_NOTICE, M_GetText("Ghost %s: Demo version incompatible.\n"), pdemoname);
 		Z_Free(pdemoname);
 		Z_Free(buffer);
 		return;
@@ -5019,7 +5091,10 @@ void G_AddGhost(char *defdemoname)
 		Z_Free(buffer);
 		return;
 	} p += 4; // "PLAY"
-	p++; // gamemap
+	if (ghostversion <= 0x0008)
+		p++; // gamemap
+	else
+		p += 2; // gamemap
 	p += 16; // mapmd5 (possibly check for consistency?)
 	flags = READUINT8(p);
 	if (!(flags & DF_GHOST))
@@ -5094,6 +5169,8 @@ void G_AddGhost(char *defdemoname)
 	gh->p = p;
 
 	ghosts = gh;
+
+	gh->version = ghostversion;
 	mthing = playerstarts[0];
 	I_Assert(mthing);
 	{ // A bit more complex than P_SpawnPlayer because ghosts aren't solid and won't just push themselves out of the ceiling.
@@ -5124,20 +5201,24 @@ void G_AddGhost(char *defdemoname)
 	gh->oldmo.z = gh->mo->z;
 
 	// Set skin
+	gh->mo->skin = &skins[0];
 	for (i = 0; i < numskins; i++)
 		if (!stricmp(skins[i].name,skin))
 		{
 			gh->mo->skin = &skins[i];
 			break;
 		}
+	gh->oldmo.skin = gh->mo->skin;
 
 	// Set color
+	gh->mo->color = ((skin_t*)gh->mo->skin)->prefcolor;
 	for (i = 0; i < MAXSKINCOLORS; i++)
 		if (!stricmp(Color_Names[i],color))
 		{
 			gh->mo->color = (UINT8)i;
 			break;
 		}
+	gh->oldmo.color = gh->mo->color;
 
 	CONS_Printf(M_GetText("Added ghost %s from %s\n"), name, pdemoname);
 	Z_Free(pdemoname);
@@ -5199,9 +5280,16 @@ void G_DoPlayMetal(void)
     metal_p += 12; // DEMOHEADER
 	metal_p++; // VERSION
 	metal_p++; // SUBVERSION
-	if (DEMOVERSION != READUINT16(metal_p))
+	metalversion = READUINT16(metal_p);
+	switch(metalversion)
 	{
-		CONS_Alert(CONS_WARNING, M_GetText("Failed to load bot recording for this map, format version mismatch.\n"));
+	case DEMOVERSION: // latest always supported
+	// compatibility available?
+	case 0x0008:
+		break;
+	// too old, cannot support.
+	default:
+		CONS_Alert(CONS_WARNING, M_GetText("Failed to load bot recording for this map, format version incompatible.\n"));
 		Z_Free(metalbuffer);
 		return;
 	}

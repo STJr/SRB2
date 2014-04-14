@@ -391,6 +391,39 @@ void COM_AddCommand(const char *name, com_func_t func)
 	com_commands = cmd;
 }
 
+/** Adds a console command for Lua.
+  * No I_Errors allowed; return a negative code instead.
+  *
+  * \param name Name of the command.
+  */
+int COM_AddLuaCommand(const char *name)
+{
+	xcommand_t *cmd;
+
+	// fail if the command is a variable name
+	if (CV_StringValue(name)[0] != '\0')
+		return -1;
+
+	// command already exists
+	for (cmd = com_commands; cmd; cmd = cmd->next)
+	{
+		if (!stricmp(name, cmd->name)) //case insensitive now that we have lower and uppercase!
+		{
+			// replace the built in command.
+			cmd->function = COM_Lua_f;
+			return 1;
+		}
+	}
+
+	// Add a new command.
+	cmd = ZZ_Alloc(sizeof *cmd);
+	cmd->name = name;
+	cmd->function = COM_Lua_f;
+	cmd->next = com_commands;
+	com_commands = cmd;
+	return 0;
+}
+
 /** Tests if a command exists.
   *
   * \param com_name Name to test for.
@@ -558,7 +591,7 @@ static void COM_CEchoFlags_f(void)
 			HU_SetCEchoFlags(atoi(arg));
 	}
 	else
-		CONS_Printf(M_GetText("cechoflags <flags>: set CEcho flags, prepend with 0x to use hexadecimal"));
+		CONS_Printf(M_GetText("cechoflags <flags>: set CEcho flags, prepend with 0x to use hexadecimal\n"));
 }
 
 /** Sets the duration for CECHO commands to stay on the screen
@@ -1017,6 +1050,8 @@ static void Setvalue(consvar_t *var, const char *valstr, boolean stealth)
 	if (var->PossibleValue)
 	{
 		INT32 v = atoi(valstr);
+		if (!v && valstr[0] != '0')
+			v = INT32_MIN; // Invalid integer trigger
 
 		if (var->PossibleValue[0].strvalue && !stricmp(var->PossibleValue[0].strvalue, "MIN")) // bounded cvar
 		{
@@ -1029,20 +1064,23 @@ static void Setvalue(consvar_t *var, const char *valstr, boolean stealth)
 			if (!var->PossibleValue[i].strvalue)
 				I_Error("Bounded cvar \"%s\" without maximum!\n", var->name);
 #endif
-			if (v < var->PossibleValue[0].value || !stricmp(valstr, "MIN"))
+
+			if ((v != INT32_MIN && v < var->PossibleValue[0].value) || !stricmp(valstr, "MIN"))
 			{
 				v = var->PossibleValue[0].value;
 				valstr = var->PossibleValue[0].strvalue;
 				override = true;
 				overrideval = v;
 			}
-			if (v > var->PossibleValue[i].value || !stricmp(valstr, "MAX"))
+			else if ((v != INT32_MIN && v > var->PossibleValue[i].value) || !stricmp(valstr, "MAX"))
 			{
 				v = var->PossibleValue[i].value;
 				valstr = var->PossibleValue[i].strvalue;
 				override = true;
 				overrideval = v;
 			}
+			if (v == INT32_MIN)
+				goto badinput;
 		}
 		else
 		{
@@ -1052,48 +1090,32 @@ static void Setvalue(consvar_t *var, const char *valstr, boolean stealth)
 			for (i = 0; var->PossibleValue[i].strvalue; i++)
 				if (!stricmp(var->PossibleValue[i].strvalue, valstr))
 					goto found;
-			if (!v)
-				if (strcmp(valstr, "0"))
-					goto error;
-			// check INT32 now
-			for (i = 0; var->PossibleValue[i].strvalue; i++)
-				if (v == var->PossibleValue[i].value)
-					goto found;
-
-error:
-			// not found
-
-			// But wait, there's hope!
-			if (var->PossibleValue == CV_OnOff
-				|| var->PossibleValue == CV_YesNo)
+			if (v != INT32_MIN)
 			{
-				INT32 hopevalue = -1;
+				// check INT32 now
+				for (i = 0; var->PossibleValue[i].strvalue; i++)
+					if (v == var->PossibleValue[i].value)
+						goto found;
+			}
+			// Not found ... but wait, there's hope!
+			if (var->PossibleValue == CV_OnOff || var->PossibleValue == CV_YesNo)
+			{
+				overrideval = -1;
+				if (!stricmp(valstr, "on") || !stricmp(valstr, "yes"))
+					overrideval = 1;
+				else if (!stricmp(valstr, "off") || !stricmp(valstr, "no"))
+					overrideval = 0;
 
-				if (!stricmp(valstr, "on"))
-					hopevalue = 1;
-				else if (!stricmp(valstr, "off"))
-					hopevalue = 0;
-				else if (!stricmp(valstr, "yes"))
-					hopevalue = 1;
-				else if (!stricmp(valstr, "no"))
-					hopevalue = 0;
-
-				if (hopevalue != -1)
+				if (overrideval != -1)
 				{
 					for (i = 0; var->PossibleValue[i].strvalue; i++)
-						if (hopevalue == var->PossibleValue[i].value)
+						if (overrideval == var->PossibleValue[i].value)
 							goto found;
 				}
 			}
 
 			// ...or not.
-			if (var != &cv_nextmap) // Suppress errors for cv_nextmap
-				CONS_Printf(M_GetText("\"%s\" is not a possible value for \"%s\"\n"), valstr, var->name);
-
-			if (var->defaultvalue == valstr)
-				I_Error("Variable %s default value \"%s\" is not a possible value\n",
-					var->name, var->defaultvalue);
-			return;
+			goto badinput;
 found:
 			var->value = var->PossibleValue[i].value;
 			var->string = var->PossibleValue[i].strvalue;
@@ -1141,6 +1163,18 @@ finish:
 #endif
 	if (var->flags & CV_CALL && !stealth)
 		var->func();
+
+	return;
+
+// landing point for possiblevalue failures
+badinput:
+
+	if (var != &cv_nextmap) // Suppress errors for cv_nextmap
+		CONS_Printf(M_GetText("\"%s\" is not a possible value for \"%s\"\n"), valstr, var->name);
+
+	// default value not valid... ?!
+	if (var->defaultvalue == valstr)
+		I_Error("Variable %s default value \"%s\" is not a possible value\n", var->name, var->defaultvalue);
 }
 
 //

@@ -134,6 +134,7 @@ static void Command_Skynum_f(void);
 
 static void Command_ExitLevel_f(void);
 static void Command_Showmap_f(void);
+static void Command_Mapmd5_f(void);
 
 static void Command_Teamchange_f(void);
 static void Command_Teamchange2_f(void);
@@ -330,7 +331,6 @@ consvar_t cv_itemfinder = {"itemfinder", "Off", CV_CALL, CV_OnOff, ItemFinder_On
 consvar_t cv_match_scoring = {"matchscoring", "Normal", CV_NETVAR|CV_CHEAT, match_scoring_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_overtime = {"overtime", "Yes", CV_NETVAR, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
 
-consvar_t cv_realnames = {"realnames", "Off", CV_NOSHOWHELP, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_rollingdemos = {"rollingdemos", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 consvar_t cv_timetic = {"timerres", "Normal", 0, timetic_cons_t, NULL, CV_SAVE, NULL, NULL, 0, 0, NULL}; // use tics in display
@@ -431,6 +431,7 @@ void D_RegisterServerCommands(void)
 	COM_AddCommand("retry", Command_Retry_f);
 	COM_AddCommand("exitlevel", Command_ExitLevel_f);
 	COM_AddCommand("showmap", Command_Showmap_f);
+	COM_AddCommand("mapmd5", Command_Mapmd5_f);
 
 	COM_AddCommand("addfile", Command_Addfile);
 	COM_AddCommand("listwad", Command_ListWADS_f);
@@ -643,7 +644,6 @@ void D_RegisterClientCommands(void)
 #ifdef SEENAMES
 	CV_RegisterVar(&cv_seenames);
 #endif
-	CV_RegisterVar(&cv_realnames);
 	CV_RegisterVar(&cv_rollingdemos);
 	CV_RegisterVar(&cv_netstat);
 
@@ -3861,6 +3861,20 @@ static void Command_Showmap_f(void)
 			CONS_Printf("%s (%d): %s %d\n", G_BuildMapName(gamemap), gamemap, mapheaderinfo[gamemap-1]->lvlttl, mapheaderinfo[gamemap-1]->actnum);
 		else
 			CONS_Printf("%s (%d): %s\n", G_BuildMapName(gamemap), gamemap, mapheaderinfo[gamemap-1]->lvlttl);
+	}
+	else
+		CONS_Printf(M_GetText("You must be in a level to use this.\n"));
+}
+
+static void Command_Mapmd5_f(void)
+{
+	if (gamestate == GS_LEVEL)
+	{
+		INT32 i;
+		char md5tmp[33];
+		for (i = 0; i < 16; ++i)
+			sprintf(&md5tmp[i*2], "%02x", mapmd5[i]);
+		CONS_Printf("%s: %s\n", G_BuildMapName(gamemap), md5tmp);
 	}
 	else
 		CONS_Printf(M_GetText("You must be in a level to use this.\n"));

@@ -1336,7 +1336,7 @@ static void P_NetArchiveThinkers(void)
 
 				if ((mobj->x != mobj->spawnpoint->x << FRACBITS) ||
 					(mobj->y != mobj->spawnpoint->y << FRACBITS) ||
-					(mobj->angle != (angle_t)(ANGLE_45 * (mobj->spawnpoint->angle/45))))
+					(mobj->angle != FixedAngle(mobj->spawnpoint->angle*FRACUNIT)))
 					diff |= MD_POS;
 
 				if (mobj->info->doomednum != mobj->spawnpoint->type)

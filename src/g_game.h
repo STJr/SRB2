@@ -137,6 +137,7 @@ void G_ReadDemoTiccmd(ticcmd_t *cmd, INT32 playernum);
 void G_WriteDemoTiccmd(ticcmd_t *cmd, INT32 playernum);
 void G_GhostAddThok(void);
 void G_GhostAddSpin(void);
+void G_GhostAddRev(void);
 void G_GhostAddColor(ghostcolor_t color);
 void G_GhostAddFlip(void);
 void G_GhostAddScale(UINT16 scale);
