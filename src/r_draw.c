@@ -376,10 +376,10 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 	// Super colors, from lightest to darkest!
 	case SKINCOLOR_SUPER1:
 		// Super White
-		for (i = 0; i < 14; i++)
+		for (i = 0; i < 10; i++)
 			dest_colormap[starttranscolor + i] = 120; // True white
-		for (; i < SKIN_RAMP_LENGTH; i++)
-			dest_colormap[starttranscolor + i] = 112; // Golden shine
+		for (; i < SKIN_RAMP_LENGTH; i++) // White-yellow fade
+			dest_colormap[starttranscolor + i] = (UINT8)(96 + (i-10));
 		break;
 
 	case SKINCOLOR_SUPER2:
@@ -420,6 +420,43 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 		for (i = 0; i < 7; i++) // With a fine golden finish! :3
 			dest_colormap[starttranscolor + (i+8)] = (UINT8)(113 + i);
 		dest_colormap[starttranscolor + 15] = 155;
+		break;
+
+	// Super Tails
+	case SKINCOLOR_TSUPER1:
+		for (i = 0; i < 10; i++) // white
+			dest_colormap[starttranscolor + i] = 120;
+		for (; i < SKIN_RAMP_LENGTH; i++) // orange
+			dest_colormap[starttranscolor + i] = (UINT8)(80 + (i-10));
+		break;
+
+	case SKINCOLOR_TSUPER2:
+		for (i = 0; i < 4; i++) // white
+			dest_colormap[starttranscolor + i] = 120;
+		for (; i < SKIN_RAMP_LENGTH; i++) // orange
+			dest_colormap[starttranscolor + i] = (UINT8)(80 + ((i-4)>>1));
+		break;
+
+	case SKINCOLOR_TSUPER3:
+		dest_colormap[starttranscolor] = 120; // pure white
+		dest_colormap[starttranscolor+1] = 120;
+		for (i = 2; i < SKIN_RAMP_LENGTH; i++) // orange
+			dest_colormap[starttranscolor + i] = (UINT8)(80 + ((i-2)>>1));
+		break;
+
+	case SKINCOLOR_TSUPER4:
+		dest_colormap[starttranscolor] = 120; // pure white
+		for (i = 1; i < 9; i++) // orange
+			dest_colormap[starttranscolor + i] = (UINT8)(80 + (i-1));
+		for (; i < SKIN_RAMP_LENGTH; i++) // gold
+			dest_colormap[starttranscolor + i] = (UINT8)(115 + (5*(i-9)/7));
+		break;
+
+	case SKINCOLOR_TSUPER5:
+		for (i = 0; i < 8; i++) // orange
+			dest_colormap[starttranscolor + i] = (UINT8)(80 + i);
+		for (; i < SKIN_RAMP_LENGTH; i++) // gold
+			dest_colormap[starttranscolor + i] = (UINT8)(115 + (5*(i-8)/8));
 		break;
 
 	// Super Knuckles

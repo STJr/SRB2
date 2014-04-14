@@ -729,6 +729,9 @@ static int mapthing_set(lua_State *L)
 static int lib_iterateMapthings(lua_State *L)
 {
 	size_t i = 0;
+	if (lua_gettop(L) < 2)
+		return luaL_error(L, "Don't call mapthings.iterate() directly, use it as 'for mapthing in mapthings.iterate do <block> end'.");
+	lua_settop(L, 2);
 	lua_remove(L, 1); // state is unused.
 	if (!lua_isnil(L, 1))
 		i = (size_t)(*((mapthing_t **)luaL_checkudata(L, 1, META_MAPTHING)) - mapthings) + 1;

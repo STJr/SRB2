@@ -1833,11 +1833,12 @@ static void ST_overlayDrawer(void)
 		{
 			ST_drawFirstPersonHUD();
 		}
+	}
 
 #ifdef HAVE_BLUA
+	if (!(netgame || multiplayer) || !hu_showscores)
 		LUAh_GameHUD(stplyr);
 #endif
-	}
 
 #if 0 // Pope XVI
 	if (!(netgame || multiplayer) && !modifiedgame && gamemap == 11 && ALL7EMERALDS(emeralds)

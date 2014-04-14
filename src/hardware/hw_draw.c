@@ -183,16 +183,15 @@ void HWR_DrawFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 	{
 		v[0].x = v[3].x = (cx*sdupx-(gpatch->width-gpatch->leftoffset)*pdupx)/vid.width - 1;
 		v[2].x = v[1].x = (cx*sdupx+gpatch->leftoffset*pdupx)/vid.width - 1;
-		v[0].y = v[1].y = 1-(cy*sdupy-gpatch->topoffset*pdupy)/vid.height;
-		v[2].y = v[3].y = 1-(cy*sdupy+(gpatch->height-gpatch->topoffset)*pdupy)/vid.height;
 	}
 	else
 	{
 		v[0].x = v[3].x = (cx*sdupx-gpatch->leftoffset*pdupx)/vid.width - 1;
 		v[2].x = v[1].x = (cx*sdupx+(gpatch->width-gpatch->leftoffset)*pdupx)/vid.width - 1;
-		v[0].y = v[1].y = 1-(cy*sdupy-gpatch->topoffset*pdupy)/vid.height;
-		v[2].y = v[3].y = 1-(cy*sdupy+(gpatch->height-gpatch->topoffset)*pdupy)/vid.height;
 	}
+
+	v[0].y = v[1].y = 1-(cy*sdupy-gpatch->topoffset*pdupy)/vid.height;
+	v[2].y = v[3].y = 1-(cy*sdupy+(gpatch->height-gpatch->topoffset)*pdupy)/vid.height;
 
 	v[0].z = v[1].z = v[2].z = v[3].z = 1.0f;
 
@@ -200,16 +199,15 @@ void HWR_DrawFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 	{
 		v[0].sow = v[3].sow = gpatch->max_s;
 		v[2].sow = v[1].sow = 0.0f;
-		v[0].tow = v[1].tow = 0.0f;
-		v[2].tow = v[3].tow = gpatch->max_t;
 	}
 	else
 	{
 		v[0].sow = v[3].sow = 0.0f;
 		v[2].sow = v[1].sow = gpatch->max_s;
-		v[0].tow = v[1].tow = 0.0f;
-		v[2].tow = v[3].tow = gpatch->max_t;
 	}
+
+	v[0].tow = v[1].tow = 0.0f;
+	v[2].tow = v[3].tow = gpatch->max_t;
 
 	flags = BLENDMODE|PF_Clip|PF_NoZClip|PF_NoDepthTest;
 

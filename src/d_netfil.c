@@ -60,6 +60,8 @@
 #include "md5.h"
 #include "filesrch.h"
 
+#include <errno.h>
+
 static void SendFile(INT32 node, const char *filename, UINT8 fileid);
 
 // sender structure
@@ -652,7 +654,7 @@ void Got_Filetxpak(void)
 	{
 		if (fileneeded[filenum].phandle) I_Error("Got_Filetxpak: allready open file\n");
 			fileneeded[filenum].phandle = fopen(fileneeded[filenum].filename, "wb");
-		if (!fileneeded[filenum].phandle) I_Error("Can't create file %s: disk full ?",fileneeded[filenum].filename);
+		if (!fileneeded[filenum].phandle) I_Error("Can't create file %s: %s",fileneeded[filenum].filename, strerror(errno));
 			CONS_Printf("\r%s...\n",fileneeded[filenum].filename);
 		fileneeded[filenum].currentsize = 0;
 		fileneeded[filenum].status = FS_DOWNLOADING;
@@ -672,7 +674,7 @@ void Got_Filetxpak(void)
 		// we can receive packet in the wrong order, anyway all os support gaped file
 		fseek(fileneeded[filenum].phandle,pos,SEEK_SET);
 		if (fwrite(netbuffer->u.filetxpak.data,size,1,fileneeded[filenum].phandle)!=1)
-			I_Error("Can't write %s: disk full ? or %s\n",fileneeded[filenum].filename, strerror(ferror(fileneeded[filenum].phandle)));
+			I_Error("Can't write to %s: %s\n",fileneeded[filenum].filename, strerror(ferror(fileneeded[filenum].phandle)));
 		fileneeded[filenum].currentsize += size;
 
 		// finished?

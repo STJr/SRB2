@@ -91,6 +91,7 @@ static void P_SetTranslucencies(void)
 	R_SetTrans(S_CYBRAKDEMONFLAMESHOT_FLY1, S_CYBRAKDEMONFLAMESHOT_DIE, tr_trans50); // Flame
 	R_SetTrans(S_CYBRAKDEMONFLAMEREST, 0, tr_trans50); // Flame
 	R_SetTrans(S_CYBRAKDEMONTARGETRETICULE1, S_CYBRAKDEMONTARGETRETICULE14, tr_trans50); // Target
+	R_SetTrans(S_CYBRAKDEMONTARGETDOT, S_CYBRAKDEMONTARGETDOT, tr_trans50); // Target
 
 	R_SetTrans(S_FOG1, S_FOG14, tr_trans50);
 

@@ -23,6 +23,8 @@
 #include "lua_hook.h"
 #include "lua_hud.h" // hud_running errors
 
+static UINT8 hooksAvailable[(hook_MAX/8)+1];
+
 const char *const hookNames[hook_MAX+1] = {
 	"NetVars",
 	"MapChange",
@@ -183,6 +185,9 @@ static int lib_addHook(lua_State *L)
 
 	if (subfield)
 		Z_Free(subfield);
+
+
+	hooksAvailable[hook/8] |= 1<<(hook%8);
 	return 0;
 }
 
@@ -190,6 +195,8 @@ int LUA_HookLib(lua_State *L)
 {
 	// Create all registry tables
 	enum hook i;
+	memset(hooksAvailable,0,sizeof(UINT8[(hook_MAX/8)+1]));
+
 	lua_newtable(L);
 	for (i = 0; i < hook_MAX; i++)
 	{
@@ -225,7 +232,7 @@ int LUA_HookLib(lua_State *L)
 boolean LUAh_MobjHook(mobj_t *mo, enum hook which)
 {
 	boolean hooked = false;
-	if (!gL)
+	if (!gL || !(hooksAvailable[which/8] & (1<<(which%8))))
 		return false;
 
 	// clear the stack (just in case)
@@ -315,7 +322,7 @@ boolean LUAh_MobjHook(mobj_t *mo, enum hook which)
 // Hook for map change (before load)
 void LUAh_MapChange(void)
 {
-	if (!gL)
+	if (!gL || !(hooksAvailable[hook_MapChange/8] & (1<<(hook_MapChange%8))))
 		return;
 
 	lua_getfield(gL, LUA_REGISTRYINDEX, "hook");
@@ -337,7 +344,7 @@ void LUAh_MapChange(void)
 // Hook for map load
 void LUAh_MapLoad(void)
 {
-	if (!gL)
+	if (!gL || !(hooksAvailable[hook_MapLoad/8] & (1<<(hook_MapLoad%8))))
 		return;
 
 	lua_pop(gL, -1);
@@ -361,7 +368,7 @@ void LUAh_MapLoad(void)
 // Hook for Got_AddPlayer
 void LUAh_PlayerJoin(int playernum)
 {
-	if (!gL)
+	if (!gL || !(hooksAvailable[hook_PlayerJoin/8] & (1<<(hook_PlayerJoin%8))))
 		return;
 
 	lua_pop(gL, -1);
@@ -385,7 +392,7 @@ void LUAh_PlayerJoin(int playernum)
 // Hook for frame (after mobj and player thinkers)
 void LUAh_ThinkFrame(void)
 {
-	if (!gL)
+	if (!gL || !(hooksAvailable[hook_ThinkFrame/8] & (1<<(hook_ThinkFrame%8))))
 		return;
 
 	lua_pop(gL, -1);
@@ -420,7 +427,7 @@ void LUAh_ThinkFrame(void)
 UINT8 LUAh_MobjCollide(mobj_t *thing1, mobj_t *thing2)
 {
 	UINT8 shouldCollide = 0; // 0 = default, 1 = force yes, 2 = force no.
-	if (!gL)
+	if (!gL || !(hooksAvailable[hook_MobjCollide/8] & (1<<(hook_MobjCollide%8))))
 		return 0;
 
 	// clear the stack
@@ -471,7 +478,7 @@ UINT8 LUAh_MobjCollide(mobj_t *thing1, mobj_t *thing2)
 UINT8 LUAh_MobjMoveCollide(mobj_t *thing1, mobj_t *thing2)
 {
 	UINT8 shouldCollide = 0; // 0 = default, 1 = force yes, 2 = force no.
-	if (!gL)
+	if (!gL || !(hooksAvailable[hook_MobjMoveCollide/8] & (1<<(hook_MobjMoveCollide%8))))
 		return 0;
 
 	// clear the stack
@@ -522,7 +529,7 @@ UINT8 LUAh_MobjMoveCollide(mobj_t *thing1, mobj_t *thing2)
 boolean LUAh_TouchSpecial(mobj_t *special, mobj_t *toucher)
 {
 	boolean hooked = false;
-	if (!gL)
+	if (!gL || !(hooksAvailable[hook_TouchSpecial/8] & (1<<(hook_TouchSpecial%8))))
 		return false;
 
 	// clear the stack
@@ -551,8 +558,14 @@ boolean LUAh_TouchSpecial(mobj_t *special, mobj_t *toucher)
 	while (lua_next(gL, 1) != 0) {
 		lua_pushvalue(gL, 2); // special
 		lua_pushvalue(gL, 3); // toucher
-		LUA_Call(gL, 2); // pops hook function, special, toucher
-		hooked = true;
+		if (lua_pcall(gL, 2, 1, 0)) { // pops hook function, special, toucher, pushes 1 return result
+			CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL,-1));
+			lua_pop(gL, 1);
+			continue;
+		}
+		if (lua_toboolean(gL, -1)) // if return true,
+			hooked = true; // override vanilla behavior
+		lua_pop(gL, 1); // pop return value
 	}
 
 	lua_pop(gL, -1);
@@ -564,7 +577,7 @@ boolean LUAh_TouchSpecial(mobj_t *special, mobj_t *toucher)
 UINT8 LUAh_ShouldDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage)
 {
 	UINT8 shouldDamage = 0; // 0 = default, 1 = force yes, 2 = force no.
-	if (!gL)
+	if (!gL || !(hooksAvailable[hook_ShouldDamage/8] & (1<<(hook_ShouldDamage%8))))
 		return 0;
 
 	// clear the stack
@@ -619,7 +632,7 @@ UINT8 LUAh_ShouldDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32
 boolean LUAh_MobjDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage)
 {
 	boolean handled = false;
-	if (!gL)
+	if (!gL || !(hooksAvailable[hook_MobjDamage/8] & (1<<(hook_MobjDamage%8))))
 		return false;
 
 	// clear the stack
@@ -669,7 +682,7 @@ boolean LUAh_MobjDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32
 boolean LUAh_MobjDeath(mobj_t *target, mobj_t *inflictor, mobj_t *source)
 {
 	boolean handled = false;
-	if (!gL)
+	if (!gL || !(hooksAvailable[hook_MobjDeath/8] & (1<<(hook_MobjDeath%8))))
 		return false;
 
 	// clear the stack
@@ -717,7 +730,7 @@ boolean LUAh_MobjDeath(mobj_t *target, mobj_t *inflictor, mobj_t *source)
 boolean LUAh_BotTiccmd(player_t *bot, ticcmd_t *cmd)
 {
 	boolean hooked = false;
-	if (!gL)
+	if (!gL || !(hooksAvailable[hook_BotTiccmd/8] & (1<<(hook_BotTiccmd%8))))
 		return false;
 
 	// clear the stack
@@ -737,8 +750,14 @@ boolean LUAh_BotTiccmd(player_t *bot, ticcmd_t *cmd)
 	while (lua_next(gL, 1)) {
 		lua_pushvalue(gL, 2); // bot
 		lua_pushvalue(gL, 3); // cmd
-		LUA_Call(gL, 2);
-		hooked = true;
+		if (lua_pcall(gL, 2, 1, 0)) {
+			CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL,-1));
+			lua_pop(gL, 1);
+			continue;
+		}
+		if (lua_toboolean(gL, -1))
+			hooked = true;
+		lua_pop(gL, 1); // pop return value
 	}
 
 	lua_pop(gL, -1);
@@ -749,7 +768,7 @@ boolean LUAh_BotTiccmd(player_t *bot, ticcmd_t *cmd)
 // Hook for B_BuildTailsTiccmd by skin name
 boolean LUAh_BotAI(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 {
-	if (!gL || !tails->skin)
+	if (!gL || !tails->skin || !(hooksAvailable[hook_BotAI/8] & (1<<(hook_BotAI%8))))
 		return false;
 
 	// clear the stack
@@ -813,7 +832,7 @@ boolean LUAh_BotAI(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 // Hook for linedef executors
 boolean LUAh_LinedefExecute(line_t *line, mobj_t *mo)
 {
-	if (!gL)
+	if (!gL || !(hooksAvailable[hook_LinedefExecute/8] & (1<<(hook_LinedefExecute%8))))
 		return false;
 
 	// clear the stack

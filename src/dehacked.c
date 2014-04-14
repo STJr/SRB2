@@ -71,8 +71,6 @@ static powertype_t get_power(const char *word);
 #endif
 
 boolean deh_loaded = false;
-boolean modcredits = false; // Whether a mod creator's name will show in the credits.
-char modcreditname[32];
 static int dbg_line;
 
 static boolean gamedataadded = false;
@@ -3285,12 +3283,6 @@ static void DEH_LoadDehackedFile(MYFILE *f, UINT16 wad)
 					}
 					DEH_WriteUndoline(word, word2, UNDO_HEADER);
 				}
-				else if (fastcmp(word, "MODBY"))
-				{
-					memset(modcreditname, 0, sizeof(char) * 32);
-					strcpy(modcreditname, origpos+6);
-					modcredits = true;
-				}
 /*				else if (fastcmp(word, "ANIMTEX"))
 				{
 					readAnimTex(f, i);
@@ -4450,6 +4442,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_CYBRAKDEMONTARGETRETICULE12",
 	"S_CYBRAKDEMONTARGETRETICULE13",
 	"S_CYBRAKDEMONTARGETRETICULE14",
+
+	"S_CYBRAKDEMONTARGETDOT",
 
 	"S_CYBRAKDEMONNAPALMBOMBLARGE_FLY1",
 	"S_CYBRAKDEMONNAPALMBOMBLARGE_FLY2",
@@ -6648,6 +6642,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_CYBRAKDEMON_FLAMESHOT",
 	"MT_CYBRAKDEMON_FLAMEREST",
 	"MT_CYBRAKDEMON_TARGET_RETICULE",
+	"MT_CYBRAKDEMON_TARGET_DOT",
 	"MT_CYBRAKDEMON_NAPALM_BOMB_LARGE",
 	"MT_CYBRAKDEMON_NAPALM_BOMB_SMALL",
 	"MT_CYBRAKDEMON_NAPALM_FLAMES",
@@ -7301,12 +7296,12 @@ static const char *const POWERS_LIST[] = {
 
 	// Weapon ammunition
 	"INFINITYRING",
-	"BOUNCERING",
-	"RAILRING",
 	"AUTOMATICRING",
-	"EXPLOSIONRING",
+	"BOUNCERING",
 	"SCATTERRING",
 	"GRENADERING",
+	"EXPLOSIONRING",
+	"RAILRING",
 
 	// Power Stones
 	"EMERALDS", // stored like global 'emeralds' variable
@@ -7441,6 +7436,7 @@ struct {
 	{"TOL_MATCH",TOL_MATCH},
 	{"TOL_TAG",TOL_TAG},
 	{"TOL_CTF",TOL_CTF},
+	{"TOL_CUSTOM",TOL_CUSTOM},
 	{"TOL_2D",TOL_2D},
 	{"TOL_MARIO",TOL_MARIO},
 	{"TOL_NIGHTS",TOL_NIGHTS},
@@ -7926,8 +7922,9 @@ static fixed_t find_const(const char **rword)
 		free(word);
 		return r;
 	}
-	if (*word >= 'A' && !*(word+1)) { // Turn a single A-z symbol into numbers, like sprite frames.
-		r = *word-'A';
+	if (!*(word+1) && // Turn a single A-z symbol into numbers, like sprite frames.
+	 (*word >= 'A' && *word <= 'Z') || (*word >= 'a' && *word <= 'z')) {
+		r = R_Char2Frame(*word);
 		free(word);
 		return r;
 	}

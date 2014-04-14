@@ -47,8 +47,7 @@ const char *LUA_GetActionName(void *action);
 void LUA_SetActionByName(void *state, const char *actiontocompare);
 #endif
 
-extern boolean deh_loaded, modcredits;
-extern char modcreditname[32];
+extern boolean deh_loaded;
 
 #define MAXRECURSION 30
 extern const char *superactions[MAXRECURSION];

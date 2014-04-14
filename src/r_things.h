@@ -191,4 +191,39 @@ void R_InitDrawNodes(void);
 
 char *GetPlayerFacePic(INT32 skinnum);
 
+// Functions to go from sprite character ID to frame number
+// for 2.1 compatibility this still uses the old 'A' + frame code
+// The use of symbols tends to be painful for wad editors though
+// So the future version of this tries to avoid using symbols
+// as much as possible while also defining all 64 slots in a sane manner
+// 2.1:    [[ ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~   ]]
+// Future: [[ ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz!@ ]]
+FUNCMATH FUNCINLINE static ATTRINLINE char R_Frame2Char(UINT8 frame)
+{
+#if 1 // 2.1 compat
+	return 'A' + frame;
+#else
+	if (frame < 26) return 'A' + frame;
+	if (frame < 36) return '0' + (frame - 26);
+	if (frame < 62) return 'a' + (frame - 36);
+	if (frame == 62) return '!';
+	if (frame == 63) return '@';
+	return '\xFF';
+#endif
+}
+
+FUNCMATH FUNCINLINE static ATTRINLINE UINT8 R_Char2Frame(char cn)
+{
+#if 1 // 2.1 compat
+	return cn - 'A';
+#else
+	if (cn >= 'A' && cn <= 'Z') return cn - 'A';
+	if (cn >= '0' && cn <= '9') return (cn - '0') + 26;
+	if (cn >= 'a' && cn <= 'z') return (cn - 'a') + 36;
+	if (cn == '!') return 62;
+	if (cn == '@') return 63;
+	return 255;
+#endif
+}
+
 #endif //__R_THINGS__

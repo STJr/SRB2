@@ -57,8 +57,8 @@ typedef union
 {
 	struct
 	{
-		char passed1[13]; // KNUCKLES GOT
-		char passed2[16]; // THROUGH THE ACT
+		char passed1[14]; // KNUCKLES GOT    / CRAWLA HONCHO
+		char passed2[16]; // THROUGH THE ACT / PASSED THE ACT
 		INT32 passedx1;
 		INT32 passedx2;
 
@@ -998,43 +998,40 @@ void Y_StartIntermission(void)
 			usetile = false;
 
 			// set up the "got through act" message according to skin name
-			if (strlen(skins[players[consoleplayer].skin].realname) <= 8)
+			// too long so just show "YOU GOT THROUGH THE ACT"
+			if (strlen(skins[players[consoleplayer].skin].realname) > 13)
 			{
-				snprintf(data.coop.passed1,
-					sizeof data.coop.passed1, "%s GOT",
+				strcpy(data.coop.passed1, "YOU GOT");
+				strcpy(data.coop.passed2, (mapheaderinfo[gamemap-1]->actnum) ? "THROUGH ACT" : "THROUGH THE ACT");
+			}
+			// long enough that "X GOT" won't fit so use "X PASSED THE ACT"
+			else if (strlen(skins[players[consoleplayer].skin].realname) > 8)
+			{
+				strcpy(data.coop.passed1, skins[players[consoleplayer].skin].realname);
+				strcpy(data.coop.passed2, (mapheaderinfo[gamemap-1]->actnum) ? "PASSED ACT" : "PASSED THE ACT");
+			}
+			// length is okay for normal use
+			else
+			{
+				snprintf(data.coop.passed1, sizeof data.coop.passed1, "%s GOT",
 					skins[players[consoleplayer].skin].realname);
-				data.coop.passed1[sizeof data.coop.passed1 - 1] = '\0';
-				if (mapheaderinfo[gamemap-1]->actnum)
-				{
-					strcpy(data.coop.passed2, "THROUGH ACT");
-					data.coop.passedx1 = 62 + (176 - V_LevelNameWidth(data.coop.passed1))/2;
-					data.coop.passedx2 = 62 + (176 - V_LevelNameWidth(data.coop.passed2))/2;
-				}
-				else
-				{
-					strcpy(data.coop.passed2, "THROUGH THE ACT");
-					data.coop.passedx1 = (BASEVIDWIDTH - V_LevelNameWidth(data.coop.passed1))/2;
-					data.coop.passedx2 = (BASEVIDWIDTH - V_LevelNameWidth(data.coop.passed2))/2;
-				}
-				// The above value is not precalculated because it needs only be computed once
-				// at the start of intermission, and precalculating it would preclude mods
-				// changing the font to one of a slightly different width.
+				strcpy(data.coop.passed2, (mapheaderinfo[gamemap-1]->actnum) ? "THROUGH ACT" : "THROUGH THE ACT");
+			}
+
+			// set X positions
+			if (mapheaderinfo[gamemap-1]->actnum)
+			{
+				data.coop.passedx1 = 62 + (176 - V_LevelNameWidth(data.coop.passed1))/2;
+				data.coop.passedx2 = 62 + (176 - V_LevelNameWidth(data.coop.passed2))/2;
 			}
 			else
 			{
-				strcpy(data.coop.passed1, skins[players[consoleplayer].skin].realname);
-				data.coop.passedx1 = 62 + (176 - V_LevelNameWidth(data.coop.passed1))/2;
-				if (mapheaderinfo[gamemap-1]->actnum)
-				{
-					strcpy(data.coop.passed2, "PASSED ACT");
-					data.coop.passedx2 = 62 + (176 - V_LevelNameWidth(data.coop.passed2))/2;
-				}
-				else
-				{
-					strcpy(data.coop.passed2, "PASSED THE ACT");
-					data.coop.passedx2 = 62 + (240 - V_LevelNameWidth(data.coop.passed2))/2;
-				}
+				data.coop.passedx1 = (BASEVIDWIDTH - V_LevelNameWidth(data.coop.passed1))/2;
+				data.coop.passedx2 = (BASEVIDWIDTH - V_LevelNameWidth(data.coop.passed2))/2;
 			}
+			// The above value is not precalculated because it needs only be computed once
+			// at the start of intermission, and precalculating it would preclude mods
+			// changing the font to one of a slightly different width.
 			break;
 		}
 

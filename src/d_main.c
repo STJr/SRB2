@@ -1086,15 +1086,14 @@ void D_SRB2Main(void)
 #endif
 	D_CleanFile();
 
-#if 1 // md5s last updated 3/22/14
+#if 1 // md5s last updated 4/13/14
 
 	// Check MD5s of autoloaded files
 	W_VerifyFileMD5(0, "ac309fb3c7d4b5b685e2cd26beccf0e8"); // srb2.srb/srb2.wad
-	W_VerifyFileMD5(1, "a894044b555dfcc71865cee16a996e88"); // zones.dta
-	W_VerifyFileMD5(2, "4c410c1de6e0440cc5b2858dcca80c3e"); // player.dta
+	W_VerifyFileMD5(1, "e956466eff2c79f7b1cdefad24761bce"); // zones.dta
+	W_VerifyFileMD5(2, "95a4cdbed287323dd361243f357a5fd2"); // player.dta
 	W_VerifyFileMD5(3, "85901ad4bf94637e5753d2ac2c03ea26"); // rings.dta
-	W_VerifyFileMD5(4, "386ab4ffc8c9fb0fa62f788a16e5c218"); // patch.dta
-
+	W_VerifyFileMD5(4, "1f37fe7bcc608a23eadb0e2c2d7c7124"); // patch.dta
 	// don't check music.dta because people like to modify it, and it doesn't matter if they do
 	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.
 #endif

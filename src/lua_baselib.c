@@ -16,6 +16,7 @@
 #include "p_setup.h" // So we can have P_SetupLevelSky
 #include "z_zone.h"
 #include "r_main.h"
+#include "r_things.h"
 #include "m_random.h"
 #include "s_sound.h"
 #include "g_game.h"
@@ -724,6 +725,27 @@ static int lib_pHomingAttack(lua_State *L)
 	return 0;
 }
 
+static int lib_pSuperReady(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	//HUDSAFE
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	lua_pushboolean(L, P_SuperReady(player));
+	return 1;
+}
+
+static int lib_pDoJump(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	boolean soundandstate = (boolean)lua_opttrueboolean(L, 2);
+	NOHUD
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	P_DoJump(player, soundandstate);
+	return 0;
+}
+
 // P_MAP
 ///////////
 
@@ -1309,6 +1331,31 @@ static int lib_rPointInSubsector(lua_State *L)
 	return 1;
 }
 
+// R_THINGS
+////////////
+
+static int lib_rChar2Frame(lua_State *L)
+{
+	const char *p = luaL_checkstring(L, 1);
+	//HUDSAFE
+	lua_pushinteger(L, R_Char2Frame(*p)); // first character only
+	return 1;
+}
+
+static int lib_rFrame2Char(lua_State *L)
+{
+	UINT8 ch = (UINT8)luaL_checkinteger(L, 1);
+	char c[2] = "";
+	//HUDSAFE
+
+	c[0] = R_Frame2Char(ch);
+	c[1] = 0;
+
+	lua_pushstring(L, c);
+	lua_pushinteger(L, c[0]);
+	return 2;
+}
+
 // S_SOUND
 ////////////
 
@@ -1593,6 +1640,8 @@ static luaL_Reg lib[] = {
 	{"P_LookForEnemies",lib_pLookForEnemies},
 	{"P_NukeEnemies",lib_pNukeEnemies},
 	{"P_HomingAttack",lib_pHomingAttack},
+	{"P_SuperReady",lib_pSuperReady},
+	{"P_DoJump",lib_pDoJump},
 
 	// p_map
 	{"P_CheckPosition",lib_pCheckPosition},
@@ -1644,6 +1693,10 @@ static luaL_Reg lib[] = {
 	{"R_PointToDist",lib_rPointToDist},
 	{"R_PointToDist2",lib_rPointToDist2},
 	{"R_PointInSubsector",lib_rPointInSubsector},
+
+	// r_things (sprite)
+	{"R_Char2Frame",lib_rChar2Frame},
+	{"R_Frame2Char",lib_rFrame2Char},
 
 	// s_sound
 	{"S_StartSound",lib_sStartSound},

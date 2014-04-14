@@ -105,7 +105,7 @@ extern consvar_t cv_overtime;
 extern consvar_t cv_startinglives;
 
 // for F_finale.c
-extern consvar_t cv_realnames, cv_rollingdemos;
+extern consvar_t cv_rollingdemos;
 
 extern consvar_t cv_resetmusic;
 

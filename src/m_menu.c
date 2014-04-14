@@ -365,7 +365,7 @@ static CV_PossibleValue_t map_cons_t[] = {
 	{1,"MIN"},
 	{NUMMAPS, "MAX"}
 };
-consvar_t cv_nextmap = {"nextmap", "MAP01", CV_HIDEN|CV_CALL, map_cons_t, Nextmap_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_nextmap = {"nextmap", "1", CV_HIDEN|CV_CALL, map_cons_t, Nextmap_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 static CV_PossibleValue_t skins_cons_t[MAXSKINS+1] = {{1, DEFAULTSKIN}};
 consvar_t cv_chooseskin = {"chooseskin", DEFAULTSKIN, CV_HIDEN|CV_CALL, skins_cons_t, Nextmap_OnChange, 0, NULL, NULL, 0, 0, NULL};
@@ -2338,8 +2338,8 @@ void M_Drawer(void)
 	{
 		if (customversionstring[0] != '\0')
 		{
-			V_DrawThinString(vid.dupx, BASEVIDHEIGHT - 17*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT, "Mod version:");
-			V_DrawThinString(vid.dupx, BASEVIDHEIGHT - 9*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, customversionstring);
+			V_DrawThinString(vid.dupx, vid.height - 17*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT, "Mod version:");
+			V_DrawThinString(vid.dupx, vid.height - 9*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, customversionstring);
 		}
 		else
 #if VERSION > 0 || SUBVERSION > 0

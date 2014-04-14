@@ -23,6 +23,7 @@
 typedef void (*com_func_t)(void);
 
 void COM_AddCommand(const char *name, com_func_t func);
+int COM_AddLuaCommand(const char *name);
 
 size_t COM_Argc(void);
 const char *COM_Argv(size_t arg); // if argv > argc, returns empty string
