@@ -2404,6 +2404,8 @@ static inline boolean P_TagDamage(mobj_t *target, mobj_t *inflictor, mobj_t *sou
 	{
 		if (!(inflictor->flags & MF_FIRE))
 			P_GivePlayerRings(player, 1);
+		if (inflictor->flags2 & MF2_BOUNCERING)
+			inflictor->fuse = 1;
 		return false;
 	}
 
@@ -2489,6 +2491,8 @@ static inline boolean P_PlayerHitsPlayer(mobj_t *target, mobj_t *inflictor, mobj
 		{
 			if (!(inflictor->flags & MF_FIRE))
 				P_GivePlayerRings(target->player, 1);
+			if (inflictor->flags2 & MF2_BOUNCERING)
+				inflictor->fuse = 1;
 
 			return false;
 		}
@@ -2636,7 +2640,10 @@ void P_RemoveShield(player_t *player)
 		player->powers[pw_shield] = SH_NONE;
 		// Reset fireflower
 		if (!player->powers[pw_super])
+		{
 			player->mo->color = player->skincolor;
+			G_GhostAddColor(GHC_NORMAL);
+		}
 	}
 	else if ((player->powers[pw_shield] & SH_NOSTACK) == SH_BOMB) // Give them what's coming to them!
 	{

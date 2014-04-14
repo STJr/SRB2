@@ -881,6 +881,9 @@ static void md2_loadTexture(md2_t *model)
 	HWR_UnlockCachedPatch(grpatch);
 }
 
+// Don't spam the console, or the OS with fopen requests!
+static boolean nomd2s = false;
+
 void HWR_InitMD2(void)
 {
 	size_t i;
@@ -906,12 +909,14 @@ void HWR_InitMD2(void)
 		md2_models[i].skin = -1;
 		md2_models[i].notfound = true;
 	}
-	// read the md2.dat file
 
+	// read the md2.dat file
 	f = fopen("md2.dat", "rt");
+
 	if (!f)
 	{
 		CONS_Printf("%s", M_GetText("Error while loading md2.dat\n"));
+		nomd2s = true;
 		return;
 	}
 	while (fscanf(f, "%19s %31s %f %f", name, filename, &scale, &offset) == 4)
@@ -966,14 +971,18 @@ void HWR_AddPlayerMD2(int skin) // For MD2's that were added after startup
 	char name[18], filename[32];
 	float scale, offset;
 
+	if (nomd2s)
+		return;
+
 	CONS_Printf("AddPlayerMD2()...\n");
 
 	// read the md2.dat file
-
 	f = fopen("md2.dat", "rt");
+
 	if (!f)
 	{
 		CONS_Printf("Error while loading md2.dat\n");
+		nomd2s = true;
 		return;
 	}
 
@@ -1009,13 +1018,16 @@ void HWR_AddSpriteMD2(size_t spritenum) // For MD2s that were added after startu
 	char name[18], filename[32];
 	float scale, offset;
 
-	// Read the md2.dat file
+	if (nomd2s)
+		return;
 
+	// Read the md2.dat file
 	f = fopen("md2.dat", "rt");
 
 	if (!f)
 	{
 		CONS_Printf("Error while loading md2.dat\n");
+		nomd2s = true;
 		return;
 	}
 

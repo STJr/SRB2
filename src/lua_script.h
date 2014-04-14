@@ -43,6 +43,9 @@ void LUA_CVarChanged(const char *name); // lua_consolelib.c
 int Lua_optoption(lua_State *L, int narg,
 	const char *def, const char *const lst[]);
 
+// Console wrapper
+void COM_Lua_f(void);
+
 #define LUA_Call(L,a)\
 {\
 	if (lua_pcall(L, a, 0, 0)) {\

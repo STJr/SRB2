@@ -22,7 +22,7 @@
 // GIFs are always little-endian
 #include "byteptr.h"
 
-consvar_t cv_gif_optimize = {"gif_optimize", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_gif_optimize = {"gif_optimize", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_gif_downscale =  {"gif_downscale", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 #ifdef HAVE_ANIGIF
@@ -357,7 +357,7 @@ static void GIF_lzw(void)
 		if (gifbwr_bufsize >= 250)
 			break;
 	}
-	if (scrbuf_pos >= scrbuf_writeend)
+	if (scrbuf_pos > scrbuf_writeend)
 	{
 		GIF_bwrwrite(giflzw_workingCode);
 		GIF_bwrwrite(GIFLZW_DATAEND);

@@ -92,6 +92,8 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
                                 UINT8 rotation,
                                 UINT8 flipped)
 {
+	char cn = R_Frame2Char(frame); // for debugging
+
 	INT32 r;
 	lumpnum_t lumppat = wad;
 	lumppat <<= 16;
@@ -107,10 +109,10 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 	{
 		// the lump should be used for all rotations
 		if (sprtemp[frame].rotate == 0)
-			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has multiple rot = 0 lump\n", spritename, 'A'+frame);
+			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has multiple rot = 0 lump\n", spritename, cn);
 
 		if (sprtemp[frame].rotate == 1)
-			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has rotations and a rot = 0 lump\n", spritename, 'A'+frame);
+			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has rotations and a rot = 0 lump\n", spritename, cn);
 
 		sprtemp[frame].rotate = 0;
 		for (r = 0; r < 8; r++)
@@ -124,7 +126,7 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 
 	// the lump is only used for one rotation
 	if (sprtemp[frame].rotate == 0)
-		CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has rotations and a rot = 0 lump\n", spritename, 'A'+frame);
+		CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has rotations and a rot = 0 lump\n", spritename, cn);
 
 	sprtemp[frame].rotate = 1;
 
@@ -132,7 +134,7 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 	rotation--;
 
 	if (sprtemp[frame].lumppat[rotation] != LUMPERROR)
-		CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s: %c:%c has two lumps mapped to it\n", spritename, 'A'+frame, '1'+rotation);
+		CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s: %c%c has two lumps mapped to it\n", spritename, cn, '1'+rotation);
 
 	// lumppat & lumpid are the same for original Doom, but different
 	// when using sprites in pwad : the lumppat points the new graphics
@@ -189,7 +191,7 @@ static boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef,
 	{
 		if (memcmp(lumpinfo[l].name,sprname,4)==0)
 		{
-			frame = (UINT8)(lumpinfo[l].name[4] - 'A');
+			frame = R_Char2Frame(lumpinfo[l].name[4]);
 			rotation = (UINT8)(lumpinfo[l].name[5] - '0');
 
 			if (frame >= 64 || rotation > 8) // Give an actual NAME error -_-...
@@ -225,7 +227,7 @@ static boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef,
 
 			if (lumpinfo[l].name[6])
 			{
-				frame = (UINT8)(lumpinfo[l].name[6] - 'A');
+				frame = R_Char2Frame(lumpinfo[l].name[6]);
 				rotation = (UINT8)(lumpinfo[l].name[7] - '0');
 				R_InstallSpriteLump(wadnum, l, numspritelumps, frame, rotation, 1);
 			}
@@ -277,8 +279,7 @@ static boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef,
 		{
 			case 0xff:
 			// no rotations were found for that frame at all
-			I_Error("R_AddSingleSpriteDef: No patches found "
-			        "for %s frame %c", sprname, frame+'A');
+			I_Error("R_AddSingleSpriteDef: No patches found for %s frame %c", sprname, R_Frame2Char(frame));
 			break;
 
 			case 0:
@@ -291,9 +292,8 @@ static boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef,
 				// we test the patch lump, or the id lump whatever
 				// if it was not loaded the two are LUMPERROR
 				if (sprtemp[frame].lumppat[rotation] == LUMPERROR)
-					I_Error("R_AddSingleSpriteDef: Sprite %s frame %c "
-					        "is missing rotations",
-					        sprname, frame+'A');
+					I_Error("R_AddSingleSpriteDef: Sprite %s frame %c is missing rotations",
+					        sprname, R_Frame2Char(frame));
 			break;
 		}
 	}

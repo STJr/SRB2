@@ -1135,8 +1135,16 @@ void P_RestoreMusic(player_t *player)
 		S_ChangeMusic(mus_supers, true);
 	else if (player->powers[pw_invulnerability] > 1)
 		S_ChangeMusic((mariomode) ? mus_minvnc : mus_invinc, false);
-	else if (player->powers[pw_sneakers] > 1)
-		S_ChangeMusic(mus_shoes, true);
+	else if (player->powers[pw_sneakers] > 1 && !player->powers[pw_super])
+	{
+		if (mapheaderinfo[gamemap-1]->levelflags & LF_SPEEDMUSIC)
+		{
+			S_SpeedMusic(1.4f);
+			S_ChangeMusic(mapmusic, true);
+		}
+		else
+			S_ChangeMusic(mus_shoes, true);
+	}
 	else
 		S_ChangeMusic(mapmusic, true);
 }
@@ -1537,8 +1545,6 @@ static void P_SpawnSpinMobj(player_t *player, mobjtype_t type)
 	}
 
 	P_SetTarget(&mobj->target, player->mo); // the one thing P_SpawnGhostMobj doesn't do
-	if (demorecording)
-		G_GhostAddSpin();
 }
 
 //
@@ -3207,10 +3213,18 @@ static void P_DoSuperStuff(player_t *player)
 			player->mo->health--;
 		}
 
-		if (player->skin == 2) // Pink superknux.
+		switch (player->skin)
+		{
+		case 1: // Golden orange supertails.
+			player->mo->color = SKINCOLOR_TSUPER1 + (leveltime/2) % 5;
+			break;
+		case 2: // Pink superknux.
 			player->mo->color = SKINCOLOR_KSUPER1 + (leveltime/2) % 5;
-		else // Yousa yellow now!
+			break;
+		default: // Yousa yellow now!
 			player->mo->color = SKINCOLOR_SUPER1 + (leveltime/2) % 5;
+			break;
+		}
 		G_GhostAddColor(GHC_SUPER);
 
 		// Ran out of rings while super!
@@ -3485,6 +3499,8 @@ static void P_DoSpinDash(player_t *player, ticcmd_t *cmd)
 
 				// Now spawn the color thok circle.
 				P_SpawnSpinMobj(player, player->revitem);
+				if (demorecording)
+					G_GhostAddRev();
 			}
 		}
 		// If not moving up or down, and travelling faster than a speed of four while not holding
@@ -4578,12 +4594,9 @@ static void P_3dMovement(player_t *player)
 			{
 				movepushside >>= 2;
 
-				//Lower speed if over "max" flight speed and greatly reduce movepushslide.
+				// Reduce movepushslide even more if over "max" flight speed
 				if (player->powers[pw_tailsfly] && player->speed > topspeed)
-				{
-					player->speed = topspeed - 1;
-					movepushside /= 4;
-				}
+					movepushside >>= 2;
 			}
 
 			// Allow a bit of movement while spinning
@@ -6525,6 +6538,10 @@ static void P_MovePlayer(player_t *player)
 	if (player->pflags & PF_GLIDING)
 	{
 		fixed_t leeway;
+		fixed_t glidespeed = player->actionspd;
+
+		if (player->powers[pw_super])
+			glidespeed *= 2;
 
 		if (player->mo->eflags & MFE_VERTICALFLIP)
 		{
@@ -6542,7 +6559,7 @@ static void P_MovePlayer(player_t *player)
 
 		if (player->skidtime) // ground gliding
 		{
-			fixed_t speed = FixedMul(player->actionspd, FRACUNIT - (FRACUNIT>>2));
+			fixed_t speed = FixedMul(glidespeed, FRACUNIT - (FRACUNIT>>2));
 			if (player->mo->eflags & MFE_UNDERWATER)
 				speed >>= 1;
 			speed = FixedMul(speed - player->glidetime*FRACUNIT, player->mo->scale);
@@ -6551,9 +6568,9 @@ static void P_MovePlayer(player_t *player)
 			P_InstaThrust(player->mo, player->mo->angle-leeway, speed);
 		}
 		else if (player->mo->eflags & MFE_UNDERWATER)
-			P_InstaThrust(player->mo, player->mo->angle-leeway, FixedMul((player->actionspd>>1) + player->glidetime*750, player->mo->scale));
+			P_InstaThrust(player->mo, player->mo->angle-leeway, FixedMul((glidespeed>>1) + player->glidetime*750, player->mo->scale));
 		else
-			P_InstaThrust(player->mo, player->mo->angle-leeway, FixedMul(player->actionspd + player->glidetime*1500, player->mo->scale));
+			P_InstaThrust(player->mo, player->mo->angle-leeway, FixedMul(glidespeed + player->glidetime*1500, player->mo->scale));
 
 		player->glidetime++;
 
@@ -6568,6 +6585,7 @@ static void P_MovePlayer(player_t *player)
 			}
 			else
 			{
+				player->pflags |= PF_THOKKED;
 				player->mo->momx >>= 1;
 				player->mo->momy >>= 1;
 				P_SetPlayerMobjState(player->mo, S_PLAY_FALL1);
@@ -6744,7 +6762,11 @@ static void P_MovePlayer(player_t *player)
 
 	// Show the "THOK!" graphic when spinning quickly across the ground. (even applies to non-spinners, in the case of zoom tubes)
 	if (player->pflags & PF_SPINNING && player->speed > FixedMul(15<<FRACBITS, player->mo->scale) && !(player->pflags & PF_JUMPED))
+	{
 		P_SpawnSpinMobj(player, player->spinitem);
+		if (demorecording)
+			G_GhostAddSpin();
+	}
 
 
 	////////////////////////////
@@ -7481,11 +7503,8 @@ boolean P_LookForEnemies(player_t *player)
 			continue; // not a mobj thinker
 
 		mo = (mobj_t *)think;
-		if (!(mo->flags & MF_ENEMY || mo->flags & MF_BOSS || mo->flags & MF_MONITOR
-			|| mo->flags & MF_SPRING))
-		{
+		if (!(mo->flags & (MF_ENEMY|MF_BOSS|MF_MONITOR|MF_SPRING)))
 			continue; // not a valid enemy
-		}
 
 		if (mo->health <= 0) // dead
 			continue;
@@ -7496,14 +7515,14 @@ boolean P_LookForEnemies(player_t *player)
 		if (mo->flags2 & MF2_FRET)
 			continue;
 
-		if ((mo->flags & MF_ENEMY || mo->flags & MF_BOSS) && !(mo->flags & MF_SHOOTABLE)) // don't aim at something you can't shoot at anyway (see Egg Guard or Minus)
+		if ((mo->flags & (MF_ENEMY|MF_BOSS)) && !(mo->flags & MF_SHOOTABLE)) // don't aim at something you can't shoot at anyway (see Egg Guard or Minus)
 			continue;
 
 		if (mo->type == MT_DETON) // Don't be STUPID, Sonic!
 			continue;
 
 		if (((mo->z > player->mo->z+FixedMul(MAXSTEPMOVE, player->mo->scale)) && !(player->mo->eflags & MFE_VERTICALFLIP))
-			|| ((mo->z+mo->height < player->mo->z+player->mo->height-FixedMul(MAXSTEPMOVE, player->mo->scale)) && (player->mo->eflags & MFE_VERTICALFLIP))) // Reverse gravity check - Flame.
+		|| ((mo->z+mo->height < player->mo->z+player->mo->height-FixedMul(MAXSTEPMOVE, player->mo->scale)) && (player->mo->eflags & MFE_VERTICALFLIP))) // Reverse gravity check - Flame.
 			continue; // Don't home upwards!
 
 		if (P_AproxDistance(P_AproxDistance(player->mo->x-mo->x, player->mo->y-mo->y),
@@ -7572,7 +7591,7 @@ void P_HomingAttack(mobj_t *source, mobj_t *enemy) // Home in on your target
 	if (dist < 1)
 		dist = 1;
 
-	if (source->type == MT_DETON && enemy->player) // For Deton Chase
+	if (source->type == MT_DETON && enemy->player) // For Deton Chase (Unused)
 	{
 		fixed_t ns = FixedDiv(FixedMul(enemy->player->normalspeed, enemy->scale), FixedDiv(20*FRACUNIT,17*FRACUNIT));
 		source->momx = FixedMul(FixedDiv(enemy->x - source->x, dist), ns);

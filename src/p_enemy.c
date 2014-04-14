@@ -2600,70 +2600,26 @@ void A_MonitorPop(mobj_t *actor)
 	{
 		case MT_QUESTIONBOX: // Random!
 		{
-			mobjtype_t spawnchance[128];
-			SINT8 numchoices = 0;
-			SINT8 target = 0;
+			mobjtype_t spawnchance[256];
+			INT32 numchoices = 0, i = 0;
 
-			if (cv_superring.value)
-			{
-				for (target += (SINT8)cv_superring.value; numchoices < target;)
-					spawnchance[numchoices++] = MT_SUPERRINGBOX;
-			}
-			if (cv_supersneakers.value)
-			{
-				for (target += (SINT8)cv_supersneakers.value; numchoices < target;)
-					spawnchance[numchoices++] = MT_SNEAKERTV;
-			}
-			if (cv_invincibility.value)
-			{
-				for (target += (SINT8)cv_invincibility.value; numchoices < target;)
-					spawnchance[numchoices++] = MT_INV;
-			}
-			if (cv_jumpshield.value)
-			{
-				for (target += (SINT8)cv_jumpshield.value; numchoices < target;)
-					spawnchance[numchoices++] = MT_WHITETV;
-			}
-			if (cv_watershield.value)
-			{
-				for (target += (SINT8)cv_watershield.value; numchoices < target;)
-					spawnchance[numchoices++] = MT_GREENTV;
-			}
-			if (cv_ringshield.value)
-			{
-				for (target += (SINT8)cv_ringshield.value; numchoices < target;)
-					spawnchance[numchoices++] = MT_YELLOWTV;
-			}
-			if (cv_forceshield.value)
-			{
-				for (target += (SINT8)cv_forceshield.value; numchoices < target;)
-					spawnchance[numchoices++] = MT_BLUETV;
-			}
-			if (cv_bombshield.value)
-			{
-				for (target += (SINT8)cv_bombshield.value; numchoices < target;)
-					spawnchance[numchoices++] = MT_BLACKTV;
-			}
-			if (cv_1up.value)
-			{
-				for (target += (SINT8)cv_1up.value; numchoices < target;)
-					spawnchance[numchoices++] = MT_PRUP;
-			}
-			if (cv_eggmanbox.value)
-			{
-				for (target += (SINT8)cv_eggmanbox.value; numchoices < target;)
-					spawnchance[numchoices++] = MT_EGGMANBOX;
-			}
-			if (cv_teleporters.value)
-			{
-				for (target += (SINT8)cv_teleporters.value; numchoices < target;)
-					spawnchance[numchoices++] = MT_MIXUPBOX;
-			}
-			if (cv_recycler.value)
-			{
-				for (target += (SINT8)cv_recycler.value; numchoices < target;)
-					spawnchance[numchoices++] = MT_RECYCLETV;
-			}
+#define QUESTIONBOXCHANCES(type, cvar) \
+for (i = cvar.value; i; --i) spawnchance[numchoices++] = type
+
+			QUESTIONBOXCHANCES(MT_SUPERRINGBOX,	cv_superring);
+			QUESTIONBOXCHANCES(MT_SNEAKERTV,	cv_supersneakers);
+			QUESTIONBOXCHANCES(MT_INV,			cv_invincibility);
+			QUESTIONBOXCHANCES(MT_WHITETV,		cv_jumpshield);
+			QUESTIONBOXCHANCES(MT_GREENTV,		cv_watershield);
+			QUESTIONBOXCHANCES(MT_YELLOWTV,		cv_ringshield);
+			QUESTIONBOXCHANCES(MT_BLUETV,		cv_forceshield);
+			QUESTIONBOXCHANCES(MT_BLACKTV,		cv_bombshield);
+			QUESTIONBOXCHANCES(MT_PRUP,			cv_1up);
+			QUESTIONBOXCHANCES(MT_EGGMANBOX,	cv_eggmanbox);
+			QUESTIONBOXCHANCES(MT_MIXUPBOX,		cv_teleporters);
+			QUESTIONBOXCHANCES(MT_RECYCLETV,	cv_recycler);
+
+#undef QUESTIONBOXCHANCES
 
 			if (numchoices == 0)
 			{
@@ -3020,7 +2976,7 @@ void A_JumpShield(mobj_t *actor)
 
 	if ((player->powers[pw_shield] & SH_NOSTACK) != SH_JUMP)
 	{
-		player->powers[pw_shield] = SH_JUMP+(player->powers[pw_shield] & SH_STACK);
+		player->powers[pw_shield] = SH_JUMP|(player->powers[pw_shield] & SH_STACK);
 		P_SpawnShieldOrb(player);
 	}
 
@@ -3052,7 +3008,7 @@ void A_RingShield(mobj_t *actor)
 
 	if ((player->powers[pw_shield] & SH_NOSTACK) != SH_ATTRACT)
 	{
-		player->powers[pw_shield] = SH_ATTRACT+(player->powers[pw_shield] & SH_STACK);
+		player->powers[pw_shield] = SH_ATTRACT|(player->powers[pw_shield] & SH_STACK);
 		P_SpawnShieldOrb(player);
 	}
 
@@ -3149,7 +3105,7 @@ void A_SuperSneakers(mobj_t *actor)
 
 	actor->target->player->powers[pw_sneakers] = sneakertics + 1;
 
-	if (P_IsLocalPlayer(player) && (!player->powers[pw_super]))
+	if (P_IsLocalPlayer(player) && !player->powers[pw_super])
 	{
 		if (S_SpeedMusic(0.0f) && (mapheaderinfo[gamemap-1]->levelflags & LF_SPEEDMUSIC))
 			S_SpeedMusic(1.4f);
@@ -3254,7 +3210,7 @@ void A_BombShield(mobj_t *actor)
 
 	if ((player->powers[pw_shield] & SH_NOSTACK) != SH_BOMB)
 	{
-		player->powers[pw_shield] = SH_BOMB+(player->powers[pw_shield] & SH_STACK);
+		player->powers[pw_shield] = SH_BOMB|(player->powers[pw_shield] & SH_STACK);
 		P_SpawnShieldOrb(player);
 	}
 
@@ -3286,7 +3242,7 @@ void A_WaterShield(mobj_t *actor)
 
 	if ((player->powers[pw_shield] & SH_NOSTACK) != SH_ELEMENTAL)
 	{
-		player->powers[pw_shield] = SH_ELEMENTAL+(player->powers[pw_shield] & SH_FIREFLOWER);
+		player->powers[pw_shield] = SH_ELEMENTAL|(player->powers[pw_shield] & SH_STACK);
 		P_SpawnShieldOrb(player);
 	}
 
@@ -9847,14 +9803,18 @@ void A_VileAttack(mobj_t *actor)
 // Function: A_VileFire
 //
 // Description: Kind of like A_CapeChase; keeps this object in front of its tracer, unless its target can't see it.
-//              Originally used by Archviles to keep their hellfire pillars on top of the player, hence the name (although it was just "A_Fire" there; added "Vile" to make it more specific).
+//				Originally used by Archviles to keep their hellfire pillars on top of the player, hence the name (although it was just "A_Fire" there; added "Vile" to make it more specific).
+//				Added some functionality to optionally draw a line directly to the enemy doing the targetting. Y'know, to hammer things in a bit.
 //
 // var1 = sound to play
-// var2 = unused
+// var2:
+//		Lower 16 bits = mobj to spawn (0 doesn't spawn a line at all)
+//		Upper 16 bits = # to spawn (default is 8)
 //
 void A_VileFire(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
 	mobj_t *dest;
 
 #ifdef HAVE_BLUA
@@ -9870,10 +9830,10 @@ void A_VileFire(mobj_t *actor)
 	if (!P_CheckSight(actor->target, dest))
 		return;
 
-	// keep to same scale and gravity as target ALWAYS
-	actor->destscale = actor->target->scale;
+	// keep to same scale and gravity as tracer ALWAYS
+	actor->destscale = dest->scale;
 	P_SetScale(actor, actor->destscale);
-	if (actor->target->eflags & MFE_VERTICALFLIP)
+	if (dest->eflags & MFE_VERTICALFLIP)
 	{
 		actor->eflags |= MFE_VERTICALFLIP;
 		actor->flags2 |= MF2_OBJECTFLIP;
@@ -9893,6 +9853,33 @@ void A_VileFire(mobj_t *actor)
 	// Play sound, if one's specified
 	if (locvar1 > 0 && locvar1 < NUMSFX)
 		S_StartSound(actor, (sfxenum_t)locvar1);
+
+	// Now draw the line to the actor's target
+	if (locvar2 & 0xFFFF)
+	{
+		mobjtype_t lineMobj;
+		UINT16 numLineMobjs;
+		fixed_t distX;
+		fixed_t distY;
+		fixed_t distZ;
+		UINT16 i;
+
+		lineMobj = (mobjtype_t)(locvar2 & 0xFFFF);
+		numLineMobjs = (UINT16)(locvar2 >> 16);
+		if (numLineMobjs == 0) {
+			numLineMobjs = 8;
+		}
+
+		// Get distance for each step
+		distX = (actor->target->x - actor->x) / numLineMobjs;
+		distY = (actor->target->y - actor->y) / numLineMobjs;
+		distZ = ((actor->target->z + FixedMul(actor->target->height/2, actor->target->scale)) - (actor->z + FixedMul(actor->height/2, actor->scale))) / numLineMobjs;
+
+		for (i = 1; i <= numLineMobjs; i++)
+		{
+			P_SpawnMobj(actor->x + (distX * i), actor->y + (distY * i), actor->z + (distZ * i) + FixedMul(actor->height/2, actor->scale), lineMobj);
+		}
+	}
 }
 
 // Function: A_BrakChase

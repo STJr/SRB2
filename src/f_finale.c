@@ -991,7 +991,7 @@ static const char *credits[] = {
 	"\1Texture Artists",
 	"Ryan \"Blaze Hedgehog\" Bloom",
 	"Buddy \"KinkaJoy\" Fischer",
-	"Pedro \"Nev3r\" Iceta",
+	"Kepa \"Nev3r\" Iceta",
 	"Jarrett \"JEV3\" Voight",
 	"",
 	"\1Music and Sound",
@@ -1002,7 +1002,7 @@ static const char *credits[] = {
 	"David \"Bulmybag\" Bulmer",
 	"Paul \"Boinciel\" Clempson",
 	"Cyan Helkaraxe",
-	"Pedro \"Nev3r\" Iceta",
+	"Kepa \"Nev3r\" Iceta",
 	"\"Monster\" Iestyn Jealous",
 	"Jarel \"Arrow\" Jones",
 	"Stefan \"Stuf\" Rimalia",
@@ -1020,7 +1020,7 @@ static const char *credits[] = {
 	"Ben \"Mystic\" Geyer",
 	"Nathan \"Jazz\" Giroux",
 	"Dan \"Blitzzo\" Hagerstrand",
-	"Pedro \"Nev3r\" Iceta",
+	"Kepa \"Nev3r\" Iceta",
 	"Thomas \"Shadow Hog\" Igoe",
 	"Erik \"Torgo\" Nielsen",
 	"Wessel \"Spherallic\" Smit",
@@ -1046,7 +1046,9 @@ static const char *credits[] = {
 	"Alex \"MistaED\" Fuller",
 	"FreeDoom Project", // Used some of the mancubus and rocket launcher sprites for Brak
 	"Randy Heit (<!>)", // For his MSPaint <!> sprite that we nicked
+#if 0 // (don't take your anger out on me anymore, ok, JTE...?)
 	"Abigail \"Raspberry\" Fox", // (Inuyasha's girlfriend. >_> <_< >_>)
+#endif
 	"",
 	"\1Thank you",
 	"\1for playing!",
