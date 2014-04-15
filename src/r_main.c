@@ -798,7 +798,54 @@ void R_SkyboxFrame(player_t *player)
 	if (mapheaderinfo[gamemap-1])
 	{
 		mapheader_t *mh = mapheaderinfo[gamemap-1];
-		if (thiscam->chase)
+		if (player->awayviewtics)
+		{
+			if (skyboxmo[1])
+			{
+				fixed_t x = 0, y = 0;
+				if (mh->skybox_scalex > 0)
+					x = (player->awayviewmobj->x - skyboxmo[1]->x) / mh->skybox_scalex;
+				else if (mh->skybox_scalex < 0)
+					x = (player->awayviewmobj->x - skyboxmo[1]->x) * -mh->skybox_scalex;
+
+				if (mh->skybox_scaley > 0)
+					y = (player->awayviewmobj->y - skyboxmo[1]->y) / mh->skybox_scaley;
+				else if (mh->skybox_scaley < 0)
+					y = (player->awayviewmobj->y - skyboxmo[1]->y) * -mh->skybox_scaley;
+
+				if (viewmobj->angle == 0)
+				{
+					viewx += x;
+					viewy += y;
+				}
+				else if (viewmobj->angle == ANGLE_90)
+				{
+					viewx -= y;
+					viewy += x;
+				}
+				else if (viewmobj->angle == ANGLE_180)
+				{
+					viewx -= x;
+					viewy -= y;
+				}
+				else if (viewmobj->angle == ANGLE_270)
+				{
+					viewx += y;
+					viewy -= x;
+				}
+				else
+				{
+					angle_t ang = viewmobj->angle>>ANGLETOFINESHIFT;
+					viewx += FixedMul(x,FINECOSINE(ang)) - FixedMul(y,  FINESINE(ang));
+					viewy += FixedMul(x,  FINESINE(ang)) + FixedMul(y,FINECOSINE(ang));
+				}
+			}
+			if (mh->skybox_scalez > 0)
+				viewz += player->awayviewmobj->z / mh->skybox_scalez;
+			else if (mh->skybox_scalez < 0)
+				viewz += player->awayviewmobj->z * -mh->skybox_scalez;
+		}
+		else if (thiscam->chase)
 		{
 			if (skyboxmo[1])
 			{
