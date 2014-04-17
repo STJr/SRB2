@@ -8394,18 +8394,18 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	// Make player translucent if camera is too close (only in single player).
 	if (!(multiplayer || netgame) && !splitscreen)
 	{
-		fixed_t x = 0, y = 0;
+		fixed_t vx = 0, vy = 0;
 		if (player->awayviewtics) {
-			x = player->awayviewmobj->x;
-			y = player->awayviewmobj->y;
+			vx = player->awayviewmobj->x;
+			vy = player->awayviewmobj->y;
 		}
 		else
 		{
-			x = thiscam->x;
-			y = thiscam->y;
+			vx = thiscam->x;
+			vy = thiscam->y;
 		}
 
-		if (P_AproxDistance(x - player->mo->x, y - player->mo->y) < FixedMul(48*FRACUNIT, mo->scale))
+		if (P_AproxDistance(vx - player->mo->x, vy - player->mo->y) < FixedMul(48*FRACUNIT, mo->scale))
 			player->mo->flags2 |= MF2_SHADOW;
 		else
 			player->mo->flags2 &= ~MF2_SHADOW;
