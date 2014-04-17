@@ -1144,8 +1144,9 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		spriteframe_t *sprframe;
 		float finalscale;
 
-		if (tics > durs)
-			durs = tics;
+		// Apparently people don't like jump frames like that, so back it goes
+		//if (tics > durs)
+			//durs = tics;
 
 		if (spr->mobj->flags2 & MF2_SHADOW)
 		{
