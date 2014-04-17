@@ -8404,7 +8404,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 			x = thiscam->x;
 			y = thiscam->y;
 		}
-		
+
 		if (P_AproxDistance(x - player->mo->x, y - player->mo->y) < FixedMul(48*FRACUNIT, mo->scale))
 			player->mo->flags2 |= MF2_SHADOW;
 		else
