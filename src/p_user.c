@@ -7772,19 +7772,6 @@ static void P_DeathThink(player_t *player)
 		return;
 
 	P_CalcHeight(player);
-
-	/// \todo Do all this physics stuff in a seperate thinker to be run by the mobj itself, and have your dead body completely finish its animation even if you've already respawned.
-	if (!(player->mo->flags2 & MF2_DONTDRAW))
-	{
-		if (player->deadtimer > 3*TICRATE)
-		{ // Go away.
-			/// \todo Actually go ahead and remove player->mo completely, and fix any bugs and crashes doing this creates. Chasecam should stop moving, and F12 should never return to it.
-			player->mo->momz = 0;
-			player->mo->flags2 |= MF2_DONTDRAW;
-		}
-		else // Apply gravity to fall downwards.
-			P_SetObjectMomZ(player->mo, -2*FRACUNIT/3, true);
-	}
 }
 
 //

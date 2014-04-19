@@ -344,8 +344,16 @@ static int player_set(lua_State *L)
 	if (hud_running)
 		return luaL_error(L, "Do not alter player_t in HUD rendering code!");
 
-	if (fastcmp(field,"mo"))
-		plr->mo = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
+	if (fastcmp(field,"mo")) {
+		if (!lua_isnil(L, 3))
+		{
+			plr->mo->player = NULL;
+			plr->mo = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
+			plr->mo->player = plr;
+		}
+		else
+			return luaL_error(L, "player.mo should not be nil!");
+	}
 	else if (fastcmp(field,"cmd"))
 		return NOSET;
 	else if (fastcmp(field,"playerstate"))

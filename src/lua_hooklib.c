@@ -145,6 +145,7 @@ static int lib_addHook(lua_State *L)
 			lua_pushvalue(L, 2);
 			lua_rawseti(L, -2, hook);
 		}
+		hooksAvailable[hook/8] |= 1<<(hook%8);
 		return 0;
 	}
 
@@ -185,7 +186,6 @@ static int lib_addHook(lua_State *L)
 
 	if (subfield)
 		Z_Free(subfield);
-
 
 	hooksAvailable[hook/8] |= 1<<(hook%8);
 	return 0;
