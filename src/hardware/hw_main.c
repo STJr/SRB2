@@ -1101,9 +1101,6 @@ static void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, INT32 texnum,
 		if (cutflag == FF_CUTSOLIDS) // These are regular walls sent in from StoreWallRange, they shouldn't be cut from this
 			solid = false;
 
-		if (cutflag & FF_SOLID) // these weren't being cut before anyway, although they probably should be in the right conditions
-			solid = false;
-
 		height = FIXED_TO_FLOAT(list[i].height);
 		if (solid)
 			bheight = FIXED_TO_FLOAT(*list[i].caster->bottomheight);
