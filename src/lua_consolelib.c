@@ -30,14 +30,21 @@ void Got_Luacmd(UINT8 **cp, INT32 playernum)
 {
 	UINT8 i, argc, flags;
 	char buf[256];
-	I_Assert(gL != NULL);
+
+	// don't use I_Assert here, goto the deny code below
+	// to clean up and kick people who try nefarious exploits
+	// like sending random junk lua commands to crash the server
+
+	if (!gL) goto deny;
 	lua_getfield(gL, LUA_REGISTRYINDEX, "COM_Command"); // push COM_Command
-	I_Assert(lua_istable(gL, -1));
+	if (!lua_istable(gL, -1)) goto deny;
 
 	argc = READUINT8(*cp);
 	READSTRINGN(*cp, buf, 255);
+	strlwr(buf); // must lowercase buffer
 	lua_getfield(gL, -1, buf); // push command info table
-	I_Assert(lua_istable(gL, -1));
+	if (!lua_istable(gL, -1)) goto deny;
+
 	lua_remove(gL, -2); // pop COM_Command
 
 	lua_rawgeti(gL, -1, 2); // push flags from command info table
@@ -47,26 +54,16 @@ void Got_Luacmd(UINT8 **cp, INT32 playernum)
 		flags = (UINT8)lua_tointeger(gL, -1);
 	lua_pop(gL, 1); // pop flags
 
-	if (flags & 1 && playernum != serverplayer && playernum != adminplayer)
-	{
-		// not from server or remote admin, must be hacked/buggy client
-		CONS_Alert(CONS_WARNING, M_GetText("Illegal lua command received from %s\n"), player_names[playernum]);
-
-		lua_pop(gL, 1); // pop command info table
-
-		if (server)
-		{
-			XBOXSTATIC UINT8 bufn[2];
-
-			bufn[0] = (UINT8)playernum;
-			bufn[1] = KICK_MSG_CON_FAIL;
-			SendNetXCmd(XD_KICK, &bufn, 2);
-		}
-		return;
-	}
+	// requires server/admin and the player is not one of them
+	if ((flags & 1) && playernum != serverplayer && playernum != adminplayer)
+		goto deny;
 
 	lua_rawgeti(gL, -1, 1); // push function from command info table
-	I_Assert(lua_isfunction(gL, -1));
+
+	// although honestly this should be true anyway
+	// BUT GODDAMNIT I SAID NO I_ASSERTS SO NO I_ASSERTS IT IS
+	if (!lua_isfunction(gL, -1)) goto deny;
+
 	lua_remove(gL, -2); // pop command info table
 
 	LUA_PushUserdata(gL, &players[playernum], META_PLAYER);
@@ -76,6 +73,20 @@ void Got_Luacmd(UINT8 **cp, INT32 playernum)
 		lua_pushstring(gL, buf);
 	}
 	LUA_Call(gL, (int)argc); // argc is 1-based, so this will cover the player we passed too.
+	return;
+
+deny:
+	//must be hacked/buggy client
+	lua_settop(gL, 0); // clear stack
+	CONS_Alert(CONS_WARNING, M_GetText("Illegal lua command received from %s\n"), player_names[playernum]);
+	if (server)
+	{
+		XBOXSTATIC UINT8 bufn[2];
+
+		bufn[0] = (UINT8)playernum;
+		bufn[1] = KICK_MSG_CON_FAIL;
+		SendNetXCmd(XD_KICK, &bufn, 2);
+	}
 }
 
 // Wrapper for COM_AddCommand commands

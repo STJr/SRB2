@@ -1,4 +1,7 @@
-Here it is! SRB2 v2.1.7 source code!
+Here it is! SRB2 v2.1.8 source code!
+(why do we keep the version number up to date
+	when everything else in this file is hilariously old?
+	- Inuyasha)
 
 
 Win32 with Visual C (6SP6+Processor Pack OR 7)

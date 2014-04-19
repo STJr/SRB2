@@ -351,16 +351,28 @@ static void GIF_lzw(void)
 			scrbuf_pos = scrbuf_linebegin;
 		}
 		// Just a bit of overflow prevention
-		// We leave ourselves 40 bits of space JUST IN CASE the
-		// end of data is right here, as that's EXACTLY how much
-		// the end of data could require at worst
-		if (gifbwr_bufsize >= 250)
+		if (gifbwr_bufsize >= 248)
 			break;
 	}
 	if (scrbuf_pos > scrbuf_writeend)
 	{
+		// 4.15.14 - I failed to account for the possibility that
+		// these two writes could possibly cause minbits increases.
+		// Luckily, we have a guarantee that the first byte CANNOT exceed
+		// the maximum possible code.  So, we do a minbits check here...
+		if (giflzw_nextCodeToAssign++ > (1 << gifbwr_bits_min))
+			++gifbwr_bits_min; // out of room, extend minbits
 		GIF_bwrwrite(giflzw_workingCode);
+
+		// And luckily once more, if the data marker somehow IS at
+		// MAXCODE it doesn't matter, because it still marks the
+		// end of the stream and thus no extending will happen!
+		// But still, we need to check minbits again...
+		if (giflzw_nextCodeToAssign++ > (1 << gifbwr_bits_min))
+			++gifbwr_bits_min; // out of room, extend minbits
 		GIF_bwrwrite(GIFLZW_DATAEND);
+
+		// Okay, the flush is safe at least.
 		GIF_bwrflush();
 		gif_writeover = 1;
 	}
@@ -527,7 +539,8 @@ static void GIF_framewrite(void)
 		while (!gif_writeover)
 		{
 			GIF_lzw(); // main lzw packing loop
-			if ((size_t)(p - gifframe_data) + gifbwr_bufsize > gifframe_size)
+
+			if ((size_t)(p - gifframe_data) + gifbwr_bufsize + 1 >= gifframe_size)
 			{
 				INT32 temppos = p - gifframe_data;
 				gifframe_data = Z_Realloc(gifframe_data, (gifframe_size *= 2), PU_STATIC, NULL);

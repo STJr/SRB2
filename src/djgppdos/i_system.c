@@ -175,10 +175,13 @@ void I_SetupMumble(void)
 {
 }
 
-void I_UpdateMumble(const MumblePos_t *MPos)
+#ifndef NOMUMBLE
+void I_UpdateMumble(const mobj_t *mobj, const listener_t listener)
 {
-	(void)MPos;
+	(void)mobj;
+	(void)listener;
 }
+#endif
 
 //
 //  Allocates the base zone memory,

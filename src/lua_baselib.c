@@ -1459,7 +1459,7 @@ static int lib_sSoundPlaying(lua_State *L)
 
 static int lib_gBuildMapName(lua_State *L)
 {
-	INT32 map = luaL_checkinteger(L, 1);
+	INT32 map = luaL_optinteger(L, 1, gamemap);
 	//HUDSAFE
 	lua_pushstring(L, G_BuildMapName(map));
 	return 1;
@@ -1484,7 +1484,7 @@ static int lib_gExitLevel(lua_State *L)
 
 static int lib_gIsSpecialStage(lua_State *L)
 {
-	INT32 mapnum = luaL_checkinteger(L, 1);
+	INT32 mapnum = luaL_optinteger(L, 1, gamemap);
 	//HUDSAFE
 	lua_pushboolean(L, G_IsSpecialStage(mapnum));
 	return 1;

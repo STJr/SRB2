@@ -5883,6 +5883,20 @@ void P_MobjThinker(mobj_t *mobj)
 				mobj->fuse--;
 			}
 			break;
+		case MT_PLAYER:
+			/// \todo Have the player's dead body completely finish its animation even if they've already respawned.
+			if (!(mobj->flags2 & MF2_DONTDRAW))
+			{
+				if (mobj->player && mobj->player->deadtimer > 3*TICRATE)
+				{ // Go away.
+					/// \todo Actually go ahead and remove mobj completely, and fix any bugs and crashes doing this creates. Chasecam should stop moving, and F12 should never return to it.
+					mobj->momz = 0;
+					mobj->flags2 |= MF2_DONTDRAW;
+				}
+				else // Apply gravity to fall downwards.
+					P_SetObjectMomZ(mobj, -2*FRACUNIT/3, true);
+			}
+			break;
 		default:
 			break;
 		}
