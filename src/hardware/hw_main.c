@@ -1080,7 +1080,7 @@ static void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, INT32 texnum,
 
 		if (list[i].caster)
 		{
-			if (sector->lightlist[i].caster->flags & FF_SOLID && !(cutflag & FF_EXTRA))
+			if (sector->lightlist[i].caster->flags & FF_CUTSOLIDS && !(cutflag & FF_EXTRA))
 				solid = true;
 			else if (sector->lightlist[i].caster->flags & FF_CUTEXTRA && cutflag & FF_EXTRA)
 			{
