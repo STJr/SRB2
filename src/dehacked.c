@@ -8489,7 +8489,10 @@ static inline int lib_getenum(lua_State *L)
 	// DYNAMIC variables too!!
 	// Try not to add anything that would break netgames or timeattack replays here.
 	// You know, like consoleplayer, displayplayer, secondarydisplayplayer, or gametime.
-	if (fastcmp(word,"maptol")) {
+	if (fastcmp(word,"gamemap")) {
+		lua_pushinteger(L, gamemap);
+		return 1;
+	} else if (fastcmp(word,"maptol")) {
 		lua_pushinteger(L, maptol);
 		return 1;
 	} else if (fastcmp(word,"mariomode")) {

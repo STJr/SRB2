@@ -179,6 +179,9 @@ void HWR_DrawFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 	if (option & V_NOSCALESTART)
 		sdupx = sdupy = 2.0f;
 
+	if (option & V_SPLITSCREEN)
+		sdupy /= 2.0f;
+
 	if (option & V_FLIP) // Need to flip both this and sow
 	{
 		v[0].x = v[3].x = (cx*sdupx-(gpatch->width-gpatch->leftoffset)*pdupx)/vid.width - 1;
