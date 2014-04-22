@@ -77,6 +77,7 @@
 #define _FILE_OFFSET_BITS 0
 #endif
 
+ #include "zlib.h"
  #include "png.h"
  #if (PNG_LIBPNG_VER_MAJOR > 1) || (PNG_LIBPNG_VER_MAJOR == 1 && PNG_LIBPNG_VER_MINOR >= 4)
   #define NO_PNG_DEBUG // 1.4.0 move png_debug to pngpriv.h
@@ -688,7 +689,7 @@ static void M_PNGText(png_structp png_ptr, png_infop png_info_ptr, PNG_CONST png
 	else
 		snprintf(locationtxt, 40, "Unknown");
 
-	png_memset(png_infotext,0x00,sizeof (png_infotext));
+	memset(png_infotext,0x00,sizeof (png_infotext));
 
 	for (i = 0; i < SRB2PNGTXT; i++)
 		png_infotext[i].key  = keytxt[i];
