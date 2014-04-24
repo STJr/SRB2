@@ -44,14 +44,9 @@
 
 #include "md5.h"
 
-#ifdef _LIBC
- #include <endian.h>
- #if __BYTE_ORDER == __BIG_ENDIAN
-  #define WORDS_BIGENDIAN 1
- #endif
-#endif
+#include "endian.h"
 
-#if defined (WORDS_BIGENDIAN) || defined (_BIG_ENDIAN)
+#if defined (SRB2_BIG_ENDIAN)
  #define SWAP(n)							\
     (((n) << 24) | (((n) & 0xff00) << 8) | (((n) >> 8) & 0xff00) | ((n) >> 24))
 #else
