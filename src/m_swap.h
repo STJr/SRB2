@@ -14,9 +14,11 @@
 #ifndef __M_SWAP__
 #define __M_SWAP__
 
+#include "endian.h"
+
 // Endianess handling.
 // WAD files are stored little endian.
-#ifdef _BIG_ENDIAN
+#ifdef SRB2_BIG_ENDIAN
 
 #define SHORT(x) ((INT16)(\
 (((UINT16)(x) & (UINT16)0x00ffU) << 8) \
