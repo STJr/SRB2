@@ -152,7 +152,7 @@ static Mix_Chunk *ds2chunk(void *stream)
 		if (!(frac & 0xFFFF)) // other solid multiples (change if FRACBITS != 16)
 			newsamples = samples * (frac >> FRACBITS);
 		else // strange and unusual fractional frequency steps, plus anything higher than 44100hz.
-			newsamples = FixedMul(frac, samples) + 2; // add 2 samples for security! the code below rounds up.
+			newsamples=(samples/freq + 1) *44100 ; //Result of division is not fractional, so 1 is added to ensure a roundup rather than truncation.
 		if (newsamples >= UINT32_MAX>>2)
 			return NULL; // would and/or did wrap, can't store.
 		break;
