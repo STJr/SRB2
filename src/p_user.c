@@ -1401,6 +1401,17 @@ void P_SpawnShieldOrb(player_t *player)
 		P_SetTarget(&ov->target, shieldobj);
 		P_SetMobjState(ov, shieldobj->info->missilestate);
 	}
+	if (player->powers[pw_shield] & SH_FORCE)
+	{
+		//Copy and pasted from P_ShieldLook in p_mobj.c
+		if (shieldobj->movecount < 1)
+		{
+			if (shieldobj->info->painstate)
+				P_SetMobjState(shieldobj,shieldobj->info->painstate);
+			else
+				shieldobj->flags2 |= MF2_SHADOW;
+		}
+	}
 }
 
 //
