@@ -1404,6 +1404,7 @@ void P_SpawnShieldOrb(player_t *player)
 	if (player->powers[pw_shield] & SH_FORCE)
 	{
 		//Copy and pasted from P_ShieldLook in p_mobj.c
+		shieldobj->movecount = (shieldobj->target->player->powers[pw_shield] & 0xFF);
 		if (shieldobj->movecount < 1)
 		{
 			if (shieldobj->info->painstate)
