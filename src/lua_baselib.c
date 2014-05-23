@@ -901,6 +901,18 @@ static int lib_pFloorzAtPos(lua_State *L)
 	lua_pushinteger(L, P_FloorzAtPos(x, y, z, height));
 	return 1;
 }
+
+static int lib_pDoSpring(lua_State *L)
+{
+	mobj_t *spring = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	mobj_t *spring = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
+	NOHUD
+	if (!spring || !object)
+		return LUA_ErrInvalid(L, "mobj_t");
+	P_DoSpring(spring, object);
+	return 0;
+}
+
 // P_INTER
 ////////////
 
@@ -1680,6 +1692,7 @@ static luaL_Reg lib[] = {
 	{"P_CheckHoopPosition",lib_pCheckHoopPosition},
 	{"P_RadiusAttack",lib_pRadiusAttack},
 	{"P_FloorzAtPos",lib_pFloorzAtPos},
+	{"P_DoSpring",lib_pDoSpring},
 
 	// p_inter
 	{"P_RemoveShield",lib_pRemoveShield},
