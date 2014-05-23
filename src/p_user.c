@@ -1445,7 +1445,7 @@ mobj_t *P_SpawnGhostMobj(mobj_t *mobj)
 //
 // Spawns the appropriate thok object on the player
 //
-static void P_SpawnThokMobj(player_t *player)
+void P_SpawnThokMobj(player_t *player)
 {
 	mobj_t *mobj;
 	mobjtype_t type = player->thokitem;
