@@ -1500,7 +1500,7 @@ void P_SpawnThokMobj(player_t *player)
 //
 // Spawns the appropriate spin object on the player
 //
-static void P_SpawnSpinMobj(player_t *player, mobjtype_t type)
+void P_SpawnSpinMobj(player_t *player, mobjtype_t type)
 {
 	mobj_t *mobj;
 	fixed_t zheight;
