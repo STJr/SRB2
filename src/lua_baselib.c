@@ -1667,7 +1667,7 @@ static luaL_Reg lib[] = {
 	{"P_SuperReady",lib_pSuperReady},
 	{"P_DoJump",lib_pDoJump},
 	{"P_SpawnThokMobj",lib_pSpawnThokMobj},
-	{"P_SpawnSpinMobj",libpSpawnSpinMobj},
+	{"P_SpawnSpinMobj",lib_pSpawnSpinMobj},
 
 	// p_map
 	{"P_CheckPosition",lib_pCheckPosition},
