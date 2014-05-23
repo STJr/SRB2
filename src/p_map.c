@@ -105,7 +105,7 @@ boolean P_TeleportMove(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z)
 //                       MOVEMENT ITERATOR FUNCTIONS
 // =========================================================================
 
-static void P_DoSpring(mobj_t *spring, mobj_t *object)
+void P_DoSpring(mobj_t *spring, mobj_t *object)
 {
 	INT32 pflags;
 	fixed_t offx, offy;
