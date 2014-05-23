@@ -905,7 +905,7 @@ static int lib_pFloorzAtPos(lua_State *L)
 static int lib_pDoSpring(lua_State *L)
 {
 	mobj_t *spring = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
-	mobj_t *spring = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
+	mobj_t *object = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
 	NOHUD
 	if (!spring || !object)
 		return LUA_ErrInvalid(L, "mobj_t");
