@@ -756,6 +756,20 @@ static int lib_pSpawnThokMobj(lua_State *L)
 	return 0;
 }
 
+static int lib_pSpawnSpinMobj(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	mobjtype_t type = luaL_checkinteger(L, 2);
+	NOHUD
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	if (type > MT_LASTFREESLOT)
+		return luaL_error(L, "mobjtype_t out of bounds error!");
+	P_SpawnSpinMobj(player, type);
+	return 0;
+}
+
+
 // P_MAP
 ///////////
 
