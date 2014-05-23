@@ -746,6 +746,16 @@ static int lib_pDoJump(lua_State *L)
 	return 0;
 }
 
+static int lib_pSpawnThokMobj(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	NOHUD
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	P_SpawnThokMobj(player);
+	return 0;
+}
+
 // P_MAP
 ///////////
 
