@@ -746,6 +746,42 @@ static int lib_pDoJump(lua_State *L)
 	return 0;
 }
 
+static int lib_pSpawnThokMobj(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	NOHUD
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	P_SpawnThokMobj(player);
+	return 0;
+}
+
+static int lib_pSpawnSpinMobj(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	mobjtype_t type = luaL_checkinteger(L, 2);
+	NOHUD
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	if (type > MT_LASTFREESLOT)
+		return luaL_error(L, "mobjtype_t out of bounds error!");
+	P_SpawnSpinMobj(player, type);
+	return 0;
+}
+
+static int lib_pTelekinesis(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	fixed_t thrust = (fixed_t)luaL_checkinteger(L, 2);
+	fixed_t range = (fixed_t)luaL_checkinteger(L, 3);
+	NOHUD
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	P_Telekinesis(player, thrust, range);
+	return 0;
+}
+
+
 // P_MAP
 ///////////
 
@@ -877,6 +913,18 @@ static int lib_pFloorzAtPos(lua_State *L)
 	lua_pushinteger(L, P_FloorzAtPos(x, y, z, height));
 	return 1;
 }
+
+static int lib_pDoSpring(lua_State *L)
+{
+	mobj_t *spring = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	mobj_t *object = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
+	NOHUD
+	if (!spring || !object)
+		return LUA_ErrInvalid(L, "mobj_t");
+	P_DoSpring(spring, object);
+	return 0;
+}
+
 // P_INTER
 ////////////
 
@@ -1156,6 +1204,16 @@ static int lib_pThingOnSpecial3DFloor(lua_State *L)
 	if (!mo)
 		return LUA_ErrInvalid(L, "mobj_t");
 	LUA_PushUserdata(L, P_ThingOnSpecial3DFloor(mo), META_SECTOR);
+	return 1;
+}
+
+static int lib_pIsFlagAtBase(lua_State *L)
+{
+	mobjtype_t flag = luaL_checkinteger(L, 1);
+	NOHUD
+	if (type > MT_LASTFREESLOT)
+		return luaL_error(L, "mobjtype_t out of bounds error!");
+	lua_pushboolean(L, P_IsFlagAtBase(flag));
 	return 1;
 }
 
@@ -1642,6 +1700,9 @@ static luaL_Reg lib[] = {
 	{"P_HomingAttack",lib_pHomingAttack},
 	{"P_SuperReady",lib_pSuperReady},
 	{"P_DoJump",lib_pDoJump},
+	{"P_SpawnThokMobj",lib_pSpawnThokMobj},
+	{"P_SpawnSpinMobj",lib_pSpawnSpinMobj},
+	{"P_Telekinesis",lib_pTelekinesis},
 
 	// p_map
 	{"P_CheckPosition",lib_pCheckPosition},
@@ -1654,6 +1715,7 @@ static luaL_Reg lib[] = {
 	{"P_CheckHoopPosition",lib_pCheckHoopPosition},
 	{"P_RadiusAttack",lib_pRadiusAttack},
 	{"P_FloorzAtPos",lib_pFloorzAtPos},
+	{"P_DoSpring",lib_pDoSpring},
 
 	// p_inter
 	{"P_RemoveShield",lib_pRemoveShield},
@@ -1684,6 +1746,7 @@ static luaL_Reg lib[] = {
 	{"P_FadeLight",lib_pFadeLight},
 	{"P_ThingOnSpecial3DFloor",lib_pThingOnSpecial3DFloor},
 	{"P_SetupLevelSky",lib_pSetupLevelSky},
+	{"P_IsFlagAtBase",lib_pIsFlagAtBase}.
 	{"P_SetSkyboxMobj",lib_pSetSkyboxMobj},
 	{"P_StartQuake",lib_pStartQuake},
 

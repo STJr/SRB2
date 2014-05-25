@@ -1445,7 +1445,7 @@ mobj_t *P_SpawnGhostMobj(mobj_t *mobj)
 //
 // Spawns the appropriate thok object on the player
 //
-static void P_SpawnThokMobj(player_t *player)
+void P_SpawnThokMobj(player_t *player)
 {
 	mobj_t *mobj;
 	mobjtype_t type = player->thokitem;
@@ -1500,7 +1500,7 @@ static void P_SpawnThokMobj(player_t *player)
 //
 // Spawns the appropriate spin object on the player
 //
-static void P_SpawnSpinMobj(player_t *player, mobjtype_t type)
+void P_SpawnSpinMobj(player_t *player, mobjtype_t type)
 {
 	mobj_t *mobj;
 	fixed_t zheight;
@@ -3580,7 +3580,7 @@ static void P_DoJumpShield(player_t *player)
 // Morph's fancy stuff-moving character ability
 // +ve thrust pushes away, -ve thrust pulls in
 //
-static void P_Telekinesis(player_t *player, fixed_t thrust, fixed_t range)
+void P_Telekinesis(player_t *player, fixed_t thrust, fixed_t range)
 {
 	thinker_t *th;
 	mobj_t *mo2;
