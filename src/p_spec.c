@@ -3109,7 +3109,7 @@ void P_SetupSignExit(player_t *player)
 //
 // Checks to see if a flag is at its base.
 //
-static boolean P_IsFlagAtBase(mobjtype_t flag)
+boolean P_IsFlagAtBase(mobjtype_t flag)
 {
 	thinker_t *think;
 	mobj_t *mo;
