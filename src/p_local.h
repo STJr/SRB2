@@ -166,6 +166,7 @@ void P_TransferToAxis(player_t *player, INT32 axisnum);
 boolean P_PlayerMoving(INT32 pnum);
 void P_SpawnThokMobj(player_t *player);
 void P_SpawnSpinMobj(player_t *player, mobjtype_t type);
+void P_Telekinesis(player_t *player, fixed_t thrust, fixed_t range);
 
 void P_PlayLivesJingle(player_t *player);
 #define P_PlayRinglossSound(s)	S_StartSound(s, (mariomode) ? sfx_mario8 : sfx_altow1 + P_RandomKey(4));
