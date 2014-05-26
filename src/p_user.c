@@ -3592,7 +3592,7 @@ static void P_DoJumpShield(player_t *player)
 // Morph's fancy stuff-moving character ability
 // +ve thrust pushes away, -ve thrust pulls in
 //
-static void P_Telekinesis(player_t *player, fixed_t thrust, fixed_t range)
+void P_Telekinesis(player_t *player, fixed_t thrust, fixed_t range)
 {
 	thinker_t *th;
 	mobj_t *mo2;
