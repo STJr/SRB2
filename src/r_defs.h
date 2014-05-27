@@ -242,7 +242,7 @@ typedef struct sector_s
 	INT32 ceilingpic;
 	INT16 lightlevel;
 	INT16 special;
-	INT16 tag;
+	UINT16 tag;
 	INT32 nexttag, firsttag; // for fast tag searches
 
 	// origin for any sounds played by the sector

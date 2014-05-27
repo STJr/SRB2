@@ -2854,9 +2854,10 @@ static void HWR_Subsector(size_t num)
 #ifdef DOPLANES
 	// -------------------- WATER IN DEV. TEST ------------------------
 	//dck hack : use abs(tag) for waterheight
-	if (gr_frontsector->tag < 0)
+	//ilag : Since we changed to UINT16 for sector tags, simulate INT16
+	if (gr_frontsector->tag > 32767)
 	{
-		wh = ((-gr_frontsector->tag) <<FRACBITS) + (FRACUNIT/2);
+		wh = ((65535-gr_frontsector->tag) <<FRACBITS) + (FRACUNIT/2);
 		if (wh > gr_frontsector->floorheight &&
 			wh < gr_frontsector->ceilingheight)
 		{
