@@ -14,6 +14,7 @@
 #ifdef HAVE_BLUA
 #include "doomstat.h"
 #include "p_mobj.h"
+#include "g_game.h"
 #include "r_things.h"
 #include "b_bot.h"
 #include "z_zone.h"
@@ -46,6 +47,7 @@ const char *const hookNames[hook_MAX+1] = {
 	"BotTiccmd",
 	"BotAI",
 	"LinedefExecute",
+	"PlayerMsg",
 	NULL
 };
 
@@ -860,6 +862,60 @@ boolean LUAh_LinedefExecute(line_t *line, mobj_t *mo)
 	lua_pop(gL, -1);
 	lua_gc(gL, LUA_GCSTEP, 1);
 	return true;
+}
+
+// Hook for PlayerMsg -Red
+boolean LUAh_PlayerMsg(int source, int target, int flags, char *msg)
+{
+	boolean handled = false;
+	
+	if (!gL || !(hooksAvailable[hook_PlayerMsg/8] & (1<<(hook_PlayerMsg%8))))
+		return false;
+	
+	lua_getfield(gL, LUA_REGISTRYINDEX, "hook");
+	I_Assert(lua_istable(gL, -1));
+	lua_rawgeti(gL, -1, hook_PlayerMsg);
+	lua_remove(gL, -2);
+	I_Assert(lua_istable(gL, -1));
+	
+	LUA_PushUserdata(gL, &players[source], META_PLAYER); // Source player
+	
+	if (flags & 2 /*HU_CSAY*/) { // csay TODO: make HU_CSAY accessible outside hu_stuff.c
+		lua_pushinteger(gL, 3); // type
+		lua_pushnil(gL); // target
+	} else if (target == -1) { // sayteam
+		lua_pushinteger(gL, 1); // type
+		lua_pushnil(gL); // target
+	} else if (target == 0) { // say
+		lua_pushinteger(gL, 0); // type
+		lua_pushnil(gL); // target
+	} else { // sayto
+		lua_pushinteger(gL, 2); // type
+		LUA_PushUserdata(gL, &players[target-1], META_PLAYER); // target
+	}
+	
+	lua_pushstring(gL, msg); // msg
+	
+	lua_pushnil(gL);
+	
+	while (lua_next(gL, -6)) {
+		lua_pushvalue(gL, -6); // source
+		lua_pushvalue(gL, -6); // type
+		lua_pushvalue(gL, -6); // target
+		lua_pushvalue(gL, -6); // msg
+		if (lua_pcall(gL, 4, 1, 0)) {
+			CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL,-1));
+			lua_pop(gL, 1);
+			continue;
+		}
+		if (lua_toboolean(gL, -1))
+			handled = true;
+		lua_pop(gL, 1); // pop return value
+	}
+	lua_pop(gL, 4); // pop arguments and mobjtype table
+
+	lua_gc(gL, LUA_GCSTEP, 1);
+	return handled;
 }
 
 #endif
