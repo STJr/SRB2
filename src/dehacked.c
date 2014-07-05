@@ -7507,6 +7507,7 @@ struct {
 	{"SF_HIRES",SF_HIRES},
 	{"SF_NOSKID",SF_NOSKID},
 	{"SF_NOSPEEDADJUST",SF_NOSPEEDADJUST},
+	{"SF_RUNONWATER",SF_RUNONWATER},
 
 	// Character abilities!
 	// Primary
