@@ -55,7 +55,8 @@ typedef enum
 	CA_TELEKINESIS,
 	CA_FALLSWITCH,
 	CA_JUMPBOOST,
-	CA_AIRDRILL
+	CA_AIRDRILL,
+	CA_JUMPTHOK
 } charability_t;
 
 //Secondary skin abilities
