@@ -3733,6 +3733,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 			{
 				case CA_THOK:
 				case CA_HOMINGTHOK:
+				case CA_JUMPTHOK: // Credit goes to CZ64 and Sryder13 for the original
 					// Now it's Sonic's abilities turn!
 					if (player->pflags & PF_JUMPED)
 					{
@@ -3742,12 +3743,19 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 							P_DoSuperTransformation(player, false);
 						else // Otherwise, THOK!
 						{
-							if (!(player->pflags & PF_THOKKED) || (player->charability2 == CA2_MULTIABILITY))
+							if (!(player->pflags & PF_THOKKED) || ((player->charability2 == CA2_MULTIABILITY) && (!(player->charability == CA_JUMPTHOK))))
 							{
 								// Catapult the player
 								fixed_t actionspd = player->actionspd;
 								if (player->mo->eflags & MFE_UNDERWATER)
 									actionspd >>= 1;
+								if (player->charability == CA_JUMPTHOK)
+								{
+									if ((actionspd == 60*FRACUNIT) && (actionspd > player->normalspeed)) //Limit only at default
+										actionspd = player->normalspeed;
+									player->pflags &= ~PF_JUMPED;
+									P_DoJump(player, false);
+								}
 								P_InstaThrust(player->mo, player->mo->angle, FixedMul(actionspd, player->mo->scale));
 
 								if (maptol & TOL_2D)
