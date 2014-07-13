@@ -1950,6 +1950,63 @@ static void readsound(MYFILE *f, INT32 num, const char *savesfxnames[])
 	(void)savesfxnames;
 }
 
+//yellowtd: readmusic: may be a clone but does its desired purpose c:
+static void readmusic(MYFILE *f, UINT16 num, const char *savemusicnames[])
+{
+	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
+	char *word;
+	char *tmp;
+	INT32 value;
+
+	do
+	{
+		if (myfgets(s, MAXLINELEN, f))
+		{
+			if (s[0] == '\n')
+				break;
+
+			tmp = strchr(s, '#');
+			if (tmp)
+				*tmp = '\0';
+
+			value = searchvalue(s);
+
+			word = strtok(s, " ");
+			if (word)
+				strupr(word);
+			else
+				break;
+
+/*			if (fastcmp(word, "OFFSET"))
+			{
+				value -= 150360;
+				if (value <= 64)
+					value /= 8;
+				else if (value <= 260)
+					value = (value+4)/8;
+				else
+					value = (value+8)/8;
+				if (value >= -1 && value < sfx_freeslot0 - 1)
+					S_sfx[num].name = savesfxnames[value+1];
+				else
+					deh_warning("Sound %d: offset out of bounds", num);
+			}
+			else */if (fastcmp(word, "DUMMYVAL"))
+			{
+                
+				DEH_WriteUndoline(word, va("%d", S_music[num].dummyval), UNDO_NONE);
+				S_music[num].dummyval = value;
+			}
+			else
+				deh_warning("Music %d : unknown word '%s'",num,word);
+		}
+	} while (!myfeof(f));
+
+	Z_Free(s);
+
+	(void)savemusicnames;
+}
+
 /** Checks if a game data file name for a mod is good.
  * "Good" means that it contains only alphanumerics, _, and -;
  * ends in ".dat"; has at least one character before the ".dat";
@@ -3168,7 +3225,8 @@ static void DEH_LoadDehackedFile(MYFILE *f, UINT16 wad)
 	//XBOXSTATIC actionf_t saveactions[NUMSTATES];
 	//XBOXSTATIC const char *savesprnames[NUMSPRITES];
 	XBOXSTATIC const char *savesfxnames[NUMSFX];
-
+	XBOXSTATIC const char *savemusicnames[NUMMUSIC];
+	
 	if (!deh_loaded)
 		initfreeslots();
 
@@ -3182,7 +3240,10 @@ static void DEH_LoadDehackedFile(MYFILE *f, UINT16 wad)
 	*/
 	for (i = 0; i < NUMSFX; i++)
 		savesfxnames[i] = S_sfx[i].name;
-
+		
+	for (i = 0; i < NUMMUSIC; i++)
+		savemusicnames[i] = S_music[i].name;
+		
 	gamedataadded = false;
 
 	// it doesn't test the version of SRB2 and version of dehacked file
