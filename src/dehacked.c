@@ -627,6 +627,8 @@ static void readfreeslots(MYFILE *f)
 			// TODO: Name too long (truncated) warnings.
 			if (fastcmp(type, "SFX"))
 				S_AddSoundFx(word, false, 0, false);
+			else if (fastcmp(type, "MUS")) 
+                S_AddMusic(word, -1);	
 			else if (fastcmp(type, "SPR"))
 			{
 				for (i = SPR_FIRSTFREESLOT; i <= SPR_LASTFREESLOT; i++)
@@ -3450,6 +3452,19 @@ static void DEH_LoadDehackedFile(MYFILE *f, UINT16 wad)
 					else
 					{
 						deh_warning("Sound %d out of range (0 - %d)", i, NUMSFX-1);
+						ignorelines(f);
+					}
+					DEH_WriteUndoline(word, word2, UNDO_HEADER);
+				}
+				else if (fastcmp(word, "MUSIC"))
+				{
+					if (i == 0 && word2[0] != '0') // If word2 isn't a number
+						i = get_mus(word2); // find a sound by name
+					if (i < NUMMUSIC && i >= 0)
+						readmusic(f, i, savemusicnames);
+					else
+					{
+						deh_warning("Music %d out of range (0 - %d)", i, NUMMUSIC-1);
 						ignorelines(f);
 					}
 					DEH_WriteUndoline(word, word2, UNDO_HEADER);
@@ -8187,6 +8202,17 @@ static inline int lib_freeslot(lua_State *L)
 			sfx = S_AddSoundFx(word, false, 0, false);
 			if (sfx != sfx_None) {
 				lua_pushinteger(L, sfx);
+				r++;
+			} else
+				return r;
+		}
+		else if (fastcmp(type, "MUS")) {
+			musicenum_t music;
+			strlwr(word);
+			CONS_Printf("Music mus_%s allocated.\n",word);
+			music = S_AddMusic(word, -1);
+			if (music != mus_None) {
+				lua_pushinteger(L, music);
 				r++;
 			} else
 				return r;
