@@ -273,7 +273,7 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 #ifdef HWRENDER
 	else if (rendermode == render_opengl)
 	{
-		if (sdlglcontext == 0)
+		if (sdlglcontext == NULL)
 		{
 			sdlglcontext = SDL_GL_CreateContext(window);
 		}
@@ -1331,7 +1331,7 @@ void I_OsPolling(void)
 //
 void I_UpdateNoBlit(void)
 {
-	if (!vidSurface)
+	if (rendermode == render_none)
 		return;
 	if (exposevideo)
 	{
@@ -1339,13 +1339,12 @@ void I_UpdateNoBlit(void)
 		if (rendermode == render_opengl)
 		{
 			OglSdlFinishUpdate(cv_vidwait.value);
-			SDL_GL_SwapWindow(window);
+			SDL_RenderPresent(renderer);
 		}
 		else
 #endif
 		if (rendermode == render_soft)
 		{
-			SDL_RenderClear(renderer);
 			SDL_RenderCopy(renderer, texture, NULL, NULL);
 			SDL_RenderPresent(renderer);
 		}
@@ -1406,7 +1405,7 @@ static inline SDL_bool SDLmatchVideoformat(void)
 //
 void I_FinishUpdate(void)
 {
-	if (!vidSurface)
+	if (rendermode == render_none)
 		return; //Alam: No software or OpenGl surface
 
 	if (I_SkipFrame())
@@ -1437,7 +1436,6 @@ void I_FinishUpdate(void)
 			SDL_UpdateTexture(texture, NULL, vidSurface->pixels, realwidth * 4);
 		}
 		// Blit buffer to texture
-		SDL_RenderClear(renderer);
 		SDL_RenderCopy(renderer, texture, NULL, NULL);
 		SDL_RenderPresent(renderer);
 	}
@@ -1446,6 +1444,7 @@ void I_FinishUpdate(void)
 	else
 	{
 		OglSdlFinishUpdate(cv_vidwait.value);
+		//SDL_RenderPresent(renderer);
 	}
 #endif
 	exposevideo = SDL_FALSE;
@@ -1827,10 +1826,10 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 		 * We want at least 1 bit R, G, and B,
 		 * and at least 16 bpp. Why 1 bit? May be more?
 		 */
-		SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 1);
+		/*SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 1);
 		SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 1);
 		SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 1);
-		SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+		SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);*/
 
 		window = SDL_CreateWindow("SRB2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 				realwidth, realheight, flags | SDL_WINDOW_OPENGL);
@@ -1839,7 +1838,7 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 			renderer = SDL_CreateRenderer(window, -1, 0);
 			if (renderer != NULL)
 			{
-				SDL_RenderSetLogicalSize(renderer, BASEVIDWIDTH, BASEVIDHEIGHT);
+				//SDL_RenderSetLogicalSize(renderer, BASEVIDWIDTH, BASEVIDHEIGHT);
 				sdlglcontext = SDL_GL_CreateContext(window);
 			}
 			else return SDL_FALSE;
