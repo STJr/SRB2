@@ -62,19 +62,11 @@ PFNglGetIntegerv pglGetIntegerv;
 PFNglGetString pglGetString;
 #endif
 
-#ifdef _PSP
-static const Uint32 WOGLFlags = SDL_HWSURFACE|SDL_OPENGL/*|SDL_RESIZABLE*/;
-static const Uint32 FOGLFlags = SDL_HWSURFACE|SDL_OPENGL|SDL_FULLSCREEN;
-#else
-static const Uint32 WOGLFlags = SDL_OPENGL/*|SDL_RESIZABLE*/;
-static const Uint32 FOGLFlags = SDL_OPENGL|SDL_FULLSCREEN;
-#endif
-
 /**	\brief SDL video display surface
 */
-SDL_Surface *vidSurface = NULL;
 INT32 oglflags = 0;
 void *GLUhandle = NULL;
+SDL_GLContext sdlglcontext = 0;
 
 #ifndef STATIC_OPENGL
 void *GetGLFunc(const char *proc)
@@ -159,32 +151,10 @@ boolean LoadGL(void)
 boolean OglSdlSurface(INT32 w, INT32 h, boolean isFullscreen)
 {
 	INT32 cbpp;
-	Uint32 OGLFlags;
+	//Uint32 OGLFlags;
 	const GLvoid *glvendor = NULL, *glrenderer = NULL, *glversion = NULL;
 
 	cbpp = cv_scr_depth.value < 16 ? 16 : cv_scr_depth.value;
-
-	if (vidSurface)
-	{
-		//Alam: SDL_Video system free vidSurface for me
-#ifdef VOODOOSAFESWITCHING
-		SDL_QuitSubSystem(SDL_INIT_VIDEO);
-		SDL_InitSubSystem(SDL_INIT_VIDEO);
-#endif
-	}
-
-	if (isFullscreen)
-		OGLFlags = FOGLFlags;
-	else
-		OGLFlags = WOGLFlags;
-
-	cbpp = SDL_VideoModeOK(w, h, cbpp, OGLFlags);
-	if (cbpp < 16)
-		return true; //Alam: Let just say we did, ok?
-
-	vidSurface = SDL_SetVideoMode(w, h, cbpp, OGLFlags);
-	if (!vidSurface)
-		return false;
 
 	glvendor = pglGetString(GL_VENDOR);
 	// Get info and extensions.
@@ -274,7 +244,7 @@ void OglSdlFinishUpdate(boolean waitvbl)
 	}
 	oldwaitvbl = waitvbl;
 
-	SDL_GL_SwapBuffers();
+	SDL_GL_SwapWindow(window);
 }
 
 EXPORT void HWRAPI( OglSdlSetPalette) (RGBA_t *palette, RGBA_t *pgamma)

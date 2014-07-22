@@ -119,9 +119,7 @@ static SDL_bool disable_mouse = SDL_FALSE;
 static      INT32          firstEntry = 0;
 
 // SDL vars
-#ifndef HWRENDER //[segabor] !!! I had problem compiling this source with gcc 3.3
 static      SDL_Surface *vidSurface = NULL;
-#endif
 static      SDL_Surface *bufSurface = NULL;
 static      SDL_Surface *icoSurface = NULL;
 static      SDL_Color    localPalette[256];
@@ -243,32 +241,44 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 
 	SDL_RenderSetLogicalSize(renderer, width, height);
 
-	// Set up Texture
-	realwidth = width;
-	realheight = height;
-	if (texture != NULL)
+	if (rendermode == render_soft)
 	{
-		SDL_DestroyTexture(texture);
-	}
-	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, width, height);
+		// Set up Texture
+		realwidth = width;
+		realheight = height;
+		if (texture != NULL)
+		{
+			SDL_DestroyTexture(texture);
+		}
+		texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, width, height);
 
-	// Set up SW surface
-	if (vidSurface != NULL)
-	{
-		SDL_FreeSurface(vidSurface);
-	}
+		// Set up SW surface
+		if (vidSurface != NULL)
+		{
+			SDL_FreeSurface(vidSurface);
+		}
 #ifdef SDL_BIG_ENDIAN
-	rmask = 0xFF000000;
-	gmask = 0x00FF0000;
-	bmask = 0x0000FF00;
-	amask = 0x000000FF;
+		rmask = 0xFF000000;
+		gmask = 0x00FF0000;
+		bmask = 0x0000FF00;
+		amask = 0x000000FF;
 #else // HEAD HEADS UP THE ASSIGNMENT ORDER IS FLIPPED, I WAS LAZY --Fury
-	amask = 0xFF000000;
-	bmask = 0x00FF0000;
-	gmask = 0x0000FF00;
-	rmask = 0x000000FF;
+		amask = 0xFF000000;
+		bmask = 0x00FF0000;
+		gmask = 0x0000FF00;
+		rmask = 0x000000FF;
 #endif
-	vidSurface = SDL_CreateRGBSurface(0, width, height, 32, rmask, gmask, bmask, amask);
+		vidSurface = SDL_CreateRGBSurface(0, width, height, 32, rmask, gmask, bmask, amask);
+	}
+#ifdef HWRENDER
+	else if (rendermode == render_opengl)
+	{
+		if (sdlglcontext == 0)
+		{
+			sdlglcontext = SDL_GL_CreateContext(window);
+		}
+	}
+#endif
 }
 
 //
@@ -1813,15 +1823,46 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
 	{
-		flags |= SDL_WINDOW_OPENGL;
+		/*
+		 * We want at least 1 bit R, G, and B,
+		 * and at least 16 bpp. Why 1 bit? May be more?
+		 */
+		SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 1);
+		SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 1);
+		SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 1);
+		SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+
+		window = SDL_CreateWindow("SRB2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+				realwidth, realheight, flags | SDL_WINDOW_OPENGL);
+		if (window != NULL)
+		{
+			renderer = SDL_CreateRenderer(window, -1, 0);
+			if (renderer != NULL)
+			{
+				SDL_RenderSetLogicalSize(renderer, BASEVIDWIDTH, BASEVIDHEIGHT);
+				sdlglcontext = SDL_GL_CreateContext(window);
+			}
+			else return SDL_FALSE;
+		}
+		else return SDL_FALSE;
 	}
 #endif
+	if (rendermode == render_soft)
+	{
+		window = SDL_CreateWindow("SRB2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+				realwidth, realheight, flags);
+		if (window != NULL)
+		{
+			renderer = SDL_CreateRenderer(window, -1, 0);
+			if (renderer != NULL)
+			{
+				SDL_RenderSetLogicalSize(renderer, BASEVIDWIDTH, BASEVIDHEIGHT);
+			}
+			else return SDL_FALSE;
+		}
+		else return SDL_FALSE;
+	}
 
-	window = SDL_CreateWindow("SRB2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-			realwidth, realheight, flags);
-	renderer = SDL_CreateRenderer(window, -1, 0);
-
-	SDL_RenderSetLogicalSize(renderer, BASEVIDWIDTH, BASEVIDHEIGHT);
 	return SDL_TRUE;
 }
 
@@ -2000,17 +2041,14 @@ void I_StartupGraphics(void)
 		vid.height = BASEVIDHEIGHT;
 		if (HWD.pfnInit(I_Error)) // let load the OpenGL library
 		{
-			/*
-			* We want at least 1 bit R, G, and B,
-			* and at least 16 bpp. Why 1 bit? May be more?
-			*/
-			SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 1);
-			SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 1);
-			SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 1);
-			SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-			if (!OglSdlSurface(vid.width, vid.height, (USE_FULLSCREEN)))
+
+			// Contrary to SDL1 implementation, all we need is a window and a GL context.
+			// No setting up a special surface to draw to.
+			// If the GL context was already made, we're good to go.
+			
+			/*if (!OglSdlSurface(vid.width, vid.height, (USE_FULLSCREEN)))
 				if (!OglSdlSurface(vid.width, vid.height, !(USE_FULLSCREEN)))
-					rendermode = render_soft;
+					rendermode = render_soft;*/
 		}
 		else
 			rendermode = render_soft;

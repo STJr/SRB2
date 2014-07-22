@@ -18,7 +18,6 @@
 
 #include "../v_video.h"
 
-extern SDL_Surface *vidSurface;
 extern void *GLUhandle;
 
 boolean OglSdlSurface(INT32 w, INT32 h, boolean isFullscreen);
@@ -27,6 +26,7 @@ void OglSdlFinishUpdate(boolean vidwait);
 
 extern SDL_Window *window;
 extern SDL_Renderer *renderer;
+extern SDL_GLContext sdlglcontext;
 
 #ifdef _CREATE_DLL_
 EXPORT void HWRAPI( OglSdlSetPalette ) (RGBA_t *palette, RGBA_t *pgamma);
