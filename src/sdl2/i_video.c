@@ -781,7 +781,7 @@ static void Impl_HandleWindowEvent(SDL_WindowEvent evt)
 		{
 			if (cv_usemouse.value) I_StartupMouse();
 		}
-		else firsttimeonmouse = SDL_FALSE;
+		//else firsttimeonmouse = SDL_FALSE;
 		if (gamestate == GS_LEVEL)
 		{
 			if (!paused) I_ResumeSong(0); //resume it
@@ -793,7 +793,7 @@ static void Impl_HandleWindowEvent(SDL_WindowEvent evt)
 		{
 			SDLforceUngrabMouse();
 		}
-		if (!netgame && gamestate == GS_LEVEL)
+		if (!netgame && gamestate == GS_LEVEL && !demoplayback && !demorecording && !modeattacking)
 		{
 			paused = true;
 		}
@@ -940,15 +940,20 @@ static void Impl_HandleMouseWheelEvent(SDL_MouseWheelEvent evt)
 static void Impl_HandleJoystickAxisEvent(SDL_JoyAxisEvent evt)
 {
 	event_t event;
+	SDL_JoystickID joyid[2];
 
-	evt.which++;
+	// Determine the Joystick IDs for each current open joystick
+	joyid[0] = SDL_JoystickInstanceID(JoyInfo.dev);
+	joyid[1] = SDL_JoystickInstanceID(JoyInfo.dev);
+
 	evt.axis++;
 	event.data1 = event.data2 = event.data3 = INT32_MAX;
-	if (cv_usejoystick.value == evt.which)
+
+	if (evt.which == joyid[0])
 	{
 		event.type = ev_joystick;
 	}
-	else if (cv_usejoystick.value == evt.which)
+	else if (evt.which == joyid[1])
 	{
 		event.type = ev_joystick2;
 	}
@@ -974,22 +979,36 @@ static void Impl_HandleJoystickAxisEvent(SDL_JoyAxisEvent evt)
 static void Impl_HandleJoystickButtonEvent(SDL_JoyButtonEvent evt, Uint32 type)
 {
 	event_t event;
+	SDL_JoystickID joyid[2];
 
-	evt.which++;
-	if (cv_usejoystick.value == evt.which)
+	// Determine the Joystick IDs for each current open joystick
+	joyid[0] = SDL_JoystickInstanceID(JoyInfo.dev);
+	joyid[1] = SDL_JoystickInstanceID(JoyInfo.dev);
+
+	if (evt.which == joyid[0])
+	{
 		event.data1 = KEY_JOY1;
-	else if (cv_usejoystick.value == evt.which)
+	}
+	else if (evt.which == joyid[1])
+	{
 		event.data1 = KEY_2JOY1;
+	}
 	else return;
 	if (type == SDL_JOYBUTTONUP)
+	{
 		event.type = ev_keyup;
+	}
 	else if (type == SDL_JOYBUTTONDOWN)
+	{
 		event.type = ev_keydown;
+	}
 	else return;
 	if (evt.button < JOYBUTTONS)
+	{
 		event.data1 += evt.button;
-	else
-		return;
+	}
+	else return;
+
 	SDLJoyRemap(&event);
 	if (event.type != ev_console) D_PostEvent(&event);
 }
@@ -1037,6 +1056,11 @@ void I_GetEvent(void)
 				break;
 		}
 	}
+
+	// In order to make wheels act like buttons, we have to set their state to Up.
+	// This is because wheel messages don't have an up/down state.
+	gamekeydown[KEY_MOUSEWHEELDOWN] = gamekeydown[KEY_MOUSEWHEELUP] = 0;
+
 #if 0
 	SDL_Event inputEvent;
 	static SDL_bool sdlquit = SDL_FALSE; //Alam: once, just once
@@ -1247,7 +1271,6 @@ void I_GetEvent(void)
 		}
 	}
 	//reset wheel like in win32, I don't understand it but works
-	gamekeydown[KEY_MOUSEWHEELDOWN] = gamekeydown[KEY_MOUSEWHEELUP] = 0;
 #endif
 }
 
