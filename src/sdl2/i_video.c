@@ -140,8 +140,8 @@ static       SDL_bool    videoblitok = SDL_FALSE;
 static       SDL_bool    exposevideo = SDL_FALSE;
 
 // SDL2 vars
-static SDL_Window   *window;
-static SDL_Renderer *renderer;
+SDL_Window   *window;
+SDL_Renderer *renderer;
 static SDL_Texture  *texture;
 static SDL_bool      havefocus = SDL_TRUE;
 
@@ -195,33 +195,50 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 	int bmask;
 	int amask;
 
-	if (fullscreen && !wasfullscreen)
+	if (window)
 	{
-		// Recreate window in fullscreen
-		SDL_DestroyRenderer(renderer);
-		renderer = NULL;
-		SDL_DestroyWindow(window);
-		window = NULL;
-		Impl_CreateWindow(SDL_TRUE);
-		Impl_SetWindowIcon();
-		wasfullscreen = SDL_TRUE;
+		if (fullscreen && !wasfullscreen)
+		{
+			// Recreate window in fullscreen
+			/*
+			   SDL_DestroyRenderer(renderer);
+			   renderer = NULL;
+			   SDL_DestroyWindow(window);
+			   window = NULL;
+			   Impl_CreateWindow(SDL_TRUE);
+			   Impl_SetWindowIcon();
+			   */
+			wasfullscreen = SDL_TRUE;
+			SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+		}
+		else if (!fullscreen && wasfullscreen)
+		{
+			// Recreate window in windowed mode
+			/*
+			   SDL_DestroyRenderer(renderer);
+			   renderer = NULL;
+			   SDL_DestroyWindow(window);
+			   window = NULL;
+			   Impl_CreateWindow(SDL_FALSE);
+			   Impl_SetWindowIcon();
+			   */
+			wasfullscreen = SDL_FALSE;
+			SDL_SetWindowFullscreen(window, 0);
+			SDL_SetWindowSize(window, width, height);
+			SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+		}
+		else if (!wasfullscreen)
+		{
+			// Reposition window only in windowed mode
+			SDL_SetWindowSize(window, width, height);
+			SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+		}
 	}
-	else if (!fullscreen && wasfullscreen)
+	else
 	{
-		// Recreate window in windowed mode
-		SDL_DestroyRenderer(renderer);
-		renderer = NULL;
-		SDL_DestroyWindow(window);
-		window = NULL;
-		Impl_CreateWindow(SDL_FALSE);
+		Impl_CreateWindow(fullscreen ? SDL_TRUE : SDL_FALSE);
 		Impl_SetWindowIcon();
-		wasfullscreen = SDL_FALSE;
-	}
-	else if (!wasfullscreen)
-	{
-		// Reposition window only in windowed mode
-		SDL_SetWindowSize(window, width, height);
-		SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+		wasfullscreen = fullscreen ? SDL_TRUE : SDL_FALSE;
 	}
 
 	SDL_RenderSetLogicalSize(renderer, width, height);
@@ -1308,9 +1325,20 @@ void I_UpdateNoBlit(void)
 		return;
 	if (exposevideo)
 	{
-		SDL_RenderClear(renderer);
-		SDL_RenderCopy(renderer, texture, NULL, NULL);
-		SDL_RenderPresent(renderer);
+#ifdef HWRENDER
+		if (rendermode == render_opengl)
+		{
+			OglSdlFinishUpdate(cv_vidwait.value);
+			SDL_GL_SwapWindow(window);
+		}
+		else
+#endif
+		if (rendermode == render_soft)
+		{
+			SDL_RenderClear(renderer);
+			SDL_RenderCopy(renderer, texture, NULL, NULL);
+			SDL_RenderPresent(renderer);
+		}
 	}
 #if 0
 #ifdef HWRENDER
@@ -1781,6 +1809,13 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 	{
 		flags = SDL_WINDOW_FULLSCREEN_DESKTOP;
 	}
+
+#ifdef HWRENDER
+	if (rendermode == render_opengl)
+	{
+		flags |= SDL_WINDOW_OPENGL;
+	}
+#endif
 
 	window = SDL_CreateWindow("SRB2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 			realwidth, realheight, flags);
