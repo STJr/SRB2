@@ -155,6 +155,7 @@ boolean OglSdlSurface(INT32 w, INT32 h, boolean isFullscreen)
 	INT32 cbpp;
 	//Uint32 OGLFlags;
 	const GLvoid *glvendor = NULL, *glrenderer = NULL, *glversion = NULL;
+	(void)isFullscreen; //unused
 
 	cbpp = cv_scr_depth.value < 16 ? 16 : cv_scr_depth.value;
 
