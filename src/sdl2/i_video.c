@@ -83,7 +83,7 @@
 #endif
 
 // maximum number of windowed modes (see windowedModes[][])
-#define MAXWINMODES (16)
+#define MAXWINMODES (17)
 
 /**	\brief
 */
@@ -147,6 +147,7 @@ static INT32 windowedModes[MAXWINMODES][2] =
 	{1920,1080}, // 1.66
 	{1680,1050}, // 1.60,5.25
 	{1600, 900}, // 1.66
+	{1366, 768}, // 1.66
 	{1440, 900}, // 1.60,4.50
 	{1280,1024}, // 1.33?
 	{1280, 960}, // 1.33,4.00
@@ -174,6 +175,7 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 	int gmask;
 	int bmask;
 	int amask;
+	int sw_texture_format = SDL_PIXELFORMAT_ABGR8888;
 
 	realwidth = vid.width;
 	realheight = vid.height;
@@ -222,6 +224,7 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 	if (rendermode == render_soft)
 	{
 		SDL_RenderSetLogicalSize(renderer, width, height);
+		SDL_RenderClear(renderer);
 		// Set up Texture
 		realwidth = width;
 		realheight = height;
@@ -229,7 +232,12 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 		{
 			SDL_DestroyTexture(texture);
 		}
-		texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, width, height);
+#ifdef SDL_BIG_ENDIAN
+		sw_texture_format = SDL_PIXELFORMAT_RGBA8888;
+#else
+		sw_texture_format = SDL_PIXELFORMAT_ABGR8888;
+#endif
+		texture = SDL_CreateTexture(renderer, sw_texture_format, SDL_TEXTUREACCESS_STREAMING, width, height);
 
 		// Set up SW surface
 		if (vidSurface != NULL)
@@ -1678,7 +1686,15 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 		if (window != NULL)
 		{
 			sdlglcontext = SDL_GL_CreateContext(window);
-			SDL_GL_MakeCurrent(window, sdlglcontext);
+			if (sdlglcontext == NULL)
+			{
+				SDL_DestroyWindow(window);
+				I_Error("Failed to create a GL context: %s\n", SDL_GetError());
+			}
+			else
+			{
+				SDL_GL_MakeCurrent(window, sdlglcontext);
+			}
 		}
 		else return SDL_FALSE;
 	}
