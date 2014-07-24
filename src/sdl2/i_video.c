@@ -216,7 +216,7 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 
 	if (rendermode == render_opengl)
 	{
-		OglSdlSurface(vid.width, vid.height, (USE_FULLSCREEN));
+		OglSdlSurface(vid.width, vid.height);
 	}
 
 	if (rendermode == render_soft)
@@ -1318,17 +1318,6 @@ void I_UpdateNoBlit(void)
 			SDL_RenderPresent(renderer);
 		}
 	}
-#if 0
-#ifdef HWRENDER
-	if (rendermode != render_soft)
-		OglSdlFinishUpdate(cv_vidwait.value);
-	else
-#endif
-	if (vidSurface->flags&SDL_DOUBLEBUF)
-		SDL_Flip(vidSurface);
-	else if (exposevideo)
-		SDL_UpdateRect(vidSurface, 0, 0, 0, 0);
-#endif
 	exposevideo = SDL_FALSE;
 }
 
@@ -1666,112 +1655,6 @@ INT32 VID_SetMode(INT32 modeNum)
 	}
 
 	return SDL_TRUE;
-#if 0
-	SDLdoUngrabMouse();
-	vid.recalc = true;
-	BitsPerPixel = (Uint8)cv_scr_depth.value;
-	//vid.bpp = BitsPerPixel==8?1:2;
-	// Window title
-	SDL_WM_SetCaption("SRB2 "VERSIONSTRING, "SRB2");
-
-	if (render_soft == rendermode)
-	{
-		//Alam: SDL_Video system free vidSurface for me
-		if (vid.buffer) free(vid.buffer);
-		vid.buffer = NULL;
-		if (bufSurface) SDL_FreeSurface(bufSurface);
-		bufSurface = NULL;
-	}
-
-	if (USE_FULLSCREEN)
-	{
-		if (numVidModes != -1)
-		{
-			modeNum += firstEntry;
-			vid.width = modeList[modeNum]->w;
-			vid.height = modeList[modeNum]->h;
-		}
-		else
-		{
-			vid.width = windowedModes[modeNum][0];
-			vid.height = windowedModes[modeNum][1];
-		}
-		if (render_soft == rendermode)
-		{
-			SDLSetMode(vid.width, vid.height, BitsPerPixel, surfaceFlagsF);
-
-			if (!vidSurface)
-			{
-				cv_fullscreen.value = 0;
-				modeNum = VID_GetModeForSize(vid.width,vid.height);
-				vid.width = windowedModes[modeNum][0];
-				vid.height = windowedModes[modeNum][1];
-				SDLSetMode(vid.width, vid.height, BitsPerPixel, surfaceFlagsW);
-				if (!vidSurface)
-					I_Error("Could not set vidmode: %s\n",SDL_GetError());
-			}
-		}
-#ifdef HWRENDER
-		else // (render_soft != rendermode)
-		{
-			if (!OglSdlSurface(vid.width, vid.height, true))
-			{
-				cv_fullscreen.value = 0;
-				modeNum = VID_GetModeForSize(vid.width,vid.height);
-				vid.width = windowedModes[modeNum][0];
-				vid.height = windowedModes[modeNum][1];
-				if (!OglSdlSurface(vid.width, vid.height,false))
-					I_Error("Could not set vidmode: %s\n",SDL_GetError());
-			}
-
-			realwidth = (Uint16)vid.width;
-			realheight = (Uint16)vid.height;
-		}
-#endif
-	}
-	else //(cv_fullscreen.value)
-	{
-		vid.width = windowedModes[modeNum][0];
-		vid.height = windowedModes[modeNum][1];
-
-		if (render_soft == rendermode)
-		{
-			SDLSetMode(vid.width, vid.height, BitsPerPixel, surfaceFlagsW);
-			if (!vidSurface)
-				I_Error("Could not set vidmode: %s\n",SDL_GetError());
-		}
-#ifdef HWRENDER
-		else //(render_soft != rendermode)
-		{
-			if (!OglSdlSurface(vid.width, vid.height, false))
-				I_Error("Could not set vidmode: %s\n",SDL_GetError());
-			realwidth = (Uint16)vid.width;
-			realheight = (Uint16)vid.height;
-		}
-#endif
-	}
-
-	vid.modenum = VID_GetModeForSize(vidSurface->w,vidSurface->h);
-
-	if (render_soft == rendermode)
-	{
-		vid.rowbytes = vid.width*vid.bpp;
-		vid.direct = SDLGetDirect();
-		vid.buffer = malloc(vid.rowbytes*vid.height*NUMSCREENS);
-		if (vid.buffer) memset(vid.buffer,0x00,vid.rowbytes*vid.height*NUMSCREENS);
-		else I_Error ("Not enough memory for video buffer\n");
-	}
-
-#if 0 // broken
-	if (!cv_stretch.value && (float)vid.width/vid.height != ((float)BASEVIDWIDTH/BASEVIDHEIGHT))
-		vid.height = (INT32)(vid.width * ((float)BASEVIDHEIGHT/BASEVIDWIDTH));// Adjust the height to match
-#endif
-	I_StartupMouse();
-
-	SDLWMSet();
-
-	return true;
-#endif
 }
 
 static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
@@ -1790,30 +1673,10 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
 	{
-		/*
-		 * We want at least 1 bit R, G, and B,
-		 * and at least 16 bpp. Why 1 bit? May be more?
-		 */
-		/*SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 1);
-		SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 1);
-		SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 1);
-		SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);*/
-
 		window = SDL_CreateWindow("SRB2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 				realwidth, realheight, flags | SDL_WINDOW_OPENGL);
 		if (window != NULL)
 		{
-			/*
-			renderer = SDL_CreateRenderer(window, -1, 0);
-			if (renderer != NULL)
-			{
-				//SDL_RenderSetLogicalSize(renderer, BASEVIDWIDTH, BASEVIDHEIGHT);
-				sdlglcontext = SDL_GL_CreateContext(window);
-				SDL_GL_MakeCurrent(window, sdlglcontext);
-			}
-			else return SDL_FALSE;
-			*/
-
 			sdlglcontext = SDL_GL_CreateContext(window);
 			SDL_GL_MakeCurrent(window, sdlglcontext);
 		}
@@ -2014,15 +1877,10 @@ void I_StartupGraphics(void)
 		vid.height = BASEVIDHEIGHT;
 		if (HWD.pfnInit(I_Error)) // let load the OpenGL library
 		{
-                    OglSdlSurface(vid.width, vid.height, (USE_FULLSCREEN));
-
-			// Contrary to SDL1 implementation, all we need is a window and a GL context.
-			// No setting up a special surface to draw to.
-			// If the GL context was already made, we're good to go.
-			
-			/*if (!OglSdlSurface(vid.width, vid.height, (USE_FULLSCREEN)))
-				if (!OglSdlSurface(vid.width, vid.height, !(USE_FULLSCREEN)))
-					rendermode = render_soft;*/
+			if (!OglSdlSurface(vid.width, vid.height))
+			{
+				rendermode = render_soft;
+			}
 		}
 		else
 			rendermode = render_soft;
@@ -2033,19 +1891,6 @@ void I_StartupGraphics(void)
 	if (render_soft == rendermode)
 	{
 		VID_SetMode(VID_GetModeForSize(BASEVIDWIDTH, BASEVIDHEIGHT));
-#if 0
-		vid.width = BASEVIDWIDTH;
-		vid.height = BASEVIDHEIGHT;
-		SDLSetMode(vid.width, vid.height, USE_FULLSCREEN);
-		if (!vidSurface)
-		{
-			CONS_Printf(M_GetText("Could not set vidmode: %s\n") ,SDL_GetError());
-			vid.rowbytes = 0;
-			graphics_started = true;
-			return;
-		}
-		Impl_VideoSetupBuffer();
-#endif
 	}
 	if (M_CheckParm("-nomousegrab"))
 		mousegrabok = SDL_FALSE;
@@ -2098,6 +1943,10 @@ void I_ShutdownGraphics(void)
 #ifdef HWRENDER
 	if (GLUhandle)
 		hwClose(GLUhandle);
+	if (sdlglcontext)
+	{
+		SDL_GL_DeleteContext(sdlglcontext);
+	}
 #endif
 	SDL_QuitSubSystem(SDL_INIT_VIDEO);
 	framebuffer = SDL_FALSE;

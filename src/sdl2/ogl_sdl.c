@@ -150,12 +150,10 @@ boolean LoadGL(void)
 
 	\return	if true, changed video mode
 */
-boolean OglSdlSurface(INT32 w, INT32 h, boolean isFullscreen)
+boolean OglSdlSurface(INT32 w, INT32 h)
 {
 	INT32 cbpp;
-	//Uint32 OGLFlags;
 	const GLvoid *glvendor = NULL, *glrenderer = NULL, *glversion = NULL;
-	(void)isFullscreen; //unused
 
 	cbpp = cv_scr_depth.value < 16 ? 16 : cv_scr_depth.value;
 
@@ -173,55 +171,18 @@ boolean OglSdlSurface(INT32 w, INT32 h, boolean isFullscreen)
 	DBG_Printf("Extensions : %s\n", gl_extensions);
 	oglflags = 0;
 
-#ifdef _WIN32
-	// BP: disable advenced feature that don't work on somes hardware
-	// Hurdler: Now works on G400 with bios 1.6 and certified drivers 6.04
-	if (strstr(glrenderer, "810")) oglflags |= GLF_NOZBUFREAD;
-#elif defined (unix) || defined (UNIXCOMMON)
-	// disable advanced features not working on somes hardware
-	if (strstr(glrenderer, "G200")) oglflags |= GLF_NOTEXENV;
-	if (strstr(glrenderer, "G400")) oglflags |= GLF_NOTEXENV;
-#endif
-	DBG_Printf("oglflags   : 0x%X\n", oglflags );
-
-#ifdef USE_PALETTED_TEXTURE
-	if (isExtAvailable("GL_EXT_paletted_texture", gl_extensions))
-		glColorTableEXT = SDL_GL_GetProcAddress("glColorTableEXT");
-	else
-		glColorTableEXT = NULL;
-#endif
-
-#ifdef USE_WGL_SWAP
-	if (isExtAvailable("WGL_EXT_swap_control", gl_extensions))
-		wglSwapIntervalEXT = SDL_GL_GetProcAddress("wglSwapIntervalEXT");
-	else
-		wglSwapIntervalEXT = NULL;
-#else
-	if (isExtAvailable("GLX_SGI_swap_control", gl_extensions))
-		glXSwapIntervalSGIEXT = SDL_GL_GetProcAddress("glXSwapIntervalSGI");
-	else
-		glXSwapIntervalSGIEXT = NULL;
-#endif
-
-#ifndef KOS_GL_COMPATIBILITY
-	if (isExtAvailable("GL_EXT_texture_filter_anisotropic", gl_extensions))
-		pglGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &maximumAnisotropy);
-	else
-#endif
-		maximumAnisotropy = 0;
+	maximumAnisotropy = 0;
 
 	granisotropicmode_cons_t[1].value = maximumAnisotropy;
+
+	SDL_GL_SetSwapInterval(cv_vidwait.value ? 1 : 0);
 
 	SetModelView(w, h);
 	SetStates();
 	pglClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
 	HWR_Startup();
-#ifdef KOS_GL_COMPATIBILITY
-	textureformatGL = GL_ARGB4444;
-#else
 	textureformatGL = cbpp > 16 ? GL_RGBA : GL_RGB5_A1;
-#endif
 
 	return true;
 }
@@ -235,19 +196,6 @@ boolean OglSdlSurface(INT32 w, INT32 h, boolean isFullscreen)
 void OglSdlFinishUpdate(boolean waitvbl)
 {
 	static boolean oldwaitvbl = false;
-	/*
-	if (oldwaitvbl != waitvbl)
-	{
-#ifdef USE_WGL_SWAP
-		if (wglSwapIntervalEXT)
-			wglSwapIntervalEXT(waitvbl);
-#else
-		if (glXSwapIntervalSGIEXT)
-			glXSwapIntervalSGIEXT(waitvbl);
-#endif
-	}
-	oldwaitvbl = waitvbl;*/
-
 	if (oldwaitvbl != waitvbl)
 	{
 		SDL_GL_SetSwapInterval(waitvbl ? 1 : 0);
@@ -263,10 +211,6 @@ EXPORT void HWRAPI( OglSdlSetPalette) (RGBA_t *palette, RGBA_t *pgamma)
 	UINT32 redgamma = pgamma->s.red, greengamma = pgamma->s.green,
 		bluegamma = pgamma->s.blue;
 
-#if 0 // changing the gamma to 127 is a bad idea
-	i = SDL_SetGamma(byteasfloat(redgamma), byteasfloat(greengamma), byteasfloat(bluegamma));
-#endif
-	if (i == 0) redgamma = greengamma = bluegamma = 0x7F; //Alam: cool
 	for (i = 0; i < 256; i++)
 	{
 		myPaletteData[i].s.red   = (UINT8)MIN((palette[i].s.red   * redgamma)  /127, 255);
@@ -274,20 +218,6 @@ EXPORT void HWRAPI( OglSdlSetPalette) (RGBA_t *palette, RGBA_t *pgamma)
 		myPaletteData[i].s.blue  = (UINT8)MIN((palette[i].s.blue  * bluegamma) /127, 255);
 		myPaletteData[i].s.alpha = palette[i].s.alpha;
 	}
-#ifdef USE_PALETTED_TEXTURE
-	if (glColorTableEXT)
-	{
-		for (i = 0; i < 256; i++)
-		{
-			palette_tex[(3*i)+0] = palette[i].s.red;
-			palette_tex[(3*i)+1] = palette[i].s.green;
-			palette_tex[(3*i)+2] = palette[i].s.blue;
-		}
-		glColorTableEXT(GL_TEXTURE_2D, GL_RGB8, 256, GL_RGB, GL_UNSIGNED_BYTE, palette_tex);
-	}
-#endif
-	// on a chang�de palette, il faut recharger toutes les textures
-	// jaja, und noch viel mehr ;-)
 	Flush();
 }
 
