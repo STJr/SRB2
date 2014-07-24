@@ -174,6 +174,7 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 	int gmask;
 	int bmask;
 	int amask;
+	int sw_texture_format = SDL_PIXELFORMAT_ABGR8888;
 
 	realwidth = vid.width;
 	realheight = vid.height;
@@ -229,7 +230,12 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 		{
 			SDL_DestroyTexture(texture);
 		}
-		texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, width, height);
+#ifdef SDL_BIG_ENDIAN
+		sw_texture_format = SDL_PIXELFORMAT_RGBA8888;
+#else
+		sw_texture_format = SDL_PIXELFORMAT_ABGR8888;
+#endif
+		texture = SDL_CreateTexture(renderer, sw_texture_format, SDL_TEXTUREACCESS_STREAMING, width, height);
 
 		// Set up SW surface
 		if (vidSurface != NULL)
