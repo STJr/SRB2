@@ -1781,7 +1781,9 @@ static boolean I_StartGMESong(const char *musicname, boolean looping)
 	gme_set_user_data(emu, data);
 	gme_set_user_cleanup(emu, I_CleanupGME);
 	gme_start_track(emu, 0);
+#ifdef HAVE_MIXER
 	gme_set_fade(emu, Digfade);
+#endif
 
 	Snd_LockAudio();
 	localdata.gme_emu = emu;
