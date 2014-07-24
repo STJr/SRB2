@@ -25,6 +25,8 @@
 
 #include "SDL.h"
 
+#include "sdlmain.h"
+
 #ifdef _MSC_VER
 #pragma warning(default : 4214 4244)
 #endif
@@ -232,6 +234,7 @@ boolean OglSdlSurface(INT32 w, INT32 h, boolean isFullscreen)
 void OglSdlFinishUpdate(boolean waitvbl)
 {
 	static boolean oldwaitvbl = false;
+	/*
 	if (oldwaitvbl != waitvbl)
 	{
 #ifdef USE_WGL_SWAP
@@ -242,7 +245,7 @@ void OglSdlFinishUpdate(boolean waitvbl)
 			glXSwapIntervalSGIEXT(waitvbl);
 #endif
 	}
-	oldwaitvbl = waitvbl;
+	oldwaitvbl = waitvbl;*/
 
 	SDL_GL_SwapWindow(window);
 }

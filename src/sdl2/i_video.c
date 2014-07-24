@@ -29,9 +29,6 @@
 
 #include "SDL.h"
 
-// SDL2 stub macro
-#define SDL2STUB(name) CONS_Printf("SDL2: stubbed: %s:%d\n", __func__, __LINE__)
-
 #ifdef _MSC_VER
 #pragma warning(default : 4214 4244)
 #endif
@@ -172,54 +169,32 @@ static void Impl_SetWindowIcon(void);
 
 static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 {
-#if 0
-	const char *SDLVD = I_GetEnv("SDL_VIDEODRIVER");
-	if (SDLVD && strncasecmp(SDLVD,"glSDL",6) == 0) //for glSDL videodriver
-		vidSurface = SDL_SetVideoMode(width, height,0,SDL_DOUBLEBUF);
-	else if (cv_vidwait.value && videoblitok && SDL_VideoModeOK(width, height, bpp, flags|SDL_HWSURFACE|SDL_DOUBLEBUF) >= bpp)
-		vidSurface = SDL_SetVideoMode(width, height, bpp, flags|SDL_HWSURFACE|SDL_DOUBLEBUF);
-	else if (videoblitok && SDL_VideoModeOK(width, height, bpp, flags|SDL_HWSURFACE) >= bpp)
-		vidSurface = SDL_SetVideoMode(width, height, bpp, flags|SDL_HWSURFACE);
-	else if (SDL_VideoModeOK(width, height, bpp, flags|SDL_SWSURFACE) >= bpp)
-		vidSurface = SDL_SetVideoMode(width, height, bpp, flags|SDL_SWSURFACE);
-	else return;
-	realwidth = (Uint16)width;
-	realheight = (Uint16)height;
-#endif
-
 	static SDL_bool wasfullscreen = SDL_FALSE;
 	int rmask;
 	int gmask;
 	int bmask;
 	int amask;
 
+	realwidth = vid.width;
+	realheight = vid.height;
+
 	if (window)
 	{
 		if (fullscreen && !wasfullscreen)
 		{
-			// Recreate window in fullscreen
-			/*
-			   SDL_DestroyRenderer(renderer);
-			   renderer = NULL;
-			   SDL_DestroyWindow(window);
-			   window = NULL;
-			   Impl_CreateWindow(SDL_TRUE);
-			   Impl_SetWindowIcon();
-			   */
 			wasfullscreen = SDL_TRUE;
 			SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+			// Logical fullscreen is not implemented yet for OpenGL, so...
+			// Special case handling
+			if (rendermode == render_opengl)
+			{
+				int sdlw, sdlh;
+				SDL_GetWindowSize(window, &sdlw, &sdlh);
+				VID_SetMode(VID_GetModeForSize(sdlw, sdlh));
+			}
 		}
 		else if (!fullscreen && wasfullscreen)
 		{
-			// Recreate window in windowed mode
-			/*
-			   SDL_DestroyRenderer(renderer);
-			   renderer = NULL;
-			   SDL_DestroyWindow(window);
-			   window = NULL;
-			   Impl_CreateWindow(SDL_FALSE);
-			   Impl_SetWindowIcon();
-			   */
 			wasfullscreen = SDL_FALSE;
 			SDL_SetWindowFullscreen(window, 0);
 			SDL_SetWindowSize(window, width, height);
@@ -239,10 +214,14 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 		wasfullscreen = fullscreen ? SDL_TRUE : SDL_FALSE;
 	}
 
-	SDL_RenderSetLogicalSize(renderer, width, height);
+	if (rendermode == render_opengl)
+	{
+		OglSdlSurface(vid.width, vid.height, (USE_FULLSCREEN));
+	}
 
 	if (rendermode == render_soft)
 	{
+		SDL_RenderSetLogicalSize(renderer, width, height);
 		// Set up Texture
 		realwidth = width;
 		realheight = height;
@@ -270,15 +249,6 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 #endif
 		vidSurface = SDL_CreateRGBSurface(0, width, height, 32, rmask, gmask, bmask, amask);
 	}
-#ifdef HWRENDER
-	else if (rendermode == render_opengl)
-	{
-		if (sdlglcontext == NULL)
-		{
-			sdlglcontext = SDL_GL_CreateContext(window);
-		}
-	}
-#endif
 }
 
 //
@@ -1339,7 +1309,6 @@ void I_UpdateNoBlit(void)
 		if (rendermode == render_opengl)
 		{
 			OglSdlFinishUpdate(cv_vidwait.value);
-			SDL_RenderPresent(renderer);
 		}
 		else
 #endif
@@ -1444,7 +1413,6 @@ void I_FinishUpdate(void)
 	else
 	{
 		OglSdlFinishUpdate(cv_vidwait.value);
-		//SDL_RenderPresent(renderer);
 	}
 #endif
 	exposevideo = SDL_FALSE;
@@ -1835,13 +1803,19 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 				realwidth, realheight, flags | SDL_WINDOW_OPENGL);
 		if (window != NULL)
 		{
+			/*
 			renderer = SDL_CreateRenderer(window, -1, 0);
 			if (renderer != NULL)
 			{
 				//SDL_RenderSetLogicalSize(renderer, BASEVIDWIDTH, BASEVIDHEIGHT);
 				sdlglcontext = SDL_GL_CreateContext(window);
+				SDL_GL_MakeCurrent(window, sdlglcontext);
 			}
 			else return SDL_FALSE;
+			*/
+
+			sdlglcontext = SDL_GL_CreateContext(window);
+			SDL_GL_MakeCurrent(window, sdlglcontext);
 		}
 		else return SDL_FALSE;
 	}
@@ -2040,6 +2014,7 @@ void I_StartupGraphics(void)
 		vid.height = BASEVIDHEIGHT;
 		if (HWD.pfnInit(I_Error)) // let load the OpenGL library
 		{
+                    OglSdlSurface(vid.width, vid.height, (USE_FULLSCREEN));
 
 			// Contrary to SDL1 implementation, all we need is a window and a GL context.
 			// No setting up a special surface to draw to.
