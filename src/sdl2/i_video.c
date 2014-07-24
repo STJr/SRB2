@@ -224,6 +224,7 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 	if (rendermode == render_soft)
 	{
 		SDL_RenderSetLogicalSize(renderer, width, height);
+		SDL_RenderClear(renderer);
 		// Set up Texture
 		realwidth = width;
 		realheight = height;
