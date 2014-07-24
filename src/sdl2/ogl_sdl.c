@@ -247,6 +247,12 @@ void OglSdlFinishUpdate(boolean waitvbl)
 	}
 	oldwaitvbl = waitvbl;*/
 
+	if (oldwaitvbl != waitvbl)
+	{
+		SDL_GL_SetSwapInterval(waitvbl ? 1 : 0);
+	}
+	oldwaitvbl = waitvbl;
+
 	SDL_GL_SwapWindow(window);
 }
 
