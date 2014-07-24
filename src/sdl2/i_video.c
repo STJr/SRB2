@@ -1835,28 +1835,6 @@ void I_StartupGraphics(void)
 	//SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY>>1,SDL_DEFAULT_REPEAT_INTERVAL<<2);
 	SDLESSet();
 	VID_Command_ModeList_f();
-	
-	// Create window
-	Impl_CreateWindow(USE_FULLSCREEN);
-	Impl_SetWindowName("SRB2");
-	
-	vid.buffer = NULL;  // For software mode
-	vid.width = BASEVIDWIDTH; // Default size for startup
-	vid.height = BASEVIDHEIGHT; // BitsPerPixel is the SDL interface's
-	vid.recalc = true; // Set up the console stufff
-	vid.direct = NULL; // Maybe direct access?
-	vid.bpp = 1; // This is the game engine's Bpp
-	vid.WndParent = NULL; //For the window?
-
-#ifdef HAVE_TTF
-	I_ShutdownTTF();
-#endif
-	// Window icon
-#ifdef HAVE_IMAGE
-	icoSurface = IMG_ReadXPMFromArray(SDL_icon_xpm);
-#endif
-	Impl_SetWindowIcon();
-
 #ifdef HWRENDER
 	if (M_CheckParm("-opengl") || rendermode == render_opengl)
 	{
@@ -1889,25 +1867,39 @@ void I_StartupGraphics(void)
 		// check gl renderer lib
 		if (HWD.pfnGetRenderVersion() != VERSION)
 			I_Error("%s", M_GetText("The version of the renderer doesn't match the version of the executable\nBe sure you have installed SRB2 properly.\n"));
-		vid.width = BASEVIDWIDTH;
-		vid.height = BASEVIDHEIGHT;
-		if (HWD.pfnInit(I_Error)) // let load the OpenGL library
+		if (!HWD.pfnInit(I_Error)) // let load the OpenGL library
 		{
-			if (!OglSdlSurface(vid.width, vid.height))
-			{
-				rendermode = render_soft;
-			}
-		}
-		else
 			rendermode = render_soft;
+		}
 	}
-#else
-	rendermode = render_soft; //force software mode when there no HWRENDER code
 #endif
-	if (render_soft == rendermode)
-	{
-		VID_SetMode(VID_GetModeForSize(BASEVIDWIDTH, BASEVIDHEIGHT));
-	}
+
+	// Fury: we do window initialization after GL setup to allow
+	// SDL_GL_LoadLibrary to work well on Windows
+	
+	// Create window
+	Impl_CreateWindow(USE_FULLSCREEN);
+	Impl_SetWindowName("SRB2");
+	
+	vid.buffer = NULL;  // For software mode
+	vid.width = BASEVIDWIDTH; // Default size for startup
+	vid.height = BASEVIDHEIGHT; // BitsPerPixel is the SDL interface's
+	vid.recalc = true; // Set up the console stufff
+	vid.direct = NULL; // Maybe direct access?
+	vid.bpp = 1; // This is the game engine's Bpp
+	vid.WndParent = NULL; //For the window?
+
+#ifdef HAVE_TTF
+	I_ShutdownTTF();
+#endif
+	// Window icon
+#ifdef HAVE_IMAGE
+	icoSurface = IMG_ReadXPMFromArray(SDL_icon_xpm);
+#endif
+	Impl_SetWindowIcon();
+
+	VID_SetMode(VID_GetModeForSize(BASEVIDWIDTH, BASEVIDHEIGHT));
+
 	if (M_CheckParm("-nomousegrab"))
 		mousegrabok = SDL_FALSE;
 	else if (M_CheckParm("-mousewarp") || SDL_SetRelativeMouseMode(SDL_TRUE) == -1)
