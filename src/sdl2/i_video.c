@@ -29,9 +29,6 @@
 
 #include "SDL.h"
 
-// SDL2 stub macro
-#define SDL2STUB(name) CONS_Printf("SDL2: stubbed: %s:%d\n", __func__, __LINE__)
-
 #ifdef _MSC_VER
 #pragma warning(default : 4214 4244)
 #endif
@@ -86,7 +83,7 @@
 #endif
 
 // maximum number of windowed modes (see windowedModes[][])
-#define MAXWINMODES (27)
+#define MAXWINMODES (16)
 
 /**	\brief
 */
@@ -119,9 +116,7 @@ static SDL_bool disable_mouse = SDL_FALSE;
 static      INT32          firstEntry = 0;
 
 // SDL vars
-#ifndef HWRENDER //[segabor] !!! I had problem compiling this source with gcc 3.3
 static      SDL_Surface *vidSurface = NULL;
-#endif
 static      SDL_Surface *bufSurface = NULL;
 static      SDL_Surface *icoSurface = NULL;
 static      SDL_Color    localPalette[256];
@@ -140,8 +135,8 @@ static       SDL_bool    videoblitok = SDL_FALSE;
 static       SDL_bool    exposevideo = SDL_FALSE;
 
 // SDL2 vars
-static SDL_Window   *window;
-static SDL_Renderer *renderer;
+SDL_Window   *window;
+SDL_Renderer *renderer;
 static SDL_Texture  *texture;
 static SDL_bool      havefocus = SDL_TRUE;
 
@@ -149,30 +144,19 @@ static SDL_bool      havefocus = SDL_TRUE;
 static INT32 windowedModes[MAXWINMODES][2] =
 {
 	{1920,1200}, // 1.60,6.00
+	{1920,1080}, // 1.66
 	{1680,1050}, // 1.60,5.25
-	{1600,1200}, // 1.33,5.00
-	{1600,1000}, // 1.60,5.00
-	{1536,1152}, // 1.33,4.80
-	{1536, 960}, // 1.60,4.80
+	{1600, 900}, // 1.66
 	{1440, 900}, // 1.60,4.50
-	{1400,1050}, // 1.33,4.375
-	{1400, 875}, // 1.60,4.375
-	{1360, 850}, // 1.60,4.25
+	{1280,1024}, // 1.33?
 	{1280, 960}, // 1.33,4.00
 	{1280, 800}, // 1.60,4.00
+	{1280, 720}, // 1.66
 	{1152, 864}, // 1.33,3.60
-	{1120, 700}, // 1.60,3.50
 	{1024, 768}, // 1.33,3.20
-	{ 960, 720}, // 1.33,3.00
-	{ 960, 600}, // 1.60,3.00
 	{ 800, 600}, // 1.33,2.50
-	{ 800, 500}, // 1.60,2.50
 	{ 640, 480}, // 1.33,2.00
 	{ 640, 400}, // 1.60,2.00
-	{ 576, 432}, // 1.33,1.80
-	{ 512, 384}, // 1.33,1.60
-	{ 416, 312}, // 1.33,1.30
-	{ 400, 300}, // 1.33,1.25
 	{ 320, 240}, // 1.33,1.00
 	{ 320, 200}, // 1.60,1.00
 };
@@ -185,84 +169,86 @@ static void Impl_SetWindowIcon(void);
 
 static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 {
-#if 0
-	const char *SDLVD = I_GetEnv("SDL_VIDEODRIVER");
-	if (SDLVD && strncasecmp(SDLVD,"glSDL",6) == 0) //for glSDL videodriver
-		vidSurface = SDL_SetVideoMode(width, height,0,SDL_DOUBLEBUF);
-	else if (cv_vidwait.value && videoblitok && SDL_VideoModeOK(width, height, bpp, flags|SDL_HWSURFACE|SDL_DOUBLEBUF) >= bpp)
-		vidSurface = SDL_SetVideoMode(width, height, bpp, flags|SDL_HWSURFACE|SDL_DOUBLEBUF);
-	else if (videoblitok && SDL_VideoModeOK(width, height, bpp, flags|SDL_HWSURFACE) >= bpp)
-		vidSurface = SDL_SetVideoMode(width, height, bpp, flags|SDL_HWSURFACE);
-	else if (SDL_VideoModeOK(width, height, bpp, flags|SDL_SWSURFACE) >= bpp)
-		vidSurface = SDL_SetVideoMode(width, height, bpp, flags|SDL_SWSURFACE);
-	else return;
-	realwidth = (Uint16)width;
-	realheight = (Uint16)height;
-#endif
-
 	static SDL_bool wasfullscreen = SDL_FALSE;
 	int rmask;
 	int gmask;
 	int bmask;
 	int amask;
 
-	if (fullscreen && !wasfullscreen)
+	realwidth = vid.width;
+	realheight = vid.height;
+
+	if (window)
 	{
-		// Recreate window in fullscreen
-		SDL_DestroyRenderer(renderer);
-		renderer = NULL;
-		SDL_DestroyWindow(window);
-		window = NULL;
-		Impl_CreateWindow(SDL_TRUE);
+		if (fullscreen && !wasfullscreen)
+		{
+			wasfullscreen = SDL_TRUE;
+			SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+			// Logical fullscreen is not implemented yet for OpenGL, so...
+			// Special case handling
+			if (rendermode == render_opengl)
+			{
+				int sdlw, sdlh;
+				SDL_GetWindowSize(window, &sdlw, &sdlh);
+				VID_SetMode(VID_GetModeForSize(sdlw, sdlh));
+			}
+		}
+		else if (!fullscreen && wasfullscreen)
+		{
+			wasfullscreen = SDL_FALSE;
+			SDL_SetWindowFullscreen(window, 0);
+			SDL_SetWindowSize(window, width, height);
+			SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+		}
+		else if (!wasfullscreen)
+		{
+			// Reposition window only in windowed mode
+			SDL_SetWindowSize(window, width, height);
+			SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+		}
+	}
+	else
+	{
+		Impl_CreateWindow(fullscreen ? SDL_TRUE : SDL_FALSE);
 		Impl_SetWindowIcon();
-		wasfullscreen = SDL_TRUE;
-	}
-	else if (!fullscreen && wasfullscreen)
-	{
-		// Recreate window in windowed mode
-		SDL_DestroyRenderer(renderer);
-		renderer = NULL;
-		SDL_DestroyWindow(window);
-		window = NULL;
-		Impl_CreateWindow(SDL_FALSE);
-		Impl_SetWindowIcon();
-		wasfullscreen = SDL_FALSE;
-	}
-	else if (!wasfullscreen)
-	{
-		// Reposition window only in windowed mode
-		SDL_SetWindowSize(window, width, height);
-		SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+		wasfullscreen = fullscreen ? SDL_TRUE : SDL_FALSE;
 	}
 
-	SDL_RenderSetLogicalSize(renderer, width, height);
-
-	// Set up Texture
-	realwidth = width;
-	realheight = height;
-	if (texture != NULL)
+	if (rendermode == render_opengl)
 	{
-		SDL_DestroyTexture(texture);
+		OglSdlSurface(vid.width, vid.height, (USE_FULLSCREEN));
 	}
-	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, width, height);
 
-	// Set up SW surface
-	if (vidSurface != NULL)
+	if (rendermode == render_soft)
 	{
-		SDL_FreeSurface(vidSurface);
-	}
+		SDL_RenderSetLogicalSize(renderer, width, height);
+		// Set up Texture
+		realwidth = width;
+		realheight = height;
+		if (texture != NULL)
+		{
+			SDL_DestroyTexture(texture);
+		}
+		texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, width, height);
+
+		// Set up SW surface
+		if (vidSurface != NULL)
+		{
+			SDL_FreeSurface(vidSurface);
+		}
 #ifdef SDL_BIG_ENDIAN
-	rmask = 0xFF000000;
-	gmask = 0x00FF0000;
-	bmask = 0x0000FF00;
-	amask = 0x000000FF;
+		rmask = 0xFF000000;
+		gmask = 0x00FF0000;
+		bmask = 0x0000FF00;
+		amask = 0x000000FF;
 #else // HEAD HEADS UP THE ASSIGNMENT ORDER IS FLIPPED, I WAS LAZY --Fury
-	amask = 0xFF000000;
-	bmask = 0x00FF0000;
-	gmask = 0x0000FF00;
-	rmask = 0x000000FF;
+		amask = 0xFF000000;
+		bmask = 0x00FF0000;
+		gmask = 0x0000FF00;
+		rmask = 0x000000FF;
 #endif
-	vidSurface = SDL_CreateRGBSurface(0, width, height, 32, rmask, gmask, bmask, amask);
+		vidSurface = SDL_CreateRGBSurface(0, width, height, 32, rmask, gmask, bmask, amask);
+	}
 }
 
 //
@@ -781,7 +767,7 @@ static void Impl_HandleWindowEvent(SDL_WindowEvent evt)
 		{
 			if (cv_usemouse.value) I_StartupMouse();
 		}
-		else firsttimeonmouse = SDL_FALSE;
+		//else firsttimeonmouse = SDL_FALSE;
 		if (gamestate == GS_LEVEL)
 		{
 			if (!paused) I_ResumeSong(0); //resume it
@@ -793,7 +779,7 @@ static void Impl_HandleWindowEvent(SDL_WindowEvent evt)
 		{
 			SDLforceUngrabMouse();
 		}
-		if (!netgame && gamestate == GS_LEVEL)
+		if (!netgame && gamestate == GS_LEVEL && !demoplayback && !demorecording && !modeattacking)
 		{
 			paused = true;
 		}
@@ -940,15 +926,20 @@ static void Impl_HandleMouseWheelEvent(SDL_MouseWheelEvent evt)
 static void Impl_HandleJoystickAxisEvent(SDL_JoyAxisEvent evt)
 {
 	event_t event;
+	SDL_JoystickID joyid[2];
 
-	evt.which++;
+	// Determine the Joystick IDs for each current open joystick
+	joyid[0] = SDL_JoystickInstanceID(JoyInfo.dev);
+	joyid[1] = SDL_JoystickInstanceID(JoyInfo.dev);
+
 	evt.axis++;
 	event.data1 = event.data2 = event.data3 = INT32_MAX;
-	if (cv_usejoystick.value == evt.which)
+
+	if (evt.which == joyid[0])
 	{
 		event.type = ev_joystick;
 	}
-	else if (cv_usejoystick.value == evt.which)
+	else if (evt.which == joyid[1])
 	{
 		event.type = ev_joystick2;
 	}
@@ -974,22 +965,36 @@ static void Impl_HandleJoystickAxisEvent(SDL_JoyAxisEvent evt)
 static void Impl_HandleJoystickButtonEvent(SDL_JoyButtonEvent evt, Uint32 type)
 {
 	event_t event;
+	SDL_JoystickID joyid[2];
 
-	evt.which++;
-	if (cv_usejoystick.value == evt.which)
+	// Determine the Joystick IDs for each current open joystick
+	joyid[0] = SDL_JoystickInstanceID(JoyInfo.dev);
+	joyid[1] = SDL_JoystickInstanceID(JoyInfo.dev);
+
+	if (evt.which == joyid[0])
+	{
 		event.data1 = KEY_JOY1;
-	else if (cv_usejoystick.value == evt.which)
+	}
+	else if (evt.which == joyid[1])
+	{
 		event.data1 = KEY_2JOY1;
+	}
 	else return;
 	if (type == SDL_JOYBUTTONUP)
+	{
 		event.type = ev_keyup;
+	}
 	else if (type == SDL_JOYBUTTONDOWN)
+	{
 		event.type = ev_keydown;
+	}
 	else return;
 	if (evt.button < JOYBUTTONS)
+	{
 		event.data1 += evt.button;
-	else
-		return;
+	}
+	else return;
+
 	SDLJoyRemap(&event);
 	if (event.type != ev_console) D_PostEvent(&event);
 }
@@ -1037,6 +1042,11 @@ void I_GetEvent(void)
 				break;
 		}
 	}
+
+	// In order to make wheels act like buttons, we have to set their state to Up.
+	// This is because wheel messages don't have an up/down state.
+	gamekeydown[KEY_MOUSEWHEELDOWN] = gamekeydown[KEY_MOUSEWHEELUP] = 0;
+
 #if 0
 	SDL_Event inputEvent;
 	static SDL_bool sdlquit = SDL_FALSE; //Alam: once, just once
@@ -1247,7 +1257,6 @@ void I_GetEvent(void)
 		}
 	}
 	//reset wheel like in win32, I don't understand it but works
-	gamekeydown[KEY_MOUSEWHEELDOWN] = gamekeydown[KEY_MOUSEWHEELUP] = 0;
 #endif
 }
 
@@ -1292,13 +1301,22 @@ void I_OsPolling(void)
 //
 void I_UpdateNoBlit(void)
 {
-	if (!vidSurface)
+	if (rendermode == render_none)
 		return;
 	if (exposevideo)
 	{
-		SDL_RenderClear(renderer);
-		SDL_RenderCopy(renderer, texture, NULL, NULL);
-		SDL_RenderPresent(renderer);
+#ifdef HWRENDER
+		if (rendermode == render_opengl)
+		{
+			OglSdlFinishUpdate(cv_vidwait.value);
+		}
+		else
+#endif
+		if (rendermode == render_soft)
+		{
+			SDL_RenderCopy(renderer, texture, NULL, NULL);
+			SDL_RenderPresent(renderer);
+		}
 	}
 #if 0
 #ifdef HWRENDER
@@ -1356,7 +1374,7 @@ static inline SDL_bool SDLmatchVideoformat(void)
 //
 void I_FinishUpdate(void)
 {
-	if (!vidSurface)
+	if (rendermode == render_none)
 		return; //Alam: No software or OpenGl surface
 
 	if (I_SkipFrame())
@@ -1387,7 +1405,6 @@ void I_FinishUpdate(void)
 			SDL_UpdateTexture(texture, NULL, vidSurface->pixels, realwidth * 4);
 		}
 		// Blit buffer to texture
-		SDL_RenderClear(renderer);
 		SDL_RenderCopy(renderer, texture, NULL, NULL);
 		SDL_RenderPresent(renderer);
 	}
@@ -1770,11 +1787,55 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 		flags = SDL_WINDOW_FULLSCREEN_DESKTOP;
 	}
 
-	window = SDL_CreateWindow("SRB2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-			realwidth, realheight, flags);
-	renderer = SDL_CreateRenderer(window, -1, 0);
+#ifdef HWRENDER
+	if (rendermode == render_opengl)
+	{
+		/*
+		 * We want at least 1 bit R, G, and B,
+		 * and at least 16 bpp. Why 1 bit? May be more?
+		 */
+		/*SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 1);
+		SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 1);
+		SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 1);
+		SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);*/
 
-	SDL_RenderSetLogicalSize(renderer, BASEVIDWIDTH, BASEVIDHEIGHT);
+		window = SDL_CreateWindow("SRB2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+				realwidth, realheight, flags | SDL_WINDOW_OPENGL);
+		if (window != NULL)
+		{
+			/*
+			renderer = SDL_CreateRenderer(window, -1, 0);
+			if (renderer != NULL)
+			{
+				//SDL_RenderSetLogicalSize(renderer, BASEVIDWIDTH, BASEVIDHEIGHT);
+				sdlglcontext = SDL_GL_CreateContext(window);
+				SDL_GL_MakeCurrent(window, sdlglcontext);
+			}
+			else return SDL_FALSE;
+			*/
+
+			sdlglcontext = SDL_GL_CreateContext(window);
+			SDL_GL_MakeCurrent(window, sdlglcontext);
+		}
+		else return SDL_FALSE;
+	}
+#endif
+	if (rendermode == render_soft)
+	{
+		window = SDL_CreateWindow("SRB2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+				realwidth, realheight, flags);
+		if (window != NULL)
+		{
+			renderer = SDL_CreateRenderer(window, -1, 0);
+			if (renderer != NULL)
+			{
+				SDL_RenderSetLogicalSize(renderer, BASEVIDWIDTH, BASEVIDHEIGHT);
+			}
+			else return SDL_FALSE;
+		}
+		else return SDL_FALSE;
+	}
+
 	return SDL_TRUE;
 }
 
@@ -1953,17 +2014,15 @@ void I_StartupGraphics(void)
 		vid.height = BASEVIDHEIGHT;
 		if (HWD.pfnInit(I_Error)) // let load the OpenGL library
 		{
-			/*
-			* We want at least 1 bit R, G, and B,
-			* and at least 16 bpp. Why 1 bit? May be more?
-			*/
-			SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 1);
-			SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 1);
-			SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 1);
-			SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-			if (!OglSdlSurface(vid.width, vid.height, (USE_FULLSCREEN)))
+                    OglSdlSurface(vid.width, vid.height, (USE_FULLSCREEN));
+
+			// Contrary to SDL1 implementation, all we need is a window and a GL context.
+			// No setting up a special surface to draw to.
+			// If the GL context was already made, we're good to go.
+			
+			/*if (!OglSdlSurface(vid.width, vid.height, (USE_FULLSCREEN)))
 				if (!OglSdlSurface(vid.width, vid.height, !(USE_FULLSCREEN)))
-					rendermode = render_soft;
+					rendermode = render_soft;*/
 		}
 		else
 			rendermode = render_soft;
