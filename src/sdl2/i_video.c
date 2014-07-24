@@ -185,14 +185,6 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 		{
 			wasfullscreen = SDL_TRUE;
 			SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
-			// Logical fullscreen is not implemented yet for OpenGL, so...
-			// Special case handling
-			if (rendermode == render_opengl)
-			{
-				int sdlw, sdlh;
-				SDL_GetWindowSize(window, &sdlw, &sdlh);
-				VID_SetMode(VID_GetModeForSize(sdlw, sdlh));
-			}
 		}
 		else if (!fullscreen && wasfullscreen)
 		{
@@ -217,6 +209,15 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 
 	if (rendermode == render_opengl)
 	{
+		int sdlw, sdlh;
+		SDL_GetWindowSize(window, &sdlw, &sdlh);
+		// Logical fullscreen is not implemented yet for OpenGL, so...
+		// Special case handling
+		if (USE_FULLSCREEN && width != sdlw && height != sdlh)
+		{
+			VID_SetMode(VID_GetModeForSize(sdlw, sdlh));
+			return;
+		}
 		OglSdlSurface(vid.width, vid.height);
 	}
 
