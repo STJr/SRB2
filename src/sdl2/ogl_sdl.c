@@ -171,7 +171,10 @@ boolean OglSdlSurface(INT32 w, INT32 h)
 	DBG_Printf("Extensions : %s\n", gl_extensions);
 	oglflags = 0;
 
-	maximumAnisotropy = 0;
+	if (isExtAvailable("GL_EXT_texture_filter_anisotropic", gl_extensions))
+		pglGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &maximumAnisotropy);
+	else
+		maximumAnisotropy = 0;
 
 	granisotropicmode_cons_t[1].value = maximumAnisotropy;
 
