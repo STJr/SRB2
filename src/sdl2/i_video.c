@@ -132,6 +132,7 @@ static       SDL_bool    mousegrabok = SDL_TRUE;
 #define HalfWarpMouse(x,y) SDL_WarpMouseInWindow(window, (Uint16)(x/2),(Uint16)(y/2))
 static       SDL_bool    videoblitok = SDL_FALSE;
 static       SDL_bool    exposevideo = SDL_FALSE;
+static       SDL_bool    usesdl2soft = SDL_FALSE;
 
 // SDL2 vars
 SDL_Window   *window;
@@ -170,10 +171,11 @@ static void Impl_SetWindowIcon(void);
 static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 {
 	static SDL_bool wasfullscreen = SDL_FALSE;
-	int rmask;
-	int gmask;
-	int bmask;
-	int amask;
+	Uint32 rmask;
+	Uint32 gmask;
+	Uint32 bmask;
+	Uint32 amask;
+	int bpp = 16;
 	int sw_texture_format = SDL_PIXELFORMAT_ABGR8888;
 
 	realwidth = vid.width;
@@ -181,7 +183,7 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 
 	if (window)
 	{
-		if (fullscreen && !wasfullscreen)
+		if (fullscreen)
 		{
 			wasfullscreen = SDL_TRUE;
 			SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
@@ -202,9 +204,14 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 	}
 	else
 	{
-		Impl_CreateWindow(fullscreen ? SDL_TRUE : SDL_FALSE);
+		Impl_CreateWindow(fullscreen);
 		Impl_SetWindowIcon();
-		wasfullscreen = fullscreen ? SDL_TRUE : SDL_FALSE;
+		wasfullscreen = fullscreen;
+		SDL_SetWindowSize(window, width, height);
+		if (fullscreen)
+		{
+			SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+		}
 	}
 
 	if (rendermode == render_opengl)
@@ -213,7 +220,7 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 		SDL_GetWindowSize(window, &sdlw, &sdlh);
 		// Logical fullscreen is not implemented yet for OpenGL, so...
 		// Special case handling
-		if (USE_FULLSCREEN && width != sdlw && height != sdlh)
+		if (fullscreen && width != sdlw && height != sdlh)
 		{
 			VID_SetMode(VID_GetModeForSize(sdlw, sdlh));
 			return;
@@ -223,8 +230,8 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 
 	if (rendermode == render_soft)
 	{
-		SDL_RenderSetLogicalSize(renderer, width, height);
 		SDL_RenderClear(renderer);
+		SDL_RenderSetLogicalSize(renderer, width, height);
 		// Set up Texture
 		realwidth = width;
 		realheight = height;
@@ -232,11 +239,16 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 		{
 			SDL_DestroyTexture(texture);
 		}
-#ifdef SDL_BIG_ENDIAN
-		sw_texture_format = SDL_PIXELFORMAT_RGBA8888;
-#else
-		sw_texture_format = SDL_PIXELFORMAT_ABGR8888;
-#endif
+
+		if (!usesdl2soft)
+		{
+			sw_texture_format = SDL_PIXELFORMAT_RGB565;
+		}
+		else
+		{
+			sw_texture_format = SDL_PIXELFORMAT_RGBA8888;
+		}
+
 		texture = SDL_CreateTexture(renderer, sw_texture_format, SDL_TEXTUREACCESS_STREAMING, width, height);
 
 		// Set up SW surface
@@ -244,18 +256,8 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 		{
 			SDL_FreeSurface(vidSurface);
 		}
-#ifdef SDL_BIG_ENDIAN
-		rmask = 0xFF000000;
-		gmask = 0x00FF0000;
-		bmask = 0x0000FF00;
-		amask = 0x000000FF;
-#else // HEAD HEADS UP THE ASSIGNMENT ORDER IS FLIPPED, I WAS LAZY --Fury
-		amask = 0xFF000000;
-		bmask = 0x00FF0000;
-		gmask = 0x0000FF00;
-		rmask = 0x000000FF;
-#endif
-		vidSurface = SDL_CreateRGBSurface(0, width, height, 32, rmask, gmask, bmask, amask);
+		SDL_PixelFormatEnumToMasks(sw_texture_format, &bpp, &rmask, &gmask, &bmask, &amask);
+		vidSurface = SDL_CreateRGBSurface(0, width, height, bpp, rmask, gmask, bmask, amask);
 	}
 }
 
@@ -1372,36 +1374,18 @@ void I_FinishUpdate(void)
 		rect.w = vid.width;
 		rect.h = vid.height;
 
-		if (vidSurface->h > vid.height)
-			rect.y = (Sint16)((vidSurface->h-vid.height)/2);
-
 		if (!bufSurface) //Double-Check
 		{
 			Impl_VideoSetupSDLBuffer();
 		}
-		if (bufSurface) //Alam: New Way to send video data
+		if (bufSurface)
 		{
-			void *pixels;
-			int pitch;
-
 			SDL_BlitSurface(bufSurface, NULL, vidSurface, &rect);
-			// Fury -- streaming textures are bad on UpdateTexture
+			// Fury -- there's no way around UpdateTexture, the GL backend uses it anyway
 			SDL_LockSurface(vidSurface);
-			SDL_LockTexture(texture, &rect, &pixels, &pitch);
-			if (pitch == vidSurface->pitch)
-			{
-				M_Memcpy(pixels, vidSurface->pixels, (pitch * vid.height));
-			}
-			else
-			{
-				SDL_UnlockTexture(texture);
-				SDL_UnlockSurface(vidSurface);
-				I_Error("The intermediate buffer and final texture types are not the same.\n");
-			}
-			SDL_UnlockTexture(texture);
+			SDL_UpdateTexture(texture, &rect, vidSurface->pixels, vidSurface->pitch);
 			SDL_UnlockSurface(vidSurface);
 		}
-		// Blit buffer to texture
 		SDL_RenderCopy(renderer, texture, NULL, NULL);
 		SDL_RenderPresent(renderer);
 	}
@@ -1705,7 +1689,7 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 				realwidth, realheight, flags);
 		if (window != NULL)
 		{
-			renderer = SDL_CreateRenderer(window, -1, 0);
+			renderer = SDL_CreateRenderer(window, -1, (usesdl2soft ? SDL_RENDERER_SOFTWARE : 0) | (cv_vidwait.value && !usesdl2soft ? SDL_RENDERER_PRESENTVSYNC : 0));
 			if (renderer != NULL)
 			{
 				SDL_RenderSetLogicalSize(renderer, BASEVIDWIDTH, BASEVIDHEIGHT);
@@ -1831,7 +1815,13 @@ void I_StartupGraphics(void)
 			framebuffer = SDL_TRUE;
 	}
 	if (M_CheckParm("-software"))
+	{
 		rendermode = render_soft;
+	}
+	if (M_CheckParm("-softblit"))
+	{
+		usesdl2soft = SDL_TRUE;
+	}
 	//SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY>>1,SDL_DEFAULT_REPEAT_INTERVAL<<2);
 	SDLESSet();
 	VID_Command_ModeList_f();
@@ -1878,8 +1868,9 @@ void I_StartupGraphics(void)
 	// SDL_GL_LoadLibrary to work well on Windows
 	
 	// Create window
-	Impl_CreateWindow(USE_FULLSCREEN);
-	Impl_SetWindowName("SRB2");
+	//Impl_CreateWindow(USE_FULLSCREEN);
+	//Impl_SetWindowName("SRB2");
+	VID_SetMode(VID_GetModeForSize(BASEVIDWIDTH, BASEVIDHEIGHT));
 	
 	vid.buffer = NULL;  // For software mode
 	vid.width = BASEVIDWIDTH; // Default size for startup
