@@ -10,7 +10,7 @@
 #     -DPC_DOS    -> use DOS specific code (eg:textmode stuff)...
 #     -DLINUX     -> use for the GNU/Linux specific
 #     -D_WINDOWS  -> use for the Win32/DirectX specific
-#     -DSDL       -> use for the SDL interface
+#     -DHAVE_SDL  -> use for the SDL interface
 #
 # Sets:
 #     Compile the DGJPP/DOS version with 'make WATTCP=1'

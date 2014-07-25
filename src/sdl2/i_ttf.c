@@ -16,7 +16,7 @@
 /// \file
 /// \brief SDL_ttf interface code. Necessary for platforms with no framebuffer console systems.
 
-#if defined(SDL) && defined(HAVE_TTF)
+#if defined(HAVE_SDL) && defined(HAVE_TTF)
 #include "SDL.h"
 #include "SDL_ttf.h"
 #include "../doomdef.h"

@@ -253,7 +253,7 @@ void S_RegisterSoundStuff(void)
 	CV_RegisterVar(&surround);
 	CV_RegisterVar(&cv_samplerate);
 
-#if defined (macintosh) && !defined (SDL) // mp3 playlist stuff
+#if defined (macintosh) && !defined (HAVE_SDL) // mp3 playlist stuff
 	{
 		INT32 i;
 		for (i = 0; i < PLAYLIST_LENGTH; i++)
@@ -761,7 +761,7 @@ void S_PauseSound(void)
 	}
 
 	// pause cd music
-#if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (SDL)
+#if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
 	I_PauseCD();
 #else
 	I_StopCD();
@@ -1050,7 +1050,7 @@ static boolean S_MIDIMusic(musicinfo_t *music, boolean looping)
 
 	// load & register it
 	music->data = W_CacheLumpNum(music->lumpnum, PU_MUSIC);
-#if defined (macintosh) && !defined (SDL)
+#if defined (macintosh) && !defined (HAVE_SDL)
 	music->handle = I_RegisterSong(music_num);
 #else
 	music->handle = I_RegisterSong(music->data, W_LumpLength(music->lumpnum));
@@ -1154,7 +1154,7 @@ void S_StopMusic(void)
 	I_StopSong(mus_playing->handle);
 	I_UnRegisterSong(mus_playing->handle);
 
-#ifndef SDL //SDL uses RWOPS
+#ifndef HAVE_SDL //SDL uses RWOPS
 	Z_ChangeTag(mus_playing->data, PU_CACHE);
 #endif
 

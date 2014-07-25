@@ -48,7 +48,7 @@ PSP_MAIN_THREAD_NAME("SRB2");
 PSP_MAIN_THREAD_STACK_SIZE_KB(256);
 #endif
 
-#ifdef SDL
+#ifdef HAVE_SDL
 
 #ifdef HAVE_TTF
 #include "SDL.h"

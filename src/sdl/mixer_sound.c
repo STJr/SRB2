@@ -3,7 +3,7 @@
 
 #include "../doomdef.h"
 
-#if defined(SDL) && defined(HAVE_MIXER) && SOUND==SOUND_MIXER
+#if defined(HAVE_SDL) && defined(HAVE_MIXER) && SOUND==SOUND_MIXER
 
 #include "../sounds.h"
 #include "../s_sound.h"

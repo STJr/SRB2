@@ -47,7 +47,7 @@
 #include "hardware/hw_main.h"
 #endif
 
-#ifdef SDL
+#ifdef HAVE_SDL
 #include "sdl/hwsym_sdl.h"
 #ifdef __linux__
 typedef off_t off64_t;
@@ -654,7 +654,7 @@ static void M_PNGText(png_structp png_ptr, png_infop png_info_ptr, PNG_CONST png
 	char Movietxt[] = "SRB2 Movie";
 	size_t i;
 	char interfacetxt[] =
-#ifdef SDL
+#ifdef HAVE_SDL
 	 "SDL";
 #elif defined (_WINDOWS)
 	 "DirectX";
@@ -809,7 +809,7 @@ static inline boolean M_PNGLib(void)
 		pnglib = GetModuleHandleA("libpng12.dll");
 	if (!pnglib)
 		pnglib = GetModuleHandleA("libpng13.dll");
-#elif defined (SDL)
+#elif defined (HAVE_SDL)
 #ifdef __APPLE__
 	pnglib = hwOpen("libpng.dylib");
 #else
@@ -818,7 +818,7 @@ static inline boolean M_PNGLib(void)
 #endif
 	if (!pnglib)
 		return false;
-#ifdef SDL
+#ifdef HAVE_SDL
 	apng_set_acTL = hwSym("png_set_acTL", pnglib);
 	apng_write_frame_head = hwSym("png_write_frame_head", pnglib);
 	apng_write_frame_tail = hwSym("png_write_frame_tail", pnglib);

@@ -24,7 +24,7 @@
 #define SOUND_FMOD    3
 
 #ifndef SOUND
-#ifdef SDL
+#ifdef HAVE_SDL
 
 // Use Mixer interface?
 #ifdef HAVE_MIXER

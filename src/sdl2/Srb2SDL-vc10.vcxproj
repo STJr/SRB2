@@ -96,7 +96,7 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\libs\libpng-src;$(ProjectDir)..\..\libs\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_DEBUG;USE_WGL_SWAP;DIRECTFULLSCREEN;SDL;HWRENDER;HW3SOUND;HAVE_FILTER;HAVE_MIXER;USEASM;HAVE_PNG;COMPVERSION;HAVE_BLUA;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;USE_WGL_SWAP;DIRECTFULLSCREEN;HAVE_SDL;HWRENDER;HW3SOUND;HAVE_FILTER;HAVE_MIXER;USEASM;HAVE_PNG;COMPVERSION;HAVE_BLUA;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -145,7 +145,7 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\libs\libpng-src;$(ProjectDir)..\..\libs\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_DEBUG;USE_WGL_SWAP;DIRECTFULLSCREEN;SDL;HWRENDER;HW3SOUND;HAVE_FILTER;HAVE_MIXER;HAVE_PNG;COMPVERSION;HAVE_BLUA;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;USE_WGL_SWAP;DIRECTFULLSCREEN;HAVE_SDL;HWRENDER;HW3SOUND;HAVE_FILTER;HAVE_MIXER;HAVE_PNG;COMPVERSION;HAVE_BLUA;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -202,7 +202,7 @@
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <OmitFramePointers>true</OmitFramePointers>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\libs\libpng-src;$(ProjectDir)..\..\libs\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG;SDLMAIN;NO_STDIO_REDIRECT;USE_WGL_SWAP;DIRECTFULLSCREEN;SDL;HWRENDER;HW3SOUND;HAVE_FILTER;HAVE_MIXER;USEASM;HAVE_PNG;COMPVERSION;HAVE_BLUA;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;SDLMAIN;NO_STDIO_REDIRECT;USE_WGL_SWAP;DIRECTFULLSCREEN;HAVE_SDL;HWRENDER;HW3SOUND;HAVE_FILTER;HAVE_MIXER;USEASM;HAVE_PNG;COMPVERSION;HAVE_BLUA;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PrecompiledHeaderOutputFile>.\..\..\objs\VC10\$(Platform)\$(Configuration)\SDL\Srb2SDL-vc9.pch</PrecompiledHeaderOutputFile>
@@ -258,7 +258,7 @@
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <OmitFramePointers>true</OmitFramePointers>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\libs\libpng-src;$(ProjectDir)..\..\libs\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG;SDLMAIN;NO_STDIO_REDIRECT;USE_WGL_SWAP;DIRECTFULLSCREEN;SDL;HWRENDER;HW3SOUND;HAVE_FILTER;HAVE_MIXER;HAVE_PNG;COMPVERSION;HAVE_BLUA;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;SDLMAIN;NO_STDIO_REDIRECT;USE_WGL_SWAP;DIRECTFULLSCREEN;HAVE_SDL;HWRENDER;HW3SOUND;HAVE_FILTER;HAVE_MIXER;HAVE_PNG;COMPVERSION;HAVE_BLUA;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PrecompiledHeaderOutputFile>.\..\..\objs\VC10\$(Platform)\$(Configuration)\SDL\Srb2SDL-vc9.pch</PrecompiledHeaderOutputFile>

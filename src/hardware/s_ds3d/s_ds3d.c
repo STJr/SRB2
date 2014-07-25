@@ -48,7 +48,7 @@
 #undef DEBUG_TO_FILE
 #define DEBUG_TO_FILE
 
-#if defined ( SDL ) && !defined ( LOGMESSAGES )
+#if defined ( HAVE_SDL ) && !defined ( LOGMESSAGES )
 #undef DEBUG_TO_FILE
 #endif
 

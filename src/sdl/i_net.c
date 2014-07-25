@@ -32,7 +32,7 @@
 
 #include "../i_tcp.h"
 
-#ifdef SDL
+#ifdef HAVE_SDL
 
 #ifdef HAVE_SDLNET
 

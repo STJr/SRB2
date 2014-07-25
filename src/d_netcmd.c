@@ -258,7 +258,7 @@ consvar_t cv_usejoystick = {"use_joystick", "0", CV_SAVE|CV_CALL, usejoystick_co
 consvar_t cv_usejoystick2 = {"use_joystick2", "0", CV_SAVE|CV_CALL, usejoystick_cons_t,
 	I_InitJoystick2, 0, NULL, NULL, 0, 0, NULL};
 #endif
-#if (defined (LJOYSTICK) || defined (SDL))
+#if (defined (LJOYSTICK) || defined (HAVE_SDL))
 #ifdef LJOYSTICK
 consvar_t cv_joyport = {"joyport", "/dev/js0", CV_SAVE, joyport_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_joyport2 = {"joyport2", "/dev/js0", CV_SAVE, joyport_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL}; //Alam: for later

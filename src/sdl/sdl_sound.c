@@ -23,7 +23,7 @@
 #pragma warning(disable : 4214 4244)
 #endif
 
-#if defined(SDL) && SOUND==SOUND_SDL
+#if defined(HAVE_SDL) && SOUND==SOUND_SDL
 
 #include "SDL.h"
 
@@ -2027,4 +2027,4 @@ static void SDLCALL I_FinishMusic(void)
 	if (Msc_Mutex) SDL_UnlockMutex(Msc_Mutex);
 }
 #endif
-#endif //SDL
+#endif //HAVE_SDL
