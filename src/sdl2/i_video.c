@@ -1381,8 +1381,25 @@ void I_FinishUpdate(void)
 		}
 		if (bufSurface) //Alam: New Way to send video data
 		{
+			void *pixels;
+			int pitch;
+
 			SDL_BlitSurface(bufSurface, NULL, vidSurface, &rect);
-			SDL_UpdateTexture(texture, NULL, vidSurface->pixels, realwidth * 4);
+			// Fury -- streaming textures are bad on UpdateTexture
+			SDL_LockSurface(vidSurface);
+			SDL_LockTexture(texture, &rect, &pixels, &pitch);
+			if (pitch == vidSurface->pitch)
+			{
+				M_Memcpy(pixels, vidSurface->pixels, (pitch * vid.height));
+			}
+			else
+			{
+				SDL_UnlockTexture(texture);
+				SDL_UnlockSurface(vidSurface);
+				I_Error("The intermediate buffer and final texture types are not the same.\n");
+			}
+			SDL_UnlockTexture(texture);
+			SDL_UnlockSurface(vidSurface);
 		}
 		// Blit buffer to texture
 		SDL_RenderCopy(renderer, texture, NULL, NULL);
