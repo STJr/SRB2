@@ -246,6 +246,7 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 		}
 		else
 		{
+			bpp = 32;
 			sw_texture_format = SDL_PIXELFORMAT_RGBA8888;
 		}
 
