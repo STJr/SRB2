@@ -129,7 +129,6 @@ static       Uint16      realheight = BASEVIDHEIGHT;
 static const Uint32      surfaceFlagsW = 0/*|SDL_RESIZABLE*/;
 static const Uint32      surfaceFlagsF = 0;
 static       SDL_bool    mousegrabok = SDL_TRUE;
-static       SDL_bool    mousewarp = SDL_FALSE;
 #define HalfWarpMouse(x,y) SDL_WarpMouseInWindow(window, (Uint16)(x/2),(Uint16)(y/2))
 static       SDL_bool    videoblitok = SDL_FALSE;
 static       SDL_bool    exposevideo = SDL_FALSE;
@@ -186,14 +185,6 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 		{
 			wasfullscreen = SDL_TRUE;
 			SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
-			// Logical fullscreen is not implemented yet for OpenGL, so...
-			// Special case handling
-			if (rendermode == render_opengl)
-			{
-				int sdlw, sdlh;
-				SDL_GetWindowSize(window, &sdlw, &sdlh);
-				VID_SetMode(VID_GetModeForSize(sdlw, sdlh));
-			}
 		}
 		else if (!fullscreen && wasfullscreen)
 		{
@@ -218,6 +209,15 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 
 	if (rendermode == render_opengl)
 	{
+		int sdlw, sdlh;
+		SDL_GetWindowSize(window, &sdlw, &sdlh);
+		// Logical fullscreen is not implemented yet for OpenGL, so...
+		// Special case handling
+		if (USE_FULLSCREEN && width != sdlw && height != sdlh)
+		{
+			VID_SetMode(VID_GetModeForSize(sdlw, sdlh));
+			return;
+		}
 		OglSdlSurface(vid.width, vid.height);
 	}
 
@@ -760,6 +760,7 @@ static void Impl_HandleWindowEvent(SDL_WindowEvent evt)
 			break;
 		case SDL_WINDOWEVENT_FOCUS_GAINED:
 			kbfocus = SDL_TRUE;
+			mousefocus = SDL_TRUE;
 			break;
 		case SDL_WINDOWEVENT_FOCUS_LOST:
 			kbfocus = SDL_FALSE;
@@ -800,7 +801,6 @@ static void Impl_HandleWindowEvent(SDL_WindowEvent evt)
 		if (MOUSE_MENU)
 		{
 			SDLdoUngrabMouse();
-			return;
 		}
 	}
 
@@ -832,43 +832,26 @@ static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
 
 	SDL_GetWindowSize(window, &wwidth, &wheight);
 
-	if (MOUSE_MENU)
+	if ((SDL_GetMouseFocus() != window && SDL_GetKeyboardFocus() != window))
 	{
 		SDLdoUngrabMouse();
 		return;
 	}
 
-	if (mousewarp && (evt.x == wwidth/2) && (evt.y == wheight/2))
+	if ((evt.x == realwidth/2) && (evt.y == realheight/2))
 	{
 		return;
 	}
 	else
 	{
-		event.data2 = +evt.xrel;
-		event.data3 = -evt.yrel;
+		event.data2 = (evt.xrel) * (wwidth / realwidth) * 2;
+		event.data3 = -evt.yrel * (wheight / realheight) * 2;
 	}
 	
 	event.type = ev_mouse;
 	D_PostEvent(&event);
 
-	if (mousewarp)
-	{
-		// Warp the pointer back to the middle of the window
-		//  or we cannot move any further if it's at a border.
-		if ((evt.x < (wwidth/2 )-(wwidth/4 )) ||
-				(evt.y < (wheight/2)-(wheight/4)) ||
-				(evt.x > (wwidth/2 )+(wwidth/4 )) ||
-				(evt.y > (wheight/2)+(wheight/4) ) )
-		{
-			HalfWarpMouse(wwidth, wheight);
-		}
-	}
-	else
-	{
-		SDL_SetWindowGrab(window, mousegrabok);
-		SDL_SetRelativeMouseMode(SDL_TRUE);
-	}
-
+	HalfWarpMouse(wwidth, wheight);
 }
 
 static void Impl_HandleMouseButtonEvent(SDL_MouseButtonEvent evt, Uint32 type)
@@ -1398,8 +1381,25 @@ void I_FinishUpdate(void)
 		}
 		if (bufSurface) //Alam: New Way to send video data
 		{
+			void *pixels;
+			int pitch;
+
 			SDL_BlitSurface(bufSurface, NULL, vidSurface, &rect);
-			SDL_UpdateTexture(texture, NULL, vidSurface->pixels, realwidth * 4);
+			// Fury -- streaming textures are bad on UpdateTexture
+			SDL_LockSurface(vidSurface);
+			SDL_LockTexture(texture, &rect, &pixels, &pitch);
+			if (pitch == vidSurface->pitch)
+			{
+				M_Memcpy(pixels, vidSurface->pixels, (pitch * vid.height));
+			}
+			else
+			{
+				SDL_UnlockTexture(texture);
+				SDL_UnlockSurface(vidSurface);
+				I_Error("The intermediate buffer and final texture types are not the same.\n");
+			}
+			SDL_UnlockTexture(texture);
+			SDL_UnlockSurface(vidSurface);
 		}
 		// Blit buffer to texture
 		SDL_RenderCopy(renderer, texture, NULL, NULL);
@@ -1902,8 +1902,6 @@ void I_StartupGraphics(void)
 
 	if (M_CheckParm("-nomousegrab"))
 		mousegrabok = SDL_FALSE;
-	else if (M_CheckParm("-mousewarp") || SDL_SetRelativeMouseMode(SDL_TRUE) == -1)
-		mousewarp = SDL_TRUE;
 #if 0 // defined (_DEBUG)
 	else
 	{
