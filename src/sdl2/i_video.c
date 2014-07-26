@@ -140,6 +140,7 @@ SDL_Window   *window;
 SDL_Renderer *renderer;
 static SDL_Texture  *texture;
 static SDL_bool      havefocus = SDL_TRUE;
+static const char *fallback_resolution_name = "Fallback";
 
 // windowed video modes from which to choose from.
 static INT32 windowedModes[MAXWINMODES][2] =
@@ -172,6 +173,7 @@ static void Impl_SetWindowIcon(void);
 static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 {
 	static SDL_bool wasfullscreen = SDL_FALSE;
+	static SDL_bool glfallbackresolution = SDL_FALSE;
 	Uint32 rmask;
 	Uint32 gmask;
 	Uint32 bmask;
@@ -192,6 +194,7 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 		else if (!fullscreen && wasfullscreen)
 		{
 			wasfullscreen = SDL_FALSE;
+			glfallbackresolution = SDL_FALSE;
 			SDL_SetWindowFullscreen(window, 0);
 			SDL_SetWindowSize(window, width, height);
 			SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
@@ -221,10 +224,21 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 		SDL_GetWindowSize(window, &sdlw, &sdlh);
 		// Logical fullscreen is not implemented yet for OpenGL, so...
 		// Special case handling
-		if (fullscreen && width != sdlw && height != sdlh)
+		if (glfallbackresolution == SDL_FALSE && fullscreen && width != sdlw && height != sdlh)
 		{
-			VID_SetMode(VID_GetModeForSize(sdlw, sdlh));
-			return;
+			if (VID_GetModeForSize(sdlw, sdlh) != -1)
+			{
+				wasfullscreen = SDL_TRUE;
+				VID_SetMode(VID_GetModeForSize(sdlw, sdlh));
+				return;
+			}
+			else
+			{
+				wasfullscreen = SDL_TRUE;
+				glfallbackresolution = SDL_TRUE;
+				VID_SetMode(-1);
+				return;
+			}
 		}
 		OglSdlSurface(vid.width, vid.height);
 	}
@@ -1471,6 +1485,10 @@ const char *VID_GetModeName(INT32 modeNum)
 	else // windowed modes
 	{
 #endif
+	if (modeNum == -1)
+	{
+		return fallback_resolution_name;
+	}
 		if (modeNum > MAXWINMODES)
 			return NULL;
 
@@ -1632,12 +1650,32 @@ INT32 VID_SetMode(INT32 modeNum)
 	SDLdoUngrabMouse();
 
 	vid.recalc = 1;
-	vid.width = windowedModes[modeNum][0];
-	vid.height = windowedModes[modeNum][1];
 	vid.bpp = 1;
 
+	if (modeNum >= 0 && modeNum < MAXWINMODES-1)
+	{
+		vid.width = windowedModes[modeNum][0];
+		vid.height = windowedModes[modeNum][1];
+		vid.modenum = modeNum;
+	}
+	else
+	{
+		// just set the desktop resolution as a fallback
+		SDL_DisplayMode mode;
+		SDL_GetWindowDisplayMode(window, &mode);
+		if (mode.w >= 2048)
+		{
+			vid.width = 1920;
+			vid.height = 1200;
+		}
+		else
+		{
+			vid.width = mode.w;
+			vid.height = mode.h;
+		}
+		vid.modenum = -1;
+	}
 	Impl_SetWindowName("SRB2 "VERSIONSTRING);
-	vid.modenum = modeNum; //VID_GetModeForSize(vidSurface->w,vidSurface->h);
 
 	SDLSetMode(windowedModes[modeNum][0], windowedModes[modeNum][1], USE_FULLSCREEN);
 
