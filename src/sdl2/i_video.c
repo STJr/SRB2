@@ -853,9 +853,12 @@ static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
 	}
 	
 	event.type = ev_mouse;
-	D_PostEvent(&event);
 
-	HalfWarpMouse(wwidth, wheight);
+	if (SDL_GetMouseFocus() == window && SDL_GetKeyboardFocus() == window)
+	{
+		D_PostEvent(&event);
+		HalfWarpMouse(wwidth, wheight);
+	}
 }
 
 static void Impl_HandleMouseButtonEvent(SDL_MouseButtonEvent evt, Uint32 type)
