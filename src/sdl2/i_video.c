@@ -133,6 +133,7 @@ static       SDL_bool    mousegrabok = SDL_TRUE;
 static       SDL_bool    videoblitok = SDL_FALSE;
 static       SDL_bool    exposevideo = SDL_FALSE;
 static       SDL_bool    usesdl2soft = SDL_FALSE;
+static       SDL_bool    borderlesswindow = SDL_FALSE;
 
 // SDL2 vars
 SDL_Window   *window;
@@ -246,6 +247,7 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 		}
 		else
 		{
+			bpp = 32;
 			sw_texture_format = SDL_PIXELFORMAT_RGBA8888;
 		}
 
@@ -1386,6 +1388,7 @@ void I_FinishUpdate(void)
 			SDL_UpdateTexture(texture, &rect, vidSurface->pixels, vidSurface->pitch);
 			SDL_UnlockSurface(vidSurface);
 		}
+		SDL_RenderClear(renderer);
 		SDL_RenderCopy(renderer, texture, NULL, NULL);
 		SDL_RenderPresent(renderer);
 	}
@@ -1659,7 +1662,12 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 
 	if (fullscreen)
 	{
-		flags = SDL_WINDOW_FULLSCREEN_DESKTOP;
+		flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+	}
+
+	if (borderlesswindow)
+	{
+		flags |= SDL_WINDOW_BORDERLESS;
 	}
 
 #ifdef HWRENDER
@@ -1818,10 +1826,10 @@ void I_StartupGraphics(void)
 	{
 		rendermode = render_soft;
 	}
-	if (M_CheckParm("-softblit"))
-	{
-		usesdl2soft = SDL_TRUE;
-	}
+
+	usesdl2soft = M_CheckParm("-softblit");
+	borderlesswindow = M_CheckParm("-borderless");
+
 	//SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY>>1,SDL_DEFAULT_REPEAT_INTERVAL<<2);
 	SDLESSet();
 	VID_Command_ModeList_f();
