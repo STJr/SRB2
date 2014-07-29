@@ -599,6 +599,7 @@ ifndef NOUPX
 	-$(UPX) $(UPX_OPTS) $(BIN)/$(EXENAME)
 endif
 endif
+	@echo Build is done, please look for $(EXENAME) in $(BIN), (checking for post steps)
 
 reobjdump:
 	@echo Redumping debugging info
