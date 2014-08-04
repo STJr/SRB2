@@ -659,6 +659,7 @@ void D_StartTitle(void)
 	// okay, stop now
 	// (otherwise the game still thinks we're playing!)
 	SV_StopServer();
+	SV_ResetServer();
 
 	// In case someone exits out at the same time they start a time attack run,
 	// reset modeattacking
@@ -731,7 +732,7 @@ static void IdentifyVersion(void)
 	char *srb2wad1, *srb2wad2;
 	const char *srb2waddir = NULL;
 
-#if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (SDL)
+#if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
 	// change to the directory where 'srb2.srb' is found
 	srb2waddir = I_LocateWad();
 #endif
@@ -757,7 +758,7 @@ static void IdentifyVersion(void)
 		}
 	}
 
-#if defined (macintosh) && !defined (SDL)
+#if defined (macintosh) && !defined (HAVE_SDL)
 	// cwd is always "/" when app is dbl-clicked
 	if (!stricmp(srb2waddir, "/"))
 		srb2waddir = I_GetWadDir();
@@ -804,7 +805,7 @@ static void IdentifyVersion(void)
 	// Add our crappy patches to fix our bugs
 	D_AddFile(va(pandf,srb2waddir,"patch.dta"));
 
-#if !defined (SDL) || defined (HAVE_MIXER)
+#if !defined (HAVE_SDL) || defined (HAVE_MIXER)
 	{
 #if defined (DC) && 0
 		const char *musicfile = "music_dc.dta";
@@ -929,7 +930,7 @@ void D_SRB2Main(void)
 	D_Titlebar(srb2, title);
 #endif
 
-#if defined (__OS2__) && !defined (SDL)
+#if defined (__OS2__) && !defined (HAVE_SDL)
 	// set PM window title
 	snprintf(pmData->title, sizeof (pmData->title),
 		"Sonic Robo Blast 2" VERSIONSTRING ": %s",
@@ -1086,14 +1087,14 @@ void D_SRB2Main(void)
 #endif
 	D_CleanFile();
 
-#if 1 // md5s last updated 4/13/14
+#if 1 // md5s last updated 8/03/14
 
 	// Check MD5s of autoloaded files
 	W_VerifyFileMD5(0, "ac309fb3c7d4b5b685e2cd26beccf0e8"); // srb2.srb/srb2.wad
 	W_VerifyFileMD5(1, "e956466eff2c79f7b1cdefad24761bce"); // zones.dta
 	W_VerifyFileMD5(2, "95a4cdbed287323dd361243f357a5fd2"); // player.dta
 	W_VerifyFileMD5(3, "85901ad4bf94637e5753d2ac2c03ea26"); // rings.dta
-	W_VerifyFileMD5(4, "1f37fe7bcc608a23eadb0e2c2d7c7124"); // patch.dta
+	W_VerifyFileMD5(4, "636e4c7b71e770e8368b48fcfe07bbd8"); // patch.dta
 	// don't check music.dta because people like to modify it, and it doesn't matter if they do
 	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.
 #endif
@@ -1136,7 +1137,7 @@ void D_SRB2Main(void)
 
 	G_LoadGameData();
 
-#if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (SDL)
+#if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
 	VID_PrepareModeList(); // Regenerate Modelist according to cv_fullscreen
 #endif
 

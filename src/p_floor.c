@@ -31,7 +31,7 @@ static inline boolean P_MobjReadyToMove(mobj_t *mo, sector_t *sec, boolean secto
 {
 	if (sectorisquicksand)
 		return (mo->z > sec->floorheight && mo->z < sec->ceilingheight);
-	else if (((mo->flags & MF_SPAWNCEILING) == MF_SPAWNCEILING) ^ ((mo->eflags & MFE_VERTICALFLIP) == MFE_VERTICALFLIP))
+	else if (!!(mo->flags & MF_SPAWNCEILING) ^ !!(mo->eflags & MFE_VERTICALFLIP))
 		return ((sectorisffloor) ? (mo->z+mo->height != sec->floorheight) : (mo->z+mo->height != sec->ceilingheight));
 	else
 		return ((sectorisffloor) ? (mo->z != sec->ceilingheight) : (mo->z != sec->floorheight));
@@ -241,7 +241,7 @@ result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, boolean crus
 						// Is the object hang from the ceiling?
 						// In that case, swap the planes used.
 						// verticalflip inverts
-						if (((mo->flags & MF_SPAWNCEILING) == MF_SPAWNCEILING) ^ ((mo->eflags & MFE_VERTICALFLIP) == MFE_VERTICALFLIP))
+						if (!!(mo->flags & MF_SPAWNCEILING) ^ !!(mo->eflags & MFE_VERTICALFLIP))
 						{
 							if (sectorisffloor && !sectorisquicksand)
 								mo->z = mo->ceilingz - mo->height;
@@ -886,9 +886,8 @@ void T_BounceCheese(levelspecthink_t *bouncer)
 			bouncer->speed += gravity;
 		}
 
-		if (bouncer->speed < 2*FRACUNIT && bouncer->speed > -2*FRACUNIT
-			&& bouncer->sector->ceilingheight < bouncer->ceilingwasheight + FRACUNIT/4
-			&& bouncer->sector->ceilingheight > bouncer->ceilingwasheight - FRACUNIT/4)
+		if (abs(bouncer->speed) < 2*FRACUNIT
+		&& abs(bouncer->sector->ceilingheight-bouncer->ceilingwasheight) < FRACUNIT/4)
 		{
 			bouncer->sector->floorheight = bouncer->floorwasheight;
 			bouncer->sector->ceilingheight = bouncer->ceilingwasheight;
@@ -1997,7 +1996,7 @@ void T_NoEnemiesSector(levelspecthink_t *nobaddies)
 				{
 					thing = node->m_thing;
 
-					if (((thing->flags & MF_ENEMY) || (thing->flags & MF_BOSS)) && thing->health > 0
+					if ((thing->flags & (MF_ENEMY|MF_BOSS)) && thing->health > 0
 						&& thing->z < upperbound && thing->z+thing->height > lowerbound)
 					{
 						exists = true;
@@ -2027,12 +2026,12 @@ foundenemy:
 //
 // Helper function for T_EachTimeThinker
 //
-static INT32 P_HavePlayersEnteredArea(INT32 *curPlayers, INT32 *oldPlayers, boolean inAndOut)
+static INT32 P_HavePlayersEnteredArea(boolean *curPlayers, boolean *oldPlayers, boolean inAndOut)
 {
 	INT32 i;
 
 	// Easy check... nothing has changed
-	if (!memcmp(curPlayers, oldPlayers, sizeof(INT32)*MAXPLAYERS))
+	if (!memcmp(curPlayers, oldPlayers, sizeof(boolean)*MAXPLAYERS))
 		return -1;
 
 	// Otherwise, we have to check if any new players have entered
@@ -2061,15 +2060,15 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 	size_t i, j;
 	sector_t *sec = NULL;
 	sector_t *targetsec = NULL;
-	sector_t *usesec = NULL;
+	//sector_t *usesec = NULL;
 	INT32 secnum = -1;
 	INT32 affectPlayer = 0;
-	INT32 oldPlayersInArea[MAXPLAYERS];
-	INT32 playersInArea[MAXPLAYERS];
-	INT32 oldPlayersOnArea[MAXPLAYERS];
-	INT32 playersOnArea[MAXPLAYERS];
-	INT32 *oldPlayersArea;
-	INT32 *playersArea;
+	boolean oldPlayersInArea[MAXPLAYERS];
+	boolean playersInArea[MAXPLAYERS];
+	boolean oldPlayersOnArea[MAXPLAYERS];
+	boolean playersOnArea[MAXPLAYERS];
+	boolean *oldPlayersArea;
+	boolean *playersArea;
 	boolean FOFsector = false;
 	boolean inAndOut = false;
 	boolean floortouch = false;
@@ -2089,13 +2088,22 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 			oldPlayersOnArea[i] = eachtime->var2s[i/2] >> 16;
 		}
 
-		playersInArea[i] = 0;
-		playersOnArea[i] = 0;
+		playersInArea[i] = false;
+		playersOnArea[i] = false;
 	}
 
 	while ((secnum = P_FindSectorFromLineTag(eachtime->sourceline, secnum)) >= 0)
 	{
 		sec = &sectors[secnum];
+
+		FOFsector = false;
+
+		if (GETSECSPECIAL(sec->special, 2) == 3 || GETSECSPECIAL(sec->special, 2) == 5)
+			floortouch = true;
+		else if (GETSECSPECIAL(sec->special, 2) >= 1 && GETSECSPECIAL(sec->special, 2) <= 8)
+			floortouch = false;
+		else
+			continue;
 
 		// Check the lines of this sector, to see if it is a FOF control sector.
 		for (i = 0; i < sec->linecount; i++)
@@ -2110,11 +2118,6 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 			while ((targetsecnum = P_FindSectorFromLineTag(sec->lines[i], targetsecnum)) >= 0)
 			{
 				targetsec = &sectors[targetsecnum];
-
-				if (GETSECSPECIAL(targetsec->special, 2) == 3 || GETSECSPECIAL(targetsec->special, 2) == 5)
-					floortouch = true;
-				else
-					floortouch = false;
 
 				for (j = 0; j < MAXPLAYERS; j++)
 				{
@@ -2146,7 +2149,7 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 						else
 							eachtime->var2s[j/2] |= 1 << 16;
 
-						playersOnArea[j] = 1;
+						playersOnArea[j] = true;
 					}
 					else
 					{
@@ -2155,7 +2158,7 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 						else
 							eachtime->vars[j/2] |= 1 << 16;
 
-						playersInArea[j] = 1;
+						playersInArea[j] = true;
 					}
 				}
 			}
@@ -2163,11 +2166,6 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 
 		if (!FOFsector)
 		{
-			if (GETSECSPECIAL(sec->special, 2) == 3 || GETSECSPECIAL(sec->special, 2) == 5)
-				floortouch = true;
-			else
-				floortouch = false;
-
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
 				if (!playeringame[i])
@@ -2192,7 +2190,7 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 					else
 						eachtime->var2s[i/2] |= 1 << 16;
 
-					playersOnArea[i] = 1;
+					playersOnArea[i] = true;
 				}
 				else
 				{
@@ -2201,16 +2199,11 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 					else
 						eachtime->vars[i/2] |= 1 << 16;
 
-					playersInArea[i] = 1;
+					playersInArea[i] = true;
 				}
 			}
 		}
 	}
-
-	if (FOFsector && targetsec)
-		usesec = targetsec;
-	else
-		usesec = sec;
 
 	if ((eachtime->sourceline->flags & ML_BOUNCY) == ML_BOUNCY)
 		inAndOut = true;
@@ -2231,12 +2224,34 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 
 	if ((affectPlayer = P_HavePlayersEnteredArea(playersArea, oldPlayersArea, inAndOut)) != -1)
 	{
+		if (GETSECSPECIAL(sec->special, 2) == 2 || GETSECSPECIAL(sec->special, 2) == 3)
+		{
+			for (i = 0; i < MAXPLAYERS; i++)
+			{
+				if (!playeringame[i])
+					continue;
+
+				if (!players[i].mo)
+					continue;
+
+				if (players[i].mo->health <= 0)
+					continue;
+
+				if ((netgame || multiplayer) && players[i].spectator)
+					continue;
+
+				if (!playersArea[i])
+					return;
+			}
+		}
+
 		CONS_Debug(DBG_GAMELOGIC, "Trying to activate each time executor with tag %d\n", eachtime->sourceline->tag);
 
-		// Fake-out P_LinedefExecute into thinking you are a continuous.
-		eachtime->sourceline->special--;
-		P_LinedefExecute(eachtime->sourceline->tag, players[affectPlayer].mo, usesec);
-		eachtime->sourceline->special++;
+		// 03/08/14 -Monster Iestyn
+		// No more stupid hacks involving changing eachtime->sourceline's tag or special or whatever!
+		// This should now run ONLY the stuff for eachtime->sourceline itself, instead of all trigger linedefs sharing the same tag.
+		// Makes much more sense doing it this way, honestly.
+		P_RunTriggerLinedef(eachtime->sourceline, players[affectPlayer].mo, sec);
 	}
 }
 

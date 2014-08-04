@@ -106,8 +106,6 @@ static void Command_Stopdemo_f(void);
 static void Command_StartMovie_f(void);
 static void Command_StopMovie_f(void);
 static void Command_Map_f(void);
-static void Command_Teleport_f(void);
-static void Command_RTeleport_f(void);
 static void Command_ResetCamera_f(void);
 
 static void Command_Addfile(void);
@@ -124,13 +122,11 @@ static void Command_Version_f(void);
 static void Command_ModDetails_f(void);
 #endif
 static void Command_ShowGametype_f(void);
-static void Command_JumpToAxis_f(void);
 FUNCNORETURN static ATTRNORETURN void Command_Quit_f(void);
 static void Command_Playintro_f(void);
 
 static void Command_Displayplayer_f(void);
 static void Command_Tunes_f(void);
-static void Command_Skynum_f(void);
 
 static void Command_ExitLevel_f(void);
 static void Command_Showmap_f(void);
@@ -258,7 +254,7 @@ consvar_t cv_usejoystick = {"use_joystick", "0", CV_SAVE|CV_CALL, usejoystick_co
 consvar_t cv_usejoystick2 = {"use_joystick2", "0", CV_SAVE|CV_CALL, usejoystick_cons_t,
 	I_InitJoystick2, 0, NULL, NULL, 0, 0, NULL};
 #endif
-#if (defined (LJOYSTICK) || defined (SDL))
+#if (defined (LJOYSTICK) || defined (HAVE_SDL))
 #ifdef LJOYSTICK
 consvar_t cv_joyport = {"joyport", "/dev/js0", CV_SAVE, joyport_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_joyport2 = {"joyport2", "/dev/js0", CV_SAVE, joyport_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL}; //Alam: for later
@@ -333,7 +329,7 @@ consvar_t cv_overtime = {"overtime", "Yes", CV_NETVAR, CV_YesNo, NULL, 0, NULL, 
 
 consvar_t cv_rollingdemos = {"rollingdemos", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
-consvar_t cv_timetic = {"timerres", "Normal", 0, timetic_cons_t, NULL, CV_SAVE, NULL, NULL, 0, 0, NULL}; // use tics in display
+consvar_t cv_timetic = {"timerres", "Normal", CV_SAVE, timetic_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL}; // use tics in display
 consvar_t cv_resetmusic = {"resetmusic", "No", CV_SAVE, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 static CV_PossibleValue_t pointlimit_cons_t[] = {{0, "MIN"}, {999999990, "MAX"}, {0, NULL}};
@@ -444,7 +440,6 @@ void D_RegisterServerCommands(void)
 	COM_AddCommand("suicide", Command_Suicide);
 
 	COM_AddCommand("gametype", Command_ShowGametype_f);
-	COM_AddCommand("jumptoaxis", Command_JumpToAxis_f);
 	COM_AddCommand("version", Command_Version_f);
 #ifdef UPDATE_ALERT
 	COM_AddCommand("mod_details", Command_ModDetails_f);
@@ -766,11 +761,13 @@ void D_RegisterClientCommands(void)
 	COM_AddCommand("scale", Command_Scale_f);
 	COM_AddCommand("gravflip", Command_Gravflip_f);
 	COM_AddCommand("hurtme", Command_Hurtme_f);
+	COM_AddCommand("jumptoaxis", Command_JumpToAxis_f);
 	COM_AddCommand("charability", Command_Charability_f);
 	COM_AddCommand("charspeed", Command_Charspeed_f);
 	COM_AddCommand("teleport", Command_Teleport_f);
 	COM_AddCommand("rteleport", Command_RTeleport_f);
 	COM_AddCommand("skynum", Command_Skynum_f);
+	COM_AddCommand("weather", Command_Weather_f);
 #ifdef _DEBUG
 	COM_AddCommand("causecfail", Command_CauseCfail_f);
 #endif
@@ -1382,149 +1379,6 @@ void D_SendPlayerConfig(void)
 static void Command_ResetCamera_f(void)
 {
 	P_ResetCamera(&players[displayplayer], &camera);
-}
-
-static void Command_RTeleport_f(void)
-{
-	fixed_t intx, inty, intz;
-	size_t i;
-	player_t *p = &players[consoleplayer];
-	subsector_t *ss;
-
-	if (!(cv_debug || devparm))
-	{
-		CONS_Printf(M_GetText("DEVMODE must be enabled."));
-		return;
-	}
-	if (netgame)
-	{
-		CONS_Printf(M_GetText("This only works in single player.\n"));
-		return;
-	}
-
-	if (COM_Argc() < 3 || COM_Argc() > 7)
-	{
-		CONS_Printf(M_GetText("rteleport -x <value> -y <value> -z <value>: relative teleport to a location\n"));
-		return;
-	}
-
-	if (!p->mo)
-		return;
-
-	i = COM_CheckParm("-x");
-	if (i)
-		intx = atoi(COM_Argv(i + 1));
-	else
-		intx = 0;
-
-	i = COM_CheckParm("-y");
-	if (i)
-		inty = atoi(COM_Argv(i + 1));
-	else
-		inty = 0;
-
-	ss = R_PointInSubsector(p->mo->x + intx*FRACUNIT, p->mo->y + inty*FRACUNIT);
-	if (!ss || ss->sector->ceilingheight - ss->sector->floorheight < p->mo->height)
-	{
-		CONS_Alert(CONS_NOTICE, M_GetText("Not a valid location.\n"));
-		return;
-	}
-	i = COM_CheckParm("-z");
-	if (i)
-	{
-		intz = atoi(COM_Argv(i + 1));
-		intz <<= FRACBITS;
-		intz += p->mo->z;
-		if (intz < ss->sector->floorheight)
-			intz = ss->sector->floorheight;
-		if (intz > ss->sector->ceilingheight - p->mo->height)
-			intz = ss->sector->ceilingheight - p->mo->height;
-	}
-	else
-		intz = 0;
-
-	CONS_Printf(M_GetText("Teleporting by %d, %d, %d...\n"), intx, inty, FixedInt((intz-p->mo->z)));
-
-	P_MapStart();
-	if (!P_TeleportMove(p->mo, p->mo->x+intx*FRACUNIT, p->mo->y+inty*FRACUNIT, intz))
-		CONS_Alert(CONS_WARNING, M_GetText("Unable to teleport to that spot!\n"));
-	else
-		S_StartSound(p->mo, sfx_mixup);
-	P_MapEnd();
-}
-
-static void Command_Teleport_f(void)
-{
-	fixed_t intx, inty, intz;
-	size_t i;
-	player_t *p = &players[consoleplayer];
-	subsector_t *ss;
-
-	if (!(cv_debug || devparm))
-	{
-		CONS_Printf(M_GetText("DEVMODE must be enabled."));
-		return;
-	}
-	if (netgame)
-	{
-		CONS_Printf(M_GetText("This only works in single player.\n"));
-		return;
-	}
-
-	if (COM_Argc() < 3 || COM_Argc() > 7)
-	{
-		CONS_Printf(M_GetText("teleport -x <value> -y <value> -z <value>: teleport to a location\n"));
-		return;
-	}
-
-	if (!p->mo)
-		return;
-
-	i = COM_CheckParm("-x");
-	if (i)
-		intx = atoi(COM_Argv(i + 1));
-	else
-	{
-		CONS_Alert(CONS_NOTICE, M_GetText("%s value not specified\n"), "X");
-		return;
-	}
-
-	i = COM_CheckParm("-y");
-	if (i)
-		inty = atoi(COM_Argv(i + 1));
-	else
-	{
-		CONS_Alert(CONS_NOTICE, M_GetText("%s value not specified\n"), "Y");
-		return;
-	}
-
-	ss = R_PointInSubsector(intx*FRACUNIT, inty*FRACUNIT);
-	if (!ss || ss->sector->ceilingheight - ss->sector->floorheight < p->mo->height)
-	{
-		CONS_Alert(CONS_NOTICE, M_GetText("Not a valid location.\n"));
-		return;
-	}
-	i = COM_CheckParm("-z");
-	if (i)
-	{
-		intz = atoi(COM_Argv(i + 1));
-		intz <<= FRACBITS;
-		if (intz < ss->sector->floorheight)
-			intz = ss->sector->floorheight;
-		if (intz > ss->sector->ceilingheight - p->mo->height)
-			intz = ss->sector->ceilingheight - p->mo->height;
-	}
-	else
-		intz = ss->sector->floorheight;
-
-	CONS_Printf(M_GetText("Teleporting to %d, %d, %d...\n"), intx, inty, FixedInt(intz));
-
-	P_MapStart();
-	if (!P_TeleportMove(p->mo, intx*FRACUNIT, inty*FRACUNIT, intz))
-		CONS_Alert(CONS_WARNING, M_GetText("Unable to teleport to that spot!\n"));
-	else
-		S_StartSound(p->mo, sfx_mixup);
-	P_MapEnd();
 }
 
 // ========================================================================
@@ -3359,23 +3213,6 @@ static void Command_ShowGametype_f(void)
 	CONS_Printf(M_GetText("Current gametype is %d\n"), gametype);
 }
 
-// Moves the NiGHTS player to another axis within the current mare
-// Only for development purposes.
-//
-static void Command_JumpToAxis_f(void)
-{
-	if (!cv_debug)
-		CONS_Printf(M_GetText("DEVMODE must be enabled.\n"));
-
-	if (COM_Argc() != 2)
-	{
-		CONS_Printf(M_GetText("jumptoaxis <axisnum>: Jump to axis within current mare.\n"));
-		return;
-	}
-
-	P_TransferToAxis(&players[consoleplayer], atoi(COM_Argv(1)));
-}
-
 /** Plays the intro.
   */
 static void Command_Playintro_f(void)
@@ -3924,32 +3761,6 @@ static void Got_ExitLevelcmd(UINT8 **cp, INT32 playernum)
 static void Command_Displayplayer_f(void)
 {
 	CONS_Printf(M_GetText("Displayplayer is %d\n"), displayplayer);
-}
-
-static void Command_Skynum_f(void)
-{
-	if (!cv_debug)
-	{
-		CONS_Printf(M_GetText("DEVMODE must be enabled.\n"));
-		CONS_Printf(M_GetText("If you want to change the sky interactively on a map, use the linedef executor feature instead.\n"));
-		return;
-	}
-
-	if (netgame || multiplayer)
-	{
-		CONS_Printf(M_GetText("This only works in single player.\n"));
-		return;
-	}
-
-	if (COM_Argc() != 2)
-	{
-		CONS_Printf(M_GetText("skynum <sky#>: change the sky\n"));
-		return;
-	}
-
-	CONS_Printf(M_GetText("Previewing sky %s...\n"), COM_Argv(1));
-
-	P_SetupLevelSky(atoi(COM_Argv(1)), false);
 }
 
 static void Command_Tunes_f(void)

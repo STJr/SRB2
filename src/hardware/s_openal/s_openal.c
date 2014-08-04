@@ -31,7 +31,7 @@ FILE* logstream = NULL;
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <stdio.h>
-#ifndef SDL // let not make a logstream here is we are inline the HW3D in the SDL binary
+#ifndef HAVE_SDL // let not make a logstream here is we are inline the HW3D in the SDL binary
 FILE* logstream = NULL;
 #endif
 #endif
@@ -49,7 +49,7 @@ FILE* logstream = NULL;
 #include "../hw3dsdrv.h"
 
 //#undef DEBUG_TO_FILE
-//#if defined ( SDL ) && !defined ( LOGMESSAGES )
+//#if defined ( HAVE_SDL ) && !defined ( LOGMESSAGES )
 #define DEBUG_TO_FILE
 //#endif
 

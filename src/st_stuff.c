@@ -759,7 +759,7 @@ static void ST_drawLevelTitle(void)
 	}
 
 	if (actnum)
-		V_DrawScaledPatch(SCX(ttlnumxpos), SCZ(zoney), V_NOSCALESTART, ttlnum);
+		V_DrawScaledPatch(ttlnumxpos, zoney, 0, ttlnum);
 
 	V_DrawLevelTitle(lvlttlxpos, lvlttly, 0, lvlttl);
 
@@ -1906,6 +1906,8 @@ static void ST_overlayDrawer(void)
 			V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(60), V_HUDTRANSHALF, M_GetText("You are a spectator."));
 			if (G_GametypeHasTeams())
 				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132), V_HUDTRANSHALF, M_GetText("Press Fire to be assigned to a team."));
+			else if (G_IsSpecialStage(gamemap) && useNightsSS)
+				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132), V_HUDTRANSHALF, M_GetText("You cannot join the game until the stage has ended."));
 			else
 				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132), V_HUDTRANSHALF, M_GetText("Press Fire to enter the game."));
 			V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(148), V_HUDTRANSHALF, M_GetText("Press F12 to watch another player."));

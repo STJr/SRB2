@@ -800,9 +800,8 @@ static void DebugPrintpacket(const char *header)
 			fprintfstring((char *)netbuffer->u.textcmd+1, netbuffer->u.textcmd[0]);
 			break;
 		case PT_SERVERCFG:
-			fprintf(debugfile, "    playermask %x playerslots %d clientnode %d serverplayer %d "
+			fprintf(debugfile, "    playerslots %d clientnode %d serverplayer %d "
 				"gametic %u gamestate %d gametype %d modifiedgame %d\n",
-				(UINT32)LONG(netbuffer->u.servercfg.playerdetected),
 				netbuffer->u.servercfg.totalslotnum, netbuffer->u.servercfg.clientnode,
 				netbuffer->u.servercfg.serverplayer, (UINT32)LONG(netbuffer->u.servercfg.gametic),
 				netbuffer->u.servercfg.gamestate, netbuffer->u.servercfg.gametype,

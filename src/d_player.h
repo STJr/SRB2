@@ -38,6 +38,7 @@ typedef enum
 	SF_HIRES            = 1<<3, // Draw the sprite 2x as small?
 	SF_NOSKID           = 1<<4, // No skid particles etc
 	SF_NOSPEEDADJUST    = 1<<5, // Skin-specific version of disablespeedadjust
+	SF_RUNONWATER       = 1<<6, // Run on top of water FOFs?
 } skinflags_t;
 
 //Primary and secondary skin abilities
@@ -55,7 +56,8 @@ typedef enum
 	CA_TELEKINESIS,
 	CA_FALLSWITCH,
 	CA_JUMPBOOST,
-	CA_AIRDRILL
+	CA_AIRDRILL,
+	CA_JUMPTHOK
 } charability_t;
 
 //Secondary skin abilities
@@ -147,7 +149,10 @@ typedef enum
 	PF_TAGGED            = 1<<27, // Player has been tagged and awaits the next round in hide and seek.
 	PF_TAGIT             = 1<<28, // The player is it! For Tag Mode
 
-	// free: 1<<29 through 1<<31
+	/*** misc ***/
+	PF_FORCESTRAFE       = 1<<29, // Turning inputs are translated into strafing inputs
+
+	// free: 1<<30 and 1<<31
 } pflags_t;
 
 typedef enum

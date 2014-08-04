@@ -395,7 +395,7 @@ static int mobj_set(lua_State *L)
 		return UNIMPLEMENTED;
 	case mobj_angle:
 		mo->angle = (angle_t)luaL_checkinteger(L, 3);
-		if (mo->player == &players[displayplayer])
+		if (mo->player == &players[consoleplayer])
 			localangle = mo->angle;
 		else if (mo->player == &players[secondarydisplayplayer])
 			localangle2 = mo->angle;

@@ -32,12 +32,12 @@
 //                                                       STANDARD DLL EXPORTS
 // ==========================================================================
 
-#ifdef SDL
+#ifdef HAVE_SDL
 #undef VID_X11
 #endif
 
 EXPORT boolean HWRAPI(Init) (I_Error_t ErrorFunction);
-#ifndef SDL
+#ifndef HAVE_SDL
 EXPORT void HWRAPI(Shutdown) (void);
 #endif
 #ifdef _WINDOWS
@@ -116,7 +116,7 @@ struct hwdriver_s
 	HookXwin            pfnHookXwin;
 	GetRenderer         pfnGetRenderer;
 #endif
-#ifndef SDL
+#ifndef HAVE_SDL
 	Shutdown            pfnShutdown;
 #endif
 #ifdef SHUFFLE

@@ -56,9 +56,11 @@ INT32 P_FindSpecialLineFromTag(INT16 special, INT16 tag, INT32 start);
 INT32 P_FindMinSurroundingLight(sector_t *sector, INT32 max);
 
 void P_SetupSignExit(player_t *player);
+boolean P_IsFlagAtBase(mobjtype_t flag);
 
 void P_SwitchWeather(INT32 weathernum);
 
+boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller);
 void P_LinedefExecute(INT16 tag, mobj_t *actor, sector_t *caller);
 void P_ChangeSectorTag(UINT32 sector, INT16 newtag);
 

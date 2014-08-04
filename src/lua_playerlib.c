@@ -267,7 +267,7 @@ static int player_get(lua_State *L)
 	else if (fastcmp(field,"drilldelay"))
 		lua_pushinteger(L, plr->drilldelay);
 	else if (fastcmp(field,"bonustime"))
-		lua_pushinteger(L, plr->bonustime);
+		lua_pushboolean(L, plr->bonustime);
 	else if (fastcmp(field,"capsule"))
 		LUA_PushUserdata(L, plr->capsule, META_MOBJ);
 	else if (fastcmp(field,"mare"))
@@ -345,14 +345,9 @@ static int player_set(lua_State *L)
 		return luaL_error(L, "Do not alter player_t in HUD rendering code!");
 
 	if (fastcmp(field,"mo")) {
-		if (!lua_isnil(L, 3))
-		{
-			plr->mo->player = NULL;
-			plr->mo = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
-			plr->mo->player = plr;
-		}
-		else
-			return luaL_error(L, "player.mo should not be nil!");
+		mobj_t *newmo = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
+		plr->mo->player = NULL; // remove player pointer from old mobj
+		(newmo->player = plr)->mo = newmo; // set player pointer for new mobj, and set new mobj as the player's mobj
 	}
 	else if (fastcmp(field,"cmd"))
 		return NOSET;
@@ -368,7 +363,7 @@ static int player_set(lua_State *L)
 		plr->bob = (fixed_t)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"aiming")) {
 		plr->aiming = (angle_t)luaL_checkinteger(L, 3);
-		if (plr == &players[displayplayer])
+		if (plr == &players[consoleplayer])
 			localaiming = plr->aiming;
 		else if (plr == &players[secondarydisplayplayer])
 			localaiming2 = plr->aiming;
@@ -392,7 +387,7 @@ static int player_set(lua_State *L)
 	else if (fastcmp(field,"flashpal"))
 		plr->flashpal = (UINT16)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"skincolor"))
-		plr->skincolor = (UINT8)luaL_checkinteger(L, 3);
+		plr->skincolor = ((UINT8)luaL_checkinteger(L, 3)) % MAXSKINCOLORS;
 	else if (fastcmp(field,"score"))
 		plr->score = (UINT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"dashspeed"))
@@ -623,7 +618,7 @@ static int power_get(lua_State *L)
 {
 	UINT16 *powers = *((UINT16 **)luaL_checkudata(L, 1, META_POWERS));
 	powertype_t p = luaL_checkinteger(L, 2);
-	if (p > NUMPOWERS)
+	if (p >= NUMPOWERS)
 		return luaL_error(L, LUA_QL("powertype_t") " cannot be %u", p);
 	lua_pushinteger(L, powers[p]);
 	return 1;
@@ -635,7 +630,7 @@ static int power_set(lua_State *L)
 	UINT16 *powers = *((UINT16 **)luaL_checkudata(L, 1, META_POWERS));
 	powertype_t p = luaL_checkinteger(L, 2);
 	UINT16 i = (UINT16)luaL_checkinteger(L, 3);
-	if (p > NUMPOWERS)
+	if (p >= NUMPOWERS)
 		return luaL_error(L, LUA_QL("powertype_t") " cannot be %u", p);
 	if (hud_running)
 		return luaL_error(L, "Do not alter player_t in HUD rendering code!");

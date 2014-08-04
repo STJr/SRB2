@@ -48,6 +48,7 @@
 
 #ifdef HAVE_BLUA
 #include "lua_hud.h"
+#include "lua_hook.h"
 #endif
 
 // coords are scaled
@@ -513,6 +514,11 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 			}
 		}
 	}
+
+#ifdef HAVE_BLUA
+	if (LUAh_PlayerMsg(playernum, target, flags, msg))
+		return;
+#endif
 
 	// If it's a CSAY, just CECHO and be done with it.
 	if (flags & HU_CSAY)

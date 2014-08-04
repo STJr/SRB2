@@ -128,8 +128,13 @@ boolean P_PlayerInPain(player_t *player);
 void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor);
 void P_ResetPlayer(player_t *player);
 boolean P_IsLocalPlayer(player_t *player);
+
+boolean P_IsObjectInGoop(mobj_t *mo);
 boolean P_IsObjectOnGround(mobj_t *mo);
 boolean P_IsObjectOnGroundIn(mobj_t *mo, sector_t *sec);
+boolean P_InSpaceSector(mobj_t *mo);
+boolean P_InQuicksand(mobj_t *mo);
+
 void P_SetObjectMomZ(mobj_t *mo, fixed_t value, boolean relative);
 void P_RestoreMusic(player_t *player);
 void P_SpawnShieldOrb(player_t *player);
@@ -141,8 +146,10 @@ void P_GiveEmerald(boolean spawnObj);
 void P_ResetScore(player_t *player);
 boolean P_MenuActivePause(void);
 
+void P_DoJumpShield(player_t *player);
 void P_BlackOw(player_t *player);
 void P_ElementalFireTrail(player_t *player);
+
 void P_DoPityCheck(player_t *player);
 void P_PlayerThink(player_t *player);
 void P_PlayerAfterThink(player_t *player);
@@ -164,6 +171,9 @@ UINT8 P_FindLowestMare(void);
 void P_FindEmerald(void);
 void P_TransferToAxis(player_t *player, INT32 axisnum);
 boolean P_PlayerMoving(INT32 pnum);
+void P_SpawnThokMobj(player_t *player);
+void P_SpawnSpinMobj(player_t *player, mobjtype_t type);
+void P_Telekinesis(player_t *player, fixed_t thrust, fixed_t range);
 
 void P_PlayLivesJingle(player_t *player);
 #define P_PlayRinglossSound(s)	S_StartSound(s, (mariomode) ? sfx_mario8 : sfx_altow1 + P_RandomKey(4));
@@ -303,6 +313,8 @@ void P_RadiusAttack(mobj_t *spot, mobj_t *source, fixed_t damagedist);
 
 fixed_t P_FloorzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height);
 boolean PIT_PushableMoved(mobj_t *thing);
+
+void P_DoSpring(mobj_t *spring, mobj_t *object);
 
 //
 // P_SETUP

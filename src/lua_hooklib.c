@@ -14,6 +14,7 @@
 #ifdef HAVE_BLUA
 #include "doomstat.h"
 #include "p_mobj.h"
+#include "g_game.h"
 #include "r_things.h"
 #include "b_bot.h"
 #include "z_zone.h"
@@ -43,9 +44,15 @@ const char *const hookNames[hook_MAX+1] = {
 	"MobjDeath",
 	"BossDeath",
 	"MobjRemoved",
+	"JumpSpecial",
+	"AbilitySpecial",
+	"SpinSpecial",
+	"JumpSpinSpecial",
 	"BotTiccmd",
 	"BotAI",
 	"LinedefExecute",
+	"PlayerMsg",
+	"HurtMsg",
 	NULL
 };
 
@@ -316,6 +323,42 @@ boolean LUAh_MobjHook(mobj_t *mo, enum hook which)
 	// the stack should now be empty.
 
 	lua_gc(gL, LUA_GCSTEP, 3);
+	return hooked;
+}
+
+boolean LUAh_PlayerHook(player_t *plr, enum hook which)
+{
+	boolean hooked = false;
+	if (!gL || !(hooksAvailable[which/8] & (1<<(which%8))))
+		return false;
+
+	// clear the stack (just in case)
+	lua_pop(gL, -1);
+
+	// hook table
+	lua_getfield(gL, LUA_REGISTRYINDEX, "hook");
+	I_Assert(lua_istable(gL, -1));
+	lua_rawgeti(gL, -1, which);
+	lua_remove(gL, -2);
+	I_Assert(lua_istable(gL, -1));
+
+	LUA_PushUserdata(gL, plr, META_PLAYER);
+
+	lua_pushnil(gL);
+	while (lua_next(gL, -3) != 0) {
+		lua_pushvalue(gL, -3); // player
+		if (lua_pcall(gL, 1, 1, 0)) { // pops hook function, player, pushes 1 return result
+			CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL,-1));
+			lua_pop(gL, 1);
+			continue;
+		}
+		if (lua_toboolean(gL, -1)) // if return true,
+			hooked = true; // override vanilla behavior
+		lua_pop(gL, 1); // pop return value
+	}
+
+	lua_pop(gL, -1);
+	lua_gc(gL, LUA_GCSTEP, 1);
 	return hooked;
 }
 
@@ -860,6 +903,101 @@ boolean LUAh_LinedefExecute(line_t *line, mobj_t *mo)
 	lua_pop(gL, -1);
 	lua_gc(gL, LUA_GCSTEP, 1);
 	return true;
+}
+
+// Hook for PlayerMsg -Red
+boolean LUAh_PlayerMsg(int source, int target, int flags, char *msg)
+{
+	boolean handled = false;
+
+	if (!gL || !(hooksAvailable[hook_PlayerMsg/8] & (1<<(hook_PlayerMsg%8))))
+		return false;
+
+	lua_getfield(gL, LUA_REGISTRYINDEX, "hook");
+	I_Assert(lua_istable(gL, -1));
+	lua_rawgeti(gL, -1, hook_PlayerMsg);
+	lua_remove(gL, -2);
+	I_Assert(lua_istable(gL, -1));
+
+	LUA_PushUserdata(gL, &players[source], META_PLAYER); // Source player
+
+	if (flags & 2 /*HU_CSAY*/) { // csay TODO: make HU_CSAY accessible outside hu_stuff.c
+		lua_pushinteger(gL, 3); // type
+		lua_pushnil(gL); // target
+	} else if (target == -1) { // sayteam
+		lua_pushinteger(gL, 1); // type
+		lua_pushnil(gL); // target
+	} else if (target == 0) { // say
+		lua_pushinteger(gL, 0); // type
+		lua_pushnil(gL); // target
+	} else { // sayto
+		lua_pushinteger(gL, 2); // type
+		LUA_PushUserdata(gL, &players[target-1], META_PLAYER); // target
+	}
+
+	lua_pushstring(gL, msg); // msg
+
+	lua_pushnil(gL);
+
+	while (lua_next(gL, -6)) {
+		lua_pushvalue(gL, -6); // source
+		lua_pushvalue(gL, -6); // type
+		lua_pushvalue(gL, -6); // target
+		lua_pushvalue(gL, -6); // msg
+		if (lua_pcall(gL, 4, 1, 0)) {
+			CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL,-1));
+			lua_pop(gL, 1);
+			continue;
+		}
+		if (lua_toboolean(gL, -1))
+			handled = true;
+		lua_pop(gL, 1); // pop return value
+	}
+	lua_pop(gL, 4); // pop arguments and mobjtype table
+
+	lua_gc(gL, LUA_GCSTEP, 1);
+	return handled;
+}
+
+// Hook for hurt messages -Red
+// The internal name is DeathMsg, but the API name is "HurtMsg". Keep that in mind. (Should this be fixed at some point?)
+// @TODO This hook should be fixed to take mobj type at the addHook parameter to compare to inflictor. (I couldn't get this to work without crashing)
+boolean LUAh_DeathMsg(player_t *player, mobj_t *inflictor, mobj_t *source)
+{
+	boolean handled = false;
+
+	if (!gL || !(hooksAvailable[hook_DeathMsg/8] & (1<<(hook_DeathMsg%8))))
+		return false;
+
+	lua_getfield(gL, LUA_REGISTRYINDEX, "hook");
+	I_Assert(lua_istable(gL, -1));
+	lua_rawgeti(gL, -1, hook_DeathMsg);
+	lua_remove(gL, -2);
+	I_Assert(lua_istable(gL, -1));
+
+	LUA_PushUserdata(gL, player, META_PLAYER); // Player
+	LUA_PushUserdata(gL, inflictor, META_MOBJ); // Inflictor
+	LUA_PushUserdata(gL, source, META_MOBJ); // Source
+
+	lua_pushnil(gL);
+
+	while (lua_next(gL, -5)) {
+		lua_pushvalue(gL, -5); // player
+		lua_pushvalue(gL, -5); // inflictor
+		lua_pushvalue(gL, -5); // source
+		if (lua_pcall(gL, 3, 1, 0)) {
+			CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL,-1));
+			lua_pop(gL, 1);
+			continue;
+		}
+		if (lua_toboolean(gL, -1))
+			handled = true;
+		lua_pop(gL, 1); // pop return value
+	}
+	lua_pop(gL, 3); // pop arguments and mobjtype table
+
+	lua_gc(gL, LUA_GCSTEP, 1);
+	return handled;
 }
 
 #endif

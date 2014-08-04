@@ -16,6 +16,7 @@
 #include "g_game.h"
 #include "s_sound.h"
 
+#include "r_local.h"
 #include "p_local.h"
 #include "p_setup.h"
 #include "d_net.h"
@@ -336,6 +337,22 @@ void Command_Hurtme_f(void)
 	P_DamageMobj(players[consoleplayer].mo, NULL, NULL, atoi(COM_Argv(1)));
 }
 
+// Moves the NiGHTS player to another axis within the current mare
+void Command_JumpToAxis_f(void)
+{
+	REQUIRE_DEVMODE;
+	REQUIRE_INLEVEL;
+	REQUIRE_SINGLEPLAYER;
+
+	if (COM_Argc() != 2)
+	{
+		CONS_Printf(M_GetText("jumptoaxis <axisnum>: Jump to axis within current mare.\n"));
+		return;
+	}
+
+	P_TransferToAxis(&players[consoleplayer], atoi(COM_Argv(1)));
+}
+
 void Command_Charability_f(void)
 {
 	REQUIRE_DEVMODE;
@@ -382,6 +399,171 @@ void Command_Charspeed_f(void)
 		players[consoleplayer].actionspd = atoi(COM_Argv(2))<<FRACBITS;
 	else
 		CONS_Printf(M_GetText("charspeed <normalspeed/runspeed/thrustfactor/accelstart/acceleration/actionspd> <value>: set character speed\n"));
+}
+
+void Command_RTeleport_f(void)
+{
+	fixed_t intx, inty, intz;
+	size_t i;
+	player_t *p = &players[consoleplayer];
+	subsector_t *ss;
+
+	REQUIRE_DEVMODE;
+	REQUIRE_INLEVEL;
+	REQUIRE_SINGLEPLAYER;
+
+	if (COM_Argc() < 3 || COM_Argc() > 7)
+	{
+		CONS_Printf(M_GetText("rteleport -x <value> -y <value> -z <value>: relative teleport to a location\n"));
+		return;
+	}
+
+	if (!p->mo)
+		return;
+
+	i = COM_CheckParm("-x");
+	if (i)
+		intx = atoi(COM_Argv(i + 1));
+	else
+		intx = 0;
+
+	i = COM_CheckParm("-y");
+	if (i)
+		inty = atoi(COM_Argv(i + 1));
+	else
+		inty = 0;
+
+	ss = R_PointInSubsector(p->mo->x + intx*FRACUNIT, p->mo->y + inty*FRACUNIT);
+	if (!ss || ss->sector->ceilingheight - ss->sector->floorheight < p->mo->height)
+	{
+		CONS_Alert(CONS_NOTICE, M_GetText("Not a valid location.\n"));
+		return;
+	}
+	i = COM_CheckParm("-z");
+	if (i)
+	{
+		intz = atoi(COM_Argv(i + 1));
+		intz <<= FRACBITS;
+		intz += p->mo->z;
+		if (intz < ss->sector->floorheight)
+			intz = ss->sector->floorheight;
+		if (intz > ss->sector->ceilingheight - p->mo->height)
+			intz = ss->sector->ceilingheight - p->mo->height;
+	}
+	else
+		intz = p->mo->z;
+
+	CONS_Printf(M_GetText("Teleporting by %d, %d, %d...\n"), intx, inty, FixedInt((intz-p->mo->z)));
+
+	P_MapStart();
+	if (!P_TeleportMove(p->mo, p->mo->x+intx*FRACUNIT, p->mo->y+inty*FRACUNIT, intz))
+		CONS_Alert(CONS_WARNING, M_GetText("Unable to teleport to that spot!\n"));
+	else
+		S_StartSound(p->mo, sfx_mixup);
+	P_MapEnd();
+}
+
+void Command_Teleport_f(void)
+{
+	fixed_t intx, inty, intz;
+	size_t i;
+	player_t *p = &players[consoleplayer];
+	subsector_t *ss;
+
+	REQUIRE_DEVMODE;
+	REQUIRE_INLEVEL;
+	REQUIRE_SINGLEPLAYER;
+
+	if (COM_Argc() < 3 || COM_Argc() > 7)
+	{
+		CONS_Printf(M_GetText("teleport -x <value> -y <value> -z <value>: teleport to a location\n"));
+		return;
+	}
+
+	if (!p->mo)
+		return;
+
+	i = COM_CheckParm("-x");
+	if (i)
+		intx = atoi(COM_Argv(i + 1));
+	else
+	{
+		CONS_Alert(CONS_NOTICE, M_GetText("%s value not specified\n"), "X");
+		return;
+	}
+
+	i = COM_CheckParm("-y");
+	if (i)
+		inty = atoi(COM_Argv(i + 1));
+	else
+	{
+		CONS_Alert(CONS_NOTICE, M_GetText("%s value not specified\n"), "Y");
+		return;
+	}
+
+	ss = R_PointInSubsector(intx*FRACUNIT, inty*FRACUNIT);
+	if (!ss || ss->sector->ceilingheight - ss->sector->floorheight < p->mo->height)
+	{
+		CONS_Alert(CONS_NOTICE, M_GetText("Not a valid location.\n"));
+		return;
+	}
+	i = COM_CheckParm("-z");
+	if (i)
+	{
+		intz = atoi(COM_Argv(i + 1));
+		intz <<= FRACBITS;
+		if (intz < ss->sector->floorheight)
+			intz = ss->sector->floorheight;
+		if (intz > ss->sector->ceilingheight - p->mo->height)
+			intz = ss->sector->ceilingheight - p->mo->height;
+	}
+	else
+		intz = ss->sector->floorheight;
+
+	CONS_Printf(M_GetText("Teleporting to %d, %d, %d...\n"), intx, inty, FixedInt(intz));
+
+	P_MapStart();
+	if (!P_TeleportMove(p->mo, intx*FRACUNIT, inty*FRACUNIT, intz))
+		CONS_Alert(CONS_WARNING, M_GetText("Unable to teleport to that spot!\n"));
+	else
+		S_StartSound(p->mo, sfx_mixup);
+	P_MapEnd();
+}
+
+void Command_Skynum_f(void)
+{
+	REQUIRE_DEVMODE;
+	REQUIRE_INLEVEL;
+	REQUIRE_SINGLEPLAYER;
+
+	if (COM_Argc() != 2)
+	{
+		CONS_Printf(M_GetText("skynum <sky#>: change the sky\n"));
+		CONS_Printf(M_GetText("Current sky is %d\n"), levelskynum);
+		return;
+	}
+
+	CONS_Printf(M_GetText("Previewing sky %s...\n"), COM_Argv(1));
+
+	P_SetupLevelSky(atoi(COM_Argv(1)), false);
+}
+
+void Command_Weather_f(void)
+{
+	REQUIRE_DEVMODE;
+	REQUIRE_INLEVEL;
+	REQUIRE_SINGLEPLAYER;
+
+	if (COM_Argc() != 2)
+	{
+		CONS_Printf(M_GetText("weather <weather#>: change the weather\n"));
+		CONS_Printf(M_GetText("Current weather is %d\n"), curWeather);
+		return;
+	}
+
+	CONS_Printf(M_GetText("Previewing weather %s...\n"), COM_Argv(1));
+
+	P_SwitchWeather(atoi(COM_Argv(1)));
 }
 
 #ifdef _DEBUG
@@ -794,13 +976,6 @@ void OP_NightsObjectplace(player_t *player)
 		}
 		if (!OP_HeightOkay(player, false))
 			return;
-
-		angle = (UINT16)((360-player->anotherflyangle) % 360);
-		if (angle > 90 && angle < 270)
-		{
-			angle += 180;
-			angle %= 360;
-		}
 
 		if (player->mo->target->flags & MF_AMBUSH)
 			angle = (UINT16)player->anotherflyangle;
