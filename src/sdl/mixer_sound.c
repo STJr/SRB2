@@ -381,7 +381,7 @@ INT32 I_StartSound(sfxenum_t id, UINT8 vol, UINT8 sep, UINT8 pitch, UINT8 priori
 	UINT8 volume = (((UINT16)vol + 1) * (UINT16)sfx_volume) / 62; // (256 * 31) / 62 == 127
 	INT32 handle = Mix_PlayChannel(-1, S_sfx[id].data, 0);
 	Mix_Volume(handle, volume);
-	Mix_SetPanning(handle, min((UINT16)sep<<1, 0xff), min((UINT16)(0xff-sep)<<1, 0xff));
+	Mix_SetPanning(handle, min((UINT16)(0xff-sep)<<1, 0xff), min((UINT16)(sep)<<1, 0xff));
 	(void)pitch; // Mixer can't handle pitch
 	(void)priority; // priority and channel management is handled by SRB2...
 	return handle;
@@ -401,7 +401,7 @@ void I_UpdateSoundParams(INT32 handle, UINT8 vol, UINT8 sep, UINT8 pitch)
 {
 	UINT8 volume = (((UINT16)vol + 1) * (UINT16)sfx_volume) / 62; // (256 * 31) / 62 == 127
 	Mix_Volume(handle, volume);
-	Mix_SetPanning(handle, min((UINT16)sep<<1, 0xff), min((UINT16)(0xff-sep)<<1, 0xff));
+	Mix_SetPanning(handle, min((UINT16)(0xff-sep)<<1, 0xff), min((UINT16)(sep)<<1, 0xff));
 	(void)pitch;
 }
 
