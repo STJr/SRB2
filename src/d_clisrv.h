@@ -267,14 +267,17 @@ typedef struct
 	UINT8 clientnode;
 	UINT8 gamestate;
 
-	UINT32 playerdetected; // playeringame vector in bit field
+	// 0xFF == not in game; else player skin num
+	UINT8 playerskins[MAXPLAYERS];
+	UINT8 playercolor[MAXPLAYERS];
+
 	UINT8 gametype;
 	UINT8 modifiedgame;
 	SINT8 adminplayer; // needs to be signed
 
 	char server_context[8]; // unique context id, generated at server startup.
 
-	UINT8 netcvarstates[0];
+	UINT8 varlengthinputs[0]; // playernames and netvars
 } ATTRPACK serverconfig_pak;
 
 typedef struct {

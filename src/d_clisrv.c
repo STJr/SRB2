@@ -1041,6 +1041,40 @@ static void GetPackets(void);
 
 static cl_mode_t cl_mode = cl_searching;
 
+// Player name send/load
+
+static void CV_SavePlayerNames(UINT8 **p)
+{
+	INT32 i = 0;
+	// Players in game only.
+	for (; i < MAXPLAYERS; ++i)
+	{
+		if (!playeringame[i])
+		{
+			WRITEUINT8(*p, 0);
+			continue;
+		}
+		WRITESTRING(*p, player_names[i]);
+	}
+}
+
+static void CV_LoadPlayerNames(UINT8 **p)
+{
+	INT32 i = 0;
+	char tmp_name[MAXPLAYERNAME+1];
+	tmp_name[MAXPLAYERNAME] = 0;
+
+	for (; i < MAXPLAYERS; ++i)
+	{
+		READSTRING(*p, tmp_name);
+		if (tmp_name[0] == 0)
+			continue;
+		if (tmp_name[MAXPLAYERNAME]) // overflow detected
+			I_Error("Received bad server config packet when trying to join");
+		memcpy(player_names[i], tmp_name, MAXPLAYERNAME+1);
+	}
+}
+
 #ifdef CLIENT_LOADINGSCREEN
 //
 // CL_DrawConnectionStatus
@@ -1070,6 +1104,7 @@ static inline void CL_DrawConnectionStatus(void)
 
 		switch (cl_mode)
 		{
+#ifdef JOININGAME
 			case cl_downloadsavegame:
 				cltext = M_GetText("Downloading game state...");
 				Net_GetNetStat();
@@ -1078,6 +1113,7 @@ static inline void CL_DrawConnectionStatus(void)
 				V_DrawRightAlignedString(BASEVIDWIDTH/2+128, BASEVIDHEIGHT-24, V_20TRANS|V_MONOSPACE,
 					va("%3.1fK/s ", ((double)getbps)/1024));
 				break;
+#endif
 			case cl_askjoin:
 			case cl_waitjoinresponse:
 				cltext = M_GetText("Requesting to join...");
@@ -1257,27 +1293,38 @@ static boolean SV_SendServerConfig(INT32 node)
 	INT32 i;
 	UINT8 *p, *op;
 	boolean waspacketsent;
-	UINT32 playermask = 0;
 
 	netbuffer->packettype = PT_SERVERCFG;
-	for (i = 0; i < MAXPLAYERS; i++)
-		if (playeringame[i])
-			playermask |= 1<<i;
 
 	netbuffer->u.servercfg.version = VERSION;
 	netbuffer->u.servercfg.subversion = SUBVERSION;
 
 	netbuffer->u.servercfg.serverplayer = (UINT8)serverplayer;
 	netbuffer->u.servercfg.totalslotnum = (UINT8)(doomcom->numslots);
-	netbuffer->u.servercfg.playerdetected = LONG(playermask);
 	netbuffer->u.servercfg.gametic = (tic_t)LONG(gametic);
 	netbuffer->u.servercfg.clientnode = (UINT8)node;
 	netbuffer->u.servercfg.gamestate = (UINT8)gamestate;
 	netbuffer->u.servercfg.gametype = (UINT8)gametype;
 	netbuffer->u.servercfg.modifiedgame = (UINT8)modifiedgame;
 	netbuffer->u.servercfg.adminplayer = (SINT8)adminplayer;
+
+	// we fill these structs with FFs so that any players not in game get sent as 0xFFFF
+	// which is nice and easy for us to detect
+	memset(netbuffer->u.servercfg.playerskins, 0xFF, sizeof(netbuffer->u.servercfg.playerskins));
+	memset(netbuffer->u.servercfg.playercolor, 0xFF, sizeof(netbuffer->u.servercfg.playercolor));
+
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (!playeringame[i])
+			continue;
+		netbuffer->u.servercfg.playerskins[i] = (UINT8)players[i].skin;
+		netbuffer->u.servercfg.playercolor[i] = (UINT8)players[i].skincolor;
+	}
+
 	memcpy(netbuffer->u.servercfg.server_context, server_context, 8);
-	op = p = netbuffer->u.servercfg.netcvarstates;
+	op = p = netbuffer->u.servercfg.varlengthinputs;
+
+	CV_SavePlayerNames(&p);
 	CV_SaveNetVars(&p);
 	{
 		const size_t len = sizeof (serverconfig_pak) + (size_t)(p - op);
@@ -2063,7 +2110,7 @@ static void Command_connect(void)
 		return;
 	}
 
-	if (Playing())
+	if (Playing() || titledemo)
 	{
 		CONS_Printf(M_GetText("You cannot connect while in a game. End this game first.\n"));
 		return;
@@ -3116,6 +3163,11 @@ static void HandleConnect(SINT8 node)
 			SV_AddWaitingPlayers();
 			player_joining = true;
 		}
+#else
+#ifndef NONET
+		// I guess we have no use for this if we aren't doing mid-level joins?
+		(void)newnode;
+#endif
 #endif
 	}
 }
@@ -3248,7 +3300,6 @@ FILESTAMP
 				{
 					INT32 j;
 					UINT8 *scp;
-					UINT32 playermask = 0;
 
 					if (server && serverrunning && node != servernode)
 					{ // but wait I thought I'm the server?
@@ -3283,11 +3334,20 @@ FILESTAMP
 #endif
 					DEBFILE(va("Server accept join gametic=%u mynode=%d\n", gametic, mynode));
 
-					playermask = LONG(netbuffer->u.servercfg.playerdetected);
+					memset(playeringame, 0, sizeof(playeringame));
 					for (j = 0; j < MAXPLAYERS; j++)
-						playeringame[j] = (playermask & (1<<j)) != 0;
+					{
+						if (netbuffer->u.servercfg.playerskins[j] == 0xFF
+						 && netbuffer->u.servercfg.playercolor[j] == 0xFF)
+							continue; // not in game
 
-					scp = netbuffer->u.servercfg.netcvarstates;
+						playeringame[j] = true;
+						SetPlayerSkinByNum(j, (INT32)netbuffer->u.servercfg.playerskins[j]);
+						players[j].skincolor = netbuffer->u.servercfg.playercolor[j];
+					}
+
+					scp = netbuffer->u.servercfg.varlengthinputs;
+					CV_LoadPlayerNames(&scp);
 					CV_LoadNetVars(&scp);
 #ifdef JOININGAME
 					if (netbuffer->u.servercfg.gamestate == GS_LEVEL/* ||

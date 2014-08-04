@@ -33,10 +33,15 @@ enum hook {
 	hook_MobjDeath,
 	hook_BossDeath,
 	hook_MobjRemoved,
+	hook_JumpSpecial,
+	hook_AbilitySpecial,
+	hook_SpinSpecial,
+	hook_JumpSpinSpecial,
 	hook_BotTiccmd,
 	hook_BotAI,
 	hook_LinedefExecute,
 	hook_PlayerMsg,
+	hook_DeathMsg,
 
 	hook_MAX // last hook
 };
@@ -47,6 +52,7 @@ void LUAh_MapLoad(void); // Hook for map load
 void LUAh_PlayerJoin(int playernum); // Hook for Got_AddPlayer
 void LUAh_ThinkFrame(void); // Hook for frame (after mobj and player thinkers)
 boolean LUAh_MobjHook(mobj_t *mo, enum hook which);
+boolean LUAh_PlayerHook(player_t *plr, enum hook which);
 #define LUAh_MobjSpawn(mo) LUAh_MobjHook(mo, hook_MobjSpawn) // Hook for P_SpawnMobj by mobj type
 UINT8 LUAh_MobjCollide(mobj_t *thing1, mobj_t *thing2); // Hook for PIT_CheckThing by (thing) mobj type
 UINT8 LUAh_MobjMoveCollide(mobj_t *thing1, mobj_t *thing2); // Hook for PIT_CheckThing by (tmthing) mobj type
@@ -59,9 +65,14 @@ boolean LUAh_MobjDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32
 boolean LUAh_MobjDeath(mobj_t *target, mobj_t *inflictor, mobj_t *source); // Hook for P_KillMobj by mobj type
 #define LUAh_BossDeath(mo) LUAh_MobjHook(mo, hook_BossDeath) // Hook for A_BossDeath by mobj type
 #define LUAh_MobjRemoved(mo) LUAh_MobjHook(mo, hook_MobjRemoved) // Hook for P_RemoveMobj by mobj type
+#define LUAh_JumpSpecial(player) LUAh_PlayerHook(player, hook_JumpSpecial) // Hook for P_DoJumpStuff (Any-jumping)
+#define LUAh_AbilitySpecial(player) LUAh_PlayerHook(player, hook_AbilitySpecial) // Hook for P_DoJumpStuff (Double-jumping)
+#define LUAh_SpinSpecial(player) LUAh_PlayerHook(player, hook_SpinSpecial) // Hook for P_DoSpinDash (Spin button effect)
+#define LUAh_JumpSpinSpecial(player) LUAh_PlayerHook(player, hook_JumpSpinSpecial) // Hook for P_DoJumpStuff (Spin button effect (mid-air))
 boolean LUAh_BotTiccmd(player_t *bot, ticcmd_t *cmd); // Hook for B_BuildTiccmd
 boolean LUAh_BotAI(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd); // Hook for B_BuildTailsTiccmd by skin name
 boolean LUAh_LinedefExecute(line_t *line, mobj_t *mo); // Hook for linedef executors
 boolean LUAh_PlayerMsg(int source, int target, int flags, char *msg); // Hook for chat messages
+boolean LUAh_DeathMsg(player_t *player, mobj_t *inflictor, mobj_t *source); // Hook for hurt messages
 
 #endif

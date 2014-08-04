@@ -43,6 +43,7 @@ boolean P_PathTraverse(fixed_t px1, fixed_t py1, fixed_t px2, fixed_t py2,
 
 FUNCMATH fixed_t P_AproxDistance(fixed_t dx, fixed_t dy);
 void P_ClosestPointOnLine(fixed_t x, fixed_t y, line_t *line, vertex_t *result);
+void P_ClosestPointOnLine3D(fixed_t x, fixed_t y, fixed_t z, line_t *line, vertex_t *result);
 INT32 P_PointOnLineSide(fixed_t x, fixed_t y, line_t *line);
 void P_MakeDivline(line_t *li, divline_t *dl);
 void P_CameraLineOpening(line_t *plinedef);
@@ -53,7 +54,7 @@ void P_SetPrecipitationThingPosition(precipmobj_t *thing);
 void P_CreatePrecipSecNodeList(precipmobj_t *thing, fixed_t x,fixed_t y);
 boolean P_SceneryTryMove(mobj_t *thing, fixed_t x, fixed_t y);
 
-extern fixed_t opentop, openbottom, openrange, lowfloor;
+extern fixed_t opentop, openbottom, openrange, lowfloor, highceiling;
 
 void P_LineOpening(line_t *plinedef);
 

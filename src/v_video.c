@@ -75,6 +75,10 @@ consvar_t cv_grdynamiclighting = {"gr_dynamiclighting", "On", CV_SAVE, CV_OnOff,
 consvar_t cv_grstaticlighting  = {"gr_staticlighting", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_grcoronas = {"gr_coronas", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_grcoronasize = {"gr_coronasize", "1", CV_SAVE| CV_FLOAT, 0, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+static CV_PossibleValue_t CV_MD2[] = {{0, "Off"}, {1, "On"}, {2, "Old"}, {0, NULL}};
+// console variables in development
+consvar_t cv_grmd2 = {"gr_md2", "Off", CV_SAVE, CV_MD2, NULL, 0, NULL, NULL, 0, 0, NULL};
 #endif
 
 const UINT8 gammatable[5][256] =
@@ -191,7 +195,7 @@ const char *R_GetPalname(UINT16 num)
 	static char palname[9];
 	char newpal[9] = "PLAYPAL";
 
-	if (num <= 9999)
+	if (num > 0 && num <= 10000)
 		snprintf(newpal, 8, "PAL%04u", num-1);
 
 	strncpy(palname, newpal, 8);
@@ -926,11 +930,9 @@ void V_DrawPatchFill(patch_t *pat)
 //
 void V_DrawFadeScreen(void)
 {
-	INT32 x, y, w;
-	INT32 *buf;
-	UINT32 quad;
-	UINT8 p1, p2, p3, p4;
-	const UINT8 *fadetable = (UINT8 *)colormaps + 16*256, *deststop = screens[0] + vid.rowbytes * vid.height;
+	const UINT8 *fadetable = (UINT8 *)colormaps + 16*256;
+	const UINT8 *deststop = screens[0] + vid.rowbytes * vid.height;
+	UINT8 *buf = screens[0];
 
 #ifdef HWRENDER
 	if (rendermode != render_soft && rendermode != render_none)
@@ -940,133 +942,52 @@ void V_DrawFadeScreen(void)
 	}
 #endif
 
-	w = vid.width>>2;
-	for (y = 0; y < vid.height; y++)
-	{
-		buf = (INT32 *)(void *)(screens[0] + vid.width*y);
-		for (x = 0; x < w; x++)
-		{
-			if (buf+ x > (const INT32 *)(const void *)deststop)
-				return;
-			M_Memcpy(&quad,buf+x,sizeof (quad)); //quad = buf[x];
-			p1 = fadetable[quad&255];
-			p2 = fadetable[(quad>>8)&255];
-			p3 = fadetable[(quad>>16)&255];
-			p4 = fadetable[quad>>24];
-			quad = (p4<<24) | (p3<<16) | (p2<<8) | p1;//buf[x] = (p4<<24) | (p3<<16) | (p2<<8) | p1;
-			M_Memcpy(buf+x,&quad,sizeof (quad));
-		}
-	}
+	// heavily simplified -- we don't need to know x or y
+	// position when we're doing a full screen fade
+	for (; buf < deststop; ++buf)
+		*buf = fadetable[*buf];
 }
 
-// Simple translucency with one color. Coords are resolution dependent.
-//
-void V_DrawFadeConsBack(INT32 px1, INT32 py1, INT32 px2, INT32 py2, INT32 color)
+// Simple translucency with one color, over a set number of lines starting from the top.
+void V_DrawFadeConsBack(INT32 plines, INT32 pcolor)
 {
-	INT32 x, y, w;
-	INT32 *buf;
-	UINT32 quad;
-	UINT8 p1, p2, p3, p4;
-	INT16 *wput;
-	const UINT8 *deststop = screens[0] + vid.rowbytes * vid.height;
-	UINT8 *colormap;
+	UINT8 *deststop, *colormap, *buf;
 
 #ifdef HWRENDER // not win32 only 19990829 by Kin
 	if (rendermode != render_soft && rendermode != render_none)
 	{
 		UINT32 hwcolor;
-
-		switch (color)
+		switch (pcolor)
 		{
-			case 0: // white
-				hwcolor = 0xffffff00;
-				break;
-			case 1: // orange
-				hwcolor = 0xff800000;
-				break;
-			case 2: // blue
-				hwcolor = 0x0000ff00;
-				break;
-			case 3: // green
-				hwcolor = 0x00800000;
-				break;
-			case 4: // gray
-				hwcolor = 0x80808000;
-				break;
-			case 5: // red
-				hwcolor = 0xff000000;
-				break;
-			default:
-				hwcolor = 0x00800000;
-				break;
+			case 0:		hwcolor = 0xffffff00;	break;	//white
+			case 1:		hwcolor = 0xff800000;	break;	//orange
+			case 2:		hwcolor = 0x0000ff00;	break;	//blue
+			case 3:		hwcolor = 0x00800000;	break;	//green
+			case 4:		hwcolor = 0x80808000;	break;	//gray
+			case 5:		hwcolor = 0xff000000;	break;	//red
+			default:	hwcolor = 0x00800000;	break;	//green
 		}
-
-		HWR_DrawConsoleBack(hwcolor, py2);
+		HWR_DrawConsoleBack(hwcolor, plines);
 		return;
 	}
 #endif
 
-	switch (color)
+	switch (pcolor)
 	{
-		case 0:
-			colormap = cwhitemap;
-			break;
-		case 1:
-			colormap = corangemap;
-			break;
-		case 2:
-			colormap = cbluemap;
-			break;
-		case 3:
-			colormap = cgreenmap;
-			break;
-		case 4:
-			colormap = cgraymap;
-			break;
-		case 5:
-			colormap = credmap;
-			break;
-		default:
-			colormap = cgreenmap;
-			break;
+		case 0:		colormap = cwhitemap; 	break;
+		case 1:		colormap = corangemap;	break;
+		case 2:		colormap = cbluemap;	break;
+		case 3:		colormap = cgreenmap;	break;
+		case 4:		colormap = cgraymap;	break;
+		case 5:		colormap = credmap;		break;
+		default:	colormap = cgreenmap;	break;
 	}
 
-	if (scr_bpp == 1)
-	{
-		px1 >>=2;
-		px2 >>=2;
-		for (y = py1; y < py2; y++)
-		{
-			buf = (INT32 *)(void *)(screens[0] + vid.width*y);
-			for (x = px1; x < px2; x++)
-			{
-				if (&buf[x] > (const INT32 *)(const void *)deststop)
-					return;
-				M_Memcpy(&quad,buf+x,sizeof (quad)); //quad = buf[x];
-				p1 = colormap[quad&255];
-				p2 = colormap[(quad>>8)&255];
-				p3 = colormap[(quad>>16)&255];
-				p4 = colormap[quad>>24];
-				quad = (p4<<24) | (p3<<16) | (p2<<8) | p1;//buf[x] = (p4<<24) | (p3<<16) | (p2<<8) | p1;
-				M_Memcpy(buf+x, &quad, sizeof (quad));
-			}
-		}
-	}
-	else
-	{
-		w = px2 - px1;
-		for (y = py1; y < py2; y++)
-		{
-			wput = (INT16 *)(void *)(screens[0] + vid.width*y) + px1;
-			for (x = 0; x < w; x++)
-			{
-				if (wput > (const INT16 *)(const void *)deststop)
-					return;
-				*wput = (INT16)(((*wput&0x7bde) + (15<<5)) >>1);
-				wput++;
-			}
-		}
-	}
+	// heavily simplified -- we don't need to know x or y position,
+	// just the stop position
+	deststop = screens[0] + vid.rowbytes * min(plines, vid.height);
+	for (buf = screens[0]; buf < deststop; ++buf)
+		*buf = colormap[*buf];
 }
 
 // Gets string colormap, used for 0x80 color codes
@@ -1390,6 +1311,12 @@ void V_DrawSmallString(INT32 x, INT32 y, INT32 option, const char *string)
 
 		cx += w;
 	}
+}
+
+void V_DrawRightAlignedSmallString(INT32 x, INT32 y, INT32 option, const char *string)
+{
+	x -= V_SmallStringWidth(string, option);
+	V_DrawSmallString(x, y, option, string);
 }
 
 //
@@ -1825,6 +1752,44 @@ INT32 V_StringWidth(const char *string, INT32 option)
 }
 
 //
+// Find string width from hu_font chars, 0.5x scale
+//
+INT32 V_SmallStringWidth(const char *string, INT32 option)
+{
+	INT32 c, w = 0;
+	INT32 spacewidth = 2, charwidth = 0;
+	size_t i;
+
+	switch (option & V_SPACINGMASK)
+	{
+		case V_MONOSPACE:
+			spacewidth = 4;
+		case V_OLDSPACING:
+			charwidth = 4;
+			break;
+		case V_6WIDTHSPACE:
+			spacewidth = 3;
+		default:
+			break;
+	}
+
+	for (i = 0; i < strlen(string); i++)
+	{
+		c = string[i];
+		if ((UINT8)c >= 0x80 && (UINT8)c <= 0x89) //color parsing! -Inuyasha 2.16.09
+			continue;
+
+		c = toupper(c) - HU_FONTSTART;
+		if (c < 0 || c >= HU_FONTSIZE || !hu_font[c])
+			w += spacewidth;
+		else
+			w += (charwidth ? charwidth : SHORT(hu_font[c]->width)/2);
+	}
+
+	return w;
+}
+
+//
 // Find string width from tny_font chars
 //
 INT32 V_ThinStringWidth(const char *string, INT32 option)
@@ -1903,61 +1868,61 @@ void V_DoPostProcessor(INT32 view, postimg_t type, INT32 param)
 
 	if (type == postimg_water)
 	{
-			UINT8 *tmpscr = screens[4];
-			UINT8 *srcscr = screens[0];
-			INT32 y;
-			angle_t disStart = (leveltime * 128) & FINEMASK; // in 0 to FINEANGLE
-			INT32 newpix;
-			INT32 sine;
-			//UINT8 *transme = ((tr_trans50)<<FF_TRANSSHIFT) + transtables;
+		UINT8 *tmpscr = screens[4];
+		UINT8 *srcscr = screens[0];
+		INT32 y;
+		angle_t disStart = (leveltime * 128) & FINEMASK; // in 0 to FINEANGLE
+		INT32 newpix;
+		INT32 sine;
+		//UINT8 *transme = ((tr_trans50)<<FF_TRANSSHIFT) + transtables;
 
-			for (y = yoffset; y < yoffset+height; y++)
+		for (y = yoffset; y < yoffset+height; y++)
+		{
+			sine = (FINESINE(disStart)*5)>>FRACBITS;
+			newpix = abs(sine);
+
+			if (sine < 0)
 			{
-				sine = (FINESINE(disStart)*5)>>FRACBITS;
-				newpix = abs(sine);
+				M_Memcpy(&tmpscr[y*vid.width+newpix], &srcscr[y*vid.width], vid.width-newpix);
 
-				if (sine < 0)
+				// Cleanup edge
+				while (newpix)
 				{
-					M_Memcpy(&tmpscr[y*vid.width+newpix], &srcscr[y*vid.width], vid.width-newpix);
-
-					// Cleanup edge
-					while (newpix)
-					{
-						tmpscr[y*vid.width+newpix] = srcscr[y*vid.width];
-						newpix--;
-					}
+					tmpscr[y*vid.width+newpix] = srcscr[y*vid.width];
+					newpix--;
 				}
-				else
+			}
+			else
+			{
+				M_Memcpy(&tmpscr[y*vid.width+0], &srcscr[y*vid.width+sine], vid.width-newpix);
+
+				// Cleanup edge
+				while (newpix)
 				{
-					M_Memcpy(&tmpscr[y*vid.width+0], &srcscr[y*vid.width+sine], vid.width-newpix);
-
-					// Cleanup edge
-					while (newpix)
-					{
-						tmpscr[y*vid.width+vid.width-newpix] = srcscr[y*vid.width+(vid.width-1)];
-						newpix--;
-					}
+					tmpscr[y*vid.width+vid.width-newpix] = srcscr[y*vid.width+(vid.width-1)];
+					newpix--;
 				}
+			}
 
 /*
 Unoptimized version
-				for (x = 0; x < vid.width*vid.bpp; x++)
-				{
-					newpix = (x + sine);
+			for (x = 0; x < vid.width*vid.bpp; x++)
+			{
+				newpix = (x + sine);
 
-					if (newpix < 0)
-						newpix = 0;
-					else if (newpix >= vid.width)
-						newpix = vid.width-1;
+				if (newpix < 0)
+					newpix = 0;
+				else if (newpix >= vid.width)
+					newpix = vid.width-1;
 
-					tmpscr[y*vid.width + x] = srcscr[y*vid.width+newpix]; // *(transme + (srcscr[y*vid.width+x]<<8) + srcscr[y*vid.width+newpix]);
-				}*/
-				disStart += 22;//the offset into the displacement map, increment each game loop
-				disStart &= FINEMASK; //clip it to FINEMASK
-			}
+				tmpscr[y*vid.width + x] = srcscr[y*vid.width+newpix]; // *(transme + (srcscr[y*vid.width+x]<<8) + srcscr[y*vid.width+newpix]);
+			}*/
+			disStart += 22;//the offset into the displacement map, increment each game loop
+			disStart &= FINEMASK; //clip it to FINEMASK
+		}
 
-			VID_BlitLinearScreen(tmpscr+vid.width*vid.bpp*yoffset, screens[0]+vid.width*vid.bpp*yoffset,
-					vid.width*vid.bpp, height, vid.width*vid.bpp, vid.width);
+		VID_BlitLinearScreen(tmpscr+vid.width*vid.bpp*yoffset, screens[0]+vid.width*vid.bpp*yoffset,
+				vid.width*vid.bpp, height, vid.width*vid.bpp, vid.width);
 	}
 	else if (type == postimg_motion) // Motion Blur!
 	{

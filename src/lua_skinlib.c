@@ -14,6 +14,7 @@
 #ifdef HAVE_BLUA
 #include "fastcmp.h"
 #include "r_things.h"
+#include "sounds.h"
 
 #include "lua_script.h"
 #include "lua_libs.h"
@@ -182,7 +183,8 @@ static int skin_get(lua_State *L)
 		lua_pushinteger(L, skin->highresscale);
 		break;
 	case skin_soundsid:
-		return UNIMPLEMENTED;
+		LUA_PushUserdata(L, skin->soundsid, META_SOUNDSID);
+		break;
 	}
 	return 1;
 }
@@ -275,6 +277,24 @@ static int lib_numSkins(lua_State *L)
 	return 1;
 }
 
+// soundsid, i -> soundsid[i]
+static int soundsid_get(lua_State *L)
+{
+	sfxenum_t *soundsid = *((sfxenum_t **)luaL_checkudata(L, 1, META_SOUNDSID));
+	skinsound_t i = luaL_checkinteger(L, 2);
+	if (i >= NUMSKINSOUNDS)
+		return luaL_error(L, LUA_QL("skinsound_t") " cannot be %u", i);
+	lua_pushinteger(L, soundsid[i]);
+	return 1;
+}
+
+// #soundsid -> NUMSKINSOUNDS
+static int soundsid_num(lua_State *L)
+{
+	lua_pushinteger(L, NUMSKINSOUNDS);
+	return 1;
+}
+
 int LUA_SkinLib(lua_State *L)
 {
 	luaL_newmetatable(L, META_SKIN);
@@ -285,6 +305,14 @@ int LUA_SkinLib(lua_State *L)
 		lua_setfield(L, -2, "__newindex");
 
 		lua_pushcfunction(L, skin_num);
+		lua_setfield(L, -2, "__len");
+	lua_pop(L,1);
+
+	luaL_newmetatable(L, META_SOUNDSID);
+		lua_pushcfunction(L, soundsid_get);
+		lua_setfield(L, -2, "__index");
+
+		lua_pushcfunction(L, soundsid_num);
 		lua_setfield(L, -2, "__len");
 	lua_pop(L,1);
 

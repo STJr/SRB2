@@ -30,6 +30,8 @@
 #include "lua_libs.h"
 #include "lua_hook.h"
 
+#include "doomstat.h"
+
 lua_State *gL = NULL;
 
 // List of internal libraries to load from SRB2
@@ -453,6 +455,7 @@ enum
 	ARCH_SIDE,
 	ARCH_SUBSECTOR,
 	ARCH_SECTOR,
+	ARCH_MAPHEADER,
 
 	ARCH_TEND=0xFF,
 };
@@ -471,6 +474,7 @@ static const struct {
 	{META_SIDE,     ARCH_SIDE},
 	{META_SUBSECTOR,ARCH_SUBSECTOR},
 	{META_SECTOR,   ARCH_SECTOR},
+	{META_MAPHEADER,   ARCH_MAPHEADER},
 	{NULL,          ARCH_NULL}
 };
 
@@ -665,6 +669,17 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 			}
 			break;
 		}
+		case ARCH_MAPHEADER:
+		{
+			mapheader_t *header = *((mapheader_t **)lua_touserdata(gL, myindex));
+			if (!header)
+				WRITEUINT8(save_p, ARCH_NULL);
+			else {
+				WRITEUINT8(save_p, ARCH_MAPHEADER);
+				WRITEUINT16(save_p, header - *mapheaderinfo);
+			}
+			break;
+		}
 		default:
 			WRITEUINT8(save_p, ARCH_NULL);
 			return 2;
@@ -834,6 +849,9 @@ static UINT8 UnArchiveValue(int TABLESINDEX)
 		break;
 	case ARCH_SECTOR:
 		LUA_PushUserdata(gL, &sectors[READUINT16(save_p)], META_SECTOR);
+		break;
+	case ARCH_MAPHEADER:
+		LUA_PushUserdata(gL, &sectors[READUINT16(save_p)], META_MAPHEADER);
 		break;
 	case ARCH_TEND:
 		return 1;

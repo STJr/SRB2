@@ -220,6 +220,10 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->menuflags = 0;
 	// TODO grades support for delfile (pfft yeah right)
 	P_DeleteGrades(num);
+	// an even further impossibility, delfile custom opts support
+	mapheaderinfo[num]->customopts = NULL;
+	mapheaderinfo[num]->numCustomOptions = 0;
+
 	DEH_WriteUndoline(va("# uload for map %d", i), NULL, UNDO_DONE);
 }
 
@@ -678,6 +682,7 @@ static void P_LoadSectors(lumpnum_t lumpnum)
 		ss->lines = NULL;
 
 		ss->heightsec = -1;
+		ss->camsec = -1;
 		ss->floorlightsec = -1;
 		ss->ceilinglightsec = -1;
 		ss->crumblestate = 0;
@@ -2559,6 +2564,15 @@ noscript:
 	}
 #endif
 
+	// oh god I hope this helps
+	// (addendum: apparently it does!
+	//  none of this needs to be done because it's not the beginning of the map when
+	//  a netgame save is being loaded, and could actively be harmful by messing with
+	//  the client's view of the data.)
+	if (fromnetsave)
+		goto netgameskip;
+	// ==========
+
 	for (i = 0; i < MAXPLAYERS; i++)
 		if (playeringame[i])
 		{
@@ -2694,6 +2708,10 @@ noscript:
 	else if (gametype == GT_RACE && server && cv_usemapnumlaps.value)
 		CV_StealthSetValue(&cv_numlaps, mapheaderinfo[gamemap - 1]->numlaps);
 
+	// ===========
+	// landing point for netgames.
+	netgameskip:
+
 	if (!dedicated)
 	{
 		if (players[displayplayer].mo && (server || addedtogame))
@@ -2769,7 +2787,6 @@ noscript:
 
 	if (twodlevel)
 	{
-		CV_SetValue(&cv_cam_dist, 320);
 		CV_SetValue(&cv_analog2, false);
 		CV_SetValue(&cv_analog, false);
 	}

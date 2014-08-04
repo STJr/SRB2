@@ -155,8 +155,6 @@ typedef struct ffloor_s
 	fixed_t *bottomyoffs;
 	angle_t *bottomangle;
 
-	fixed_t delta;
-
 	size_t secnum;
 	ffloortype_e flags;
 	struct line_s *master;
@@ -269,6 +267,7 @@ typedef struct sector_s
 	angle_t ceilingpic_angle;
 
 	INT32 heightsec; // other sector, or -1 if no other sector
+	INT32 camsec; // used for camera clipping
 
 	INT32 floorlightsec, ceilinglightsec;
 	INT32 crumblestate; // used for crumbling and bobbing

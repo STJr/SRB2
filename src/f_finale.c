@@ -704,7 +704,20 @@ static void F_IntroDrawScene(void)
 				V_DrawScaledPatch(deplete, 72, 0, (patch = W_CachePatchName("PEELOUT1", PU_CACHE)));
 				W_UnlockCachedPatch(patch);
 			}
-			V_DrawFill(0, 112, BASEVIDWIDTH, BASEVIDHEIGHT - 112, 31);
+
+			{ // Fixing up the black box rendering to look right in resolutions <16:10 -Red
+				INT32 y = 112;
+				INT32 h = BASEVIDHEIGHT - 112;
+				if (vid.height != BASEVIDHEIGHT * vid.dupy)
+				{
+					INT32 adjust = (vid.height/vid.dupy)-200;
+					adjust /= 2;
+					y += adjust;
+					h += adjust;
+					V_DrawFill(0, 0, BASEVIDWIDTH, adjust, 31); // Render a black bar on top so it keeps the "cinematic" windowboxing... I just prefer it this way. -Red
+				}
+				V_DrawFill(0, y, BASEVIDWIDTH, h, 31);
+			}
 		}
 	}
 
@@ -967,6 +980,7 @@ static const char *credits[] = {
 	"",
 	"\1Programming",
 	"\1Assistance",
+	"Tim \"RedEnchilada\" Bordelon",
 	"Andrew \"orospakr\" Clunis",
 	"Gregor \"Oogaland\" Dick",
 	"Julio \"Chaos Zero 64\" Guir",

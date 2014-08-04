@@ -200,6 +200,14 @@ typedef struct
 	UINT32 grade[6]; // D, C, B, A, S, X (F: failed to reach any of these)
 } nightsgrades_t;
 
+// Custom Lua values
+// (This is not ifdeffed so the map header structure can stay identical, just in case.)
+typedef struct
+{
+	char option[32]; // 31 usable characters
+	char value[256]; // 255 usable characters. If this seriously isn't enough then wtf.
+} customoption_t;
+
 /** Map header information.
   */
 typedef struct
@@ -238,6 +246,11 @@ typedef struct
 	// NiGHTS stuff.
 	UINT8 numGradedMares;   ///< Internal. For grade support.
 	nightsgrades_t *grades; ///< NiGHTS grades. Allocated dynamically for space reasons. Be careful.
+
+	// Lua stuff.
+	// (This is not ifdeffed so the map header structure can stay identical, just in case.)
+	UINT8 numCustomOptions;     ///< Internal. For Lua custom value support.
+	customoption_t *customopts; ///< Custom options. Allocated dynamically for space reasons. Be careful.
 } mapheader_t;
 
 // level flags

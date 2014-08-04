@@ -145,7 +145,7 @@ void V_DrawFlatFill(INT32 x, INT32 y, INT32 w, INT32 h, lumpnum_t flatnum);
 // fade down the screen buffer before drawing the menu over
 void V_DrawFadeScreen(void);
 
-void V_DrawFadeConsBack(INT32 px1, INT32 py1, INT32 px2, INT32 py2, INT32 pcolor);
+void V_DrawFadeConsBack(INT32 plines, INT32 pcolor);
 
 // draw a single character
 void V_DrawCharacter(INT32 x, INT32 y, INT32 c, boolean lowercaseallowed);
@@ -160,8 +160,11 @@ void V_DrawString(INT32 x, INT32 y, INT32 option, const char *string);
 void V_DrawCenteredString(INT32 x, INT32 y, INT32 option, const char *string);
 void V_DrawRightAlignedString(INT32 x, INT32 y, INT32 option, const char *string);
 
+// draw a string using the hu_font, 0.5x scale
 void V_DrawSmallString(INT32 x, INT32 y, INT32 option, const char *string);
+void V_DrawRightAlignedSmallString(INT32 x, INT32 y, INT32 option, const char *string);
 
+// draw a string using the tny_font
 void V_DrawThinString(INT32 x, INT32 y, INT32 option, const char *string);
 void V_DrawRightAlignedThinString(INT32 x, INT32 y, INT32 option, const char *string);
 
@@ -180,6 +183,8 @@ INT32 V_CreditStringWidth(const char *string);
 
 // Find string width from hu_font chars
 INT32 V_StringWidth(const char *string, INT32 option);
+// Find string width from hu_font chars, 0.5x scale
+INT32 V_SmallStringWidth(const char *string, INT32 option);
 // Find string width from tny_font chars
 INT32 V_ThinStringWidth(const char *string, INT32 option);
 
