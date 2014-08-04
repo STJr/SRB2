@@ -3,7 +3,7 @@
 
 #include "../doomdef.h"
 
-#if defined(SDL) && defined(HAVE_MIXER) && SOUND==SOUND_MIXER
+#if defined(HAVE_SDL) && defined(HAVE_MIXER) && SOUND==SOUND_MIXER
 
 #include "../sounds.h"
 #include "../s_sound.h"
@@ -617,7 +617,7 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 	}
 #endif
 
-	music = Mix_LoadMUS_RW(SDL_RWFromMem(data, len));
+	music = Mix_LoadMUS_RW(SDL_RWFromMem(data, len), SDL_FALSE);
 	if (!music)
 	{
 		CONS_Alert(CONS_ERROR, "Mix_LoadMUS_RW: %s\n", Mix_GetError());
@@ -778,7 +778,7 @@ void I_SetMIDIMusicVolume(UINT8 volume)
 
 INT32 I_RegisterSong(void *data, size_t len)
 {
-	music = Mix_LoadMUS_RW(SDL_RWFromMem(data, len));
+	music = Mix_LoadMUS_RW(SDL_RWFromMem(data, len), SDL_FALSE);
 	if (!music)
 	{
 		CONS_Alert(CONS_ERROR, "Mix_LoadMUS_RW: %s\n", Mix_GetError());

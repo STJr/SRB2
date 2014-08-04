@@ -1110,7 +1110,7 @@ static menuitem_t OP_VideoOptionsMenu[] =
 	{IT_SUBMENU|IT_STRING, NULL,   "3D Card Options...",  &OP_OpenGLOptionsDef,    20},
 #endif
 
-#if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (SDL)
+#if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
 	{IT_STRING|IT_CVAR,      NULL, "Fullscreen",          &cv_fullscreen,    30},
 #endif
 
@@ -6827,7 +6827,7 @@ static void M_VideoModeMenu(INT32 choice)
 
 	memset(modedescs, 0, sizeof(modedescs));
 
-#if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (SDL)
+#if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
 	VID_PrepareModeList(); // FIXME: hack
 #endif
 	vidm_nummodes = 0;
