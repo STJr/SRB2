@@ -163,7 +163,7 @@ static I_Error_t I_Error_GL = NULL;
 //                  : else do nothing
 // Returns          :
 // -----------------+
-#if !(defined (SDL) && defined (STATIC3DS))
+#if !(defined (HAVE_SDL) && defined (STATIC3DS))
 FUNCPRINTF void DBG_Printf(const char *lpFmt, ...)
 {
 #ifdef DEBUG_TO_FILE

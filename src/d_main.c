@@ -731,7 +731,7 @@ static void IdentifyVersion(void)
 	char *srb2wad1, *srb2wad2;
 	const char *srb2waddir = NULL;
 
-#if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (SDL)
+#if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
 	// change to the directory where 'srb2.srb' is found
 	srb2waddir = I_LocateWad();
 #endif
@@ -757,7 +757,7 @@ static void IdentifyVersion(void)
 		}
 	}
 
-#if defined (macintosh) && !defined (SDL)
+#if defined (macintosh) && !defined (HAVE_SDL)
 	// cwd is always "/" when app is dbl-clicked
 	if (!stricmp(srb2waddir, "/"))
 		srb2waddir = I_GetWadDir();
@@ -804,7 +804,7 @@ static void IdentifyVersion(void)
 	// Add our crappy patches to fix our bugs
 	D_AddFile(va(pandf,srb2waddir,"patch.dta"));
 
-#if !defined (SDL) || defined (HAVE_MIXER)
+#if !defined (HAVE_SDL) || defined (HAVE_MIXER)
 	{
 #if defined (DC) && 0
 		const char *musicfile = "music_dc.dta";
@@ -929,7 +929,7 @@ void D_SRB2Main(void)
 	D_Titlebar(srb2, title);
 #endif
 
-#if defined (__OS2__) && !defined (SDL)
+#if defined (__OS2__) && !defined (HAVE_SDL)
 	// set PM window title
 	snprintf(pmData->title, sizeof (pmData->title),
 		"Sonic Robo Blast 2" VERSIONSTRING ": %s",
@@ -1136,7 +1136,7 @@ void D_SRB2Main(void)
 
 	G_LoadGameData();
 
-#if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (SDL)
+#if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
 	VID_PrepareModeList(); // Regenerate Modelist according to cv_fullscreen
 #endif
 

@@ -55,7 +55,7 @@ FILE *logstream = NULL;
 #define MAXCHANNEL 1024
 
 #undef DEBUG_TO_FILE
-#if defined ( SDL ) && !defined ( LOGMESSAGES )
+#if defined ( HAVE_SDL ) && !defined ( LOGMESSAGES )
 #define DEBUG_TO_FILE
 #endif
 
@@ -1187,7 +1187,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, // handle to DLL module
 	}
 	return TRUE; // Successful DLL_PROCESS_ATTACH.
 }
-#elif !defined (SDL)
+#elif !defined (HAVE_SDL)
 
 // **************************************************************************
 //                                                                  FUNCTIONS

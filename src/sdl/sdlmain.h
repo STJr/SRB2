@@ -22,6 +22,11 @@
 extern SDL_bool consolevent;
 extern SDL_bool framebuffer;
 
+#include "../m_fixed.h"
+
+// SDL2 stub macro
+#define SDL2STUB(name) CONS_Printf("SDL2: stubbed: %s:%d\n", __func__, __LINE__)
+
 /**	\brief	The JoyInfo_s struct
 
   info about joystick

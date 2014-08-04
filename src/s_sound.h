@@ -37,7 +37,7 @@ extern CV_PossibleValue_t soundvolume_cons_t[];
 //part of i_cdmus.c
 extern consvar_t cd_volume, cdUpdate;
 
-#if defined (macintosh) && !defined (SDL)
+#if defined (macintosh) && !defined (HAVE_SDL)
 typedef enum
 {
 	music_normal,

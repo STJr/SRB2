@@ -23,7 +23,7 @@
 #pragma warning(disable : 4214 4244)
 #endif
 
-#if defined(SDL) && SOUND==SOUND_SDL
+#if defined(HAVE_SDL) && SOUND==SOUND_SDL
 
 #include "SDL.h"
 
@@ -856,6 +856,7 @@ FUNCINLINE static ATTRINLINE void I_UpdateStream16S(Uint8 *stream, int len)
 
 	if (Snd_Mutex) SDL_LockMutex(Snd_Mutex);
 
+
 	// Mix sounds into the mixing buffer.
 	// Loop over len
 	while (len--)
@@ -944,6 +945,7 @@ FUNCINLINE static ATTRINLINE void I_UpdateStream16M(Uint8 *stream, int len)
 	len /= 2; // not 8bit mono samples, 16bit mono ones
 
 	if (Snd_Mutex) SDL_LockMutex(Snd_Mutex);
+
 
 	// Mix sounds into the mixing buffer.
 	// Loop over len
@@ -1050,10 +1052,7 @@ static void SDLCALL I_UpdateStream(void *userdata, Uint8 *stream, int len)
 	if (!sound_started || !userdata)
 		return;
 
-#if SDL_VERSION_ATLEAST(1,3,0)
-	if (musicStarted)
-		memset(stream, 0x00, len); // only work in !AUDIO_U8, that needs 0x80
-#endif
+	memset(stream, 0x00, len); // only work in !AUDIO_U8, that needs 0x80
 
 	if ((audio.channels != 1 && audio.channels != 2) ||
 	    (audio.format != AUDIO_S8 && audio.format != AUDIO_S16SYS))
@@ -1320,8 +1319,8 @@ void I_StartupSound(void)
 	}
 	else
 	{
-		char ad[100];
-		CONS_Printf(M_GetText(" Starting up with audio driver : %s\n"), SDL_AudioDriverName(ad, (int)sizeof ad));
+		//char ad[100];
+		//CONS_Printf(M_GetText(" Starting up with audio driver : %s\n"), SDL_AudioDriverName(ad, (int)sizeof ad));
 	}
 	samplecount = audio.samples;
 	CV_SetValue(&cv_samplerate, audio.freq);
@@ -1782,7 +1781,9 @@ static boolean I_StartGMESong(const char *musicname, boolean looping)
 	gme_set_user_data(emu, data);
 	gme_set_user_cleanup(emu, I_CleanupGME);
 	gme_start_track(emu, 0);
+#ifdef HAVE_MIXER
 	gme_set_fade(emu, Digfade);
+#endif
 
 	Snd_LockAudio();
 	localdata.gme_emu = emu;
@@ -2027,4 +2028,4 @@ static void SDLCALL I_FinishMusic(void)
 	if (Msc_Mutex) SDL_UnlockMutex(Msc_Mutex);
 }
 #endif
-#endif //SDL
+#endif //HAVE_SDL

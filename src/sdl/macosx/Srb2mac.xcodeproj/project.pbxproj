@@ -1264,7 +1264,7 @@
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					MAC_ALERT,
 					SDLMAIN,
-					SDL,
+					HAVE_SDL,
 					HAVE_MIXER,
 					HAVE_PNG,
 					HAVE_BLUA,
@@ -1386,7 +1386,7 @@
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					MAC_ALERT,
 					SDLMAIN,
-					SDL,
+					HAVE_SDL,
 					HAVE_MIXER,
 					HAVE_PNG,
 					HAVE_BLUA,

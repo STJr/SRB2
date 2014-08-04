@@ -33,7 +33,7 @@ HW3SOUND for 3D hardware sound  support
 					<Add option="-g" />
 					<Add option="`sdl-config --cflags`" />
 					<Add option="-DDIRECTFULLSCREEN" />
-					<Add option="-DSDL" />
+					<Add option="-DHAVE_SDL" />
 					<Add option="-DPARANOIA" />
 					<Add option="-DRANGECHECK" />
 					<Add option="-D_DEBUG" />
@@ -56,7 +56,7 @@ HW3SOUND for 3D hardware sound  support
 					<Add option="-g" />
 					<Add option="`sdl-config --cflags`" />
 					<Add option="-DDIRECTFULLSCREEN" />
-					<Add option="-DSDL" />
+					<Add option="-DHAVE_SDL" />
 					<Add option="-DNDEBUG" />
 					<Add option="-DCOMPVERSION" />
 					<Add option="-DHAVE_BLUA" />
@@ -77,7 +77,7 @@ HW3SOUND for 3D hardware sound  support
 					<Add option="`sdl-config --cflags`" />
 					<Add option="`libpng-config --cflags`" />
 					<Add option="-DDIRECTFULLSCREEN" />
-					<Add option="-DSDL" />
+					<Add option="-DHAVE_SDL" />
 					<Add option="-DHAVE_MIXER" />
 					<Add option="-DHWRENDER" />
 					<Add option="-DHW3SOUND" />
@@ -107,7 +107,7 @@ HW3SOUND for 3D hardware sound  support
 					<Add option="`sdl-config --cflags`" />
 					<Add option="`libpng-config --cflags`" />
 					<Add option="-DDIRECTFULLSCREEN" />
-					<Add option="-DSDL" />
+					<Add option="-DHAVE_SDL" />
 					<Add option="-DHAVE_MIXER" />
 					<Add option="-DHWRENDER" />
 					<Add option="-DHW3SOUND" />
@@ -138,7 +138,7 @@ HW3SOUND for 3D hardware sound  support
 					<Add option="-D__USE_MINGW_ANSI_STDIO=0" />
 					<Add option="-DUSE_WGL_SWAP" />
 					<Add option="-DDIRECTFULLSCREEN" />
-					<Add option="-DSDL" />
+					<Add option="-DHAVE_SDL" />
 					<Add option="-DHAVE_MIXER" />
 					<Add option="-DHWRENDER" />
 					<Add option="-DHW3SOUND" />
@@ -185,7 +185,7 @@ HW3SOUND for 3D hardware sound  support
 					<Add option="-D__USE_MINGW_ANSI_STDIO=0" />
 					<Add option="-DUSE_WGL_SWAP" />
 					<Add option="-DDIRECTFULLSCREEN" />
-					<Add option="-DSDL" />
+					<Add option="-DHAVE_SDL" />
 					<Add option="-DHAVE_MIXER" />
 					<Add option="-DHAVE_FMOD" />
 					<Add option="-DHWRENDER" />
@@ -551,7 +551,7 @@ HW3SOUND for 3D hardware sound  support
 					<Add option="-DSTDC_HEADERS" />
 					<Add option="-DUSE_WGL_SWAP" />
 					<Add option="-DDIRECTFULLSCREEN" />
-					<Add option="-DSDL" />
+					<Add option="-DHAVE_SDL" />
 					<Add option="-DHAVE_MIXER" />
 					<Add option="-DHWRENDER" />
 					<Add option="-DHW3SOUND" />
@@ -592,7 +592,7 @@ HW3SOUND for 3D hardware sound  support
 					<Add option="-DSTDC_HEADERS" />
 					<Add option="-DUSE_WGL_SWAP" />
 					<Add option="-DDIRECTFULLSCREEN" />
-					<Add option="-DSDL" />
+					<Add option="-DHAVE_SDL" />
 					<Add option="-DHAVE_MIXER" />
 					<Add option="-DHWRENDER" />
 					<Add option="-DHW3SOUND" />
