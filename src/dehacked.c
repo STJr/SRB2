@@ -632,6 +632,8 @@ static void readfreeslots(MYFILE *f)
 			// TODO: Name too long (truncated) warnings.
 			if (fastcmp(type, "SFX"))
 				S_AddSoundFx(word, false, 0, false);
+			else if (fastcmp(type, "MUS")) 
+                S_AddMusic(word, -1);	
 			else if (fastcmp(type, "SPR"))
 			{
 				for (i = SPR_FIRSTFREESLOT; i <= SPR_LASTFREESLOT; i++)
@@ -2005,6 +2007,63 @@ static void readsound(MYFILE *f, INT32 num, const char *savesfxnames[])
 	(void)savesfxnames;
 }
 
+//yellowtd: readmusic: may be a clone but does its desired purpose c:
+static void readmusic(MYFILE *f, UINT16 num, const char *savemusicnames[])
+{
+	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
+	char *word;
+	char *tmp;
+	INT32 value;
+
+	do
+	{
+		if (myfgets(s, MAXLINELEN, f))
+		{
+			if (s[0] == '\n')
+				break;
+
+			tmp = strchr(s, '#');
+			if (tmp)
+				*tmp = '\0';
+
+			value = searchvalue(s);
+
+			word = strtok(s, " ");
+			if (word)
+				strupr(word);
+			else
+				break;
+
+/*			if (fastcmp(word, "OFFSET"))
+			{
+				value -= 150360;
+				if (value <= 64)
+					value /= 8;
+				else if (value <= 260)
+					value = (value+4)/8;
+				else
+					value = (value+8)/8;
+				if (value >= -1 && value < sfx_freeslot0 - 1)
+					S_sfx[num].name = savesfxnames[value+1];
+				else
+					deh_warning("Sound %d: offset out of bounds", num);
+			}
+			else */if (fastcmp(word, "DUMMYVAL"))
+			{
+                
+				DEH_WriteUndoline(word, va("%d", S_music[num].dummyval), UNDO_NONE);
+				S_music[num].dummyval = value;
+			}
+			else
+				deh_warning("Music %d : unknown word '%s'",num,word);
+		}
+	} while (!myfeof(f));
+
+	Z_Free(s);
+
+	(void)savemusicnames;
+}
+
 /** Checks if a game data file name for a mod is good.
  * "Good" means that it contains only alphanumerics, _, and -;
  * ends in ".dat"; has at least one character before the ".dat";
@@ -3223,7 +3282,8 @@ static void DEH_LoadDehackedFile(MYFILE *f, UINT16 wad)
 	//XBOXSTATIC actionf_t saveactions[NUMSTATES];
 	//XBOXSTATIC const char *savesprnames[NUMSPRITES];
 	XBOXSTATIC const char *savesfxnames[NUMSFX];
-
+	XBOXSTATIC const char *savemusicnames[NUMMUSIC];
+	
 	if (!deh_loaded)
 		initfreeslots();
 
@@ -3237,7 +3297,10 @@ static void DEH_LoadDehackedFile(MYFILE *f, UINT16 wad)
 	*/
 	for (i = 0; i < NUMSFX; i++)
 		savesfxnames[i] = S_sfx[i].name;
-
+		
+	for (i = 0; i < NUMMUSIC; i++)
+		savemusicnames[i] = S_music[i].name;
+		
 	gamedataadded = false;
 
 	// it doesn't test the version of SRB2 and version of dehacked file
@@ -3444,6 +3507,19 @@ static void DEH_LoadDehackedFile(MYFILE *f, UINT16 wad)
 					else
 					{
 						deh_warning("Sound %d out of range (0 - %d)", i, NUMSFX-1);
+						ignorelines(f);
+					}
+					DEH_WriteUndoline(word, word2, UNDO_HEADER);
+				}
+				else if (fastcmp(word, "MUSIC"))
+				{
+					if (i == 0 && word2[0] != '0') // If word2 isn't a number
+						i = get_mus(word2); // find a sound by name
+					if (i < NUMMUSIC && i >= 0)
+						readmusic(f, i, savemusicnames);
+					else
+					{
+						deh_warning("Music %d out of range (0 - %d)", i, NUMMUSIC-1);
 						ignorelines(f);
 					}
 					DEH_WriteUndoline(word, word2, UNDO_HEADER);
@@ -8247,6 +8323,17 @@ static inline int lib_freeslot(lua_State *L)
 			sfx = S_AddSoundFx(word, false, 0, false);
 			if (sfx != sfx_None) {
 				lua_pushinteger(L, sfx);
+				r++;
+			} else
+				return r;
+		}
+		else if (fastcmp(type, "MUS")) {
+			musicenum_t music;
+			strlwr(word);
+			CONS_Printf("Music mus_%s allocated.\n",word);
+			music = S_AddMusic(word, -1);
+			if (music != mus_None) {
+				lua_pushinteger(L, music);
 				r++;
 			} else
 				return r;
