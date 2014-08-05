@@ -34,12 +34,14 @@
 // PU - purge tags.
 // Tags < PU_LEVEL are not purged until freed explicitly.
 #define PU_STATIC               1 // static entire execution time
-#define PU_SOUND                2 // static while playing
-#define PU_MUSIC                3 // static while playing
-#define PU_HUDGFX               4 // static until WAD added
+#define PU_LUA                  2 // static entire execution time -- used by lua so it doesn't get caught in loops forever
 
-#define PU_HWRPATCHINFO         5 // Hardware GLPatch_t struct for OpenGL texture cache
-#define PU_HWRPATCHCOLMIPMAP    6 // Hardware GLMipmap_t struct colromap variation of patch
+#define PU_SOUND               11 // static while playing
+#define PU_MUSIC               12 // static while playing
+#define PU_HUDGFX              13 // static until WAD added
+
+#define PU_HWRPATCHINFO        21 // Hardware GLPatch_t struct for OpenGL texture cache
+#define PU_HWRPATCHCOLMIPMAP   22 // Hardware GLMipmap_t struct colromap variation of patch
 
 #define PU_HWRCACHE            48 // static until unlocked
 #define PU_CACHE               49 // static until unlocked

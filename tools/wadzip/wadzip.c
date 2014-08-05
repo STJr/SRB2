@@ -252,7 +252,9 @@ void writewad(const wad_t *wad, const char *fname, int compress)
 			}
 		}
 
-		if (fwrite(cbuf, csize, 1, fp) < 1)
+		if (!csize)
+			; // inu: 0 length markers aren't to be written
+		else if (fwrite(cbuf, csize, 1, fp) < 1)
 		{
 			err(1, "cannot write lump %lu to %s", (unsigned long)ix,
 				fname);
