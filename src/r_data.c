@@ -999,7 +999,7 @@ void R_ReInitColormaps(UINT16 num)
 	char colormap[9] = "COLORMAP";
 	lumpnum_t lump;
 
-	if (num <= 9999)
+	if (num > 0 && num <= 10000)
 		snprintf(colormap, 8, "CLM%04u", num-1);
 
 	// Load in the light tables, now 64k aligned for smokie...

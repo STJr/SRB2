@@ -128,8 +128,13 @@ boolean P_PlayerInPain(player_t *player);
 void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor);
 void P_ResetPlayer(player_t *player);
 boolean P_IsLocalPlayer(player_t *player);
+
+boolean P_IsObjectInGoop(mobj_t *mo);
 boolean P_IsObjectOnGround(mobj_t *mo);
 boolean P_IsObjectOnGroundIn(mobj_t *mo, sector_t *sec);
+boolean P_InSpaceSector(mobj_t *mo);
+boolean P_InQuicksand(mobj_t *mo);
+
 void P_SetObjectMomZ(mobj_t *mo, fixed_t value, boolean relative);
 void P_RestoreMusic(player_t *player);
 void P_SpawnShieldOrb(player_t *player);
@@ -141,8 +146,10 @@ void P_GiveEmerald(boolean spawnObj);
 void P_ResetScore(player_t *player);
 boolean P_MenuActivePause(void);
 
+void P_DoJumpShield(player_t *player);
 void P_BlackOw(player_t *player);
 void P_ElementalFireTrail(player_t *player);
+
 void P_DoPityCheck(player_t *player);
 void P_PlayerThink(player_t *player);
 void P_PlayerAfterThink(player_t *player);

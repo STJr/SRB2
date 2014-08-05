@@ -963,7 +963,8 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 		|| (player->mo && (player->mo->flags2 & MF2_TWOD))
 		|| player->climbing
 		|| (player->pflags & PF_NIGHTSMODE)
-		|| (player->pflags & PF_SLIDING)) // Analog
+		|| (player->pflags & PF_SLIDING)
+		|| (player->pflags & PF_FORCESTRAFE)) // Analog
 			forcestrafe = true;
 	if (forcestrafe) // Analog
 	{
@@ -1243,7 +1244,8 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 		|| (player->mo && (player->mo->flags2 & MF2_TWOD))
 		|| player->climbing
 		|| (player->pflags & PF_NIGHTSMODE)
-		|| (player->pflags & PF_SLIDING)) // Analog
+		|| (player->pflags & PF_SLIDING)
+		|| (player->pflags & PF_FORCESTRAFE)) // Analog
 			forcestrafe = true;
 	if (forcestrafe) // Analog
 	{
@@ -2421,6 +2423,8 @@ void G_DoReborn(INT32 playernum)
 		{
 			INT32 i;
 
+			player->playerstate = PST_REBORN;
+
 			P_LoadThingsOnly();
 
 			P_ClearStarPost(player->starpostnum);
@@ -2451,6 +2455,12 @@ void G_DoReborn(INT32 playernum)
 
 			// Starpost support
 			G_SpawnPlayer(playernum, starpost);
+
+			if (botingame)
+			{ // Bots respawn next to their master.
+				players[secondarydisplayplayer].playerstate = PST_REBORN;
+				G_SpawnPlayer(secondarydisplayplayer, false);
+			}
 		}
 		else
 #ifdef HAVE_BLUA
@@ -5175,19 +5185,26 @@ void G_AddGhost(char *defdemoname)
 	I_Assert(mthing);
 	{ // A bit more complex than P_SpawnPlayer because ghosts aren't solid and won't just push themselves out of the ceiling.
 		fixed_t x,y,z;
+		sector_t *sector;
 		x = mthing->x << FRACBITS;
 		y = mthing->y << FRACBITS;
-		if (mthing->options & MTF_AMBUSH)
-			z = R_PointInSubsector(x, y)->sector->ceilingheight - mobjinfo[MT_PLAYER].height;
-		else if (mthing->options >> ZSHIFT)
+		sector = R_PointInSubsector(x, y)->sector;
+		if (!!(mthing->options & MTF_AMBUSH) ^ !!(mthing->options & MTF_OBJECTFLIP))
 		{
-			sector_t *sector = R_PointInSubsector(x, y)->sector;
-			z = sector->floorheight + ((mthing->options >> ZSHIFT) << FRACBITS);
+			z = sector->ceilingheight - mobjinfo[MT_PLAYER].height;
+			if (mthing->options >> ZSHIFT)
+				z -= ((mthing->options >> ZSHIFT) << FRACBITS);
+			if (z < sector->floorheight)
+				z = sector->floorheight;
+		}
+		else
+		{
+			z = sector->floorheight;
+			if (mthing->options >> ZSHIFT)
+				z += ((mthing->options >> ZSHIFT) << FRACBITS);
 			if (z > sector->ceilingheight - mobjinfo[MT_PLAYER].height)
 				z = sector->ceilingheight - mobjinfo[MT_PLAYER].height;
 		}
-		else
-			z = mthing->z << FRACBITS;
 		gh->mo = P_SpawnMobj(x, y, z, MT_GHOST);
 		gh->mo->angle = FixedAngle(mthing->angle*FRACUNIT);
 	}

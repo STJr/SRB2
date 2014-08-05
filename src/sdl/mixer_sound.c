@@ -3,7 +3,7 @@
 
 #include "../doomdef.h"
 
-#if defined(SDL) && defined(HAVE_MIXER) && SOUND==SOUND_MIXER
+#if defined(HAVE_SDL) && defined(HAVE_MIXER) && SOUND==SOUND_MIXER
 
 #include "../sounds.h"
 #include "../s_sound.h"
@@ -381,7 +381,7 @@ INT32 I_StartSound(sfxenum_t id, UINT8 vol, UINT8 sep, UINT8 pitch, UINT8 priori
 	UINT8 volume = (((UINT16)vol + 1) * (UINT16)sfx_volume) / 62; // (256 * 31) / 62 == 127
 	INT32 handle = Mix_PlayChannel(-1, S_sfx[id].data, 0);
 	Mix_Volume(handle, volume);
-	Mix_SetPanning(handle, min((UINT16)sep<<1, 0xff), min((UINT16)(0xff-sep)<<1, 0xff));
+	Mix_SetPanning(handle, min((UINT16)(0xff-sep)<<1, 0xff), min((UINT16)(sep)<<1, 0xff));
 	(void)pitch; // Mixer can't handle pitch
 	(void)priority; // priority and channel management is handled by SRB2...
 	return handle;
@@ -401,7 +401,7 @@ void I_UpdateSoundParams(INT32 handle, UINT8 vol, UINT8 sep, UINT8 pitch)
 {
 	UINT8 volume = (((UINT16)vol + 1) * (UINT16)sfx_volume) / 62; // (256 * 31) / 62 == 127
 	Mix_Volume(handle, volume);
-	Mix_SetPanning(handle, min((UINT16)sep<<1, 0xff), min((UINT16)(0xff-sep)<<1, 0xff));
+	Mix_SetPanning(handle, min((UINT16)(0xff-sep)<<1, 0xff), min((UINT16)(sep)<<1, 0xff));
 	(void)pitch;
 }
 
@@ -617,7 +617,7 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 	}
 #endif
 
-	music = Mix_LoadMUS_RW(SDL_RWFromMem(data, len));
+	music = Mix_LoadMUS_RW(SDL_RWFromMem(data, len), SDL_FALSE);
 	if (!music)
 	{
 		CONS_Alert(CONS_ERROR, "Mix_LoadMUS_RW: %s\n", Mix_GetError());
@@ -778,7 +778,7 @@ void I_SetMIDIMusicVolume(UINT8 volume)
 
 INT32 I_RegisterSong(void *data, size_t len)
 {
-	music = Mix_LoadMUS_RW(SDL_RWFromMem(data, len));
+	music = Mix_LoadMUS_RW(SDL_RWFromMem(data, len), SDL_FALSE);
 	if (!music)
 	{
 		CONS_Alert(CONS_ERROR, "Mix_LoadMUS_RW: %s\n", Mix_GetError());

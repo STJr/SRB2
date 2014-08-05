@@ -1110,7 +1110,7 @@ static menuitem_t OP_VideoOptionsMenu[] =
 	{IT_SUBMENU|IT_STRING, NULL,   "3D Card Options...",  &OP_OpenGLOptionsDef,    20},
 #endif
 
-#if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (SDL)
+#if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
 	{IT_STRING|IT_CVAR,      NULL, "Fullscreen",          &cv_fullscreen,    30},
 #endif
 
@@ -6244,8 +6244,13 @@ static void M_DrawSetupMultiPlayerMenu(void)
 	// draw player sprite
 	if (!setupm_fakecolor) // should never happen but hey, who knows
 	{
-		if (skins[setupm_fakeskin].flags & SF_HIRES && skins[setupm_fakeskin].highresscale == FRACUNIT>>1)
-			V_DrawSmallScaledPatch(mx + 98 + (PLBOXW*8/2), my + 16 + (PLBOXH*8) - 12, flags, patch);
+		if (skins[setupm_fakeskin].flags & SF_HIRES)
+		{
+			V_DrawSciencePatch((mx+98+(PLBOXW*8/2))<<FRACBITS,
+						(my+16+(PLBOXH*8)-12)<<FRACBITS,
+						flags, patch,
+						skins[setupm_fakeskin].highresscale);
+		}
 		else
 			V_DrawScaledPatch(mx + 98 + (PLBOXW*8/2), my + 16 + (PLBOXH*8) - 12, flags, patch);
 	}
@@ -6253,8 +6258,13 @@ static void M_DrawSetupMultiPlayerMenu(void)
 	{
 		UINT8 *colormap = R_GetTranslationColormap(setupm_fakeskin, setupm_fakecolor, 0);
 
-		if (skins[setupm_fakeskin].flags & SF_HIRES && skins[setupm_fakeskin].highresscale == FRACUNIT>>1)
-			V_DrawSmallMappedPatch(mx + 98 + (PLBOXW*8/2), my + 16 + (PLBOXH*8) - 12, flags, patch, colormap);
+		if (skins[setupm_fakeskin].flags & SF_HIRES)
+		{
+			V_DrawFixedPatch((mx+98+(PLBOXW*8/2))<<FRACBITS,
+						(my+16+(PLBOXH*8)-12)<<FRACBITS,
+						skins[setupm_fakeskin].highresscale,
+						flags, patch, colormap);
+		}
 		else
 			V_DrawMappedPatch(mx + 98 + (PLBOXW*8/2), my + 16 + (PLBOXH*8) - 12, flags, patch, colormap);
 
@@ -6827,7 +6837,7 @@ static void M_VideoModeMenu(INT32 choice)
 
 	memset(modedescs, 0, sizeof(modedescs));
 
-#if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (SDL)
+#if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
 	VID_PrepareModeList(); // FIXME: hack
 #endif
 	vidm_nummodes = 0;

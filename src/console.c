@@ -1139,7 +1139,7 @@ void CONS_Printf(const char *fmt, ...)
 	// if not in display loop, force screen update
 	if (con_startup)
 	{
-#if (defined (_WINDOWS)) || (defined (__OS2__) && !defined (SDL))
+#if (defined (_WINDOWS)) || (defined (__OS2__) && !defined (HAVE_SDL))
 		static lumpnum_t con_backpic_lumpnum = UINT32_MAX;
 		patch_t *con_backpic;
 
@@ -1383,7 +1383,6 @@ static void CON_DrawConsole(void)
 	UINT8 *p;
 	size_t i;
 	INT32 y;
-	INT32 w = 0, x2 = 0;
 	INT32 charflags = 0;
 	INT32 charwidth = (INT32)con_scalefactor << 3;
 	INT32 charheight = charwidth;
@@ -1416,9 +1415,9 @@ static void CON_DrawConsole(void)
 	}
 	else
 	{
-		x2 = vid.width;
-		// Hurdler: what's the correct value of w and x2 in hardware mode???
-		if (rendermode != render_none) V_DrawFadeConsBack(w, 0, x2, con_curlines, cons_backcolor.value); // translucent background
+		// inu: no more width (was always 0 and vid.width)
+		if (rendermode != render_none)
+			V_DrawFadeConsBack(con_curlines, cons_backcolor.value); // translucent background
 	}
 
 	// draw console text lines from top to bottom

@@ -73,7 +73,7 @@ void __set_fpscr(long); // in libgcc / kernel's startup.s?
 #pragma warning(disable : 4214 4244)
 #endif
 
-#ifdef SDL
+#ifdef HAVE_SDL
 
 #include "SDL.h"
 
@@ -996,8 +996,8 @@ void I_GetJoystickEvents(void)
 	UINT64 joyhats = 0;
 #if 0
 	UINT64 joybuttons = 0;
-	Sint16 axisx, axisy;
 #endif
+	Sint16 axisx, axisy;
 
 	if (!joystick_started) return;
 
@@ -1070,7 +1070,6 @@ void I_GetJoystickEvents(void)
 		}
 	}
 
-#if 0
 	// send joystick axis positions
 	event.type = ev_joystick;
 
@@ -1123,7 +1122,6 @@ void I_GetJoystickEvents(void)
 		}
 		D_PostEvent(&event);
 	}
-#endif
 }
 
 /**	\brief	Open joystick handle
@@ -1156,7 +1154,7 @@ static int joy_open(const char *fname)
 		{
 			CONS_Printf(M_GetText("Cannot use joystick #%d/(%s), it doesn't exist\n"),joyindex,fname);
 			for (i = 0; i < num_joy; i++)
-				CONS_Printf("#%d/(%s)\n", i+1, SDL_JoystickName(i));
+				CONS_Printf("#%d/(%s)\n", i+1, SDL_JoystickNameForIndex(i));
 			I_ShutdownJoystick();
 			return -1;
 		}
@@ -1177,7 +1175,7 @@ static int joy_open(const char *fname)
 		{
 			CONS_Printf(M_GetText("Found %d joysticks on this system\n"), num_joy);
 			for (i = 0; i < num_joy; i++)
-				CONS_Printf("#%d/(%s)\n", i+1, SDL_JoystickName(i));
+				CONS_Printf("#%d/(%s)\n", i+1, SDL_JoystickNameForIndex(i));
 		}
 		else
 			CONS_Printf("%s", M_GetText("Found no joysticks on this system\n"));
@@ -1185,7 +1183,6 @@ static int joy_open(const char *fname)
 	}
 
 	JoyInfo.dev = SDL_JoystickOpen(joyindex-1);
-	CONS_Printf(M_GetText("Joystick: %s\n"), SDL_JoystickName(joyindex-1));
 
 	if (JoyInfo.dev == NULL)
 	{
@@ -1195,6 +1192,7 @@ static int joy_open(const char *fname)
 	}
 	else
 	{
+		CONS_Printf(M_GetText("Joystick: %s\n"), SDL_JoystickName(JoyInfo.dev));
 		JoyInfo.axises = SDL_JoystickNumAxes(JoyInfo.dev);
 		if (JoyInfo.axises > JOYAXISSET*2)
 			JoyInfo.axises = JOYAXISSET*2;
@@ -1219,7 +1217,7 @@ static int joy_open(const char *fname)
 		JoyInfo.balls = SDL_JoystickNumBalls(JoyInfo.dev);
 #endif
 
-		//Joystick.bGamepadStyle = !stricmp(SDL_JoystickName(SDL_JoystickIndex(JoyInfo.dev)), "pad");
+		//Joystick.bGamepadStyle = !stricmp(SDL_JoystickName(JoyInfo.dev), "pad");
 
 		return JoyInfo.axises;
 	}
@@ -1290,8 +1288,8 @@ void I_GetJoystick2Events(void)
 	UINT64 joyhats = 0;
 #if 0
 	INT64 joybuttons = 0;
-	INT32 axisx, axisy;
 #endif
+	INT32 axisx, axisy;
 
 	if (!joystick2_started)
 		return;
@@ -1361,7 +1359,6 @@ void I_GetJoystick2Events(void)
 		}
 	}
 
-#if 0
 	// send joystick axis positions
 	event.type = ev_joystick2;
 
@@ -1416,7 +1413,6 @@ void I_GetJoystick2Events(void)
 		}
 		D_PostEvent(&event);
 	}
-#endif
 
 }
 
@@ -1448,7 +1444,7 @@ static int joy_open2(const char *fname)
 		{
 			CONS_Printf(M_GetText("Cannot use joystick #%d/(%s), it doesn't exist\n"),joyindex,fname);
 			for (i = 0; i < num_joy; i++)
-				CONS_Printf("#%d/(%s)\n", i+1, SDL_JoystickName(i));
+				CONS_Printf("#%d/(%s)\n", i+1, SDL_JoystickNameForIndex(i));
 			I_ShutdownJoystick2();
 			return -1;
 		}
@@ -1469,7 +1465,7 @@ static int joy_open2(const char *fname)
 		{
 			CONS_Printf(M_GetText("Found %d joysticks on this system\n"), num_joy);
 			for (i = 0; i < num_joy; i++)
-				CONS_Printf("#%d/(%s)\n", i+1, SDL_JoystickName(i));
+				CONS_Printf("#%d/(%s)\n", i+1, SDL_JoystickNameForIndex(i));
 		}
 		else
 			CONS_Printf("%s", M_GetText("Found no joysticks on this system\n"));
@@ -1477,7 +1473,6 @@ static int joy_open2(const char *fname)
 	}
 
 	JoyInfo2.dev = SDL_JoystickOpen(joyindex-1);
-	CONS_Printf(M_GetText("Joystick2: %s\n"), SDL_JoystickName(joyindex-1));
 
 	if (!JoyInfo2.dev)
 	{
@@ -1487,6 +1482,7 @@ static int joy_open2(const char *fname)
 	}
 	else
 	{
+		CONS_Printf(M_GetText("Joystick2: %s\n"), SDL_JoystickName(JoyInfo2.dev));
 		JoyInfo2.axises = SDL_JoystickNumAxes(JoyInfo2.dev);
 		if (JoyInfo2.axises > JOYAXISSET*2)
 			JoyInfo2.axises = JOYAXISSET*2;
@@ -1511,7 +1507,7 @@ static int joy_open2(const char *fname)
 		JoyInfo2.balls = SDL_JoystickNumBalls(JoyInfo2.dev);
 #endif
 
-		//Joystick.bGamepadStyle = !stricmp(SDL_JoystickName(SDL_JoystickIndex(JoyInfo2.dev)), "pad");
+		//Joystick.bGamepadStyle = !stricmp(SDL_JoystickName(JoyInfo2.dev), "pad");
 
 		return JoyInfo2.axises;
 	}
@@ -1582,11 +1578,11 @@ const char *I_GetJoyName(INT32 joyindex)
 	if (SDL_WasInit(SDL_INIT_JOYSTICK) == 0)
 	{
 		if (SDL_InitSubSystem(SDL_INIT_JOYSTICK) != -1)
-			joyname = SDL_JoystickName(joyindex);
+			joyname = SDL_JoystickNameForIndex(joyindex);
 		SDL_QuitSubSystem(SDL_INIT_JOYSTICK);
 	}
 	else
-		joyname = SDL_JoystickName(joyindex);
+		joyname = SDL_JoystickNameForIndex(joyindex);
 	return joyname;
 }
 
@@ -2219,7 +2215,7 @@ void I_Sleep(void)
 INT32 I_StartupSystem(void)
 {
 	SDL_version SDLcompiled;
-	const SDL_version *SDLlinked;
+	SDL_version SDLlinked;
 #ifdef _XBOX
 #ifdef __GNUC__
 	char DP[] ="      Sonic Robo Blast 2!\n";
@@ -2240,12 +2236,12 @@ INT32 I_StartupSystem(void)
 #endif
 #endif
 	SDL_VERSION(&SDLcompiled)
-	SDLlinked = SDL_Linked_Version();
+	SDL_GetVersion(&SDLlinked);
 	I_StartupConsole();
 	I_OutputMsg("Compiled for SDL version: %d.%d.%d\n",
 	 SDLcompiled.major, SDLcompiled.minor, SDLcompiled.patch);
 	I_OutputMsg("Linked with SDL version: %d.%d.%d\n",
-	 SDLlinked->major, SDLlinked->minor, SDLlinked->patch);
+	 SDLlinked.major, SDLlinked.minor, SDLlinked.patch);
 #if 0 //#ifdef GP2X //start up everything
 	if (SDL_Init(SDL_INIT_NOPARACHUTE|SDL_INIT_EVERYTHING) < 0)
 #else
@@ -2875,7 +2871,7 @@ const char *I_LocateWad(void)
 	return waddir;
 }
 
-#ifdef LINUX
+#if defined(LINUX) || defined(LINUX64)
 #define MEMINFO_FILE "/proc/meminfo"
 #define MEMTOTAL "MemTotal:"
 #define MEMFREE "MemFree:"
@@ -2931,7 +2927,25 @@ UINT32 I_GetFreeMem(UINT32 *total)
 	if (total)
 		*total = 32 << 20;
 	return 32 << 20;
-#elif defined (LINUX)
+#elif (defined (_WIN32) || (defined (_WIN32_WCE) && !defined (__GNUC__))) && !defined (_XBOX)
+	MEMORYSTATUS info;
+
+	info.dwLength = sizeof (MEMORYSTATUS);
+	GlobalMemoryStatus( &info );
+	if (total)
+		*total = (UINT32)info.dwTotalPhys;
+	return (UINT32)info.dwAvailPhys;
+#elif defined (__OS2__)
+	UINT32 pr_arena;
+
+	if (total)
+		DosQuerySysInfo( QSV_TOTPHYSMEM, QSV_TOTPHYSMEM,
+							(PVOID) total, sizeof (UINT32));
+	DosQuerySysInfo( QSV_MAXPRMEM, QSV_MAXPRMEM,
+				(PVOID) &pr_arena, sizeof (UINT32));
+
+	return pr_arena;
+#elif defined (LINUX) || defined (LINUX64)
 	/* Linux */
 	char buf[1024];
 	char *memTag;
@@ -2975,24 +2989,6 @@ UINT32 I_GetFreeMem(UINT32 *total)
 	if (total)
 		*total = totalKBytes << 10;
 	return freeKBytes << 10;
-#elif (defined (_WIN32) || (defined (_WIN32_WCE) && !defined (__GNUC__))) && !defined (_XBOX)
-	MEMORYSTATUS info;
-
-	info.dwLength = sizeof (MEMORYSTATUS);
-	GlobalMemoryStatus( &info );
-	if (total)
-		*total = (UINT32)info.dwTotalPhys;
-	return (UINT32)info.dwAvailPhys;
-#elif defined (__OS2__)
-	UINT32 pr_arena;
-
-	if (total)
-		DosQuerySysInfo( QSV_TOTPHYSMEM, QSV_TOTPHYSMEM,
-							(PVOID) total, sizeof (UINT32));
-	DosQuerySysInfo( QSV_MAXPRMEM, QSV_MAXPRMEM,
-				(PVOID) &pr_arena, sizeof (UINT32));
-
-	return pr_arena;
 #else
 	// Guess 48 MB.
 	if (total)
@@ -3039,8 +3035,8 @@ const CPUInfoFlags *I_CPUInfo(void)
 		WIN_CPUInfo.SSE2        = SDL_HasSSE2();
 		WIN_CPUInfo.AltiVec     = SDL_HasAltiVec();
 	}
-	WIN_CPUInfo.MMXExt      = SDL_HasMMXExt();
-	WIN_CPUInfo.AMD3DNowExt = SDL_Has3DNowExt();
+	WIN_CPUInfo.MMXExt      = SDL_FALSE; //SDL_HasMMXExt(); No longer in SDL2
+	WIN_CPUInfo.AMD3DNowExt = SDL_FALSE; //SDL_Has3DNowExt(); No longer in SDL2
 #endif
 	GetSystemInfo(&SI);
 	WIN_CPUInfo.CPUs = SI.dwNumberOfProcessors;
@@ -3052,9 +3048,9 @@ const CPUInfoFlags *I_CPUInfo(void)
 	memset(&SDL_CPUInfo,0,sizeof (CPUInfoFlags));
 	SDL_CPUInfo.RDTSC       = SDL_HasRDTSC();
 	SDL_CPUInfo.MMX         = SDL_HasMMX();
-	SDL_CPUInfo.MMXExt      = SDL_HasMMXExt();
+	SDL_CPUInfo.MMXExt      = SDL_FALSE; //SDL_HasMMXExt(); No longer in SDL2
 	SDL_CPUInfo.AMD3DNow    = SDL_Has3DNow();
-	SDL_CPUInfo.AMD3DNowExt = SDL_Has3DNowExt();
+	SDL_CPUInfo.AMD3DNowExt = SDL_FALSE; //SDL_Has3DNowExt(); No longer in SDL2
 	SDL_CPUInfo.SSE         = SDL_HasSSE();
 	SDL_CPUInfo.SSE2        = SDL_HasSSE2();
 	SDL_CPUInfo.AltiVec     = SDL_HasAltiVec();

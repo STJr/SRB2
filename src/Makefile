@@ -10,7 +10,7 @@
 #     -DPC_DOS    -> use DOS specific code (eg:textmode stuff)...
 #     -DLINUX     -> use for the GNU/Linux specific
 #     -D_WINDOWS  -> use for the Win32/DirectX specific
-#     -DSDL       -> use for the SDL interface
+#     -DHAVE_SDL  -> use for the SDL interface
 #
 # Sets:
 #     Compile the DGJPP/DOS version with 'make WATTCP=1'
@@ -599,6 +599,7 @@ ifndef NOUPX
 	-$(UPX) $(UPX_OPTS) $(BIN)/$(EXENAME)
 endif
 endif
+	@echo Build is done, please look for $(EXENAME) in $(BIN), \(checking for post steps\)
 
 reobjdump:
 	@echo Redumping debugging info

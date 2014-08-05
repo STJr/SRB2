@@ -4550,7 +4550,7 @@ void A_DetonChase(mobj_t *actor)
 	}*/
 	// movedir is up/down angle: how much it has to go up as it goes over to the player
 	xydist = P_AproxDistance(actor->tracer->x - actor->x, actor->tracer->y - actor->y);
-	exact = R_PointToAngle2(actor->x, actor->z, actor->x + xydist, actor->tracer->z);
+	exact = R_PointToAngle2(0, 0, xydist, actor->tracer->z - actor->z);
 	actor->movedir = exact;
 	/*if (exact != actor->movedir)
 	{
@@ -6730,7 +6730,8 @@ void A_BuzzFly(mobj_t *actor)
 		actor->momz = FixedMul(FixedDiv(actor->target->z - actor->z, dist), realspeed);
 
 		if (actor->z+actor->momz >= actor->waterbottom && actor->watertop > actor->floorz
-			&& actor->z+actor->momz > actor->watertop - FixedMul(256*FRACUNIT, actor->scale))
+			&& actor->z+actor->momz > actor->watertop - FixedMul(256*FRACUNIT, actor->scale)
+			&& actor->z+actor->momz <= actor->watertop)
 		{
 			actor->momz = 0;
 			actor->z = actor->watertop;
@@ -7299,11 +7300,16 @@ void A_SpawnObjectRelative(mobj_t *actor)
 //
 void A_ChangeAngleRelative(mobj_t *actor)
 {
+	// Oh god, the old code /sucked/. Changed this and the absolute version to get a random range using amin and amax instead of
+	//  getting a random angle from the _entire_ spectrum and then clipping. While we're at it, do the angle conversion to the result
+	//  rather than the ranges, so <0 and >360 work as possible values. -Red
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
-	angle_t angle = (P_Random()+1)<<24;
-	const angle_t amin = FixedAngle(locvar1*FRACUNIT);
-	const angle_t amax = FixedAngle(locvar2*FRACUNIT);
+	//angle_t angle = (P_Random()+1)<<24;
+	const fixed_t amin = locvar1*FRACUNIT;
+	const fixed_t amax = locvar2*FRACUNIT;
+	//const angle_t amin = FixedAngle(locvar1*FRACUNIT);
+	//const angle_t amax = FixedAngle(locvar2*FRACUNIT);
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_ChangeAngleRelative", actor))
 		return;
@@ -7313,13 +7319,13 @@ void A_ChangeAngleRelative(mobj_t *actor)
 	if (amin > amax)
 		I_Error("A_ChangeAngleRelative: var1 is greater then var2");
 #endif
-
+/*
 	if (angle < amin)
 		angle = amin;
 	if (angle > amax)
-		angle = amax;
+		angle = amax;*/
 
-	actor->angle += angle;
+	actor->angle += FixedAngle(P_RandomRange(amin, amax));
 }
 
 // Function: A_ChangeAngleAbsolute
@@ -7333,9 +7339,11 @@ void A_ChangeAngleAbsolute(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
-	angle_t angle = (P_Random()+1)<<24;
-	const angle_t amin = FixedAngle(locvar1*FRACUNIT);
-	const angle_t amax = FixedAngle(locvar2*FRACUNIT);
+	//angle_t angle = (P_Random()+1)<<24;
+	const fixed_t amin = locvar1*FRACUNIT;
+	const fixed_t amax = locvar2*FRACUNIT;
+	//const angle_t amin = FixedAngle(locvar1*FRACUNIT);
+	//const angle_t amax = FixedAngle(locvar2*FRACUNIT);
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_ChangeAngelAbsolute", actor))
 		return;
@@ -7345,13 +7353,13 @@ void A_ChangeAngleAbsolute(mobj_t *actor)
 	if (amin > amax)
 		I_Error("A_ChangeAngleAbsolute: var1 is greater then var2");
 #endif
-
+/*
 	if (angle < amin)
 		angle = amin;
 	if (angle > amax)
-		angle = amax;
+		angle = amax;*/
 
-	actor->angle = angle;
+	actor->angle = FixedAngle(P_RandomRange(amin, amax));
 }
 
 // Function: A_PlaySound
@@ -9313,9 +9321,15 @@ void A_SpikeRetract(mobj_t *actor)
 		return;
 
 	if (locvar1 == 0)
+	{
 		actor->flags &= ~MF_SOLID;
+		actor->flags |= MF_NOCLIPTHING;
+	}
 	else
+	{
 		actor->flags |= MF_SOLID;
+		actor->flags &= ~MF_NOCLIPTHING;
+	}
 	if (actor->flags & MF_SOLID)
 		P_CheckPosition(actor, actor->x, actor->y);
 }

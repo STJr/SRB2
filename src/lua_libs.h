@@ -31,12 +31,15 @@ extern lua_State *gL;
 #define META_TICCMD "TICCMD_T*"
 #define META_SKIN "SKIN_T*"
 #define META_POWERS "PLAYER_T*POWERS"
+#define META_SOUNDSID "SKIN_T*SOUNDSID"
 
 #define META_VERTEX "VERTEX_T*"
 #define META_LINE "LINE_T*"
 #define META_SIDE "SIDE_T*"
 #define META_SUBSECTOR "SUBSECTOR_T*"
 #define META_SECTOR "SECTOR_T*"
+#define META_FFLOOR "FFLOOR_T*"
+#define META_MAPHEADER "MAPHEADER_T*"
 
 #define META_CVAR "CONSVAR_T*"
 
@@ -45,6 +48,7 @@ extern lua_State *gL;
 #define META_HUDINFO "HUDINFO_T*"
 #define META_PATCH "PATCH_T*"
 #define META_COLORMAP "COLORMAP"
+#define META_CAMERA "CAMERA_T*"
 
 boolean luaL_checkboolean(lua_State *L, int narg);
 

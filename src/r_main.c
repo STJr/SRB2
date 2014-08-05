@@ -1304,6 +1304,7 @@ void R_RegisterEngineStuff(void)
 	CV_RegisterVar(&cv_grdynamiclighting);
 	CV_RegisterVar(&cv_grcoronas);
 	CV_RegisterVar(&cv_grcoronasize);
+	CV_RegisterVar(&cv_grmd2);
 #endif
 
 #ifdef HWRENDER

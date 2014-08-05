@@ -149,7 +149,10 @@ typedef enum
 	PF_TAGGED            = 1<<27, // Player has been tagged and awaits the next round in hide and seek.
 	PF_TAGIT             = 1<<28, // The player is it! For Tag Mode
 
-	// free: 1<<29 through 1<<31
+	/*** misc ***/
+	PF_FORCESTRAFE       = 1<<29, // Turning inputs are translated into strafing inputs
+
+	// free: 1<<30 and 1<<31
 } pflags_t;
 
 typedef enum

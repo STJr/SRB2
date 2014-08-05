@@ -1536,6 +1536,337 @@ static void P_AddExecutorDelay(line_t *line, mobj_t *mobj)
 
 static sector_t *triplinecaller;
 
+/** Used by P_LinedefExecute to check a trigger linedef's conditions
+  * The linedef executor specials in the trigger linedef's sector are run if all conditions are met.
+  * Return false cancels P_LinedefExecute, this happens if a condition is not met.
+  *
+  * \param triggerline Trigger linedef to check conditions for; should NEVER be NULL.
+  * \param actor Object initiating the action; should not be NULL.
+  * \param caller Sector in which the action was started. May be NULL.
+  * \sa P_ProcessLineSpecial, P_LinedefExecute
+  */
+boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller)
+{
+	sector_t *ctlsector;
+	fixed_t dist = P_AproxDistance(triggerline->dx, triggerline->dy)>>FRACBITS;
+	size_t i, linecnt, sectori;
+	INT16 specialtype = triggerline->special;
+
+	/////////////////////////////////////////////////
+	// Distance-checking/sector trigger conditions //
+	/////////////////////////////////////////////////
+
+	// Linetypes 303 and 304 require a specific
+	// number, or minimum or maximum, of rings.
+	if (specialtype == 303 || specialtype == 304)
+	{
+		fixed_t rings = 0;
+
+		// With the passuse flag, count all player's
+		// rings.
+		if (triggerline->flags & ML_EFFECT4)
+		{
+			for (i = 0; i < MAXPLAYERS; i++)
+			{
+				if (!playeringame[i] || players[i].spectator)
+					continue;
+
+				if (!players[i].mo || players[i].mo->health < 1)
+					continue;
+
+				rings += players[i].mo->health-1;
+			}
+		}
+		else
+		{
+			if (!(actor && actor->player))
+				return false; // no player to count rings from here, sorry
+
+			rings = actor->health-1;
+		}
+
+		if (triggerline->flags & ML_NOCLIMB)
+		{
+			if (rings > dist)
+				return false;
+		}
+		else if (triggerline->flags & ML_BLOCKMONSTERS)
+		{
+			if (rings < dist)
+				return false;
+		}
+		else
+		{
+			if (rings != dist)
+				return false;
+		}
+	}
+	else if (specialtype >= 314 && specialtype <= 315)
+	{
+		msecnode_t *node;
+		mobj_t *mo;
+		INT32 numpush = 0;
+		INT32 numneeded = dist;
+
+		if (!caller)
+			return false; // we need a calling sector to find pushables in, silly!
+
+		// Count the pushables in this sector
+		node = caller->touching_thinglist; // things touching this sector
+		while (node)
+		{
+			mo = node->m_thing;
+			if (mo->flags & MF_PUSHABLE)
+				numpush++;
+			node = node->m_snext;
+		}
+
+		if (triggerline->flags & ML_NOCLIMB) // Need at least or more
+		{
+			if (numpush < numneeded)
+				return false;
+		}
+		else if (triggerline->flags & ML_EFFECT4) // Need less than
+		{
+			if (numpush >= numneeded)
+				return false;
+		}
+		else // Need exact
+		{
+			if (numpush != numneeded)
+				return false;
+		}
+	}
+	else if (caller)
+	{
+		if (GETSECSPECIAL(caller->special, 2) == 6)
+		{
+			if (!(ALL7EMERALDS(emeralds)))
+				return false;
+		}
+		else if (GETSECSPECIAL(caller->special, 2) == 7)
+		{
+			UINT8 mare;
+
+			if (!(maptol & TOL_NIGHTS))
+				return false;
+
+			mare = P_FindLowestMare();
+
+			if (triggerline->flags & ML_NOCLIMB)
+			{
+				if (!(mare <= dist))
+					return false;
+			}
+			else if (triggerline->flags & ML_BLOCKMONSTERS)
+			{
+				if (!(mare >= dist))
+					return false;
+			}
+			else
+			{
+				if (!(mare == dist))
+					return false;
+			}
+		}
+		// If we were not triggered by a sector type especially for the purpose,
+		// a Linedef Executor linedef trigger is not handling sector triggers properly, return.
+
+		else if ((!GETSECSPECIAL(caller->special, 2) || GETSECSPECIAL(caller->special, 2) > 7) && (specialtype > 320))
+		{
+			CONS_Alert(CONS_WARNING,
+				M_GetText("Linedef executor trigger isn't handling sector triggers properly!\nspecialtype = %d, if you are not a dev, report this warning instance\nalong with the wad that caused it!\n"),
+				specialtype);
+			return false;
+		}
+	}
+
+	//////////////////////////////////////
+	// Miscellaneous trigger conditions //
+	//////////////////////////////////////
+
+	switch (specialtype)
+	{
+		case 305: // continuous
+		case 306: // each time
+		case 307: // once
+			if (!(actor && actor->player && actor->player->charability != dist/10))
+				return false;
+			break;
+		case 309: // continuous
+		case 310: // each time
+			// Only red team members can activate this.
+			if (!(actor && actor->player && actor->player->ctfteam == 1))
+				return false;
+			break;
+		case 311: // continuous
+		case 312: // each time
+			// Only blue team members can activate this.
+			if (!(actor && actor->player && actor->player->ctfteam == 2))
+				return false;
+			break;
+		case 317: // continuous
+		case 318: // once
+			{ // Unlockable triggers required
+				INT32 trigid = (INT32)(sides[triggerline->sidenum[0]].textureoffset>>FRACBITS);
+
+				if ((modifiedgame && !savemoddata) || (netgame || multiplayer))
+					return false;
+				else if (trigid < 0 || trigid > 31) // limited by 32 bit variable
+				{
+					CONS_Debug(DBG_GAMELOGIC, "Unlockable trigger (sidedef %hu): bad trigger ID %d\n", triggerline->sidenum[0], trigid);
+					return false;
+				}
+				else if (!(unlocktriggers & (1 << trigid)))
+					return false;
+			}
+			break;
+		case 319: // continuous
+		case 320: // once
+			{ // An unlockable itself must be unlocked!
+				INT32 unlockid = (INT32)(sides[triggerline->sidenum[0]].textureoffset>>FRACBITS);
+
+				if ((modifiedgame && !savemoddata) || (netgame || multiplayer))
+					return false;
+				else if (unlockid < 0 || unlockid >= MAXUNLOCKABLES) // limited by unlockable count
+				{
+					CONS_Debug(DBG_GAMELOGIC, "Unlockable check (sidedef %hu): bad unlockable ID %d\n", triggerline->sidenum[0], unlockid);
+					return false;
+				}
+				else if (!(unlockables[unlockid-1].unlocked))
+					return false;
+			}
+			break;
+		default:
+			break;
+	}
+
+	/////////////////////////////////
+	// Processing linedef specials //
+	/////////////////////////////////
+
+	triplinecaller = caller;
+	ctlsector = triggerline->frontsector;
+	sectori = (size_t)(ctlsector - sectors);
+	linecnt = ctlsector->linecount;
+
+	if (triggerline->flags & ML_EFFECT5) // disregard order for efficiency
+	{
+		for (i = 0; i < linecnt; i++)
+			if (ctlsector->lines[i]->special >= 400
+				&& ctlsector->lines[i]->special < 500)
+			{
+				if (ctlsector->lines[i]->flags & ML_DONTPEGTOP)
+					P_AddExecutorDelay(ctlsector->lines[i], actor);
+				else
+					P_ProcessLineSpecial(ctlsector->lines[i], actor);
+			}
+	}
+	else // walk around the sector in a defined order
+	{
+		boolean backwards = false;
+		size_t j, masterlineindex = (size_t)-1;
+
+		for (i = 0; i < linecnt; i++)
+			if (ctlsector->lines[i] == triggerline)
+			{
+				masterlineindex = i;
+				break;
+			}
+
+#ifdef PARANOIA
+		if (masterlineindex == (size_t)-1)
+		{
+			const size_t li = (size_t)(ctlsector->lines[i] - lines);
+			I_Error("Line %s isn't linked into its front sector", sizeu1(li));
+		}
+#endif
+
+		// i == masterlineindex
+		for (;;)
+		{
+			if (backwards) // v2 to v1
+			{
+				for (j = 0; j < linecnt; j++)
+				{
+					if (i == j)
+						continue;
+					if (ctlsector->lines[i]->v1 == ctlsector->lines[j]->v2)
+					{
+						i = j;
+						break;
+					}
+					if (ctlsector->lines[i]->v1 == ctlsector->lines[j]->v1)
+					{
+						i = j;
+						backwards = false;
+						break;
+					}
+				}
+				if (j == linecnt)
+				{
+					const size_t vertexei = (size_t)(ctlsector->lines[i]->v1 - vertexes);
+					CONS_Debug(DBG_GAMELOGIC, "Warning: Sector %s is not closed at vertex %s (%d, %d)\n",
+						sizeu1(sectori), sizeu2(vertexei), ctlsector->lines[i]->v1->x, ctlsector->lines[i]->v1->y);
+					return false; // abort
+				}
+			}
+			else // v1 to v2
+			{
+				for (j = 0; j < linecnt; j++)
+				{
+					if (i == j)
+						continue;
+					if (ctlsector->lines[i]->v2 == ctlsector->lines[j]->v1)
+					{
+						i = j;
+						break;
+					}
+					if (ctlsector->lines[i]->v2 == ctlsector->lines[j]->v2)
+					{
+						i = j;
+						backwards = true;
+						break;
+					}
+				}
+				if (j == linecnt)
+				{
+					const size_t vertexei = (size_t)(ctlsector->lines[i]->v1 - vertexes);
+					CONS_Debug(DBG_GAMELOGIC, "Warning: Sector %s is not closed at vertex %s (%d, %d)\n",
+						sizeu1(sectori), sizeu2(vertexei), ctlsector->lines[i]->v2->x, ctlsector->lines[i]->v2->y);
+					return false; // abort
+				}
+			}
+
+			if (i == masterlineindex)
+				break;
+
+			if (ctlsector->lines[i]->special >= 400
+				&& ctlsector->lines[i]->special < 500)
+			{
+				if (ctlsector->lines[i]->flags & ML_DONTPEGTOP)
+					P_AddExecutorDelay(ctlsector->lines[i], actor);
+				else
+					P_ProcessLineSpecial(ctlsector->lines[i], actor);
+			}
+		}
+	}
+
+	// Special type 308, 307, 302, 304, 315, 318, and 320 only work once
+	if (specialtype == 302 || specialtype == 304 || specialtype == 307 || specialtype == 308 || specialtype == 315 || specialtype == 318 || specialtype == 320)
+	{
+		triggerline->special = 0; // Clear it out
+
+		// Hmm, I'm thinking that we shouldn't touch the sector special, incase
+		// we have continuous executors associated with it, too?
+		/*
+		if (caller && (GETSECSPECIAL(caller->special, 2) >= 1 && GETSECSPECIAL(caller->special, 2) <= 7))
+			caller->special = (UINT16)(caller->special-(GETSECSPECIAL(caller->special, 2) << 4)); // Only remove the relevant section
+			*/
+	}
+	return true;
+}
+
 /** Runs a linedef executor.
   * Can be called by:
   *   - a player moving into a special sector or FOF.
@@ -1546,15 +1877,12 @@ static sector_t *triplinecaller;
   * \param tag Tag of the linedef executor to run.
   * \param actor Object initiating the action; should not be NULL.
   * \param caller Sector in which the action was started. May be NULL.
-  * \sa P_ProcessLineSpecial
+  * \sa P_ProcessLineSpecial, P_RunTriggerLinedef
   * \author Graue <graue@oceanbase.org>
   */
 void P_LinedefExecute(INT16 tag, mobj_t *actor, sector_t *caller)
 {
-	sector_t *ctlsector;
-	fixed_t dist;
-	size_t masterline, i, linecnt, sectori;
-	INT16 specialtype;
+	size_t masterline;
 
 	CONS_Debug(DBG_GAMELOGIC, "P_LinedefExecute: Executing trigger linedefs of tag %d\n", tag);
 
@@ -1578,289 +1906,8 @@ void P_LinedefExecute(INT16 tag, mobj_t *actor, sector_t *caller)
 			|| lines[masterline].special > 399)
 			continue;
 
-		specialtype = lines[masterline].special;
-
-		// Special handling for some executors
-
-		// Linetypes 303 and 304 require a specific
-		// number, or minimum or maximum, of rings.
-		if (actor && actor->player && (specialtype == 303
-			|| specialtype == 304))
-		{
-			fixed_t rings = 0;
-
-			// With the passuse flag, count all player's
-			// rings.
-			if (lines[masterline].flags & ML_EFFECT4)
-			{
-				for (i = 0; i < MAXPLAYERS; i++)
-				{
-					if (!playeringame[i] || players[i].spectator)
-						continue;
-
-					if (!players[i].mo || players[i].mo->health < 1)
-						continue;
-
-					rings += players[i].mo->health-1;
-				}
-			}
-			else
-				rings = actor->health-1;
-
-			dist = P_AproxDistance(lines[masterline].dx, lines[masterline].dy)>>FRACBITS;
-
-			if (lines[masterline].flags & ML_NOCLIMB)
-			{
-				if (rings > dist)
-					return;
-			}
-			else if (lines[masterline].flags & ML_BLOCKMONSTERS)
-			{
-				if (rings < dist)
-					return;
-			}
-			else
-			{
-				if (rings != dist)
-					return;
-			}
-		}
-		else if (caller)
-		{
-			if (GETSECSPECIAL(caller->special, 2) == 6)
-			{
-				if (!(ALL7EMERALDS(emeralds)))
-					return;
-			}
-			else if (GETSECSPECIAL(caller->special, 2) == 7)
-			{
-				UINT8 mare;
-
-				if (!(maptol & TOL_NIGHTS))
-					return;
-
-				dist = P_AproxDistance(lines[masterline].dx, lines[masterline].dy)>>FRACBITS;
-				mare = P_FindLowestMare();
-
-				if (lines[masterline].flags & ML_NOCLIMB)
-				{
-					if (!(mare <= dist))
-						return;
-				}
-				else if (lines[masterline].flags & ML_BLOCKMONSTERS)
-				{
-					if (!(mare >= dist))
-						return;
-				}
-				else
-				{
-					if (!(mare == dist))
-						return;
-				}
-			}
-			// If we were not triggered by a sector type especially for the purpose,
-			// a Linedef Executor linedef trigger is not handling sector triggers properly, return.
-
-			else if ((!GETSECSPECIAL(caller->special, 2) || GETSECSPECIAL(caller->special, 2) > 7) && (specialtype > 318))
-			{
-				CONS_Alert(CONS_WARNING,
-					M_GetText("Linedef executor trigger isn't handling sector triggers properly!\nspecialtype = %d, if you are not a dev, report this warning instance\nalong with the wad that caused it!\n"),
-					specialtype);
-			}
-
-
-			if (specialtype >= 314 && specialtype <= 315)
-			{
-				msecnode_t *node;
-				mobj_t *mo;
-				INT32 numpush = 0;
-				INT32 numneeded = P_AproxDistance(lines[masterline].dx, lines[masterline].dy)>>FRACBITS;
-
-				// Count the pushables in this sector
-				node = caller->touching_thinglist; // things touching this sector
-				while (node)
-				{
-					mo = node->m_thing;
-					if (mo->flags & MF_PUSHABLE)
-						numpush++;
-					node = node->m_snext;
-				}
-
-				if (lines[masterline].flags & ML_NOCLIMB) // Need at least or more
-				{
-					if (numpush < numneeded)
-						return;
-				}
-				else if (lines[masterline].flags & ML_EFFECT4) // Need less than
-				{
-					if (numpush >= numneeded)
-						return;
-				}
-				else // Need exact
-				{
-					if (numpush != numneeded)
-						return;
-				}
-			}
-		}
-
-		if (specialtype >= 305 && specialtype <= 307)
-		{
-			if (!actor)
-				return;
-
-			if (!actor->player)
-				return;
-
-			if (actor->player->charability != (P_AproxDistance(lines[masterline].dx, lines[masterline].dy)>>FRACBITS)/10)
-				return;
-		}
-
-		// Only red team members can activate this.
-		if ((specialtype == 309 || specialtype == 310)
-			&& !(actor && actor->player && actor->player->ctfteam == 1))
-			return;
-
-		// Only blue team members can activate this.
-		if ((specialtype == 311 || specialtype == 312)
-			&& !(actor && actor->player && actor->player->ctfteam == 2))
-			return;
-
-		// Unlockable triggers required
-		if (specialtype <= 318 && specialtype >= 317)
-		{
-			INT32 trigid = (INT32)(sides[lines[masterline].sidenum[0]].textureoffset>>FRACBITS);
-
-			if ((modifiedgame && !savemoddata) || (netgame || multiplayer))
-				return;
-			else if (trigid < 0 || trigid > 31) // limited by 32 bit variable
-			{
-				CONS_Debug(DBG_GAMELOGIC, "Unlockable trigger (sidedef %hu): bad trigger ID %d\n", lines[masterline].sidenum[0], trigid);
-				return;
-			}
-			else if (!(unlocktriggers & (1 << trigid)))
-				return;
-		}
-
-		triplinecaller = caller;
-		ctlsector = lines[masterline].frontsector;
-		sectori = (size_t)(ctlsector - sectors);
-		linecnt = ctlsector->linecount;
-
-		if (lines[masterline].flags & ML_EFFECT5) // disregard order for efficiency
-		{
-			for (i = 0; i < linecnt; i++)
-				if (ctlsector->lines[i]->special >= 400
-					&& ctlsector->lines[i]->special < 500)
-				{
-					if (ctlsector->lines[i]->flags & ML_DONTPEGTOP)
-						P_AddExecutorDelay(ctlsector->lines[i], actor);
-					else
-						P_ProcessLineSpecial(ctlsector->lines[i], actor);
-				}
-		}
-		else // walk around the sector in a defined order
-		{
-			boolean backwards = false;
-			size_t j, masterlineindex = (size_t)-1;
-
-			for (i = 0; i < linecnt; i++)
-				if (ctlsector->lines[i] == &lines[masterline])
-				{
-					masterlineindex = i;
-					break;
-				}
-
-#ifdef PARANOIA
-			if (masterlineindex == (size_t)-1)
-			{
-				const size_t li = (size_t)(ctlsector->lines[i] - lines);
-				I_Error("Line %s isn't linked into its front sector", sizeu1(li));
-			}
-#endif
-
-			// i == masterlineindex
-			for (;;)
-			{
-				if (backwards) // v2 to v1
-				{
-					for (j = 0; j < linecnt; j++)
-					{
-						if (i == j)
-							continue;
-						if (ctlsector->lines[i]->v1 == ctlsector->lines[j]->v2)
-						{
-							i = j;
-							break;
-						}
-						if (ctlsector->lines[i]->v1 == ctlsector->lines[j]->v1)
-						{
-							i = j;
-							backwards = false;
-							break;
-						}
-					}
-					if (j == linecnt)
-					{
-						const size_t vertexei = (size_t)(ctlsector->lines[i]->v1 - vertexes);
-						CONS_Debug(DBG_GAMELOGIC, "Warning: Sector %s is not closed at vertex %s (%d, %d)\n",
-							sizeu1(sectori), sizeu2(vertexei), ctlsector->lines[i]->v1->x, ctlsector->lines[i]->v1->y);
-						return; // abort
-					}
-				}
-				else // v1 to v2
-				{
-					for (j = 0; j < linecnt; j++)
-					{
-						if (i == j)
-							continue;
-						if (ctlsector->lines[i]->v2 == ctlsector->lines[j]->v1)
-						{
-							i = j;
-							break;
-						}
-						if (ctlsector->lines[i]->v2 == ctlsector->lines[j]->v2)
-						{
-							i = j;
-							backwards = true;
-							break;
-						}
-					}
-					if (j == linecnt)
-					{
-						const size_t vertexei = (size_t)(ctlsector->lines[i]->v1 - vertexes);
-						CONS_Debug(DBG_GAMELOGIC, "Warning: Sector %s is not closed at vertex %s (%d, %d)\n",
-							sizeu1(sectori), sizeu2(vertexei), ctlsector->lines[i]->v2->x, ctlsector->lines[i]->v2->y);
-						return; // abort
-					}
-				}
-
-				if (i == masterlineindex)
-					break;
-
-				if (ctlsector->lines[i]->special >= 400
-					&& ctlsector->lines[i]->special < 500)
-				{
-					if (ctlsector->lines[i]->flags & ML_DONTPEGTOP)
-						P_AddExecutorDelay(ctlsector->lines[i], actor);
-					else
-						P_ProcessLineSpecial(ctlsector->lines[i], actor);
-				}
-			}
-		}
-
-		// Special type 308, 307, 302, 304, 315, and 318 only work once
-		if (specialtype == 302 || specialtype == 304 || specialtype == 307 || specialtype == 308 || specialtype == 315 || specialtype == 318)
-		{
-			lines[masterline].special = 0; // Clear it out
-
-			// Hmm, I'm thinking that we shouldn't touch the sector special, incase
-			// we have continuous executors associated with it, too?
-			/*
-			if (caller && (GETSECSPECIAL(caller->special, 2) >= 1 && GETSECSPECIAL(caller->special, 2) <= 7))
-				caller->special = (UINT16)(caller->special-(GETSECSPECIAL(caller->special, 2) << 4)); // Only remove the relevant section
-				*/
-		}
+		if (!P_RunTriggerLinedef(&lines[masterline], actor, caller))
+			return; // cancel P_LinedefExecute if function returns false
 	}
 }
 
@@ -2201,21 +2248,15 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo)
 			break;*/
 
 		case 409: // Change tagged sectors' tag
-		// (formerly "Change calling sectors' tag", but behavior
-		//  was changed)
+		// (formerly "Change calling sectors' tag", but behavior was changed)
 		{
-			while ((secnum = P_FindSectorFromLineTag(line,
-				secnum)) != -1)
-			{
-				P_ChangeSectorTag(secnum,
-					(INT16)(P_AproxDistance(line->dx, line->dy)
-					>>FRACBITS));
-			}
+			while ((secnum = P_FindSectorFromLineTag(line, secnum)) >= 0)
+				P_ChangeSectorTag(secnum,(INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS));
 			break;
 		}
 
 		case 410: // Change front sector's tag
-			P_ChangeSectorTag((UINT32)(line->frontsector - sectors), (INT16)(P_AproxDistance(line->dx, line->dy)>>FRACBITS));
+			P_ChangeSectorTag((UINT32)(line->frontsector - sectors), (INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS));
 			break;
 
 		case 411: // Stop floor/ceiling movement in tagged sector(s)
@@ -3388,14 +3429,14 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 
 			P_DoPlayerPain(player, NULL, NULL); // this does basically everything that was here before
 
-			if (gametype == GT_CTF && (player->gotflag & GF_REDFLAG || player->gotflag & GF_BLUEFLAG))
+			if (gametype == GT_CTF && player->gotflag & (GF_REDFLAG|GF_BLUEFLAG))
 				P_PlayerFlagBurst(player, false);
 			break;
 		case 12: // Space Countdown
 			if ((player->powers[pw_shield] & SH_NOSTACK) != SH_ELEMENTAL && !player->powers[pw_spacetime])
 				player->powers[pw_spacetime] = spacetimetics + 1;
 			break;
-		case 13: // Ramp Sector (Increase step-up)
+		case 13: // Ramp Sector (Increase step-up/down)
 		case 14: // Non-Ramp Sector (Don't step-down)
 		case 15: // Bouncy Sector (FOF Control Only)
 			break;
@@ -4056,8 +4097,7 @@ DoneSection2:
 					junk.dx = v2.x - v1.x;
 					junk.dy = v2.y - v1.y;
 
-					P_ClosestPointOnLine(player->mo->x, player->mo->y, &junk, &resultlow);
-					resultlow.z = waypointmid->z;
+					P_ClosestPointOnLine3D(player->mo->x, player->mo->y, player->mo->z, &junk, &resultlow);
 				}
 
 				// Waypointmid and Waypointhigh:
@@ -4074,11 +4114,10 @@ DoneSection2:
 					junk.dx = v2.x - v1.x;
 					junk.dy = v2.y - v1.y;
 
-					P_ClosestPointOnLine(player->mo->x, player->mo->y, &junk, &resulthigh);
-					resulthigh.z = waypointhigh->z;
+					P_ClosestPointOnLine3D(player->mo->x, player->mo->y, player->mo->z, &junk, &resulthigh);
 				}
 
-				// 3D support not available yet. Need a 3D version of P_ClosestPointOnLine.
+				// 3D support now available. Disregard the previous notice here. -Red
 
 				P_UnsetThingPosition(player->mo);
 				P_ResetPlayer(player);
@@ -4086,22 +4125,23 @@ DoneSection2:
 
 				if (lines[lineindex].flags & ML_EFFECT1) // Don't wrap
 				{
-					if (waypointhigh)
-					{
-						closest = waypointhigh;
-						player->mo->x = resulthigh.x;
-						player->mo->y = resulthigh.y;
-						player->mo->z = resulthigh.z - P_GetPlayerHeight(player);
-					}
-					else if (waypointlow)
-					{
-						closest = waypointmid;
-						player->mo->x = resultlow.x;
-						player->mo->y = resultlow.y;
-						player->mo->z = resultlow.z - P_GetPlayerHeight(player);
-					}
-
 					highest->flags |= MF_SLIDEME;
+				}
+
+				// Changing the conditions on these ifs to fix issues with snapping to the wrong spot -Red
+				if ((lines[lineindex].flags & ML_EFFECT1) && waypointmid->health == 0)
+				{
+					closest = waypointhigh;
+					player->mo->x = resulthigh.x;
+					player->mo->y = resulthigh.y;
+					player->mo->z = resulthigh.z - P_GetPlayerHeight(player);
+				}
+				else if ((lines[lineindex].flags & ML_EFFECT1) && waypointmid->health == highest->health)
+				{
+					closest = waypointmid;
+					player->mo->x = resultlow.x;
+					player->mo->y = resultlow.y;
+					player->mo->z = resultlow.z - P_GetPlayerHeight(player);
 				}
 				else
 				{
@@ -5528,6 +5568,9 @@ void P_SpawnSpecials(INT32 fromnetsave)
 
 					if (lines[i].flags & ML_EFFECT3)
 						sectors[s].flags |= SF_TRIGGERSPECIAL_TOUCH;
+
+					if (lines[i].frontsector && GETSECSPECIAL(lines[i].frontsector->special, 4) == 12)
+						sectors[s].camsec = sides[*lines[i].sidenum].sector-sectors;
 				}
 				break;
 
@@ -6175,6 +6218,9 @@ void P_SpawnSpecials(INT32 fromnetsave)
 			case 317:
 			case 318:
 				break;
+			case 319:
+			case 320:
+				break;
 
 			case 399: // Linedef execute on map load
 				// This is handled in P_RunLevelLoadExecutors.
@@ -6588,7 +6634,7 @@ void T_Scroll(scroll_t *s)
 						continue;
 
 					if (!((thing = node->m_thing)->flags & MF_NOCLIP) &&
-						(!(thing->flags & MF_NOGRAVITY || thing->z < height)))
+						(!(thing->flags & MF_NOGRAVITY || thing->z+thing->height < height)))
 					{
 						// Move objects only if on floor or underwater,
 						// non-floating, and clipped.

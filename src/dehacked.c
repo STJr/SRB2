@@ -27,6 +27,7 @@
 #include "p_local.h" // for var1 and var2, and some constants
 #include "p_setup.h"
 #include "r_data.h"
+#include "r_sky.h"
 #include "fastcmp.h"
 #include "lua_script.h"
 #include "lua_hook.h"
@@ -363,6 +364,10 @@ static void clear_levels(void)
 	{
 		if (!mapheaderinfo[i])
 			continue;
+
+		// Custom map header info
+		// (no need to set num to 0, we're freeing the entire header shortly)
+		Z_Free(mapheaderinfo[i]->customopts);
 
 		P_DeleteGrades(i);
 		Z_Free(mapheaderinfo[i]);
@@ -993,6 +998,7 @@ static void readlevelheader(MYFILE *f, INT32 num)
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
 	char *word = s;
 	char *word2;
+	//char *word3; // Non-uppercase version of word2
 	char *tmp;
 	INT32 i;
 
@@ -1036,6 +1042,49 @@ static void readlevelheader(MYFILE *f, INT32 num)
 				continue;
 			}
 
+			// Lua custom options also go above, contents may be case sensitive.
+			if (fastncmp(word, "LUA.", 4))
+			{
+#ifdef HAVE_BLUA
+				UINT8 j;
+				customoption_t *modoption;
+
+				// Note: we actualy strlwr word here, so things are made a little easier for Lua
+				strlwr(word);
+				word += 4; // move past "lua."
+
+				// ... and do a simple name sanity check; the name must start with a letter
+				if (*word < 'a' || *word > 'z')
+				{
+					deh_warning("Level header %d: invalid custom option name \"%s\"", num, word);
+					continue;
+				}
+
+				// Sanity limit of 128 params
+				if (mapheaderinfo[num-1]->numCustomOptions == 128)
+				{
+					deh_warning("Level header %d: too many custom parameters", num);
+					continue;
+				}
+				j = mapheaderinfo[num-1]->numCustomOptions++;
+
+				mapheaderinfo[num-1]->customopts =
+					Z_Realloc(mapheaderinfo[num-1]->customopts,
+						sizeof(customoption_t) * mapheaderinfo[num-1]->numCustomOptions, PU_STATIC, NULL);
+
+				// Newly allocated
+				modoption = &mapheaderinfo[num-1]->customopts[j];
+
+				strncpy(modoption->option, word,  31);
+				modoption->option[31] = '\0';
+				strncpy(modoption->value,  word2, 255);
+				modoption->value[255] = '\0';
+#else
+				// Silently ignore.
+#endif
+				continue;
+			}
+
 			// Now go to uppercase
 			strupr(word2);
 
@@ -1049,19 +1098,26 @@ static void readlevelheader(MYFILE *f, INT32 num)
 					deh_warning("Level header %d: unknown word '%s'", num, word);
 					continue;
 				}
+
 				P_AddGradesForMare((INT16)(num-1), mare-1, word2);
 			}
 
 			// Strings that can be truncated
 			else if (fastcmp(word, "LEVELNAME"))
+			{
 				deh_strlcpy(mapheaderinfo[num-1]->lvlttl, word2,
 					sizeof(mapheaderinfo[num-1]->lvlttl), va("Level header %d: levelname", num));
+			}
 			else if (fastcmp(word, "SCRIPTNAME"))
+			{
 				deh_strlcpy(mapheaderinfo[num-1]->scriptname, word2,
 					sizeof(mapheaderinfo[num-1]->scriptname), va("Level header %d: scriptname", num));
+			}
 			else if (fastcmp(word, "RUNSOC"))
+			{
 				deh_strlcpy(mapheaderinfo[num-1]->runsoc, word2,
 					sizeof(mapheaderinfo[num-1]->runsoc), va("Level header %d: runsoc", num));
+			}
 			else if (fastcmp(word, "ACT"))
 			{
 				if (i >= 0 && i < 20) // 0 for no act number, TTL1 through TTL19
@@ -1242,7 +1298,6 @@ static void readlevelheader(MYFILE *f, INT32 num)
 				else
 					mapheaderinfo[num-1]->menuflags &= ~LF2_NOVISITNEEDED;
 			}
-
 			else
 				deh_warning("Level header %d: unknown word '%s'", num, word);
 		}
@@ -7221,23 +7276,11 @@ static const char *const MOBJEFLAG_LIST[] = {
 	NULL
 };
 
-static const char *const MAPTHINGFLAG_LIST[16] = {
+static const char *const MAPTHINGFLAG_LIST[4] = {
 	NULL,
 	"OBJECTFLIP", // Reverse gravity flag for objects.
 	"OBJECTSPECIAL", // Special flag used with certain objects.
-	"AMBUSH", // Deaf monsters/do not react to sound.
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL
+	"AMBUSH" // Deaf monsters/do not react to sound.
 };
 
 static const char *const PLAYERFLAG_LIST[] = {
@@ -7303,6 +7346,9 @@ static const char *const PLAYERFLAG_LIST[] = {
 	/*** TAG STUFF ***/
 	"TAGGED", // Player has been tagged and awaits the next round in hide and seek.
 	"TAGIT", // The player is it! For Tag Mode
+
+	/*** misc ***/
+	"FORCESTRAFE", // Translate turn inputs into strafe inputs
 
 	NULL // stop loop here.
 };
@@ -7519,6 +7565,19 @@ struct {
 	{"TOL_ERZ3",TOL_ERZ3},
 	{"TOL_XMAS",TOL_XMAS},
 
+	// Level flags
+	{"LF_SCRIPTISFILE",LF_SCRIPTISFILE},
+	{"LF_SPEEDMUSIC",LF_SPEEDMUSIC},
+	{"LF_NOSSMUSIC",LF_NOSSMUSIC},
+	{"LF_NORELOAD",LF_NORELOAD},
+	{"LF_NOZONE",LF_NOZONE},
+	// And map flags
+	{"LF2_HIDEINMENU",LF2_HIDEINMENU},
+	{"LF2_HIDEINSTATS",LF2_HIDEINSTATS},
+	{"LF2_RECORDATTACK",LF2_RECORDATTACK},
+	{"LF2_NIGHTSATTACK",LF2_NIGHTSATTACK},
+	{"LF2_NOVISITNEEDED",LF2_NOVISITNEEDED},
+
 	// NiGHTS grades
 	{"GRADE_F",GRADE_F},
 	{"GRADE_E",GRADE_E},
@@ -7667,6 +7726,68 @@ struct {
 	// Used to be MF_ for some stupid reason, now they're GF_ to stop them looking like mobjflags
 	{"GF_REDFLAG",GF_REDFLAG},
 	{"GF_BLUEFLAG",GF_BLUEFLAG},
+
+	// Customisable sounds for Skins, from sounds.h
+	{"SKSSPIN",SKSSPIN},
+	{"SKSPUTPUT",SKSPUTPUT},
+	{"SKSPUDPUD",SKSPUDPUD},
+	{"SKSPLPAN1",SKSPLPAN1}, // Ouchies
+	{"SKSPLPAN2",SKSPLPAN2},
+	{"SKSPLPAN3",SKSPLPAN3},
+	{"SKSPLPAN4",SKSPLPAN4},
+	{"SKSPLDET1",SKSPLDET1}, // Deaths
+	{"SKSPLDET2",SKSPLDET2},
+	{"SKSPLDET3",SKSPLDET3},
+	{"SKSPLDET4",SKSPLDET4},
+	{"SKSPLVCT1",SKSPLVCT1}, // Victories
+	{"SKSPLVCT2",SKSPLVCT2},
+	{"SKSPLVCT3",SKSPLVCT3},
+	{"SKSPLVCT4",SKSPLVCT4},
+	{"SKSTHOK",SKSTHOK},
+	{"SKSSPNDSH",SKSSPNDSH},
+	{"SKSZOOM",SKSZOOM},
+	{"SKSSKID",SKSSKID},
+	{"SKSGASP",SKSGASP},
+	{"SKSJUMP",SKSJUMP},
+
+	// 3D Floor/Fake Floor/FOF/whatever flags
+	{"FF_EXISTS",FF_EXISTS},                   ///< Always set, to check for validity.
+	{"FF_BLOCKPLAYER",FF_BLOCKPLAYER},         ///< Solid to player, but nothing else
+	{"FF_BLOCKOTHERS",FF_BLOCKOTHERS},         ///< Solid to everything but player
+	{"FF_SOLID",FF_SOLID},                     ///< Clips things.
+	{"FF_RENDERSIDES",FF_RENDERSIDES},         ///< Renders the sides.
+	{"FF_RENDERPLANES",FF_RENDERPLANES},       ///< Renders the floor/ceiling.
+	{"FF_RENDERALL",FF_RENDERALL},             ///< Renders everything.
+	{"FF_SWIMMABLE",FF_SWIMMABLE},             ///< Is a water block.
+	{"FF_NOSHADE",FF_NOSHADE},                 ///< Messes with the lighting?
+	{"FF_CUTSOLIDS",FF_CUTSOLIDS},             ///< Cuts out hidden solid pixels.
+	{"FF_CUTEXTRA",FF_CUTEXTRA},               ///< Cuts out hidden translucent pixels.
+	{"FF_CUTLEVEL",FF_CUTLEVEL},               ///< Cuts out all hidden pixels.
+	{"FF_CUTSPRITES",FF_CUTSPRITES},           ///< Final step in making 3D water.
+	{"FF_BOTHPLANES",FF_BOTHPLANES},           ///< Renders both planes all the time.
+	{"FF_EXTRA",FF_EXTRA},                     ///< Gets cut by ::FF_CUTEXTRA.
+	{"FF_TRANSLUCENT",FF_TRANSLUCENT},         ///< See through!
+	{"FF_FOG",FF_FOG},                         ///< Fog "brush."
+	{"FF_INVERTPLANES",FF_INVERTPLANES},       ///< Reverse the plane visibility rules.
+	{"FF_ALLSIDES",FF_ALLSIDES},               ///< Render inside and outside sides.
+	{"FF_INVERTSIDES",FF_INVERTSIDES},         ///< Only render inside sides.
+	{"FF_DOUBLESHADOW",FF_DOUBLESHADOW},       ///< Make two lightlist entries to reset light?
+	{"FF_FLOATBOB",FF_FLOATBOB},               ///< Floats on water and bobs if you step on it.
+	{"FF_NORETURN",FF_NORETURN},               ///< Used with ::FF_CRUMBLE. Will not return to its original position after falling.
+	{"FF_CRUMBLE",FF_CRUMBLE},                 ///< Falls 2 seconds after being stepped on, and randomly brings all touching crumbling 3dfloors down with it, providing their master sectors share the same tag (allows crumble platforms above or below, to also exist).
+	{"FF_SHATTERBOTTOM",FF_SHATTERBOTTOM},     ///< Used with ::FF_BUSTUP. Like FF_SHATTER, but only breaks from the bottom. Good for springing up through rubble.
+	{"FF_MARIO",FF_MARIO},                     ///< Acts like a question block when hit from underneath. Goodie spawned at top is determined by master sector.
+	{"FF_BUSTUP",FF_BUSTUP},                   ///< You can spin through/punch this block and it will crumble!
+	{"FF_QUICKSAND",FF_QUICKSAND},             ///< Quicksand!
+	{"FF_PLATFORM",FF_PLATFORM},               ///< You can jump up through this to the top.
+	{"FF_REVERSEPLATFORM",FF_REVERSEPLATFORM}, ///< A fall-through floor in normal gravity, a platform in reverse gravity.
+	{"FF_INTANGABLEFLATS",FF_INTANGABLEFLATS}, ///< Both flats are intangable, but the sides are still solid.
+	{"FF_SHATTER",FF_SHATTER},                 ///< Used with ::FF_BUSTUP. Thinks everyone's Knuckles.
+	{"FF_SPINBUST",FF_SPINBUST},               ///< Used with ::FF_BUSTUP. Jump or fall onto it while curled in a ball.
+	{"FF_ONLYKNUX",FF_ONLYKNUX},               ///< Used with ::FF_BUSTUP. Only Knuckles can break this rock.
+	{"FF_RIPPLE",FF_RIPPLE},                   ///< Ripple the flats
+	{"FF_COLORMAPONLY",FF_COLORMAPONLY},       ///< Only copy the colormap, not the lightlevel
+	{"FF_GOOWATER",FF_GOOWATER},               ///< Used with ::FF_SWIMMABLE. Makes thick bouncey goop.
 
 	// Angles
 	{"ANG1",ANG1},
@@ -8355,7 +8476,7 @@ static inline int lib_getenum(lua_State *L)
 	}
 	else if (fastncmp("MTF_", word, 4)) {
 		p = word+4;
-		for (i = 0; i < 16; i++)
+		for (i = 0; i < 4; i++)
 			if (MAPTHINGFLAG_LIST[i] && fastcmp(p, MAPTHINGFLAG_LIST[i])) {
 				lua_pushinteger(L, ((lua_Integer)1<<i));
 				return 1;
@@ -8385,6 +8506,11 @@ static inline int lib_getenum(lua_State *L)
 				lua_pushinteger(L, ((lua_Integer)1<<i));
 				return 1;
 			}
+		if (fastcmp(p, "NETONLY"))
+		{
+			lua_pushinteger(L, (lua_Integer)ML_NETONLY);
+			return 1;
+		}
 		if (mathlib) return luaL_error(L, "linedef flag '%s' could not be found.\n", word);
 		return 0;
 	}
@@ -8632,8 +8758,22 @@ static inline int lib_getenum(lua_State *L)
 	} else if (fastcmp(word,"globalweather")) {
 		lua_pushinteger(L, globalweather);
 		return 1;
+	} else if (fastcmp(word,"levelskynum")) {
+		lua_pushinteger(L, levelskynum);
+		return 1;
+	} else if (fastcmp(word,"globallevelskynum")) {
+		lua_pushinteger(L, globallevelskynum);
+		return 1;
+	} else if (fastcmp(word,"mapmusic")) {
+		lua_pushinteger(L, mapmusic);
+		return 1;
 	} else if (fastcmp(word,"server")) {
 		if (dedicated || !playeringame[serverplayer])
+			return 0;
+		LUA_PushUserdata(L, &players[serverplayer], META_PLAYER);
+		return 1;
+	} else if (fastcmp(word,"dedicatedserver")) {
+		if (!dedicated)
 			return 0;
 		LUA_PushUserdata(L, &players[serverplayer], META_PLAYER);
 		return 1;

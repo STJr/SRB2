@@ -20,7 +20,7 @@
 #ifndef _R_OPENGL_H_
 #define _R_OPENGL_H_
 
-#ifdef SDL
+#ifdef HAVE_SDL
 
 #ifdef _MSC_VER
 #pragma warning(disable : 4214 4244)
@@ -50,7 +50,7 @@
 
 #undef DEBUG_TO_FILE            // maybe defined in previous *.h
 #define DEBUG_TO_FILE           // output debugging msgs to ogllog.txt
-#if defined ( SDL ) && !defined ( LOGMESSAGES )
+#if defined ( HAVE_SDL ) && !defined ( LOGMESSAGES )
 #undef DEBUG_TO_FILE
 #endif
 
@@ -109,7 +109,7 @@ extern PFNglGetString pglGetString;
 
 extern const GLubyte    *gl_extensions;
 extern RGBA_t           myPaletteData[];
-#ifndef SDL
+#ifndef HAVE_SDL
 extern FILE             *logstream;
 #endif
 extern GLint            screen_width;
