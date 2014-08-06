@@ -1842,7 +1842,7 @@ static int lib_gTicsToMilliseconds(lua_State *L)
 
 static luaL_Reg lib[] = {
 	{"print", lib_print},
-	{"EvalMath", lib_evalMath,},
+	{"EvalMath", lib_evalMath},
 
 	// m_random
 	{"P_Random",lib_pRandom},

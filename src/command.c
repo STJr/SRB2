@@ -379,7 +379,13 @@ void COM_AddCommand(const char *name, com_func_t func)
 	{
 		if (!stricmp(name, cmd->name)) //case insensitive now that we have lower and uppercase!
 		{
-			I_Error("Command %s already exists\n", name);
+			// don't I_Error for Lua commands
+			// Lua commands can replace game commands, and they have priority.
+			// BUT, if for some reason we screwed up and made two console commands with the same name,
+			// it's good to have this here so we find out.
+			if (cmd->function != COM_Lua_f)
+				I_Error("Command %s already exists\n", name);
+
 			return;
 		}
 	}
