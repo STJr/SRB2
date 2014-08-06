@@ -2978,7 +2978,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo)
 #ifdef HAVE_BLUA
 			LUAh_LinedefExecute(line, mo);
 #else
-			CONS_Alert(CONS_ERROR, "The map is trying to run a Lua script, but this exe was not compiled with Lua support!");
+			CONS_Alert(CONS_ERROR, "The map is trying to run a Lua script, but this exe was not compiled with Lua support!\n");
 #endif
 			break;
 

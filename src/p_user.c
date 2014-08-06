@@ -4747,7 +4747,6 @@ static void P_ShootLine(mobj_t *source, mobj_t *dest, fixed_t height)
 
 static void P_NightsTransferPoints(player_t *player, fixed_t xspeed, fixed_t radius)
 {
-	mobj_t* targ;
 	if (player->pflags & PF_TRANSFERTOCLOSEST)
 	{
 		const angle_t fa = R_PointToAngle2(player->axis1->x, player->axis1->y, player->axis2->x, player->axis2->y);
@@ -4763,17 +4762,14 @@ static void P_NightsTransferPoints(player_t *player, fixed_t xspeed, fixed_t rad
 	if (player->exiting)
 		return;
 
-	// You're welcome, Rob. -Red
-	targ = player->mo->target;
-	if (!P_TryMove(player->mo, player->mo->x+player->mo->momx, player->mo->y+player->mo->momy, true))
+	// You're welcome, Rob. (Now with slightly less horrendous hacking  -Red
+	player->mo->tracer->flags &= ~MF_NOCLIP;
+	player->mo->tracer->z = player->mo->z;
+	if (!P_TryMove(player->mo->tracer, player->mo->x+player->mo->momx, player->mo->y+player->mo->momy, true)) {
+		player->mo->tracer->flags |= MF_NOCLIP;
 		return;
-	else
-		P_TeleportMove(player->mo, player->mo->x-player->mo->momx, player->mo->y-player->mo->momy, player->mo->z);
-
-	if (!(player->pflags & PF_TRANSFERTOCLOSEST) && !player->mo->target) {
-		P_SetTarget(&player->mo->target, targ);
-		P_SetMobjState(player->mo->tracer, S_SUPERTRANS1);
 	}
+	player->mo->tracer->flags |= MF_NOCLIP;
 	{
 		const INT32 sequence = player->mo->target->threshold;
 		mobj_t *transfer1 = NULL;
@@ -5734,14 +5730,6 @@ static void P_NiGHTSMovement(player_t *player)
 	}
 
 	P_NightsTransferPoints(player, xspeed, radius);
-
-	// Check here after transferring because the game can be dumb sometimes -Red
-	if (player->mo->tracer->state >= &states[S_SUPERTRANS1]
-		&& player->mo->tracer->state <= &states[S_SUPERTRANS9])
-	{
-		player->mo->momx = player->mo->momy = player->mo->momz = 0;
-		return;
-	}
 
 	if (still)
 		player->mo->momz = -FRACUNIT;
@@ -7221,8 +7209,11 @@ void P_NukeEnemies(mobj_t *inflictor, mobj_t *source, fixed_t radius)
 	{
 		fa = (i*(FINEANGLES/16));
 		mo = P_SpawnMobj(inflictor->x, inflictor->y, inflictor->z, MT_SUPERSPARK);
-		mo->momx = FixedMul(FINESINE(fa),ns);
-		mo->momy = FixedMul(FINECOSINE(fa),ns);
+		if (!P_MobjWasRemoved(mo))
+		{
+			mo->momx = FixedMul(FINESINE(fa),ns);
+			mo->momy = FixedMul(FINECOSINE(fa),ns);
+		}
 	}
 
 	for (think = thinkercap.next; think != &thinkercap; think = think->next)

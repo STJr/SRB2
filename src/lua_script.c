@@ -55,12 +55,13 @@ static lua_CFunction liblist[] = {
 // Lua asks for memory using this.
 static void *LUA_Alloc(void *ud, void *ptr, size_t osize, size_t nsize)
 {
-	(void)ud; (void)osize;
+	(void)ud;
 	if (nsize == 0) {
-		Z_Free(ptr);
+		if (osize != 0)
+			Z_Free(ptr);
 		return NULL;
 	} else
-		return Z_Realloc(ptr, nsize, PU_STATIC, NULL);
+		return Z_Realloc(ptr, nsize, PU_LUA, NULL);
 }
 
 // Panic function Lua calls when there's an unprotected error.
@@ -183,7 +184,7 @@ void LUA_LoadLump(UINT16 wad, UINT16 lump)
 	char *name;
 	f.wad = wad;
 	f.size = W_LumpLengthPwad(wad, lump);
-	f.data = Z_Malloc(f.size, PU_STATIC, NULL);
+	f.data = Z_Malloc(f.size, PU_LUA, NULL);
 	W_ReadLumpPwad(wad, lump, f.data);
 	f.curpos = f.data;
 
@@ -307,7 +308,7 @@ fixed_t LUA_EvalMath(const char *word)
 		p = lua_tostring(L, -1);
 		while (*p++ != ':' && *p) ;
 		p += 3; // "1: "
-		CONS_Alert(CONS_WARNING, "%s", p);
+		CONS_Alert(CONS_WARNING, "%s\n", p);
 	}
 	else
 		res = lua_tointeger(L, -1);

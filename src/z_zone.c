@@ -167,9 +167,6 @@ void Z_Free(void *ptr)
 
 	if (ptr == NULL)
 		return;
-#ifdef HAVE_BLUA
-	LUA_InvalidateUserdata(ptr);
-#endif
 
 #ifdef ZDEBUG2
 	CONS_Debug(DBG_MEMORY, "Z_Free %s:%d\n", file, line);
@@ -184,6 +181,12 @@ void Z_Free(void *ptr)
 #ifdef ZDEBUG
 	// Write every Z_Free call to a debug file.
 	CONS_Debug(DBG_MEMORY, "Z_Free at %s:%d\n", file, line);
+#endif
+
+#ifdef HAVE_BLUA
+	// anything that isn't by lua gets passed to lua just in case.
+	if (block->tag != PU_LUA)
+		LUA_InvalidateUserdata(ptr);
 #endif
 
 	// TODO: if zdebugging, make sure no other block has a user
