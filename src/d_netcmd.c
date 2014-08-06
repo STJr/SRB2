@@ -3901,7 +3901,7 @@ static void Command_Cheats_f(void)
 	if (CV_CheatsEnabled())
 	{
 		CONS_Printf(M_GetText("At least one CHEAT-marked variable has been changed -- Cheats are enabled.\n"));
-		CONS_Printf(M_GetText("Type CHEATS OFF to reset all cheat variables to default."));
+		CONS_Printf(M_GetText("Type CHEATS OFF to reset all cheat variables to default.\n"));
 	}
 	else
 		CONS_Printf(M_GetText("No CHEAT-marked variables are changed -- Cheats are disabled.\n"));
