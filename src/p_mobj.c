@@ -3520,7 +3520,7 @@ static void P_Boss3Thinker(mobj_t *mobj)
 			mobj_t *dummy;
 			SINT8 way = mobj->threshold - 1; // 0 through 4.
 			SINT8 way2;
-			
+
 			i = 0; // reset i to 0 so we can check how many clones we've removed
 
 			// scan the thinkers to make sure all the old pinch dummies are gone before making new ones
@@ -5780,12 +5780,18 @@ void P_MobjThinker(mobj_t *mobj)
 
 #ifdef HAVE_BLUA
 	// Check for a Lua thinker first
-	if (!mobj->player && LUAh_MobjThinker(mobj))
-		return;
-	else if (mobj->player && !mobj->player->spectator)
+	if (!mobj->player)
+	{
+		if (LUAh_MobjThinker(mobj) || P_MobjWasRemoved(mobj))
+			return;
+	}
+	else if (!mobj->player->spectator)
+	{
+		// You cannot short-circuit the player thinker like you can other thinkers.
 		LUAh_MobjThinker(mobj);
-	if (P_MobjWasRemoved(mobj))
-		return;
+		if (P_MobjWasRemoved(mobj))
+			return;
+	}
 #endif
 	// if it's pushable, or if it would be pushable other than temporary disablement, use the
 	// separate thinker
@@ -8262,7 +8268,7 @@ void P_SpawnMapThing(mapthing_t *mthing)
 	{
 		if ((i == MT_BLUEFLAG && blueflag) || (i == MT_REDFLAG && redflag))
 		{
-			CONS_Alert(CONS_ERROR, M_GetText("Only one flag per team allowed in CTF!"));
+			CONS_Alert(CONS_ERROR, M_GetText("Only one flag per team allowed in CTF!\n"));
 			return;
 		}
 	}

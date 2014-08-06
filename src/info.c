@@ -12525,12 +12525,12 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // deathsound
 		0,              // speed
 		16*FRACUNIT,    // radius
-		56*FRACUNIT,    // height
+		48*FRACUNIT,    // height
 		0,              // display offset
 		1000,           // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_NOCLIP|MF_NOGRAVITY|MF_NOBLOCKMAP, // flags
+		MF_NOCLIP|MF_NOGRAVITY, // flags
 		S_NULL          // raisestate
 	},
 
@@ -14398,7 +14398,7 @@ void P_ResetData(INT32 flags)
 {
 #ifndef ALLOW_RESETDATA
 	(void)flags;
-	CONS_Alert(CONS_NOTICE, M_GetText("P_ResetData(): not supported in this build."));
+	CONS_Alert(CONS_NOTICE, M_GetText("P_ResetData(): not supported in this build.\n"));
 #else
 	if (flags & 1)
 	{

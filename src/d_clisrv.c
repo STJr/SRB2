@@ -769,7 +769,7 @@ static inline void resynch_write_ctf(resynchend_pak *rst)
 			}
 			if (j == MAXPLAYERS) // fine, no I_Error
 			{
-				CONS_Alert(CONS_ERROR, "One of the flags has gone completely missing...");
+				CONS_Alert(CONS_ERROR, "One of the flags has gone completely missing...\n");
 				rst->flagplayer[i] = -2;
 			}
 			continue;
@@ -1527,7 +1527,7 @@ static void CL_LoadReceivedSavegame(void)
 		Z_Free(savebuffer);
 		save_p = NULL;
 		if (unlink(tmpsave) == -1)
-			CONS_Alert(CONS_ERROR, M_GetText("Can't delete %s"), tmpsave);
+			CONS_Alert(CONS_ERROR, M_GetText("Can't delete %s\n"), tmpsave);
 		return;
 	}
 
@@ -1535,7 +1535,7 @@ static void CL_LoadReceivedSavegame(void)
 	Z_Free(savebuffer);
 	save_p = NULL;
 	if (unlink(tmpsave) == -1)
-		CONS_Alert(CONS_ERROR, M_GetText("Can't delete %s"), tmpsave);
+		CONS_Alert(CONS_ERROR, M_GetText("Can't delete %s\n"), tmpsave);
 	consistancy[gametic%BACKUPTICS] = Consistancy();
 	CON_ToggleOff();
 }
@@ -2308,6 +2308,10 @@ void CL_Reset(void)
 	doomcom->numslots = 1;
 	SV_StopServer();
 	SV_ResetServer();
+
+	// make sure we don't leave any fileneeded gunk over from a failed join
+	fileneedednum = 0;
+	memset(fileneeded, 0, sizeof(fileneeded));
 
 	// D_StartTitle should get done now, but the calling function will handle it
 }
