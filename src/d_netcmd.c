@@ -3790,7 +3790,7 @@ static void Command_Tunes_f(void)
 		tune = mapheaderinfo[gamemap-1]->musicslot;
 		track = mapheaderinfo[gamemap-1]->musicslottrack;
 	}
-	else if (toupper(tunearg[0]) >= 'A' && toupper(tunearg[0]) <= 'Z') && (strlen(tunearg) < 3)) 
+	else if ((toupper(tunearg[0]) >= 'A' && toupper(tunearg[0]) <= 'Z') && (strlen(tunearg) < 3))
 		tune = (UINT16)M_MapNumber(tunearg[0], tunearg[1]);
     else if (fastncmp("mus_",tunearg,4)) //yellowtd: why not just give both tune options?
         tune = get_mus(tunearg+4);
