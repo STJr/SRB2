@@ -41,6 +41,9 @@ void DEH_Check(void);
 
 fixed_t get_number(const char *word);
 
+//yellowtd: make get_mus an extern
+extern UINT16 get_mus(const char *word);
+
 #ifdef HAVE_BLUA
 boolean LUA_SetLuaAction(void *state, const char *actiontocompare);
 const char *LUA_GetActionName(void *action);
