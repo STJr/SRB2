@@ -65,7 +65,7 @@ static mobjtype_t get_mobjtype(const char *word);
 static statenum_t get_state(const char *word);
 static spritenum_t get_sprite(const char *word);
 static sfxenum_t get_sfx(const char *word);
-static UINT16 get_mus(const char *word);
+//static UINT16 get_mus(const char *word);
 static hudnum_t get_huditem(const char *word);
 #ifndef HAVE_BLUA
 static powertype_t get_power(const char *word);
@@ -7987,7 +7987,9 @@ static sfxenum_t get_sfx(const char *word)
 	return sfx_None;
 }
 
-static UINT16 get_mus(const char *word)
+//yellowtd: make get_mus an extern
+//static UINT16 get_mus(const char *word)
+extern UINT16 get_mus(const char *word)
 { // Returns the value of SFX_ enumerations
 	UINT16 i;
 	if (*word >= '0' && *word <= '9')
