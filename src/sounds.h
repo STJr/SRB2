@@ -119,7 +119,7 @@ extern musicinfo_t S_music[];
 // Identifiers for all music in game.
 //
 
-#define NUMMUSFREESLOTS 800
+#define NUMMUSFREESLOTS 256
 
 // Music list (don't edit this comment!)
 typedef enum

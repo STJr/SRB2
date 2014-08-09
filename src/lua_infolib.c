@@ -945,6 +945,9 @@ static int musicinfo_get(lua_State *L)
 
 	switch (field)
 	{
+	case musicinfor_name:
+		lua_pushstring(L, music->name);
+		return 1;
 	case musicinfor_dummyval:
 		lua_pushinteger(L, music->dummyval);
 		return 1;
@@ -969,6 +972,9 @@ static int musicinfo_set(lua_State *L)
 
 	switch (field)
 	{
+	case musicinfow_name:
+		music->name = luaL_checkstring(L, 1);
+		break;
 	case musicinfow_dummyval:
 		music->dummyval = luaL_checkinteger(L, 1);
 		break;
