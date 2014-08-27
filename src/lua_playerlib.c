@@ -635,7 +635,7 @@ static int power_set(lua_State *L)
 	if (hud_running)
 		return luaL_error(L, "Do not alter player_t in HUD rendering code!");
 	powers[p] = i;
-	return 1;
+	return 0;
 }
 
 // #powers -> NUMPOWERS
