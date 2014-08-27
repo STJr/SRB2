@@ -165,12 +165,11 @@ static const char *const camera_opt[] = {
 
 static int lib_getHudInfo(lua_State *L)
 {
-	// arg 1 is empty table with this metatable set
-	lua_Integer mindex = luaL_checkinteger(L,2);
-	hudinfo_t **userdata = lua_newuserdata(L, sizeof(hudinfo_t *));
-	luaL_getmetatable(L, META_HUDINFO);
-	lua_setmetatable(L, -2);
-	*userdata = &hudinfo[mindex];
+	UINT32 i;
+	lua_remove(L, 1);
+
+	i = luaL_checkinteger(L, 1);
+	LUA_PushUserdata(L, &hudinfo[i], META_HUDINFO);
 	return 1;
 }
 

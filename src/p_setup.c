@@ -161,7 +161,7 @@ FUNCNORETURN static ATTRNORETURN void CorruptMapError(const char *msg)
 /** Clears the data from a single map header.
   *
   * \param i Map number to clear header for.
-  * \sa P_ClearMapHeaderInfo, P_LoadMapHeader
+  * \sa P_ClearMapHeaderInfo
   */
 static void P_ClearSingleMapHeaderInfo(INT16 i)
 {
@@ -240,62 +240,6 @@ void P_AllocMapHeader(INT16 i)
 	}
 	P_ClearSingleMapHeaderInfo(i + 1);
 }
-
-/** Initializes the map headers.
-  * Only new, Dehacked format map headers (MAPxxD) are loaded here. Old map
-  * headers (MAPxxN) are no longer supported.
-  *
-  * \sa P_ClearMapHeaderInfo, P_LoadMapHeader
-  */
-void P_InitMapHeaders(void)
-{
-	char mapheader[7];
-	lumpnum_t lumpnum;
-	INT32 mapnum;
-
-	// Make sure that the map header is valid for the
-	// initial value of gamemap
-	if(!mapheaderinfo[gamemap-1])
-		P_AllocMapHeader(gamemap-1);
-
-	for (mapnum = 1; mapnum <= NUMMAPS; mapnum++)
-	{
-		strncpy(mapheader, G_BuildMapName(mapnum), 5);
-
-		mapheader[5] = 'D'; // New header
-		mapheader[6] = '\0';
-
-		lumpnum = W_CheckNumForName(mapheader);
-
-		if (!(lumpnum == LUMPERROR || W_LumpLength(lumpnum) == 0))
-			DEH_LoadDehackedLump(lumpnum);
-	}
-}
-
-/** Sets up the data in a single map header.
-  *
-  * \param mapnum Map number to load header for.
-  * \sa P_ClearSingleMapHeaderInfo, P_InitMapHeaders
-  */
-static inline void P_LoadMapHeader(INT16 mapnum)
-{
-	char mapheader[7];
-	lumpnum_t lumpnum;
-
-	strncpy(mapheader, G_BuildMapName(mapnum), 5);
-
-	mapheader[5] = 'D'; // New header
-	mapheader[6] = '\0';
-
-	lumpnum = W_CheckNumForName(mapheader);
-
-	if (!(lumpnum == LUMPERROR || W_LumpLength(lumpnum) == 0))
-	{
-		DEH_LoadDehackedLump(lumpnum);
-		return;
-	}
-}
-
 
 /** NiGHTS Grades are a special structure,
   * we initialize them here.
@@ -1418,53 +1362,38 @@ static void P_LoadSideDefs2(lumpnum_t lumpnum)
 						{
 							col = msd->toptexture;
 
+							sec->extra_colormap->rgba =
+								(HEX2INT(col[1]) << 4) + (HEX2INT(col[2]) << 0) +
+								(HEX2INT(col[3]) << 12) + (HEX2INT(col[4]) << 8) +
+								(HEX2INT(col[5]) << 20) + (HEX2INT(col[6]) << 16);
+
+							// alpha
 							if (msd->toptexture[7])
-							{
-								sec->extra_colormap->rgba =
-									(HEX2INT(col[1]) << 4) + (HEX2INT(col[2]) << 0) +
-									(HEX2INT(col[3]) << 12) + (HEX2INT(col[4]) << 8) +
-									(HEX2INT(col[5]) << 20) + (HEX2INT(col[6]) << 16) +
-									(ALPHA2INT(col[7]) << 24);
-							}
+								sec->extra_colormap->rgba += (ALPHA2INT(col[7]) << 24);
 							else
-							{
-								sec->extra_colormap->rgba =
-									(HEX2INT(col[1]) << 4) + (HEX2INT(col[2]) << 0) +
-									(HEX2INT(col[3]) << 12) + (HEX2INT(col[4]) << 8) +
-									(HEX2INT(col[5]) << 20) + (HEX2INT(col[6]) << 16) +
-									(25 << 24);
-							}
+								sec->extra_colormap->rgba += (25 << 24);
 						}
 						else
-						{
 							sec->extra_colormap->rgba = 0;
-						}
 
 						if (msd->bottomtexture[0] == '#' && msd->bottomtexture[1] && msd->bottomtexture[2] && msd->bottomtexture[3] && msd->bottomtexture[4] && msd->bottomtexture[5] && msd->bottomtexture[6])
 						{
 							col = msd->bottomtexture;
 
+
+							sec->extra_colormap->fadergba =
+								(HEX2INT(col[1]) << 4) + (HEX2INT(col[2]) << 0) +
+								(HEX2INT(col[3]) << 12) + (HEX2INT(col[4]) << 8) +
+								(HEX2INT(col[5]) << 20) + (HEX2INT(col[6]) << 16);
+
+							// alpha
 							if (msd->bottomtexture[7])
-							{
-								sec->extra_colormap->fadergba =
-									(HEX2INT(col[1]) << 4) + (HEX2INT(col[2]) << 0) +
-									(HEX2INT(col[3]) << 12) + (HEX2INT(col[4]) << 8) +
-									(HEX2INT(col[5]) << 20) + (HEX2INT(col[6]) << 16) +
-									(ALPHA2INT(col[7]) << 24);
-							}
+								sec->extra_colormap->fadergba += (ALPHA2INT(col[7]) << 24);
 							else
-							{
-								sec->extra_colormap->fadergba =
-									(HEX2INT(col[1]) << 4) + (HEX2INT(col[2]) << 0) +
-									(HEX2INT(col[3]) << 12) + (HEX2INT(col[4]) << 8) +
-									(HEX2INT(col[5]) << 20) + (HEX2INT(col[6]) << 16) +
-									(25 << 24);
-							}
+								sec->extra_colormap->fadergba += (25 << 24);
 						}
 						else
-						{
 							sec->extra_colormap->fadergba = 0x19000000;
-						}
 #undef ALPHA2INT
 #undef HEX2INT
 					}
@@ -2278,6 +2207,140 @@ static void P_MakeMapMD5(lumpnum_t maplumpnum, void *dest)
 	M_Memcpy(dest, &resmd5, 16);
 }
 
+static void P_RunLevelScript(const char *scriptname)
+{
+	if (!(mapheaderinfo[gamemap-1]->levelflags & LF_SCRIPTISFILE))
+	{
+		lumpnum_t lumpnum;
+		char newname[9];
+
+		strncpy(newname, scriptname, 8);
+
+		newname[8] = '\0';
+
+		lumpnum = W_CheckNumForName(newname);
+
+		if (lumpnum == LUMPERROR || W_LumpLength(lumpnum) == 0)
+		{
+			CONS_Debug(DBG_SETUP, "SOC Error: script lump %s not found/not valid.\n", newname);
+			return;
+		}
+
+		COM_BufInsertText(W_CacheLumpNum(lumpnum, PU_CACHE));
+	}
+	else
+	{
+		COM_BufAddText(va("exec %s\n", scriptname));
+	}
+	COM_BufExecute(); // Run it!
+}
+
+static void P_ForceCharacter(const char *forcecharskin)
+{
+	if (netgame)
+	{
+		char skincmd[33];
+		if (splitscreen)
+		{
+			sprintf(skincmd, "skin2 %s\n", forcecharskin);
+			CV_Set(&cv_skin2, forcecharskin);
+		}
+
+		sprintf(skincmd, "skin %s\n", forcecharskin);
+		COM_BufAddText(skincmd);
+	}
+	else
+	{
+		if (splitscreen)
+		{
+			SetPlayerSkin(secondarydisplayplayer, forcecharskin);
+			if ((unsigned)cv_playercolor2.value != skins[players[secondarydisplayplayer].skin].prefcolor)
+			{
+				CV_StealthSetValue(&cv_playercolor2, skins[players[secondarydisplayplayer].skin].prefcolor);
+				players[secondarydisplayplayer].skincolor = skins[players[secondarydisplayplayer].skin].prefcolor;
+			}
+		}
+
+		SetPlayerSkin(consoleplayer, forcecharskin);
+		// normal player colors in single player
+		if ((unsigned)cv_playercolor.value != skins[players[consoleplayer].skin].prefcolor)
+		{
+			CV_StealthSetValue(&cv_playercolor, skins[players[consoleplayer].skin].prefcolor);
+			players[consoleplayer].skincolor = skins[players[consoleplayer].skin].prefcolor;
+		}
+	}
+}
+
+static void P_LoadRecordGhosts(void)
+{
+	const size_t glen = strlen(srb2home)+1+strlen("replay")+1+strlen(timeattackfolder)+1+strlen("MAPXX")+1;
+	char *gpath = malloc(glen);
+	INT32 i;
+
+	if (!gpath)
+		return;
+
+	sprintf(gpath,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s", srb2home, timeattackfolder, G_BuildMapName(gamemap));
+
+	// Best Score ghost
+	if (cv_ghost_bestscore.value)
+	{
+		for (i = 0; i < numskins; ++i)
+		{
+			if (cv_ghost_bestscore.value == 1 && players[consoleplayer].skin != i)
+				continue;
+
+			if (FIL_FileExists(va("%s-%s-score-best.lmp", gpath, skins[i].name)))
+				G_AddGhost(va("%s-%s-score-best.lmp", gpath, skins[i].name));
+		}
+	}
+
+	// Best Time ghost
+	if (cv_ghost_besttime.value)
+	{
+		for (i = 0; i < numskins; ++i)
+		{
+			if (cv_ghost_besttime.value == 1 && players[consoleplayer].skin != i)
+				continue;
+
+			if (FIL_FileExists(va("%s-%s-time-best.lmp", gpath, skins[i].name)))
+				G_AddGhost(va("%s-%s-time-best.lmp", gpath, skins[i].name));
+		}
+	}
+
+	// Best Rings ghost
+	if (cv_ghost_bestrings.value)
+	{
+		for (i = 0; i < numskins; ++i)
+		{
+			if (cv_ghost_bestrings.value == 1 && players[consoleplayer].skin != i)
+				continue;
+
+			if (FIL_FileExists(va("%s-%s-rings-best.lmp", gpath, skins[i].name)))
+				G_AddGhost(va("%s-%s-rings-best.lmp", gpath, skins[i].name));
+		}
+	}
+
+	// Last ghost
+	if (cv_ghost_last.value)
+	{
+		for (i = 0; i < numskins; ++i)
+		{
+			if (cv_ghost_last.value == 1 && players[consoleplayer].skin != i)
+				continue;
+
+			if (FIL_FileExists(va("%s-%s-last.lmp", gpath, skins[i].name)))
+				G_AddGhost(va("%s-%s-last.lmp", gpath, skins[i].name));
+		}
+	}
+
+	// Guest ghost
+	if (cv_ghost_guest.value && FIL_FileExists(va("%s-guest.lmp", gpath)))
+		G_AddGhost(va("%s-guest.lmp", gpath));
+
+	free(gpath);
+}
+
 /** Loads a level from a lump or external wad.
   *
   * \param skipprecip If true, don't spawn precipitation.
@@ -2329,33 +2392,7 @@ boolean P_SetupLevel(boolean skipprecip)
 		P_RunSOC(mapheaderinfo[gamemap-1]->runsoc);
 
 	if (cv_runscripts.value && mapheaderinfo[gamemap-1]->scriptname[0] != '#')
-	{
-		if (!(mapheaderinfo[gamemap-1]->levelflags & LF_SCRIPTISFILE))
-		{
-			lumpnum_t lumpnum;
-			char newname[9];
-
-			strncpy(newname, mapheaderinfo[gamemap-1]->scriptname, 8);
-
-			newname[8] = '\0';
-
-			lumpnum = W_CheckNumForName(newname);
-
-			if (lumpnum == LUMPERROR || W_LumpLength(lumpnum) == 0)
-			{
-				CONS_Debug(DBG_SETUP, "SOC Error: script lump %s not found/not valid.\n", newname);
-				goto noscript;
-			}
-
-			COM_BufInsertText(W_CacheLumpNum(lumpnum, PU_CACHE));
-		}
-		else
-		{
-			COM_BufAddText(va("exec %s\n", mapheaderinfo[gamemap-1]->scriptname));
-		}
-		COM_BufExecute(); // Run it!
-	}
-noscript:
+		P_RunLevelScript(mapheaderinfo[gamemap-1]->scriptname);
 
 	P_LevelInitStuff();
 
@@ -2363,40 +2400,7 @@ noscript:
 
 	if (mapheaderinfo[gamemap-1]->forcecharacter[0] != '\0'
 	&& atoi(mapheaderinfo[gamemap-1]->forcecharacter) != 255)
-	{
-		if (netgame)
-		{
-			char skincmd[33];
-			if (splitscreen)
-			{
-				sprintf(skincmd, "skin2 %s\n", mapheaderinfo[gamemap-1]->forcecharacter);
-				CV_Set(&cv_skin2, mapheaderinfo[gamemap-1]->forcecharacter);
-			}
-
-			sprintf(skincmd, "skin %s\n", mapheaderinfo[gamemap-1]->forcecharacter);
-			COM_BufAddText(skincmd);
-		}
-		else
-		{
-			if (splitscreen)
-			{
-				SetPlayerSkin(secondarydisplayplayer, mapheaderinfo[gamemap-1]->forcecharacter);
-				if ((unsigned)cv_playercolor2.value != skins[players[secondarydisplayplayer].skin].prefcolor)
-				{
-					CV_StealthSetValue(&cv_playercolor2, skins[players[secondarydisplayplayer].skin].prefcolor);
-					players[secondarydisplayplayer].skincolor = skins[players[secondarydisplayplayer].skin].prefcolor;
-				}
-			}
-
-			SetPlayerSkin(consoleplayer, mapheaderinfo[gamemap-1]->forcecharacter);
-			// normal player colors in single player
-			if ((unsigned)cv_playercolor.value != skins[players[consoleplayer].skin].prefcolor)
-			{
-				CV_StealthSetValue(&cv_playercolor, skins[players[consoleplayer].skin].prefcolor);
-				players[consoleplayer].skincolor = skins[players[consoleplayer].skin].prefcolor;
-			}
-		}
-	}
+		P_ForceCharacter(mapheaderinfo[gamemap-1]->forcecharacter);
 
 	// chasecam on in chaos, race, coop
 	// chasecam off in match, tag, capture the flag
@@ -2408,11 +2412,7 @@ noscript:
 
 	if (!dedicated)
 	{
-		if (maptol & TOL_2D)
-		{
-			CV_SetValue(&cv_cam_speed, 0);
-		}
-		else if (!cv_cam_speed.changed && !(maptol & TOL_2D))
+		if (!cv_cam_speed.changed)
 			CV_Set(&cv_cam_speed, cv_cam_speed.defaultvalue);
 
 		if (!cv_chasecam.changed)
@@ -2601,72 +2601,7 @@ noscript:
 		}
 
 	if (modeattacking == ATTACKING_RECORD && !demoplayback)
-	{
-		const size_t glen = strlen(srb2home)+1+strlen("replay")+1+strlen(timeattackfolder)+1+strlen("MAPXX")+1;
-		char *gpath = malloc(glen);
-		if (gpath)
-		{
-			sprintf(gpath,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s", srb2home, timeattackfolder, G_BuildMapName(gamemap));
-
-			// Best Score ghost
-			if (cv_ghost_bestscore.value)
-			{
-				for (i = 0; i < numskins; ++i)
-				{
-					if (cv_ghost_bestscore.value == 1 && players[consoleplayer].skin != i)
-						continue;
-
-					if (FIL_FileExists(va("%s-%s-score-best.lmp", gpath, skins[i].name)))
-						G_AddGhost(va("%s-%s-score-best.lmp", gpath, skins[i].name));
-				}
-			}
-
-			// Best Time ghost
-			if (cv_ghost_besttime.value)
-			{
-				for (i = 0; i < numskins; ++i)
-				{
-					if (cv_ghost_besttime.value == 1 && players[consoleplayer].skin != i)
-						continue;
-
-					if (FIL_FileExists(va("%s-%s-time-best.lmp", gpath, skins[i].name)))
-						G_AddGhost(va("%s-%s-time-best.lmp", gpath, skins[i].name));
-				}
-			}
-
-			// Best Rings ghost
-			if (cv_ghost_bestrings.value)
-			{
-				for (i = 0; i < numskins; ++i)
-				{
-					if (cv_ghost_bestrings.value == 1 && players[consoleplayer].skin != i)
-						continue;
-
-					if (FIL_FileExists(va("%s-%s-rings-best.lmp", gpath, skins[i].name)))
-						G_AddGhost(va("%s-%s-rings-best.lmp", gpath, skins[i].name));
-				}
-			}
-
-			// Last ghost
-			if (cv_ghost_last.value)
-			{
-				for (i = 0; i < numskins; ++i)
-				{
-					if (cv_ghost_last.value == 1 && players[consoleplayer].skin != i)
-						continue;
-
-					if (FIL_FileExists(va("%s-%s-last.lmp", gpath, skins[i].name)))
-						G_AddGhost(va("%s-%s-last.lmp", gpath, skins[i].name));
-				}
-			}
-
-			// Guest ghost
-			if (cv_ghost_guest.value && FIL_FileExists(va("%s-guest.lmp", gpath)))
-				G_AddGhost(va("%s-guest.lmp", gpath));
-
-			free(gpath);
-		}
-	}
+		P_LoadRecordGhosts();
 
 	if (G_TagGametype())
 	{
@@ -2988,16 +2923,13 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 
 		if (name[0] == 'M' && name[1] == 'A' && name[2] == 'P') // Ignore the headers
 		{
+			if (name[5]!='\0')
+				continue;
 			num = (INT16)M_MapNumber(name[3], name[4]);
 
 			//If you replaced the map you're on, end the level when done.
 			if (num == gamemap)
 				replacedcurrentmap = true;
-
-			if (name[5] == 'D')
-				P_LoadMapHeader(num);
-			else if (name[5]!='\0')
-				continue;
 
 			CONS_Printf("%s\n", name);
 		}

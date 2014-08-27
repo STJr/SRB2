@@ -988,8 +988,8 @@ void P_DoSuperTransformation(player_t *player, boolean giverings)
 	{
 		player->powers[pw_extralife] = 0;
 		player->powers[pw_invulnerability] = 0;
+		player->powers[pw_sneakers] = 0;
 	}
-	player->powers[pw_sneakers] = 0;
 
 	if (gametype != GT_COOP)
 	{
@@ -4009,7 +4009,7 @@ static boolean P_AnalogMove(player_t *player)
 //
 // Determines if the player is pressing in the direction they are moving
 //
-// 0 = no controls pressed
+// 0 = no controls pressed/no movement
 // 1 = pressing in the direction of movement
 // 2 = pressing in the opposite direction of movement
 //
@@ -4030,7 +4030,19 @@ INT32 P_GetPlayerControlDirection(player_t *player)
 	if (!cmd->forwardmove && !cmd->sidemove)
 		return 0;
 
-	if (P_AnalogMove(player) && thiscam->chase)
+	if (!player->mo->momx && !player->mo->momy)
+		return 0;
+
+	if (twodlevel || player->mo->flags2 & MF2_TWOD)
+	{
+		if (!cmd->sidemove)
+			return 0;
+		if (!player->mo->momx)
+			return 0;
+		origtempangle = tempangle = 0; // relative to the axis rather than the player!
+		controlplayerdirection = R_PointToAngle2(0, 0, player->mo->momx, player->mo->momy);
+	}
+	else if (P_AnalogMove(player) && thiscam->chase)
 	{
 		if (player->awayviewtics)
 			origtempangle = tempangle = player->awayviewmobj->angle;
@@ -4047,11 +4059,14 @@ INT32 P_GetPlayerControlDirection(player_t *player)
 	// Calculate the angle at which the controls are pointing
 	// to figure out the proper mforward and mbackward.
 	tempangle >>= ANGLETOFINESHIFT;
-	tempx += FixedMul(cmd->forwardmove*FRACUNIT,FINECOSINE(tempangle));
-	tempy += FixedMul(cmd->forwardmove*FRACUNIT,FINESINE(tempangle));
+	if (!(twodlevel || player->mo->flags2 & MF2_TWOD)) // in 2d mode, sidemove is treated as the forwards/backwards direction
+	{
+		tempx += FixedMul(cmd->forwardmove*FRACUNIT,FINECOSINE(tempangle));
+		tempy += FixedMul(cmd->forwardmove*FRACUNIT,FINESINE(tempangle));
 
-	tempangle = origtempangle-ANGLE_90;
-	tempangle >>= ANGLETOFINESHIFT;
+		tempangle = origtempangle-ANGLE_90;
+		tempangle >>= ANGLETOFINESHIFT;
+	}
 	tempx += FixedMul(cmd->sidemove*FRACUNIT,FINECOSINE(tempangle));
 	tempy += FixedMul(cmd->sidemove*FRACUNIT,FINESINE(tempangle));
 
@@ -8725,10 +8740,7 @@ void P_PlayerThink(player_t *player)
 	if (!(player->pflags & PF_NIGHTSMODE))
 	{
 		if (cmd->buttons & BT_USE)
-		{
-			if (!(player->pflags & PF_USEDOWN))
-				player->pflags |= PF_USEDOWN;
-		}
+			player->pflags |= PF_USEDOWN;
 		else
 			player->pflags &= ~PF_USEDOWN;
 	}
@@ -9026,8 +9038,7 @@ void P_PlayerAfterThink(player_t *player)
 		}
 	}
 
-	if (!(cmd->buttons & BT_WEAPONNEXT) && !(cmd->buttons & BT_WEAPONPREV)
-		&& !(cmd->buttons & BT_WEAPONMASK))
+	if (!(cmd->buttons & (BT_WEAPONNEXT|BT_WEAPONPREV|BT_WEAPONMASK)))
 		player->pflags &= ~PF_WPNDOWN;
 
 	// Weapon cycling if out of ammo for a certain weapon
@@ -9064,7 +9075,7 @@ void P_PlayerAfterThink(player_t *player)
 	&& player->charability2 == CA2_SPINDASH)
 		P_SetPlayerMobjState(player->mo, S_PLAY_ATK1);
 
-	if ((player->pflags & PF_CARRIED) && player->mo->tracer)
+	if (player->pflags & PF_CARRIED && player->mo->tracer)
 	{
 		player->mo->height = FixedDiv(P_GetPlayerHeight(player), FixedDiv(14*FRACUNIT,10*FRACUNIT));
 
@@ -9153,7 +9164,7 @@ void P_PlayerAfterThink(player_t *player)
 			}
 		}
 	}
-	else if ((player->pflags & PF_MACESPIN) && player->mo->tracer && player->mo->tracer->target)
+	else if (player->pflags & PF_MACESPIN && player->mo->tracer && player->mo->tracer->target)
 	{
 		player->mo->height = P_GetPlayerSpinHeight(player);
 		// tracer is what you're hanging onto....
@@ -9183,9 +9194,9 @@ void P_PlayerAfterThink(player_t *player)
 		}
 	}
 
-	if (((splitscreen && player == &players[secondarydisplayplayer]) || player == &players[displayplayer]))
+	if ((splitscreen && player == &players[secondarydisplayplayer]) || player == &players[displayplayer])
 	{
-		if (!(thiscam->chase)) // bob view only if looking through the player's eyes
+		if (!thiscam->chase) // bob view only if looking through the player's eyes
 		{
 			P_CalcHeight(player);
 			P_CalcPostImg(player);

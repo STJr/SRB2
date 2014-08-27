@@ -79,8 +79,6 @@ char motd[254], server_context[8]; // Message of the Day, Unique Context (even w
 
 // server specific vars
 UINT8 playernode[MAXPLAYERS];
-UINT8 consfailcount[MAXPLAYERS];
-UINT8 consfailstatus[MAXPLAYERS];
 
 #ifdef NEWPING
 UINT16 pingmeasurecount = 1;
@@ -943,6 +941,14 @@ static void SV_RequireResynch(INT32 node)
 static void SV_SendResynch(INT32 node)
 {
 	INT32 i, j;
+
+	if (!nodeingame[node])
+	{
+		// player left during resynch
+		// so obviously we don't need to do any of this anymore
+		resynch_inprogress[node] = false;
+		return;
+	}
 
 	// resynched?
 	if (!resynch_status[node])
@@ -2213,6 +2219,9 @@ static void CL_RemovePlayer(INT32 playernum)
 		playerpernode[node]--;
 		if (playerpernode[node] <= 0)
 		{
+			// If a resynch was in progress, well, it no longer needs to be.
+			SV_InitResynchVars(playernode[playernum]);
+
 			nodeingame[playernode[playernum]] = false;
 			Net_CloseConnection(playernode[playernum]);
 			ResetNode(node);
@@ -2269,9 +2278,6 @@ static void CL_RemovePlayer(INT32 playernum)
 
 	if (playernum == displayplayer)
 		displayplayer = consoleplayer; // don't look through someone's view who isn't there
-
-	consfailcount[playernum] = 0;
-	consfailstatus[playernum] = 0;
 
 #ifdef HAVE_BLUA
 	LUA_InvalidatePlayer(&players[playernum]);
@@ -2753,7 +2759,12 @@ void SV_ResetServer(void)
 	tictoclear = maketic;
 
 	for (i = 0; i < MAXNETNODES; i++)
+	{
 		ResetNode(i);
+
+		// Make sure resynch status doesn't get carried over!
+		SV_InitResynchVars(i);
+	}
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{

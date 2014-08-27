@@ -672,6 +672,9 @@ void P_ExplodeMissile(mobj_t *mo)
 		explodemo->momx -= (P_Random() % 96) * FixedMul(FRACUNIT/8, explodemo->scale);
 		explodemo->momy -= (P_Random() % 96) * FixedMul(FRACUNIT/8, explodemo->scale);
 		S_StartSound(explodemo, sfx_cybdth);
+
+		// Hack: Release an animal.
+		P_DamageMobj(mo, NULL, NULL, 10000);
 	}
 
 	mo->flags &= ~MF_MISSILE;

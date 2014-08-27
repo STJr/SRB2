@@ -3177,15 +3177,16 @@ static void Command_ListWADS_f(void)
 	INT32 i = numwadfiles;
 	char *tempname;
 	CONS_Printf(M_GetText("There are %d wads loaded:\n"),numwadfiles);
-	for (i--; i; i--)
+	for (i--; i >= 0; i--)
 	{
 		nameonly(tempname = va("%s", wadfiles[i]->filename));
-		if (i >= mainwads)
-			CONS_Printf("   %.2d: %s\n", i, tempname);
+		if (!i)
+			CONS_Printf("\x82 IWAD\x80: %s\n", tempname);
+		else if (i <= mainwads)
+			CONS_Printf("\x82 * %.2d\x80: %s\n", i, tempname);
 		else
-			CONS_Printf("*  %.2d: %s\n", i, tempname);
+			CONS_Printf("   %.2d: %s\n", i, tempname);
 	}
-	CONS_Printf("  IWAD: %s\n", wadfiles[0]->filename);
 }
 
 // =========================================================================
@@ -4026,6 +4027,16 @@ static void Name2_OnChange(void)
   */
 static void Skin_OnChange(void)
 {
+	if (!Playing())
+		return; // do whatever you want
+
+	if (!(cv_debug || devparm) && !(multiplayer || netgame) // In single player.
+		&& (gamestate == GS_LEVEL || gamestate == GS_INTERMISSION || gamestate == GS_CONTINUING))
+	{
+		CV_StealthSet(&cv_skin, skins[players[consoleplayer].skin].name);
+		return;
+	}
+
 	if (CanChangeSkin(consoleplayer) && !P_PlayerMoving(consoleplayer))
 		SendNameAndColor();
 	else
@@ -4042,6 +4053,9 @@ static void Skin_OnChange(void)
   */
 static void Skin2_OnChange(void)
 {
+	if (!Playing() || !splitscreen)
+		return; // do whatever you want
+
 	if (CanChangeSkin(secondarydisplayplayer) && !P_PlayerMoving(secondarydisplayplayer))
 		SendNameAndColor2();
 	else
@@ -4057,6 +4071,16 @@ static void Skin2_OnChange(void)
   */
 static void Color_OnChange(void)
 {
+	if (!Playing())
+		return; // do whatever you want
+
+	if (!(cv_debug || devparm) && !(multiplayer || netgame) // In single player.
+		&& (gamestate == GS_LEVEL || gamestate == GS_INTERMISSION || gamestate == GS_CONTINUING))
+	{
+		CV_StealthSet(&cv_skin, skins[players[consoleplayer].skin].name);
+		return;
+	}
+
 	if (!P_PlayerMoving(consoleplayer))
 	{
 		// Color change menu scrolling fix is no longer necessary
@@ -4076,6 +4100,9 @@ static void Color_OnChange(void)
   */
 static void Color2_OnChange(void)
 {
+	if (!Playing() || !splitscreen)
+		return; // do whatever you want
+
 	if (!P_PlayerMoving(secondarydisplayplayer))
 	{
 		// Color change menu scrolling fix is no longer necessary
