@@ -3790,24 +3790,20 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 				case CA_JUMPTHOK: // Credit goes to CZ64 and Sryder13 for the original
 					// Now it's Sonic's abilities turn!
 					// THOK!
-					if (!(player->pflags & PF_THOKKED) || ((player->charability2 == CA2_MULTIABILITY) /*&& (!(player->charability == CA_JUMPTHOK))*/))
+					if (!(player->pflags & PF_THOKKED) || (player->charability2 == CA2_MULTIABILITY))
 					{
 						// Catapult the player
 						fixed_t actionspd = player->actionspd;
 						if (player->mo->eflags & MFE_UNDERWATER)
 							actionspd >>= 1;
-						if (player->charability == CA_JUMPTHOK)
+						if ((player->charability == CA_JUMPTHOK) && !(player->pflags & PF_THOKKED))
 						{
-							// Enforcing an arbitrary limit, even on just the default setting, is bad; it encourages bad WADmaking practice and disables use of that particular action speed.
-							// Instead, see the speed limit in 2D with the added condition below! I think that works much better, and is more consistent. -Red
-							//if ((actionspd == 60*FRACUNIT) && (actionspd > player->normalspeed)) //Limit only at default
-								//actionspd = player->normalspeed;
 							player->pflags &= ~PF_JUMPED;
 							P_DoJump(player, false);
 						}
 						P_InstaThrust(player->mo, player->mo->angle, FixedMul(actionspd, player->mo->scale));
 
-						if ((maptol & TOL_2D) || (player->charability == CA_JUMPTHOK))
+						if (maptol & TOL_2D)
 						{
 							player->mo->momx /= 2;
 							player->mo->momy /= 2;
