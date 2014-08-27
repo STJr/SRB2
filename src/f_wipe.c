@@ -148,8 +148,8 @@ static fademask_t *F_GetFadeMask(UINT8 masknum, UINT8 scrnnum) {
 		*mask++ = FixedDiv((pcolor->s.red+1)<<FRACBITS, paldiv)>>FRACBITS;
 	}
 
-	fm.xscale = FixedDiv(fm.width<<FRACBITS, vid.width<<FRACBITS);
-	fm.yscale = FixedDiv(fm.height<<FRACBITS, vid.height<<FRACBITS);
+	fm.xscale = FixedDiv(vid.width<<FRACBITS, fm.width<<FRACBITS);
+	fm.yscale = FixedDiv(vid.height<<FRACBITS, fm.height<<FRACBITS);
 	return &fm;
 
 	// Landing point for freeing data -- do this instead of just returning NULL
@@ -172,13 +172,6 @@ static fademask_t *F_GetFadeMask(UINT8 masknum, UINT8 scrnnum) {
   */
 static void F_DoWipe(fademask_t *fademask)
 {
-	// wipe screen, start, end
-	UINT8 *w = wipe_scr;
-	const UINT8 *s = wipe_scr_start;
-	const UINT8 *e = wipe_scr_end;
-	UINT8 transval;
-	INT32 x = 0, y = 0;
-
 #ifdef HWRENDER
 	/// \todo Mask wipes for OpenGL
 	if(rendermode != render_soft)
@@ -187,29 +180,99 @@ static void F_DoWipe(fademask_t *fademask)
 		return;
 	}
 #endif
-	// Software mask wipe
-	do
-	{
-		if (*s != *e)
-		{
-			transval = fademask->mask[ // y*width + x
-				(FixedMul(y<<FRACBITS,fademask->yscale)>>FRACBITS)*fademask->width
-				+ (FixedMul(x<<FRACBITS,fademask->xscale)>>FRACBITS)
-			];
 
-			if (transval == 0)
-				*w = *s;
-			else if (transval == 10)
-				*w = *e;
-			else
-				*w = transtables[(*e<<8) + *s + ((9 - transval)<<FF_TRANSSHIFT)];
-		}
-		if (++x >= vid.width)
+	// Software mask wipe -- optimized; though it might not look like it!
+	// Okay, to save you wondering *how* this is more optimized than the simpler
+	// version that came before it...
+	// ---
+	// The previous code did two FixedMul calls for every single pixel on the
+	// screen, of which there are hundreds of thousands -- if not millions -- of.
+	// This worked fine for smaller screen sizes, but with excessively large
+	// (1920x1200) screens that meant 4 million+ calls out to FixedMul, and that
+	// would take /just/ long enough that fades would start to noticably lag.
+	// ---
+	// This code iterates over the fade mask's pixels instead of the screen's,
+	// and deals with drawing over each rectangular area before it moves on to
+	// the next pixel in the fade mask.  As a result, it's more complex (and might
+	// look a little messy; sorry!) but it simultaneously runs at twice the speed.
+	// In addition, we precalculate all the X and Y positions that we need to draw
+	// from and to, so it uses a little extra memory, but again, helps it run faster.
+	{
+		// wipe screen, start, end
+		UINT8       *w = wipe_scr;
+		const UINT8 *s = wipe_scr_start;
+		const UINT8 *e = wipe_scr_end;
+
+		// first pixel for each screen
+		UINT8       *w_base = w;
+		const UINT8 *s_base = s;
+		const UINT8 *e_base = e;
+
+		// mask data, end
+		UINT8       *transtbl;
+		const UINT8 *mask    = fademask->mask;
+		const UINT8 *maskend = mask + fademask->size;
+
+		// rectangle draw hints
+		UINT32 draw_linestart, draw_rowstart;
+		UINT32 draw_lineend,   draw_rowend;
+		UINT32 draw_linestogo, draw_rowstogo;
+
+		// rectangle coordinates, etc.
+		UINT16 scrxpos[fademask->width  + 1];
+		UINT16 scrypos[fademask->height + 1];
+		UINT16 maskx, masky;
+		UINT32 relativepos;
+
+		// ---
+		// Screw it, we do the fixed point math ourselves up front.
+		scrxpos[0] = 0;
+		for (relativepos = 0, maskx = 1; maskx < fademask->width; ++maskx)
+			scrxpos[maskx] = (relativepos += fademask->xscale)>>FRACBITS;
+		scrxpos[fademask->width] = vid.width;
+
+		scrypos[0] = 0;
+		for (relativepos = 0, masky = 1; masky < fademask->height; ++masky)
+			scrypos[masky] = (relativepos += fademask->yscale)>>FRACBITS;
+		scrypos[fademask->height] = vid.height;
+		// ---
+
+		maskx = masky = 0;
+		do
 		{
-			x = 0;
-			++y;
-		}
-	} while (++w && ++s && ++e && w < wipe_scr + vid.width*vid.height);
+			// pointer to transtable that this mask would use
+			transtbl = transtables + ((9 - *mask)<<FF_TRANSSHIFT);
+			// (ignore that it goes out of bounds if *mask is 0 or 10 --
+			//  it wouldn't be used in those cases anyway)
+
+			draw_rowstart = scrxpos[maskx];
+			draw_rowend   = scrxpos[maskx + 1];
+			draw_linestart = scrypos[masky];
+			draw_lineend   = scrypos[masky + 1];
+
+			// DRAWING LOOP
+			relativepos = (draw_linestart * vid.width) + draw_rowstart;
+			draw_linestogo = draw_lineend - draw_linestart;
+			while (draw_linestogo--)
+			{
+				w = w_base + relativepos;
+				s = s_base + relativepos;
+				e = e_base + relativepos;
+				draw_rowstogo = draw_rowend - draw_rowstart;
+				while (draw_rowstogo--)
+				{
+					if (*s != *e)
+						*w = ((*mask == 0) ? *s : (*mask == 10) ? *e : transtbl[(*e<<8) + *s]);
+					++w, ++s, ++e;
+				}
+				relativepos += vid.width;
+			}
+			// END DRAWING LOOP
+
+			if (++maskx >= fademask->width)
+				++masky, maskx = 0;
+		} while (++mask < maskend);
+	}
 }
 #endif
 
