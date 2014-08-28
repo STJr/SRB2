@@ -3376,7 +3376,7 @@ static void HWR_DrawSprite(gr_vissprite_t *spr)
 		sSurf.FlatColor.s.blue = 0x00;
 		sSurf.FlatColor.s.green = 0x00;
 
-		if (spr->mobj->frame & FF_TRANSMASK || spr->mobj->flags2 & MF2_SHADOW)
+		/*if (spr->mobj->frame & FF_TRANSMASK || spr->mobj->flags2 & MF2_SHADOW)
 		{
 			sector_t *sector = spr->mobj->subsector->sector;
 			UINT8 lightlevel = sector->lightlevel;
@@ -3406,15 +3406,25 @@ static void HWR_DrawSprite(gr_vissprite_t *spr)
 				sSurf.FlatColor.rgba = HWR_Lighting(lightlevel/2, colormap->rgba, colormap->fadergba, false, true);
 			else
 				sSurf.FlatColor.rgba = HWR_Lighting(lightlevel/2, NORMALFOG, FADEFOG, false, true);
+		}*/
+
+		// shadow is always half as translucent as the sprite itself
+		if (spr->mobj->flags2 & MF2_SHADOW)
+			sSurf.FlatColor.s.alpha = 0x20;
+		else if (spr->mobj->frame & FF_TRANSMASK)
+		{
+			HWR_TranstableToAlpha((spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT, &sSurf);
+			sSurf.FlatColor.s.alpha /= 2; //cut alpha in half!
 		}
-			Surf.FlatColor.rgba = NORMALFOG;
+		else
+			sSurf.FlatColor.s.alpha = 0x80; // default
 
 		/// \todo do the test earlier
 		if (!cv_grmd2.value || (md2_models[spr->mobj->sprite].scale < 0.0f) || (md2_models[spr->mobj->sprite].notfound = true) || (md2_playermodels[(skin_t*)spr->mobj->skin-skins].scale < 0.0f) || (md2_playermodels[(skin_t*)spr->mobj->skin-skins].notfound = true))
 		{
-			if (0x80 > floorheight/4)
+			if (sSurf.FlatColor.s.alpha > floorheight/4)
 			{
-				sSurf.FlatColor.s.alpha = (UINT8)(0x80 - floorheight/4);
+				sSurf.FlatColor.s.alpha = (UINT8)(sSurf.FlatColor.s.alpha - floorheight/4);
 				HWD.pfnDrawPolygon(&sSurf, swallVerts, 4, PF_Translucent|PF_Modulated|PF_Clip);
 			}
 		}
@@ -4460,6 +4470,12 @@ void HWR_RenderSkyboxView(INT32 viewnumber, player_t *player)
 {
 	const float fpov = FIXED_TO_FLOAT(cv_grfov.value+player->fovadd);
 	FTransform stransform;
+	postimg_t *type;
+
+	if (splitscreen && player == &players[secondarydisplayplayer])
+		type = &postimgtype2;
+	else
+		type = &postimgtype;
 
 	{
 		// do we really need to save player (is it not the same)?
@@ -4508,7 +4524,7 @@ void HWR_RenderSkyboxView(INT32 viewnumber, player_t *player)
 	atransform.anglex = (float)(aimingangle>>ANGLETOFINESHIFT)*(360.0f/(float)FINEANGLES);
 	atransform.angley = (float)(viewangle>>ANGLETOFINESHIFT)*(360.0f/(float)FINEANGLES);
 
-	if (postimgtype == postimg_flip)
+	if (*type == postimg_flip)
 		atransform.flip = true;
 	else
 		atransform.flip = false;
@@ -4527,7 +4543,7 @@ void HWR_RenderSkyboxView(INT32 viewnumber, player_t *player)
 	stransform.anglex = 0.0f;
 	stransform.angley = -270.0f;
 
-	if (postimgtype == postimg_flip)
+	if (*type == postimg_flip)
 		stransform.flip = true;
 	else
 		stransform.flip = false;
@@ -4669,10 +4685,16 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 {
 	const float fpov = FIXED_TO_FLOAT(cv_grfov.value+player->fovadd);
 	FTransform stransform;
+	postimg_t *type;
 
 	const boolean skybox = (skyboxmo[0] && cv_skybox.value); // True if there's a skybox object and skyboxes are on
 
 	FRGBAFloat ClearColor;
+
+	if (splitscreen && player == &players[secondarydisplayplayer])
+		type = &postimgtype2;
+	else
+		type = &postimgtype;
 
 	ClearColor.red = 0.0f;
 	ClearColor.green = 0.0f;
@@ -4732,7 +4754,7 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 	atransform.anglex = (float)(aimingangle>>ANGLETOFINESHIFT)*(360.0f/(float)FINEANGLES);
 	atransform.angley = (float)(viewangle>>ANGLETOFINESHIFT)*(360.0f/(float)FINEANGLES);
 
-	if (postimgtype == postimg_flip)
+	if (*type == postimg_flip)
 		atransform.flip = true;
 	else
 		atransform.flip = false;
@@ -4751,7 +4773,7 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 	stransform.anglex = 0.0f;
 	stransform.angley = -270.0f;
 
-	if (postimgtype == postimg_flip)
+	if (*type == postimg_flip)
 		stransform.flip = true;
 	else
 		stransform.flip = false;
@@ -5298,6 +5320,13 @@ INT32 HWR_GetTextureUsed(void)
 
 void HWR_DoPostProcessor(player_t *player)
 {
+	postimg_t *type;
+
+	if (splitscreen && player == &players[secondarydisplayplayer])
+		type = &postimgtype2;
+	else
+		type = &postimgtype;
+
 	// Armageddon Blast Flash!
 	// Could this even be considered postprocessor?
 	if (player->flashcount)
@@ -5332,7 +5361,7 @@ void HWR_DoPostProcessor(player_t *player)
 
 #ifdef SHUFFLE
 	// Drunken vision! WooOOooo~
-	if (postimgtype == postimg_water || postimgtype == postimg_heat)
+	if (*type == postimg_water || *type == postimg_heat)
 	{
 		// 10 by 10 grid. 2 coordinates (xy)
 		float v[SCREENVERTS][SCREENVERTS][2];
@@ -5343,7 +5372,7 @@ void HWR_DoPostProcessor(player_t *player)
 		INT32 FREQUENCY;
 
 		// Modifies the wave.
-		if (postimgtype == postimg_water)
+		if (*type == postimg_water)
 		{
 			WAVELENGTH = 20; // Lower is longer
 			AMPLITUDE = 20; // Lower is bigger

@@ -1852,18 +1852,17 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 		}
 	}
 
-	// Special type 308, 307, 302, 304, 315, 318, and 320 only work once
-	if (specialtype == 302 || specialtype == 304 || specialtype == 307 || specialtype == 308 || specialtype == 315 || specialtype == 318 || specialtype == 320)
-	{
+	// These special types work only once
+	if (specialtype == 302  // Once
+	 || specialtype == 304  // Ring count - Once
+	 || specialtype == 307  // Character ability - Once
+	 || specialtype == 308  // Race only - Once
+	 || specialtype == 315  // No of pushables - Once
+	 || specialtype == 318  // Unlockable trigger - Once
+	 || specialtype == 320  // Unlockable - Once
+	 || specialtype == 399) // Level Load
 		triggerline->special = 0; // Clear it out
 
-		// Hmm, I'm thinking that we shouldn't touch the sector special, incase
-		// we have continuous executors associated with it, too?
-		/*
-		if (caller && (GETSECSPECIAL(caller->special, 2) >= 1 && GETSECSPECIAL(caller->special, 2) <= 7))
-			caller->special = (UINT16)(caller->special-(GETSECSPECIAL(caller->special, 2) << 4)); // Only remove the relevant section
-			*/
-	}
 	return true;
 }
 
@@ -1893,13 +1892,14 @@ void P_LinedefExecute(INT16 tag, mobj_t *actor, sector_t *caller)
 		if (lines[masterline].tag != tag)
 			continue;
 
-		// "No More Enemies" takes care of itself.
+		// "No More Enemies" and "Level Load" take care of themselves.
 		if (lines[masterline].special == 313
-			// Each-time exectors handle themselves, too
-			|| lines[masterline].special == 301
-			|| lines[masterline].special == 306
-			|| lines[masterline].special == 310
-			|| lines[masterline].special == 312)
+		 || lines[masterline].special == 399
+		 // Each-time executors handle themselves, too
+		 || lines[masterline].special == 301 // Each time
+		 || lines[masterline].special == 306 // Character ability - Each time
+		 || lines[masterline].special == 310 // CTF Red team - Each time
+		 || lines[masterline].special == 312) // CTF Blue team - Each time
 			continue;
 
 		if (lines[masterline].special < 300
@@ -3323,12 +3323,79 @@ sector_t *P_PlayerTouchingSectorSpecial(player_t *player, INT32 section, INT32 n
 }
 
 //
-// P_ShouldObjectBeDamaged
+// P_ThingIsOnThe3DFloor
 //
-// Checks for conditions that a mobj should be damaged by
-// floor touch/anywhere-in-FOF damage specials.
+// This checks whether the mobj is on/in the FOF we want it to be at
+// Needed for the "All players" trigger sector specials only
 //
-#define P_ShouldObjectBeDamaged(mo,roversector) (roversector || P_IsObjectOnGround(mo))
+static boolean P_ThingIsOnThe3DFloor(mobj_t *mo, sector_t *sector, sector_t *targetsec)
+{
+	ffloor_t *rover;
+
+	if (!mo->player) // should NEVER happen
+		return false;
+
+	if (!targetsec->ffloors) // also should NEVER happen
+		return false;
+
+	for (rover = targetsec->ffloors; rover; rover = rover->next)
+	{
+		if (rover->master->frontsector != sector)
+			continue;
+
+		// we're assuming the FOF existed when the first player touched it
+		//if (!(rover->flags & FF_EXISTS))
+		//	return false;
+
+		// Check the 3D floor's type...
+		if (rover->flags & FF_BLOCKPLAYER)
+		{
+			// Thing must be on top of the floor to be affected...
+			if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR)
+				&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING))
+			{
+				if ((mo->eflags & MFE_VERTICALFLIP) || mo->z != *rover->topheight)
+					return false;
+			}
+			else if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING)
+				&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR))
+			{
+				if (!(mo->eflags & MFE_VERTICALFLIP)
+					|| mo->z + mo->height != *rover->bottomheight)
+					return false;
+			}
+			else if (rover->master->frontsector->flags & SF_FLIPSPECIAL_BOTH)
+			{
+				if (!((mo->eflags & MFE_VERTICALFLIP && mo->z + mo->height == *rover->bottomheight)
+					|| (!(mo->eflags & MFE_VERTICALFLIP) && mo->z == *rover->topheight)))
+					return false;
+			}
+		}
+		else
+		{
+			// Water and intangible FOFs
+			if (mo->z > *rover->topheight || (mo->z + mo->height) < *rover->bottomheight)
+				return false;
+		}
+
+		return true;
+	}
+
+	return false;
+}
+
+//
+// P_MobjReadyToTrigger
+//
+// Is player standing on the sector's "ground"?
+//
+static inline boolean P_MobjReadyToTrigger(mobj_t *mo, sector_t *sec)
+{
+	if (mo->eflags & MFE_VERTICALFLIP)
+		return (mo->z+mo->height == sec->ceilingheight);
+	else
+		return (mo->z == sec->floorheight);
+}
 
 /** Applies a sector special to a player.
   *
@@ -3370,19 +3437,19 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 	switch (special)
 	{
 		case 1: // Damage (Generic)
-			if (P_ShouldObjectBeDamaged(player->mo, roversector))
+			if (roversector || P_MobjReadyToTrigger(player->mo, sector))
 				P_DamageMobj(player->mo, NULL, NULL, 1);
 			break;
 		case 2: // Damage (Water)
-			if (P_ShouldObjectBeDamaged(player->mo, roversector) && (player->powers[pw_underwater] || player->pflags & PF_NIGHTSMODE) && (player->powers[pw_shield] & SH_NOSTACK) != SH_ELEMENTAL)
+			if ((roversector || P_MobjReadyToTrigger(player->mo, sector)) && (player->powers[pw_underwater] || player->pflags & PF_NIGHTSMODE) && (player->powers[pw_shield] & SH_NOSTACK) != SH_ELEMENTAL)
 				P_DamageMobj(player->mo, NULL, NULL, 1);
 			break;
 		case 3: // Damage (Fire)
-			if (P_ShouldObjectBeDamaged(player->mo, roversector) && (player->powers[pw_shield] & SH_NOSTACK) != SH_ELEMENTAL)
+			if ((roversector || P_MobjReadyToTrigger(player->mo, sector)) && (player->powers[pw_shield] & SH_NOSTACK) != SH_ELEMENTAL)
 				P_DamageMobj(player->mo, NULL, NULL, 1);
 			break;
 		case 4: // Damage (Electrical)
-			if (P_ShouldObjectBeDamaged(player->mo, roversector) && (player->powers[pw_shield] & SH_NOSTACK) != SH_ATTRACT)
+			if ((roversector || P_MobjReadyToTrigger(player->mo, sector)) && (player->powers[pw_shield] & SH_NOSTACK) != SH_ATTRACT)
 				P_DamageMobj(player->mo, NULL, NULL, 1);
 			break;
 		case 5: // Spikes
@@ -3390,7 +3457,7 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 			break;
 		case 6: // Death Pit (Camera Mod)
 		case 7: // Death Pit (No Camera Mod)
-			if (P_ShouldObjectBeDamaged(player->mo, roversector))
+			if (roversector || P_MobjReadyToTrigger(player->mo, sector))
 				P_DamageMobj(player->mo, NULL, NULL, 10000);
 			break;
 		case 8: // Instant Kill
@@ -3451,10 +3518,26 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 			break;
 		case 2: // Linedef executor requires all players present+doesn't require touching floor
 		case 3: // Linedef executor requires all players present
-			/// \todo take FOFs into account (+continues for proper splitscreen support?)
+			/// \todo check continues for proper splitscreen support?
 			for (i = 0; i < MAXPLAYERS; i++)
-				if (playeringame[i] && !players[i].bot && players[i].mo && (gametype != GT_COOP || players[i].lives > 0) && !(P_PlayerTouchingSectorSpecial(&players[i], 2, 3) == sector || P_PlayerTouchingSectorSpecial(&players[i], 2, 2) == sector))
-					goto DoneSection2;
+				if (playeringame[i] && !players[i].bot && players[i].mo && (gametype != GT_COOP || players[i].lives > 0))
+				{
+					if (roversector)
+					{
+						if (players[i].mo->subsector->sector != roversector)
+							goto DoneSection2;
+						if (!P_ThingIsOnThe3DFloor(players[i].mo, sector, roversector))
+							goto DoneSection2;
+					}
+					else
+					{
+						if (players[i].mo->subsector->sector != sector)
+							goto DoneSection2;
+
+						if (special == 3 && !P_MobjReadyToTrigger(players[i].mo, sector))
+							goto DoneSection2;
+					}
+				}
 		case 4: // Linedef executor that doesn't require touching floor
 		case 5: // Linedef executor
 		case 6: // Linedef executor (7 Emeralds)
@@ -5280,7 +5363,7 @@ static void P_RunLevelLoadExecutors(void)
 	for (i = 0; i < numlines; i++)
 	{
 		if (lines[i].special == 399)
-			P_LinedefExecute(lines[i].tag, NULL, NULL);
+			P_RunTriggerLinedef(&lines[i], NULL, NULL);
 	}
 }
 

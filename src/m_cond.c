@@ -512,9 +512,9 @@ emblem_t emblemlocations[MAXEMBLEMS] =
 
 	// FLOODED COVE
 	// ---
-	{0, -1888, -1440, 2448, 52, 'N', SKINCOLOR_ROSEWOOD, 0, "", 0},
-	{ET_NGRADE, 0,0,0,      52, 'Q', SKINCOLOR_TEAL,     GRADE_A, "", 0},
-	{ET_NTIME,  0,0,0,      52, 'T', SKINCOLOR_GREY,  90*TICRATE, "", 0},
+	{0, 1824, -1888, 2448, 52, 'N', SKINCOLOR_ROSEWOOD, 0, "", 0},
+	{ET_NGRADE, 0,0,0,     52, 'Q', SKINCOLOR_TEAL,     GRADE_A, "", 0},
+	{ET_NTIME,  0,0,0,     52, 'T', SKINCOLOR_GREY,  90*TICRATE, "", 0},
 
 
 	// CAVERN FORTRESS
