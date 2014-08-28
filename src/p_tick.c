@@ -168,7 +168,8 @@ void Command_CountMobjs_f(void)
 				count++;
 		}
 
-		CONS_Printf(" * %d: %d\n", i, count);
+		if (count > 0) // Don't bother displaying if there are none of this type!
+			CONS_Printf(" * %d: %d\n", i, count);
 	}
 }
 

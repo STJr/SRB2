@@ -64,7 +64,6 @@ boolean P_DelWadFile(void);
 boolean P_RunSOC(const char *socfilename);
 void P_WriteThings(lumpnum_t lump);
 size_t P_PrecacheLevelFlats(void);
-void P_InitMapHeaders(void);
 void P_AllocMapHeader(INT16 i);
 
 // Needed for NiGHTS

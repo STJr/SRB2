@@ -4452,8 +4452,6 @@ static void M_ReadSavegameInfo(UINT32 slot)
 	savegameinfo[slot].skincolor = READUINT8(save_p);
 	CHECKPOS
 	savegameinfo[slot].skinnum = READUINT8(save_p);
-	strcpy(savegameinfo[slot].playername,
-		skins[savegameinfo[slot].skinnum].name);
 
 	CHECKPOS
 	(void)READINT32(save_p); // Score
@@ -4463,17 +4461,26 @@ static void M_ReadSavegameInfo(UINT32 slot)
 	CHECKPOS
 	savegameinfo[slot].continues = READINT32(save_p); // continues
 
-	if (fake & (1<<10)) {
+	if (fake & (1<<10))
+	{
 		CHECKPOS
 		savegameinfo[slot].botskin = READUINT8(save_p);
-		if (savegameinfo[slot].botskin-1 < numskins)
-			snprintf(savegameinfo[slot].playername, 24, "%s & %s", savegameinfo[slot].playername, skins[savegameinfo[slot].botskin-1].name);
-		else
+		if (savegameinfo[slot].botskin-1 >= numskins)
 			savegameinfo[slot].botskin = 0;
 		CHECKPOS
 		savegameinfo[slot].botcolor = READUINT8(save_p); // because why not.
-	} else
+	}
+	else
 		savegameinfo[slot].botskin = 0;
+
+	if (savegameinfo[slot].botskin)
+		snprintf(savegameinfo[slot].playername, 32, "%s & %s",
+			skins[savegameinfo[slot].skinnum].realname,
+			skins[savegameinfo[slot].botskin-1].realname);
+	else
+		strcpy(savegameinfo[slot].playername, skins[savegameinfo[slot].skinnum].realname);
+
+	savegameinfo[slot].playername[31] = 0;
 
 	// File end marker check
 	CHECKPOS

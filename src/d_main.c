@@ -1091,10 +1091,10 @@ void D_SRB2Main(void)
 
 	// Check MD5s of autoloaded files
 	W_VerifyFileMD5(0, "ac309fb3c7d4b5b685e2cd26beccf0e8"); // srb2.srb/srb2.wad
-	W_VerifyFileMD5(1, "e956466eff2c79f7b1cdefad24761bce"); // zones.dta
-	W_VerifyFileMD5(2, "95a4cdbed287323dd361243f357a5fd2"); // player.dta
+	W_VerifyFileMD5(1, "f39b6c849295e3c81875726e8cc0e2c7"); // zones.dta
+	W_VerifyFileMD5(2, "cfca0f1c73023cbbd8f844f45480f799"); // player.dta
 	W_VerifyFileMD5(3, "85901ad4bf94637e5753d2ac2c03ea26"); // rings.dta
-	W_VerifyFileMD5(4, "01735733412bf68c42f4669e964fc952"); // patch.dta
+	W_VerifyFileMD5(4, "3d6cfc185fd7c195eb934ce593b0248f"); // patch.dta
 	// don't check music.dta because people like to modify it, and it doesn't matter if they do
 	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.
 #endif
@@ -1146,7 +1146,6 @@ void D_SRB2Main(void)
 
 	wipegamestate = gamestate;
 
-	P_InitMapHeaders();
 	savedata.lives = 0; // flag this as not-used
 
 	//------------------------------------------------ COMMAND LINE PARAMS
