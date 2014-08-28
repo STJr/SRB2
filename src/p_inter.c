@@ -2118,6 +2118,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source)
 				case MT_JETTGUNNER:
 				case MT_CRAWLACOMMANDER:
 				case MT_REDBUZZ:
+				case MT_DETON:
 					item = MT_MOUSE;
 					break;
 

@@ -888,6 +888,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			if (tmthing->z + tmthing->height + tmthing->momz >= thing->z
 				&& tmthing->z + tmthing->height + tmthing->momz < thing->z + thing->height
 				&& P_IsObjectOnGround(thing)
+				&& !P_IsObjectOnGround(tmthing) // Don't crush if the monitor is on the ground...
 				&& (tmthing->flags & MF_SOLID))
 			{
 				if (tmthing->flags & (MF_MONITOR|MF_PUSHABLE))
@@ -941,6 +942,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			if (tmthing->z + tmthing->momz <= thing->z + thing->height
 				&& tmthing->z + tmthing->momz > thing->z
 				&& P_IsObjectOnGround(thing)
+				&& !P_IsObjectOnGround(tmthing) // Don't crush if the monitor is on the ground...
 				&& (tmthing->flags & MF_SOLID))
 			{
 				if (tmthing->flags & (MF_MONITOR|MF_PUSHABLE))
@@ -1084,6 +1086,10 @@ static boolean PIT_CheckThing(mobj_t *thing)
 					*momz = -*momz; // Therefore, you should be thrust in the opposite direction, vertically.
 				return false;
 			}
+/*
+			else if ((thing->flags & (MF_SOLID|MF_NOCLIP|MF_PUSHABLE)) == MF_SOLID)
+				return false; // this fixes both monitors and non-pushable solids being walked through on bobbing FOFs... for now!
+*/
 		}
 	}
 

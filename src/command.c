@@ -1320,14 +1320,6 @@ static void CV_SetCVar(consvar_t *var, const char *value, boolean stealth)
 	if (!var || !var->string || !value || !stricmp(var->string, value))
 		return; // no changes
 
-	// Don't allow skin/color changes in single player
-	if ((var == &cv_skin || var == &cv_playercolor) &&
-		!(cv_debug || devparm) && !(multiplayer || netgame)
-		&& (gamestate == GS_LEVEL || gamestate == GS_INTERMISSION))
-	{
-		return;
-	}
-
 	if (var->flags & CV_NETVAR)
 	{
 		// send the value of the variable
