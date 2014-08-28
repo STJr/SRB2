@@ -4613,7 +4613,7 @@ if (0)
 #ifdef ALAM_LIGHTING
 	//14/11/99: Hurdler: moved here because it doesn't work with
 	// subsector, see other comments;
-	HWR_ResetLights();
+	//HWR_ResetLights(); CONS_Printf("butts"); //yellowtd: TODO: Coronas wont show with skyboxes on, fix this soon
 #endif
 
 	// Draw MD2 and sprites
