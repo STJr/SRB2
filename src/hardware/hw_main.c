@@ -1393,11 +1393,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 		}
 
 		// check TOP TEXTURE
-		if (worldhigh < worldtop && texturetranslation[gr_sidedef->toptexture]
-#ifdef POLYOBJECTS // polyobjects don't have top textures, silly.
-		&& !gr_curline->polyseg
-#endif
-			)
+		if (worldhigh < worldtop && texturetranslation[gr_sidedef->toptexture])
 		{
 			if (drawtextured)
 			{
@@ -1435,11 +1431,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 		}
 
 		// check BOTTOM TEXTURE
-		if (worldlow > worldbottom && texturetranslation[gr_sidedef->bottomtexture]
-#ifdef POLYOBJECTS // polyobjects don't have bottom textures, silly.
-		&& !gr_curline->polyseg
-#endif
-			) //only if VISIBLE!!!
+		if (worldlow > worldbottom && texturetranslation[gr_sidedef->bottomtexture]) //only if VISIBLE!!!
 		{
 			if (drawtextured)
 			{
@@ -1646,6 +1638,17 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 					blendmode = PF_Masked;
 					break;
 			}
+
+#ifdef POLYOBJECTS
+			if (gr_curline->polyseg && gr_curline->polyseg->translucency > 0)
+			{
+				if (gr_curline->polyseg->translucency >= NUMTRANSMAPS) // wall not drawn
+					return;
+
+				blendmode = HWR_TranstableToAlpha(gr_curline->polyseg->translucency, &Surf);
+			}
+#endif
+
 			if (grTex->mipmap.flags & TF_TRANSPARENT)
 				blendmode = PF_Translucent;
 
