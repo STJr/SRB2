@@ -1647,8 +1647,8 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 					Surf.FlatColor.s.alpha = 0x00; // This shouldn't draw anything regardless of blendmode
 					blendmode = PF_Masked;
 				}
-
-				blendmode = HWR_TranstableToAlpha(gr_curline->polyseg->translucency, &Surf);
+				else
+					blendmode = HWR_TranstableToAlpha(gr_curline->polyseg->translucency, &Surf);
 			}
 #endif
 
