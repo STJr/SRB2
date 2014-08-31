@@ -1652,7 +1652,7 @@ INT32 VID_SetMode(INT32 modeNum)
 	vid.recalc = 1;
 	vid.bpp = 1;
 
-	if (modeNum >= 0 && modeNum < MAXWINMODES-1)
+	if (modeNum >= 0 && modeNum < MAXWINMODES)
 	{
 		vid.width = windowedModes[modeNum][0];
 		vid.height = windowedModes[modeNum][1];
