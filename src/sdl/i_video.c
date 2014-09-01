@@ -629,50 +629,20 @@ static void VID_Command_Info_f (void)
 
 static void VID_Command_ModeList_f(void)
 {
-	SDL2STUB();
-#if 0
-#if !defined (DC) && !defined (_WIN32_WCE) && !defined (_PSP) &&  !defined(GP2X)
-	INT32 i;
-#ifdef HWRENDER
-	if (rendermode == render_opengl)
-		modeList = SDL_ListModes(NULL, SDL_OPENGL|SDL_FULLSCREEN);
-	else
-#endif
-	modeList = SDL_ListModes(NULL, surfaceFlagsF|SDL_HWSURFACE); //Alam: At least hardware surface
-
-	if (modeList == (SDL_Rect **)0 && cv_fullscreen.value)
+	// List windowed modes
+	INT32 i = 0;
+	CONS_Printf("NOTE: Under SDL2, all modes are supported on all platforms.\n");
+	CONS_Printf("Under opengl, fullscreen only supports native desktop resolution.\n");
+	CONS_Printf("Under software, the mode is stretched up to desktop resolution.\n");
+	for (i = 0; i < MAXWINMODES; i++)
 	{
-		CONS_Printf("%s", M_GetText("No video modes present\n"));
-		cv_fullscreen.value = 0;
+		CONS_Printf("%2d: %dx%d\n", i, windowedModes[i][0], windowedModes[i][1]);
 	}
-	else if (modeList != (SDL_Rect **)0)
-	{
-		numVidModes = 0;
-		if (modeList == (SDL_Rect **)-1)
-			numVidModes = -1; // should not happen with fullscreen modes
-		else while (modeList[numVidModes])
-			numVidModes++;
-	}
-	CONS_Printf(M_GetText("Found %d FullScreen Video Modes:\n"), numVidModes);
-	for (i=0 ; i<numVidModes; i++)
-	{ // fullscreen modes
-		INT32 modeNum = firstEntry + i;
-		if (modeNum >= numVidModes)
-			break;
 
-		CONS_Printf(M_GetText("%dx%d and "),
-				modeList[modeNum]->w,
-				modeList[modeNum]->h);
-	}
-	CONS_Printf("%s", M_GetText("None\n"));
-#endif
-#endif
 }
 
 static void VID_Command_Mode_f (void)
 {
-	SDL2STUB();
-#if 0
 	INT32 modenum;
 
 	if (COM_Argc()!= 2)
@@ -687,7 +657,6 @@ static void VID_Command_Mode_f (void)
 		CONS_Printf(M_GetText("Video mode not present\n"));
 	else
 		setmodeneeded = modenum+1; // request vid mode change
-#endif
 }
 
 #if 0
@@ -1614,37 +1583,6 @@ static inline void SDLESSet(void)
 	SDL2STUB();
 }
 
-static void SDLWMSet(void)
-{
-	SDL2STUB();
-#if 0
-#ifdef RPC_NO_WINDOWS_H
-	SDL_SysWMinfo SDLWM;
-	memset(&SDLWM,0,sizeof (SDL_SysWMinfo));
-	SDL_VERSION(&SDLWM.version)
-	if (SDL_GetWMInfo(&SDLWM))
-		vid.WndParent = SDLWM.window;
-	else
-		vid.WndParent = INVALID_HANDLE_VALUE;
-	if (vid.WndParent != INVALID_HANDLE_VALUE)
-	{
-		SetFocus(vid.WndParent);
-		ShowWindow(vid.WndParent, SW_SHOW);
-	}
-	SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
-#endif
-	SDL_EventState(SDL_VIDEORESIZE, SDL_IGNORE);
-#endif
-}
-
-#if 0
-static void* SDLGetDirect(void)
-{
-	// you can not use the video memory in pixels member in fullscreen mode
-	return NULL;
-}
-#endif
-
 INT32 VID_SetMode(INT32 modeNum)
 {
 	SDLdoUngrabMouse();
@@ -1757,7 +1695,6 @@ static void Impl_SetWindowName(const char *title)
 	{
 		return;
 	}
-	SDL2STUB();
 	SDL_SetWindowTitle(window, title);
 }
 
@@ -1958,8 +1895,6 @@ void I_StartupGraphics(void)
 	VID_Command_Info_f();
 	if (!disable_mouse) SDL_ShowCursor(SDL_DISABLE);
 	SDLdoUngrabMouse();
-
-	SDLWMSet();
 
 	graphics_started = true;
 }
