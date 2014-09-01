@@ -83,7 +83,7 @@
 #endif
 
 // maximum number of windowed modes (see windowedModes[][])
-#define MAXWINMODES (17)
+#define MAXWINMODES (18)
 
 /**	\brief
 */
@@ -148,6 +148,7 @@ static INT32 windowedModes[MAXWINMODES][2] =
 	{1920,1200}, // 1.60,6.00
 	{1920,1080}, // 1.66
 	{1680,1050}, // 1.60,5.25
+	{1600,1200}, // 1.33
 	{1600, 900}, // 1.66
 	{1366, 768}, // 1.66
 	{1440, 900}, // 1.60,4.50
