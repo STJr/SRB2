@@ -452,7 +452,7 @@ static void HWR_GenerateTexture(INT32 texnum, GLTexture_t *grtex)
 	//Hurdler: not efficient at all but I don't remember exactly how HWR_DrawPatchInCache works :(
 	if (format2bpp[grtex->mipmap.grInfo.format]==4)
 	{
-		for (i = 3; i < blocksize; i += 4)
+		for (i = 3; i < blocksize*4; i += 4) // blocksize*4 because blocksize doesn't include the bpp
 		{
 			if (block[i] == 0)
 			{
