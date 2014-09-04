@@ -63,8 +63,8 @@ INT32 HWR_GetTextureUsed(void);
 void HWR_DoPostProcessor(player_t *player);
 void HWR_StartScreenWipe(void);
 void HWR_EndScreenWipe(void);
-void HWR_DoScreenWipe(void);
 void HWR_DrawIntermissionBG(void);
+void HWR_DoWipe(UINT8 wipenum, UINT8 scrnnum);
 
 // This stuff is put here so MD2's can use them
 UINT32 HWR_Lighting(INT32 light, UINT32 color, UINT32 fadecolor, boolean fogblockpoly, boolean plane);

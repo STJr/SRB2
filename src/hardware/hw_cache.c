@@ -1002,4 +1002,108 @@ GLPatch_t *HWR_GetCachedGLPatch(lumpnum_t lumpnum)
 	return HWR_GetCachedGLPatchPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum));
 }
 
+// Need to do this because they aren't powers of 2
+static void HWR_DrawFadeMaskInCache(GLMipmap_t *mipmap, INT32 pblockwidth, INT32 pblockheight,
+	lumpnum_t fademasklumpnum, UINT16 fmwidth, UINT16 fmheight)
+{
+	INT32 i,j;
+	fixed_t posx, posy, stepx, stepy;
+	UINT8 *block = mipmap->grInfo.data; // places the data directly into here, it already has the space allocated from HWR_ResizeBlock
+	UINT8 *flat;
+	UINT8 *dest, *src, texel;
+	RGBA_t col;
+
+	// Place the flats data into flat
+	W_ReadLump(fademasklumpnum, Z_Malloc(W_LumpLength(fademasklumpnum),
+		PU_HWRCACHE, &flat));
+
+	stepy = ((INT32)SHORT(fmheight)<<FRACBITS)/pblockheight;
+	stepx = ((INT32)SHORT(fmwidth)<<FRACBITS)/pblockwidth;
+	posy = 0;
+	for (j = 0; j < pblockheight; j++)
+	{
+		posx = 0;
+		dest = &block[j*blockwidth]; // 1bpp
+		src = &flat[(posy>>FRACBITS)*SHORT(fmwidth)];
+		for (i = 0; i < pblockwidth;i++)
+		{
+			// fademask bpp is always 1, and is used just for alpha
+			texel = src[(posx)>>FRACBITS];
+			col = V_GetColor(texel);
+			*dest = col.s.red; // take the red level of the colour and use it for alpha, as fademasks do
+
+			dest++;
+			posx += stepx;
+		}
+		posy += stepy;
+	}
+
+	Z_Free(flat);
+}
+
+static void HWR_CacheFadeMask(GLMipmap_t *grMipmap, lumpnum_t fademasklumpnum)
+{
+	size_t size;
+	UINT16 fmheight = 0, fmwidth = 0;
+	UINT8 *block; // The fade mask's pixels
+
+	// setup the texture info
+	grMipmap->grInfo.format = GR_TEXFMT_ALPHA_8; // put the correct alpha levels straight in so I don't need to convert it later
+	grMipmap->flags = 0;
+
+	size = W_LumpLength(fademasklumpnum);
+
+	switch (size)
+	{
+		// None of these are powers of 2, so I'll need to do what is done for textures and make them powers of 2 before they can be used
+		case 256000: // 640x400
+			fmwidth = 640;
+			fmheight = 400;
+			break;
+		case 64000: // 320x200
+			fmwidth = 320;
+			fmheight = 200;
+			break;
+		case 16000: // 160x100
+			fmwidth = 160;
+			fmheight = 100;
+			break;
+		case 4000: // 80x50 (minimum)
+			fmwidth = 80;
+			fmheight = 50;
+			break;
+		default: // Bad lump
+			CONS_Alert(CONS_WARNING, "Fade mask lump of incorrect size, ignored\n"); // I should avoid this by checking the lumpnum in HWR_RunWipe
+			break;
+	}
+
+	// Thankfully, this will still work for this scenario
+	HWR_ResizeBlock(fmwidth, fmheight, &grMipmap->grInfo);
+
+	grMipmap->width  = blockwidth;
+	grMipmap->height = blockheight;
+
+	block = MakeBlock(grMipmap);
+
+	HWR_DrawFadeMaskInCache(grMipmap, blockwidth, blockheight, fademasklumpnum, fmwidth, fmheight);
+
+	// I DO need to convert this because it isn't power of 2 and we need the alpha
+}
+
+
+void HWR_GetFadeMask(lumpnum_t fademasklumpnum)
+{
+	GLMipmap_t *grmip;
+
+	grmip = &HWR_GetCachedGLPatch(fademasklumpnum)->mipmap;
+
+	if (!grmip->downloaded && !grmip->grInfo.data)
+		HWR_CacheFadeMask(grmip, fademasklumpnum);
+
+	HWD.pfnSetTexture(grmip);
+
+	// The system-memory data can be purged now.
+	Z_ChangeTag(grmip->grInfo.data, PU_HWRCACHE_UNLOCKED);
+}
+
 #endif //HWRENDER

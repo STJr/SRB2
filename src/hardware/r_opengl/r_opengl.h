@@ -35,6 +35,13 @@
 #else
 #include <GL/gl.h>
 #include <GL/glu.h>
+
+#ifndef MINI_GL_COMPATIBILITY
+#ifdef STATIC_OPENGL // Because of the 1.3 functions, you'll need GLext to compile it if static
+#define GL_GLEXT_PROTOTYPES
+#include <GL/glext.h>
+#endif
+#endif
 #endif
 
 #define  _CREATE_DLL_  // necessary for Unix AND Windows
@@ -66,6 +73,7 @@
 boolean LoadGL(void);
 void *GetGLFunc(const char *proc);
 boolean SetupGLfunc(void);
+boolean SetupGLFunc13(void);
 void Flush(void);
 INT32 isExtAvailable(const char *extension, const GLubyte *start);
 boolean SetupPixelFormat(INT32 WantColorBits, INT32 WantStencilBits, INT32 WantDepthBits);
