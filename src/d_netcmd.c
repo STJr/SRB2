@@ -3764,6 +3764,8 @@ static void Command_Displayplayer_f(void)
 	CONS_Printf(M_GetText("Displayplayer is %d\n"), displayplayer);
 }
 
+#include "dehacked.h"
+#include "fastcmp.h"
 static void Command_Tunes_f(void)
 {
 	const char *tunearg;
@@ -3789,9 +3791,13 @@ static void Command_Tunes_f(void)
 		tune = mapheaderinfo[gamemap-1]->musicslot;
 		track = mapheaderinfo[gamemap-1]->musicslottrack;
 	}
-	else if (toupper(tunearg[0]) >= 'A' && toupper(tunearg[0]) <= 'Z')
+	else if ((toupper(tunearg[0]) >= 'A' && toupper(tunearg[0]) <= 'Z') && (strlen(tunearg) < 3))
 		tune = (UINT16)M_MapNumber(tunearg[0], tunearg[1]);
-
+    else if (fastncmp("mus_",tunearg,4)) //yellowtd: why not just give both tune options?
+        tune = get_mus(tunearg+4);
+    else if (tunearg) 
+        tune = get_mus(tunearg);  
+	
 	if (tune >= NUMMUSIC)
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("Valid slots are 1 to %d, or 0 to stop music\n"), NUMMUSIC - 1);

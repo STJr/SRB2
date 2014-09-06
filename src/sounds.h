@@ -102,6 +102,11 @@ typedef struct
 
 	// music handle once registered
 	INT32 handle;
+	
+	//yellowtd: Music has no options unlike sfxinfo_t
+	//So we apply a dummy value for such
+	INT32 dummyval;
+	
 } musicinfo_t;
 
 // the complete set of sound effects
@@ -113,6 +118,8 @@ extern musicinfo_t S_music[];
 //
 // Identifiers for all music in game.
 //
+
+#define NUMMUSFREESLOTS 256
 
 // Music list (don't edit this comment!)
 typedef enum
@@ -1169,7 +1176,15 @@ typedef enum
 	mus_credit, // credits
 	mus_racent, // Race Results
 	mus_stjr,   // Sonic Team Jr. Presents
-
+	
+	//yellowtd: Freeslots for musics. The magic begins elsewhere
+	// free slots for S_AddMusic() at run-time --------------------
+	mus_frees0,
+	//
+	// ... 60 free musics here ...
+	//
+	mus_lstfre = mus_frees0 + NUMMUSFREESLOTS-1,
+	// end of freeslots ---------------------------------------------
 	NUMMUSIC
 } musicenum_t;
 // Note: song number should be a UINT16, as mapmusic only uses 16 bits for music slot number.
@@ -1631,6 +1646,7 @@ typedef enum
 
 void S_InitRuntimeSounds(void);
 sfxenum_t S_AddSoundFx(const char *name, boolean singular, INT32 flags, boolean skinsound);
+musicenum_t S_AddMusic(const char *name, INT32 dummyval);
 void S_RemoveSoundFx(sfxenum_t id);
 
 #endif
