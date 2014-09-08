@@ -1286,6 +1286,25 @@ static void HWR_SplitFog(sector_t *sector, wallVert3D *wallVerts, FSurfaceInfo* 
 	HWR_AddTransparentWall(wallVerts, Surf, 0, PF_Translucent|PF_NoTexture, true, lightnum, colormap);
 }
 
+// HWR_DrawSkyWalls
+// Draw walls into the depth buffer so that anything behind is culled properly
+static void HWR_DrawSkyWall(wallVert3D *wallVerts, FSurfaceInfo *Surf, fixed_t bottom, fixed_t top)
+{
+	HWD.pfnSetTexture(NULL);
+	// no texture
+	wallVerts[3].t = wallVerts[2].t = 0;
+	wallVerts[0].t = wallVerts[1].t = 0;
+	wallVerts[0].s = wallVerts[3].s = 0;
+	wallVerts[2].s = wallVerts[1].s = 0;
+	// set top/bottom coords
+	wallVerts[2].y = wallVerts[3].y = FIXED_TO_FLOAT(top); // No real way to find the correct height of this
+	wallVerts[0].y = wallVerts[1].y = FIXED_TO_FLOAT(bottom); // worldlow/bottom because it needs to cover up the lower thok barrier wall
+	HWR_ProjectWall(wallVerts, Surf, PF_Invisible|PF_Clip|PF_NoTexture, 255, NULL);
+	// PF_Invisible so it's not drawn into the colour buffer
+	// PF_NoTexture for no texture
+	// PF_Occlude is set in HWR_ProjectWall to draw into the depth buffer
+}
+
 //
 // HWR_StoreWallRange
 // A portion or all of a wall segment will be drawn, from startfrac to endfrac,
@@ -1674,6 +1693,57 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				Surf.FlatColor.rgba = 0xffffffff;
 			}*/
 		}
+
+		// Isn't this just the most lovely mess
+		if (gr_frontsector->ceilingpic == skyflatnum || gr_backsector->ceilingpic == skyflatnum)
+		{
+			if (gr_frontsector->ceilingheight-gr_frontsector->floorheight <= 0) // current sector is a thok barrier
+			{
+				if (gr_backsector->ceilingheight-gr_backsector->floorheight <= 0) // behind sector is also a thok barrier
+					HWR_DrawSkyWall(wallVerts, &Surf, worldbottom < worldlow ? worldbottom : worldlow, INT32_MAX);
+				// behind sector is not a thok barrier
+				else if (gr_backsector->ceilingheight <= gr_frontsector->ceilingheight) // behind sector ceiling is lower or equal to current sector
+					HWR_DrawSkyWall(wallVerts, &Surf, worldhigh, INT32_MAX);
+			}
+			else if (gr_backsector->ceilingheight-gr_backsector->floorheight <= 0) // behind sector is a thok barrier, current sector is not
+			{
+				if (gr_backsector->ceilingheight >= gr_frontsector->ceilingheight // thok barrier ceiling height is equal to or greater than current sector ceiling height
+					|| gr_backsector->floorheight <= gr_frontsector->floorheight // thok barrier ceiling height is equal to or less than current sector floor height
+					|| gr_backsector->ceilingpic != skyflatnum) // thok barrier is not a sky
+					HWR_DrawSkyWall(wallVerts, &Surf, worldhigh, INT32_MAX);
+			}
+			else // neither sectors are thok barriers
+			{
+				if ((gr_backsector->ceilingheight < gr_frontsector->ceilingheight && !gr_sidedef->toptexture) // no top texture and sector behind is lower
+					|| gr_backsector->ceilingpic != skyflatnum) // behind sector is not a sky
+					HWR_DrawSkyWall(wallVerts, &Surf, worldhigh, INT32_MAX);
+			}
+		}
+		// And now for sky floors!
+		if (gr_frontsector->floorpic == skyflatnum || gr_backsector->floorpic == skyflatnum)
+		{
+			if (gr_frontsector->ceilingheight-gr_frontsector->floorheight <= 0) // current sector is a thok barrier
+			{
+				if (gr_backsector->ceilingheight-gr_backsector->floorheight <= 0) // behind sector is also a thok barrier
+					HWR_DrawSkyWall(wallVerts, &Surf, INT32_MIN, worldtop > worldhigh ? worldtop : worldhigh);
+				// behind sector is not a thok barrier
+				else if (gr_backsector->floorheight >= gr_frontsector->floorheight) // behind sector floor is greater or equal to current sector
+					HWR_DrawSkyWall(wallVerts, &Surf, INT32_MIN, worldlow);
+			}
+			else if (gr_backsector->ceilingheight-gr_backsector->floorheight <= 0) // behind sector is a thok barrier, current sector is not
+			{
+				if (gr_backsector->floorheight <= gr_frontsector->floorheight // thok barrier floor height is equal to or less than current sector floor height
+					|| gr_backsector->ceilingheight >= gr_frontsector->ceilingheight // thok barrier floor height is equal to or greater than current sector ceiling height
+					|| gr_backsector->floorpic != skyflatnum) // thok barrier is not a sky
+					HWR_DrawSkyWall(wallVerts, &Surf, INT32_MIN, worldlow);
+			}
+			else // neither sectors are thok barriers
+			{
+				if ((gr_backsector->floorheight > gr_frontsector->floorheight && !gr_sidedef->bottomtexture) // no bottom texture and sector behind is higher
+					|| gr_backsector->floorpic != skyflatnum) // behind sector is not a sky
+					HWR_DrawSkyWall(wallVerts, &Surf, INT32_MIN, worldlow);
+			}
+		}
 	}
 	else
 	{
@@ -1713,6 +1783,11 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 					HWR_ProjectWall(wallVerts, &Surf, PF_Masked, lightnum, colormap);
 			}
 		}
+
+		if (gr_frontsector->ceilingpic == skyflatnum) // It's a single-sided line with sky for its sector
+			HWR_DrawSkyWall(wallVerts, &Surf, worldtop, INT32_MAX);
+		if (gr_frontsector->floorpic == skyflatnum)
+			HWR_DrawSkyWall(wallVerts, &Surf, INT32_MIN, worldbottom);
 	}
 
 
