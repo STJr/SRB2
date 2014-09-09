@@ -1699,7 +1699,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 		{
 			fixed_t depthwallheight;
 
-			if (!gr_sidedef->toptexture)
+			if (!gr_sidedef->toptexture || (gr_frontsector->ceilingpic == skyflatnum && gr_backsector->ceilingpic == skyflatnum)) // when both sectors are sky, the top texture isn't drawn
 				depthwallheight = gr_frontsector->ceilingheight < gr_backsector->ceilingheight ? gr_frontsector->ceilingheight : gr_backsector->ceilingheight;
 			else
 				depthwallheight = gr_frontsector->ceilingheight > gr_backsector->ceilingheight ? gr_frontsector->ceilingheight : gr_backsector->ceilingheight;
