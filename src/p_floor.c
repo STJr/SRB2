@@ -2222,7 +2222,7 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 		oldPlayersArea = oldPlayersInArea;
 	}
 
-	if ((affectPlayer = P_HavePlayersEnteredArea(playersArea, oldPlayersArea, inAndOut)) != -1)
+	while ((affectPlayer = P_HavePlayersEnteredArea(playersArea, oldPlayersArea, inAndOut)) != -1)
 	{
 		if (GETSECSPECIAL(sec->special, 2) == 2 || GETSECSPECIAL(sec->special, 2) == 3)
 		{
@@ -2252,6 +2252,7 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 		// This should now run ONLY the stuff for eachtime->sourceline itself, instead of all trigger linedefs sharing the same tag.
 		// Makes much more sense doing it this way, honestly.
 		P_RunTriggerLinedef(eachtime->sourceline, players[affectPlayer].mo, sec);
+		oldPlayersArea[affectPlayer]=playersArea[affectPlayer];
 	}
 }
 
