@@ -973,9 +973,7 @@ void P_DoSuperTransformation(player_t *player, boolean giverings)
 	// Transformation animation
 	P_SetPlayerMobjState(player->mo, S_PLAY_SUPERTRANS1);
 
-	player->mo->momx >>= 1;
-	player->mo->momy >>= 1;
-	player->mo->momz >>= 1;
+	player->mo->momx = player->mo->momy = player->mo->momz = 0;
 
 	if (giverings)
 	{
