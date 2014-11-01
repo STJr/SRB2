@@ -409,6 +409,10 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 
 	for (check = visplanes[hash]; check; check = check->next)
 	{
+#ifdef POLYOBJECTS_PLANES
+		if (check->polyobj && pfloor)
+			continue;
+#endif
 		if (height == check->height && picnum == check->picnum
 			&& lightlevel == check->lightlevel
 			&& xoff == check->xoffs && yoff == check->yoffs
@@ -434,6 +438,9 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 	check->viewz = viewz;
 	check->viewangle = viewangle + plangle;
 	check->plangle = plangle;
+#ifdef POLYOBJECTS_PLANES
+	check->polyobj = NULL;
+#endif
 
 	memset(check->top, 0xff, sizeof (check->top));
 	memset(check->bottom, 0x00, sizeof (check->bottom));
@@ -666,6 +673,42 @@ void R_DrawSinglePlane(visplane_t *pl)
 	itswater = false;
 #endif
 	spanfunc = basespanfunc;
+
+#ifdef POLYOBJECTS_PLANES
+	if (pl->polyobj && pl->polyobj->translucency != 0) {
+		spanfunc = R_DrawTranslucentSpan_8;
+
+		// Hacked up support for alpha value in software mode Tails 09-24-2002 (sidenote: ported to polys 10-15-2014, there was no time travel involved -Red)
+		if (pl->polyobj->translucency >= 10)
+			return; // Don't even draw it
+		else if (pl->polyobj->translucency == 9)
+			ds_transmap = ((tr_trans90)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+		else if (pl->polyobj->translucency == 8)
+			ds_transmap = ((tr_trans80)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+		else if (pl->polyobj->translucency == 7)
+			ds_transmap = ((tr_trans70)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+		else if (pl->polyobj->translucency == 6)
+			ds_transmap = ((tr_trans60)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+		else if (pl->polyobj->translucency == 5)
+			ds_transmap = ((tr_trans50)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+		else if (pl->polyobj->translucency == 4)
+			ds_transmap = ((tr_trans40)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+		else if (pl->polyobj->translucency == 3)
+			ds_transmap = ((tr_trans30)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+		else if (pl->polyobj->translucency == 2)
+			ds_transmap = ((tr_trans20)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+		else if (pl->polyobj->translucency == 1)
+			ds_transmap = ((tr_trans10)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+		else // Opaque, but allow transparent flat pixels
+			spanfunc = splatfunc;
+
+		if (pl->extra_colormap && pl->extra_colormap->fog)
+			light = (pl->lightlevel >> LIGHTSEGSHIFT);
+		else
+		light = LIGHTLEVELS-1;
+
+	} else
+#endif
 	if (pl->ffloor)
 	{
 		// Don't draw planes that shouldn't be drawn.

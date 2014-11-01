@@ -1830,6 +1830,20 @@ static void R_CreateDrawNodes(void)
 			}
 			else if (r2->seg)
 			{
+#ifdef POLYOBJECTS_PLANES
+				if (r2->seg->curline->polyseg && rover->mobj && P_MobjInsidePolyobj(r2->seg->curline->polyseg, rover->mobj)) {
+					// Determine if we need to sort in front of the polyobj, based on the planes. This fixes the issue where
+					// polyobject planes render above the object standing on them. (A bit hacky... but it works.) -Red
+					mobj_t *mo = rover->mobj;
+					sector_t *po = r2->seg->curline->backsector;
+
+					if (po->ceilingheight < viewz && mo->z+mo->height > po->ceilingheight)
+						continue;
+
+					if (po->floorheight > viewz && mo->z < po->floorheight)
+						continue;
+				}
+#endif
 				if (rover->x1 > r2->seg->x2 || rover->x2 < r2->seg->x1)
 					continue;
 

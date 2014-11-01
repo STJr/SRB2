@@ -453,7 +453,7 @@ extern const char *compdate, *comptime, *comprevision;
 //#define CHAOSISNOTDEADYET
 
 ///	Polyobject fake flat code
-//#define POLYOBJECTS_PLANES
+#define POLYOBJECTS_PLANES
 
 ///	Blue spheres for future use.
 ///	\todo	Remove this define.

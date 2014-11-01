@@ -684,6 +684,33 @@ void R_SortPolyObjects(subsector_t *sub)
 }
 
 //
+// R_PolysegCompare
+//
+// Callback for qsort to sort the segs of a polyobject. Returns such that the
+// closer one is sorted first. I sure hope this doesn't break anything. -Red
+//
+static int R_PolysegCompare(const void *p1, const void *p2)
+{
+	const seg_t *seg1 = *(const seg_t * const *)p1;
+	const seg_t *seg2 = *(const seg_t * const *)p2;
+	fixed_t dist1, dist2;
+
+	// TODO might be a better way to get distance?
+#define vxdist(v) FixedMul(R_PointToDist(v->x, v->y), FINECOSINE((R_PointToAngle(v->x, v->y)-viewangle)>>ANGLETOFINESHIFT))+0xFFFFFFF
+
+	dist1 = min(vxdist(seg1->v1), vxdist(seg1->v2));
+	dist2 = min(vxdist(seg2->v1), vxdist(seg2->v2));
+
+	if (dist1 == dist2) { // Segs connect toward the front, so use the back verts to determine order!
+		dist1 = max(vxdist(seg1->v1), vxdist(seg1->v2));
+		dist2 = max(vxdist(seg2->v1), vxdist(seg2->v2));
+	}
+#undef vxdist
+
+	return dist1-dist2;
+}
+
+//
 // R_AddPolyObjects
 //
 // haleyjd 02/19/06
@@ -709,6 +736,7 @@ static void R_AddPolyObjects(subsector_t *sub)
 	// render polyobjects
 	for (i = 0; i < numpolys; ++i)
 	{
+		qsort(po_ptrs[i]->segs, po_ptrs[i]->segCount, sizeof(seg_t *), R_PolysegCompare);
 		for (j = 0; j < po_ptrs[i]->segCount; ++j)
 			R_AddLine(po_ptrs[i]->segs[j]);
 	}
@@ -909,15 +937,28 @@ static void R_Subsector(size_t num)
 				&& polysec->floorheight >= frontsector->floorheight
 				&& (viewz < polysec->floorheight))
 			{
+				fixed_t xoff, yoff;
+				xoff = polysec->floor_xoffs;
+				yoff = polysec->floor_yoffs;
+
+				if (po->angle != 0) {
+					angle_t fineshift = po->angle >> ANGLETOFINESHIFT;
+
+					xoff -= FixedMul(FINECOSINE(fineshift), po->centerPt.x)+FixedMul(FINESINE(fineshift), po->centerPt.y);
+					yoff -= FixedMul(FINESINE(fineshift), po->centerPt.x)-FixedMul(FINECOSINE(fineshift), po->centerPt.y);
+				} else {
+					xoff -= po->centerPt.x;
+					yoff += po->centerPt.y;
+				}
+
 				light = R_GetPlaneLight(frontsector, polysec->floorheight, viewz < polysec->floorheight);
 				light = 0;
 				ffloor[numffloors].plane = R_FindPlane(polysec->floorheight, polysec->floorpic,
-						polysec->lightlevel, polysec->floor_xoffs,
-						polysec->floor_yoffs,
-						polysec->floorpic_angle,
+						polysec->lightlevel, xoff, yoff,
+						polysec->floorpic_angle-po->angle,
 						NULL,
 						NULL);
-				ffloor[numffloors].plane->polyobj = true;
+				ffloor[numffloors].plane->polyobj = po;
 
 				ffloor[numffloors].height = polysec->floorheight;
 				ffloor[numffloors].polyobj = po;
@@ -934,12 +975,27 @@ static void R_Subsector(size_t num)
 				&& polysec->ceilingheight <= frontsector->ceilingheight
 				&& (viewz > polysec->ceilingheight))
 			{
+				fixed_t xoff, yoff;
+				xoff = polysec->ceiling_xoffs;
+				yoff = polysec->ceiling_yoffs;
+
+				if (po->angle != 0) {
+					angle_t fineshift = po->angle >> ANGLETOFINESHIFT;
+
+					xoff -= FixedMul(FINECOSINE(fineshift), po->centerPt.x)+FixedMul(FINESINE(fineshift), po->centerPt.y);
+					yoff -= FixedMul(FINESINE(fineshift), po->centerPt.x)-FixedMul(FINECOSINE(fineshift), po->centerPt.y);
+				} else {
+					xoff -= po->centerPt.x;
+					yoff += po->centerPt.y;
+				}
+
 				light = R_GetPlaneLight(frontsector, polysec->ceilingheight, viewz < polysec->ceilingheight);
 				light = 0;
 				ffloor[numffloors].plane = R_FindPlane(polysec->ceilingheight, polysec->ceilingpic,
-					polysec->lightlevel, polysec->ceiling_xoffs, polysec->ceiling_yoffs, polysec->ceilingpic_angle,
+					polysec->lightlevel, xoff, yoff, polysec->ceilingpic_angle-po->angle,
 					NULL, NULL);
-				ffloor[numffloors].plane->polyobj = true;
+				ffloor[numffloors].plane->polyobj = po;
+
 				ffloor[numffloors].polyobj = po;
 				ffloor[numffloors].height = polysec->ceilingheight;
 //				ffloor[numffloors].ffloor = rover;

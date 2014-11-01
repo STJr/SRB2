@@ -59,7 +59,7 @@ typedef struct visplane_s
 
 	struct ffloor_s *ffloor;
 #ifdef POLYOBJECTS_PLANES
-	boolean polyobj;
+	polyobj_t *polyobj;
 #endif
 } visplane_t;
 
