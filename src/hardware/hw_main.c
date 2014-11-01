@@ -66,6 +66,8 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing);
 #ifdef SORTING
 void HWR_AddTransparentFloor(lumpnum_t lumpnum, extrasubsector_t *xsub, fixed_t fixedheight,
                              INT32 lightlevel, INT32 alpha, sector_t *FOFSector, FBITFIELD blend, boolean fogplane, extracolormap_t *planecolormap);
+void HWR_AddTransparentPolyobjectFloor(lumpnum_t lumpnum, polyobj_t *polysector, fixed_t fixedheight,
+                             INT32 lightlevel, INT32 alpha, sector_t *FOFSector, FBITFIELD blend, extracolormap_t *planecolormap);
 #else
 static void HWR_Add3DWater(lumpnum_t lumpnum, extrasubsector_t *xsub, fixed_t fixedheight,
                            INT32 lightlevel, INT32 alpha, sector_t *FOFSector);
@@ -1286,6 +1288,25 @@ static void HWR_SplitFog(sector_t *sector, wallVert3D *wallVerts, FSurfaceInfo* 
 	HWR_AddTransparentWall(wallVerts, Surf, 0, PF_Translucent|PF_NoTexture, true, lightnum, colormap);
 }
 
+// HWR_DrawSkyWalls
+// Draw walls into the depth buffer so that anything behind is culled properly
+static void HWR_DrawSkyWall(wallVert3D *wallVerts, FSurfaceInfo *Surf, fixed_t bottom, fixed_t top)
+{
+	HWD.pfnSetTexture(NULL);
+	// no texture
+	wallVerts[3].t = wallVerts[2].t = 0;
+	wallVerts[0].t = wallVerts[1].t = 0;
+	wallVerts[0].s = wallVerts[3].s = 0;
+	wallVerts[2].s = wallVerts[1].s = 0;
+	// set top/bottom coords
+	wallVerts[2].y = wallVerts[3].y = FIXED_TO_FLOAT(top); // No real way to find the correct height of this
+	wallVerts[0].y = wallVerts[1].y = FIXED_TO_FLOAT(bottom); // worldlow/bottom because it needs to cover up the lower thok barrier wall
+	HWR_ProjectWall(wallVerts, Surf, PF_Invisible|PF_Clip|PF_NoTexture, 255, NULL);
+	// PF_Invisible so it's not drawn into the colour buffer
+	// PF_NoTexture for no texture
+	// PF_Occlude is set in HWR_ProjectWall to draw into the depth buffer
+}
+
 //
 // HWR_StoreWallRange
 // A portion or all of a wall segment will be drawn, from startfrac to endfrac,
@@ -1393,11 +1414,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 		}
 
 		// check TOP TEXTURE
-		if (worldhigh < worldtop && texturetranslation[gr_sidedef->toptexture]
-#ifdef POLYOBJECTS // polyobjects don't have top textures, silly.
-		&& !gr_curline->polyseg
-#endif
-			)
+		if (worldhigh < worldtop && texturetranslation[gr_sidedef->toptexture])
 		{
 			if (drawtextured)
 			{
@@ -1435,11 +1452,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 		}
 
 		// check BOTTOM TEXTURE
-		if (worldlow > worldbottom && texturetranslation[gr_sidedef->bottomtexture]
-#ifdef POLYOBJECTS // polyobjects don't have bottom textures, silly.
-		&& !gr_curline->polyseg
-#endif
-			) //only if VISIBLE!!!
+		if (worldlow > worldbottom && texturetranslation[gr_sidedef->bottomtexture]) //only if VISIBLE!!!
 		{
 			if (drawtextured)
 			{
@@ -1646,6 +1659,20 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 					blendmode = PF_Masked;
 					break;
 			}
+
+#ifdef POLYOBJECTS
+			if (gr_curline->polyseg && gr_curline->polyseg->translucency > 0)
+			{
+				if (gr_curline->polyseg->translucency >= NUMTRANSMAPS) // wall not drawn
+				{
+					Surf.FlatColor.s.alpha = 0x00; // This shouldn't draw anything regardless of blendmode
+					blendmode = PF_Masked;
+				}
+				else
+					blendmode = HWR_TranstableToAlpha(gr_curline->polyseg->translucency, &Surf);
+			}
+#endif
+
 			if (grTex->mipmap.flags & TF_TRANSPARENT)
 				blendmode = PF_Translucent;
 
@@ -1667,6 +1694,85 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				Surf.FlatColor.s.red = Surf.FlatColor.s.green = Surf.FlatColor.s.blue = 0xff;
 				Surf.FlatColor.rgba = 0xffffffff;
 			}*/
+		}
+
+		// Isn't this just the most lovely mess
+		if (!gr_curline->polyseg) // Don't do it for polyobjects
+		{
+			if (gr_frontsector->ceilingpic == skyflatnum || gr_backsector->ceilingpic == skyflatnum)
+			{
+				fixed_t depthwallheight;
+
+				if (!gr_sidedef->toptexture || (gr_frontsector->ceilingpic == skyflatnum && gr_backsector->ceilingpic == skyflatnum)) // when both sectors are sky, the top texture isn't drawn
+					depthwallheight = gr_frontsector->ceilingheight < gr_backsector->ceilingheight ? gr_frontsector->ceilingheight : gr_backsector->ceilingheight;
+				else
+					depthwallheight = gr_frontsector->ceilingheight > gr_backsector->ceilingheight ? gr_frontsector->ceilingheight : gr_backsector->ceilingheight;
+
+				if (gr_frontsector->ceilingheight-gr_frontsector->floorheight <= 0) // current sector is a thok barrier
+				{
+					if (gr_backsector->ceilingheight-gr_backsector->floorheight <= 0) // behind sector is also a thok barrier
+					{
+						if (!gr_sidedef->bottomtexture) // Only extend further down if there's no texture
+							HWR_DrawSkyWall(wallVerts, &Surf, worldbottom < worldlow ? worldbottom : worldlow, INT32_MAX);
+						else
+							HWR_DrawSkyWall(wallVerts, &Surf, worldbottom > worldlow ? worldbottom : worldlow, INT32_MAX);
+					}
+					// behind sector is not a thok barrier
+					else if (gr_backsector->ceilingheight <= gr_frontsector->ceilingheight) // behind sector ceiling is lower or equal to current sector
+						HWR_DrawSkyWall(wallVerts, &Surf, depthwallheight, INT32_MAX);
+						// gr_front/backsector heights need to be used here because of the worldtop being set to worldhigh earlier on
+				}
+				else if (gr_backsector->ceilingheight-gr_backsector->floorheight <= 0) // behind sector is a thok barrier, current sector is not
+				{
+					if (gr_backsector->ceilingheight >= gr_frontsector->ceilingheight // thok barrier ceiling height is equal to or greater than current sector ceiling height
+						|| gr_backsector->floorheight <= gr_frontsector->floorheight // thok barrier ceiling height is equal to or less than current sector floor height
+						|| gr_backsector->ceilingpic != skyflatnum) // thok barrier is not a sky
+						HWR_DrawSkyWall(wallVerts, &Surf, depthwallheight, INT32_MAX);
+				}
+				else // neither sectors are thok barriers
+				{
+					if ((gr_backsector->ceilingheight < gr_frontsector->ceilingheight && !gr_sidedef->toptexture) // no top texture and sector behind is lower
+						|| gr_backsector->ceilingpic != skyflatnum) // behind sector is not a sky
+						HWR_DrawSkyWall(wallVerts, &Surf, depthwallheight, INT32_MAX);
+				}
+			}
+			// And now for sky floors!
+			if (gr_frontsector->floorpic == skyflatnum || gr_backsector->floorpic == skyflatnum)
+			{
+				fixed_t depthwallheight;
+
+				if (!gr_sidedef->bottomtexture)
+					depthwallheight = worldbottom > worldlow ? worldbottom : worldlow;
+				else
+					depthwallheight = worldbottom < worldlow ? worldbottom : worldlow;
+
+				if (gr_frontsector->ceilingheight-gr_frontsector->floorheight <= 0) // current sector is a thok barrier
+				{
+					if (gr_backsector->ceilingheight-gr_backsector->floorheight <= 0) // behind sector is also a thok barrier
+					{
+						if (!gr_sidedef->toptexture) // Only extend up if there's no texture
+							HWR_DrawSkyWall(wallVerts, &Surf, INT32_MIN, worldtop > worldhigh ? worldtop : worldhigh);
+						else
+							HWR_DrawSkyWall(wallVerts, &Surf, INT32_MIN, worldtop < worldhigh ? worldtop : worldhigh);
+					}
+					// behind sector is not a thok barrier
+					else if (gr_backsector->floorheight >= gr_frontsector->floorheight) // behind sector floor is greater or equal to current sector
+						HWR_DrawSkyWall(wallVerts, &Surf, INT32_MIN, depthwallheight);
+				}
+				else if (gr_backsector->ceilingheight-gr_backsector->floorheight <= 0) // behind sector is a thok barrier, current sector is not
+				{
+					if (gr_backsector->floorheight <= gr_frontsector->floorheight // thok barrier floor height is equal to or less than current sector floor height
+						|| gr_backsector->ceilingheight >= gr_frontsector->ceilingheight // thok barrier floor height is equal to or greater than current sector ceiling height
+						|| gr_backsector->floorpic != skyflatnum) // thok barrier is not a sky
+						HWR_DrawSkyWall(wallVerts, &Surf, INT32_MIN, depthwallheight);
+				}
+				else // neither sectors are thok barriers
+				{
+					if ((gr_backsector->floorheight > gr_frontsector->floorheight && !gr_sidedef->bottomtexture) // no bottom texture and sector behind is higher
+						|| gr_backsector->floorpic != skyflatnum) // behind sector is not a sky
+						HWR_DrawSkyWall(wallVerts, &Surf, INT32_MIN, depthwallheight);
+				}
+			}
 		}
 	}
 	else
@@ -1706,6 +1812,14 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				else
 					HWR_ProjectWall(wallVerts, &Surf, PF_Masked, lightnum, colormap);
 			}
+		}
+
+		if (!gr_curline->polyseg)
+		{
+			if (gr_frontsector->ceilingpic == skyflatnum) // It's a single-sided line with sky for its sector
+				HWR_DrawSkyWall(wallVerts, &Surf, worldtop, INT32_MAX);
+			if (gr_frontsector->floorpic == skyflatnum)
+				HWR_DrawSkyWall(wallVerts, &Surf, INT32_MIN, worldbottom);
 		}
 	}
 
@@ -2506,6 +2620,234 @@ static inline void HWR_AddPolyObjectSegs(void)
 	Z_Free(pv1);
 	Z_Free(gr_fakeline);
 }
+
+#ifdef POLYOBJECTS_PLANES
+static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, fixed_t fixedheight,
+									FBITFIELD blendmode, UINT8 lightlevel, lumpnum_t lumpnum, sector_t *FOFsector,
+									UINT8 alpha, extracolormap_t *planecolormap)
+{
+	float           height; //constant y for all points on the convex flat polygon
+	FOutVector      *v3d;
+	INT32             i;
+	float           flatxref,flatyref;
+	float fflatsize;
+	INT32 flatflag;
+	size_t len;
+	float scrollx = 0.0f, scrolly = 0.0f;
+	angle_t angle = 0;
+	FSurfaceInfo    Surf;
+	fixed_t tempxsow, tempytow;
+	size_t nrPlaneVerts;
+
+	static FOutVector *planeVerts = NULL;
+	static UINT16 numAllocedPlaneVerts = 0;
+
+	nrPlaneVerts = polysector->numVertices;
+
+	height = FIXED_TO_FLOAT(fixedheight);
+
+	if (nrPlaneVerts < 3)   //not even a triangle ?
+		return;
+
+	if (nrPlaneVerts > UINT16_MAX) // FIXME: exceeds plVerts size
+	{
+		CONS_Debug(DBG_RENDER, "polygon size of %d exceeds max value of %d vertices\n", nrPlaneVerts, UINT16_MAX);
+		return;
+	}
+
+	// Allocate plane-vertex buffer if we need to
+	if (!planeVerts || nrPlaneVerts > numAllocedPlaneVerts)
+	{
+		numAllocedPlaneVerts = (UINT16)nrPlaneVerts;
+		Z_Free(planeVerts);
+		Z_Malloc(numAllocedPlaneVerts * sizeof (FOutVector), PU_LEVEL, &planeVerts);
+	}
+
+	len = W_LumpLength(lumpnum);
+
+	switch (len)
+	{
+		case 4194304: // 2048x2048 lump
+			fflatsize = 2048.0f;
+			flatflag = 2047;
+			break;
+		case 1048576: // 1024x1024 lump
+			fflatsize = 1024.0f;
+			flatflag = 1023;
+			break;
+		case 262144:// 512x512 lump
+			fflatsize = 512.0f;
+			flatflag = 511;
+			break;
+		case 65536: // 256x256 lump
+			fflatsize = 256.0f;
+			flatflag = 255;
+			break;
+		case 16384: // 128x128 lump
+			fflatsize = 128.0f;
+			flatflag = 127;
+			break;
+		case 1024: // 32x32 lump
+			fflatsize = 32.0f;
+			flatflag = 31;
+			break;
+		default: // 64x64 lump
+			fflatsize = 64.0f;
+			flatflag = 63;
+			break;
+	}
+
+	// reference point for flat texture coord for each vertex around the polygon
+	flatxref = (float)(((fixed_t)FIXED_TO_FLOAT(polysector->origVerts[0].x) & (~flatflag)) / fflatsize);
+	flatyref = (float)(((fixed_t)FIXED_TO_FLOAT(polysector->origVerts[0].y) & (~flatflag)) / fflatsize);
+
+	// transform
+	v3d = planeVerts;
+
+	if (FOFsector != NULL)
+	{
+		if (fixedheight == FOFsector->floorheight) // it's a floor
+		{
+			scrollx = FIXED_TO_FLOAT(FOFsector->floor_xoffs)/fflatsize;
+			scrolly = FIXED_TO_FLOAT(FOFsector->floor_yoffs)/fflatsize;
+			angle = FOFsector->floorpic_angle>>ANGLETOFINESHIFT;
+		}
+		else // it's a ceiling
+		{
+			scrollx = FIXED_TO_FLOAT(FOFsector->ceiling_xoffs)/fflatsize;
+			scrolly = FIXED_TO_FLOAT(FOFsector->ceiling_yoffs)/fflatsize;
+			angle = FOFsector->ceilingpic_angle>>ANGLETOFINESHIFT;
+		}
+	}
+	else if (gr_frontsector)
+	{
+		if (fixedheight < dup_viewz) // it's a floor
+		{
+			scrollx = FIXED_TO_FLOAT(gr_frontsector->floor_xoffs)/fflatsize;
+			scrolly = FIXED_TO_FLOAT(gr_frontsector->floor_yoffs)/fflatsize;
+			angle = gr_frontsector->floorpic_angle>>ANGLETOFINESHIFT;
+		}
+		else // it's a ceiling
+		{
+			scrollx = FIXED_TO_FLOAT(gr_frontsector->ceiling_xoffs)/fflatsize;
+			scrolly = FIXED_TO_FLOAT(gr_frontsector->ceiling_yoffs)/fflatsize;
+			angle = gr_frontsector->ceilingpic_angle>>ANGLETOFINESHIFT;
+		}
+	}
+
+	if (angle) // Only needs to be done if there's an altered angle
+	{
+		// This needs to be done so that it scrolls in a different direction after rotation like software
+		tempxsow = FLOAT_TO_FIXED(scrollx);
+		tempytow = FLOAT_TO_FIXED(scrolly);
+		scrollx = (FIXED_TO_FLOAT(FixedMul(tempxsow, FINECOSINE(angle)) - FixedMul(tempytow, FINESINE(angle))));
+		scrolly = (FIXED_TO_FLOAT(FixedMul(tempxsow, FINESINE(angle)) + FixedMul(tempytow, FINECOSINE(angle))));
+
+		// This needs to be done so everything aligns after rotation
+		// It would be done so that rotation is done, THEN the translation, but I couldn't get it to rotate AND scroll like software does
+		tempxsow = FLOAT_TO_FIXED(flatxref);
+		tempytow = FLOAT_TO_FIXED(flatyref);
+		flatxref = (FIXED_TO_FLOAT(FixedMul(tempxsow, FINECOSINE(angle)) - FixedMul(tempytow, FINESINE(angle))));
+		flatyref = (FIXED_TO_FLOAT(FixedMul(tempxsow, FINESINE(angle)) + FixedMul(tempytow, FINECOSINE(angle))));
+	}
+
+	for (i = 0; i < nrPlaneVerts; i++,v3d++)
+	{
+		// Hurdler: add scrolling texture on floor/ceiling
+		v3d->sow = (float)((FIXED_TO_FLOAT(polysector->origVerts[i].x) / fflatsize) - flatxref + scrollx); // Go from the polysector's original vertex locations
+		v3d->tow = (float)(flatyref - (FIXED_TO_FLOAT(polysector->origVerts[i].y) / fflatsize) + scrolly); // Means the flat is offset based on the original vertex locations
+
+		// Need to rotate before translate
+		if (angle) // Only needs to be done if there's an altered angle
+		{
+			tempxsow = FLOAT_TO_FIXED(v3d->sow);
+			tempytow = FLOAT_TO_FIXED(v3d->tow);
+			v3d->sow = (FIXED_TO_FLOAT(FixedMul(tempxsow, FINECOSINE(angle)) - FixedMul(tempytow, FINESINE(angle))));
+			v3d->tow = (FIXED_TO_FLOAT(-FixedMul(tempxsow, FINESINE(angle)) - FixedMul(tempytow, FINECOSINE(angle))));
+		}
+
+		v3d->x = FIXED_TO_FLOAT(polysector->lines[i]->v1->x);
+		v3d->y = height;
+		v3d->z = FIXED_TO_FLOAT(polysector->lines[i]->v1->y);
+	}
+
+
+	if (planecolormap)
+		Surf.FlatColor.rgba = HWR_Lighting(lightlevel, planecolormap->rgba, planecolormap->fadergba, false, true);
+	else
+		Surf.FlatColor.rgba = HWR_Lighting(lightlevel, NORMALFOG, FADEFOG, false, true);
+
+	if (blendmode & PF_Translucent)
+	{
+		Surf.FlatColor.s.alpha = (UINT8)alpha;
+		blendmode |= PF_Modulated|PF_Occlude|PF_Clip;
+	}
+	else
+		blendmode |= PF_Masked|PF_Modulated|PF_Clip;
+
+	HWD.pfnDrawPolygon(&Surf, planeVerts, nrPlaneVerts, blendmode);
+}
+
+static void HWR_AddPolyObjectPlanes(void)
+{
+	size_t i;
+	sector_t *polyobjsector; 
+
+	// Polyobject Planes need their own function for drawing because they don't have extrasubsectors by themselves
+	// It should be okay because polyobjects should always be convex anyway
+
+	for (i  = 0; i < numpolys; i++)
+	{
+		polyobjsector = po_ptrs[i]->lines[0]->backsector; // the in-level polyobject sector
+
+		if (!(po_ptrs[i]->flags & POF_RENDERPLANES)) // Only render planes when you should
+			continue;
+
+		if (po_ptrs[i]->translucency >= NUMTRANSMAPS)
+			continue;
+
+		if (polyobjsector->floorheight <= gr_frontsector->ceilingheight
+			&& polyobjsector->floorheight >= gr_frontsector->floorheight
+			&& (viewz < polyobjsector->floorheight))
+		{
+			if (po_ptrs[i]->translucency > 0)
+			{
+				FSurfaceInfo Surf;
+				FBITFIELD blendmode = HWR_TranstableToAlpha(po_ptrs[i]->translucency, &Surf);
+				HWR_AddTransparentPolyobjectFloor(levelflats[polyobjsector->floorpic].lumpnum, po_ptrs[i], polyobjsector->floorheight,
+													polyobjsector->lightlevel, Surf.FlatColor.s.alpha, polyobjsector, blendmode, NULL);
+			}
+			else
+			{
+				HWR_GetFlat(levelflats[polyobjsector->floorpic].lumpnum);
+				HWR_RenderPolyObjectPlane(po_ptrs[i], polyobjsector->floorheight, PF_Occlude,
+										polyobjsector->lightlevel, levelflats[polyobjsector->floorpic].lumpnum,
+										polyobjsector, 255, NULL);
+			}
+		}
+
+		if (polyobjsector->ceilingheight >= gr_frontsector->floorheight
+			&& polyobjsector->ceilingheight <= gr_frontsector->ceilingheight
+			&& (viewz > polyobjsector->ceilingheight))
+		{
+			if (po_ptrs[i]->translucency > 0)
+			{
+				FSurfaceInfo Surf;
+				FBITFIELD blendmode = HWR_TranstableToAlpha(po_ptrs[i]->translucency, &Surf);
+				HWR_AddTransparentPolyobjectFloor(levelflats[polyobjsector->ceilingpic].lumpnum, po_ptrs[i], polyobjsector->ceilingheight,
+													polyobjsector->lightlevel, Surf.FlatColor.s.alpha, polyobjsector, blendmode, NULL);
+			}
+			else
+			{
+				HWR_GetFlat(levelflats[polyobjsector->ceilingpic].lumpnum);
+				HWR_RenderPolyObjectPlane(po_ptrs[i], polyobjsector->ceilingheight, PF_Occlude,
+										polyobjsector->lightlevel, levelflats[polyobjsector->floorpic].lumpnum,
+										polyobjsector, 255, NULL);
+			}
+		}
+	}
+}
+#endif
 #endif
 
 // -----------------+
@@ -2816,8 +3158,13 @@ static void HWR_Subsector(size_t num)
 		// Draw polyobject lines.
 		HWR_AddPolyObjectSegs();
 
-		// Draw polyobject planes
-		//HWR_AddPolyObjectPlanes();
+#ifdef POLYOBJECTS_PLANES
+		if (sub->validcount != validcount) // This validcount situation seems to let us know that the floors have already been drawn.
+		{
+			// Draw polyobject planes
+			HWR_AddPolyObjectPlanes();
+		}
+#endif
 	}
 #endif
 
@@ -3698,6 +4045,22 @@ typedef struct
 static size_t numplanes = 0; // a list of transparent floors to be drawn
 static planeinfo_t *planeinfo = NULL;
 
+typedef struct
+{
+	polyobj_t *polysector;
+	fixed_t fixedheight;
+	INT32 lightlevel;
+	lumpnum_t lumpnum;
+	INT32 alpha;
+	sector_t *FOFSector;
+	FBITFIELD blend;
+	extracolormap_t *planecolormap;
+	INT32 drawcount;
+} polyplaneinfo_t;
+
+static size_t numpolyplanes = 0; // a list of transparent poyobject floors to be drawn
+static polyplaneinfo_t *polyplaneinfo = NULL;
+
 #ifndef SORTING
 size_t numfloors = 0;
 #else
@@ -3707,6 +4070,7 @@ size_t numfloors = 0;
 typedef struct gr_drawnode_s
 {
 	planeinfo_t *plane;
+	polyplaneinfo_t *polyplane;
 	wallinfo_t *wall;
 	gr_vissprite_t *sprite;
 
@@ -3747,6 +4111,35 @@ void HWR_AddTransparentFloor(lumpnum_t lumpnum, extrasubsector_t *xsub,
 	numplanes++;
 }
 
+// Adding this for now until I can create extrasubsector info for polyobjects
+// When that happens it'll just be done through HWR_AddTransparentFloor and HWR_RenderPlane
+void HWR_AddTransparentPolyobjectFloor(lumpnum_t lumpnum, polyobj_t *polysector,
+	fixed_t fixedheight, INT32 lightlevel, INT32 alpha, sector_t *FOFSector, FBITFIELD blend, extracolormap_t *planecolormap)
+{
+	static size_t allocedpolyplanes = 0;
+
+	// Force realloc if buffer has been freed
+	if (!polyplaneinfo)
+		allocedpolyplanes = 0;
+
+	if (allocedpolyplanes < numpolyplanes + 1)
+	{
+		allocedpolyplanes += MAX_TRANSPARENTFLOOR;
+		Z_Realloc(polyplaneinfo, allocedpolyplanes * sizeof (*polyplaneinfo), PU_LEVEL, &polyplaneinfo);
+	}
+
+	polyplaneinfo[numpolyplanes].fixedheight = fixedheight;
+	polyplaneinfo[numpolyplanes].lightlevel = lightlevel;
+	polyplaneinfo[numpolyplanes].lumpnum = lumpnum;
+	polyplaneinfo[numpolyplanes].polysector = polysector;
+	polyplaneinfo[numpolyplanes].alpha = alpha;
+	polyplaneinfo[numpolyplanes].FOFSector = FOFSector;
+	polyplaneinfo[numpolyplanes].blend = blend;
+	polyplaneinfo[numpolyplanes].planecolormap = planecolormap;
+	polyplaneinfo[numpolyplanes].drawcount = drawcount++;
+	numpolyplanes++;
+}
+
 //
 // HWR_CreateDrawNodes
 // Creates and sorts a list of drawnodes for the scene being rendered.
@@ -3759,12 +4152,13 @@ static void HWR_CreateDrawNodes(void)
 	// Could this be optimized into _AddTransparentWall/_AddTransparentPlane?
 	// Hell yes! But sort algorithm must be modified to use a linked list.
 	gr_drawnode_t *sortnode = Z_Calloc((sizeof(planeinfo_t)*numplanes)
+									+ (sizeof(polyplaneinfo_t)*numpolyplanes)
 									+ (sizeof(wallinfo_t)*numwalls)
 									,PU_STATIC, NULL);
 	// todo:
 	// However, in reality we shouldn't be re-copying and shifting all this information
 	// that is already lying around. This should all be in some sort of linked list or lists.
-	size_t *sortindex = Z_Calloc(sizeof(size_t) * (numplanes + numwalls), PU_STATIC, NULL);
+	size_t *sortindex = Z_Calloc(sizeof(size_t) * (numplanes + numpolyplanes + numwalls), PU_STATIC, NULL);
 
 	// If true, swap the draw order.
 	boolean shift = false;
@@ -3772,6 +4166,12 @@ static void HWR_CreateDrawNodes(void)
 	for (i = 0; i < numplanes; i++, p++)
 	{
 		sortnode[p].plane = &planeinfo[i];
+		sortindex[p] = p;
+	}
+
+	for (i = 0; i < numpolyplanes; i++, p++)
+	{
+		sortnode[p].polyplane = &polyplaneinfo[i];
 		sortindex[p] = p;
 	}
 
@@ -3810,10 +4210,38 @@ static void HWR_CreateDrawNodes(void)
 					if (ABS(sortnode[sortindex[i]].plane->fixedheight - pviewz) > ABS(sortnode[sortindex[prev]].plane->fixedheight - pviewz))
 						shift = true;
 				}
+				if (sortnode[sortindex[prev]].polyplane)
+				{
+					// Plane (i) is further away than polyplane (prev)
+					if (ABS(sortnode[sortindex[i]].plane->fixedheight - pviewz) > ABS(sortnode[sortindex[prev]].polyplane->fixedheight - pviewz))
+						shift = true;
+				}
 				else if (sortnode[sortindex[prev]].wall)
 				{
 					// Plane (i) is further than wall (prev)
 					if (sortnode[sortindex[i]].plane->drawcount > sortnode[sortindex[prev]].wall->drawcount)
+						shift = true;
+				}
+			}
+			else if (sortnode[sortindex[i]].polyplane)
+			{
+				// What are we comparing it with?
+				if (sortnode[sortindex[prev]].plane)
+				{
+					// Plane (i) is further away than plane (prev)
+					if (ABS(sortnode[sortindex[i]].polyplane->fixedheight - pviewz) > ABS(sortnode[sortindex[prev]].plane->fixedheight - pviewz))
+						shift = true;
+				}
+				if (sortnode[sortindex[prev]].polyplane)
+				{
+					// Plane (i) is further away than polyplane (prev)
+					if (ABS(sortnode[sortindex[i]].polyplane->fixedheight - pviewz) > ABS(sortnode[sortindex[prev]].polyplane->fixedheight - pviewz))
+						shift = true;
+				}
+				else if (sortnode[sortindex[prev]].wall)
+				{
+					// Plane (i) is further than wall (prev)
+					if (sortnode[sortindex[i]].polyplane->drawcount > sortnode[sortindex[prev]].wall->drawcount)
 						shift = true;
 				}
 			}
@@ -3824,6 +4252,12 @@ static void HWR_CreateDrawNodes(void)
 				{
 					// Wall (i) is further than plane(prev)
 					if (sortnode[sortindex[i]].wall->drawcount > sortnode[sortindex[prev]].plane->drawcount)
+						shift = true;
+				}
+				if (sortnode[sortindex[prev]].polyplane)
+				{
+					// Wall (i) is further than polyplane(prev)
+					if (sortnode[sortindex[i]].wall->drawcount > sortnode[sortindex[prev]].polyplane->drawcount)
 						shift = true;
 				}
 				else if (sortnode[sortindex[prev]].wall)
@@ -3862,6 +4296,16 @@ static void HWR_CreateDrawNodes(void)
 			HWR_RenderPlane(NULL, sortnode[sortindex[i]].plane->xsub, sortnode[sortindex[i]].plane->fixedheight, sortnode[sortindex[i]].plane->blend, sortnode[sortindex[i]].plane->lightlevel,
 				sortnode[sortindex[i]].plane->lumpnum, sortnode[sortindex[i]].plane->FOFSector, sortnode[sortindex[i]].plane->alpha, sortnode[sortindex[i]].plane->fogplane, sortnode[sortindex[i]].plane->planecolormap);
 		}
+		else if (sortnode[sortindex[i]].polyplane)
+		{
+			// We aren't traversing the BSP tree, so make gr_frontsector null to avoid crashes.
+			gr_frontsector = NULL;
+
+			if (!(sortnode[sortindex[i]].polyplane->blend & PF_NoTexture))
+				HWR_GetFlat(sortnode[sortindex[i]].polyplane->lumpnum);
+			HWR_RenderPolyObjectPlane(sortnode[sortindex[i]].polyplane->polysector, sortnode[sortindex[i]].polyplane->fixedheight, sortnode[sortindex[i]].polyplane->blend, sortnode[sortindex[i]].polyplane->lightlevel,
+				sortnode[sortindex[i]].polyplane->lumpnum, sortnode[sortindex[i]].polyplane->FOFSector, sortnode[sortindex[i]].polyplane->alpha, sortnode[sortindex[i]].polyplane->planecolormap);
+		}
 		else if (sortnode[sortindex[i]].wall)
 		{
 			if (!(sortnode[sortindex[i]].wall->blend & PF_NoTexture))
@@ -3873,6 +4317,7 @@ static void HWR_CreateDrawNodes(void)
 
 	numwalls = 0;
 	numplanes = 0;
+	numpolyplanes = 0;
 
 	// No mem leaks, please.
 	Z_Free(sortnode);
@@ -4349,7 +4794,7 @@ static void HWR_DrawSkyBackground(player_t *player)
 {
 	FOutVector v[4];
 	angle_t angle;
-	float f;
+	float dimensionmultiply;
 
 //  3--2
 //  | /|
@@ -4371,36 +4816,49 @@ static void HWR_DrawSkyBackground(player_t *player)
 
 	// X
 
-	if (textures[skytexture]->width > 256)
-		angle = (angle_t)((float)(dup_viewangle + gr_xtoviewangle[0])
-						/((float)textures[skytexture]->width/256.0f))
-							%(ANGLE_90-1);
-	else
-		angle = (dup_viewangle + gr_xtoviewangle[0])%(ANGLE_90-1);
+	// NOTE: This doesn't work right with texture widths greater than 1024
+	// software doesn't draw any further than 1024 for skies anyway, but this doesn't overlap properly
+	// The only time this will probably be an issue is when a sky wider than 1024 is used as a sky AND a regular wall texture
 
-	f = (float)((textures[skytexture]->width/2)
-	            * FIXED_TO_FLOAT(FINETANGENT((2048
-	 - ((INT32)angle>>(ANGLETOFINESHIFT + 1))) & FINEMASK)));
+	angle = (dup_viewangle + gr_xtoviewangle[0]);
 
-	v[0].sow = v[3].sow = 0.22f+(f)/(textures[skytexture]->width/2);
-	v[2].sow = v[1].sow = 0.22f+(f+(127))/(textures[skytexture]->width/2);
+	dimensionmultiply = ((float)textures[skytexture]->width/256.0f);
 
+	v[0].sow = v[3].sow = ((float) angle / ((ANGLE_90-1)*dimensionmultiply));
+	v[2].sow = v[1].sow = (-1.0f/dimensionmultiply)+((float) angle / ((ANGLE_90-1)*dimensionmultiply));
 
 	// Y
+	angle = aimingangle;
+	
+	float aspectratio = (float)vid.width/(float)vid.height;
+	dimensionmultiply = ((float)textures[skytexture]->height/(128.0f*aspectratio));
+	float angleturn = (((float)ANGLE_45-1.0f)*aspectratio)*dimensionmultiply;
 
-	if (textures[skytexture]->height > 256)
-		angle = (angle_t)((float)(aimingangle)
-						*(256.0f/(float)textures[skytexture]->height))
-							%(ANGLE_90-1); // Just so that looking up and down scales right
+	// Middle of the sky should always be at angle 0
+	// need to keep correct aspect ratio with X
+	if (atransform.flip)
+	{
+		// During vertical flip the sky should be flipped and it's y movement should also be flipped obviously
+		v[3].tow = v[2].tow = -(0.5f-(0.5f/dimensionmultiply));
+		v[0].tow = v[1].tow = (-1.0f/dimensionmultiply)-(0.5f-(0.5f/dimensionmultiply));
+	}
 	else
-		angle = (aimingangle);
+	{
+		v[3].tow = v[2].tow = (-1.0f/dimensionmultiply)-(0.5f-(0.5f/dimensionmultiply));
+		v[0].tow = v[1].tow = -(0.5f-(0.5f/dimensionmultiply));
+	}
 
-	f = (float)((textures[skytexture]->height/2)
-	            * FIXED_TO_FLOAT(FINETANGENT((2048
-	 - ((INT32)angle>>(ANGLETOFINESHIFT + 1))) & FINEMASK)));
-
-	v[3].tow = v[2].tow = 0.22f+(f)/(textures[skytexture]->height/2);
-	v[0].tow = v[1].tow = 0.22f+(f+(127))/(textures[skytexture]->height/2);
+	if (angle > ANGLE_180) // Do this because we don't want the sky to suddenly teleport when crossing over 0 to 360 and vice versa
+	{
+		angle = InvAngle(angle);
+		v[3].tow = v[2].tow += ((float) angle / angleturn);
+		v[0].tow = v[1].tow += ((float) angle / angleturn);
+	}
+	else
+	{
+		v[3].tow = v[2].tow -= ((float) angle / angleturn);
+		v[0].tow = v[1].tow -= ((float) angle / angleturn);
+	}
 
 	HWD.pfnDrawPolygon(NULL, v, 4, 0);
 }
@@ -4649,7 +5107,7 @@ if (0)
 #endif
 
 #ifdef SORTING
-	if (numplanes || numwalls) //Hurdler: render 3D water and transparent walls after everything
+	if (numplanes || numpolyplanes || numwalls) //Hurdler: render 3D water and transparent walls after everything
 	{
 		HWR_CreateDrawNodes();
 	}
@@ -4879,12 +5337,12 @@ if (0)
 #endif
 
 #ifdef SORTING
-	if (numplanes || numwalls) //Hurdler: render 3D water and transparent walls after everything
+	if (numplanes || numpolyplanes || numwalls) //Hurdler: render 3D water and transparent walls after everything
 	{
 		HWR_CreateDrawNodes();
 	}
 #else
-	if (numfloors || numwalls)
+	if (numfloors || numpolyplanes || numwalls)
 	{
 		HWD.pfnSetTransform(&atransform);
 		if (numfloors)
@@ -5413,7 +5871,7 @@ void HWR_StartScreenWipe(void)
 
 void HWR_EndScreenWipe(void)
 {
-	HWRWipeCounter = 1.0f;
+	HWRWipeCounter = 0.0f;
 	//CONS_Debug(DBG_RENDER, "In HWR_EndScreenWipe()\n");
 	HWD.pfnEndScreenWipe();
 }
@@ -5423,17 +5881,38 @@ void HWR_DrawIntermissionBG(void)
 	HWD.pfnDrawIntermissionBG();
 }
 
-void HWR_DoScreenWipe(void)
+void HWR_DoWipe(UINT8 wipenum, UINT8 scrnnum)
 {
-	//CONS_Debug(DBG_RENDER, "In HWR_DoScreenWipe(). Alpha =%f\n", HWRWipeCounter);
+	static char lumpname[9] = "FADEmmss";
+	lumpnum_t lumpnum;
+	size_t lsize;
 
-	HWD.pfnDoScreenWipe(HWRWipeCounter);
+	if (wipenum > 99 || scrnnum > 99) // not a valid wipe number
+		return; // shouldn't end up here really, the loop should've stopped running beforehand
 
-	// This works for all the cases in vanilla until fade masks get done
-	HWRWipeCounter -= 0.05f; // Go less opaque after
+	// puts the numbers into the lumpname
+	sprintf(&lumpname[4], "%.2hu%.2hu", (UINT16)wipenum, (UINT16)scrnnum);
+	lumpnum = W_CheckNumForName(lumpname);
 
-	if (HWRWipeCounter < 0)
-		HWRWipeCounter = 0;
+	if (lumpnum == LUMPERROR) // again, shouldn't be here really
+		return;
+
+	lsize = W_LumpLength(lumpnum);
+
+	if (!(lsize == 256000 || lsize == 64000 || lsize == 16000 || lsize == 4000))
+	{
+		CONS_Alert(CONS_WARNING, "Fade mask lump %s of incorrect size, ignored\n", lumpname);
+		return; // again, shouldn't get here if it is a bad size
+	}
+
+	HWR_GetFadeMask(lumpnum);
+
+	HWD.pfnDoScreenWipe(HWRWipeCounter); // Still send in wipecounter since old stuff might not support multitexturing
+
+	HWRWipeCounter += 0.05f; // increase opacity of end screen
+
+	if (HWRWipeCounter > 1.0f)
+		HWRWipeCounter = 1.0f;
 }
 
 #endif // HWRENDER
