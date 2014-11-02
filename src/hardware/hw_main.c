@@ -2791,7 +2791,7 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, fixed_t fixedheight
 static void HWR_AddPolyObjectPlanes(void)
 {
 	size_t i;
-	sector_t *polyobjsector; 
+	sector_t *polyobjsector;
 
 	// Polyobject Planes need their own function for drawing because they don't have extrasubsectors by themselves
 	// It should be okay because polyobjects should always be convex anyway
@@ -4829,7 +4829,7 @@ static void HWR_DrawSkyBackground(player_t *player)
 
 	// Y
 	angle = aimingangle;
-	
+
 	float aspectratio = (float)vid.width/(float)vid.height;
 	dimensionmultiply = ((float)textures[skytexture]->height/(128.0f*aspectratio));
 	float angleturn = (((float)ANGLE_45-1.0f)*aspectratio)*dimensionmultiply;
