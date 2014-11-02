@@ -366,6 +366,10 @@ static INT32 WINAPI SetRes(viddef_t *lvid, vmode_t *pcurrentmode)
 	else
 		maximumAnisotropy = 0;
 
+#ifndef MINI_GL_COMPATIBILITY
+	SetupGLFunc13();
+#endif
+
 
 	screen_depth = (GLbyte)(lvid->bpp*8);
 	if (screen_depth > 16)
