@@ -532,7 +532,7 @@ boolean SetupGLFunc13(void)
 	const char *glversion = (const char *)pglGetString(GL_VERSION);
 	UINT32 majorversion = 0, minorversion = 0;
 
-	if (glversion != NULL && sscanf((char *)glversion, "%u.%u", &majorversion, &minorversion) == 2) // There is a version number I can identify
+	if (glversion != NULL && sscanf(glversion, "%u.%u", &majorversion, &minorversion) == 2) // There is a version number I can identify
 	{
 		if (majorversion > 1 || (majorversion == 1 && minorversion >= 3)) // Version of OpenGL is equal to or greater than 1.3
 		{

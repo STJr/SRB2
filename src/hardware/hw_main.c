@@ -2751,7 +2751,7 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, fixed_t fixedheight
 		flatyref = (FIXED_TO_FLOAT(FixedMul(tempxsow, FINESINE(angle)) + FixedMul(tempytow, FINECOSINE(angle))));
 	}
 
-	for (i = 0; i < nrPlaneVerts; i++,v3d++)
+	for (i = 0; i < (INT32)nrPlaneVerts; i++,v3d++)
 	{
 		// Hurdler: add scrolling texture on floor/ceiling
 		v3d->sow = (float)((FIXED_TO_FLOAT(polysector->origVerts[i].x) / fflatsize) - flatxref + scrollx); // Go from the polysector's original vertex locations
