@@ -1230,7 +1230,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		else
 			p.z = FIXED_TO_FLOAT(spr->mobj->z);
 
-		if (spr->mobj->skin)
+		if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)
 			sprdef = &((skin_t *)spr->mobj->skin)->spritedef;
 		else
 			sprdef = &sprites[spr->mobj->sprite];
