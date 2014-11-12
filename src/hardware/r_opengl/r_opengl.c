@@ -157,6 +157,10 @@ float byteasfloat(UINT8 fbyte)
 
 static I_Error_t I_Error_GL = NULL;
 
+#ifndef MINI_GL_COMPATIBILITY
+static boolean gl13 = false; // whether we can use opengl 1.3 functions
+#endif
+
 
 // -----------------+
 // DBG_Printf       : Output error messages to debug log if DEBUG_TO_FILE is defined,
@@ -262,6 +266,11 @@ FUNCPRINTF void DBG_Printf(const char *lpFmt, ...)
 
 /* GLU functions */
 #define pgluBuild2DMipmaps gluBuild2DMipmaps
+#endif
+#ifndef MINI_GL_COMPATIBILITY
+/* 1.3 functions for multitexturing */
+#define pglActiveTexture, glActiveTexture;
+#define pglMultiTexCoord2f, glMultiTexCoord2f;
 #endif
 #else //!STATIC_OPENGL
 
@@ -387,6 +396,14 @@ static PFNglCopyTexImage2D pglCopyTexImage2D;
 /* GLU functions */
 typedef GLint (APIENTRY * PFNgluBuild2DMipmaps) (GLenum target, GLint internalFormat, GLsizei width, GLsizei height, GLenum format, GLenum type, const void *data);
 static PFNgluBuild2DMipmaps pgluBuild2DMipmaps;
+
+#ifndef MINI_GL_COMPATIBILITY
+/* 1.3 functions for multitexturing */
+typedef void (APIENTRY *PFNglActiveTexture) (GLenum);
+static PFNglActiveTexture pglActiveTexture;
+typedef void (APIENTRY *PFNglMultiTexCoord2f) (GLenum, GLfloat, GLfloat);
+static PFNglMultiTexCoord2f pglMultiTexCoord2f;
+#endif
 #endif
 
 #ifndef MINI_GL_COMPATIBILITY
@@ -400,6 +417,14 @@ static PFNgluBuild2DMipmaps pgluBuild2DMipmaps;
 #endif
 #ifndef GL_TEXTURE_MAX_LOD
 #define GL_TEXTURE_MAX_LOD 0x813B
+#endif
+
+/* 1.3 GL_TEXTUREi */
+#ifndef GL_TEXTURE0
+#define GL_TEXTURE0 0x84C0
+#endif
+#ifndef GL_TEXTURE1
+#define GL_TEXTURE1 0x84C1
 #endif
 
 #endif
@@ -490,6 +515,34 @@ boolean SetupGLfunc(void)
 
 #endif
 	return true;
+}
+
+// This has to be done after the context is created so the version number can be obtained
+boolean SetupGLFunc13(void)
+{
+#ifdef MINI_GL_COMPATIBILITY
+	return false;
+#else
+#ifdef STATIC_OPENGL
+	gl13 = true;
+#else
+	if (isExtAvailable("GL_ARB_multitexture", gl_extensions))
+	{
+		// Get the functions
+		pglActiveTexture  = GetGLFunc("glActiveTextureARB");
+		pglMultiTexCoord2f  = GetGLFunc("glMultiTexCoord2fARB");
+
+		gl13 = true; // This is now true, so the new fade mask stuff can be done, if OpenGL version is less than 1.3, it still uses the old fade stuff.
+		DBG_Printf("GL_ARB_multitexture support: enabled\n");
+
+	}
+	else
+		DBG_Printf("GL_ARB_multitexture support: disabled\n");
+#undef GETOPENGLFUNC
+
+#endif
+	return true;
+#endif
 }
 
 // -----------------+
@@ -1234,6 +1287,23 @@ EXPORT void HWRAPI(SetTexture) (FTextureInfo *pTexInfo)
 				}
 			}
 		}
+		else if (pTexInfo->grInfo.format == GR_TEXFMT_ALPHA_8) // Used for fade masks
+		{
+			const GLubyte *pImgData = (const GLubyte *)pTexInfo->grInfo.data;
+			INT32 i, j;
+
+			for (j = 0; j < h; j++)
+			{
+				for (i = 0; i < w; i++)
+				{
+					tex[w*j+i]  = (pImgData>>4)<<12;
+					tex[w*j+i] |= (255>>4)<<8;
+					tex[w*j+i] |= (255>>4)<<4;
+					tex[w*j+i] |= (255>>4);
+					pImgData++;
+				}
+			}
+		}
 		else
 			DBG_Printf ("SetTexture(bad format) %ld\n", pTexInfo->grInfo.format);
 #else
@@ -1294,6 +1364,23 @@ EXPORT void HWRAPI(SetTexture) (FTextureInfo *pTexInfo)
 					tex[w*j+i].s.green = *pImgData;
 					tex[w*j+i].s.blue  = *pImgData;
 					pImgData++;
+					tex[w*j+i].s.alpha = *pImgData;
+					pImgData++;
+				}
+			}
+		}
+		else if (pTexInfo->grInfo.format == GR_TEXFMT_ALPHA_8) // Used for fade masks
+		{
+			const GLubyte *pImgData = (const GLubyte *)pTexInfo->grInfo.data;
+			INT32 i, j;
+
+			for (j = 0; j < h; j++)
+			{
+				for (i = 0; i < w; i++)
+				{
+					tex[w*j+i].s.red   = 255; // 255 because the fade mask is modulated with the screen texture, so alpha affects it while the colours don't
+					tex[w*j+i].s.green = 255;
+					tex[w*j+i].s.blue  = 255;
 					tex[w*j+i].s.alpha = *pImgData;
 					pImgData++;
 				}
@@ -2109,6 +2196,10 @@ EXPORT void HWRAPI(DoScreenWipe)(float alpha)
 	INT32 texsize = 2048;
 	float xfix, yfix;
 
+#ifndef MINI_GL_COMPATIBILITY
+	INT32 fademaskdownloaded = tex_downloaded; // the fade mask that has been set
+#endif
+
 	// Use a power of two texture, dammit
 	if(screen_width <= 1024)
 		texsize = 1024;
@@ -2122,8 +2213,8 @@ EXPORT void HWRAPI(DoScreenWipe)(float alpha)
 
 	SetBlend(PF_Modulated|PF_NoDepthTest|PF_Clip|PF_NoZClip);
 
-	// Draw the screen on bottom to fade to
-	pglBindTexture(GL_TEXTURE_2D, endScreenWipe);
+	// Draw the original screen
+	pglBindTexture(GL_TEXTURE_2D, startScreenWipe);
 	pglBegin(GL_QUADS);
 		pglColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 
@@ -2142,12 +2233,56 @@ EXPORT void HWRAPI(DoScreenWipe)(float alpha)
 		// Bottom right
 		pglTexCoord2f(xfix, 0.0f);
 		pglVertex3f(1.0f, -1.0f, 1.0f);
+
 	pglEnd();
 
 	SetBlend(PF_Modulated|PF_Translucent|PF_NoDepthTest|PF_Clip|PF_NoZClip);
 
-	// Draw the screen on top that fades.
-	pglBindTexture(GL_TEXTURE_2D, startScreenWipe);
+#ifndef MINI_GL_COMPATIBILITY
+	if (gl13)
+	{
+		// Draw the end screen that fades in
+		pglActiveTexture(GL_TEXTURE0);
+		pglEnable(GL_TEXTURE_2D);
+		pglBindTexture(GL_TEXTURE_2D, endScreenWipe);
+
+		pglActiveTexture(GL_TEXTURE1);
+		pglEnable(GL_TEXTURE_2D);
+		pglBindTexture(GL_TEXTURE_2D, fademaskdownloaded);
+
+		pglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+		pglBegin(GL_QUADS);
+			pglColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+
+			// Bottom left
+			pglMultiTexCoord2f(GL_TEXTURE0, 0.0f, 0.0f);
+			pglMultiTexCoord2f(GL_TEXTURE1, 0.0f, 0.0f);
+			pglVertex3f(-1.0f, -1.0f, 1.0f);
+
+			// Top left
+			pglMultiTexCoord2f(GL_TEXTURE0, 0.0f, yfix);
+			pglMultiTexCoord2f(GL_TEXTURE1, 0.0f, 1.0f);
+			pglVertex3f(-1.0f, 1.0f, 1.0f);
+
+			// Top right
+			pglMultiTexCoord2f(GL_TEXTURE0, xfix, yfix);
+			pglMultiTexCoord2f(GL_TEXTURE1, 1.0f, 1.0f);
+			pglVertex3f(1.0f, 1.0f, 1.0f);
+
+			// Bottom right
+			pglMultiTexCoord2f(GL_TEXTURE0, xfix, 0.0f);
+			pglMultiTexCoord2f(GL_TEXTURE1, 1.0f, 0.0f);
+			pglVertex3f(1.0f, -1.0f, 1.0f);
+		pglEnd();
+
+		pglDisable(GL_TEXTURE_2D); // disable the texture in the 2nd texture unit
+		pglActiveTexture(GL_TEXTURE0);
+	}
+	else
+	{
+#endif
+	// Draw the end screen that fades in
+	pglBindTexture(GL_TEXTURE_2D, endScreenWipe);
 	pglBegin(GL_QUADS);
 		pglColor4f(1.0f, 1.0f, 1.0f, alpha);
 
@@ -2166,8 +2301,10 @@ EXPORT void HWRAPI(DoScreenWipe)(float alpha)
 		// Bottom right
 		pglTexCoord2f(xfix, 0.0f);
 		pglVertex3f(1.0f, -1.0f, 1.0f);
-
 	pglEnd();
+#ifndef MINI_GL_COMPATIBILITY
+	}
+#endif
 
 	tex_downloaded = 0; // 0 so it knows it doesn't have any of the cached patches downloaded right now
 }

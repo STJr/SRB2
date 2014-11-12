@@ -1242,11 +1242,8 @@ void T_FloatSector(levelspecthink_t *floater)
 
 	if (actionsector)
 	{
-		boolean tofloat = false;
-		boolean floatanyway = false; // Ignore the crumblestate setting.
-		fixed_t waterheight = actionsector->floorheight - 512*FRACUNIT;
-
-		waterheight = P_SectorCheckWater(actionsector, floater->sector); // find the highest suitable water block around
+		//boolean floatanyway = false; // Ignore the crumblestate setting.
+		fixed_t waterheight = P_SectorCheckWater(actionsector, floater->sector); // find the highest suitable water block around
 
 		if (waterheight == cheeseheight) // same height, no floating needed
 			;
@@ -1254,10 +1251,8 @@ void T_FloatSector(levelspecthink_t *floater)
 			;
 		else if (floater->sector->ceilingheight == actionsector->ceilingheight && waterheight > cheeseheight) // too high
 			;
-		else // we have something to float in! Or we're for some reason above the ground, let's fall anyway
-			tofloat = true;
-
-		if (tofloat && (floater->sector->crumblestate == 0 || floater->sector->crumblestate >= 3 || floatanyway))
+		// we have something to float in! Or we're for some reason above the ground, let's fall anyway
+		else if (floater->sector->crumblestate == 0 || floater->sector->crumblestate >= 3/* || floatanyway*/)
 			EV_BounceSector(floater->sector, FRACUNIT, floater->sourceline);
 
 		P_RecalcPrecipInSector(actionsector);
@@ -2252,6 +2247,9 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 		// This should now run ONLY the stuff for eachtime->sourceline itself, instead of all trigger linedefs sharing the same tag.
 		// Makes much more sense doing it this way, honestly.
 		P_RunTriggerLinedef(eachtime->sourceline, players[affectPlayer].mo, sec);
+
+		if (!eachtime->sourceline->special) // this happens only for "Trigger on X calls" linedefs
+			P_RemoveThinker(&eachtime->thinker);
 	}
 }
 
@@ -2852,30 +2850,33 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 	fixed_t topy, bottomy;
 	fixed_t topz;
 	fixed_t a, b, c;
+	mobjtype_t type = MT_ROCKCRUMBLE1;
+
+	// If the control sector has a special
+	// of Section3:7-15, use the custom debris.
+	if (GETSECSPECIAL(rover->master->frontsector->special, 3) >= 8)
+		type = MT_ROCKCRUMBLE1+(GETSECSPECIAL(rover->master->frontsector->special, 3)-7);
 
 	// soundorg z height never gets set normally, so MEH.
 	sec->soundorg.z = sec->floorheight;
 	S_StartSound(&sec->soundorg, sfx_crumbl);
 
-	// Find the leftmost vertex in the subsector.
+	// Find the outermost vertexes in the subsector
 	for (i = 0; i < sec->linecount; i++)
+	{
+		// Find the leftmost vertex in the subsector.
 		if ((sec->lines[i]->v1->x < sec->lines[leftmostvertex]->v1->x))
 			leftmostvertex = i;
-
-	// Find the rightmost vertex in the subsector.
-	for (i = 0; i < sec->linecount; i++)
+		// Find the rightmost vertex in the subsector.
 		if ((sec->lines[i]->v1->x > sec->lines[rightmostvertex]->v1->x))
 			rightmostvertex = i;
-
-	// Find the topmost vertex in the subsector.
-	for (i = 0; i < sec->linecount; i++)
+		// Find the topmost vertex in the subsector.
 		if ((sec->lines[i]->v1->y > sec->lines[topmostvertex]->v1->y))
 			topmostvertex = i;
-
-	// Find the bottommost vertex in the subsector.
-	for (i = 0; i < sec->linecount; i++)
+		// Find the bottommost vertex in the subsector.
 		if ((sec->lines[i]->v1->y < sec->lines[bottommostvertex]->v1->y))
 			bottommostvertex = i;
+	}
 
 	leftx = sec->lines[leftmostvertex]->v1->x+(16<<FRACBITS);
 	rightx = sec->lines[rightmostvertex]->v1->x;
@@ -2892,13 +2893,7 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 				mobj_t *spawned = NULL;
 				for (c = topz; c > *rover->bottomheight; c -= (32<<FRACBITS))
 				{
-					// If the control sector has a special
-					// of Section3:7-15, use the custom debris.
-					if (GETSECSPECIAL(rover->master->frontsector->special, 3) >= 8)
-						spawned = P_SpawnMobj(a, b, c, MT_ROCKCRUMBLE1+(GETSECSPECIAL(rover->master->frontsector->special, 3)-7));
-					else
-						spawned = P_SpawnMobj(a, b, c, MT_ROCKCRUMBLE1);
-
+					spawned = P_SpawnMobj(a, b, c, type);
 					spawned->fuse = 3*TICRATE;
 				}
 			}

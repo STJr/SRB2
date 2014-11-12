@@ -43,7 +43,6 @@ extern boolean singledemo;
 extern boolean demo_start;
 
 extern mobj_t *metalplayback;
-extern boolean metal_start;
 
 // gametic at level start
 extern tic_t levelstarttic;
@@ -147,6 +146,8 @@ void G_ConsGhostTic(void);
 void G_GhostTicker(void);
 void G_ReadMetalTic(mobj_t *metal);
 void G_WriteMetalTic(mobj_t *metal);
+void G_SaveMetal(UINT8 **buffer);
+void G_LoadMetal(UINT8 **buffer);
 
 void G_DoPlayDemo(char *defdemoname);
 void G_TimeDemo(const char *name);

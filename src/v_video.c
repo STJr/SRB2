@@ -484,7 +484,7 @@ void V_DrawFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t 
 		INT32 topdelta, prevdelta = -1;
 		if (x < 0) // don't draw off the left of the screen (WRAP PREVENTION)
 			continue;
-		if (x > vid.width) // don't draw off the right of the screen (WRAP PREVENTION)
+		if (x >= vid.width) // don't draw off the right of the screen (WRAP PREVENTION)
 			break;
 		column = (const column_t *)((const UINT8 *)(patch) + LONG(patch->columnofs[col>>FRACBITS]));
 
@@ -596,7 +596,7 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 		INT32 topdelta, prevdelta = -1;
 		if (x < 0) // don't draw off the left of the screen (WRAP PREVENTION)
 			continue;
-		if (x > vid.width) // don't draw off the right of the screen (WRAP PREVENTION)
+		if (x >= vid.width) // don't draw off the right of the screen (WRAP PREVENTION)
 			break;
 		column = (const column_t *)((const UINT8 *)(patch) + LONG(patch->columnofs[col>>FRACBITS]));
 
@@ -1609,7 +1609,7 @@ INT32 V_CreditStringWidth(const char *string)
 	{
 		c = toupper(string[i]) - CRED_FONTSTART;
 		if (c < 0 || c >= CRED_FONTSIZE)
-			w += 8;
+			w += 16;
 		else
 			w += SHORT(cred_font[c]->width);
 	}

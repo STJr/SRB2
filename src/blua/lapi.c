@@ -319,21 +319,6 @@ LUA_API lua_Number lua_tonumber (lua_State *L, int idx) {
     return 0;
 }
 
-
-LUA_API lua_Integer lua_tointeger (lua_State *L, int idx) {
-  TValue n;
-  const TValue *o = index2adr(L, idx);
-  if (tonumber(o, &n)) {
-    lua_Integer res;
-    lua_Number num = nvalue(o);
-    lua_number2integer(res, num);
-    return res;
-  }
-  else
-    return 0;
-}
-
-
 LUA_API int lua_toboolean (lua_State *L, int idx) {
   const TValue *o = index2adr(L, idx);
   return !l_isfalse(o);
@@ -441,14 +426,6 @@ LUA_API void lua_pushnil (lua_State *L) {
 LUA_API void lua_pushnumber (lua_State *L, lua_Number n) {
   lua_lock(L);
   setnvalue(L->top, n);
-  api_incr_top(L);
-  lua_unlock(L);
-}
-
-
-LUA_API void lua_pushinteger (lua_State *L, lua_Integer n) {
-  lua_lock(L);
-  setnvalue(L->top, cast_num(n));
   api_incr_top(L);
   lua_unlock(L);
 }

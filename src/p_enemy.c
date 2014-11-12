@@ -2089,7 +2089,7 @@ void A_Boss1Laser(mobj_t *actor)
 		actor->angle = R_PointToAngle2(x, y, actor->target->x, actor->target->y);
 		if (mobjinfo[locvar1].seesound)
 			S_StartSound(actor, mobjinfo[locvar1].seesound);
-		if (!(actor->spawnpoint->options & MTF_AMBUSH))
+		if (!(actor->spawnpoint && actor->spawnpoint->options & MTF_AMBUSH))
 		{
 			point = P_SpawnMobj(x + P_ReturnThrustX(actor, actor->angle, actor->radius), y + P_ReturnThrustY(actor, actor->angle, actor->radius), actor->z - actor->height / 2, MT_EGGMOBILE_TARGET);
 			point->fuse = actor->tics+1;
@@ -2097,10 +2097,10 @@ void A_Boss1Laser(mobj_t *actor)
 			P_SetTarget(&actor->target, point);
 		}
 	}
-	else if (actor->target && !(actor->spawnpoint->options & MTF_AMBUSH))
+	else if (actor->target && !(actor->spawnpoint && actor->spawnpoint->options & MTF_AMBUSH))
 		actor->angle = R_PointToAngle2(x, y, actor->target->x, actor->target->y);
 
-	if (actor->spawnpoint->options & MTF_AMBUSH)
+	if (actor->spawnpoint && actor->spawnpoint->options & MTF_AMBUSH)
 		angle = FixedAngle(FixedDiv(actor->tics*160*FRACUNIT, actor->state->tics*FRACUNIT) + 10*FRACUNIT);
 	else
 		angle = R_PointToAngle2(z + (mobjinfo[locvar1].height>>1), 0, actor->target->z, R_PointToDist2(x, y, actor->target->x, actor->target->y));
@@ -9607,10 +9607,6 @@ void A_TrapShot(mobj_t *actor)
 	missile->momy = FixedMul(FINECOSINE(vertang>>ANGLETOFINESHIFT), FixedMul(FINESINE(missile->angle>>ANGLETOFINESHIFT), speed));
 	missile->momz = FixedMul(FINESINE(vertang>>ANGLETOFINESHIFT), speed);
 }
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// TODO: Test the HELL out of these, then remove these annoying lines that are only here to remind you of that -SH //
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Function: A_VileTarget
 //

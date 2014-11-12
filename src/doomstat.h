@@ -165,7 +165,6 @@ extern cutscene_t *cutscenes[128];
 
 // For the Custom Exit linedef.
 extern INT16 nextmapoverride;
-extern INT32 nextmapgametype;
 extern boolean skipstats;
 
 extern UINT32 totalrings; //  Total # of rings in a level

@@ -660,6 +660,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		player->mo->tracer->destscale = player->mo->scale;
 		P_SetScale(player->mo->tracer, player->mo->scale);
 		player->mo->tracer->eflags = (player->mo->tracer->eflags & ~MFE_VERTICALFLIP)|(player->mo->eflags & MFE_VERTICALFLIP);
+		player->mo->height = player->mo->tracer->height;
 	}
 
 	player->pflags &= ~(PF_USEDOWN|PF_JUMPDOWN|PF_ATTACKDOWN|PF_STARTDASH|PF_GLIDING|PF_JUMPED|PF_THOKKED|PF_SPINNING|PF_DRILLING);
@@ -3998,10 +3999,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 
 static boolean P_AnalogMove(player_t *player)
 {
-	if (netgame)
-		return false;
-	return ((player == &players[consoleplayer] && cv_analog.value)
-		|| (player == &players[secondarydisplayplayer] && cv_analog2.value));
+	return player->pflags & PF_ANALOGMODE;
 }
 
 //
@@ -4124,7 +4122,11 @@ static void P_2dMovement(player_t *player)
 	}
 	else if (player->onconveyor == 4 && !P_IsObjectOnGround(player->mo)) // Actual conveyor belt
 		player->cmomx = player->cmomy = 0;
-	else if (player->onconveyor != 2 && player->onconveyor != 4)
+	else if (player->onconveyor != 2 && player->onconveyor != 4
+#ifdef POLYOBJECTS
+				&& player->onconveyor != 1
+#endif
+	)
 		player->cmomx = player->cmomy = 0;
 
 	player->rmomx = player->mo->momx - player->cmomx;
@@ -4264,22 +4266,16 @@ static void P_3dMovement(player_t *player)
 	fixed_t movepushforward = 0, movepushside = 0;
 	INT32 mforward = 0, mbackward = 0;
 	angle_t dangle; // replaces old quadrants bits
-	camera_t *thiscam;
 	fixed_t normalspd = FixedMul(player->normalspeed, player->mo->scale);
 	boolean analogmove = false;
 #ifndef OLD_MOVEMENT_CODE
 	fixed_t oldMagnitude, newMagnitude;
 
 	// Get the old momentum; this will be needed at the end of the function! -SH
-	oldMagnitude = R_PointToDist2(player->mo->momx, player->mo->momy, 0, 0);
+	oldMagnitude = R_PointToDist2(player->mo->momx - player->cmomx, player->mo->momy - player->cmomy, 0, 0);
 #endif
 
-	if (splitscreen && player == &players[secondarydisplayplayer])
-		thiscam = &camera2;
-	else
-		thiscam = &camera;
-
-	analogmove = (P_AnalogMove(player) && thiscam->chase);
+	analogmove = P_AnalogMove(player);
 
 	cmd = &player->cmd;
 
@@ -4306,16 +4302,13 @@ static void P_3dMovement(player_t *player)
 
 	if (analogmove)
 	{
-		if (player->awayviewtics)
-			movepushangle = player->awayviewmobj->angle;
-		else
-			movepushangle = thiscam->angle;
+		movepushangle = (cmd->angleturn<<16 /* not FRACBITS */);
 	}
 	else
 	{
 		movepushangle = player->mo->angle;
 	}
-		movepushsideangle = movepushangle-ANGLE_90;
+	movepushsideangle = movepushangle-ANGLE_90;
 
 	// cmomx/cmomy stands for the conveyor belt speed.
 	if (player->onconveyor == 2) // Wind/Current
@@ -4326,7 +4319,11 @@ static void P_3dMovement(player_t *player)
 	}
 	else if (player->onconveyor == 4 && !P_IsObjectOnGround(player->mo)) // Actual conveyor belt
 		player->cmomx = player->cmomy = 0;
-	else if (player->onconveyor != 2 && player->onconveyor != 4)
+	else if (player->onconveyor != 2 && player->onconveyor != 4
+#ifdef POLYOBJECTS
+				&& player->onconveyor != 1
+#endif
+	)
 		player->cmomx = player->cmomy = 0;
 
 	player->rmomx = player->mo->momx - player->cmomx;
@@ -4482,8 +4479,6 @@ static void P_3dMovement(player_t *player)
 		if (!(player->pflags & PF_GLIDING || player->exiting || P_PlayerInPain(player)))
 		{
 			angle_t controldirection;
-			fixed_t tempx = 0, tempy = 0;
-			angle_t tempangle;
 #ifdef OLD_MOVEMENT_CODE
 			angle_t controlplayerdirection;
 			boolean cforward; // controls pointing forward from the player
@@ -4494,17 +4489,8 @@ static void P_3dMovement(player_t *player)
 #endif
 			// Calculate the angle at which the controls are pointing
 			// to figure out the proper mforward and mbackward.
-			tempangle = movepushangle;
-			tempangle >>= ANGLETOFINESHIFT;
-			tempx += FixedMul(cmd->forwardmove*FRACUNIT,FINECOSINE(tempangle));
-			tempy += FixedMul(cmd->forwardmove*FRACUNIT,FINESINE(tempangle));
-
-			tempangle = movepushsideangle;
-			tempangle >>= ANGLETOFINESHIFT;
-			tempx += FixedMul(cmd->sidemove*FRACUNIT,FINECOSINE(tempangle));
-			tempy += FixedMul(cmd->sidemove*FRACUNIT,FINESINE(tempangle));
-
-			controldirection = R_PointToAngle2(0, 0, tempx, tempy);
+			// (Why was it so complicated before? ~Red)
+			controldirection = R_PointToAngle2(0, 0, cmd->forwardmove*FRACUNIT, -cmd->sidemove*FRACUNIT)+movepushangle;
 
 #ifdef OLD_MOVEMENT_CODE
 			controlplayerdirection = player->mo->angle;
@@ -4624,22 +4610,27 @@ static void P_3dMovement(player_t *player)
 	// If "no" to 2, normalize to topspeed, so we can't suddenly run faster than it of our own accord.
 	// If "no" to 1, we're not reaching any limits yet, so ignore this entirely!
 	// -Shadow Hog
-	newMagnitude = R_PointToDist2(player->mo->momx, player->mo->momy, 0, 0);
+	newMagnitude = R_PointToDist2(player->mo->momx - player->cmomx, player->mo->momy - player->cmomy, 0, 0);
 	if (newMagnitude > topspeed)
 	{
+		fixed_t tempmomx, tempmomy;
 		if (oldMagnitude > topspeed)
 		{
 			if (newMagnitude > oldMagnitude)
 			{
-				player->mo->momx = FixedMul(FixedDiv(player->mo->momx, newMagnitude), oldMagnitude);
-				player->mo->momy = FixedMul(FixedDiv(player->mo->momy, newMagnitude), oldMagnitude);
+				tempmomx = FixedMul(FixedDiv(player->mo->momx - player->cmomx, newMagnitude), oldMagnitude);
+				tempmomy = FixedMul(FixedDiv(player->mo->momy - player->cmomy, newMagnitude), oldMagnitude);
+				player->mo->momx = tempmomx + player->cmomx;
+				player->mo->momy = tempmomy + player->cmomy;
 			}
 			// else do nothing
 		}
 		else
 		{
-			player->mo->momx = FixedMul(FixedDiv(player->mo->momx, newMagnitude), topspeed);
-			player->mo->momy = FixedMul(FixedDiv(player->mo->momy, newMagnitude), topspeed);
+			tempmomx = FixedMul(FixedDiv(player->mo->momx - player->cmomx, newMagnitude), topspeed);
+			tempmomy = FixedMul(FixedDiv(player->mo->momy - player->cmomy, newMagnitude), topspeed);
+			player->mo->momx = tempmomx + player->cmomx;
+			player->mo->momy = tempmomy + player->cmomy;
 		}
 	}
 #endif
@@ -6060,6 +6051,7 @@ static void P_SkidStuff(player_t *player)
 			particle->eflags |= player->mo->eflags & MFE_VERTICALFLIP;
 			P_SetScale(particle, player->mo->scale >> 2);
 			particle->destscale = player->mo->scale << 2;
+			particle->scalespeed = FixedMul(particle->scalespeed, player->mo->scale); // scale the scaling speed!
 			P_SetObjectMomZ(particle, FRACUNIT, false);
 			S_StartSound(player->mo, sfx_s3k7e); // the proper "Knuckles eats dirt" sfx.
 		}
@@ -6080,6 +6072,7 @@ static void P_SkidStuff(player_t *player)
 				particle->eflags |= player->mo->eflags & MFE_VERTICALFLIP;
 				P_SetScale(particle, player->mo->scale >> 2);
 				particle->destscale = player->mo->scale << 2;
+				particle->scalespeed = FixedMul(particle->scalespeed, player->mo->scale); // scale the scaling speed!
 				P_SetObjectMomZ(particle, FRACUNIT, false);
 			}
 		}
@@ -6120,16 +6113,10 @@ static void P_MovePlayer(player_t *player)
 	ticcmd_t *cmd;
 	INT32 i;
 
-	camera_t *thiscam;
 	fixed_t runspd;
 
 	if (countdowntimeup)
 		return;
-
-	if (splitscreen && player == &players[secondarydisplayplayer])
-		thiscam = &camera2;
-	else
-		thiscam = &camera;
 
 	if (player->mo->state >= &states[S_PLAY_SUPERTRANS1] && player->mo->state <= &states[S_PLAY_SUPERTRANS9])
 	{
@@ -6256,7 +6243,7 @@ static void P_MovePlayer(player_t *player)
 		P_2dMovement(player);
 	else
 	{
-		if (!player->climbing && (!P_AnalogMove(player) || player->pflags & PF_SPINNING))
+		if (!player->climbing && (!P_AnalogMove(player)))
 			player->mo->angle = (cmd->angleturn<<16 /* not FRACBITS */);
 
 		ticruned++;
@@ -6572,31 +6559,45 @@ static void P_MovePlayer(player_t *player)
 	//////////////////
 
 	// This really looks like it should be moved to P_3dMovement. -Red
-	if (P_AnalogMove(player) && thiscam->chase
+	if (P_AnalogMove(player)
 		&& (cmd->forwardmove != 0 || cmd->sidemove != 0) && !player->climbing && !twodlevel && !(player->mo->flags2 & MF2_TWOD))
 	{
 		// If travelling slow enough, face the way the controls
 		// point and not your direction of movement.
 		if (player->speed < FixedMul(5*FRACUNIT, player->mo->scale) || player->pflags & PF_GLIDING || !onground)
 		{
-			fixed_t tempx = 0, tempy = 0;
 			angle_t tempangle;
 
-			if (player->awayviewtics)
-				tempangle = player->awayviewmobj->angle;
-			else
-				tempangle = thiscam->angle;
-			tempangle >>= ANGLETOFINESHIFT;
-			tempx += FixedMul(cmd->forwardmove*FRACUNIT,FINECOSINE(tempangle));
-			tempy += FixedMul(cmd->forwardmove*FRACUNIT,FINESINE(tempangle));
+			tempangle = (cmd->angleturn << 16);
 
-			tempangle <<= ANGLETOFINESHIFT;
-			tempangle -= ANGLE_90;
-			tempangle >>= ANGLETOFINESHIFT;
-			tempx += FixedMul(cmd->sidemove*FRACUNIT,FINECOSINE(tempangle));
-			tempy += FixedMul(cmd->sidemove*FRACUNIT,FINESINE(tempangle));
+#ifdef REDSANALOG // Ease to it. Chillax. ~Red
+			tempangle += R_PointToAngle2(0, 0, cmd->forwardmove*FRACUNIT, -cmd->sidemove*FRACUNIT);
+			{
+				fixed_t tweenvalue = max(abs(cmd->forwardmove), abs(cmd->sidemove));
 
-			player->mo->angle = R_PointToAngle2(0, 0, tempx, tempy);
+				if (tweenvalue < 10 && (cmd->buttons & (BT_CAMLEFT|BT_CAMRIGHT)) == (BT_CAMLEFT|BT_CAMRIGHT)) {
+					tempangle = (cmd->angleturn << 16);
+					tweenvalue = 16;
+				}
+
+				tweenvalue *= tweenvalue*tweenvalue*1536;
+
+				//if (player->pflags & PF_GLIDING)
+					//tweenvalue >>= 1;
+
+				tempangle -= player->mo->angle;
+
+				if (tempangle < ANGLE_180 && tempangle > tweenvalue)
+					player->mo->angle += tweenvalue;
+				else if (tempangle >= ANGLE_180 && InvAngle(tempangle) > tweenvalue)
+					player->mo->angle -= tweenvalue;
+				else
+					player->mo->angle += tempangle;
+			}
+#else
+			// Less math this way ~Red
+			player->mo->angle = R_PointToAngle2(0, 0, cmd->forwardmove*FRACUNIT, -cmd->sidemove*FRACUNIT)+tempangle;
+#endif
 		}
 		// Otherwise, face the direction you're travelling.
 		else if (player->panim == PA_WALK || player->panim == PA_RUN || player->panim == PA_ROLL
@@ -7559,19 +7560,20 @@ static void CV_CamRotate2_OnChange(void)
 		CV_SetValue(&cv_cam2_rotate, cv_cam2_rotate.value % 360);
 }
 
+static CV_PossibleValue_t CV_CamSpeed[] = {{0, "MIN"}, {1*FRACUNIT, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t rotation_cons_t[] = {{1, "MIN"}, {45, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t CV_CamRotate[] = {{-720, "MIN"}, {720, "MAX"}, {0, NULL}};
 
 consvar_t cv_cam_dist = {"cam_dist", "128", CV_FLOAT, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam_height = {"cam_height", "20", CV_FLOAT, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam_still = {"cam_still", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_cam_speed = {"cam_speed", "0.25", CV_FLOAT, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_cam_speed = {"cam_speed", "0.25", CV_FLOAT, CV_CamSpeed, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam_rotate = {"cam_rotate", "0", CV_CALL|CV_NOINIT, CV_CamRotate, CV_CamRotate_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam_rotspeed = {"cam_rotspeed", "10", 0, rotation_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam2_dist = {"cam2_dist", "128", CV_FLOAT, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam2_height = {"cam2_height", "20", CV_FLOAT, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam2_still = {"cam2_still", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_cam2_speed = {"cam2_speed", "0.25", CV_FLOAT, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_cam2_speed = {"cam2_speed", "0.25", CV_FLOAT, CV_CamSpeed, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam2_rotate = {"cam2_rotate", "0", CV_CALL|CV_NOINIT, CV_CamRotate, CV_CamRotate2_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_cam2_rotspeed = {"cam2_rotspeed", "10", 0, rotation_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
@@ -7724,6 +7726,15 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		camheight = FixedMul(cv_cam2_height.value, mo->scale);
 	}
 
+#ifdef REDSANALOG
+	if (P_AnalogMove(player) && (player->cmd.buttons & (BT_CAMLEFT|BT_CAMRIGHT)) == (BT_CAMLEFT|BT_CAMRIGHT)) {
+		camstill = true;
+
+		if (camspeed < 4*FRACUNIT/5)
+			camspeed = 4*FRACUNIT/5;
+	}
+#endif // REDSANALOG
+
 	if (mo->eflags & MFE_VERTICALFLIP)
 		camheight += thiscam->height;
 
@@ -7772,6 +7783,9 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 
 	if (!objectplacing && !(twodlevel || (mo->flags2 & MF2_TWOD)) && !(player->pflags & PF_NIGHTSMODE))
 	{
+#ifdef REDSANALOG
+		if ((player->cmd.buttons & (BT_CAMLEFT|BT_CAMRIGHT)) == (BT_CAMLEFT|BT_CAMRIGHT)); else
+#endif
 		if (player->cmd.buttons & BT_CAMLEFT)
 		{
 			if (thiscam == &camera)
@@ -8569,6 +8583,9 @@ void P_PlayerThink(player_t *player)
 	// check water content, set stuff in mobj
 	P_MobjCheckWater(player->mo);
 
+#ifdef POLYOBJECTS
+	if (player->onconveyor != 1 || !P_IsObjectOnGround(player->mo))
+#endif
 	player->onconveyor = 0;
 	// check special sectors : damage & secrets
 
@@ -8706,6 +8723,11 @@ void P_PlayerThink(player_t *player)
 
 	if (!player->mo)
 		return; // P_MovePlayer removed player->mo.
+
+#ifdef POLYOBJECTS
+	if (player->onconveyor == 1)
+			player->cmomy = player->cmomx = 0;
+#endif
 
 	P_DoSuperStuff(player);
 	P_CheckSneakerAndLivesTimer(player);

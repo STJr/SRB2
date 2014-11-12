@@ -131,7 +131,6 @@ boolean countdowntimeup = false;
 cutscene_t *cutscenes[128];
 
 INT16 nextmapoverride;
-INT32 nextmapgametype;
 boolean skipstats;
 
 // Pointers to each CTF flag
@@ -244,7 +243,6 @@ mobj_t *metalplayback;
 static UINT8 *metalbuffer = NULL;
 static UINT8 *metal_p;
 static UINT16 metalversion;
-boolean metal_start;
 
 // extra data stuff (events registered this frame while recording)
 static struct {
@@ -283,6 +281,8 @@ static void UserAnalog_OnChange(void);
 static void UserAnalog2_OnChange(void);
 static void Analog_OnChange(void);
 static void Analog2_OnChange(void);
+void SendWeaponPref(void);
+void SendWeaponPref2(void);
 
 static CV_PossibleValue_t crosshair_cons_t[] = {{0, "Off"}, {1, "Cross"}, {2, "Angle"}, {3, "Point"}, {0, NULL}};
 static CV_PossibleValue_t joyaxis_cons_t[] = {{0, "None"},
@@ -595,14 +595,18 @@ void G_AddTempNightsRecords(UINT32 pscore, tic_t ptime, UINT8 mare)
 void G_SetNightsRecords(void)
 {
 	INT32 i;
+	UINT32 totalscore = 0;
+	tic_t totaltime = 0;
+
+	const size_t glen = strlen(srb2home)+1+strlen("replay")+1+strlen(timeattackfolder)+1+strlen("MAPXX")+1;
+	char *gpath;
+	char lastdemo[256], bestdemo[256];
 
 	if (!ntemprecords.nummares)
 		return;
 
 	// Set overall
 	{
-		UINT32 totalscore = 0;
-		tic_t totaltime = 0;
 		UINT8 totalrank = 0, realrank = 0;
 
 		for (i = 1; i <= ntemprecords.nummares; ++i)
@@ -647,6 +651,50 @@ void G_SetNightsRecords(void)
 	}
 
 	memset(&ntemprecords, 0, sizeof(nightsdata_t));
+
+	// Save demo!
+	bestdemo[255] = '\0';
+	lastdemo[255] = '\0';
+	G_SetDemoTime(totaltime, totalscore, 0);
+	G_CheckDemoStatus();
+
+	I_mkdir(va("%s"PATHSEP"replay", srb2home), 0755);
+	I_mkdir(va("%s"PATHSEP"replay"PATHSEP"%s", srb2home, timeattackfolder), 0755);
+
+	if ((gpath = malloc(glen)) == NULL)
+		I_Error("Out of memory for replay filepath\n");
+
+	sprintf(gpath,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s", srb2home, timeattackfolder, G_BuildMapName(gamemap));
+	snprintf(lastdemo, 255, "%s-last.lmp", gpath);
+
+	if (FIL_FileExists(lastdemo))
+	{
+		UINT8 *buf;
+		size_t len = FIL_ReadFile(lastdemo, &buf);
+
+		snprintf(bestdemo, 255, "%s-time-best.lmp", gpath);
+		if (!FIL_FileExists(bestdemo) || G_CmpDemoTime(bestdemo, lastdemo) & 1)
+		{ // Better time, save this demo.
+			if (FIL_FileExists(bestdemo))
+				remove(bestdemo);
+			FIL_WriteFile(bestdemo, buf, len);
+			CONS_Printf("\x83%s\x80 %s '%s'\n", M_GetText("NEW RECORD TIME!"), M_GetText("Saved replay as"), bestdemo);
+		}
+
+		snprintf(bestdemo, 255, "%s-score-best.lmp", gpath);
+		if (!FIL_FileExists(bestdemo) || (G_CmpDemoTime(bestdemo, lastdemo) & (1<<1)))
+		{ // Better score, save this demo.
+			if (FIL_FileExists(bestdemo))
+				remove(bestdemo);
+			FIL_WriteFile(bestdemo, buf, len);
+			CONS_Printf("\x83%s\x80 %s '%s'\n", M_GetText("NEW HIGH SCORE!"), M_GetText("Saved replay as"), bestdemo);
+		}
+
+		//CONS_Printf("%s '%s'\n", M_GetText("Saved replay as"), lastdemo);
+
+		Z_Free(buf);
+	}
+	free(gpath);
 
 	// If the mare count changed, this will update the score display
 	CV_AddValue(&cv_nextmap, 1);
@@ -909,6 +957,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	// these ones used for multiple conditions
 	boolean turnleft, turnright, mouseaiming, analogjoystickmove, gamepadjoystickmove;
 	player_t *player = &players[consoleplayer];
+	camera_t *thiscam = &camera;
 
 	static INT32 turnheld; // for accelerative turning
 	static boolean keyboard_look; // true if lookup/down using keyboard
@@ -1172,8 +1221,16 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	cmd->forwardmove = (SINT8)(cmd->forwardmove + forward);
 	cmd->sidemove = (SINT8)(cmd->sidemove + side);
 
-	localangle += (cmd->angleturn<<16);
-	cmd->angleturn = (INT16)(localangle >> 16);
+	if (cv_analog.value) {
+		cmd->angleturn = (INT16)(thiscam->angle >> 16);
+		if (player->awayviewtics)
+			cmd->angleturn = (INT16)(player->awayviewmobj->angle >> 16);
+	}
+	else
+	{
+		localangle += (cmd->angleturn<<16);
+		cmd->angleturn = (INT16)(localangle >> 16);
+	}
 
 	//Reset away view if a command is given.
 	if ((cmd->forwardmove || cmd->sidemove || cmd->buttons)
@@ -1190,6 +1247,7 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 	// these ones used for multiple conditions
 	boolean turnleft, turnright, mouseaiming, analogjoystickmove, gamepadjoystickmove;
 	player_t *player = &players[secondarydisplayplayer];
+	camera_t *thiscam = (player->bot == 2 ? &camera : &camera2);
 
 	static INT32 turnheld; // for accelerative turning
 	static boolean keyboard_look; // true if lookup/down using keyboard
@@ -1463,8 +1521,16 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 		}
 	}
 
-	localangle2 += (cmd->angleturn<<16);
-	cmd->angleturn = (INT16)(localangle2 >> 16);
+	if (cv_analog2.value) {
+		cmd->angleturn = (INT16)(thiscam->angle >> 16);
+		if (player->awayviewtics)
+			cmd->angleturn = (INT16)(player->awayviewmobj->angle >> 16);
+	}
+	else
+	{
+		localangle2 += (cmd->angleturn<<16);
+		cmd->angleturn = (INT16)(localangle2 >> 16);
+	}
 }
 
 // User has designated that they want
@@ -1497,25 +1563,45 @@ static void Analog_OnChange(void)
 
 	if (leveltime > 1)
 		CV_SetValue(&cv_cam_dist, 128);
-	if (netgame)
-		CV_StealthSetValue(&cv_analog, 0);
-	else if (cv_analog.value || demoplayback)
+	if (cv_analog.value || demoplayback)
 		CV_SetValue(&cv_cam_dist, 192);
+
+	if (!cv_chasecam.value && cv_analog.value) {
+		CV_SetValue(&cv_analog, 0);
+		return;
+	}
+
+	if (cv_analog.value)
+		players[consoleplayer].pflags |= PF_ANALOGMODE;
+	else
+		players[consoleplayer].pflags &= ~PF_ANALOGMODE;
+
+	SendWeaponPref();
 }
 
 static void Analog2_OnChange(void)
 {
-	if (!splitscreen || !cv_cam2_dist.string)
+	if (!(splitscreen || botingame) || !cv_cam2_dist.string)
 		return;
 
 	// cameras are not initialized at this point
 
 	if (leveltime > 1)
 		CV_SetValue(&cv_cam2_dist, 128);
-	if (netgame)
-		CV_StealthSetValue(&cv_analog2, 0);
-	else if (cv_analog2.value)
+	if (cv_analog2.value)
 		CV_SetValue(&cv_cam2_dist, 192);
+
+	if (!cv_chasecam2.value && cv_analog2.value) {
+		CV_SetValue(&cv_analog2, 0);
+		return;
+	}
+
+	if (cv_analog2.value)
+		players[secondarydisplayplayer].pflags |= PF_ANALOGMODE;
+	else
+		players[secondarydisplayplayer].pflags &= ~PF_ANALOGMODE;
+
+	SendWeaponPref2();
 }
 
 //
@@ -1999,7 +2085,7 @@ void G_PlayerReborn(INT32 player)
 	exiting = players[player].exiting;
 	jointime = players[player].jointime;
 	spectator = players[player].spectator;
-	pflags = (players[player].pflags & (PF_TIMEOVER|PF_FLIPCAM|PF_TAGIT|PF_TAGGED));
+	pflags = (players[player].pflags & (PF_TIMEOVER|PF_FLIPCAM|PF_TAGIT|PF_TAGGED|PF_ANALOGMODE));
 
 	// As long as we're not in multiplayer, carry over cheatcodes from map to map
 	if (!(netgame || multiplayer))
@@ -2838,23 +2924,12 @@ static void G_DoWorldDone(void)
 {
 	if (server)
 	{
-		INT32 nextgametype;
-
-		// for custom exit (linetype 2) that changes gametype
-		if (nextmapgametype != -1)
-			nextgametype = nextmapgametype;
-		else
-		{
-			// use current gametype by default
-			nextgametype = gametype;
-		}
-
-		if (gametype == GT_COOP && nextgametype == GT_COOP)
+		if (gametype == GT_COOP)
 			// don't reset player between maps
-			D_MapChange(nextmap+1, nextgametype, ultimatemode, false, 0, false, false);
+			D_MapChange(nextmap+1, gametype, ultimatemode, false, 0, false, false);
 		else
 			// resetplayer in match/chaos/tag/CTF/race for more equality
-			D_MapChange(nextmap+1, nextgametype, ultimatemode, true, 0, false, false);
+			D_MapChange(nextmap+1, gametype, ultimatemode, true, 0, false, false);
 	}
 
 	gameaction = ga_nothing;
@@ -3618,6 +3693,7 @@ static ticcmd_t oldcmd;
 // Not used for Metal Sonic
 #define GZT_SPRITE 0x10 // Animation frame
 #define GZT_EXTRA  0x20
+#define GZT_NIGHTS 0x40 // NiGHTS Mode stuff!
 
 // GZT_EXTRA flags
 #define EZT_THOK   0x01 // Spawned a thok object
@@ -3631,6 +3707,21 @@ static ticcmd_t oldcmd;
 #define EZT_SPRITE 0x40 // Changed sprite set completely out of PLAY (NiGHTS, SOCs, whatever)
 
 static mobj_t oldmetal, oldghost;
+
+void G_SaveMetal(UINT8 **buffer)
+{
+	I_Assert(buffer != NULL && *buffer != NULL);
+
+	WRITEUINT32(*buffer, metal_p - metalbuffer);
+}
+
+void G_LoadMetal(UINT8 **buffer)
+{
+	I_Assert(buffer != NULL && *buffer != NULL);
+
+	G_DoPlayMetal();
+	metal_p = metalbuffer + READUINT32(*buffer);
+}
 
 ticcmd_t *G_CopyTiccmd(ticcmd_t* dest, const ticcmd_t* src, const size_t n)
 {
@@ -3814,6 +3905,13 @@ void G_WriteGhostTic(mobj_t *ghost)
 	if (!(demoflags & DF_GHOST))
 		return; // No ghost data to write.
 
+	if (ghost->player && ghost->player->pflags & PF_NIGHTSMODE && ghost->tracer)
+	{
+		// We're talking about the NiGHTS thing, not the normal platforming thing!
+		ziptic |= GZT_NIGHTS;
+		ghost = ghost->tracer;
+	}
+
 	ziptic_p = demo_p++; // the ziptic, written at the end of this function
 
 	#define MAXMOM (0xFFFF<<8)
@@ -3875,10 +3973,7 @@ void G_WriteGhostTic(mobj_t *ghost)
 	}
 
 	// Store the sprite frame.
-	if (ghost->player && ghost->player->pflags & PF_NIGHTSMODE && ghost->tracer)
-		frame = ghost->tracer->frame & 0xFF; // get frame from NiGHTS tracer
-	else
-		frame = ghost->frame & 0xFF; // get frame from player
+	frame = ghost->frame & 0xFF;
 	if (frame != oldghost.frame)
 	{
 		oldghost.frame = frame;
@@ -3887,10 +3982,7 @@ void G_WriteGhostTic(mobj_t *ghost)
 	}
 
 	// Check for sprite set changes
-	if (ghost->player && ghost->player->pflags & PF_NIGHTSMODE && ghost->tracer)
-		sprite = ghost->tracer->sprite; // get sprite from NiGHTS tracer
-	else
-		sprite = ghost->sprite; // get sprite from player
+	sprite = ghost->sprite;
 	if (sprite != oldghost.sprite)
 	{
 		oldghost.sprite = sprite;
@@ -3957,11 +4049,15 @@ void G_ConsGhostTic(void)
 {
 	UINT8 ziptic;
 	UINT16 px,py,pz,gx,gy,gz;
+	mobj_t *testmo;
+	boolean nightsfail = false;
 
 	if (!demo_p || !demo_start)
 		return;
 	if (!(demoflags & DF_GHOST))
 		return; // No ghost data to use.
+
+	testmo = players[0].mo;
 
 	// Grab ghost data.
 	ziptic = READUINT8(demo_p);
@@ -3988,6 +4084,12 @@ void G_ConsGhostTic(void)
 		demo_p++;
 	if (ziptic & GZT_SPRITE)
 		demo_p++;
+	if(ziptic & GZT_NIGHTS) {
+		if (!testmo->player || !(testmo->player->pflags & PF_NIGHTSMODE) || !testmo->tracer)
+			nightsfail = true;
+		else
+			testmo = testmo->tracer;
+	}
 
 	if (ziptic & GZT_EXTRA)
 	{ // But wait, there's more!
@@ -4029,7 +4131,12 @@ void G_ConsGhostTic(void)
 					mobj = NULL; // wasn't this one, keep searching.
 				}
 				if (mobj && mobj->health != health) // Wasn't damaged?! This is desync! Fix it!
+				{
+					if (demosynced)
+						CONS_Alert(CONS_WARNING, M_GetText("Demo playback has desynced!\n"));
+					demosynced = false;
 					P_DamageMobj(mobj, players[0].mo, players[0].mo, 1);
+				}
 			}
 		}
 		if (ziptic & EZT_SPRITE)
@@ -4037,24 +4144,24 @@ void G_ConsGhostTic(void)
 	}
 
 	// Re-synchronise
-	px = players[0].mo->x>>FRACBITS;
-	py = players[0].mo->y>>FRACBITS;
-	pz = players[0].mo->z>>FRACBITS;
+	px = testmo->x>>FRACBITS;
+	py = testmo->y>>FRACBITS;
+	pz = testmo->z>>FRACBITS;
 	gx = oldghost.x>>FRACBITS;
 	gy = oldghost.y>>FRACBITS;
 	gz = oldghost.z>>FRACBITS;
 
-	if (px != gx || py != gy || pz != gz)
+	if (nightsfail || px != gx || py != gy || pz != gz)
 	{
 		if (demosynced)
 			CONS_Alert(CONS_WARNING, M_GetText("Demo playback has desynced!\n"));
 		demosynced = false;
 
-		P_UnsetThingPosition(players[0].mo);
-		players[0].mo->x = oldghost.x;
-		players[0].mo->y = oldghost.y;
-		P_SetThingPosition(players[0].mo);
-		players[0].mo->z = oldghost.z;
+		P_UnsetThingPosition(testmo);
+		testmo->x = oldghost.x;
+		testmo->y = oldghost.y;
+		P_SetThingPosition(testmo);
+		testmo->z = oldghost.z;
 	}
 
 	if (*demo_p == DEMOMARKER)
@@ -4272,7 +4379,7 @@ void G_ReadMetalTic(mobj_t *metal)
 	UINT16 speed;
 	UINT8 statetype;
 
-	if (!metal_p || !metal_start)
+	if (!metal_p)
 		return;
 	ziptic = READUINT8(metal_p);
 
@@ -4517,11 +4624,7 @@ void G_BeginRecording(void)
 	memset(name,0,sizeof(name));
 
 	demo_p = demobuffer;
-	demoflags = DF_GHOST;
-	if (modeattacking == ATTACKING_RECORD)
-		demoflags |= DF_RECORDATTACK;
-	else if (modeattacking == ATTACKING_NIGHTS)
-		demoflags |= DF_NIGHTSATTACK;
+	demoflags = DF_GHOST|(modeattacking<<DF_ATTACKSHIFT);
 
 	// Setup header.
 	M_Memcpy(demo_p, DEMOHEADER, 12); demo_p += 12;
@@ -4651,12 +4754,21 @@ void G_BeginMetal(void)
 
 void G_SetDemoTime(UINT32 ptime, UINT32 pscore, UINT16 prings)
 {
-	if (!(demorecording && demoflags & DF_RECORDATTACK && demotime_p))
-		return; // Can't record a time. :(
-	WRITEUINT32(demotime_p, ptime);
-	WRITEUINT32(demotime_p, pscore);
-	WRITEUINT16(demotime_p, prings);
-	demotime_p = NULL;
+	if (!demorecording || !demotime_p)
+		return;
+	if (demoflags & DF_RECORDATTACK)
+	{
+		WRITEUINT32(demotime_p, ptime);
+		WRITEUINT32(demotime_p, pscore);
+		WRITEUINT16(demotime_p, prings);
+		demotime_p = NULL;
+	}
+	else if (demoflags & DF_NIGHTSATTACK)
+	{
+		WRITEUINT32(demotime_p, ptime);
+		WRITEUINT32(demotime_p, pscore);
+		demotime_p = NULL;
+	}
 }
 
 // Returns bitfield:
@@ -4672,6 +4784,7 @@ UINT8 G_CmpDemoTime(char *oldname, char *newname)
 	size_t bufsize ATTRUNUSED;
 	UINT8 c;
 	UINT16 s ATTRUNUSED;
+	UINT8 aflags = 0;
 
 	// load the new file
 	FIL_DefaultExtension(newname, ".lmp");
@@ -4694,10 +4807,23 @@ UINT8 G_CmpDemoTime(char *oldname, char *newname)
 	p += 2; // gamemap
 	p += 16; // map md5
 	flags = READUINT8(p); // demoflags
-	I_Assert(flags & DF_RECORDATTACK);
-	newtime = READUINT32(p);
-	newscore = READUINT32(p);
-	newrings = READUINT16(p);
+
+	aflags = flags & (DF_RECORDATTACK|DF_NIGHTSATTACK);
+	I_Assert(aflags);
+	if (flags & DF_RECORDATTACK)
+	{
+		newtime = READUINT32(p);
+		newscore = READUINT32(p);
+		newrings = READUINT16(p);
+	}
+	else if (flags & DF_NIGHTSATTACK)
+	{
+		newtime = READUINT32(p);
+		newscore = READUINT32(p);
+		newrings = 0;
+	}
+	else // appease compiler
+		return 0;
 
 	Z_Free(buffer);
 
@@ -4745,15 +4871,26 @@ UINT8 G_CmpDemoTime(char *oldname, char *newname)
 		p += 2; // gamemap
 	p += 16; // mapmd5
 	flags = READUINT8(p);
-	if (!(flags & DF_RECORDATTACK))
+	if (!(flags & aflags))
 	{
-		CONS_Alert(CONS_NOTICE, M_GetText("File '%s' not from timeattack. It will be overwritten.\n"), oldname);
+		CONS_Alert(CONS_NOTICE, M_GetText("File '%s' not from same game mode. It will be overwritten.\n"), oldname);
 		Z_Free(buffer);
 		return UINT8_MAX;
 	}
-	oldtime = READUINT32(p);
-	oldscore = READUINT32(p);
-	oldrings = READUINT16(p);
+	if (flags & DF_RECORDATTACK)
+	{
+		oldtime = READUINT32(p);
+		oldscore = READUINT32(p);
+		oldrings = READUINT16(p);
+	}
+	else if (flags & DF_NIGHTSATTACK)
+	{
+		oldtime = READUINT32(p);
+		oldscore = READUINT32(p);
+		oldrings = 0;
+	}
+	else // appease compiler
+		return UINT8_MAX;
 
 	Z_Free(buffer);
 
@@ -4967,7 +5104,6 @@ void G_DoPlayDemo(char *defdemoname)
 
 	// didn't start recording right away.
 	demo_start = false;
-	metal_start = false;
 
 #ifdef HAVE_BLUA
 	LUAh_MapChange();
@@ -5013,7 +5149,6 @@ void G_DoPlayDemo(char *defdemoname)
 	players[0].jumpfactor = jumpfactor;
 
 	demo_start = true;
-	metal_start = true;
 }
 
 void G_AddGhost(char *defdemoname)
@@ -5433,7 +5568,7 @@ boolean G_CheckDemoStatus(void)
 			I_Quit();
 		G_StopDemo();
 
-		if (modeattacking == ATTACKING_RECORD)
+		if (modeattacking)
 			M_EndModeAttackRun();
 		else
 			D_AdvanceDemo();

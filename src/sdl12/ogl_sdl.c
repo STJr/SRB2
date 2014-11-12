@@ -237,6 +237,8 @@ boolean OglSdlSurface(INT32 w, INT32 h, boolean isFullscreen)
 #endif
 		maximumAnisotropy = 0;
 
+	SetupGLFunc13();
+
 	granisotropicmode_cons_t[1].value = maximumAnisotropy;
 
 	SetModelView(w, h);

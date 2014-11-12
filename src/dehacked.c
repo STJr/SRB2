@@ -7349,6 +7349,7 @@ static const char *const PLAYERFLAG_LIST[] = {
 
 	/*** misc ***/
 	"FORCESTRAFE", // Translate turn inputs into strafe inputs
+	"ANALOGMODE", // Analog mode?
 
 	NULL // stop loop here.
 };
@@ -8770,12 +8771,7 @@ static inline int lib_getenum(lua_State *L)
 		lua_pushinteger(L, mapmusic);
 		return 1;
 	} else if (fastcmp(word,"server")) {
-		if (dedicated || !playeringame[serverplayer])
-			return 0;
-		LUA_PushUserdata(L, &players[serverplayer], META_PLAYER);
-		return 1;
-	} else if (fastcmp(word,"dedicatedserver")) {
-		if (!dedicated)
+		if (!playeringame[serverplayer])
 			return 0;
 		LUA_PushUserdata(L, &players[serverplayer], META_PLAYER);
 		return 1;

@@ -99,6 +99,9 @@ typedef struct polyobj_s
 
 	UINT8 isBad;         // a bad polyobject: should not be rendered/manipulated
 	INT32 translucency; // index to translucency tables
+
+	// these are saved for netgames, so do not let Lua touch these!
+	INT32 spawnflags; // Flags the polyobject originally spawned with
 } polyobj_t;
 
 //
@@ -122,6 +125,7 @@ typedef struct polyrotate_s
 	INT32 polyObjNum;    // numeric id of polyobject (avoid C pointers here)
 	INT32 speed;         // speed of movement per frame
 	INT32 distance;      // distance to move
+	UINT8 turnobjs;      // turn objects? 0=no, 1=everything but players, 2=everything
 } polyrotate_t;
 
 typedef struct polymove_s
@@ -189,6 +193,17 @@ typedef struct polyswingdoor_s
 	UINT8 closing;        // if true, is closing
 } polyswingdoor_t;
 
+typedef struct polydisplace_s
+{
+	thinker_t thinker; // must be first
+
+	INT32 polyObjNum;
+	struct sector_s *controlSector;
+	fixed_t dx;
+	fixed_t dy;
+	fixed_t oldHeights;
+} polydisplace_t;
+
 //
 // Line Activation Data Structures
 //
@@ -199,7 +214,8 @@ typedef struct polyrotdata_s
 	INT32 direction;    // direction of rotation
 	INT32 speed;        // angular speed
 	INT32 distance;     // distance to move
-	UINT8 overRide;      // if true, will override any action on the object
+	UINT8 turnobjs;     // rotate objects being carried?
+	UINT8 overRide;     // if true, will override any action on the object
 } polyrotdata_t;
 
 typedef struct polymovedata_s
@@ -208,7 +224,7 @@ typedef struct polymovedata_s
 	fixed_t distance;   // distance to move
 	fixed_t speed;      // linear speed
 	angle_t angle;      // angle of movement
-	UINT8 overRide;   // if true, will override any action on the object
+	UINT8 overRide;     // if true, will override any action on the object
 } polymovedata_t;
 
 typedef struct polywaypointdata_s
@@ -239,6 +255,14 @@ typedef struct polydoordata_s
 	INT32 delay;          // delay time after opening
 } polydoordata_t;
 
+typedef struct polydisplacedata_s
+{
+	INT32 polyObjNum;
+	struct sector_s *controlSector;
+	fixed_t dx;
+	fixed_t dy;
+} polydisplacedata_t;
+
 //
 // Functions
 //
@@ -258,12 +282,14 @@ void T_PolyObjMove  (polymove_t *);
 void T_PolyObjWaypoint (polywaypoint_t *);
 void T_PolyDoorSlide(polyslidedoor_t *);
 void T_PolyDoorSwing(polyswingdoor_t *);
+void T_PolyObjDisplace  (polydisplace_t *);
 void T_PolyObjFlag  (polymove_t *);
 
 INT32 EV_DoPolyDoor(polydoordata_t *);
 INT32 EV_DoPolyObjMove(polymovedata_t *);
 INT32 EV_DoPolyObjWaypoint(polywaypointdata_t *);
 INT32 EV_DoPolyObjRotate(polyrotdata_t *);
+INT32 EV_DoPolyObjDisplace(polydisplacedata_t *);
 INT32 EV_DoPolyObjFlag(struct line_s *);
 
 

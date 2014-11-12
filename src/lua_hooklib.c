@@ -873,7 +873,7 @@ boolean LUAh_BotAI(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 }
 
 // Hook for linedef executors
-boolean LUAh_LinedefExecute(line_t *line, mobj_t *mo)
+boolean LUAh_LinedefExecute(line_t *line, mobj_t *mo, sector_t *sector)
 {
 	if (!gL || !(hooksAvailable[hook_LinedefExecute/8] & (1<<(hook_LinedefExecute%8))))
 		return false;
@@ -898,7 +898,8 @@ boolean LUAh_LinedefExecute(line_t *line, mobj_t *mo)
 
 	LUA_PushUserdata(gL, line, META_LINE);
 	LUA_PushUserdata(gL, mo, META_MOBJ);
-	LUA_Call(gL, 2); // pops hook function, line, mo
+	LUA_PushUserdata(gL, sector, META_SECTOR);
+	LUA_Call(gL, 3); // pops hook function, line, mo, sector
 
 	lua_pop(gL, -1);
 	lua_gc(gL, LUA_GCSTEP, 1);

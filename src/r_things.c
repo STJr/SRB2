@@ -489,6 +489,7 @@ void R_DelSpriteDefs(UINT16 wadnum)
 // GAME FUNCTIONS
 //
 static UINT32 visspritecount;
+static UINT32 clippedvissprites;
 static vissprite_t *visspritechunks[MAXVISSPRITES >> VISSPRITECHUNKBITS] = {NULL};
 
 
@@ -546,7 +547,7 @@ void R_InitSprites(void)
 //
 void R_ClearSprites(void)
 {
-	visspritecount = 0;
+	visspritecount = clippedvissprites = 0;
 }
 
 static inline void R_ResetVisSpriteChunks(void)
@@ -608,8 +609,7 @@ void R_DrawMaskedColumn(column_t *column)
 			topdelta += prevdelta;
 		prevdelta = topdelta;
 		topscreen = sprtopscreen + spryscale*topdelta;
-		bottomscreen = sprbotscreen == INT32_MAX ? topscreen + spryscale*column->length
-		                                      : sprbotscreen + spryscale*column->length;
+		bottomscreen = topscreen + spryscale*column->length;
 
 		dc_yl = (topscreen+FRACUNIT-1)>>FRACBITS;
 		dc_yh = (bottomscreen-1)>>FRACBITS;
@@ -1157,6 +1157,16 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (x2 < 0)
 		return;
 
+	// PORTAL SPRITE CLIPPING
+	if (portalrender)
+	{
+		if (x2 < portalclipstart || x1 > portalclipend)
+			return;
+
+		if (P_PointOnLineSide(thing->x, thing->y, portalclipline) != 0)
+			return;
+	}
+
 	//SoM: 3/17/2000: Disregard sprites that are out of view..
 	if (thing->eflags & MFE_VERTICALFLIP)
 	{
@@ -1174,29 +1184,8 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	if (thing->subsector->sector->cullheight)
 	{
-		fixed_t cullplane = thing->subsector->sector->cullheight->frontsector->floorheight;
-		if (thing->subsector->sector->cullheight->flags & ML_NOCLIMB) // Group culling
-		{
-			// Make sure this is part of the same group
-			if (viewsector->cullheight && viewsector->cullheight->frontsector
-				== thing->subsector->sector->cullheight->frontsector)
-			{
-				// OK, we can cull
-				if (viewz > cullplane && gzt < cullplane) // Cull if below plane
-					return;
-
-				if (gz > cullplane && viewz <= cullplane) // Cull if above plane
-					return;
-			}
-		}
-		else // Quick culling
-		{
-			if (viewz > cullplane && gzt < cullplane) // Cull if below plane
-				return;
-
-			if (gz > cullplane && viewz <= cullplane) // Cull if above plane
-				return;
-		}
+		if (R_DoCulling(thing->subsector->sector->cullheight, viewsector->cullheight, viewz, gz, gzt))
+			return;
 	}
 
 	if (thing->subsector->sector->numlights)
@@ -1258,6 +1247,16 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	vis->x1 = x1 < 0 ? 0 : x1;
 	vis->x2 = x2 >= viewwidth ? viewwidth-1 : x2;
+
+	// PORTAL SEMI-CLIPPING
+	if (portalrender)
+	{
+		if (vis->x1 < portalclipstart)
+			vis->x1 = portalclipstart;
+		if (vis->x2 > portalclipend)
+			vis->x2 = portalclipend;
+	}
+
 	vis->xscale = xscale; //SoM: 4/17/2000
 	vis->sector = thing->subsector->sector;
 	vis->szt = (INT16)((centeryfrac - FixedMul(vis->gzt - viewz, yscale))>>FRACBITS);
@@ -1350,7 +1349,7 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	fixed_t iscale;
 
 	//SoM: 3/17/2000
-	fixed_t gzt;
+	fixed_t gz ,gzt;
 
 	// transform the origin point
 	tr_x = thing->x - viewx;
@@ -1417,33 +1416,24 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	if (x2 < 0)
 		return;
 
+	// PORTAL SPRITE CLIPPING
+	if (portalrender)
+	{
+		if (x2 < portalclipstart || x1 > portalclipend)
+			return;
+
+		if (P_PointOnLineSide(thing->x, thing->y, portalclipline) != 0)
+			return;
+	}
+
 	//SoM: 3/17/2000: Disregard sprites that are out of view..
 	gzt = thing->z + spritecachedinfo[lump].topoffset;
+	gz = gzt - spritecachedinfo[lump].height;
 
 	if (thing->subsector->sector->cullheight)
 	{
-		if (thing->subsector->sector->cullheight->flags & ML_NOCLIMB) // Group culling
-		{
-			// Make sure this is part of the same group
-			if (viewsector->cullheight && viewsector->cullheight->frontsector
-				== thing->subsector->sector->cullheight->frontsector)
-			{
-				// OK, we can cull
-				if (viewz > thing->subsector->sector->cullheight->frontsector->floorheight
-					&& gzt < thing->subsector->sector->cullheight->frontsector->floorheight) // Cull if below plane
-					return;
-				else if (gzt - spritecachedinfo[lump].height > thing->subsector->sector->cullheight->frontsector->floorheight) // Cull if above plane
-					return;
-			}
-		}
-		else // Quick culling
-		{
-			if (viewz > thing->subsector->sector->cullheight->frontsector->floorheight
-				&& gzt < thing->subsector->sector->cullheight->frontsector->floorheight) // Cull if below plane
-				return;
-			else if (gzt - spritecachedinfo[lump].height > thing->subsector->sector->cullheight->frontsector->floorheight) // Cull if above plane
-				return;
-		}
+		if (R_DoCulling(thing->subsector->sector->cullheight, viewsector->cullheight, viewz, gz, gzt))
+			return;
 	}
 
 	// quick check for possible overflows
@@ -1454,13 +1444,12 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 		return;
 	}
 
-
 	// store information in a vissprite
 	vis = R_NewVisSprite();
 	vis->scale = yscale; //<<detailshift;
 	vis->gx = thing->x;
 	vis->gy = thing->y;
-	vis->gz = gzt - spritecachedinfo[lump].height;
+	vis->gz = gz;
 	vis->gzt = gzt;
 	vis->thingheight = 4*FRACUNIT;
 	vis->pz = thing->z;
@@ -1469,6 +1458,16 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 
 	vis->x1 = x1 < 0 ? 0 : x1;
 	vis->x2 = x2 >= viewwidth ? viewwidth-1 : x2;
+
+	// PORTAL SEMI-CLIPPING
+	if (portalrender)
+	{
+		if (vis->x1 < portalclipstart)
+			vis->x1 = portalclipstart;
+		if (vis->x2 > portalclipend)
+			vis->x2 = portalclipend;
+	}
+
 	vis->xscale = xscale; //SoM: 4/17/2000
 	vis->sector = thing->subsector->sector;
 	vis->szt = (INT16)((centeryfrac - FixedMul(vis->gzt - viewz, yscale))>>FRACBITS);
@@ -1830,6 +1829,20 @@ static void R_CreateDrawNodes(void)
 			}
 			else if (r2->seg)
 			{
+#ifdef POLYOBJECTS_PLANES
+				if (r2->seg->curline->polyseg && rover->mobj && P_MobjInsidePolyobj(r2->seg->curline->polyseg, rover->mobj)) {
+					// Determine if we need to sort in front of the polyobj, based on the planes. This fixes the issue where
+					// polyobject planes render above the object standing on them. (A bit hacky... but it works.) -Red
+					mobj_t *mo = rover->mobj;
+					sector_t *po = r2->seg->curline->backsector;
+
+					if (po->ceilingheight < viewz && mo->z+mo->height > po->ceilingheight)
+						continue;
+
+					if (po->floorheight > viewz && mo->z < po->floorheight)
+						continue;
+				}
+#endif
 				if (rover->x1 > r2->seg->x2 || rover->x2 < r2->seg->x1)
 					continue;
 
@@ -1937,297 +1950,201 @@ void R_InitDrawNodes(void)
 //        don't draw the part of sprites hidden under the console
 static void R_DrawSprite(vissprite_t *spr)
 {
-	drawseg_t *ds;
-	INT16      clipbot[MAXVIDWIDTH];
-	INT16      cliptop[MAXVIDWIDTH];
-	INT32        x;
-	INT32        r1;
-	INT32        r2;
-	fixed_t    scale;
-	fixed_t    lowscale;
-	INT32        silhouette;
-
-	memset(clipbot,0x00,sizeof (clipbot));
-	memset(cliptop,0x00,sizeof (cliptop));
-	for (x = spr->x1; x <= spr->x2; x++)
-		clipbot[x] = cliptop[x] = -2;
-
-	// Scan drawsegs from end to start for obscuring segs.
-	// The first drawseg that has a greater scale
-	//  is the clip seg.
-	//SoM: 4/8/2000:
-	// Pointer check was originally nonportable
-	// and buggy, by going past LEFT end of array:
-
-	//    for (ds = ds_p-1; ds >= drawsegs; ds--)    old buggy code
-	for (ds = ds_p; ds-- > drawsegs ;)
-	{
-		// determine if the drawseg obscures the sprite
-		if (ds->x1 > spr->x2 ||
-		    ds->x2 < spr->x1 ||
-		    (!ds->silhouette
-		     && !ds->maskedtexturecol))
-		{
-			// does not cover sprite
-			continue;
-		}
-
-		r1 = ds->x1 < spr->x1 ? spr->x1 : ds->x1;
-		r2 = ds->x2 > spr->x2 ? spr->x2 : ds->x2;
-
-		if (ds->scale1 > ds->scale2)
-		{
-			lowscale = ds->scale2;
-			scale = ds->scale1;
-		}
-		else
-		{
-			lowscale = ds->scale1;
-			scale = ds->scale2;
-		}
-
-		if (scale < spr->scale ||
-		    (lowscale < spr->scale &&
-		     !R_PointOnSegSide (spr->gx, spr->gy, ds->curline)))
-		{
-			// masked mid texture?
-			/*if (ds->maskedtexturecol)
-				R_RenderMaskedSegRange (ds, r1, r2);*/
-			// seg is behind sprite
-			continue;
-		}
-
-		// clip this piece of the sprite
-		silhouette = ds->silhouette;
-
-		if (spr->gz >= ds->bsilheight)
-			silhouette &= ~SIL_BOTTOM;
-
-		if (spr->gzt <= ds->tsilheight)
-			silhouette &= ~SIL_TOP;
-
-		if (silhouette == 1)
-		{
-			// bottom sil
-			for (x = r1; x <= r2; x++)
-				if (clipbot[x] == -2)
-					clipbot[x] = ds->sprbottomclip[x];
-		}
-		else if (silhouette == 2)
-		{
-			// top sil
-			for (x = r1; x <= r2; x++)
-				if (cliptop[x] == -2)
-					cliptop[x] = ds->sprtopclip[x];
-		}
-		else if (silhouette == 3)
-		{
-			// both
-			for (x = r1; x <= r2; x++)
-			{
-				if (clipbot[x] == -2)
-					clipbot[x] = ds->sprbottomclip[x];
-				if (cliptop[x] == -2)
-					cliptop[x] = ds->sprtopclip[x];
-			}
-		}
-	}
-	//SoM: 3/17/2000: Clip sprites in water.
-	if (spr->heightsec != -1)  // only things in specially marked sectors
-	{
-		fixed_t mh, h;
-		INT32 phs = viewplayer->mo->subsector->sector->heightsec;
-		if ((mh = sectors[spr->heightsec].floorheight) > spr->gz &&
-		    (h = centeryfrac - FixedMul(mh -= viewz, spr->scale)) >= 0 &&
-		    (h >>= FRACBITS) < viewheight)
-		{
-			if (mh <= 0 || (phs != -1 && viewz > sectors[phs].floorheight))
-			{                          // clip bottom
-				for (x = spr->x1; x <= spr->x2; x++)
-					if (clipbot[x] == -2 || h < clipbot[x])
-						clipbot[x] = (INT16)h;
-			}
-			else                        // clip top
-			{
-				for (x = spr->x1; x <= spr->x2; x++)
-					if (cliptop[x] == -2 || h > cliptop[x])
-						cliptop[x] = (INT16)h;
-			}
-		}
-
-		if ((mh = sectors[spr->heightsec].ceilingheight) < spr->gzt &&
-		    (h = centeryfrac - FixedMul(mh-viewz, spr->scale)) >= 0 &&
-		    (h >>= FRACBITS) < viewheight)
-		{
-			if (phs != -1 && viewz >= sectors[phs].ceilingheight)
-			{                         // clip bottom
-				for (x = spr->x1; x <= spr->x2; x++)
-					if (clipbot[x] == -2 || h < clipbot[x])
-						clipbot[x] = (INT16)h;
-			}
-			else                       // clip top
-			{
-				for (x = spr->x1; x <= spr->x2; x++)
-					if (cliptop[x] == -2 || h > cliptop[x])
-						cliptop[x] = (INT16)h;
-			}
-		}
-	}
-	if (spr->cut & SC_TOP && spr->cut & SC_BOTTOM)
-	{
-		for (x = spr->x1; x <= spr->x2; x++)
-		{
-			if (cliptop[x] == -2 || spr->szt > cliptop[x])
-				cliptop[x] = spr->szt;
-
-			if (clipbot[x] == -2 || spr->sz < clipbot[x])
-				clipbot[x] = spr->sz;
-		}
-	}
-	else if (spr->cut & SC_TOP)
-	{
-		for (x = spr->x1; x <= spr->x2; x++)
-		{
-			if (cliptop[x] == -2 || spr->szt > cliptop[x])
-				cliptop[x] = spr->szt;
-		}
-	}
-	else if (spr->cut & SC_BOTTOM)
-	{
-		for (x = spr->x1; x <= spr->x2; x++)
-		{
-			if (clipbot[x] == -2 || spr->sz < clipbot[x])
-				clipbot[x] = spr->sz;
-		}
-	}
-
-	// all clipping has been performed, so draw the sprite
-
-	// check for unclipped columns
-	for (x = spr->x1; x <= spr->x2; x++)
-	{
-		if (clipbot[x] == -2)
-			clipbot[x] = (INT16)viewheight;
-
-		if (cliptop[x] == -2)
-			//Fab : 26-04-98: was -1, now clips against console bottom
-		cliptop[x] = (INT16)con_clipviewtop;
-	}
-
-	mfloorclip = clipbot;
-	mceilingclip = cliptop;
+	mfloorclip = spr->clipbot;
+	mceilingclip = spr->cliptop;
 	R_DrawVisSprite(spr);
 }
 
 // Special drawer for precipitation sprites Tails 08-18-2002
 static void R_DrawPrecipitationSprite(vissprite_t *spr)
 {
-	drawseg_t *ds;
-	INT16      clipbot[MAXVIDWIDTH];
-	INT16      cliptop[MAXVIDWIDTH];
-	INT32        x;
-	INT32        r1;
-	INT32        r2;
-	fixed_t    scale;
-	fixed_t    lowscale;
-	INT32        silhouette;
+	mfloorclip = spr->clipbot;
+	mceilingclip = spr->cliptop;
+	R_DrawPrecipitationVisSprite(spr);
+}
 
-	memset(clipbot,0x00,sizeof (clipbot));
-	memset(cliptop,0x00,sizeof (cliptop));
-	for (x = spr->x1; x <= spr->x2; x++)
-		clipbot[x] = cliptop[x] = -2;
-
-	// Scan drawsegs from end to start for obscuring segs.
-	// The first drawseg that has a greater scale
-	//  is the clip seg.
-	//SoM: 4/8/2000:
-	// Pointer check was originally nonportable
-	// and buggy, by going past LEFT end of array:
-
-	//    for (ds = ds_p-1; ds >= drawsegs; ds--)    old buggy code
-	for (ds = ds_p; ds-- > drawsegs ;)
+// R_ClipSprites
+// Clips vissprites without drawing, so that portals can work. -Red
+void R_ClipSprites(void)
+{
+	vissprite_t *spr;
+	for (;clippedvissprites < visspritecount; clippedvissprites++)
 	{
-		// determine if the drawseg obscures the sprite
-		if (ds->x1 > spr->x2 ||
-		    ds->x2 < spr->x1 ||
-		    (!ds->silhouette &&
-		     !ds->maskedtexturecol))
-		{
-			// does not cover sprite
-			continue;
-		}
+		drawseg_t *ds;
+		INT32		x;
+		INT32		r1;
+		INT32		r2;
+		fixed_t		scale;
+		fixed_t		lowscale;
+		INT32		silhouette;
 
-		r1 = ds->x1 < spr->x1 ? spr->x1 : ds->x1;
-		r2 = ds->x2 > spr->x2 ? spr->x2 : ds->x2;
+		spr = R_GetVisSprite(clippedvissprites);
 
-		if (ds->scale1 > ds->scale2)
-		{
-			lowscale = ds->scale2;
-			scale = ds->scale1;
-		}
-		else
-		{
-			lowscale = ds->scale1;
-			scale = ds->scale2;
-		}
+		for (x = spr->x1; x <= spr->x2; x++)
+			spr->clipbot[x] = spr->cliptop[x] = -2;
 
-		if (scale < spr->scale ||
-		    (lowscale < spr->scale &&
-		     !R_PointOnSegSide (spr->gx, spr->gy, ds->curline)))
-		{
-			// masked mid texture?
-			/*if (ds->maskedtexturecol)
-				R_RenderMaskedSegRange(ds, r1, r2);*/
-			// seg is behind sprite
-			continue;
-		}
+		// Scan drawsegs from end to start for obscuring segs.
+		// The first drawseg that has a greater scale
+		//  is the clip seg.
+		//SoM: 4/8/2000:
+		// Pointer check was originally nonportable
+		// and buggy, by going past LEFT end of array:
 
-		// clip this piece of the sprite
-		silhouette = ds->silhouette;
-
-		if (silhouette == 1)
+		//    for (ds = ds_p-1; ds >= drawsegs; ds--)    old buggy code
+		for (ds = ds_p; ds-- > drawsegs ;)
 		{
-			// bottom sil
-			for (x = r1; x <= r2; x++)
-				if (clipbot[x] == -2)
-					clipbot[x] = ds->sprbottomclip[x];
-		}
-		else if (silhouette == 2)
-		{
-			// top sil
-			for (x = r1; x <= r2; x++)
-				if (cliptop[x] == -2)
-					cliptop[x] = ds->sprtopclip[x];
-		}
-		else if (silhouette == 3)
-		{
-			// both
-			for (x = r1; x <= r2; x++)
+			// determine if the drawseg obscures the sprite
+			if (ds->x1 > spr->x2 ||
+			    ds->x2 < spr->x1 ||
+			    (!ds->silhouette
+			     && !ds->maskedtexturecol))
 			{
-				if (clipbot[x] == -2)
-					clipbot[x] = ds->sprbottomclip[x];
-				if (cliptop[x] == -2)
-					cliptop[x] = ds->sprtopclip[x];
+				// does not cover sprite
+				continue;
+			}
+
+			r1 = ds->x1 < spr->x1 ? spr->x1 : ds->x1;
+			r2 = ds->x2 > spr->x2 ? spr->x2 : ds->x2;
+
+			if (ds->scale1 > ds->scale2)
+			{
+				lowscale = ds->scale2;
+				scale = ds->scale1;
+			}
+			else
+			{
+				lowscale = ds->scale1;
+				scale = ds->scale2;
+			}
+
+			if (scale < spr->scale ||
+			    (lowscale < spr->scale &&
+			     !R_PointOnSegSide (spr->gx, spr->gy, ds->curline)))
+			{
+				// masked mid texture?
+				/*if (ds->maskedtexturecol)
+					R_RenderMaskedSegRange (ds, r1, r2);*/
+				// seg is behind sprite
+				continue;
+			}
+
+			// clip this piece of the sprite
+			silhouette = ds->silhouette;
+
+			if (spr->gz >= ds->bsilheight)
+				silhouette &= ~SIL_BOTTOM;
+
+			if (spr->gzt <= ds->tsilheight)
+				silhouette &= ~SIL_TOP;
+
+			if (silhouette == 1)
+			{
+				// bottom sil
+				for (x = r1; x <= r2; x++)
+					if (spr->clipbot[x] == -2)
+						spr->clipbot[x] = ds->sprbottomclip[x];
+			}
+			else if (silhouette == 2)
+			{
+				// top sil
+				for (x = r1; x <= r2; x++)
+					if (spr->cliptop[x] == -2)
+						spr->cliptop[x] = ds->sprtopclip[x];
+			}
+			else if (silhouette == 3)
+			{
+				// both
+				for (x = r1; x <= r2; x++)
+				{
+					if (spr->clipbot[x] == -2)
+						spr->clipbot[x] = ds->sprbottomclip[x];
+					if (spr->cliptop[x] == -2)
+						spr->cliptop[x] = ds->sprtopclip[x];
+				}
 			}
 		}
+		//SoM: 3/17/2000: Clip sprites in water.
+		if (spr->heightsec != -1)  // only things in specially marked sectors
+		{
+			fixed_t mh, h;
+			INT32 phs = viewplayer->mo->subsector->sector->heightsec;
+			if ((mh = sectors[spr->heightsec].floorheight) > spr->gz &&
+				(h = centeryfrac - FixedMul(mh -= viewz, spr->scale)) >= 0 &&
+				(h >>= FRACBITS) < viewheight)
+			{
+				if (mh <= 0 || (phs != -1 && viewz > sectors[phs].floorheight))
+				{                          // clip bottom
+					for (x = spr->x1; x <= spr->x2; x++)
+						if (spr->clipbot[x] == -2 || h < spr->clipbot[x])
+							spr->clipbot[x] = (INT16)h;
+				}
+				else						// clip top
+				{
+					for (x = spr->x1; x <= spr->x2; x++)
+						if (spr->cliptop[x] == -2 || h > spr->cliptop[x])
+							spr->cliptop[x] = (INT16)h;
+				}
+			}
+
+			if ((mh = sectors[spr->heightsec].ceilingheight) < spr->gzt &&
+			    (h = centeryfrac - FixedMul(mh-viewz, spr->scale)) >= 0 &&
+			    (h >>= FRACBITS) < viewheight)
+			{
+				if (phs != -1 && viewz >= sectors[phs].ceilingheight)
+				{                         // clip bottom
+					for (x = spr->x1; x <= spr->x2; x++)
+						if (spr->clipbot[x] == -2 || h < spr->clipbot[x])
+							spr->clipbot[x] = (INT16)h;
+				}
+				else                       // clip top
+				{
+					for (x = spr->x1; x <= spr->x2; x++)
+						if (spr->cliptop[x] == -2 || h > spr->cliptop[x])
+							spr->cliptop[x] = (INT16)h;
+				}
+			}
+		}
+		if (spr->cut & SC_TOP && spr->cut & SC_BOTTOM)
+		{
+			for (x = spr->x1; x <= spr->x2; x++)
+			{
+				if (spr->cliptop[x] == -2 || spr->szt > spr->cliptop[x])
+					spr->cliptop[x] = spr->szt;
+
+				if (spr->clipbot[x] == -2 || spr->sz < spr->clipbot[x])
+					spr->clipbot[x] = spr->sz;
+			}
+		}
+		else if (spr->cut & SC_TOP)
+		{
+			for (x = spr->x1; x <= spr->x2; x++)
+			{
+				if (spr->cliptop[x] == -2 || spr->szt > spr->cliptop[x])
+					spr->cliptop[x] = spr->szt;
+			}
+		}
+		else if (spr->cut & SC_BOTTOM)
+		{
+			for (x = spr->x1; x <= spr->x2; x++)
+			{
+				if (spr->clipbot[x] == -2 || spr->sz < spr->clipbot[x])
+					spr->clipbot[x] = spr->sz;
+			}
+		}
+
+		// all clipping has been performed, so store the values - what, did you think we were drawing them NOW?
+
+		// check for unclipped columns
+		for (x = spr->x1; x <= spr->x2; x++)
+		{
+			if (spr->clipbot[x] == -2)
+				spr->clipbot[x] = (INT16)viewheight;
+
+			if (spr->cliptop[x] == -2)
+				//Fab : 26-04-98: was -1, now clips against console bottom
+				spr->cliptop[x] = (INT16)con_clipviewtop;
+		}
 	}
-
-	// all clipping has been performed, so draw the sprite
-
-	// check for unclipped columns
-	for (x = spr->x1; x <= spr->x2; x++)
-	{
-		if (clipbot[x] == -2)
-			clipbot[x] = (INT16)viewheight;
-
-		if (cliptop[x] == -2)
-			//Fab : 26-04-98: was -1, now clips against console bottom
-			cliptop[x] = (INT16)con_clipviewtop;
-	}
-
-	mfloorclip = clipbot;
-	mceilingclip = cliptop;
-	R_DrawPrecipitationVisSprite(spr);
 }
 
 //
