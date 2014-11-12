@@ -642,7 +642,9 @@ static void P_LoadSectors(lumpnum_t lumpnum)
 		ss->extra_colormap = NULL;
 
 		ss->floor_xoffs = ss->ceiling_xoffs = ss->floor_yoffs = ss->ceiling_yoffs = 0;
+		ss->spawn_flr_xoffs = ss->spawn_ceil_xoffs = ss->spawn_flr_yoffs = ss->spawn_ceil_yoffs = 0;
 		ss->floorpic_angle = ss->ceilingpic_angle = 0;
+		ss->spawn_flrpic_angle = ss->spawn_ceilpic_angle = 0;
 		ss->bottommap = ss->midmap = ss->topmap = -1;
 		ss->gravity = NULL;
 		ss->cullheight = NULL;
@@ -1139,6 +1141,7 @@ static void P_LoadLineDefs(lumpnum_t lumpnum)
 		ld->frontsector = ld->backsector = NULL;
 		ld->validcount = 0;
 		ld->firsttag = ld->nexttag = -1;
+		ld->callcount = 0;
 		// killough 11/98: fix common wad errors (missing sidedefs):
 
 		if (ld->sidenum[0] == 0xffff)
@@ -1380,7 +1383,6 @@ static void P_LoadSideDefs2(lumpnum_t lumpnum)
 						{
 							col = msd->bottomtexture;
 
-
 							sec->extra_colormap->fadergba =
 								(HEX2INT(col[1]) << 4) + (HEX2INT(col[2]) << 0) +
 								(HEX2INT(col[3]) << 12) + (HEX2INT(col[4]) << 8) +
@@ -1393,7 +1395,7 @@ static void P_LoadSideDefs2(lumpnum_t lumpnum)
 								sec->extra_colormap->fadergba += (25 << 24);
 						}
 						else
-							sec->extra_colormap->fadergba = 0x19000000;
+							sec->extra_colormap->fadergba = 0x19000000; // default alpha, (25 << 24)
 #undef ALPHA2INT
 #undef HEX2INT
 					}
@@ -2341,6 +2343,35 @@ static void P_LoadRecordGhosts(void)
 	free(gpath);
 }
 
+static void P_LoadNightsGhosts(void)
+{
+	const size_t glen = strlen(srb2home)+1+strlen("replay")+1+strlen(timeattackfolder)+1+strlen("MAPXX")+1;
+	char *gpath = malloc(glen);
+
+	if (!gpath)
+		return;
+
+	sprintf(gpath,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s", srb2home, timeattackfolder, G_BuildMapName(gamemap));
+
+	// Best Score ghost
+	if (cv_ghost_bestscore.value && FIL_FileExists(va("%s-score-best.lmp", gpath)))
+			G_AddGhost(va("%s-score-best.lmp", gpath));
+
+	// Best Time ghost
+	if (cv_ghost_besttime.value && FIL_FileExists(va("%s-time-best.lmp", gpath)))
+			G_AddGhost(va("%s-time-best.lmp", gpath));
+
+	// Last ghost
+	if (cv_ghost_last.value && FIL_FileExists(va("%s-last.lmp", gpath)))
+		G_AddGhost(va("%s-last.lmp", gpath));
+
+	// Guest ghost
+	if (cv_ghost_guest.value && FIL_FileExists(va("%s-guest.lmp", gpath)))
+		G_AddGhost(va("%s-guest.lmp", gpath));
+
+	free(gpath);
+}
+
 /** Loads a level from a lump or external wad.
   *
   * \param skipprecip If true, don't spawn precipitation.
@@ -2602,6 +2633,8 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	if (modeattacking == ATTACKING_RECORD && !demoplayback)
 		P_LoadRecordGhosts();
+	else if (modeattacking == ATTACKING_NIGHTS && !demoplayback)
+		P_LoadNightsGhosts();
 
 	if (G_TagGametype())
 	{
@@ -2750,7 +2783,6 @@ boolean P_SetupLevel(boolean skipprecip)
 		R_PrecacheLevel();
 
 	nextmapoverride = 0;
-	nextmapgametype = -1;
 	skipstats = false;
 
 	if (!(netgame || multiplayer) && (!modifiedgame || savemoddata))

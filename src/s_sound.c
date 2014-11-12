@@ -192,10 +192,9 @@ static INT32 S_getChannel(const void *origin, sfxinfo_t *sfxinfo)
 				S_StopChannel(cnum);
 			break;
 		}
-		else if (origin && channels[cnum].origin == origin && ((channels[cnum].sfxinfo == sfxinfo)
-			|| (channels[cnum].sfxinfo->name != sfxinfo->name
-			&& channels[cnum].sfxinfo->pitch == 1 && sfxinfo->pitch == 1
-			&& channels[cnum].sfxinfo->pitch == sfxinfo->pitch)))
+		else if (origin && channels[cnum].origin == origin
+			&& channels[cnum].sfxinfo->name != sfxinfo->name
+			&& channels[cnum].sfxinfo->pitch == SF_TOTALLYSINGLE && sfxinfo->pitch == SF_TOTALLYSINGLE)
 		{
 			S_StopChannel(cnum);
 			break;

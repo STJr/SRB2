@@ -7273,6 +7273,7 @@ static const char *const PLAYERFLAG_LIST[] = {
 
 	/*** misc ***/
 	"FORCESTRAFE", // Translate turn inputs into strafe inputs
+	"ANALOGMODE", // Analog mode?
 
 	NULL // stop loop here.
 };

@@ -73,14 +73,29 @@ player_t *viewplayer;
 // PORTALS!
 // You can thank and/or curse JTE for these.
 UINT8 portalrender;
+sector_t *portalcullsector;
 typedef struct portal_pair
 {
 	INT32 line1;
 	INT32 line2;
 	UINT8 pass;
 	struct portal_pair *next;
+
+	fixed_t viewx;
+	fixed_t viewy;
+	fixed_t viewz;
+	angle_t viewangle;
+
+	INT32 start;
+	INT32 end;
+	INT16 *ceilingclip;
+	INT16 *floorclip;
+	fixed_t *frontscale;
+	size_t seg;
 } portal_pair;
 portal_pair *portal_base, *portal_cap;
+line_t *portalclipline;
+INT32 portalclipstart, portalclipend;
 
 //
 // precalculated math tables
@@ -123,17 +138,21 @@ static CV_PossibleValue_t drawdist_cons_t[] = {
 	{8192, "8192"},	{0, "Infinite"},	{0, NULL}};
 static CV_PossibleValue_t precipdensity_cons_t[] = {{0, "None"}, {1, "Light"}, {2, "Moderate"}, {4, "Heavy"}, {6, "Thick"}, {8, "V.Thick"}, {0, NULL}};
 static CV_PossibleValue_t translucenthud_cons_t[] = {{0, "MIN"}, {10, "MAX"}, {0, NULL}};
+static CV_PossibleValue_t maxportals_cons_t[] = {{0, "MIN"}, {12, "MAX"}, {0, NULL}}; // lmao rendering 32 portals, you're a card
 static CV_PossibleValue_t homremoval_cons_t[] = {{0, "No"}, {1, "Yes"}, {2, "Flash"}, {0, NULL}};
 
 static void ChaseCam_OnChange(void);
 static void ChaseCam2_OnChange(void);
+static void FlipCam_OnChange(void);
+static void FlipCam2_OnChange(void);
 void SendWeaponPref(void);
+void SendWeaponPref2(void);
 
 consvar_t cv_tailspickup = {"tailspickup", "On", CV_NETVAR, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_chasecam = {"chasecam", "On", CV_CALL, CV_OnOff, ChaseCam_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_chasecam2 = {"chasecam2", "On", CV_CALL, CV_OnOff, ChaseCam2_OnChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_flipcam = {"flipcam", "No", CV_SAVE|CV_CALL|CV_NOINIT, CV_YesNo, SendWeaponPref, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_flipcam2 = {"flipcam2", "No", CV_SAVE|CV_CALL|CV_NOINIT, CV_YesNo, SendWeaponPref, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_flipcam = {"flipcam", "No", CV_SAVE|CV_CALL|CV_NOINIT, CV_YesNo, FlipCam_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_flipcam2 = {"flipcam2", "No", CV_SAVE|CV_CALL|CV_NOINIT, CV_YesNo, FlipCam2_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 consvar_t cv_shadow = {"shadow", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_shadowoffs = {"offsetshadows", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -150,6 +169,8 @@ consvar_t cv_precipdensity = {"precipdensity", "Moderate", CV_SAVE, precipdensit
 
 // Okay, whoever said homremoval causes a performance hit should be shot.
 consvar_t cv_homremoval = {"homremoval", "No", CV_SAVE, homremoval_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+consvar_t cv_maxportals = {"maxportals", "2", CV_SAVE, maxportals_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 void SplitScreen_OnChange(void)
 {
@@ -205,6 +226,26 @@ static void ChaseCam2_OnChange(void)
 		CV_SetValue(&cv_analog2, 0);
 	else
 		CV_SetValue(&cv_analog2, 1);
+}
+
+static void FlipCam_OnChange(void)
+{
+	if (cv_flipcam.value)
+		players[consoleplayer].pflags |= PF_FLIPCAM;
+	else
+		players[consoleplayer].pflags &= ~PF_FLIPCAM;
+
+	SendWeaponPref();
+}
+
+static void FlipCam2_OnChange(void)
+{
+	if (cv_flipcam2.value)
+		players[secondarydisplayplayer].pflags |= PF_FLIPCAM;
+	else
+		players[secondarydisplayplayer].pflags &= ~PF_FLIPCAM;
+
+	SendWeaponPref2();
 }
 
 //
@@ -423,6 +464,47 @@ fixed_t R_ScaleFromGlobalAngle(angle_t visangle)
 		return num;
 	}
 	return 64*FRACUNIT;
+}
+
+//
+// R_DoCulling
+// Checks viewz and top/bottom heights of an item against culling planes
+// Returns true if the item is to be culled, i.e it shouldn't be drawn!
+// if ML_NOCLIMB is set, the camera view is required to be in the same area for culling to occur
+boolean R_DoCulling(line_t *cullheight, line_t *viewcullheight, fixed_t vz, fixed_t bottomh, fixed_t toph)
+{
+	fixed_t cullplane;
+
+	if (!cullheight)
+		return false;
+
+	cullplane = cullheight->frontsector->floorheight;
+	if (cullheight->flags & ML_NOCLIMB) // Group culling
+	{
+		if (!viewcullheight)
+			return false;
+
+		// Make sure this is part of the same group
+		if (viewcullheight->frontsector == cullheight->frontsector)
+		{
+			// OK, we can cull
+			if (vz > cullplane && toph < cullplane) // Cull if below plane
+				return true;
+
+			if (bottomh > cullplane && vz <= cullplane) // Cull if above plane
+				return true;
+		}
+	}
+	else // Quick culling
+	{
+		if (vz > cullplane && toph < cullplane) // Cull if below plane
+			return true;
+
+		if (bottomh > cullplane && vz <= cullplane) // Cull if above plane
+			return true;
+	}
+
+	return false;
 }
 
 //
@@ -1070,7 +1152,9 @@ void R_SetupFrame(player_t *player, boolean skybox)
 	centeryfrac = centery<<FRACBITS;
 }
 
-static void R_PortalFrame(player_t *player, line_t *start, line_t *dest)
+#define ANGLED_PORTALS
+
+static void R_PortalFrame(line_t *start, line_t *dest, portal_pair *portal)
 {
 	vertex_t dest_c, start_c;
 #ifdef ANGLED_PORTALS
@@ -1078,7 +1162,20 @@ static void R_PortalFrame(player_t *player, line_t *start, line_t *dest)
 	angle_t dangle = R_PointToAngle2(0,0,dest->dx,dest->dy) - R_PointToAngle2(start->dx,start->dy,0,0);
 #endif
 
-	R_SetupFrame(player, false);
+	//R_SetupFrame(player, false);
+	viewx = portal->viewx;
+	viewy = portal->viewy;
+	viewz = portal->viewz;
+
+	viewangle = portal->viewangle;
+	viewsin = FINESINE(viewangle>>ANGLETOFINESHIFT);
+	viewcos = FINECOSINE(viewangle>>ANGLETOFINESHIFT);
+
+	portalcullsector = dest->frontsector;
+	viewsector = dest->frontsector;
+	portalclipline = dest;
+	portalclipstart = portal->start;
+	portalclipend = portal->end;
 
 	// Offset the portal view by the linedef centers
 
@@ -1089,6 +1186,9 @@ static void R_PortalFrame(player_t *player, line_t *start, line_t *dest)
 	// other side center
 	dest_c.x = (dest->v1->x + dest->v2->x) / 2;
 	dest_c.y = (dest->v1->y + dest->v2->y) / 2;
+
+	// Heights!
+	viewz += dest->frontsector->floorheight - start->frontsector->floorheight;
 
 	// calculate the difference in position and rotation!
 #ifdef ANGLED_PORTALS
@@ -1104,21 +1204,50 @@ static void R_PortalFrame(player_t *player, line_t *start, line_t *dest)
 	viewangle += dangle;
 	viewsin = FINESINE(viewangle>>ANGLETOFINESHIFT);
 	viewcos = FINECOSINE(viewangle>>ANGLETOFINESHIFT);
-	CONS_Printf("dangle == %u\n", AngleFixed(dangle)>>FRACBITS);
+	//CONS_Printf("dangle == %u\n", AngleFixed(dangle)>>FRACBITS);
 
 	// ????
-	viewx = dest_c.x - viewx;
-	viewy = dest_c.y - viewy;
+	{
+		fixed_t disttopoint;
+		angle_t angtopoint;
+
+		disttopoint = R_PointToDist2(start_c.x, start_c.y, viewx, viewy);
+		angtopoint = R_PointToAngle2(start_c.x, start_c.y, viewx, viewy);
+		angtopoint += dangle;
+
+		viewx = dest_c.x+FixedMul(FINECOSINE(angtopoint>>ANGLETOFINESHIFT), disttopoint);
+		viewy = dest_c.y+FixedMul(FINESINE(angtopoint>>ANGLETOFINESHIFT), disttopoint);
+	}
 #endif
 }
 
-void R_AddPortal(INT32 line1, INT32 line2)
+void R_AddPortal(INT32 line1, INT32 line2, INT32 x1, INT32 x2)
 {
 	portal_pair *portal = Z_Malloc(sizeof(portal_pair), PU_LEVEL, NULL);
+	INT16 *ceilingclipsave = Z_Malloc(sizeof(INT16)*(x2-x1), PU_LEVEL, NULL);
+	INT16 *floorclipsave = Z_Malloc(sizeof(INT16)*(x2-x1), PU_LEVEL, NULL);
+	fixed_t *frontscalesave = Z_Malloc(sizeof(fixed_t)*(x2-x1), PU_LEVEL, NULL);
+
 	portal->line1 = line1;
 	portal->line2 = line2;
 	portal->pass = portalrender+1;
 	portal->next = NULL;
+
+	R_PortalStoreClipValues(x1, x2, ceilingclipsave, floorclipsave, frontscalesave);
+
+	portal->ceilingclip = ceilingclipsave;
+	portal->floorclip = floorclipsave;
+	portal->frontscale = frontscalesave;
+
+	portal->start = x1;
+	portal->end = x2;
+
+	portal->seg = ds_p-drawsegs;
+
+	portal->viewx = viewx;
+	portal->viewy = viewy;
+	portal->viewz = viewz;
+	portal->viewangle = viewangle;
 
 	if (!portal_base)
 	{
@@ -1203,6 +1332,7 @@ void R_RenderPlayerView(player_t *player)
 	ProfZeroTimer();
 #endif
 	R_RenderBSPNode((INT32)numnodes - 1);
+	R_ClipSprites();
 #ifdef TIMING
 	RDMSR(0x10, &mycount);
 	mytotal += mycount; // 64bit add
@@ -1211,6 +1341,41 @@ void R_RenderPlayerView(player_t *player)
 #endif
 //profile stuff ---------------------------------------------------------
 
+	// PORTAL RENDERING
+	for(portal = portal_base; portal; portal = portal_base)
+	{
+		// render the portal
+		CONS_Debug(DBG_RENDER, "Rendering portal from line %d to %d\n", portal->line1, portal->line2);
+		portalrender = portal->pass;
+
+		R_PortalFrame(&lines[portal->line1], &lines[portal->line2], portal);
+
+		R_PortalClearClipSegs(portal->start, portal->end);
+
+		R_PortalRestoreClipValues(portal->start, portal->end, portal->ceilingclip, portal->floorclip, portal->frontscale);
+
+		validcount++;
+
+		if (portal->seg)
+		{
+			// Push the portal's old drawseg out of the way so it isn't interfering with sprite clipping. -Red
+			drawseg_t *seg = drawsegs+portal->seg;
+			seg->scale1 = 0;
+			seg->scale2 = 0;
+		}
+
+		R_RenderBSPNode((INT32)numnodes - 1);
+		R_ClipSprites();
+		//R_DrawPlanes();
+		//R_DrawMasked();
+
+		// okay done. free it.
+		portalcullsector = NULL; // Just in case...
+		portal_base = portal->next;
+		Z_Free(portal);
+	}
+	// END PORTAL RENDERING
+
 	R_DrawPlanes();
 #ifdef FLOORSPLATS
 	R_DrawVisibleFloorSplats();
@@ -1218,24 +1383,6 @@ void R_RenderPlayerView(player_t *player)
 	// draw mid texture and sprite
 	// And now 3D floors/sides!
 	R_DrawMasked();
-
-	// PORTAL RENDERING
-	for(portal = portal_base; portal; portal = portal_base)
-	{
-		// render the portal
-		CONS_Debug(DBG_RENDER, "Rendering portal from line %d to %d\n", portal->line1, portal->line2);
-		portalrender = portal->pass;
-		R_PortalFrame(player, &lines[portal->line1], &lines[portal->line2]);
-		validcount++;
-		R_RenderBSPNode((INT32)numnodes - 1);
-		R_DrawPlanes();
-		R_DrawMasked();
-
-		// okay done. free it.
-		portal_base = portal->next;
-		Z_Free(portal);
-	}
-	// END PORTAL RENDERING
 
 	// Check for new console commands.
 	NetUpdate();
@@ -1285,6 +1432,8 @@ void R_RegisterEngineStuff(void)
 
 	CV_RegisterVar(&cv_showhud);
 	CV_RegisterVar(&cv_translucenthud);
+
+	CV_RegisterVar(&cv_maxportals);
 
 	// Default viewheight is changeable,
 	// initialized to standard viewheight

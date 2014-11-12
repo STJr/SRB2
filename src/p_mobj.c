@@ -2030,6 +2030,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 					// Check if we're on a polyobject
 					// that triggers a linedef executor.
 					msecnode_t *node;
+					boolean stopmovecut = false;
 
 					for (node = mo->touching_sectorlist; node; node = node->m_snext)
 					{
@@ -2051,6 +2052,18 @@ static void P_PlayerZMovement(mobj_t *mo)
 
 								while(po)
 								{
+									if (!P_MobjInsidePolyobj(po, mo))
+									{
+										po = (polyobj_t *)(po->link.next);
+										continue;
+									}
+
+									polysec = po->lines[0]->backsector;
+
+									// Moving polyobjects should act like conveyors if the player lands on one. (I.E. none of the momentum cut thing below) -Red
+									if ((mo->z == polysec->ceilingheight || mo->z+mo->height == polysec->floorheight) && (po->flags & POF_SOLID) && po->thinker)
+										stopmovecut = true;
+
 									if (!(po->flags & POF_LDEXEC)
 										|| !(po->flags & POF_SOLID))
 									{
@@ -2058,14 +2071,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 										continue;
 									}
 
-									if (!P_MobjInsidePolyobj(po, mo))
-									{
-										po = (polyobj_t *)(po->link.next);
-										continue;
-									}
-
 									// We're inside it! Yess...
-									polysec = po->lines[0]->backsector;
 
 									if (mo->z == polysec->ceilingheight)
 									{
@@ -2080,6 +2086,8 @@ static void P_PlayerZMovement(mobj_t *mo)
 							}
 						}
 					}
+
+					if (!stopmovecut)
 #endif
 
 					// Cut momentum in half when you hit the ground and
@@ -5761,6 +5769,29 @@ void P_MobjThinker(mobj_t *mobj)
 			case MT_SEED:
 				mobj->momz = mobj->info->speed;
 				break;
+			case MT_ROCKCRUMBLE1:
+			case MT_ROCKCRUMBLE2:
+			case MT_ROCKCRUMBLE3:
+			case MT_ROCKCRUMBLE4:
+			case MT_ROCKCRUMBLE5:
+			case MT_ROCKCRUMBLE6:
+			case MT_ROCKCRUMBLE7:
+			case MT_ROCKCRUMBLE8:
+			case MT_ROCKCRUMBLE9:
+			case MT_ROCKCRUMBLE10:
+			case MT_ROCKCRUMBLE11:
+			case MT_ROCKCRUMBLE12:
+			case MT_ROCKCRUMBLE13:
+			case MT_ROCKCRUMBLE14:
+			case MT_ROCKCRUMBLE15:
+			case MT_ROCKCRUMBLE16:
+				if (mobj->z <= P_FloorzAtPos(mobj->x, mobj->y, mobj->z, mobj->height)
+					&& mobj->state != &states[mobj->info->deathstate])
+				{
+					P_SetMobjState(mobj, mobj->info->deathstate);
+					return;
+				}
+				break;
 			default:
 				if (mobj->fuse)
 				{ // Scenery object fuse! Very basic!
@@ -5951,29 +5982,6 @@ void P_MobjThinker(mobj_t *mobj)
 		}
 	else switch (mobj->type)
 	{
-		case MT_ROCKCRUMBLE1:
-		case MT_ROCKCRUMBLE2:
-		case MT_ROCKCRUMBLE3:
-		case MT_ROCKCRUMBLE4:
-		case MT_ROCKCRUMBLE5:
-		case MT_ROCKCRUMBLE6:
-		case MT_ROCKCRUMBLE7:
-		case MT_ROCKCRUMBLE8:
-		case MT_ROCKCRUMBLE9:
-		case MT_ROCKCRUMBLE10:
-		case MT_ROCKCRUMBLE11:
-		case MT_ROCKCRUMBLE12:
-		case MT_ROCKCRUMBLE13:
-		case MT_ROCKCRUMBLE14:
-		case MT_ROCKCRUMBLE15:
-		case MT_ROCKCRUMBLE16:
-			if (mobj->z <= P_FloorzAtPos(mobj->x, mobj->y, mobj->z, mobj->height)
-				&& mobj->state != &states[mobj->info->deathstate])
-			{
-				P_SetMobjState(mobj, mobj->info->deathstate);
-				return;
-			}
-			break;
 		case MT_EMERALDSPAWN:
 			if (mobj->threshold)
 			{

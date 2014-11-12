@@ -323,7 +323,7 @@ static void Arith (lua_State *L, StkId ra, TValue *rb,
       case TM_SUB: setnvalue(ra, luai_numsub(nb, nc)); break;
       case TM_MUL: setnvalue(ra, luai_nummul(nb, nc)); break;
       case TM_DIV: if (nc == 0) { lua_pushliteral(L, "divide by zero error"); lua_error(L); } else setnvalue(ra, luai_numdiv(nb, nc)); break;
-      case TM_MOD: setnvalue(ra, luai_nummod(nb, nc)); break;
+      case TM_MOD: if (nc == 0) { lua_pushliteral(L, "modulo by zero error"); lua_error(L); } else setnvalue(ra, luai_nummod(nb, nc)); break;
       case TM_POW: setnvalue(ra, luai_numpow(nb, nc)); break;
       case TM_UNM: setnvalue(ra, luai_numunm(nb)); break;
       case TM_AND: setnvalue(ra, luai_numand(nb, nc)); break;
@@ -494,7 +494,7 @@ void luaV_execute (lua_State *L, int nexeccalls) {
           if (nc == 0) {
             lua_pushliteral(L, "divide by zero error");
             lua_error(L);
-					}
+          }
           else
             setnvalue(ra, luai_numdiv(nb, nc));
         }
@@ -503,7 +503,19 @@ void luaV_execute (lua_State *L, int nexeccalls) {
         continue;
       }
       case OP_MOD: {
-        arith_op(luai_nummod, TM_MOD);
+        TValue *rb = RKB(i);
+        TValue *rc = RKC(i);
+        if (ttisnumber(rb) && ttisnumber(rc)) {
+          lua_Number nb = nvalue(rb), nc = nvalue(rc);
+          if (nc == 0) {
+            lua_pushliteral(L, "modulo by zero error");
+            lua_error(L);
+          }
+          else
+            setnvalue(ra, luai_nummod(nb, nc));
+        }
+        else
+          Protect(Arith(L, ra, rb, rc, TM_MOD));
         continue;
       }
       case OP_POW: {

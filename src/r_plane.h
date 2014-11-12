@@ -59,7 +59,7 @@ typedef struct visplane_s
 
 	struct ffloor_s *ffloor;
 #ifdef POLYOBJECTS_PLANES
-	boolean polyobj;
+	polyobj_t *polyobj;
 #endif
 } visplane_t;
 
@@ -83,6 +83,8 @@ extern fixed_t *yslope;
 extern fixed_t distscale[MAXVIDWIDTH];
 
 void R_InitPlanes(void);
+void R_PortalStoreClipValues(INT32 start, INT32 end, INT16 *ceil, INT16 *floor, fixed_t *scale);
+void R_PortalRestoreClipValues(INT32 start, INT32 end, INT16 *ceil, INT16 *floor, fixed_t *scale);
 void R_ClearPlanes(void);
 
 void R_MapPlane(INT32 y, INT32 x1, INT32 x2);

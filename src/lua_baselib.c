@@ -1744,7 +1744,26 @@ static int lib_gDoReborn(lua_State *L)
 
 static int lib_gExitLevel(lua_State *L)
 {
+	int n = lua_gettop(L); // Num arguments
 	NOHUD
+
+	// LUA EXTENSION: Custom exit like support
+	// Supported:
+	//	G_ExitLevel();			[no modifications]
+	//	G_ExitLevel(int)		[nextmap override only]
+	//	G_ExitLevel(bool)		[skipstats only]
+	//	G_ExitLevel(int, bool)	[both of the above]
+	if (n >= 1)
+	{
+		if (lua_isnumber(L, 1) || n >= 2)
+		{
+			nextmapoverride = (INT16)luaL_checknumber(L, 1);
+			lua_pop(L, 1); // pop nextmapoverride; skipstats now 1 if available
+		}
+		skipstats = lua_optboolean(L, 1);
+	}
+	// ---
+
 	G_ExitLevel();
 	return 0;
 }

@@ -835,7 +835,7 @@ static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
 		event.data2 = (evt.xrel) * (wwidth / realwidth);
 		event.data3 = -evt.yrel * (wheight / realheight);
 	}
-	
+
 	event.type = ev_mouse;
 
 	if (SDL_GetMouseFocus() == window && SDL_GetKeyboardFocus() == window)
@@ -1853,12 +1853,12 @@ void I_StartupGraphics(void)
 
 	// Fury: we do window initialization after GL setup to allow
 	// SDL_GL_LoadLibrary to work well on Windows
-	
+
 	// Create window
 	//Impl_CreateWindow(USE_FULLSCREEN);
 	//Impl_SetWindowName("SRB2");
 	VID_SetMode(VID_GetModeForSize(BASEVIDWIDTH, BASEVIDHEIGHT));
-	
+
 	vid.buffer = NULL;  // For software mode
 	vid.width = BASEVIDWIDTH; // Default size for startup
 	vid.height = BASEVIDHEIGHT; // BitsPerPixel is the SDL interface's

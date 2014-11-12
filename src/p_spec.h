@@ -347,6 +347,7 @@ typedef struct
 	thinker_t thinker; // Thinker for linedef executor delay
 	line_t *line;      // Pointer to line that is waiting.
 	mobj_t *caller;    // Pointer to calling mobj
+	sector_t *sector;  // Pointer to triggering sector
 	INT32 timer;       // Delay timer
 } executor_t;
 

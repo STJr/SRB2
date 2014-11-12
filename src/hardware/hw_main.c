@@ -3487,6 +3487,46 @@ static fixed_t HWR_OpaqueFloorAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t hei
 	return floorz;
 }
 
+//
+// HWR_DoCulling
+// Hardware version of R_DoCulling
+// (see r_main.c)
+static boolean HWR_DoCulling(line_t *cullheight, line_t *viewcullheight, float vz, float bottomh, float toph)
+{
+	float cullplane;
+
+	if (!cullheight)
+		return false;
+
+	cullplane = FIXED_TO_FLOAT(cullheight->frontsector->floorheight);
+	if (cullheight->flags & ML_NOCLIMB) // Group culling
+	{
+		if (!viewcullheight)
+			return false;
+
+		// Make sure this is part of the same group
+		if (viewcullheight->frontsector == cullheight->frontsector)
+		{
+			// OK, we can cull
+			if (vz > cullplane && toph < cullplane) // Cull if below plane
+				return true;
+
+			if (bottomh > cullplane && vz <= cullplane) // Cull if above plane
+				return true;
+		}
+	}
+	else // Quick culling
+	{
+		if (vz > cullplane && toph < cullplane) // Cull if below plane
+			return true;
+
+		if (bottomh > cullplane && vz <= cullplane) // Cull if above plane
+			return true;
+	}
+
+	return false;
+}
+
 // -----------------+
 // HWR_DrawSprite   : Draw flat sprites
 //                  : (monsters, bonuses, weapons, lights, ...)
@@ -4607,29 +4647,8 @@ static void HWR_ProjectSprite(mobj_t *thing)
 
 	if (thing->subsector->sector->cullheight)
 	{
-		float cullplane = FIXED_TO_FLOAT(thing->subsector->sector->cullheight->frontsector->floorheight);
-		if (thing->subsector->sector->cullheight->flags & ML_NOCLIMB) // Group culling
-		{
-			// Make sure this is part of the same group
-			if (viewsector->cullheight && viewsector->cullheight->frontsector
-				== thing->subsector->sector->cullheight->frontsector)
-			{
-				// OK, we can cull
-				if (gr_viewz > cullplane && gzt < cullplane) // Cull if below plane
-					return;
-
-				if (gz > cullplane && gr_viewz <= cullplane) // Cull if above plane
-					return;
-			}
-		}
-		else // Quick culling
-		{
-			if (gr_viewz > cullplane && gzt < cullplane) // Cull if below plane
-				return;
-
-			if (gz > cullplane && gr_viewz <= cullplane) // Cull if above plane
-				return;
-		}
+		if (HWR_DoCulling(thing->subsector->sector->cullheight, viewsector->cullheight, gr_viewz, gz, gzt))
+			return;
 	}
 
 	heightsec = thing->subsector->sector->heightsec;
@@ -4795,6 +4814,8 @@ static void HWR_DrawSkyBackground(player_t *player)
 	FOutVector v[4];
 	angle_t angle;
 	float dimensionmultiply;
+	float aspectratio;
+	float angleturn;
 
 //  3--2
 //  | /|
@@ -4830,9 +4851,9 @@ static void HWR_DrawSkyBackground(player_t *player)
 	// Y
 	angle = aimingangle;
 
-	float aspectratio = (float)vid.width/(float)vid.height;
+	aspectratio = (float)vid.width/(float)vid.height;
 	dimensionmultiply = ((float)textures[skytexture]->height/(128.0f*aspectratio));
-	float angleturn = (((float)ANGLE_45-1.0f)*aspectratio)*dimensionmultiply;
+	angleturn = (((float)ANGLE_45-1.0f)*aspectratio)*dimensionmultiply;
 
 	// Middle of the sky should always be at angle 0
 	// need to keep correct aspect ratio with X

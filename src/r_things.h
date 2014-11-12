@@ -54,6 +54,7 @@ void R_DelSpriteDefs(UINT16 wadnum);
 void R_AddSprites(sector_t *sec, INT32 lightlevel);
 void R_InitSprites(void);
 void R_ClearSprites(void);
+void R_ClipSprites(void);
 void R_DrawMasked(void);
 
 // -----------
@@ -155,6 +156,8 @@ typedef struct vissprite_s
 	INT16 sz, szt;
 
 	spritecut_e cut;
+
+	INT16 clipbot[MAXVIDWIDTH], cliptop[MAXVIDWIDTH];
 
 	boolean precip;
 	boolean vflip; // Flip vertically

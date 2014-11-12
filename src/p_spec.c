@@ -50,10 +50,6 @@ mobj_t *skyboxmo[2];
 // Amount (dx, dy) vector linedef is shifted right to get scroll amount
 #define SCROLL_SHIFT 5
 
-// Factor to scale scrolling effect into mobj-carrying properties = 3/32.
-// (This is so scrolling floors and objects on them can move at same speed.)
-#define CARRYFACTOR ((3*FRACUNIT)/32)
-
 /** Animated texture descriptor
   * This keeps track of an animated texture or an animated flat.
   * \sa P_UpdateSpecials, P_InitPicAnims, animdef_t
@@ -107,7 +103,7 @@ static void P_AddBlockThinker(sector_t *sec, line_t *sourceline);
 static void P_AddFloatThinker(sector_t *sec, INT32 tag, line_t *sourceline);
 static void P_AddBridgeThinker(line_t *sourceline, sector_t *sec);
 static void P_AddFakeFloorsByLine(size_t line, ffloortype_e ffloorflags, thinkerlist_t *secthinkers);
-static void P_ProcessLineSpecial(line_t *line, mobj_t *mo);
+static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec);
 static void Add_Friction(INT32 friction, INT32 movefactor, INT32 affectee, INT32 referrer);
 static void P_AddSpikeThinker(sector_t *sec, INT32 referrer);
 
@@ -1388,7 +1384,32 @@ static boolean PolyRotate(line_t *line)
 	// Polyobj_OR types have override set to true
 	prd.overRide  = (line->special == 485 || line->special == 487);
 
+	if (line->flags & ML_NOCLIMB)
+		prd.turnobjs = 0;
+	else if (line->flags & ML_EFFECT4)
+		prd.turnobjs = 2;
+	else
+		prd.turnobjs = 1;
+
 	return EV_DoPolyObjRotate(&prd);
+}
+
+//
+// PolyDisplace
+//
+// Parses arguments for parameterized polyobject move-by-sector-heights specials
+//
+static boolean PolyDisplace(line_t *line)
+{
+	polydisplacedata_t pdd;
+
+	pdd.polyObjNum = line->tag;
+
+	pdd.controlSector = line->frontsector;
+	pdd.dx = line->dx>>8;
+	pdd.dy = line->dy>>8;
+
+	return EV_DoPolyObjDisplace(&pdd);
 }
 
 #endif // ifdef POLYOBJECTS
@@ -1512,13 +1533,13 @@ void T_ExecutorDelay(executor_t *e)
 	{
 		if (e->caller && P_MobjWasRemoved(e->caller)) // If the mobj died while we were delaying
 			P_SetTarget(&e->caller, NULL); // Call with no mobj!
-		P_ProcessLineSpecial(e->line, e->caller);
+		P_ProcessLineSpecial(e->line, e->caller, e->sector);
 		P_SetTarget(&e->caller, NULL); // Let the mobj know it can be removed now.
 		P_RemoveThinker(&e->thinker);
 	}
 }
 
-static void P_AddExecutorDelay(line_t *line, mobj_t *mobj)
+static void P_AddExecutorDelay(line_t *line, mobj_t *mobj, sector_t *sector)
 {
 	executor_t *e;
 
@@ -1529,12 +1550,11 @@ static void P_AddExecutorDelay(line_t *line, mobj_t *mobj)
 
 	e->thinker.function.acp1 = (actionf_p1)T_ExecutorDelay;
 	e->line = line;
+	e->sector = sector;
 	e->timer = (line->backsector->ceilingheight>>FRACBITS)+(line->backsector->floorheight>>FRACBITS);
 	P_SetTarget(&e->caller, mobj); // Use P_SetTarget to make sure the mobj doesn't get freed while we're delaying.
 	P_AddThinker(&e->thinker);
 }
-
-static sector_t *triplinecaller;
 
 /** Used by P_LinedefExecute to check a trigger linedef's conditions
   * The linedef executor specials in the trigger linedef's sector are run if all conditions are met.
@@ -1672,7 +1692,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 		// If we were not triggered by a sector type especially for the purpose,
 		// a Linedef Executor linedef trigger is not handling sector triggers properly, return.
 
-		else if ((!GETSECSPECIAL(caller->special, 2) || GETSECSPECIAL(caller->special, 2) > 7) && (specialtype > 320))
+		else if ((!GETSECSPECIAL(caller->special, 2) || GETSECSPECIAL(caller->special, 2) > 7) && (specialtype > 322))
 		{
 			CONS_Alert(CONS_WARNING,
 				M_GetText("Linedef executor trigger isn't handling sector triggers properly!\nspecialtype = %d, if you are not a dev, report this warning instance\nalong with the wad that caused it!\n"),
@@ -1737,6 +1757,15 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 					return false;
 			}
 			break;
+		case 321: // continuous
+		case 322: // each time
+			// decrement calls left before triggering
+			if (triggerline->callcount > 0)
+			{
+				if (--triggerline->callcount > 0)
+					return false;
+			}
+			break;
 		default:
 			break;
 	}
@@ -1745,7 +1774,6 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 	// Processing linedef specials //
 	/////////////////////////////////
 
-	triplinecaller = caller;
 	ctlsector = triggerline->frontsector;
 	sectori = (size_t)(ctlsector - sectors);
 	linecnt = ctlsector->linecount;
@@ -1757,9 +1785,9 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 				&& ctlsector->lines[i]->special < 500)
 			{
 				if (ctlsector->lines[i]->flags & ML_DONTPEGTOP)
-					P_AddExecutorDelay(ctlsector->lines[i], actor);
+					P_AddExecutorDelay(ctlsector->lines[i], actor, caller);
 				else
-					P_ProcessLineSpecial(ctlsector->lines[i], actor);
+					P_ProcessLineSpecial(ctlsector->lines[i], actor, caller);
 			}
 	}
 	else // walk around the sector in a defined order
@@ -1845,13 +1873,17 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 				&& ctlsector->lines[i]->special < 500)
 			{
 				if (ctlsector->lines[i]->flags & ML_DONTPEGTOP)
-					P_AddExecutorDelay(ctlsector->lines[i], actor);
+					P_AddExecutorDelay(ctlsector->lines[i], actor, caller);
 				else
-					P_ProcessLineSpecial(ctlsector->lines[i], actor);
+					P_ProcessLineSpecial(ctlsector->lines[i], actor, caller);
 			}
 		}
 	}
 
+	// "Trigger on X calls" linedefs reset if noclimb is set
+	if ((specialtype == 321 || specialtype == 322) && triggerline->flags & ML_NOCLIMB)
+		triggerline->callcount = sides[triggerline->sidenum[0]].textureoffset>>FRACBITS;
+	else
 	// These special types work only once
 	if (specialtype == 302  // Once
 	 || specialtype == 304  // Ring count - Once
@@ -1860,6 +1892,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 	 || specialtype == 315  // No of pushables - Once
 	 || specialtype == 318  // Unlockable trigger - Once
 	 || specialtype == 320  // Unlockable - Once
+	 || specialtype == 321 || specialtype == 322 // Trigger on X calls - Continuous + Each Time
 	 || specialtype == 399) // Level Load
 		triggerline->special = 0; // Clear it out
 
@@ -1899,7 +1932,8 @@ void P_LinedefExecute(INT16 tag, mobj_t *actor, sector_t *caller)
 		 || lines[masterline].special == 301 // Each time
 		 || lines[masterline].special == 306 // Character ability - Each time
 		 || lines[masterline].special == 310 // CTF Red team - Each time
-		 || lines[masterline].special == 312) // CTF Blue team - Each time
+		 || lines[masterline].special == 312 // CTF Blue team - Each time
+		 || lines[masterline].special == 322) // Trigger on X calls - Each Time
 			continue;
 
 		if (lines[masterline].special < 300
@@ -2149,22 +2183,20 @@ static mobj_t *P_GetObjectTypeInSectorNum(mobjtype_t type, size_t s)
 }
 
 /** Processes the line special triggered by an object.
-  * The external variable ::triplinecaller points to the sector in which the
-  * action was initiated; it can be NULL. Because of the A_LinedefExecute()
-  * action, even if non-NULL, this sector might not have the same tag as the
-  * linedef executor, and it might not have the linedef executor sector type.
   *
   * \param line Line with the special command on it.
   * \param mo   mobj that triggered the line. Must be valid and non-NULL.
-  * \todo Get rid of the secret parameter and make ::triplinecaller actually get
-  *       passed to the function.
+  * \param callsec sector in which action was initiated; this can be NULL.
+  *        Because of the A_LinedefExecute() action, even if non-NULL,
+  *        this sector might not have the same tag as the linedef executor,
+  *        and it might not have the linedef executor sector type.
   * \todo Handle mo being NULL gracefully. T_MoveFloor() and T_MoveCeiling()
   *       don't have an object to pass.
   * \todo Split up into multiple functions.
   * \sa P_LinedefExecute
   * \author Graue <graue@oceanbase.org>
   */
-static void P_ProcessLineSpecial(line_t *line, mobj_t *mo)
+static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 {
 	INT32 secnum = -1;
 	mobj_t *bot = NULL;
@@ -2365,7 +2397,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo)
 				if (musicnum >= NUMMUSIC || musicnum == mus_None)
 					S_StopMusic();
 				else
-					S_ChangeMusic(mapmusic, !(line->flags & ML_NOCLIMB));
+					S_ChangeMusic(mapmusic, !(line->flags & ML_EFFECT4));
 
 				// Except, you can use the ML_BLOCKMONSTERS flag to change this behavior.
 				// if (mapmusic & MUSIC_RELOADRESET) then it will reset the music in G_PlayerReborn.
@@ -2431,8 +2463,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo)
 					else if (line->flags & ML_BLOCKMONSTERS)
 					{
 						// play the sound from calling sector's soundorg
-						if (triplinecaller)
-							S_StartSound(&triplinecaller->soundorg, sfxnum);
+						if (callsec)
+							S_StartSound(&callsec->soundorg, sfxnum);
 						else if (mo)
 							S_StartSound(&mo->subsector->sector->soundorg, sfxnum);
 					}
@@ -2976,7 +3008,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo)
 
 		case 443: // Calls a named Lua function
 #ifdef HAVE_BLUA
-			LUAh_LinedefExecute(line, mo);
+			LUAh_LinedefExecute(line, mo, callsec);
 #else
 			CONS_Alert(CONS_ERROR, "The map is trying to run a Lua script, but this exe was not compiled with Lua support!\n");
 #endif
@@ -3392,9 +3424,9 @@ static boolean P_ThingIsOnThe3DFloor(mobj_t *mo, sector_t *sector, sector_t *tar
 static inline boolean P_MobjReadyToTrigger(mobj_t *mo, sector_t *sec)
 {
 	if (mo->eflags & MFE_VERTICALFLIP)
-		return (mo->z+mo->height == sec->ceilingheight);
+		return (mo->z+mo->height == sec->ceilingheight && sec->flags & SF_FLIPSPECIAL_CEILING);
 	else
-		return (mo->z == sec->floorheight);
+		return (mo->z == sec->floorheight && sec->flags & SF_FLIPSPECIAL_FLOOR);
 }
 
 /** Applies a sector special to a player.
@@ -3715,15 +3747,6 @@ DoneSection2:
 
 					if (lines[lineindex].flags & ML_NOCLIMB)
 						skipstats = true;
-
-					// change the gametype using front x offset if passuse flag is given
-					// ...but not in single player!
-					if (multiplayer && lines[lineindex].flags & ML_EFFECT4)
-					{
-						INT32 xofs = sides[lines[lineindex].sidenum[0]].textureoffset;
-						if (xofs >= 0 && xofs < NUMGAMETYPES)
-							nextmapgametype = xofs;
-					}
 				}
 			}
 			break;
@@ -4861,7 +4884,7 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 	if ((flags & FF_SOLID) && (master->flags & ML_EFFECT2)) // Block all BUT player
 		flags &= ~FF_BLOCKPLAYER;
 
-	ffloor->flags = flags;
+	ffloor->spawnflags = ffloor->flags = flags;
 	ffloor->master = master;
 	ffloor->norender = INFTICS;
 
@@ -4926,6 +4949,8 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 	}
 	else
 		ffloor->alpha = 0xff;
+
+	ffloor->spawnalpha = ffloor->alpha; // save for netgames
 
 	if (flags & FF_QUICKSAND)
 		CheckForQuicksand = true;
@@ -5607,13 +5632,13 @@ void P_SpawnSpecials(INT32 fromnetsave)
 					if (!(lines[i].flags & ML_EFFECT5)) // Align floor unless ALLTRIGGER flag is set
 					{
 						for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
-							sectors[s].floorpic_angle = R_PointToAngle2(lines[i].v1->x, lines[i].v1->y, lines[i].v2->x, lines[i].v2->y);
+							sectors[s].spawn_flrpic_angle = sectors[s].floorpic_angle = R_PointToAngle2(lines[i].v1->x, lines[i].v1->y, lines[i].v2->x, lines[i].v2->y);
 					}
 
 					if (!(lines[i].flags & ML_BOUNCY)) // Align ceiling unless BOUNCY flag is set
 					{
 						for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
-							sectors[s].ceilingpic_angle = R_PointToAngle2(lines[i].v1->x, lines[i].v1->y, lines[i].v2->x, lines[i].v2->y);
+							sectors[s].spawn_ceilpic_angle = sectors[s].ceilingpic_angle = R_PointToAngle2(lines[i].v1->x, lines[i].v1->y, lines[i].v2->x, lines[i].v2->y);
 					}
 				}
 				else // Do offsets
@@ -5624,6 +5649,9 @@ void P_SpawnSpecials(INT32 fromnetsave)
 						{
 							sectors[s].floor_xoffs += lines[i].dx;
 							sectors[s].floor_yoffs += lines[i].dy;
+							// saved for netgames
+							sectors[s].spawn_flr_xoffs = sectors[s].floor_xoffs;
+							sectors[s].spawn_flr_yoffs = sectors[s].floor_yoffs;
 						}
 					}
 
@@ -5633,6 +5661,9 @@ void P_SpawnSpecials(INT32 fromnetsave)
 						{
 							sectors[s].ceiling_xoffs += lines[i].dx;
 							sectors[s].ceiling_yoffs += lines[i].dy;
+							// saved for netgames
+							sectors[s].spawn_ceil_xoffs = sectors[s].ceiling_xoffs;
+							sectors[s].spawn_ceil_yoffs = sectors[s].ceiling_yoffs;
 						}
 					}
 				}
@@ -6305,6 +6336,20 @@ void P_SpawnSpecials(INT32 fromnetsave)
 			case 320:
 				break;
 
+			// Trigger on X calls
+			case 321:
+			case 322:
+				if (lines[i].flags & ML_NOCLIMB && sides[lines[i].sidenum[0]].rowoffset > 0) // optional "starting" count
+					lines[i].callcount = sides[lines[i].sidenum[0]].rowoffset>>FRACBITS;
+				else
+					lines[i].callcount = sides[lines[i].sidenum[0]].textureoffset>>FRACBITS;
+				if (lines[i].special == 322) // Each time
+				{
+					sec = sides[*lines[i].sidenum].sector - sectors;
+					P_AddEachTimeThinker(&sectors[sec], &lines[i]);
+				}
+				break;
+
 			case 399: // Linedef execute on map load
 				// This is handled in P_RunLevelLoadExecutors.
 				break;
@@ -6444,6 +6489,10 @@ void P_SpawnSpecials(INT32 fromnetsave)
 			case 30: // Polyobj_Flag
 				EV_DoPolyObjFlag(&lines[i]);
 				break;
+
+			case 31: // Polyobj_Displace
+				PolyDisplace(&lines[i]);
+				break;
 		}
 	}
 #endif
@@ -6475,6 +6524,47 @@ static void P_AddFakeFloorsByLine(size_t line, ffloortype_e ffloorflags, thinker
  Add_WallScroller,
  P_SpawnScrollers
 */
+
+// helper function for T_Scroll
+static void P_DoScrollMove(mobj_t *thing, fixed_t dx, fixed_t dy, INT32 exclusive)
+{
+	fixed_t fuckaj = 0; // Nov 05 14:12:08 <+MonsterIestyn> I've heard of explicitly defined variables but this is ridiculous
+	if (thing->player)
+	{
+		if (!(dx | dy))
+		{
+			thing->player->cmomx = 0;
+			thing->player->cmomy = 0;
+		}
+		else
+		{
+			thing->player->cmomx += dx;
+			thing->player->cmomy += dy;
+			thing->player->cmomx = FixedMul(thing->player->cmomx, 0xe800);
+			thing->player->cmomy = FixedMul(thing->player->cmomy, 0xe800);
+		}
+	}
+
+	if (thing->player && (thing->player->pflags & PF_SPINNING) && (thing->player->rmomx || thing->player->rmomy) && !(thing->player->pflags & PF_STARTDASH))
+		fuckaj = FixedDiv(549*ORIG_FRICTION,500*FRACUNIT);
+	else if (thing->friction != ORIG_FRICTION)
+		fuckaj = thing->friction;
+
+	if (fuckaj) {
+		// refactor thrust for new friction
+		dx = FixedDiv(dx, CARRYFACTOR);
+		dy = FixedDiv(dy, CARRYFACTOR);
+
+		dx = FixedMul(dx, FRACUNIT-fuckaj);
+		dy = FixedMul(dy, FRACUNIT-fuckaj);
+	}
+
+	thing->momx += dx;
+	thing->momy += dy;
+
+	if (exclusive)
+		thing->flags2 |= MF2_PUSHED;
+}
 
 /** Processes an active scroller.
   * This function, with the help of r_plane.c and r_bsp.c, supports generalized
@@ -6585,26 +6675,7 @@ void T_Scroll(scroll_t *s)
 						{
 							// Move objects only if on floor
 							// non-floating, and clipped.
-							thing->momx += dx;
-							thing->momy += dy;
-							if (thing->player)
-							{
-								if (!(dx | dy))
-								{
-									thing->player->cmomx = 0;
-									thing->player->cmomy = 0;
-								}
-								else
-								{
-									thing->player->cmomx += dx;
-									thing->player->cmomy += dy;
-									thing->player->cmomx = FixedMul(thing->player->cmomx, 0xe800);
-									thing->player->cmomy = FixedMul(thing->player->cmomy, 0xe800);
-								}
-							}
-
-							if (s->exclusive)
-								thing->flags2 |= MF2_PUSHED;
+							P_DoScrollMove(thing, dx, dy, s->exclusive);
 						}
 					} // end of for loop through touching_thinglist
 				} // end of loop through sectors
@@ -6619,31 +6690,12 @@ void T_Scroll(scroll_t *s)
 					if (thing->flags2 & MF2_PUSHED)
 						continue;
 
-					if (!((thing = node->m_thing)->flags & MF_NOCLIP) &&
+					if (!(thing->flags & MF_NOCLIP) &&
 						(!(thing->flags & MF_NOGRAVITY || thing->z > height)))
 					{
 						// Move objects only if on floor or underwater,
 						// non-floating, and clipped.
-						thing->momx += dx;
-						thing->momy += dy;
-						if (thing->player)
-						{
-							if (!(dx | dy))
-							{
-								thing->player->cmomx = 0;
-								thing->player->cmomy = 0;
-							}
-							else
-							{
-								thing->player->cmomx += dx;
-								thing->player->cmomy += dy;
-								thing->player->cmomx = FixedMul(thing->player->cmomx, 0xe800);
-								thing->player->cmomy = FixedMul(thing->player->cmomy, 0xe800);
-							}
-						}
-
-						if (s->exclusive)
-							thing->flags2 |= MF2_PUSHED;
+						P_DoScrollMove(thing, dx, dy, s->exclusive);
 					}
 				}
 			}
@@ -6682,26 +6734,7 @@ void T_Scroll(scroll_t *s)
 						{
 							// Move objects only if on floor or underwater,
 							// non-floating, and clipped.
-							thing->momx += dx;
-							thing->momy += dy;
-							if (thing->player)
-							{
-								if (!(dx | dy))
-								{
-									thing->player->cmomx = 0;
-									thing->player->cmomy = 0;
-								}
-								else
-								{
-									thing->player->cmomx += dx;
-									thing->player->cmomy += dy;
-									thing->player->cmomx = FixedMul(thing->player->cmomx, 0xe800);
-									thing->player->cmomy = FixedMul(thing->player->cmomy, 0xe800);
-								}
-							}
-
-							if (s->exclusive)
-								thing->flags2 |= MF2_PUSHED;
+							P_DoScrollMove(thing, dx, dy, s->exclusive);
 						}
 					} // end of for loop through touching_thinglist
 				} // end of loop through sectors
@@ -6716,31 +6749,12 @@ void T_Scroll(scroll_t *s)
 					if (thing->flags2 & MF2_PUSHED)
 						continue;
 
-					if (!((thing = node->m_thing)->flags & MF_NOCLIP) &&
+					if (!(thing->flags & MF_NOCLIP) &&
 						(!(thing->flags & MF_NOGRAVITY || thing->z+thing->height < height)))
 					{
 						// Move objects only if on floor or underwater,
 						// non-floating, and clipped.
-						thing->momx += dx;
-						thing->momy += dy;
-						if (thing->player)
-						{
-							if (!(dx | dy))
-							{
-								thing->player->cmomx = 0;
-								thing->player->cmomy = 0;
-							}
-							else
-							{
-								thing->player->cmomx += dx;
-								thing->player->cmomy += dy;
-								thing->player->cmomx = FixedMul(thing->player->cmomx, 0xe800);
-								thing->player->cmomy = FixedMul(thing->player->cmomy, 0xe800);
-							}
-						}
-
-						if (s->exclusive)
-							thing->flags2 |= MF2_PUSHED;
+						P_DoScrollMove(thing, dx, dy, s->exclusive);
 					}
 				}
 			}
@@ -7440,16 +7454,16 @@ void T_Pusher(pusher_t *p)
 		thing = node->m_thing;
 		if (thing->flags & (MF_NOGRAVITY | MF_NOCLIP)
 			&& !(thing->type == MT_SMALLBUBBLE
-											|| thing->type == MT_MEDIUMBUBBLE
-											|| thing->type == MT_EXTRALARGEBUBBLE))
+			|| thing->type == MT_MEDIUMBUBBLE
+			|| thing->type == MT_EXTRALARGEBUBBLE))
 			continue;
 
 		if (!(thing->flags & MF_PUSHABLE) && !(thing->type == MT_PLAYER
-											|| thing->type == MT_SMALLBUBBLE
-											|| thing->type == MT_MEDIUMBUBBLE
-											|| thing->type == MT_EXTRALARGEBUBBLE
-											|| thing->type == MT_LITTLETUMBLEWEED
-											|| thing->type == MT_BIGTUMBLEWEED))
+			|| thing->type == MT_SMALLBUBBLE
+			|| thing->type == MT_MEDIUMBUBBLE
+			|| thing->type == MT_EXTRALARGEBUBBLE
+			|| thing->type == MT_LITTLETUMBLEWEED
+			|| thing->type == MT_BIGTUMBLEWEED))
 			continue;
 
 		if (thing->flags2 & MF2_PUSHED)

@@ -131,7 +131,9 @@ INT32 P_RandomKeyD(const char *rfile, INT32 rline, INT32 a)
 {
 	CONS_Printf("P_RandomKey() at: %sp %d\n", rfile, rline);
 #endif
-	return (INT32)(((P_Random()|(P_Random() << 8))/65536.0f)*a);
+	INT32 prandom = P_Random(); // note: forcing explicit function call order
+	prandom |= P_Random() << 8; // (function call order is not strictly defined)
+	return (INT32)((prandom/65536.0f)*a);
 }
 
 /** Provides a random number in between a specific range.
@@ -148,7 +150,9 @@ INT32 P_RandomRangeD(const char *rfile, INT32 rline, INT32 a, INT32 b)
 {
 	CONS_Printf("P_RandomRange() at: %sp %d\n", rfile, rline);
 #endif
-	return (INT32)(((P_Random()|(P_Random() << 8))/65536.0f)*(b-a+1))+a;
+	INT32 prandom = P_Random(); // note: forcing explicit function call order
+	prandom |= P_Random() << 8; // (function call order is not strictly defined)
+	return (INT32)((prandom/65536.0f)*(b-a+1))+a;
 }
 
 /** Provides a random byte without saving what the seed would be.
