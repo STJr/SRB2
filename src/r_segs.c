@@ -589,7 +589,8 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 				// draw the texture
 				col = (column_t *)((UINT8 *)R_GetColumn(texnum, maskedtexturecol[dc_x]) - 3);
 
-#ifdef POLYOBJECTS_PLANES
+//#ifdef POLYOBJECTS_PLANES
+#if 0 // Disabling this allows inside edges to render below the planes, for until the clipping is fixed to work right when POs are near the camera. -Red
 				if (curline->dontrenderme && curline->polyseg && (curline->polyseg->flags & POF_RENDERPLANES))
 				{
 					fixed_t my_topscreen;
@@ -611,7 +612,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 
 						for (i = 0; i < numffloors; i++)
 						{
-							if (!ffloor[i].polyobj)
+							if (!ffloor[i].polyobj || ffloor[i].polyobj != curline->polyseg)
 								continue;
 
 							if (ffloor[i].height < viewz)
@@ -648,6 +649,15 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 		}
 	}
 	colfunc = wallcolfunc;
+}
+
+// Loop through R_DrawMaskedColumn calls
+static void R_DrawRepeatMaskedColumn(column_t *col)
+{
+	do {
+		R_DrawMaskedColumn(col);
+		sprtopscreen += dc_texheight*spryscale;
+	} while (sprtopscreen < sprbotscreen);
 }
 
 //
@@ -836,7 +846,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	//faB: handle case where multipatch texture is drawn on a 2sided wall, multi-patch textures
 	//     are not stored per-column with post info anymore in Doom Legacy
 	if (textures[texnum]->holes)
-		colfunc_2s = R_DrawMaskedColumn;                    //render the usual 2sided single-patch packed texture
+		colfunc_2s = R_DrawRepeatMaskedColumn;                    //render the usual 2sided single-patch packed texture
 	else
 	{
 		colfunc_2s = R_Render2sidedMultiPatchColumn;        //render multipatch with no holes (no post_t info)
@@ -1120,8 +1130,16 @@ static void R_RenderSegLoop (void)
 			for (i = 0; i < numffloors; i++)
 			{
 #ifdef POLYOBJECTS_PLANES
-				if (curline->polyseg && !ffloor[i].polyobj)
-					continue;
+				//if (curline->polyseg && (!ffloor[i].polyobj || ffloor[i].polyobj != curline->polyseg))
+					//continue; // Causes issues with FOF planes in The Wall -Red
+
+				// FIXME hack to fix planes disappearing when a seg goes behind the camera. This NEEDS to be changed to be done properly. -Red
+				if (curline->polyseg) {
+					if (ffloor[i].plane->minx > rw_x)
+						ffloor[i].plane->minx = rw_x;
+					else if (ffloor[i].plane->maxx < rw_x)
+						ffloor[i].plane->maxx = rw_x;
+				}
 #endif
 
 				if (ffloor[i].height < viewz)
@@ -1134,6 +1152,13 @@ static void R_RenderSegLoop (void)
 
 					if (bottom_w > bottom)
 						bottom_w = bottom;
+
+#ifdef POLYOBJECTS_PLANES
+					// Polyobject-specific hack to fix plane leaking -Red
+					if (curline->polyseg && ffloor[i].polyobj && ffloor[i].polyobj == curline->polyseg && top_w >= bottom_w) {
+						ffloor[i].plane->top[rw_x] = ffloor[i].plane->bottom[rw_x] = 0xFFFF;
+					} else
+#endif
 
 					if (top_w <= bottom_w)
 					{
@@ -1151,6 +1176,13 @@ static void R_RenderSegLoop (void)
 
 					if (bottom_w > bottom)
 						bottom_w = bottom;
+
+#ifdef POLYOBJECTS_PLANES
+					// Polyobject-specific hack to fix plane leaking -Red
+					if (curline->polyseg && ffloor[i].polyobj && ffloor[i].polyobj == curline->polyseg && top_w >= bottom_w) {
+						ffloor[i].plane->top[rw_x] = ffloor[i].plane->bottom[rw_x] = 0xFFFF;
+					} else
+#endif
 
 					if (top_w <= bottom_w)
 					{
@@ -1327,9 +1359,9 @@ static void R_RenderSegLoop (void)
 
 		for (i = 0; i < numffloors; i++)
 		{
-#ifdef POLYOBJECTS_PLANES
-			if (curline->polyseg && !ffloor[i].polyobj)
-				continue;
+#if 0 //#ifdef POLYOBJECTS_PLANES
+			if (curline->polyseg && (!ffloor[i].polyobj || ffloor[i].polyobj != curline->polyseg))
+				continue; // Causes issues with FOF planes in The Wall -Red
 #endif
 
 			ffloor[i].f_frac += ffloor[i].f_step;
@@ -1339,9 +1371,9 @@ static void R_RenderSegLoop (void)
 		{
 			INT32 y_w;
 
-#ifdef POLYOBJECTS_PLANES
-			if (curline->polyseg && !ffloor[i].polyobj)
-				continue;
+#if 0 //#ifdef POLYOBJECTS_PLANES
+			if (curline->polyseg && (!ffloor[i].polyobj || ffloor[i].polyobj != curline->polyseg))
+				continue; // Causes issues with FOF planes in The Wall -Red
 #endif
 			y_w = ffloor[i].b_frac >> HEIGHTBITS;
 
@@ -1488,9 +1520,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	{
 		for (i = 0; i < numffloors; i++)
 		{
-#ifdef POLYOBJECTS_PLANES
-			if (ds_p->curline->polyseg && !ffloor[i].polyobj)
-					continue;
+#if 0 //#ifdef POLYOBJECTS_PLANES
+			if (ds_p->curline->polyseg && (!ffloor[i].polyobj || ffloor[i].polyobj != ds_p->curline->polyseg))
+				continue; // Causes issues with FOF planes in The Wall -Red
 #endif
 			ffloor[i].f_pos = ffloor[i].height - viewz;
 		}
@@ -1989,8 +2021,10 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	{
 		for (i = 0; i < numffloors; i++)
 		{
-//			if (curline->polyseg && !ffloor[i].polyobj)
-//					continue;
+#if 0 //#ifdef POLYOBJECTS_PLANES
+			if (curline->polyseg && (!ffloor[i].polyobj || ffloor[i].polyobj != curline->polyseg))
+				continue; // Causes issues with FOF planes in The Wall -Red
+#endif
 
 			ffloor[i].f_pos >>= 4;
 			ffloor[i].f_step = FixedMul(-rw_scalestep, ffloor[i].f_pos);

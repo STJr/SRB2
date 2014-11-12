@@ -538,8 +538,14 @@ void P_LineOpening(line_t *linedef)
 			// Check for frontsector's fake floors
 			for (rover = front->ffloors; rover; rover = rover->next)
 			{
-				if (!(rover->flags & FF_EXISTS) || !(((rover->flags & FF_BLOCKPLAYER) && tmthing->player)
-				|| ((rover->flags & FF_BLOCKOTHERS) && !tmthing->player))) continue;
+				if (!(rover->flags & FF_EXISTS))
+					continue;
+
+				if (tmthing->player && (P_CheckSolidLava(tmthing, rover) || P_CanRunOnWater(tmthing->player, rover)))
+					;
+				else if (!((rover->flags & FF_BLOCKPLAYER && tmthing->player)
+					|| (rover->flags & FF_BLOCKOTHERS && !tmthing->player)))
+					continue;
 
 				delta1 = abs(tmthing->z - (*rover->bottomheight + ((*rover->topheight - *rover->bottomheight)/2)));
 				delta2 = abs(thingtop - (*rover->bottomheight + ((*rover->topheight - *rover->bottomheight)/2)));
@@ -564,8 +570,14 @@ void P_LineOpening(line_t *linedef)
 			// Check for backsectors fake floors
 			for (rover = back->ffloors; rover; rover = rover->next)
 			{
-				if (!(rover->flags & FF_EXISTS) || !(((rover->flags & FF_BLOCKPLAYER) && tmthing->player)
-				|| ((rover->flags & FF_BLOCKOTHERS) && !tmthing->player))) continue;
+				if (!(rover->flags & FF_EXISTS))
+					continue;
+
+				if (tmthing->player && (P_CheckSolidLava(tmthing, rover) || P_CanRunOnWater(tmthing->player, rover)))
+					;
+				else if (!((rover->flags & FF_BLOCKPLAYER && tmthing->player)
+					|| (rover->flags & FF_BLOCKOTHERS && !tmthing->player)))
+					continue;
 
 				delta1 = abs(tmthing->z - (*rover->bottomheight + ((*rover->topheight - *rover->bottomheight)/2)));
 				delta2 = abs(thingtop - (*rover->bottomheight + ((*rover->topheight - *rover->bottomheight)/2)));

@@ -444,4 +444,3 @@ VOID WINAPI OutputDebugStringA(
 
 	OutputDebugStringW(lpOutputStringW);
 }
-

@@ -167,6 +167,10 @@ typedef struct ffloor_s
 	INT32 lastlight;
 	INT32 alpha;
 	tic_t norender; // for culling
+
+	// these are saved for netgames, so do not let Lua touch these!
+	ffloortype_e spawnflags; // flags the 3D floor spawned with
+	INT32 spawnalpha; // alpha the 3D floor spawned with
 } ffloor_t;
 
 
@@ -332,6 +336,16 @@ typedef struct sector_s
 	// list of precipitation mobjs in sector
 	precipmobj_t *preciplist;
 	struct mprecipsecnode_s *touching_preciplist;
+
+	// these are saved for netgames, so do not let Lua touch these!
+
+	// offsets sector spawned with (via linedef type 7)
+	fixed_t spawn_flr_xoffs, spawn_flr_yoffs;
+	fixed_t spawn_ceil_xoffs, spawn_ceil_yoffs;
+
+	// flag angles sector spawned with (via linedef type 7)
+	angle_t spawn_flrpic_angle;
+	angle_t spawn_ceilpic_angle;
 } sector_t;
 
 //
@@ -381,6 +395,7 @@ typedef struct line_s
 #endif
 
 	char *text; // a concatination of all front and back texture names, for linedef specials that require a string.
+	INT16 callcount; // no. of calls left before triggering, for the "X calls" linedef specials, defaults to 0
 } line_t;
 
 //

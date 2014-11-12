@@ -1375,7 +1375,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3k61",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"s3k62",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"s3k63",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
-  {"s3k64",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
+  {"s3k64",  false,  64,  2, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"s3k65",  false, 255,  0, -1, NULL, 0,        -1,  -1, LUMPERROR}, // Blue Spheres
   {"s3k66",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"s3k67",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},

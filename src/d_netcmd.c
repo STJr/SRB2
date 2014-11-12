@@ -164,6 +164,7 @@ static void Command_Archivetest_f(void);
 // =========================================================================
 
 void SendWeaponPref(void);
+void SendWeaponPref2(void);
 
 static CV_PossibleValue_t usemouse_cons_t[] = {{0, "Off"}, {1, "On"}, {2, "Force"}, {0, NULL}};
 #if (defined (__unix__) && !defined (MSDOS)) || defined(__APPLE__) || defined (UNIXCOMMON)
@@ -1345,26 +1346,34 @@ void SendWeaponPref(void)
 	XBOXSTATIC UINT8 buf[1];
 
 	buf[0] = 0;
-	if (cv_flipcam.value)
+	if (players[consoleplayer].pflags & PF_FLIPCAM)
 		buf[0] |= 1;
+	if (players[consoleplayer].pflags & PF_ANALOGMODE)
+		buf[0] |= 2;
 	SendNetXCmd(XD_WEAPONPREF, buf, 1);
+}
 
-	if (splitscreen)
-	{
-		buf[0] = 0;
-		if (cv_flipcam2.value)
-			buf[0] |= 1;
-		SendNetXCmd2(XD_WEAPONPREF, buf, 1);
-	}
+void SendWeaponPref2(void)
+{
+	XBOXSTATIC UINT8 buf[1];
+
+	buf[0] = 0;
+	if (players[secondarydisplayplayer].pflags & PF_FLIPCAM)
+		buf[0] |= 1;
+	if (players[secondarydisplayplayer].pflags & PF_ANALOGMODE)
+		buf[0] |= 2;
+	SendNetXCmd2(XD_WEAPONPREF, buf, 1);
 }
 
 static void Got_WeaponPref(UINT8 **cp,INT32 playernum)
 {
 	UINT8 prefs = READUINT8(*cp);
+
+	players[playernum].pflags &= ~(PF_FLIPCAM|PF_ANALOGMODE);
 	if (prefs & 1)
 		players[playernum].pflags |= PF_FLIPCAM;
-	else
-		players[playernum].pflags &= ~PF_FLIPCAM;
+	if (prefs & 2)
+		players[playernum].pflags |= PF_ANALOGMODE;
 }
 
 void D_SendPlayerConfig(void)
@@ -1373,6 +1382,8 @@ void D_SendPlayerConfig(void)
 	if (splitscreen || botingame)
 		SendNameAndColor2();
 	SendWeaponPref();
+	if (splitscreen)
+		SendWeaponPref2();
 }
 
 // Only works for displayplayer, sorry!
@@ -1798,7 +1809,6 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	if (demorecording) // Okay, level loaded, character spawned and skinned,
 		G_BeginRecording(); // I AM NOW READY TO RECORD.
 	demo_start = true;
-	metal_start = true;
 }
 
 static void Command_Pause(void)

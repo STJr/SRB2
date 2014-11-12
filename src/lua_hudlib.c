@@ -13,6 +13,7 @@
 #include "doomdef.h"
 #ifdef HAVE_BLUA
 #include "r_defs.h"
+#include "r_local.h"
 #include "st_stuff.h" // hudinfo[]
 #include "g_game.h"
 #include "p_local.h" // camera_t
@@ -222,6 +223,11 @@ static int hudinfo_num(lua_State *L)
 	return 1;
 }
 
+static int colormap_get(lua_State *L)
+{
+	return luaL_error(L, "colormap is not a struct.");
+}
+
 static int patch_get(lua_State *L)
 {
 	patch_t *patch = *((patch_t **)luaL_checkudata(L, 1, META_PATCH));
@@ -352,7 +358,7 @@ static int libd_draw(lua_State *L)
 	patch = *((patch_t **)luaL_checkudata(L, 3, META_PATCH));
 	flags = luaL_optinteger(L, 4, 0);
 	if (!lua_isnoneornil(L, 5))
-		colormap = luaL_checkudata(L, 5, META_COLORMAP);
+		colormap = *((UINT8 **)luaL_checkudata(L, 5, META_COLORMAP));
 
 	flags &= ~V_PARAMMASK; // Don't let crashes happen.
 
@@ -374,7 +380,7 @@ static int libd_drawScaled(lua_State *L)
 	patch = *((patch_t **)luaL_checkudata(L, 4, META_PATCH));
 	flags = luaL_optinteger(L, 5, 0);
 	if (!lua_isnoneornil(L, 6))
-		colormap = luaL_checkudata(L, 6, META_COLORMAP);
+		colormap = *((UINT8 **)luaL_checkudata(L, 6, META_COLORMAP));
 
 	flags &= ~V_PARAMMASK; // Don't let crashes happen.
 
@@ -490,6 +496,35 @@ static int libd_stringWidth(lua_State *L)
 	return 1;
 }
 
+static int libd_getColormap(lua_State *L)
+{
+	INT32 skinnum = TC_DEFAULT;
+	skincolors_t color = luaL_optinteger(L, 2, 0);
+	UINT8* colormap = NULL;
+	//HUDSAFE
+	if (lua_isnoneornil(L, 1))
+		; // defaults to TC_DEFAULT
+	else if (lua_type(L, 1) == LUA_TNUMBER) // skin number
+	{
+		skinnum = (INT32)luaL_checkinteger(L, 1);
+		if (skinnum < TC_ALLWHITE || skinnum >= MAXSKINS)
+			return luaL_error(L, "argument #1 is out of range");
+	}
+	else // skin name
+	{
+		const char *skinname = luaL_checkstring(L, 1);
+		INT32 i = R_SkinAvailable(skinname);
+		if (i != -1) // if -1, just default to TC_DEFAULT as above
+			skinnum = i;
+	}
+
+	// all was successful above, now we generate the colormap at last!
+
+	colormap = R_GetTranslationColormap(skinnum, color, GTC_CACHE);
+	LUA_PushUserdata(L, colormap, META_COLORMAP); // push as META_COLORMAP userdata, specifically for patches to use!
+	return 1;
+}
+
 static luaL_Reg lib_draw[] = {
 	{"patchExists", libd_patchExists},
 	{"cachePatch", libd_cachePatch},
@@ -500,6 +535,7 @@ static luaL_Reg lib_draw[] = {
 	{"drawFill", libd_drawFill},
 	{"drawString", libd_drawString},
 	{"stringWidth", libd_stringWidth},
+	{"getColormap", libd_getColormap},
 	{NULL, NULL}
 };
 
@@ -591,6 +627,11 @@ int LUA_HudLib(lua_State *L)
 			lua_setfield(L, -2, "__len");
 		lua_setmetatable(L, -2);
 	lua_setglobal(L, "hudinfo");
+
+	luaL_newmetatable(L, META_COLORMAP);
+		lua_pushcfunction(L, colormap_get);
+		lua_setfield(L, -2, "__index");
+	lua_pop(L,1);
 
 	luaL_newmetatable(L, META_PATCH);
 		lua_pushcfunction(L, patch_get);

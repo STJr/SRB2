@@ -144,8 +144,8 @@ extern FILE *logstream;
 #define VERSIONSTRING "Trunk"
 #else
 #define VERSION    201 // Game version
-#define SUBVERSION 11  // more precise version number
-#define VERSIONSTRING "v2.1.11"
+#define SUBVERSION 12  // more precise version number
+#define VERSIONSTRING "v2.1.12"
 #endif
 
 // Modification options
@@ -428,9 +428,8 @@ extern const char *compdate, *comptime, *comprevision;
 // Compile them at your own risk!
 
 ///	Max recursive portal renders
-///	\note	sadly some additional work will need to be done
-///	     	before anything > 1 will function correctly
-#define PORTAL_LIMIT 1
+///	\note	obsoleted by cv_maxportals
+//#define PORTAL_LIMIT 8
 
 ///	Fun experimental slope stuff!
 //#define SLOPENESS
@@ -453,7 +452,7 @@ extern const char *compdate, *comptime, *comprevision;
 //#define CHAOSISNOTDEADYET
 
 ///	Polyobject fake flat code
-//#define POLYOBJECTS_PLANES
+#define POLYOBJECTS_PLANES
 
 ///	Blue spheres for future use.
 ///	\todo	Remove this define.
@@ -492,5 +491,8 @@ extern const char *compdate, *comptime, *comprevision;
 ///	Display a connection screen on join attempts.
 #define CLIENT_LOADINGSCREEN
 #endif
+
+/// Experimental tweaks to analog mode. (Needs a lot of work before it's ready for primetime.)
+//#define REDSANALOG
 
 #endif // __DOOMDEF__

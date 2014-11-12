@@ -523,19 +523,20 @@ static inline void P_DoTagStuff(void)
 	//increment survivor scores
 	if (leveltime % TICRATE == 0 && leveltime > (hidetime * TICRATE))
 	{
-		INT32 spectators = 0;
+		INT32 participants = 0;
 
-		for (i=0; i < MAXPLAYERS; i++) //count spectators to subtract from the player count.
+		for (i=0; i < MAXPLAYERS; i++)
 		{
-			if (players[i].spectator)
-				spectators++;
+			if (playeringame[i] && !players[i].spectator)
+				participants++;
 		}
 
 		for (i=0; i < MAXPLAYERS; i++)
 		{
-			if (!(players[i].pflags & PF_TAGIT) && !(players[i].pflags & PF_TAGGED)
-				&& !players[i].spectator && playeringame[i] && players[i].playerstate == PST_LIVE)
-				P_AddPlayerScore(&players[i], (D_NumPlayers() - spectators) / 2); //points given is the number of participating players divided by two.
+			if (playeringame[i] && !players[i].spectator && players[i].playerstate == PST_LIVE
+			&& !(players[i].pflags & (PF_TAGIT|PF_TAGGED)))
+				//points given is the number of participating players divided by two.
+				P_AddPlayerScore(&players[i], participants/2);
 		}
 	}
 }
@@ -691,7 +692,7 @@ void P_Ticker(boolean run)
 			G_WriteGhostTic(players[consoleplayer].mo);
 		if (demoplayback) // Use Ghost data for consistency checks.
 			G_ConsGhostTic();
-		if (modeattacking == ATTACKING_RECORD)
+		if (modeattacking)
 			G_GhostTicker();
 	}
 
