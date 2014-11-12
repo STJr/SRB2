@@ -89,7 +89,8 @@ enum line_e {
 	line_validcount,
 	line_firsttag,
 	line_nexttag,
-	line_text
+	line_text,
+	line_callcount
 };
 
 static const char *const line_opt[] = {
@@ -111,6 +112,7 @@ static const char *const line_opt[] = {
 	"firsttag",
 	"nexttag",
 	"text",
+	"callcount",
 	NULL};
 
 enum side_e {
@@ -574,6 +576,9 @@ static int line_get(lua_State *L)
 	case line_text:
 		lua_pushstring(L, line->text);
 		return 1;
+	case line_callcount:
+		lua_pushinteger(L, line->callcount);
+		return 1;
 	}
 	return 0;
 }
@@ -1033,7 +1038,7 @@ static int ffloor_set(lua_State *L)
 		boolean flag;
 		fixed_t lastpos = *ffloor->topheight;
 		sector_t *sector = &sectors[ffloor->secnum];
-		sector->floorheight = (fixed_t)luaL_checkinteger(L, 3);
+		sector->ceilingheight = (fixed_t)luaL_checkinteger(L, 3);
 		flag = P_CheckSector(sector, true);
 		if (flag && sector->numattached)
 		{
@@ -1052,7 +1057,7 @@ static int ffloor_set(lua_State *L)
 		boolean flag;
 		fixed_t lastpos = *ffloor->bottomheight;
 		sector_t *sector = &sectors[ffloor->secnum];
-		sector->ceilingheight = (fixed_t)luaL_checkinteger(L, 3);
+		sector->floorheight = (fixed_t)luaL_checkinteger(L, 3);
 		flag = P_CheckSector(sector, true);
 		if (flag && sector->numattached)
 		{

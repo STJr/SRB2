@@ -399,10 +399,10 @@ static PFNgluBuild2DMipmaps pgluBuild2DMipmaps;
 
 #ifndef MINI_GL_COMPATIBILITY
 /* 1.3 functions for multitexturing */
-typedef void (APIENTRY *PFNGLACTIVETEXTUREPROC) (GLenum);
-static PFNGLACTIVETEXTUREPROC pglActiveTexture;
-typedef void (APIENTRY *PFNGLMULTITEXCOORD2FPROC) (GLenum, GLfloat, GLfloat);
-static PFNGLMULTITEXCOORD2FPROC pglMultiTexCoord2f;
+typedef void (APIENTRY *PFNglActiveTexture) (GLenum);
+static PFNglActiveTexture pglActiveTexture;
+typedef void (APIENTRY *PFNglMultiTexCoord2f) (GLenum, GLfloat, GLfloat);
+static PFNglMultiTexCoord2f pglMultiTexCoord2f;
 #endif
 #endif
 
@@ -517,38 +517,33 @@ boolean SetupGLfunc(void)
 	return true;
 }
 
-#ifndef MINI_GL_COMPATIBILITY
 // This has to be done after the context is created so the version number can be obtained
 boolean SetupGLFunc13(void)
 {
-#ifndef STATIC_OPENGL
-#define GETOPENGLFUNC(func, proc) \
-	func = GetGLFunc(#proc); \
-	if (!func) \
-	{ \
-		DBG_Printf("failed to get OpenGL function: %s", #proc); \
-	} \
-
-	const char *glversion = (const char *)pglGetString(GL_VERSION);
-	UINT32 majorversion = 0, minorversion = 0;
-
-	if (glversion != NULL && sscanf((char *)glversion, "%u.%u", &majorversion, &minorversion) == 2) // There is a version number I can identify
+#ifdef MINI_GL_COMPATIBILITY
+	return false;
+#else
+#ifdef STATIC_OPENGL
+	gl13 = true;
+#else
+	if (isExtAvailable("GL_ARB_multitexture", gl_extensions))
 	{
-		if (majorversion > 1 || (majorversion == 1 && minorversion >= 3)) // Version of OpenGL is equal to or greater than 1.3
-		{
-			// Get the functions
-			GETOPENGLFUNC(pglActiveTexture , glActiveTexture)
-			GETOPENGLFUNC(pglMultiTexCoord2f , glMultiTexCoord2f)
+		// Get the functions
+		pglActiveTexture  = GetGLFunc("glActiveTextureARB");
+		pglMultiTexCoord2f  = GetGLFunc("glMultiTexCoord2fARB");
 
-			gl13 = true; // This is now true, so the new fade mask stuff can be done, if OpenGL version is less than 1.3, it still uses the old fade stuff.
-		}
+		gl13 = true; // This is now true, so the new fade mask stuff can be done, if OpenGL version is less than 1.3, it still uses the old fade stuff.
+		DBG_Printf("GL_ARB_multitexture support: enabled\n");
+
 	}
+	else
+		DBG_Printf("GL_ARB_multitexture support: disabled\n");
 #undef GETOPENGLFUNC
 
 #endif
 	return true;
-}
 #endif
+}
 
 // -----------------+
 // SetNoTexture     : Disable texture

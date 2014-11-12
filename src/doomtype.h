@@ -307,7 +307,11 @@ typedef UINT32 tic_t;
 #define FUNCTARGET(X)  __attribute__ ((__target__ (X)))
 #endif
 #endif
+#if defined (__MINGW32__) && ((__GNUC__ > 3) || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4))
+#define ATTRPACK __attribute__((packed, gcc_struct))
+#else
 #define ATTRPACK __attribute__((packed))
+#endif
 #define ATTRUNUSED __attribute__((unused))
 #ifdef _XBOX
 #define FILESTAMP I_OutputMsg("%s:%d\n",__FILE__,__LINE__);

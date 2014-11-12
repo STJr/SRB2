@@ -192,6 +192,14 @@ void R_ClearClipSegs(void)
 	solidsegs[1].last = 0x7fffffff;
 	newend = solidsegs + 2;
 }
+void R_PortalClearClipSegs(INT32 start, INT32 end)
+{
+	solidsegs[0].first = -0x7fffffff;
+	solidsegs[0].last = start-1;
+	solidsegs[1].first = end;
+	solidsegs[1].last = 0x7fffffff;
+	newend = solidsegs + 2;
+}
 
 
 // R_DoorClosed
@@ -423,9 +431,9 @@ static void R_AddLine(seg_t *line)
 	backsector = line->backsector;
 
 	// Portal line
-	if (line->linedef->special == 40)
+	if (line->linedef->special == 40 && P_PointOnLineSide(viewx, viewy, line->linedef) == 0)
 	{
-		if (portalrender < PORTAL_LIMIT)
+		if (portalrender < cv_maxportals.value)
 		{
 			// Find the other side!
 			INT32 line2 = P_FindSpecialLineFromTag(40, line->linedef->tag, -1);
@@ -433,8 +441,9 @@ static void R_AddLine(seg_t *line)
 				line2 = P_FindSpecialLineFromTag(40, line->linedef->tag, line2);
 			if (line2 >= 0) // found it!
 			{
-				R_AddPortal(line->linedef-lines, line2); // Remember the lines for later rendering
-				return; // Don't fill in that space now!
+				R_AddPortal(line->linedef-lines, line2, x1, x2); // Remember the lines for later rendering
+				//return; // Don't fill in that space now!
+				goto clipsolid;
 			}
 		}
 		// Recursed TOO FAR (viewing a portal within a portal)
@@ -684,6 +693,33 @@ void R_SortPolyObjects(subsector_t *sub)
 }
 
 //
+// R_PolysegCompare
+//
+// Callback for qsort to sort the segs of a polyobject. Returns such that the
+// closer one is sorted first. I sure hope this doesn't break anything. -Red
+//
+static int R_PolysegCompare(const void *p1, const void *p2)
+{
+	const seg_t *seg1 = *(const seg_t * const *)p1;
+	const seg_t *seg2 = *(const seg_t * const *)p2;
+	fixed_t dist1, dist2;
+
+	// TODO might be a better way to get distance?
+#define vxdist(v) FixedMul(R_PointToDist(v->x, v->y), FINECOSINE((R_PointToAngle(v->x, v->y)-viewangle)>>ANGLETOFINESHIFT))+0xFFFFFFF
+
+	dist1 = min(vxdist(seg1->v1), vxdist(seg1->v2));
+	dist2 = min(vxdist(seg2->v1), vxdist(seg2->v2));
+
+	if (dist1 == dist2) { // Segs connect toward the front, so use the back verts to determine order!
+		dist1 = max(vxdist(seg1->v1), vxdist(seg1->v2));
+		dist2 = max(vxdist(seg2->v1), vxdist(seg2->v2));
+	}
+#undef vxdist
+
+	return dist1-dist2;
+}
+
+//
 // R_AddPolyObjects
 //
 // haleyjd 02/19/06
@@ -709,6 +745,7 @@ static void R_AddPolyObjects(subsector_t *sub)
 	// render polyobjects
 	for (i = 0; i < numpolys; ++i)
 	{
+		qsort(po_ptrs[i]->segs, po_ptrs[i]->segCount, sizeof(seg_t *), R_PolysegCompare);
 		for (j = 0; j < po_ptrs[i]->segCount; ++j)
 			R_AddLine(po_ptrs[i]->segs[j]);
 	}
@@ -809,43 +846,10 @@ static void R_Subsector(size_t num)
 
 			if (frontsector->cullheight)
 			{
-				if (frontsector->cullheight->flags & ML_NOCLIMB) // Group culling
+				if (R_DoCulling(frontsector->cullheight, viewsector->cullheight, viewz, *rover->bottomheight, *rover->topheight))
 				{
-					// Make sure this is part of the same group
-					if (viewsector->cullheight && viewsector->cullheight->frontsector
-						== frontsector->cullheight->frontsector)
-					{
-						// OK, we can cull
-						if (viewz > frontsector->cullheight->frontsector->floorheight
-							&& *rover->topheight < frontsector->cullheight->frontsector->floorheight) // Cull if below plane
-						{
-							rover->norender = leveltime;
-							continue;
-						}
-
-						if (*rover->bottomheight > frontsector->cullheight->frontsector->floorheight
-							&& viewz <= frontsector->cullheight->frontsector->floorheight) // Cull if above plane
-						{
-							rover->norender = leveltime;
-							continue;
-						}
-					}
-				}
-				else // Quick culling
-				{
-					if (viewz > frontsector->cullheight->frontsector->floorheight
-						&& *rover->topheight < frontsector->cullheight->frontsector->floorheight) // Cull if below plane
-					{
-						rover->norender = leveltime;
-						continue;
-					}
-
-					if (*rover->bottomheight > frontsector->cullheight->frontsector->floorheight
-						&& viewz <= frontsector->cullheight->frontsector->floorheight) // Cull if above plane
-					{
-						rover->norender = leveltime;
-						continue;
-					}
+					rover->norender = leveltime;
+					continue;
 				}
 			}
 
@@ -909,15 +913,28 @@ static void R_Subsector(size_t num)
 				&& polysec->floorheight >= frontsector->floorheight
 				&& (viewz < polysec->floorheight))
 			{
+				fixed_t xoff, yoff;
+				xoff = polysec->floor_xoffs;
+				yoff = polysec->floor_yoffs;
+
+				if (po->angle != 0) {
+					angle_t fineshift = po->angle >> ANGLETOFINESHIFT;
+
+					xoff -= FixedMul(FINECOSINE(fineshift), po->centerPt.x)+FixedMul(FINESINE(fineshift), po->centerPt.y);
+					yoff -= FixedMul(FINESINE(fineshift), po->centerPt.x)-FixedMul(FINECOSINE(fineshift), po->centerPt.y);
+				} else {
+					xoff -= po->centerPt.x;
+					yoff += po->centerPt.y;
+				}
+
 				light = R_GetPlaneLight(frontsector, polysec->floorheight, viewz < polysec->floorheight);
 				light = 0;
 				ffloor[numffloors].plane = R_FindPlane(polysec->floorheight, polysec->floorpic,
-						polysec->lightlevel, polysec->floor_xoffs,
-						polysec->floor_yoffs,
-						polysec->floorpic_angle,
+						polysec->lightlevel, xoff, yoff,
+						polysec->floorpic_angle-po->angle,
 						NULL,
 						NULL);
-				ffloor[numffloors].plane->polyobj = true;
+				ffloor[numffloors].plane->polyobj = po;
 
 				ffloor[numffloors].height = polysec->floorheight;
 				ffloor[numffloors].polyobj = po;
@@ -934,12 +951,27 @@ static void R_Subsector(size_t num)
 				&& polysec->ceilingheight <= frontsector->ceilingheight
 				&& (viewz > polysec->ceilingheight))
 			{
+				fixed_t xoff, yoff;
+				xoff = polysec->ceiling_xoffs;
+				yoff = polysec->ceiling_yoffs;
+
+				if (po->angle != 0) {
+					angle_t fineshift = po->angle >> ANGLETOFINESHIFT;
+
+					xoff -= FixedMul(FINECOSINE(fineshift), po->centerPt.x)+FixedMul(FINESINE(fineshift), po->centerPt.y);
+					yoff -= FixedMul(FINESINE(fineshift), po->centerPt.x)-FixedMul(FINECOSINE(fineshift), po->centerPt.y);
+				} else {
+					xoff -= po->centerPt.x;
+					yoff += po->centerPt.y;
+				}
+
 				light = R_GetPlaneLight(frontsector, polysec->ceilingheight, viewz < polysec->ceilingheight);
 				light = 0;
 				ffloor[numffloors].plane = R_FindPlane(polysec->ceilingheight, polysec->ceilingpic,
-					polysec->lightlevel, polysec->ceiling_xoffs, polysec->ceiling_yoffs, polysec->ceilingpic_angle,
+					polysec->lightlevel, xoff, yoff, polysec->ceilingpic_angle-po->angle,
 					NULL, NULL);
-				ffloor[numffloors].plane->polyobj = true;
+				ffloor[numffloors].plane->polyobj = po;
+
 				ffloor[numffloors].polyobj = po;
 				ffloor[numffloors].height = polysec->ceilingheight;
 //				ffloor[numffloors].ffloor = rover;
@@ -1147,5 +1179,14 @@ void R_RenderBSPNode(INT32 bspnum)
 
 		bspnum = bsp->children[side^1];
 	}
+
+	// PORTAL CULLING
+	if (portalcullsector) {
+		sector_t *sect = subsectors[bspnum & ~NF_SUBSECTOR].sector;
+		if (sect != portalcullsector)
+			return;
+		portalcullsector = NULL;
+	}
+
 	R_Subsector(bspnum == -1 ? 0 : bspnum & ~NF_SUBSECTOR);
 }

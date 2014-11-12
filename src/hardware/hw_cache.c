@@ -1045,7 +1045,6 @@ static void HWR_CacheFadeMask(GLMipmap_t *grMipmap, lumpnum_t fademasklumpnum)
 {
 	size_t size;
 	UINT16 fmheight = 0, fmwidth = 0;
-	UINT8 *block; // The fade mask's pixels
 
 	// setup the texture info
 	grMipmap->grInfo.format = GR_TEXFMT_ALPHA_8; // put the correct alpha levels straight in so I don't need to convert it later
@@ -1083,7 +1082,7 @@ static void HWR_CacheFadeMask(GLMipmap_t *grMipmap, lumpnum_t fademasklumpnum)
 	grMipmap->width  = blockwidth;
 	grMipmap->height = blockheight;
 
-	block = MakeBlock(grMipmap);
+	MakeBlock(grMipmap);
 
 	HWR_DrawFadeMaskInCache(grMipmap, blockwidth, blockheight, fademasklumpnum, fmwidth, fmheight);
 

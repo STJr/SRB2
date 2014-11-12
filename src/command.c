@@ -1055,9 +1055,22 @@ static void Setvalue(consvar_t *var, const char *valstr, boolean stealth)
 
 	if (var->PossibleValue)
 	{
-		INT32 v = atoi(valstr);
-		if (!v && valstr[0] != '0')
-			v = INT32_MIN; // Invalid integer trigger
+		INT32 v;
+
+		if (var->flags & CV_FLOAT)
+		{
+			double d = atof(valstr);
+			if (!d && valstr[0] != '0')
+				v = INT32_MIN;
+			else
+				v = (INT32)(d * FRACUNIT);
+		}
+		else
+		{
+			v = atoi(valstr);
+			if (!v && valstr[0] != '0')
+				v = INT32_MIN; // Invalid integer trigger
+		}
 
 		if (var->PossibleValue[0].strvalue && !stricmp(var->PossibleValue[0].strvalue, "MIN")) // bounded cvar
 		{
@@ -1134,13 +1147,13 @@ found:
 
 	var->string = var->zstring = Z_StrDup(valstr);
 
-	if (var->flags & CV_FLOAT)
+	if (override)
+		var->value = overrideval;
+	else if (var->flags & CV_FLOAT)
 	{
 		double d = atof(var->string);
 		var->value = (INT32)(d * FRACUNIT);
 	}
-	else if (override)
-		var->value = overrideval;
 	else
 		var->value = atoi(var->string);
 
