@@ -987,6 +987,9 @@ static void Impl_HandleJoystickButtonEvent(SDL_JoyButtonEvent evt, Uint32 type)
 void I_GetEvent(void)
 {
 	SDL_Event evt;
+	// We only want the first motion event,
+	// otherwise we'll end up catching the warp back to center.
+	int mouseMotionOnce = 0;
 
 	if (!graphics_started)
 	{
@@ -1005,7 +1008,8 @@ void I_GetEvent(void)
 				Impl_HandleKeyboardEvent(evt.key, evt.type);
 				break;
 			case SDL_MOUSEMOTION:
-				Impl_HandleMouseMotionEvent(evt.motion);
+				if (!mouseMotionOnce) Impl_HandleMouseMotionEvent(evt.motion);
+				mouseMotionOnce = 1;
 				break;
 			case SDL_MOUSEBUTTONUP:
 			case SDL_MOUSEBUTTONDOWN:
