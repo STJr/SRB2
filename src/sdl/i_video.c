@@ -818,30 +818,33 @@ static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
 	event_t event;
 	int wwidth, wheight;
 
-	SDL_GetWindowSize(window, &wwidth, &wheight);
-
-	if ((SDL_GetMouseFocus() != window && SDL_GetKeyboardFocus() != window))
+	if (USE_MOUSEINPUT)
 	{
-		SDLdoUngrabMouse();
-		return;
-	}
+		SDL_GetWindowSize(window, &wwidth, &wheight);
 
-	if ((evt.x == realwidth/2) && (evt.y == realheight/2))
-	{
-		return;
-	}
-	else
-	{
-		event.data2 = (evt.xrel) * (wwidth / realwidth);
-		event.data3 = -evt.yrel * (wheight / realheight);
-	}
+		if ((SDL_GetMouseFocus() != window && SDL_GetKeyboardFocus() != window))
+		{
+			SDLdoUngrabMouse();
+			return;
+		}
 
-	event.type = ev_mouse;
+		if ((evt.x == realwidth/2) && (evt.y == realheight/2))
+		{
+			return;
+		}
+		else
+		{
+			event.data2 = (int)round((evt.xrel) * ((float)wwidth / (float)realwidth));
+			event.data3 = (int)round(-evt.yrel * ((float)wheight / (float)realheight));
+		}
 
-	if (SDL_GetMouseFocus() == window && SDL_GetKeyboardFocus() == window)
-	{
-		D_PostEvent(&event);
-		HalfWarpMouse(wwidth, wheight);
+		event.type = ev_mouse;
+
+		if (SDL_GetMouseFocus() == window && SDL_GetKeyboardFocus() == window)
+		{
+			D_PostEvent(&event);
+			HalfWarpMouse(wwidth, wheight);
+		}
 	}
 }
 
