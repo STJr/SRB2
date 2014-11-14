@@ -201,13 +201,22 @@ boolean OglSdlSurface(INT32 w, INT32 h)
 void OglSdlFinishUpdate(boolean waitvbl)
 {
 	static boolean oldwaitvbl = false;
+	int sdlw, sdlh;
 	if (oldwaitvbl != waitvbl)
 	{
 		SDL_GL_SetSwapInterval(waitvbl ? 1 : 0);
 	}
+
 	oldwaitvbl = waitvbl;
 
+	SDL_GetWindowSize(window, &sdlw, &sdlh);
+
+	HWR_MakeScreenFinalTexture();
+	HWR_DrawScreenFinalTexture(sdlw, sdlh);
 	SDL_GL_SwapWindow(window);
+
+	SetModelView(realwidth, realheight);
+	SetStates();
 }
 
 EXPORT void HWRAPI( OglSdlSetPalette) (RGBA_t *palette, RGBA_t *pgamma)

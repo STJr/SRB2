@@ -84,6 +84,8 @@ EXPORT void HWRAPI(EndScreenWipe) (void);
 EXPORT void HWRAPI(DoScreenWipe) (float alpha);
 EXPORT void HWRAPI(DrawIntermissionBG) (void);
 EXPORT void HWRAPI(MakeScreenTexture) (void);
+EXPORT void HWRAPI(MakeScreenFinalTexture) (void);
+EXPORT void HWRAPI(DrawScreenFinalTexture) (int width, int height);
 // ==========================================================================
 //                                      HWR DRIVER OBJECT, FOR CLIENT PROGRAM
 // ==========================================================================
@@ -127,6 +129,8 @@ struct hwdriver_s
 	DoScreenWipe        pfnDoScreenWipe;
 	DrawIntermissionBG  pfnDrawIntermissionBG;
 	MakeScreenTexture   pfnMakeScreenTexture;
+	MakeScreenFinalTexture  pfnMakeScreenFinalTexture;
+	DrawScreenFinalTexture  pfnDrawScreenFinalTexture;
 };
 
 extern struct hwdriver_s hwdriver;
