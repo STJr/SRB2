@@ -535,7 +535,7 @@ boolean SetupGLFunc13(void)
 	// Parse the GL version
 	if (version != NULL)
 	{
-		if (sscanf(version, "%d.%d", &glmajor, &glminor) == 2)
+		if (sscanf((const char*)version, "%d.%d", &glmajor, &glminor) == 2)
 		{
 			// Look, we gotta prepare for the inevitable arrival of GL 2.0 code...
 			switch (glmajor)
@@ -543,6 +543,10 @@ boolean SetupGLFunc13(void)
 				case 1:
 					if (glminor == 3) gl13 = true;
 					break;
+				case 2:
+				case 3:
+				case 4:
+					gl13 = true;
 				default:
 					break;
 			}
@@ -2400,11 +2404,7 @@ EXPORT void HWRAPI(MakeScreenFinalTexture) (void)
 EXPORT void HWRAPI(DrawScreenFinalTexture)(int width, int height)
 {
 	float xfix, yfix;
-	int lmaxx, lmaxy;
 	INT32 texsize = 2048;
-
-	lmaxx = width < screen_width ? screen_width : width;
-	lmaxy = height < screen_height ? screen_height : height;
 
 	if(screen_width <= 1024)
 		texsize = 1024;
