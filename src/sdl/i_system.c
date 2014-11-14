@@ -742,7 +742,7 @@ static inline void I_ShutdownConsole(void){}
 //
 void I_StartupKeyboard (void)
 {
-#if defined (NDEBUG) && !defined (DC)
+#if !defined (DC)
 #ifdef SIGILL
 	signal(SIGILL , signal_handler);
 #endif
