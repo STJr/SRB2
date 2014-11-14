@@ -827,7 +827,7 @@ static void Impl_HandleJoystickAxisEvent(SDL_JoyAxisEvent evt)
 
 	// Determine the Joystick IDs for each current open joystick
 	joyid[0] = SDL_JoystickInstanceID(JoyInfo.dev);
-	joyid[1] = SDL_JoystickInstanceID(JoyInfo.dev);
+	joyid[1] = SDL_JoystickInstanceID(JoyInfo2.dev);
 
 	evt.axis++;
 	event.data1 = event.data2 = event.data3 = INT32_MAX;
@@ -866,7 +866,7 @@ static void Impl_HandleJoystickButtonEvent(SDL_JoyButtonEvent evt, Uint32 type)
 
 	// Determine the Joystick IDs for each current open joystick
 	joyid[0] = SDL_JoystickInstanceID(JoyInfo.dev);
-	joyid[1] = SDL_JoystickInstanceID(JoyInfo.dev);
+	joyid[1] = SDL_JoystickInstanceID(JoyInfo2.dev);
 
 	if (evt.which == joyid[0])
 	{
