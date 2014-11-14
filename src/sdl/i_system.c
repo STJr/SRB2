@@ -304,7 +304,7 @@ UINT8 keyboard_started = false;
 static void signal_handler(INT32 num)
 {
 	//static char msg[] = "oh no! back to reality!\r\n";
-	char *      sigmsg;
+	const char *      sigmsg;
 	char        sigdef[32];
 
 	D_QuitNetGame(); // Fix server freezes
