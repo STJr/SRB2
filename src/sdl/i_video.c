@@ -752,6 +752,7 @@ static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
 		if (SDL_GetMouseFocus() == window && SDL_GetKeyboardFocus() == window)
 		{
 			D_PostEvent(&event);
+			SDL_SetWindowGrab(window, SDL_TRUE);
 			HalfWarpMouse(wwidth, wheight);
 		}
 	}
