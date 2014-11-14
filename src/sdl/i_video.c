@@ -124,8 +124,8 @@ static      SDL_Color    localPalette[256];
 static      SDL_Rect   **modeList = NULL;
 static       Uint8       BitsPerPixel = 16;
 #endif
-static       Uint16      realwidth = BASEVIDWIDTH;
-static       Uint16      realheight = BASEVIDHEIGHT;
+Uint16      realwidth = BASEVIDWIDTH;
+Uint16      realheight = BASEVIDHEIGHT;
 static const Uint32      surfaceFlagsW = 0/*|SDL_RESIZABLE*/;
 static const Uint32      surfaceFlagsF = 0;
 static       SDL_bool    mousegrabok = SDL_TRUE;
@@ -221,26 +221,6 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 
 	if (rendermode == render_opengl)
 	{
-		int sdlw, sdlh;
-		SDL_GetWindowSize(window, &sdlw, &sdlh);
-		// Logical fullscreen is not implemented yet for OpenGL, so...
-		// Special case handling
-		if (glfallbackresolution == SDL_FALSE && fullscreen && width != sdlw && height != sdlh)
-		{
-			if (VID_GetModeForSize(sdlw, sdlh) != -1)
-			{
-				wasfullscreen = SDL_TRUE;
-				VID_SetMode(VID_GetModeForSize(sdlw, sdlh));
-				return;
-			}
-			else
-			{
-				wasfullscreen = SDL_TRUE;
-				glfallbackresolution = SDL_TRUE;
-				VID_SetMode(-1);
-				return;
-			}
-		}
 		OglSdlSurface(vid.width, vid.height);
 	}
 
@@ -1779,6 +1759,8 @@ void I_StartupGraphics(void)
 		HWD.pfnDoScreenWipe     = hwSym("DoScreenWipe",NULL);
 		HWD.pfnDrawIntermissionBG=hwSym("DrawIntermissionBG",NULL);
 		HWD.pfnMakeScreenTexture= hwSym("MakeScreenTexture",NULL);
+		HWD.pfnMakeScreenFinalTexture=hwSym("MakeScreenFinalTexture",NULL);
+		HWD.pfnDrawScreenFinalTexture=hwSym("DrawScreenFinalTexture",NULL);
 		// check gl renderer lib
 		if (HWD.pfnGetRenderVersion() != VERSION)
 			I_Error("%s", M_GetText("The version of the renderer doesn't match the version of the executable\nBe sure you have installed SRB2 properly.\n"));
