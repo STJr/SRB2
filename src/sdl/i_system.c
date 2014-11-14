@@ -301,7 +301,7 @@ SDL_bool framebuffer = SDL_FALSE;
 
 UINT8 keyboard_started = false;
 
-static void signal_handler(INT32 num)
+FUNCNORETURN static ATTRNORETURN void signal_handler(INT32 num)
 {
 	//static char msg[] = "oh no! back to reality!\r\n";
 	const char *      sigmsg;
@@ -350,7 +350,7 @@ static void signal_handler(INT32 num)
 	I_Quit();
 }
 
-#if defined (NDEBUG) && !defined (DC) && !defined (_WIN32_WCE)
+#if !defined (DC)
 FUNCNORETURN static ATTRNORETURN void quit_handler(int num)
 {
 	signal(num, SIG_DFL); //default signal action
