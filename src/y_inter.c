@@ -770,11 +770,12 @@ void Y_Ticker(void)
 }
 
 //
-// Y_UpdateReplays
+// Y_UpdateRecordReplays
 //
-// Update replay files/data, etc
+// Update replay files/data, etc. for Record Attack
+// See G_SetNightsRecords for NiGHTS Attack.
 //
-static void Y_UpdateReplays(void)
+static void Y_UpdateRecordReplays(void)
 {
 	const size_t glen = strlen(srb2home)+1+strlen("replay")+1+strlen(timeattackfolder)+1+strlen("MAPXX")+1;
 	char *gpath;
@@ -962,7 +963,7 @@ void Y_StartIntermission(void)
 					mapvisited[gamemap-1] |= MV_PERFECT;
 
 				if (modeattacking == ATTACKING_RECORD)
-					Y_UpdateReplays();
+					Y_UpdateRecordReplays();
 			}
 
 			for (i = 0; i < 4; ++i)

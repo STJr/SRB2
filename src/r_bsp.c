@@ -192,6 +192,14 @@ void R_ClearClipSegs(void)
 	solidsegs[1].last = 0x7fffffff;
 	newend = solidsegs + 2;
 }
+void R_PortalClearClipSegs(INT32 start, INT32 end)
+{
+	solidsegs[0].first = -0x7fffffff;
+	solidsegs[0].last = start-1;
+	solidsegs[1].first = end;
+	solidsegs[1].last = 0x7fffffff;
+	newend = solidsegs + 2;
+}
 
 
 // R_DoorClosed
@@ -423,9 +431,9 @@ static void R_AddLine(seg_t *line)
 	backsector = line->backsector;
 
 	// Portal line
-	if (line->linedef->special == 40)
+	if (line->linedef->special == 40 && P_PointOnLineSide(viewx, viewy, line->linedef) == 0)
 	{
-		if (portalrender < PORTAL_LIMIT)
+		if (portalrender < cv_maxportals.value)
 		{
 			// Find the other side!
 			INT32 line2 = P_FindSpecialLineFromTag(40, line->linedef->tag, -1);
@@ -433,8 +441,9 @@ static void R_AddLine(seg_t *line)
 				line2 = P_FindSpecialLineFromTag(40, line->linedef->tag, line2);
 			if (line2 >= 0) // found it!
 			{
-				R_AddPortal(line->linedef-lines, line2); // Remember the lines for later rendering
-				return; // Don't fill in that space now!
+				R_AddPortal(line->linedef-lines, line2, x1, x2); // Remember the lines for later rendering
+				//return; // Don't fill in that space now!
+				goto clipsolid;
 			}
 		}
 		// Recursed TOO FAR (viewing a portal within a portal)
@@ -837,43 +846,10 @@ static void R_Subsector(size_t num)
 
 			if (frontsector->cullheight)
 			{
-				if (frontsector->cullheight->flags & ML_NOCLIMB) // Group culling
+				if (R_DoCulling(frontsector->cullheight, viewsector->cullheight, viewz, *rover->bottomheight, *rover->topheight))
 				{
-					// Make sure this is part of the same group
-					if (viewsector->cullheight && viewsector->cullheight->frontsector
-						== frontsector->cullheight->frontsector)
-					{
-						// OK, we can cull
-						if (viewz > frontsector->cullheight->frontsector->floorheight
-							&& *rover->topheight < frontsector->cullheight->frontsector->floorheight) // Cull if below plane
-						{
-							rover->norender = leveltime;
-							continue;
-						}
-
-						if (*rover->bottomheight > frontsector->cullheight->frontsector->floorheight
-							&& viewz <= frontsector->cullheight->frontsector->floorheight) // Cull if above plane
-						{
-							rover->norender = leveltime;
-							continue;
-						}
-					}
-				}
-				else // Quick culling
-				{
-					if (viewz > frontsector->cullheight->frontsector->floorheight
-						&& *rover->topheight < frontsector->cullheight->frontsector->floorheight) // Cull if below plane
-					{
-						rover->norender = leveltime;
-						continue;
-					}
-
-					if (*rover->bottomheight > frontsector->cullheight->frontsector->floorheight
-						&& viewz <= frontsector->cullheight->frontsector->floorheight) // Cull if above plane
-					{
-						rover->norender = leveltime;
-						continue;
-					}
+					rover->norender = leveltime;
+					continue;
 				}
 			}
 
@@ -1203,5 +1179,14 @@ void R_RenderBSPNode(INT32 bspnum)
 
 		bspnum = bsp->children[side^1];
 	}
+
+	// PORTAL CULLING
+	if (portalcullsector) {
+		sector_t *sect = subsectors[bspnum & ~NF_SUBSECTOR].sector;
+		if (sect != portalcullsector)
+			return;
+		portalcullsector = NULL;
+	}
+
 	R_Subsector(bspnum == -1 ? 0 : bspnum & ~NF_SUBSECTOR);
 }

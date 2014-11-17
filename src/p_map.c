@@ -211,12 +211,160 @@ void P_DoSpring(mobj_t *spring, mobj_t *object)
 	}
 }
 
+static void P_DoFanAndGasJet(mobj_t *spring, mobj_t *object)
+{
+	player_t *p = object->player; // will be NULL if not a player
+	fixed_t zdist; // distance between bottoms
+	fixed_t speed = spring->info->mass; // conveniently, both fans and gas jets use this for the vertical thrust
+	SINT8 flipval = P_MobjFlip(spring); // virtually everything here centers around the thruster's gravity, not the object's!
+
+	if (p && object->state == &states[object->info->painstate]) // can't use fans and gas jets when player is in pain!
+		return;
+
+	// is object below thruster's position? if not, calculate distance between their bottoms
+	if (spring->eflags & MFE_VERTICALFLIP)
+	{
+		if (object->z + object->height > spring->z + spring->height)
+			return;
+		zdist = (spring->z + spring->height) - (object->z + object->height);
+	}
+	else
+	{
+		if (object->z < spring->z)
+			return;
+		zdist = object->z - spring->z;
+	}
+
+	switch (spring->type)
+	{
+		case MT_FAN: // fan
+			if (zdist > (spring->health << FRACBITS)) // max z distance determined by health (set by map thing angle)
+				break;
+			if (flipval*object->momz >= FixedMul(speed, spring->scale)) // if object's already moving faster than your best, don't bother
+				break;
+			if (p && (p->climbing || p->pflags & PF_GLIDING)) // doesn't affect Knux when he's using his abilities!
+				break;
+
+			object->momz += flipval*FixedMul(speed/4, spring->scale);
+
+			// limit the speed if too high
+			if (flipval*object->momz > FixedMul(speed, spring->scale))
+				object->momz = flipval*FixedMul(speed, spring->scale);
+
+			if (p && !p->powers[pw_tailsfly]) // doesn't reset anim for Tails' flight
+			{
+				P_ResetPlayer(p);
+				if (p->panim != PA_FALL)
+					P_SetPlayerMobjState(object, S_PLAY_FALL1);
+			}
+			break;
+		case MT_STEAM: // Steam
+			if (zdist > FixedMul(16*FRACUNIT, spring->scale))
+				break;
+			if (spring->state != &states[S_STEAM1]) // Only when it bursts
+				break;
+
+			object->momz = flipval*FixedMul(speed, FixedSqrt(FixedMul(spring->scale, object->scale))); // scale the speed with both objects' scales, just like with springs!
+
+			if (p)
+			{
+				P_ResetPlayer(p);
+				if (p->panim != PA_FALL)
+					P_SetPlayerMobjState(object, S_PLAY_FALL1);
+			}
+			break;
+		default:
+			break;
+	}
+}
+
+static void P_DoTailsCarry(player_t *sonic, player_t *tails)
+{
+	INT32 p;
+	fixed_t zdist; // z distance between the two players' bottoms
+
+	if ((tails->pflags & PF_CARRIED) && tails->mo->tracer == sonic->mo)
+		return;
+	if ((sonic->pflags & PF_CARRIED) && sonic->mo->tracer == tails->mo)
+		return;
+
+	if (!tails->powers[pw_tailsfly] && !(tails->charability == CA_FLY && (tails->mo->state >= &states[S_PLAY_SPC1] && tails->mo->state <= &states[S_PLAY_SPC4])))
+		return;
+
+	if (tails->bot == 1)
+		return;
+
+	if (sonic->pflags & PF_NIGHTSMODE)
+		return;
+
+	if (sonic->mo->tracer && sonic->mo->tracer->type == MT_TUBEWAYPOINT
+	&& !(sonic->pflags & PF_ROPEHANG))
+		return; // don't steal players from zoomtubes!
+
+	if ((sonic->mo->eflags & MFE_VERTICALFLIP) != (tails->mo->eflags & MFE_VERTICALFLIP))
+		return; // Both should be in same gravity
+
+	if (tails->mo->eflags & MFE_VERTICALFLIP)
+	{
+		if (tails->mo->ceilingz - (tails->mo->z + tails->mo->height) < sonic->mo->height-FixedMul(2*FRACUNIT, sonic->mo->scale))
+			return;
+	}
+	else if (tails->mo->z - tails->mo->floorz < sonic->mo->height-FixedMul(2*FRACUNIT, sonic->mo->scale))
+		return; // No room to pick up this guy!
+
+	// Search in case another player is already being carried by this fox.
+	for (p = 0; p < MAXPLAYERS; p++)
+		if (playeringame[p] && players[p].mo
+		&& players[p].pflags & PF_CARRIED && players[p].mo->tracer == tails->mo)
+			return;
+
+	if (tails->mo->eflags & MFE_VERTICALFLIP)
+		zdist = (sonic->mo->z + sonic->mo->height) - (tails->mo->z + tails->mo->height);
+	else
+		zdist = tails->mo->z - sonic->mo->z;
+
+	if (zdist <= sonic->mo->height + FixedMul(FRACUNIT, sonic->mo->scale)
+		&& zdist > sonic->mo->height*2/3
+		&& P_MobjFlip(tails->mo)*sonic->mo->momz <= 0)
+	{
+	// Why block opposing teams from tailsflying each other?
+		// Sneaking into the hands of a flying tails player in Race might be a viable strategy, who knows.
+		/*
+		if (gametype == GT_RACE || gametype == GT_COMPETITION
+			|| (netgame && (tails->spectator || sonic->spectator))
+			|| (G_TagGametype() && (!(tails->pflags & PF_TAGIT) != !(sonic->pflags & PF_TAGIT)))
+			|| (gametype == GT_MATCH)
+			|| (G_GametypeHasTeams() && tails->ctfteam != sonic->ctfteam))
+			sonic->pflags &= ~PF_CARRIED; */
+		if (tails->spectator || sonic->spectator)
+			sonic->pflags &= ~PF_CARRIED;
+		else
+		{
+			if (sonic-players == consoleplayer && botingame)
+				CV_SetValue(&cv_analog2, false);
+			P_ResetPlayer(sonic);
+			P_SetTarget(&sonic->mo->tracer, tails->mo);
+			sonic->pflags |= PF_CARRIED;
+			S_StartSound(sonic->mo, sfx_s3k4a);
+			P_UnsetThingPosition(sonic->mo);
+			sonic->mo->x = tails->mo->x;
+			sonic->mo->y = tails->mo->y;
+			P_SetThingPosition(sonic->mo);
+		}
+	}
+	else {
+		if (sonic-players == consoleplayer && botingame)
+			CV_SetValue(&cv_analog2, true);
+		sonic->pflags &= ~PF_CARRIED;
+	}
+}
+
 //
 // PIT_CheckThing
 //
 static boolean PIT_CheckThing(mobj_t *thing)
 {
-	fixed_t blockdist, topz, tmtopz;
+	fixed_t blockdist;
 
 	// don't clip against self
 	tmsprung = false;
@@ -662,103 +810,17 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 	if (thing->flags & MF_PUSHABLE)
 	{
-		if (tmthing->eflags & MFE_VERTICALFLIP)
-		{
-			if (thing->z + thing->height <= tmthing->z + tmthing->height)
-			{
-				switch (tmthing->type)
-				{
-					case MT_FAN: // fan
-						if (thing->z + thing->height >= tmthing->z + tmthing->height - (tmthing->health << FRACBITS) && thing->momz > -FixedMul(tmthing->info->mass, tmthing->scale))
-						{
-							thing->momz -= FixedMul(tmthing->info->mass/4, tmthing->scale);
-
-							if (thing->momz < -FixedMul(tmthing->info->mass, tmthing->scale))
-								thing->momz = -FixedMul(tmthing->info->mass, tmthing->scale);
-						}
-						break;
-					case MT_STEAM: // Steam
-						if (tmthing->state == &states[S_STEAM1] && thing->z + thing->height >= tmthing->z + tmthing->height - FixedMul(16*FRACUNIT, tmthing->scale)) // Only when it bursts
-							thing->momz = -FixedMul(tmthing->info->mass, FixedSqrt(FixedMul(tmthing->scale, thing->scale)));
-						break;
-					default:
-						break;
-				}
-			}
-		}
-		else
-		{
-			if (thing->z >= tmthing->z)
-			{
-				switch (tmthing->type)
-				{
-					case MT_FAN: // fan
-						if (thing->z <= tmthing->z + (tmthing->health << FRACBITS) && thing->momz < FixedMul(tmthing->info->mass, tmthing->scale))
-						{
-							thing->momz += FixedMul(tmthing->info->mass/4, tmthing->scale);
-
-							if (thing->momz > FixedMul(tmthing->info->mass, tmthing->scale))
-								thing->momz = FixedMul(tmthing->info->mass, tmthing->scale);
-						}
-						break;
-					case MT_STEAM: // Steam
-						if (tmthing->state == &states[S_STEAM1] && thing->z <= tmthing->z + FixedMul(16*FRACUNIT, tmthing->scale)) // Only when it bursts
-							thing->momz = FixedMul(tmthing->info->mass, FixedSqrt(FixedMul(tmthing->scale, thing->scale)));
-						break;
-					default:
-						break;
-				}
-			}
-		}
+		if (tmthing->type == MT_FAN || tmthing->type == MT_STEAM)
+			P_DoFanAndGasJet(tmthing, thing);
 	}
 
 	if (tmthing->flags & MF_PUSHABLE)
 	{
-		if ((thing->eflags & MFE_VERTICALFLIP) && tmthing->z + tmthing->height <= thing->z + thing->height)
-		{
-			switch (thing->type)
-			{
-				case MT_FAN: // fan
-					if (tmthing->z + tmthing->height >= thing->z + thing->height - (thing->health << FRACBITS) && tmthing->momz > -FixedMul(thing->info->mass, thing->scale))
-					{
-						tmthing->momz -= FixedMul(thing->info->mass/4, thing->scale);
-
-						if (tmthing->momz < -FixedMul(thing->info->mass, thing->scale))
-							tmthing->momz = -FixedMul(thing->info->mass, thing->scale);
-					}
-					break;
-				case MT_STEAM: // Steam
-					if (thing->state == &states[S_STEAM1] && tmthing->z + tmthing->height >= thing->z + thing->height - FixedMul(16*FRACUNIT, thing->scale)) // Only when it bursts
-						tmthing->momz = -FixedMul(thing->info->mass, FixedSqrt(FixedMul(thing->scale, tmthing->scale)));
-					break;
-				default:
-					break;
-			}
-		}
-		else if (!(thing->eflags & MFE_VERTICALFLIP) && tmthing->z >= thing->z)
-		{
-			switch (thing->type)
-			{
-				case MT_FAN: // fan
-					if (tmthing->z <= thing->z + (thing->health << FRACBITS) && tmthing->momz < FixedMul(thing->info->mass, thing->scale))
-					{
-						tmthing->momz += FixedMul(thing->info->mass/4, thing->scale);
-
-						if (tmthing->momz > FixedMul(thing->info->mass, thing->scale))
-							tmthing->momz = FixedMul(thing->info->mass, thing->scale);
-					}
-					break;
-				case MT_STEAM: // Steam
-					if (thing->state == &states[S_STEAM1] && tmthing->z <= thing->z + FixedMul(16*FRACUNIT, thing->scale)) // Only when it bursts
-						tmthing->momz = FixedMul(thing->info->mass, FixedSqrt(FixedMul(thing->scale, tmthing->scale)));
-					break;
-				default:
-					break;
-			}
-		}
+		if (thing->type == MT_FAN || thing->type == MT_STEAM)
+			P_DoFanAndGasJet(thing, tmthing);
 
 		if ((!(thing->eflags & MFE_VERTICALFLIP) && (tmthing->z <= (thing->z + thing->height + FixedMul(FRACUNIT, thing->scale)) && (tmthing->z + tmthing->height) >= thing->z))
-		|| ((thing->eflags & MFE_VERTICALFLIP) && (tmthing->z + tmthing->height >= (thing->z - FixedMul(FRACUNIT, thing->scale)) && tmthing->z <= (thing->z + thing->height))))
+		  || ((thing->eflags & MFE_VERTICALFLIP) && (tmthing->z + tmthing->height >= (thing->z - FixedMul(FRACUNIT, thing->scale)) && tmthing->z <= (thing->z + thing->height))))
 		{
 			if (thing->flags & MF_SPRING)
 			{
@@ -799,78 +861,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	{
 		if (tmthing->player && thing->player)
 		{
-			if ((tmthing->player->pflags & PF_CARRIED) && tmthing->tracer == thing)
-				return true;
-			else if ((thing->player->pflags & PF_CARRIED) && thing->tracer == tmthing)
-				return true;
-			else if (tmthing->player->powers[pw_tailsfly]
-				|| (tmthing->player->charability == CA_FLY && (tmthing->state >= &states[S_PLAY_SPC1] && tmthing->state <= &states[S_PLAY_SPC4])))
-			{
-				INT32 p;
-
-				if (tmthing->player->bot == 1)
-					return true;
-
-				if (thing->player->pflags & PF_NIGHTSMODE)
-					return true;
-
-				if (thing->tracer && thing->tracer->type == MT_TUBEWAYPOINT
-				&& !(thing->player->pflags & PF_ROPEHANG))
-					return true; // don't steal players from zoomtubes!
-
-				if ((thing->eflags & MFE_VERTICALFLIP) != (tmthing->eflags & MFE_VERTICALFLIP))
-					return true; // Both should be in same gravity
-
-				if ((tmthing->eflags & MFE_VERTICALFLIP)
-					&& tmthing->ceilingz - (tmthing->z + tmthing->height) < thing->height-FixedMul(2*FRACUNIT, thing->scale))
-					return true;
-				else if (tmthing->z - tmthing->floorz < thing->height-FixedMul(2*FRACUNIT, thing->scale))
-					return true; // No room to pick up this guy!
-
-				// Search in case another player is already being carried by this fox.
-				for (p = 0; p < MAXPLAYERS; p++)
-					if (playeringame[p] && players[p].mo
-					&& players[p].pflags & PF_CARRIED && players[p].mo->tracer == tmthing)
-						return true;
-
-				if ((!(tmthing->eflags & MFE_VERTICALFLIP) && (tmthing->z <= thing->z + thing->height + FixedMul(FRACUNIT, thing->scale))
-					&& tmthing->z > thing->z + thing->height*2/3
-					&& thing->momz <= 0)
-					|| ((tmthing->eflags & MFE_VERTICALFLIP) && (tmthing->z + tmthing->height >= thing->z - FixedMul(FRACUNIT, thing->scale))
-					&& tmthing->z + tmthing->height < thing->z + thing->height - thing->height*2/3
-					&& thing->momz >= 0))
-				{
-					// Why block opposing teams from tailsflying each other?
-					// Sneaking into the hands of a flying tails player in Race might be a viable strategy, who knows.
-					/*
-					if (gametype == GT_RACE || gametype == GT_COMPETITION
-						|| (netgame && (tmthing->player->spectator || thing->player->spectator))
-						|| (G_TagGametype() && (!(tmthing->player->pflags & PF_TAGIT) != !(thing->player->pflags & PF_TAGIT)))
-						|| (gametype == GT_MATCH)
-						|| (G_GametypeHasTeams() && tmthing->player->ctfteam != thing->player->ctfteam))
-						thing->player->pflags &= ~PF_CARRIED; */
-					if (tmthing->player->spectator || thing->player->spectator)
-						thing->player->pflags &= ~PF_CARRIED;
-					else
-					{
-						if (thing->player-players == consoleplayer && botingame)
-							CV_SetValue(&cv_analog2, false);
-						P_ResetPlayer(thing->player);
-						P_SetTarget(&thing->tracer, tmthing);
-						thing->player->pflags |= PF_CARRIED;
-						S_StartSound(thing, sfx_s3k4a);
-						P_UnsetThingPosition(thing);
-						thing->x = tmthing->x;
-						thing->y = tmthing->y;
-						P_SetThingPosition(thing);
-					}
-				}
-				else {
-					if (thing->player-players == consoleplayer && botingame)
-						CV_SetValue(&cv_analog2, true);
-					thing->player->pflags &= ~PF_CARRIED;
-				}
-			}
+			P_DoTailsCarry(thing->player, tmthing->player);
 			return true;
 		}
 	}
@@ -882,114 +873,33 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 	if (thing->player)
 	{
-		if (tmthing->eflags & MFE_VERTICALFLIP) //doesn't matter what gravity player's following! Just do your stuff in YOUR direction only
+		// Doesn't matter what gravity player's following! Just do your stuff in YOUR direction only
+		if (tmthing->eflags & MFE_VERTICALFLIP
+		&& (tmthing->z + tmthing->height + tmthing->momz > thing->z
+		 || tmthing->z + tmthing->height + tmthing->momz >= thing->z + thing->height))
+			;
+		else if (!(tmthing->eflags & MFE_VERTICALFLIP)
+		&& (tmthing->z + tmthing->momz > thing->z + thing->height
+		 || tmthing->z + tmthing->momz <= thing->z))
+			;
+		else if  (P_IsObjectOnGround(thing)
+			&& !P_IsObjectOnGround(tmthing) // Don't crush if the monitor is on the ground...
+			&& (tmthing->flags & MF_SOLID))
 		{
-			// Objects kill you if it falls from above.
-			if (tmthing->z + tmthing->height + tmthing->momz >= thing->z
-				&& tmthing->z + tmthing->height + tmthing->momz < thing->z + thing->height
-				&& P_IsObjectOnGround(thing)
-				&& !P_IsObjectOnGround(tmthing) // Don't crush if the monitor is on the ground...
-				&& (tmthing->flags & MF_SOLID))
+			if (tmthing->flags & (MF_MONITOR|MF_PUSHABLE))
 			{
-				if (tmthing->flags & (MF_MONITOR|MF_PUSHABLE))
-				{
-					if (thing != tmthing->target)
-						P_DamageMobj(thing, tmthing, tmthing->target, 10000);
+				// Objects kill you if it falls from above.
+				if (thing != tmthing->target)
+					P_DamageMobj(thing, tmthing, tmthing->target, 10000);
 
-					tmthing->momz = -tmthing->momz/2; // Bounce, just for fun!
-					// The tmthing->target allows the pusher of the object
-					// to get the point if he topples it on an opponent.
-				}
-			}
-
-			if (thing->z + thing->height <= tmthing->z + tmthing->height && !(thing->state == &states[thing->info->painstate])) // Stuff where da player don't gotta move
-			{
-				switch (tmthing->type)
-				{
-					case MT_FAN: // fan
-						if (thing->z + thing->height >= tmthing->z + tmthing->height - (tmthing->health << FRACBITS) && thing->momz > -FixedMul(tmthing->info->mass, tmthing->scale) && !(thing->player->climbing || (thing->player->pflags & PF_GLIDING)))
-						{
-							thing->momz -= FixedMul(tmthing->info->mass/4, tmthing->scale);
-
-							if (thing->momz < -FixedMul(tmthing->info->mass, tmthing->scale))
-								thing->momz = -FixedMul(tmthing->info->mass, tmthing->scale);
-
-							if (!thing->player->powers[pw_tailsfly])
-							{
-								P_ResetPlayer(thing->player);
-								if (thing->player->panim != PA_FALL)
-									P_SetPlayerMobjState(thing, S_PLAY_FALL1);
-							}
-						}
-						break;
-					case MT_STEAM: // Steam
-						if (tmthing->state == &states[S_STEAM1] && thing->z + thing->height >= tmthing->z + tmthing->height - FixedMul(16*FRACUNIT, tmthing->scale)) // Only when it bursts
-						{
-							thing->momz = -FixedMul(tmthing->info->mass, FixedSqrt(FixedMul(tmthing->scale, thing->scale)));
-							P_ResetPlayer(thing->player);
-							if (thing->player->panim != PA_FALL)
-								P_SetPlayerMobjState(thing, S_PLAY_FALL1);
-						}
-						break;
-					default:
-						break;
-				}
+				tmthing->momz = -tmthing->momz/2; // Bounce, just for fun!
+				// The tmthing->target allows the pusher of the object
+				// to get the point if he topples it on an opponent.
 			}
 		}
-		else
-		{
-			// Objects kill you if it falls from above.
-			if (tmthing->z + tmthing->momz <= thing->z + thing->height
-				&& tmthing->z + tmthing->momz > thing->z
-				&& P_IsObjectOnGround(thing)
-				&& !P_IsObjectOnGround(tmthing) // Don't crush if the monitor is on the ground...
-				&& (tmthing->flags & MF_SOLID))
-			{
-				if (tmthing->flags & (MF_MONITOR|MF_PUSHABLE))
-				{
-					if (thing != tmthing->target)
-						P_DamageMobj(thing, tmthing, tmthing->target, 10000);
 
-					tmthing->momz = -tmthing->momz/2; // Bounce, just for fun!
-					// The tmthing->target allows the pusher of the object
-					// to get the point if he topples it on an opponent.
-				}
-			}
-
-			if (thing->z >= tmthing->z && !(thing->state == &states[thing->info->painstate])) // Stuff where da player don't gotta move
-			{
-				switch (tmthing->type)
-				{
-					case MT_FAN: // fan
-						if (thing->z <= tmthing->z + (tmthing->health << FRACBITS) && thing->momz < FixedMul(tmthing->info->mass, tmthing->scale) && !(thing->player->climbing || (thing->player->pflags & PF_GLIDING)))
-						{
-							thing->momz += FixedMul(tmthing->info->mass/4, tmthing->scale);
-
-							if (thing->momz > FixedMul(tmthing->info->mass, tmthing->scale))
-								thing->momz = FixedMul(tmthing->info->mass, tmthing->scale);
-
-							if (!thing->player->powers[pw_tailsfly])
-							{
-								P_ResetPlayer(thing->player);
-								if (thing->player->panim != PA_FALL)
-									P_SetPlayerMobjState(thing, S_PLAY_FALL1);
-							}
-						}
-						break;
-					case MT_STEAM: // Steam
-						if (tmthing->state == &states[S_STEAM1] && thing->z <= tmthing->z + FixedMul(16*FRACUNIT, tmthing->scale)) // Only when it bursts
-						{
-							thing->momz = FixedMul(tmthing->info->mass, FixedSqrt(FixedMul(tmthing->scale, thing->scale)));
-							P_ResetPlayer(thing->player);
-							if (thing->player->panim != PA_FALL)
-								P_SetPlayerMobjState(thing, S_PLAY_FALL1);
-						}
-						break;
-					default:
-						break;
-				}
-			}
-		}
+		if (tmthing->type == MT_FAN || tmthing->type == MT_STEAM)
+			P_DoFanAndGasJet(tmthing, thing);
 	}
 
 	if (tmthing->player) // Is the moving/interacting object the player?
@@ -997,72 +907,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		if (!tmthing->health)
 			return true;
 
-		if ((thing->eflags & MFE_VERTICALFLIP) && tmthing->z + tmthing->height <= thing->z + thing->height && !(tmthing->state == &states[tmthing->info->painstate]))
-		{
-			switch (thing->type)
-			{
-				case MT_FAN: // fan
-					if (tmthing->z + tmthing->height >= thing->z + thing->height - (thing->health << FRACBITS) && tmthing->momz > -FixedMul(thing->info->mass, thing->scale) && !(tmthing->player->climbing || (tmthing->player->pflags & PF_GLIDING)))
-					{
-						tmthing->momz -= FixedMul(thing->info->mass/4, thing->scale);
-
-						if (tmthing->momz < -FixedMul(thing->info->mass, thing->scale))
-							tmthing->momz = -FixedMul(thing->info->mass, thing->scale);
-
-						if (!tmthing->player->powers[pw_tailsfly])
-						{
-							P_ResetPlayer(tmthing->player);
-							if (tmthing->player->panim != PA_FALL)
-								P_SetPlayerMobjState(tmthing, S_PLAY_FALL1);
-						}
-					}
-					break;
-				case MT_STEAM: // Steam
-					if (thing->state == &states[S_STEAM1] && tmthing->z + tmthing->height >= thing->z + thing->height - FixedMul(16*FRACUNIT, thing->scale)) // Only when it bursts
-					{
-						tmthing->momz = -FixedMul(thing->info->mass, FixedSqrt(FixedMul(thing->scale, tmthing->scale)));
-						P_ResetPlayer(tmthing->player);
-						if (tmthing->player->panim != PA_FALL)
-							P_SetPlayerMobjState(tmthing, S_PLAY_FALL1);
-					}
-					break;
-				default:
-					break;
-			}
-		}
-		else if (!(thing->eflags & MFE_VERTICALFLIP) && tmthing->z >= thing->z && !(tmthing->state == &states[tmthing->info->painstate]))
-		{
-			switch (thing->type)
-			{
-				case MT_FAN: // fan
-					if (tmthing->z <= thing->z + (thing->health << FRACBITS) && tmthing->momz < FixedMul(thing->info->mass, thing->scale) && !(tmthing->player->climbing || (tmthing->player->pflags & PF_GLIDING)))
-					{
-						tmthing->momz += FixedMul(thing->info->mass/4, thing->scale);
-
-						if (tmthing->momz > FixedMul(thing->info->mass, thing->scale))
-							tmthing->momz = FixedMul(thing->info->mass, thing->scale);
-
-						if (!tmthing->player->powers[pw_tailsfly])
-						{
-							P_ResetPlayer(tmthing->player);
-							if (tmthing->player->panim != PA_FALL)
-								P_SetPlayerMobjState(tmthing, S_PLAY_FALL1);
-						}
-					}
-					break;
-				case MT_STEAM: // Steam
-					if (thing->state == &states[S_STEAM1] && tmthing->z <= thing->z + FixedMul(16*FRACUNIT, thing->scale)) // Only when it bursts
-					{
-						tmthing->momz = FixedMul(thing->info->mass, FixedSqrt(FixedMul(thing->scale, tmthing->scale)));
-						P_ResetPlayer(tmthing->player);
-						if (tmthing->player->panim != PA_FALL)
-							P_SetPlayerMobjState(tmthing, S_PLAY_FALL1);
-					}
-					break;
-				default:
-					break;
-			}
-		}
+		if (thing->type == MT_FAN || thing->type == MT_STEAM)
+			P_DoFanAndGasJet(thing, tmthing);
 
 		// Are you touching the side of the object you're interacting with?
 		if (thing->z - FixedMul(FRACUNIT, thing->scale) <= tmthing->z + tmthing->height
@@ -1104,6 +950,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	else if ((thing->flags & (MF_SOLID|MF_NOCLIP)) == MF_SOLID
 		&& (tmthing->flags & (MF_SOLID|MF_NOCLIP)) == MF_SOLID)
 	{
+		fixed_t topz, tmtopz;
+
 		if (tmthing->eflags & MFE_VERTICALFLIP)
 		{
 			// pass under
@@ -1415,8 +1263,8 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 				;
 			else if (thing->type == MT_SKIM && (rover->flags & FF_SWIMMABLE))
 				;
-			else if (!((((rover->flags & FF_BLOCKPLAYER) && thing->player)
-				|| ((rover->flags & FF_BLOCKOTHERS) && !thing->player))
+			else if (!((rover->flags & FF_BLOCKPLAYER && thing->player)
+				|| (rover->flags & FF_BLOCKOTHERS && !thing->player)
 				|| rover->flags & FF_QUICKSAND))
 				continue;
 
@@ -1450,15 +1298,20 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 		}
 	}
 
+	// The bounding box is extended by MAXRADIUS
+	// because mobj_ts are grouped into mapblocks
+	// based on their origin point, and can overlap
+	// into adjacent blocks by up to MAXRADIUS units.
+
+	xl = (unsigned)(tmbbox[BOXLEFT] - bmaporgx - MAXRADIUS)>>MAPBLOCKSHIFT;
+	xh = (unsigned)(tmbbox[BOXRIGHT] - bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
+	yl = (unsigned)(tmbbox[BOXBOTTOM] - bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
+	yh = (unsigned)(tmbbox[BOXTOP] - bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
+
 #ifdef POLYOBJECTS
 	// Check polyobjects and see if tmfloorz/tmceilingz need to be altered
 	{
 		validcount++;
-
-		xl = (unsigned)(tmbbox[BOXLEFT] - bmaporgx - MAXRADIUS)>>MAPBLOCKSHIFT;
-		xh = (unsigned)(tmbbox[BOXRIGHT] - bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
-		yl = (unsigned)(tmbbox[BOXBOTTOM] - bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
-		yh = (unsigned)(tmbbox[BOXTOP] - bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
 
 		for (by = yl; by <= yh; by++)
 			for (bx = xl; bx <= xh; bx++)
@@ -1533,15 +1386,6 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 		return true;
 
 	// Check things first, possibly picking things up.
-	// The bounding box is extended by MAXRADIUS
-	// because mobj_ts are grouped into mapblocks
-	// based on their origin point, and can overlap
-	// into adjacent blocks by up to MAXRADIUS units.
-
-	xl = (unsigned)(tmbbox[BOXLEFT] - bmaporgx - MAXRADIUS)>>MAPBLOCKSHIFT;
-	xh = (unsigned)(tmbbox[BOXRIGHT] - bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
-	yl = (unsigned)(tmbbox[BOXBOTTOM] - bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
-	yh = (unsigned)(tmbbox[BOXTOP] - bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
 
 	// MF_NOCLIPTHING: used by camera to not be blocked by things
 	if (!(thing->flags & MF_NOCLIPTHING))
@@ -1671,15 +1515,20 @@ boolean P_CheckCameraPosition(fixed_t x, fixed_t y, camera_t *thiscam)
 		}
 	}
 
+	// The bounding box is extended by MAXRADIUS
+	// because mobj_ts are grouped into mapblocks
+	// based on their origin point, and can overlap
+	// into adjacent blocks by up to MAXRADIUS units.
+
+	xl = (unsigned)(tmbbox[BOXLEFT] - bmaporgx)>>MAPBLOCKSHIFT;
+	xh = (unsigned)(tmbbox[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
+	yl = (unsigned)(tmbbox[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
+	yh = (unsigned)(tmbbox[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
+
 #ifdef POLYOBJECTS
 	// Check polyobjects and see if tmfloorz/tmceilingz need to be altered
 	{
 		validcount++;
-
-		xl = (unsigned)(tmbbox[BOXLEFT] - bmaporgx)>>MAPBLOCKSHIFT;
-		xh = (unsigned)(tmbbox[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
-		yl = (unsigned)(tmbbox[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
-		yh = (unsigned)(tmbbox[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
 
 		for (by = yl; by <= yh; by++)
 			for (bx = xl; bx <= xh; bx++)
@@ -1749,18 +1598,7 @@ boolean P_CheckCameraPosition(fixed_t x, fixed_t y, camera_t *thiscam)
 	}
 #endif
 
-	// Check things.
-	// The bounding box is extended by MAXRADIUS
-	// because mobj_ts are grouped into mapblocks
-	// based on their origin point, and can overlap
-	// into adjacent blocks by up to MAXRADIUS units.
-
 	// check lines
-	xl = (unsigned)(tmbbox[BOXLEFT] - bmaporgx)>>MAPBLOCKSHIFT;
-	xh = (unsigned)(tmbbox[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
-	yl = (unsigned)(tmbbox[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
-	yh = (unsigned)(tmbbox[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
-
 	for (bx = xl; bx <= xh; bx++)
 		for (by = yl; by <= yh; by++)
 			if (!P_BlockLinesIterator(bx, by, PIT_CheckCameraLine))

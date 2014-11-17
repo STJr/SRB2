@@ -106,6 +106,50 @@ void R_InitPlanes(void)
 	// FIXME: unused
 }
 
+// R_PortalStoreClipValues
+// Saves clipping values for later. -Red
+void R_PortalStoreClipValues(INT32 start, INT32 end, INT16 *ceil, INT16 *floor, fixed_t *scale)
+{
+	INT32 i;
+	for (i = 0; i < end-start; i++)
+	{
+		*ceil = ceilingclip[start+i];
+		ceil++;
+		*floor = floorclip[start+i];
+		floor++;
+		*scale = frontscale[start+i];
+		scale++;
+	}
+}
+
+// R_PortalRestoreClipValues
+// Inverse of the above. Restores the old value!
+void R_PortalRestoreClipValues(INT32 start, INT32 end, INT16 *ceil, INT16 *floor, fixed_t *scale)
+{
+	INT32 i;
+	for (i = 0; i < end-start; i++)
+	{
+		ceilingclip[start+i] = *ceil;
+		ceil++;
+		floorclip[start+i] = *floor;
+		floor++;
+		frontscale[start+i] = *scale;
+		scale++;
+	}
+
+	// HACKS FOLLOW
+	for (i = 0; i < start; i++)
+	{
+		floorclip[i] = -1;
+		ceilingclip[i] = (INT16)viewheight;
+	}
+	for (i = end; i < vid.width; i++)
+	{
+		floorclip[i] = -1;
+		ceilingclip[i] = (INT16)viewheight;
+	}
+}
+
 
 //profile stuff ---------------------------------------------------------
 //#define TIMING
@@ -597,6 +641,7 @@ void R_MakeSpans(INT32 x, INT32 t1, INT32 b1, INT32 t2, INT32 b2)
 void R_DrawPlanes(void)
 {
 	visplane_t *pl;
+	angle_t skyviewangle = viewangle; // the flat angle itself can mess with viewangle, so do your own angle instead!
 	INT32 x;
 	INT32 angle;
 	INT32 i;
@@ -635,7 +680,7 @@ void R_DrawPlanes(void)
 
 					if (dc_yl <= dc_yh)
 					{
-						angle = (viewangle + xtoviewangle[x])>>ANGLETOSKYSHIFT;
+						angle = (skyviewangle + xtoviewangle[x])>>ANGLETOSKYSHIFT;
 						dc_x = x;
 						dc_source =
 							R_GetColumn(skytexture,

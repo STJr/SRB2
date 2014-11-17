@@ -651,6 +651,15 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	colfunc = wallcolfunc;
 }
 
+// Loop through R_DrawMaskedColumn calls
+static void R_DrawRepeatMaskedColumn(column_t *col)
+{
+	do {
+		R_DrawMaskedColumn(col);
+		sprtopscreen += dc_texheight*spryscale;
+	} while (sprtopscreen < sprbotscreen);
+}
+
 //
 // R_RenderThickSideRange
 // Renders all the thick sides in the given range.
@@ -837,7 +846,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	//faB: handle case where multipatch texture is drawn on a 2sided wall, multi-patch textures
 	//     are not stored per-column with post info anymore in Doom Legacy
 	if (textures[texnum]->holes)
-		colfunc_2s = R_DrawMaskedColumn;                    //render the usual 2sided single-patch packed texture
+		colfunc_2s = R_DrawRepeatMaskedColumn;                    //render the usual 2sided single-patch packed texture
 	else
 	{
 		colfunc_2s = R_Render2sidedMultiPatchColumn;        //render multipatch with no holes (no post_t info)

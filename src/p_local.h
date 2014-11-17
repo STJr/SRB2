@@ -373,6 +373,10 @@ void P_DoNightsScore(player_t *player);
 
 extern INT32 ceilmovesound;
 
+// Factor to scale scrolling effect into mobj-carrying properties = 3/32.
+// (This is so scrolling floors and objects on them can move at same speed.)
+#define CARRYFACTOR ((3*FRACUNIT)/32)
+
 void P_MixUp(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z, angle_t angle,
 			INT16 starpostx, INT16 starposty, INT16 starpostz,
 			INT32 starpostnum, tic_t starposttime, angle_t starpostangle,

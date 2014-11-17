@@ -418,6 +418,7 @@ UINT16 W_LoadWadFile(const char *filename)
 		free(fileinfov);
 	}
 
+#ifndef NOMD5
 	//
 	// w-waiiiit!
 	// Let's not add a wad file if the MD5 matches
@@ -433,6 +434,7 @@ UINT16 W_LoadWadFile(const char *filename)
 			return INT16_MAX;
 		}
 	}
+#endif
 
 	//
 	// link wad file to search files

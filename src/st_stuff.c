@@ -463,15 +463,15 @@ static INT32 STRINGY(INT32 y)
 
 static INT32 SPLITFLAGS(INT32 f)
 {
-    // Pass this V_SNAPTO(TOP|BOTTOM) and it'll trim them to account for splitscreen! -Red
-    if (splitscreen)
-    {
-        if (stplyr != &players[displayplayer])
-            f &= ~V_SNAPTOTOP;
-        else
-            f &= ~V_SNAPTOBOTTOM;
-    }
-    return f;
+	// Pass this V_SNAPTO(TOP|BOTTOM) and it'll trim them to account for splitscreen! -Red
+	if (splitscreen)
+	{
+		if (stplyr != &players[displayplayer])
+			f &= ~V_SNAPTOTOP;
+		else
+			f &= ~V_SNAPTOBOTTOM;
+	}
+	return f;
 }
 
 static INT32 SCX(INT32 x)
@@ -521,7 +521,7 @@ static void ST_DrawNightsOverlayNum(INT32 x /* right border */, INT32 y, INT32 a
 	INT32 w = SHORT(numpat[0]->width);
 	const UINT8 *colormap;
 
-    // I want my V_SNAPTOx flags. :< -Red
+	// I want my V_SNAPTOx flags. :< -Red
 	//a &= V_ALPHAMASK;
 
 	if (colornum == 0)
@@ -1000,8 +1000,8 @@ static void ST_drawNiGHTSHUD(void)
 
 			if (splitscreen)
 			{
-				ST_DrawNightsOverlayNum(256, STRINGY(160), SPLITFLAGS(V_SNAPTOBOTTOM)|V_SNAPTORIGHT|linktrans, (stplyr->linkcount-1), nightsnum, colornum);
-				V_DrawTranslucentMappedPatch(264, STRINGY(160), SPLITFLAGS(V_SNAPTOBOTTOM)|V_SNAPTORIGHT|linktrans, nightslink,
+				ST_DrawNightsOverlayNum(256, STRINGY(152), SPLITFLAGS(V_SNAPTOBOTTOM)|V_SNAPTORIGHT|linktrans, (stplyr->linkcount-1), nightsnum, colornum);
+				V_DrawTranslucentMappedPatch(264, STRINGY(152), SPLITFLAGS(V_SNAPTOBOTTOM)|V_SNAPTORIGHT|linktrans, nightslink,
 					colornum == 0 ? colormaps : R_GetTranslationColormap(TC_DEFAULT, colornum, GTC_CACHE));
 			}
 			else
@@ -1025,8 +1025,8 @@ static void ST_drawNiGHTSHUD(void)
 
 			if (splitscreen)
 			{
-				ST_DrawNightsOverlayNum(256, STRINGY(160), SPLITFLAGS(V_SNAPTOBOTTOM)|V_SNAPTORIGHT, (stplyr->linkcount-1), nightsnum, colornum);
-				V_DrawMappedPatch(264, STRINGY(160), SPLITFLAGS(V_SNAPTOBOTTOM)|V_SNAPTORIGHT, nightslink,
+				ST_DrawNightsOverlayNum(256, STRINGY(152), SPLITFLAGS(V_SNAPTOBOTTOM)|V_SNAPTORIGHT, (stplyr->linkcount-1), nightsnum, colornum);
+				V_DrawMappedPatch(264, STRINGY(152), SPLITFLAGS(V_SNAPTOBOTTOM)|V_SNAPTORIGHT, nightslink,
 					colornum == 0 ? colormaps : R_GetTranslationColormap(TC_DEFAULT, colornum, GTC_CACHE));
 			}
 			else
@@ -1079,17 +1079,17 @@ static void ST_drawNiGHTSHUD(void)
 		else if (nosshack)
 		{ // Even dirtier hack-of-a-hack to draw seperate drill meters in splitscreen special stages but nothing else.
 			splitscreen = true;
-			V_DrawScaledPatch(locx, STRINGY(locy)-3, V_SNAPTOLEFT|V_HUDTRANS, drillbar);
+			V_DrawScaledPatch(locx, STRINGY(locy)-3, V_HUDTRANS, drillbar);
 			for (dfill = 0; dfill < stplyr->drillmeter/20 && dfill < 96; ++dfill)
-				V_DrawScaledPatch(locx + 2 + dfill, STRINGY(locy + 3), V_SNAPTOLEFT|V_HUDTRANS, drillfill[fillpatch]);
+				V_DrawScaledPatch(locx + 2 + dfill, STRINGY(locy + 3), V_HUDTRANS, drillfill[fillpatch]);
 			stplyr = &players[secondarydisplayplayer];
 			if (stplyr->pflags & PF_DRILLING)
 				fillpatch = (stplyr->drillmeter & 1) + 1;
 			else
 				fillpatch = 0;
-			V_DrawScaledPatch(locx, STRINGY(locy-3), V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS, drillbar);
+			V_DrawScaledPatch(locx, STRINGY(locy-3), V_SNAPTOBOTTOM|V_HUDTRANS, drillbar);
 			for (dfill = 0; dfill < stplyr->drillmeter/20 && dfill < 96; ++dfill)
-				V_DrawScaledPatch(locx + 2 + dfill, STRINGY(locy + 3), V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS, drillfill[fillpatch]);
+				V_DrawScaledPatch(locx + 2 + dfill, STRINGY(locy + 3), V_SNAPTOBOTTOM|V_HUDTRANS, drillfill[fillpatch]);
 			stplyr = &players[displayplayer];
 			splitscreen = false;
 		}
@@ -1233,19 +1233,22 @@ static void ST_drawNiGHTSHUD(void)
 		if (modeattacking == ATTACKING_NIGHTS)
 		{
 			INT32 maretime = max(stplyr->realtime - stplyr->marebegunat, 0);
+			fixed_t cornerx = vid.width, cornery = vid.height-SCZ(20);
 
-			ST_DrawOverlayPatch(SCX(298), SCY(180), W_CachePatchName("NGRTIMER", PU_HUDGFX));
-			ST_DrawPaddedOverlayNum(SCX(298), SCY(180), G_TicsToCentiseconds(maretime), 2);
-			ST_DrawOverlayPatch(SCX(274), SCY(180), sboperiod);
+#define ASSISHHUDFIX(n) (n*vid.dupx)
+			ST_DrawOverlayPatch(cornerx-ASSISHHUDFIX(22), cornery, W_CachePatchName("NGRTIMER", PU_HUDGFX));
+			ST_DrawPaddedOverlayNum(cornerx-ASSISHHUDFIX(22), cornery, G_TicsToCentiseconds(maretime), 2);
+			ST_DrawOverlayPatch(cornerx-ASSISHHUDFIX(46), cornery, sboperiod);
 			if (maretime < 60*TICRATE)
-				ST_DrawOverlayNum(SCX(274), SCY(180), G_TicsToSeconds(maretime));
+				ST_DrawOverlayNum(cornerx-ASSISHHUDFIX(46), cornery, G_TicsToSeconds(maretime));
 			else
 			{
-				ST_DrawPaddedOverlayNum(SCX(274), SCY(180), G_TicsToSeconds(maretime), 2);
-				ST_DrawOverlayPatch(SCX(250), SCY(180), sbocolon);
-				ST_DrawOverlayNum(SCX(250), SCY(180), G_TicsToMinutes(maretime, true));
+				ST_DrawPaddedOverlayNum(cornerx-ASSISHHUDFIX(46), cornery, G_TicsToSeconds(maretime), 2);
+				ST_DrawOverlayPatch(cornerx-ASSISHHUDFIX(70), cornery, sbocolon);
+				ST_DrawOverlayNum(cornerx-ASSISHHUDFIX(70), cornery, G_TicsToMinutes(maretime, true));
 			}
 		}
+#undef ASSISHHUDFIX
 	}
 
 	// Ideya time remaining
@@ -1288,10 +1291,10 @@ static void ST_drawNiGHTSHUD(void)
 			numbersize = 48/2;
 
 		if (realnightstime < 10)
-			ST_DrawNightsOverlayNum(160 + numbersize, STRINGY(12), V_SNAPTOTOP, realnightstime,
+			ST_DrawNightsOverlayNum(160 + numbersize, STRINGY(12), SPLITFLAGS(V_SNAPTOTOP), realnightstime,
 				nightsnum, SKINCOLOR_RED);
 		else
-			ST_DrawNightsOverlayNum(160 + numbersize, STRINGY(12), V_SNAPTOTOP, realnightstime,
+			ST_DrawNightsOverlayNum(160 + numbersize, STRINGY(12), SPLITFLAGS(V_SNAPTOTOP), realnightstime,
 				nightsnum, SKINCOLOR_SUPER4);
 
 		// Show exact time in debug
