@@ -22,7 +22,6 @@
 
 #define ZCLIP_PLANE 4.0f
 #define NZCLIP_PLANE 0.9f
-#define ALAM_LIGHTING
 
 // ==========================================================================
 //                                                               SIMPLE TYPES
