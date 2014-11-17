@@ -5942,7 +5942,7 @@ void HWR_DoWipe(UINT8 wipenum, UINT8 scrnnum)
 	if (HWRWipeCounter > 1.0f)
 		HWRWipeCounter = 1.0f;
 }
-
+/*
 void HWR_MakeScreenFinalTexture(void)
 {
     HWD.pfnMakeScreenFinalTexture();
@@ -5952,5 +5952,5 @@ void HWR_DrawScreenFinalTexture(int width, int height)
 {
     HWD.pfnDrawScreenFinalTexture(width, height);
 }
-
+*/
 #endif // HWRENDER
