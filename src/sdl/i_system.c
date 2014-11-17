@@ -301,37 +301,38 @@ SDL_bool framebuffer = SDL_FALSE;
 
 UINT8 keyboard_started = false;
 
-#if 0
-static void signal_handler(INT32 num)
+FUNCNORETURN static ATTRNORETURN void signal_handler(INT32 num)
 {
 	//static char msg[] = "oh no! back to reality!\r\n";
-	char *      sigmsg;
+	const char *      sigmsg;
 	char        sigdef[32];
+
+	D_QuitNetGame(); // Fix server freezes
 
 	switch (num)
 	{
 	case SIGINT:
-		sigmsg = "interrupt";
+		sigmsg = "SIGINT - interrupted";
 		break;
 	case SIGILL:
-		sigmsg = "illegal instruction - invalid function image";
+		sigmsg = "SIGILL - illegal instruction - invalid function image";
 		break;
 	case SIGFPE:
-		sigmsg = "floating point exception";
+		sigmsg = "SIGFPE - floating point exception";
 		break;
 	case SIGSEGV:
-		sigmsg = "segment violation";
+		sigmsg = "SIGSEGV - segment violation";
 		break;
 	case SIGTERM:
-		sigmsg = "Software termination signal from kill";
+		sigmsg = "SIGTERM - Software termination signal from kill";
 		break;
 #if !(defined (__unix_) || defined (UNIXCOMMON))
 	case SIGBREAK:
-		sigmsg = "Ctrl-Break sequence";
+		sigmsg = "SIGBREAK - Ctrl-Break sequence";
 		break;
 #endif
 	case SIGABRT:
-		sigmsg = "abnormal termination triggered by abort call";
+		sigmsg = "SIGABRT - abnormal termination triggered by abort call";
 		break;
 	default:
 		sprintf(sigdef,"signal number %d", num);
@@ -339,13 +340,17 @@ static void signal_handler(INT32 num)
 	}
 
 	I_OutputMsg("signal_handler() error: %s\n", sigmsg);
+
+	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
+		"Signal caught",
+		sigmsg, NULL);
+	I_ShutdownSystem();
 	signal(num, SIG_DFL);               //default signal action
 	raise(num);
 	I_Quit();
 }
-#endif
 
-#if defined (NDEBUG) && !defined (DC) && !defined (_WIN32_WCE)
+#if !defined (DC)
 FUNCNORETURN static ATTRNORETURN void quit_handler(int num)
 {
 	signal(num, SIG_DFL); //default signal action
@@ -737,21 +742,21 @@ static inline void I_ShutdownConsole(void){}
 //
 void I_StartupKeyboard (void)
 {
-#if defined (NDEBUG) && !defined (DC)
+#if !defined (DC)
 #ifdef SIGILL
-//	signal(SIGILL , signal_handler);
+	signal(SIGILL , signal_handler);
 #endif
 #ifdef SIGINT
 	signal(SIGINT , quit_handler);
 #endif
 #ifdef SIGSEGV
-//	signal(SIGSEGV , signal_handler);
+	signal(SIGSEGV , signal_handler);
 #endif
 #ifdef SIGBREAK
 	signal(SIGBREAK , quit_handler);
 #endif
 #ifdef SIGABRT
-//	signal(SIGABRT , signal_handler);
+	signal(SIGABRT , signal_handler);
 #endif
 #ifdef SIGTERM
 	signal(SIGTERM , quit_handler);
