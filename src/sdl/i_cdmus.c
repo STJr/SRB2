@@ -36,3 +36,4 @@ boolean I_SetVolumeCD(int volume)
 	(void)volume;
 	return false;
 }
+#endif
