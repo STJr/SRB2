@@ -1,3 +1,4 @@
+#ifdef HAVE_SDL
 #include "../command.h"
 #include "../s_sound.h"
 #include "../i_sound.h"
