@@ -761,8 +761,10 @@ void HWR_WallLighting(FOutVector *wlVerts)
 #ifdef DL_HIGH_QUALITY
 		Surf.FlatColor.s.alpha = (UINT8)((1-dist_p2d/DL_SQRRADIUS(j))*Surf.FlatColor.s.alpha);
 #endif
+		if ((!dynlights->mo[j]) || (dynlights->mo[j]->thinker.function.acp1 != (actionf_p1)P_MobjThinker))
+			continue;
 		if (!dynlights->mo[j]->state)
-			return;
+			continue;
 		// next state is null so fade out with alpha
 		if (dynlights->mo[j]->state->nextstate == S_NULL)
 			Surf.FlatColor.s.alpha = (UINT8)(((float)dynlights->mo[j]->tics/(float)dynlights->mo[j]->state->tics)*Surf.FlatColor.s.alpha);
@@ -824,8 +826,10 @@ void HWR_PlaneLighting(FOutVector *clVerts, int nrClipVerts)
 #ifdef DL_HIGH_QUALITY
 		Surf.FlatColor.s.alpha = (unsigned char)((1 - dist_p2d/DL_SQRRADIUS(j))*Surf.FlatColor.s.alpha);
 #endif
+		if ((!dynlights->mo[j]) || (dynlights->mo[j]->thinker.function.acp1 != (actionf_p1)P_MobjThinker))
+			continue;
 		if (!dynlights->mo[j]->state)
-			return;
+			continue;
 		// next state is null so fade out with alpha
 		if ((dynlights->mo[j]->state->nextstate == S_NULL))
 			Surf.FlatColor.s.alpha = (unsigned char)(((float)dynlights->mo[j]->tics/(float)dynlights->mo[j]->state->tics)*Surf.FlatColor.s.alpha);
@@ -1231,25 +1235,6 @@ static void HWR_CheckSubsector(size_t num, fixed_t *bbox)
 }
 
 
-// --------------------------------------------------------------------------
-// Hurdler: this adds lights by mobj.
-// --------------------------------------------------------------------------
-static void HWR_AddMobjLights(mobj_t *thing)
-{
-	if (t_lspr[thing->sprite]->type & CORONA_SPR)
-	{
-		LIGHT_POS(dynlights->nb).x = FIXED_TO_FLOAT(thing->x);
-		LIGHT_POS(dynlights->nb).y = FIXED_TO_FLOAT(thing->z) + t_lspr[thing->sprite]->light_yoffset;
-		LIGHT_POS(dynlights->nb).z = FIXED_TO_FLOAT(thing->y);
-
-		dynlights->p_lspr[dynlights->nb] = t_lspr[thing->sprite];
-
-		dynlights->nb++;
-		if (dynlights->nb > DL_MAX_LIGHT)
-			dynlights->nb = DL_MAX_LIGHT;
-	}
-}
-
 //Hurdler: The goal of this function is to walk through all the bsp starting
 //         on the top.
 //         We need to do that to know all the lights in the map and all the walls
@@ -1266,8 +1251,37 @@ static void HWR_ComputeLightMapsInBSPNode(int bspnum, fixed_t *bbox)
 	HWR_ComputeLightMapsInBSPNode(nodes[bspnum].children[0], nodes[bspnum].bbox[0]);
 	HWR_ComputeLightMapsInBSPNode(nodes[bspnum].children[1], nodes[bspnum].bbox[1]);
 }
+#endif
 
-static void HWR_SearchLightsInMobjs(void)
+// --------------------------------------------------------------------------
+// Hurdler: this adds lights by mobj.
+// --------------------------------------------------------------------------
+static void HWR_AddMobjLights(mobj_t *thing)
+{
+    if (!cv_drawdist.value || P_AproxDistance(thing->x-viewx, thing->y-viewy) < cv_drawdist.value)
+	if (!(thing->flags2 & MF2_DEBRIS) && (thing->sprite != SPR_PLAY ||
+	 (thing->player && thing->player->powers[pw_super])))
+	if ((t_lspr[thing->sprite]->type&DYNLIGHT_SPR)
+	  && ((t_lspr[thing->sprite]->type != LIGHT_SPR) || cv_grstaticlighting.value)
+	  && (dynlights->nb < DL_MAX_LIGHT)
+
+	  && thing->state)
+	{
+		LIGHT_POS(dynlights->nb).x = FIXED_TO_FLOAT(thing->x);
+		LIGHT_POS(dynlights->nb).y = FIXED_TO_FLOAT(thing->z) + t_lspr[thing->sprite]->light_yoffset;
+		LIGHT_POS(dynlights->nb).z = FIXED_TO_FLOAT(thing->y);
+
+		dynlights->p_lspr[dynlights->nb] = t_lspr[thing->sprite];
+
+		P_SetTarget(&dynlights->mo[dynlights->nb], thing);
+
+		dynlights->nb++;
+		if (dynlights->nb > DL_MAX_LIGHT)
+			dynlights->nb = DL_MAX_LIGHT;
+	}
+}
+
+void HWR_SearchLightsInMobjs(void)
 {
 	thinker_t *         th;
 	//mobj_t *            mobj;
@@ -1278,9 +1292,15 @@ static void HWR_SearchLightsInMobjs(void)
 		// a mobj ?
 		if (th->function.acp1 == (actionf_p1)P_MobjThinker)
 			HWR_AddMobjLights((mobj_t *)th);
+
+
+		if (dynlights->nb == DL_MAX_LIGHT)
+        {
+            CONS_Printf("light limit exceeded\n");
+            return;
+        }
 	}
 }
-#endif
 
 //
 // HWR_CreateStaticLightmaps()

@@ -36,6 +36,8 @@ void HWR_WallLighting(FOutVector *wlVerts);
 void HWR_ResetLights(void);
 void HWR_SetLights(int viewnumber);
 
+void HWR_SearchLightsInMobjs(void);
+
 #ifdef NEWCORONAS
 void HWR_DrawCoronas(void);
 #else
