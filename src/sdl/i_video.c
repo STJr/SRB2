@@ -124,8 +124,8 @@ static      SDL_Color    localPalette[256];
 static      SDL_Rect   **modeList = NULL;
 static       Uint8       BitsPerPixel = 16;
 #endif
-static       Uint16      realwidth = BASEVIDWIDTH;
-static       Uint16      realheight = BASEVIDHEIGHT;
+Uint16      realwidth = BASEVIDWIDTH;
+Uint16      realheight = BASEVIDHEIGHT;
 static const Uint32      surfaceFlagsW = 0/*|SDL_RESIZABLE*/;
 static const Uint32      surfaceFlagsF = 0;
 static       SDL_bool    mousegrabok = SDL_TRUE;
@@ -174,7 +174,6 @@ static void Impl_SetWindowIcon(void);
 static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 {
 	static SDL_bool wasfullscreen = SDL_FALSE;
-	static SDL_bool glfallbackresolution = SDL_FALSE;
 	Uint32 rmask;
 	Uint32 gmask;
 	Uint32 bmask;
@@ -195,16 +194,15 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 		else if (!fullscreen && wasfullscreen)
 		{
 			wasfullscreen = SDL_FALSE;
-			glfallbackresolution = SDL_FALSE;
 			SDL_SetWindowFullscreen(window, 0);
 			SDL_SetWindowSize(window, width, height);
-			SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+			SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED_DISPLAY(1), SDL_WINDOWPOS_CENTERED_DISPLAY(1));
 		}
 		else if (!wasfullscreen)
 		{
 			// Reposition window only in windowed mode
 			SDL_SetWindowSize(window, width, height);
-			SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+			SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED_DISPLAY(1), SDL_WINDOWPOS_CENTERED_DISPLAY(1));
 		}
 	}
 	else
@@ -221,26 +219,6 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 
 	if (rendermode == render_opengl)
 	{
-		int sdlw, sdlh;
-		SDL_GetWindowSize(window, &sdlw, &sdlh);
-		// Logical fullscreen is not implemented yet for OpenGL, so...
-		// Special case handling
-		if (glfallbackresolution == SDL_FALSE && fullscreen && width != sdlw && height != sdlh)
-		{
-			if (VID_GetModeForSize(sdlw, sdlh) != -1)
-			{
-				wasfullscreen = SDL_TRUE;
-				VID_SetMode(VID_GetModeForSize(sdlw, sdlh));
-				return;
-			}
-			else
-			{
-				wasfullscreen = SDL_TRUE;
-				glfallbackresolution = SDL_TRUE;
-				VID_SetMode(-1);
-				return;
-			}
-		}
 		OglSdlSurface(vid.width, vid.height);
 	}
 
@@ -278,221 +256,150 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 	}
 }
 
-//
-//  Translates the SDL key into SRB2 key
-//
-
-static INT32 SDLatekey(SDL_Keycode sym)
+static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Scancode code)
 {
-	INT32 rc = sym + 0x80;
-
-	switch (sym)
+	if (code >= SDL_SCANCODE_A && code <= SDL_SCANCODE_Z)
 	{
-		case SDLK_LEFT:
-			rc = KEY_LEFTARROW;
-			break;
-		case SDLK_RIGHT:
-			rc = KEY_RIGHTARROW;
-			break;
-		case SDLK_DOWN:
-			rc = KEY_DOWNARROW;
-			break;
-		case SDLK_UP:
-			rc = KEY_UPARROW;
-			break;
+		// get lowercase ASCII
+		return code - SDL_SCANCODE_A + 'a';
+	}
+	if (code >= SDL_SCANCODE_1 && code <= SDL_SCANCODE_9)
+	{
+		return code - SDL_SCANCODE_1 + '1';
+	}
+	else if (code == SDL_SCANCODE_0)
+	{
+		return '0';
+	}
+	if (code >= SDL_SCANCODE_F1 && code <= SDL_SCANCODE_F12)
+	{
+		return KEY_F1 + (code - SDL_SCANCODE_F1);
+	}
+	switch (code)
+	{
+		case SDL_SCANCODE_KP_0:
+			return KEY_KEYPAD0;
+		case SDL_SCANCODE_KP_1:
+			return KEY_KEYPAD1;
+		case SDL_SCANCODE_KP_2:
+			return KEY_KEYPAD2;
+		case SDL_SCANCODE_KP_3:
+			return KEY_KEYPAD3;
+		case SDL_SCANCODE_KP_4:
+			return KEY_KEYPAD4;
+		case SDL_SCANCODE_KP_5:
+			return KEY_KEYPAD5;
+		case SDL_SCANCODE_KP_6:
+			return KEY_KEYPAD6;
+		case SDL_SCANCODE_KP_7:
+			return KEY_KEYPAD7;
+		case SDL_SCANCODE_KP_8:
+			return KEY_KEYPAD8;
+		case SDL_SCANCODE_KP_9:
+			return KEY_KEYPAD9;
 
-		case SDLK_ESCAPE:
-			rc = KEY_ESCAPE;
-			break;
-		case SDLK_SPACE:
-			rc = KEY_SPACE;
-			break;
-		case SDLK_RETURN:
-		case SDLK_KP_ENTER:
-			rc = KEY_ENTER;
-			break;
-		case SDLK_TAB:
-			rc = KEY_TAB;
-			break;
-		case SDLK_F1:
-			rc = KEY_F1;
-			break;
-		case SDLK_F2:
-			rc = KEY_F2;
-			break;
-		case SDLK_F3:
-			rc = KEY_F3;
-			break;
-		case SDLK_F4:
-			rc = KEY_F4;
-			break;
-		case SDLK_F5:
-			rc = KEY_F5;
-			break;
-		case SDLK_F6:
-			rc = KEY_F6;
-			break;
-		case SDLK_F7:
-			rc = KEY_F7;
-			break;
-		case SDLK_F8:
-			rc = KEY_F8;
-			break;
-		case SDLK_F9:
-			rc = KEY_F9;
-			break;
-		case SDLK_F10:
-			rc = KEY_F10;
-			break;
-		case SDLK_F11:
-			rc = KEY_F11;
-			break;
-		case SDLK_F12:
-			rc = KEY_F12;
-			break;
+		case SDL_SCANCODE_RETURN:
+			return KEY_ENTER;
+		case SDL_SCANCODE_ESCAPE:
+			return KEY_ESCAPE;
+		case SDL_SCANCODE_BACKSPACE:
+			return KEY_BACKSPACE;
+		case SDL_SCANCODE_TAB:
+			return KEY_TAB;
+		case SDL_SCANCODE_SPACE:
+			return KEY_SPACE;
+		case SDL_SCANCODE_MINUS:
+			return KEY_MINUS;
+		case SDL_SCANCODE_EQUALS:
+			return KEY_EQUALS;
+		case SDL_SCANCODE_LEFTBRACKET:
+			return '[';
+		case SDL_SCANCODE_RIGHTBRACKET:
+			return ']';
+		case SDL_SCANCODE_BACKSLASH:
+			return '\\';
+		case SDL_SCANCODE_NONUSHASH:
+			return '#';
+		case SDL_SCANCODE_SEMICOLON:
+			return ';';
+		case SDL_SCANCODE_APOSTROPHE:
+			return '\'';
+		case SDL_SCANCODE_GRAVE:
+			return '`';
+		case SDL_SCANCODE_COMMA:
+			return ',';
+		case SDL_SCANCODE_PERIOD:
+			return '.';
+		case SDL_SCANCODE_SLASH:
+			return '/';
+		case SDL_SCANCODE_CAPSLOCK:
+			return KEY_CAPSLOCK;
+		case SDL_SCANCODE_PRINTSCREEN:
+			return 0; // undefined?
+		case SDL_SCANCODE_SCROLLLOCK:
+			return KEY_SCROLLLOCK;
+		case SDL_SCANCODE_PAUSE:
+			return KEY_PAUSE;
+		case SDL_SCANCODE_INSERT:
+			return KEY_INS;
+		case SDL_SCANCODE_HOME:
+			return KEY_HOME;
+		case SDL_SCANCODE_PAGEUP:
+			return KEY_PGUP;
+		case SDL_SCANCODE_DELETE:
+			return KEY_DEL;
+		case SDL_SCANCODE_END:
+			return KEY_END;
+		case SDL_SCANCODE_PAGEDOWN:
+			return KEY_PGDN;
+		case SDL_SCANCODE_RIGHT:
+			return KEY_RIGHTARROW;
+		case SDL_SCANCODE_LEFT:
+			return KEY_LEFTARROW;
+		case SDL_SCANCODE_DOWN:
+			return KEY_DOWNARROW;
+		case SDL_SCANCODE_UP:
+			return KEY_UPARROW;
+		case SDL_SCANCODE_NUMLOCKCLEAR:
+			return KEY_NUMLOCK;
+		case SDL_SCANCODE_KP_DIVIDE:
+			return KEY_KPADSLASH;
+		case SDL_SCANCODE_KP_MULTIPLY:
+			return '*'; // undefined?
+		case SDL_SCANCODE_KP_MINUS:
+			return KEY_MINUSPAD;
+		case SDL_SCANCODE_KP_PLUS:
+			return KEY_PLUSPAD;
+		case SDL_SCANCODE_KP_ENTER:
+			return KEY_ENTER;
+		case SDL_SCANCODE_KP_PERIOD:
+			return KEY_KPADDEL;
+		case SDL_SCANCODE_NONUSBACKSLASH:
+			return '\\';
 
-		case SDLK_BACKSPACE:
-			rc = KEY_BACKSPACE;
-			break;
-		case SDLK_DELETE:
-			rc = KEY_DEL;
-			break;
-
-		case SDLK_KP_EQUALS: //Alam & Logan: WTF? Mac KB haves one! XD
-		case SDLK_PAUSE:
-			rc = KEY_PAUSE;
-			break;
-
-		case SDLK_EQUALS:
-		case SDLK_PLUS:
-			rc = KEY_EQUALS;
-			break;
-
-		case SDLK_MINUS:
-			rc = KEY_MINUS;
-			break;
-
-		case SDLK_LSHIFT:
-			rc = KEY_LSHIFT;
-			break;
-
-		case SDLK_RSHIFT:
-			rc = KEY_RSHIFT;
-			break;
-
-		case SDLK_CAPSLOCK:
-			rc = KEY_CAPSLOCK;
-			break;
-
-		case SDLK_LCTRL:
-			rc = KEY_LCTRL;
-			break;
-		case SDLK_RCTRL:
-			rc = KEY_RCTRL;
-			break;
-
-		case SDLK_LALT:
-			rc = KEY_LALT;
-			break;
-		case SDLK_RALT:
-			rc = KEY_RALT;
-			break;
-
-		case SDLK_NUMLOCKCLEAR:
-			rc = KEY_NUMLOCK;
-			break;
-		case SDLK_SCROLLLOCK:
-			rc = KEY_SCROLLLOCK;
-			break;
-
-		case SDLK_PAGEUP:
-			rc = KEY_PGUP;
-			break;
-		case SDLK_PAGEDOWN:
-			rc = KEY_PGDN;
-			break;
-		case SDLK_END:
-			rc = KEY_END;
-			break;
-		case SDLK_HOME:
-			rc = KEY_HOME;
-			break;
-		case SDLK_INSERT:
-			rc = KEY_INS;
-			break;
-
-		case SDLK_KP_0:
-			rc = KEY_KEYPAD0;
-			break;
-		case SDLK_KP_1:
-			rc = KEY_KEYPAD1;
-			break;
-		case SDLK_KP_2:
-			rc = KEY_KEYPAD2;
-			break;
-		case SDLK_KP_3:
-			rc = KEY_KEYPAD3;
-			break;
-		case SDLK_KP_4:
-			rc = KEY_KEYPAD4;
-			break;
-		case SDLK_KP_5:
-			rc = KEY_KEYPAD5;
-			break;
-		case SDLK_KP_6:
-			rc = KEY_KEYPAD6;
-			break;
-		case SDLK_KP_7:
-			rc = KEY_KEYPAD7;
-			break;
-		case SDLK_KP_8:
-			rc = KEY_KEYPAD8;
-			break;
-		case SDLK_KP_9:
-			rc = KEY_KEYPAD9;
-			break;
-
-		case SDLK_KP_PERIOD:
-			rc = KEY_KPADDEL;
-			break;
-		case SDLK_KP_DIVIDE:
-			rc = KEY_KPADSLASH;
-			break;
-		case SDLK_KP_MULTIPLY:
-			rc = '*';
-			break;
-		case SDLK_KP_MINUS:
-			rc = KEY_MINUSPAD;
-			break;
-		case SDLK_KP_PLUS:
-			rc = KEY_PLUSPAD;
-			break;
-
-		case SDLK_LMETA:
-			rc = KEY_LEFTWIN;
-			break;
-		case SDLK_RMETA:
-			rc = KEY_RIGHTWIN;
-			break;
-
-		case SDLK_MENU:
-			rc = KEY_MENU;
-			break;
-
+		case SDL_SCANCODE_LSHIFT:
+			return KEY_LSHIFT;
+		case SDL_SCANCODE_RSHIFT:
+			return KEY_RSHIFT;
+		case SDL_SCANCODE_LCTRL:
+			return KEY_LCTRL;
+		case SDL_SCANCODE_RCTRL:
+			return KEY_RCTRL;
+		case SDL_SCANCODE_LALT:
+			return KEY_LALT;
+		case SDL_SCANCODE_RALT:
+			return KEY_RALT;
+		case SDL_SCANCODE_LGUI:
+			return KEY_LEFTWIN;
+		case SDL_SCANCODE_RGUI:
+			return KEY_RIGHTWIN;
 		default:
-			if (sym >= SDLK_SPACE && sym <= SDLK_DELETE)
-				rc = sym - SDLK_SPACE + ' ';
-			else if (sym >= 'A' && sym <= 'Z')
-				rc = sym - 'A' + 'a';
-			else if (sym)
-			{
-				I_OutputMsg("Unknown Keycode %i, Name: %s\n",sym, SDL_GetKeyName( sym ));
-			}
-			else if (!sym) rc = 0;
 			break;
 	}
-
-	return rc;
+	DBG_Printf("Unknown incoming scancode: %d, represented %c\n",
+				code,
+				SDL_GetKeyName(SDL_GetKeyFromScancode(code)));
+	return 0;
 }
 
 static void SDLdoUngrabMouse(void)
@@ -809,7 +716,7 @@ static void Impl_HandleKeyboardEvent(SDL_KeyboardEvent evt, Uint32 type)
 	{
 		return;
 	}
-	event.data1 = SDLatekey(evt.keysym.sym);
+	event.data1 = Impl_SDL_Scancode_To_Keycode(evt.keysym.scancode);
 	if (event.data1) D_PostEvent(&event);
 }
 
@@ -818,30 +725,34 @@ static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
 	event_t event;
 	int wwidth, wheight;
 
-	SDL_GetWindowSize(window, &wwidth, &wheight);
-
-	if ((SDL_GetMouseFocus() != window && SDL_GetKeyboardFocus() != window))
+	if (USE_MOUSEINPUT)
 	{
-		SDLdoUngrabMouse();
-		return;
-	}
+		SDL_GetWindowSize(window, &wwidth, &wheight);
 
-	if ((evt.x == realwidth/2) && (evt.y == realheight/2))
-	{
-		return;
-	}
-	else
-	{
-		event.data2 = (evt.xrel) * (wwidth / realwidth);
-		event.data3 = -evt.yrel * (wheight / realheight);
-	}
+		if ((SDL_GetMouseFocus() != window && SDL_GetKeyboardFocus() != window))
+		{
+			SDLdoUngrabMouse();
+			return;
+		}
 
-	event.type = ev_mouse;
+		if ((evt.x == realwidth/2) && (evt.y == realheight/2))
+		{
+			return;
+		}
+		else
+		{
+			event.data2 = (INT32)lround((evt.xrel) * ((float)wwidth / (float)realwidth));
+			event.data3 = (INT32)lround(-evt.yrel * ((float)wheight / (float)realheight));
+		}
 
-	if (SDL_GetMouseFocus() == window && SDL_GetKeyboardFocus() == window)
-	{
-		D_PostEvent(&event);
-		HalfWarpMouse(wwidth, wheight);
+		event.type = ev_mouse;
+
+		if (SDL_GetMouseFocus() == window && SDL_GetKeyboardFocus() == window)
+		{
+			D_PostEvent(&event);
+			SDL_SetWindowGrab(window, SDL_TRUE);
+			HalfWarpMouse(wwidth, wheight);
+		}
 	}
 }
 
@@ -868,9 +779,11 @@ static void Impl_HandleMouseButtonEvent(SDL_MouseButtonEvent evt, Uint32 type)
 		else if (evt.button == SDL_BUTTON_RIGHT)
 			event.data1 = KEY_MOUSE1+1;
 		else if (evt.button == SDL_BUTTON_LEFT)
-			event.data1= KEY_MOUSE1;
-		else if (evt.button <= MOUSEBUTTONS)
-			event.data1 = KEY_MOUSE1 + evt.which - SDL_BUTTON_LEFT;
+			event.data1 = KEY_MOUSE1;
+		else if (evt.button == SDL_BUTTON_X1)
+			event.data1 = KEY_MOUSE1+3;
+		else if (evt.button == SDL_BUTTON_X2)
+			event.data1 = KEY_MOUSE1+4;
 		if (event.type == ev_keyup || event.type == ev_keydown)
 		{
 			D_PostEvent(&event);
@@ -912,7 +825,7 @@ static void Impl_HandleJoystickAxisEvent(SDL_JoyAxisEvent evt)
 
 	// Determine the Joystick IDs for each current open joystick
 	joyid[0] = SDL_JoystickInstanceID(JoyInfo.dev);
-	joyid[1] = SDL_JoystickInstanceID(JoyInfo.dev);
+	joyid[1] = SDL_JoystickInstanceID(JoyInfo2.dev);
 
 	evt.axis++;
 	event.data1 = event.data2 = event.data3 = INT32_MAX;
@@ -951,7 +864,7 @@ static void Impl_HandleJoystickButtonEvent(SDL_JoyButtonEvent evt, Uint32 type)
 
 	// Determine the Joystick IDs for each current open joystick
 	joyid[0] = SDL_JoystickInstanceID(JoyInfo.dev);
-	joyid[1] = SDL_JoystickInstanceID(JoyInfo.dev);
+	joyid[1] = SDL_JoystickInstanceID(JoyInfo2.dev);
 
 	if (evt.which == joyid[0])
 	{
@@ -984,6 +897,9 @@ static void Impl_HandleJoystickButtonEvent(SDL_JoyButtonEvent evt, Uint32 type)
 void I_GetEvent(void)
 {
 	SDL_Event evt;
+	// We only want the first motion event,
+	// otherwise we'll end up catching the warp back to center.
+	int mouseMotionOnce = 0;
 
 	if (!graphics_started)
 	{
@@ -1002,7 +918,8 @@ void I_GetEvent(void)
 				Impl_HandleKeyboardEvent(evt.key, evt.type);
 				break;
 			case SDL_MOUSEMOTION:
-				Impl_HandleMouseMotionEvent(evt.motion);
+				if (!mouseMotionOnce) Impl_HandleMouseMotionEvent(evt.motion);
+				mouseMotionOnce = 1;
 				break;
 			case SDL_MOUSEBUTTONUP:
 			case SDL_MOUSEBUTTONDOWN:
@@ -1841,6 +1758,8 @@ void I_StartupGraphics(void)
 		HWD.pfnDoScreenWipe     = hwSym("DoScreenWipe",NULL);
 		HWD.pfnDrawIntermissionBG=hwSym("DrawIntermissionBG",NULL);
 		HWD.pfnMakeScreenTexture= hwSym("MakeScreenTexture",NULL);
+		HWD.pfnMakeScreenFinalTexture=hwSym("MakeScreenFinalTexture",NULL);
+		HWD.pfnDrawScreenFinalTexture=hwSym("DrawScreenFinalTexture",NULL);
 		// check gl renderer lib
 		if (HWD.pfnGetRenderVersion() != VERSION)
 			I_Error("%s", M_GetText("The version of the renderer doesn't match the version of the executable\nBe sure you have installed SRB2 properly.\n"));

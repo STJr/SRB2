@@ -3560,7 +3560,7 @@ static void HWR_DrawSprite(gr_vissprite_t *spr)
 
 	gpatch = W_CachePatchNum(spr->patchlumpnum, PU_CACHE);
 
-#ifdef ALAM_LIGHTING
+#if 0 //#ifdef ALAM_LIGHTING
 	if (!(spr->mobj->flags2 & MF2_DEBRIS) && (spr->mobj->sprite != SPR_PLAY ||
 	 (spr->mobj->player && spr->mobj->player->powers[pw_super])))
 		HWR_DL_AddLight(spr, gpatch);
@@ -5073,6 +5073,12 @@ if (0)
 
 	validcount++;
 
+#ifdef ALAM_LIGHTING
+	//14/11/99: Hurdler: moved here because it doesn't work with
+	// subsector, see other comments;
+	HWR_ResetLights();
+    HWR_SearchLightsInMobjs();
+#endif
 	HWR_RenderBSPNode((INT32)numnodes-1);
 
 	// Make a viewangle int so we can render things based on mouselook
@@ -5108,7 +5114,7 @@ if (0)
 #ifdef ALAM_LIGHTING
 	//14/11/99: Hurdler: moved here because it doesn't work with
 	// subsector, see other comments;
-	//HWR_ResetLights(); CONS_Printf("butts"); //yellowtd: TODO: Coronas wont show with skyboxes on, fix this soon
+	//HWR_ResetLights();
 #endif
 
 	// Draw MD2 and sprites
@@ -5303,6 +5309,13 @@ if (0)
 
 	validcount++;
 
+
+#ifdef ALAM_LIGHTING
+	//14/11/99: Hurdler: moved here because it doesn't work with
+	// subsector, see other comments;
+	HWR_ResetLights();
+    HWR_SearchLightsInMobjs();
+#endif
 	HWR_RenderBSPNode((INT32)numnodes-1);
 
 	// Make a viewangle int so we can render things based on mouselook
@@ -5334,12 +5347,6 @@ if (0)
 
 	// Check for new console commands.
 	NetUpdate();
-
-#ifdef ALAM_LIGHTING
-	//14/11/99: Hurdler: moved here because it doesn't work with
-	// subsector, see other comments;
-	HWR_ResetLights();
-#endif
 
 	// Draw MD2 and sprites
 #ifdef SORTING
@@ -5934,6 +5941,16 @@ void HWR_DoWipe(UINT8 wipenum, UINT8 scrnnum)
 
 	if (HWRWipeCounter > 1.0f)
 		HWRWipeCounter = 1.0f;
+}
+
+void HWR_MakeScreenFinalTexture(void)
+{
+    HWD.pfnMakeScreenFinalTexture();
+}
+
+void HWR_DrawScreenFinalTexture(int width, int height)
+{
+    HWD.pfnDrawScreenFinalTexture(width, height);
 }
 
 #endif // HWRENDER
