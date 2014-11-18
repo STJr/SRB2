@@ -1258,7 +1258,7 @@ static void HWR_ComputeLightMapsInBSPNode(int bspnum, fixed_t *bbox)
 // --------------------------------------------------------------------------
 static void HWR_AddMobjLights(mobj_t *thing)
 {
-    if (!cv_drawdist.value || P_AproxDistance(thing->x-viewx, thing->y-viewy) < cv_drawdist.value)
+    if (!cv_drawdist.value || P_AproxDistance(thing->x-viewx, thing->y-viewy) < cv_drawdist.value*FRACUNIT)
 	if (!(thing->flags2 & MF2_DEBRIS) && (thing->sprite != SPR_PLAY ||
 	 (thing->player && thing->player->powers[pw_super])))
 	if ((t_lspr[thing->sprite]->type&DYNLIGHT_SPR)
