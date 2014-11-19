@@ -31,6 +31,9 @@
 #include "i_video.h"
 #include "lua_hook.h"
 #include "b_bot.h"
+#ifdef ESLOPE
+#include "p_slopes.h"
+#endif
 
 // protos.
 static CV_PossibleValue_t viewheight_cons_t[] = {{16, "MIN"}, {56, "MAX"}, {0, NULL}};
@@ -700,13 +703,73 @@ boolean P_InsideANonSolidFFloor(mobj_t *mobj, ffloor_t *rover)
 		|| ((rover->flags & FF_BLOCKOTHERS) && !mobj->player)))
 		return false;
 
-	if (mobj->z > *rover->topheight)
+	fixed_t topheight = *rover->topheight;
+	fixed_t bottomheight = *rover->bottomheight;
+
+/*#ifdef ESLOPE
+	if (rover->t_slope)
+		topheight = P_GetZAt(rover->t_slope, mobj->x, mobj->y);
+	if (rover->b_slope)
+		bottomheight = P_GetZAt(rover->b_slope, mobj->x, mobj->y);
+#endif*/
+
+	if (mobj->z > topheight)
 		return false;
 
-	if (mobj->z + mobj->height < *rover->bottomheight)
+	if (mobj->z + mobj->height < bottomheight)
 		return false;
 
 	return true;
+}
+
+fixed_t P_GetMobjZAtSecF(mobj_t *mobj, sector_t *sector) // SRB2CBTODO: This needs to be over all the code
+{
+	I_Assert(mobj != NULL);
+#ifdef ESLOPE
+	if (sector->f_slope)
+		return P_GetZAt(sector->f_slope, mobj->x, mobj->y);
+	else
+#endif
+		return sector->floorheight;
+}
+
+fixed_t P_GetMobjZAtF(mobj_t *mobj) // SRB2CBTODO: This needs to be over all the code
+{
+	I_Assert(mobj != NULL);
+	sector_t *sector;
+	sector = R_PointInSubsector(mobj->x, mobj->y)->sector;
+
+#ifdef ESLOPE
+	if (sector->f_slope)
+		return P_GetZAt(sector->f_slope, mobj->x, mobj->y);
+	else
+#endif
+		return sector->floorheight;
+}
+
+fixed_t P_GetMobjZAtSecC(mobj_t *mobj, sector_t *sector) // SRB2CBTODO: This needs to be over all the code
+{
+	I_Assert(mobj != NULL);
+#ifdef ESLOPE
+	if (sector->c_slope)
+		return P_GetZAt(sector->c_slope, mobj->x, mobj->y);
+	else
+#endif
+		return sector->ceilingheight;
+}
+
+fixed_t P_GetMobjZAtC(mobj_t *mobj) // SRB2CBTODO: This needs to be over all the code
+{
+	I_Assert(mobj != NULL);
+	sector_t *sector;
+	sector = R_PointInSubsector(mobj->x, mobj->y)->sector;
+
+#ifdef ESLOPE
+	if (sector->c_slope)
+		return P_GetZAt(sector->c_slope, mobj->x, mobj->y);
+	else
+#endif
+		return sector->ceilingheight;
 }
 
 static void P_PlayerFlip(mobj_t *mo)
@@ -2455,6 +2518,11 @@ void P_MobjCheckWater(mobj_t *mobj)
 	// Default if no water exists.
 	mobj->watertop = mobj->waterbottom = mobj->subsector->sector->floorheight - 1000*FRACUNIT;
 
+#ifdef ESLOPE // Set the correct waterbottom/top to be below the lowest point of the slope
+	if (mobj->subsector->sector->f_slope)
+		mobj->watertop = mobj->waterbottom = mobj->subsector->sector->f_slope->lowz - 1000*FRACUNIT;
+#endif
+
 	// Reset water state.
 	mobj->eflags &= ~(MFE_UNDERWATER|MFE_TOUCHWATER|MFE_GOOWATER);
 
@@ -2465,34 +2533,45 @@ void P_MobjCheckWater(mobj_t *mobj)
 		 || ((rover->flags & FF_BLOCKOTHERS) && !mobj->player)))
 			continue;
 
+		fixed_t topheight = *rover->topheight;
+		fixed_t bottomheight = *rover->bottomheight;
+
+/*#ifdef ESLOPE
+		if (rover->t_slope)
+			topheight = P_GetZAt(rover->t_slope, mobj->x, mobj->y);
+
+		if (rover->b_slope)
+			bottomheight = P_GetZAt(rover->b_slope, mobj->x, mobj->y);
+#endif*/
+
 		if (mobj->eflags & MFE_VERTICALFLIP)
 		{
-			if (*rover->topheight < (thingtop - FixedMul(mobj->info->height/2, mobj->scale))
-			 || *rover->bottomheight > thingtop)
+			if (topheight < (thingtop - FixedMul(mobj->info->height/2, mobj->scale))
+			 || bottomheight > thingtop)
 				continue;
 		}
 		else
 		{
-			if (*rover->topheight < mobj->z
-			 || *rover->bottomheight > (mobj->z + FixedMul(mobj->info->height/2, mobj->scale)))
+			if (topheight < mobj->z
+			 || bottomheight > (mobj->z + FixedMul(mobj->info->height/2, mobj->scale)))
 				continue;
 		}
 
 		// Set the watertop and waterbottom
-		mobj->watertop = *rover->topheight;
-		mobj->waterbottom = *rover->bottomheight;
+		mobj->watertop = topheight;
+		mobj->waterbottom = bottomheight;
 
 		// Just touching the water?
-		if (((mobj->eflags & MFE_VERTICALFLIP) && thingtop - FixedMul(mobj->info->height, mobj->scale) < *rover->bottomheight)
-		 || (!(mobj->eflags & MFE_VERTICALFLIP) && mobj->z + FixedMul(mobj->info->height, mobj->scale) > *rover->topheight))
+		if (((mobj->eflags & MFE_VERTICALFLIP) && thingtop - FixedMul(mobj->info->height, mobj->scale) < bottomheight)
+		 || (!(mobj->eflags & MFE_VERTICALFLIP) && mobj->z + FixedMul(mobj->info->height, mobj->scale) > topheight))
 		{
 			mobj->eflags |= MFE_TOUCHWATER;
 			if (rover->flags & FF_GOOWATER && !(mobj->flags & MF_NOGRAVITY))
 				mobj->eflags |= MFE_GOOWATER;
 		}
 		// Actually in the water?
-		if (((mobj->eflags & MFE_VERTICALFLIP) && thingtop - FixedMul(mobj->info->height/2, mobj->scale) > *rover->bottomheight)
-		 || (!(mobj->eflags & MFE_VERTICALFLIP) && mobj->z + FixedMul(mobj->info->height/2, mobj->scale) < *rover->topheight))
+		if (((mobj->eflags & MFE_VERTICALFLIP) && thingtop - FixedMul(mobj->info->height/2, mobj->scale) > bottomheight)
+		 || (!(mobj->eflags & MFE_VERTICALFLIP) && mobj->z + FixedMul(mobj->info->height/2, mobj->scale) < topheight))
 		{
 			mobj->eflags |= MFE_UNDERWATER;
 			if (rover->flags & FF_GOOWATER && !(mobj->flags & MF_NOGRAVITY))

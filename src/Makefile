@@ -432,6 +432,7 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/m_misc.o   \
 		$(OBJDIR)/m_random.o \
 		$(OBJDIR)/m_queue.o  \
+		$(OBJDIR)/m_vector.o \
 		$(OBJDIR)/info.o     \
 		$(OBJDIR)/p_ceilng.o \
 		$(OBJDIR)/p_enemy.o  \
@@ -450,6 +451,7 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/p_telept.o \
 		$(OBJDIR)/p_tick.o   \
 		$(OBJDIR)/p_user.o   \
+		$(OBJDIR)/p_slopes.o \
 		$(OBJDIR)/tables.o   \
 		$(OBJDIR)/r_bsp.o    \
 		$(OBJDIR)/r_data.o   \

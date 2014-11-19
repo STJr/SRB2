@@ -19,6 +19,9 @@
 #include "z_zone.h"
 #include "g_game.h"
 #include "r_main.h"
+#ifdef ESLOPE
+#include "p_slopes.h"
+#endif
 
 // ==========================================================================
 //                              FLOORS
@@ -1174,12 +1177,18 @@ void T_SpikeSector(levelspecthink_t *spikes)
 
 		if (affectsec == spikes->sector) // Applied to an actual sector
 		{
+			fixed_t affectpoint = affectsec->floorheight;
+
+#ifdef ESLOPE
+			if (affectsec->f_slope)
+				affectpoint = P_GetZAt(affectsec->f_slope, thing->x, thing->y);
+#endif
 			if (affectsec->flags & SF_FLIPSPECIAL_FLOOR)
 			{
 				if (!(thing->eflags & MFE_VERTICALFLIP) && thing->momz > 0)
 					continue;
 
-				if (thing->z == affectsec->floorheight)
+				if (thing->z == affectpoint)
 					dothepain = true;
 			}
 
