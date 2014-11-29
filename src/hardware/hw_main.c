@@ -2766,9 +2766,9 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, fixed_t fixedheight
 			v3d->tow = (FIXED_TO_FLOAT(-FixedMul(tempxsow, FINESINE(angle)) - FixedMul(tempytow, FINECOSINE(angle))));
 		}
 
-		v3d->x = FIXED_TO_FLOAT(polysector->lines[i]->v1->x);
+		v3d->x = FIXED_TO_FLOAT(polysector->vertices[i]->x);
 		v3d->y = height;
-		v3d->z = FIXED_TO_FLOAT(polysector->lines[i]->v1->y);
+		v3d->z = FIXED_TO_FLOAT(polysector->vertices[i]->y);
 	}
 
 
