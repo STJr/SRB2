@@ -2715,14 +2715,6 @@ void A_BossDeath(mobj_t *mo)
 	P_LinedefExecute(LE_BOSSDEAD, mo, NULL);
 	mo->health = 0;
 
-#ifdef CHAOSISNOTDEADYET
-	if (mo->flags2 & MF2_CHAOSBOSS)
-	{
-		P_RemoveMobj(mo);
-		return;
-	}
-#endif
-
 	// Boss is dead (but not necessarily fleeing...)
 	// Lua may use this to ignore bosses after they start fleeing
 	mo->flags2 |= MF2_BOSSDEAD;
@@ -5635,10 +5627,11 @@ void A_MixUp(mobj_t *actor)
 //
 void A_RecyclePowers(mobj_t *actor)
 {
-#ifdef WEIGHTEDRECYCLER
 	INT32 i, j, k, numplayers = 0;
 
+#ifdef WEIGHTEDRECYCLER
 	UINT8 beneficiary = 255;
+#endif
 	UINT8 playerslist[MAXPLAYERS];
 	UINT8 postscramble[MAXPLAYERS];
 
@@ -5649,6 +5642,11 @@ void A_RecyclePowers(mobj_t *actor)
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_RecyclePowers", actor))
 		return;
+#endif
+
+#if !defined(WEIGHTEDRECYCLER) && !defined(HAVE_BLUA)
+	// actor is used in all scenarios but this one, funny enough
+	(void)actor;
 #endif
 
 	if (!multiplayer)
@@ -5665,9 +5663,11 @@ void A_RecyclePowers(mobj_t *actor)
 			numplayers++;
 			postscramble[j] = playerslist[j] = (UINT8)i;
 
+#ifdef WEIGHTEDRECYCLER
 			// The guy who started the recycle gets the best result
 			if (actor && actor->target && actor->target->player && &players[i] == actor->target->player)
 				beneficiary = (UINT8)i;
+#endif
 
 			// Save powers
 			for (k = 0; k < NUMPOWERS; k++)
@@ -5684,6 +5684,13 @@ void A_RecyclePowers(mobj_t *actor)
 		return; //nobody to touch!
 
 	//shuffle the post scramble list, whee!
+	// hardcoded 0-1 to 1-0 for two players
+	if (numplayers == 2)
+	{
+		postscramble[0] = playerslist[1];
+		postscramble[1] = playerslist[0];
+	}
+	else
 	for (j = 0; j < numplayers; j++)
 	{
 		UINT8 tempint;
@@ -5694,6 +5701,7 @@ void A_RecyclePowers(mobj_t *actor)
 		postscramble[i] = tempint;
 	}
 
+#ifdef WEIGHTEDRECYCLER
 	//the joys of qsort...
 	if (beneficiary != 255) {
 		qsort(playerslist, numplayers, sizeof(UINT8), P_RecycleCompare);
@@ -5710,6 +5718,7 @@ void A_RecyclePowers(mobj_t *actor)
 			}
 		}
 	}
+#endif
 
 	// now assign!
 	for (i = 0; i < numplayers; i++)
@@ -5737,137 +5746,6 @@ void A_RecyclePowers(mobj_t *actor)
 			P_RestoreMusic(&players[recv_pl]);
 		P_FlashPal(&players[recv_pl], PAL_RECYCLE, 10);
 	}
-#else
-	INT32 i, numplayers = 0;
-
-#ifdef HAVE_BLUA
-	if (LUA_CallAction("A_RecyclePowers", actor))
-		return;
-#endif
-	if (!multiplayer)
-		return;
-
-	numplayers = 0;
-
-	// Count the number of players in the game
-	for (i = 0; i < MAXPLAYERS; i++)
-		if (playeringame[i] && players[i].mo && players[i].mo->health > 0 && players[i].playerstate == PST_LIVE
-			&& !players[i].exiting && !players[i].powers[pw_super] && !((netgame || multiplayer) && players[i].spectator))
-			numplayers++;
-
-	if (numplayers <= 1)
-		return; //nobody to touch!
-
-	else if (numplayers == 2) //simple swap is all that's needed
-	{
-		UINT16 temp[NUMPOWERS];
-		INT32 weapons;
-		INT32 weaponheld;
-
-		INT32 one = -1, two = 0; // default value 0 to make the compiler shut up
-
-		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] && players[i].mo && players[i].mo->health > 0 && players[i].playerstate == PST_LIVE
-				&& !players[i].exiting && !players[i].powers[pw_super] && !((netgame || multiplayer) && players[i].spectator))
-			{
-				if (one == -1)
-					one = i;
-				else
-					two = i;
-			}
-		for (i = 0; i < NUMPOWERS; i++)
-		{
-			if (i == pw_flashing || i == pw_underwater || i == pw_spacetime
-			    || i == pw_tailsfly || i == pw_extralife || i == pw_super || i == pw_nocontrol)
-				continue;
-			temp[i] = players[one].powers[i];
-			players[one].powers[i] = players[two].powers[i];
-			players[two].powers[i] = temp[i];
-		}
-		//1.1: weapons need to be swapped too
-		weapons = players[one].ringweapons;
-		players[one].ringweapons = players[two].ringweapons;
-		players[two].ringweapons = weapons;
-
-		weaponheld = players[one].currentweapon;
-		players[one].currentweapon = players[two].currentweapon;
-		players[two].currentweapon = weaponheld;
-
-		P_SpawnShieldOrb(players[one].mo->player);
-		P_SpawnShieldOrb(players[two].mo->player);
-		P_FlashPal(&players[one], PAL_RECYCLE, 10);
-		P_FlashPal(&players[two], PAL_RECYCLE, 10);
-		//piece o' cake, eh?
-	}
-	else
-	{
-		//well, the cake is a LIE!
-		UINT16 temp[MAXPLAYERS][NUMPOWERS];
-		INT32 weapons[MAXPLAYERS];
-		INT32 weaponheld[MAXPLAYERS];
-		INT32 counter = 0, j = 0, prandom = 0, recyclefrom = 0;
-
-		for (i = 0; i < MAXPLAYERS; i++)
-		{
-			if (playeringame[i] && players[i].playerstate == PST_LIVE
-				&& players[i].mo && players[i].mo->health > 0 && !players[i].exiting && !players[i].powers[pw_super]
-				&& !((netgame || multiplayer) && players[i].spectator))
-			{
-				for (j = 0; j < NUMPOWERS; j++)
-					temp[counter][j] = players[i].powers[j];
-				//1.1: ring weapons too
-				weapons[counter] = players[i].ringweapons;
-				weaponheld[counter] = players[i].currentweapon;
-				counter++;
-			}
-		}
-		counter = 0;
-
-		// Mix them up!
-		for (;;)
-		{
-			if (counter > 255) // fail-safe to avoid endless loop
-				break;
-			prandom = P_Random();
-			prandom %= numplayers; // I love modular arithmetic, don't you?
-			if (prandom) // Make sure it's not a useless mix
-				break;
-			counter++;
-		}
-
-		counter = 0;
-
-		for (i = 0; i < MAXPLAYERS; i++)
-		{
-			if (playeringame[i] && players[i].playerstate == PST_LIVE
-				&& players[i].mo && players[i].mo->health > 0 && !players[i].exiting && !players[i].powers[pw_super]
-				&& !((netgame || multiplayer) && players[i].spectator))
-			{
-				recyclefrom = (counter + prandom) % numplayers;
-				for (j = 0; j < NUMPOWERS; j++)
-				{
-					if (j == pw_flashing || j == pw_underwater || j == pw_spacetime
-					    || j == pw_tailsfly || j == pw_extralife || j == pw_super || j == pw_nocontrol)
-						continue;
-					players[i].powers[j] = temp[recyclefrom][j];
-				}
-				//1.1: weapon rings too
-				players[i].ringweapons = weapons[recyclefrom];
-				players[i].currentweapon = weaponheld[recyclefrom];
-
-				P_SpawnShieldOrb(players[i].mo->player);
-				P_FlashPal(&players[i], PAL_RECYCLE, 10);
-				counter++;
-			}
-		}
-	}
-	for (i = 0; i < MAXPLAYERS; i++) //just for sneakers/invinc.
-		if (playeringame[i] && players[i].playerstate == PST_LIVE
-			&& players[i].mo && players[i].mo->health > 0 && !players[i].exiting && !players[i].powers[pw_super]
-			&& !((netgame || multiplayer) && players[i].spectator))
-			if (P_IsLocalPlayer(players[i].mo->player))
-				P_RestoreMusic(players[i].mo->player);
-#endif
 
 	S_StartSound(NULL, sfx_gravch); //heh, the sound effect I used is already in
 }
@@ -6160,13 +6038,7 @@ void A_Boss2Pogo(mobj_t *actor)
 			goop->momy = FixedMul(FINESINE(fa),ns);
 			goop->momz = FixedMul(4*FRACUNIT, actor->scale);
 
-
-#ifdef CHAOSISNOTDEADYET
-			if (gametype == GT_CHAOS)
-				goop->fuse = 5*TICRATE;
-			else
-#endif
-				goop->fuse = 10*TICRATE;
+			goop->fuse = 10*TICRATE;
 		}
 		actor->reactiontime = 0; // we already shot goop, so don't do it again!
 		if (actor->info->attacksound)

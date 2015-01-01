@@ -946,10 +946,12 @@ static void R_InitExtraColormaps(void)
 	CONS_Printf(M_GetText("Number of Extra Colormaps: %s\n"), sizeu1(numcolormaplumps));
 }
 
+// 12/14/14 -- only take flats in F_START/F_END
 lumpnum_t R_GetFlatNumForName(const char *name)
 {
-	lumpnum_t lump = W_CheckNumForName(name);
-
+	lumpnum_t lump = W_CheckNumForNameInBlock(name, "F_START", "F_END");
+	if (lump == LUMPERROR)
+		lump = W_CheckNumForNameInBlock(name, "FF_START", "FF_END"); // deutex, some other old things
 	if (lump == LUMPERROR)
 	{
 		if (strcmp(name, SKYFLATNAME))

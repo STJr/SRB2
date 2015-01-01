@@ -278,6 +278,7 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[SMALLREDBALL_L], // SPR_TRLS
 	&lspr[NOLIGHT],     // SPR_CBLL
 	&lspr[NOLIGHT],     // SPR_AROW
+	&lspr[NOLIGHT],     // SPR_CFIR
 
 	// Greenflower Scenery
 	&lspr[NOLIGHT],     // SPR_FWR1

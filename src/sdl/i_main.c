@@ -195,15 +195,15 @@ int main(int argc, char **argv)
 
 #ifdef LOGMESSAGES
 #if defined(_WIN32_WCE) || defined(GP2X)
-	logstream = fopen(va("%s.log",argv[0]), "a");
+	logstream = fopen(va("%s.log",argv[0]), "wt");
 #elif defined (_WII)
-	logstream = fopen(va("%s/srb2log.txt",logdir), "a");
+	logstream = fopen(va("%s/log.txt",logdir), "wt");
 #elif defined (DEFAULTDIR)
 	if (logdir)
-		logstream = fopen(va("%s/"DEFAULTDIR"/srb2log.txt",logdir), "a");
+		logstream = fopen(va("%s/"DEFAULTDIR"/log.txt",logdir), "wt");
 	else
 #endif
-		logstream = fopen("./srb2log.txt", "a");
+		logstream = fopen("./log.txt", "wt");
 #endif
 
 	//I_OutputMsg("I_StartupSystem() ...\n");
@@ -228,9 +228,9 @@ int main(int argc, char **argv)
 #endif
 #endif
 	// startup SRB2
-	CONS_Printf("%s", M_GetText("Setting up SRB2...\n"));
+	CONS_Printf("Setting up SRB2...\n");
 	D_SRB2Main();
-	CONS_Printf("%s", M_GetText("Entering main game loop...\n"));
+	CONS_Printf("Entering main game loop...\n");
 	// never return
 	D_SRB2Loop();
 

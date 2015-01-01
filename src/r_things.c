@@ -1293,7 +1293,9 @@ static void R_ProjectSprite(mobj_t *thing)
 	vis->transmap = NULL;
 
 	// specific translucency
-	if (thing->flags2 & MF2_SHADOW) // actually only the player should use this (temporary invisibility)
+	if (!cv_translucency.value)
+		; // no translucency
+	else if (thing->flags2 & MF2_SHADOW) // actually only the player should use this (temporary invisibility)
 		vis->transmap = ((tr_trans80-1)<<FF_TRANSSHIFT) + transtables; // because now the translucency is set through FF_TRANSMASK
 	else if (thing->frame & FF_TRANSMASK)
 		vis->transmap = (thing->frame & FF_TRANSMASK) - 0x10000 + transtables;

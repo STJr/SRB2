@@ -94,6 +94,7 @@ typedef struct
 	thinker_t **thinkers;
 } thinkerlist_t;
 
+static void P_SearchForDisableLinedefs(void);
 static void P_SpawnScrollers(void);
 static void P_SpawnFriction(void);
 static void P_SpawnPushers(void);
@@ -4776,6 +4777,18 @@ void P_UpdateSpecials(void)
 	}
 }
 
+static inline ffloor_t *P_GetFFloorBySec(sector_t *sec, sector_t *sec2)
+{
+	ffloor_t *rover;
+
+	if (!sec->ffloors)
+		return NULL;
+	for (rover = sec->ffloors; rover; rover = rover->next)
+		if (rover->secnum == (size_t)(sec2 - sectors))
+			return rover;
+	return NULL;
+}
+
 /** Adds a newly formed 3Dfloor structure to a sector's ffloors list.
   *
   * \param sec    Target sector.
@@ -4822,7 +4835,9 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 	size_t i;
 
 	if (sec == sec2)
-		return false; //Don't need a fake floor on a control sector.
+		return NULL; //Don't need a fake floor on a control sector.
+	if ((ffloor = (P_GetFFloorBySec(sec, sec2))))
+		return ffloor; // If this ffloor already exists, return it
 
 	if (sec2->ceilingheight < sec2->floorheight)
 	{
@@ -5312,9 +5327,6 @@ void T_LaserFlash(laserthink_t *flash)
 	ffloor_t *ffloor = flash->ffloor;
 	sector_t *sector = flash->sector;
 
-	if (!ffloor)
-		flash->ffloor = ffloor = P_AddFakeFloor(sector, flash->sec, flash->sourceline, laserflags, NULL);
-
 	if (!ffloor || !(ffloor->flags & FF_EXISTS))
 		return;
 
@@ -5409,6 +5421,10 @@ void P_SpawnSpecials(INT32 fromnetsave)
 	thinkerlist_t *secthinkers;
 	thinker_t *th;
 
+	// This used to be used, and *should* be used in the future,
+	// but currently isn't.
+	(void)fromnetsave;
+
 	// Set the default gravity. Custom gravity overrides this setting.
 	gravity = FRACUNIT/2;
 
@@ -5480,36 +5496,11 @@ void P_SpawnSpecials(INT32 fromnetsave)
 		curWeather = PRECIP_NONE;
 
 	P_InitTagLists();   // Create xref tables for tags
+	P_SearchForDisableLinedefs(); // Disable linedefs are now allowed to disable *any* line
+
 	P_SpawnScrollers(); // Add generalized scrollers
 	P_SpawnFriction();  // Friction model using linedefs
 	P_SpawnPushers();   // Pusher model using linedefs
-
-	// Look for disable linedefs
-	for (i = 0; i < numlines; i++)
-	{
-		if (lines[i].special == 6)
-		{
-			// Ability flags can disable disable linedefs now, lol
-			if (netgame || multiplayer)
-			{
-				// future: nonet flag?
-			}
-			else if (((lines[i].flags & ML_NETONLY) != ML_NETONLY)
-			&& !(players[consoleplayer].charability == CA_THOK          && (lines[i].flags & ML_NOSONIC))
-			&& !(players[consoleplayer].charability == CA_FLY           && (lines[i].flags & ML_NOTAILS))
-			&& !(players[consoleplayer].charability == CA_GLIDEANDCLIMB && (lines[i].flags & ML_NOKNUX )))
-			{
-				for (j = -1; (j = P_FindLineFromLineTag(&lines[i], j)) >= 0;)
-				{
-					lines[j].tag = 0;
-					lines[j].special = 0;
-				}
-			}
-			lines[i].special = 0;
-			lines[i].tag = 0;
-		}
-	}
-
 
 	// Look for thinkers that affect FOFs, and sort them by sector
 
@@ -5993,12 +5984,7 @@ void P_SpawnSpecials(INT32 fromnetsave)
 				break;
 
 			case 160: // Float/bob platform
-				sec = sides[*lines[i].sidenum].sector - sectors;
-				for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
-				{
-					P_AddFakeFloor(&sectors[s], &sectors[sec], lines + i,
-						FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_FLOATBOB, secthinkers);
-				}
+				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_FLOATBOB, secthinkers);
 				break;
 
 			case 170: // Crumbling platform
@@ -6043,13 +6029,8 @@ void P_SpawnSpecials(INT32 fromnetsave)
 				break;
 
 			case 176: // Air bobbing platform that will crumble and bob on the water when it falls and hits
-				sec = sides[*lines[i].sidenum].sector - sectors;
+				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_FLOATBOB|FF_CRUMBLE, secthinkers);
 				lines[i].flags |= ML_BLOCKMONSTERS;
-				for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
-				{
-					P_AddFakeFloor(&sectors[s], &sectors[sec], lines + i,
-						FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_FLOATBOB|FF_CRUMBLE, secthinkers);
-				}
 				P_AddOldAirbob(lines[i].frontsector, lines + i, true);
 				break;
 
@@ -6061,21 +6042,11 @@ void P_SpawnSpecials(INT32 fromnetsave)
 				break;
 
 			case 178: // Crumbling platform that will float when it hits water
-				sec = sides[*lines[i].sidenum].sector - sectors;
-				for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
-				{
-					P_AddFakeFloor(&sectors[s], &sectors[sec], lines + i,
-						FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CRUMBLE|FF_FLOATBOB, secthinkers);
-				}
+				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CRUMBLE|FF_FLOATBOB, secthinkers);
 				break;
 
 			case 179: // Crumbling platform that will float when it hits water, but not return
-				sec = sides[*lines[i].sidenum].sector - sectors;
-				for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
-				{
-					P_AddFakeFloor(&sectors[s], &sectors[sec], lines + i,
-						FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_CRUMBLE|FF_FLOATBOB|FF_NORETURN, secthinkers);
-				}
+				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_CRUMBLE|FF_FLOATBOB|FF_NORETURN, secthinkers);
 				break;
 
 			case 180: // Air bobbing platform that will crumble
@@ -6158,14 +6129,13 @@ void P_SpawnSpecials(INT32 fromnetsave)
 				break;
 
 			case 202: // Fog
+				ffloorflags = FF_EXISTS|FF_RENDERALL|FF_FOG|FF_BOTHPLANES|FF_INVERTPLANES|FF_ALLSIDES|FF_INVERTSIDES|FF_CUTEXTRA|FF_EXTRA|FF_DOUBLESHADOW|FF_CUTSPRITES;
 				sec = sides[*lines[i].sidenum].sector - sectors;
 				// SoM: Because it's fog, check for an extra colormap and set
 				// the fog flag...
 				if (sectors[sec].extra_colormap)
 					sectors[sec].extra_colormap->fog = 1;
-				for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
-					P_AddFakeFloor(&sectors[s], &sectors[sec], lines + i,
-						FF_EXISTS|FF_RENDERALL|FF_FOG|FF_BOTHPLANES|FF_INVERTPLANES|FF_ALLSIDES|FF_INVERTSIDES|FF_CUTEXTRA|FF_EXTRA|FF_DOUBLESHADOW|FF_CUTSPRITES, secthinkers);
+				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
 				break;
 
 			case 220: // Like opaque water, but not swimmable. (Good for snow effect on FOFs)
@@ -6195,12 +6165,7 @@ void P_SpawnSpecials(INT32 fromnetsave)
 				break;
 
 			case 250: // Mario Block
-				sec = sides[*lines[i].sidenum].sector - sectors;
-				for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
-				{
-					P_AddFakeFloor(&sectors[s], &sectors[sec], lines + i,
-						FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_MARIO, secthinkers);
-				}
+				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_MARIO, secthinkers);
 				break;
 
 			case 251: // A THWOMP!
@@ -6247,13 +6212,11 @@ void P_SpawnSpecials(INT32 fromnetsave)
 				break;
 
 			case 258: // Laser block
-				if (!fromnetsave) // This creates a FOF which disrupts net saves
-				{
-					sec = sides[*lines[i].sidenum].sector - sectors;
+				sec = sides[*lines[i].sidenum].sector - sectors;
 
-					for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
-						EV_AddLaserThinker(&sectors[s], &sectors[sec], lines + i, secthinkers);
-				}
+				// No longer totally disrupts netgames
+				for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
+					EV_AddLaserThinker(&sectors[s], &sectors[sec], lines + i, secthinkers);
 				break;
 
 			case 259: // Make-Your-Own FOF!
@@ -7719,4 +7682,40 @@ static void P_SpawnPushers(void)
 					Add_Pusher(p_downwind, l->dx, l->dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
 				break;
 		}
+}
+
+static void P_SearchForDisableLinedefs(void)
+{
+	size_t i;
+	INT32 j;
+
+	// Look for disable linedefs
+	for (i = 0; i < numlines; i++)
+	{
+		if (lines[i].special == 6)
+		{
+			// Remove special
+			// Do *not* remove tag. That would mess with the tag lists
+			// that P_InitTagLists literally just created!
+			lines[i].special = 0;
+
+			// Ability flags can disable disable linedefs now, lol
+			if (netgame || multiplayer)
+			{
+				// future: nonet flag?
+			}
+			else if ((lines[i].flags & ML_NETONLY) == ML_NETONLY)
+				continue; // Net-only never triggers in single player
+			else if (players[consoleplayer].charability == CA_THOK && (lines[i].flags & ML_NOSONIC))
+				continue;
+			else if (players[consoleplayer].charability == CA_FLY && (lines[i].flags & ML_NOTAILS))
+				continue;
+			else if (players[consoleplayer].charability == CA_GLIDEANDCLIMB && (lines[i].flags & ML_NOKNUX))
+				continue;
+
+			// Disable any linedef specials with our tag.
+			for (j = -1; (j = P_FindLineFromLineTag(&lines[i], j)) >= 0;)
+				lines[j].special = 0;
+		}
+	}
 }

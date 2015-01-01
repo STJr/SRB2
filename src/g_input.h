@@ -125,7 +125,7 @@ typedef enum
 } gamecontrols_e;
 
 // mouse values are used once
-extern consvar_t cv_mousesens;
+extern consvar_t cv_mousesens, cv_mouseysens;
 
 extern INT32 mousex, mousey;
 extern INT32 mlooky; //mousey with mlookSensitivity

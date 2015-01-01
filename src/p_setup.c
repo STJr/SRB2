@@ -1502,22 +1502,26 @@ static void P_LoadSideDefs2(lumpnum_t lumpnum)
 
 static boolean LineInBlock(fixed_t cx1, fixed_t cy1, fixed_t cx2, fixed_t cy2, fixed_t bx1, fixed_t by1)
 {
-	fixed_t bx2 = bx1 + MAPBLOCKUNITS;
-	fixed_t by2 = by1 + MAPBLOCKUNITS;
-	line_t boxline, testline;
-	vertex_t vbox, vtest;
+	fixed_t bbox[4];
+	line_t testline;
+	vertex_t vtest;
+
+	bbox[BOXRIGHT] = bx1 + MAPBLOCKUNITS;
+	bbox[BOXTOP] = by1 + MAPBLOCKUNITS;
+	bbox[BOXLEFT] = bx1;
+	bbox[BOXBOTTOM] = by1;
 
 	// Trivial rejection
-	if (cx1 < bx1 && cx2 < bx1)
+	if (cx1 < bbox[BOXLEFT] && cx2 < bbox[BOXLEFT])
 		return false;
 
-	if (cx1 > bx2 && cx2 > bx2)
+	if (cx1 > bbox[BOXRIGHT] && cx2 > bbox[BOXRIGHT])
 		return false;
 
-	if (cy1 < by1 && cy2 < by1)
+	if (cy1 < bbox[BOXBOTTOM] && cy2 < bbox[BOXBOTTOM])
 		return false;
 
-	if (cy1 > by2 && cy2 > by2)
+	if (cy1 > bbox[BOXTOP] && cy2 > bbox[BOXTOP])
 		return false;
 
 	// Rats, guess we gotta check
@@ -1527,12 +1531,11 @@ static boolean LineInBlock(fixed_t cx1, fixed_t cy1, fixed_t cx2, fixed_t cy2, f
 	cy1 <<= FRACBITS;
 	cx2 <<= FRACBITS;
 	cy2 <<= FRACBITS;
-	bx1 <<= FRACBITS;
-	by1 <<= FRACBITS;
-	bx2 <<= FRACBITS;
-	by2 <<= FRACBITS;
+	bbox[BOXTOP] <<= FRACBITS;
+	bbox[BOXBOTTOM] <<= FRACBITS;
+	bbox[BOXLEFT] <<= FRACBITS;
+	bbox[BOXRIGHT] <<= FRACBITS;
 
-	boxline.v1 = &vbox;
 	testline.v1 = &vtest;
 
 	testline.v1->x = cx1;
@@ -1540,47 +1543,12 @@ static boolean LineInBlock(fixed_t cx1, fixed_t cy1, fixed_t cx2, fixed_t cy2, f
 	testline.dx = cx2 - cx1;
 	testline.dy = cy2 - cy1;
 
-	// Test line against bottom edge of box
-	boxline.v1->x = bx1;
-	boxline.v1->y = by1;
-	boxline.dx = bx2 - bx1;
-	boxline.dy = 0;
+	if ((testline.dx > 0) ^ (testline.dy > 0))
+		testline.slopetype = ST_NEGATIVE;
+	else
+		testline.slopetype = ST_POSITIVE;
 
-	if (P_PointOnLineSide(cx1, cy1, &boxline) != P_PointOnLineSide(cx2, cy2, &boxline)
-		&& P_PointOnLineSide(boxline.v1->x, boxline.v1->y, &testline) != P_PointOnLineSide(boxline.v1->x+boxline.dx, boxline.v1->y+boxline.dy, &testline))
-		return true;
-
-	// Right edge of box
-	boxline.v1->x = bx2;
-	boxline.v1->y = by1;
-	boxline.dx = 0;
-	boxline.dy = by2-by1;
-
-	if (P_PointOnLineSide(cx1, cy1, &boxline) != P_PointOnLineSide(cx2, cy2, &boxline)
-		&& P_PointOnLineSide(boxline.v1->x, boxline.v1->y, &testline) != P_PointOnLineSide(boxline.v1->x+boxline.dx, boxline.v1->y+boxline.dy, &testline))
-		return true;
-
-	// Top edge of box
-	boxline.v1->x = bx1;
-	boxline.v1->y = by2;
-	boxline.dx = bx2 - bx1;
-	boxline.dy = 0;
-
-	if (P_PointOnLineSide(cx1, cy1, &boxline) != P_PointOnLineSide(cx2, cy2, &boxline)
-		&& P_PointOnLineSide(boxline.v1->x, boxline.v1->y, &testline) != P_PointOnLineSide(boxline.v1->x+boxline.dx, boxline.v1->y+boxline.dy, &testline))
-		return true;
-
-	// Left edge of box
-	boxline.v1->x = bx1;
-	boxline.v1->y = by1;
-	boxline.dx = 0;
-	boxline.dy = by2-by1;
-
-	if (P_PointOnLineSide(cx1, cy1, &boxline) != P_PointOnLineSide(cx2, cy2, &boxline)
-		&& P_PointOnLineSide(boxline.v1->x, boxline.v1->y, &testline) != P_PointOnLineSide(boxline.v1->x+boxline.dx, boxline.v1->y+boxline.dy, &testline))
-		return true;
-
-	return false;
+	return P_BoxOnLineSide(bbox, &testline) == -1;
 }
 
 //
@@ -2435,11 +2403,8 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	// chasecam on in chaos, race, coop
 	// chasecam off in match, tag, capture the flag
-	chase = (gametype == GT_RACE || gametype == GT_COMPETITION || gametype == GT_COOP
-#ifdef CHAOSISNOTDEADYET
-		|| gametype == GT_CHAOS
-#endif
-		) || (maptol & TOL_2D);
+	chase = (gametype == GT_RACE || gametype == GT_COMPETITION || gametype == GT_COOP)
+		|| (maptol & TOL_2D);
 
 	if (!dedicated)
 	{

@@ -43,6 +43,16 @@
 #define FF_TRANSMASK 0xf0000
 /// \brief shift for FF_TRANSMASK
 #define FF_TRANSSHIFT 16
+/// \brief preshifted translucency flags
+#define FF_TRANS10 (tr_trans10<<FF_TRANSSHIFT)
+#define FF_TRANS20 (tr_trans20<<FF_TRANSSHIFT)
+#define FF_TRANS30 (tr_trans30<<FF_TRANSSHIFT)
+#define FF_TRANS40 (tr_trans40<<FF_TRANSSHIFT)
+#define FF_TRANS50 (tr_trans50<<FF_TRANSSHIFT)
+#define FF_TRANS60 (tr_trans60<<FF_TRANSSHIFT)
+#define FF_TRANS70 (tr_trans70<<FF_TRANSSHIFT)
+#define FF_TRANS80 (tr_trans80<<FF_TRANSSHIFT)
+#define FF_TRANS90 (tr_trans90<<FF_TRANSSHIFT)
 
 /**	\brief translucency tables
 

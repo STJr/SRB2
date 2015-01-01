@@ -1590,33 +1590,6 @@ static void P_HitDeathMessages(player_t *player, mobj_t *inflictor, mobj_t *sour
 			case MT_SPIKE:
 				str = M_GetText("%s was %s by spikes.\n");
 				break;
-#ifdef CHAOSISNOTDEADYET
-/* These were obviously made for Chaos, and they're extremely out of date.
-   We either need to keep them out of the EXE or update them to contain
-   proper text for all enemies we currently have in the game.
-*/
-			case MT_BLUECRAWLA:
-				str = M_GetText("%s was %s by a blue crawla!\n");
-				break;
-			case MT_REDCRAWLA:
-				str = M_GetText("%s was %s by a red crawla!\n");
-				break;
-			case MT_JETTGUNNER:
-				str = M_GetText("%s was %s by a jetty-syn gunner!\n");
-				break;
-			case MT_JETTBOMBER:
-				str = M_GetText("%s was %s by a jetty-syn bomber!\n");
-				break;
-			case MT_CRAWLACOMMANDER:
-				str = M_GetText("%s was %s by a crawla commander!\n");
-				break;
-			case MT_EGGMOBILE:
-				str = M_GetText("%s was %s by the Egg Mobile!\n");
-				break;
-			case MT_EGGMOBILE2:
-				str = M_GetText("%s was %s by the Egg Slimer!\n");
-				break;
-#endif
 			default:
 				str = M_GetText("%s was %s by an environmental hazard.\n");
 				break;
@@ -1864,11 +1837,6 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source)
 	{
 		if (metalrecording) // Ack! Metal Sonic shouldn't die! Cut the tape, end recording!
 			G_StopMetalRecording();
-#ifdef CHAOSISNOTDEADYET
-		if (gametype == GT_CHAOS)
-			target->player->score /= 2; // Halve the player's score in Chaos Mode
-		else
-#endif
 		if (gametype == GT_MATCH && cv_match_scoring.value == 0 // note, no team match suicide penalty
 			&& ((target == source) || (source == NULL && inflictor == NULL) || (source && !source->player)))
 		{ // Suicide penalty
@@ -1896,39 +1864,6 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source)
 		{
 			INT32 score = 0;
 
-#ifdef CHAOSISNOTDEADYET
-			if (gametype == GT_CHAOS)
-			{
-				if ((target->flags & MF_ENEMY)
-					&& !(target->flags & MF_MISSILE))
-					source->player->scoreadd++;
-
-				switch (target->type)
-				{
-					case MT_BLUECRAWLA:
-					case MT_GOOMBA:
-						score = 100*source->player->scoreadd;
-						break;
-					case MT_REDCRAWLA:
-					case MT_BLUEGOOMBA:
-						score = 150*source->player->scoreadd;
-						break;
-					case MT_JETTBOMBER:
-						score = 400*source->player->scoreadd;
-						break;
-					case MT_JETTGUNNER:
-						score = 500*source->player->scoreadd;
-						break;
-					case MT_CRAWLACOMMANDER:
-						score = 300*source->player->scoreadd;
-						break;
-					default:
-						score = 100*source->player->scoreadd;
-						break;
-				}
-			}
-			else
-#endif
 			if (maptol & TOL_NIGHTS) // Enemies always worth 200, bosses don't do anything.
 			{
 				if ((target->flags & MF_ENEMY) && !(target->flags & (MF_MISSILE|MF_BOSS)))
@@ -2089,9 +2024,6 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source)
 	// This determines the kind of object spawned
 	// during the death frame of a thing.
 	if (!mariomode // Don't show birds, etc. in Mario Mode Tails 12-23-2001
-#ifdef CHAOSISNOTDEADYET
-	&& gametype != GT_CHAOS // Or Chaos Mode!
-#endif
 	&& target->flags & MF_ENEMY)
 	{
 		if (cv_soniccd.value)
@@ -2512,11 +2444,7 @@ static inline boolean P_PlayerHitsPlayer(mobj_t *target, mobj_t *inflictor, mobj
 		return false;
 
 	// In COOP/RACE/CHAOS, you can't hurt other players unless cv_friendlyfire is on
-	if (!cv_friendlyfire.value && (G_PlatformGametype()
-#ifdef CHAOSISNOTDEADYET
-		|| gametype == GT_CHAOS
-#endif
-		))
+	if (!cv_friendlyfire.value && (G_PlatformGametype()))
 		return false;
 
 	// Tag handling
@@ -2843,17 +2771,6 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 
 		if (target->health > 1)
 		{
-
-#ifdef CHAOSISNOTDEADYET
-			if (gametype == GT_CHAOS && source && source->player)
-			{
-				player = source->player;
-				if (!((player->pflags & PF_USEDOWN) && player->dashspeed
-				&& (player->pflags & PF_STARTDASH) && (player->pflags & PF_SPINNING)))
-					player->scoreadd++;
-				P_AddPlayerScore(player, 300*player->scoreadd);
-			}
-#endif
 			if (target->info->painsound)
 				S_StartSound(target, target->info->painsound);
 
@@ -2882,14 +2799,6 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 
 		if (target->health > 1)
 			target->flags2 |= MF2_FRET;
-
-#ifdef CHAOSISNOTDEADYET
-		if (gametype == GT_CHAOS && source && source->player)
-		{
-			source->player->scoreadd++;
-			P_AddPlayerScore(source->player, 300*source->player->scoreadd);
-		}
-#endif
 	}
 #ifdef HAVE_BLUA
 	else if (target->flags & MF_ENEMY)

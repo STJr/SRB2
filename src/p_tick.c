@@ -587,7 +587,7 @@ void P_Ticker(boolean run)
 	}
 
 	// Check for pause or menu up in single player
-	if (paused || P_MenuActivePause())
+	if (paused || P_AutoPause())
 		return;
 
 	postimgtype = postimgtype2 = postimg_none;
