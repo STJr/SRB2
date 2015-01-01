@@ -28,6 +28,8 @@ static CV_PossibleValue_t onecontrolperkey_cons_t[] = {{1, "One"}, {2, "Several"
 // mouse values are used once
 consvar_t cv_mousesens = {"mousesens", "35", CV_SAVE, mousesens_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_mousesens2 = {"mousesens2", "35", CV_SAVE, mousesens_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_mouseysens = {"mouseysens", "35", CV_SAVE, mousesens_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_mouseysens2 = {"mouseysens2", "35", CV_SAVE, mousesens_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_controlperkey = {"controlperkey", "One", CV_SAVE, onecontrolperkey_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 INT32 mousex, mousey;
@@ -99,7 +101,7 @@ void G_MapEventsToControls(event_t *ev)
 		case ev_mouse: // buttons are virtual keys
 			mousex = (INT32)(ev->data2*((cv_mousesens.value*cv_mousesens.value)/110.0f + 0.1f));
 			mousey = (INT32)(ev->data3*((cv_mousesens.value*cv_mousesens.value)/110.0f + 0.1f));
-			mlooky = mousey;
+			mlooky = (INT32)(ev->data3*((cv_mouseysens.value*cv_mousesens.value)/110.0f + 0.1f));
 			break;
 
 		case ev_joystick: // buttons are virtual keys
@@ -121,7 +123,7 @@ void G_MapEventsToControls(event_t *ev)
 		case ev_mouse2: // buttons are virtual keys
 			mouse2x = (INT32)(ev->data2*((cv_mousesens2.value*cv_mousesens2.value)/110.0f + 0.1f));
 			mouse2y = (INT32)(ev->data3*((cv_mousesens2.value*cv_mousesens2.value)/110.0f + 0.1f));
-			mlook2y = mouse2y;
+			mlook2y = (INT32)(ev->data3*((cv_mouseysens2.value*cv_mousesens2.value)/110.0f + 0.1f));
 			break;
 
 		default:

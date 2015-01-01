@@ -168,7 +168,6 @@ static boolean gl13 = false; // whether we can use opengl 1.3 functions
 //                  : else do nothing
 // Returns          :
 // -----------------+
-#if !(defined (HAVE_SDL) && defined (STATIC3DS))
 FUNCPRINTF void DBG_Printf(const char *lpFmt, ...)
 {
 #ifdef DEBUG_TO_FILE
@@ -178,13 +177,12 @@ FUNCPRINTF void DBG_Printf(const char *lpFmt, ...)
 	va_start (arglist, lpFmt);
 	vsnprintf (str, 4096, lpFmt, arglist);
 	va_end   (arglist);
-	if (logstream)
-		fwrite(str, strlen(str), 1, logstream);
+	if (gllogstream)
+		fwrite(str, strlen(str), 1, gllogstream);
 #else
 	(void)lpFmt;
 #endif
 }
-#endif
 
 #ifdef STATIC_OPENGL
 /* 1.0 functions */
@@ -673,7 +671,7 @@ static void GLProject(GLdouble objX, GLdouble objY, GLdouble objZ,
 // -----------------+
 void SetModelView(GLint w, GLint h)
 {
-	DBG_Printf("SetModelView(): %dx%d\n", (int)w, (int)h);
+//	DBG_Printf("SetModelView(): %dx%d\n", (int)w, (int)h);
 
 	screen_width = w;
 	screen_height = h;
@@ -714,7 +712,7 @@ void SetStates(void)
 	GLfloat LightDiffuse[] = {1.0f, 1.0f, 1.0f, 1.0f};
 #endif
 
-	DBG_Printf("SetStates()\n");
+//	DBG_Printf("SetStates()\n");
 
 	// Hurdler: not necessary, is it?
 	pglShadeModel(GL_SMOOTH);      // iterate vertice colors

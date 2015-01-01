@@ -355,6 +355,7 @@ typedef enum sprite
 	SPR_TRLS,
 	SPR_CBLL, // Cannonball
 	SPR_AROW, // Arrow
+	SPR_CFIR, // Colored fire of various sorts
 
 	// Greenflower Scenery
 	SPR_FWR1,
@@ -1907,7 +1908,12 @@ typedef enum state
 	S_ARROWDOWN,
 
 	// Trapgoyle Demon fire
-	S_DEMONFIRE,
+	S_DEMONFIRE1,
+	S_DEMONFIRE2,
+	S_DEMONFIRE3,
+	S_DEMONFIRE4,
+	S_DEMONFIRE5,
+	S_DEMONFIRE6,
 
 	S_GFZFLOWERA,
 	S_GFZFLOWERA2,
@@ -3934,7 +3940,6 @@ typedef enum mobj_type
 	MT_NIGHTOPIANHELPER, // the actual helper object that orbits you
 
 	// Utility Objects
-	MT_CHAOSSPAWNER,
 	MT_TELEPORTMAN,
 	MT_ALTVIEWMAN,
 	MT_CRUMBLEOBJ, // Sound generator for crumbling platform

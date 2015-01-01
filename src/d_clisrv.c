@@ -823,7 +823,7 @@ static inline void resynch_read_ctf(resynchend_pak *p)
 	{
 		if (!playeringame[p->flagplayer[1]])
 			 I_Error("Invalid blue flag player %d who isn't in the game!", (INT32)p->flagplayer[1]);
-		players[p->flagplayer[1]].gotflag = GF_REDFLAG;
+		players[p->flagplayer[1]].gotflag = GF_BLUEFLAG;
 		if (blueflag)
 		{
 			P_RemoveMobj(blueflag);

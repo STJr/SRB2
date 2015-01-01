@@ -144,8 +144,8 @@ extern FILE *logstream;
 #define VERSIONSTRING "Trunk"
 #else
 #define VERSION    201 // Game version
-#define SUBVERSION 12  // more precise version number
-#define VERSIONSTRING "v2.1.12"
+#define SUBVERSION 14  // more precise version number
+#define VERSIONSTRING "v2.1.14"
 // Hey! If you change this, add 1 to the MODVERSION below!
 // Otherwise we can't force updates!
 #endif
@@ -203,7 +203,7 @@ extern FILE *logstream;
 // it's only for detection of the version the player is using so the MS can alert them of an update.
 // Only set it higher, not lower, obviously.
 // Note that we use this to help keep internal testing in check; this is why v2.1.0 is not version "1".
-#define MODVERSION 17
+#define MODVERSION 19
 
 
 
@@ -448,10 +448,6 @@ extern const char *compdate, *comptime, *comprevision;
 
 ///	Dumps the contents of a network save game upon consistency failure for debugging.
 //#define DUMPCONSISTENCY
-
-///	Pre-1.08 Chaos gametype code
-///	\note	Code severely out of date, does not take new enemies/bosses into account.
-//#define CHAOSISNOTDEADYET
 
 ///	Polyobject fake flat code
 #define POLYOBJECTS_PLANES

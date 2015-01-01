@@ -5052,7 +5052,12 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_ARROWDOWN",
 
 	// Trapgoyle Demon fire
-	"S_DEMONFIRE",
+	"S_DEMONFIRE1",
+	"S_DEMONFIRE2",
+	"S_DEMONFIRE3",
+	"S_DEMONFIRE4",
+	"S_DEMONFIRE5",
+	"S_DEMONFIRE6",
 
 	"S_GFZFLOWERA",
 	"S_GFZFLOWERA2",
@@ -7062,7 +7067,6 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_NIGHTOPIANHELPER", // the actual helper object that orbits you
 
 	// Utility Objects
-	"MT_CHAOSSPAWNER",
 	"MT_TELEPORTMAN",
 	"MT_ALTVIEWMAN",
 	"MT_CRUMBLEOBJ", // Sound generator for crumbling platform
@@ -7453,6 +7457,17 @@ struct {
 	{"FF_FULLBRIGHT",FF_FULLBRIGHT},
 	{"FF_TRANSMASK",FF_TRANSMASK},
 	{"FF_TRANSSHIFT",FF_TRANSSHIFT},
+	// new preshifted translucency (used in source)
+	{"FF_TRANS10",FF_TRANS10},
+	{"FF_TRANS20",FF_TRANS20},
+	{"FF_TRANS30",FF_TRANS30},
+	{"FF_TRANS40",FF_TRANS40},
+	{"FF_TRANS50",FF_TRANS50},
+	{"FF_TRANS60",FF_TRANS60},
+	{"FF_TRANS70",FF_TRANS70},
+	{"FF_TRANS80",FF_TRANS80},
+	{"FF_TRANS90",FF_TRANS90},
+	// compatibility
 	// Transparency for SOCs is pre-shifted
 	{"TR_TRANS10",tr_trans10<<FF_TRANSSHIFT},
 	{"TR_TRANS20",tr_trans20<<FF_TRANSSHIFT},
@@ -8047,7 +8062,7 @@ static fixed_t find_const(const char **rword)
 		return r;
 	}
 	if (!*(word+1) && // Turn a single A-z symbol into numbers, like sprite frames.
-	 (*word >= 'A' && *word <= 'Z') || (*word >= 'a' && *word <= 'z')) {
+	 ((*word >= 'A' && *word <= 'Z') || (*word >= 'a' && *word <= 'z'))) {
 		r = R_Char2Frame(*word);
 		free(word);
 		return r;

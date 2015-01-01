@@ -667,31 +667,28 @@ static void Impl_HandleWindowEvent(SDL_WindowEvent evt)
 
 	if (mousefocus && kbfocus)
 	{
+		// Tell game we got focus back, resume music if necessary
+		window_notinfocus = false;
+		if (!paused)
+			I_ResumeSong(0); //resume it
+
 		if (!firsttimeonmouse)
 		{
 			if (cv_usemouse.value) I_StartupMouse();
 		}
 		//else firsttimeonmouse = SDL_FALSE;
-		if (gamestate == GS_LEVEL)
-		{
-			if (!paused) I_ResumeSong(0); //resume it
-		}
 	}
 	else if (!mousefocus && !kbfocus)
 	{
+		// Tell game we lost focus, pause music
+		window_notinfocus = true;
+		I_PauseSong(0);
+
 		if (!disable_mouse)
 		{
 			SDLforceUngrabMouse();
 		}
-		if (!netgame && gamestate == GS_LEVEL && !demoplayback && !demorecording && !modeattacking)
-		{
-			paused = true;
-		}
 		memset(gamekeydown, 0, NUMKEYS); // TODO this is a scary memset
-		if (gamestate == GS_LEVEL)
-		{
-			I_PauseSong(0);
-		}
 
 		if (MOUSE_MENU)
 		{
@@ -1570,7 +1567,7 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
 	{
-		window = SDL_CreateWindow("SRB2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+		window = SDL_CreateWindow("SRB2 "VERSIONSTRING, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 				realwidth, realheight, flags | SDL_WINDOW_OPENGL);
 		if (window != NULL)
 		{
@@ -1590,7 +1587,7 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 #endif
 	if (rendermode == render_soft)
 	{
-		window = SDL_CreateWindow("SRB2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+		window = SDL_CreateWindow("SRB2 "VERSIONSTRING, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 				realwidth, realheight, flags);
 		if (window != NULL)
 		{
@@ -1775,7 +1772,7 @@ void I_StartupGraphics(void)
 
 	// Create window
 	//Impl_CreateWindow(USE_FULLSCREEN);
-	//Impl_SetWindowName("SRB2");
+	//Impl_SetWindowName("SRB2 "VERSIONSTRING);
 	VID_SetMode(VID_GetModeForSize(BASEVIDWIDTH, BASEVIDHEIGHT));
 
 	vid.buffer = NULL;  // For software mode
@@ -1835,12 +1832,17 @@ void I_ShutdownGraphics(void)
 		bufSurface = NULL;
 	}
 
+	I_OutputMsg("I_ShutdownGraphics(): ");
+
 	// was graphics initialized anyway?
 	if (!graphics_started)
+	{
+		I_OutputMsg("graphics never started\n");
 		return;
-	CONS_Printf("I_ShutdownGraphics: ");
+	}
 	graphics_started = false;
-	CONS_Printf("%s", M_GetText("shut down\n"));
+	I_OutputMsg("shut down\n");
+
 #ifdef HWRENDER
 	if (GLUhandle)
 		hwClose(GLUhandle);

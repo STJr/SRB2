@@ -203,7 +203,7 @@ void ST_doPaletteStuff(void)
 {
 	INT32 palette;
 
-	if (paused || P_MenuActivePause())
+	if (paused || P_AutoPause())
 		palette = 0;
 	else if (stplyr && stplyr->flashcount)
 		palette = stplyr->flashpal;
@@ -1576,15 +1576,6 @@ static inline void ST_drawTeamName(void)
 		V_DrawString(244, (splitscreen) ? STRINGY(184) : STRINGY(192), V_HUDTRANSHALF, "SPECTATOR");
 }
 
-#ifdef CHAOSISNOTDEADYET
-static inline void ST_drawChaosHUD(void)
-{
-	char chains[33];
-	sprintf(chains, "CHAINS: %u", stplyr->scoreadd);
-	V_DrawString(8, STRINGY(184), V_HUDTRANSHALF, chains);
-}
-#endif
-
 static void ST_drawSpecialStageHUD(void)
 {
 	if (totalrings > 0)
@@ -1667,7 +1658,7 @@ static void ST_doHuntIconsAndSound(void)
 			interval = newinterval;
 	}
 
-	if (!(P_MenuActivePause() || paused) && interval > 0 && leveltime && leveltime % interval == 0)
+	if (!(P_AutoPause() || paused) && interval > 0 && leveltime && leveltime % interval == 0)
 		S_StartSound(NULL, sfx_emfind);
 }
 
@@ -1727,7 +1718,7 @@ static void ST_doItemFinderIconsAndSound(void)
 		}
 	}
 
-	if (!(P_MenuActivePause() || paused) && interval > 0 && leveltime && leveltime % interval == 0)
+	if (!(P_AutoPause() || paused) && interval > 0 && leveltime && leveltime % interval == 0)
 		S_StartSound(NULL, sfx_emfind);
 }
 
@@ -1813,12 +1804,6 @@ static void ST_overlayDrawer(void)
 		// Team names for team gametypes
 		if (G_GametypeHasTeams())
 			ST_drawTeamName();
-
-		// Chaos HUD Stuff
-#ifdef CHAOSISNOTDEADYET
-		else if (gametype == GT_CHAOS)
-			ST_drawChaosHUD();
-#endif
 
 		// Special Stage HUD
 		if (!useNightsSS && G_IsSpecialStage(gamemap) && stplyr == &players[displayplayer])

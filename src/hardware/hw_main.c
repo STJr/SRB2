@@ -3796,7 +3796,9 @@ static void HWR_DrawSprite(gr_vissprite_t *spr)
 		}*/
 
 		// shadow is always half as translucent as the sprite itself
-		if (spr->mobj->flags2 & MF2_SHADOW)
+		if (!cv_translucency.value)
+			; // translucency disabled
+		else if (spr->mobj->flags2 & MF2_SHADOW)
 			sSurf.FlatColor.s.alpha = 0x20;
 		else if (spr->mobj->frame & FF_TRANSMASK)
 		{

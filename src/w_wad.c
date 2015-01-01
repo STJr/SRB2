@@ -662,6 +662,32 @@ lumpnum_t W_GetNumForName(const char *name)
 	return i;
 }
 
+//
+// W_CheckNumForNameInBlock
+// Checks only in blocks from blockstart lump to blockend lump
+//
+lumpnum_t W_CheckNumForNameInBlock(const char *name, const char *blockstart, const char *blockend)
+{
+	INT32 i;
+	lumpnum_t bsid, beid;
+	lumpnum_t check = INT16_MAX;
+
+	// scan wad files backwards so patch lump files take precedence
+	for (i = numwadfiles - 1; i >= 0; i--)
+	{
+		bsid = W_CheckNumForNamePwad(blockstart,(UINT16)i,0);
+		if (bsid == INT16_MAX)
+			continue; // block doesn't exist, keep going
+		beid = W_CheckNumForNamePwad(blockend,(UINT16)i,0);
+		// if block end doesn't exist, just search through everything
+
+		check = W_CheckNumForNamePwad(name,(UINT16)i,bsid);
+		if (check < beid)
+			return (i<<16)+check; // found it, in our constraints
+	}
+	return LUMPERROR;
+}
+
 // Used by Lua. Case sensitive lump checking, quickly...
 #include "fastcmp.h"
 UINT8 W_LumpExists(const char *name)

@@ -572,8 +572,8 @@ static boolean R_CheckBBox(fixed_t *bspcoord)
 	py2 = bspcoord[checkcoord[boxpos][3]];
 
 	// check clip list for an open space
-	angle1 = R_PointToAngle(px1, py1) - viewangle;
-	angle2 = R_PointToAngle(px2, py2) - viewangle;
+	angle1 = R_PointToAngle2(viewx>>1, viewy>>1, px1>>1, py1>>1) - viewangle;
+	angle2 = R_PointToAngle2(viewx>>1, viewy>>1, px2>>1, py2>>1) - viewangle;
 
 	span = angle1 - angle2;
 
@@ -702,21 +702,62 @@ static int R_PolysegCompare(const void *p1, const void *p2)
 {
 	const seg_t *seg1 = *(const seg_t * const *)p1;
 	const seg_t *seg2 = *(const seg_t * const *)p2;
-	fixed_t dist1, dist2;
+	fixed_t dist1v1, dist1v2, dist2v1, dist2v2;
 
 	// TODO might be a better way to get distance?
-#define vxdist(v) FixedMul(R_PointToDist(v->x, v->y), FINECOSINE((R_PointToAngle(v->x, v->y)-viewangle)>>ANGLETOFINESHIFT))+0xFFFFFFF
+#define pdist(x, y) (FixedMul(R_PointToDist(x, y), FINECOSINE((R_PointToAngle(x, y)-viewangle)>>ANGLETOFINESHIFT))+0xFFFFFFF)
+#define vxdist(v) pdist(v->x, v->y)
 
-	dist1 = min(vxdist(seg1->v1), vxdist(seg1->v2));
-	dist2 = min(vxdist(seg2->v1), vxdist(seg2->v2));
+	dist1v1 = vxdist(seg1->v1);
+	dist1v2 = vxdist(seg1->v2);
+	dist2v1 = vxdist(seg2->v1);
+	dist2v2 = vxdist(seg2->v2);
 
-	if (dist1 == dist2) { // Segs connect toward the front, so use the back verts to determine order!
-		dist1 = max(vxdist(seg1->v1), vxdist(seg1->v2));
-		dist2 = max(vxdist(seg2->v1), vxdist(seg2->v2));
+	if (min(dist1v1, dist1v2) != min(dist2v1, dist2v2))
+		return min(dist1v1, dist1v2) - min(dist2v1, dist2v2);
+
+	{ // That didn't work, so now let's try this.......
+		fixed_t delta1, delta2, x1, y1, x2, y2;
+		vertex_t *near1, *near2, *far1, *far2; // wherever you are~
+
+		delta1 = R_PointToDist2(seg1->v1->x, seg1->v1->y, seg1->v2->x, seg1->v2->y);
+		delta2 = R_PointToDist2(seg2->v1->x, seg2->v1->y, seg2->v2->x, seg2->v2->y);
+
+		delta1 = FixedDiv(128<<FRACBITS, delta1);
+		delta2 = FixedDiv(128<<FRACBITS, delta2);
+
+		if (dist1v1 < dist1v2)
+		{
+			near1 = seg1->v1;
+			far1 = seg1->v2;
+		}
+		else
+		{
+			near1 = seg1->v2;
+			far1 = seg1->v1;
+		}
+
+		if (dist2v1 < dist2v2)
+		{
+			near2 = seg2->v1;
+			far2 = seg2->v2;
+		}
+		else
+		{
+			near2 = seg2->v2;
+			far2 = seg2->v1;
+		}
+
+		x1 = near1->x + FixedMul(far1->x-near1->x, delta1);
+		y1 = near1->y + FixedMul(far1->y-near1->y, delta1);
+
+		x2 = near2->x + FixedMul(far2->x-near2->x, delta2);
+		y2 = near2->y + FixedMul(far2->y-near2->y, delta2);
+
+		return pdist(x1, y1)-pdist(x2, y2);
 	}
 #undef vxdist
-
-	return dist1-dist2;
+#undef pdist
 }
 
 //
@@ -835,6 +876,7 @@ static void R_Subsector(size_t num)
 
 	numffloors = 0;
 	ffloor[numffloors].plane = NULL;
+	ffloor[numffloors].polyobj = NULL;
 	if (frontsector->ffloors)
 	{
 		ffloor_t *rover;
@@ -854,6 +896,7 @@ static void R_Subsector(size_t num)
 			}
 
 			ffloor[numffloors].plane = NULL;
+			ffloor[numffloors].polyobj = NULL;
 			if (*rover->bottomheight <= frontsector->ceilingheight
 				&& *rover->bottomheight >= frontsector->floorheight
 				&& ((viewz < *rover->bottomheight && !(rover->flags & FF_INVERTPLANES))
@@ -872,6 +915,7 @@ static void R_Subsector(size_t num)
 			if (numffloors >= MAXFFLOORS)
 				break;
 			ffloor[numffloors].plane = NULL;
+			ffloor[numffloors].polyobj = NULL;
 			if (*rover->topheight >= frontsector->floorheight
 				&& *rover->topheight <= frontsector->ceilingheight
 				&& ((viewz > *rover->topheight && !(rover->flags & FF_INVERTPLANES))

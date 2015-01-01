@@ -25,9 +25,6 @@ typedef enum
 	int_teammatch,// Team Match
 //	int_tag,      // Tag
 	int_ctf,      // CTF
-#ifdef CHAOSISNOTDEADYET
-	int_chaos,    // Chaos
-#endif
 	int_spec,     // Special Stage
 	int_nights,   // NiGHTS into Dreams
 	int_nightsspec,// NiGHTS special stage
