@@ -2180,8 +2180,7 @@ void G_PlayerReborn(INT32 player)
 	p->health = 1; // 0 rings
 	p->panim = PA_IDLE; // standing animation
 
-	if ((netgame || multiplayer) && !p->spectator
-	&& gametype != GT_RACE)
+	if ((netgame || multiplayer) && !p->spectator)
 		p->powers[pw_flashing] = flashingtics-1; // Babysitting deterrent
 
 	if (p-players == consoleplayer)
