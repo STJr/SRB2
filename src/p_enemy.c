@@ -5660,6 +5660,11 @@ void A_RecyclePowers(mobj_t *actor)
 		if (playeringame[i] && players[i].mo && players[i].mo->health > 0 && players[i].playerstate == PST_LIVE
 			&& !players[i].exiting && !((netgame || multiplayer) && players[i].spectator))
 		{
+#ifndef WEIGHTEDRECYCLER
+			if (players[i].powers[pw_super])
+				continue; // Ignore super players
+#endif
+
 			numplayers++;
 			postscramble[j] = playerslist[j] = (UINT8)i;
 
