@@ -350,7 +350,7 @@ static float searchfvalue(const char *s)
 static void clear_conditionsets(void)
 {
 	UINT8 i;
-	for (i = 0; i < MAXCONDITIONSETS; ++i)
+	for (i = 1; i < MAXCONDITIONSETS; ++i)
 		M_ClearConditionSet(i);
 }
 
