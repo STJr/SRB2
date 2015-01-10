@@ -312,9 +312,9 @@ FUNCNORETURN static ATTRNORETURN void signal_handler(INT32 num)
 
 	switch (num)
 	{
-	case SIGINT:
-		sigmsg = "SIGINT - interrupted";
-		break;
+//	case SIGINT:
+//		sigmsg = "SIGINT - interrupted";
+//		break;
 	case SIGILL:
 		sigmsg = "SIGILL - illegal instruction - invalid function image";
 		break;
@@ -324,14 +324,12 @@ FUNCNORETURN static ATTRNORETURN void signal_handler(INT32 num)
 	case SIGSEGV:
 		sigmsg = "SIGSEGV - segment violation";
 		break;
-	case SIGTERM:
-		sigmsg = "SIGTERM - Software termination signal from kill";
-		break;
-#if !(defined (__unix_) || defined (UNIXCOMMON))
-	case SIGBREAK:
-		sigmsg = "SIGBREAK - Ctrl-Break sequence";
-		break;
-#endif
+//	case SIGTERM:
+//		sigmsg = "SIGTERM - Software termination signal from kill";
+//		break;
+//	case SIGBREAK:
+//		sigmsg = "SIGBREAK - Ctrl-Break sequence";
+//		break;
 	case SIGABRT:
 		sigmsg = "SIGABRT - abnormal termination triggered by abort call";
 		break;
@@ -743,11 +741,18 @@ static inline void I_ShutdownConsole(void){}
 void I_StartupKeyboard (void)
 {
 #if !defined (DC)
+#ifdef SIGINT
+	signal(SIGINT , quit_handler);
+#endif
+#ifdef SIGBREAK
+	signal(SIGBREAK , quit_handler);
+#endif
+#ifdef SIGTERM
+	signal(SIGTERM , quit_handler);
+#endif
+
 	// If these defines don't exist,
 	// then compilation would have failed above us...
-	signal(SIGINT , quit_handler);
-	signal(SIGBREAK , quit_handler);
-	signal(SIGTERM , quit_handler);
 	signal(SIGILL , signal_handler);
 	signal(SIGSEGV , signal_handler);
 	signal(SIGABRT , signal_handler);
@@ -2332,9 +2337,7 @@ static boolean shutdowning = false;
 void I_Error(const char *error, ...)
 {
 	va_list argptr;
-#if (defined (MAC_ALERT) || defined (_WIN32) || (defined (_WIN32_WCE) && !defined (__GNUC__))) && !defined (_XBOX)
 	char buffer[8192];
-#endif
 
 	// recursive error detecting
 	if (shutdowning)
