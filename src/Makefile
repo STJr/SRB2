@@ -305,6 +305,10 @@ PNG_LDFLAGS?=$(shell $(PNG_CONFIG) --ldflags)
 endif
 endif
 
+ifdef LINUX
+PNG_CFLAGS+=-D_LARGEFILE64_SOURCE
+endif
+
 LIBS+=$(PNG_LDFLAGS)
 CFLAGS+=$(PNG_CFLAGS)
 endif
