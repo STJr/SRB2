@@ -875,7 +875,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	{
 		// Doesn't matter what gravity player's following! Just do your stuff in YOUR direction only
 		if (tmthing->eflags & MFE_VERTICALFLIP
-		&& (tmthing->z + tmthing->height + tmthing->momz > thing->z
+		&& (tmthing->z + tmthing->height + tmthing->momz < thing->z
 		 || tmthing->z + tmthing->height + tmthing->momz >= thing->z + thing->height))
 			;
 		else if (!(tmthing->eflags & MFE_VERTICALFLIP)
