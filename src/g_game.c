@@ -4329,20 +4329,10 @@ void G_GhostTicker(void)
 		switch(g->color)
 		{
 		case GHC_SUPER: // Super Sonic (P_DoSuperStuff)
-			// Yousa yellow now!
-			g->mo->color = SKINCOLOR_SUPER1 + (leveltime/2) % 5;
-			if (g->mo->skin)
-				switch (((skin_t*)g->mo->skin)-skins)
-				{
-				case 1: // Golden orange supertails.
-					g->mo->color = SKINCOLOR_TSUPER1 + (leveltime/2) % 5;
-					break;
-				case 2: // Pink superknux.
-					g->mo->color = SKINCOLOR_KSUPER1 + (leveltime/2) % 5;
-					break;
-				default:
-					break;
-				}
+			if (leveltime % 9 < 5)
+				g->mo->color = SKINCOLOR_SUPER1 + leveltime % 9;
+			else
+				g->mo->color = SKINCOLOR_SUPER1 + 9 - leveltime % 9;
 			break;
 		case GHC_INVINCIBLE: // Mario invincibility (P_CheckInvincibilityTimer)
 			g->mo->color = (UINT8)(leveltime % MAXSKINCOLORS);
