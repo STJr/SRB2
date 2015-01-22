@@ -3385,13 +3385,22 @@ static void P_DoSuperStuff(player_t *player)
 		switch (player->skin)
 		{
 		case 1: // Golden orange supertails.
-			player->mo->color = SKINCOLOR_TSUPER1 + (leveltime/2) % 5;
+			if (leveltime % 9 < 5)
+				player->mo->color = SKINCOLOR_TSUPER1 + leveltime % 9;
+			else
+				player->mo->color = SKINCOLOR_TSUPER1 + 9 - leveltime % 9;
 			break;
 		case 2: // Pink superknux.
-			player->mo->color = SKINCOLOR_KSUPER1 + (leveltime/2) % 5;
+			if (leveltime % 9 < 5)
+				player->mo->color = SKINCOLOR_KSUPER1 + leveltime % 9;
+			else
+				player->mo->color = SKINCOLOR_KSUPER1 + 9 - leveltime % 9;
 			break;
 		default: // Yousa yellow now!
-			player->mo->color = SKINCOLOR_SUPER1 + (leveltime/2) % 5;
+			if (leveltime % 9 < 5)
+				player->mo->color = SKINCOLOR_SUPER1 + leveltime % 9;
+			else
+				player->mo->color = SKINCOLOR_SUPER1 + 9 - leveltime % 9;
 			break;
 		}
 
