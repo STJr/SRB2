@@ -963,9 +963,9 @@ void D_SRB2Main(void)
 #endif
 
 #if defined (_WIN32_WCE) //|| defined (_DEBUG) || defined (GP2X)
-	devparm = !M_CheckParm("-nodebug");
+	devparm = M_CheckParm("-nodebug") == 0;
 #else
-	devparm = M_CheckParm("-debug");
+	devparm = M_CheckParm("-debug") != 0;
 #endif
 
 	// for dedicated server
@@ -1138,8 +1138,7 @@ void D_SRB2Main(void)
 #endif
 	D_CleanFile();
 
-#if 1 // md5s last updated 6/10/15
-
+#ifndef DEVMODE // md5s last updated 6/10/15
 	// Check MD5s of autoloaded files
 	W_VerifyFileMD5(0, "c1b9577687f8a795104aef4600720ea7"); // srb2.srb/srb2.wad
 	W_VerifyFileMD5(3, "85901ad4bf94637e5753d2ac2c03ea26"); // rings.dta
