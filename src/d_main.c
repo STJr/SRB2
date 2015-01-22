@@ -1118,7 +1118,7 @@ void D_SRB2Main(void)
 #endif
 	D_CleanFile();
 
-#ifndef DEVMODE // md5s last updated 12/14/14
+#ifndef DEVELOP // md5s last updated 12/14/14
 
 	// Check MD5s of autoloaded files
 	W_VerifyFileMD5(0, ASSET_HASH_SRB2_SRB); // srb2.srb/srb2.wad

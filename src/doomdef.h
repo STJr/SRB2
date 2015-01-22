@@ -138,8 +138,8 @@
 extern FILE *logstream;
 #endif
 
-//#define DEVMODE // Disable this for release builds to remove excessive cheat commands and enable MD5 checking and stuff, all in one go. :3
-#ifdef DEVMODE
+//#define DEVELOP // Disable this for release builds to remove excessive cheat commands and enable MD5 checking and stuff, all in one go. :3
+#ifdef DEVELOP
 #define VERSION    0 // Game version
 #define SUBVERSION 0 // more precise version number
 #define VERSIONSTRING "Trunk"
