@@ -68,9 +68,7 @@ void R_DrawMasked(void);
 typedef struct
 {
 	char name[SKINNAMESIZE+1]; // INT16 descriptive name of the skin
-	spritedef_t spritedef;
 	UINT16 wadnum;
-	char sprite[4]; // Sprite name, if seperated from S_SKIN.
 	skinflags_t flags;
 
 	char realname[SKINNAMESIZE+1]; // Display name for level completion.
@@ -102,6 +100,8 @@ typedef struct
 
 	// specific sounds per skin
 	sfxenum_t soundsid[NUMSKINSOUNDS]; // sound # in S_sfx table
+
+	spritedef_t sprites[NUMPLAYERSPRITES];
 } skin_t;
 
 // -----------

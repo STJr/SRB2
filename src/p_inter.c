@@ -309,7 +309,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		|| (toucher->z + toucher->height > special->z + special->height && (toucher->eflags & MFE_VERTICALFLIP)))
 		&& player->charability == CA_FLY
 		&& (player->powers[pw_tailsfly]
-		|| (toucher->state >= &states[S_PLAY_SPC1] && toucher->state <= &states[S_PLAY_SPC4]))) // Tails can shred stuff with his propeller.
+		|| toucher->state-states == S_PLAY_FLY_TIRED)) // Tails can shred stuff with his propeller.
 		{
 			toucher->momz = -toucher->momz/2;
 
@@ -351,7 +351,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		|| (toucher->z + toucher->height > special->z + special->height && (toucher->eflags & MFE_VERTICALFLIP))) // Flame is bad at logic - JTE
 		&& player->charability == CA_FLY
 		&& (player->powers[pw_tailsfly]
-		|| (toucher->state >= &states[S_PLAY_SPC1] && toucher->state <= &states[S_PLAY_SPC4]))) // Tails can shred stuff with his propeller.
+		|| toucher->state-states == S_PLAY_FLY_TIRED)) // Tails can shred stuff with his propeller.
 		{
 			if (P_MobjFlip(toucher)*toucher->momz < 0)
 				toucher->momz = -toucher->momz/2;
@@ -875,7 +875,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 					P_ResetPlayer(player);
 
-					P_SetPlayerMobjState(toucher, S_PLAY_FALL1);
+					P_SetPlayerMobjState(toucher, S_PLAY_FALL);
 				}
 			}
 			return;
@@ -1212,7 +1212,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				if (player->pflags & PF_GLIDING)
 				{
 					player->pflags &= ~(PF_GLIDING|PF_JUMPED);
-					P_SetPlayerMobjState(toucher, S_PLAY_FALL1);
+					P_SetPlayerMobjState(toucher, S_PLAY_FALL);
 				}
 
 				// Play a bounce sound?
@@ -1279,7 +1279,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					if (player->pflags & PF_GLIDING)
 					{
 						player->pflags &= ~(PF_GLIDING|PF_JUMPED);
-						P_SetPlayerMobjState(toucher, S_PLAY_FALL1);
+						P_SetPlayerMobjState(toucher, S_PLAY_FALL);
 					}
 
 					// Play a bounce sound?
@@ -1335,7 +1335,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			{
 				player->pflags |= PF_MACESPIN;
 				S_StartSound(toucher, sfx_spin);
-				P_SetPlayerMobjState(toucher, S_PLAY_ATK1);
+				P_SetPlayerMobjState(toucher, S_PLAY_SPIN);
 			}
 			else
 				player->pflags |= PF_ITEMHANG;
@@ -2570,7 +2570,7 @@ static inline void P_SuperDamage(player_t *player, mobj_t *inflictor, mobj_t *so
 	P_InstaThrust(player->mo, ang, fallbackspeed);
 
 	if (player->charflags & SF_SUPERANIMS)
-		P_SetPlayerMobjState(player->mo, S_PLAY_SUPERHIT);
+		P_SetPlayerMobjState(player->mo, S_PLAY_SUPER_PAIN);
 	else
 		P_SetPlayerMobjState(player->mo, player->mo->info->painstate);
 

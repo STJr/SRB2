@@ -3739,7 +3739,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PLAY_STND",
 	"S_PLAY_TAP1",
 	"S_PLAY_TAP2",
-	"S_PLAY_RUN1",
+	"S_PLAY_WALK",
 	"S_PLAY_RUN2",
 	"S_PLAY_RUN3",
 	"S_PLAY_RUN4",
@@ -3751,12 +3751,12 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PLAY_SPD2",
 	"S_PLAY_SPD3",
 	"S_PLAY_SPD4",
-	"S_PLAY_ATK1",
+	"S_PLAY_SPIN",
 	"S_PLAY_ATK2",
 	"S_PLAY_ATK3",
 	"S_PLAY_ATK4",
 	"S_PLAY_SPRING",
-	"S_PLAY_FALL1",
+	"S_PLAY_FALL",
 	"S_PLAY_FALL2",
 	"S_PLAY_ABL1",
 	"S_PLAY_ABL2",
@@ -4534,7 +4534,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	// S_PLAY_TAP1
 	"S_METALSONIC_WAIT1",
 	"S_METALSONIC_WAIT2",
-	// S_PLAY_RUN1
+	// S_PLAY_WALK
 	"S_METALSONIC_WALK1",
 	"S_METALSONIC_WALK2",
 	"S_METALSONIC_WALK3",

@@ -2513,7 +2513,7 @@ void A_1upThinker(mobj_t *actor)
 		}
 	}
 
-	if (closestplayer == -1 || skins[players[closestplayer].skin].spritedef.numframes <= states[S_PLAY_BOX1].frame)
+	if (closestplayer == -1 || skins[players[closestplayer].skin].sprites[SPR2_LIFE].numframes == 0)
 	{ // Closest player not found (no players in game?? may be empty dedicated server!), or does not have correct sprite.
 		actor->frame = 0;
 		if (actor->tracer) {
@@ -2658,7 +2658,7 @@ for (i = cvar.value; i; --i) spawnchance[numchoices++] = type
 			if (actor->tracer) // Remove the old lives icon.
 				P_RemoveMobj(actor->tracer);
 
-			if (!newmobj->target->skin || ((skin_t *)newmobj->target->skin)->spritedef.numframes <= states[S_PLAY_BOX1].frame)
+			if (!newmobj->target->skin || ((skin_t *)newmobj->target->skin)->sprites[SPR2_LIFE].numframes == 0)
 				newmobj->frame -= 2; // No lives icon for this player, use the default.
 			else
 			{ // Spawn the lives icon.

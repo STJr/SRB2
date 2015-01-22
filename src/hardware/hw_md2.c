@@ -1200,7 +1200,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		curr = &md2->model->frames[frame];
 		if (cv_grmd2.value == 1
 		    && spr->mobj->state->nextstate != S_NULL && states[spr->mobj->state->nextstate].sprite != SPR_NULL
-		    && !(spr->mobj->player && (spr->mobj->state->nextstate == S_PLAY_TAP1 || spr->mobj->state->nextstate == S_PLAY_TAP2) && spr->mobj->state == &states[S_PLAY_STND]))
+		    && !(spr->mobj->player && spr->mobj->state->nextstate == S_PLAY_WAIT && spr->mobj->state == &states[S_PLAY_STND]))
 		{
 			const INT32 nextframe = (states[spr->mobj->state->nextstate].frame & FF_FRAMEMASK) % md2->model->header.numFrames;
 			next = &md2->model->frames[nextframe];
@@ -1216,7 +1216,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 			p.z = FIXED_TO_FLOAT(spr->mobj->z);
 
 		if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)
-			sprdef = &((skin_t *)spr->mobj->skin)->spritedef;
+			sprdef = &((skin_t *)spr->mobj->skin)->sprites[spr->mobj->sprite2];
 		else
 			sprdef = &sprites[spr->mobj->sprite];
 

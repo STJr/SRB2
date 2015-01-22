@@ -1169,8 +1169,11 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		WRITEUINT16(save_p, mobj->state-states);
 	if (diff & MD_TICS)
 		WRITEINT32(save_p, mobj->tics);
-	if (diff & MD_SPRITE)
+	if (diff & MD_SPRITE) {
 		WRITEUINT16(save_p, mobj->sprite);
+		if (mobj->sprite == SPR_PLAY)
+			WRITEUINT8(save_p, mobj->sprite2);
+	}
 	if (diff & MD_FRAME)
 		WRITEUINT32(save_p, mobj->frame);
 	if (diff & MD_EFLAGS)
@@ -1991,10 +1994,16 @@ static void LoadMobjThinker(actionf_p1 thinker)
 		mobj->tics = READINT32(save_p);
 	else
 		mobj->tics = mobj->state->tics;
-	if (diff & MD_SPRITE)
+	if (diff & MD_SPRITE) {
 		mobj->sprite = READUINT16(save_p);
-	else
+		if (mobj->sprite == SPR_PLAY)
+			mobj->sprite2 = READUINT8(save_p);
+	}
+	else {
 		mobj->sprite = mobj->state->sprite;
+		if (mobj->sprite == SPR_PLAY)
+			mobj->sprite2 = mobj->state->frame&FF_FRAMEMASK;
+	}
 	if (diff & MD_FRAME)
 		mobj->frame = READUINT32(save_p);
 	else

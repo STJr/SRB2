@@ -192,21 +192,21 @@ void P_DoSpring(mobj_t *spring, mobj_t *object)
 		P_ResetPlayer(object->player);
 
 		if (origvertispeed > 0)
-			P_SetPlayerMobjState(object, S_PLAY_SPRING);
+			P_SetPlayerMobjState(object, S_PLAY_JUMP);
 		else if (origvertispeed < 0)
-			P_SetPlayerMobjState(object, S_PLAY_FALL1);
+			P_SetPlayerMobjState(object, S_PLAY_FALL);
 		else // horizontal spring
 		{
 			if (pflags & (PF_JUMPED|PF_SPINNING) && object->player->panim == PA_ROLL)
 				object->player->pflags = pflags;
 			else
-				P_SetPlayerMobjState(object, S_PLAY_RUN1);
+				P_SetPlayerMobjState(object, S_PLAY_WALK);
 		}
 
 		if (spring->info->painchance)
 		{
 			object->player->pflags |= PF_JUMPED;
-			P_SetPlayerMobjState(object, S_PLAY_ATK1);
+			P_SetPlayerMobjState(object, S_PLAY_SPIN);
 		}
 	}
 }
@@ -255,7 +255,7 @@ static void P_DoFanAndGasJet(mobj_t *spring, mobj_t *object)
 			{
 				P_ResetPlayer(p);
 				if (p->panim != PA_FALL)
-					P_SetPlayerMobjState(object, S_PLAY_FALL1);
+					P_SetPlayerMobjState(object, S_PLAY_FALL);
 			}
 			break;
 		case MT_STEAM: // Steam
@@ -270,7 +270,7 @@ static void P_DoFanAndGasJet(mobj_t *spring, mobj_t *object)
 			{
 				P_ResetPlayer(p);
 				if (p->panim != PA_FALL)
-					P_SetPlayerMobjState(object, S_PLAY_FALL1);
+					P_SetPlayerMobjState(object, S_PLAY_FALL);
 			}
 			break;
 		default:
@@ -288,7 +288,7 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 	if ((sonic->pflags & PF_CARRIED) && sonic->mo->tracer == tails->mo)
 		return;
 
-	if (!tails->powers[pw_tailsfly] && !(tails->charability == CA_FLY && (tails->mo->state >= &states[S_PLAY_SPC1] && tails->mo->state <= &states[S_PLAY_SPC4])))
+	if (!tails->powers[pw_tailsfly] && !(tails->charability == CA_FLY && tails->mo->state-states == S_PLAY_FLY_TIRED))
 		return;
 
 	if (tails->bot == 1)
@@ -1850,7 +1850,7 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 
 				// Don't 'step up' while springing,
 				// Only step up "if needed".
-				if (thing->state == &states[S_PLAY_SPRING]
+				if (thing->state-states == S_PLAY_JUMP
 				&& P_MobjFlip(thing)*thing->momz > FixedMul(FRACUNIT, thing->scale))
 					maxstep = 0;
 			}

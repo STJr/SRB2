@@ -3684,7 +3684,7 @@ DoneSection2:
 					if (!(player->pflags & PF_SPINNING))
 						player->pflags |= PF_SPINNING;
 
-					P_SetPlayerMobjState(player->mo, S_PLAY_ATK1);
+					P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
 				}
 
 				player->powers[pw_flashing] = TICRATE/3;
@@ -3826,7 +3826,7 @@ DoneSection2:
 
 			P_ResetPlayer(player);
 			if (player->panim != PA_FALL)
-				P_SetPlayerMobjState(player->mo, S_PLAY_FALL1);
+				P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
 			break;
 
 		case 6: // Super Sonic transformer
@@ -3838,7 +3838,7 @@ DoneSection2:
 			if (!(player->pflags & PF_SPINNING) && P_IsObjectOnGround(player->mo) && (player->charability2 == CA2_SPINDASH))
 			{
 				player->pflags |= PF_SPINNING;
-				P_SetPlayerMobjState(player->mo, S_PLAY_ATK1);
+				P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
 				S_StartAttackSound(player->mo, sfx_spin);
 
 				if (abs(player->rmomx) < FixedMul(5*FRACUNIT, player->mo->scale)
@@ -3912,9 +3912,9 @@ DoneSection2:
 				player->pflags &= ~PF_GLIDING;
 				player->climbing = 0;
 
-				if (!(player->mo->state >= &states[S_PLAY_ATK1] && player->mo->state <= &states[S_PLAY_ATK4]))
+				if (player->mo->state-states != S_PLAY_SPIN)
 				{
-					P_SetPlayerMobjState(player->mo, S_PLAY_ATK1);
+					P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
 					S_StartSound(player->mo, sfx_spin);
 				}
 			}
@@ -3984,9 +3984,9 @@ DoneSection2:
 				player->pflags |= PF_SPINNING;
 				player->pflags &= ~PF_JUMPED;
 
-				if (!(player->mo->state >= &states[S_PLAY_ATK1] && player->mo->state <= &states[S_PLAY_ATK4]))
+				if (player->mo->state-states != S_PLAY_SPIN)
 				{
-					P_SetPlayerMobjState(player->mo, S_PLAY_ATK1);
+					P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
 					S_StartSound(player->mo, sfx_spin);
 				}
 			}
@@ -4289,7 +4289,7 @@ DoneSection2:
 				player->pflags &= ~PF_SLIDING;
 				player->climbing = 0;
 				P_SetThingPosition(player->mo);
-				P_SetPlayerMobjState(player->mo, S_PLAY_CARRY);
+				P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
 			}
 			break;
 		case 12: // Camera noclip

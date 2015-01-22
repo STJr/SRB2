@@ -6331,8 +6331,8 @@ static void M_HandleConnectIP(INT32 choice)
 #define PLBOXW    8
 #define PLBOXH    9
 
-static INT32      multi_tics;
-static state_t   *multi_state;
+static UINT8      multi_tics;
+static UINT8      multi_frame;
 
 // this is set before entering the MultiPlayer setup menu,
 // for either player 1 or 2
@@ -6346,11 +6346,10 @@ static INT32      setupm_fakecolor;
 
 static void M_DrawSetupMultiPlayerMenu(void)
 {
-	INT32 mx, my, st, flags = 0;
+	INT32 mx, my, flags = 0;
 	spritedef_t *sprdef;
 	spriteframe_t *sprframe;
 	patch_t *patch;
-	UINT8 frame;
 
 	mx = MP_PlayerSetupDef.x;
 	my = MP_PlayerSetupDef.y;
@@ -6378,28 +6377,23 @@ static void M_DrawSetupMultiPlayerMenu(void)
 	// anim the player in the box
 	if (--multi_tics <= 0)
 	{
-		st = multi_state->nextstate;
-		if (st != S_NULL)
-			multi_state = &states[st];
-		multi_tics = multi_state->tics;
-		if (multi_tics == -1)
-			multi_tics = 15;
+		multi_frame++;
+		multi_tics = 4;
 	}
 
 	// skin 0 is default player sprite
 	if (R_SkinAvailable(skins[setupm_fakeskin].name) != -1)
-		sprdef = &skins[R_SkinAvailable(skins[setupm_fakeskin].name)].spritedef;
+		sprdef = &skins[R_SkinAvailable(skins[setupm_fakeskin].name)].sprites[SPR2_WALK];
 	else
-		sprdef = &skins[0].spritedef;
+		sprdef = &skins[0].sprites[SPR2_WALK];
 
 	if (!sprdef->numframes) // No frames ??
 		return; // Can't render!
 
-	frame = multi_state->frame & FF_FRAMEMASK;
-	if (frame >= sprdef->numframes) // Walking animation missing
-		frame = 0; // Try to use standing frame
+	if (multi_frame >= sprdef->numframes)
+		multi_frame = 0;
 
-	sprframe = &sprdef->spriteframes[frame];
+	sprframe = &sprdef->spriteframes[multi_frame];
 	patch = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
 	if (sprframe->flip & 1) // Only for first sprite
 		flags |= V_FLIP; // This sprite is left/right flipped!
@@ -6533,8 +6527,8 @@ static void M_SetupMultiPlayer(INT32 choice)
 {
 	(void)choice;
 
-	multi_state = &states[mobjinfo[MT_PLAYER].seestate];
-	multi_tics = multi_state->tics;
+	multi_frame = 0;
+	multi_tics = 4;
 	strcpy(setupm_name, cv_playername.string);
 
 	// set for player 1
@@ -6564,8 +6558,8 @@ static void M_SetupMultiPlayer2(INT32 choice)
 {
 	(void)choice;
 
-	multi_state = &states[mobjinfo[MT_PLAYER].seestate];
-	multi_tics = multi_state->tics;
+	multi_frame = 0;
+	multi_tics = 4;
 	strcpy (setupm_name, cv_playername2.string);
 
 	// set for splitscreen secondary player
