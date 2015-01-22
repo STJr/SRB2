@@ -91,7 +91,7 @@ static UINT8 cheatf_warp(void)
 	return 1;
 }
 
-#ifdef DEVMODE
+#ifdef DEVELOP
 static UINT8 cheatf_devmode(void)
 {
 	UINT8 i;
@@ -143,7 +143,7 @@ static cheatseq_t cheat_warp_joy = {
 	  SCRAMBLE(KEY_ENTER), 0xff }
 };
 
-#ifdef DEVMODE
+#ifdef DEVELOP
 static cheatseq_t cheat_devmode = {
 	0, cheatf_devmode,
 	{ SCRAMBLE('d'), SCRAMBLE('e'), SCRAMBLE('v'), SCRAMBLE('m'), SCRAMBLE('o'), SCRAMBLE('d'), SCRAMBLE('e'), 0xff }
@@ -256,7 +256,7 @@ boolean cht_Responder(event_t *ev)
 	ret += cht_CheckCheat(&cheat_ultimate_joy, (char)ch);
 	ret += cht_CheckCheat(&cheat_warp, (char)ch);
 	ret += cht_CheckCheat(&cheat_warp_joy, (char)ch);
-#ifdef DEVMODE
+#ifdef DEVELOP
 	ret += cht_CheckCheat(&cheat_devmode, (char)ch);
 #endif
 	return (ret != 0);
