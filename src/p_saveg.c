@@ -2798,7 +2798,7 @@ static inline void P_ArchivePolyObj(polyobj_t *po)
 
 	if (po->flags != po->spawnflags)
 		diff |= PD_FLAGS;
-	if (po->translucency != 0)
+	if (po->translucency != po->spawntrans)
 		diff |= PD_TRANS;
 
 	WRITEUINT8(save_p, diff);
