@@ -91,6 +91,33 @@ static UINT8 cheatf_warp(void)
 	return 1;
 }
 
+#ifdef DEVMODE
+static UINT8 cheatf_devmode(void)
+{
+	UINT8 i;
+
+	if (modifiedgame)
+		return 0;
+
+	if (menuactive && currentMenu != &MainDef)
+		return 0; // Only on the main menu!
+
+	S_StartSound(0, sfx_itemup);
+
+	// Just unlock all the things and turn on -debug and console devmode.
+	G_SetGameModified(false);
+	for (i = 0; i < MAXUNLOCKABLES; i++)
+		unlockables[i].unlocked = true;
+	devparm = TRUE;
+	cv_debug |= 0x8000;
+
+	// Refresh secrets menu existing.
+	M_ClearMenus(true);
+	M_StartControlPanel();
+	return 1;
+}
+#endif
+
 static cheatseq_t cheat_ultimate = {
 	0, cheatf_ultimate,
 	{ SCRAMBLE('u'), SCRAMBLE('l'), SCRAMBLE('t'), SCRAMBLE('i'), SCRAMBLE('m'), SCRAMBLE('a'), SCRAMBLE('t'), SCRAMBLE('e'), 0xff }
@@ -115,6 +142,14 @@ static cheatseq_t cheat_warp_joy = {
 	  SCRAMBLE(KEY_LEFTARROW), SCRAMBLE(KEY_UPARROW),
 	  SCRAMBLE(KEY_ENTER), 0xff }
 };
+
+#ifdef DEVMODE
+static cheatseq_t cheat_devmode = {
+	0, cheatf_devmode,
+	{ SCRAMBLE('d'), SCRAMBLE('e'), SCRAMBLE('v'), SCRAMBLE('m'), SCRAMBLE('o'), SCRAMBLE('d'), SCRAMBLE('e'), 0xff }
+};
+#endif
+
 // ==========================================================================
 //                        CHEAT SEQUENCE PACKAGE
 // ==========================================================================
@@ -221,6 +256,9 @@ boolean cht_Responder(event_t *ev)
 	ret += cht_CheckCheat(&cheat_ultimate_joy, (char)ch);
 	ret += cht_CheckCheat(&cheat_warp, (char)ch);
 	ret += cht_CheckCheat(&cheat_warp_joy, (char)ch);
+#ifdef DEVMODE
+	ret += cht_CheckCheat(&cheat_devmode, (char)ch);
+#endif
 	return (ret != 0);
 }
 
