@@ -473,6 +473,7 @@ static void readPlayer(MYFILE *f, INT32 num)
 
 				if (!slotfound && (slotfound = findFreeSlot(&num)) == false)
 					goto done;
+				PlayerMenu[num].status = IT_CALL;
 
 				for (i = 0; i < MAXLINELEN-3; i++)
 				{
@@ -545,6 +546,7 @@ static void readPlayer(MYFILE *f, INT32 num)
 				if (!slotfound && (slotfound = findFreeSlot(&num)) == false)
 					goto done;
 				DEH_WriteUndoline(word, &description[num].picname[0], UNDO_NONE);
+				PlayerMenu[num].status = IT_CALL;
 				strncpy(description[num].picname, word2, 8);
 			}
 			else if (fastcmp(word, "STATUS"))
@@ -576,6 +578,8 @@ static void readPlayer(MYFILE *f, INT32 num)
 				if (!slotfound && (slotfound = findFreeSlot(&num)) == false)
 					goto done;
 				DEH_WriteUndoline(word, description[num].skinname, UNDO_NONE);
+				PlayerMenu[num].status = IT_CALL;
+
 				strlcpy(description[num].skinname, word2, sizeof description[num].skinname);
 				strlwr(description[num].skinname);
 			}
