@@ -15,6 +15,24 @@ function(prepend_sources SOURCE_FILES)
 	set(${SOURCE_FILES} ${MODIFIED} PARENT_SCOPE)
 endfunction()
 
+# Macro to add OSX framework
+macro(add_framework fwname appname)
+	find_library(FRAMEWORK_${fwname}
+    	NAMES ${fwname}
+    	PATHS ${CMAKE_OSX_SYSROOT}/System/Library
+    		${CMAKE_OSX_SYSROOT}/Library
+    		/System/Library
+    		/Library
+    	PATH_SUFFIXES Frameworks
+    	NO_DEFAULT_PATH)
+    if( ${FRAMEWORK_${fwname}} STREQUAL FRAMEWORK_${fwname}-NOTFOUND)
+        MESSAGE(ERROR ": Framework ${fwname} not found")
+    else()
+        TARGET_LINK_LIBRARIES(${appname} PRIVATE "${FRAMEWORK_${fwname}}/${fwname}")
+        MESSAGE(STATUS "Framework ${fwname} found at ${FRAMEWORK_${fwname}}")
+    endif()
+endmacro()
+
 # 64-bit check
 if(${CMAKE_SIZEOF_VOID_P} EQUAL 8)
 	message(STATUS "Target is 64-bit")
@@ -32,12 +50,21 @@ endif()
 if (UNIX)
 	add_definitions(-DUNIXCOMMON)
 endif()
+
 if(${CMAKE_SYSTEM} MATCHES "Linux")
 	add_definitions(-DLINUX)
 	if(${SRB2_SYSTEM_BITS} EQUAL 64)
 		add_definitions(-DLINUX64)
 	endif()
 endif()
+
+if(${CMAKE_SYSTEM} MATCHES "Darwin")
+	add_definitions(-DMACOSX)
+	if(${CMAKE_C_COMPILER_ID} MATCHES "Clang")
+		set(CLANG ON)
+	endif()
+endif()
+
 # TODO support MacOSX builds
 
 add_subdirectory(src/)

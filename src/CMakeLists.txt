@@ -64,7 +64,7 @@ set(SRB2_CORE_SOURCES
 	screen.c
 	sounds.c
 	st_stuff.c
-	string.c
+	#string.c
 	tables.c
 	v_video.c
 	w_wad.c
@@ -342,6 +342,8 @@ endif()
 
 # Compatibility flag with later versions of GCC
 # We should really fix our code to not need this
-add_compile_options(-mno-ms-bitfields)
+if(NOT CLANG)
+	add_compile_options(-mno-ms-bitfields)
+endif()
 
 add_subdirectory(sdl)

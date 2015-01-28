@@ -40,6 +40,9 @@ set(SRB2_SDL2_EXE_NAME srb2sdl2)
 if(${CMAKE_SYSTEM} MATCHES "Windows")
 	set(SRB2_SDL2_EXE_NAME srb2win)
 endif()
+if(CLANG)
+	set(SRB2_SDL2_EXE_NAME SRB2)
+endif()
 
 # Dependency
 find_package(SDL2)
@@ -76,14 +79,36 @@ if(${SDL2_FOUND})
 		)
 	endif()
 
-	add_executable(${SRB2_SDL2_EXE_NAME} WIN32 ${SRB2_SDL2_TOTAL_SOURCES})
+	if(${CMAKE_SYSTEM} MATCHES Darwin)
+		set(MACOSX_BUNDLE_ICON_FILE Srb2mac.icns)
+		set_source_files_properties(macosx/Srb2mac.icns PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
+		set(SRB2_SDL2_TOTAL_SOURCES ${SRB2_SDL2_TOTAL_SOURCES}
+			macosx/mac_alert.c
+			macosx/mac_alert.h
+			macosx/Srb2mac.icns
+		)
+	endif()
 
-	target_link_libraries(${SRB2_SDL2_EXE_NAME} PRIVATE
-		${SDL2_LIBRARIES}
-		${PNG_LIBRARIES}
-		${ZLIB_LIBRARIES}
-		${OPENGL_LIBRARIES}
-	)
+	if(CLANG)
+		add_executable(${SRB2_SDL2_EXE_NAME} MACOSX_BUNDLE ${SRB2_SDL2_TOTAL_SOURCES})
+		add_framework(CoreFoundation ${SRB2_SDL2_EXE_NAME})
+		add_framework(SDL2 ${SRB2_SDL2_EXE_NAME})
+		target_link_libraries(${SRB2_SDL2_EXE_NAME} PRIVATE
+			${PNG_LIBRARIES}
+			${ZLIB_LIBRARIES}
+			${OPENGL_LIBRARIES}
+		)
+	else()
+		add_executable(${SRB2_SDL2_EXE_NAME} WIN32 ${SRB2_SDL2_TOTAL_SOURCES})
+
+		target_link_libraries(${SRB2_SDL2_EXE_NAME} PRIVATE
+			${SDL2_LIBRARIES}
+			${PNG_LIBRARIES}
+			${ZLIB_LIBRARIES}
+			${OPENGL_LIBRARIES}
+		)
+
+	endif()
 
 	if(${CMAKE_SYSTEM} MATCHES Windows)
 		target_link_libraries(${SRB2_SDL2_EXE_NAME} PRIVATE
