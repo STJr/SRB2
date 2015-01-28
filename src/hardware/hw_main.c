@@ -3658,7 +3658,7 @@ static void HWR_DrawSpriteShadow(gr_vissprite_t *spr, GLPatch_t *gpatch, float t
 	/*if (spr->mobj->frame & FF_TRANSMASK || spr->mobj->flags2 & MF2_SHADOW)
 	{
 		sector_t *sector = spr->mobj->subsector->sector;
-		UINT8 lightlevel = sector->lightlevel;
+		UINT8 lightlevel = 255;
 		extracolormap_t *colormap = sector->extra_colormap;
 
 		if (sector->numlights)
@@ -3667,8 +3667,6 @@ static void HWR_DrawSpriteShadow(gr_vissprite_t *spr, GLPatch_t *gpatch, float t
 
 			if (!(spr->mobj->frame & FF_FULLBRIGHT))
 				lightlevel = *sector->lightlist[light].lightlevel;
-			else
-				lightlevel = 255;
 
 			if (sector->lightlist[light].extra_colormap)
 				colormap = sector->lightlist[light].extra_colormap;
@@ -3830,7 +3828,7 @@ static void HWR_DrawSprite(gr_vissprite_t *spr)
 	// colormap test
 	{
 		sector_t *sector = spr->mobj->subsector->sector;
-		UINT8 lightlevel = sector->lightlevel;
+		UINT8 lightlevel = 255;
 		extracolormap_t *colormap = sector->extra_colormap;
 
 		if (sector->numlights)
@@ -3841,8 +3839,6 @@ static void HWR_DrawSprite(gr_vissprite_t *spr)
 
 			if (!(spr->mobj->frame & FF_FULLBRIGHT))
 				lightlevel = *sector->lightlist[light].lightlevel;
-			else
-				lightlevel = 255;
 
 			if (sector->lightlist[light].extra_colormap)
 				colormap = sector->lightlist[light].extra_colormap;
@@ -3851,15 +3847,10 @@ static void HWR_DrawSprite(gr_vissprite_t *spr)
 		{
 			if (!(spr->mobj->frame & FF_FULLBRIGHT))
 				lightlevel = sector->lightlevel;
-			else
-				lightlevel = 255;
 
 			if (sector->extra_colormap)
 				colormap = sector->extra_colormap;
 		}
-
-		if (spr->mobj->frame & FF_FULLBRIGHT)
-			lightlevel = 255;
 
 		if (colormap)
 			Surf.FlatColor.rgba = HWR_Lighting(lightlevel, colormap->rgba, colormap->fadergba, false, false);
