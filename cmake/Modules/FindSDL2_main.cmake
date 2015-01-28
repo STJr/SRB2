@@ -11,7 +11,7 @@ libfind_pkg_check_modules(SDL2_MAIN_PKGCONF SDL2)
 
 # includes
 find_path(SDL2_MAIN_INCLUDE_DIR
-	NAMES SDL_main.h
+	NAMES SDL.h
 	PATHS
 		${SDL2_MAIN_PKGCONF_INCLUDE_DIRS}
 		"/usr/include/SDL2"

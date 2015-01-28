@@ -3,7 +3,7 @@
 set(SRB2_CONFIG_SDL2_USEMIXER ON CACHE BOOL "Use SDL2_mixer or regular sdl sound")
 
 if(${SRB2_CONFIG_SDL2_USEMIXER})
-	find_package(SDL2_MIXER)
+	find_package(SDL2_mixer)
 	if(${SDL2_MIXER_FOUND})
 		set(SRB2_HAVE_MIXER ON)
 		set(SRB2_SDL2_SOUNDIMPL mixer_sound.c)
@@ -75,6 +75,10 @@ if(${SDL2_FOUND})
 		set(SRB2_SDL2_TOTAL_SOURCES ${SRB2_SDL2_TOTAL_SOURCES}
 			${CMAKE_SOURCE_DIR}/src/win32/win_dbg.c
 			${CMAKE_SOURCE_DIR}/src/win32/Srb2win.rc
+		)
+	endif()
+	if(NOT CLANG)
+		set(SRB2_SDL2_TOTAL_SOURCES ${SRB2_SDL2_TOTAL_SOURCES}
 			${CMAKE_SOURCE_DIR}/src/string.c
 		)
 	endif()
@@ -109,6 +113,8 @@ if(${SDL2_FOUND})
 			${PNG_LIBRARIES}
 			${ZLIB_LIBRARIES}
 			${OPENGL_LIBRARIES}
+			m #need math lol
+			rt # this too
 		)
 
 	endif()
