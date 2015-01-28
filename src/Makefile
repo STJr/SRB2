@@ -585,6 +585,8 @@ $(BIN)/$(EXENAME): $(POS) $(OBJS)
 	-$(MKDIR) $(BIN)
 	@echo Linking $(EXENAME)...
 	$(LD) $(LDFLAGS) $(OBJS) -o $(BIN)/$(EXENAME) $(LIBS)
+	@echo $(LD) $(LDFLAGS) $(OBJS) -o $(BIN)/$(EXENAME) $(LIBS)
+	@echo $(CFLAGS)
 ifndef VALGRIND
 ifndef NOOBJDUMP
 	@echo Dumping debugging info
