@@ -131,6 +131,7 @@ if(${SDL2_FOUND})
 	endif()
 
 	if(MSVC)
+		find_package(SDL2_MAIN REQUIRED)
 		target_link_libraries(${SRB2_SDL2_EXE_NAME} PRIVATE
 			${SDL2_MAIN_LIBRARIES}
 		)
