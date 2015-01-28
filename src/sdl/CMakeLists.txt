@@ -83,6 +83,7 @@ if(${SDL2_FOUND})
 	if(${CMAKE_SYSTEM} MATCHES Windows)
 		set(SRB2_SDL2_TOTAL_SOURCES ${SRB2_SDL2_TOTAL_SOURCES}
 			${CMAKE_SOURCE_DIR}/src/win32/win_dbg.c
+			${CMAKE_SOURCE_DIR}/src/win32/Srb2win.rc
 			${CMAKE_SOURCE_DIR}/src/string.c
 		)
 	endif()
