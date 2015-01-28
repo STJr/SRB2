@@ -3,7 +3,14 @@
 set(SRB2_CONFIG_SDL2_USEMIXER ON CACHE BOOL "Use SDL2_mixer or regular sdl sound")
 
 if(${SRB2_CONFIG_SDL2_USEMIXER})
-	set(SRB2_SDL2_SOUNDIMPL mixer_sound.c)
+	find_package(SDL2_MIXER)
+	if(${SDL2_MIXER_FOUND})
+		set(SRB2_HAVE_MIXER ON)
+		set(SRB2_SDL2_SOUNDIMPL mixer_sound.c)
+	else()
+		message(WARNING "You specified that SDL2_mixer is available, but it was not found. Falling back to sdl sound.")
+		set(SRB2_SDL2_SOUNDIMPL sdl_sound.c)
+	endif()
 else()
 	set(SRB2_SDL2_SOUNDIMPL sdl_sound.c)
 endif()
@@ -55,7 +62,7 @@ if(${SDL2_FOUND})
 		${SRB2_SDL2_HEADERS}
 	)
 
-	if(${SRB2_CONFIG_HWRENDER} AND ${OPENGL_FOUND})
+	if(${SRB2_CONFIG_HWRENDER})
 		set(SRB2_SDL2_TOTAL_SOURCES ${SRB2_SDL2_TOTAL_SOURCES}
 			${SRB2_HWRENDER_SOURCES}
 			${SRB2_HWRENDER_HEADERS}
@@ -76,6 +83,7 @@ if(${SDL2_FOUND})
 	if(${CMAKE_SYSTEM} MATCHES Windows)
 		set(SRB2_SDL2_TOTAL_SOURCES ${SRB2_SDL2_TOTAL_SOURCES}
 			${CMAKE_SOURCE_DIR}/src/win32/win_dbg.c
+			${CMAKE_SOURCE_DIR}/src/string.c
 		)
 	endif()
 
@@ -93,6 +101,7 @@ if(${SDL2_FOUND})
 		add_executable(${SRB2_SDL2_EXE_NAME} MACOSX_BUNDLE ${SRB2_SDL2_TOTAL_SOURCES})
 		add_framework(CoreFoundation ${SRB2_SDL2_EXE_NAME})
 		add_framework(SDL2 ${SRB2_SDL2_EXE_NAME})
+		add_framework(SDL2_mixer ${SRB2_SDL2_EXE_NAME})
 		target_link_libraries(${SRB2_SDL2_EXE_NAME} PRIVATE
 			${PNG_LIBRARIES}
 			${ZLIB_LIBRARIES}
@@ -103,6 +112,7 @@ if(${SDL2_FOUND})
 
 		target_link_libraries(${SRB2_SDL2_EXE_NAME} PRIVATE
 			${SDL2_LIBRARIES}
+			${SDL2_MIXER_LIBRARIES}
 			${PNG_LIBRARIES}
 			${ZLIB_LIBRARIES}
 			${OPENGL_LIBRARIES}
@@ -121,11 +131,15 @@ if(${SDL2_FOUND})
 
 	target_include_directories(${SRB2_SDL2_EXE_NAME} PRIVATE
 		${SDL2_INCLUDE_DIRS}
-		${SDL2_MAIN_INCLUDE_DIRS}
+		${SDL2_MIXER_INCLUDE_DIRS}
 		${PNG_INCLUDE_DIRS}
 		${ZLIB_INCLUDE_DIRS}
 		${OPENGL_INCLUDE_DIRS}
 	)
+
+	if(${SRB2_HAVE_MIXER})
+		target_compile_definitions(${SRB2_SDL2_EXE_NAME} PRIVATE -DHAVE_MIXER -DSOUND=SOUND_MIXER)
+	endif()
 
 	target_compile_definitions(${SRB2_SDL2_EXE_NAME} PRIVATE
 		-DHAVE_SDL

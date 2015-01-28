@@ -203,12 +203,14 @@ set(SRB2_CONFIG_HAVE_PNG ON CACHE BOOL
 	"Enable PNG support. Depends on zlib, so will be disabled if you don't enable that too.")
 set(SRB2_CONFIG_HAVE_ZLIB ON CACHE BOOL
 	"Enable zlib support")
-set(SRB2_CONFIG_HAVE_LIBGME ON CACHE BOOL
+set(SRB2_CONFIG_HAVE_GME ON CACHE BOOL
 	"Enable GME support")
 set(SRB2_CONFIG_HWRENDER ON CACHE BOOL
 	"Enable hardware rendering through OpenGL")
 set(SRB2_CONFIG_USEASM OFF CACHE BOOL
 	"Enable nasm-implemented blit functions for moderate speedup")
+set(SRB2_CONFIG_STATIC_OPENGL OFF CACHE BOOL
+	"Use statically linked OpenGL. NOT RECOMMENDED.")
 
 if(${SRB2_CONFIG_HAVE_BLUA})
 	add_definitions(-DHAVE_BLUA)
@@ -291,8 +293,13 @@ if(${SRB2_CONFIG_HAVE_BLUA})
 	prepend_sources(SRB2_BLUA_HEADERS)
 endif()
 
-if(${SRB2_CONFIG_HAVE_LIBGME})
-	# ???
+if(${SRB2_CONFIG_HAVE_GME})
+	find_package(GME)
+	if(${GME_FOUND})
+		set(SRB2_HAVE_GME ON)
+	else()
+		message(WARNING "You have specified that GME is available but it was not found.")
+	endif()
 endif()
 
 if(${SRB2_CONFIG_HAVE_ZLIB})
@@ -318,11 +325,16 @@ if(${SRB2_CONFIG_HAVE_PNG} AND ${SRB2_CONFIG_HAVE_ZLIB})
 endif()
 
 if(${SRB2_CONFIG_HWRENDER})
+	add_definitions(-DHWRENDER)
+endif()
+
+if(${SRB2_CONFIG_HWRENDER} AND ${SRB2_CONFIG_STATIC_OPENGL})
 	find_package(OpenGL)
 	if(${OPENGL_FOUND})
 		add_definitions(-DHWRENDER)
+		add_definitions(-DSTATIC_OPENGL)
 	else()
-		message(WARNING "You have specified HWRENDER but opengl was not found. Not setting HWRENDER.")
+		message(WARNING "You have specified static opengl but opengl was not found. Not setting HWRENDER.")
 	endif()
 endif()
 
