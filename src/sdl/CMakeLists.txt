@@ -42,15 +42,6 @@ set(SRB2_SDL2_HEADERS
 prepend_sources(SRB2_SDL2_SOURCES)
 prepend_sources(SRB2_SDL2_HEADERS)
 
-# Binary name
-set(SRB2_SDL2_EXE_NAME srb2sdl2)
-if(${CMAKE_SYSTEM} MATCHES "Windows")
-	set(SRB2_SDL2_EXE_NAME srb2win)
-endif()
-if(CLANG)
-	set(SRB2_SDL2_EXE_NAME SRB2)
-endif()
-
 # Dependency
 find_package(SDL2)
 
@@ -160,6 +151,40 @@ if(${SDL2_FOUND})
 		-DHAVE_SDL
 		-DNDEBUG
 	)
+
+	#### Installation ####
+	install(TARGETS ${SRB2_SDL2_EXE_NAME} ${SRB2_SDL2_EXE_NAME}
+		RUNTIME DESTINATION .
+	)
+
+	if(${CMAKE_SYSTEM} MATCHES Windows)
+		find_library(SRB2_SDL2_DLL_SDL2 "SDL2.dll")
+		if(${SRB2_CONFIG_SDL2_USEMIXER})
+			find_library(SRB2_SDL2_DLL_SDL2_mixer "SDL2_mixer.dll")
+			find_library(SRB2_SDL2_DLL_libmikmod-2 "libmikmod-2.dll")
+			find_library(SRB2_SDL2_DLL_libogg_0 "libogg-0.dll")
+			find_library(SRB2_SDL2_DLL_libvorbis_0 "libvorbis-0.dll")
+			find_library(SRB2_SDL2_DLL_libvorbisfile_3 "libvorbisfile-3.dll")
+			find_library(SRB2_SDL2_DLL_smpeg2 "smpeg2.dll")
+		endif()
+		if(${SRB2_CONFIG_HAVE_GME})
+			find_library(SRB2_SDL2_DLL_libgme "libgme.dll")
+		endif()
+
+		install(PROGRAMS
+			${SRB2_SDL2_DLL_SDL2}
+
+			${SRB2_SDL2_DLL_SDL2_mixer}
+			${SRB2_SDL2_DLL_libmikmod}
+			${SRB2_SDL2_DLL_libogg_0}
+			${SRB2_SDL2_DLL_libvorbis_0}
+			${SRB2_SDL2_DLL_libvorbisfile_3}
+			${SRB2_SDL2_DLL_smpeg2}
+
+			${SRB2_SDL2_DLL_libgme}
+			DESTINATION .
+		)
+	endif()
 else()
 	message(WARNING "SDL2 wasn't found, so ${SRB2_SDL2_EXE_NAME} won't be available")
 endif()

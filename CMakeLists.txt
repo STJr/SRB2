@@ -65,6 +65,27 @@ if(${CMAKE_SYSTEM} MATCHES "Darwin")
 	endif()
 endif()
 
-# TODO support MacOSX builds
+# Set EXE names so the assets CMakeLists can refer to its target
+set(SRB2_SDL2_EXE_NAME srb2)
+set(SRB2_WIN_EXE_NAME srb2dd)
 
-add_subdirectory(src/)
+add_subdirectory(src)
+add_subdirectory(assets)
+
+
+
+##### PACKAGE CONFIGURATION #####
+
+if(${CMAKE_SYSTEM} MATCHES "Windows")
+	set(CPACK_GENERATOR "ZIP")
+endif()
+
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Sonic Robo Blast 2")
+set(CPACK_PACKAGE_VENDOR "Sonic Team Jr.")
+#set(CPACK_PACKAGE_DESCRIPTION_FILE )
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+set(CPACK_PACKAGE_VERSION_MAJOR ${SRB2_VERSION_MAJOR})
+set(CPACK_PACKAGE_VERSION_MINOR ${SRB2_VERSION_MINOR})
+set(CPACK_PACKAGE_VERSION_PATCH ${SRB2_VERSION_PATCH})
+set(CPACK_PACKAGE_INSTALL_DIRECTORY "CMake ${CMAKE_VERSION_MAJOR}.${CMAKE_VERSION_MINOR}")
+include(CPack)
