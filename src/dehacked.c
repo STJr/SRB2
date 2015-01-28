@@ -3796,7 +3796,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Blue Crawla
 	"S_POSS_STND",
-	"S_POSS_STND2",
 	"S_POSS_RUN1",
 	"S_POSS_RUN2",
 	"S_POSS_RUN3",
@@ -3806,7 +3805,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Red Crawla
 	"S_SPOS_STND",
-	"S_SPOS_STND2",
 	"S_SPOS_RUN1",
 	"S_SPOS_RUN2",
 	"S_SPOS_RUN3",
@@ -8474,6 +8472,27 @@ static inline int lib_getenum(lua_State *L)
 				return 1;
 			}
 		if (mathlib) return luaL_error(L, "sprite '%s' could not be found.\n", word);
+		return 0;
+	}
+	else if (fastncmp("SPR2_",word,4)) {
+		p = word+5;
+		for (i = 0; i < NUMPLAYERSPRITES; i++)
+			if (!spr2names[i][4])
+			{
+				// special 3-char cases, e.g. SPR2_RUN
+				// the spr2names entry will have "_" on the end, as in "RUN_"
+				if (spr2names[i][3] == '_' && !p[3]) {
+					if (fastncmp(p,spr2names[i],3)) {
+						lua_pushinteger(L, i);
+						return 1;
+					}
+				}
+				else if (fastncmp(p,spr2names[i],4)) {
+					lua_pushinteger(L, i);
+					return 1;
+				}
+			}
+		if (mathlib) return luaL_error(L, "player sprite '%s' could not be found.\n", word);
 		return 0;
 	}
 	else if (!mathlib && fastncmp("sfx_",word,4)) {

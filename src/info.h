@@ -683,7 +683,6 @@ typedef enum state
 
 	// Blue Crawla
 	S_POSS_STND,
-	S_POSS_STND2,
 	S_POSS_RUN1,
 	S_POSS_RUN2,
 	S_POSS_RUN3,
@@ -693,7 +692,6 @@ typedef enum state
 
 	// Red Crawla
 	S_SPOS_STND,
-	S_SPOS_STND2,
 	S_SPOS_RUN1,
 	S_SPOS_RUN2,
 	S_SPOS_RUN3,

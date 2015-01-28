@@ -1082,6 +1082,12 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 	md2_t *md2;
 	UINT8 color[4];
 
+	if (!cv_grmd2.value)
+		return;
+
+	if (!spr->precip)
+		return;
+
 	// MD2 colormap fix
 	// colormap test
 	{
@@ -1116,8 +1122,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 			Surf.FlatColor.rgba = HWR_Lighting(lightlevel, NORMALFOG, FADEFOG, false, false);
 	}
 
-	// Look at HWR_ProjetctSprite for more
-	if (cv_grmd2.value && ((md2_models[spr->mobj->sprite].scale > 0.0f) || (md2_playermodels[(skin_t*)spr->mobj->skin-skins].scale > 0.0f)) && !spr->precip)
+	// Look at HWR_ProjectSprite for more
 	{
 		GLPatch_t *gpatch;
 		INT32 *buff;
@@ -1134,15 +1139,11 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 			//durs = tics;
 
 		if (spr->mobj->flags2 & MF2_SHADOW)
-		{
 			Surf.FlatColor.s.alpha = 0x40;
-		}
 		else if (spr->mobj->frame & FF_TRANSMASK)
 			HWR_TranstableToAlpha((spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT, &Surf);
 		else
-		{
 			Surf.FlatColor.s.alpha = 0xFF;
-		}
 
 		// dont forget to enabled the depth test because we can't do this like
 		// before: polygons models are not sorted
