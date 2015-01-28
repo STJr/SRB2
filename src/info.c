@@ -150,8 +150,7 @@ state_t states[NUMSTATES] =
 	{SPR_PLAY, 34, 1, {NULL}, 0, 24, S_PLAY_SIGN},         // S_PLAY_SIGN
 
 	// Blue Crawla
-	{SPR_POSS, 0, 5, {A_Look}, 0, 0, S_POSS_STND2},   // S_POSS_STND
-	{SPR_POSS, 0, 5, {A_Look}, 0, 0, S_POSS_STND},    // S_POSS_STND2
+	{SPR_POSS, 0, 5, {A_Look}, 0, 0, S_POSS_STND},   // S_POSS_STND
 	{SPR_POSS, 0, 3, {A_Chase}, 0, 0, S_POSS_RUN2},   // S_POSS_RUN1
 	{SPR_POSS, 1, 3, {A_Chase}, 0, 0, S_POSS_RUN3},   // S_POSS_RUN2
 	{SPR_POSS, 2, 3, {A_Chase}, 0, 0, S_POSS_RUN4},   // S_POSS_RUN3
@@ -160,8 +159,7 @@ state_t states[NUMSTATES] =
 	{SPR_POSS, 5, 3, {A_Chase}, 0, 0, S_POSS_RUN1},   // S_POSS_RUN6
 
 	// Red Crawla
-	{SPR_SPOS, 0, 5, {A_Look}, 0, 0, S_SPOS_STND2},   // S_SPOS_STND
-	{SPR_SPOS, 0, 5, {A_Look}, 0, 0, S_SPOS_STND},    // S_SPOS_STND2
+	{SPR_SPOS, 0, 5, {A_Look}, 0, 0, S_SPOS_STND},   // S_SPOS_STND
 	{SPR_SPOS, 0, 1, {A_Chase}, 0, 0, S_SPOS_RUN2},   // S_SPOS_RUN1
 	{SPR_SPOS, 1, 1, {A_Chase}, 0, 0, S_SPOS_RUN3},   // S_SPOS_RUN2
 	{SPR_SPOS, 2, 1, {A_Chase}, 0, 0, S_SPOS_RUN4},   // S_SPOS_RUN3
