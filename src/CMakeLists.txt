@@ -354,7 +354,7 @@ endif()
 
 # Compatibility flag with later versions of GCC
 # We should really fix our code to not need this
-if(NOT CLANG)
+if(NOT CLANG AND NOT MSVC)
 	add_compile_options(-mno-ms-bitfields)
 endif()
 

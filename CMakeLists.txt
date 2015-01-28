@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.0)
 project(SRB2
-	VERSION 2.1.14)
+	VERSION 2.1.14
+	LANGUAGES C)
 
 # Set up CMAKE path
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
@@ -41,9 +42,8 @@ else()
 	set(SRB2_SYSTEM_BITS 32)
 endif()
 
-# DO NOT ALLOW MSVC!
 if(MSVC)
-	message(FATAL_ERROR "MSVC is not supported!")
+	message(WARNING "!! MSVC BUILDS OF SRB2 CANNOT PLAY MULTIPLAYER !! You're more than welcome to try and fix this!")
 endif()
 
 # OS macros

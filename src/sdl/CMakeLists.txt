@@ -129,6 +129,19 @@ if(${SDL2_FOUND})
 		)
 	endif()
 
+	if(MSVC)
+		target_link_libraries(${SRB2_SDL2_EXE_NAME} PRIVATE
+			${SDL2_MAIN_LIBRARIES}
+		)
+		target_compile_options(${SRB2_SDL2_EXE_NAME} PRIVATE
+			/Umain
+			/D_CRT_SECURE_NO_WARNINGS # something about string functions.
+			/D_CRT_NONSTDC_NO_DEPRECATE
+			/DSDLMAIN
+			/D_WINSOCK_DEPRECATED_NO_WARNINGS # Don't care
+		)
+	endif()
+
 	target_include_directories(${SRB2_SDL2_EXE_NAME} PRIVATE
 		${SDL2_INCLUDE_DIRS}
 		${SDL2_MIXER_INCLUDE_DIRS}
