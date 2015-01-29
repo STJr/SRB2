@@ -667,17 +667,9 @@ static void I_StartupConsole(void)
 {
 	HANDLE ci, co;
 	const INT32 ded = M_CheckParm("-dedicated");
-#ifdef SDLMAIN
 	BOOL gotConsole = FALSE;
 	if (M_CheckParm("-console") || ded)
 		gotConsole = AllocConsole();
-#else
-	BOOL gotConsole = TRUE;
-	if (M_CheckParm("-detachconsole"))
-	{
-		FreeConsole();
-		gotConsole = AllocConsole();
-	}
 #ifdef _DEBUG
 	else if (M_CheckParm("-noconsole") && !ded)
 #else
@@ -687,7 +679,6 @@ static void I_StartupConsole(void)
 		FreeConsole();
 		gotConsole = FALSE;
 	}
-#endif
 
 	if (gotConsole)
 	{

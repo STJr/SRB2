@@ -165,7 +165,6 @@ if(${SDL2_FOUND})
 
 	target_compile_definitions(${SRB2_SDL2_EXE_NAME} PRIVATE
 		-DHAVE_SDL
-		-DNDEBUG
 	)
 
 	#### Installation ####
