@@ -69,8 +69,17 @@ endif()
 set(SRB2_SDL2_EXE_NAME srb2)
 set(SRB2_WIN_EXE_NAME srb2dd)
 
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/src)
+
 add_subdirectory(src)
 add_subdirectory(assets)
+
+
+## config.h generation
+set(GIT_EXECUTABLE "git" CACHE FILEPATH "Path to git binary")
+include(GitUtilities)
+git_describe(SRB2_COMP_REVISION "${CMAKE_CURRENT_SOURCE_DIR}")
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/src/config.h)
 
 
 

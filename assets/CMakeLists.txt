@@ -11,15 +11,16 @@ set(SRB2_ASSET_ALL
 )
 
 set(SRB2_ASSET_HASHED
-	${CMAKE_CURRENT_SOURCE_DIR}/srb2.srb
-	${CMAKE_CURRENT_SOURCE_DIR}/player.dta
-	${CMAKE_CURRENT_SOURCE_DIR}/rings.dta
-	${CMAKE_CURRENT_SOURCE_DIR}/zones.dta
-	${CMAKE_CURRENT_SOURCE_DIR}/patch.dta
+	srb2.srb
+	player.dta
+	rings.dta
+	zones.dta
+	patch.dta
 )
 
 foreach(SRB2_ASSET ${SRB2_ASSET_HASHED})
-	file(MD5 ${SRB2_ASSET} "SRB2_ASSET_${SRB2_ASSET}_HASH")
+	file(MD5 ${CMAKE_CURRENT_SOURCE_DIR}/${SRB2_ASSET} "SRB2_ASSET_${SRB2_ASSET}_HASH")
+	set(SRB2_ASSET_${SRB2_ASSET}_HASH ${SRB2_ASSET_${SRB2_ASSET}_HASH} PARENT_SCOPE)
 endforeach()
 
 # Installation

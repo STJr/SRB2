@@ -160,6 +160,8 @@ set(SRB2_CORE_HEADERS
 prepend_sources(SRB2_CORE_SOURCES)
 prepend_sources(SRB2_CORE_HEADERS)
 
+set(SRB2_CORE_HEADERS ${SRB2_CORE_HEADERS} ${CMAKE_CURRENT_BINARY_DIR}/config.h)
+
 set(SRB2_HWRENDER_SOURCES
 	hardware/hw_bsp.c
 	hardware/hw_cache.c
@@ -357,5 +359,7 @@ endif()
 if(NOT CLANG AND NOT MSVC)
 	add_compile_options(-mno-ms-bitfields)
 endif()
+
+add_definitions(-DCMAKECONFIG)
 
 add_subdirectory(sdl)
