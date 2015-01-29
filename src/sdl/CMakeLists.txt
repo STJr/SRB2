@@ -113,9 +113,14 @@ if(${SDL2_FOUND})
 			${PNG_LIBRARIES}
 			${ZLIB_LIBRARIES}
 			${OPENGL_LIBRARIES}
-			m #need math lol
-			rt # this too
 		)
+
+		if(${CMAKE_SYSTEM} MATCHES Linux)
+			target_link_libraries(${SRB2_SDL2_EXE_NAME} PRIVATE
+				m
+				rt
+			)
+		endif()
 
 	endif()
 
