@@ -25,6 +25,13 @@ endforeach()
 
 # Installation
 
-install(FILES ${SRB2_ASSET_ALL}
-	DESTINATION .
-)
+if(CLANG)
+	get_target_property(outname ${SRB2_SDL2_EXE_NAME} OUTPUT_NAME)
+	install(FILES ${SRB2_ASSET_ALL}
+		DESTINATION "${outname}.app/Contents/Resources"
+	)
+else()
+	install(FILES ${SRB2_ASSET_ALL}
+		DESTINATION .
+	)
+endif()

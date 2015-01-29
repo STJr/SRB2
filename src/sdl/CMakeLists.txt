@@ -99,6 +99,7 @@ if(${SDL2_FOUND})
 			${ZLIB_LIBRARIES}
 			${OPENGL_LIBRARIES}
 		)
+		set_target_properties(${SRB2_SDL2_EXE_NAME} PROPERTIES OUTPUT_NAME "Sonic Robo Blast 2")
 	else()
 		add_executable(${SRB2_SDL2_EXE_NAME} WIN32 ${SRB2_SDL2_TOTAL_SOURCES})
 
@@ -111,6 +112,8 @@ if(${SDL2_FOUND})
 		)
 
 	endif()
+
+	set_target_properties(${SRB2_SDL2_EXE_NAME} PROPERTIES VERSION ${SRB2_VERSION})
 
 	if(${CMAKE_SYSTEM} MATCHES Windows)
 		target_link_libraries(${SRB2_SDL2_EXE_NAME} PRIVATE
@@ -153,9 +156,15 @@ if(${SDL2_FOUND})
 	)
 
 	#### Installation ####
-	install(TARGETS ${SRB2_SDL2_EXE_NAME} ${SRB2_SDL2_EXE_NAME}
-		RUNTIME DESTINATION .
-	)
+	if (CLANG)
+		install(TARGETS ${SRB2_SDL2_EXE_NAME}
+			BUNDLE DESTINATION .
+		)
+	else()
+		install(TARGETS ${SRB2_SDL2_EXE_NAME} ${SRB2_SDL2_EXE_NAME}
+			RUNTIME DESTINATION .
+		)
+	endif()
 
 	if(${CMAKE_SYSTEM} MATCHES Windows)
 		find_library(SRB2_SDL2_DLL_SDL2 "SDL2.dll")
