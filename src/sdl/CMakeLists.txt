@@ -89,6 +89,8 @@ if(${SDL2_FOUND})
 		set(SRB2_SDL2_TOTAL_SOURCES ${SRB2_SDL2_TOTAL_SOURCES}
 			macosx/mac_alert.c
 			macosx/mac_alert.h
+			macosx/mac_resources.c
+			macosx/mac_resources.h
 			macosx/Srb2mac.icns
 		)
 	endif()
@@ -203,6 +205,18 @@ if(${SDL2_FOUND})
 
 			${SRB2_SDL2_DLL_libgme}
 			DESTINATION .
+		)
+	endif()
+
+	
+	# Mac bundle fixup
+	if(CLANG)
+		install(CODE "
+			include(BundleUtilities)
+			fixup_bundle(\"${CMAKE_INSTALL_PREFIX}/Sonic Robo Blast 2.app\"
+				\"\"
+				/Library/Frameworks
+			)"
 		)
 	endif()
 else()

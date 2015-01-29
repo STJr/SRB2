@@ -20,6 +20,8 @@
 /// \file
 /// \brief SRB2 system stuff for SDL
 
+#include "config.h"
+
 #ifndef _WIN32_WCE
 #include <signal.h>
 #endif
@@ -143,6 +145,10 @@ void __set_fpscr(long); // in libgcc / kernel's startup.s?
 
 #ifndef O_BINARY
 #define O_BINARY 0
+#endif
+
+#ifdef __APPLE__
+#include "macosx/mac_resources.h"
 #endif
 
 // Locations for searching the srb2.srb
@@ -2757,6 +2763,28 @@ static const char *locateWad(void)
 	strcpy(returnWadPath, ".");
 	if (isWadPathOk(returnWadPath))
 		return NULL;
+#endif
+    
+    
+#ifdef CMAKECONFIG
+#ifndef NDEBUG
+    I_OutputMsg(","CMAKE_ASSETS_DIR);
+    strcpy(returnWadPath, CMAKE_ASSETS_DIR);
+    if (isWadPathOk(returnWadPath))
+    {
+        return returnWadPath;
+    }
+#endif
+#endif
+    
+#ifdef __APPLE__
+    OSX_GetResourcesPath(returnWadPath);
+    I_OutputMsg(",%s", returnWadPath);
+    if (isWadPathOk(returnWadPath))
+    {
+        return returnWadPath;
+    }
+    
 #endif
 
 	// examine default dirs

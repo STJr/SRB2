@@ -81,18 +81,6 @@ include(GitUtilities)
 git_describe(SRB2_COMP_REVISION "${CMAKE_CURRENT_SOURCE_DIR}")
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/src/config.h)
 
-
-# Mac bundle fixup
-if(CLANG)
-	install(CODE "
-		include(BundleUtilities)
-		fixup_bundle(\"${CMAKE_INSTALL_PREFIX}/Sonic Robo Blast 2.app\"
-			\"\"
-			/Library/Frameworks
-		)"
-	)
-endif()
-
 ##### PACKAGE CONFIGURATION #####
 
 if(${CMAKE_SYSTEM} MATCHES "Windows")
