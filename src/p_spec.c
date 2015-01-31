@@ -6527,7 +6527,7 @@ static void P_DoScrollMove(mobj_t *thing, fixed_t dx, fixed_t dy, INT32 exclusiv
 	thing->momy += dy;
 
 	if (exclusive)
-		thing->flags2 |= MF2_PUSHED;
+		thing->eflags |= MFE_PUSHED;
 }
 
 /** Processes an active scroller.
@@ -6631,7 +6631,7 @@ void T_Scroll(scroll_t *s)
 					{
 						thing = node->m_thing;
 
-						if (thing->flags2 & MF2_PUSHED) // Already pushed this tic by an exclusive pusher.
+						if (thing->eflags & MFE_PUSHED) // Already pushed this tic by an exclusive pusher.
 							continue;
 
 						if (!(thing->flags & MF_NOCLIP)) // Thing must be clipped
@@ -6651,7 +6651,7 @@ void T_Scroll(scroll_t *s)
 				{
 					thing = node->m_thing;
 
-					if (thing->flags2 & MF2_PUSHED)
+					if (thing->eflags & MFE_PUSHED)
 						continue;
 
 					if (!(thing->flags & MF_NOCLIP) &&
@@ -6690,7 +6690,7 @@ void T_Scroll(scroll_t *s)
 					{
 						thing = node->m_thing;
 
-						if (thing->flags2 & MF2_PUSHED)
+						if (thing->eflags & MFE_PUSHED)
 							continue;
 
 						if (!(thing->flags & MF_NOCLIP)) // Thing must be clipped
@@ -6710,7 +6710,7 @@ void T_Scroll(scroll_t *s)
 				{
 					thing = node->m_thing;
 
-					if (thing->flags2 & MF2_PUSHED)
+					if (thing->eflags & MFE_PUSHED)
 						continue;
 
 					if (!(thing->flags & MF_NOCLIP) &&
@@ -7193,7 +7193,7 @@ static pusher_t *tmpusher; // pusher structure for blockmap searches
   */
 static inline boolean PIT_PushThing(mobj_t *thing)
 {
-	if (thing->flags2 & MF2_PUSHED)
+	if (thing->eflags & MFE_PUSHED)
 		return false;
 
 	if (thing->player && thing->player->pflags & PF_ROPEHANG)
@@ -7323,7 +7323,7 @@ static inline boolean PIT_PushThing(mobj_t *thing)
 	}
 
 	if (tmpusher->exclusive)
-		thing->flags2 |= MF2_PUSHED;
+		thing->eflags |= MFE_PUSHED;
 
 	return true;
 }
@@ -7430,7 +7430,7 @@ void T_Pusher(pusher_t *p)
 			|| thing->type == MT_BIGTUMBLEWEED))
 			continue;
 
-		if (thing->flags2 & MF2_PUSHED)
+		if (thing->eflags & MFE_PUSHED)
 			continue;
 
 		if (thing->player && thing->player->pflags & PF_ROPEHANG)
@@ -7600,7 +7600,7 @@ void T_Pusher(pusher_t *p)
 			}
 
 			if (p->exclusive)
-				thing->flags2 |= MF2_PUSHED;
+				thing->eflags |= MFE_PUSHED;
 		}
 	}
 }
