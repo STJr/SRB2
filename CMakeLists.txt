@@ -34,6 +34,22 @@ macro(add_framework fwname appname)
     endif()
 endmacro()
 
+# Macro to copy Windows DLLs to Debug/Release folder for easy debugging
+# Note: this is general purpose, we could copy anything. Just using for DLLs on MSVC though
+macro(copy_files_to_build_dir target dlllist_var)
+	if(MSVC)
+		# http://stackoverflow.com/a/26983405/3064195
+		foreach(dlllist_item ${${dlllist_var}})
+			get_filename_component(dllname ${dlllist_item} NAME)
+			add_custom_command(TARGET ${target} POST_BUILD
+				COMMAND ${CMAKE_COMMAND} -E copy_if_different
+				${dlllist_item}
+				${CMAKE_CURRENT_BINARY_DIR}/\$\(Configuration\)/${dllname}
+			)
+		endforeach()
+	endif()
+endmacro()
+
 # 64-bit check
 if(${CMAKE_SIZEOF_VOID_P} EQUAL 8)
 	message(STATUS "Target is 64-bit")

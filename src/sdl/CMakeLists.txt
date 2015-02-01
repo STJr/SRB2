@@ -179,32 +179,32 @@ if(${SDL2_FOUND})
 	endif()
 
 	if(${CMAKE_SYSTEM} MATCHES Windows)
-		find_library(SRB2_SDL2_DLL_SDL2 "SDL2.dll")
+		set(win_extra_dll_list "")
+		macro(getwinlib dllname defaultname)
+			find_library(SRB2_SDL2_DLL_${dllname} "${defaultname}")
+			list(APPEND win_extra_dll_list ${SRB2_SDL2_DLL_${dllname}})
+		endmacro()
+		getwinlib(SDL2 "SDL2.dll")
 		if(${SRB2_CONFIG_SDL2_USEMIXER})
-			find_library(SRB2_SDL2_DLL_SDL2_mixer "SDL2_mixer.dll")
-			find_library(SRB2_SDL2_DLL_libmikmod-2 "libmikmod-2.dll")
-			find_library(SRB2_SDL2_DLL_libogg_0 "libogg-0.dll")
-			find_library(SRB2_SDL2_DLL_libvorbis_0 "libvorbis-0.dll")
-			find_library(SRB2_SDL2_DLL_libvorbisfile_3 "libvorbisfile-3.dll")
-			find_library(SRB2_SDL2_DLL_smpeg2 "smpeg2.dll")
+			getwinlib(SDL2_mixer "SDL2_mixer.dll")
+			getwinlib(libmikmod-2 "libmikmod-2.dll")
+			getwinlib(libogg_0 "libogg-0.dll")
+			getwinlib(libvorbis_0 "libvorbis-0.dll")
+			getwinlib(libvorbisfile_3 "libvorbisfile-3.dll")
+			getwinlib(smpeg2 "smpeg2.dll")
 		endif()
 		if(${SRB2_CONFIG_HAVE_GME})
-			find_library(SRB2_SDL2_DLL_libgme "libgme.dll")
+			getwinlib(libgme "libgme.dll")
 		endif()
 
 		install(PROGRAMS
-			${SRB2_SDL2_DLL_SDL2}
-
-			${SRB2_SDL2_DLL_SDL2_mixer}
-			${SRB2_SDL2_DLL_libmikmod}
-			${SRB2_SDL2_DLL_libogg_0}
-			${SRB2_SDL2_DLL_libvorbis_0}
-			${SRB2_SDL2_DLL_libvorbisfile_3}
-			${SRB2_SDL2_DLL_smpeg2}
-
-			${SRB2_SDL2_DLL_libgme}
+			${win_extra_dll_list}
 			DESTINATION .
 		)
+
+		# We also want to copy those DLLs to build directories on MSVC.
+		# So we'll add a post_build step.
+		copy_files_to_build_dir(${SRB2_SDL2_EXE_NAME} win_extra_dll_list)
 	endif()
 
 	
