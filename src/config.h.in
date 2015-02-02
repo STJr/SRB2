@@ -22,6 +22,5 @@
 #define ASSET_HASH_PLAYER_DTA "cfca0f1c73023cbbd8f844f45480f799"
 #define ASSET_HASH_RINGS_DTA  "85901ad4bf94637e5753d2ac2c03ea26"
 
-#define 
 #endif
 #endif
