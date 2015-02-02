@@ -305,6 +305,10 @@ PNG_LDFLAGS?=$(shell $(PNG_CONFIG) --ldflags)
 endif
 endif
 
+ifdef LINUX
+PNG_CFLAGS+=-D_LARGEFILE64_SOURCE
+endif
+
 LIBS+=$(PNG_LDFLAGS)
 CFLAGS+=$(PNG_CFLAGS)
 endif
@@ -581,6 +585,8 @@ $(BIN)/$(EXENAME): $(POS) $(OBJS)
 	-$(MKDIR) $(BIN)
 	@echo Linking $(EXENAME)...
 	$(LD) $(LDFLAGS) $(OBJS) -o $(BIN)/$(EXENAME) $(LIBS)
+	@echo $(LD) $(LDFLAGS) $(OBJS) -o $(BIN)/$(EXENAME) $(LIBS)
+	@echo $(CFLAGS)
 ifndef VALGRIND
 ifndef NOOBJDUMP
 	@echo Dumping debugging info

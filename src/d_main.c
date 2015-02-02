@@ -74,6 +74,12 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 #include "m_cond.h" // condition initialization
 #include "fastcmp.h"
 
+#ifdef CMAKECONFIG
+#include "config.h"
+#else
+#include "config.h.in"
+#endif
+
 #ifdef _XBOX
 #include "sdl/SRB2XBOX/xboxhelp.h"
 #endif
@@ -1115,10 +1121,10 @@ void D_SRB2Main(void)
 #if 1 // md5s last updated 12/14/14
 
 	// Check MD5s of autoloaded files
-	W_VerifyFileMD5(0, "c1b9577687f8a795104aef4600720ea7"); // srb2.srb/srb2.wad
-	W_VerifyFileMD5(1, "303838c6c534d9540288360fa49cca60"); // zones.dta
-	W_VerifyFileMD5(2, "cfca0f1c73023cbbd8f844f45480f799"); // player.dta
-	W_VerifyFileMD5(3, "85901ad4bf94637e5753d2ac2c03ea26"); // rings.dta
+	W_VerifyFileMD5(0, ASSET_HASH_SRB2_SRB); // srb2.srb/srb2.wad
+	W_VerifyFileMD5(1, ASSET_HASH_ZONES_DTA); // zones.dta
+	W_VerifyFileMD5(2, ASSET_HASH_PLAYER_DTA); // player.dta
+	W_VerifyFileMD5(3, ASSET_HASH_RINGS_DTA); // rings.dta
 	//W_VerifyFileMD5(4, "0c66790502e648bfce90fdc5bb15722e"); // patch.dta
 	// don't check music.dta because people like to modify it, and it doesn't matter if they do
 	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.

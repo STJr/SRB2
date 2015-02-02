@@ -271,12 +271,17 @@ static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Scancode code)
 	{
 		return '0';
 	}
-	if (code >= SDL_SCANCODE_F1 && code <= SDL_SCANCODE_F12)
+	if (code >= SDL_SCANCODE_F1 && code <= SDL_SCANCODE_F10)
 	{
 		return KEY_F1 + (code - SDL_SCANCODE_F1);
 	}
 	switch (code)
 	{
+		case SDL_SCANCODE_F11: // F11 and F12 are
+			return KEY_F11;    // separated from the
+		case SDL_SCANCODE_F12: // rest of the function
+			return KEY_F12;    // keys
+
 		case SDL_SCANCODE_KP_0:
 			return KEY_KEYPAD0;
 		case SDL_SCANCODE_KP_1:

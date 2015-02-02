@@ -351,7 +351,7 @@ static void clear_conditionsets(void)
 {
 	UINT8 i;
 	for (i = 0; i < MAXCONDITIONSETS; ++i)
-		M_ClearConditionSet(i);
+		M_ClearConditionSet(i+1);
 }
 
 static void clear_levels(void)

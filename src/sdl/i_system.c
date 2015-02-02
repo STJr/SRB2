@@ -20,6 +20,8 @@
 /// \file
 /// \brief SRB2 system stuff for SDL
 
+#include "config.h"
+
 #ifndef _WIN32_WCE
 #include <signal.h>
 #endif
@@ -143,6 +145,10 @@ void __set_fpscr(long); // in libgcc / kernel's startup.s?
 
 #ifndef O_BINARY
 #define O_BINARY 0
+#endif
+
+#ifdef __APPLE__
+#include "macosx/mac_resources.h"
 #endif
 
 // Locations for searching the srb2.srb
@@ -312,9 +318,9 @@ FUNCNORETURN static ATTRNORETURN void signal_handler(INT32 num)
 
 	switch (num)
 	{
-	case SIGINT:
-		sigmsg = "SIGINT - interrupted";
-		break;
+//	case SIGINT:
+//		sigmsg = "SIGINT - interrupted";
+//		break;
 	case SIGILL:
 		sigmsg = "SIGILL - illegal instruction - invalid function image";
 		break;
@@ -324,14 +330,12 @@ FUNCNORETURN static ATTRNORETURN void signal_handler(INT32 num)
 	case SIGSEGV:
 		sigmsg = "SIGSEGV - segment violation";
 		break;
-	case SIGTERM:
-		sigmsg = "SIGTERM - Software termination signal from kill";
-		break;
-#if !(defined (__unix_) || defined (UNIXCOMMON))
-	case SIGBREAK:
-		sigmsg = "SIGBREAK - Ctrl-Break sequence";
-		break;
-#endif
+//	case SIGTERM:
+//		sigmsg = "SIGTERM - Software termination signal from kill";
+//		break;
+//	case SIGBREAK:
+//		sigmsg = "SIGBREAK - Ctrl-Break sequence";
+//		break;
 	case SIGABRT:
 		sigmsg = "SIGABRT - abnormal termination triggered by abort call";
 		break;
@@ -663,17 +667,9 @@ static void I_StartupConsole(void)
 {
 	HANDLE ci, co;
 	const INT32 ded = M_CheckParm("-dedicated");
-#ifdef SDLMAIN
 	BOOL gotConsole = FALSE;
 	if (M_CheckParm("-console") || ded)
 		gotConsole = AllocConsole();
-#else
-	BOOL gotConsole = TRUE;
-	if (M_CheckParm("-detachconsole"))
-	{
-		FreeConsole();
-		gotConsole = AllocConsole();
-	}
 #ifdef _DEBUG
 	else if (M_CheckParm("-noconsole") && !ded)
 #else
@@ -683,7 +679,6 @@ static void I_StartupConsole(void)
 		FreeConsole();
 		gotConsole = FALSE;
 	}
-#endif
 
 	if (gotConsole)
 	{
@@ -743,11 +738,18 @@ static inline void I_ShutdownConsole(void){}
 void I_StartupKeyboard (void)
 {
 #if !defined (DC)
+#ifdef SIGINT
+	signal(SIGINT , quit_handler);
+#endif
+#ifdef SIGBREAK
+	signal(SIGBREAK , quit_handler);
+#endif
+#ifdef SIGTERM
+	signal(SIGTERM , quit_handler);
+#endif
+
 	// If these defines don't exist,
 	// then compilation would have failed above us...
-	signal(SIGINT , quit_handler);
-	signal(SIGBREAK , quit_handler);
-	signal(SIGTERM , quit_handler);
 	signal(SIGILL , signal_handler);
 	signal(SIGSEGV , signal_handler);
 	signal(SIGABRT , signal_handler);
@@ -1656,7 +1658,7 @@ void I_UpdateMumble(const mobj_t *mobj, const listener_t listener)
 		return;
 
 	if(mumble->uiVersion != 2) {
-		wcsncpy(mumble->name, L"SRB2 "VERSIONSTRING, 256);
+		wcsncpy(mumble->name, L"SRB2 "VERSIONSTRINGW, 256);
 		wcsncpy(mumble->description, L"Sonic Robo Blast 2 with integrated Mumble Link support.", 2048);
 		mumble->uiVersion = 2;
 	}
@@ -2332,9 +2334,7 @@ static boolean shutdowning = false;
 void I_Error(const char *error, ...)
 {
 	va_list argptr;
-#if (defined (MAC_ALERT) || defined (_WIN32) || (defined (_WIN32_WCE) && !defined (__GNUC__))) && !defined (_XBOX)
 	char buffer[8192];
-#endif
 
 	// recursive error detecting
 	if (shutdowning)
@@ -2754,6 +2754,28 @@ static const char *locateWad(void)
 	strcpy(returnWadPath, ".");
 	if (isWadPathOk(returnWadPath))
 		return NULL;
+#endif
+    
+    
+#ifdef CMAKECONFIG
+#ifndef NDEBUG
+    I_OutputMsg(","CMAKE_ASSETS_DIR);
+    strcpy(returnWadPath, CMAKE_ASSETS_DIR);
+    if (isWadPathOk(returnWadPath))
+    {
+        return returnWadPath;
+    }
+#endif
+#endif
+    
+#ifdef __APPLE__
+    OSX_GetResourcesPath(returnWadPath);
+    I_OutputMsg(",%s", returnWadPath);
+    if (isWadPathOk(returnWadPath))
+    {
+        return returnWadPath;
+    }
+    
 #endif
 
 	// examine default dirs
