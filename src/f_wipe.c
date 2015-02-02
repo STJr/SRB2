@@ -210,8 +210,8 @@ static void F_DoWipe(fademask_t *fademask)
 		UINT32 draw_linestogo, draw_rowstogo;
 
 		// rectangle coordinates, etc.
-		UINT16 scrxpos[fademask->width  + 1];
-		UINT16 scrypos[fademask->height + 1];
+		UINT16* scrxpos = (UINT16*)malloc((fademask->width + 1)  * sizeof(UINT16));
+		UINT16* scrypos = (UINT16*)malloc((fademask->height + 1) * sizeof(UINT16));
 		UINT16 maskx, masky;
 		UINT32 relativepos;
 
@@ -263,6 +263,9 @@ static void F_DoWipe(fademask_t *fademask)
 			if (++maskx >= fademask->width)
 				++masky, maskx = 0;
 		} while (++mask < maskend);
+
+		free(scrxpos);
+		free(scrypos);
 	}
 }
 #endif

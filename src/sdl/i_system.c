@@ -20,6 +20,8 @@
 /// \file
 /// \brief SRB2 system stuff for SDL
 
+#include "config.h"
+
 #ifndef _WIN32_WCE
 #include <signal.h>
 #endif
@@ -143,6 +145,10 @@ void __set_fpscr(long); // in libgcc / kernel's startup.s?
 
 #ifndef O_BINARY
 #define O_BINARY 0
+#endif
+
+#ifdef __APPLE__
+#include "macosx/mac_resources.h"
 #endif
 
 // Locations for searching the srb2.srb
@@ -661,17 +667,9 @@ static void I_StartupConsole(void)
 {
 	HANDLE ci, co;
 	const INT32 ded = M_CheckParm("-dedicated");
-#ifdef SDLMAIN
 	BOOL gotConsole = FALSE;
 	if (M_CheckParm("-console") || ded)
 		gotConsole = AllocConsole();
-#else
-	BOOL gotConsole = TRUE;
-	if (M_CheckParm("-detachconsole"))
-	{
-		FreeConsole();
-		gotConsole = AllocConsole();
-	}
 #ifdef _DEBUG
 	else if (M_CheckParm("-noconsole") && !ded)
 #else
@@ -681,7 +679,6 @@ static void I_StartupConsole(void)
 		FreeConsole();
 		gotConsole = FALSE;
 	}
-#endif
 
 	if (gotConsole)
 	{
@@ -1661,7 +1658,7 @@ void I_UpdateMumble(const mobj_t *mobj, const listener_t listener)
 		return;
 
 	if(mumble->uiVersion != 2) {
-		wcsncpy(mumble->name, L"SRB2 "VERSIONSTRING, 256);
+		wcsncpy(mumble->name, L"SRB2 "VERSIONSTRINGW, 256);
 		wcsncpy(mumble->description, L"Sonic Robo Blast 2 with integrated Mumble Link support.", 2048);
 		mumble->uiVersion = 2;
 	}
@@ -2757,6 +2754,28 @@ static const char *locateWad(void)
 	strcpy(returnWadPath, ".");
 	if (isWadPathOk(returnWadPath))
 		return NULL;
+#endif
+    
+    
+#ifdef CMAKECONFIG
+#ifndef NDEBUG
+    I_OutputMsg(","CMAKE_ASSETS_DIR);
+    strcpy(returnWadPath, CMAKE_ASSETS_DIR);
+    if (isWadPathOk(returnWadPath))
+    {
+        return returnWadPath;
+    }
+#endif
+#endif
+    
+#ifdef __APPLE__
+    OSX_GetResourcesPath(returnWadPath);
+    I_OutputMsg(",%s", returnWadPath);
+    if (isWadPathOk(returnWadPath))
+    {
+        return returnWadPath;
+    }
+    
 #endif
 
 	// examine default dirs
