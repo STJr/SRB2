@@ -143,6 +143,7 @@ extern FILE *logstream;
 #define VERSION    0 // Game version
 #define SUBVERSION 0 // more precise version number
 #define VERSIONSTRING "Trunk"
+#define VERSIONSTRINGW L"Trunk"
 #else
 #define VERSION    201 // Game version
 #define SUBVERSION 14  // more precise version number
