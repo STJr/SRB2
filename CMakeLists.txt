@@ -67,6 +67,10 @@ if (UNIX)
 	add_definitions(-DUNIXCOMMON)
 endif()
 
+if(CMAKE_COMPILER_IS_GNUCC)
+	find_program(OBJCOPY objcopy)
+endif()
+
 if(${CMAKE_SYSTEM} MATCHES "Linux")
 	add_definitions(-DLINUX)
 	if(${SRB2_SYSTEM_BITS} EQUAL 64)

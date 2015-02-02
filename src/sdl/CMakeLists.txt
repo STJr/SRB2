@@ -208,6 +208,18 @@ if(${SDL2_FOUND})
 		-DHAVE_SDL
 	)
 
+	## strip debug symbols into separate file when using gcc
+	if(CMAKE_COMPILER_IS_GNUCC)
+		if(${CMAKE_BUILD_TYPE} MATCHES Debug)
+			message(STATUS "Will make separate debug symbols in *.debug")
+			add_custom_command(TARGET ${SRB2_SDL2_EXE_NAME} POST_BUILD
+				COMMAND ${OBJCOPY} --only-keep-debug $<TARGET_FILE:${SRB2_SDL2_EXE_NAME}> $<TARGET_FILE:${SRB2_SDL2_EXE_NAME}>.debug
+				COMMAND ${OBJCOPY} --strip-debug $<TARGET_FILE:${SRB2_SDL2_EXE_NAME}>
+				COMMAND ${OBJCOPY} --add-gnu-debuglink=$<TARGET_FILE_NAME:${SRB2_SDL2_EXE_NAME}>.debug $<TARGET_FILE:${SRB2_SDL2_EXE_NAME}>
+			)
+		endif()
+	endif()
+
 	#### Installation ####
 	if (CLANG)
 		install(TARGETS ${SRB2_SDL2_EXE_NAME}
