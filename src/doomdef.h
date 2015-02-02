@@ -147,6 +147,7 @@ extern FILE *logstream;
 #define VERSION    202 // Game version
 #define SUBVERSION 0  // more precise version number
 #define VERSIONSTRING "v2.2"
+#define VERSIONSTRINGW L"v2.2"
 // Hey! If you change this, add 1 to the MODVERSION below!
 // Otherwise we can't force updates!
 #endif
