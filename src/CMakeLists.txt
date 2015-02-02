@@ -198,12 +198,31 @@ set(SRB2_R_OPENGL_HEADERS
 prepend_sources(SRB2_R_OPENGL_SOURCES)
 prepend_sources(SRB2_R_OPENGL_HEADERS)
 
+set(SRB2_ASM_SOURCES
+	vid_copy.s
+)
+
 set(SRB2_NASM_SOURCES
-	tamp_mmx.nas
+	tmap_mmx.nas
 	tmap.nas
 )
 
+if(MSVC)
+	list(APPEND SRB2_NASM_SOURCES tmap_vc.nas)
+endif()
+
+set(SRB2_NASM_OBJECTS
+	tmap_mmx.obj
+	tmap.obj
+)
+
+if(MSVC)
+	list(APPEND SRB2_NASM_OBJECTS tmap_vc.obj)
+endif()
+
+prepend_sources(SRB2_ASM_SOURCES)
 prepend_sources(SRB2_NASM_SOURCES)
+
 
 ### Configuration
 set(SRB2_CONFIG_HAVE_BLUA ON CACHE BOOL
@@ -218,6 +237,8 @@ set(SRB2_CONFIG_HWRENDER ON CACHE BOOL
 	"Enable hardware rendering through OpenGL")
 set(SRB2_CONFIG_USEASM OFF CACHE BOOL
 	"Enable NASM tmap implementation for software mode speedup.")
+set(SRB2_CONFIG_YASM OFF CACHE BOOL
+	"Use YASM in place of NASM.")
 set(SRB2_CONFIG_STATIC_OPENGL OFF CACHE BOOL
 	"Use statically linked OpenGL. NOT RECOMMENDED.")
 
@@ -348,7 +369,13 @@ if(${SRB2_CONFIG_HWRENDER} AND ${SRB2_CONFIG_STATIC_OPENGL})
 endif()
 
 if(${SRB2_CONFIG_USEASM})
-	enable_language(ASM-NASM)
+	if(${SRB2_CONFIG_YASM})
+		set(CMAKE_ASM_YASM_SOURCE_FILE_EXTENSIONS ${CMAKE_ASM_YASM_SOURCE_FILE_EXTENSIONS} nas)
+		enable_language(ASM_YASM)
+	else()
+		set(CMAKE_ASM_NASM_SOURCE_FILE_EXTENSIONS ${CMAKE_ASM_NASM_SOURCE_FILE_EXTENSIONS} nas)
+		enable_language(ASM_NASM)
+	endif()
 	set(SRB2_USEASM ON)
 	add_definitions(-DUSEASM)
 else()
@@ -365,7 +392,7 @@ endif()
 # Compatibility flag with later versions of GCC
 # We should really fix our code to not need this
 if(NOT CLANG AND NOT MSVC)
-	add_compile_options(-mno-ms-bitfields)
+	set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -mno-ms-bitfields)
 endif()
 
 add_definitions(-DCMAKECONFIG)

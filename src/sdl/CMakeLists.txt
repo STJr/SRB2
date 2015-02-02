@@ -75,6 +75,17 @@ if(${SDL2_FOUND})
 		set(SRB2_SDL2_TOTAL_SOURCES ${SRB2_SDL2_TOTAL_SOURCES}
 			${SRB2_NASM_SOURCES}
 		)
+		if(MSVC)
+			set(SRB2_SDL2_TOTAL_SOURCES ${SRB2_SDL2_TOTAL_SOURCES}
+				${SRB2_NASM_OBJECTS}
+			)
+			set_source_files_properties(${SRB2_NASM_OBJECTS} PROPERTIES GENERATED ON)
+		else()
+			list(APPEND SRB2_SDL2_TOTAL_SOURCES ${SRB2_ASM_SOURCES})
+			set_source_files_properties(${SRB2_ASM_SOURCES} PROPERTIES LANGUAGE C)
+			set_source_files_properties(${SRB2_ASM_SOURCES} PROPERTIES COMPILE_FLAGS "-x assembler-with-cpp")
+		endif()
+
 	endif()
 
 	if(${CMAKE_SYSTEM} MATCHES Windows)
@@ -130,6 +141,30 @@ if(${SDL2_FOUND})
 			)
 		endif()
 
+	endif()
+
+	if(${SRB2_USEASM})
+		if(${SRB2_CONFIG_YASM})
+			set(ASM_ASSEMBLER_TEMP ${CMAKE_ASM_YASM_COMPILER})
+			set(ASM_ASSEMBLER_OBJFORMAT ${CMAKE_ASM_YASM_OBJECT_FORMAT})
+			set_source_files_properties(${SRB2_NASM_SOURCES} LANGUAGE ASM_YASM)
+		else()
+			set(ASM_ASSEMBLER_TEMP ${CMAKE_ASM_NASM_COMPILER})
+			set(ASM_ASSEMBLER_OBJFORMAT ${CMAKE_ASM_NASM_OBJECT_FORMAT})
+			set_source_files_properties(${SRB2_NASM_SOURCES} LANGUAGE ASM_NASM)
+		endif()
+
+		if(MSVC)
+			# using assembler with msvc doesn't work, must do it manually
+			foreach(ASMFILE ${SRB2_NASM_SOURCES})
+				get_filename_component(ASMFILE_NAME ${ASMFILE} NAME_WE)
+				set(ASMFILE_NAME ${ASMFILE_NAME}.obj)
+				add_custom_command(TARGET ${SRB2_SDL2_EXE_NAME} PRE_LINK
+					COMMAND ${ASM_ASSEMBLER_TEMP} ARGS -f ${ASM_ASSEMBLER_OBJFORMAT} -o ${CMAKE_CURRENT_BINARY_DIR}/${ASMFILE_NAME} ${ASMFILE}
+					COMMENT "assemble ${ASMFILE_NAME}."
+				)
+			endforeach()
+		endif()
 	endif()
 
 	set_target_properties(${SRB2_SDL2_EXE_NAME} PROPERTIES VERSION ${SRB2_VERSION})
