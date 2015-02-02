@@ -1662,11 +1662,7 @@ void I_UpdateMumble(const mobj_t *mobj, const listener_t listener)
 		return;
 
 	if(mumble->uiVersion != 2) {
-#ifdef VERSIONSTRINGW
 		wcsncpy(mumble->name, L"SRB2 "VERSIONSTRINGW, 256);
-#else
-		wcsncpy(mumble->name, L"SRB2 "VERSIONSTRING, 256);
-#endif
 		wcsncpy(mumble->description, L"Sonic Robo Blast 2 with integrated Mumble Link support.", 2048);
 		mumble->uiVersion = 2;
 	}
