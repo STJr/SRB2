@@ -198,6 +198,13 @@ set(SRB2_R_OPENGL_HEADERS
 prepend_sources(SRB2_R_OPENGL_SOURCES)
 prepend_sources(SRB2_R_OPENGL_HEADERS)
 
+set(SRB2_NASM_SOURCES
+	tamp_mmx.nas
+	tmap.nas
+)
+
+prepend_sources(SRB2_NASM_SOURCES)
+
 ### Configuration
 set(SRB2_CONFIG_HAVE_BLUA ON CACHE BOOL
 	"Enable Lua interpreter support")
@@ -210,7 +217,7 @@ set(SRB2_CONFIG_HAVE_GME ON CACHE BOOL
 set(SRB2_CONFIG_HWRENDER ON CACHE BOOL
 	"Enable hardware rendering through OpenGL")
 set(SRB2_CONFIG_USEASM OFF CACHE BOOL
-	"Enable nasm-implemented blit functions for moderate speedup")
+	"Enable NASM tmap implementation for software mode speedup.")
 set(SRB2_CONFIG_STATIC_OPENGL OFF CACHE BOOL
 	"Use statically linked OpenGL. NOT RECOMMENDED.")
 
@@ -341,6 +348,7 @@ if(${SRB2_CONFIG_HWRENDER} AND ${SRB2_CONFIG_STATIC_OPENGL})
 endif()
 
 if(${SRB2_CONFIG_USEASM})
+	enable_language(ASM-NASM)
 	set(SRB2_USEASM ON)
 	add_definitions(-DUSEASM)
 else()

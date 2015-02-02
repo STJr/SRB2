@@ -71,6 +71,12 @@ if(${SDL2_FOUND})
 		)
 	endif()
 
+	if(${SRB2_USEASM})
+		set(SRB2_SDL2_TOTAL_SOURCES ${SRB2_SDL2_TOTAL_SOURCES}
+			${SRB2_NASM_SOURCES}
+		)
+	endif()
+
 	if(${CMAKE_SYSTEM} MATCHES Windows)
 		set(SRB2_SDL2_TOTAL_SOURCES ${SRB2_SDL2_TOTAL_SOURCES}
 			${CMAKE_SOURCE_DIR}/src/win32/win_dbg.c
