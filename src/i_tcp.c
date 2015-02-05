@@ -651,7 +651,7 @@ static void SOCK_Send(void)
 					if (broadcastaddress[i].any.sa_family == AF_INET)
 						d = d4;
 #ifdef HAVE_IPV6
-					if (broadcastaddress[i].any.sa_family == AF_INET6)
+					else if (broadcastaddress[i].any.sa_family == AF_INET6)
 						d = d6;
 #endif
 					else
@@ -690,7 +690,7 @@ static void SOCK_Send(void)
 		if (clientaddress[doomcom->remotenode].any.sa_family == AF_INET)
 			d = d4;
 #ifdef HAVE_IPV6
-		if (clientaddress[doomcom->remotenode].any.sa_family == AF_INET6)
+		else if (clientaddress[doomcom->remotenode].any.sa_family == AF_INET6)
 			d = d6;
 #endif
 		else
