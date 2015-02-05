@@ -77,7 +77,6 @@ set(SRB2_CORE_HEADERS
 	b_bot.h
 	byteptr.h
 	command.h
-	comptime.h
 	console.h
 	d_clisrv.h
 	d_event.h
