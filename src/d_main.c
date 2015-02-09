@@ -74,6 +74,12 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 #include "m_cond.h" // condition initialization
 #include "fastcmp.h"
 
+#ifdef CMAKECONFIG
+#include "config.h"
+#else
+#include "config.h.in"
+#endif
+
 #ifdef _XBOX
 #include "sdl/SRB2XBOX/xboxhelp.h"
 #endif
@@ -89,6 +95,9 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 #ifdef HW3SOUND
 #include "hardware/hw3sound.h"
 #endif
+
+// platform independant focus loss
+UINT8 window_notinfocus = false;
 
 //
 // DEMO LOOP
@@ -437,6 +446,17 @@ static void D_Display(void)
 		CON_Drawer();
 
 	M_Drawer(); // menu is drawn even on top of everything
+
+	// focus lost notification goes on top of everything, even the former everything
+	if (window_notinfocus)
+	{
+		M_DrawTextBox((BASEVIDWIDTH/2) - (60), (BASEVIDHEIGHT/2) - (16), 13, 2);
+		if (gamestate == GS_LEVEL && (P_AutoPause() || paused))
+			V_DrawCenteredString(BASEVIDWIDTH/2, (BASEVIDHEIGHT/2) - (4), V_YELLOWMAP, "Game Paused");
+		else
+			V_DrawCenteredString(BASEVIDWIDTH/2, (BASEVIDHEIGHT/2) - (4), V_YELLOWMAP, "Focus Lost");
+	}
+
 	NetUpdate(); // send out any new accumulation
 
 	// It's safe to end the game now.
@@ -635,6 +655,7 @@ void D_AdvanceDemo(void)
 //
 void D_StartTitle(void)
 {
+	INT32 i;
 	if (netgame)
 	{
 		if (gametype == GT_COOP)
@@ -660,6 +681,16 @@ void D_StartTitle(void)
 	// (otherwise the game still thinks we're playing!)
 	SV_StopServer();
 	SV_ResetServer();
+
+	for (i = 0; i < MAXPLAYERS; i++)
+		CL_ClearPlayer(i);
+
+	splitscreen = false;
+	SplitScreen_OnChange();
+	botingame = false;
+	botskin = 0;
+	cv_debug = 0;
+	emeralds = 0;
 
 	// In case someone exits out at the same time they start a time attack run,
 	// reset modeattacking
@@ -803,7 +834,7 @@ static void IdentifyVersion(void)
 	D_AddFile(va(pandf,srb2waddir,"rings.dta"));
 
 	// Add our crappy patches to fix our bugs
-	D_AddFile(va(pandf,srb2waddir,"patch.dta"));
+	// D_AddFile(va(pandf,srb2waddir,"patch.dta"));
 
 #if !defined (HAVE_SDL) || defined (HAVE_MIXER)
 	{
@@ -1087,19 +1118,19 @@ void D_SRB2Main(void)
 #endif
 	D_CleanFile();
 
-#if 1 // md5s last updated 11/10/14
+#if 1 // md5s last updated 12/14/14
 
 	// Check MD5s of autoloaded files
-	W_VerifyFileMD5(0, "ac309fb3c7d4b5b685e2cd26beccf0e8"); // srb2.srb/srb2.wad
-	W_VerifyFileMD5(1, "f39b6c849295e3c81875726e8cc0e2c7"); // zones.dta
-	W_VerifyFileMD5(2, "cfca0f1c73023cbbd8f844f45480f799"); // player.dta
-	W_VerifyFileMD5(3, "85901ad4bf94637e5753d2ac2c03ea26"); // rings.dta
-	W_VerifyFileMD5(4, "a45cc59d13dce924f2112b3e4201d0ae"); // patch.dta
+	W_VerifyFileMD5(0, ASSET_HASH_SRB2_SRB); // srb2.srb/srb2.wad
+	W_VerifyFileMD5(1, ASSET_HASH_ZONES_DTA); // zones.dta
+	W_VerifyFileMD5(2, ASSET_HASH_PLAYER_DTA); // player.dta
+	W_VerifyFileMD5(3, ASSET_HASH_RINGS_DTA); // rings.dta
+	//W_VerifyFileMD5(4, "0c66790502e648bfce90fdc5bb15722e"); // patch.dta
 	// don't check music.dta because people like to modify it, and it doesn't matter if they do
 	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.
 #endif
 
-	mainwads = 5; // there are 5 wads not to unload
+	mainwads = 4; // there are 5 wads not to unload
 
 	cht_Init();
 

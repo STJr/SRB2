@@ -1354,6 +1354,133 @@ static void P_SceneryXYMovement(mobj_t *mo)
 	P_SceneryXYFriction(mo, oldx, oldy);
 }
 
+//
+// P_AdjustMobjFloorZ_FFloors
+//
+// Utility function for P_ZMovement and related
+// Adjusts mo->floorz/mo->ceiling accordingly for FFloors
+//
+// "motype" determines what behaviour to use exactly
+// This is to keep things consistent in case these various object types NEED to be different
+//
+// motype options:
+// 0 - normal
+// 1 - forces false check for water (rings)
+// 2 - forces false check for water + different quicksand behaviour (scenery)
+//
+static void P_AdjustMobjFloorZ_FFloors(mobj_t *mo, sector_t *sector, UINT8 motype)
+{
+	ffloor_t *rover;
+	fixed_t delta1, delta2, thingtop;
+
+	I_Assert(mo != NULL);
+	I_Assert(!P_MobjWasRemoved(mo));
+
+	thingtop = mo->z + mo->height;
+
+	for (rover = sector->ffloors; rover; rover = rover->next)
+	{
+		if (!(rover->flags & FF_EXISTS))
+			continue;
+
+		if (mo->player && (P_CheckSolidLava(mo, rover) || P_CanRunOnWater(mo->player, rover))) // only the player should be affected
+			;
+		else if (motype != 0 && rover->flags & FF_SWIMMABLE) // "scenery" only
+			continue;
+		else if (rover->flags & FF_QUICKSAND) // quicksand
+			;
+		else if (!((rover->flags & FF_BLOCKPLAYER && mo->player) // solid to players?
+			    || (rover->flags & FF_BLOCKOTHERS && !mo->player))) // solid to others?
+			continue;
+		if (rover->flags & FF_QUICKSAND)
+		{
+			switch (motype)
+			{
+				case 2: // scenery does things differently for some reason
+					if (mo->z < *rover->topheight && *rover->bottomheight < thingtop)
+					{
+						mo->floorz = mo->z;
+						continue;
+					}
+					break;
+				default:
+					if (mo->z < *rover->topheight && *rover->bottomheight < thingtop)
+					{
+						if (mo->floorz < mo->z)
+							mo->floorz = mo->z;
+					}
+					continue; // This is so you can jump/spring up through quicksand from below.
+			}
+		}
+
+		delta1 = mo->z - (*rover->bottomheight + ((*rover->topheight - *rover->bottomheight)/2));
+		delta2 = thingtop - (*rover->bottomheight + ((*rover->topheight - *rover->bottomheight)/2));
+		if (*rover->topheight > mo->floorz && abs(delta1) < abs(delta2)
+			&& !(rover->flags & FF_REVERSEPLATFORM))
+		{
+			mo->floorz = *rover->topheight;
+		}
+		if (*rover->bottomheight < mo->ceilingz && abs(delta1) >= abs(delta2)
+			&& !(rover->flags & FF_PLATFORM))
+		{
+			mo->ceilingz = *rover->bottomheight;
+		}
+	}
+}
+
+//
+// P_AdjustMobjFloorZ_PolyObjs
+//
+// Utility function for P_ZMovement and related
+// Adjusts mo->floorz/mo->ceiling accordingly for PolyObjs
+//
+static void P_AdjustMobjFloorZ_PolyObjs(mobj_t *mo, subsector_t *subsec)
+{
+	polyobj_t *po = subsec->polyList;
+	sector_t *polysec;
+	fixed_t delta1, delta2, thingtop;
+	fixed_t polytop, polybottom;
+
+	I_Assert(mo != NULL);
+	I_Assert(!P_MobjWasRemoved(mo));
+
+	thingtop = mo->z + mo->height;
+
+	while(po)
+	{
+		if (!P_MobjInsidePolyobj(po, mo) || !(po->flags & POF_SOLID))
+		{
+			po = (polyobj_t *)(po->link.next);
+			continue;
+		}
+
+		// We're inside it! Yess...
+		polysec = po->lines[0]->backsector;
+
+		if (po->flags & POF_CLIPPLANES)
+		{
+			polytop = polysec->ceilingheight;
+			polybottom = polysec->floorheight;
+		}
+		else
+		{
+			polytop = INT32_MAX;
+			polybottom = INT32_MIN;
+		}
+
+		delta1 = mo->z - (polybottom + ((polytop - polybottom)/2));
+		delta2 = thingtop - (polybottom + ((polytop - polybottom)/2));
+
+		if (polytop > mo->floorz && abs(delta1) < abs(delta2))
+			mo->floorz = polytop;
+
+		if (polybottom < mo->ceilingz && abs(delta1) >= abs(delta2))
+			mo->ceilingz = polybottom;
+
+		po = (polyobj_t *)(po->link.next);
+	}
+}
+
 static void P_RingZMovement(mobj_t *mo)
 {
 	I_Assert(mo != NULL);
@@ -1361,43 +1488,9 @@ static void P_RingZMovement(mobj_t *mo)
 
 	// Intercept the stupid 'fall through 3dfloors' bug
 	if (mo->subsector->sector->ffloors)
-	{
-		ffloor_t *rover;
-		fixed_t delta1, delta2;
-		INT32 thingtop = mo->z + mo->height;
-
-		for (rover = mo->subsector->sector->ffloors; rover; rover = rover->next)
-		{
-			if (!(rover->flags & FF_EXISTS))
-				continue;
-
-			if ((!(rover->flags & FF_BLOCKOTHERS || rover->flags & FF_QUICKSAND) || (rover->flags & FF_SWIMMABLE)))
-				continue;
-
-			if (rover->flags & FF_QUICKSAND)
-			{
-				if (mo->z < *rover->topheight && *rover->bottomheight < thingtop)
-				{
-					if (mo->floorz < mo->z)
-						mo->floorz = mo->z;
-				}
-				continue;
-			}
-
-			delta1 = mo->z - (*rover->bottomheight + ((*rover->topheight - *rover->bottomheight)/2));
-			delta2 = thingtop - (*rover->bottomheight + ((*rover->topheight - *rover->bottomheight)/2));
-			if (*rover->topheight > mo->floorz && abs(delta1) < abs(delta2)
-				&& (!(rover->flags & FF_REVERSEPLATFORM)))
-			{
-				mo->floorz = *rover->topheight;
-			}
-			if (*rover->bottomheight < mo->ceilingz && abs(delta1) >= abs(delta2)
-				&& (/*mo->z + mo->height <= *rover->bottomheight ||*/ !(rover->flags & FF_PLATFORM)))
-			{
-				mo->ceilingz = *rover->bottomheight;
-			}
-		}
-	}
+		P_AdjustMobjFloorZ_FFloors(mo, mo->subsector->sector, 1);
+	if (mo->subsector->polyList)
+		P_AdjustMobjFloorZ_PolyObjs(mo, mo->subsector);
 
 	// adjust height
 	if (mo->pmomz && mo->z != mo->floorz)
@@ -1443,7 +1536,7 @@ boolean P_CheckSolidLava(mobj_t *mo, ffloor_t *rover)
 	I_Assert(mo != NULL);
 	I_Assert(!P_MobjWasRemoved(mo));
 
-	if ((rover->flags & FF_SWIMMABLE) && GETSECSPECIAL(rover->master->frontsector->special, 1) == 3
+	if (rover->flags & FF_SWIMMABLE && GETSECSPECIAL(rover->master->frontsector->special, 1) == 3
 		&& !(rover->master->flags & ML_BLOCKMONSTERS)
 		&& ((rover->master->flags & ML_EFFECT3) || mo->z-mo->momz > *rover->topheight - FixedMul(16*FRACUNIT, mo->scale)))
 			return true;
@@ -1464,55 +1557,9 @@ static boolean P_ZMovement(mobj_t *mo)
 
 	// Intercept the stupid 'fall through 3dfloors' bug
 	if (mo->subsector->sector->ffloors)
-	{
-		ffloor_t *rover;
-		fixed_t delta1, delta2, thingtop = mo->z + mo->height;
-
-		for (rover = mo->subsector->sector->ffloors; rover; rover = rover->next)
-		{
-#if 0 // I question the utility of having four seperate z movement functions.
-			if (!(rover->flags & FF_EXISTS)
-				|| (!((((rover->flags & FF_BLOCKPLAYER) && mo->player)
-				|| ((rover->flags & FF_BLOCKOTHERS) && !mo->player)) || rover->flags & FF_QUICKSAND)
-				|| (rover->flags & FF_SWIMMABLE)))
-			{
-				continue;
-			}
-#else
-			if (!(rover->flags & FF_EXISTS))
-				continue;
-
-			if (mo->player && P_CheckSolidLava(mo, rover)) // only the player should be affected
-				;
-			else if (!((((rover->flags & FF_BLOCKPLAYER) && mo->player)
-				|| ((rover->flags & FF_BLOCKOTHERS) && !mo->player))
-				|| rover->flags & FF_QUICKSAND))
-				continue;
-#endif
-			if (rover->flags & FF_QUICKSAND)
-			{
-				if (mo->z < *rover->topheight && *rover->bottomheight < thingtop)
-				{
-					if (mo->floorz < mo->z)
-						mo->floorz = mo->z;
-				}
-				continue;
-			}
-
-			delta1 = mo->z - (*rover->bottomheight + ((*rover->topheight - *rover->bottomheight)/2));
-			delta2 = thingtop - (*rover->bottomheight + ((*rover->topheight - *rover->bottomheight)/2));
-			if (*rover->topheight > mo->floorz && abs(delta1) < abs(delta2)
-				&& (!(rover->flags & FF_REVERSEPLATFORM)))
-			{
-				mo->floorz = *rover->topheight;
-			}
-			if (*rover->bottomheight < mo->ceilingz && abs(delta1) >= abs(delta2)
-				&& (/*mo->z + mo->height <= *rover->bottomheight ||*/ !(rover->flags & FF_PLATFORM)))
-			{
-				mo->ceilingz = *rover->bottomheight;
-			}
-		}
-	}
+		P_AdjustMobjFloorZ_FFloors(mo, mo->subsector->sector, 0);
+	if (mo->subsector->polyList)
+		P_AdjustMobjFloorZ_PolyObjs(mo, mo->subsector);
 
 	// adjust height
 	if (mo->pmomz && mo->z != mo->floorz)
@@ -1922,45 +1969,9 @@ static void P_PlayerZMovement(mobj_t *mo)
 
 	// Intercept the stupid 'fall through 3dfloors' bug
 	if (mo->subsector->sector->ffloors)
-	{
-		ffloor_t *rover;
-		fixed_t delta1, delta2;
-		INT32 thingtop = mo->z + mo->height;
-
-		for (rover = mo->subsector->sector->ffloors; rover; rover = rover->next)
-		{
-			if (!(rover->flags & FF_EXISTS))
-				continue;
-
-			if (P_CheckSolidLava(mo, rover) || P_CanRunOnWater(mo->player, rover))
-				;
-			else if (!(rover->flags & FF_BLOCKPLAYER || rover->flags & FF_QUICKSAND))
-				continue;
-
-			if (rover->flags & FF_QUICKSAND)
-			{
-				if (mo->z < *rover->topheight && *rover->bottomheight < thingtop)
-				{
-					if (mo->floorz < mo->z)
-						mo->floorz = mo->z;
-				}
-				continue; // This is so you can jump/spring up through quicksand from below.
-			}
-
-			delta1 = mo->z - (*rover->bottomheight + ((*rover->topheight - *rover->bottomheight)/2));
-			delta2 = thingtop - (*rover->bottomheight + ((*rover->topheight - *rover->bottomheight)/2));
-			if (*rover->topheight > mo->floorz && abs(delta1) < abs(delta2)
-				&& (!(rover->flags & FF_REVERSEPLATFORM)))
-			{
-				mo->floorz = *rover->topheight;
-			}
-			if (*rover->bottomheight < mo->ceilingz && abs(delta1) >= abs(delta2)
-				&& (/*mo->z + mo->height <= *rover->bottomheight ||*/ !(rover->flags & FF_PLATFORM)))
-			{
-				mo->ceilingz = *rover->bottomheight;
-			}
-		}
-	}
+		P_AdjustMobjFloorZ_FFloors(mo, mo->subsector->sector, 0);
+	if (mo->subsector->polyList)
+		P_AdjustMobjFloorZ_PolyObjs(mo, mo->subsector);
 
 	// check for smooth step up
 	if ((mo->eflags & MFE_VERTICALFLIP && mo->z + mo->height > mo->ceilingz)
@@ -2052,26 +2063,24 @@ static void P_PlayerZMovement(mobj_t *mo)
 
 								while(po)
 								{
-									if (!P_MobjInsidePolyobj(po, mo))
-									{
-										po = (polyobj_t *)(po->link.next);
-										continue;
-									}
-
-									polysec = po->lines[0]->backsector;
-
-									// Moving polyobjects should act like conveyors if the player lands on one. (I.E. none of the momentum cut thing below) -Red
-									if ((mo->z == polysec->ceilingheight || mo->z+mo->height == polysec->floorheight) && (po->flags & POF_SOLID) && po->thinker)
-										stopmovecut = true;
-
-									if (!(po->flags & POF_LDEXEC)
-										|| !(po->flags & POF_SOLID))
+									if (!P_MobjInsidePolyobj(po, mo) || !(po->flags & POF_SOLID))
 									{
 										po = (polyobj_t *)(po->link.next);
 										continue;
 									}
 
 									// We're inside it! Yess...
+									polysec = po->lines[0]->backsector;
+
+									// Moving polyobjects should act like conveyors if the player lands on one. (I.E. none of the momentum cut thing below) -Red
+									if ((mo->z == polysec->ceilingheight || mo->z+mo->height == polysec->floorheight) && po->thinker)
+										stopmovecut = true;
+
+									if (!(po->flags & POF_LDEXEC))
+									{
+										po = (polyobj_t *)(po->link.next);
+										continue;
+									}
 
 									if (mo->z == polysec->ceilingheight)
 									{
@@ -2241,42 +2250,9 @@ static boolean P_SceneryZMovement(mobj_t *mo)
 {
 	// Intercept the stupid 'fall through 3dfloors' bug
 	if (mo->subsector->sector->ffloors)
-	{
-		ffloor_t *rover;
-		fixed_t delta1, delta2;
-		INT32 thingtop = mo->z + mo->height;
-
-		for (rover = mo->subsector->sector->ffloors; rover; rover = rover->next)
-		{
-			if (!(rover->flags & FF_EXISTS))
-				continue;
-
-			if ((!(rover->flags & FF_BLOCKOTHERS || rover->flags & FF_QUICKSAND) || (rover->flags & FF_SWIMMABLE)))
-				continue;
-
-			if (rover->flags & FF_QUICKSAND)
-			{
-				if (mo->z < *rover->topheight && *rover->bottomheight < thingtop)
-				{
-					mo->floorz = mo->z;
-					continue;
-				}
-			}
-
-			delta1 = mo->z - (*rover->bottomheight + ((*rover->topheight - *rover->bottomheight)/2));
-			delta2 = thingtop - (*rover->bottomheight + ((*rover->topheight - *rover->bottomheight)/2));
-			if (*rover->topheight > mo->floorz && abs(delta1) < abs(delta2)
-				&& (!(rover->flags & FF_REVERSEPLATFORM)))
-			{
-				mo->floorz = *rover->topheight;
-			}
-			if (*rover->bottomheight < mo->ceilingz && abs(delta1) >= abs(delta2)
-				&& (/*mo->z + mo->height <= *rover->bottomheight ||*/ !(rover->flags & FF_PLATFORM)))
-			{
-				mo->ceilingz = *rover->bottomheight;
-			}
-		}
-	}
+		P_AdjustMobjFloorZ_FFloors(mo, mo->subsector->sector, 2);
+	if (mo->subsector->polyList)
+		P_AdjustMobjFloorZ_PolyObjs(mo, mo->subsector);
 
 	// adjust height
 	if (mo->pmomz && mo->z != mo->floorz)
@@ -3371,11 +3347,7 @@ static void P_Boss2Thinker(mobj_t *mobj)
 	if (!mobj->movecount)
 		mobj->flags2 &= ~MF2_FRET;
 
-	if (!mobj->tracer
-#ifdef CHAOSISNOTDEADYET
-		&& gametype != GT_CHAOS
-#endif
-		)
+	if (!mobj->tracer)
 	{
 		var1 = 0;
 		A_BossJetFume(mobj);
@@ -3398,11 +3370,7 @@ static void P_Boss2Thinker(mobj_t *mobj)
 		return;
 	}
 
-	if (mobj->state == &states[mobj->info->spawnstate] && mobj->health > mobj->info->damage
-#ifdef CHAOSISNOTDEADYET
-	&& gametype != GT_CHAOS
-#endif
-	)
+	if (mobj->state == &states[mobj->info->spawnstate] && mobj->health > mobj->info->damage)
 		A_Boss2Chase(mobj);
 	else if (mobj->health > 0 && mobj->state != &states[mobj->info->painstate] && mobj->state != &states[mobjinfo[mobj->info->missilestate].raisestate])
 	{
@@ -5116,32 +5084,6 @@ void P_SetScale(mobj_t *mobj, fixed_t newscale)
 	}
 }
 
-// Returns true if no boss with health is in the level.
-// Used for Chaos mode
-
-#ifdef CHAOSISNOTDEADYET
-static boolean P_BossDoesntExist(void)
-{
-	thinker_t *th;
-	mobj_t *mo2;
-
-	// scan the thinkers
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
-	{
-		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-			continue;
-
-		mo2 = (mobj_t *)th;
-
-		if (mo2->flags & MF_BOSS && mo2->health)
-			return false;
-	}
-
-	// No boss found!
-	return true;
-}
-#endif
-
 void P_Attract(mobj_t *source, mobj_t *dest, boolean nightsgrab) // Home in on your target
 {
 	fixed_t dist, ndist, speedmul;
@@ -6130,14 +6072,6 @@ void P_MobjThinker(mobj_t *mobj)
 					return;
 				}
 
-#ifdef CHAOSISNOTDEADYET
-				if (gametype == GT_CHAOS && mobj->target->health <= 0)
-				{
-					P_RemoveMobj(mobj);
-					return;
-				}
-#endif
-
 				jetx = mobj->target->x + P_ReturnThrustX(mobj->target, mobj->target->angle, FixedMul(-64*FRACUNIT, mobj->target->scale));
 				jety = mobj->target->y + P_ReturnThrustY(mobj->target, mobj->target->angle, FixedMul(-64*FRACUNIT, mobj->target->scale));
 
@@ -6209,14 +6143,6 @@ void P_MobjThinker(mobj_t *mobj)
 					return;
 				}
 
-#ifdef CHAOSISNOTDEADYET
-				if (gametype == GT_CHAOS && mobj->target->health <= 0)
-				{
-					P_RemoveMobj(mobj);
-					return;
-				}
-#endif
-
 				jetx = mobj->target->x + P_ReturnThrustX(mobj->target, mobj->target->angle, FixedMul(-60*FRACUNIT, mobj->target->scale));
 				jety = mobj->target->y + P_ReturnThrustY(mobj->target, mobj->target->angle, FixedMul(-60*FRACUNIT, mobj->target->scale));
 
@@ -6239,13 +6165,6 @@ void P_MobjThinker(mobj_t *mobj)
 					return;
 				}
 
-#ifdef CHAOSISNOTDEADYET
-				if (gametype == GT_CHAOS && mobj->target->health <= 0)
-				{
-					P_RemoveMobj(mobj);
-					return;
-				}
-#endif
 				P_UnsetThingPosition(mobj);
 				mobj->x = mobj->target->x;
 				mobj->y = mobj->target->y;
@@ -6677,148 +6596,6 @@ for (i = ((mobj->flags2 & MF2_STRONGBOX) ? strongboxamt : weakboxamt); i; --i) s
 					}
 					P_RemoveMobj(mobj); // make sure they disappear
 					return;
-				case MT_CHAOSSPAWNER: // Chaos Mode spawner thingy
-				{
-					// 8 enemies: Blue Crawla, Red Crawla, Crawla Commander,
-					//            Jett-Synn Bomber, Jett-Synn Gunner, Skim,
-					//            Egg Mobile, Egg Slimer.
-					// Max. 3 chances per enemy.
-
-#ifdef CHAOSISNOTDEADYET
-
-					mobjtype_t spawnchance[8*3], enemy;
-					mobj_t *spawnedmo;
-					INT32 i = 0, numchoices = 0, stop;
-					fixed_t sfloorz, space, airspace, spawnz[8*3];
-
-					sfloorz = mobj->floorz;
-					space = mobj->ceilingz - sfloorz;
-
-					// This makes the assumption there is no gravity-defying water.
-					// A fair assumption to make, if you ask me.
-					airspace = min(space, mobj->ceilingz - mobj->watertop);
-
-					mobj->fuse = cv_chaos_spawnrate.value*TICRATE;
-					prandom = P_Random(); // Gotta love those random numbers!
-
-					if (cv_chaos_bluecrawla.value && space >= mobjinfo[MT_BLUECRAWLA].height)
-					{
-						stop = i + cv_chaos_bluecrawla.value;
-						for (; i < stop; i++)
-						{
-							spawnchance[i] = MT_BLUECRAWLA;
-							spawnz[i] = sfloorz;
-							numchoices++;
-						}
-					}
-					if (cv_chaos_redcrawla.value && space >= mobjinfo[MT_REDCRAWLA].height)
-					{
-						stop = i + cv_chaos_redcrawla.value;
-						for (; i < stop; i++)
-						{
-							spawnchance[i] = MT_REDCRAWLA;
-							spawnz[i] = sfloorz;
-							numchoices++;
-						}
-					}
-					if (cv_chaos_crawlacommander.value
-						&& space >= mobjinfo[MT_CRAWLACOMMANDER].height + 33*FRACUNIT)
-					{
-						stop = i + cv_chaos_crawlacommander.value;
-						for (; i < stop; i++)
-						{
-							spawnchance[i] = MT_CRAWLACOMMANDER;
-							spawnz[i] = sfloorz + 33*FRACUNIT;
-							numchoices++;
-						}
-					}
-					if (cv_chaos_jettysynbomber.value
-						&& airspace >= mobjinfo[MT_JETTBOMBER].height + 33*FRACUNIT)
-					{
-						stop = i + cv_chaos_jettysynbomber.value;
-						for (; i < stop; i++)
-						{
-							spawnchance[i] = MT_JETTBOMBER;
-							spawnz[i] = max(sfloorz, mobj->watertop) + 33*FRACUNIT;
-							numchoices++;
-						}
-					}
-					if (cv_chaos_jettysyngunner.value
-						&& airspace >= mobjinfo[MT_JETTGUNNER].height + 33*FRACUNIT)
-					{
-						stop = i + cv_chaos_jettysyngunner.value;
-						for (; i < stop; i++)
-						{
-							spawnchance[i] = MT_JETTGUNNER;
-							spawnz[i] = max(sfloorz, mobj->watertop) + 33*FRACUNIT;
-							numchoices++;
-						}
-					}
-					if (cv_chaos_skim.value
-						&& mobj->watertop < mobj->ceilingz - mobjinfo[MT_SKIM].height
-						&& mobj->watertop - sfloorz > mobjinfo[MT_SKIM].height/2)
-					{
-						stop = i + cv_chaos_skim.value;
-						for (; i < stop; i++)
-						{
-							spawnchance[i] = MT_SKIM;
-							spawnz[i] = mobj->watertop;
-							numchoices++;
-						}
-					}
-					if (P_BossDoesntExist())
-					{
-						if (cv_chaos_eggmobile1.value
-							&& space >= mobjinfo[MT_EGGMOBILE].height + 33*FRACUNIT)
-						{
-							stop = i + cv_chaos_eggmobile1.value;
-							for (; i < stop; i++)
-							{
-								spawnchance[i] = MT_EGGMOBILE;
-								spawnz[i] = sfloorz + 33*FRACUNIT;
-								numchoices++;
-							}
-						}
-						if (cv_chaos_eggmobile2.value
-							&& space >= mobjinfo[MT_EGGMOBILE2].height + 33*FRACUNIT)
-						{
-							stop = i + cv_chaos_eggmobile2.value;
-							for (; i < stop; i++)
-							{
-								spawnchance[i] = MT_EGGMOBILE2;
-								spawnz[i] = sfloorz + 33*FRACUNIT;
-								numchoices++;
-							}
-						}
-					}
-
-					if (numchoices)
-					{
-						fixed_t fogz;
-
-						i = prandom % numchoices;
-						enemy = spawnchance[i];
-
-						fogz = spawnz[i] - 32*FRACUNIT;
-						if (fogz < sfloorz)
-							fogz = sfloorz;
-
-						spawnedmo = P_SpawnMobj(mobj->x, mobj->y, spawnz[i], enemy);
-						P_SpawnMobj(mobj->x, mobj->y, fogz, MT_TFOG);
-
-						P_SupermanLook4Players(spawnedmo);
-						if (spawnedmo->target && spawnedmo->type != MT_SKIM)
-							P_SetMobjState(spawnedmo, spawnedmo->info->seestate);
-
-						if (spawnedmo->flags & MF_BOSS)
-						{
-							spawnedmo->flags2 |= MF2_CHAOSBOSS;
-							spawnedmo->momx = spawnedmo->momy = 0;
-						}
-					}
-#endif
-					break;
-				}
 				case MT_METALSONIC_BATTLE:
 					break; // don't remove
 				case MT_SPIKE:
@@ -8178,7 +7955,8 @@ void P_SpawnMapThing(mapthing_t *mthing)
 
 	if (i == NUMMOBJTYPES)
 	{
-		if (mthing->type == 3328) // 3D Mode start Thing
+		if (mthing->type == 3328 // 3D Mode start Thing
+		 || mthing->type == 750) // Chaos mode spawn
 			return;
 		CONS_Alert(CONS_WARNING, M_GetText("Unknown thing type %d placed at (%d, %d)\n"), mthing->type, mthing->x, mthing->y);
 		i = MT_UNKNOWN;
@@ -8597,15 +8375,6 @@ ML_NOCLIMB : Direction not controllable
 		if (mthing->angle > 0)
 			mobj->health = mthing->angle;
 		break;
-	case MT_CHAOSSPAWNER:
-#ifndef CHAOSISNOTDEADYET
-		return;
-#else
-		if (gametype != GT_CHAOS)
-			return;
-		mobj->fuse = P_Random()*2;
-		break;
-#endif
 	case MT_TRAPGOYLE:
 	case MT_TRAPGOYLEUP:
 	case MT_TRAPGOYLEDOWN:

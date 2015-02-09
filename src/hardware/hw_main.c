@@ -2651,7 +2651,7 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, fixed_t fixedheight
 
 	if (nrPlaneVerts > UINT16_MAX) // FIXME: exceeds plVerts size
 	{
-		CONS_Debug(DBG_RENDER, "polygon size of %d exceeds max value of %d vertices\n", nrPlaneVerts, UINT16_MAX);
+		CONS_Debug(DBG_RENDER, "polygon size of %s exceeds max value of %d vertices\n", sizeu1(nrPlaneVerts), UINT16_MAX);
 		return;
 	}
 
@@ -2766,9 +2766,9 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, fixed_t fixedheight
 			v3d->tow = (FIXED_TO_FLOAT(-FixedMul(tempxsow, FINESINE(angle)) - FixedMul(tempytow, FINECOSINE(angle))));
 		}
 
-		v3d->x = FIXED_TO_FLOAT(polysector->lines[i]->v1->x);
+		v3d->x = FIXED_TO_FLOAT(polysector->vertices[i]->x);
 		v3d->y = height;
-		v3d->z = FIXED_TO_FLOAT(polysector->lines[i]->v1->y);
+		v3d->z = FIXED_TO_FLOAT(polysector->vertices[i]->y);
 	}
 
 
@@ -3796,7 +3796,9 @@ static void HWR_DrawSprite(gr_vissprite_t *spr)
 		}*/
 
 		// shadow is always half as translucent as the sprite itself
-		if (spr->mobj->flags2 & MF2_SHADOW)
+		if (!cv_translucency.value)
+			; // translucency disabled
+		else if (spr->mobj->flags2 & MF2_SHADOW)
 			sSurf.FlatColor.s.alpha = 0x20;
 		else if (spr->mobj->frame & FF_TRANSMASK)
 		{

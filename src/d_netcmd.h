@@ -44,6 +44,7 @@ extern consvar_t cv_invertmouse2;
 extern consvar_t cv_alwaysfreelook2;
 extern consvar_t cv_mousemove2;
 extern consvar_t cv_mousesens2;
+extern consvar_t cv_mouseysens2;
 
 // normally in p_mobj but the .h is not read
 extern consvar_t cv_itemrespawntime;
@@ -80,7 +81,6 @@ extern consvar_t cv_useranalog, cv_useranalog2;
 extern consvar_t cv_analog, cv_analog2;
 
 extern consvar_t cv_netstat;
-extern consvar_t cv_translucency;
 extern consvar_t cv_splats;
 
 extern consvar_t cv_countdowntime;
@@ -112,12 +112,6 @@ extern consvar_t cv_resetmusic;
 extern consvar_t cv_ringslinger, cv_soundtest;
 
 extern consvar_t cv_specialrings, cv_powerstones, cv_matchboxes, cv_competitionboxes;
-
-#ifdef CHAOSISNOTDEADYET
-extern consvar_t cv_chaos_spawnrate, cv_chaos_bluecrawla, cv_chaos_redcrawla;
-extern consvar_t cv_chaos_crawlacommander, cv_chaos_jettysynbomber, cv_chaos_jettysyngunner;
-extern consvar_t cv_chaos_eggmobile1, cv_chaos_eggmobile2, cv_chaos_skim;
-#endif
 
 #ifdef NEWPING
 extern consvar_t cv_maxping;

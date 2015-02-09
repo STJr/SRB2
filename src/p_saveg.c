@@ -991,6 +991,241 @@ static inline UINT32 SavePlayer(const player_t *player)
 }
 
 //
+// SaveMobjThinker
+//
+// Saves a mobj_t thinker
+//
+static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
+{
+	const mobj_t *mobj = (const mobj_t *)th;
+	UINT32 diff;
+	UINT16 diff2;
+
+	// Ignore stationary hoops - these will be respawned from mapthings.
+	if (mobj->type == MT_HOOP)
+		return;
+
+	// These are NEVER saved.
+	if (mobj->type == MT_HOOPCOLLIDE)
+		return;
+
+	// This hoop has already been collected.
+	if (mobj->type == MT_HOOPCENTER && mobj->threshold == 4242)
+		return;
+
+	if (mobj->spawnpoint && mobj->info->doomednum != -1)
+	{
+		// spawnpoint is not modified but we must save it since it is an identifier
+		diff = MD_SPAWNPOINT;
+
+		if ((mobj->x != mobj->spawnpoint->x << FRACBITS) ||
+			(mobj->y != mobj->spawnpoint->y << FRACBITS) ||
+			(mobj->angle != FixedAngle(mobj->spawnpoint->angle*FRACUNIT)))
+			diff |= MD_POS;
+
+		if (mobj->info->doomednum != mobj->spawnpoint->type)
+			diff |= MD_TYPE;
+	}
+	else
+		diff = MD_POS | MD_TYPE; // not a map spawned thing so make it from scratch
+
+	diff2 = 0;
+
+	// not the default but the most probable
+	if (mobj->momx != 0 || mobj->momy != 0 || mobj->momz != 0)
+		diff |= MD_MOM;
+	if (mobj->radius != mobj->info->radius)
+		diff |= MD_RADIUS;
+	if (mobj->height != mobj->info->height)
+		diff |= MD_HEIGHT;
+	if (mobj->flags != mobj->info->flags)
+		diff |= MD_FLAGS;
+	if (mobj->flags2)
+		diff |= MD_FLAGS2;
+	if (mobj->health != mobj->info->spawnhealth)
+		diff |= MD_HEALTH;
+	if (mobj->reactiontime != mobj->info->reactiontime)
+		diff |= MD_RTIME;
+	if ((statenum_t)(mobj->state-states) != mobj->info->spawnstate)
+		diff |= MD_STATE;
+	if (mobj->tics != mobj->state->tics)
+		diff |= MD_TICS;
+	if (mobj->sprite != mobj->state->sprite)
+		diff |= MD_SPRITE;
+	if (mobj->frame != mobj->state->frame)
+		diff |= MD_FRAME;
+	if (mobj->eflags)
+		diff |= MD_EFLAGS;
+	if (mobj->player)
+		diff |= MD_PLAYER;
+
+	if (mobj->movedir)
+		diff |= MD_MOVEDIR;
+	if (mobj->movecount)
+		diff |= MD_MOVECOUNT;
+	if (mobj->threshold)
+		diff |= MD_THRESHOLD;
+	if (mobj->lastlook != -1)
+		diff |= MD_LASTLOOK;
+	if (mobj->target)
+		diff |= MD_TARGET;
+	if (mobj->tracer)
+		diff |= MD_TRACER;
+	if (mobj->friction != ORIG_FRICTION)
+		diff |= MD_FRICTION;
+	if (mobj->movefactor != ORIG_FRICTION_FACTOR)
+		diff |= MD_MOVEFACTOR;
+	if (mobj->fuse)
+		diff |= MD_FUSE;
+	if (mobj->watertop)
+		diff |= MD_WATERTOP;
+	if (mobj->waterbottom)
+		diff |= MD_WATERBOTTOM;
+	if (mobj->scale != FRACUNIT)
+		diff |= MD_SCALE;
+	if (mobj->destscale != mobj->scale)
+		diff |= MD_DSCALE;
+	if (mobj->scalespeed != FRACUNIT/12)
+		diff2 |= MD2_SCALESPEED;
+
+	if (mobj == redflag)
+		diff |= MD_REDFLAG;
+	if (mobj == blueflag)
+		diff |= MD_BLUEFLAG;
+
+	if (mobj->cusval)
+		diff2 |= MD2_CUSVAL;
+	if (mobj->cvmem)
+		diff2 |= MD2_CVMEM;
+	if (mobj->color)
+		diff2 |= MD2_COLOR;
+	if (mobj->skin)
+		diff2 |= MD2_SKIN;
+	if (mobj->extravalue1)
+		diff2 |= MD2_EXTVAL1;
+	if (mobj->extravalue2)
+		diff2 |= MD2_EXTVAL2;
+	if (mobj->hnext)
+		diff2 |= MD2_HNEXT;
+	if (mobj->hprev)
+		diff2 |= MD2_HPREV;
+	if (diff2 != 0)
+		diff |= MD_MORE;
+
+	// Scrap all of that. If we're a hoop center, this is ALL we're saving.
+	if (mobj->type == MT_HOOPCENTER)
+		diff = MD_SPAWNPOINT;
+
+	WRITEUINT8(save_p, type);
+	WRITEUINT32(save_p, diff);
+	if (diff & MD_MORE)
+		WRITEUINT16(save_p, diff2);
+
+	// save pointer, at load time we will search this pointer to reinitilize pointers
+	WRITEUINT32(save_p, (size_t)mobj);
+
+	WRITEFIXED(save_p, mobj->z); // Force this so 3dfloor problems don't arise.
+	WRITEFIXED(save_p, mobj->floorz);
+	WRITEFIXED(save_p, mobj->ceilingz);
+
+	if (diff & MD_SPAWNPOINT)
+	{
+		size_t z;
+
+		for (z = 0; z < nummapthings; z++)
+			if (&mapthings[z] == mobj->spawnpoint)
+				WRITEUINT16(save_p, z);
+		if (mobj->type == MT_HOOPCENTER)
+			return;
+	}
+
+	if (diff & MD_TYPE)
+		WRITEUINT32(save_p, mobj->type);
+	if (diff & MD_POS)
+	{
+		WRITEFIXED(save_p, mobj->x);
+		WRITEFIXED(save_p, mobj->y);
+		WRITEANGLE(save_p, mobj->angle);
+	}
+	if (diff & MD_MOM)
+	{
+		WRITEFIXED(save_p, mobj->momx);
+		WRITEFIXED(save_p, mobj->momy);
+		WRITEFIXED(save_p, mobj->momz);
+	}
+	if (diff & MD_RADIUS)
+		WRITEFIXED(save_p, mobj->radius);
+	if (diff & MD_HEIGHT)
+		WRITEFIXED(save_p, mobj->height);
+	if (diff & MD_FLAGS)
+		WRITEUINT32(save_p, mobj->flags);
+	if (diff & MD_FLAGS2)
+		WRITEUINT32(save_p, mobj->flags2);
+	if (diff & MD_HEALTH)
+		WRITEINT32(save_p, mobj->health);
+	if (diff & MD_RTIME)
+		WRITEINT32(save_p, mobj->reactiontime);
+	if (diff & MD_STATE)
+		WRITEUINT16(save_p, mobj->state-states);
+	if (diff & MD_TICS)
+		WRITEINT32(save_p, mobj->tics);
+	if (diff & MD_SPRITE)
+		WRITEUINT16(save_p, mobj->sprite);
+	if (diff & MD_FRAME)
+		WRITEUINT32(save_p, mobj->frame);
+	if (diff & MD_EFLAGS)
+		WRITEUINT8(save_p, mobj->eflags);
+	if (diff & MD_PLAYER)
+		WRITEUINT8(save_p, mobj->player-players);
+	if (diff & MD_MOVEDIR)
+		WRITEANGLE(save_p, mobj->movedir);
+	if (diff & MD_MOVECOUNT)
+		WRITEINT32(save_p, mobj->movecount);
+	if (diff & MD_THRESHOLD)
+		WRITEINT32(save_p, mobj->threshold);
+	if (diff & MD_LASTLOOK)
+		WRITEINT32(save_p, mobj->lastlook);
+	if (diff & MD_TARGET)
+		WRITEUINT32(save_p, mobj->target->mobjnum);
+	if (diff & MD_TRACER)
+		WRITEUINT32(save_p, mobj->tracer->mobjnum);
+	if (diff & MD_FRICTION)
+		WRITEFIXED(save_p, mobj->friction);
+	if (diff & MD_MOVEFACTOR)
+		WRITEFIXED(save_p, mobj->movefactor);
+	if (diff & MD_FUSE)
+		WRITEINT32(save_p, mobj->fuse);
+	if (diff & MD_WATERTOP)
+		WRITEFIXED(save_p, mobj->watertop);
+	if (diff & MD_WATERBOTTOM)
+		WRITEFIXED(save_p, mobj->waterbottom);
+	if (diff & MD_SCALE)
+		WRITEFIXED(save_p, mobj->scale);
+	if (diff & MD_DSCALE)
+		WRITEFIXED(save_p, mobj->destscale);
+	if (diff2 & MD2_SCALESPEED)
+		WRITEFIXED(save_p, mobj->scalespeed);
+	if (diff2 & MD2_CUSVAL)
+		WRITEINT32(save_p, mobj->cusval);
+	if (diff2 & MD2_CVMEM)
+		WRITEINT32(save_p, mobj->cvmem);
+	if (diff2 & MD2_SKIN)
+		WRITEUINT8(save_p, (UINT8)((skin_t *)mobj->skin - skins));
+	if (diff2 & MD2_COLOR)
+		WRITEUINT8(save_p, mobj->color);
+	if (diff2 & MD2_EXTVAL1)
+		WRITEINT32(save_p, mobj->extravalue1);
+	if (diff2 & MD2_EXTVAL2)
+		WRITEINT32(save_p, mobj->extravalue2);
+	if (diff2 & MD2_HNEXT)
+		WRITEUINT32(save_p, mobj->hnext->mobjnum);
+	if (diff2 & MD2_HPREV)
+		WRITEUINT32(save_p, mobj->hprev->mobjnum);
+
+	WRITEUINT32(save_p, mobj->mobjnum);
+}
+
+//
 // SaveSpecialLevelThinker
 //
 // Saves a levelspecthink_t thinker
@@ -1395,9 +1630,6 @@ static inline void SaveWhatThinker(const thinker_t *th, const UINT8 type)
 static void P_NetArchiveThinkers(void)
 {
 	const thinker_t *th;
-	const mobj_t *mobj;
-	UINT32 diff;
-	UINT16 diff2;
 
 	WRITEUINT32(save_p, ARCHIVEBLOCK_THINKERS);
 
@@ -1406,230 +1638,8 @@ static void P_NetArchiveThinkers(void)
 	{
 		if (th->function.acp1 == (actionf_p1)P_MobjThinker)
 		{
-			mobj = (const mobj_t *)th;
-
-			// Ignore stationary hoops - these will be respawned from mapthings.
-			if (mobj->type == MT_HOOP)
-				continue;
-
-			// These are NEVER saved.
-			if (mobj->type == MT_HOOPCOLLIDE)
-				continue;
-
-			// This hoop has already been collected.
-			if (mobj->type == MT_HOOPCENTER && mobj->threshold == 4242)
-				continue;
-
-			if (mobj->spawnpoint && mobj->info->doomednum != -1)
-			{
-				// spawnpoint is not modified but we must save it since it is an identifier
-				diff = MD_SPAWNPOINT;
-
-				if ((mobj->x != mobj->spawnpoint->x << FRACBITS) ||
-					(mobj->y != mobj->spawnpoint->y << FRACBITS) ||
-					(mobj->angle != FixedAngle(mobj->spawnpoint->angle*FRACUNIT)))
-					diff |= MD_POS;
-
-				if (mobj->info->doomednum != mobj->spawnpoint->type)
-					diff |= MD_TYPE;
-			}
-			else
-				diff = MD_POS | MD_TYPE; // not a map spawned thing so make it from scratch
-
-			diff2 = 0;
-
-			// not the default but the most probable
-			if (mobj->momx != 0 || mobj->momy != 0 || mobj->momz != 0)
-				diff |= MD_MOM;
-			if (mobj->radius != mobj->info->radius)
-				diff |= MD_RADIUS;
-			if (mobj->height != mobj->info->height)
-				diff |= MD_HEIGHT;
-			if (mobj->flags != mobj->info->flags)
-				diff |= MD_FLAGS;
-			if (mobj->flags2)
-				diff |= MD_FLAGS2;
-			if (mobj->health != mobj->info->spawnhealth)
-				diff |= MD_HEALTH;
-			if (mobj->reactiontime != mobj->info->reactiontime)
-				diff |= MD_RTIME;
-			if ((statenum_t)(mobj->state-states) != mobj->info->spawnstate)
-				diff |= MD_STATE;
-			if (mobj->tics != mobj->state->tics)
-				diff |= MD_TICS;
-			if (mobj->sprite != mobj->state->sprite)
-				diff |= MD_SPRITE;
-			if (mobj->frame != mobj->state->frame)
-				diff |= MD_FRAME;
-			if (mobj->eflags)
-				diff |= MD_EFLAGS;
-			if (mobj->player)
-				diff |= MD_PLAYER;
-
-			if (mobj->movedir)
-				diff |= MD_MOVEDIR;
-			if (mobj->movecount)
-				diff |= MD_MOVECOUNT;
-			if (mobj->threshold)
-				diff |= MD_THRESHOLD;
-			if (mobj->lastlook != -1)
-				diff |= MD_LASTLOOK;
-			if (mobj->target)
-				diff |= MD_TARGET;
-			if (mobj->tracer)
-				diff |= MD_TRACER;
-			if (mobj->friction != ORIG_FRICTION)
-				diff |= MD_FRICTION;
-			if (mobj->movefactor != ORIG_FRICTION_FACTOR)
-				diff |= MD_MOVEFACTOR;
-			if (mobj->fuse)
-				diff |= MD_FUSE;
-			if (mobj->watertop)
-				diff |= MD_WATERTOP;
-			if (mobj->waterbottom)
-				diff |= MD_WATERBOTTOM;
-			if (mobj->scale != FRACUNIT)
-				diff |= MD_SCALE;
-			if (mobj->destscale != mobj->scale)
-				diff |= MD_DSCALE;
-			if (mobj->scalespeed != FRACUNIT/12)
-				diff2 |= MD2_SCALESPEED;
-
-			if (mobj == redflag)
-				diff |= MD_REDFLAG;
-			if (mobj == blueflag)
-				diff |= MD_BLUEFLAG;
-
-			if (mobj->cusval)
-				diff2 |= MD2_CUSVAL;
-			if (mobj->cvmem)
-				diff2 |= MD2_CVMEM;
-			if (mobj->color)
-				diff2 |= MD2_COLOR;
-			if (mobj->skin)
-				diff2 |= MD2_SKIN;
-			if (mobj->extravalue1)
-				diff2 |= MD2_EXTVAL1;
-			if (mobj->extravalue2)
-				diff2 |= MD2_EXTVAL2;
-			if (mobj->hnext)
-				diff2 |= MD2_HNEXT;
-			if (mobj->hprev)
-				diff2 |= MD2_HPREV;
-			if (diff2 != 0)
-				diff |= MD_MORE;
-
-			// Scrap all of that. If we're a hoop center, this is ALL we're saving.
-			if (mobj->type == MT_HOOPCENTER)
-				diff = MD_SPAWNPOINT;
-
-			WRITEUINT8(save_p, tc_mobj);
-			WRITEUINT32(save_p, diff);
-			if (diff & MD_MORE)
-				WRITEUINT16(save_p, diff2);
-
-			// save pointer, at load time we will search this pointer to reinitilize pointers
-			WRITEUINT32(save_p, (size_t)mobj);
-
-			WRITEFIXED(save_p, mobj->z); // Force this so 3dfloor problems don't arise.
-			WRITEFIXED(save_p, mobj->floorz);
-			WRITEFIXED(save_p, mobj->ceilingz);
-
-			if (diff & MD_SPAWNPOINT)
-			{
-				size_t z;
-
-				for (z = 0; z < nummapthings; z++)
-					if (&mapthings[z] == mobj->spawnpoint)
-						WRITEUINT16(save_p, z);
-				if (mobj->type == MT_HOOPCENTER)
-					continue;
-			}
-
-			if (diff & MD_TYPE)
-				WRITEUINT32(save_p, mobj->type);
-			if (diff & MD_POS)
-			{
-				WRITEFIXED(save_p, mobj->x);
-				WRITEFIXED(save_p, mobj->y);
-				WRITEANGLE(save_p, mobj->angle);
-			}
-			if (diff & MD_MOM)
-			{
-				WRITEFIXED(save_p, mobj->momx);
-				WRITEFIXED(save_p, mobj->momy);
-				WRITEFIXED(save_p, mobj->momz);
-			}
-			if (diff & MD_RADIUS)
-				WRITEFIXED(save_p, mobj->radius);
-			if (diff & MD_HEIGHT)
-				WRITEFIXED(save_p, mobj->height);
-			if (diff & MD_FLAGS)
-				WRITEUINT32(save_p, mobj->flags);
-			if (diff & MD_FLAGS2)
-				WRITEUINT32(save_p, mobj->flags2);
-			if (diff & MD_HEALTH)
-				WRITEINT32(save_p, mobj->health);
-			if (diff & MD_RTIME)
-				WRITEINT32(save_p, mobj->reactiontime);
-			if (diff & MD_STATE)
-				WRITEUINT16(save_p, mobj->state-states);
-			if (diff & MD_TICS)
-				WRITEINT32(save_p, mobj->tics);
-			if (diff & MD_SPRITE)
-				WRITEUINT16(save_p, mobj->sprite);
-			if (diff & MD_FRAME)
-				WRITEUINT32(save_p, mobj->frame);
-			if (diff & MD_EFLAGS)
-				WRITEUINT8(save_p, mobj->eflags);
-			if (diff & MD_PLAYER)
-				WRITEUINT8(save_p, mobj->player-players);
-			if (diff & MD_MOVEDIR)
-				WRITEANGLE(save_p, mobj->movedir);
-			if (diff & MD_MOVECOUNT)
-				WRITEINT32(save_p, mobj->movecount);
-			if (diff & MD_THRESHOLD)
-				WRITEINT32(save_p, mobj->threshold);
-			if (diff & MD_LASTLOOK)
-				WRITEINT32(save_p, mobj->lastlook);
-			if (diff & MD_TARGET)
-				WRITEUINT32(save_p, mobj->target->mobjnum);
-			if (diff & MD_TRACER)
-				WRITEUINT32(save_p, mobj->tracer->mobjnum);
-			if (diff & MD_FRICTION)
-				WRITEFIXED(save_p, mobj->friction);
-			if (diff & MD_MOVEFACTOR)
-				WRITEFIXED(save_p, mobj->movefactor);
-			if (diff & MD_FUSE)
-				WRITEINT32(save_p, mobj->fuse);
-			if (diff & MD_WATERTOP)
-				WRITEFIXED(save_p, mobj->watertop);
-			if (diff & MD_WATERBOTTOM)
-				WRITEFIXED(save_p, mobj->waterbottom);
-			if (diff & MD_SCALE)
-				WRITEFIXED(save_p, mobj->scale);
-			if (diff & MD_DSCALE)
-				WRITEFIXED(save_p, mobj->destscale);
-			if (diff2 & MD2_SCALESPEED)
-				WRITEFIXED(save_p, mobj->scalespeed);
-			if (diff2 & MD2_CUSVAL)
-				WRITEINT32(save_p, mobj->cusval);
-			if (diff2 & MD2_CVMEM)
-				WRITEINT32(save_p, mobj->cvmem);
-			if (diff2 & MD2_SKIN)
-				WRITEUINT8(save_p, (UINT8)((skin_t *)mobj->skin - skins));
-			if (diff2 & MD2_COLOR)
-				WRITEUINT8(save_p, mobj->color);
-			if (diff2 & MD2_EXTVAL1)
-				WRITEINT32(save_p, mobj->extravalue1);
-			if (diff2 & MD2_EXTVAL2)
-				WRITEINT32(save_p, mobj->extravalue2);
-			if (diff2 & MD2_HNEXT)
-				WRITEUINT32(save_p, mobj->hnext->mobjnum);
-			if (diff2 & MD2_HPREV)
-				WRITEUINT32(save_p, mobj->hprev->mobjnum);
-
-			WRITEUINT32(save_p, mobj->mobjnum);
+			SaveMobjThinker(th, tc_mobj);
+			continue;
 		}
 #ifdef PARANOIA
 		else if (th->function.acp1 == (actionf_p1)P_RainThinker
@@ -1860,6 +1870,232 @@ static inline player_t *LoadPlayer(UINT32 player)
 {
 	if (player >= MAXPLAYERS) return NULL;
 	return &players[player];
+}
+
+//
+// LoadMobjThinker
+//
+// Loads a mobj_t from a save game
+//
+static void LoadMobjThinker(actionf_p1 thinker)
+{
+	thinker_t *next;
+	mobj_t *mobj;
+	UINT32 diff;
+	UINT16 diff2;
+	INT32 i;
+	fixed_t z, floorz, ceilingz;
+
+	diff = READUINT32(save_p);
+	if (diff & MD_MORE)
+		diff2 = READUINT16(save_p);
+	else
+		diff2 = 0;
+
+	next = (void *)(size_t)READUINT32(save_p);
+
+	z = READFIXED(save_p); // Force this so 3dfloor problems don't arise.
+	floorz = READFIXED(save_p);
+	ceilingz = READFIXED(save_p);
+
+	if (diff & MD_SPAWNPOINT)
+	{
+		UINT16 spawnpointnum = READUINT16(save_p);
+
+		if (mapthings[spawnpointnum].type == 1705 || mapthings[spawnpointnum].type == 1713) // NiGHTS Hoop special case
+		{
+			P_SpawnHoopsAndRings(&mapthings[spawnpointnum]);
+			return;
+		}
+
+		mobj = Z_Calloc(sizeof (*mobj), PU_LEVEL, NULL);
+
+		mobj->spawnpoint = &mapthings[spawnpointnum];
+		mapthings[spawnpointnum].mobj = mobj;
+	}
+	else
+		mobj = Z_Calloc(sizeof (*mobj), PU_LEVEL, NULL);
+
+	// declare this as a valid mobj as soon as possible.
+	mobj->thinker.function.acp1 = thinker;
+
+	mobj->z = z;
+	mobj->floorz = floorz;
+	mobj->ceilingz = ceilingz;
+
+	if (diff & MD_TYPE)
+		mobj->type = READUINT32(save_p);
+	else
+	{
+		for (i = 0; i < NUMMOBJTYPES; i++)
+			if (mobj->spawnpoint && mobj->spawnpoint->type == mobjinfo[i].doomednum)
+				break;
+		if (i == NUMMOBJTYPES)
+		{
+			if (mobj->spawnpoint)
+				CONS_Alert(CONS_ERROR, "Found mobj with unknown map thing type %d\n", mobj->spawnpoint->type);
+			else
+				CONS_Alert(CONS_ERROR, "Found mobj with unknown map thing type NULL\n");
+			I_Error("Savegame corrupted");
+		}
+		mobj->type = i;
+	}
+	mobj->info = &mobjinfo[mobj->type];
+	if (diff & MD_POS)
+	{
+		mobj->x = READFIXED(save_p);
+		mobj->y = READFIXED(save_p);
+		mobj->angle = READANGLE(save_p);
+	}
+	else
+	{
+		mobj->x = mobj->spawnpoint->x << FRACBITS;
+		mobj->y = mobj->spawnpoint->y << FRACBITS;
+		mobj->angle = FixedAngle(mobj->spawnpoint->angle*FRACUNIT);
+	}
+	if (diff & MD_MOM)
+	{
+		mobj->momx = READFIXED(save_p);
+		mobj->momy = READFIXED(save_p);
+		mobj->momz = READFIXED(save_p);
+	} // otherwise they're zero, and the memset took care of it
+
+	if (diff & MD_RADIUS)
+		mobj->radius = READFIXED(save_p);
+	else
+		mobj->radius = mobj->info->radius;
+	if (diff & MD_HEIGHT)
+		mobj->height = READFIXED(save_p);
+	else
+		mobj->height = mobj->info->height;
+	if (diff & MD_FLAGS)
+		mobj->flags = READUINT32(save_p);
+	else
+		mobj->flags = mobj->info->flags;
+	if (diff & MD_FLAGS2)
+		mobj->flags2 = READUINT32(save_p);
+	if (diff & MD_HEALTH)
+		mobj->health = READINT32(save_p);
+	else
+		mobj->health = mobj->info->spawnhealth;
+	if (diff & MD_RTIME)
+		mobj->reactiontime = READINT32(save_p);
+	else
+		mobj->reactiontime = mobj->info->reactiontime;
+
+	if (diff & MD_STATE)
+		mobj->state = &states[READUINT16(save_p)];
+	else
+		mobj->state = &states[mobj->info->spawnstate];
+	if (diff & MD_TICS)
+		mobj->tics = READINT32(save_p);
+	else
+		mobj->tics = mobj->state->tics;
+	if (diff & MD_SPRITE)
+		mobj->sprite = READUINT16(save_p);
+	else
+		mobj->sprite = mobj->state->sprite;
+	if (diff & MD_FRAME)
+		mobj->frame = READUINT32(save_p);
+	else
+		mobj->frame = mobj->state->frame;
+	if (diff & MD_EFLAGS)
+		mobj->eflags = READUINT8(save_p);
+	if (diff & MD_PLAYER)
+	{
+		i = READUINT8(save_p);
+		mobj->player = &players[i];
+		mobj->player->mo = mobj;
+		// added for angle prediction
+		if (consoleplayer == i)
+			localangle = mobj->angle;
+		if (secondarydisplayplayer == i)
+			localangle2 = mobj->angle;
+	}
+	if (diff & MD_MOVEDIR)
+		mobj->movedir = READANGLE(save_p);
+	if (diff & MD_MOVECOUNT)
+		mobj->movecount = READINT32(save_p);
+	if (diff & MD_THRESHOLD)
+		mobj->threshold = READINT32(save_p);
+	if (diff & MD_LASTLOOK)
+		mobj->lastlook = READINT32(save_p);
+	else
+		mobj->lastlook = -1;
+	if (diff & MD_TARGET)
+		mobj->target = (mobj_t *)(size_t)READUINT32(save_p);
+	if (diff & MD_TRACER)
+		mobj->tracer = (mobj_t *)(size_t)READUINT32(save_p);
+	if (diff & MD_FRICTION)
+		mobj->friction = READFIXED(save_p);
+	else
+		mobj->friction = ORIG_FRICTION;
+	if (diff & MD_MOVEFACTOR)
+		mobj->movefactor = READFIXED(save_p);
+	else
+		mobj->movefactor = ORIG_FRICTION_FACTOR;
+	if (diff & MD_FUSE)
+		mobj->fuse = READINT32(save_p);
+	if (diff & MD_WATERTOP)
+		mobj->watertop = READFIXED(save_p);
+	if (diff & MD_WATERBOTTOM)
+		mobj->waterbottom = READFIXED(save_p);
+	if (diff & MD_SCALE)
+		mobj->scale = READFIXED(save_p);
+	else
+		mobj->scale = FRACUNIT;
+	if (diff & MD_DSCALE)
+		mobj->destscale = READFIXED(save_p);
+	else
+		mobj->destscale = mobj->scale;
+	if (diff2 & MD2_SCALESPEED)
+		mobj->scalespeed = READFIXED(save_p);
+	else
+		mobj->scalespeed = FRACUNIT/12;
+	if (diff2 & MD2_CUSVAL)
+		mobj->cusval = READINT32(save_p);
+	if (diff2 & MD2_CVMEM)
+		mobj->cvmem = READINT32(save_p);
+	if (diff2 & MD2_SKIN)
+		mobj->skin = &skins[READUINT8(save_p)];
+	if (diff2 & MD2_COLOR)
+		mobj->color = READUINT8(save_p);
+	if (diff2 & MD2_EXTVAL1)
+		mobj->extravalue1 = READINT32(save_p);
+	if (diff2 & MD2_EXTVAL2)
+		mobj->extravalue2 = READINT32(save_p);
+	if (diff2 & MD2_HNEXT)
+		mobj->hnext = (mobj_t *)(size_t)READUINT32(save_p);
+	if (diff2 & MD2_HPREV)
+		mobj->hprev = (mobj_t *)(size_t)READUINT32(save_p);
+
+	if (diff & MD_REDFLAG)
+	{
+		redflag = mobj;
+		rflagpoint = mobj->spawnpoint;
+	}
+	if (diff & MD_BLUEFLAG)
+	{
+		blueflag = mobj;
+		bflagpoint = mobj->spawnpoint;
+	}
+
+	// set sprev, snext, bprev, bnext, subsector
+	P_SetThingPosition(mobj);
+
+	mobj->mobjnum = READUINT32(save_p);
+
+	if (mobj->player)
+	{
+		if (mobj->eflags & MFE_VERTICALFLIP)
+			mobj->player->viewz = mobj->z + mobj->height - mobj->player->viewheight;
+		else
+			mobj->player->viewz = mobj->player->mo->z + mobj->player->viewheight;
+	}
+
+	P_AddThinker(&mobj->thinker);
+
+	mobj->info = (mobjinfo_t *)next; // temporarily, set when leave this function
 }
 
 //
@@ -2131,11 +2367,15 @@ static void LoadPusherThinker(actionf_p1 thinker)
 static inline void LoadLaserThinker(actionf_p1 thinker)
 {
 	laserthink_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
+	ffloor_t *rover = NULL;
 	ht->thinker.function.acp1 = thinker;
 	ht->sector = LoadSector(READUINT32(save_p));
-	ht->ffloor = NULL;
 	ht->sec = LoadSector(READUINT32(save_p));
 	ht->sourceline = LoadLine(READUINT32(save_p));
+	for (rover = ht->sector->ffloors; rover; rover = rover->next)
+		if (rover->secnum == (size_t)(ht->sec - sectors)
+		&& rover->master == ht->sourceline)
+			ht->ffloor = rover;
 	P_AddThinker(&ht->thinker);
 }
 
@@ -2333,13 +2573,8 @@ static void P_NetUnArchiveThinkers(void)
 {
 	thinker_t *currentthinker;
 	thinker_t *next;
-	mobj_t *mobj;
-	UINT32 diff;
-	UINT16 diff2;
-	INT32 i;
 	UINT8 tclass;
 	UINT8 restoreNum = false;
-	fixed_t z, floorz, ceilingz;
 
 	if (READUINT32(save_p) != ARCHIVEBLOCK_THINKERS)
 		I_Error("Bad $$$.sav at archive block Thinkers");
@@ -2350,7 +2585,6 @@ static void P_NetUnArchiveThinkers(void)
 	{
 		next = currentthinker->next;
 
-		mobj = (mobj_t *)currentthinker;
 		if (currentthinker->function.acp1 == (actionf_p1)P_MobjThinker)
 			P_RemoveSavegameMobj((mobj_t *)currentthinker); // item isn't saved, don't remove it
 		else
@@ -2372,216 +2606,7 @@ static void P_NetUnArchiveThinkers(void)
 		switch (tclass)
 		{
 			case tc_mobj:
-				diff = READUINT32(save_p);
-				if (diff & MD_MORE)
-					diff2 = READUINT16(save_p);
-				else
-					diff2 = 0;
-
-				next = (void *)(size_t)READUINT32(save_p);
-
-				z = READFIXED(save_p); // Force this so 3dfloor problems don't arise.
-				floorz = READFIXED(save_p);
-				ceilingz = READFIXED(save_p);
-
-				if (diff & MD_SPAWNPOINT)
-				{
-					UINT16 spawnpointnum = READUINT16(save_p);
-
-					if (mapthings[spawnpointnum].type == 1705 || mapthings[spawnpointnum].type == 1713) // NiGHTS Hoop special case
-					{
-						P_SpawnHoopsAndRings(&mapthings[spawnpointnum]);
-						continue;
-					}
-
-					mobj = Z_Calloc(sizeof (*mobj), PU_LEVEL, NULL);
-
-					mobj->spawnpoint = &mapthings[spawnpointnum];
-					mapthings[spawnpointnum].mobj = mobj;
-				}
-				else
-					mobj = Z_Calloc(sizeof (*mobj), PU_LEVEL, NULL);
-
-				// declare this as a valid mobj as soon as possible.
-				mobj->thinker.function.acp1 = (actionf_p1)P_MobjThinker;
-
-				mobj->z = z;
-				mobj->floorz = floorz;
-				mobj->ceilingz = ceilingz;
-
-				if (diff & MD_TYPE)
-					mobj->type = READUINT32(save_p);
-				else
-				{
-					for (i = 0; i < NUMMOBJTYPES; i++)
-						if (mobj->spawnpoint && mobj->spawnpoint->type == mobjinfo[i].doomednum)
-							break;
-					if (i == NUMMOBJTYPES)
-					{
-						if (mobj->spawnpoint)
-							CONS_Alert(CONS_ERROR, "Found mobj with unknown map thing type %d\n", mobj->spawnpoint->type);
-						else
-							CONS_Alert(CONS_ERROR, "Found mobj with unknown map thing type NULL\n");
-						I_Error("Savegame corrupted");
-					}
-					mobj->type = i;
-				}
-				mobj->info = &mobjinfo[mobj->type];
-				if (diff & MD_POS)
-				{
-					mobj->x = READFIXED(save_p);
-					mobj->y = READFIXED(save_p);
-					mobj->angle = READANGLE(save_p);
-				}
-				else
-				{
-					mobj->x = mobj->spawnpoint->x << FRACBITS;
-					mobj->y = mobj->spawnpoint->y << FRACBITS;
-					mobj->angle = FixedAngle(mobj->spawnpoint->angle*FRACUNIT);
-				}
-				if (diff & MD_MOM)
-				{
-					mobj->momx = READFIXED(save_p);
-					mobj->momy = READFIXED(save_p);
-					mobj->momz = READFIXED(save_p);
-				} // otherwise they're zero, and the memset took care of it
-
-				if (diff & MD_RADIUS)
-					mobj->radius = READFIXED(save_p);
-				else
-					mobj->radius = mobj->info->radius;
-				if (diff & MD_HEIGHT)
-					mobj->height = READFIXED(save_p);
-				else
-					mobj->height = mobj->info->height;
-				if (diff & MD_FLAGS)
-					mobj->flags = READUINT32(save_p);
-				else
-					mobj->flags = mobj->info->flags;
-				if (diff & MD_FLAGS2)
-					mobj->flags2 = READUINT32(save_p);
-				if (diff & MD_HEALTH)
-					mobj->health = READINT32(save_p);
-				else
-					mobj->health = mobj->info->spawnhealth;
-				if (diff & MD_RTIME)
-					mobj->reactiontime = READINT32(save_p);
-				else
-					mobj->reactiontime = mobj->info->reactiontime;
-
-				if (diff & MD_STATE)
-					mobj->state = &states[READUINT16(save_p)];
-				else
-					mobj->state = &states[mobj->info->spawnstate];
-				if (diff & MD_TICS)
-					mobj->tics = READINT32(save_p);
-				else
-					mobj->tics = mobj->state->tics;
-				if (diff & MD_SPRITE)
-					mobj->sprite = READUINT16(save_p);
-				else
-					mobj->sprite = mobj->state->sprite;
-				if (diff & MD_FRAME)
-					mobj->frame = READUINT32(save_p);
-				else
-					mobj->frame = mobj->state->frame;
-				if (diff & MD_EFLAGS)
-					mobj->eflags = READUINT8(save_p);
-				if (diff & MD_PLAYER)
-				{
-					i = READUINT8(save_p);
-					mobj->player = &players[i];
-					mobj->player->mo = mobj;
-					// added for angle prediction
-					if (consoleplayer == i)
-						localangle = mobj->angle;
-					if (secondarydisplayplayer == i)
-						localangle2 = mobj->angle;
-				}
-				if (diff & MD_MOVEDIR)
-					mobj->movedir = READANGLE(save_p);
-				if (diff & MD_MOVECOUNT)
-					mobj->movecount = READINT32(save_p);
-				if (diff & MD_THRESHOLD)
-					mobj->threshold = READINT32(save_p);
-				if (diff & MD_LASTLOOK)
-					mobj->lastlook = READINT32(save_p);
-				else
-					mobj->lastlook = -1;
-				if (diff & MD_TARGET)
-					mobj->target = (mobj_t *)(size_t)READUINT32(save_p);
-				if (diff & MD_TRACER)
-					mobj->tracer = (mobj_t *)(size_t)READUINT32(save_p);
-				if (diff & MD_FRICTION)
-					mobj->friction = READFIXED(save_p);
-				else
-					mobj->friction = ORIG_FRICTION;
-				if (diff & MD_MOVEFACTOR)
-					mobj->movefactor = READFIXED(save_p);
-				else
-					mobj->movefactor = ORIG_FRICTION_FACTOR;
-				if (diff & MD_FUSE)
-					mobj->fuse = READINT32(save_p);
-				if (diff & MD_WATERTOP)
-					mobj->watertop = READFIXED(save_p);
-				if (diff & MD_WATERBOTTOM)
-					mobj->waterbottom = READFIXED(save_p);
-				if (diff & MD_SCALE)
-					mobj->scale = READFIXED(save_p);
-				else
-					mobj->scale = FRACUNIT;
-				if (diff & MD_DSCALE)
-					mobj->destscale = READFIXED(save_p);
-				else
-					mobj->destscale = mobj->scale;
-				if (diff2 & MD2_SCALESPEED)
-					mobj->scalespeed = READFIXED(save_p);
-				else
-					mobj->scalespeed = FRACUNIT/12;
-				if (diff2 & MD2_CUSVAL)
-					mobj->cusval = READINT32(save_p);
-				if (diff2 & MD2_CVMEM)
-					mobj->cvmem = READINT32(save_p);
-				if (diff2 & MD2_SKIN)
-					mobj->skin = &skins[READUINT8(save_p)];
-				if (diff2 & MD2_COLOR)
-					mobj->color = READUINT8(save_p);
-				if (diff2 & MD2_EXTVAL1)
-					mobj->extravalue1 = READINT32(save_p);
-				if (diff2 & MD2_EXTVAL2)
-					mobj->extravalue2 = READINT32(save_p);
-				if (diff2 & MD2_HNEXT)
-					mobj->hnext = (mobj_t *)(size_t)READUINT32(save_p);
-				if (diff2 & MD2_HPREV)
-					mobj->hprev = (mobj_t *)(size_t)READUINT32(save_p);
-
-				if (diff & MD_REDFLAG)
-				{
-					redflag = mobj;
-					rflagpoint = mobj->spawnpoint;
-				}
-				if (diff & MD_BLUEFLAG)
-				{
-					blueflag = mobj;
-					bflagpoint = mobj->spawnpoint;
-				}
-
-				// set sprev, snext, bprev, bnext, subsector
-				P_SetThingPosition(mobj);
-
-				mobj->mobjnum = READUINT32(save_p);
-
-				if (mobj->player)
-				{
-					if (mobj->eflags & MFE_VERTICALFLIP)
-						mobj->player->viewz = mobj->z + mobj->height - mobj->player->viewheight;
-					else
-						mobj->player->viewz = mobj->player->mo->z + mobj->player->viewheight;
-				}
-
-				P_AddThinker(&mobj->thinker);
-
-				mobj->info = (mobjinfo_t *)next; // temporarily, set when leave this function
+				LoadMobjThinker((actionf_p1)P_MobjThinker);
 				break;
 
 			case tc_ceiling:

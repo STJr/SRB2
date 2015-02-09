@@ -20,6 +20,12 @@
 /// \file
 /// \brief SRB2 system stuff for SDL
 
+#ifdef CMAKECONFIG
+#include "config.h"
+#else
+#include "config.h.in"
+#endif
+
 #ifndef _WIN32_WCE
 #include <signal.h>
 #endif
@@ -143,6 +149,10 @@ void __set_fpscr(long); // in libgcc / kernel's startup.s?
 
 #ifndef O_BINARY
 #define O_BINARY 0
+#endif
+
+#ifdef __APPLE__
+#include "macosx/mac_resources.h"
 #endif
 
 // Locations for searching the srb2.srb
@@ -301,6 +311,7 @@ SDL_bool framebuffer = SDL_FALSE;
 
 UINT8 keyboard_started = false;
 
+#if !defined (DC)
 FUNCNORETURN static ATTRNORETURN void signal_handler(INT32 num)
 {
 	//static char msg[] = "oh no! back to reality!\r\n";
@@ -311,26 +322,24 @@ FUNCNORETURN static ATTRNORETURN void signal_handler(INT32 num)
 
 	switch (num)
 	{
-	case SIGINT:
-		sigmsg = "SIGINT - interrupted";
-		break;
+//	case SIGINT:
+//		sigmsg = "SIGINT - interrupted";
+//		break;
 	case SIGILL:
 		sigmsg = "SIGILL - illegal instruction - invalid function image";
 		break;
 	case SIGFPE:
-		sigmsg = "SIGFPE - floating point exception";
+		sigmsg = "SIGFPE - mathematical exception";
 		break;
 	case SIGSEGV:
 		sigmsg = "SIGSEGV - segment violation";
 		break;
-	case SIGTERM:
-		sigmsg = "SIGTERM - Software termination signal from kill";
-		break;
-#if !(defined (__unix_) || defined (UNIXCOMMON))
-	case SIGBREAK:
-		sigmsg = "SIGBREAK - Ctrl-Break sequence";
-		break;
-#endif
+//	case SIGTERM:
+//		sigmsg = "SIGTERM - Software termination signal from kill";
+//		break;
+//	case SIGBREAK:
+//		sigmsg = "SIGBREAK - Ctrl-Break sequence";
+//		break;
 	case SIGABRT:
 		sigmsg = "SIGABRT - abnormal termination triggered by abort call";
 		break;
@@ -339,7 +348,7 @@ FUNCNORETURN static ATTRNORETURN void signal_handler(INT32 num)
 		sigmsg = sigdef;
 	}
 
-	I_OutputMsg("signal_handler() error: %s\n", sigmsg);
+	I_OutputMsg("\nsignal_handler() error: %s\n", sigmsg);
 
 	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
 		"Signal caught",
@@ -350,7 +359,6 @@ FUNCNORETURN static ATTRNORETURN void signal_handler(INT32 num)
 	I_Quit();
 }
 
-#if !defined (DC)
 FUNCNORETURN static ATTRNORETURN void quit_handler(int num)
 {
 	signal(num, SIG_DFL); //default signal action
@@ -663,17 +671,9 @@ static void I_StartupConsole(void)
 {
 	HANDLE ci, co;
 	const INT32 ded = M_CheckParm("-dedicated");
-#ifdef SDLMAIN
 	BOOL gotConsole = FALSE;
 	if (M_CheckParm("-console") || ded)
 		gotConsole = AllocConsole();
-#else
-	BOOL gotConsole = TRUE;
-	if (M_CheckParm("-detachconsole"))
-	{
-		FreeConsole();
-		gotConsole = AllocConsole();
-	}
 #ifdef _DEBUG
 	else if (M_CheckParm("-noconsole") && !ded)
 #else
@@ -683,7 +683,6 @@ static void I_StartupConsole(void)
 		FreeConsole();
 		gotConsole = FALSE;
 	}
-#endif
 
 	if (gotConsole)
 	{
@@ -743,24 +742,22 @@ static inline void I_ShutdownConsole(void){}
 void I_StartupKeyboard (void)
 {
 #if !defined (DC)
-#ifdef SIGILL
-	signal(SIGILL , signal_handler);
-#endif
 #ifdef SIGINT
 	signal(SIGINT , quit_handler);
-#endif
-#ifdef SIGSEGV
-	signal(SIGSEGV , signal_handler);
 #endif
 #ifdef SIGBREAK
 	signal(SIGBREAK , quit_handler);
 #endif
-#ifdef SIGABRT
-	signal(SIGABRT , signal_handler);
-#endif
 #ifdef SIGTERM
 	signal(SIGTERM , quit_handler);
 #endif
+
+	// If these defines don't exist,
+	// then compilation would have failed above us...
+	signal(SIGILL , signal_handler);
+	signal(SIGSEGV , signal_handler);
+	signal(SIGABRT , signal_handler);
+	signal(SIGFPE , signal_handler);
 #endif
 }
 
@@ -1665,7 +1662,7 @@ void I_UpdateMumble(const mobj_t *mobj, const listener_t listener)
 		return;
 
 	if(mumble->uiVersion != 2) {
-		wcsncpy(mumble->name, L"SRB2 "VERSIONSTRING, 256);
+		wcsncpy(mumble->name, L"SRB2 "VERSIONSTRINGW, 256);
 		wcsncpy(mumble->description, L"Sonic Robo Blast 2 with integrated Mumble Link support.", 2048);
 		mumble->uiVersion = 2;
 	}
@@ -2341,9 +2338,7 @@ static boolean shutdowning = false;
 void I_Error(const char *error, ...)
 {
 	va_list argptr;
-#if (defined (MAC_ALERT) || defined (_WIN32) || (defined (_WIN32_WCE) && !defined (__GNUC__))) && !defined (_XBOX)
 	char buffer[8192];
-#endif
 
 	// recursive error detecting
 	if (shutdowning)
@@ -2375,62 +2370,38 @@ void I_Error(const char *error, ...)
 		}
 		if (errorcount > 20)
 		{
-#ifdef MAC_ALERT
 			va_start(argptr, error);
 			vsprintf(buffer, error, argptr);
 			va_end(argptr);
-			// 2004-03-03 AJR Since the Mac user is most likely double clicking to run the game, give them a panel.
-			MacShowAlert("Recursive Error", buffer, "Quit", NULL, NULL);
-#elif (defined (_WIN32) || (defined (_WIN32_WCE)) && !defined (__GNUC__)) && !defined (_XBOX)
-			va_start(argptr,error);
-			vsprintf(buffer, error, argptr);
-			va_end(argptr);
-#ifndef _WIN32_WCE
-			{
-				HANDLE co = GetStdHandle(STD_OUTPUT_HANDLE);
-				DWORD bytesWritten;
-				if (co != INVALID_HANDLE_VALUE)
-				{
-					if (GetFileType(co) == FILE_TYPE_CHAR && GetConsoleMode(co, &bytesWritten))
-						WriteConsoleA(co, buffer, (DWORD)strlen(buffer), NULL, NULL);
-					else
-						WriteFile(co, buffer, (DWORD)strlen(buffer), &bytesWritten, NULL);
-				}
-			}
-#endif
-			OutputDebugStringA(buffer);
-			MessageBoxA(vid.WndParent, buffer, "SRB2 Recursive Error", MB_OK|MB_ICONERROR);
-#else
-			// Don't print garbage
-			va_start(argptr, error);
-			if (!framebuffer)
-				vfprintf (stderr, error, argptr);
-			va_end(argptr);
-#endif
+			// Implement message box with SDL_ShowSimpleMessageBox,
+			// which should fail gracefully if it can't put a message box up
+			// on the target system
+			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
+				"SRB2 "VERSIONSTRING" Recursive Error",
+				buffer, NULL);
+
 			W_Shutdown();
+
 #ifdef GP2X
 			chdir("/usr/gp2x");
 			execl("/usr/gp2x/gp2xmenu", "/usr/gp2x/gp2xmenu", NULL);
 #endif
+
 			exit(-1); // recursive errors detected
 		}
 	}
-	shutdowning = true;
-	I_ShutdownConsole();
-#ifndef MAC_ALERT
-	// Message first.
-	va_start(argptr,error);
-	if (!framebuffer)
-	{
-		fprintf(stderr, "Error: ");
-		vfprintf(stderr,error,argptr);
-		fprintf(stderr, "\n");
-	}
-	va_end(argptr);
 
-	if (!framebuffer)
-		fflush(stderr);
-#endif
+	shutdowning = true;
+
+	// Display error message in the console before we start shutting it down
+	va_start(argptr, error);
+	vsprintf(buffer, error, argptr);
+	va_end(argptr);
+	I_OutputMsg("\nI_Error(): %s\n", buffer);
+	// ---
+
+	I_ShutdownConsole();
+
 	M_SaveConfig(NULL); // save game config, cvars..
 #ifndef NONET
 	D_SaveBan(); // save the ban list
@@ -2454,21 +2425,30 @@ void I_Error(const char *error, ...)
 #ifndef _arch_dreamcast
 	SDL_Quit();
 #endif
-#ifdef MAC_ALERT
-	va_start(argptr, error);
-	vsprintf(buffer, error, argptr);
-	va_end(argptr);
-	// 2004-03-03 AJR Since the Mac user is most likely double clicking to run the game, give them a panel.
-	MacShowAlert("Critical Error", buffer, "Quit", NULL, NULL);
-#endif
+
+	// Implement message box with SDL_ShowSimpleMessageBox,
+	// which should fail gracefully if it can't put a message box up
+	// on the target system
+	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
+		"SRB2 "VERSIONSTRING" Error",
+		buffer, NULL);
+	// Note that SDL_ShowSimpleMessageBox does *not* require SDL to be
+	// initialized at the time, so calling it after SDL_Quit() is
+	// perfectly okay! In addition, we do this on purpose so the
+	// fullscreen window is closed before displaying the error message
+	// in case the fullscreen window blocks it for some absurd reason.
+
 	W_Shutdown();
+
 #if defined (PARANOIA) && defined (__CYGWIN__)
-		*(INT32 *)2 = 4; //Alam: Debug!
+	*(INT32 *)2 = 4; //Alam: Debug!
 #endif
+
 #ifdef GP2X
 	chdir("/usr/gp2x");
 	execl("/usr/gp2x/gp2xmenu", "/usr/gp2x/gp2xmenu", NULL);
 #endif
+
 	exit(-1);
 }
 
@@ -2534,6 +2514,7 @@ void I_ShutdownSystem(void)
 #ifdef  LOGMESSAGES
 	if (logstream)
 	{
+		I_OutputMsg("I_ShutdownSystem(): end of logstream.\n");
 		fclose(logstream);
 		logstream = NULL;
 	}
@@ -2777,6 +2758,28 @@ static const char *locateWad(void)
 	strcpy(returnWadPath, ".");
 	if (isWadPathOk(returnWadPath))
 		return NULL;
+#endif
+    
+    
+#ifdef CMAKECONFIG
+#ifndef NDEBUG
+    I_OutputMsg(","CMAKE_ASSETS_DIR);
+    strcpy(returnWadPath, CMAKE_ASSETS_DIR);
+    if (isWadPathOk(returnWadPath))
+    {
+        return returnWadPath;
+    }
+#endif
+#endif
+    
+#ifdef __APPLE__
+    OSX_GetResourcesPath(returnWadPath);
+    I_OutputMsg(",%s", returnWadPath);
+    if (isWadPathOk(returnWadPath))
+    {
+        return returnWadPath;
+    }
+    
 #endif
 
 	// examine default dirs

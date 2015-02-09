@@ -726,7 +726,11 @@ static inline boolean saveTGA(const char *file_name, void *buffer,
 	tga_hdr.image_type = 2;
 	tga_hdr.image_descriptor = 32;
 
-	write(fd, &tga_hdr, sizeof (TGAHeader));
+	if ( -1 == write(fd, &tga_hdr, sizeof (TGAHeader)))
+	{
+		close(fd);
+		return false;
+	}
 	// format to 888 BGR
 	for (i = 0; i < width * height * 3; i+=3)
 	{
@@ -734,7 +738,11 @@ static inline boolean saveTGA(const char *file_name, void *buffer,
 		buf8[i] = buf8[i+2];
 		buf8[i+2] = temp;
 	}
-	write(fd, buffer, width * height * 3);
+	if ( -1 == write(fd, buffer, width * height * 3))
+	{
+		close(fd);
+		return false;
+	}
 	close(fd);
 	return true;
 }

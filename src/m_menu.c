@@ -387,9 +387,6 @@ CV_PossibleValue_t gametype_cons_t[] =
 	{GT_HIDEANDSEEK, "Hide and Seek"},
 
 	{GT_CTF, "CTF"},
-#ifdef CHAOSISNOTDEADYET
-	{GT_CHAOS, "Chaos"},
-#endif
 	{0, NULL}
 };
 consvar_t cv_newgametype = {"newgametype", "Co-op", CV_HIDEN|CV_CALL, gametype_cons_t, Newgametype_OnChange, 0, NULL, NULL, 0, 0, NULL};
@@ -1129,7 +1126,9 @@ static menuitem_t OP_MouseOptionsMenu[] =
 	{IT_STRING | IT_CVAR, NULL, "Mouse Move",       &cv_mousemove,        40},
 	{IT_STRING | IT_CVAR, NULL, "Invert Mouse",     &cv_invertmouse,      50},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
-	                      NULL, "Mouse Speed",      &cv_mousesens,        60},
+	                      NULL, "Mouse X Speed",    &cv_mousesens,        60},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
+	                      NULL, "Mouse Y Speed",    &cv_mouseysens,        70},
 };
 
 static menuitem_t OP_Mouse2OptionsMenu[] =
@@ -1139,9 +1138,11 @@ static menuitem_t OP_Mouse2OptionsMenu[] =
 	                                                &cv_mouse2port,       20},
 	{IT_STRING | IT_CVAR, NULL, "Always MouseLook", &cv_alwaysfreelook2,  30},
 	{IT_STRING | IT_CVAR, NULL, "Mouse Move",       &cv_mousemove2,       40},
-	{IT_STRING | IT_CVAR, NULL, "Invert Mouse",    &cv_invertmouse2,      50},
+	{IT_STRING | IT_CVAR, NULL, "Invert Mouse",     &cv_invertmouse2,     50},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
-	                      NULL, "Mouse Speed",     &cv_mousesens2,        60},
+	                      NULL, "Mouse X Speed",    &cv_mousesens2,       60},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
+	                      NULL, "Mouse Y Speed",    &cv_mouseysens2,      70},
 };
 
 static menuitem_t OP_VideoOptionsMenu[] =
@@ -1901,9 +1902,6 @@ static void Newgametype_OnChange(void)
 			(cv_newgametype.value == GT_COMPETITION && !(mapheaderinfo[cv_nextmap.value-1]->typeoflevel & TOL_COMPETITION)) ||
 			(cv_newgametype.value == GT_RACE && !(mapheaderinfo[cv_nextmap.value-1]->typeoflevel & TOL_RACE)) ||
 			((cv_newgametype.value == GT_MATCH || cv_newgametype.value == GT_TEAMMATCH) && !(mapheaderinfo[cv_nextmap.value-1]->typeoflevel & TOL_MATCH)) ||
-#ifdef CHAOSISNOTDEADYET
-			(cv_newgametype.value == GT_CHAOS && !(mapheaderinfo[cv_nextmap.value-1]->typeoflevel & TOL_CHAOS)) ||
-#endif
 			((cv_newgametype.value == GT_TAG || cv_newgametype.value == GT_HIDEANDSEEK) && !(mapheaderinfo[cv_nextmap.value-1]->typeoflevel & TOL_TAG)) ||
 			(cv_newgametype.value == GT_CTF && !(mapheaderinfo[cv_nextmap.value-1]->typeoflevel & TOL_CTF)))
 		{
@@ -3467,11 +3465,6 @@ boolean M_CanShowLevelInList(INT32 mapnum, INT32 gt)
 
 			if (gt == GT_RACE && (mapheaderinfo[mapnum]->typeoflevel & TOL_RACE))
 				return true;
-
-#ifdef CHAOSISNOTDEADYET
-			if (gt == GT_CHAOS && (mapheaderinfo[mapnum]->typeoflevel & TOL_CHAOS))
-				return true;
-#endif
 
 			return false;
 

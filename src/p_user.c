@@ -160,15 +160,17 @@ fixed_t P_ReturnThrustY(mobj_t *mo, angle_t angle, fixed_t move)
 	return FixedMul(move, FINESINE(angle));
 }
 
-boolean P_MenuActivePause(void)
+//
+// P_AutoPause
+// Returns true when gameplay should be halted even if the game isn't necessarily paused.
+//
+boolean P_AutoPause(void)
 {
-	if (netgame || !menuactive)
+	// Don't pause even on menu-up or focus-lost in netgames or record attack
+	if (netgame || modeattacking)
 		return false;
 
-	if (modeattacking)
-		return false;
-
-	return true;
+	return (menuactive || window_notinfocus);
 }
 
 //
@@ -328,14 +330,10 @@ void P_GiveEmerald(boolean spawnObj)
 //
 // P_ResetScore
 //
-// This is called when your chain is reset. If in
-// Chaos mode, it displays what chain you got.
+// This is called when your chain is reset.
 void P_ResetScore(player_t *player)
 {
-#ifdef CHAOSISNOTDEADYET
-	if (gametype == GT_CHAOS && player->scoreadd >= 5)
-		CONS_Printf(M_GetText("%s got a chain of %u!\n"), player_names[player-players], player->scoreadd);
-#endif
+	// Formally a host for Chaos mode behavior
 
 	player->scoreadd = 0;
 }
@@ -974,9 +972,7 @@ void P_DoSuperTransformation(player_t *player, boolean giverings)
 	// Transformation animation
 	P_SetPlayerMobjState(player->mo, S_PLAY_SUPERTRANS1);
 
-	player->mo->momx >>= 1;
-	player->mo->momy >>= 1;
-	player->mo->momz >>= 1;
+	player->mo->momx = player->mo->momy = player->mo->momz = 0;
 
 	if (giverings)
 	{
@@ -2542,6 +2538,7 @@ static void P_DoClimbing(player_t *player)
 			thinker_t *think;
 			scroll_t *scroller;
 			angle_t sideangle;
+			fixed_t dx, dy;
 
 			for (think = thinkercap.next; think != &thinkercap; think = think->next)
 			{
@@ -2556,14 +2553,25 @@ static void P_DoClimbing(player_t *player)
 				if (scroller->affectee != player->lastsidehit)
 					continue;
 
+				if (scroller->accel)
+				{
+					dx = scroller->vdx;
+					dy = scroller->vdy;
+				}
+				else
+				{
+					dx = scroller->dx;
+					dy = scroller->dy;
+				}
+
 				if (cmd->forwardmove != 0)
 				{
-					player->mo->momz += scroller->dy;
+					player->mo->momz += dy;
 					climb = true;
 				}
 				else
 				{
-					player->mo->momz = scroller->dy;
+					player->mo->momz = dy;
 					climb = false;
 				}
 
@@ -2571,12 +2579,12 @@ static void P_DoClimbing(player_t *player)
 
 				if (cmd->sidemove != 0)
 				{
-					P_Thrust(player->mo, sideangle, scroller->dx);
+					P_Thrust(player->mo, sideangle, dx);
 					climb = true;
 				}
 				else
 				{
-					P_InstaThrust(player->mo, sideangle, scroller->dx);
+					P_InstaThrust(player->mo, sideangle, dx);
 					climb = false;
 				}
 			}
@@ -2652,6 +2660,125 @@ static void P_DoClimbing(player_t *player)
 		P_ResetPlayer(player);
 		P_SetPlayerMobjState(player->mo, S_PLAY_STND);
 	}
+}
+
+//
+// PIT_CheckSolidsTeeter
+// AKA: PIT_HacksToStopPlayersTeeteringOnGargoyles
+//
+
+static mobj_t *teeterer; // the player checking for teetering
+static boolean solidteeter; // saves whether the player can teeter on this or not
+static fixed_t highesttop; // highest floor found so far
+// reserved for standing on multiple objects
+static boolean couldteeter;
+static fixed_t teeterxl, teeterxh;
+static fixed_t teeteryl, teeteryh;
+
+static boolean PIT_CheckSolidsTeeter(mobj_t *thing)
+{
+	fixed_t blockdist;
+	fixed_t tiptop = FixedMul(MAXSTEPMOVE, teeterer->scale);
+	fixed_t thingtop = thing->z + thing->height;
+	fixed_t teeterertop = teeterer->z + teeterer->height;
+
+	if (!teeterer || !thing)
+		return true;
+
+	if (!(thing->flags & MF_SOLID))
+		return true;
+
+	if (thing->flags & MF_NOCLIP)
+		return true;
+
+	if (thing == teeterer)
+		return true;
+
+	if (thing->player && cv_tailspickup.value && gametype != GT_HIDEANDSEEK)
+		return true;
+
+	blockdist = teeterer->radius + thing->radius;
+
+	if (abs(thing->x - teeterer->x) >= blockdist || abs(thing->y - teeterer->y) >= blockdist)
+		return true; // didn't hit it
+
+	if (teeterer->eflags & MFE_VERTICALFLIP)
+	{
+		if (thingtop < teeterer->z)
+			return true;
+		if (thing->z > highesttop)
+			return true;
+		highesttop = thing->z;
+		if (thing->z > teeterertop + tiptop)
+		{
+			solidteeter = true;
+			return true;
+		}
+	}
+	else
+	{
+		if (thing->z > teeterertop)
+			return true;
+		if (thingtop < highesttop)
+			return true;
+		highesttop = thingtop;
+		if (thingtop < teeterer->z - tiptop)
+		{
+			solidteeter = true;
+			return true;
+		}
+	}
+
+	// are you standing on this?
+	if ((teeterer->eflags & MFE_VERTICALFLIP && thing->z - FixedMul(FRACUNIT, teeterer->scale) == teeterertop)
+	|| (!(teeterer->eflags & MFE_VERTICALFLIP) && thingtop + FixedMul(FRACUNIT, teeterer->scale) == teeterer->z))
+	{
+		fixed_t teeterdist = thing->radius - FixedMul(5*FRACUNIT, teeterer->scale);
+		// how far are you from the edge?
+		if (abs(teeterer->x - thing->x) > teeterdist || abs(teeterer->y - thing->y) > teeterdist)
+		{
+			if (couldteeter) // player is standing on another object already, see if we can stand on both and not teeter!
+			{
+				if (thing->x - teeterdist < teeterxl)
+					teeterxl = thing->x - teeterdist;
+				if (thing->x + teeterdist > teeterxh)
+					teeterxh = thing->x + teeterdist;
+				if (thing->y - teeterdist < teeteryl)
+					teeteryl = thing->y - teeterdist;
+				if (thing->y + teeterdist > teeteryh)
+					teeteryh = thing->y + teeterdist;
+
+				if (teeterer->x < teeterxl)
+					return true;
+				if (teeterer->x > teeterxh)
+					return true;
+				if (teeterer->y < teeteryl)
+					return true;
+				if (teeterer->y > teeteryh)
+					return true;
+
+				solidteeter = false; // you can stop teetering now!
+				couldteeter = false; // just in case...
+				return false;
+			}
+			else
+			{
+				// too far! don't change teeter status though
+				// save teeter x/y limits to bring up later
+				teeterxl = thing->x - teeterdist;
+				teeterxh = thing->x + teeterdist;
+				teeteryl = thing->y - teeterdist;
+				teeteryh = thing->y + teeterdist;
+			}
+			couldteeter = true;
+			return true;
+		}
+		solidteeter = false;
+		couldteeter = false;
+		return false; // you're definitely not teetering, that's the end of the matter
+	}
+	solidteeter = false;
+	return true; // you're not teetering but it's not neccessarily over, YET
 }
 
 //
@@ -2828,17 +2955,17 @@ static void P_DoTeeter(player_t *player)
 		}
 	}
 
-#ifdef POLYOBJECTS
-	// Polyobjects
 	{
 		INT32 bx, by, xl, xh, yl, yh;
-
-		validcount++;
 
 		yh = (unsigned)(player->mo->y + player->mo->radius - bmaporgy)>>MAPBLOCKSHIFT;
 		yl = (unsigned)(player->mo->y - player->mo->radius - bmaporgy)>>MAPBLOCKSHIFT;
 		xh = (unsigned)(player->mo->x + player->mo->radius - bmaporgx)>>MAPBLOCKSHIFT;
 		xl = (unsigned)(player->mo->x - player->mo->radius - bmaporgx)>>MAPBLOCKSHIFT;
+
+	// Polyobjects
+#ifdef POLYOBJECTS
+		validcount++;
 
 		for (by = yl; by <= yh; by++)
 			for (bx = xl; bx <= xh; bx++)
@@ -2900,16 +3027,12 @@ static void P_DoTeeter(player_t *player)
 							}
 
 							if (polybottom > player->mo->z + player->mo->height + tiptop
-									|| (polybottom < player->mo->z
-									&& player->mo->z + player->mo->height < player->mo->ceilingz - tiptop))
-							{
+							|| (polybottom < player->mo->z
+							&& player->mo->z + player->mo->height < player->mo->ceilingz - tiptop))
 								teeter = true;
-								roverfloor = true;
-							}
 							else
 							{
 								teeter = false;
-								roverfloor = true;
 								break;
 							}
 						}
@@ -2922,16 +3045,12 @@ static void P_DoTeeter(player_t *player)
 							}
 
 							if (polytop < player->mo->z - tiptop
-									|| (polytop > player->mo->z + player->mo->height
-									&& player->mo->z > player->mo->floorz + tiptop))
-							{
+							|| (polytop > player->mo->z + player->mo->height
+							&& player->mo->z > player->mo->floorz + tiptop))
 								teeter = true;
-								roverfloor = true;
-							}
 							else
 							{
 								teeter = false;
-								roverfloor = true;
 								break;
 							}
 						}
@@ -2939,8 +3058,27 @@ static void P_DoTeeter(player_t *player)
 					plink = (polymaplink_t *)(plink->link.next);
 				}
 			}
-	}
 #endif
+		if (teeter) // only bother with objects as a last resort if you were already teetering
+		{
+			mobj_t *oldtmthing = tmthing;
+			tmthing = teeterer = player->mo;
+			teeterxl = teeterxh = player->mo->x;
+			teeteryl = teeteryh = player->mo->y;
+			couldteeter = false;
+			solidteeter = teeter;
+			for (by = yl; by <= yh; by++)
+				for (bx = xl; bx <= xh; bx++)
+				{
+					highesttop = INT32_MIN;
+					if (!P_BlockThingsIterator(bx, by, PIT_CheckSolidsTeeter))
+						goto teeterdone; // we've found something that stops us teetering at all, how about we stop already
+				}
+teeterdone:
+			teeter = solidteeter;
+			tmthing = oldtmthing; // restore old tmthing, goodness knows what the game does with this before mobj thinkers
+		}
+	}
 	if (teeter)
 	{
 		if ((player->mo->state == &states[S_PLAY_STND] || player->mo->state == &states[S_PLAY_TAP1] || player->mo->state == &states[S_PLAY_TAP2] || player->mo->state == &states[S_PLAY_SUPERSTAND]))

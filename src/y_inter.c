@@ -588,7 +588,7 @@ void Y_Ticker(void)
 		return;
 
 	// Check for pause or menu up in single player
-	if (paused || P_MenuActivePause())
+	if (paused || P_AutoPause())
 		return;
 
 	intertic++;
@@ -907,11 +907,7 @@ void Y_StartIntermission(void)
 			intertype = int_teammatch;
 		else if (gametype == GT_MATCH
 		 || gametype == GT_TAG
-		 || gametype == GT_HIDEANDSEEK
-#ifdef CHAOSISNOTDEADYET
-		 || gametype == GT_CHAOS
-#endif
-		)
+		 || gametype == GT_HIDEANDSEEK)
 			intertype = int_match;
 		else if (gametype == GT_RACE)
 			intertype = int_race;

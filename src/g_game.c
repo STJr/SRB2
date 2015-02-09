@@ -967,7 +967,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 
 	// why build a ticcmd if we're paused?
 	// Or, for that matter, if we're being reborn.
-	if (paused || P_MenuActivePause() || (gamestate == GS_LEVEL && player->playerstate == PST_REBORN))
+	if (paused || P_AutoPause() || (gamestate == GS_LEVEL && player->playerstate == PST_REBORN))
 	{
 		cmd->angleturn = (INT16)(localangle >> 16);
 		cmd->aiming = G_ClipAimingPitch(&localaiming);
@@ -1257,7 +1257,7 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 
 	//why build a ticcmd if we're paused?
 	// Or, for that matter, if we're being reborn.
-	if (paused || P_MenuActivePause() || player->playerstate == PST_REBORN)
+	if (paused || P_AutoPause() || player->playerstate == PST_REBORN)
 	{
 		cmd->angleturn = (INT16)(localangle2 >> 16);
 		cmd->aiming = G_ClipAimingPitch(&localaiming2);
@@ -2299,11 +2299,7 @@ void G_SpawnPlayer(INT32 playernum, boolean starpost)
 	// -- DM/Tag/CTF-spectator/etc --
 	// Order: DM->CTF->Coop
 	else if (gametype == GT_MATCH || gametype == GT_TEAMMATCH || gametype == GT_CTF
-	 || ((gametype == GT_TAG || gametype == GT_HIDEANDSEEK) && !(players[playernum].pflags & PF_TAGIT))
-#ifdef CHAOSISNOTDEADYET
-	 || gametype == GT_CHAOS
-#endif
-	)
+	 || ((gametype == GT_TAG || gametype == GT_HIDEANDSEEK) && !(players[playernum].pflags & PF_TAGIT)))
 	{
 		if (!(spawnpoint = G_FindMatchStart(playernum)) // find a DM start
 		&& !(spawnpoint = G_FindCTFStart(playernum))) // find a CTF start
@@ -2709,9 +2705,6 @@ INT16 G_TOLFlag(INT32 pgametype)
 	if (pgametype == GT_RACE)         return TOL_RACE;
 	if (pgametype == GT_MATCH)        return TOL_MATCH;
 	if (pgametype == GT_TEAMMATCH)    return TOL_MATCH;
-#ifdef CHAOSISNOTDEADYET
-	if (pgametype == GT_CHAOS)        return TOL_CHAOS;
-#endif
 	if (pgametype == GT_TAG)          return TOL_TAG;
 	if (pgametype == GT_HIDEANDSEEK)  return TOL_TAG;
 	if (pgametype == GT_CTF)          return TOL_CTF;

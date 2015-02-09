@@ -277,21 +277,6 @@ consvar_t cv_matchboxes = {"matchboxes", "Normal", CV_NETVAR|CV_CHEAT, matchboxe
 consvar_t cv_specialrings = {"specialrings", "On", CV_NETVAR, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_powerstones = {"powerstones", "On", CV_NETVAR, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
-#ifdef CHAOSISNOTDEADYET
-consvar_t cv_chaos_bluecrawla = {"chaos_bluecrawla", "8", CV_NETVAR, chances_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_chaos_redcrawla = {"chaos_redcrawla", "8", CV_NETVAR, chances_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_chaos_crawlacommander = {"chaos_crawlacommander", "2", CV_NETVAR, chances_cons_t,
-	NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_chaos_jettysynbomber = {"chaos_jettysynbomber", "5", CV_NETVAR, chances_cons_t,
-	NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_chaos_jettysyngunner = {"chaos_jettysyngunner", "2", CV_NETVAR, chances_cons_t,
-	NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_chaos_eggmobile1 = {"chaos_eggmobile1", "2", CV_NETVAR, chances_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_chaos_eggmobile2 = {"chaos_eggmobile2", "2", CV_NETVAR, chances_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_chaos_skim = {"chaos_skim", "5", CV_NETVAR, chances_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_chaos_spawnrate = {"chaos_spawnrate", "30",CV_NETVAR, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
-#endif
-
 consvar_t cv_recycler =      {"tv_recycler",      "5", CV_NETVAR|CV_CHEAT, chances_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_teleporters =   {"tv_teleporter",    "5", CV_NETVAR|CV_CHEAT, chances_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_superring =     {"tv_superring",     "5", CV_NETVAR|CV_CHEAT, chances_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -498,18 +483,6 @@ void D_RegisterServerCommands(void)
 	CV_RegisterVar(&cv_competitionboxes);
 	CV_RegisterVar(&cv_matchboxes);
 
-#ifdef CHAOSISNOTDEADYET
-	CV_RegisterVar(&cv_chaos_bluecrawla);
-	CV_RegisterVar(&cv_chaos_redcrawla);
-	CV_RegisterVar(&cv_chaos_crawlacommander);
-	CV_RegisterVar(&cv_chaos_jettysynbomber);
-	CV_RegisterVar(&cv_chaos_jettysyngunner);
-	CV_RegisterVar(&cv_chaos_eggmobile1);
-	CV_RegisterVar(&cv_chaos_eggmobile2);
-	CV_RegisterVar(&cv_chaos_skim);
-	CV_RegisterVar(&cv_chaos_spawnrate);
-#endif
-
 	CV_RegisterVar(&cv_recycler);
 	CV_RegisterVar(&cv_teleporters);
 	CV_RegisterVar(&cv_superring);
@@ -699,6 +672,8 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_invertmouse2);
 	CV_RegisterVar(&cv_mousesens);
 	CV_RegisterVar(&cv_mousesens2);
+	CV_RegisterVar(&cv_mouseysens);
+	CV_RegisterVar(&cv_mouseysens2);
 	CV_RegisterVar(&cv_mousemove);
 	CV_RegisterVar(&cv_mousemove2);
 
@@ -733,9 +708,6 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_scr_depth);
 	CV_RegisterVar(&cv_scr_width);
 	CV_RegisterVar(&cv_scr_height);
-
-	// p_fab.c
-	CV_RegisterVar(&cv_translucency);
 
 	CV_RegisterVar(&cv_soundtest);
 
@@ -3374,18 +3346,6 @@ void D_GameTypeChanged(INT32 lastgametype)
 
 		switch (gametype)
 		{
-#ifdef CHAOSISNOTDEADYET
-			case GT_CHAOS:
-				if (!cv_timelimit.changed && !cv_pointlimit.changed) // user hasn't changed limits
-				{
-					// default settings for chaos: timelimit 2 mins, no pointlimit
-					CV_SetValue(&cv_pointlimit, 0);
-					CV_SetValue(&cv_timelimit, 2);
-				}
-				if (!cv_itemrespawntime.changed)
-					CV_SetValue(&cv_itemrespawntime, 90); // respawn sparingly in chaos
-				break;
-#endif
 			case GT_MATCH:
 			case GT_TEAMMATCH:
 				if (!cv_timelimit.changed && !cv_pointlimit.changed) // user hasn't changed limits
@@ -3911,14 +3871,18 @@ static void Command_Cheats_f(void)
 {
 	if (COM_CheckParm("off"))
 	{
-		CV_ResetCheatNetVars();
+		if (!(server || (adminplayer == consoleplayer)))
+			CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
+		else
+			CV_ResetCheatNetVars();
 		return;
 	}
 
 	if (CV_CheatsEnabled())
 	{
 		CONS_Printf(M_GetText("At least one CHEAT-marked variable has been changed -- Cheats are enabled.\n"));
-		CONS_Printf(M_GetText("Type CHEATS OFF to reset all cheat variables to default.\n"));
+		if (server || (adminplayer == consoleplayer))
+			CONS_Printf(M_GetText("Type CHEATS OFF to reset all cheat variables to default.\n"));
 	}
 	else
 		CONS_Printf(M_GetText("No CHEAT-marked variables are changed -- Cheats are disabled.\n"));
