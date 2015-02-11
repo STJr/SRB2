@@ -233,6 +233,9 @@ typedef enum
 	MFE_GOOWATER          = 1<<6,
 	// Mobj was already pushed this tic
 	MFE_PUSHED            = 1<<7,
+	// Mobj was already sprung this tic
+	MFE_SPRUNG            = 1<<8,
+	// free: to and including 1<<15
 } mobjeflag_t;
 
 //
@@ -287,7 +290,7 @@ typedef struct mobj_s
 	state_t *state;
 	UINT32 flags; // flags from mobjinfo tables
 	UINT32 flags2; // MF2_ flags
-	UINT8 eflags; // extra flags
+	UINT16 eflags; // extra flags
 
 	void *skin; // overrides 'sprite' when non-NULL (for player bodies to 'remember' the skin)
 	// Player and mobj sprites in multiplayer modes are modified

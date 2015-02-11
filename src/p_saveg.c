@@ -1177,7 +1177,7 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 	if (diff & MD_FRAME)
 		WRITEUINT32(save_p, mobj->frame);
 	if (diff & MD_EFLAGS)
-		WRITEUINT8(save_p, mobj->eflags);
+		WRITEUINT16(save_p, mobj->eflags);
 	if (diff & MD_PLAYER)
 		WRITEUINT8(save_p, mobj->player-players);
 	if (diff & MD_MOVEDIR)
@@ -2009,7 +2009,7 @@ static void LoadMobjThinker(actionf_p1 thinker)
 	else
 		mobj->frame = mobj->state->frame;
 	if (diff & MD_EFLAGS)
-		mobj->eflags = READUINT8(save_p);
+		mobj->eflags = READUINT16(save_p);
 	if (diff & MD_PLAYER)
 	{
 		i = READUINT8(save_p);

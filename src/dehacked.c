@@ -7188,6 +7188,7 @@ static const char *const MOBJEFLAG_LIST[] = {
 	"VERTICALFLIP", // Vertically flip sprite/allow upside-down physics
 	"GOOWATER", // Goo water
 	"PUSHED", // Mobj was already pushed this tic
+	"SPRUNG", // Mobj was already sprung this tic
 	NULL
 };
 
