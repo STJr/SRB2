@@ -137,7 +137,6 @@ enum cameraf {
 	camera_ceilingz,
 	camera_radius,
 	camera_height,
-	camera_relativex,
 	camera_momx,
 	camera_momy,
 	camera_momz
@@ -158,7 +157,6 @@ static const char *const camera_opt[] = {
 	"ceilingz",
 	"radius",
 	"height",
-	"relativex",
 	"momx",
 	"momy",
 	"momz",
@@ -311,9 +309,6 @@ static int camera_get(lua_State *L)
 		break;
 	case camera_height:
 		lua_pushinteger(L, cam->height);
-		break;
-	case camera_relativex:
-		lua_pushinteger(L, cam->relativex);
 		break;
 	case camera_momx:
 		lua_pushinteger(L, cam->momx);
