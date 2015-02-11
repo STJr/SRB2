@@ -108,7 +108,6 @@ void P_DoSpring(mobj_t *spring, mobj_t *object)
 	fixed_t offx, offy;
 	fixed_t vertispeed = spring->info->mass;
 	fixed_t horizspeed = spring->info->damage;
-	fixed_t origvertispeed = vertispeed; // for vertical flipping
 
 	if (object->eflags & MFE_SPRUNG) // Object was already sprung this tic
 		return;
@@ -192,9 +191,9 @@ void P_DoSpring(mobj_t *spring, mobj_t *object)
 		pflags = object->player->pflags & (PF_JUMPED|PF_SPINNING|PF_THOKKED); // I still need these.
 		P_ResetPlayer(object->player);
 
-		if (origvertispeed > 0)
+		if (P_MobjFlip(object)*vertispeed > 0)
 			P_SetPlayerMobjState(object, S_PLAY_JUMP);
-		else if (origvertispeed < 0)
+		else if (P_MobjFlip(object)*vertispeed < 0)
 			P_SetPlayerMobjState(object, S_PLAY_FALL);
 		else // horizontal spring
 		{
