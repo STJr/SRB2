@@ -273,7 +273,6 @@ boolean P_LookForPlayers(mobj_t *actor, boolean allaround, boolean tracer, fixed
 extern boolean floatok;
 extern fixed_t tmfloorz;
 extern fixed_t tmceilingz;
-extern boolean tmsprung;
 extern mobj_t *tmfloorthing, *tmthing;
 extern camera_t *mapcampointer;
 
