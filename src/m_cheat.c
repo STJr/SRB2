@@ -372,7 +372,7 @@ void Command_Hurtme_f(void)
 		return;
 	}
 
-	P_DamageMobj(players[consoleplayer].mo, NULL, NULL, atoi(COM_Argv(1)));
+	P_DamageMobj(players[consoleplayer].mo, NULL, NULL, atoi(COM_Argv(1)), 0);
 }
 
 // Moves the NiGHTS player to another axis within the current mare

@@ -426,12 +426,12 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			S_StartSound(tmthing, thing->info->deathsound);
 			for (thing = thing->subsector->sector->thinglist; thing; thing = thing->snext)
 				if (thing->type == MT_SPIKE && thing->health > 0 && thing->flags & MF_SOLID && P_AproxDistance(thing->x - tmthing->x, thing->y - tmthing->y) < FixedMul(56*FRACUNIT, thing->scale))
-					P_KillMobj(thing, tmthing, tmthing);
+					P_KillMobj(thing, tmthing, tmthing, 0);
 		}
 		else
 		{
 			thing->health = 0;
-			P_KillMobj(thing, tmthing, tmthing);
+			P_KillMobj(thing, tmthing, tmthing, 0);
 		}
 		return true;
 	}
@@ -483,7 +483,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		else
 			thing->z = tmthing->z + tmthing->height + FixedMul(FRACUNIT, tmthing->scale);
 		if (thing->flags & MF_SHOOTABLE)
-			P_DamageMobj(thing, tmthing, tmthing, 1);
+			P_DamageMobj(thing, tmthing, tmthing, 1, 0);
 		return true;
 	}
 
@@ -495,7 +495,12 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		if (thing->z + thing->height < tmthing->z)
 			return true; // underneath
 		if (tmthing->player && tmthing->flags & MF_SHOOTABLE)
-			P_DamageMobj(tmthing, thing, thing, 1);
+		{
+			UINT8 damagetype = 0;
+			if (thing->flags & MF_FIRE) // BURN!
+				damagetype = DMG_FIRE;
+			P_DamageMobj(tmthing, thing, thing, 1, damagetype);
+		}
 		return true;
 	}
 	else if (tmthing->flags & MF_PAIN)
@@ -506,7 +511,12 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		if (tmthing->z + tmthing->height < thing->z)
 			return true; // underneath
 		if (thing->player && thing->flags & MF_SHOOTABLE)
-			P_DamageMobj(thing, tmthing, tmthing, 1);
+		{
+			UINT8 damagetype = 0;
+			if (tmthing->flags & MF_FIRE) // BURN!
+				damagetype = DMG_FIRE;
+			P_DamageMobj(thing, tmthing, tmthing, 1, damagetype);
+		}
 		return true;
 	}
 
@@ -627,7 +637,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				return false;
 			else // hit shield from behind, shield is destroyed!
 			{
-				P_KillMobj(thing, tmthing, tmthing);
+				P_KillMobj(thing, tmthing, tmthing, 0);
 				return false;
 			}
 		}
@@ -636,7 +646,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			return true;
 		// damage / explode
 		if (tmthing->flags & MF_ENEMY) // An actual ENEMY! (Like the deton, for example)
-			P_DamageMobj(thing, tmthing, tmthing, 1);
+			P_DamageMobj(thing, tmthing, tmthing, 1, 0);
 		else if (tmthing->type == MT_BLACKEGGMAN_MISSILE && thing->player
 			&& (thing->player->pflags & PF_JUMPED)
 			&& !thing->player->powers[pw_flashing]
@@ -672,7 +682,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			P_SetThingPosition(tmthing);
 		}
 		else
-			P_DamageMobj(thing, tmthing, tmthing->target, 1);
+			P_DamageMobj(thing, tmthing, tmthing->target, 1, 0);
 
 		// don't traverse any more
 
@@ -786,11 +796,11 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		{
 			if (thing->z + thing->height <= tmthing->z + FixedMul(FRACUNIT, tmthing->scale)
 			&& thing->z + thing->height + thing->momz  >= tmthing->z + FixedMul(FRACUNIT, tmthing->scale) + tmthing->momz)
-				P_DamageMobj(thing, tmthing, tmthing, 1);
+				P_DamageMobj(thing, tmthing, tmthing, 1, 0);
 		}
 		else if (thing->z >= tmthing->z + tmthing->height - FixedMul(FRACUNIT, tmthing->scale)
 		&& thing->z + thing->momz <= tmthing->z + tmthing->height - FixedMul(FRACUNIT, tmthing->scale) + tmthing->momz)
-			P_DamageMobj(thing, tmthing, tmthing, 1);
+			P_DamageMobj(thing, tmthing, tmthing, 1, 0);
 	}
 	else if (thing->type == MT_SPIKE && thing->flags & MF_SOLID && tmthing->player) // unfortunate player falls into spike?!
 	{
@@ -798,11 +808,11 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		{
 			if (tmthing->z + tmthing->height <= thing->z - FixedMul(FRACUNIT, thing->scale)
 			&& tmthing->z + tmthing->height + tmthing->momz >= thing->z - FixedMul(FRACUNIT, thing->scale))
-				P_DamageMobj(tmthing, thing, thing, 1);
+				P_DamageMobj(tmthing, thing, thing, 1, 0);
 		}
 		else if (tmthing->z >= thing->z + thing->height + FixedMul(FRACUNIT, thing->scale)
 		&& tmthing->z + tmthing->momz <= thing->z + thing->height + FixedMul(FRACUNIT, thing->scale))
-			P_DamageMobj(tmthing, thing, thing, 1);
+			P_DamageMobj(tmthing, thing, thing, 1, 0);
 	}
 
 	if (thing->flags & MF_PUSHABLE)
@@ -832,10 +842,10 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		{
 			if ((tmthing->player->powers[pw_invulnerability] || tmthing->player->powers[pw_super])
 				&& !thing->player->powers[pw_super])
-				P_DamageMobj(thing, tmthing, tmthing, 1);
+				P_DamageMobj(thing, tmthing, tmthing, 1, 0);
 			else if ((thing->player->powers[pw_invulnerability] || thing->player->powers[pw_super])
 				&& !tmthing->player->powers[pw_super])
-				P_DamageMobj(tmthing, thing, thing, 1);
+				P_DamageMobj(tmthing, thing, thing, 1, 0);
 		}
 
 		// If players are using touch tag, seekers damage hiders.
@@ -843,9 +853,9 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			((thing->player->pflags & PF_TAGIT) != (tmthing->player->pflags & PF_TAGIT)))
 		{
 			if ((tmthing->player->pflags & PF_TAGIT) && !(thing->player->pflags & PF_TAGIT))
-				P_DamageMobj(thing, tmthing, tmthing, 1);
+				P_DamageMobj(thing, tmthing, tmthing, 1, 0);
 			else if ((thing->player->pflags & PF_TAGIT) && !(tmthing->player->pflags & PF_TAGIT))
-				P_DamageMobj(tmthing, thing, tmthing, 1);
+				P_DamageMobj(tmthing, thing, tmthing, 1, 0);
 		}
 	}
 
@@ -883,7 +893,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			{
 				// Objects kill you if it falls from above.
 				if (thing != tmthing->target)
-					P_DamageMobj(thing, tmthing, tmthing->target, 10000);
+					P_DamageMobj(thing, tmthing, tmthing->target, 1, DMG_INSTAKILL);
 
 				tmthing->momz = -tmthing->momz/2; // Bounce, just for fun!
 				// The tmthing->target allows the pusher of the object
@@ -917,7 +927,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			{
 				SINT8 flipval = P_MobjFlip(thing); // Save this value in case monitor gets removed.
 				fixed_t *momz = &tmthing->momz; // tmthing gets changed by P_DamageMobj, so we need a new pointer?! X_x;;
-				P_DamageMobj(thing, tmthing, tmthing, 1); // break the monitor
+				P_DamageMobj(thing, tmthing, tmthing, 1, 0); // break the monitor
 				// Going down? Then bounce back up.
 				if ((P_MobjWasRemoved(thing) // Monitor was removed
 					|| !thing->health) // or otherwise popped
@@ -3007,7 +3017,7 @@ static boolean PIT_RadiusAttack(mobj_t *thing)
 
 	if (P_CheckSight(thing, bombspot))
 	{	// must be in direct path
-		P_DamageMobj(thing, bombspot, bombsource, 1); // Tails 01-11-2001
+		P_DamageMobj(thing, bombspot, bombsource, 1, 0); // Tails 01-11-2001
 	}
 
 	return true;
@@ -3140,22 +3150,15 @@ static boolean PIT_ChangeSector(mobj_t *thing, boolean realcrush)
 		{
 			// Crush the object
 			if (netgame && thing->player && thing->player->spectator)
-				P_DamageMobj(thing, NULL, NULL, 42000); // Respawn crushed spectators
+				P_DamageMobj(thing, NULL, NULL, 1, DMG_SPECTATOR); // Respawn crushed spectators
 			else
-			{
-				if (!killer)
-				{
-					//Nobody is responsible for crushing the object, so give a generic crush message
-					killer = P_SpawnMobj(thing->x, thing->y, thing->z, MT_NULL);
-					killer->threshold = 44; // Special flag for crushing
-				}
-				P_DamageMobj(thing, killer, killer, 10000);
-			}
+				P_DamageMobj(thing, killer, killer, 1, DMG_CRUSHED);
+			return true;
 		}
 	}
 
 	if (realcrush && crushchange)
-		P_DamageMobj(thing, NULL, NULL, 1);
+		P_DamageMobj(thing, NULL, NULL, 1, 0);
 
 	// keep checking (crush other things)
 	return true;

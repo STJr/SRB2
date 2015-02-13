@@ -4813,7 +4813,7 @@ void A_UnidusBall(mobj_t *actor)
 		boolean skull = (actor->target->flags2 & MF2_SKULLFLY) == MF2_SKULLFLY;
 		if (actor->target->state == &states[actor->target->info->painstate])
 		{
-			P_KillMobj(actor, NULL, NULL);
+			P_KillMobj(actor, NULL, NULL, 0);
 			return;
 		}
 		switch(actor->extravalue2)
@@ -5278,7 +5278,7 @@ void A_RingExplode(mobj_t *actor)
 		if (mo2->flags & MF_SHOOTABLE)
 		{
 			actor->flags2 |= MF2_DEBRIS;
-			P_DamageMobj(mo2, actor, actor->target, 1);
+			P_DamageMobj(mo2, actor, actor->target, 1, 0);
 			continue;
 		}
 	}
@@ -6383,7 +6383,7 @@ void A_EggmanBox(mobj_t *actor)
 		return;
 	}
 
-	P_DamageMobj(actor->target, actor, actor, 1); // Ow!
+	P_DamageMobj(actor->target, actor, actor, 1, 0); // Ow!
 }
 
 // Function: A_TurretFire
@@ -9368,9 +9368,9 @@ void A_RemoteDamage(mobj_t *actor)
 	if (locvar2 == 1) // Kill mobj!
 	{
 		if (target->player) // players die using P_DamageMobj instead for some reason
-			P_DamageMobj(target, source, source, 10000);
+			P_DamageMobj(target, source, source, 1, DMG_INSTAKILL);
 		else
-			P_KillMobj(target, source, source);
+			P_KillMobj(target, source, source, 0);
 	}
 	else if (locvar2 == 2) // Remove mobj!
 	{
@@ -9380,7 +9380,7 @@ void A_RemoteDamage(mobj_t *actor)
 		P_RemoveMobj(target);
 	}
 	else // default: Damage mobj!
-		P_DamageMobj(target, source, source, 1);
+		P_DamageMobj(target, source, source, 1, 0);
 }
 
 // Function: A_HomingChase
@@ -9615,7 +9615,7 @@ void A_VileAttack(mobj_t *actor)
 			return;
 
 		S_StartSound(actor, soundtoplay);
-		P_DamageMobj(actor->target, actor, actor, 1);
+		P_DamageMobj(actor->target, actor, actor, 1, 0);
 		//actor->target->momz = 1000*FRACUNIT/actor->target->info->mass; // How id did it
 		actor->target->momz += FixedMul(10*FRACUNIT, actor->scale)*P_MobjFlip(actor->target); // How we're doing it
 		if (explosionType != MT_NULL)
@@ -9656,7 +9656,7 @@ void A_VileAttack(mobj_t *actor)
 				continue;
 
 			S_StartSound(actor, soundtoplay);
-			P_DamageMobj(players[i].mo, actor, actor, 1);
+			P_DamageMobj(players[i].mo, actor, actor, 1, 0);
 			//actor->target->momz = 1000*FRACUNIT/actor->target->info->mass; // How id did it
 			players[i].mo->momz += FixedMul(10*FRACUNIT, actor->scale)*P_MobjFlip(players[i].mo); // How we're doing it
 			if (explosionType != MT_NULL)

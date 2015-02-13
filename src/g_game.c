@@ -4134,7 +4134,7 @@ void G_ConsGhostTic(void)
 					if (demosynced)
 						CONS_Alert(CONS_WARNING, M_GetText("Demo playback has desynced!\n"));
 					demosynced = false;
-					P_DamageMobj(mobj, players[0].mo, players[0].mo, 1);
+					P_DamageMobj(mobj, players[0].mo, players[0].mo, 1, 0);
 				}
 			}
 		}

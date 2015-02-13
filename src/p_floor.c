@@ -1215,9 +1215,7 @@ void T_SpikeSector(levelspecthink_t *spikes)
 
 		if (dothepain)
 		{
-			mobj_t *killer = P_SpawnMobj(thing->x, thing->y, thing->z, MT_NULL);
-			killer->threshold = 43; // Special flag that it was spikes which hurt you.
-			P_DamageMobj(thing, killer, killer, 1);
+			P_DamageMobj(thing, NULL, NULL, 1, DMG_SPIKE);
 			break;
 		}
 	}
@@ -3125,7 +3123,7 @@ INT32 EV_MarioBlock(sector_t *sec, sector_t *roversector, fixed_t topheight, mob
 		thing->momz = FixedMul(6*FRACUNIT, thing->scale);
 		P_SetThingPosition(thing);
 		if (thing->flags & MF_SHOOTABLE)
-			P_DamageMobj(thing, puncher, puncher, 1);
+			P_DamageMobj(thing, puncher, puncher, 1, 0);
 		else if (thing->type == MT_RING || thing->type == MT_COIN)
 		{
 			thing->momz = FixedMul(3*FRACUNIT, thing->scale);

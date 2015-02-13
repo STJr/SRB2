@@ -712,7 +712,7 @@ void P_ExplodeMissile(mobj_t *mo)
 		S_StartSound(explodemo, sfx_cybdth);
 
 		// Hack: Release an animal.
-		P_DamageMobj(mo, NULL, NULL, 10000);
+		P_DamageMobj(mo, NULL, NULL, 1, DMG_INSTAKILL);
 	}
 
 	mo->flags &= ~MF_MISSILE;
@@ -1744,7 +1744,7 @@ static boolean P_ZMovement(mobj_t *mo)
 			// Kill enemies and bosses that fall into death pits.
 			if (mo->health)
 			{
-				P_KillMobj(mo, NULL, NULL);
+				P_KillMobj(mo, NULL, NULL, 0);
 				return false;
 			}
 		}
@@ -2800,7 +2800,7 @@ void P_DestroyRobots(void)
 			continue;
 
 		// Found a target enemy
-		P_KillMobj(mo, players[consoleplayer].mo, players[consoleplayer].mo);
+		P_KillMobj(mo, players[consoleplayer].mo, players[consoleplayer].mo, 0);
 	}
 }
 
@@ -3481,7 +3481,7 @@ static void P_Boss3Thinker(mobj_t *mobj)
 					continue;
 
 				if (players[i].mo->eflags & MFE_UNDERWATER)
-					P_DamageMobj(players[i].mo, mobj, mobj, 1);
+					P_DamageMobj(players[i].mo, mobj, mobj, 1, 0);
 			}
 
 			// Make the water flash
@@ -3822,7 +3822,7 @@ static void P_Boss4PopSpikeballs(mobj_t *mobj)
 		P_SetTarget(&base->tracer, NULL);
 		for (seg = base; seg; seg = seg->hnext)
 			if (seg->health)
-				P_KillMobj(seg, NULL, NULL);
+				P_KillMobj(seg, NULL, NULL, 0);
 		base = next;
 	}
 }
@@ -4122,7 +4122,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 		{
 			INT32 i;
 
-			P_KillMobj(mobj, NULL, NULL);
+			P_KillMobj(mobj, NULL, NULL, 0);
 
 			// It was a team effort
 			for (i = 0; i < MAXPLAYERS; i++)
@@ -4173,7 +4173,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 				&& players[i].mo->z < mobj->z + mobj->height + 128*FRACUNIT) // You can't be in the vicinity, either...
 			{
 				// Punch him!
-				P_DamageMobj(players[i].mo, mobj, mobj, 1);
+				P_DamageMobj(players[i].mo, mobj, mobj, 1, 0);
 				mobj->state->nextstate = mobj->info->spawnstate;
 
 				// Laugh
@@ -4396,7 +4396,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 			if (players[i].mo->z < mobj->z - 64*FRACUNIT)
 				continue;
 
-			P_DamageMobj(players[i].mo, mobj, mobj, 1);
+			P_DamageMobj(players[i].mo, mobj, mobj, 1, 0);
 
 			// Laugh
 			S_StartSound(0, sfx_bewar1 + P_RandomKey(4));
@@ -5818,7 +5818,7 @@ void P_MobjThinker(mobj_t *mobj)
 		if (mobj->flags & MF_FIRE && mobj->type != MT_PUMA && mobj->type != MT_FIREBALL
 			&& (mobj->eflags & (MFE_UNDERWATER|MFE_TOUCHWATER)))
 		{
-			P_KillMobj(mobj, NULL, NULL);
+			P_KillMobj(mobj, NULL, NULL, 0);
 			return;
 		}
 	}
@@ -6450,7 +6450,7 @@ void P_MobjThinker(mobj_t *mobj)
 			if (mobj->flags & MF_FIRE && mobj->type != MT_PUMA && mobj->type != MT_FIREBALL
 				&& (mobj->eflags & (MFE_UNDERWATER|MFE_TOUCHWATER)))
 			{
-				P_KillMobj(mobj, NULL, NULL);
+				P_KillMobj(mobj, NULL, NULL, 0);
 				return;
 			}
 			break;
@@ -6699,7 +6699,7 @@ for (i = ((mobj->flags2 & MF2_STRONGBOX) ? strongboxamt : weakboxamt); i; --i) s
 	if (mobj->flags & (MF_ENEMY|MF_BOSS) && mobj->health
 		&& P_CheckDeathPitCollide(mobj)) // extra pit check in case these didn't have momz
 	{
-		P_KillMobj(mobj, NULL, NULL);
+		P_KillMobj(mobj, NULL, NULL, DMG_DEATHPIT);
 		return;
 	}
 
@@ -6713,7 +6713,7 @@ for (i = ((mobj->flags2 & MF2_STRONGBOX) ? strongboxamt : weakboxamt); i; --i) s
 		&& !(mobj->flags & MF_NOCLIPHEIGHT)
 		&& mobj->health > 0)
 		{
-			P_KillMobj(mobj, NULL, NULL);
+			P_KillMobj(mobj, NULL, NULL, DMG_CRUSHED);
 			return;
 		}
 	}

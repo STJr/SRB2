@@ -3472,19 +3472,19 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 	{
 		case 1: // Damage (Generic)
 			if (roversector || P_MobjReadyToTrigger(player->mo, sector))
-				P_DamageMobj(player->mo, NULL, NULL, 1);
+				P_DamageMobj(player->mo, NULL, NULL, 1, 0);
 			break;
 		case 2: // Damage (Water)
-			if ((roversector || P_MobjReadyToTrigger(player->mo, sector)) && (player->powers[pw_underwater] || player->pflags & PF_NIGHTSMODE) && (player->powers[pw_shield] & SH_NOSTACK) != SH_ELEMENTAL)
-				P_DamageMobj(player->mo, NULL, NULL, 1);
+			if ((roversector || P_MobjReadyToTrigger(player->mo, sector)) && (player->powers[pw_underwater] || player->pflags & PF_NIGHTSMODE))
+				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_WATER);
 			break;
 		case 3: // Damage (Fire)
-			if ((roversector || P_MobjReadyToTrigger(player->mo, sector)) && (player->powers[pw_shield] & SH_NOSTACK) != SH_ELEMENTAL)
-				P_DamageMobj(player->mo, NULL, NULL, 1);
+			if (roversector || P_MobjReadyToTrigger(player->mo, sector))
+				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_FIRE);
 			break;
 		case 4: // Damage (Electrical)
-			if ((roversector || P_MobjReadyToTrigger(player->mo, sector)) && (player->powers[pw_shield] & SH_NOSTACK) != SH_ATTRACT)
-				P_DamageMobj(player->mo, NULL, NULL, 1);
+			if (roversector || P_MobjReadyToTrigger(player->mo, sector))
+				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_ELECTRIC);
 			break;
 		case 5: // Spikes
 			// Don't do anything. In Soviet Russia, spikes find you.
@@ -3492,10 +3492,10 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 		case 6: // Death Pit (Camera Mod)
 		case 7: // Death Pit (No Camera Mod)
 			if (roversector || P_MobjReadyToTrigger(player->mo, sector))
-				P_DamageMobj(player->mo, NULL, NULL, 10000);
+				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_DEATHPIT);
 			break;
 		case 8: // Instant Kill
-			P_DamageMobj(player->mo, NULL, NULL, 10000);
+			P_DamageMobj(player->mo, NULL, NULL, 1, DMG_INSTAKILL);
 			break;
 		case 9: // Ring Drainer (Floor Touch)
 		case 10: // Ring Drainer (No Floor Touch)
@@ -3599,7 +3599,7 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 
 				mo2 = (mobj_t *)th;
 				if (mo2->type == MT_EGGTRAP)
-					P_KillMobj(mo2, NULL, player->mo);
+					P_KillMobj(mo2, NULL, player->mo, 0);
 			}
 
 			// clear the special so you can't push the button twice.
@@ -5355,9 +5355,9 @@ void T_LaserFlash(laserthink_t *flash)
 			continue;
 
 		if (thing->flags & MF_SHOOTABLE)
-			P_DamageMobj(thing, NULL, NULL, 1);
+			P_DamageMobj(thing, NULL, NULL, 1, 0);
 		else if (thing->type == MT_EGGSHIELD)
-			P_KillMobj(thing, NULL, NULL);
+			P_KillMobj(thing, NULL, NULL, 0);
 	}
 }
 

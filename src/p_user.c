@@ -632,7 +632,7 @@ static void P_DeNightserizePlayer(player_t *player)
 			continue;
 
 		if (mo2->flags & MF_AMBUSH)
-			P_DamageMobj(player->mo, NULL, NULL, 10000);
+			P_DamageMobj(player->mo, NULL, NULL, 1, DMG_INSTAKILL);
 
 		break;
 	}
@@ -1998,21 +1998,15 @@ static void P_CheckUnderwaterAndSpaceTimer(player_t *player)
 	// Underwater timer runs out
 	else if (player->powers[pw_underwater] == 1)
 	{
-		mobj_t *killer;
-
 		if ((netgame || multiplayer) && P_IsLocalPlayer(player))
 			S_ChangeMusic(mapmusic, true);
-
-		killer = P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z, MT_NULL);
-		killer->threshold = 42; // Special flag that it was drowning which killed you.
-		P_DamageMobj(player->mo, killer, killer, 10000);
+		P_DamageMobj(player->mo, NULL, NULL, 1, DMG_DROWNED);
 	}
 	else if (player->powers[pw_spacetime] == 1)
 	{
 		if ((netgame || multiplayer) && P_IsLocalPlayer(player))
 			S_ChangeMusic(mapmusic, true);
-
-		P_DamageMobj(player->mo, NULL, NULL, 10000);
+		P_DamageMobj(player->mo, NULL, NULL, 1, DMG_SPACEDROWN);
 	}
 
 	if (numbermobj)
@@ -6016,7 +6010,7 @@ static void P_NiGHTSMovement(player_t *player)
 		if (player->powers[pw_flashing] == 1)
 			player->powers[pw_flashing] = 3;
 		else
-			P_DamageMobj(player->mo, NULL, NULL, 1);
+			P_DamageMobj(player->mo, NULL, NULL, 1, 0);
 	}
 
 	if (movingangle >= ANGLE_90 && movingangle <= ANGLE_180)
@@ -6378,7 +6372,7 @@ static void P_MovePlayer(player_t *player)
 						players[i].exiting = (14*TICRATE)/5 + 1;
 			}
 			else if (player->health > 1)
-				P_DamageMobj(player->mo, NULL, NULL, 1);
+				P_DamageMobj(player->mo, NULL, NULL, 1, 0);
 			player->pflags &= ~PF_NIGHTSFALL;
 		}
 	}
@@ -6906,13 +6900,9 @@ static void P_MovePlayer(player_t *player)
 		else if (player->mo->ceilingz - player->mo->floorz < player->mo->height)
 		{
 			if ((netgame || multiplayer) && player->spectator)
-				P_DamageMobj(player->mo, NULL, NULL, 42000); // Respawn crushed spectators
+				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_SPECTATOR); // Respawn crushed spectators
 			else
-			{
-				mobj_t *killer = P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z, MT_NULL);
-				killer->threshold = 44; // Special flag that it was crushing which killed you.
-				P_DamageMobj(player->mo, killer, killer, 10000);
-			}
+				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_CRUSHED);
 
 			if (player->playerstate == PST_DEAD)
 				return;
@@ -7343,7 +7333,7 @@ static void P_NukeAllPlayers(player_t *player)
 		if (mo == player->mo)
 			continue;
 
-		P_DamageMobj(mo, player->mo, player->mo, 1);
+		P_DamageMobj(mo, player->mo, player->mo, 1, 0);
 	}
 
 	CONS_Printf(M_GetText("%s caused a world of pain.\n"), player_names[player-players]);
@@ -7401,12 +7391,12 @@ void P_NukeEnemies(mobj_t *inflictor, mobj_t *source, fixed_t radius)
 			mo->flags |= MF_SPECIAL|MF_SHOOTABLE;
 
 		if (mo->type == MT_EGGGUARD && mo->tracer) //nuke Egg Guard's shield!
-			P_KillMobj(mo->tracer, inflictor, source);
+			P_KillMobj(mo->tracer, inflictor, source, 0);
 
 		if (mo->flags & MF_BOSS || mo->type == MT_PLAYER) //don't OHKO bosses nor players!
-			P_DamageMobj(mo, inflictor, source, 1);
+			P_DamageMobj(mo, inflictor, source, 1, 0);
 		else
-			P_DamageMobj(mo, inflictor, source, 1000);
+			P_DamageMobj(mo, inflictor, source, 1000, 0);
 	}
 }
 
@@ -8679,7 +8669,7 @@ void P_PlayerThink(player_t *player)
 			}
 
 			player->lives = 2; // Don't start the game over music!
-			P_DamageMobj(player->mo, NULL, NULL, 10000);
+			P_DamageMobj(player->mo, NULL, NULL, 1, DMG_INSTAKILL);
 			player->lives = 0;
 
 			if (player->playerstate == PST_DEAD)

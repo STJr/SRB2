@@ -1911,7 +1911,7 @@ static void Got_Suicide(UINT8 **cp, INT32 playernum)
 	}
 
 	if (players[suicideplayer].mo)
-		P_DamageMobj(players[suicideplayer].mo, NULL, NULL, 10000);
+		P_DamageMobj(players[suicideplayer].mo, NULL, NULL, 1, DMG_INSTAKILL);
 }
 
 /** Deals with an ::XD_RANDOMSEED message in a netgame.
@@ -2442,7 +2442,7 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 	if (players[playernum].mo)
 	{
 		if (!players[playernum].spectator)
-			P_DamageMobj(players[playernum].mo, NULL, NULL, 10000);
+			P_DamageMobj(players[playernum].mo, NULL, NULL, 1, DMG_INSTAKILL);
 		else
 		{
 			P_RemoveMobj(players[playernum].mo);
