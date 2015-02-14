@@ -60,7 +60,6 @@ enum subsector_e {
 	subsector_sector,
 	subsector_numlines,
 	subsector_firstline,
-	subsector_validcount
 };
 
 static const char *const subsector_opt[] = {
@@ -68,7 +67,6 @@ static const char *const subsector_opt[] = {
 	"sector",
 	"numlines",
 	"firstline",
-	"validcount",
 	NULL};
 
 enum line_e {
@@ -86,7 +84,6 @@ enum line_e {
 	line_slopetype,
 	line_frontsector,
 	line_backsector,
-	line_validcount,
 	line_firsttag,
 	line_nexttag,
 	line_text,
@@ -108,7 +105,6 @@ static const char *const line_opt[] = {
 	"slopetype",
 	"frontsector",
 	"backsector",
-	"validcount",
 	"firsttag",
 	"nexttag",
 	"text",
@@ -476,9 +472,6 @@ static int subsector_get(lua_State *L)
 	case subsector_firstline:
 		lua_pushinteger(L, subsector->firstline);
 		return 1;
-	case subsector_validcount:
-		lua_pushinteger(L, subsector->validcount);
-		return 1;
 	}
 	return 0;
 }
@@ -563,9 +556,6 @@ static int line_get(lua_State *L)
 		return 1;
 	case line_backsector:
 		LUA_PushUserdata(L, line->backsector, META_SECTOR);
-		return 1;
-	case line_validcount:
-		lua_pushinteger(L, line->validcount);
 		return 1;
 	case line_firsttag:
 		lua_pushinteger(L, line->firsttag);

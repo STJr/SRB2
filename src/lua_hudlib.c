@@ -126,8 +126,6 @@ static const char *const widtht_opt[] = {
 enum cameraf {
 	camera_chase = 0,
 	camera_aiming,
-	camera_viewheight,
-	camera_startangle,
 	camera_x,
 	camera_y,
 	camera_z,
@@ -146,8 +144,6 @@ enum cameraf {
 static const char *const camera_opt[] = {
 	"chase",
 	"aiming",
-	"viewheight",
-	"startangle",
 	"x",
 	"y",
 	"z",
@@ -276,12 +272,6 @@ static int camera_get(lua_State *L)
 		break;
 	case camera_aiming:
 		lua_pushinteger(L, cam->aiming);
-		break;
-	case camera_viewheight:
-		lua_pushinteger(L, cam->viewheight);
-		break;
-	case camera_startangle:
-		lua_pushinteger(L, cam->startangle);
 		break;
 	case camera_x:
 		lua_pushinteger(L, cam->x);
