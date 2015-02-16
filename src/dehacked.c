@@ -7291,6 +7291,7 @@ static const char *const ML_LIST[16] = {
 };
 
 // This DOES differ from r_draw's Color_Names, unfortunately.
+// Also includes Super colors
 static const char *COLOR_ENUMS[] = {
 	"NONE",     	// SKINCOLOR_NONE
 	"WHITE",    	// SKINCOLOR_WHITE
@@ -7317,7 +7318,25 @@ static const char *COLOR_ENUMS[] = {
 	"ZIM",      	// SKINCOLOR_ZIM
 	"OLIVE",    	// SKINCOLOR_OLIVE
 	"YELLOW",   	// SKINCOLOR_YELLOW
-	"GOLD"      	// SKINCOLOR_GOLD
+	"GOLD",     	// SKINCOLOR_GOLD
+	// Super special awesome Super flashing colors!
+	"SUPER1",   	// SKINCOLOR_SUPER1
+	"SUPER2",   	// SKINCOLOR_SUPER2,
+	"SUPER3",   	// SKINCOLOR_SUPER3,
+	"SUPER4",   	// SKINCOLOR_SUPER4,
+	"SUPER5",   	// SKINCOLOR_SUPER5,
+	// Super Tails
+	"TSUPER1",  	// SKINCOLOR_TSUPER1,
+	"TSUPER2",  	// SKINCOLOR_TSUPER2,
+	"TSUPER3",  	// SKINCOLOR_TSUPER3,
+	"TSUPER4",  	// SKINCOLOR_TSUPER4,
+	"TSUPER5",  	// SKINCOLOR_TSUPER5,
+	// Super Knuckles
+	"KSUPER1",  	// SKINCOLOR_KSUPER1,
+	"KSUPER2",  	// SKINCOLOR_KSUPER2,
+	"KSUPER3",  	// SKINCOLOR_KSUPER3,
+	"KSUPER4",  	// SKINCOLOR_KSUPER4,
+	"KSUPER5"   	// SKINCOLOR_KSUPER5,
 };
 
 static const char *const POWERS_LIST[] = {
@@ -7524,8 +7543,9 @@ struct {
 	{"EMERALD6",EMERALD6},
 	{"EMERALD7",EMERALD7},
 
-	// SKINCOLOR_ doesn't include this..!
+	// SKINCOLOR_ doesn't include these..!
 	{"MAXSKINCOLORS",MAXSKINCOLORS},
+	{"MAXTRANSLATIONS",MAXTRANSLATIONS},
 
 	// Precipitation
 	{"PRECIP_NONE",PRECIP_NONE},
@@ -8146,7 +8166,7 @@ static fixed_t find_const(const char **rword)
 	}
 	else if (fastncmp("SKINCOLOR_",word,10)) {
 		char *p = word+10;
-		for (i = 0; i < MAXSKINCOLORS; i++)
+		for (i = 0; i < MAXTRANSLATIONS; i++)
 			if (fastcmp(p, COLOR_ENUMS[i])) {
 				free(word);
 				return i;
@@ -8205,8 +8225,8 @@ void DEH_Check(void)
 	if (dehpowers != NUMPOWERS)
 		I_Error("You forgot to update the Dehacked powers list, you dolt!\n(%d powers defined, versus %s in the Dehacked list)\n", NUMPOWERS, sizeu1(dehpowers));
 
-	if (dehcolors != MAXSKINCOLORS)
-		I_Error("You forgot to update the Dehacked colors list, you dolt!\n(%d colors defined, versus %s in the Dehacked list)\n", MAXSKINCOLORS, sizeu1(dehcolors));
+	if (dehcolors != MAXTRANSLATIONS)
+		I_Error("You forgot to update the Dehacked colors list, you dolt!\n(%d colors defined, versus %s in the Dehacked list)\n", MAXTRANSLATIONS, sizeu1(dehcolors));
 #endif
 }
 
@@ -8581,7 +8601,7 @@ static inline int lib_getenum(lua_State *L)
 	}
 	else if (fastncmp("SKINCOLOR_",word,10)) {
 		p = word+10;
-		for (i = 0; i < MAXSKINCOLORS; i++)
+		for (i = 0; i < MAXTRANSLATIONS; i++)
 			if (fastcmp(p, COLOR_ENUMS[i])) {
 				lua_pushinteger(L, i);
 				return 1;
