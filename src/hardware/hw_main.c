@@ -4560,6 +4560,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 			sizeu1(rot), sizeu2(sprdef->numframes), sprnames[thing->sprite]);
 		thing->sprite = states[S_UNKNOWN].sprite;
 		thing->frame = states[S_UNKNOWN].frame;
+		sprdef = &sprites[thing->sprite];
 		rot = thing->frame&FF_FRAMEMASK;
 		thing->state->sprite = thing->sprite;
 		thing->state->frame = thing->frame;
