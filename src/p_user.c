@@ -2953,10 +2953,10 @@ static void P_DoTeeter(player_t *player)
 	{
 		INT32 bx, by, xl, xh, yl, yh;
 
-		yh = (unsigned)(player->mo->y + player->mo->radius - bmaporgy)>>MAPBLOCKSHIFT;
-		yl = (unsigned)(player->mo->y - player->mo->radius - bmaporgy)>>MAPBLOCKSHIFT;
-		xh = (unsigned)(player->mo->x + player->mo->radius - bmaporgx)>>MAPBLOCKSHIFT;
-		xl = (unsigned)(player->mo->x - player->mo->radius - bmaporgx)>>MAPBLOCKSHIFT;
+		yh = (player->mo->y + player->mo->radius - bmaporgy)>>MAPBLOCKSHIFT;
+		yl = (player->mo->y - player->mo->radius - bmaporgy)>>MAPBLOCKSHIFT;
+		xh = (player->mo->x + player->mo->radius - bmaporgx)>>MAPBLOCKSHIFT;
+		xl = (player->mo->x - player->mo->radius - bmaporgx)>>MAPBLOCKSHIFT;
 
 	// Polyobjects
 #ifdef POLYOBJECTS
@@ -8079,10 +8079,10 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		INT32 xl, xh, yl, yh, bx, by;
 		validcount++;
 
-		xl = (unsigned)(tmbbox[BOXLEFT] - bmaporgx)>>MAPBLOCKSHIFT;
-		xh = (unsigned)(tmbbox[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
-		yl = (unsigned)(tmbbox[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
-		yh = (unsigned)(tmbbox[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
+		xl = (tmbbox[BOXLEFT] - bmaporgx)>>MAPBLOCKSHIFT;
+		xh = (tmbbox[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
+		yl = (tmbbox[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
+		yh = (tmbbox[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
 
 		for (by = yl; by <= yh; by++)
 			for (bx = xl; bx <= xh; bx++)

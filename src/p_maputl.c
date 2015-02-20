@@ -768,8 +768,8 @@ void P_SetThingPosition(mobj_t *thing)
 	if (!(thing->flags & MF_NOBLOCKMAP))
 	{
 		// inert things don't need to be in blockmap
-		const INT32 blockx = (unsigned)(thing->x - bmaporgx)>>MAPBLOCKSHIFT;
-		const INT32 blocky = (unsigned)(thing->y - bmaporgy)>>MAPBLOCKSHIFT;
+		const INT32 blockx = (thing->x - bmaporgx)>>MAPBLOCKSHIFT;
+		const INT32 blocky = (thing->y - bmaporgy)>>MAPBLOCKSHIFT;
 		if (blockx >= 0 && blockx < bmapwidth
 			&& blocky >= 0 && blocky < bmapheight)
 		{
@@ -1271,10 +1271,10 @@ boolean P_RadiusLinesCheck(fixed_t radius, fixed_t x, fixed_t y,
 	tmbbox[BOXLEFT] = x - radius;
 
 	// check lines
-	xl = (unsigned)(tmbbox[BOXLEFT] - bmaporgx)>>MAPBLOCKSHIFT;
-	xh = (unsigned)(tmbbox[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
-	yl = (unsigned)(tmbbox[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
-	yh = (unsigned)(tmbbox[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
+	xl = (tmbbox[BOXLEFT] - bmaporgx)>>MAPBLOCKSHIFT;
+	xh = (tmbbox[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
+	yl = (tmbbox[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
+	yh = (tmbbox[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
 
 	for (bx = xl; bx <= xh; bx++)
 		for (by = yl; by <= yh; by++)
