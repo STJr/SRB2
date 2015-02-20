@@ -1026,34 +1026,31 @@ void R_SetupFrame(player_t *player, boolean skybox)
 {
 	INT32 dy = 0;
 	camera_t *thiscam;
-	boolean forcechase = false;
+	boolean chasecam = false;
 
 	if (splitscreen && player == &players[secondarydisplayplayer]
 		&& player != &players[consoleplayer])
 	{
 		thiscam = &camera2;
+		chasecam = (cv_chasecam2.value != 0);
 	}
 	else
+	{
 		thiscam = &camera;
+		chasecam = (cv_chasecam.value != 0);
+	}
 
 	if (player->climbing || (player->pflags & PF_NIGHTSMODE) || player->playerstate == PST_DEAD)
-		forcechase = true;
+		chasecam = true; // force chasecam on
+	else if (player->spectator) // no spectator chasecam
+		chasecam = false; // force chasecam off
 
-	if (!forcechase && player->spectator) // no spectator chasecam
-		thiscam->chase = false;
-	else if ((cv_chasecam.value || forcechase) && !player->spectator && thiscam == &camera && !thiscam->chase)
+	if (chasecam && !thiscam->chase)
 	{
-		P_ResetCamera(player, &camera);
+		P_ResetCamera(player, thiscam);
 		thiscam->chase = true;
 	}
-	else if ((cv_chasecam2.value || forcechase) && !player->spectator && thiscam == &camera2 && !thiscam->chase)
-	{
-		P_ResetCamera(player, &camera2);
-		thiscam->chase = true;
-	}
-	else if (!(cv_chasecam.value || forcechase) && thiscam == &camera)
-		thiscam->chase = false;
-	else if (!(cv_chasecam2.value || forcechase) && thiscam == &camera2)
+	else if (!chasecam)
 		thiscam->chase = false;
 
 	viewsky = !skybox;
@@ -1066,9 +1063,7 @@ void R_SetupFrame(player_t *player, boolean skybox)
 		aimingangle = player->awayviewaiming;
 		viewangle = viewmobj->angle;
 	}
-	else if (!player->spectator && (forcechase
-		|| (cv_chasecam.value && thiscam == &camera)
-		|| (cv_chasecam2.value && thiscam == &camera2)))
+	else if (!player->spectator && chasecam)
 	// use outside cam view
 	{
 		viewmobj = NULL;
@@ -1105,8 +1100,7 @@ void R_SetupFrame(player_t *player, boolean skybox)
 
 	viewplayer = player;
 
-	if ((forcechase || (cv_chasecam.value && thiscam == &camera) || (cv_chasecam2.value && thiscam == &camera2))
-		&& !player->awayviewtics && !player->spectator)
+	if (chasecam && !player->awayviewtics && !player->spectator)
 	{
 		viewx = thiscam->x;
 		viewy = thiscam->y;
