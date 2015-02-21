@@ -3397,10 +3397,12 @@ static void P_DoSuperStuff(player_t *player)
 
 		if ((cmd->forwardmove != 0 || cmd->sidemove != 0 || player->pflags & (PF_CARRIED|PF_ROPEHANG|PF_ITEMHANG|PF_MACESPIN))
 		&& !(leveltime % TICRATE) && (player->mo->momx || player->mo->momy))
+		{
 			spark = P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z, MT_SUPERSPARK);
 			spark->destscale = player->mo->scale;
 			P_SetScale(spark, player->mo->scale);
-
+		}
+		
 		G_GhostAddColor(GHC_SUPER);
 
 		// Ran out of rings while super!
