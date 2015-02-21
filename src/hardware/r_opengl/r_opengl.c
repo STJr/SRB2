@@ -1899,7 +1899,7 @@ EXPORT void HWRAPI(DrawMD2i) (INT32 *gl_cmd_buffer, md2_frame_t *frame, UINT32 d
 #endif
 	}
 
-	DrawPolygon(NULL, NULL, 0, PF_Masked|PF_Modulated|PF_Occlude|PF_Clip);
+	DrawPolygon(NULL, NULL, 0, PF_Masked|PF_Modulated|PF_Occlude/*|PF_Clip*/); //Yellow: Fixes MD2 Transparency
 
 	pglPushMatrix(); // should be the same as glLoadIdentity
 	//Hurdler: now it seems to work
@@ -1909,6 +1909,15 @@ EXPORT void HWRAPI(DrawMD2i) (INT32 *gl_cmd_buffer, md2_frame_t *frame, UINT32 d
 	pglRotatef(pos->angley, 0.0f, -1.0f, 0.0f);
 	pglRotatef(pos->anglex, -1.0f, 0.0f, 0.0f);
 	//pglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // alpha = level of transparency
+	
+	//Yellow: Fixes MD2 Transparency
+    // Remove depth mask when the model is transparent so it doesn't cut thorugh sprites
+    if (color[3] < 255)
+    {
+        pglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // alpha = level of transparency
+        pglDepthMask(GL_FALSE);
+    }
+
 
 	val = *gl_cmd_buffer++;
 

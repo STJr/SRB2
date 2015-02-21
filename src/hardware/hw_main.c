@@ -4028,7 +4028,8 @@ static void HWR_SortVisSprites(void)
 	gr_vsprsortedhead.next = gr_vsprsortedhead.prev = &gr_vsprsortedhead;
 	for (i = 0; i < gr_visspritecount; i++)
 	{
-		bestdist = ZCLIP_PLANE-1;
+		//bestdist = ZCLIP_PLANE-1;
+		bestdist = -66666.0f; //Yellow: Changing this value fixes the crash
 		for (ds = unsorted.next; ds != &unsorted; ds = ds->next)
 		{
 			if (ds->tz > bestdist)
@@ -4561,7 +4562,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	tz = (tr_x * gr_viewcos) + (tr_y * gr_viewsin);
 
 	// thing is behind view plane?
-	if (tz < ZCLIP_PLANE)
+	if (tz < ZCLIP_PLANE && md2_models[thing->sprite].notfound == true) //Yellow: Only MD2's dont disappear 
 		return;
 
 	tx = (tr_x * gr_viewsin) - (tr_y * gr_viewcos);
@@ -4589,8 +4590,9 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		rot = thing->frame&FF_FRAMEMASK;
 		thing->state->sprite = thing->sprite;
 		thing->state->frame = thing->frame;
+		sprdef = &sprites[thing->sprite]; //Yellow: sprdef now updates rotations to fix the crash
 	}
-
+    
 	sprframe = &sprdef->spriteframes[rot];
 
 #ifdef PARANOIA
