@@ -27,19 +27,7 @@ find_library(SDL2_LIBRARY
 		"/usr/local/lib"
 )
 
-find_library(SDL2_MAIN_LIBRARY
-	NAMES SDL2_main
-	PATHS
-		${SDL2_PKGCONF_LIBRARY_DIRS}
-		/usr/lib
-		/usr/local/lib
-)
-
-
 # set include dir variables
 set(SDL2_PROCESS_INCLUDES SDL2_INCLUDE_DIR)
 set(SDL2_PROCESS_LIBS SDL2_LIBRARY)
-set(SDL2_MAIN_PROCESS_INCLUDES SDL2_INCLUDE_DIR)
-set(SDL2_MAIN_PROCESS_LIBS SDL2_MAIN_LIBRARY)
 libfind_process(SDL2)
-libfind_process(SDL2_MAIN)
