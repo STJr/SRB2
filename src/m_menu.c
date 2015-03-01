@@ -1323,7 +1323,6 @@ static menuitem_t OP_ServerOptionsMenu[] =
 	{IT_STRING | IT_CVAR,    NULL, "Max Players",                 &cv_maxplayers,        110},
 	{IT_STRING | IT_CVAR,    NULL, "Allow players to join",       &cv_allownewplayer,    120},
 	{IT_STRING | IT_CVAR,    NULL, "Allow WAD Downloading",       &cv_downloading,       130},
-	{IT_STRING | IT_CVAR,    NULL, "Attempts to Resynch",         &cv_resynchattempts,   140},
 #endif
 };
 

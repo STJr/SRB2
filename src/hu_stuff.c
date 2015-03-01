@@ -1098,10 +1098,6 @@ void HU_Drawer(void)
 
 	if (!automapactive && cv_crosshair2.value && !demoplayback && !camera2.chase && !players[secondarydisplayplayer].spectator)
 		HU_DrawCrosshair2();
-
-	// draw desynch text
-	if (hu_resynching)
-		V_DrawCenteredString(BASEVIDWIDTH/2, 180, V_YELLOWMAP, "Resynching...");
 }
 
 //======================================================================
