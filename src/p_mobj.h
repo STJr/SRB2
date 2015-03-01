@@ -257,6 +257,9 @@ typedef struct mobj_s
 	// List: thinker links.
 	thinker_t thinker;
 
+	// Last network transmission about this mobj.
+	struct net_mobj_s *netData;
+
 	// Info for drawing: position.
 	fixed_t x, y, z;
 

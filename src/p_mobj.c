@@ -5477,6 +5477,14 @@ void P_MobjThinker(mobj_t *mobj)
 	I_Assert(mobj != NULL);
 	I_Assert(!P_MobjWasRemoved(mobj));
 
+	// Network ghost mobjs don't think on their own.
+	if (netgame && !server && mobj->netData)
+	{
+		mobj->z += mobj->momz;
+		P_TryMove(mobj, mobj->x + mobj->momx, mobj->y + mobj->momy, true);
+		return;
+	}
+
 	if (mobj->flags & MF_NOTHINK)
 		return;
 

@@ -12,6 +12,7 @@ set(SRB2_CORE_SOURCES
 	d_net.c
 	d_netcmd.c
 	d_netfil.c
+	d_netmobj.c
 	dehacked.c
 	f_finale.c
 	f_wipe.c
@@ -84,6 +85,7 @@ set(SRB2_CORE_HEADERS
 	d_net.h
 	d_netcmd.h
 	d_netfil.h
+	d_netmobj.h
 	d_player.h
 	d_think.h
 	d_ticcmd.h
