@@ -2217,7 +2217,7 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 		oldPlayersArea = oldPlayersInArea;
 	}
 
-	if ((affectPlayer = P_HavePlayersEnteredArea(playersArea, oldPlayersArea, inAndOut)) != -1)
+	while ((affectPlayer = P_HavePlayersEnteredArea(playersArea, oldPlayersArea, inAndOut)) != -1)
 	{
 		if (GETSECSPECIAL(sec->special, 2) == 2 || GETSECSPECIAL(sec->special, 2) == 3)
 		{
@@ -2250,6 +2250,8 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 
 		if (!eachtime->sourceline->special) // this happens only for "Trigger on X calls" linedefs
 			P_RemoveThinker(&eachtime->thinker);
+
+		oldPlayersArea[affectPlayer]=playersArea[affectPlayer];
 	}
 }
 
