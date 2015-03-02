@@ -3325,6 +3325,7 @@ firenormal:
 //
 static void P_DoSuperStuff(player_t *player)
 {
+	mobj_t *spark;
 	ticcmd_t *cmd = &player->cmd;
 	if (player->mo->state >= &states[S_PLAY_SUPER_TRANS] && player->mo->state <= &states[S_PLAY_SUPER_TRANS9])
 		return; // don't do anything right now, we're in the middle of transforming!
@@ -3400,7 +3401,11 @@ static void P_DoSuperStuff(player_t *player)
 
 		if ((cmd->forwardmove != 0 || cmd->sidemove != 0 || player->pflags & (PF_CARRIED|PF_ROPEHANG|PF_ITEMHANG|PF_MACESPIN))
 		&& !(leveltime % TICRATE) && (player->mo->momx || player->mo->momy))
-			P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z, MT_SUPERSPARK);
+		{
+			spark = P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z, MT_SUPERSPARK);
+			spark->destscale = player->mo->scale;
+			P_SetScale(spark, player->mo->scale);
+		}
 
 		G_GhostAddColor(GHC_SUPER);
 
