@@ -40,7 +40,7 @@ typedef enum
 	PT_CLIENTMIS,     // Same as above with but saying resend from.
 	PT_CLIENT2CMD,    // 2 cmds in the packet for splitscreen.
 	PT_CLIENT2MIS,    // Same as above with but saying resend from
-	PT_NODEKEEPALIVE, // Same but without ticcmd and consistancy
+	PT_NODEKEEPALIVE, // Same but without ticcmd
 	PT_NODEKEEPALIVEMIS,
 	PT_SERVERTICS,    // All cmds for the tic.
 	PT_SERVERREFUSE,  // Server refuses joiner (reason inside).
@@ -81,7 +81,6 @@ typedef struct
 {
 	UINT8 client_tic;
 	UINT8 resendfrom;
-	INT16 consistancy;
 	ticcmd_t cmd;
 } ATTRPACK clientcmd_pak;
 
@@ -91,7 +90,6 @@ typedef struct
 {
 	UINT8 client_tic;
 	UINT8 resendfrom;
-	INT16 consistancy;
 	ticcmd_t cmd, cmd2;
 } ATTRPACK client2cmd_pak;
 

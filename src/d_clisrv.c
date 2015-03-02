@@ -96,8 +96,6 @@ static tic_t firstticstosend; // min of the nettics
 static tic_t tictoclear = 0; // optimize d_clearticcmd
 static tic_t maketic;
 
-static INT16 consistancy[BACKUPTICS];
-
 // client specific
 static ticcmd_t localcmds;
 static ticcmd_t localcmds2;
@@ -461,8 +459,6 @@ void ReadLmpExtraData(UINT8 **demo_pointer, INT32 playernum)
 // -----------------------------------------------------------------
 // end extra data function for lmps
 // -----------------------------------------------------------------
-
-static INT16 Consistancy(void);
 
 #ifndef NONET
 #define JOININGAME
@@ -980,7 +976,6 @@ static void CL_LoadReceivedSavegame(void)
 	save_p = NULL;
 	if (unlink(tmpsave) == -1)
 		CONS_Alert(CONS_ERROR, M_GetText("Can't delete %s\n"), tmpsave);
-	consistancy[gametic%BACKUPTICS] = Consistancy();
 	CON_ToggleOff();
 }
 #endif
@@ -3088,36 +3083,6 @@ FILESTAMP
 // Builds ticcmds for console player,
 // sends out a packet
 //
-// no more use random generator, because at very first tic isn't yet synchronized
-// Note: It is called consistAncy on purpose.
-//
-static INT16 Consistancy(void)
-{
-	INT32 i;
-	UINT32 ret = 0;
-
-	DEBFILE(va("TIC %u ", gametic));
-
-	for (i = 0; i < MAXPLAYERS; i++)
-	{
-		if (!playeringame[i])
-			ret ^= 0xCCCC;
-		else if (!players[i].mo);
-		else
-		{
-			ret += players[i].mo->x;
-			ret -= players[i].mo->y;
-			ret += players[i].powers[pw_shield];
-			ret *= i+1;
-		}
-	}
-	// I give up
-	// Coop desynching enemies is painful
-	if (!G_PlatformGametype())
-		ret += P_GetRandSeed();
-
-	return (INT16)(ret & 0xFFFF);
-}
 
 // send the client packet to the server
 static void CL_SendClientCmd(void)
@@ -3141,7 +3106,6 @@ static void CL_SendClientCmd(void)
 	else if (gamestate != GS_NULL)
 	{
 		G_MoveTiccmd(&netbuffer->u.clientpak.cmd, &localcmds, 1);
-		netbuffer->u.clientpak.consistancy = SHORT(consistancy[gametic%BACKUPTICS]);
 
 		// send a special packet with 2 cmd for splitscreen
 		if (splitscreen || botingame)
@@ -3417,7 +3381,6 @@ void TryRunTics(tic_t realtics)
 				G_Ticker((gametic % NEWTICRATERATIO) == 0);
 				ExtraDataTicker();
 				gametic++;
-				consistancy[gametic%BACKUPTICS] = Consistancy();
 			}
 	}
 }
