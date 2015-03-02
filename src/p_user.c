@@ -3402,7 +3402,7 @@ static void P_DoSuperStuff(player_t *player)
 			spark->destscale = player->mo->scale;
 			P_SetScale(spark, player->mo->scale);
 		}
-		
+
 		G_GhostAddColor(GHC_SUPER);
 
 		// Ran out of rings while super!
