@@ -2759,8 +2759,8 @@ static const char *locateWad(void)
 	if (isWadPathOk(returnWadPath))
 		return NULL;
 #endif
-    
-    
+
+
 #ifdef CMAKECONFIG
 #ifndef NDEBUG
     I_OutputMsg(","CMAKE_ASSETS_DIR);
@@ -2771,7 +2771,7 @@ static const char *locateWad(void)
     }
 #endif
 #endif
-    
+
 #ifdef __APPLE__
     OSX_GetResourcesPath(returnWadPath);
     I_OutputMsg(",%s", returnWadPath);
@@ -2779,7 +2779,7 @@ static const char *locateWad(void)
     {
         return returnWadPath;
     }
-    
+
 #endif
 
 	// examine default dirs
