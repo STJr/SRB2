@@ -12,6 +12,8 @@
 #define ASSET_HASH_PATCH_DTA  "${SRB2_ASSET_patch.dta_HASH}"
 
 #define SRB2_COMP_REVISION    "${SRB2_COMP_REVISION}"
+#define SRB2_GIT_DESCRIBE     "${SRB2_GIT_DESCRIBE}"
+#define SRB2_GIT_BRANCH       "${SRB2_GIT_BRANCH}"
 
 #define CMAKE_ASSETS_DIR      "${CMAKE_SOURCE_DIR}/assets"
 
