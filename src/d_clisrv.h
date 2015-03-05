@@ -36,13 +36,6 @@ typedef enum
 	PT_SERVERCFG,     // Server config used in start game
 	                  // (must stay 1 for backwards compatibility).
 	                  // This is a positive response to a CLIENTJOIN request.
-	PT_CLIENTCMD,     // Ticcmd of the client.
-	PT_CLIENTMIS,     // Same as above with but saying resend from.
-	PT_CLIENT2CMD,    // 2 cmds in the packet for splitscreen.
-	PT_CLIENT2MIS,    // Same as above with but saying resend from
-	PT_NODEKEEPALIVE, // Same but without ticcmd
-	PT_NODEKEEPALIVEMIS,
-	PT_SERVERTICS,    // All cmds for the tic.
 	PT_SERVERREFUSE,  // Server refuses joiner (reason inside).
 	PT_SERVERSHUTDOWN,
 	PT_CLIENTQUIT,    // Client closes the connection.
@@ -62,8 +55,6 @@ typedef enum
 
 	PT_FILEFRAGMENT = PT_CANFAIL, // A part of a file.
 
-	PT_TEXTCMD,       // Extra text commands from the client.
-	PT_TEXTCMD2,      // Splitscreen text commands.
 	PT_CLIENTJOIN,    // Client wants to join; used in start game.
 	PT_NODETIMEOUT,   // Packet sent to self if the connection times out.
 #ifdef NEWPING

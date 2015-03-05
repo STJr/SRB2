@@ -32,14 +32,6 @@
 // NETWORKING
 //
 // gametic is the tic about to be (or currently being) run
-// server:
-//   maketic is the tic that hasn't had control made for it yet
-//   nettics: is the tic for each node
-//   firsttictosend: is the lowest value of nettics
-// client:
-//   neededtic: is the tic needed by the client to run the game
-//   firsttictosend: is used to optimize a condition
-// normally maketic >= gametic > 0
 
 #define FORCECLOSE 0x8000
 tic_t connectiontimeout = (15*TICRATE);
@@ -736,13 +728,6 @@ static const char *packettypename[NUMPACKETTYPE] =
 {
 	"NOTHING",
 	"SERVERCFG",
-	"CLIENTCMD",
-	"CLIENTMIS",
-	"CLIENT2CMD",
-	"CLIENT2MIS",
-	"NODEKEEPALIVE",
-	"NODEKEEPALIVEMIS",
-	"SERVERTICS",
 	"SERVERREFUSE",
 	"SERVERSHUTDOWN",
 	"CLIENTQUIT",
@@ -754,8 +739,6 @@ static const char *packettypename[NUMPACKETTYPE] =
 
 	"PLAYERCONFIGS",
 	"FILEFRAGMENT",
-	"TEXTCMD",
-	"TEXTCMD2",
 	"CLIENTJOIN",
 	"NODETIMEOUT",
 };
@@ -775,29 +758,6 @@ static void DebugPrintpacket(const char *header)
 		case PT_CLIENTJOIN:
 			fprintf(debugfile, "    number %d mode %d\n", netbuffer->u.clientcfg.localplayers,
 				netbuffer->u.clientcfg.mode);
-			break;
-		case PT_SERVERTICS:
-			fprintf(debugfile, "    firsttic %u ply %d tics %d ntxtcmd %s\n    ",
-				(UINT32)ExpandTics(netbuffer->u.serverpak.starttic), netbuffer->u.serverpak.numslots,
-				netbuffer->u.serverpak.numtics,
-				sizeu1((size_t)(&((UINT8 *)netbuffer)[doomcom->datalength] - (UINT8 *)&netbuffer->u.serverpak.cmds[netbuffer->u.serverpak.numslots*netbuffer->u.serverpak.numtics])));
-			fprintfstring((char *)&netbuffer->u.serverpak.cmds[netbuffer->u.serverpak.numslots*netbuffer->u.serverpak.numtics],(size_t)(
-				&((UINT8 *)netbuffer)[doomcom->datalength] - (UINT8 *)&netbuffer->u.serverpak.cmds[netbuffer->u.serverpak.numslots*netbuffer->u.serverpak.numtics]));
-			break;
-		case PT_CLIENTCMD:
-		case PT_CLIENT2CMD:
-		case PT_CLIENTMIS:
-		case PT_CLIENT2MIS:
-		case PT_NODEKEEPALIVE:
-		case PT_NODEKEEPALIVEMIS:
-			fprintf(debugfile, "    tic %4u resendfrom %u\n",
-				(UINT32)ExpandTics(netbuffer->u.clientpak.client_tic),
-				(UINT32)ExpandTics (netbuffer->u.clientpak.resendfrom));
-			break;
-		case PT_TEXTCMD:
-		case PT_TEXTCMD2:
-			fprintf(debugfile, "    length %d\n    ", netbuffer->u.textcmd[0]);
-			fprintfstring((char *)netbuffer->u.textcmd+1, netbuffer->u.textcmd[0]);
 			break;
 		case PT_SERVERCFG:
 			fprintf(debugfile, "    playerslots %d clientnode %d serverplayer %d "
