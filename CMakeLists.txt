@@ -85,6 +85,9 @@ if(${CMAKE_SYSTEM} MATCHES "Darwin")
 	endif()
 endif()
 
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+set(CMAKE_PDB_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+
 # Set EXE names so the assets CMakeLists can refer to its target
 set(SRB2_SDL2_EXE_NAME srb2)
 set(SRB2_WIN_EXE_NAME srb2dd)
