@@ -58,10 +58,6 @@ else()
 	set(SRB2_SYSTEM_BITS 32)
 endif()
 
-if(MSVC)
-	message(WARNING "!! MSVC BUILDS OF SRB2 CANNOT PLAY MULTIPLAYER !! You're more than welcome to try and fix this!")
-endif()
-
 # OS macros
 if (UNIX)
 	add_definitions(-DUNIXCOMMON)
