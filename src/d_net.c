@@ -724,7 +724,8 @@ static void fprintfstring(char *s, size_t len)
 	fprintf(debugfile, "\n");
 }
 
-static const char *packettypename[NUMPACKETTYPE] =
+// Matches packet structure PT_ enum in d_clisrv.h
+static const char *packettypename[] =
 {
 	"NOTHING",
 	"SERVERCFG",
@@ -735,19 +736,24 @@ static const char *packettypename[NUMPACKETTYPE] =
 	"ASKINFO",
 	"SERVERINFO",
 	"REQUESTFILE",
-	"ASKINFOVIAMS",
+	"ASKINFOVIAMS"
+};
 
-	"PLAYERCONFIGS",
+static const char *failtypename[] =
+{
 	"FILEFRAGMENT",
 	"CLIENTJOIN",
 	"NODETIMEOUT",
+#ifdef NEWPING
+	"PING"
+#endif
 };
 
 static void DebugPrintpacket(const char *header)
 {
 	fprintf(debugfile, "%-12s (node %d,ack %d,ackret %d,size %d) type(%d) : %s\n",
 		header, doomcom->remotenode, netbuffer->ack, netbuffer->ackreturn, doomcom->datalength,
-		netbuffer->packettype, packettypename[netbuffer->packettype]);
+		netbuffer->packettype, netbuffer->packettype < PT_CANFAIL ? packettypename[netbuffer->packettype] : failtypename[netbuffer->packettype - PT_CANFAIL]);
 
 	switch (netbuffer->packettype)
 	{

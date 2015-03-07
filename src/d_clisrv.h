@@ -30,14 +30,12 @@
 //
 // Packet structure
 //
-typedef enum
-{
+typedef enum {
 	PT_NOTHING,       // To send a nop through the network. ^_~
 	PT_SERVERCFG,     // Server config used in start game
-	                  // (must stay 1 for backwards compatibility).
 	                  // This is a positive response to a CLIENTJOIN request.
 	PT_SERVERREFUSE,  // Server refuses joiner (reason inside).
-	PT_SERVERSHUTDOWN,
+	PT_SERVERSHUTDOWN,// Server is exiting.
 	PT_CLIENTQUIT,    // Client closes the connection.
 
 	PT_ASKINFO,       // Anyone can ask info of the server.
@@ -47,20 +45,17 @@ typedef enum
 	PT_ASKINFOVIAMS,  // Packet from the MS requesting info be sent to new client.
 	                  // If this ID changes, update masterserver definition.
 
-	// Add non-PT_CANFAIL packet types here to avoid breaking MS compatibility.
-
-	PT_CANFAIL,       // This is kind of a priority. Anything bigger than CANFAIL
-	                  // allows HSendPacket(,true,,) to return false.
-	                  // In addition, this packet can't occupy all the available slots.
+	PT_CANFAIL = 0x40, // This is kind of a priority. Anything >= PT_CANFAIL
+	                   // allows HSendPacket(,true,,) to return false.
+	                   // In addition, this packet can't occupy all the available slots.
 
 	PT_FILEFRAGMENT = PT_CANFAIL, // A part of a file.
 
 	PT_CLIENTJOIN,    // Client wants to join; used in start game.
 	PT_NODETIMEOUT,   // Packet sent to self if the connection times out.
 #ifdef NEWPING
-	PT_PING,          // Packet sent to tell clients the other client's latency to server.
+	PT_PING           // Packet sent to tell clients the other client's latency to server.
 #endif
-	NUMPACKETTYPE
 } packettype_t;
 
 #if defined(_MSC_VER)
