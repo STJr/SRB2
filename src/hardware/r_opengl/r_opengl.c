@@ -28,11 +28,6 @@
 
 #include <stdarg.h>
 #include <math.h>
-#ifndef SHUFFLE
-#ifndef KOS_GL_COMPATIBILITY
-#define SHUFFLE
-#endif
-#endif
 #include "r_opengl.h"
 
 #if defined (HWRENDER) && !defined (NOROPENGL)
@@ -1932,7 +1927,6 @@ EXPORT INT32  HWRAPI(GetRenderVersion) (void)
 	return VERSION;
 }
 
-#ifdef SHUFFLE
 EXPORT void HWRAPI(PostImgRedraw) (float points[SCREENVERTS][SCREENVERTS][2])
 {
 	INT32 x, y;
@@ -1992,7 +1986,6 @@ EXPORT void HWRAPI(PostImgRedraw) (float points[SCREENVERTS][SCREENVERTS][2])
 	pglEnable(GL_DEPTH_TEST);
 	pglEnable(GL_BLEND);
 }
-#endif //SHUFFLE
 
 // Create Screen to fade from
 EXPORT void HWRAPI(StartScreenWipe) (void)

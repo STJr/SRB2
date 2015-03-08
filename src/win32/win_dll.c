@@ -114,9 +114,7 @@ static loadfunc_t hwdFuncTable[] = {
 	{"SetTransform@4",      &hwdriver.pfnSetTransform},
 	{"GetTextureUsed@0",    &hwdriver.pfnGetTextureUsed},
 	{"GetRenderVersion@0",  &hwdriver.pfnGetRenderVersion},
-#ifdef SHUFFLE
 	{"PostImgRedraw@4",     &hwdriver.pfnPostImgRedraw},
-#endif
 	{"StartScreenWipe@0",   &hwdriver.pfnStartScreenWipe},
 	{"EndScreenWipe@0",     &hwdriver.pfnEndScreenWipe},
 	{"DoScreenWipe@4",      &hwdriver.pfnDoScreenWipe},
@@ -144,9 +142,7 @@ static loadfunc_t hwdFuncTable[] = {
 	{"SetTransform",        &hwdriver.pfnSetTransform},
 	{"GetTextureUsed",      &hwdriver.pfnGetTextureUsed},
 	{"GetRenderVersion",    &hwdriver.pfnGetRenderVersion},
-#ifdef SHUFFLE
 	{"PostImgRedraw",       &hwdriver.pfnPostImgRedraw},
-#endif
 	{"StartScreenWipe",     &hwdriver.pfnStartScreenWipe},
 	{"EndScreenWipe",       &hwdriver.pfnEndScreenWipe},
 	{"DoScreenWipe",        &hwdriver.pfnDoScreenWipe},
