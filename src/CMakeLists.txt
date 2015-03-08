@@ -34,32 +34,6 @@ set(SRB2_CORE_SOURCES
 	m_random.c
 	md5.c
 	mserv.c
-	p_ceilng.c
-	p_enemy.c
-	p_fab.c
-	p_floor.c
-	p_inter.c
-	p_lights.c
-	p_map.c
-	p_maputl.c
-	p_mobj.c
-	p_polyobj.c
-	p_saveg.c
-	p_setup.c
-	p_sight.c
-	p_spec.c
-	p_telept.c
-	p_tick.c
-	p_user.c
-	r_bsp.c
-	r_data.c
-	r_draw.c
-	r_main.c
-	r_plane.c
-	r_segs.c
-	r_sky.c
-	r_splats.c
-	r_things.c
 	s_sound.c
 	screen.c
 	sounds.c
@@ -124,15 +98,31 @@ set(SRB2_CORE_HEADERS
 	md5.h
 	mserv.h
 	p5prof.h
-	p_local.h
-	p_maputl.h
-	p_mobj.h
-	p_polyobj.h
-	p_pspr.h
-	p_saveg.h
-	p_setup.h
-	p_spec.h
-	p_tick.h
+	s_sound.h
+	screen.h
+	sounds.h
+	st_stuff.h
+	tables.h
+	v_video.h
+	w_wad.h
+	y_inter.h
+	z_zone.h
+
+	config.h.in
+	${CMAKE_CURRENT_BINARY_DIR}/config.h
+)
+
+set(SRB2_CORE_RENDER_SOURCES
+	r_bsp.c
+	r_data.c
+	r_draw.c
+	r_main.c
+	r_plane.c
+	r_segs.c
+	r_sky.c
+	r_splats.c
+	r_things.c
+
 	r_bsp.h
 	r_data.h
 	r_defs.h
@@ -145,57 +135,45 @@ set(SRB2_CORE_HEADERS
 	r_splats.h
 	r_state.h
 	r_things.h
-	s_sound.h
-	screen.h
-	sounds.h
-	st_stuff.h
-	tables.h
-	v_video.h
-	w_wad.h
-	y_inter.h
-	z_zone.h
 )
 
-prepend_sources(SRB2_CORE_SOURCES)
-prepend_sources(SRB2_CORE_HEADERS)
+set(SRB2_CORE_GAME_SOURCES
+	p_ceilng.c
+	p_enemy.c
+	p_fab.c
+	p_floor.c
+	p_inter.c
+	p_lights.c
+	p_map.c
+	p_maputl.c
+	p_mobj.c
+	p_polyobj.c
+	p_saveg.c
+	p_setup.c
+	p_sight.c
+	p_spec.c
+	p_telept.c
+	p_tick.c
+	p_user.c
 
-set(SRB2_CORE_HEADERS ${SRB2_CORE_HEADERS} ${CMAKE_CURRENT_BINARY_DIR}/config.h)
-
-set(SRB2_HWRENDER_SOURCES
-	hardware/hw_bsp.c
-	hardware/hw_cache.c
-	hardware/hw_draw.c
-	hardware/hw_light.c
-	hardware/hw_main.c
-	hardware/hw_md2.c
-	hardware/hw_trick.c
+	p_local.h
+	p_maputl.h
+	p_mobj.h
+	p_polyobj.h
+	p_pspr.h
+	p_saveg.h
+	p_setup.h
+	p_spec.h
+	p_tick.h
 )
 
-set (SRB2_HWRENDER_HEADERS
-	hardware/hw_data.h
-	hardware/hw_defs.h
-	hardware/hw_dll.h
-	hardware/hw_drv.h
-	hardware/hw_glide.h
-	hardware/hw_glob.h
-	hardware/hw_light.h
-	hardware/hw_main.h
-	hardware/hw_md2.h
-)
+if(NOT CLANG)
+	set(SRB2_CORE_SOURCES ${SRB2_CORE_SOURCES} string.c)
+endif()
 
-prepend_sources(SRB2_HWRENDER_SOURCES)
-prepend_sources(SRB2_HWRENDER_HEADERS)
-
-set(SRB2_R_OPENGL_SOURCES
-	hardware/r_opengl/r_opengl.c
-)
-
-set(SRB2_R_OPENGL_HEADERS
-	hardware/r_opengl/r_opengl.h
-)
-
-prepend_sources(SRB2_R_OPENGL_SOURCES)
-prepend_sources(SRB2_R_OPENGL_HEADERS)
+source_group("Main" FILES ${SRB2_CORE_SOURCES} ${SRB2_CORE_HEADERS})
+source_group("Renderer" FILES ${SRB2_CORE_RENDER_SOURCES})
+source_group("Game" FILES ${SRB2_CORE_GAME_SOURCES})
 
 set(SRB2_ASM_SOURCES
 	vid_copy.s
@@ -219,8 +197,7 @@ if(MSVC)
 	list(APPEND SRB2_NASM_OBJECTS tmap_vc.obj)
 endif()
 
-prepend_sources(SRB2_ASM_SOURCES)
-prepend_sources(SRB2_NASM_SOURCES)
+source_group("Assembly" FILES ${SRB2_ASM_SOURCES} ${SRB2_NASM_SOURCES})
 
 
 ### Configuration
@@ -229,11 +206,11 @@ set(SRB2_CONFIG_HAVE_BLUA ON CACHE BOOL
 set(SRB2_CONFIG_HAVE_PNG ON CACHE BOOL
 	"Enable PNG support. Depends on zlib, so will be disabled if you don't enable that too.")
 set(SRB2_CONFIG_HAVE_ZLIB ON CACHE BOOL
-	"Enable zlib support")
+	"Enable zlib support.")
 set(SRB2_CONFIG_HAVE_GME ON CACHE BOOL
-	"Enable GME support")
+	"Enable GME support.")
 set(SRB2_CONFIG_HWRENDER ON CACHE BOOL
-	"Enable hardware rendering through OpenGL")
+	"Enable hardware rendering through OpenGL.")
 set(SRB2_CONFIG_USEASM OFF CACHE BOOL
 	"Enable NASM tmap implementation for software mode speedup.")
 set(SRB2_CONFIG_YASM OFF CACHE BOOL
@@ -264,8 +241,7 @@ if(${SRB2_CONFIG_HAVE_BLUA})
 		lua_script.h
 	)
 
-	prepend_sources(SRB2_LUA_SOURCES)
-	prepend_sources(SRB2_LUA_HEADERS)
+	source_group("LUA" FILES ${SRB2_LUA_SOURCES} ${SRB2_LUA_HEADERS})
 
 	set(SRB2_BLUA_SOURCES
 		blua/lapi.c
@@ -318,8 +294,7 @@ if(${SRB2_CONFIG_HAVE_BLUA})
 		blua/lvm.h
 		blua/lzio.h
 	)
-	prepend_sources(SRB2_BLUA_SOURCES)
-	prepend_sources(SRB2_BLUA_HEADERS)
+	source_group("LUA\\Interpreter" FILES ${SRB2_BLUA_SOURCES} ${SRB2_BLUA_HEADERS})
 endif()
 
 if(${SRB2_CONFIG_HAVE_GME})
@@ -355,6 +330,36 @@ endif()
 
 if(${SRB2_CONFIG_HWRENDER})
 	add_definitions(-DHWRENDER)
+	set(SRB2_HWRENDER_SOURCES
+		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_bsp.c
+		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_cache.c
+		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_draw.c
+		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_light.c
+		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_main.c
+		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_md2.c
+		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_trick.c
+	)
+
+	set (SRB2_HWRENDER_HEADERS
+		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_data.h
+		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_defs.h
+		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_dll.h
+		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_drv.h
+		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_glide.h
+		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_glob.h
+		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_light.h
+		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_main.h
+		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_md2.h
+	)
+
+	set(SRB2_R_OPENGL_SOURCES
+		${CMAKE_CURRENT_SOURCE_DIR}/hardware/r_opengl/r_opengl.c
+	)
+
+	set(SRB2_R_OPENGL_HEADERS
+		${CMAKE_CURRENT_SOURCE_DIR}/hardware/r_opengl/r_opengl.h
+	)
+
 endif()
 
 if(${SRB2_CONFIG_HWRENDER} AND ${SRB2_CONFIG_STATIC_OPENGL})
@@ -384,10 +389,6 @@ endif()
 
 # Targets
 
-if(${CMAKE_SYSTEM} MATCHES Windows)
-	add_subdirectory(win32)
-endif()
-
 # Compatibility flag with later versions of GCC
 # We should really fix our code to not need this
 if(NOT CLANG AND NOT MSVC)
@@ -396,4 +397,23 @@ endif()
 
 add_definitions(-DCMAKECONFIG)
 
+add_library(SRB2Core STATIC
+	${SRB2_CORE_SOURCES}
+	${SRB2_CORE_HEADERS}
+	${SRB2_CORE_RENDER_SOURCES}
+	${SRB2_CORE_GAME_SOURCES}
+	${SRB2_LUA_SOURCES}
+	${SRB2_LUA_HEADERS}
+	${SRB2_BLUA_SOURCES}
+	${SRB2_BLUA_HEADERS}
+)
+
 add_subdirectory(sdl)
+
+if(${CMAKE_SYSTEM} MATCHES Windows)
+	add_subdirectory(win32)
+endif()
+
+if(NOT ${SRB2_SDL2_AVAILABLE} AND NOT ${SRB2_WIN32_AVAILABLE})
+	message(FATAL_ERROR "There are no targets available to build an SRB2 executable. :(")
+endif()

@@ -3,6 +3,12 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
 
+/* DO NOT MODIFY config.h DIRECTLY! It will be overwritten by cmake.
+ * If you want to change a configuration option here, modify it in
+ * your CMakeCache.txt. config.h.in is used as a template for CMake
+ * variables, so you can insert them here too.
+ */
+
 #ifdef CMAKECONFIG
 
 #define ASSET_HASH_SRB2_SRB   "${SRB2_ASSET_srb2.srb_HASH}"
