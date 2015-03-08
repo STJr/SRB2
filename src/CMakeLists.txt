@@ -176,25 +176,25 @@ source_group("Renderer" FILES ${SRB2_CORE_RENDER_SOURCES})
 source_group("Game" FILES ${SRB2_CORE_GAME_SOURCES})
 
 set(SRB2_ASM_SOURCES
-	vid_copy.s
+	${CMAKE_CURRENT_SOURCE_DIR}/vid_copy.s
 )
 
 set(SRB2_NASM_SOURCES
-	tmap_mmx.nas
-	tmap.nas
+	${CMAKE_CURRENT_SOURCE_DIR}/tmap_mmx.nas
+	${CMAKE_CURRENT_SOURCE_DIR}/tmap.nas
 )
 
 if(MSVC)
-	list(APPEND SRB2_NASM_SOURCES tmap_vc.nas)
+	list(APPEND SRB2_NASM_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/tmap_vc.nas)
 endif()
 
 set(SRB2_NASM_OBJECTS
-	tmap_mmx.obj
-	tmap.obj
+	${CMAKE_CURRENT_BINARY_DIR}/tmap_mmx.obj
+	${CMAKE_CURRENT_BINARY_DIR}/tmap.obj
 )
 
 if(MSVC)
-	list(APPEND SRB2_NASM_OBJECTS tmap_vc.obj)
+	list(APPEND SRB2_NASM_OBJECTS ${CMAKE_CURRENT_BINARY_DIR}/tmap_vc.obj)
 endif()
 
 source_group("Assembly" FILES ${SRB2_ASM_SOURCES} ${SRB2_NASM_SOURCES})
