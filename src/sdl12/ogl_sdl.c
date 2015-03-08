@@ -230,11 +230,9 @@ boolean OglSdlSurface(INT32 w, INT32 h, boolean isFullscreen)
 		glXSwapIntervalSGIEXT = NULL;
 #endif
 
-#ifndef KOS_GL_COMPATIBILITY
 	if (isExtAvailable("GL_EXT_texture_filter_anisotropic", gl_extensions))
 		pglGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &maximumAnisotropy);
 	else
-#endif
 		maximumAnisotropy = 0;
 
 	SetupGLFunc13();
@@ -246,11 +244,7 @@ boolean OglSdlSurface(INT32 w, INT32 h, boolean isFullscreen)
 	pglClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
 	HWR_Startup();
-#ifdef KOS_GL_COMPATIBILITY
-	textureformatGL = GL_ARGB4444;
-#else
 	textureformatGL = cbpp > 16 ? GL_RGBA : GL_RGB5_A1;
-#endif
 
 	return true;
 }
