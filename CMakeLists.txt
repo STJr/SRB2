@@ -3,6 +3,10 @@ project(SRB2
 	VERSION 2.1.14
 	LANGUAGES C)
 
+if(${PROJECT_SOURCE_DIR} MATCHES ${PROJECT_BINARY_DIR})
+	message(FATAL_ERROR "In-source builds will bring you a world of pain. Please make a separate directory to invoke CMake from.")
+endif()
+
 # Set up CMAKE path
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
@@ -58,10 +62,6 @@ else()
 	set(SRB2_SYSTEM_BITS 32)
 endif()
 
-if(MSVC)
-	message(WARNING "!! MSVC BUILDS OF SRB2 CANNOT PLAY MULTIPLAYER !! You're more than welcome to try and fix this!")
-endif()
-
 # OS macros
 if (UNIX)
 	add_definitions(-DUNIXCOMMON)
@@ -85,6 +85,9 @@ if(${CMAKE_SYSTEM} MATCHES "Darwin")
 	endif()
 endif()
 
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+set(CMAKE_PDB_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+
 # Set EXE names so the assets CMakeLists can refer to its target
 set(SRB2_SDL2_EXE_NAME srb2)
 set(SRB2_WIN_EXE_NAME srb2dd)
@@ -98,7 +101,9 @@ add_subdirectory(assets)
 ## config.h generation
 set(GIT_EXECUTABLE "git" CACHE FILEPATH "Path to git binary")
 include(GitUtilities)
-git_describe(SRB2_COMP_REVISION "${CMAKE_CURRENT_SOURCE_DIR}")
+git_describe(SRB2_GIT_DESCRIBE "${CMAKE_SOURCE_DIR}")
+git_current_branch(SRB2_GIT_BRANCH "${CMAKE_SOURCE_DIR}")
+set(SRB2_COMP_REVISION "${SRB2_GIT_DESCRIBE}-<${SRB2_GIT_BRANCH}>")
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/src/config.h)
 
 ##### PACKAGE CONFIGURATION #####

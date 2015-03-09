@@ -3,6 +3,12 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
 
+/* DO NOT MODIFY config.h DIRECTLY! It will be overwritten by cmake.
+ * If you want to change a configuration option here, modify it in
+ * your CMakeCache.txt. config.h.in is used as a template for CMake
+ * variables, so you can insert them here too.
+ */
+
 #ifdef CMAKECONFIG
 
 #define ASSET_HASH_SRB2_SRB   "${SRB2_ASSET_srb2.srb_HASH}"
@@ -12,6 +18,8 @@
 #define ASSET_HASH_PATCH_DTA  "${SRB2_ASSET_patch.dta_HASH}"
 
 #define SRB2_COMP_REVISION    "${SRB2_COMP_REVISION}"
+#define SRB2_GIT_DESCRIBE     "${SRB2_GIT_DESCRIBE}"
+#define SRB2_GIT_BRANCH       "${SRB2_GIT_BRANCH}"
 
 #define CMAKE_ASSETS_DIR      "${CMAKE_SOURCE_DIR}/assets"
 
