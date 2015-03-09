@@ -39,16 +39,13 @@ set(SRB2_SDL2_HEADERS
 	sdlmain.h
 )
 
-prepend_sources(SRB2_SDL2_SOURCES)
-prepend_sources(SRB2_SDL2_HEADERS)
+source_group("Interface Code" FILES ${SRB2_SDL2_SOURCES} ${SRB2_SDL2_HEADERS})
 
 # Dependency
 find_package(SDL2)
 
 if(${SDL2_FOUND})
 	set(SRB2_SDL2_TOTAL_SOURCES
-		${SRB2_CORE_SOURCES}
-		${SRB2_CORE_HEADERS}
 		${SRB2_SDL2_SOURCES}
 		${SRB2_SDL2_HEADERS}
 	)
@@ -60,15 +57,9 @@ if(${SDL2_FOUND})
 			${SRB2_R_OPENGL_SOURCES}
 			${SRB2_R_OPENGL_HEADERS}
 		)
-	endif()
 
-	if(${SRB2_CONFIG_HAVE_BLUA})
-		set(SRB2_SDL2_TOTAL_SOURCES ${SRB2_SDL2_TOTAL_SOURCES}
-			${SRB2_LUA_SOURCES}
-			${SRB2_LUA_HEADERS}
-			${SRB2_BLUA_SOURCES}
-			${SRB2_BLUA_HEADERS}
-		)
+		source_group("Hardware" FILES ${SRB2_HWRENDER_SOURCES} ${SRB2_HWRENDER_HEADERS})
+		source_group("Hardware\\OpenGL Renderer" FILES ${SRB2_R_OPENGL_SOURCES} ${SRB2_R_OPENGL_HEADERS})
 	endif()
 
 	if(${SRB2_USEASM})
@@ -85,7 +76,6 @@ if(${SDL2_FOUND})
 			set_source_files_properties(${SRB2_ASM_SOURCES} PROPERTIES LANGUAGE C)
 			set_source_files_properties(${SRB2_ASM_SOURCES} PROPERTIES COMPILE_FLAGS "-x assembler-with-cpp")
 		endif()
-
 	endif()
 
 	if(${CMAKE_SYSTEM} MATCHES Windows)
@@ -94,39 +84,36 @@ if(${SDL2_FOUND})
 			${CMAKE_SOURCE_DIR}/src/win32/Srb2win.rc
 		)
 	endif()
-	if(NOT CLANG)
-		set(SRB2_SDL2_TOTAL_SOURCES ${SRB2_SDL2_TOTAL_SOURCES}
-			${CMAKE_SOURCE_DIR}/src/string.c
-		)
-	endif()
 
 	if(${CMAKE_SYSTEM} MATCHES Darwin)
 		set(MACOSX_BUNDLE_ICON_FILE Srb2mac.icns)
 		set_source_files_properties(macosx/Srb2mac.icns PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
-		set(SRB2_SDL2_TOTAL_SOURCES ${SRB2_SDL2_TOTAL_SOURCES}
+		set(SRB2_SDL2_MAC_SOURCES
 			macosx/mac_alert.c
 			macosx/mac_alert.h
 			macosx/mac_resources.c
 			macosx/mac_resources.h
 			macosx/Srb2mac.icns
 		)
+		source_group("Interface Code\\OSX Compatibility" FILES ${SRB2_SDL2_MAC_SOURCES})
+		set(SRB2_SDL2_TOTAL_SOURCES ${SRB2_SDL2_TOTAL_SOURCES} ${SRB2_SDL2_MAC_SOURCES})
 	endif()
 
+	add_executable(SRB2SDL2 MACOSX_BUNDLE WIN32 ${SRB2_SDL2_TOTAL_SOURCES})
+	set_target_properties(SRB2SDL2 PROPERTIES OUTPUT_NAME ${SRB2_SDL2_EXE_NAME})
+
 	if(CLANG)
-		add_executable(${SRB2_SDL2_EXE_NAME} MACOSX_BUNDLE ${SRB2_SDL2_TOTAL_SOURCES})
-		add_framework(CoreFoundation ${SRB2_SDL2_EXE_NAME})
-		add_framework(SDL2 ${SRB2_SDL2_EXE_NAME})
-		add_framework(SDL2_mixer ${SRB2_SDL2_EXE_NAME})
-		target_link_libraries(${SRB2_SDL2_EXE_NAME} PRIVATE
+		add_framework(CoreFoundation SRB2SDL2)
+		add_framework(SDL2 SRB2SDL2)
+		add_framework(SDL2_mixer SRB2SDL2)
+		target_link_libraries(SRB2SDL2 PRIVATE
 			${PNG_LIBRARIES}
 			${ZLIB_LIBRARIES}
 			${OPENGL_LIBRARIES}
 		)
-		set_target_properties(${SRB2_SDL2_EXE_NAME} PROPERTIES OUTPUT_NAME "Sonic Robo Blast 2")
+		set_target_properties(SRB2SDL2 PROPERTIES OUTPUT_NAME "Sonic Robo Blast 2")
 	else()
-		add_executable(${SRB2_SDL2_EXE_NAME} WIN32 ${SRB2_SDL2_TOTAL_SOURCES})
-
-		target_link_libraries(${SRB2_SDL2_EXE_NAME} PRIVATE
+		target_link_libraries(SRB2SDL2 PRIVATE
 			${SDL2_LIBRARIES}
 			${SDL2_MIXER_LIBRARIES}
 			${PNG_LIBRARIES}
@@ -135,13 +122,14 @@ if(${SDL2_FOUND})
 		)
 
 		if(${CMAKE_SYSTEM} MATCHES Linux)
-			target_link_libraries(${SRB2_SDL2_EXE_NAME} PRIVATE
+			target_link_libraries(SRB2SDL2 PRIVATE
 				m
 				rt
 			)
 		endif()
-
 	endif()
+
+	target_link_libraries(SRB2SDL2 PRIVATE SRB2Core)
 
 	if(${SRB2_USEASM})
 		if(${SRB2_CONFIG_YASM})
@@ -159,7 +147,7 @@ if(${SDL2_FOUND})
 			foreach(ASMFILE ${SRB2_NASM_SOURCES})
 				get_filename_component(ASMFILE_NAME ${ASMFILE} NAME_WE)
 				set(ASMFILE_NAME ${ASMFILE_NAME}.obj)
-				add_custom_command(TARGET ${SRB2_SDL2_EXE_NAME} PRE_LINK
+				add_custom_command(TARGET SRB2SDL2 PRE_LINK
 					COMMAND ${ASM_ASSEMBLER_TEMP} ARGS -f ${ASM_ASSEMBLER_OBJFORMAT} -o ${CMAKE_CURRENT_BINARY_DIR}/${ASMFILE_NAME} ${ASMFILE}
 					COMMENT "assemble ${ASMFILE_NAME}."
 				)
@@ -167,23 +155,23 @@ if(${SDL2_FOUND})
 		endif()
 	endif()
 
-	set_target_properties(${SRB2_SDL2_EXE_NAME} PROPERTIES VERSION ${SRB2_VERSION})
+	set_target_properties(SRB2SDL2 PROPERTIES VERSION ${SRB2_VERSION})
 
 	if(${CMAKE_SYSTEM} MATCHES Windows)
-		target_link_libraries(${SRB2_SDL2_EXE_NAME} PRIVATE
+		target_link_libraries(SRB2SDL2 PRIVATE
 			ws2_32
 		)
-		target_compile_options(${SRB2_SDL2_EXE_NAME} PRIVATE
+		target_compile_options(SRB2SDL2 PRIVATE
 			-U_WINDOWS
 		)
 	endif()
 
 	if(MSVC)
 		find_package(SDL2_MAIN REQUIRED)
-		target_link_libraries(${SRB2_SDL2_EXE_NAME} PRIVATE
+		target_link_libraries(SRB2SDL2 PRIVATE
 			${SDL2_MAIN_LIBRARIES}
 		)
-		target_compile_options(${SRB2_SDL2_EXE_NAME} PRIVATE
+		target_compile_options(SRB2SDL2 PRIVATE
 			/Umain
 			/D_CRT_SECURE_NO_WARNINGS # something about string functions.
 			/D_CRT_NONSTDC_NO_DEPRECATE
@@ -192,7 +180,7 @@ if(${SDL2_FOUND})
 		)
 	endif()
 
-	target_include_directories(${SRB2_SDL2_EXE_NAME} PRIVATE
+	target_include_directories(SRB2SDL2 PRIVATE
 		${SDL2_INCLUDE_DIRS}
 		${SDL2_MIXER_INCLUDE_DIRS}
 		${PNG_INCLUDE_DIRS}
@@ -201,10 +189,10 @@ if(${SDL2_FOUND})
 	)
 
 	if(${SRB2_HAVE_MIXER})
-		target_compile_definitions(${SRB2_SDL2_EXE_NAME} PRIVATE -DHAVE_MIXER -DSOUND=SOUND_MIXER)
+		target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_MIXER -DSOUND=SOUND_MIXER)
 	endif()
 
-	target_compile_definitions(${SRB2_SDL2_EXE_NAME} PRIVATE
+	target_compile_definitions(SRB2SDL2 PRIVATE
 		-DHAVE_SDL
 	)
 
@@ -212,21 +200,21 @@ if(${SDL2_FOUND})
 	if(CMAKE_COMPILER_IS_GNUCC)
 		if(${CMAKE_BUILD_TYPE} MATCHES Debug)
 			message(STATUS "Will make separate debug symbols in *.debug")
-			add_custom_command(TARGET ${SRB2_SDL2_EXE_NAME} POST_BUILD
-				COMMAND ${OBJCOPY} --only-keep-debug $<TARGET_FILE:${SRB2_SDL2_EXE_NAME}> $<TARGET_FILE:${SRB2_SDL2_EXE_NAME}>.debug
-				COMMAND ${OBJCOPY} --strip-debug $<TARGET_FILE:${SRB2_SDL2_EXE_NAME}>
-				COMMAND ${OBJCOPY} --add-gnu-debuglink=$<TARGET_FILE_NAME:${SRB2_SDL2_EXE_NAME}>.debug $<TARGET_FILE:${SRB2_SDL2_EXE_NAME}>
+			add_custom_command(TARGET SRB2SDL2 POST_BUILD
+				COMMAND ${OBJCOPY} --only-keep-debug $<TARGET_FILE:SRB2SDL2> $<TARGET_FILE:SRB2SDL2>.debug
+				COMMAND ${OBJCOPY} --strip-debug $<TARGET_FILE:SRB2SDL2>
+				COMMAND ${OBJCOPY} --add-gnu-debuglink=$<TARGET_FILE_NAME:SRB2SDL2>.debug $<TARGET_FILE:SRB2SDL2>
 			)
 		endif()
 	endif()
 
 	#### Installation ####
 	if (CLANG)
-		install(TARGETS ${SRB2_SDL2_EXE_NAME}
+		install(TARGETS SRB2SDL2
 			BUNDLE DESTINATION .
 		)
 	else()
-		install(TARGETS ${SRB2_SDL2_EXE_NAME} ${SRB2_SDL2_EXE_NAME}
+		install(TARGETS SRB2SDL2 SRB2SDL2
 			RUNTIME DESTINATION .
 		)
 	endif()
@@ -257,10 +245,10 @@ if(${SDL2_FOUND})
 
 		# We also want to copy those DLLs to build directories on MSVC.
 		# So we'll add a post_build step.
-		copy_files_to_build_dir(${SRB2_SDL2_EXE_NAME} win_extra_dll_list)
+		copy_files_to_build_dir(SRB2SDL2 win_extra_dll_list)
 	endif()
 
-	
+
 	# Mac bundle fixup
 	if(CLANG)
 		install(CODE "
@@ -271,6 +259,9 @@ if(${SDL2_FOUND})
 			)"
 		)
 	endif()
+
+	set(SRB2_SDL2_AVAILABLE YES PARENT_SCOPE)
 else()
-	message(WARNING "SDL2 wasn't found, so ${SRB2_SDL2_EXE_NAME} won't be available")
+	message(WARNING "SDL2 was not found, so the SDL2 target will not be available.")
+	set(SRB2_SDL2_AVAILABLE NO PARENT_SCOPE)
 endif()
