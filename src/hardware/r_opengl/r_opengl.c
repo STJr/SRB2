@@ -185,7 +185,9 @@ FUNCPRINTF void DBG_Printf(const char *lpFmt, ...)
 #define pglPolygonOffset glPolygonOffset
 #define pglScissor glScissor
 #define pglEnable glEnable
+#define pglEnableClientState glEnableClientState
 #define pglDisable glDisable
+#define pglDisableClientState glDisableClientState
 #define pglGetDoublev glGetDoublev
 //glGetIntegerv
 //glGetString
@@ -217,6 +219,16 @@ FUNCPRINTF void DBG_Printf(const char *lpFmt, ...)
 #define pglColor4f glColor4f
 #define pglColor4fv glColor4fv
 #define pglTexCoord2f glTexCoord2f
+
+/* Drawing Functions (arrays) */
+#define pglVertexPointer glVertexPointer
+#define pglNormalPointer glNormalPointer
+#define pglColorPointer glColorPointer
+#define pglIndexPointer glIndexPointer
+#define pglTexCoordPointer glTexCoordPointer
+#define pglEdgeFlagPointer glEdgeFlagPointer
+#define pglDrawArrays glDrawArrays
+#define pglDrawElements glDrawElements
 
 /* Lighting */
 #define pglShadeModel glShadeModel
@@ -271,8 +283,12 @@ typedef void (APIENTRY * PFNglScissor) (GLint x, GLint y, GLsizei width, GLsizei
 static PFNglScissor pglScissor;
 typedef void (APIENTRY * PFNglEnable) (GLenum cap);
 static PFNglEnable pglEnable;
+typedef void (APIENTRY * PFNglEnableClientState) (GLenum cap);
+static PFNglEnableClientState pglEnableClientState;
 typedef void (APIENTRY * PFNglDisable) (GLenum cap);
 static PFNglDisable pglDisable;
+typedef void (APIENTRY * PFNglDisableClientState) (GLenum cap);
+static PFNglDisableClientState pglDisableClientState;
 typedef void (APIENTRY * PFNglGetDoublev) (GLenum pname, GLdouble *params);
 static PFNglGetDoublev pglGetDoublev;
 //glGetIntegerv
@@ -325,6 +341,24 @@ typedef void (APIENTRY * PFNglColor4fv) (const GLfloat *v);
 static PFNglColor4fv pglColor4fv;
 typedef void (APIENTRY * PFNglTexCoord2f) (GLfloat s, GLfloat t);
 static PFNglTexCoord2f pglTexCoord2f;
+
+/* Drawing Functions (arrays) */
+typedef void (APIENTRY * PFNglVertexPointer) (GLint size, GLenum type, GLsizei stride, const GLvoid * pointer);
+static PFNglVertexPointer pglVertexPointer;
+typedef void (APIENTRY * PFNglNormalPointer) (GLenum type, GLsizei stride, const GLvoid * pointer);
+static PFNglNormalPointer pglNormalPointer;
+typedef void (APIENTRY * PFNglColorPointer) (GLint size, GLenum type, GLsizei stride, const GLvoid * pointer);
+static PFNglColorPointer pglColorPointer;
+typedef void (APIENTRY * PFNglIndexPointer) (GLenum type, GLsizei stride, const GLvoid * pointer);
+static PFNglIndexPointer pglIndexPointer;
+typedef void (APIENTRY * PFNglTexCoordPointer) (GLint size, GLenum type, GLsizei stride, const GLvoid * pointer);
+static PFNglTexCoordPointer pglTexCoordPointer;
+typedef void (APIENTRY * PFNglEdgeFlagPointer) (GLsizei stride, const GLvoid * pointer);
+static PFNglEdgeFlagPointer pglEdgeFlagPointer;
+typedef void (APIENTRY * PFNglDrawArrays) (GLenum mode, GLint first, GLsizei count);
+static PFNglDrawArrays pglDrawArrays;
+typedef void (APIENTRY * PFNglDrawElements) (GLenum mode, GLsizei count, GLenum type, const GLvoid * indices);
+static PFNglDrawElements pglDrawElements;
 
 /* Lighting */
 typedef void (APIENTRY * PFNglShadeModel) (GLenum mode);
@@ -416,7 +450,9 @@ boolean SetupGLfunc(void)
 	GETOPENGLFUNC(pglPolygonOffset , glPolygonOffset)
 	GETOPENGLFUNC(pglScissor , glScissor)
 	GETOPENGLFUNC(pglEnable , glEnable)
+	GETOPENGLFUNC(pglEnableClientState, glEnableClientState);
 	GETOPENGLFUNC(pglDisable , glDisable)
+	GETOPENGLFUNC(pglDisableClientState, glDisableClientState);
 	GETOPENGLFUNC(pglGetDoublev , glGetDoublev)
 	GETOPENGLFUNC(pglGetIntegerv , glGetIntegerv)
 	GETOPENGLFUNC(pglGetString , glGetString)
@@ -444,6 +480,14 @@ boolean SetupGLfunc(void)
 	GETOPENGLFUNC(pglColor4f , glColor4f)
 	GETOPENGLFUNC(pglColor4fv , glColor4fv)
 	GETOPENGLFUNC(pglTexCoord2f , glTexCoord2f)
+	
+	GETOPENGLFUNC(pglVertexPointer, glVertexPointer)
+	GETOPENGLFUNC(pglNormalPointer, glNormalPointer)
+	GETOPENGLFUNC(pglColorPointer, glColorPointer)
+	GETOPENGLFUNC(pglTexCoordPointer, glTexCoordPointer)
+	GETOPENGLFUNC(pglEdgeFlagPointer, glEdgeFlagPointer)
+	GETOPENGLFUNC(pglDrawArrays, glDrawArrays)
+	GETOPENGLFUNC(pglDrawElements, glDrawElements)
 
 	GETOPENGLFUNC(pglShadeModel , glShadeModel)
 	GETOPENGLFUNC(pglLightfv, glLightfv)
@@ -1296,6 +1340,7 @@ EXPORT void HWRAPI(DrawPolygon) (FSurfaceInfo  *pSurf,
 	FUINT i;
 	FUINT j;
 	GLRGBAFloat c = {0,0,0,0};
+	FUINT stride;
 
 	if ((PolyFlags & PF_Corona) && (oglflags & GLF_NOZBUFREAD))
 		PolyFlags &= ~(PF_NoDepthTest|PF_Corona);
@@ -1375,15 +1420,15 @@ EXPORT void HWRAPI(DrawPolygon) (FSurfaceInfo  *pSurf,
 	if (PolyFlags & PF_MD2)
 		return;
 
-	pglBegin(GL_TRIANGLE_FAN);
-	for (i = 0; i < iNumPts; i++)
-	{
-		pglTexCoord2f(pOutVerts[i].sow, pOutVerts[i].tow);
-		//Hurdler: test code: -pOutVerts[i].z => pOutVerts[i].z
-		pglVertex3f(pOutVerts[i].x, pOutVerts[i].y, pOutVerts[i].z);
-		//pglVertex3f(pOutVerts[i].x, pOutVerts[i].y, -pOutVerts[i].z);
-	}
-	pglEnd();
+	stride = sizeof(FUINT) + sizeof(FLOAT) + sizeof(FLOAT);
+
+	pglEnableClientState(GL_VERTEX_ARRAY);
+	pglEnableClientState(GL_TEXTURE_COORD_ARRAY);
+	pglVertexPointer(3, GL_FLOAT, sizeof(FOutVector), &pOutVerts[0].x);
+	pglTexCoordPointer(2, GL_FLOAT, sizeof(FOutVector), &pOutVerts[0].sow);
+	pglDrawArrays(GL_TRIANGLE_FAN, 0, iNumPts);
+	pglDisableClientState(GL_TEXTURE_COORD_ARRAY);
+	pglDisableClientState(GL_VERTEX_ARRAY);
 
 	if (PolyFlags & PF_RemoveYWrap)
 		pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
