@@ -1340,7 +1340,6 @@ EXPORT void HWRAPI(DrawPolygon) (FSurfaceInfo  *pSurf,
 	FUINT i;
 	FUINT j;
 	GLRGBAFloat c = {0,0,0,0};
-	FUINT stride;
 
 	if ((PolyFlags & PF_Corona) && (oglflags & GLF_NOZBUFREAD))
 		PolyFlags &= ~(PF_NoDepthTest|PF_Corona);
@@ -1419,8 +1418,6 @@ EXPORT void HWRAPI(DrawPolygon) (FSurfaceInfo  *pSurf,
 
 	if (PolyFlags & PF_MD2)
 		return;
-
-	stride = sizeof(FUINT) + sizeof(FLOAT) + sizeof(FLOAT);
 
 	pglEnableClientState(GL_VERTEX_ARRAY);
 	pglEnableClientState(GL_TEXTURE_COORD_ARRAY);
