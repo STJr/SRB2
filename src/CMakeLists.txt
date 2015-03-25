@@ -109,7 +109,6 @@ set(SRB2_CORE_HEADERS
 	z_zone.h
 
 	config.h.in
-	${CMAKE_CURRENT_BINARY_DIR}/config.h
 )
 
 set(SRB2_CORE_RENDER_SOURCES
@@ -171,9 +170,16 @@ if(NOT CLANG)
 	set(SRB2_CORE_SOURCES ${SRB2_CORE_SOURCES} string.c)
 endif()
 
+prepend_sources(SRB2_CORE_SOURCES)
+prepend_sources(SRB2_CORE_HEADERS)
+prepend_sources(SRB2_CORE_RENDER_SOURCES)
+prepend_sources(SRB2_CORE_GAME_SOURCES)
+
+set(SRB2_CORE_HEADERS ${SRB2_CORE_HEADERS} ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 source_group("Main" FILES ${SRB2_CORE_SOURCES} ${SRB2_CORE_HEADERS})
 source_group("Renderer" FILES ${SRB2_CORE_RENDER_SOURCES})
 source_group("Game" FILES ${SRB2_CORE_GAME_SOURCES})
+
 
 set(SRB2_ASM_SOURCES
 	${CMAKE_CURRENT_SOURCE_DIR}/vid_copy.s
@@ -241,6 +247,9 @@ if(${SRB2_CONFIG_HAVE_BLUA})
 		lua_script.h
 	)
 
+	prepend_sources(SRB2_LUA_SOURCES)
+	prepend_sources(SRB2_LUA_HEADERS)
+
 	source_group("LUA" FILES ${SRB2_LUA_SOURCES} ${SRB2_LUA_HEADERS})
 
 	set(SRB2_BLUA_SOURCES
@@ -294,6 +303,10 @@ if(${SRB2_CONFIG_HAVE_BLUA})
 		blua/lvm.h
 		blua/lzio.h
 	)
+
+	prepend_sources(SRB2_BLUA_SOURCES)
+	prepend_sources(SRB2_BLUA_HEADERS)
+
 	source_group("LUA\\Interpreter" FILES ${SRB2_BLUA_SOURCES} ${SRB2_BLUA_HEADERS})
 endif()
 
@@ -397,16 +410,16 @@ endif()
 
 add_definitions(-DCMAKECONFIG)
 
-add_library(SRB2Core STATIC
-	${SRB2_CORE_SOURCES}
-	${SRB2_CORE_HEADERS}
-	${SRB2_CORE_RENDER_SOURCES}
-	${SRB2_CORE_GAME_SOURCES}
-	${SRB2_LUA_SOURCES}
-	${SRB2_LUA_HEADERS}
-	${SRB2_BLUA_SOURCES}
-	${SRB2_BLUA_HEADERS}
-)
+#add_library(SRB2Core STATIC
+#	${SRB2_CORE_SOURCES}
+#	${SRB2_CORE_HEADERS}
+#	${SRB2_CORE_RENDER_SOURCES}
+#	${SRB2_CORE_GAME_SOURCES}
+#	${SRB2_LUA_SOURCES}
+#	${SRB2_LUA_HEADERS}
+#	${SRB2_BLUA_SOURCES}
+#	${SRB2_BLUA_HEADERS}
+#)
 
 add_subdirectory(sdl)
 
