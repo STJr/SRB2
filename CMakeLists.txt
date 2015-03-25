@@ -48,7 +48,7 @@ macro(copy_files_to_build_dir target dlllist_var)
 			add_custom_command(TARGET ${target} POST_BUILD
 				COMMAND ${CMAKE_COMMAND} -E copy_if_different
 				${dlllist_item}
-				${CMAKE_CURRENT_BINARY_DIR}/\$\(Configuration\)/${dllname}
+				$<TARGET_FILE_DIR:${target}>/${dllname}
 			)
 		endforeach()
 	endif()
