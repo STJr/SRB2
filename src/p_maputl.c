@@ -531,12 +531,25 @@ void P_LineOpening(line_t *linedef)
 			texheight = textures[texturetranslation[side->midtexture]]->height << FRACBITS;
 
 			// Set texbottom and textop to the Z coordinates of the texture's boundaries
-			if (linedef->flags & ML_DONTPEGBOTTOM) {
-				texbottom = openbottom + side->rowoffset;
-				textop = texbottom + texheight*(side->repeatcnt+1);
-			} else {
-				textop = opentop - side->rowoffset;
-				texbottom = textop - texheight*(side->repeatcnt+1);
+#ifdef POLYOBJECTS
+			if (linedef->polyobj && (linedef->polyobj->flags & POF_TESTHEIGHT)) {
+				if (linedef->flags & ML_DONTPEGBOTTOM) {
+					texbottom = back->floorheight + side->rowoffset;
+					textop = texbottom + texheight*(side->repeatcnt+1);
+				} else {
+					textop = back->ceilingheight - side->rowoffset;
+					texbottom = textop - texheight*(side->repeatcnt+1);
+				}
+			} else
+#endif
+			{
+				if (linedef->flags & ML_DONTPEGBOTTOM) {
+					texbottom = openbottom + side->rowoffset;
+					textop = texbottom + texheight*(side->repeatcnt+1);
+				} else {
+					textop = opentop - side->rowoffset;
+					texbottom = textop - texheight*(side->repeatcnt+1);
+				}
 			}
 
 			texmid = texbottom+(textop-texbottom)/2;
