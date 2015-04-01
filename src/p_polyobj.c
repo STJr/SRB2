@@ -1043,9 +1043,10 @@ static void Polyobj_carryThings(polyobj_t *po, fixed_t dx, fixed_t dy)
 
 				mo->lastlook = pomovecount;
 
-				// always push players even if not solid
-				if (!((mo->flags & MF_SOLID) || mo->player))
+				// Don't scroll objects that aren't affected by gravity
+				if (mo->flags & MF_NOGRAVITY)
 					continue;
+				// (The above check used to only move MF_SOLID objects, but that's inconsistent with conveyor behavior. -Red)
 
 				if (mo->flags & MF_NOCLIP)
 					continue;
@@ -1097,9 +1098,11 @@ static INT32 Polyobj_clipThings(polyobj_t *po, line_t *line)
 
 				for (; mo; mo = mo->bnext)
 				{
-					// always push players even if not solid
-					if (!((mo->flags & MF_SOLID) || mo->player))
+
+					// Don't scroll objects that aren't affected by gravity
+					if (mo->flags & MF_NOGRAVITY)
 						continue;
+					// (The above check used to only move MF_SOLID objects, but that's inconsistent with conveyor behavior. -Red)
 
 					if (mo->flags & MF_NOCLIP)
 						continue;
@@ -1283,9 +1286,10 @@ static void Polyobj_rotateThings(polyobj_t *po, vertex_t origin, angle_t delta, 
 
 				mo->lastlook = pomovecount;
 
-				// always push players even if not solid
-				if (!((mo->flags & MF_SOLID) || mo->player))
+				// Don't scroll objects that aren't affected by gravity
+				if (mo->flags & MF_NOGRAVITY)
 					continue;
+				// (The above check used to only move MF_SOLID objects, but that's inconsistent with conveyor behavior. -Red)
 
 				if (mo->flags & MF_NOCLIP)
 					continue;
