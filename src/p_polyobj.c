@@ -1304,13 +1304,21 @@ static void Polyobj_rotateThings(polyobj_t *po, vertex_t origin, angle_t delta, 
 					continue;
 
 				{
-					fixed_t newxoff, newyoff;
+					fixed_t newxoff, newyoff, oldxoff, oldyoff;
 					angle_t angletoobj = R_PointToAngle2(origin.x, origin.y, mo->x, mo->y);
 					fixed_t disttoobj = R_PointToDist2(origin.x, origin.y, mo->x, mo->y);
 
+					oldxoff = mo->x-origin.x;
+					oldyoff = mo->y-origin.y;
+
 					if (mo->player) // Hack to fix players sliding off of spinning polys -Red
 					{
-						disttoobj = FixedMul(disttoobj, 0xfe40);
+						angle_t temp;
+						angletoobj += delta;
+
+						temp = angletoobj >> ANGLETOFINESHIFT;
+						oldxoff = FixedMul(FINECOSINE(temp), disttoobj);
+						oldyoff = FixedMul(FINESINE(temp), disttoobj);
 					}
 
 					angletoobj += delta;
@@ -1318,7 +1326,7 @@ static void Polyobj_rotateThings(polyobj_t *po, vertex_t origin, angle_t delta, 
 					newxoff = FixedMul(FINECOSINE(angletoobj), disttoobj);
 					newyoff = FixedMul(FINESINE(angletoobj), disttoobj);
 
-					Polyobj_slideThing(mo, origin.x+newxoff-mo->x, origin.y+newyoff-mo->y);
+					Polyobj_slideThing(mo, newxoff-oldxoff, newyoff-oldyoff);
 
 					if (turnthings == 2 || (turnthings == 1 && !mo->player)) {
 						mo->angle += delta;
