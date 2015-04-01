@@ -1890,6 +1890,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 	 || specialtype == 304  // Ring count - Once
 	 || specialtype == 307  // Character ability - Once
 	 || specialtype == 308  // Race only - Once
+	 || specialtype == 313  // No More Enemies - Once
 	 || specialtype == 315  // No of pushables - Once
 	 || specialtype == 318  // Unlockable trigger - Once
 	 || specialtype == 320  // Unlockable - Once
@@ -6526,7 +6527,7 @@ static void P_DoScrollMove(mobj_t *thing, fixed_t dx, fixed_t dy, INT32 exclusiv
 	thing->momy += dy;
 
 	if (exclusive)
-		thing->flags2 |= MF2_PUSHED;
+		thing->eflags |= MFE_PUSHED;
 }
 
 /** Processes an active scroller.
@@ -6630,7 +6631,7 @@ void T_Scroll(scroll_t *s)
 					{
 						thing = node->m_thing;
 
-						if (thing->flags2 & MF2_PUSHED) // Already pushed this tic by an exclusive pusher.
+						if (thing->eflags & MFE_PUSHED) // Already pushed this tic by an exclusive pusher.
 							continue;
 
 						if (!(thing->flags & MF_NOCLIP)) // Thing must be clipped
@@ -6650,7 +6651,7 @@ void T_Scroll(scroll_t *s)
 				{
 					thing = node->m_thing;
 
-					if (thing->flags2 & MF2_PUSHED)
+					if (thing->eflags & MFE_PUSHED)
 						continue;
 
 					if (!(thing->flags & MF_NOCLIP) &&
@@ -6689,7 +6690,7 @@ void T_Scroll(scroll_t *s)
 					{
 						thing = node->m_thing;
 
-						if (thing->flags2 & MF2_PUSHED)
+						if (thing->eflags & MFE_PUSHED)
 							continue;
 
 						if (!(thing->flags & MF_NOCLIP)) // Thing must be clipped
@@ -6709,7 +6710,7 @@ void T_Scroll(scroll_t *s)
 				{
 					thing = node->m_thing;
 
-					if (thing->flags2 & MF2_PUSHED)
+					if (thing->eflags & MFE_PUSHED)
 						continue;
 
 					if (!(thing->flags & MF_NOCLIP) &&
@@ -7192,7 +7193,7 @@ static pusher_t *tmpusher; // pusher structure for blockmap searches
   */
 static inline boolean PIT_PushThing(mobj_t *thing)
 {
-	if (thing->flags2 & MF2_PUSHED)
+	if (thing->eflags & MFE_PUSHED)
 		return false;
 
 	if (thing->player && thing->player->pflags & PF_ROPEHANG)
@@ -7322,7 +7323,7 @@ static inline boolean PIT_PushThing(mobj_t *thing)
 	}
 
 	if (tmpusher->exclusive)
-		thing->flags2 |= MF2_PUSHED;
+		thing->eflags |= MFE_PUSHED;
 
 	return true;
 }
@@ -7400,10 +7401,10 @@ void T_Pusher(pusher_t *p)
 		tmbbox[BOXRIGHT]  = p->x + radius;
 		tmbbox[BOXLEFT]   = p->x - radius;
 
-		xl = (unsigned)(tmbbox[BOXLEFT] - bmaporgx - MAXRADIUS)>>MAPBLOCKSHIFT;
-		xh = (unsigned)(tmbbox[BOXRIGHT] - bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
-		yl = (unsigned)(tmbbox[BOXBOTTOM] - bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
-		yh = (unsigned)(tmbbox[BOXTOP] - bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
+		xl = (tmbbox[BOXLEFT] - bmaporgx - MAXRADIUS)>>MAPBLOCKSHIFT;
+		xh = (tmbbox[BOXRIGHT] - bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
+		yl = (tmbbox[BOXBOTTOM] - bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
+		yh = (tmbbox[BOXTOP] - bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
 		for (bx = xl; bx <= xh; bx++)
 			for (by = yl; by <= yh; by++)
 				P_BlockThingsIterator(bx,by, PIT_PushThing);
@@ -7429,7 +7430,7 @@ void T_Pusher(pusher_t *p)
 			|| thing->type == MT_BIGTUMBLEWEED))
 			continue;
 
-		if (thing->flags2 & MF2_PUSHED)
+		if (thing->eflags & MFE_PUSHED)
 			continue;
 
 		if (thing->player && thing->player->pflags & PF_ROPEHANG)
@@ -7599,7 +7600,7 @@ void T_Pusher(pusher_t *p)
 			}
 
 			if (p->exclusive)
-				thing->flags2 |= MF2_PUSHED;
+				thing->eflags |= MFE_PUSHED;
 		}
 	}
 }

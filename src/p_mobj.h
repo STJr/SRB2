@@ -175,24 +175,23 @@ typedef enum
 	MF2_EXPLOSION      = 1<<7,  // Thrown ring has explosive properties
 	MF2_SCATTER        = 1<<8,  // Thrown ring has scatter properties
 	MF2_BEYONDTHEGRAVE = 1<<9,  // Source of this missile has died and has since respawned.
-	MF2_PUSHED         = 1<<10, // Mobj was already pushed this tic
-	MF2_SLIDEPUSH      = 1<<11, // MF_PUSHABLE that pushes continuously.
-	MF2_CLASSICPUSH    = 1<<12, // Drops straight down when object has negative Z.
-	MF2_STANDONME      = 1<<13, // While not pushable, stand on me anyway.
-	MF2_INFLOAT        = 1<<14, // Floating to a height for a move, don't auto float to target's height.
-	MF2_DEBRIS         = 1<<15, // Splash ring from explosion ring
-	MF2_NIGHTSPULL     = 1<<16, // Attracted from a paraloop
-	MF2_JUSTATTACKED   = 1<<17, // can be pushed by other moving mobjs
-	MF2_FIRING         = 1<<18, // turret fire
-	MF2_SUPERFIRE      = 1<<19, // Firing something with Super Sonic-stopping properties. Or, if mobj has MF_MISSILE, this is the actual fire from it.
-	MF2_SHADOW         = 1<<20, // Fuzzy draw, makes targeting harder.
-	MF2_STRONGBOX      = 1<<21, // Flag used for "strong" random monitors.
-	MF2_OBJECTFLIP     = 1<<22, // Flag for objects that always have flipped gravity.
-	MF2_SKULLFLY       = 1<<23, // Special handling: skull in flight.
-	MF2_FRET           = 1<<24, // Flashing from a previous hit
-	MF2_BOSSNOTRAP     = 1<<25, // No Egg Trap after boss
-	MF2_BOSSFLEE       = 1<<26, // Boss is fleeing!
-	MF2_BOSSDEAD       = 1<<27, // Boss is dead! (Not necessarily fleeing, if a fleeing point doesn't exist.)
+	MF2_SLIDEPUSH      = 1<<10, // MF_PUSHABLE that pushes continuously.
+	MF2_CLASSICPUSH    = 1<<11, // Drops straight down when object has negative Z.
+	MF2_STANDONME      = 1<<12, // While not pushable, stand on me anyway.
+	MF2_INFLOAT        = 1<<13, // Floating to a height for a move, don't auto float to target's height.
+	MF2_DEBRIS         = 1<<14, // Splash ring from explosion ring
+	MF2_NIGHTSPULL     = 1<<15, // Attracted from a paraloop
+	MF2_JUSTATTACKED   = 1<<16, // can be pushed by other moving mobjs
+	MF2_FIRING         = 1<<17, // turret fire
+	MF2_SUPERFIRE      = 1<<18, // Firing something with Super Sonic-stopping properties. Or, if mobj has MF_MISSILE, this is the actual fire from it.
+	MF2_SHADOW         = 1<<19, // Fuzzy draw, makes targeting harder.
+	MF2_STRONGBOX      = 1<<20, // Flag used for "strong" random monitors.
+	MF2_OBJECTFLIP     = 1<<21, // Flag for objects that always have flipped gravity.
+	MF2_SKULLFLY       = 1<<22, // Special handling: skull in flight.
+	MF2_FRET           = 1<<23, // Flashing from a previous hit
+	MF2_BOSSNOTRAP     = 1<<24, // No Egg Trap after boss
+	MF2_BOSSFLEE       = 1<<25, // Boss is fleeing!
+	MF2_BOSSDEAD       = 1<<26, // Boss is dead! (Not necessarily fleeing, if a fleeing point doesn't exist.)
 	// free: to and including 1<<31
 } mobjflag2_t;
 
@@ -232,7 +231,11 @@ typedef enum
 	MFE_VERTICALFLIP      = 1<<5,
 	// Goo water
 	MFE_GOOWATER          = 1<<6,
-	// free: to and including 1<<7
+	// Mobj was already pushed this tic
+	MFE_PUSHED            = 1<<7,
+	// Mobj was already sprung this tic
+	MFE_SPRUNG            = 1<<8,
+	// free: to and including 1<<15
 } mobjeflag_t;
 
 //
@@ -286,7 +289,7 @@ typedef struct mobj_s
 	state_t *state;
 	UINT32 flags; // flags from mobjinfo tables
 	UINT32 flags2; // MF2_ flags
-	UINT8 eflags; // extra flags
+	UINT16 eflags; // extra flags
 
 	void *skin; // overrides 'sprite' when non-NULL (for player bodies to 'remember' the skin)
 	// Player and mobj sprites in multiplayer modes are modified

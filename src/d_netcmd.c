@@ -3193,7 +3193,27 @@ static void Command_ModDetails_f(void)
 //
 static void Command_ShowGametype_f(void)
 {
-	CONS_Printf(M_GetText("Current gametype is %d\n"), gametype);
+	INT32 j;
+	const char *gametypestr = NULL;
+
+	if (!(netgame || multiplayer)) // print "Single player" instead of "Co-op"
+	{
+		CONS_Printf(M_GetText("Current gametype is %s\n"), M_GetText("Single player"));
+		return;
+	}
+	// find name string for current gametype
+	for (j = 0; gametype_cons_t[j].strvalue; j++)
+	{
+		if (gametype_cons_t[j].value == gametype)
+		{
+			gametypestr = gametype_cons_t[j].strvalue;
+			break;
+		}
+	}
+	if (gametypestr)
+		CONS_Printf(M_GetText("Current gametype is %s\n"), gametypestr);
+	else // string for current gametype was not found above (should never happen)
+		CONS_Printf(M_GetText("Unknown gametype set (%d)\n"), gametype);
 }
 
 /** Plays the intro.
