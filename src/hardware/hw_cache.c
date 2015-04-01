@@ -1105,4 +1105,9 @@ void HWR_GetFadeMask(lumpnum_t fademasklumpnum)
 	Z_ChangeTag(grmip->grInfo.data, PU_HWRCACHE_UNLOCKED);
 }
 
+int HWR_GetNumCacheTextures(void)
+{
+	return gr_numtextures;
+}
+
 #endif //HWRENDER

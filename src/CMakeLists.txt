@@ -339,6 +339,7 @@ if(${SRB2_CONFIG_HWRENDER})
 		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_md2.c
 		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_trick.c
 		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_vertarray.c
+		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_vertbuckets.c
 	)
 
 	set (SRB2_HWRENDER_HEADERS
@@ -352,6 +353,7 @@ if(${SRB2_CONFIG_HWRENDER})
 		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_main.h
 		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_md2.h
 		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_vertarray.h
+		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_vertbuckets.h
 	)
 
 	set(SRB2_R_OPENGL_SOURCES
