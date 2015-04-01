@@ -28,67 +28,91 @@
 #define INITIAL_BUCKET_SIZE 6
 
 static FVertexArray * buckets = NULL;
-static int numBuckets = 0;
+static int numTextureBuckets = 0;
 
 static int bucketsHaveBeenInitialized = 0;
 
-void HWR_ResetVertexBuckets(void)
+static aatree_t * flatArrays;
+static aatree_t * textureArrays;
+
+static UINT8 arraysInitialized = 0;
+
+typedef enum
 {
-	// Free all arrays if they've been initialized before.
-	if (bucketsHaveBeenInitialized)
+	RMODE_FLAT,
+	RMODE_TEXTURE
+} EMode;
+
+static EMode rmode;
+
+static void FreeArraysFunc(INT32 key, void * value)
+{
+	FVertexArray * varray = (FVertexArray *) value;
+	HWR_FreeVertexArray(varray);
+	Z_Free(varray);
+}
+
+static void DrawArraysFunc(INT32 key, void * value)
+{
+	FVertexArray * varray = (FVertexArray *) value;
+	FSurfaceInfo surf;
+
+	surf.FlatColor.rgba = 0xFFFFFFFF;
+
+	if (rmode == RMODE_FLAT)
 	{
-		int i = 0;
-		for (i = 0; i < numBuckets; i++)
-		{
-			HWR_FreeVertexArray(&buckets[i]);
-		}
-		Z_Free(buckets);
+		HWR_GetFlat(key);
+	}
+	else if (rmode == RMODE_TEXTURE)
+	{
+		HWR_GetTexture(key);
+	}
+	// TODO support flags, translucency, etc
+	HWD.pfnDrawPolygon(&surf, varray->buffer, varray->used, 0);
+}
+
+static FVertexArray * GetVArray(aatree_t * tree, int index)
+{
+	FVertexArray * varray = (FVertexArray *) M_AATreeGet(tree, index);
+	if (!varray)
+	{
+		// no varray for this flat yet, create it
+		varray = (FVertexArray *) Z_Calloc(sizeof(FVertexArray), PU_STATIC, NULL);
+		HWR_InitVertexArray(varray, INITIAL_BUCKET_SIZE);
+		M_AATreeSet(tree, index, (void *) varray);
 	}
 
-	// We will only have as many buckets as gr_numtextures
-	numBuckets = HWR_GetNumCacheTextures();
-	buckets = Z_Malloc(numBuckets * sizeof(FVertexArray), PU_HWRCACHE, NULL);
-	
+	return varray;
+}
+
+void HWR_ResetVertexBuckets(void)
+{
+	if (arraysInitialized)
 	{
-		int i = 0;
-		for (i = 0; i < numBuckets; i++)
-		{
-			HWR_InitVertexArray(&buckets[i], INITIAL_BUCKET_SIZE);
-		}
+		M_AATreeIterate(flatArrays, FreeArraysFunc);
+		M_AATreeIterate(textureArrays, FreeArraysFunc);
+		M_AATreeFree(flatArrays);
+		M_AATreeFree(textureArrays);
 	}
-	bucketsHaveBeenInitialized = 1;
+
+	flatArrays = M_AATreeAlloc(0);
+	textureArrays = M_AATreeAlloc(0);
 }
 
 FVertexArray * HWR_GetVertexArrayForTexture(int texNum)
 {
-	if (texNum >= numBuckets || texNum < 0)
-	{
-		I_Error("HWR_GetVertexArrayForTexture: texNum >= numBuckets");
-		//return NULL;
-	}
-	return &buckets[texNum];
+	return GetVArray(textureArrays, texNum);
+}
+
+FVertexArray * HWR_GetVertexArrayForFlat(lumpnum_t lump)
+{
+	return GetVArray(flatArrays, lump);
 }
 
 void HWR_DrawVertexBuckets(void)
 {
-	int i = 0;
-	for (i = 0; i < numBuckets; i++)
-	{
-		FSurfaceInfo surface;
-		FVertexArray * bucket = &buckets[i];
-		
-		if (bucket->used == 0)
-		{
-			// We did not add any vertices with this texture, so we can skip binding and drawing.
-			continue;
-		}
-		
-		// Bind the texture.
-		
-		HWR_GetTexture(i);
-		// Draw the triangles.
-		// TODO handle polyflags and modulation for lighting/translucency?
-		HWD.pfnDrawPolygon(&surface, bucket->buffer, bucket->used, 0);
-		CONS_Printf("%d: %d tris\n", i, bucket->used);
-	}
+	rmode = RMODE_TEXTURE;
+	M_AATreeIterate(textureArrays, DrawArraysFunc);
+	rmode = RMODE_FLAT;
+	M_AATreeIterate(flatArrays, DrawArraysFunc);
 }
