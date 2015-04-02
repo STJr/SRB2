@@ -1335,7 +1335,8 @@ EXPORT void HWRAPI(DrawPolygon) (FSurfaceInfo  *pSurf,
                                     //FTextureInfo  *pTexInfo,
                                     FOutVector    *pOutVerts,
                                     FUINT         iNumPts,
-                                    FBITFIELD     PolyFlags)
+                                    FBITFIELD     PolyFlags,
+                                    int           PrimitiveType)
 {
 	FUINT i;
 	FUINT j;
@@ -1423,7 +1424,17 @@ EXPORT void HWRAPI(DrawPolygon) (FSurfaceInfo  *pSurf,
 	pglEnableClientState(GL_TEXTURE_COORD_ARRAY);
 	pglVertexPointer(3, GL_FLOAT, sizeof(FOutVector), &pOutVerts[0].x);
 	pglTexCoordPointer(2, GL_FLOAT, sizeof(FOutVector), &pOutVerts[0].sow);
-	pglDrawArrays(GL_TRIANGLE_FAN, 0, iNumPts);
+	switch (PrimitiveType)
+	{
+		case PP_TriangleFan:
+			pglDrawArrays(GL_TRIANGLE_FAN, 0, iNumPts);
+			break;
+		case PP_Triangles:
+			pglDrawArrays(GL_TRIANGLES, 0, iNumPts);
+			break;
+		default:
+			break;
+	}
 	pglDisableClientState(GL_TEXTURE_COORD_ARRAY);
 	pglDisableClientState(GL_VERTEX_ARRAY);
 
@@ -1648,7 +1659,7 @@ EXPORT void HWRAPI(DrawMD2i) (INT32 *gl_cmd_buffer, md2_frame_t *frame, UINT32 d
 #endif
 	}
 
-	DrawPolygon(NULL, NULL, 0, PF_Masked|PF_Modulated|PF_Occlude|PF_Clip);
+	DrawPolygon(NULL, NULL, 0, PF_Masked|PF_Modulated|PF_Occlude|PF_Clip, PP_TriangleFan);
 
 	pglPushMatrix(); // should be the same as glLoadIdentity
 	//Hurdler: now it seems to work

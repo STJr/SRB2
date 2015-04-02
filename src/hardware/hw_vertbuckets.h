@@ -33,6 +33,7 @@
   * should be called before rendering any BSP node. */
 void HWR_ResetVertexBuckets(void);
 
+FVertexArray * HWR_GetVertexArrayForFlat(lumpnum_t lumpnum);
 /** Get a pointer to the vertex array used for a given texture number. */
 FVertexArray * HWR_GetVertexArrayForTexture(int texNum);
 

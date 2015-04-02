@@ -57,6 +57,12 @@ static void DrawArraysFunc(INT32 key, void * value)
 	FVertexArray * varray = (FVertexArray *) value;
 	FSurfaceInfo surf;
 
+	if (varray->used == 0)
+	{
+		return;
+	}
+
+
 	surf.FlatColor.rgba = 0xFFFFFFFF;
 
 	if (rmode == RMODE_FLAT)
@@ -68,7 +74,7 @@ static void DrawArraysFunc(INT32 key, void * value)
 		HWR_GetTexture(key);
 	}
 	// TODO support flags, translucency, etc
-	HWD.pfnDrawPolygon(&surf, varray->buffer, varray->used, 0);
+	HWD.pfnDrawPolygon(&surf, varray->buffer, varray->used, PF_Occlude, PP_Triangles);
 }
 
 static FVertexArray * GetVArray(aatree_t * tree, int index)

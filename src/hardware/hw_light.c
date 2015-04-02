@@ -768,7 +768,7 @@ void HWR_WallLighting(FOutVector *wlVerts)
 		if (dynlights->mo[j]->state->nextstate == S_NULL)
 			Surf.FlatColor.s.alpha = (UINT8)(((float)dynlights->mo[j]->tics/(float)dynlights->mo[j]->state->tics)*Surf.FlatColor.s.alpha);
 
-		HWD.pfnDrawPolygon (&Surf, wlVerts, 4, LIGHTMAPFLAGS);
+		HWD.pfnDrawPolygon (&Surf, wlVerts, 4, LIGHTMAPFLAGS, PP_TriangleFan);
 
 	} // end for (j = 0; j < dynlights->nb; j++)
 }
@@ -831,7 +831,7 @@ void HWR_PlaneLighting(FOutVector *clVerts, int nrClipVerts)
 		if ((dynlights->mo[j]->state->nextstate == S_NULL))
 			Surf.FlatColor.s.alpha = (unsigned char)(((float)dynlights->mo[j]->tics/(float)dynlights->mo[j]->state->tics)*Surf.FlatColor.s.alpha);
 
-		HWD.pfnDrawPolygon (&Surf, clVerts, nrClipVerts, LIGHTMAPFLAGS);
+		HWD.pfnDrawPolygon (&Surf, clVerts, nrClipVerts, LIGHTMAPFLAGS, PP_TriangleFan);
 
 	} // end for (j = 0; j < dynlights->nb; j++)
 }
@@ -928,7 +928,7 @@ void HWR_DoCoronasLighting(FOutVector *outVerts, gr_vissprite_t *spr)
 
 		HWR_GetPic(coronalumpnum);  /// \todo use different coronas
 
-		HWD.pfnDrawPolygon (&Surf, light, 4, PF_Modulated | PF_Additive | PF_Clip | PF_Corona | PF_NoDepthTest);
+		HWD.pfnDrawPolygon (&Surf, light, 4, PF_Modulated | PF_Additive | PF_Clip | PF_Corona | PF_NoDepthTest, PP_TriangleFan);
 	}
 }
 #endif
@@ -1008,7 +1008,7 @@ void HWR_DrawCoronas(void)
 		light[3].y = cy+size*1.33f;
 		light[3].sow = 0.0f;   light[3].tow = 1.0f;
 
-		HWD.pfnDrawPolygon (&Surf, light, 4, PF_Modulated | PF_Additive | PF_Clip | PF_NoDepthTest | PF_Corona);
+		HWD.pfnDrawPolygon (&Surf, light, 4, PF_Modulated | PF_Additive | PF_Clip | PF_NoDepthTest | PF_Corona, PP_TriangleFan);
 	}
 }
 #endif

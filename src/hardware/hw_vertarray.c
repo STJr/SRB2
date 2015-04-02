@@ -28,7 +28,7 @@ void HWR_InitVertexArray(FVertexArray * varray, unsigned int initialSize)
 {
 	varray->size = initialSize;
 	varray->used = 0;
-	varray->buffer = Z_Malloc(varray->size * sizeof(FOutVector), PU_STATIC, varray);
+	varray->buffer = (FOutVector *) Z_Malloc(varray->size * sizeof(FOutVector), PU_STATIC, varray);
 }
 
 void HWR_FreeVertexArray(FVertexArray * varray)
@@ -39,16 +39,40 @@ void HWR_FreeVertexArray(FVertexArray * varray)
 void HWR_InsertVertexArray(FVertexArray * varray, int numElements, FOutVector * elements)
 {
 	int i = 0;
-	if (varray->used + numElements >= varray->size)
+	FOutVector * actualElements = NULL;
+	int numActualElements = numElements;
+
+	// Expand array from fan to triangles
+	// Not optimal... but the overhead will make up for it significantly
 	{
-		varray->size *= RESIZE_FACTOR;
-		varray->buffer = Z_Realloc(varray->buffer, varray->size * sizeof(FOutVector), PU_STATIC, varray);
+		int j = 0;
+		int k = 0;
+		numActualElements -= 3;
+		numActualElements *= 3;
+		numActualElements += 3;
+
+		actualElements = (FOutVector *) Z_Malloc(numActualElements * sizeof(FOutVector), PU_STATIC, NULL);
+
+		for (j = 2; j < numElements; j++)
+		{
+			actualElements[k] = elements[0];
+			actualElements[k+1] = elements[j-1];
+			actualElements[k+2] = elements[j];
+			k += 3;
+		}
 	}
 
-	for (i = 0; i < numElements; i++)
+	while (varray->used + numActualElements >= varray->size)
 	{
-		varray->buffer[i + varray->used] = elements[i];
+		varray->buffer = (FOutVector *) Z_Realloc(varray->buffer, varray->size * RESIZE_FACTOR * sizeof(FOutVector), PU_STATIC, varray);
+		varray->size *= RESIZE_FACTOR;
+	}
+
+	for (i = 0; i < numActualElements; i++)
+	{
+		varray->buffer[i + varray->used] = actualElements[i];
 	}
 	
-	varray->used += numElements;
+	varray->used += numActualElements;
+	Z_Free(actualElements);
 }

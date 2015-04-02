@@ -159,6 +159,12 @@ enum EPolyFlags
 	PF_Debug            = 0x80000000    // print debug message in driver :)
 };
 
+enum EPolygonPrimitive
+{
+	PP_TriangleFan = 0,
+	PP_Triangles
+};
+
 
 enum ESurfFlags
 {

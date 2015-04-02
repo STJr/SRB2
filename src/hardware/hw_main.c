@@ -24,6 +24,7 @@
 #include "hw_glob.h"
 #include "hw_light.h"
 #include "hw_drv.h"
+#include "hw_vertbuckets.h"
 
 #include "../i_video.h" // for rendermode == render_glide
 #include "../v_video.h"
@@ -758,7 +759,8 @@ static void HWR_RenderPlane(sector_t *sector, extrasubsector_t *xsub, fixed_t fi
 	else
 		PolyFlags |= PF_Masked|PF_Modulated|PF_Clip;
 
-	HWD.pfnDrawPolygon(&Surf, planeVerts, nrPlaneVerts, PolyFlags);
+	//HWD.pfnDrawPolygon(&Surf, planeVerts, nrPlaneVerts, PolyFlags);
+    HWR_InsertVertexArray(HWR_GetVertexArrayForFlat(lumpnum), nrPlaneVerts, planeVerts);
 
 #ifdef ALAM_LIGHTING
 	// add here code for dynamic lighting on planes
@@ -807,7 +809,7 @@ static void HWR_RenderSkyPlane(extrasubsector_t *xsub, fixed_t fixedheight)
 	}
 
 	HWD.pfnDrawPolygon(NULL, planeVerts, nrPlaneVerts,
-	 PF_Clip|PF_Invisible|PF_NoTexture|PF_Occlude);
+	 PF_Clip|PF_Invisible|PF_NoTexture|PF_Occlude, PP_TriangleFan);
 }
 #endif //polysky
 
@@ -897,7 +899,7 @@ static void HWR_DrawSegsSplats(FSurfaceInfo * pSurf)
 				break;
 		}
 
-		HWD.pfnDrawPolygon(&pSurf2, trVerts, 4, i|PF_Modulated|PF_Clip|PF_Decal);
+		HWD.pfnDrawPolygon(&pSurf2, trVerts, 4, i|PF_Modulated|PF_Clip|PF_Decal, PP_TriangleFan);
 	}
 }
 #endif
@@ -942,7 +944,7 @@ static void HWR_AddTransparentWall(wallVert3D *wallVerts, FSurfaceInfo * pSurf, 
 */
 static void HWR_ProjectWall(wallVert3D   * wallVerts,
                                     FSurfaceInfo * pSurf,
-                                    FBITFIELD blendmode, INT32 lightlevel, extracolormap_t *wallcolormap)
+                                    FBITFIELD blendmode, INT32 lightlevel, extracolormap_t *wallcolormap, int texnum)
 {
 	FOutVector  trVerts[4];
 	FOutVector  *wv;
@@ -988,7 +990,14 @@ static void HWR_ProjectWall(wallVert3D   * wallVerts,
 		pSurf->FlatColor.rgba = HWR_Lighting(lightlevel, NORMALFOG, FADEFOG, false, false);
 	}
 
-	HWD.pfnDrawPolygon(pSurf, trVerts, 4, blendmode|PF_Modulated|PF_Occlude|PF_Clip);
+    if (texnum == -1)
+    {
+        //HWD.pfnDrawPolygon(pSurf, trVerts, 4, blendmode|PF_Modulated|PF_Occlude|PF_Clip, PP_TriangleFan);
+    }
+    else
+    {
+        HWR_InsertVertexArray(HWR_GetVertexArrayForTexture(texnum), 4, trVerts);   
+    }
 
 #ifdef WALLSPLATS
 	if (gr_curline->linedef->splats && cv_splats.value)
@@ -1144,7 +1153,7 @@ static void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, INT32 texnum,
 		else if (glTex->mipmap.flags & TF_TRANSPARENT)
 			HWR_AddTransparentWall(wallVerts, Surf, texnum, PF_Environment, false, lightnum, colormap);
 		else
-			HWR_ProjectWall(wallVerts, Surf, PF_Masked, lightnum, colormap);
+			HWR_ProjectWall(wallVerts, Surf, PF_Masked, lightnum, colormap, texnum);
 
 		if (solid)
 			top = bheight;
@@ -1181,7 +1190,7 @@ static void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, INT32 texnum,
 	else if (glTex->mipmap.flags & TF_TRANSPARENT)
 		HWR_AddTransparentWall(wallVerts, Surf, texnum, PF_Environment, false, lightnum, colormap);
 	else
-		HWR_ProjectWall(wallVerts, Surf, PF_Masked, lightnum, colormap);
+		HWR_ProjectWall(wallVerts, Surf, PF_Masked, lightnum, colormap, texnum);
 }
 
 //
@@ -1301,7 +1310,7 @@ static void HWR_DrawSkyWall(wallVert3D *wallVerts, FSurfaceInfo *Surf, fixed_t b
 	// set top/bottom coords
 	wallVerts[2].y = wallVerts[3].y = FIXED_TO_FLOAT(top); // No real way to find the correct height of this
 	wallVerts[0].y = wallVerts[1].y = FIXED_TO_FLOAT(bottom); // worldlow/bottom because it needs to cover up the lower thok barrier wall
-	HWR_ProjectWall(wallVerts, Surf, PF_Invisible|PF_Clip|PF_NoTexture, 255, NULL);
+	HWR_ProjectWall(wallVerts, Surf, PF_Invisible|PF_Clip|PF_NoTexture, 255, NULL, -1);
 	// PF_Invisible so it's not drawn into the colour buffer
 	// PF_NoTexture for no texture
 	// PF_Occlude is set in HWR_ProjectWall to draw into the depth buffer
@@ -1448,7 +1457,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 			else if (grTex->mipmap.flags & TF_TRANSPARENT)
 				HWR_AddTransparentWall(wallVerts, &Surf, texturetranslation[gr_sidedef->toptexture], PF_Environment, false, lightnum, colormap);
 			else
-				HWR_ProjectWall(wallVerts, &Surf, PF_Masked, lightnum, colormap);
+				HWR_ProjectWall(wallVerts, &Surf, PF_Masked, lightnum, colormap, texturetranslation[gr_sidedef->toptexture]);
 		}
 
 		// check BOTTOM TEXTURE
@@ -1486,7 +1495,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 			else if (grTex->mipmap.flags & TF_TRANSPARENT)
 				HWR_AddTransparentWall(wallVerts, &Surf, texturetranslation[gr_sidedef->bottomtexture], PF_Environment, false, lightnum, colormap);
 			else
-				HWR_ProjectWall(wallVerts, &Surf, PF_Masked, lightnum, colormap);
+				HWR_ProjectWall(wallVerts, &Surf, PF_Masked, lightnum, colormap, texturetranslation[gr_sidedef->bottomtexture]);
 		}
 		gr_midtexture = texturetranslation[gr_sidedef->midtexture];
 		if (gr_midtexture)
@@ -1686,7 +1695,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 			else if (!(blendmode & PF_Masked))
 				HWR_AddTransparentWall(wallVerts, &Surf, gr_midtexture, blendmode, false, lightnum, colormap);
 			else
-				HWR_ProjectWall(wallVerts, &Surf, blendmode, lightnum, colormap);
+				HWR_ProjectWall(wallVerts, &Surf, blendmode, lightnum, colormap, gr_midtexture);
 
 			// If there is a colormap change, remove it.
 /*			if (!(Surf.FlatColor.s.red + Surf.FlatColor.s.green + Surf.FlatColor.s.blue == Surf.FlatColor.s.red/3)
@@ -1810,7 +1819,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				if (grTex->mipmap.flags & TF_TRANSPARENT)
 					HWR_AddTransparentWall(wallVerts, &Surf, gr_midtexture, PF_Environment, false, lightnum, colormap);
 				else
-					HWR_ProjectWall(wallVerts, &Surf, PF_Masked, lightnum, colormap);
+					HWR_ProjectWall(wallVerts, &Surf, PF_Masked, lightnum, colormap, gr_midtexture);
 			}
 		}
 
@@ -1936,7 +1945,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 						if (blendmode != PF_Masked)
 							HWR_AddTransparentWall(wallVerts, &Surf, texnum, blendmode, false, lightnum, colormap);
 						else
-							HWR_ProjectWall(wallVerts, &Surf, PF_Masked, lightnum, colormap);
+							HWR_ProjectWall(wallVerts, &Surf, PF_Masked, lightnum, colormap, texnum);
 					}
 				}
 			}
@@ -2042,7 +2051,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 						if (blendmode != PF_Masked)
 							HWR_AddTransparentWall(wallVerts, &Surf, texnum, blendmode, false, lightnum, colormap);
 						else
-							HWR_ProjectWall(wallVerts, &Surf, PF_Masked, lightnum, colormap);
+							HWR_ProjectWall(wallVerts, &Surf, PF_Masked, lightnum, colormap, texnum);
 					}
 				}
 			}
@@ -2785,7 +2794,7 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, fixed_t fixedheight
 	else
 		blendmode |= PF_Masked|PF_Modulated|PF_Clip;
 
-	HWD.pfnDrawPolygon(&Surf, planeVerts, nrPlaneVerts, blendmode);
+	HWD.pfnDrawPolygon(&Surf, planeVerts, nrPlaneVerts, blendmode, PP_TriangleFan);
 }
 
 static void HWR_AddPolyObjectPlanes(void)
@@ -2979,6 +2988,7 @@ static void HWR_Subsector(size_t num)
 		{
 			if (sub->validcount != validcount)
 			{
+
 				HWR_GetFlat(levelflats[gr_frontsector->floorpic].lumpnum);
 				HWR_RenderPlane(gr_frontsector, &extrasubsectors[num], locFloorHeight, PF_Occlude, floorlightlevel, levelflats[gr_frontsector->floorpic].lumpnum, NULL, 255, false, floorcolormap);
 			}
@@ -3814,7 +3824,7 @@ static void HWR_DrawSprite(gr_vissprite_t *spr)
 			if (sSurf.FlatColor.s.alpha > floorheight/4)
 			{
 				sSurf.FlatColor.s.alpha = (UINT8)(sSurf.FlatColor.s.alpha - floorheight/4);
-				HWD.pfnDrawPolygon(&sSurf, swallVerts, 4, PF_Translucent|PF_Modulated|PF_Clip);
+				HWD.pfnDrawPolygon(&sSurf, swallVerts, 4, PF_Translucent|PF_Modulated|PF_Clip, PP_TriangleFan);
 			}
 		}
 	}
@@ -3886,7 +3896,7 @@ noshadow:
 			blend = PF_Translucent|PF_Occlude;
 		}
 
-		HWD.pfnDrawPolygon(&Surf, wallVerts, 4, blend|PF_Modulated|PF_Clip);
+		HWD.pfnDrawPolygon(&Surf, wallVerts, 4, blend|PF_Modulated|PF_Clip, PP_TriangleFan);
 	}
 }
 
@@ -3986,7 +3996,7 @@ static inline void HWR_DrawPrecipitationSprite(gr_vissprite_t *spr)
 		blend = PF_Translucent|PF_Occlude;
 	}
 
-	HWD.pfnDrawPolygon(&Surf, wallVerts, 4, blend|PF_Modulated|PF_Clip);
+	HWD.pfnDrawPolygon(&Surf, wallVerts, 4, blend|PF_Modulated|PF_Clip, PP_TriangleFan);
 }
 #endif
 
@@ -4883,7 +4893,7 @@ static void HWR_DrawSkyBackground(player_t *player)
 		v[0].tow = v[1].tow -= ((float) angle / angleturn);
 	}
 
-	HWD.pfnDrawPolygon(NULL, v, 4, 0);
+	HWD.pfnDrawPolygon(NULL, v, 4, 0, PP_TriangleFan);
 }
 
 
@@ -5075,7 +5085,9 @@ if (0)
 
 	validcount++;
 
+    HWR_ResetVertexBuckets();
 	HWR_RenderBSPNode((INT32)numnodes-1);
+    HWR_DrawVertexBuckets();
 
 	// Make a viewangle int so we can render things based on mouselook
 	if (player == &players[consoleplayer])
@@ -5088,18 +5100,27 @@ if (0)
 	{
 		dup_viewangle += ANGLE_90;
 		HWR_ClearClipSegs();
+
+        HWR_ResetVertexBuckets();
 		HWR_RenderBSPNode((INT32)numnodes-1); //left
+        HWR_DrawVertexBuckets();
 
 		dup_viewangle += ANGLE_90;
 		if (((INT32)aimingangle > ANGLE_45 || (INT32)aimingangle<-ANGLE_45))
 		{
 			HWR_ClearClipSegs();
+
+            HWR_ResetVertexBuckets();
 			HWR_RenderBSPNode((INT32)numnodes-1); //back
+            HWR_DrawVertexBuckets();
 		}
 
 		dup_viewangle += ANGLE_90;
 		HWR_ClearClipSegs();
+
+        HWR_ResetVertexBuckets();
 		HWR_RenderBSPNode((INT32)numnodes-1); //right
+        HWR_DrawVertexBuckets();
 
 		dup_viewangle += ANGLE_90;
 	}
@@ -5305,7 +5326,9 @@ if (0)
 
 	validcount++;
 
+    HWR_ResetVertexBuckets();
 	HWR_RenderBSPNode((INT32)numnodes-1);
+    HWR_DrawVertexBuckets();
 
 	// Make a viewangle int so we can render things based on mouselook
 	if (player == &players[consoleplayer])
@@ -5318,18 +5341,27 @@ if (0)
 	{
 		dup_viewangle += ANGLE_90;
 		HWR_ClearClipSegs();
+
+        HWR_ResetVertexBuckets();
 		HWR_RenderBSPNode((INT32)numnodes-1); //left
+        HWR_DrawVertexBuckets();
 
 		dup_viewangle += ANGLE_90;
 		if (((INT32)aimingangle > ANGLE_45 || (INT32)aimingangle<-ANGLE_45))
 		{
 			HWR_ClearClipSegs();
+
+            HWR_ResetVertexBuckets();
 			HWR_RenderBSPNode((INT32)numnodes-1); //back
+            HWR_DrawVertexBuckets();
 		}
 
 		dup_viewangle += ANGLE_90;
 		HWR_ClearClipSegs();
+
+        HWR_ResetVertexBuckets();
 		HWR_RenderBSPNode((INT32)numnodes-1); //right
+        HWR_DrawVertexBuckets();
 
 		dup_viewangle += ANGLE_90;
 	}
@@ -5774,9 +5806,9 @@ static void HWR_RenderWall(wallVert3D   *wallVerts, FSurfaceInfo *pSurf, FBITFIE
 	pSurf->FlatColor.s.alpha = alpha; // put the alpha back after lighting
 
 	if (blend & PF_Environment)
-		HWD.pfnDrawPolygon(pSurf, trVerts, 4, blend|PF_Modulated|PF_Clip|PF_Occlude); // PF_Occlude must be used for solid objects
+		HWD.pfnDrawPolygon(pSurf, trVerts, 4, blend|PF_Modulated|PF_Clip|PF_Occlude, PP_TriangleFan); // PF_Occlude must be used for solid objects
 	else
-		HWD.pfnDrawPolygon(pSurf, trVerts, 4, blend|PF_Modulated|PF_Clip); // No PF_Occlude means overlapping (incorrect) transparency
+		HWD.pfnDrawPolygon(pSurf, trVerts, 4, blend|PF_Modulated|PF_Clip, PP_TriangleFan); // No PF_Occlude means overlapping (incorrect) transparency
 
 #ifdef WALLSPLATS
 	if (gr_curline->linedef->splats && cv_splats.value)
@@ -5830,7 +5862,7 @@ void HWR_DoPostProcessor(player_t *player)
 
 		Surf.FlatColor.s.alpha = 0xc0; // match software mode
 
-		HWD.pfnDrawPolygon(&Surf, v, 4, PF_Modulated|PF_Additive|PF_NoTexture|PF_NoDepthTest|PF_Clip|PF_NoZClip);
+		HWD.pfnDrawPolygon(&Surf, v, 4, PF_Modulated|PF_Additive|PF_NoTexture|PF_NoDepthTest|PF_Clip|PF_NoZClip, PP_TriangleFan);
 	}
 
 	// Capture the screen for intermission and screen waving
