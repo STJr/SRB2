@@ -1262,6 +1262,7 @@ static void Polyobj_rotateThings(polyobj_t *po, vertex_t origin, angle_t delta, 
 {
 	static INT32 pomovecount = 10000;
 	INT32 x, y;
+	angle_t deltafine = delta >> ANGLETOFINESHIFT;
 
 	pomovecount++;
 
@@ -1304,27 +1305,26 @@ static void Polyobj_rotateThings(polyobj_t *po, vertex_t origin, angle_t delta, 
 					continue;
 
 				{
-					fixed_t newxoff, newyoff, oldxoff, oldyoff;
-					angle_t angletoobj = R_PointToAngle2(origin.x, origin.y, mo->x, mo->y);
-					fixed_t disttoobj = R_PointToDist2(origin.x, origin.y, mo->x, mo->y);
+					fixed_t oldxoff, oldyoff, newxoff, newyoff;
+					fixed_t c, s;
+
+					c = FINECOSINE(deltafine);
+					s = FINESINE(deltafine);
 
 					oldxoff = mo->x-origin.x;
 					oldyoff = mo->y-origin.y;
 
 					if (mo->player) // Hack to fix players sliding off of spinning polys -Red
 					{
-						angle_t temp;
-						angletoobj += delta;
+						fixed_t temp;
 
-						temp = angletoobj >> ANGLETOFINESHIFT;
-						oldxoff = FixedMul(FINECOSINE(temp), disttoobj);
-						oldyoff = FixedMul(FINESINE(temp), disttoobj);
+						temp = FixedMul(oldxoff, c)-FixedMul(oldyoff, s);
+						oldyoff = FixedMul(oldyoff, c)+FixedMul(oldxoff, s);
+						oldxoff = temp;
 					}
 
-					angletoobj += delta;
-					angletoobj >>= ANGLETOFINESHIFT;
-					newxoff = FixedMul(FINECOSINE(angletoobj), disttoobj);
-					newyoff = FixedMul(FINESINE(angletoobj), disttoobj);
+					newxoff = FixedMul(oldxoff, c)-FixedMul(oldyoff, s);
+					newyoff = FixedMul(oldyoff, c)+FixedMul(oldxoff, s);
 
 					Polyobj_slideThing(mo, newxoff-oldxoff, newyoff-oldyoff);
 
