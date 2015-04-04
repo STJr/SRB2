@@ -121,7 +121,7 @@ void P_DoSpring(mobj_t *spring, mobj_t *object)
 		/*Someone want to make these work like bumpers?*/
 		return;
 	}
-	
+
 	object->eflags |= MFE_SPRUNG; // apply this flag asap!
 	spring->flags &= ~(MF_SOLID|MF_SPECIAL); // De-solidify
 
@@ -1223,7 +1223,7 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 			{
 				// If you're inside goowater and slowing down
 				fixed_t sinklevel = FixedMul(thing->info->height/6, thing->scale);
-				fixed_t minspeed = FixedMul(thing->info->height/12, thing->scale);
+				fixed_t minspeed = FixedMul(thing->info->height/9, thing->scale);
 				if (thing->z < *rover->topheight && *rover->bottomheight < thingtop
 				&& abs(thing->momz) < minspeed)
 				{
