@@ -2526,10 +2526,8 @@ void P_MobjCheckWater(mobj_t *mobj)
 			return;
 
 		if ((mobj->eflags & MFE_GOOWATER || wasingoo)) { // Decide what happens to your momentum when you enter/leave goopy water.
-			if (wasinwater && P_MobjFlip(mobj)*mobj->momz > 0)
-				mobj->momz = FixedMul(mobj->momz, FixedDiv(9*FRACUNIT, 8*FRACUNIT)); // Give the mobj a little out-of-goo boost.
-			else if (P_MobjFlip(mobj)*mobj->momz < 0)
-				mobj->momz = FixedMul(mobj->momz, FixedDiv(2*FRACUNIT, 5*FRACUNIT)); // KILL its momentum.
+			if (P_MobjFlip(mobj)*mobj->momz < 0) // You are entering the goo?
+				mobj->momz = FixedMul(mobj->momz, FixedDiv(2*FRACUNIT, 5*FRACUNIT)); // kill momentum significantly, to make the goo feel thick.
 		}
 		else if (wasinwater && P_MobjFlip(mobj)*mobj->momz > 0)
 			mobj->momz = FixedMul(mobj->momz, FixedDiv(780*FRACUNIT, 457*FRACUNIT)); // Give the mobj a little out-of-water boost.
