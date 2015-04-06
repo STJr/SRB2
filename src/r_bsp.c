@@ -978,11 +978,12 @@ static void R_Subsector(size_t num)
 						polysec->floorpic_angle-po->angle,
 						NULL,
 						NULL);
-				ffloor[numffloors].plane->polyobj = po;
+				//ffloor[numffloors].plane->polyobj = po;
 
 				ffloor[numffloors].height = polysec->floorheight;
 				ffloor[numffloors].polyobj = po;
 //				ffloor[numffloors].ffloor = rover;
+				po->visplane = ffloor[numffloors].plane;
 				numffloors++;
 			}
 
@@ -1014,11 +1015,12 @@ static void R_Subsector(size_t num)
 				ffloor[numffloors].plane = R_FindPlane(polysec->ceilingheight, polysec->ceilingpic,
 					polysec->lightlevel, xoff, yoff, polysec->ceilingpic_angle-po->angle,
 					NULL, NULL);
-				ffloor[numffloors].plane->polyobj = po;
+				//ffloor[numffloors].plane->polyobj = po;
 
 				ffloor[numffloors].polyobj = po;
 				ffloor[numffloors].height = polysec->ceilingheight;
 //				ffloor[numffloors].ffloor = rover;
+				po->visplane = ffloor[numffloors].plane;
 				numffloors++;
 			}
 
