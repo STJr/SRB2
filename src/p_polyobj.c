@@ -2491,6 +2491,10 @@ INT32 EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 		return 0;
 	}
 
+	// Hotfix to not crash on single-waypoint sequences -Red
+	if (!last)
+		last = first;
+
 	// Set diffx, diffy, diffz
 	// Put these at 0 for now...might not be needed after all.
 	th->diffx = 0;//first->x - po->centerPt.x;
