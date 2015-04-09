@@ -1299,6 +1299,8 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 	yl = (unsigned)(tmbbox[BOXBOTTOM] - bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
 	yh = (unsigned)(tmbbox[BOXTOP] - bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
 
+	BMBOUNDFIX(xl, xh, yl, yh);
+
 #ifdef POLYOBJECTS
 	// Check polyobjects and see if tmfloorz/tmceilingz need to be altered
 	{
@@ -1515,6 +1517,8 @@ boolean P_CheckCameraPosition(fixed_t x, fixed_t y, camera_t *thiscam)
 	xh = (unsigned)(tmbbox[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
 	yl = (unsigned)(tmbbox[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
 	yh = (unsigned)(tmbbox[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
+
+	BMBOUNDFIX(xl, xh, yl, yh);
 
 #ifdef POLYOBJECTS
 	// Check polyobjects and see if tmfloorz/tmceilingz need to be altered
@@ -1942,6 +1946,8 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 		yl = (unsigned)(thing->y - MAXRADIUS - bmaporgy)>>MAPBLOCKSHIFT;
 		xh = (unsigned)(thing->x + MAXRADIUS - bmaporgx)>>MAPBLOCKSHIFT;
 		xl = (unsigned)(thing->x - MAXRADIUS - bmaporgx)>>MAPBLOCKSHIFT;
+
+		BMBOUNDFIX(xl, xh, yl, yh);
 
 		stand = thing;
 		standx = x;
@@ -3029,6 +3035,8 @@ void P_RadiusAttack(mobj_t *spot, mobj_t *source, fixed_t damagedist)
 	xh = (unsigned)(spot->x + dist - bmaporgx)>>MAPBLOCKSHIFT;
 	xl = (unsigned)(spot->x - dist - bmaporgx)>>MAPBLOCKSHIFT;
 
+	BMBOUNDFIX(xl, xh, yl, yh);
+
 	bombspot = spot;
 	bombsource = source;
 	bombdamage = FixedMul(damagedist, spot->scale);
@@ -3650,6 +3658,8 @@ void P_CreateSecNodeList(mobj_t *thing, fixed_t x, fixed_t y)
 	yl = (unsigned)(tmbbox[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
 	yh = (unsigned)(tmbbox[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
 
+	BMBOUNDFIX(xl, xh, yl, yh);
+
 	for (bx = xl; bx <= xh; bx++)
 		for (by = yl; by <= yh; by++)
 			P_BlockLinesIterator(bx, by, PIT_GetSectors);
@@ -3726,6 +3736,8 @@ void P_CreatePrecipSecNodeList(precipmobj_t *thing,fixed_t x,fixed_t y)
 	xh = (unsigned)(preciptmbbox[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
 	yl = (unsigned)(preciptmbbox[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
 	yh = (unsigned)(preciptmbbox[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
+
+	BMBOUNDFIX(xl, xh, yl, yh);
 
 	for (bx = xl; bx <= xh; bx++)
 		for (by = yl; by <= yh; by++)

@@ -38,6 +38,9 @@
 #define MAPBMASK      (MAPBLOCKSIZE-1)
 #define MAPBTOFRAC    (MAPBLOCKSHIFT-FRACBITS)
 
+// Convenience macro to fix issue with collision along bottom/left edges of blockmap -Red
+#define BMBOUNDFIX(xl, xh, yl, yh) {if (xl > xh) xl = 0; if (yl > yh) yl = 0;}
+
 // player radius used only in am_map.c
 #define PLAYERRADIUS (16*FRACUNIT)
 
