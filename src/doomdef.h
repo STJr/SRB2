@@ -15,6 +15,10 @@
 #ifndef __DOOMDEF__
 #define __DOOMDEF__
 
+#ifndef TOPDOWN
+#define TOPDOWN
+#endif
+
 // Sound system select
 // This should actually be in the makefile,
 // but I can't stand that gibberish. D:

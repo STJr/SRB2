@@ -24,6 +24,81 @@ static boolean lastForward = false;
 static boolean lastBlocked = false;
 static boolean blocked = false;
 
+#ifdef TOPDOWN
+static inline void B_BuildTopDownTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
+{
+	boolean forward = false;
+	angle_t angle;
+	INT16 rangle;
+	fixed_t dist;
+
+	// We can't follow Sonic if he's not around!
+	if (!sonic || sonic->health <= 0)
+		return;
+
+	if (tails->player->pflags & (PF_MACESPIN|PF_ITEMHANG))
+	{
+		dist = P_AproxDistance(tails->x-sonic->x, tails->y-sonic->y);
+		if (sonic->player->cmd.buttons & BT_JUMP && sonic->player->pflags & (PF_JUMPED|PF_MACESPIN|PF_ITEMHANG))
+			cmd->buttons |= BT_JUMP;
+		if (sonic->player->pflags & (PF_MACESPIN|PF_ITEMHANG))
+		{
+			cmd->forwardmove = sonic->player->cmd.forwardmove;
+			cmd->sidemove = sonic->player->cmd.sidemove;
+		} else if (dist > FixedMul(512*FRACUNIT, tails->scale))
+			cmd->buttons |= BT_JUMP;
+		return;
+	}
+
+	// Gather data about the environment
+	dist = P_AproxDistance(tails->x-sonic->x, tails->y-sonic->y);
+	if (tails->player->pflags & PF_STARTDASH)
+		angle = sonic->angle;
+	else
+		angle = R_PointToAngle2(tails->x, tails->y, sonic->x, sonic->y);
+
+	// Decide which direction to turn
+	if (tails->angle - angle < ANGLE_180) {
+		rangle = AngleFixed(tails->angle - angle)>>FRACBITS;
+	} else {
+		rangle = 360-(AngleFixed(tails->angle - angle)>>FRACBITS);
+	}
+
+	if (dist >= (sonic->radius+tails->radius)*3) // We're not close enough?
+	{
+		cmd->forwardmove = min(P_ReturnThrustY(NULL, angle, MAXPLMOVE*2), MAXPLMOVE); // Done like this because I'm too lazy to fix it properly and this works
+		cmd->sidemove = min(P_ReturnThrustX(NULL, angle, MAXPLMOVE*2), MAXPLMOVE);
+
+		forward = true; // Start walking.
+	}
+	else if (abs(rangle) >= 10) // close enough but not facing right direction
+	{
+		tails->angle = angle;
+	}
+
+	// Decide when to jump
+	if (!(tails->player->pflags & (PF_JUMPED|PF_JUMPDOWN))) { // We're not jumping yet...
+		if (forward && lastForward && blocked && lastBlocked) // We've been stopped by a wall or something
+			cmd->buttons |= BT_JUMP; // Try to jump up
+	} else if ((tails->player->pflags & (PF_JUMPDOWN|PF_JUMPED)) == (PF_JUMPDOWN|PF_JUMPED)) { // When we're already jumping...
+		if (lastForward && blocked) // We're still stuck on something?
+			cmd->buttons |= BT_JUMP;
+		if (sonic->floorz > tails->floorz) // He's still above us? Jump HIGHER, then!
+			cmd->buttons |= BT_JUMP;
+	}
+
+	// Decide when to spin
+	if (sonic->player->pflags & PF_STARTDASH
+	&& (tails->player->pflags & PF_STARTDASH || (P_AproxDistance(tails->momx, tails->momy) < 2*FRACUNIT && !forward)))
+		cmd->buttons |= BT_USE;
+
+	// Update our status
+	lastForward = forward;
+	lastBlocked = blocked;
+	blocked = false;
+}
+#endif
+
 static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 {
 	boolean forward=false, backward=false, left=false, right=false, jump=false, spin=false;
@@ -134,6 +209,11 @@ void B_BuildTiccmd(player_t *player, ticcmd_t *cmd)
 		return;
 
 	// Basic Tails AI
+#ifdef TOPDOWN
+	if (maptol & TOL_TD)
+		B_BuildTopDownTailsTiccmd(players[consoleplayer].mo, player->mo, cmd);
+	else
+#endif
 	B_BuildTailsTiccmd(players[consoleplayer].mo, player->mo, cmd);
 }
 

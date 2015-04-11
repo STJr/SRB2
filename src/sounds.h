@@ -38,6 +38,9 @@ typedef enum
 	SKSSKID,
 	SKSGASP,
 	SKSJUMP,
+#ifdef TOPDOWN
+	SKSINTWIN,
+#endif
 	NUMSKINSOUNDS
 } skinsound_t;
 
@@ -1170,6 +1173,10 @@ typedef enum
 	mus_racent, // Race Results
 	mus_stjr,   // Sonic Team Jr. Presents
 
+#ifdef TOPDOWN
+	mus_wipe,   // Team Wipe
+#endif
+
 	NUMMUSIC
 } musicenum_t;
 // Note: song number should be a UINT16, as mapmusic only uses 16 bits for music slot number.
@@ -1614,6 +1621,22 @@ typedef enum
 	sfx_s3kdal,
 	sfx_s3kdbs,
 	sfx_s3kdbl,
+
+#ifdef TOPDOWN
+	sfx_chilbl,
+	sfx_chilex,
+	sfx_chilht,
+	sfx_chilic,
+	sfx_winds,
+	sfx_card,
+	sfx_dsssb1,
+	sfx_dsssb2,
+	sfx_dsssb3,
+	sfx_intbon,
+	sfx_int2nd,
+	sfx_int1st,
+	sfx_intwin,
+#endif
 
 	// free slots for S_AddSoundFx() at run-time --------------------
 	sfx_freeslot0,

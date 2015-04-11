@@ -346,7 +346,11 @@ consvar_t cv_maxping = {"maxping", "0", CV_SAVE, CV_Unsigned, NULL, 0, NULL, NUL
 #endif
 // Intermission time Tails 04-19-2002
 static CV_PossibleValue_t inttime_cons_t[] = {{0, "MIN"}, {3600, "MAX"}, {0, NULL}};
+#ifdef TOPDOWN
+consvar_t cv_inttime = {"inttime", "30", CV_NETVAR, inttime_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+#else
 consvar_t cv_inttime = {"inttime", "20", CV_NETVAR, inttime_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+#endif
 
 static CV_PossibleValue_t advancemap_cons_t[] = {{0, "Off"}, {1, "Next"}, {2, "Random"}, {0, NULL}};
 consvar_t cv_advancemap = {"advancemap", "Next", CV_NETVAR, advancemap_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -364,6 +368,10 @@ INT16 gametype = GT_COOP;
 boolean splitscreen = false;
 boolean circuitmap = false;
 INT32 adminplayer = -1;
+#ifdef TOPDOWN
+boolean twoplayer = false; // 2 player no splitscreen
+SINT8 sharedlives;
+#endif
 
 // =========================================================================
 //                           SERVER STARTUP
@@ -1148,7 +1156,11 @@ static void SendNameAndColor2(void)
 {
 	INT32 secondplaya;
 
+#ifdef TOPDOWN
+	if (!splitscreen && !twoplayer && !botingame)
+#else
 	if (!splitscreen && !botingame)
+#endif
 		return; // can happen if skin2/color2/name2 changed
 
 	if (secondarydisplayplayer != consoleplayer)
@@ -1351,10 +1363,14 @@ static void Got_WeaponPref(UINT8 **cp,INT32 playernum)
 void D_SendPlayerConfig(void)
 {
 	SendNameAndColor();
+#ifdef TOPDOWN
+	if (splitscreen || twoplayer || botingame)
+#else
 	if (splitscreen || botingame)
+#endif
 		SendNameAndColor2();
 	SendWeaponPref();
-	if (splitscreen)
+	if (splitscreen || twoplayer)
 		SendWeaponPref2();
 }
 
@@ -1509,6 +1525,25 @@ void D_MapChange(INT32 mapnum, INT32 newgametype, boolean pultmode, boolean rese
 		WRITEUINT8(buf_p, newgametype);
 
 		WRITESTRINGN(buf_p, mapname, MAX_WADPATH);
+
+#ifdef TOPDOWN
+		if (splitscreen || twoplayer)
+		{
+			// maptol hasn't been set yet
+			if (splitscreen && ((mapheaderinfo[mapnum-1]->typeoflevel & TOL_TD) && newgametype == GT_COOP))
+			{
+				splitscreen = false; // Don't call splitscreen_onchange, because it will attempt to add another player
+				twoplayer = true;
+				R_ExecuteSetViewSize(); // Just call this, since the screen has changed size
+			}
+			else if (twoplayer && !((mapheaderinfo[mapnum-1]->typeoflevel & TOL_TD) && newgametype == GT_COOP))
+			{
+				splitscreen = true;
+				twoplayer = false;
+				R_ExecuteSetViewSize(); // Just call this, since the screen has changed size
+			}
+		}
+#endif
 	}
 
 	if (delay == 1)
@@ -3410,7 +3445,11 @@ void D_GameTypeChanged(INT32 lastgametype)
 
 	// When swapping to a gametype that supports spectators,
 	// make everyone a spectator initially.
+#ifdef TOPDOWN
+	if (!splitscreen && !twoplayer && (G_GametypeHasSpectators()))
+#else
 	if (!splitscreen && (G_GametypeHasSpectators()))
+#endif
 	{
 		INT32 i;
 		for (i = 0; i < MAXPLAYERS; i++)
@@ -3801,6 +3840,9 @@ void Command_ExitGame_f(void)
 		CL_ClearPlayer(i);
 
 	splitscreen = false;
+#ifdef TOPDOWN
+	twoplayer = false;
+#endif
 	SplitScreen_OnChange();
 	botingame = false;
 	botskin = 0;
@@ -4027,7 +4069,11 @@ static void Skin_OnChange(void)
   */
 static void Skin2_OnChange(void)
 {
+#ifdef TOPDOWN
+	if (!Playing() || (!splitscreen && !twoplayer))
+#else
 	if (!Playing() || !splitscreen)
+#endif
 		return; // do whatever you want
 
 	if (CanChangeSkin(secondarydisplayplayer) && !P_PlayerMoving(secondarydisplayplayer))
@@ -4074,7 +4120,11 @@ static void Color_OnChange(void)
   */
 static void Color2_OnChange(void)
 {
+#ifdef TOPDOWN
+	if (!Playing() || (!splitscreen && !twoplayer))
+#else
 	if (!Playing() || !splitscreen)
+#endif
 		return; // do whatever you want
 
 	if (!P_PlayerMoving(secondarydisplayplayer))

@@ -66,6 +66,10 @@ patch_t *tny_font[HU_FONTSIZE];
 patch_t *tallnum[10]; // 0-9
 patch_t *nightsnum[10]; // 0-9
 
+#ifdef TOPDOWN
+patch_t *smallnum[10]; // 0-9
+#endif
+
 // Level title and credits fonts
 patch_t *lt_font[LT_FONTSIZE];
 patch_t *cred_font[CRED_FONTSIZE];
@@ -83,6 +87,9 @@ patch_t *rmatcico;
 patch_t *bmatcico;
 patch_t *tagico;
 patch_t *tallminus;
+#ifdef TOPDOWN
+patch_t *smallminus;
+#endif
 
 //-------------------------------------------
 //              coop hud
@@ -245,10 +252,20 @@ void HU_LoadGraphics(void)
 		tallnum[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
 		sprintf(buffer, "NGTNUM%d", i);
 		nightsnum[i] = (patch_t *) W_CachePatchName(buffer, PU_HUDGFX);
+
+#ifdef TOPDOWN
+		sprintf(buffer, "STSNUM%d", i);
+		smallnum[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
+#endif
 	}
 
 	// minus for negative tallnums
 	tallminus = (patch_t *)W_CachePatchName("STTMINUS", PU_HUDGFX);
+
+#ifdef TOPDOWN
+	// minus for negative smallnums
+	smallminus = (patch_t *)W_CachePatchName("STSMINUS", PU_HUDGFX);
+#endif
 
 	// cache the crosshairs, don't bother to know which one is being used,
 	// just cache all 3, they're so small anyway.

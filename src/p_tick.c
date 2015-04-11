@@ -632,6 +632,10 @@ void P_Ticker(boolean run)
 	// Run shield positioning
 	P_RunShields();
 
+#ifdef TOPDOWN
+		P_RunShadows();
+#endif
+
 	P_UpdateSpecials();
 	P_RespawnSpecials();
 
@@ -742,6 +746,10 @@ void P_PreTicker(INT32 frames)
 
 		// Run shield positioning
 		P_RunShields();
+
+#ifdef TOPDOWN
+		P_RunShadows();
+#endif
 
 		P_UpdateSpecials();
 		P_RespawnSpecials();

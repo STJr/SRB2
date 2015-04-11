@@ -62,6 +62,11 @@ extern boolean st_overlay; // sb overlay on or off when fullscreen
 extern lumpnum_t st_borderpatchnum;
 // patches, also used in intermission
 extern patch_t *tallnum[10];
+
+#ifdef TOPDOWN
+extern patch_t *smallnum[10]; // 0-9, small numbers for TIME and SCORE in ND, probably WILL be used in intermission
+#endif
+
 extern patch_t *sboscore;
 extern patch_t *sbotime;
 extern patch_t *sbocolon;
@@ -70,6 +75,11 @@ extern patch_t *faceprefix[MAXSKINS]; // face status patches
 extern patch_t *superprefix[MAXSKINS]; // super face status patches
 extern patch_t *livesback;
 extern patch_t *ngradeletters[7];
+
+#ifdef TOPDOWN
+extern patch_t *sboscolon;
+extern patch_t *sbosperiod;
+#endif
 
 /** HUD location information (don't move this comment)
   */
@@ -115,6 +125,97 @@ typedef enum
 	HUD_HUNTPICS,
 	HUD_GRAVBOOTSICO,
 	HUD_LAP,
+
+#ifdef TOPDOWN
+	// twoplayer stuff for regualr damage mode
+	HUD_LIVESPIC1P,
+
+	HUD_RINGS1P,
+	HUD_RINGSNUM1P,
+
+	HUD_RINGS2P,
+	HUD_RINGSNUM2P,
+
+	HUD_SCORENUM1P,
+
+	HUD_SCORE2P,
+	HUD_SCORENUM2P,
+
+	HUD_TIME2P,
+	HUD_MINUTES2P,
+	HUD_TIMECOLON2P,
+	HUD_SECONDS2P,
+
+	HUD_SS_TOTALRINGS1P,
+
+	HUD_SS_TOTALRINGS2P,
+
+	HUD_HUNTPICS1P,
+	HUD_GRAVBOOTSICO1P,
+
+	HUD_HUNTPICS2P,
+	HUD_GRAVBOOTSICO2P,
+
+	HUD_ND_RINGENERGY,
+	HUD_ND_HEALTHNUM,
+	HUD_ND_HEALTHSLASH,
+	HUD_ND_HEALTHTOTAL,
+
+	// twoplayer player 1
+	HUD_ND_RINGENERGY1P,
+	HUD_ND_HEALTHNUM1P,
+	HUD_ND_HEALTHSLASH1P,
+	HUD_ND_HEALTHTOTAL1P,
+
+	// twoplayer player 2
+	HUD_ND_RINGENERGY2P,
+	HUD_ND_HEALTHNUM2P,
+	HUD_ND_HEALTHSLASH2P,
+	HUD_ND_HEALTHTOTAL2P,
+
+	HUD_ND_EMBLEMICON,
+	HUD_ND_EMBLEMS,
+
+	// twoplayer positioning
+	HUD_ND_EMBLEMICON2P,
+	HUD_ND_EMBLEMS2P,
+
+	HUD_ND_SMALLTIME,
+	HUD_ND_MINUTES,
+	HUD_ND_TIMECOLON,
+	HUD_ND_SECONDS,
+	HUD_ND_TIMETICPERIOD,
+	HUD_ND_TICS,
+
+	// twoplayer positioning
+	HUD_ND_SMALLTIME2P,
+	HUD_ND_MINUTES2P,
+	HUD_ND_TIMECOLON2P,
+	HUD_ND_SECONDS2P,
+	HUD_ND_TIMETICPERIOD2P,
+	HUD_ND_TICS2P,
+
+	HUD_ND_SMALLSCORE,
+	HUD_ND_SCORENUM,
+
+	// splitscreen positioning
+	HUD_ND_SMALLSCORESPLIT,
+	HUD_ND_SCORENUMSPLIT,
+
+	// twoplayer positioning
+	HUD_ND_SMALLSCORE2P,
+	HUD_ND_SCORENUM2P,
+
+	HUD_ND_LIVESPIC,
+	HUD_ND_LIVESNUM,
+
+	// twoplayer player 1
+	HUD_ND_LIVESPIC1P,
+
+	// twoplayer player 2
+	HUD_ND_LIVESPIC2P,
+	HUD_ND_LIVESNUM2P,
+#endif
 
 	NUMHUDITEMS
 } hudnum_t;

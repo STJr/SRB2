@@ -123,6 +123,18 @@ static patch_t *minicaps;
 static patch_t *gotrflag;
 static patch_t *gotbflag;
 
+#ifdef TOPDOWN
+// ND
+static patch_t *drenergy[5];
+static patch_t *renergy[26]; // These 2 are used in intermission
+static patch_t *sboemblm;
+static patch_t *sbostime;
+static patch_t *sbosscore;
+static patch_t *sboslash;
+patch_t *sboscolon;
+patch_t *sbosperiod;
+#endif
+
 static boolean facefreed[MAXPLAYERS];
 
 hudinfo_t hudinfo[NUMHUDITEMS] =
@@ -162,6 +174,89 @@ hudinfo_t hudinfo[NUMHUDITEMS] =
 	{ 152, 168}, // HUD_HUNTPICS
 	{ 152,  24}, // HUD_GRAVBOOTSICO
 	{ 240, 160}, // HUD_LAP
+
+#ifdef TOPDOWN
+	{  16, 160}, // HUD_LIVESPIC1P
+
+	{  16,  26}, // HUD_RINGS1P
+	{ 112,  26}, // HUD_RINGSNUM1P
+
+	{ 208,  26}, // HUD_RINGS2P
+	{ 304,  26}, // HUD_RINGSNUM2P
+
+	{ 112,  10}, // HUD_SCORENUM1P
+
+	{ 208,  10}, // HUD_SCORE2P // less space unfortunately
+	{ 304,  10}, // HUD_SCORENUM2P
+
+	{ 124,  10}, // HUD_TIME2P
+	{ 176,  10}, // HUD_MINUTES2P
+	{ 176,  10}, // HUD_TIMECOLON2P
+	{ 200,  10}, // HUD_SECONDS2P
+
+	{ 112,  42}, // HUD_SS_TOTALRINGS1P
+
+	{ 304,  42}, // HUD_SS_TOTALRINGS2P
+
+	{  72, 168}, // HUD_HUNTPICS1P
+	{  16,  83}, // HUD_GRAVBOOTSICO1P
+
+	{ 224, 168}, // HUD_HUNTPICS2P
+	{ 304,  83}, // HUD_GRAVBOOTSICO2P
+
+	// ND
+	{   3,  14}, // HUD_ND_RINGENERGY
+	{  50,  17}, // HUD_ND_HEALTHNUM
+	{  50,  17}, // HUD_ND_HEALTHSLASH
+	{  66,  17}, // HUD_ND_HEALTHTOTAL
+
+	{   3,  169}, // HUD_ND_RINGENERGY1P
+	{  50,  172}, // HUD_ND_HEALTHNUM1P
+	{  50,  172}, // HUD_ND_HEALTHSLASH1P
+	{  66,  172}, // HUD_ND_HEALTHTOTAL1P
+
+	{ 254,  169}, // HUD_ND_RINGENERGY2P
+	{ 301,  172}, // HUD_ND_HEALTHNUM2P
+	{ 301,  172}, // HUD_ND_HEALTHSLASH2P
+	{ 317,  172}, // HUD_ND_HEALTHTOTAL2P
+
+	{ 106,  14}, // HUD_ND_EMBLEMICON
+	{ 168,  17}, // HUD_ND_EMBLEMS
+
+	{   3,  14}, // HUD_ND_EMBLEMICON2P
+	{  65,  17}, // HUD_ND_EMBLEMS2P
+
+	{ 203,  14}, // HUD_ND_SMALLTIME
+	{ 269,  14}, // HUD_ND_MINUTES
+	{ 269,  14}, // HUD_ND_TIMECOLON
+	{ 293,  14}, // HUD_ND_SECONDS
+	{ 293,  14}, // HUD_ND_TIMETICPERIOD
+	{ 317,  14}, // HUD_ND_TICS
+
+	{ 106,  14}, // HUD_ND_SMALLTIME2P
+	{ 172,  14}, // HUD_ND_MINUTES2P
+	{ 172,  14}, // HUD_ND_TIMECOLON2P
+	{ 196,  14}, // HUD_ND_SECONDS2P
+	{ 196,  14}, // HUD_ND_TIMETICPERIOD2P
+	{ 229,  14}, // HUD_ND_TICS2P
+
+	{ 203,  23}, // HUD_ND_SMALLSCORE
+	{ 317,  23}, // HUD_ND_SCORENUM
+
+	{ 203,  35}, // HUD_ND_SMALLSCORESPLIT
+	{ 317,  35}, // HUD_ND_SCORENUMSPLIT
+
+	{ 106,  23}, // HUD_ND_SMALLSCORE2P
+	{ 229,  23}, // HUD_ND_SCORENUM2P
+
+	{ 282, 177}, // HUD_ND_LIVESPIC
+	{ 317, 180}, // HUD_ND_LIVESNUM
+
+	{ 264,  14}, // HUD_ND_LIVESPIC1P
+
+	{ 282,  14}, // HUD_ND_LIVESPIC2P
+	{ 317,  17}, // HUD_ND_LIVESNUM2P
+#endif
 };
 
 //
@@ -337,6 +432,21 @@ void ST_LoadGraphics(void)
 
 	for (i = 0; i < 7; ++i)
 		ngradeletters[i] = W_CachePatchName(va("GRADE%d", i), PU_HUDGFX);
+
+#ifdef TOPDOWN
+	// New damage HUD
+	for (i = 0; i < 5; i++)
+		drenergy[i] = W_CachePatchName(va("DENERG%d", i), PU_HUDGFX);
+	for (i = 0; i < 26; i++)
+		renergy[i] = W_CachePatchName(va("RENERG%d", i), PU_HUDGFX);
+
+	sboemblm = W_CachePatchName("SBOEMBLM", PU_HUDGFX);
+	sbostime = W_CachePatchName("SBOSTIME", PU_HUDGFX);
+	sbosscore = W_CachePatchName("SBOSSCOR", PU_HUDGFX);
+	sboslash = W_CachePatchName("SBOSLASH", PU_HUDGFX);
+	sboscolon = W_CachePatchName("SBOSCOLN", PU_HUDGFX);
+	sbosperiod = W_CachePatchName("SBOSPERI", PU_HUDGFX); // Period for time centiseconds
+#endif
 }
 
 // made separate so that skins code can reload custom face graphics
@@ -511,6 +621,13 @@ static INT32 SCR(INT32 r)
 #define ST_DrawPadNumFromHudWS(h,n,q) V_DrawPaddedTallNum(SCX(hudinfo[h+!!splitscreen].x), SCY(hudinfo[h+!!splitscreen].y), V_NOSCALESTART|V_HUDTRANS, n, q)
 #define ST_DrawPatchFromHudWS(h,p)    V_DrawScaledPatch(SCX(hudinfo[h+!!splitscreen].x), SCY(hudinfo[h+!!splitscreen].y), V_NOSCALESTART|V_HUDTRANS, p)
 
+#ifdef TOPDOWN
+#define ST_DrawSmallNumFromHud(h,n)        V_DrawSmallNum(SCX(hudinfo[h].x), SCY(hudinfo[h].y), V_NOSCALESTART|V_HUDTRANS, n)
+#define ST_DrawPadSmallNumFromHud(h,n,q)   V_DrawPaddedSmallNum(SCX(hudinfo[h].x), SCY(hudinfo[h].y), V_NOSCALESTART|V_HUDTRANS, n, q)
+#define ST_DrawSmallNumFromHudWS(h,n)      V_DrawSmallNum(SCX(hudinfo[h+!!splitscreen].x), SCY(hudinfo[h+!!splitscreen].y), V_NOSCALESTART|V_HUDTRANS, n)
+#define ST_DrawPadSmallNumFromHudWS(h,n,q) V_DrawPaddedSmallNum(SCX(hudinfo[h+!!splitscreen].x), SCY(hudinfo[h+!!splitscreen].y), V_NOSCALESTART|V_HUDTRANS, n, q)
+#endif
+
 // Draw a number, scaled, over the view, maybe with set translucency
 // Always draw the number completely since it's overlay
 //
@@ -611,19 +728,94 @@ static void ST_drawScore(void)
 	ST_DrawPatchFromHud(HUD_SCORE, sboscore);
 	if (objectplacing)
 	{
+#ifdef TOPDOWN
+		if (twoplayer)
+		{
+			if (op_displayflags > UINT16_MAX)
+				ST_DrawOverlayPatch(SCX(hudinfo[HUD_SCORENUM1P].x-tallminus->width), SCY(hudinfo[HUD_SCORENUM1P].y), tallminus);
+			else
+				ST_DrawNumFromHud(HUD_SCORENUM1P, op_displayflags);
+		}
+		else
+		{
+#endif
 		if (op_displayflags > UINT16_MAX)
 			ST_DrawOverlayPatch(SCX(hudinfo[HUD_SCORENUM].x-tallminus->width), SCY(hudinfo[HUD_SCORENUM].y), tallminus);
 		else
 			ST_DrawNumFromHud(HUD_SCORENUM, op_displayflags);
+#ifdef TOPDOWN
+		}
+#endif
 	}
 	else
+#ifdef TOPDOWN
+	{
+		if (twoplayer)
+			ST_DrawNumFromHud(HUD_SCORENUM1P, stplyr->score);
+		else
+#endif
 		ST_DrawNumFromHud(HUD_SCORENUM, stplyr->score);
+#ifdef TOPDOWN
+	}
+#endif
+
+#ifdef TOPDOWN
+	if (twoplayer)
+	{
+			// SCORE:
+		ST_DrawPatchFromHud(HUD_SCORE2P, sboscore);
+		if (objectplacing)
+		{
+			if (op_displayflags > UINT16_MAX)
+				ST_DrawOverlayPatch(SCX(hudinfo[HUD_SCORENUM2P].x-tallminus->width), SCY(hudinfo[HUD_SCORENUM2P].y), tallminus);
+			else
+				ST_DrawNumFromHud(HUD_SCORENUM2P, op_displayflags);
+		}
+		else
+			ST_DrawNumFromHud(HUD_SCORENUM2P, players[secondarydisplayplayer].score);
+	}
+#endif
 }
 
 static void ST_drawTime(void)
 {
 	INT32 seconds, minutes, tictrn, tics;
 
+#ifdef TOPDOWN
+	if (twoplayer)
+	{
+		// TIME:
+		ST_DrawPatchFromHudWS(HUD_TIME2P, sbotime);
+
+		if (objectplacing)
+		{
+			tics    = objectsdrawn;
+			seconds = objectsdrawn%100;
+			minutes = objectsdrawn/100;
+			tictrn  = 0;
+		}
+		else
+		{
+			tics = players[secondarydisplayplayer].realtime;
+			seconds = G_TicsToSeconds(tics);
+			minutes = G_TicsToMinutes(tics, true);
+			tictrn  = G_TicsToCentiseconds(tics);
+		}
+
+		if (cv_timetic.value == 1) // Tics only -- how simple is this?
+			ST_DrawNumFromHudWS(HUD_SECONDS2P, tics);
+		else
+		{
+			ST_DrawNumFromHudWS(HUD_MINUTES2P, minutes); // Minutes
+			ST_DrawPatchFromHudWS(HUD_TIMECOLON2P, sbocolon); // Colon
+			ST_DrawPadNumFromHudWS(HUD_SECONDS2P, seconds, 2); // Seconds
+
+			// Not going to be drawing centiseconds like this
+		}
+	}
+	else
+	{
+#endif
 	// TIME:
 	ST_DrawPatchFromHudWS(HUD_TIME, sbotime);
 
@@ -656,12 +848,20 @@ static void ST_drawTime(void)
 			ST_DrawPadNumFromHud(HUD_TICS, tictrn, 2); // Tics
 		}
 	}
+#ifdef TOPDOWN
+	}
+#endif
 }
 
 static inline void ST_drawRings(void)
 {
 	INT32 ringnum = max(stplyr->health-1, 0);
 
+#ifdef TOPDOWN
+	if (twoplayer)
+		ST_DrawPatchFromHudWS(HUD_RINGS1P, ((stplyr->health <= 1 && leveltime/5 & 1) ? rrings : sborings));
+	else
+#endif
 	ST_DrawPatchFromHudWS(HUD_RINGS, ((stplyr->health <= 1 && leveltime/5 & 1) ? rrings : sborings));
 
 	if (objectplacing)
@@ -675,7 +875,34 @@ static inline void ST_drawRings(void)
 				ringnum += players[i].mo->health - 1;
 	}
 
+#ifdef TOPDOWN
+	if (twoplayer)
+		ST_DrawNumFromHudWS(HUD_RINGSNUM1P, ringnum);
+	else
+#endif
 	ST_DrawNumFromHudWS(HUD_RINGSNUM, ringnum);
+
+#ifdef TOPDOWN
+	if (twoplayer)
+	{
+		INT32 ringnum = max(players[secondarydisplayplayer].health-1, 0);
+
+		ST_DrawPatchFromHudWS(HUD_RINGS2P, ((stplyr->health <= 1 && leveltime/5 & 1) ? rrings : sborings));
+
+		if (objectplacing)
+			ringnum = op_currentdoomednum;
+		else if (!useNightsSS && G_IsSpecialStage(gamemap))
+		{
+			INT32 i;
+			ringnum = 0;
+			for (i = 0; i < MAXPLAYERS; i++)
+				if (playeringame[i] && players[i].mo && players[i].mo->health > 1)
+					ringnum += players[i].mo->health - 1;
+		}
+
+		ST_DrawNumFromHudWS(HUD_RINGSNUM2P, ringnum);
+	}
+#endif
 }
 
 static void ST_drawLives(void)
@@ -685,6 +912,35 @@ static void ST_drawLives(void)
 	if (!stplyr->skincolor)
 		return; // Just joined a server, skin isn't loaded yet!
 
+#ifdef TOPDOWN
+	if (twoplayer)
+	{
+		// face background
+		V_DrawSmallScaledPatch(hudinfo[HUD_LIVESPIC1P].x, hudinfo[HUD_LIVESPIC1P].y + (v_splitflag ? -12 : 0),
+			V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS|v_splitflag, livesback);
+
+		// face
+		if (stplyr->mo && stplyr->mo->color)
+		{
+			// skincolor face/super
+			UINT8 *colormap = R_GetTranslationColormap(stplyr->skin, stplyr->mo->color, GTC_CACHE);
+			patch_t *face = faceprefix[stplyr->skin];
+			if (stplyr->powers[pw_super] || stplyr->pflags & PF_NIGHTSMODE)
+				face = superprefix[stplyr->skin];
+			V_DrawSmallMappedPatch(hudinfo[HUD_LIVESPIC1P].x, hudinfo[HUD_LIVESPIC1P].y + (v_splitflag ? -12 : 0),
+				V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS|v_splitflag,face, colormap);
+		}
+		else if (stplyr->skincolor)
+		{
+			// skincolor face
+			UINT8 *colormap = R_GetTranslationColormap(stplyr->skin, stplyr->skincolor, GTC_CACHE);
+			V_DrawSmallMappedPatch(hudinfo[HUD_LIVESPIC1P].x, hudinfo[HUD_LIVESPIC1P].y + (v_splitflag ? -12 : 0),
+				V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS|v_splitflag,faceprefix[stplyr->skin], colormap);
+		}
+	}
+	else
+	{
+#endif
 	// face background
 	V_DrawSmallScaledPatch(hudinfo[HUD_LIVESPIC].x, hudinfo[HUD_LIVESPIC].y + (v_splitflag ? -12 : 0),
 		V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS|v_splitflag, livesback);
@@ -707,21 +963,426 @@ static void ST_drawLives(void)
 		V_DrawSmallMappedPatch(hudinfo[HUD_LIVESPIC].x, hudinfo[HUD_LIVESPIC].y + (v_splitflag ? -12 : 0),
 			V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS|v_splitflag,faceprefix[stplyr->skin], colormap);
 	}
+#ifdef TOPDOWN
+	}
+#endif
+
+#ifdef TOPDOWN
+	if (twoplayer)
+	{
+		// face background
+		V_DrawSmallScaledPatch(hudinfo[HUD_LIVESPIC].x, hudinfo[HUD_LIVESPIC].y + (v_splitflag ? -12 : 0),
+			V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS|v_splitflag, livesback);
+
+		// face
+		if (players[secondarydisplayplayer].mo && players[secondarydisplayplayer].mo->color)
+		{
+			// skincolor face/super
+			UINT8 *colormap = R_GetTranslationColormap(players[secondarydisplayplayer].skin, players[secondarydisplayplayer].mo->color, GTC_CACHE);
+			patch_t *face = faceprefix[players[secondarydisplayplayer].skin];
+			if (players[secondarydisplayplayer].powers[pw_super] || players[secondarydisplayplayer].pflags & PF_NIGHTSMODE)
+				face = superprefix[players[secondarydisplayplayer].skin];
+			V_DrawSmallMappedPatch(hudinfo[HUD_LIVESPIC].x, hudinfo[HUD_LIVESPIC].y + (v_splitflag ? -12 : 0),
+				V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS|v_splitflag,face, colormap);
+		}
+		else if (players[secondarydisplayplayer].skincolor)
+		{
+			// skincolor face
+			UINT8 *colormap = R_GetTranslationColormap(players[secondarydisplayplayer].skin, players[secondarydisplayplayer].skincolor, GTC_CACHE);
+			V_DrawSmallMappedPatch(hudinfo[HUD_LIVESPIC].x, hudinfo[HUD_LIVESPIC].y + (v_splitflag ? -12 : 0),
+				V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS|v_splitflag,faceprefix[players[secondarydisplayplayer].skin], colormap);
+		}
+	}
+#endif
 
 	// name
+#ifdef TOPDOWN
+	if (twoplayer)
+	{
+		if (strlen(skins[stplyr->skin].hudname) > 8 || strlen(skins[players[secondarydisplayplayer].skin].hudname) > 8)
+		{
+			V_DrawThinString(hudinfo[HUD_LIVESNAME].x, hudinfo[HUD_LIVESNAME].y-16 + (v_splitflag ? -12 : 0),
+				V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_MONOSPACE|V_YELLOWMAP|v_splitflag, skins[stplyr->skin].hudname);
+
+			V_DrawThinString(hudinfo[HUD_LIVESNAME].x, hudinfo[HUD_LIVESNAME].y + (v_splitflag ? -12 : 0),
+				V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_MONOSPACE|V_YELLOWMAP|v_splitflag, skins[players[secondarydisplayplayer].skin].hudname);
+		}
+		else
+		{
+			V_DrawString(hudinfo[HUD_LIVESNAME].x, hudinfo[HUD_LIVESNAME].y-16 + (v_splitflag ? -12 : 0),
+				V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_MONOSPACE|V_YELLOWMAP|v_splitflag, skins[stplyr->skin].hudname);
+
+			V_DrawString(hudinfo[HUD_LIVESNAME].x, hudinfo[HUD_LIVESNAME].y + (v_splitflag ? -12 : 0),
+				V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_MONOSPACE|V_YELLOWMAP|v_splitflag, skins[players[secondarydisplayplayer].skin].hudname);
+		}
+
+		V_DrawThinString(hudinfo[HUD_LIVESNAME].x, hudinfo[HUD_LIVESNAME].y-8 + (v_splitflag ? -12 : 0),
+			V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_MONOSPACE|V_YELLOWMAP|v_splitflag, "AND");
+	}
+	else
+	{
+#endif
 	if (strlen(skins[stplyr->skin].hudname) > 8)
 		V_DrawThinString(hudinfo[HUD_LIVESNAME].x, hudinfo[HUD_LIVESNAME].y + (v_splitflag ? -12 : 0),
 			V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_MONOSPACE|V_YELLOWMAP|v_splitflag, skins[stplyr->skin].hudname);
 	else
 		V_DrawString(hudinfo[HUD_LIVESNAME].x, hudinfo[HUD_LIVESNAME].y + (v_splitflag ? -12 : 0),
 			V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_MONOSPACE|V_YELLOWMAP|v_splitflag, skins[stplyr->skin].hudname);
+#ifdef TOPDOWN
+	}
+#endif
 	// x
 	V_DrawScaledPatch(hudinfo[HUD_LIVESX].x, hudinfo[HUD_LIVESX].y + (v_splitflag ? -4 : 0),
 		V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS|v_splitflag, stlivex);
+#ifdef TOPDOWN
+	if (maptol & TOL_TD && (netgame || multiplayer))
+	{
+		// lives
+		V_DrawRightAlignedString(hudinfo[HUD_LIVESNUM].x, hudinfo[HUD_LIVESNUM].y + (v_splitflag ? -4 : 0),
+			V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS|v_splitflag, va("%d",sharedlives)); // sharedlives in TD
+	}
+	else
+	{
+#endif
 	// lives
 	V_DrawRightAlignedString(hudinfo[HUD_LIVESNUM].x, hudinfo[HUD_LIVESNUM].y + (v_splitflag ? -4 : 0),
 		V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS|v_splitflag, va("%d",stplyr->lives));
+#ifdef TOPDOWN
+	}
+#endif
 }
+
+#ifdef TOPDOWN
+static void ST_drawNDScore(void)
+{
+	if (gametype == GT_COOP && (netgame || multiplayer) && (maptol & TOL_TD))
+	{
+		INT32 i;
+
+		for (i = 0; i < MAXPLAYERS; i++)
+			if (playeringame[i] && !players[i].bot && players[i].mo && players[i].mo->health > 0 && (players[i].playerstate == PST_LIVE || players[i].playerstate == PST_REBORN)) // There's a player left, so show the HUD
+				break;
+
+		if (i == MAXPLAYERS)
+			return;
+	}
+	// SCORE:
+	if (twoplayer)
+		ST_DrawPatchFromHud(HUD_ND_SMALLSCORE2P, sbosscore);
+	else if (splitscreen)
+		ST_DrawPatchFromHud(HUD_ND_SMALLSCORESPLIT, sbosscore);
+	else
+		ST_DrawPatchFromHud(HUD_ND_SMALLSCORE, sbosscore);
+
+	if (objectplacing)
+	{
+		if (twoplayer)
+		{
+			if (op_displayflags > UINT16_MAX)
+				ST_DrawOverlayPatch(SCX(hudinfo[HUD_ND_SCORENUM2P].x-smallminus->width), SCY(hudinfo[HUD_ND_SCORENUM2P].y), smallminus);
+			else
+				ST_DrawSmallNumFromHud(HUD_ND_SCORENUM2P, op_displayflags);
+		}
+		else
+		{
+			if (op_displayflags > UINT16_MAX)
+				ST_DrawOverlayPatch(SCX(hudinfo[HUD_ND_SCORENUM].x-smallminus->width), SCY(hudinfo[HUD_ND_SCORENUM].y), smallminus);
+			else
+				ST_DrawSmallNumFromHud(HUD_ND_SCORENUM, op_displayflags);
+		}
+	}
+	else
+	{
+		INT32 i, totalscore = stplyr->score;
+
+		if ((maptol & TOL_TD) && gametype == GT_COOP && (netgame || multiplayer))
+		{
+			totalscore = 0;
+
+			for (i = 0; i < MAXPLAYERS; i++)
+			{
+				if (playeringame[i])
+				{
+					if (players[i].bot)
+						continue;
+
+					totalscore += players[i].score;
+				}
+			}
+		}
+
+		if (twoplayer)
+			ST_DrawSmallNumFromHud(HUD_ND_SCORENUM2P, totalscore);
+		else if (splitscreen)
+			ST_DrawSmallNumFromHud(HUD_ND_SCORENUMSPLIT, totalscore);
+		else
+			ST_DrawSmallNumFromHud(HUD_ND_SCORENUM, totalscore);
+	}
+}
+
+static void ST_drawNDTime(void)
+{
+	if (gametype == GT_COOP && (netgame || multiplayer) && (maptol & TOL_TD))
+	{
+		INT32 i;
+
+		for (i = 0; i < MAXPLAYERS; i++)
+			if (playeringame[i] && !players[i].bot && players[i].mo && players[i].mo->health > 0 && (players[i].playerstate == PST_LIVE || players[i].playerstate == PST_REBORN)) // There's a player left, so show the HUD
+				break;
+
+		if (i == MAXPLAYERS)
+			return;
+	}
+
+	INT32 seconds, minutes, tictrn, tics;
+
+	// TIME:
+	if (twoplayer)
+		ST_DrawPatchFromHud(HUD_ND_SMALLTIME2P, sbostime);
+	else
+		ST_DrawPatchFromHud(HUD_ND_SMALLTIME, sbostime);
+
+	if (objectplacing)
+	{
+		tics    = objectsdrawn;
+		seconds = objectsdrawn%100;
+		minutes = objectsdrawn/100;
+		tictrn  = 0;
+	}
+	else
+	{
+		tics = stplyr->realtime;
+		seconds = G_TicsToSeconds(tics);
+		minutes = G_TicsToMinutes(tics, true);
+		tictrn  = G_TicsToCentiseconds(tics);
+	}
+
+	if (cv_timetic.value == 1) // Tics only -- how simple is this?
+	{
+		if (twoplayer)
+			ST_DrawSmallNumFromHud(HUD_ND_SECONDS2P, tics);
+		else
+			ST_DrawSmallNumFromHud(HUD_ND_SECONDS, tics);
+	}
+	else
+	{
+		if (twoplayer)
+		{
+			ST_DrawSmallNumFromHud(HUD_ND_MINUTES2P, minutes); // Minutes
+			ST_DrawPatchFromHud(HUD_ND_TIMECOLON2P, sboscolon); // Colon
+			ST_DrawPadSmallNumFromHud(HUD_ND_SECONDS2P, seconds, 2); // Seconds
+
+			// ALWAYS display this in ND
+			ST_DrawPatchFromHud(HUD_ND_TIMETICPERIOD2P, sbosperiod); // Period
+			ST_DrawPadSmallNumFromHud(HUD_ND_TICS2P, tictrn, 2); // Tics
+		}
+		else
+		{
+			ST_DrawSmallNumFromHud(HUD_ND_MINUTES, minutes); // Minutes
+			ST_DrawPatchFromHud(HUD_ND_TIMECOLON, sboscolon); // Colon
+			ST_DrawPadSmallNumFromHud(HUD_ND_SECONDS, seconds, 2); // Seconds
+
+			// ALWAYS display this in ND
+			ST_DrawPatchFromHud(HUD_ND_TIMETICPERIOD, sbosperiod); // Period
+			ST_DrawPadSmallNumFromHud(HUD_ND_TICS, tictrn, 2); // Tics
+		}
+	}
+}
+
+static inline void ST_drawNDRings(void)
+{
+	if (gametype == GT_COOP && (netgame || multiplayer) && (maptol & TOL_TD))
+	{
+		INT32 i;
+
+		for (i = 0; i < MAXPLAYERS; i++)
+			if (playeringame[i] && !players[i].bot && players[i].mo && players[i].mo->health > 0 && (players[i].playerstate == PST_LIVE || players[i].playerstate == PST_REBORN)) // There's a player left, so show the HUD
+				break;
+
+		if (i == MAXPLAYERS)
+			return;
+	}
+
+	INT32 ringnum = max(stplyr->health-1, 0);
+	INT32 hits = ringnum/5;
+
+	if (hits > 5)
+		hits = 5;
+
+	if (ringnum > 25)
+		ringnum = 25;
+
+	if (twoplayer)
+		ST_DrawPatchFromHud(HUD_ND_RINGENERGY1P, ((hits <= 0 && leveltime/5 & 1) ? drenergy[ringnum] : renergy[ringnum]));
+	else
+		ST_DrawPatchFromHud(HUD_ND_RINGENERGY, ((hits <= 0 && leveltime/5 & 1) ? drenergy[ringnum] : renergy[ringnum]));
+
+	if (ringnum >= 25)
+		ringnum = 5;
+	else
+		ringnum %= 5;
+
+	if (twoplayer)
+	{
+		ST_DrawNumFromHud(HUD_ND_HEALTHNUM1P, hits);
+		ST_DrawPatchFromHud(HUD_ND_HEALTHSLASH1P, sboslash);
+		ST_DrawNumFromHud(HUD_ND_HEALTHTOTAL1P, 5);
+	}
+	else
+	{
+		ST_DrawNumFromHud(HUD_ND_HEALTHNUM, hits);
+		ST_DrawPatchFromHud(HUD_ND_HEALTHSLASH, sboslash);
+		ST_DrawNumFromHud(HUD_ND_HEALTHTOTAL, 5);
+	}
+
+	if (twoplayer)
+	{
+		ringnum = max(players[secondarydisplayplayer].health-1, 0);
+		hits = ringnum/5;
+
+		if (hits > 5)
+			hits = 5;
+
+		if (ringnum > 25)
+			ringnum = 25;
+
+		ST_DrawPatchFromHud(HUD_ND_RINGENERGY2P, ((hits <= 0 && leveltime/5 & 1) ? drenergy[ringnum] : renergy[ringnum]));
+
+		if (ringnum >= 25)
+			ringnum = 5;
+		else
+			ringnum %= 5;
+
+		ST_DrawNumFromHud(HUD_ND_HEALTHNUM2P, hits);
+		ST_DrawPatchFromHud(HUD_ND_HEALTHSLASH2P, sboslash);
+		ST_DrawNumFromHud(HUD_ND_HEALTHTOTAL2P, 5);
+	}
+}
+
+static inline void ST_drawNDEmblems(void)
+{
+	if (gametype == GT_COOP && (netgame || multiplayer) && (maptol & TOL_TD))
+	{
+		INT32 i;
+
+		for (i = 0; i < MAXPLAYERS; i++)
+			if (playeringame[i] && !players[i].bot && players[i].mo && players[i].mo->health > 0 && (players[i].playerstate == PST_LIVE || players[i].playerstate == PST_REBORN)) // There's a player left, so show the HUD
+				break;
+
+		if (i == MAXPLAYERS)
+			return;
+	}
+
+	INT32 emblemnum = max(stplyr->emblems, 0);
+
+	if ((maptol & TOL_TD) && gametype == GT_COOP && (netgame || multiplayer))
+	{
+		emblemnum = 0;
+		INT32 i;
+
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			if (playeringame[i])
+			{
+				if (players[i].bot)
+					continue;
+
+				emblemnum += players[i].emblems;
+			}
+		}
+
+		emblemnum = max(emblemnum, 0);
+	}
+
+	if (twoplayer)
+		ST_DrawPatchFromHud(HUD_ND_EMBLEMICON2P, sboemblm);
+	else
+		ST_DrawPatchFromHud(HUD_ND_EMBLEMICON, sboemblm);
+
+	if (objectplacing)
+		emblemnum = op_currentdoomednum;
+
+	if (twoplayer)
+		ST_DrawNumFromHud(HUD_ND_EMBLEMS2P, emblemnum);
+	else
+		ST_DrawNumFromHud(HUD_ND_EMBLEMS, emblemnum);
+}
+
+static void ST_drawNDLives(void)
+{
+	INT32 livespichudnum = (twoplayer ? HUD_ND_LIVESPIC1P : HUD_ND_LIVESPIC);
+
+	if (!stplyr->skincolor)
+		return; // Just joined a server, skin isn't loaded yet!
+
+	// face background
+	V_DrawSmallScaledPatch(SCX(hudinfo[livespichudnum].x), SCY(hudinfo[livespichudnum].y + (splitscreen ? -12 : 0)),
+		V_NOSCALESTART|V_HUDTRANS, livesback);
+
+	// face
+	if (stplyr->mo && stplyr->mo->color)
+	{
+		// skincolor face/super
+		UINT8 *colormap = R_GetTranslationColormap(stplyr->skin, stplyr->mo->color, GTC_CACHE);
+		patch_t *face = faceprefix[stplyr->skin];
+		if (stplyr->powers[pw_super] || stplyr->pflags & PF_NIGHTSMODE)
+			face = superprefix[stplyr->skin];
+		V_DrawSmallMappedPatch(SCX(hudinfo[livespichudnum].x), SCY(hudinfo[livespichudnum].y + (splitscreen ? -12 : 0)),
+			V_NOSCALESTART|V_HUDTRANS,face, colormap);
+	}
+	else if (stplyr->skincolor)
+	{
+		// skincolor face
+		UINT8 *colormap = R_GetTranslationColormap(stplyr->skin, stplyr->skincolor, GTC_CACHE);
+		V_DrawSmallMappedPatch(SCX(hudinfo[livespichudnum].x), SCY(hudinfo[livespichudnum].y + (splitscreen ? -12 : 0)),
+			V_NOSCALESTART|V_HUDTRANS,faceprefix[stplyr->skin], colormap);
+	}
+
+	if (twoplayer)
+	{
+		livespichudnum = HUD_ND_LIVESPIC2P;
+
+		// face background
+		V_DrawSmallScaledPatch(SCX(hudinfo[livespichudnum].x), SCY(hudinfo[livespichudnum].y + (splitscreen ? -12 : 0)),
+			V_NOSCALESTART|V_HUDTRANS, livesback);
+
+		// face
+		if (players[secondarydisplayplayer].mo && players[secondarydisplayplayer].mo->color)
+		{
+			// skincolor face/super
+			UINT8 *colormap = R_GetTranslationColormap(players[secondarydisplayplayer].skin, players[secondarydisplayplayer].mo->color, GTC_CACHE);
+			patch_t *face = faceprefix[players[secondarydisplayplayer].skin];
+			if (players[secondarydisplayplayer].powers[pw_super] || players[secondarydisplayplayer].pflags & PF_NIGHTSMODE)
+				face = superprefix[players[secondarydisplayplayer].skin];
+			V_DrawSmallMappedPatch(SCX(hudinfo[livespichudnum].x), SCY(hudinfo[livespichudnum].y + (splitscreen ? -12 : 0)),
+				V_NOSCALESTART|V_HUDTRANS,face, colormap);
+		}
+		else if (players[secondarydisplayplayer].skincolor)
+		{
+			// skincolor face
+			UINT8 *colormap = R_GetTranslationColormap(players[secondarydisplayplayer].skin, players[secondarydisplayplayer].skincolor, GTC_CACHE);
+			V_DrawSmallMappedPatch(SCX(hudinfo[livespichudnum].x), SCY(hudinfo[livespichudnum].y + (splitscreen ? -12 : 0)),
+				V_NOSCALESTART|V_HUDTRANS,faceprefix[players[secondarydisplayplayer].skin], colormap);
+		}
+	}
+
+	// lives
+	if ((maptol & TOL_TD) && gametype == GT_COOP && (netgame || multiplayer))
+	{
+		INT32 livesnum = max(sharedlives, 0); // Lives are temporarily set to -1 when a gameover happens to avoid desync from sharedlives when a new player joins when there is 0 lives
+
+		if (twoplayer)
+			ST_DrawNumFromHud(HUD_ND_LIVESNUM2P, livesnum); // Since we don't ever have negative lives anyway, this works
+		else
+			ST_DrawNumFromHud(HUD_ND_LIVESNUM, livesnum); // Since we don't ever have negative lives anyway, this works
+	}
+	else
+	{
+		// twoplayer is only in Coop mode
+		ST_DrawNumFromHud(HUD_ND_LIVESNUM, stplyr->lives);
+	}
+}
+#endif
 
 static void ST_drawLevelTitle(void)
 {
@@ -1339,6 +2000,34 @@ static void ST_drawNiGHTSHUD(void)
 		splitscreen = true;
 }
 
+#ifdef TOPDOWN
+static void ST_DrawNDHUD()
+{
+#ifdef HAVE_BLUA
+	if (LUA_HudEnabled(hud_ndscore))
+#endif
+	ST_drawNDScore();
+#ifdef HAVE_BLUA
+	if (LUA_HudEnabled(hud_ndtime))
+#endif
+	ST_drawNDTime();
+#ifdef HAVE_BLUA
+	if (LUA_HudEnabled(hud_ndringenergy))
+#endif
+	ST_drawNDRings();
+#ifdef HAVE_BLUA
+	if (LUA_HudEnabled(hud_ndemblems))
+#endif
+	ST_drawNDEmblems();
+	if (G_GametypeUsesLives()
+#ifdef HAVE_BLUA
+	&& LUA_HudEnabled(hud_ndlives)
+#endif
+	)
+		ST_drawNDLives();
+}
+#endif
+
 static void ST_drawWeaponRing(powertype_t weapon, INT32 rwflag, INT32 wepflag, INT32 xoffs, patch_t *pat)
 {
 	INT32 txtflags = 0, patflags = 0;
@@ -1599,7 +2288,53 @@ static void ST_drawSpecialStageHUD(void)
 static INT32 ST_drawEmeraldHuntIcon(mobj_t *hunt, patch_t **patches, INT32 offset)
 {
 	INT32 interval, i;
+#ifdef TOPDOWN
+	UINT32 dist;
+#else
 	UINT32 dist = ((UINT32)P_AproxDistance(P_AproxDistance(stplyr->mo->x - hunt->x, stplyr->mo->y - hunt->y), stplyr->mo->z - hunt->z))>>FRACBITS;
+#endif
+
+#ifdef TOPDOWN
+	if (twoplayer)
+	{
+		dist = ((UINT32)P_AproxDistance(P_AproxDistance(players[secondarydisplayplayer].mo->x - hunt->x, players[secondarydisplayplayer].mo->y - hunt->y), players[secondarydisplayplayer].mo->z - hunt->z))>>FRACBITS;
+	
+		if (dist < 128)
+		{
+			i = 5;
+			interval = 5;
+		}
+		else if (dist < 512)
+		{
+			i = 4;
+			interval = 10;
+		}
+		else if (dist < 1024)
+		{
+			i = 3;
+			interval = 20;
+		}
+		else if (dist < 2048)
+		{
+			i = 2;
+			interval = 30;
+		}
+		else if (dist < 3072)
+		{
+			i = 1;
+			interval = 35;
+		}
+		else
+		{
+			i = 0;
+			interval = 0;
+		}
+
+		V_DrawScaledPatch(hudinfo[HUD_HUNTPICS2P].x+offset, STRINGY(hudinfo[HUD_HUNTPICS2P].y), V_HUDTRANS, patches[i]);
+	}
+
+	dist = ((UINT32)P_AproxDistance(P_AproxDistance(stplyr->mo->x - hunt->x, stplyr->mo->y - hunt->y), stplyr->mo->z - hunt->z))>>FRACBITS;
+#endif
 
 	if (dist < 128)
 	{
@@ -1632,6 +2367,11 @@ static INT32 ST_drawEmeraldHuntIcon(mobj_t *hunt, patch_t **patches, INT32 offse
 		interval = 0;
 	}
 
+#ifdef TOPDOWN
+	if (twoplayer)
+		V_DrawScaledPatch(hudinfo[HUD_HUNTPICS1P].x+offset, STRINGY(hudinfo[HUD_HUNTPICS1P].y), V_HUDTRANS, patches[i]);
+	else
+#endif
 	V_DrawScaledPatch(hudinfo[HUD_HUNTPICS].x+offset, STRINGY(hudinfo[HUD_HUNTPICS].y), V_HUDTRANS, patches[i]);
 	return interval;
 }
@@ -1732,6 +2472,12 @@ static void ST_overlayDrawer(void)
 	{
 		if (maptol & TOL_NIGHTS)
 			ST_drawNiGHTSHUD();
+#ifdef TOPDOWN
+		else if (maptol & TOL_ND)
+		{
+			ST_DrawNDHUD();
+		}
+#endif
 		else
 		{
 #ifdef HAVE_BLUA
@@ -1816,7 +2562,23 @@ static void ST_overlayDrawer(void)
 			ST_doHuntIconsAndSound();
 
 		if (stplyr->powers[pw_gravityboots] > 3*TICRATE || (stplyr->powers[pw_gravityboots] && leveltime & 1))
+#ifdef TOPDOWN
+		{
+			if (twoplayer)
+				V_DrawScaledPatch(hudinfo[HUD_GRAVBOOTSICO1P].x, STRINGY(hudinfo[HUD_GRAVBOOTSICO1P].y), V_SNAPTORIGHT, gravboots);
+			else
+#endif
 			V_DrawScaledPatch(hudinfo[HUD_GRAVBOOTSICO].x, STRINGY(hudinfo[HUD_GRAVBOOTSICO].y), V_SNAPTORIGHT, gravboots);
+#ifdef TOPDOWN
+		}
+#endif
+
+#ifdef TOPDOWN
+		if (twoplayer && (players[secondarydisplayplayer].powers[pw_gravityboots] > 3*TICRATE || (players[secondarydisplayplayer].powers[pw_gravityboots] && leveltime & 1)))
+		{
+			V_DrawScaledPatch(hudinfo[HUD_GRAVBOOTSICO2P].x, STRINGY(hudinfo[HUD_GRAVBOOTSICO2P].y), V_SNAPTORIGHT, gravboots);
+		}
+#endif
 
 		if(!P_IsLocalPlayer(stplyr))
 		{

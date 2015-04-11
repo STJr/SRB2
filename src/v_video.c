@@ -1308,6 +1308,14 @@ void V_DrawSmallString(INT32 x, INT32 y, INT32 option, const char *string)
 	}
 }
 
+#ifdef TOPDOWN
+void V_DrawSmallCenteredString(INT32 x, INT32 y, INT32 option, const char *string)
+{
+	x -= V_SmallStringWidth(string, option)/2;
+	V_DrawSmallString(x, y, option, string);
+}
+#endif
+
 void V_DrawRightAlignedSmallString(INT32 x, INT32 y, INT32 option, const char *string)
 {
 	x -= V_SmallStringWidth(string, option);
@@ -1543,6 +1551,54 @@ void V_DrawPaddedTallNum(INT32 x, INT32 y, INT32 flags, INT32 num, INT32 digits)
 		num /= 10;
 	} while (--digits);
 }
+
+#ifdef TOPDOWN
+// Draws a smallnum.
+void V_DrawSmallNum(INT32 x, INT32 y, INT32 flags, INT32 num)
+{
+	INT32 w = SHORT(smallnum[0]->width);
+	boolean neg;
+
+	if (flags & V_NOSCALESTART)
+		w *= vid.dupx;
+
+	if ((neg = num < 0))
+		num = -num;
+
+	// draw the number
+	do
+	{
+		x -= w;
+		V_DrawScaledPatch(x, y, flags, smallnum[num % 10]);
+		num /= 10;
+	} while (num);
+
+	// draw a minus sign if necessary
+	if (neg)
+		V_DrawScaledPatch(x - w, y, flags, smallminus); // Tails
+}
+
+// Draws a number with a set number of digits.
+// Does not handle negative numbers in a special way, don't try to feed it any.
+void V_DrawPaddedSmallNum(INT32 x, INT32 y, INT32 flags, INT32 num, INT32 digits)
+{
+	INT32 w = SHORT(smallnum[0]->width);
+
+	if (flags & V_NOSCALESTART)
+		w *= vid.dupx;
+
+	if (num < 0)
+		num = -num;
+
+	// draw the number
+	do
+	{
+		x -= w;
+		V_DrawScaledPatch(x, y, flags, smallnum[num % 10]);
+		num /= 10;
+	} while (--digits);
+}
+#endif
 
 // Write a string using the credit font
 // NOTE: the text is centered for screens larger than the base width

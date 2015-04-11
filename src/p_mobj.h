@@ -418,7 +418,12 @@ void P_MobjCheckWater(mobj_t *mobj);
 void P_SpawnPlayer(INT32 playernum);
 void P_MovePlayerToSpawn(INT32 playernum, mapthing_t *mthing);
 void P_MovePlayerToStarpost(INT32 playernum);
+void P_MovePlayerToTDSpawn(INT32 playernum);
+#ifdef TOPDOWN
+void P_AfterPlayerSpawn(INT32 playernum, boolean resetcamera);
+#else
 void P_AfterPlayerSpawn(INT32 playernum);
+#endif
 
 void P_SpawnMapThing(mapthing_t *mthing);
 void P_SpawnHoopsAndRings(mapthing_t *mthing);

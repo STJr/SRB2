@@ -2238,18 +2238,32 @@ static void Sk_SetDefaultValue(skin_t *skin)
 	skin->starttranscolor = 160;
 	skin->prefcolor = SKINCOLOR_GREEN;
 
+#ifdef TOPDOWN
+	skin->normalspeed = 13<<FRACBITS;
+	skin->runspeed = 10<<FRACBITS;
+	skin->thrustfactor = 4;
+	skin->accelstart = 130;
+	skin->acceleration = 30;
+#else
 	skin->normalspeed = 36<<FRACBITS;
 	skin->runspeed = 28<<FRACBITS;
 	skin->thrustfactor = 5;
 	skin->accelstart = 96;
 	skin->acceleration = 40;
+#endif
 
 	skin->ability = CA_NONE;
 	skin->ability2 = CA2_SPINDASH;
 	skin->jumpfactor = FRACUNIT;
+#ifdef TOPDOWN
+	skin->actionspd = (25<<FRACBITS)/2;
+	skin->mindash = 8<<FRACBITS;
+	skin->maxdash = 24<<FRACBITS;
+#else
 	skin->actionspd = 30<<FRACBITS;
 	skin->mindash = 15<<FRACBITS;
 	skin->maxdash = 90<<FRACBITS;
+#endif
 
 	skin->thokitem = -1;
 	skin->spinitem = -1;
@@ -2298,6 +2312,15 @@ void R_InitSkins(void)
 	skin->prefcolor = SKINCOLOR_BLUE;
 
 	skin->ability =   CA_THOK;
+#ifdef TOPDOWN
+	skin->actionspd = 13<<FRACBITS;
+
+	skin->normalspeed =  (25<<FRACBITS)/2;
+	skin->runspeed =     10<<FRACBITS;
+	skin->thrustfactor =  4;
+	skin->accelstart =   130;
+	skin->acceleration = 30;
+#else
 	skin->actionspd = 60<<FRACBITS;
 
 	skin->normalspeed =  36<<FRACBITS;
@@ -2305,6 +2328,7 @@ void R_InitSkins(void)
 	skin->thrustfactor =  5;
 	skin->accelstart =   96;
 	skin->acceleration = 40;
+#endif
 
 	skin->spritedef.numframes = sprites[SPR_PLAY].numframes;
 	skin->spritedef.spriteframes = sprites[SPR_PLAY].spriteframes;
@@ -2595,7 +2619,9 @@ void R_AddSkins(UINT16 wadnum)
 #undef FULLPROCESS
 
 #define GETSPEED(field) else if (!stricmp(stoken, #field)) skin->field = atoi(value)<<FRACBITS;
+#ifndef TOPDOWN
 			GETSPEED(normalspeed)
+#endif
 			GETSPEED(runspeed)
 			GETSPEED(mindash)
 			GETSPEED(maxdash)
@@ -2618,6 +2644,10 @@ void R_AddSkins(UINT16 wadnum)
 				skin->jumpfactor = FLOAT_TO_FIXED(atof(value));
 			else if (!stricmp(stoken, "highresscale"))
 				skin->highresscale = FLOAT_TO_FIXED(atof(value));
+#ifdef TOPDOWN
+			else if (!stricmp(stoken, "normalspeed"))
+				skin->normalspeed = FLOAT_TO_FIXED(atof(value));
+#endif
 			else
 			{
 				INT32 found = false;

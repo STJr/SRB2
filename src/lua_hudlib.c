@@ -96,6 +96,9 @@ enum align {
 	align_right,
 	align_fixed,
 	align_small,
+#ifdef TOPDOWN
+	align_smallcenter,
+#endif
 	align_smallright,
 	align_thin,
 	align_thinright
@@ -140,7 +143,13 @@ enum cameraf {
 	camera_relativex,
 	camera_momx,
 	camera_momy,
-	camera_momz
+	camera_momz,
+#ifdef TOPDOWN
+	camera_aimx,
+	camera_aimy,
+	camera_aimz,
+	camera_zoom,
+#endif
 };
 
 
@@ -162,6 +171,12 @@ static const char *const camera_opt[] = {
 	"momx",
 	"momy",
 	"momz",
+#ifdef TOPDOWN
+	"aimx",
+	"aimy",
+	"aimz",
+	"zoom",
+#endif
 	NULL};
 
 static int lib_getHudInfo(lua_State *L)
@@ -324,6 +339,20 @@ static int camera_get(lua_State *L)
 	case camera_momz:
 		lua_pushinteger(L, cam->momz);
 		break;
+#ifdef TOPDOWN
+	case camera_aimx:
+		lua_pushinteger(L, cam->aimx);
+		break;
+	case camera_aimy:
+		lua_pushinteger(L, cam->aimy);
+		break;
+	case camera_aimz:
+		lua_pushinteger(L, cam->aimz);
+		break;
+	case camera_zoom:
+		lua_pushinteger(L, cam->zoom);
+		break;
+#endif
 	}
 	return 1;
 }
@@ -417,6 +446,39 @@ static int libd_drawPaddedNum(lua_State *L)
 	return 0;
 }
 
+#ifdef TOPDOWN
+static int libd_drawSmallNum(lua_State *L)
+{
+	INT32 x, y, flags, num;
+	if (!hud_running)
+		return luaL_error(L, "HUD rendering code should not be called outside of rendering hooks!");
+
+	x = luaL_checkinteger(L, 1);
+	y = luaL_checkinteger(L, 2);
+	num = luaL_checkinteger(L, 3);
+	flags = luaL_optinteger(L, 4, 0);
+	flags &= ~V_PARAMMASK; // Don't let crashes happen.
+
+	V_DrawSmallNum(x, y, flags, num);
+	return 0;
+}
+
+static int libd_drawPaddedSmallNum(lua_State *L)
+{
+	INT32 x, y, flags, num, digits;
+	HUDONLY
+	x = luaL_checkinteger(L, 1);
+	y = luaL_checkinteger(L, 2);
+	num = abs(luaL_checkinteger(L, 3));
+	digits = luaL_optinteger(L, 4, 2);
+	flags = luaL_optinteger(L, 5, 0);
+	flags &= ~V_PARAMMASK; // Don't let crashes happen.
+
+	V_DrawPaddedSmallNum(x, y, flags, num, digits);
+	return 0;
+}
+#endif
+
 static int libd_drawFill(lua_State *L)
 {
 	INT32 x = luaL_optinteger(L, 1, 0);
@@ -460,6 +522,11 @@ static int libd_drawString(lua_State *L)
 	case align_small:
 		V_DrawSmallString(x, y, flags, str);
 		break;
+#ifdef TOPDOWN
+		case align_smallcenter:
+		V_DrawSmallCenteredString(x, y, flags, str);
+		break;
+#endif
 	case align_smallright:
 		V_DrawRightAlignedSmallString(x, y, flags, str);
 		break;
@@ -532,6 +599,10 @@ static luaL_Reg lib_draw[] = {
 	{"drawScaled", libd_drawScaled},
 	{"drawNum", libd_drawNum},
 	{"drawPaddedNum", libd_drawPaddedNum},
+#ifdef TOPDOWN
+	{"drawSmallNum", libd_drawSmallNum},
+	{"drawPaddedSmallNum", libd_drawPaddedSmallNum},
+#endif
 	{"drawFill", libd_drawFill},
 	{"drawString", libd_drawString},
 	{"stringWidth", libd_stringWidth},

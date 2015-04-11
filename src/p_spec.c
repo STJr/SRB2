@@ -2369,13 +2369,74 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					dest = P_GetObjectTypeInSectorNum(MT_TELEPORTMAN, secnum);
 					if (!dest)
 						return;
-
+#ifdef TOPDOWN
+					INT32 i;
+#endif
 					if (bot)
 						P_Teleport(bot, dest->x, dest->y, dest->z, (line->flags & ML_NOCLIMB) ?  mo->angle : dest->angle, (line->flags & ML_BLOCKMONSTERS) == 0, (line->flags & ML_EFFECT4) == ML_EFFECT4);
 					if (line->flags & ML_BLOCKMONSTERS)
+#ifndef TOPDOWN
 						P_Teleport(mo, dest->x, dest->y, dest->z, (line->flags & ML_NOCLIMB) ?  mo->angle : dest->angle, false, (line->flags & ML_EFFECT4) == ML_EFFECT4);
+#else
+					{
+						if (mo->player && (maptol & TOL_TD) && gametype == GT_COOP)
+						{
+							for (i = 0; i < MAXPLAYERS; i++)
+							{
+								if (playeringame[i] && players[i].mo && players[i].mo->health > 0 && (players[i].playerstate == PST_LIVE || players[i].playerstate == PST_BUBBLE) && !players[i].exiting)
+								{
+									if ((netgame || multiplayer) && players[i].spectator) // Ignore spectators
+										continue;
+
+									if (players[i].bot) // ignore dumb, stupid tails
+										continue;
+
+									// As hilarious as players moving through the thok barrier with "not a care in the world" music is, it has to stop
+									if (players[i].mo->tracer && players[i].mo->tracer->type == MT_TUBEWAYPOINT)
+										P_SetTarget(&players[i].mo->tracer, NULL);
+
+									// Set them all to the same speed so they come out of the teleport moving the same if needed
+									players[i].mo->momx = mo->momx;
+									players[i].mo->momy = mo->momy;
+									players[i].mo->momz = mo->momz;
+
+									P_Teleport(players[i].mo, dest->x, dest->y, dest->z, (line->flags & ML_NOCLIMB) ?  mo->angle : dest->angle, false, (line->flags & ML_EFFECT4));
+								}
+							}
+						}
+						else
+							P_Teleport(mo, dest->x, dest->y, dest->z, (line->flags & ML_NOCLIMB) ?  mo->angle : dest->angle, false, (line->flags & ML_EFFECT4));
+					}
+#endif
 					else
 					{
+#ifdef TOPDOWN
+						if (mo->player && (maptol & TOL_TD) && gametype == GT_COOP)
+						{
+							for (i = 0; i < MAXPLAYERS; i++)
+							{
+								if (playeringame[i] && players[i].mo && players[i].mo->health > 0 && (players[i].playerstate == PST_LIVE || players[i].playerstate == PST_BUBBLE) && !players[i].exiting)
+								{
+									if ((netgame || multiplayer) && players[i].spectator) // Ignore spectators
+										continue;
+
+									if (players[i].bot) // ignore dumb, stupid tails
+										continue;
+
+									// As hilarious as players moving through the thok barrier with "not a care in the world" music is, it has to stop
+									if (players[i].mo->tracer && players[i].mo->tracer->type == MT_TUBEWAYPOINT)
+										P_SetTarget(&players[i].mo->tracer, NULL);
+
+									players[i].mo->momx = mo->momx;
+									players[i].mo->momy = mo->momy;
+									players[i].mo->momz = mo->momz;
+
+									P_Teleport(players[i].mo, dest->x, dest->y, dest->z, (line->flags & ML_NOCLIMB) ?  mo->angle : dest->angle, true, (line->flags & ML_EFFECT4));
+								}
+							}
+						}
+						else
+#endif
 						P_Teleport(mo, dest->x, dest->y, dest->z, (line->flags & ML_NOCLIMB) ?  mo->angle : dest->angle, true, (line->flags & ML_EFFECT4) == ML_EFFECT4);
 						// Play the 'bowrwoosh!' sound
 						S_StartSound(dest, sfx_mixup);
@@ -3069,6 +3130,18 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			}
 			break;
 
+#ifdef TOPDOWN
+		case 446: // Disable TD Shared Camera (Enable if noclimb)
+			if (mo->player)
+			{
+				if (line->flags & ML_NOCLIMB)
+					mo->player->pflags &= ~PF_NOTDSHAREDCAMERA;
+				else
+					mo->player->pflags |= PF_NOTDSHAREDCAMERA;
+			}
+			break;
+#endif
+
 		case 450: // Execute Linedef Executor - for recursion
 			P_LinedefExecute(line->tag, mo, NULL);
 			break;
@@ -3498,6 +3571,11 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 			break;
 		case 9: // Ring Drainer (Floor Touch)
 		case 10: // Ring Drainer (No Floor Touch)
+#ifdef TOPDOWN
+			// Ignore bubblers
+			if (player->playerstate == PST_BUBBLE)
+				break;
+#endif
 			if (leveltime % (TICRATE/2) == 0 && player->mo->health > 1)
 			{
 				player->mo->health--;
@@ -3506,6 +3584,11 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 			}
 			break;
 		case 11: // Special Stage Damage - Kind of like a mini-P_DamageMobj()
+#ifdef TOPDOWN
+			// Ignore bubblers
+			if (player->playerstate == PST_BUBBLE)
+				break;
+#endif
 			if (player->powers[pw_invulnerability] || player->powers[pw_flashing] || player->powers[pw_super] || player->exiting || player->bot)
 				break;
 
@@ -3533,7 +3616,11 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 				P_PlayerFlagBurst(player, false);
 			break;
 		case 12: // Space Countdown
+#ifdef TOPDOWN
+			if ((player->powers[pw_shield] & SH_NOSTACK) != SH_ELEMENTAL && player->playerstate != PST_BUBBLE && !player->powers[pw_spacetime])
+#else
 			if ((player->powers[pw_shield] & SH_NOSTACK) != SH_ELEMENTAL && !player->powers[pw_spacetime])
+#endif
 				player->powers[pw_spacetime] = spacetimetics + 1;
 			break;
 		case 13: // Ramp Sector (Increase step-up/down)
@@ -3553,6 +3640,32 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 		case 3: // Linedef executor requires all players present
 			/// \todo check continues for proper splitscreen support?
 			for (i = 0; i < MAXPLAYERS; i++)
+#ifdef TOPDOWN
+			{
+				if ((maptol & TOL_TD) && gametype == GT_COOP && (netgame || multiplayer))
+				{
+					if (playeringame[i] && !players[i].bot && players[i].mo && (gametype != GT_COOP || sharedlives > -1))
+					{
+						if (roversector)
+						{
+							if (players[i].mo->subsector->sector != roversector)
+								goto DoneSection2;
+							if (!P_ThingIsOnThe3DFloor(players[i].mo, sector, roversector))
+								goto DoneSection2;
+						}
+						else
+						{
+							if (players[i].mo->subsector->sector != sector)
+								goto DoneSection2;
+
+							if (special == 3 && !P_MobjReadyToTrigger(players[i].mo, sector))
+								goto DoneSection2;
+						}
+					}
+				}
+				else
+				{
+#endif
 				if (playeringame[i] && !players[i].bot && players[i].mo && (gametype != GT_COOP || players[i].lives > 0))
 				{
 					if (roversector)
@@ -3571,6 +3684,10 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 							goto DoneSection2;
 					}
 				}
+#ifdef TOPDOWN
+				}
+			}
+#endif
 		case 4: // Linedef executor that doesn't require touching floor
 		case 5: // Linedef executor
 		case 6: // Linedef executor (7 Emeralds)
@@ -3857,6 +3974,12 @@ DoneSection2:
 				mobj_t *mo2;
 				angle_t an;
 
+#ifdef TOPDOWN
+				// Ignore bubblers
+				if (player->playerstate == PST_BUBBLE)
+					break;
+#endif
+
 				if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT)
 					break;
 
@@ -3929,6 +4052,12 @@ DoneSection2:
 				mobj_t *waypoint = NULL;
 				mobj_t *mo2;
 				angle_t an;
+
+#ifdef TOPDOWN
+				// Ignore bubblers
+				if (player->playerstate == PST_BUBBLE)
+					break;
+#endif
 
 				if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT)
 					break;
@@ -4051,6 +4180,12 @@ DoneSection2:
 				line_t junk;
 				vertex_t v1, v2, resulthigh, resultlow;
 				mobj_t *highest = NULL;
+
+#ifdef TOPDOWN
+				// Ignore bubblers
+				if (player->playerstate == PST_BUBBLE)
+					break;
+#endif
 
 				if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT)
 					break;

@@ -177,10 +177,17 @@ void SplitScreen_OnChange(void)
 {
 	if (!cv_debug && netgame)
 	{
+#ifdef TOPDOWN
+		if (splitscreen || twoplayer)
+#else
 		if (splitscreen)
+#endif
 		{
 			CONS_Alert(CONS_NOTICE, M_GetText("Splitscreen not supported in netplay, sorry!\n"));
 			splitscreen = false;
+#ifdef TOPDOWN
+			twoplayer = false;
+#endif
 		}
 		return;
 	}
@@ -190,13 +197,21 @@ void SplitScreen_OnChange(void)
 
 	if (!demoplayback && !botingame)
 	{
+#ifdef TOPDOWN
+		if (splitscreen || twoplayer)
+#else
 		if (splitscreen)
+#endif
 			CL_AddSplitscreenPlayer();
 		else
 			CL_RemoveSplitscreenPlayer();
 
 		if (server && !netgame)
+#ifdef TOPDOWN
+			multiplayer = (splitscreen || twoplayer);
+#else
 			multiplayer = splitscreen;
+#endif
 	}
 	else
 	{
@@ -1036,7 +1051,11 @@ void R_SetupFrame(player_t *player, boolean skybox)
 	else
 		thiscam = &camera;
 
+#ifdef TOPDOWN
+	if (player->climbing || (player->pflags & PF_NIGHTSMODE) || player->playerstate == PST_DEAD || (maptol & TOL_TD))
+#else
 	if (player->climbing || (player->pflags & PF_NIGHTSMODE) || player->playerstate == PST_DEAD)
+#endif
 		forcechase = true;
 
 	if (!forcechase && player->spectator) // no spectator chasecam

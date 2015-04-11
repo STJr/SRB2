@@ -78,7 +78,11 @@ typedef enum
 	// Dead on the ground, view follows killer.
 	PST_DEAD,
 	// Ready to restart/respawn???
-	PST_REBORN
+	PST_REBORN,
+#ifdef TOPDOWN
+	// After being reborn in co-op you get put into a bubble
+	PST_BUBBLE
+#endif
 } playerstate_t;
 
 //
@@ -153,7 +157,8 @@ typedef enum
 	PF_FORCESTRAFE       = 1<<29, // Turning inputs are translated into strafing inputs
 	PF_ANALOGMODE        = 1<<30, // Analog mode?
 
-	// free: 1<<30 and 1<<31
+	/*** TD ***/
+	PF_NOTDSHAREDCAMERA  = 1<<31, // disables the TD shared camera and bubbling effects
 } pflags_t;
 
 typedef enum
@@ -433,6 +438,14 @@ typedef struct player_s
 	tic_t jointime; // Timer when player joins game to change skin/color
 #ifdef HWRENDER
 	fixed_t fovadd; // adjust FOV for hw rendering
+#endif
+
+#ifdef TOPDOWN
+	fixed_t maxflyheight;
+	INT32 emblems;
+	tic_t climbtime;
+	UINT32 damagededuct; // number of times hit and killed for the damage deduction in TD
+	UINT32 levelscore; // the score you've gotten in the current level
 #endif
 } player_t;
 

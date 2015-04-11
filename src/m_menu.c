@@ -2564,7 +2564,11 @@ void M_StartControlPanel(void)
 				MPauseMenu[mpause_scramble].status = IT_STRING | IT_SUBMENU;
 		}
 
+#ifdef TOPDOWN
+		if (splitscreen || twoplayer)
+#else
 		if (splitscreen)
+#endif
 			MPauseMenu[mpause_psetupsplit].status = MPauseMenu[mpause_psetupsplit2].status = IT_STRING | IT_CALL;
 		else
 		{
@@ -6581,7 +6585,11 @@ static void M_SetupMultiPlayer2(INT32 choice)
 	setupm_fakecolor = setupm_cvcolor->value;
 
 	// disable skin changes if we can't actually change skins
+#ifdef TOPDOWN
+	if ((splitscreen || twoplayer) && !CanChangeSkin(secondarydisplayplayer))
+#else
 	if (splitscreen && !CanChangeSkin(secondarydisplayplayer))
+#endif
 		MP_PlayerSetupMenu[2].status = (IT_GRAYEDOUT);
 	else
 		MP_PlayerSetupMenu[2].status = (IT_KEYHANDLER | IT_STRING);

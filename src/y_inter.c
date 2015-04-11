@@ -40,6 +40,10 @@
 #include "hardware/hw_main.h"
 #endif
 
+#ifdef TOPDOWN
+#include "m_random.h" // We have a fake quake effect for compcoop
+#endif
+
 #ifdef PC_DOS
 #include <stdio.h> // for snprintf
 int	snprintf(char *str, size_t n, const char *fmt, ...);
@@ -74,6 +78,39 @@ typedef union
 		patch_t *ptotal; // TOTAL
 		UINT8 gotlife; // Number of extra lives obtained
 	} coop;
+
+#ifdef TOPDOWN
+	struct
+	{
+		boolean gotlife; // Whether any of the players got a life from points at the end
+
+		INT32 totaldamagededuction[MAXPLAYERS];
+		INT32 totalemblembonus[MAXPLAYERS];
+		INT32 damagededuction[MAXPLAYERS];
+		INT32 emblembonus[MAXPLAYERS];
+
+		INT32 place[MAXPLAYERS]; // Their final place, useful for draws.
+		UINT32 scores[MAXPLAYERS]; // Winner's score
+		UINT32 finalscores[MAXPLAYERS]; // Winner's score after bonuses are applied
+		UINT8 *color[MAXPLAYERS]; // Winner's color #
+		INT32 *character[MAXPLAYERS]; // Winner's character #
+		INT32 num[MAXPLAYERS]; // Winner's player #
+		char *name[MAXPLAYERS]; // Winner's name
+		INT32 numplayers; // Number of players being displayed
+		char levelstring[44]; // holds levelnames up to 32 characters
+
+		patch_t *scorepatch;
+		patch_t *guardpatch;
+		patch_t *emblempatch;
+
+		INT32 topplayers[4]; // top players sorted based on player number
+		patch_t *placeicons[4];
+		fixed_t placescale;
+
+		INT16 quake; // The quake for the y values of the drawn graphics
+		INT16 titleoffset;
+	} compcoop;
+#endif
 
 	struct
 	{
@@ -149,6 +186,9 @@ intertype_t intertype = int_none;
 
 static void Y_AwardCoopBonuses(void);
 static void Y_AwardSpecialStageBonus(void);
+#ifdef TOPDOWN
+static void Y_CalculateCompCoopWinners(void);
+#endif
 static void Y_CalculateCompetitionWinners(void);
 static void Y_CalculateTimeRaceWinners(void);
 static void Y_CalculateMatchWinners(void);
@@ -248,6 +288,145 @@ void Y_IntermissionDrawer(void)
 			bonusy -= (3*SHORT(tallnum[0]->height)/2) + 1;
 		}
 	}
+#ifdef TOPDOWN
+	else if (intertype == int_compcoop)
+	{
+		INT32 i;
+		INT32 totalscore;
+		char name[MAXPLAYERNAME+1];
+		INT32 x, y; // These are used for the below 4th place players to place their icons
+
+		// draw the level name
+		// titleoffset is used in place of quake, during the quake, titleoffset is set to quake
+		V_DrawCenteredString(BASEVIDWIDTH/2, 2+data.compcoop.titleoffset, 0, data.compcoop.levelstring);
+
+		// Draw the clear
+		if (data.compcoop.titleoffset == 89)
+			V_DrawCenteredString(BASEVIDWIDTH/2, 12+data.compcoop.titleoffset, 0, "* CLEAR! *");
+
+		// Line
+		V_DrawFill(4, 12+data.compcoop.quake, 312, 1, 0);
+
+		// Top players are below so the 1st is always on-top
+
+		// Line 2
+		V_DrawFill(4, 110+data.compcoop.quake, 312, 1, 0);
+
+		// Line 3
+		V_DrawFill(4, 137+data.compcoop.quake, 312, 1, 0);
+
+		x = 9;
+		y = 140+data.compcoop.quake;
+
+		// the rest get drawn normally
+		for (i = 4; i < data.compcoop.numplayers; i++)
+		{
+			if (playeringame[data.compcoop.num[i]])
+			{
+				// Draw the back sprite, it looks ugly if we don't
+				V_DrawSmallScaledPatch(x, y, 0, livesback);
+
+				if (data.compcoop.color[i] == 0)
+					V_DrawSmallScaledPatch(x, y, 0,faceprefix[*data.compcoop.character[i]]);
+				else
+				{
+					UINT8 *colormap = R_GetTranslationColormap(*data.compcoop.character[i], *data.compcoop.color[i], GTC_CACHE);
+					V_DrawSmallMappedPatch(x, y, 0,faceprefix[*data.compcoop.character[i]], colormap);
+				}
+
+				V_DrawSmallCenteredString(x + livesback->width/4, y + livesback->height/2 + 2, 0, va("%d.", data.compcoop.place[i]));
+
+				strlcpy(name, data.compcoop.name[i], 6);
+
+				V_DrawSmallCenteredString(x + livesback->width/4, y + livesback->height/2 + 2 + 5, V_ALLOWLOWERCASE, name);
+
+				x += livesback->width/2 + 6;
+
+				if (x > 312 - livesback->width/2)
+				{
+					x = 9;
+					y += livesback->height/2 + 13;
+				}
+			}
+		}
+
+		// Top 4 players, below so the 1st overlaps
+		for (i = 0; i < min(4, data.compcoop.numplayers); i++)
+		{
+			if (playeringame[data.compcoop.num[data.compcoop.topplayers[i]]])
+			{
+				// SCORE
+				V_DrawScaledPatch((78*i)+43-(data.compcoop.scorepatch->width/2), 20+data.compcoop.quake, 0, data.compcoop.scorepatch);
+
+				totalscore = data.compcoop.scores[data.compcoop.topplayers[i]];
+
+				if (data.compcoop.damagededuction[data.compcoop.topplayers[i]] != -1)
+					totalscore -= data.compcoop.totaldamagededuction[data.compcoop.topplayers[i]];
+
+				if (data.compcoop.emblembonus[data.compcoop.topplayers[i]] != -1)
+					totalscore += data.compcoop.totalemblembonus[data.compcoop.topplayers[i]];
+                
+                totalscore = max(totalscore, 0);
+
+				V_DrawCenteredString((78*i)+43, 38+data.compcoop.quake, 0, va("%i", totalscore));
+
+				// Emblem Bonus
+				if (data.compcoop.emblembonus[data.compcoop.topplayers[i]] > -1)
+				{
+					V_DrawScaledPatch((78*i)+43-(data.compcoop.emblempatch->width/2), 50+data.compcoop.quake, 0, data.compcoop.emblempatch);
+
+					V_DrawSmallCenteredString((78*i)+43, 69+data.compcoop.quake, 0, va("+ %i", data.compcoop.emblembonus[data.compcoop.topplayers[i]]));
+				}
+
+				// Guard Deduction
+				if (data.compcoop.damagededuction[data.compcoop.topplayers[i]] > -1)
+				{
+					V_DrawScaledPatch((78*i)+43-(data.compcoop.guardpatch->width/2), 76+data.compcoop.quake, 0, data.compcoop.guardpatch);
+
+					V_DrawSmallCenteredString((78*i)+43, 100+data.compcoop.quake, V_REDMAP, va("- %i", data.compcoop.damagededuction[data.compcoop.topplayers[i]]));
+				}
+
+				// Draw the back sprite, it looks ugly if we don't
+				V_DrawSmallScaledPatch((78*i)+43-(livesback->width/4), 113+data.compcoop.quake, 0, livesback);
+
+				if (data.compcoop.color[data.compcoop.topplayers[i]] == 0)
+					V_DrawSmallScaledPatch((78*i)+43-(livesback->width/4), 113+data.compcoop.quake, 0,faceprefix[*data.compcoop.character[data.compcoop.topplayers[i]]]);
+				else
+				{
+					UINT8 *colormap = R_GetTranslationColormap(*data.compcoop.character[data.compcoop.topplayers[i]], *data.compcoop.color[data.compcoop.topplayers[i]], GTC_CACHE);
+					V_DrawSmallMappedPatch((78*i)+43-(livesback->width/4), 113+data.compcoop.quake, 0,faceprefix[*data.compcoop.character[data.compcoop.topplayers[i]]], colormap);
+				}
+
+				// 9 character max so that names don't overlap/touch
+				strlcpy(name, data.compcoop.name[data.compcoop.topplayers[i]], 19);
+
+				V_DrawSmallCenteredString((78*i)+43, 131+data.compcoop.quake, V_ALLOWLOWERCASE, name);
+
+				// Place
+				if (data.compcoop.placeicons[data.compcoop.topplayers[i]])
+				{
+					if (data.compcoop.place[data.compcoop.topplayers[i]] != 1)
+						V_DrawScaledPatch((78*i)+43-(data.compcoop.placeicons[data.compcoop.topplayers[i]]->width/2), 78-(data.compcoop.placeicons[data.compcoop.topplayers[i]]->height/2)+data.compcoop.quake, 0, data.compcoop.placeicons[data.compcoop.topplayers[i]]);
+				}
+			}
+		}
+
+		// one more loop so that the "1st" is ALWAYS draw in front of everything else
+		for (i = 0; i < min(4, data.compcoop.numplayers); i++)
+		{
+			if (playeringame[data.compcoop.num[data.compcoop.topplayers[i]]] && data.compcoop.place[data.compcoop.topplayers[i]] == 1)
+			{
+				if (data.compcoop.placeicons[data.compcoop.topplayers[i]])
+				{
+					// because it was getting ridiculous
+					x = ((78*i)+43-((FixedMul(data.compcoop.placeicons[data.compcoop.topplayers[i]]->width*FRACUNIT, data.compcoop.placescale)>>FRACBITS)/2))<<FRACBITS;
+					y = (83-((FixedMul(data.compcoop.placeicons[data.compcoop.topplayers[i]]->height*FRACUNIT, data.compcoop.placescale)>>FRACBITS)/2)+data.compcoop.quake)<<FRACBITS;
+					V_DrawFixedPatch(x, y, data.compcoop.placescale, 0, data.compcoop.placeicons[data.compcoop.topplayers[i]], NULL);
+				}
+			}
+		}
+	}
+#endif
 	else if (intertype == int_spec)
 	{
 		// draw the header
@@ -499,8 +678,19 @@ void Y_IntermissionDrawer(void)
 		V_DrawThinString(x+168, 32, V_YELLOWMAP, "RING");
 
 		// Total rings
+#ifdef TOPDOWN
+		if (maptol & TOL_ND)
+		{
+			V_DrawThinString(x+191, 32, V_YELLOWMAP, "EMBLEM");
+		}
+		else
+		{
+#endif
 		V_DrawThinString(x+191, 24, V_YELLOWMAP, "TOTAL");
 		V_DrawThinString(x+196, 32, V_YELLOWMAP, "RING");
+#ifdef TOPDOWN
+		}
+#endif
 
 		// Monitors
 		V_DrawThinString(x+223, 24, V_YELLOWMAP, "ITEM");
@@ -569,8 +759,19 @@ void Y_IntermissionDrawer(void)
 	}
 
 	if (timer)
+#ifdef TOPDOWN
+	{
+		if (intertype == int_compcoop)
+			V_DrawString(4, 2, V_YELLOWMAP,
+				va("%d", timer/TICRATE));
+		else
+			V_DrawCenteredString(BASEVIDWIDTH/2, 188, V_YELLOWMAP,
+				va("start in %d seconds", timer/TICRATE));
+	}
+#else
 		V_DrawCenteredString(BASEVIDWIDTH/2, 188, V_YELLOWMAP,
 			va("start in %d seconds", timer/TICRATE));
+#endif
 
 	// Make it obvious that scrambling is happening next round.
 	if (cv_scrambleonchange.value && cv_teamscramble.value && (intertic/TICRATE % 2 == 0))
@@ -684,6 +885,109 @@ void Y_Ticker(void)
 			--data.coop.gotlife;
 		}
 	}
+#ifdef TOPDOWN
+	else if (intertype == int_compcoop)
+	{
+		INT32 i;
+
+		if (!intertic) // first time only
+			S_ChangeMusic(mus_lclear, false); // don't loop it
+
+		if (intertic >= 3*TICRATE && data.compcoop.titleoffset > 0)
+			data.compcoop.titleoffset -= 2;
+
+		if (data.compcoop.titleoffset < 0)
+			data.compcoop.titleoffset = 0;
+
+		if (intertic == 5*TICRATE+21)
+			S_ChangeMusic(mus_racent, true); // Do loop it
+
+		for (i = 0; i < data.compcoop.numplayers; i++)
+		{
+			if (intertic >= 6*TICRATE && playeringame[data.compcoop.num[i]] && data.compcoop.damagededuction[i] == -1)
+				data.compcoop.damagededuction[i] = data.compcoop.totaldamagededuction[i];
+
+			if (intertic >= 7*TICRATE && playeringame[data.compcoop.num[i]] && data.compcoop.emblembonus[i] == -1)
+				data.compcoop.emblembonus[i] = data.compcoop.totalemblembonus[i];
+
+			if (intertic == 10*TICRATE+25 && playeringame[data.compcoop.num[i]] && data.compcoop.place[i] == 1)
+				S_StartSound(NULL, skins[players[data.compcoop.num[i]].skin].soundsid[SKSINTWIN]);
+		}
+
+		if (intertic == 6*TICRATE)
+			S_StartSound(NULL, sfx_intbon);
+
+		if (intertic == 7*TICRATE)
+		{
+			S_StartSound(NULL, sfx_intbon);
+
+			if (data.compcoop.gotlife)
+				P_PlayLivesJingle(NULL);
+		}
+
+		boolean soundplayed = false; // Whether the place sound has already been played (no random sound increases)
+
+		for (i = 0; i < min(4, data.compcoop.numplayers); i++)
+		{
+			if (intertic > 8*TICRATE+(12-(i*4)) && playeringame[data.compcoop.num[data.compcoop.topplayers[i]]])
+			{
+				data.compcoop.emblembonus[data.compcoop.topplayers[i]] = -2; // -2 tells it to keep the scores added, but get rid of the other stuff
+				data.compcoop.damagededuction[data.compcoop.topplayers[i]] = -2;
+			}
+
+			if (data.compcoop.place[i] > 1 && intertic == 9*TICRATE+(24-(data.compcoop.place[i]-1)*8) && playeringame[data.compcoop.num[i]])
+			{
+				data.compcoop.placeicons[i] = W_CachePatchName(va("PLACE%d", data.compcoop.place[i]), PU_STATIC);
+
+				if (!soundplayed)
+					S_StartSound(NULL, sfx_int2nd);
+
+				soundplayed = true;
+			}
+			else if (data.compcoop.place[i] == 1 && intertic == 9*TICRATE+46 && playeringame[data.compcoop.num[i]])
+			{
+				data.compcoop.placeicons[i] = W_CachePatchName("PLACE1", PU_STATIC);
+
+				if (!soundplayed)
+					S_StartSound(NULL, sfx_int1st);
+
+				soundplayed = true;
+			}
+		}
+
+		if (intertic == 9*TICRATE+47)
+			data.compcoop.placescale = 2*FRACUNIT;
+		else if (intertic >= 9*TICRATE+48)
+			data.compcoop.placescale = FRACUNIT;
+
+		if (intertic < 4*TICRATE)
+			data.compcoop.quake = 250; // off the screen
+		else if (intertic >= 4*TICRATE && intertic < (4*TICRATE)+TICRATE/2)
+		{
+			data.compcoop.quake -= 15;
+
+			if (data.compcoop.quake < 0)
+				data.compcoop.quake = 0;
+		}
+		else if (intertic >= 9*TICRATE+48 && intertic < 11*TICRATE)
+		{
+			if (intertic & 1)
+			{
+				data.compcoop.quake = M_RandomRange(-10, 10);
+			}
+			data.compcoop.titleoffset = data.compcoop.quake;
+		}
+		else
+		{
+			data.compcoop.quake = 0;
+			data.compcoop.titleoffset = 0;
+		}
+
+		// If a player has left or joined, recalculate scores.
+		if (data.compcoop.numplayers != D_NumPlayers())
+			Y_CalculateCompCoopWinners();
+	}
+#endif
 	else if (intertype == int_spec) // coop or single player, special stage
 	{
 		INT32 i;
@@ -884,7 +1188,11 @@ void Y_StartIntermission(void)
 	}
 	else
 	{
+#ifdef TOPDOWN
+		if (cv_inttime.value == 0 && gametype == GT_COOP && !(maptol & TOL_TD))
+#else
 		if (cv_inttime.value == 0 && gametype == GT_COOP)
+#endif
 			timer = 0;
 		else
 		{
@@ -900,6 +1208,10 @@ void Y_StartIntermission(void)
 			// Don't add it here
 			if (G_IsSpecialStage(gamemap))
 				intertype = int_spec;
+#ifdef TOPDOWN
+			else if (maptol & TOL_TD)
+				intertype = int_compcoop;
+#endif
 			else
 				intertype = int_coop;
 		}
@@ -1031,6 +1343,62 @@ void Y_StartIntermission(void)
 			// changing the font to one of a slightly different width.
 			break;
 		}
+
+#ifdef TOPDOWN
+		case int_compcoop:
+		{
+			// Calculate who won
+			Y_CalculateCompCoopWinners();
+
+			// set up the levelstring
+			if (mapheaderinfo[prevmap]->actnum)
+				snprintf(data.compcoop.levelstring,
+					sizeof data.compcoop.levelstring,
+					"* %.32s Act %d *",
+					mapheaderinfo[prevmap]->lvlttl, mapheaderinfo[prevmap]->actnum);
+			else
+				snprintf(data.compcoop.levelstring,
+					sizeof data.compcoop.levelstring,
+					"* %.32s *",
+					mapheaderinfo[prevmap]->lvlttl);
+
+			data.compcoop.levelstring[sizeof data.compcoop.levelstring - 1] = '\0';
+
+			data.compcoop.scorepatch = W_CachePatchName("INTSCORE", PU_STATIC);
+			data.compcoop.guardpatch = W_CachePatchName("INTGUARD", PU_STATIC);
+
+			if (maptol & TOL_ND)
+				data.compcoop.emblempatch = W_CachePatchName("SBOEMBLM", PU_STATIC);
+			else
+				data.compcoop.emblempatch = W_CachePatchName("INTRING", PU_STATIC);
+
+#ifdef HWRENDER
+			// In OpenGL, placeicons[i] isn't set to null, so the icon stays
+			if (rendermode == render_opengl)
+			{
+				for (i = 0; i < 4; i++)
+				{
+					data.compcoop.placeicons[i] = NULL;
+				}
+			}
+#endif
+
+			data.compcoop.quake = 250;
+
+			data.compcoop.titleoffset = 89;
+
+			data.compcoop.placescale = 4*FRACUNIT;
+
+			// get background patches
+			widebgpatch = W_CachePatchName("INTERSCW", PU_STATIC);
+			bgpatch = W_CachePatchName("INTERSCR", PU_STATIC);
+
+			usetile = false;
+			useinterpic = false;
+			usebuffer = false; // force it to use the old system
+			break;
+		}
+#endif
 
 		case int_nightsspec:
 			if (modeattacking && stagefailed)
@@ -1256,6 +1624,116 @@ void Y_StartIntermission(void)
 	}
 }
 
+#ifdef TOPDOWN
+//
+// Y_CalculateCompCoophWinners
+//
+static void Y_CalculateCompCoopWinners(void)
+{
+	INT32 i, j;
+	boolean completed[MAXPLAYERS];
+	INT32 emblembonus, damagededuction;
+	UINT32 finalscore;
+	UINT8 ptlives;
+
+	// Initialize variables
+	memset(data.compcoop.place, 0, sizeof (data.compcoop.place));
+	memset(data.compcoop.totalemblembonus, 0, sizeof (data.compcoop.totalemblembonus));
+	memset(data.compcoop.totaldamagededuction, 0, sizeof (data.compcoop.totaldamagededuction));
+	memset(data.compcoop.emblembonus, 0, sizeof (data.compcoop.emblembonus));
+	memset(data.compcoop.damagededuction, 0, sizeof (data.compcoop.damagededuction));
+	memset(data.compcoop.scores, 0, sizeof (data.compcoop.scores));
+	memset(data.compcoop.finalscores, 0, sizeof (data.compcoop.finalscores));
+	memset(data.compcoop.color, 0, sizeof (data.compcoop.color));
+	memset(data.compcoop.character, 0, sizeof (data.compcoop.character));
+	memset(completed, 0, sizeof (completed));
+	data.compcoop.numplayers = 0;
+	data.compcoop.gotlife = false;
+	i = j = 0;
+
+	for (j = 0; j < MAXPLAYERS; j++)
+	{
+		if (!playeringame[j])
+			continue;
+
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			if (!playeringame[i])
+				continue;
+
+			if (maptol & TOL_ND)
+				emblembonus = players[i].emblems * 100;
+			else
+				emblembonus = (players[i].health-1) * 100;
+
+			damagededuction = players[i].damagededuct * 100;
+			
+			// This checks the lives
+			finalscore = players[i].score + emblembonus - damagededuction;
+            if (finalscore > players[i].score + emblembonus) // If it's greater than the original value + emblembonus, logically it has wrapped around
+            {
+                finalscore = players[i].score;
+            }
+
+			ptlives = (!ultimatemode && !modeattacking) ? max((finalscore/50000) - (players[i].score/50000), 0) : 0;
+
+			if (ptlives > 0)
+				data.compcoop.gotlife = true; // a player has got at least 1 life from their points
+            
+            // This checks the position
+            finalscore = players[i].levelscore + emblembonus - damagededuction;
+            if (finalscore > players[i].levelscore + emblembonus) // If it's greater than the original value + emblembonus, logically it has wrapped around
+            {
+                finalscore = 0;
+            }
+
+			if (finalscore >= data.compcoop.finalscores[data.compcoop.numplayers] && completed[i] == false)
+			{
+				data.compcoop.totalemblembonus[data.compcoop.numplayers] = emblembonus;
+				data.compcoop.totaldamagededuction[data.compcoop.numplayers] = damagededuction;
+				data.compcoop.emblembonus[data.compcoop.numplayers] = -1; // -1 to tell it not to draw it yet
+				data.compcoop.damagededuction[data.compcoop.numplayers] = -1;
+				data.compcoop.scores[data.compcoop.numplayers] = players[i].levelscore;
+				data.compcoop.finalscores[data.compcoop.numplayers] = finalscore;
+				data.compcoop.color[data.compcoop.numplayers] = &players[i].skincolor;
+				data.compcoop.character[data.compcoop.numplayers] = &players[i].skin;
+				data.compcoop.name[data.compcoop.numplayers] = player_names[i];
+				data.compcoop.num[data.compcoop.numplayers] = i;
+			}
+		}
+		completed[data.compcoop.num[data.compcoop.numplayers]] = true;
+		data.compcoop.numplayers++;
+	}
+
+	for (i = 0; i < data.compcoop.numplayers; i++)
+	{
+		// Already sorted, just apply a number for their place
+		if (i > 0 && data.compcoop.finalscores[i] == data.compcoop.finalscores[i-1])
+			data.compcoop.place[i] = data.compcoop.place[i-1];
+		else
+			data.compcoop.place[i] = i+1;
+	}
+
+	INT32 topplayersplayernum[4] = {MAXPLAYERS, MAXPLAYERS, MAXPLAYERS, MAXPLAYERS};
+
+	memset(completed, 0, sizeof (completed));
+	memset(data.compcoop.topplayers, 0, sizeof (data.compcoop.topplayers));
+
+	for (i = 0; i < min(4, data.compcoop.numplayers); i++)
+	{
+		for (j = 0; j < min(4, data.compcoop.numplayers); j++)
+		{
+			if (data.compcoop.num[j] < topplayersplayernum[i] && completed[j] == false)
+			{
+				data.compcoop.topplayers[i] = j;
+				topplayersplayernum[i] = data.compcoop.num[j];
+			}
+		}
+		completed[data.compcoop.topplayers[i]] = true;
+	}
+}
+#endif
+
 //
 // Y_CalculateMatchWinners
 //
@@ -1374,6 +1852,9 @@ static void Y_CalculateCompetitionWinners(void)
 
 		times[i]    = players[i].realtime;
 		rings[i]    = (UINT32)max(players[i].health-1, 0);
+#ifdef TOPDOWN
+		maxrings[i] = (UINT32)players[i].emblems;
+#endif
 		maxrings[i] = (UINT32)players[i].totalring;
 		monitors[i] = (UINT32)players[i].numboxes;
 		scores[i]   = (UINT32)min(players[i].score, 99999990);
@@ -1393,10 +1874,24 @@ static void Y_CalculateCompetitionWinners(void)
 			else
 				bestat[1] = false;
 
+#ifdef TOPDOWN
+			if (maptol & TOL_ND)
+			{
+				if (players[i].emblems >= players[j].emblems)
+					points[i]++;
+				else
+					bestat[2] = false;
+			}
+			else
+			{
+#endif
 			if (players[i].totalring >= players[j].totalring)
 				points[i]++;
 			else
 				bestat[2] = false;
+#ifdef TOPDOWN
+			}
+#endif
 
 			if (players[i].numboxes >= players[j].numboxes)
 				points[i]++;
@@ -1509,9 +2004,22 @@ static void Y_SetTimeBonus(player_t *player, y_bonus_t *bstruct)
 //
 static void Y_SetRingBonus(player_t *player, y_bonus_t *bstruct)
 {
+#ifdef TOPDOWN
+	if (maptol & TOL_ND)
+	{
+		strncpy(bstruct->patch, "YB_EMBLM", sizeof(bstruct->patch));
+		bstruct->display = true;
+		bstruct->points = max(0, player->emblems * 100);
+	}
+	else
+	{
+#endif
 	strncpy(bstruct->patch, "YB_RING", sizeof(bstruct->patch));
 	bstruct->display = true;
 	bstruct->points = max(0, (player->health-1) * 100);
+#ifdef TOPDOWN
+	}
+#endif
 }
 
 //
@@ -1707,6 +2215,35 @@ void Y_EndIntermission(void)
 {
 	Y_UnloadData();
 
+#ifdef TOPDOWN
+	if (intertype == int_compcoop)
+	{
+		UINT32 oldscore, finalscore;
+		INT32 i;
+		UINT8 ptlives;
+		for (i = 0; i < data.compcoop.numplayers; i++)
+		{
+			if (!playeringame[data.compcoop.num[i]])
+				continue;
+
+			// have to do this here since adding it in the compcoop calculations would cause it to give out extra points when people leave
+			oldscore = players[data.compcoop.num[i]].score;
+			finalscore = data.compcoop.emblembonus[i] - data.compcoop.damagededuction[i];
+			if (data.compcoop.emblembonus[i] < 0 || data.compcoop.damagededuction[i] < 0 // if these are still negative for whatever reason, we shouldn't give the player a massive score
+				|| finalscore > (UINT32)data.compcoop.emblembonus[i]) // If it's greater than emblembonus, logically it has wrapped around
+            {
+                finalscore = 0;
+            }
+			players[data.compcoop.num[i]].score += finalscore;
+
+			ptlives = (!ultimatemode && !modeattacking) ? max((players[i].score/50000) - (oldscore/50000), 0) : 0;
+
+			if (ptlives)
+				P_GivePlayerLives(&players[data.compcoop.num[i]], ptlives);
+		}
+	}
+#endif
+
 	endtic = -1;
 	intertype = int_none;
 	usebuffer = false;
@@ -1800,6 +2337,17 @@ static void Y_UnloadData(void)
 			UNLOAD(data.coop.bonuspatches[0]);
 			UNLOAD(data.coop.ptotal);
 			break;
+#ifdef TOPDOWN
+		case int_compcoop:
+			UNLOAD(data.compcoop.scorepatch);
+			UNLOAD(data.compcoop.guardpatch);
+			UNLOAD(data.compcoop.emblempatch);
+			UNLOAD(data.compcoop.placeicons[0]);
+			UNLOAD(data.compcoop.placeicons[1]);
+			UNLOAD(data.compcoop.placeicons[2]);
+			UNLOAD(data.compcoop.placeicons[3]);
+			break;
+#endif
 		case int_spec:
 			// unload the special stage patches
 			//UNLOAD(data.spec.cemerald);

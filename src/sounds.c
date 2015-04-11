@@ -1078,6 +1078,10 @@ musicinfo_t S_music[NUMMUSIC] =
 	{"credit", 0, NULL, -1}, // Credits
 	{"racent", 0, NULL, -1}, // Race Results
 	{"stjr",   0, NULL, -1}, // Sonic Team Jr. Presents
+
+#ifdef TOPDOWN
+	{"wipe",   0, NULL, -1}, // Team Wipe
+#endif
 };
 
 
@@ -1526,6 +1530,22 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3kdal", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"s3kdbs", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"s3kdbl", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
+
+#ifdef TOPDOWN
+  {"chilbl", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
+  {"chilex", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
+  {"chilht", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
+  {"chilic", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
+  {"winds",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
+  {"card",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
+  {"dsssb1", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
+  {"dsssb2", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
+  {"dsssb3", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
+  {"intbon", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
+  {"int2nd", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
+  {"int1st", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
+  {"intwin", false,  64,  0, -1, NULL, 0, SKSINTWIN,  -1, LUMPERROR},
+#endif
 
   // skin sounds free slots to add sounds at run time (Boris HACK!!!)
   // initialized to NULL

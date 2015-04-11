@@ -271,6 +271,14 @@ static inline void P_NetArchivePlayers(void)
 		WRITEUINT8(save_p, players[i].accelstart);
 		WRITEUINT8(save_p, players[i].acceleration);
 		WRITEFIXED(save_p, players[i].jumpfactor);
+
+#ifdef TOPDOWN
+		WRITEFIXED(save_p, players[i].maxflyheight);
+		WRITEINT32(save_p, players[i].emblems);
+		WRITEUINT32(save_p, players[i].climbtime);
+		WRITEUINT32(save_p, players[i].damagededuct);
+		WRITEUINT32(save_p, players[i].levelscore);
+#endif
 	}
 }
 
@@ -437,6 +445,14 @@ static inline void P_NetUnArchivePlayers(void)
 		players[i].accelstart = READUINT8(save_p);
 		players[i].acceleration = READUINT8(save_p);
 		players[i].jumpfactor = READFIXED(save_p);
+
+#ifdef TOPDOWN
+		players[i].maxflyheight = READFIXED(save_p);
+		players[i].emblems = READINT32(save_p);
+		players[i].climbtime = READUINT32(save_p);
+		players[i].damagededuct = READUINT32(save_p);
+		players[i].levelscore = READUINT32(save_p);
+#endif
 	}
 }
 

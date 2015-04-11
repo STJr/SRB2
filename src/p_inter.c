@@ -141,6 +141,14 @@ boolean P_CanPickupItem(player_t *player, boolean weapon)
 	if (player->powers[pw_flashing] > (flashingtics/4)*3 && player->powers[pw_flashing] <= flashingtics)
 		return false;
 
+#ifdef TOPDOWN
+	if ((maptol & TOL_ND) && player->mo->health > 25) // No more rings for YOU
+		return false;
+
+	if ((maptol & TOL_ND) && player->bot && players[consoleplayer].mo->health > 25) // stop bots getting rings when you already have max
+		return false;
+#endif
+
 	return true;
 }
 
@@ -217,6 +225,74 @@ void P_DoNightsScore(player_t *player)
 	dummymo->destscale = 2*FRACUNIT;
 }
 
+#ifdef TOPDOWN
+//
+// P_DoTDEmblemScore
+//
+// When you pick up a TD Emblem, score appears
+// and rises like with badniks and monitors
+//
+void P_DoTDEmblemScore(player_t *player)
+{
+	mobj_t *dummymo;
+
+	if (player->exiting)
+		return; // Don't do any fancy shit for failures.
+
+	dummymo = P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z+player->mo->height/2, MT_SCORE);
+	if (player->bot)
+		player = &players[consoleplayer];
+
+	player->linkcount++;
+	player->linktimer = 2*TICRATE;
+
+	if (gametype == GT_COOP && (netgame || multiplayer))
+	{
+		dummymo->color = player->mo->color;
+	}
+	else
+	{
+		dummymo->color = SKINCOLOR_SILVER;
+	}
+
+	if (player->linkcount < 9)
+	{
+		switch (player->linkcount)
+		{
+		case 1:
+		case 2:
+			P_AddPlayerScore(player, 20);
+			P_SetMobjState(dummymo, dummymo->info->spawnstate+12);
+			break;
+		case 3:
+		case 4:
+			P_AddPlayerScore(player, 40);
+			P_SetMobjState(dummymo, dummymo->info->spawnstate+13);
+			break;
+		case 5:
+		case 6:
+			P_AddPlayerScore(player, 60);
+			P_SetMobjState(dummymo, dummymo->info->spawnstate+15);
+			break;
+		case 7:
+		case 8:
+			P_AddPlayerScore(player, 80);
+			P_SetMobjState(dummymo, dummymo->info->spawnstate+16);
+			break;
+		default:
+			P_RemoveMobj(dummymo);
+			break;
+		}
+		
+	}
+	else
+	{
+		P_AddPlayerScore(player, 100);
+		P_SetMobjState(dummymo, dummymo->info->spawnstate);
+	}
+}
+#endif
+
 /** Takes action based on a ::MF_SPECIAL thing touched by a player.
   * Actually, this just checks a few things (heights, toucher->player, no
   * objectplace, no dead or disappearing things)
@@ -236,6 +312,11 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 	if (objectplacing)
 		return;
+
+#ifdef TOPDOWN
+	if (toucher->player && toucher->player->playerstate == PST_BUBBLE)
+		return;
+#endif
 
 	I_Assert(special != NULL);
 	I_Assert(toucher != NULL);
@@ -308,7 +389,11 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		else if (((toucher->z < special->z && !(toucher->eflags & MFE_VERTICALFLIP))
 		|| (toucher->z + toucher->height > special->z + special->height && (toucher->eflags & MFE_VERTICALFLIP)))
 		&& player->charability == CA_FLY
+#ifdef TOPDOWN
+		&& ((player->powers[pw_tailsfly] && !(player->pflags & PF_JUMPED))
+#else
 		&& (player->powers[pw_tailsfly]
+#endif
 		|| (toucher->state >= &states[S_PLAY_SPC1] && toucher->state <= &states[S_PLAY_SPC4]))) // Tails can shred stuff with his propeller.
 		{
 			toucher->momz = -toucher->momz/2;
@@ -350,7 +435,11 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		else if (((toucher->z < special->z && !(toucher->eflags & MFE_VERTICALFLIP))
 		|| (toucher->z + toucher->height > special->z + special->height && (toucher->eflags & MFE_VERTICALFLIP))) // Flame is bad at logic - JTE
 		&& player->charability == CA_FLY
+#ifdef TOPDOWN
+		&& ((player->powers[pw_tailsfly] && !(player->pflags & PF_JUMPED))
+#else
 		&& (player->powers[pw_tailsfly]
+#endif
 		|| (toucher->state >= &states[S_PLAY_SPC1] && toucher->state <= &states[S_PLAY_SPC4]))) // Tails can shred stuff with his propeller.
 		{
 			if (P_MobjFlip(toucher)*toucher->momz < 0)
@@ -386,6 +475,11 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		case MT_FLINGRING:
 			if (!(P_CanPickupItem(player, false)))
 				return;
+
+#ifdef TOPDOWN
+			if (maptol & TOL_ND && special->type == MT_FLINGRING && special->fuse > 7*TICRATE) // 1 second where they can't be picked up so you can beat up enemies for other players
+				return;
+#endif
 
 			special->momx = special->momy = special->momz = 0;
 			P_GivePlayerRings(player, 1);
@@ -1148,6 +1242,29 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if (player->starpostnum >= special->health)
 				return; // Already hit this post
 
+#ifdef TOPDOWN
+			if ((maptol & TOL_TD) && gametype == GT_COOP && (netgame || multiplayer))
+			{
+				INT32 i;
+				for (i = 0; i < MAXPLAYERS; i++)
+				{
+					if (playeringame[i])
+					{
+						if (players[i].bot) // ignore dumb, stupid tails
+							continue;
+
+						players[i].starposttime = leveltime;
+						players[i].starpostx = player->mo->x>>FRACBITS;
+						players[i].starposty = player->mo->y>>FRACBITS;
+						players[i].starpostz = special->z>>FRACBITS;
+						players[i].starpostangle = special->angle;
+						players[i].starpostnum = special->health;
+					}
+				}
+			}
+			else
+			{
+#endif
 			// Save the player's time and position.
 			player->starposttime = leveltime;
 			player->starpostx = toucher->x>>FRACBITS;
@@ -1155,6 +1272,9 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			player->starpostz = special->z>>FRACBITS;
 			player->starpostangle = special->angle;
 			player->starpostnum = special->health;
+#ifdef TOPDOWN
+			}
+#endif
 			P_ClearStarPost(special->health);
 
 			// Find all starposts in the level with this value.
@@ -1314,6 +1434,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			return;
 		case MT_SMALLMACECHAIN:
 		case MT_BIGMACECHAIN:
+		case MT_SMALLBLUECHAIN:
+		case MT_BIGBLUECHAIN:
 			// Is this the last link in the chain?
 			if (toucher->momz > 0 || !(special->flags & MF_AMBUSH)
 				|| (player->pflags & PF_ITEMHANG) || (player->pflags & PF_MACESPIN))
@@ -1398,6 +1520,10 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				return;
 			if (maptol & TOL_NIGHTS)
 				return;
+#ifdef TOPDOWN
+			if (player->playerstate == PST_BUBBLE)
+				return;
+#endif
 			if (mariomode)
 				return;
 			else if (toucher->eflags & MFE_VERTICALFLIP)
@@ -1437,6 +1563,67 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			}
 			return;
 
+#ifdef TOPDOWN
+		case MT_TOXOMISTERCLOUD:
+			{
+				thinker_t *th;
+				mobj_t *mo2;
+				boolean alreadyInfected = false;
+				// check all the current clouds to make sure the player isn't already being drained
+				for (th = thinkercap.next; th != &thinkercap; th = th->next)
+				{
+					if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+						continue;
+
+					mo2 = (mobj_t *)th;
+					
+					if (mo2->type != MT_TOXOMISTERCLOUD)
+						continue;
+
+					if (mo2 == special) // don't kill yourself
+						continue;
+
+					if (mo2->threshold && mo2->tracer == player->mo) // player it touched already has one
+					{
+						alreadyInfected = true;
+					}
+
+				}
+			
+				if (!special->threshold)
+				{
+					if (alreadyInfected)
+					{
+						P_KillMobj(special, NULL, NULL);
+						return;
+					}
+
+					special->threshold = 1; // Infected!
+					special->fuse = 10*TICRATE; // 10 seconds of infection
+					special->tracer = player->mo; // set the tracer to be the player object that was touched
+				}
+				else if (special->tracer != player->mo && !alreadyInfected) // already infected player touched another player? make sure the other player isn't already infected
+				{
+					mobj_t *cloud;
+					cloud = P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z, MT_TOXOMISTERCLOUD);
+
+					P_SetTarget(&cloud->target, special->target);
+					P_SetTarget(&cloud->tracer, player->mo);
+
+					cloud->threshold = 1;
+					cloud->fuse = special->fuse;
+				}
+			}
+			return;
+		case MT_ICECUBE:
+			P_InstaThrust(toucher, ANGLE_180, 15*FRACUNIT);
+			return;
+		case MT_TDEMBLEM:
+			S_StartSound(toucher, special->info->activesound);
+			P_DoTDEmblemScore(player);
+			P_GivePlayerEmblems(toucher->player, 1);
+			break;
+#endif
 		default: // SOC or script pickup
 			if (player->bot)
 				return;
@@ -1827,6 +2014,10 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source)
 	target->flags2 &= ~(MF2_SKULLFLY|MF2_NIGHTSPULL);
 	target->health = 0; // This makes it easy to check if something's dead elsewhere.
 
+#ifdef TOPDOWN
+	target->flags &= ~MF_PAIN; // Don't cause pain anymore
+#endif
+
 #ifdef HAVE_BLUA
 	if (LUAh_MobjDeath(target, inflictor, source) || P_MobjWasRemoved(target))
 		return;
@@ -1885,15 +2076,64 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source)
 			else
 			{
 				if (target->flags & MF_BOSS)
+#ifdef TOPDOWN
+				{
+#endif
 					score = 1000;
+#ifdef TOPDOWN
+					// Everyone gets 1000 points when the boss dies in TD
+					if ((maptol & TOL_TD) && gametype == GT_COOP && (netgame || multiplayer))
+					{
+						INT32 i;
+						for (i = 0; i < MAXPLAYERS; i++)
+						{
+							if (playeringame[i] && players[i].mo && players[i].mo->health > 0 && players[i].playerstate == PST_LIVE)
+							{
+								if (players[i].spectator) // Ignore spectators
+									continue;
+
+								if (players[i].bot) // ignore dumb, stupid tails
+									continue;
+
+								if (&players[i] == source->player)
+									continue;
+
+								P_AddPlayerScore(&players[i], score);
+							}
+						}
+					}
+				}
+#endif
+#ifdef TOPDOWN
+				else if (((target->flags & MF_ENEMY) && !(target->flags & MF_MISSILE)) || (target->flags & MF_MONITOR))
+#else
 				else if ((target->flags & MF_ENEMY) && !(target->flags & MF_MISSILE))
+#endif
 				{
 					mobj_t *scoremobj;
 					UINT32 scorestate = mobjinfo[MT_SCORE].spawnstate;
 
 					scoremobj = P_SpawnMobj(target->x, target->y, target->z + (target->height / 2), MT_SCORE);
 
-					// On ground? No chain starts.
+#ifdef TOPDOWN
+					if (gametype == GT_COOP && (netgame || multiplayer))
+					{
+						scoremobj->color = source->color;
+					}
+					else
+					{
+						scoremobj->color = SKINCOLOR_SILVER;
+					}
+#endif
+
+#ifdef TOPDOWN
+					if (gametype == GT_COOP && (target->flags & MF_MONITOR))
+					{
+						score = 500;
+						scorestate += 2;
+					}
+					else
+#endif
 					if (!source->player->powers[pw_invulnerability] && P_IsObjectOnGround(source))
 					{
 						source->player->scoreadd = 0;
@@ -1923,13 +2163,21 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source)
 					// More Sonic-like point system
 					else switch (++source->player->scoreadd)
 					{
-						case 1:  score = 100;   break;
+#ifdef TOPDOWN
+                        case 1:  score = 200;   scorestate += 1; break;
+						case 2:  score = 400;   scorestate += 5; break;
+						case 3:  score = 600;   scorestate += 10;break;
+						case 4:  score = 800;   scorestate += 6; break;
+						default: score = 1000;  scorestate += 3; break;
+#else
+                        case 1:  score = 100;   break;
 						case 2:  score = 200;   scorestate += 1; break;
 						case 3:  score = 500;   scorestate += 2; break;
 						case 4: case 5: case 6: case 7: case 8: case 9:
 						case 10: case 11: case 12: case 13: case 14:
 						         score = 1000;  scorestate += 3; break;
 						default: score = 10000; scorestate += 4; break;
+#endif // TOPDOWN
 					}
 
 					P_SetMobjState(scoremobj, scorestate);
@@ -1948,9 +2196,22 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source)
 		target->flags |= MF_NOBLOCKMAP;
 		P_SetThingPosition(target);
 
+#ifdef TOPDOWN
+		target->player->damagededuct += 10;
+#endif
+
 		if (!target->player->bot && !G_IsSpecialStage(gamemap)
 		 && G_GametypeUsesLives())
 		{
+#ifdef TOPDOWN
+			if ((maptol & TOL_TD) && gametype == GT_COOP && (netgame || multiplayer))
+			{
+				if (sharedlives > 0)
+					sharedlives -= 1;
+			}
+			else
+			{
+#endif
 			target->player->lives -= 1; // Lose a life Tails 03-11-2000
 
 			if (target->player->lives <= 0) // Tails 03-14-2000
@@ -1961,6 +2222,9 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source)
 					S_ChangeMusic(mus_gmover, false); // Yousa dead now, Okieday? Tails 03-14-2000
 				}
 			}
+#ifdef TOPDOWN
+			}
+#endif
 		}
 		target->player->playerstate = PST_DEAD;
 
@@ -2026,6 +2290,11 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source)
 	if (!mariomode // Don't show birds, etc. in Mario Mode Tails 12-23-2001
 	&& target->flags & MF_ENEMY)
 	{
+#ifdef TOPDOWN
+		if (maptol & TOL_TD)
+			item = MT_FLINGRING;
+		else
+#endif
 		if (cv_soniccd.value)
 			item = MT_SEED;
 		else
@@ -2104,6 +2373,16 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source)
 		mo = P_SpawnMobj(target->x, target->y, target->z + (target->height / 2) - FixedMul(mobjinfo[item].height / 2, target->scale), item);
 		mo->destscale = target->scale;
 		P_SetScale(mo, mo->destscale);
+
+#ifdef TOPDOWN
+		if (mo && mo->type == MT_FLINGRING)
+		{
+			mo->eflags |= (target->eflags & MFE_VERTICALFLIP);
+			mo->fuse = 8*TICRATE;
+			P_SetObjectMomZ(mo, ((mo->eflags & MFE_VERTICALFLIP) == MFE_VERTICALFLIP) ? -(5<<FRACBITS) : 5<<FRACBITS, false);
+			mo->momx = mo->momy = 1; // Need to have at least a little of this so that they actually move
+		}
+#endif
 	}
 	// Other death animation effects
 	else switch(target->type)
@@ -2125,9 +2404,41 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source)
 
 		case MT_PLAYER:
 			target->fuse = TICRATE*3; // timer before mobj disappears from view (even if not an actual player)
+#ifdef TOPDOWN
+			if (maptol & TOL_TD)
+			{
+				if (inflictor && !(source && source->type == MT_NULL && source->threshold == 44))
+					target->momz = 0;
+			}
+			else
+#endif
 			target->momx = target->momy = target->momz = 0;
+#ifdef TOPDOWN
+			if ((!(maptol & TOL_TD) && !(source && source->type == MT_NULL && source->threshold == 42)) // not topdown and not drowning
+				|| ((maptol & TOL_TD) && (inflictor && !(source && source->type == MT_NULL && (source->threshold == 42 || source->threshold == 44))))) // topdown and inflictor and not drowning or crushed
+#else
 			if (!(source && source->type == MT_NULL && source->threshold == 42)) // Don't jump up when drowning
+#endif
+#ifdef TOPDOWN
+			{
+				if (maptol & TOL_TD)
+				{
+					angle_t ang;
+					P_SetObjectMomZ(target, 34*FRACUNIT, false);
+
+					if (inflictor)
+						ang = R_PointToAngle2(inflictor->x-inflictor->momx, inflictor->y - inflictor->momy, target->x - target->momx, target->y - target->momy);
+					else
+						ang = R_PointToAngle2(target->momx, target->momy, 0, 0);
+
+					P_InstaThrust(target, ang, FixedMul(34*FRACUNIT, target->scale));
+				}
+				else
+#endif
 				P_SetObjectMomZ(target, 14*FRACUNIT, false);
+#ifdef TOPDOWN
+			}
+#endif
 
 			if (source && source->type == MT_NULL && source->threshold == 42) // drowned
 				S_StartSound(target, sfx_drown);
@@ -2578,6 +2889,10 @@ static inline void P_SuperDamage(player_t *player, mobj_t *inflictor, mobj_t *so
 
 	if (player->timeshit != UINT8_MAX)
 		++player->timeshit;
+
+#ifdef TOPDOWN
+	++player->damagededuct;
+#endif
 }
 
 void P_RemoveShield(player_t *player)
@@ -2649,6 +2964,9 @@ static void P_RingDamage(player_t *player, mobj_t *inflictor, mobj_t *source, IN
 		P_ForceFeed(player, 40, 10, TICRATE, 40 + min(damage, 100)*2);
 
 		if (source && (source->type == MT_SPIKE || (source->type == MT_NULL && source->threshold == 43))) // spikes
+#ifdef TOPDOWN
+			if (!(maptol & TOL_ND)) // no spike sound in ND
+#endif
 			S_StartSound(player->mo, sfx_spkdth);
 	}
 
@@ -2671,6 +2989,11 @@ static void P_RingDamage(player_t *player, mobj_t *inflictor, mobj_t *source, IN
 	}
 
 	// Ring loss sound plays despite hitting spikes
+#ifdef TOPDOWN
+	if (maptol & TOL_ND)
+		S_StartSound(player->mo, sfx_spkdth); // spike sound in ND, probably to be replaced
+	else
+#endif
 	P_PlayRinglossSound(player->mo); // Ringledingle!
 }
 
@@ -2702,6 +3025,11 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 
 	if (objectplacing)
 		return false;
+
+#ifdef TOPDOWN
+	if (target->player && target->player->playerstate == PST_BUBBLE)
+		return false;
+#endif
 
 	if (target->health <= 0)
 		return false;
@@ -2799,6 +3127,18 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 
 		if (target->health > 1)
 			target->flags2 |= MF2_FRET;
+
+#ifdef TOPDOWN
+		if ((maptol & TOL_ND) && source && source->player)
+		{
+			mobj_t *scoremobj = P_SpawnMobj(source->x, source->y, source->z + (source->height/2), MT_SCORE);
+			scoremobj->color = (netgame || multiplayer) && gametype == GT_COOP ? source->color : SKINCOLOR_SILVER;
+			P_SetMobjState(scoremobj, mobjinfo[MT_SCORE].spawnstate+2);
+			P_AddPlayerScore(source->player, 500);
+			P_GivePlayerRings(source->player, 1); // get a ring in ND for hitting a boss
+			S_StartSound(source, sfx_itemup);
+		}
+#endif
 	}
 #ifdef HAVE_BLUA
 	else if (target->flags & MF_ENEMY)
@@ -2912,6 +3252,33 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			P_ShieldDamage(player, inflictor, source, damage);
 			damage = 0;
 		}
+#ifdef TOPDOWN
+		else if (maptol & TOL_ND)
+		{
+			if (player->mo->health > 5) // No shield but have more than 4 rings in the New Damage system.
+			{
+				damage = 5;
+				P_RingDamage(player, inflictor, source, damage);
+			}
+			else // Less than 5 rings in new damage? Die.
+			{
+				// To reduce griefing potential, don't allow players to be killed
+				// by friendly fire. Spilling their rings and other items is enough.
+				if (force || !(G_GametypeHasTeams()
+					&& source && source->player && (source->player->ctfteam == player->ctfteam)
+					&& cv_friendlyfire.value))
+				{
+					damage = player->mo->health;
+					P_KillPlayer(player, source, damage);
+				}
+				else
+				{
+					damage = 0;
+					P_ShieldDamage(player, inflictor, source, damage);
+				}
+			}
+		}
+#endif
 		else if (player->mo->health > 1) // No shield but have rings.
 		{
 			damage = player->mo->health - 1;
@@ -3003,6 +3370,11 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 	else
 		switch (target->type)
 		{
+#ifdef TOPDOWN
+		case MT_CHILLPENGUIN:
+			// no state change for chill pengiun
+			break;
+#endif
 		case MT_EGGMOBILE2: // egg slimer
 			if (target->health < target->info->damage) // in pinch phase
 			{
@@ -3034,6 +3406,85 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 		}
 	}
 
+#ifdef TOPDOWN
+	switch (target->type)
+	{
+	case MT_REDEYE:
+		if (target->health > 4)
+		{
+			thinker_t *th;
+			mobj_t *mo2;
+			for (th = thinkercap.next; th != &thinkercap; th = th->next)
+			{
+				if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+					continue;
+
+				mo2 = (mobj_t *)th;
+
+				if (mo2->type != MT_REDEYEBALL)
+					continue;
+
+				if (mo2->target != target)
+					continue;
+
+				P_KillMobj(mo2, NULL, NULL);
+				break;
+			}
+		}
+		else if (target->health == 4)
+		{
+			thinker_t *th;
+			mobj_t *mo2;
+			for (th = thinkercap.next; th != &thinkercap; th = th->next)
+			{
+				if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+					continue;
+
+				mo2 = (mobj_t *)th;
+
+				if (mo2->type != MT_STATICGENERATOR && mo2->type != MT_REDEYEBALL)
+					continue;
+
+				if (mo2->type == MT_REDEYEBALL)
+				{
+					if (mo2->target == target)
+					{
+						P_KillMobj(mo2, NULL, NULL);
+					}
+					continue;
+				}
+
+				if (!mo2->spawnpoint)
+					continue;
+
+				if (!(mo2->spawnpoint->options & MTF_AMBUSH))
+					continue; // Doesn't belong to the boss
+
+				if (mo2->spawnpoint->options & MTF_OBJECTSPECIAL) // spin time
+				{
+					mo2->flags |= MF_PAIN;
+					mo2->target = target;
+					P_SetMobjState(mo2, mo2->info->meleestate);
+				}
+				else
+					P_KillMobj(mo2, NULL, NULL);
+
+
+			}
+		}
+		break;
+	case MT_CHILLPENGUIN:
+		A_FaceTarget(target);
+		var1 = 8;
+		var2 = -2;
+		A_BunnyHop(target);
+		target->fuse = 70;
+		break;
+	default:
+		break;
+	}
+#endif
+
 	return true;
 }
 
@@ -3063,6 +3514,11 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 	if (num_rings > 32 && !(player->pflags & PF_NIGHTSFALL))
 		num_rings = 32;
 
+#ifdef TOPDOWN
+	if ((maptol & TOL_ND) && player->mo->health <= 5) // Spawning too many balls when dieing from enemies...
+		num_rings -= 1;
+#endif
+
 	if (player->powers[pw_emeralds])
 		P_PlayerEmeraldBurst(player, false);
 
@@ -3076,6 +3532,11 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 	for (i = 0; i < num_rings; i++)
 	{
 		INT32 objType = mobjinfo[MT_RING].reactiontime;
+#ifdef TOPDOWN
+		if (maptol & TOL_TD)
+			objType = MT_FLINGENERGY;
+		else
+#endif
 		if (mariomode)
 			objType = mobjinfo[MT_COIN].reactiontime;
 
@@ -3085,12 +3546,22 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 
 		mo = P_SpawnMobj(player->mo->x, player->mo->y, z, objType);
 
+#ifdef TOPDOWN
+		if (maptol & TOL_TD)
+			mo->fuse = 4*TICRATE;
+		else
+#endif
 		mo->fuse = 8*TICRATE;
 		P_SetTarget(&mo->target, player->mo);
 
 		mo->destscale = player->mo->scale;
 		P_SetScale(mo, player->mo->scale);
 
+#ifdef TOPDOWN
+		if (maptol & TOL_TD) // In New Damage we'll have the balls spread out evenly based on how many there are.
+			fa = (i * FINEANGLES / num_rings) & FINEMASK;
+		else
+#endif
 		// Angle offset by player angle, then slightly offset by amount of rings
 		fa = ((i*FINEANGLES/16) + (player->mo->angle>>ANGLETOFINESHIFT) - ((num_rings-1)*FINEANGLES/32)) & FINEMASK;
 
@@ -3099,6 +3570,12 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 		if (player->pflags & PF_NIGHTSFALL)
 		{
 			ns = FixedMul(((i*FRACUNIT)/16)+2*FRACUNIT, mo->scale);
+
+#ifdef TOPDOWN
+			if (maptol & TOL_ND)
+				ns *= 4;
+#endif
+
 			mo->momx = FixedMul(FINECOSINE(fa),ns);
 
 			if (!(twodlevel || (player->mo->flags2 & MF2_TWOD)))
@@ -3123,12 +3600,24 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 			}
 
 			ns = FixedMul(FixedMul(momxy, FRACUNIT + FixedDiv(player->losstime<<FRACBITS, 10*TICRATE<<FRACBITS)), mo->scale);
+
+#ifdef TOPDOWN
+			if (maptol & TOL_ND)
+				ns = FixedMul(FixedMul(momxy, 14*FRACUNIT), mo->scale);
+#endif
+
 			mo->momx = FixedMul(FINECOSINE(fa),ns);
 
 			if (!(twodlevel || (player->mo->flags2 & MF2_TWOD)))
 				mo->momy = FixedMul(FINESINE(fa),ns);
 
 			ns = FixedMul(momz, FRACUNIT + FixedDiv(player->losstime<<FRACBITS, 10*TICRATE<<FRACBITS));
+
+#ifdef TOPDOWN
+			if (maptol & TOL_ND)
+				ns = FixedMul(momz, 3*FRACUNIT);
+#endif
+
 			P_SetObjectMomZ(mo, ns, false);
 
 			if (i & 1)

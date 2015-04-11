@@ -43,7 +43,9 @@ static INT32 continuetime; // Short delay when continuing
 static tic_t animtimer; // Used for some animation timings
 static INT32 roidtics; // Asteroid spinning
 
+#ifndef TOPDOWN
 static INT32 deplete;
+#endif
 static tic_t stoptimer;
 
 static boolean keypressed = false;
@@ -247,7 +249,11 @@ static void F_SkyScroll(INT32 scrollspeed)
 // =============
 //  INTRO SCENE
 // =============
+#ifdef TOPDOWN
+#define NUMINTROSCENES 1
+#else
 #define NUMINTROSCENES 16
+#endif
 INT32 intro_scenenum = 0;
 INT32 intro_curtime = 0;
 
@@ -255,6 +261,9 @@ const char *introtext[NUMINTROSCENES];
 
 static tic_t introscenetime[NUMINTROSCENES] =
 {
+#ifdef TOPDOWN
+	 2*TICRATE + (TICRATE/2),	// KART KR(eW
+#else
 	 7*TICRATE + (TICRATE/2),	// STJr Presents
 	11*TICRATE + (TICRATE/2),	// Two months had passed since...
 	15*TICRATE + (TICRATE/2),	// As it was about to drain the rings...
@@ -271,6 +280,7 @@ static tic_t introscenetime[NUMINTROSCENES] =
 	18*TICRATE + (TICRATE/2),	// Eggman took this as his cue and blasted off...
 	16*TICRATE,					// Easy! We go find Eggman and stop his...
 	25*TICRATE,					// I'm just finding what mission obje...
+#endif
 };
 
 // custom intros
@@ -289,6 +299,7 @@ void F_StartIntro(void)
 
 	introtext[0] = " #";
 
+#ifndef TOPDOWN
 	introtext[1] = M_GetText(
 	"Two months had passed since Dr. Eggman\n"
 	"tried to take over the world using his\n"
@@ -431,6 +442,7 @@ void F_StartIntro(void)
 	if that explosion I saw is anything to go by."
 	If you're willing to help then... let's go!"
 */
+#endif
 
 	G_SetGamestate(GS_INTRO);
 	gameaction = ga_nothing;
@@ -455,10 +467,22 @@ static void F_IntroDrawScene(void)
 	INT32 cx = 8, cy = 128;
 	patch_t *background = NULL;
 	INT32 bgxoffs = 0;
+#ifndef TOPDOWN
 	void *patch;
+#endif
 
 	// DRAW A FULL PIC INSTEAD OF FLAT!
+#ifdef TOPDOWN
+	if (intro_scenenum == 0)
+	{
+		if (finalecount == 35)
+			S_StartSound(NULL, sfx_intwin); // YES!
+		background = W_CachePatchName("KARTKREW", PU_CACHE);
+	}
+#else
 	if (intro_scenenum == 0);
+#endif
+#ifndef TOPDOWN
 	else if (intro_scenenum == 1)
 		background = W_CachePatchName("INTRO1", PU_CACHE);
 	else if (intro_scenenum == 2)
@@ -537,8 +561,13 @@ static void F_IntroDrawScene(void)
 		background = W_CachePatchName("INTRO7", PU_CACHE);
 		highres = true;
 	}
+#endif
 
+#ifdef TOPDOWN
+	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 120);
+#else
 	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+#endif
 
 	if (background)
 	{
@@ -547,6 +576,7 @@ static void F_IntroDrawScene(void)
 		else
 			V_DrawScaledPatch(bgxoffs, 0, 0, background);
 	}
+#ifndef TOPDOWN
 	else if (intro_scenenum == 0) // STJr presents
 	{
 		// "Waaaaaaah" intro
@@ -720,9 +750,11 @@ static void F_IntroDrawScene(void)
 			}
 		}
 	}
+#endif
 
 	W_UnlockCachedPatch(background);
 
+#ifndef TOPDOWN
 	if (intro_scenenum == 4) // The asteroid SPINS!
 	{
 		if (roidtics >= 0)
@@ -732,10 +764,12 @@ static void F_IntroDrawScene(void)
 			W_UnlockCachedPatch(patch);
 		}
 	}
+#endif
 
 	if (animtimer)
 		animtimer--;
 
+#ifndef TOPDOWN
 	if (intro_scenenum == 7 && intro_curtime > 7*TICRATE)
 	{
 		patch_t *sgrass;
@@ -750,6 +784,7 @@ static void F_IntroDrawScene(void)
 
 		W_UnlockCachedPatch(sgrass);
 	}
+#endif
 
 	V_DrawString(cx, cy, 0, cutscene_disptext);
 }
@@ -771,8 +806,27 @@ void F_IntroDrawer(void)
 				F_RunWipe(99,true);
 			}
 
+#ifdef TOPDOWN
+			// Stay on black for a bit. =)
+			{
+				tic_t quittime;
+				quittime = I_GetTime() + NEWTICRATE*1; // Shortened the quit time, used to be 2 seconds
+				while (quittime > I_GetTime())
+				{
+					I_OsPolling();
+					I_UpdateNoBlit();
+					M_Drawer(); // menu is drawn even on top of wipes
+					I_FinishUpdate(); // Update the screen with the image Tails 06-19-2001
+				}
+			}
+
+			D_StartTitle();
+			return;
+#endif
+
 			S_ChangeMusic(mus_read_m, false);
 		}
+#ifndef TOPDOWN
 		else if (intro_scenenum == 3)
 			roidtics = BASEVIDWIDTH - 64;
 		else if (intro_scenenum == 10)
@@ -787,6 +841,7 @@ void F_IntroDrawer(void)
 			}
 		}
 		else if (intro_scenenum == 15)
+		
 		{
 			if (rendermode != render_none)
 			{
@@ -812,6 +867,7 @@ void F_IntroDrawer(void)
 			D_StartTitle();
 			return;
 		}
+#endif
 		F_NewCutscene(introtext[++intro_scenenum]);
 		timetonext = introscenetime[intro_scenenum];
 
@@ -822,6 +878,7 @@ void F_IntroDrawer(void)
 
 	intro_curtime = introscenetime[intro_scenenum] - timetonext;
 
+#ifndef TOPDOWN
 	if (rendermode != render_none)
 	{
 		if (intro_scenenum == 5 && intro_curtime == 5*TICRATE)
@@ -877,6 +934,7 @@ void F_IntroDrawer(void)
 			F_RunWipe(99,true);
 		}
 	}
+#endif
 
 	F_IntroDrawScene();
 }
@@ -958,6 +1016,74 @@ boolean F_IntroResponder(event_t *event)
 //  CREDITS
 // =========
 static const char *credits[] = {
+#ifdef TOPDOWN // Kart Krew's Kredits :P
+	"\1Kart Krew Credits",
+	"",
+	"",
+	"\1Programming",
+	"\"Sryder13\"", // He's the reason this mod got this far, I swear
+	"",
+	"\1Programming",
+	"\1Assistance",
+	"\"JTE\"", // Advice regarding SRB2's source
+	"\"Zipper\"", // Most reliable on the team! Was always available and created tons of scripts. Even the scrapped ones helped.
+	"\"Badz\" / \"Badnik\"", // Also very reliable, did lots more than Wolfy~
+	"\"Wolfy\"", // Oh, he did nothing special. Certainly not typing up credits strings or anything like that.
+	"",
+	"\1Sprite Artists",
+	"\"Iceman404\"", // Did most of the sprites for this mod
+	"\"CoatRack\"", // TD was pretty much built off of his ideas
+	"\"Spherallic\"",
+	"\"Zipper\"",
+	"\"SevenColorsAlice\"", // Drew the Penguinator sprites
+	"",
+	"\1Texture Artists",
+	"\"Charybdizs\"",
+	"\"CoatRack\"",
+	"\"Spherallic\"", 
+	"\"Iceman404\"",
+	"",
+	"\1Level Design",
+	"\"CoatRack\"", // Weather Factory, Stormy Streets, Sky Islands, WFZ Boss, Hub fixes
+	"\"Chromatian\"", // Frozen Factory and Checkered Mountain
+	"\"Charybdizs\"", // Hub
+	"\"Sryder13\"", // Mainframe Metropolis
+	"\"Zipper\"", // Fixes to Checkered Mountain and Frozen Factory
+	"\"katsy\"", // Fixes to Stormy Streets
+	"",
+	"\1Music and Sound",
+	"Sonic Lost World - SEGA", // The game was awful, but the music was okay.
+	"Super Mario 3D World - Nintendo",
+	"Sonic Team Junior", // So we're crediting STJr, even though they have a whole section of credits directly below? :v
+	"Karl Breuggemann",
+	"Drift City - NPluto", // Credits music!
+	"",
+	"\1Testing",
+	"\"ChaoticChao\"", // Hosted lots of test netgames
+	"\"Jeck Jims\"",
+	"\"CyberIF\"", // Was almost always around for quick testing
+	"\"Fooruman\"", // Found lots of bugs!
+	"\"katsy\"", // She found bugs too, but she actually went ahead and fixed them as well.
+	"",
+	"\1Ornaments",
+	"\"katsy\" - Lead Ornament", // Even though she isn't an ornament, she is an ornament.
+	"\"Blitz-T\" - Kart-Exclusive Ornament", // Also the "Works on Kart but not this" Ornament
+	"\"Scizor300\" - Grumpy Uncle Ornament",
+	"\"Blade\" - Lazy Ornament", // Of course this implies that he put loads of work into TD!
+	"\"CyberIF\" - Ultra Oldbie Ornament",
+	"\"Whackjood\" - Special Rare Ornament", // For his perfect attendance!
+	"\"SevenColorsAlice\" - Concept Ornament", // Was originally going to be "Colorful Ornament", but V_DrawStringAtFixed lacks string colors.
+	"\"Nev3r\" - Fool's Gold Ornament", 
+	"\"AlamA\" - Compiling Ornament", // Thanks to him, I can at least compile this file to test!
+	"\"LoganA\" - Not-Compiling Ornament", // I think Logan does server stuff, actually
+	"\"Monster Iestyn\" - Hood Ornament", // No, not THAT hood, you fool
+	"\"Prime 2.0\" - Meaningful Ornament", // Well, meaningful ELSEWHERE
+	"\"Flame\" - +b Ornament", // *	ChanServ has kicked Flame from #srb2riders (You are not authorized to be on this channel)
+	"",
+	"\1Special Thanks",
+	"\"Jeck Jims\"", // For his work on MD2 models 
+	"",
+#endif
 	"\1Sonic Robo Blast II",
 	"\1Credits",
 	"",

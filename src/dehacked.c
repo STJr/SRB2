@@ -987,6 +987,10 @@ static const struct {
 	{"XMAS",TOL_XMAS},
 	{"CHRISTMAS",TOL_XMAS},
 	{"WINTER",TOL_XMAS},
+#ifdef TOPDOWN
+	{"TD",TOL_TD},
+	{"ND",TOL_ND},
+#endif
 
 	{NULL, 0}
 };
@@ -1259,6 +1263,22 @@ static void readlevelheader(MYFILE *f, INT32 num)
 				else
 					mapheaderinfo[num-1]->levelflags &= ~LF_NOZONE;
 			}
+#ifdef TOPDOWN
+			else if (fastcmp(word, "TDBOSSZONE"))
+			{
+				if (i || word2[0] == 'T' || word2[0] == 'Y')
+					mapheaderinfo[num-1]->levelflags |= LF_TDBOSSZONE;
+				else
+					mapheaderinfo[num-1]->levelflags &= ~LF_TDBOSSZONE;
+			}
+			else if (fastcmp(word, "TDNOSHAREDCAMERA"))
+			{
+				if (i || word2[0] == 'T' || word2[0] == 'Y')
+					mapheaderinfo[num-1]->levelflags |= LF_TDNOSHAREDCAMERA;
+				else
+					mapheaderinfo[num-1]->levelflags &= ~LF_TDNOSHAREDCAMERA;
+			}
+#endif
 
 			// Individual triggers for menu flags
 			else if (fastcmp(word, "HIDDEN"))
@@ -1296,6 +1316,12 @@ static void readlevelheader(MYFILE *f, INT32 num)
 				else
 					mapheaderinfo[num-1]->menuflags &= ~LF2_NOVISITNEEDED;
 			}
+#ifdef TOPDOWN
+			else if (fastcmp(word, "TDBLAST"))
+			{
+				mapheaderinfo[num-1]->tdblast = (INT16)i;
+			}
+#endif
 			else
 				deh_warning("Level header %d: unknown word '%s'", num, word);
 		}
@@ -1801,6 +1827,12 @@ static actionpointer_t actionpointers[] =
 	{{A_BrakLobShot},          "A_BRAKLOBSHOT"},
 	{{A_NapalmScatter},        "A_NAPALMSCATTER"},
 	{{A_SpawnFreshCopy},       "A_SPAWNFRESHCOPY"},
+#ifdef TOPDOWN
+	{{A_OrbitalChase},         "A_ORBITALCHASE"},
+	{{A_InflatableSnowman},    "A_INFLATABLESNOWMAN"},
+	{{A_CheckGround},          "A_CHECKGROUND"},
+	{{A_LookTracer},           "A_LOOKTRACER"},
+#endif
 
 	{{NULL},                   "NONE"},
 
@@ -2940,6 +2972,13 @@ static void readmaincfg(MYFILE *f)
 				DEH_WriteUndoline(word, va("%u", extralifetics), UNDO_NONE);
 				extralifetics = (UINT16)get_number(word2);
 			}
+#ifdef TOPDOWN
+			else if (fastcmp(word, "KNUXCLIMBTICS"))
+			{
+				DEH_WriteUndoline(word, va("%u", knuxclimbtics), UNDO_NONE);
+				knuxclimbtics = (UINT16)get_number(word2);
+			}
+#endif
 			else if (fastcmp(word, "GAMEOVERTICS"))
 			{
 				DEH_WriteUndoline(word, va("%u", gameovertics), UNDO_NONE);
@@ -5636,6 +5675,14 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SCRI", // 4000 (mario)
 	"S_SCRJ", // 8000 (mario)
 	"S_SCRK", // 1UP (mario)
+#ifdef TOPDOWN
+	"S_SCRL", // 10 (Unused)
+	"S_SCRM", // 20 (TD Emblems)
+	"S_SCRN", // 40 (TD Emblems)
+	"S_SCRO", // 50 (Unused)
+	"S_SCRP", // 60 (TD Emblems)
+	"S_SCRQ", // 80 (TD Emblems)
+#endif
 
 	// Drowning Timer Numbers
 	"S_ZERO1",
@@ -6439,6 +6486,10 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_XPLD2",
 	"S_XPLD3",
 	"S_XPLD4",
+#ifdef TOPDOWN
+	"S_XPLD5",
+	"S_XPLD6",
+#endif
 
 	// Underwater Explosion
 	"S_WPLD1",
@@ -6612,6 +6663,363 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 #ifdef SEENAMES
 	"S_NAMECHECK",
+#endif
+
+#ifdef TOPDOWN
+	// topdown misc
+	"S_SHADOW",
+
+	// Damage energy
+	"S_FLINGENERGY1",
+	"S_FLINGENERGY2",
+	"S_FLINGENERGY3",
+
+	// Bubbles
+	"S_BUBBLESPAWN1",
+	"S_BUBBLESPAWN2",
+	"S_BUBBLE1",
+	"S_BUBBLE2",
+	"S_BUBBLE3",
+	"S_BUBBLE4",
+	"S_BUBBLE5",
+	"S_BUBBLE6",
+	"S_BUBBLE7",
+	"S_BUBBLE8",
+	"S_BUBBLEPOP1",
+	"S_BUBBLEPOP2",
+	"S_BUBBLEPOP3",
+	"S_BUBBLEPOP4",
+
+	// Small Blue Mace Chain
+	"S_SMALLBLUECHAIN1",
+	"S_SMALLBLUECHAIN2",
+	"S_SMALLBLUECHAIN3",
+	"S_SMALLBLUECHAIN4",
+	"S_SMALLBLUECHAIN5",
+	"S_SMALLBLUECHAIN6",
+
+	// Big Blue Mace Chain
+	"S_BIGBLUECHAIN1",
+	"S_BIGBLUECHAIN2",
+	"S_BIGBLUECHAIN3",
+	"S_BIGBLUECHAIN4",
+	"S_BIGBLUECHAIN5",
+	"S_BIGBLUECHAIN6",
+
+	// Mini health bar
+	"S_MINIHEALTH0",
+	"S_MINIHEALTH1",
+	"S_MINIHEALTH2",
+	"S_MINIHEALTH3",
+	"S_MINIHEALTH4",
+	"S_MINIHEALTH5",
+
+	// No health exclamation
+	"S_NOHEALTHEXCLAMATION1",
+	"S_NOHEALTHEXCLAMATION2",
+
+	// Above player arrow
+	"S_ARROWMOVING1",
+	"S_ARROWSTATIONARY1",
+	"S_ARROWSTATIONARY2",
+	"S_ARROWSTATIONARY3",
+	"S_ARROWSTATIONARY4",
+	"S_ARROWSTATIONARY5",
+	"S_ARROWSTATIONARY6",
+	"S_ARROWSTATIONARY7",
+	"S_ARROWSTATIONARY8",
+	"S_ARROWSTATIONARY9",
+
+	// Top Down enemies
+	// Missile Turret
+	"S_MISSILETURRETLOOK",
+	"S_MISSILETURRET1",
+	"S_MISSILETURRET2",
+	"S_MISSILETURRET3",
+	"S_MISSILETURRET4",
+	"S_MISSILETURRET5",
+	"S_MISSILETURRET6",
+	"S_MISSILETURRET7",
+	"S_MISSILETURRET8",
+	"S_MISSILETURRET9",
+	"S_MISSILETURRET10",
+	"S_MISSILETURRET11",
+	"S_MISSILETURRET12",
+	"S_MISSILETURRET13",
+	"S_MISSILETURRET14",
+	"S_MISSILETURRET15",
+	"S_MISSILETURRET16",
+	"S_MISSILETURRET17",
+
+	"S_ORBITALMISSILE1",
+	"S_ORBITALMISSILE2",
+	"S_ORBITALMISSILE3",
+	"S_ORBITALMISSILE4",
+	"S_ORBITALMISSILE5",
+
+	// Cluckoid
+	"S_CLUCKOIDLOOK",
+	"S_CLUCKOIDINHALE1",
+	"S_CLUCKOIDINHALE2",
+	"S_CLUCKOIDINHALE3",
+	"S_CLUCKOIDINHALE4",
+	"S_CLUCKOIDINHALE5",
+	"S_CLUCKOIDEXHALE1",
+	"S_CLUCKOIDEXHALE2",
+	"S_CLUCKOIDEXHALE3",
+	"S_CLUCKOIDEXHALE4",
+	"S_CLUCKOIDEXHALE5",
+
+	"S_CLUCKOIDWIND1",
+	"S_CLUCKOIDWIND2",
+	"S_CLUCKOIDWIND3",
+	"S_CLUCKOIDWIND4",
+	"S_CLUCKOIDWIND5",
+
+	// Toxomister
+	"S_TOXOMISTERLOOK",
+	"S_TOXOMISTERSPAWNCLOUD",
+
+	"S_TOXOMISTERCLOUD1",
+	"S_TOXOMISTERCLOUD2",
+	"S_TOXOMISTERCLOUD3",
+	"S_TOXOMISTERCLOUD4",
+
+	// Krackobot
+	"S_KRACKOBOTLOOK",
+	"S_KRACKOBOTCHASE1",
+	"S_KRACKOBOTCHASE2",
+	"S_KRACKOBOTCHASE3",
+	"S_KRACKOBOTCHASE4",
+	"S_KRACKOBOTZAP",
+
+	"S_ZAPORB1",
+	"S_ZAPORB2",
+	"S_ZAPORB3",
+	"S_ZAPORB4",
+	"S_ZAPORBSPREAD",
+
+	"S_ZAPSPREAD1",
+	"S_ZAPSPREAD2",
+	"S_ZAPSPREAD3",
+	"S_ZAPSPREAD4",
+	"S_ZAPSPREAD5",
+	"S_ZAPSPREAD6",
+
+	"S_ZAPSPREADTRAIL1",
+	"S_ZAPSPREADTRAIL2",
+	"S_ZAPSPREADTRAIL3",
+	"S_ZAPSPREADTRAIL4",
+	"S_ZAPSPREADTRAIL5",
+	"S_ZAPSPREADTRAIL6",
+
+	// Penguinator
+	"S_PENGUINATORLOOK",
+	"S_PENGUINATORWADDLE1",
+	"S_PENGUINATORWADDLE2",
+	"S_PENGUINATORWADDLE3",
+	"S_PENGUINATORWADDLE4",
+	"S_PENGUINATORSLIDE1",
+	"S_PENGUINATORSLIDE2",
+	"S_PENGUINATORSLIDE3",
+	"S_PENGUINATORSLIDE4",
+	"S_PENGUINATORSLIDE5",
+	"S_PENGUINATORSLIDE6",
+
+	// Dumbguinator
+	"S_DUMBGUINATORLOOK",
+	"S_DUMBGUINATORSLIDE1",
+	"S_DUMBGUINATORSLIDE2",
+
+	// Snow gang
+	"S_SNOWGANG1",
+	"S_SNOWGANG2",
+	"S_SNOWGANG3",
+
+	"S_SNOWSPARK1",
+	"S_SNOWSPARK2",
+	"S_SNOWSPARKSPAWN",
+
+	"S_SNOWFLARE1",
+	"S_SNOWFLARE2",
+	"S_SNOWFLARE3",
+	"S_SNOWFLARE4",
+	"S_SNOWFLARE5",
+	"S_SNOWFLARE6",
+	"S_SNOWFLARE7",
+	"S_SNOWFLARE8",
+	"S_SNOWFLARE9",
+
+	// Top Down bosses
+	// Red Eye
+	"S_REDEYE_SPAWN",
+	"S_REDEYE_NEUTRAL",
+	"S_REDEYE_PAIN",
+	"S_REDEYE_PANIC",
+	"S_REDEYE_PANICCHASE",
+	"S_REDEYE_PANICALERT",
+	"S_REDEYE_PANICSTOP",
+	"S_REDEYE_PANICZAP1",
+	"S_REDEYE_PANICZAP2",
+	"S_REDEYE_PANICZAP3",
+	"S_REDEYE_PANICZAP4",
+	"S_REDEYE_PANICZAP5",
+
+	"S_REDEYE_DEATH1",
+	"S_REDEYE_DEATH2",
+	"S_REDEYE_DEATH3",
+	"S_REDEYE_DEATH4",
+	"S_REDEYE_DEATH5",
+	"S_REDEYE_DEATH6",
+	"S_REDEYE_DEATH7",
+	"S_REDEYE_DEATH8",
+	"S_REDEYE_DEATH9",
+	"S_REDEYE_DEATH10",
+	"S_REDEYE_DEATH11",
+	"S_REDEYE_DEATH12",
+	"S_REDEYE_DEATH13",
+	"S_REDEYE_DEATH14",
+	"S_REDEYE_DEATH15",
+	"S_REDEYE_DEATH16",
+	"S_REDEYE_DEATH17",
+	"S_REDEYE_DEATH18",
+	"S_REDEYE_DEATH19",
+	"S_REDEYE_DEATH20",
+	"S_REDEYE_DEATH21",
+	"S_REDEYE_DEATH22",
+
+	"S_REDEYEBALL_EXTEND1",
+	"S_REDEYEBALL_EXTEND2",
+	"S_REDEYEBALL_CONTRACT",
+
+	// Chill Penguin
+	"S_CHILLPENGUIN_SNEAKY",
+	"S_CHILLPENGUIN_OHNO",
+	"S_CHILLPENGUIN_GREETINGS1",
+	"S_CHILLPENGUIN_GREETINGS2",
+	"S_CHILLPENGUIN_PREPARE",
+
+	"S_CHILLPENGUIN_TARGETSPAWN",
+	"S_CHILLPENGUIN_INFLATE",
+	"S_CHILLPENGUIN_CHANGLE",
+	"S_CHILLPENGUIN_JUMP",
+	"S_CHILLPENGUIN_DASH",
+	"S_CHILLPENGUIN_STOP",
+
+	"S_CHILLPENGUIN_LOB1",
+	"S_CHILLPENGUIN_LOB2",
+	"S_CHILLPENGUIN_LOBREPEAT",
+	"S_CHILLPENGUIN_SHRINK",
+	"S_CHILLPENGUIN_FALLBACK",
+
+	"S_CHILLPENGUIN_FIRE1",
+	"S_CHILLPENGUIN_FIRE2",
+	"S_CHILLPENGUIN_FIRE3",
+
+	"S_CHILLPENGUIN_DEATH1",
+	"S_CHILLPENGUIN_DEATH2",
+	"S_CHILLPENGUIN_DEATH3",
+	"S_CHILLPENGUIN_DEATH4",
+	"S_CHILLPENGUIN_DEATH5",
+	"S_CHILLPENGUIN_DEATH6",
+
+	"S_PENGUINICE1",
+	"S_PENGUINICE2",
+	"S_PENGUINICE3",
+
+	"S_ICYWIND",
+
+	"S_ICECUBESPAWN",
+
+	"S_ICECUBE1",
+	"S_ICECUBE2",
+
+	"S_CIRNO1",
+	"S_CIRNO2",
+	"S_CIRNO3",
+	"S_CIRNO4",
+	"S_CIRNO5",
+	"S_CIRNO6",
+	"S_CIRNO7",
+	"S_CIRNO8",
+	"S_CIRNO9",
+	"S_CIRNO10",
+	"S_CIRNO11",
+	"S_CIRNO12",
+	"S_CIRNO13",
+	"S_CIRNO14",
+
+	// Top Down springs and fans
+	// Bounce clouds
+	"S_BOUNCECLOUD1",
+	"S_BOUNCECLOUD2",
+	"S_BOUNCECLOUD3",
+	"S_BOUNCECLOUD4",
+	"S_BOUNCECLOUDBOUNCE1",
+	"S_BOUNCECLOUDBOUNCE2",
+
+	"S_MOVINGBOUNCECLOUDSPAWNER",
+	"S_MOVINGBOUNCECLOUD1",
+	"S_MOVINGBOUNCECLOUD2",
+	"S_MOVINGBOUNCECLOUD3",
+	"S_MOVINGBOUNCECLOUD4",
+	"S_MOVINGBOUNCECLOUD5",
+	"S_MOVINGBOUNCECLOUDBOUNCE1",
+	"S_MOVINGBOUNCECLOUDBOUNCE2",
+
+	// Top Down hazards
+	// Checker balls
+	"S_CHECKERBALLSPAWNER",
+	"S_CHECKERBALLSPAWNERIDLE",
+	"S_CHECKERBALL1",
+	"S_CHECKERBALL2",
+	"S_CHECKERBALL3",
+	"S_CHECKERBALL4",
+	"S_CHECKERBALL5",
+	"S_CHECKERBALL6",
+	"S_CHECKERBALL7",
+
+	// Static Generator
+	"S_STATICGENERATORSPAWN",
+	"S_STATICGENERATOR1",
+	"S_STATICGENERATOR2",
+	"S_STATICGENERATOR3",
+	"S_STATICGENERATOR4",
+	"S_STATICGENERATOR5",
+	"S_STATICGENERATOR6",
+	"S_STATICGENERATOR7",
+	"S_STATICGENERATOR_SUMMON1",
+	"S_STATICGENERATOR_SUMMON2",
+	"S_STATICGENERATOR_DEATH1",
+	"S_STATICGENERATOR_DEATH2",
+	"S_STATICGENERATOR_DEATH3",
+	"S_STATICGENERATOR_DEATH4",
+	"S_STATICGENERATOR_DEATH5",
+	"S_STATICGENERATOR_DEATH6",
+	"S_STATICGENERATOR_DEATH7",
+	"S_STATICGENERATOR_DEATH8",
+	"S_STATICGENERATOR_DEATH9",
+	"S_STATICGENERATOR_DEATH10",
+
+	// Top Down decoration
+	// Palmtree top
+	"S_PALMTREETOP",
+
+	// Giant flowers
+	"S_BUDDEDGIANTFLOWER",
+	"S_CLOSEDGIANTFLOWER",
+
+	// Blue weather factory light
+	"S_BLUELIGHT",
+
+	// Frozen Factory tree
+	"S_FFTREE",
+
+	// Stormy Streets Bush
+	"S_STORMYBUSH",
+
+	// Stormy Streets Cone
+	"S_STORMYCONE",
 #endif
 };
 
@@ -7124,6 +7532,83 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 #ifdef SEENAMES
 	"MT_NAMECHECK",
 #endif
+
+#ifdef TOPDOWN
+	"MT_SHADOW",
+
+	"MT_FLINGENERGY",
+
+	"MT_BUBBLE",
+
+	"MT_SMALLBLUECHAIN",
+	"MT_BIGBLUECHAIN",
+
+	"MT_MINIHEALTHBAR", // The small health bar that appears over your head
+	"MT_NOHEALTHEXCLAMATION", // The small exclamation mark that appears over character's heads when they have no health
+	"MT_PLAYERARROW", // The arrow above your own players head
+
+	// Top Down enemies
+	"MT_MISSILETURRET",
+	"MT_ORBITALMISSILE",
+
+	"MT_CLUCKOID",
+	"MT_CLUCKOIDWIND",
+
+	"MT_TOXOMISTER",
+	"MT_TOXOMISTERCLOUD",
+
+	"MT_KRACKOBOT",
+	"MT_ZAPORB",
+	"MT_ZAPSPREAD",
+	"MT_ZAPSPREADTRAIL",
+
+	"MT_PENGUINATOR",
+
+	"MT_DUMBGUINATOR",
+
+	"MT_SNOWGANG",
+	"MT_SNOWSPARK",
+	"MT_SNOWFLARE",
+
+	// Top Down bosses
+	"MT_REDEYE",
+	"MT_REDEYEBALL",
+
+	"MT_CHILLPENGUIN",
+	"MT_PENGUINICE",
+	"MT_ICYWIND",
+	"MT_ICECUBESPAWN",
+	"MT_ICECUBE",
+	"MT_CIRNO", // Oh Zipper!
+
+	// Top Down other collectables
+	"MT_TDEMBLEM",
+
+	// Top Down springs and fans
+	"MT_BOUNCECLOUD",
+	"MT_MOVINGBOUNCECLOUDSPAWNER",
+	"MT_MOVINGBOUNCECLOUD",
+
+	// Top Down hazards
+	"MT_CHECKERBALLSPAWNER",
+	"MT_CHECKERBALL",
+
+	"MT_STATICGENERATOR",
+
+	// Top Down decoration
+	"MT_PALMTREETOP",
+
+	"MT_BUDDEDGIANTFLOWER",
+	"MT_CLOSEDGIANTFLOWER",
+
+	"MT_BLUELIGHT",
+
+	"MT_FFTREE",
+
+	"MT_STORMYBUSH",
+
+	"MT_STORMYCONE",
+#endif
 };
 
 static const char *const MOBJFLAG_LIST[] = {
@@ -7278,6 +7763,9 @@ static const char *const PLAYERFLAG_LIST[] = {
 	/*** misc ***/
 	"FORCESTRAFE", // Translate turn inputs into strafe inputs
 	"ANALOGMODE", // Analog mode?
+
+	/*** TD ***/
+	"NOTDSHAREDCAMERA", // disables the TD shared camera and bubbling effects
 
 	NULL // stop loop here.
 };
@@ -7504,6 +7992,10 @@ struct {
 	{"TOL_NIGHTS",TOL_NIGHTS},
 	{"TOL_ERZ3",TOL_ERZ3},
 	{"TOL_XMAS",TOL_XMAS},
+#ifdef TOPDOWN
+	{"TOL_TD",TOL_TD},
+	{"TOL_ND",TOL_ND},
+#endif
 
 	// Level flags
 	{"LF_SCRIPTISFILE",LF_SCRIPTISFILE},
@@ -7511,6 +8003,10 @@ struct {
 	{"LF_NOSSMUSIC",LF_NOSSMUSIC},
 	{"LF_NORELOAD",LF_NORELOAD},
 	{"LF_NOZONE",LF_NOZONE},
+#ifdef TOPDOWN
+	{"LF_TDBOSSZONE",LF_TDBOSSZONE},
+	{"LF_TDNOSHAREDCAMERA",LF_TDNOSHAREDCAMERA},
+#endif
 	// And map flags
 	{"LF2_HIDEINMENU",LF2_HIDEINMENU},
 	{"LF2_HIDEINSTATS",LF2_HIDEINSTATS},

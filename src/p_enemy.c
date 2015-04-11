@@ -236,6 +236,13 @@ void A_BrakFireShot(mobj_t *actor);
 void A_BrakLobShot(mobj_t *actor);
 void A_NapalmScatter(mobj_t *actor);
 void A_SpawnFreshCopy(mobj_t *actor);
+// topdowns actions
+#ifdef TOPDOWN
+void A_OrbitalChase(mobj_t *actor);
+void A_InflatableSnowman(mobj_t *actor);
+void A_CheckGround(mobj_t *actor);
+void A_LookTracer(mobj_t *actor);
+#endif
 
 //
 // ENEMY THINKING
@@ -2393,7 +2400,11 @@ void A_BossScream(mobj_t *actor)
 
 	// Determine what mobj to spawn. If undefined or invalid, use MT_BOSSEXPLODE as default.
 	if (locvar2 <= 0 || locvar2 >= NUMMOBJTYPES)
+#ifdef TOPDOWN
+		explodetype = MT_EXPLODE;
+#else
 		explodetype = MT_BOSSEXPLODE;
+#endif
 	else
 		explodetype = (mobjtype_t)locvar2;
 
@@ -2721,9 +2732,22 @@ void A_BossDeath(mobj_t *mo)
 
 	// make sure there is a player alive for victory
 	for (i = 0; i < MAXPLAYERS; i++)
+#ifdef TOPDOWN
+		if ((maptol & TOL_TD) && gametype == GT_COOP && (netgame || multiplayer))
+		{
+			if (playeringame[i] && (players[i].health > 0
+			|| ((netgame || multiplayer) && (sharedlives > 0))))
+				break;
+		}
+		else
+		{
+#endif
 		if (playeringame[i] && (players[i].health > 0
 			|| ((netgame || multiplayer) && (players[i].lives > 0 || players[i].continues > 0))))
 			break;
+#ifdef TOPDOWN
+		}
+#endif
 
 	if (i == MAXPLAYERS)
 		return; // no one left alive, so do not end game
@@ -2764,6 +2788,14 @@ bossjustdie:
 		return;
 	else if (P_MobjWasRemoved(mo))
 		return;
+#endif
+#ifdef TOPDOWN
+	if (mo->type == MT_CHILLPENGUIN)
+	{
+		mo->flags |= MF_NOCLIP;
+		mo->flags &= ~MF_SPECIAL;
+	}
+	else
 #endif
 	if (mo->type == MT_BLACKEGGMAN || mo->type == MT_CYBRAKDEMON)
 	{
@@ -2964,6 +2996,33 @@ void A_JumpShield(mobj_t *actor)
 		return;
 	}
 
+#ifdef TOPDOWN
+	if (gametype == GT_COOP && maptol & TOL_TD)
+	{
+		INT32 i;
+
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			if (playeringame[i] && players[i].mo && players[i].mo->health > 0 && players[i].playerstate != PST_DEAD && !players[i].exiting)
+			{
+				if ((netgame || multiplayer) && players[i].spectator) // Ignore spectators
+					continue;
+
+				player = &players[i];
+
+				if ((player->powers[pw_shield] & SH_NOSTACK) != SH_JUMP)
+				{
+					player->powers[pw_shield] = SH_JUMP|(player->powers[pw_shield] & SH_STACK);
+					P_SpawnShieldOrb(player);
+				}
+
+				S_StartSound(player->mo, actor->info->seesound);
+			}
+		}
+	}
+	else
+	{
+#endif
 	player = actor->target->player;
 
 	if ((player->powers[pw_shield] & SH_NOSTACK) != SH_JUMP)
@@ -2973,6 +3032,9 @@ void A_JumpShield(mobj_t *actor)
 	}
 
 	S_StartSound(player->mo, actor->info->seesound);
+#ifdef TOPDOWN
+	}
+#endif
 }
 
 // Function: A_RingShield
@@ -2996,6 +3058,33 @@ void A_RingShield(mobj_t *actor)
 		return;
 	}
 
+#ifdef TOPDOWN
+	if (gametype == GT_COOP && maptol & TOL_TD)
+	{
+		INT32 i;
+
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			if (playeringame[i] && players[i].mo && players[i].mo->health > 0 && players[i].playerstate != PST_DEAD && !players[i].exiting)
+			{
+				if ((netgame || multiplayer) && players[i].spectator) // Ignore spectators
+					continue;
+
+				player = &players[i];
+
+				if ((player->powers[pw_shield] & SH_NOSTACK) != SH_ATTRACT)
+				{
+					player->powers[pw_shield] = SH_ATTRACT|(player->powers[pw_shield] & SH_STACK);
+					P_SpawnShieldOrb(player);
+				}
+
+				S_StartSound(player->mo, actor->info->seesound);
+			}
+		}
+	}
+	else
+	{
+#endif
 	player = actor->target->player;
 
 	if ((player->powers[pw_shield] & SH_NOSTACK) != SH_ATTRACT)
@@ -3005,6 +3094,9 @@ void A_RingShield(mobj_t *actor)
 	}
 
 	S_StartSound(player->mo, actor->info->seesound);
+#ifdef TOPDOWN
+	}
+#endif
 }
 
 // Function: A_RingBox
@@ -3028,11 +3120,40 @@ void A_RingBox(mobj_t *actor)
 		return;
 	}
 
+#ifdef TOPDOWN
+	if (gametype == GT_COOP && (maptol & TOL_TD))
+	{
+		INT32 i;
+
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			if (playeringame[i] && players[i].mo && players[i].mo->health > 0 && players[i].playerstate != PST_DEAD && !players[i].exiting)
+			{
+				if ((netgame || multiplayer) && players[i].spectator) // Ignore spectators
+					continue;
+
+				if (players[i].bot) // ignore bots
+					continue;
+
+				player = &players[i];
+
+				P_GivePlayerRings(player, actor->info->reactiontime/2); // half rings, but to everyone in TD
+				if (actor->info->seesound)
+					S_StartSound(player->mo, actor->info->seesound);
+			}
+		}
+	}
+	else
+	{
+#endif
 	player = actor->target->player;
 
 	P_GivePlayerRings(player, actor->info->reactiontime);
 	if (actor->info->seesound)
 		S_StartSound(player->mo, actor->info->seesound);
+#ifdef TOPDOWN
+	}
+#endif
 }
 
 // Function: A_Invincibility
@@ -3056,6 +3177,38 @@ void A_Invincibility(mobj_t *actor)
 		return;
 	}
 
+#ifdef TOPDOWN
+	if (gametype == GT_COOP && maptol & TOL_TD)
+	{
+		INT32 i;
+
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			if (playeringame[i] && players[i].mo && players[i].mo->health > 0 && players[i].playerstate != PST_DEAD && !players[i].exiting)
+			{
+				if ((netgame || multiplayer) && players[i].spectator) // Ignore spectators
+					continue;
+
+				player = &players[i];
+				player->powers[pw_invulnerability] = invulntics + 1;
+
+				if (P_IsLocalPlayer(player) && !player->powers[pw_super])
+				{
+					S_StopMusic();
+					if (mariomode)
+					{
+						S_ChangeMusic(mus_minvnc, false);
+						G_GhostAddColor(GHC_INVINCIBLE);
+					}
+					else
+						S_ChangeMusic(mus_invinc, false);
+				}
+			}
+		}
+	}
+	else
+	{
+#endif
 	player = actor->target->player;
 	player->powers[pw_invulnerability] = invulntics + 1;
 
@@ -3070,6 +3223,9 @@ void A_Invincibility(mobj_t *actor)
 		else
 			S_ChangeMusic(mus_invinc, false);
 	}
+#ifdef TOPDOWN
+	}
+#endif
 }
 
 // Function: A_SuperSneakers
@@ -3093,6 +3249,37 @@ void A_SuperSneakers(mobj_t *actor)
 		return;
 	}
 
+#ifdef TOPDOWN
+	if (gametype == GT_COOP && maptol & TOL_TD)
+	{
+		INT32 i;
+
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			if (playeringame[i] && players[i].mo && players[i].mo->health > 0 && players[i].playerstate != PST_DEAD && !players[i].exiting)
+			{
+				if ((netgame || multiplayer) && players[i].spectator) // Ignore spectators
+					continue;
+
+				player = &players[i];
+				player->powers[pw_sneakers] = sneakertics + 1;
+
+				if (P_IsLocalPlayer(player) && !player->powers[pw_super])
+				{
+					if (S_SpeedMusic(0.0f) && (mapheaderinfo[gamemap-1]->levelflags & LF_SPEEDMUSIC))
+						S_SpeedMusic(1.4f);
+					else
+					{
+						S_StopMusic();
+						S_ChangeMusic(mus_shoes, false);
+					}
+				}
+			}
+		}
+	}
+	else
+	{
+#endif
 	player = actor->target->player;
 
 	actor->target->player->powers[pw_sneakers] = sneakertics + 1;
@@ -3107,6 +3294,9 @@ void A_SuperSneakers(mobj_t *actor)
 			S_ChangeMusic(mus_shoes, false);
 		}
 	}
+#ifdef TOPDOWN
+	}
+#endif
 }
 
 // Function: A_AwardScore
@@ -3173,7 +3363,52 @@ void A_ExtraLife(mobj_t *actor)
 	if (gametype != GT_COOP && gametype != GT_COMPETITION)
 		P_GivePlayerRings(player, 100);
 	else
+#ifdef TOPDOWN
+	{
+		if ((maptol & TOL_TD) && gametype == GT_COOP && (netgame || multiplayer))
+		{
+			INT32 i;
+			INT32 numplayers = 0;
+
+			for (i = 0; i < MAXPLAYERS; i++)
+			{
+				if (playeringame[i])
+				{
+					if ((netgame || multiplayer) && players[i].spectator) // Ignore spectators
+						continue;
+
+					if (players[i].bot)
+						continue;
+
+					numplayers++;
+				}
+			}
+			P_GivePlayerLives(player, numplayers);
+		}
+		else
+#endif
 		P_GivePlayerLives(player, 1);
+#ifdef TOPDOWN
+	}
+	if ((maptol & TOL_TD) && gametype == GT_COOP && (netgame || multiplayer))
+	{
+		INT32 i;
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			if (playeringame[i])
+			{
+				if ((netgame || multiplayer) && players[i].spectator) // Ignore spectators
+					continue;
+
+				if (players[i].bot) // ignore dumb, stupid tails
+					continue;
+
+				P_PlayLivesJingle(&players[i]);
+			}
+		}
+	}
+	else
+#endif
 	P_PlayLivesJingle(player);
 }
 
@@ -3198,6 +3433,33 @@ void A_BombShield(mobj_t *actor)
 		return;
 	}
 
+#ifdef TOPDOWN
+	if (gametype == GT_COOP && maptol & TOL_TD)
+	{
+		INT32 i;
+
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			if (playeringame[i] && players[i].mo && players[i].mo->health > 0 && players[i].playerstate != PST_DEAD && !players[i].exiting)
+			{
+				if ((netgame || multiplayer) && players[i].spectator) // Ignore spectators
+					continue;
+
+				player = &players[i];
+
+				if ((player->powers[pw_shield] & SH_NOSTACK) != SH_BOMB)
+				{
+					player->powers[pw_shield] = SH_BOMB|(player->powers[pw_shield] & SH_STACK);
+					P_SpawnShieldOrb(player);
+				}
+
+				S_StartSound(player->mo, actor->info->seesound);
+			}
+		}
+	}
+	else
+	{
+#endif
 	player = actor->target->player;
 
 	if ((player->powers[pw_shield] & SH_NOSTACK) != SH_BOMB)
@@ -3207,6 +3469,9 @@ void A_BombShield(mobj_t *actor)
 	}
 
 	S_StartSound(player->mo, actor->info->seesound);
+#ifdef TOPDOWN
+	}
+#endif
 }
 
 // Function: A_WaterShield
@@ -3230,6 +3495,44 @@ void A_WaterShield(mobj_t *actor)
 		return;
 	}
 
+#ifdef TOPDOWN
+	if (gametype == GT_COOP && maptol & TOL_TD)
+	{
+		INT32 i;
+
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			if (playeringame[i] && players[i].mo && players[i].mo->health > 0 && players[i].playerstate != PST_DEAD && !players[i].exiting)
+			{
+				if ((netgame || multiplayer) && players[i].spectator) // Ignore spectators
+					continue;
+
+				player = &players[i];
+
+				if ((player->powers[pw_shield] & SH_NOSTACK) != SH_ELEMENTAL)
+				{
+					player->powers[pw_shield] = SH_ELEMENTAL|(player->powers[pw_shield] & SH_STACK);
+					P_SpawnShieldOrb(player);
+				}
+
+				if (player->powers[pw_underwater] && player->powers[pw_underwater] <= 12*TICRATE + 1)
+					P_RestoreMusic(player);
+
+				player->powers[pw_underwater] = 0;
+
+				if (player->powers[pw_spacetime] > 1)
+				{
+					player->powers[pw_spacetime] = 0;
+					P_RestoreMusic(player);
+				}
+
+				S_StartSound(player->mo, actor->info->seesound);
+			}
+		}
+	}
+	else
+	{
+#endif
 	player = actor->target->player;
 
 	if ((player->powers[pw_shield] & SH_NOSTACK) != SH_ELEMENTAL)
@@ -3249,6 +3552,9 @@ void A_WaterShield(mobj_t *actor)
 		P_RestoreMusic(player);
 	}
 	S_StartSound(player->mo, actor->info->seesound);
+#ifdef TOPDOWN
+	}
+#endif
 }
 
 // Function: A_ForceShield
@@ -3272,6 +3578,35 @@ void A_ForceShield(mobj_t *actor)
 		return;
 	}
 
+#ifdef TOPDOWN
+	if (gametype == GT_COOP && maptol & TOL_TD)
+	{
+		INT32 i;
+
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			if (playeringame[i] && players[i].mo && players[i].mo->health > 0 && players[i].playerstate != PST_DEAD && !players[i].exiting)
+			{
+				if ((netgame || multiplayer) && players[i].spectator) // Ignore spectators
+					continue;
+
+				player = &players[i];
+
+				if (!(player->powers[pw_shield] & SH_FORCE))
+				{
+					player->powers[pw_shield] = SH_FORCE|(player->powers[pw_shield] & SH_STACK)|0x01;
+					P_SpawnShieldOrb(player);
+				}
+				else
+					player->powers[pw_shield] = SH_FORCE|(player->powers[pw_shield] & SH_STACK)|0x01;
+
+				S_StartSound(player->mo, actor->info->seesound);
+			}
+		}
+	}
+	else
+	{
+#endif
 	player = actor->target->player;
 
 	if (!(player->powers[pw_shield] & SH_FORCE))
@@ -3283,6 +3618,9 @@ void A_ForceShield(mobj_t *actor)
 		player->powers[pw_shield] = SH_FORCE|(player->powers[pw_shield] & SH_STACK)|0x01;
 
 	S_StartSound(player->mo, actor->info->seesound);
+#ifdef TOPDOWN
+	}
+#endif
 }
 
 // Function: A_PityShield
@@ -3310,6 +3648,33 @@ void A_PityShield(mobj_t *actor)
 		return;
 	}
 
+#ifdef TOPDOWN
+	if (gametype == GT_COOP && maptol & TOL_TD)
+	{
+		INT32 i;
+
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			if (playeringame[i] && players[i].mo && players[i].mo->health > 0 && players[i].playerstate != PST_DEAD && !players[i].exiting)
+			{
+				if ((netgame || multiplayer) && players[i].spectator) // Ignore spectators
+					continue;
+
+				player = &players[i];
+
+				if ((player->powers[pw_shield] & SH_NOSTACK) != SH_PITY)
+				{
+					player->powers[pw_shield] = SH_PITY+(player->powers[pw_shield] & SH_STACK);
+					P_SpawnShieldOrb(player);
+				}
+
+				S_StartSound(player->mo, actor->info->seesound);
+			}
+		}
+	}
+	else
+	{
+#endif
 	player = actor->target->player;
 
 	if ((player->powers[pw_shield] & SH_NOSTACK) != SH_PITY)
@@ -3319,6 +3684,9 @@ void A_PityShield(mobj_t *actor)
 	}
 
 	S_StartSound(player->mo, actor->info->seesound);
+#ifdef TOPDOWN
+	}
+#endif
 }
 
 
@@ -3628,7 +3996,11 @@ void A_AttractChase(mobj_t *actor)
 	if (!actor->tracer
 		|| !actor->tracer->player
 		|| !actor->tracer->health
-		|| !P_CheckSight(actor, actor->tracer)) // You have to be able to SEE it...sorta
+		|| !P_CheckSight(actor, actor->tracer)
+#ifdef TOPDOWN
+		|| ((maptol & TOL_ND) && actor->tracer->health > 25)
+#endif
+		) // You have to be able to SEE it...sorta
 	{
 		// Lost attracted rings don't through walls anymore.
 		actor->flags &= ~MF_NOCLIP;
@@ -5009,7 +5381,11 @@ void A_MaceRotate(mobj_t *actor)
 	actor->z = actor->target->z;
 
 	// Cut the height to align the link with the axis.
-	if (actor->type == MT_SMALLMACECHAIN || actor->type == MT_BIGMACECHAIN)
+	if (actor->type == MT_SMALLMACECHAIN || actor->type == MT_BIGMACECHAIN
+#ifdef TOPDOWN
+		|| actor->type == MT_SMALLBLUECHAIN || actor->type == MT_BIGBLUECHAIN
+#endif
+		)
 		actor->z -= actor->height/4;
 	else
 		actor->z -= actor->height/2;
@@ -9160,9 +9536,23 @@ void A_ForceWin(mobj_t *actor)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
+#ifdef TOPDOWN
+		if ((maptol & TOL_TD) && gametype == GT_COOP && (netgame || multiplayer))
+		{
+			if (playeringame[i] && (players[i].health > 0
+			|| ((netgame || multiplayer) && (sharedlives > 0))))
+				break;
+		}
+		else
+		{
+#endif
 		if (playeringame[i] && (players[i].health > 0
 		    || ((netgame || multiplayer) && (players[i].lives > 0 || players[i].continues > 0))))
 			break;
+
+#ifdef TOPDOWN
+		}
+#endif
 	}
 
 	if (i == MAXPLAYERS)
@@ -10150,3 +10540,181 @@ void A_SpawnFreshCopy(mobj_t *actor)
 	if (newObject->info->seesound)
 		S_StartSound(newObject, newObject->info->seesound);
 }
+
+#ifdef TOPDOWN
+// Function: A_OrbitalChase
+//
+// Description: Thrust towards target or tracer without slowing, with a speed cap
+//
+// var1:
+//		Lower 16 bits: Speed to Thrust by
+//		Upper 16 bits: 0 = target, 1 = tracer
+// var2:
+//		Lower 16 bits: Speed cap
+//		Upper 16 bits: 0 = Has vertical movement 1 = Horizontal movement only
+//
+void A_OrbitalChase(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_OrbitalChase", actor))
+		return;
+#endif
+
+	mobj_t *target; // Who are we chasing?
+
+	if (locvar1 >> 16 == 0)
+		target = actor->target;
+	else
+		target = actor->tracer;
+
+	if (!target)
+		return;
+
+	fixed_t dist, scaledspeed, oldspeed;
+	if (locvar2 >> 16 == 0)
+		dist = P_AproxDistance(P_AproxDistance(target->x - actor->x, target->y - actor->y), (target->z + target->height/2) - (actor->z + actor->height/2));
+	else
+		dist = P_AproxDistance(target->x - actor->x, target->y - actor->y);
+
+	scaledspeed = FixedMul((locvar1 & 65535)<<16, actor->scale);
+
+	if (locvar2 >> 16 == 0)
+	{
+		oldspeed = P_AproxDistance(P_AproxDistance(actor->momx, actor->momy), actor->momz);
+
+		actor->momx += FixedMul(FixedDiv(target->x - actor->x, dist), scaledspeed);
+		actor->momy += FixedMul(FixedDiv(target->y - actor->y, dist), scaledspeed);
+		actor->momz += FixedMul(FixedDiv((target->z + target->height/2) - (actor->z + actor->height/2), dist), scaledspeed);
+	}
+	else
+	{
+		oldspeed = P_AproxDistance(actor->momx, actor->momy);
+
+		actor->momx += FixedMul(FixedDiv(target->x - actor->x, dist), scaledspeed);
+		actor->momy += FixedMul(FixedDiv(target->y - actor->y, dist), scaledspeed);
+	}
+
+	if ((locvar2 & 65535) > 0)
+	{
+		fixed_t finalspeed;
+		fixed_t scaledspeedcap = FixedMul((locvar2 & 65535)<<16, actor->scale);
+
+		if (locvar2 >> 16 == 0)
+			finalspeed = P_AproxDistance(P_AproxDistance(actor->momx, actor->momy), actor->momz);
+		else
+			finalspeed = P_AproxDistance(actor->momx, actor->momy);
+
+		if (finalspeed > scaledspeedcap)
+		{
+			if (oldspeed > scaledspeedcap)
+			{
+				if (finalspeed > oldspeed)
+				{
+					actor->momx = FixedMul(FixedDiv(actor->momx, finalspeed), oldspeed);
+					actor->momy = FixedMul(FixedDiv(actor->momy, finalspeed), oldspeed);
+
+					if (locvar2 >> 16 == 0)
+						actor->momz = FixedMul(FixedDiv(actor->momz, finalspeed), oldspeed);
+				}
+			}
+			else
+			{
+				actor->momx = FixedMul(FixedDiv(actor->momx, finalspeed), scaledspeedcap);
+				actor->momy = FixedMul(FixedDiv(actor->momy, finalspeed), scaledspeedcap);
+
+				if (locvar2 >> 16 == 0)
+					actor->momz = FixedMul(FixedDiv(actor->momz, finalspeed), scaledspeedcap);
+			}
+		}
+	}
+}
+
+// Function: A_InflatableSnowman
+//
+// Description: Increases the size of the object up to var2 by var1, if it hits (or goes above) var2, change state to meleestate
+//
+// var1 = size increase increment
+// var2 = stop size
+//
+void A_InflatableSnowman(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_InflatableSnowman", actor))
+		return;
+#endif
+
+	if (actor->scale >= locvar2)
+	{
+		if (actor->info->attacksound)
+			S_StartAttackSound(actor, actor->info->attacksound);
+		P_SetMobjState(actor, actor->info->meleestate);
+	}
+	else
+	{
+		actor->destscale = actor->scale + locvar1;
+		P_SetScale(actor, actor->destscale);
+	}
+}
+
+// Function: A_CheckGround
+//
+// Description: Checks if the object is on the ground, changes state to var1 if it is, var2 checks if not on the ground
+//
+// var1 = state to change to
+// var2 = 0 = onground 1 = in air
+//
+void A_CheckGround(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_CheckGround", actor))
+		return;
+#endif
+
+	if ((locvar2 && !P_IsObjectOnGround(actor))
+		|| (!locvar2 && P_IsObjectOnGround(actor)))
+		P_SetMobjState(actor, (statenum_t)locvar1);
+}
+
+// Function: A_LookTracer
+//
+// Description: Look for a player and set your tracer to them.
+//
+// var1:
+//		lower 16 bits = look all around
+//		upper 16 bits = distance limit
+// var2 = If 1, only change to seestate. If 2, only play seesound. If 0, do both.
+//
+void A_LookTracer(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_Look", actor))
+		return;
+#endif
+
+	if (!P_LookForPlayers(actor, locvar1 & 65535, true , FixedMul((locvar1 >> 16)*FRACUNIT, actor->scale)))
+		return;
+
+	// go into chase state
+	if (!locvar2)
+	{
+		P_SetMobjState(actor, actor->info->seestate);
+		A_PlaySeeSound(actor);
+	}
+	else if (locvar2 == 1) // Only go into seestate
+		P_SetMobjState(actor, actor->info->seestate);
+	else if (locvar2 == 2) // Only play seesound
+		A_PlaySeeSound(actor);
+}
+#endif
