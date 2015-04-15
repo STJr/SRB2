@@ -5024,7 +5024,7 @@ void A_MaceRotate(mobj_t *actor)
 		actor->movecount += actor->target->lastlook;
 		actor->movecount &= FINEMASK;
 
-		actor->threshold = FixedMul(FINECOSINE(actor->movecount), actor->target->lastlook);
+		actor->threshold = FixedMul(FINECOSINE(actor->movecount), actor->target->lastlook << FRACBITS);
 
 		v[0] = FRACUNIT;
 		v[1] = 0;
@@ -5032,7 +5032,7 @@ void A_MaceRotate(mobj_t *actor)
 		v[3] = FRACUNIT;
 
 		// Calculate the angle matrixes for the link.
-		res = VectorMatrixMultiply(v, *RotateXMatrix(FixedAngle(actor->threshold << FRACBITS)));
+		res = VectorMatrixMultiply(v, *RotateXMatrix(FixedAngle(actor->threshold)));
 		M_Memcpy(&v, res, sizeof(v));
 		res = VectorMatrixMultiply(v, *RotateZMatrix(actor->target->health << ANGLETOFINESHIFT));
 		M_Memcpy(&v, res, sizeof(v));

@@ -2958,6 +2958,8 @@ static void P_DoTeeter(player_t *player)
 		xh = (player->mo->x + player->mo->radius - bmaporgx)>>MAPBLOCKSHIFT;
 		xl = (player->mo->x - player->mo->radius - bmaporgx)>>MAPBLOCKSHIFT;
 
+		BMBOUNDFIX(xl, xh, yl, yh);
+
 	// Polyobjects
 #ifdef POLYOBJECTS
 		validcount++;
@@ -8088,6 +8090,8 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		xh = (tmbbox[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
 		yl = (tmbbox[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
 		yh = (tmbbox[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
+
+		BMBOUNDFIX(xl, xh, yl, yh);
 
 		for (by = yl; by <= yh; by++)
 			for (bx = xl; bx <= xh; bx++)

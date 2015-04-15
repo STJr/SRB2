@@ -1691,6 +1691,19 @@ static void R_CreateDrawNodes(void)
 		}
 		if (ds->maskedtexturecol)
 		{
+#ifdef POLYOBJECTS_PLANES
+			// Check for a polyobject plane, but only if this is a front line
+			if (ds->curline->polyseg && ds->curline->polyseg->visplane && !ds->curline->side) {
+				// Put it in!
+
+				entry = R_CreateDrawNode(&nodehead);
+				entry->plane = ds->curline->polyseg->visplane;
+				entry->seg = ds;
+				ds->curline->polyseg->visplane->polyobj = ds->curline->polyseg;
+				ds->curline->polyseg->visplane = NULL;
+			}
+#endif
+
 			entry = R_CreateDrawNode(&nodehead);
 			entry->seg = ds;
 		}
@@ -1707,7 +1720,7 @@ static void R_CreateDrawNodes(void)
 					plane = ds->ffloorplanes[p];
 					R_PlaneBounds(plane);
 
-					if (plane->low < con_clipviewtop || plane->high > vid.height || plane->high > plane->low)
+					if (plane->low < con_clipviewtop || plane->high > vid.height || plane->high > plane->low || plane->polyobj)
 					{
 						ds->ffloorplanes[p] = NULL;
 						continue;
@@ -1818,7 +1831,7 @@ static void R_CreateDrawNodes(void)
 			}
 			else if (r2->seg)
 			{
-#ifdef POLYOBJECTS_PLANES
+#if 0 //#ifdef POLYOBJECTS_PLANES
 				if (r2->seg->curline->polyseg && rover->mobj && P_MobjInsidePolyobj(r2->seg->curline->polyseg, rover->mobj)) {
 					// Determine if we need to sort in front of the polyobj, based on the planes. This fixes the issue where
 					// polyobject planes render above the object standing on them. (A bit hacky... but it works.) -Red
