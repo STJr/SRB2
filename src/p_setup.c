@@ -72,6 +72,10 @@
 #include "hardware/hw_light.h"
 #endif
 
+#ifdef ESLOPE
+#include "p_slopes.h"
+#endif
+
 //
 // Map MD5, calculated on level load.
 // Sent to clients in PT_SERVERINFO.
@@ -1165,6 +1169,10 @@ static void P_LoadLineDefs(lumpnum_t lumpnum)
 
 #ifdef POLYOBJECTS
 		ld->polyobj = NULL;
+#endif
+
+#ifdef ESLOPE
+		P_MakeLineNormal(ld);
 #endif
 	}
 

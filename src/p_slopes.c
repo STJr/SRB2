@@ -185,23 +185,27 @@ static float P_GetExtent(sector_t *sector, line_t *line, v3float_t *o, v2float_t
    for(i = 0; i < sector->linecount; i++)
    {
       line_t *li = sector->lines[i];
+      vertex_t tempv;
       float dist;
-      
+
       // Don't compare to the slope line.
       if(li == line)
          continue;
-      
+
 	   // ZDoom code in P_AlignPlane
 	   // dist = fabs((double(line->v1->y) - vert->y) * line->dx - (double(line->v1->x) - vert->x) * line->dy);
-      dist = (float)fabs((FIXED_TO_FLOAT(li->v1->x) - o->x) * d->x + (FIXED_TO_FLOAT(li->v1->y) - o->y) * d->y);
+      //dist = (float)fabs((FIXED_TO_FLOAT(li->v1->x) - o->x) * d->x + (FIXED_TO_FLOAT(li->v1->y) - o->y) * d->y);
+      P_ClosestPointOnLine(li->v1->x, li->v1->y, line, &tempv);
+      dist = FIXED_TO_FLOAT(R_PointToDist2(tempv.x, tempv.y, line->v1->x, line->v1->y));
       if(dist > fardist)
          fardist = dist;
 
-      dist = (float)fabs((FIXED_TO_FLOAT(li->v2->x) - o->x) * d->x + (FIXED_TO_FLOAT(li->v2->y) - o->y) * d->y);
+		// We shouldn't have to do this for v2... -Red
+      /*dist = (float)fabs((FIXED_TO_FLOAT(li->v2->x) - o->x) * d->x + (FIXED_TO_FLOAT(li->v2->y) - o->y) * d->y);
       if(dist > fardist)
-         fardist = dist;
+         fardist = dist;*/
    }
-	
+
 	return fardist;
 }
 
