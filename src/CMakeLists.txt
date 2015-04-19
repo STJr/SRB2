@@ -32,6 +32,7 @@ set(SRB2_CORE_SOURCES
 	m_misc.c
 	m_queue.c
 	m_random.c
+	m_vector.c
 	md5.c
 	mserv.c
 	s_sound.c
@@ -95,6 +96,7 @@ set(SRB2_CORE_HEADERS
 	m_queue.h
 	m_random.h
 	m_swap.h
+	m_vector.h
 	md5.h
 	mserv.h
 	p5prof.h
@@ -150,6 +152,7 @@ set(SRB2_CORE_GAME_SOURCES
 	p_saveg.c
 	p_setup.c
 	p_sight.c
+	p_slopes.c
 	p_spec.c
 	p_telept.c
 	p_tick.c
@@ -162,6 +165,7 @@ set(SRB2_CORE_GAME_SOURCES
 	p_pspr.h
 	p_saveg.h
 	p_setup.h
+	p_slopes.h
 	p_spec.h
 	p_tick.h
 )
