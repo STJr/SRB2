@@ -33,6 +33,9 @@
 #include "m_misc.h"
 #include "m_cond.h" //unlock triggers
 #include "lua_hook.h" // LUAh_LinedefExecute
+#ifdef ESLOPE
+#include "p_slopes.h"
+#endif
 
 #ifdef HW3SOUND
 #include "hardware/hw3sound.h"
@@ -4581,16 +4584,27 @@ static void P_RunSpecialSectorCheck(player_t *player, sector_t *sector)
 		return;
 	}
 
+	fixed_t f_affectpoint = sector->floorheight;
+	fixed_t c_affectpoint = sector->ceilingheight;
+
+#ifdef ESLOPE
+	if (sector->f_slope)
+		f_affectpoint = P_GetZAt(sector->f_slope, player->mo->x, player->mo->y);
+
+	if (sector->c_slope)
+		c_affectpoint = P_GetZAt(sector->c_slope, player->mo->x, player->mo->y);
+#endif
+
 	// Only go further if on the ground
-	if ((sector->flags & SF_FLIPSPECIAL_FLOOR) && !(sector->flags & SF_FLIPSPECIAL_CEILING) && player->mo->z != sector->floorheight)
+	if ((sector->flags & SF_FLIPSPECIAL_FLOOR) && !(sector->flags & SF_FLIPSPECIAL_CEILING) && player->mo->z != f_affectpoint)
 		return;
 
-	if ((sector->flags & SF_FLIPSPECIAL_CEILING) && !(sector->flags & SF_FLIPSPECIAL_FLOOR) && player->mo->z + player->mo->height != sector->ceilingheight)
+	if ((sector->flags & SF_FLIPSPECIAL_CEILING) && !(sector->flags & SF_FLIPSPECIAL_FLOOR) && player->mo->z + player->mo->height != c_affectpoint)
 		return;
 
 	if ((sector->flags & SF_FLIPSPECIAL_BOTH)
-		&& player->mo->z != sector->floorheight
-		&& player->mo->z + player->mo->height != sector->ceilingheight)
+		&& player->mo->z != f_affectpoint
+		&& player->mo->z + player->mo->height != c_affectpoint)
 		return;
 
 	P_ProcessSpecialSector(player, sector, NULL);
@@ -4750,6 +4764,9 @@ void P_UpdateSpecials(void)
 
 	// POINT LIMIT
 	P_CheckPointLimit();
+
+	// Kalaron: ...We...have dynamic slopes *YESSSS*
+	P_SpawnDeferredSpecials();
 
 	// ANIMATE TEXTURES
 	for (anim = anims; anim < lastanim; anim++)
@@ -6464,6 +6481,63 @@ void P_SpawnSpecials(INT32 fromnetsave)
 	P_RunLevelLoadExecutors();
 }
 
+#ifdef ESLOPE
+//
+// P_SpawnDeferredSpecials
+//
+// SoM: Specials that copy slopes, ect., need to be collected in a separate
+// pass
+// NOTE: SRB2CBTODO: A new function, P_SpawnDeferredSpecials is needed if objects
+// are to be needed in this function, because this function currently needs to be
+// done before 'things' are loaded, because slopes are part of this function,
+// and slope height adjustments are needed for spawning objects
+void P_SpawnDeferredSpecials(void)
+{
+	size_t      i;
+	line_t   *line;
+
+	for(i = 0; i < numlines; i++)
+	{
+		line = lines + i;
+
+		switch(line->special)
+		{
+				// Slopes, Eternity engine
+				/*{ 386, "Slope_FrontsectorFloor" },
+				 { 387, "Slope_FrontsectorCeiling" },
+				 { 388, "Slope_FrontsectorFloorAndCeiling" },
+				 { 389, "Slope_BacksectorFloor" },
+				 { 390, "Slope_BacksectorCeiling" },
+				 { 391, "Slope_BacksectorFloorAndCeiling" },
+				 { 392, "Slope_BackFloorAndFrontCeiling" },
+				 { 393, "Slope_BackCeilingAndFrontFloor" },
+
+				 { 394, "Slope_FrontFloorToTaggedSlope" },
+				 { 395, "Slope_FrontCeilingToTaggedSlope" },
+				 { 396, "Slope_FrontFloorAndCeilingToTaggedSlope" },*/
+
+				// SoM 05/10/09: Slopes // SRB2CBTODO:!
+			case 386:
+			case 387:
+			case 388:
+			case 389:
+			case 390:
+			case 391:
+			case 392:
+			case 393:
+				P_SpawnSlope_Line(i);
+				break;
+				// SoM: Copy slopes
+			case 394:
+			case 395:
+			case 396:
+				P_CopySectorSlope(line);
+				break;
+		}
+	}
+}
+#endif
+
 /** Adds 3Dfloors as appropriate based on a common control linedef.
   *
   * \param line        Control linedef to use.
@@ -7363,8 +7437,12 @@ void T_Pusher(pusher_t *p)
 			|| GETSECSPECIAL(referrer->special, 3) == 3)
 			foundfloor = true;
 	}
-	else if (!(GETSECSPECIAL(sec->special, 3) == 2
-			|| GETSECSPECIAL(sec->special, 3) == 3))
+	else if (
+#ifdef ESLOPE
+			(!sec->f_slope) &&
+#endif
+			(!(GETSECSPECIAL(sec->special, 3) == 2
+			|| GETSECSPECIAL(sec->special, 3) == 3)))
 		return;
 
 	if (p->roverpusher && foundfloor == false) // Not even a 3d floor has the PUSH_MASK.

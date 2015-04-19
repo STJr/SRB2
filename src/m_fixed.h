@@ -357,6 +357,29 @@ FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FixedRound(fixed_t x)
 	return INT32_MAX;
 }
 
+/*!
+ \brief convert a fixed_t number into double floating number
+ */
+#define FIXED_TO_DOUBLE(f) ((double)((f) / FRACUNIT))
+
+/*!
+ \brief convert a double floating number into fixed_t number
+ */
+#define DOUBLE_TO_FIXED(f) ((fixed_t)((f) * FRACUNIT))
+
+/*!
+ \brief convert a integer into fixed_t number
+ */
+#define INT_TO_FIXED(x) ((int)((x) * FRACUNIT))
+
+/*!
+ \brief convert a fixed_t number into integer
+ */
+#define FIXED_TO_INT(x) (((int)(x)) / (FRACUNIT))
+
+static inline int DivScale32 (fixed_t a, fixed_t b) { return (fixed_t)(((INT64)a << 32) / b); }
+
+
 #ifdef NEED_FIXED_VECTOR
 
 typedef struct

@@ -439,6 +439,14 @@ extern const char *compdate, *comptime, *comprevision;
 ///	Fun experimental slope stuff!
 //#define SLOPENESS
 
+/// Kalaron/Eternity Engine slope code (SRB2CB ported)
+/// Depends on NEED_FIXED_VECTORS? for a few functions.
+/// However, uses own vector types for math.
+#define ESLOPE
+
+/// Fixed and float point types
+//#define NEED_FIXED_VECTOR
+
 ///	Delete file while the game is running.
 ///	\note	EXTREMELY buggy, tends to crash game.
 //#define DELFILE

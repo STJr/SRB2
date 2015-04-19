@@ -28,6 +28,11 @@
 // Needs precompiled tables/data structures.
 #include "info.h"
 
+// For slope code, we need v3float_t
+#ifdef ESLOPE
+#include "m_vector.h"
+#endif
+
 //
 // NOTES: mobj_t
 //
@@ -351,6 +356,11 @@ typedef struct mobj_s
 	// They are for SOCs to store things in.
 	INT32 cusval;
 	INT32 cvmem;
+
+#ifdef ESLOPE
+	angle_t pitchangle;
+	v3float_t vector;
+#endif
 
 	// WARNING: New fields must be added separately to savegame and Lua.
 } mobj_t;

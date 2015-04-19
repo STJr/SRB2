@@ -53,6 +53,15 @@
 // above this, a height difference is considered as a 'dropoff'
 #define MAXSTEPMOVE (24*FRACUNIT)
 
+#ifdef ESLOPE
+// [RH] Minimum floorplane.c value for walking
+// The lower the value, the steeper the slope is
+#define SECPLANESTEEPSLOPE		46000
+// ESLOPE stuff - a slope of 4 or lower is so level, treat it as flat
+#define LEVELSLOPE 4
+#define STEEPSLOPE 65
+#endif
+
 #define USERANGE (64*FRACUNIT)
 #define MELEERANGE (64*FRACUNIT)
 #define MISSILERANGE (32*64*FRACUNIT)
@@ -137,6 +146,12 @@ boolean P_IsObjectOnGround(mobj_t *mo);
 boolean P_IsObjectOnGroundIn(mobj_t *mo, sector_t *sec);
 boolean P_InSpaceSector(mobj_t *mo);
 boolean P_InQuicksand(mobj_t *mo);
+
+#ifdef ESLOPE
+boolean P_IsObjectOnSlope(mobj_t *mo, boolean ceiling);
+boolean P_SlopeGreaterThan(mobj_t *mo, boolean ceiling, int value);
+boolean P_SlopeLessThan(mobj_t *mo, boolean ceiling, int value);
+#endif
 
 void P_SetObjectMomZ(mobj_t *mo, fixed_t value, boolean relative);
 void P_RestoreMusic(player_t *player);
