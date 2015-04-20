@@ -854,7 +854,11 @@ static void R_Subsector(size_t num)
 
 	sub->sector->extra_colormap = frontsector->extra_colormap;
 
-	if ((frontsector->floorheight < viewz || (frontsector->heightsec != -1
+	if (((
+#ifdef ESLOPE
+			frontsector->f_slope ? P_GetZAt(frontsector->f_slope, viewx, viewy) :
+#endif
+		frontsector->floorheight) < viewz || (frontsector->heightsec != -1
 		&& sectors[frontsector->heightsec].ceilingpic == skyflatnum)))
 	{
 		floorplane = R_FindPlane(frontsector->floorheight, frontsector->floorpic, floorlightlevel,
@@ -863,7 +867,11 @@ static void R_Subsector(size_t num)
 	else
 		floorplane = NULL;
 
-	if ((frontsector->ceilingheight > viewz || frontsector->ceilingpic == skyflatnum
+	if (((
+#ifdef ESLOPE
+			frontsector->c_slope ? P_GetZAt(frontsector->c_slope, viewx, viewy) :
+#endif
+		frontsector->ceilingheight) > viewz || frontsector->ceilingpic == skyflatnum
 		|| (frontsector->heightsec != -1
 		&& sectors[frontsector->heightsec].floorpic == skyflatnum)))
 	{

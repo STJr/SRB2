@@ -50,6 +50,9 @@ static fixed_t rw_offset2; // for splats
 static fixed_t rw_scale, rw_scalestep;
 static fixed_t rw_midtexturemid, rw_toptexturemid, rw_bottomtexturemid;
 static INT32 worldtop, worldbottom, worldhigh, worldlow;
+#ifdef ESLOPE
+static INT32 worldtopslope, worldbottomslope, worldhighslope, worldlowslope; // worldtop/bottom at end of slope
+#endif
 static fixed_t pixhigh, pixlow, pixhighstep, pixlowstep;
 static fixed_t topfrac, topstep;
 static fixed_t bottomfrac, bottomstep;
@@ -1402,6 +1405,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	INT32           i, p;
 	lightlist_t   *light;
 	r_lightlist_t *rlight;
+#ifdef ESLOPE
+	vertex_t segleft, segright;
+#endif
 	static size_t maxdrawsegs = 0;
 
 	if (ds_p == drawsegs+maxdrawsegs)
@@ -1502,8 +1508,104 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 	// calculate texture boundaries
 	//  and decide if floor / ceiling marks are needed
-	worldtop = frontsector->ceilingheight - viewz;
-	worldbottom = frontsector->floorheight - viewz;
+#ifdef ESLOPE
+	// Figure out map coordinates of where start and end are mapping to on seg, so we can clip right for slope bullshit
+	if (frontsector->c_slope || frontsector->f_slope || (backsector && (backsector->c_slope || backsector->f_slope))) {
+		angle_t temp;
+		fixed_t tan;
+
+		// left
+		temp = xtoviewangle[start]+viewangle;
+
+		if (curline->v1->x == curline->v2->x) {
+			// Line seg is vertical, so no line-slope form for it
+			tan = FINETANGENT((temp+ANGLE_90)>>ANGLETOFINESHIFT);
+
+			segleft.x = curline->v1->x;
+
+			segleft.y = curline->v1->y-FixedMul(viewx-segleft.x, tan);
+		} else if (temp>>ANGLETOFINESHIFT == ANGLE_90>>ANGLETOFINESHIFT || temp>>ANGLETOFINESHIFT == ANGLE_270>>ANGLETOFINESHIFT) {
+			// Same problem as above, except this time with the view angle
+			tan = FixedDiv(curline->v2->y-curline->v1->y, curline->v2->x-curline->v1->x);
+
+			segleft.x = viewx;
+			segleft.y = curline->v1->y-FixedMul(viewx-curline->v1->x, tan);
+		} else {
+			// Both lines can be written in slope-intercept form, so figure out line intersection
+			float a1, b1, c1, a2, b2, c2, det; // 1 is the seg, 2 is the view angle vector...
+
+			a1 = FIXED_TO_FLOAT(curline->v2->y-curline->v1->y);
+			b1 = FIXED_TO_FLOAT(curline->v1->x-curline->v2->x);
+			c1 = a1*FIXED_TO_FLOAT(curline->v1->x) + b1*FIXED_TO_FLOAT(curline->v1->y);
+
+			a2 = -FIXED_TO_FLOAT(FINESINE(temp>>ANGLETOFINESHIFT));
+			b2 = FIXED_TO_FLOAT(FINECOSINE(temp>>ANGLETOFINESHIFT));
+			c2 = a2*FIXED_TO_FLOAT(viewx) + b2*FIXED_TO_FLOAT(viewy);
+
+			det = a1*b2 - a2*b1;
+
+			segleft.x = FLOAT_TO_FIXED((b2*c1 - b1*c2)/det);
+			segleft.y = FLOAT_TO_FIXED((a1*c2 - a2*c1)/det);
+		}
+
+		// right
+		temp = xtoviewangle[stop]+viewangle;
+
+		if (curline->v1->x == curline->v2->x) {
+			// Line seg is vertical, so no line-slope form for it
+			tan = FINETANGENT((temp+ANGLE_90)>>ANGLETOFINESHIFT);
+
+			segright.x = curline->v1->x;
+
+			segright.y = curline->v1->y-FixedMul(viewx-segright.x, tan);
+		} else if (temp>>ANGLETOFINESHIFT == ANGLE_90>>ANGLETOFINESHIFT || temp>>ANGLETOFINESHIFT == ANGLE_270>>ANGLETOFINESHIFT) {
+			// Same problem as above, except this time with the view angle
+			tan = FixedDiv(curline->v2->y-curline->v1->y, curline->v2->x-curline->v1->x);
+
+			segright.x = viewx;
+			segright.y = curline->v1->y-FixedMul(viewx-curline->v1->x, tan);
+		} else {
+			// Both lines can be written in slope-intercept form, so figure out line intersection
+			float a1, b1, c1, a2, b2, c2, det; // 1 is the seg, 2 is the view angle vector...
+
+			a1 = FIXED_TO_FLOAT(curline->v2->y-curline->v1->y);
+			b1 = FIXED_TO_FLOAT(curline->v1->x-curline->v2->x);
+			c1 = a1*FIXED_TO_FLOAT(curline->v1->x) + b1*FIXED_TO_FLOAT(curline->v1->y);
+
+			a2 = -FIXED_TO_FLOAT(FINESINE(temp>>ANGLETOFINESHIFT));
+			b2 = FIXED_TO_FLOAT(FINECOSINE(temp>>ANGLETOFINESHIFT));
+			c2 = a2*FIXED_TO_FLOAT(viewx) + b2*FIXED_TO_FLOAT(viewy);
+
+			det = a1*b2 - a2*b1;
+
+			segright.x = FLOAT_TO_FIXED((b2*c1 - b1*c2)/det);
+			segright.y = FLOAT_TO_FIXED((a1*c2 - a2*c1)/det);
+		}
+	}
+
+	if (frontsector->c_slope) {
+		worldtop = P_GetZAt(frontsector->c_slope, segleft.x, segleft.y) - viewz;
+		worldtopslope = P_GetZAt(frontsector->c_slope, segright.x, segright.y) - viewz;
+	} else {
+		worldtopslope =
+#else
+	{
+#endif
+		worldtop = frontsector->ceilingheight - viewz;
+	}
+
+
+#ifdef ESLOPE
+	if (frontsector->f_slope) {
+		worldbottom = P_GetZAt(frontsector->f_slope, segleft.x, segleft.y) - viewz;
+		worldbottomslope = P_GetZAt(frontsector->f_slope, segright.x, segright.y) - viewz;
+	} else {
+		worldbottomslope =
+#else
+	{
+#endif
+		worldbottom = frontsector->floorheight - viewz;
+	}
 
 	midtexture = toptexture = bottomtexture = maskedtexture = 0;
 	ds_p->maskedtexturecol = NULL;
@@ -1616,17 +1718,46 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			}
 		}
 
-		worldhigh = backsector->ceilingheight - viewz;
-		worldlow = backsector->floorheight - viewz;
+#ifdef ESLOPE
+		if (backsector->c_slope) {
+			worldhigh = P_GetZAt(backsector->c_slope, segleft.x, segleft.y) - viewz;
+			worldhighslope = P_GetZAt(backsector->c_slope, segright.x, segright.y) - viewz;
+		} else {
+			worldhighslope =
+#else
+		{
+#endif
+			worldhigh = backsector->ceilingheight - viewz;
+		}
+
+
+#ifdef ESLOPE
+		if (backsector->f_slope) {
+			worldlow = P_GetZAt(backsector->f_slope, segleft.x, segleft.y) - viewz;
+			worldlowslope = P_GetZAt(backsector->f_slope, segright.x, segright.y) - viewz;
+		} else {
+			worldlowslope =
+#else
+		{
+#endif
+			worldlow = backsector->floorheight - viewz;
+		}
+
 
 		// hack to allow height changes in outdoor areas
 		if (frontsector->ceilingpic == skyflatnum
 			&& backsector->ceilingpic == skyflatnum)
 		{
+#ifdef ESLOPE
+			worldtopslope = worldhighslope =
+#endif
 			worldtop = worldhigh;
 		}
 
 		if (worldlow != worldbottom
+#ifdef ESLOPE
+			|| worldlowslope != worldbottomslope
+#endif
 		    || backsector->floorpic != frontsector->floorpic
 		    || backsector->lightlevel != frontsector->lightlevel
 		    //SoM: 3/22/2000: Check floor x and y offsets.
@@ -1649,6 +1780,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		}
 
 		if (worldhigh != worldtop
+#ifdef ESLOPE
+			|| worldhighslope != worldtopslope
+#endif
 		    || backsector->ceilingpic != frontsector->ceilingpic
 		    || backsector->lightlevel != frontsector->lightlevel
 		    //SoM: 3/22/2000: Check floor x and y offsets.
@@ -1678,7 +1812,11 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		}
 
 		// check TOP TEXTURE
-		if (worldhigh < worldtop)
+		if (worldhigh < worldtop
+#ifdef ESLOPE
+				|| worldhighslope < worldtopslope
+#endif
+			)
 		{
 			// top texture
 			if ((linedef->flags & (ML_DONTPEGTOP) && (linedef->flags & ML_DONTPEGBOTTOM))
@@ -1721,7 +1859,11 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			}
 		}
 		// check BOTTOM TEXTURE
-		if (worldlow > worldbottom)     //seulement si VISIBLE!!!
+		if (worldlow > worldbottom
+#ifdef ESLOPE
+				|| worldlowslope > worldbottomslope
+#endif
+			)     //seulement si VISIBLE!!!
 		{
 			// bottom texture
 			bottomtexture = texturetranslation[sidedef->bottomtexture];
@@ -1967,12 +2109,27 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	// calculate incremental stepping values for texture edges
 	worldtop >>= 4;
 	worldbottom >>= 4;
+#ifdef ESLOPE
+	worldtopslope >>= 4;
+	worldbottomslope >>= 4;
+#endif
 
 	topstep = -FixedMul (rw_scalestep, worldtop);
 	topfrac = (centeryfrac>>4) - FixedMul (worldtop, rw_scale);
 
 	bottomstep = -FixedMul (rw_scalestep,worldbottom);
 	bottomfrac = (centeryfrac>>4) - FixedMul (worldbottom, rw_scale);
+
+#ifdef ESLOPE
+	if (frontsector->c_slope) {
+		fixed_t topfracend = (centeryfrac>>4) - FixedMul (worldtopslope, ds_p->scale2);
+		topstep = (topfracend-topfrac)/(stop-start+1);
+	}
+	if (frontsector->f_slope) {
+		fixed_t bottomfracend = (centeryfrac>>4) - FixedMul (worldbottomslope, ds_p->scale2);
+		bottomstep = (bottomfracend-bottomfrac)/(stop-start+1);
+	}
+#endif
 
 	dc_numlights = 0;
 
@@ -2036,17 +2193,42 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	{
 		worldhigh >>= 4;
 		worldlow >>= 4;
+#ifdef ESLOPE
+		worldhighslope >>= 4;
+		worldlowslope >>= 4;
+#endif
 
-		if (worldhigh < worldtop)
+		if (worldhigh < worldtop
+#ifdef ESLOPE
+			|| worldhighslope < worldtopslope
+#endif
+			)
 		{
 			pixhigh = (centeryfrac>>4) - FixedMul (worldhigh, rw_scale);
 			pixhighstep = -FixedMul (rw_scalestep,worldhigh);
+
+#ifdef ESLOPE
+			if (backsector->c_slope) {
+				fixed_t topfracend = (centeryfrac>>4) - FixedMul (worldhighslope, ds_p->scale2);
+				pixhighstep = (topfracend-pixhigh)/(stop-start+1);
+			}
+#endif
 		}
 
-		if (worldlow > worldbottom)
+		if (worldlow > worldbottom
+#ifdef ESLOPE
+			|| worldlowslope > worldbottomslope
+#endif
+			)
 		{
 			pixlow = (centeryfrac>>4) - FixedMul (worldlow, rw_scale);
 			pixlowstep = -FixedMul (rw_scalestep,worldlow);
+#ifdef ESLOPE
+			if (backsector->f_slope) {
+				fixed_t bottomfracend = (centeryfrac>>4) - FixedMul (worldlowslope, ds_p->scale2);
+				pixlowstep = (bottomfracend-pixlow)/(stop-start+1);
+			}
+#endif
 		}
 
 		{
