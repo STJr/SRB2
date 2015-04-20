@@ -196,7 +196,7 @@ static float P_GetExtent(sector_t *sector, line_t *line, v3float_t *o, v2float_t
 	   // dist = fabs((double(line->v1->y) - vert->y) * line->dx - (double(line->v1->x) - vert->x) * line->dy);
       //dist = (float)fabs((FIXED_TO_FLOAT(li->v1->x) - o->x) * d->x + (FIXED_TO_FLOAT(li->v1->y) - o->y) * d->y);
       P_ClosestPointOnLine(li->v1->x, li->v1->y, line, &tempv);
-      dist = FIXED_TO_FLOAT(R_PointToDist2(tempv.x, tempv.y, line->v1->x, line->v1->y));
+      dist = FIXED_TO_FLOAT(R_PointToDist2(tempv.x, tempv.y, li->v1->x, li->v1->y));
       if(dist > fardist)
          fardist = dist;
 
