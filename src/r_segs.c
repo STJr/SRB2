@@ -1517,7 +1517,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		// left
 		temp = xtoviewangle[start]+viewangle;
 
-		if (curline->v1->x == curline->v2->x) {
+		/*if (curline->v1->x == curline->v2->x) {
 			// Line seg is vertical, so no line-slope form for it
 			tan = FINETANGENT((temp+ANGLE_90)>>ANGLETOFINESHIFT);
 
@@ -1530,7 +1530,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 			segleft.x = viewx;
 			segleft.y = curline->v1->y-FixedMul(viewx-curline->v1->x, tan);
-		} else {
+		} else */{
 			// Both lines can be written in slope-intercept form, so figure out line intersection
 			float a1, b1, c1, a2, b2, c2, det; // 1 is the seg, 2 is the view angle vector...
 
@@ -1551,7 +1551,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		// right
 		temp = xtoviewangle[stop]+viewangle;
 
-		if (curline->v1->x == curline->v2->x) {
+		/*if (curline->v1->x == curline->v2->x) {
 			// Line seg is vertical, so no line-slope form for it
 			tan = FINETANGENT((temp+ANGLE_90)>>ANGLETOFINESHIFT);
 
@@ -1564,7 +1564,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 			segright.x = viewx;
 			segright.y = curline->v1->y-FixedMul(viewx-curline->v1->x, tan);
-		} else {
+		} else */{
 			// Both lines can be written in slope-intercept form, so figure out line intersection
 			float a1, b1, c1, a2, b2, c2, det; // 1 is the seg, 2 is the view angle vector...
 
