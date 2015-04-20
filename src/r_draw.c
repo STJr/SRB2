@@ -103,6 +103,12 @@ fixed_t ds_xfrac, ds_yfrac, ds_xstep, ds_ystep;
 UINT8 *ds_source; // start of a 64*64 tile image
 UINT8 *ds_transmap; // one of the translucency tables
 
+#ifdef ESLOPE
+pslope_t *ds_slope; // Current slope being used
+v3float_t ds_su, ds_sv, ds_sz; // Vectors for... stuff?
+float focallengthf;
+#endif
+
 /**	\brief Variable flat sizes
 */
 

@@ -423,7 +423,11 @@ static visplane_t *new_visplane(unsigned hash)
 //
 visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 	fixed_t xoff, fixed_t yoff, angle_t plangle, extracolormap_t *planecolormap,
-	ffloor_t *pfloor)
+	ffloor_t *pfloor
+#ifdef ESLOPE
+			, pslope_t *slope
+#endif
+			)
 {
 	visplane_t *check;
 	unsigned hash;
@@ -462,7 +466,11 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 			&& xoff == check->xoffs && yoff == check->yoffs
 			&& planecolormap == check->extra_colormap
 			&& !pfloor && !check->ffloor && check->viewz == viewz
-			&& check->viewangle == viewangle)
+			&& check->viewangle == viewangle
+#ifdef ESLOPE
+			&& check->slope == slope
+#endif
+			)
 		{
 			return check;
 		}
@@ -484,6 +492,9 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 	check->plangle = plangle;
 #ifdef POLYOBJECTS_PLANES
 	check->polyobj = NULL;
+#endif
+#ifdef ESLOPE
+	check->slope = slope;
 #endif
 
 	memset(check->top, 0xff, sizeof (check->top));
@@ -551,6 +562,9 @@ visplane_t *R_CheckPlane(visplane_t *pl, INT32 start, INT32 stop)
 		new_pl->plangle = pl->plangle;
 #ifdef POLYOBJECTS_PLANES
 		new_pl->polyobj = pl->polyobj;
+#endif
+#ifdef ESLOPE
+		new_pl->slope = pl->slope;
 #endif
 		pl = new_pl;
 		pl->minx = start;
@@ -904,6 +918,78 @@ void R_DrawSinglePlane(visplane_t *pl)
 			nflatshiftup = 10;
 			break;
 	}
+
+#ifdef ESLOPE
+	if (pl->slope) {
+		// Potentially override other stuff for now cus we're mean. :< But draw a slope plane!
+		// I copied ZDoom's code and adapted it to SRB2... -Red
+		static const float ifloatpow2[16] =
+		{
+			// ifloatpow2[i] = 1 / (1 << i)
+			64.f, 32.f, 16.f, 8.f, 4.f, 2.f, 1.f, 0.5f,
+			0.25f, 0.125f, 0.0625f, 0.03125f, 0.015625f, 0.0078125f,
+			0.00390625f, 0.001953125f
+			/*, 0.0009765625f, 0.00048828125f, 0.000244140625f,
+			1.220703125e-4f, 6.103515625e-5, 3.0517578125e-5*/
+		};
+		double lxscale, lyscale;
+		double xscale, yscale;
+		v3float_t p, m, n;
+		angle_t ang;
+		double zeroheight;
+
+		double vx = FIXED_TO_FLOAT(viewx);
+		double vy = FIXED_TO_FLOAT(viewy);
+		double vz = FIXED_TO_FLOAT(viewz);
+
+		zeroheight = FIXED_TO_FLOAT(P_GetZAt(pl->slope, viewx, viewy));
+
+		// p is the texture origin in view space
+		// Don't add in the offsets at this stage, because doing so can result in
+		// errors if the flat is rotated.
+		ang = (ANGLE_270 - viewangle)>>ANGLETOFINESHIFT;
+		p.x = vx * FIXED_TO_FLOAT(FINECOSINE(ang)) - vy * FIXED_TO_FLOAT(FINESINE(ang));
+		p.z = vx * FIXED_TO_FLOAT(FINESINE(ang)) + vy * FIXED_TO_FLOAT(FINECOSINE(ang));
+		p.y = FIXED_TO_FLOAT(P_GetZAt(pl->slope, 0, 0)) - vz;
+
+		// m is the v direction vector in view space
+		ang = (ANGLE_180 - viewangle - pl->plangle) >> ANGLETOFINESHIFT;
+		m.x = FIXED_TO_FLOAT(FINECOSINE(ang));
+		m.z = FIXED_TO_FLOAT(FINESINE(ang));
+
+		// n is the u direction vector in view space
+		ang += ANGLE_90>>ANGLETOFINESHIFT;
+		ang &= FINEMASK;
+		n.x = -FIXED_TO_FLOAT(FINECOSINE(ang));
+		n.z = -FIXED_TO_FLOAT(FINESINE(ang));
+
+		ang = pl->plangle>>ANGLETOFINESHIFT;
+		m.y = FIXED_TO_FLOAT(P_GetZAt(pl->slope, viewx + FINESINE(ang), viewy + FINECOSINE(ang))) - zeroheight;
+		ang += ANGLE_90>>ANGLETOFINESHIFT;
+		ang &= FINEMASK;
+		n.y = FIXED_TO_FLOAT(P_GetZAt(pl->slope, viewx + FINESINE(ang), viewy + FINECOSINE(ang))) - zeroheight;
+
+		M_CrossProduct3f(&ds_su, &p, &m);
+		M_CrossProduct3f(&ds_sv, &p, &n);
+		M_CrossProduct3f(&ds_sz, &m, &n);
+
+		ds_su.z *= focallengthf;
+		ds_sv.z *= focallengthf;
+		ds_sz.z *= focallengthf;
+
+		// Premultiply the texture vectors with the scale factors
+#define SFMULT 65536.f*(1<<nflatshiftup)
+		ds_su.x *= SFMULT;
+		ds_su.y *= SFMULT;
+		ds_su.z *= SFMULT;
+		ds_sv.x *= SFMULT;
+		ds_sv.y *= SFMULT;
+		ds_sv.z *= SFMULT;
+#undef SFMULT
+
+		spanfunc = R_DrawTiltedSpan_8;
+	}
+#endif // ESLOPE
 
 	xoffs = pl->xoffs;
 	yoffs = pl->yoffs;

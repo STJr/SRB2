@@ -60,6 +60,12 @@ extern fixed_t ds_xfrac, ds_yfrac, ds_xstep, ds_ystep;
 extern UINT8 *ds_source; // start of a 64*64 tile image
 extern UINT8 *ds_transmap;
 
+#ifdef ESLOPE
+pslope_t *ds_slope; // Current slope being used
+v3float_t ds_su, ds_sv, ds_sz; // Vectors for... stuff?
+float focallengthf;
+#endif
+
 // Variable flat sizes
 extern UINT32 nflatxshift;
 extern UINT32 nflatyshift;
@@ -141,6 +147,9 @@ void ASMCALL R_DrawSpan_8_MMX(void);
 void R_DrawTranslatedColumn_8(void);
 void R_DrawTranslatedTranslucentColumn_8(void);
 void R_DrawSpan_8(void);
+#ifdef ESLOPE
+void R_DrawTiltedSpan_8(void);
+#endif
 void R_DrawSplat_8(void);
 void R_DrawTranslucentSplat_8(void);
 void R_DrawTranslucentSpan_8(void);

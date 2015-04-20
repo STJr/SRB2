@@ -527,6 +527,8 @@ static void R_InitTextureMapping(void)
 	focallength = FixedDiv(centerxfrac,
 		FINETANGENT(FINEANGLES/4+/*cv_fov.value*/ FIELDOFVIEW/2));
 
+	focallengthf = FIXED_TO_FLOAT(focallength);
+
 	for (i = 0; i < FINEANGLES/2; i++)
 	{
 		if (FINETANGENT(i) > FRACUNIT*2)

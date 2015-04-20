@@ -487,6 +487,10 @@ static void R_AddLine(seg_t *line)
 #endif
 		backsector->ceilingpic == frontsector->ceilingpic
 		&& backsector->floorpic == frontsector->floorpic
+#ifdef ESLOPE
+		&& backsector->f_slope == frontsector->f_slope
+		&& backsector->c_slope == frontsector->c_slope
+#endif
 		&& backsector->lightlevel == frontsector->lightlevel
 		&& !curline->sidedef->midtexture
 		// Check offsets too!
@@ -862,7 +866,11 @@ static void R_Subsector(size_t num)
 		&& sectors[frontsector->heightsec].ceilingpic == skyflatnum)))
 	{
 		floorplane = R_FindPlane(frontsector->floorheight, frontsector->floorpic, floorlightlevel,
-			frontsector->floor_xoffs, frontsector->floor_yoffs, frontsector->floorpic_angle, floorcolormap, NULL);
+			frontsector->floor_xoffs, frontsector->floor_yoffs, frontsector->floorpic_angle, floorcolormap, NULL
+#ifdef ESLOPE
+			, frontsector->f_slope
+#endif
+			);
 	}
 	else
 		floorplane = NULL;
@@ -877,7 +885,11 @@ static void R_Subsector(size_t num)
 	{
 		ceilingplane = R_FindPlane(frontsector->ceilingheight, frontsector->ceilingpic,
 			ceilinglightlevel, frontsector->ceiling_xoffs, frontsector->ceiling_yoffs, frontsector->ceilingpic_angle,
-			ceilingcolormap, NULL);
+			ceilingcolormap, NULL
+#ifdef ESLOPE
+			, frontsector->c_slope
+#endif
+			);
 	}
 	else
 		ceilingplane = NULL;
@@ -914,7 +926,11 @@ static void R_Subsector(size_t num)
 					viewz < *rover->bottomheight);
 				ffloor[numffloors].plane = R_FindPlane(*rover->bottomheight, *rover->bottompic,
 					*frontsector->lightlist[light].lightlevel, *rover->bottomxoffs,
-					*rover->bottomyoffs, *rover->bottomangle, frontsector->lightlist[light].extra_colormap, rover);
+					*rover->bottomyoffs, *rover->bottomangle, frontsector->lightlist[light].extra_colormap, rover
+#ifdef ESLOPE
+					, NULL // will ffloors be slopable eventually?
+#endif
+					);
 
 				ffloor[numffloors].height = *rover->bottomheight;
 				ffloor[numffloors].ffloor = rover;
@@ -932,7 +948,11 @@ static void R_Subsector(size_t num)
 				light = R_GetPlaneLight(frontsector, *rover->topheight, viewz < *rover->topheight);
 				ffloor[numffloors].plane = R_FindPlane(*rover->topheight, *rover->toppic,
 					*frontsector->lightlist[light].lightlevel, *rover->topxoffs, *rover->topyoffs, *rover->topangle,
-					frontsector->lightlist[light].extra_colormap, rover);
+					frontsector->lightlist[light].extra_colormap, rover
+#ifdef ESLOPE
+					, NULL // will ffloors be slopable eventually?
+#endif
+					);
 				ffloor[numffloors].height = *rover->topheight;
 				ffloor[numffloors].ffloor = rover;
 				numffloors++;
@@ -985,7 +1005,11 @@ static void R_Subsector(size_t num)
 						polysec->lightlevel, xoff, yoff,
 						polysec->floorpic_angle-po->angle,
 						NULL,
-						NULL);
+						NULL
+#ifdef ESLOPE
+					, NULL // will ffloors be slopable eventually?
+#endif
+					);
 				//ffloor[numffloors].plane->polyobj = po;
 
 				ffloor[numffloors].height = polysec->floorheight;
@@ -1022,7 +1046,11 @@ static void R_Subsector(size_t num)
 				light = 0;
 				ffloor[numffloors].plane = R_FindPlane(polysec->ceilingheight, polysec->ceilingpic,
 					polysec->lightlevel, xoff, yoff, polysec->ceilingpic_angle-po->angle,
-					NULL, NULL);
+					NULL, NULL
+#ifdef ESLOPE
+					, NULL // will ffloors be slopable eventually?
+#endif
+					);
 				//ffloor[numffloors].plane->polyobj = po;
 
 				ffloor[numffloors].polyobj = po;

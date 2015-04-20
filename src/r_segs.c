@@ -1757,6 +1757,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		if (worldlow != worldbottom
 #ifdef ESLOPE
 			|| worldlowslope != worldbottomslope
+			|| backsector->f_slope != frontsector->f_slope
 #endif
 		    || backsector->floorpic != frontsector->floorpic
 		    || backsector->lightlevel != frontsector->lightlevel
@@ -1782,6 +1783,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		if (worldhigh != worldtop
 #ifdef ESLOPE
 			|| worldhighslope != worldtopslope
+			|| backsector->c_slope != frontsector->c_slope
 #endif
 		    || backsector->ceilingpic != frontsector->ceilingpic
 		    || backsector->lightlevel != frontsector->lightlevel
@@ -2092,13 +2094,21 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	//  and doesn't need to be marked.
 	if (frontsector->heightsec == -1)
 	{
-		if (frontsector->floorheight >= viewz)
+		if ((
+#ifdef ESLOPE
+			frontsector->f_slope ? P_GetZAt(frontsector->f_slope, viewx, viewy) :
+#endif
+			frontsector->floorheight) >= viewz)
 		{
 			// above view plane
 			markfloor = false;
 		}
 
-		if (frontsector->ceilingheight <= viewz &&
+		if ((
+#ifdef ESLOPE
+			frontsector->c_slope ? P_GetZAt(frontsector->c_slope, viewx, viewy) :
+#endif
+			frontsector->ceilingheight) <= viewz &&
 		    frontsector->ceilingpic != skyflatnum)
 		{
 			// below view plane

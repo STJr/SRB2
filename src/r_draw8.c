@@ -526,6 +526,49 @@ void R_DrawSpan_8 (void)
 	}
 }
 
+#ifdef ESLOPE
+/**	\brief The R_DrawTiltedSpan_8 function
+	Draw slopes! Holy sheit!
+*/
+void R_DrawTiltedSpan_8(void)
+{
+	// x1, x2 = ds_x1, ds_x2
+	int width = ds_x2 - ds_x1;
+	double iz, uz, vz;
+	BYTE *fb;
+	DWORD u, v;
+	int i;
+
+	UINT8 *source;
+	UINT8 *colormap;
+	UINT8 *dest;
+
+	iz = ds_sz.z + ds_sz.y*(centery-ds_y) + ds_sz.x*(ds_x1-centerx);
+
+	uz = ds_su.z + ds_su.y*(centery-ds_y) + ds_su.x*(ds_x1-centerx);
+	vz = ds_sv.z + ds_sv.y*(centery-ds_y) + ds_sv.x*(ds_x1-centerx);
+
+	dest = ylookup[ds_y] + columnofs[ds_x1];
+	source = ds_source;
+	colormap = ds_colormap;
+
+	// The "perfect" reference version of this routine. Pretty slow.
+	// Use it only to see how things are supposed to look.
+	i = 0;
+	do
+	{
+		double z = 1.f/iz;
+		u = (INT64)(uz*z) + viewx;
+		v = (INT64)(vz*z) + viewy;
+		*dest = colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]];
+		dest++;
+		iz += ds_sz.x;
+		uz += ds_su.x;
+		vz += ds_sv.x;
+	} while (--width >= 0);
+}
+#endif // ESLOPE
+
 /**	\brief The R_DrawSplat_8 function
 	Just like R_DrawSpan_8, but skips transparent pixels.
 */
