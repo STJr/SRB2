@@ -535,8 +535,7 @@ void R_DrawTiltedSpan_8(void)
 	// x1, x2 = ds_x1, ds_x2
 	int width = ds_x2 - ds_x1;
 	double iz, uz, vz;
-	BYTE *fb;
-	DWORD u, v;
+	UINT32 u, v;
 	int i;
 
 	UINT8 *source;
