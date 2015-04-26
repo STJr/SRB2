@@ -965,9 +965,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 		ang = pl->plangle>>ANGLETOFINESHIFT;
 		m.y = FIXED_TO_FLOAT(P_GetZAt(pl->slope, viewx + FINESINE(ang), viewy + FINECOSINE(ang))) - zeroheight;
-		ang += ANGLE_90>>ANGLETOFINESHIFT;
-		ang &= FINEMASK;
-		n.y = FIXED_TO_FLOAT(P_GetZAt(pl->slope, viewx + FINESINE(ang), viewy + FINECOSINE(ang))) - zeroheight;
+		n.y = FIXED_TO_FLOAT(P_GetZAt(pl->slope, viewx + FINECOSINE(ang), viewy - FINESINE(ang))) - zeroheight;
 
 		M_CrossProduct3f(&ds_su, &p, &m);
 		M_CrossProduct3f(&ds_sv, &p, &n);
