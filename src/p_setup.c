@@ -1170,10 +1170,6 @@ static void P_LoadLineDefs(lumpnum_t lumpnum)
 #ifdef POLYOBJECTS
 		ld->polyobj = NULL;
 #endif
-
-#ifdef ESLOPE
-		P_MakeLineNormal(ld);
-#endif
 	}
 
 	Z_Free(data);

@@ -239,29 +239,30 @@ typedef struct
 	// and the one with the 'f' is floating point, for easier reference elsewhere in the code
 	v3fixed_t o;
 	v3float_t of;
-	
+
 	// The normal of the 3d plane the slope creates.
+	v3fixed_t normal;
 	v3float_t normalf;
-	
+
 	// 2-Dimentional vector (x, y) normalized. Used to determine distance from
 	// the origin in 2d mapspace.
 	v2fixed_t d;
 	v2float_t df;
-	
+
 	// The rate at which z changes based on distance from the origin plane.
 	fixed_t zdelta;
 	float   zdeltaf;
-	
+
 	// For comparing when a slope should be rendered
 	fixed_t lowz;
 	fixed_t highz;
-	
+
 	// SRB2CBTODO: This could be used for something?
 	// Determining the relative z values in a slope?
 	struct line_s *sourceline;
-	
+
 	// This values only check and must be updated if the slope itself is modified
-	USHORT zangle; // Angle of the plane going up from the ground (not mesured in degrees)
+	angle_t zangle; // Angle of the plane going up from the ground (not mesured in degrees)
 	angle_t xydirection; // The direction the slope is facing (north, west, south, etc.)
 	secplane_t secplane; // Extra data for collision and stuff
 } pslope_t;
@@ -444,12 +445,6 @@ typedef struct line_s
 
 	char *text; // a concatination of all front and back texture names, for linedef specials that require a string.
 	INT16 callcount; // no. of calls left before triggering, for the "X calls" linedef specials, defaults to 0
-
-#ifdef ESLOPE
-	// SoM 05/11/09: Pre-calculated 2D normal for the line
-	float nx, ny;
-	float len;
-#endif
 } line_t;
 
 //
