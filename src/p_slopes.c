@@ -359,7 +359,7 @@ void P_SpawnSlope_Line(int linenum)
 			srcplane->a = FLOAT_TO_FIXED (fslope->normalf.x); // cross[0]
 			srcplane->b = FLOAT_TO_FIXED (fslope->normalf.y); // cross[1]
 			srcplane->c = FLOAT_TO_FIXED (fslope->normalf.z); // cross[2]
-			srcplane->ic = DivScale32 (1, srcplane->c); // (1 << 32/srcplane->c) or FLOAT_TO_FIXED(1.0f/cross[2]);
+			srcplane->ic = FixedDiv(FRACUNIT, srcplane->c); // (1 << 32/srcplane->c) or FLOAT_TO_FIXED(1.0f/cross[2]);
 
 			// destheight takes the destination height used in dz
 			srcplane->d = -TMulScale16 (srcplane->a, line->v1->x, // x
@@ -414,7 +414,7 @@ void P_SpawnSlope_Line(int linenum)
 			srcplane->b = FLOAT_TO_FIXED (cslope->normalf.y); // cross[1]
 			srcplane->c = FLOAT_TO_FIXED (cslope->normalf.z); // cross[2]
 			//plane->ic = FLOAT_TO_FIXED (1.f/cross[2]);
-			srcplane->ic = DivScale32 (1, srcplane->c); // (1 << 32/srcplane->c)
+			srcplane->ic = FixedDiv(FRACUNIT, srcplane->c); // (1 << 32/srcplane->c)
 #ifdef SLOPETHINGS // For setting thing-based slopes
 			srcplane->d = -TMulScale16 (plane->a, x,
 										plane->b, y,
@@ -523,7 +523,7 @@ void P_SpawnSlope_Line(int linenum)
 			srcplane->b = FLOAT_TO_FIXED (fslope->normalf.y); // cross[1]
 			srcplane->c = FLOAT_TO_FIXED (fslope->normalf.z); // cross[2]
 			//plane->ic = FLOAT_TO_FIXED (1.f/cross[2]);
-			srcplane->ic = DivScale32 (1, srcplane->c); // (1 << 32/srcplane->c)
+			srcplane->ic = FixedDiv(FRACUNIT, srcplane->c); // (1 << 32/srcplane->c)
 #ifdef SLOPETHINGS // For setting thing-based slopes
 			srcplane->d = -TMulScale16 (plane->a, x,
 										plane->b, y,
@@ -585,7 +585,7 @@ void P_SpawnSlope_Line(int linenum)
 			srcplane->b = FLOAT_TO_FIXED (cslope->normalf.y); // cross[1]
 			srcplane->c = FLOAT_TO_FIXED (cslope->normalf.z); // cross[2]
 			//plane->ic = FLOAT_TO_FIXED (1.f/cross[2]);
-			srcplane->ic = DivScale32 (1, srcplane->c); // (1 << 32/srcplane->c)
+			srcplane->ic = FixedDiv(FRACUNIT, srcplane->c); // (1 << 32/srcplane->c)
 #ifdef SLOPETHINGS // For setting thing-based slopes
 			srcplane->d = -TMulScale16 (plane->a, x,
 										plane->b, y,
@@ -637,13 +637,6 @@ void P_CopySectorSlope(line_t *line)
 
 
 #include "byteptr.h"
-
-/*
-typedef struct
-{
-	fixed_t z1;
-	fixed_t z2;
-} mapvert_t;*/
 
 #include "p_setup.h"
 #include "p_local.h"
@@ -861,7 +854,7 @@ void P_SetSlopesFromVertexHeights(lumpnum_t lumpnum)
 						srcplane->a = FLOAT_TO_FIXED (ret->normalf.x);
 						srcplane->b = FLOAT_TO_FIXED (ret->normalf.y);
 						srcplane->c = FLOAT_TO_FIXED (ret->normalf.z);
-						//srcplane->ic = DivScale32 (1, srcplane->c);
+						//srcplane->ic = FixedDiv(FRACUNIT, srcplane->c);
 						srcplane->d = -TMulScale16 (srcplane->a, vertexes[vi3].x,
 													srcplane->b, vertexes[vi3].y,
 													srcplane->c, z3);
@@ -891,279 +884,11 @@ void P_SetSlopesFromVertexHeights(lumpnum_t lumpnum)
 	}
 	Z_Free(datastart);
 
-#if 0 // UDMF support
-	for(i = 0; i < numvertexdatas; i++)
-	{
-		if (vertexdatas[i].flags & VERTEXFLAG_ZCeilingEnabled)
-		{
-			vt_heights[1][i] = vertexdatas[i].zCeiling;
-			vt_found = true;
-		}
-
-		if (vertexdatas[i].flags & VERTEXFLAG_ZFloorEnabled)
-		{
-			vt_heights[0][i] = vertexdatas[i].zFloor;
-			vt_found = true;
-		}
-	}
-
-	// If vertexdata_t is ever extended for non-slope usage, this will obviously have to be deferred or removed.
-	delete[] vertexdatas;
-	vertexdatas = NULL;
-	numvertexdatas = 0;
-#endif
-
 
 
 
 }
 
-#include "p_maputl.h"
-
-#if 0
-static void P_SlopeLineToPointo (int lineid, fixed_t x, fixed_t y, fixed_t z, boolean slopeCeil)
-{
-	int linenum = -1;
-
-	while ((linenum = P_FindLineFromID (lineid, linenum)) != -1)
-	{
-		const line_t *line = &lines[linenum];
-		sector_t *sec;
-		secplane_t *plane;
-
-		if (P_PointOnLineSide (x, y, line) == 0)
-		{
-			sec = line->frontsector;
-		}
-		else
-		{
-			sec = line->backsector;
-		}
-		if (sec == NULL)
-		{
-			continue;
-		}
-		if (slopeCeil)
-		{
-			plane = &sec->ceilingplane;
-		}
-		else
-		{
-			plane = &sec->floorplane;
-		}
-
-		FVector3 p, v1, v2, cross;
-
-		p[0] = FIXED2FLOAT (line->v1->x);
-		p[1] = FIXED2FLOAT (line->v1->y);
-		p[2] = FIXED2FLOAT (plane->ZatPoint (line->v1->x, line->v1->y));
-		v1[0] = FIXED2FLOAT (line->dx);
-		v1[1] = FIXED2FLOAT (line->dy);
-		v1[2] = FIXED2FLOAT (plane->ZatPoint (line->v2->x, line->v2->y)) - p[2];
-		v2[0] = FIXED2FLOAT (x - line->v1->x);
-		v2[1] = FIXED2FLOAT (y - line->v1->y);
-		v2[2] = FIXED2FLOAT (z) - p[2];
-
-		cross = v1 ^ v2;
-		double len = cross.Length();
-		if (len == 0)
-		{
-			Printf ("Slope thing at (%d,%d) lies directly on its target line.\n", int(x>>16), int(y>>16));
-			return;
-		}
-		cross /= len;
-		// Fix backward normals
-		if ((cross.Z < 0 && !slopeCeil) || (cross.Z > 0 && slopeCeil))
-		{
-			cross = -cross;
-		}
-
-		plane->a = FLOAT2FIXED (cross[0]);
-		plane->b = FLOAT2FIXED (cross[1]);
-		plane->c = FLOAT2FIXED (cross[2]);
-		//plane->ic = FLOAT2FIXED (1.f/cross[2]);
-		plane->ic = DivScale32 (1, plane->c);
-		plane->d = -TMulScale16 (plane->a, x,
-								 plane->b, y,
-								 plane->c, z);
-	}
-}
-#else
-#if 0
-// P_SlopeLineToPoint, start from a specific linedef number(not tag) and slope to a mapthing with the angle of the linedef
-static void P_SlopeLineToPoint(int linenum)
-{
-	line_t *line = lines + linenum;
-	int special = line->special;
-	pslope_t *fslope = NULL, *cslope = NULL;
-	v3float_t origin, point;
-	v2float_t direction;
-	float dz, extent;
-
-	boolean frontfloor = (special == 386 || special == 388 || special == 393);
-	boolean backfloor  = (special == 389 || special == 391 || special == 392);
-	boolean frontceil  = (special == 387 || special == 388 || special == 392);
-	boolean backceil   = (special == 390 || special == 391 || special == 393);
-
-	// SoM: We don't need the line to retain its special type
-	line->special = 0; //SRB2CBTODO: ESLOPE: Maybe we do need it for another to check for a plane slope?
-
-	if(!frontfloor && !backfloor && !frontceil && !backceil)
-	{
-		CONS_Printf("P_SpawnSlope_Line called with non-slope line special.\n");
-		return;
-	}
-
-	if(!line->frontsector || !line->backsector)
-	{
-		CONS_Printf("P_SpawnSlope_Line used on a line without two sides.\n");
-		return;
-	}
-
-	origin.x = (FIXED_TO_FLOAT(line->v2->x) + FIXED_TO_FLOAT(line->v1->x)) * 0.5f;
-	origin.y = (FIXED_TO_FLOAT(line->v2->y) + FIXED_TO_FLOAT(line->v1->y)) * 0.5f;
-
-	if(frontfloor || frontceil)
-	{
-		// Do the front sector
-		direction.x = line->nx;
-		direction.y = line->ny;
-
-		extent = P_GetExtent(line->frontsector, line, &origin, &direction);
-
-		if(extent < 0.0f)
-		{
-			CONS_Printf("P_SpawnSlope_Line failed to get frontsector extent on line number %i\n", linenum);
-			return;
-		}
-
-		// reposition the origin according to the extent
-		point.x = origin.x + direction.x * extent;
-		point.y = origin.y + direction.y * extent;
-		direction.x = -direction.x;
-		direction.y = -direction.y;
-
-		// CONS_Printf("Test: X: %f, Y: %f\n", origin.x, origin.y);
-
-		if(frontfloor)
-		{
-			point.z = FIXED_TO_FLOAT(line->frontsector->floorheight); // Startz
-			dz = (FIXED_TO_FLOAT(line->backsector->floorheight) - point.z) / extent; // Destinationz
-
-			fslope = line->frontsector->f_slope =
-            P_MakeSlope(&point, &direction, dz, false);
-
-			// Sync the linedata of the line that started this slope
-			// SRB2CBTODO: Anything special for remote(control sector)-based slopes later?
-			line->frontsector->f_slope->sourceline = line;
-
-			// Remember the way the slope is formed
-			fixed_t highest = line->frontsector->floorheight > line->backsector->floorheight ?
-			line->frontsector->floorheight : line->backsector->floorheight;
-			fixed_t lowest = line->frontsector->floorheight < line->backsector->floorheight ?
-			line->frontsector->floorheight : line->backsector->floorheight;
-			// This line special sets extra clipping data for the frontsector's slope
-			fslope->highz = line->frontsector->f_slope->highz = highest;
-			fslope->lowz = line->frontsector->f_slope->lowz = lowest;
-
-			// SRB2CBTODO: Get XY angle of a slope and then awesome physics! //        ESLOPE:
-			//fslope->zangle = line->frontsector->f_slope->zangle = P_GetSlopezangle(line->frontsector, highvert, lowvert);
-			//100*(ANG45/45);//R_PointToAngle2(direction.x, direction.y, origin.x, origin.y);
-			// Get slope XY angle with secplane_t
-			secplane_t *srcplane = Z_Calloc(sizeof(*srcplane), PU_LEVEL, NULL);
-			// ZDoom secplane port!
-			// secplane_t! woot!
-			// ret = f_slope or c_slope
-			srcplane->a = FLOAT_TO_FIXED (fslope->normalf.x); // cross[0]
-			srcplane->b = FLOAT_TO_FIXED (fslope->normalf.y); // cross[1]
-			srcplane->c = FLOAT_TO_FIXED (fslope->normalf.z); // cross[2]
-			//plane->ic = FLOAT_TO_FIXED (1.f/cross[2]);
-			srcplane->ic = DivScale32 (1, srcplane->c); // (1 << 32/srcplane->c)
-#ifdef SLOPETHINGS // For setting thing-based slopes
-			srcplane->d = -TMulScale16 (plane->a, x,
-										plane->b, y,
-										plane->c, z);
-#endif
-			//srcheight = isceiling ? sec->GetPlaneTexZ(sector_t::floor) : sec->GetPlaneTexZ(sector_t::ceiling);
-			//destheight = isceiling ? refsec->GetPlaneTexZ(sector_t::floor) : refsec->GetPlaneTexZ(sector_t::ceiling);
-			//P_GetZAtf(ret, v2.x, v2.y)
-			// destheight takes the destination height used in dz
-			srcplane->d = -TMulScale16 (srcplane->a, line->v1->x,
-										srcplane->b, line->v1->y,
-										srcplane->c, line->backsector->floorheight);
-
-			// Sync the secplane!
-			fslope->secplane = line->frontsector->f_slope->secplane = *srcplane;
-
-		}
-	}
-}
-#endif
-#endif
-
-
-
-//===========================================================================
-//
-// P_SpawnSlopeMakers
-//
-//===========================================================================
-#if 0
-void P_SpawnSlopeMakers (FMapThing *firstmt, FMapThing *lastmt)
-{
-	FMapThing *mt;
-
-	for (mt = firstmt; mt < lastmt; ++mt)
-	{
-		if ((mt->type >= THING_SlopeFloorPointLine &&
-			 mt->type <= THING_SetCeilingSlope) ||
-			mt->type==THING_VavoomFloor || mt->type==THING_VavoomCeiling)
-		{
-			fixed_t x, y, z;
-			secplane_t *refplane;
-			sector_t *sec;
-
-			x = mt->x;
-			y = mt->y;
-			sec = P_PointInSector (x, y);
-			if (mt->type & 1)
-			{
-				refplane = &sec->ceilingplane;
-			}
-			else
-			{
-				refplane = &sec->floorplane;
-			}
-			z = refplane->ZatPoint (x, y) + (mt->z);
-			if (mt->type==THING_VavoomFloor || mt->type==THING_VavoomCeiling)
-			{
-				P_VavoomSlope(sec, mt->thingid, x, y, mt->z, mt->type & 1);
-			}
-			else if (mt->type <= THING_SlopeCeilingPointLine)
-			{
-				P_SlopeLineToPoint (mt->args[0], x, y, z, mt->type & 1);
-			}
-			else
-			{
-				P_SetSlope (refplane, mt->type & 1, mt->angle, mt->args[0], x, y, z);
-			}
-			mt->type = 0;
-		}
-	}
-
-	for (mt = firstmt; mt < lastmt; ++mt)
-	{
-		if (mt->type == THING_CopyFloorPlane ||
-			mt->type == THING_CopyCeilingPlane)
-		{
-			P_CopyPlane (mt->args[0], mt->x, mt->y, mt->type & 1);
-			mt->type = 0;
-		}
-	}
-
-	P_SetSlopesFromVertexHeights(firstmt, lastmt);
-}
-#endif
 
 
 
