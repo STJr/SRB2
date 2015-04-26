@@ -357,7 +357,7 @@ void P_CameraLineOpening(line_t *linedef)
 		if (sectors[front->camsec].c_slope)
 			frontceiling = P_GetZAt(sectors[front->camsec].c_slope, camera.x, camera.y);
 #endif
-			
+
 	}
 	else if (front->heightsec >= 0)
 	{
@@ -463,7 +463,7 @@ void P_CameraLineOpening(line_t *linedef)
 /*#ifdef ESLOPE
 					if (rover->t_slope)
 						topheight = P_GetZAt(rover->t_slope, camera.x, camera.y);
-					
+
 					if (rover->b_slope)
 						bottomheight = P_GetZAt(rover->b_slope, camera.x, camera.y);
 #endif // ESLOPE*/
@@ -494,7 +494,7 @@ void P_CameraLineOpening(line_t *linedef)
 /*#ifdef ESLOPE
 					if (rover->t_slope)
 						topheight = P_GetZAt(rover->t_slope, camera.x, camera.y);
-					
+
 					if (rover->b_slope)
 						bottomheight = P_GetZAt(rover->b_slope, camera.x, camera.y);
 #endif // ESLOPE*/
@@ -642,7 +642,7 @@ void P_LineOpening(line_t *linedef)
 			if (front->c_slope) highceiling = P_GetZAt(front->c_slope, tmthing->x, tmthing->y);
 		}
 
-		if (front->c_slope && front->floorheight < back->floorheight)
+		if (front->f_slope && front->floorheight < back->floorheight)
 		{
 			openbottom = P_GetZAt(front->f_slope, tmthing->x, tmthing->y);
 			if (back->f_slope) lowfloor = P_GetZAt(back->f_slope, tmthing->x, tmthing->y);
@@ -683,11 +683,11 @@ void P_LineOpening(line_t *linedef)
 
 				fixed_t topheight = *rover->topheight;
 				fixed_t bottomheight = *rover->bottomheight;
-				
+
 /*#ifdef ESLOPE
 				if (rover->t_slope)
 					topheight = P_GetZAt(rover->t_slope, camera.x, camera.y);
-				
+
 				if (rover->b_slope)
 					bottomheight = P_GetZAt(rover->b_slope, camera.x, camera.y);
 #endif*/
@@ -730,7 +730,7 @@ void P_LineOpening(line_t *linedef)
 /*#ifdef ESLOPE
 				if (rover->t_slope)
 					topheight = P_GetZAt(rover->t_slope, tmthing->x, tmthing->y);
-				
+
 				if (rover->b_slope)
 					bottomheight = P_GetZAt(rover->b_slope, tmthing->x, tmthing->y);
 #endif*/
