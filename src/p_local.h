@@ -232,6 +232,9 @@ boolean P_RailThinker(mobj_t *mobj);
 void P_PushableThinker(mobj_t *mobj);
 void P_SceneryThinker(mobj_t *mobj);
 
+fixed_t P_GetFloorZ(mobj_t *mobj, sector_t *sector, fixed_t x, fixed_t y, line_t *line);
+fixed_t P_GetCeilingZ(mobj_t *mobj, sector_t *sector, fixed_t x, fixed_t y, line_t *line);
+
 boolean P_InsideANonSolidFFloor(mobj_t *mobj, ffloor_t *rover);
 boolean P_CheckDeathPitCollide(mobj_t *mo);
 boolean P_CheckSolidLava(mobj_t *mo, ffloor_t *rover);
