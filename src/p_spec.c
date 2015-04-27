@@ -4765,8 +4765,8 @@ void P_UpdateSpecials(void)
 	// POINT LIMIT
 	P_CheckPointLimit();
 
-	// Kalaron: ...We...have dynamic slopes *YESSSS*
-	P_SpawnDeferredSpecials();
+	// Dynamic slopeness
+	P_RunDynamicSlopes();
 
 	// ANIMATE TEXTURES
 	for (anim = anims; anim < lastanim; anim++)
@@ -6446,6 +6446,25 @@ void P_SpawnSpecials(INT32 fromnetsave)
 				for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
 					sectors[s].midmap = lines[i].frontsector->midmap;
 				break;
+
+#ifdef ESLOPE // Slope specials. TODO move these to a different spot, maybe?
+			case 386:
+			case 387:
+			case 388:
+			case 389:
+			case 390:
+			case 391:
+			case 392:
+			case 393:
+				P_SpawnSlope_Line(i);
+				break;
+				// SoM: Copy slopes
+			case 394:
+			case 395:
+			case 396:
+				P_CopySectorSlope(&lines[i]);
+				break;
+#endif
 
 			default:
 				break;

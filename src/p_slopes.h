@@ -1,4 +1,4 @@
-// Emacs style mode select   -*- C++ -*- 
+// Emacs style mode select   -*- C++ -*-
 //-----------------------------------------------------------------------------
 //
 // Copyright(C) 2004 Stephen McGranahan
@@ -7,12 +7,12 @@
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation; either version 2 of the License, or
 // (at your option) any later version.
-// 
+//
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-// 
+//
 // You should have received a copy of the GNU General Public License
 // along with this program; if not, write to the Free Software
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -29,6 +29,9 @@
 #define P_SLOPES_H__
 
 #ifdef ESLOPE
+void P_ResetDynamicSlopes(void);
+void P_RunDynamicSlopes(void);
+
 // P_MakeLineNormal
 // Calculates a 2D normal for the given line and stores it in the line
 void P_MakeLineNormal(line_t *line);
@@ -74,7 +77,7 @@ float P_GetZAtf(pslope_t *slope, float x, float y);
 
 
 // Returns the distance of the given point from the given origin and normal.
-float P_DistFromPlanef(const v3float_t *point, const v3float_t *pori, 
+float P_DistFromPlanef(const v3float_t *point, const v3float_t *pori,
                        const v3float_t *pnormal);
 
 #endif

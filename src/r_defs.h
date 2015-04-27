@@ -229,7 +229,7 @@ typedef struct secplane_t
 
 #include "m_vector.h"
 
-typedef struct
+typedef struct pslope_s
 {
 	// --- Information used in clipping/projection ---
 	// Origin vector for the plane
@@ -240,12 +240,8 @@ typedef struct
 	v3fixed_t o;
 	v3float_t of;
 
-	// The normal of the 3d plane the slope creates.
-	v3fixed_t normal;
-	v3float_t normalf;
-
 	// 2-Dimentional vector (x, y) normalized. Used to determine distance from
-	// the origin in 2d mapspace.
+	// the origin in 2d mapspace. (Basically a thrust of FRACUNIT in xydirection angle)
 	v2fixed_t d;
 	v2float_t df;
 
@@ -253,18 +249,22 @@ typedef struct
 	fixed_t zdelta;
 	float   zdeltaf;
 
+	// The normal of the slope; will always point upward, and thus be inverted on ceilings. I think it's only needed for physics? -Red
+	v3fixed_t normal;
+
 	// For comparing when a slope should be rendered
 	fixed_t lowz;
 	fixed_t highz;
 
-	// SRB2CBTODO: This could be used for something?
-	// Determining the relative z values in a slope?
-	struct line_s *sourceline;
-
 	// This values only check and must be updated if the slope itself is modified
 	angle_t zangle; // Angle of the plane going up from the ground (not mesured in degrees)
 	angle_t xydirection; // The direction the slope is facing (north, west, south, etc.)
-	secplane_t secplane; // Extra data for collision and stuff
+
+	struct line_s *sourceline; // The line that generated the slope
+	fixed_t extent; // Distance value used for recalculating zdelta
+	UINT8 refpos; // 1=front floor 2=front ceiling 3=back floor 4=back ceiling (used for dynamic sloping) 0=disabled
+
+	struct pslope_s *next; // Make a linked list of dynamic slopes, for easy reference later
 } pslope_t;
 #endif
 

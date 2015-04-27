@@ -40,27 +40,79 @@
 
 #ifdef ESLOPE
 
+static pslope_t *dynslopes = NULL;
+
+// Reset the dynamic slopes pointer
+void P_ResetDynamicSlopes(void) {
+	dynslopes = NULL;
+}
+
+// Calculate line normal
+void P_CalculateSlopeNormal(pslope_t *slope) {
+	slope->normal.z = FINECOSINE(slope->zangle>>ANGLETOFINESHIFT);
+	slope->normal.x = -FixedMul(FINESINE(slope->zangle>>ANGLETOFINESHIFT), slope->d.x);
+	slope->normal.y = -FixedMul(FINESINE(slope->zangle>>ANGLETOFINESHIFT), slope->d.y);
+}
+
+// Recalculate dynamic slopes
+void P_RunDynamicSlopes(void) {
+	pslope_t *slope;
+
+	for (slope = dynslopes; slope; slope = slope->next) {
+		fixed_t zdelta;
+
+		switch(slope->refpos) {
+		case 1: // front floor
+			zdelta = slope->sourceline->backsector->floorheight - slope->sourceline->frontsector->floorheight;
+			break;
+		case 2: // front ceiling
+			zdelta = slope->sourceline->backsector->ceilingheight - slope->sourceline->frontsector->ceilingheight;
+			break;
+		case 3: // back floor
+			zdelta = slope->sourceline->frontsector->floorheight - slope->sourceline->backsector->floorheight;
+			break;
+		case 4: // back ceiling
+			zdelta = slope->sourceline->frontsector->ceilingheight - slope->sourceline->backsector->ceilingheight;
+			break;
+
+		default:
+			I_Error("P_RunDynamicSlopes: slope has invalid type!");
+		}
+
+		if (slope->zdelta != FixedDiv(zdelta, slope->extent)) {
+			slope->zdeltaf = FIXED_TO_FLOAT(slope->zdelta = FixedDiv(zdelta, slope->extent));
+			slope->zangle = R_PointToAngle2(0, 0, slope->extent, zdelta);
+			P_CalculateSlopeNormal(slope);
+		}
+	}
+}
+
 //
 // P_MakeSlope
 //
 // Alocates and fill the contents of a slope structure.
 //
 static pslope_t *P_MakeSlope(const v3fixed_t *o, const v2fixed_t *d,
-                             const fixed_t zdelta, boolean isceiling)
+                             const fixed_t zdelta, boolean dynamic)
 {
-   pslope_t *ret = Z_Malloc(sizeof(pslope_t), PU_LEVEL, NULL);
-   memset(ret, 0, sizeof(*ret));
+	pslope_t *ret = Z_Malloc(sizeof(pslope_t), PU_LEVEL, NULL);
+	memset(ret, 0, sizeof(*ret));
 
-   ret->of.x = FIXED_TO_FLOAT(ret->o.x = o->x);
-   ret->of.y = FIXED_TO_FLOAT(ret->o.y = o->y);
-   ret->of.z = FIXED_TO_FLOAT(ret->o.z = o->z);
+	ret->of.x = FIXED_TO_FLOAT(ret->o.x = o->x);
+	ret->of.y = FIXED_TO_FLOAT(ret->o.y = o->y);
+	ret->of.z = FIXED_TO_FLOAT(ret->o.z = o->z);
 
-   ret->df.x = FIXED_TO_FLOAT(ret->d.x = d->x);
-   ret->df.y = FIXED_TO_FLOAT(ret->d.y = d->y);
+	ret->df.x = FIXED_TO_FLOAT(ret->d.x = d->x);
+	ret->df.y = FIXED_TO_FLOAT(ret->d.y = d->y);
 
-   ret->zdeltaf = FIXED_TO_FLOAT(ret->zdelta = zdelta);
+	ret->zdeltaf = FIXED_TO_FLOAT(ret->zdelta = zdelta);
 
-   return ret;
+	if (dynamic) { // Add to the dynamic slopes list
+		ret->next = dynslopes;
+		dynslopes = ret;
+	}
+
+	return ret;
 }
 
 //
@@ -195,7 +247,11 @@ void P_SpawnSlope_Line(int linenum)
 			// In P_SpawnSlopeLine the origin is the centerpoint of the sourcelinedef
 
 			fslope = line->frontsector->f_slope =
-            P_MakeSlope(&point, &direction, dz, false);
+            P_MakeSlope(&point, &direction, dz, true);
+
+            // Set up some shit
+            fslope->extent = extent;
+            fslope->refpos = 1;
 
 			// Now remember that f_slope IS a vector
 			// fslope->o = origin      3D point 1 of the vector
@@ -235,8 +291,10 @@ void P_SpawnSlope_Line(int linenum)
 			fslope->highz = highest;
 			fslope->lowz = lowest;
 
-			fslope->zangle = R_PointToAngle2(0, origin.z, R_PointToDist2(origin.x, origin.y, point.x, point.y), point.z);
+			fslope->zangle = R_PointToAngle2(0, origin.z, extent, point.z);
 			fslope->xydirection = R_PointToAngle2(origin.x, origin.y, point.x, point.y);
+
+			P_CalculateSlopeNormal(fslope);
 		}
 		if(frontceil)
 		{
@@ -245,6 +303,10 @@ void P_SpawnSlope_Line(int linenum)
 
 			cslope = line->frontsector->c_slope =
             P_MakeSlope(&point, &direction, dz, true);
+
+            // Set up some shit
+            cslope->extent = extent;
+            cslope->refpos = 2;
 
 			// Sync the linedata of the line that started this slope
 			// SRB2CBTODO: Anything special for remote(control sector)-based slopes later?
@@ -270,8 +332,10 @@ void P_SpawnSlope_Line(int linenum)
 			cslope->highz = highest;
 			cslope->lowz = lowest;
 
-			cslope->zangle = R_PointToAngle2(0, origin.z, R_PointToDist2(origin.x, origin.y, point.x, point.y), point.z);
+			cslope->zangle = R_PointToAngle2(0, origin.z, extent, point.z);
 			cslope->xydirection = R_PointToAngle2(origin.x, origin.y, point.x, point.y);
+
+			P_CalculateSlopeNormal(cslope);
 		}
 	}
 	if(backfloor || backceil)
@@ -301,7 +365,11 @@ void P_SpawnSlope_Line(int linenum)
 			dz = FixedDiv(line->frontsector->floorheight - point.z, extent);
 
 			fslope = line->backsector->f_slope =
-            P_MakeSlope(&point, &direction, dz, false);
+            P_MakeSlope(&point, &direction, dz, true);
+
+            // Set up some shit
+            fslope->extent = extent;
+            fslope->refpos = 3;
 
 			// Sync the linedata of the line that started this slope
 			// SRB2CBTODO: Anything special for remote(control sector)-based slopes later?
@@ -327,8 +395,10 @@ void P_SpawnSlope_Line(int linenum)
 			fslope->highz = highest;
 			fslope->lowz = lowest;
 
-			cslope->zangle = R_PointToAngle2(0, origin.z, R_PointToDist2(origin.x, origin.y, point.x, point.y), point.z);
+			cslope->zangle = R_PointToAngle2(0, origin.z, extent, point.z);
 			cslope->xydirection = R_PointToAngle2(origin.x, origin.y, point.x, point.y);
+
+			P_CalculateSlopeNormal(fslope);
 		}
 		if(backceil)
 		{
@@ -337,6 +407,10 @@ void P_SpawnSlope_Line(int linenum)
 
 			cslope = line->backsector->c_slope =
             P_MakeSlope(&point, &direction, dz, true);
+
+            // Set up some shit
+            cslope->extent = extent;
+            cslope->refpos = 4;
 
 			// Sync the linedata of the line that started this slope
 			// SRB2CBTODO: Anything special for remote(control sector)-based slopes later?
@@ -363,8 +437,10 @@ void P_SpawnSlope_Line(int linenum)
 			cslope->highz = highest;
 			cslope->lowz = lowest;
 
-			cslope->zangle = R_PointToAngle2(0, origin.z, R_PointToDist2(origin.x, origin.y, point.x, point.y), point.z);
+			cslope->zangle = R_PointToAngle2(0, origin.z, extent, point.z);
 			cslope->xydirection = R_PointToAngle2(origin.x, origin.y, point.x, point.y);
+
+			P_CalculateSlopeNormal(cslope);
 		}
 	}
 
@@ -399,7 +475,7 @@ void P_CopySectorSlope(line_t *line)
    line->special = 0; // Linedef was use to set slopes, it finished its job, so now make it a normal linedef
 }
 
-
+#ifdef SPRINGCLEAN
 #include "byteptr.h"
 
 #include "p_setup.h"
@@ -652,7 +728,7 @@ void P_SetSlopesFromVertexHeights(lumpnum_t lumpnum)
 
 
 }
-
+#endif
 
 
 

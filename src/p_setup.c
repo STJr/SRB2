@@ -2544,6 +2544,7 @@ boolean P_SetupLevel(boolean skipprecip)
 			break;
 
 	// set up world state
+	P_ResetDynamicSlopes();
 	P_SpawnSpecials(fromnetsave);
 
 	if (loadprecip) //  ugly hack for P_NetUnArchiveMisc (and P_LoadNetGame)
