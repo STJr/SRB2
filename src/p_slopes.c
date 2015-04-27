@@ -64,15 +64,19 @@ void P_RunDynamicSlopes(void) {
 		switch(slope->refpos) {
 		case 1: // front floor
 			zdelta = slope->sourceline->backsector->floorheight - slope->sourceline->frontsector->floorheight;
+			slope->o.z = slope->sourceline->frontsector->floorheight;
 			break;
 		case 2: // front ceiling
 			zdelta = slope->sourceline->backsector->ceilingheight - slope->sourceline->frontsector->ceilingheight;
+			slope->o.z = slope->sourceline->frontsector->ceilingheight;
 			break;
 		case 3: // back floor
 			zdelta = slope->sourceline->frontsector->floorheight - slope->sourceline->backsector->floorheight;
+			slope->o.z = slope->sourceline->backsector->floorheight;
 			break;
 		case 4: // back ceiling
 			zdelta = slope->sourceline->frontsector->ceilingheight - slope->sourceline->backsector->ceilingheight;
+			slope->o.z = slope->sourceline->backsector->ceilingheight;
 			break;
 
 		default:
