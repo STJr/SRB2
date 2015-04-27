@@ -36,11 +36,6 @@ void P_SpawnSpecials(INT32 fromnetsave);
 
 // every tic
 void P_UpdateSpecials(void);
-
-#ifdef ESLOPE
-void P_SpawnDeferredSpecials(void);
-#endif
-
 sector_t *P_PlayerTouchingSectorSpecial(player_t *player, INT32 section, INT32 number);
 void P_PlayerInSpecialSector(player_t *player);
 void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *roversector);

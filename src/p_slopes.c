@@ -116,19 +116,6 @@ static pslope_t *P_MakeSlope(const v3fixed_t *o, const v2fixed_t *d,
 }
 
 //
-// P_CopySlope
-//
-// Allocates and returns a copy of the given slope structure.
-//
-static pslope_t *P_CopySlope(const pslope_t *src)
-{
-   pslope_t *ret = Z_Malloc(sizeof(pslope_t), PU_LEVEL, NULL);
-   memcpy(ret, src, sizeof(*ret));
-
-   return ret;
-}
-
-//
 // P_GetExtent
 //
 // Returns the distance to the first line within the sector that
@@ -471,7 +458,6 @@ void P_CopySectorSlope(line_t *line)
          fsec->c_slope = srcsec->c_slope; //P_CopySlope(srcsec->c_slope);
    }
 
-	//SRB2CBTODO: ESLOPE: Maybe we do need it for another to check for a plane slope?
    line->special = 0; // Linedef was use to set slopes, it finished its job, so now make it a normal linedef
 }
 
@@ -765,7 +751,7 @@ float P_GetZAtf(pslope_t *slope, float x, float y)
    return slope->of.z + (dist * slope->zdeltaf);
 }
 
-//
+// Unused? -Red
 // P_DistFromPlanef
 //
 float P_DistFromPlanef(const v3float_t *point, const v3float_t *pori,

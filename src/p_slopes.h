@@ -31,18 +31,12 @@
 #ifdef ESLOPE
 void P_ResetDynamicSlopes(void);
 void P_RunDynamicSlopes(void);
-
-// P_MakeLineNormal
-// Calculates a 2D normal for the given line and stores it in the line
-void P_MakeLineNormal(line_t *line);
-
-
 // P_SpawnSlope_Line
 // Creates one or more slopes based on the given line type and front/back
 // sectors.
 void P_SpawnSlope_Line(int linenum);
 
-
+#ifdef SPRINGCLEAN
 // Loads just map objects that make slopes,
 // terrain affecting objects have to be spawned first
 void P_SetSlopesFromVertexHeights(lumpnum_t lumpnum);
@@ -60,6 +54,7 @@ typedef enum
 	THING_VertexFloorZ=1504,
 	THING_VertexCeilingZ=1505,
 } slopething_e;
+#endif
 
 //
 // P_CopySectorSlope
@@ -76,6 +71,7 @@ fixed_t P_GetZAt(pslope_t *slope, fixed_t x, fixed_t y);
 float P_GetZAtf(pslope_t *slope, float x, float y);
 
 
+// Unused? -Red
 // Returns the distance of the given point from the given origin and normal.
 float P_DistFromPlanef(const v3float_t *point, const v3float_t *pori,
                        const v3float_t *pnormal);
