@@ -4584,16 +4584,8 @@ static void P_RunSpecialSectorCheck(player_t *player, sector_t *sector)
 		return;
 	}
 
-	fixed_t f_affectpoint = sector->floorheight;
-	fixed_t c_affectpoint = sector->ceilingheight;
-
-#ifdef ESLOPE
-	if (sector->f_slope)
-		f_affectpoint = P_GetZAt(sector->f_slope, player->mo->x, player->mo->y);
-
-	if (sector->c_slope)
-		c_affectpoint = P_GetZAt(sector->c_slope, player->mo->x, player->mo->y);
-#endif
+	fixed_t f_affectpoint = P_GetFloorZ(player->mo, sector, player->mo->x, player->mo->y, NULL);//sector->floorheight;
+	fixed_t c_affectpoint = P_GetCeilingZ(player->mo, sector, player->mo->x, player->mo->y, NULL);//sector->ceilingheight;
 
 	// Only go further if on the ground
 	if ((sector->flags & SF_FLIPSPECIAL_FLOOR) && !(sector->flags & SF_FLIPSPECIAL_CEILING) && player->mo->z != f_affectpoint)

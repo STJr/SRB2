@@ -28,7 +28,7 @@
 #include "hardware/hw3sound.h"
 #endif
 
-#ifdef ESLOPE
+#ifdef SPRINGCLEAN// ESLOPE
 #include "p_slopes.h"
 #endif
 
@@ -5611,12 +5611,8 @@ void A_MixUp(mobj_t *actor)
 				P_SetThingPosition(players[i].mo);
 
 #ifdef ESLOPE
-				players[i].mo->floorz = (players[i].mo->subsector->sector->f_slope ?
-										 P_GetZAt(players[i].mo->subsector->sector->f_slope, players[i].mo->x, players[i].mo->y) :
-										 players[i].mo->subsector->sector->floorheight);
-				players[i].mo->ceilingz = (players[i].mo->subsector->sector->c_slope ?
-										   P_GetZAt(players[i].mo->subsector->sector->c_slope, players[i].mo->x, players[i].mo->y) :
-										   players[i].mo->subsector->sector->ceilingheight);
+				players[i].mo->floorz = P_GetFloorZ(players[i].mo, players[i].mo->subsector->sector, players[i].mo->x, players[i].mo->y, NULL);
+				players[i].mo->ceilingz = P_GetCeilingZ(players[i].mo, players[i].mo->subsector->sector, players[i].mo->x, players[i].mo->y, NULL);
 #else
 				players[i].mo->floorz = players[i].mo->subsector->sector->floorheight;
 				players[i].mo->ceilingz = players[i].mo->subsector->sector->ceilingheight;

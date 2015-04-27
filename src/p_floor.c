@@ -19,7 +19,7 @@
 #include "z_zone.h"
 #include "g_game.h"
 #include "r_main.h"
-#ifdef ESLOPE
+#ifdef SPRINGCLEAN// ESLOPE
 #include "p_slopes.h"
 #endif
 
@@ -1177,18 +1177,15 @@ void T_SpikeSector(levelspecthink_t *spikes)
 
 		if (affectsec == spikes->sector) // Applied to an actual sector
 		{
-			fixed_t affectpoint = affectsec->floorheight;
+			fixed_t affectfloor = P_GetFloorZ(thing, affectsec, thing->x, thing->y, NULL);
+			fixed_t affectceil = P_GetCeilingZ(thing, affectsec, thing->x, thing->y, NULL);
 
-#ifdef ESLOPE
-			if (affectsec->f_slope)
-				affectpoint = P_GetZAt(affectsec->f_slope, thing->x, thing->y);
-#endif
 			if (affectsec->flags & SF_FLIPSPECIAL_FLOOR)
 			{
 				if (!(thing->eflags & MFE_VERTICALFLIP) && thing->momz > 0)
 					continue;
 
-				if (thing->z == affectpoint)
+				if (thing->z == affectfloor)
 					dothepain = true;
 			}
 
@@ -1197,7 +1194,7 @@ void T_SpikeSector(levelspecthink_t *spikes)
 				if ((thing->eflags & MFE_VERTICALFLIP) && thing->momz < 0)
 					continue;
 
-				if (thing->z + thing->height == affectsec->ceilingheight)
+				if (thing->z + thing->height == affectceil)
 					dothepain = true;
 			}
 		}

@@ -27,7 +27,7 @@
 
 #include "r_splats.h"
 
-#ifdef ESLOPE
+#ifdef SPRINGCLEAN// ESLOPE
 #include "p_slopes.h"
 #endif
 
@@ -125,7 +125,7 @@ void P_DoSpring(mobj_t *spring, mobj_t *object)
 		/*Someone want to make these work like bumpers?*/
 		return;
 	}
-	
+
 	object->eflags |= MFE_SPRUNG; // apply this flag asap!
 	spring->flags &= ~(MF_SOLID|MF_SPECIAL); // De-solidify
 
@@ -1208,21 +1208,8 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 	// that contains the point.
 	// Any contacted lines the step closer together
 	// will adjust them.
-#ifdef ESLOPE
-	if (newsubsec->sector->f_slope)
-	{
-		tmfloorz = tmdropoffz = P_GetZAt(newsubsec->sector->f_slope, thing->x, thing->y);
-	}
-	else
-#endif
-	tmfloorz = tmdropoffz = newsubsec->sector->floorheight;
-
-#ifdef ESLOPE
-	if (newsubsec->sector->c_slope)
-		tmceilingz = P_GetZAt(newsubsec->sector->c_slope, thing->x, thing->y);
-	else
-#endif
-	tmceilingz = newsubsec->sector->ceilingheight;
+	tmfloorz = tmdropoffz = P_GetFloorZ(thing, newsubsec->sector, thing->x, thing->y, NULL); //newsubsec->sector->floorheight;
+	tmceilingz = P_GetCeilingZ(thing, newsubsec->sector, thing->x, thing->y, NULL); //newsubsec->sector->ceilingheight;
 
 	// Check list of fake floors and see if tmfloorz/tmceilingz need to be altered.
 	if (newsubsec->sector->ffloors)
@@ -1535,7 +1522,7 @@ boolean P_CheckCameraPosition(fixed_t x, fixed_t y, camera_t *thiscam)
 
 			fixed_t topheight = *rover->topheight;
 			fixed_t bottomheight = *rover->bottomheight;
-			
+
 /*#ifdef ESLOPE
 			if (rover->t_slope)
 				topheight = P_GetZAt(rover->t_slope, thiscam->x, thiscam->y);
@@ -2033,7 +2020,7 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 	// Link the thing into its new position
 	P_UnsetThingPosition(thing);
 
-#ifdef ESLOPE
+#ifdef SRPINGCLEAN// ESLOPE
 	// By virtue of being derived from SRB2 code, Kalaron's physics are GPL.
 	if (P_IsObjectOnSlope(thing, false))
 	{
@@ -2112,32 +2099,9 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 	}
 #endif
 
-	// P_CheckPosition sets the tmfloorz with slopes, but after P_UnsetThingPosition, recheck the function here
-	// TODO: Make a function for floor/ceilingz auto check with slopes?
-#ifdef ESLOPE
-	if (thing->subsector->sector->f_slope)
-	{
-		// TODO: Support a mobj's gravity for this too
-		if (P_GetZAt(thing->subsector->sector->f_slope, thing->x+thing->momx, thing->y+thing->momy) > P_GetZAt(thing->subsector->sector->f_slope, thing->x, thing->y))
-			thing->floorz = P_GetZAt(thing->subsector->sector->f_slope, thing->x+thing->momx, thing->y+thing->momy);
-		else
-			thing->floorz = P_GetZAt(thing->subsector->sector->f_slope, thing->x, thing->y);
-	}
-	else
-#endif
-		thing->floorz = tmfloorz;
-#ifdef ESLOPE
-	if (thing->subsector->sector->c_slope)
-	{
-		// SRB2CBTODO: Support a mobj's gravity for this too
-		if (P_GetZAt(thing->subsector->sector->c_slope, thing->x+thing->momx, thing->y+thing->momy) < P_GetZAt(thing->subsector->sector->c_slope, thing->x, thing->y))
-			thing->ceilingz = P_GetZAt(thing->subsector->sector->c_slope, thing->x, thing->y);
-		else
-			thing->ceilingz = P_GetZAt(thing->subsector->sector->c_slope, thing->x+thing->momx, thing->y+thing->momy);
-	}
-	else
-#endif
-		thing->ceilingz = tmceilingz;
+	thing->floorz = tmfloorz;
+	thing->ceilingz = tmceilingz;
+
 	thing->x = x;
 	thing->y = y;
 
@@ -2494,16 +2458,8 @@ static boolean P_IsClimbingValid(player_t *player, angle_t angle)
 
 	glidesector = R_PointInSubsector(player->mo->x + platx, player->mo->y + platy);
 
-	floorz = glidesector->sector->floorheight;
-#ifdef ESLOPE
-	if (glidesector->sector->f_slope)
-		floorz = P_GetZAt(glidesector->sector->f_slope, player->mo->x + platx, player->mo->y + platy);
-#endif
-	ceilingz = glidesector->sector->ceilingheight;
-#ifdef ESLOPE
-	if (glidesector->sector->c_slope)
-		ceilingz = P_GetZAt(glidesector->sector->c_slope, player->mo->x + platx, player->mo->y + platy);
-#endif
+	floorz = P_GetFloorZ(player->mo, glidesector->sector, player->mo->x + platx, player->mo->y + platy, NULL);
+	ceilingz = P_GetCeilingZ(player->mo, glidesector->sector, player->mo->x + platx, player->mo->y + platy, NULL);
 
 	if (glidesector->sector != player->mo->subsector->sector)
 	{
@@ -2519,7 +2475,7 @@ static boolean P_IsClimbingValid(player_t *player, angle_t angle)
 
 				fixed_t topheight = *rover->topheight;
 				fixed_t bottomheight = *rover->bottomheight;
-				
+
 /*#ifdef ESLOPE
 				if (rover->t_slope)
 					topheight = P_GetZAt(rover->t_slope, player->mo->x, player->mo->y);
@@ -4046,7 +4002,7 @@ fixed_t P_FloorzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height)
 
 			fixed_t topheight = *rover->topheight;
 			fixed_t bottomheight = *rover->bottomheight;
-			
+
 /*#ifdef ESLOPE
 			if (rover->t_slope)
 				topheight = P_GetZAt(rover->t_slope, x, y);

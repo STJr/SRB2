@@ -21,7 +21,7 @@
 #include "p_maputl.h"
 #include "p_polyobj.h"
 #include "z_zone.h"
-#ifdef ESLOPE
+#ifdef SPRINGCLEAN// ESLOPE
 #include "p_slopes.h"
 #endif
 
@@ -557,26 +557,36 @@ void P_LineOpening(line_t *linedef)
 	I_Assert(front != NULL);
 	I_Assert(back != NULL);
 
-	if (front->ceilingheight < back->ceilingheight)
-	{
-		opentop = front->ceilingheight;
-		highceiling = back->ceilingheight;
-	}
-	else
-	{
-		opentop = back->ceilingheight;
-		highceiling = front->ceilingheight;
-	}
+	{ // Set open and high/low values here
+		fixed_t frontheight, backheight;
 
-	if (front->floorheight > back->floorheight)
-	{
-		openbottom = front->floorheight;
-		lowfloor = back->floorheight;
-	}
-	else
-	{
-		openbottom = back->floorheight;
-		lowfloor = front->floorheight;
+		frontheight = P_GetCeilingZ(tmthing, front, tmthing->x, tmthing->y, linedef);
+		backheight = P_GetCeilingZ(tmthing, back, tmthing->x, tmthing->y, linedef);
+
+		if (frontheight < backheight)
+		{
+			opentop = frontheight;
+			highceiling = backheight;
+		}
+		else
+		{
+			opentop = backheight;
+			highceiling = frontheight;
+		}
+
+		frontheight = P_GetFloorZ(tmthing, front, tmthing->x, tmthing->y, linedef);
+		backheight = P_GetFloorZ(tmthing, back, tmthing->x, tmthing->y, linedef);
+
+		if (frontheight > backheight)
+		{
+			openbottom = frontheight;
+			lowfloor = backheight;
+		}
+		else
+		{
+			openbottom = backheight;
+			lowfloor = frontheight;
+		}
 	}
 
 	if (tmthing)
@@ -627,32 +637,6 @@ void P_LineOpening(line_t *linedef)
 					openbottom = textop;
 			}
 		}
-#ifdef ESLOPE
-		// I suspect the math here is wrong and we should be comparing the slope Zs
-		// if either are slopes.
-		// -- Fury
-		if (front->c_slope && front->ceilingheight < back->ceilingheight)
-		{
-			opentop = P_GetZAt(front->c_slope, tmthing->x, tmthing->y);
-			if (back->c_slope) highceiling = P_GetZAt(back->c_slope, tmthing->x, tmthing->y);
-		}
-		else if (back->c_slope && front->ceilingheight >= back->ceilingheight)
-		{
-			opentop = P_GetZAt(back->c_slope, tmthing->x, tmthing->y);
-			if (front->c_slope) highceiling = P_GetZAt(front->c_slope, tmthing->x, tmthing->y);
-		}
-
-		if (front->f_slope && front->floorheight < back->floorheight)
-		{
-			openbottom = P_GetZAt(front->f_slope, tmthing->x, tmthing->y);
-			if (back->f_slope) lowfloor = P_GetZAt(back->f_slope, tmthing->x, tmthing->y);
-		}
-		if (back->f_slope && front->floorheight >= back->floorheight)
-		{
-			openbottom = P_GetZAt(back->f_slope, tmthing->x, tmthing->y);
-			if (front->f_slope) lowfloor = P_GetZAt(back->f_slope, tmthing->x, tmthing->y);
-		}
-#endif
 
 		// Check for fake floors in the sector.
 		if (front->ffloors || back->ffloors
@@ -889,14 +873,9 @@ void P_SetThingPosition(mobj_t *thing)
 	ss = thing->subsector = R_PointInSubsector(thing->x, thing->y);
 
 	fixed_t tfloorz, tceilz;
-	tfloorz = ss->sector->floorheight;
-	tceilz = ss->sector->ceilingheight;
-#ifdef ESLOPE
-	if (ss->sector->f_slope)
-		tfloorz = P_GetZAt(ss->sector->f_slope, thing->x, thing->y);
-	if (ss->sector->c_slope)
-		tceilz = P_GetZAt(ss->sector->c_slope, thing->x, thing->y);
-#endif
+
+	tfloorz = P_GetFloorZ(thing, ss->sector, thing->x, thing->y, NULL);
+	tceilz = P_GetCeilingZ(thing, ss->sector, thing->x, thing->y, NULL);
 
 	if (!(thing->flags & MF_NOSECTOR))
 	{
