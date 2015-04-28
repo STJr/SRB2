@@ -2083,7 +2083,7 @@ static void P_LevelInitStuff(void)
 				players[i].health = 6;
 		}
 		else
-            players[i].health = 1;
+			players[i].health = 1;
 
 		players[i].aiming = 0;
 		players[i].pflags &= ~PF_TIMEOVER;

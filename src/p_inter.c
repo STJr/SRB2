@@ -1247,13 +1247,13 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			}
 			else
 			{
-                // Save the player's time and position.
-                player->starposttime = leveltime;
-                player->starpostx = toucher->x>>FRACBITS;
-                player->starposty = toucher->y>>FRACBITS;
-                player->starpostz = special->z>>FRACBITS;
-                player->starpostangle = special->angle;
-                player->starpostnum = special->health;
+				// Save the player's time and position.
+				player->starposttime = leveltime;
+				player->starpostx = toucher->x>>FRACBITS;
+				player->starposty = toucher->y>>FRACBITS;
+				player->starpostz = special->z>>FRACBITS;
+				player->starpostangle = special->angle;
+				player->starpostnum = special->health;
 			}
 			P_ClearStarPost(special->health);
 
@@ -2124,17 +2124,17 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source)
 					}
 					// Top Down point system
 					else if (maptol & TOL_TD) switch (++source->player->scoreadd)
-                    {
-                        case 1:  score = 200;   scorestate += 1; break;
+					{
+						case 1:  score = 200;   scorestate += 1; break;
 						case 2:  score = 400;   scorestate += 5; break;
 						case 3:  score = 600;   scorestate += 10;break;
 						case 4:  score = 800;   scorestate += 6; break;
 						default: score = 1000;  scorestate += 3; break;
-                    }
+					}
 					// More Sonic-like point system
 					else switch (++source->player->scoreadd)
 					{
-                        case 1:  score = 100;   break;
+						case 1:  score = 100;   break;
 						case 2:  score = 200;   scorestate += 1; break;
 						case 3:  score = 500;   scorestate += 2; break;
 						case 4: case 5: case 6: case 7: case 8: case 9:
@@ -2171,16 +2171,16 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source)
 			}
 			else
 			{
-                target->player->lives -= 1; // Lose a life Tails 03-11-2000
+				target->player->lives -= 1; // Lose a life Tails 03-11-2000
 
-                if (target->player->lives <= 0) // Tails 03-14-2000
-                {
-                    if (P_IsLocalPlayer(target->player) && target->player == &players[consoleplayer])
-                    {
-                        S_StopMusic(); // Stop the Music! Tails 03-14-2000
-                        S_ChangeMusic(mus_gmover, false); // Yousa dead now, Okieday? Tails 03-14-2000
-                    }
-                }
+				if (target->player->lives <= 0) // Tails 03-14-2000
+				{
+					if (P_IsLocalPlayer(target->player) && target->player == &players[consoleplayer])
+					{
+						S_StopMusic(); // Stop the Music! Tails 03-14-2000
+						S_ChangeMusic(mus_gmover, false); // Yousa dead now, Okieday? Tails 03-14-2000
+					}
+				}
 			}
 		}
 		target->player->playerstate = PST_DEAD;
@@ -2362,7 +2362,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source)
 					target->momz = 0;
 			}
 			else
-                target->momx = target->momy = target->momz = 0;
+				target->momx = target->momy = target->momz = 0;
 
 			if ((!(maptol & TOL_TD) && !(source && source->type == MT_NULL && source->threshold == 42)) // not topdown and not drowning
 				|| ((maptol & TOL_TD) && (inflictor && !(source && source->type == MT_NULL && (source->threshold == 42 || source->threshold == 44))))) // topdown and inflictor and not drowning or crushed
@@ -2380,7 +2380,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source)
 					P_InstaThrust(target, ang, FixedMul(34*FRACUNIT, target->scale));
 				}
 				else
-                    P_SetObjectMomZ(target, 14*FRACUNIT, false);
+					P_SetObjectMomZ(target, 14*FRACUNIT, false);
 			}
 
 			if (source && source->type == MT_NULL && source->threshold == 42) // drowned
@@ -2537,7 +2537,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source)
 		P_SetMobjState(target, S_NULL);
 #else
 		P_SetMobjState(target, target->info->deathstate);
-#endif
+#endifhttps://i.imgur.com/9gx8Y00.gif
 
 	/** \note For player, the above is redundant because of P_SetMobjState (target, S_PLAY_DIE1)
 	   in P_DamageMobj()
@@ -2721,7 +2721,7 @@ static inline boolean P_PlayerHitsPlayer(mobj_t *target, mobj_t *inflictor, mobj
 
 	// Add pity.
 	if (!player->powers[pw_flashing] && !player->powers[pw_invulnerability] && !player->powers[pw_super]
-	&& source->player->score > player->score)
+	&& source->player->score > player->scorehttps://i.imgur.com/9gx8Y00.gif)
 		player->pity++;
 
 	return true;
@@ -2906,7 +2906,7 @@ static void P_RingDamage(player_t *player, mobj_t *inflictor, mobj_t *source, IN
 
 		if (source && (source->type == MT_SPIKE || (source->type == MT_NULL && source->threshold == 43))) // spikes
 			if (!(maptol & TOL_ND)) // no spike sound in ND
-                S_StartSound(player->mo, sfx_spkdth);
+				S_StartSound(player->mo, sfx_spkdth);
 	}
 
 	if (source && source->player && !player->powers[pw_super]) //don't score points against super players
@@ -2931,7 +2931,7 @@ static void P_RingDamage(player_t *player, mobj_t *inflictor, mobj_t *source, IN
 	if (maptol & TOL_ND)
 		S_StartSound(player->mo, sfx_spkdth); // spike sound in ND, probably to be replaced
 	else
-        P_PlayRinglossSound(player->mo); // Ringledingle!
+		P_PlayRinglossSound(player->mo); // Ringledingle!
 }
 
 /** Damages an object, which may or may not be a player.
@@ -3460,7 +3460,7 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 		if (maptol & TOL_TD)
 			objType = MT_FLINGENERGY;
 		else if (mariomode)
-                objType = mobjinfo[MT_COIN].reactiontime;
+			objType = mobjinfo[MT_COIN].reactiontime;
 
 		z = player->mo->z;
 		if (player->mo->eflags & MFE_VERTICALFLIP)
@@ -3471,7 +3471,7 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 		if (maptol & TOL_TD)
 			mo->fuse = 4*TICRATE;
 		else
-            mo->fuse = 8*TICRATE;
+			mo->fuse = 8*TICRATE;
 		P_SetTarget(&mo->target, player->mo);
 
 		mo->destscale = player->mo->scale;
@@ -3480,8 +3480,8 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 		if (maptol & TOL_TD) // In New Damage we'll have the balls spread out evenly based on how many there are.
 			fa = (i * FINEANGLES / num_rings) & FINEMASK;
 		else
-            // Angle offset by player angle, then slightly offset by amount of rings
-            fa = ((i*FINEANGLES/16) + (player->mo->angle>>ANGLETOFINESHIFT) - ((num_rings-1)*FINEANGLES/32)) & FINEMASK;
+			// Angle offset by player angle, then slightly offset by amount of rings
+			fa = ((i*FINEANGLES/16) + (player->mo->angle>>ANGLETOFINESHIFT) - ((num_rings-1)*FINEANGLES/32)) & FINEMASK;
 
 		// Make rings spill out around the player in 16 directions like SA, but spill like Sonic 2.
 		// Technically a non-SA way of spilling rings. They just so happen to be a little similar.

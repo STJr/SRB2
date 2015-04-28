@@ -2217,7 +2217,7 @@ void G_PlayerReborn(INT32 player)
 			p->health = 6;
 	}
 	else
-        p->health = 1; // 0 rings
+		p->health = 1; // 0 rings
     
 	p->panim = PA_IDLE; // standing animation
 
@@ -2651,23 +2651,23 @@ void G_DoReborn(INT32 playernum)
 #endif
 		else
 		{
-            // respawn at the start
-            mobj_t *oldmo = NULL;
+			// respawn at the start
+			mobj_t *oldmo = NULL;
 
-            if (player->starposttime)
-                starpost = true;
+			if (player->starposttime)
+				starpost = true;
 
-            // first dissasociate the corpse
-            if (player->mo)
-            {
-                oldmo = player->mo;
-                // Don't leave your carcass stuck 10-billion feet in the ground!
-                P_RemoveMobj(player->mo);
-            }
+			// first dissasociate the corpse
+			if (player->mo)
+			{
+				oldmo = player->mo;
+				// Don't leave your carcass stuck 10-billion feet in the ground!
+				P_RemoveMobj(player->mo);
+			}
 
-            G_SpawnPlayer(playernum, starpost, true);
-            if (oldmo)
-                G_ChangePlayerReferences(oldmo, players[playernum].mo);
+			G_SpawnPlayer(playernum, starpost, true);
+			if (oldmo)
+				G_ChangePlayerReferences(oldmo, players[playernum].mo);
 		}
 	}
 }

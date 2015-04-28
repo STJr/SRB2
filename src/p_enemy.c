@@ -2734,9 +2734,9 @@ void A_BossDeath(mobj_t *mo)
 		}
 		else
 		{
-            if (playeringame[i] && (players[i].health > 0
-                || ((netgame || multiplayer) && (players[i].lives > 0 || players[i].continues > 0))))
-                break;
+			if (playeringame[i] && (players[i].health > 0
+				|| ((netgame || multiplayer) && (players[i].lives > 0 || players[i].continues > 0))))
+				break;
 		}
 
 	if (i == MAXPLAYERS)
@@ -3008,15 +3008,15 @@ void A_JumpShield(mobj_t *actor)
 	}
 	else
 	{
-        player = actor->target->player;
+		player = actor->target->player;
 
-        if ((player->powers[pw_shield] & SH_NOSTACK) != SH_JUMP)
-        {
-            player->powers[pw_shield] = SH_JUMP|(player->powers[pw_shield] & SH_STACK);
-            P_SpawnShieldOrb(player);
-        }
+		if ((player->powers[pw_shield] & SH_NOSTACK) != SH_JUMP)
+		{
+			player->powers[pw_shield] = SH_JUMP|(player->powers[pw_shield] & SH_STACK);
+			P_SpawnShieldOrb(player);
+		}
 
-        S_StartSound(player->mo, actor->info->seesound);
+		S_StartSound(player->mo, actor->info->seesound);
 	}
 }
 
@@ -3066,15 +3066,15 @@ void A_RingShield(mobj_t *actor)
 	}
 	else
 	{
-        player = actor->target->player;
+		player = actor->target->player;
 
-        if ((player->powers[pw_shield] & SH_NOSTACK) != SH_ATTRACT)
-        {
-            player->powers[pw_shield] = SH_ATTRACT|(player->powers[pw_shield] & SH_STACK);
-            P_SpawnShieldOrb(player);
-        }
+		if ((player->powers[pw_shield] & SH_NOSTACK) != SH_ATTRACT)
+		{
+			player->powers[pw_shield] = SH_ATTRACT|(player->powers[pw_shield] & SH_STACK);
+			P_SpawnShieldOrb(player);
+		}
 
-        S_StartSound(player->mo, actor->info->seesound);
+		S_StartSound(player->mo, actor->info->seesound);
 	}
 }
 
@@ -3123,11 +3123,11 @@ void A_RingBox(mobj_t *actor)
 	}
 	else
 	{
-        player = actor->target->player;
+		player = actor->target->player;
 
-        P_GivePlayerRings(player, actor->info->reactiontime);
-        if (actor->info->seesound)
-            S_StartSound(player->mo, actor->info->seesound);
+		P_GivePlayerRings(player, actor->info->reactiontime);
+		if (actor->info->seesound)
+			S_StartSound(player->mo, actor->info->seesound);
 	}
 }
 
@@ -3182,20 +3182,20 @@ void A_Invincibility(mobj_t *actor)
 	}
 	else
 	{
-        player = actor->target->player;
-        player->powers[pw_invulnerability] = invulntics + 1;
+		player = actor->target->player;
+		player->powers[pw_invulnerability] = invulntics + 1;
 
-        if (P_IsLocalPlayer(player) && !player->powers[pw_super])
-        {
-            S_StopMusic();
-            if (mariomode)
-            {
-                S_ChangeMusic(mus_minvnc, false);
-                G_GhostAddColor(GHC_INVINCIBLE);
-            }
-            else
-                S_ChangeMusic(mus_invinc, false);
-        }
+		if (P_IsLocalPlayer(player) && !player->powers[pw_super])
+		{
+			S_StopMusic();
+			if (mariomode)
+			{
+				S_ChangeMusic(mus_minvnc, false);
+				G_GhostAddColor(GHC_INVINCIBLE);
+			}
+			else
+				S_ChangeMusic(mus_invinc, false);
+		}
 	}
 }
 
@@ -3249,20 +3249,20 @@ void A_SuperSneakers(mobj_t *actor)
 	}
 	else
 	{
-        player = actor->target->player;
+		player = actor->target->player;
 
-        actor->target->player->powers[pw_sneakers] = sneakertics + 1;
+		actor->target->player->powers[pw_sneakers] = sneakertics + 1;
 
-        if (P_IsLocalPlayer(player) && !player->powers[pw_super])
-        {
-            if (S_SpeedMusic(0.0f) && (mapheaderinfo[gamemap-1]->levelflags & LF_SPEEDMUSIC))
-                S_SpeedMusic(1.4f);
-            else
-            {
-                S_StopMusic();
-                S_ChangeMusic(mus_shoes, false);
-            }
-        }
+		if (P_IsLocalPlayer(player) && !player->powers[pw_super])
+		{
+			if (S_SpeedMusic(0.0f) && (mapheaderinfo[gamemap-1]->levelflags & LF_SPEEDMUSIC))
+				S_SpeedMusic(1.4f);
+			else
+			{
+				S_StopMusic();
+				S_ChangeMusic(mus_shoes, false);
+			}
+		}
 	}
 }
 
@@ -3352,7 +3352,7 @@ void A_ExtraLife(mobj_t *actor)
 			P_GivePlayerLives(player, numplayers);
 		}
 		else
-            P_GivePlayerLives(player, 1);
+			P_GivePlayerLives(player, 1);
 	}
 	if ((maptol & TOL_TD) && gametype == GT_COOP && (netgame || multiplayer))
 	{
@@ -3372,7 +3372,7 @@ void A_ExtraLife(mobj_t *actor)
 		}
 	}
 	else
-        P_PlayLivesJingle(player);
+		P_PlayLivesJingle(player);
 }
 
 // Function: A_BombShield
@@ -3421,15 +3421,15 @@ void A_BombShield(mobj_t *actor)
 	}
 	else
 	{
-        player = actor->target->player;
+		player = actor->target->player;
 
-        if ((player->powers[pw_shield] & SH_NOSTACK) != SH_BOMB)
-        {
-            player->powers[pw_shield] = SH_BOMB|(player->powers[pw_shield] & SH_STACK);
-            P_SpawnShieldOrb(player);
-        }
+		if ((player->powers[pw_shield] & SH_NOSTACK) != SH_BOMB)
+		{
+			player->powers[pw_shield] = SH_BOMB|(player->powers[pw_shield] & SH_STACK);
+			P_SpawnShieldOrb(player);
+		}
 
-        S_StartSound(player->mo, actor->info->seesound);
+		S_StartSound(player->mo, actor->info->seesound);
 	}
 }
 
@@ -3490,25 +3490,25 @@ void A_WaterShield(mobj_t *actor)
 	}
 	else
 	{
-        player = actor->target->player;
+		player = actor->target->player;
 
-        if ((player->powers[pw_shield] & SH_NOSTACK) != SH_ELEMENTAL)
-        {
-            player->powers[pw_shield] = SH_ELEMENTAL|(player->powers[pw_shield] & SH_STACK);
-            P_SpawnShieldOrb(player);
-        }
+		if ((player->powers[pw_shield] & SH_NOSTACK) != SH_ELEMENTAL)
+		{
+			player->powers[pw_shield] = SH_ELEMENTAL|(player->powers[pw_shield] & SH_STACK);
+			P_SpawnShieldOrb(player);
+		}
 
-        if (player->powers[pw_underwater] && player->powers[pw_underwater] <= 12*TICRATE + 1)
-            P_RestoreMusic(player);
+		if (player->powers[pw_underwater] && player->powers[pw_underwater] <= 12*TICRATE + 1)
+			P_RestoreMusic(player);
 
-        player->powers[pw_underwater] = 0;
+		player->powers[pw_underwater] = 0;
 
-        if (player->powers[pw_spacetime] > 1)
-        {
-            player->powers[pw_spacetime] = 0;
-            P_RestoreMusic(player);
-        }
-        S_StartSound(player->mo, actor->info->seesound);
+		if (player->powers[pw_spacetime] > 1)
+		{
+			player->powers[pw_spacetime] = 0;
+			P_RestoreMusic(player);
+		}
+		S_StartSound(player->mo, actor->info->seesound);
 	}
 }
 
@@ -3560,17 +3560,17 @@ void A_ForceShield(mobj_t *actor)
 	}
 	else
 	{
-        player = actor->target->player;
+		player = actor->target->player;
 
-        if (!(player->powers[pw_shield] & SH_FORCE))
-        {
-            player->powers[pw_shield] = SH_FORCE|(player->powers[pw_shield] & SH_STACK)|0x01;
-            P_SpawnShieldOrb(player);
-        }
-        else
-            player->powers[pw_shield] = SH_FORCE|(player->powers[pw_shield] & SH_STACK)|0x01;
+		if (!(player->powers[pw_shield] & SH_FORCE))
+		{
+			player->powers[pw_shield] = SH_FORCE|(player->powers[pw_shield] & SH_STACK)|0x01;
+			P_SpawnShieldOrb(player);
+		}
+		else
+			player->powers[pw_shield] = SH_FORCE|(player->powers[pw_shield] & SH_STACK)|0x01;
 
-        S_StartSound(player->mo, actor->info->seesound);
+		S_StartSound(player->mo, actor->info->seesound);
 	}
 }
 
@@ -3624,15 +3624,15 @@ void A_PityShield(mobj_t *actor)
 	}
 	else
 	{
-        player = actor->target->player;
+		player = actor->target->player;
 
-        if ((player->powers[pw_shield] & SH_NOSTACK) != SH_PITY)
-        {
-            player->powers[pw_shield] = SH_PITY+(player->powers[pw_shield] & SH_STACK);
-            P_SpawnShieldOrb(player);
-        }
+		if ((player->powers[pw_shield] & SH_NOSTACK) != SH_PITY)
+		{
+			player->powers[pw_shield] = SH_PITY+(player->powers[pw_shield] & SH_STACK);
+			P_SpawnShieldOrb(player);
+		}
 
-        S_StartSound(player->mo, actor->info->seesound);
+		S_StartSound(player->mo, actor->info->seesound);
 	}
 }
 
@@ -9487,9 +9487,9 @@ void A_ForceWin(mobj_t *actor)
 		}
 		else
 		{
-            if (playeringame[i] && (players[i].health > 0
-                || ((netgame || multiplayer) && (players[i].lives > 0 || players[i].continues > 0))))
-                break;
+			if (playeringame[i] && (players[i].health > 0
+				|| ((netgame || multiplayer) && (players[i].lives > 0 || players[i].continues > 0))))
+				break;
 		}
 	}
 

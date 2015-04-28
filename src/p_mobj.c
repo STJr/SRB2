@@ -8614,16 +8614,16 @@ void P_AfterPlayerSpawn(INT32 playernum, boolean resetcamera)
 
 	if (resetcamera)
 	{
-        if (camera.chase)
-        {
-            if (displayplayer == playernum)
-                P_ResetCamera(p, &camera);
-        }
-        if (camera2.chase && splitscreen)
-        {
-            if (secondarydisplayplayer == playernum)
-                P_ResetCamera(p, &camera2);
-        }
+		if (camera.chase)
+		{
+			if (displayplayer == playernum)
+				P_ResetCamera(p, &camera);
+		}
+		if (camera2.chase && splitscreen)
+		{
+			if (secondarydisplayplayer == playernum)
+				P_ResetCamera(p, &camera2);
+		}
 	}
 
 	if (CheckForReverseGravity)
@@ -9263,11 +9263,11 @@ ML_NOCLIMB : Direction not controllable
 		}
 		else // Default to the regular otherwise
 		{
-            if (mthing->options & MTF_AMBUSH)
-            {
-                chainlink = MT_BIGMACECHAIN;
-                macetype = MT_BIGMACE;
-            }
+			if (mthing->options & MTF_AMBUSH)
+			{
+				chainlink = MT_BIGMACECHAIN;
+				macetype = MT_BIGMACE;
+			}
 		}
 
 		if (mthing->options & MTF_OBJECTSPECIAL)

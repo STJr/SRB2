@@ -676,8 +676,8 @@ void Y_IntermissionDrawer(void)
 		}
 		else
 		{
-            V_DrawThinString(x+191, 24, V_YELLOWMAP, "TOTAL");
-            V_DrawThinString(x+196, 32, V_YELLOWMAP, "RING");
+			V_DrawThinString(x+191, 24, V_YELLOWMAP, "TOTAL");
+			V_DrawThinString(x+196, 32, V_YELLOWMAP, "RING");
 		}
 
 		// Monitors
@@ -1823,10 +1823,10 @@ static void Y_CalculateCompetitionWinners(void)
 
 		times[i]    = players[i].realtime;
 		rings[i]    = (UINT32)max(players[i].health-1, 0);
-        if (maptol & TOL_ND)
-            maxrings[i] = (UINT32)players[i].emblems;
+		if (maptol & TOL_ND)
+			maxrings[i] = (UINT32)players[i].emblems;
 		else
-            maxrings[i] = (UINT32)players[i].totalring;
+			maxrings[i] = (UINT32)players[i].totalring;
 		monitors[i] = (UINT32)players[i].numboxes;
 		scores[i]   = (UINT32)min(players[i].score, 99999990);
 
@@ -1854,10 +1854,10 @@ static void Y_CalculateCompetitionWinners(void)
 			}
 			else
 			{
-                if (players[i].totalring >= players[j].totalring)
-                    points[i]++;
-                else
-                    bestat[2] = false;
+				if (players[i].totalring >= players[j].totalring)
+					points[i]++;
+				else
+					bestat[2] = false;
 			}
 
 			if (players[i].numboxes >= players[j].numboxes)
@@ -1979,9 +1979,9 @@ static void Y_SetRingBonus(player_t *player, y_bonus_t *bstruct)
 	}
 	else
 	{
-        strncpy(bstruct->patch, "YB_RING", sizeof(bstruct->patch));
-        bstruct->display = true;
-        bstruct->points = max(0, (player->health-1) * 100);
+		strncpy(bstruct->patch, "YB_RING", sizeof(bstruct->patch));
+		bstruct->display = true;
+		bstruct->points = max(0, (player->health-1) * 100);
 	}
 }
 

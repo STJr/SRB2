@@ -210,7 +210,7 @@ void B_BuildTiccmd(player_t *player, ticcmd_t *cmd)
 	if (maptol & TOL_TD)
 		B_BuildTopDownTailsTiccmd(players[consoleplayer].mo, player->mo, cmd);
 	else
-        B_BuildTailsTiccmd(players[consoleplayer].mo, player->mo, cmd);
+		B_BuildTailsTiccmd(players[consoleplayer].mo, player->mo, cmd);
 }
 
 void B_KeysToTiccmd(mobj_t *mo, ticcmd_t *cmd, boolean forward, boolean backward, boolean left, boolean right, boolean strafeleft, boolean straferight, boolean jump, boolean spin)

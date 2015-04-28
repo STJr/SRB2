@@ -2429,7 +2429,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 							}
 						}
 						else
-                            P_Teleport(mo, dest->x, dest->y, dest->z, (line->flags & ML_NOCLIMB) ?  mo->angle : dest->angle, true, (line->flags & ML_EFFECT4) == ML_EFFECT4);
+							P_Teleport(mo, dest->x, dest->y, dest->z, (line->flags & ML_NOCLIMB) ?  mo->angle : dest->angle, true, (line->flags & ML_EFFECT4) == ML_EFFECT4);
 						// Play the 'bowrwoosh!' sound
 						S_StartSound(dest, sfx_mixup);
 					}
@@ -3646,24 +3646,24 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 				}
 				else
 				{
-                    if (playeringame[i] && !players[i].bot && players[i].mo && (gametype != GT_COOP || players[i].lives > 0))
-                    {
-                        if (roversector)
-                        {
-                            if (players[i].mo->subsector->sector != roversector)
-                                goto DoneSection2;
-                            if (!P_ThingIsOnThe3DFloor(players[i].mo, sector, roversector))
-                                goto DoneSection2;
-                        }
-                        else
-                        {
-                            if (players[i].mo->subsector->sector != sector)
-                                goto DoneSection2;
+					if (playeringame[i] && !players[i].bot && players[i].mo && (gametype != GT_COOP || players[i].lives > 0))
+					{
+						if (roversector)
+						{
+							if (players[i].mo->subsector->sector != roversector)
+								goto DoneSection2;
+							if (!P_ThingIsOnThe3DFloor(players[i].mo, sector, roversector))
+								goto DoneSection2;
+						}
+						else
+						{
+							if (players[i].mo->subsector->sector != sector)
+								goto DoneSection2;
 
-                            if (special == 3 && !P_MobjReadyToTrigger(players[i].mo, sector))
-                                goto DoneSection2;
-                        }
-                    }
+							if (special == 3 && !P_MobjReadyToTrigger(players[i].mo, sector))
+								goto DoneSection2;
+						}
+					}
 				}
 			}
 		case 4: // Linedef executor that doesn't require touching floor

@@ -632,7 +632,7 @@ void P_Ticker(boolean run)
 	// Run shield positioning
 	P_RunShields();
 
-    P_RunShadows();
+	P_RunShadows();
 
 	P_UpdateSpecials();
 	P_RespawnSpecials();

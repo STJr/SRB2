@@ -1083,12 +1083,12 @@ void P_GivePlayerLives(player_t *player, INT32 numlives)
 	}
 	else
 	{
-        player->lives += numlives;
+		player->lives += numlives;
 
-        if (player->lives > 99)
-            player->lives = 99;
-        else if (player->lives < 1)
-            player->lives = 1;
+		if (player->lives > 99)
+			player->lives = 99;
+		else if (player->lives < 1)
+			player->lives = 1;
 	}
 }
 
@@ -2798,7 +2798,7 @@ static void P_DoClimbing(player_t *player)
 		player->pflags |= PF_JUMPED;
 		P_SetPlayerMobjState(player->mo, S_PLAY_ATK1);
 		if (!(maptol & TOL_TD))
-            P_SetObjectMomZ(player->mo, 4*FRACUNIT, false);
+			P_SetObjectMomZ(player->mo, 4*FRACUNIT, false);
 		P_InstaThrust(player->mo, player->mo->angle, FixedMul(-4*FRACUNIT, player->mo->scale));
 	}
 
@@ -4172,16 +4172,16 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						}
 						P_InstaThrust(player->mo, player->mo->angle, FixedMul(actionspd, player->mo->scale));
 
-                        if (player->charability != CA_JUMPTHOK) // Jumpthok jump is done earlier
-                        {
-                            if (!(player->pflags & PF_THOKKED) // Never do the jump more than once, even if you have multiability
-                                 && player->thokitem == (UINT32)mobjinfo[MT_PLAYER].painchance) // This is so that custom character that like to use the thokitem don't break
-                            {
-                                player->pflags &= ~PF_JUMPED;
-                                P_DoJump(player, false);
-                                player->mo->momz = FixedMul(player->mo->momz, 3*FRACUNIT/4); // Half height
-                            }
-                        }
+						if (player->charability != CA_JUMPTHOK) // Jumpthok jump is done earlier
+						{
+							if (!(player->pflags & PF_THOKKED) // Never do the jump more than once, even if you have multiability
+								 && player->thokitem == (UINT32)mobjinfo[MT_PLAYER].painchance) // This is so that custom character that like to use the thokitem don't break
+							{
+								player->pflags &= ~PF_JUMPED;
+								P_DoJump(player, false);
+								player->mo->momz = FixedMul(player->mo->momz, 3*FRACUNIT/4); // Half height
+							}
+						}
 						if (maptol & TOL_2D)
 						{
 							player->mo->momx /= 2;
@@ -4231,7 +4231,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						P_SetPlayerMobjState(player->mo, S_PLAY_ABL1); // Change to the flying animation
 
 						if (!player->powers[pw_tailsfly])
-                            player->powers[pw_tailsfly] = tailsflytics + 1; // Set the fly timer
+							player->powers[pw_tailsfly] = tailsflytics + 1; // Set the fly timer
 
 						player->pflags &= ~(PF_JUMPED|PF_SPINNING|PF_STARTDASH);
 						player->pflags |= PF_THOKKED;
@@ -6953,7 +6953,7 @@ static void P_MovePlayer(player_t *player)
 		if (maptol & TOL_TD)
 			player->pflags |= PF_STASIS;
 		else
-            player->pflags |= PF_FULLSTASIS;
+			player->pflags |= PF_FULLSTASIS;
 	else if (player->powers[pw_nocontrol])
 	{
 		player->pflags |= PF_STASIS;
@@ -7195,16 +7195,16 @@ static void P_MovePlayer(player_t *player)
 		}
 		else
 		{
-            if (player->mo->eflags & MFE_VERTICALFLIP)
-            {
-                if (player->mo->momz > FixedMul(2*FRACUNIT, player->mo->scale))
-                    player->mo->momz -= FixedMul(3*(FRACUNIT/4), player->mo->scale);
-            }
-            else
-            {
-                if (player->mo->momz < FixedMul(-2*FRACUNIT, player->mo->scale))
-                    player->mo->momz += FixedMul(3*(FRACUNIT/4), player->mo->scale);
-            }
+			if (player->mo->eflags & MFE_VERTICALFLIP)
+			{
+				if (player->mo->momz > FixedMul(2*FRACUNIT, player->mo->scale))
+					player->mo->momz -= FixedMul(3*(FRACUNIT/4), player->mo->scale);
+			}
+			else
+			{
+				if (player->mo->momz < FixedMul(-2*FRACUNIT, player->mo->scale))
+					player->mo->momz += FixedMul(3*(FRACUNIT/4), player->mo->scale);
+			}
 		}
 
 		// Strafing while gliding.
@@ -7221,7 +7221,7 @@ static void P_MovePlayer(player_t *player)
 			if (maptol & TOL_TD)
 				speed = FixedMul(speed, player->mo->scale);
 			else
-                speed = FixedMul(speed - player->glidetime*FRACUNIT, player->mo->scale);
+				speed = FixedMul(speed - player->glidetime*FRACUNIT, player->mo->scale);
                 
 			if (speed < 0)
 				speed = 0;
@@ -7232,14 +7232,14 @@ static void P_MovePlayer(player_t *player)
 			if (maptol & TOL_TD)
 				P_InstaThrust(player->mo, player->mo->angle-leeway, FixedMul((glidespeed>>1), player->mo->scale));
 			else
-                P_InstaThrust(player->mo, player->mo->angle-leeway, FixedMul((glidespeed>>1) + player->glidetime*750, player->mo->scale));
+				P_InstaThrust(player->mo, player->mo->angle-leeway, FixedMul((glidespeed>>1) + player->glidetime*750, player->mo->scale));
 		}
 		else
 		{
 			if (maptol & TOL_TD)
 				P_InstaThrust(player->mo, player->mo->angle-leeway, FixedMul(glidespeed, player->mo->scale));
 			else
-                P_InstaThrust(player->mo, player->mo->angle-leeway, FixedMul(glidespeed + player->glidetime*1500, player->mo->scale));
+				P_InstaThrust(player->mo, player->mo->angle-leeway, FixedMul(glidespeed + player->glidetime*1500, player->mo->scale));
 		}
 
 		player->glidetime++;
@@ -7260,8 +7260,8 @@ static void P_MovePlayer(player_t *player)
 				player->pflags |= PF_THOKKED;
 				if (!(maptol & TOL_TD))
 				{
-                    player->mo->momx >>= 1;
-                    player->mo->momy >>= 1;
+					player->mo->momx >>= 1;
+					player->mo->momy >>= 1;
 				}
 				P_SetPlayerMobjState(player->mo, S_PLAY_FALL1);
 			}
@@ -7335,12 +7335,12 @@ static void P_MovePlayer(player_t *player)
 	if (player->gotflag && player->powers[pw_tailsfly] && !(player->pflags & PF_JUMPED))
 		player->powers[pw_tailsfly] = 1;
 
-    // can still have flight saved when not flying in TD
+	// can still have flight saved when not flying in TD
 	if (!(maptol & TOL_TD))
 	{
-        // If not in a fly position, don't think you're flying!
-        if (player->panim != PA_ABILITY)
-            player->powers[pw_tailsfly] = 0;
+		// If not in a fly position, don't think you're flying!
+		if (player->panim != PA_ABILITY)
+			player->powers[pw_tailsfly] = 0;
 	}
 
 	if (player->charability == CA_FLY || (player->charability == CA_SWIM && player->mo->eflags & MFE_UNDERWATER))
@@ -7360,9 +7360,9 @@ static void P_MovePlayer(player_t *player)
 				}
 				else
 				{
-                    // Adventure-style flying by just holding the button down
-                    if (cmd->buttons & BT_JUMP && !(player->pflags & PF_STASIS) && !player->exiting)
-                        P_SetObjectMomZ(player->mo, actionspd/4, true);
+					// Adventure-style flying by just holding the button down
+					if (cmd->buttons & BT_JUMP && !(player->pflags & PF_STASIS) && !player->exiting)
+						P_SetObjectMomZ(player->mo, actionspd/4, true);
 				}
 			}
 			else
@@ -7383,10 +7383,10 @@ static void P_MovePlayer(player_t *player)
 
 			if (!(maptol & TOL_TD))
 			{
-			// Descend
-                if (cmd->buttons & BT_USE && !(player->pflags & PF_STASIS) && !player->exiting)
-                    if (P_MobjFlip(player->mo)*player->mo->momz > -FixedMul(5*actionspd, player->mo->scale))
-                        P_SetObjectMomZ(player->mo, -actionspd/2, true);
+				// Descend
+				if (cmd->buttons & BT_USE && !(player->pflags & PF_STASIS) && !player->exiting)
+					if (P_MobjFlip(player->mo)*player->mo->momz > -FixedMul(5*actionspd, player->mo->scale))
+						P_SetObjectMomZ(player->mo, -actionspd/2, true);
 			}
 
 			// Stop going higher if you're above max height and you're in a Top Down level
@@ -7453,7 +7453,7 @@ static void P_MovePlayer(player_t *player)
 
 	if (player->playerstate != PST_BUBBLE)
 	{
-        P_DoSpinDash(player, cmd);
+		P_DoSpinDash(player, cmd);
 	}
 
 	// jumping
@@ -8504,80 +8504,80 @@ static void P_DeathThink(player_t *player)
 	}
 	else
 	{
-        // Force respawn if idle for more than 30 seconds in shooter modes.
-        if (player->deadtimer > 30*TICRATE && !G_PlatformGametype())
-            player->playerstate = PST_REBORN;
-        else if (player->lives > 0 && !G_IsSpecialStage(gamemap)) // Don't allow "click to respawn" in special stages!
-        {
-            // Respawn with jump button, force respawn time (3 second default, cheat protected) in shooter modes.
-            if ((cmd->buttons & BT_JUMP) && player->deadtimer > cv_respawntime.value*TICRATE
-                && gametype != GT_RACE && gametype != GT_COOP)
-                player->playerstate = PST_REBORN;
+		// Force respawn if idle for more than 30 seconds in shooter modes.
+		if (player->deadtimer > 30*TICRATE && !G_PlatformGametype())
+			player->playerstate = PST_REBORN;
+		else if (player->lives > 0 && !G_IsSpecialStage(gamemap)) // Don't allow "click to respawn" in special stages!
+		{
+			// Respawn with jump button, force respawn time (3 second default, cheat protected) in shooter modes.
+			if ((cmd->buttons & BT_JUMP) && player->deadtimer > cv_respawntime.value*TICRATE
+				&& gametype != GT_RACE && gametype != GT_COOP)
+				player->playerstate = PST_REBORN;
 
-            // Instant respawn in race or if you're spectating.
-            if ((cmd->buttons & BT_JUMP) && (gametype == GT_RACE || player->spectator))
-                player->playerstate = PST_REBORN;
+			// Instant respawn in race or if you're spectating.
+			if ((cmd->buttons & BT_JUMP) && (gametype == GT_RACE || player->spectator))
+				player->playerstate = PST_REBORN;
 
-            // One second respawn in coop.
-            if ((cmd->buttons & BT_JUMP) && player->deadtimer > TICRATE && (gametype == GT_COOP || gametype == GT_COMPETITION))
-                player->playerstate = PST_REBORN;
+			// One second respawn in coop.
+			if ((cmd->buttons & BT_JUMP) && player->deadtimer > TICRATE && (gametype == GT_COOP || gametype == GT_COMPETITION))
+				player->playerstate = PST_REBORN;
 
-            // Single player auto respawn
-            if (!(netgame || multiplayer) && player->deadtimer > 5*TICRATE)
-                player->playerstate = PST_REBORN;
-        }
-        else if ((netgame || multiplayer) && player->deadtimer == 8*TICRATE)
-        {
-            // In a net/multiplayer game, and out of lives
-            if (gametype == GT_COMPETITION)
-            {
-                INT32 i;
+			// Single player auto respawn
+			if (!(netgame || multiplayer) && player->deadtimer > 5*TICRATE)
+				player->playerstate = PST_REBORN;
+		}
+		else if ((netgame || multiplayer) && player->deadtimer == 8*TICRATE)
+		{
+			// In a net/multiplayer game, and out of lives
+			if (gametype == GT_COMPETITION)
+			{
+				INT32 i;
 
-                for (i = 0; i < MAXPLAYERS; i++)
-                    if (playeringame[i] && !players[i].exiting && players[i].lives > 0)
-                        break;
+				for (i = 0; i < MAXPLAYERS; i++)
+					if (playeringame[i] && !players[i].exiting && players[i].lives > 0)
+						break;
 
-                if (i == MAXPLAYERS)
-                {
-                    // Everyone's either done with the race, or dead.
-                    if (!countdown2 || countdown2 > 1*TICRATE)
-                        countdown2 = 1*TICRATE;
-                }
-            }
+				if (i == MAXPLAYERS)
+				{
+					// Everyone's either done with the race, or dead.
+					if (!countdown2 || countdown2 > 1*TICRATE)
+						countdown2 = 1*TICRATE;
+				}
+			}
 
-            // In a coop game, and out of lives
-            if (gametype == GT_COOP)
-            {
-                INT32 i;
+			// In a coop game, and out of lives
+			if (gametype == GT_COOP)
+			{
+				INT32 i;
 
-                for (i = 0; i < MAXPLAYERS; i++)
-                    if (playeringame[i] && (players[i].exiting || players[i].lives > 0))
-                        break;
+				for (i = 0; i < MAXPLAYERS; i++)
+					if (playeringame[i] && (players[i].exiting || players[i].lives > 0))
+						break;
 
-                if (i == MAXPLAYERS)
-                {
-                    // They're dead, Jim.
-                    //nextmapoverride = spstage_start;
-                    nextmapoverride = gamemap;
-                    countdown2 = 1*TICRATE;
-                    skipstats = true;
+				if (i == MAXPLAYERS)
+				{
+					// They're dead, Jim.
+					//nextmapoverride = spstage_start;
+					nextmapoverride = gamemap;
+					countdown2 = 1*TICRATE;
+					skipstats = true;
 
-                    for (i = 0; i < MAXPLAYERS; i++)
-                    {
-                        if (playeringame[i])
-                        {
-                            players[i].score = 0;
-                            players[i].levelscore = 0;
-                        }
-                    }
+					for (i = 0; i < MAXPLAYERS; i++)
+					{
+						if (playeringame[i])
+						{
+							players[i].score = 0;
+							players[i].levelscore = 0;
+						}
+					}
 
-                    //emeralds = 0;
-                    tokenbits = 0;
-                    tokenlist = 0;
-                    token = 0;
-                }
-            }
-        }
+					//emeralds = 0;
+					tokenbits = 0;
+					tokenlist = 0;
+					token = 0;
+				}
+			}
+		}
 	}
 
 	if (gametype == GT_RACE || gametype == GT_COMPETITION || (gametype == GT_COOP && (multiplayer || netgame)))
@@ -8699,7 +8699,7 @@ void P_ResetCamera(player_t *player, camera_t *thiscam)
 				thiscam->angle = ANGLE_90;
 		}
 		else
-            thiscam->angle = player->mo->angle;
+			thiscam->angle = player->mo->angle;
             
 		thiscam->aiming = 0;
 	}
@@ -8713,7 +8713,7 @@ void P_ResetCamera(player_t *player, camera_t *thiscam)
 	if (maptol & TOL_TD)
 		while (!P_MoveTDChaseCamera(player,thiscam,true) && ++tries < 2*TICRATE);
 	else
-        while (!P_MoveChaseCamera(player,thiscam,true) && ++tries < 2*TICRATE);
+		while (!P_MoveChaseCamera(player,thiscam,true) && ++tries < 2*TICRATE);
 }
 
 boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcalled)
@@ -10236,8 +10236,8 @@ void P_PlayerThink(player_t *player)
 				}
 				else
 				{
-                    if (players[i].lives <= 0)
-                        continue;
+					if (players[i].lives <= 0)
+						continue;
 				}
 
 				if (players[i].playerstate == PST_BUBBLE)
@@ -10650,8 +10650,8 @@ void P_PlayerAfterThink(player_t *player)
 			}
 			else
 			{
-                if (((splitscreen && player == &players[secondarydisplayplayer]) || player == &players[displayplayer]) && thiscam->chase)
-                    P_MoveChaseCamera(player, thiscam, false);
+				if (((splitscreen && player == &players[secondarydisplayplayer]) || player == &players[displayplayer]) && thiscam->chase)
+					P_MoveChaseCamera(player, thiscam, false);
 			}
 		}
 		return;
@@ -10932,7 +10932,7 @@ void P_PlayerAfterThink(player_t *player)
 				if (maptol & TOL_TD)
 					P_MoveTDChaseCamera(player, thiscam, false);
 				else
-                    P_MoveChaseCamera(player, thiscam, false); // calculate the camera movement
+					P_MoveChaseCamera(player, thiscam, false); // calculate the camera movement
 			}
 		}
 	}

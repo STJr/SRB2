@@ -615,10 +615,10 @@ void D_SRB2Loop(void)
 				}
 				else
 				{
-                    if (splitscreen && camera2.chase)
-                        P_MoveChaseCamera(&players[secondarydisplayplayer], &camera2, false);
-                    if (camera.chase)
-                        P_MoveChaseCamera(&players[displayplayer], &camera, false);
+					if (splitscreen && camera2.chase)
+						P_MoveChaseCamera(&players[secondarydisplayplayer], &camera2, false);
+					if (camera.chase)
+						P_MoveChaseCamera(&players[displayplayer], &camera, false);
 				}
 			}
 			D_Display();
