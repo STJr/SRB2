@@ -987,10 +987,8 @@ static const struct {
 	{"XMAS",TOL_XMAS},
 	{"CHRISTMAS",TOL_XMAS},
 	{"WINTER",TOL_XMAS},
-#ifdef TOPDOWN
 	{"TD",TOL_TD},
 	{"ND",TOL_ND},
-#endif
 
 	{NULL, 0}
 };
@@ -1263,7 +1261,6 @@ static void readlevelheader(MYFILE *f, INT32 num)
 				else
 					mapheaderinfo[num-1]->levelflags &= ~LF_NOZONE;
 			}
-#ifdef TOPDOWN
 			else if (fastcmp(word, "TDBOSSZONE"))
 			{
 				if (i || word2[0] == 'T' || word2[0] == 'Y')
@@ -1278,7 +1275,6 @@ static void readlevelheader(MYFILE *f, INT32 num)
 				else
 					mapheaderinfo[num-1]->levelflags &= ~LF_TDNOSHAREDCAMERA;
 			}
-#endif
 
 			// Individual triggers for menu flags
 			else if (fastcmp(word, "HIDDEN"))
@@ -1316,12 +1312,10 @@ static void readlevelheader(MYFILE *f, INT32 num)
 				else
 					mapheaderinfo[num-1]->menuflags &= ~LF2_NOVISITNEEDED;
 			}
-#ifdef TOPDOWN
 			else if (fastcmp(word, "TDBLAST"))
 			{
 				mapheaderinfo[num-1]->tdblast = (INT16)i;
 			}
-#endif
 			else
 				deh_warning("Level header %d: unknown word '%s'", num, word);
 		}
@@ -1827,12 +1821,10 @@ static actionpointer_t actionpointers[] =
 	{{A_BrakLobShot},          "A_BRAKLOBSHOT"},
 	{{A_NapalmScatter},        "A_NAPALMSCATTER"},
 	{{A_SpawnFreshCopy},       "A_SPAWNFRESHCOPY"},
-#ifdef TOPDOWN
 	{{A_OrbitalChase},         "A_ORBITALCHASE"},
 	{{A_InflatableSnowman},    "A_INFLATABLESNOWMAN"},
 	{{A_CheckGround},          "A_CHECKGROUND"},
 	{{A_LookTracer},           "A_LOOKTRACER"},
-#endif
 
 	{{NULL},                   "NONE"},
 
@@ -2972,13 +2964,11 @@ static void readmaincfg(MYFILE *f)
 				DEH_WriteUndoline(word, va("%u", extralifetics), UNDO_NONE);
 				extralifetics = (UINT16)get_number(word2);
 			}
-#ifdef TOPDOWN
 			else if (fastcmp(word, "KNUXCLIMBTICS"))
 			{
 				DEH_WriteUndoline(word, va("%u", knuxclimbtics), UNDO_NONE);
 				knuxclimbtics = (UINT16)get_number(word2);
 			}
-#endif
 			else if (fastcmp(word, "GAMEOVERTICS"))
 			{
 				DEH_WriteUndoline(word, va("%u", gameovertics), UNDO_NONE);
@@ -5675,14 +5665,12 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SCRI", // 4000 (mario)
 	"S_SCRJ", // 8000 (mario)
 	"S_SCRK", // 1UP (mario)
-#ifdef TOPDOWN
 	"S_SCRL", // 10 (Unused)
 	"S_SCRM", // 20 (TD Emblems)
 	"S_SCRN", // 40 (TD Emblems)
 	"S_SCRO", // 50 (Unused)
 	"S_SCRP", // 60 (TD Emblems)
 	"S_SCRQ", // 80 (TD Emblems)
-#endif
 
 	// Drowning Timer Numbers
 	"S_ZERO1",
@@ -6486,10 +6474,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_XPLD2",
 	"S_XPLD3",
 	"S_XPLD4",
-#ifdef TOPDOWN
 	"S_XPLD5",
 	"S_XPLD6",
-#endif
 
 	// Underwater Explosion
 	"S_WPLD1",
@@ -6665,7 +6651,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_NAMECHECK",
 #endif
 
-#ifdef TOPDOWN
 	// topdown misc
 	"S_SHADOW",
 
@@ -7020,7 +7005,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Stormy Streets Cone
 	"S_STORMYCONE",
-#endif
 };
 
 // RegEx to generate this from info.h: ^\tMT_([^,]+), --> \t"MT_\1",
@@ -7533,7 +7517,6 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_NAMECHECK",
 #endif
 
-#ifdef TOPDOWN
 	"MT_SHADOW",
 
 	"MT_FLINGENERGY",
@@ -7608,7 +7591,6 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_STORMYBUSH",
 
 	"MT_STORMYCONE",
-#endif
 };
 
 static const char *const MOBJFLAG_LIST[] = {
@@ -7992,10 +7974,8 @@ struct {
 	{"TOL_NIGHTS",TOL_NIGHTS},
 	{"TOL_ERZ3",TOL_ERZ3},
 	{"TOL_XMAS",TOL_XMAS},
-#ifdef TOPDOWN
 	{"TOL_TD",TOL_TD},
 	{"TOL_ND",TOL_ND},
-#endif
 
 	// Level flags
 	{"LF_SCRIPTISFILE",LF_SCRIPTISFILE},
@@ -8003,10 +7983,8 @@ struct {
 	{"LF_NOSSMUSIC",LF_NOSSMUSIC},
 	{"LF_NORELOAD",LF_NORELOAD},
 	{"LF_NOZONE",LF_NOZONE},
-#ifdef TOPDOWN
 	{"LF_TDBOSSZONE",LF_TDBOSSZONE},
 	{"LF_TDNOSHAREDCAMERA",LF_TDNOSHAREDCAMERA},
-#endif
 	// And map flags
 	{"LF2_HIDEINMENU",LF2_HIDEINMENU},
 	{"LF2_HIDEINSTATS",LF2_HIDEINSTATS},

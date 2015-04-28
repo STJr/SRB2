@@ -162,9 +162,7 @@ void V_DrawRightAlignedString(INT32 x, INT32 y, INT32 option, const char *string
 
 // draw a string using the hu_font, 0.5x scale
 void V_DrawSmallString(INT32 x, INT32 y, INT32 option, const char *string);
-#ifdef TOPDOWN
 void V_DrawSmallCenteredString(INT32 x, INT32 y, INT32 option, const char *string);
-#endif
 void V_DrawRightAlignedSmallString(INT32 x, INT32 y, INT32 option, const char *string);
 
 // draw a string using the tny_font
@@ -177,11 +175,9 @@ void V_DrawStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
 void V_DrawTallNum(INT32 x, INT32 y, INT32 flags, INT32 num);
 void V_DrawPaddedTallNum(INT32 x, INT32 y, INT32 flags, INT32 num, INT32 digits);
 
-#ifdef TOPDOWN
 // Draw small nums, used for menu, HUD, intermission
 void V_DrawSmallNum(INT32 x, INT32 y, INT32 flags, INT32 num);
 void V_DrawPaddedSmallNum(INT32 x, INT32 y, INT32 flags, INT32 num, INT32 digits);
-#endif
 
 // Find string width from lt_font chars
 INT32 V_LevelNameWidth(const char *string);

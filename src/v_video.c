@@ -1308,13 +1308,11 @@ void V_DrawSmallString(INT32 x, INT32 y, INT32 option, const char *string)
 	}
 }
 
-#ifdef TOPDOWN
 void V_DrawSmallCenteredString(INT32 x, INT32 y, INT32 option, const char *string)
 {
 	x -= V_SmallStringWidth(string, option)/2;
 	V_DrawSmallString(x, y, option, string);
 }
-#endif
 
 void V_DrawRightAlignedSmallString(INT32 x, INT32 y, INT32 option, const char *string)
 {
@@ -1552,7 +1550,6 @@ void V_DrawPaddedTallNum(INT32 x, INT32 y, INT32 flags, INT32 num, INT32 digits)
 	} while (--digits);
 }
 
-#ifdef TOPDOWN
 // Draws a smallnum.
 void V_DrawSmallNum(INT32 x, INT32 y, INT32 flags, INT32 num)
 {
@@ -1598,7 +1595,6 @@ void V_DrawPaddedSmallNum(INT32 x, INT32 y, INT32 flags, INT32 num, INT32 digits
 		num /= 10;
 	} while (--digits);
 }
-#endif
 
 // Write a string using the credit font
 // NOTE: the text is centered for screens larger than the base width

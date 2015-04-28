@@ -40,9 +40,7 @@
 #include "hardware/hw_main.h"
 #endif
 
-#ifdef TOPDOWN
 #include "m_random.h" // We have a fake quake effect for compcoop
-#endif
 
 #ifdef PC_DOS
 #include <stdio.h> // for snprintf
@@ -79,7 +77,6 @@ typedef union
 		UINT8 gotlife; // Number of extra lives obtained
 	} coop;
 
-#ifdef TOPDOWN
 	struct
 	{
 		boolean gotlife; // Whether any of the players got a life from points at the end
@@ -110,7 +107,6 @@ typedef union
 		INT16 quake; // The quake for the y values of the drawn graphics
 		INT16 titleoffset;
 	} compcoop;
-#endif
 
 	struct
 	{
@@ -186,9 +182,7 @@ intertype_t intertype = int_none;
 
 static void Y_AwardCoopBonuses(void);
 static void Y_AwardSpecialStageBonus(void);
-#ifdef TOPDOWN
 static void Y_CalculateCompCoopWinners(void);
-#endif
 static void Y_CalculateCompetitionWinners(void);
 static void Y_CalculateTimeRaceWinners(void);
 static void Y_CalculateMatchWinners(void);
@@ -288,7 +282,6 @@ void Y_IntermissionDrawer(void)
 			bonusy -= (3*SHORT(tallnum[0]->height)/2) + 1;
 		}
 	}
-#ifdef TOPDOWN
 	else if (intertype == int_compcoop)
 	{
 		INT32 i;
@@ -426,7 +419,6 @@ void Y_IntermissionDrawer(void)
 			}
 		}
 	}
-#endif
 	else if (intertype == int_spec)
 	{
 		// draw the header
@@ -678,19 +670,15 @@ void Y_IntermissionDrawer(void)
 		V_DrawThinString(x+168, 32, V_YELLOWMAP, "RING");
 
 		// Total rings
-#ifdef TOPDOWN
 		if (maptol & TOL_ND)
 		{
 			V_DrawThinString(x+191, 32, V_YELLOWMAP, "EMBLEM");
 		}
 		else
 		{
-#endif
-		V_DrawThinString(x+191, 24, V_YELLOWMAP, "TOTAL");
-		V_DrawThinString(x+196, 32, V_YELLOWMAP, "RING");
-#ifdef TOPDOWN
+            V_DrawThinString(x+191, 24, V_YELLOWMAP, "TOTAL");
+            V_DrawThinString(x+196, 32, V_YELLOWMAP, "RING");
 		}
-#endif
 
 		// Monitors
 		V_DrawThinString(x+223, 24, V_YELLOWMAP, "ITEM");
@@ -759,7 +747,6 @@ void Y_IntermissionDrawer(void)
 	}
 
 	if (timer)
-#ifdef TOPDOWN
 	{
 		if (intertype == int_compcoop)
 			V_DrawString(4, 2, V_YELLOWMAP,
@@ -768,10 +755,6 @@ void Y_IntermissionDrawer(void)
 			V_DrawCenteredString(BASEVIDWIDTH/2, 188, V_YELLOWMAP,
 				va("start in %d seconds", timer/TICRATE));
 	}
-#else
-		V_DrawCenteredString(BASEVIDWIDTH/2, 188, V_YELLOWMAP,
-			va("start in %d seconds", timer/TICRATE));
-#endif
 
 	// Make it obvious that scrambling is happening next round.
 	if (cv_scrambleonchange.value && cv_teamscramble.value && (intertic/TICRATE % 2 == 0))
@@ -885,7 +868,6 @@ void Y_Ticker(void)
 			--data.coop.gotlife;
 		}
 	}
-#ifdef TOPDOWN
 	else if (intertype == int_compcoop)
 	{
 		INT32 i;
@@ -987,7 +969,6 @@ void Y_Ticker(void)
 		if (data.compcoop.numplayers != D_NumPlayers())
 			Y_CalculateCompCoopWinners();
 	}
-#endif
 	else if (intertype == int_spec) // coop or single player, special stage
 	{
 		INT32 i;
@@ -1188,11 +1169,7 @@ void Y_StartIntermission(void)
 	}
 	else
 	{
-#ifdef TOPDOWN
 		if (cv_inttime.value == 0 && gametype == GT_COOP && !(maptol & TOL_TD))
-#else
-		if (cv_inttime.value == 0 && gametype == GT_COOP)
-#endif
 			timer = 0;
 		else
 		{
@@ -1208,10 +1185,8 @@ void Y_StartIntermission(void)
 			// Don't add it here
 			if (G_IsSpecialStage(gamemap))
 				intertype = int_spec;
-#ifdef TOPDOWN
 			else if (maptol & TOL_TD)
 				intertype = int_compcoop;
-#endif
 			else
 				intertype = int_coop;
 		}
@@ -1344,7 +1319,6 @@ void Y_StartIntermission(void)
 			break;
 		}
 
-#ifdef TOPDOWN
 		case int_compcoop:
 		{
 			// Calculate who won
@@ -1398,7 +1372,6 @@ void Y_StartIntermission(void)
 			usebuffer = false; // force it to use the old system
 			break;
 		}
-#endif
 
 		case int_nightsspec:
 			if (modeattacking && stagefailed)
@@ -1624,7 +1597,6 @@ void Y_StartIntermission(void)
 	}
 }
 
-#ifdef TOPDOWN
 //
 // Y_CalculateCompCoophWinners
 //
@@ -1732,7 +1704,6 @@ static void Y_CalculateCompCoopWinners(void)
 		completed[data.compcoop.topplayers[i]] = true;
 	}
 }
-#endif
 
 //
 // Y_CalculateMatchWinners
@@ -1852,10 +1823,10 @@ static void Y_CalculateCompetitionWinners(void)
 
 		times[i]    = players[i].realtime;
 		rings[i]    = (UINT32)max(players[i].health-1, 0);
-#ifdef TOPDOWN
-		maxrings[i] = (UINT32)players[i].emblems;
-#endif
-		maxrings[i] = (UINT32)players[i].totalring;
+        if (maptol & TOL_ND)
+            maxrings[i] = (UINT32)players[i].emblems;
+		else
+            maxrings[i] = (UINT32)players[i].totalring;
 		monitors[i] = (UINT32)players[i].numboxes;
 		scores[i]   = (UINT32)min(players[i].score, 99999990);
 
@@ -1874,7 +1845,6 @@ static void Y_CalculateCompetitionWinners(void)
 			else
 				bestat[1] = false;
 
-#ifdef TOPDOWN
 			if (maptol & TOL_ND)
 			{
 				if (players[i].emblems >= players[j].emblems)
@@ -1884,14 +1854,11 @@ static void Y_CalculateCompetitionWinners(void)
 			}
 			else
 			{
-#endif
-			if (players[i].totalring >= players[j].totalring)
-				points[i]++;
-			else
-				bestat[2] = false;
-#ifdef TOPDOWN
+                if (players[i].totalring >= players[j].totalring)
+                    points[i]++;
+                else
+                    bestat[2] = false;
 			}
-#endif
 
 			if (players[i].numboxes >= players[j].numboxes)
 				points[i]++;
@@ -2004,7 +1971,6 @@ static void Y_SetTimeBonus(player_t *player, y_bonus_t *bstruct)
 //
 static void Y_SetRingBonus(player_t *player, y_bonus_t *bstruct)
 {
-#ifdef TOPDOWN
 	if (maptol & TOL_ND)
 	{
 		strncpy(bstruct->patch, "YB_EMBLM", sizeof(bstruct->patch));
@@ -2013,13 +1979,10 @@ static void Y_SetRingBonus(player_t *player, y_bonus_t *bstruct)
 	}
 	else
 	{
-#endif
-	strncpy(bstruct->patch, "YB_RING", sizeof(bstruct->patch));
-	bstruct->display = true;
-	bstruct->points = max(0, (player->health-1) * 100);
-#ifdef TOPDOWN
+        strncpy(bstruct->patch, "YB_RING", sizeof(bstruct->patch));
+        bstruct->display = true;
+        bstruct->points = max(0, (player->health-1) * 100);
 	}
-#endif
 }
 
 //
@@ -2215,7 +2178,6 @@ void Y_EndIntermission(void)
 {
 	Y_UnloadData();
 
-#ifdef TOPDOWN
 	if (intertype == int_compcoop)
 	{
 		UINT32 oldscore, finalscore;
@@ -2242,7 +2204,6 @@ void Y_EndIntermission(void)
 				P_GivePlayerLives(&players[data.compcoop.num[i]], ptlives);
 		}
 	}
-#endif
 
 	endtic = -1;
 	intertype = int_none;
@@ -2337,7 +2298,6 @@ static void Y_UnloadData(void)
 			UNLOAD(data.coop.bonuspatches[0]);
 			UNLOAD(data.coop.ptotal);
 			break;
-#ifdef TOPDOWN
 		case int_compcoop:
 			UNLOAD(data.compcoop.scorepatch);
 			UNLOAD(data.compcoop.guardpatch);
@@ -2347,7 +2307,6 @@ static void Y_UnloadData(void)
 			UNLOAD(data.compcoop.placeicons[2]);
 			UNLOAD(data.compcoop.placeicons[3]);
 			break;
-#endif
 		case int_spec:
 			// unload the special stage patches
 			//UNLOAD(data.spec.cemerald);

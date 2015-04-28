@@ -63,9 +63,7 @@ extern lumpnum_t st_borderpatchnum;
 // patches, also used in intermission
 extern patch_t *tallnum[10];
 
-#ifdef TOPDOWN
 extern patch_t *smallnum[10]; // 0-9, small numbers for TIME and SCORE in ND, probably WILL be used in intermission
-#endif
 
 extern patch_t *sboscore;
 extern patch_t *sbotime;
@@ -76,10 +74,8 @@ extern patch_t *superprefix[MAXSKINS]; // super face status patches
 extern patch_t *livesback;
 extern patch_t *ngradeletters[7];
 
-#ifdef TOPDOWN
 extern patch_t *sboscolon;
 extern patch_t *sbosperiod;
-#endif
 
 /** HUD location information (don't move this comment)
   */
@@ -126,7 +122,6 @@ typedef enum
 	HUD_GRAVBOOTSICO,
 	HUD_LAP,
 
-#ifdef TOPDOWN
 	// twoplayer stuff for regualr damage mode
 	HUD_LIVESPIC1P,
 
@@ -215,7 +210,6 @@ typedef enum
 	// twoplayer player 2
 	HUD_ND_LIVESPIC2P,
 	HUD_ND_LIVESNUM2P,
-#endif
 
 	NUMHUDITEMS
 } hudnum_t;

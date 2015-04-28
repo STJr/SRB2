@@ -819,11 +819,7 @@ void P_CheckGravity(mobj_t *mo, boolean affect)
 
 	if (mo->player)
 	{
-#ifdef TOPDOWN
 		if (mo->player->charability == CA_FLY && ((mo->player->powers[pw_tailsfly] && !(mo->player->pflags & PF_JUMPED))
-#else
-		if (mo->player->charability == CA_FLY && (mo->player->powers[pw_tailsfly]
-#endif
 		|| (mo->state >= &states[S_PLAY_SPC1] && mo->state <= &states[S_PLAY_SPC4])))
 			gravityadd = gravityadd/3; // less gravity while flying
 		if (mo->player->pflags & PF_GLIDING)
@@ -863,9 +859,7 @@ void P_CheckGravity(mobj_t *mo, boolean affect)
 			{
 				case MT_FLINGRING:
 				case MT_FLINGCOIN:
-#ifdef TOPDOWN
 				case MT_FLINGENERGY:
-#endif
 				case MT_FLINGEMERALD:
 				case MT_BOUNCERING:
 				case MT_RAILRING:
@@ -2159,9 +2153,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 					mo->player->glidetime = 0;
 					mo->player->climbing = 0;
 					mo->player->powers[pw_tailsfly] = 0;
-#ifdef TOPDOWN
 					mo->player->climbtime = 0;
-#endif
 				}
 			}
 			if (mo->player && !(mo->player->pflags & PF_SPINNING))
@@ -2170,11 +2162,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 			if (tmfloorthing && (tmfloorthing->flags & (MF_PUSHABLE|MF_MONITOR)
 			|| tmfloorthing->flags2 & MF2_STANDONME || tmfloorthing->type == MT_PLAYER))
 				mo->momz = tmfloorthing->momz;
-#ifdef TOPDOWN
 			else if (!tmfloorthing && !((maptol & TOL_TD) && P_CheckDeathPitCollide(mo)))
-#else
-			else if (!tmfloorthing)
-#endif
 				mo->momz = 0;
 		}
 		else if (tmfloorthing && (tmfloorthing->flags & (MF_PUSHABLE|MF_MONITOR)
@@ -2507,9 +2495,7 @@ void P_MobjCheckWater(mobj_t *mobj)
 		 || (p->exiting) // Or exiting
 		 || (maptol & TOL_NIGHTS) // Or in NiGHTS mode
 		 || (mariomode) // Or in Mario mode...
-#ifdef TOPDOWN
 		 || p->playerstate == PST_BUBBLE // Or bubbled
-#endif
 		 )
 		{
 			// Can't drown.
@@ -2865,9 +2851,7 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 		{
 			// clip movement
 			if (thiscam->z <= thiscam->floorz
-#ifdef TOPDOWN
 				&& !(maptol & TOL_TD)
-#endif
 				) // hit the floor
 			{
 				fixed_t cam_height = cv_cam_height.value;
@@ -2884,9 +2868,7 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 			}
 
 			if (thiscam->z + thiscam->height > thiscam->ceilingz
-#ifdef TOPDOWN
 				&& !(maptol & TOL_TD)
-#endif
 				)
 			{
 				if (thiscam->momz > 0)
@@ -4514,11 +4496,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 		// Pre-threshold reactiontime stuff for attack phases
 		if (mobj->reactiontime && mobj->movecount == 3) {
 			if (mobj->movedir == 0 || mobj->movedir == 2) { // Pausing between bounces in the pinball phase
-#ifdef TOPDOWN
 				if (mobj->target->player->powers[pw_tailsfly] && !(mobj->target->player->pflags & PF_JUMPED)) // Trying to escape, eh?
-#else
-				if (mobj->target->player->powers[pw_tailsfly]) // Trying to escape, eh?
-#endif
 					mobj->watertop = mobj->target->z + mobj->target->momz*6; // Readjust your aim. >:3
 				else
 					mobj->watertop = mobj->target->floorz + 16*FRACUNIT;
@@ -4846,7 +4824,6 @@ static void P_Boss9Thinker(mobj_t *mobj)
 	}
 }
 
-#ifdef TOPDOWN
 static void P_BossRedThinker(mobj_t *mobj)
 {
 	if ((statenum_t)(mobj->state-states) == mobj->info->spawnstate)
@@ -5005,7 +4982,6 @@ static void P_BossChillThinker(mobj_t *mobj)
 		mobj->extravalue2 = 0; // reset A_Repeat
 	}
 }
-#endif
 
 //
 // P_GetClosestAxis
@@ -5565,7 +5541,6 @@ static void P_RemoveOverlay(mobj_t *thing)
 		}
 }
 
-#ifdef TOPDOWN
 // Find the floor the shadow should be placed on, solid floors, or opaque ones
 // Ceiling boolean is for whether the shadow is placed on the ceiling
 // most of this is just HWR_OpaqueFloorAtPos
@@ -5694,7 +5669,6 @@ void P_RunShadows()
 		}
 	}
 }
-#endif
 
 void A_BossDeath(mobj_t *mo);
 // AI for the Koopa boss.
@@ -6056,7 +6030,6 @@ void P_MobjThinker(mobj_t *mobj)
 					return;
 				}
 				break;
-#ifdef TOPDOWN
 			case MT_BUBBLE:
 				if (mobj->target && mobj->target->health && mobj->target->player && mobj->target->player->mo && mobj->target->player->health && mobj->target->player->playerstate == PST_BUBBLE)
 				{
@@ -6188,7 +6161,6 @@ void P_MobjThinker(mobj_t *mobj)
 				}
 				break;
 			// Shadows are NOT done here, they weren't getting the correct floorz so they have to be done around the same time as shields
-#endif
 			default:
 				if (mobj->fuse)
 				{ // Scenery object fuse! Very basic!
@@ -6284,14 +6256,12 @@ void P_MobjThinker(mobj_t *mobj)
 			case MT_METALSONIC_BATTLE:
 				P_Boss9Thinker(mobj);
 				break;
-#ifdef TOPDOWN
 			case MT_REDEYE:
 				P_BossRedThinker(mobj);
 				break;
 			case MT_CHILLPENGUIN:
 				P_BossChillThinker(mobj);
 				break;
-#endif
 			default: // Generic SOC-made boss
 				if (mobj->flags2 & MF2_SKULLFLY)
 					P_SpawnGhostMobj(mobj);
@@ -6861,7 +6831,6 @@ void P_MobjThinker(mobj_t *mobj)
 				mobj->tracer->y, mobj->tracer->floorz, SPLATDRAWMODE_SHADE);
 #endif
 			break;
-#ifdef TOPDOWN
 		case MT_SMALLBLUECHAIN:
 		case MT_BIGBLUECHAIN:
 			A_MaceRotate(mobj);
@@ -7164,7 +7133,6 @@ void P_MobjThinker(mobj_t *mobj)
 				P_SetObjectMomZ(particle, FRACUNIT, false);
 			}
 			break;
-#endif
 		case MT_SPINFIRE:
 			if (mobj->eflags & MFE_VERTICALFLIP)
 				mobj->z = mobj->ceilingz - mobj->height;
@@ -7736,9 +7704,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 	else if (P_MobjWasRemoved(mobj))
 		return NULL;
 	else
-#ifdef TOPDOWN
 	{
-#endif
 #endif
 	switch (mobj->type)
 	{
@@ -7842,7 +7808,6 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 		case MT_BLUEBALL:
 #endif
 			nummaprings++;
-#ifdef TOPDOWN
 			break;
 		case MT_ZAPSPREAD:
 			mobj->fuse = 1*TICRATE;
@@ -7850,11 +7815,9 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 		case MT_ZAPSPREADTRAIL:
 			mobj->fuse = 12;
 			break;
-#endif
 		default:
 			break;
 	}
-#ifdef TOPDOWN
 	if (maptol & TOL_TD)
 	{
 		if (mobj->flags & MF_ENEMY || mobj->flags & MF_BOSS
@@ -7870,7 +7833,6 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 	}
 #ifdef HAVE_BLUA
 	}
-#endif
 #endif
 
 	if (!(mobj->flags & MF_NOTHINK))
@@ -7908,7 +7870,6 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 	return mobj;
 }
 
-#ifdef TOPDOWN
 //
 // P_SpawnShadowMobj
 // warning: Do not send a shadow mobj as a caster into here, or try to spawn spawn shadows for shadows in P_SpawnMobj, we do not want recursive shadows
@@ -8013,7 +7974,6 @@ mobj_t *P_SpawnShadowMobj(mobj_t * caster)
 
 	return mobj;
 }
-#endif
 
 static precipmobj_t *P_SpawnPrecipMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 {
@@ -8600,7 +8560,6 @@ void P_SpawnPlayer(INT32 playernum)
 	// Spawn with a pity shield if necessary.
 	P_DoPityCheck(p);
 
-#ifdef TOPDOWN
 	if (gametype == GT_COOP && (maptol & TOL_ND))
 	{
 		//mobj_t *minihealthbar;
@@ -8621,14 +8580,9 @@ void P_SpawnPlayer(INT32 playernum)
 		overheadarrow->flags2 |= MF2_DONTDRAW;
 		P_SetScale(overheadarrow, mobj->destscale);
 	}
-#endif
 }
 
-#ifdef TOPDOWN // stupid stupid stupid
 void P_AfterPlayerSpawn(INT32 playernum, boolean resetcamera)
-#else
-void P_AfterPlayerSpawn(INT32 playernum)
-#endif
 {
 	player_t *p = &players[playernum];
 	mobj_t *mobj = p->mo;
@@ -8658,23 +8612,19 @@ void P_AfterPlayerSpawn(INT32 playernum)
 
 	SV_SpawnPlayer(playernum, mobj->x, mobj->y, mobj->angle);
 
-#ifdef TOPDOWN
 	if (resetcamera)
 	{
-#endif
-	if (camera.chase)
-	{
-		if (displayplayer == playernum)
-			P_ResetCamera(p, &camera);
+        if (camera.chase)
+        {
+            if (displayplayer == playernum)
+                P_ResetCamera(p, &camera);
+        }
+        if (camera2.chase && splitscreen)
+        {
+            if (secondarydisplayplayer == playernum)
+                P_ResetCamera(p, &camera2);
+        }
 	}
-	if (camera2.chase && splitscreen)
-	{
-		if (secondarydisplayplayer == playernum)
-			P_ResetCamera(p, &camera2);
-	}
-#ifdef TOPDOWN
-	}
-#endif
 
 	if (CheckForReverseGravity)
 		P_CheckGravity(mobj, false);
@@ -8749,11 +8699,7 @@ void P_MovePlayerToSpawn(INT32 playernum, mapthing_t *mthing)
 
 	mobj->angle = angle;
 
-#ifdef TOPDOWN
 	P_AfterPlayerSpawn(playernum, true);
-#else
-	P_AfterPlayerSpawn(playernum);
-#endif
 }
 
 void P_MovePlayerToStarpost(INT32 playernum)
@@ -8786,17 +8732,12 @@ void P_MovePlayerToStarpost(INT32 playernum)
 
 	mobj->angle = p->starpostangle;
 
-#ifdef TOPDOWN
 	P_AfterPlayerSpawn(playernum, true);
-#else
-	P_AfterPlayerSpawn(playernum);
-#endif
 
 	if (!(netgame || multiplayer))
 		leveltime = p->starposttime;
 }
 
-#ifdef TOPDOWN
 void P_MovePlayerToTDSpawn(INT32 playernum)
 {
 	fixed_t x, y, z;
@@ -8863,15 +8804,10 @@ void P_MovePlayerToTDSpawn(INT32 playernum)
 	// TODO Sonic 3D Blast angle
 	mobj->angle = ANGLE_270; // Face screen
 
-#ifdef TOPDOWN
 	// Tell it not to reset the camera because they've just respawned in multiplayer...
 	// We only do TD respawns in multiplayer so no worries hopefully
 	P_AfterPlayerSpawn(playernum, false);
-#else
-	P_AfterPlayerSpawn(playernum);
-#endif
 }
-#endif
 
 #define MAXHUNTEMERALDS 64
 mapthing_t *huntemeralds[MAXHUNTEMERALDS];
@@ -9133,11 +9069,7 @@ void P_SpawnMapThing(mapthing_t *mthing)
 		z = ss->sector->floorheight + ((mthing->options >> ZSHIFT) << FRACBITS);
 	else if (i == MT_AXIS || i == MT_AXISTRANSFER || i == MT_AXISTRANSFERLINE)
 		z = ONFLOORZ;
-#ifdef TOPDOWN
 	else if (i == MT_SPECIALSPIKEBALL || P_WeaponOrPanel(i) || i == MT_EMERALDSPAWN || i == MT_EMMY || i == MT_TDEMBLEM)
-#else
-	else if (i == MT_SPECIALSPIKEBALL || P_WeaponOrPanel(i) || i == MT_EMERALDSPAWN || i == MT_EMMY)
-#endif
 	{
 		if (mthing->options & MTF_OBJECTFLIP)
 		{
@@ -9316,7 +9248,6 @@ ML_NOCLIMB : Direction not controllable
 
 		mobj->reactiontime = 0;
 
-#ifdef TOPDOWN
 		if (mthing->extrainfo == 1)
 		{
 			if (mthing->options & MTF_AMBUSH)
@@ -9332,15 +9263,12 @@ ML_NOCLIMB : Direction not controllable
 		}
 		else // Default to the regular otherwise
 		{
-#endif
-		if (mthing->options & MTF_AMBUSH)
-		{
-			chainlink = MT_BIGMACECHAIN;
-			macetype = MT_BIGMACE;
+            if (mthing->options & MTF_AMBUSH)
+            {
+                chainlink = MT_BIGMACECHAIN;
+                macetype = MT_BIGMACE;
+            }
 		}
-#ifdef TOPDOWN
-		}
-#endif
 
 		if (mthing->options & MTF_OBJECTSPECIAL)
 			mobj->flags2 |= MF2_BOSSNOTRAP; // shut up maces.
@@ -9428,7 +9356,6 @@ ML_NOCLIMB : Direction not controllable
 	case MT_TRAPGOYLELONG:
 		if (mthing->angle >= 360)
 			mobj->tics += 7*(mthing->angle / 360) + 1; // starting delay
-#ifdef TOPDOWN
 		break;
 	case MT_CHECKERBALLSPAWNER:
 		if (mthing->options & MTF_OBJECTSPECIAL)
@@ -9447,7 +9374,6 @@ ML_NOCLIMB : Direction not controllable
 			P_SetScale(mobj, FRACUNIT/4);
 		}
 		break;
-#endif
 	default:
 		break;
 	}
@@ -10001,10 +9927,8 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 		if (ultimatemode && !(G_IsSpecialStage(gamemap) || maptol & TOL_NIGHTS))
 			return;
 
-#ifdef TOPDOWN
 		if (mthing->options & MTF_OBJECTSPECIAL && !(netgame || multiplayer)) // Don't spawn rings that have the object special flag in multiplayer
 			return;
-#endif
 
 		// Which ringthing to use
 		switch (mthing->type)

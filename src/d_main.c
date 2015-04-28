@@ -606,7 +606,6 @@ void D_SRB2Loop(void)
 			// Lagless camera! Yay!
 			if (gamestate == GS_LEVEL && netgame)
 			{
-#ifdef TOPDOWN
 				if (maptol & TOL_TD)
 				{
 					if (splitscreen && camera2.chase)
@@ -616,14 +615,11 @@ void D_SRB2Loop(void)
 				}
 				else
 				{
-#endif
-				if (splitscreen && camera2.chase)
-					P_MoveChaseCamera(&players[secondarydisplayplayer], &camera2, false);
-				if (camera.chase)
-					P_MoveChaseCamera(&players[displayplayer], &camera, false);
-#ifdef TOPDOWN
+                    if (splitscreen && camera2.chase)
+                        P_MoveChaseCamera(&players[secondarydisplayplayer], &camera2, false);
+                    if (camera.chase)
+                        P_MoveChaseCamera(&players[displayplayer], &camera, false);
 				}
-#endif
 			}
 			D_Display();
 
@@ -712,9 +708,7 @@ void D_StartTitle(void)
 	displayplayer = consoleplayer = 0;
 	//demosequence = -1;
 	gametype = GT_COOP;
-#ifdef TOPDOWN
 	sharedlives = 3;
-#endif
 	paused = false;
 	advancedemo = false;
 	F_StartTitleScreen();
@@ -835,19 +829,11 @@ static void IdentifyVersion(void)
 	// if you change the ordering of this or add/remove a file, be sure to update the md5
 	// checking in D_SRB2Main
 
-#ifdef TOPDOWN
 	// Add the maps
 	D_AddFile(va(pandf,srb2waddir,"zones.td"));
 
 	// Add the players
 	D_AddFile(va(pandf,srb2waddir, "player.td"));
-#else
-	// Add the maps
-	D_AddFile(va(pandf,srb2waddir,"zones.dta"));
-
-	// Add the players
-	D_AddFile(va(pandf,srb2waddir, "player.dta"));
-#endif
 
 	// Add the weapons
 	D_AddFile(va(pandf,srb2waddir,"rings.dta"));
@@ -855,13 +841,11 @@ static void IdentifyVersion(void)
 	// Add our crappy patches to fix our bugs
 	// D_AddFile(va(pandf,srb2waddir,"patch.dta"));
 
-#ifdef TOPDOWN
 	// Add the asset pack textures (that really should've been in vanilla)
 	D_AddFile(va(pandf,srb2waddir, "assetpack.td"));
 
 	// Add the new custom TD data
 	D_AddFile(va(pandf,srb2waddir, "tddata.td"));
-#endif
 
 #if !defined (HAVE_SDL) || defined (HAVE_MIXER)
 	{
@@ -877,7 +861,6 @@ static void IdentifyVersion(void)
 		else if (ms == 0)
 			I_Error("File %s has been modified with non-music lumps",musicfile);
 
-#ifdef TOPDOWN
 		musicfile = "music.td";
 		musicpath = va(pandf,srb2waddir,musicfile);
 
@@ -886,7 +869,6 @@ static void IdentifyVersion(void)
 			D_AddFile(musicpath);
 		else if (ms == 0)
 			I_Error("File %s has been modified with non-music lumps",musicfile);
-#endif
 	}
 #endif
 }
@@ -1160,29 +1142,18 @@ void D_SRB2Main(void)
 
 	// Check MD5s of autoloaded files
 	W_VerifyFileMD5(0, "c1b9577687f8a795104aef4600720ea7"); // srb2.srb/srb2.wad
-#ifdef TOPDOWN
 	W_VerifyFileMD5(1, "07288367ef8adb68bf2475f87f8ea7d3"); // zones.td
 	W_VerifyFileMD5(2, "e6d142d9fdaee3251b497358a53fb424"); // player.td
-#else
-	W_VerifyFileMD5(1, "303838c6c534d9540288360fa49cca60"); // zones.dta
-	W_VerifyFileMD5(2, "cfca0f1c73023cbbd8f844f45480f799"); // player.dta
-#endif
 	W_VerifyFileMD5(3, "85901ad4bf94637e5753d2ac2c03ea26"); // rings.dta
 	//W_VerifyFileMD5(4, "0c66790502e648bfce90fdc5bb15722e"); // patch.dta
-
-#ifdef TOPDOWN
+	
 	W_VerifyFileMD5(4, "bfffe2fec3ad2b0d189ac5fa7573ce7a"); // assetpack.td
 	W_VerifyFileMD5(5, "d23bc8ac6a89d37caf892165bf970688"); // tddata.td
-#endif
 	// don't check music.dta because people like to modify it, and it doesn't matter if they do
 	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.
 #endif
 
-#ifdef TOPDOWN
 	mainwads = 6; // there are 7 wads not to unload
-#else
-	mainwads = 4; // there are 5 wads not to unload
-#endif
 
 	cht_Init();
 

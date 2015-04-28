@@ -85,10 +85,8 @@ extern boolean splitscreen;
 extern boolean circuitmap; // Does this level have 'circuit mode'?
 extern boolean fromlevelselect;
 
-#ifdef TOPDOWN
 extern boolean twoplayer; // 2 player no splitscreen
 extern SINT8 sharedlives;
-#endif
 
 // ========================================
 // Internal parameters for sound rendering.
@@ -248,9 +246,7 @@ typedef struct
 	UINT8 levelflags;     ///< LF_flags:  merged eight booleans into one UINT8 for space, see below
 	UINT8 menuflags;      ///< LF2_flags: options that affect record attack / nights mode menus
 
-#ifdef TOPDOWN
 	INT16 tdblast;        ///< camera angle for TD levels
-#endif
 
 	// NiGHTS stuff.
 	UINT8 numGradedMares;   ///< Internal. For grade support.
@@ -268,10 +264,8 @@ typedef struct
 #define LF_NOSSMUSIC      4 ///< Disable Super Sonic music
 #define LF_NORELOAD       8 ///< Don't reload level on death
 #define LF_NOZONE        16 ///< Don't include "ZONE" on level title
-#ifdef TOPDOWN
 #define LF_TDBOSSZONE    32 ///< Top Down boss Zone, start with 5 hits and no shared camera
 #define LF_TDNOSHAREDCAMERA 64 ///< Top Down ,but without the camera sharing
-#endif
 
 #define LF2_HIDEINMENU     1 ///< Hide in the multiplayer menu
 #define LF2_HIDEINSTATS    2 ///< Hide in the statistics screen
@@ -304,10 +298,8 @@ enum TypeOfLevel
 	TOL_ERZ3   = 0x0800, ///< ERZ3
 	TOL_XMAS   = 0x1000, ///< Christmas NiGHTS
 
-#ifdef TOPDOWN
 	TOL_TD     = 0x2000, ///< Top-Down
 	TOL_ND     = 0x4000  ///< New Damage
-#endif
 };
 
 // Gametypes
@@ -414,9 +406,7 @@ extern UINT16 underwatertics;
 extern UINT16 spacetimetics;
 extern UINT16 extralifetics;
 
-#ifdef TOPDOWN
 extern UINT16 knuxclimbtics;
-#endif
 
 extern UINT8 introtoplay;
 extern UINT8 creditscutscene;

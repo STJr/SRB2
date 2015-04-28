@@ -137,11 +137,9 @@ typedef struct
 	tic_t realtime[MAXPLAYERS];
 	UINT8 laps[MAXPLAYERS];
 
-#ifdef TOPDOWN
 	INT32 emblems[MAXPLAYERS];
 	UINT32 damagededuct[MAXPLAYERS]; // number of times hit and killed for the damage deduction in TD
 	UINT32 levelscore[MAXPLAYERS]; // the score you've gotten in the current level
-#endif
 } ATTRPACK resynchend_pak;
 
 typedef struct
@@ -234,10 +232,8 @@ typedef struct
 	UINT8 timeshit;
 	INT32 onconveyor;
 
-#ifdef TOPDOWN
 	fixed_t maxflyheight;
 	tic_t climbtime;
-#endif
 
 	//player->mo stuff
 	UINT8 hasmo; //boolean
@@ -286,9 +282,7 @@ typedef struct
 	UINT8 modifiedgame;
 	SINT8 adminplayer; // needs to be signed
 
-#ifdef TOPDOWN
 	SINT8 sharedlives;
-#endif
 
 	char server_context[8]; // unique context id, generated at server startup.
 

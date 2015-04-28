@@ -208,12 +208,10 @@ void A_BrakFireShot();
 void A_BrakLobShot();
 void A_NapalmScatter();
 void A_SpawnFreshCopy();
-#ifdef TOPDOWN
 void A_OrbitalChase();
 void A_InflatableSnowman();
 void A_CheckGround();
 void A_LookTracer();
-#endif
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
 #define NUMMOBJFREESLOTS 256
@@ -576,7 +574,6 @@ typedef enum sprite
 	SPR_SRBN,
 	SPR_SRBO,
 
-#ifdef TOPDOWN
 	SPR_SHAD, // Fake Shadows
 
 	SPR_FLEN, // Damage Energy
@@ -631,7 +628,6 @@ typedef enum sprite
 
 	SPR_SBUS, // Stormy Streets Bush
 	SPR_CONE, // Stormy Streets Cone
-#endif
 
 	SPR_FIRSTFREESLOT,
 	SPR_LASTFREESLOT = SPR_FIRSTFREESLOT + NUMSPRITEFREESLOTS - 1,
@@ -2555,14 +2551,12 @@ typedef enum state
 	S_SCRI, // 4000 (mario)
 	S_SCRJ, // 8000 (mario)
 	S_SCRK, // 1UP (mario)
-#ifdef TOPDOWN
 	S_SCRL, // 10 (Unused)
 	S_SCRM, // 20 (TD Emblems)
 	S_SCRN, // 40 (TD Emblems)
 	S_SCRO, // 50 (Unused)
 	S_SCRP, // 60 (TD Emblems)
 	S_SCRQ, // 80 (TD Emblems)
-#endif
 
 	// Drowning Timer Numbers
 	S_ZERO1,
@@ -3366,10 +3360,8 @@ typedef enum state
 	S_XPLD2,
 	S_XPLD3,
 	S_XPLD4,
-#ifdef TOPDOWN
 	S_XPLD5,
 	S_XPLD6,
-#endif
 
 	// Underwater Explosion
 	S_WPLD1,
@@ -3545,7 +3537,6 @@ typedef enum state
 	S_NAMECHECK,
 #endif
 
-#ifdef TOPDOWN
 	// topdown misc
 	S_SHADOW,
 
@@ -3900,7 +3891,6 @@ typedef enum state
 
 	// Stormy Streets Cone
 	S_STORMYCONE,
-#endif
 
 	S_FIRSTFREESLOT,
 	S_LASTFREESLOT = S_FIRSTFREESLOT + NUMSTATEFREESLOTS - 1,
@@ -4430,7 +4420,6 @@ typedef enum mobj_type
 	MT_NAMECHECK,
 #endif
 
-#ifdef TOPDOWN
 	// Top Down misc
 	MT_SHADOW,
 
@@ -4506,7 +4495,6 @@ typedef enum mobj_type
 	MT_STORMYBUSH,
 
 	MT_STORMYCONE,
-#endif
 
 	MT_FIRSTFREESLOT,
 	MT_LASTFREESLOT = MT_FIRSTFREESLOT + NUMMOBJFREESLOTS - 1,

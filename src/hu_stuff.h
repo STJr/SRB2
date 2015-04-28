@@ -61,9 +61,7 @@ typedef struct
 extern patch_t *hu_font[HU_FONTSIZE], *tny_font[HU_FONTSIZE];
 extern patch_t *tallnum[10];
 extern patch_t *nightsnum[10];
-#ifdef TOPDOWN
 extern patch_t *smallnum[10];
-#endif
 extern patch_t *lt_font[LT_FONTSIZE];
 extern patch_t *cred_font[CRED_FONTSIZE];
 extern patch_t *emeraldpics[7];
@@ -74,9 +72,7 @@ extern patch_t *rmatcico;
 extern patch_t *bmatcico;
 extern patch_t *tagico;
 extern patch_t *tallminus;
-#ifdef TOPDOWN
 extern patch_t *smallminus;
-#endif
 
 // set true when entering a chat message
 extern boolean chat_on;

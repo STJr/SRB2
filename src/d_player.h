@@ -79,10 +79,8 @@ typedef enum
 	PST_DEAD,
 	// Ready to restart/respawn???
 	PST_REBORN,
-#ifdef TOPDOWN
 	// After being reborn in co-op you get put into a bubble
 	PST_BUBBLE
-#endif
 } playerstate_t;
 
 //
@@ -440,13 +438,11 @@ typedef struct player_s
 	fixed_t fovadd; // adjust FOV for hw rendering
 #endif
 
-#ifdef TOPDOWN
 	fixed_t maxflyheight;
 	INT32 emblems;
 	tic_t climbtime;
 	UINT32 damagededuct; // number of times hit and killed for the damage deduction in TD
 	UINT32 levelscore; // the score you've gotten in the current level
-#endif
 } player_t;
 
 #endif

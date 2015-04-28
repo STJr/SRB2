@@ -184,31 +184,19 @@ boolean CheckForFloatBob;
 boolean CheckForReverseGravity;
 
 // Powerup durations
-#ifdef TOPDOWN
 UINT16 invulntics = 26*TICRATE;
 UINT16 sneakertics = 26*TICRATE;
 UINT16 flashingtics = TICRATE + (TICRATE/2);
-#else
-UINT16 invulntics = 20*TICRATE;
-UINT16 sneakertics = 20*TICRATE;
-UINT16 flashingtics = 3*TICRATE;
-#endif
 UINT16 tailsflytics = 8*TICRATE;
 UINT16 underwatertics = 30*TICRATE;
 UINT16 spacetimetics = 11*TICRATE + (TICRATE/2);
 UINT16 extralifetics = 4*TICRATE;
 
-#ifdef TOPDOWN
 UINT16 knuxclimbtics = 2*TICRATE;
-#endif
 
 INT32 gameovertics = 15*TICRATE;
 
-#ifdef TOPDOWN
 UINT8 use1upSound = 1;
-#else
-UINT8 use1upSound = 0;
-#endif
 UINT8 maxXtraLife = 2; // Max extra lives from rings
 
 UINT8 introtoplay;
@@ -1028,9 +1016,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 		|| (player->pflags & PF_NIGHTSMODE)
 		|| (player->pflags & PF_SLIDING) // Analog
 		|| (player->pflags & PF_FORCESTRAFE) // Analog
-#ifdef TOPDOWN
 		|| maptol & TOL_TD
-#endif
 		)
 			forcestrafe = true;
 	if (forcestrafe) // Analog
@@ -1322,9 +1308,7 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 		|| (player->pflags & PF_NIGHTSMODE)
 		|| (player->pflags & PF_SLIDING)
 		|| (player->pflags & PF_FORCESTRAFE)
-#ifdef TOPDOWN
 		|| maptol & TOL_TD
-#endif
 		) // Analog
 			forcestrafe = true;
 	if (forcestrafe) // Analog
@@ -1664,11 +1648,7 @@ void G_DoLoadLevel(boolean resetplayer)
 		P_FindEmerald();
 
 	displayplayer = consoleplayer; // view the guy you are playing
-#ifdef TOPDOWN
 	if (!splitscreen && !twoplayer && !botingame)
-#else
-	if (!splitscreen && !botingame)
-#endif
 		secondarydisplayplayer = consoleplayer;
 
 	gameaction = ga_nothing;
@@ -1707,11 +1687,7 @@ boolean G_Responder(event_t *ev)
 	// allow spy mode changes even during the demo
 	if (gamestate == GS_LEVEL && ev->type == ev_keydown && ev->data1 == KEY_F12)
 	{
-#ifdef TOPDOWN
 		if (splitscreen || twoplayer || !netgame)
-#else
-		if (splitscreen || !netgame)
-#endif
 			displayplayer = consoleplayer;
 		else
 		{
@@ -2108,12 +2084,10 @@ void G_PlayerReborn(INT32 player)
 	INT16 bot;
 	SINT8 pity;
 
-#ifdef TOPDOWN
 	INT32 emblems;
 	SINT8 xtralife;
 	UINT32 damagededuct;
 	UINT32 levelscore;
-#endif
 
 	score = players[player].score;
 	lives = players[player].lives;
@@ -2122,11 +2096,7 @@ void G_PlayerReborn(INT32 player)
 	exiting = players[player].exiting;
 	jointime = players[player].jointime;
 	spectator = players[player].spectator;
-#ifdef TOPDOWN
 	pflags = (players[player].pflags & (PF_TIMEOVER|PF_FLIPCAM|PF_TAGIT|PF_TAGGED|PF_ANALOGMODE|PF_NOTDSHAREDCAMERA)); // keep your camera state, at least here
-#else
-	pflags = (players[player].pflags & (PF_TIMEOVER|PF_FLIPCAM|PF_TAGIT|PF_TAGGED|PF_ANALOGMODE));
-#endif
 
 	// As long as we're not in multiplayer, carry over cheatcodes from map to map
 	if (!(netgame || multiplayer))
@@ -2165,7 +2135,6 @@ void G_PlayerReborn(INT32 player)
 	bot = players[player].bot;
 	pity = players[player].pity;
 
-#ifdef TOPDOWN
 	emblems = players[player].emblems;
 
 	INT32 i;
@@ -2180,7 +2149,6 @@ void G_PlayerReborn(INT32 player)
 
 	damagededuct = players[player].damagededuct;
 	levelscore = players[player].levelscore;
-#endif
 
 	p = &players[player];
 	memset(p, 0, sizeof (*p));
@@ -2229,13 +2197,11 @@ void G_PlayerReborn(INT32 player)
 		p->bot = 1; // reset to AI-controlled
 	p->pity = pity;
 
-#ifdef TOPDOWN
 	p->emblems = emblems; // keep emblems after death
 	p->xtralife = xtralife;
 	p->climbtime = 0;
 	p->damagededuct = damagededuct;
 	p->levelscore = levelscore;
-#endif
 
 	// Don't do anything immediately
 	p->pflags |= PF_USEDOWN;
@@ -2243,7 +2209,6 @@ void G_PlayerReborn(INT32 player)
 	p->pflags |= PF_JUMPDOWN;
 
 	p->playerstate = PST_LIVE;
-#ifdef TOPDOWN
 	if (maptol & TOL_ND) // Start with 1 hit of damage in the new damage system
 	{
 		if (mapheaderinfo[gamemap-1]->levelflags & LF_TDBOSSZONE)
@@ -2252,8 +2217,8 @@ void G_PlayerReborn(INT32 player)
 			p->health = 6;
 	}
 	else
-#endif
-	p->health = 1; // 0 rings
+        p->health = 1; // 0 rings
+    
 	p->panim = PA_IDLE; // standing animation
 
 	if ((netgame || multiplayer) && !p->spectator
@@ -2348,11 +2313,7 @@ static boolean G_CheckSpot(INT32 playernum, mapthing_t *mthing)
 // or a not-so-appropriate spot, if it initially fails
 // due to a lack of starts open or something.
 //
-#ifdef TOPDOWN
 void G_SpawnPlayer(INT32 playernum, boolean starpost, boolean bubblepossible)
-#else
-void G_SpawnPlayer(INT32 playernum, boolean starpost)
-#endif
 {
 	mapthing_t *spawnpoint;
 
@@ -2361,7 +2322,6 @@ void G_SpawnPlayer(INT32 playernum, boolean starpost)
 
 	P_SpawnPlayer(playernum);
 
-#ifdef TOPDOWN
 	// Topdown co-op spawning
 	if (maptol & TOL_TD && gametype == GT_COOP && bubblepossible && !(players[playernum].pflags & PF_NOTDSHAREDCAMERA)) // don't use TD respawn in no shared camera mode
 	{
@@ -2391,7 +2351,6 @@ void G_SpawnPlayer(INT32 playernum, boolean starpost)
 			return;
 		}
 	}
-#endif
 
 	if (starpost) //Don't even bother with looking for a place to spawn.
 	{
@@ -2432,21 +2391,13 @@ void G_SpawnPlayer(INT32 playernum, boolean starpost)
 	{
 		if (nummapthings)
 		{
-#ifdef TOPDOWN
 			if (playernum == consoleplayer || ((splitscreen || twoplayer) && playernum == secondarydisplayplayer))
-#else
-			if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
-#endif
 				CONS_Alert(CONS_ERROR, M_GetText("No player spawns found, spawning at the first mapthing!\n"));
 			spawnpoint = &mapthings[0];
 		}
 		else
 		{
-#ifdef TOPDOWN
 			if (playernum == consoleplayer || ((splitscreen || twoplayer) && playernum == secondarydisplayplayer))
-#else
-			if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
-#endif
 				CONS_Alert(CONS_ERROR, M_GetText("No player spawns found, spawning at the origin!\n"));
 			//P_MovePlayerToSpawn handles this fine if the spawnpoint is NULL.
 		}
@@ -2460,11 +2411,7 @@ mapthing_t *G_FindCTFStart(INT32 playernum)
 
 	if (!numredctfstarts && !numbluectfstarts) //why even bother, eh?
 	{
-#ifdef TOPDOWN
 		if (playernum == consoleplayer || ((splitscreen || twoplayer) && playernum == secondarydisplayplayer))
-#else
-		if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
-#endif
 			CONS_Alert(CONS_WARNING, M_GetText("No CTF starts in this map!\n"));
 		return NULL;
 	}
@@ -2473,11 +2420,7 @@ mapthing_t *G_FindCTFStart(INT32 playernum)
 	{
 		if (!numredctfstarts)
 		{
-#ifdef TOPDOWN
 			if (playernum == consoleplayer || ((splitscreen || twoplayer) && playernum == secondarydisplayplayer))
-#else
-			if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
-#endif
 				CONS_Alert(CONS_WARNING, M_GetText("No Red Team starts in this map!\n"));
 			return NULL;
 		}
@@ -2489,11 +2432,7 @@ mapthing_t *G_FindCTFStart(INT32 playernum)
 				return redctfstarts[i];
 		}
 
-#ifdef TOPDOWN
 		if (playernum == consoleplayer || ((splitscreen || twoplayer) && playernum == secondarydisplayplayer))
-#else
-		if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
-#endif
 			CONS_Alert(CONS_WARNING, M_GetText("Could not spawn at any Red Team starts!\n"));
 		return NULL;
 	}
@@ -2501,11 +2440,7 @@ mapthing_t *G_FindCTFStart(INT32 playernum)
 	{
 		if (!numbluectfstarts)
 		{
-#ifdef TOPDOWN
 			if (playernum == consoleplayer || ((splitscreen || twoplayer) && playernum == secondarydisplayplayer))
-#else
-			if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
-#endif
 				CONS_Alert(CONS_WARNING, M_GetText("No Blue Team starts in this map!\n"));
 			return NULL;
 		}
@@ -2516,11 +2451,7 @@ mapthing_t *G_FindCTFStart(INT32 playernum)
 			if (G_CheckSpot(playernum, bluectfstarts[i]))
 				return bluectfstarts[i];
 		}
-#ifdef TOPDOWN
 		if (playernum == consoleplayer || ((splitscreen || twoplayer) && playernum == secondarydisplayplayer))
-#else
-		if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
-#endif
 			CONS_Alert(CONS_WARNING, M_GetText("Could not spawn at any Blue Team starts!\n"));
 		return NULL;
 	}
@@ -2540,20 +2471,12 @@ mapthing_t *G_FindMatchStart(INT32 playernum)
 			if (G_CheckSpot(playernum, deathmatchstarts[i]))
 				return deathmatchstarts[i];
 		}
-#ifdef TOPDOWN
 		if (playernum == consoleplayer || ((splitscreen || twoplayer) && playernum == secondarydisplayplayer))
-#else
-		if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
-#endif
 			CONS_Alert(CONS_WARNING, M_GetText("Could not spawn at any Deathmatch starts!\n"));
 		return NULL;
 	}
 
-#ifdef TOPDOWN
 	if (playernum == consoleplayer || ((splitscreen || twoplayer) && playernum == secondarydisplayplayer))
-#else
-	if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
-#endif
 		CONS_Alert(CONS_WARNING, M_GetText("No Deathmatch starts in this map!\n"));
 	return NULL;
 }
@@ -2571,11 +2494,7 @@ mapthing_t *G_FindCoopStart(INT32 playernum)
 		return playerstarts[0];
 	}
 
-#ifdef TOPDOWN
 	if (playernum == consoleplayer || ((splitscreen || twoplayer) && playernum == secondarydisplayplayer))
-#else
-	if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
-#endif
 		CONS_Alert(CONS_WARNING, M_GetText("No Co-op starts in this map!\n"));
 	return NULL;
 }
@@ -2688,19 +2607,11 @@ void G_DoReborn(INT32 playernum)
 			CON_ClearHUD();
 
 			// Starpost support
-#ifdef TOPDOWN
 			G_SpawnPlayer(playernum, starpost, false);
-#else
-			G_SpawnPlayer(playernum, starpost);
-#endif
 			if (botingame)
 			{ // Bots respawn next to their master.
 				players[secondarydisplayplayer].playerstate = PST_REBORN;
-#ifdef TOPDOWN
 				G_SpawnPlayer(secondarydisplayplayer, false, false);
-#else
-				G_SpawnPlayer(secondarydisplayplayer, false);
-#endif
 			}
 		}
 		else
@@ -2715,7 +2626,6 @@ void G_DoReborn(INT32 playernum)
 	}
 	else
 	{
-#ifdef TOPDOWN
 		INT32 numplayers = 0, i;
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
@@ -2741,31 +2651,24 @@ void G_DoReborn(INT32 playernum)
 #endif
 		else
 		{
-#endif
-		// respawn at the start
-		mobj_t *oldmo = NULL;
+            // respawn at the start
+            mobj_t *oldmo = NULL;
 
-		if (player->starposttime)
-			starpost = true;
+            if (player->starposttime)
+                starpost = true;
 
-		// first dissasociate the corpse
-		if (player->mo)
-		{
-			oldmo = player->mo;
-			// Don't leave your carcass stuck 10-billion feet in the ground!
-			P_RemoveMobj(player->mo);
+            // first dissasociate the corpse
+            if (player->mo)
+            {
+                oldmo = player->mo;
+                // Don't leave your carcass stuck 10-billion feet in the ground!
+                P_RemoveMobj(player->mo);
+            }
+
+            G_SpawnPlayer(playernum, starpost, true);
+            if (oldmo)
+                G_ChangePlayerReferences(oldmo, players[playernum].mo);
 		}
-
-#ifdef TOPDOWN
-		G_SpawnPlayer(playernum, starpost, true);
-#else
-		G_SpawnPlayer(playernum, starpost);
-#endif
-		if (oldmo)
-			G_ChangePlayerReferences(oldmo, players[playernum].mo);
-#ifdef TOPDOWN
-		}
-#endif
 	}
 }
 
@@ -2773,7 +2676,6 @@ void G_AddPlayer(INT32 playernum)
 {
 	player_t *p = &players[playernum];
 
-#ifdef TOPDOWN
 	// Go through the current players and make sure you have the latest starpost set
 	if ((maptol & TOL_TD) && gametype == GT_COOP && (netgame || multiplayer))
 	{
@@ -2797,7 +2699,6 @@ void G_AddPlayer(INT32 playernum)
 			}
 		}
 	}
-#endif
 
 	p->jointime = 0;
 	p->playerstate = PST_REBORN;
@@ -3634,11 +3535,7 @@ void G_LoadGame(UINT32 slot, INT16 mapoverride)
 //	gameaction = ga_nothing;
 //	G_SetGamestate(GS_LEVEL);
 	displayplayer = consoleplayer;
-#ifdef TOPDOWN
 	multiplayer = splitscreen = twoplayer = false;
-#else
-	multiplayer = splitscreen = false;
-#endif
 
 //	G_DeferedInitNew(sk_medium, G_BuildMapName(1), 0, 0, 1);
 	if (setsizeneeded)
@@ -3721,16 +3618,10 @@ void G_DeferedInitNew(boolean pultmode, const char *mapname, INT32 pickedchar, b
 		botcolor = savedata.botcolor;
 		botingame = (botskin != 0);
 	}
-#ifdef TOPDOWN
 	else if (splitscreen != SSSG || twoplayer != SSSG)
-#else
-	else if (splitscreen != SSSG)
-#endif
 	{
 		splitscreen = SSSG;
-#ifdef TOPDOWN
 		twoplayer = SSSG;
-#endif
 		SplitScreen_OnChange();
 	}
 
@@ -3801,14 +3692,12 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 			players[i].score = players[i].xtralife = 0;
 		}
 
-#ifdef TOPDOWN
 		if (netgame || multiplayer)
 			sharedlives = cv_startinglives.value;
 		else if (pultmode)
 			sharedlives = 1;
 		else
 			sharedlives = 3;
-#endif
 
 		// Reset unlockable triggers
 		unlocktriggers = 0;

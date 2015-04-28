@@ -1079,9 +1079,7 @@ musicinfo_t S_music[NUMMUSIC] =
 	{"racent", 0, NULL, -1}, // Race Results
 	{"stjr",   0, NULL, -1}, // Sonic Team Jr. Presents
 
-#ifdef TOPDOWN
 	{"wipe",   0, NULL, -1}, // Team Wipe
-#endif
 };
 
 
@@ -1531,7 +1529,6 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3kdbs", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"s3kdbl", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
 
-#ifdef TOPDOWN
   {"chilbl", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"chilex", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"chilht", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
@@ -1545,7 +1542,6 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"int2nd", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"int1st", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"intwin", false,  64,  0, -1, NULL, 0, SKSINTWIN,  -1, LUMPERROR},
-#endif
 
   // skin sounds free slots to add sounds at run time (Boris HACK!!!)
   // initialized to NULL

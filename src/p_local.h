@@ -105,10 +105,8 @@ typedef struct camera_s
 	// Momentums, used to update position.
 	fixed_t momx, momy, momz;
 
-#ifdef TOPDOWN
 	fixed_t aimx, aimy, aimz;
 	fixed_t zoom; // zoom value used in TopDown
-#endif
 } camera_t;
 
 extern camera_t camera, camera2;
@@ -129,11 +127,9 @@ void P_ResetCamera(player_t *player, camera_t *thiscam);
 boolean P_TryCameraMove(fixed_t x, fixed_t y, camera_t *thiscam);
 void P_SlideCameraMove(camera_t *thiscam);
 boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcalled);
-#ifdef TOPDOWN
 boolean P_MoveTDChaseCamera(player_t *player, camera_t *thiscam, boolean resetcalled);
 void P_BubblePlayer(player_t *player);
 void P_UnbubblePlayer(player_t *player);
-#endif
 boolean P_PlayerInPain(player_t *player);
 void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor);
 void P_ResetPlayer(player_t *player);
@@ -150,9 +146,7 @@ void P_RestoreMusic(player_t *player);
 void P_SpawnShieldOrb(player_t *player);
 mobj_t *P_SpawnGhostMobj(mobj_t *mobj);
 void P_GivePlayerRings(player_t *player, INT32 num_rings);
-#ifdef TOPDOWN
 void P_GivePlayerEmblems(player_t *player, INT32 num_emblems); // ND
-#endif
 void P_GivePlayerLives(player_t *player, INT32 numlives);
 UINT8 P_GetNextEmerald(void);
 void P_GiveEmerald(boolean spawnObj);
@@ -213,9 +207,7 @@ void P_RespawnSpecials(void);
 
 mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type);
 
-#ifdef TOPDOWN
 mobj_t *P_SpawnShadowMobj(mobj_t * caster);
-#endif
 
 void P_RecalcPrecipInSector(sector_t *sector);
 void P_PrecipitationEffects(void);
@@ -226,9 +218,7 @@ void P_RemoveSavegameMobj(mobj_t *th);
 boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state);
 boolean P_SetMobjState(mobj_t *mobj, statenum_t state);
 void P_RunShields(void);
-#ifdef TOPDOWN
 void P_RunShadows(void);
-#endif
 void P_MobjThinker(mobj_t *mobj);
 boolean P_RailThinker(mobj_t *mobj);
 void P_PushableThinker(mobj_t *mobj);
@@ -385,9 +375,7 @@ void P_ResetStarposts(void);
 
 boolean P_CanPickupItem(player_t *player, boolean weapon);
 void P_DoNightsScore(player_t *player);
-#ifdef TOPDOWN
 void P_DoTDEmblemScore(player_t *player);
-#endif
 
 //
 // P_SPEC

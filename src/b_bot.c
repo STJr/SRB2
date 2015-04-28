@@ -24,7 +24,6 @@ static boolean lastForward = false;
 static boolean lastBlocked = false;
 static boolean blocked = false;
 
-#ifdef TOPDOWN
 static inline void B_BuildTopDownTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 {
 	boolean forward = false;
@@ -97,7 +96,6 @@ static inline void B_BuildTopDownTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcm
 	lastBlocked = blocked;
 	blocked = false;
 }
-#endif
 
 static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 {
@@ -209,12 +207,10 @@ void B_BuildTiccmd(player_t *player, ticcmd_t *cmd)
 		return;
 
 	// Basic Tails AI
-#ifdef TOPDOWN
 	if (maptol & TOL_TD)
 		B_BuildTopDownTailsTiccmd(players[consoleplayer].mo, player->mo, cmd);
 	else
-#endif
-	B_BuildTailsTiccmd(players[consoleplayer].mo, player->mo, cmd);
+        B_BuildTailsTiccmd(players[consoleplayer].mo, player->mo, cmd);
 }
 
 void B_KeysToTiccmd(mobj_t *mo, ticcmd_t *cmd, boolean forward, boolean backward, boolean left, boolean right, boolean strafeleft, boolean straferight, boolean jump, boolean spin)

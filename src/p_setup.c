@@ -218,10 +218,8 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->levelflags = 0;
 	DEH_WriteUndoline("MENUFLAGS", va("%d", mapheaderinfo[num]->menuflags), UNDO_NONE);
 	mapheaderinfo[num]->menuflags = 0;
-#ifdef TOPDOWN
 	DEH_WriteUndoline("TDBLAST", va("%d", mapheaderinfo[num]->tdblast), UNDO_NONE);
 	mapheaderinfo[num]->tdblast = 0;
-#endif
 	// TODO grades support for delfile (pfft yeah right)
 	P_DeleteGrades(num);
 	// an even further impossibility, delfile custom opts support
@@ -2048,12 +2046,10 @@ static void P_LevelInitStuff(void)
 	// earthquake camera
 	memset(&quake,0,sizeof(struct quake));
 
-#ifdef TOPDOWN
 	if ((maptol & TOL_TD) && gametype == GT_COOP && (netgame || multiplayer) && sharedlives == -1) // -1 because we have the case where players can be running through the level with 0 lives
 	{
 		sharedlives = cv_startinglives.value;
 	}
-#endif
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
@@ -2068,7 +2064,6 @@ static void P_LevelInitStuff(void)
 		players[i].gotcontinue = false;
 
 		players[i].xtralife = players[i].deadtimer = players[i].numboxes = players[i].totalring = players[i].laps = 0;
-#ifdef TOPDOWN
 		players[i].levelscore = 0;
 
 		players[i].damagededuct = 0;
@@ -2088,8 +2083,8 @@ static void P_LevelInitStuff(void)
 				players[i].health = 6;
 		}
 		else
-#endif
-		players[i].health = 1;
+            players[i].health = 1;
+
 		players[i].aiming = 0;
 		players[i].pflags &= ~PF_TIMEOVER;
 
@@ -2242,11 +2237,7 @@ static void P_ForceCharacter(const char *forcecharskin)
 	if (netgame)
 	{
 		char skincmd[33];
-#ifdef TOPDOWN
 		if (splitscreen || twoplayer)
-#else
-		if (splitscreen)
-#endif
 		{
 			sprintf(skincmd, "skin2 %s\n", forcecharskin);
 			CV_Set(&cv_skin2, forcecharskin);
@@ -2257,11 +2248,7 @@ static void P_ForceCharacter(const char *forcecharskin)
 	}
 	else
 	{
-#ifdef TOPDOWN
 		if (splitscreen || twoplayer)
-#else
-		if (splitscreen)
-#endif
 		{
 			SetPlayerSkin(secondarydisplayplayer, forcecharskin);
 			if ((unsigned)cv_playercolor2.value != skins[players[secondarydisplayplayer].skin].prefcolor)
@@ -2628,19 +2615,11 @@ boolean P_SetupLevel(boolean skipprecip)
 
 				if (players[i].starposttime)
 				{
-#ifdef TOPDOWN
 					G_SpawnPlayer(i, true, false);
-#else
-					G_SpawnPlayer(i, true);
-#endif
 					P_ClearStarPost(players[i].starpostnum);
 				}
 				else
-#ifdef TOPDOWN
 					G_SpawnPlayer(i, false, false);
-#else
-					G_SpawnPlayer(i, false);
-#endif
 			}
 		}
 
@@ -2680,11 +2659,7 @@ boolean P_SetupLevel(boolean skipprecip)
 			if (players[playersactive[i]].mo)
 				P_RemoveMobj(players[playersactive[i]].mo);
 
-#ifdef TOPDOWN
-			G_SpawnPlayer(playersactive[i], false, false);
-#else
-			G_SpawnPlayer(playersactive[i], false); //respawn the lucky player in his dedicated spawn location.
-#endif
+			G_SpawnPlayer(playersactive[i], false, false); //respawn the lucky player in his dedicated spawn location.
 		}
 		else
 			CONS_Printf(M_GetText("No player currently available to become IT. Awaiting available players.\n"));
@@ -2776,7 +2751,6 @@ boolean P_SetupLevel(boolean skipprecip)
 		CV_SetValue(&cv_analog, false);
 	}
 
-#ifdef TOPDOWN
 	if (maptol & TOL_TD)
 	{
 		CV_SetValue(&cv_cam_dist, 576);
@@ -2785,7 +2759,6 @@ boolean P_SetupLevel(boolean skipprecip)
 		CV_SetValue(&cv_cam2_dist, 576);
 		CV_SetValue(&cv_cam2_height, 384);
 	}
-#endif
 
 	// clear special respawning que
 	iquehead = iquetail = 0;

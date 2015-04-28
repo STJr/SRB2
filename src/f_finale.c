@@ -43,9 +43,6 @@ static INT32 continuetime; // Short delay when continuing
 static tic_t animtimer; // Used for some animation timings
 static INT32 roidtics; // Asteroid spinning
 
-#ifndef TOPDOWN
-static INT32 deplete;
-#endif
 static tic_t stoptimer;
 
 static boolean keypressed = false;
@@ -249,11 +246,7 @@ static void F_SkyScroll(INT32 scrollspeed)
 // =============
 //  INTRO SCENE
 // =============
-#ifdef TOPDOWN
 #define NUMINTROSCENES 1
-#else
-#define NUMINTROSCENES 16
-#endif
 INT32 intro_scenenum = 0;
 INT32 intro_curtime = 0;
 
@@ -261,26 +254,7 @@ const char *introtext[NUMINTROSCENES];
 
 static tic_t introscenetime[NUMINTROSCENES] =
 {
-#ifdef TOPDOWN
 	 2*TICRATE + (TICRATE/2),	// KART KR(eW
-#else
-	 7*TICRATE + (TICRATE/2),	// STJr Presents
-	11*TICRATE + (TICRATE/2),	// Two months had passed since...
-	15*TICRATE + (TICRATE/2),	// As it was about to drain the rings...
-	14*TICRATE,					// What Sonic, Tails, and Knuckles...
-	18*TICRATE,					// About once every year, a strange...
-	19*TICRATE + (TICRATE/2),	// Curses! Eggman yelled. That ridiculous...
-	19*TICRATE + (TICRATE/4),	// It was only later that he had an idea...
-	10*TICRATE + (TICRATE/2),	// Before beginning his scheme, Eggman decided to give Sonic...
-	16*TICRATE,					// We're ready to fire in 15 seconds, the robot said...
-	16*TICRATE,					// Meanwhile, Sonic was tearing across the zones...
-	16*TICRATE + (TICRATE/2),	// Sonic knew he was getting closer to the city...
-	17*TICRATE,					// Greenflower City was gone...
-	16*TICRATE + (TICRATE/2),	// You're not quite as dead as we thought, huh?...
-	18*TICRATE + (TICRATE/2),	// Eggman took this as his cue and blasted off...
-	16*TICRATE,					// Easy! We go find Eggman and stop his...
-	25*TICRATE,					// I'm just finding what mission obje...
-#endif
 };
 
 // custom intros
@@ -298,151 +272,6 @@ void F_StartIntro(void)
 	}
 
 	introtext[0] = " #";
-
-#ifndef TOPDOWN
-	introtext[1] = M_GetText(
-	"Two months had passed since Dr. Eggman\n"
-	"tried to take over the world using his\n"
-	"Ring Satellite.\n#");
-
-	introtext[2] = M_GetText(
-	"As it was about to drain the rings\n"
-	"away from the planet, Sonic burst into\n"
-	"the Satellite and for what he thought\n"
-	"would be the last time,\xB4 defeated\n"
-	"Dr. Eggman.\n#");
-
-	introtext[3] = M_GetText(
-	"\nWhat Sonic, Tails, and Knuckles had\n"
-	"not anticipated was that Eggman would\n"
-	"return,\xB8 bringing an all new threat.\n#");
-
-	introtext[4] = M_GetText(
-	"\xA8""About once every year, a strange asteroid\n"
-	"hovers around the planet.\xBF It suddenly\n"
-	"appears from nowhere, circles around, and\n"
-	"\xB6- just as mysteriously as it arrives -\xB6\n"
-	"vanishes after about two months.\xBF\n"
-	"No one knows why it appears, or how.\n#");
-
-	introtext[5] = M_GetText(
-	"\xA7\"Curses!\"\xA9\xBA Eggman yelled. \xA7\"That hedgehog\n"
-	"and his ridiculous friends will pay\n"
-	"dearly for this!\"\xA9\xC8 Just then his scanner\n"
-	"blipped as the Black Rock made its\n"
-	"appearance from nowhere.\xBF Eggman looked at\n"
-	"the screen, and just shrugged it off.\n#");
-
-	introtext[6] = M_GetText(
-	"It was only later\n"
-	"that he had an\n"
-	"idea. \xBF\xA7\"The Black\n"
-	"Rock usually has a\n"
-	"lot of energy\n"
-	"within it\xAC...\xA7\xBF\n"
-	"If I can somehow\n"
-	"harness this,\xB8 I\n"
-	"can turn it into\n"
-	"the ultimate\n"
-	"battle station\xAC...\xA7\xBF\n"
-	"And every last\n"
-	"person will be\n"
-	"begging for mercy,\xB8\xA8\n"
-	"including Sonic!\"\n#");
-
-	introtext[7] = M_GetText(
-	"\xA8\nBefore beginning his scheme,\n"
-	"Eggman decided to give Sonic\n"
-	"a reunion party...\n#");
-
-	introtext[8] = M_GetText(
-	"\xA5\"We're\xB6 ready\xB6 to\xB4 fire\xB6 in\xB6 15\xB6 seconds!\"\xA8\xB8\n"
-	"The robot said, his voice crackling a\n"
-	"little down the com-link. \xBF\xA7\"Good!\"\xA8\xB8\n"
-	"Eggman sat back in his Egg-Mobile and\n"
-	"began to count down as he saw the\n"
-	"GreenFlower city on the main monitor.\n#");
-
-	introtext[9] = M_GetText(
-	"\xA5\"10...\xD2""9...\xD2""8...\"\xA8\xD2\n"
-	"Meanwhile, Sonic was tearing across the\n"
-	"zones. Everything became a blur as he\n"
-	"ran around loops, skimmed over water,\n"
-	"and catapulted himself off rocks with\n"
-	"his phenomenal speed.\n#");
-
-	introtext[10] = M_GetText(
-	"\xA5\"6...\xD2""5...\xD2""4...\"\xA8\xD2\n"
-	"Sonic knew he was getting closer to the\n"
-	"City, and pushed himself harder.\xB4 Finally,\n"
-	"the city appeared in the horizon.\xD2\xD2\n"
-	"\xA5\"3...\xD2""2...\xD2""1...\xD2""Zero.\"\n#");
-
-	introtext[11] = M_GetText(
-	"GreenFlower City was gone.\xC4\n"
-	"Sonic arrived just in time to see what\n"
-	"little of the 'ruins' were left.\n"
-	"Everyone and everything in the city\n"
-	"had been obliterated.\n#");
-
-	introtext[12] = M_GetText(
-	"\xA7\"You're not quite as dead as we thought,\n"
-	"huh?\xBF Are you going to tell us your plan as\n"
-	"usual or will I \xA8\xB4'have to work it out'\xA7 or\n"
-	"something?\"\xD2\xD2\n"
-	"\"We'll see\xAA...\xA7\xBF let's give you a quick warm\n"
-	"up, Sonic!\xA6\xC4 JETTYSYNS!\xA7\xBD Open fire!\"\n#");
-
-	introtext[13] = M_GetText(
-	"Eggman took this\n"
-	"as his cue and\n"
-	"blasted off,\n"
-	"leaving Sonic\n"
-	"and Tails behind.\xB6\n"
-	"Tails looked at\n"
-	"the ruins of the\n"
-	"Greenflower City\n"
-	"with a grim face\n"
-	"and sighed.\xC6\n"
-	"\xA7\"Now\xB6 what do we\n"
-	"do?\",\xA9 he asked.\n#");
-
-	introtext[14] = M_GetText(
-	"\xA7\"Easy!\xBF We go\n"
-	"find Eggman\n"
-	"and stop his\n"
-	"latest\n"
-	"insane plan.\xBF\n"
-	"Just like\n"
-	"we've always\n"
-	"done,\xBA right?\xD2\n\n"
-	"\xAE...\xA9\xD2\n\n"
-	"\"Tails, what\n"
-	"\xAA*ARE*\xA9 you\n"
-	"doing?\"\n#");
-
-	introtext[15] = M_GetText(
-	"\xA8\"I'm just finding what mission obje\xAC\xB1...\xBF\n"
-	"\xA6""a-\xB8""ha!\xBF Here it is!\xA8\xBF This will only give us\n"
-	"the robot's primary objective.\xBF It says\xAC\xB1...\"\n"
-	"\xD2\xA3\x83"
-	"* LOCATE  AND  RETRIEVE:  CHAOS  EMERALDS *"
-	"\xBF\n"
-	"*  CLOSEST  LOCATION:  GREENFLOWER  ZONE  *"
-	"\x80\n\xA9\xD2\xD2"
-	"\"All right, then\xAF... \xD2\xD2\xA7let's go!\"\n#");
-
-/*
-	"What are we waiting for? The first emerald is ours!" Sonic was about to
-	run, when he saw a shadow pass over him, he recognized the silhouette
-	instantly.
-	"Knuckles!" Sonic said. The echidna stopped his glide and landed
-	facing Sonic. "What are you doing here?"
-	He replied, "This crisis affects the Floating Island,
-	if that explosion I saw is anything to go by."
-	If you're willing to help then... let's go!"
-*/
-#endif
 
 	G_SetGamestate(GS_INTRO);
 	gameaction = ga_nothing;
@@ -467,107 +296,16 @@ static void F_IntroDrawScene(void)
 	INT32 cx = 8, cy = 128;
 	patch_t *background = NULL;
 	INT32 bgxoffs = 0;
-#ifndef TOPDOWN
-	void *patch;
-#endif
 
 	// DRAW A FULL PIC INSTEAD OF FLAT!
-#ifdef TOPDOWN
 	if (intro_scenenum == 0)
 	{
 		if (finalecount == 35)
 			S_StartSound(NULL, sfx_intwin); // YES!
 		background = W_CachePatchName("KARTKREW", PU_CACHE);
 	}
-#else
-	if (intro_scenenum == 0);
-#endif
-#ifndef TOPDOWN
-	else if (intro_scenenum == 1)
-		background = W_CachePatchName("INTRO1", PU_CACHE);
-	else if (intro_scenenum == 2)
-	{
-		background = W_CachePatchName("INTRO2", PU_CACHE);
-		highres = true;
-	}
-	else if (intro_scenenum == 3)
-		background = W_CachePatchName("INTRO3", PU_CACHE);
-	else if (intro_scenenum == 4)
-		background = W_CachePatchName("INTRO4", PU_CACHE);
-	else if (intro_scenenum == 5)
-	{
-		if (intro_curtime >= 5*TICRATE)
-			background = W_CachePatchName("RADAR", PU_CACHE);
-		else
-		{
-			background = W_CachePatchName("DRAT", PU_CACHE);
-			highres = true;
-		}
-	}
-	else if (intro_scenenum == 6)
-	{
-		background = W_CachePatchName("INTRO6", PU_CACHE);
-		cx = 180;
-		cy = 8;
-	}
-	else if (intro_scenenum == 7)
-	{
-		if (intro_curtime >= 6*TICRATE)
-			background = W_CachePatchName("SGRASS5", PU_CACHE);
-		else
-			background = W_CachePatchName("SGRASS1", PU_CACHE);
-	}
-	else if (intro_scenenum == 8)
-	{
-		background = W_CachePatchName("WATCHING", PU_CACHE);
-		highres = true;
-	}
-	else if (intro_scenenum == 9)
-	{
-		background = W_CachePatchName("ZOOMING", PU_CACHE);
-		highres = true;
-	}
-	else if (intro_scenenum == 10);
-	else if (intro_scenenum == 11)
-		background = W_CachePatchName("INTRO5", PU_CACHE);
-	else if (intro_scenenum == 12)
-	{
-		if (intro_curtime >= 7*TICRATE)
-			background = W_CachePatchName("CONFRONT", PU_CACHE);
-		else
-			background = W_CachePatchName("REVENGE", PU_CACHE);
-		highres = true;
-	}
-	else if (intro_scenenum == 13)
-	{
-		background = W_CachePatchName("TAILSSAD", PU_CACHE);
-		highres = true;
-		bgxoffs = 144;
-		cx = 8;
-		cy = 8;
-	}
-	else if (intro_scenenum == 14)
-	{
-		if (intro_curtime >= 7*TICRATE)
-			background = W_CachePatchName("SONICDO2", PU_CACHE);
-		else
-			background = W_CachePatchName("SONICDO1", PU_CACHE);
-		highres = true;
-		cx = 224;
-		cy = 8;
-	}
-	else if (intro_scenenum == 15)
-	{
-		background = W_CachePatchName("INTRO7", PU_CACHE);
-		highres = true;
-	}
-#endif
 
-#ifdef TOPDOWN
 	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 120);
-#else
-	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
-#endif
 
 	if (background)
 	{
@@ -576,215 +314,11 @@ static void F_IntroDrawScene(void)
 		else
 			V_DrawScaledPatch(bgxoffs, 0, 0, background);
 	}
-#ifndef TOPDOWN
-	else if (intro_scenenum == 0) // STJr presents
-	{
-		// "Waaaaaaah" intro
-		if (finalecount-TICRATE/2 < 4*TICRATE+23) {
-			// aspect is FRACUNIT/2 for 4:3 (source) resolutions, smaller for 16:10 (SRB2) resolutions
-			fixed_t aspect = (FRACUNIT + (FRACUNIT*4/3 - FRACUNIT*vid.width/vid.height)/2)>>1;
-			fixed_t x,y;
-			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 2);
-			if (finalecount < 30) { // Cry!
-				if (finalecount < 4)
-					S_StopMusic();
-				if (finalecount == 4)
-					S_ChangeMusic(mus_stjr, false);
-				x = (BASEVIDWIDTH<<FRACBITS)/2 - FixedMul(334<<FRACBITS, aspect)/2;
-				y = (BASEVIDHEIGHT<<FRACBITS)/2 - FixedMul(358<<FRACBITS, aspect)/2;
-				V_DrawSciencePatch(x, y, 0, (patch = W_CachePatchName("WAHH1", PU_CACHE)), aspect);
-				W_UnlockCachedPatch(patch);
-				if (finalecount > 6) {
-					V_DrawSciencePatch(x, y, 0, (patch = W_CachePatchName("WAHH2", PU_CACHE)), aspect);
-					W_UnlockCachedPatch(patch);
-				}
-				if (finalecount > 10) {
-					V_DrawSciencePatch(x, y, 0, (patch = W_CachePatchName("WAHH3", PU_CACHE)), aspect);
-					W_UnlockCachedPatch(patch);
-				}
-				if (finalecount > 14) {
-					V_DrawSciencePatch(x, y, 0, (patch = W_CachePatchName("WAHH4", PU_CACHE)), aspect);
-					W_UnlockCachedPatch(patch);
-				}
-			}
-			else if (finalecount-30 < 20) { // Big eggy
-				background = W_CachePatchName("FEEDIN", PU_CACHE);
-				x = (BASEVIDWIDTH<<FRACBITS)/2 - FixedMul(560<<FRACBITS, aspect)/2;
-				y = (BASEVIDHEIGHT<<FRACBITS) - FixedMul(477<<FRACBITS, aspect);
-				V_DrawSciencePatch(x, y, V_SNAPTOBOTTOM, background, aspect);
-			}
-			else if (finalecount-50 < 30) { // Zoom out
-				fixed_t scale = FixedDiv(aspect, FixedDiv((finalecount-50)<<FRACBITS, (15<<FRACBITS))+FRACUNIT);
-				background = W_CachePatchName("FEEDIN", PU_CACHE);
-				x = (BASEVIDWIDTH<<FRACBITS)/2 - FixedMul(560<<FRACBITS, aspect)/2 + (FixedMul(560<<FRACBITS, aspect) - FixedMul(560<<FRACBITS, scale));
-				y = (BASEVIDHEIGHT<<FRACBITS) - FixedMul(477<<FRACBITS, scale);
-				V_DrawSciencePatch(x, y, V_SNAPTOBOTTOM, background, scale);
-			}
-			else
-			{
-				{
-					// Draw tiny eggy
-					fixed_t scale = FixedMul(FRACUNIT/3, aspect);
-					background = W_CachePatchName("FEEDIN", PU_CACHE);
-					x = (BASEVIDWIDTH<<FRACBITS)/2 - FixedMul(560<<FRACBITS, aspect)/2 + (FixedMul(560<<FRACBITS, aspect) - FixedMul(560<<FRACBITS, scale));
-					y = (BASEVIDHEIGHT<<FRACBITS) - FixedMul(477<<FRACBITS, scale);
-					V_DrawSciencePatch(x, y, V_SNAPTOBOTTOM, background, scale);
-				}
-
-				if (finalecount-84 < 58) { // Pure Fat is driving up!
-					int ftime = (finalecount-84);
-					x = (-189<<FRACBITS) + (FixedMul((6<<FRACBITS)+FRACUNIT/3, ftime<<FRACBITS) - FixedMul((6<<FRACBITS)+FRACUNIT/3, FixedDiv(FixedMul(ftime<<FRACBITS, ftime<<FRACBITS), 120<<FRACBITS)));
-					y = (BASEVIDHEIGHT<<FRACBITS) - FixedMul(417<<FRACBITS, aspect);
-					// Draw the body
-					V_DrawSciencePatch(x, y, V_SNAPTOLEFT|V_SNAPTOBOTTOM, (patch = W_CachePatchName("PUREFAT1", PU_CACHE)), aspect);
-					W_UnlockCachedPatch(patch);
-					// Draw the door
-					V_DrawSciencePatch(x+FixedMul(344<<FRACBITS, aspect), y+FixedMul(292<<FRACBITS, aspect), V_SNAPTOLEFT|V_SNAPTOBOTTOM, (patch = W_CachePatchName("PUREFAT2", PU_CACHE)), aspect);
-					W_UnlockCachedPatch(patch);
-					// Draw the wheel
-					V_DrawSciencePatch(x+FixedMul(178<<FRACBITS, aspect), y+FixedMul(344<<FRACBITS, aspect), V_SNAPTOLEFT|V_SNAPTOBOTTOM, (patch = W_CachePatchName(va("TYRE%02u",(abs(finalecount-144)/3)%16), PU_CACHE)), aspect);
-					W_UnlockCachedPatch(patch);
-					// Draw the wheel cover
-					V_DrawSciencePatch(x+FixedMul(88<<FRACBITS, aspect), y+FixedMul(238<<FRACBITS, aspect), V_SNAPTOLEFT|V_SNAPTOBOTTOM, (patch = W_CachePatchName("PUREFAT3", PU_CACHE)), aspect);
-					W_UnlockCachedPatch(patch);
-				} else { // Pure Fat has stopped!
-					y = (BASEVIDHEIGHT<<FRACBITS) - FixedMul(417<<FRACBITS, aspect);
-					// Draw the body
-					V_DrawSciencePatch(0, y, V_SNAPTOLEFT|V_SNAPTOBOTTOM, (patch = W_CachePatchName("PUREFAT1", PU_CACHE)), aspect);
-					W_UnlockCachedPatch(patch);
-					// Draw the wheel
-					V_DrawSciencePatch(FixedMul(178<<FRACBITS, aspect), y+FixedMul(344<<FRACBITS, aspect), V_SNAPTOLEFT|V_SNAPTOBOTTOM, (patch = W_CachePatchName("TYRE00", PU_CACHE)), aspect);
-					W_UnlockCachedPatch(patch);
-					// Draw the wheel cover
-					V_DrawSciencePatch(FixedMul(88<<FRACBITS, aspect), y+FixedMul(238<<FRACBITS, aspect), V_SNAPTOLEFT|V_SNAPTOBOTTOM, (patch = W_CachePatchName("PUREFAT3", PU_CACHE)), aspect);
-					W_UnlockCachedPatch(patch);
-					// Draw the door
-					if (finalecount-TICRATE/2 > 4*TICRATE) { // Door is being raised!
-						int ftime = (finalecount-TICRATE/2-4*TICRATE);
-						y -= FixedDiv((ftime*ftime)<<FRACBITS, 23<<FRACBITS);
-					}
-					V_DrawSciencePatch(FixedMul(344<<FRACBITS, aspect), y+FixedMul(292<<FRACBITS, aspect), V_SNAPTOLEFT|V_SNAPTOBOTTOM, (patch = W_CachePatchName("PUREFAT2", PU_CACHE)), aspect);
-					W_UnlockCachedPatch(patch);
-				}
-			}
-		} else {
-			V_DrawCreditString((160 - V_CreditStringWidth("SONIC TEAM JR")/2)<<FRACBITS, 80<<FRACBITS, 0, "SONIC TEAM JR");
-			V_DrawCreditString((160 - V_CreditStringWidth("PRESENTS")/2)<<FRACBITS, 96<<FRACBITS, 0, "PRESENTS");
-		}
-	}
-	else if (intro_scenenum == 10) // Sky Runner
-	{
-		if (timetonext > 5*TICRATE && timetonext < 6*TICRATE)
-		{
-			if (!(finalecount & 3))
-				background = W_CachePatchName("BRITEGG1", PU_CACHE);
-			else
-				background = W_CachePatchName("DARKEGG1", PU_CACHE);
-
-			V_DrawScaledPatch(0, 0, 0, background);
-		}
-		else if (timetonext > 3*TICRATE && timetonext < 4*TICRATE)
-		{
-			if (!(finalecount & 3))
-				background = W_CachePatchName("BRITEGG2", PU_CACHE);
-			else
-				background = W_CachePatchName("DARKEGG2", PU_CACHE);
-
-			V_DrawScaledPatch(0, 0, 0, background);
-		}
-		else if (timetonext > 1*TICRATE && timetonext < 2*TICRATE)
-		{
-			if (!(finalecount & 3))
-				background = W_CachePatchName("BRITEGG3", PU_CACHE);
-			else
-				background = W_CachePatchName("DARKEGG3", PU_CACHE);
-
-			V_DrawScaledPatch(0, 0, 0, background);
-		}
-		else
-		{
-			F_SkyScroll(80*4);
-			if (timetonext == 6)
-			{
-				stoptimer = finalecount;
-				animtimer = finalecount % 16;
-			}
-			else if (timetonext >= 0 && timetonext < 6)
-			{
-				animtimer = stoptimer;
-				deplete -= 32;
-			}
-			else
-			{
-				animtimer = finalecount % 16;
-				deplete = 160;
-			}
-
-			if (finalecount & 1)
-			{
-				V_DrawScaledPatch(deplete, 8, 0, (patch = W_CachePatchName("RUN2", PU_CACHE)));
-				W_UnlockCachedPatch(patch);
-				V_DrawScaledPatch(deplete, 72, 0, (patch = W_CachePatchName("PEELOUT2", PU_CACHE)));
-				W_UnlockCachedPatch(patch);
-			}
-			else
-			{
-				V_DrawScaledPatch(deplete, 8, 0, (patch = W_CachePatchName("RUN1", PU_CACHE)));
-				W_UnlockCachedPatch(patch);
-				V_DrawScaledPatch(deplete, 72, 0, (patch = W_CachePatchName("PEELOUT1", PU_CACHE)));
-				W_UnlockCachedPatch(patch);
-			}
-
-			{ // Fixing up the black box rendering to look right in resolutions <16:10 -Red
-				INT32 y = 112;
-				INT32 h = BASEVIDHEIGHT - 112;
-				if (vid.height != BASEVIDHEIGHT * vid.dupy)
-				{
-					INT32 adjust = (vid.height/vid.dupy)-200;
-					adjust /= 2;
-					y += adjust;
-					h += adjust;
-					V_DrawFill(0, 0, BASEVIDWIDTH, adjust, 31); // Render a black bar on top so it keeps the "cinematic" windowboxing... I just prefer it this way. -Red
-				}
-				V_DrawFill(0, y, BASEVIDWIDTH, h, 31);
-			}
-		}
-	}
-#endif
 
 	W_UnlockCachedPatch(background);
 
-#ifndef TOPDOWN
-	if (intro_scenenum == 4) // The asteroid SPINS!
-	{
-		if (roidtics >= 0)
-		{
-			V_DrawScaledPatch(roidtics, 24, 0,
-				(patch = W_CachePatchName(va("ROID00%.2d", intro_curtime%35), PU_CACHE)));
-			W_UnlockCachedPatch(patch);
-		}
-	}
-#endif
-
 	if (animtimer)
 		animtimer--;
-
-#ifndef TOPDOWN
-	if (intro_scenenum == 7 && intro_curtime > 7*TICRATE)
-	{
-		patch_t *sgrass;
-
-		if (intro_curtime >= 7*TICRATE + ((TICRATE/7)*2))
-			sgrass = W_CachePatchName("SGRASS4", PU_CACHE);
-		else if (intro_curtime >= 7*TICRATE + (TICRATE/7))
-			sgrass = W_CachePatchName("SGRASS3", PU_CACHE);
-		else
-			sgrass = W_CachePatchName("SGRASS2", PU_CACHE);
-		V_DrawScaledPatch(123, 4, 0, sgrass);
-
-		W_UnlockCachedPatch(sgrass);
-	}
-#endif
 
 	V_DrawString(cx, cy, 0, cutscene_disptext);
 }
@@ -806,7 +340,6 @@ void F_IntroDrawer(void)
 				F_RunWipe(99,true);
 			}
 
-#ifdef TOPDOWN
 			// Stay on black for a bit. =)
 			{
 				tic_t quittime;
@@ -822,52 +355,10 @@ void F_IntroDrawer(void)
 
 			D_StartTitle();
 			return;
-#endif
 
 			S_ChangeMusic(mus_read_m, false);
 		}
-#ifndef TOPDOWN
-		else if (intro_scenenum == 3)
-			roidtics = BASEVIDWIDTH - 64;
-		else if (intro_scenenum == 10)
-		{
-			// The only fade to white in the entire damn game.
-			if (rendermode != render_none)
-			{
-				F_WipeStartScreen();
-				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 0);
-				F_WipeEndScreen();
-				F_RunWipe(99,true);
-			}
-		}
-		else if (intro_scenenum == 15)
-		
-		{
-			if (rendermode != render_none)
-			{
-				F_WipeStartScreen();
-				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
-				F_WipeEndScreen();
-				F_RunWipe(99,true);
-			}
 
-			// Stay on black for a bit. =)
-			{
-				tic_t quittime;
-				quittime = I_GetTime() + NEWTICRATE*2; // Shortened the quit time, used to be 2 seconds
-				while (quittime > I_GetTime())
-				{
-					I_OsPolling();
-					I_UpdateNoBlit();
-					M_Drawer(); // menu is drawn even on top of wipes
-					I_FinishUpdate(); // Update the screen with the image Tails 06-19-2001
-				}
-			}
-
-			D_StartTitle();
-			return;
-		}
-#endif
 		F_NewCutscene(introtext[++intro_scenenum]);
 		timetonext = introscenetime[intro_scenenum];
 
@@ -877,64 +368,6 @@ void F_IntroDrawer(void)
 	}
 
 	intro_curtime = introscenetime[intro_scenenum] - timetonext;
-
-#ifndef TOPDOWN
-	if (rendermode != render_none)
-	{
-		if (intro_scenenum == 5 && intro_curtime == 5*TICRATE)
-		{
-			patch_t *radar = W_CachePatchName("RADAR", PU_CACHE);
-
-			F_WipeStartScreen();
-			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
-			V_DrawScaledPatch(0, 0, 0, radar);
-			W_UnlockCachedPatch(radar);
-			V_DrawString(8, 128, 0, cutscene_disptext);
-
-			F_WipeEndScreen();
-			F_RunWipe(99,true);
-		}
-		else if (intro_scenenum == 7 && intro_curtime == 6*TICRATE) // Force a wipe here
-		{
-			patch_t *grass = W_CachePatchName("SGRASS5", PU_CACHE);
-
-			F_WipeStartScreen();
-			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
-			V_DrawScaledPatch(0, 0, 0, grass);
-			W_UnlockCachedPatch(grass);
-			V_DrawString(8, 128, 0, cutscene_disptext);
-
-			F_WipeEndScreen();
-			F_RunWipe(99,true);
-		}
-		else if (intro_scenenum == 12 && intro_curtime == 7*TICRATE)
-		{
-			patch_t *confront = W_CachePatchName("CONFRONT", PU_CACHE);
-
-			F_WipeStartScreen();
-			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
-			V_DrawSmallScaledPatch(0, 0, 0, confront);
-			W_UnlockCachedPatch(confront);
-			V_DrawString(8, 128, 0, cutscene_disptext);
-
-			F_WipeEndScreen();
-			F_RunWipe(99,true);
-		}
-		if (intro_scenenum == 14 && intro_curtime == 7*TICRATE)
-		{
-			patch_t *sdo = W_CachePatchName("SONICDO2", PU_CACHE);
-
-			F_WipeStartScreen();
-			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
-			V_DrawSmallScaledPatch(0, 0, 0, sdo);
-			W_UnlockCachedPatch(sdo);
-			V_DrawString(224, 8, 0, cutscene_disptext);
-
-			F_WipeEndScreen();
-			F_RunWipe(99,true);
-		}
-	}
-#endif
 
 	F_IntroDrawScene();
 }
@@ -1016,7 +449,7 @@ boolean F_IntroResponder(event_t *event)
 //  CREDITS
 // =========
 static const char *credits[] = {
-#ifdef TOPDOWN // Kart Krew's Kredits :P
+// Kart Krew's Kredits :P
 	"\1Kart Krew Credits",
 	"",
 	"",
@@ -1083,7 +516,6 @@ static const char *credits[] = {
 	"\1Special Thanks",
 	"\"Jeck Jims\"", // For his work on MD2 models 
 	"",
-#endif
 	"\1Sonic Robo Blast II",
 	"\1Credits",
 	"",

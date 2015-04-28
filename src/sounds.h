@@ -38,9 +38,7 @@ typedef enum
 	SKSSKID,
 	SKSGASP,
 	SKSJUMP,
-#ifdef TOPDOWN
 	SKSINTWIN,
-#endif
 	NUMSKINSOUNDS
 } skinsound_t;
 
@@ -1173,9 +1171,7 @@ typedef enum
 	mus_racent, // Race Results
 	mus_stjr,   // Sonic Team Jr. Presents
 
-#ifdef TOPDOWN
 	mus_wipe,   // Team Wipe
-#endif
 
 	NUMMUSIC
 } musicenum_t;
@@ -1622,7 +1618,6 @@ typedef enum
 	sfx_s3kdbs,
 	sfx_s3kdbl,
 
-#ifdef TOPDOWN
 	sfx_chilbl,
 	sfx_chilex,
 	sfx_chilht,
@@ -1636,7 +1631,6 @@ typedef enum
 	sfx_int2nd,
 	sfx_int1st,
 	sfx_intwin,
-#endif
 
 	// free slots for S_AddSoundFx() at run-time --------------------
 	sfx_freeslot0,

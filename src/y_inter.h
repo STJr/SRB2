@@ -21,9 +21,7 @@ typedef enum
 {
 	int_none,
 	int_coop,     // Single Player/Cooperative
-#ifdef TOPDOWN
 	int_compcoop, // TD coop
-#endif
 	int_match,    // Match
 	int_teammatch,// Team Match
 //	int_tag,      // Tag

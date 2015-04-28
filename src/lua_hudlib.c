@@ -96,9 +96,7 @@ enum align {
 	align_right,
 	align_fixed,
 	align_small,
-#ifdef TOPDOWN
 	align_smallcenter,
-#endif
 	align_smallright,
 	align_thin,
 	align_thinright
@@ -144,12 +142,10 @@ enum cameraf {
 	camera_momx,
 	camera_momy,
 	camera_momz,
-#ifdef TOPDOWN
 	camera_aimx,
 	camera_aimy,
 	camera_aimz,
 	camera_zoom,
-#endif
 };
 
 
@@ -171,12 +167,10 @@ static const char *const camera_opt[] = {
 	"momx",
 	"momy",
 	"momz",
-#ifdef TOPDOWN
 	"aimx",
 	"aimy",
 	"aimz",
 	"zoom",
-#endif
 	NULL};
 
 static int lib_getHudInfo(lua_State *L)
@@ -339,7 +333,6 @@ static int camera_get(lua_State *L)
 	case camera_momz:
 		lua_pushinteger(L, cam->momz);
 		break;
-#ifdef TOPDOWN
 	case camera_aimx:
 		lua_pushinteger(L, cam->aimx);
 		break;
@@ -352,7 +345,6 @@ static int camera_get(lua_State *L)
 	case camera_zoom:
 		lua_pushinteger(L, cam->zoom);
 		break;
-#endif
 	}
 	return 1;
 }
@@ -446,7 +438,6 @@ static int libd_drawPaddedNum(lua_State *L)
 	return 0;
 }
 
-#ifdef TOPDOWN
 static int libd_drawSmallNum(lua_State *L)
 {
 	INT32 x, y, flags, num;
@@ -477,7 +468,6 @@ static int libd_drawPaddedSmallNum(lua_State *L)
 	V_DrawPaddedSmallNum(x, y, flags, num, digits);
 	return 0;
 }
-#endif
 
 static int libd_drawFill(lua_State *L)
 {
@@ -522,11 +512,9 @@ static int libd_drawString(lua_State *L)
 	case align_small:
 		V_DrawSmallString(x, y, flags, str);
 		break;
-#ifdef TOPDOWN
 		case align_smallcenter:
 		V_DrawSmallCenteredString(x, y, flags, str);
 		break;
-#endif
 	case align_smallright:
 		V_DrawRightAlignedSmallString(x, y, flags, str);
 		break;
@@ -599,10 +587,8 @@ static luaL_Reg lib_draw[] = {
 	{"drawScaled", libd_drawScaled},
 	{"drawNum", libd_drawNum},
 	{"drawPaddedNum", libd_drawPaddedNum},
-#ifdef TOPDOWN
 	{"drawSmallNum", libd_drawSmallNum},
 	{"drawPaddedSmallNum", libd_drawPaddedSmallNum},
-#endif
 	{"drawFill", libd_drawFill},
 	{"drawString", libd_drawString},
 	{"stringWidth", libd_stringWidth},

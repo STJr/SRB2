@@ -30,13 +30,11 @@ enum hud {
 	hud_coopemeralds,
 	hud_tokens,
 	hud_tabemblems,
-#ifdef TOPDOWN
 	hud_ndringenergy,
 	hud_ndemblems,
 	hud_ndtime,
 	hud_ndscore,
 	hud_ndlives,
-#endif
 	hud_MAX
 };
 

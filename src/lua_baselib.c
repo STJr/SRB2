@@ -248,15 +248,12 @@ static int lib_pSpawnMobj(lua_State *L)
 	NOHUD
 	if (type > MT_LASTFREESLOT)
 		return luaL_error(L, "mobjtype_t out of bounds error!");
-#ifdef TOPDOWN
 	if (type == MT_SHADOW)
 		return luaL_error(L, "can't spawn MT_SHADOW here, use P_SpawnShadowMobj if you intended to create a mobj shadow");
-#endif
 	LUA_PushUserdata(L, P_SpawnMobj(x, y, z, type), META_MOBJ);
 	return 1;
 }
 
-#ifdef TOPDOWN
 static int lib_pSpawnShadowMobj(lua_State *L)
 {
 	mobj_t *caster = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
@@ -268,7 +265,6 @@ static int lib_pSpawnShadowMobj(lua_State *L)
 	LUA_PushUserdata(L, P_SpawnShadowMobj(caster), META_MOBJ);
 	return 1;
 }
-#endif
 
 static int lib_pRemoveMobj(lua_State *L)
 {
@@ -579,7 +575,6 @@ static int lib_pAddPlayerScore(lua_State *L)
 	return 0;
 }
 
-#ifdef TOPDOWN
 static int lib_pBubblePlayer(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
@@ -599,7 +594,6 @@ static int lib_pUnbubblePlayer(lua_State *L)
 	P_UnbubblePlayer(player);
 	return 0;
 }
-#endif
 
 static int lib_pPlayerInPain(lua_State *L)
 {
@@ -1243,7 +1237,6 @@ static int lib_pDoNightsScore(lua_State *L)
 	return 0;
 }
 
-#ifdef TOPDOWN
 static int lib_pDoTDEmblemScore(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
@@ -1253,7 +1246,6 @@ static int lib_pDoTDEmblemScore(lua_State *L)
 	P_DoNightsScore(player);
 	return 0;
 }
-#endif
 
 // P_SPEC
 ////////////
@@ -1937,9 +1929,7 @@ static luaL_Reg lib[] = {
 	// p_mobj
 	// don't add P_SetMobjState or P_SetPlayerMobjState, use "mobj.state = S_NEWSTATE" instead.
 	{"P_SpawnMobj",lib_pSpawnMobj},
-#ifdef TOPDOWN
 	{"P_SpawnShadowMobj",lib_pSpawnShadowMobj},
-#endif
 	{"P_RemoveMobj",lib_pRemoveMobj},
 	{"P_SpawnMissile",lib_pSpawnMissile},
 	{"P_SpawnXYZMissile",lib_pSpawnXYZMissile},
@@ -1966,10 +1956,8 @@ static luaL_Reg lib[] = {
 	{"P_GetPlayerSpinHeight",lib_pGetPlayerSpinHeight},
 	{"P_GetPlayerControlDirection",lib_pGetPlayerControlDirection},
 	{"P_AddPlayerScore",lib_pAddPlayerScore},
-#ifdef TOPDOWN
 	{"P_BubblePlayer",lib_pBubblePlayer},
 	{"P_UnubblePlayer",lib_pUnbubblePlayer},
-#endif
 	{"P_PlayerInPain",lib_pPlayerInPain},
 	{"P_DoPlayerPain",lib_pDoPlayerPain},
 	{"P_ResetPlayer",lib_pResetPlayer},
@@ -2028,9 +2016,7 @@ static luaL_Reg lib[] = {
 	{"P_PlayLivesJingle",lib_pPlayLivesJingle},
 	{"P_CanPickupItem",lib_pCanPickupItem},
 	{"P_DoNightsScore",lib_pDoNightsScore},
-#ifdef TOPDOWN
 	{"P_DoTDEmblemScore",lib_pDoTDEmblemScore},
-#endif
 
 	// p_spec
 	{"P_Thrust",lib_pThrust},

@@ -54,11 +54,10 @@ char sprnames[NUMSPRITES + 1][5] =
 	"ROII","ROIJ","ROIK","ROIL","ROIM","ROIN","ROIO","ROIP","BBAL","GWLG",
 	"GWLR","SRBA","SRBB","SRBC","SRBD","SRBE","SRBF","SRBG","SRBH","SRBI",
 	"SRBJ","SRBK","SRBL","SRBM","SRBN","SRBO",
-#ifdef TOPDOWN
+	
 	"SHAD","FLEN","BUBB","SBCH","BBCH","MHEL","MXCL","ARRO","MITR","HMIS",
 	"CLUK","TOXO","KRKO","ZAPO","ZAPT","PENG","GANG","FLAR","REDI","CHIL",
 	"CIRN","CLOD","CKBL","STAT","PLMT","GFLO","BLUE","FFTR","SBUS","CONE",
-#endif
 };
 
 // Doesn't work with g++, needs actionf_p1 (don't modify this comment)
@@ -1994,7 +1993,6 @@ state_t states[NUMSTATES] =
 	{SPR_PRTL, FF_FULLBRIGHT|FF_TRANS70, 2*TICRATE, {NULL}, 0, 0, S_NULL}, // S_PARTICLE
 	{SPR_NULL,     0,         1, {A_ParticleSpawn}, 0, 0, S_PARTICLEGEN}, // S_PARTICLEGEN
 
-#ifdef TOPDOWN
 	{SPR_SCOR, FF_FULLBRIGHT, 32, {A_ScoreRise}, 0, 0, S_NULL}, // S_SCRA  - 100
 	{SPR_SCOR, FF_FULLBRIGHT|1, 32, {A_ScoreRise}, 0, 0, S_NULL}, // S_SCRB  - 200
 	{SPR_SCOR, FF_FULLBRIGHT|2, 32, {A_ScoreRise}, 0, 0, S_NULL}, // S_SCRC  - 500
@@ -2012,19 +2010,6 @@ state_t states[NUMSTATES] =
 	{SPR_SCOR, FF_FULLBRIGHT|14, 32, {A_ScoreRise}, 0, 0, S_NULL}, // S_SCRO - 50 (Unused)
 	{SPR_SCOR, FF_FULLBRIGHT|15, 32, {A_ScoreRise}, 0, 0, S_NULL}, // S_SCRP - 60 (TD Emblems)
 	{SPR_SCOR, FF_FULLBRIGHT|16, 32, {A_ScoreRise}, 0, 0, S_NULL}, // S_SCRQ - 80 (TD Emblems)
-#else
-	{SPR_SCOR, 0, 32, {A_ScoreRise}, 0, 0, S_NULL}, // S_SCRA  - 100
-	{SPR_SCOR, 1, 32, {A_ScoreRise}, 0, 0, S_NULL}, // S_SCRB  - 200
-	{SPR_SCOR, 2, 32, {A_ScoreRise}, 0, 0, S_NULL}, // S_SCRC  - 500
-	{SPR_SCOR, 3, 32, {A_ScoreRise}, 0, 0, S_NULL}, // S_SCRD  - 1000
-	{SPR_SCOR, 4, 32, {A_ScoreRise}, 0, 0, S_NULL}, // S_SCRE  - 10000
-	{SPR_SCOR, 5, 32, {A_ScoreRise}, 0, 0, S_NULL}, // S_SCRF  - 400 (mario mode)
-	{SPR_SCOR, 6, 32, {A_ScoreRise}, 0, 0, S_NULL}, // S_SCRG  - 800 (mario mode)
-	{SPR_SCOR, 7, 32, {A_ScoreRise}, 0, 0, S_NULL}, // S_SCRH  - 2000 (mario mode)
-	{SPR_SCOR, 8, 32, {A_ScoreRise}, 0, 0, S_NULL}, // S_SCRI  - 4000 (mario mode)
-	{SPR_SCOR, 9, 32, {A_ScoreRise}, 0, 0, S_NULL}, // S_SCRJ  - 8000 (mario mode)
-	{SPR_SCOR, 10, 32, {A_ScoreRise}, 0, 0, S_NULL}, // S_SCRK - 1UP (mario mode)
-#endif
 
 	// Drowning Timer Numbers
 	{SPR_DRWN, 0, 40, {NULL}, 0, 0, S_NULL}, // S_ZERO1
@@ -2872,13 +2857,9 @@ state_t states[NUMSTATES] =
 	{SPR_BOM1, 0, 1, {A_Scream}, 0, 0, S_XPLD2}, // S_XPLD1
 	{SPR_BOM1, 1, 5, {NULL}, 0, 0, S_XPLD3},     // S_XPLD2
 	{SPR_BOM1, 2, 5, {NULL}, 0, 0, S_XPLD4},     // S_XPLD3
-#ifndef TOPDOWN
-	{SPR_BOM1, 3, 5, {NULL}, 0, 0, S_NULL},     // S_XPLD4
-#else
 	{SPR_BOM1, 3, 5, {NULL}, 0, 0, S_XPLD5},     // S_XPLD4
 	{SPR_BOM1, 4, 5, {NULL}, 0, 0, S_XPLD6},     // S_XPLD5
 	{SPR_BOM1, 5, 5, {NULL}, 0, 0, S_NULL},      // S_XPLD6
-#endif
 
 	// Underwater Explosion
 	{SPR_BOM4, 0, 3, {A_Scream}, 0, 0, S_WPLD2}, // S_WPLD1
@@ -3053,7 +3034,6 @@ state_t states[NUMSTATES] =
 	{SPR_NULL, 0, 1, {NULL}, 0, 0, S_NULL}, // S_NAMECHECK
 #endif
 
-#ifdef TOPDOWN
 	// Fake Shadow
 	{SPR_SHAD, FF_TRANS50, -1, {NULL}, 0, 0, S_NULL}, // S_SHADOW
 
@@ -3411,7 +3391,6 @@ state_t states[NUMSTATES] =
 
 	// Stormy Streets cone
 	{SPR_CONE, 0, -1, {NULL}, 0, 0, S_NULL},
-#endif
 };
 
 mobjinfo_t mobjinfo[NUMMOBJTYPES] =
@@ -14694,7 +14673,6 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 #endif
 
-#ifdef TOPDOWN
 	{           // MT_SHADOW
 		-1,             // doomednum
 		S_SHADOW,       // spawnstate
@@ -15916,7 +15894,6 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		MF_SOLID|MF_SCENERY, // flags
 		S_NULL          // raisestate
 	},
-#endif
 };
 
 

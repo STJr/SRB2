@@ -135,18 +135,9 @@ void P_DoSpring(mobj_t *spring, mobj_t *object)
 		vertispeed *= -1;
 
 	if (vertispeed > 0)
-#ifdef TOPDOWN
-		object->z = spring->z + spring->height + FixedMul(FRACUNIT, spring->scale); // bugfix
-#else
-		object->z = spring->z + spring->height + 1;
-#endif
+		object->z = spring->z + spring->height + FixedMul(FRACUNIT, spring->scale);
 	else if (vertispeed < 0)
-#ifdef TOPDOWN
-		object->z = spring->z - object->height - FixedMul(FRACUNIT, spring->scale); // bugfix
-#else
-		object->z = spring->z - object->height - 1;
-
-#endif
+		object->z = spring->z - object->height - FixedMul(FRACUNIT, spring->scale);
 	else
 	{
 		// Horizontal springs teleport you in FRONT of them.
@@ -260,11 +251,7 @@ static void P_DoFanAndGasJet(mobj_t *spring, mobj_t *object)
 			if (flipval*object->momz > FixedMul(speed, spring->scale))
 				object->momz = flipval*FixedMul(speed, spring->scale);
 
-#ifdef TOPDOWN
 			if (p && !p->powers[pw_tailsfly] && !(p->pflags & PF_JUMPED)) // doesn't reset anim for Tails' flight
-#else
-			if (p && !p->powers[pw_tailsfly]) // doesn't reset anim for Tails' flight
-#endif
 			{
 				P_ResetPlayer(p);
 				if (p->panim != PA_FALL)
@@ -301,11 +288,7 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 	if ((sonic->pflags & PF_CARRIED) && sonic->mo->tracer == tails->mo)
 		return;
 
-#ifdef TOPDOWN
 	if ((!tails->powers[pw_tailsfly] || tails->pflags & PF_JUMPED) && !(tails->charability == CA_FLY && (tails->mo->state >= &states[S_PLAY_SPC1] && tails->mo->state <= &states[S_PLAY_SPC4])))
-#else
-	if (!tails->powers[pw_tailsfly] && !(tails->charability == CA_FLY && (tails->mo->state >= &states[S_PLAY_SPC1] && tails->mo->state <= &states[S_PLAY_SPC4])))
-#endif
 		return;
 
 	if (tails->bot == 1)
@@ -357,14 +340,12 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 			sonic->pflags &= ~PF_CARRIED;
 		else
 		{
-#ifdef TOPDOWN
 			fixed_t previousfly = sonic->powers[pw_tailsfly];
 			boolean hasthokked = (sonic->pflags & PF_THOKKED);
-#endif
 			if (sonic-players == consoleplayer && botingame)
 				CV_SetValue(&cv_analog2, false);
 			P_ResetPlayer(sonic);
-#ifdef TOPDOWN
+
 			if (maptol & TOL_TD && (sonic->charability == CA_FLY || sonic->charability == CA_SWIM))
 			{
 				if (hasthokked && !previousfly)
@@ -373,7 +354,7 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 					sonic->powers[pw_tailsfly] = previousfly; // hack to stop fly chaining in td
 				sonic->maxflyheight = tails->maxflyheight; // more!
 			}
-#endif
+
 			P_SetTarget(&sonic->mo->tracer, tails->mo);
 			sonic->pflags |= PF_CARRIED;
 			S_StartSound(sonic->mo, sfx_s3k4a);
@@ -1680,9 +1661,7 @@ boolean P_TryCameraMove(fixed_t x, fixed_t y, camera_t *thiscam)
 
 		if ((thiscam == &camera && (players[displayplayer].pflags & PF_NOCLIP))
 		|| (thiscam == &camera2 && (players[secondarydisplayplayer].pflags & PF_NOCLIP))
-#ifdef TOPDOWN
 		|| (maptol & TOL_TD)
-#endif
 		)
 		{ // Noclipping player camera noclips too!!
 			floatok = true;

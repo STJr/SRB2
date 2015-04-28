@@ -569,11 +569,9 @@ static inline void resynch_write_player(resynch_pak *rsp, const size_t i)
 	rsp->timeshit = players[i].timeshit;
 	rsp->onconveyor = LONG(players[i].onconveyor);
 
-#ifdef TOPDOWN
 	// TD
 	rsp->maxflyheight = LONG(players[i].maxflyheight);
 	rsp->climbtime = (tic_t)LONG(players[i].climbtime);
-#endif
 
 	rsp->hasmo = false;
 	//Transfer important mo information if the player has a body.
@@ -700,11 +698,9 @@ static void resynch_read_player(resynch_pak *rsp)
 	players[i].timeshit = rsp->timeshit;
 	players[i].onconveyor = LONG(rsp->onconveyor);
 
-#ifdef TOPDOWN
 	// TD
 	players[i].maxflyheight = LONG(rsp->maxflyheight);
 	players[i].climbtime = (tic_t)LONG(rsp->climbtime);
-#endif
 
 	//We get a packet for each player in game.
 	if (!playeringame[i])
@@ -887,11 +883,9 @@ static inline void resynch_write_others(resynchend_pak *rst)
 		rst->realtime[i] = (tic_t)LONG(players[i].realtime);
 		rst->laps[i] = players[i].laps;
 
-#ifdef TOPDOWN
 		rst->emblems[i] = LONG(players[i].emblems);
 		rst->damagededuct[i] = (UINT32)LONG(players[i].damagededuct);
 		rst->levelscore[i] = (UINT32)LONG(players[i].levelscore);
-#endif
 	}
 
 	// endian safeness
@@ -924,11 +918,9 @@ static inline void resynch_read_others(resynchend_pak *p)
 		players[i].realtime = (tic_t)LONG(p->realtime[i]);
 		players[i].laps = p->laps[i];
 
-#ifdef TOPDOWN
 		players[i].emblems = LONG(p->emblems[i]);
 		players[i].damagededuct = (UINT32)LONG(p->damagededuct[i]);
 		players[i].levelscore = (UINT32)LONG(p->levelscore[i]);
-#endif
 	}
 }
 
@@ -1191,11 +1183,7 @@ static boolean CL_SendJoin(void)
 		CONS_Printf(M_GetText("Sending join request...\n"));
 	netbuffer->packettype = PT_CLIENTJOIN;
 
-#ifdef TOPDOWN
 	if (splitscreen || twoplayer || botingame)
-#else
-	if (splitscreen || botingame)
-#endif
 		localplayers++;
 	netbuffer->u.clientcfg.localplayers = localplayers;
 	netbuffer->u.clientcfg.version = VERSION;
@@ -1355,9 +1343,8 @@ static boolean SV_SendServerConfig(INT32 node)
 		netbuffer->u.servercfg.playercolor[i] = (UINT8)players[i].skincolor;
 	}
 
-#ifdef TOPDOWN
 	netbuffer->u.servercfg.sharedlives = (SINT8)sharedlives;
-#endif
+
 	memcpy(netbuffer->u.servercfg.server_context, server_context, 8);
 	op = p = netbuffer->u.servercfg.varlengthinputs;
 
@@ -2205,9 +2192,7 @@ static void Command_connect(void)
 	}
 
 	splitscreen = false;
-#ifdef TOPDOWN
 	twoplayer = false;
-#endif
 	SplitScreen_OnChange();
 	botingame = false;
 	botskin = 0;
@@ -2935,11 +2920,7 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 
 	// Clear player before joining, lest some things get set incorrectly
 	// HACK: don't do this for splitscreen, it relies on preset values
-#ifdef TOPDOWN
 	if (!splitscreen && !twoplayer && !botingame)
-#else
-	if (!splitscreen && !botingame)
-#endif
 		CL_ClearPlayer(newplayernum);
 	playeringame[newplayernum] = true;
 	G_AddPlayer(newplayernum);
@@ -3139,11 +3120,7 @@ void SV_StartSinglePlayerServer(void)
 	// no more tic the game with this settings!
 	SV_StopServer();
 
-#ifdef TOPDOWN
 	if (splitscreen || twoplayer)
-#else
-	if (splitscreen)
-#endif
 		multiplayer = true;
 }
 
@@ -3385,9 +3362,7 @@ FILESTAMP
 						gametype = netbuffer->u.servercfg.gametype;
 						modifiedgame = netbuffer->u.servercfg.modifiedgame;
 						adminplayer = netbuffer->u.servercfg.adminplayer;
-#ifdef TOPDOWN
 						sharedlives = netbuffer->u.servercfg.sharedlives;
-#endif
 						memcpy(server_context, netbuffer->u.servercfg.server_context, 8);
 					}
 
@@ -3860,11 +3835,7 @@ static void CL_SendClientCmd(void)
 		netbuffer->u.clientpak.consistancy = SHORT(consistancy[gametic%BACKUPTICS]);
 
 		// send a special packet with 2 cmd for splitscreen
-#ifdef TOPDOWN
 		if (splitscreen || twoplayer || botingame)
-#else
-		if (splitscreen || botingame)
-#endif
 		{
 			netbuffer->packettype += 2;
 			G_MoveTiccmd(&netbuffer->u.client2pak.cmd2, &localcmds2, 1);
@@ -4028,11 +3999,7 @@ static void Local_Maketic(INT32 realtics)
 	if (!dedicated) rendergametic = gametic;
 	// translate inputs (keyboard/mouse/joystick) into game controls
 	G_BuildTiccmd(&localcmds, realtics);
-#ifdef TOPDOWN
 	if (splitscreen || twoplayer || botingame)
-#else
-	if (splitscreen || botingame)
-#endif
 		G_BuildTiccmd2(&localcmds2, realtics);
 
 	localcmds.angleturn |= TICCMD_RECEIVED;

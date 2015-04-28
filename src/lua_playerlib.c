@@ -300,7 +300,6 @@ static int player_get(lua_State *L)
 		lua_pushinteger(L, plr->losstime);
 	else if (fastcmp(field,"onconveyor"))
 		lua_pushinteger(L, plr->onconveyor);
-#ifdef TOPDOWN
 	else if (fastcmp(field,"maxflyheight"))
 		lua_pushinteger(L, plr->maxflyheight);
 	else if (fastcmp(field,"emblems"))
@@ -311,7 +310,6 @@ static int player_get(lua_State *L)
 		lua_pushinteger(L, plr->damagededuct);
 	else if (fastcmp(field,"levelscore"))
 		lua_pushinteger(L, plr->levelscore);
-#endif
 	else if (fastcmp(field,"awayviewmobj"))
 		LUA_PushUserdata(L, plr->awayviewmobj, META_MOBJ);
 	else if (fastcmp(field,"awayviewtics"))
@@ -567,7 +565,6 @@ static int player_set(lua_State *L)
 		plr->losstime = (tic_t)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"onconveyor"))
 		plr->onconveyor = (INT32)luaL_checkinteger(L, 3);
-#ifdef TOPDOWN
 	else if (fastcmp(field,"maxflyheight"))
 		plr->maxflyheight = (fixed_t)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"emblems"))
@@ -578,7 +575,6 @@ static int player_set(lua_State *L)
 		plr->emblems = (UINT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"levelscore"))
 		plr->emblems = (UINT32)luaL_checkinteger(L, 3);
-#endif
 	else if (fastcmp(field,"awayviewmobj"))
 	{
 		mobj_t *mo = NULL;
