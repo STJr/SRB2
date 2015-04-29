@@ -27,7 +27,7 @@
 
 #include "r_splats.h"
 
-#ifdef SPRINGCLEAN// ESLOPE
+#ifdef ESLOPE
 #include "p_slopes.h"
 #endif
 
@@ -52,6 +52,9 @@ fixed_t tmfloorz, tmceilingz;
 static fixed_t tmdropoffz, tmdrpoffceilz; // drop-off floor/ceiling heights
 mobj_t *tmfloorthing; // the thing corresponding to tmfloorz or NULL if tmfloorz is from a sector
 static mobj_t *tmhitthing; // the solid thing you bumped into (for collisions)
+#ifdef ESLOPE
+pslope_t *tmfloorslope, *tmceilingslope;
+#endif
 
 // keep track of the line that lowers the ceiling,
 // so missiles don't explode against sky hack walls
@@ -957,6 +960,9 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				if (thing->z + thing->height > tmfloorz)
 				{
 					tmfloorz = thing->z + thing->height;
+#ifdef ESLOPE
+					tmfloorslope = NULL;
+#endif
 				}
 				return true;
 			}
@@ -975,6 +981,9 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			else if (topz < tmceilingz && tmthing->z+tmthing->height <= thing->z+thing->height)
 			{
 				tmceilingz = topz;
+#ifdef ESLOPE
+				tmceilingslope = NULL;
+#endif
 				tmfloorthing = thing; // thing we may stand on
 			}
 		}
@@ -988,6 +997,9 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				if (thing->z < tmceilingz)
 				{
 					tmceilingz = thing->z;
+#ifdef ESLOPE
+					tmceilingslope = NULL;
+#endif
 				}
 				return true;
 			}
@@ -1005,6 +1017,9 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			else if (topz > tmfloorz && tmthing->z >= thing->z)
 			{
 				tmfloorz = topz;
+#ifdef ESLOPE
+				tmfloorslope = NULL;
+#endif
 				tmfloorthing = thing; // thing we may stand on
 			}
 		}
@@ -1127,11 +1142,13 @@ static boolean PIT_CheckLine(line_t *ld)
 	{
 		tmceilingz = opentop;
 		ceilingline = ld;
+		tmceilingslope = opentopslope;
 	}
 
 	if (openbottom > tmfloorz)
 	{
 		tmfloorz = openbottom;
+		tmfloorslope = openbottomslope;
 	}
 
 	if (highceiling > tmdrpoffceilz)
@@ -1210,6 +1227,10 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 	// will adjust them.
 	tmfloorz = tmdropoffz = P_GetFloorZ(thing, newsubsec->sector, x, y, NULL); //newsubsec->sector->floorheight;
 	tmceilingz = P_GetCeilingZ(thing, newsubsec->sector, x, y, NULL); //newsubsec->sector->ceilingheight;
+#ifdef ESLOPE
+	tmfloorslope = newsubsec->sector->f_slope;
+	tmceilingslope = newsubsec->sector->c_slope;
+#endif
 
 	// Check list of fake floors and see if tmfloorz/tmceilingz need to be altered.
 	if (newsubsec->sector->ffloors)
@@ -1252,13 +1273,21 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 					// Land on the top or the bottom, depending on gravity flip.
 					if (!(thing->eflags & MFE_VERTICALFLIP) && thing->z >= topheight - sinklevel && thing->momz <= 0)
 					{
-						if (tmfloorz < topheight - sinklevel)
+						if (tmfloorz < topheight - sinklevel) {
 							tmfloorz = topheight - sinklevel;
+#ifdef ESLOPE
+							tmfloorslope = NULL;
+#endif
+						}
 					}
 					else if (thing->eflags & MFE_VERTICALFLIP && thingtop <= bottomheight + sinklevel && thing->momz >= 0)
 					{
-						if (tmceilingz > bottomheight + sinklevel)
+						if (tmceilingz > bottomheight + sinklevel) {
 							tmceilingz = bottomheight + sinklevel;
+#ifdef ESLOPE
+							tmceilingslope = NULL;
+#endif
+						}
 					}
 				}
 				continue;
@@ -1277,8 +1306,12 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 			{
 				if (thing->z < topheight && bottomheight < thingtop)
 				{
-					if (tmfloorz < thing->z)
+					if (tmfloorz < thing->z) {
 						tmfloorz = thing->z;
+#ifdef ESLOPE
+						tmfloorslope = NULL;
+#endif
+					}
 				}
 				// Quicksand blocks never change heights otherwise.
 				continue;
@@ -1293,12 +1326,18 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 				&& !(rover->flags & FF_REVERSEPLATFORM))
 			{
 				tmfloorz = tmdropoffz = topheight;
+#ifdef ESLOPE
+				tmfloorslope = NULL;
+#endif
 			}
 			if (bottomheight < tmceilingz && abs(delta1) >= abs(delta2)
 				&& !(rover->flags & FF_PLATFORM)
 				&& !(thing->type == MT_SKIM && (rover->flags & FF_SWIMMABLE)))
 			{
 				tmceilingz = tmdrpoffceilz = bottomheight;
+#ifdef ESLOPE
+				tmceilingslope = NULL;
+#endif
 			}
 		}
 	}
@@ -1371,11 +1410,19 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 						delta1 = thing->z - (polybottom + ((polytop - polybottom)/2));
 						delta2 = thingtop - (polybottom + ((polytop - polybottom)/2));
 
-						if (polytop > tmfloorz && abs(delta1) < abs(delta2))
+						if (polytop > tmfloorz && abs(delta1) < abs(delta2)) {
 							tmfloorz = tmdropoffz = polytop;
+#ifdef ESLOPE
+							tmfloorslope = NULL;
+#endif
+						}
 
-						if (polybottom < tmceilingz && abs(delta1) >= abs(delta2))
+						if (polybottom < tmceilingz && abs(delta1) >= abs(delta2)) {
 							tmceilingz = tmdrpoffceilz = polybottom;
+#ifdef ESLOPE
+							tmceilingslope = NULL;
+#endif
+						}
 					}
 					plink = (polymaplink_t *)(plink->link.next);
 				}
@@ -1824,6 +1871,10 @@ boolean PIT_PushableMoved(mobj_t *thing)
 		mobj_t *oldthing = tmthing;
 		line_t *oldceilline = ceilingline;
 		line_t *oldblockline = blockingline;
+#ifdef ESLOPE
+		pslope_t *oldfslope = tmfloorslope;
+		pslope_t *oldcslope = tmceilingslope;
+#endif
 
 		// Move the player
 		P_TryMove(thing, thing->x+stand->momx, thing->y+stand->momy, true);
@@ -1836,6 +1887,10 @@ boolean PIT_PushableMoved(mobj_t *thing)
 		P_SetTarget(&tmthing, oldthing);
 		ceilingline = oldceilline;
 		blockingline = oldblockline;
+#ifdef ESLOPE
+		tmfloorslope = oldfslope;
+		tmceilingslope = oldcslope;
+#endif
 		thing->momz = stand->momz;
 	}
 	else
@@ -2030,87 +2085,16 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 	// Link the thing into its new position
 	P_UnsetThingPosition(thing);
 
-#ifdef SRPINGCLEAN// ESLOPE
-	// By virtue of being derived from SRB2 code, Kalaron's physics are GPL.
-	if (P_IsObjectOnSlope(thing, false))
-	{
-		fixed_t thingspeed = P_AproxDistance(thing->momx, thing->momy);
-		fixed_t predictmomx = x+(thing->momx/2);
-		fixed_t predictmomy = y+(thing->momy/2);
-		sector_t *nextsector = R_PointInSubsector(predictmomx, predictmomy)->sector;
-		sector_t *currentsector = R_PointInSubsector(thing->x, thing->y)->sector;
-		fixed_t zthrust = 0;
-		fixed_t slopeang = currentsector->f_slope->zangle;
-		fixed_t nextz = nextsector->floorheight;
-		if (nextsector->f_slope)
-			nextz = P_GetZAt(nextsector->f_slope, thing->x+predictmomx+thing->momx, thing->y+predictmomy+thing->momy);
-
-		if (nextsector != currentsector)
-		{
-			// Give a boost up from the slope you came if the next sector is lower than the first
-			// If your next sector does not have a slope and you're comming off of one
-			if (currentsector->f_slope)
-				if (P_GetZAt(currentsector->f_slope, thing->x, thing->y)/FRACUNIT > (nextz/FRACUNIT)+(slopeang*3))
-					//&& !nextsector->f_slope // TODO: VPHYSICS height check, not this hacky check? Or is this good enough?
-					if (currentsector->f_slope->zangle > 9)
-					{
-						fixed_t currentz = P_GetZAt(currentsector->f_slope, thing->x, thing->y);
-						fixed_t predictz = P_GetZAt(currentsector->f_slope, thing->x+thing->momx, thing->y+thing->momy);
-
-						predictz += (((thing->pitchangle/(ANGLE_45/45))+90)/70.0f)+thingspeed/9;
-
-						// Make sure that the z doesn't go too high for steep slopes
-
-						predictz -= ((currentsector->f_slope->zangle)/4)*FRACUNIT;
-						if (currentsector->f_slope->zangle > 60) // really steep
-						{
-							predictz -= ((currentsector->f_slope->zangle)/2)*FRACUNIT;
-						}
-
-						zthrust = (predictz - currentz)/2;
-
-						if (zthrust > (30*thing->scale/100)*FRACUNIT)
-							zthrust = (30*thing->scale/100)*FRACUNIT;
-
-						if (zthrust < -(30*thing->scale/100)*FRACUNIT)
-							zthrust = -(30*thing->scale/100)*FRACUNIT;
-
-						if (currentz/FRACUNIT > (nextz/FRACUNIT)+(slopeang*3))
-						{
-							// Now even out the momx/momy when catapulting off a steep slope
-							if (currentsector->f_slope->zangle > 65)
-							{
-								thing->momx /= 4.0f;
-								thing->momy /= 4.0f;
-							}
-							else if (currentsector->f_slope->zangle > 60)
-							{
-								thing->momx /= 3.5f;
-								thing->momy /= 3.5f;
-							}
-							else if (currentsector->f_slope->zangle > 50)
-							{
-								thing->momx /= 3.4f;
-								thing->momy /= 3.4f;
-							}
-							else if (currentsector->f_slope->zangle > 40)
-							{
-								thing->momx /= 3.3f;
-								thing->momy /= 3.3f;
-							}
-						}
-
-						thing->momz += zthrust; // VPHYSICS TODO: Make a real formula for z trajectory going off a slope
-						/*CONS_Printf("CurZ %i,  PredictZ %i\n", currentz/FRACUNIT, predictz/FRACUNIT);
-						 CONS_Printf("Pitch: %i\n", thing->pitchangle/(ANG45/45)+90);
-						 CONS_Printf("ZThrust: %i\n", zthrust/FRACUNIT);*/
-					}
-		}
-	}
-#endif
-
 	thing->floorz = tmfloorz;
 	thing->ceilingz = tmceilingz;
+
+#ifdef ESLOPE
+	// Assign thing's standingslope if needed
+	if (thing->z <= tmfloorz && thing->momz <= 0 && !(thing->eflags & MFE_VERTICALFLIP))
+		thing->standingslope = tmfloorslope;
+	else if (thing->z+thing->height >= tmceilingz && thing->momz >= 0 && (thing->eflags & MFE_VERTICALFLIP))
+		thing->standingslope = tmceilingslope;
+#endif
 
 	thing->x = x;
 	thing->y = y;

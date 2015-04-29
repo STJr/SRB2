@@ -30,7 +30,7 @@
 
 // For slope code, we need v3float_t
 #ifdef ESLOPE
-#include "m_vector.h"
+//#include "r_defs.h"
 #endif
 
 //
@@ -358,8 +358,7 @@ typedef struct mobj_s
 	INT32 cvmem;
 
 #ifdef ESLOPE
-	angle_t pitchangle;
-	v3float_t vector;
+	struct pslope_s *standingslope; // The slope that the object is standing on (shouldn't need synced in savegames, right?)
 #endif
 
 	// WARNING: New fields must be added separately to savegame and Lua.

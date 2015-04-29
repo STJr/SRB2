@@ -325,6 +325,9 @@ fixed_t P_InterceptVector(divline_t *v2, divline_t *v1)
 // OPTIMIZE: keep this precalculated
 //
 fixed_t opentop, openbottom, openrange, lowfloor, highceiling;
+#ifdef ESLOPE
+pslope_t *opentopslope, *openbottomslope;
+#endif
 
 // P_CameraLineOpening
 // P_LineOpening, but for camera
@@ -567,11 +570,13 @@ void P_LineOpening(line_t *linedef)
 		{
 			opentop = frontheight;
 			highceiling = backheight;
+			opentopslope = front->c_slope;
 		}
 		else
 		{
 			opentop = backheight;
 			highceiling = frontheight;
+			opentopslope = back->c_slope;
 		}
 
 		frontheight = P_GetFloorZ(tmthing, front, tmx, tmy, linedef);
@@ -581,11 +586,13 @@ void P_LineOpening(line_t *linedef)
 		{
 			openbottom = frontheight;
 			lowfloor = backheight;
+			openbottomslope = front->f_slope;
 		}
 		else
 		{
 			openbottom = backheight;
 			lowfloor = frontheight;
+			openbottomslope = back->f_slope;
 		}
 	}
 
@@ -761,11 +768,19 @@ void P_LineOpening(line_t *linedef)
 			if (highestceiling < highceiling)
 				highceiling = highestceiling;
 
-			if (highestfloor > openbottom)
+			if (highestfloor > openbottom) {
 				openbottom = highestfloor;
+#ifdef ESLOPE
+				openbottomslope = NULL;
+#endif
+			}
 
-			if (lowestceiling < opentop)
+			if (lowestceiling < opentop) {
 				opentop = lowestceiling;
+#ifdef ESLOPE
+				opentopslope = NULL;
+#endif
+			}
 
 			if (lowestfloor > lowfloor)
 				lowfloor = lowestfloor;

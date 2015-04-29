@@ -298,6 +298,9 @@ extern mobj_t *tmfloorthing, *tmthing;
 extern camera_t *mapcampointer;
 extern fixed_t tmx;
 extern fixed_t tmy;
+#ifdef ESLOPE
+extern pslope_t *tmfloorslope, *tmceilingslope;
+#endif
 
 /* cphipps 2004/08/30 */
 extern void P_MapStart(void);
