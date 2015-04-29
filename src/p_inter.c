@@ -2721,7 +2721,7 @@ static inline boolean P_PlayerHitsPlayer(mobj_t *target, mobj_t *inflictor, mobj
 
 	// Add pity.
 	if (!player->powers[pw_flashing] && !player->powers[pw_invulnerability] && !player->powers[pw_super]
-	&& source->player->score > player->scorehttps://i.imgur.com/9gx8Y00.gif)
+	&& source->player->score > player->score)
 		player->pity++;
 
 	return true;
