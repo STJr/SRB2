@@ -7531,9 +7531,6 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_PLAYERARROW", // The arrow above your own players head
 
 	// Top Down enemies
-	"MT_MISSILETURRET",
-	"MT_ORBITALMISSILE",
-
 	"MT_CLUCKOID",
 	"MT_CLUCKOIDWIND",
 
@@ -7552,6 +7549,9 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_SNOWGANG",
 	"MT_SNOWSPARK",
 	"MT_SNOWFLARE",
+
+	"MT_MISSILETURRET",
+	"MT_ORBITALMISSILE",
 
 	// Top Down bosses
 	"MT_REDEYE",

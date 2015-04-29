@@ -14891,60 +14891,6 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	// Top Down enemies
-	{           // MT_MISSILETURRET
-		2010,           // doomednum
-		S_MISSILETURRETLOOK, // spawnstate
-		1,              // spawnhealth
-		S_MISSILETURRET1, // seestate
-		sfx_buzz3,      // seesound
-		0,              // reactiontime
-		sfx_s3k82,      // attacksound
-		S_NULL,         // painstate
-		0,              // painchance
-		sfx_None,       // painsound
-		S_NULL,         // meleestate
-		S_NULL,         // missilestate
-		S_XPLD1,        // deathstate
-		S_NULL,         // xdeathstate
-		sfx_pop,        // deathsound
-		0,              // speed
-		30*FRACUNIT,    // radius
-		52*FRACUNIT,    // height
-		0,              // display offset
-		100,            // mass
-		0,              // damage
-		sfx_None,       // activesound
-		MF_SPECIAL|MF_SHOOTABLE|MF_ENEMY, // flags
-		S_NULL          // raisestate
-	},
-
-	{           // MT_ORBITALMISSILE
-		-1,             // doomednum
-		S_ORBITALMISSILE1, // spawnstate
-		1,              // spawnhealth
-		S_ORBITALMISSILE2, // seestate
-		sfx_None,       // seesound
-		0,              // reactiontime
-		sfx_deton,      // attacksound
-		S_NULL,         // painstate
-		0,              // painchance
-		sfx_None,       // painsound
-		S_NULL,         // meleestate
-		S_NULL,         // missilestate
-		S_XPLD1,        // deathstate
-		S_NULL,         // xdeathstate
-		sfx_cybdth,     // deathsound
-		0,              // speed
-		4*FRACUNIT,     // radius
-		4*FRACUNIT,     // height
-		0,              // display offset
-		0,              // mass
-		0,              // damage
-		sfx_None,       // activesound
-		MF_NOGRAVITY|MF_MISSILE|MF_RUNSPAWNFUNC, // flags
-		S_NULL          // raisestate
-	},
-
 	{           // MT_CLUCKOID
 		2020,           // doomednum
 		S_CLUCKOIDLOOK, // spawnstate
@@ -15293,6 +15239,60 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_None,       // activesound
 		MF_FIRE|MF_PAIN|MF_RUNSPAWNFUNC, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_MISSILETURRET
+		2078,           // doomednum
+		S_MISSILETURRETLOOK, // spawnstate
+		1,              // spawnhealth
+		S_MISSILETURRET1, // seestate
+		sfx_buzz3,      // seesound
+		0,              // reactiontime
+		sfx_s3k82,      // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_XPLD1,        // deathstate
+		S_NULL,         // xdeathstate
+		sfx_pop,        // deathsound
+		0,              // speed
+		30*FRACUNIT,    // radius
+		52*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_SPECIAL|MF_SHOOTABLE|MF_ENEMY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_ORBITALMISSILE
+		-1,             // doomednum
+		S_ORBITALMISSILE1, // spawnstate
+		1,              // spawnhealth
+		S_ORBITALMISSILE2, // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_deton,      // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_XPLD1,        // deathstate
+		S_NULL,         // xdeathstate
+		sfx_cybdth,     // deathsound
+		0,              // speed
+		4*FRACUNIT,     // radius
+		4*FRACUNIT,     // height
+		0,              // display offset
+		0,              // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOGRAVITY|MF_MISSILE|MF_RUNSPAWNFUNC, // flags
 		S_NULL          // raisestate
 	},
 
