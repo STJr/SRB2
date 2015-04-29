@@ -551,8 +551,8 @@ void R_DrawTiltedSpan_8(void)
 	source = ds_source;
 	colormap = ds_colormap;
 
-	// The "perfect" reference version of this routine. Pretty slow.
-	// Use it only to see how things are supposed to look.
+#if 0	// The "perfect" reference version of this routine. Pretty slow.
+		// Use it only to see how things are supposed to look.
 	i = 0;
 	do
 	{
@@ -565,6 +565,81 @@ void R_DrawTiltedSpan_8(void)
 		uz += ds_su.x;
 		vz += ds_sv.x;
 	} while (--width >= 0);
+}
+#else
+#define SPANSIZE 16
+#define INVSPAN	0.0625f
+
+	double startz = 1.f/iz;
+	double startu = uz*startz;
+	double startv = vz*startz;
+	double izstep, uzstep, vzstep;
+
+	izstep = ds_sz.x * SPANSIZE;
+	uzstep = ds_su.x * SPANSIZE;
+	vzstep = ds_sv.x * SPANSIZE;
+	//x1 = 0;
+	width++;
+
+	while (width >= SPANSIZE)
+	{
+		iz += izstep;
+		uz += uzstep;
+		vz += vzstep;
+
+		double endz = 1.f/iz;
+		double endu = uz*endz;
+		double endv = vz*endz;
+		UINT32 stepu = (INT64)((endu - startu) * INVSPAN);
+		UINT32 stepv = (INT64)((endv - startv) * INVSPAN);
+		u = (INT64)(startu) + viewx;
+		v = (INT64)(startv) + viewy;
+
+		for (i = SPANSIZE-1; i >= 0; i--)
+		{
+			*dest = colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]];
+			dest++;
+			u += stepu;
+			v += stepv;
+		}
+		startu = endu;
+		startv = endv;
+		width -= SPANSIZE;
+	}
+	if (width > 0)
+	{
+		if (width == 1)
+		{
+			u = (INT64)(startu);
+			v = (INT64)(startv);
+			*dest = colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]];
+		}
+		else
+		{
+			double left = width;
+			iz += ds_sz.x * left;
+			uz += ds_su.x * left;
+			vz += ds_sv.x * left;
+
+			double endz = 1.f/iz;
+			double endu = uz*endz;
+			double endv = vz*endz;
+			left = 1.f/left;
+			UINT32 stepu = (INT64)((endu - startu) * left);
+			UINT32 stepv = (INT64)((endv - startv) * left);
+			u = (INT64)(startu) + viewx;
+			v = (INT64)(startv) + viewy;
+
+			for (; width != 0; width--)
+			{
+				*dest = colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]];
+				dest++;
+				u += stepu;
+				v += stepv;
+			}
+		}
+	}
+#endif
 }
 #endif // ESLOPE
 
