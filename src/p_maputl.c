@@ -560,8 +560,8 @@ void P_LineOpening(line_t *linedef)
 	{ // Set open and high/low values here
 		fixed_t frontheight, backheight;
 
-		frontheight = P_GetCeilingZ(tmthing, front, tmthing->x, tmthing->y, linedef);
-		backheight = P_GetCeilingZ(tmthing, back, tmthing->x, tmthing->y, linedef);
+		frontheight = P_GetCeilingZ(tmthing, front, tmx, tmy, linedef);
+		backheight = P_GetCeilingZ(tmthing, back, tmx, tmy, linedef);
 
 		if (frontheight < backheight)
 		{
@@ -574,8 +574,8 @@ void P_LineOpening(line_t *linedef)
 			highceiling = frontheight;
 		}
 
-		frontheight = P_GetFloorZ(tmthing, front, tmthing->x, tmthing->y, linedef);
-		backheight = P_GetFloorZ(tmthing, back, tmthing->x, tmthing->y, linedef);
+		frontheight = P_GetFloorZ(tmthing, front, tmx, tmy, linedef);
+		backheight = P_GetFloorZ(tmthing, back, tmx, tmy, linedef);
 
 		if (frontheight > backheight)
 		{

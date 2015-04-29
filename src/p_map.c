@@ -38,8 +38,8 @@
 fixed_t tmbbox[4];
 mobj_t *tmthing;
 static INT32 tmflags;
-static fixed_t tmx;
-static fixed_t tmy;
+fixed_t tmx;
+fixed_t tmy;
 
 static precipmobj_t *tmprecipthing;
 static fixed_t preciptmbbox[4];
@@ -1208,8 +1208,8 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 	// that contains the point.
 	// Any contacted lines the step closer together
 	// will adjust them.
-	tmfloorz = tmdropoffz = P_GetFloorZ(thing, newsubsec->sector, thing->x, thing->y, NULL); //newsubsec->sector->floorheight;
-	tmceilingz = P_GetCeilingZ(thing, newsubsec->sector, thing->x, thing->y, NULL); //newsubsec->sector->ceilingheight;
+	tmfloorz = tmdropoffz = P_GetFloorZ(thing, newsubsec->sector, x, y, NULL); //newsubsec->sector->floorheight;
+	tmceilingz = P_GetCeilingZ(thing, newsubsec->sector, x, y, NULL); //newsubsec->sector->ceilingheight;
 
 	// Check list of fake floors and see if tmfloorz/tmceilingz need to be altered.
 	if (newsubsec->sector->ffloors)
@@ -1945,13 +1945,23 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 				{
 					if (thingtop == thing->ceilingz && tmceilingz > thingtop && tmceilingz - thingtop <= maxstep)
 					{
-						thing->z = tmceilingz - thing->height;
+						thing->z = (thing->ceilingz = thingtop = tmceilingz) - thing->height;
+						thing->eflags |= MFE_JUSTSTEPPEDDOWN;
+					}
+					else if (thingtop == thing->ceilingz && tmceilingz , thingtop && thingtop - tmceilingz <= maxstep)
+					{
+						thing->z = (thing->ceilingz = thingtop = tmceilingz) - thing->height;
 						thing->eflags |= MFE_JUSTSTEPPEDDOWN;
 					}
 				}
 				else if (thing->z == thing->floorz && tmfloorz < thing->z && thing->z - tmfloorz <= maxstep)
 				{
-					thing->z = tmfloorz;
+					thing->z = thing->floorz = tmfloorz;
+					thing->eflags |= MFE_JUSTSTEPPEDDOWN;
+				}
+				else if (thing->z == thing->floorz && tmfloorz > thing->z && tmfloorz - thing->z <= maxstep)
+				{
+					thing->z = thing->floorz = tmfloorz;
 					thing->eflags |= MFE_JUSTSTEPPEDDOWN;
 				}
 			}

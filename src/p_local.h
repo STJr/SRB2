@@ -296,6 +296,8 @@ extern fixed_t tmfloorz;
 extern fixed_t tmceilingz;
 extern mobj_t *tmfloorthing, *tmthing;
 extern camera_t *mapcampointer;
+extern fixed_t tmx;
+extern fixed_t tmy;
 
 /* cphipps 2004/08/30 */
 extern void P_MapStart(void);

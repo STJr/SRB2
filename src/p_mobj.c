@@ -747,7 +747,7 @@ fixed_t P_GetFloorZ(mobj_t *mobj, sector_t *sector, fixed_t x, fixed_t y, line_t
 
 		if (slope->zdelta > 0) {
 			testx = -testx;
-			testx = -testy;
+			testy = -testy;
 		}
 
 		testx += x;
@@ -774,6 +774,17 @@ fixed_t P_GetFloorZ(mobj_t *mobj, sector_t *sector, fixed_t x, fixed_t y, line_t
 			v1.y = line->v1->y;
 			v2.x = line->v2->x;
 			v2.y = line->v2->y;
+
+			/*CONS_Printf("BEFORE: v1 = %f %f %f\n",
+						FIXED_TO_FLOAT(v1.x),
+						FIXED_TO_FLOAT(v1.y),
+						FIXED_TO_FLOAT(P_GetZAt(slope, v1.x, v1.y))
+						);
+			CONS_Printf("        v2 = %f %f %f\n",
+						FIXED_TO_FLOAT(v2.x),
+						FIXED_TO_FLOAT(v2.y),
+						FIXED_TO_FLOAT(P_GetZAt(slope, v2.x, v2.y))
+						);*/
 
 			if (abs(v1.x-x) > mobj->radius) {
 				// v1's x is out of range, so rein it in
@@ -827,6 +838,17 @@ fixed_t P_GetFloorZ(mobj_t *mobj, sector_t *sector, fixed_t x, fixed_t y, line_t
 				}
 			}
 
+			/*CONS_Printf("AFTER:  v1 = %f %f %f\n",
+						FIXED_TO_FLOAT(v1.x),
+						FIXED_TO_FLOAT(v1.y),
+						FIXED_TO_FLOAT(P_GetZAt(slope, v1.x, v1.y))
+						);
+			CONS_Printf("        v2 = %f %f %f\n",
+						FIXED_TO_FLOAT(v2.x),
+						FIXED_TO_FLOAT(v2.y),
+						FIXED_TO_FLOAT(P_GetZAt(slope, v2.x, v2.y))
+						);*/
+
 			// Return the higher of the two points
 			return max(
 				P_GetZAt(slope, v1.x, v1.y),
@@ -860,7 +882,7 @@ fixed_t P_GetCeilingZ(mobj_t *mobj, sector_t *sector, fixed_t x, fixed_t y, line
 
 		if (slope->zdelta < 0) {
 			testx = -testx;
-			testx = -testy;
+			testy = -testy;
 		}
 
 		testx += x;
