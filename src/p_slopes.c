@@ -85,7 +85,7 @@ void P_RunDynamicSlopes(void) {
 
 		if (slope->zdelta != FixedDiv(zdelta, slope->extent)) {
 			slope->zdeltaf = FIXED_TO_FLOAT(slope->zdelta = FixedDiv(zdelta, slope->extent));
-			slope->zangle = R_PointToAngle2(0, 0, slope->extent, zdelta);
+			slope->zangle = R_PointToAngle2(0, 0, slope->extent, -zdelta);
 			P_CalculateSlopeNormal(slope);
 		}
 	}
@@ -233,7 +233,7 @@ void P_SpawnSlope_Line(int linenum)
 		{
 
 			point.z = line->frontsector->floorheight; // Startz
-			dz = FixedDiv(line->backsector->floorheight - point.z, extent); // Destinationz
+			dz = FixedDiv(origin.z - point.z, extent); // Destinationz
 
 			// In P_SpawnSlopeLine the origin is the centerpoint of the sourcelinedef
 
@@ -289,8 +289,9 @@ void P_SpawnSlope_Line(int linenum)
 		}
 		if(frontceil)
 		{
+			origin.z = line->backsector->ceilingheight;
 			point.z = line->frontsector->ceilingheight;
-			dz = FixedDiv(line->backsector->ceilingheight - point.z, extent);
+			dz = FixedDiv(origin.z - point.z, extent);
 
 			cslope = line->frontsector->c_slope =
             P_MakeSlope(&point, &direction, dz, true);
@@ -353,7 +354,7 @@ void P_SpawnSlope_Line(int linenum)
 		if(backfloor)
 		{
 			point.z = line->backsector->floorheight;
-			dz = FixedDiv(line->frontsector->floorheight - point.z, extent);
+			dz = FixedDiv(origin.z - point.z, extent);
 
 			fslope = line->backsector->f_slope =
             P_MakeSlope(&point, &direction, dz, true);
@@ -386,15 +387,16 @@ void P_SpawnSlope_Line(int linenum)
 			fslope->highz = highest;
 			fslope->lowz = lowest;
 
-			cslope->zangle = R_PointToAngle2(0, origin.z, extent, point.z);
-			cslope->xydirection = R_PointToAngle2(origin.x, origin.y, point.x, point.y);
+			fslope->zangle = R_PointToAngle2(0, origin.z, extent, point.z);
+			fslope->xydirection = R_PointToAngle2(origin.x, origin.y, point.x, point.y);
 
 			P_CalculateSlopeNormal(fslope);
 		}
 		if(backceil)
 		{
+			origin.z = line->frontsector->ceilingheight;
 			point.z = line->backsector->ceilingheight;
-			dz = FixedDiv(line->frontsector->ceilingheight - point.z, extent);
+			dz = FixedDiv(origin.z - point.z, extent);
 
 			cslope = line->backsector->c_slope =
             P_MakeSlope(&point, &direction, dz, true);
