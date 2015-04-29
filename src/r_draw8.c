@@ -565,7 +565,6 @@ void R_DrawTiltedSpan_8(void)
 		uz += ds_su.x;
 		vz += ds_sv.x;
 	} while (--width >= 0);
-}
 #else
 #define SPANSIZE 16
 #define INVSPAN	0.0625f
