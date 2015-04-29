@@ -409,6 +409,50 @@ angles3d_t *M_VectorAlignTo(float Pitch, float Yaw, float Roll, v3float_t v, byt
 
 }
 
+//
+// RotateVector
+//
+// Rotates a vector around another vector
+//
+void M_VecRotate(v3fixed_t *rotVec, const v3fixed_t *axisVec, const angle_t angle)
+{
+	// Rotate the point (x,y,z) around the vector (u,v,w)
+	fixed_t ux = FixedMul(axisVec->x, rotVec->x);
+	fixed_t uy = FixedMul(axisVec->x, rotVec->y);
+	fixed_t uz = FixedMul(axisVec->x, rotVec->z);
+	fixed_t vx = FixedMul(axisVec->y, rotVec->x);
+	fixed_t vy = FixedMul(axisVec->y, rotVec->y);
+	fixed_t vz = FixedMul(axisVec->y, rotVec->z);
+	fixed_t wx = FixedMul(axisVec->z, rotVec->x);
+	fixed_t wy = FixedMul(axisVec->z, rotVec->y);
+	fixed_t wz = FixedMul(axisVec->z, rotVec->z);
+	fixed_t sa = FINESINE(angle>>ANGLETOFINESHIFT);
+	fixed_t ca = FINECOSINE(angle>>ANGLETOFINESHIFT);
+	fixed_t ua = ux+vy+wz;
+	fixed_t ax = FixedMul(axisVec->x,ua);
+	fixed_t ay = FixedMul(axisVec->y,ua);
+	fixed_t az = FixedMul(axisVec->z,ua);
+	fixed_t xs = FixedMul(axisVec->x,axisVec->x);
+	fixed_t ys = FixedMul(axisVec->y,axisVec->y);
+	fixed_t zs = FixedMul(axisVec->z,axisVec->z);
+	fixed_t bx = FixedMul(rotVec->x,ys+zs);
+	fixed_t by = FixedMul(rotVec->y,xs+zs);
+	fixed_t bz = FixedMul(rotVec->z,xs+ys);
+	fixed_t cx = FixedMul(axisVec->x,vy+wz);
+	fixed_t cy = FixedMul(axisVec->y,ux+wz);
+	fixed_t cz = FixedMul(axisVec->z,ux+vy);
+	fixed_t dx = FixedMul(bx-cx, ca);
+	fixed_t dy = FixedMul(by-cy, ca);
+	fixed_t dz = FixedMul(bz-cz, ca);
+	fixed_t ex = FixedMul(vz-wy, sa);
+	fixed_t ey = FixedMul(wx-uz, sa);
+	fixed_t ez = FixedMul(uy-vx, sa);
+
+	rotVec->x = ax+dx+ex;
+	rotVec->y = ay+dy+ey;
+	rotVec->z = az+dz+ez;
+}
+
 
 
 
@@ -975,50 +1019,6 @@ boolean FV_IntersectedPolygon(const fvector_t *vPoly, const fvector_t *vLine, co
 
 	// If we get here, we must have NOT collided
 	return false;
-}
-
-//
-// RotateVector
-//
-// Rotates a vector around another vector
-//
-void FV_Rotate(fvector_t *rotVec, const fvector_t *axisVec, const angle_t angle)
-{
-	// Rotate the point (x,y,z) around the vector (u,v,w)
-	fixed_t ux = FixedMul(axisVec->x, rotVec->x);
-	fixed_t uy = FixedMul(axisVec->x, rotVec->y);
-	fixed_t uz = FixedMul(axisVec->x, rotVec->z);
-	fixed_t vx = FixedMul(axisVec->y, rotVec->x);
-	fixed_t vy = FixedMul(axisVec->y, rotVec->y);
-	fixed_t vz = FixedMul(axisVec->y, rotVec->z);
-	fixed_t wx = FixedMul(axisVec->z, rotVec->x);
-	fixed_t wy = FixedMul(axisVec->z, rotVec->y);
-	fixed_t wz = FixedMul(axisVec->z, rotVec->z);
-	fixed_t sa = FINESINE(angle);
-	fixed_t ca = FINECOSINE(angle);
-	fixed_t ua = ux+vy+wz;
-	fixed_t ax = FixedMul(axisVec->x,ua);
-	fixed_t ay = FixedMul(axisVec->y,ua);
-	fixed_t az = FixedMul(axisVec->z,ua);
-	fixed_t xs = FixedMul(axisVec->x,axisVec->x);
-	fixed_t ys = FixedMul(axisVec->y,axisVec->y);
-	fixed_t zs = FixedMul(axisVec->z,axisVec->z);
-	fixed_t bx = FixedMul(rotVec->x,ys+zs);
-	fixed_t by = FixedMul(rotVec->y,xs+zs);
-	fixed_t bz = FixedMul(rotVec->z,xs+ys);
-	fixed_t cx = FixedMul(axisVec->x,vy+wz);
-	fixed_t cy = FixedMul(axisVec->y,ux+wz);
-	fixed_t cz = FixedMul(axisVec->z,ux+vy);
-	fixed_t dx = FixedMul(bx-cx, ca);
-	fixed_t dy = FixedMul(by-cy, ca);
-	fixed_t dz = FixedMul(bz-cz, ca);
-	fixed_t ex = FixedMul(vz-wy, sa);
-	fixed_t ey = FixedMul(wx-uz, sa);
-	fixed_t ez = FixedMul(uy-vx, sa);
-
-	rotVec->x = ax+dx+ex;
-	rotVec->y = ay+dy+ey;
-	rotVec->z = az+dz+ez;
 }
 
 void FM_Rotate(fmatrix_t *dest, angle_t angle, fixed_t x, fixed_t y, fixed_t z)

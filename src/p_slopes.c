@@ -768,6 +768,69 @@ float P_DistFromPlanef(const v3float_t *point, const v3float_t *pori,
           (point->z - pori->z) * pnormal->z;
 }
 
+//
+// P_QuantizeMomentumToSlope
+//
+// When given a vector, rotates it and aligns it to a slope
+void P_QuantizeMomentumToSlope(v3fixed_t *momentum, pslope_t *slope)
+{
+	v3fixed_t axis;
+	axis.x = -slope->d.y;
+	axis.y = slope->d.x;
+	axis.z = 0;
+
+	M_VecRotate(momentum, &axis, slope->zangle);
+}
+
+//
+// P_SlopeLaunch
+//
+// Handles slope ejection for objects
+void P_SlopeLaunch(mobj_t *mo)
+{
+	// Double the pre-rotation Z, then halve the post-rotation Z. This reduces the
+	// vertical launch given from slopes while increasing the horizontal launch
+	// given. Good for SRB2's gravity and horizontal speeds.
+	v3fixed_t slopemom;
+	slopemom.x = mo->momx;
+	slopemom.y = mo->momy;
+	slopemom.z = mo->momz*2;
+	P_QuantizeMomentumToSlope(&slopemom, mo->standingslope);
+
+	mo->momx = slopemom.x;
+	mo->momy = slopemom.y;
+	mo->momz = slopemom.z/2;
+
+	CONS_Printf("Launched off of slope.\n");
+	mo->standingslope = NULL;
+}
+
+// https://yourlogicalfallacyis.com/slippery-slope
+// Handles sliding down slopes, like if they were made of butter :)
+void P_ButteredSlope(mobj_t *mo)
+{
+	fixed_t thrust;
+
+	if (!mo->standingslope)
+		return;
+
+	if (abs(mo->standingslope->zdelta) < FRACUNIT/2)
+		return; // Don't apply physics to slopes that aren't steep enough
+
+	thrust = FINESINE(mo->standingslope->zangle>>ANGLETOFINESHIFT) * (mo->eflags & MFE_VERTICALFLIP ? 1 : -1);
+
+	if (!(mo->player && (mo->player->pflags & PF_SPINNING))) {
+		if (mo->momx || mo->momy) // Slightly increase thrust based on the object's speed parallel to the slope direction
+			thrust = FixedMul(thrust, FRACUNIT+P_AproxDistance(mo->momx, mo->momy)/4);
+		// This solves the issue of being able to zigzag up steep slopes
+	}
+
+	// Multiply by gravity
+	thrust = FixedMul(thrust, FRACUNIT/2); // TODO actually get this
+
+	P_Thrust(mo, mo->standingslope->xydirection, thrust);
+}
+
 // EOF
 #endif // #ifdef ESLOPE
 

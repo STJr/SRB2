@@ -1,4 +1,4 @@
-// Emacs style mode select   -*- C++ -*- 
+// Emacs style mode select   -*- C++ -*-
 //-----------------------------------------------------------------------------
 //
 // Copyright(C) 2004 Stephen McGranahan
@@ -7,12 +7,12 @@
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation; either version 2 of the License, or
 // (at your option) any later version.
-// 
+//
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-// 
+//
 // You should have received a copy of the GNU General Public License
 // along with this program; if not, write to the Free Software
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -113,6 +113,8 @@ float FV_Distancef(const v3float_t *p1, const v3float_t *p2);
 float M_VectorYaw(v3float_t v);
 float M_VectorPitch(v3float_t v);
 angles3d_t *M_VectorAlignTo(float Pitch, float Yaw, float Roll, v3float_t v, byte AngleAxis, float Rate);
+
+void M_VecRotate(v3fixed_t *rotVec, const v3fixed_t *axisVec, const angle_t angle);
 
 
 

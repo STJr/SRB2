@@ -76,6 +76,11 @@ float P_GetZAtf(pslope_t *slope, float x, float y);
 float P_DistFromPlanef(const v3float_t *point, const v3float_t *pori,
                        const v3float_t *pnormal);
 
+// Lots of physics-based bullshit
+void P_QuantizeMomentumToSlope(v3fixed_t *momentum, pslope_t *slope);
+void P_SlopeLaunch(mobj_t *mo);
+void P_ButteredSlope(mobj_t *mo);
+
 #endif
 
 // EOF

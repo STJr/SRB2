@@ -1239,7 +1239,11 @@ static void P_XYFriction(mobj_t *mo, fixed_t oldx, fixed_t oldy)
 		}
 		else if (abs(player->rmomx) < FixedMul(STOPSPEED, mo->scale)
 		    && abs(player->rmomy) < FixedMul(STOPSPEED, mo->scale)
-		    && (!(player->cmd.forwardmove && !(twodlevel || mo->flags2 & MF2_TWOD)) && !player->cmd.sidemove && !(player->pflags & PF_SPINNING)))
+		    && (!(player->cmd.forwardmove && !(twodlevel || mo->flags2 & MF2_TWOD)) && !player->cmd.sidemove && !(player->pflags & PF_SPINNING))
+#ifdef ESLOPE
+			&& !(player->mo->standingslope && abs(player->mo->standingslope->zdelta) >= FRACUNIT/2)
+#endif
+				)
 		{
 			// if in a walking frame, stop moving
 			if (player->panim == PA_WALK)
@@ -1383,6 +1387,11 @@ void P_XYMovement(mobj_t *mo)
 	fixed_t xmove, ymove;
 	fixed_t oldx, oldy; // reducing bobbing/momentum on ice when up against walls
 	boolean moved;
+#ifdef ESLOPE
+	pslope_t *oldslope = NULL;
+	v3fixed_t slopemom;
+	fixed_t predictedz;
+#endif
 
 	I_Assert(mo != NULL);
 	I_Assert(!P_MobjWasRemoved(mo));
@@ -1413,6 +1422,29 @@ void P_XYMovement(mobj_t *mo)
 
 	oldx = mo->x;
 	oldy = mo->y;
+
+#ifdef ESLOPE
+	// adjust various things based on slope
+	if (mo->standingslope) {
+		if (!P_IsObjectOnGround(mo)) { // We fell off at some point? Do the twisty thing!
+			P_SlopeLaunch(mo);
+			xmove = mo->momx;
+			ymove = mo->momy;
+		} else { // Still on the ground.
+			slopemom.x = xmove;
+			slopemom.y = ymove;
+			slopemom.z = 0;
+			P_QuantizeMomentumToSlope(&slopemom, mo->standingslope);
+
+			xmove = slopemom.x;
+			ymove = slopemom.y;
+
+			predictedz = mo->z + slopemom.z; // We'll use this later...
+
+			oldslope = mo->standingslope;
+		}
+	}
+#endif
 
 	// Pushables can break some blocks
 	if (CheckForBustableBlocks && mo->flags & MF_PUSHABLE)
@@ -1533,6 +1565,29 @@ void P_XYMovement(mobj_t *mo)
 
 	if (P_MobjWasRemoved(mo)) // MF_SPECIAL touched a player! O_o;;
 		return;
+
+#ifdef ESLOPE
+	if (moved && oldslope) { // Check to see if we ran off
+		if (oldslope != mo->standingslope) { // First, compare different slopes
+			// Start by quantizing momentum on this slope
+			v3fixed_t test;
+			test.x = mo->momx;
+			test.y = mo->momy;
+			test.z = 0;
+			if (mo->standingslope) // Don't fuss with the rotation if we don't HAVE a slope
+				P_QuantizeMomentumToSlope(&test, mo->standingslope);
+
+			// Now compare the Zs of the different quantizations
+			if (slopemom.z - test.z > 2*FRACUNIT) { // Allow for a bit of sticking - this value can be adjusted later
+				mo->standingslope = oldslope;
+				P_SlopeLaunch(mo);
+			}
+		} else if (predictedz-mo->z > 2*FRACUNIT) { // Now check if we were supposed to stick to this slope
+			mo->standingslope = oldslope;
+			P_SlopeLaunch(mo);
+		}
+	}
+#endif
 
 	// Check the gravity status.
 	P_CheckGravity(mo, false);
@@ -1818,6 +1873,11 @@ static boolean P_ZMovement(mobj_t *mo)
 
 	I_Assert(mo != NULL);
 	I_Assert(!P_MobjWasRemoved(mo));
+
+#ifdef ESLOPE
+	if (mo->standingslope && !P_IsObjectOnGround(mo))
+			P_SlopeLaunch(mo);
+#endif
 
 	// Intercept the stupid 'fall through 3dfloors' bug
 	if (mo->subsector->sector->ffloors)
@@ -2230,6 +2290,11 @@ static void P_PlayerZMovement(mobj_t *mo)
 
 	if (!mo->player)
 		return;
+
+#ifdef ESLOPE
+	if (mo->standingslope && !P_IsObjectOnGround(mo))
+			P_SlopeLaunch(mo);
+#endif
 
 	// Intercept the stupid 'fall through 3dfloors' bug
 	if (mo->subsector->sector->ffloors)
@@ -3182,6 +3247,10 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 	I_Assert(!P_MobjWasRemoved(mobj));
 
 	P_MobjCheckWater(mobj);
+
+#ifdef ESLOPE
+	P_ButteredSlope(mobj);
+#endif
 
 	// momentum movement
 	mobj->eflags &= ~MFE_JUSTSTEPPEDDOWN;
