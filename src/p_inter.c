@@ -2537,7 +2537,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source)
 		P_SetMobjState(target, S_NULL);
 #else
 		P_SetMobjState(target, target->info->deathstate);
-#endifhttps://i.imgur.com/9gx8Y00.gif
+#endif
 
 	/** \note For player, the above is redundant because of P_SetMobjState (target, S_PLAY_DIE1)
 	   in P_DamageMobj()
