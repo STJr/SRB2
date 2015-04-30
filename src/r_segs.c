@@ -1512,27 +1512,14 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	// Figure out map coordinates of where start and end are mapping to on seg, so we can clip right for slope bullshit
 	if (frontsector->c_slope || frontsector->f_slope || (backsector && (backsector->c_slope || backsector->f_slope))) {
 		angle_t temp;
-		fixed_t tan;
 
 		// left
 		temp = xtoviewangle[start]+viewangle;
 
-		/*if (curline->v1->x == curline->v2->x) {
-			// Line seg is vertical, so no line-slope form for it
-			tan = FINETANGENT((temp+ANGLE_90)>>ANGLETOFINESHIFT);
-
-			segleft.x = curline->v1->x;
-
-			segleft.y = curline->v1->y-FixedMul(viewx-segleft.x, tan);
-		} else if (temp>>ANGLETOFINESHIFT == ANGLE_90>>ANGLETOFINESHIFT || temp>>ANGLETOFINESHIFT == ANGLE_270>>ANGLETOFINESHIFT) {
-			// Same problem as above, except this time with the view angle
-			tan = FixedDiv(curline->v2->y-curline->v1->y, curline->v2->x-curline->v1->x);
-
-			segleft.x = viewx;
-			segleft.y = curline->v1->y-FixedMul(viewx-curline->v1->x, tan);
-		} else */{
+		{
 			// Both lines can be written in slope-intercept form, so figure out line intersection
 			float a1, b1, c1, a2, b2, c2, det; // 1 is the seg, 2 is the view angle vector...
+			///TODO: convert to FPU
 
 			a1 = FIXED_TO_FLOAT(curline->v2->y-curline->v1->y);
 			b1 = FIXED_TO_FLOAT(curline->v1->x-curline->v2->x);
@@ -1551,22 +1538,10 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		// right
 		temp = xtoviewangle[stop]+viewangle;
 
-		/*if (curline->v1->x == curline->v2->x) {
-			// Line seg is vertical, so no line-slope form for it
-			tan = FINETANGENT((temp+ANGLE_90)>>ANGLETOFINESHIFT);
-
-			segright.x = curline->v1->x;
-
-			segright.y = curline->v1->y-FixedMul(viewx-segright.x, tan);
-		} else if (temp>>ANGLETOFINESHIFT == ANGLE_90>>ANGLETOFINESHIFT || temp>>ANGLETOFINESHIFT == ANGLE_270>>ANGLETOFINESHIFT) {
-			// Same problem as above, except this time with the view angle
-			tan = FixedDiv(curline->v2->y-curline->v1->y, curline->v2->x-curline->v1->x);
-
-			segright.x = viewx;
-			segright.y = curline->v1->y-FixedMul(viewx-curline->v1->x, tan);
-		} else */{
+		{
 			// Both lines can be written in slope-intercept form, so figure out line intersection
 			float a1, b1, c1, a2, b2, c2, det; // 1 is the seg, 2 is the view angle vector...
+			///TODO: convert to FPU
 
 			a1 = FIXED_TO_FLOAT(curline->v2->y-curline->v1->y);
 			b1 = FIXED_TO_FLOAT(curline->v1->x-curline->v2->x);

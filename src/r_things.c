@@ -2030,21 +2030,21 @@ void R_ClipSprites(void)
 			if (spr->gzt <= ds->tsilheight)
 				silhouette &= ~SIL_TOP;
 
-			if (silhouette == 1)
+			if (silhouette == SIL_BOTTOM)
 			{
 				// bottom sil
 				for (x = r1; x <= r2; x++)
 					if (spr->clipbot[x] == -2)
 						spr->clipbot[x] = ds->sprbottomclip[x];
 			}
-			else if (silhouette == 2)
+			else if (silhouette == SIL_TOP)
 			{
 				// top sil
 				for (x = r1; x <= r2; x++)
 					if (spr->cliptop[x] == -2)
 						spr->cliptop[x] = ds->sprtopclip[x];
 			}
-			else if (silhouette == 3)
+			else if (silhouette == (SIL_TOP|SIL_BOTTOM))
 			{
 				// both
 				for (x = r1; x <= r2; x++)
