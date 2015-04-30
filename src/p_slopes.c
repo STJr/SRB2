@@ -801,7 +801,7 @@ void P_SlopeLaunch(mobj_t *mo)
 	mo->momy = slopemom.y;
 	mo->momz = slopemom.z/2;
 
-	CONS_Printf("Launched off of slope.\n");
+	//CONS_Printf("Launched off of slope.\n");
 	mo->standingslope = NULL;
 }
 
@@ -814,16 +814,14 @@ void P_ButteredSlope(mobj_t *mo)
 	if (!mo->standingslope)
 		return;
 
-	if (abs(mo->standingslope->zdelta) < FRACUNIT/2)
+	if (abs(mo->standingslope->zdelta) < FRACUNIT/3)
 		return; // Don't apply physics to slopes that aren't steep enough
 
-	thrust = FINESINE(mo->standingslope->zangle>>ANGLETOFINESHIFT) * (mo->eflags & MFE_VERTICALFLIP ? 1 : -1);
+	thrust = FINESINE(mo->standingslope->zangle>>ANGLETOFINESHIFT) * 3 / 2 * (mo->eflags & MFE_VERTICALFLIP ? 1 : -1);
 
-	if (!(mo->player && (mo->player->pflags & PF_SPINNING))) {
-		if (mo->momx || mo->momy) // Slightly increase thrust based on the object's speed parallel to the slope direction
-			thrust = FixedMul(thrust, FRACUNIT+P_AproxDistance(mo->momx, mo->momy)/4);
-		// This solves the issue of being able to zigzag up steep slopes
-	}
+	if (mo->momx || mo->momy) // Slightly increase thrust based on the object's speed
+		thrust = FixedMul(thrust, FRACUNIT+P_AproxDistance(mo->momx, mo->momy)/16);
+	// This makes it harder to zigzag up steep slopes, as well as allows greater top speed when rolling down
 
 	// Multiply by gravity
 	thrust = FixedMul(thrust, FRACUNIT/2); // TODO actually get this

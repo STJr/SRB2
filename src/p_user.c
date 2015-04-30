@@ -4503,12 +4503,16 @@ static void P_3dMovement(player_t *player)
 	angle_t dangle; // replaces old quadrants bits
 	fixed_t normalspd = FixedMul(player->normalspeed, player->mo->scale);
 	boolean analogmove = false;
-#ifndef OLD_MOVEMENT_CODE
 	fixed_t oldMagnitude, newMagnitude;
+#ifdef ESLOPE
+	v3fixed_t totalthrust;
+
+	totalthrust.x = totalthrust.y = 0; // I forget if this is needed
+	totalthrust.z = FRACUNIT*P_MobjFlip(player->mo); // A bit of extra push-back on slopes
+#endif // ESLOPE
 
 	// Get the old momentum; this will be needed at the end of the function! -SH
 	oldMagnitude = R_PointToDist2(player->mo->momx - player->cmomx, player->mo->momy - player->cmomy, 0, 0);
-#endif
 
 	analogmove = P_AnalogMove(player);
 
@@ -4685,17 +4689,10 @@ static void P_3dMovement(player_t *player)
 		}
 
 		movepushforward = FixedMul(movepushforward, player->mo->scale);
-#ifdef OLD_MOVEMENT_CODE
-		if (player->speed < topspeed && mforward && cmd->forwardmove > 0) // Sonic's Speed
-			P_Thrust(player->mo, movepushangle, movepushforward);
-		else if (mforward && cmd->forwardmove < 0)
-			P_Thrust(player->mo, movepushangle, movepushforward);
-		else if (player->speed < topspeed && mbackward && cmd->forwardmove < 0)
-			P_Thrust(player->mo, movepushangle, movepushforward);
-		else if (mbackward && cmd->forwardmove > 0)
-			P_Thrust(player->mo, movepushangle, movepushforward);
-		else if (!mforward && !mbackward)
-			P_Thrust(player->mo, movepushangle, movepushforward);
+
+#ifdef ESLOPE
+		totalthrust.x += P_ReturnThrustX(player->mo, movepushangle, movepushforward);
+		totalthrust.y += P_ReturnThrustY(player->mo, movepushangle, movepushforward);
 #else
 		P_Thrust(player->mo, movepushangle, movepushforward);
 #endif
@@ -4714,32 +4711,11 @@ static void P_3dMovement(player_t *player)
 		if (!(player->pflags & PF_GLIDING || player->exiting || P_PlayerInPain(player)))
 		{
 			angle_t controldirection;
-#ifdef OLD_MOVEMENT_CODE
-			angle_t controlplayerdirection;
-			boolean cforward; // controls pointing forward from the player
-			boolean cbackward; // controls pointing backward from the player
-			angle_t dangle;
 
-			cforward = cbackward = false;
-#endif
 			// Calculate the angle at which the controls are pointing
 			// to figure out the proper mforward and mbackward.
 			// (Why was it so complicated before? ~Red)
 			controldirection = R_PointToAngle2(0, 0, cmd->forwardmove*FRACUNIT, -cmd->sidemove*FRACUNIT)+movepushangle;
-
-#ifdef OLD_MOVEMENT_CODE
-			controlplayerdirection = player->mo->angle;
-
-			dangle = controldirection - controlplayerdirection;
-
-			if (dangle > ANGLE_180) //flip to keep to one side
-				dangle = InvAngle(dangle);
-
-			if (dangle > ANGLE_90)
-				cbackward = true; // Controls pointing backwards from player
-			else
-				cforward = true; // Controls pointing in player's general direction
-#endif
 
 			movepushforward = max(abs(cmd->sidemove), abs(cmd->forwardmove)) * (thrustfactor * acceleration);
 
@@ -4763,13 +4739,10 @@ static void P_3dMovement(player_t *player)
 			movepushsideangle = controldirection;
 
 			movepushforward = FixedMul(movepushforward, player->mo->scale);
-#ifdef OLD_MOVEMENT_CODE
-			if (player->speed < topspeed)
-				P_Thrust(player->mo, controldirection, movepushforward);
-			else if ((mforward) && (cbackward))
-				P_Thrust(player->mo, controldirection, movepushforward);
-			else if ((mbackward) && (cforward))
-				P_Thrust(player->mo, controldirection, movepushforward);
+
+#ifdef ESLOPE
+			totalthrust.x += P_ReturnThrustX(player->mo, controldirection, movepushforward);
+			totalthrust.y += P_ReturnThrustY(player->mo, controldirection, movepushforward);
 #else
 			P_Thrust(player->mo, controldirection, movepushforward);
 #endif
@@ -4777,29 +4750,6 @@ static void P_3dMovement(player_t *player)
 	}
 	else if (cmd->sidemove && !(player->pflags & PF_GLIDING) && !player->exiting && !P_PlayerInPain(player))
 	{
-#ifdef OLD_MOVEMENT_CODE
-		boolean mright = 0;
-		boolean mleft = 0;
-		angle_t sideangle;
-
-		sideangle = player->mo->angle - ANGLE_90;
-
-		// Monster Iestyn - 04-11-13
-		// Quadrants are stupid, excessive and broken, let's do this a much simpler way!
-		// Get delta angle from rmom angle and player angle first
-		dangle = R_PointToAngle2(0,0, player->rmomx, player->rmomy) - sideangle;
-		if (dangle > ANGLE_180)
-			dangle = InvAngle(dangle);
-
-		// now use it to determine direction!
-		if (dangle <= ANGLE_45) // angles 0-45 or 315-360
-			mright = 1; // going right
-		else if (dangle >= ANGLE_135) // angles 135-225
-			mleft = 1; // going left
-
-		// anything else will leave both at 0, so no need to do anything else
-#endif
-
 		movepushside = cmd->sidemove * (thrustfactor * acceleration);
 
 		if (!onground)
@@ -4822,19 +4772,37 @@ static void P_3dMovement(player_t *player)
 
 		// Finally move the player now that his speed/direction has been decided.
 		movepushside = FixedMul(movepushside, player->mo->scale);
-#ifdef OLD_MOVEMENT_CODE
-		if (player->speed < topspeed)
-			P_Thrust(player->mo, movepushsideangle, movepushside);
-		else if (mright && cmd->sidemove < 0)
-			P_Thrust(player->mo, movepushsideangle, movepushside);
-		else if (mleft && cmd->sidemove > 0)
-			P_Thrust(player->mo, movepushsideangle, movepushside);
+
+#ifdef ESLOPE
+		totalthrust.x += P_ReturnThrustX(player->mo, movepushsideangle, movepushside);
+		totalthrust.y += P_ReturnThrustY(player->mo, movepushsideangle, movepushside);
 #else
 		P_Thrust(player->mo, movepushsideangle, movepushside);
 #endif
 	}
 
-#ifndef OLD_MOVEMENT_CODE
+#ifdef ESLOPE
+	if ((totalthrust.x || totalthrust.y)
+		&& player->mo->standingslope && abs(player->mo->standingslope->zdelta) > FRACUNIT/2) {
+		// Factor thrust to slope, but only for the part pushing up it!
+		// The rest is unaffected.
+		angle_t thrustangle = R_PointToAngle2(0, 0, totalthrust.x, totalthrust.y)-player->mo->standingslope->xydirection;
+
+		if (player->mo->standingslope->zdelta < 0) { // Direction goes down, so thrustangle needs to face toward
+			if (thrustangle < ANGLE_90 || thrustangle > ANGLE_270) {
+				P_QuantizeMomentumToSlope(&totalthrust, player->mo->standingslope);
+			}
+		} else { // Direction goes up, so thrustangle needs to face away
+			if (thrustangle > ANGLE_90 && thrustangle < ANGLE_270) {
+				P_QuantizeMomentumToSlope(&totalthrust, player->mo->standingslope);
+			}
+		}
+	}
+
+	player->mo->momx += totalthrust.x;
+	player->mo->momy += totalthrust.y;
+#endif
+
 	// Time to ask three questions:
 	// 1) Are we over topspeed?
 	// 2) If "yes" to 1, were we moving over topspeed to begin with?
@@ -4868,7 +4836,6 @@ static void P_3dMovement(player_t *player)
 			player->mo->momy = tempmomy + player->cmomy;
 		}
 	}
-#endif
 }
 
 //
