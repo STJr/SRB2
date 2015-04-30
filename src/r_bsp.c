@@ -459,6 +459,11 @@ static void R_AddLine(seg_t *line)
 	doorclosed = 0;
 
 	// Closed door.
+#ifdef ESLOPE
+	// Just don't bother checking this if one side is sloped. This is probably inefficient, but it's better than
+	// random renderer stopping around slopes...
+	if (!(frontsector->f_slope || frontsector->c_slope || backsector->f_slope || backsector->c_slope))
+#endif
 	if (backsector->ceilingheight <= frontsector->floorheight
 		|| backsector->floorheight >= frontsector->ceilingheight)
 	{

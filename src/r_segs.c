@@ -1659,64 +1659,6 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	else
 	{
 		// two sided line
-		ds_p->sprtopclip = ds_p->sprbottomclip = NULL;
-		ds_p->silhouette = 0;
-
-		if (frontsector->floorheight > backsector->floorheight)
-		{
-			ds_p->silhouette = SIL_BOTTOM;
-			ds_p->bsilheight = frontsector->floorheight;
-		}
-		else if (backsector->floorheight > viewz)
-		{
-			ds_p->silhouette = SIL_BOTTOM;
-			ds_p->bsilheight = INT32_MAX;
-			// ds_p->sprbottomclip = negonearray;
-		}
-
-		if (frontsector->ceilingheight < backsector->ceilingheight)
-		{
-			ds_p->silhouette |= SIL_TOP;
-			ds_p->tsilheight = frontsector->ceilingheight;
-		}
-		else if (backsector->ceilingheight < viewz)
-		{
-			ds_p->silhouette |= SIL_TOP;
-			ds_p->tsilheight = INT32_MIN;
-			// ds_p->sprtopclip = screenheightarray;
-		}
-
-		if (backsector->ceilingheight <= frontsector->floorheight)
-		{
-			ds_p->sprbottomclip = negonearray;
-			ds_p->bsilheight = INT32_MAX;
-			ds_p->silhouette |= SIL_BOTTOM;
-		}
-
-		if (backsector->floorheight >= frontsector->ceilingheight)
-		{
-			ds_p->sprtopclip = screenheightarray;
-			ds_p->tsilheight = INT32_MIN;
-			ds_p->silhouette |= SIL_TOP;
-		}
-
-		//SoM: 3/25/2000: This code fixes an automap bug that didn't check
-		// frontsector->ceiling and backsector->floor to see if a door was closed.
-		// Without the following code, sprites get displayed behind closed doors.
-		{
-			if (doorclosed || backsector->ceilingheight <= frontsector->floorheight)
-			{
-				ds_p->sprbottomclip = negonearray;
-				ds_p->bsilheight = INT32_MAX;
-				ds_p->silhouette |= SIL_BOTTOM;
-			}
-			if (doorclosed || backsector->floorheight >= frontsector->ceilingheight)
-			{                   // killough 1/17/98, 2/8/98
-				ds_p->sprtopclip = screenheightarray;
-				ds_p->tsilheight = INT32_MIN;
-				ds_p->silhouette |= SIL_TOP;
-			}
-		}
 
 #ifdef ESLOPE
 		if (backsector->c_slope) {
@@ -1752,6 +1694,101 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			worldtopslope = worldhighslope =
 #endif
 			worldtop = worldhigh;
+		}
+
+		ds_p->sprtopclip = ds_p->sprbottomclip = NULL;
+		ds_p->silhouette = 0;
+
+		if (
+#ifdef ESLOPE
+			worldbottomslope > worldlowslope ||
+#endif
+			worldbottom > worldlow)
+		{
+			ds_p->silhouette = SIL_BOTTOM;
+#ifdef ESLOPE
+			ds_p->bsilheight = (frontsector->f_slope ? INT32_MAX : frontsector->floorheight);
+#else
+			ds_p->bsilheight = frontsector->floorheight;
+#endif
+		}
+#ifdef ESLOPE
+		else if ((backsector->f_slope ? P_GetZAt(backsector->f_slope, viewx, viewy) : backsector->floorheight) > viewz)
+#else
+		else if (backsector->floorheight > viewz)
+#endif
+		{
+			ds_p->silhouette = SIL_BOTTOM;
+			ds_p->bsilheight = INT32_MAX;
+			// ds_p->sprbottomclip = negonearray;
+		}
+
+		if (
+#ifdef ESLOPE
+			worldtopslope < worldhighslope ||
+#endif
+			worldtop < worldhigh)
+		{
+			ds_p->silhouette |= SIL_TOP;
+#ifdef ESLOPE
+			ds_p->tsilheight = (frontsector->c_slope ? INT32_MIN : frontsector->ceilingheight);
+#else
+			ds_p->tsilheight = frontsector->ceilingheight;
+#endif
+		}
+#ifdef ESLOPE
+		else if ((backsector->c_slope ? P_GetZAt(backsector->c_slope, viewx, viewy) : backsector->ceilingheight) < viewz)
+#else
+		else if (backsector->ceilingheight < viewz)
+#endif
+		{
+			ds_p->silhouette |= SIL_TOP;
+			ds_p->tsilheight = INT32_MIN;
+			// ds_p->sprtopclip = screenheightarray;
+		}
+
+#ifdef ESLOPE
+		if (worldhigh <= worldbottom && worldhighslope <= worldbottomslope)
+#else
+		if (worldhigh <= worldbottom)
+#endif
+		{
+			ds_p->sprbottomclip = negonearray;
+			ds_p->bsilheight = INT32_MAX;
+			ds_p->silhouette |= SIL_BOTTOM;
+		}
+
+#ifdef ESLOPE
+		if (worldlow >= worldtop && worldlowslope >= worldtopslope)
+#else
+		if (worldlow >= worldtop)
+#endif
+		{
+			ds_p->sprtopclip = screenheightarray;
+			ds_p->tsilheight = INT32_MIN;
+			ds_p->silhouette |= SIL_TOP;
+		}
+
+#ifdef ESLOPE
+		// This causes issues with slopes.
+		if (!(frontsector->f_slope || frontsector->c_slope || backsector->f_slope || backsector->c_slope))
+#endif
+		//SoM: 3/25/2000: This code fixes an automap bug that didn't check
+		// frontsector->ceiling and backsector->floor to see if a door was closed.
+		// Without the following code, sprites get displayed behind closed doors.
+		{
+			if (doorclosed || backsector->ceilingheight <= frontsector->floorheight)
+			{
+				ds_p->sprbottomclip = negonearray;
+				ds_p->bsilheight = INT32_MAX;
+				ds_p->silhouette |= SIL_BOTTOM;
+			}
+			if (doorclosed || backsector->floorheight >= frontsector->ceilingheight)
+			{                   // killough 1/17/98, 2/8/98
+				ds_p->sprtopclip = screenheightarray;
+				ds_p->tsilheight = INT32_MIN;
+				ds_p->silhouette |= SIL_TOP;
+			}
 		}
 
 		if (worldlow != worldbottom
@@ -1816,7 +1853,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		// check TOP TEXTURE
 		if (worldhigh < worldtop
 #ifdef ESLOPE
-				|| worldhighslope < worldtopslope
+				/*-(FRACUNIT>>8)*/|| worldhighslope < worldtopslope/*-(FRACUNIT>>8)*/
 #endif
 			)
 		{
@@ -1863,7 +1900,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		// check BOTTOM TEXTURE
 		if (worldlow > worldbottom
 #ifdef ESLOPE
-				|| worldlowslope > worldbottomslope
+				/*+(FRACUNIT>>8)*/ || worldlowslope > worldbottomslope/*+(FRACUNIT>>8)*/ // The leeway works around a weird rendering bug with slopes...
 #endif
 			)     //seulement si VISIBLE!!!
 		{
