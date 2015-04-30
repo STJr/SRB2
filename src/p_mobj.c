@@ -754,10 +754,7 @@ fixed_t P_GetFloorZ(mobj_t *mobj, sector_t *sector, fixed_t x, fixed_t y, line_t
 		testy += y;
 
 		// If the highest point is in the sector, then we have it easy! Just get the Z at that point
-		if (R_PointInSubsector(testx, testy)->sector == sector
-			// The following line is a hack to fix a bug where an object pops down on the frame its highest corner re-enters the sloped sector.
-			|| R_PointInSubsector(testx+mobj->momx, testy+mobj->momy)->sector == sector
-			)
+		if (R_PointInSubsector(testx, testy)->sector == sector)
 			return P_GetZAt(slope, testx, testy);
 
 		// If we're just testing for base sector location (no collision line), just go for the center's spot...
@@ -889,10 +886,7 @@ fixed_t P_GetCeilingZ(mobj_t *mobj, sector_t *sector, fixed_t x, fixed_t y, line
 		testy += y;
 
 		// If the lowest point is in the sector, then we have it easy! Just get the Z at that point
-		if (R_PointInSubsector(testx, testy)->sector == sector
-			// The following line is a hack to fix a bug where an object pops down on the frame its highest corner re-enters the sloped sector.
-			|| R_PointInSubsector(testx+mobj->momx, testy+mobj->momy)->sector == sector
-			)
+		if (R_PointInSubsector(testx, testy)->sector == sector)
 			return P_GetZAt(slope, testx, testy);
 
 		// If we're just testing for base sector location (no collision line), just go for the center's spot...
