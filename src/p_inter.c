@@ -252,27 +252,31 @@ void P_DoTDEmblemScore(player_t *player)
 		dummymo->color = SKINCOLOR_SILVER;
 	}
 
-	if (player->linkcount < 9)
+	if (player->linkcount < 13)
 	{
 		switch (player->linkcount)
 		{
 		case 1:
 		case 2:
+		case 3:
 			P_AddPlayerScore(player, 20);
 			P_SetMobjState(dummymo, dummymo->info->spawnstate+12);
 			break;
-		case 3:
 		case 4:
+		case 5:
+		case 6:
 			P_AddPlayerScore(player, 40);
 			P_SetMobjState(dummymo, dummymo->info->spawnstate+13);
 			break;
-		case 5:
-		case 6:
+		case 7:
+		case 8:
+		case 9:
 			P_AddPlayerScore(player, 60);
 			P_SetMobjState(dummymo, dummymo->info->spawnstate+15);
 			break;
-		case 7:
-		case 8:
+		case 10:
+		case 11:
+		case 12:
 			P_AddPlayerScore(player, 80);
 			P_SetMobjState(dummymo, dummymo->info->spawnstate+16);
 			break;
