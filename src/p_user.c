@@ -1075,7 +1075,7 @@ void P_GivePlayerLives(player_t *player, INT32 numlives)
 	{
 		// Player doesn't matter here
 		sharedlives += numlives;
-		
+
 		if (sharedlives > 99)
 			sharedlives = 99;
 		else if (sharedlives < 1)
@@ -4255,6 +4255,25 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 							player->pflags &= ~PF_THOKKED;
 						}
 
+						if (maptol & TOL_TD)
+						{
+							fixed_t playerspeed = R_PointToDist2(0, 0, player->mo->momx, player->mo->momy);
+
+							if (playerspeed > glidespeed)
+							{
+								angle_t moveangle = R_PointToAngle2(0, 0, player->mo->momx, player->mo->momy);
+								angle_t angleDifference = moveangle - player->mo->angle;
+								if (angleDifference > ANGLE_180)
+									angleDifference = InvAngle(angleDifference);
+
+								if (angleDifference < ANGLE_90)
+								{
+									fixed_t speedAdjust = FixedMul(playerspeed - glidespeed, FINESINE(angleDifference>>ANGLETOFINESHIFT));
+									glidespeed = playerspeed - speedAdjust - FixedMul(FRACUNIT/4, player->mo->scale);
+								}
+							}
+						}
+
 						P_SetPlayerMobjState(player->mo, S_PLAY_ABL1);
 						P_InstaThrust(player->mo, player->mo->angle, FixedMul(glidespeed, player->mo->scale));
 						player->pflags &= ~(PF_SPINNING|PF_STARTDASH);
@@ -5240,7 +5259,7 @@ static void P_TDMovement(player_t *player)
 		if (checkangle >= ANGLE_45 && checkangle < ANGLE_135)
 		{
 			P_SetObjectMomZ(player->mo, FixedDiv(cmd->forwardmove*FRACUNIT,10*FRACUNIT), false);
-		
+
 			if (player->powers[pw_super] && ALL7EMERALDS(player->powers[pw_emeralds]))
 			{
 				player->mo->momz *= 2;
@@ -5255,7 +5274,7 @@ static void P_TDMovement(player_t *player)
 		else if (checkangle >= ANGLE_135 && checkangle < ANGLE_225)
 		{
 			P_SetObjectMomZ(player->mo, FixedDiv(-cmd->sidemove*FRACUNIT,10*FRACUNIT), false);
-		
+
 			if (player->powers[pw_super] && ALL7EMERALDS(player->powers[pw_emeralds]))
 			{
 				player->mo->momz *= 2;
@@ -5270,7 +5289,7 @@ static void P_TDMovement(player_t *player)
 		else if (checkangle >= ANGLE_225 && checkangle < ANGLE_315)
 		{
 			P_SetObjectMomZ(player->mo, FixedDiv(-cmd->forwardmove*FRACUNIT,10*FRACUNIT), false);
-		
+
 			if (player->powers[pw_super] && ALL7EMERALDS(player->powers[pw_emeralds]))
 			{
 				player->mo->momz *= 2;
@@ -5285,7 +5304,7 @@ static void P_TDMovement(player_t *player)
 		else if (checkangle >= ANGLE_315 || checkangle < ANGLE_45)
 		{
 			P_SetObjectMomZ(player->mo, FixedDiv(cmd->sidemove*FRACUNIT,10*FRACUNIT), false);
-		
+
 			if (player->powers[pw_super] && ALL7EMERALDS(player->powers[pw_emeralds]))
 			{
 				player->mo->momz *= 2;
@@ -7169,6 +7188,13 @@ static void P_MovePlayer(player_t *player)
 		if (player->powers[pw_super])
 			glidespeed *= 2;
 
+		if (maptol & TOL_TD)
+		{
+			const fixed_t playerspeed = R_PointToDist2(0, 0, player->mo->momx, player->mo->momy);
+			if (playerspeed > glidespeed)
+				glidespeed = playerspeed - FixedMul(FRACUNIT/4, player->mo->scale);
+		}
+
 		if (maptol & TOL_TD) // Slower descent in Top Down Levels
 		{
 			fixed_t descentspeed;
@@ -7222,7 +7248,7 @@ static void P_MovePlayer(player_t *player)
 				speed = FixedMul(speed, player->mo->scale);
 			else
 				speed = FixedMul(speed - player->glidetime*FRACUNIT, player->mo->scale);
-                
+
 			if (speed < 0)
 				speed = 0;
 			P_InstaThrust(player->mo, player->mo->angle-leeway, speed);
@@ -8700,7 +8726,7 @@ void P_ResetCamera(player_t *player, camera_t *thiscam)
 		}
 		else
 			thiscam->angle = player->mo->angle;
-            
+
 		thiscam->aiming = 0;
 	}
 	thiscam->relativex = 0;
@@ -9998,7 +10024,7 @@ static void P_BubbleIfAway(player_t *player)
 				followJump = false;
 			}
 
-			numplayers++;			
+			numplayers++;
 		}
 	}
 
