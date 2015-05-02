@@ -10700,8 +10700,6 @@ void A_SpreadShot(mobj_t *actor)
 		{
 			const angle_t ar = FixedAngle(loc2up*FRACUNIT); // Angle range
 			const angle_t fa = ar/(loc1lw-1); // angle difference between shots
-			//const fixed_t rc = FINECOSINE(fa);
-			//const fixed_t rs = FINESINE(fa);
 
 			const fixed_t xa = actor->x + P_ReturnThrustX(actor, actor->angle + (ar/2) - (count * fa), 10*FRACUNIT);
 			const fixed_t ya = actor->y + P_ReturnThrustY(actor, actor->angle + (ar/2) - (count * fa), 10*FRACUNIT);
