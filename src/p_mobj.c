@@ -1690,6 +1690,13 @@ static boolean P_ZMovement(mobj_t *mo)
 				return false;
 			}
 			break;
+		case MT_CHECKERBALL:
+		case MT_SICHECKERBALL:
+			if (P_CheckDeathPitCollide(mo))
+			{
+				P_RemoveMobj(mo);
+				return false;
+			}
 		default:
 			break;
 	}
@@ -3507,7 +3514,7 @@ static void P_Boss3Thinker(mobj_t *mobj)
 			mobj_t *dummy;
 			SINT8 way = mobj->threshold - 1; // 0 through 4.
 			SINT8 way2;
-			
+
 			i = 0; // reset i to 0 so we can check how many clones we've removed
 
 			// scan the thinkers to make sure all the old pinch dummies are gone before making new ones
@@ -6906,7 +6913,7 @@ void P_MobjThinker(mobj_t *mobj)
 				P_KillMobj(mobj, NULL, NULL);
 				return;
 			}
-			
+
 			if (!mobj->tracer && mobj->target && mobj->target->target && mobj->target->target->player) // Just spawned, set the tracer to be the spawner's target (the player)
 			{
 				P_SetTarget(&mobj->tracer, mobj->target->target);
@@ -6963,7 +6970,7 @@ void P_MobjThinker(mobj_t *mobj)
 
 					var1 = (mobj->info->speed>>FRACBITS);
 					var2 = 16+(1<<FRACBITS);
-				
+
 					A_OrbitalChase(mobj);
 				}
 			}
@@ -7043,7 +7050,7 @@ void P_MobjThinker(mobj_t *mobj)
 		case MT_ICECUBESPAWN:
 			if (!mobj->movecount)
 				mobj->movecount = P_RandomRange(-5, 5);
-			
+
 			if (!mobj->tracer)
 			{
 				var1 = MT_CHILLPENGUIN;
@@ -7113,7 +7120,10 @@ void P_MobjThinker(mobj_t *mobj)
 			P_InstaThrust(mobj, mobj->angle, mobj->info->speed);
 			break;
 		case MT_CHECKERBALL:
-			if (!mobj->momx && !mobj->momy && mobj->state != &states[mobj->info->spawnstate])
+		case MT_SICHECKERBALL:
+			P_MobjCheckWater(mobj);
+			if ((mobj->type == MT_CHECKERBALL && !mobj->momx && !mobj->momy && mobj->state != &states[mobj->info->spawnstate])
+				|| (mobj->type == MT_SICHECKERBALL && (mobj->eflags & (MFE_UNDERWATER|MFE_TOUCHWATER)) && mobj->state != &states[mobj->info->spawnstate]))
 			{
 				P_KillMobj(mobj, NULL, NULL);
 				return;
@@ -7828,7 +7838,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			|| mobj->type == MT_PENGUINICE || mobj->type == MT_ICECUBE
 			|| mobj->type == MT_TDEMBLEM
 			|| mobj->type == MT_BOUNCECLOUD || mobj->type == MT_MOVINGBOUNCECLOUD
-			|| mobj->type == MT_CHECKERBALL)
+			|| mobj->type == MT_CHECKERBALL || mobj->type == MT_SICHECKERBALL)
 			P_SpawnShadowMobj(mobj);
 	}
 #ifdef HAVE_BLUA
@@ -9357,7 +9367,15 @@ ML_NOCLIMB : Direction not controllable
 		if (mthing->angle >= 360)
 			mobj->tics += 7*(mthing->angle / 360) + 1; // starting delay
 		break;
+	case MT_PLASMAPOPUPTURRET:
+	case MT_GUNPUPPY:
+		if (mthing->angle)
+			mobj->threshold = mthing->angle;
+		else
+			mobj->threshold = (TICRATE*2)-1;
+		break;
 	case MT_CHECKERBALLSPAWNER:
+	case MT_SICHECKERBALLSPAWNER:
 		if (mthing->options & MTF_OBJECTSPECIAL)
 			P_SetMobjState(mobj, mobj->info->raisestate);
 		break;

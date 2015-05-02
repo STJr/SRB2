@@ -1825,6 +1825,7 @@ static actionpointer_t actionpointers[] =
 	{{A_InflatableSnowman},    "A_INFLATABLESNOWMAN"},
 	{{A_CheckGround},          "A_CHECKGROUND"},
 	{{A_LookTracer},           "A_LOOKTRACER"},
+	{{A_SpreadShot},           "A_SPREADSHOT"},
 
 	{{NULL},                   "NONE"},
 
@@ -6716,32 +6717,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_ARROWSTATIONARY9",
 
 	// Top Down enemies
-	// Missile Turret
-	"S_MISSILETURRETLOOK",
-	"S_MISSILETURRET1",
-	"S_MISSILETURRET2",
-	"S_MISSILETURRET3",
-	"S_MISSILETURRET4",
-	"S_MISSILETURRET5",
-	"S_MISSILETURRET6",
-	"S_MISSILETURRET7",
-	"S_MISSILETURRET8",
-	"S_MISSILETURRET9",
-	"S_MISSILETURRET10",
-	"S_MISSILETURRET11",
-	"S_MISSILETURRET12",
-	"S_MISSILETURRET13",
-	"S_MISSILETURRET14",
-	"S_MISSILETURRET15",
-	"S_MISSILETURRET16",
-	"S_MISSILETURRET17",
-
-	"S_ORBITALMISSILE1",
-	"S_ORBITALMISSILE2",
-	"S_ORBITALMISSILE3",
-	"S_ORBITALMISSILE4",
-	"S_ORBITALMISSILE5",
-
 	// Cluckoid
 	"S_CLUCKOIDLOOK",
 	"S_CLUCKOIDINHALE1",
@@ -6834,6 +6809,55 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SNOWFLARE7",
 	"S_SNOWFLARE8",
 	"S_SNOWFLARE9",
+
+	// Gun Puppy
+	"S_GUNPUPPYLOOK",
+	"S_GUNPUPPYFIRE1",
+	"S_GUNPUPPYFIRE2",
+	"S_GUNPUPPYFIRE3",
+	"S_GUNPUPPYFIRE4",
+	"S_GUNPUPPYFIRE5",
+	"S_GUNPUPPYFIRE6",
+	"S_GUNPUPPYFIRE7",
+	"S_GUNPUPPYFIRE8",
+	"S_GUNPUPPYFIRE9",
+	"S_GUNPUPPYFIRE10",
+	"S_GUNPUPPYFIRE11",
+	"S_GUNPUPPYFIRE12",
+
+	// Plasma Bullet
+	"S_PLASMABULLET1",
+	"S_PLASMABULLET2",
+	"S_PLASMABULLETTRAIL1",
+	"S_PLASMABULLETTRAIL2",
+	"S_PLASMABULLETTRAIL3",
+
+	// Missile Turret
+	"S_MISSILETURRETLOOK",
+	"S_MISSILETURRET1",
+	"S_MISSILETURRET2",
+	"S_MISSILETURRET3",
+	"S_MISSILETURRET4",
+	"S_MISSILETURRET5",
+	"S_MISSILETURRET6",
+	"S_MISSILETURRET7",
+	"S_MISSILETURRET8",
+	"S_MISSILETURRET9",
+	"S_MISSILETURRET10",
+	"S_MISSILETURRET11",
+	"S_MISSILETURRET12",
+	"S_MISSILETURRET13",
+	"S_MISSILETURRET14",
+	"S_MISSILETURRET15",
+	"S_MISSILETURRET16",
+	"S_MISSILETURRET17",
+
+	"S_ORBITALMISSILE1",
+	"S_ORBITALMISSILE2",
+	"S_ORBITALMISSILE3",
+	"S_ORBITALMISSILE4",
+	"S_ORBITALMISSILE5",
+
 
 	// Top Down bosses
 	// Red Eye
@@ -6986,6 +7010,24 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_STATICGENERATOR_DEATH9",
 	"S_STATICGENERATOR_DEATH10",
 
+	// Sky Islands Blue Flame
+	"S_BLUEFLAME1",
+	"S_BLUEFLAME2",
+	"S_BLUEFLAME3",
+	"S_BLUEFLAME4",
+	"S_BLUEFLAME5",
+
+	// Sky Islands Checker balls
+	"S_SICHECKERBALLSPAWNER",
+	"S_SICHECKERBALLSPAWNERIDLE",
+	"S_SICHECKERBALL1",
+	"S_SICHECKERBALL2",
+	"S_SICHECKERBALL3",
+	"S_SICHECKERBALL4",
+	"S_SICHECKERBALL5",
+	"S_SICHECKERBALL6",
+	"S_SICHECKERBALL7",
+
 	// Top Down decoration
 	// Palmtree top
 	"S_PALMTREETOP",
@@ -6999,6 +7041,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Frozen Factory tree
 	"S_FFTREE",
+
+	// Sky Islands Bird Statue
+	"S_BIRDSTATUE",
 
 	// Stormy Streets Bush
 	"S_STORMYBUSH",
@@ -7550,6 +7595,13 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_SNOWSPARK",
 	"MT_SNOWFLARE",
 
+	"MT_PLASMAPOPUPTURRET",
+
+	"MT_GUNPUPPY",
+
+	"MT_PLASMABULLET",
+	"MT_PLASMABULLETTRAIL",
+
 	"MT_MISSILETURRET",
 	"MT_ORBITALMISSILE",
 
@@ -7578,6 +7630,11 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 
 	"MT_STATICGENERATOR",
 
+	"MT_BLUEFLAME",
+
+	"MT_SICHECKERBALLSPAWNER",
+	"MT_SICHECKERBALL",
+
 	// Top Down decoration
 	"MT_PALMTREETOP",
 
@@ -7587,6 +7644,8 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_BLUELIGHT",
 
 	"MT_FFTREE",
+
+	"MT_BIRDSTATUE",
 
 	"MT_STORMYBUSH",
 

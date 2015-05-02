@@ -212,6 +212,7 @@ void A_OrbitalChase();
 void A_InflatableSnowman();
 void A_CheckGround();
 void A_LookTracer();
+void A_SpreadShot();
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
 #define NUMMOBJFREESLOTS 256
@@ -588,9 +589,6 @@ typedef enum sprite
 	SPR_ARRO, // Small arrow above players
 
 	// Top Down Enemies
-	SPR_MITR, // Homing Missile Turret
-	SPR_HMIS, // Homing Missile
-
 	SPR_CLUK, // Cluckoid
 
 	SPR_TOXO, // Toxomister
@@ -604,6 +602,12 @@ typedef enum sprite
 	SPR_GANG, // Snow Gang
 	SPR_FLAR, // definitely not from kart
 
+	SPR_GPUP, // Gun Puppy
+	SPR_PLSM, // Plasma Bullet
+
+	SPR_MITR, // Homing Missile Turret
+	SPR_HMIS, // Homing Missile
+
 	// Top Down bosses
 	SPR_REDI, // Red Eye
 
@@ -615,7 +619,10 @@ typedef enum sprite
 
 	// Top Down hazards
 	SPR_CKBL, // Checker ball
+
 	SPR_STAT, // Static Generator
+
+	SPR_BLFM, // Sky islands Blue Flame
 
 	// Top Down decoration
 	SPR_PLMT, // Palm tree top
@@ -625,6 +632,8 @@ typedef enum sprite
 	SPR_BLUE, // blue light
 
 	SPR_FFTR, // Frozen Factory Tree
+
+	SPR_BIST, // Sky Islands Bird Statue
 
 	SPR_SBUS, // Stormy Streets Bush
 	SPR_CONE, // Stormy Streets Cone
@@ -3602,32 +3611,6 @@ typedef enum state
 	S_ARROWSTATIONARY9,
 
 	// Top Down enemies
-	// Missile Turret
-	S_MISSILETURRETLOOK,
-	S_MISSILETURRET1,
-	S_MISSILETURRET2,
-	S_MISSILETURRET3,
-	S_MISSILETURRET4,
-	S_MISSILETURRET5,
-	S_MISSILETURRET6,
-	S_MISSILETURRET7,
-	S_MISSILETURRET8,
-	S_MISSILETURRET9,
-	S_MISSILETURRET10,
-	S_MISSILETURRET11,
-	S_MISSILETURRET12,
-	S_MISSILETURRET13,
-	S_MISSILETURRET14,
-	S_MISSILETURRET15,
-	S_MISSILETURRET16,
-	S_MISSILETURRET17,
-
-	S_ORBITALMISSILE1,
-	S_ORBITALMISSILE2,
-	S_ORBITALMISSILE3,
-	S_ORBITALMISSILE4,
-	S_ORBITALMISSILE5,
-
 	// Cluckoid
 	S_CLUCKOIDLOOK,
 	S_CLUCKOIDINHALE1,
@@ -3720,6 +3703,54 @@ typedef enum state
 	S_SNOWFLARE7,
 	S_SNOWFLARE8,
 	S_SNOWFLARE9,
+
+	// Gun Puppy
+	S_GUNPUPPYLOOK,
+	S_GUNPUPPYFIRE1,
+	S_GUNPUPPYFIRE2,
+	S_GUNPUPPYFIRE3,
+	S_GUNPUPPYFIRE4,
+	S_GUNPUPPYFIRE5,
+	S_GUNPUPPYFIRE6,
+	S_GUNPUPPYFIRE7,
+	S_GUNPUPPYFIRE8,
+	S_GUNPUPPYFIRE9,
+	S_GUNPUPPYFIRE10,
+	S_GUNPUPPYFIRE11,
+	S_GUNPUPPYFIRE12,
+
+	// Plasma Bullet
+	S_PLASMABULLET1,
+	S_PLASMABULLET2,
+	S_PLASMABULLETTRAIL1,
+	S_PLASMABULLETTRAIL2,
+	S_PLASMABULLETTRAIL3,
+
+	// Missile Turret
+	S_MISSILETURRETLOOK,
+	S_MISSILETURRET1,
+	S_MISSILETURRET2,
+	S_MISSILETURRET3,
+	S_MISSILETURRET4,
+	S_MISSILETURRET5,
+	S_MISSILETURRET6,
+	S_MISSILETURRET7,
+	S_MISSILETURRET8,
+	S_MISSILETURRET9,
+	S_MISSILETURRET10,
+	S_MISSILETURRET11,
+	S_MISSILETURRET12,
+	S_MISSILETURRET13,
+	S_MISSILETURRET14,
+	S_MISSILETURRET15,
+	S_MISSILETURRET16,
+	S_MISSILETURRET17,
+
+	S_ORBITALMISSILE1,
+	S_ORBITALMISSILE2,
+	S_ORBITALMISSILE3,
+	S_ORBITALMISSILE4,
+	S_ORBITALMISSILE5,
 
 	// Top Down bosses
 	// Red Eye
@@ -3872,6 +3903,24 @@ typedef enum state
 	S_STATICGENERATOR_DEATH9,
 	S_STATICGENERATOR_DEATH10,
 
+	// Sky Islands Blue Flame
+	S_BLUEFLAME1,
+	S_BLUEFLAME2,
+	S_BLUEFLAME3,
+	S_BLUEFLAME4,
+	S_BLUEFLAME5,
+
+	// Sky Islands Checker balls
+	S_SICHECKERBALLSPAWNER,
+	S_SICHECKERBALLSPAWNERIDLE,
+	S_SICHECKERBALL1,
+	S_SICHECKERBALL2,
+	S_SICHECKERBALL3,
+	S_SICHECKERBALL4,
+	S_SICHECKERBALL5,
+	S_SICHECKERBALL6,
+	S_SICHECKERBALL7,
+
 	// Top Down decoration
 	// Palmtree top
 	S_PALMTREETOP,
@@ -3885,6 +3934,9 @@ typedef enum state
 
 	// Frozen Factory tree
 	S_FFTREE,
+
+	// Sky Islands Bird Statue
+	S_BIRDSTATUE,
 
 	// Stormy Streets Bush
 	S_STORMYBUSH,
@@ -4454,6 +4506,13 @@ typedef enum mobj_type
 	MT_SNOWSPARK,
 	MT_SNOWFLARE,
 
+	MT_PLASMAPOPUPTURRET,
+
+	MT_GUNPUPPY,
+
+	MT_PLASMABULLET,
+	MT_PLASMABULLETTRAIL,
+
 	MT_MISSILETURRET,
 	MT_ORBITALMISSILE,
 
@@ -4475,12 +4534,17 @@ typedef enum mobj_type
 	MT_BOUNCECLOUD,
 	MT_MOVINGBOUNCECLOUDSPAWNER,
 	MT_MOVINGBOUNCECLOUD,
-	
+
 	// Top Down hazards
 	MT_CHECKERBALLSPAWNER,
 	MT_CHECKERBALL,
 
 	MT_STATICGENERATOR,
+
+	MT_BLUEFLAME,
+
+	MT_SICHECKERBALLSPAWNER,
+	MT_SICHECKERBALL,
 
 	// Top Down decoration
 	MT_PALMTREETOP,
@@ -4491,6 +4555,8 @@ typedef enum mobj_type
 	MT_BLUELIGHT,
 
 	MT_FFTREE,
+
+	MT_BIRDSTATUE,
 
 	MT_STORMYBUSH,
 

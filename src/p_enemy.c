@@ -241,6 +241,7 @@ void A_OrbitalChase(mobj_t *actor);
 void A_InflatableSnowman(mobj_t *actor);
 void A_CheckGround(mobj_t *actor);
 void A_LookTracer(mobj_t *actor);
+void A_SpreadShot(mobj_t *actor);
 
 //
 // ENEMY THINKING
@@ -10653,4 +10654,71 @@ void A_LookTracer(mobj_t *actor)
 		P_SetMobjState(actor, actor->info->seestate);
 	else if (locvar2 == 2) // Only play seesound
 		A_PlaySeeSound(actor);
+}
+
+// Function: A_SpreadShot
+//
+// Description: Shoots objects horizontally that spread evenly in an angle range range specified.
+//
+// var1:
+//		lower 16 bits = number of missiles
+//		upper 16 bits = missile type #
+// var2:
+//		lower 16 bits = height offset
+//		upper 16 bits = angle range
+//
+void A_SpreadShot(mobj_t *actor)
+{
+	fixed_t z;
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	const UINT16 loc1lw = (UINT16)(locvar1 & 65535);
+	const UINT16 loc1up = (UINT16)(locvar1 >> 16);
+	const UINT16 loc2lw = (UINT16)(locvar2 & 65535);
+	const UINT16 loc2up = (UINT16)(locvar2 >> 16);
+	INT32 count = 0;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_MultiShot", actor))
+		return;
+#endif
+
+	if (actor->target)
+		A_FaceTarget(actor);
+
+	if (actor->eflags & MFE_VERTICALFLIP)
+		z = actor->z + actor->height - FixedMul(48*FRACUNIT + loc2lw*FRACUNIT, actor->scale);
+	else
+		z = actor->z + FixedMul(48*FRACUNIT + loc2lw*FRACUNIT, actor->scale);
+
+	if (loc1lw == 1)
+	{
+		P_SpawnAlteredDirectionMissile(actor, loc1up, actor->x, actor->y, z, 0);
+	}
+	else
+	{
+		while(count < loc1lw && loc1lw >= 1)
+		{
+			const angle_t ar = FixedAngle(loc2up*FRACUNIT); // Angle range
+			const angle_t fa = ar/(loc1lw-1); // angle difference between shots
+			//const fixed_t rc = FINECOSINE(fa);
+			//const fixed_t rs = FINESINE(fa);
+
+			const fixed_t xa = actor->x + P_ReturnThrustX(actor, actor->angle + (ar/2) - (count * fa), 10*FRACUNIT);
+			const fixed_t ya = actor->y + P_ReturnThrustY(actor, actor->angle + (ar/2) - (count * fa), 10*FRACUNIT);
+
+			P_SpawnPointMissile(actor, xa, ya, z, loc1up, actor->x, actor->y, z);
+			count++;
+		}
+	}
+
+	if (!(actor->flags & MF_BOSS))
+	{
+		if (ultimatemode)
+			actor->reactiontime = actor->info->reactiontime*TICRATE;
+		else
+			actor->reactiontime = actor->info->reactiontime*TICRATE*2;
+	}
+
+	if (actor->info->attacksound)
+		S_StartSound(actor, actor->info->attacksound);
 }
