@@ -2563,7 +2563,7 @@ typedef enum state
 	S_SCRL, // 10 (Unused)
 	S_SCRM, // 20 (TD Emblems)
 	S_SCRN, // 40 (TD Emblems)
-	S_SCRO, // 50 (Unused)
+	S_SCRO, // 50 (Checkpoint)
 	S_SCRP, // 60 (TD Emblems)
 	S_SCRQ, // 80 (TD Emblems)
 

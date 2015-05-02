@@ -2008,7 +2008,7 @@ state_t states[NUMSTATES] =
 	{SPR_SCOR, FF_FULLBRIGHT|11, 32, {A_ScoreRise}, 0, 0, S_NULL}, // S_SCRL - 10 (Unused)
 	{SPR_SCOR, FF_FULLBRIGHT|12, 32, {A_ScoreRise}, 0, 0, S_NULL}, // S_SCRM - 20 (TD Emblems)
 	{SPR_SCOR, FF_FULLBRIGHT|13, 32, {A_ScoreRise}, 0, 0, S_NULL}, // S_SCRN - 40 (TD Emblems)
-	{SPR_SCOR, FF_FULLBRIGHT|14, 32, {A_ScoreRise}, 0, 0, S_NULL}, // S_SCRO - 50 (Unused)
+	{SPR_SCOR, FF_FULLBRIGHT|14, 32, {A_ScoreRise}, 0, 0, S_NULL}, // S_SCRO - 50 (Checkpoint)
 	{SPR_SCOR, FF_FULLBRIGHT|15, 32, {A_ScoreRise}, 0, 0, S_NULL}, // S_SCRP - 60 (TD Emblems)
 	{SPR_SCOR, FF_FULLBRIGHT|16, 32, {A_ScoreRise}, 0, 0, S_NULL}, // S_SCRQ - 80 (TD Emblems)
 

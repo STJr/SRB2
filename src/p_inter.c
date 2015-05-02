@@ -1246,6 +1246,18 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 						players[i].starpostz = special->z>>FRACBITS;
 						players[i].starpostangle = special->angle;
 						players[i].starpostnum = special->health;
+
+						if (player == &players[i])
+						{
+							mobj_t *scoremobj;
+
+							scoremobj = P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z + (player->mo->height / 2), MT_SCORE);
+
+							scoremobj->color = player->mo->color;
+
+							P_SetMobjState(scoremobj, mobjinfo[MT_SCORE].spawnstate+14);
+							P_AddPlayerScore(player, 50);
+						}
 					}
 				}
 			}
@@ -1258,6 +1270,18 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				player->starpostz = special->z>>FRACBITS;
 				player->starpostangle = special->angle;
 				player->starpostnum = special->health;
+
+				if (maptol & TOL_TD)
+				{
+					mobj_t *scoremobj;
+
+					scoremobj = P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z + (player->mo->height / 2), MT_SCORE);
+
+					scoremobj->color = SKINCOLOR_SILVER;
+
+					P_SetMobjState(scoremobj, mobjinfo[MT_SCORE].spawnstate+14);
+					P_AddPlayerScore(player, 50);
+				}
 			}
 			P_ClearStarPost(special->health);
 
