@@ -280,7 +280,7 @@ void P_DoTDEmblemScore(player_t *player)
 			P_RemoveMobj(dummymo);
 			break;
 		}
-		
+
 	}
 	else
 	{
@@ -1553,7 +1553,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 						continue;
 
 					mo2 = (mobj_t *)th;
-					
+
 					if (mo2->type != MT_TOXOMISTERCLOUD)
 						continue;
 
@@ -1566,7 +1566,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					}
 
 				}
-			
+
 				if (!special->threshold)
 				{
 					if (alreadyInfected)
@@ -3393,6 +3393,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 					mo2->flags |= MF_PAIN;
 					mo2->target = target;
 					P_SetMobjState(mo2, mo2->info->meleestate);
+					P_SpawnShadowMobj(mo2);
 				}
 				else
 					P_KillMobj(mo2, NULL, NULL);

@@ -7835,6 +7835,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			|| mobj->type == MT_RING || mobj->type == MT_FLINGRING
 			|| mobj->type == MT_SPIKEBALL || mobj->type == MT_SPECIALSPIKEBALL
 			|| mobj->type == MT_SMALLBLUECHAIN || mobj->type == MT_BIGBLUECHAIN
+			|| mobj->type == MT_REDEYEBALL
 			|| mobj->type == MT_PENGUINICE || mobj->type == MT_ICECUBE
 			|| mobj->type == MT_TDEMBLEM
 			|| mobj->type == MT_BOUNCECLOUD || mobj->type == MT_MOVINGBOUNCECLOUD
