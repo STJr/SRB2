@@ -57,8 +57,8 @@ char sprnames[NUMSPRITES + 1][5] =
 
 	"SHAD","FLEN","BUBB","SBCH","BBCH","MHEL","MXCL","ARRO","CLUK","TOXO",
 	"KRKO","ZAPO","ZAPT","PENG","GANG","FLAR","GPUP","PLSM","MITR","HMIS",
-	"REDI","CHIL","CIRN","CLOD","CKBL","STAT","BLFM","PLMT","GFLO","BLUE",
-	"FFTR","BIST","SBUS","CONE",
+	"REDI","CHIL","CIRN","OKUU","STAR","LITT","LAVA","DANM","CLOD","CKBL",
+	"STAT","BLFM","PLMT","GFLO","BLUE","FFTR","BIST","SBUS","CONE",
 };
 
 // Doesn't work with g++, needs actionf_p1 (don't modify this comment)
@@ -3342,6 +3342,128 @@ state_t states[NUMSTATES] =
 	{SPR_CIRN, 5, 20, {A_PlaySound}, sfx_dsssb2, 0, S_CIRNO13}, // S_CIRNO12
 	{SPR_CIRN, 5, 1, {A_PlaySound}, sfx_dsssb3, 0, S_CIRNO14}, // S_CIRNO13
 	{SPR_CIRN, 5, 1, {NULL}, 0, 0, S_NULL}, // S_CIRNO14
+
+	// Okuu
+	{SPR_OKUU, 0, 16, {A_SpawnObjectRelative}, 0, MT_HELPER, S_OKUUWAIT2}, //S_OKUUWAIT1
+	{SPR_OKUU, 1, 8, {NULL}, 0, 0, S_OKUUWAIT3}, //S_OKUUWAIT2
+	{SPR_OKUU, 2, 8, {NULL}, 0, 0, S_OKUUWAIT4}, //S_OKUUWAIT3
+	{SPR_OKUU, 1, 8, {NULL}, 0, 0, S_OKUUWAIT5}, //S_OKUUWAIT4
+	{SPR_OKUU, 0, 8, {NULL}, 0, 0, S_OKUUWAITREPEAT}, //S_OKUUWAIT5
+	{SPR_OKUU, 0, 0, {A_Repeat}, 2, S_OKUUWAIT2, S_OKUUFLY1}, //S_OKUUWAITREPEAT
+	{SPR_OKUU, 6, 35, {A_BunnyHop}, 8, 0, S_OKUUFLYSTOP}, //S_OKUUFLY1
+	{SPR_OKUU, 10, 35, {A_ForceStop}, 0, 0, S_OKUUFLY2SOUND}, //S_OKUUFLYSTOP
+	{SPR_OKUU, 11, 0, {A_PlaySound}, sfx_roam, 0, S_OKUUFLY2}, //S_OKUUFLY2SOUND
+	{SPR_OKUU, 10, 0, {A_OrbitalChase}, 3*FRACUNIT, 9*FRACUNIT, S_OKUUFLYREPEAT}, //S_OKUUFLY2
+	{SPR_OKUU, 11, 0, {A_Repeat}, 12, S_OKUUFLY2SOUND, S_OKUUFLY3}, //S_OKUUFLYREPEAT
+	{SPR_OKUU, 10, 1, {A_FindTarget}, MT_PLAYER, 0, S_OKUUFLY3STOP}, //S_OKUUFLY3
+	{SPR_OKUU, 15, 35, {A_ForceStop}, 0, 0, S_OKUUFLY3CHECK}, //S_OKUUFLY3STOP
+	{SPR_OKUU, 15, 0, {A_CheckHealth}, 22, S_OKUUFLY3FIRESOUND, S_OKUUFLY3ZOOM}, //S_OKUUFLY3CHECK
+	{SPR_OKUU, 15, 35, {A_PlaySound}, sfx_card, 0, S_OKUUFLY3FIRE}, //S_OKUUFLY3FIRESOUND
+	{SPR_OKUU, 7, 70, {A_Boss1Laser}, MT_BALL, 2, S_OKUUFLY3ZOOM}, //S_OKUUFLY3FIRE
+	{SPR_OKUU, 11, 10, {A_HomingChase}, 25*FRACUNIT, 0, S_OKUULAND1}, //S_OKUUFLY3ZOOM
+	{SPR_OKUU, 8, 1, {A_CheckGround}, S_OKUULAND2, 0, S_OKUULAND1}, //S_OKUULAND1
+	{SPR_OKUU, 9, 40, {A_StartQuake}, 30*FRACUNIT, 35, S_OKUULANDCHECK}, //S_OKUULAND2
+	{SPR_OKUU, 9, 0, {A_CheckHealth}, 16, S_OKUUSHOCKWAVE1, S_OKUUWAIT2}, //S_OKUULANDCHECK
+	{SPR_OKUU, 9, 1, {A_FindTracer}, MT_HELPER, 0, S_OKUUSPELLCARD1_2}, //S_OKUUSPELLCARD1_1
+	{SPR_OKUU, 11, 16, {A_ZThrust}, 48, 0, S_OKUUSPELLCARD1_3}, //S_OKUUSPELLCARD1_2
+	{SPR_OKUU, 11, 15, {A_CapeChase}, 1+(1500<<16), 0, S_OKUUSPELLCARD1_4}, //S_OKUUSPELLCARD1_3
+	{SPR_OKUU, 11, 16, {A_ZThrust}, -48, 0, S_OKUUSPELLCARD1_5}, //S_OKUUSPELLCARD1_4
+	{SPR_OKUU, 11, 1, {A_CheckGround}, S_OKUUSPELLCARD1_6, 0, S_OKUUSPELLCARD1_5}, //S_OKUUSPELLCARD1_5
+	{SPR_OKUU, 9, 35, {A_StartQuake}, 30*FRACUNIT, 35, S_OKUUSPELLCARD1_6DLC}, //S_OKUUSPELLCARD1_6
+	{SPR_OKUU, 9, 1, {A_SetObjectState}, S_HELPERBLAST1, 1, S_OKUUSPELLCARD1_7}, //S_OKUUSPELLCARD1_6DLC
+	{SPR_OKUU, 5, 16, {A_FindTarget}, MT_PLAYER, 1, S_OKUUSPELLCARD1_8}, //S_OKUUSPELLCARD1_7
+	{SPR_OKUU, 5, 35, {A_PlaySound}, sfx_card, 0, S_OKUUSPELLCARD1_9}, //S_OKUUSPELLCARD1_8
+	{SPR_OKUU, 7, 70, {A_Boss1Laser}, MT_BALL, 2, S_OKUUSPELLCARD1_7}, //S_OKUUSPELLCARD1_9
+	{SPR_OKUU, 5, 35, {A_SetObjectState}, S_HELPER2, 1, S_OKUUHOP2}, //S_OKUUHOP1
+	{SPR_OKUU, 6, 16, {A_ZThrust}, 16, 1, S_OKUUHOP2CRUTCH}, //S_OKUUHOP2
+	{SPR_OKUU, 6, 16, {A_ForceStop}, 0, 0, S_OKUUHOP3}, //S_OKUUHOP2CRUTCH
+	{SPR_OKUU, 6, 0, {A_FindTarget}, MT_PLAYER, 0, S_OKUUHOP4SOUND}, //S_OKUUHOP3
+	{SPR_OKUU, 6, 0, {A_PlaySound}, sfx_roam, 0, S_OKUUHOP4}, //S_OKUUHOP4SOUND
+	{SPR_OKUU, 10, 0, {A_OrbitalChase}, 3*FRACUNIT, 18*FRACUNIT, S_OKUUHOP4REPEAT}, //S_OKUUHOP4
+	{SPR_OKUU, 10, 0, {A_Repeat}, 12, S_OKUUHOP4SOUND, S_OKUUFLY3ZOOM}, //S_OKUUHOP4REPEAT
+	{SPR_OKUU, 12, 35, {A_NapalmScatter}, MT_LAVAPLUME+(4<<16), 192+(50<<16), S_OKUUSHOCKWAVE1MORE}, //S_OKUUSHOCKWAVE1
+	{SPR_OKUU, 12, 35, {A_NapalmScatter}, MT_LAVAPLUME+(8<<16), 384+(90<<16), S_OKUUSHOCKWAVE2}, //S_OKUUSHOCKWAVE1MORE
+	{SPR_OKUU, 11, 35, {A_HomingChase}, 50*FRACUNIT, 1, S_OKUUSHOCKWAVE3}, //S_OKUUSHOCKWAVE2
+	{SPR_OKUU, 13, 8, {A_ZThrust}, 1, 1, S_OKUUSHOCKWAVE4}, //S_OKUUSHOCKWAVE3
+	{SPR_OKUU, 13, 35, {A_FireShot}, MT_LAVAPLUME, 16, S_OKUUSHOCKWAVE4REPEAT}, //S_OKUUSHOCKWAVE4
+	{SPR_OKUU, 10, 0, {A_Repeat}, 3, S_OKUUSHOCKWAVE3, S_OKUUSHOCKWAVE5}, //S_OKUUSHOCKWAVE4REPEAT
+	{SPR_OKUU, 10, 1, {A_ForceStop}, 0, 0, S_OKUUSHOCKWAVE6}, //S_OKUUSHOCKWAVE5
+	{SPR_OKUU, 10, 45, {A_PlaySound}, sfx_card, 0, S_OKUUSHOCKWAVE7}, //S_OKUUSHOCKWAVE6
+	{SPR_OKUU, 10, 35, {A_TrapShot}, MT_STARBIG, -90, S_OKUUHOP3}, //S_OKUUSHOCKWAVE7
+	{SPR_OKUU, 11, 16, {A_ZThrust}, 48, 0, S_OKUUSPELLCARD2_2}, //S_OKUUSPELLCARD2_1
+	{SPR_OKUU, 11, 15, {A_CapeChase}, 1+(1500<<16), 0, S_OKUUSPELLCARD2_3}, //S_OKUUSPELLCARD2_2
+	{SPR_OKUU, 11, 16, {A_ZThrust}, -48, 0, S_OKUUSPELLCARD2_4}, //S_OKUUSPELLCARD2_3
+	{SPR_OKUU, 11, 1, {A_CheckGround}, S_OKUUSPELLCARD2_5, 0, S_OKUUSPELLCARD2_4}, //S_OKUUSPELLCARD2_4
+	{SPR_OKUU, 9, 35, {A_StartQuake}, 30*FRACUNIT, 35, S_OKUUSPELLCARD2_6}, //S_OKUUSPELLCARD2_5
+	{SPR_OKUU, 12, 35, {A_MultiShot}, 5+(MT_STARROTATE2<<16), -40*FRACUNIT, S_OKUUSPELLCARD2_7}, //S_OKUUSPELLCARD2_6
+	{SPR_OKUU, 13, 35, {A_MultiShot}, 5+(MT_STARROTATE<<16), -40*FRACUNIT, S_OKUUSPELLCARD2_8}, //S_OKUUSPELLCARD2_7
+	{SPR_OKUU, 13, 1, {A_ChangeAngleAbsolute}, 270, 270, S_OKUUSPELLCARD2_9}, //S_OKUUSPELLCARD2_8
+	{SPR_OKUU, 13, 2, {A_MoveAbsolute}, 270, 4, S_OKUUSPELLCARD2_9}, //S_OKUUSPELLCARD2_9
+	{SPR_OKUU, 13, 55, {A_MoveAbsolute}, 90, 20, S_OKUUSPELLCARD2_9}, //S_OKUUSPELLCARD2_10
+	{SPR_OKUU, 11, 16, {A_ZThrust}, 48, 0, S_OKUUSPELLCARD3_2}, //S_OKUUSPELLCARD3_1
+	{SPR_OKUU, 11, 15, {A_CapeChase}, 1+(1500<<16), 0, S_OKUUSPELLCARD3_3}, //S_OKUUSPELLCARD3_2
+	{SPR_OKUU, 11, 16, {A_ZThrust}, -48, 0, S_OKUUSPELLCARD3_4}, //S_OKUUSPELLCARD3_3
+	{SPR_OKUU, 11, 1, {A_CheckGround}, S_OKUUSPELLCARD3_5, 0, S_OKUUSPELLCARD3_4}, //S_OKUUSPELLCARD3_4
+	{SPR_OKUU, 9, 35, {A_StartQuake}, 30*FRACUNIT, 35, S_OKUUSPELLCARD3_6}, //S_OKUUSPELLCARD3_5
+	{SPR_OKUU, 9, 0, {A_SpawnObjectRelative}, 0, MT_STARHUGE+(-30<<16), S_OKUUSPELLCARD3_7}, //S_OKUUSPELLCARD3_6
+	{SPR_OKUU, 16, 31, {A_MultiShot}, 16+(MT_SHRINKINGSTAR<<16), -80*FRACUNIT, S_OKUUSPELLCARD3_8}, //S_OKUUSPELLCARD3_7
+	{SPR_OKUU, 17, 2, {NULL},0,0, S_OKUUSPELLCARD3_9}, //S_OKUUSPELLCARD3_8
+	{SPR_OKUU, 18, 2, {NULL},0,0, S_OKUUSPELLCARD3_7}, //S_OKUUSPELLCARD3_9
+	{SPR_OKUU, 19, 70, {A_SetObjectFlags},MF_NOGRAVITY,1, S_OKUUDEATH2}, //S_OKUUDEATH1
+	{SPR_OKUU, 20, 35, {A_ZThrust},16,1, S_OKUUDEATH3}, //S_OKUUDEATH2
+	{SPR_OKUU, 21, 8, {NULL},0,0, S_OKUUDEATH4}, //S_OKUUDEATH3
+	{SPR_OKUU, 22, 1, {A_CheckGround},S_OKUUDEATH5,0, S_OKUUDEATH4}, //S_OKUUDEATH4
+	{SPR_OKUU, 23, 2, {A_SetObjectFlags},MF_NOGRAVITY,2, S_OKUUDEATH6}, //S_OKUUDEATH5
+	{SPR_OKUU, 24, 2, {A_ForceStop},0,0, S_OKUUDEATH7}, //S_OKUUDEATH6
+	{SPR_OKUU, 25, -1, {A_ForceWin},0,0, S_OKUUDEATH7}, //S_OKUUDEATH7
+
+	{SPR_DANM, 0, 4, {NULL}, 0, 0, S_SCENERYSTAR2}, //S_SCENERYSTAR1
+	{SPR_DANM, 1, 4, {NULL}, 0, 0, S_SCENERYSTAR1}, //S_SCENERYSTAR2
+
+	{SPR_NULL, 0, 1, {NULL}, 0, 0, S_HELPER1}, //S_HELPER1
+	{SPR_NULL, 0, 16, {A_ZThrust}, -16, 1, S_HELPER1}, //S_HELPER2
+	{SPR_NULL, 0, 16, {A_ZThrust}, 16, 1, S_HELPERBLAST2}, //S_HELPERBLAST1
+	{SPR_NULL, 0, 35, {A_ForceStop}, 0, 0, S_HELPERBLAST3}, //S_HELPERBLAST2
+	{SPR_NULL, 0, 35, {A_FindTarget}, MT_PLAYER, 1, S_HELPERBLAST4}, //S_HELPERBLAST3
+	{SPR_NULL, 0, 12, {A_FireRandomShot}, MT_STARBIG, 800, S_HELPERBLAST4}, //S_HELPERBLAST4
+
+	{SPR_STAR, 0|FF_FULLBRIGHT|FF_TRANS30, 1, {NULL}, 0, 0, S_STAR2}, //S_STAR1
+	{SPR_STAR, 0|FF_FULLBRIGHT|FF_TRANS30, 1, {A_RotateExtend}, 1+FRACUNIT,-(30<<16)+10, S_STAR2}, //S_STAR2
+
+
+	{SPR_STAR, 0|FF_FULLBRIGHT|FF_TRANS30, 1, {NULL}, 0, 0, S_STAR4}, //S_STAR3
+	{SPR_STAR, 0|FF_FULLBRIGHT|FF_TRANS30, 1, {A_RotateExtend}, 1+FRACUNIT,-(30<<16)+20, S_STAR4}, //S_STAR4
+
+	{SPR_NULL, 0, 1, {A_SetFuse}, 280, 0, S_STAR6}, //S_STAR5
+	{SPR_STAR, 1|FF_FULLBRIGHT|FF_TRANS30, 4, {NULL}, 0, 0, S_STAR7}, //S_STAR6
+	{SPR_STAR, 2|FF_FULLBRIGHT|FF_TRANS30, 4, {NULL}, 0, 0, S_STAR8}, //S_STAR7
+	{SPR_STAR, 3|FF_FULLBRIGHT|FF_TRANS30, 4, {NULL}, 0, 0, S_STAR6}, //S_STAR8
+
+
+	{SPR_STAR, 0|FF_FULLBRIGHT|FF_TRANS30, 350, {NULL}, 0, 0, S_STAR10}, //S_STAR9
+	{SPR_STAR, 0|FF_FULLBRIGHT|FF_TRANS30, 350, {A_SetScale}, 8*FRACUNIT/3, 0, S_STAR11}, //S_STAR10
+	{SPR_STAR, 0|FF_FULLBRIGHT|FF_TRANS30, 350, {A_SetScale}, 10*FRACUNIT/3, 0, S_STAR11}, //S_STAR11
+
+
+	{SPR_NULL, 0, 1, {A_SetFuse}, 15*TICRATE, 0, S_STAR13}, //S_STAR12
+	{SPR_STAR, 1|FF_FULLBRIGHT|FF_TRANS30, 1, {A_RotateShrink}, (128<<16)+1, -30<<16, S_STAR13}, //S_STAR13
+
+
+	{SPR_LITT, 2, 3, {NULL}, 0, 0, S_STARDEATH2}, //S_STARDEATH
+	{SPR_LITT, 3, 3, {NULL}, 0, 0, S_NULL}, //S_STARDEATH2
+
+
+	{SPR_LITT, 0|FF_FULLBRIGHT|FF_TRANS50, 2,{NULL}, 0, 0, S_NULL}, //S_BALL
+
+
+	{SPR_STAR, 4|FF_FULLBRIGHT, 2,{A_CheckGround}, S_LAVAPLUME2, 0, S_LAVAPLUME1}, //S_LAVAPLUME1
+	{SPR_NULL, 0, 1,{A_SpawnObjectRelative}, 0, MT_LAVAFLOOR, S_NULL}, //S_LAVAPLUME2
+
+
+	{SPR_NULL, 0, 1, {A_SetFuse}, 6*TICRATE, 0, S_LAVAFLOOR2}, //S_LAVAFLOOR1
+	{SPR_NULL, 0, 4, {NULL}, 0, 0, S_LAVAFLOOR3}, //S_LAVAFLOOR2
+	{SPR_NULL, 1, 4, {NULL}, 0, 0, S_LAVAFLOOR4}, //S_LAVAFLOOR3
+	{SPR_NULL, 2, 16, {NULL}, 0, 0, S_LAVAFLOOR2}, //S_LAVAFLOOR4
 
 	// Top Down springs and fans
 	// Bounce Clouds
@@ -15662,6 +15784,303 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_None,       // activesound
 		MF_SPECIAL|MF_NOGRAVITY|MF_NOCLIP, // flags
+		S_NULL          // raisestate
+	},
+
+	{  	 // MT_OKUU
+		2492,             // doomednum REMEMBER TO CHANGE THIS TO YOUR LIKING
+		S_OKUUWAIT1,         // spawnstate
+		24,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		32,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		200,              // painchance
+		sfx_dmged,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_OKUUDEATH1,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		3,              // speed
+		52*FRACUNIT,              // radius
+		108*FRACUNIT,              // height
+		0,              // display offset
+		100,              // mass
+		8,              // damage
+		sfx_None,       // activesound
+		MF_SPECIAL|MF_SHOOTABLE|MF_BOSS|MF_NOGRAVITY|MF_RUNSPAWNFUNC, // flags
+		S_NULL          // raisestate
+	},
+
+	{        // MT_SCENERYSTAR
+		2493,             // doomednum REMEMBER TO CHANGE THIS TO YOUR LIKING
+		S_SCENERYSTAR1,         // spawnstate
+		1000,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_STARDEATH,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		8,              // speed
+		10*FRACUNIT,              // radius
+		10*FRACUNIT,              // height
+		0,              // display offset
+		100,              // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOGRAVITY|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{       // MT_HELPER
+		-1,             // doomednum
+		S_HELPER1,         // spawnstate
+		1000,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_STARDEATH,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		8,              // speed
+		10*FRACUNIT,              // radius
+		10*FRACUNIT,              // height
+		0,              // display offset
+		100,              // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOGRAVITY, // flags
+		S_NULL          // raisestate
+	},
+
+	{       // MT_STARROTATE
+		-1,             // doomednum
+		S_STAR1,         // spawnstate
+		1000,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_star,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		200,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_STARDEATH,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		8*FRACUNIT,              // speed
+		25*FRACUNIT,              // radius
+		102*FRACUNIT,              // height
+		0,              // display offset
+		100,              // mass
+		20,              // damage
+		sfx_None,       // activesound
+		MF_PAIN|MF_NOGRAVITY, // flags
+		S_NULL          // raisestate
+	},
+
+	{  		 // MT_STARROTATE2
+		-1,             // doomednum
+		S_STAR3,         // spawnstate
+		1000,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_star,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		200,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_STARDEATH,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		8*FRACUNIT,              // speed
+		25*FRACUNIT,              // radius
+		102*FRACUNIT,              // height
+		0,              // display offset
+		100,              // mass
+		20,              // damage
+		sfx_None,       // activesound
+		MF_PAIN|MF_NOGRAVITY, // flags
+		S_NULL          // raisestate
+	},
+
+	{       // MT_STARBIG
+		-1,             // doomednum
+		S_STAR5,         // spawnstate
+		1000,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_star,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		200,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_STARDEATH,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		8*FRACUNIT,              // speed
+		34*FRACUNIT,              // radius
+		122*FRACUNIT,              // height
+		0,              // display offset
+		100,              // mass
+		20,              // damage
+		sfx_None,       // activesound
+		MF_PAIN|MF_NOGRAVITY|MF_RUNSPAWNFUNC|MF_NOCLIPHEIGHT, // flags
+		S_NULL          // raisestate
+	},
+
+	{  	 // MT_STARHUGE
+		-1,             // doomednum
+		S_STAR9,         // spawnstate
+		1000,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_star,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		200,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_STARDEATH,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		8*FRACUNIT,              // speed
+		56*FRACUNIT,              // radius
+		122*FRACUNIT,              // height
+		0,              // display offset
+		100,              // mass
+		20,              // damage
+		sfx_None,       // activesound
+		MF_PAIN|MF_NOGRAVITY|MF_NOCLIPHEIGHT, // flags
+		S_NULL          // raisestate
+	},
+
+	{  	 // MT_SHRINKINGSTAR
+		-1,             // doomednum
+		S_STAR12,         // spawnstate
+		1000,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		200,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_STARDEATH,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		8*FRACUNIT,              // speed
+		12*FRACUNIT,              // radius
+		24*FRACUNIT,              // height
+		0,              // display offset
+		100,              // mass
+		20,              // damage
+		sfx_None,       // activesound
+		MF_PAIN|MF_NOGRAVITY|MF_NOCLIPHEIGHT|MF_RUNSPAWNFUNC, // flags
+		S_NULL          // raisestate
+	},
+
+	{  	 // MT_BALL
+		-1,             // doomednum
+		S_BALL,         // spawnstate
+		1000,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_beam,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		200,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_STARDEATH,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		20*FRACUNIT,              // speed
+		12*FRACUNIT,              // radius
+		24*FRACUNIT,              // height
+		0,              // display offset
+		100,              // mass
+		20,              // damage
+		sfx_None,       // activesound
+		MF_NOGRAVITY|MF_NOBLOCKMAP|MF_MISSILE, // flags
+		S_NULL          // raisestate
+	},
+
+	{  	 // MT_LAVAPLUME
+		-1,             // doomednum
+		S_LAVAPLUME1,         // spawnstate
+		1000,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_star,       // seesound
+		8,              // reactiontime
+		sfx_star,       // attacksound
+		S_NULL,         // painstate
+		200,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_STARDEATH,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		20*FRACUNIT,              // speed
+		30*FRACUNIT,              // radius
+		70*FRACUNIT,              // height
+		0,              // display offset
+		100,              // mass
+		20,              // damage
+		sfx_None,       // activesound
+		MF_PAIN|MF_RUNSPAWNFUNC, // flags
+		S_NULL          // raisestate
+	},
+
+	{  	 // MT_LAVAFLOOR
+		-1,             // doomednum
+		S_LAVAFLOOR1,         // spawnstate
+		1000,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_star,       // seesound
+		8,              // reactiontime
+		sfx_star,       // attacksound
+		S_NULL,         // painstate
+		200,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_STARDEATH,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		56*FRACUNIT,              // radius
+		5*FRACUNIT,              // height
+		0,              // display offset
+		100,              // mass
+		20,              // damage
+		sfx_None,       // activesound
+		MF_PAIN|MF_RUNSPAWNFUNC, // flags
 		S_NULL          // raisestate
 	},
 
