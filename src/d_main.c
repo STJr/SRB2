@@ -1146,14 +1146,14 @@ void D_SRB2Main(void)
 	W_VerifyFileMD5(2, "e6d142d9fdaee3251b497358a53fb424"); // player.td
 	W_VerifyFileMD5(3, "85901ad4bf94637e5753d2ac2c03ea26"); // rings.dta
 	//W_VerifyFileMD5(4, "0c66790502e648bfce90fdc5bb15722e"); // patch.dta
-	
+
 	W_VerifyFileMD5(4, "bfffe2fec3ad2b0d189ac5fa7573ce7a"); // assetpack.td
 	W_VerifyFileMD5(5, "d23bc8ac6a89d37caf892165bf970688"); // tddata.td
 	// don't check music.dta because people like to modify it, and it doesn't matter if they do
 	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.
 #endif
 
-	mainwads = 6; // there are 7 wads not to unload
+	mainwads = 7; // there are 7 wads not to unload
 
 	cht_Init();
 
