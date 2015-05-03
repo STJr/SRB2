@@ -52,6 +52,7 @@ static fixed_t rw_midtexturemid, rw_toptexturemid, rw_bottomtexturemid;
 static INT32 worldtop, worldbottom, worldhigh, worldlow;
 #ifdef ESLOPE
 static INT32 worldtopslope, worldbottomslope, worldhighslope, worldlowslope; // worldtop/bottom at end of slope
+static fixed_t rw_toptextureslide, rw_midtextureslide, rw_bottomtextureslide; // Defines how to adjust Y offsets along the wall for slopes
 #endif
 static fixed_t pixhigh, pixlow, pixhighstep, pixlowstep;
 static fixed_t topfrac, topstep;
@@ -1064,6 +1065,7 @@ static void R_RenderSegLoop (void)
 
 	INT32     mid;
 	fixed_t texturecolumn = 0;
+	fixed_t oldtexturecolumn = -1;
 	INT32     top;
 	INT32     bottom;
 	INT32     i;
@@ -1200,6 +1202,16 @@ static void R_RenderSegLoop (void)
 		// calculate texture offset
 		angle = (rw_centerangle + xtoviewangle[rw_x])>>ANGLETOFINESHIFT;
 		texturecolumn = rw_offset-FixedMul(FINETANGENT(angle),rw_distance);
+
+#ifdef ESLOPE
+		if (oldtexturecolumn != -1) {
+			rw_bottomtexturemid += FixedMul(rw_bottomtextureslide, oldtexturecolumn-texturecolumn);
+			rw_midtexturemid    += FixedMul(rw_midtextureslide, oldtexturecolumn-texturecolumn);
+			rw_toptexturemid    += FixedMul(rw_toptextureslide, oldtexturecolumn-texturecolumn);
+		}
+		oldtexturecolumn = texturecolumn;
+#endif
+
 		texturecolumn >>= FRACBITS;
 
 		// texturecolumn and lighting are independent of wall tiers
@@ -1407,6 +1419,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	r_lightlist_t *rlight;
 #ifdef ESLOPE
 	vertex_t segleft, segright;
+	fixed_t ceilingfrontslide, floorfrontslide, ceilingbackslide, floorbackslide;
 #endif
 	static size_t maxdrawsegs = 0;
 
@@ -1605,6 +1618,28 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		}
 	}
 
+#ifdef ESLOPE
+	// Set up texture Y offset slides for sloped walls
+	rw_toptextureslide = rw_midtextureslide = rw_bottomtextureslide = 0;
+	ceilingfrontslide = floorfrontslide = ceilingbackslide = floorbackslide = 0;
+
+	{
+		angle_t lineangle = R_PointToAngle2(curline->v1->x, curline->v1->y, curline->v2->x, curline->v2->y);
+
+		if (frontsector->f_slope)
+			floorfrontslide = FixedMul(frontsector->f_slope->zdelta, FINECOSINE((lineangle-frontsector->f_slope->xydirection)>>ANGLETOFINESHIFT));
+
+		if (frontsector->c_slope)
+			ceilingfrontslide = FixedMul(frontsector->c_slope->zdelta, FINECOSINE((lineangle-frontsector->c_slope->xydirection)>>ANGLETOFINESHIFT));
+
+		if (backsector && backsector->f_slope)
+			floorbackslide = FixedMul(backsector->f_slope->zdelta, FINECOSINE((lineangle-backsector->f_slope->xydirection)>>ANGLETOFINESHIFT));
+
+		if (backsector && backsector->c_slope)
+			ceilingbackslide = FixedMul(backsector->c_slope->zdelta, FINECOSINE((lineangle-backsector->c_slope->xydirection)>>ANGLETOFINESHIFT));
+	}
+#endif
+
 	if (!backsector)
 	{
 		// single sided line
@@ -1614,14 +1649,22 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 		if (linedef->flags & ML_DONTPEGBOTTOM)
 		{
+#ifdef ESLOPE
+			rw_midtexturemid = worldbottom + textureheight[sidedef->midtexture];
+			rw_midtextureslide = floorfrontslide;
+#else
 			vtop = frontsector->floorheight + textureheight[sidedef->midtexture];
 			// bottom of texture at bottom
 			rw_midtexturemid = vtop - viewz;
+#endif
 		}
 		else
 		{
 			// top of texture at top
 			rw_midtexturemid = worldtop;
+#ifdef ESLOPE
+			rw_midtextureslide = ceilingfrontslide;
+#endif
 		}
 		rw_midtexturemid += sidedef->rowoffset;
 
@@ -1847,12 +1890,20 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 				{
 					// top of texture at top
 					rw_toptexturemid = worldtop;
+#ifdef ESLOPE
+					rw_toptextureslide = ceilingfrontslide;
+#endif
 				}
 				else
 				{
+#ifdef ESLOPE
+					rw_toptexturemid = worldhigh + textureheight[def->toptexture];
+					rw_toptextureslide = ceilingbackslide;
+#else
 					vtop = backsector->ceilingheight + textureheight[def->toptexture];
 					// bottom of texture
 					rw_toptexturemid = vtop - viewz;
+#endif
 				}
 			}
 			else
@@ -1863,12 +1914,20 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 				{
 					// top of texture at top
 					rw_toptexturemid = worldtop;
+#ifdef ESLOPE
+					rw_toptextureslide = ceilingfrontslide;
+#endif
 				}
 				else
 				{
+#ifdef ESLOPE
+					rw_toptexturemid = worldhigh + textureheight[sidedef->toptexture];
+					rw_toptextureslide = ceilingbackslide;
+#else
 					vtop = backsector->ceilingheight + textureheight[sidedef->toptexture];
 					// bottom of texture
 					rw_toptexturemid = vtop - viewz;
+#endif
 				}
 			}
 		}
@@ -1887,9 +1946,16 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 				// bottom of texture at bottom
 				// top of texture at top
 				rw_bottomtexturemid = worldtop;
+#ifdef ESLOPE
+				rw_bottomtextureslide = floorfrontslide;
+#endif
 			}
-			else    // top of texture at top
+			else {   // top of texture at top
 				rw_bottomtexturemid = worldlow;
+#ifdef ESLOPE
+				rw_bottomtextureslide = floorbackslide;
+#endif
+			}
 		}
 
 		rw_toptexturemid += sidedef->rowoffset;
