@@ -512,7 +512,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 #ifdef ESLOPE
 			dc_texturemid = ds->maskedtextureheight[dc_x];
 
-			if (curline->linedef->flags & ML_DONTPEGBOTTOM)
+			if (!!(curline->linedef->flags & ML_DONTPEGBOTTOM) ^ !!(curline->linedef->flags & ML_EFFECT3))
 				dc_texturemid += (textureheight[texnum])*times + textureheight[texnum];
 			else
 				dc_texturemid -= (textureheight[texnum])*times;
@@ -1379,7 +1379,7 @@ static void R_RenderSegLoop (void)
 
 #ifdef ESLOPE
 			if (maskedtextureheight != NULL) {
-				maskedtextureheight[rw_x] = (curline->linedef->flags & ML_DONTPEGBOTTOM ?
+				maskedtextureheight[rw_x] = (!!(curline->linedef->flags & ML_DONTPEGBOTTOM) ^ !!(curline->linedef->flags & ML_EFFECT3) ?
 											max(rw_midtexturemid, rw_midtextureback) :
 											min(rw_midtexturemid, rw_midtextureback));
 			}
@@ -1672,7 +1672,14 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		midtexture = texturetranslation[sidedef->midtexture];
 		// a single sided line is terminal, so it must mark ends
 		markfloor = markceiling = true;
-
+#ifdef ESLOPE
+		if (!(linedef->flags & ML_EFFECT1)) {
+			if (linedef->flags & ML_DONTPEGBOTTOM)
+				rw_midtexturemid = frontsector->floorheight + textureheight[sidedef->midtexture] - viewz;
+			else
+				rw_midtexturemid = frontsector->ceilingheight;
+		}
+#endif
 		if (linedef->flags & ML_DONTPEGBOTTOM)
 		{
 #ifdef ESLOPE
@@ -1912,6 +1919,14 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 				if (!toptexture) //Second side has no texture, use the first side's instead.
 					toptexture = texturetranslation[sidedef->toptexture];
 
+#ifdef ESLOPE
+				if (!(linedef->flags & ML_EFFECT1)) { // Ignore slopes for lower/upper textures unless flag is checked
+					if (linedef->flags & ML_DONTPEGTOP)
+						rw_toptexturemid = frontsector->ceilingheight - viewz;
+					else
+						rw_toptexturemid = backsector->ceilingheight - viewz;
+				} else
+#endif
 				if (linedef->flags & ML_DONTPEGTOP)
 				{
 					// top of texture at top
@@ -1936,6 +1951,14 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			{
 				toptexture = texturetranslation[sidedef->toptexture];
 
+#ifdef ESLOPE
+				if (!(linedef->flags & ML_EFFECT1)) { // Ignore slopes for lower/upper textures unless flag is checked
+					if (linedef->flags & ML_DONTPEGTOP)
+						rw_toptexturemid = frontsector->ceilingheight - viewz;
+					else
+						rw_toptexturemid = backsector->ceilingheight - viewz;
+				} else
+#endif
 				if (linedef->flags & ML_DONTPEGTOP)
 				{
 					// top of texture at top
@@ -1967,6 +1990,14 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			// bottom texture
 			bottomtexture = texturetranslation[sidedef->bottomtexture];
 
+#ifdef ESLOPE
+			if (!(linedef->flags & ML_EFFECT1)) { // Ignore slopes for lower/upper textures unless flag is checked
+				if (linedef->flags & ML_DONTPEGBOTTOM)
+					rw_bottomtexturemid = frontsector->floorheight - viewz;
+				else
+					rw_bottomtexturemid = backsector->floorheight - viewz;
+			} else
+#endif
 			if (linedef->flags & ML_DONTPEGBOTTOM)
 			{
 				// bottom of texture at bottom
@@ -2150,7 +2181,14 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			maskedtextureheight = &(ds_p->maskedtextureheight[0]); // ????
 
 			// Set midtexture starting height
-			if (linedef->flags & ML_DONTPEGBOTTOM) {
+			if (linedef->flags & ML_EFFECT2) { // Ignore slopes when texturing
+				rw_midtextureslide = rw_midtexturebackslide = 0;
+				if (!!(linedef->flags & ML_DONTPEGBOTTOM) ^ !!(linedef->flags & ML_EFFECT3))
+					rw_midtexturemid = rw_midtextureback = max(frontsector->floorheight, backsector->floorheight) - viewz;
+				else
+					rw_midtexturemid = rw_midtextureback = min(frontsector->ceilingheight, backsector->ceilingheight) - viewz;
+
+			} else if (!!(linedef->flags & ML_DONTPEGBOTTOM) ^ !!(linedef->flags & ML_EFFECT3)) {
 				rw_midtexturemid = worldbottom;
 				rw_midtextureslide = floorfrontslide;
 				rw_midtextureback = worldlow;
