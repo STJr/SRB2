@@ -53,6 +53,7 @@ static INT32 worldtop, worldbottom, worldhigh, worldlow;
 #ifdef ESLOPE
 static INT32 worldtopslope, worldbottomslope, worldhighslope, worldlowslope; // worldtop/bottom at end of slope
 static fixed_t rw_toptextureslide, rw_midtextureslide, rw_bottomtextureslide; // Defines how to adjust Y offsets along the wall for slopes
+static fixed_t rw_midtextureback, rw_midtexturebackslide; // Values for masked midtexture height calculation
 #endif
 static fixed_t pixhigh, pixlow, pixhighstep, pixlowstep;
 static fixed_t topfrac, topstep;
@@ -60,6 +61,9 @@ static fixed_t bottomfrac, bottomstep;
 
 static lighttable_t **walllights;
 static INT16 *maskedtexturecol;
+#ifdef ESLOPE
+static fixed_t *maskedtextureheight = NULL;
+#endif
 
 // ==========================================================================
 // R_Splats Wall Splats Drawer
@@ -478,6 +482,8 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 			spryscale = ds->scale1 + (x1 - ds->x1)*rw_scalestep;
 		}
 
+
+#ifndef ESLOPE
 		if (curline->linedef->flags & ML_DONTPEGBOTTOM)
 		{
 			dc_texturemid = front->floorheight > back->floorheight
@@ -496,12 +502,21 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 			dc_texturemid += (textureheight[texnum])*times;
 		else
 			dc_texturemid -= (textureheight[texnum])*times;
+#endif
 
 		dc_texheight = textureheight[texnum]>>FRACBITS;
 
 		// draw the columns
 		for (dc_x = x1; dc_x <= x2; dc_x++)
 		{
+#ifdef ESLOPE
+			dc_texturemid = ds->maskedtextureheight[dc_x];
+
+			if (curline->linedef->flags & ML_DONTPEGBOTTOM)
+				dc_texturemid += (textureheight[texnum])*times + textureheight[texnum];
+			else
+				dc_texturemid -= (textureheight[texnum])*times;
+#endif
 			// calculate lighting
 			if (maskedtexturecol[dc_x] != INT16_MAX)
 			{
@@ -1205,9 +1220,10 @@ static void R_RenderSegLoop (void)
 
 #ifdef ESLOPE
 		if (oldtexturecolumn != -1) {
-			rw_bottomtexturemid += FixedMul(rw_bottomtextureslide, oldtexturecolumn-texturecolumn);
-			rw_midtexturemid    += FixedMul(rw_midtextureslide, oldtexturecolumn-texturecolumn);
-			rw_toptexturemid    += FixedMul(rw_toptextureslide, oldtexturecolumn-texturecolumn);
+			rw_bottomtexturemid += FixedMul(rw_bottomtextureslide,  oldtexturecolumn-texturecolumn);
+			rw_midtexturemid    += FixedMul(rw_midtextureslide,     oldtexturecolumn-texturecolumn);
+			rw_toptexturemid    += FixedMul(rw_toptextureslide,     oldtexturecolumn-texturecolumn);
+			rw_midtextureback   += FixedMul(rw_midtexturebackslide, oldtexturecolumn-texturecolumn);
 		}
 		oldtexturecolumn = texturecolumn;
 #endif
@@ -1360,6 +1376,14 @@ static void R_RenderSegLoop (void)
 			// save texturecol
 			//  for backdrawing of masked mid texture
 			maskedtexturecol[rw_x] = (INT16)texturecolumn;
+
+#ifdef ESLOPE
+			if (maskedtexture) {
+				maskedtextureheight[rw_x] = (curline->linedef->flags & ML_DONTPEGBOTTOM ?
+											max(rw_midtexturemid, rw_midtextureback) :
+											min(rw_midtexturemid, rw_midtextureback));
+			}
+#endif
 		}
 
 		if (dc_numlights)
@@ -2119,6 +2143,23 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			}
 			else
 				ds_p->maskedtexturecol = ds_p->thicksidecol;
+
+#ifdef ESLOPE
+			maskedtextureheight = &(ds_p->maskedtextureheight[0]); // ????
+
+			// Set midtexture starting height
+			if (linedef->flags & ML_DONTPEGBOTTOM) {
+				rw_midtexturemid = worldbottom;
+				rw_midtextureslide = floorfrontslide;
+				rw_midtextureback = worldlow;
+				rw_midtexturebackslide = floorbackslide;
+			} else {
+				rw_midtexturemid = worldtop;
+				rw_midtextureslide = ceilingfrontslide;
+				rw_midtextureback = worldhigh;
+				rw_midtexturebackslide = ceilingbackslide;
+			}
+#endif
 
 			maskedtexture = true;
 		}

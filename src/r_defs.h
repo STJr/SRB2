@@ -661,6 +661,9 @@ typedef struct drawseg_s
 	INT16 *thicksidecol;
 	INT32 numthicksides;
 	fixed_t frontscale[MAXVIDWIDTH];
+#ifdef ESLOPE
+	fixed_t maskedtextureheight[MAXVIDWIDTH]; // For handling sloped midtextures
+#endif
 } drawseg_t;
 
 typedef enum
