@@ -1378,7 +1378,7 @@ static void R_RenderSegLoop (void)
 			maskedtexturecol[rw_x] = (INT16)texturecolumn;
 
 #ifdef ESLOPE
-			if (maskedtexture) {
+			if (maskedtextureheight != NULL) {
 				maskedtextureheight[rw_x] = (curline->linedef->flags & ML_DONTPEGBOTTOM ?
 											max(rw_midtexturemid, rw_midtextureback) :
 											min(rw_midtexturemid, rw_midtextureback));
@@ -1446,6 +1446,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	fixed_t ceilingfrontslide, floorfrontslide, ceilingbackslide, floorbackslide;
 #endif
 	static size_t maxdrawsegs = 0;
+
+	maskedtextureheight = NULL;
 
 	if (ds_p == drawsegs+maxdrawsegs)
 	{
@@ -1969,7 +1971,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			{
 				// bottom of texture at bottom
 				// top of texture at top
-				rw_bottomtexturemid = worldtop;
+				rw_bottomtexturemid = worldbottom;
 #ifdef ESLOPE
 				rw_bottomtextureslide = floorfrontslide;
 #endif
@@ -2159,6 +2161,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 				rw_midtextureback = worldhigh;
 				rw_midtexturebackslide = ceilingbackslide;
 			}
+			rw_midtexturemid += sidedef->rowoffset;
+			rw_midtextureback += sidedef->rowoffset;
 #endif
 
 			maskedtexture = true;
