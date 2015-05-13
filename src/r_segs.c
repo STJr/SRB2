@@ -2371,7 +2371,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 		if (worldhigh < worldtop
 #ifdef ESLOPE
-			|| worldhighslope < worldtopslope
+			|| worldhighslope <= worldtopslope
 #endif
 			)
 		{
@@ -2388,7 +2388,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 		if (worldlow > worldbottom
 #ifdef ESLOPE
-			|| worldlowslope > worldbottomslope
+			|| worldlowslope >= worldbottomslope
 #endif
 			)
 		{
