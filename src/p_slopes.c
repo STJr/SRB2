@@ -805,6 +805,26 @@ void P_SlopeLaunch(mobj_t *mo)
 	mo->standingslope = NULL;
 }
 
+// Function to help handle landing on slopes
+void P_HandleSlopeLanding(mobj_t *thing, pslope_t *slope)
+{
+	v3fixed_t mom;
+	mom.x = thing->momx;
+	mom.y = thing->momy;
+	mom.z = thing->momz*2;
+
+	// Reverse quantizing might could use its own function later
+	slope->zangle = ANGLE_MAX-slope->zangle;
+	P_QuantizeMomentumToSlope(&mom, slope);
+	slope->zangle = ANGLE_MAX-slope->zangle;
+
+	if (P_MobjFlip(thing)*mom.z < 0) { // falling, land on slope
+		thing->momx = mom.x;
+		thing->momy = mom.y;
+		thing->momz = -P_MobjFlip(thing);
+	}
+}
+
 // https://yourlogicalfallacyis.com/slippery-slope
 // Handles sliding down slopes, like if they were made of butter :)
 void P_ButteredSlope(mobj_t *mo)

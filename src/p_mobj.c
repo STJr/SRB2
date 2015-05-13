@@ -2344,6 +2344,12 @@ static void P_PlayerZMovement(mobj_t *mo)
 		if (mo->state == &states[mo->info->painstate] || mo->state == &states[S_PLAY_SUPERHIT])
 			P_SetPlayerMobjState(mo, S_PLAY_STND);
 
+#ifdef ESLOPE
+		if (mo->eflags & MFE_VERTICALFLIP ? tmceilingslope : tmfloorslope)
+			// Handle landing on slope during Z movement
+			P_HandleSlopeLanding(mo, (mo->eflags & MFE_VERTICALFLIP ? tmceilingslope : tmfloorslope));
+#endif
+
 		if (P_MobjFlip(mo)*mo->momz < 0) // falling
 		{
 			// Squat down. Decrease viewheight for a moment after hitting the ground (hard),

@@ -1912,6 +1912,9 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 	fixed_t tryy = thing->y;
 	fixed_t radius = thing->radius;
 	fixed_t thingtop = thing->z + thing->height;
+#ifdef ESLOPE
+	fixed_t startingonground = P_IsObjectOnGround(thing);
+#endif
 	floatok = false;
 
 	if (radius < MAXRADIUS/2)
@@ -2003,7 +2006,7 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 						thing->z = (thing->ceilingz = thingtop = tmceilingz) - thing->height;
 						thing->eflags |= MFE_JUSTSTEPPEDDOWN;
 					}
-					else if (thingtop == thing->ceilingz && tmceilingz < thingtop && thingtop - tmceilingz <= maxstep)
+					else if (tmceilingz < thingtop && thingtop - tmceilingz <= maxstep)
 					{
 						thing->z = (thing->ceilingz = thingtop = tmceilingz) - thing->height;
 						thing->eflags |= MFE_JUSTSTEPPEDDOWN;
@@ -2014,7 +2017,7 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 					thing->z = thing->floorz = tmfloorz;
 					thing->eflags |= MFE_JUSTSTEPPEDDOWN;
 				}
-				else if (thing->z == thing->floorz && tmfloorz > thing->z && tmfloorz - thing->z <= maxstep)
+				else if (tmfloorz > thing->z && tmfloorz - thing->z <= maxstep)
 				{
 					thing->z = thing->floorz = tmfloorz;
 					thing->eflags |= MFE_JUSTSTEPPEDDOWN;
@@ -2090,10 +2093,20 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 
 #ifdef ESLOPE
 	// Assign thing's standingslope if needed
-	if (thing->z <= tmfloorz && thing->momz <= 0 && !(thing->eflags & MFE_VERTICALFLIP))
-		thing->standingslope = tmfloorslope;
-	else if (thing->z+thing->height >= tmceilingz && thing->momz >= 0 && (thing->eflags & MFE_VERTICALFLIP))
-		thing->standingslope = tmceilingslope;
+	if (thing->z <= tmfloorz && !(thing->eflags & MFE_VERTICALFLIP)) {
+		if (!startingonground && tmfloorslope)
+			P_HandleSlopeLanding(thing, tmfloorslope);
+
+		if (thing->momz <= 0)
+			thing->standingslope = tmfloorslope;
+	}
+	else if (thing->z+thing->height >= tmceilingz /*&& thing->momz >= 0*/ && (thing->eflags & MFE_VERTICALFLIP)) {
+		if (!startingonground && tmceilingslope)
+			P_HandleSlopeLanding(thing, tmceilingslope);
+
+		if (thing->momz >= 0)
+			thing->standingslope = tmceilingslope;
+	}
 #endif
 
 	thing->x = x;
