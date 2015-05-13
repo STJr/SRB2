@@ -4508,7 +4508,7 @@ static void P_3dMovement(player_t *player)
 	v3fixed_t totalthrust;
 
 	totalthrust.x = totalthrust.y = 0; // I forget if this is needed
-	totalthrust.z = FRACUNIT*P_MobjFlip(player->mo); // A bit of extra push-back on slopes
+	totalthrust.z = FRACUNIT*P_MobjFlip(player->mo)/3; // A bit of extra push-back on slopes
 #endif // ESLOPE
 
 	// Get the old momentum; this will be needed at the end of the function! -SH
