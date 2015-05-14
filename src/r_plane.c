@@ -861,6 +861,9 @@ void R_DrawSinglePlane(visplane_t *pl)
 	}
 	else light = (pl->lightlevel >> LIGHTSEGSHIFT);
 
+#ifdef ESLOPE
+	if (!pl->slope) // Don't mess with angle on slopes! We'll handle this ourselves later
+#endif
 	if (viewangle != pl->viewangle)
 	{
 		memset(cachedheight, 0, sizeof (cachedheight));
@@ -962,10 +965,8 @@ void R_DrawSinglePlane(visplane_t *pl)
 		m.z = FIXED_TO_FLOAT(FINESINE(ang));
 
 		// n is the u direction vector in view space
-		ang += ANGLE_90>>ANGLETOFINESHIFT;
-		ang &= FINEMASK;
-		n.x = -FIXED_TO_FLOAT(FINECOSINE(ang));
-		n.z = -FIXED_TO_FLOAT(FINESINE(ang));
+		n.x = FIXED_TO_FLOAT(FINESINE(ang));
+		n.z = -FIXED_TO_FLOAT(FINECOSINE(ang));
 
 		ang = pl->plangle>>ANGLETOFINESHIFT;
 		m.y = FIXED_TO_FLOAT(P_GetZAt(pl->slope, viewx + FINESINE(ang), viewy + FINECOSINE(ang))) - zeroheight;
