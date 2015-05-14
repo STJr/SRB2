@@ -82,6 +82,8 @@ extern fixed_t cachedxstep[MAXVIDHEIGHT];
 extern fixed_t cachedystep[MAXVIDHEIGHT];
 extern fixed_t basexscale, baseyscale;
 
+extern lighttable_t **planezlight;
+
 extern fixed_t *yslope;
 extern fixed_t distscale[MAXVIDWIDTH];
 

@@ -63,7 +63,7 @@ extern UINT8 *ds_transmap;
 #ifdef ESLOPE
 pslope_t *ds_slope; // Current slope being used
 v3float_t ds_su, ds_sv, ds_sz; // Vectors for... stuff?
-float focallengthf;
+float focallengthf, zeroheight;
 #endif
 
 // Variable flat sizes

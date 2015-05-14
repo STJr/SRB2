@@ -527,6 +527,30 @@ void R_DrawSpan_8 (void)
 }
 
 #ifdef ESLOPE
+// R_CalcTiltedLighting
+// Exactly what it says on the tin. I wish I wasn't too lazy to explain things properly.
+static size_t tiltlighting[MAXVIDWIDTH];
+void R_CalcTiltedLighting(fixed_t start, fixed_t end)
+{
+	// ZDoom uses a different lighting setup to us, and I couldn't figure out how to adapt their version
+	// of this function. Here's my own.
+	INT32 left = ds_x1, right = ds_x2;
+	fixed_t step = (end-start)/(ds_x2-ds_x1+1);
+	size_t i;
+
+	// I wanna do some optimizing by checking for out-of-range segments on either side to fill in all at once,
+	// but I'm too bad at coding to not crash the game trying to do that. I guess this is fast enough for now...
+
+	for (i = left; i <= right; i++) {
+		tiltlighting[i] = (start += step) >> FRACBITS;
+		if (tiltlighting[i] < 0)
+			tiltlighting[i] = 0;
+		else if (tiltlighting[i] >= MAXLIGHTSCALE)
+			tiltlighting[i] = MAXLIGHTSCALE-1;
+	}
+}
+
+
 /**	\brief The R_DrawTiltedSpan_8 function
 	Draw slopes! Holy sheit!
 */
@@ -544,12 +568,24 @@ void R_DrawTiltedSpan_8(void)
 
 	iz = ds_sz.z + ds_sz.y*(centery-ds_y) + ds_sz.x*(ds_x1-centerx);
 
+	// Lighting is simple. It's just linear interpolation from start to end
+	{
+		float planelightfloat = BASEVIDWIDTH*BASEVIDWIDTH/vid.width / (fabs(zeroheight - FIXED_TO_FLOAT(viewz))) / -21.0f;
+		float lightstart, lightend;
+
+		lightend = (iz + ds_sz.x*width) * planelightfloat;
+		lightstart = iz * planelightfloat;
+
+		R_CalcTiltedLighting(FLOAT_TO_FIXED(lightstart), FLOAT_TO_FIXED(lightend));
+		//CONS_Printf("tilted lighting %f to %f (foc %f)\n", vz, uz, focallengthf);
+	}
+
 	uz = ds_su.z + ds_su.y*(centery-ds_y) + ds_su.x*(ds_x1-centerx);
 	vz = ds_sv.z + ds_sv.y*(centery-ds_y) + ds_sv.x*(ds_x1-centerx);
 
 	dest = ylookup[ds_y] + columnofs[ds_x1];
 	source = ds_source;
-	colormap = ds_colormap;
+	//colormap = ds_colormap;
 
 #if 0	// The "perfect" reference version of this routine. Pretty slow.
 		// Use it only to see how things are supposed to look.
@@ -559,6 +595,9 @@ void R_DrawTiltedSpan_8(void)
 		double z = 1.f/iz;
 		u = (INT64)(uz*z) + viewx;
 		v = (INT64)(vz*z) + viewy;
+
+		colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
+
 		*dest = colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]];
 		dest++;
 		iz += ds_sz.x;
@@ -596,6 +635,7 @@ void R_DrawTiltedSpan_8(void)
 
 		for (i = SPANSIZE-1; i >= 0; i--)
 		{
+			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 			*dest = colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]];
 			dest++;
 			u += stepu;
@@ -611,6 +651,7 @@ void R_DrawTiltedSpan_8(void)
 		{
 			u = (INT64)(startu);
 			v = (INT64)(startv);
+			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 			*dest = colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]];
 		}
 		else
@@ -631,6 +672,7 @@ void R_DrawTiltedSpan_8(void)
 
 			for (; width != 0; width--)
 			{
+				colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 				*dest = colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]];
 				dest++;
 				u += stepu;

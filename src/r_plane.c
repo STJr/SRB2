@@ -74,7 +74,7 @@ static INT32 spanstart[MAXVIDHEIGHT];
 //
 // texture mapping
 //
-static lighttable_t **planezlight;
+lighttable_t **planezlight;
 static fixed_t planeheight;
 
 //added : 10-02-98: yslopetab is what yslope used to be,
@@ -327,6 +327,11 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 	if (pindex >= MAXLIGHTZ)
 		pindex = MAXLIGHTZ - 1;
 
+#ifdef ESLOPE
+	if (currentplane->slope)
+		ds_colormap = colormaps;
+	else
+#endif
 	ds_colormap = planezlight[pindex];
 
 	if (currentplane->extra_colormap)
@@ -919,24 +924,23 @@ void R_DrawSinglePlane(visplane_t *pl)
 			break;
 	}
 
+	xoffs = pl->xoffs;
+	yoffs = pl->yoffs;
+	planeheight = abs(pl->height - pl->viewz);
+
+	if (light >= LIGHTLEVELS)
+		light = LIGHTLEVELS-1;
+
+	if (light < 0)
+		light = 0;
+
 #ifdef ESLOPE
 	if (pl->slope) {
 		// Potentially override other stuff for now cus we're mean. :< But draw a slope plane!
 		// I copied ZDoom's code and adapted it to SRB2... -Red
-		static const float ifloatpow2[16] =
-		{
-			// ifloatpow2[i] = 1 / (1 << i)
-			64.f, 32.f, 16.f, 8.f, 4.f, 2.f, 1.f, 0.5f,
-			0.25f, 0.125f, 0.0625f, 0.03125f, 0.015625f, 0.0078125f,
-			0.00390625f, 0.001953125f
-			/*, 0.0009765625f, 0.00048828125f, 0.000244140625f,
-			1.220703125e-4f, 6.103515625e-5, 3.0517578125e-5*/
-		};
-		double lxscale, lyscale;
-		double xscale, yscale;
 		v3float_t p, m, n;
 		angle_t ang;
-		double zeroheight;
+		//double zeroheight;
 
 		double vx = FIXED_TO_FLOAT(viewx);
 		double vy = FIXED_TO_FLOAT(viewy);
@@ -986,18 +990,10 @@ void R_DrawSinglePlane(visplane_t *pl)
 #undef SFMULT
 
 		spanfunc = R_DrawTiltedSpan_8;
-	}
+
+		planezlight = scalelight[light];
+	} else
 #endif // ESLOPE
-
-	xoffs = pl->xoffs;
-	yoffs = pl->yoffs;
-	planeheight = abs(pl->height - pl->viewz);
-
-	if (light >= LIGHTLEVELS)
-		light = LIGHTLEVELS-1;
-
-	if (light < 0)
-		light = 0;
 
 	planezlight = zlight[light];
 
