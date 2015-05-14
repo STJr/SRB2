@@ -570,14 +570,14 @@ void R_DrawTiltedSpan_8(void)
 
 	// Lighting is simple. It's just linear interpolation from start to end
 	{
-		float planelightfloat = BASEVIDWIDTH*BASEVIDWIDTH/vid.width / (fabs(zeroheight - FIXED_TO_FLOAT(viewz))) / -21.0f;
+		float planelightfloat = BASEVIDWIDTH*BASEVIDWIDTH/vid.width / (zeroheight - FIXED_TO_FLOAT(viewz)) / 21.0f;
 		float lightstart, lightend;
 
 		lightend = (iz + ds_sz.x*width) * planelightfloat;
 		lightstart = iz * planelightfloat;
 
 		R_CalcTiltedLighting(FLOAT_TO_FIXED(lightstart), FLOAT_TO_FIXED(lightend));
-		//CONS_Printf("tilted lighting %f to %f (foc %f)\n", vz, uz, focallengthf);
+		//CONS_Printf("tilted lighting %f to %f (foc %f)\n", lightstart, lightend, focallengthf);
 	}
 
 	uz = ds_su.z + ds_su.y*(centery-ds_y) + ds_su.x*(ds_x1-centerx);
