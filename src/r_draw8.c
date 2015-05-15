@@ -593,8 +593,8 @@ void R_DrawTiltedSpan_8(void)
 	do
 	{
 		double z = 1.f/iz;
-		u = (INT64)(uz*z) + viewx;
-		v = (INT64)(vz*z) + viewy;
+		u = (UINT32)(uz*z) + viewx;
+		v = (UINT32)(vz*z) + viewy;
 
 		colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 
@@ -628,10 +628,10 @@ void R_DrawTiltedSpan_8(void)
 		double endz = 1.f/iz;
 		double endu = uz*endz;
 		double endv = vz*endz;
-		UINT32 stepu = (INT64)((endu - startu) * INVSPAN);
-		UINT32 stepv = (INT64)((endv - startv) * INVSPAN);
-		u = (INT64)(startu) + viewx;
-		v = (INT64)(startv) + viewy;
+		UINT32 stepu = (UINT32)((endu - startu) * INVSPAN);
+		UINT32 stepv = (UINT32)((endv - startv) * INVSPAN);
+		u = (UINT32)(startu) + viewx;
+		v = (UINT32)(startv) + viewy;
 
 		for (i = SPANSIZE-1; i >= 0; i--)
 		{
@@ -649,8 +649,8 @@ void R_DrawTiltedSpan_8(void)
 	{
 		if (width == 1)
 		{
-			u = (INT64)(startu);
-			v = (INT64)(startv);
+			u = (UINT32)(startu);
+			v = (UINT32)(startv);
 			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 			*dest = colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]];
 		}
@@ -665,10 +665,10 @@ void R_DrawTiltedSpan_8(void)
 			double endu = uz*endz;
 			double endv = vz*endz;
 			left = 1.f/left;
-			UINT32 stepu = (INT64)((endu - startu) * left);
-			UINT32 stepv = (INT64)((endv - startv) * left);
-			u = (INT64)(startu) + viewx;
-			v = (INT64)(startv) + viewy;
+			UINT32 stepu = (UINT32)((endu - startu) * left);
+			UINT32 stepv = (UINT32)((endv - startv) * left);
+			u = (UINT32)(startu) + viewx;
+			v = (UINT32)(startv) + viewy;
 
 			for (; width != 0; width--)
 			{
