@@ -1384,7 +1384,7 @@ void P_XYMovement(mobj_t *mo)
 #ifdef ESLOPE
 	pslope_t *oldslope = NULL;
 	v3fixed_t slopemom;
-	fixed_t predictedz;
+	fixed_t predictedz = 0;
 #endif
 
 	I_Assert(mo != NULL);
@@ -1437,7 +1437,7 @@ void P_XYMovement(mobj_t *mo)
 
 			oldslope = mo->standingslope;
 		}
-	} else if (P_IsObjectOnGround(mo))
+	} else if (P_IsObjectOnGround(mo) && !mo->momz)
 		predictedz = mo->z;
 #endif
 
@@ -1562,38 +1562,48 @@ void P_XYMovement(mobj_t *mo)
 
 #ifdef ESLOPE
 	if (moved && oldslope) { // Check to see if we ran off
-		//angle_t moveangle = R_PointToAngle2(mo->momx, mo->momy);
 
 		if (oldslope != mo->standingslope) { // First, compare different slopes
-			// Start by quantizing momentum on this slope
-			v3fixed_t test;
-			test.x = mo->momx;
-			test.y = mo->momy;
-			test.z = 0;
-			if (mo->standingslope) // Don't fuss with the rotation if we don't HAVE a slope
-				P_QuantizeMomentumToSlope(&test, mo->standingslope);
+			angle_t oldangle, newangle;
+			angle_t moveangle = R_PointToAngle2(0, 0, mo->momx, mo->momy);
+
+			oldangle = FixedMul((signed)oldslope->zangle, FINECOSINE((moveangle - oldslope->xydirection) >> ANGLETOFINESHIFT));
+
+			if (mo->standingslope)
+				newangle = FixedMul((signed)mo->standingslope->zangle, FINECOSINE((moveangle - mo->standingslope->xydirection) >> ANGLETOFINESHIFT));
+			else
+				newangle = 0;
 
 			// Now compare the Zs of the different quantizations
-			if (slopemom.z - test.z > P_AproxDistance(slopemom.x, slopemom.y/3) { // Allow for a bit of sticking - this value can be adjusted later
+			if (oldangle-newangle > ANG30 && oldangle-newangle < ANGLE_180) { // Allow for a bit of sticking - this value can be adjusted later
 				mo->standingslope = oldslope;
 				P_SlopeLaunch(mo);
+
+				//CONS_Printf("launched off of slope - ");
 			}
-		} else if (predictedz-mo->z > P_AproxDistance(slopemom.x, slopemom.y)/3) { // Now check if we were supposed to stick to this slope
-			mo->standingslope = oldslope;
+
+			/*CONS_Printf("old angle %f - new angle %f = %f\n",
+						FIXED_TO_FLOAT(AngleFixed(oldangle)),
+						FIXED_TO_FLOAT(AngleFixed(newangle)),
+						FIXED_TO_FLOAT(AngleFixed(oldangle-newangle))
+						);*/
+		} else if (predictedz-mo->z > abs(slopemom.z/2)) { // Now check if we were supposed to stick to this slope
+			//CONS_Printf("%d-%d > %d\n", (predictedz), (mo->z), (slopemom.z/2));
 			P_SlopeLaunch(mo);
 		}
 	} else if (moved && mo->standingslope && predictedz) {
-		slopemom.x = mo->momx;
-		slopemom.y = mo->momy;
-		slopemom.z = 0;
+		angle_t moveangle = R_PointToAngle2(0, 0, mo->momx, mo->momy);
+		angle_t newangle = FixedMul((signed)mo->standingslope->zangle, FINECOSINE((moveangle - mo->standingslope->xydirection) >> ANGLETOFINESHIFT));
 
-		P_QuantizeMomentumToSlope(&slopemom, mo->standingslope);
-
-		if (-slopemom.z > P_AproxDistance(mo->momx, mo->momy)/3) {
+			/*CONS_Printf("flat to angle %f - predicted z of %f\n",
+						FIXED_TO_FLOAT(AngleFixed(ANGLE_MAX-newangle)),
+						FIXED_TO_FLOAT(predictedz)
+						);*/
+		if (ANGLE_MAX-newangle > ANG30 && newangle > ANGLE_180) {
 			mo->momz = P_MobjFlip(mo)*FRACUNIT/2;
 			mo->z = predictedz + P_MobjFlip(mo);
 			mo->standingslope = NULL;
-			CONS_Printf("Launched off of flat surface running into downward slope\n");
+			//CONS_Printf("Launched off of flat surface running into downward slope\n");
 		}
 	}
 #endif
@@ -2300,11 +2310,6 @@ static void P_PlayerZMovement(mobj_t *mo)
 	if (!mo->player)
 		return;
 
-#ifdef ESLOPE
-	if (mo->standingslope && !P_IsObjectOnGround(mo))
-			P_SlopeLaunch(mo);
-#endif
-
 	// Intercept the stupid 'fall through 3dfloors' bug
 	if (mo->subsector->sector->ffloors)
 		P_AdjustMobjFloorZ_FFloors(mo, mo->subsector->sector, 0);
@@ -2338,6 +2343,11 @@ static void P_PlayerZMovement(mobj_t *mo)
 	|| mo->player->playerstate == PST_REBORN)
 		return;
 
+#ifdef ESLOPE
+	if (mo->standingslope && !P_IsObjectOnGround(mo))
+			P_SlopeLaunch(mo);
+#endif
+
 	// clip movement
 	if (P_IsObjectOnGround(mo) && !(mo->flags & MF_NOCLIPHEIGHT))
 	{
@@ -2360,9 +2370,10 @@ static void P_PlayerZMovement(mobj_t *mo)
 			P_SetPlayerMobjState(mo, S_PLAY_STND);
 
 #ifdef ESLOPE
-		if (mo->eflags & MFE_VERTICALFLIP ? tmceilingslope : tmfloorslope)
+		if (!mo->standingslope && (mo->eflags & MFE_VERTICALFLIP ? tmceilingslope : tmfloorslope)) {
 			// Handle landing on slope during Z movement
 			P_HandleSlopeLanding(mo, (mo->eflags & MFE_VERTICALFLIP ? tmceilingslope : tmfloorslope));
+		}
 #endif
 
 		if (P_MobjFlip(mo)*mo->momz < 0) // falling
