@@ -1437,7 +1437,8 @@ void P_XYMovement(mobj_t *mo)
 
 			oldslope = mo->standingslope;
 		}
-	}
+	} else if (P_IsObjectOnGround(mo))
+		predictedz = mo->z;
 #endif
 
 	// Pushables can break some blocks
@@ -1447,7 +1448,6 @@ void P_XYMovement(mobj_t *mo)
 	if (!P_TryMove(mo, mo->x + xmove, mo->y + ymove, true) && !(mo->eflags & MFE_SPRUNG))
 	{
 		// blocked move
-
 		if (player) {
 			moved = false;
 			if (player->bot)
@@ -1562,6 +1562,8 @@ void P_XYMovement(mobj_t *mo)
 
 #ifdef ESLOPE
 	if (moved && oldslope) { // Check to see if we ran off
+		//angle_t moveangle = R_PointToAngle2(mo->momx, mo->momy);
+
 		if (oldslope != mo->standingslope) { // First, compare different slopes
 			// Start by quantizing momentum on this slope
 			v3fixed_t test;
@@ -1572,13 +1574,26 @@ void P_XYMovement(mobj_t *mo)
 				P_QuantizeMomentumToSlope(&test, mo->standingslope);
 
 			// Now compare the Zs of the different quantizations
-			if (slopemom.z - test.z > 2*FRACUNIT) { // Allow for a bit of sticking - this value can be adjusted later
+			if (slopemom.z - test.z > P_AproxDistance(slopemom.x, slopemom.y/3) { // Allow for a bit of sticking - this value can be adjusted later
 				mo->standingslope = oldslope;
 				P_SlopeLaunch(mo);
 			}
-		} else if (predictedz-mo->z > 2*FRACUNIT) { // Now check if we were supposed to stick to this slope
+		} else if (predictedz-mo->z > P_AproxDistance(slopemom.x, slopemom.y)/3) { // Now check if we were supposed to stick to this slope
 			mo->standingslope = oldslope;
 			P_SlopeLaunch(mo);
+		}
+	} else if (moved && mo->standingslope && predictedz) {
+		slopemom.x = mo->momx;
+		slopemom.y = mo->momy;
+		slopemom.z = 0;
+
+		P_QuantizeMomentumToSlope(&slopemom, mo->standingslope);
+
+		if (-slopemom.z > P_AproxDistance(mo->momx, mo->momy)/3) {
+			mo->momz = P_MobjFlip(mo)*FRACUNIT/2;
+			mo->z = predictedz + P_MobjFlip(mo);
+			mo->standingslope = NULL;
+			CONS_Printf("Launched off of flat surface running into downward slope\n");
 		}
 	}
 #endif
