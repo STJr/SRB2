@@ -233,7 +233,7 @@ void P_SpawnSlope_Line(int linenum)
 			// In P_SpawnSlopeLine the origin is the centerpoint of the sourcelinedef
 
 			fslope = line->frontsector->f_slope =
-            P_MakeSlope(&point, &direction, dz, true);
+            P_MakeSlope(&point, &direction, dz, !(line->flags & ML_NOTAILS));
 
             // Set up some shit
             fslope->extent = extent;
@@ -289,7 +289,7 @@ void P_SpawnSlope_Line(int linenum)
 			dz = FixedDiv(origin.z - point.z, extent);
 
 			cslope = line->frontsector->c_slope =
-            P_MakeSlope(&point, &direction, dz, true);
+            P_MakeSlope(&point, &direction, dz, !(line->flags & ML_NOTAILS));
 
             // Set up some shit
             cslope->extent = extent;
@@ -352,7 +352,7 @@ void P_SpawnSlope_Line(int linenum)
 			dz = FixedDiv(origin.z - point.z, extent);
 
 			fslope = line->backsector->f_slope =
-            P_MakeSlope(&point, &direction, dz, true);
+            P_MakeSlope(&point, &direction, dz, !(line->flags & ML_NOTAILS));
 
             // Set up some shit
             fslope->extent = extent;
@@ -394,7 +394,7 @@ void P_SpawnSlope_Line(int linenum)
 			dz = FixedDiv(origin.z - point.z, extent);
 
 			cslope = line->backsector->c_slope =
-            P_MakeSlope(&point, &direction, dz, true);
+            P_MakeSlope(&point, &direction, dz, !(line->flags & ML_NOTAILS));
 
             // Set up some shit
             cslope->extent = extent;
