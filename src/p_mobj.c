@@ -7306,8 +7306,16 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 	// Make sure scale matches destscale immediately when spawned
 	P_SetScale(mobj, mobj->destscale);
 
-	mobj->floorz = mobj->subsector->sector->floorheight;
-	mobj->ceilingz = mobj->subsector->sector->ceilingheight;
+	mobj->floorz =
+#ifdef ESLOPE
+				mobj->subsector->sector->f_slope ? P_GetZAt(mobj->subsector->sector->f_slope, x, y) :
+#endif
+				mobj->subsector->sector->floorheight;
+	mobj->ceilingz =
+#ifdef ESLOPE
+				mobj->subsector->sector->c_slope ? P_GetZAt(mobj->subsector->sector->c_slope, x, y) :
+#endif
+				mobj->subsector->sector->ceilingheight;
 
 	// Tells MobjCheckWater that the water height was not set.
 	mobj->watertop = INT32_MAX;
@@ -8364,7 +8372,11 @@ void P_SpawnMapThing(mapthing_t *mthing)
 			return;
 
 		ss = R_PointInSubsector(mthing->x << FRACBITS, mthing->y << FRACBITS);
-		mthing->z = (INT16)((ss->sector->floorheight>>FRACBITS) + (mthing->options >> ZSHIFT));
+		mthing->z = (INT16)(((
+#ifdef ESLOPE
+								ss->sector->f_slope ? P_GetZAt(ss->sector->f_slope, mthing->x << FRACBITS, mthing->y << FRACBITS) :
+#endif
+								ss->sector->floorheight)>>FRACBITS) + (mthing->options >> ZSHIFT));
 
 		if (numhuntemeralds < MAXHUNTEMERALDS)
 			huntemeralds[numhuntemeralds++] = mthing;
@@ -8482,14 +8494,22 @@ void P_SpawnMapThing(mapthing_t *mthing)
 	ss = R_PointInSubsector(x, y);
 
 	if (i == MT_NIGHTSBUMPER)
-		z = ss->sector->floorheight + ((mthing->options >> ZSHIFT) << FRACBITS);
+		z = (
+#ifdef ESLOPE
+			ss->sector->f_slope ? P_GetZAt(ss->sector->f_slope, x, y) :
+#endif
+			ss->sector->floorheight) + ((mthing->options >> ZSHIFT) << FRACBITS);
 	else if (i == MT_AXIS || i == MT_AXISTRANSFER || i == MT_AXISTRANSFERLINE)
 		z = ONFLOORZ;
 	else if (i == MT_SPECIALSPIKEBALL || P_WeaponOrPanel(i) || i == MT_EMERALDSPAWN || i == MT_EMMY)
 	{
 		if (mthing->options & MTF_OBJECTFLIP)
 		{
-			z = ss->sector->ceilingheight;
+			z = (
+#ifdef ESLOPE
+			ss->sector->c_slope ? P_GetZAt(ss->sector->c_slope, x, y) :
+#endif
+			ss->sector->ceilingheight);
 
 			if (mthing->options & MTF_AMBUSH) // Special flag for rings
 				z -= 24*FRACUNIT;
@@ -8500,7 +8520,11 @@ void P_SpawnMapThing(mapthing_t *mthing)
 		}
 		else
 		{
-			z = ss->sector->floorheight;
+			z = (
+#ifdef ESLOPE
+			ss->sector->f_slope ? P_GetZAt(ss->sector->f_slope, x, y) :
+#endif
+			ss->sector->floorheight);
 
 			if (mthing->options & MTF_AMBUSH) // Special flag for rings
 				z += 24*FRACUNIT;
@@ -8520,9 +8544,17 @@ void P_SpawnMapThing(mapthing_t *mthing)
 
 		// base positions
 		if (flip)
-			z = ss->sector->ceilingheight - mobjinfo[i].height;
+			z = (
+#ifdef ESLOPE
+			ss->sector->c_slope ? P_GetZAt(ss->sector->c_slope, x, y) :
+#endif
+			ss->sector->ceilingheight) - mobjinfo[i].height;
 		else
-			z = ss->sector->floorheight;
+			z = (
+#ifdef ESLOPE
+			ss->sector->f_slope ? P_GetZAt(ss->sector->f_slope, x, y) :
+#endif
+			ss->sector->floorheight);
 
 		// offsetting
 		if (mthing->options >> ZSHIFT)
@@ -9036,7 +9068,11 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 		// Screw these damn hoops, I need this thinker.
 		//hoopcenter->flags |= MF_NOTHINK;
 
-		z += sec->floorheight;
+		z +=
+#ifdef ESLOPE
+			sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
+#endif
+			sec->floorheight;
 
 		hoopcenter->z = z - hoopcenter->height/2;
 
@@ -9169,7 +9205,11 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 		hoopcenter = P_SpawnMobj(x, y, z, MT_HOOPCENTER);
 		hoopcenter->spawnpoint = mthing;
 
-		z += sec->floorheight;
+		z +=
+#ifdef ESLOPE
+			sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
+#endif
+			sec->floorheight;
 		hoopcenter->z = z - hoopcenter->height/2;
 
 		P_UnsetThingPosition(hoopcenter);
@@ -9281,7 +9321,11 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 	// Wing logo item.
 	else if (mthing->type == mobjinfo[MT_NIGHTSWING].doomednum)
 	{
-		z = sec->floorheight;
+		z =
+#ifdef ESLOPE
+			sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
+#endif
+			sec->floorheight;
 		if (mthing->options >> ZSHIFT)
 			z += ((mthing->options >> ZSHIFT) << FRACBITS);
 
@@ -9333,13 +9377,21 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 		// Set proper height
 		if (mthing->options & MTF_OBJECTFLIP)
 		{
-			z = sec->ceilingheight - mobjinfo[ringthing].height;
+			z = (
+#ifdef ESLOPE
+			sec->c_slope ? P_GetZAt(sec->c_slope, x, y) :
+#endif
+			sec->ceilingheight) - mobjinfo[ringthing].height;
 			if (mthing->options >> ZSHIFT)
 				z -= ((mthing->options >> ZSHIFT) << FRACBITS);
 		}
 		else
 		{
-			z = sec->floorheight;
+			z =
+#ifdef ESLOPE
+			sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
+#endif
+			sec->floorheight;
 			if (mthing->options >> ZSHIFT)
 				z += ((mthing->options >> ZSHIFT) << FRACBITS);
 		}
@@ -9393,13 +9445,21 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 		{
 			if (mthing->options & MTF_OBJECTFLIP)
 			{
-				z = sec->ceilingheight - mobjinfo[ringthing].height - dist*r;
+				z = (
+#ifdef ESLOPE
+					sec->c_slope ? P_GetZAt(sec->c_slope, x, y) :
+#endif
+					sec->ceilingheight) - mobjinfo[ringthing].height - dist*r;
 				if (mthing->options >> ZSHIFT)
 					z -= ((mthing->options >> ZSHIFT) << FRACBITS);
 			}
 			else
 			{
-				z = sec->floorheight + dist*r;
+				z = (
+#ifdef ESLOPE
+					sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
+#endif
+					sec->floorheight) + dist*r;
 				if (mthing->options >> ZSHIFT)
 					z += ((mthing->options >> ZSHIFT) << FRACBITS);
 			}
@@ -9445,13 +9505,21 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 
 			if (mthing->options & MTF_OBJECTFLIP)
 			{
-				z = sec->ceilingheight - mobjinfo[ringthing].height - 64*FRACUNIT*r;
+				z = (
+#ifdef ESLOPE
+					sec->c_slope ? P_GetZAt(sec->c_slope, x, y) :
+#endif
+					sec->ceilingheight) - mobjinfo[ringthing].height - 64*FRACUNIT*r;
 				if (mthing->options >> ZSHIFT)
 					z -= ((mthing->options >> ZSHIFT) << FRACBITS);
 			}
 			else
 			{
-				z = sec->floorheight + 64*FRACUNIT*r;
+				z = (
+#ifdef ESLOPE
+					sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
+#endif
+					sec->floorheight) + 64*FRACUNIT*r;
 				if (mthing->options >> ZSHIFT)
 					z += ((mthing->options >> ZSHIFT) << FRACBITS);
 			}
@@ -9482,7 +9550,11 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 			size = 192*FRACUNIT;
 		}
 
-		z = sec->floorheight;
+		z =
+#ifdef ESLOPE
+			sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
+#endif
+			sec->floorheight;
 		if (mthing->options >> ZSHIFT)
 			z += ((mthing->options >> ZSHIFT) << FRACBITS);
 

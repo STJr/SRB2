@@ -6439,18 +6439,7 @@ void P_SpawnSpecials(INT32 fromnetsave)
 					sectors[s].midmap = lines[i].frontsector->midmap;
 				break;
 
-#ifdef ESLOPE // Slope specials. TODO move these to a different spot, maybe?
-			case 386:
-			case 387:
-			case 388:
-			case 389:
-			case 390:
-			case 391:
-			case 392:
-			case 393:
-				P_SpawnSlope_Line(i);
-				break;
-				// SoM: Copy slopes
+#ifdef ESLOPE // Slope copy specials. Handled here for sanity.
 			case 394:
 			case 395:
 			case 396:

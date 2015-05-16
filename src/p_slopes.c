@@ -42,11 +42,6 @@
 
 static pslope_t *dynslopes = NULL;
 
-// Reset the dynamic slopes pointer
-void P_ResetDynamicSlopes(void) {
-	dynslopes = NULL;
-}
-
 // Calculate line normal
 void P_CalculateSlopeNormal(pslope_t *slope) {
 	slope->normal.z = FINECOSINE(slope->zangle>>ANGLETOFINESHIFT);
@@ -721,6 +716,35 @@ void P_SetSlopesFromVertexHeights(lumpnum_t lumpnum)
 
 }
 #endif
+
+// Reset the dynamic slopes pointer, and read all of the fancy schmancy slopes
+void P_ResetDynamicSlopes(void) {
+	size_t i;
+
+	dynslopes = NULL;
+
+	// We'll handle copy slopes later, after all the tag lists have been made.
+	// Yes, this means copied slopes won't affect things' spawning heights. Too bad for you.
+	for (i = 0; i < numlines; i++)
+	{
+		switch (lines[i].special)
+		{
+			case 386:
+			case 387:
+			case 388:
+			case 389:
+			case 390:
+			case 391:
+			case 392:
+			case 393:
+				P_SpawnSlope_Line(i);
+				break;
+
+			default:
+				break;
+		}
+	}
+}
 
 
 

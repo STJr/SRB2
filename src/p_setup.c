@@ -892,9 +892,14 @@ static void P_LoadThings(lumpnum_t lumpnum)
 	numhuntemeralds = 0;
 	for (i = 0; i < nummapthings; i++, mt++)
 	{
+		sector_t *mtsector = R_PointInSubsector(mt->x << FRACBITS, mt->y << FRACBITS)->sector;
+
 		// Z for objects
-		mt->z = (INT16)(R_PointInSubsector(mt->x << FRACBITS, mt->y << FRACBITS)
-			->sector->floorheight>>FRACBITS);
+		mt->z = (INT16)(
+#ifdef ESLOPE
+				mtsector->f_slope ? P_GetZAt(mtsector->f_slope, mt->x << FRACBITS, mt->y << FRACBITS) :
+#endif
+				mtsector->floorheight)>>FRACBITS;
 
 		if (mt->type == 1700 // MT_AXIS
 			|| mt->type == 1701 // MT_AXISTRANSFER
@@ -2535,6 +2540,10 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	P_MapStart();
 
+#ifdef ESLOPE
+	P_ResetDynamicSlopes();
+#endif
+
 	P_LoadThings(lastloadedmaplumpnum + ML_THINGS);
 
 	P_SpawnSecretItems(loademblems);
@@ -2544,7 +2553,6 @@ boolean P_SetupLevel(boolean skipprecip)
 			break;
 
 	// set up world state
-	P_ResetDynamicSlopes();
 	P_SpawnSpecials(fromnetsave);
 
 	if (loadprecip) //  ugly hack for P_NetUnArchiveMisc (and P_LoadNetGame)
