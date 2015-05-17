@@ -990,7 +990,10 @@ void R_DrawSinglePlane(visplane_t *pl)
 		ds_sv.z *= SFMULT;
 #undef SFMULT
 
-		spanfunc = R_DrawTiltedSpan_8;
+		if (spanfunc == R_DrawTranslucentSpan_8)
+			spanfunc = R_DrawTiltedTranslucentSpan_8;
+		else
+			spanfunc = R_DrawTiltedSpan_8;
 
 		planezlight = scalelight[light];
 	} else

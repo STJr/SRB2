@@ -149,6 +149,7 @@ void R_DrawTranslatedTranslucentColumn_8(void);
 void R_DrawSpan_8(void);
 #ifdef ESLOPE
 void R_DrawTiltedSpan_8(void);
+void R_DrawTiltedTranslucentSpan_8(void);
 #endif
 void R_DrawSplat_8(void);
 void R_DrawTranslucentSplat_8(void);
