@@ -204,6 +204,8 @@ void P_SpawnSlope_Line(int linenum)
 	// For FOF slopes, make a special function to copy to the xy origin & direction relative to the position of the FOF on the map!
 	if(frontfloor || frontceil)
 	{
+		line->frontsector->hasslope = true; // Tell the software renderer that we're sloped
+
 		origin.z = line->backsector->floorheight;
 		direction.x = nx;
 		direction.y = ny;
@@ -327,6 +329,8 @@ void P_SpawnSlope_Line(int linenum)
 	}
 	if(backfloor || backceil)
 	{
+		line->backsector->hasslope = true; // Tell the software renderer that we're sloped
+
 		origin.z = line->frontsector->floorheight;
 		// Backsector
 		direction.x = -nx;
@@ -458,6 +462,8 @@ void P_CopySectorSlope(line_t *line)
       if((special - 393) & 2 && !fsec->c_slope && srcsec->c_slope)
          fsec->c_slope = srcsec->c_slope; //P_CopySlope(srcsec->c_slope);
    }
+
+   fsec->hasslope = true;
 
    line->special = 0; // Linedef was use to set slopes, it finished its job, so now make it a normal linedef
 }

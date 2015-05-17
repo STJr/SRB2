@@ -1602,7 +1602,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	//  and decide if floor / ceiling marks are needed
 #ifdef ESLOPE
 	// Figure out map coordinates of where start and end are mapping to on seg, so we can clip right for slope bullshit
-	//if (frontsector->c_slope || frontsector->f_slope || (backsector && (backsector->c_slope || backsector->f_slope))) // Commenting this out for FOFslop. -Red
+	if (frontsector->hasslope || (backsector && backsector->hasslope)) // Commenting this out for FOFslop. -Red
 	{
 		angle_t temp;
 
@@ -2589,6 +2589,10 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 						continue;
 
 #ifdef ESLOPE
+					// Let the renderer know this sector is sloped.
+					if (*rover->b_slope || *rover->t_slope)
+						backsector->hasslope = true;
+
 					rovertest = (*rover->b_slope ? P_GetZAt(*rover->b_slope, segleft.x, segleft.y) : *rover->bottomheight) - viewz;
 					planevistest = (*rover->b_slope ? P_GetZAt(*rover->b_slope, viewx, viewy) : *rover->bottomheight);
 
@@ -2670,6 +2674,10 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 
 #ifdef ESLOPE
+					// Let the renderer know this sector is sloped.
+					if (*rover->b_slope || *rover->t_slope)
+						frontsector->hasslope = true;
+
 					rovertest = (*rover->b_slope ? P_GetZAt(*rover->b_slope, segleft.x, segleft.y) : *rover->bottomheight) - viewz;
 					planevistest = (*rover->b_slope ? P_GetZAt(*rover->b_slope, viewx, viewy) : *rover->bottomheight);
 

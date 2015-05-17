@@ -946,6 +946,10 @@ static void R_Subsector(size_t num)
 
 #ifdef ESLOPE
 				ffloor[numffloors].slope = *rover->b_slope;
+
+				// Tell the renderer this sector has slopes in it.
+				if (ffloor[numffloors].slope)
+					frontsector->hasslope = true;
 #endif
 
 				ffloor[numffloors].height =
@@ -983,6 +987,10 @@ static void R_Subsector(size_t num)
 
 #ifdef ESLOPE
 				ffloor[numffloors].slope = *rover->t_slope;
+
+				// Tell the renderer this sector has slopes in it.
+				if (ffloor[numffloors].slope)
+					frontsector->hasslope = true;
 #endif
 
 				ffloor[numffloors].height =

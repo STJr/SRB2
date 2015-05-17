@@ -391,7 +391,9 @@ typedef struct sector_s
 	// Eternity engine slope
 	pslope_t *f_slope; // floor slope
 	pslope_t *c_slope; // ceiling slope
+	boolean hasslope; // The sector, or one of its visible FOFs, contains a slope
 #endif
+
 	// these are saved for netgames, so do not let Lua touch these!
 
 	// offsets sector spawned with (via linedef type 7)
