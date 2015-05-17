@@ -4903,6 +4903,12 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 	ffloor->topyoffs = &sec2->ceiling_yoffs;
 	ffloor->topangle = &sec2->ceilingpic_angle;
 
+#ifdef ESLOPE
+	// Add slopes
+	ffloor->t_slope = &sec2->c_slope;
+	ffloor->b_slope = &sec2->f_slope;
+#endif
+
 	if ((flags & FF_SOLID) && (master->flags & ML_EFFECT1)) // Block player only
 		flags &= ~FF_BLOCKOTHERS;
 

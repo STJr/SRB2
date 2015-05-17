@@ -905,6 +905,7 @@ static void R_Subsector(size_t num)
 	if (frontsector->ffloors)
 	{
 		ffloor_t *rover;
+		fixed_t heightcheck;
 
 		for (rover = frontsector->ffloors; rover && numffloors < MAXFFLOORS; rover = rover->next)
 		{
@@ -922,10 +923,16 @@ static void R_Subsector(size_t num)
 
 			ffloor[numffloors].plane = NULL;
 			ffloor[numffloors].polyobj = NULL;
+
+			heightcheck =
+#ifdef ESLOPE
+				*rover->b_slope ? P_GetZAt(*rover->b_slope, viewx, viewy) :
+#endif
+				*rover->bottomheight;
 			if (*rover->bottomheight <= frontsector->ceilingheight
 				&& *rover->bottomheight >= frontsector->floorheight
-				&& ((viewz < *rover->bottomheight && !(rover->flags & FF_INVERTPLANES))
-				|| (viewz > *rover->bottomheight && (rover->flags & FF_BOTHPLANES))))
+				&& ((viewz < heightcheck && !(rover->flags & FF_INVERTPLANES))
+				|| (viewz > heightcheck && (rover->flags & FF_BOTHPLANES))))
 			{
 				light = R_GetPlaneLight(frontsector, *rover->bottomheight,
 					viewz < *rover->bottomheight);
@@ -933,11 +940,20 @@ static void R_Subsector(size_t num)
 					*frontsector->lightlist[light].lightlevel, *rover->bottomxoffs,
 					*rover->bottomyoffs, *rover->bottomangle, frontsector->lightlist[light].extra_colormap, rover
 #ifdef ESLOPE
-					, NULL // will ffloors be slopable eventually?
+					, *rover->b_slope
 #endif
 					);
 
-				ffloor[numffloors].height = *rover->bottomheight;
+#ifdef ESLOPE
+				ffloor[numffloors].slope = *rover->b_slope;
+#endif
+
+				ffloor[numffloors].height =
+#ifdef ESLOPE
+				*rover->b_slope ? P_GetZAt(*rover->b_slope, viewx, viewy) :
+#endif
+				*rover->bottomheight;
+
 				ffloor[numffloors].ffloor = rover;
 				numffloors++;
 			}
@@ -945,20 +961,36 @@ static void R_Subsector(size_t num)
 				break;
 			ffloor[numffloors].plane = NULL;
 			ffloor[numffloors].polyobj = NULL;
+
+			heightcheck =
+#ifdef ESLOPE
+				*rover->t_slope ? P_GetZAt(*rover->t_slope, viewx, viewy) :
+#endif
+				*rover->topheight;
 			if (*rover->topheight >= frontsector->floorheight
 				&& *rover->topheight <= frontsector->ceilingheight
-				&& ((viewz > *rover->topheight && !(rover->flags & FF_INVERTPLANES))
-				|| (viewz < *rover->topheight && (rover->flags & FF_BOTHPLANES))))
+				&& ((viewz > heightcheck && !(rover->flags & FF_INVERTPLANES))
+				|| (viewz < heightcheck && (rover->flags & FF_BOTHPLANES))))
 			{
 				light = R_GetPlaneLight(frontsector, *rover->topheight, viewz < *rover->topheight);
 				ffloor[numffloors].plane = R_FindPlane(*rover->topheight, *rover->toppic,
 					*frontsector->lightlist[light].lightlevel, *rover->topxoffs, *rover->topyoffs, *rover->topangle,
 					frontsector->lightlist[light].extra_colormap, rover
 #ifdef ESLOPE
-					, NULL // will ffloors be slopable eventually?
+					, *rover->t_slope
 #endif
 					);
-				ffloor[numffloors].height = *rover->topheight;
+
+#ifdef ESLOPE
+				ffloor[numffloors].slope = *rover->t_slope;
+#endif
+
+				ffloor[numffloors].height =
+#ifdef ESLOPE
+				*rover->t_slope ? P_GetZAt(*rover->t_slope, viewx, viewy) :
+#endif
+				*rover->topheight;
+
 				ffloor[numffloors].ffloor = rover;
 				numffloors++;
 			}

@@ -155,6 +155,12 @@ typedef struct ffloor_s
 	fixed_t *bottomyoffs;
 	angle_t *bottomangle;
 
+#ifdef ESLOPE
+	// Pointers to pointers. Yup.
+	struct pslope_s **t_slope;
+	struct pslope_s **b_slope;
+#endif
+
 	size_t secnum;
 	ffloortype_e flags;
 	struct line_s *master;

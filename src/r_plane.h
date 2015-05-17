@@ -119,6 +119,14 @@ typedef struct planemgr_s
 	INT16 f_clip[MAXVIDWIDTH];
 	INT16 c_clip[MAXVIDWIDTH];
 
+#ifdef ESLOPE
+	// For slope rendering; the height at the other end
+	fixed_t f_pos_slope;
+	fixed_t b_pos_slope;
+
+	struct pslope_s *slope;
+#endif
+
 	struct ffloor_s *ffloor;
 #ifdef POLYOBJECTS_PLANES
 	polyobj_t *polyobj;
