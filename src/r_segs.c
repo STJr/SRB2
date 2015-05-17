@@ -1904,7 +1904,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		// check TOP TEXTURE
 		if (worldhigh < worldtop
 #ifdef ESLOPE
-				/*-(FRACUNIT>>8)*/|| worldhighslope < worldtopslope/*-(FRACUNIT>>8)*/
+				|| worldhighslope < worldtopslope
 #endif
 			)
 		{
@@ -1983,7 +1983,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		// check BOTTOM TEXTURE
 		if (worldlow > worldbottom
 #ifdef ESLOPE
-				/*+(FRACUNIT>>8)*/ || worldlowslope > worldbottomslope/*+(FRACUNIT>>8)*/ // The leeway works around a weird rendering bug with slopes...
+				|| worldlowslope > worldbottomslope
 #endif
 			)     //seulement si VISIBLE!!!
 		{
