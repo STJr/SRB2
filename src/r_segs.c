@@ -698,6 +698,10 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	r_lightlist_t   *rlight;
 	fixed_t         lheight;
 	line_t          *newline = NULL;
+#ifdef ESLOPE
+	// Render FOF sides kinda like normal sides, with the frac and step and everything
+	fixed_t         top_frac, top_step, bottom_frac, bottom_step;
+#endif
 
 	void (*colfunc_2s) (column_t *);
 
@@ -872,6 +876,34 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		column2s_length = textures[texnum]->height;
 	}
 
+#ifdef ESLOPE
+	// Set heights according to plane, or slope, whichever
+	{
+		fixed_t left_top, right_top, left_bottom, right_bottom;
+
+		left_top = *pfloor->t_slope ? P_GetZAt(*pfloor->t_slope, ds->leftpos.x, ds->leftpos.y) : *pfloor->topheight;
+		right_top = *pfloor->t_slope ? P_GetZAt(*pfloor->t_slope, ds->rightpos.x, ds->rightpos.y) : *pfloor->topheight;
+		left_bottom = *pfloor->b_slope ? P_GetZAt(*pfloor->b_slope, ds->leftpos.x, ds->leftpos.y) : *pfloor->bottomheight;
+		right_bottom = *pfloor->b_slope ? P_GetZAt(*pfloor->b_slope, ds->rightpos.x, ds->rightpos.y) : *pfloor->bottomheight;
+
+		left_top -= viewz;
+		right_top -= viewz;
+		left_bottom -= viewz;
+		right_bottom -= viewz;
+
+		top_frac = centeryfrac - FixedMul(left_top, ds->scale1);
+		bottom_frac = centeryfrac - FixedMul(left_bottom, ds->scale1);
+		top_step = centeryfrac - FixedMul(right_top, ds->scale2);
+		bottom_step = centeryfrac - FixedMul(right_bottom, ds->scale2);
+
+		top_step = (top_step-top_frac)/(ds->x2-ds->x1+1);
+		bottom_step = (bottom_step-bottom_frac)/(ds->x2-ds->x1+1);
+
+		top_frac += top_step * (x1 - ds->x1);
+		bottom_frac += bottom_step * (x1 - ds->x1);
+	}
+#endif
+
 	// draw the columns
 	for (dc_x = x1; dc_x <= x2; dc_x++)
 	{
@@ -887,8 +919,16 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 				INT32 solid = 0;
 				INT32 lighteffect = 0;
 
+#ifdef ESLOPE
+				sprtopscreen = windowtop = top_frac;
+				sprbotscreen = windowbottom = bottom_frac;
+
+				top_frac += top_step;
+				bottom_frac += bottom_step;
+#else
 				sprtopscreen = windowtop = (centeryfrac - FixedMul((dc_texturemid - offsetvalue), spryscale));
 				sprbotscreen = windowbottom = FixedMul(*pfloor->topheight - *pfloor->bottomheight, spryscale) + sprtopscreen;
+#endif
 
 				// SoM: If column is out of range, why bother with it??
 				if (windowbottom < topbounds || windowtop > bottombounds)
@@ -1030,11 +1070,24 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			 || ((signed)dc_texturemid < 0 && (spryscale) && (signed)(dc_texturemid)>>FRACBITS < (INT32_MIN / spryscale)))
 			{
 				spryscale += rw_scalestep;
+#ifdef ESLOPE
+				top_frac += top_step;
+				bottom_frac += bottom_step;
+#endif
 				continue;
 			}
 
+#ifdef ESLOPE
+			sprtopscreen = windowtop = top_frac;
+			sprbotscreen = windowbottom = bottom_frac;
+
+			top_frac += top_step;
+			bottom_frac += bottom_step;
+#else
 			sprtopscreen = windowtop = (centeryfrac - FixedMul((dc_texturemid - offsetvalue), spryscale));
 			sprbotscreen = windowbottom = FixedMul(*pfloor->topheight - *pfloor->bottomheight, spryscale) + sprtopscreen;
+#endif
+
 			dc_iscale = 0xffffffffu / (unsigned)spryscale;
 
 			// draw the texture
@@ -1571,8 +1624,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 			det = a1*b2 - a2*b1;
 
-			segleft.x = FLOAT_TO_FIXED((b2*c1 - b1*c2)/det);
-			segleft.y = FLOAT_TO_FIXED((a1*c2 - a2*c1)/det);
+			ds_p->leftpos.x = segleft.x = FLOAT_TO_FIXED((b2*c1 - b1*c2)/det);
+			ds_p->leftpos.y = segleft.y = FLOAT_TO_FIXED((a1*c2 - a2*c1)/det);
 		}
 
 		// right
@@ -1593,8 +1646,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 			det = a1*b2 - a2*b1;
 
-			segright.x = FLOAT_TO_FIXED((b2*c1 - b1*c2)/det);
-			segright.y = FLOAT_TO_FIXED((a1*c2 - a2*c1)/det);
+			ds_p->rightpos.x = segright.x = FLOAT_TO_FIXED((b2*c1 - b1*c2)/det);
+			ds_p->rightpos.y = segright.y = FLOAT_TO_FIXED((a1*c2 - a2*c1)/det);
 		}
 	}
 

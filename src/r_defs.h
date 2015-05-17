@@ -667,8 +667,11 @@ typedef struct drawseg_s
 	INT16 *thicksidecol;
 	INT32 numthicksides;
 	fixed_t frontscale[MAXVIDWIDTH];
+
 #ifdef ESLOPE
 	fixed_t maskedtextureheight[MAXVIDWIDTH]; // For handling sloped midtextures
+
+	vertex_t leftpos, rightpos; // Used for rendering FOF walls with slopes
 #endif
 } drawseg_t;
 
