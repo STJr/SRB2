@@ -1107,9 +1107,9 @@ fixed_t P_GetFOFBottomZ(mobj_t *mobj, sector_t *sector, ffloor_t *fof, fixed_t x
 	I_Assert(sector != NULL);
 	I_Assert(fof != NULL);
 #ifdef ESLOPE
-	if (*fof->t_slope) {
+	if (*fof->b_slope) {
 		fixed_t testx, testy;
-		pslope_t *slope = *fof->t_slope;
+		pslope_t *slope = *fof->b_slope;
 
 		// Get the corner of the object that should be the lowest on the slope
 		if (slope->d.x < 0)
