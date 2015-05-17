@@ -1244,15 +1244,8 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 			if (!(rover->flags & FF_EXISTS))
 				continue;
 
-			fixed_t topheight = *rover->topheight;
-			fixed_t bottomheight = *rover->bottomheight;
-
-/*#ifdef ESLOPE
-			if (rover->t_slope)
-				topheight = P_GetZAt(rover->t_slope, thing->x, thing->y);
-			if (rover->b_slope)
-				bottomheight = P_GetZAt(rover->b_slope, thing->x, thing->y);
-#endif*/
+			fixed_t topheight = P_GetFOFTopZ(thing, newsubsec->sector, rover, x, y, NULL);
+			fixed_t bottomheight = P_GetFOFBottomZ(thing, newsubsec->sector, rover, x, y, NULL);
 
 			if (rover->flags & FF_GOOWATER && !(thing->flags & MF_NOGRAVITY))
 			{
@@ -1276,7 +1269,7 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 						if (tmfloorz < topheight - sinklevel) {
 							tmfloorz = topheight - sinklevel;
 #ifdef ESLOPE
-							tmfloorslope = NULL;
+							tmfloorslope = *rover->t_slope;
 #endif
 						}
 					}
@@ -1285,7 +1278,7 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 						if (tmceilingz > bottomheight + sinklevel) {
 							tmceilingz = bottomheight + sinklevel;
 #ifdef ESLOPE
-							tmceilingslope = NULL;
+							tmceilingslope = *rover->b_slope;
 #endif
 						}
 					}
@@ -1327,7 +1320,7 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 			{
 				tmfloorz = tmdropoffz = topheight;
 #ifdef ESLOPE
-				tmfloorslope = NULL;
+				tmfloorslope = *rover->t_slope;
 #endif
 			}
 			if (bottomheight < tmceilingz && abs(delta1) >= abs(delta2)
@@ -1336,7 +1329,7 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 			{
 				tmceilingz = tmdrpoffceilz = bottomheight;
 #ifdef ESLOPE
-				tmceilingslope = NULL;
+				tmceilingslope = *rover->b_slope;
 #endif
 			}
 		}
@@ -4010,12 +4003,12 @@ fixed_t P_FloorzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height)
 			fixed_t topheight = *rover->topheight;
 			fixed_t bottomheight = *rover->bottomheight;
 
-/*#ifdef ESLOPE
-			if (rover->t_slope)
-				topheight = P_GetZAt(rover->t_slope, x, y);
-			if (rover->b_slope)
-				bottomheight = P_GetZAt(rover->b_slope, x, y);
-#endif*/
+#ifdef ESLOPE
+			if (*rover->t_slope)
+				topheight = P_GetZAt(*rover->t_slope, x, y);
+			if (*rover->b_slope)
+				bottomheight = P_GetZAt(*rover->b_slope, x, y);
+#endif
 
 			if (rover->flags & FF_QUICKSAND)
 			{

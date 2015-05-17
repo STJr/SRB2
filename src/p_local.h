@@ -234,6 +234,8 @@ void P_SceneryThinker(mobj_t *mobj);
 
 fixed_t P_GetFloorZ(mobj_t *mobj, sector_t *sector, fixed_t x, fixed_t y, line_t *line);
 fixed_t P_GetCeilingZ(mobj_t *mobj, sector_t *sector, fixed_t x, fixed_t y, line_t *line);
+fixed_t P_GetFOFTopZ(mobj_t *mobj, sector_t *sector, ffloor_t *fof, fixed_t x, fixed_t y, line_t *line);
+fixed_t P_GetFOFBottomZ(mobj_t *mobj, sector_t *sector, ffloor_t *fof, fixed_t x, fixed_t y, line_t *line);
 
 boolean P_InsideANonSolidFFloor(mobj_t *mobj, ffloor_t *rover);
 boolean P_CheckDeathPitCollide(mobj_t *mo);
