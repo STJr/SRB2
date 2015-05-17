@@ -1752,24 +1752,32 @@ static void R_CreateDrawNodes(void)
 		{
 			if (r2->plane)
 			{
+				fixed_t planeobjectz;
 				if (r2->plane->minx > rover->x2 || r2->plane->maxx < rover->x1)
 					continue;
 				if (rover->szt > r2->plane->low || rover->sz < r2->plane->high)
 					continue;
 
+				// Gotta get the plane's height AT THE OBJECT POSITION if we're using slopes -Red
+				planeobjectz =
+#ifdef ESLOPE
+							r2->plane->slope ? P_GetZAt(r2->plane->slope, rover->gx, rover->gy) :
+#endif
+				              r2->plane->height;
+
 				if (rover->mobjflags & MF_NOCLIPHEIGHT)
 				{
 					//Objects with NOCLIPHEIGHT can appear halfway in.
-					if (r2->plane->height < viewz && rover->pz+(rover->thingheight/2) >= r2->plane->height)
+					if (r2->plane->height < viewz && rover->pz+(rover->thingheight/2) >= planeobjectz)
 						continue;
-					if (r2->plane->height > viewz && rover->pzt-(rover->thingheight/2) <= r2->plane->height)
+					if (r2->plane->height > viewz && rover->pzt-(rover->thingheight/2) <= planeobjectz)
 						continue;
 				}
 				else
 				{
-					if (r2->plane->height < viewz && rover->pz >= r2->plane->height)
+					if (r2->plane->height < viewz && rover->pz >= planeobjectz)
 						continue;
-					if (r2->plane->height > viewz && rover->pzt <= r2->plane->height)
+					if (r2->plane->height > viewz && rover->pzt <= planeobjectz)
 						continue;
 				}
 
