@@ -2478,26 +2478,83 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 		for (i = p = 0; i < dc_numlights; i++)
 		{
+#ifdef ESLOPE
+			fixed_t leftheight, rightheight;
+#endif
+
 			light = &frontsector->lightlist[i];
 			rlight = &dc_lightlist[p];
 
+#ifdef ESLOPE
+			if (light->slope) {
+				leftheight = P_GetZAt(light->slope, segleft.x, segleft.y);
+				rightheight = P_GetZAt(light->slope, segright.x, segright.y);
+
+				// Flag sector as having slopes
+				frontsector->hasslope = true;
+			} else
+				leftheight = rightheight = light->height;
+
+			leftheight -= viewz;
+			rightheight -= viewz;
+
+			leftheight >>= 4;
+			rightheight >>= 4;
+#endif
+
 			if (i != 0)
 			{
+#ifdef ESLOPE
+				if (leftheight < worldbottom && rightheight < worldbottomslope)
+					continue;
+
+				if (leftheight > worldtop && rightheight > worldtopslope && i+1 < dc_numlights && frontsector->lightlist[i+1].height > frontsector->ceilingheight)
+					continue;
+#else
 				if (light->height < frontsector->floorheight)
 					continue;
 
 				if (light->height > frontsector->ceilingheight && i+1 < dc_numlights && frontsector->lightlist[i+1].height > frontsector->ceilingheight)
 					continue;
+#endif
 			}
 
+#ifdef ESLOPE
+			rlight->height = (centeryfrac>>4) - FixedMul(leftheight, rw_scale);
+			rlight->heightstep = (centeryfrac>>4) - FixedMul(rightheight, ds_p->scale2);
+			rlight->heightstep = (rlight->heightstep-rlight->height)/(stop-start+1);
+#else
 			rlight->height = (centeryfrac>>4) - FixedMul((light->height - viewz) >> 4, rw_scale);
 			rlight->heightstep = -FixedMul (rw_scalestep, (light->height - viewz) >> 4);
+#endif
 			rlight->flags = light->flags;
 
 			if (light->caster && light->caster->flags & FF_SOLID)
 			{
+#ifdef ESLOPE
+				if (*light->caster->b_slope) {
+					leftheight = P_GetZAt(*light->caster->b_slope, segleft.x, segleft.y);
+					rightheight = P_GetZAt(*light->caster->b_slope, segright.x, segright.y);
+
+					// Flag sector as having slopes
+					frontsector->hasslope = true;
+				} else
+					leftheight = rightheight = *light->caster->bottomheight;
+
+				leftheight -= viewz;
+				rightheight -= viewz;
+
+				leftheight >>= 4;
+				rightheight >>= 4;
+
+				rlight->botheight = (centeryfrac>>4) - FixedMul(leftheight, rw_scale);
+				rlight->botheightstep = (centeryfrac>>4) - FixedMul(rightheight, ds_p->scale2);
+				rlight->botheightstep = (rlight->botheightstep-rlight->botheight)/(stop-start+1);
+
+#else
 				rlight->botheight = (centeryfrac >> 4) - FixedMul((*light->caster->bottomheight - viewz) >> 4, rw_scale);
 				rlight->botheightstep = -FixedMul (rw_scalestep, (*light->caster->bottomheight - viewz) >> 4);
+#endif
 			}
 
 			rlight->lightlevel = *light->lightlevel;

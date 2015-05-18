@@ -851,11 +851,19 @@ static void R_Subsector(size_t num)
 			sub->sector->moved = frontsector->moved = false;
 		}
 
-		light = R_GetPlaneLight(frontsector, frontsector->floorheight, false);
+		light = R_GetPlaneLight(frontsector,
+#ifdef ESLOPE
+								frontsector->f_slope ? P_GetZAt(frontsector->f_slope, frontsector->soundorg.x, frontsector->soundorg.y) :
+#endif
+								frontsector->floorheight, false);
 		if (frontsector->floorlightsec == -1)
 			floorlightlevel = *frontsector->lightlist[light].lightlevel;
 		floorcolormap = frontsector->lightlist[light].extra_colormap;
-		light = R_GetPlaneLight(frontsector, frontsector->ceilingheight, false);
+		light = R_GetPlaneLight(frontsector,
+#ifdef ESLOPE
+								frontsector->c_slope ? P_GetZAt(frontsector->c_slope, frontsector->soundorg.x, frontsector->soundorg.y) :
+#endif
+								frontsector->ceilingheight, false);
 		if (frontsector->ceilinglightsec == -1)
 			ceilinglightlevel = *frontsector->lightlist[light].lightlevel;
 		ceilingcolormap = frontsector->lightlist[light].extra_colormap;
@@ -934,8 +942,14 @@ static void R_Subsector(size_t num)
 				&& ((viewz < heightcheck && !(rover->flags & FF_INVERTPLANES))
 				|| (viewz > heightcheck && (rover->flags & FF_BOTHPLANES))))
 			{
+#ifdef ESLOPE
+				light = R_GetPlaneLight(frontsector,
+					*rover->b_slope ? P_GetZAt(*rover->b_slope, frontsector->soundorg.x, frontsector->soundorg.y) : *rover->bottomheight,
+					viewz < (*rover->b_slope ? P_GetZAt(*rover->b_slope, viewx, viewy) : *rover->bottomheight));
+#else
 				light = R_GetPlaneLight(frontsector, *rover->bottomheight,
 					viewz < *rover->bottomheight);
+#endif
 				ffloor[numffloors].plane = R_FindPlane(*rover->bottomheight, *rover->bottompic,
 					*frontsector->lightlist[light].lightlevel, *rover->bottomxoffs,
 					*rover->bottomyoffs, *rover->bottomangle, frontsector->lightlist[light].extra_colormap, rover
@@ -976,7 +990,13 @@ static void R_Subsector(size_t num)
 				&& ((viewz > heightcheck && !(rover->flags & FF_INVERTPLANES))
 				|| (viewz < heightcheck && (rover->flags & FF_BOTHPLANES))))
 			{
+#ifdef ESLOPE
+				light = R_GetPlaneLight(frontsector,
+					*rover->t_slope ? P_GetZAt(*rover->t_slope, frontsector->soundorg.x, frontsector->soundorg.y) : *rover->topheight,
+					viewz < (*rover->t_slope ? P_GetZAt(*rover->t_slope, viewx, viewy) : *rover->topheight));
+#else
 				light = R_GetPlaneLight(frontsector, *rover->topheight, viewz < *rover->topheight);
+#endif
 				ffloor[numffloors].plane = R_FindPlane(*rover->topheight, *rover->toppic,
 					*frontsector->lightlist[light].lightlevel, *rover->topxoffs, *rover->topyoffs, *rover->topangle,
 					frontsector->lightlist[light].extra_colormap, rover
@@ -1158,6 +1178,11 @@ void R_Prep3DFloors(sector_t *sector)
 	fixed_t bestheight, maxheight;
 	INT32 count, i, mapnum;
 	sector_t *sec;
+#ifdef ESLOPE
+	pslope_t *bestslope;
+	fixed_t heighttest; // I think it's better to check the Z height at the sector's center
+	                    // than assume unsloped heights are accurate indicators of order in sloped sectors. -Red
+#endif
 
 	count = 1;
 	for (rover = sector->ffloors; rover; rover = rover->next)
@@ -1180,7 +1205,13 @@ void R_Prep3DFloors(sector_t *sector)
 	else
 		memset(sector->lightlist, 0, sizeof (lightlist_t) * count);
 
+#ifdef ESLOPE
+	heighttest = sector->c_slope ? P_GetZAt(sector->c_slope, sector->soundorg.x, sector->soundorg.y) : sector->ceilingheight;
+
+	sector->lightlist[0].height = heighttest + 1;
+#else
 	sector->lightlist[0].height = sector->ceilingheight + 1;
+#endif
 	sector->lightlist[0].lightlevel = &sector->lightlevel;
 	sector->lightlist[0].caster = NULL;
 	sector->lightlist[0].extra_colormap = sector->extra_colormap;
@@ -1198,6 +1229,29 @@ void R_Prep3DFloors(sector_t *sector)
 				&& !(rover->flags & FF_CUTLEVEL) && !(rover->flags & FF_CUTSPRITES)))
 			continue;
 
+#ifdef ESLOPE
+			heighttest = *rover->t_slope ? P_GetZAt(*rover->t_slope, sector->soundorg.x, sector->soundorg.y) : *rover->topheight;
+
+			if (heighttest > bestheight && heighttest < maxheight)
+			{
+				best = rover;
+				bestheight = heighttest;
+				bestslope = *rover->t_slope;
+				continue;
+			}
+			if (rover->flags & FF_DOUBLESHADOW) {
+				heighttest = *rover->b_slope ? P_GetZAt(*rover->b_slope, sector->soundorg.x, sector->soundorg.y) : *rover->bottomheight;
+
+				if (heighttest > bestheight
+					&& heighttest < maxheight)
+				{
+					best = rover;
+					bestheight = heighttest;
+					bestslope = *rover->b_slope;
+					continue;
+				}
+			}
+#else
 			if (*rover->topheight > bestheight && *rover->topheight < maxheight)
 			{
 				best = rover;
@@ -1211,6 +1265,7 @@ void R_Prep3DFloors(sector_t *sector)
 				bestheight = *rover->bottomheight;
 				continue;
 			}
+#endif
 		}
 		if (!best)
 		{
@@ -1221,6 +1276,9 @@ void R_Prep3DFloors(sector_t *sector)
 		sector->lightlist[i].height = maxheight = bestheight;
 		sector->lightlist[i].caster = best;
 		sector->lightlist[i].flags = best->flags;
+#ifdef ESLOPE
+		sector->lightlist[i].slope = bestslope;
+#endif
 		sec = &sectors[best->secnum];
 		mapnum = sec->midmap;
 		if (mapnum >= 0 && (size_t)mapnum < num_extra_colormaps)
@@ -1246,7 +1304,12 @@ void R_Prep3DFloors(sector_t *sector)
 
 		if (best->flags & FF_DOUBLESHADOW)
 		{
+#ifdef ESLOPE
+			heighttest = *best->b_slope ? P_GetZAt(*best->b_slope, sector->soundorg.x, sector->soundorg.y) : *best->bottomheight;
+			if (bestheight == heighttest) ///TODO: do this in a more efficient way -Red
+#else
 			if (bestheight == *best->bottomheight)
+#endif
 			{
 				sector->lightlist[i].lightlevel = sector->lightlist[best->lastlight].lightlevel;
 				sector->lightlist[i].extra_colormap =

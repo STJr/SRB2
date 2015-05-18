@@ -190,6 +190,9 @@ typedef struct lightlist_s
 	extracolormap_t *extra_colormap;
 	INT32 flags;
 	ffloor_t *caster;
+#ifdef ESLOPE
+	struct pslope_s *slope; // FF_DOUBLESHADOW makes me have to store this pointer here. Bluh bluh.
+#endif
 } lightlist_t;
 
 
