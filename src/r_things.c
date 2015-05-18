@@ -950,12 +950,22 @@ static void R_SplitSprite(vissprite_t *sprite, mobj_t *thing)
 
 	for (i = 1; i < sector->numlights; i++)
 	{
-		if (sector->lightlist[i].height >= sprite->gzt || !(sector->lightlist[i].caster->flags & FF_CUTSPRITES))
+		fixed_t testheight = sector->lightlist[i].height;
+
+		if (!(sector->lightlist[i].caster->flags & FF_CUTSPRITES))
 			continue;
-		if (sector->lightlist[i].height <= sprite->gz)
+
+#ifdef ESLOPE
+		if (sector->lightlist[i].slope)
+			testheight = P_GetZAt(sector->lightlist[i].slope, sprite->gx, sprite->gy);
+#endif
+
+		if (testheight >= sprite->gzt)
+			continue;
+		if (testheight <= sprite->gz)
 			return;
 
-		cutfrac = (INT16)((centeryfrac - FixedMul(sector->lightlist[i].height - viewz, sprite->scale))>>FRACBITS);
+		cutfrac = (INT16)((centeryfrac - FixedMul(testheight - viewz, sprite->scale))>>FRACBITS);
 		if (cutfrac < 0)
 			continue;
 		if (cutfrac > vid.height)
@@ -966,15 +976,15 @@ static void R_SplitSprite(vissprite_t *sprite, mobj_t *thing)
 		newsprite = M_Memcpy(R_NewVisSprite(), sprite, sizeof (vissprite_t));
 
 		sprite->cut |= SC_BOTTOM;
-		sprite->gz = sector->lightlist[i].height;
+		sprite->gz = testheight;
 
 		newsprite->gzt = sprite->gz;
 
 		sprite->sz = cutfrac;
 		newsprite->szt = (INT16)(sprite->sz - 1);
 
-		if (sector->lightlist[i].height < sprite->pzt && sector->lightlist[i].height > sprite->pz)
-			sprite->pz = newsprite->pzt = sector->lightlist[i].height;
+		if (testheight < sprite->pzt && testheight > sprite->pz)
+			sprite->pz = newsprite->pzt = testheight;
 		else
 		{
 			newsprite->pz = newsprite->gz;
@@ -1191,7 +1201,20 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (thing->subsector->sector->numlights)
 	{
 		INT32 lightnum;
+#ifdef ESLOPE // R_GetPlaneLight won't work on sloped lights!
+		light = thing->subsector->sector->numlights - 1;
+
+		for (lightnum = 1; lightnum < thing->subsector->sector->numlights; lightnum++) {
+			fixed_t h = thing->subsector->sector->lightlist[lightnum].slope ? P_GetZAt(thing->subsector->sector->lightlist[lightnum].slope, thing->x, thing->y)
+			            : thing->subsector->sector->lightlist[lightnum].height;
+			if (h <= gzt) {
+				light = lightnum - 1;
+				break;
+			}
+		}
+#else
 		light = R_GetPlaneLight(thing->subsector->sector, gzt, false);
+#endif
 		lightnum = (*thing->subsector->sector->lightlist[light].lightlevel >> LIGHTSEGSHIFT);
 
 		if (lightnum < 0)
