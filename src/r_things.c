@@ -1752,32 +1752,34 @@ static void R_CreateDrawNodes(void)
 		{
 			if (r2->plane)
 			{
-				fixed_t planeobjectz;
+				fixed_t planeobjectz, planecameraz;
 				if (r2->plane->minx > rover->x2 || r2->plane->maxx < rover->x1)
 					continue;
 				if (rover->szt > r2->plane->low || rover->sz < r2->plane->high)
 					continue;
 
-				// Gotta get the plane's height AT THE OBJECT POSITION if we're using slopes -Red
-				planeobjectz =
 #ifdef ESLOPE
-							r2->plane->slope ? P_GetZAt(r2->plane->slope, rover->gx, rover->gy) :
+				// Effective height may be different for each comparison in the case of slopes
+				if (r2->plane->slope) {
+					planeobjectz = P_GetZAt(r2->plane->slope, rover->gx, rover->gy);
+					planecameraz = P_GetZAt(r2->plane->slope, viewx, viewy);
+				} else
 #endif
-				              r2->plane->height;
+					planeobjectz = planecameraz = r2->plane->height;
 
 				if (rover->mobjflags & MF_NOCLIPHEIGHT)
 				{
 					//Objects with NOCLIPHEIGHT can appear halfway in.
-					if (r2->plane->height < viewz && rover->pz+(rover->thingheight/2) >= planeobjectz)
+					if (planecameraz < viewz && rover->pz+(rover->thingheight/2) >= planeobjectz)
 						continue;
-					if (r2->plane->height > viewz && rover->pzt-(rover->thingheight/2) <= planeobjectz)
+					if (planecameraz > viewz && rover->pzt-(rover->thingheight/2) <= planeobjectz)
 						continue;
 				}
 				else
 				{
-					if (r2->plane->height < viewz && rover->pz >= planeobjectz)
+					if (planecameraz < viewz && rover->pz >= planeobjectz)
 						continue;
-					if (r2->plane->height > viewz && rover->pzt <= planeobjectz)
+					if (planecameraz > viewz && rover->pzt <= planeobjectz)
 						continue;
 				}
 
@@ -1807,6 +1809,7 @@ static void R_CreateDrawNodes(void)
 			}
 			else if (r2->thickseg)
 			{
+				fixed_t topplaneobjectz, topplanecameraz, botplaneobjectz, botplanecameraz;
 				if (rover->x1 > r2->thickseg->x2 || rover->x2 < r2->thickseg->x1)
 					continue;
 
@@ -1817,9 +1820,25 @@ static void R_CreateDrawNodes(void)
 				if (scale <= rover->scale)
 					continue;
 
-				if ((*r2->ffloor->topheight > viewz && *r2->ffloor->bottomheight < viewz) ||
-				    (*r2->ffloor->topheight < viewz && rover->gzt < *r2->ffloor->topheight) ||
-				    (*r2->ffloor->bottomheight > viewz && rover->gz > *r2->ffloor->bottomheight))
+#ifdef ESLOPE
+				if (*r2->ffloor->t_slope) {
+					topplaneobjectz = P_GetZAt(*r2->ffloor->t_slope, rover->gx, rover->gy);
+					topplanecameraz = P_GetZAt(*r2->ffloor->t_slope, viewx, viewy);
+				} else
+#endif
+					topplaneobjectz = topplanecameraz = *r2->ffloor->topheight;
+
+#ifdef ESLOPE
+				if (*r2->ffloor->b_slope) {
+					botplaneobjectz = P_GetZAt(*r2->ffloor->b_slope, rover->gx, rover->gy);
+					botplanecameraz = P_GetZAt(*r2->ffloor->b_slope, viewx, viewy);
+				} else
+#endif
+					botplaneobjectz = botplanecameraz = *r2->ffloor->bottomheight;
+
+				if ((topplanecameraz > viewz && botplanecameraz < viewz) ||
+				    (topplanecameraz < viewz && rover->gzt < topplaneobjectz) ||
+				    (botplanecameraz > viewz && rover->gz > botplaneobjectz))
 				{
 					entry = R_CreateDrawNode(NULL);
 					(entry->prev = r2->prev)->next = entry;
