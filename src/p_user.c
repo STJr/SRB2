@@ -3758,7 +3758,11 @@ static void P_DoSpinDash(player_t *player, ticcmd_t *cmd)
 	if ((player->charability2 == CA2_SPINDASH) && !(player->pflags & PF_SLIDING) && !player->exiting
 		&& !P_PlayerInPain(player)) // subsequent revs
 	{
-		if ((cmd->buttons & BT_USE) && player->speed < FixedMul(5<<FRACBITS, player->mo->scale) && !player->mo->momz && onground && !(player->pflags & PF_USEDOWN) && !(player->pflags & PF_SPINNING))
+		if ((cmd->buttons & BT_USE) && player->speed < FixedMul(5<<FRACBITS, player->mo->scale) && !player->mo->momz && onground && !(player->pflags & PF_USEDOWN) && !(player->pflags & PF_SPINNING)
+#ifdef ESLOPE
+			&& (!player->mo->standingslope || abs(player->mo->standingslope->zdelta) < FRACUNIT/2)
+#endif
+			)
 		{
 			player->mo->momx = player->cmomx;
 			player->mo->momy = player->cmomy;
@@ -3787,7 +3791,11 @@ static void P_DoSpinDash(player_t *player, ticcmd_t *cmd)
 		// down the spin button and not spinning.
 		// AKA Just go into a spin on the ground, you idiot. ;)
 		else if ((cmd->buttons & BT_USE || ((twodlevel || (player->mo->flags2 & MF2_TWOD)) && cmd->forwardmove < -20))
-			&& !player->climbing && !player->mo->momz && onground && player->speed > FixedMul(5<<FRACBITS, player->mo->scale) && !(player->pflags & PF_USEDOWN) && !(player->pflags & PF_SPINNING))
+			&& !player->climbing && !player->mo->momz && onground && (player->speed > FixedMul(5<<FRACBITS, player->mo->scale)
+#ifdef ESLOPE
+			|| (player->mo->standingslope && abs(player->mo->standingslope->zdelta) >= FRACUNIT/2)
+#endif
+			) && !(player->pflags & PF_USEDOWN) && !(player->pflags & PF_SPINNING))
 		{
 			player->pflags |= PF_SPINNING;
 			P_SetPlayerMobjState(player->mo, S_PLAY_ATK1);
@@ -3799,7 +3807,11 @@ static void P_DoSpinDash(player_t *player, ticcmd_t *cmd)
 
 	// Rolling normally
 	if (onground && player->pflags & PF_SPINNING && !(player->pflags & PF_STARTDASH)
-		&& player->speed < FixedMul(5*FRACUNIT,player->mo->scale))
+		&& player->speed < FixedMul(5*FRACUNIT,player->mo->scale)
+#ifdef ESLOPE
+			&& (!player->mo->standingslope || abs(player->mo->standingslope->zdelta) < FRACUNIT/2)
+#endif
+			)
 	{
 		if (GETSECSPECIAL(player->mo->subsector->sector->special, 4) == 7 || (player->mo->ceilingz - player->mo->floorz < P_GetPlayerHeight(player)))
 			P_InstaThrust(player->mo, player->mo->angle, FixedMul(10*FRACUNIT, player->mo->scale));
