@@ -889,7 +889,7 @@ void P_ButteredSlope(mobj_t *mo)
 			mult = FINECOSINE(angle >> ANGLETOFINESHIFT);
 		}
 
-		CONS_Printf("%d\n", mult);
+		//CONS_Printf("%d\n", mult);
 
 		thrust = FixedMul(thrust, FRACUNIT*2/3 + mult/8);
 	}

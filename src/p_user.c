@@ -2361,10 +2361,23 @@ static void P_DoClimbing(player_t *player)
 		floorclimb = false;
 		boostup = false;
 		skyclimber = false;
+		fixed_t floorheight, ceilingheight; // ESLOPE
+
+#ifdef ESLOPE
+		floorheight = glidesector->sector->f_slope ? P_GetZAt(glidesector->sector->f_slope, player->mo->x, player->mo->y)
+		                                           : glidesector->sector->floorheight;
+		ceilingheight = glidesector->sector->c_slope ? P_GetZAt(glidesector->sector->c_slope, player->mo->x, player->mo->y)
+		                                             : glidesector->sector->ceilingheight;
+#else
+		floorheight = glidesector->sector->floorheight;
+		ceilingheight = glidesector->sector->ceilingheight;
+#endif
 
 		if (glidesector->sector->ffloors)
 		{
 			ffloor_t *rover;
+			fixed_t topheight, bottomheight; // ESLOPE
+
 			for (rover = glidesector->sector->ffloors; rover; rover = rover->next)
 			{
 				if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_BLOCKPLAYER) || (rover->flags & FF_BUSTUP))
@@ -2372,13 +2385,21 @@ static void P_DoClimbing(player_t *player)
 
 				floorclimb = true;
 
+#ifdef ESLOPE
+				bottomheight = *rover->b_slope ? P_GetZAt(*rover->b_slope, player->mo->x, player->mo->y) : *rover->bottomheight;
+				topheight = *rover->t_slope ? P_GetZAt(*rover->t_slope, player->mo->x, player->mo->y) : *rover->topheight;
+#else
+				bottomheight = *rover->bottomheight;
+				topheight = *rover->topheight;
+#endif
+
 				// Only supports rovers that are moving like an 'elevator', not just the top or bottom.
 				if (rover->master->frontsector->floorspeed && rover->master->frontsector->ceilspeed == 42)
 				{
-					if ((!(player->mo->eflags & MFE_VERTICALFLIP) && (*rover->bottomheight < player->mo->z+player->mo->height)
-						&& (*rover->topheight >= player->mo->z + FixedMul(16*FRACUNIT, player->mo->scale)))
-					|| ((player->mo->eflags & MFE_VERTICALFLIP) && (*rover->topheight > player->mo->z)
-						&& (*rover->bottomheight <= player->mo->z + player->mo->height - FixedMul(16*FRACUNIT, player->mo->scale))))
+					if ((!(player->mo->eflags & MFE_VERTICALFLIP) && (bottomheight < player->mo->z+player->mo->height)
+						&& (topheight >= player->mo->z + FixedMul(16*FRACUNIT, player->mo->scale)))
+					|| ((player->mo->eflags & MFE_VERTICALFLIP) && (topheight > player->mo->z)
+						&& (bottomheight <= player->mo->z + player->mo->height - FixedMul(16*FRACUNIT, player->mo->scale))))
 					{
 						if (cmd->forwardmove != 0)
 							player->mo->momz += rover->master->frontsector->floorspeed;
@@ -2394,8 +2415,9 @@ static void P_DoClimbing(player_t *player)
 				if (player->mo->eflags & MFE_VERTICALFLIP)
 				{
 					// Trying to climb down past the bottom of the FOF
-					if ((*rover->topheight >= player->mo->z + player->mo->height) && ((player->mo->z + player->mo->height + player->mo->momz) >= *rover->topheight))
+					if ((topheight >= player->mo->z + player->mo->height) && ((player->mo->z + player->mo->height + player->mo->momz) >= topheight))
 					{
+						fixed_t bottomheight2;
 						ffloor_t *roverbelow;
 						boolean foundfof = false;
 						floorclimb = true;
@@ -2410,7 +2432,13 @@ static void P_DoClimbing(player_t *player)
 							if (roverbelow == rover)
 								continue;
 
-							if (*roverbelow->bottomheight < *rover->topheight + FixedMul(16*FRACUNIT, player->mo->scale))
+#ifdef ESLOPE
+							bottomheight2 = *roverbelow->b_slope ? P_GetZAt(*roverbelow->b_slope, player->mo->x, player->mo->y) : *roverbelow->bottomheight;
+#else
+							bottomheight2 = *roverbelow->bottomheight;
+#endif
+
+							if (bottomheight2 < topheight + FixedMul(16*FRACUNIT, player->mo->scale))
 								foundfof = true;
 						}
 
@@ -2419,7 +2447,7 @@ static void P_DoClimbing(player_t *player)
 					}
 
 					// Below the FOF
-					if (*rover->topheight <= player->mo->z)
+					if (topheight <= player->mo->z)
 					{
 						floorclimb = false;
 						boostup = false;
@@ -2427,7 +2455,7 @@ static void P_DoClimbing(player_t *player)
 					}
 
 					// Above the FOF
-					if (*rover->bottomheight > player->mo->z + player->mo->height - FixedMul(16*FRACUNIT, player->mo->scale))
+					if (bottomheight > player->mo->z + player->mo->height - FixedMul(16*FRACUNIT, player->mo->scale))
 					{
 						floorclimb = false;
 						thrust = true;
@@ -2437,8 +2465,9 @@ static void P_DoClimbing(player_t *player)
 				else
 				{
 					// Trying to climb down past the bottom of a FOF
-					if ((*rover->bottomheight <= player->mo->z) && ((player->mo->z + player->mo->momz) <= *rover->bottomheight))
+					if ((bottomheight <= player->mo->z) && ((player->mo->z + player->mo->momz) <= bottomheight))
 					{
+						fixed_t topheight2;
 						ffloor_t *roverbelow;
 						boolean foundfof = false;
 						floorclimb = true;
@@ -2453,7 +2482,13 @@ static void P_DoClimbing(player_t *player)
 							if (roverbelow == rover)
 								continue;
 
-							if (*roverbelow->topheight > *rover->bottomheight - FixedMul(16*FRACUNIT, player->mo->scale))
+#ifdef ESLOPE
+							topheight2 = *roverbelow->t_slope ? P_GetZAt(*roverbelow->t_slope, player->mo->x, player->mo->y) : *roverbelow->topheight;
+#else
+							topheight2 = *roverbelow->topheight;
+#endif
+
+							if (topheight2 > bottomheight - FixedMul(16*FRACUNIT, player->mo->scale))
 								foundfof = true;
 						}
 
@@ -2462,7 +2497,7 @@ static void P_DoClimbing(player_t *player)
 					}
 
 					// Below the FOF
-					if (*rover->bottomheight >= player->mo->z + player->mo->height)
+					if (bottomheight >= player->mo->z + player->mo->height)
 					{
 						floorclimb = false;
 						boostup = false;
@@ -2470,7 +2505,7 @@ static void P_DoClimbing(player_t *player)
 					}
 
 					// Above the FOF
-					if (*rover->topheight < player->mo->z + FixedMul(16*FRACUNIT, player->mo->scale))
+					if (topheight < player->mo->z + FixedMul(16*FRACUNIT, player->mo->scale))
 					{
 						floorclimb = false;
 						thrust = true;
@@ -2491,7 +2526,7 @@ static void P_DoClimbing(player_t *player)
 		if (player->mo->eflags & MFE_VERTICALFLIP)
 		{
 			// Trying to climb down past the upper texture area
-			if ((glidesector->sector->floorheight >= player->mo->z + player->mo->height) && ((player->mo->z + player->mo->height + player->mo->momz) >= glidesector->sector->floorheight))
+			if ((floorheight >= player->mo->z + player->mo->height) && ((player->mo->z + player->mo->height + player->mo->momz) >= floorheight))
 			{
 				boolean foundfof = false;
 				floorclimb = true;
@@ -2499,13 +2534,20 @@ static void P_DoClimbing(player_t *player)
 				// Is there a FOF directly below that we can move onto?
 				if (glidesector->sector->ffloors)
 				{
+					fixed_t bottomheight;
 					ffloor_t *rover;
 					for (rover = glidesector->sector->ffloors; rover; rover = rover->next)
 					{
 						if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_BLOCKPLAYER) || (rover->flags & FF_BUSTUP))
 							continue;
 
-						if (*rover->bottomheight < glidesector->sector->floorheight + FixedMul(16*FRACUNIT, player->mo->scale))
+#ifdef ESLOPE
+						bottomheight = *rover->b_slope ? P_GetZAt(*rover->b_slope, player->mo->x, player->mo->y) : *rover->bottomheight;
+#else
+						bottomheight = *rover->bottomheight;
+#endif
+
+						if (bottomheight < floorheight + FixedMul(16*FRACUNIT, player->mo->scale))
 						{
 							foundfof = true;
 							break;
@@ -2518,8 +2560,8 @@ static void P_DoClimbing(player_t *player)
 			}
 
 			// Reached the top of the lower texture area
-			if (!floorclimb && glidesector->sector->ceilingheight > player->mo->z + player->mo->height - FixedMul(16*FRACUNIT, player->mo->scale)
-				&& (glidesector->sector->ceilingpic == skyflatnum || glidesector->sector->floorheight < (player->mo->z - FixedMul(8*FRACUNIT, player->mo->scale))))
+			if (!floorclimb && ceilingheight > player->mo->z + player->mo->height - FixedMul(16*FRACUNIT, player->mo->scale)
+				&& (glidesector->sector->ceilingpic == skyflatnum || floorheight < (player->mo->z - FixedMul(8*FRACUNIT, player->mo->scale))))
 			{
 				thrust = true;
 				boostup = true;
@@ -2529,7 +2571,7 @@ static void P_DoClimbing(player_t *player)
 		else
 		{
 			// Trying to climb down past the upper texture area
-			if ((glidesector->sector->ceilingheight <= player->mo->z) && ((player->mo->z + player->mo->momz) <= glidesector->sector->ceilingheight))
+			if ((ceilingheight <= player->mo->z) && ((player->mo->z + player->mo->momz) <= ceilingheight))
 			{
 				boolean foundfof = false;
 				floorclimb = true;
@@ -2543,7 +2585,7 @@ static void P_DoClimbing(player_t *player)
 						if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_BLOCKPLAYER) || (rover->flags & FF_BUSTUP))
 							continue;
 
-						if (*rover->topheight > glidesector->sector->ceilingheight - FixedMul(16*FRACUNIT, player->mo->scale))
+						if (*rover->topheight > ceilingheight - FixedMul(16*FRACUNIT, player->mo->scale))
 						{
 							foundfof = true;
 							break;
@@ -2556,7 +2598,7 @@ static void P_DoClimbing(player_t *player)
 			}
 
 			// Allow climbing from a FOF or lower texture onto the upper texture and vice versa.
-			if (player->mo->z > glidesector->sector->ceilingheight - FixedMul(16*FRACUNIT, player->mo->scale))
+			if (player->mo->z > ceilingheight - FixedMul(16*FRACUNIT, player->mo->scale))
 			{
 				floorclimb = true;
 				thrust = false;
@@ -2564,8 +2606,8 @@ static void P_DoClimbing(player_t *player)
 			}
 
 			// Reached the top of the lower texture area
-			if (!floorclimb && glidesector->sector->floorheight < player->mo->z + FixedMul(16*FRACUNIT, player->mo->scale)
-				&& (glidesector->sector->ceilingpic == skyflatnum || glidesector->sector->ceilingheight > (player->mo->z + player->mo->height + FixedMul(8*FRACUNIT, player->mo->scale))))
+			if (!floorclimb && floorheight < player->mo->z + FixedMul(16*FRACUNIT, player->mo->scale)
+				&& (glidesector->sector->ceilingpic == skyflatnum || ceilingheight > (player->mo->z + player->mo->height + FixedMul(8*FRACUNIT, player->mo->scale))))
 			{
 				thrust = true;
 				boostup = true;
@@ -2574,14 +2616,14 @@ static void P_DoClimbing(player_t *player)
 		}
 
 		// Trying to climb on the sky
-		if ((glidesector->sector->ceilingheight < player->mo->z) && glidesector->sector->ceilingpic == skyflatnum)
+		if ((ceilingheight < player->mo->z) && glidesector->sector->ceilingpic == skyflatnum)
 		{
 			skyclimber = true;
 		}
 
 		// Climbing on the lower texture area?
-		if ((!(player->mo->eflags & MFE_VERTICALFLIP) && player->mo->z + FixedMul(16*FRACUNIT, player->mo->scale) < glidesector->sector->floorheight)
-			|| ((player->mo->eflags & MFE_VERTICALFLIP) && player->mo->z + player->mo->height <= glidesector->sector->floorheight))
+		if ((!(player->mo->eflags & MFE_VERTICALFLIP) && player->mo->z + FixedMul(16*FRACUNIT, player->mo->scale) < floorheight)
+			|| ((player->mo->eflags & MFE_VERTICALFLIP) && player->mo->z + player->mo->height <= floorheight))
 		{
 			floorclimb = true;
 
@@ -2597,8 +2639,8 @@ static void P_DoClimbing(player_t *player)
 			}
 		}
 		// Climbing on the upper texture area?
-		else if ((!(player->mo->eflags & MFE_VERTICALFLIP) && player->mo->z >= glidesector->sector->ceilingheight)
-			|| ((player->mo->eflags & MFE_VERTICALFLIP) && player->mo->z + player->mo->height - FixedMul(16*FRACUNIT, player->mo->scale) > glidesector->sector->ceilingheight))
+		else if ((!(player->mo->eflags & MFE_VERTICALFLIP) && player->mo->z >= ceilingheight)
+			|| ((player->mo->eflags & MFE_VERTICALFLIP) && player->mo->z + player->mo->height - FixedMul(16*FRACUNIT, player->mo->scale) > ceilingheight))
 		{
 			floorclimb = true;
 

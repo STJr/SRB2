@@ -2458,8 +2458,13 @@ static boolean P_IsClimbingValid(player_t *player, angle_t angle)
 
 	glidesector = R_PointInSubsector(player->mo->x + platx, player->mo->y + platy);
 
-	floorz = P_GetFloorZ(player->mo, glidesector->sector, player->mo->x + platx, player->mo->y + platy, NULL);
-	ceilingz = P_GetCeilingZ(player->mo, glidesector->sector, player->mo->x + platx, player->mo->y + platy, NULL);
+#ifdef ESLOPE
+	floorz = glidesector->sector->f_slope ? P_GetZAt(glidesector->sector->f_slope, player->mo->x, player->mo->y) : glidesector->sector->floorheight;
+	ceilingz = glidesector->sector->c_slope ? P_GetZAt(glidesector->sector->c_slope, player->mo->x, player->mo->y) : glidesector->sector->ceilingheight;
+#else
+	floorz = glidesector->sector->floorheight;
+	ceilingz = glidesector->sector->ceilingheight;
+#endif
 
 	if (glidesector->sector != player->mo->subsector->sector)
 	{
@@ -2476,12 +2481,12 @@ static boolean P_IsClimbingValid(player_t *player, angle_t angle)
 				fixed_t topheight = *rover->topheight;
 				fixed_t bottomheight = *rover->bottomheight;
 
-/*#ifdef ESLOPE
-				if (rover->t_slope)
-					topheight = P_GetZAt(rover->t_slope, player->mo->x, player->mo->y);
-				if (rover->b_slope)
-					bottomheight = P_GetZAt(rover->b_slope, player->mo->x, player->mo->y);
-#endif*/
+#ifdef ESLOPE
+				if (*rover->t_slope)
+					topheight = P_GetZAt(*rover->t_slope, player->mo->x, player->mo->y);
+				if (*rover->b_slope)
+					bottomheight = P_GetZAt(*rover->b_slope, player->mo->x, player->mo->y);
+#endif
 
 				floorclimb = true;
 
@@ -2600,14 +2605,6 @@ static boolean PTR_SlideTraverse(intercept_t *in)
 
 	maxstep = FixedMul(MAXSTEPMOVE, slidemo->scale);
 
-#ifdef ESLOPE // TODO: Make this collosion better
-	// Maxstepmove = 0 means the object bounces like a nut while going down a slope
-	if (slidemo->subsector->sector->f_slope)
-	{
-		maxstep *= slidemo->subsector->sector->f_slope->zangle;
-	}
-#endif
-
 	if (openbottom - slidemo->z > maxstep)
 		goto isblocking; // too big a step up
 
@@ -2647,12 +2644,12 @@ isblocking:
 				fixed_t topheight = *rover->topheight;
 				fixed_t bottomheight = *rover->bottomheight;
 
-/*#ifdef ESLOPE
-				if (rover->t_slope)
-					topheight = P_GetZAt(rover->t_slope, slidemo->x, slidemo->y);
-				if (rover->b_slope)
-					bottomheight = P_GetZAt(rover->b_slope, slidemo->x, slidemo->y);
-#endif*/
+#ifdef ESLOPE
+				if (*rover->t_slope)
+					topheight = P_GetZAt(*rover->t_slope, slidemo->x, slidemo->y);
+				if (*rover->b_slope)
+					bottomheight = P_GetZAt(*rover->b_slope, slidemo->x, slidemo->y);
+#endif
 
 				if (topheight < slidemo->z)
 					continue;
