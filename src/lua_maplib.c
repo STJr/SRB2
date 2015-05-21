@@ -658,6 +658,50 @@ static int side_get(lua_State *L)
 	return 0;
 }
 
+static int side_set(lua_State *L)
+{
+	side_t *side = *((side_t **)luaL_checkudata(L, 1, META_SIDE));
+	enum side_e field = luaL_checkoption(L, 2, side_opt[0], side_opt);
+
+	if (!side)
+	{
+		if (field == side_valid) {
+			lua_pushboolean(L, 0);
+			return 1;
+		}
+		return luaL_error(L, "accessed side_t doesn't exist anymore.");
+	}
+
+	switch(field)
+	{
+	case side_valid: // valid
+	case side_sector:
+	case side_special:
+	case side_text:
+	default:
+		return luaL_error(L, "side_t field " LUA_QS " cannot be set.", side_opt[field]);
+	case side_textureoffset:
+		side->textureoffset = luaL_checkfixed(L, 3);
+		break;
+	case side_rowoffset:
+		side->rowoffset = luaL_checkfixed(L, 3);
+		break;
+	case side_toptexture:
+        side->toptexture = luaL_checkinteger(L, 3);
+		break;
+	case side_bottomtexture:
+        side->bottomtexture = luaL_checkinteger(L, 3);
+		break;
+	case side_midtexture:
+        side->midtexture = luaL_checkinteger(L, 3);
+		break;
+	case side_repeatcnt:
+        side->repeatcnt = luaL_checkinteger(L, 3);
+		break;
+	}
+	return 0;
+}
+
 static int side_num(lua_State *L)
 {
 	side_t *side = *((side_t **)luaL_checkudata(L, 1, META_SIDE));
@@ -1213,6 +1257,9 @@ int LUA_MapLib(lua_State *L)
 	luaL_newmetatable(L, META_SIDE);
 		lua_pushcfunction(L, side_get);
 		lua_setfield(L, -2, "__index");
+
+		lua_pushcfunction(L, side_set);
+		lua_setfield(L, -2, "__newindex");
 
 		lua_pushcfunction(L, side_num);
 		lua_setfield(L, -2, "__len");
