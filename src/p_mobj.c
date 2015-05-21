@@ -3033,12 +3033,7 @@ void P_MobjCheckWater(mobj_t *mobj)
 	player_t *p = mobj->player; // Will just be null if not a player.
 
 	// Default if no water exists.
-	mobj->watertop = mobj->waterbottom = mobj->subsector->sector->floorheight - 1000*FRACUNIT;
-
-#ifdef ESLOPE // Set the correct waterbottom/top to be below the lowest point of the slope
-	if (mobj->subsector->sector->f_slope)
-		mobj->watertop = mobj->waterbottom = mobj->subsector->sector->f_slope->lowz - 1000*FRACUNIT;
-#endif
+	mobj->watertop = mobj->waterbottom = mobj->z - 1000*FRACUNIT;
 
 	// Reset water state.
 	mobj->eflags &= ~(MFE_UNDERWATER|MFE_TOUCHWATER|MFE_GOOWATER);
@@ -3267,7 +3262,7 @@ static void P_SceneryCheckWater(mobj_t *mobj)
 	sector_t *sector;
 
 	// Default if no water exists.
-	mobj->watertop = mobj->waterbottom = mobj->subsector->sector->floorheight - 1000*FRACUNIT;
+	mobj->watertop = mobj->waterbottom = mobj->z - 1000*FRACUNIT;
 
 	// see if we are in water, and set some flags for later
 	sector = mobj->subsector->sector;
@@ -3275,6 +3270,7 @@ static void P_SceneryCheckWater(mobj_t *mobj)
 	if (sector->ffloors)
 	{
 		ffloor_t *rover;
+		fixed_t topheight, bottomheight;
 
 		mobj->eflags &= ~(MFE_UNDERWATER|MFE_TOUCHWATER);
 
@@ -3282,20 +3278,32 @@ static void P_SceneryCheckWater(mobj_t *mobj)
 		{
 			if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_SWIMMABLE) || rover->flags & FF_BLOCKOTHERS)
 				continue;
-			if (*rover->topheight <= mobj->z
-				|| *rover->bottomheight > (mobj->z + FixedMul(mobj->info->height >> 1, mobj->scale)))
+
+			topheight = *rover->topheight;
+			bottomheight = *rover->bottomheight;
+
+#ifdef ESLOPE
+			if (*rover->t_slope)
+				topheight = P_GetZAt(*rover->t_slope, mobj->x, mobj->y);
+
+			if (*rover->b_slope)
+				bottomheight = P_GetZAt(*rover->b_slope, mobj->x, mobj->y);
+#endif
+
+			if (topheight <= mobj->z
+				|| bottomheight > (mobj->z + FixedMul(mobj->info->height >> 1, mobj->scale)))
 				continue;
 
-			if (mobj->z + FixedMul(mobj->info->height, mobj->scale) > *rover->topheight)
+			if (mobj->z + FixedMul(mobj->info->height, mobj->scale) > topheight)
 				mobj->eflags |= MFE_TOUCHWATER;
 			else
 				mobj->eflags &= ~MFE_TOUCHWATER;
 
 			// Set the watertop and waterbottom
-			mobj->watertop = *rover->topheight;
-			mobj->waterbottom = *rover->bottomheight;
+			mobj->watertop = topheight;
+			mobj->waterbottom = bottomheight;
 
-			if (mobj->z + FixedMul(mobj->info->height >> 1, mobj->scale) < *rover->topheight)
+			if (mobj->z + FixedMul(mobj->info->height >> 1, mobj->scale) < topheight)
 				mobj->eflags |= MFE_UNDERWATER;
 			else
 				mobj->eflags &= ~MFE_UNDERWATER;
