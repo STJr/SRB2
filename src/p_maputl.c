@@ -375,14 +375,8 @@ void P_CameraLineOpening(line_t *linedef)
 	}
 	else
 	{
-		frontfloor = front->floorheight;
-		frontceiling = front->ceilingheight;
-#ifdef ESLOPE
-		if (front->f_slope)
-			frontfloor = P_GetZAt(front->f_slope, camera.x, camera.y);
-		if (front->c_slope)
-			frontceiling = P_GetZAt(front->c_slope, camera.x, camera.y);
-#endif
+		frontfloor = P_CameraGetFloorZ(mapcampointer, front, tmx, tmy, linedef);
+		frontceiling = P_CameraGetCeilingZ(mapcampointer, front, tmx, tmy, linedef);
 	}
 	if (back->camsec >= 0)
 	{
@@ -408,14 +402,8 @@ void P_CameraLineOpening(line_t *linedef)
 	}
 	else
 	{
-		backfloor = back->floorheight;
-		backceiling = back->ceilingheight;
-#ifdef ESLOPE
-		if (back->f_slope)
-			frontfloor = P_GetZAt(back->f_slope, camera.x, camera.y);
-		if (back->c_slope)
-			frontceiling = P_GetZAt(back->c_slope, camera.x, camera.y);
-#endif
+		backfloor = P_CameraGetFloorZ(mapcampointer, back, tmx, tmy, linedef);
+		backceiling = P_CameraGetCeilingZ(mapcampointer, back, tmx, tmy, linedef);
 	}
 
 	{
@@ -460,16 +448,8 @@ void P_CameraLineOpening(line_t *linedef)
 					if (!(rover->flags & FF_BLOCKOTHERS) || !(rover->flags & FF_RENDERALL) || !(rover->flags & FF_EXISTS) || GETSECSPECIAL(rover->master->frontsector->special, 4) == 12)
 						continue;
 
-					fixed_t topheight = *rover->topheight;
-					fixed_t bottomheight = *rover->bottomheight;
-
-/*#ifdef ESLOPE
-					if (rover->t_slope)
-						topheight = P_GetZAt(rover->t_slope, camera.x, camera.y);
-
-					if (rover->b_slope)
-						bottomheight = P_GetZAt(rover->b_slope, camera.x, camera.y);
-#endif // ESLOPE*/
+					fixed_t topheight = P_CameraGetFOFTopZ(mapcampointer, front, rover, tmx, tmy, linedef);
+					fixed_t bottomheight = P_CameraGetFOFBottomZ(mapcampointer, front, rover, tmx, tmy, linedef);
 
 					delta1 = abs(mapcampointer->z - (bottomheight + ((topheight - bottomheight)/2)));
 					delta2 = abs(thingtop - (bottomheight + ((topheight - bottomheight)/2)));
@@ -491,16 +471,8 @@ void P_CameraLineOpening(line_t *linedef)
 					if (!(rover->flags & FF_BLOCKOTHERS) || !(rover->flags & FF_RENDERALL) || !(rover->flags & FF_EXISTS) || GETSECSPECIAL(rover->master->frontsector->special, 4) == 12)
 						continue;
 
-					fixed_t topheight = *rover->topheight;
-					fixed_t bottomheight = *rover->bottomheight;
-
-/*#ifdef ESLOPE
-					if (rover->t_slope)
-						topheight = P_GetZAt(rover->t_slope, camera.x, camera.y);
-
-					if (rover->b_slope)
-						bottomheight = P_GetZAt(rover->b_slope, camera.x, camera.y);
-#endif // ESLOPE*/
+					fixed_t topheight = P_CameraGetFOFTopZ(mapcampointer, back, rover, tmx, tmy, linedef);
+					fixed_t bottomheight = P_CameraGetFOFBottomZ(mapcampointer, back, rover, tmx, tmy, linedef);
 
 					delta1 = abs(mapcampointer->z - (bottomheight + ((topheight - bottomheight)/2)));
 					delta2 = abs(thingtop - (bottomheight + ((topheight - bottomheight)/2)));

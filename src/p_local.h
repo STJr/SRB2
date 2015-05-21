@@ -237,6 +237,11 @@ fixed_t P_GetCeilingZ(mobj_t *mobj, sector_t *sector, fixed_t x, fixed_t y, line
 fixed_t P_GetFOFTopZ(mobj_t *mobj, sector_t *sector, ffloor_t *fof, fixed_t x, fixed_t y, line_t *line);
 fixed_t P_GetFOFBottomZ(mobj_t *mobj, sector_t *sector, ffloor_t *fof, fixed_t x, fixed_t y, line_t *line);
 
+fixed_t P_CameraGetFloorZ(camera_t *mobj, sector_t *sector, fixed_t x, fixed_t y, line_t *line);
+fixed_t P_CameraGetCeilingZ(camera_t *mobj, sector_t *sector, fixed_t x, fixed_t y, line_t *line);
+fixed_t P_CameraGetFOFTopZ(camera_t *mobj, sector_t *sector, ffloor_t *fof, fixed_t x, fixed_t y, line_t *line);
+fixed_t P_CameraGetFOFBottomZ(camera_t *mobj, sector_t *sector, ffloor_t *fof, fixed_t x, fixed_t y, line_t *line);
+
 boolean P_InsideANonSolidFFloor(mobj_t *mobj, ffloor_t *rover);
 boolean P_CheckDeathPitCollide(mobj_t *mo);
 boolean P_CheckSolidLava(mobj_t *mo, ffloor_t *rover);

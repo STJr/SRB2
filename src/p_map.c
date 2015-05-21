@@ -1517,21 +1517,9 @@ boolean P_CheckCameraPosition(fixed_t x, fixed_t y, camera_t *thiscam)
 	// that contains the point.
 	// Any contacted lines the step closer together
 	// will adjust them.
-#ifdef ESLOPE
-	if (newsubsec->sector->f_slope)
-	{
-		tmfloorz = tmdropoffz = P_GetZAt(newsubsec->sector->f_slope, thiscam->x, thiscam->y);
-	}
-	else
-#endif
-	tmfloorz = tmdropoffz = newsubsec->sector->floorheight;
+	tmfloorz = tmdropoffz = P_CameraGetFloorZ(thiscam, newsubsec->sector, x, y, NULL);
 
-#ifdef ESLOPE
-	if (newsubsec->sector->c_slope)
-		tmceilingz = P_GetZAt(newsubsec->sector->c_slope, thiscam->x, thiscam->y);
-	else
-#endif
-	tmceilingz = newsubsec->sector->ceilingheight;
+	tmceilingz = P_CameraGetCeilingZ(thiscam, newsubsec->sector, x, y, NULL);
 
 	// Cameras use the heightsec's heights rather then the actual sector heights.
 	// If you can see through it, why not move the camera through it too?
@@ -1560,15 +1548,8 @@ boolean P_CheckCameraPosition(fixed_t x, fixed_t y, camera_t *thiscam)
 			if (!(rover->flags & FF_BLOCKOTHERS) || !(rover->flags & FF_EXISTS) || !(rover->flags & FF_RENDERALL) || GETSECSPECIAL(rover->master->frontsector->special, 4) == 12)
 				continue;
 
-			fixed_t topheight = *rover->topheight;
-			fixed_t bottomheight = *rover->bottomheight;
-
-/*#ifdef ESLOPE
-			if (rover->t_slope)
-				topheight = P_GetZAt(rover->t_slope, thiscam->x, thiscam->y);
-			if (rover->b_slope)
-				bottomheight = P_GetZAt(rover->b_slope, thiscam->x, thiscam->y);
-#endif*/
+			fixed_t topheight = P_CameraGetFOFTopZ(thiscam, newsubsec->sector, rover, x, y, NULL);
+			fixed_t bottomheight = P_CameraGetFOFBottomZ(thiscam, newsubsec->sector, rover, x, y, NULL);
 
 			delta1 = thiscam->z - (bottomheight
 				+ ((topheight - bottomheight)/2));
