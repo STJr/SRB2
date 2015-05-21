@@ -47,37 +47,37 @@ static int lib_max(lua_State *L)
 
 static int lib_fixedangle(lua_State *L)
 {
-	lua_pushinteger(L, FixedAngle((fixed_t)luaL_checkinteger(L, 1)));
+	lua_pushangle(L, FixedAngle(luaL_checkfixed(L, 1)));
 	return 1;
 }
 
 static int lib_anglefixed(lua_State *L)
 {
-	lua_pushinteger(L, AngleFixed((angle_t)luaL_checkinteger(L, 1)));
+	lua_pushfixed(L, AngleFixed(luaL_checkangle(L, 1)));
 	return 1;
 }
 
 static int lib_invangle(lua_State *L)
 {
-	lua_pushinteger(L, InvAngle((angle_t)luaL_checkinteger(L, 1)));
+	lua_pushangle(L, InvAngle(luaL_checkangle(L, 1)));
 	return 1;
 }
 
 static int lib_finesine(lua_State *L)
 {
-	lua_pushinteger(L, FINESINE((luaL_checkinteger(L, 1)>>ANGLETOFINESHIFT) & FINEMASK));
+	lua_pushfixed(L, FINESINE((luaL_checkangle(L, 1)>>ANGLETOFINESHIFT) & FINEMASK));
 	return 1;
 }
 
 static int lib_finecosine(lua_State *L)
 {
-	lua_pushinteger(L, FINECOSINE((luaL_checkinteger(L, 1)>>ANGLETOFINESHIFT) & FINEMASK));
+	lua_pushfixed(L, FINECOSINE((luaL_checkangle(L, 1)>>ANGLETOFINESHIFT) & FINEMASK));
 	return 1;
 }
 
 static int lib_finetangent(lua_State *L)
 {
-	lua_pushinteger(L, FINETANGENT((luaL_checkinteger(L, 1)>>ANGLETOFINESHIFT) & FINEMASK));
+	lua_pushfixed(L, FINETANGENT((luaL_checkangle(L, 1)>>ANGLETOFINESHIFT) & FINEMASK));
 	return 1;
 }
 
@@ -86,61 +86,61 @@ static int lib_finetangent(lua_State *L)
 
 static int lib_fixedmul(lua_State *L)
 {
-	lua_pushinteger(L, FixedMul((fixed_t)luaL_checkinteger(L, 1), (fixed_t)luaL_checkinteger(L, 2)));
+	lua_pushfixed(L, FixedMul(luaL_checkfixed(L, 1), luaL_checkfixed(L, 2)));
 	return 1;
 }
 
 static int lib_fixedint(lua_State *L)
 {
-	lua_pushinteger(L, FixedInt((fixed_t)luaL_checkinteger(L, 1)));
+	lua_pushinteger(L, FixedInt(luaL_checkfixed(L, 1)));
 	return 1;
 }
 
 static int lib_fixeddiv(lua_State *L)
 {
-	lua_pushinteger(L, FixedDiv((fixed_t)luaL_checkinteger(L, 1), (fixed_t)luaL_checkinteger(L, 2)));
+	lua_pushfixed(L, FixedDiv(luaL_checkfixed(L, 1), luaL_checkfixed(L, 2)));
 	return 1;
 }
 
 static int lib_fixedrem(lua_State *L)
 {
-	lua_pushinteger(L, FixedRem((fixed_t)luaL_checkinteger(L, 1), (fixed_t)luaL_checkinteger(L, 2)));
+	lua_pushfixed(L, FixedRem(luaL_checkfixed(L, 1), luaL_checkfixed(L, 2)));
 	return 1;
 }
 
 static int lib_fixedsqrt(lua_State *L)
 {
-	lua_pushinteger(L, FixedSqrt((fixed_t)luaL_checkinteger(L, 1)));
+	lua_pushfixed(L, FixedSqrt(luaL_checkfixed(L, 1)));
 	return 1;
 }
 
 static int lib_fixedhypot(lua_State *L)
 {
-	lua_pushinteger(L, FixedHypot((fixed_t)luaL_checkinteger(L, 1), (fixed_t)luaL_checkinteger(L, 2)));
+	lua_pushfixed(L, FixedHypot(luaL_checkfixed(L, 1), luaL_checkfixed(L, 2)));
 	return 1;
 }
 
 static int lib_fixedfloor(lua_State *L)
 {
-	lua_pushinteger(L, FixedFloor((fixed_t)luaL_checkinteger(L, 1)));
+	lua_pushfixed(L, FixedFloor(luaL_checkfixed(L, 1)));
 	return 1;
 }
 
 static int lib_fixedtrunc(lua_State *L)
 {
-	lua_pushinteger(L, FixedTrunc((fixed_t)luaL_checkinteger(L, 1)));
+	lua_pushfixed(L, FixedTrunc(luaL_checkfixed(L, 1)));
 	return 1;
 }
 
 static int lib_fixedceil(lua_State *L)
 {
-	lua_pushinteger(L, FixedCeil((fixed_t)luaL_checkinteger(L, 1)));
+	lua_pushfixed(L, FixedCeil(luaL_checkfixed(L, 1)));
 	return 1;
 }
 
 static int lib_fixedround(lua_State *L)
 {
-	lua_pushinteger(L, FixedRound((fixed_t)luaL_checkinteger(L, 1)));
+	lua_pushfixed(L, FixedRound(luaL_checkfixed(L, 1)));
 	return 1;
 }
 

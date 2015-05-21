@@ -280,10 +280,10 @@ static int sector_get(lua_State *L)
 		lua_pushboolean(L, 1);
 		return 1;
 	case sector_floorheight:
-		lua_pushinteger(L, sector->floorheight);
+		lua_pushfixed(L, sector->floorheight);
 		return 1;
 	case sector_ceilingheight:
-		lua_pushinteger(L, sector->ceilingheight);
+		lua_pushfixed(L, sector->ceilingheight);
 		return 1;
 	case sector_floorpic: { // floorpic
 		levelflat_t *levelflat;
@@ -397,7 +397,7 @@ static int sector_set(lua_State *L)
 	case sector_floorheight: { // floorheight
 		boolean flag;
 		fixed_t lastpos = sector->floorheight;
-		sector->floorheight = (fixed_t)luaL_checkinteger(L, 3);
+		sector->floorheight = luaL_checkfixed(L, 3);
 		flag = P_CheckSector(sector, true);
 		if (flag && sector->numattached)
 		{
@@ -409,7 +409,7 @@ static int sector_set(lua_State *L)
 	case sector_ceilingheight: { // ceilingheight
 		boolean flag;
 		fixed_t lastpos = sector->ceilingheight;
-		sector->ceilingheight = (fixed_t)luaL_checkinteger(L, 3);
+		sector->ceilingheight = luaL_checkfixed(L, 3);
 		flag = P_CheckSector(sector, true);
 		if (flag && sector->numattached)
 		{
@@ -509,10 +509,10 @@ static int line_get(lua_State *L)
 		LUA_PushUserdata(L, line->v2, META_VERTEX);
 		return 1;
 	case line_dx:
-		lua_pushinteger(L, line->dx);
+		lua_pushfixed(L, line->dx);
 		return 1;
 	case line_dy:
-		lua_pushinteger(L, line->dy);
+		lua_pushfixed(L, line->dy);
 		return 1;
 	case line_flags:
 		lua_pushinteger(L, line->flags);
@@ -628,10 +628,10 @@ static int side_get(lua_State *L)
 		lua_pushboolean(L, 1);
 		return 1;
 	case side_textureoffset:
-		lua_pushinteger(L, side->textureoffset);
+		lua_pushfixed(L, side->textureoffset);
 		return 1;
 	case side_rowoffset:
-		lua_pushinteger(L, side->rowoffset);
+		lua_pushfixed(L, side->rowoffset);
 		return 1;
 	case side_toptexture:
 		lua_pushinteger(L, side->toptexture);
@@ -685,13 +685,13 @@ static int vertex_get(lua_State *L)
 		lua_pushboolean(L, 1);
 		return 1;
 	case vertex_x:
-		lua_pushinteger(L, vertex->x);
+		lua_pushfixed(L, vertex->x);
 		return 1;
 	case vertex_y:
-		lua_pushinteger(L, vertex->y);
+		lua_pushfixed(L, vertex->y);
 		return 1;
 	case vertex_z:
-		lua_pushinteger(L, vertex->z);
+		lua_pushfixed(L, vertex->z);
 		return 1;
 	}
 	return 0;
@@ -954,7 +954,7 @@ static int ffloor_get(lua_State *L)
 		lua_pushboolean(L, 1);
 		return 1;
 	case ffloor_topheight:
-		lua_pushinteger(L, *ffloor->topheight);
+		lua_pushfixed(L, *ffloor->topheight);
 		return 1;
 	case ffloor_toppic: { // toppic
 		levelflat_t *levelflat;
@@ -968,7 +968,7 @@ static int ffloor_get(lua_State *L)
 		lua_pushinteger(L, *ffloor->toplightlevel);
 		return 1;
 	case ffloor_bottomheight:
-		lua_pushinteger(L, *ffloor->bottomheight);
+		lua_pushfixed(L, *ffloor->bottomheight);
 		return 1;
 	case ffloor_bottompic: { // bottompic
 		levelflat_t *levelflat;
@@ -1028,7 +1028,7 @@ static int ffloor_set(lua_State *L)
 		boolean flag;
 		fixed_t lastpos = *ffloor->topheight;
 		sector_t *sector = &sectors[ffloor->secnum];
-		sector->ceilingheight = (fixed_t)luaL_checkinteger(L, 3);
+		sector->ceilingheight = luaL_checkfixed(L, 3);
 		flag = P_CheckSector(sector, true);
 		if (flag && sector->numattached)
 		{
@@ -1047,7 +1047,7 @@ static int ffloor_set(lua_State *L)
 		boolean flag;
 		fixed_t lastpos = *ffloor->bottomheight;
 		sector_t *sector = &sectors[ffloor->secnum];
-		sector->floorheight = (fixed_t)luaL_checkinteger(L, 3);
+		sector->floorheight = luaL_checkfixed(L, 3);
 		flag = P_CheckSector(sector, true);
 		if (flag && sector->numattached)
 		{
