@@ -1870,6 +1870,9 @@ static void P_CheckBouncySectors(player_t *player)
 	fixed_t oldx;
 	fixed_t oldy;
 	fixed_t oldz;
+#ifdef ESLOPE
+	v3fixed_t momentum;
+#endif
 
 	oldx = player->mo->x;
 	oldy = player->mo->y;
@@ -1890,16 +1893,21 @@ static void P_CheckBouncySectors(player_t *player)
 		{
 			ffloor_t *rover;
 			boolean top = true;
+			fixed_t topheight, bottomheight;
 
 			for (rover = node->m_sector->ffloors; rover; rover = rover->next)
 			{
-				if (player->mo->z > *rover->topheight)
+				topheight = P_GetFOFTopZ(player->mo, node->m_sector, rover, player->mo->x, player->mo->y, NULL);
+				bottomheight = P_GetFOFBottomZ(player->mo, node->m_sector, rover, player->mo->x, player->mo->y, NULL);
+
+				if (player->mo->z > topheight)
 					continue;
 
-				if (player->mo->z + player->mo->height < *rover->bottomheight)
+				if (player->mo->z + player->mo->height < bottomheight)
 					continue;
 
-				if (oldz < *rover->topheight && oldz > *rover->bottomheight)
+				if (oldz < P_GetFOFTopZ(player->mo, node->m_sector, rover, oldx, oldy, NULL)
+						&& oldz + player->mo->height > P_GetFOFBottomZ(player->mo, node->m_sector, rover, oldx, oldy, NULL))
 					top = false;
 
 				if (GETSECSPECIAL(rover->master->frontsector->special, 1) == 15)
@@ -1914,7 +1922,29 @@ static void P_CheckBouncySectors(player_t *player)
 					{
 						fixed_t newmom;
 
+#ifdef ESLOPE
+						pslope_t *slope;
+						if (abs(oldz - topheight) < abs(oldz + player->mo->height - bottomheight)) { // Hit top
+							slope = *rover->t_slope;
+						} else { // Hit bottom
+							slope = *rover->b_slope;
+						}
+
+						momentum.x = player->mo->momx;
+						momentum.y = player->mo->momy;
+						momentum.z = player->mo->momz*2;
+
+						if (slope) {
+							// Reverse quantizing might could use its own function later
+							slope->zangle = ANGLE_MAX-slope->zangle;
+							P_QuantizeMomentumToSlope(&momentum, slope);
+							slope->zangle = ANGLE_MAX-slope->zangle;
+						}
+
+						newmom = momentum.z = -FixedMul(momentum.z,linedist)/2;
+#else
 						newmom = -FixedMul(player->mo->momz,linedist);
+#endif
 
 						if (abs(newmom) < (linedist*2))
 						{
@@ -1937,7 +1967,18 @@ static void P_CheckBouncySectors(player_t *player)
 						else if (newmom < -P_GetPlayerHeight(player)/2)
 							newmom = -P_GetPlayerHeight(player)/2;
 
+#ifdef ESLOPE
+						momentum.z = newmom*2;
+
+						if (slope)
+							P_QuantizeMomentumToSlope(&momentum, slope);
+
+						player->mo->momx = momentum.x;
+						player->mo->momy = momentum.y;
+						player->mo->momz = momentum.z/2;
+#else
 						player->mo->momz = newmom;
+#endif
 
 						if (player->pflags & PF_SPINNING)
 						{
