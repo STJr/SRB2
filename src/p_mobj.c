@@ -2152,7 +2152,7 @@ void P_XYMovement(mobj_t *mo)
 
 #ifdef ESLOPE
 	// adjust various things based on slope
-	if (mo->standingslope) {
+	if (mo->standingslope && abs(mo->standingslope->zdelta) > FRACUNIT>>8) {
 		if (!P_IsObjectOnGround(mo)) { // We fell off at some point? Do the twisty thing!
 			P_SlopeLaunch(mo);
 			xmove = mo->momx;
