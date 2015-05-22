@@ -2786,9 +2786,7 @@ boolean P_SetupLevel(boolean skipprecip)
 		}
 		P_PreTicker(2);
 #ifdef HAVE_BLUA
-		P_MapStart();
 		LUAh_MapLoad();
-		P_MapEnd();
 #endif
 	}
 
