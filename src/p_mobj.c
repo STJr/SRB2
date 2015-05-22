@@ -2387,6 +2387,12 @@ void P_XYMovement(mobj_t *mo)
 	if (player && player->homing) // no friction for homing
 		return;
 
+#ifdef ESLOPE
+	if ((mo->type == MT_BIGTUMBLEWEED || mo->type == MT_LITTLETUMBLEWEED)
+			&& (mo->standingslope && abs(mo->standingslope->zdelta) > FRACUNIT>>8)) // Special exception for tumbleweeds on slopes
+		return;
+#endif
+
 	if (((!(mo->eflags & MFE_VERTICALFLIP) && mo->z > mo->floorz) || (mo->eflags & MFE_VERTICALFLIP && mo->z+mo->height < mo->ceilingz))
 		&& !(player && player->pflags & PF_SLIDING))
 		return; // no friction when airborne
@@ -2822,6 +2828,21 @@ static boolean P_ZMovement(mobj_t *mo)
 		|| (mo->z + mo->height >= mo->ceilingz && mo->eflags & MFE_VERTICALFLIP))
 	&& !(mo->flags & MF_NOCLIPHEIGHT))
 	{
+		v3fixed_t mom;
+		mom.x = mo->momx;
+		mom.y = mo->momy;
+		mom.z = mo->momz;
+
+#ifdef ESLOPE
+		P_TryMove(mo, mo->x, mo->y, true); // Sets mo->standingslope correctly
+		if (mo->standingslope) {
+			// Reverse quantizing might could use its own function later
+			mo->standingslope->zangle = ANGLE_MAX-mo->standingslope->zangle;
+			P_QuantizeMomentumToSlope(&mom, mo->standingslope);
+			mo->standingslope->zangle = ANGLE_MAX-mo->standingslope->zangle;
+		}
+#endif
+
 		if (mo->eflags & MFE_VERTICALFLIP)
 			mo->z = mo->ceilingz - mo->height;
 		else
@@ -2829,7 +2850,7 @@ static boolean P_ZMovement(mobj_t *mo)
 
 		// hit the floor
 		if (mo->type == MT_FIREBALL) // special case for the fireball
-			mo->momz = P_MobjFlip(mo)*FixedMul(5*FRACUNIT, mo->scale);
+			mom.z = P_MobjFlip(mo)*FixedMul(5*FRACUNIT, mo->scale);
 		else if (mo->type == MT_SPINFIRE) // elemental shield fire is another exception here
 			;
 		else if (mo->flags & MF_MISSILE)
@@ -2844,12 +2865,12 @@ static boolean P_ZMovement(mobj_t *mo)
 				if (mo->flags & MF_GRENADEBOUNCE)
 				{
 					// Going down? (Or up in reverse gravity?)
-					if (P_MobjFlip(mo)*mo->momz < 0)
+					if (P_MobjFlip(mo)*mom.z < 0)
 					{
 						// If going slower than a fracunit, just stop.
-						if (abs(mo->momz) < FixedMul(FRACUNIT, mo->scale))
+						if (abs(mom.z) < FixedMul(FRACUNIT, mo->scale))
 						{
-							mo->momx = mo->momy = mo->momz = 0;
+							mom.x = mom.y = mom.z = 0;
 
 							// Napalm hack
 							if (mo->type == MT_CYBRAKDEMON_NAPALM_BOMB_LARGE && mo->fuse)
@@ -2857,7 +2878,7 @@ static boolean P_ZMovement(mobj_t *mo)
 						}
 						// Otherwise bounce up at half speed.
 						else
-							mo->momz = -mo->momz/2;
+							mom.z = -mom.z/2;
 						S_StartSound(mo, mo->info->activesound);
 					}
 				}
@@ -2880,14 +2901,14 @@ static boolean P_ZMovement(mobj_t *mo)
 			}
 		}
 
-		if (P_MobjFlip(mo)*mo->momz < 0) // falling
+		if (P_MobjFlip(mo)*mom.z < 0) // falling
 		{
 			if (!tmfloorthing || tmfloorthing->flags & (MF_PUSHABLE|MF_MONITOR)
 			|| tmfloorthing->flags2 & MF2_STANDONME || tmfloorthing->type == MT_PLAYER)
 				mo->eflags |= MFE_JUSTHITFLOOR;
 
 			if (mo->flags2 & MF2_SKULLFLY) // the skull slammed into something
-				mo->momz = -mo->momz;
+				mom.z = -mom.z;
 			else
 			// Flingrings bounce
 			if (mo->type == MT_FLINGRING
@@ -2900,35 +2921,42 @@ static boolean P_ZMovement(mobj_t *mo)
 				|| mo->type == MT_FALLINGROCK)
 			{
 				if (maptol & TOL_NIGHTS)
-					mo->momz = -FixedDiv(mo->momz, 10*FRACUNIT);
+					mom.z = -FixedDiv(mom.z, 10*FRACUNIT);
 				else
-					mo->momz = -FixedMul(mo->momz, FixedDiv(17*FRACUNIT,20*FRACUNIT));
+					mom.z = -FixedMul(mom.z, FixedDiv(17*FRACUNIT,20*FRACUNIT));
 
 				if (mo->type == MT_BIGTUMBLEWEED || mo->type == MT_LITTLETUMBLEWEED)
 				{
-					if (abs(mo->momx) < FixedMul(STOPSPEED, mo->scale)
-						&& abs(mo->momy) < FixedMul(STOPSPEED, mo->scale)
-						&& abs(mo->momz) < FixedMul(STOPSPEED*3, mo->scale))
+					if (abs(mom.x) < FixedMul(STOPSPEED, mo->scale)
+						&& abs(mom.y) < FixedMul(STOPSPEED, mo->scale)
+						&& abs(mom.z) < FixedMul(STOPSPEED*3, mo->scale))
 					{
-						if (!(mo->flags & MF_AMBUSH))
-						{
-							mo->momx = mo->momy = mo->momz = 0;
-							P_SetMobjState(mo, mo->info->spawnstate);
-						}
-						else
+						if (mo->flags & MF_AMBUSH)
 						{
 							// If deafed, give the tumbleweed another random kick if it runs out of steam.
-							mo->momz += P_MobjFlip(mo)*FixedMul(6*FRACUNIT, mo->scale);
+							mom.z += P_MobjFlip(mo)*FixedMul(6*FRACUNIT, mo->scale);
 
 							if (P_Random() & 1)
-								mo->momx += FixedMul(6*FRACUNIT, mo->scale);
+								mom.x += FixedMul(6*FRACUNIT, mo->scale);
 							else
-								mo->momx -= FixedMul(6*FRACUNIT, mo->scale);
+								mom.x -= FixedMul(6*FRACUNIT, mo->scale);
 
 							if (P_Random() & 1)
-								mo->momy += FixedMul(6*FRACUNIT, mo->scale);
+								mom.y += FixedMul(6*FRACUNIT, mo->scale);
 							else
-								mo->momy -= FixedMul(6*FRACUNIT, mo->scale);
+								mom.y -= FixedMul(6*FRACUNIT, mo->scale);
+						}
+#ifdef ESLOPE
+						else if (mo->standingslope && abs(mo->standingslope->zdelta) > FRACUNIT>>8)
+						{
+							// Pop the object up a bit to encourage bounciness
+							//mom.z = P_MobjFlip(mo)*mo->scale;
+						}
+#endif
+						else
+						{
+							mom.x = mom.y = mom.z = 0;
+							P_SetMobjState(mo, mo->info->spawnstate);
 						}
 					}
 
@@ -2938,14 +2966,14 @@ static boolean P_ZMovement(mobj_t *mo)
 				}
 				else if (mo->type == MT_FALLINGROCK)
 				{
-					if (P_MobjFlip(mo)*mo->momz > FixedMul(2*FRACUNIT, mo->scale))
+					if (P_MobjFlip(mo)*mom.z > FixedMul(2*FRACUNIT, mo->scale))
 						S_StartSound(mo, mo->info->activesound + P_RandomKey(mo->info->mass));
 
-					mo->momz /= 2; // Rocks not so bouncy
+					mom.z /= 2; // Rocks not so bouncy
 
-					if (abs(mo->momx) < FixedMul(STOPSPEED, mo->scale)
-						&& abs(mo->momy) < FixedMul(STOPSPEED, mo->scale)
-						&& abs(mo->momz) < FixedMul(STOPSPEED*3, mo->scale))
+					if (abs(mom.x) < FixedMul(STOPSPEED, mo->scale)
+						&& abs(mom.y) < FixedMul(STOPSPEED, mo->scale)
+						&& abs(mom.z) < FixedMul(STOPSPEED*3, mo->scale))
 					{
 						P_RemoveMobj(mo);
 						return false;
@@ -2953,20 +2981,30 @@ static boolean P_ZMovement(mobj_t *mo)
 				}
 				else if (mo->type == MT_CANNONBALLDECOR)
 				{
-					mo->momz /= 2;
-					if (abs(mo->momz) < FixedMul(STOPSPEED*3, mo->scale))
-						mo->momz = 0;
+					mom.z /= 2;
+					if (abs(mom.z) < FixedMul(STOPSPEED*3, mo->scale))
+						mom.z = 0;
 				}
 			}
 			else if (tmfloorthing && (tmfloorthing->flags & (MF_PUSHABLE|MF_MONITOR)
 			|| tmfloorthing->flags2 & MF2_STANDONME || tmfloorthing->type == MT_PLAYER))
-				mo->momz = tmfloorthing->momz;
+				mom.z = tmfloorthing->momz;
 			else if (!tmfloorthing)
-				mo->momz = 0;
+				mom.z = 0;
 		}
 		else if (tmfloorthing && (tmfloorthing->flags & (MF_PUSHABLE|MF_MONITOR)
 		|| tmfloorthing->flags2 & MF2_STANDONME || tmfloorthing->type == MT_PLAYER))
-			mo->momz = tmfloorthing->momz;
+			mom.z = tmfloorthing->momz;
+
+#ifdef ESLOPE
+		if (mo->standingslope) {
+			P_QuantizeMomentumToSlope(&mom, mo->standingslope);
+		}
+#endif
+
+		mo->momx = mom.x;
+		mo->momy = mom.y;
+		mo->momz = mom.z;
 
 		if (mo->type == MT_STEAM)
 			return true;
@@ -7797,6 +7835,21 @@ for (i = ((mobj->flags2 & MF2_STRONGBOX) ? strongboxamt : weakboxamt); i; --i) s
 		mobj->pmomz = 0; // to prevent that weird rocketing gargoyle bug
 		mobj->eflags &= ~MFE_JUSTHITFLOOR;
 	}
+
+#ifdef ESLOPE // Sliding physics for slidey mobjs!
+	if (mobj->type == MT_FLINGRING
+		|| mobj->type == MT_FLINGCOIN
+		|| P_WeaponOrPanel(mobj->type)
+		|| mobj->type == MT_FLINGEMERALD
+		|| mobj->type == MT_BIGTUMBLEWEED
+		|| mobj->type == MT_LITTLETUMBLEWEED
+		|| mobj->type == MT_CANNONBALLDECOR
+		|| mobj->type == MT_FALLINGROCK) {
+		P_TryMove(mobj, mobj->x, mobj->y, true); // Sets mo->standingslope correctly
+		//if (mobj->standingslope) CONS_Printf("slope physics on mobj\n");
+		P_ButteredSlope(mobj);
+	}
+#endif
 
 	if (mobj->flags & (MF_ENEMY|MF_BOSS) && mobj->health
 		&& P_CheckDeathPitCollide(mobj)) // extra pit check in case these didn't have momz
