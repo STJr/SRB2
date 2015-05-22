@@ -908,6 +908,9 @@ static void R_Subsector(size_t num)
 		ceilingplane = NULL;
 
 	numffloors = 0;
+#ifdef ESLOPE
+	ffloor[numffloors].slope = NULL;
+#endif
 	ffloor[numffloors].plane = NULL;
 	ffloor[numffloors].polyobj = NULL;
 	if (frontsector->ffloors)
@@ -945,7 +948,7 @@ static void R_Subsector(size_t num)
 #ifdef ESLOPE
 				light = R_GetPlaneLight(frontsector,
 					*rover->b_slope ? P_GetZAt(*rover->b_slope, frontsector->soundorg.x, frontsector->soundorg.y) : *rover->bottomheight,
-					viewz < (*rover->b_slope ? P_GetZAt(*rover->b_slope, viewx, viewy) : *rover->bottomheight));
+					viewz < heightcheck);
 #else
 				light = R_GetPlaneLight(frontsector, *rover->bottomheight,
 					viewz < *rover->bottomheight);
@@ -993,7 +996,7 @@ static void R_Subsector(size_t num)
 #ifdef ESLOPE
 				light = R_GetPlaneLight(frontsector,
 					*rover->t_slope ? P_GetZAt(*rover->t_slope, frontsector->soundorg.x, frontsector->soundorg.y) : *rover->topheight,
-					viewz < (*rover->t_slope ? P_GetZAt(*rover->t_slope, viewx, viewy) : *rover->topheight));
+					viewz < heightcheck);
 #else
 				light = R_GetPlaneLight(frontsector, *rover->topheight, viewz < *rover->topheight);
 #endif
@@ -1079,6 +1082,9 @@ static void R_Subsector(size_t num)
 
 				ffloor[numffloors].height = polysec->floorheight;
 				ffloor[numffloors].polyobj = po;
+#ifdef ESLOPE
+				ffloor[numffloors].slope = NULL;
+#endif
 //				ffloor[numffloors].ffloor = rover;
 				po->visplane = ffloor[numffloors].plane;
 				numffloors++;
@@ -1120,6 +1126,9 @@ static void R_Subsector(size_t num)
 
 				ffloor[numffloors].polyobj = po;
 				ffloor[numffloors].height = polysec->ceilingheight;
+#ifdef ESLOPE
+				ffloor[numffloors].slope = NULL;
+#endif
 //				ffloor[numffloors].ffloor = rover;
 				po->visplane = ffloor[numffloors].plane;
 				numffloors++;
