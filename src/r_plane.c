@@ -437,6 +437,9 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 	visplane_t *check;
 	unsigned hash;
 
+#ifdef ESLOPE
+	if (slope); else // Don't mess with this right now if a slope is involved
+#endif
 	if (plangle != 0)
 	{
 		// Add the view offset, rotated by the plane angle.
@@ -946,8 +949,8 @@ void R_DrawSinglePlane(visplane_t *pl)
 		//double zeroheight;
 		float fudge;
 
-		float vx = FIXED_TO_FLOAT(viewx);
-		float vy = FIXED_TO_FLOAT(viewy);
+		float vx = FIXED_TO_FLOAT(viewx+xoffs);
+		float vy = FIXED_TO_FLOAT(viewy-yoffs);
 		float vz = FIXED_TO_FLOAT(viewz);
 
 		zeroheight = FIXED_TO_FLOAT(P_GetZAt(pl->slope, viewx, viewy));
@@ -960,7 +963,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 		ang = ANG2RAD(ANGLE_270 - viewangle);
 		p.x = vx * cos(ang) - vy * sin(ang);
 		p.z = vx * sin(ang) + vy * cos(ang);
-		p.y = FIXED_TO_FLOAT(P_GetZAt(pl->slope, 0, 0)) - vz;
+		p.y = FIXED_TO_FLOAT(P_GetZAt(pl->slope, -xoffs, yoffs)) - vz;
 
 		// m is the v direction vector in view space
 		ang = ANG2RAD(ANGLE_180 - viewangle - pl->plangle);
