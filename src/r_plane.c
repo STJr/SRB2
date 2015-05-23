@@ -946,12 +946,15 @@ void R_DrawSinglePlane(visplane_t *pl)
 		// I copied ZDoom's code and adapted it to SRB2... -Red
 		floatv3_t p, m, n;
 		float ang;
-		//double zeroheight;
+		float vx, vy, vz;
 		float fudge;
 
-		float vx = FIXED_TO_FLOAT(viewx+xoffs);
-		float vy = FIXED_TO_FLOAT(viewy-yoffs);
-		float vz = FIXED_TO_FLOAT(viewz);
+		xoffs &= ((1 << (32-nflatshiftup))-1);
+		yoffs &= ((1 << (32-nflatshiftup))-1);
+
+		vx = FIXED_TO_FLOAT(viewx+xoffs);
+		vy = FIXED_TO_FLOAT(viewy-yoffs);
+		vz = FIXED_TO_FLOAT(viewz);
 
 		zeroheight = FIXED_TO_FLOAT(P_GetZAt(pl->slope, viewx, viewy));
 
