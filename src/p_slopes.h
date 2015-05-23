@@ -66,11 +66,6 @@ void P_CopySectorSlope(line_t *line);
 // Returns the height of the sloped plane at (x, y) as a fixed_t
 fixed_t P_GetZAt(pslope_t *slope, fixed_t x, fixed_t y);
 
-
-// Returns the height of the sloped plane at (x, y) as a float
-float P_GetZAtf(pslope_t *slope, float x, float y);
-
-
 // Lots of physics-based bullshit
 void P_QuantizeMomentumToSlope(vector3_t *momentum, pslope_t *slope);
 void P_SlopeLaunch(mobj_t *mo);

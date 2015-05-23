@@ -772,21 +772,7 @@ fixed_t P_GetZAt(pslope_t *slope, fixed_t x, fixed_t y)
 
    return slope->o.z + FixedMul(dist, slope->zdelta);
 }
-#ifdef SPRINGCLEAN
-//
-// P_GetZAtf
-//
-// Returns the height of the sloped plane at (x, y) as a float
-//
-float P_GetZAtf(pslope_t *slope, float x, float y)
-{
-	//if (!slope) // SRB2CBTODO: keep this when done with debugging
-	//	I_Error("P_GetZAtf: slope parameter is NULL");
 
-   float dist = (x - slope->of.x) * slope->df.x + (y - slope->of.y) * slope->df.y;
-   return slope->of.z + (dist * slope->zdeltaf);
-}
-#endif
 
 //
 // P_QuantizeMomentumToSlope
