@@ -952,6 +952,15 @@ void R_DrawSinglePlane(visplane_t *pl)
 		xoffs &= ((1 << (32-nflatshiftup))-1);
 		yoffs &= ((1 << (32-nflatshiftup))-1);
 
+		xoffs -= (pl->slope->o.x + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1);
+		yoffs += (pl->slope->o.y + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1);
+
+		// Okay, look, don't ask me why this works, but without this setup there's a disgusting-looking misalignment with the textures. -Red
+		fudge = ((1<<nflatshiftup)+1.0f)/(1<<nflatshiftup);
+
+		xoffs *= fudge;
+		yoffs /= fudge;
+
 		vx = FIXED_TO_FLOAT(viewx+xoffs);
 		vy = FIXED_TO_FLOAT(viewy-yoffs);
 		vz = FIXED_TO_FLOAT(viewz);
@@ -980,9 +989,6 @@ void R_DrawSinglePlane(visplane_t *pl)
 		ang = ANG2RAD(pl->plangle);
 		m.y = FIXED_TO_FLOAT(P_GetZAt(pl->slope, viewx + FLOAT_TO_FIXED(sin(ang)), viewy + FLOAT_TO_FIXED(cos(ang)))) - zeroheight;
 		n.y = FIXED_TO_FLOAT(P_GetZAt(pl->slope, viewx + FLOAT_TO_FIXED(cos(ang)), viewy - FLOAT_TO_FIXED(sin(ang)))) - zeroheight;
-
-		// Okay, look, don't ask me why this works, but without this setup there's a disgusting-looking misalignment with the textures. -Red
-		fudge = ((1<<nflatshiftup)+1.0f)/(1<<nflatshiftup);
 
 		m.x /= fudge;
 		m.y /= fudge;
