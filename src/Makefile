@@ -436,7 +436,6 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/m_misc.o   \
 		$(OBJDIR)/m_random.o \
 		$(OBJDIR)/m_queue.o  \
-		$(OBJDIR)/m_vector.o \
 		$(OBJDIR)/info.o     \
 		$(OBJDIR)/p_ceilng.o \
 		$(OBJDIR)/p_enemy.o  \
