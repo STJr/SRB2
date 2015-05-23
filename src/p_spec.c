@@ -33,9 +33,6 @@
 #include "m_misc.h"
 #include "m_cond.h" //unlock triggers
 #include "lua_hook.h" // LUAh_LinedefExecute
-#ifdef ESLOPE
-#include "p_slopes.h"
-#endif
 
 #ifdef HW3SOUND
 #include "hardware/hw3sound.h"
@@ -4522,6 +4519,7 @@ static void P_PlayerOnSpecial3DFloor(player_t *player, sector_t *sector)
 static void P_RunSpecialSectorCheck(player_t *player, sector_t *sector)
 {
 	boolean nofloorneeded = false;
+	fixed_t f_affectpoint, c_affectpoint;
 
 	if (!sector->special) // nothing special, exit
 		return;
@@ -4584,8 +4582,8 @@ static void P_RunSpecialSectorCheck(player_t *player, sector_t *sector)
 		return;
 	}
 
-	fixed_t f_affectpoint = P_GetFloorZ(player->mo, sector, player->mo->x, player->mo->y, NULL);//sector->floorheight;
-	fixed_t c_affectpoint = P_GetCeilingZ(player->mo, sector, player->mo->x, player->mo->y, NULL);//sector->ceilingheight;
+	f_affectpoint = P_GetFloorZ(player->mo, sector, player->mo->x, player->mo->y, NULL);
+	c_affectpoint = P_GetCeilingZ(player->mo, sector, player->mo->x, player->mo->y, NULL);
 
 	// Only go further if on the ground
 	if ((sector->flags & SF_FLIPSPECIAL_FLOOR) && !(sector->flags & SF_FLIPSPECIAL_CEILING) && player->mo->z != f_affectpoint)
@@ -7386,12 +7384,8 @@ void T_Pusher(pusher_t *p)
 			|| GETSECSPECIAL(referrer->special, 3) == 3)
 			foundfloor = true;
 	}
-	else if (
-#ifdef ESLOPE
-			(!sec->f_slope) &&
-#endif
-			(!(GETSECSPECIAL(sec->special, 3) == 2
-			|| GETSECSPECIAL(sec->special, 3) == 3)))
+	else if (!(GETSECSPECIAL(sec->special, 3) == 2
+			|| GETSECSPECIAL(sec->special, 3) == 3))
 		return;
 
 	if (p->roverpusher && foundfloor == false) // Not even a 3d floor has the PUSH_MASK.

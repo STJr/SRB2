@@ -21,9 +21,6 @@
 #include "p_maputl.h"
 #include "p_polyobj.h"
 #include "z_zone.h"
-#ifdef SPRINGCLEAN// ESLOPE
-#include "p_slopes.h"
-#endif
 
 //
 // P_AproxDistance
@@ -862,6 +859,7 @@ void P_SetThingPosition(mobj_t *thing)
 {                                                      // link into subsector
 	subsector_t *ss;
 	sector_t *oldsec = NULL;
+	fixed_t tfloorz, tceilz;
 
 	I_Assert(thing != NULL);
 	I_Assert(!P_MobjWasRemoved(thing));
@@ -870,11 +868,6 @@ void P_SetThingPosition(mobj_t *thing)
 		oldsec = thing->subsector->sector;
 
 	ss = thing->subsector = R_PointInSubsector(thing->x, thing->y);
-
-	fixed_t tfloorz, tceilz;
-
-	tfloorz = P_GetFloorZ(thing, ss->sector, thing->x, thing->y, NULL);
-	tceilz = P_GetCeilingZ(thing, ss->sector, thing->x, thing->y, NULL);
 
 	if (!(thing->flags & MF_NOSECTOR))
 	{
@@ -936,6 +929,9 @@ void P_SetThingPosition(mobj_t *thing)
 	// sector's floor is the same height.
 	if (thing->player && oldsec != NULL && thing->subsector && oldsec != thing->subsector->sector)
 	{
+		tfloorz = P_GetFloorZ(thing, ss->sector, thing->x, thing->y, NULL);
+		tceilz = P_GetCeilingZ(thing, ss->sector, thing->x, thing->y, NULL);
+
 		if (thing->eflags & MFE_VERTICALFLIP)
 		{
 			if (thing->z + thing->height >= tceilz)

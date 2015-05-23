@@ -96,10 +96,11 @@ FUNCMATH angle_t FixedAngle(fixed_t fa);
 // and with a factor, with +factor for (fa/factor) and -factor for (fa*factor)
 FUNCMATH angle_t FixedAngleC(fixed_t fa, fixed_t factor);
 
-/// The FixedAcos function
-FUNCMATH angle_t FixedAcos(fixed_t x);
 
 #ifdef NEED_FIXED_VECTOR
+
+/// The FixedAcos function
+FUNCMATH angle_t FixedAcos(fixed_t x);
 
 /// Fixed Point Vector functions
 angle_t FV2_AngleBetweenVectors(const vector2_t *Vector1, const vector2_t *Vector2);

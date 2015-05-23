@@ -2181,6 +2181,7 @@ void P_XYMovement(mobj_t *mo)
 	if (!P_TryMove(mo, mo->x + xmove, mo->y + ymove, true) && !(mo->eflags & MFE_SPRUNG))
 	{
 		// blocked move
+
 		if (player) {
 			moved = false;
 			if (player->bot)

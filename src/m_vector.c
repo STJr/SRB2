@@ -330,7 +330,7 @@ angle_t FV_AngleBetweenVectors(const v3fixed_t *Vector1, const v3fixed_t *Vector
 	fixed_t vectorsMagnitude = FixedMul(FV_Magnitude(Vector1), FV_Magnitude(Vector2));
 
 	// Return the arc cosine of the (dotProduct / vectorsMagnitude) which is the angle in RADIANS.
-	return FixedAcos(FixedDiv(dotProduct, vectorsMagnitude));
+	return 0;//ALFALFA FixedAcos(FixedDiv(dotProduct, vectorsMagnitude));
 }
 
 float FV_AngleBetweenVectorsf(const v3float_t *Vector1, const v3float_t *Vector2)

@@ -28,11 +28,6 @@
 // Needs precompiled tables/data structures.
 #include "info.h"
 
-// For slope code, we need v3float_t
-#ifdef ESLOPE
-//#include "r_defs.h"
-#endif
-
 //
 // NOTES: mobj_t
 //

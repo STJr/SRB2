@@ -28,10 +28,6 @@
 #include "hardware/hw3sound.h"
 #endif
 
-#ifdef SPRINGCLEAN// ESLOPE
-#include "p_slopes.h"
-#endif
-
 #ifdef HAVE_BLUA
 boolean LUA_CallAction(const char *action, mobj_t *actor);
 #endif

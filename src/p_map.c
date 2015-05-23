@@ -1756,30 +1756,8 @@ boolean P_TryCameraMove(fixed_t x, fixed_t y, camera_t *thiscam)
 	}
 	else
 	{
-#ifdef ESLOPE // SRB2CBTODO: Checking the things momx/y help with collision issues, but makes going done slopes not as smooth
-		if (thiscam->subsector->sector && thiscam->subsector->sector->f_slope)
-		{
-			// SRB2CBTODO: Support a mobj's gravity for this too
-			if (P_GetZAt(thiscam->subsector->sector->f_slope, thiscam->x+thiscam->momx, thiscam->y+thiscam->momy) > P_GetZAt(thiscam->subsector->sector->f_slope, thiscam->x, thiscam->y))
-				thiscam->floorz = P_GetZAt(thiscam->subsector->sector->f_slope, thiscam->x+thiscam->momx, thiscam->y+thiscam->momy);
-			else
-				thiscam->floorz = P_GetZAt(thiscam->subsector->sector->f_slope, thiscam->x, thiscam->y);
-		}
-		else
-#endif
-			tmfloorz = thiscam->subsector->sector->floorheight;
-#ifdef ESLOPE
-		if (thiscam->subsector->sector && thiscam->subsector->sector->c_slope)
-		{
-			// SRB2CBTODO: Support a mobj's gravity for this too
-			if (P_GetZAt(thiscam->subsector->sector->c_slope, thiscam->x+thiscam->momx, thiscam->y+thiscam->momy) < P_GetZAt(thiscam->subsector->sector->c_slope, thiscam->x, thiscam->y))
-				thiscam->ceilingz = P_GetZAt(thiscam->subsector->sector->c_slope, thiscam->x, thiscam->y);
-			else
-				thiscam->ceilingz = P_GetZAt(thiscam->subsector->sector->c_slope, thiscam->x+thiscam->momx, thiscam->y+thiscam->momy);
-		}
-		else
-#endif
-			tmceilingz = thiscam->subsector->sector->ceilingheight;
+		tmfloorz = P_CameraGetFloorZ(thiscam, thiscam->subsector->sector, x, y, NULL);
+		tmceilingz = P_CameraGetCeilingZ(thiscam, thiscam->subsector->sector, x, y, NULL);
 	}
 
 	// the move is ok,
@@ -2074,7 +2052,7 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 		if (thing->momz <= 0)
 			thing->standingslope = tmfloorslope;
 	}
-	else if (thing->z+thing->height >= tmceilingz /*&& thing->momz >= 0*/ && (thing->eflags & MFE_VERTICALFLIP)) {
+	else if (thing->z+thing->height >= tmceilingz && (thing->eflags & MFE_VERTICALFLIP)) {
 		if (!startingonground && tmceilingslope)
 			P_HandleSlopeLanding(thing, tmceilingslope);
 
@@ -2120,15 +2098,7 @@ boolean P_SceneryTryMove(mobj_t *thing, fixed_t x, fixed_t y)
 
 		if (!(thing->flags & MF_NOCLIP))
 		{
-			fixed_t maxstep = MAXSTEPMOVE;
-
-#ifdef ESLOPE // TODO: Make this collosion better
-		// Maxstepmove = 0 means the object bounces like a nut while going down a slope
-		if (thing->subsector->sector->f_slope)
-		{
-			maxstep *= thing->subsector->sector->f_slope->zangle;
-		}
-#endif
+			const fixed_t maxstep = MAXSTEPMOVE;
 
 			if (tmceilingz - tmfloorz < thing->height)
 				return false; // doesn't fit
@@ -2450,6 +2420,7 @@ static boolean P_IsClimbingValid(player_t *player, angle_t angle)
 	if (glidesector->sector != player->mo->subsector->sector)
 	{
 		boolean floorclimb = false;
+		fixed_t topheight, bottomheight;
 
 		if (glidesector->sector->ffloors)
 		{
@@ -2459,8 +2430,8 @@ static boolean P_IsClimbingValid(player_t *player, angle_t angle)
 				if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_BLOCKPLAYER))
 					continue;
 
-				fixed_t topheight = *rover->topheight;
-				fixed_t bottomheight = *rover->bottomheight;
+				topheight = *rover->topheight;
+				bottomheight = *rover->bottomheight;
 
 #ifdef ESLOPE
 				if (*rover->t_slope)
@@ -2551,7 +2522,6 @@ static boolean P_IsClimbingValid(player_t *player, angle_t angle)
 static boolean PTR_SlideTraverse(intercept_t *in)
 {
 	line_t *li;
-	fixed_t maxstep;
 
 	I_Assert(in->isaline);
 
@@ -2584,9 +2554,7 @@ static boolean PTR_SlideTraverse(intercept_t *in)
 	if (opentop - slidemo->z < slidemo->height)
 		goto isblocking; // mobj is too high
 
-	maxstep = FixedMul(MAXSTEPMOVE, slidemo->scale);
-
-	if (openbottom - slidemo->z > maxstep)
+	if (openbottom - slidemo->z > FixedMul(MAXSTEPMOVE, slidemo->scale))
 		goto isblocking; // too big a step up
 
 	// this line doesn't block movement
@@ -2607,6 +2575,7 @@ isblocking:
 		line_t *checkline = li;
 		sector_t *checksector;
 		ffloor_t *rover;
+		fixed_t topheight, bottomheight;
 		boolean fofline = false;
 		INT32 side = P_PointOnLineSide(slidemo->x, slidemo->y, li);
 
@@ -2622,8 +2591,8 @@ isblocking:
 				if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_BLOCKPLAYER) || (rover->flags & FF_BUSTUP))
 					continue;
 
-				fixed_t topheight = *rover->topheight;
-				fixed_t bottomheight = *rover->bottomheight;
+				topheight = *rover->topheight;
+				bottomheight = *rover->bottomheight;
 
 #ifdef ESLOPE
 				if (*rover->t_slope)
@@ -3258,6 +3227,7 @@ static boolean PIT_ChangeSector(mobj_t *thing, boolean realcrush)
 		if (thing->subsector->sector->ffloors && (realcrush || thing->flags & MF_PUSHABLE))
 		{
 			ffloor_t *rover;
+			fixed_t topheight, bottomheight;
 			fixed_t delta1, delta2;
 			INT32 thingtop = thing->z + thing->height;
 
@@ -3267,8 +3237,8 @@ static boolean PIT_ChangeSector(mobj_t *thing, boolean realcrush)
 				|| ((rover->flags & FF_BLOCKOTHERS) && !thing->player)) || !(rover->flags & FF_EXISTS))
 					continue;
 
-				fixed_t topheight = *rover->topheight;
-				fixed_t bottomheight = *rover->bottomheight;
+				topheight = *rover->topheight;
+				bottomheight = *rover->bottomheight;
 
 /*#ifdef ESLOPE
 				if (rover->t_slope)

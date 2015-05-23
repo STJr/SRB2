@@ -19,9 +19,6 @@
 #include "z_zone.h"
 #include "g_game.h"
 #include "r_main.h"
-#ifdef SPRINGCLEAN// ESLOPE
-#include "p_slopes.h"
-#endif
 
 // ==========================================================================
 //                              FLOORS
