@@ -79,7 +79,7 @@ void P_RunDynamicSlopes(void) {
 		}
 
 		if (slope->zdelta != FixedDiv(zdelta, slope->extent)) {
-			slope->zdeltaf = FIXED_TO_FLOAT(slope->zdelta = FixedDiv(zdelta, slope->extent));
+			slope->zdelta = FixedDiv(zdelta, slope->extent);
 			slope->zangle = R_PointToAngle2(0, 0, slope->extent, -zdelta);
 			P_CalculateSlopeNormal(slope);
 		}
@@ -91,20 +91,20 @@ void P_RunDynamicSlopes(void) {
 //
 // Alocates and fill the contents of a slope structure.
 //
-static pslope_t *P_MakeSlope(const v3fixed_t *o, const v2fixed_t *d,
+static pslope_t *P_MakeSlope(const vector3_t *o, const vector2_t *d,
                              const fixed_t zdelta, boolean dynamic)
 {
 	pslope_t *ret = Z_Malloc(sizeof(pslope_t), PU_LEVEL, NULL);
 	memset(ret, 0, sizeof(*ret));
 
-	ret->of.x = FIXED_TO_FLOAT(ret->o.x = o->x);
-	ret->of.y = FIXED_TO_FLOAT(ret->o.y = o->y);
-	ret->of.z = FIXED_TO_FLOAT(ret->o.z = o->z);
+	ret->o.x = o->x;
+	ret->o.y = o->y;
+	ret->o.z = o->z;
 
-	ret->df.x = FIXED_TO_FLOAT(ret->d.x = d->x);
-	ret->df.y = FIXED_TO_FLOAT(ret->d.y = d->y);
+	ret->d.x = d->x;
+	ret->d.y = d->y;
 
-	ret->zdeltaf = FIXED_TO_FLOAT(ret->zdelta = zdelta);
+	ret->zdelta = zdelta;
 
 	if (dynamic) { // Add to the dynamic slopes list
 		ret->next = dynslopes;
@@ -170,8 +170,8 @@ void P_SpawnSlope_Line(int linenum)
 	line_t *line = lines + linenum;
 	INT16 special = line->special;
 	pslope_t *fslope = NULL, *cslope = NULL;
-	v3fixed_t origin, point;
-	v2fixed_t direction;
+	vector3_t origin, point;
+	vector2_t direction;
 	fixed_t nx, ny, dz, extent;
 
 	boolean frontfloor = (special == 386 || special == 388 || special == 393);
@@ -772,7 +772,7 @@ fixed_t P_GetZAt(pslope_t *slope, fixed_t x, fixed_t y)
 
    return slope->o.z + FixedMul(dist, slope->zdelta);
 }
-
+#ifdef SPRINGCLEAN
 //
 // P_GetZAtf
 //
@@ -786,30 +786,20 @@ float P_GetZAtf(pslope_t *slope, float x, float y)
    float dist = (x - slope->of.x) * slope->df.x + (y - slope->of.y) * slope->df.y;
    return slope->of.z + (dist * slope->zdeltaf);
 }
-
-// Unused? -Red
-// P_DistFromPlanef
-//
-float P_DistFromPlanef(const v3float_t *point, const v3float_t *pori,
-                       const v3float_t *pnormal)
-{
-   return (point->x - pori->x) * pnormal->x +
-          (point->y - pori->y) * pnormal->y +
-          (point->z - pori->z) * pnormal->z;
-}
+#endif
 
 //
 // P_QuantizeMomentumToSlope
 //
 // When given a vector, rotates it and aligns it to a slope
-void P_QuantizeMomentumToSlope(v3fixed_t *momentum, pslope_t *slope)
+void P_QuantizeMomentumToSlope(vector3_t *momentum, pslope_t *slope)
 {
-	v3fixed_t axis;
+	vector3_t axis;
 	axis.x = -slope->d.y;
 	axis.y = slope->d.x;
 	axis.z = 0;
 
-	M_VecRotate(momentum, &axis, slope->zangle);
+	FV3_Rotate(momentum, &axis, slope->zangle >> ANGLETOFINESHIFT);
 }
 
 //
@@ -821,7 +811,7 @@ void P_SlopeLaunch(mobj_t *mo)
 	// Double the pre-rotation Z, then halve the post-rotation Z. This reduces the
 	// vertical launch given from slopes while increasing the horizontal launch
 	// given. Good for SRB2's gravity and horizontal speeds.
-	v3fixed_t slopemom;
+	vector3_t slopemom;
 	slopemom.x = mo->momx;
 	slopemom.y = mo->momy;
 	slopemom.z = mo->momz*2;
@@ -838,7 +828,7 @@ void P_SlopeLaunch(mobj_t *mo)
 // Function to help handle landing on slopes
 void P_HandleSlopeLanding(mobj_t *thing, pslope_t *slope)
 {
-	v3fixed_t mom;
+	vector3_t mom;
 	mom.x = thing->momx;
 	mom.y = thing->momy;
 	mom.z = thing->momz*2;

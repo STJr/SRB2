@@ -97,7 +97,7 @@ FUNCMATH angle_t FixedAngle(fixed_t fa);
 FUNCMATH angle_t FixedAngleC(fixed_t fa, fixed_t factor);
 
 
-#ifdef NEED_FIXED_VECTOR
+#if 1 //#ifdef NEED_FIXED_VECTOR
 
 /// The FixedAcos function
 FUNCMATH angle_t FixedAcos(fixed_t x);

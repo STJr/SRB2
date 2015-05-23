@@ -941,7 +941,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 	if (pl->slope) {
 		// Potentially override other stuff for now cus we're mean. :< But draw a slope plane!
 		// I copied ZDoom's code and adapted it to SRB2... -Red
-		v3float_t p, m, n;
+		FVector p, m, n;
 		angle_t ang;
 		//double zeroheight;
 
@@ -972,9 +972,10 @@ void R_DrawSinglePlane(visplane_t *pl)
 		m.y = FIXED_TO_FLOAT(P_GetZAt(pl->slope, viewx + FINESINE(ang), viewy + FINECOSINE(ang))) - zeroheight;
 		n.y = FIXED_TO_FLOAT(P_GetZAt(pl->slope, viewx + FINECOSINE(ang), viewy - FINESINE(ang))) - zeroheight;
 
-		M_CrossProduct3f(&ds_su, &p, &m);
-		M_CrossProduct3f(&ds_sv, &p, &n);
-		M_CrossProduct3f(&ds_sz, &m, &n);
+		///TODO: slope FPU conversion stuff
+		//M_CrossProduct3f(&ds_su, &p, &m);
+		//M_CrossProduct3f(&ds_sv, &p, &n);
+		//M_CrossProduct3f(&ds_sz, &m, &n);
 
 		ds_su.z *= focallengthf;
 		ds_sv.z *= focallengthf;

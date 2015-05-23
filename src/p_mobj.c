@@ -2116,7 +2116,7 @@ void P_XYMovement(mobj_t *mo)
 	boolean moved;
 #ifdef ESLOPE
 	pslope_t *oldslope = NULL;
-	v3fixed_t slopemom;
+	vector3_t slopemom;
 	fixed_t predictedz = 0;
 #endif
 
@@ -2829,7 +2829,7 @@ static boolean P_ZMovement(mobj_t *mo)
 		|| (mo->z + mo->height >= mo->ceilingz && mo->eflags & MFE_VERTICALFLIP))
 	&& !(mo->flags & MF_NOCLIPHEIGHT))
 	{
-		v3fixed_t mom;
+		vector3_t mom;
 		mom.x = mo->momx;
 		mom.y = mo->momy;
 		mom.z = mo->momz;

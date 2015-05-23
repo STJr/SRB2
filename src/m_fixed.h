@@ -358,7 +358,7 @@ FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FixedRound(fixed_t x)
 }
 
 
-#ifdef NEED_FIXED_VECTOR
+#if 1//#ifdef NEED_FIXED_VECTOR
 
 typedef struct
 {

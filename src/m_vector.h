@@ -28,7 +28,7 @@
 #ifndef M_VECTOR_H__
 #define M_VECTOR_H__
 
-#ifdef ESLOPE
+#if 0 //#ifdef ESLOPE
 
 #include "m_fixed.h"
 #include "tables.h"

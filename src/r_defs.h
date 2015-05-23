@@ -236,30 +236,21 @@ typedef struct secplane_t
 // Kalaron Slopes
 #ifdef ESLOPE
 
-#include "m_vector.h"
-
 typedef struct pslope_s
 {
 	// --- Information used in clipping/projection ---
 	// Origin vector for the plane
-	// NOTE: All similarly named entries in this struct do the same thing,
-	// differing with just 'f' in the name for float:
-	// o = of, d = df, zdelta = zdeltaf; the only difference is that one's fixed,
-	// and the one with the 'f' is floating point, for easier reference elsewhere in the code
-	v3fixed_t o;
-	v3float_t of;
+	vector3_t o;
 
 	// 2-Dimentional vector (x, y) normalized. Used to determine distance from
 	// the origin in 2d mapspace. (Basically a thrust of FRACUNIT in xydirection angle)
-	v2fixed_t d;
-	v2float_t df;
+	vector2_t d;
 
 	// The rate at which z changes based on distance from the origin plane.
 	fixed_t zdelta;
-	float   zdeltaf;
 
 	// The normal of the slope; will always point upward, and thus be inverted on ceilings. I think it's only needed for physics? -Red
-	v3fixed_t normal;
+	vector3_t normal;
 
 	// For comparing when a slope should be rendered
 	fixed_t lowz;

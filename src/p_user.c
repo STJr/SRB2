@@ -1790,7 +1790,7 @@ static void P_CheckBouncySectors(player_t *player)
 	fixed_t oldy;
 	fixed_t oldz;
 #ifdef ESLOPE
-	v3fixed_t momentum;
+	vector3_t momentum;
 #endif
 
 	oldx = player->mo->x;
@@ -4519,7 +4519,7 @@ static void P_3dMovement(player_t *player)
 	boolean analogmove = false;
 	fixed_t oldMagnitude, newMagnitude;
 #ifdef ESLOPE
-	v3fixed_t totalthrust;
+	vector3_t totalthrust;
 
 	totalthrust.x = totalthrust.y = 0; // I forget if this is needed
 	totalthrust.z = FRACUNIT*P_MobjFlip(player->mo)/3; // A bit of extra push-back on slopes

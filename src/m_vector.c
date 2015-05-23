@@ -24,7 +24,7 @@
 //      SoM created 05/18/09
 //
 //-----------------------------------------------------------------------------
-
+#if 0 // GET THIS SHEIT OUTTA HEEEEEEEEEEEEEEEEEEEEEEERE
 #include "doomdef.h"
 #include "m_vector.h"
 #include "r_main.h"
@@ -1156,3 +1156,4 @@ void FV_Normalf(const v3float_t *a_triangle, v3float_t *a_normal)
 // EOF
 #endif // #ifdef ESLOPE
 
+#endif
