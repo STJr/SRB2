@@ -61,11 +61,12 @@ extern UINT8 *ds_source; // start of a 64*64 tile image
 extern UINT8 *ds_transmap;
 
 #ifdef ESLOPE
-///TODO: either convert ds_su, etc to FPU or declare a floating-point vector type somewhere
-#include "hardware/hw_defs.h"
+typedef struct {
+	float x, y, z;
+} floatv3_t;
 
 pslope_t *ds_slope; // Current slope being used
-FVector ds_su, ds_sv, ds_sz; // Vectors for... stuff?
+floatv3_t ds_su, ds_sv, ds_sz; // Vectors for... stuff?
 float focallengthf, zeroheight;
 #endif
 

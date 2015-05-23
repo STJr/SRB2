@@ -941,41 +941,60 @@ void R_DrawSinglePlane(visplane_t *pl)
 	if (pl->slope) {
 		// Potentially override other stuff for now cus we're mean. :< But draw a slope plane!
 		// I copied ZDoom's code and adapted it to SRB2... -Red
-		FVector p, m, n;
-		angle_t ang;
+		floatv3_t p, m, n;
+		float ang;
 		//double zeroheight;
+		float fudge;
 
-		double vx = FIXED_TO_FLOAT(viewx);
-		double vy = FIXED_TO_FLOAT(viewy);
-		double vz = FIXED_TO_FLOAT(viewz);
+		float vx = FIXED_TO_FLOAT(viewx);
+		float vy = FIXED_TO_FLOAT(viewy);
+		float vz = FIXED_TO_FLOAT(viewz);
 
 		zeroheight = FIXED_TO_FLOAT(P_GetZAt(pl->slope, viewx, viewy));
+
+#define ANG2RAD(angle) ((float)((angle)*M_PI)/ANGLE_180)
 
 		// p is the texture origin in view space
 		// Don't add in the offsets at this stage, because doing so can result in
 		// errors if the flat is rotated.
-		ang = (ANGLE_270 - viewangle)>>ANGLETOFINESHIFT;
-		p.x = vx * FIXED_TO_FLOAT(FINECOSINE(ang)) - vy * FIXED_TO_FLOAT(FINESINE(ang));
-		p.z = vx * FIXED_TO_FLOAT(FINESINE(ang)) + vy * FIXED_TO_FLOAT(FINECOSINE(ang));
+		ang = ANG2RAD(ANGLE_270 - viewangle);
+		p.x = vx * cos(ang) - vy * sin(ang);
+		p.z = vx * sin(ang) + vy * cos(ang);
 		p.y = FIXED_TO_FLOAT(P_GetZAt(pl->slope, 0, 0)) - vz;
 
 		// m is the v direction vector in view space
-		ang = (ANGLE_180 - viewangle - pl->plangle) >> ANGLETOFINESHIFT;
-		m.x = FIXED_TO_FLOAT(FINECOSINE(ang));
-		m.z = FIXED_TO_FLOAT(FINESINE(ang));
+		ang = ANG2RAD(ANGLE_180 - viewangle - pl->plangle);
+		m.x = cos(ang);
+		m.z = sin(ang);
 
 		// n is the u direction vector in view space
-		n.x = FIXED_TO_FLOAT(FINESINE(ang));
-		n.z = -FIXED_TO_FLOAT(FINECOSINE(ang));
+		n.x = sin(ang);
+		n.z = -cos(ang);
 
-		ang = pl->plangle>>ANGLETOFINESHIFT;
-		m.y = FIXED_TO_FLOAT(P_GetZAt(pl->slope, viewx + FINESINE(ang), viewy + FINECOSINE(ang))) - zeroheight;
-		n.y = FIXED_TO_FLOAT(P_GetZAt(pl->slope, viewx + FINECOSINE(ang), viewy - FINESINE(ang))) - zeroheight;
+		ang = ANG2RAD(pl->plangle);
+		m.y = FIXED_TO_FLOAT(P_GetZAt(pl->slope, viewx + FLOAT_TO_FIXED(sin(ang)), viewy + FLOAT_TO_FIXED(cos(ang)))) - zeroheight;
+		n.y = FIXED_TO_FLOAT(P_GetZAt(pl->slope, viewx + FLOAT_TO_FIXED(cos(ang)), viewy - FLOAT_TO_FIXED(sin(ang)))) - zeroheight;
 
-		///TODO: slope FPU conversion stuff
-		//M_CrossProduct3f(&ds_su, &p, &m);
-		//M_CrossProduct3f(&ds_sv, &p, &n);
-		//M_CrossProduct3f(&ds_sz, &m, &n);
+		// Okay, look, don't ask me why this works, but without this setup there's a disgusting-looking misalignment with the textures. -Red
+		fudge = ((1<<nflatshiftup)+1.0f)/(1<<nflatshiftup);
+
+		m.x /= fudge;
+		m.y /= fudge;
+		m.z /= fudge;
+
+		n.x *= fudge;
+		n.y *= fudge;
+		n.z *= fudge;
+
+		// Eh. I tried making this stuff fixed-point and it exploded on me. Here's a macro for the only floating-point vector function I recall using.
+#define CROSS(d, v1, v2) \
+   d.x = (v1.y * v2.z) - (v1.z * v2.y);\
+   d.y = (v1.z * v2.x) - (v1.x * v2.z);\
+   d.z = (v1.x * v2.y) - (v1.y * v2.x)
+		CROSS(ds_su, p, m);
+		CROSS(ds_sv, p, n);
+		CROSS(ds_sz, m, n);
+#undef CROSS
 
 		ds_su.z *= focallengthf;
 		ds_sv.z *= focallengthf;
