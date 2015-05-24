@@ -725,7 +725,108 @@ boolean P_InsideANonSolidFFloor(mobj_t *mobj, ffloor_t *rover)
 // P_GetFloorZ (and its ceiling counterpart)
 // Gets the floor height (or ceiling height) of the mobj's contact point in sector, assuming object's center if moved to [x, y]
 // If line is supplied, it's a divider line on the sector. Set it to NULL if you're not checking for collision with a line
-fixed_t P_GetFloorZ(mobj_t *mobj, sector_t *sector, fixed_t x, fixed_t y, line_t *line) // SRB2CBTODO: This needs to be over all the code
+// Supply boundsec ONLY when checking for specials! It should be the "in-level" sector, and sector the control sector (if separate).
+// If set, then this function will iterate through boundsec's linedefs to find the highest contact point on the slope. Non-special-checking
+// usage will handle that later.
+static fixed_t HighestOnLine(fixed_t radius, fixed_t x, fixed_t y, line_t *line, pslope_t *slope, boolean actuallylowest)
+{
+	// Alright, so we're sitting on a line that contains our slope sector, and need to figure out the highest point we're touching...
+	// The solution is simple! Get the line's vertices, and pull each one in along its line until it touches the object's bounding box
+	// (assuming it isn't already inside), then test each point's slope Z and return the higher of the two.
+	vertex_t v1, v2;
+	v1.x = line->v1->x;
+	v1.y = line->v1->y;
+	v2.x = line->v2->x;
+	v2.y = line->v2->y;
+
+	/*CONS_Printf("BEFORE: v1 = %f %f %f\n",
+				FIXED_TO_FLOAT(v1.x),
+				FIXED_TO_FLOAT(v1.y),
+				FIXED_TO_FLOAT(P_GetZAt(slope, v1.x, v1.y))
+				);
+	CONS_Printf("        v2 = %f %f %f\n",
+				FIXED_TO_FLOAT(v2.x),
+				FIXED_TO_FLOAT(v2.y),
+				FIXED_TO_FLOAT(P_GetZAt(slope, v2.x, v2.y))
+				);*/
+
+	if (abs(v1.x-x) > radius) {
+		// v1's x is out of range, so rein it in
+		fixed_t diff = abs(v1.x-x) - radius;
+
+		if (v1.x < x) { // Moving right
+			v1.x += diff;
+			v1.y += FixedMul(diff, FixedDiv(line->dy, line->dx));
+		} else { // Moving left
+			v1.x -= diff;
+			v1.y -= FixedMul(diff, FixedDiv(line->dy, line->dx));
+		}
+	}
+
+	if (abs(v1.y-y) > radius) {
+		// v1's y is out of range, so rein it in
+		fixed_t diff = abs(v1.y-y) - radius;
+
+		if (v1.y < y) { // Moving up
+			v1.y += diff;
+			v1.x += FixedMul(diff, FixedDiv(line->dx, line->dy));
+		} else { // Moving down
+			v1.y -= diff;
+			v1.x -= FixedMul(diff, FixedDiv(line->dx, line->dy));
+		}
+	}
+
+	if (abs(v2.x-x) > radius) {
+		// v1's x is out of range, so rein it in
+		fixed_t diff = abs(v2.x-x) - radius;
+
+		if (v2.x < x) { // Moving right
+			v2.x += diff;
+			v2.y += FixedMul(diff, FixedDiv(line->dy, line->dx));
+		} else { // Moving left
+			v2.x -= diff;
+			v2.y -= FixedMul(diff, FixedDiv(line->dy, line->dx));
+		}
+	}
+
+	if (abs(v2.y-y) > radius) {
+		// v2's y is out of range, so rein it in
+		fixed_t diff = abs(v2.y-y) - radius;
+
+		if (v2.y < y) { // Moving up
+			v2.y += diff;
+			v2.x += FixedMul(diff, FixedDiv(line->dx, line->dy));
+		} else { // Moving down
+			v2.y -= diff;
+			v2.x -= FixedMul(diff, FixedDiv(line->dx, line->dy));
+		}
+	}
+
+	/*CONS_Printf("AFTER:  v1 = %f %f %f\n",
+				FIXED_TO_FLOAT(v1.x),
+				FIXED_TO_FLOAT(v1.y),
+				FIXED_TO_FLOAT(P_GetZAt(slope, v1.x, v1.y))
+				);
+	CONS_Printf("        v2 = %f %f %f\n",
+				FIXED_TO_FLOAT(v2.x),
+				FIXED_TO_FLOAT(v2.y),
+				FIXED_TO_FLOAT(P_GetZAt(slope, v2.x, v2.y))
+				);*/
+
+	// Return the higher of the two points
+	if (actuallylowest)
+		return min(
+			P_GetZAt(slope, v1.x, v1.y),
+			P_GetZAt(slope, v2.x, v2.y)
+		);
+	else
+		return max(
+			P_GetZAt(slope, v1.x, v1.y),
+			P_GetZAt(slope, v2.x, v2.y)
+		);
+}
+
+fixed_t P_MobjFloorZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, line_t *line, boolean lowest, boolean perfect)
 {
 	I_Assert(mobj != NULL);
 	I_Assert(sector != NULL);
@@ -745,7 +846,7 @@ fixed_t P_GetFloorZ(mobj_t *mobj, sector_t *sector, fixed_t x, fixed_t y, line_t
 		else
 			testy = -mobj->radius;
 
-		if (slope->zdelta > 0) {
+		if ((slope->zdelta > 0) ^ !!(lowest)) {
 			testx = -testx;
 			testy = -testy;
 		}
@@ -754,110 +855,56 @@ fixed_t P_GetFloorZ(mobj_t *mobj, sector_t *sector, fixed_t x, fixed_t y, line_t
 		testy += y;
 
 		// If the highest point is in the sector, then we have it easy! Just get the Z at that point
-		if (R_PointInSubsector(testx, testy)->sector == sector)
+		if (R_PointInSubsector(testx, testy)->sector == (boundsec ?: sector))
 			return P_GetZAt(slope, testx, testy);
+
+		// If boundsec is set, we're looking for specials. In that case, iterate over every line in this sector to find the TRUE highest/lowest point
+		if (perfect) {
+			size_t i;
+			line_t *ld;
+			fixed_t bbox[4];
+			fixed_t finalheight;
+
+			if (lowest)
+				finalheight = INT32_MAX;
+			else
+				finalheight = INT32_MIN;
+
+			bbox[BOXLEFT] = x-mobj->radius;
+			bbox[BOXRIGHT] = x+mobj->radius;
+			bbox[BOXTOP] = y+mobj->radius;
+			bbox[BOXBOTTOM] = y-mobj->radius;
+			for (i = 0; i < boundsec->linecount; i++) {
+				ld = boundsec->lines[i];
+
+				if (bbox[BOXRIGHT] <= ld->bbox[BOXLEFT] || bbox[BOXLEFT] >= ld->bbox[BOXRIGHT]
+				|| bbox[BOXTOP] <= ld->bbox[BOXBOTTOM] || bbox[BOXBOTTOM] >= ld->bbox[BOXTOP])
+					continue;
+
+				if (P_BoxOnLineSide(bbox, ld) != -1)
+					continue;
+
+				if (lowest)
+					finalheight = min(finalheight, HighestOnLine(mobj->radius, x, y, ld, slope, true));
+				else
+					finalheight = max(finalheight, HighestOnLine(mobj->radius, x, y, ld, slope, false));
+			}
+
+			return finalheight;
+		}
 
 		// If we're just testing for base sector location (no collision line), just go for the center's spot...
 		// It'll get fixed when we test for collision anyway, and the final result can't be lower than this
 		if (line == NULL)
 			return P_GetZAt(slope, x, y);
 
-		// Alright, so we're sitting on a line that contains our slope sector, and need to figure out the highest point we're touching...
-		// The solution is simple! Get the line's vertices, and pull each one in along its line until it touches the object's bounding box
-		// (assuming it isn't already inside), then test each point's slope Z and return the higher of the two.
-		{
-			vertex_t v1, v2;
-			v1.x = line->v1->x;
-			v1.y = line->v1->y;
-			v2.x = line->v2->x;
-			v2.y = line->v2->y;
-
-			/*CONS_Printf("BEFORE: v1 = %f %f %f\n",
-						FIXED_TO_FLOAT(v1.x),
-						FIXED_TO_FLOAT(v1.y),
-						FIXED_TO_FLOAT(P_GetZAt(slope, v1.x, v1.y))
-						);
-			CONS_Printf("        v2 = %f %f %f\n",
-						FIXED_TO_FLOAT(v2.x),
-						FIXED_TO_FLOAT(v2.y),
-						FIXED_TO_FLOAT(P_GetZAt(slope, v2.x, v2.y))
-						);*/
-
-			if (abs(v1.x-x) > mobj->radius) {
-				// v1's x is out of range, so rein it in
-				fixed_t diff = abs(v1.x-x) - mobj->radius;
-
-				if (v1.x < x) { // Moving right
-					v1.x += diff;
-					v1.y += FixedMul(diff, FixedDiv(line->dy, line->dx));
-				} else { // Moving left
-					v1.x -= diff;
-					v1.y -= FixedMul(diff, FixedDiv(line->dy, line->dx));
-				}
-			}
-
-			if (abs(v1.y-y) > mobj->radius) {
-				// v1's y is out of range, so rein it in
-				fixed_t diff = abs(v1.y-y) - mobj->radius;
-
-				if (v1.y < y) { // Moving up
-					v1.y += diff;
-					v1.x += FixedMul(diff, FixedDiv(line->dx, line->dy));
-				} else { // Moving down
-					v1.y -= diff;
-					v1.x -= FixedMul(diff, FixedDiv(line->dx, line->dy));
-				}
-			}
-
-			if (abs(v2.x-x) > mobj->radius) {
-				// v1's x is out of range, so rein it in
-				fixed_t diff = abs(v2.x-x) - mobj->radius;
-
-				if (v2.x < x) { // Moving right
-					v2.x += diff;
-					v2.y += FixedMul(diff, FixedDiv(line->dy, line->dx));
-				} else { // Moving left
-					v2.x -= diff;
-					v2.y -= FixedMul(diff, FixedDiv(line->dy, line->dx));
-				}
-			}
-
-			if (abs(v2.y-y) > mobj->radius) {
-				// v2's y is out of range, so rein it in
-				fixed_t diff = abs(v2.y-y) - mobj->radius;
-
-				if (v2.y < y) { // Moving up
-					v2.y += diff;
-					v2.x += FixedMul(diff, FixedDiv(line->dx, line->dy));
-				} else { // Moving down
-					v2.y -= diff;
-					v2.x -= FixedMul(diff, FixedDiv(line->dx, line->dy));
-				}
-			}
-
-			/*CONS_Printf("AFTER:  v1 = %f %f %f\n",
-						FIXED_TO_FLOAT(v1.x),
-						FIXED_TO_FLOAT(v1.y),
-						FIXED_TO_FLOAT(P_GetZAt(slope, v1.x, v1.y))
-						);
-			CONS_Printf("        v2 = %f %f %f\n",
-						FIXED_TO_FLOAT(v2.x),
-						FIXED_TO_FLOAT(v2.y),
-						FIXED_TO_FLOAT(P_GetZAt(slope, v2.x, v2.y))
-						);*/
-
-			// Return the higher of the two points
-			return max(
-				P_GetZAt(slope, v1.x, v1.y),
-				P_GetZAt(slope, v2.x, v2.y)
-			);
-		}
+		return HighestOnLine(mobj->radius, x, y, line, slope, lowest);
 	} else // Well, that makes it easy. Just get the floor height
 #endif
 		return sector->floorheight;
 }
 
-fixed_t P_GetCeilingZ(mobj_t *mobj, sector_t *sector, fixed_t x, fixed_t y, line_t *line) // SRB2CBTODO: This needs to be over all the code
+fixed_t P_MobjCeilingZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, line_t *line, boolean lowest, boolean perfect)
 {
 	I_Assert(mobj != NULL);
 	I_Assert(sector != NULL);
@@ -865,118 +912,6 @@ fixed_t P_GetCeilingZ(mobj_t *mobj, sector_t *sector, fixed_t x, fixed_t y, line
 	if (sector->c_slope) {
 		fixed_t testx, testy;
 		pslope_t *slope = sector->c_slope;
-
-		// Get the corner of the object that should be the lowest on the slope
-		if (slope->d.x < 0)
-			testx = mobj->radius;
-		else
-			testx = -mobj->radius;
-
-		if (slope->d.y < 0)
-			testy = mobj->radius;
-		else
-			testy = -mobj->radius;
-
-		if (slope->zdelta < 0) {
-			testx = -testx;
-			testy = -testy;
-		}
-
-		testx += x;
-		testy += y;
-
-		// If the lowest point is in the sector, then we have it easy! Just get the Z at that point
-		if (R_PointInSubsector(testx, testy)->sector == sector)
-			return P_GetZAt(slope, testx, testy);
-
-		// If we're just testing for base sector location (no collision line), just go for the center's spot...
-		// It'll get fixed when we test for collision anyway, and the final result can't be higher than this
-		if (line == NULL)
-			return P_GetZAt(slope, x, y);
-
-		// Alright, so we're sitting on a line that contains our slope sector, and need to figure out the highest point we're touching...
-		// The solution is simple! Get the line's vertices, and pull each one in along its line until it touches the object's bounding box
-		// (assuming it isn't already inside), then test each point's slope Z and return the lower of the two.
-		{
-			vertex_t v1, v2;
-			v1.x = line->v1->x;
-			v1.y = line->v1->y;
-			v2.x = line->v2->x;
-			v2.y = line->v2->y;
-
-			if (abs(v1.x-x) > mobj->radius) {
-				// v1's x is out of range, so rein it in
-				fixed_t diff = abs(v1.x-x) - mobj->radius;
-
-				if (v1.x < x) { // Moving right
-					v1.x += diff;
-					v1.y += FixedMul(diff, FixedDiv(line->dy, line->dx));
-				} else { // Moving left
-					v1.x -= diff;
-					v1.y -= FixedMul(diff, FixedDiv(line->dy, line->dx));
-				}
-			}
-
-			if (abs(v1.y-y) > mobj->radius) {
-				// v1's y is out of range, so rein it in
-				fixed_t diff = abs(v1.y-y) - mobj->radius;
-
-				if (v1.y < y) { // Moving up
-					v1.y += diff;
-					v1.x += FixedMul(diff, FixedDiv(line->dx, line->dy));
-				} else { // Moving down
-					v1.y -= diff;
-					v1.x -= FixedMul(diff, FixedDiv(line->dx, line->dy));
-				}
-			}
-
-			if (abs(v2.x-x) > mobj->radius) {
-				// v1's x is out of range, so rein it in
-				fixed_t diff = abs(v2.x-x) - mobj->radius;
-
-				if (v2.x < x) { // Moving right
-					v2.x += diff;
-					v2.y += FixedMul(diff, FixedDiv(line->dy, line->dx));
-				} else { // Moving left
-					v2.x -= diff;
-					v2.y -= FixedMul(diff, FixedDiv(line->dy, line->dx));
-				}
-			}
-
-			if (abs(v2.y-y) > mobj->radius) {
-				// v2's y is out of range, so rein it in
-				fixed_t diff = abs(v2.y-y) - mobj->radius;
-
-				if (v2.y < y) { // Moving up
-					v2.y += diff;
-					v2.x += FixedMul(diff, FixedDiv(line->dx, line->dy));
-				} else { // Moving down
-					v2.y -= diff;
-					v2.x -= FixedMul(diff, FixedDiv(line->dx, line->dy));
-				}
-			}
-
-			// Return the lower of the two points
-			return min(
-				P_GetZAt(slope, v1.x, v1.y),
-				P_GetZAt(slope, v2.x, v2.y)
-			);
-		}
-	} else // Well, that makes it easy. Just get the ceiling height
-#endif
-		return sector->ceilingheight;
-}
-
-// Do the same as above, but for FOFs!
-fixed_t P_GetFOFTopZ(mobj_t *mobj, sector_t *sector, ffloor_t *fof, fixed_t x, fixed_t y, line_t *line) // SRB2CBTODO: This needs to be over all the code
-{
-	I_Assert(mobj != NULL);
-	I_Assert(sector != NULL);
-	I_Assert(fof != NULL);
-#ifdef ESLOPE
-	if (*fof->t_slope) {
-		fixed_t testx, testy;
-		pslope_t *slope = *fof->t_slope;
 
 		// Get the corner of the object that should be the highest on the slope
 		if (slope->d.x < 0)
@@ -989,7 +924,7 @@ fixed_t P_GetFOFTopZ(mobj_t *mobj, sector_t *sector, ffloor_t *fof, fixed_t x, f
 		else
 			testy = -mobj->radius;
 
-		if (slope->zdelta > 0) {
+		if ((slope->zdelta > 0) ^ !!(lowest)) {
 			testx = -testx;
 			testy = -testy;
 		}
@@ -998,222 +933,57 @@ fixed_t P_GetFOFTopZ(mobj_t *mobj, sector_t *sector, ffloor_t *fof, fixed_t x, f
 		testy += y;
 
 		// If the highest point is in the sector, then we have it easy! Just get the Z at that point
-		if (R_PointInSubsector(testx, testy)->sector == sector)
+		if (R_PointInSubsector(testx, testy)->sector == (boundsec ?: sector))
 			return P_GetZAt(slope, testx, testy);
+
+		// If boundsec is set, we're looking for specials. In that case, iterate over every line in this sector to find the TRUE highest/lowest point
+		if (perfect) {
+			size_t i;
+			line_t *ld;
+			fixed_t bbox[4];
+			fixed_t finalheight;
+
+			if (lowest)
+				finalheight = INT32_MAX;
+			else
+				finalheight = INT32_MIN;
+
+			bbox[BOXLEFT] = x-mobj->radius;
+			bbox[BOXRIGHT] = x+mobj->radius;
+			bbox[BOXTOP] = y+mobj->radius;
+			bbox[BOXBOTTOM] = y-mobj->radius;
+			for (i = 0; i < boundsec->linecount; i++) {
+				ld = boundsec->lines[i];
+
+				if (bbox[BOXRIGHT] <= ld->bbox[BOXLEFT] || bbox[BOXLEFT] >= ld->bbox[BOXRIGHT]
+				|| bbox[BOXTOP] <= ld->bbox[BOXBOTTOM] || bbox[BOXBOTTOM] >= ld->bbox[BOXTOP])
+					continue;
+
+				if (P_BoxOnLineSide(bbox, ld) != -1)
+					continue;
+
+				if (lowest)
+					finalheight = min(finalheight, HighestOnLine(mobj->radius, x, y, ld, slope, true));
+				else
+					finalheight = max(finalheight, HighestOnLine(mobj->radius, x, y, ld, slope, false));
+			}
+
+			return finalheight;
+		}
 
 		// If we're just testing for base sector location (no collision line), just go for the center's spot...
 		// It'll get fixed when we test for collision anyway, and the final result can't be lower than this
 		if (line == NULL)
 			return P_GetZAt(slope, x, y);
 
-		// Alright, so we're sitting on a line that contains our slope sector, and need to figure out the highest point we're touching...
-		// The solution is simple! Get the line's vertices, and pull each one in along its line until it touches the object's bounding box
-		// (assuming it isn't already inside), then test each point's slope Z and return the higher of the two.
-		{
-			vertex_t v1, v2;
-			v1.x = line->v1->x;
-			v1.y = line->v1->y;
-			v2.x = line->v2->x;
-			v2.y = line->v2->y;
-
-			/*CONS_Printf("BEFORE: v1 = %f %f %f\n",
-						FIXED_TO_FLOAT(v1.x),
-						FIXED_TO_FLOAT(v1.y),
-						FIXED_TO_FLOAT(P_GetZAt(slope, v1.x, v1.y))
-						);
-			CONS_Printf("        v2 = %f %f %f\n",
-						FIXED_TO_FLOAT(v2.x),
-						FIXED_TO_FLOAT(v2.y),
-						FIXED_TO_FLOAT(P_GetZAt(slope, v2.x, v2.y))
-						);*/
-
-			if (abs(v1.x-x) > mobj->radius) {
-				// v1's x is out of range, so rein it in
-				fixed_t diff = abs(v1.x-x) - mobj->radius;
-
-				if (v1.x < x) { // Moving right
-					v1.x += diff;
-					v1.y += FixedMul(diff, FixedDiv(line->dy, line->dx));
-				} else { // Moving left
-					v1.x -= diff;
-					v1.y -= FixedMul(diff, FixedDiv(line->dy, line->dx));
-				}
-			}
-
-			if (abs(v1.y-y) > mobj->radius) {
-				// v1's y is out of range, so rein it in
-				fixed_t diff = abs(v1.y-y) - mobj->radius;
-
-				if (v1.y < y) { // Moving up
-					v1.y += diff;
-					v1.x += FixedMul(diff, FixedDiv(line->dx, line->dy));
-				} else { // Moving down
-					v1.y -= diff;
-					v1.x -= FixedMul(diff, FixedDiv(line->dx, line->dy));
-				}
-			}
-
-			if (abs(v2.x-x) > mobj->radius) {
-				// v1's x is out of range, so rein it in
-				fixed_t diff = abs(v2.x-x) - mobj->radius;
-
-				if (v2.x < x) { // Moving right
-					v2.x += diff;
-					v2.y += FixedMul(diff, FixedDiv(line->dy, line->dx));
-				} else { // Moving left
-					v2.x -= diff;
-					v2.y -= FixedMul(diff, FixedDiv(line->dy, line->dx));
-				}
-			}
-
-			if (abs(v2.y-y) > mobj->radius) {
-				// v2's y is out of range, so rein it in
-				fixed_t diff = abs(v2.y-y) - mobj->radius;
-
-				if (v2.y < y) { // Moving up
-					v2.y += diff;
-					v2.x += FixedMul(diff, FixedDiv(line->dx, line->dy));
-				} else { // Moving down
-					v2.y -= diff;
-					v2.x -= FixedMul(diff, FixedDiv(line->dx, line->dy));
-				}
-			}
-
-			/*CONS_Printf("AFTER:  v1 = %f %f %f\n",
-						FIXED_TO_FLOAT(v1.x),
-						FIXED_TO_FLOAT(v1.y),
-						FIXED_TO_FLOAT(P_GetZAt(slope, v1.x, v1.y))
-						);
-			CONS_Printf("        v2 = %f %f %f\n",
-						FIXED_TO_FLOAT(v2.x),
-						FIXED_TO_FLOAT(v2.y),
-						FIXED_TO_FLOAT(P_GetZAt(slope, v2.x, v2.y))
-						);*/
-
-			// Return the higher of the two points
-			return max(
-				P_GetZAt(slope, v1.x, v1.y),
-				P_GetZAt(slope, v2.x, v2.y)
-			);
-		}
-	} else // Well, that makes it easy. Just get the top height
+		return HighestOnLine(mobj->radius, x, y, line, slope, lowest);
+	} else // Well, that makes it easy. Just get the ceiling height
 #endif
-		return *fof->topheight;
-}
-
-fixed_t P_GetFOFBottomZ(mobj_t *mobj, sector_t *sector, ffloor_t *fof, fixed_t x, fixed_t y, line_t *line) // SRB2CBTODO: This needs to be over all the code
-{
-	I_Assert(mobj != NULL);
-	I_Assert(sector != NULL);
-	I_Assert(fof != NULL);
-#ifdef ESLOPE
-	if (*fof->b_slope) {
-		fixed_t testx, testy;
-		pslope_t *slope = *fof->b_slope;
-
-		// Get the corner of the object that should be the lowest on the slope
-		if (slope->d.x < 0)
-			testx = mobj->radius;
-		else
-			testx = -mobj->radius;
-
-		if (slope->d.y < 0)
-			testy = mobj->radius;
-		else
-			testy = -mobj->radius;
-
-		if (slope->zdelta < 0) {
-			testx = -testx;
-			testy = -testy;
-		}
-
-		testx += x;
-		testy += y;
-
-		// If the lowest point is in the sector, then we have it easy! Just get the Z at that point
-		if (R_PointInSubsector(testx, testy)->sector == sector)
-			return P_GetZAt(slope, testx, testy);
-
-		// If we're just testing for base sector location (no collision line), just go for the center's spot...
-		// It'll get fixed when we test for collision anyway, and the final result can't be higher than this
-		if (line == NULL)
-			return P_GetZAt(slope, x, y);
-
-		// Alright, so we're sitting on a line that contains our slope sector, and need to figure out the highest point we're touching...
-		// The solution is simple! Get the line's vertices, and pull each one in along its line until it touches the object's bounding box
-		// (assuming it isn't already inside), then test each point's slope Z and return the lower of the two.
-		{
-			vertex_t v1, v2;
-			v1.x = line->v1->x;
-			v1.y = line->v1->y;
-			v2.x = line->v2->x;
-			v2.y = line->v2->y;
-
-			if (abs(v1.x-x) > mobj->radius) {
-				// v1's x is out of range, so rein it in
-				fixed_t diff = abs(v1.x-x) - mobj->radius;
-
-				if (v1.x < x) { // Moving right
-					v1.x += diff;
-					v1.y += FixedMul(diff, FixedDiv(line->dy, line->dx));
-				} else { // Moving left
-					v1.x -= diff;
-					v1.y -= FixedMul(diff, FixedDiv(line->dy, line->dx));
-				}
-			}
-
-			if (abs(v1.y-y) > mobj->radius) {
-				// v1's y is out of range, so rein it in
-				fixed_t diff = abs(v1.y-y) - mobj->radius;
-
-				if (v1.y < y) { // Moving up
-					v1.y += diff;
-					v1.x += FixedMul(diff, FixedDiv(line->dx, line->dy));
-				} else { // Moving down
-					v1.y -= diff;
-					v1.x -= FixedMul(diff, FixedDiv(line->dx, line->dy));
-				}
-			}
-
-			if (abs(v2.x-x) > mobj->radius) {
-				// v1's x is out of range, so rein it in
-				fixed_t diff = abs(v2.x-x) - mobj->radius;
-
-				if (v2.x < x) { // Moving right
-					v2.x += diff;
-					v2.y += FixedMul(diff, FixedDiv(line->dy, line->dx));
-				} else { // Moving left
-					v2.x -= diff;
-					v2.y -= FixedMul(diff, FixedDiv(line->dy, line->dx));
-				}
-			}
-
-			if (abs(v2.y-y) > mobj->radius) {
-				// v2's y is out of range, so rein it in
-				fixed_t diff = abs(v2.y-y) - mobj->radius;
-
-				if (v2.y < y) { // Moving up
-					v2.y += diff;
-					v2.x += FixedMul(diff, FixedDiv(line->dx, line->dy));
-				} else { // Moving down
-					v2.y -= diff;
-					v2.x -= FixedMul(diff, FixedDiv(line->dx, line->dy));
-				}
-			}
-
-			// Return the lower of the two points
-			return min(
-				P_GetZAt(slope, v1.x, v1.y),
-				P_GetZAt(slope, v2.x, v2.y)
-			);
-		}
-	} else // Well, that makes it easy. Just get the bottom height
-#endif
-		return *fof->bottomheight;
+		return sector->ceilingheight;
 }
 
 // Now do the same as all above, but for cameras because apparently cameras are special?
-fixed_t P_CameraGetFloorZ(camera_t *mobj, sector_t *sector, fixed_t x, fixed_t y, line_t *line) // SRB2CBTODO: This needs to be over all the code
+fixed_t P_CameraFloorZ(camera_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, line_t *line, boolean lowest, boolean perfect)
 {
 	I_Assert(mobj != NULL);
 	I_Assert(sector != NULL);
@@ -1233,7 +1003,7 @@ fixed_t P_CameraGetFloorZ(camera_t *mobj, sector_t *sector, fixed_t x, fixed_t y
 		else
 			testy = -mobj->radius;
 
-		if (slope->zdelta > 0) {
+		if ((slope->zdelta > 0) ^ !!(lowest)) {
 			testx = -testx;
 			testy = -testy;
 		}
@@ -1242,110 +1012,56 @@ fixed_t P_CameraGetFloorZ(camera_t *mobj, sector_t *sector, fixed_t x, fixed_t y
 		testy += y;
 
 		// If the highest point is in the sector, then we have it easy! Just get the Z at that point
-		if (R_PointInSubsector(testx, testy)->sector == sector)
+		if (R_PointInSubsector(testx, testy)->sector == (boundsec ?: sector))
 			return P_GetZAt(slope, testx, testy);
+
+		// If boundsec is set, we're looking for specials. In that case, iterate over every line in this sector to find the TRUE highest/lowest point
+		if (perfect) {
+			size_t i;
+			line_t *ld;
+			fixed_t bbox[4];
+			fixed_t finalheight;
+
+			if (lowest)
+				finalheight = INT32_MAX;
+			else
+				finalheight = INT32_MIN;
+
+			bbox[BOXLEFT] = x-mobj->radius;
+			bbox[BOXRIGHT] = x+mobj->radius;
+			bbox[BOXTOP] = y+mobj->radius;
+			bbox[BOXBOTTOM] = y-mobj->radius;
+			for (i = 0; i < boundsec->linecount; i++) {
+				ld = boundsec->lines[i];
+
+				if (bbox[BOXRIGHT] <= ld->bbox[BOXLEFT] || bbox[BOXLEFT] >= ld->bbox[BOXRIGHT]
+				|| bbox[BOXTOP] <= ld->bbox[BOXBOTTOM] || bbox[BOXBOTTOM] >= ld->bbox[BOXTOP])
+					continue;
+
+				if (P_BoxOnLineSide(bbox, ld) != -1)
+					continue;
+
+				if (lowest)
+					finalheight = min(finalheight, HighestOnLine(mobj->radius, x, y, ld, slope, true));
+				else
+					finalheight = max(finalheight, HighestOnLine(mobj->radius, x, y, ld, slope, false));
+			}
+
+			return finalheight;
+		}
 
 		// If we're just testing for base sector location (no collision line), just go for the center's spot...
 		// It'll get fixed when we test for collision anyway, and the final result can't be lower than this
 		if (line == NULL)
 			return P_GetZAt(slope, x, y);
 
-		// Alright, so we're sitting on a line that contains our slope sector, and need to figure out the highest point we're touching...
-		// The solution is simple! Get the line's vertices, and pull each one in along its line until it touches the object's bounding box
-		// (assuming it isn't already inside), then test each point's slope Z and return the higher of the two.
-		{
-			vertex_t v1, v2;
-			v1.x = line->v1->x;
-			v1.y = line->v1->y;
-			v2.x = line->v2->x;
-			v2.y = line->v2->y;
-
-			/*CONS_Printf("BEFORE: v1 = %f %f %f\n",
-						FIXED_TO_FLOAT(v1.x),
-						FIXED_TO_FLOAT(v1.y),
-						FIXED_TO_FLOAT(P_GetZAt(slope, v1.x, v1.y))
-						);
-			CONS_Printf("        v2 = %f %f %f\n",
-						FIXED_TO_FLOAT(v2.x),
-						FIXED_TO_FLOAT(v2.y),
-						FIXED_TO_FLOAT(P_GetZAt(slope, v2.x, v2.y))
-						);*/
-
-			if (abs(v1.x-x) > mobj->radius) {
-				// v1's x is out of range, so rein it in
-				fixed_t diff = abs(v1.x-x) - mobj->radius;
-
-				if (v1.x < x) { // Moving right
-					v1.x += diff;
-					v1.y += FixedMul(diff, FixedDiv(line->dy, line->dx));
-				} else { // Moving left
-					v1.x -= diff;
-					v1.y -= FixedMul(diff, FixedDiv(line->dy, line->dx));
-				}
-			}
-
-			if (abs(v1.y-y) > mobj->radius) {
-				// v1's y is out of range, so rein it in
-				fixed_t diff = abs(v1.y-y) - mobj->radius;
-
-				if (v1.y < y) { // Moving up
-					v1.y += diff;
-					v1.x += FixedMul(diff, FixedDiv(line->dx, line->dy));
-				} else { // Moving down
-					v1.y -= diff;
-					v1.x -= FixedMul(diff, FixedDiv(line->dx, line->dy));
-				}
-			}
-
-			if (abs(v2.x-x) > mobj->radius) {
-				// v1's x is out of range, so rein it in
-				fixed_t diff = abs(v2.x-x) - mobj->radius;
-
-				if (v2.x < x) { // Moving right
-					v2.x += diff;
-					v2.y += FixedMul(diff, FixedDiv(line->dy, line->dx));
-				} else { // Moving left
-					v2.x -= diff;
-					v2.y -= FixedMul(diff, FixedDiv(line->dy, line->dx));
-				}
-			}
-
-			if (abs(v2.y-y) > mobj->radius) {
-				// v2's y is out of range, so rein it in
-				fixed_t diff = abs(v2.y-y) - mobj->radius;
-
-				if (v2.y < y) { // Moving up
-					v2.y += diff;
-					v2.x += FixedMul(diff, FixedDiv(line->dx, line->dy));
-				} else { // Moving down
-					v2.y -= diff;
-					v2.x -= FixedMul(diff, FixedDiv(line->dx, line->dy));
-				}
-			}
-
-			/*CONS_Printf("AFTER:  v1 = %f %f %f\n",
-						FIXED_TO_FLOAT(v1.x),
-						FIXED_TO_FLOAT(v1.y),
-						FIXED_TO_FLOAT(P_GetZAt(slope, v1.x, v1.y))
-						);
-			CONS_Printf("        v2 = %f %f %f\n",
-						FIXED_TO_FLOAT(v2.x),
-						FIXED_TO_FLOAT(v2.y),
-						FIXED_TO_FLOAT(P_GetZAt(slope, v2.x, v2.y))
-						);*/
-
-			// Return the higher of the two points
-			return max(
-				P_GetZAt(slope, v1.x, v1.y),
-				P_GetZAt(slope, v2.x, v2.y)
-			);
-		}
+		return HighestOnLine(mobj->radius, x, y, line, slope, lowest);
 	} else // Well, that makes it easy. Just get the floor height
 #endif
 		return sector->floorheight;
 }
 
-fixed_t P_CameraGetCeilingZ(camera_t *mobj, sector_t *sector, fixed_t x, fixed_t y, line_t *line) // SRB2CBTODO: This needs to be over all the code
+fixed_t P_CameraCeilingZ(camera_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, line_t *line, boolean lowest, boolean perfect)
 {
 	I_Assert(mobj != NULL);
 	I_Assert(sector != NULL);
@@ -1353,118 +1069,6 @@ fixed_t P_CameraGetCeilingZ(camera_t *mobj, sector_t *sector, fixed_t x, fixed_t
 	if (sector->c_slope) {
 		fixed_t testx, testy;
 		pslope_t *slope = sector->c_slope;
-
-		// Get the corner of the object that should be the lowest on the slope
-		if (slope->d.x < 0)
-			testx = mobj->radius;
-		else
-			testx = -mobj->radius;
-
-		if (slope->d.y < 0)
-			testy = mobj->radius;
-		else
-			testy = -mobj->radius;
-
-		if (slope->zdelta < 0) {
-			testx = -testx;
-			testy = -testy;
-		}
-
-		testx += x;
-		testy += y;
-
-		// If the lowest point is in the sector, then we have it easy! Just get the Z at that point
-		if (R_PointInSubsector(testx, testy)->sector == sector)
-			return P_GetZAt(slope, testx, testy);
-
-		// If we're just testing for base sector location (no collision line), just go for the center's spot...
-		// It'll get fixed when we test for collision anyway, and the final result can't be higher than this
-		if (line == NULL)
-			return P_GetZAt(slope, x, y);
-
-		// Alright, so we're sitting on a line that contains our slope sector, and need to figure out the highest point we're touching...
-		// The solution is simple! Get the line's vertices, and pull each one in along its line until it touches the object's bounding box
-		// (assuming it isn't already inside), then test each point's slope Z and return the lower of the two.
-		{
-			vertex_t v1, v2;
-			v1.x = line->v1->x;
-			v1.y = line->v1->y;
-			v2.x = line->v2->x;
-			v2.y = line->v2->y;
-
-			if (abs(v1.x-x) > mobj->radius) {
-				// v1's x is out of range, so rein it in
-				fixed_t diff = abs(v1.x-x) - mobj->radius;
-
-				if (v1.x < x) { // Moving right
-					v1.x += diff;
-					v1.y += FixedMul(diff, FixedDiv(line->dy, line->dx));
-				} else { // Moving left
-					v1.x -= diff;
-					v1.y -= FixedMul(diff, FixedDiv(line->dy, line->dx));
-				}
-			}
-
-			if (abs(v1.y-y) > mobj->radius) {
-				// v1's y is out of range, so rein it in
-				fixed_t diff = abs(v1.y-y) - mobj->radius;
-
-				if (v1.y < y) { // Moving up
-					v1.y += diff;
-					v1.x += FixedMul(diff, FixedDiv(line->dx, line->dy));
-				} else { // Moving down
-					v1.y -= diff;
-					v1.x -= FixedMul(diff, FixedDiv(line->dx, line->dy));
-				}
-			}
-
-			if (abs(v2.x-x) > mobj->radius) {
-				// v1's x is out of range, so rein it in
-				fixed_t diff = abs(v2.x-x) - mobj->radius;
-
-				if (v2.x < x) { // Moving right
-					v2.x += diff;
-					v2.y += FixedMul(diff, FixedDiv(line->dy, line->dx));
-				} else { // Moving left
-					v2.x -= diff;
-					v2.y -= FixedMul(diff, FixedDiv(line->dy, line->dx));
-				}
-			}
-
-			if (abs(v2.y-y) > mobj->radius) {
-				// v2's y is out of range, so rein it in
-				fixed_t diff = abs(v2.y-y) - mobj->radius;
-
-				if (v2.y < y) { // Moving up
-					v2.y += diff;
-					v2.x += FixedMul(diff, FixedDiv(line->dx, line->dy));
-				} else { // Moving down
-					v2.y -= diff;
-					v2.x -= FixedMul(diff, FixedDiv(line->dx, line->dy));
-				}
-			}
-
-			// Return the lower of the two points
-			return min(
-				P_GetZAt(slope, v1.x, v1.y),
-				P_GetZAt(slope, v2.x, v2.y)
-			);
-		}
-	} else // Well, that makes it easy. Just get the ceiling height
-#endif
-		return sector->ceilingheight;
-}
-
-// Do the same as above, but for FOFs!
-fixed_t P_CameraGetFOFTopZ(camera_t *mobj, sector_t *sector, ffloor_t *fof, fixed_t x, fixed_t y, line_t *line) // SRB2CBTODO: This needs to be over all the code
-{
-	I_Assert(mobj != NULL);
-	I_Assert(sector != NULL);
-	I_Assert(fof != NULL);
-#ifdef ESLOPE
-	if (*fof->t_slope) {
-		fixed_t testx, testy;
-		pslope_t *slope = *fof->t_slope;
 
 		// Get the corner of the object that should be the highest on the slope
 		if (slope->d.x < 0)
@@ -1477,7 +1081,7 @@ fixed_t P_CameraGetFOFTopZ(camera_t *mobj, sector_t *sector, ffloor_t *fof, fixe
 		else
 			testy = -mobj->radius;
 
-		if (slope->zdelta > 0) {
+		if ((slope->zdelta > 0) ^ !!(lowest)) {
 			testx = -testx;
 			testy = -testy;
 		}
@@ -1486,220 +1090,54 @@ fixed_t P_CameraGetFOFTopZ(camera_t *mobj, sector_t *sector, ffloor_t *fof, fixe
 		testy += y;
 
 		// If the highest point is in the sector, then we have it easy! Just get the Z at that point
-		if (R_PointInSubsector(testx, testy)->sector == sector)
+		if (R_PointInSubsector(testx, testy)->sector == (boundsec ?: sector))
 			return P_GetZAt(slope, testx, testy);
+
+		// If boundsec is set, we're looking for specials. In that case, iterate over every line in this sector to find the TRUE highest/lowest point
+		if (perfect) {
+			size_t i;
+			line_t *ld;
+			fixed_t bbox[4];
+			fixed_t finalheight;
+
+			if (lowest)
+				finalheight = INT32_MAX;
+			else
+				finalheight = INT32_MIN;
+
+			bbox[BOXLEFT] = x-mobj->radius;
+			bbox[BOXRIGHT] = x+mobj->radius;
+			bbox[BOXTOP] = y+mobj->radius;
+			bbox[BOXBOTTOM] = y-mobj->radius;
+			for (i = 0; i < boundsec->linecount; i++) {
+				ld = boundsec->lines[i];
+
+				if (bbox[BOXRIGHT] <= ld->bbox[BOXLEFT] || bbox[BOXLEFT] >= ld->bbox[BOXRIGHT]
+				|| bbox[BOXTOP] <= ld->bbox[BOXBOTTOM] || bbox[BOXBOTTOM] >= ld->bbox[BOXTOP])
+					continue;
+
+				if (P_BoxOnLineSide(bbox, ld) != -1)
+					continue;
+
+				if (lowest)
+					finalheight = min(finalheight, HighestOnLine(mobj->radius, x, y, ld, slope, true));
+				else
+					finalheight = max(finalheight, HighestOnLine(mobj->radius, x, y, ld, slope, false));
+			}
+
+			return finalheight;
+		}
 
 		// If we're just testing for base sector location (no collision line), just go for the center's spot...
 		// It'll get fixed when we test for collision anyway, and the final result can't be lower than this
 		if (line == NULL)
 			return P_GetZAt(slope, x, y);
 
-		// Alright, so we're sitting on a line that contains our slope sector, and need to figure out the highest point we're touching...
-		// The solution is simple! Get the line's vertices, and pull each one in along its line until it touches the object's bounding box
-		// (assuming it isn't already inside), then test each point's slope Z and return the higher of the two.
-		{
-			vertex_t v1, v2;
-			v1.x = line->v1->x;
-			v1.y = line->v1->y;
-			v2.x = line->v2->x;
-			v2.y = line->v2->y;
-
-			/*CONS_Printf("BEFORE: v1 = %f %f %f\n",
-						FIXED_TO_FLOAT(v1.x),
-						FIXED_TO_FLOAT(v1.y),
-						FIXED_TO_FLOAT(P_GetZAt(slope, v1.x, v1.y))
-						);
-			CONS_Printf("        v2 = %f %f %f\n",
-						FIXED_TO_FLOAT(v2.x),
-						FIXED_TO_FLOAT(v2.y),
-						FIXED_TO_FLOAT(P_GetZAt(slope, v2.x, v2.y))
-						);*/
-
-			if (abs(v1.x-x) > mobj->radius) {
-				// v1's x is out of range, so rein it in
-				fixed_t diff = abs(v1.x-x) - mobj->radius;
-
-				if (v1.x < x) { // Moving right
-					v1.x += diff;
-					v1.y += FixedMul(diff, FixedDiv(line->dy, line->dx));
-				} else { // Moving left
-					v1.x -= diff;
-					v1.y -= FixedMul(diff, FixedDiv(line->dy, line->dx));
-				}
-			}
-
-			if (abs(v1.y-y) > mobj->radius) {
-				// v1's y is out of range, so rein it in
-				fixed_t diff = abs(v1.y-y) - mobj->radius;
-
-				if (v1.y < y) { // Moving up
-					v1.y += diff;
-					v1.x += FixedMul(diff, FixedDiv(line->dx, line->dy));
-				} else { // Moving down
-					v1.y -= diff;
-					v1.x -= FixedMul(diff, FixedDiv(line->dx, line->dy));
-				}
-			}
-
-			if (abs(v2.x-x) > mobj->radius) {
-				// v1's x is out of range, so rein it in
-				fixed_t diff = abs(v2.x-x) - mobj->radius;
-
-				if (v2.x < x) { // Moving right
-					v2.x += diff;
-					v2.y += FixedMul(diff, FixedDiv(line->dy, line->dx));
-				} else { // Moving left
-					v2.x -= diff;
-					v2.y -= FixedMul(diff, FixedDiv(line->dy, line->dx));
-				}
-			}
-
-			if (abs(v2.y-y) > mobj->radius) {
-				// v2's y is out of range, so rein it in
-				fixed_t diff = abs(v2.y-y) - mobj->radius;
-
-				if (v2.y < y) { // Moving up
-					v2.y += diff;
-					v2.x += FixedMul(diff, FixedDiv(line->dx, line->dy));
-				} else { // Moving down
-					v2.y -= diff;
-					v2.x -= FixedMul(diff, FixedDiv(line->dx, line->dy));
-				}
-			}
-
-			/*CONS_Printf("AFTER:  v1 = %f %f %f\n",
-						FIXED_TO_FLOAT(v1.x),
-						FIXED_TO_FLOAT(v1.y),
-						FIXED_TO_FLOAT(P_GetZAt(slope, v1.x, v1.y))
-						);
-			CONS_Printf("        v2 = %f %f %f\n",
-						FIXED_TO_FLOAT(v2.x),
-						FIXED_TO_FLOAT(v2.y),
-						FIXED_TO_FLOAT(P_GetZAt(slope, v2.x, v2.y))
-						);*/
-
-			// Return the higher of the two points
-			return max(
-				P_GetZAt(slope, v1.x, v1.y),
-				P_GetZAt(slope, v2.x, v2.y)
-			);
-		}
-	} else // Well, that makes it easy. Just get the top height
+		return HighestOnLine(mobj->radius, x, y, line, slope, lowest);
+	} else // Well, that makes it easy. Just get the ceiling height
 #endif
-		return *fof->topheight;
+		return sector->ceilingheight;
 }
-
-fixed_t P_CameraGetFOFBottomZ(camera_t *mobj, sector_t *sector, ffloor_t *fof, fixed_t x, fixed_t y, line_t *line) // SRB2CBTODO: This needs to be over all the code
-{
-	I_Assert(mobj != NULL);
-	I_Assert(sector != NULL);
-	I_Assert(fof != NULL);
-#ifdef ESLOPE
-	if (*fof->b_slope) {
-		fixed_t testx, testy;
-		pslope_t *slope = *fof->b_slope;
-
-		// Get the corner of the object that should be the lowest on the slope
-		if (slope->d.x < 0)
-			testx = mobj->radius;
-		else
-			testx = -mobj->radius;
-
-		if (slope->d.y < 0)
-			testy = mobj->radius;
-		else
-			testy = -mobj->radius;
-
-		if (slope->zdelta < 0) {
-			testx = -testx;
-			testy = -testy;
-		}
-
-		testx += x;
-		testy += y;
-
-		// If the lowest point is in the sector, then we have it easy! Just get the Z at that point
-		if (R_PointInSubsector(testx, testy)->sector == sector)
-			return P_GetZAt(slope, testx, testy);
-
-		// If we're just testing for base sector location (no collision line), just go for the center's spot...
-		// It'll get fixed when we test for collision anyway, and the final result can't be higher than this
-		if (line == NULL)
-			return P_GetZAt(slope, x, y);
-
-		// Alright, so we're sitting on a line that contains our slope sector, and need to figure out the highest point we're touching...
-		// The solution is simple! Get the line's vertices, and pull each one in along its line until it touches the object's bounding box
-		// (assuming it isn't already inside), then test each point's slope Z and return the lower of the two.
-		{
-			vertex_t v1, v2;
-			v1.x = line->v1->x;
-			v1.y = line->v1->y;
-			v2.x = line->v2->x;
-			v2.y = line->v2->y;
-
-			if (abs(v1.x-x) > mobj->radius) {
-				// v1's x is out of range, so rein it in
-				fixed_t diff = abs(v1.x-x) - mobj->radius;
-
-				if (v1.x < x) { // Moving right
-					v1.x += diff;
-					v1.y += FixedMul(diff, FixedDiv(line->dy, line->dx));
-				} else { // Moving left
-					v1.x -= diff;
-					v1.y -= FixedMul(diff, FixedDiv(line->dy, line->dx));
-				}
-			}
-
-			if (abs(v1.y-y) > mobj->radius) {
-				// v1's y is out of range, so rein it in
-				fixed_t diff = abs(v1.y-y) - mobj->radius;
-
-				if (v1.y < y) { // Moving up
-					v1.y += diff;
-					v1.x += FixedMul(diff, FixedDiv(line->dx, line->dy));
-				} else { // Moving down
-					v1.y -= diff;
-					v1.x -= FixedMul(diff, FixedDiv(line->dx, line->dy));
-				}
-			}
-
-			if (abs(v2.x-x) > mobj->radius) {
-				// v1's x is out of range, so rein it in
-				fixed_t diff = abs(v2.x-x) - mobj->radius;
-
-				if (v2.x < x) { // Moving right
-					v2.x += diff;
-					v2.y += FixedMul(diff, FixedDiv(line->dy, line->dx));
-				} else { // Moving left
-					v2.x -= diff;
-					v2.y -= FixedMul(diff, FixedDiv(line->dy, line->dx));
-				}
-			}
-
-			if (abs(v2.y-y) > mobj->radius) {
-				// v2's y is out of range, so rein it in
-				fixed_t diff = abs(v2.y-y) - mobj->radius;
-
-				if (v2.y < y) { // Moving up
-					v2.y += diff;
-					v2.x += FixedMul(diff, FixedDiv(line->dx, line->dy));
-				} else { // Moving down
-					v2.y -= diff;
-					v2.x -= FixedMul(diff, FixedDiv(line->dx, line->dy));
-				}
-			}
-
-			// Return the lower of the two points
-			return min(
-				P_GetZAt(slope, v1.x, v1.y),
-				P_GetZAt(slope, v2.x, v2.y)
-			);
-		}
-	} else // Well, that makes it easy. Just get the bottom height
-#endif
-		return *fof->bottomheight;
-}
-
 static void P_PlayerFlip(mobj_t *mo)
 {
 	if (!mo->player)
