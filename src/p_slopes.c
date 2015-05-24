@@ -174,10 +174,10 @@ void P_SpawnSlope_Line(int linenum)
 	vector2_t direction;
 	fixed_t nx, ny, dz, extent;
 
-	boolean frontfloor = (special == 386 || special == 388 || special == 393);
-	boolean backfloor  = (special == 389 || special == 391 || special == 392);
-	boolean frontceil  = (special == 387 || special == 388 || special == 392);
-	boolean backceil   = (special == 390 || special == 391 || special == 393);
+	boolean frontfloor = (special == 700 || special == 702 || special == 703);
+	boolean backfloor  = (special == 710 || special == 712 || special == 713);
+	boolean frontceil  = (special == 701 || special == 702 || special == 713);
+	boolean backceil   = (special == 711 || special == 712 || special == 703);
 
 	if(!frontfloor && !backfloor && !frontceil && !backceil)
 	{
@@ -457,9 +457,9 @@ void P_CopySectorSlope(line_t *line)
    {
       sector_t *srcsec = sectors + i;
 
-      if((special - 393) & 1 && !fsec->f_slope && srcsec->f_slope)
+      if((special - 719) & 1 && !fsec->f_slope && srcsec->f_slope)
          fsec->f_slope = srcsec->f_slope; //P_CopySlope(srcsec->f_slope);
-      if((special - 393) & 2 && !fsec->c_slope && srcsec->c_slope)
+      if((special - 719) & 2 && !fsec->c_slope && srcsec->c_slope)
          fsec->c_slope = srcsec->c_slope; //P_CopySlope(srcsec->c_slope);
    }
 
@@ -726,6 +726,9 @@ void P_SetSlopesFromVertexHeights(lumpnum_t lumpnum)
 // Reset the dynamic slopes pointer, and read all of the fancy schmancy slopes
 void P_ResetDynamicSlopes(void) {
 	size_t i;
+#if 1 // Rewrite old specials to new ones, and give a console warning
+	boolean warned = false;
+#endif
 
 	dynslopes = NULL;
 
@@ -735,14 +738,48 @@ void P_ResetDynamicSlopes(void) {
 	{
 		switch (lines[i].special)
 		{
+#if 1 // Rewrite old specials to new ones, and give a console warning
+#define WARNME if (!warned) {warned = true; CONS_Alert(CONS_WARNING, "This level uses old slope specials.\nA conversion will be needed before 2.2's release.\n");}
 			case 386:
 			case 387:
 			case 388:
+				lines[i].special += 700-386;
+				WARNME
+				P_SpawnSlope_Line(i);
+				break;
+
 			case 389:
 			case 390:
 			case 391:
 			case 392:
+				lines[i].special += 710-389;
+				WARNME
+				P_SpawnSlope_Line(i);
+				break;
+
 			case 393:
+				lines[i].special = 703;
+				WARNME
+				P_SpawnSlope_Line(i);
+				break;
+
+			case 394:
+			case 395:
+			case 396:
+				lines[i].special += 720-394;
+				WARNME
+				break;
+
+#endif
+
+			case 700:
+			case 701:
+			case 702:
+			case 703:
+			case 710:
+			case 711:
+			case 712:
+			case 713:
 				P_SpawnSlope_Line(i);
 				break;
 

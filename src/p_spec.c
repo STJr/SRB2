@@ -6452,9 +6452,9 @@ void P_SpawnSpecials(INT32 fromnetsave)
 				break;
 
 #ifdef ESLOPE // Slope copy specials. Handled here for sanity.
-			case 394:
-			case 395:
-			case 396:
+			case 720:
+			case 721:
+			case 722:
 				P_CopySectorSlope(&lines[i]);
 				break;
 #endif
