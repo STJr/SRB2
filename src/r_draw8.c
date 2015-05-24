@@ -628,8 +628,8 @@ void R_DrawTiltedSpan_8(void)
 		double endz = 1.f/iz;
 		double endu = uz*endz;
 		double endv = vz*endz;
-		UINT32 stepu = (UINT32)((endu - startu) * INVSPAN);
-		UINT32 stepv = (UINT32)((endv - startv) * INVSPAN);
+		UINT32 stepu = (INT64)((endu - startu) * INVSPAN);
+		UINT32 stepv = (INT64)((endv - startv) * INVSPAN);
 		u = (UINT32)(startu) + viewx;
 		v = (UINT32)(startv) + viewy;
 
@@ -665,8 +665,8 @@ void R_DrawTiltedSpan_8(void)
 			double endu = uz*endz;
 			double endv = vz*endz;
 			left = 1.f/left;
-			UINT32 stepu = (UINT32)((endu - startu) * left);
-			UINT32 stepv = (UINT32)((endv - startv) * left);
+			UINT32 stepu = (INT64)((endu - startu) * left);
+			UINT32 stepv = (INT64)((endv - startv) * left);
 			u = (UINT32)(startu) + viewx;
 			v = (UINT32)(startv) + viewy;
 
@@ -761,8 +761,8 @@ void R_DrawTiltedTranslucentSpan_8(void)
 		double endz = 1.f/iz;
 		double endu = uz*endz;
 		double endv = vz*endz;
-		UINT32 stepu = (UINT32)((endu - startu) * INVSPAN);
-		UINT32 stepv = (UINT32)((endv - startv) * INVSPAN);
+		UINT32 stepu = (INT64)((endu - startu) * INVSPAN);
+		UINT32 stepv = (INT64)((endv - startv) * INVSPAN);
 		u = (UINT32)(startu) + viewx;
 		v = (UINT32)(startv) + viewy;
 
@@ -798,8 +798,8 @@ void R_DrawTiltedTranslucentSpan_8(void)
 			double endu = uz*endz;
 			double endv = vz*endz;
 			left = 1.f/left;
-			UINT32 stepu = (UINT32)((endu - startu) * left);
-			UINT32 stepv = (UINT32)((endv - startv) * left);
+			UINT32 stepu = (INT64)((endu - startu) * left);
+			UINT32 stepv = (INT64)((endv - startv) * left);
 			u = (UINT32)(startu) + viewx;
 			v = (UINT32)(startv) + viewy;
 
