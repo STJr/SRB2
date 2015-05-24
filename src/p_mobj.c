@@ -3562,11 +3562,11 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 				if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_CRUMBLE))
 					continue;
 
-				topheight = P_GetFOFTopZ(mobj, node->m_sector, rover, mobj->x, mobj->y, NULL);
-				bottomheight = P_GetFOFBottomZ(mobj, node->m_sector, rover, mobj->x, mobj->y, NULL);
+				topheight = P_GetSpecialTopZ(mobj, sectors + rover->secnum, node->m_sector);
+				bottomheight = P_GetSpecialBottomZ(mobj, sectors + rover->secnum, node->m_sector);
 
-				if ((topheight <= mobj->z + 16*mobj->scale && topheight >= mobj->z && !(mobj->eflags & MFE_VERTICALFLIP))
-				|| (bottomheight >= mobj->z + mobj->height && bottomheight <= mobj->z + mobj->height - 16*mobj->scale && mobj->eflags & MFE_VERTICALFLIP)) // You nut.
+				if ((topheight == mobj->z && !(mobj->eflags & MFE_VERTICALFLIP))
+				|| (bottomheight == mobj->z + mobj->height && mobj->eflags & MFE_VERTICALFLIP)) // You nut.
 					EV_StartCrumble(rover->master->frontsector, rover, (rover->flags & FF_FLOATBOB), mobj->player, rover->alpha, !(rover->flags & FF_NORETURN));
 			}
 		}

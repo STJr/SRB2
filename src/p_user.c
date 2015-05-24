@@ -1212,7 +1212,7 @@ boolean P_IsObjectOnGroundIn(mobj_t *mo, sector_t *sec)
 	if (mo->eflags & MFE_VERTICALFLIP)
 	{
 		// Detect if the player is on the ceiling.
-		if (mo->z+mo->height >= sec->ceilingheight)
+		if (mo->z+mo->height >= P_GetSpecialTopZ(mo, sec, sec))
 			return true;
 		// Otherwise, detect if the player is on the bottom of a FOF.
 		else
@@ -1236,7 +1236,7 @@ boolean P_IsObjectOnGroundIn(mobj_t *mo, sector_t *sec)
 					continue;
 
 				// Actually check if the player is on the suitable FOF.
-				if (mo->z+mo->height == *rover->bottomheight)
+				if (mo->z+mo->height == P_GetSpecialBottomZ(mo, sectors + rover->secnum, sec))
 					return true;
 			}
 		}
@@ -1245,7 +1245,7 @@ boolean P_IsObjectOnGroundIn(mobj_t *mo, sector_t *sec)
 	else
 	{
 		// Detect if the player is on the floor.
-		if (mo->z <= sec->floorheight)
+		if (mo->z <= P_GetSpecialBottomZ(mo, sec, sec))
 			return true;
 		// Otherwise, detect if the player is on the top of a FOF.
 		else
@@ -1269,7 +1269,7 @@ boolean P_IsObjectOnGroundIn(mobj_t *mo, sector_t *sec)
 					continue;
 
 				// Actually check if the player is on the suitable FOF.
-				if (mo->z == *rover->topheight)
+				if (mo->z == P_GetSpecialTopZ(mo, sectors + rover->secnum, sec))
 					return true;
 			}
 		}

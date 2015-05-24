@@ -1174,8 +1174,8 @@ void T_SpikeSector(levelspecthink_t *spikes)
 
 		if (affectsec == spikes->sector) // Applied to an actual sector
 		{
-			fixed_t affectfloor = P_GetFloorZ(thing, affectsec, thing->x, thing->y, NULL);
-			fixed_t affectceil = P_GetCeilingZ(thing, affectsec, thing->x, thing->y, NULL);
+			fixed_t affectfloor = P_GetSpecialBottomZ(thing, affectsec, affectsec);
+			fixed_t affectceil = P_GetSpecialTopZ(thing, affectsec, affectsec);
 
 			if (affectsec->flags & SF_FLIPSPECIAL_FLOOR)
 			{
@@ -1197,12 +1197,14 @@ void T_SpikeSector(levelspecthink_t *spikes)
 		}
 		else
 		{
+			fixed_t affectfloor = P_GetSpecialBottomZ(thing, affectsec, spikes->sector);
+			fixed_t affectceil = P_GetSpecialTopZ(thing, affectsec, spikes->sector);
 			if (affectsec->flags & SF_FLIPSPECIAL_FLOOR)
 			{
 				if (!(thing->eflags & MFE_VERTICALFLIP) && thing->momz > 0)
 					continue;
 
-				if (thing->z == affectsec->ceilingheight)
+				if (thing->z == affectceil)
 					dothepain = true;
 			}
 
@@ -1211,7 +1213,7 @@ void T_SpikeSector(levelspecthink_t *spikes)
 				if ((thing->eflags & MFE_VERTICALFLIP) && thing->momz < 0)
 					continue;
 
-				if (thing->z + thing->height == affectsec->floorheight)
+				if (thing->z + thing->height == affectfloor)
 					dothepain = true;
 			}
 		}
@@ -2090,6 +2092,7 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 	boolean FOFsector = false;
 	boolean inAndOut = false;
 	boolean floortouch = false;
+	fixed_t bottomheight, topheight;
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
@@ -2154,10 +2157,13 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 					if (players[j].mo->subsector->sector != targetsec)
 						continue;
 
-					if (players[j].mo->z > sec->ceilingheight)
+					topheight = P_GetSpecialTopZ(players[j].mo, sec, targetsec);
+					bottomheight = P_GetSpecialBottomZ(players[j].mo, sec, targetsec);
+
+					if (players[j].mo->z > topheight)
 						continue;
 
-					if (players[j].mo->z + players[j].mo->height < sec->floorheight)
+					if (players[j].mo->z + players[j].mo->height < bottomheight)
 						continue;
 
 					if (floortouch == true && P_IsObjectOnGroundIn(players[j].mo, targetsec))
@@ -2317,7 +2323,7 @@ void T_RaiseSector(levelspecthink_t *raise)
 			if (raise->vars[1] && !(thing->player->pflags & PF_STARTDASH))
 				continue;
 
-			if (!(thing->z == raise->sector->ceilingheight))
+			if (!(thing->z == P_GetSpecialTopZ(thing, raise->sector, sector)))
 				continue;
 
 			playeronme = true;
