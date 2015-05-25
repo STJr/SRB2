@@ -2278,8 +2278,10 @@ static boolean P_ZMovement(mobj_t *mo)
 			mo->z = mo->floorz;
 
 #ifdef ESLOPE
-		P_TryMove(mo, mo->x, mo->y, true); // Sets mo->standingslope correctly
-		if (mo->standingslope) {
+		P_CheckPosition(mo, mo->x, mo->y); // Sets mo->standingslope correctly
+		if ((mo->eflags & MFE_VERTICALFLIP) ? tmceilingslope : tmfloorslope) {
+			mo->standingslope = (mo->eflags & MFE_VERTICALFLIP) ? tmceilingslope : tmfloorslope;
+
 			// Reverse quantizing might could use its own function later
 			mo->standingslope->zangle = ANGLE_MAX-mo->standingslope->zangle;
 			P_QuantizeMomentumToSlope(&mom, mo->standingslope);
