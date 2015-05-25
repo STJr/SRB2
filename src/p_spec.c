@@ -4413,7 +4413,7 @@ static void P_PlayerOnSpecial3DFloor(player_t *player, sector_t *sector)
 		else
 		{
 			// Water and DEATH FOG!!! heh
-			if (player->mo->z > P_GetSpecialTopZ(player->mo, sectors + rover->secnum, sector) || (player->mo->z + player->mo->height) < P_GetSpecialTopZ(player->mo, sectors + rover->secnum, sector))
+			if (player->mo->z > P_GetSpecialTopZ(player->mo, sectors + rover->secnum, sector) || (player->mo->z + player->mo->height) < P_GetSpecialBottomZ(player->mo, sectors + rover->secnum, sector))
 				continue;
 		}
 
