@@ -2272,6 +2272,11 @@ static boolean P_ZMovement(mobj_t *mo)
 		mom.y = mo->momy;
 		mom.z = mo->momz;
 
+		if (mo->eflags & MFE_VERTICALFLIP)
+			mo->z = mo->ceilingz - mo->height;
+		else
+			mo->z = mo->floorz;
+
 #ifdef ESLOPE
 		P_TryMove(mo, mo->x, mo->y, true); // Sets mo->standingslope correctly
 		if (mo->standingslope) {
@@ -2281,11 +2286,6 @@ static boolean P_ZMovement(mobj_t *mo)
 			mo->standingslope->zangle = ANGLE_MAX-mo->standingslope->zangle;
 		}
 #endif
-
-		if (mo->eflags & MFE_VERTICALFLIP)
-			mo->z = mo->ceilingz - mo->height;
-		else
-			mo->z = mo->floorz;
 
 		// hit the floor
 		if (mo->type == MT_FIREBALL) // special case for the fireball
