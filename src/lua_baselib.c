@@ -1100,6 +1100,16 @@ static int lib_pPlayerWeaponAmmoBurst(lua_State *L)
 	return 0;
 }
 
+static int lib_pPlayerWeaponPanelOrAmmoBurst(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	NOHUD
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	P_PlayerWeaponPanelOrAmmoBurst(player);
+	return 0;
+}
+
 static int lib_pPlayerEmeraldBurst(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
@@ -1965,6 +1975,7 @@ static luaL_Reg lib[] = {
 	{"P_PlayerRingBurst",lib_pPlayerRingBurst},
 	{"P_PlayerWeaponPanelBurst",lib_pPlayerWeaponPanelBurst},
 	{"P_PlayerWeaponAmmoBurst",lib_pPlayerWeaponAmmoBurst},
+	{"P_PlayerWeaponPanelOrAmmoBurst", lib_pPlayerWeaponPanelOrAmmoBurst},
 	{"P_PlayerEmeraldBurst",lib_pPlayerEmeraldBurst},
 	{"P_PlayerFlagBurst",lib_pPlayerFlagBurst},
 	{"P_PlayRinglossSound",lib_pPlayRinglossSound},
