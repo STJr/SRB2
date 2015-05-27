@@ -2716,6 +2716,13 @@ static void P_ShieldDamage(player_t *player, mobj_t *inflictor, mobj_t *source, 
 
 static void P_RingDamage(player_t *player, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype)
 {
+	P_DoPlayerPain(player, source, inflictor);
+
+	P_ForceFeed(player, 40, 10, TICRATE, 40 + min(damage, 100)*2);
+
+	if ((source && source->type == MT_SPIKE) || damagetype == DMG_SPIKE) // spikes
+		S_StartSound(player->mo, sfx_spkdth);
+
 	if (source && source->player && !player->powers[pw_super]) //don't score points against super players
 	{
 		// Award no points when players shoot each other when cv_friendlyfire is on.
