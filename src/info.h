@@ -2262,6 +2262,7 @@ typedef enum state
 	S_MAGN10,
 	S_MAGN11,
 	S_MAGN12,
+	S_MAGN13,
 
 	S_FORC1,
 	S_FORC2,

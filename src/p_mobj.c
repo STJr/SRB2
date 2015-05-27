@@ -5608,11 +5608,16 @@ void P_MobjThinker(mobj_t *mobj)
 			case MT_BLACKORB:
 			case MT_WHITEORB:
 			case MT_GREENORB:
-			case MT_YELLOWORB:
 			case MT_BLUEORB:
 			case MT_PITYORB:
 				if (!P_AddShield(mobj))
 					return;
+				break;
+			case MT_YELLOWORB:
+				if (!P_AddShield(mobj))
+					return;
+				if (mobj->target->player->homing)
+					P_SetMobjState(mobj, mobj->info->painstate);
 				break;
 			case MT_WATERDROP:
 				P_SceneryCheckWater(mobj);

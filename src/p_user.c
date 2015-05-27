@@ -3971,7 +3971,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 
 						if (player->charability == CA_HOMINGTHOK && !player->homing)
 						{
-							if (P_LookForEnemies(player))
+							if (P_LookForEnemies(player, true))
 							{
 								if (player->mo->tracer)
 									player->homing = 3*TICRATE;
@@ -6792,6 +6792,17 @@ static void P_MovePlayer(player_t *player)
 					if (!(player->powers[pw_super] || player->powers[pw_invulnerability]))
 						P_BlackOw(player);
 				}
+				// Attract shield activation
+				if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT)
+				{
+					if (!(player->pflags & PF_THOKKED))
+					{
+						player->pflags |= PF_THOKKED;
+						player->homing = 2;
+						if (P_LookForEnemies(player, false) && player->mo->tracer)
+							player->homing = 3*TICRATE;
+					}
+				}
 			}
 			// Super Sonic move
 			if (player->charflags & SF_SUPER && player->powers[pw_super] && player->speed > FixedMul(5<<FRACBITS, player->mo->scale)
@@ -6807,8 +6818,20 @@ static void P_MovePlayer(player_t *player)
 		}
 	}
 
+	if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT)
+	{
+		if (player->homing && player->mo->tracer)
+		{
+			if (!(player->pflags & PF_JUMPED)
+			|| player->mo->tracer->health <= 0
+			|| player->mo->tracer->flags2 & MF2_FRET)
+				player->homing = 0;
+			else
+				P_HomingAttack(player->mo, player->mo->tracer);
+		}
+	}
 	// HOMING option.
-	if (player->charability == CA_HOMINGTHOK)
+	else if (player->charability == CA_HOMINGTHOK)
 	{
 		// If you've got a target, chase after it!
 		if (player->homing && player->mo->tracer)
@@ -7410,9 +7433,9 @@ void P_NukeEnemies(mobj_t *inflictor, mobj_t *source, fixed_t radius)
 //
 // P_LookForEnemies
 // Looks for something you can hit - Used for homing attack
-// Includes monitors and springs!
+// If nonenemies is true, includes monitors and springs!
 //
-boolean P_LookForEnemies(player_t *player)
+boolean P_LookForEnemies(player_t *player, boolean nonenemies)
 {
 	mobj_t *mo;
 	thinker_t *think;
@@ -7425,7 +7448,8 @@ boolean P_LookForEnemies(player_t *player)
 			continue; // not a mobj thinker
 
 		mo = (mobj_t *)think;
-		if (!(mo->flags & (MF_ENEMY|MF_BOSS|MF_MONITOR|MF_SPRING)))
+		if ((nonenemies && !(mo->flags & (MF_ENEMY|MF_BOSS|MF_MONITOR|MF_SPRING)))
+		|| (!nonenemies && !(mo->flags & (MF_ENEMY|MF_BOSS))))
 			continue; // not a valid enemy
 
 		if (mo->health <= 0) // dead
@@ -7524,7 +7548,12 @@ void P_HomingAttack(mobj_t *source, mobj_t *enemy) // Home in on your target
 			ns = FixedMul(source->info->speed, source->scale);
 	}
 	else if (source->player)
-		ns = FixedDiv(FixedMul(source->player->actionspd, source->scale), 3*FRACUNIT/2);
+	{
+		if (source->player->charability == CA_HOMINGTHOK)
+			ns = FixedDiv(FixedMul(source->player->actionspd, source->scale), 3*FRACUNIT/2);
+		else //if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT)
+			ns = FixedMul(80*FRACUNIT, source->scale);
+	}
 
 	source->momx = FixedMul(FixedDiv(enemy->x - source->x, dist), ns);
 	source->momy = FixedMul(FixedDiv(enemy->y - source->y, dist), ns);

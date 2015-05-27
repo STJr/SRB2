@@ -791,10 +791,11 @@ static int lib_pReturnThrustY(lua_State *L)
 static int lib_pLookForEnemies(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	boolean nonenemies = lua_opttrueboolean(L, 2);
 	NOHUD
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
-	lua_pushboolean(L, P_LookForEnemies(player));
+	lua_pushboolean(L, P_LookForEnemies(player, nonenemies));
 	return 1;
 }
 
