@@ -241,9 +241,10 @@ void P_DoMatchSuper(player_t *player)
 		return;
 
 	// Got 'em all? Turn "super"!
+	emeraldspawndelay = invulntics + 1;
 	player->powers[pw_emeralds] = 0;
-	player->powers[pw_invulnerability] = invulntics + 1;
-	player->powers[pw_sneakers] = player->powers[pw_invulnerability];
+	player->powers[pw_invulnerability] = emeraldspawndelay;
+	player->powers[pw_sneakers] = emeraldspawndelay;
 	if (P_IsLocalPlayer(player) && !player->powers[pw_super])
 	{
 		S_StopMusic();

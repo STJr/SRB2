@@ -444,5 +444,6 @@ void P_EmeraldManager(void);
 extern mapthing_t *huntemeralds[MAXHUNTEMERALDS];
 extern INT32 numhuntemeralds;
 extern boolean runemeraldmanager;
+extern UINT16 emeraldspawndelay;
 extern INT32 numstarposts;
 #endif

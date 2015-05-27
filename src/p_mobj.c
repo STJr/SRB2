@@ -657,14 +657,12 @@ void P_EmeraldManager(void)
 			else
 				break;
 
-			if (leveltime < TICRATE) // Start of map
-				spawnpoints[j]->threshold = 60*TICRATE + P_Random() * (TICRATE/5);
-			else
-				spawnpoints[j]->threshold = P_Random() * (TICRATE/5);
-
+			spawnpoints[j]->threshold = emeraldspawndelay + P_Random() * (TICRATE/5);
 			break;
 		}
 	}
+
+	emeraldspawndelay = 0;
 }
 
 //
