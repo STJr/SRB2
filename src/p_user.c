@@ -6799,6 +6799,7 @@ static void P_MovePlayer(player_t *player)
 					{
 						player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
 						player->homing = 2;
+						S_StartSound(player->mo, sfx_spdpad);
 						if (P_LookForEnemies(player, false) && player->mo->tracer)
 							player->homing = 3*TICRATE;
 					}
