@@ -997,6 +997,7 @@ void P_DoSuperTransformation(player_t *player, boolean giverings)
 
 	P_PlayerFlagBurst(player, false);
 }
+
 // Adds to the player's score
 void P_AddPlayerScore(player_t *player, UINT32 amount)
 {
@@ -1080,6 +1081,42 @@ void P_AddPlayerScore(player_t *player, UINT32 amount)
 			redscore += amount;
 		else if (player->ctfteam == 2)
 			bluescore += amount;
+	}
+}
+
+// Steals from every enemy's score.
+void P_StealPlayerScore(player_t *player, UINT32 amount)
+{
+	boolean teams = G_GametypeHasTeams();
+	UINT32 stolen = 0;
+	int i;
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (&players[i] == player
+		|| (teams && players[i].ctfteam == player->ctfteam))
+			continue;
+		if (players[i].score >= amount)
+		{
+			stolen += amount;
+			players[i].score -= amount;
+		}
+		else
+		{
+			stolen += players[i].score;
+			players[i].score = 0;
+		}
+	}
+	if (stolen > 0)
+	{
+		// In team match, all stolen points are removed from the enemy team's running score.
+		if (gametype == GT_TEAMMATCH)
+		{
+			if (player->ctfteam == 1)
+				bluescore -= amount;
+			else if (player->ctfteam == 2)
+				redscore -= amount;
+		}
+		P_AddPlayerScore(player, stolen);
 	}
 }
 
@@ -3321,7 +3358,7 @@ static void P_DoSuperStuff(player_t *player)
 		return; // NiGHTS Super doesn't mix with normal super
 
 	// Does player have all emeralds? If so, flag the "Ready For Super!"
-	if ((ALL7EMERALDS(emeralds) || ALL7EMERALDS(player->powers[pw_emeralds])) && player->health > 50)
+	if (ALL7EMERALDS(emeralds) && player->health > 50)
 		player->pflags |= PF_SUPERREADY;
 	else
 		player->pflags &= ~PF_SUPERREADY;
@@ -3329,7 +3366,7 @@ static void P_DoSuperStuff(player_t *player)
 	if (player->powers[pw_super])
 	{
 		// If you're super and not Sonic, de-superize!
-		if (!((ALL7EMERALDS(emeralds)) && (player->charflags & SF_SUPER)) && !(ALL7EMERALDS(player->powers[pw_emeralds])))
+		if (!(ALL7EMERALDS(emeralds) && player->charflags & SF_SUPER))
 		{
 			player->powers[pw_super] = 0;
 			P_SetPlayerMobjState(player->mo, S_PLAY_STND);
@@ -3462,12 +3499,12 @@ static void P_DoSuperStuff(player_t *player)
 //
 boolean P_SuperReady(player_t *player)
 {
-	if ((player->pflags & PF_SUPERREADY) && !player->powers[pw_super] && !player->powers[pw_tailsfly]
+	if (player->pflags & PF_SUPERREADY && !player->powers[pw_super] && !player->powers[pw_tailsfly]
 	&& !(player->powers[pw_shield] & SH_NOSTACK)
 	&& !player->powers[pw_invulnerability]
 	&& !(maptol & TOL_NIGHTS) // don't turn 'regular super' in nights levels
 	&& player->pflags & PF_JUMPED
-	&& ((player->charflags & SF_SUPER) || ALL7EMERALDS(player->powers[pw_emeralds])))
+	&& player->charflags & SF_SUPER)
 		return true;
 
 	return false;
@@ -3995,13 +4032,6 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						player->pflags |= PF_GLIDING|PF_THOKKED;
 						player->glidetime = 0;
 
-						if (player->powers[pw_super] && ALL7EMERALDS(player->powers[pw_emeralds]))
-						{
-							// Glide at double speed while super.
-							glidespeed *= 2;
-							player->pflags &= ~PF_THOKKED;
-						}
-
 						P_SetPlayerMobjState(player->mo, S_PLAY_GLIDE);
 						P_InstaThrust(player->mo, player->mo->angle, FixedMul(glidespeed, player->mo->scale));
 						player->pflags &= ~(PF_SPINNING|PF_STARTDASH);
@@ -4115,8 +4145,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 		player->pflags &= ~PF_JUMPDOWN;
 
 		// Repeat abilities, but not double jump!
-		if ((player->charability2 == CA2_MULTIABILITY && player->charability != CA_DOUBLEJUMP)
-			|| (player->powers[pw_super] && ALL7EMERALDS(player->powers[pw_emeralds])))
+		if (player->charability2 == CA2_MULTIABILITY && player->charability != CA_DOUBLEJUMP)
 			player->secondjump = 0;
 		else if (player->charability == CA_FLOAT && player->secondjump == 1)
 			player->secondjump = 2;
@@ -4360,9 +4389,6 @@ static void P_2dMovement(player_t *player)
 		if (cmd->forwardmove != 0)
 			P_SetObjectMomZ(player->mo, FixedDiv(cmd->forwardmove*FRACUNIT,10*FRACUNIT), false);
 
-		if (player->powers[pw_super] && ALL7EMERALDS(player->powers[pw_emeralds]))
-			player->mo->momz *= 2;
-
 		player->mo->momx = 0;
 	}
 	else if (cmd->sidemove != 0 && !(player->pflags & PF_GLIDING || player->exiting
@@ -4556,11 +4582,7 @@ static void P_3dMovement(player_t *player)
 	if (player->climbing)
 	{
 		if (cmd->forwardmove)
-		{
 			P_SetObjectMomZ(player->mo, FixedDiv(cmd->forwardmove*FRACUNIT, 10*FRACUNIT), false);
-			if (player->powers[pw_super] && ALL7EMERALDS(player->powers[pw_emeralds]))
-				player->mo->momz *= 2;
-		}
 	}
 	else if (!analogmove
 		&& cmd->forwardmove != 0 && !(player->pflags & PF_GLIDING || player->exiting
@@ -4601,12 +4623,7 @@ static void P_3dMovement(player_t *player)
 	}
 	// Sideways movement
 	if (player->climbing)
-	{
-		if (player->powers[pw_super] && ALL7EMERALDS(player->powers[pw_emeralds]))
-			P_InstaThrust(player->mo, player->mo->angle-ANGLE_90, FixedMul(FixedDiv(cmd->sidemove*FRACUNIT, 5*FRACUNIT), player->mo->scale));
-		else
-			P_InstaThrust(player->mo, player->mo->angle-ANGLE_90, FixedMul(FixedDiv(cmd->sidemove*FRACUNIT, 10*FRACUNIT), player->mo->scale));
-	}
+		P_InstaThrust(player->mo, player->mo->angle-ANGLE_90, FixedMul(FixedDiv(cmd->sidemove*FRACUNIT, 10*FRACUNIT), player->mo->scale));
 	// Analog movement control
 	else if (analogmove)
 	{
@@ -6510,8 +6527,8 @@ static void P_MovePlayer(player_t *player)
 			P_ResetPlayer(player); // down, stop gliding.
 			if (onground)
 				P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
-			else if ((player->charability2 == CA2_MULTIABILITY)
-				|| (player->powers[pw_super] && ALL7EMERALDS(player->powers[pw_emeralds]) && player->charability == CA_GLIDEANDCLIMB))
+			else if (player->charability2 == CA2_MULTIABILITY
+				&& player->charability == CA_GLIDEANDCLIMB)
 			{
 				player->pflags |= PF_JUMPED;
 				P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
@@ -6764,11 +6781,6 @@ static void P_MovePlayer(player_t *player)
 				{
 					if ((player->powers[pw_shield] & SH_NOSTACK) == SH_JUMP && !player->powers[pw_super])
 						P_DoJumpShield(player);
-					else if (player->powers[pw_super] && ALL7EMERALDS(player->powers[pw_emeralds]) && player->charability == CA_FLY)
-					{
-						P_DoJumpShield(player);
-						player->mo->momz *= 2;
-					}
 				}
 				// Bomb shield activation
 				if ((player->powers[pw_shield] & SH_NOSTACK) == SH_BOMB)
@@ -8924,7 +8936,7 @@ void P_PlayerThink(player_t *player)
 	if (player->powers[pw_flashing] && player->powers[pw_flashing] < UINT16_MAX && ((player->pflags & PF_NIGHTSMODE) || player->powers[pw_flashing] < flashingtics))
 		player->powers[pw_flashing]--;
 
-	if (player->powers[pw_tailsfly] && player->powers[pw_tailsfly] < UINT16_MAX && player->charability != CA_SWIM && !(player->powers[pw_super] && ALL7EMERALDS(player->powers[pw_emeralds]))) // tails fly counter
+	if (player->powers[pw_tailsfly] && player->powers[pw_tailsfly] < UINT16_MAX && player->charability != CA_SWIM) // tails fly counter
 		player->powers[pw_tailsfly]--;
 
 	if (player->powers[pw_underwater] && (player->pflags & PF_GODMODE || (player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL))
