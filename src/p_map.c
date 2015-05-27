@@ -121,7 +121,7 @@ void P_DoSpring(mobj_t *spring, mobj_t *object)
 		/*Someone want to make these work like bumpers?*/
 		return;
 	}
-	
+
 	object->eflags |= MFE_SPRUNG; // apply this flag asap!
 	spring->flags &= ~(MF_SOLID|MF_SPECIAL); // De-solidify
 
@@ -188,7 +188,7 @@ void P_DoSpring(mobj_t *spring, mobj_t *object)
 				localangle2 = spring->angle;
 		}
 
-		pflags = object->player->pflags & (PF_JUMPED|PF_SPINNING|PF_THOKKED); // I still need these.
+		pflags = object->player->pflags & (PF_JUMPED|PF_SPINNING|PF_THOKKED|PF_SHIELDABILITY); // I still need these.
 		P_ResetPlayer(object->player);
 
 		if (P_MobjFlip(object)*vertispeed > 0)

@@ -661,7 +661,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		player->mo->height = player->mo->tracer->height;
 	}
 
-	player->pflags &= ~(PF_USEDOWN|PF_JUMPDOWN|PF_ATTACKDOWN|PF_STARTDASH|PF_GLIDING|PF_JUMPED|PF_THOKKED|PF_SPINNING|PF_DRILLING);
+	player->pflags &= ~(PF_USEDOWN|PF_JUMPDOWN|PF_ATTACKDOWN|PF_STARTDASH|PF_GLIDING|PF_JUMPED|PF_THOKKED|PF_SHIELDABILITY|PF_SPINNING|PF_DRILLING);
 	player->homing = 0;
 	player->mo->fuse = 0;
 	player->speed = 0;
@@ -874,7 +874,7 @@ void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor)
 // Useful when you want to kill everything the player is doing.
 void P_ResetPlayer(player_t *player)
 {
-	player->pflags &= ~(PF_ROPEHANG|PF_ITEMHANG|PF_MACESPIN|PF_SPINNING|PF_JUMPED|PF_GLIDING|PF_THOKKED|PF_CARRIED);
+	player->pflags &= ~(PF_ROPEHANG|PF_ITEMHANG|PF_MACESPIN|PF_SPINNING|PF_JUMPED|PF_GLIDING|PF_THOKKED|PF_SHIELDABILITY|PF_CARRIED);
 	player->jumping = 0;
 	player->secondjump = 0;
 	player->glidetime = 0;
@@ -6797,7 +6797,7 @@ static void P_MovePlayer(player_t *player)
 				{
 					if (!(player->pflags & PF_THOKKED))
 					{
-						player->pflags |= PF_THOKKED;
+						player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
 						player->homing = 2;
 						if (P_LookForEnemies(player, false) && player->mo->tracer)
 							player->homing = 3*TICRATE;
@@ -6818,25 +6818,15 @@ static void P_MovePlayer(player_t *player)
 		}
 	}
 
-	if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT)
-	{
-		if (player->homing && player->mo->tracer)
-		{
-			if (!(player->pflags & PF_JUMPED)
-			|| player->mo->tracer->health <= 0
-			|| player->mo->tracer->flags2 & MF2_FRET)
-				player->homing = 0;
-			else
-				P_HomingAttack(player->mo, player->mo->tracer);
-		}
-	}
 	// HOMING option.
-	else if (player->charability == CA_HOMINGTHOK)
+	if (player->charability == CA_HOMINGTHOK
+	|| (player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT)
 	{
 		// If you've got a target, chase after it!
 		if (player->homing && player->mo->tracer)
 		{
-			P_SpawnThokMobj(player);
+			if (!(player->pflags & PF_SHIELDABILITY))
+				P_SpawnThokMobj(player);
 			P_HomingAttack(player->mo, player->mo->tracer);
 
 			// But if you don't, then stop homing.
@@ -6852,7 +6842,7 @@ static void P_MovePlayer(player_t *player)
 				if (player->mo->tracer->flags2 & MF2_FRET)
 					P_InstaThrust(player->mo, player->mo->angle, -(player->speed>>3));
 
-				if (!(player->mo->tracer->flags & MF_BOSS))
+				if (!(player->pflags & PF_SHIELDABILITY) && !(player->mo->tracer->flags & MF_BOSS))
 					player->pflags &= ~PF_THOKKED;
 			}
 		}
@@ -7549,9 +7539,9 @@ void P_HomingAttack(mobj_t *source, mobj_t *enemy) // Home in on your target
 	}
 	else if (source->player)
 	{
-		if (source->player->charability == CA_HOMINGTHOK)
+		if (source->player->charability == CA_HOMINGTHOK && !(source->player->pflags & PF_SHIELDABILITY))
 			ns = FixedDiv(FixedMul(source->player->actionspd, source->scale), 3*FRACUNIT/2);
-		else //if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT)
+		else
 			ns = FixedMul(80*FRACUNIT, source->scale);
 	}
 
