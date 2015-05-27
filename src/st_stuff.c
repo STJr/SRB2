@@ -1349,7 +1349,7 @@ static void ST_drawWeaponRing(powertype_t weapon, INT32 rwflag, INT32 wepflag, I
 			txtflags |= V_YELLOWMAP;
 
 		if (weapon == pw_infinityring
-		|| (stplyr->ringweapons & rwflag && stplyr->health > 1))
+		|| (stplyr->ringweapons & rwflag))
 			txtflags |= V_20TRANS;
 		else
 		{

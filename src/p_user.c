@@ -3130,72 +3130,64 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 			mobj_t *mo = NULL;
 			player->pflags |= PF_ATTACKDOWN;
 
+			#define TAKE_AMMO(player, power) \
+			player->powers[power]--; \
+			if (player->health <= 1) \
+			{ \
+				if (player->powers[power] > 0) \
+					player->powers[power]--; \
+			} \
+			else \
+			{ \
+				player->health--; \
+				player->mo->health--; \
+			}
+
 			if (cmd->buttons & BT_FIRENORMAL) // No powers, just a regular ring.
 				goto firenormal; //code repetition sucks.
 			// Bounce ring
 			else if (player->currentweapon == WEP_BOUNCE && player->powers[pw_bouncering])
 			{
-				if (player->health <= 1)
-					return;
+				TAKE_AMMO(player, pw_bouncering);
 				P_SetWeaponDelay(player, TICRATE/4);
 
 				mo = P_SpawnPlayerMissile(player->mo, MT_THROWNBOUNCE, MF2_BOUNCERING);
 
 				if (mo)
 					mo->fuse = 3*TICRATE; // Bounce Ring time
-
-				player->powers[pw_bouncering]--;
-				player->mo->health--;
-				player->health--;
 			}
 			// Rail ring
 			else if (player->currentweapon == WEP_RAIL && player->powers[pw_railring])
 			{
-				if (player->health <= 1)
-					return;
+				TAKE_AMMO(player, pw_railring);
 				P_SetWeaponDelay(player, (3*TICRATE)/2);
 
 				mo = P_SpawnPlayerMissile(player->mo, MT_REDRING, MF2_RAILRING|MF2_DONTDRAW);
 
 				// Rail has no unique thrown object, therefore its sound plays here.
 				S_StartSound(player->mo, sfx_rail1);
-
-				player->powers[pw_railring]--;
-				player->mo->health--;
-				player->health--;
 			}
 			// Automatic
 			else if (player->currentweapon == WEP_AUTO && player->powers[pw_automaticring])
 			{
-				if (player->health <= 1)
-					return;
+				TAKE_AMMO(player, pw_automaticring);
 				player->pflags &= ~PF_ATTACKDOWN;
 				P_SetWeaponDelay(player, 2);
 
 				mo = P_SpawnPlayerMissile(player->mo, MT_THROWNAUTOMATIC, MF2_AUTOMATIC);
-
-				player->powers[pw_automaticring]--;
-				player->mo->health--;
-				player->health--;
 			}
 			// Explosion
 			else if (player->currentweapon == WEP_EXPLODE && player->powers[pw_explosionring])
 			{
-				if (player->health <= 1)
-					return;
+				TAKE_AMMO(player, pw_explosionring);
 				P_SetWeaponDelay(player, (3*TICRATE)/2);
 
 				mo = P_SpawnPlayerMissile(player->mo, MT_THROWNEXPLOSION, MF2_EXPLOSION);
-
-				player->powers[pw_explosionring]--;
-				player->mo->health--;
-				player->health--;
 			}
 			// Grenade
 			else if (player->currentweapon == WEP_GRENADE && player->powers[pw_grenadering])
 			{
-				if (player->health <= 1)
-					return;
+				TAKE_AMMO(player, pw_grenadering);
 				P_SetWeaponDelay(player, TICRATE/3);
 
 				mo = P_SpawnPlayerMissile(player->mo, MT_THROWNGRENADE, MF2_EXPLOSION);
@@ -3205,10 +3197,6 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 					//P_InstaThrust(mo, player->mo->angle, FixedMul(mo->info->speed, player->mo->scale));
 					mo->fuse = mo->info->mass;
 				}
-
-				player->powers[pw_grenadering]--;
-				player->mo->health--;
-				player->health--;
 			}
 			// Scatter
 			// Note: Ignores MF2_RAILRING
@@ -3218,8 +3206,7 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 				angle_t shotangle = player->mo->angle;
 				angle_t oldaiming = player->aiming;
 
-				if (player->health <= 1)
-					return;
+				TAKE_AMMO(player, pw_scatterring);
 				P_SetWeaponDelay(player, (2*TICRATE)/3);
 
 				// Center
@@ -3245,10 +3232,6 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 
 				player->mo->z = oldz;
 				player->aiming = oldaiming;
-
-				player->powers[pw_scatterring]--;
-				player->mo->health--;
-				player->health--;
 				return;
 			}
 			// No powers, just a regular ring.
@@ -3285,6 +3268,8 @@ firenormal:
 					player->health--;
 				}
 			}
+
+			#undef TAKE_AMMO
 
 			if (mo)
 			{
@@ -9221,10 +9206,6 @@ void P_PlayerAfterThink(player_t *player)
 	if (player->currentweapon == WEP_EXPLODE && (!(player->ringweapons & RW_EXPLODE) || !player->powers[pw_explosionring]))
 		player->currentweapon++;
 	if (player->currentweapon == WEP_RAIL && (!(player->ringweapons & RW_RAIL) || !player->powers[pw_railring]))
-		player->currentweapon = 0;
-
-	// If you're out of rings, but have Infinity Rings left, switch to that.
-	if (player->currentweapon != 0 && player->health <= 1 && player->powers[pw_infinityring])
 		player->currentweapon = 0;
 
 	if (P_IsLocalPlayer(player) && (player->pflags & PF_WPNDOWN) && player->currentweapon != oldweapon)
