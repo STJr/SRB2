@@ -6820,8 +6820,21 @@ static void P_MovePlayer(player_t *player)
 	}
 
 	// HOMING option.
-	if (player->charability == CA_HOMINGTHOK
-	|| (player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT)
+	if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT
+	&& player->pflags & PF_SHIELDABILITY)
+	{
+		if (player->homing && player->mo->tracer)
+		{
+			P_HomingAttack(player->mo, player->mo->tracer);
+			if (player->mo->tracer->health <= 0 || (player->mo->tracer->flags2 & MF2_FRET))
+				player->homing = 0;
+		}
+
+		// If you're not jumping, then you obviously wouldn't be homing.
+		if (!(player->pflags & PF_JUMPED))
+			player->homing = 0;
+	}
+	else if (player->charability == CA_HOMINGTHOK)
 	{
 		// If you've got a target, chase after it!
 		if (player->homing && player->mo->tracer)
@@ -7543,7 +7556,7 @@ void P_HomingAttack(mobj_t *source, mobj_t *enemy) // Home in on your target
 		if (source->player->charability == CA_HOMINGTHOK && !(source->player->pflags & PF_SHIELDABILITY))
 			ns = FixedDiv(FixedMul(source->player->actionspd, source->scale), 3*FRACUNIT/2);
 		else
-			ns = FixedMul(80*FRACUNIT, source->scale);
+			ns = FixedMul(45*FRACUNIT, source->scale);
 	}
 
 	source->momx = FixedMul(FixedDiv(enemy->x - source->x, dist), ns);
