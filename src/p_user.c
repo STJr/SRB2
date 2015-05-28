@@ -6827,7 +6827,12 @@ static void P_MovePlayer(player_t *player)
 		{
 			P_HomingAttack(player->mo, player->mo->tracer);
 			if (player->mo->tracer->health <= 0 || (player->mo->tracer->flags2 & MF2_FRET))
+			{
+				P_SetObjectMomZ(player->mo, 6*FRACUNIT, false);
+				if (player->mo->eflags & MFE_UNDERWATER)
+					player->mo->momz = FixedMul(player->mo->momz, FRACUNIT/3);
 				player->homing = 0;
+			}
 		}
 
 		// If you're not jumping, then you obviously wouldn't be homing.
@@ -6839,8 +6844,7 @@ static void P_MovePlayer(player_t *player)
 		// If you've got a target, chase after it!
 		if (player->homing && player->mo->tracer)
 		{
-			if (!(player->pflags & PF_SHIELDABILITY))
-				P_SpawnThokMobj(player);
+			P_SpawnThokMobj(player);
 			P_HomingAttack(player->mo, player->mo->tracer);
 
 			// But if you don't, then stop homing.
@@ -6856,7 +6860,7 @@ static void P_MovePlayer(player_t *player)
 				if (player->mo->tracer->flags2 & MF2_FRET)
 					P_InstaThrust(player->mo, player->mo->angle, -(player->speed>>3));
 
-				if (!(player->pflags & PF_SHIELDABILITY) && !(player->mo->tracer->flags & MF_BOSS))
+				if (!(player->mo->tracer->flags & MF_BOSS))
 					player->pflags &= ~PF_THOKKED;
 			}
 		}
