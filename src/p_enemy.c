@@ -3200,12 +3200,13 @@ void A_BombShield(mobj_t *actor)
 
 	player = actor->target->player;
 
-	if ((player->powers[pw_shield] & SH_NOSTACK) != SH_BOMB)
-	{
-		player->powers[pw_shield] = SH_BOMB|(player->powers[pw_shield] & SH_STACK);
-		P_SpawnShieldOrb(player);
-	}
+	// If you already have a bomb shield, use it!
+	if ((player->powers[pw_shield] & SH_NOSTACK) == SH_BOMB)
+		P_BlackOw(player);
 
+	// Now we know for certain that we don't have a bomb shield, so add one. :3
+	player->powers[pw_shield] = SH_BOMB|(player->powers[pw_shield] & SH_STACK);
+	P_SpawnShieldOrb(player);
 	S_StartSound(player->mo, actor->info->seesound);
 }
 
