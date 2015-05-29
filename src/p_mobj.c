@@ -1493,13 +1493,12 @@ static void P_RingZMovement(mobj_t *mo)
 		P_AdjustMobjFloorZ_PolyObjs(mo, mo->subsector);
 
 	// adjust height
-	mo->z += mo->momz;
-
 	if (mo->eflags & MFE_APPLYPMOMZ && !P_IsObjectOnGround(mo))
 	{
 		mo->momz += mo->pmomz;
 		mo->eflags &= ~MFE_APPLYPMOMZ;
 	}
+	mo->z += mo->momz;
 
 	// clip movement
 	if (mo->z <= mo->floorz && !(mo->flags & MF_NOCLIPHEIGHT))
@@ -1563,13 +1562,12 @@ static boolean P_ZMovement(mobj_t *mo)
 		P_AdjustMobjFloorZ_PolyObjs(mo, mo->subsector);
 
 	// adjust height
-	mo->z += mo->momz;
-
 	if (mo->eflags & MFE_APPLYPMOMZ && !P_IsObjectOnGround(mo))
 	{
 		mo->momz += mo->pmomz;
 		mo->eflags &= ~MFE_APPLYPMOMZ;
 	}
+	mo->z += mo->momz;
 
 	switch (mo->type)
 	{
@@ -1989,13 +1987,13 @@ static void P_PlayerZMovement(mobj_t *mo)
 	}
 
 	// adjust height
-	mo->z += mo->momz;
-
 	if (mo->eflags & MFE_APPLYPMOMZ && !P_IsObjectOnGround(mo))
 	{
 		mo->momz += mo->pmomz;
 		mo->eflags &= ~MFE_APPLYPMOMZ;
 	}
+
+	mo->z += mo->momz;
 
 	// Have player fall through floor?
 	if (mo->player->playerstate == PST_DEAD
@@ -2256,13 +2254,12 @@ static boolean P_SceneryZMovement(mobj_t *mo)
 		P_AdjustMobjFloorZ_PolyObjs(mo, mo->subsector);
 
 	// adjust height
-	mo->z += mo->momz;
-
 	if (mo->eflags & MFE_APPLYPMOMZ && !P_IsObjectOnGround(mo))
 	{
 		mo->momz += mo->pmomz;
 		mo->eflags &= ~MFE_APPLYPMOMZ;
 	}
+	mo->z += mo->momz;
 
 	switch (mo->type)
 	{

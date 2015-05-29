@@ -7193,7 +7193,7 @@ static const char *const MOBJFLAG2_LIST[] = {
 	NULL
 };
 
-static const char *const MOBJEFLAG_LIST[8] = {
+static const char *const MOBJEFLAG_LIST[] = {
 	"ONGROUND", // The mobj stands on solid floor (not on another mobj or in air)
 	"JUSTHITFLOOR", // The mobj just hit the floor while falling, this is cleared on next frame
 	"TOUCHWATER", // The mobj stands in a sector with water, and touches the surface
