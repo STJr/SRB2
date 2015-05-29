@@ -1986,8 +1986,14 @@ static void P_PlayerZMovement(mobj_t *mo)
 			(FixedMul(cv_viewheight.value<<FRACBITS, mo->scale) - mo->player->viewheight)>>3;
 	}
 
-	if (mo->pmomz && mo->z > mo->floorz)
+	// adjust height
+	if (mo->pmomz && !P_IsObjectOnGround(mo))
+	{
+		if ((mo->eflags & MFE_VERTICALFLIP && mo->pmomz < 0)
+		|| (!(mo->eflags & MFE_VERTICALFLIP) && mo->pmomz > 0))
+			mo->momz += mo->pmomz;
 		mo->pmomz = 0;
+	}
 
 	mo->z += mo->momz;
 
