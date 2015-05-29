@@ -3832,11 +3832,13 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 
 	if (cmd->buttons & BT_USE && !(player->pflags & PF_JUMPDOWN) && !player->exiting && !P_PlayerInPain(player))
 	{
-		if (onground || player->climbing || player->pflags & (PF_CARRIED|PF_ITEMHANG|PF_ROPEHANG))
-		{}
-		else if (player->pflags & PF_MACESPIN && player->mo->tracer)
-		{}
-		else if (!(player->pflags & PF_SLIDING) && ((gametype != GT_CTF) || (!player->gotflag)))
+		if (onground || player->climbing || player->pflags & (PF_CARRIED|PF_ITEMHANG|PF_ROPEHANG|PF_SLIDING)
+		|| (player->pflags & PF_MACESPIN && player->mo->tracer))
+			;
+		else if ((player->powers[pw_shield] & SH_NOSTACK) == SH_JUMP
+		&& !(player->pflags & PF_JUMPED))
+			P_DoJumpShield(player);
+		else if (gametype != GT_CTF || !player->gotflag)
 		{
 #ifdef HAVE_BLUA
 			if (!LUAh_JumpSpinSpecial(player))
