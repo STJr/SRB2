@@ -287,6 +287,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		// Player animations
 		if (st->sprite == SPR_PLAY)
 		{
+			boolean noalt = false;
 			UINT8 spr2 = st->frame & FF_FRAMEMASK;
 			UINT16 frame = (mobj->frame & FF_FRAMEMASK)+1;
 			if (mobj->sprite != SPR_PLAY)
@@ -296,6 +297,99 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 			}
 			else if (mobj->sprite2 != spr2)
 				frame = 0;
+
+			while (&((skin_t *)mobj->skin)->sprites[spr2].numframes == 0 && spr2 != SPR2_STND)
+			{
+				switch(spr2)
+				{
+				case SPR2_RUN:
+					spr2 = SPR2_WALK;
+					break;
+				case SPR2_DRWN:
+					spr2 = SPR2_DEAD;
+					break;
+				case SPR2_DASH:
+					spr2 = SPR2_SPIN;
+					break;
+				case SPR2_GASP:
+					spr2 = SPR2_JUMP;
+					break;
+				case SPR2_JUMP:
+					spr2 = SPR2_FALL;
+					break;
+				case SPR2_FALL:
+					spr2 = SPR2_WALK;
+					break;
+				case SPR2_RIDE:
+					spr2 = SPR2_FALL;
+					break;
+
+				case SPR2_FLY:
+					spr2 = SPR2_JUMP;
+					break;
+				case SPR2_TIRE:
+					spr2 = SPR2_FLY;
+					break;
+
+				case SPR2_GLID:
+					spr2 = SPR2_FLY;
+					break;
+				case SPR2_CLMB:
+					spr2 = SPR2_WALK;
+					break;
+				case SPR2_CLNG:
+					spr2 = SPR2_CLMB;
+					break;
+
+				case SPR2_SIGN:
+				case SPR2_LIFE:
+					noalt = true;
+					break;
+
+				// Super sprites fallback to regular sprites
+				case SPR2_SWLK:
+					spr2 = SPR2_WALK;
+					break;
+				case SPR2_SRUN:
+					spr2 = SPR2_RUN;
+					break;
+				case SPR2_SPAN:
+					spr2 = SPR2_PAIN;
+					break;
+				case SPR2_SDTH:
+					spr2 = SPR2_DEAD;
+					break;
+				case SPR2_SDRN:
+					spr2 = SPR2_DRWN;
+					break;
+				case SPR2_SSPN:
+					spr2 = SPR2_SPIN;
+					break;
+				case SPR2_SGSP:
+					spr2 = SPR2_GASP;
+					break;
+				case SPR2_SJMP:
+					spr2 = SPR2_JUMP;
+					break;
+				case SPR2_SFAL:
+					spr2 = SPR2_FALL;
+					break;
+				case SPR2_SEDG:
+					spr2 = SPR2_EDGE;
+					break;
+				case SPR2_SRID:
+					spr2 = SPR2_RIDE;
+					break;
+
+				// Dunno? Just go to standing then.
+				default:
+					spr2 = SPR2_STND;
+					break;
+				}
+				if (noalt)
+					break;
+			}
+
 			mobj->sprite2 = spr2;
 			if (!mobj->skin || frame >= ((skin_t *)mobj->skin)->sprites[spr2].numframes)
 				frame = 0;
