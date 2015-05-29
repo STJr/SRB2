@@ -6497,19 +6497,22 @@ void P_MobjThinker(mobj_t *mobj)
 						if (mobj->spawnpoint->options & MTF_OBJECTFLIP)
 						{
 							z = ss->sector->ceilingheight - mobjinfo[mobj->type].height;
-							if (mobj->spawnpoint->z)
-								z -= mobj->spawnpoint->z << FRACBITS;
+							if (mobj->spawnpoint->options >> ZSHIFT)
+								z -= (mobj->spawnpoint->options >> ZSHIFT) << FRACBITS;
 						}
 						else
 						{
 							z = ss->sector->floorheight;
-							if (mobj->spawnpoint->z)
-								z += mobj->spawnpoint->z << FRACBITS;
+							if (mobj->spawnpoint->options >> ZSHIFT)
+								z += (mobj->spawnpoint->options >> ZSHIFT) << FRACBITS;
 						}
 						flagmo = P_SpawnMobj(x, y, z, mobj->type);
 						flagmo->spawnpoint = mobj->spawnpoint;
 						if (mobj->spawnpoint->options & MTF_OBJECTFLIP)
-							flagmo->spawnpoint->options |= MTF_OBJECTFLIP;
+						{
+							flagmo->eflags |= MFE_VERTICALFLIP;
+							flagmo->flags2 |= MF2_OBJECTFLIP;
+						}
 
 						if (mobj->type == MT_REDFLAG)
 						{
