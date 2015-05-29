@@ -232,7 +232,8 @@ typedef enum
 	MFE_VERTICALFLIP      = 1<<5,
 	// Goo water
 	MFE_GOOWATER          = 1<<6,
-	// free: to and including 1<<7
+	// Platform movement
+	MFE_APPLYPMOMZ        = 1<<7
 } mobjeflag_t;
 
 //

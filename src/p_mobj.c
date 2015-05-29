@@ -1493,12 +1493,13 @@ static void P_RingZMovement(mobj_t *mo)
 		P_AdjustMobjFloorZ_PolyObjs(mo, mo->subsector);
 
 	// adjust height
-	if (mo->pmomz && mo->z != mo->floorz)
+	mo->z += mo->momz;
+
+	if (mo->eflags & MFE_APPLYPMOMZ && !P_IsObjectOnGround(mo))
 	{
 		mo->momz += mo->pmomz;
-		mo->pmomz = 0;
+		mo->eflags &= ~MFE_APPLYPMOMZ;
 	}
-	mo->z += mo->momz;
 
 	// clip movement
 	if (mo->z <= mo->floorz && !(mo->flags & MF_NOCLIPHEIGHT))
@@ -1562,12 +1563,13 @@ static boolean P_ZMovement(mobj_t *mo)
 		P_AdjustMobjFloorZ_PolyObjs(mo, mo->subsector);
 
 	// adjust height
-	if (mo->pmomz && mo->z != mo->floorz)
+	mo->z += mo->momz;
+
+	if (mo->eflags & MFE_APPLYPMOMZ && !P_IsObjectOnGround(mo))
 	{
 		mo->momz += mo->pmomz;
-		mo->pmomz = 0;
+		mo->eflags &= ~MFE_APPLYPMOMZ;
 	}
-	mo->z += mo->momz;
 
 	switch (mo->type)
 	{
@@ -1987,15 +1989,13 @@ static void P_PlayerZMovement(mobj_t *mo)
 	}
 
 	// adjust height
-	if (mo->pmomz && !P_IsObjectOnGround(mo))
-	{
-		if ((mo->eflags & MFE_VERTICALFLIP && mo->pmomz < 0)
-		|| (!(mo->eflags & MFE_VERTICALFLIP) && mo->pmomz > 0))
-			mo->momz += mo->pmomz;
-		mo->pmomz = 0;
-	}
-
 	mo->z += mo->momz;
+
+	if (mo->eflags & MFE_APPLYPMOMZ && !P_IsObjectOnGround(mo))
+	{
+		mo->momz += mo->pmomz;
+		mo->eflags &= ~MFE_APPLYPMOMZ;
+	}
 
 	// Have player fall through floor?
 	if (mo->player->playerstate == PST_DEAD
@@ -2010,7 +2010,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 		else
 			mo->z = mo->floorz;
 
-		if (mo->player && (mo->player->pflags & PF_NIGHTSMODE))
+		if (mo->player->pflags & PF_NIGHTSMODE)
 		{
 			if (mo->player->flyangle < 90 || mo->player->flyangle >= 270)
 				mo->player->flyangle += P_MobjFlip(mo)*90;
@@ -2025,12 +2025,11 @@ static void P_PlayerZMovement(mobj_t *mo)
 
 		if (P_MobjFlip(mo)*mo->momz < 0) // falling
 		{
+			mo->pmomz = 0; // We're on a new floor, don't keep doing platform movement.
+
 			// Squat down. Decrease viewheight for a moment after hitting the ground (hard),
-			if (mo->player)
-			{
-				if (P_MobjFlip(mo)*mo->momz < -FixedMul(8*FRACUNIT, mo->scale))
-					mo->player->deltaviewheight = (P_MobjFlip(mo)*mo->momz)>>3; // make sure momz is negative
-			}
+			if (P_MobjFlip(mo)*mo->momz < -FixedMul(8*FRACUNIT, mo->scale))
+				mo->player->deltaviewheight = (P_MobjFlip(mo)*mo->momz)>>3; // make sure momz is negative
 
 			if (!tmfloorthing || tmfloorthing->flags & (MF_PUSHABLE|MF_MONITOR)
 				|| tmfloorthing->flags2 & MF2_STANDONME || tmfloorthing->type == MT_PLAYER) // Spin Attack
@@ -2103,14 +2102,14 @@ static void P_PlayerZMovement(mobj_t *mo)
 
 					// Cut momentum in half when you hit the ground and
 					// aren't pressing any controls.
-					if (!mo->player || (!(mo->player->cmd.forwardmove || mo->player->cmd.sidemove) && !mo->player->cmomx && !mo->player->cmomy && !(mo->player->pflags & PF_SPINNING)))
+					if (!(mo->player->cmd.forwardmove || mo->player->cmd.sidemove) && !mo->player->cmomx && !mo->player->cmomy && !(mo->player->pflags & PF_SPINNING))
 					{
 						mo->momx = mo->momx/2;
 						mo->momy = mo->momy/2;
 					}
 				}
 
-				if (mo->health && mo->player)
+				if (mo->health)
 				{
 					if (mo->player->pflags & PF_GLIDING) // ground gliding
 					{
@@ -2156,7 +2155,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 					mo->player->powers[pw_tailsfly] = 0;
 				}
 			}
-			if (mo->player && !(mo->player->pflags & PF_SPINNING))
+			if (!(mo->player->pflags & PF_SPINNING))
 				mo->player->pflags &= ~PF_STARTDASH;
 
 			if (tmfloorthing && (tmfloorthing->flags & (MF_PUSHABLE|MF_MONITOR)
@@ -2199,7 +2198,7 @@ nightsdone:
 		else
 			mo->z = mo->ceilingz - mo->height;
 
-		if (mo->player && (mo->player->pflags & PF_NIGHTSMODE))
+		if (mo->player->pflags & PF_NIGHTSMODE)
 		{
 			if (mo->player->flyangle < 90 || mo->player->flyangle >= 270)
 				mo->player->flyangle -= P_MobjFlip(mo)*90;
@@ -2214,7 +2213,7 @@ nightsdone:
 		{
 			msecnode_t *node;
 
-			if (CheckForMarioBlocks && mo->player && !(netgame && mo->player->spectator)) // Only let the player punch
+			if (CheckForMarioBlocks && !(netgame && mo->player->spectator)) // Only let the player punch
 			{
 				// Search the touching sectors, from side-to-side...
 				for (node = mo->touching_sectorlist; node; node = node->m_snext)
@@ -2242,7 +2241,7 @@ nightsdone:
 			if (mariomode)
 				S_StartSound(mo, sfx_mario1);
 
-			if (!(mo->player && mo->player->climbing))
+			if (!mo->player->climbing)
 				mo->momz = 0;
 		}
 	}
@@ -2257,12 +2256,13 @@ static boolean P_SceneryZMovement(mobj_t *mo)
 		P_AdjustMobjFloorZ_PolyObjs(mo, mo->subsector);
 
 	// adjust height
-	if (mo->pmomz && mo->z != mo->floorz)
+	mo->z += mo->momz;
+
+	if (mo->eflags & MFE_APPLYPMOMZ && !P_IsObjectOnGround(mo))
 	{
 		mo->momz += mo->pmomz;
-		mo->pmomz = 0;
+		mo->eflags &= ~MFE_APPLYPMOMZ;
 	}
-	mo->z += mo->momz;
 
 	switch (mo->type)
 	{
@@ -2840,10 +2840,10 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 	thiscam->floorz = tmfloorz;
 	thiscam->ceilingz = tmceilingz;
 
-	if (thiscam->momz)
+	if (thiscam->momz || player->mo->pmomz)
 	{
 		// adjust height
-		thiscam->z += thiscam->momz;
+		thiscam->z += thiscam->momz + player->mo->pmomz;
 
 		if (!itsatwodlevel && !(player->pflags & PF_NOCLIP))
 		{

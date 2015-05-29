@@ -3623,14 +3623,18 @@ void P_DoJump(player_t *player, boolean soundandstate)
 		player->mo->z--;
 		if (player->mo->pmomz < 0)
 			player->mo->momz += player->mo->pmomz; // Add the platform's momentum to your jump.
+		else
+			player->mo->pmomz = 0;
 	}
 	else
 	{
 		player->mo->z++;
 		if (player->mo->pmomz > 0)
 			player->mo->momz += player->mo->pmomz; // Add the platform's momentum to your jump.
+		else
+			player->mo->pmomz = 0;
 	}
-	player->mo->pmomz = 0;
+	player->mo->eflags &= ~MFE_APPLYPMOMZ;
 
 	player->pflags |= PF_JUMPED;
 

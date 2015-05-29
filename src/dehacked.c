@@ -7193,7 +7193,7 @@ static const char *const MOBJFLAG2_LIST[] = {
 	NULL
 };
 
-static const char *const MOBJEFLAG_LIST[] = {
+static const char *const MOBJEFLAG_LIST[8] = {
 	"ONGROUND", // The mobj stands on solid floor (not on another mobj or in air)
 	"JUSTHITFLOOR", // The mobj just hit the floor while falling, this is cleared on next frame
 	"TOUCHWATER", // The mobj stands in a sector with water, and touches the surface
@@ -7201,7 +7201,7 @@ static const char *const MOBJEFLAG_LIST[] = {
 	"JUSTSTEPPEDDOWN", // used for ramp sectors
 	"VERTICALFLIP", // Vertically flip sprite/allow upside-down physics
 	"GOOWATER", // Goo water
-	NULL
+	"APPLYPMOMZ" // Platform movement
 };
 
 static const char *const MAPTHINGFLAG_LIST[4] = {

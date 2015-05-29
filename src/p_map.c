@@ -2076,14 +2076,7 @@ static boolean P_ThingHeightClip(mobj_t *thing)
 			thing->pmomz = thing->ceilingz - (thing->z + thing->height);
 		else
 			thing->pmomz = thing->floorz - thing->z;
-
-		if (thing->player)
-		{
-			if (splitscreen && camera2.chase && thing->player == &players[secondarydisplayplayer])
-				camera2.z += thing->pmomz;
-			else if (camera.chase && thing->player == &players[displayplayer])
-				camera.z += thing->pmomz;
-		}
+		thing->eflags |= MFE_APPLYPMOMZ;
 
 		if (thing->eflags & MFE_VERTICALFLIP)
 			thing->z = thing->ceilingz - thing->height;
