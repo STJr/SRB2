@@ -3438,12 +3438,32 @@ static void P_DoSuperStuff(player_t *player)
 			{
 				if ((player->pflags & PF_JUMPED) || (player->pflags & PF_SPINNING))
 					P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
-				else if (player->panim == PA_RUN)
-					P_SetPlayerMobjState(player->mo, S_PLAY_RUN);
-				else if (player->panim == PA_WALK)
-					P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
-				else
+				else switch (player->mo->state-states)
+				{
+				default:
 					P_SetPlayerMobjState(player->mo, S_PLAY_STND);
+					break;
+				case S_PLAY_DASH:
+					break;
+				case S_PLAY_SUPER_WALK:
+					P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
+					break;
+				case S_PLAY_SUPER_RUN:
+					P_SetPlayerMobjState(player->mo, S_PLAY_RUN);
+					break;
+				case S_PLAY_SUPER_PAIN:
+					P_SetPlayerMobjState(player->mo, S_PLAY_PAIN);
+					break;
+				case S_PLAY_SUPER_JUMP:
+					P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
+					break;
+				case S_PLAY_SUPER_FALL:
+					P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
+					break;
+				case S_PLAY_SUPER_RIDE:
+					P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
+					break;
+				}
 
 				if (!player->exiting)
 				{
@@ -6429,10 +6449,10 @@ static void P_MovePlayer(player_t *player)
 		P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
 
 	// If Springing, but travelling DOWNWARD, change back!
-	if (player->mo->state == &states[S_PLAY_JUMP] && P_MobjFlip(player->mo)*player->mo->momz < 0)
+	if (player->panim == PA_JUMP && P_MobjFlip(player->mo)*player->mo->momz < 0)
 		P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
 	// If Springing but on the ground, change back!
-	else if (onground && (player->mo->state == &states[S_PLAY_JUMP] || player->panim == PA_FALL || player->mo->state == &states[S_PLAY_RIDE]) && !player->mo->momz)
+	else if (onground && (player->panim == PA_JUMP || player->panim == PA_FALL || player->panim == PA_RIDE) && !player->mo->momz)
 		P_SetPlayerMobjState(player->mo, S_PLAY_STND);
 
 	// If you are stopped and are still walking, stand still!

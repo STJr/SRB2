@@ -184,7 +184,6 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 	case S_PLAY_STND:
 	case S_PLAY_WAIT:
 	case S_PLAY_EDGE:
-	case S_PLAY_RIDE:
 	case S_PLAY_SUPER_STND:
 	case S_PLAY_SUPER_EDGE:
 		player->panim = PA_IDLE;
@@ -198,14 +197,25 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		player->panim = PA_RUN;
 		break;
 	case S_PLAY_SPIN:
+	case S_PLAY_DASH:
+	case S_PLAY_SUPER_SPIN:
 		player->panim = PA_ROLL;
 		break;
+	case S_PLAY_JUMP:
+	case S_PLAY_SUPER_JUMP:
+		player->panim = PA_JUMP;
+		break;
 	case S_PLAY_FALL:
+	case S_PLAY_SUPER_FALL:
 		player->panim = PA_FALL;
 		break;
 	case S_PLAY_FLY:
 	case S_PLAY_GLIDE:
 		player->panim = PA_ABILITY;
+		break;
+	case S_PLAY_RIDE:
+	case S_PLAY_SUPER_RIDE:
+		player->panim = PA_RIDE;
 		break;
 	default:
 		player->panim = PA_ETC;

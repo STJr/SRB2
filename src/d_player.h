@@ -164,8 +164,10 @@ typedef enum
 	PA_WALK,
 	PA_RUN,
 	PA_ROLL,
+	PA_JUMP,
 	PA_FALL,
-	PA_ABILITY
+	PA_ABILITY,
+	PA_RIDE
 } panim_t;
 
 typedef enum
