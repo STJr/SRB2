@@ -196,6 +196,11 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 	case S_PLAY_SUPER_RUN:
 		player->panim = PA_RUN;
 		break;
+	case S_PLAY_PAIN:
+	case S_PLAY_SUPER_PAIN:
+	case S_PLAY_SUPER_STUN:
+		player->panim = PA_PAIN;
+		break;
 	case S_PLAY_SPIN:
 	case S_PLAY_DASH:
 	case S_PLAY_SUPER_SPIN:
@@ -355,6 +360,9 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 					break;
 				case SPR2_SPAN:
 					spr2 = SPR2_PAIN;
+					break;
+				case SPR2_SMSL:
+					spr2 = SPR2_SPAN;
 					break;
 				case SPR2_SDTH:
 					spr2 = SPR2_DEAD;
@@ -2165,7 +2173,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 			goto nightsdone;
 		}
 		// Get up if you fell.
-		if (mo->state == &states[mo->info->painstate] || mo->state-states == S_PLAY_SUPER_PAIN)
+		if (mo->player->panim == PA_PAIN)
 			P_SetPlayerMobjState(mo, S_PLAY_STND);
 
 		if (P_MobjFlip(mo)*mo->momz < 0) // falling

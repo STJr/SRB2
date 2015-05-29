@@ -2587,7 +2587,7 @@ static inline void P_SuperDamage(player_t *player, mobj_t *inflictor, mobj_t *so
 	P_InstaThrust(player->mo, ang, fallbackspeed);
 
 	if (player->charflags & SF_SUPERANIMS)
-		P_SetPlayerMobjState(player->mo, S_PLAY_SUPER_PAIN);
+		P_SetPlayerMobjState(player->mo, S_PLAY_SUPER_STUN);
 	else
 		P_SetPlayerMobjState(player->mo, player->mo->info->painstate);
 
