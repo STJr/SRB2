@@ -3436,7 +3436,8 @@ static void P_DoSuperStuff(player_t *player)
 
 			if (player->mo->health > 0)
 			{
-				if ((player->pflags & PF_JUMPED) || (player->pflags & PF_SPINNING))
+				if ((player->pflags & PF_JUMPED || player->pflags & PF_SPINNING)
+				&& player->mo->state-states != S_PLAY_DASH)
 					P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
 				else switch (player->mo->state-states)
 				{
@@ -3699,7 +3700,7 @@ static void P_DoSpinDash(player_t *player, ticcmd_t *cmd)
 			player->pflags |= PF_STARTDASH|PF_SPINNING;
 			player->dashspeed = FixedMul(FRACUNIT, player->mo->scale);
 			player->dashtime = 0;
-			P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
+			P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
 			player->pflags |= PF_USEDOWN;
 		}
 		else if ((cmd->buttons & BT_USE) && (player->pflags & PF_STARTDASH))
@@ -3756,6 +3757,7 @@ static void P_DoSpinDash(player_t *player, ticcmd_t *cmd)
 		player->pflags &= ~PF_STARTDASH;
 		if (!((gametype == GT_RACE || gametype == GT_COMPETITION) && leveltime < 4*TICRATE))
 		{
+			P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
 			P_InstaThrust(player->mo, player->mo->angle, player->dashspeed); // catapult forward ho!!
 			if (!player->spectator)
 				S_StartSound(player->mo, sfx_zoom);
@@ -3763,7 +3765,9 @@ static void P_DoSpinDash(player_t *player, ticcmd_t *cmd)
 		player->dashspeed = 0;
 	}
 
-	if (onground && (player->pflags & PF_SPINNING) && !(player->panim == PA_ROLL))
+	if (onground && player->pflags & PF_STARTDASH && player->mo->state-states != S_PLAY_DASH)
+		P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
+	else if (onground && player->pflags & PF_SPINNING && !(player->panim == PA_ROLL))
 		P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
 }
 

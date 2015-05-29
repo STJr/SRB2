@@ -3749,6 +3749,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PLAY_DEAD",
 	"S_PLAY_DRWN",
 	"S_PLAY_SPIN",
+	"S_PLAY_DASH",
 	"S_PLAY_GASP",
 	"S_PLAY_JUMP",
 	"S_PLAY_FALL",
