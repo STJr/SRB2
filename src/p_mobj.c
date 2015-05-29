@@ -1986,12 +1986,8 @@ static void P_PlayerZMovement(mobj_t *mo)
 			(FixedMul(cv_viewheight.value<<FRACBITS, mo->scale) - mo->player->viewheight)>>3;
 	}
 
-	// adjust height
-/*	if (mo->pmomz && mo->z > mo->floorz && !(mo->player->pflags & PF_JUMPED))
-	{
-		mo->momz += mo->pmomz;
+	if (mo->pmomz && mo->z > mo->floorz)
 		mo->pmomz = 0;
-	}*/
 
 	mo->z += mo->momz;
 
@@ -2899,6 +2895,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 	msecnode_t *node;
 
 	I_Assert(mobj != NULL);
+	I_Assert(mobj->player != NULL);
 	I_Assert(!P_MobjWasRemoved(mobj));
 
 	P_MobjCheckWater(mobj);
@@ -2917,7 +2914,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 		P_CheckPosition(mobj, mobj->x, mobj->y);
 		goto animonly;
 	}
-	else if (mobj->player && (mobj->player->pflags & PF_MACESPIN) && mobj->tracer)
+	else if (mobj->player->pflags & PF_MACESPIN && mobj->tracer)
 	{
 		P_CheckPosition(mobj, mobj->x, mobj->y);
 		goto animonly;
@@ -2936,7 +2933,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 	else
 		P_TryMove(mobj, mobj->x, mobj->y, true);
 
-	if (!(netgame && mobj->player && mobj->player->spectator))
+	if (!(netgame && mobj->player->spectator))
 	{
 		// Crumbling platforms
 		for (node = mobj->touching_sectorlist; node; node = node->m_snext)
@@ -3019,18 +3016,14 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 	}
 	else
 	{
-		if (mobj->player)
+		mobj->player->jumping = 0;
+		mobj->player->pflags &= ~PF_JUMPED;
+		if (mobj->player->secondjump || mobj->player->powers[pw_tailsfly])
 		{
-			mobj->player->jumping = 0;
-			mobj->player->pflags &= ~PF_JUMPED;
-			if (mobj->player->secondjump || mobj->player->powers[pw_tailsfly])
-			{
-				mobj->player->secondjump = 0;
-				mobj->player->powers[pw_tailsfly] = 0;
-				P_SetPlayerMobjState(mobj, S_PLAY_RUN1);
-			}
+			mobj->player->secondjump = 0;
+			mobj->player->powers[pw_tailsfly] = 0;
+			P_SetPlayerMobjState(mobj, S_PLAY_RUN1);
 		}
-		mobj->pmomz = 0;
 		mobj->eflags &= ~MFE_JUSTHITFLOOR;
 	}
 
@@ -6643,17 +6636,6 @@ for (i = ((mobj->flags2 & MF2_STRONGBOX) ? strongboxamt : weakboxamt); i; --i) s
 	}
 	else
 	{
-		if (mobj->player)
-		{
-			mobj->player->jumping = 0;
-			mobj->player->pflags &= ~PF_JUMPED;
-			if (mobj->player->secondjump || mobj->player->powers[pw_tailsfly])
-			{
-				mobj->player->secondjump = 0;
-				mobj->player->powers[pw_tailsfly] = 0;
-				P_SetPlayerMobjState(mobj, S_PLAY_RUN1);
-			}
-		}
 		mobj->pmomz = 0; // to prevent that weird rocketing gargoyle bug
 		mobj->eflags &= ~MFE_JUSTHITFLOOR;
 	}
@@ -6854,17 +6836,6 @@ void P_SceneryThinker(mobj_t *mobj)
 	}
 	else
 	{
-		if (mobj->player)
-		{
-			mobj->player->jumping = 0;
-			mobj->player->pflags &= ~PF_JUMPED;
-			if (mobj->player->secondjump || mobj->player->powers[pw_tailsfly])
-			{
-				mobj->player->secondjump = 0;
-				mobj->player->powers[pw_tailsfly] = 0;
-				P_SetPlayerMobjState(mobj, S_PLAY_RUN1);
-			}
-		}
 		mobj->pmomz = 0; // to prevent that weird rocketing gargoyle bug
 		mobj->eflags &= ~MFE_JUSTHITFLOOR;
 	}
