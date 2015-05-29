@@ -88,6 +88,7 @@ char spr2names[NUMPLAYERSPRITES][5] =
 	"SWLK",
 	"SRUN",
 	"SPAN",
+	"SMSL",
 	"SDTH",
 	"SDRN",
 	"SSPN",

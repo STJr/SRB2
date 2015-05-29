@@ -3770,6 +3770,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PLAY_SUPER_WALK",
 	"S_PLAY_SUPER_RUN",
 	"S_PLAY_SUPER_PAIN",
+	"S_PLAY_SUPER_STUN",
 	"S_PLAY_SUPER_DEAD",
 	"S_PLAY_SUPER_DRWN",
 	"S_PLAY_SUPER_SPIN",
@@ -7666,9 +7667,12 @@ struct {
 	{"PA_IDLE",PA_IDLE},
 	{"PA_WALK",PA_WALK},
 	{"PA_RUN",PA_RUN},
+	{"PA_PAIN",PA_PAIN},
 	{"PA_ROLL",PA_ROLL},
+	{"PA_JUMP",PA_JUMP},
 	{"PA_FALL",PA_FALL},
 	{"PA_ABILITY",PA_ABILITY},
+	{"PA_RIDE",PA_RIDE},
 
 	// Current weapon
 	{"WEP_AUTO",WEP_AUTO},
