@@ -142,24 +142,29 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		{
 		case S_PLAY_STND:
 		case S_PLAY_WAIT:
-		case S_PLAY_GASP:
-			P_SetPlayerMobjState(mobj, S_PLAY_SUPER_STND);
-			return true;
-		case S_PLAY_FALL:
-		case S_PLAY_JUMP:
+			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_STND);
 		case S_PLAY_WALK:
-			P_SetPlayerMobjState(mobj, S_PLAY_SUPER_WALK);
-			return true;
+			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_WALK);
 		case S_PLAY_RUN:
-			P_SetPlayerMobjState(mobj, S_PLAY_SUPER_RUN);
-			return true;
-		case S_PLAY_EDGE:
-			P_SetPlayerMobjState(mobj, S_PLAY_SUPER_EDGE);
-			return true;
+			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_RUN);
+		case S_PLAY_PAIN:
+			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_PAIN);
+		case S_PLAY_DEAD:
+			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_DEAD);
+		case S_PLAY_DRWN:
+			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_DRWN);
 		case S_PLAY_SPIN:
 			if (!(player->charflags & SF_SUPERSPIN))
 				return true;
-			break;
+			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_SPIN);
+		case S_PLAY_GASP:
+			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_GASP);
+		case S_PLAY_JUMP:
+			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_JUMP);
+		case S_PLAY_FALL:
+			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_FALL);
+		case S_PLAY_EDGE:
+			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_EDGE);
 		default:
 			break;
 		}

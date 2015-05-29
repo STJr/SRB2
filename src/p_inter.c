@@ -1953,7 +1953,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 	{
 		target->flags &= ~(MF_SOLID|MF_SHOOTABLE); // does not block
 		P_UnsetThingPosition(target);
-		target->flags |= MF_NOBLOCKMAP;
+		target->flags |= MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY;
 		P_SetThingPosition(target);
 
 		if (!target->player->bot && !G_IsSpecialStage(gamemap)
@@ -2289,7 +2289,12 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 		}
 	}
 	else if (target->player)
-		P_SetPlayerMobjState(target, target->info->deathstate);
+	{
+		if (damagetype == DMG_DROWNED || damagetype == DMG_SPACEDROWN)
+			P_SetPlayerMobjState(target, target->info->xdeathstate);
+		else
+			P_SetPlayerMobjState(target, target->info->deathstate);
+	}
 	else
 #ifdef DEBUG_NULL_DEATHSTATE
 		P_SetMobjState(target, S_NULL);
