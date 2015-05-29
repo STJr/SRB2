@@ -3713,9 +3713,12 @@ static void P_DoSpinDash(player_t *player, ticcmd_t *cmd)
 					S_StartSound(player->mo, sfx_spndsh); // Make the rev sound!
 
 				// Now spawn the color thok circle.
-				P_SpawnSpinMobj(player, player->revitem);
-				if (demorecording)
-					G_GhostAddRev();
+				if (player->mo->sprite2 != SPR2_DASH)
+				{
+					P_SpawnSpinMobj(player, player->revitem);
+					if (demorecording)
+						G_GhostAddRev();
+				}
 			}
 		}
 		// If not moving up or down, and travelling faster than a speed of four while not holding

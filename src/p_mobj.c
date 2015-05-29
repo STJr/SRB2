@@ -295,15 +295,9 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 			boolean noalt = false;
 			UINT8 spr2 = st->frame & FF_FRAMEMASK;
 			UINT16 frame = (mobj->frame & FF_FRAMEMASK)+1;
-			if (mobj->sprite != SPR_PLAY)
-			{
-				mobj->sprite = SPR_PLAY;
-				frame = 0;
-			}
-			else if (mobj->sprite2 != spr2)
-				frame = 0;
 
-			while (&((skin_t *)mobj->skin)->sprites[spr2].numframes == 0 && spr2 != SPR2_STND)
+			while (((skin_t *)mobj->skin)->sprites[spr2].numframes <= 0
+				&& spr2 != SPR2_STND)
 			{
 				switch(spr2)
 				{
@@ -397,6 +391,14 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 				if (noalt)
 					break;
 			}
+
+			if (mobj->sprite != SPR_PLAY)
+			{
+				mobj->sprite = SPR_PLAY;
+				frame = 0;
+			}
+			else if (mobj->sprite2 != spr2)
+				frame = 0;
 
 			mobj->sprite2 = spr2;
 			if (!mobj->skin || frame >= ((skin_t *)mobj->skin)->sprites[spr2].numframes)
