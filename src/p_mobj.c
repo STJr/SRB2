@@ -5548,86 +5548,6 @@ static void P_RemoveOverlay(mobj_t *thing)
 		}
 }
 
-// Find the floor the shadow should be placed on, solid floors, or opaque ones
-// Ceiling boolean is for whether the shadow is placed on the ceiling
-// most of this is just HWR_OpaqueFloorAtPos
-static fixed_t P_FindShadowFloor(mobj_t *mobj, boolean ceiling)
-{
-	const sector_t *sec = mobj->subsector->sector;
-	fixed_t finalz;
-
-	if (ceiling)
-		finalz = sec->ceilingheight;
-	else
-		finalz = sec->floorheight;
-
-	if (sec->ffloors)
-	{
-		ffloor_t *rover;
-		const fixed_t thingtop = mobj->z + mobj->height;
-
-		for (rover = sec->ffloors; rover; rover = rover->next)
-		{
-			if (!(rover->flags & FF_EXISTS)
-			|| (!(rover->flags & FF_RENDERPLANES) && !(rover->flags & FF_SOLID))
-			|| rover->flags & FF_FOG
-			|| rover->flags & FF_INVERTPLANES)
-				continue;
-
-			if (ceiling)
-			{
-				if (*rover->topheight < finalz && thingtop <= *rover->bottomheight)
-					finalz = *rover->bottomheight;
-			}
-			else
-			{
-				if (*rover->topheight > finalz && mobj->z >= *rover->topheight)
-					finalz = *rover->topheight;
-			}
-		}
-	}
-
-	// Go through the objects to see if there's a solid one you can land on
-	// I've commented this out because it likely could cause a lot of lag...
-	/*if ((mobj->flags & (MF_SOLID|MF_NOCLIP)) == MF_SOLID)
-	{
-		thinker_t *th;
-		mobj_t *mo2;
-		fixed_t blockdist;
-		for (th = thinkercap.next; th != &thinkercap; th = th->next)
-		{
-			if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-				continue;
-
-			mo2 = (mobj_t *)th;
-
-			if (mo2 == mobj)
-				continue; // ignore yourself...
-
-			if ((mo2->flags & (MF_SOLID|MF_NOCLIP)) != MF_SOLID) // Only find solid objects
-				continue;
-
-			blockdist = mobj->radius + mo2->radius;
-
-			if (abs(mobj->x - mo2->x) >= blockdist || abs(mobj->y - mo2->y) >= blockdist)
-				continue; // not above/below it
-
-			if (ceiling)
-			{
-				if (mo2->z < mobj->z + mobj->height && mo2->z < finalz)
-					finalz = mo2->z;
-			}
-			else
-			{
-				if (mo2->z + mobj->height < mobj->z && mo2->z + mobj->height > finalz)
-					finalz = mo2->z + mobj->height;
-			}
-		}
-	}*/
-
-	return finalz;
-}
-
 void P_RunShadows()
 {
 	thinker_t * th;
@@ -5652,23 +5572,34 @@ void P_RunShadows()
 			else
 				mobj->flags2 &= ~MF2_DONTDRAW;
 
-			P_UnsetThingPosition(mobj);
-			mobj->x = mobj->target->x;
-			mobj->y = mobj->target->y;
+			// First scale to the same radius
+			P_SetScale(mobj, FixedDiv(mobj->target->radius, mobj->info->radius));
 
-			if (!(mobj->target->eflags & MFE_VERTICALFLIP))
-			{
-				mobj->z = P_FindShadowFloor(mobj->target, false);
-				mobj->eflags &= ~MFE_VERTICALFLIP;
-			}
-			else
-			{
-				mobj->z = P_FindShadowFloor(mobj->target, true);
-				mobj->eflags |= MFE_VERTICALFLIP;
-			}
-			P_SetThingPosition(mobj);
+			P_TeleportMove(mobj, mobj->target->x, mobj->target->y, mobj->target->z);
 
-			P_SetScale(mobj, FixedDiv(FixedDiv(mobj->target->radius, mobj->info->radius), max(FRACUNIT, ((mobj->target->z-mobj->z)/200)+FRACUNIT))); // "Hi-Res", Not using scale, because these scale based on radius of the object, which is scaled by scale!
+			if (mobj->floorz < mobj->z)
+			{
+				mobj->z = mobj->floorz;
+
+				INT32 i;
+				fixed_t prevz;
+
+				for (i = 0; i < MAXFFLOORS; i++)
+				{
+					prevz = mobj->z;
+
+					// Now scale again based on height difference
+					P_SetScale(mobj, FixedDiv(mobj->scale, max(FRACUNIT, ((mobj->target->z-mobj->z)/200)+FRACUNIT)));
+
+					// Check new position to see if you should still be on that ledge
+					P_TeleportMove(mobj, mobj->target->x, mobj->target->y, mobj->z);
+
+					mobj->z = mobj->floorz;
+
+					if (mobj->z == prevz)
+						break;
+				}
+			}
 		}
 		else
 		{

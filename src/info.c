@@ -14735,12 +14735,12 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // deathsound
 		60*FRACUNIT,    // speed
 		50*FRACUNIT,    // radius
-		1,              // height
+		1*FRACUNIT,     // height
 		-1,             // display offset
 		100,            // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_NOBLOCKMAP|MF_NOCLIP|MF_NOGRAVITY|MF_SCENERY, // flags
+		MF_NOGRAVITY|MF_SCENERY, // flags
 		S_NULL          // raisestate
 	},
 
