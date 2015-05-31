@@ -5450,6 +5450,8 @@ void P_MobjThinker(mobj_t *mobj)
 
 	mobj->eflags &= ~(MFE_PUSHED|MFE_SPRUNG);
 
+	tmfloorthing = tmhitthing = NULL;
+
 	// 970 allows ANY mobj to trigger a linedef exec
 	if (mobj->subsector && GETSECSPECIAL(mobj->subsector->sector->special, 2) == 8)
 	{

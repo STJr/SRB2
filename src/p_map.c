@@ -47,7 +47,7 @@ boolean floatok;
 fixed_t tmfloorz, tmceilingz;
 static fixed_t tmdropoffz, tmdrpoffceilz; // drop-off floor/ceiling heights
 mobj_t *tmfloorthing; // the thing corresponding to tmfloorz or NULL if tmfloorz is from a sector
-static mobj_t *tmhitthing; // the solid thing you bumped into (for collisions)
+mobj_t *tmhitthing; // the solid thing you bumped into (for collisions)
 
 // keep track of the line that lowers the ceiling,
 // so missiles don't explode against sky hack walls
