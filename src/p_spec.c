@@ -3625,7 +3625,8 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 			{
 				if ((maptol & TOL_TD) && gametype == GT_COOP && (netgame || multiplayer))
 				{
-					if (playeringame[i] && !players[i].bot && players[i].mo && (gametype != GT_COOP || sharedlives > -1))
+					if ((sharedlives > 0 && playeringame[i] && !players[i].bot && players[i].mo && players[i].playerstate != PST_BUBBLE)
+						|| (sharedlives == 0 && playeringame[i] && !players[i].bot && players[i].mo && players[i].playerstate != PST_BUBBLE && players[i].playerstate != PST_DEAD))
 					{
 						if (roversector)
 						{
