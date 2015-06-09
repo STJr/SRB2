@@ -7189,7 +7189,7 @@ static const char *const MOBJEFLAG_LIST[] = {
 	"GOOWATER", // Goo water
 	"PUSHED", // Mobj was already pushed this tic
 	"SPRUNG", // Mobj was already sprung this tic
-	"APPLYPMOMZ" // Platform movement
+	"APPLYPMOMZ", // Platform movement
 	NULL
 };
 
