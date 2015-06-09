@@ -1546,23 +1546,12 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel)
 	// If a limit exists, handle things a tiny bit different.
 	if ((limit_dist = (fixed_t)((maptol & TOL_NIGHTS) ? cv_drawdist_nights.value : cv_drawdist.value) << FRACBITS))
 	{
-		if (!players[displayplayer].mo)
-			return; // Draw nothing if no player.
-			// todo: is this really the best option for this situation?
-
 		for (thing = sec->thinglist; thing; thing = thing->snext)
 		{
 			if (thing->sprite == SPR_NULL || thing->flags2 & MF2_DONTDRAW)
 				continue;
 
-			approx_dist = P_AproxDistance(
-				players[displayplayer].mo->x - thing->x,
-				players[displayplayer].mo->y - thing->y);
-
-			if (splitscreen && approx_dist > limit_dist && players[secondarydisplayplayer].mo)
-				approx_dist = P_AproxDistance(
-					players[secondarydisplayplayer].mo->x - thing->x,
-					players[secondarydisplayplayer].mo->y - thing->y);
+			approx_dist = P_AproxDistance(viewx-thing->x, viewy-thing->y);
 
 			if (approx_dist <= limit_dist)
 				R_ProjectSprite(thing);
@@ -1579,23 +1568,12 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel)
 	// Someone seriously wants infinite draw distance for precipitation?
 	if ((limit_dist = (fixed_t)cv_drawdist_precip.value << FRACBITS))
 	{
-		if (!players[displayplayer].mo)
-			return; // Draw nothing if no player.
-			// todo: is this really the best option for this situation?
-
 		for (precipthing = sec->preciplist; precipthing; precipthing = precipthing->snext)
 		{
 			if (precipthing->precipflags & PCF_INVISIBLE)
 				continue;
 
-			approx_dist = P_AproxDistance(
-				players[displayplayer].mo->x - precipthing->x,
-				players[displayplayer].mo->y - precipthing->y);
-
-			if (splitscreen && approx_dist > limit_dist && players[secondarydisplayplayer].mo)
-				approx_dist = P_AproxDistance(
-					players[secondarydisplayplayer].mo->x - precipthing->x,
-					players[secondarydisplayplayer].mo->y - precipthing->y);
+			approx_dist = P_AproxDistance(viewx-precipthing->x, viewy-precipthing->y);
 
 			if (approx_dist <= limit_dist)
 				R_ProjectPrecipitationSprite(precipthing);
@@ -1704,6 +1682,19 @@ static void R_CreateDrawNodes(void)
 		}
 		if (ds->maskedtexturecol)
 		{
+#ifdef POLYOBJECTS_PLANES
+			// Check for a polyobject plane, but only if this is a front line
+			if (ds->curline->polyseg && ds->curline->polyseg->visplane && !ds->curline->side) {
+				// Put it in!
+
+				entry = R_CreateDrawNode(&nodehead);
+				entry->plane = ds->curline->polyseg->visplane;
+				entry->seg = ds;
+				ds->curline->polyseg->visplane->polyobj = ds->curline->polyseg;
+				ds->curline->polyseg->visplane = NULL;
+			}
+#endif
+
 			entry = R_CreateDrawNode(&nodehead);
 			entry->seg = ds;
 		}
@@ -1720,7 +1711,7 @@ static void R_CreateDrawNodes(void)
 					plane = ds->ffloorplanes[p];
 					R_PlaneBounds(plane);
 
-					if (plane->low < con_clipviewtop || plane->high > vid.height || plane->high > plane->low)
+					if (plane->low < con_clipviewtop || plane->high > vid.height || plane->high > plane->low || plane->polyobj)
 					{
 						ds->ffloorplanes[p] = NULL;
 						continue;
@@ -1831,7 +1822,7 @@ static void R_CreateDrawNodes(void)
 			}
 			else if (r2->seg)
 			{
-#ifdef POLYOBJECTS_PLANES
+#if 0 //#ifdef POLYOBJECTS_PLANES
 				if (r2->seg->curline->polyseg && rover->mobj && P_MobjInsidePolyobj(r2->seg->curline->polyseg, rover->mobj)) {
 					// Determine if we need to sort in front of the polyobj, based on the planes. This fixes the issue where
 					// polyobject planes render above the object standing on them. (A bit hacky... but it works.) -Red

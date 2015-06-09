@@ -2963,6 +2963,8 @@ static void P_DoTeeter(player_t *player)
 		xh = (unsigned)(player->mo->x + player->mo->radius - bmaporgx)>>MAPBLOCKSHIFT;
 		xl = (unsigned)(player->mo->x - player->mo->radius - bmaporgx)>>MAPBLOCKSHIFT;
 
+		BMBOUNDFIX(xl, xh, yl, yh);
+
 	// Polyobjects
 #ifdef POLYOBJECTS
 		validcount++;
@@ -3330,6 +3332,7 @@ firenormal:
 //
 static void P_DoSuperStuff(player_t *player)
 {
+	mobj_t *spark;
 	ticcmd_t *cmd = &player->cmd;
 	if (player->mo->state >= &states[S_PLAY_SUPERTRANS1] && player->mo->state <= &states[S_PLAY_SUPERTRANS9])
 		return; // don't do anything right now, we're in the middle of transforming!
@@ -3384,19 +3387,32 @@ static void P_DoSuperStuff(player_t *player)
 		switch (player->skin)
 		{
 		case 1: // Golden orange supertails.
-			player->mo->color = SKINCOLOR_TSUPER1 + (leveltime/2) % 5;
+			if (leveltime % 9 < 5)
+				player->mo->color = SKINCOLOR_TSUPER1 + leveltime % 9;
+			else
+				player->mo->color = SKINCOLOR_TSUPER1 + 9 - leveltime % 9;
 			break;
 		case 2: // Pink superknux.
-			player->mo->color = SKINCOLOR_KSUPER1 + (leveltime/2) % 5;
+			if (leveltime % 9 < 5)
+				player->mo->color = SKINCOLOR_KSUPER1 + leveltime % 9;
+			else
+				player->mo->color = SKINCOLOR_KSUPER1 + 9 - leveltime % 9;
 			break;
 		default: // Yousa yellow now!
-			player->mo->color = SKINCOLOR_SUPER1 + (leveltime/2) % 5;
+			if (leveltime % 9 < 5)
+				player->mo->color = SKINCOLOR_SUPER1 + leveltime % 9;
+			else
+				player->mo->color = SKINCOLOR_SUPER1 + 9 - leveltime % 9;
 			break;
 		}
 
 		if ((cmd->forwardmove != 0 || cmd->sidemove != 0 || player->pflags & (PF_CARRIED|PF_ROPEHANG|PF_ITEMHANG|PF_MACESPIN))
 		&& !(leveltime % TICRATE) && (player->mo->momx || player->mo->momy))
-			P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z, MT_SUPERSPARK);
+		{
+			spark = P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z, MT_SUPERSPARK);
+			spark->destscale = player->mo->scale;
+			P_SetScale(spark, player->mo->scale);
+		}
 
 		G_GhostAddColor(GHC_SUPER);
 
@@ -7780,24 +7796,24 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	angle_t angle = 0, focusangle = 0, focusaiming = 0;
 	fixed_t x, y, z, dist, checkdist, viewpointx, viewpointy, camspeed, camdist, camheight, pviewheight;
 	INT32 camrotate;
-	boolean camstill, forceon = false, cameranoclip;
+	boolean camstill, cameranoclip;
 	mobj_t *mo;
 	subsector_t *newsubsec;
 	fixed_t f1, f2;
 
 	cameranoclip = (player->pflags & (PF_NOCLIP|PF_NIGHTSMODE)) || (player->mo->flags & (MF_NOCLIP|MF_NOCLIPHEIGHT)); // Noclipping player camera noclips too!!
 
-	if (player->climbing || (player->pflags & PF_NIGHTSMODE) || player->playerstate == PST_DEAD)
-		forceon = true;
+	if (!(player->climbing || (player->pflags & PF_NIGHTSMODE) || player->playerstate == PST_DEAD))
+	{
+		if (player->spectator) // force cam off for spectators
+			return true;
 
-	if (!forceon && player->spectator) // force cam off for spectators
-		return true;
+		if (!cv_chasecam.value && thiscam == &camera)
+			return true;
 
-	if (!forceon && !cv_chasecam.value && thiscam == &camera)
-		return true;
-
-	if (!forceon && !cv_chasecam2.value && thiscam == &camera2)
-		return true;
+		if (!cv_chasecam2.value && thiscam == &camera2)
+			return true;
+	}
 
 	if (!thiscam->chase && !resetcalled)
 	{
@@ -8095,6 +8111,8 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		xh = (unsigned)(tmbbox[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
 		yl = (unsigned)(tmbbox[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
 		yh = (unsigned)(tmbbox[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
+
+		BMBOUNDFIX(xl, xh, yl, yh);
 
 		for (by = yl; by <= yh; by++)
 			for (bx = xl; bx <= xh; bx++)
@@ -9087,7 +9105,7 @@ void P_PlayerAfterThink(player_t *player)
 {
 	ticcmd_t *cmd;
 	INT32 oldweapon = player->currentweapon;
-	camera_t *thiscam;
+	camera_t *thiscam = NULL; // if not one of the displayed players, just don't bother
 
 #ifdef PARANOIA
 	if (!player->mo)
@@ -9101,7 +9119,7 @@ void P_PlayerAfterThink(player_t *player)
 
 	if (splitscreen && player == &players[secondarydisplayplayer])
 		thiscam = &camera2;
-	else
+	else if (player == &players[displayplayer])
 		thiscam = &camera;
 
 	if (player->playerstate == PST_DEAD)
@@ -9109,7 +9127,7 @@ void P_PlayerAfterThink(player_t *player)
 		// camera may still move when guy is dead
 		//if (!netgame)
 		{
-			if (((splitscreen && player == &players[secondarydisplayplayer]) || player == &players[displayplayer]) && thiscam->chase)
+			if (thiscam && thiscam->chase)
 				P_MoveChaseCamera(player, thiscam, false);
 		}
 		return;
@@ -9364,7 +9382,7 @@ void P_PlayerAfterThink(player_t *player)
 		}
 	}
 
-	if ((splitscreen && player == &players[secondarydisplayplayer]) || player == &players[displayplayer])
+	if (thiscam)
 	{
 		if (!thiscam->chase) // bob view only if looking through the player's eyes
 		{

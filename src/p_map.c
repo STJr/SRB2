@@ -49,9 +49,6 @@ static fixed_t tmdropoffz, tmdrpoffceilz; // drop-off floor/ceiling heights
 mobj_t *tmfloorthing; // the thing corresponding to tmfloorz or NULL if tmfloorz is from a sector
 static mobj_t *tmhitthing; // the solid thing you bumped into (for collisions)
 
-// turned on or off in PIT_CheckThing
-boolean tmsprung;
-
 // keep track of the line that lowers the ceiling,
 // so missiles don't explode against sky hack walls
 line_t *ceilingline;
@@ -111,7 +108,9 @@ void P_DoSpring(mobj_t *spring, mobj_t *object)
 	fixed_t offx, offy;
 	fixed_t vertispeed = spring->info->mass;
 	fixed_t horizspeed = spring->info->damage;
-	fixed_t origvertispeed = vertispeed; // for vertical flipping
+
+	if (object->eflags & MFE_SPRUNG) // Object was already sprung this tic
+		return;
 
 	// Spectators don't trigger springs.
 	if (object->player && object->player->spectator)
@@ -122,7 +121,8 @@ void P_DoSpring(mobj_t *spring, mobj_t *object)
 		/*Someone want to make these work like bumpers?*/
 		return;
 	}
-
+	
+	object->eflags |= MFE_SPRUNG; // apply this flag asap!
 	spring->flags &= ~(MF_SOLID|MF_SPECIAL); // De-solidify
 
 	if (horizspeed && vertispeed) // Mimic SA
@@ -191,9 +191,9 @@ void P_DoSpring(mobj_t *spring, mobj_t *object)
 		pflags = object->player->pflags & (PF_JUMPED|PF_SPINNING|PF_THOKKED); // I still need these.
 		P_ResetPlayer(object->player);
 
-		if (origvertispeed > 0)
+		if (P_MobjFlip(object)*vertispeed > 0)
 			P_SetPlayerMobjState(object, S_PLAY_SPRING);
-		else if (origvertispeed < 0)
+		else if (P_MobjFlip(object)*vertispeed < 0)
 			P_SetPlayerMobjState(object, S_PLAY_FALL1);
 		else // horizontal spring
 		{
@@ -367,10 +367,11 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	fixed_t blockdist;
 
 	// don't clip against self
-	tmsprung = false;
+	if (thing == tmthing)
+		return true;
 
 	// Ignore... things.
-	if (!tmthing || !thing)
+	if (!tmthing || !thing || P_MobjWasRemoved(thing))
 		return true;
 
 	I_Assert(!P_MobjWasRemoved(tmthing));
@@ -436,9 +437,6 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	}
 
 	if (!(thing->flags & (MF_SOLID|MF_SPECIAL|MF_PAIN|MF_SHOOTABLE)))
-		return true;
-
-	if (!tmthing || !thing || thing == tmthing || P_MobjWasRemoved(thing))
 		return true;
 
 	// Don't collide with your buddies while NiGHTS-flying.
@@ -549,7 +547,6 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		if ((tmznext <= thzh && tmz > thzh) || (tmznext > thzh - sprarea && tmznext < thzh))
 		{
 			P_DoSpring(thing, tmthing);
-			tmsprung = true;
 			return true;
 		}
 		else if (tmz > thzh - sprarea && tmz < thzh) // Don't damage people springing up / down
@@ -818,15 +815,11 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	{
 		if (thing->type == MT_FAN || thing->type == MT_STEAM)
 			P_DoFanAndGasJet(thing, tmthing);
-
-		if ((!(thing->eflags & MFE_VERTICALFLIP) && (tmthing->z <= (thing->z + thing->height + FixedMul(FRACUNIT, thing->scale)) && (tmthing->z + tmthing->height) >= thing->z))
-		  || ((thing->eflags & MFE_VERTICALFLIP) && (tmthing->z + tmthing->height >= (thing->z - FixedMul(FRACUNIT, thing->scale)) && tmthing->z <= (thing->z + thing->height))))
+		else if (thing->flags & MF_SPRING)
 		{
-			if (thing->flags & MF_SPRING)
-			{
+			if ( thing->z <= tmthing->z + tmthing->height
+			&& tmthing->z <= thing->z + thing->height)
 				P_DoSpring(thing, tmthing);
-				tmsprung = true;
-			}
 		}
 	}
 
@@ -875,7 +868,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	{
 		// Doesn't matter what gravity player's following! Just do your stuff in YOUR direction only
 		if (tmthing->eflags & MFE_VERTICALFLIP
-		&& (tmthing->z + tmthing->height + tmthing->momz > thing->z
+		&& (tmthing->z + tmthing->height + tmthing->momz < thing->z
 		 || tmthing->z + tmthing->height + tmthing->momz >= thing->z + thing->height))
 			;
 		else if (!(tmthing->eflags & MFE_VERTICALFLIP)
@@ -909,17 +902,17 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 		if (thing->type == MT_FAN || thing->type == MT_STEAM)
 			P_DoFanAndGasJet(thing, tmthing);
-
+		else if (thing->flags & MF_SPRING)
+		{
+			if ( thing->z <= tmthing->z + tmthing->height
+			&& tmthing->z <= thing->z + thing->height)
+				P_DoSpring(thing, tmthing);
+		}
 		// Are you touching the side of the object you're interacting with?
-		if (thing->z - FixedMul(FRACUNIT, thing->scale) <= tmthing->z + tmthing->height
+		else if (thing->z - FixedMul(FRACUNIT, thing->scale) <= tmthing->z + tmthing->height
 			&& thing->z + thing->height + FixedMul(FRACUNIT, thing->scale) >= tmthing->z)
 		{
-			if (thing->flags & MF_SPRING)
-			{
-				P_DoSpring(thing, tmthing);
-				tmsprung = true;
-			}
-			else if (thing->flags & MF_MONITOR
+			if (thing->flags & MF_MONITOR
 				&& tmthing->player->pflags & (PF_JUMPED|PF_SPINNING|PF_GLIDING))
 			{
 				SINT8 flipval = P_MobjFlip(thing); // Save this value in case monitor gets removed.
@@ -932,14 +925,12 @@ static boolean PIT_CheckThing(mobj_t *thing)
 					*momz = -*momz; // Therefore, you should be thrust in the opposite direction, vertically.
 				return false;
 			}
-/*
-			else if ((thing->flags & (MF_SOLID|MF_NOCLIP|MF_PUSHABLE)) == MF_SOLID)
-				return false; // this fixes both monitors and non-pushable solids being walked through on bobbing FOFs... for now!
-*/
 		}
 	}
 
 
+	if (thing->flags & MF_SPRING && (tmthing->player || tmthing->flags & MF_PUSHABLE));
+	else
 	// Monitors are not treated as solid to players who are jumping, spinning or gliding,
 	// unless it's a CTF team monitor and you're on the wrong team
 	if (thing->flags & MF_MONITOR && tmthing->player && tmthing->player->pflags & (PF_JUMPED|PF_SPINNING|PF_GLIDING)
@@ -1308,6 +1299,8 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 	yl = (unsigned)(tmbbox[BOXBOTTOM] - bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
 	yh = (unsigned)(tmbbox[BOXTOP] - bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
 
+	BMBOUNDFIX(xl, xh, yl, yh);
+
 #ifdef POLYOBJECTS
 	// Check polyobjects and see if tmfloorz/tmceilingz need to be altered
 	{
@@ -1524,6 +1517,8 @@ boolean P_CheckCameraPosition(fixed_t x, fixed_t y, camera_t *thiscam)
 	xh = (unsigned)(tmbbox[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
 	yl = (unsigned)(tmbbox[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
 	yh = (unsigned)(tmbbox[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
+
+	BMBOUNDFIX(xl, xh, yl, yh);
 
 #ifdef POLYOBJECTS
 	// Check polyobjects and see if tmfloorz/tmceilingz need to be altered
@@ -1766,7 +1761,6 @@ boolean PIT_PushableMoved(mobj_t *thing)
 		boolean oldfltok = floatok;
 		fixed_t oldflrz = tmfloorz;
 		fixed_t oldceilz = tmceilingz;
-		boolean oldsprung = tmsprung;
 		mobj_t *oldflrthing = tmfloorthing;
 		mobj_t *oldthing = tmthing;
 		line_t *oldceilline = ceilingline;
@@ -1779,7 +1773,6 @@ boolean PIT_PushableMoved(mobj_t *thing)
 		floatok = oldfltok;
 		tmfloorz = oldflrz;
 		tmceilingz = oldceilz;
-		tmsprung = oldsprung;
 		tmfloorthing = oldflrthing;
 		P_SetTarget(&tmthing, oldthing);
 		ceilingline = oldceilline;
@@ -1953,6 +1946,8 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 		yl = (unsigned)(thing->y - MAXRADIUS - bmaporgy)>>MAPBLOCKSHIFT;
 		xh = (unsigned)(thing->x + MAXRADIUS - bmaporgx)>>MAPBLOCKSHIFT;
 		xl = (unsigned)(thing->x - MAXRADIUS - bmaporgx)>>MAPBLOCKSHIFT;
+
+		BMBOUNDFIX(xl, xh, yl, yh);
 
 		stand = thing;
 		standx = x;
@@ -3037,6 +3032,8 @@ void P_RadiusAttack(mobj_t *spot, mobj_t *source, fixed_t damagedist)
 	xh = (unsigned)(spot->x + dist - bmaporgx)>>MAPBLOCKSHIFT;
 	xl = (unsigned)(spot->x - dist - bmaporgx)>>MAPBLOCKSHIFT;
 
+	BMBOUNDFIX(xl, xh, yl, yh);
+
 	bombspot = spot;
 	bombsource = source;
 	bombdamage = FixedMul(damagedist, spot->scale);
@@ -3658,6 +3655,8 @@ void P_CreateSecNodeList(mobj_t *thing, fixed_t x, fixed_t y)
 	yl = (unsigned)(tmbbox[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
 	yh = (unsigned)(tmbbox[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
 
+	BMBOUNDFIX(xl, xh, yl, yh);
+
 	for (bx = xl; bx <= xh; bx++)
 		for (by = yl; by <= yh; by++)
 			P_BlockLinesIterator(bx, by, PIT_GetSectors);
@@ -3734,6 +3733,8 @@ void P_CreatePrecipSecNodeList(precipmobj_t *thing,fixed_t x,fixed_t y)
 	xh = (unsigned)(preciptmbbox[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
 	yl = (unsigned)(preciptmbbox[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
 	yh = (unsigned)(preciptmbbox[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
+
+	BMBOUNDFIX(xl, xh, yl, yh);
 
 	for (bx = xl; bx <= xh; bx++)
 		for (by = yl; by <= yh; by++)
