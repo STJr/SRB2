@@ -273,11 +273,11 @@ void B_RespawnBot(INT32 playernum)
 	P_TeleportMove(tails, x, y, z);
 	if (player->charability == CA_FLY)
 	{
-		P_SetPlayerMobjState(tails, S_PLAY_ABL1);
+		P_SetPlayerMobjState(tails, S_PLAY_FLY);
 		tails->player->powers[pw_tailsfly] = (UINT16)-1;
 	}
 	else
-		P_SetPlayerMobjState(tails, S_PLAY_FALL1);
+		P_SetPlayerMobjState(tails, S_PLAY_FALL);
 	P_SetScale(tails, sonic->scale);
 	tails->destscale = sonic->destscale;
 }

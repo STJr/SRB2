@@ -473,6 +473,7 @@ static void readPlayer(MYFILE *f, INT32 num)
 
 				if (!slotfound && (slotfound = findFreeSlot(&num)) == false)
 					goto done;
+				PlayerMenu[num].status = IT_CALL;
 
 				for (i = 0; i < MAXLINELEN-3; i++)
 				{
@@ -545,6 +546,7 @@ static void readPlayer(MYFILE *f, INT32 num)
 				if (!slotfound && (slotfound = findFreeSlot(&num)) == false)
 					goto done;
 				DEH_WriteUndoline(word, &description[num].picname[0], UNDO_NONE);
+				PlayerMenu[num].status = IT_CALL;
 				strncpy(description[num].picname, word2, 8);
 			}
 			else if (fastcmp(word, "STATUS"))
@@ -576,6 +578,8 @@ static void readPlayer(MYFILE *f, INT32 num)
 				if (!slotfound && (slotfound = findFreeSlot(&num)) == false)
 					goto done;
 				DEH_WriteUndoline(word, description[num].skinname, UNDO_NONE);
+				PlayerMenu[num].status = IT_CALL;
+
 				strlcpy(description[num].skinname, word2, sizeof description[num].skinname);
 				strlwr(description[num].skinname);
 			}
@@ -3736,52 +3740,37 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	// Thok
 	"S_THOK",
 
+	// Player
 	"S_PLAY_STND",
-	"S_PLAY_TAP1",
-	"S_PLAY_TAP2",
-	"S_PLAY_RUN1",
-	"S_PLAY_RUN2",
-	"S_PLAY_RUN3",
-	"S_PLAY_RUN4",
-	"S_PLAY_RUN5",
-	"S_PLAY_RUN6",
-	"S_PLAY_RUN7",
-	"S_PLAY_RUN8",
-	"S_PLAY_SPD1",
-	"S_PLAY_SPD2",
-	"S_PLAY_SPD3",
-	"S_PLAY_SPD4",
-	"S_PLAY_ATK1",
-	"S_PLAY_ATK2",
-	"S_PLAY_ATK3",
-	"S_PLAY_ATK4",
-	"S_PLAY_SPRING",
-	"S_PLAY_FALL1",
-	"S_PLAY_FALL2",
-	"S_PLAY_ABL1",
-	"S_PLAY_ABL2",
-	"S_PLAY_SPC1",
-	"S_PLAY_SPC2",
-	"S_PLAY_SPC3",
-	"S_PLAY_SPC4",
-	"S_PLAY_CLIMB1",
-	"S_PLAY_CLIMB2",
-	"S_PLAY_CLIMB3",
-	"S_PLAY_CLIMB4",
-	"S_PLAY_CLIMB5",
-	"S_PLAY_GASP",
+	"S_PLAY_WAIT",
+	"S_PLAY_WALK",
+	"S_PLAY_RUN",
 	"S_PLAY_PAIN",
-	"S_PLAY_DIE",
-	"S_PLAY_TEETER1",
-	"S_PLAY_TEETER2",
-	"S_PLAY_CARRY",
-	"S_PLAY_SUPERSTAND",
-	"S_PLAY_SUPERWALK1",
-	"S_PLAY_SUPERWALK2",
-	"S_PLAY_SUPERFLY1",
-	"S_PLAY_SUPERFLY2",
-	"S_PLAY_SUPERTEETER",
-	"S_PLAY_SUPERHIT",
+	"S_PLAY_DEAD",
+	"S_PLAY_SPIN",
+	"S_PLAY_GASP",
+	"S_PLAY_JUMP",
+	"S_PLAY_FALL",
+	"S_PLAY_EDGE",
+	"S_PLAY_RIDE",
+
+	// CA_FLY
+	"S_PLAY_FLY",
+	"S_PLAY_FLY_TIRED",
+
+	// CA_GLIDEANDCLIMB
+	"S_PLAY_GLIDE",
+	"S_PLAY_CLING",
+	"S_PLAY_CLIMB",
+
+	// SF_SUPERANIMS
+	"S_PLAY_SUPER_STND",
+	"S_PLAY_SUPER_WALK",
+	"S_PLAY_SUPER_RUN",
+	"S_PLAY_SUPER_EDGE",
+	"S_PLAY_SUPER_PAIN",
+
+	// SF_SUPER
 	"S_PLAY_SUPERTRANS1",
 	"S_PLAY_SUPERTRANS2",
 	"S_PLAY_SUPERTRANS3",
@@ -3807,7 +3796,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Blue Crawla
 	"S_POSS_STND",
-	"S_POSS_STND2",
 	"S_POSS_RUN1",
 	"S_POSS_RUN2",
 	"S_POSS_RUN3",
@@ -3817,7 +3805,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Red Crawla
 	"S_SPOS_STND",
-	"S_SPOS_STND2",
 	"S_SPOS_RUN1",
 	"S_SPOS_RUN2",
 	"S_SPOS_RUN3",
@@ -4534,7 +4521,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	// S_PLAY_TAP1
 	"S_METALSONIC_WAIT1",
 	"S_METALSONIC_WAIT2",
-	// S_PLAY_RUN1
+	// S_PLAY_WALK
 	"S_METALSONIC_WALK1",
 	"S_METALSONIC_WALK2",
 	"S_METALSONIC_WALK3",
@@ -7172,7 +7159,6 @@ static const char *const MOBJFLAG2_LIST[] = {
 	"EXPLOSION",	// Thrown ring has explosive properties
 	"SCATTER",		// Thrown ring has scatter properties
 	"BEYONDTHEGRAVE",// Source of this missile has died and has since respawned.
-	"PUSHED",		// Mobj was already pushed this tic
 	"SLIDEPUSH",	// MF_PUSHABLE that pushes continuously.
 	"CLASSICPUSH",	// Drops straight down when object has negative Z.
 	"STANDONME",	// While not pushable, stand on me anyway.
@@ -7201,7 +7187,10 @@ static const char *const MOBJEFLAG_LIST[] = {
 	"JUSTSTEPPEDDOWN", // used for ramp sectors
 	"VERTICALFLIP", // Vertically flip sprite/allow upside-down physics
 	"GOOWATER", // Goo water
+	"PUSHED", // Mobj was already pushed this tic
+	"SPRUNG", // Mobj was already sprung this tic
 	"APPLYPMOMZ" // Platform movement
+	NULL
 };
 
 static const char *const MAPTHINGFLAG_LIST[4] = {
@@ -7303,6 +7292,7 @@ static const char *const ML_LIST[16] = {
 };
 
 // This DOES differ from r_draw's Color_Names, unfortunately.
+// Also includes Super colors
 static const char *COLOR_ENUMS[] = {
 	"NONE",     	// SKINCOLOR_NONE
 	"WHITE",    	// SKINCOLOR_WHITE
@@ -7329,7 +7319,25 @@ static const char *COLOR_ENUMS[] = {
 	"ZIM",      	// SKINCOLOR_ZIM
 	"OLIVE",    	// SKINCOLOR_OLIVE
 	"YELLOW",   	// SKINCOLOR_YELLOW
-	"GOLD"      	// SKINCOLOR_GOLD
+	"GOLD",     	// SKINCOLOR_GOLD
+	// Super special awesome Super flashing colors!
+	"SUPER1",   	// SKINCOLOR_SUPER1
+	"SUPER2",   	// SKINCOLOR_SUPER2,
+	"SUPER3",   	// SKINCOLOR_SUPER3,
+	"SUPER4",   	// SKINCOLOR_SUPER4,
+	"SUPER5",   	// SKINCOLOR_SUPER5,
+	// Super Tails
+	"TSUPER1",  	// SKINCOLOR_TSUPER1,
+	"TSUPER2",  	// SKINCOLOR_TSUPER2,
+	"TSUPER3",  	// SKINCOLOR_TSUPER3,
+	"TSUPER4",  	// SKINCOLOR_TSUPER4,
+	"TSUPER5",  	// SKINCOLOR_TSUPER5,
+	// Super Knuckles
+	"KSUPER1",  	// SKINCOLOR_KSUPER1,
+	"KSUPER2",  	// SKINCOLOR_KSUPER2,
+	"KSUPER3",  	// SKINCOLOR_KSUPER3,
+	"KSUPER4",  	// SKINCOLOR_KSUPER4,
+	"KSUPER5"   	// SKINCOLOR_KSUPER5,
 };
 
 static const char *const POWERS_LIST[] = {
@@ -7536,8 +7544,9 @@ struct {
 	{"EMERALD6",EMERALD6},
 	{"EMERALD7",EMERALD7},
 
-	// SKINCOLOR_ doesn't include this..!
+	// SKINCOLOR_ doesn't include these..!
 	{"MAXSKINCOLORS",MAXSKINCOLORS},
+	{"MAXTRANSLATIONS",MAXTRANSLATIONS},
 
 	// Precipitation
 	{"PRECIP_NONE",PRECIP_NONE},
@@ -8158,7 +8167,7 @@ static fixed_t find_const(const char **rword)
 	}
 	else if (fastncmp("SKINCOLOR_",word,10)) {
 		char *p = word+10;
-		for (i = 0; i < MAXSKINCOLORS; i++)
+		for (i = 0; i < MAXTRANSLATIONS; i++)
 			if (fastcmp(p, COLOR_ENUMS[i])) {
 				free(word);
 				return i;
@@ -8217,8 +8226,8 @@ void DEH_Check(void)
 	if (dehpowers != NUMPOWERS)
 		I_Error("You forgot to update the Dehacked powers list, you dolt!\n(%d powers defined, versus %s in the Dehacked list)\n", NUMPOWERS, sizeu1(dehpowers));
 
-	if (dehcolors != MAXSKINCOLORS)
-		I_Error("You forgot to update the Dehacked colors list, you dolt!\n(%d colors defined, versus %s in the Dehacked list)\n", MAXSKINCOLORS, sizeu1(dehcolors));
+	if (dehcolors != MAXTRANSLATIONS)
+		I_Error("You forgot to update the Dehacked colors list, you dolt!\n(%d colors defined, versus %s in the Dehacked list)\n", MAXTRANSLATIONS, sizeu1(dehcolors));
 #endif
 }
 
@@ -8487,6 +8496,27 @@ static inline int lib_getenum(lua_State *L)
 		if (mathlib) return luaL_error(L, "sprite '%s' could not be found.\n", word);
 		return 0;
 	}
+	else if (fastncmp("SPR2_",word,4)) {
+		p = word+5;
+		for (i = 0; i < NUMPLAYERSPRITES; i++)
+			if (!spr2names[i][4])
+			{
+				// special 3-char cases, e.g. SPR2_RUN
+				// the spr2names entry will have "_" on the end, as in "RUN_"
+				if (spr2names[i][3] == '_' && !p[3]) {
+					if (fastncmp(p,spr2names[i],3)) {
+						lua_pushinteger(L, i);
+						return 1;
+					}
+				}
+				else if (fastncmp(p,spr2names[i],4)) {
+					lua_pushinteger(L, i);
+					return 1;
+				}
+			}
+		if (mathlib) return luaL_error(L, "player sprite '%s' could not be found.\n", word);
+		return 0;
+	}
 	else if (!mathlib && fastncmp("sfx_",word,4)) {
 		p = word+4;
 		for (i = 0; i < NUMSFX; i++)
@@ -8572,7 +8602,7 @@ static inline int lib_getenum(lua_State *L)
 	}
 	else if (fastncmp("SKINCOLOR_",word,10)) {
 		p = word+10;
-		for (i = 0; i < MAXSKINCOLORS; i++)
+		for (i = 0; i < MAXTRANSLATIONS; i++)
 			if (fastcmp(p, COLOR_ENUMS[i])) {
 				lua_pushinteger(L, i);
 				return 1;
@@ -8697,7 +8727,7 @@ static inline int lib_getenum(lua_State *L)
 		lua_pushinteger(L, mapmusic);
 		return 1;
 	} else if (fastcmp(word,"server")) {
-		if (!playeringame[serverplayer])
+		if ((!multiplayer || !netgame) && !playeringame[serverplayer])
 			return 0;
 		LUA_PushUserdata(L, &players[serverplayer], META_PLAYER);
 		return 1;

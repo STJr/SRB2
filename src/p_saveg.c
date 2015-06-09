@@ -1052,6 +1052,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		diff |= MD_TICS;
 	if (mobj->sprite != mobj->state->sprite)
 		diff |= MD_SPRITE;
+	if (mobj->sprite == SPR_PLAY && mobj->sprite2 != 0)
+		diff |= MD_SPRITE;
 	if (mobj->frame != mobj->state->frame)
 		diff |= MD_FRAME;
 	if (mobj->eflags)
@@ -1169,12 +1171,15 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		WRITEUINT16(save_p, mobj->state-states);
 	if (diff & MD_TICS)
 		WRITEINT32(save_p, mobj->tics);
-	if (diff & MD_SPRITE)
+	if (diff & MD_SPRITE) {
 		WRITEUINT16(save_p, mobj->sprite);
+		if (mobj->sprite == SPR_PLAY)
+			WRITEUINT8(save_p, mobj->sprite2);
+	}
 	if (diff & MD_FRAME)
 		WRITEUINT32(save_p, mobj->frame);
 	if (diff & MD_EFLAGS)
-		WRITEUINT8(save_p, mobj->eflags);
+		WRITEUINT16(save_p, mobj->eflags);
 	if (diff & MD_PLAYER)
 		WRITEUINT8(save_p, mobj->player-players);
 	if (diff & MD_MOVEDIR)
@@ -1991,16 +1996,22 @@ static void LoadMobjThinker(actionf_p1 thinker)
 		mobj->tics = READINT32(save_p);
 	else
 		mobj->tics = mobj->state->tics;
-	if (diff & MD_SPRITE)
+	if (diff & MD_SPRITE) {
 		mobj->sprite = READUINT16(save_p);
-	else
+		if (mobj->sprite == SPR_PLAY)
+			mobj->sprite2 = READUINT8(save_p);
+	}
+	else {
 		mobj->sprite = mobj->state->sprite;
+		if (mobj->sprite == SPR_PLAY)
+			mobj->sprite2 = mobj->state->frame&FF_FRAMEMASK;
+	}
 	if (diff & MD_FRAME)
 		mobj->frame = READUINT32(save_p);
 	else
 		mobj->frame = mobj->state->frame;
 	if (diff & MD_EFLAGS)
-		mobj->eflags = READUINT8(save_p);
+		mobj->eflags = READUINT16(save_p);
 	if (diff & MD_PLAYER)
 	{
 		i = READUINT8(save_p);
@@ -2789,7 +2800,7 @@ static inline void P_ArchivePolyObj(polyobj_t *po)
 
 	if (po->flags != po->spawnflags)
 		diff |= PD_FLAGS;
-	if (po->translucency != 0)
+	if (po->translucency != po->spawntrans)
 		diff |= PD_TRANS;
 
 	WRITEUINT8(save_p, diff);

@@ -2180,8 +2180,7 @@ void G_PlayerReborn(INT32 player)
 	p->health = 1; // 0 rings
 	p->panim = PA_IDLE; // standing animation
 
-	if ((netgame || multiplayer) && !p->spectator
-	&& gametype != GT_RACE)
+	if ((netgame || multiplayer) && !p->spectator)
 		p->powers[pw_flashing] = flashingtics-1; // Babysitting deterrent
 
 	if (p-players == consoleplayer)
@@ -3687,6 +3686,7 @@ static ticcmd_t oldcmd;
 #define GZT_SPRITE 0x10 // Animation frame
 #define GZT_EXTRA  0x20
 #define GZT_NIGHTS 0x40 // NiGHTS Mode stuff!
+#define GZT_SPR2   0x80 // Player animations
 
 // GZT_EXTRA flags
 #define EZT_THOK   0x01 // Spawned a thok object
@@ -3890,8 +3890,6 @@ void G_WriteGhostTic(mobj_t *ghost)
 	char ziptic = 0;
 	UINT8 *ziptic_p;
 	UINT32 i;
-	UINT8 sprite;
-	UINT8 frame;
 
 	if (!demo_p)
 		return;
@@ -3966,19 +3964,25 @@ void G_WriteGhostTic(mobj_t *ghost)
 	}
 
 	// Store the sprite frame.
-	frame = ghost->frame & 0xFF;
-	if (frame != oldghost.frame)
+	if ((ghost->frame & 0xFF) != oldghost.frame)
 	{
-		oldghost.frame = frame;
+		oldghost.frame = (ghost->frame & 0xFF);
 		ziptic |= GZT_SPRITE;
 		WRITEUINT8(demo_p,oldghost.frame);
 	}
 
-	// Check for sprite set changes
-	sprite = ghost->sprite;
-	if (sprite != oldghost.sprite)
+	if (ghost->sprite == SPR_PLAY
+	&& ghost->sprite2 != oldghost.sprite2)
 	{
-		oldghost.sprite = sprite;
+		oldghost.sprite2 = ghost->sprite2;
+		ziptic |= GZT_SPR2;
+		WRITEUINT8(demo_p,oldghost.sprite2);
+	}
+
+	// Check for sprite set changes
+	if (ghost->sprite != oldghost.sprite)
+	{
+		oldghost.sprite = ghost->sprite;
 		ghostext.flags |= EZT_SPRITE;
 	}
 
@@ -4021,7 +4025,7 @@ void G_WriteGhostTic(mobj_t *ghost)
 			ghostext.hitlist = NULL;
 		}
 		if (ghostext.flags & EZT_SPRITE)
-			WRITEUINT8(demo_p,sprite);
+			WRITEUINT8(demo_p,oldghost.sprite);
 		ghostext.flags = 0;
 	}
 
@@ -4077,6 +4081,8 @@ void G_ConsGhostTic(void)
 		demo_p++;
 	if (ziptic & GZT_SPRITE)
 		demo_p++;
+	if (ziptic & GZT_SPR2)
+		demo_p++;
 	if(ziptic & GZT_NIGHTS) {
 		if (!testmo->player || !(testmo->player->pflags & PF_NIGHTSMODE) || !testmo->tracer)
 			nightsfail = true;
@@ -4128,7 +4134,7 @@ void G_ConsGhostTic(void)
 					if (demosynced)
 						CONS_Alert(CONS_WARNING, M_GetText("Demo playback has desynced!\n"));
 					demosynced = false;
-					P_DamageMobj(mobj, players[0].mo, players[0].mo, 1);
+					P_DamageMobj(mobj, players[0].mo, players[0].mo, 1, 0);
 				}
 			}
 		}
@@ -4208,6 +4214,8 @@ void G_GhostTicker(void)
 			g->oldmo.angle = READUINT8(g->p)<<24;
 		if (ziptic & GZT_SPRITE)
 			g->oldmo.frame = READUINT8(g->p);
+		if (ziptic & GZT_SPR2)
+			g->oldmo.sprite2 = READUINT8(g->p);
 
 		// Update ghost
 		P_UnsetThingPosition(g->mo);
@@ -4217,6 +4225,7 @@ void G_GhostTicker(void)
 		P_SetThingPosition(g->mo);
 		g->mo->angle = g->oldmo.angle;
 		g->mo->frame = g->oldmo.frame | tr_trans30<<FF_TRANSSHIFT;
+		g->mo->sprite2 = g->oldmo.sprite2;
 
 		if (ziptic & GZT_EXTRA)
 		{ // But wait, there's more!
@@ -4330,20 +4339,10 @@ void G_GhostTicker(void)
 		switch(g->color)
 		{
 		case GHC_SUPER: // Super Sonic (P_DoSuperStuff)
-			// Yousa yellow now!
-			g->mo->color = SKINCOLOR_SUPER1 + (leveltime/2) % 5;
-			if (g->mo->skin)
-				switch (((skin_t*)g->mo->skin)-skins)
-				{
-				case 1: // Golden orange supertails.
-					g->mo->color = SKINCOLOR_TSUPER1 + (leveltime/2) % 5;
-					break;
-				case 2: // Pink superknux.
-					g->mo->color = SKINCOLOR_KSUPER1 + (leveltime/2) % 5;
-					break;
-				default:
-					break;
-				}
+			if (leveltime % 9 < 5)
+				g->mo->color = SKINCOLOR_SUPER1 + leveltime % 9;
+			else
+				g->mo->color = SKINCOLOR_SUPER1 + 9 - leveltime % 9;
 			break;
 		case GHC_INVINCIBLE: // Mario invincibility (P_CheckInvincibilityTimer)
 			g->mo->color = (UINT8)(leveltime % MAXSKINCOLORS);
@@ -4401,6 +4400,8 @@ void G_ReadMetalTic(mobj_t *metal)
 		oldmetal.angle = READUINT8(metal_p)<<24;
 	if (ziptic & GZT_SPRITE)
 		metal_p++; // Currently unused. (Metal Sonic figures out what he's doing his own damn self.)
+	if (ziptic & GZT_SPR2)
+		metal_p++;
 
 	// Set movement, position, and angle
 	// oldmetal contains where you're supposed to be.

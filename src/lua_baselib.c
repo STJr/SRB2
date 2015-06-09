@@ -1037,6 +1037,7 @@ static int lib_pDamageMobj(lua_State *L)
 {
 	mobj_t *target = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ)), *inflictor = NULL, *source = NULL;
 	INT32 damage;
+	UINT8 damagetype;
 	NOHUD
 	if (!target)
 		return LUA_ErrInvalid(L, "mobj_t");
@@ -1045,13 +1046,15 @@ static int lib_pDamageMobj(lua_State *L)
 	if (!lua_isnone(L, 3) && lua_isuserdata(L, 3))
 		source = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
 	damage = (INT32)luaL_optinteger(L, 4, 1);
-	lua_pushboolean(L, P_DamageMobj(target, inflictor, source, damage));
+	damagetype = (UINT8)luaL_optinteger(L, 5, 0);
+	lua_pushboolean(L, P_DamageMobj(target, inflictor, source, damage, damagetype));
 	return 1;
 }
 
 static int lib_pKillMobj(lua_State *L)
 {
 	mobj_t *target = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ)), *inflictor = NULL, *source = NULL;
+	UINT8 damagetype;
 	NOHUD
 	if (!target)
 		return LUA_ErrInvalid(L, "mobj_t");
@@ -1059,7 +1062,8 @@ static int lib_pKillMobj(lua_State *L)
 		inflictor = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
 	if (!lua_isnone(L, 3) && lua_isuserdata(L, 3))
 		source = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
-	P_KillMobj(target, inflictor, source);
+	damagetype = (UINT8)luaL_optinteger(L, 4, 0);
+	P_KillMobj(target, inflictor, source, damagetype);
 	return 0;
 }
 

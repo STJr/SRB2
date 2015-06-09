@@ -28,7 +28,7 @@
 
 #define POLYOBJ_ANCHOR_DOOMEDNUM     760
 #define POLYOBJ_SPAWN_DOOMEDNUM      761
-#define POLYOBJ_SPAWNCRUSH_DOOMEDNUM 762
+#define POLYOBJ_SPAWNCRUSH_DOOMEDNUM 762 // todo: REMOVE
 
 #define POLYOBJ_START_LINE    20
 #define POLYOBJ_EXPLICIT_LINE 21
@@ -100,8 +100,11 @@ typedef struct polyobj_s
 	UINT8 isBad;         // a bad polyobject: should not be rendered/manipulated
 	INT32 translucency; // index to translucency tables
 
+	struct visplane_s *visplane; // polyobject's visplane, for ease of putting into the list later
+
 	// these are saved for netgames, so do not let Lua touch these!
 	INT32 spawnflags; // Flags the polyobject originally spawned with
+	INT32 spawntrans; // Translucency the polyobject originally spawned with
 } polyobj_t;
 
 //
@@ -274,7 +277,7 @@ boolean P_PointInsidePolyobj(polyobj_t *po, fixed_t x, fixed_t y);
 boolean P_MobjTouchingPolyobj(polyobj_t *po, mobj_t *mo);
 boolean P_MobjInsidePolyobj(polyobj_t *po, mobj_t *mo);
 boolean P_BBoxInsidePolyobj(polyobj_t *po, fixed_t *bbox);
-void Polyobj_GetInfo(INT16 tag, INT32 *polyID, INT32 *parentID, UINT16 *exparg);
+void Polyobj_GetInfo(INT16 poid, INT32 *poflags, INT32 *parentID, INT32 *potrans);
 
 // thinkers (needed in p_saveg.c)
 void T_PolyObjRotate(polyrotate_t *);

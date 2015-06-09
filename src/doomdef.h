@@ -138,15 +138,17 @@
 extern FILE *logstream;
 #endif
 
-#if 0
+#define DEVELOP // Disable this for release builds to remove excessive cheat commands and enable MD5 checking and stuff, all in one go. :3
+#ifdef DEVELOP
 #define VERSION    0 // Game version
 #define SUBVERSION 0 // more precise version number
 #define VERSIONSTRING "Trunk"
+#define VERSIONSTRINGW L"Trunk"
 #else
-#define VERSION    201 // Game version
-#define SUBVERSION 14  // more precise version number
-#define VERSIONSTRING "v2.1.14"
-#define VERSIONSTRINGW L"v2.1.14"
+#define VERSION    202 // Game version
+#define SUBVERSION 0  // more precise version number
+#define VERSIONSTRING "v2.2"
+#define VERSIONSTRINGW L"v2.2"
 // Hey! If you change this, add 1 to the MODVERSION below!
 // Otherwise we can't force updates!
 #endif
@@ -193,7 +195,7 @@ extern FILE *logstream;
 // and should not be changed unless you have merged changes between versions of SRB2
 // (such as 2.0.4 to 2.0.5, etc) into your working copy.
 // Will always resemble the versionstring, 205 = 2.0.5, 210 = 2.1, etc.
-#define CODEBASE 210
+#define CODEBASE 220
 
 // The Modification ID; must be obtained from Inuyasha ( http://mb.srb2.org/private.php?do=newpm&u=2604 ).
 // DO NOT try to set this otherwise, or your modification will be unplayable through the Master Server.
@@ -204,7 +206,7 @@ extern FILE *logstream;
 // it's only for detection of the version the player is using so the MS can alert them of an update.
 // Only set it higher, not lower, obviously.
 // Note that we use this to help keep internal testing in check; this is why v2.1.0 is not version "1".
-#define MODVERSION 19
+#define MODVERSION 20
 
 
 

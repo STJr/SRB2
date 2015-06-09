@@ -38,6 +38,9 @@
 #define MAPBMASK      (MAPBLOCKSIZE-1)
 #define MAPBTOFRAC    (MAPBLOCKSHIFT-FRACBITS)
 
+// Convenience macro to fix issue with collision along bottom/left edges of blockmap -Red
+#define BMBOUNDFIX(xl, xh, yl, yh) {if (xl > xh) xl = 0; if (yl > yh) yl = 0;}
+
 // player radius used only in am_map.c
 #define PLAYERRADIUS (16*FRACUNIT)
 
@@ -273,7 +276,6 @@ boolean P_LookForPlayers(mobj_t *actor, boolean allaround, boolean tracer, fixed
 extern boolean floatok;
 extern fixed_t tmfloorz;
 extern fixed_t tmceilingz;
-extern boolean tmsprung;
 extern mobj_t *tmfloorthing, *tmthing;
 extern camera_t *mapcampointer;
 
@@ -343,12 +345,29 @@ typedef struct BasicFF_s
 	INT32 Magnitude; ///< Magnitude of the effect, in the range from 0 through 10,000.
 } BasicFF_t;
 
+/* Damage/death types, for P_DamageMobj and related */
+//// Damage types
+//#define DMG_NORMAL 0 (unneeded?)
+#define DMG_WATER     1
+#define DMG_FIRE      2
+#define DMG_ELECTRIC  3
+#define DMG_SPIKE     4
+//#define DMG_SPECIALSTAGE 5
+//// Death types - cannot be combined with damage types
+#define DMG_INSTAKILL  0x80
+#define DMG_DROWNED    0x80+1
+#define DMG_SPACEDROWN 0x80+2
+#define DMG_DEATHPIT   0x80+3
+#define DMG_CRUSHED    0x80+4
+#define DMG_SPECTATOR  0x80+5
+#define DMG_DEATHMASK  DMG_INSTAKILL // if bit 7 is set, this is a death type instead of a damage type
+
 void P_ForceFeed(const player_t *player, INT32 attack, INT32 fade, tic_t duration, INT32 period);
 void P_ForceConstant(const BasicFF_t *FFInfo);
 void P_RampConstant(const BasicFF_t *FFInfo, INT32 Start, INT32 End);
 void P_RemoveShield(player_t *player);
-boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage);
-void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source);
+boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype);
+void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damagetype);
 void P_PlayerRingBurst(player_t *player, INT32 num_rings); /// \todo better fit in p_user.c
 void P_PlayerWeaponPanelBurst(player_t *player);
 void P_PlayerWeaponAmmoBurst(player_t *player);

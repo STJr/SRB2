@@ -17,6 +17,7 @@
 
 #include "p_local.h"
 #include "r_main.h"
+#include "r_data.h"
 #include "p_maputl.h"
 #include "p_polyobj.h"
 #include "z_zone.h"
@@ -520,6 +521,51 @@ void P_LineOpening(line_t *linedef)
 	{
 		fixed_t thingtop = tmthing->z + tmthing->height;
 
+		// Check for collision with front side's midtexture if Effect 4 is set
+		if (linedef->flags & ML_EFFECT4) {
+			side_t *side = &sides[linedef->sidenum[0]];
+			fixed_t textop, texbottom, texheight;
+			fixed_t texmid, delta1, delta2;
+
+			// Get the midtexture's height
+			texheight = textures[texturetranslation[side->midtexture]]->height << FRACBITS;
+
+			// Set texbottom and textop to the Z coordinates of the texture's boundaries
+#ifdef POLYOBJECTS
+			if (linedef->polyobj && (linedef->polyobj->flags & POF_TESTHEIGHT)) {
+				if (linedef->flags & ML_DONTPEGBOTTOM) {
+					texbottom = back->floorheight + side->rowoffset;
+					textop = texbottom + texheight*(side->repeatcnt+1);
+				} else {
+					textop = back->ceilingheight - side->rowoffset;
+					texbottom = textop - texheight*(side->repeatcnt+1);
+				}
+			} else
+#endif
+			{
+				if (linedef->flags & ML_DONTPEGBOTTOM) {
+					texbottom = openbottom + side->rowoffset;
+					textop = texbottom + texheight*(side->repeatcnt+1);
+				} else {
+					textop = opentop - side->rowoffset;
+					texbottom = textop - texheight*(side->repeatcnt+1);
+				}
+			}
+
+			texmid = texbottom+(textop-texbottom)/2;
+
+			delta1 = abs(tmthing->z - texmid);
+			delta2 = abs(thingtop - texmid);
+
+			if (delta1 > delta2) { // Below
+				if (opentop > texbottom)
+					opentop = texbottom;
+			} else { // Above
+				if (openbottom < textop)
+					openbottom = textop;
+			}
+		}
+
 		// Check for fake floors in the sector.
 		if (front->ffloors || back->ffloors
 #ifdef POLYOBJECTS
@@ -768,8 +814,8 @@ void P_SetThingPosition(mobj_t *thing)
 	if (!(thing->flags & MF_NOBLOCKMAP))
 	{
 		// inert things don't need to be in blockmap
-		const INT32 blockx = (unsigned)(thing->x - bmaporgx)>>MAPBLOCKSHIFT;
-		const INT32 blocky = (unsigned)(thing->y - bmaporgy)>>MAPBLOCKSHIFT;
+		const INT32 blockx = (thing->x - bmaporgx)>>MAPBLOCKSHIFT;
+		const INT32 blocky = (thing->y - bmaporgy)>>MAPBLOCKSHIFT;
 		if (blockx >= 0 && blockx < bmapwidth
 			&& blocky >= 0 && blocky < bmapheight)
 		{
@@ -1271,10 +1317,10 @@ boolean P_RadiusLinesCheck(fixed_t radius, fixed_t x, fixed_t y,
 	tmbbox[BOXLEFT] = x - radius;
 
 	// check lines
-	xl = (unsigned)(tmbbox[BOXLEFT] - bmaporgx)>>MAPBLOCKSHIFT;
-	xh = (unsigned)(tmbbox[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
-	yl = (unsigned)(tmbbox[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
-	yh = (unsigned)(tmbbox[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
+	xl = (tmbbox[BOXLEFT] - bmaporgx)>>MAPBLOCKSHIFT;
+	xh = (tmbbox[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
+	yl = (tmbbox[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
+	yh = (tmbbox[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
 
 	for (bx = xl; bx <= xh; bx++)
 		for (by = yl; by <= yh; by++)

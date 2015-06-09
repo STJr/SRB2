@@ -921,24 +921,25 @@ void HWR_InitMD2(void)
 	}
 	while (fscanf(f, "%19s %31s %f %f", name, filename, &scale, &offset) == 4)
 	{
+		if (stricmp(name, "PLAY") == 0)
+		{
+			CONS_Printf("MD2 for sprite PLAY detected in md2.dat, use a player skin instead!\n");
+			continue;
+		}
+	
 		for (i = 0; i < NUMSPRITES; i++)
 		{
 			if (stricmp(name, sprnames[i]) == 0)
 			{
-				if (stricmp(name, "PLAY") == 0)
-					continue;
+				//if (stricmp(name, "PLAY") == 0)
+					//continue;
 
 				//CONS_Debug(DBG_RENDER, "  Found: %s %s %f %f\n", name, filename, scale, offset);
 				md2_models[i].scale = scale;
 				md2_models[i].offset = offset;
 				md2_models[i].notfound = false;
 				strcpy(md2_models[i].filename, filename);
-				break;
-			}
-			if (i == NUMSPRITES)
-			{
-				CONS_Printf("MD2 for sprite %s not found\n", name);
-				md2_models[i].notfound = true;
+				goto md2found;
 			}
 		}
 
@@ -952,15 +953,14 @@ void HWR_InitMD2(void)
 				md2_playermodels[s].offset = offset;
 				md2_playermodels[s].notfound = false;
 				strcpy(md2_playermodels[s].filename, filename);
-				break;
-			}
-			if (s == MAXSKINS-1)
-			{
-				CONS_Printf("MD2 for player skin %s not found\n", name);
-				md2_playermodels[s].notfound = true;
+				goto md2found;
 			}
 		}
-
+		// no sprite/player skin name found?!?
+		CONS_Printf("Unknown sprite/player skin %s detected in md2.dat\n", name);
+md2found:
+		// move on to next line...
+		continue;
 	}
 	fclose(f);
 }
@@ -996,17 +996,14 @@ void HWR_AddPlayerMD2(int skin) // For MD2's that were added after startup
 			md2_playermodels[skin].offset = offset;
 			md2_playermodels[skin].notfound = false;
 			strcpy(md2_playermodels[skin].filename, filename);
-			break;
-		}
-		if (skin == MAXSKINS-1)
-		{
-			CONS_Printf("MD2 for player skin %s not found\n", name);
-			md2_playermodels[skin].notfound = true;
+			goto playermd2found;
 		}
 	}
 
+	//CONS_Printf("MD2 for player skin %s not found\n", skins[skin].name);
+	md2_playermodels[skin].notfound = true;
+playermd2found:
 	fclose(f);
-
 }
 
 
@@ -1019,6 +1016,9 @@ void HWR_AddSpriteMD2(size_t spritenum) // For MD2s that were added after startu
 	float scale, offset;
 
 	if (nomd2s)
+		return;
+
+	if (spritenum == SPR_PLAY) // Handled already NEWMD2: Per sprite, per-skin check
 		return;
 
 	// Read the md2.dat file
@@ -1034,27 +1034,19 @@ void HWR_AddSpriteMD2(size_t spritenum) // For MD2s that were added after startu
 	// Check for any MD2s that match the names of player skins!
 	while (fscanf(f, "%19s %31s %f %f", name, filename, &scale, &offset) == 4)
 	{
+		if (stricmp(name, sprnames[spritenum]) == 0)
 		{
-			if (stricmp(name, sprnames[spritenum]) == 0)
-			{
-				if (stricmp(name, "PLAY") == 0) // Handled already NEWMD2: Per sprite, per-skin check
-					continue;
-
-				md2_models[spritenum].scale = scale;
-				md2_models[spritenum].offset = offset;
-				md2_models[spritenum].notfound = false;
-				strcpy(md2_models[spritenum].filename, filename);
-				break;
-			}
-
-			if (spritenum == NUMSPRITES-1)
-			{
-				CONS_Printf("MD2 for sprite %s not found\n", name);
-				md2_models[spritenum].notfound = true;
-			}
+			md2_models[spritenum].scale = scale;
+			md2_models[spritenum].offset = offset;
+			md2_models[spritenum].notfound = false;
+			strcpy(md2_models[spritenum].filename, filename);
+			goto spritemd2found;
 		}
 	}
 
+	//CONS_Printf("MD2 for sprite %s not found\n", sprnames[spritenum]);
+	md2_models[spritenum].notfound = true;
+spritemd2found:
 	fclose(f);
 }
 
@@ -1090,11 +1082,17 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 	md2_t *md2;
 	UINT8 color[4];
 
+	if (!cv_grmd2.value)
+		return;
+
+	if (!spr->precip)
+		return;
+
 	// MD2 colormap fix
 	// colormap test
 	{
 		sector_t *sector = spr->mobj->subsector->sector;
-		UINT8 lightlevel = sector->lightlevel;
+		UINT8 lightlevel = 255;
 		extracolormap_t *colormap = sector->extra_colormap;
 
 		if (sector->numlights)
@@ -1105,8 +1103,6 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 
 			if (!(spr->mobj->frame & FF_FULLBRIGHT))
 				lightlevel = *sector->lightlist[light].lightlevel;
-			else
-				lightlevel = 255;
 
 			if (sector->lightlist[light].extra_colormap)
 				colormap = sector->lightlist[light].extra_colormap;
@@ -1115,15 +1111,10 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		{
 			if (!(spr->mobj->frame & FF_FULLBRIGHT))
 				lightlevel = sector->lightlevel;
-			else
-				lightlevel = 255;
 
 			if (sector->extra_colormap)
 				colormap = sector->extra_colormap;
 		}
-
-		if (spr->mobj->frame & FF_FULLBRIGHT)
-			lightlevel = 255;
 
 		if (colormap)
 			Surf.FlatColor.rgba = HWR_Lighting(lightlevel, colormap->rgba, colormap->fadergba, false, false);
@@ -1131,8 +1122,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 			Surf.FlatColor.rgba = HWR_Lighting(lightlevel, NORMALFOG, FADEFOG, false, false);
 	}
 
-	// Look at HWR_ProjetctSprite for more
-	if (cv_grmd2.value && ((md2_models[spr->mobj->sprite].scale > 0.0f) || (md2_playermodels[(skin_t*)spr->mobj->skin-skins].scale > 0.0f)) && !spr->precip)
+	// Look at HWR_ProjectSprite for more
 	{
 		GLPatch_t *gpatch;
 		INT32 *buff;
@@ -1149,15 +1139,11 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 			//durs = tics;
 
 		if (spr->mobj->flags2 & MF2_SHADOW)
-		{
 			Surf.FlatColor.s.alpha = 0x40;
-		}
 		else if (spr->mobj->frame & FF_TRANSMASK)
 			HWR_TranstableToAlpha((spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT, &Surf);
 		else
-		{
 			Surf.FlatColor.s.alpha = 0xFF;
-		}
 
 		// dont forget to enabled the depth test because we can't do this like
 		// before: polygons models are not sorted
@@ -1215,7 +1201,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		curr = &md2->model->frames[frame];
 		if (cv_grmd2.value == 1
 		    && spr->mobj->state->nextstate != S_NULL && states[spr->mobj->state->nextstate].sprite != SPR_NULL
-		    && !(spr->mobj->player && (spr->mobj->state->nextstate == S_PLAY_TAP1 || spr->mobj->state->nextstate == S_PLAY_TAP2) && spr->mobj->state == &states[S_PLAY_STND]))
+		    && !(spr->mobj->player && spr->mobj->state->nextstate == S_PLAY_WAIT && spr->mobj->state == &states[S_PLAY_STND]))
 		{
 			const INT32 nextframe = (states[spr->mobj->state->nextstate].frame & FF_FRAMEMASK) % md2->model->header.numFrames;
 			next = &md2->model->frames[nextframe];
@@ -1231,7 +1217,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 			p.z = FIXED_TO_FLOAT(spr->mobj->z);
 
 		if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)
-			sprdef = &((skin_t *)spr->mobj->skin)->spritedef;
+			sprdef = &((skin_t *)spr->mobj->skin)->sprites[spr->mobj->sprite2];
 		else
 			sprdef = &sprites[spr->mobj->sprite];
 
@@ -1263,8 +1249,6 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 			p.flip = false;
 
 		HWD.pfnDrawMD2i(buff, curr, durs, tics, next, &p, finalscale, flip, color);
-
-
 	}
 }
 

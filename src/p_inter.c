@@ -291,7 +291,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 	{
 		if (special->type == MT_BLACKEGGMAN)
 		{
-			P_DamageMobj(toucher, special, special, 1); // ouch
+			P_DamageMobj(toucher, special, special, 1, 0); // ouch
 			return;
 		}
 
@@ -303,20 +303,20 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				toucher->momz = -toucher->momz;
 			toucher->momx = -toucher->momx;
 			toucher->momy = -toucher->momy;
-			P_DamageMobj(special, toucher, toucher, 1);
+			P_DamageMobj(special, toucher, toucher, 1, 0);
 		}
 		else if (((toucher->z < special->z && !(toucher->eflags & MFE_VERTICALFLIP))
 		|| (toucher->z + toucher->height > special->z + special->height && (toucher->eflags & MFE_VERTICALFLIP)))
 		&& player->charability == CA_FLY
 		&& (player->powers[pw_tailsfly]
-		|| (toucher->state >= &states[S_PLAY_SPC1] && toucher->state <= &states[S_PLAY_SPC4]))) // Tails can shred stuff with his propeller.
+		|| toucher->state-states == S_PLAY_FLY_TIRED)) // Tails can shred stuff with his propeller.
 		{
 			toucher->momz = -toucher->momz/2;
 
-			P_DamageMobj(special, toucher, toucher, 1);
+			P_DamageMobj(special, toucher, toucher, 1, 0);
 		}
 		else
-			P_DamageMobj(toucher, special, special, 1);
+			P_DamageMobj(toucher, special, special, 1, 0);
 
 		return;
 	}
@@ -330,13 +330,13 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		&& toucher->z < special->z + special->height && toucher->z + toucher->height > special->z)
 		{
 			// Can only hit snapper from above
-			P_DamageMobj(toucher, special, special, 1);
+			P_DamageMobj(toucher, special, special, 1, 0);
 		}
 		else if (special->type == MT_SHARP
 		&& ((special->state == &states[special->info->xdeathstate]) || (toucher->z > special->z + special->height/2)))
 		{
 			// Cannot hit sharp from above or when red and angry
-			P_DamageMobj(toucher, special, special, 1);
+			P_DamageMobj(toucher, special, special, 1, 0);
 		}
 		else if (((player->pflags & PF_NIGHTSMODE) && (player->pflags & PF_DRILLING))
 		|| (player->pflags & (PF_JUMPED|PF_SPINNING|PF_GLIDING))
@@ -345,27 +345,27 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if (P_MobjFlip(toucher)*toucher->momz < 0)
 				toucher->momz = -toucher->momz;
 
-			P_DamageMobj(special, toucher, toucher, 1);
+			P_DamageMobj(special, toucher, toucher, 1, 0);
 		}
 		else if (((toucher->z < special->z && !(toucher->eflags & MFE_VERTICALFLIP))
 		|| (toucher->z + toucher->height > special->z + special->height && (toucher->eflags & MFE_VERTICALFLIP))) // Flame is bad at logic - JTE
 		&& player->charability == CA_FLY
 		&& (player->powers[pw_tailsfly]
-		|| (toucher->state >= &states[S_PLAY_SPC1] && toucher->state <= &states[S_PLAY_SPC4]))) // Tails can shred stuff with his propeller.
+		|| toucher->state-states == S_PLAY_FLY_TIRED)) // Tails can shred stuff with his propeller.
 		{
 			if (P_MobjFlip(toucher)*toucher->momz < 0)
 				toucher->momz = -toucher->momz/2;
 
-			P_DamageMobj(special, toucher, toucher, 1);
+			P_DamageMobj(special, toucher, toucher, 1, 0);
 		}
 		else
-			P_DamageMobj(toucher, special, special, 1);
+			P_DamageMobj(toucher, special, special, 1, 0);
 
 		return;
 	}
 	else if (special->flags & MF_FIRE)
 	{
-		P_DamageMobj(toucher, special, special, 1);
+		P_DamageMobj(toucher, special, special, 1, DMG_FIRE);
 		return;
 	}
 	else
@@ -743,7 +743,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 					if (mo2->flags & MF_SHOOTABLE)
 					{
-						P_DamageMobj(mo2, toucher, toucher, 1);
+						P_DamageMobj(mo2, toucher, toucher, 1, 0);
 						continue;
 					}
 
@@ -875,7 +875,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 					P_ResetPlayer(player);
 
-					P_SetPlayerMobjState(toucher, S_PLAY_FALL1);
+					P_SetPlayerMobjState(toucher, S_PLAY_FALL);
 				}
 			}
 			return;
@@ -1212,7 +1212,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				if (player->pflags & PF_GLIDING)
 				{
 					player->pflags &= ~(PF_GLIDING|PF_JUMPED);
-					P_SetPlayerMobjState(toucher, S_PLAY_FALL1);
+					P_SetPlayerMobjState(toucher, S_PLAY_FALL);
 				}
 
 				// Play a bounce sound?
@@ -1279,7 +1279,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					if (player->pflags & PF_GLIDING)
 					{
 						player->pflags &= ~(PF_GLIDING|PF_JUMPED);
-						P_SetPlayerMobjState(toucher, S_PLAY_FALL1);
+						P_SetPlayerMobjState(toucher, S_PLAY_FALL);
 					}
 
 					// Play a bounce sound?
@@ -1335,7 +1335,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			{
 				player->pflags |= PF_MACESPIN;
 				S_StartSound(toucher, sfx_spin);
-				P_SetPlayerMobjState(toucher, S_PLAY_ATK1);
+				P_SetPlayerMobjState(toucher, S_PLAY_SPIN);
 			}
 			else
 				player->pflags |= PF_ITEMHANG;
@@ -1351,7 +1351,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		case MT_SPECIALSPIKEBALL:
 			if (!(!useNightsSS && G_IsSpecialStage(gamemap))) // Only for old special stages
 			{
-				P_DamageMobj(toucher, special, special, 1);
+				P_DamageMobj(toucher, special, special, 1, 0);
 				return;
 			}
 
@@ -1382,7 +1382,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			// Goomba Stomp'd!
 			if (special->target->momz < 0)
 			{
-				P_DamageMobj(toucher, special, special->target, 1);
+				P_DamageMobj(toucher, special, special->target, 1, 0);
 				//special->target->momz = -special->target->momz;
 				special->target->momx = special->target->momy = 0;
 				special->target->momz = 0;
@@ -1446,7 +1446,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 	}
 
 	S_StartSound(toucher, special->info->deathsound); // was NULL, but changed to player so you could hear others pick up rings
-	P_KillMobj(special, NULL, toucher);
+	P_KillMobj(special, NULL, toucher, 0);
 }
 
 #define CTFTEAMCODE(pl) pl->ctfteam ? (pl->ctfteam == 1 ? "\x85" : "\x84") : ""
@@ -1457,8 +1457,9 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
   * \param player    Affected player.
   * \param inflictor The attack weapon used, can be NULL.
   * \param source    The attacker, can be NULL.
+  * \param damagetype The type of damage dealt to the player. If bit 7 (0x80) is set, this was an instant-kill.
   */
-static void P_HitDeathMessages(player_t *player, mobj_t *inflictor, mobj_t *source)
+static void P_HitDeathMessages(player_t *player, mobj_t *inflictor, mobj_t *source, UINT8 damagetype)
 {
 	const char *str = NULL;
 	boolean deathonly = false;
@@ -1567,22 +1568,6 @@ static void P_HitDeathMessages(player_t *player, mobj_t *inflictor, mobj_t *sour
 		}
 		else switch (source->type)
 		{
-			case MT_NULL:
-				switch(source->threshold)
-				{
-				case 42:
-					deathonly = true;
-					str = M_GetText("%s drowned.\n");
-					break;
-				case 43:
-					str = M_GetText("%s was %s by spikes.\n");
-					break;
-				case 44:
-					deathonly = true;
-					str = M_GetText("%s was crushed.\n");
-					break;
-				}
-				break;
 			case MT_EGGMANICO:
 			case MT_EGGMANBOX:
 				str = M_GetText("%s was %s by Eggman's nefarious TV magic.\n");
@@ -1598,30 +1583,52 @@ static void P_HitDeathMessages(player_t *player, mobj_t *inflictor, mobj_t *sour
 	else
 	{
 		// null source, environment kills
-		// TERRIBLE HACK for hit damage because P_DoPlayerPain moves the player...
-		// I'll put it back, I promise!
-		player->mo->z -= player->mo->momz+1;
-		if (P_PlayerTouchingSectorSpecial(player, 1, 2))
-			str = M_GetText("%s was %s by chemical water.\n");
-		else if (P_PlayerTouchingSectorSpecial(player, 1, 3))
-			str = M_GetText("%s was %s by molten lava.\n");
-		else if (P_PlayerTouchingSectorSpecial(player, 1, 4))
-			str = M_GetText("%s was %s by electricity.\n");
-		else if (deadtarget)
+		switch (damagetype)
 		{
-			deathonly = true;
-			if (P_PlayerTouchingSectorSpecial(player, 1, 6)
-			 || P_PlayerTouchingSectorSpecial(player, 1, 7))
-				str = M_GetText("%s fell into a bottomless pit.\n");
-			else if (P_PlayerTouchingSectorSpecial(player, 1, 12))
-				str = M_GetText("%s asphyxiated in space.\n");
-			else
-				str = M_GetText("%s died.\n");
+			case DMG_WATER:
+				str = M_GetText("%s was %s by chemical water.\n");
+				break;
+			case DMG_FIRE:
+				str = M_GetText("%s was %s by molten lava.\n");
+				break;
+			case DMG_ELECTRIC:
+				str = M_GetText("%s was %s by electricity.\n");
+				break;
+			case DMG_SPIKE:
+				str = M_GetText("%s was %s by spikes.\n");
+				break;
+			case DMG_DROWNED:
+				deathonly = true;
+				str = M_GetText("%s drowned.\n");
+				break;
+			case DMG_CRUSHED:
+				deathonly = true;
+				str = M_GetText("%s was crushed.\n");
+				break;
+			case DMG_DEATHPIT:
+				if (deadtarget)
+				{
+					deathonly = true;
+					str = M_GetText("%s fell into a bottomless pit.\n");
+				}
+				break;
+			case DMG_SPACEDROWN:
+				if (deadtarget)
+				{
+					deathonly = true;
+					str = M_GetText("%s asphyxiated in space.\n");
+				}
+				break;
+			default:
+				if (deadtarget)
+				{
+					deathonly = true;
+					str = M_GetText("%s died.\n");
+				}
+				break;
 		}
 		if (!str)
 			str = M_GetText("%s was %s by an environmental hazard.\n");
-
-		player->mo->z += player->mo->momz+1;
 	}
 
 	if (!str) // Should not happen! Unless we missed catching something above.
@@ -1799,10 +1806,11 @@ boolean P_CheckRacers(void)
   * \param target    The victim.
   * \param inflictor The attack weapon. May be NULL (environmental damage).
   * \param source    The attacker. May be NULL.
+  * \param damagetype The type of damage dealt that killed the target. If bit 7 (0x80) was set, this was an instant-death.
   * \todo Cleanup, refactor, split up.
   * \sa P_DamageMobj
   */
-void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source)
+void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damagetype)
 {
 	mobjtype_t item;
 	mobj_t *mo;
@@ -2126,15 +2134,19 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source)
 		case MT_PLAYER:
 			target->fuse = TICRATE*3; // timer before mobj disappears from view (even if not an actual player)
 			target->momx = target->momy = target->momz = 0;
-			if (!(source && source->type == MT_NULL && source->threshold == 42)) // Don't jump up when drowning
-				P_SetObjectMomZ(target, 14*FRACUNIT, false);
-
-			if (source && source->type == MT_NULL && source->threshold == 42) // drowned
+			if (damagetype == DMG_DROWNED) // drowned
+			{
 				S_StartSound(target, sfx_drown);
-			else if (source && (source->type == MT_SPIKE || (source->type == MT_NULL && source->threshold == 43))) // Spikes
-				S_StartSound(target, sfx_spkdth);
+				// Don't jump up when drowning
+			}
 			else
-				P_PlayDeathSound(target);
+			{
+				P_SetObjectMomZ(target, 14*FRACUNIT, false);
+				if ((source && source->type == MT_SPIKE) || damagetype == DMG_SPIKE) // Spikes
+					S_StartSound(target, sfx_spkdth);
+				else
+					P_PlayDeathSound(target);
+			}
 			break;
 		default:
 			break;
@@ -2384,7 +2396,7 @@ static inline boolean P_TagDamage(mobj_t *target, mobj_t *inflictor, mobj_t *sou
 	if (source->player->pflags & PF_TAGIT && !(player->pflags & PF_TAGIT))
 	{
 		P_AddPlayerScore(source->player, 100); //award points to tagger.
-		P_HitDeathMessages(player, inflictor, source);
+		P_HitDeathMessages(player, inflictor, source, 0);
 
 		if (gametype == GT_TAG) //survivor
 		{
@@ -2570,7 +2582,7 @@ static inline void P_SuperDamage(player_t *player, mobj_t *inflictor, mobj_t *so
 	P_InstaThrust(player->mo, ang, fallbackspeed);
 
 	if (player->charflags & SF_SUPERANIMS)
-		P_SetPlayerMobjState(player->mo, S_PLAY_SUPERHIT);
+		P_SetPlayerMobjState(player->mo, S_PLAY_SUPER_PAIN);
 	else
 		P_SetPlayerMobjState(player->mo, player->mo->info->painstate);
 
@@ -2640,7 +2652,7 @@ static void P_ShieldDamage(player_t *player, mobj_t *inflictor, mobj_t *source, 
 	}
 }
 
-static void P_RingDamage(player_t *player, mobj_t *inflictor, mobj_t *source, INT32 damage)
+static void P_RingDamage(player_t *player, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype)
 {
 	if (!(inflictor && ((inflictor->flags & MF_MISSILE) || inflictor->player) && player->powers[pw_super] && ALL7EMERALDS(player->powers[pw_emeralds])))
 	{
@@ -2648,7 +2660,7 @@ static void P_RingDamage(player_t *player, mobj_t *inflictor, mobj_t *source, IN
 
 		P_ForceFeed(player, 40, 10, TICRATE, 40 + min(damage, 100)*2);
 
-		if (source && (source->type == MT_SPIKE || (source->type == MT_NULL && source->threshold == 43))) // spikes
+		if ((source && source->type == MT_SPIKE) || damagetype == DMG_SPIKE) // spikes
 			S_StartSound(player->mo, sfx_spkdth);
 	}
 
@@ -2677,21 +2689,21 @@ static void P_RingDamage(player_t *player, mobj_t *inflictor, mobj_t *source, IN
 /** Damages an object, which may or may not be a player.
   * For melee attacks, source and inflictor are the same.
   *
-  * \param target    The object being damaged.
-  * \param inflictor The thing that caused the damage: creature, missile,
-  *                  gargoyle, and so forth. Can be NULL in the case of
-  *                  environmental damage, such as slime or crushing.
-  * \param source    The creature or person responsible. For example, if a
-  *                  player is hit by a ring, the player who shot it. In some
-  *                  cases, the target will go after this object after
-  *                  receiving damage. This can be NULL.
-  * \param damage    Amount of damage to be dealt. 10000 is instant death.
+  * \param target     The object being damaged.
+  * \param inflictor  The thing that caused the damage: creature, missile,
+  *                   gargoyle, and so forth. Can be NULL in the case of
+  *                   environmental damage, such as slime or crushing.
+  * \param source     The creature or person responsible. For example, if a
+  *                   player is hit by a ring, the player who shot it. In some
+  *                   cases, the target will go after this object after
+  *                   receiving damage. This can be NULL.
+  * \param damage     Amount of damage to be dealt.
+  * \param damagetype Type of damage to be dealt. If bit 7 (0x80) is set, this is an instant-kill.
   * \return True if the target sustained damage, otherwise false.
   * \todo Clean up this mess, split into multiple functions.
-  * \todo Get rid of the magic number 10000.
   * \sa P_KillMobj
   */
-boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage)
+boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype)
 {
 	player_t *player;
 #ifdef HAVE_BLUA
@@ -2709,9 +2721,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 	// Spectator handling
 	if (netgame)
 	{
-		if (damage == 42000 && target->player && target->player->spectator)
-			damage = 10000;
-		else if (target->player && target->player->spectator)
+		if (damagetype != DMG_SPECTATOR && target->player && target->player->spectator)
 			return false;
 
 		if (source && source->player && source->player->spectator)
@@ -2819,6 +2829,21 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 
 			if (!(target->player->pflags & (PF_NIGHTSMODE|PF_NIGHTSFALL)) && (maptol & TOL_NIGHTS))
 				return false;
+
+			switch (damagetype)
+			{
+				case DMG_WATER:
+				case DMG_FIRE:
+					if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL)
+						return false; // Invincible to water/fire damage
+					break;
+				case DMG_ELECTRIC:
+					if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT)
+						return false; // Invincible to electric damage
+					break;
+				default:
+					break;
+			}
 		}
 
 		if (player->pflags & PF_NIGHTSMODE) // NiGHTS damage handling
@@ -2840,12 +2865,12 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			return true;
 		}
 
-		if (!force && inflictor && (inflictor->flags & MF_FIRE))
+		if (!force && inflictor && inflictor->flags & MF_FIRE)
 		{
 			if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL)
 				return false; // Invincible to fire objects
 
-			if (G_PlatformGametype() && source && source->player)
+			if (G_PlatformGametype() && inflictor && source && source->player)
 				return false; // Don't get hurt by fire generated from friends.
 		}
 
@@ -2854,7 +2879,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 		{
 			if ((gametype == GT_MATCH || gametype == GT_TEAMMATCH || gametype == GT_CTF) && cv_suddendeath.value
 				&& !player->powers[pw_flashing] && !player->powers[pw_invulnerability])
-				damage = 10000;
+				damagetype = DMG_INSTAKILL;
 		}
 
 		// Player hits another player
@@ -2868,7 +2893,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			return false;
 
 		// Instant-Death
-		if (damage == 10000)
+		if (damagetype & DMG_DEATHMASK)
 			P_KillPlayer(player, source, damage);
 		else if (metalrecording)
 		{
@@ -2876,7 +2901,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 				inflictor = source;
 			if (inflictor && inflictor->flags & MF_ENEMY)
 			{ // Metal Sonic destroy enemy !!
-				P_KillMobj(inflictor, NULL, target);
+				P_KillMobj(inflictor, NULL, target, damagetype);
 				return false;
 			}
 			else if (inflictor && inflictor->flags & MF_MISSILE)
@@ -2915,7 +2940,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 		else if (player->mo->health > 1) // No shield but have rings.
 		{
 			damage = player->mo->health - 1;
-			P_RingDamage(player, inflictor, source, damage);
+			P_RingDamage(player, inflictor, source, damage, damagetype);
 		}
 		else // No shield, no rings, no invincibility.
 		{
@@ -2952,21 +2977,20 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			if (gametype == GT_CTF && (player->gotflag & (GF_REDFLAG|GF_BLUEFLAG)))
 				P_PlayerFlagBurst(player, false);
 		}
+		else if (damagetype & DMG_DEATHMASK)
+			player->health = 0;
 		else
 		{
 			player->health -= damage; // mirror mobj health here
-			if (damage < 10000)
-			{
-				target->player->powers[pw_flashing] = flashingtics;
-				if (damage > 0) // don't spill emeralds/ammo/panels for shield damage
-					P_PlayerRingBurst(player, damage);
-			}
+			target->player->powers[pw_flashing] = flashingtics;
+			if (damage > 0) // don't spill emeralds/ammo/panels for shield damage
+				P_PlayerRingBurst(player, damage);
 		}
 
 		if (player->health < 0)
 			player->health = 0;
 
-		P_HitDeathMessages(player, inflictor, source);
+		P_HitDeathMessages(player, inflictor, source, damagetype);
 
 		P_ForceFeed(player, 40, 10, TICRATE, 40 + min(damage, 100)*2);
 	}
@@ -2974,7 +2998,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 	// Killing dead. Just for kicks.
 	// Require source and inflictor be player.  Don't hurt for firing rings.
 	if (cv_killingdead.value && (source && source->player) && (inflictor && inflictor->player) && P_Random() < 80)
-		P_DamageMobj(source, target, target, 1);
+		P_DamageMobj(source, target, target, 1, 0);
 
 	// do the damage
 	if (player && player->powers[pw_super] && ALL7EMERALDS(player->powers[pw_emeralds]) && inflictor && ((inflictor->flags & MF_MISSILE) || inflictor->player))
@@ -2983,6 +3007,8 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 		if (target->health < 2)
 			target->health = 2;
 	}
+	else if (damagetype & DMG_DEATHMASK)
+		target->health = 0;
 	else
 		target->health -= damage;
 
@@ -2991,7 +3017,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 
 	if (target->health <= 0)
 	{
-		P_KillMobj(target, inflictor, source);
+		P_KillMobj(target, inflictor, source, damagetype);
 		return true;
 	}
 

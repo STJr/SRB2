@@ -1215,9 +1215,7 @@ void T_SpikeSector(levelspecthink_t *spikes)
 
 		if (dothepain)
 		{
-			mobj_t *killer = P_SpawnMobj(thing->x, thing->y, thing->z, MT_NULL);
-			killer->threshold = 43; // Special flag that it was spikes which hurt you.
-			P_DamageMobj(thing, killer, killer, 1);
+			P_DamageMobj(thing, NULL, NULL, 1, DMG_SPIKE);
 			break;
 		}
 	}
@@ -1968,51 +1966,71 @@ void T_NoEnemiesSector(levelspecthink_t *nobaddies)
 {
 	size_t i;
 	fixed_t upperbound, lowerbound;
-	INT32 s;
-	sector_t *checksector;
+	sector_t *sec = NULL;
+	sector_t *targetsec = NULL;
+	INT32 secnum = -1;
 	msecnode_t *node;
 	mobj_t *thing;
-	boolean exists = false;
+	boolean FOFsector = false;
 
-	for (i = 0; i < nobaddies->sector->linecount; i++)
+	while ((secnum = P_FindSectorFromLineTag(nobaddies->sourceline, secnum)) >= 0)
 	{
-		if (nobaddies->sector->lines[i]->special == 223)
+		sec = &sectors[secnum];
+
+		FOFsector = false;
+
+		// Check the lines of this sector, to see if it is a FOF control sector.
+		for (i = 0; i < sec->linecount; i++)
 		{
+			INT32 targetsecnum = -1;
 
-			upperbound = nobaddies->sector->ceilingheight;
-			lowerbound = nobaddies->sector->floorheight;
+			if (sec->lines[i]->special < 100 || sec->lines[i]->special >= 300)
+				continue;
 
-			for (s = -1; (s = P_FindSectorFromLineTag(nobaddies->sector->lines[i], s)) >= 0 ;)
+			FOFsector = true;
+
+			while ((targetsecnum = P_FindSectorFromLineTag(sec->lines[i], targetsecnum)) >= 0)
 			{
-				checksector = &sectors[s];
+				targetsec = &sectors[targetsecnum];
 
-				node = checksector->touching_thinglist; // things touching this sector
+				upperbound = targetsec->ceilingheight;
+				lowerbound = targetsec->floorheight;
+				node = targetsec->touching_thinglist; // things touching this sector
 				while (node)
 				{
 					thing = node->m_thing;
 
 					if ((thing->flags & (MF_ENEMY|MF_BOSS)) && thing->health > 0
-						&& thing->z < upperbound && thing->z+thing->height > lowerbound)
-					{
-						exists = true;
-						goto foundenemy;
-					}
+					&& thing->z < upperbound && thing->z+thing->height > lowerbound)
+						return;
 
 					node = node->m_snext;
 				}
 			}
 		}
+
+		if (!FOFsector)
+		{
+			upperbound = sec->ceilingheight;
+			lowerbound = sec->floorheight;
+			node = sec->touching_thinglist; // things touching this sector
+			while (node)
+			{
+				thing = node->m_thing;
+
+				if ((thing->flags & (MF_ENEMY|MF_BOSS)) && thing->health > 0
+				&& thing->z < upperbound && thing->z+thing->height > lowerbound)
+					return;
+
+				node = node->m_snext;
+			}
+		}
 	}
-foundenemy:
-	if (exists)
-		return;
 
-	s = P_AproxDistance(nobaddies->sourceline->dx, nobaddies->sourceline->dy)>>FRACBITS;
+	CONS_Debug(DBG_GAMELOGIC, "Running no-more-enemies exec with tag of %d\n", nobaddies->sourceline->tag);
 
-	CONS_Debug(DBG_GAMELOGIC, "Running no-more-enemies exec with tag of %d\n", s);
-
-	// Otherwise, run the linedef exec and terminate this thinker
-	P_LinedefExecute((INT16)s, NULL, NULL);
+	// No enemies found, run the linedef exec and terminate this thinker
+	P_RunTriggerLinedef(nobaddies->sourceline, NULL, NULL);
 	P_RemoveThinker(&nobaddies->thinker);
 }
 
@@ -2217,7 +2235,7 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 		oldPlayersArea = oldPlayersInArea;
 	}
 
-	if ((affectPlayer = P_HavePlayersEnteredArea(playersArea, oldPlayersArea, inAndOut)) != -1)
+	while ((affectPlayer = P_HavePlayersEnteredArea(playersArea, oldPlayersArea, inAndOut)) != -1)
 	{
 		if (GETSECSPECIAL(sec->special, 2) == 2 || GETSECSPECIAL(sec->special, 2) == 3)
 		{
@@ -2250,6 +2268,8 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 
 		if (!eachtime->sourceline->special) // this happens only for "Trigger on X calls" linedefs
 			P_RemoveThinker(&eachtime->thinker);
+
+		oldPlayersArea[affectPlayer]=playersArea[affectPlayer];
 	}
 }
 
@@ -3105,7 +3125,7 @@ INT32 EV_MarioBlock(sector_t *sec, sector_t *roversector, fixed_t topheight, mob
 		thing->momz = FixedMul(6*FRACUNIT, thing->scale);
 		P_SetThingPosition(thing);
 		if (thing->flags & MF_SHOOTABLE)
-			P_DamageMobj(thing, puncher, puncher, 1);
+			P_DamageMobj(thing, puncher, puncher, 1, 0);
 		else if (thing->type == MT_RING || thing->type == MT_COIN)
 		{
 			thing->momz = FixedMul(3*FRACUNIT, thing->scale);

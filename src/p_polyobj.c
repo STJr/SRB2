@@ -239,24 +239,39 @@ boolean P_BBoxInsidePolyobj(polyobj_t *po, fixed_t *bbox)
 //
 // Polyobj_GetInfo
 //
-// Finds the 'polyobject settings' linedef that shares the same tag
-// as the polyobj linedef to get the settings for it.
+// Finds the 'polyobject settings' linedef for a polyobject
+// the polyobject's id should be set as its tag
 //
-void Polyobj_GetInfo(INT16 tag, INT32 *polyID, INT32 *mirrorID, UINT16 *exparg)
+void Polyobj_GetInfo(INT16 poid, INT32 *poflags, INT32 *parentID, INT32 *potrans)
 {
-	INT32 i = P_FindSpecialLineFromTag(POLYINFO_SPECIALNUM, tag, -1);
+	INT32 i = P_FindSpecialLineFromTag(POLYINFO_SPECIALNUM, poid, -1);
 
 	if (i == -1)
-		I_Error("Polyobject (tag: %d) needs line %d for information.\n", tag, POLYINFO_SPECIALNUM);
+		return; // no extra settings to apply, let's leave it
 
-	if (polyID)
-		*polyID = lines[i].frontsector->floorheight>>FRACBITS;
+	if (parentID)
+		*parentID = lines[i].frontsector->special;
 
-	if (mirrorID)
-		*mirrorID = lines[i].frontsector->special;
+	if (potrans)
+		*potrans = (lines[i].frontsector->floorheight>>FRACBITS) / 100;
 
-	if (exparg)
-		*exparg = (UINT16)lines[i].frontsector->lightlevel;
+	if (lines[i].flags & ML_EFFECT1)
+		*poflags |= POF_ONESIDE;
+
+	if (lines[i].flags & ML_EFFECT2)
+		*poflags &= ~POF_SOLID;
+
+	if (lines[i].flags & ML_EFFECT3)
+		*poflags |= POF_PUSHABLESTOP;
+
+	if (lines[i].flags & ML_EFFECT4)
+		*poflags |= POF_RENDERPLANES;
+
+	/*if (lines[i].flags & ML_EFFECT5)
+		*poflags &= ~POF_CLIPPLANES;*/
+
+	if (lines[i].flags & ML_NOCLIMB) // Has a linedef executor
+		*poflags |= POF_LDEXEC;
 }
 
 // Reallocating array maintenance
@@ -478,6 +493,7 @@ newseg:
 	CONS_Debug(DBG_POLYOBJ, "Polyobject %d is not closed\n", po->id);
 }
 
+/*
 // structure used to store segs during explicit search process
 typedef struct segitem_s
 {
@@ -553,7 +569,7 @@ static void Polyobj_findExplicit(polyobj_t *po)
 
 	// free the temporary array
 	Z_Free(segitems);
-}
+}*/
 
 // Setup functions
 
@@ -591,47 +607,27 @@ static void Polyobj_spawnPolyObj(INT32 num, mobj_t *spawnSpot, INT32 id)
 	for (i = 0; i < numsegs; ++i)
 	{
 		seg_t *seg = &segs[i];
-		INT32 polyID, parentID;
+		INT32 poflags = POF_SOLID|POF_TESTHEIGHT|POF_RENDERSIDES;
+		INT32 parentID = 0, potrans = 0;
 
 		if (seg->linedef->special != POLYOBJ_START_LINE)
 			continue;
+		
+		if (seg->linedef->tag != po->id)
+			continue;
 
-		Polyobj_GetInfo(seg->linedef->tag, &polyID, &parentID, NULL);
+		Polyobj_GetInfo(po->id, &poflags, &parentID, &potrans); // apply extra settings if they exist!
+		
+		// save original flags and translucency to reference later for netgames!
+		po->spawnflags = po->flags = poflags;
+		po->spawntrans = po->translucency = potrans;
 
-		// is it a START line with this polyobject's id?
-		if (polyID == po->id)
-		{
-			po->flags = POF_SOLID|POF_TESTHEIGHT|POF_RENDERSIDES;
-
-			if (seg->linedef->flags & ML_EFFECT1)
-				po->flags |= POF_ONESIDE;
-
-			if (seg->linedef->flags & ML_EFFECT2)
-				po->flags &= ~POF_SOLID;
-
-			if (seg->linedef->flags & ML_EFFECT3)
-				po->flags |= POF_PUSHABLESTOP;
-
-			if (seg->linedef->flags & ML_EFFECT4)
-				po->flags |= POF_RENDERPLANES;
-
-			// TODO: Use a different linedef flag for this if we really need it!!
-			// This clashes with texture tiling, also done by Effect 5 flag
-			/*if (seg->linedef->flags & ML_EFFECT5)
-				po->flags &= ~POF_CLIPPLANES;*/
-
-			if (seg->linedef->flags & ML_NOCLIMB) // Has a linedef executor
-				po->flags |= POF_LDEXEC;
-
-			po->spawnflags = po->flags; // save original flags to reference later for netgames!
-
-			Polyobj_findSegs(po, seg);
-			po->parent = parentID;
-			if (po->parent == po->id) // do not allow a self-reference
-				po->parent = -1;
-			// TODO: sound sequence is in args[2]
-			break;
-		}
+		Polyobj_findSegs(po, seg);
+		po->parent = parentID;
+		if (po->parent == po->id) // do not allow a self-reference
+			po->parent = -1;
+		// TODO: sound sequence is in args[2]
+		break;
 	}
 
 	CONS_Debug(DBG_POLYOBJ, "PO ID: %d; Num verts: %s\n", po->id, sizeu1(po->numVertices));
@@ -640,6 +636,7 @@ static void Polyobj_spawnPolyObj(INT32 num, mobj_t *spawnSpot, INT32 id)
 	if (po->isBad)
 		return;
 
+	/*
 	// 2. If no such line existed in the first step, look for a seg with the
 	//    "explicit" special with tag matching this polyobject's id number. If
 	//    found, continue to search for all such lines, storing them in a
@@ -658,7 +655,7 @@ static void Polyobj_spawnPolyObj(INT32 num, mobj_t *spawnSpot, INT32 id)
 		if (po->parent == po->id) // do not allow a self-reference
 			po->parent = -1;
 		// TODO: sound sequence is in args[3]
-	}
+	}*/
 
 
 	// set the polyobject's spawn spot
@@ -851,10 +848,10 @@ static void Polyobj_linkToBlockmap(polyobj_t *po)
 		M_AddToBox(blockbox, po->vertices[i]->x, po->vertices[i]->y);
 
 	// adjust bounding box relative to blockmap
-	blockbox[BOXRIGHT]  = (unsigned)(blockbox[BOXRIGHT]  - bmaporgx) >> MAPBLOCKSHIFT;
-	blockbox[BOXLEFT]   = (unsigned)(blockbox[BOXLEFT]   - bmaporgx) >> MAPBLOCKSHIFT;
-	blockbox[BOXTOP]    = (unsigned)(blockbox[BOXTOP]    - bmaporgy) >> MAPBLOCKSHIFT;
-	blockbox[BOXBOTTOM] = (unsigned)(blockbox[BOXBOTTOM] - bmaporgy) >> MAPBLOCKSHIFT;
+	blockbox[BOXRIGHT]  = (blockbox[BOXRIGHT]  - bmaporgx) >> MAPBLOCKSHIFT;
+	blockbox[BOXLEFT]   = (blockbox[BOXLEFT]   - bmaporgx) >> MAPBLOCKSHIFT;
+	blockbox[BOXTOP]    = (blockbox[BOXTOP]    - bmaporgy) >> MAPBLOCKSHIFT;
+	blockbox[BOXBOTTOM] = (blockbox[BOXBOTTOM] - bmaporgy) >> MAPBLOCKSHIFT;
 
 	// link polyobject to every block its bounding box intersects
 	for (y = blockbox[BOXBOTTOM]; y <= blockbox[BOXTOP]; ++y)
@@ -1043,9 +1040,10 @@ static void Polyobj_carryThings(polyobj_t *po, fixed_t dx, fixed_t dy)
 
 				mo->lastlook = pomovecount;
 
-				// always push players even if not solid
-				if (!((mo->flags & MF_SOLID) || mo->player))
+				// Don't scroll objects that aren't affected by gravity
+				if (mo->flags & MF_NOGRAVITY)
 					continue;
+				// (The above check used to only move MF_SOLID objects, but that's inconsistent with conveyor behavior. -Red)
 
 				if (mo->flags & MF_NOCLIP)
 					continue;
@@ -1081,10 +1079,10 @@ static INT32 Polyobj_clipThings(polyobj_t *po, line_t *line)
 		return hitflags;
 
 	// adjust linedef bounding box to blockmap, extend by MAXRADIUS
-	linebox[BOXLEFT]   = (unsigned)(line->bbox[BOXLEFT]   - bmaporgx - MAXRADIUS) >> MAPBLOCKSHIFT;
-	linebox[BOXRIGHT]  = (unsigned)(line->bbox[BOXRIGHT]  - bmaporgx + MAXRADIUS) >> MAPBLOCKSHIFT;
-	linebox[BOXBOTTOM] = (unsigned)(line->bbox[BOXBOTTOM] - bmaporgy - MAXRADIUS) >> MAPBLOCKSHIFT;
-	linebox[BOXTOP]    = (unsigned)(line->bbox[BOXTOP]    - bmaporgy + MAXRADIUS) >> MAPBLOCKSHIFT;
+	linebox[BOXLEFT]   = (line->bbox[BOXLEFT]   - bmaporgx - MAXRADIUS) >> MAPBLOCKSHIFT;
+	linebox[BOXRIGHT]  = (line->bbox[BOXRIGHT]  - bmaporgx + MAXRADIUS) >> MAPBLOCKSHIFT;
+	linebox[BOXBOTTOM] = (line->bbox[BOXBOTTOM] - bmaporgy - MAXRADIUS) >> MAPBLOCKSHIFT;
+	linebox[BOXTOP]    = (line->bbox[BOXTOP]    - bmaporgy + MAXRADIUS) >> MAPBLOCKSHIFT;
 
 	// check all mobj blockmap cells the line contacts
 	for (y = linebox[BOXBOTTOM]; y <= linebox[BOXTOP]; ++y)
@@ -1097,9 +1095,11 @@ static INT32 Polyobj_clipThings(polyobj_t *po, line_t *line)
 
 				for (; mo; mo = mo->bnext)
 				{
-					// always push players even if not solid
-					if (!((mo->flags & MF_SOLID) || mo->player))
+
+					// Don't scroll objects that aren't affected by gravity
+					if (mo->flags & MF_NOGRAVITY)
 						continue;
+					// (The above check used to only move MF_SOLID objects, but that's inconsistent with conveyor behavior. -Red)
 
 					if (mo->flags & MF_NOCLIP)
 						continue;
@@ -1259,6 +1259,7 @@ static void Polyobj_rotateThings(polyobj_t *po, vertex_t origin, angle_t delta, 
 {
 	static INT32 pomovecount = 10000;
 	INT32 x, y;
+	angle_t deltafine = delta >> ANGLETOFINESHIFT;
 
 	pomovecount++;
 
@@ -1283,9 +1284,10 @@ static void Polyobj_rotateThings(polyobj_t *po, vertex_t origin, angle_t delta, 
 
 				mo->lastlook = pomovecount;
 
-				// always push players even if not solid
-				if (!((mo->flags & MF_SOLID) || mo->player))
+				// Don't scroll objects that aren't affected by gravity
+				if (mo->flags & MF_NOGRAVITY)
 					continue;
+				// (The above check used to only move MF_SOLID objects, but that's inconsistent with conveyor behavior. -Red)
 
 				if (mo->flags & MF_NOCLIP)
 					continue;
@@ -1300,21 +1302,28 @@ static void Polyobj_rotateThings(polyobj_t *po, vertex_t origin, angle_t delta, 
 					continue;
 
 				{
-					fixed_t newxoff, newyoff;
-					angle_t angletoobj = R_PointToAngle2(origin.x, origin.y, mo->x, mo->y);
-					fixed_t disttoobj = R_PointToDist2(origin.x, origin.y, mo->x, mo->y);
+					fixed_t oldxoff, oldyoff, newxoff, newyoff;
+					fixed_t c, s;
+
+					c = FINECOSINE(deltafine);
+					s = FINESINE(deltafine);
+
+					oldxoff = mo->x-origin.x;
+					oldyoff = mo->y-origin.y;
 
 					if (mo->player) // Hack to fix players sliding off of spinning polys -Red
 					{
-						disttoobj = FixedMul(disttoobj, 0xfe40);
+						fixed_t temp;
+
+						temp = FixedMul(oldxoff, c)-FixedMul(oldyoff, s);
+						oldyoff = FixedMul(oldyoff, c)+FixedMul(oldxoff, s);
+						oldxoff = temp;
 					}
 
-					angletoobj += delta;
-					angletoobj >>= ANGLETOFINESHIFT;
-					newxoff = FixedMul(FINECOSINE(angletoobj), disttoobj);
-					newyoff = FixedMul(FINESINE(angletoobj), disttoobj);
+					newxoff = FixedMul(oldxoff, c)-FixedMul(oldyoff, s);
+					newyoff = FixedMul(oldyoff, c)+FixedMul(oldxoff, s);
 
-					Polyobj_slideThing(mo, origin.x+newxoff-mo->x, origin.y+newyoff-mo->y);
+					Polyobj_slideThing(mo, newxoff-oldxoff, newyoff-oldyoff);
 
 					if (turnthings == 2 || (turnthings == 1 && !mo->player)) {
 						mo->angle += delta;
@@ -2490,6 +2499,10 @@ INT32 EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 		P_RemoveThinker(&th->thinker);
 		return 0;
 	}
+
+	// Hotfix to not crash on single-waypoint sequences -Red
+	if (!last)
+		last = first;
 
 	// Set diffx, diffy, diffz
 	// Put these at 0 for now...might not be needed after all.
