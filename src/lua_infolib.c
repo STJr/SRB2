@@ -137,8 +137,6 @@ static void A_Lua(mobj_t *actor)
 		--superstack;
 		superactions[superstack] = NULL;
 	}
-
-	lua_gc(gL, LUA_GCSTEP, 1);
 }
 
 // Arbitrary states[] table index -> state_t *

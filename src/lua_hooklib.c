@@ -204,7 +204,6 @@ boolean LUAh_MobjHook(mobj_t *mo, enum hook which)
 		}
 
 	lua_settop(gL, 0);
-	lua_gc(gL, LUA_GCSTEP, 1);
 	return hooked;
 }
 
@@ -238,7 +237,6 @@ boolean LUAh_PlayerHook(player_t *plr, enum hook which)
 		}
 
 	lua_settop(gL, 0);
-	lua_gc(gL, LUA_GCSTEP, 1);
 	return hooked;
 }
 
@@ -262,7 +260,6 @@ void LUAh_MapChange(void)
 		}
 
 	lua_settop(gL, 0);
-	lua_gc(gL, LUA_GCSTEP, 1);
 }
 
 // Hook for map load
@@ -285,7 +282,6 @@ void LUAh_MapLoad(void)
 		}
 
 	lua_settop(gL, 0);
-	lua_gc(gL, LUA_GCSTEP, 1);
 }
 
 // Hook for Got_AddPlayer
@@ -308,7 +304,6 @@ void LUAh_PlayerJoin(int playernum)
 		}
 
 	lua_settop(gL, 0);
-	lua_gc(gL, LUA_GCCOLLECT, 0);
 }
 
 // Hook for frame (after mobj and player thinkers)
@@ -330,8 +325,6 @@ void LUAh_ThinkFrame(void)
 				hookp->error = true;
 			}
 		}
-
-	lua_gc(gL, LUA_GCSTEP, 1);
 }
 
 // Hook for mobj collisions
@@ -375,7 +368,6 @@ UINT8 LUAh_MobjCollideHook(mobj_t *thing1, mobj_t *thing2, enum hook which)
 		}
 
 	lua_settop(gL, 0);
-	lua_gc(gL, LUA_GCSTEP, 1);
 	return shouldCollide;
 }
 
@@ -415,7 +407,6 @@ boolean LUAh_TouchSpecial(mobj_t *special, mobj_t *toucher)
 		}
 
 	lua_settop(gL, 0);
-	lua_gc(gL, LUA_GCSTEP, 1);
 	return hooked;
 }
 
@@ -464,7 +455,6 @@ UINT8 LUAh_ShouldDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32
 		}
 
 	lua_settop(gL, 0);
-	lua_gc(gL, LUA_GCSTEP, 1);
 	return shouldDamage;
 }
 
@@ -508,7 +498,6 @@ boolean LUAh_MobjDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32
 		}
 
 	lua_settop(gL, 0);
-	lua_gc(gL, LUA_GCSTEP, 1);
 	return hooked;
 }
 
@@ -550,7 +539,6 @@ boolean LUAh_MobjDeath(mobj_t *target, mobj_t *inflictor, mobj_t *source)
 		}
 
 	lua_settop(gL, 0);
-	lua_gc(gL, LUA_GCSTEP, 1);
 	return hooked;
 }
 
@@ -589,7 +577,6 @@ boolean LUAh_BotTiccmd(player_t *bot, ticcmd_t *cmd)
 		}
 
 	lua_settop(gL, 0);
-	lua_gc(gL, LUA_GCSTEP, 1);
 	return hooked;
 }
 
@@ -651,7 +638,6 @@ boolean LUAh_BotAI(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 		}
 
 	lua_settop(gL, 0);
-	lua_gc(gL, LUA_GCSTEP, 1);
 	return hooked;
 }
 
@@ -685,7 +671,6 @@ boolean LUAh_LinedefExecute(line_t *line, mobj_t *mo, sector_t *sector)
 		}
 
 	lua_settop(gL, 0);
-	lua_gc(gL, LUA_GCSTEP, 1);
 	return hooked;
 }
 
@@ -739,7 +724,6 @@ boolean LUAh_PlayerMsg(int source, int target, int flags, char *msg)
 		}
 
 	lua_settop(gL, 0);
-	lua_gc(gL, LUA_GCSTEP, 1);
 	return hooked;
 }
 
@@ -781,7 +765,6 @@ boolean LUAh_HurtMsg(player_t *player, mobj_t *inflictor, mobj_t *source)
 		}
 
 	lua_settop(gL, 0);
-	lua_gc(gL, LUA_GCSTEP, 1);
 	return hooked;
 }
 
