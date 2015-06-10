@@ -71,7 +71,7 @@ struct hook_s
 };
 typedef struct hook_s* hook_p;
 
-#define FMT_HOOKID "hook_%04x"
+#define FMT_HOOKID "hook_%d"
 
 hook_p roothook;
 
