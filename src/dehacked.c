@@ -998,7 +998,7 @@ static const struct {
 static void readlevelheader(MYFILE *f, INT32 num)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
-	char *word = s;
+	char *word;
 	char *word2;
 	//char *word3; // Non-uppercase version of word2
 	char *tmp;
@@ -1026,6 +1026,9 @@ static void readlevelheader(MYFILE *f, INT32 num)
 				*tmp = '\0';
 			if (s == tmp)
 				continue; // Skip comment lines, but don't break.
+
+			// Set / reset word, because some things (Lua.) move it
+			word = s;
 
 			// Get the part before the " = "
 			tmp = strchr(s, '=');
