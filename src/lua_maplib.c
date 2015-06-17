@@ -37,6 +37,7 @@ enum sector_e {
 	sector_thinglist,
 	sector_heightsec,
 	sector_camsec,
+	sector_lines,
 	sector_ffloors
 };
 
@@ -52,6 +53,7 @@ static const char *const sector_opt[] = {
 	"thinglist",
 	"heightsec",
 	"camsec",
+	"lines",
 	"ffloors",
 	NULL};
 
@@ -260,6 +262,49 @@ static int sector_iterate(lua_State *L)
 	return 3;
 }
 
+// sector.lines, i -> sector.lines[i]
+// sector.lines.valid, for validity checking
+static int sectorlines_get(lua_State *L)
+{
+	line_t **seclines = *((line_t ***)luaL_checkudata(L, 1, META_SECTORLINES));
+	size_t i;
+	//size_t numoflines;
+	lua_settop(L, 2);
+	if (!lua_isnumber(L, 2))
+	{
+		int field = luaL_checkoption(L, 2, NULL, valid_opt);
+		if (!seclines)
+		{
+			if (field == 0) {
+				lua_pushboolean(L, 0);
+				return 1;
+			}
+			return luaL_error(L, "accessed sector_t doesn't exist anymore.");
+		} else if (field == 0) {
+			lua_pushboolean(L, 1);
+			return 1;
+		}
+	}
+
+	/* \TODO: figure out how to find size of seclines array, rather than the size of a pointer!
+	Testing for sectors[0].lines in GFZ1 with a test Lua script:
+	sizeof(seclines) returns 4
+	sizeof(*seclines) returns 4
+	sizeof(**seclines) returns 84, presumably the size of line_t
+	You can probably see why I haven't been successful yet, hopefully
+	//CONS_Printf("sizeof(seclines): %d\n", sizeof(seclines));
+	//CONS_Printf("sizeof(seclines[0]): %d\n", sizeof(seclines[0]));*/
+
+	/*numoflines = sizeof(seclines) / sizeof(seclines[0]);
+	if (!numoflines)
+		return luaL_error(L, "no lines found!");*/
+	i = (size_t)lua_tointeger(L, 2);
+	/*if (i > numoflines)
+		return 0;*/
+	LUA_PushUserdata(L, seclines[i], META_LINE);
+	return 1;
+}
+
 static int sector_get(lua_State *L)
 {
 	sector_t *sector = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
@@ -324,6 +369,9 @@ static int sector_get(lua_State *L)
 		if (sector->camsec < 0)
 			return 0;
 		LUA_PushUserdata(L, &sectors[sector->camsec], META_SECTOR);
+		return 1;
+	case sector_lines: // lines
+		LUA_PushUserdata(L, sector->lines, META_SECTORLINES);
 		return 1;
 	case sector_ffloors: // ffloors
 		lua_pushcfunction(L, lib_iterateSectorFFloors);
@@ -1178,6 +1226,11 @@ static int mapheaderinfo_get(lua_State *L)
 
 int LUA_MapLib(lua_State *L)
 {
+	luaL_newmetatable(L, META_SECTORLINES);
+		lua_pushcfunction(L, sectorlines_get);
+		lua_setfield(L, -2, "__index");
+	lua_pop(L, 1);
+
 	luaL_newmetatable(L, META_SECTOR);
 		lua_pushcfunction(L, sector_get);
 		lua_setfield(L, -2, "__index");

@@ -42,6 +42,7 @@ extern lua_State *gL;
 
 #define META_CVAR "CONSVAR_T*"
 
+#define META_SECTORLINES "SECTOR_T*LINES"
 #define META_SIDENUM "LINE_T*SIDENUM"
 
 #define META_HUDINFO "HUDINFO_T*"
