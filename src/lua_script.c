@@ -442,7 +442,6 @@ enum
 	ARCH_NULL=0,
 	ARCH_BOOLEAN,
 	ARCH_SIGNED,
-	ARCH_UNSIGNED,
 	ARCH_STRING,
 	ARCH_TABLE,
 
@@ -522,13 +521,8 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 	case LUA_TNUMBER:
 	{
 		lua_Integer number = lua_tointeger(gL, myindex);
-		if (number < 0) {
-			WRITEUINT8(save_p, ARCH_SIGNED);
-			WRITEFIXED(save_p, number);
-		} else {
-			WRITEUINT8(save_p, ARCH_UNSIGNED);
-			WRITEANGLE(save_p, number);
-		}
+        WRITEUINT8(save_p, ARCH_SIGNED);
+        WRITEFIXED(save_p, number);
 		break;
 	}
 	case LUA_TSTRING:
@@ -797,9 +791,6 @@ static UINT8 UnArchiveValue(int TABLESINDEX)
 	case ARCH_SIGNED:
 		lua_pushinteger(gL, READFIXED(save_p));
 		break;
-	case ARCH_UNSIGNED:
-		lua_pushinteger(gL, READANGLE(save_p));
-		break;
 	case ARCH_STRING:
 	{
 		char value[1024];
@@ -946,6 +937,14 @@ static void NetArchiveHook(lua_CFunction archFunc)
 		LUA_Call(gL, 1);
 	}
 	lua_pop(gL, 2);
+}
+
+void LUA_Step(void)
+{
+	if (!gL)
+		return;
+	lua_settop(gL, 0);
+	lua_gc(gL, LUA_GCSTEP, 1);
 }
 
 void LUA_Archive(void)

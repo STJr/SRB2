@@ -1479,7 +1479,7 @@ static void P_HitDeathMessages(player_t *player, mobj_t *inflictor, mobj_t *sour
 		return; // Presumably it's obvious what's happening in splitscreen.
 
 #ifdef HAVE_BLUA
-	if (LUAh_DeathMsg(player, inflictor, source))
+	if (LUAh_HurtMsg(player, inflictor, source))
 		return;
 #endif
 

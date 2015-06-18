@@ -47,7 +47,7 @@ boolean floatok;
 fixed_t tmfloorz, tmceilingz;
 static fixed_t tmdropoffz, tmdrpoffceilz; // drop-off floor/ceiling heights
 mobj_t *tmfloorthing; // the thing corresponding to tmfloorz or NULL if tmfloorz is from a sector
-static mobj_t *tmhitthing; // the solid thing you bumped into (for collisions)
+mobj_t *tmhitthing; // the solid thing you bumped into (for collisions)
 
 // keep track of the line that lowers the ceiling,
 // so missiles don't explode against sky hack walls
@@ -121,7 +121,7 @@ void P_DoSpring(mobj_t *spring, mobj_t *object)
 		/*Someone want to make these work like bumpers?*/
 		return;
 	}
-	
+
 	object->eflags |= MFE_SPRUNG; // apply this flag asap!
 	spring->flags &= ~(MF_SOLID|MF_SPECIAL); // De-solidify
 
@@ -1233,7 +1233,7 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 			{
 				// If you're inside goowater and slowing down
 				fixed_t sinklevel = FixedMul(thing->info->height/6, thing->scale);
-				fixed_t minspeed = FixedMul(thing->info->height/12, thing->scale);
+				fixed_t minspeed = FixedMul(thing->info->height/9, thing->scale);
 				if (thing->z < *rover->topheight && *rover->bottomheight < thingtop
 				&& abs(thing->momz) < minspeed)
 				{
@@ -2052,6 +2052,7 @@ boolean P_SceneryTryMove(mobj_t *thing, fixed_t x, fixed_t y)
 //
 static boolean P_ThingHeightClip(mobj_t *thing)
 {
+	boolean floormoved;
 	fixed_t oldfloorz = thing->floorz;
 	boolean onfloor = P_IsObjectOnGround(thing);//(thing->z <= thing->floorz);
 
@@ -2063,6 +2064,9 @@ static boolean P_ThingHeightClip(mobj_t *thing)
 	if (P_MobjWasRemoved(thing))
 		return true;
 
+	floormoved = (thing->eflags & MFE_VERTICALFLIP && tmceilingz != thing->ceilingz)
+		|| (!(thing->eflags & MFE_VERTICALFLIP) && tmfloorz != thing->floorz);
+
 	thing->floorz = tmfloorz;
 	thing->ceilingz = tmceilingz;
 
@@ -2071,20 +2075,13 @@ static boolean P_ThingHeightClip(mobj_t *thing)
 	if (tmfloorz > oldfloorz+thing->height)
 		return true;
 
-	if (/*!tmfloorthing && */onfloor && !(thing->flags & MF_NOGRAVITY))
+	if (onfloor && !(thing->flags & MF_NOGRAVITY) && floormoved)
 	{
 		if (thing->eflags & MFE_VERTICALFLIP)
 			thing->pmomz = thing->ceilingz - (thing->z + thing->height);
 		else
 			thing->pmomz = thing->floorz - thing->z;
-
-		if (thing->player)
-		{
-			if (splitscreen && camera2.chase && thing->player == &players[secondarydisplayplayer])
-				camera2.z += thing->pmomz;
-			else if (camera.chase && thing->player == &players[displayplayer])
-				camera.z += thing->pmomz;
-		}
+		thing->eflags |= MFE_APPLYPMOMZ;
 
 		if (thing->eflags & MFE_VERTICALFLIP)
 			thing->z = thing->ceilingz - thing->height;
