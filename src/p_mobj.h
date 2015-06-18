@@ -235,6 +235,8 @@ typedef enum
 	MFE_PUSHED            = 1<<7,
 	// Mobj was already sprung this tic
 	MFE_SPRUNG            = 1<<8,
+	// Platform movement
+	MFE_APPLYPMOMZ        = 1<<9,
 	// free: to and including 1<<15
 } mobjeflag_t;
 
