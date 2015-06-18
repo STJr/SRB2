@@ -5450,6 +5450,8 @@ void P_MobjThinker(mobj_t *mobj)
 
 	mobj->eflags &= ~(MFE_PUSHED|MFE_SPRUNG);
 
+	tmfloorthing = tmhitthing = NULL;
+
 	// 970 allows ANY mobj to trigger a linedef exec
 	if (mobj->subsector && GETSECSPECIAL(mobj->subsector->sector->special, 2) == 8)
 	{
@@ -6497,19 +6499,22 @@ void P_MobjThinker(mobj_t *mobj)
 						if (mobj->spawnpoint->options & MTF_OBJECTFLIP)
 						{
 							z = ss->sector->ceilingheight - mobjinfo[mobj->type].height;
-							if (mobj->spawnpoint->z)
-								z -= mobj->spawnpoint->z << FRACBITS;
+							if (mobj->spawnpoint->options >> ZSHIFT)
+								z -= (mobj->spawnpoint->options >> ZSHIFT) << FRACBITS;
 						}
 						else
 						{
 							z = ss->sector->floorheight;
-							if (mobj->spawnpoint->z)
-								z += mobj->spawnpoint->z << FRACBITS;
+							if (mobj->spawnpoint->options >> ZSHIFT)
+								z += (mobj->spawnpoint->options >> ZSHIFT) << FRACBITS;
 						}
 						flagmo = P_SpawnMobj(x, y, z, mobj->type);
 						flagmo->spawnpoint = mobj->spawnpoint;
 						if (mobj->spawnpoint->options & MTF_OBJECTFLIP)
-							flagmo->spawnpoint->options |= MTF_OBJECTFLIP;
+						{
+							flagmo->eflags |= MFE_VERTICALFLIP;
+							flagmo->flags2 |= MF2_OBJECTFLIP;
+						}
 
 						if (mobj->type == MT_REDFLAG)
 						{
