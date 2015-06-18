@@ -3078,10 +3078,10 @@ teeterdone:
 	}
 	if (teeter)
 	{
-		if (player->panim == PA_IDLE && player->mo->state-states != S_PLAY_EDGE)
+		if (player->panim == PA_IDLE)
 			P_SetPlayerMobjState(player->mo, S_PLAY_EDGE);
 	}
-	else if (checkedforteeter && (player->mo->state-states == S_PLAY_EDGE || player->mo->state-states == S_PLAY_SUPER_EDGE))
+	else if (checkedforteeter && player->panim == PA_EDGE)
 		P_SetPlayerMobjState(player->mo, S_PLAY_STND);
 }
 
@@ -6884,7 +6884,7 @@ static void P_MovePlayer(player_t *player)
 	}
 
 	// Make sure you're not teetering when you shouldn't be.
-	if ((player->mo->state-states == S_PLAY_EDGE || player->mo->state-states == S_PLAY_SUPER_EDGE)
+	if (player->panim == PA_EDGE
 	&& (player->mo->momx || player->mo->momy || player->mo->momz))
 		P_SetPlayerMobjState(player->mo, S_PLAY_STND);
 

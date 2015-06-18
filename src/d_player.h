@@ -161,6 +161,7 @@ typedef enum
 	// Are animation frames playing?
 	PA_ETC=0,
 	PA_IDLE,
+	PA_EDGE,
 	PA_WALK,
 	PA_RUN,
 	PA_PAIN,

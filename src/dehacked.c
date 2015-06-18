@@ -7665,6 +7665,7 @@ struct {
 	// Player animation (panim_t)
 	{"PA_ETC",PA_ETC},
 	{"PA_IDLE",PA_IDLE},
+	{"PA_EDGE",PA_EDGE},
 	{"PA_WALK",PA_WALK},
 	{"PA_RUN",PA_RUN},
 	{"PA_PAIN",PA_PAIN},

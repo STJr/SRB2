@@ -183,10 +183,12 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 	{
 	case S_PLAY_STND:
 	case S_PLAY_WAIT:
-	case S_PLAY_EDGE:
 	case S_PLAY_SUPER_STND:
-	case S_PLAY_SUPER_EDGE:
 		player->panim = PA_IDLE;
+		break;
+	case S_PLAY_EDGE:
+	case S_PLAY_SUPER_EDGE:
+		player->panim = PA_EDGE;
 		break;
 	case S_PLAY_WALK:
 	case S_PLAY_SUPER_WALK:
