@@ -280,10 +280,10 @@ static int sector_get(lua_State *L)
 		lua_pushboolean(L, 1);
 		return 1;
 	case sector_floorheight:
-		lua_pushinteger(L, sector->floorheight);
+		lua_pushfixed(L, sector->floorheight);
 		return 1;
 	case sector_ceilingheight:
-		lua_pushinteger(L, sector->ceilingheight);
+		lua_pushfixed(L, sector->ceilingheight);
 		return 1;
 	case sector_floorpic: { // floorpic
 		levelflat_t *levelflat;
@@ -396,26 +396,30 @@ static int sector_set(lua_State *L)
 		return luaL_error(L, "sector_t field " LUA_QS " cannot be set.", sector_opt[field]);
 	case sector_floorheight: { // floorheight
 		boolean flag;
+		mobj_t *ptmthing = tmthing;
 		fixed_t lastpos = sector->floorheight;
-		sector->floorheight = (fixed_t)luaL_checkinteger(L, 3);
+		sector->floorheight = luaL_checkfixed(L, 3);
 		flag = P_CheckSector(sector, true);
 		if (flag && sector->numattached)
 		{
 			sector->floorheight = lastpos;
 			P_CheckSector(sector, true);
 		}
+		P_SetTarget(&tmthing, ptmthing);
 		break;
 	}
 	case sector_ceilingheight: { // ceilingheight
 		boolean flag;
+		mobj_t *ptmthing = tmthing;
 		fixed_t lastpos = sector->ceilingheight;
-		sector->ceilingheight = (fixed_t)luaL_checkinteger(L, 3);
+		sector->ceilingheight = luaL_checkfixed(L, 3);
 		flag = P_CheckSector(sector, true);
 		if (flag && sector->numattached)
 		{
 			sector->ceilingheight = lastpos;
 			P_CheckSector(sector, true);
 		}
+		P_SetTarget(&tmthing, ptmthing);
 		break;
 	}
 	case sector_floorpic:
@@ -509,10 +513,10 @@ static int line_get(lua_State *L)
 		LUA_PushUserdata(L, line->v2, META_VERTEX);
 		return 1;
 	case line_dx:
-		lua_pushinteger(L, line->dx);
+		lua_pushfixed(L, line->dx);
 		return 1;
 	case line_dy:
-		lua_pushinteger(L, line->dy);
+		lua_pushfixed(L, line->dy);
 		return 1;
 	case line_flags:
 		lua_pushinteger(L, line->flags);
@@ -628,10 +632,10 @@ static int side_get(lua_State *L)
 		lua_pushboolean(L, 1);
 		return 1;
 	case side_textureoffset:
-		lua_pushinteger(L, side->textureoffset);
+		lua_pushfixed(L, side->textureoffset);
 		return 1;
 	case side_rowoffset:
-		lua_pushinteger(L, side->rowoffset);
+		lua_pushfixed(L, side->rowoffset);
 		return 1;
 	case side_toptexture:
 		lua_pushinteger(L, side->toptexture);
@@ -654,6 +658,50 @@ static int side_get(lua_State *L)
 	case side_text:
 		lua_pushstring(L, side->text);
 		return 1;
+	}
+	return 0;
+}
+
+static int side_set(lua_State *L)
+{
+	side_t *side = *((side_t **)luaL_checkudata(L, 1, META_SIDE));
+	enum side_e field = luaL_checkoption(L, 2, side_opt[0], side_opt);
+
+	if (!side)
+	{
+		if (field == side_valid) {
+			lua_pushboolean(L, 0);
+			return 1;
+		}
+		return luaL_error(L, "accessed side_t doesn't exist anymore.");
+	}
+
+	switch(field)
+	{
+	case side_valid: // valid
+	case side_sector:
+	case side_special:
+	case side_text:
+	default:
+		return luaL_error(L, "side_t field " LUA_QS " cannot be set.", side_opt[field]);
+	case side_textureoffset:
+		side->textureoffset = luaL_checkfixed(L, 3);
+		break;
+	case side_rowoffset:
+		side->rowoffset = luaL_checkfixed(L, 3);
+		break;
+	case side_toptexture:
+        side->toptexture = luaL_checkinteger(L, 3);
+		break;
+	case side_bottomtexture:
+        side->bottomtexture = luaL_checkinteger(L, 3);
+		break;
+	case side_midtexture:
+        side->midtexture = luaL_checkinteger(L, 3);
+		break;
+	case side_repeatcnt:
+        side->repeatcnt = luaL_checkinteger(L, 3);
+		break;
 	}
 	return 0;
 }
@@ -685,13 +733,13 @@ static int vertex_get(lua_State *L)
 		lua_pushboolean(L, 1);
 		return 1;
 	case vertex_x:
-		lua_pushinteger(L, vertex->x);
+		lua_pushfixed(L, vertex->x);
 		return 1;
 	case vertex_y:
-		lua_pushinteger(L, vertex->y);
+		lua_pushfixed(L, vertex->y);
 		return 1;
 	case vertex_z:
-		lua_pushinteger(L, vertex->z);
+		lua_pushfixed(L, vertex->z);
 		return 1;
 	}
 	return 0;
@@ -954,7 +1002,7 @@ static int ffloor_get(lua_State *L)
 		lua_pushboolean(L, 1);
 		return 1;
 	case ffloor_topheight:
-		lua_pushinteger(L, *ffloor->topheight);
+		lua_pushfixed(L, *ffloor->topheight);
 		return 1;
 	case ffloor_toppic: { // toppic
 		levelflat_t *levelflat;
@@ -968,7 +1016,7 @@ static int ffloor_get(lua_State *L)
 		lua_pushinteger(L, *ffloor->toplightlevel);
 		return 1;
 	case ffloor_bottomheight:
-		lua_pushinteger(L, *ffloor->bottomheight);
+		lua_pushfixed(L, *ffloor->bottomheight);
 		return 1;
 	case ffloor_bottompic: { // bottompic
 		levelflat_t *levelflat;
@@ -1027,14 +1075,16 @@ static int ffloor_set(lua_State *L)
 	case ffloor_topheight: { // topheight
 		boolean flag;
 		fixed_t lastpos = *ffloor->topheight;
+		mobj_t *ptmthing = tmthing;
 		sector_t *sector = &sectors[ffloor->secnum];
-		sector->ceilingheight = (fixed_t)luaL_checkinteger(L, 3);
+		sector->ceilingheight = luaL_checkfixed(L, 3);
 		flag = P_CheckSector(sector, true);
 		if (flag && sector->numattached)
 		{
 			*ffloor->topheight = lastpos;
 			P_CheckSector(sector, true);
 		}
+		P_SetTarget(&tmthing, ptmthing);
 		break;
 	}
 	case ffloor_toppic:
@@ -1046,14 +1096,16 @@ static int ffloor_set(lua_State *L)
 	case ffloor_bottomheight: { // bottomheight
 		boolean flag;
 		fixed_t lastpos = *ffloor->bottomheight;
+		mobj_t *ptmthing = tmthing;
 		sector_t *sector = &sectors[ffloor->secnum];
-		sector->floorheight = (fixed_t)luaL_checkinteger(L, 3);
+		sector->floorheight = luaL_checkfixed(L, 3);
 		flag = P_CheckSector(sector, true);
 		if (flag && sector->numattached)
 		{
 			*ffloor->bottomheight = lastpos;
 			P_CheckSector(sector, true);
 		}
+		P_SetTarget(&tmthing, ptmthing);
 		break;
 	}
 	case ffloor_bottompic:
@@ -1213,6 +1265,9 @@ int LUA_MapLib(lua_State *L)
 	luaL_newmetatable(L, META_SIDE);
 		lua_pushcfunction(L, side_get);
 		lua_setfield(L, -2, "__index");
+
+		lua_pushcfunction(L, side_set);
+		lua_setfield(L, -2, "__newindex");
 
 		lua_pushcfunction(L, side_num);
 		lua_setfield(L, -2, "__len");
