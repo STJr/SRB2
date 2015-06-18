@@ -121,7 +121,7 @@ void P_DoSpring(mobj_t *spring, mobj_t *object)
 		/*Someone want to make these work like bumpers?*/
 		return;
 	}
-	
+
 	object->eflags |= MFE_SPRUNG; // apply this flag asap!
 	spring->flags &= ~(MF_SOLID|MF_SPECIAL); // De-solidify
 
