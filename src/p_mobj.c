@@ -192,6 +192,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		break;
 	case S_PLAY_WALK:
 	case S_PLAY_SUPER_WALK:
+	case S_PLAY_SUPER_FLOAT:
 		player->panim = PA_WALK;
 		break;
 	case S_PLAY_RUN:
@@ -383,6 +384,9 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 					break;
 				case SPR2_SRID:
 					spr2 = SPR2_RIDE;
+					break;
+				case SPR2_SFLT:
+					spr2 = SPR2_SWLK;
 					break;
 
 				// Dunno? Just go to standing then.

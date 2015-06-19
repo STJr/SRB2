@@ -3779,6 +3779,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PLAY_SUPER_FALL",
 	"S_PLAY_SUPER_EDGE",
 	"S_PLAY_SUPER_RIDE",
+	"S_PLAY_SUPER_FLOAT",
 
 	// SF_SUPER
 	"S_PLAY_SUPERTRANS1",

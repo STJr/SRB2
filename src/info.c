@@ -96,7 +96,8 @@ char spr2names[NUMPLAYERSPRITES][5] =
 	"SJMP",
 	"SFAL",
 	"SEDG",
-	"SRID"
+	"SRID",
+	"SFLT"
 };
 
 // Doesn't work with g++, needs actionf_p1 (don't modify this comment)
@@ -162,6 +163,7 @@ state_t states[NUMSTATES] =
 	{SPR_PLAY, SPR2_SFAL,   2, {NULL}, 0, 0, S_PLAY_SUPER_FALL}, // S_PLAY_SUPER_FALL
 	{SPR_PLAY, SPR2_SEDG,  12, {NULL}, 0, 0, S_PLAY_SUPER_EDGE}, // S_PLAY_SUPER_EDGE
 	{SPR_PLAY, SPR2_SRID,   4, {NULL}, 0, 0, S_PLAY_SUPER_RIDE}, // S_PLAY_SUPER_RIDE
+	{SPR_PLAY, SPR2_SFLT,   7, {NULL}, 0, 0, S_PLAY_SUPER_FLOAT}, // S_PLAY_SUPER_FLOAT
 
 	// Transforming into Super
 	{SPR_PLAY, SPR2_TRNS,                4, {NULL}, 0, 0, S_PLAY_SUPER_TRANS2}, // S_PLAY_SUPER_TRANS

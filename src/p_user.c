@@ -6438,12 +6438,16 @@ static void P_MovePlayer(player_t *player)
 	// MOVEMENT ANIMATIONS //
 	/////////////////////////
 
-	if ((cmd->forwardmove != 0 || cmd->sidemove != 0) || (player->powers[pw_super] && player->mo->z > player->mo->floorz))
+	if ((cmd->forwardmove != 0 || cmd->sidemove != 0) || (player->powers[pw_super] && !onground))
 	{
 		// If the player is moving fast enough,
 		// break into a run!
 		if (player->speed >= runspd && player->panim == PA_WALK && !player->skidtime && (onground || player->powers[pw_super]))
 			P_SetPlayerMobjState (player->mo, S_PLAY_RUN);
+
+		// Super floating at slow speeds has its own special animation.
+		else if (player->powers[pw_super] && player->panim == PA_IDLE && !onground)
+			P_SetPlayerMobjState (player->mo, S_PLAY_SUPER_FLOAT);
 
 		// Otherwise, just walk.
 		else if ((player->rmomx || player->rmomy) && player->panim == PA_IDLE)
@@ -6453,7 +6457,12 @@ static void P_MovePlayer(player_t *player)
 	// If your running animation is playing, and you're
 	// going too slow, switch back to the walking frames.
 	if (player->panim == PA_RUN && player->speed < runspd)
-		P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
+	{
+		if (!onground && player->powers[pw_super])
+			P_SetPlayerMobjState(player->mo, S_PLAY_SUPER_FLOAT);
+		else
+			P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
+	}
 
 	// If Springing, but travelling DOWNWARD, change back!
 	if (player->panim == PA_JUMP && P_MobjFlip(player->mo)*player->mo->momz < 0)
@@ -6824,8 +6833,8 @@ static void P_MovePlayer(player_t *player)
 			if (player->charflags & SF_SUPER && player->powers[pw_super] && player->speed > FixedMul(5<<FRACBITS, player->mo->scale)
 			&& P_MobjFlip(player->mo)*player->mo->momz <= 0)
 			{
-				if (player->panim == PA_ROLL || player->mo->state-states == S_PLAY_PAIN)
-					P_SetPlayerMobjState(player->mo, S_PLAY_SUPER_WALK);
+				if (player->panim == PA_ROLL || player->mo->state-states == S_PLAY_PAIN || player->panim == PA_WALK)
+					P_SetPlayerMobjState(player->mo, S_PLAY_SUPER_FLOAT);
 
 				player->mo->momz = 0;
 				player->pflags &= ~PF_SPINNING;
