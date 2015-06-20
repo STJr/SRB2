@@ -6654,6 +6654,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// topdown misc
 	"S_SHADOW",
+	"S_WHITESHADOW",
 
 	// Damage energy
 	"S_FLINGENERGY1",

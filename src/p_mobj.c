@@ -7842,16 +7842,15 @@ mobj_t *P_SpawnShadowMobj(mobj_t * caster)
 
 	// do not set the state with P_SetMobjState,
 	// because action routines can not be called yet
-	st = &states[info->spawnstate];
+	if (caster->frame & FF_FULLBRIGHT)
+		st = &states[S_WHITESHADOW];
+	else
+		st = &states[info->spawnstate];
 
 	mobj->state = st;
 	mobj->tics = st->tics;
 	mobj->sprite = st->sprite;
-
-	if (caster->frame & FF_FULLBRIGHT)
-		mobj->frame |= 1;
-	else
-		mobj->frame = st->frame; // FF_FRAMEMASK for frame, and other bits..
+	mobj->frame = st->frame; // FF_FRAMEMASK for frame, and other bits..
 
 	mobj->friction = ORIG_FRICTION;
 

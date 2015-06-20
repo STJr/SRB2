@@ -3548,6 +3548,7 @@ typedef enum state
 
 	// topdown misc
 	S_SHADOW,
+	S_WHITESHADOW,
 
 	// Damage energy
 	S_FLINGENERGY1,
