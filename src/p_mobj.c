@@ -142,24 +142,29 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		{
 		case S_PLAY_STND:
 		case S_PLAY_WAIT:
-		case S_PLAY_GASP:
-			P_SetPlayerMobjState(mobj, S_PLAY_SUPER_STND);
-			return true;
-		case S_PLAY_FALL:
-		case S_PLAY_JUMP:
+			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_STND);
 		case S_PLAY_WALK:
-			P_SetPlayerMobjState(mobj, S_PLAY_SUPER_WALK);
-			return true;
+			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_WALK);
 		case S_PLAY_RUN:
-			P_SetPlayerMobjState(mobj, S_PLAY_SUPER_RUN);
-			return true;
-		case S_PLAY_EDGE:
-			P_SetPlayerMobjState(mobj, S_PLAY_SUPER_EDGE);
-			return true;
+			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_RUN);
+		case S_PLAY_PAIN:
+			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_PAIN);
+		case S_PLAY_DEAD:
+			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_DEAD);
+		case S_PLAY_DRWN:
+			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_DRWN);
 		case S_PLAY_SPIN:
 			if (!(player->charflags & SF_SUPERSPIN))
 				return true;
-			break;
+			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_SPIN);
+		case S_PLAY_GASP:
+			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_GASP);
+		case S_PLAY_JUMP:
+			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_JUMP);
+		case S_PLAY_FALL:
+			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_FALL);
+		case S_PLAY_EDGE:
+			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_EDGE);
 		default:
 			break;
 		}
@@ -178,29 +183,47 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 	{
 	case S_PLAY_STND:
 	case S_PLAY_WAIT:
-	case S_PLAY_EDGE:
-	case S_PLAY_RIDE:
 	case S_PLAY_SUPER_STND:
-	case S_PLAY_SUPER_EDGE:
 		player->panim = PA_IDLE;
+		break;
+	case S_PLAY_EDGE:
+	case S_PLAY_SUPER_EDGE:
+		player->panim = PA_EDGE;
 		break;
 	case S_PLAY_WALK:
 	case S_PLAY_SUPER_WALK:
+	case S_PLAY_SUPER_FLOAT:
 		player->panim = PA_WALK;
 		break;
 	case S_PLAY_RUN:
 	case S_PLAY_SUPER_RUN:
 		player->panim = PA_RUN;
 		break;
+	case S_PLAY_PAIN:
+	case S_PLAY_SUPER_PAIN:
+	case S_PLAY_SUPER_STUN:
+		player->panim = PA_PAIN;
+		break;
 	case S_PLAY_SPIN:
+	case S_PLAY_DASH:
+	case S_PLAY_SUPER_SPIN:
 		player->panim = PA_ROLL;
 		break;
+	case S_PLAY_JUMP:
+	case S_PLAY_SUPER_JUMP:
+		player->panim = PA_JUMP;
+		break;
 	case S_PLAY_FALL:
+	case S_PLAY_SUPER_FALL:
 		player->panim = PA_FALL;
 		break;
 	case S_PLAY_FLY:
 	case S_PLAY_GLIDE:
 		player->panim = PA_ABILITY;
+		break;
+	case S_PLAY_RIDE:
+	case S_PLAY_SUPER_RIDE:
+		player->panim = PA_RIDE;
 		break;
 	default:
 		player->panim = PA_ETC;
@@ -272,8 +295,109 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		// Player animations
 		if (st->sprite == SPR_PLAY)
 		{
+			boolean noalt = false;
 			UINT8 spr2 = st->frame & FF_FRAMEMASK;
 			UINT16 frame = (mobj->frame & FF_FRAMEMASK)+1;
+
+			while (((skin_t *)mobj->skin)->sprites[spr2].numframes <= 0
+				&& spr2 != SPR2_STND)
+			{
+				switch(spr2)
+				{
+				case SPR2_RUN:
+					spr2 = SPR2_WALK;
+					break;
+				case SPR2_DRWN:
+					spr2 = SPR2_DEAD;
+					break;
+				case SPR2_DASH:
+					spr2 = SPR2_SPIN;
+					break;
+				case SPR2_GASP:
+					spr2 = SPR2_JUMP;
+					break;
+				case SPR2_JUMP:
+					spr2 = SPR2_FALL;
+					break;
+				case SPR2_FALL:
+					spr2 = SPR2_WALK;
+					break;
+				case SPR2_RIDE:
+					spr2 = SPR2_FALL;
+					break;
+
+				case SPR2_FLY:
+					spr2 = SPR2_JUMP;
+					break;
+				case SPR2_TIRE:
+					spr2 = SPR2_FLY;
+					break;
+
+				case SPR2_GLID:
+					spr2 = SPR2_FLY;
+					break;
+				case SPR2_CLMB:
+					spr2 = SPR2_WALK;
+					break;
+				case SPR2_CLNG:
+					spr2 = SPR2_CLMB;
+					break;
+
+				case SPR2_SIGN:
+				case SPR2_LIFE:
+					noalt = true;
+					break;
+
+				// Super sprites fallback to regular sprites
+				case SPR2_SWLK:
+					spr2 = SPR2_WALK;
+					break;
+				case SPR2_SRUN:
+					spr2 = SPR2_RUN;
+					break;
+				case SPR2_SPAN:
+					spr2 = SPR2_PAIN;
+					break;
+				case SPR2_SMSL:
+					spr2 = SPR2_SPAN;
+					break;
+				case SPR2_SDTH:
+					spr2 = SPR2_DEAD;
+					break;
+				case SPR2_SDRN:
+					spr2 = SPR2_DRWN;
+					break;
+				case SPR2_SSPN:
+					spr2 = SPR2_SPIN;
+					break;
+				case SPR2_SGSP:
+					spr2 = SPR2_GASP;
+					break;
+				case SPR2_SJMP:
+					spr2 = SPR2_JUMP;
+					break;
+				case SPR2_SFAL:
+					spr2 = SPR2_FALL;
+					break;
+				case SPR2_SEDG:
+					spr2 = SPR2_EDGE;
+					break;
+				case SPR2_SRID:
+					spr2 = SPR2_RIDE;
+					break;
+				case SPR2_SFLT:
+					spr2 = SPR2_SWLK;
+					break;
+
+				// Dunno? Just go to standing then.
+				default:
+					spr2 = SPR2_STND;
+					break;
+				}
+				if (noalt)
+					break;
+			}
+
 			if (mobj->sprite != SPR_PLAY)
 			{
 				mobj->sprite = SPR_PLAY;
@@ -281,6 +405,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 			}
 			else if (mobj->sprite2 != spr2)
 				frame = 0;
+
 			mobj->sprite2 = spr2;
 			if (!mobj->skin || frame >= ((skin_t *)mobj->skin)->sprites[spr2].numframes)
 				frame = 0;
@@ -2056,7 +2181,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 			goto nightsdone;
 		}
 		// Get up if you fell.
-		if (mo->state == &states[mo->info->painstate] || mo->state-states == S_PLAY_SUPER_PAIN)
+		if (mo->player->panim == PA_PAIN)
 			P_SetPlayerMobjState(mo, S_PLAY_STND);
 
 		if (P_MobjFlip(mo)*mo->momz < 0) // falling
