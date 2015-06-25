@@ -72,6 +72,10 @@
 #include "hardware/hw_light.h"
 #endif
 
+#ifdef ESLOPE
+#include "p_slopes.h"
+#endif
+
 //
 // Map MD5, calculated on level load.
 // Sent to clients in PT_SERVERINFO.
@@ -888,9 +892,14 @@ static void P_LoadThings(lumpnum_t lumpnum)
 	numhuntemeralds = 0;
 	for (i = 0; i < nummapthings; i++, mt++)
 	{
+		sector_t *mtsector = R_PointInSubsector(mt->x << FRACBITS, mt->y << FRACBITS)->sector;
+
 		// Z for objects
-		mt->z = (INT16)(R_PointInSubsector(mt->x << FRACBITS, mt->y << FRACBITS)
-			->sector->floorheight>>FRACBITS);
+		mt->z = (INT16)(
+#ifdef ESLOPE
+				mtsector->f_slope ? P_GetZAt(mtsector->f_slope, mt->x << FRACBITS, mt->y << FRACBITS) :
+#endif
+				mtsector->floorheight)>>FRACBITS;
 
 		if (mt->type == 1700 // MT_AXIS
 			|| mt->type == 1701 // MT_AXISTRANSFER
@@ -2530,6 +2539,10 @@ boolean P_SetupLevel(boolean skipprecip)
 		skyboxmo[i] = NULL;
 
 	P_MapStart();
+
+#ifdef ESLOPE
+	P_ResetDynamicSlopes();
+#endif
 
 	P_LoadThings(lastloadedmaplumpnum + ML_THINGS);
 

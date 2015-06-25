@@ -357,7 +357,8 @@ FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FixedRound(fixed_t x)
 	return INT32_MAX;
 }
 
-#ifdef NEED_FIXED_VECTOR
+
+#if 1//#ifdef NEED_FIXED_VECTOR
 
 typedef struct
 {

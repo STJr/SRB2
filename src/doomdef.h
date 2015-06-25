@@ -138,10 +138,12 @@
 extern FILE *logstream;
 #endif
 
-#if 0
+//#define DEVELOP // Disable this for release builds to remove excessive cheat commands and enable MD5 checking and stuff, all in one go. :3
+#ifdef DEVELOP
 #define VERSION    0 // Game version
 #define SUBVERSION 0 // more precise version number
 #define VERSIONSTRING "Trunk"
+#define VERSIONSTRINGW L"Trunk"
 #else
 #define VERSION    201 // Game version
 #define SUBVERSION 14  // more precise version number
@@ -436,6 +438,13 @@ extern const char *compdate, *comptime, *comprevision;
 
 ///	Fun experimental slope stuff!
 //#define SLOPENESS
+
+/// Kalaron/Eternity Engine slope code (SRB2CB ported)
+/// Depends on NEED_FIXED_VECTORS? for a few functions.
+#define ESLOPE
+
+/// Fixed and float point types
+//#define NEED_FIXED_VECTOR
 
 ///	Delete file while the game is running.
 ///	\note	EXTREMELY buggy, tends to crash game.

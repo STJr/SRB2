@@ -155,6 +155,12 @@ typedef struct ffloor_s
 	fixed_t *bottomyoffs;
 	angle_t *bottomangle;
 
+#ifdef ESLOPE
+	// Pointers to pointers. Yup.
+	struct pslope_s **t_slope;
+	struct pslope_s **b_slope;
+#endif
+
 	size_t secnum;
 	ffloortype_e flags;
 	struct line_s *master;
@@ -184,6 +190,9 @@ typedef struct lightlist_s
 	extracolormap_t *extra_colormap;
 	INT32 flags;
 	ffloor_t *caster;
+#ifdef ESLOPE
+	struct pslope_s *slope; // FF_DOUBLESHADOW makes me have to store this pointer here. Bluh bluh.
+#endif
 } lightlist_t;
 
 
@@ -223,6 +232,41 @@ typedef struct secplane_t
 
 	fixed_t a, b, c, d, ic;
 } secplane_t;
+
+// Kalaron Slopes
+#ifdef ESLOPE
+
+typedef struct pslope_s
+{
+	// --- Information used in clipping/projection ---
+	// Origin vector for the plane
+	vector3_t o;
+
+	// 2-Dimentional vector (x, y) normalized. Used to determine distance from
+	// the origin in 2d mapspace. (Basically a thrust of FRACUNIT in xydirection angle)
+	vector2_t d;
+
+	// The rate at which z changes based on distance from the origin plane.
+	fixed_t zdelta;
+
+	// The normal of the slope; will always point upward, and thus be inverted on ceilings. I think it's only needed for physics? -Red
+	vector3_t normal;
+
+	// For comparing when a slope should be rendered
+	fixed_t lowz;
+	fixed_t highz;
+
+	// This values only check and must be updated if the slope itself is modified
+	angle_t zangle; // Angle of the plane going up from the ground (not mesured in degrees)
+	angle_t xydirection; // The direction the slope is facing (north, west, south, etc.)
+
+	struct line_s *sourceline; // The line that generated the slope
+	fixed_t extent; // Distance value used for recalculating zdelta
+	UINT8 refpos; // 1=front floor 2=front ceiling 3=back floor 4=back ceiling (used for dynamic sloping) 0=disabled
+
+	struct pslope_s *next; // Make a linked list of dynamic slopes, for easy reference later
+} pslope_t;
+#endif
 
 typedef enum
 {
@@ -336,6 +380,13 @@ typedef struct sector_s
 	// list of precipitation mobjs in sector
 	precipmobj_t *preciplist;
 	struct mprecipsecnode_s *touching_preciplist;
+
+#ifdef ESLOPE
+	// Eternity engine slope
+	pslope_t *f_slope; // floor slope
+	pslope_t *c_slope; // ceiling slope
+	boolean hasslope; // The sector, or one of its visible FOFs, contains a slope
+#endif
 
 	// these are saved for netgames, so do not let Lua touch these!
 
@@ -612,6 +663,12 @@ typedef struct drawseg_s
 	INT16 *thicksidecol;
 	INT32 numthicksides;
 	fixed_t frontscale[MAXVIDWIDTH];
+
+#ifdef ESLOPE
+	fixed_t maskedtextureheight[MAXVIDWIDTH]; // For handling sloped midtextures
+
+	vertex_t leftpos, rightpos; // Used for rendering FOF walls with slopes
+#endif
 } drawseg_t;
 
 typedef enum

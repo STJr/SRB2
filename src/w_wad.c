@@ -413,6 +413,7 @@ UINT16 W_LoadWadFile(const char *filename)
 				lump_p->disksize -= 4;
 			}
 			else lump_p->compressed = 0;
+			memset(lump_p->name, 0x00, 9);
 			strncpy(lump_p->name, fileinfo->name, 8);
 		}
 		free(fileinfov);

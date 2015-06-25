@@ -500,7 +500,7 @@ static int mobj_set(lua_State *L)
 		return luaL_error(L, "mobj.skin '%s' not found!", skin);
 	}
 	case mobj_color:
-		mo->color = ((UINT8)luaL_checkinteger(L, 3)) % MAXSKINCOLORS;
+		mo->color = ((UINT8)luaL_checkinteger(L, 3)) % MAXTRANSLATIONS;
 		break;
 	case mobj_bnext:
 		return NOSETPOS;

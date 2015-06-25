@@ -17,6 +17,7 @@
 
 #include "p_local.h"
 #include "r_main.h"
+#include "r_data.h"
 #include "p_maputl.h"
 #include "p_polyobj.h"
 #include "z_zone.h"
@@ -321,6 +322,9 @@ fixed_t P_InterceptVector(divline_t *v2, divline_t *v1)
 // OPTIMIZE: keep this precalculated
 //
 fixed_t opentop, openbottom, openrange, lowfloor, highceiling;
+#ifdef ESLOPE
+pslope_t *opentopslope, *openbottomslope;
+#endif
 
 // P_CameraLineOpening
 // P_LineOpening, but for camera
@@ -347,31 +351,56 @@ void P_CameraLineOpening(line_t *linedef)
 	{
 		frontfloor = sectors[front->camsec].floorheight;
 		frontceiling = sectors[front->camsec].ceilingheight;
+#ifdef ESLOPE
+		if (sectors[front->camsec].f_slope) // SRB2CBTODO: ESLOPE (sectors[front->heightsec].f_slope)
+			frontfloor = P_GetZAt(sectors[front->camsec].f_slope, camera.x, camera.y);
+		if (sectors[front->camsec].c_slope)
+			frontceiling = P_GetZAt(sectors[front->camsec].c_slope, camera.x, camera.y);
+#endif
+
 	}
 	else if (front->heightsec >= 0)
 	{
 		frontfloor = sectors[front->heightsec].floorheight;
 		frontceiling = sectors[front->heightsec].ceilingheight;
+#ifdef ESLOPE
+		if (sectors[front->heightsec].f_slope) // SRB2CBTODO: ESLOPE (sectors[front->heightsec].f_slope)
+			frontfloor = P_GetZAt(sectors[front->heightsec].f_slope, camera.x, camera.y);
+		if (sectors[front->heightsec].c_slope)
+			frontceiling = P_GetZAt(sectors[front->heightsec].c_slope, camera.x, camera.y);
+#endif
 	}
 	else
 	{
-		frontfloor = front->floorheight;
-		frontceiling = front->ceilingheight;
+		frontfloor = P_CameraGetFloorZ(mapcampointer, front, tmx, tmy, linedef);
+		frontceiling = P_CameraGetCeilingZ(mapcampointer, front, tmx, tmy, linedef);
 	}
 	if (back->camsec >= 0)
 	{
 		backfloor = sectors[back->camsec].floorheight;
 		backceiling = sectors[back->camsec].ceilingheight;
+#ifdef ESLOPE
+		if (sectors[back->camsec].f_slope) // SRB2CBTODO: ESLOPE (sectors[front->heightsec].f_slope)
+			frontfloor = P_GetZAt(sectors[back->camsec].f_slope, camera.x, camera.y);
+		if (sectors[back->camsec].c_slope)
+			frontceiling = P_GetZAt(sectors[back->camsec].c_slope, camera.x, camera.y);
+#endif
 	}
 	else if (back->heightsec >= 0)
 	{
 		backfloor = sectors[back->heightsec].floorheight;
 		backceiling = sectors[back->heightsec].ceilingheight;
+#ifdef ESLOPE
+		if (sectors[back->heightsec].f_slope) // SRB2CBTODO: ESLOPE (sectors[front->heightsec].f_slope)
+			frontfloor = P_GetZAt(sectors[back->heightsec].f_slope, camera.x, camera.y);
+		if (sectors[back->heightsec].c_slope)
+			frontceiling = P_GetZAt(sectors[back->heightsec].c_slope, camera.x, camera.y);
+#endif
 	}
 	else
 	{
-		backfloor = back->floorheight;
-		backceiling = back->ceilingheight;
+		backfloor = P_CameraGetFloorZ(mapcampointer, back, tmx, tmy, linedef);
+		backceiling = P_CameraGetCeilingZ(mapcampointer, back, tmx, tmy, linedef);
 	}
 
 	{
@@ -416,17 +445,20 @@ void P_CameraLineOpening(line_t *linedef)
 					if (!(rover->flags & FF_BLOCKOTHERS) || !(rover->flags & FF_RENDERALL) || !(rover->flags & FF_EXISTS) || GETSECSPECIAL(rover->master->frontsector->special, 4) == 12)
 						continue;
 
-					delta1 = abs(mapcampointer->z - (*rover->bottomheight + ((*rover->topheight - *rover->bottomheight)/2)));
-					delta2 = abs(thingtop - (*rover->bottomheight + ((*rover->topheight - *rover->bottomheight)/2)));
-					if (*rover->bottomheight < lowestceiling && delta1 >= delta2)
-						lowestceiling = *rover->bottomheight;
-					else if (*rover->bottomheight < highestceiling && delta1 >= delta2)
-						highestceiling = *rover->bottomheight;
+					fixed_t topheight = P_CameraGetFOFTopZ(mapcampointer, front, rover, tmx, tmy, linedef);
+					fixed_t bottomheight = P_CameraGetFOFBottomZ(mapcampointer, front, rover, tmx, tmy, linedef);
 
-					if (*rover->topheight > highestfloor && delta1 < delta2)
-						highestfloor = *rover->topheight;
-					else if (*rover->topheight > lowestfloor && delta1 < delta2)
-						lowestfloor = *rover->topheight;
+					delta1 = abs(mapcampointer->z - (bottomheight + ((topheight - bottomheight)/2)));
+					delta2 = abs(thingtop - (bottomheight + ((topheight - bottomheight)/2)));
+					if (bottomheight < lowestceiling && delta1 >= delta2)
+						lowestceiling = bottomheight;
+					else if (bottomheight < highestceiling && delta1 >= delta2)
+						highestceiling = bottomheight;
+
+					if (topheight > highestfloor && delta1 < delta2)
+						highestfloor = topheight;
+					else if (topheight > lowestfloor && delta1 < delta2)
+						lowestfloor = topheight;
 				}
 
 			// Check for backsectors fake floors
@@ -436,17 +468,20 @@ void P_CameraLineOpening(line_t *linedef)
 					if (!(rover->flags & FF_BLOCKOTHERS) || !(rover->flags & FF_RENDERALL) || !(rover->flags & FF_EXISTS) || GETSECSPECIAL(rover->master->frontsector->special, 4) == 12)
 						continue;
 
-					delta1 = abs(mapcampointer->z - (*rover->bottomheight + ((*rover->topheight - *rover->bottomheight)/2)));
-					delta2 = abs(thingtop - (*rover->bottomheight + ((*rover->topheight - *rover->bottomheight)/2)));
-					if (*rover->bottomheight < lowestceiling && delta1 >= delta2)
-						lowestceiling = *rover->bottomheight;
-					else if (*rover->bottomheight < highestceiling && delta1 >= delta2)
-						highestceiling = *rover->bottomheight;
+					fixed_t topheight = P_CameraGetFOFTopZ(mapcampointer, back, rover, tmx, tmy, linedef);
+					fixed_t bottomheight = P_CameraGetFOFBottomZ(mapcampointer, back, rover, tmx, tmy, linedef);
 
-					if (*rover->topheight > highestfloor && delta1 < delta2)
-						highestfloor = *rover->topheight;
-					else if (*rover->topheight > lowestfloor && delta1 < delta2)
-						lowestfloor = *rover->topheight;
+					delta1 = abs(mapcampointer->z - (bottomheight + ((topheight - bottomheight)/2)));
+					delta2 = abs(thingtop - (bottomheight + ((topheight - bottomheight)/2)));
+					if (bottomheight < lowestceiling && delta1 >= delta2)
+						lowestceiling = bottomheight;
+					else if (bottomheight < highestceiling && delta1 >= delta2)
+						highestceiling = bottomheight;
+
+					if (topheight > highestfloor && delta1 < delta2)
+						highestfloor = topheight;
+					else if (topheight > lowestfloor && delta1 < delta2)
+						lowestfloor = topheight;
 				}
 
 			if (highestceiling < highceiling)
@@ -494,31 +529,90 @@ void P_LineOpening(line_t *linedef)
 	I_Assert(front != NULL);
 	I_Assert(back != NULL);
 
-	if (front->ceilingheight < back->ceilingheight)
-	{
-		opentop = front->ceilingheight;
-		highceiling = back->ceilingheight;
-	}
-	else
-	{
-		opentop = back->ceilingheight;
-		highceiling = front->ceilingheight;
-	}
+	{ // Set open and high/low values here
+		fixed_t frontheight, backheight;
 
-	if (front->floorheight > back->floorheight)
-	{
-		openbottom = front->floorheight;
-		lowfloor = back->floorheight;
-	}
-	else
-	{
-		openbottom = back->floorheight;
-		lowfloor = front->floorheight;
+		frontheight = P_GetCeilingZ(tmthing, front, tmx, tmy, linedef);
+		backheight = P_GetCeilingZ(tmthing, back, tmx, tmy, linedef);
+
+		if (frontheight < backheight)
+		{
+			opentop = frontheight;
+			highceiling = backheight;
+			opentopslope = front->c_slope;
+		}
+		else
+		{
+			opentop = backheight;
+			highceiling = frontheight;
+			opentopslope = back->c_slope;
+		}
+
+		frontheight = P_GetFloorZ(tmthing, front, tmx, tmy, linedef);
+		backheight = P_GetFloorZ(tmthing, back, tmx, tmy, linedef);
+
+		if (frontheight > backheight)
+		{
+			openbottom = frontheight;
+			lowfloor = backheight;
+			openbottomslope = front->f_slope;
+		}
+		else
+		{
+			openbottom = backheight;
+			lowfloor = frontheight;
+			openbottomslope = back->f_slope;
+		}
 	}
 
 	if (tmthing)
 	{
 		fixed_t thingtop = tmthing->z + tmthing->height;
+
+		// Check for collision with front side's midtexture if Effect 4 is set
+		if (linedef->flags & ML_EFFECT4) {
+			side_t *side = &sides[linedef->sidenum[0]];
+			fixed_t textop, texbottom, texheight;
+			fixed_t texmid, delta1, delta2;
+
+			// Get the midtexture's height
+			texheight = textures[texturetranslation[side->midtexture]]->height << FRACBITS;
+
+			// Set texbottom and textop to the Z coordinates of the texture's boundaries
+#ifdef POLYOBJECTS
+			if (linedef->polyobj && (linedef->polyobj->flags & POF_TESTHEIGHT)) {
+				if (linedef->flags & ML_DONTPEGBOTTOM) {
+					texbottom = back->floorheight + side->rowoffset;
+					textop = texbottom + texheight*(side->repeatcnt+1);
+				} else {
+					textop = back->ceilingheight - side->rowoffset;
+					texbottom = textop - texheight*(side->repeatcnt+1);
+				}
+			} else
+#endif
+			{
+				if (linedef->flags & ML_DONTPEGBOTTOM) {
+					texbottom = openbottom + side->rowoffset;
+					textop = texbottom + texheight*(side->repeatcnt+1);
+				} else {
+					textop = opentop - side->rowoffset;
+					texbottom = textop - texheight*(side->repeatcnt+1);
+				}
+			}
+
+			texmid = texbottom+(textop-texbottom)/2;
+
+			delta1 = abs(tmthing->z - texmid);
+			delta2 = abs(thingtop - texmid);
+
+			if (delta1 > delta2) { // Below
+				if (opentop > texbottom)
+					opentop = texbottom;
+			} else { // Above
+				if (openbottom < textop)
+					openbottom = textop;
+			}
+		}
 
 		// Check for fake floors in the sector.
 		if (front->ffloors || back->ffloors
@@ -534,6 +628,10 @@ void P_LineOpening(line_t *linedef)
 			fixed_t highestfloor = openbottom;
 			fixed_t lowestfloor = lowfloor;
 			fixed_t delta1, delta2;
+#ifdef ESLOPE
+			pslope_t *ceilingslope = opentopslope;
+			pslope_t *floorslope = openbottomslope;
+#endif
 
 			// Check for frontsector's fake floors
 			for (rover = front->ffloors; rover; rover = rover->next)
@@ -547,23 +645,34 @@ void P_LineOpening(line_t *linedef)
 					|| (rover->flags & FF_BLOCKOTHERS && !tmthing->player)))
 					continue;
 
-				delta1 = abs(tmthing->z - (*rover->bottomheight + ((*rover->topheight - *rover->bottomheight)/2)));
-				delta2 = abs(thingtop - (*rover->bottomheight + ((*rover->topheight - *rover->bottomheight)/2)));
+				fixed_t topheight = P_GetFOFTopZ(tmthing, front, rover, tmx, tmy, linedef);
+				fixed_t bottomheight = P_GetFOFBottomZ(tmthing, front, rover, tmx, tmy, linedef);
+
+				delta1 = abs(tmthing->z - (bottomheight + ((topheight - bottomheight)/2)));
+				delta2 = abs(thingtop - (bottomheight + ((topheight - bottomheight)/2)));
 
 				if (delta1 >= delta2 && !(rover->flags & FF_PLATFORM)) // thing is below FOF
 				{
-					if (*rover->bottomheight < lowestceiling)
-						lowestceiling = *rover->bottomheight;
-					else if (*rover->bottomheight < highestceiling)
-						highestceiling = *rover->bottomheight;
+					if (bottomheight < lowestceiling) {
+						lowestceiling = bottomheight;
+#ifdef ESLOPE
+						ceilingslope = *rover->b_slope;
+#endif
+					}
+					else if (bottomheight < highestceiling)
+						highestceiling = bottomheight;
 				}
 
 				if (delta1 < delta2 && !(rover->flags & FF_REVERSEPLATFORM)) // thing is above FOF
 				{
-					if (*rover->topheight > highestfloor)
-						highestfloor = *rover->topheight;
-					else if (*rover->topheight > lowestfloor)
-						lowestfloor = *rover->topheight;
+					if (topheight > highestfloor) {
+						highestfloor = topheight;
+#ifdef ESLOPE
+						floorslope = *rover->t_slope;
+#endif
+					}
+					else if (topheight > lowestfloor)
+						lowestfloor = topheight;
 				}
 			}
 
@@ -579,23 +688,34 @@ void P_LineOpening(line_t *linedef)
 					|| (rover->flags & FF_BLOCKOTHERS && !tmthing->player)))
 					continue;
 
-				delta1 = abs(tmthing->z - (*rover->bottomheight + ((*rover->topheight - *rover->bottomheight)/2)));
-				delta2 = abs(thingtop - (*rover->bottomheight + ((*rover->topheight - *rover->bottomheight)/2)));
+				fixed_t topheight = P_GetFOFTopZ(tmthing, back, rover, tmx, tmy, linedef);
+				fixed_t bottomheight = P_GetFOFBottomZ(tmthing, back, rover, tmx, tmy, linedef);
+
+				delta1 = abs(tmthing->z - (bottomheight + ((topheight - bottomheight)/2)));
+				delta2 = abs(thingtop - (bottomheight + ((topheight - bottomheight)/2)));
 
 				if (delta1 >= delta2 && !(rover->flags & FF_PLATFORM)) // thing is below FOF
 				{
-					if (*rover->bottomheight < lowestceiling)
-						lowestceiling = *rover->bottomheight;
-					else if (*rover->bottomheight < highestceiling)
-						highestceiling = *rover->bottomheight;
+					if (bottomheight < lowestceiling) {
+						lowestceiling = bottomheight;
+#ifdef ESLOPE
+						ceilingslope = *rover->b_slope;
+#endif
+					}
+					else if (bottomheight < highestceiling)
+						highestceiling = bottomheight;
 				}
 
 				if (delta1 < delta2 && !(rover->flags & FF_REVERSEPLATFORM)) // thing is above FOF
 				{
-					if (*rover->topheight > highestfloor)
-						highestfloor = *rover->topheight;
-					else if (*rover->topheight > lowestfloor)
-						lowestfloor = *rover->topheight;
+					if (topheight > highestfloor) {
+						highestfloor = topheight;
+#ifdef ESLOPE
+						floorslope = *rover->t_slope;
+#endif
+					}
+					else if (topheight > lowestfloor)
+						lowestfloor = topheight;
 				}
 			}
 
@@ -607,13 +727,21 @@ void P_LineOpening(line_t *linedef)
 
 				delta1 = abs(tmthing->z - (polysec->floorheight + ((polysec->ceilingheight - polysec->floorheight)/2)));
 				delta2 = abs(thingtop - (polysec->floorheight + ((polysec->ceilingheight - polysec->floorheight)/2)));
-				if (polysec->floorheight < lowestceiling && delta1 >= delta2)
+				if (polysec->floorheight < lowestceiling && delta1 >= delta2) {
 					lowestceiling = polysec->floorheight;
+#ifdef ESLOPE
+					ceilingslope = NULL;
+#endif
+				}
 				else if (polysec->floorheight < highestceiling && delta1 >= delta2)
 					highestceiling = polysec->floorheight;
 
-				if (polysec->ceilingheight > highestfloor && delta1 < delta2)
+				if (polysec->ceilingheight > highestfloor && delta1 < delta2) {
 					highestfloor = polysec->ceilingheight;
+#ifdef ESLOPE
+					floorslope = NULL;
+#endif
+				}
 				else if (polysec->ceilingheight > lowestfloor && delta1 < delta2)
 					lowestfloor = polysec->ceilingheight;
 			}
@@ -621,11 +749,19 @@ void P_LineOpening(line_t *linedef)
 			if (highestceiling < highceiling)
 				highceiling = highestceiling;
 
-			if (highestfloor > openbottom)
+			if (highestfloor > openbottom) {
 				openbottom = highestfloor;
+#ifdef ESLOPE
+				openbottomslope = floorslope;
+#endif
+			}
 
-			if (lowestceiling < opentop)
+			if (lowestceiling < opentop) {
 				opentop = lowestceiling;
+#ifdef ESLOPE
+				opentopslope = ceilingslope;
+#endif
+			}
 
 			if (lowestfloor > lowfloor)
 				lowfloor = lowestfloor;
@@ -723,6 +859,7 @@ void P_SetThingPosition(mobj_t *thing)
 {                                                      // link into subsector
 	subsector_t *ss;
 	sector_t *oldsec = NULL;
+	fixed_t tfloorz, tceilz;
 
 	I_Assert(thing != NULL);
 	I_Assert(!P_MobjWasRemoved(thing));
@@ -792,12 +929,15 @@ void P_SetThingPosition(mobj_t *thing)
 	// sector's floor is the same height.
 	if (thing->player && oldsec != NULL && thing->subsector && oldsec != thing->subsector->sector)
 	{
+		tfloorz = P_GetFloorZ(thing, ss->sector, thing->x, thing->y, NULL);
+		tceilz = P_GetCeilingZ(thing, ss->sector, thing->x, thing->y, NULL);
+
 		if (thing->eflags & MFE_VERTICALFLIP)
 		{
-			if (thing->z + thing->height >= thing->subsector->sector->ceilingheight)
+			if (thing->z + thing->height >= tceilz)
 				thing->eflags |= MFE_JUSTSTEPPEDDOWN;
 		}
-		else if (thing->z <= thing->subsector->sector->floorheight)
+		else if (thing->z <= tfloorz)
 			thing->eflags |= MFE_JUSTSTEPPEDDOWN;
 	}
 }

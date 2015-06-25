@@ -473,6 +473,7 @@ static void readPlayer(MYFILE *f, INT32 num)
 
 				if (!slotfound && (slotfound = findFreeSlot(&num)) == false)
 					goto done;
+				PlayerMenu[num].status = IT_CALL;
 
 				for (i = 0; i < MAXLINELEN-3; i++)
 				{
@@ -545,6 +546,7 @@ static void readPlayer(MYFILE *f, INT32 num)
 				if (!slotfound && (slotfound = findFreeSlot(&num)) == false)
 					goto done;
 				DEH_WriteUndoline(word, &description[num].picname[0], UNDO_NONE);
+				PlayerMenu[num].status = IT_CALL;
 				strncpy(description[num].picname, word2, 8);
 			}
 			else if (fastcmp(word, "STATUS"))
@@ -576,6 +578,8 @@ static void readPlayer(MYFILE *f, INT32 num)
 				if (!slotfound && (slotfound = findFreeSlot(&num)) == false)
 					goto done;
 				DEH_WriteUndoline(word, description[num].skinname, UNDO_NONE);
+				PlayerMenu[num].status = IT_CALL;
+
 				strlcpy(description[num].skinname, word2, sizeof description[num].skinname);
 				strlwr(description[num].skinname);
 			}
@@ -3883,7 +3887,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Blue Crawla
 	"S_POSS_STND",
-	"S_POSS_STND2",
 	"S_POSS_RUN1",
 	"S_POSS_RUN2",
 	"S_POSS_RUN3",
@@ -3893,7 +3896,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Red Crawla
 	"S_SPOS_STND",
-	"S_SPOS_STND2",
 	"S_SPOS_RUN1",
 	"S_SPOS_RUN2",
 	"S_SPOS_RUN3",
@@ -7248,7 +7250,6 @@ static const char *const MOBJFLAG2_LIST[] = {
 	"EXPLOSION",	// Thrown ring has explosive properties
 	"SCATTER",		// Thrown ring has scatter properties
 	"BEYONDTHEGRAVE",// Source of this missile has died and has since respawned.
-	"PUSHED",		// Mobj was already pushed this tic
 	"SLIDEPUSH",	// MF_PUSHABLE that pushes continuously.
 	"CLASSICPUSH",	// Drops straight down when object has negative Z.
 	"STANDONME",	// While not pushable, stand on me anyway.
@@ -7277,6 +7278,8 @@ static const char *const MOBJEFLAG_LIST[] = {
 	"JUSTSTEPPEDDOWN", // used for ramp sectors
 	"VERTICALFLIP", // Vertically flip sprite/allow upside-down physics
 	"GOOWATER", // Goo water
+	"PUSHED", // Mobj was already pushed this tic
+	"SPRUNG", // Mobj was already sprung this tic
 	NULL
 };
 
@@ -7379,6 +7382,7 @@ static const char *const ML_LIST[16] = {
 };
 
 // This DOES differ from r_draw's Color_Names, unfortunately.
+// Also includes Super colors
 static const char *COLOR_ENUMS[] = {
 	"NONE",     	// SKINCOLOR_NONE
 	"WHITE",    	// SKINCOLOR_WHITE
@@ -7405,7 +7409,25 @@ static const char *COLOR_ENUMS[] = {
 	"ZIM",      	// SKINCOLOR_ZIM
 	"OLIVE",    	// SKINCOLOR_OLIVE
 	"YELLOW",   	// SKINCOLOR_YELLOW
-	"GOLD"      	// SKINCOLOR_GOLD
+	"GOLD",     	// SKINCOLOR_GOLD
+	// Super special awesome Super flashing colors!
+	"SUPER1",   	// SKINCOLOR_SUPER1
+	"SUPER2",   	// SKINCOLOR_SUPER2,
+	"SUPER3",   	// SKINCOLOR_SUPER3,
+	"SUPER4",   	// SKINCOLOR_SUPER4,
+	"SUPER5",   	// SKINCOLOR_SUPER5,
+	// Super Tails
+	"TSUPER1",  	// SKINCOLOR_TSUPER1,
+	"TSUPER2",  	// SKINCOLOR_TSUPER2,
+	"TSUPER3",  	// SKINCOLOR_TSUPER3,
+	"TSUPER4",  	// SKINCOLOR_TSUPER4,
+	"TSUPER5",  	// SKINCOLOR_TSUPER5,
+	// Super Knuckles
+	"KSUPER1",  	// SKINCOLOR_KSUPER1,
+	"KSUPER2",  	// SKINCOLOR_KSUPER2,
+	"KSUPER3",  	// SKINCOLOR_KSUPER3,
+	"KSUPER4",  	// SKINCOLOR_KSUPER4,
+	"KSUPER5"   	// SKINCOLOR_KSUPER5,
 };
 
 static const char *const POWERS_LIST[] = {
@@ -7612,8 +7634,9 @@ struct {
 	{"EMERALD6",EMERALD6},
 	{"EMERALD7",EMERALD7},
 
-	// SKINCOLOR_ doesn't include this..!
+	// SKINCOLOR_ doesn't include these..!
 	{"MAXSKINCOLORS",MAXSKINCOLORS},
+	{"MAXTRANSLATIONS",MAXTRANSLATIONS},
 
 	// Precipitation
 	{"PRECIP_NONE",PRECIP_NONE},
@@ -8236,7 +8259,7 @@ static fixed_t find_const(const char **rword)
 	}
 	else if (fastncmp("SKINCOLOR_",word,10)) {
 		char *p = word+10;
-		for (i = 0; i < MAXSKINCOLORS; i++)
+		for (i = 0; i < MAXTRANSLATIONS; i++)
 			if (fastcmp(p, COLOR_ENUMS[i])) {
 				free(word);
 				return i;
@@ -8295,8 +8318,8 @@ void DEH_Check(void)
 	if (dehpowers != NUMPOWERS)
 		I_Error("You forgot to update the Dehacked powers list, you dolt!\n(%d powers defined, versus %s in the Dehacked list)\n", NUMPOWERS, sizeu1(dehpowers));
 
-	if (dehcolors != MAXSKINCOLORS)
-		I_Error("You forgot to update the Dehacked colors list, you dolt!\n(%d colors defined, versus %s in the Dehacked list)\n", MAXSKINCOLORS, sizeu1(dehcolors));
+	if (dehcolors != MAXTRANSLATIONS)
+		I_Error("You forgot to update the Dehacked colors list, you dolt!\n(%d colors defined, versus %s in the Dehacked list)\n", MAXTRANSLATIONS, sizeu1(dehcolors));
 #endif
 }
 
@@ -8661,7 +8684,7 @@ static inline int lib_getenum(lua_State *L)
 	}
 	else if (fastncmp("SKINCOLOR_",word,10)) {
 		p = word+10;
-		for (i = 0; i < MAXSKINCOLORS; i++)
+		for (i = 0; i < MAXTRANSLATIONS; i++)
 			if (fastcmp(p, COLOR_ENUMS[i])) {
 				lua_pushinteger(L, i);
 				return 1;
@@ -8786,7 +8809,7 @@ static inline int lib_getenum(lua_State *L)
 		lua_pushinteger(L, mapmusic);
 		return 1;
 	} else if (fastcmp(word,"server")) {
-		if (!playeringame[serverplayer])
+		if ((!multiplayer || !netgame) && !playeringame[serverplayer])
 			return 0;
 		LUA_PushUserdata(L, &players[serverplayer], META_PLAYER);
 		return 1;

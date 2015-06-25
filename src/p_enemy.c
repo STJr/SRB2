@@ -363,11 +363,11 @@ boolean P_CheckMissileRange(mobj_t *actor)
 	if (!actor->target)
 		return false;
 
-	if (!P_CheckSight(actor, actor->target))
-		return false;
-
 	if (actor->reactiontime)
 		return false; // do not attack yet
+
+	if (!P_CheckSight(actor, actor->target))
+		return false;
 
 	// OPTIMIZE: get this from a global checksight
 	dist = P_AproxDistance(actor->x-actor->target->x, actor->y-actor->target->y) - FixedMul(64*FRACUNIT, actor->scale);
@@ -652,6 +652,9 @@ boolean P_LookForPlayers(mobj_t *actor, boolean allaround, boolean tracer, fixed
 
 		player = &players[actor->lastlook];
 
+		if ((netgame || multiplayer) && player->spectator)
+			continue;
+
 		if (player->health <= 0)
 			continue; // dead
 
@@ -659,12 +662,6 @@ boolean P_LookForPlayers(mobj_t *actor, boolean allaround, boolean tracer, fixed
 			continue; // ignore notarget
 
 		if (!player->mo || P_MobjWasRemoved(player->mo))
-			continue;
-
-		if (!P_CheckSight(actor, player->mo))
-			continue; // out of sight
-
-		if ((netgame || multiplayer) && player->spectator)
 			continue;
 
 		if (dist > 0
@@ -682,6 +679,9 @@ boolean P_LookForPlayers(mobj_t *actor, boolean allaround, boolean tracer, fixed
 					continue; // behind back
 			}
 		}
+
+		if (!P_CheckSight(actor, player->mo))
+			continue; // out of sight
 
 		if (tracer)
 			P_SetTarget(&actor->tracer, player->mo);
@@ -5024,7 +5024,7 @@ void A_MaceRotate(mobj_t *actor)
 		actor->movecount += actor->target->lastlook;
 		actor->movecount &= FINEMASK;
 
-		actor->threshold = FixedMul(FINECOSINE(actor->movecount), actor->target->lastlook);
+		actor->threshold = FixedMul(FINECOSINE(actor->movecount), actor->target->lastlook << FRACBITS);
 
 		v[0] = FRACUNIT;
 		v[1] = 0;
@@ -5032,7 +5032,7 @@ void A_MaceRotate(mobj_t *actor)
 		v[3] = FRACUNIT;
 
 		// Calculate the angle matrixes for the link.
-		res = VectorMatrixMultiply(v, *RotateXMatrix(FixedAngle(actor->threshold << FRACBITS)));
+		res = VectorMatrixMultiply(v, *RotateXMatrix(FixedAngle(actor->threshold)));
 		M_Memcpy(&v, res, sizeof(v));
 		res = VectorMatrixMultiply(v, *RotateZMatrix(actor->target->health << ANGLETOFINESHIFT));
 		M_Memcpy(&v, res, sizeof(v));
@@ -5606,8 +5606,13 @@ void A_MixUp(mobj_t *actor)
 
 				P_SetThingPosition(players[i].mo);
 
+#ifdef ESLOPE
+				players[i].mo->floorz = P_GetFloorZ(players[i].mo, players[i].mo->subsector->sector, players[i].mo->x, players[i].mo->y, NULL);
+				players[i].mo->ceilingz = P_GetCeilingZ(players[i].mo, players[i].mo->subsector->sector, players[i].mo->x, players[i].mo->y, NULL);
+#else
 				players[i].mo->floorz = players[i].mo->subsector->sector->floorheight;
 				players[i].mo->ceilingz = players[i].mo->subsector->sector->ceilingheight;
+#endif
 
 				P_CheckPosition(players[i].mo, players[i].mo->x, players[i].mo->y);
 			}
@@ -5660,6 +5665,11 @@ void A_RecyclePowers(mobj_t *actor)
 		if (playeringame[i] && players[i].mo && players[i].mo->health > 0 && players[i].playerstate == PST_LIVE
 			&& !players[i].exiting && !((netgame || multiplayer) && players[i].spectator))
 		{
+#ifndef WEIGHTEDRECYCLER
+			if (players[i].powers[pw_super])
+				continue; // Ignore super players
+#endif
+
 			numplayers++;
 			postscramble[j] = playerslist[j] = (UINT8)i;
 
