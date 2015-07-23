@@ -121,7 +121,7 @@ UINT32 nflatxshift, nflatyshift, nflatshiftup, nflatmask;
 #define METALSONIC_TT_CACHE_INDEX (MAXSKINS + 2)
 #define ALLWHITE_TT_CACHE_INDEX (MAXSKINS + 3)
 #define SKIN_RAMP_LENGTH 16
-#define DEFAULT_STARTTRANSCOLOR 160
+#define DEFAULT_STARTTRANSCOLOR 96
 #define NUM_PALETTE_ENTRIES 256
 
 static UINT8** translationtablecache[MAXSKINS + 4] = {NULL};
@@ -347,7 +347,7 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 		break;
 
 	case SKINCOLOR_PEACH:
-		// 10 color rame, from 2 color ranges
+		// 10 colors
 		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
 		{
 			if (10*i/16 == 0)
@@ -360,7 +360,7 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 		break;
 
 	case SKINCOLOR_BEIGE:
-		// 13 color range, from 2 color ranges
+		// 13 colors
 		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
 		{
 			if (13*i/16 == 12)
@@ -396,7 +396,7 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 		break;
 
 	case SKINCOLOR_GOLD:
-		// 10 color range, from 2 color ranges
+		// 10 colors
 		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
 		{
 			if (10*i/16 == 0)
@@ -409,7 +409,7 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 		break;
 
 	case SKINCOLOR_TAN:
-		// 8 color range, from 3 color ranges
+		// 8 colors
 		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
 		{
 			if (8*i/16 == 0)
@@ -426,13 +426,13 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 		break;
 
 	case SKINCOLOR_OLIVE:
-		// 7 color ramp
+		// 7 colors
 		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
 			dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + (7*i/SKIN_RAMP_LENGTH));
 		break;
 
 	case SKINCOLOR_YELLOW:
-		// 10 color range, from 2 color ranges
+		// 10 colors
 		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
 		{
 			if (10*i/16 == 0)
@@ -445,20 +445,18 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 		break;
 
 	case SKINCOLOR_NEONGREEN:
-		// Multi-color ramp
+		// 8 colors
 		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
 		{
-			if (10*i/16 <= 1)
-				dest_colormap[starttranscolor + i] = 0x60 + 10*i/16; // Brighter green
-			else if (10*i/16 < 9)
-				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + (10*i/SKIN_RAMP_LENGTH) - 2); // Neon green
+			if (8*i/16 == 7)
+				dest_colormap[starttranscolor + i] = 0x6E; // Darkest
 			else
-				dest_colormap[starttranscolor + i] = 0x6F;
+				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + (8*i/SKIN_RAMP_LENGTH)); // Neon green
 		}
 		break;
 
 	case SKINCOLOR_TEAL:
-		// 6 color ramp
+		// 6 colors
 		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
 		{
 			if (6*i/16 == 0)
@@ -483,7 +481,7 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 		break;
 
 	case SKINCOLOR_STEELBLUE:
-		// 8 color range, from 2 color ranges
+		// 8 colors
 		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
 		{
 			if (8*i/16 <= 1)
@@ -496,7 +494,7 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 		break;
 
 	case SKINCOLOR_LAVENDER:
-		// 10 color range, from 2 color ranges
+		// 10 colors
 		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
 		{
 			if (10*i/16 <= 1)
