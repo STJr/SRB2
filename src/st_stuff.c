@@ -889,7 +889,7 @@ static void ST_drawFirstPersonHUD(void)
 // [21:42] <+Rob> Beige - Lavender - Steel Blue - Peach - Orange - Purple - Silver - Yellow - Pink - Red - Blue - Green - Cyan - Gold
 static skincolors_t linkColor[14] =
 {SKINCOLOR_BEIGE,  SKINCOLOR_LAVENDER, SKINCOLOR_STEELBLUE, SKINCOLOR_PEACH, SKINCOLOR_ORANGE,
- SKINCOLOR_PURPLE, SKINCOLOR_SILVER,   SKINCOLOR_SUPER4,    SKINCOLOR_PINK,  SKINCOLOR_RED,
+ SKINCOLOR_MAGENTA, SKINCOLOR_SILVER,   SKINCOLOR_SUPER4,    SKINCOLOR_PINK,  SKINCOLOR_RED,
  SKINCOLOR_BLUE,   SKINCOLOR_GREEN,    SKINCOLOR_CYAN,      SKINCOLOR_GOLD};
 
 static void ST_drawNightsRecords(void)
