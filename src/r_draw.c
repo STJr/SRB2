@@ -315,12 +315,6 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 			dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + (12*i/SKIN_RAMP_LENGTH));
 		break;
 
-	case SKINCOLOR_PURPLE:
-		// 10 color ramp
-		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
-			dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + (10*i/SKIN_RAMP_LENGTH));
-		break;
-
 	case SKINCOLOR_MAGENTA:
 		// 9 color ramp
 		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
@@ -440,6 +434,17 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 				dest_colormap[starttranscolor + i] = (UINT8)(0xEC + 10*i/16); // Lightest
 			else
 				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + (10*i/SKIN_RAMP_LENGTH) - 2); // main
+		}
+		break;
+
+	case SKINCOLOR_PURPLE:
+		// 10 colors
+		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
+		{
+			if (i <= 3)
+				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + i); // Lightest
+			else
+				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + (8*i/SKIN_RAMP_LENGTH) + 2); // main
 		}
 		break;
 
