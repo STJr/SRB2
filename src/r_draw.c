@@ -525,7 +525,7 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
 		{
 			if (8*i/16 == 0)
-				dest_colormap[starttranscolor + i] = 0x48; // Lightest
+				dest_colormap[starttranscolor + i] = 0x58; // Lightest
 			else if (8*i/16 == 7)
 				dest_colormap[starttranscolor + i] = 0x6D; // Darkest
 			else if (8*i/16 >= 5)
