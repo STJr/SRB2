@@ -137,9 +137,9 @@ const char *Color_Names[MAXSKINCOLORS] =
 	"Grey",      // SKINCOLOR_GREY
 	"Black",     // SKINCOLOR_BLACK
 	"Cyan",      // SKINCOLOR_CYAN
-	"Aquamarine",// SKINCOLOR_AQUAMARINE
+	"Aqua",      // SKINCOLOR_AQUAMARINE
 	"Teal",      // SKINCOLOR_TEAL
-	"Steel_Blue",// SKINCOLOR_STEELBLUE
+	"Azure",     // SKINCOLOR_AZURE
 	"Blue",      // SKINCOLOR_BLUE
 	"Peach",     // SKINCOLOR_PEACH
 	"Tan",       // SKINCOLOR_TAN
@@ -149,12 +149,12 @@ const char *Color_Names[MAXSKINCOLORS] =
 	"Purple",    // SKINCOLOR_PURPLE
 	"Magenta",   // SKINCOLOR_MAGENTA
 	"Orange",    // SKINCOLOR_ORANGE
-	"Rosewood",  // SKINCOLOR_ROSEWOOD
+	"Rust",      // SKINCOLOR_RUST
 	"Beige",     // SKINCOLOR_BEIGE
 	"Brown",     // SKINCOLOR_BROWN
 	"Red",       // SKINCOLOR_RED
-	"Dark_Red",  // SKINCOLOR_DARKRED
-	"Neon_Green",// SKINCOLOR_NEONGREEN
+	"Crimson",   // SKINCOLOR_CRIMSON
+	"Emerald",   // SKINCOLOR_EMERALD
 	"Green",     // SKINCOLOR_GREEN
 	"Zim",       // SKINCOLOR_ZIM
 	"Peridot",   // SKINCOLOR_PERIDOT
@@ -170,9 +170,9 @@ const UINT8 Color_Opposite[MAXSKINCOLORS*2] =
 	SKINCOLOR_SILVER,12,// SKINCOLOR_GREY
 	SKINCOLOR_WHITE,8,  // SKINCOLOR_BLACK
 	SKINCOLOR_NONE,8,   // SKINCOLOR_CYAN
-	SKINCOLOR_NONE,8,   // SKINCOLOR_AQUAMARINE
+	SKINCOLOR_NONE,8,   // SKINCOLOR_AQUA
 	SKINCOLOR_NONE,8,   // SKINCOLOR_TEAL
-	SKINCOLOR_NONE,8,   // SKINCOLOR_STEELBLUE
+	SKINCOLOR_NONE,8,   // SKINCOLOR_AZURE
 	SKINCOLOR_ORANGE,9, // SKINCOLOR_BLUE
 	SKINCOLOR_NONE,8,   // SKINCOLOR_PEACH
 	SKINCOLOR_NONE,8,   // SKINCOLOR_TAN
@@ -182,12 +182,12 @@ const UINT8 Color_Opposite[MAXSKINCOLORS*2] =
 	SKINCOLOR_NONE,8,   // SKINCOLOR_PURPLE
 	SKINCOLOR_NONE,8,   // SKINCOLOR_MAGENTA
 	SKINCOLOR_BLUE,12,  // SKINCOLOR_ORANGE
-	SKINCOLOR_NONE,8,   // SKINCOLOR_ROSEWOOD
+	SKINCOLOR_NONE,8,   // SKINCOLOR_RUST
 	SKINCOLOR_NONE,8,   // SKINCOLOR_BEIGE
 	SKINCOLOR_NONE,8,   // SKINCOLOR_BROWN
 	SKINCOLOR_GREEN,5,  // SKINCOLOR_RED
-	SKINCOLOR_NONE,8,   // SKINCOLOR_DARKRED
-	SKINCOLOR_NONE,8,   // SKINCOLOR_NEONGREEN
+	SKINCOLOR_NONE,8,   // SKINCOLOR_CRIMSON
+	SKINCOLOR_NONE,8,   // SKINCOLOR_EMERALD
 	SKINCOLOR_RED,11,   // SKINCOLOR_GREEN
 	SKINCOLOR_MAGENTA,3, // SKINCOLOR_ZIM
 	SKINCOLOR_NONE,8,   // SKINCOLOR_PERIDOT
@@ -243,9 +243,9 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 		0x08, // SKINCOLOR_GREY
 		0x18, // SKINCOLOR_BLACK
 		0x70, // SKINCOLOR_CYAN
-		0xf8, // SKINCOLOR_AQUAMARINE
+		0xf8, // SKINCOLOR_AQUA
 		0x7c, // SKINCOLOR_TEAL
-		0x9a, // SKINCOLOR_STEELBLUE
+		0x9a, // SKINCOLOR_AZURE
 		0x82, // SKINCOLOR_BLUE
 		0xc8, // SKINCOLOR_PEACH
 		0x54, // SKINCOLOR_TAN
@@ -255,12 +255,12 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 		0x90, // SKINCOLOR_PURPLE
 		0xa3, // SKINCOLOR_MAGENTA
 		0x31, // SKINCOLOR_ORANGE
-		0x3a, // SKINCOLOR_ROSEWOOD
+		0x3a, // SKINCOLOR_RUST
 		0xe0, // SKINCOLOR_BEIGE
 		0xd0, // SKINCOLOR_BROWN
 		0x21, // SKINCOLOR_RED
-		0x28, // SKINCOLOR_DARKRED
-		0xf0, // SKINCOLOR_NEONGREEN
+		0x28, // SKINCOLOR_CRIMSON
+		0xf0, // SKINCOLOR_EMERALD
 		0x60, // SKINCOLOR_GREEN
 		0x58, // SKINCOLOR_ZIM
 		0xac, // SKINCOLOR_PERIDOT
@@ -330,7 +330,7 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 			dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + (i >> 1));
 		break;
 
-	case SKINCOLOR_AQUAMARINE:
+	case SKINCOLOR_AQUA:
 		// 10 colors
 		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
 		{
@@ -354,7 +354,7 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 		}
 		break;
 
-	case SKINCOLOR_STEELBLUE:
+	case SKINCOLOR_AZURE:
 		// 8 colors
 		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
 		{
@@ -458,7 +458,7 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 		}
 		break;
 
-	case SKINCOLOR_ROSEWOOD:
+	case SKINCOLOR_RUST:
 		// 9 colors
 		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
 		{
@@ -496,7 +496,7 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 		}
 		break;
 
-	case SKINCOLOR_DARKRED:
+	case SKINCOLOR_CRIMSON:
 		// 9 colors
 		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
 		{
@@ -509,7 +509,7 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 		}
 		break;
 
-	case SKINCOLOR_NEONGREEN:
+	case SKINCOLOR_EMERALD:
 		// 8 colors
 		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
 		{
