@@ -536,15 +536,15 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 		break;
 
 	case SKINCOLOR_YELLOW:
-		// 9 colors
+		// 10 colors
 		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
 		{
 			if (i == 0)
-				dest_colormap[starttranscolor + i] = 0x48; // Lightest
+				dest_colormap[starttranscolor + i] = 0x53; // Lightest
 			else if (i == 15)
 				dest_colormap[starttranscolor + i] = 0xDD; // Darkest
 			else
-				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + (8*(i-1)/SKIN_RAMP_LENGTH));
+				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + (8*i/SKIN_RAMP_LENGTH));
 		}
 		break;
 
