@@ -120,6 +120,7 @@ typedef struct
 	float       offset;
 	md2_model_t *model;
 	void        *grpatch;
+	void        *blendgrpatch;
 	boolean     notfound;
 	INT32       skin;
 } md2_t;
