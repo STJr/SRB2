@@ -1009,8 +1009,8 @@ static int lib_pDoSpring(lua_State *L)
 	NOHUD
 	if (!spring || !object)
 		return LUA_ErrInvalid(L, "mobj_t");
-	P_DoSpring(spring, object);
-	return 0;
+	lua_pushboolean(L, P_DoSpring(spring, object));
+	return 1;
 }
 
 // P_INTER
