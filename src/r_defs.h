@@ -233,11 +233,19 @@ typedef struct secplane_t
 	fixed_t a, b, c, d, ic;
 } secplane_t;
 
-// Kalaron Slopes
+// Slopes
 #ifdef ESLOPE
+typedef enum {
+	SL_NOPHYSICS = 1, // Don't do momentum adjustment with this slope
+	SL_NODYNAMIC = 1<<1, // Slope will never need to move during the level, so don't fuss with recalculating it
+	SL_ANCHORVERTEX = 1<<2, // Slope is using a Slope Vertex Thing to anchor its position
+	SL_VERTEXSLOPE = 1<<3, // Slope is built from three Slope Vertex Things
+} slopeflags_t;
 
 typedef struct pslope_s
 {
+	UINT16 id; // The number of the slope, mostly used for netgame syncing purposes
+
 	// --- Information used in clipping/projection ---
 	// Origin vector for the plane
 	vector3_t o;
@@ -262,7 +270,10 @@ typedef struct pslope_s
 
 	struct line_s *sourceline; // The line that generated the slope
 	fixed_t extent; // Distance value used for recalculating zdelta
-	UINT8 refpos; // 1=front floor 2=front ceiling 3=back floor 4=back ceiling (used for dynamic sloping) 0=disabled
+	UINT8 refpos; // 1=front floor 2=front ceiling 3=back floor 4=back ceiling (used for dynamic sloping)
+
+	UINT8 flags; // Slope options
+	struct mobj_s **vertices; // List should be three long for slopes made by vertex things, or one long for slopes using one vertex thing to anchor
 
 	struct pslope_s *next; // Make a linked list of dynamic slopes, for easy reference later
 } pslope_t;
