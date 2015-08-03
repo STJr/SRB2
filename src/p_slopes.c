@@ -484,6 +484,18 @@ void P_CopySectorSlope(line_t *line)
    line->special = 0; // Linedef was use to set slopes, it finished its job, so now make it a normal linedef
 }
 
+//
+// P_SlopeById
+//
+// Looks in the slope list for a slope with a specified ID. Mostly useful for netgame sync
+//
+pslope_t *P_SlopeById(UINT16 id)
+{
+	pslope_t *ret;
+	for (ret = slopelist; ret && ret->id != id; ret = ret->next);
+	return ret;
+}
+
 #ifdef SPRINGCLEAN
 #include "byteptr.h"
 
