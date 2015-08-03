@@ -40,7 +40,8 @@
 
 #ifdef ESLOPE
 
-static pslope_t *dynslopes = NULL;
+static pslope_t *slopelist = NULL;
+static UINT16 slopecount = 0;
 
 // Calculate line normal
 void P_CalculateSlopeNormal(pslope_t *slope) {
@@ -53,8 +54,11 @@ void P_CalculateSlopeNormal(pslope_t *slope) {
 void P_RunDynamicSlopes(void) {
 	pslope_t *slope;
 
-	for (slope = dynslopes; slope; slope = slope->next) {
+	for (slope = slopelist; slope; slope = slope->next) {
 		fixed_t zdelta;
+
+		if (slope->flags & SL_NODYNAMIC)
+			continue;
 
 		switch(slope->refpos) {
 		case 1: // front floor
@@ -92,7 +96,7 @@ void P_RunDynamicSlopes(void) {
 // Alocates and fill the contents of a slope structure.
 //
 static pslope_t *P_MakeSlope(const vector3_t *o, const vector2_t *d,
-                             const fixed_t zdelta, boolean dynamic)
+                             const fixed_t zdelta, UINT8 flags)
 {
 	pslope_t *ret = Z_Malloc(sizeof(pslope_t), PU_LEVEL, NULL);
 	memset(ret, 0, sizeof(*ret));
@@ -106,10 +110,14 @@ static pslope_t *P_MakeSlope(const vector3_t *o, const vector2_t *d,
 
 	ret->zdelta = zdelta;
 
-	if (dynamic) { // Add to the dynamic slopes list
-		ret->next = dynslopes;
-		dynslopes = ret;
-	}
+	ret->flags = flags;
+
+	// Add to the slope list
+	ret->next = slopelist;
+	slopelist = ret;
+
+	slopecount++;
+	ret->id = slopecount;
 
 	return ret;
 }
@@ -179,6 +187,14 @@ void P_SpawnSlope_Line(int linenum)
 	boolean frontceil  = (special == 701 || special == 702 || special == 713);
 	boolean backceil   = (special == 711 || special == 712 || special == 703);
 
+	UINT8 flags = 0; // Slope flags
+	if (line->flags & ML_NOSONIC)
+		flags |= SL_NOPHYSICS;
+	if (line->flags & ML_NOTAILS)
+		flags |= SL_NODYNAMIC;
+	if (line->flags & ML_NOKNUX)
+		flags |= SL_ANCHORVERTEX;
+
 	if(!frontfloor && !backfloor && !frontceil && !backceil)
 	{
 		CONS_Printf("P_SpawnSlope_Line called with non-slope line special.\n");
@@ -235,7 +251,7 @@ void P_SpawnSlope_Line(int linenum)
 			// In P_SpawnSlopeLine the origin is the centerpoint of the sourcelinedef
 
 			fslope = line->frontsector->f_slope =
-            P_MakeSlope(&point, &direction, dz, !(line->flags & ML_NOTAILS));
+            P_MakeSlope(&point, &direction, dz, flags);
 
             // Set up some shit
             fslope->extent = extent;
@@ -291,7 +307,7 @@ void P_SpawnSlope_Line(int linenum)
 			dz = FixedDiv(origin.z - point.z, extent);
 
 			cslope = line->frontsector->c_slope =
-            P_MakeSlope(&point, &direction, dz, !(line->flags & ML_NOTAILS));
+            P_MakeSlope(&point, &direction, dz, flags);
 
             // Set up some shit
             cslope->extent = extent;
@@ -356,7 +372,7 @@ void P_SpawnSlope_Line(int linenum)
 			dz = FixedDiv(origin.z - point.z, extent);
 
 			fslope = line->backsector->f_slope =
-            P_MakeSlope(&point, &direction, dz, !(line->flags & ML_NOTAILS));
+            P_MakeSlope(&point, &direction, dz, flags);
 
             // Set up some shit
             fslope->extent = extent;
@@ -398,7 +414,7 @@ void P_SpawnSlope_Line(int linenum)
 			dz = FixedDiv(origin.z - point.z, extent);
 
 			cslope = line->backsector->c_slope =
-            P_MakeSlope(&point, &direction, dz, !(line->flags & ML_NOTAILS));
+            P_MakeSlope(&point, &direction, dz, flags);
 
             // Set up some shit
             cslope->extent = extent;
@@ -730,7 +746,8 @@ void P_ResetDynamicSlopes(void) {
 	boolean warned = false;
 #endif
 
-	dynslopes = NULL;
+	slopelist = NULL;
+	slopecount = 0;
 
 	// We'll handle copy slopes later, after all the tag lists have been made.
 	// Yes, this means copied slopes won't affect things' spawning heights. Too bad for you.
