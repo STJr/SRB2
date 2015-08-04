@@ -273,7 +273,7 @@ typedef struct pslope_s
 	UINT8 refpos; // 1=front floor 2=front ceiling 3=back floor 4=back ceiling (used for dynamic sloping)
 
 	UINT8 flags; // Slope options
-	struct mobj_s **vertices; // List should be three long for slopes made by vertex things, or one long for slopes using one vertex thing to anchor
+	mapthing_t **vertices; // List should be three long for slopes made by vertex things, or one long for slopes using one vertex thing to anchor
 
 	struct pslope_s *next; // Make a linked list of dynamic slopes, for easy reference later
 } pslope_t;

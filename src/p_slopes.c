@@ -34,6 +34,7 @@
 #include "z_zone.h"
 #include "p_spec.h"
 #include "p_slopes.h"
+#include "p_setup.h"
 #include "r_main.h"
 #include "p_maputl.h"
 #include "w_wad.h"
@@ -48,6 +49,65 @@ void P_CalculateSlopeNormal(pslope_t *slope) {
 	slope->normal.z = FINECOSINE(slope->zangle>>ANGLETOFINESHIFT);
 	slope->normal.x = -FixedMul(FINESINE(slope->zangle>>ANGLETOFINESHIFT), slope->d.x);
 	slope->normal.y = -FixedMul(FINESINE(slope->zangle>>ANGLETOFINESHIFT), slope->d.y);
+}
+
+// With a vertex slope that has its vertices set, configure relevant slope info
+void P_ReconfigureVertexSlope(pslope_t *slope)
+{
+	vector3_t vec1, vec2;
+
+	// Set slope normal
+	vec1.x = (slope->vertices[1]->x - slope->vertices[0]->x) << FRACBITS;
+	vec1.y = (slope->vertices[1]->y - slope->vertices[0]->y) << FRACBITS;
+	vec1.z = (slope->vertices[1]->z - slope->vertices[0]->z) << FRACBITS;
+
+	vec2.x = (slope->vertices[2]->x - slope->vertices[0]->x) << FRACBITS;
+	vec2.y = (slope->vertices[2]->y - slope->vertices[0]->y) << FRACBITS;
+	vec2.z = (slope->vertices[2]->z - slope->vertices[0]->z) << FRACBITS;
+
+	// ugggggggh fixed-point maaaaaaath
+	slope->extent = max(
+		max(max(abs(vec1.x), abs(vec1.y)), abs(vec1.z)),
+		max(max(abs(vec2.x), abs(vec2.y)), abs(vec2.z))
+	) >> (FRACBITS+5);
+	vec1.x /= slope->extent;
+	vec1.y /= slope->extent;
+	vec1.z /= slope->extent;
+	vec2.x /= slope->extent;
+	vec2.y /= slope->extent;
+	vec2.z /= slope->extent;
+
+	FV3_Cross(&vec1, &vec2, &slope->normal);
+
+	slope->extent = R_PointToDist2(0, 0, R_PointToDist2(0, 0, slope->normal.x, slope->normal.y), slope->normal.z);
+	if (slope->normal.z < 0)
+		slope->extent = -slope->extent;
+
+	slope->normal.x = FixedDiv(slope->normal.x, slope->extent);
+	slope->normal.y = FixedDiv(slope->normal.y, slope->extent);
+	slope->normal.z = FixedDiv(slope->normal.z, slope->extent);
+
+	// Set origin
+	slope->o.x = slope->vertices[0]->x << FRACBITS;
+	slope->o.y = slope->vertices[0]->y << FRACBITS;
+	slope->o.z = slope->vertices[0]->z << FRACBITS;
+
+	if (slope->normal.x == 0 && slope->normal.y == 0) { // Set some defaults for a non-sloped "slope"
+		slope->zangle = slope->xydirection = 0;
+		slope->zdelta = slope->d.x = slope->d.y = 0;
+	} else {
+		// Get direction vector
+		slope->extent = R_PointToDist2(0, 0, slope->normal.x, slope->normal.y);
+		slope->d.x = -FixedDiv(slope->normal.x, slope->extent);
+		slope->d.y = -FixedDiv(slope->normal.y, slope->extent);
+
+		// Z delta
+		slope->zdelta = FixedDiv(slope->extent, slope->normal.z);
+
+		// Get angles
+		slope->xydirection = R_PointToAngle2(0, 0, slope->d.x, slope->d.y)+ANGLE_180;
+		slope->zangle = -R_PointToAngle2(0, 0, FRACUNIT, slope->zdelta);
+	}
 }
 
 // Recalculate dynamic slopes
@@ -77,6 +137,24 @@ void P_RunDynamicSlopes(void) {
 			zdelta = slope->sourceline->frontsector->ceilingheight - slope->sourceline->backsector->ceilingheight;
 			slope->o.z = slope->sourceline->backsector->ceilingheight;
 			break;
+		case 5: // vertices
+			{
+				mapthing_t *mt;
+				size_t i, l;
+				line_t *line;
+
+				for (i = 0; i < 3; i++) {
+					mt = slope->vertices[i];
+					l = P_FindSpecialLineFromTag(799, mt->angle, -1);
+					if (l != -1) {
+						line = &lines[l];
+						mt->z = line->frontsector->floorheight >> FRACBITS;
+					}
+				}
+
+				P_ReconfigureVertexSlope(slope);
+			}
+			continue; // TODO
 
 		default:
 			I_Error("P_RunDynamicSlopes: slope has invalid type!");
@@ -456,6 +534,68 @@ void P_SpawnSlope_Line(int linenum)
 		return;
 }
 
+//
+// P_NewVertexSlope
+//
+// Creates a new slope from three vertices with the specified IDs
+//
+pslope_t *P_NewVertexSlope(INT16 tag1, INT16 tag2, INT16 tag3, UINT8 flags)
+{
+	size_t i;
+	mapthing_t *mt = mapthings;
+
+	pslope_t *ret = Z_Malloc(sizeof(pslope_t), PU_LEVEL, NULL);
+	memset(ret, 0, sizeof(*ret));
+
+	// Start by setting flags
+	ret->flags = flags;
+
+	// Now set up the vertex list
+	ret->vertices = Z_Malloc(3*sizeof(mapthing_t), PU_LEVEL, NULL);
+	memset(ret->vertices, 0, 3*sizeof(mapthing_t));
+
+	// And... look for the vertices in question.
+	for (i = 0; i < nummapthings; i++, mt++) {
+		if (mt->type != 750) // Haha, I'm hijacking the old Chaos Spawn thingtype for something!
+			continue;
+
+		if (!ret->vertices[0] && mt->angle == tag1)
+			ret->vertices[0] = mt;
+		else if (!ret->vertices[1] && mt->angle == tag2)
+			ret->vertices[1] = mt;
+		else if (!ret->vertices[2] && mt->angle == tag3)
+			ret->vertices[2] = mt;
+	}
+
+	if (!ret->vertices[0])
+		CONS_Printf("PANIC 0\n");
+	if (!ret->vertices[1])
+		CONS_Printf("PANIC 1\n");
+	if (!ret->vertices[2])
+		CONS_Printf("PANIC 2\n");
+
+	// Now set heights for each vertex, because they haven't been set yet
+	for (i = 0; i < 3; i++) {
+		mt = ret->vertices[i];
+		if (mt->extrainfo)
+			mt->z = mt->options;
+		else
+			mt->z = (R_PointInSubsector(mt->x << FRACBITS, mt->y << FRACBITS)->sector->floorheight >> FRACBITS) + (mt->options >> ZSHIFT);
+	}
+
+	P_ReconfigureVertexSlope(ret);
+	ret->refpos = 5;
+
+	// Add to the slope list
+	ret->next = slopelist;
+	slopelist = ret;
+
+	slopecount++;
+	ret->id = slopecount;
+
+	return ret;
+}
+
 
 
 //
@@ -810,6 +950,24 @@ void P_ResetDynamicSlopes(void) {
 			case 712:
 			case 713:
 				P_SpawnSlope_Line(i);
+				break;
+
+			case 704:
+				{
+					UINT8 flags = SL_VERTEXSLOPE;
+					if (lines[i].flags & ML_NOSONIC)
+						flags |= SL_NOPHYSICS;
+					if (!(lines[i].flags & ML_NOTAILS))
+						flags |= SL_NODYNAMIC;
+
+					if (lines[i].flags & ML_NOKNUX)
+						lines[i].frontsector->f_slope = P_NewVertexSlope(lines[i].tag, sides[lines[i].sidenum[0]].textureoffset >> FRACBITS,
+																			sides[lines[i].sidenum[0]].rowoffset >> FRACBITS, flags);
+					else
+						lines[i].frontsector->f_slope = P_NewVertexSlope(lines[i].tag, lines[i].tag, lines[i].tag, flags);
+
+					lines[i].frontsector->hasslope = true;
+				}
 				break;
 
 			default:
