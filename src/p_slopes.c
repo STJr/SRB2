@@ -953,20 +953,47 @@ void P_ResetDynamicSlopes(void) {
 				break;
 
 			case 704:
+			case 705:
+			case 714:
+			case 715:
 				{
+					pslope_t **slopetoset;
+					size_t which = lines[i].special;
+
 					UINT8 flags = SL_VERTEXSLOPE;
 					if (lines[i].flags & ML_NOSONIC)
 						flags |= SL_NOPHYSICS;
 					if (!(lines[i].flags & ML_NOTAILS))
 						flags |= SL_NODYNAMIC;
 
-					if (lines[i].flags & ML_NOKNUX)
-						lines[i].frontsector->f_slope = P_NewVertexSlope(lines[i].tag, sides[lines[i].sidenum[0]].textureoffset >> FRACBITS,
-																			sides[lines[i].sidenum[0]].rowoffset >> FRACBITS, flags);
-					else
-						lines[i].frontsector->f_slope = P_NewVertexSlope(lines[i].tag, lines[i].tag, lines[i].tag, flags);
+					if (which == 704)
+					{
+						slopetoset = &lines[i].frontsector->f_slope;
+						which = 0;
+					}
+					else if (which == 705)
+					{
+						slopetoset = &lines[i].frontsector->c_slope;
+						which = 0;
+					}
+					else if (which == 714)
+					{
+						slopetoset = &lines[i].backsector->f_slope;
+						which = 1;
+					}
+					else // 715
+					{
+						slopetoset = &lines[i].backsector->c_slope;
+						which = 1;
+					}
 
-					lines[i].frontsector->hasslope = true;
+					if (lines[i].flags & ML_NOKNUX)
+						*slopetoset = P_NewVertexSlope(lines[i].tag, sides[lines[i].sidenum[which]].textureoffset >> FRACBITS,
+																			sides[lines[i].sidenum[which]].rowoffset >> FRACBITS, flags);
+					else
+						*slopetoset = P_NewVertexSlope(lines[i].tag, lines[i].tag, lines[i].tag, flags);
+
+					sides[lines[i].sidenum[which]].sector->hasslope = true;
 				}
 				break;
 
