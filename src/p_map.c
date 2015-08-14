@@ -102,7 +102,7 @@ boolean P_TeleportMove(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z)
 //                       MOVEMENT ITERATOR FUNCTIONS
 // =========================================================================
 
-void P_DoSpring(mobj_t *spring, mobj_t *object)
+boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 {
 	INT32 pflags;
 	fixed_t offx, offy;
@@ -110,16 +110,16 @@ void P_DoSpring(mobj_t *spring, mobj_t *object)
 	fixed_t horizspeed = spring->info->damage;
 
 	if (object->eflags & MFE_SPRUNG) // Object was already sprung this tic
-		return;
+		return false;
 
 	// Spectators don't trigger springs.
 	if (object->player && object->player->spectator)
-		return;
+		return false;
 
 	if (object->player && (object->player->pflags & PF_NIGHTSMODE))
 	{
 		/*Someone want to make these work like bumpers?*/
-		return;
+		return false;
 	}
 
 	object->eflags |= MFE_SPRUNG; // apply this flag asap!
@@ -209,6 +209,7 @@ void P_DoSpring(mobj_t *spring, mobj_t *object)
 			P_SetPlayerMobjState(object, S_PLAY_SPIN);
 		}
 	}
+	return true;
 }
 
 static void P_DoFanAndGasJet(mobj_t *spring, mobj_t *object)
@@ -365,6 +366,7 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 static boolean PIT_CheckThing(mobj_t *thing)
 {
 	fixed_t blockdist;
+	boolean iwassprung = false;
 
 	// don't clip against self
 	if (thing == tmthing)
@@ -829,7 +831,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		{
 			if ( thing->z <= tmthing->z + tmthing->height
 			&& tmthing->z <= thing->z + thing->height)
-				P_DoSpring(thing, tmthing);
+				iwassprung = P_DoSpring(thing, tmthing);
 		}
 	}
 
@@ -916,7 +918,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		{
 			if ( thing->z <= tmthing->z + tmthing->height
 			&& tmthing->z <= thing->z + thing->height)
-				P_DoSpring(thing, tmthing);
+				iwassprung = P_DoSpring(thing, tmthing);
 		}
 		// Are you touching the side of the object you're interacting with?
 		else if (thing->z - FixedMul(FRACUNIT, thing->scale) <= tmthing->z + tmthing->height
@@ -938,12 +940,14 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		}
 	}
 
-
-	if (thing->flags & MF_SPRING && (tmthing->player || tmthing->flags & MF_PUSHABLE));
-	else
+	if (thing->flags & MF_SPRING && (tmthing->player || tmthing->flags & MF_PUSHABLE))
+	{
+		if (iwassprung) // this spring caused you to gain MFE_SPRUNG just now...
+			return false; // "cancel" P_TryMove via blocking so you keep your current position
+	}
 	// Monitors are not treated as solid to players who are jumping, spinning or gliding,
 	// unless it's a CTF team monitor and you're on the wrong team
-	if (thing->flags & MF_MONITOR && tmthing->player && tmthing->player->pflags & (PF_JUMPED|PF_SPINNING|PF_GLIDING)
+	else if (thing->flags & MF_MONITOR && tmthing->player && tmthing->player->pflags & (PF_JUMPED|PF_SPINNING|PF_GLIDING)
 	&& !((thing->type == MT_REDRINGBOX && tmthing->player->ctfteam != 1) || (thing->type == MT_BLUERINGBOX && tmthing->player->ctfteam != 2)))
 		;
 	// z checking at last
