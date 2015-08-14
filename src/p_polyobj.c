@@ -612,12 +612,12 @@ static void Polyobj_spawnPolyObj(INT32 num, mobj_t *spawnSpot, INT32 id)
 
 		if (seg->linedef->special != POLYOBJ_START_LINE)
 			continue;
-		
+
 		if (seg->linedef->tag != po->id)
 			continue;
 
 		Polyobj_GetInfo(po->id, &poflags, &parentID, &potrans); // apply extra settings if they exist!
-		
+
 		// save original flags and translucency to reference later for netgames!
 		po->spawnflags = po->flags = poflags;
 		po->spawntrans = po->translucency = potrans;
