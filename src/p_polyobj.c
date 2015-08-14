@@ -657,6 +657,14 @@ static void Polyobj_spawnPolyObj(INT32 num, mobj_t *spawnSpot, INT32 id)
 		// TODO: sound sequence is in args[3]
 	}*/
 
+	// make sure array isn't empty
+	// since Polyobj_findExplicit is disabled currently, we have to do things here instead now!
+	if (po->segCount == 0)
+	{
+		po->isBad = true;
+		CONS_Debug(DBG_POLYOBJ, "Polyobject %d is empty\n", po->id);
+		return;
+	}
 
 	// set the polyobject's spawn spot
 	po->spawnSpot.x = spawnSpot->x;
