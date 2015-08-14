@@ -1479,7 +1479,7 @@ static void P_HitDeathMessages(player_t *player, mobj_t *inflictor, mobj_t *sour
 		return; // Presumably it's obvious what's happening in splitscreen.
 
 #ifdef HAVE_BLUA
-	if (LUAh_DeathMsg(player, inflictor, source))
+	if (LUAh_HurtMsg(player, inflictor, source))
 		return;
 #endif
 
@@ -1953,7 +1953,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 	{
 		target->flags &= ~(MF_SOLID|MF_SHOOTABLE); // does not block
 		P_UnsetThingPosition(target);
-		target->flags |= MF_NOBLOCKMAP;
+		target->flags |= MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY;
 		P_SetThingPosition(target);
 
 		if (!target->player->bot && !G_IsSpecialStage(gamemap)
@@ -2289,7 +2289,12 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 		}
 	}
 	else if (target->player)
-		P_SetPlayerMobjState(target, target->info->deathstate);
+	{
+		if (damagetype == DMG_DROWNED || damagetype == DMG_SPACEDROWN)
+			P_SetPlayerMobjState(target, target->info->xdeathstate);
+		else
+			P_SetPlayerMobjState(target, target->info->deathstate);
+	}
 	else
 #ifdef DEBUG_NULL_DEATHSTATE
 		P_SetMobjState(target, S_NULL);
@@ -2582,7 +2587,7 @@ static inline void P_SuperDamage(player_t *player, mobj_t *inflictor, mobj_t *so
 	P_InstaThrust(player->mo, ang, fallbackspeed);
 
 	if (player->charflags & SF_SUPERANIMS)
-		P_SetPlayerMobjState(player->mo, S_PLAY_SUPER_PAIN);
+		P_SetPlayerMobjState(player->mo, S_PLAY_SUPER_STUN);
 	else
 		P_SetPlayerMobjState(player->mo, player->mo->info->painstate);
 

@@ -2953,10 +2953,10 @@ static void P_DoTeeter(player_t *player)
 	{
 		INT32 bx, by, xl, xh, yl, yh;
 
-		yh = (player->mo->y + player->mo->radius - bmaporgy)>>MAPBLOCKSHIFT;
-		yl = (player->mo->y - player->mo->radius - bmaporgy)>>MAPBLOCKSHIFT;
-		xh = (player->mo->x + player->mo->radius - bmaporgx)>>MAPBLOCKSHIFT;
-		xl = (player->mo->x - player->mo->radius - bmaporgx)>>MAPBLOCKSHIFT;
+		yh = (unsigned)(player->mo->y + player->mo->radius - bmaporgy)>>MAPBLOCKSHIFT;
+		yl = (unsigned)(player->mo->y - player->mo->radius - bmaporgy)>>MAPBLOCKSHIFT;
+		xh = (unsigned)(player->mo->x + player->mo->radius - bmaporgx)>>MAPBLOCKSHIFT;
+		xl = (unsigned)(player->mo->x - player->mo->radius - bmaporgx)>>MAPBLOCKSHIFT;
 
 		BMBOUNDFIX(xl, xh, yl, yh);
 
@@ -3078,10 +3078,10 @@ teeterdone:
 	}
 	if (teeter)
 	{
-		if (player->panim == PA_IDLE && player->mo->state-states != S_PLAY_EDGE)
+		if (player->panim == PA_IDLE)
 			P_SetPlayerMobjState(player->mo, S_PLAY_EDGE);
 	}
-	else if (checkedforteeter && (player->mo->state-states == S_PLAY_EDGE || player->mo->state-states == S_PLAY_SUPER_EDGE))
+	else if (checkedforteeter && player->panim == PA_EDGE)
 		P_SetPlayerMobjState(player->mo, S_PLAY_STND);
 }
 
@@ -3436,14 +3436,35 @@ static void P_DoSuperStuff(player_t *player)
 
 			if (player->mo->health > 0)
 			{
-				if ((player->pflags & PF_JUMPED) || (player->pflags & PF_SPINNING))
+				if ((player->pflags & PF_JUMPED || player->pflags & PF_SPINNING)
+				&& player->mo->state-states != S_PLAY_DASH)
 					P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
-				else if (player->panim == PA_RUN)
-					P_SetPlayerMobjState(player->mo, S_PLAY_RUN);
-				else if (player->panim == PA_WALK)
-					P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
-				else
+				else switch (player->mo->state-states)
+				{
+				default:
 					P_SetPlayerMobjState(player->mo, S_PLAY_STND);
+					break;
+				case S_PLAY_DASH:
+					break;
+				case S_PLAY_SUPER_WALK:
+					P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
+					break;
+				case S_PLAY_SUPER_RUN:
+					P_SetPlayerMobjState(player->mo, S_PLAY_RUN);
+					break;
+				case S_PLAY_SUPER_PAIN:
+					P_SetPlayerMobjState(player->mo, S_PLAY_PAIN);
+					break;
+				case S_PLAY_SUPER_JUMP:
+					P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
+					break;
+				case S_PLAY_SUPER_FALL:
+					P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
+					break;
+				case S_PLAY_SUPER_RIDE:
+					P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
+					break;
+				}
 
 				if (!player->exiting)
 				{
@@ -3630,11 +3651,22 @@ void P_DoJump(player_t *player, boolean soundandstate)
 
 	// set just an eensy above the ground
 	if (player->mo->eflags & MFE_VERTICALFLIP)
+	{
 		player->mo->z--;
+		if (player->mo->pmomz < 0)
+			player->mo->momz += player->mo->pmomz; // Add the platform's momentum to your jump.
+		else
+			player->mo->pmomz = 0;
+	}
 	else
+	{
 		player->mo->z++;
-
-	player->mo->z += player->mo->pmomz; // Solves problem of 'hitting around again after jumping on a moving platform'.
+		if (player->mo->pmomz > 0)
+			player->mo->momz += player->mo->pmomz; // Add the platform's momentum to your jump.
+		else
+			player->mo->pmomz = 0;
+	}
+	player->mo->eflags &= ~MFE_APPLYPMOMZ;
 
 	player->pflags |= PF_JUMPED;
 
@@ -3679,7 +3711,7 @@ static void P_DoSpinDash(player_t *player, ticcmd_t *cmd)
 			player->pflags |= PF_STARTDASH|PF_SPINNING;
 			player->dashspeed = FixedMul(FRACUNIT, player->mo->scale);
 			player->dashtime = 0;
-			P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
+			P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
 			player->pflags |= PF_USEDOWN;
 		}
 		else if ((cmd->buttons & BT_USE) && (player->pflags & PF_STARTDASH))
@@ -3692,9 +3724,12 @@ static void P_DoSpinDash(player_t *player, ticcmd_t *cmd)
 					S_StartSound(player->mo, sfx_spndsh); // Make the rev sound!
 
 				// Now spawn the color thok circle.
-				P_SpawnSpinMobj(player, player->revitem);
-				if (demorecording)
-					G_GhostAddRev();
+				if (player->mo->sprite2 != SPR2_DASH)
+				{
+					P_SpawnSpinMobj(player, player->revitem);
+					if (demorecording)
+						G_GhostAddRev();
+				}
 			}
 		}
 		// If not moving up or down, and travelling faster than a speed of four while not holding
@@ -3736,6 +3771,7 @@ static void P_DoSpinDash(player_t *player, ticcmd_t *cmd)
 		player->pflags &= ~PF_STARTDASH;
 		if (!((gametype == GT_RACE || gametype == GT_COMPETITION) && leveltime < 4*TICRATE))
 		{
+			P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
 			P_InstaThrust(player->mo, player->mo->angle, player->dashspeed); // catapult forward ho!!
 			if (!player->spectator)
 				S_StartSound(player->mo, sfx_zoom);
@@ -3743,7 +3779,9 @@ static void P_DoSpinDash(player_t *player, ticcmd_t *cmd)
 		player->dashspeed = 0;
 	}
 
-	if (onground && (player->pflags & PF_SPINNING) && !(player->panim == PA_ROLL))
+	if (onground && player->pflags & PF_STARTDASH && player->mo->state-states != S_PLAY_DASH)
+		P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
+	else if (onground && player->pflags & PF_SPINNING && !(player->panim == PA_ROLL))
 		P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
 }
 
@@ -6411,12 +6449,16 @@ static void P_MovePlayer(player_t *player)
 	// MOVEMENT ANIMATIONS //
 	/////////////////////////
 
-	if ((cmd->forwardmove != 0 || cmd->sidemove != 0) || (player->powers[pw_super] && player->mo->z > player->mo->floorz))
+	if ((cmd->forwardmove != 0 || cmd->sidemove != 0) || (player->powers[pw_super] && !onground))
 	{
 		// If the player is moving fast enough,
 		// break into a run!
 		if (player->speed >= runspd && player->panim == PA_WALK && !player->skidtime && (onground || player->powers[pw_super]))
 			P_SetPlayerMobjState (player->mo, S_PLAY_RUN);
+
+		// Super floating at slow speeds has its own special animation.
+		else if (player->powers[pw_super] && player->panim == PA_IDLE && !onground)
+			P_SetPlayerMobjState (player->mo, S_PLAY_SUPER_FLOAT);
 
 		// Otherwise, just walk.
 		else if ((player->rmomx || player->rmomy) && player->panim == PA_IDLE)
@@ -6426,13 +6468,18 @@ static void P_MovePlayer(player_t *player)
 	// If your running animation is playing, and you're
 	// going too slow, switch back to the walking frames.
 	if (player->panim == PA_RUN && player->speed < runspd)
-		P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
+	{
+		if (!onground && player->powers[pw_super])
+			P_SetPlayerMobjState(player->mo, S_PLAY_SUPER_FLOAT);
+		else
+			P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
+	}
 
 	// If Springing, but travelling DOWNWARD, change back!
-	if (player->mo->state == &states[S_PLAY_JUMP] && P_MobjFlip(player->mo)*player->mo->momz < 0)
+	if (player->panim == PA_JUMP && P_MobjFlip(player->mo)*player->mo->momz < 0)
 		P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
 	// If Springing but on the ground, change back!
-	else if (onground && (player->mo->state == &states[S_PLAY_JUMP] || player->panim == PA_FALL || player->mo->state == &states[S_PLAY_RIDE]) && !player->mo->momz)
+	else if (onground && (player->panim == PA_JUMP || player->panim == PA_FALL || player->panim == PA_RIDE) && !player->mo->momz)
 		P_SetPlayerMobjState(player->mo, S_PLAY_STND);
 
 	// If you are stopped and are still walking, stand still!
@@ -6797,8 +6844,8 @@ static void P_MovePlayer(player_t *player)
 			if (player->charflags & SF_SUPER && player->powers[pw_super] && player->speed > FixedMul(5<<FRACBITS, player->mo->scale)
 			&& P_MobjFlip(player->mo)*player->mo->momz <= 0)
 			{
-				if (player->panim == PA_ROLL || player->mo->state-states == S_PLAY_PAIN)
-					P_SetPlayerMobjState(player->mo, S_PLAY_SUPER_WALK);
+				if (player->panim == PA_ROLL || player->mo->state-states == S_PLAY_PAIN || player->panim == PA_WALK)
+					P_SetPlayerMobjState(player->mo, S_PLAY_SUPER_FLOAT);
 
 				player->mo->momz = 0;
 				player->pflags &= ~PF_SPINNING;
@@ -6857,7 +6904,7 @@ static void P_MovePlayer(player_t *player)
 	}
 
 	// Make sure you're not teetering when you shouldn't be.
-	if ((player->mo->state-states == S_PLAY_EDGE || player->mo->state-states == S_PLAY_SUPER_EDGE)
+	if (player->panim == PA_EDGE
 	&& (player->mo->momx || player->mo->momy || player->mo->momz))
 		P_SetPlayerMobjState(player->mo, S_PLAY_STND);
 
@@ -8086,10 +8133,10 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		INT32 xl, xh, yl, yh, bx, by;
 		validcount++;
 
-		xl = (tmbbox[BOXLEFT] - bmaporgx)>>MAPBLOCKSHIFT;
-		xh = (tmbbox[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
-		yl = (tmbbox[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
-		yh = (tmbbox[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
+		xl = (unsigned)(tmbbox[BOXLEFT] - bmaporgx)>>MAPBLOCKSHIFT;
+		xh = (unsigned)(tmbbox[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
+		yl = (unsigned)(tmbbox[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
+		yh = (unsigned)(tmbbox[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
 
 		BMBOUNDFIX(xl, xh, yl, yh);
 
@@ -9036,7 +9083,6 @@ void P_PlayerThink(player_t *player)
 			player->mo->tracer->flags2 &= ~MF2_DONTDRAW;
 	}
 
-	player->mo->pmomz = 0;
 	player->pflags &= ~PF_SLIDING;
 
 /*
@@ -9387,4 +9433,7 @@ void P_PlayerAfterThink(player_t *player)
 		player->mo->flags2 |= MF2_DONTDRAW;
 		player->mo->flags |= MF_NOGRAVITY;
 	}
+
+	if (P_IsObjectOnGround(player->mo))
+		player->mo->pmomz = 0;
 }

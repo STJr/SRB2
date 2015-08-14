@@ -47,7 +47,7 @@ boolean floatok;
 fixed_t tmfloorz, tmceilingz;
 static fixed_t tmdropoffz, tmdrpoffceilz; // drop-off floor/ceiling heights
 mobj_t *tmfloorthing; // the thing corresponding to tmfloorz or NULL if tmfloorz is from a sector
-static mobj_t *tmhitthing; // the solid thing you bumped into (for collisions)
+mobj_t *tmhitthing; // the solid thing you bumped into (for collisions)
 
 // keep track of the line that lowers the ceiling,
 // so missiles don't explode against sky hack walls
@@ -121,7 +121,7 @@ void P_DoSpring(mobj_t *spring, mobj_t *object)
 		/*Someone want to make these work like bumpers?*/
 		return;
 	}
-	
+
 	object->eflags |= MFE_SPRUNG; // apply this flag asap!
 	spring->flags &= ~(MF_SOLID|MF_SPECIAL); // De-solidify
 
@@ -1233,7 +1233,7 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 			{
 				// If you're inside goowater and slowing down
 				fixed_t sinklevel = FixedMul(thing->info->height/6, thing->scale);
-				fixed_t minspeed = FixedMul(thing->info->height/12, thing->scale);
+				fixed_t minspeed = FixedMul(thing->info->height/9, thing->scale);
 				if (thing->z < *rover->topheight && *rover->bottomheight < thingtop
 				&& abs(thing->momz) < minspeed)
 				{
@@ -1304,10 +1304,10 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 	// based on their origin point, and can overlap
 	// into adjacent blocks by up to MAXRADIUS units.
 
-	xl = (tmbbox[BOXLEFT] - bmaporgx - MAXRADIUS)>>MAPBLOCKSHIFT;
-	xh = (tmbbox[BOXRIGHT] - bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
-	yl = (tmbbox[BOXBOTTOM] - bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
-	yh = (tmbbox[BOXTOP] - bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
+	xl = (unsigned)(tmbbox[BOXLEFT] - bmaporgx - MAXRADIUS)>>MAPBLOCKSHIFT;
+	xh = (unsigned)(tmbbox[BOXRIGHT] - bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
+	yl = (unsigned)(tmbbox[BOXBOTTOM] - bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
+	yh = (unsigned)(tmbbox[BOXTOP] - bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
 
 	BMBOUNDFIX(xl, xh, yl, yh);
 
@@ -1523,10 +1523,10 @@ boolean P_CheckCameraPosition(fixed_t x, fixed_t y, camera_t *thiscam)
 	// based on their origin point, and can overlap
 	// into adjacent blocks by up to MAXRADIUS units.
 
-	xl = (tmbbox[BOXLEFT] - bmaporgx)>>MAPBLOCKSHIFT;
-	xh = (tmbbox[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
-	yl = (tmbbox[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
-	yh = (tmbbox[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
+	xl = (unsigned)(tmbbox[BOXLEFT] - bmaporgx)>>MAPBLOCKSHIFT;
+	xh = (unsigned)(tmbbox[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
+	yl = (unsigned)(tmbbox[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
+	yh = (unsigned)(tmbbox[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
 
 	BMBOUNDFIX(xl, xh, yl, yh);
 
@@ -1853,7 +1853,7 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 
 				// Don't 'step up' while springing,
 				// Only step up "if needed".
-				if (thing->state-states == S_PLAY_JUMP
+				if (thing->player->panim == PA_JUMP
 				&& P_MobjFlip(thing)*thing->momz > FixedMul(FRACUNIT, thing->scale))
 					maxstep = 0;
 			}
@@ -1952,10 +1952,10 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 	{
 		INT32 bx, by, xl, xh, yl, yh;
 
-		yh = (thing->y + MAXRADIUS - bmaporgy)>>MAPBLOCKSHIFT;
-		yl = (thing->y - MAXRADIUS - bmaporgy)>>MAPBLOCKSHIFT;
-		xh = (thing->x + MAXRADIUS - bmaporgx)>>MAPBLOCKSHIFT;
-		xl = (thing->x - MAXRADIUS - bmaporgx)>>MAPBLOCKSHIFT;
+		yh = (unsigned)(thing->y + MAXRADIUS - bmaporgy)>>MAPBLOCKSHIFT;
+		yl = (unsigned)(thing->y - MAXRADIUS - bmaporgy)>>MAPBLOCKSHIFT;
+		xh = (unsigned)(thing->x + MAXRADIUS - bmaporgx)>>MAPBLOCKSHIFT;
+		xl = (unsigned)(thing->x - MAXRADIUS - bmaporgx)>>MAPBLOCKSHIFT;
 
 		BMBOUNDFIX(xl, xh, yl, yh);
 
@@ -2052,6 +2052,7 @@ boolean P_SceneryTryMove(mobj_t *thing, fixed_t x, fixed_t y)
 //
 static boolean P_ThingHeightClip(mobj_t *thing)
 {
+	boolean floormoved;
 	fixed_t oldfloorz = thing->floorz;
 	boolean onfloor = P_IsObjectOnGround(thing);//(thing->z <= thing->floorz);
 
@@ -2063,6 +2064,9 @@ static boolean P_ThingHeightClip(mobj_t *thing)
 	if (P_MobjWasRemoved(thing))
 		return true;
 
+	floormoved = (thing->eflags & MFE_VERTICALFLIP && tmceilingz != thing->ceilingz)
+		|| (!(thing->eflags & MFE_VERTICALFLIP) && tmfloorz != thing->floorz);
+
 	thing->floorz = tmfloorz;
 	thing->ceilingz = tmceilingz;
 
@@ -2071,20 +2075,13 @@ static boolean P_ThingHeightClip(mobj_t *thing)
 	if (tmfloorz > oldfloorz+thing->height)
 		return true;
 
-	if (/*!tmfloorthing && */onfloor && !(thing->flags & MF_NOGRAVITY))
+	if (onfloor && !(thing->flags & MF_NOGRAVITY) && floormoved)
 	{
 		if (thing->eflags & MFE_VERTICALFLIP)
 			thing->pmomz = thing->ceilingz - (thing->z + thing->height);
 		else
 			thing->pmomz = thing->floorz - thing->z;
-
-		if (thing->player)
-		{
-			if (splitscreen && camera2.chase && thing->player == &players[secondarydisplayplayer])
-				camera2.z += thing->pmomz;
-			else if (camera.chase && thing->player == &players[displayplayer])
-				camera.z += thing->pmomz;
-		}
+		thing->eflags |= MFE_APPLYPMOMZ;
 
 		if (thing->eflags & MFE_VERTICALFLIP)
 			thing->z = thing->ceilingz - thing->height;
@@ -3040,10 +3037,10 @@ void P_RadiusAttack(mobj_t *spot, mobj_t *source, fixed_t damagedist)
 	fixed_t dist;
 
 	dist = FixedMul(damagedist, spot->scale) + MAXRADIUS;
-	yh = (spot->y + dist - bmaporgy)>>MAPBLOCKSHIFT;
-	yl = (spot->y - dist - bmaporgy)>>MAPBLOCKSHIFT;
-	xh = (spot->x + dist - bmaporgx)>>MAPBLOCKSHIFT;
-	xl = (spot->x - dist - bmaporgx)>>MAPBLOCKSHIFT;
+	yh = (unsigned)(spot->y + dist - bmaporgy)>>MAPBLOCKSHIFT;
+	yl = (unsigned)(spot->y - dist - bmaporgy)>>MAPBLOCKSHIFT;
+	xh = (unsigned)(spot->x + dist - bmaporgx)>>MAPBLOCKSHIFT;
+	xl = (unsigned)(spot->x - dist - bmaporgx)>>MAPBLOCKSHIFT;
 
 	BMBOUNDFIX(xl, xh, yl, yh);
 
@@ -3656,10 +3653,10 @@ void P_CreateSecNodeList(mobj_t *thing, fixed_t x, fixed_t y)
 
 	validcount++; // used to make sure we only process a line once
 
-	xl = (tmbbox[BOXLEFT] - bmaporgx)>>MAPBLOCKSHIFT;
-	xh = (tmbbox[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
-	yl = (tmbbox[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
-	yh = (tmbbox[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
+	xl = (unsigned)(tmbbox[BOXLEFT] - bmaporgx)>>MAPBLOCKSHIFT;
+	xh = (unsigned)(tmbbox[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
+	yl = (unsigned)(tmbbox[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
+	yh = (unsigned)(tmbbox[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
 
 	BMBOUNDFIX(xl, xh, yl, yh);
 
@@ -3735,10 +3732,10 @@ void P_CreatePrecipSecNodeList(precipmobj_t *thing,fixed_t x,fixed_t y)
 
 	validcount++; // used to make sure we only process a line once
 
-	xl = (preciptmbbox[BOXLEFT] - bmaporgx)>>MAPBLOCKSHIFT;
-	xh = (preciptmbbox[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
-	yl = (preciptmbbox[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
-	yh = (preciptmbbox[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
+	xl = (unsigned)(preciptmbbox[BOXLEFT] - bmaporgx)>>MAPBLOCKSHIFT;
+	xh = (unsigned)(preciptmbbox[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
+	yl = (unsigned)(preciptmbbox[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
+	yh = (unsigned)(preciptmbbox[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
 
 	BMBOUNDFIX(xl, xh, yl, yh);
 
