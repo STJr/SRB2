@@ -316,7 +316,7 @@ void P_RadiusAttack(mobj_t *spot, mobj_t *source, fixed_t damagedist);
 fixed_t P_FloorzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height);
 boolean PIT_PushableMoved(mobj_t *thing);
 
-void P_DoSpring(mobj_t *spring, mobj_t *object);
+boolean P_DoSpring(mobj_t *spring, mobj_t *object);
 
 //
 // P_SETUP
