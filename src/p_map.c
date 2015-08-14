@@ -1304,10 +1304,10 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 	// based on their origin point, and can overlap
 	// into adjacent blocks by up to MAXRADIUS units.
 
-	xl = (tmbbox[BOXLEFT] - bmaporgx - MAXRADIUS)>>MAPBLOCKSHIFT;
-	xh = (tmbbox[BOXRIGHT] - bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
-	yl = (tmbbox[BOXBOTTOM] - bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
-	yh = (tmbbox[BOXTOP] - bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
+	xl = (unsigned)(tmbbox[BOXLEFT] - bmaporgx - MAXRADIUS)>>MAPBLOCKSHIFT;
+	xh = (unsigned)(tmbbox[BOXRIGHT] - bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
+	yl = (unsigned)(tmbbox[BOXBOTTOM] - bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
+	yh = (unsigned)(tmbbox[BOXTOP] - bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
 
 	BMBOUNDFIX(xl, xh, yl, yh);
 
@@ -1523,10 +1523,10 @@ boolean P_CheckCameraPosition(fixed_t x, fixed_t y, camera_t *thiscam)
 	// based on their origin point, and can overlap
 	// into adjacent blocks by up to MAXRADIUS units.
 
-	xl = (tmbbox[BOXLEFT] - bmaporgx)>>MAPBLOCKSHIFT;
-	xh = (tmbbox[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
-	yl = (tmbbox[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
-	yh = (tmbbox[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
+	xl = (unsigned)(tmbbox[BOXLEFT] - bmaporgx)>>MAPBLOCKSHIFT;
+	xh = (unsigned)(tmbbox[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
+	yl = (unsigned)(tmbbox[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
+	yh = (unsigned)(tmbbox[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
 
 	BMBOUNDFIX(xl, xh, yl, yh);
 
@@ -1952,10 +1952,10 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 	{
 		INT32 bx, by, xl, xh, yl, yh;
 
-		yh = (thing->y + MAXRADIUS - bmaporgy)>>MAPBLOCKSHIFT;
-		yl = (thing->y - MAXRADIUS - bmaporgy)>>MAPBLOCKSHIFT;
-		xh = (thing->x + MAXRADIUS - bmaporgx)>>MAPBLOCKSHIFT;
-		xl = (thing->x - MAXRADIUS - bmaporgx)>>MAPBLOCKSHIFT;
+		yh = (unsigned)(thing->y + MAXRADIUS - bmaporgy)>>MAPBLOCKSHIFT;
+		yl = (unsigned)(thing->y - MAXRADIUS - bmaporgy)>>MAPBLOCKSHIFT;
+		xh = (unsigned)(thing->x + MAXRADIUS - bmaporgx)>>MAPBLOCKSHIFT;
+		xl = (unsigned)(thing->x - MAXRADIUS - bmaporgx)>>MAPBLOCKSHIFT;
 
 		BMBOUNDFIX(xl, xh, yl, yh);
 
@@ -3037,10 +3037,10 @@ void P_RadiusAttack(mobj_t *spot, mobj_t *source, fixed_t damagedist)
 	fixed_t dist;
 
 	dist = FixedMul(damagedist, spot->scale) + MAXRADIUS;
-	yh = (spot->y + dist - bmaporgy)>>MAPBLOCKSHIFT;
-	yl = (spot->y - dist - bmaporgy)>>MAPBLOCKSHIFT;
-	xh = (spot->x + dist - bmaporgx)>>MAPBLOCKSHIFT;
-	xl = (spot->x - dist - bmaporgx)>>MAPBLOCKSHIFT;
+	yh = (unsigned)(spot->y + dist - bmaporgy)>>MAPBLOCKSHIFT;
+	yl = (unsigned)(spot->y - dist - bmaporgy)>>MAPBLOCKSHIFT;
+	xh = (unsigned)(spot->x + dist - bmaporgx)>>MAPBLOCKSHIFT;
+	xl = (unsigned)(spot->x - dist - bmaporgx)>>MAPBLOCKSHIFT;
 
 	BMBOUNDFIX(xl, xh, yl, yh);
 
@@ -3653,10 +3653,10 @@ void P_CreateSecNodeList(mobj_t *thing, fixed_t x, fixed_t y)
 
 	validcount++; // used to make sure we only process a line once
 
-	xl = (tmbbox[BOXLEFT] - bmaporgx)>>MAPBLOCKSHIFT;
-	xh = (tmbbox[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
-	yl = (tmbbox[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
-	yh = (tmbbox[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
+	xl = (unsigned)(tmbbox[BOXLEFT] - bmaporgx)>>MAPBLOCKSHIFT;
+	xh = (unsigned)(tmbbox[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
+	yl = (unsigned)(tmbbox[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
+	yh = (unsigned)(tmbbox[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
 
 	BMBOUNDFIX(xl, xh, yl, yh);
 
@@ -3732,10 +3732,10 @@ void P_CreatePrecipSecNodeList(precipmobj_t *thing,fixed_t x,fixed_t y)
 
 	validcount++; // used to make sure we only process a line once
 
-	xl = (preciptmbbox[BOXLEFT] - bmaporgx)>>MAPBLOCKSHIFT;
-	xh = (preciptmbbox[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
-	yl = (preciptmbbox[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
-	yh = (preciptmbbox[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
+	xl = (unsigned)(preciptmbbox[BOXLEFT] - bmaporgx)>>MAPBLOCKSHIFT;
+	xh = (unsigned)(preciptmbbox[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
+	yl = (unsigned)(preciptmbbox[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
+	yh = (unsigned)(preciptmbbox[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
 
 	BMBOUNDFIX(xl, xh, yl, yh);
 
