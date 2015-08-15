@@ -796,16 +796,14 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if (G_IsSpecialStage(gamemap) && !player->exiting)
 			{ // In special stages, share rings. Everyone gives up theirs to the player who touched the capsule
 				for (i = 0; i < MAXPLAYERS; i++)
-					if (playeringame[i] && (&players[i] != player) && players[i].mo->health > 1)
+					if (playeringame[i] && (&players[i] != player) && players[i].rings > 0)
 					{
-						toucher->health += players[i].mo->health-1;
-						player->health = toucher->health;
-						players[i].mo->health = 1;
-						players[i].health = players[i].mo->health;
+						player->rings += players[i].rings;
+						players[i].rings = 0;
 					}
 			}
 
-			if (!(player->health > 1) || player->exiting)
+			if (player->rings <= 0 || player->exiting)
 				return;
 
 			// Mark the player as 'pull into the capsule'
@@ -1366,11 +1364,10 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			else
 			{
 				P_PlayRinglossSound(toucher);
-				if (toucher->health > 10)
-					toucher->health -= 10;
+				if (player->rings >= 10)
+					player->rings -= 10;
 				else
-					toucher->health = 1;
-				player->health = toucher->health;
+					player->rings = 0;
 			}
 
 			P_DoPlayerPain(player, special, NULL);
@@ -1475,6 +1472,9 @@ static void P_HitDeathMessages(player_t *player, mobj_t *inflictor, mobj_t *sour
 	if (!player)
 		return; // Impossible!
 
+	if (!player->mo)
+		return; // Also impossible!
+
 	if (!netgame)
 		return; // Presumably it's obvious what's happening in splitscreen.
 
@@ -1483,7 +1483,7 @@ static void P_HitDeathMessages(player_t *player, mobj_t *inflictor, mobj_t *sour
 		return;
 #endif
 
-	deadtarget = (player->health <= 0);
+	deadtarget = (player->mo->health <= 0);
 
 	// Target's name
 	snprintf(targetname, sizeof(targetname), "%s%s%s",
@@ -2428,26 +2428,25 @@ static inline boolean P_TagDamage(mobj_t *target, mobj_t *inflictor, mobj_t *sou
 		return true;
 	}
 
-	if (target->health <= 1) // Death
+	if (player->rings > 0) // Ring loss
+	{
+		P_PlayRinglossSound(target);
+		P_PlayerRingBurst(player, player->rings);
+	}
+	else // Death
 	{
 		P_PlayDeathSound(target);
 		P_PlayVictorySound(source); // Killer laughs at you! LAUGHS! BWAHAHAHHAHAA!!
 	}
-	else if (target->health > 1) // Ring loss
-	{
-		P_PlayRinglossSound(target);
-		P_PlayerRingBurst(player, player->mo->health - 1);
-	}
 
 	if (inflictor && ((inflictor->flags & MF_MISSILE) || inflictor->player) && player->powers[pw_super] && ALL7EMERALDS(player->powers[pw_emeralds]))
 	{
-		player->health -= 10;
-		if (player->health < 2)
-			player->health = 2;
-		target->health = player->health;
+		player->rings -= 10;
+		if (player->rings < 1)
+			player->rings = 1;
 	}
 	else
-		player->health = target->health = 1;
+		player->rings = 0;
 
 	return true;
 }
@@ -2497,7 +2496,7 @@ static void P_KillPlayer(player_t *player, mobj_t *source, INT32 damage)
 	// Burst weapons and emeralds in Match/CTF only
 	if (source && (gametype == GT_MATCH || gametype == GT_TEAMMATCH || gametype == GT_CTF))
 	{
-		P_PlayerRingBurst(player, player->health - 1);
+		P_PlayerRingBurst(player, player->rings);
 		P_PlayerEmeraldBurst(player, false);
 	}
 
@@ -2942,9 +2941,9 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			P_ShieldDamage(player, inflictor, source, damage);
 			damage = 0;
 		}
-		else if (player->mo->health > 1) // No shield but have rings.
+		else if (player->rings > 0) // No shield but have rings.
 		{
-			damage = player->mo->health - 1;
+			damage = player->rings;
 			P_RingDamage(player, inflictor, source, damage, damagetype);
 		}
 		else // No shield, no rings, no invincibility.
@@ -2974,26 +2973,28 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			}
 			else
 			{
-				player->health -= (10 * (1 << (INT32)(player->powers[pw_super] / 10500)));
-				if (player->health < 2)
-					player->health = 2;
+				player->rings -= (10 * (1 << (INT32)(player->powers[pw_super] / 10500)));
+				if (player->rings < 1)
+					player->rings = 1;
 			}
 
 			if (gametype == GT_CTF && (player->gotflag & (GF_REDFLAG|GF_BLUEFLAG)))
 				P_PlayerFlagBurst(player, false);
+			damage = 0;
 		}
 		else if (damagetype & DMG_DEATHMASK)
-			player->health = 0;
-		else
+			player->rings = 0;
+		else if (damage == 0 || player->rings) //quickfix to just get things back to normal ...for now (sans Tag, I'll deal with that later)
 		{
-			player->health -= damage; // mirror mobj health here
-			target->player->powers[pw_flashing] = flashingtics;
 			if (damage > 0) // don't spill emeralds/ammo/panels for shield damage
 				P_PlayerRingBurst(player, damage);
+			player->rings -= damage;
+			target->player->powers[pw_flashing] = flashingtics;
+			damage = 0;
 		}
 
-		if (player->health < 0)
-			player->health = 0;
+		if (player->rings < 0)
+			player->rings = 0;
 
 		P_HitDeathMessages(player, inflictor, source, damagetype);
 
@@ -3006,13 +3007,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 		P_DamageMobj(source, target, target, 1, 0);
 
 	// do the damage
-	if (player && player->powers[pw_super] && ALL7EMERALDS(player->powers[pw_emeralds]) && inflictor && ((inflictor->flags & MF_MISSILE) || inflictor->player))
-	{
-		target->health -= (10 * (1 << (INT32)(player->powers[pw_super] / 10500)));
-		if (target->health < 2)
-			target->health = 2;
-	}
-	else if (damagetype & DMG_DEATHMASK)
+	if (damagetype & DMG_DEATHMASK)
 		target->health = 0;
 	else
 		target->health -= damage;
@@ -3078,7 +3073,7 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 		return;
 
 	// If no health, don't spawn ring!
-	if (player->mo->health <= 1)
+	if (player->rings <= 0)
 		num_rings = 0;
 
 	if (num_rings > 32 && !(player->pflags & PF_NIGHTSFALL))

@@ -278,10 +278,8 @@ typedef struct player_s
 	// It is updated with cmd->aiming.
 	angle_t aiming;
 
-	// This is only used between levels,
-	// mo->health is used during levels.
-	/// \todo Remove this.  We don't need a second health definition for players.
-	INT32 health;
+	// player's ring count
+	INT32 rings;
 
 	SINT8 pity; // i pity the fool.
 	INT32 currentweapon; // current weapon selected.

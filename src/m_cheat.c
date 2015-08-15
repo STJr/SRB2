@@ -625,7 +625,7 @@ void Command_CauseCfail_f(void)
 	players[consoleplayer].mo->y = 123311; //cfail cansuled kthxbye
 	players[consoleplayer].mo->z = 123311;
 	players[consoleplayer].score = 1337;
-	players[consoleplayer].health = 1337;
+	players[consoleplayer].rings = 1337;
 	players[consoleplayer].mo->destscale = 25;
 	P_SetThingPosition(players[consoleplayer].mo);
 
@@ -739,7 +739,7 @@ void Command_Setrings_f(void)
 	if (COM_Argc() > 1)
 	{
 		// P_GivePlayerRings does value clamping
-		players[consoleplayer].health = players[consoleplayer].mo->health = 1;
+		players[consoleplayer].rings = 0;
 		P_GivePlayerRings(&players[consoleplayer], atoi(COM_Argv(1)));
 		if (!G_IsSpecialStage(gamemap) || !useNightsSS)
 			players[consoleplayer].totalring -= atoi(COM_Argv(1)); //undo totalring addition done in P_GivePlayerRings
@@ -1241,7 +1241,7 @@ void Command_ObjectPlace_f(void)
 		// Like the classics, recover from death by entering objectplace
 		if (players[0].mo->health <= 0)
 		{
-			players[0].mo->health = players[0].health = 1;
+			players[0].mo->health = 1;
 			players[0].deadtimer = 0;
 			op_oldflags1 = mobjinfo[MT_PLAYER].flags;
 			++players[0].lives;

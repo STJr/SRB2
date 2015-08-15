@@ -655,14 +655,14 @@ boolean P_LookForPlayers(mobj_t *actor, boolean allaround, boolean tracer, fixed
 		if ((netgame || multiplayer) && player->spectator)
 			continue;
 
-		if (player->health <= 0)
-			continue; // dead
-
 		if (player->pflags & PF_INVIS)
 			continue; // ignore notarget
 
 		if (!player->mo || P_MobjWasRemoved(player->mo))
 			continue;
+
+		if (player->mo->health <= 0)
+			continue; // dead
 
 		if (dist > 0
 			&& P_AproxDistance(P_AproxDistance(player->mo->x - actor->x, player->mo->y - actor->y), player->mo->z - actor->z) > dist)
@@ -727,7 +727,7 @@ static boolean P_LookForShield(mobj_t *actor)
 
 		player = &players[actor->lastlook];
 
-		if (player->health <= 0 || !player->mo)
+		if (!player->mo || player->mo->health <= 0)
 			continue; // dead
 
 		//When in CTF, don't pull rings that you cannot pick up.
@@ -2721,7 +2721,7 @@ void A_BossDeath(mobj_t *mo)
 
 	// make sure there is a player alive for victory
 	for (i = 0; i < MAXPLAYERS; i++)
-		if (playeringame[i] && (players[i].health > 0
+		if (playeringame[i] && ((players[i].mo && players[i].mo->health > 0)
 			|| ((netgame || multiplayer) && (players[i].lives > 0 || players[i].continues > 0))))
 			break;
 
@@ -8268,7 +8268,7 @@ void A_RingDrain(mobj_t *actor)
 	}
 
 	player = actor->target->player;
-	P_GivePlayerRings(player, -min(locvar1, player->mo->health-1));
+	P_GivePlayerRings(player, -min(locvar1, player->rings));
 }
 
 // Function: A_SplitShot
@@ -8578,7 +8578,7 @@ void A_CheckTargetRings(mobj_t *actor)
 	if (!(actor->target) || !(actor->target->player))
 	   return;
 
-	if (actor->target->player->health >= locvar1)
+	if (actor->target->player->rings >= locvar1)
 		P_SetMobjState(actor, locvar2);
 }
 
@@ -8600,7 +8600,7 @@ void A_CheckRings(mobj_t *actor)
 #endif
 
 	for (i = 0; i < MAXPLAYERS; i++)
-		cntr += players[i].health-1;
+		cntr += players[i].rings;
 
 	if (cntr >= locvar1)
 		P_SetMobjState(actor, locvar2);
@@ -9172,7 +9172,7 @@ void A_ForceWin(mobj_t *actor)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (playeringame[i] && (players[i].health > 0
+		if (playeringame[i] && ((players[i].mo && players[i].mo->health > 0)
 		    || ((netgame || multiplayer) && (players[i].lives > 0 || players[i].continues > 0))))
 			break;
 	}

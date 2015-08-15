@@ -495,7 +495,7 @@ static inline void resynch_write_player(resynch_pak *rsp, const size_t i)
 		rsp->powers[j] = (UINT16)SHORT(players[i].powers[j]);
 
 	// Score is resynched in the rspfirm resync packet
-	rsp->health = 0; // resynched with mo health
+	rsp->rings = LONG(players[i].rings);
 	rsp->lives = players[i].lives;
 	rsp->continues = players[i].continues;
 	rsp->scoreadd = players[i].scoreadd;
@@ -577,7 +577,6 @@ static inline void resynch_write_player(resynch_pak *rsp, const size_t i)
 	rsp->hasmo = true;
 
 	rsp->health = LONG(players[i].mo->health);
-
 	rsp->angle = (angle_t)LONG(players[i].mo->angle);
 	rsp->x = LONG(players[i].mo->x);
 	rsp->y = LONG(players[i].mo->y);
@@ -620,7 +619,7 @@ static void resynch_read_player(resynch_pak *rsp)
 		players[i].powers[j] = (UINT16)SHORT(rsp->powers[j]);
 
 	// Score is resynched in the rspfirm resync packet
-	players[i].health = rsp->health;
+	players[i].rings = LONG(rsp->rings);
 	players[i].lives = rsp->lives;
 	players[i].continues = rsp->continues;
 	players[i].scoreadd = rsp->scoreadd;
@@ -2244,7 +2243,7 @@ static void CL_RemovePlayer(INT32 playernum)
 		}
 
 		count--;
-		rings = players[playernum].health - 1;
+		rings = players[playernum].rings;
 		increment = rings/count;
 
 		for (i = 0; i < MAXPLAYERS; i++)

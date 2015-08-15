@@ -1068,7 +1068,7 @@ static int lib_pPlayerRingBurst(lua_State *L)
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
 	if (num_rings == -1)
-		num_rings = player->health - 1;
+		num_rings = player->rings;
 	P_PlayerRingBurst(player, num_rings);
 	return 0;
 }

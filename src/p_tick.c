@@ -469,7 +469,7 @@ static inline void P_DoSpecialStageStuff(void)
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i])
 			{
-				ssrings += (players[i].mo->health-1);
+				ssrings += players[i].rings;
 
 				// If in water, deplete timer 6x as fast.
 				if ((players[i].mo->eflags & MFE_TOUCHWATER)

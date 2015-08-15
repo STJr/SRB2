@@ -704,7 +704,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		{
 			for (i = 0; i < MAXPLAYERS; i++)
 				if (playeringame[i]/* && players[i].pflags & PF_NIGHTSMODE*/)
-					total_rings += players[i].health-1;
+					total_rings += players[i].rings;
 		}
 
 		for (i = 0; i < MAXPLAYERS; i++)
@@ -722,8 +722,8 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 			}
 			else
 			{
-				players[i].finishedrings = (INT16)(players[i].health - 1);
-				P_AddPlayerScore(&players[i], (players[i].health - 1) * 50);
+				players[i].finishedrings = (INT16)(players[i].rings);
+				P_AddPlayerScore(&players[i], (players[i].rings) * 50);
 			}
 
 			// Add score to leaderboards now
@@ -734,7 +734,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 			players[i].lastmarescore = players[i].marescore;
 			players[i].marescore = 0;
 
-			players[i].mo->health = players[i].health = 1;
+			players[i].rings = 0;
 			P_DoPlayerExit(&players[i]);
 		}
 	}
@@ -742,12 +742,12 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 	{
 		/// \todo Handle multi-mare special stages.
 		// Ring bonus
-		P_AddPlayerScore(player, (player->health - 1) * 50);
+		P_AddPlayerScore(player, (player->rings) * 50);
 
 		player->lastmare = (UINT8)oldmare;
 		player->texttimer = 4*TICRATE;
 		player->textvar = 4; // Score and grades
-		player->finishedrings = (INT16)(player->health - 1);
+		player->finishedrings = (INT16)(player->rings);
 
 		// Add score to temp leaderboards
 		if (!(netgame||multiplayer) && P_IsLocalPlayer(player))
@@ -758,7 +758,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		player->marescore = 0;
 		player->marebegunat = leveltime;
 
-		player->mo->health = player->health = 1;
+		player->rings = 0;
 	}
 	else
 	{
@@ -901,30 +901,23 @@ void P_GivePlayerRings(player_t *player, INT32 num_rings)
 	if (!player->mo)
 		return;
 
-	player->mo->health += num_rings;
-	player->health += num_rings;
+	player->rings += num_rings;
 
 	if (!G_IsSpecialStage(gamemap) || !useNightsSS)
 		player->totalring += num_rings;
 
 	// Can only get up to 9999 rings, sorry!
-	if (player->mo->health > 10000)
-	{
-		player->mo->health = 10000;
-		player->health = 10000;
-	}
-	else if (player->mo->health < 1)
-	{
-		player->mo->health = 1;
-		player->health = 1;
-	}
+	if (player->rings > 9999)
+		player->rings = 9999;
+	else if (player->rings < 0)
+		player->rings = 0;
 
 	// Now extra life bonuses are handled here instead of in P_MovePlayer, since why not?
 	if (!ultimatemode && !modeattacking && !G_IsSpecialStage(gamemap) && G_GametypeUsesLives())
 	{
 		INT32 gainlives = 0;
 
-		while (player->xtralife < maxXtraLife && player->health > 100 * (player->xtralife+1))
+		while (player->xtralife < maxXtraLife && player->rings >= 100 * (player->xtralife+1))
 		{
 			++gainlives;
 			++player->xtralife;
@@ -975,10 +968,7 @@ void P_DoSuperTransformation(player_t *player, boolean giverings)
 	player->mo->momx = player->mo->momy = player->mo->momz = 0;
 
 	if (giverings)
-	{
-		player->mo->health = 51;
-		player->health = player->mo->health;
-	}
+		player->rings = 50;
 
 	// Just in case.
 	if (!(mapheaderinfo[gamemap-1]->levelflags & LF_NOSSMUSIC))
@@ -3135,7 +3125,7 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 			// Bounce ring
 			else if (player->currentweapon == WEP_BOUNCE && player->powers[pw_bouncering])
 			{
-				if (player->health <= 1)
+				if (player->rings <= 0)
 					return;
 				P_SetWeaponDelay(player, TICRATE/4);
 
@@ -3145,13 +3135,12 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 					mo->fuse = 3*TICRATE; // Bounce Ring time
 
 				player->powers[pw_bouncering]--;
-				player->mo->health--;
-				player->health--;
+				player->rings--;
 			}
 			// Rail ring
 			else if (player->currentweapon == WEP_RAIL && player->powers[pw_railring])
 			{
-				if (player->health <= 1)
+				if (player->rings <= 0)
 					return;
 				P_SetWeaponDelay(player, (3*TICRATE)/2);
 
@@ -3161,13 +3150,12 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 				S_StartSound(player->mo, sfx_rail1);
 
 				player->powers[pw_railring]--;
-				player->mo->health--;
-				player->health--;
+				player->rings--;
 			}
 			// Automatic
 			else if (player->currentweapon == WEP_AUTO && player->powers[pw_automaticring])
 			{
-				if (player->health <= 1)
+				if (player->rings <= 0)
 					return;
 				player->pflags &= ~PF_ATTACKDOWN;
 				P_SetWeaponDelay(player, 2);
@@ -3175,26 +3163,24 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 				mo = P_SpawnPlayerMissile(player->mo, MT_THROWNAUTOMATIC, MF2_AUTOMATIC);
 
 				player->powers[pw_automaticring]--;
-				player->mo->health--;
-				player->health--;
+				player->rings--;
 			}
 			// Explosion
 			else if (player->currentweapon == WEP_EXPLODE && player->powers[pw_explosionring])
 			{
-				if (player->health <= 1)
+				if (player->rings <= 0)
 					return;
 				P_SetWeaponDelay(player, (3*TICRATE)/2);
 
 				mo = P_SpawnPlayerMissile(player->mo, MT_THROWNEXPLOSION, MF2_EXPLOSION);
 
 				player->powers[pw_explosionring]--;
-				player->mo->health--;
-				player->health--;
+				player->rings--;
 			}
 			// Grenade
 			else if (player->currentweapon == WEP_GRENADE && player->powers[pw_grenadering])
 			{
-				if (player->health <= 1)
+				if (player->rings <= 0)
 					return;
 				P_SetWeaponDelay(player, TICRATE/3);
 
@@ -3207,8 +3193,7 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 				}
 
 				player->powers[pw_grenadering]--;
-				player->mo->health--;
-				player->health--;
+				player->rings--;
 			}
 			// Scatter
 			// Note: Ignores MF2_RAILRING
@@ -3218,7 +3203,7 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 				angle_t shotangle = player->mo->angle;
 				angle_t oldaiming = player->aiming;
 
-				if (player->health <= 1)
+				if (player->rings <= 0)
 					return;
 				P_SetWeaponDelay(player, (2*TICRATE)/3);
 
@@ -3247,8 +3232,7 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 				player->aiming = oldaiming;
 
 				player->powers[pw_scatterring]--;
-				player->mo->health--;
-				player->health--;
+				player->rings--;
 				return;
 			}
 			// No powers, just a regular ring.
@@ -3272,7 +3256,7 @@ firenormal:
 				// Red Ring
 				else
 				{
-					if (player->health <= 1)
+					if (player->rings <= 0)
 						return;
 					P_SetWeaponDelay(player, TICRATE/4);
 
@@ -3281,8 +3265,7 @@ firenormal:
 					if (mo)
 						P_ColorTeamMissile(mo, player);
 
-					player->mo->health--;
-					player->health--;
+					player->rings--;
 				}
 			}
 
@@ -3336,7 +3319,7 @@ static void P_DoSuperStuff(player_t *player)
 		return; // NiGHTS Super doesn't mix with normal super
 
 	// Does player have all emeralds? If so, flag the "Ready For Super!"
-	if ((ALL7EMERALDS(emeralds) || ALL7EMERALDS(player->powers[pw_emeralds])) && player->health > 50)
+	if ((ALL7EMERALDS(emeralds) || ALL7EMERALDS(player->powers[pw_emeralds])) && player->rings >= 50)
 		player->pflags |= PF_SUPERREADY;
 	else
 		player->pflags &= ~PF_SUPERREADY;
@@ -3374,10 +3357,7 @@ static void P_DoSuperStuff(player_t *player)
 
 		// Deplete one ring every second while super
 		if ((leveltime % TICRATE == 0) && !(player->exiting))
-		{
-			player->health--;
-			player->mo->health--;
-		}
+			player->rings--;
 
 		switch (player->skin)
 		{
@@ -3412,7 +3392,7 @@ static void P_DoSuperStuff(player_t *player)
 		G_GhostAddColor(GHC_SUPER);
 
 		// Ran out of rings while super!
-		if (player->health <= 1 || player->exiting)
+		if (player->rings <= 0 || player->exiting)
 		{
 			player->powers[pw_emeralds] = 0; // lost the power stones
 			P_SpawnGhostMobj(player->mo);
@@ -3464,12 +3444,6 @@ static void P_DoSuperStuff(player_t *player)
 				case S_PLAY_SUPER_RIDE:
 					P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
 					break;
-				}
-
-				if (!player->exiting)
-				{
-					player->health = 1;
-					player->mo->health = 1;
 				}
 			}
 
@@ -5392,12 +5366,10 @@ static void P_DoNiGHTSCapsule(player_t *player)
 	if (G_IsSpecialStage(gamemap))
 	{ // In special stages, share rings. Everyone gives up theirs to the capsule player always, because we can't have any individualism here!
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] && (&players[i] != player) && players[i].mo->health > 1)
+			if (playeringame[i] && (&players[i] != player) && players[i].rings > 0)
 			{
-				player->mo->health += players[i].mo->health-1;
-				player->health = player->mo->health;
-				players[i].mo->health = 1;
-				players[i].health = players[i].mo->health;
+				player->rings += players[i].rings;
+				players[i].rings = 0;
 			}
 	}
 
@@ -5406,10 +5378,9 @@ static void P_DoNiGHTSCapsule(player_t *player)
 		&& player->mo->y == player->capsule->y
 		&& player->mo->z == player->capsule->z+(player->capsule->height/3))
 	{
-		if (player->mo->health > 1)
+		if (player->rings > 0)
 		{
-			player->mo->health--;
-			player->health--;
+			player->rings--;
 			player->capsule->health--;
 			player->capsule->extravalue1++;
 
@@ -6129,7 +6100,7 @@ static void P_PlayerDropWeapon(player_t *player)
 
 	if (mo)
 	{
-		player->mo->health--;
+		player->rings--;
 		P_InstaThrust(mo, player->mo->angle-ANGLE_180, 8*FRACUNIT);
 		P_SetObjectMomZ(mo, 4*FRACUNIT, false);
 		mo->flags2 |= MF2_DONTRESPAWN;
@@ -6416,7 +6387,7 @@ static void P_MovePlayer(player_t *player)
 					if (playeringame[i])
 						players[i].exiting = (14*TICRATE)/5 + 1;
 			}
-			else if (player->health > 1)
+			else if (player->rings > 0)
 				P_DamageMobj(player->mo, NULL, NULL, 1, 0);
 			player->pflags &= ~PF_NIGHTSFALL;
 		}
@@ -8613,7 +8584,7 @@ void P_PlayerThink(player_t *player)
 #endif
 
 	// todo: Figure out what is actually causing these problems in the first place...
-	if ((player->health <= 0 || player->mo->health <= 0) && player->playerstate == PST_LIVE) //you should be DEAD!
+	if (player->mo->health <= 0 && player->playerstate == PST_LIVE) //you should be DEAD!
 	{
 		CONS_Debug(DBG_GAMELOGIC, "P_PlayerThink: Player %s in PST_LIVE with 0 health. (\"Zombie bug\")\n", sizeu1(playeri));
 		player->playerstate = PST_DEAD;
@@ -8713,7 +8684,7 @@ void P_PlayerThink(player_t *player)
 		//  it to the exit, you're a goner!
 		else if (countdown == 1 && !player->exiting && player->lives > 0)
 		{
-			if (netgame && player->health > 0)
+			if (netgame && player->mo->health > 0)
 				CONS_Printf(M_GetText("%s ran out of time.\n"), player_names[player-players]);
 
 			player->pflags |= PF_TIMEOVER;
@@ -8802,7 +8773,7 @@ void P_PlayerThink(player_t *player)
 	{
 		player->score = 0;
 		player->mo->health = 1;
-		player->health = 1;
+		player->rings = 0;
 	}
 
 	if ((netgame || multiplayer) && player->lives <= 0)
@@ -9270,7 +9241,7 @@ void P_PlayerAfterThink(player_t *player)
 		player->currentweapon = 0;
 
 	// If you're out of rings, but have Infinity Rings left, switch to that.
-	if (player->currentweapon != 0 && player->health <= 1 && player->powers[pw_infinityring])
+	if (player->currentweapon != 0 && player->rings <= 0 && player->powers[pw_infinityring])
 		player->currentweapon = 0;
 
 	if (P_IsLocalPlayer(player) && (player->pflags & PF_WPNDOWN) && player->currentweapon != oldweapon)

@@ -155,7 +155,7 @@ typedef struct
 	UINT16 powers[NUMPOWERS];
 
 	// Score is resynched in the confirm resync packet
-	INT32 health;
+	INT32 rings;
 	SINT8 lives;
 	SINT8 continues;
 	UINT8 scoreadd;
@@ -231,6 +231,7 @@ typedef struct
 	//player->mo stuff
 	UINT8 hasmo; //boolean
 
+	INT32 health;
 	angle_t angle;
 	fixed_t x;
 	fixed_t y;
