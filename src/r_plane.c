@@ -836,7 +836,11 @@ void R_DrawSinglePlane(visplane_t *pl)
 		else light = (pl->lightlevel >> LIGHTSEGSHIFT);
 
 #ifndef NOWATER
-		if (pl->ffloor->flags & FF_RIPPLE)
+		if (pl->ffloor->flags & FF_RIPPLE
+#ifdef ESLOPE
+				&& !pl->slope
+#endif
+			)
 		{
 			INT32 top, bottom;
 
@@ -1024,6 +1028,8 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 		if (spanfunc == R_DrawTranslucentSpan_8)
 			spanfunc = R_DrawTiltedTranslucentSpan_8;
+		else if (spanfunc == splatfunc)
+			spanfunc = R_DrawTiltedSplat_8;
 		else
 			spanfunc = R_DrawTiltedSpan_8;
 

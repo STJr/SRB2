@@ -593,8 +593,8 @@ void R_DrawTiltedSpan_8(void)
 	do
 	{
 		double z = 1.f/iz;
-		u = (UINT32)(uz*z) + viewx;
-		v = (UINT32)(vz*z) + viewy;
+		u = (INT64)(uz*z) + viewx;
+		v = (INT64)(vz*z) + viewy;
 
 		colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 
@@ -630,8 +630,8 @@ void R_DrawTiltedSpan_8(void)
 		double endv = vz*endz;
 		UINT32 stepu = (INT64)((endu - startu) * INVSPAN);
 		UINT32 stepv = (INT64)((endv - startv) * INVSPAN);
-		u = (UINT32)(startu) + viewx;
-		v = (UINT32)(startv) + viewy;
+		u = (INT64)(startu) + viewx;
+		v = (INT64)(startv) + viewy;
 
 		for (i = SPANSIZE-1; i >= 0; i--)
 		{
@@ -649,8 +649,8 @@ void R_DrawTiltedSpan_8(void)
 	{
 		if (width == 1)
 		{
-			u = (UINT32)(startu);
-			v = (UINT32)(startv);
+			u = (INT64)(startu);
+			v = (INT64)(startv);
 			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 			*dest = colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]];
 		}
@@ -667,8 +667,8 @@ void R_DrawTiltedSpan_8(void)
 			left = 1.f/left;
 			UINT32 stepu = (INT64)((endu - startu) * left);
 			UINT32 stepv = (INT64)((endv - startv) * left);
-			u = (UINT32)(startu) + viewx;
-			v = (UINT32)(startv) + viewy;
+			u = (INT64)(startu) + viewx;
+			v = (INT64)(startv) + viewy;
 
 			for (; width != 0; width--)
 			{
@@ -726,8 +726,8 @@ void R_DrawTiltedTranslucentSpan_8(void)
 	do
 	{
 		double z = 1.f/iz;
-		u = (UINT32)(uz*z) + viewx;
-		v = (UINT32)(vz*z) + viewy;
+		u = (INT64)(uz*z) + viewx;
+		v = (INT64)(vz*z) + viewy;
 
 		colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 
@@ -763,8 +763,8 @@ void R_DrawTiltedTranslucentSpan_8(void)
 		double endv = vz*endz;
 		UINT32 stepu = (INT64)((endu - startu) * INVSPAN);
 		UINT32 stepv = (INT64)((endv - startv) * INVSPAN);
-		u = (UINT32)(startu) + viewx;
-		v = (UINT32)(startv) + viewy;
+		u = (INT64)(startu) + viewx;
+		v = (INT64)(startv) + viewy;
 
 		for (i = SPANSIZE-1; i >= 0; i--)
 		{
@@ -782,8 +782,8 @@ void R_DrawTiltedTranslucentSpan_8(void)
 	{
 		if (width == 1)
 		{
-			u = (UINT32)(startu);
-			v = (UINT32)(startv);
+			u = (INT64)(startu);
+			v = (INT64)(startv);
 			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 			*dest = colormap[*(ds_transmap + (source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)] << 8) + dest[0])];
 		}
@@ -800,13 +800,152 @@ void R_DrawTiltedTranslucentSpan_8(void)
 			left = 1.f/left;
 			UINT32 stepu = (INT64)((endu - startu) * left);
 			UINT32 stepv = (INT64)((endv - startv) * left);
-			u = (UINT32)(startu) + viewx;
-			v = (UINT32)(startv) + viewy;
+			u = (INT64)(startu) + viewx;
+			v = (INT64)(startv) + viewy;
 
 			for (; width != 0; width--)
 			{
 				colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 				*dest = colormap[*(ds_transmap + (source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)] << 8) + dest[0])];
+				dest++;
+				u += stepu;
+				v += stepv;
+			}
+		}
+	}
+#endif
+}
+
+void R_DrawTiltedSplat_8(void)
+{
+	// x1, x2 = ds_x1, ds_x2
+	int width = ds_x2 - ds_x1;
+	double iz, uz, vz;
+	UINT32 u, v;
+	int i;
+
+	UINT8 *source;
+	UINT8 *colormap;
+	UINT8 *dest;
+
+	UINT8 val;
+
+	iz = ds_sz.z + ds_sz.y*(centery-ds_y) + ds_sz.x*(ds_x1-centerx);
+
+	// Lighting is simple. It's just linear interpolation from start to end
+	{
+		float planelightfloat = BASEVIDWIDTH*BASEVIDWIDTH/vid.width / (zeroheight - FIXED_TO_FLOAT(viewz)) / 21.0f;
+		float lightstart, lightend;
+
+		lightend = (iz + ds_sz.x*width) * planelightfloat;
+		lightstart = iz * planelightfloat;
+
+		R_CalcTiltedLighting(FLOAT_TO_FIXED(lightstart), FLOAT_TO_FIXED(lightend));
+		//CONS_Printf("tilted lighting %f to %f (foc %f)\n", lightstart, lightend, focallengthf);
+	}
+
+	uz = ds_su.z + ds_su.y*(centery-ds_y) + ds_su.x*(ds_x1-centerx);
+	vz = ds_sv.z + ds_sv.y*(centery-ds_y) + ds_sv.x*(ds_x1-centerx);
+
+	dest = ylookup[ds_y] + columnofs[ds_x1];
+	source = ds_source;
+	//colormap = ds_colormap;
+
+#if 0	// The "perfect" reference version of this routine. Pretty slow.
+		// Use it only to see how things are supposed to look.
+	i = 0;
+	do
+	{
+		double z = 1.f/iz;
+		u = (INT64)(uz*z) + viewx;
+		v = (INT64)(vz*z) + viewy;
+
+		colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
+
+		val = colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]];
+		if (val != TRANSPARENTPIXEL)
+			*dest = val;
+		dest++;
+		iz += ds_sz.x;
+		uz += ds_su.x;
+		vz += ds_sv.x;
+	} while (--width >= 0);
+#else
+#define SPANSIZE 16
+#define INVSPAN	0.0625f
+
+	double startz = 1.f/iz;
+	double startu = uz*startz;
+	double startv = vz*startz;
+	double izstep, uzstep, vzstep;
+
+	izstep = ds_sz.x * SPANSIZE;
+	uzstep = ds_su.x * SPANSIZE;
+	vzstep = ds_sv.x * SPANSIZE;
+	//x1 = 0;
+	width++;
+
+	while (width >= SPANSIZE)
+	{
+		iz += izstep;
+		uz += uzstep;
+		vz += vzstep;
+
+		double endz = 1.f/iz;
+		double endu = uz*endz;
+		double endv = vz*endz;
+		UINT32 stepu = (INT64)((endu - startu) * INVSPAN);
+		UINT32 stepv = (INT64)((endv - startv) * INVSPAN);
+		u = (INT64)(startu) + viewx;
+		v = (INT64)(startv) + viewy;
+
+		for (i = SPANSIZE-1; i >= 0; i--)
+		{
+			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
+			val = colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]];
+			if (val != TRANSPARENTPIXEL)
+				*dest = val;
+			dest++;
+			u += stepu;
+			v += stepv;
+		}
+		startu = endu;
+		startv = endv;
+		width -= SPANSIZE;
+	}
+	if (width > 0)
+	{
+		if (width == 1)
+		{
+			u = (INT64)(startu);
+			v = (INT64)(startv);
+			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
+			val = colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]];
+			if (val != TRANSPARENTPIXEL)
+				*dest = val;
+		}
+		else
+		{
+			double left = width;
+			iz += ds_sz.x * left;
+			uz += ds_su.x * left;
+			vz += ds_sv.x * left;
+
+			double endz = 1.f/iz;
+			double endu = uz*endz;
+			double endv = vz*endz;
+			left = 1.f/left;
+			UINT32 stepu = (INT64)((endu - startu) * left);
+			UINT32 stepv = (INT64)((endv - startv) * left);
+			u = (INT64)(startu) + viewx;
+			v = (INT64)(startv) + viewy;
+
+			for (; width != 0; width--)
+			{
+				colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
+				val = colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]];
+				if (val != TRANSPARENTPIXEL)
+					*dest = val;
 				dest++;
 				u += stepu;
 				v += stepv;

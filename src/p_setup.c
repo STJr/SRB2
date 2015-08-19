@@ -850,7 +850,7 @@ void P_ScanThings(INT16 mapnum, INT16 wadnum, INT16 lumpnum)
 //
 // P_LoadThings
 //
-static void P_LoadThings(lumpnum_t lumpnum)
+static void P_PrepareThings(lumpnum_t lumpnum)
 {
 	size_t i;
 	mapthing_t *mt;
@@ -887,6 +887,15 @@ static void P_LoadThings(lumpnum_t lumpnum)
 		}
 	}
 	Z_Free(datastart);
+
+}
+
+static void P_LoadThings(void)
+{
+	size_t i;
+	mapthing_t *mt;
+
+	// Loading the things lump itself into memory is now handled in P_PrepareThings, above
 
 	mt = mapthings;
 	numhuntemeralds = 0;
@@ -2123,7 +2132,8 @@ void P_LoadThingsOnly(void)
 
 	P_LevelInitStuff();
 
-	P_LoadThings(lastloadedmaplumpnum + ML_THINGS);
+	P_PrepareThings(lastloadedmaplumpnum + ML_THINGS);
+	P_LoadThings();
 
 	P_SpawnSecretItems(true);
 }
@@ -2540,11 +2550,13 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	P_MapStart();
 
+	P_PrepareThings(lastloadedmaplumpnum + ML_THINGS);
+
 #ifdef ESLOPE
 	P_ResetDynamicSlopes();
 #endif
 
-	P_LoadThings(lastloadedmaplumpnum + ML_THINGS);
+	P_LoadThings();
 
 	P_SpawnSecretItems(loademblems);
 

@@ -63,6 +63,8 @@ typedef enum
 //
 void P_CopySectorSlope(line_t *line);
 
+pslope_t *P_SlopeById(UINT16 id);
+
 // Returns the height of the sloped plane at (x, y) as a fixed_t
 fixed_t P_GetZAt(pslope_t *slope, fixed_t x, fixed_t y);
 
