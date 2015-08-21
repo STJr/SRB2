@@ -324,6 +324,7 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 	case SKINCOLOR_WHITE:
 	case SKINCOLOR_BLACK:
 	case SKINCOLOR_PINK:
+	case SKINCOLOR_LAVENDER:
 	case SKINCOLOR_ZIM:
 		// 8 color ramp
 		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
@@ -360,8 +361,6 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 		{
 			if (8*i/16 <= 1)
 				dest_colormap[starttranscolor + i] = (UINT8)(0x80 + 8*i/16); // Lightest
-			else if (8*i/16 == 7)
-				dest_colormap[starttranscolor + i] = 0x7B; // Darkest
 			else
 				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + (8*i/SKIN_RAMP_LENGTH) - 2); // main
 		}
@@ -371,7 +370,7 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
 		{
 			if (i == 14)
-				dest_colormap[starttranscolor + i] = 0x9F;
+				dest_colormap[starttranscolor + i] = 0xED;
 			else if (i == 15)
 				dest_colormap[starttranscolor + i] = 0x1F;
 			else
@@ -423,17 +422,6 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 				dest_colormap[starttranscolor + i] = (UINT8)(0x2B + (15*i/SKIN_RAMP_LENGTH) - 9); // Darkish
 			else
 				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + (15*i/SKIN_RAMP_LENGTH) - 1); // main
-		}
-		break;
-
-	case SKINCOLOR_LAVENDER:
-		// 10 colors
-		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
-		{
-			if (10*i/16 <= 1)
-				dest_colormap[starttranscolor + i] = (UINT8)(0xEC + 10*i/16); // Lightest
-			else
-				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + (10*i/SKIN_RAMP_LENGTH) - 2); // main
 		}
 		break;
 
