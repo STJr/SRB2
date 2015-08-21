@@ -982,6 +982,7 @@ static const char *credits[] = {
 	"",
 	"\1Programming",
 	"\1Assistance",
+	"\"chi.miru\"", // Red's secret weapon, the REAL reason slopes exist (also helped port drawing code from ZDoom)
 	"Andrew \"orospakr\" Clunis",
 	"Gregor \"Oogaland\" Dick",
 	"Julio \"Chaos Zero 64\" Guir",
