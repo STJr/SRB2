@@ -1133,4 +1133,3 @@ void P_ButteredSlope(mobj_t *mo)
 
 // EOF
 #endif // #ifdef ESLOPE
-
