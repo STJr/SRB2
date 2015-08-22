@@ -2284,7 +2284,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 						{
 							if (mo->player->speed >= FixedMul(mo->player->runspeed, mo->scale) && mo->player->panim != PA_RUN)
 								P_SetPlayerMobjState(mo, S_PLAY_RUN);
-							else if ((mo->player->rmomx || mo->player->rmomy) && mo->player->panim != PA_WALK)
+							else if ((mo->player->rmomx || mo->player->rmomy) && (mo->player->panim != PA_WALK || mo->state-states == S_PLAY_SUPER_FLOAT))
 								P_SetPlayerMobjState(mo, S_PLAY_WALK);
 							else if (!mo->player->rmomx && !mo->player->rmomy && mo->player->panim != PA_IDLE)
 								P_SetPlayerMobjState(mo, S_PLAY_STND);
@@ -2293,7 +2293,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 						{
 							if (mo->player->speed >= FixedMul(mo->player->runspeed, mo->scale) && mo->player->panim != PA_RUN)
 								P_SetPlayerMobjState(mo, S_PLAY_RUN);
-							else if ((mo->momx || mo->momy) && mo->player->panim != PA_WALK)
+							else if ((mo->momx || mo->momy) && (mo->player->panim != PA_WALK || mo->state-states == S_PLAY_SUPER_FLOAT))
 								P_SetPlayerMobjState(mo, S_PLAY_WALK);
 							else if (!mo->momx && !mo->momy && mo->player->panim != PA_IDLE)
 								P_SetPlayerMobjState(mo, S_PLAY_STND);
