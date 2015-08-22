@@ -357,9 +357,6 @@ FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FixedRound(fixed_t x)
 	return INT32_MAX;
 }
 
-
-#if 1//#ifdef NEED_FIXED_VECTOR
-
 typedef struct
 {
 	fixed_t x;
@@ -437,7 +434,5 @@ void FM_MultMatrixVec3(const matrix_t *matrix, const vector3_t *vec, vector3_t *
 void FM_MultMatrix(matrix_t *dest, const matrix_t *multme);
 void FM_Translate(matrix_t *dest, fixed_t x, fixed_t y, fixed_t z);
 void FM_Scale(matrix_t *dest, fixed_t x, fixed_t y, fixed_t z);
-
-#endif // defined NEED_FIXED_VECTOR
 
 #endif //m_fixed.h

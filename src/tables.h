@@ -96,9 +96,6 @@ FUNCMATH angle_t FixedAngle(fixed_t fa);
 // and with a factor, with +factor for (fa/factor) and -factor for (fa*factor)
 FUNCMATH angle_t FixedAngleC(fixed_t fa, fixed_t factor);
 
-
-#if 1 //#ifdef NEED_FIXED_VECTOR
-
 /// The FixedAcos function
 FUNCMATH angle_t FixedAcos(fixed_t x);
 
@@ -111,8 +108,6 @@ boolean FV3_IntersectedPolygon(const vector3_t *vPoly, const vector3_t *vLine, c
 void FV3_Rotate(vector3_t *rotVec, const vector3_t *axisVec, const angle_t angle);
 /// Fixed Point Matrix functions
 void FM_Rotate(matrix_t *dest, angle_t angle, fixed_t x, fixed_t y, fixed_t z);
-
-#endif // defined NEED_FIXED_VECTOR
 
 // The table values in tables.c are calculated with this many fractional bits.
 #define FINE_FRACBITS 16
