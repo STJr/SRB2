@@ -1478,7 +1478,7 @@ static void P_HitDeathMessages(player_t *player, mobj_t *inflictor, mobj_t *sour
 		return; // Presumably it's obvious what's happening in splitscreen.
 
 #ifdef HAVE_BLUA
-	if (LUAh_DeathMsg(player, inflictor, source))
+	if (LUAh_HurtMsg(player, inflictor, source))
 		return;
 #endif
 
@@ -1988,7 +1988,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source)
 			// allow them to try again, rather than sitting the whole thing out.
 			if (leveltime >= hidetime * TICRATE)
 			{
-				if (gametype == GT_HIDEANDSEEK)//suiciding in survivor makes you IT.
+				if (gametype == GT_TAG)//suiciding in survivor makes you IT.
 				{
 					target->player->pflags |= PF_TAGIT;
 					CONS_Printf(M_GetText("%s is now IT!\n"), player_names[target->player-players]); // Tell everyone who is it!

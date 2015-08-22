@@ -316,13 +316,13 @@ angle_t R_PointToAngle(fixed_t x, fixed_t y)
 	x >= 0 ?
 	y >= 0 ?
 		(x > y) ? tantoangle[SlopeDiv(y,x)] :                          // octant 0
-		ANGLE_90-1-tantoangle[SlopeDiv(x,y)] :                         // octant 1
+		ANGLE_90-tantoangle[SlopeDiv(x,y)] :                           // octant 1
 		x > (y = -y) ? 0-tantoangle[SlopeDiv(y,x)] :                   // octant 8
 		ANGLE_270+tantoangle[SlopeDiv(x,y)] :                          // octant 7
-		y >= 0 ? (x = -x) > y ? ANGLE_180-1-tantoangle[SlopeDiv(y,x)] :// octant 3
+		y >= 0 ? (x = -x) > y ? ANGLE_180-tantoangle[SlopeDiv(y,x)] :  // octant 3
 		ANGLE_90 + tantoangle[SlopeDiv(x,y)] :                         // octant 2
-		(x = -x) > (y = -y) ? ANGLE_180+tantoangle[ SlopeDiv(y,x)] :   // octant 4
-		ANGLE_270-1-tantoangle[SlopeDiv(x,y)] :                        // octant 5
+		(x = -x) > (y = -y) ? ANGLE_180+tantoangle[SlopeDiv(y,x)] :    // octant 4
+		ANGLE_270-tantoangle[SlopeDiv(x,y)] :                          // octant 5
 		0;
 }
 
@@ -332,13 +332,13 @@ angle_t R_PointToAngle2(fixed_t pviewx, fixed_t pviewy, fixed_t x, fixed_t y)
 	x >= 0 ?
 	y >= 0 ?
 		(x > y) ? tantoangle[SlopeDiv(y,x)] :                          // octant 0
-		ANGLE_90-1-tantoangle[SlopeDiv(x,y)] :                         // octant 1
+		ANGLE_90-tantoangle[SlopeDiv(x,y)] :                           // octant 1
 		x > (y = -y) ? 0-tantoangle[SlopeDiv(y,x)] :                   // octant 8
 		ANGLE_270+tantoangle[SlopeDiv(x,y)] :                          // octant 7
-		y >= 0 ? (x = -x) > y ? ANGLE_180-1-tantoangle[SlopeDiv(y,x)] :// octant 3
+		y >= 0 ? (x = -x) > y ? ANGLE_180-tantoangle[SlopeDiv(y,x)] :  // octant 3
 		ANGLE_90 + tantoangle[SlopeDiv(x,y)] :                         // octant 2
-		(x = -x) > (y = -y) ? ANGLE_180+tantoangle[ SlopeDiv(y,x)] :   // octant 4
-		ANGLE_270-1-tantoangle[SlopeDiv(x,y)] :                        // octant 5
+		(x = -x) > (y = -y) ? ANGLE_180+tantoangle[SlopeDiv(y,x)] :    // octant 4
+		ANGLE_270-tantoangle[SlopeDiv(x,y)] :                          // octant 5
 		0;
 }
 
