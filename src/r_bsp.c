@@ -1218,6 +1218,7 @@ void R_Prep3DFloors(sector_t *sector)
 	heighttest = sector->c_slope ? P_GetZAt(sector->c_slope, sector->soundorg.x, sector->soundorg.y) : sector->ceilingheight;
 
 	sector->lightlist[0].height = heighttest + 1;
+	sector->lightlist[0].slope = sector->c_slope;
 #else
 	sector->lightlist[0].height = sector->ceilingheight + 1;
 #endif
