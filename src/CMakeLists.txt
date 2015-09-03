@@ -150,6 +150,7 @@ set(SRB2_CORE_GAME_SOURCES
 	p_saveg.c
 	p_setup.c
 	p_sight.c
+	p_slopes.c
 	p_spec.c
 	p_telept.c
 	p_tick.c
@@ -162,6 +163,7 @@ set(SRB2_CORE_GAME_SOURCES
 	p_pspr.h
 	p_saveg.h
 	p_setup.h
+	p_slopes.h
 	p_spec.h
 	p_tick.h
 )

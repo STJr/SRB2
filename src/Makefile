@@ -454,6 +454,7 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/p_telept.o \
 		$(OBJDIR)/p_tick.o   \
 		$(OBJDIR)/p_user.o   \
+		$(OBJDIR)/p_slopes.o \
 		$(OBJDIR)/tables.o   \
 		$(OBJDIR)/r_bsp.o    \
 		$(OBJDIR)/r_data.o   \

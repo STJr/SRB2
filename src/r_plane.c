@@ -74,7 +74,7 @@ static INT32 spanstart[MAXVIDHEIGHT];
 //
 // texture mapping
 //
-static lighttable_t **planezlight;
+lighttable_t **planezlight;
 static fixed_t planeheight;
 
 //added : 10-02-98: yslopetab is what yslope used to be,
@@ -327,6 +327,11 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 	if (pindex >= MAXLIGHTZ)
 		pindex = MAXLIGHTZ - 1;
 
+#ifdef ESLOPE
+	if (currentplane->slope)
+		ds_colormap = colormaps;
+	else
+#endif
 	ds_colormap = planezlight[pindex];
 
 	if (currentplane->extra_colormap)
@@ -423,11 +428,18 @@ static visplane_t *new_visplane(unsigned hash)
 //
 visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 	fixed_t xoff, fixed_t yoff, angle_t plangle, extracolormap_t *planecolormap,
-	ffloor_t *pfloor)
+	ffloor_t *pfloor
+#ifdef ESLOPE
+			, pslope_t *slope
+#endif
+			)
 {
 	visplane_t *check;
 	unsigned hash;
 
+#ifdef ESLOPE
+	if (slope); else // Don't mess with this right now if a slope is involved
+#endif
 	if (plangle != 0)
 	{
 		// Add the view offset, rotated by the plane angle.
@@ -462,7 +474,11 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 			&& xoff == check->xoffs && yoff == check->yoffs
 			&& planecolormap == check->extra_colormap
 			&& !pfloor && !check->ffloor && check->viewz == viewz
-			&& check->viewangle == viewangle)
+			&& check->viewangle == viewangle
+#ifdef ESLOPE
+			&& check->slope == slope
+#endif
+			)
 		{
 			return check;
 		}
@@ -484,6 +500,9 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 	check->plangle = plangle;
 #ifdef POLYOBJECTS_PLANES
 	check->polyobj = NULL;
+#endif
+#ifdef ESLOPE
+	check->slope = slope;
 #endif
 
 	memset(check->top, 0xff, sizeof (check->top));
@@ -551,6 +570,9 @@ visplane_t *R_CheckPlane(visplane_t *pl, INT32 start, INT32 stop)
 		new_pl->plangle = pl->plangle;
 #ifdef POLYOBJECTS_PLANES
 		new_pl->polyobj = pl->polyobj;
+#endif
+#ifdef ESLOPE
+		new_pl->slope = pl->slope;
 #endif
 		pl = new_pl;
 		pl->minx = start;
@@ -814,7 +836,11 @@ void R_DrawSinglePlane(visplane_t *pl)
 		else light = (pl->lightlevel >> LIGHTSEGSHIFT);
 
 #ifndef NOWATER
-		if (pl->ffloor->flags & FF_RIPPLE)
+		if (pl->ffloor->flags & FF_RIPPLE
+#ifdef ESLOPE
+				&& !pl->slope
+#endif
+			)
 		{
 			INT32 top, bottom;
 
@@ -842,6 +868,9 @@ void R_DrawSinglePlane(visplane_t *pl)
 	}
 	else light = (pl->lightlevel >> LIGHTSEGSHIFT);
 
+#ifdef ESLOPE
+	if (!pl->slope) // Don't mess with angle on slopes! We'll handle this ourselves later
+#endif
 	if (viewangle != pl->viewangle)
 	{
 		memset(cachedheight, 0, sizeof (cachedheight));
@@ -914,6 +943,99 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 	if (light < 0)
 		light = 0;
+
+#ifdef ESLOPE
+	if (pl->slope) {
+		// Potentially override other stuff for now cus we're mean. :< But draw a slope plane!
+		// I copied ZDoom's code and adapted it to SRB2... -Red
+		floatv3_t p, m, n;
+		float ang;
+		float vx, vy, vz;
+		float fudge;
+
+		xoffs &= ((1 << (32-nflatshiftup))-1);
+		yoffs &= ((1 << (32-nflatshiftup))-1);
+
+		xoffs -= (pl->slope->o.x + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1);
+		yoffs += (pl->slope->o.y + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1);
+
+		// Okay, look, don't ask me why this works, but without this setup there's a disgusting-looking misalignment with the textures. -Red
+		fudge = ((1<<nflatshiftup)+1.0f)/(1<<nflatshiftup);
+
+		xoffs *= fudge;
+		yoffs /= fudge;
+
+		vx = FIXED_TO_FLOAT(viewx+xoffs);
+		vy = FIXED_TO_FLOAT(viewy-yoffs);
+		vz = FIXED_TO_FLOAT(viewz);
+
+		zeroheight = FIXED_TO_FLOAT(P_GetZAt(pl->slope, viewx, viewy));
+
+#define ANG2RAD(angle) ((float)((angle)*M_PI)/ANGLE_180)
+
+		// p is the texture origin in view space
+		// Don't add in the offsets at this stage, because doing so can result in
+		// errors if the flat is rotated.
+		ang = ANG2RAD(ANGLE_270 - viewangle);
+		p.x = vx * cos(ang) - vy * sin(ang);
+		p.z = vx * sin(ang) + vy * cos(ang);
+		p.y = FIXED_TO_FLOAT(P_GetZAt(pl->slope, -xoffs, yoffs)) - vz;
+
+		// m is the v direction vector in view space
+		ang = ANG2RAD(ANGLE_180 - viewangle - pl->plangle);
+		m.x = cos(ang);
+		m.z = sin(ang);
+
+		// n is the u direction vector in view space
+		n.x = sin(ang);
+		n.z = -cos(ang);
+
+		ang = ANG2RAD(pl->plangle);
+		m.y = FIXED_TO_FLOAT(P_GetZAt(pl->slope, viewx + FLOAT_TO_FIXED(sin(ang)), viewy + FLOAT_TO_FIXED(cos(ang)))) - zeroheight;
+		n.y = FIXED_TO_FLOAT(P_GetZAt(pl->slope, viewx + FLOAT_TO_FIXED(cos(ang)), viewy - FLOAT_TO_FIXED(sin(ang)))) - zeroheight;
+
+		m.x /= fudge;
+		m.y /= fudge;
+		m.z /= fudge;
+
+		n.x *= fudge;
+		n.y *= fudge;
+		n.z *= fudge;
+
+		// Eh. I tried making this stuff fixed-point and it exploded on me. Here's a macro for the only floating-point vector function I recall using.
+#define CROSS(d, v1, v2) \
+   d.x = (v1.y * v2.z) - (v1.z * v2.y);\
+   d.y = (v1.z * v2.x) - (v1.x * v2.z);\
+   d.z = (v1.x * v2.y) - (v1.y * v2.x)
+		CROSS(ds_su, p, m);
+		CROSS(ds_sv, p, n);
+		CROSS(ds_sz, m, n);
+#undef CROSS
+
+		ds_su.z *= focallengthf;
+		ds_sv.z *= focallengthf;
+		ds_sz.z *= focallengthf;
+
+		// Premultiply the texture vectors with the scale factors
+#define SFMULT 65536.f*(1<<nflatshiftup)
+		ds_su.x *= SFMULT;
+		ds_su.y *= SFMULT;
+		ds_su.z *= SFMULT;
+		ds_sv.x *= SFMULT;
+		ds_sv.y *= SFMULT;
+		ds_sv.z *= SFMULT;
+#undef SFMULT
+
+		if (spanfunc == R_DrawTranslucentSpan_8)
+			spanfunc = R_DrawTiltedTranslucentSpan_8;
+		else if (spanfunc == splatfunc)
+			spanfunc = R_DrawTiltedSplat_8;
+		else
+			spanfunc = R_DrawTiltedSpan_8;
+
+		planezlight = scalelight[light];
+	} else
+#endif // ESLOPE
 
 	planezlight = zlight[light];
 

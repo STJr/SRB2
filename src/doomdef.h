@@ -439,6 +439,9 @@ extern const char *compdate, *comptime, *comprevision;
 ///	Fun experimental slope stuff!
 //#define SLOPENESS
 
+/// Kalaron/Eternity Engine slope code (SRB2CB ported)
+#define ESLOPE
+
 ///	Delete file while the game is running.
 ///	\note	EXTREMELY buggy, tends to crash game.
 //#define DELFILE

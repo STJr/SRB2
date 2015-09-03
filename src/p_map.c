@@ -27,6 +27,10 @@
 
 #include "r_splats.h"
 
+#ifdef ESLOPE
+#include "p_slopes.h"
+#endif
+
 #include "z_zone.h"
 
 #include "lua_hook.h"
@@ -34,8 +38,8 @@
 fixed_t tmbbox[4];
 mobj_t *tmthing;
 static INT32 tmflags;
-static fixed_t tmx;
-static fixed_t tmy;
+fixed_t tmx;
+fixed_t tmy;
 
 static precipmobj_t *tmprecipthing;
 static fixed_t preciptmbbox[4];
@@ -48,6 +52,9 @@ fixed_t tmfloorz, tmceilingz;
 static fixed_t tmdropoffz, tmdrpoffceilz; // drop-off floor/ceiling heights
 mobj_t *tmfloorthing; // the thing corresponding to tmfloorz or NULL if tmfloorz is from a sector
 mobj_t *tmhitthing; // the solid thing you bumped into (for collisions)
+#ifdef ESLOPE
+pslope_t *tmfloorslope, *tmceilingslope;
+#endif
 
 // keep track of the line that lowers the ceiling,
 // so missiles don't explode against sky hack walls
@@ -967,6 +974,9 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				if (thing->z + thing->height > tmfloorz)
 				{
 					tmfloorz = thing->z + thing->height;
+#ifdef ESLOPE
+					tmfloorslope = NULL;
+#endif
 				}
 				return true;
 			}
@@ -985,6 +995,9 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			else if (topz < tmceilingz && tmthing->z+tmthing->height <= thing->z+thing->height)
 			{
 				tmceilingz = topz;
+#ifdef ESLOPE
+				tmceilingslope = NULL;
+#endif
 				tmfloorthing = thing; // thing we may stand on
 			}
 		}
@@ -998,6 +1011,9 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				if (thing->z < tmceilingz)
 				{
 					tmceilingz = thing->z;
+#ifdef ESLOPE
+					tmceilingslope = NULL;
+#endif
 				}
 				return true;
 			}
@@ -1015,6 +1031,9 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			else if (topz > tmfloorz && tmthing->z >= thing->z)
 			{
 				tmfloorz = topz;
+#ifdef ESLOPE
+				tmfloorslope = NULL;
+#endif
 				tmfloorthing = thing; // thing we may stand on
 			}
 		}
@@ -1137,11 +1156,13 @@ static boolean PIT_CheckLine(line_t *ld)
 	{
 		tmceilingz = opentop;
 		ceilingline = ld;
+		tmceilingslope = opentopslope;
 	}
 
 	if (openbottom > tmfloorz)
 	{
 		tmfloorz = openbottom;
+		tmfloorslope = openbottomslope;
 	}
 
 	if (highceiling > tmdrpoffceilz)
@@ -1218,8 +1239,12 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 	// that contains the point.
 	// Any contacted lines the step closer together
 	// will adjust them.
-	tmfloorz = tmdropoffz = newsubsec->sector->floorheight;
-	tmceilingz = tmdrpoffceilz = newsubsec->sector->ceilingheight;
+	tmfloorz = tmdropoffz = P_GetFloorZ(thing, newsubsec->sector, x, y, NULL); //newsubsec->sector->floorheight;
+	tmceilingz = P_GetCeilingZ(thing, newsubsec->sector, x, y, NULL); //newsubsec->sector->ceilingheight;
+#ifdef ESLOPE
+	tmfloorslope = newsubsec->sector->f_slope;
+	tmceilingslope = newsubsec->sector->c_slope;
+#endif
 
 	// Check list of fake floors and see if tmfloorz/tmceilingz need to be altered.
 	if (newsubsec->sector->ffloors)
@@ -1233,32 +1258,43 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 			if (!(rover->flags & FF_EXISTS))
 				continue;
 
+			fixed_t topheight = P_GetFOFTopZ(thing, newsubsec->sector, rover, x, y, NULL);
+			fixed_t bottomheight = P_GetFOFBottomZ(thing, newsubsec->sector, rover, x, y, NULL);
+
 			if (rover->flags & FF_GOOWATER && !(thing->flags & MF_NOGRAVITY))
 			{
 				// If you're inside goowater and slowing down
 				fixed_t sinklevel = FixedMul(thing->info->height/6, thing->scale);
 				fixed_t minspeed = FixedMul(thing->info->height/9, thing->scale);
-				if (thing->z < *rover->topheight && *rover->bottomheight < thingtop
+				if (thing->z < topheight && bottomheight < thingtop
 				&& abs(thing->momz) < minspeed)
 				{
 					// Oh no! The object is stick in between the surface of the goo and sinklevel! help them out!
-					if (!(thing->eflags & MFE_VERTICALFLIP) && thing->z > *rover->topheight - sinklevel
+					if (!(thing->eflags & MFE_VERTICALFLIP) && thing->z > topheight - sinklevel
 					&& thing->momz >= 0 && thing->momz < (minspeed>>2))
 						thing->momz += minspeed>>2;
-					else if (thing->eflags & MFE_VERTICALFLIP && thingtop < *rover->bottomheight + sinklevel
+					else if (thing->eflags & MFE_VERTICALFLIP && thingtop < bottomheight + sinklevel
 					&& thing->momz <= 0 && thing->momz > -(minspeed>>2))
 						thing->momz -= minspeed>>2;
 
 					// Land on the top or the bottom, depending on gravity flip.
-					if (!(thing->eflags & MFE_VERTICALFLIP) && thing->z >= *rover->topheight - sinklevel && thing->momz <= 0)
+					if (!(thing->eflags & MFE_VERTICALFLIP) && thing->z >= topheight - sinklevel && thing->momz <= 0)
 					{
-						if (tmfloorz < *rover->topheight - sinklevel)
-							tmfloorz = *rover->topheight - sinklevel;
+						if (tmfloorz < topheight - sinklevel) {
+							tmfloorz = topheight - sinklevel;
+#ifdef ESLOPE
+							tmfloorslope = *rover->t_slope;
+#endif
+						}
 					}
-					else if (thing->eflags & MFE_VERTICALFLIP && thingtop <= *rover->bottomheight + sinklevel && thing->momz >= 0)
+					else if (thing->eflags & MFE_VERTICALFLIP && thingtop <= bottomheight + sinklevel && thing->momz >= 0)
 					{
-						if (tmceilingz > *rover->bottomheight + sinklevel)
-							tmceilingz = *rover->bottomheight + sinklevel;
+						if (tmceilingz > bottomheight + sinklevel) {
+							tmceilingz = bottomheight + sinklevel;
+#ifdef ESLOPE
+							tmceilingslope = *rover->b_slope;
+#endif
+						}
 					}
 				}
 				continue;
@@ -1275,30 +1311,40 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 
 			if (rover->flags & FF_QUICKSAND)
 			{
-				if (thing->z < *rover->topheight && *rover->bottomheight < thingtop)
+				if (thing->z < topheight && bottomheight < thingtop)
 				{
-					if (tmfloorz < thing->z)
+					if (tmfloorz < thing->z) {
 						tmfloorz = thing->z;
+#ifdef ESLOPE
+						tmfloorslope = NULL;
+#endif
+					}
 				}
 				// Quicksand blocks never change heights otherwise.
 				continue;
 			}
 
-			delta1 = thing->z - (*rover->bottomheight
-				+ ((*rover->topheight - *rover->bottomheight)/2));
-			delta2 = thingtop - (*rover->bottomheight
-				+ ((*rover->topheight - *rover->bottomheight)/2));
+			delta1 = thing->z - (bottomheight
+				+ ((topheight - bottomheight)/2));
+			delta2 = thingtop - (bottomheight
+				+ ((topheight - bottomheight)/2));
 
-			if (*rover->topheight > tmfloorz && abs(delta1) < abs(delta2)
+			if (topheight > tmfloorz && abs(delta1) < abs(delta2)
 				&& !(rover->flags & FF_REVERSEPLATFORM))
 			{
-				tmfloorz = tmdropoffz = *rover->topheight;
+				tmfloorz = tmdropoffz = topheight;
+#ifdef ESLOPE
+				tmfloorslope = *rover->t_slope;
+#endif
 			}
-			if (*rover->bottomheight < tmceilingz && abs(delta1) >= abs(delta2)
+			if (bottomheight < tmceilingz && abs(delta1) >= abs(delta2)
 				&& !(rover->flags & FF_PLATFORM)
 				&& !(thing->type == MT_SKIM && (rover->flags & FF_SWIMMABLE)))
 			{
-				tmceilingz = tmdrpoffceilz = *rover->bottomheight;
+				tmceilingz = tmdrpoffceilz = bottomheight;
+#ifdef ESLOPE
+				tmceilingslope = *rover->b_slope;
+#endif
 			}
 		}
 	}
@@ -1371,11 +1417,19 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 						delta1 = thing->z - (polybottom + ((polytop - polybottom)/2));
 						delta2 = thingtop - (polybottom + ((polytop - polybottom)/2));
 
-						if (polytop > tmfloorz && abs(delta1) < abs(delta2))
+						if (polytop > tmfloorz && abs(delta1) < abs(delta2)) {
 							tmfloorz = tmdropoffz = polytop;
+#ifdef ESLOPE
+							tmfloorslope = NULL;
+#endif
+						}
 
-						if (polybottom < tmceilingz && abs(delta1) >= abs(delta2))
+						if (polybottom < tmceilingz && abs(delta1) >= abs(delta2)) {
 							tmceilingz = tmdrpoffceilz = polybottom;
+#ifdef ESLOPE
+							tmceilingslope = NULL;
+#endif
+						}
 					}
 					plink = (polymaplink_t *)(plink->link.next);
 				}
@@ -1477,8 +1531,9 @@ boolean P_CheckCameraPosition(fixed_t x, fixed_t y, camera_t *thiscam)
 	// that contains the point.
 	// Any contacted lines the step closer together
 	// will adjust them.
-	tmfloorz = tmdropoffz = newsubsec->sector->floorheight;
-	tmceilingz = tmdrpoffceilz = newsubsec->sector->ceilingheight;
+	tmfloorz = tmdropoffz = P_CameraGetFloorZ(thiscam, newsubsec->sector, x, y, NULL);
+
+	tmceilingz = P_CameraGetCeilingZ(thiscam, newsubsec->sector, x, y, NULL);
 
 	// Cameras use the heightsec's heights rather then the actual sector heights.
 	// If you can see through it, why not move the camera through it too?
@@ -1507,17 +1562,20 @@ boolean P_CheckCameraPosition(fixed_t x, fixed_t y, camera_t *thiscam)
 			if (!(rover->flags & FF_BLOCKOTHERS) || !(rover->flags & FF_EXISTS) || !(rover->flags & FF_RENDERALL) || GETSECSPECIAL(rover->master->frontsector->special, 4) == 12)
 				continue;
 
-			delta1 = thiscam->z - (*rover->bottomheight
-				+ ((*rover->topheight - *rover->bottomheight)/2));
-			delta2 = thingtop - (*rover->bottomheight
-				+ ((*rover->topheight - *rover->bottomheight)/2));
-			if (*rover->topheight > tmfloorz && abs(delta1) < abs(delta2))
+			fixed_t topheight = P_CameraGetFOFTopZ(thiscam, newsubsec->sector, rover, x, y, NULL);
+			fixed_t bottomheight = P_CameraGetFOFBottomZ(thiscam, newsubsec->sector, rover, x, y, NULL);
+
+			delta1 = thiscam->z - (bottomheight
+				+ ((topheight - bottomheight)/2));
+			delta2 = thingtop - (bottomheight
+				+ ((topheight - bottomheight)/2));
+			if (topheight > tmfloorz && abs(delta1) < abs(delta2))
 			{
-				tmfloorz = tmdropoffz = *rover->topheight;
+				tmfloorz = tmdropoffz = topheight;
 			}
-			if (*rover->bottomheight < tmceilingz && abs(delta1) >= abs(delta2))
+			if (bottomheight < tmceilingz && abs(delta1) >= abs(delta2))
 			{
-				tmceilingz = tmdrpoffceilz = *rover->bottomheight;
+				tmceilingz = tmdrpoffceilz = bottomheight;
 			}
 		}
 	}
@@ -1712,8 +1770,8 @@ boolean P_TryCameraMove(fixed_t x, fixed_t y, camera_t *thiscam)
 	}
 	else
 	{
-		tmfloorz = thiscam->subsector->sector->floorheight;
-		tmceilingz = thiscam->subsector->sector->ceilingheight;
+		tmfloorz = P_CameraGetFloorZ(thiscam, thiscam->subsector->sector, x, y, NULL);
+		tmceilingz = P_CameraGetCeilingZ(thiscam, thiscam->subsector->sector, x, y, NULL);
 	}
 
 	// the move is ok,
@@ -1779,6 +1837,10 @@ boolean PIT_PushableMoved(mobj_t *thing)
 		mobj_t *oldthing = tmthing;
 		line_t *oldceilline = ceilingline;
 		line_t *oldblockline = blockingline;
+#ifdef ESLOPE
+		pslope_t *oldfslope = tmfloorslope;
+		pslope_t *oldcslope = tmceilingslope;
+#endif
 
 		// Move the player
 		P_TryMove(thing, thing->x+stand->momx, thing->y+stand->momy, true);
@@ -1791,6 +1853,10 @@ boolean PIT_PushableMoved(mobj_t *thing)
 		P_SetTarget(&tmthing, oldthing);
 		ceilingline = oldceilline;
 		blockingline = oldblockline;
+#ifdef ESLOPE
+		tmfloorslope = oldfslope;
+		tmceilingslope = oldcslope;
+#endif
 		thing->momz = stand->momz;
 	}
 	else
@@ -1812,6 +1878,9 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 	fixed_t tryy = thing->y;
 	fixed_t radius = thing->radius;
 	fixed_t thingtop = thing->z + thing->height;
+#ifdef ESLOPE
+	fixed_t startingonground = P_IsObjectOnGround(thing);
+#endif
 	floatok = false;
 
 	if (radius < MAXRADIUS/2)
@@ -1900,13 +1969,23 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 				{
 					if (thingtop == thing->ceilingz && tmceilingz > thingtop && tmceilingz - thingtop <= maxstep)
 					{
-						thing->z = tmceilingz - thing->height;
+						thing->z = (thing->ceilingz = thingtop = tmceilingz) - thing->height;
+						thing->eflags |= MFE_JUSTSTEPPEDDOWN;
+					}
+					else if (tmceilingz < thingtop && thingtop - tmceilingz <= maxstep)
+					{
+						thing->z = (thing->ceilingz = thingtop = tmceilingz) - thing->height;
 						thing->eflags |= MFE_JUSTSTEPPEDDOWN;
 					}
 				}
 				else if (thing->z == thing->floorz && tmfloorz < thing->z && thing->z - tmfloorz <= maxstep)
 				{
-					thing->z = tmfloorz;
+					thing->z = thing->floorz = tmfloorz;
+					thing->eflags |= MFE_JUSTSTEPPEDDOWN;
+				}
+				else if (tmfloorz > thing->z && tmfloorz - thing->z <= maxstep)
+				{
+					thing->z = thing->floorz = tmfloorz;
 					thing->eflags |= MFE_JUSTSTEPPEDDOWN;
 				}
 			}
@@ -1977,6 +2056,25 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 
 	thing->floorz = tmfloorz;
 	thing->ceilingz = tmceilingz;
+
+#ifdef ESLOPE
+	// Assign thing's standingslope if needed
+	if (thing->z <= tmfloorz && !(thing->eflags & MFE_VERTICALFLIP)) {
+		if (!startingonground && tmfloorslope)
+			P_HandleSlopeLanding(thing, tmfloorslope);
+
+		if (thing->momz <= 0)
+			thing->standingslope = tmfloorslope;
+	}
+	else if (thing->z+thing->height >= tmceilingz && (thing->eflags & MFE_VERTICALFLIP)) {
+		if (!startingonground && tmceilingslope)
+			P_HandleSlopeLanding(thing, tmceilingslope);
+
+		if (thing->momz >= 0)
+			thing->standingslope = tmceilingslope;
+	}
+#endif
+
 	thing->x = x;
 	thing->y = y;
 
@@ -1992,6 +2090,7 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 boolean P_SceneryTryMove(mobj_t *thing, fixed_t x, fixed_t y)
 {
 	fixed_t tryx, tryy;
+
 	tryx = thing->x;
 	tryy = thing->y;
 	do {
@@ -2314,15 +2413,25 @@ static boolean P_IsClimbingValid(player_t *player, angle_t angle)
 {
 	fixed_t platx, platy;
 	subsector_t *glidesector;
+	fixed_t floorz, ceilingz;
 
 	platx = P_ReturnThrustX(player->mo, angle, player->mo->radius + FixedMul(8*FRACUNIT, player->mo->scale));
 	platy = P_ReturnThrustY(player->mo, angle, player->mo->radius + FixedMul(8*FRACUNIT, player->mo->scale));
 
 	glidesector = R_PointInSubsector(player->mo->x + platx, player->mo->y + platy);
 
+#ifdef ESLOPE
+	floorz = glidesector->sector->f_slope ? P_GetZAt(glidesector->sector->f_slope, player->mo->x, player->mo->y) : glidesector->sector->floorheight;
+	ceilingz = glidesector->sector->c_slope ? P_GetZAt(glidesector->sector->c_slope, player->mo->x, player->mo->y) : glidesector->sector->ceilingheight;
+#else
+	floorz = glidesector->sector->floorheight;
+	ceilingz = glidesector->sector->ceilingheight;
+#endif
+
 	if (glidesector->sector != player->mo->subsector->sector)
 	{
 		boolean floorclimb = false;
+		fixed_t topheight, bottomheight;
 
 		if (glidesector->sector->ffloors)
 		{
@@ -2332,34 +2441,44 @@ static boolean P_IsClimbingValid(player_t *player, angle_t angle)
 				if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_BLOCKPLAYER))
 					continue;
 
+				topheight = *rover->topheight;
+				bottomheight = *rover->bottomheight;
+
+#ifdef ESLOPE
+				if (*rover->t_slope)
+					topheight = P_GetZAt(*rover->t_slope, player->mo->x, player->mo->y);
+				if (*rover->b_slope)
+					bottomheight = P_GetZAt(*rover->b_slope, player->mo->x, player->mo->y);
+#endif
+
 				floorclimb = true;
 
 				if (player->mo->eflags & MFE_VERTICALFLIP)
 				{
-					if ((*rover->topheight < player->mo->z + player->mo->height) && ((player->mo->z + player->mo->height + player->mo->momz) < *rover->topheight))
+					if ((topheight < player->mo->z + player->mo->height) && ((player->mo->z + player->mo->height + player->mo->momz) < topheight))
 					{
 						floorclimb = true;
 					}
-					if (*rover->topheight < player->mo->z) // Waaaay below the ledge.
+					if (topheight < player->mo->z) // Waaaay below the ledge.
 					{
 						floorclimb = false;
 					}
-					if (*rover->bottomheight > player->mo->z + player->mo->height - FixedMul(16*FRACUNIT,player->mo->scale))
+					if (bottomheight > player->mo->z + player->mo->height - FixedMul(16*FRACUNIT,player->mo->scale))
 					{
 						floorclimb = false;
 					}
 				}
 				else
 				{
-					if ((*rover->bottomheight > player->mo->z) && ((player->mo->z - player->mo->momz) > *rover->bottomheight))
+					if ((bottomheight > player->mo->z) && ((player->mo->z - player->mo->momz) > bottomheight))
 					{
 						floorclimb = true;
 					}
-					if (*rover->bottomheight > player->mo->z + player->mo->height) // Waaaay below the ledge.
+					if (bottomheight > player->mo->z + player->mo->height) // Waaaay below the ledge.
 					{
 						floorclimb = false;
 					}
-					if (*rover->topheight < player->mo->z + FixedMul(16*FRACUNIT,player->mo->scale))
+					if (topheight < player->mo->z + FixedMul(16*FRACUNIT,player->mo->scale))
 					{
 						floorclimb = false;
 					}
@@ -2372,30 +2491,30 @@ static boolean P_IsClimbingValid(player_t *player, angle_t angle)
 
 		if (player->mo->eflags & MFE_VERTICALFLIP)
 		{
-			if ((glidesector->sector->floorheight <= player->mo->z + player->mo->height)
-				&& ((player->mo->z + player->mo->height - player->mo->momz) <= glidesector->sector->floorheight))
+			if ((floorz <= player->mo->z + player->mo->height)
+				&& ((player->mo->z + player->mo->height - player->mo->momz) <= floorz))
 				floorclimb = true;
 
-			if ((glidesector->sector->floorheight > player->mo->z)
+			if ((floorz > player->mo->z)
 				&& glidesector->sector->floorpic == skyflatnum)
 				return false;
 
-			if ((player->mo->z + player->mo->height - FixedMul(16*FRACUNIT,player->mo->scale) > glidesector->sector->ceilingheight)
-				|| (player->mo->z + player->mo->height <= glidesector->sector->floorheight))
+			if ((player->mo->z + player->mo->height - FixedMul(16*FRACUNIT,player->mo->scale) > ceilingz)
+				|| (player->mo->z + player->mo->height <= floorz))
 				floorclimb = true;
 		}
 		else
 		{
-			if ((glidesector->sector->ceilingheight >= player->mo->z)
-				&& ((player->mo->z - player->mo->momz) >= glidesector->sector->ceilingheight))
+			if ((ceilingz >= player->mo->z)
+				&& ((player->mo->z - player->mo->momz) >= ceilingz))
 				floorclimb = true;
 
-			if ((glidesector->sector->ceilingheight < player->mo->z+player->mo->height)
+			if ((ceilingz < player->mo->z+player->mo->height)
 				&& glidesector->sector->ceilingpic == skyflatnum)
 				return false;
 
-			if ((player->mo->z + FixedMul(16*FRACUNIT,player->mo->scale) < glidesector->sector->floorheight)
-				|| (player->mo->z >= glidesector->sector->ceilingheight))
+			if ((player->mo->z + FixedMul(16*FRACUNIT,player->mo->scale) < ceilingz)
+				|| (player->mo->z >= ceilingz))
 				floorclimb = true;
 		}
 
@@ -2467,6 +2586,7 @@ isblocking:
 		line_t *checkline = li;
 		sector_t *checksector;
 		ffloor_t *rover;
+		fixed_t topheight, bottomheight;
 		boolean fofline = false;
 		INT32 side = P_PointOnLineSide(slidemo->x, slidemo->y, li);
 
@@ -2482,13 +2602,23 @@ isblocking:
 				if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_BLOCKPLAYER) || (rover->flags & FF_BUSTUP))
 					continue;
 
-				if (*rover->topheight < slidemo->z)
+				topheight = *rover->topheight;
+				bottomheight = *rover->bottomheight;
+
+#ifdef ESLOPE
+				if (*rover->t_slope)
+					topheight = P_GetZAt(*rover->t_slope, slidemo->x, slidemo->y);
+				if (*rover->b_slope)
+					bottomheight = P_GetZAt(*rover->b_slope, slidemo->x, slidemo->y);
+#endif
+
+				if (topheight < slidemo->z)
 					continue;
 
-				if (*rover->bottomheight > slidemo->z + slidemo->height)
+				if (bottomheight > slidemo->z + slidemo->height)
 					continue;
 
-				// Got this far, so I guess it's climbable.
+				// Got this far, so I guess it's climbable. // TODO: Climbing check, also, better method to do this?
 				if (rover->master->flags & ML_TFERLINE)
 				{
 					size_t linenum = li-checksector->lines[0];
@@ -3108,6 +3238,7 @@ static boolean PIT_ChangeSector(mobj_t *thing, boolean realcrush)
 		if (thing->subsector->sector->ffloors && (realcrush || thing->flags & MF_PUSHABLE))
 		{
 			ffloor_t *rover;
+			fixed_t topheight, bottomheight;
 			fixed_t delta1, delta2;
 			INT32 thingtop = thing->z + thing->height;
 
@@ -3117,9 +3248,19 @@ static boolean PIT_ChangeSector(mobj_t *thing, boolean realcrush)
 				|| ((rover->flags & FF_BLOCKOTHERS) && !thing->player)) || !(rover->flags & FF_EXISTS))
 					continue;
 
-				delta1 = thing->z - (*rover->bottomheight + *rover->topheight)/2;
-				delta2 = thingtop - (*rover->bottomheight + *rover->topheight)/2;
-				if (*rover->bottomheight <= thing->ceilingz && abs(delta1) >= abs(delta2))
+				topheight = *rover->topheight;
+				bottomheight = *rover->bottomheight;
+
+/*#ifdef ESLOPE
+				if (rover->t_slope)
+					topheight = P_GetZAt(rover->t_slope, thing->x, thing->y);
+				if (rover->b_slope)
+					bottomheight = P_GetZAt(rover->b_slope, thing->x, thing->y);
+#endif*/
+
+				delta1 = thing->z - (bottomheight + topheight)/2;
+				delta2 = thingtop - (bottomheight + topheight)/2;
+				if (bottomheight <= thing->ceilingz && abs(delta1) >= abs(delta2))
 				{
 					if (thing->flags & MF_PUSHABLE)
 					{
@@ -3790,7 +3931,7 @@ void P_MapEnd(void)
 }
 
 // P_FloorzAtPos
-// Returns the floorz of the XYZ position
+// Returns the floorz of the XYZ position // TODO: Need ceilingpos function too
 // Tails 05-26-2003
 fixed_t P_FloorzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height)
 {
@@ -3811,9 +3952,19 @@ fixed_t P_FloorzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height)
 			if ((!(rover->flags & FF_SOLID || rover->flags & FF_QUICKSAND) || (rover->flags & FF_SWIMMABLE)))
 				continue;
 
+			fixed_t topheight = *rover->topheight;
+			fixed_t bottomheight = *rover->bottomheight;
+
+#ifdef ESLOPE
+			if (*rover->t_slope)
+				topheight = P_GetZAt(*rover->t_slope, x, y);
+			if (*rover->b_slope)
+				bottomheight = P_GetZAt(*rover->b_slope, x, y);
+#endif
+
 			if (rover->flags & FF_QUICKSAND)
 			{
-				if (z < *rover->topheight && *rover->bottomheight < thingtop)
+				if (z < topheight && bottomheight < thingtop)
 				{
 					if (floorz < z)
 						floorz = z;
@@ -3821,10 +3972,10 @@ fixed_t P_FloorzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height)
 				continue;
 			}
 
-			delta1 = z - (*rover->bottomheight + ((*rover->topheight - *rover->bottomheight)/2));
-			delta2 = thingtop - (*rover->bottomheight + ((*rover->topheight - *rover->bottomheight)/2));
-			if (*rover->topheight > floorz && abs(delta1) < abs(delta2))
-				floorz = *rover->topheight;
+			delta1 = z - (bottomheight + ((topheight - bottomheight)/2));
+			delta2 = thingtop - (bottomheight + ((topheight - bottomheight)/2));
+			if (topheight > floorz && abs(delta1) < abs(delta2))
+				floorz = topheight;
 		}
 	}
 

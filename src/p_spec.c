@@ -3365,6 +3365,7 @@ sector_t *P_PlayerTouchingSectorSpecial(player_t *player, INT32 section, INT32 n
 static boolean P_ThingIsOnThe3DFloor(mobj_t *mo, sector_t *sector, sector_t *targetsec)
 {
 	ffloor_t *rover;
+	fixed_t top, bottom;
 
 	if (!mo->player) // should NEVER happen
 		return false;
@@ -3381,6 +3382,9 @@ static boolean P_ThingIsOnThe3DFloor(mobj_t *mo, sector_t *sector, sector_t *tar
 		//if (!(rover->flags & FF_EXISTS))
 		//	return false;
 
+		top = P_GetSpecialTopZ(mo, sector, targetsec);
+		bottom = P_GetSpecialBottomZ(mo, sector, targetsec);
+
 		// Check the 3D floor's type...
 		if (rover->flags & FF_BLOCKPLAYER)
 		{
@@ -3388,27 +3392,27 @@ static boolean P_ThingIsOnThe3DFloor(mobj_t *mo, sector_t *sector, sector_t *tar
 			if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR)
 				&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING))
 			{
-				if ((mo->eflags & MFE_VERTICALFLIP) || mo->z != *rover->topheight)
+				if ((mo->eflags & MFE_VERTICALFLIP) || mo->z != top)
 					return false;
 			}
 			else if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING)
 				&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR))
 			{
 				if (!(mo->eflags & MFE_VERTICALFLIP)
-					|| mo->z + mo->height != *rover->bottomheight)
+					|| mo->z + mo->height != bottom)
 					return false;
 			}
 			else if (rover->master->frontsector->flags & SF_FLIPSPECIAL_BOTH)
 			{
-				if (!((mo->eflags & MFE_VERTICALFLIP && mo->z + mo->height == *rover->bottomheight)
-					|| (!(mo->eflags & MFE_VERTICALFLIP) && mo->z == *rover->topheight)))
+				if (!((mo->eflags & MFE_VERTICALFLIP && mo->z + mo->height == bottom)
+					|| (!(mo->eflags & MFE_VERTICALFLIP) && mo->z == top)))
 					return false;
 			}
 		}
 		else
 		{
 			// Water and intangible FOFs
-			if (mo->z > *rover->topheight || (mo->z + mo->height) < *rover->bottomheight)
+			if (mo->z > top || (mo->z + mo->height) < bottom)
 				return false;
 		}
 
@@ -3426,9 +3430,9 @@ static boolean P_ThingIsOnThe3DFloor(mobj_t *mo, sector_t *sector, sector_t *tar
 static inline boolean P_MobjReadyToTrigger(mobj_t *mo, sector_t *sec)
 {
 	if (mo->eflags & MFE_VERTICALFLIP)
-		return (mo->z+mo->height == sec->ceilingheight && sec->flags & SF_FLIPSPECIAL_CEILING);
+		return (mo->z+mo->height == P_GetSpecialTopZ(mo, sec, sec) && sec->flags & SF_FLIPSPECIAL_CEILING);
 	else
-		return (mo->z == sec->floorheight && sec->flags & SF_FLIPSPECIAL_FLOOR);
+		return (mo->z == P_GetSpecialBottomZ(mo, sec, sec) && sec->flags & SF_FLIPSPECIAL_FLOOR);
 }
 
 /** Applies a sector special to a player.
@@ -4389,27 +4393,27 @@ static void P_PlayerOnSpecial3DFloor(player_t *player, sector_t *sector)
 			if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR)
 				&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING))
 			{
-				if ((player->mo->eflags & MFE_VERTICALFLIP) || player->mo->z != *rover->topheight)
+				if ((player->mo->eflags & MFE_VERTICALFLIP) || player->mo->z != P_GetSpecialTopZ(player->mo, sectors + rover->secnum, sector))
 					continue;
 			}
 			else if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING)
 				&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR))
 			{
 				if (!(player->mo->eflags & MFE_VERTICALFLIP)
-					|| player->mo->z + player->mo->height != *rover->bottomheight)
+					|| player->mo->z + player->mo->height != P_GetSpecialBottomZ(player->mo, sectors + rover->secnum, sector))
 					continue;
 			}
 			else if (rover->master->frontsector->flags & SF_FLIPSPECIAL_BOTH)
 			{
-				if (!((player->mo->eflags & MFE_VERTICALFLIP && player->mo->z + player->mo->height == *rover->bottomheight)
-					|| (!(player->mo->eflags & MFE_VERTICALFLIP) && player->mo->z == *rover->topheight)))
+				if (!((player->mo->eflags & MFE_VERTICALFLIP && player->mo->z + player->mo->height == P_GetSpecialBottomZ(player->mo, sectors + rover->secnum, sector))
+					|| (!(player->mo->eflags & MFE_VERTICALFLIP) && player->mo->z == P_GetSpecialTopZ(player->mo, sectors + rover->secnum, sector))))
 					continue;
 			}
 		}
 		else
 		{
 			// Water and DEATH FOG!!! heh
-			if (player->mo->z > *rover->topheight || (player->mo->z + player->mo->height) < *rover->bottomheight)
+			if (player->mo->z > P_GetSpecialTopZ(player->mo, sectors + rover->secnum, sector) || (player->mo->z + player->mo->height) < P_GetSpecialBottomZ(player->mo, sectors + rover->secnum, sector))
 				continue;
 		}
 
@@ -4519,6 +4523,7 @@ static void P_PlayerOnSpecial3DFloor(player_t *player, sector_t *sector)
 static void P_RunSpecialSectorCheck(player_t *player, sector_t *sector)
 {
 	boolean nofloorneeded = false;
+	fixed_t f_affectpoint, c_affectpoint;
 
 	if (!sector->special) // nothing special, exit
 		return;
@@ -4581,16 +4586,19 @@ static void P_RunSpecialSectorCheck(player_t *player, sector_t *sector)
 		return;
 	}
 
+	f_affectpoint = P_GetSpecialBottomZ(player->mo, sector, sector);
+	c_affectpoint = P_GetSpecialTopZ(player->mo, sector, sector);
+
 	// Only go further if on the ground
-	if ((sector->flags & SF_FLIPSPECIAL_FLOOR) && !(sector->flags & SF_FLIPSPECIAL_CEILING) && player->mo->z != sector->floorheight)
+	if ((sector->flags & SF_FLIPSPECIAL_FLOOR) && !(sector->flags & SF_FLIPSPECIAL_CEILING) && player->mo->z != f_affectpoint)
 		return;
 
-	if ((sector->flags & SF_FLIPSPECIAL_CEILING) && !(sector->flags & SF_FLIPSPECIAL_FLOOR) && player->mo->z + player->mo->height != sector->ceilingheight)
+	if ((sector->flags & SF_FLIPSPECIAL_CEILING) && !(sector->flags & SF_FLIPSPECIAL_FLOOR) && player->mo->z + player->mo->height != c_affectpoint)
 		return;
 
 	if ((sector->flags & SF_FLIPSPECIAL_BOTH)
-		&& player->mo->z != sector->floorheight
-		&& player->mo->z + player->mo->height != sector->ceilingheight)
+		&& player->mo->z != f_affectpoint
+		&& player->mo->z + player->mo->height != c_affectpoint)
 		return;
 
 	P_ProcessSpecialSector(player, sector, NULL);
@@ -4751,6 +4759,9 @@ void P_UpdateSpecials(void)
 	// POINT LIMIT
 	P_CheckPointLimit();
 
+	// Dynamic slopeness
+	P_RunDynamicSlopes();
+
 	// ANIMATE TEXTURES
 	for (anim = anims; anim < lastanim; anim++)
 	{
@@ -4893,6 +4904,12 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 	ffloor->topxoffs = &sec2->ceiling_xoffs;
 	ffloor->topyoffs = &sec2->ceiling_yoffs;
 	ffloor->topangle = &sec2->ceilingpic_angle;
+
+#ifdef ESLOPE
+	// Add slopes
+	ffloor->t_slope = &sec2->c_slope;
+	ffloor->b_slope = &sec2->f_slope;
+#endif
 
 	if ((flags & FF_SOLID) && (master->flags & ML_EFFECT1)) // Block player only
 		flags &= ~FF_BLOCKOTHERS;
@@ -5327,6 +5344,7 @@ void T_LaserFlash(laserthink_t *flash)
 	sector_t *sourcesec;
 	ffloor_t *ffloor = flash->ffloor;
 	sector_t *sector = flash->sector;
+	fixed_t top, bottom;
 
 	if (!ffloor || !(ffloor->flags & FF_EXISTS))
 		return;
@@ -5350,8 +5368,11 @@ void T_LaserFlash(laserthink_t *flash)
 			&& thing->flags & MF_BOSS)
 			continue; // Don't hurt bosses
 
-		if (thing->z >= sourcesec->ceilingheight
-		|| thing->z + thing->height <= sourcesec->floorheight)
+		top = P_GetSpecialTopZ(thing, sourcesec, sector);
+		bottom = P_GetSpecialBottomZ(thing, sourcesec, sector);
+
+		if (thing->z >= top
+		|| thing->z + thing->height <= bottom)
 			continue;
 
 		if (thing->flags & MF_SHOOTABLE)
@@ -6430,6 +6451,14 @@ void P_SpawnSpecials(INT32 fromnetsave)
 					sectors[s].midmap = lines[i].frontsector->midmap;
 				break;
 
+#ifdef ESLOPE // Slope copy specials. Handled here for sanity.
+			case 720:
+			case 721:
+			case 722:
+				P_CopySectorSlope(&lines[i]);
+				break;
+#endif
+
 			default:
 				break;
 		}
@@ -6634,6 +6663,8 @@ void T_Scroll(scroll_t *s)
 						if (thing->eflags & MFE_PUSHED) // Already pushed this tic by an exclusive pusher.
 							continue;
 
+						height = P_GetSpecialBottomZ(thing, sec, psec);
+
 						if (!(thing->flags & MF_NOCLIP)) // Thing must be clipped
 						if (!(thing->flags & MF_NOGRAVITY || thing->z+thing->height != height)) // Thing must a) be non-floating and have z+height == height
 						{
@@ -6653,6 +6684,8 @@ void T_Scroll(scroll_t *s)
 
 					if (thing->eflags & MFE_PUSHED)
 						continue;
+
+					height = P_GetSpecialBottomZ(thing, sec, sec);
 
 					if (!(thing->flags & MF_NOCLIP) &&
 						(!(thing->flags & MF_NOGRAVITY || thing->z > height)))
@@ -6693,6 +6726,8 @@ void T_Scroll(scroll_t *s)
 						if (thing->eflags & MFE_PUSHED)
 							continue;
 
+						height = P_GetSpecialTopZ(thing, sec, psec);
+
 						if (!(thing->flags & MF_NOCLIP)) // Thing must be clipped
 						if (!(thing->flags & MF_NOGRAVITY || thing->z != height))// Thing must a) be non-floating and have z == height
 						{
@@ -6712,6 +6747,8 @@ void T_Scroll(scroll_t *s)
 
 					if (thing->eflags & MFE_PUSHED)
 						continue;
+
+					height = P_GetSpecialTopZ(thing, sec, sec);
 
 					if (!(thing->flags & MF_NOCLIP) &&
 						(!(thing->flags & MF_NOGRAVITY || thing->z+thing->height < height)))
@@ -7006,7 +7043,7 @@ static void Add_Friction(INT32 friction, INT32 movefactor, INT32 affectee, INT32
   */
 void T_Friction(friction_t *f)
 {
-	sector_t *sec;
+	sector_t *sec, *referrer;
 	mobj_t *thing;
 	msecnode_t *node;
 
@@ -7015,7 +7052,7 @@ void T_Friction(friction_t *f)
 	// Make sure the sector type hasn't changed
 	if (f->roverfriction)
 	{
-		sector_t *referrer = sectors + f->referrer;
+		referrer = sectors + f->referrer;
 
 		if (!(GETSECSPECIAL(referrer->special, 3) == 1
 			|| GETSECSPECIAL(referrer->special, 3) == 3))
@@ -7047,9 +7084,7 @@ void T_Friction(friction_t *f)
 		{
 			if (f->roverfriction)
 			{
-				sector_t *referrer = &sectors[f->referrer];
-
-				if (thing->floorz != referrer->ceilingheight)
+				if (thing->floorz != P_GetSpecialTopZ(thing, referrer, sec))
 				{
 					node = node->m_snext;
 					continue;
@@ -7062,7 +7097,7 @@ void T_Friction(friction_t *f)
 					thing->movefactor = f->movefactor;
 				}
 			}
-			else if (sec->floorheight == thing->floorz && (thing->friction == ORIG_FRICTION // normal friction?
+			else if (P_GetSpecialBottomZ(thing, sec, sec) == thing->floorz && (thing->friction == ORIG_FRICTION // normal friction?
 				|| f->friction < thing->friction))
 			{
 				thing->friction = f->friction;
@@ -7336,7 +7371,7 @@ static inline boolean PIT_PushThing(mobj_t *thing)
   */
 void T_Pusher(pusher_t *p)
 {
-	sector_t *sec;
+	sector_t *sec, *referrer;
 	mobj_t *thing;
 	msecnode_t *node;
 	INT32 xspeed = 0,yspeed = 0;
@@ -7345,7 +7380,6 @@ void T_Pusher(pusher_t *p)
 	//INT32 ht = 0;
 	boolean inFOF;
 	boolean touching;
-	boolean foundfloor = false;
 	boolean moved;
 
 	xspeed = yspeed = 0;
@@ -7357,17 +7391,14 @@ void T_Pusher(pusher_t *p)
 
 	if (p->roverpusher)
 	{
-		sector_t *referrer = &sectors[p->referrer];
+		referrer = &sectors[p->referrer];
 
-		if (GETSECSPECIAL(referrer->special, 3) == 2
-			|| GETSECSPECIAL(referrer->special, 3) == 3)
-			foundfloor = true;
+		if (!(GETSECSPECIAL(referrer->special, 3) == 2
+			|| GETSECSPECIAL(referrer->special, 3) == 3))
+			return;
 	}
 	else if (!(GETSECSPECIAL(sec->special, 3) == 2
 			|| GETSECSPECIAL(sec->special, 3) == 3))
-		return;
-
-	if (p->roverpusher && foundfloor == false) // Not even a 3d floor has the PUSH_MASK.
 		return;
 
 	// For constant pushers (wind/current) there are 3 situations:
@@ -7444,41 +7475,38 @@ void T_Pusher(pusher_t *p)
 		// Find the area that the 'thing' is in
 		if (p->roverpusher)
 		{
-			sector_t *referrer = &sectors[p->referrer];
-			INT32 special;
+			fixed_t top, bottom;
 
-			special = GETSECSPECIAL(referrer->special, 3);
-
-			if (!(special == 2 || special == 3))
-				return;
+			top = P_GetSpecialTopZ(thing, referrer, sec);
+			bottom = P_GetSpecialBottomZ(thing, referrer, sec);
 
 			if (thing->eflags & MFE_VERTICALFLIP)
 			{
-				if (referrer->floorheight > thing->z + thing->height
-					|| referrer->ceilingheight < (thing->z + (thing->height >> 1)))
+				if (bottom > thing->z + thing->height
+					|| top < (thing->z + (thing->height >> 1)))
 					continue;
 
-				if (thing->z < referrer->floorheight)
+				if (thing->z < bottom)
 					touching = true;
 
-				if (thing->z + (thing->height >> 1) > referrer->floorheight)
+				if (thing->z + (thing->height >> 1) > bottom)
 					inFOF = true;
 
 			}
 			else
 			{
-				if (referrer->ceilingheight < thing->z || referrer->floorheight > (thing->z + (thing->height >> 1)))
+				if (top < thing->z || referrer->floorheight > (thing->z + (thing->height >> 1)))
 					continue;
-				if (thing->z + thing->height > referrer->ceilingheight)
+				if (thing->z + thing->height > top)
 					touching = true;
 
-				if (thing->z + (thing->height >> 1) < referrer->ceilingheight)
+				if (thing->z + (thing->height >> 1) < top)
 					inFOF = true;
 			}
 		}
 		else // Treat the entire sector as one big FOF
 		{
-			if (thing->z == thing->subsector->sector->floorheight)
+			if (thing->z == P_GetSpecialBottomZ(thing, sec, sec))
 				touching = true;
 			else if (p->type != p_current)
 				inFOF = true;

@@ -119,8 +119,6 @@ fixed_t FixedHypot(fixed_t x, fixed_t y)
 	return FixedMul(ax, yx1); // |x|*((1 + (x/y)^2)^1/2)
 }
 
-#ifdef NEED_FIXED_VECTOR
-
 vector2_t *FV2_Load(vector2_t *vec, fixed_t x, fixed_t y)
 {
 	vec->x = x;
@@ -862,8 +860,6 @@ void FM_Scale(matrix_t *dest, fixed_t x, fixed_t y, fixed_t z)
 	FM_MultMatrix(dest, &scale);
 #undef M
 }
-
-#endif
 
 #ifdef M_TESTCASE
 //#define MULDIV_TEST
