@@ -2203,6 +2203,7 @@ boolean M_Responder(event_t *ev)
 				if (modeattacking)
 					return true;
 				M_StartControlPanel();
+				M_Options(0);
 				currentMenu = &OP_SoundOptionsDef;
 				itemOn = 0;
 				return true;
@@ -2212,6 +2213,7 @@ boolean M_Responder(event_t *ev)
 				if (modeattacking)
 					return true;
 				M_StartControlPanel();
+				M_Options(0);
 				M_VideoModeMenu(0);
 				return true;
 #endif
@@ -2223,6 +2225,7 @@ boolean M_Responder(event_t *ev)
 				if (modeattacking)
 					return true;
 				M_StartControlPanel();
+				M_Options(0);
 				M_SetupNextMenu(&OP_MainDef);
 				return true;
 
