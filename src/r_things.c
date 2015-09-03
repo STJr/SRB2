@@ -950,12 +950,22 @@ static void R_SplitSprite(vissprite_t *sprite, mobj_t *thing)
 
 	for (i = 1; i < sector->numlights; i++)
 	{
-		if (sector->lightlist[i].height >= sprite->gzt || !(sector->lightlist[i].caster->flags & FF_CUTSPRITES))
+		fixed_t testheight = sector->lightlist[i].height;
+
+		if (!(sector->lightlist[i].caster->flags & FF_CUTSPRITES))
 			continue;
-		if (sector->lightlist[i].height <= sprite->gz)
+
+#ifdef ESLOPE
+		if (sector->lightlist[i].slope)
+			testheight = P_GetZAt(sector->lightlist[i].slope, sprite->gx, sprite->gy);
+#endif
+
+		if (testheight >= sprite->gzt)
+			continue;
+		if (testheight <= sprite->gz)
 			return;
 
-		cutfrac = (INT16)((centeryfrac - FixedMul(sector->lightlist[i].height - viewz, sprite->scale))>>FRACBITS);
+		cutfrac = (INT16)((centeryfrac - FixedMul(testheight - viewz, sprite->scale))>>FRACBITS);
 		if (cutfrac < 0)
 			continue;
 		if (cutfrac > vid.height)
@@ -966,15 +976,15 @@ static void R_SplitSprite(vissprite_t *sprite, mobj_t *thing)
 		newsprite = M_Memcpy(R_NewVisSprite(), sprite, sizeof (vissprite_t));
 
 		sprite->cut |= SC_BOTTOM;
-		sprite->gz = sector->lightlist[i].height;
+		sprite->gz = testheight;
 
 		newsprite->gzt = sprite->gz;
 
 		sprite->sz = cutfrac;
 		newsprite->szt = (INT16)(sprite->sz - 1);
 
-		if (sector->lightlist[i].height < sprite->pzt && sector->lightlist[i].height > sprite->pz)
-			sprite->pz = newsprite->pzt = sector->lightlist[i].height;
+		if (testheight < sprite->pzt && testheight > sprite->pz)
+			sprite->pz = newsprite->pzt = testheight;
 		else
 		{
 			newsprite->pz = newsprite->gz;
@@ -1191,7 +1201,20 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (thing->subsector->sector->numlights)
 	{
 		INT32 lightnum;
+#ifdef ESLOPE // R_GetPlaneLight won't work on sloped lights!
+		light = thing->subsector->sector->numlights - 1;
+
+		for (lightnum = 1; lightnum < thing->subsector->sector->numlights; lightnum++) {
+			fixed_t h = thing->subsector->sector->lightlist[lightnum].slope ? P_GetZAt(thing->subsector->sector->lightlist[lightnum].slope, thing->x, thing->y)
+			            : thing->subsector->sector->lightlist[lightnum].height;
+			if (h <= gzt) {
+				light = lightnum - 1;
+				break;
+			}
+		}
+#else
 		light = R_GetPlaneLight(thing->subsector->sector, gzt, false);
+#endif
 		lightnum = (*thing->subsector->sector->lightlist[light].lightlevel >> LIGHTSEGSHIFT);
 
 		if (lightnum < 0)
@@ -1752,24 +1775,34 @@ static void R_CreateDrawNodes(void)
 		{
 			if (r2->plane)
 			{
+				fixed_t planeobjectz, planecameraz;
 				if (r2->plane->minx > rover->x2 || r2->plane->maxx < rover->x1)
 					continue;
 				if (rover->szt > r2->plane->low || rover->sz < r2->plane->high)
 					continue;
 
+#ifdef ESLOPE
+				// Effective height may be different for each comparison in the case of slopes
+				if (r2->plane->slope) {
+					planeobjectz = P_GetZAt(r2->plane->slope, rover->gx, rover->gy);
+					planecameraz = P_GetZAt(r2->plane->slope, viewx, viewy);
+				} else
+#endif
+					planeobjectz = planecameraz = r2->plane->height;
+
 				if (rover->mobjflags & MF_NOCLIPHEIGHT)
 				{
 					//Objects with NOCLIPHEIGHT can appear halfway in.
-					if (r2->plane->height < viewz && rover->pz+(rover->thingheight/2) >= r2->plane->height)
+					if (planecameraz < viewz && rover->pz+(rover->thingheight/2) >= planeobjectz)
 						continue;
-					if (r2->plane->height > viewz && rover->pzt-(rover->thingheight/2) <= r2->plane->height)
+					if (planecameraz > viewz && rover->pzt-(rover->thingheight/2) <= planeobjectz)
 						continue;
 				}
 				else
 				{
-					if (r2->plane->height < viewz && rover->pz >= r2->plane->height)
+					if (planecameraz < viewz && rover->pz >= planeobjectz)
 						continue;
-					if (r2->plane->height > viewz && rover->pzt <= r2->plane->height)
+					if (planecameraz > viewz && rover->pzt <= planeobjectz)
 						continue;
 				}
 
@@ -1799,6 +1832,7 @@ static void R_CreateDrawNodes(void)
 			}
 			else if (r2->thickseg)
 			{
+				fixed_t topplaneobjectz, topplanecameraz, botplaneobjectz, botplanecameraz;
 				if (rover->x1 > r2->thickseg->x2 || rover->x2 < r2->thickseg->x1)
 					continue;
 
@@ -1809,9 +1843,25 @@ static void R_CreateDrawNodes(void)
 				if (scale <= rover->scale)
 					continue;
 
-				if ((*r2->ffloor->topheight > viewz && *r2->ffloor->bottomheight < viewz) ||
-				    (*r2->ffloor->topheight < viewz && rover->gzt < *r2->ffloor->topheight) ||
-				    (*r2->ffloor->bottomheight > viewz && rover->gz > *r2->ffloor->bottomheight))
+#ifdef ESLOPE
+				if (*r2->ffloor->t_slope) {
+					topplaneobjectz = P_GetZAt(*r2->ffloor->t_slope, rover->gx, rover->gy);
+					topplanecameraz = P_GetZAt(*r2->ffloor->t_slope, viewx, viewy);
+				} else
+#endif
+					topplaneobjectz = topplanecameraz = *r2->ffloor->topheight;
+
+#ifdef ESLOPE
+				if (*r2->ffloor->b_slope) {
+					botplaneobjectz = P_GetZAt(*r2->ffloor->b_slope, rover->gx, rover->gy);
+					botplanecameraz = P_GetZAt(*r2->ffloor->b_slope, viewx, viewy);
+				} else
+#endif
+					botplaneobjectz = botplanecameraz = *r2->ffloor->bottomheight;
+
+				if ((topplanecameraz > viewz && botplanecameraz < viewz) ||
+				    (topplanecameraz < viewz && rover->gzt < topplaneobjectz) ||
+				    (botplanecameraz > viewz && rover->gz > botplaneobjectz))
 				{
 					entry = R_CreateDrawNode(NULL);
 					(entry->prev = r2->prev)->next = entry;
@@ -2030,21 +2080,21 @@ void R_ClipSprites(void)
 			if (spr->gzt <= ds->tsilheight)
 				silhouette &= ~SIL_TOP;
 
-			if (silhouette == 1)
+			if (silhouette == SIL_BOTTOM)
 			{
 				// bottom sil
 				for (x = r1; x <= r2; x++)
 					if (spr->clipbot[x] == -2)
 						spr->clipbot[x] = ds->sprbottomclip[x];
 			}
-			else if (silhouette == 2)
+			else if (silhouette == SIL_TOP)
 			{
 				// top sil
 				for (x = r1; x <= r2; x++)
 					if (spr->cliptop[x] == -2)
 						spr->cliptop[x] = ds->sprtopclip[x];
 			}
-			else if (silhouette == 3)
+			else if (silhouette == (SIL_TOP|SIL_BOTTOM))
 			{
 				// both
 				for (x = r1; x <= r2; x++)

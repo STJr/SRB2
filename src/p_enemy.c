@@ -5606,8 +5606,13 @@ void A_MixUp(mobj_t *actor)
 
 				P_SetThingPosition(players[i].mo);
 
+#ifdef ESLOPE
+				players[i].mo->floorz = P_GetFloorZ(players[i].mo, players[i].mo->subsector->sector, players[i].mo->x, players[i].mo->y, NULL);
+				players[i].mo->ceilingz = P_GetCeilingZ(players[i].mo, players[i].mo->subsector->sector, players[i].mo->x, players[i].mo->y, NULL);
+#else
 				players[i].mo->floorz = players[i].mo->subsector->sector->floorheight;
 				players[i].mo->ceilingz = players[i].mo->subsector->sector->ceilingheight;
+#endif
 
 				P_CheckPosition(players[i].mo, players[i].mo->x, players[i].mo->y);
 			}

@@ -354,6 +354,10 @@ typedef struct mobj_s
 	INT32 cusval;
 	INT32 cvmem;
 
+#ifdef ESLOPE
+	struct pslope_s *standingslope; // The slope that the object is standing on (shouldn't need synced in savegames, right?)
+#endif
+
 	// WARNING: New fields must be added separately to savegame and Lua.
 } mobj_t;
 

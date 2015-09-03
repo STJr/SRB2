@@ -72,6 +72,10 @@
 #include "hardware/hw_light.h"
 #endif
 
+#ifdef ESLOPE
+#include "p_slopes.h"
+#endif
+
 //
 // Map MD5, calculated on level load.
 // Sent to clients in PT_SERVERINFO.
@@ -846,7 +850,7 @@ void P_ScanThings(INT16 mapnum, INT16 wadnum, INT16 lumpnum)
 //
 // P_LoadThings
 //
-static void P_LoadThings(lumpnum_t lumpnum)
+static void P_PrepareThings(lumpnum_t lumpnum)
 {
 	size_t i;
 	mapthing_t *mt;
@@ -884,13 +888,27 @@ static void P_LoadThings(lumpnum_t lumpnum)
 	}
 	Z_Free(datastart);
 
+}
+
+static void P_LoadThings(void)
+{
+	size_t i;
+	mapthing_t *mt;
+
+	// Loading the things lump itself into memory is now handled in P_PrepareThings, above
+
 	mt = mapthings;
 	numhuntemeralds = 0;
 	for (i = 0; i < nummapthings; i++, mt++)
 	{
+		sector_t *mtsector = R_PointInSubsector(mt->x << FRACBITS, mt->y << FRACBITS)->sector;
+
 		// Z for objects
-		mt->z = (INT16)(R_PointInSubsector(mt->x << FRACBITS, mt->y << FRACBITS)
-			->sector->floorheight>>FRACBITS);
+		mt->z = (INT16)(
+#ifdef ESLOPE
+				mtsector->f_slope ? P_GetZAt(mtsector->f_slope, mt->x << FRACBITS, mt->y << FRACBITS) :
+#endif
+				mtsector->floorheight)>>FRACBITS;
 
 		if (mt->type == 1700 // MT_AXIS
 			|| mt->type == 1701 // MT_AXISTRANSFER
@@ -2114,7 +2132,8 @@ void P_LoadThingsOnly(void)
 
 	P_LevelInitStuff();
 
-	P_LoadThings(lastloadedmaplumpnum + ML_THINGS);
+	P_PrepareThings(lastloadedmaplumpnum + ML_THINGS);
+	P_LoadThings();
 
 	P_SpawnSecretItems(true);
 }
@@ -2531,7 +2550,13 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	P_MapStart();
 
-	P_LoadThings(lastloadedmaplumpnum + ML_THINGS);
+	P_PrepareThings(lastloadedmaplumpnum + ML_THINGS);
+
+#ifdef ESLOPE
+	P_ResetDynamicSlopes();
+#endif
+
+	P_LoadThings();
 
 	P_SpawnSecretItems(loademblems);
 
