@@ -916,7 +916,7 @@ static void R_Subsector(size_t num)
 	if (frontsector->ffloors)
 	{
 		ffloor_t *rover;
-		fixed_t heightcheck;
+		fixed_t heightcheck, planecenterz, floorcenterz, ceilingcenterz;
 
 		for (rover = frontsector->ffloors; rover && numffloors < MAXFFLOORS; rover = rover->next)
 		{
@@ -934,25 +934,38 @@ static void R_Subsector(size_t num)
 
 			ffloor[numffloors].plane = NULL;
 			ffloor[numffloors].polyobj = NULL;
+			
+			floorcenterz = 
+#ifdef ESLOPE
+				frontsector->f_slope ? P_GetZAt(frontsector->f_slope, frontsector->soundorg.x, frontsector->soundorg.y) :
+#endif
+				frontsector->floorheight;
+				
+			ceilingcenterz = 
+#ifdef ESLOPE
+				frontsector->c_slope ? P_GetZAt(frontsector->c_slope, frontsector->soundorg.x, frontsector->soundorg.y) :
+#endif
+				frontsector->ceilingheight;
 
 			heightcheck =
 #ifdef ESLOPE
 				*rover->b_slope ? P_GetZAt(*rover->b_slope, viewx, viewy) :
 #endif
 				*rover->bottomheight;
-			if (*rover->bottomheight <= frontsector->ceilingheight
-				&& *rover->bottomheight >= frontsector->floorheight
+			
+			planecenterz = 
+#ifdef ESLOPE
+				*rover->b_slope ? P_GetZAt(*rover->b_slope, frontsector->soundorg.x, frontsector->soundorg.y) :
+#endif
+				*rover->bottomheight;
+			if (planecenterz <= ceilingcenterz
+				&& planecenterz >= floorcenterz
 				&& ((viewz < heightcheck && !(rover->flags & FF_INVERTPLANES))
 				|| (viewz > heightcheck && (rover->flags & FF_BOTHPLANES))))
 			{
-#ifdef ESLOPE
-				light = R_GetPlaneLight(frontsector,
-					*rover->b_slope ? P_GetZAt(*rover->b_slope, frontsector->soundorg.x, frontsector->soundorg.y) : *rover->bottomheight,
-					viewz < heightcheck);
-#else
-				light = R_GetPlaneLight(frontsector, *rover->bottomheight,
+				light = R_GetPlaneLight(frontsector, planecenterz,
 					viewz < *rover->bottomheight);
-#endif
+					
 				ffloor[numffloors].plane = R_FindPlane(*rover->bottomheight, *rover->bottompic,
 					*frontsector->lightlist[light].lightlevel, *rover->bottomxoffs,
 					*rover->bottomyoffs, *rover->bottomangle, frontsector->lightlist[light].extra_colormap, rover
@@ -988,18 +1001,19 @@ static void R_Subsector(size_t num)
 				*rover->t_slope ? P_GetZAt(*rover->t_slope, viewx, viewy) :
 #endif
 				*rover->topheight;
-			if (*rover->topheight >= frontsector->floorheight
-				&& *rover->topheight <= frontsector->ceilingheight
+			
+			planecenterz = 
+#ifdef ESLOPE
+				*rover->t_slope ? P_GetZAt(*rover->t_slope, frontsector->soundorg.x, frontsector->soundorg.y) :
+#endif
+				*rover->topheight;
+			if (planecenterz >= floorcenterz
+				&& planecenterz <= ceilingcenterz
 				&& ((viewz > heightcheck && !(rover->flags & FF_INVERTPLANES))
 				|| (viewz < heightcheck && (rover->flags & FF_BOTHPLANES))))
 			{
-#ifdef ESLOPE
-				light = R_GetPlaneLight(frontsector,
-					*rover->t_slope ? P_GetZAt(*rover->t_slope, frontsector->soundorg.x, frontsector->soundorg.y) : *rover->topheight,
-					viewz < heightcheck);
-#else
-				light = R_GetPlaneLight(frontsector, *rover->topheight, viewz < *rover->topheight);
-#endif
+				light = R_GetPlaneLight(frontsector, planecenterz, viewz < *rover->topheight);
+				
 				ffloor[numffloors].plane = R_FindPlane(*rover->topheight, *rover->toppic,
 					*frontsector->lightlist[light].lightlevel, *rover->topxoffs, *rover->topyoffs, *rover->topangle,
 					frontsector->lightlist[light].extra_colormap, rover
