@@ -484,6 +484,42 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	}
 #endif
 
+	if (thing->type == MT_PINBALL)
+	{
+		if (tmthing->flags & (MF_ENEMY|MF_BOSS))
+		{
+			if (thing->z > tmthing->z + tmthing->height)
+				return true; // overhead
+			if (thing->z + thing->height < tmthing->z)
+				return true; // underneath
+
+			if (thing->tracer && thing->tracer != tmthing && thing->tracer->player) // The ball... doesn't belong to you!
+			{
+				P_DamageMobj(tmthing, thing, thing->tracer, 1);
+				P_KillMobj(thing, NULL, NULL);
+				return false; // they did collide
+			}
+		}
+	}
+
+	if (tmthing->type == MT_PINBALL)
+	{
+		if (thing->flags & (MF_ENEMY|MF_BOSS))
+		{
+			if (tmthing->z > thing->z + thing->height)
+				return true; // overhead
+			if (tmthing->z + tmthing->height < thing->z)
+				return true; // underneath
+
+			if (tmthing->tracer && tmthing->tracer != thing && tmthing->tracer->player) // The ball... doesn't belong to you!
+			{
+				P_DamageMobj(thing, tmthing, tmthing->tracer, 1);
+				P_KillMobj(tmthing, NULL, NULL);
+				return false; // they did collide
+			}
+		}
+	}
+
 	// When solid spikes move, assume they just popped up and teleport things on top of them to hurt.
 	if (tmthing->type == MT_SPIKE && tmthing->flags & MF_SOLID)
 	{
