@@ -3025,7 +3025,6 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 		}
 
 		if (damagetype & DMG_DEATHMASK)
-			damage = 0;
 			player->rings = 0;
 		else if (damage == 0 || player->rings) //quickfix to just get things back to normal ...for now (sans Tag, I'll deal with that later)
 		{
