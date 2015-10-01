@@ -2015,6 +2015,7 @@ static void P_LevelInitStuff(void)
 	// special stage tokens, emeralds, and ring total
 	tokenbits = 0;
 	runemeraldmanager = false;
+	emeraldspawndelay = 60*TICRATE;
 	nummaprings = 0;
 
 	// emerald hunt

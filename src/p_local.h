@@ -371,6 +371,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 void P_PlayerRingBurst(player_t *player, INT32 num_rings); /// \todo better fit in p_user.c
 void P_PlayerWeaponPanelBurst(player_t *player);
 void P_PlayerWeaponAmmoBurst(player_t *player);
+void P_PlayerWeaponPanelOrAmmoBurst(player_t *player);
 void P_PlayerEmeraldBurst(player_t *player, boolean toss);
 
 void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck);
@@ -384,6 +385,7 @@ void P_ResetStarposts(void);
 
 boolean P_CanPickupItem(player_t *player, boolean weapon);
 void P_DoNightsScore(player_t *player);
+void P_DoMatchSuper(player_t *player);
 
 //
 // P_SPEC
