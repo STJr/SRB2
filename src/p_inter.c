@@ -2686,7 +2686,7 @@ void P_RemoveShield(player_t *player)
 		player->powers[pw_shield] = player->powers[pw_shield] & SH_STACK;
 }
 
-static void P_ShieldDamage(player_t *player, mobj_t *inflictor, mobj_t *source, INT32 damage)
+static void P_ShieldDamage(player_t *player, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype)
 {
 	// Must do pain first to set flashing -- P_RemoveShield can cause damage
 	P_DoPlayerPain(player, source, inflictor);
@@ -2695,7 +2695,7 @@ static void P_ShieldDamage(player_t *player, mobj_t *inflictor, mobj_t *source, 
 
 	P_ForceFeed(player, 40, 10, TICRATE, 40 + min(damage, 100)*2);
 
-	if (source && (source->type == MT_SPIKE || (source->type == MT_NULL && source->threshold == 43))) // spikes
+	if ((source && source->type == MT_SPIKE) || damagetype == DMG_SPIKE) // spikes
 		S_StartSound(player->mo, sfx_spkdth);
 	else
 		S_StartSound (player->mo, sfx_shldls); // Ba-Dum! Shield loss.
@@ -2971,7 +2971,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 				return false; // Metal Sonic walk through flame !!
 			else
 			{ // Oh no! Metal Sonic is hit !!
-				P_ShieldDamage(player, inflictor, source, damage);
+				P_ShieldDamage(player, inflictor, source, damage, damagetype);
 				return true;
 			}
 		}
@@ -2997,7 +2997,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 #endif
 		else if (!player->powers[pw_super] && (player->powers[pw_shield] || player->bot))  //If One-Hit Shield
 		{
-			P_ShieldDamage(player, inflictor, source, damage);
+			P_ShieldDamage(player, inflictor, source, damage, damagetype);
 			damage = 0;
 		}
 		else if (player->rings > 0) // No shield but have rings.
@@ -3019,7 +3019,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			else
 			{
 				damage = 0;
-				P_ShieldDamage(player, inflictor, source, damage);
+				P_ShieldDamage(player, inflictor, source, damage, damagetype);
 			}
 		}
 
