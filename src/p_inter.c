@@ -2383,8 +2383,7 @@ static inline void P_NiGHTSDamage(mobj_t *target, mobj_t *source)
 	player_t *player = target->player;
 	tic_t oldnightstime = player->nightstime;
 
-	if (!player->powers[pw_flashing]
-		&& !(player->pflags & PF_GODMODE))
+	if (!player->powers[pw_flashing])
 	{
 		angle_t fa;
 
@@ -2891,6 +2890,9 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			if (player->exiting)
 				return false;
 
+			if (player->pflags & PF_GODMODE)
+				return false;
+
 			if (!(target->player->pflags & (PF_NIGHTSMODE|PF_NIGHTSFALL)) && (maptol & TOL_NIGHTS))
 				return false;
 
@@ -2952,9 +2954,6 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			if (!P_PlayerHitsPlayer(target, inflictor, source, damage))
 				return false;
 		}
-
-		if (!force && player->pflags & PF_GODMODE)
-			return false;
 
 		// Instant-Death
 		if (damagetype & DMG_DEATHMASK)
