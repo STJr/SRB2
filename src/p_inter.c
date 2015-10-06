@@ -2747,6 +2747,10 @@ static void P_RingDamage(player_t *player, mobj_t *inflictor, mobj_t *source, IN
 
 	// Ring loss sound plays despite hitting spikes
 	P_PlayRinglossSound(player->mo); // Ringledingle!
+	P_PlayerRingBurst(player, damage);
+	player->rings -= damage;
+	if (player->rings < 0)
+		player->rings = 0;
 }
 
 /** Damages an object, which may or may not be a player.
@@ -2957,7 +2961,10 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 
 		// Instant-Death
 		if (damagetype & DMG_DEATHMASK)
+		{
 			P_KillPlayer(player, source, damage);
+			player->rings = 0;
+		}
 		else if (metalrecording)
 		{
 			if (!inflictor)
@@ -3004,6 +3011,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 		{
 			damage = player->rings;
 			P_RingDamage(player, inflictor, source, damage, damagetype);
+			damage = 0;
 		}
 		// To reduce griefing potential, don't allow players to be killed
 		// by friendly fire. Spilling their rings and other items is enough.
@@ -3019,20 +3027,6 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			damage = 1;
 			P_KillPlayer(player, source, damage);
 		}
-
-		if (damagetype & DMG_DEATHMASK)
-			player->rings = 0;
-		else if (damage == 0 || player->rings) //quickfix to just get things back to normal ...for now (sans Tag, I'll deal with that later)
-		{
-			if (damage > 0) // don't spill emeralds/ammo/panels for shield damage
-				P_PlayerRingBurst(player, damage);
-			player->rings -= damage;
-			target->player->powers[pw_flashing] = flashingtics;
-			damage = 0;
-		}
-
-		if (player->rings < 0)
-			player->rings = 0;
 
 		P_HitDeathMessages(player, inflictor, source, damagetype);
 
