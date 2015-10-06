@@ -2920,7 +2920,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 					return false; // Don't hit yourself with your own paraloop, baka
 				if (source && source->player && !cv_friendlyfire.value
 				&& (gametype == GT_COOP
-				|| (G_GametypeHasTeams() && target->player->ctfteam == source->player->ctfteam)))
+				|| (G_GametypeHasTeams() && player->ctfteam == source->player->ctfteam)))
 					return false; // Don't run eachother over in special stages and team games and such
 			}
 #ifdef HAVE_BLUA
@@ -2995,7 +2995,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 		else if (LUAh_MobjDamage(target, inflictor, source, damage))
 			return true;
 #endif
-		else if (!player->powers[pw_super] && (player->powers[pw_shield] || player->bot))  //If One-Hit Shield
+		else if (player->powers[pw_shield] || player->bot)  //If One-Hit Shield
 		{
 			P_ShieldDamage(player, inflictor, source, damage, damagetype);
 			damage = 0;
@@ -3005,22 +3005,19 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			damage = player->rings;
 			P_RingDamage(player, inflictor, source, damage, damagetype);
 		}
+		// To reduce griefing potential, don't allow players to be killed
+		// by friendly fire. Spilling their rings and other items is enough.
+		else if (!force && G_GametypeHasTeams()
+			&& source && source->player && (source->player->ctfteam == player->ctfteam)
+			&& cv_friendlyfire.value)
+		{
+			damage = 0;
+			P_ShieldDamage(player, inflictor, source, damage, damagetype);
+		}
 		else // No shield, no rings, no invincibility.
 		{
-			// To reduce griefing potential, don't allow players to be killed
-			// by friendly fire. Spilling their rings and other items is enough.
-			if (force || !(G_GametypeHasTeams()
-				&& source && source->player && (source->player->ctfteam == player->ctfteam)
-				&& cv_friendlyfire.value))
-			{
-				damage = 1;
-				P_KillPlayer(player, source, damage);
-			}
-			else
-			{
-				damage = 0;
-				P_ShieldDamage(player, inflictor, source, damage, damagetype);
-			}
+			damage = 1;
+			P_KillPlayer(player, source, damage);
 		}
 
 		if (damagetype & DMG_DEATHMASK)
