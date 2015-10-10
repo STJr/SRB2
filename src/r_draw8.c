@@ -529,14 +529,14 @@ void R_DrawSpan_8 (void)
 #ifdef ESLOPE
 // R_CalcTiltedLighting
 // Exactly what it says on the tin. I wish I wasn't too lazy to explain things properly.
-static size_t tiltlighting[MAXVIDWIDTH];
+static INT32 tiltlighting[MAXVIDWIDTH];
 void R_CalcTiltedLighting(fixed_t start, fixed_t end)
 {
 	// ZDoom uses a different lighting setup to us, and I couldn't figure out how to adapt their version
 	// of this function. Here's my own.
 	INT32 left = ds_x1, right = ds_x2;
 	fixed_t step = (end-start)/(ds_x2-ds_x1+1);
-	size_t i;
+	INT32 i;
 
 	// I wanna do some optimizing by checking for out-of-range segments on either side to fill in all at once,
 	// but I'm too bad at coding to not crash the game trying to do that. I guess this is fast enough for now...
@@ -565,6 +565,11 @@ void R_DrawTiltedSpan_8(void)
 	UINT8 *source;
 	UINT8 *colormap;
 	UINT8 *dest;
+
+	double startz, startu, startv;
+	double izstep, uzstep, vzstep;
+	double endz, endu, endv;
+	UINT32 stepu, stepv;
 
 	iz = ds_sz.z + ds_sz.y*(centery-ds_y) + ds_sz.x*(ds_x1-centerx);
 
@@ -608,10 +613,9 @@ void R_DrawTiltedSpan_8(void)
 #define SPANSIZE 16
 #define INVSPAN	0.0625f
 
-	double startz = 1.f/iz;
-	double startu = uz*startz;
-	double startv = vz*startz;
-	double izstep, uzstep, vzstep;
+	startz = 1.f/iz;
+	startu = uz*startz;
+	startv = vz*startz;
 
 	izstep = ds_sz.x * SPANSIZE;
 	uzstep = ds_su.x * SPANSIZE;
@@ -625,11 +629,11 @@ void R_DrawTiltedSpan_8(void)
 		uz += uzstep;
 		vz += vzstep;
 
-		double endz = 1.f/iz;
-		double endu = uz*endz;
-		double endv = vz*endz;
-		UINT32 stepu = (INT64)((endu - startu) * INVSPAN);
-		UINT32 stepv = (INT64)((endv - startv) * INVSPAN);
+		endz = 1.f/iz;
+		endu = uz*endz;
+		endv = vz*endz;
+		stepu = (INT64)((endu - startu) * INVSPAN);
+		stepv = (INT64)((endv - startv) * INVSPAN);
 		u = (INT64)(startu) + viewx;
 		v = (INT64)(startv) + viewy;
 
@@ -661,12 +665,12 @@ void R_DrawTiltedSpan_8(void)
 			uz += ds_su.x * left;
 			vz += ds_sv.x * left;
 
-			double endz = 1.f/iz;
-			double endu = uz*endz;
-			double endv = vz*endz;
+			endz = 1.f/iz;
+			endu = uz*endz;
+			endv = vz*endz;
 			left = 1.f/left;
-			UINT32 stepu = (INT64)((endu - startu) * left);
-			UINT32 stepv = (INT64)((endv - startv) * left);
+			stepu = (INT64)((endu - startu) * left);
+			stepv = (INT64)((endv - startv) * left);
 			u = (INT64)(startu) + viewx;
 			v = (INT64)(startv) + viewy;
 
@@ -683,7 +687,6 @@ void R_DrawTiltedSpan_8(void)
 #endif
 }
 
-
 /**	\brief The R_DrawTiltedTranslucentSpan_8 function
 	Like DrawTiltedSpan, but translucent
 */
@@ -698,6 +701,11 @@ void R_DrawTiltedTranslucentSpan_8(void)
 	UINT8 *source;
 	UINT8 *colormap;
 	UINT8 *dest;
+
+	double startz, startu, startv;
+	double izstep, uzstep, vzstep;
+	double endz, endu, endv;
+	UINT32 stepu, stepv;
 
 	iz = ds_sz.z + ds_sz.y*(centery-ds_y) + ds_sz.x*(ds_x1-centerx);
 
@@ -741,10 +749,9 @@ void R_DrawTiltedTranslucentSpan_8(void)
 #define SPANSIZE 16
 #define INVSPAN	0.0625f
 
-	double startz = 1.f/iz;
-	double startu = uz*startz;
-	double startv = vz*startz;
-	double izstep, uzstep, vzstep;
+	startz = 1.f/iz;
+	startu = uz*startz;
+	startv = vz*startz;
 
 	izstep = ds_sz.x * SPANSIZE;
 	uzstep = ds_su.x * SPANSIZE;
@@ -758,11 +765,11 @@ void R_DrawTiltedTranslucentSpan_8(void)
 		uz += uzstep;
 		vz += vzstep;
 
-		double endz = 1.f/iz;
-		double endu = uz*endz;
-		double endv = vz*endz;
-		UINT32 stepu = (INT64)((endu - startu) * INVSPAN);
-		UINT32 stepv = (INT64)((endv - startv) * INVSPAN);
+		endz = 1.f/iz;
+		endu = uz*endz;
+		endv = vz*endz;
+		stepu = (INT64)((endu - startu) * INVSPAN);
+		stepv = (INT64)((endv - startv) * INVSPAN);
 		u = (INT64)(startu) + viewx;
 		v = (INT64)(startv) + viewy;
 
@@ -794,12 +801,12 @@ void R_DrawTiltedTranslucentSpan_8(void)
 			uz += ds_su.x * left;
 			vz += ds_sv.x * left;
 
-			double endz = 1.f/iz;
-			double endu = uz*endz;
-			double endv = vz*endz;
+			endz = 1.f/iz;
+			endu = uz*endz;
+			endv = vz*endz;
 			left = 1.f/left;
-			UINT32 stepu = (INT64)((endu - startu) * left);
-			UINT32 stepv = (INT64)((endv - startv) * left);
+			stepu = (INT64)((endu - startu) * left);
+			stepv = (INT64)((endv - startv) * left);
 			u = (INT64)(startu) + viewx;
 			v = (INT64)(startv) + viewy;
 
@@ -829,6 +836,11 @@ void R_DrawTiltedSplat_8(void)
 	UINT8 *dest;
 
 	UINT8 val;
+
+	double startz, startu, startv;
+	double izstep, uzstep, vzstep;
+	double endz, endu, endv;
+	UINT32 stepu, stepv;
 
 	iz = ds_sz.z + ds_sz.y*(centery-ds_y) + ds_sz.x*(ds_x1-centerx);
 
@@ -874,10 +886,9 @@ void R_DrawTiltedSplat_8(void)
 #define SPANSIZE 16
 #define INVSPAN	0.0625f
 
-	double startz = 1.f/iz;
-	double startu = uz*startz;
-	double startv = vz*startz;
-	double izstep, uzstep, vzstep;
+	startz = 1.f/iz;
+	startu = uz*startz;
+	startv = vz*startz;
 
 	izstep = ds_sz.x * SPANSIZE;
 	uzstep = ds_su.x * SPANSIZE;
@@ -891,11 +902,11 @@ void R_DrawTiltedSplat_8(void)
 		uz += uzstep;
 		vz += vzstep;
 
-		double endz = 1.f/iz;
-		double endu = uz*endz;
-		double endv = vz*endz;
-		UINT32 stepu = (INT64)((endu - startu) * INVSPAN);
-		UINT32 stepv = (INT64)((endv - startv) * INVSPAN);
+		endz = 1.f/iz;
+		endu = uz*endz;
+		endv = vz*endz;
+		stepu = (INT64)((endu - startu) * INVSPAN);
+		stepv = (INT64)((endv - startv) * INVSPAN);
 		u = (INT64)(startu) + viewx;
 		v = (INT64)(startv) + viewy;
 
@@ -931,12 +942,12 @@ void R_DrawTiltedSplat_8(void)
 			uz += ds_su.x * left;
 			vz += ds_sv.x * left;
 
-			double endz = 1.f/iz;
-			double endu = uz*endz;
-			double endv = vz*endz;
+			endz = 1.f/iz;
+			endu = uz*endz;
+			endv = vz*endz;
 			left = 1.f/left;
-			UINT32 stepu = (INT64)((endu - startu) * left);
-			UINT32 stepv = (INT64)((endv - startv) * left);
+			stepu = (INT64)((endu - startu) * left);
+			stepv = (INT64)((endv - startv) * left);
 			u = (INT64)(startu) + viewx;
 			v = (INT64)(startv) + viewy;
 

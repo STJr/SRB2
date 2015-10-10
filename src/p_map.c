@@ -1255,11 +1255,13 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 
 		for (rover = newsubsec->sector->ffloors; rover; rover = rover->next)
 		{
+			fixed_t topheight, bottomheight;
+
 			if (!(rover->flags & FF_EXISTS))
 				continue;
 
-			fixed_t topheight = P_GetFOFTopZ(thing, newsubsec->sector, rover, x, y, NULL);
-			fixed_t bottomheight = P_GetFOFBottomZ(thing, newsubsec->sector, rover, x, y, NULL);
+			topheight = P_GetFOFTopZ(thing, newsubsec->sector, rover, x, y, NULL);
+			bottomheight = P_GetFOFBottomZ(thing, newsubsec->sector, rover, x, y, NULL);
 
 			if (rover->flags & FF_GOOWATER && !(thing->flags & MF_NOGRAVITY))
 			{
@@ -1559,11 +1561,12 @@ boolean P_CheckCameraPosition(fixed_t x, fixed_t y, camera_t *thiscam)
 
 		for (rover = newsubsec->sector->ffloors; rover; rover = rover->next)
 		{
+			fixed_t topheight, bottomheight;
 			if (!(rover->flags & FF_BLOCKOTHERS) || !(rover->flags & FF_EXISTS) || !(rover->flags & FF_RENDERALL) || GETSECSPECIAL(rover->master->frontsector->special, 4) == 12)
 				continue;
 
-			fixed_t topheight = P_CameraGetFOFTopZ(thiscam, newsubsec->sector, rover, x, y, NULL);
-			fixed_t bottomheight = P_CameraGetFOFBottomZ(thiscam, newsubsec->sector, rover, x, y, NULL);
+			topheight = P_CameraGetFOFTopZ(thiscam, newsubsec->sector, rover, x, y, NULL);
+			bottomheight = P_CameraGetFOFBottomZ(thiscam, newsubsec->sector, rover, x, y, NULL);
 
 			delta1 = thiscam->z - (bottomheight
 				+ ((topheight - bottomheight)/2));
@@ -3946,14 +3949,15 @@ fixed_t P_FloorzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height)
 
 		for (rover = sec->ffloors; rover; rover = rover->next)
 		{
+			fixed_t topheight, bottomheight;
 			if (!(rover->flags & FF_EXISTS))
 				continue;
 
 			if ((!(rover->flags & FF_SOLID || rover->flags & FF_QUICKSAND) || (rover->flags & FF_SWIMMABLE)))
 				continue;
 
-			fixed_t topheight = *rover->topheight;
-			fixed_t bottomheight = *rover->bottomheight;
+			topheight = *rover->topheight;
+			bottomheight = *rover->bottomheight;
 
 #ifdef ESLOPE
 			if (*rover->t_slope)
