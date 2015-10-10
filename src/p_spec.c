@@ -29,6 +29,7 @@
 #include "r_main.h" //Two extra includes.
 #include "r_sky.h"
 #include "p_polyobj.h"
+#include "p_slopes.h"
 #include "hu_stuff.h"
 #include "m_misc.h"
 #include "m_cond.h" //unlock triggers
@@ -7043,7 +7044,7 @@ static void Add_Friction(INT32 friction, INT32 movefactor, INT32 affectee, INT32
   */
 void T_Friction(friction_t *f)
 {
-	sector_t *sec, *referrer;
+	sector_t *sec, *referrer = NULL;
 	mobj_t *thing;
 	msecnode_t *node;
 
@@ -7371,7 +7372,7 @@ static inline boolean PIT_PushThing(mobj_t *thing)
   */
 void T_Pusher(pusher_t *p)
 {
-	sector_t *sec, *referrer;
+	sector_t *sec, *referrer = NULL;
 	mobj_t *thing;
 	msecnode_t *node;
 	INT32 xspeed = 0,yspeed = 0;

@@ -29,6 +29,7 @@
 #include "m_random.h"
 #include "m_misc.h"
 #include "i_video.h"
+#include "p_slopes.h"
 #include "p_spec.h"
 #include "r_splats.h"
 #include "z_zone.h"
@@ -2312,11 +2313,11 @@ static void P_DoClimbing(player_t *player)
 		boolean thrust;
 		boolean boostup;
 		boolean skyclimber;
+		fixed_t floorheight, ceilingheight; // ESLOPE
 		thrust = false;
 		floorclimb = false;
 		boostup = false;
 		skyclimber = false;
-		fixed_t floorheight, ceilingheight; // ESLOPE
 
 #ifdef ESLOPE
 		floorheight = glidesector->sector->f_slope ? P_GetZAt(glidesector->sector->f_slope, player->mo->x, player->mo->y)

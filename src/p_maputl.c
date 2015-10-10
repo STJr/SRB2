@@ -20,6 +20,7 @@
 #include "r_data.h"
 #include "p_maputl.h"
 #include "p_polyobj.h"
+#include "p_slopes.h"
 #include "z_zone.h"
 
 //
@@ -442,11 +443,12 @@ void P_CameraLineOpening(line_t *linedef)
 			if (front->ffloors)
 				for (rover = front->ffloors; rover; rover = rover->next)
 				{
+					fixed_t topheight, bottomheight;
 					if (!(rover->flags & FF_BLOCKOTHERS) || !(rover->flags & FF_RENDERALL) || !(rover->flags & FF_EXISTS) || GETSECSPECIAL(rover->master->frontsector->special, 4) == 12)
 						continue;
 
-					fixed_t topheight = P_CameraGetFOFTopZ(mapcampointer, front, rover, tmx, tmy, linedef);
-					fixed_t bottomheight = P_CameraGetFOFBottomZ(mapcampointer, front, rover, tmx, tmy, linedef);
+					topheight = P_CameraGetFOFTopZ(mapcampointer, front, rover, tmx, tmy, linedef);
+					bottomheight = P_CameraGetFOFBottomZ(mapcampointer, front, rover, tmx, tmy, linedef);
 
 					delta1 = abs(mapcampointer->z - (bottomheight + ((topheight - bottomheight)/2)));
 					delta2 = abs(thingtop - (bottomheight + ((topheight - bottomheight)/2)));
@@ -465,11 +467,12 @@ void P_CameraLineOpening(line_t *linedef)
 			if (back->ffloors)
 				for (rover = back->ffloors; rover; rover = rover->next)
 				{
+					fixed_t topheight, bottomheight;
 					if (!(rover->flags & FF_BLOCKOTHERS) || !(rover->flags & FF_RENDERALL) || !(rover->flags & FF_EXISTS) || GETSECSPECIAL(rover->master->frontsector->special, 4) == 12)
 						continue;
 
-					fixed_t topheight = P_CameraGetFOFTopZ(mapcampointer, back, rover, tmx, tmy, linedef);
-					fixed_t bottomheight = P_CameraGetFOFBottomZ(mapcampointer, back, rover, tmx, tmy, linedef);
+					topheight = P_CameraGetFOFTopZ(mapcampointer, back, rover, tmx, tmy, linedef);
+					bottomheight = P_CameraGetFOFBottomZ(mapcampointer, back, rover, tmx, tmy, linedef);
 
 					delta1 = abs(mapcampointer->z - (bottomheight + ((topheight - bottomheight)/2)));
 					delta2 = abs(thingtop - (bottomheight + ((topheight - bottomheight)/2)));
@@ -636,6 +639,7 @@ void P_LineOpening(line_t *linedef)
 			// Check for frontsector's fake floors
 			for (rover = front->ffloors; rover; rover = rover->next)
 			{
+				fixed_t topheight, bottomheight;
 				if (!(rover->flags & FF_EXISTS))
 					continue;
 
@@ -645,8 +649,8 @@ void P_LineOpening(line_t *linedef)
 					|| (rover->flags & FF_BLOCKOTHERS && !tmthing->player)))
 					continue;
 
-				fixed_t topheight = P_GetFOFTopZ(tmthing, front, rover, tmx, tmy, linedef);
-				fixed_t bottomheight = P_GetFOFBottomZ(tmthing, front, rover, tmx, tmy, linedef);
+				topheight = P_GetFOFTopZ(tmthing, front, rover, tmx, tmy, linedef);
+				bottomheight = P_GetFOFBottomZ(tmthing, front, rover, tmx, tmy, linedef);
 
 				delta1 = abs(tmthing->z - (bottomheight + ((topheight - bottomheight)/2)));
 				delta2 = abs(thingtop - (bottomheight + ((topheight - bottomheight)/2)));
@@ -679,6 +683,7 @@ void P_LineOpening(line_t *linedef)
 			// Check for backsectors fake floors
 			for (rover = back->ffloors; rover; rover = rover->next)
 			{
+				fixed_t topheight, bottomheight;
 				if (!(rover->flags & FF_EXISTS))
 					continue;
 
@@ -688,8 +693,8 @@ void P_LineOpening(line_t *linedef)
 					|| (rover->flags & FF_BLOCKOTHERS && !tmthing->player)))
 					continue;
 
-				fixed_t topheight = P_GetFOFTopZ(tmthing, back, rover, tmx, tmy, linedef);
-				fixed_t bottomheight = P_GetFOFBottomZ(tmthing, back, rover, tmx, tmy, linedef);
+				topheight = P_GetFOFTopZ(tmthing, back, rover, tmx, tmy, linedef);
+				bottomheight = P_GetFOFBottomZ(tmthing, back, rover, tmx, tmy, linedef);
 
 				delta1 = abs(tmthing->z - (bottomheight + ((topheight - bottomheight)/2)));
 				delta2 = abs(thingtop - (bottomheight + ((topheight - bottomheight)/2)));

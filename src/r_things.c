@@ -24,6 +24,7 @@
 #include "r_plane.h"
 #include "p_tick.h"
 #include "p_local.h"
+#include "p_slopes.h"
 #include "dehacked.h" // get_number (for thok)
 #include "d_netfil.h" // blargh. for nameonly().
 #include "m_cheat.h" // objectplace

@@ -65,9 +65,9 @@ typedef struct {
 	float x, y, z;
 } floatv3_t;
 
-pslope_t *ds_slope; // Current slope being used
-floatv3_t ds_su, ds_sv, ds_sz; // Vectors for... stuff?
-float focallengthf, zeroheight;
+extern pslope_t *ds_slope; // Current slope being used
+extern floatv3_t ds_su, ds_sv, ds_sz; // Vectors for... stuff?
+extern float focallengthf, zeroheight;
 #endif
 
 // Variable flat sizes
@@ -152,6 +152,7 @@ void R_DrawTranslatedColumn_8(void);
 void R_DrawTranslatedTranslucentColumn_8(void);
 void R_DrawSpan_8(void);
 #ifdef ESLOPE
+void R_CalcTiltedLighting(fixed_t start, fixed_t end);
 void R_DrawTiltedSpan_8(void);
 void R_DrawTiltedTranslucentSpan_8(void);
 void R_DrawTiltedSplat_8(void);
