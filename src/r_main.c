@@ -114,15 +114,6 @@ INT32 viewangletox[FINEANGLES/2];
 // from clipangle to -clipangle.
 angle_t xtoviewangle[MAXVIDWIDTH+1];
 
-// UNUSED.
-// The finetangentgent[angle+FINEANGLES/4] table
-// holds the fixed_t tangent values for view angles,
-// ranging from INT32_MIN to 0 to INT32_MAX.
-
-#if !(defined _NDS) || !(defined NONET)
-fixed_t *finecosine = &finesine[FINEANGLES/4];
-#endif
-
 lighttable_t *scalelight[LIGHTLEVELS][MAXLIGHTSCALE];
 lighttable_t *scalelightfixed[MAXLIGHTSCALE];
 lighttable_t *zlight[LIGHTLEVELS][MAXLIGHTZ];
