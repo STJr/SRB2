@@ -1960,9 +1960,9 @@ fixed_t finesine[10240] =
 	65531, 65531, 65532, 65532, 65533, 65533, 65534, 65534,
 	65534, 65535, 65535, 65535, 65535, 65535, 65535, 65535
 };
+
+fixed_t *finecosine = &finesine[FINEANGLES/4];
 #endif
-
-
 
 angle_t tantoangle[2049] =
 {
