@@ -503,7 +503,7 @@ static void R_RenderFloorSplat(floorsplat_t *pSplat, vertex_t *verts, UINT8 *pTe
 		{
 			ds_x1 = x1;
 			ds_x2 = x2;
-			ds_transmap = ((tr_trans50)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+			ds_transmap = transtables + ((tr_trans50-1)<<16);
 			splatfunc();
 		}
 
