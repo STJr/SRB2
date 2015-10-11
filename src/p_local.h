@@ -397,6 +397,7 @@ void P_PlayerEmeraldBurst(player_t *player, boolean toss);
 
 void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck);
 void P_PlayerFlagBurst(player_t *player, boolean toss);
+void P_CheckTimeLimit(void);
 void P_CheckPointLimit(void);
 void P_CheckSurvivors(void);
 boolean P_CheckRacers(void);
