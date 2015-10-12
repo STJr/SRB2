@@ -232,7 +232,7 @@ static void F_DoWipe(fademask_t *fademask)
 		do
 		{
 			// pointer to transtable that this mask would use
-			transtbl = transtables + ((9 - *mask)<<16);
+			transtbl = transtables + ((9 - *mask)<<FF_TRANSSHIFT);
 			// (ignore that it goes out of bounds if *mask is 0 or 10 --
 			//  it wouldn't be used in those cases anyway)
 
