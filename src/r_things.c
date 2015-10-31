@@ -2671,7 +2671,7 @@ next_token:
 			if (z < lastlump) lastlump = z;
 
 			// load all sprite sets we are aware of.
-			for (sprite2 = 0; sprite2 < NUMPLAYERSPRITES; sprite2++)
+			for (sprite2 = 0; sprite2 < free_spr2; sprite2++)
 				R_AddSingleSpriteDef(spr2names[sprite2], &skin->sprites[sprite2], wadnum, lump, lastlump);
 		}
 

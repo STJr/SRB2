@@ -671,6 +671,22 @@ static void readfreeslots(MYFILE *f)
 						break;
 					}
 			}
+			else if (fastcmp(type, "SPR2_"))
+			{
+				// Search if we already have an SPR2 by that name...
+				for (i = SPR_FIRSTFREESLOT; i < free_spr2; i++)
+					if (memcmp(spr2names[i],word,4) == 0)
+						break;
+				// We found it? (Two mods using the same SPR2 name?) Then don't allocate another one.
+				if (i != free_spr2)
+					continue;
+				// Copy in the spr2 name and increment free_spr2.
+				if (free_spr2 < NUMPLAYERSPRITES) {
+					strncpy(spr2names[free_spr2],word,4);
+					spr2names[free_spr2++][4] = 0;
+				} else
+					CONS_Alert(CONS_WARNING, "Ran out of free SPR2 slots!\n");
+			}
 			else
 				deh_warning("Freeslots: unknown enum class '%s' for '%s_%s'", type, type, word);
 		}
@@ -8292,7 +8308,7 @@ static inline int lib_freeslot(lua_State *L)
 				lua_pushinteger(L, sfx);
 				r++;
 			} else
-				return r;
+				CONS_Alert(CONS_WARNING, "Ran out of free SFX slots!\n");
 		}
 		else if (fastcmp(type, "SPR"))
 		{
@@ -8319,7 +8335,7 @@ static inline int lib_freeslot(lua_State *L)
 				break;
 			}
 			if (j > SPR_LASTFREESLOT)
-				return r;
+				CONS_Alert(CONS_WARNING, "Ran out of free sprite slots!\n");
 		}
 		else if (fastcmp(type, "S"))
 		{
@@ -8334,7 +8350,7 @@ static inline int lib_freeslot(lua_State *L)
 					break;
 				}
 			if (i == NUMSTATEFREESLOTS)
-				return r;
+				CONS_Alert(CONS_WARNING, "Ran out of free State slots!\n");
 		}
 		else if (fastcmp(type, "MT"))
 		{
@@ -8349,7 +8365,26 @@ static inline int lib_freeslot(lua_State *L)
 					break;
 				}
 			if (i == NUMMOBJFREESLOTS)
-				return r;
+				CONS_Alert(CONS_WARNING, "Ran out of free MobjType slots!\n");
+		}
+		else if (fastcmp(type, "SPR2"))
+		{
+			// Search if we already have an SPR2 by that name...
+			enum playersprite i;
+			for (i = SPR_FIRSTFREESLOT; i < free_spr2; i++)
+				if (memcmp(spr2names[i],word,4) == 0)
+					break;
+			// We don't, so allocate a new one.
+			if (i == free_spr2) {
+				if (free_spr2 < NUMPLAYERSPRITES)
+				{
+					CONS_Printf("Sprite SPR2_%s allocated.\n",word);
+					strncpy(spr2names[free_spr2],word,4);
+					spr2names[free_spr2++][4] = 0;
+				} else
+					CONS_Alert(CONS_WARNING, "Ran out of free SPR2 slots!\n");
+			}
+			r++;
 		}
 		Z_Free(s);
 		lua_remove(L, 1);
@@ -8516,7 +8551,7 @@ static inline int lib_getenum(lua_State *L)
 	}
 	else if (fastncmp("SPR2_",word,4)) {
 		p = word+5;
-		for (i = 0; i < NUMPLAYERSPRITES; i++)
+		for (i = 0; i < free_spr2; i++)
 			if (!spr2names[i][4])
 			{
 				// special 3-char cases, e.g. SPR2_RUN

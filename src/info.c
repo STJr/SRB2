@@ -99,6 +99,7 @@ char spr2names[NUMPLAYERSPRITES][5] =
 	"SRID",
 	"SFLT"
 };
+enum playersprite free_spr2 = SPR2_FIRSTFREESLOT;
 
 // Doesn't work with g++, needs actionf_p1 (don't modify this comment)
 state_t states[NUMSTATES] =
