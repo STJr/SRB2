@@ -105,7 +105,7 @@ void R_DrawColumn_8(void)
 	}
 }
 
-#define TRANSPARENTPIXEL 247
+#define TRANSPARENTPIXEL 255
 
 void R_Draw2sMultiPatchColumn_8(void)
 {
@@ -947,3 +947,4 @@ void R_DrawColumnShadowed_8(void)
 	if (dc_yl <= realyh)
 		walldrawerfunc();		// R_DrawWallColumn_8 for the appropriate architecture
 }
+

@@ -1121,10 +1121,10 @@ void D_SRB2Main(void)
 #if 1 // md5s last updated 12/14/14
 
 	// Check MD5s of autoloaded files
-	W_VerifyFileMD5(0, ASSET_HASH_SRB2_SRB); // srb2.srb/srb2.wad
-	W_VerifyFileMD5(1, ASSET_HASH_ZONES_DTA); // zones.dta
-	W_VerifyFileMD5(2, ASSET_HASH_PLAYER_DTA); // player.dta
-	W_VerifyFileMD5(3, ASSET_HASH_RINGS_DTA); // rings.dta
+	//W_VerifyFileMD5(0, ASSET_HASH_SRB2_SRB); // srb2.srb/srb2.wad
+	//W_VerifyFileMD5(1, ASSET_HASH_ZONES_DTA); // zones.dta
+	//W_VerifyFileMD5(2, ASSET_HASH_PLAYER_DTA); // player.dta
+	//W_VerifyFileMD5(3, ASSET_HASH_RINGS_DTA); // rings.dta
 	//W_VerifyFileMD5(4, "0c66790502e648bfce90fdc5bb15722e"); // patch.dta
 	// don't check music.dta because people like to modify it, and it doesn't matter if they do
 	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.
