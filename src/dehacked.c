@@ -7337,7 +7337,7 @@ static const char *COLOR_ENUMS[] = {
 	"LAVENDER", 	// SKINCOLOR_LAVENDER
 	"MAGENTA",   	// SKINCOLOR_MAGENTA
 	"PINK",     	// SKINCOLOR_PINK
-	"ROSY"     	// SKINCOLOR_ROSY
+	"ROSY",     	// SKINCOLOR_ROSY
 	// Super special awesome Super flashing colors!
 	"SUPER1",   	// SKINCOLOR_SUPER1
 	"SUPER2",   	// SKINCOLOR_SUPER2,
