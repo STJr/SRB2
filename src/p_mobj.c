@@ -31,6 +31,9 @@
 #include "i_video.h"
 #include "lua_hook.h"
 #include "b_bot.h"
+#ifdef ESLOPE
+#include "p_slopes.h"
+#endif
 
 // protos.
 static CV_PossibleValue_t viewheight_cons_t[] = {{16, "MIN"}, {56, "MAX"}, {0, NULL}};
@@ -141,45 +144,30 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		switch (state)
 		{
 		case S_PLAY_STND:
-		case S_PLAY_TAP1:
-		case S_PLAY_TAP2:
-		case S_PLAY_GASP:
-			P_SetPlayerMobjState(mobj, S_PLAY_SUPERSTAND);
-			return true;
-		case S_PLAY_FALL1:
-		case S_PLAY_SPRING:
-		case S_PLAY_RUN1:
-		case S_PLAY_RUN2:
-		case S_PLAY_RUN3:
-		case S_PLAY_RUN4:
-			P_SetPlayerMobjState(mobj, S_PLAY_SUPERWALK1);
-			return true;
-		case S_PLAY_FALL2:
-		case S_PLAY_RUN5:
-		case S_PLAY_RUN6:
-		case S_PLAY_RUN7:
-		case S_PLAY_RUN8:
-			P_SetPlayerMobjState(mobj, S_PLAY_SUPERWALK2);
-			return true;
-		case S_PLAY_SPD1:
-		case S_PLAY_SPD2:
-			P_SetPlayerMobjState(mobj, S_PLAY_SUPERFLY1);
-			return true;
-		case S_PLAY_SPD3:
-		case S_PLAY_SPD4:
-			P_SetPlayerMobjState(mobj, S_PLAY_SUPERFLY2);
-			return true;
-		case S_PLAY_TEETER1:
-		case S_PLAY_TEETER2:
-			P_SetPlayerMobjState(mobj, S_PLAY_SUPERTEETER);
-			return true;
-		case S_PLAY_ATK1:
-		case S_PLAY_ATK2:
-		case S_PLAY_ATK3:
-		case S_PLAY_ATK4:
+		case S_PLAY_WAIT:
+			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_STND);
+		case S_PLAY_WALK:
+			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_WALK);
+		case S_PLAY_RUN:
+			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_RUN);
+		case S_PLAY_PAIN:
+			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_PAIN);
+		case S_PLAY_DEAD:
+			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_DEAD);
+		case S_PLAY_DRWN:
+			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_DRWN);
+		case S_PLAY_SPIN:
 			if (!(player->charflags & SF_SUPERSPIN))
 				return true;
-			break;
+			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_SPIN);
+		case S_PLAY_GASP:
+			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_GASP);
+		case S_PLAY_JUMP:
+			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_JUMP);
+		case S_PLAY_FALL:
+			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_FALL);
+		case S_PLAY_EDGE:
+			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_EDGE);
 		default:
 			break;
 		}
@@ -194,23 +182,56 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 
 	// Set animation state
 	// The pflags version of this was just as convoluted.
-	if ((state >= S_PLAY_STND && state <= S_PLAY_TAP2) || (state >= S_PLAY_TEETER1 && state <= S_PLAY_TEETER2) || state == S_PLAY_CARRY
-	|| state == S_PLAY_SUPERSTAND || state == S_PLAY_SUPERTEETER)
+	switch(state)
+	{
+	case S_PLAY_STND:
+	case S_PLAY_WAIT:
+	case S_PLAY_SUPER_STND:
 		player->panim = PA_IDLE;
-	else if ((state >= S_PLAY_RUN1 && state <= S_PLAY_RUN8)
-	|| (state >= S_PLAY_SUPERWALK1 && state <= S_PLAY_SUPERWALK2))
+		break;
+	case S_PLAY_EDGE:
+	case S_PLAY_SUPER_EDGE:
+		player->panim = PA_EDGE;
+		break;
+	case S_PLAY_WALK:
+	case S_PLAY_SUPER_WALK:
+	case S_PLAY_SUPER_FLOAT:
 		player->panim = PA_WALK;
-	else if ((state >= S_PLAY_SPD1 && state <= S_PLAY_SPD4)
-	|| (state >= S_PLAY_SUPERFLY1 && state <= S_PLAY_SUPERFLY2))
+		break;
+	case S_PLAY_RUN:
+	case S_PLAY_SUPER_RUN:
 		player->panim = PA_RUN;
-	else if (state >= S_PLAY_ATK1 && state <= S_PLAY_ATK4)
+		break;
+	case S_PLAY_PAIN:
+	case S_PLAY_SUPER_PAIN:
+	case S_PLAY_SUPER_STUN:
+		player->panim = PA_PAIN;
+		break;
+	case S_PLAY_SPIN:
+	case S_PLAY_DASH:
+	case S_PLAY_SUPER_SPIN:
 		player->panim = PA_ROLL;
-	else if (state >= S_PLAY_FALL1 && state <= S_PLAY_FALL2)
+		break;
+	case S_PLAY_JUMP:
+	case S_PLAY_SUPER_JUMP:
+		player->panim = PA_JUMP;
+		break;
+	case S_PLAY_FALL:
+	case S_PLAY_SUPER_FALL:
 		player->panim = PA_FALL;
-	else if (state >= S_PLAY_ABL1 && state <= S_PLAY_ABL2)
+		break;
+	case S_PLAY_FLY:
+	case S_PLAY_GLIDE:
 		player->panim = PA_ABILITY;
-	else
+		break;
+	case S_PLAY_RIDE:
+	case S_PLAY_SUPER_RIDE:
+		player->panim = PA_RIDE;
+		break;
+	default:
 		player->panim = PA_ETC;
+		break;
+	}
 
 	if (recursion++) // if recursion detected,
 		memset(seenstate = tempstate, 0, sizeof tempstate); // clear state table
@@ -274,8 +295,131 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 			}
 		}
 
-		mobj->sprite = st->sprite;
-		mobj->frame = st->frame;
+		// Player animations
+		if (st->sprite == SPR_PLAY)
+		{
+			boolean noalt = false;
+			UINT8 spr2 = st->frame & FF_FRAMEMASK;
+			UINT16 frame = (mobj->frame & FF_FRAMEMASK)+1;
+
+			while (((skin_t *)mobj->skin)->sprites[spr2].numframes <= 0
+				&& spr2 != SPR2_STND)
+			{
+				switch(spr2)
+				{
+				case SPR2_RUN:
+					spr2 = SPR2_WALK;
+					break;
+				case SPR2_DRWN:
+					spr2 = SPR2_DEAD;
+					break;
+				case SPR2_DASH:
+					spr2 = SPR2_SPIN;
+					break;
+				case SPR2_GASP:
+					spr2 = SPR2_JUMP;
+					break;
+				case SPR2_JUMP:
+					spr2 = SPR2_FALL;
+					break;
+				case SPR2_FALL:
+					spr2 = SPR2_WALK;
+					break;
+				case SPR2_RIDE:
+					spr2 = SPR2_FALL;
+					break;
+
+				case SPR2_FLY:
+					spr2 = SPR2_JUMP;
+					break;
+				case SPR2_TIRE:
+					spr2 = SPR2_FLY;
+					break;
+
+				case SPR2_GLID:
+					spr2 = SPR2_FLY;
+					break;
+				case SPR2_CLMB:
+					spr2 = SPR2_WALK;
+					break;
+				case SPR2_CLNG:
+					spr2 = SPR2_CLMB;
+					break;
+
+				case SPR2_SIGN:
+				case SPR2_LIFE:
+					noalt = true;
+					break;
+
+				// Super sprites fallback to regular sprites
+				case SPR2_SWLK:
+					spr2 = SPR2_WALK;
+					break;
+				case SPR2_SRUN:
+					spr2 = SPR2_RUN;
+					break;
+				case SPR2_SPAN:
+					spr2 = SPR2_PAIN;
+					break;
+				case SPR2_SMSL:
+					spr2 = SPR2_SPAN;
+					break;
+				case SPR2_SDTH:
+					spr2 = SPR2_DEAD;
+					break;
+				case SPR2_SDRN:
+					spr2 = SPR2_DRWN;
+					break;
+				case SPR2_SSPN:
+					spr2 = SPR2_SPIN;
+					break;
+				case SPR2_SGSP:
+					spr2 = SPR2_GASP;
+					break;
+				case SPR2_SJMP:
+					spr2 = SPR2_JUMP;
+					break;
+				case SPR2_SFAL:
+					spr2 = SPR2_FALL;
+					break;
+				case SPR2_SEDG:
+					spr2 = SPR2_EDGE;
+					break;
+				case SPR2_SRID:
+					spr2 = SPR2_RIDE;
+					break;
+				case SPR2_SFLT:
+					spr2 = SPR2_SWLK;
+					break;
+
+				// Dunno? Just go to standing then.
+				default:
+					spr2 = SPR2_STND;
+					break;
+				}
+				if (noalt)
+					break;
+			}
+
+			if (mobj->sprite != SPR_PLAY)
+			{
+				mobj->sprite = SPR_PLAY;
+				frame = 0;
+			}
+			else if (mobj->sprite2 != spr2)
+				frame = 0;
+
+			mobj->sprite2 = spr2;
+			if (!mobj->skin || frame >= ((skin_t *)mobj->skin)->sprites[spr2].numframes)
+				frame = 0;
+			mobj->frame = frame|(st->frame&~FF_FRAMEMASK);
+		}
+		// Regular sprites
+		else
+		{
+			mobj->sprite = st->sprite;
+			mobj->frame = st->frame;
+		}
 
 		// Modified handling.
 		// Call action functions when the state is set
@@ -341,8 +485,30 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 		st = &states[state];
 		mobj->state = st;
 		mobj->tics = st->tics;
-		mobj->sprite = st->sprite;
-		mobj->frame = st->frame;
+
+		// Player animations
+		if (st->sprite == SPR_PLAY)
+		{
+			UINT8 spr2 = st->frame & FF_FRAMEMASK;
+			UINT16 frame = (mobj->frame & FF_FRAMEMASK)+1;
+			if (mobj->sprite != SPR_PLAY)
+			{
+				mobj->sprite = SPR_PLAY;
+				frame = 0;
+			}
+			else if (mobj->sprite2 != spr2)
+				frame = 0;
+			mobj->sprite2 = spr2;
+			if (!mobj->skin || frame >= ((skin_t *)mobj->skin)->sprites[spr2].numframes)
+				frame = 0;
+			mobj->frame = frame|(st->frame&~FF_FRAMEMASK);
+		}
+		// Regular sprites
+		else
+		{
+			mobj->sprite = st->sprite;
+			mobj->frame = st->frame;
+		}
 
 		// Modified handling.
 		// Call action functions when the state is set
@@ -674,7 +840,7 @@ void P_ExplodeMissile(mobj_t *mo)
 		S_StartSound(explodemo, sfx_cybdth);
 
 		// Hack: Release an animal.
-		P_DamageMobj(mo, NULL, NULL, 10000);
+		P_DamageMobj(mo, NULL, NULL, 1, DMG_INSTAKILL);
 	}
 
 	mo->flags &= ~MF_MISSILE;
@@ -693,6 +859,7 @@ void P_ExplodeMissile(mobj_t *mo)
 // Returns TRUE if mobj is inside a non-solid 3d floor.
 boolean P_InsideANonSolidFFloor(mobj_t *mobj, ffloor_t *rover)
 {
+	fixed_t topheight, bottomheight;
 	if (!(rover->flags & FF_EXISTS))
 		return false;
 
@@ -700,15 +867,441 @@ boolean P_InsideANonSolidFFloor(mobj_t *mobj, ffloor_t *rover)
 		|| ((rover->flags & FF_BLOCKOTHERS) && !mobj->player)))
 		return false;
 
-	if (mobj->z > *rover->topheight)
+	topheight = *rover->topheight;
+	bottomheight = *rover->bottomheight;
+
+#ifdef ESLOPE
+	if (*rover->t_slope)
+		topheight = P_GetZAt(*rover->t_slope, mobj->x, mobj->y);
+	if (*rover->b_slope)
+		bottomheight = P_GetZAt(*rover->b_slope, mobj->x, mobj->y);
+#endif
+
+	if (mobj->z > topheight)
 		return false;
 
-	if (mobj->z + mobj->height < *rover->bottomheight)
+	if (mobj->z + mobj->height < bottomheight)
 		return false;
 
 	return true;
 }
 
+// P_GetFloorZ (and its ceiling counterpart)
+// Gets the floor height (or ceiling height) of the mobj's contact point in sector, assuming object's center if moved to [x, y]
+// If line is supplied, it's a divider line on the sector. Set it to NULL if you're not checking for collision with a line
+// Supply boundsec ONLY when checking for specials! It should be the "in-level" sector, and sector the control sector (if separate).
+// If set, then this function will iterate through boundsec's linedefs to find the highest contact point on the slope. Non-special-checking
+// usage will handle that later.
+static fixed_t HighestOnLine(fixed_t radius, fixed_t x, fixed_t y, line_t *line, pslope_t *slope, boolean actuallylowest)
+{
+	// Alright, so we're sitting on a line that contains our slope sector, and need to figure out the highest point we're touching...
+	// The solution is simple! Get the line's vertices, and pull each one in along its line until it touches the object's bounding box
+	// (assuming it isn't already inside), then test each point's slope Z and return the higher of the two.
+	vertex_t v1, v2;
+	v1.x = line->v1->x;
+	v1.y = line->v1->y;
+	v2.x = line->v2->x;
+	v2.y = line->v2->y;
+
+	/*CONS_Printf("BEFORE: v1 = %f %f %f\n",
+				FIXED_TO_FLOAT(v1.x),
+				FIXED_TO_FLOAT(v1.y),
+				FIXED_TO_FLOAT(P_GetZAt(slope, v1.x, v1.y))
+				);
+	CONS_Printf("        v2 = %f %f %f\n",
+				FIXED_TO_FLOAT(v2.x),
+				FIXED_TO_FLOAT(v2.y),
+				FIXED_TO_FLOAT(P_GetZAt(slope, v2.x, v2.y))
+				);*/
+
+	if (abs(v1.x-x) > radius) {
+		// v1's x is out of range, so rein it in
+		fixed_t diff = abs(v1.x-x) - radius;
+
+		if (v1.x < x) { // Moving right
+			v1.x += diff;
+			v1.y += FixedMul(diff, FixedDiv(line->dy, line->dx));
+		} else { // Moving left
+			v1.x -= diff;
+			v1.y -= FixedMul(diff, FixedDiv(line->dy, line->dx));
+		}
+	}
+
+	if (abs(v1.y-y) > radius) {
+		// v1's y is out of range, so rein it in
+		fixed_t diff = abs(v1.y-y) - radius;
+
+		if (v1.y < y) { // Moving up
+			v1.y += diff;
+			v1.x += FixedMul(diff, FixedDiv(line->dx, line->dy));
+		} else { // Moving down
+			v1.y -= diff;
+			v1.x -= FixedMul(diff, FixedDiv(line->dx, line->dy));
+		}
+	}
+
+	if (abs(v2.x-x) > radius) {
+		// v1's x is out of range, so rein it in
+		fixed_t diff = abs(v2.x-x) - radius;
+
+		if (v2.x < x) { // Moving right
+			v2.x += diff;
+			v2.y += FixedMul(diff, FixedDiv(line->dy, line->dx));
+		} else { // Moving left
+			v2.x -= diff;
+			v2.y -= FixedMul(diff, FixedDiv(line->dy, line->dx));
+		}
+	}
+
+	if (abs(v2.y-y) > radius) {
+		// v2's y is out of range, so rein it in
+		fixed_t diff = abs(v2.y-y) - radius;
+
+		if (v2.y < y) { // Moving up
+			v2.y += diff;
+			v2.x += FixedMul(diff, FixedDiv(line->dx, line->dy));
+		} else { // Moving down
+			v2.y -= diff;
+			v2.x -= FixedMul(diff, FixedDiv(line->dx, line->dy));
+		}
+	}
+
+	/*CONS_Printf("AFTER:  v1 = %f %f %f\n",
+				FIXED_TO_FLOAT(v1.x),
+				FIXED_TO_FLOAT(v1.y),
+				FIXED_TO_FLOAT(P_GetZAt(slope, v1.x, v1.y))
+				);
+	CONS_Printf("        v2 = %f %f %f\n",
+				FIXED_TO_FLOAT(v2.x),
+				FIXED_TO_FLOAT(v2.y),
+				FIXED_TO_FLOAT(P_GetZAt(slope, v2.x, v2.y))
+				);*/
+
+	// Return the higher of the two points
+	if (actuallylowest)
+		return min(
+			P_GetZAt(slope, v1.x, v1.y),
+			P_GetZAt(slope, v2.x, v2.y)
+		);
+	else
+		return max(
+			P_GetZAt(slope, v1.x, v1.y),
+			P_GetZAt(slope, v2.x, v2.y)
+		);
+}
+
+fixed_t P_MobjFloorZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, line_t *line, boolean lowest, boolean perfect)
+{
+	I_Assert(mobj != NULL);
+	I_Assert(sector != NULL);
+#ifdef ESLOPE
+	if (sector->f_slope) {
+		fixed_t testx, testy;
+		pslope_t *slope = sector->f_slope;
+
+		// Get the corner of the object that should be the highest on the slope
+		if (slope->d.x < 0)
+			testx = mobj->radius;
+		else
+			testx = -mobj->radius;
+
+		if (slope->d.y < 0)
+			testy = mobj->radius;
+		else
+			testy = -mobj->radius;
+
+		if ((slope->zdelta > 0) ^ !!(lowest)) {
+			testx = -testx;
+			testy = -testy;
+		}
+
+		testx += x;
+		testy += y;
+
+		// If the highest point is in the sector, then we have it easy! Just get the Z at that point
+		if (R_PointInSubsector(testx, testy)->sector == (boundsec ?: sector))
+			return P_GetZAt(slope, testx, testy);
+
+		// If boundsec is set, we're looking for specials. In that case, iterate over every line in this sector to find the TRUE highest/lowest point
+		if (perfect) {
+			size_t i;
+			line_t *ld;
+			fixed_t bbox[4];
+			fixed_t finalheight;
+
+			if (lowest)
+				finalheight = INT32_MAX;
+			else
+				finalheight = INT32_MIN;
+
+			bbox[BOXLEFT] = x-mobj->radius;
+			bbox[BOXRIGHT] = x+mobj->radius;
+			bbox[BOXTOP] = y+mobj->radius;
+			bbox[BOXBOTTOM] = y-mobj->radius;
+			for (i = 0; i < boundsec->linecount; i++) {
+				ld = boundsec->lines[i];
+
+				if (bbox[BOXRIGHT] <= ld->bbox[BOXLEFT] || bbox[BOXLEFT] >= ld->bbox[BOXRIGHT]
+				|| bbox[BOXTOP] <= ld->bbox[BOXBOTTOM] || bbox[BOXBOTTOM] >= ld->bbox[BOXTOP])
+					continue;
+
+				if (P_BoxOnLineSide(bbox, ld) != -1)
+					continue;
+
+				if (lowest)
+					finalheight = min(finalheight, HighestOnLine(mobj->radius, x, y, ld, slope, true));
+				else
+					finalheight = max(finalheight, HighestOnLine(mobj->radius, x, y, ld, slope, false));
+			}
+
+			return finalheight;
+		}
+
+		// If we're just testing for base sector location (no collision line), just go for the center's spot...
+		// It'll get fixed when we test for collision anyway, and the final result can't be lower than this
+		if (line == NULL)
+			return P_GetZAt(slope, x, y);
+
+		return HighestOnLine(mobj->radius, x, y, line, slope, lowest);
+	} else // Well, that makes it easy. Just get the floor height
+#endif
+		return sector->floorheight;
+}
+
+fixed_t P_MobjCeilingZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, line_t *line, boolean lowest, boolean perfect)
+{
+	I_Assert(mobj != NULL);
+	I_Assert(sector != NULL);
+#ifdef ESLOPE
+	if (sector->c_slope) {
+		fixed_t testx, testy;
+		pslope_t *slope = sector->c_slope;
+
+		// Get the corner of the object that should be the highest on the slope
+		if (slope->d.x < 0)
+			testx = mobj->radius;
+		else
+			testx = -mobj->radius;
+
+		if (slope->d.y < 0)
+			testy = mobj->radius;
+		else
+			testy = -mobj->radius;
+
+		if ((slope->zdelta > 0) ^ !!(lowest)) {
+			testx = -testx;
+			testy = -testy;
+		}
+
+		testx += x;
+		testy += y;
+
+		// If the highest point is in the sector, then we have it easy! Just get the Z at that point
+		if (R_PointInSubsector(testx, testy)->sector == (boundsec ?: sector))
+			return P_GetZAt(slope, testx, testy);
+
+		// If boundsec is set, we're looking for specials. In that case, iterate over every line in this sector to find the TRUE highest/lowest point
+		if (perfect) {
+			size_t i;
+			line_t *ld;
+			fixed_t bbox[4];
+			fixed_t finalheight;
+
+			if (lowest)
+				finalheight = INT32_MAX;
+			else
+				finalheight = INT32_MIN;
+
+			bbox[BOXLEFT] = x-mobj->radius;
+			bbox[BOXRIGHT] = x+mobj->radius;
+			bbox[BOXTOP] = y+mobj->radius;
+			bbox[BOXBOTTOM] = y-mobj->radius;
+			for (i = 0; i < boundsec->linecount; i++) {
+				ld = boundsec->lines[i];
+
+				if (bbox[BOXRIGHT] <= ld->bbox[BOXLEFT] || bbox[BOXLEFT] >= ld->bbox[BOXRIGHT]
+				|| bbox[BOXTOP] <= ld->bbox[BOXBOTTOM] || bbox[BOXBOTTOM] >= ld->bbox[BOXTOP])
+					continue;
+
+				if (P_BoxOnLineSide(bbox, ld) != -1)
+					continue;
+
+				if (lowest)
+					finalheight = min(finalheight, HighestOnLine(mobj->radius, x, y, ld, slope, true));
+				else
+					finalheight = max(finalheight, HighestOnLine(mobj->radius, x, y, ld, slope, false));
+			}
+
+			return finalheight;
+		}
+
+		// If we're just testing for base sector location (no collision line), just go for the center's spot...
+		// It'll get fixed when we test for collision anyway, and the final result can't be lower than this
+		if (line == NULL)
+			return P_GetZAt(slope, x, y);
+
+		return HighestOnLine(mobj->radius, x, y, line, slope, lowest);
+	} else // Well, that makes it easy. Just get the ceiling height
+#endif
+		return sector->ceilingheight;
+}
+
+// Now do the same as all above, but for cameras because apparently cameras are special?
+fixed_t P_CameraFloorZ(camera_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, line_t *line, boolean lowest, boolean perfect)
+{
+	I_Assert(mobj != NULL);
+	I_Assert(sector != NULL);
+#ifdef ESLOPE
+	if (sector->f_slope) {
+		fixed_t testx, testy;
+		pslope_t *slope = sector->f_slope;
+
+		// Get the corner of the object that should be the highest on the slope
+		if (slope->d.x < 0)
+			testx = mobj->radius;
+		else
+			testx = -mobj->radius;
+
+		if (slope->d.y < 0)
+			testy = mobj->radius;
+		else
+			testy = -mobj->radius;
+
+		if ((slope->zdelta > 0) ^ !!(lowest)) {
+			testx = -testx;
+			testy = -testy;
+		}
+
+		testx += x;
+		testy += y;
+
+		// If the highest point is in the sector, then we have it easy! Just get the Z at that point
+		if (R_PointInSubsector(testx, testy)->sector == (boundsec ?: sector))
+			return P_GetZAt(slope, testx, testy);
+
+		// If boundsec is set, we're looking for specials. In that case, iterate over every line in this sector to find the TRUE highest/lowest point
+		if (perfect) {
+			size_t i;
+			line_t *ld;
+			fixed_t bbox[4];
+			fixed_t finalheight;
+
+			if (lowest)
+				finalheight = INT32_MAX;
+			else
+				finalheight = INT32_MIN;
+
+			bbox[BOXLEFT] = x-mobj->radius;
+			bbox[BOXRIGHT] = x+mobj->radius;
+			bbox[BOXTOP] = y+mobj->radius;
+			bbox[BOXBOTTOM] = y-mobj->radius;
+			for (i = 0; i < boundsec->linecount; i++) {
+				ld = boundsec->lines[i];
+
+				if (bbox[BOXRIGHT] <= ld->bbox[BOXLEFT] || bbox[BOXLEFT] >= ld->bbox[BOXRIGHT]
+				|| bbox[BOXTOP] <= ld->bbox[BOXBOTTOM] || bbox[BOXBOTTOM] >= ld->bbox[BOXTOP])
+					continue;
+
+				if (P_BoxOnLineSide(bbox, ld) != -1)
+					continue;
+
+				if (lowest)
+					finalheight = min(finalheight, HighestOnLine(mobj->radius, x, y, ld, slope, true));
+				else
+					finalheight = max(finalheight, HighestOnLine(mobj->radius, x, y, ld, slope, false));
+			}
+
+			return finalheight;
+		}
+
+		// If we're just testing for base sector location (no collision line), just go for the center's spot...
+		// It'll get fixed when we test for collision anyway, and the final result can't be lower than this
+		if (line == NULL)
+			return P_GetZAt(slope, x, y);
+
+		return HighestOnLine(mobj->radius, x, y, line, slope, lowest);
+	} else // Well, that makes it easy. Just get the floor height
+#endif
+		return sector->floorheight;
+}
+
+fixed_t P_CameraCeilingZ(camera_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, line_t *line, boolean lowest, boolean perfect)
+{
+	I_Assert(mobj != NULL);
+	I_Assert(sector != NULL);
+#ifdef ESLOPE
+	if (sector->c_slope) {
+		fixed_t testx, testy;
+		pslope_t *slope = sector->c_slope;
+
+		// Get the corner of the object that should be the highest on the slope
+		if (slope->d.x < 0)
+			testx = mobj->radius;
+		else
+			testx = -mobj->radius;
+
+		if (slope->d.y < 0)
+			testy = mobj->radius;
+		else
+			testy = -mobj->radius;
+
+		if ((slope->zdelta > 0) ^ !!(lowest)) {
+			testx = -testx;
+			testy = -testy;
+		}
+
+		testx += x;
+		testy += y;
+
+		// If the highest point is in the sector, then we have it easy! Just get the Z at that point
+		if (R_PointInSubsector(testx, testy)->sector == (boundsec ?: sector))
+			return P_GetZAt(slope, testx, testy);
+
+		// If boundsec is set, we're looking for specials. In that case, iterate over every line in this sector to find the TRUE highest/lowest point
+		if (perfect) {
+			size_t i;
+			line_t *ld;
+			fixed_t bbox[4];
+			fixed_t finalheight;
+
+			if (lowest)
+				finalheight = INT32_MAX;
+			else
+				finalheight = INT32_MIN;
+
+			bbox[BOXLEFT] = x-mobj->radius;
+			bbox[BOXRIGHT] = x+mobj->radius;
+			bbox[BOXTOP] = y+mobj->radius;
+			bbox[BOXBOTTOM] = y-mobj->radius;
+			for (i = 0; i < boundsec->linecount; i++) {
+				ld = boundsec->lines[i];
+
+				if (bbox[BOXRIGHT] <= ld->bbox[BOXLEFT] || bbox[BOXLEFT] >= ld->bbox[BOXRIGHT]
+				|| bbox[BOXTOP] <= ld->bbox[BOXBOTTOM] || bbox[BOXBOTTOM] >= ld->bbox[BOXTOP])
+					continue;
+
+				if (P_BoxOnLineSide(bbox, ld) != -1)
+					continue;
+
+				if (lowest)
+					finalheight = min(finalheight, HighestOnLine(mobj->radius, x, y, ld, slope, true));
+				else
+					finalheight = max(finalheight, HighestOnLine(mobj->radius, x, y, ld, slope, false));
+			}
+
+			return finalheight;
+		}
+
+		// If we're just testing for base sector location (no collision line), just go for the center's spot...
+		// It'll get fixed when we test for collision anyway, and the final result can't be lower than this
+		if (line == NULL)
+			return P_GetZAt(slope, x, y);
+
+		return HighestOnLine(mobj->radius, x, y, line, slope, lowest);
+	} else // Well, that makes it easy. Just get the ceiling height
+#endif
+		return sector->ceilingheight;
+}
 static void P_PlayerFlip(mobj_t *mo)
 {
 	if (!mo->player)
@@ -820,7 +1413,7 @@ void P_CheckGravity(mobj_t *mo, boolean affect)
 	if (mo->player)
 	{
 		if (mo->player->charability == CA_FLY && (mo->player->powers[pw_tailsfly]
-		|| (mo->state >= &states[S_PLAY_SPC1] && mo->state <= &states[S_PLAY_SPC4])))
+		|| mo->state-states == S_PLAY_FLY_TIRED))
 			gravityadd = gravityadd/3; // less gravity while flying
 		if (mo->player->pflags & PF_GLIDING)
 			gravityadd = gravityadd/3; // less gravity while gliding
@@ -975,7 +1568,11 @@ static void P_XYFriction(mobj_t *mo, fixed_t oldx, fixed_t oldy)
 		}
 		else if (abs(player->rmomx) < FixedMul(STOPSPEED, mo->scale)
 		    && abs(player->rmomy) < FixedMul(STOPSPEED, mo->scale)
-		    && (!(player->cmd.forwardmove && !(twodlevel || mo->flags2 & MF2_TWOD)) && !player->cmd.sidemove && !(player->pflags & PF_SPINNING)))
+		    && (!(player->cmd.forwardmove && !(twodlevel || mo->flags2 & MF2_TWOD)) && !player->cmd.sidemove && !(player->pflags & PF_SPINNING))
+#ifdef ESLOPE
+			&& !(player->mo->standingslope && abs(player->mo->standingslope->zdelta) >= FRACUNIT/2)
+#endif
+				)
 		{
 			// if in a walking frame, stop moving
 			if (player->panim == PA_WALK)
@@ -1119,6 +1716,11 @@ void P_XYMovement(mobj_t *mo)
 	fixed_t xmove, ymove;
 	fixed_t oldx, oldy; // reducing bobbing/momentum on ice when up against walls
 	boolean moved;
+#ifdef ESLOPE
+	pslope_t *oldslope = NULL;
+	vector3_t slopemom;
+	fixed_t predictedz = 0;
+#endif
 
 	I_Assert(mo != NULL);
 	I_Assert(!P_MobjWasRemoved(mo));
@@ -1150,11 +1752,35 @@ void P_XYMovement(mobj_t *mo)
 	oldx = mo->x;
 	oldy = mo->y;
 
+#ifdef ESLOPE
+	// adjust various things based on slope
+	if (mo->standingslope && abs(mo->standingslope->zdelta) > FRACUNIT>>8) {
+		if (!P_IsObjectOnGround(mo)) { // We fell off at some point? Do the twisty thing!
+			P_SlopeLaunch(mo);
+			xmove = mo->momx;
+			ymove = mo->momy;
+		} else { // Still on the ground.
+			slopemom.x = xmove;
+			slopemom.y = ymove;
+			slopemom.z = 0;
+			P_QuantizeMomentumToSlope(&slopemom, mo->standingslope);
+
+			xmove = slopemom.x;
+			ymove = slopemom.y;
+
+			predictedz = mo->z + slopemom.z; // We'll use this later...
+
+			oldslope = mo->standingslope;
+		}
+	} else if (P_IsObjectOnGround(mo) && !mo->momz)
+		predictedz = mo->z;
+#endif
+
 	// Pushables can break some blocks
 	if (CheckForBustableBlocks && mo->flags & MF_PUSHABLE)
 		P_PushableCheckBustables(mo);
 
-	if (!P_TryMove(mo, mo->x + xmove, mo->y + ymove, true) && !tmsprung)
+	if (!P_TryMove(mo, mo->x + xmove, mo->y + ymove, true) && !(mo->eflags & MFE_SPRUNG))
 	{
 		// blocked move
 
@@ -1270,6 +1896,54 @@ void P_XYMovement(mobj_t *mo)
 	if (P_MobjWasRemoved(mo)) // MF_SPECIAL touched a player! O_o;;
 		return;
 
+#ifdef ESLOPE
+	if (moved && oldslope) { // Check to see if we ran off
+
+		if (oldslope != mo->standingslope) { // First, compare different slopes
+			angle_t oldangle, newangle;
+			angle_t moveangle = R_PointToAngle2(0, 0, mo->momx, mo->momy);
+
+			oldangle = FixedMul((signed)oldslope->zangle, FINECOSINE((moveangle - oldslope->xydirection) >> ANGLETOFINESHIFT));
+
+			if (mo->standingslope)
+				newangle = FixedMul((signed)mo->standingslope->zangle, FINECOSINE((moveangle - mo->standingslope->xydirection) >> ANGLETOFINESHIFT));
+			else
+				newangle = 0;
+
+			// Now compare the Zs of the different quantizations
+			if (oldangle-newangle > ANG30 && oldangle-newangle < ANGLE_180) { // Allow for a bit of sticking - this value can be adjusted later
+				mo->standingslope = oldslope;
+				P_SlopeLaunch(mo);
+
+				//CONS_Printf("launched off of slope - ");
+			}
+
+			/*CONS_Printf("old angle %f - new angle %f = %f\n",
+						FIXED_TO_FLOAT(AngleFixed(oldangle)),
+						FIXED_TO_FLOAT(AngleFixed(newangle)),
+						FIXED_TO_FLOAT(AngleFixed(oldangle-newangle))
+						);*/
+		} else if (predictedz-mo->z > abs(slopemom.z/2)) { // Now check if we were supposed to stick to this slope
+			//CONS_Printf("%d-%d > %d\n", (predictedz), (mo->z), (slopemom.z/2));
+			P_SlopeLaunch(mo);
+		}
+	} else if (moved && mo->standingslope && predictedz) {
+		angle_t moveangle = R_PointToAngle2(0, 0, mo->momx, mo->momy);
+		angle_t newangle = FixedMul((signed)mo->standingslope->zangle, FINECOSINE((moveangle - mo->standingslope->xydirection) >> ANGLETOFINESHIFT));
+
+			/*CONS_Printf("flat to angle %f - predicted z of %f\n",
+						FIXED_TO_FLOAT(AngleFixed(ANGLE_MAX-newangle)),
+						FIXED_TO_FLOAT(predictedz)
+						);*/
+		if (ANGLE_MAX-newangle > ANG30 && newangle > ANGLE_180) {
+			mo->momz = P_MobjFlip(mo)*FRACUNIT/2;
+			mo->z = predictedz + P_MobjFlip(mo);
+			mo->standingslope = NULL;
+			//CONS_Printf("Launched off of flat surface running into downward slope\n");
+		}
+	}
+#endif
+
 	// Check the gravity status.
 	P_CheckGravity(mo, false);
 
@@ -1315,6 +1989,12 @@ void P_XYMovement(mobj_t *mo)
 
 	if (player && player->homing) // no friction for homing
 		return;
+
+#ifdef ESLOPE
+	if ((mo->type == MT_BIGTUMBLEWEED || mo->type == MT_LITTLETUMBLEWEED)
+			&& (mo->standingslope && abs(mo->standingslope->zdelta) > FRACUNIT>>8)) // Special exception for tumbleweeds on slopes
+		return;
+#endif
 
 	if (((!(mo->eflags & MFE_VERTICALFLIP) && mo->z > mo->floorz) || (mo->eflags & MFE_VERTICALFLIP && mo->z+mo->height < mo->ceilingz))
 		&& !(player && player->pflags & PF_SLIDING))
@@ -1372,6 +2052,7 @@ static void P_AdjustMobjFloorZ_FFloors(mobj_t *mo, sector_t *sector, UINT8 motyp
 {
 	ffloor_t *rover;
 	fixed_t delta1, delta2, thingtop;
+	fixed_t topheight, bottomheight;
 
 	I_Assert(mo != NULL);
 	I_Assert(!P_MobjWasRemoved(mo));
@@ -1382,6 +2063,9 @@ static void P_AdjustMobjFloorZ_FFloors(mobj_t *mo, sector_t *sector, UINT8 motyp
 	{
 		if (!(rover->flags & FF_EXISTS))
 			continue;
+
+		topheight = P_GetFOFTopZ(mo, sector, rover, mo->x, mo->y, NULL);
+		bottomheight = P_GetFOFBottomZ(mo, sector, rover, mo->x, mo->y, NULL);
 
 		if (mo->player && (P_CheckSolidLava(mo, rover) || P_CanRunOnWater(mo->player, rover))) // only the player should be affected
 			;
@@ -1397,14 +2081,14 @@ static void P_AdjustMobjFloorZ_FFloors(mobj_t *mo, sector_t *sector, UINT8 motyp
 			switch (motype)
 			{
 				case 2: // scenery does things differently for some reason
-					if (mo->z < *rover->topheight && *rover->bottomheight < thingtop)
+					if (mo->z < topheight && bottomheight < thingtop)
 					{
 						mo->floorz = mo->z;
 						continue;
 					}
 					break;
 				default:
-					if (mo->z < *rover->topheight && *rover->bottomheight < thingtop)
+					if (mo->z < topheight && bottomheight < thingtop)
 					{
 						if (mo->floorz < mo->z)
 							mo->floorz = mo->z;
@@ -1413,17 +2097,17 @@ static void P_AdjustMobjFloorZ_FFloors(mobj_t *mo, sector_t *sector, UINT8 motyp
 			}
 		}
 
-		delta1 = mo->z - (*rover->bottomheight + ((*rover->topheight - *rover->bottomheight)/2));
-		delta2 = thingtop - (*rover->bottomheight + ((*rover->topheight - *rover->bottomheight)/2));
-		if (*rover->topheight > mo->floorz && abs(delta1) < abs(delta2)
+		delta1 = mo->z - (bottomheight + ((topheight - bottomheight)/2));
+		delta2 = thingtop - (bottomheight + ((topheight - bottomheight)/2));
+		if (topheight > mo->floorz && abs(delta1) < abs(delta2)
 			&& !(rover->flags & FF_REVERSEPLATFORM))
 		{
-			mo->floorz = *rover->topheight;
+			mo->floorz = topheight;
 		}
-		if (*rover->bottomheight < mo->ceilingz && abs(delta1) >= abs(delta2)
+		if (bottomheight < mo->ceilingz && abs(delta1) >= abs(delta2)
 			&& !(rover->flags & FF_PLATFORM))
 		{
-			mo->ceilingz = *rover->bottomheight;
+			mo->ceilingz = bottomheight;
 		}
 	}
 }
@@ -1493,10 +2177,10 @@ static void P_RingZMovement(mobj_t *mo)
 		P_AdjustMobjFloorZ_PolyObjs(mo, mo->subsector);
 
 	// adjust height
-	if (mo->pmomz && mo->z != mo->floorz)
+	if (mo->eflags & MFE_APPLYPMOMZ && !P_IsObjectOnGround(mo))
 	{
 		mo->momz += mo->pmomz;
-		mo->pmomz = 0;
+		mo->eflags &= ~MFE_APPLYPMOMZ;
 	}
 	mo->z += mo->momz;
 
@@ -1555,6 +2239,11 @@ static boolean P_ZMovement(mobj_t *mo)
 	I_Assert(mo != NULL);
 	I_Assert(!P_MobjWasRemoved(mo));
 
+#ifdef ESLOPE
+	if (mo->standingslope && !P_IsObjectOnGround(mo))
+			P_SlopeLaunch(mo);
+#endif
+
 	// Intercept the stupid 'fall through 3dfloors' bug
 	if (mo->subsector->sector->ffloors)
 		P_AdjustMobjFloorZ_FFloors(mo, mo->subsector->sector, 0);
@@ -1562,10 +2251,10 @@ static boolean P_ZMovement(mobj_t *mo)
 		P_AdjustMobjFloorZ_PolyObjs(mo, mo->subsector);
 
 	// adjust height
-	if (mo->pmomz && mo->z != mo->floorz)
+	if (mo->eflags & MFE_APPLYPMOMZ && !P_IsObjectOnGround(mo))
 	{
 		mo->momz += mo->pmomz;
-		mo->pmomz = 0;
+		mo->eflags &= ~MFE_APPLYPMOMZ;
 	}
 	mo->z += mo->momz;
 
@@ -1706,7 +2395,7 @@ static boolean P_ZMovement(mobj_t *mo)
 			// Kill enemies and bosses that fall into death pits.
 			if (mo->health)
 			{
-				P_KillMobj(mo, NULL, NULL);
+				P_KillMobj(mo, NULL, NULL, 0);
 				return false;
 			}
 		}
@@ -1742,14 +2431,31 @@ static boolean P_ZMovement(mobj_t *mo)
 		|| (mo->z + mo->height >= mo->ceilingz && mo->eflags & MFE_VERTICALFLIP))
 	&& !(mo->flags & MF_NOCLIPHEIGHT))
 	{
+		vector3_t mom;
+		mom.x = mo->momx;
+		mom.y = mo->momy;
+		mom.z = mo->momz;
+
 		if (mo->eflags & MFE_VERTICALFLIP)
 			mo->z = mo->ceilingz - mo->height;
 		else
 			mo->z = mo->floorz;
 
+#ifdef ESLOPE
+		P_CheckPosition(mo, mo->x, mo->y); // Sets mo->standingslope correctly
+		if ((mo->eflags & MFE_VERTICALFLIP) ? tmceilingslope : tmfloorslope) {
+			mo->standingslope = (mo->eflags & MFE_VERTICALFLIP) ? tmceilingslope : tmfloorslope;
+
+			// Reverse quantizing might could use its own function later
+			mo->standingslope->zangle = ANGLE_MAX-mo->standingslope->zangle;
+			P_QuantizeMomentumToSlope(&mom, mo->standingslope);
+			mo->standingslope->zangle = ANGLE_MAX-mo->standingslope->zangle;
+		}
+#endif
+
 		// hit the floor
 		if (mo->type == MT_FIREBALL) // special case for the fireball
-			mo->momz = P_MobjFlip(mo)*FixedMul(5*FRACUNIT, mo->scale);
+			mom.z = P_MobjFlip(mo)*FixedMul(5*FRACUNIT, mo->scale);
 		else if (mo->type == MT_SPINFIRE) // elemental shield fire is another exception here
 			;
 		else if (mo->flags & MF_MISSILE)
@@ -1764,12 +2470,12 @@ static boolean P_ZMovement(mobj_t *mo)
 				if (mo->flags & MF_GRENADEBOUNCE)
 				{
 					// Going down? (Or up in reverse gravity?)
-					if (P_MobjFlip(mo)*mo->momz < 0)
+					if (P_MobjFlip(mo)*mom.z < 0)
 					{
 						// If going slower than a fracunit, just stop.
-						if (abs(mo->momz) < FixedMul(FRACUNIT, mo->scale))
+						if (abs(mom.z) < FixedMul(FRACUNIT, mo->scale))
 						{
-							mo->momx = mo->momy = mo->momz = 0;
+							mom.x = mom.y = mom.z = 0;
 
 							// Napalm hack
 							if (mo->type == MT_CYBRAKDEMON_NAPALM_BOMB_LARGE && mo->fuse)
@@ -1777,7 +2483,7 @@ static boolean P_ZMovement(mobj_t *mo)
 						}
 						// Otherwise bounce up at half speed.
 						else
-							mo->momz = -mo->momz/2;
+							mom.z = -mom.z/2;
 						S_StartSound(mo, mo->info->activesound);
 					}
 				}
@@ -1800,14 +2506,14 @@ static boolean P_ZMovement(mobj_t *mo)
 			}
 		}
 
-		if (P_MobjFlip(mo)*mo->momz < 0) // falling
+		if (P_MobjFlip(mo)*mom.z < 0) // falling
 		{
 			if (!tmfloorthing || tmfloorthing->flags & (MF_PUSHABLE|MF_MONITOR)
 			|| tmfloorthing->flags2 & MF2_STANDONME || tmfloorthing->type == MT_PLAYER)
 				mo->eflags |= MFE_JUSTHITFLOOR;
 
 			if (mo->flags2 & MF2_SKULLFLY) // the skull slammed into something
-				mo->momz = -mo->momz;
+				mom.z = -mom.z;
 			else
 			// Flingrings bounce
 			if (mo->type == MT_FLINGRING
@@ -1820,35 +2526,42 @@ static boolean P_ZMovement(mobj_t *mo)
 				|| mo->type == MT_FALLINGROCK)
 			{
 				if (maptol & TOL_NIGHTS)
-					mo->momz = -FixedDiv(mo->momz, 10*FRACUNIT);
+					mom.z = -FixedDiv(mom.z, 10*FRACUNIT);
 				else
-					mo->momz = -FixedMul(mo->momz, FixedDiv(17*FRACUNIT,20*FRACUNIT));
+					mom.z = -FixedMul(mom.z, FixedDiv(17*FRACUNIT,20*FRACUNIT));
 
 				if (mo->type == MT_BIGTUMBLEWEED || mo->type == MT_LITTLETUMBLEWEED)
 				{
-					if (abs(mo->momx) < FixedMul(STOPSPEED, mo->scale)
-						&& abs(mo->momy) < FixedMul(STOPSPEED, mo->scale)
-						&& abs(mo->momz) < FixedMul(STOPSPEED*3, mo->scale))
+					if (abs(mom.x) < FixedMul(STOPSPEED, mo->scale)
+						&& abs(mom.y) < FixedMul(STOPSPEED, mo->scale)
+						&& abs(mom.z) < FixedMul(STOPSPEED*3, mo->scale))
 					{
-						if (!(mo->flags & MF_AMBUSH))
-						{
-							mo->momx = mo->momy = mo->momz = 0;
-							P_SetMobjState(mo, mo->info->spawnstate);
-						}
-						else
+						if (mo->flags & MF_AMBUSH)
 						{
 							// If deafed, give the tumbleweed another random kick if it runs out of steam.
-							mo->momz += P_MobjFlip(mo)*FixedMul(6*FRACUNIT, mo->scale);
+							mom.z += P_MobjFlip(mo)*FixedMul(6*FRACUNIT, mo->scale);
 
 							if (P_Random() & 1)
-								mo->momx += FixedMul(6*FRACUNIT, mo->scale);
+								mom.x += FixedMul(6*FRACUNIT, mo->scale);
 							else
-								mo->momx -= FixedMul(6*FRACUNIT, mo->scale);
+								mom.x -= FixedMul(6*FRACUNIT, mo->scale);
 
 							if (P_Random() & 1)
-								mo->momy += FixedMul(6*FRACUNIT, mo->scale);
+								mom.y += FixedMul(6*FRACUNIT, mo->scale);
 							else
-								mo->momy -= FixedMul(6*FRACUNIT, mo->scale);
+								mom.y -= FixedMul(6*FRACUNIT, mo->scale);
+						}
+#ifdef ESLOPE
+						else if (mo->standingslope && abs(mo->standingslope->zdelta) > FRACUNIT>>8)
+						{
+							// Pop the object up a bit to encourage bounciness
+							//mom.z = P_MobjFlip(mo)*mo->scale;
+						}
+#endif
+						else
+						{
+							mom.x = mom.y = mom.z = 0;
+							P_SetMobjState(mo, mo->info->spawnstate);
 						}
 					}
 
@@ -1858,14 +2571,14 @@ static boolean P_ZMovement(mobj_t *mo)
 				}
 				else if (mo->type == MT_FALLINGROCK)
 				{
-					if (P_MobjFlip(mo)*mo->momz > FixedMul(2*FRACUNIT, mo->scale))
+					if (P_MobjFlip(mo)*mom.z > FixedMul(2*FRACUNIT, mo->scale))
 						S_StartSound(mo, mo->info->activesound + P_RandomKey(mo->info->mass));
 
-					mo->momz /= 2; // Rocks not so bouncy
+					mom.z /= 2; // Rocks not so bouncy
 
-					if (abs(mo->momx) < FixedMul(STOPSPEED, mo->scale)
-						&& abs(mo->momy) < FixedMul(STOPSPEED, mo->scale)
-						&& abs(mo->momz) < FixedMul(STOPSPEED*3, mo->scale))
+					if (abs(mom.x) < FixedMul(STOPSPEED, mo->scale)
+						&& abs(mom.y) < FixedMul(STOPSPEED, mo->scale)
+						&& abs(mom.z) < FixedMul(STOPSPEED*3, mo->scale))
 					{
 						P_RemoveMobj(mo);
 						return false;
@@ -1873,20 +2586,30 @@ static boolean P_ZMovement(mobj_t *mo)
 				}
 				else if (mo->type == MT_CANNONBALLDECOR)
 				{
-					mo->momz /= 2;
-					if (abs(mo->momz) < FixedMul(STOPSPEED*3, mo->scale))
-						mo->momz = 0;
+					mom.z /= 2;
+					if (abs(mom.z) < FixedMul(STOPSPEED*3, mo->scale))
+						mom.z = 0;
 				}
 			}
 			else if (tmfloorthing && (tmfloorthing->flags & (MF_PUSHABLE|MF_MONITOR)
 			|| tmfloorthing->flags2 & MF2_STANDONME || tmfloorthing->type == MT_PLAYER))
-				mo->momz = tmfloorthing->momz;
+				mom.z = tmfloorthing->momz;
 			else if (!tmfloorthing)
-				mo->momz = 0;
+				mom.z = 0;
 		}
 		else if (tmfloorthing && (tmfloorthing->flags & (MF_PUSHABLE|MF_MONITOR)
 		|| tmfloorthing->flags2 & MF2_STANDONME || tmfloorthing->type == MT_PLAYER))
-			mo->momz = tmfloorthing->momz;
+			mom.z = tmfloorthing->momz;
+
+#ifdef ESLOPE
+		if (mo->standingslope) {
+			P_QuantizeMomentumToSlope(&mom, mo->standingslope);
+		}
+#endif
+
+		mo->momx = mom.x;
+		mo->momy = mom.y;
+		mo->momz = mom.z;
 
 		if (mo->type == MT_STEAM)
 			return true;
@@ -1987,11 +2710,11 @@ static void P_PlayerZMovement(mobj_t *mo)
 	}
 
 	// adjust height
-/*	if (mo->pmomz && mo->z > mo->floorz && !(mo->player->pflags & PF_JUMPED))
+	if (mo->eflags & MFE_APPLYPMOMZ && !P_IsObjectOnGround(mo))
 	{
 		mo->momz += mo->pmomz;
-		mo->pmomz = 0;
-	}*/
+		mo->eflags &= ~MFE_APPLYPMOMZ;
+	}
 
 	mo->z += mo->momz;
 
@@ -1999,6 +2722,11 @@ static void P_PlayerZMovement(mobj_t *mo)
 	if (mo->player->playerstate == PST_DEAD
 	|| mo->player->playerstate == PST_REBORN)
 		return;
+
+#ifdef ESLOPE
+	if (mo->standingslope && !P_IsObjectOnGround(mo))
+			P_SlopeLaunch(mo);
+#endif
 
 	// clip movement
 	if (P_IsObjectOnGround(mo) && !(mo->flags & MF_NOCLIPHEIGHT))
@@ -2008,7 +2736,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 		else
 			mo->z = mo->floorz;
 
-		if (mo->player && (mo->player->pflags & PF_NIGHTSMODE))
+		if (mo->player->pflags & PF_NIGHTSMODE)
 		{
 			if (mo->player->flyangle < 90 || mo->player->flyangle >= 270)
 				mo->player->flyangle += P_MobjFlip(mo)*90;
@@ -2018,17 +2746,23 @@ static void P_PlayerZMovement(mobj_t *mo)
 			goto nightsdone;
 		}
 		// Get up if you fell.
-		if (mo->state == &states[mo->info->painstate] || mo->state == &states[S_PLAY_SUPERHIT])
+		if (mo->player->panim == PA_PAIN)
 			P_SetPlayerMobjState(mo, S_PLAY_STND);
+
+#ifdef ESLOPE
+		if (!mo->standingslope && (mo->eflags & MFE_VERTICALFLIP ? tmceilingslope : tmfloorslope)) {
+			// Handle landing on slope during Z movement
+			P_HandleSlopeLanding(mo, (mo->eflags & MFE_VERTICALFLIP ? tmceilingslope : tmfloorslope));
+		}
+#endif
 
 		if (P_MobjFlip(mo)*mo->momz < 0) // falling
 		{
+			mo->pmomz = 0; // We're on a new floor, don't keep doing platform movement.
+
 			// Squat down. Decrease viewheight for a moment after hitting the ground (hard),
-			if (mo->player)
-			{
-				if (P_MobjFlip(mo)*mo->momz < -FixedMul(8*FRACUNIT, mo->scale))
-					mo->player->deltaviewheight = (P_MobjFlip(mo)*mo->momz)>>3; // make sure momz is negative
-			}
+			if (P_MobjFlip(mo)*mo->momz < -FixedMul(8*FRACUNIT, mo->scale))
+				mo->player->deltaviewheight = (P_MobjFlip(mo)*mo->momz)>>3; // make sure momz is negative
 
 			if (!tmfloorthing || tmfloorthing->flags & (MF_PUSHABLE|MF_MONITOR)
 				|| tmfloorthing->flags2 & MF2_STANDONME || tmfloorthing->type == MT_PLAYER) // Spin Attack
@@ -2101,14 +2835,14 @@ static void P_PlayerZMovement(mobj_t *mo)
 
 					// Cut momentum in half when you hit the ground and
 					// aren't pressing any controls.
-					if (!mo->player || (!(mo->player->cmd.forwardmove || mo->player->cmd.sidemove) && !mo->player->cmomx && !mo->player->cmomy && !(mo->player->pflags & PF_SPINNING)))
+					if (!(mo->player->cmd.forwardmove || mo->player->cmd.sidemove) && !mo->player->cmomx && !mo->player->cmomy && !(mo->player->pflags & PF_SPINNING))
 					{
 						mo->momx = mo->momx/2;
 						mo->momy = mo->momy/2;
 					}
 				}
 
-				if (mo->health && mo->player)
+				if (mo->health)
 				{
 					if (mo->player->pflags & PF_GLIDING) // ground gliding
 					{
@@ -2116,23 +2850,23 @@ static void P_PlayerZMovement(mobj_t *mo)
 						mo->tics = -1;
 					}
 					else if (mo->player->pflags & PF_JUMPED || (mo->player->pflags & (PF_SPINNING|PF_USEDOWN)) != (PF_SPINNING|PF_USEDOWN)
-					|| mo->player->powers[pw_tailsfly] || (mo->state >= &states[S_PLAY_SPC1] && mo->state <= &states[S_PLAY_SPC4]))
+					|| mo->player->powers[pw_tailsfly] || mo->state-states == S_PLAY_FLY_TIRED)
 					{
 						if (mo->player->cmomx || mo->player->cmomy)
 						{
 							if (mo->player->speed >= FixedMul(mo->player->runspeed, mo->scale) && mo->player->panim != PA_RUN)
-								P_SetPlayerMobjState(mo, S_PLAY_SPD1);
-							else if ((mo->player->rmomx || mo->player->rmomy) && mo->player->panim != PA_WALK)
-								P_SetPlayerMobjState(mo, S_PLAY_RUN1);
+								P_SetPlayerMobjState(mo, S_PLAY_RUN);
+							else if ((mo->player->rmomx || mo->player->rmomy) && (mo->player->panim != PA_WALK || mo->state-states == S_PLAY_SUPER_FLOAT))
+								P_SetPlayerMobjState(mo, S_PLAY_WALK);
 							else if (!mo->player->rmomx && !mo->player->rmomy && mo->player->panim != PA_IDLE)
 								P_SetPlayerMobjState(mo, S_PLAY_STND);
 						}
 						else
 						{
 							if (mo->player->speed >= FixedMul(mo->player->runspeed, mo->scale) && mo->player->panim != PA_RUN)
-								P_SetPlayerMobjState(mo, S_PLAY_SPD1);
-							else if ((mo->momx || mo->momy) && mo->player->panim != PA_WALK)
-								P_SetPlayerMobjState(mo, S_PLAY_RUN1);
+								P_SetPlayerMobjState(mo, S_PLAY_RUN);
+							else if ((mo->momx || mo->momy) && (mo->player->panim != PA_WALK || mo->state-states == S_PLAY_SUPER_FLOAT))
+								P_SetPlayerMobjState(mo, S_PLAY_WALK);
 							else if (!mo->momx && !mo->momy && mo->player->panim != PA_IDLE)
 								P_SetPlayerMobjState(mo, S_PLAY_STND);
 						}
@@ -2154,7 +2888,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 					mo->player->powers[pw_tailsfly] = 0;
 				}
 			}
-			if (mo->player && !(mo->player->pflags & PF_SPINNING))
+			if (!(mo->player->pflags & PF_SPINNING))
 				mo->player->pflags &= ~PF_STARTDASH;
 
 			if (tmfloorthing && (tmfloorthing->flags & (MF_PUSHABLE|MF_MONITOR)
@@ -2197,7 +2931,7 @@ nightsdone:
 		else
 			mo->z = mo->ceilingz - mo->height;
 
-		if (mo->player && (mo->player->pflags & PF_NIGHTSMODE))
+		if (mo->player->pflags & PF_NIGHTSMODE)
 		{
 			if (mo->player->flyangle < 90 || mo->player->flyangle >= 270)
 				mo->player->flyangle -= P_MobjFlip(mo)*90;
@@ -2212,7 +2946,7 @@ nightsdone:
 		{
 			msecnode_t *node;
 
-			if (CheckForMarioBlocks && mo->player && !(netgame && mo->player->spectator)) // Only let the player punch
+			if (CheckForMarioBlocks && !(netgame && mo->player->spectator)) // Only let the player punch
 			{
 				// Search the touching sectors, from side-to-side...
 				for (node = mo->touching_sectorlist; node; node = node->m_snext)
@@ -2240,7 +2974,7 @@ nightsdone:
 			if (mariomode)
 				S_StartSound(mo, sfx_mario1);
 
-			if (!(mo->player && mo->player->climbing))
+			if (!mo->player->climbing)
 				mo->momz = 0;
 		}
 	}
@@ -2255,10 +2989,10 @@ static boolean P_SceneryZMovement(mobj_t *mo)
 		P_AdjustMobjFloorZ_PolyObjs(mo, mo->subsector);
 
 	// adjust height
-	if (mo->pmomz && mo->z != mo->floorz)
+	if (mo->eflags & MFE_APPLYPMOMZ && !P_IsObjectOnGround(mo))
 	{
 		mo->momz += mo->pmomz;
-		mo->pmomz = 0;
+		mo->eflags &= ~MFE_APPLYPMOMZ;
 	}
 	mo->z += mo->momz;
 
@@ -2429,46 +3163,58 @@ void P_MobjCheckWater(mobj_t *mobj)
 	player_t *p = mobj->player; // Will just be null if not a player.
 
 	// Default if no water exists.
-	mobj->watertop = mobj->waterbottom = mobj->subsector->sector->floorheight - 1000*FRACUNIT;
+	mobj->watertop = mobj->waterbottom = mobj->z - 1000*FRACUNIT;
 
 	// Reset water state.
 	mobj->eflags &= ~(MFE_UNDERWATER|MFE_TOUCHWATER|MFE_GOOWATER);
 
 	for (rover = sector->ffloors; rover; rover = rover->next)
 	{
+		fixed_t topheight, bottomheight;
 		if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_SWIMMABLE)
 		 || (((rover->flags & FF_BLOCKPLAYER) && mobj->player)
 		 || ((rover->flags & FF_BLOCKOTHERS) && !mobj->player)))
 			continue;
 
+		topheight = *rover->topheight;
+		bottomheight = *rover->bottomheight;
+
+#ifdef ESLOPE
+		if (*rover->t_slope)
+			topheight = P_GetZAt(*rover->t_slope, mobj->x, mobj->y);
+
+		if (*rover->b_slope)
+			bottomheight = P_GetZAt(*rover->b_slope, mobj->x, mobj->y);
+#endif
+
 		if (mobj->eflags & MFE_VERTICALFLIP)
 		{
-			if (*rover->topheight < (thingtop - FixedMul(mobj->info->height/2, mobj->scale))
-			 || *rover->bottomheight > thingtop)
+			if (topheight < (thingtop - FixedMul(mobj->info->height/2, mobj->scale))
+			 || bottomheight > thingtop)
 				continue;
 		}
 		else
 		{
-			if (*rover->topheight < mobj->z
-			 || *rover->bottomheight > (mobj->z + FixedMul(mobj->info->height/2, mobj->scale)))
+			if (topheight < mobj->z
+			 || bottomheight > (mobj->z + FixedMul(mobj->info->height/2, mobj->scale)))
 				continue;
 		}
 
 		// Set the watertop and waterbottom
-		mobj->watertop = *rover->topheight;
-		mobj->waterbottom = *rover->bottomheight;
+		mobj->watertop = topheight;
+		mobj->waterbottom = bottomheight;
 
 		// Just touching the water?
-		if (((mobj->eflags & MFE_VERTICALFLIP) && thingtop - FixedMul(mobj->info->height, mobj->scale) < *rover->bottomheight)
-		 || (!(mobj->eflags & MFE_VERTICALFLIP) && mobj->z + FixedMul(mobj->info->height, mobj->scale) > *rover->topheight))
+		if (((mobj->eflags & MFE_VERTICALFLIP) && thingtop - FixedMul(mobj->info->height, mobj->scale) < bottomheight)
+		 || (!(mobj->eflags & MFE_VERTICALFLIP) && mobj->z + FixedMul(mobj->info->height, mobj->scale) > topheight))
 		{
 			mobj->eflags |= MFE_TOUCHWATER;
 			if (rover->flags & FF_GOOWATER && !(mobj->flags & MF_NOGRAVITY))
 				mobj->eflags |= MFE_GOOWATER;
 		}
 		// Actually in the water?
-		if (((mobj->eflags & MFE_VERTICALFLIP) && thingtop - FixedMul(mobj->info->height/2, mobj->scale) > *rover->bottomheight)
-		 || (!(mobj->eflags & MFE_VERTICALFLIP) && mobj->z + FixedMul(mobj->info->height/2, mobj->scale) < *rover->topheight))
+		if (((mobj->eflags & MFE_VERTICALFLIP) && thingtop - FixedMul(mobj->info->height/2, mobj->scale) > bottomheight)
+		 || (!(mobj->eflags & MFE_VERTICALFLIP) && mobj->z + FixedMul(mobj->info->height/2, mobj->scale) < topheight))
 		{
 			mobj->eflags |= MFE_UNDERWATER;
 			if (rover->flags & FF_GOOWATER && !(mobj->flags & MF_NOGRAVITY))
@@ -2526,10 +3272,8 @@ void P_MobjCheckWater(mobj_t *mobj)
 			return;
 
 		if ((mobj->eflags & MFE_GOOWATER || wasingoo)) { // Decide what happens to your momentum when you enter/leave goopy water.
-			if (wasinwater && P_MobjFlip(mobj)*mobj->momz > 0)
-				mobj->momz = FixedMul(mobj->momz, FixedDiv(9*FRACUNIT, 8*FRACUNIT)); // Give the mobj a little out-of-goo boost.
-			else if (P_MobjFlip(mobj)*mobj->momz < 0)
-				mobj->momz = FixedMul(mobj->momz, FixedDiv(2*FRACUNIT, 5*FRACUNIT)); // KILL its momentum.
+			if (P_MobjFlip(mobj)*mobj->momz < 0) // You are entering the goo?
+				mobj->momz = FixedMul(mobj->momz, FixedDiv(2*FRACUNIT, 5*FRACUNIT)); // kill momentum significantly, to make the goo feel thick.
 		}
 		else if (wasinwater && P_MobjFlip(mobj)*mobj->momz > 0)
 			mobj->momz = FixedMul(mobj->momz, FixedDiv(780*FRACUNIT, 457*FRACUNIT)); // Give the mobj a little out-of-water boost.
@@ -2647,7 +3391,7 @@ static void P_SceneryCheckWater(mobj_t *mobj)
 	sector_t *sector;
 
 	// Default if no water exists.
-	mobj->watertop = mobj->waterbottom = mobj->subsector->sector->floorheight - 1000*FRACUNIT;
+	mobj->watertop = mobj->waterbottom = mobj->z - 1000*FRACUNIT;
 
 	// see if we are in water, and set some flags for later
 	sector = mobj->subsector->sector;
@@ -2655,6 +3399,7 @@ static void P_SceneryCheckWater(mobj_t *mobj)
 	if (sector->ffloors)
 	{
 		ffloor_t *rover;
+		fixed_t topheight, bottomheight;
 
 		mobj->eflags &= ~(MFE_UNDERWATER|MFE_TOUCHWATER);
 
@@ -2662,20 +3407,32 @@ static void P_SceneryCheckWater(mobj_t *mobj)
 		{
 			if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_SWIMMABLE) || rover->flags & FF_BLOCKOTHERS)
 				continue;
-			if (*rover->topheight <= mobj->z
-				|| *rover->bottomheight > (mobj->z + FixedMul(mobj->info->height >> 1, mobj->scale)))
+
+			topheight = *rover->topheight;
+			bottomheight = *rover->bottomheight;
+
+#ifdef ESLOPE
+			if (*rover->t_slope)
+				topheight = P_GetZAt(*rover->t_slope, mobj->x, mobj->y);
+
+			if (*rover->b_slope)
+				bottomheight = P_GetZAt(*rover->b_slope, mobj->x, mobj->y);
+#endif
+
+			if (topheight <= mobj->z
+				|| bottomheight > (mobj->z + FixedMul(mobj->info->height >> 1, mobj->scale)))
 				continue;
 
-			if (mobj->z + FixedMul(mobj->info->height, mobj->scale) > *rover->topheight)
+			if (mobj->z + FixedMul(mobj->info->height, mobj->scale) > topheight)
 				mobj->eflags |= MFE_TOUCHWATER;
 			else
 				mobj->eflags &= ~MFE_TOUCHWATER;
 
 			// Set the watertop and waterbottom
-			mobj->watertop = *rover->topheight;
-			mobj->waterbottom = *rover->bottomheight;
+			mobj->watertop = topheight;
+			mobj->waterbottom = bottomheight;
 
-			if (mobj->z + FixedMul(mobj->info->height >> 1, mobj->scale) < *rover->topheight)
+			if (mobj->z + FixedMul(mobj->info->height >> 1, mobj->scale) < topheight)
 				mobj->eflags |= MFE_UNDERWATER;
 			else
 				mobj->eflags &= ~MFE_UNDERWATER;
@@ -2705,7 +3462,15 @@ static boolean P_CameraCheckHeat(camera_t *thiscam)
 			if (!(rover->flags & FF_EXISTS))
 				continue;
 
-			if (halfheight >= *rover->topheight || halfheight <= *rover->bottomheight)
+			if (halfheight >= (
+#ifdef ESLOPE
+					*rover->t_slope ? P_GetZAt(*rover->t_slope, thiscam->x, thiscam->y) :
+#endif
+					*rover->topheight) || halfheight <= (
+#ifdef ESLOPE
+					*rover->b_slope ? P_GetZAt(*rover->b_slope, thiscam->x, thiscam->y) :
+#endif
+					*rover->bottomheight))
 				continue;
 
 			if (P_FindSpecialLineFromTag(13, rover->master->frontsector->tag, -1) != -1)
@@ -2733,7 +3498,15 @@ static boolean P_CameraCheckWater(camera_t *thiscam)
 			if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_SWIMMABLE) || rover->flags & FF_BLOCKOTHERS)
 				continue;
 
-			if (halfheight >= *rover->topheight || halfheight <= *rover->bottomheight)
+			if (halfheight >= (
+#ifdef ESLOPE
+					*rover->t_slope ? P_GetZAt(*rover->t_slope, thiscam->x, thiscam->y) :
+#endif
+					*rover->topheight) || halfheight <= (
+#ifdef ESLOPE
+					*rover->b_slope ? P_GetZAt(*rover->b_slope, thiscam->x, thiscam->y) :
+#endif
+					*rover->bottomheight))
 				continue;
 
 			return true;
@@ -2762,7 +3535,7 @@ void P_DestroyRobots(void)
 			continue;
 
 		// Found a target enemy
-		P_KillMobj(mo, players[consoleplayer].mo, players[consoleplayer].mo);
+		P_KillMobj(mo, players[consoleplayer].mo, players[consoleplayer].mo, 0);
 	}
 }
 
@@ -2838,10 +3611,10 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 	thiscam->floorz = tmfloorz;
 	thiscam->ceilingz = tmceilingz;
 
-	if (thiscam->momz)
+	if (thiscam->momz || player->mo->pmomz)
 	{
 		// adjust height
-		thiscam->z += thiscam->momz;
+		thiscam->z += thiscam->momz + player->mo->pmomz;
 
 		if (!itsatwodlevel && !(player->pflags & PF_NOCLIP))
 		{
@@ -2899,9 +3672,14 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 	msecnode_t *node;
 
 	I_Assert(mobj != NULL);
+	I_Assert(mobj->player != NULL);
 	I_Assert(!P_MobjWasRemoved(mobj));
 
 	P_MobjCheckWater(mobj);
+
+#ifdef ESLOPE
+	P_ButteredSlope(mobj);
+#endif
 
 	// momentum movement
 	mobj->eflags &= ~MFE_JUSTSTEPPEDDOWN;
@@ -2917,7 +3695,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 		P_CheckPosition(mobj, mobj->x, mobj->y);
 		goto animonly;
 	}
-	else if (mobj->player && (mobj->player->pflags & PF_MACESPIN) && mobj->tracer)
+	else if (mobj->player->pflags & PF_MACESPIN && mobj->tracer)
 	{
 		P_CheckPosition(mobj, mobj->x, mobj->y);
 		goto animonly;
@@ -2936,11 +3714,12 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 	else
 		P_TryMove(mobj, mobj->x, mobj->y, true);
 
-	if (!(netgame && mobj->player && mobj->player->spectator))
+	if (!(netgame && mobj->player->spectator))
 	{
 		// Crumbling platforms
 		for (node = mobj->touching_sectorlist; node; node = node->m_snext)
 		{
+			fixed_t topheight, bottomheight;
 			ffloor_t *rover;
 
 			for (rover = node->m_sector->ffloors; rover; rover = rover->next)
@@ -2948,8 +3727,11 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 				if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_CRUMBLE))
 					continue;
 
-				if ((*rover->topheight == mobj->z && !(mobj->eflags & MFE_VERTICALFLIP))
-				|| (*rover->bottomheight == mobj->z + mobj->height && mobj->eflags & MFE_VERTICALFLIP)) // You nut.
+				topheight = P_GetSpecialTopZ(mobj, sectors + rover->secnum, node->m_sector);
+				bottomheight = P_GetSpecialBottomZ(mobj, sectors + rover->secnum, node->m_sector);
+
+				if ((topheight == mobj->z && !(mobj->eflags & MFE_VERTICALFLIP))
+				|| (bottomheight == mobj->z + mobj->height && mobj->eflags & MFE_VERTICALFLIP)) // You nut.
 					EV_StartCrumble(rover->master->frontsector, rover, (rover->flags & FF_FLOATBOB), mobj->player, rover->alpha, !(rover->flags & FF_NORETURN));
 			}
 		}
@@ -3019,18 +3801,14 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 	}
 	else
 	{
-		if (mobj->player)
+		mobj->player->jumping = 0;
+		mobj->player->pflags &= ~PF_JUMPED;
+		if (mobj->player->secondjump || mobj->player->powers[pw_tailsfly])
 		{
-			mobj->player->jumping = 0;
-			mobj->player->pflags &= ~PF_JUMPED;
-			if (mobj->player->secondjump || mobj->player->powers[pw_tailsfly])
-			{
-				mobj->player->secondjump = 0;
-				mobj->player->powers[pw_tailsfly] = 0;
-				P_SetPlayerMobjState(mobj, S_PLAY_RUN1);
-			}
+			mobj->player->secondjump = 0;
+			mobj->player->powers[pw_tailsfly] = 0;
+			P_SetPlayerMobjState(mobj, S_PLAY_WALK);
 		}
-		mobj->pmomz = 0;
 		mobj->eflags &= ~MFE_JUSTHITFLOOR;
 	}
 
@@ -3443,7 +4221,7 @@ static void P_Boss3Thinker(mobj_t *mobj)
 					continue;
 
 				if (players[i].mo->eflags & MFE_UNDERWATER)
-					P_DamageMobj(players[i].mo, mobj, mobj, 1);
+					P_DamageMobj(players[i].mo, mobj, mobj, 1, 0);
 			}
 
 			// Make the water flash
@@ -3784,7 +4562,7 @@ static void P_Boss4PopSpikeballs(mobj_t *mobj)
 		P_SetTarget(&base->tracer, NULL);
 		for (seg = base; seg; seg = seg->hnext)
 			if (seg->health)
-				P_KillMobj(seg, NULL, NULL);
+				P_KillMobj(seg, NULL, NULL, 0);
 		base = next;
 	}
 }
@@ -4084,7 +4862,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 		{
 			INT32 i;
 
-			P_KillMobj(mobj, NULL, NULL);
+			P_KillMobj(mobj, NULL, NULL, 0);
 
 			// It was a team effort
 			for (i = 0; i < MAXPLAYERS; i++)
@@ -4135,7 +4913,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 				&& players[i].mo->z < mobj->z + mobj->height + 128*FRACUNIT) // You can't be in the vicinity, either...
 			{
 				// Punch him!
-				P_DamageMobj(players[i].mo, mobj, mobj, 1);
+				P_DamageMobj(players[i].mo, mobj, mobj, 1, 0);
 				mobj->state->nextstate = mobj->info->spawnstate;
 
 				// Laugh
@@ -4358,7 +5136,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 			if (players[i].mo->z < mobj->z - 64*FRACUNIT)
 				continue;
 
-			P_DamageMobj(players[i].mo, mobj, mobj, 1);
+			P_DamageMobj(players[i].mo, mobj, mobj, 1, 0);
 
 			// Laugh
 			S_StartSound(0, sfx_bewar1 + P_RandomKey(4));
@@ -5448,7 +6226,9 @@ void P_MobjThinker(mobj_t *mobj)
 	if (mobj->tracer && P_MobjWasRemoved(mobj->tracer))
 		P_SetTarget(&mobj->tracer, NULL);
 
-	mobj->flags2 &= ~MF2_PUSHED;
+	mobj->eflags &= ~(MFE_PUSHED|MFE_SPRUNG);
+
+	tmfloorthing = tmhitthing = NULL;
 
 	// 970 allows ANY mobj to trigger a linedef exec
 	if (mobj->subsector && GETSECSPECIAL(mobj->subsector->sector->special, 2) == 8)
@@ -5780,7 +6560,7 @@ void P_MobjThinker(mobj_t *mobj)
 		if (mobj->flags & MF_FIRE && mobj->type != MT_PUMA && mobj->type != MT_FIREBALL
 			&& (mobj->eflags & (MFE_UNDERWATER|MFE_TOUCHWATER)))
 		{
-			P_KillMobj(mobj, NULL, NULL);
+			P_KillMobj(mobj, NULL, NULL, 0);
 			return;
 		}
 	}
@@ -6412,7 +7192,7 @@ void P_MobjThinker(mobj_t *mobj)
 			if (mobj->flags & MF_FIRE && mobj->type != MT_PUMA && mobj->type != MT_FIREBALL
 				&& (mobj->eflags & (MFE_UNDERWATER|MFE_TOUCHWATER)))
 			{
-				P_KillMobj(mobj, NULL, NULL);
+				P_KillMobj(mobj, NULL, NULL, 0);
 				return;
 			}
 			break;
@@ -6497,19 +7277,22 @@ void P_MobjThinker(mobj_t *mobj)
 						if (mobj->spawnpoint->options & MTF_OBJECTFLIP)
 						{
 							z = ss->sector->ceilingheight - mobjinfo[mobj->type].height;
-							if (mobj->spawnpoint->z)
-								z -= mobj->spawnpoint->z << FRACBITS;
+							if (mobj->spawnpoint->options >> ZSHIFT)
+								z -= (mobj->spawnpoint->options >> ZSHIFT) << FRACBITS;
 						}
 						else
 						{
 							z = ss->sector->floorheight;
-							if (mobj->spawnpoint->z)
-								z += mobj->spawnpoint->z << FRACBITS;
+							if (mobj->spawnpoint->options >> ZSHIFT)
+								z += (mobj->spawnpoint->options >> ZSHIFT) << FRACBITS;
 						}
 						flagmo = P_SpawnMobj(x, y, z, mobj->type);
 						flagmo->spawnpoint = mobj->spawnpoint;
 						if (mobj->spawnpoint->options & MTF_OBJECTFLIP)
-							flagmo->spawnpoint->options |= MTF_OBJECTFLIP;
+						{
+							flagmo->eflags |= MFE_VERTICALFLIP;
+							flagmo->flags2 |= MF2_OBJECTFLIP;
+						}
 
 						if (mobj->type == MT_REDFLAG)
 						{
@@ -6643,25 +7426,29 @@ for (i = ((mobj->flags2 & MF2_STRONGBOX) ? strongboxamt : weakboxamt); i; --i) s
 	}
 	else
 	{
-		if (mobj->player)
-		{
-			mobj->player->jumping = 0;
-			mobj->player->pflags &= ~PF_JUMPED;
-			if (mobj->player->secondjump || mobj->player->powers[pw_tailsfly])
-			{
-				mobj->player->secondjump = 0;
-				mobj->player->powers[pw_tailsfly] = 0;
-				P_SetPlayerMobjState(mobj, S_PLAY_RUN1);
-			}
-		}
 		mobj->pmomz = 0; // to prevent that weird rocketing gargoyle bug
 		mobj->eflags &= ~MFE_JUSTHITFLOOR;
 	}
 
+#ifdef ESLOPE // Sliding physics for slidey mobjs!
+	if (mobj->type == MT_FLINGRING
+		|| mobj->type == MT_FLINGCOIN
+		|| P_WeaponOrPanel(mobj->type)
+		|| mobj->type == MT_FLINGEMERALD
+		|| mobj->type == MT_BIGTUMBLEWEED
+		|| mobj->type == MT_LITTLETUMBLEWEED
+		|| mobj->type == MT_CANNONBALLDECOR
+		|| mobj->type == MT_FALLINGROCK) {
+		P_TryMove(mobj, mobj->x, mobj->y, true); // Sets mo->standingslope correctly
+		//if (mobj->standingslope) CONS_Printf("slope physics on mobj\n");
+		P_ButteredSlope(mobj);
+	}
+#endif
+
 	if (mobj->flags & (MF_ENEMY|MF_BOSS) && mobj->health
 		&& P_CheckDeathPitCollide(mobj)) // extra pit check in case these didn't have momz
 	{
-		P_KillMobj(mobj, NULL, NULL);
+		P_KillMobj(mobj, NULL, NULL, DMG_DEATHPIT);
 		return;
 	}
 
@@ -6675,7 +7462,7 @@ for (i = ((mobj->flags2 & MF2_STRONGBOX) ? strongboxamt : weakboxamt); i; --i) s
 		&& !(mobj->flags & MF_NOCLIPHEIGHT)
 		&& mobj->health > 0)
 		{
-			P_KillMobj(mobj, NULL, NULL);
+			P_KillMobj(mobj, NULL, NULL, DMG_CRUSHED);
 			return;
 		}
 	}
@@ -6854,17 +7641,6 @@ void P_SceneryThinker(mobj_t *mobj)
 	}
 	else
 	{
-		if (mobj->player)
-		{
-			mobj->player->jumping = 0;
-			mobj->player->pflags &= ~PF_JUMPED;
-			if (mobj->player->secondjump || mobj->player->powers[pw_tailsfly])
-			{
-				mobj->player->secondjump = 0;
-				mobj->player->powers[pw_tailsfly] = 0;
-				P_SetPlayerMobjState(mobj, S_PLAY_RUN1);
-			}
-		}
 		mobj->pmomz = 0; // to prevent that weird rocketing gargoyle bug
 		mobj->eflags &= ~MFE_JUSTHITFLOOR;
 	}
@@ -6931,8 +7707,16 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 	// Make sure scale matches destscale immediately when spawned
 	P_SetScale(mobj, mobj->destscale);
 
-	mobj->floorz = mobj->subsector->sector->floorheight;
-	mobj->ceilingz = mobj->subsector->sector->ceilingheight;
+	mobj->floorz =
+#ifdef ESLOPE
+				mobj->subsector->sector->f_slope ? P_GetZAt(mobj->subsector->sector->f_slope, x, y) :
+#endif
+				mobj->subsector->sector->floorheight;
+	mobj->ceilingz =
+#ifdef ESLOPE
+				mobj->subsector->sector->c_slope ? P_GetZAt(mobj->subsector->sector->c_slope, x, y) :
+#endif
+				mobj->subsector->sector->ceilingheight;
 
 	// Tells MobjCheckWater that the water height was not set.
 	mobj->watertop = INT32_MAX;
@@ -7989,7 +8773,11 @@ void P_SpawnMapThing(mapthing_t *mthing)
 			return;
 
 		ss = R_PointInSubsector(mthing->x << FRACBITS, mthing->y << FRACBITS);
-		mthing->z = (INT16)((ss->sector->floorheight>>FRACBITS) + (mthing->options >> ZSHIFT));
+		mthing->z = (INT16)(((
+#ifdef ESLOPE
+								ss->sector->f_slope ? P_GetZAt(ss->sector->f_slope, mthing->x << FRACBITS, mthing->y << FRACBITS) :
+#endif
+								ss->sector->floorheight)>>FRACBITS) + (mthing->options >> ZSHIFT));
 
 		if (numhuntemeralds < MAXHUNTEMERALDS)
 			huntemeralds[numhuntemeralds++] = mthing;
@@ -8107,14 +8895,22 @@ void P_SpawnMapThing(mapthing_t *mthing)
 	ss = R_PointInSubsector(x, y);
 
 	if (i == MT_NIGHTSBUMPER)
-		z = ss->sector->floorheight + ((mthing->options >> ZSHIFT) << FRACBITS);
+		z = (
+#ifdef ESLOPE
+			ss->sector->f_slope ? P_GetZAt(ss->sector->f_slope, x, y) :
+#endif
+			ss->sector->floorheight) + ((mthing->options >> ZSHIFT) << FRACBITS);
 	else if (i == MT_AXIS || i == MT_AXISTRANSFER || i == MT_AXISTRANSFERLINE)
 		z = ONFLOORZ;
 	else if (i == MT_SPECIALSPIKEBALL || P_WeaponOrPanel(i) || i == MT_EMERALDSPAWN || i == MT_EMMY)
 	{
 		if (mthing->options & MTF_OBJECTFLIP)
 		{
-			z = ss->sector->ceilingheight;
+			z = (
+#ifdef ESLOPE
+			ss->sector->c_slope ? P_GetZAt(ss->sector->c_slope, x, y) :
+#endif
+			ss->sector->ceilingheight);
 
 			if (mthing->options & MTF_AMBUSH) // Special flag for rings
 				z -= 24*FRACUNIT;
@@ -8125,7 +8921,11 @@ void P_SpawnMapThing(mapthing_t *mthing)
 		}
 		else
 		{
-			z = ss->sector->floorheight;
+			z = (
+#ifdef ESLOPE
+			ss->sector->f_slope ? P_GetZAt(ss->sector->f_slope, x, y) :
+#endif
+			ss->sector->floorheight);
 
 			if (mthing->options & MTF_AMBUSH) // Special flag for rings
 				z += 24*FRACUNIT;
@@ -8145,9 +8945,17 @@ void P_SpawnMapThing(mapthing_t *mthing)
 
 		// base positions
 		if (flip)
-			z = ss->sector->ceilingheight - mobjinfo[i].height;
+			z = (
+#ifdef ESLOPE
+			ss->sector->c_slope ? P_GetZAt(ss->sector->c_slope, x, y) :
+#endif
+			ss->sector->ceilingheight) - mobjinfo[i].height;
 		else
-			z = ss->sector->floorheight;
+			z = (
+#ifdef ESLOPE
+			ss->sector->f_slope ? P_GetZAt(ss->sector->f_slope, x, y) :
+#endif
+			ss->sector->floorheight);
 
 		// offsetting
 		if (mthing->options >> ZSHIFT)
@@ -8661,7 +9469,11 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 		// Screw these damn hoops, I need this thinker.
 		//hoopcenter->flags |= MF_NOTHINK;
 
-		z += sec->floorheight;
+		z +=
+#ifdef ESLOPE
+			sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
+#endif
+			sec->floorheight;
 
 		hoopcenter->z = z - hoopcenter->height/2;
 
@@ -8794,7 +9606,11 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 		hoopcenter = P_SpawnMobj(x, y, z, MT_HOOPCENTER);
 		hoopcenter->spawnpoint = mthing;
 
-		z += sec->floorheight;
+		z +=
+#ifdef ESLOPE
+			sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
+#endif
+			sec->floorheight;
 		hoopcenter->z = z - hoopcenter->height/2;
 
 		P_UnsetThingPosition(hoopcenter);
@@ -8906,7 +9722,11 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 	// Wing logo item.
 	else if (mthing->type == mobjinfo[MT_NIGHTSWING].doomednum)
 	{
-		z = sec->floorheight;
+		z =
+#ifdef ESLOPE
+			sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
+#endif
+			sec->floorheight;
 		if (mthing->options >> ZSHIFT)
 			z += ((mthing->options >> ZSHIFT) << FRACBITS);
 
@@ -8958,13 +9778,21 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 		// Set proper height
 		if (mthing->options & MTF_OBJECTFLIP)
 		{
-			z = sec->ceilingheight - mobjinfo[ringthing].height;
+			z = (
+#ifdef ESLOPE
+			sec->c_slope ? P_GetZAt(sec->c_slope, x, y) :
+#endif
+			sec->ceilingheight) - mobjinfo[ringthing].height;
 			if (mthing->options >> ZSHIFT)
 				z -= ((mthing->options >> ZSHIFT) << FRACBITS);
 		}
 		else
 		{
-			z = sec->floorheight;
+			z =
+#ifdef ESLOPE
+			sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
+#endif
+			sec->floorheight;
 			if (mthing->options >> ZSHIFT)
 				z += ((mthing->options >> ZSHIFT) << FRACBITS);
 		}
@@ -9018,13 +9846,21 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 		{
 			if (mthing->options & MTF_OBJECTFLIP)
 			{
-				z = sec->ceilingheight - mobjinfo[ringthing].height - dist*r;
+				z = (
+#ifdef ESLOPE
+					sec->c_slope ? P_GetZAt(sec->c_slope, x, y) :
+#endif
+					sec->ceilingheight) - mobjinfo[ringthing].height - dist*r;
 				if (mthing->options >> ZSHIFT)
 					z -= ((mthing->options >> ZSHIFT) << FRACBITS);
 			}
 			else
 			{
-				z = sec->floorheight + dist*r;
+				z = (
+#ifdef ESLOPE
+					sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
+#endif
+					sec->floorheight) + dist*r;
 				if (mthing->options >> ZSHIFT)
 					z += ((mthing->options >> ZSHIFT) << FRACBITS);
 			}
@@ -9070,13 +9906,21 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 
 			if (mthing->options & MTF_OBJECTFLIP)
 			{
-				z = sec->ceilingheight - mobjinfo[ringthing].height - 64*FRACUNIT*r;
+				z = (
+#ifdef ESLOPE
+					sec->c_slope ? P_GetZAt(sec->c_slope, x, y) :
+#endif
+					sec->ceilingheight) - mobjinfo[ringthing].height - 64*FRACUNIT*r;
 				if (mthing->options >> ZSHIFT)
 					z -= ((mthing->options >> ZSHIFT) << FRACBITS);
 			}
 			else
 			{
-				z = sec->floorheight + 64*FRACUNIT*r;
+				z = (
+#ifdef ESLOPE
+					sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
+#endif
+					sec->floorheight) + 64*FRACUNIT*r;
 				if (mthing->options >> ZSHIFT)
 					z += ((mthing->options >> ZSHIFT) << FRACBITS);
 			}
@@ -9107,7 +9951,11 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 			size = 192*FRACUNIT;
 		}
 
-		z = sec->floorheight;
+		z =
+#ifdef ESLOPE
+			sec->f_slope ? P_GetZAt(sec->f_slope, x, y) :
+#endif
+			sec->floorheight;
 		if (mthing->options >> ZSHIFT)
 			z += ((mthing->options >> ZSHIFT) << FRACBITS);
 

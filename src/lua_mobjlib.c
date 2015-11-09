@@ -162,13 +162,13 @@ static int mobj_get(lua_State *L)
 		lua_pushboolean(L, 1);
 		break;
 	case mobj_x:
-		lua_pushinteger(L, mo->x);
+		lua_pushfixed(L, mo->x);
 		break;
 	case mobj_y:
-		lua_pushinteger(L, mo->y);
+		lua_pushfixed(L, mo->y);
 		break;
 	case mobj_z:
-		lua_pushinteger(L, mo->z);
+		lua_pushfixed(L, mo->z);
 		break;
 	case mobj_snext:
 		LUA_PushUserdata(L, mo->snext, META_MOBJ);
@@ -179,7 +179,7 @@ static int mobj_get(lua_State *L)
 		// i.e. it will always ultimately point to THIS mobj -- so that's actually not useful to Lua and won't be included.
 		return UNIMPLEMENTED;
 	case mobj_angle:
-		lua_pushinteger(L, mo->angle);
+		lua_pushangle(L, mo->angle);
 		break;
 	case mobj_sprite:
 		lua_pushinteger(L, mo->sprite);
@@ -193,28 +193,28 @@ static int mobj_get(lua_State *L)
 		LUA_PushUserdata(L, mo->subsector, META_SUBSECTOR);
 		break;
 	case mobj_floorz:
-		lua_pushinteger(L, mo->floorz);
+		lua_pushfixed(L, mo->floorz);
 		break;
 	case mobj_ceilingz:
-		lua_pushinteger(L, mo->ceilingz);
+		lua_pushfixed(L, mo->ceilingz);
 		break;
 	case mobj_radius:
-		lua_pushinteger(L, mo->radius);
+		lua_pushfixed(L, mo->radius);
 		break;
 	case mobj_height:
-		lua_pushinteger(L, mo->height);
+		lua_pushfixed(L, mo->height);
 		break;
 	case mobj_momx:
-		lua_pushinteger(L, mo->momx);
+		lua_pushfixed(L, mo->momx);
 		break;
 	case mobj_momy:
-		lua_pushinteger(L, mo->momy);
+		lua_pushfixed(L, mo->momy);
 		break;
 	case mobj_momz:
-		lua_pushinteger(L, mo->momz);
+		lua_pushfixed(L, mo->momz);
 		break;
 	case mobj_pmomz:
-		lua_pushinteger(L, mo->pmomz);
+		lua_pushfixed(L, mo->pmomz);
 		break;
 	case mobj_tics:
 		lua_pushinteger(L, mo->tics);
@@ -299,32 +299,32 @@ static int mobj_get(lua_State *L)
 		LUA_PushUserdata(L, mo->tracer, META_MOBJ);
 		break;
 	case mobj_friction:
-		lua_pushinteger(L, mo->friction);
+		lua_pushfixed(L, mo->friction);
 		break;
 	case mobj_movefactor:
-		lua_pushinteger(L, mo->movefactor);
+		lua_pushfixed(L, mo->movefactor);
 		break;
 	case mobj_fuse:
 		lua_pushinteger(L, mo->fuse);
 		break;
 	case mobj_watertop:
-		lua_pushinteger(L, mo->watertop);
+		lua_pushfixed(L, mo->watertop);
 		break;
 	case mobj_waterbottom:
-		lua_pushinteger(L, mo->waterbottom);
+		lua_pushfixed(L, mo->waterbottom);
 		break;
 	case mobj_mobjnum:
 		// mobjnum is a networking thing generated for $$$.sav
 		// and therefore shouldn't be used by Lua.
 		return UNIMPLEMENTED;
 	case mobj_scale:
-		lua_pushinteger(L, mo->scale);
+		lua_pushfixed(L, mo->scale);
 		break;
 	case mobj_destscale:
-		lua_pushinteger(L, mo->destscale);
+		lua_pushfixed(L, mo->destscale);
 		break;
 	case mobj_scalespeed:
-		lua_pushinteger(L, mo->scalespeed);
+		lua_pushfixed(L, mo->scalespeed);
 		break;
 	case mobj_extravalue1:
 		lua_pushinteger(L, mo->extravalue1);
@@ -382,7 +382,7 @@ static int mobj_set(lua_State *L)
 	{
 		// z doesn't cross sector bounds so it's okay.
 		mobj_t *ptmthing = tmthing;
-		mo->z = (fixed_t)luaL_checkinteger(L, 3);
+		mo->z = luaL_checkfixed(L, 3);
 		P_CheckPosition(mo, mo->x, mo->y);
 		mo->floorz = tmfloorz;
 		mo->ceilingz = tmceilingz;
@@ -394,7 +394,7 @@ static int mobj_set(lua_State *L)
 	case mobj_sprev:
 		return UNIMPLEMENTED;
 	case mobj_angle:
-		mo->angle = (angle_t)luaL_checkinteger(L, 3);
+		mo->angle = luaL_checkangle(L, 3);
 		if (mo->player == &players[consoleplayer])
 			localangle = mo->angle;
 		else if (mo->player == &players[secondarydisplayplayer])
@@ -417,7 +417,7 @@ static int mobj_set(lua_State *L)
 	case mobj_radius:
 	{
 		mobj_t *ptmthing = tmthing;
-		mo->radius = (fixed_t)luaL_checkinteger(L, 3);
+		mo->radius = luaL_checkfixed(L, 3);
 		if (mo->radius < 0)
 			mo->radius = 0;
 		P_CheckPosition(mo, mo->x, mo->y);
@@ -429,7 +429,7 @@ static int mobj_set(lua_State *L)
 	case mobj_height:
 	{
 		mobj_t *ptmthing = tmthing;
-		mo->height = (fixed_t)luaL_checkinteger(L, 3);
+		mo->height = luaL_checkfixed(L, 3);
 		if (mo->height < 0)
 			mo->height = 0;
 		P_CheckPosition(mo, mo->x, mo->y);
@@ -439,16 +439,17 @@ static int mobj_set(lua_State *L)
 		break;
 	}
 	case mobj_momx:
-		mo->momx = (fixed_t)luaL_checkinteger(L, 3);
+		mo->momx = luaL_checkfixed(L, 3);
 		break;
 	case mobj_momy:
-		mo->momy = (fixed_t)luaL_checkinteger(L, 3);
+		mo->momy = luaL_checkfixed(L, 3);
 		break;
 	case mobj_momz:
-		mo->momz = (fixed_t)luaL_checkinteger(L, 3);
+		mo->momz = luaL_checkfixed(L, 3);
 		break;
 	case mobj_pmomz:
-		mo->pmomz = (fixed_t)luaL_checkinteger(L, 3);
+		mo->pmomz = luaL_checkfixed(L, 3);
+		mo->eflags |= MFE_APPLYPMOMZ;
 		break;
 	case mobj_tics:
 		mo->tics = luaL_checkinteger(L, 3);
@@ -500,7 +501,7 @@ static int mobj_set(lua_State *L)
 		return luaL_error(L, "mobj.skin '%s' not found!", skin);
 	}
 	case mobj_color:
-		mo->color = ((UINT8)luaL_checkinteger(L, 3)) % MAXSKINCOLORS;
+		mo->color = ((UINT8)luaL_checkinteger(L, 3)) % MAXTRANSLATIONS;
 		break;
 	case mobj_bnext:
 		return NOSETPOS;
@@ -572,25 +573,25 @@ static int mobj_set(lua_State *L)
 		}
 		break;
 	case mobj_friction:
-		mo->friction = (fixed_t)luaL_checkinteger(L, 3);
+		mo->friction = luaL_checkfixed(L, 3);
 		break;
 	case mobj_movefactor:
-		mo->movefactor = (fixed_t)luaL_checkinteger(L, 3);
+		mo->movefactor = luaL_checkfixed(L, 3);
 		break;
 	case mobj_fuse:
 		mo->fuse = luaL_checkinteger(L, 3);
 		break;
 	case mobj_watertop:
-		mo->watertop = (fixed_t)luaL_checkinteger(L, 3);
+		mo->watertop = luaL_checkfixed(L, 3);
 		break;
 	case mobj_waterbottom:
-		mo->waterbottom = (fixed_t)luaL_checkinteger(L, 3);
+		mo->waterbottom = luaL_checkfixed(L, 3);
 		break;
 	case mobj_mobjnum:
 		return UNIMPLEMENTED;
 	case mobj_scale:
 	{
-		fixed_t scale = (fixed_t)luaL_checkinteger(L, 3);
+		fixed_t scale = luaL_checkfixed(L, 3);
 		if (scale < FRACUNIT/100)
 			scale = FRACUNIT/100;
 		mo->destscale = scale;
@@ -599,14 +600,14 @@ static int mobj_set(lua_State *L)
 	}
 	case mobj_destscale:
 	{
-		fixed_t scale = (fixed_t)luaL_checkinteger(L, 3);
+		fixed_t scale = luaL_checkfixed(L, 3);
 		if (scale < FRACUNIT/100)
 			scale = FRACUNIT/100;
 		mo->destscale = scale;
 		break;
 	}
 	case mobj_scalespeed:
-		mo->scalespeed = (fixed_t)luaL_checkinteger(L, 3);
+		mo->scalespeed = luaL_checkfixed(L, 3);
 		break;
 	case mobj_extravalue1:
 		mo->extravalue1 = luaL_checkinteger(L, 3);

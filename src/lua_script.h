@@ -19,8 +19,20 @@
 #include "blua/lua.h"
 #include "blua/lualib.h"
 #include "blua/lauxlib.h"
+
 #define lua_optboolean(L, i) (!lua_isnoneornil(L, i) && lua_toboolean(L, i))
 #define lua_opttrueboolean(L, i) (lua_isnoneornil(L, i) || lua_toboolean(L, i))
+
+// fixed_t casting
+// TODO add some distinction between fixed numbers and integer numbers
+// for at least the purpose of printing and maybe math.
+#define luaL_checkfixed(L, i) luaL_checkinteger(L, i)
+#define lua_pushfixed(L, f) lua_pushinteger(L, f)
+
+// angle_t casting
+// we reduce the angle to a fixed point between 0.0 and 1.0
+#define luaL_checkangle(L, i) (((angle_t)(luaL_checkfixed(L, i)&0xFFFF))<<16)
+#define lua_pushangle(L, a) lua_pushfixed(L, a>>16)
 
 #ifdef _DEBUG
 void LUA_ClearExtVars(void);
@@ -36,6 +48,7 @@ void LUA_InvalidateUserdata(void *data);
 void LUA_InvalidateLevel(void);
 void LUA_InvalidateMapthings(void);
 void LUA_InvalidatePlayer(player_t *player);
+void LUA_Step(void);
 void LUA_Archive(void);
 void LUA_UnArchive(void);
 void Got_Luacmd(UINT8 **cp, INT32 playernum); // lua_consolelib.c

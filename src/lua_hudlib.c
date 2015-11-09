@@ -126,8 +126,6 @@ static const char *const widtht_opt[] = {
 enum cameraf {
 	camera_chase = 0,
 	camera_aiming,
-	camera_viewheight,
-	camera_startangle,
 	camera_x,
 	camera_y,
 	camera_z,
@@ -137,7 +135,6 @@ enum cameraf {
 	camera_ceilingz,
 	camera_radius,
 	camera_height,
-	camera_relativex,
 	camera_momx,
 	camera_momy,
 	camera_momz
@@ -147,8 +144,6 @@ enum cameraf {
 static const char *const camera_opt[] = {
 	"chase",
 	"aiming",
-	"viewheight",
-	"startangle",
 	"x",
 	"y",
 	"z",
@@ -158,7 +153,6 @@ static const char *const camera_opt[] = {
 	"ceilingz",
 	"radius",
 	"height",
-	"relativex",
 	"momx",
 	"momy",
 	"momz",
@@ -279,12 +273,6 @@ static int camera_get(lua_State *L)
 	case camera_aiming:
 		lua_pushinteger(L, cam->aiming);
 		break;
-	case camera_viewheight:
-		lua_pushinteger(L, cam->viewheight);
-		break;
-	case camera_startangle:
-		lua_pushinteger(L, cam->startangle);
-		break;
 	case camera_x:
 		lua_pushinteger(L, cam->x);
 		break;
@@ -311,9 +299,6 @@ static int camera_get(lua_State *L)
 		break;
 	case camera_height:
 		lua_pushinteger(L, cam->height);
-		break;
-	case camera_relativex:
-		lua_pushinteger(L, cam->relativex);
 		break;
 	case camera_momx:
 		lua_pushinteger(L, cam->momx);
@@ -689,8 +674,6 @@ void LUAh_GameHUD(player_t *stplayr)
 		LUA_Call(gL, 3);
 	}
 	lua_pop(gL, -1);
-	lua_gc(gL, LUA_GCCOLLECT, 0);
-
 	hud_running = false;
 }
 
@@ -716,8 +699,6 @@ void LUAh_ScoresHUD(void)
 		LUA_Call(gL, 1);
 	}
 	lua_pop(gL, -1);
-	lua_gc(gL, LUA_GCCOLLECT, 0);
-
 	hud_running = false;
 }
 

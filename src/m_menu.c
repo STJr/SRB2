@@ -110,10 +110,10 @@ const char *quitmsg[NUM_QUITMESSAGES];
 // Stuff for customizing the player select screen Tails 09-22-2003
 description_t description[32] =
 {
-	{"\x82Sonic\x80 is the fastest of the three, but also the hardest to control. Beginners beware, but experts will find Sonic very powerful.\n\n\x82""Ability:\x80 Speed Thok\nDouble jump to zoom forward with a huge burst of speed.\n\n\x82Tip:\x80 Simply letting go of forward does not slow down in SRB2. To slow down, hold the opposite direction.", "", "sonic"},
-	{"\x82Tails\x80 is the most mobile of the three, but has the slowest speed. Because of his mobility, he's well-\nsuited to beginners.\n\n\x82""Ability:\x80 Fly\nDouble jump to start flying for a limited time. Repetitively hit the jump button to ascend.\n\n\x82Tip:\x80 To quickly descend while flying, hit the spin button.", "", "tails"},
-	{"\x82Knuckles\x80 is well-\nrounded and can destroy breakable walls simply by touching them, but he can't jump as high as the other two.\n\n\x82""Ability:\x80 Glide & Climb\nDouble jump to glide in the air as long as jump is held. Glide into a wall to climb it.\n\n\x82Tip:\x80 Press spin while climbing to jump off the wall; press jump instead to jump off\nand face away from\nthe wall.", "", "knuckles"},
-	{"\x82Sonic & Tails\x80 team up to take on Dr. Eggman!\nControl Sonic while Tails desperately struggles to keep up.\n\nPlayer 2 can control Tails directly by setting the controls in the options menu.\nTails's directional controls are relative to Player 1's camera.\n\nTails can pick up Sonic while flying and carry him around.", "CHRS&T", "sonic&tails"},
+	{"???", "", ""},
+	{"???", "", ""},
+	{"???", "", ""},
+	{"???", "", ""},
 	{"???", "", ""},
 	{"???", "", ""},
 	{"???", "", ""},
@@ -827,10 +827,10 @@ static menuitem_t SP_LevelStatsMenu[] =
 // And I'm too lazy to go through and rename it everywhere. ARRGH!
 menuitem_t PlayerMenu[32] =
 {
-	{IT_CALL, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_CALL, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_CALL, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_CALL, NULL, NULL, M_ChoosePlayer, 0},
+	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
+	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
+	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
+	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
 	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
 	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
 	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
@@ -2203,6 +2203,7 @@ boolean M_Responder(event_t *ev)
 				if (modeattacking)
 					return true;
 				M_StartControlPanel();
+				M_Options(0);
 				currentMenu = &OP_SoundOptionsDef;
 				itemOn = 0;
 				return true;
@@ -2212,6 +2213,7 @@ boolean M_Responder(event_t *ev)
 				if (modeattacking)
 					return true;
 				M_StartControlPanel();
+				M_Options(0);
 				M_VideoModeMenu(0);
 				return true;
 #endif
@@ -2223,6 +2225,7 @@ boolean M_Responder(event_t *ev)
 				if (modeattacking)
 					return true;
 				M_StartControlPanel();
+				M_Options(0);
 				M_SetupNextMenu(&OP_MainDef);
 				return true;
 
@@ -6331,8 +6334,8 @@ static void M_HandleConnectIP(INT32 choice)
 #define PLBOXW    8
 #define PLBOXH    9
 
-static INT32      multi_tics;
-static state_t   *multi_state;
+static UINT8      multi_tics;
+static UINT8      multi_frame;
 
 // this is set before entering the MultiPlayer setup menu,
 // for either player 1 or 2
@@ -6346,11 +6349,10 @@ static INT32      setupm_fakecolor;
 
 static void M_DrawSetupMultiPlayerMenu(void)
 {
-	INT32 mx, my, st, flags = 0;
+	INT32 mx, my, flags = 0;
 	spritedef_t *sprdef;
 	spriteframe_t *sprframe;
 	patch_t *patch;
-	UINT8 frame;
 
 	mx = MP_PlayerSetupDef.x;
 	my = MP_PlayerSetupDef.y;
@@ -6378,28 +6380,23 @@ static void M_DrawSetupMultiPlayerMenu(void)
 	// anim the player in the box
 	if (--multi_tics <= 0)
 	{
-		st = multi_state->nextstate;
-		if (st != S_NULL)
-			multi_state = &states[st];
-		multi_tics = multi_state->tics;
-		if (multi_tics == -1)
-			multi_tics = 15;
+		multi_frame++;
+		multi_tics = 4;
 	}
 
 	// skin 0 is default player sprite
 	if (R_SkinAvailable(skins[setupm_fakeskin].name) != -1)
-		sprdef = &skins[R_SkinAvailable(skins[setupm_fakeskin].name)].spritedef;
+		sprdef = &skins[R_SkinAvailable(skins[setupm_fakeskin].name)].sprites[SPR2_WALK];
 	else
-		sprdef = &skins[0].spritedef;
+		sprdef = &skins[0].sprites[SPR2_WALK];
 
 	if (!sprdef->numframes) // No frames ??
 		return; // Can't render!
 
-	frame = multi_state->frame & FF_FRAMEMASK;
-	if (frame >= sprdef->numframes) // Walking animation missing
-		frame = 0; // Try to use standing frame
+	if (multi_frame >= sprdef->numframes)
+		multi_frame = 0;
 
-	sprframe = &sprdef->spriteframes[frame];
+	sprframe = &sprdef->spriteframes[multi_frame];
 	patch = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
 	if (sprframe->flip & 1) // Only for first sprite
 		flags |= V_FLIP; // This sprite is left/right flipped!
@@ -6533,8 +6530,8 @@ static void M_SetupMultiPlayer(INT32 choice)
 {
 	(void)choice;
 
-	multi_state = &states[mobjinfo[MT_PLAYER].seestate];
-	multi_tics = multi_state->tics;
+	multi_frame = 0;
+	multi_tics = 4;
 	strcpy(setupm_name, cv_playername.string);
 
 	// set for player 1
@@ -6564,8 +6561,8 @@ static void M_SetupMultiPlayer2(INT32 choice)
 {
 	(void)choice;
 
-	multi_state = &states[mobjinfo[MT_PLAYER].seestate];
-	multi_tics = multi_state->tics;
+	multi_frame = 0;
+	multi_tics = 4;
 	strcpy (setupm_name, cv_playername2.string);
 
 	// set for splitscreen secondary player

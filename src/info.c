@@ -56,6 +56,50 @@ char sprnames[NUMSPRITES + 1][5] =
 	"SRBJ","SRBK","SRBL","SRBM","SRBN","SRBO",
 };
 
+char spr2names[NUMPLAYERSPRITES][5] =
+{
+	"STND",
+	"WAIT",
+	"WALK",
+	"RUN_",
+	"PAIN",
+	"DEAD",
+	"DRWN",
+	"SPIN",
+	"DASH",
+	"GASP",
+	"JUMP",
+	"FALL",
+	"EDGE",
+	"RIDE",
+
+	"SIGN",
+	"LIFE",
+
+	"FLY_",
+	"TIRE",
+
+	"GLID",
+	"CLNG",
+	"CLMB",
+
+	"TRNS",
+	"SSTD",
+	"SWLK",
+	"SRUN",
+	"SPAN",
+	"SMSL",
+	"SDTH",
+	"SDRN",
+	"SSPN",
+	"SGSP",
+	"SJMP",
+	"SFAL",
+	"SEDG",
+	"SRID",
+	"SFLT"
+};
+
 // Doesn't work with g++, needs actionf_p1 (don't modify this comment)
 state_t states[NUMSTATES] =
 {
@@ -81,77 +125,71 @@ state_t states[NUMSTATES] =
 	{SPR_THOK, FF_TRANS50, 8, {NULL}, 0, 0, S_NULL}, // S_THOK
 
 	// Player
-	{SPR_PLAY,     0, 105, {NULL},   0, 0, S_PLAY_TAP1},        // S_PLAY_STND
-	{SPR_PLAY,     1,  16, {NULL},   0, 0, S_PLAY_TAP2},        // S_PLAY_TAP1
-	{SPR_PLAY,     2,  16, {NULL},   0, 0, S_PLAY_TAP1},        // S_PLAY_TAP2
-	{SPR_PLAY,     3,   4, {NULL},   0, 0, S_PLAY_RUN2},        // S_PLAY_RUN1
-	{SPR_PLAY,     4,   4, {NULL},   0, 0, S_PLAY_RUN3},        // S_PLAY_RUN2
-	{SPR_PLAY,     5,   4, {NULL},   0, 0, S_PLAY_RUN4},        // S_PLAY_RUN3
-	{SPR_PLAY,     6,   4, {NULL},   0, 0, S_PLAY_RUN5},        // S_PLAY_RUN4
-	{SPR_PLAY,     7,   4, {NULL},   0, 0, S_PLAY_RUN6},        // S_PLAY_RUN5
-	{SPR_PLAY,     8,   4, {NULL},   0, 0, S_PLAY_RUN7},        // S_PLAY_RUN6
-	{SPR_PLAY,     9,   4, {NULL},   0, 0, S_PLAY_RUN8},        // S_PLAY_RUN7
-	{SPR_PLAY,    10,   4, {NULL},   0, 0, S_PLAY_RUN1},        // S_PLAY_RUN8
-	{SPR_PLAY,    16,   2, {NULL},   0, 0, S_PLAY_SPD2},        // S_PLAY_SPD1
-	{SPR_PLAY,    17,   2, {NULL},   0, 0, S_PLAY_SPD3},        // S_PLAY_SPD2
-	{SPR_PLAY,    18,   2, {NULL},   0, 0, S_PLAY_SPD4},        // S_PLAY_SPD3
-	{SPR_PLAY,    19,   2, {NULL},   0, 0, S_PLAY_SPD1},        // S_PLAY_SPD4
-	{SPR_PLAY,    11,   1, {NULL},   0, 0, S_PLAY_ATK2},        // S_PLAY_ATK1
-	{SPR_PLAY,    12,   1, {NULL},   0, 0, S_PLAY_ATK3},        // S_PLAY_ATK2
-	{SPR_PLAY,    13,   1, {NULL},   0, 0, S_PLAY_ATK4},        // S_PLAY_ATK3
-	{SPR_PLAY,    14,   1, {NULL},   0, 0, S_PLAY_ATK1},        // S_PLAY_ATK4
-	{SPR_PLAY,    15,  -1, {NULL},   0, 0, S_PLAY_FALL1},       // S_PLAY_SPRING
-	{SPR_PLAY,    31,   2, {NULL},   0, 0, S_PLAY_FALL2},       // S_PLAY_FALL1
-	{SPR_PLAY,    32,   2, {NULL},   0, 0, S_PLAY_FALL1},       // S_PLAY_FALL2
-	{SPR_PLAY,    20,   2, {NULL},   0, 0, S_PLAY_ABL2},        // S_PLAY_ABL1
-	{SPR_PLAY,    21,   2, {NULL},   0, 0, S_PLAY_ABL1},        // S_PLAY_ABL2
-	{SPR_PLAY,    22,   6, {NULL},   0, 0, S_PLAY_SPC2},        // S_PLAY_SPC1
-	{SPR_PLAY,    23,   6, {NULL},   0, 0, S_PLAY_SPC3},        // S_PLAY_SPC2
-	{SPR_PLAY,    24,   6, {NULL},   0, 0, S_PLAY_SPC4},        // S_PLAY_SPC3
-	{SPR_PLAY,    25,   6, {NULL},   0, 0, S_PLAY_SPC1},        // S_PLAY_SPC4
-	{SPR_PLAY,    22,  -1, {NULL},   0, 0, S_NULL},             // S_PLAY_CLIMB1
-	{SPR_PLAY,    23,   5, {NULL},   0, 0, S_PLAY_CLIMB3},      // S_PLAY_CLIMB2
-	{SPR_PLAY,    24,   5, {NULL},   0, 0, S_PLAY_CLIMB4},      // S_PLAY_CLIMB3
-	{SPR_PLAY,    25,   5, {NULL},   0, 0, S_PLAY_CLIMB5},      // S_PLAY_CLIMB4
-	{SPR_PLAY,    24,   5, {NULL},   0, 0, S_PLAY_CLIMB2},      // S_PLAY_CLIMB5
-	{SPR_PLAY,    26,  14, {NULL},   0, 0, S_PLAY_RUN1},        // S_PLAY_GASP
-	{SPR_PLAY,    27, 350, {NULL},   0, 0, S_PLAY_FALL1},       // S_PLAY_PAIN
-	{SPR_PLAY,    28,  -1, {A_Fall}, 0, 0, S_NULL},             // S_PLAY_DIE
-	{SPR_PLAY,    29,  12, {NULL},   0, 0, S_PLAY_TEETER2},     // S_PLAY_TEETER1
-	{SPR_PLAY,    30,  12, {NULL},   0, 0, S_PLAY_TEETER1},     // S_PLAY_TEETER2
-	{SPR_PLAY,    33,  -1, {NULL},   0, 0, S_NULL},             // S_PLAY_CARRY
-	{SPR_PLAY,    20,  -1, {NULL},   0, 0, S_PLAY_SUPERSTAND},  // S_PLAY_SUPERSTAND
-	{SPR_PLAY,    20,   7, {NULL},   0, 0, S_PLAY_SUPERWALK2},  // S_PLAY_SUPERWALK1
-	{SPR_PLAY,    21,   7, {NULL},   0, 0, S_PLAY_SUPERWALK1},  // S_PLAY_SUPERWALK2
-	{SPR_PLAY,    22,   7, {NULL},   0, 0, S_PLAY_SUPERFLY2},   // S_PLAY_SUPERFLY1
-	{SPR_PLAY,    23,   7, {NULL},   0, 0, S_PLAY_SUPERFLY1},   // S_PLAY_SUPERFLY2
-	{SPR_PLAY,    24,  12, {NULL},   0, 0, S_PLAY_SUPERTEETER}, // S_PLAY_SUPERTEETER
-	{SPR_PLAY,    25,  -1, {NULL},   0, 0, S_PLAY_SUPERSTAND},  // S_PLAY_SUPERHIT
-	{SPR_PLAY,    36,   4, {NULL},   0, 0, S_PLAY_SUPERTRANS2}, // S_PLAY_SUPERTRANS1
-	{SPR_PLAY,    37,   4, {NULL},   0, 0, S_PLAY_SUPERTRANS3}, // S_PLAY_SUPERTRANS2
-	{SPR_PLAY, 32806,   4, {NULL},   0, 0, S_PLAY_SUPERTRANS4}, // S_PLAY_SUPERTRANS3
-	{SPR_PLAY,    39,   3, {NULL},   0, 0, S_PLAY_SUPERTRANS5}, // S_PLAY_SUPERTRANS4
-	{SPR_PLAY,    40,   3, {NULL},   0, 0, S_PLAY_SUPERTRANS6}, // S_PLAY_SUPERTRANS5
-	{SPR_PLAY,    41,   3, {NULL},   0, 0, S_PLAY_SUPERTRANS7}, // S_PLAY_SUPERTRANS6
-	{SPR_PLAY,    42,   3, {NULL},   0, 0, S_PLAY_SUPERTRANS8}, // S_PLAY_SUPERTRANS7
-	{SPR_PLAY,    43,   3, {NULL},   0, 0, S_PLAY_SUPERTRANS9}, // S_PLAY_SUPERTRANS8
-	{SPR_PLAY,    44,  16, {NULL},   0, 0, S_PLAY_RUN1},        // S_PLAY_SUPERTRANS9
+	{SPR_PLAY, SPR2_STND, 105, {NULL}, 0, 0, S_PLAY_WAIT}, // S_PLAY_STND
+	{SPR_PLAY, SPR2_WAIT,  16, {NULL}, 0, 0, S_PLAY_WAIT}, // S_PLAY_WAIT
+	{SPR_PLAY, SPR2_WALK,   4, {NULL}, 0, 0, S_PLAY_WALK}, // S_PLAY_WALK
+	{SPR_PLAY, SPR2_RUN ,   2, {NULL}, 0, 0, S_PLAY_RUN},  // S_PLAY_RUN
+	{SPR_PLAY, SPR2_PAIN, 350, {NULL}, 0, 0, S_PLAY_FALL}, // S_PLAY_PAIN
+	{SPR_PLAY, SPR2_DEAD,   4, {NULL}, 0, 0, S_PLAY_DEAD}, // S_PLAY_DEAD
+	{SPR_PLAY, SPR2_DRWN,   4, {NULL}, 0, 0, S_PLAY_DRWN}, // S_PLAY_DRWN
+	{SPR_PLAY, SPR2_SPIN,   1, {NULL}, 0, 0, S_PLAY_SPIN}, // S_PLAY_SPIN
+	{SPR_PLAY, SPR2_DASH,   2, {NULL}, 0, 0, S_PLAY_DASH}, // S_PLAY_DASH
+	{SPR_PLAY, SPR2_GASP,  14, {NULL}, 0, 0, S_PLAY_WALK}, // S_PLAY_GASP
+	{SPR_PLAY, SPR2_JUMP,   2, {NULL}, 0, 0, S_PLAY_JUMP}, // S_PLAY_JUMP
+	{SPR_PLAY, SPR2_FALL,   2, {NULL}, 0, 0, S_PLAY_FALL}, // S_PLAY_FALL
+	{SPR_PLAY, SPR2_EDGE,  12, {NULL}, 0, 0, S_PLAY_EDGE}, // S_PLAY_EDGE
+	{SPR_PLAY, SPR2_RIDE,   4, {NULL}, 0, 0, S_PLAY_RIDE}, // S_PLAY_RIDE
+
+	// Tails abilities
+	{SPR_PLAY, SPR2_FLY ,   2, {NULL}, 0, 0, S_PLAY_FLY},  // S_PLAY_FLY
+	{SPR_PLAY, SPR2_TIRE,  12, {NULL}, 0, 0, S_PLAY_FLY_TIRED}, // S_PLAY_FLY_TIRED
+
+	// Knuckles abilities
+	{SPR_PLAY, SPR2_GLID,   2, {NULL}, 0, 0, S_PLAY_GLIDE}, // S_PLAY_GLIDE
+	{SPR_PLAY, SPR2_CLNG,   6, {NULL}, 0, 0, S_PLAY_CLING}, // S_PLAY_CLING
+	{SPR_PLAY, SPR2_CLMB,   5, {NULL}, 0, 0, S_PLAY_CLIMB}, // S_PLAY_CLIMB
+
+	// Super Sonic
+	{SPR_PLAY, SPR2_SSTD,   7, {NULL}, 0, 0, S_PLAY_SUPER_STND}, // S_PLAY_SUPER_STND
+	{SPR_PLAY, SPR2_SWLK,   7, {NULL}, 0, 0, S_PLAY_SUPER_WALK}, // S_PLAY_SUPER_WALK
+	{SPR_PLAY, SPR2_SRUN,   7, {NULL}, 0, 0, S_PLAY_SUPER_RUN},  // S_PLAY_SUPER_RUN
+	{SPR_PLAY, SPR2_SPAN,  -1, {NULL}, 0, 0, S_PLAY_SUPER_STND}, // S_PLAY_SUPER_PAIN
+	{SPR_PLAY, SPR2_SMSL,  -1, {NULL}, 0, 0, S_PLAY_SUPER_STND}, // S_PLAY_SUPER_STUN
+	{SPR_PLAY, SPR2_SDTH,   4, {NULL}, 0, 0, S_PLAY_SUPER_DEAD}, // S_PLAY_SUPER_DEAD
+	{SPR_PLAY, SPR2_SDRN,   4, {NULL}, 0, 0, S_PLAY_SUPER_DRWN}, // S_PLAY_SUPER_DRWN
+	{SPR_PLAY, SPR2_SSPN,   1, {NULL}, 0, 0, S_PLAY_SUPER_SPIN}, // S_PLAY_SUPER_SPIN
+	{SPR_PLAY, SPR2_SGSP,  14, {NULL}, 0, 0, S_PLAY_SUPER_WALK}, // S_PLAY_SUPER_GASP
+	{SPR_PLAY, SPR2_SJMP,   2, {NULL}, 0, 0, S_PLAY_SUPER_JUMP}, // S_PLAY_SUPER_JUMP
+	{SPR_PLAY, SPR2_SFAL,   2, {NULL}, 0, 0, S_PLAY_SUPER_FALL}, // S_PLAY_SUPER_FALL
+	{SPR_PLAY, SPR2_SEDG,  12, {NULL}, 0, 0, S_PLAY_SUPER_EDGE}, // S_PLAY_SUPER_EDGE
+	{SPR_PLAY, SPR2_SRID,   4, {NULL}, 0, 0, S_PLAY_SUPER_RIDE}, // S_PLAY_SUPER_RIDE
+	{SPR_PLAY, SPR2_SFLT,   7, {NULL}, 0, 0, S_PLAY_SUPER_FLOAT}, // S_PLAY_SUPER_FLOAT
+
+	// Transforming into Super
+	{SPR_PLAY, SPR2_TRNS,                4, {NULL}, 0, 0, S_PLAY_SUPER_TRANS2}, // S_PLAY_SUPER_TRANS
+	{SPR_PLAY, SPR2_TRNS,                4, {NULL}, 0, 0, S_PLAY_SUPER_TRANS3}, // S_PLAY_SUPER_TRANS2
+	{SPR_PLAY, SPR2_TRNS|FF_FULLBRIGHT,  4, {NULL}, 0, 0, S_PLAY_SUPER_TRANS4}, // S_PLAY_SUPER_TRANS3
+	{SPR_PLAY, SPR2_TRNS,                3, {NULL}, 0, 0, S_PLAY_SUPER_TRANS5}, // S_PLAY_SUPER_TRANS4
+	{SPR_PLAY, SPR2_TRNS,                3, {NULL}, 0, 0, S_PLAY_SUPER_TRANS6}, // S_PLAY_SUPER_TRANS5
+	{SPR_PLAY, SPR2_TRNS,                3, {NULL}, 0, 0, S_PLAY_SUPER_TRANS7}, // S_PLAY_SUPER_TRANS6
+	{SPR_PLAY, SPR2_TRNS,                3, {NULL}, 0, 0, S_PLAY_SUPER_TRANS8}, // S_PLAY_SUPER_TRANS7
+	{SPR_PLAY, SPR2_TRNS,                3, {NULL}, 0, 0, S_PLAY_SUPER_TRANS9}, // S_PLAY_SUPER_TRANS8
+	{SPR_PLAY, SPR2_TRNS,               16, {NULL}, 0, 0, S_PLAY_WALK},         // S_PLAY_SUPER_TRANS9
 
 	{SPR_NULL, 0, -1, {NULL}, 0, 0, S_OBJPLACE_DUMMY}, //S_OBJPLACE_DUMMY
 
 	// 1-Up Box Sprites (uses player sprite)
-	{SPR_PLAY, 35,  2, {NULL}, 0, 16, S_PLAY_BOX2},  // S_PLAY_BOX1
-	{SPR_NULL,  0,  1, {NULL}, 0,  0, S_PLAY_BOX1},  // S_PLAY_BOX2
-	{SPR_PLAY, 35,  4, {NULL}, 0,  4, S_PLAY_ICON2}, // S_PLAY_ICON1
-	{SPR_NULL,  0, 12, {NULL}, 0,  0, S_PLAY_ICON3}, // S_PLAY_ICON2
-	{SPR_PLAY, 35, 18, {NULL}, 0,  4, S_NULL},       // S_PLAY_ICON3
+	{SPR_PLAY, SPR2_LIFE,  2, {NULL}, 0, 16, S_PLAY_BOX2},  // S_PLAY_BOX1
+	{SPR_NULL,         0,  1, {NULL}, 0,  0, S_PLAY_BOX1},  // S_PLAY_BOX2
+	{SPR_PLAY, SPR2_LIFE,  4, {NULL}, 0,  4, S_PLAY_ICON2}, // S_PLAY_ICON1
+	{SPR_NULL,         0, 12, {NULL}, 0,  0, S_PLAY_ICON3}, // S_PLAY_ICON2
+	{SPR_PLAY, SPR2_LIFE, 18, {NULL}, 0,  4, S_NULL},       // S_PLAY_ICON3
 
 	// Level end sign (uses player sprite)
-	{SPR_PLAY, 34, 1, {NULL}, 0, 24, S_PLAY_SIGN},         // S_PLAY_SIGN
+	{SPR_PLAY, SPR2_SIGN, 1, {NULL}, 0, 24, S_PLAY_SIGN},         // S_PLAY_SIGN
 
 	// Blue Crawla
-	{SPR_POSS, 0, 5, {A_Look}, 0, 0, S_POSS_STND2},   // S_POSS_STND
-	{SPR_POSS, 0, 5, {A_Look}, 0, 0, S_POSS_STND},    // S_POSS_STND2
+	{SPR_POSS, 0, 5, {A_Look}, 0, 0, S_POSS_STND},   // S_POSS_STND
 	{SPR_POSS, 0, 3, {A_Chase}, 0, 0, S_POSS_RUN2},   // S_POSS_RUN1
 	{SPR_POSS, 1, 3, {A_Chase}, 0, 0, S_POSS_RUN3},   // S_POSS_RUN2
 	{SPR_POSS, 2, 3, {A_Chase}, 0, 0, S_POSS_RUN4},   // S_POSS_RUN3
@@ -160,8 +198,7 @@ state_t states[NUMSTATES] =
 	{SPR_POSS, 5, 3, {A_Chase}, 0, 0, S_POSS_RUN1},   // S_POSS_RUN6
 
 	// Red Crawla
-	{SPR_SPOS, 0, 5, {A_Look}, 0, 0, S_SPOS_STND2},   // S_SPOS_STND
-	{SPR_SPOS, 0, 5, {A_Look}, 0, 0, S_SPOS_STND},    // S_SPOS_STND2
+	{SPR_SPOS, 0, 5, {A_Look}, 0, 0, S_SPOS_STND},   // S_SPOS_STND
 	{SPR_SPOS, 0, 1, {A_Chase}, 0, 0, S_SPOS_RUN2},   // S_SPOS_RUN1
 	{SPR_SPOS, 1, 1, {A_Chase}, 0, 0, S_SPOS_RUN3},   // S_SPOS_RUN2
 	{SPR_SPOS, 2, 1, {A_Chase}, 0, 0, S_SPOS_RUN4},   // S_SPOS_RUN3
@@ -3110,7 +3147,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		-1,             // doomednum
 		S_PLAY_STND,    // spawnstate
 		1,              // spawnhealth
-		S_PLAY_RUN1,    // seestate
+		S_PLAY_WALK,    // seestate
 		sfx_None,       // seesound
 		0,              // reactiontime
 		sfx_thok,       // attacksound
@@ -3118,9 +3155,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		MT_THOK,        // painchance
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
-		S_PLAY_ATK1,    // missilestate
-		S_PLAY_DIE,     // deathstate
-		S_NULL,         // xdeathstate
+		S_PLAY_SPIN,    // missilestate
+		S_PLAY_DEAD,    // deathstate
+		S_PLAY_DRWN,    // xdeathstate
 		sfx_None,       // deathsound
 		1,              // speed
 		16*FRACUNIT,    // radius

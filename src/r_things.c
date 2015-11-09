@@ -24,6 +24,7 @@
 #include "r_plane.h"
 #include "p_tick.h"
 #include "p_local.h"
+#include "p_slopes.h"
 #include "dehacked.h" // get_number (for thok)
 #include "d_netfil.h" // blargh. for nameonly().
 #include "m_cheat.h" // objectplace
@@ -337,6 +338,10 @@ void R_AddSpriteDefs(UINT16 wadnum)
 		start = 0; //let say S_START is lump 0
 	else
 		start++;   // just after S_START
+
+	// ignore skin wads (we don't want skin sprites interfering with vanilla sprites)
+	if (start == 0 && W_CheckNumForNamePwad("S_SKIN", wadnum, 0) != INT16_MAX)
+		return;
 
 	end = W_CheckNumForNamePwad("S_END",wadnum,start);
 	if (end == INT16_MAX)
@@ -950,12 +955,22 @@ static void R_SplitSprite(vissprite_t *sprite, mobj_t *thing)
 
 	for (i = 1; i < sector->numlights; i++)
 	{
-		if (sector->lightlist[i].height >= sprite->gzt || !(sector->lightlist[i].caster->flags & FF_CUTSPRITES))
+		fixed_t testheight = sector->lightlist[i].height;
+
+		if (!(sector->lightlist[i].caster->flags & FF_CUTSPRITES))
 			continue;
-		if (sector->lightlist[i].height <= sprite->gz)
+
+#ifdef ESLOPE
+		if (sector->lightlist[i].slope)
+			testheight = P_GetZAt(sector->lightlist[i].slope, sprite->gx, sprite->gy);
+#endif
+
+		if (testheight >= sprite->gzt)
+			continue;
+		if (testheight <= sprite->gz)
 			return;
 
-		cutfrac = (INT16)((centeryfrac - FixedMul(sector->lightlist[i].height - viewz, sprite->scale))>>FRACBITS);
+		cutfrac = (INT16)((centeryfrac - FixedMul(testheight - viewz, sprite->scale))>>FRACBITS);
 		if (cutfrac < 0)
 			continue;
 		if (cutfrac > vid.height)
@@ -966,15 +981,15 @@ static void R_SplitSprite(vissprite_t *sprite, mobj_t *thing)
 		newsprite = M_Memcpy(R_NewVisSprite(), sprite, sizeof (vissprite_t));
 
 		sprite->cut |= SC_BOTTOM;
-		sprite->gz = sector->lightlist[i].height;
+		sprite->gz = testheight;
 
 		newsprite->gzt = sprite->gz;
 
 		sprite->sz = cutfrac;
 		newsprite->szt = (INT16)(sprite->sz - 1);
 
-		if (sector->lightlist[i].height < sprite->pzt && sector->lightlist[i].height > sprite->pz)
-			sprite->pz = newsprite->pzt = sector->lightlist[i].height;
+		if (testheight < sprite->pzt && testheight > sprite->pz)
+			sprite->pz = newsprite->pzt = testheight;
 		else
 		{
 			newsprite->pz = newsprite->gz;
@@ -1088,9 +1103,14 @@ static void R_ProjectSprite(mobj_t *thing)
 	//Fab : 02-08-98: 'skin' override spritedef currently used for skin
 	if (thing->skin && thing->sprite == SPR_PLAY)
 	{
-		sprdef = &((skin_t *)thing->skin)->spritedef;
-		if (rot >= sprdef->numframes)
+		sprdef = &((skin_t *)thing->skin)->sprites[thing->sprite2];
+		if (rot >= sprdef->numframes) {
+			CONS_Alert(CONS_ERROR, M_GetText("R_ProjectSprite: invalid skins[\"%s\"].sprites[SPR2_%s] frame %d\n"), ((skin_t *)thing->skin)->name, spr2names[thing->sprite2], rot);
+			thing->sprite = states[S_UNKNOWN].sprite;
+			thing->frame = states[S_UNKNOWN].frame;
 			sprdef = &sprites[thing->sprite];
+			rot = thing->frame&FF_FRAMEMASK;
+		}
 	}
 	else
 		sprdef = &sprites[thing->sprite];
@@ -1191,7 +1211,20 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (thing->subsector->sector->numlights)
 	{
 		INT32 lightnum;
+#ifdef ESLOPE // R_GetPlaneLight won't work on sloped lights!
+		light = thing->subsector->sector->numlights - 1;
+
+		for (lightnum = 1; lightnum < thing->subsector->sector->numlights; lightnum++) {
+			fixed_t h = thing->subsector->sector->lightlist[lightnum].slope ? P_GetZAt(thing->subsector->sector->lightlist[lightnum].slope, thing->x, thing->y)
+			            : thing->subsector->sector->lightlist[lightnum].height;
+			if (h <= gzt) {
+				light = lightnum - 1;
+				break;
+			}
+		}
+#else
 		light = R_GetPlaneLight(thing->subsector->sector, gzt, false);
+#endif
 		lightnum = (*thing->subsector->sector->lightlist[light].lightlevel >> LIGHTSEGSHIFT);
 
 		if (lightnum < 0)
@@ -1546,23 +1579,12 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel)
 	// If a limit exists, handle things a tiny bit different.
 	if ((limit_dist = (fixed_t)((maptol & TOL_NIGHTS) ? cv_drawdist_nights.value : cv_drawdist.value) << FRACBITS))
 	{
-		if (!players[displayplayer].mo)
-			return; // Draw nothing if no player.
-			// todo: is this really the best option for this situation?
-
 		for (thing = sec->thinglist; thing; thing = thing->snext)
 		{
 			if (thing->sprite == SPR_NULL || thing->flags2 & MF2_DONTDRAW)
 				continue;
 
-			approx_dist = P_AproxDistance(
-				players[displayplayer].mo->x - thing->x,
-				players[displayplayer].mo->y - thing->y);
-
-			if (splitscreen && approx_dist > limit_dist && players[secondarydisplayplayer].mo)
-				approx_dist = P_AproxDistance(
-					players[secondarydisplayplayer].mo->x - thing->x,
-					players[secondarydisplayplayer].mo->y - thing->y);
+			approx_dist = P_AproxDistance(viewx-thing->x, viewy-thing->y);
 
 			if (approx_dist <= limit_dist)
 				R_ProjectSprite(thing);
@@ -1579,23 +1601,12 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel)
 	// Someone seriously wants infinite draw distance for precipitation?
 	if ((limit_dist = (fixed_t)cv_drawdist_precip.value << FRACBITS))
 	{
-		if (!players[displayplayer].mo)
-			return; // Draw nothing if no player.
-			// todo: is this really the best option for this situation?
-
 		for (precipthing = sec->preciplist; precipthing; precipthing = precipthing->snext)
 		{
 			if (precipthing->precipflags & PCF_INVISIBLE)
 				continue;
 
-			approx_dist = P_AproxDistance(
-				players[displayplayer].mo->x - precipthing->x,
-				players[displayplayer].mo->y - precipthing->y);
-
-			if (splitscreen && approx_dist > limit_dist && players[secondarydisplayplayer].mo)
-				approx_dist = P_AproxDistance(
-					players[secondarydisplayplayer].mo->x - precipthing->x,
-					players[secondarydisplayplayer].mo->y - precipthing->y);
+			approx_dist = P_AproxDistance(viewx-precipthing->x, viewy-precipthing->y);
 
 			if (approx_dist <= limit_dist)
 				R_ProjectPrecipitationSprite(precipthing);
@@ -1704,6 +1715,19 @@ static void R_CreateDrawNodes(void)
 		}
 		if (ds->maskedtexturecol)
 		{
+#ifdef POLYOBJECTS_PLANES
+			// Check for a polyobject plane, but only if this is a front line
+			if (ds->curline->polyseg && ds->curline->polyseg->visplane && !ds->curline->side) {
+				// Put it in!
+
+				entry = R_CreateDrawNode(&nodehead);
+				entry->plane = ds->curline->polyseg->visplane;
+				entry->seg = ds;
+				ds->curline->polyseg->visplane->polyobj = ds->curline->polyseg;
+				ds->curline->polyseg->visplane = NULL;
+			}
+#endif
+
 			entry = R_CreateDrawNode(&nodehead);
 			entry->seg = ds;
 		}
@@ -1720,7 +1744,7 @@ static void R_CreateDrawNodes(void)
 					plane = ds->ffloorplanes[p];
 					R_PlaneBounds(plane);
 
-					if (plane->low < con_clipviewtop || plane->high > vid.height || plane->high > plane->low)
+					if (plane->low < con_clipviewtop || plane->high > vid.height || plane->high > plane->low || plane->polyobj)
 					{
 						ds->ffloorplanes[p] = NULL;
 						continue;
@@ -1761,24 +1785,34 @@ static void R_CreateDrawNodes(void)
 		{
 			if (r2->plane)
 			{
+				fixed_t planeobjectz, planecameraz;
 				if (r2->plane->minx > rover->x2 || r2->plane->maxx < rover->x1)
 					continue;
 				if (rover->szt > r2->plane->low || rover->sz < r2->plane->high)
 					continue;
 
+#ifdef ESLOPE
+				// Effective height may be different for each comparison in the case of slopes
+				if (r2->plane->slope) {
+					planeobjectz = P_GetZAt(r2->plane->slope, rover->gx, rover->gy);
+					planecameraz = P_GetZAt(r2->plane->slope, viewx, viewy);
+				} else
+#endif
+					planeobjectz = planecameraz = r2->plane->height;
+
 				if (rover->mobjflags & MF_NOCLIPHEIGHT)
 				{
 					//Objects with NOCLIPHEIGHT can appear halfway in.
-					if (r2->plane->height < viewz && rover->pz+(rover->thingheight/2) >= r2->plane->height)
+					if (planecameraz < viewz && rover->pz+(rover->thingheight/2) >= planeobjectz)
 						continue;
-					if (r2->plane->height > viewz && rover->pzt-(rover->thingheight/2) <= r2->plane->height)
+					if (planecameraz > viewz && rover->pzt-(rover->thingheight/2) <= planeobjectz)
 						continue;
 				}
 				else
 				{
-					if (r2->plane->height < viewz && rover->pz >= r2->plane->height)
+					if (planecameraz < viewz && rover->pz >= planeobjectz)
 						continue;
-					if (r2->plane->height > viewz && rover->pzt <= r2->plane->height)
+					if (planecameraz > viewz && rover->pzt <= planeobjectz)
 						continue;
 				}
 
@@ -1808,6 +1842,7 @@ static void R_CreateDrawNodes(void)
 			}
 			else if (r2->thickseg)
 			{
+				fixed_t topplaneobjectz, topplanecameraz, botplaneobjectz, botplanecameraz;
 				if (rover->x1 > r2->thickseg->x2 || rover->x2 < r2->thickseg->x1)
 					continue;
 
@@ -1818,9 +1853,25 @@ static void R_CreateDrawNodes(void)
 				if (scale <= rover->scale)
 					continue;
 
-				if ((*r2->ffloor->topheight > viewz && *r2->ffloor->bottomheight < viewz) ||
-				    (*r2->ffloor->topheight < viewz && rover->gzt < *r2->ffloor->topheight) ||
-				    (*r2->ffloor->bottomheight > viewz && rover->gz > *r2->ffloor->bottomheight))
+#ifdef ESLOPE
+				if (*r2->ffloor->t_slope) {
+					topplaneobjectz = P_GetZAt(*r2->ffloor->t_slope, rover->gx, rover->gy);
+					topplanecameraz = P_GetZAt(*r2->ffloor->t_slope, viewx, viewy);
+				} else
+#endif
+					topplaneobjectz = topplanecameraz = *r2->ffloor->topheight;
+
+#ifdef ESLOPE
+				if (*r2->ffloor->b_slope) {
+					botplaneobjectz = P_GetZAt(*r2->ffloor->b_slope, rover->gx, rover->gy);
+					botplanecameraz = P_GetZAt(*r2->ffloor->b_slope, viewx, viewy);
+				} else
+#endif
+					botplaneobjectz = botplanecameraz = *r2->ffloor->bottomheight;
+
+				if ((topplanecameraz > viewz && botplanecameraz < viewz) ||
+				    (topplanecameraz < viewz && rover->gzt < topplaneobjectz) ||
+				    (botplanecameraz > viewz && rover->gz > botplaneobjectz))
 				{
 					entry = R_CreateDrawNode(NULL);
 					(entry->prev = r2->prev)->next = entry;
@@ -1831,7 +1882,7 @@ static void R_CreateDrawNodes(void)
 			}
 			else if (r2->seg)
 			{
-#ifdef POLYOBJECTS_PLANES
+#if 0 //#ifdef POLYOBJECTS_PLANES
 				if (r2->seg->curline->polyseg && rover->mobj && P_MobjInsidePolyobj(r2->seg->curline->polyseg, rover->mobj)) {
 					// Determine if we need to sort in front of the polyobj, based on the planes. This fixes the issue where
 					// polyobject planes render above the object standing on them. (A bit hacky... but it works.) -Red
@@ -2039,21 +2090,21 @@ void R_ClipSprites(void)
 			if (spr->gzt <= ds->tsilheight)
 				silhouette &= ~SIL_TOP;
 
-			if (silhouette == 1)
+			if (silhouette == SIL_BOTTOM)
 			{
 				// bottom sil
 				for (x = r1; x <= r2; x++)
 					if (spr->clipbot[x] == -2)
 						spr->clipbot[x] = ds->sprbottomclip[x];
 			}
-			else if (silhouette == 2)
+			else if (silhouette == SIL_TOP)
 			{
 				// top sil
 				for (x = r1; x <= r2; x++)
 					if (spr->cliptop[x] == -2)
 						spr->cliptop[x] = ds->sprtopclip[x];
 			}
-			else if (silhouette == 3)
+			else if (silhouette == (SIL_TOP|SIL_BOTTOM))
 			{
 				// both
 				for (x = r1; x <= r2; x++)
@@ -2225,7 +2276,6 @@ static void Sk_SetDefaultValue(skin_t *skin)
 		sizeof skin->name, "skin %u", (UINT32)(skin-skins));
 	skin->name[sizeof skin->name - 1] = '\0';
 	skin->wadnum = INT16_MAX;
-	strcpy(skin->sprite, "");
 
 	skin->flags = 0;
 
@@ -2267,7 +2317,6 @@ static void Sk_SetDefaultValue(skin_t *skin)
 //
 void R_InitSkins(void)
 {
-	skin_t *skin;
 #ifdef SKINVALUES
 	INT32 i;
 
@@ -2278,43 +2327,8 @@ void R_InitSkins(void)
 	}
 #endif
 
-	// skin[0] = Sonic skin
-	skin = &skins[0];
-	numskins = 1;
-	Sk_SetDefaultValue(skin);
-
-	// Hardcoded S_SKIN customizations for Sonic.
-	strcpy(skin->name,       DEFAULTSKIN);
-#ifdef SKINVALUES
-	skin_cons_t[0].strvalue = skins[0].name;
-#endif
-	skin->flags = SF_SUPER|SF_SUPERANIMS|SF_SUPERSPIN;
-	strcpy(skin->realname,   "Sonic");
-	strcpy(skin->hudname,    "SONIC");
-
-	strncpy(skin->charsel,   "CHRSONIC", 8);
-	strncpy(skin->face,      "LIVSONIC", 8);
-	strncpy(skin->superface, "LIVSUPER", 8);
-	skin->prefcolor = SKINCOLOR_BLUE;
-
-	skin->ability =   CA_THOK;
-	skin->actionspd = 60<<FRACBITS;
-
-	skin->normalspeed =  36<<FRACBITS;
-	skin->runspeed =     28<<FRACBITS;
-	skin->thrustfactor =  5;
-	skin->accelstart =   96;
-	skin->acceleration = 40;
-
-	skin->spritedef.numframes = sprites[SPR_PLAY].numframes;
-	skin->spritedef.spriteframes = sprites[SPR_PLAY].spriteframes;
-	ST_LoadFaceGraphics(skin->face, skin->superface, 0);
-
-	//MD2 for sonic doesn't want to load in Linux.
-#ifdef HWRENDER
-	if (rendermode == render_opengl)
-		HWR_AddPlayerMD2(0);
-#endif
+	// no default skin!
+	numskins = 0;
 }
 
 // returns true if the skin name is found (loaded from pwad)
@@ -2559,11 +2573,6 @@ void R_AddSkins(UINT16 wadnum)
 					STRBUFCPY(skin->realname, skin->hudname);
 			}
 
-			else if (!stricmp(stoken, "sprite"))
-			{
-				strupr(value);
-				strncpy(skin->sprite, value, sizeof skin->sprite);
-			}
 			else if (!stricmp(stoken, "charsel"))
 			{
 				strupr(value);
@@ -2645,71 +2654,25 @@ next_token:
 		}
 		free(buf2);
 
-		// Not in vanilla, you don't.
-		skin->flags &= ~SF_SUPER;
+		if (skin != &skins[0])
+			skin->flags &= ~SF_SUPER;
 
-		lump++; // if no sprite defined use spirte just after this one
-		if (skin->sprite[0] == '\0')
+		// Add sprites
 		{
-			const char *csprname = W_CheckNameForNumPwad(wadnum, lump);
+			UINT16 z;
+			UINT8 sprite2;
 
-			// skip to end of this skin's frames
-			lastlump = lump;
-			while (W_CheckNameForNumPwad(wadnum,lastlump) && memcmp(W_CheckNameForNumPwad(wadnum, lastlump),csprname,4)==0)
-				lastlump++;
-			// allocate (or replace) sprite frames, and set spritedef
-			R_AddSingleSpriteDef(csprname, &skin->spritedef, wadnum, lump, lastlump);
-		}
-		else
-		{
-			// search in the normal sprite tables
-			size_t name;
-			boolean found = false;
-			const char *sprname = skin->sprite;
-			for (name = 0;sprnames[name][0] != '\0';name++)
-				if (strncmp(sprnames[name], sprname, 4) == 0)
-				{
-					found = true;
-					skin->spritedef = sprites[name];
-				}
+			lump++; // start after S_SKIN
+			lastlump = W_CheckNumForNamePwad("S_END",wadnum,lump); // stop at S_END
+			// old wadding practices die hard -- stop at S_SKIN or S_START if they come before S_END.
+			z = W_CheckNumForNamePwad("S_SKIN",wadnum,lump);
+			if (z < lastlump) lastlump = z;
+			z = W_CheckNumForNamePwad("S_START",wadnum,lump);
+			if (z < lastlump) lastlump = z;
 
-			// not found so make a new one
-			// go through the entire current wad looking for our sprite
-			// don't just mass add anything beginning with our four letters.
-			// "HOODFACE" is not a sprite name.
-			if (!found)
-			{
-				UINT16 localllump = 0, lstart = UINT16_MAX, lend = UINT16_MAX;
-				const char *lname;
-
-				while ((lname = W_CheckNameForNumPwad(wadnum,localllump)))
-				{
-					// If this is a valid sprite...
-					if (!memcmp(lname,sprname,4) && lname[4] && lname[5] && lname[5] >= '0' && lname[5] <= '8')
-					{
-						if (lstart == UINT16_MAX)
-							lstart = localllump;
-						// If already set do nothing
-					}
-					else
-					{
-						if (lstart != UINT16_MAX)
-						{
-							lend = localllump;
-							break;
-						}
-						// If not already set do nothing
-					}
-					++localllump;
-				}
-
-				R_AddSingleSpriteDef(sprname, &skin->spritedef, wadnum, lstart, lend);
-			}
-
-			// I don't particularly care about skipping to the end of the used frames.
-			// We could be using frames from ANYWHERE in the current WAD file, including
-			// right before us, which is a terrible idea.
-			// So just let the function in the while loop take care of it for us.
+			// load all sprite sets we are aware of.
+			for (sprite2 = 0; sprite2 < NUMPLAYERSPRITES; sprite2++)
+				R_AddSingleSpriteDef(spr2names[sprite2], &skin->sprites[sprite2], wadnum, lump, lastlump);
 		}
 
 		R_FlushTranslationColormapCache();

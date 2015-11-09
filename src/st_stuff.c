@@ -1590,7 +1590,7 @@ static void ST_drawSpecialStageHUD(void)
 	if (sstimer)
 	{
 		V_DrawString(hudinfo[HUD_TIMELEFT].x, STRINGY(hudinfo[HUD_TIMELEFT].y), V_HUDTRANS, M_GetText("TIME LEFT"));
-		ST_DrawNightsOverlayNum(SCX(hudinfo[HUD_TIMELEFTNUM].x), SCY(hudinfo[HUD_TIMELEFTNUM].y), V_HUDTRANS, sstimer/TICRATE, tallnum, SKINCOLOR_WHITE);
+		ST_DrawNumFromHud(HUD_TIMELEFTNUM, sstimer/TICRATE);
 	}
 	else
 		ST_DrawPatchFromHud(HUD_TIMEUP, timeup);

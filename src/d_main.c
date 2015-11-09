@@ -96,6 +96,10 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 #include "hardware/hw3sound.h"
 #endif
 
+#ifdef HAVE_BLUA
+#include "lua_script.h"
+#endif
+
 // platform independant focus loss
 UINT8 window_notinfocus = false;
 
@@ -634,6 +638,10 @@ void D_SRB2Loop(void)
 #ifdef HW3SOUND
 		HW3S_EndFrameUpdate();
 #endif
+
+#ifdef HAVE_BLUA
+		LUA_Step();
+#endif
 	}
 }
 
@@ -943,9 +951,9 @@ void D_SRB2Main(void)
 #endif
 
 #if defined (_WIN32_WCE) //|| defined (_DEBUG) || defined (GP2X)
-	devparm = !M_CheckParm("-nodebug");
+	devparm = M_CheckParm("-nodebug") == 0;
 #else
-	devparm = M_CheckParm("-debug");
+	devparm = M_CheckParm("-debug") != 0;
 #endif
 
 	// for dedicated server
@@ -1118,7 +1126,7 @@ void D_SRB2Main(void)
 #endif
 	D_CleanFile();
 
-#if 1 // md5s last updated 12/14/14
+#ifndef DEVELOP // md5s last updated 12/14/14
 
 	// Check MD5s of autoloaded files
 	//W_VerifyFileMD5(0, ASSET_HASH_SRB2_SRB); // srb2.srb/srb2.wad

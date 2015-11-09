@@ -91,6 +91,44 @@ static int lib_sprnamelen(lua_State *L)
 	return 1;
 }
 
+//
+// Player Sprite Names
+//
+
+// push sprite name
+static int lib_getSpr2name(lua_State *L)
+{
+	UINT32 i;
+
+	lua_remove(L, 1); // don't care about spr2names[] dummy userdata.
+
+	if (lua_isnumber(L, 1))
+	{
+		i = lua_tonumber(L, 1);
+		if (i > NUMPLAYERSPRITES)
+			return 0;
+		lua_pushlstring(L, spr2names[i], 4);
+		return 1;
+	}
+	else if (lua_isstring(L, 1))
+	{
+		const char *name = lua_tostring(L, 1);
+		for (i = 0; i < NUMPLAYERSPRITES; i++)
+			if (fastcmp(name, spr2names[i]))
+			{
+				lua_pushinteger(L, i);
+				return 1;
+			}
+	}
+	return 0;
+}
+
+static int lib_spr2namelen(lua_State *L)
+{
+	lua_pushinteger(L, NUMPLAYERSPRITES);
+	return 1;
+}
+
 ////////////////
 // STATE INFO //
 ////////////////
@@ -137,8 +175,6 @@ static void A_Lua(mobj_t *actor)
 		--superstack;
 		superactions[superstack] = NULL;
 	}
-
-	lua_gc(gL, LUA_GCSTEP, 1);
 }
 
 // Arbitrary states[] table index -> state_t *
@@ -510,11 +546,11 @@ static int lib_setMobjInfo(lua_State *L)
 		else if (i == 15 || (str && fastcmp(str,"deathsound")))
 			info->deathsound = luaL_checkinteger(L, 3);
 		else if (i == 16 || (str && fastcmp(str,"speed")))
-			info->speed = (fixed_t)luaL_checkinteger(L, 3);
+			info->speed = luaL_checkfixed(L, 3);
 		else if (i == 17 || (str && fastcmp(str,"radius")))
-			info->radius = (fixed_t)luaL_checkinteger(L, 3);
+			info->radius = luaL_checkfixed(L, 3);
 		else if (i == 18 || (str && fastcmp(str,"height")))
-			info->height = (fixed_t)luaL_checkinteger(L, 3);
+			info->height = luaL_checkfixed(L, 3);
 		else if (i == 19 || (str && fastcmp(str,"dispoffset")))
 			info->dispoffset = (INT32)luaL_checkinteger(L, 3);
 		else if (i == 20 || (str && fastcmp(str,"mass")))
@@ -580,11 +616,11 @@ static int mobjinfo_get(lua_State *L)
 	else if (fastcmp(field,"deathsound"))
 		lua_pushinteger(L, info->deathsound);
 	else if (fastcmp(field,"speed"))
-		lua_pushinteger(L, info->speed);
+		lua_pushinteger(L, info->speed); // sometimes it's fixed_t, sometimes it's not...
 	else if (fastcmp(field,"radius"))
-		lua_pushinteger(L, info->radius);
+		lua_pushfixed(L, info->radius);
 	else if (fastcmp(field,"height"))
-		lua_pushinteger(L, info->height);
+		lua_pushfixed(L, info->height);
 	else if (fastcmp(field,"dispoffset"))
 		lua_pushinteger(L, info->dispoffset);
 	else if (fastcmp(field,"mass"))
@@ -656,11 +692,11 @@ static int mobjinfo_set(lua_State *L)
 	else if (fastcmp(field,"deathsound"))
 		info->deathsound = luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"speed"))
-		info->speed = (fixed_t)luaL_checkinteger(L, 3);
+		info->speed = luaL_checkfixed(L, 3);
 	else if (fastcmp(field,"radius"))
-		info->radius = (fixed_t)luaL_checkinteger(L, 3);
+		info->radius = luaL_checkfixed(L, 3);
 	else if (fastcmp(field,"height"))
-		info->height = (fixed_t)luaL_checkinteger(L, 3);
+		info->height = luaL_checkfixed(L, 3);
 	else if (fastcmp(field,"dispoffset"))
 		info->dispoffset = (INT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"mass"))
@@ -903,6 +939,16 @@ int LUA_InfoLib(lua_State *L)
 			lua_setfield(L, -2, "__len");
 		lua_setmetatable(L, -2);
 	lua_setglobal(L, "sprnames");
+
+	lua_newuserdata(L, 0);
+		lua_createtable(L, 0, 2);
+			lua_pushcfunction(L, lib_getSpr2name);
+			lua_setfield(L, -2, "__index");
+
+			lua_pushcfunction(L, lib_spr2namelen);
+			lua_setfield(L, -2, "__len");
+		lua_setmetatable(L, -2);
+	lua_setglobal(L, "spr2names");
 
 	lua_newuserdata(L, 0);
 		lua_createtable(L, 0, 2);

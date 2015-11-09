@@ -38,6 +38,9 @@
 #define MAPBMASK      (MAPBLOCKSIZE-1)
 #define MAPBTOFRAC    (MAPBLOCKSHIFT-FRACBITS)
 
+// Convenience macro to fix issue with collision along bottom/left edges of blockmap -Red
+#define BMBOUNDFIX(xl, xh, yl, yh) {if (xl > xh) xl = 0; if (yl > yh) yl = 0;}
+
 // player radius used only in am_map.c
 #define PLAYERRADIUS (16*FRACUNIT)
 
@@ -214,6 +217,23 @@ boolean P_RailThinker(mobj_t *mobj);
 void P_PushableThinker(mobj_t *mobj);
 void P_SceneryThinker(mobj_t *mobj);
 
+
+fixed_t P_MobjFloorZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, line_t *line, boolean lowest, boolean perfect);
+fixed_t P_MobjCeilingZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, line_t *line, boolean lowest, boolean perfect);
+#define P_GetFloorZ(mobj, sector, x, y, line) P_MobjFloorZ(mobj, sector, NULL, x, y, line, false, false)
+#define P_GetCeilingZ(mobj, sector, x, y, line) P_MobjCeilingZ(mobj, sector, NULL, x, y, line, true, false)
+#define P_GetFOFTopZ(mobj, sector, fof, x, y, line) P_MobjCeilingZ(mobj, sectors + fof->secnum, sector, x, y, line, false, false)
+#define P_GetFOFBottomZ(mobj, sector, fof, x, y, line) P_MobjFloorZ(mobj, sectors + fof->secnum, sector, x, y, line, true, false)
+#define P_GetSpecialBottomZ(mobj, src, bound) P_MobjFloorZ(mobj, src, bound, mobj->x, mobj->y, NULL, src != bound, true)
+#define P_GetSpecialTopZ(mobj, src, bound) P_MobjCeilingZ(mobj, src, bound, mobj->x, mobj->y, NULL, src == bound, true)
+
+fixed_t P_CameraFloorZ(camera_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, line_t *line, boolean lowest, boolean perfect);
+fixed_t P_CameraCeilingZ(camera_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, line_t *line, boolean lowest, boolean perfect);
+#define P_CameraGetFloorZ(mobj, sector, x, y, line) P_CameraFloorZ(mobj, sector, NULL, x, y, line, false, false)
+#define P_CameraGetCeilingZ(mobj, sector, x, y, line) P_CameraCeilingZ(mobj, sector, NULL, x, y, line, true, false)
+#define P_CameraGetFOFTopZ(mobj, sector, fof, x, y, line) P_CameraCeilingZ(mobj, sectors + fof->secnum, sector, x, y, line, false, false)
+#define P_CameraGetFOFBottomZ(mobj, sector, fof, x, y, line) P_CameraFloorZ(mobj, sectors + fof->secnum, sector, x, y, line, true, false)
+
 boolean P_InsideANonSolidFFloor(mobj_t *mobj, ffloor_t *rover);
 boolean P_CheckDeathPitCollide(mobj_t *mo);
 boolean P_CheckSolidLava(mobj_t *mo, ffloor_t *rover);
@@ -273,9 +293,13 @@ boolean P_LookForPlayers(mobj_t *actor, boolean allaround, boolean tracer, fixed
 extern boolean floatok;
 extern fixed_t tmfloorz;
 extern fixed_t tmceilingz;
-extern boolean tmsprung;
-extern mobj_t *tmfloorthing, *tmthing;
+extern mobj_t *tmfloorthing, *tmhitthing, *tmthing;
 extern camera_t *mapcampointer;
+extern fixed_t tmx;
+extern fixed_t tmy;
+#ifdef ESLOPE
+extern pslope_t *tmfloorslope, *tmceilingslope;
+#endif
 
 /* cphipps 2004/08/30 */
 extern void P_MapStart(void);
@@ -314,7 +338,7 @@ void P_RadiusAttack(mobj_t *spot, mobj_t *source, fixed_t damagedist);
 fixed_t P_FloorzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height);
 boolean PIT_PushableMoved(mobj_t *thing);
 
-void P_DoSpring(mobj_t *spring, mobj_t *object);
+boolean P_DoSpring(mobj_t *spring, mobj_t *object);
 
 //
 // P_SETUP
@@ -343,12 +367,29 @@ typedef struct BasicFF_s
 	INT32 Magnitude; ///< Magnitude of the effect, in the range from 0 through 10,000.
 } BasicFF_t;
 
+/* Damage/death types, for P_DamageMobj and related */
+//// Damage types
+//#define DMG_NORMAL 0 (unneeded?)
+#define DMG_WATER     1
+#define DMG_FIRE      2
+#define DMG_ELECTRIC  3
+#define DMG_SPIKE     4
+//#define DMG_SPECIALSTAGE 5
+//// Death types - cannot be combined with damage types
+#define DMG_INSTAKILL  0x80
+#define DMG_DROWNED    0x80+1
+#define DMG_SPACEDROWN 0x80+2
+#define DMG_DEATHPIT   0x80+3
+#define DMG_CRUSHED    0x80+4
+#define DMG_SPECTATOR  0x80+5
+#define DMG_DEATHMASK  DMG_INSTAKILL // if bit 7 is set, this is a death type instead of a damage type
+
 void P_ForceFeed(const player_t *player, INT32 attack, INT32 fade, tic_t duration, INT32 period);
 void P_ForceConstant(const BasicFF_t *FFInfo);
 void P_RampConstant(const BasicFF_t *FFInfo, INT32 Start, INT32 End);
 void P_RemoveShield(player_t *player);
-boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage);
-void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source);
+boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype);
+void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damagetype);
 void P_PlayerRingBurst(player_t *player, INT32 num_rings); /// \todo better fit in p_user.c
 void P_PlayerWeaponPanelBurst(player_t *player);
 void P_PlayerWeaponAmmoBurst(player_t *player);
