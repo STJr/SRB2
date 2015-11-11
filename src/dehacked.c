@@ -674,11 +674,11 @@ static void readfreeslots(MYFILE *f)
 			else if (fastcmp(type, "SPR2"))
 			{
 				// Search if we already have an SPR2 by that name...
-				for (i = SPR_FIRSTFREESLOT; i < free_spr2; i++)
+				for (i = SPR2_FIRSTFREESLOT; i < free_spr2; i++)
 					if (memcmp(spr2names[i],word,4) == 0)
 						break;
 				// We found it? (Two mods using the same SPR2 name?) Then don't allocate another one.
-				if (i != free_spr2)
+				if (i < free_spr2)
 					continue;
 				// Copy in the spr2 name and increment free_spr2.
 				if (free_spr2 < NUMPLAYERSPRITES) {
@@ -8371,11 +8371,11 @@ static inline int lib_freeslot(lua_State *L)
 		{
 			// Search if we already have an SPR2 by that name...
 			enum playersprite i;
-			for (i = SPR_FIRSTFREESLOT; i < free_spr2; i++)
+			for (i = SPR2_FIRSTFREESLOT; i < free_spr2; i++)
 				if (memcmp(spr2names[i],word,4) == 0)
 					break;
 			// We don't, so allocate a new one.
-			if (i == free_spr2) {
+			if (i >= free_spr2) {
 				if (free_spr2 < NUMPLAYERSPRITES)
 				{
 					CONS_Printf("Sprite SPR2_%s allocated.\n",word);
