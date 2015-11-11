@@ -671,7 +671,7 @@ static void readfreeslots(MYFILE *f)
 						break;
 					}
 			}
-			else if (fastcmp(type, "SPR2_"))
+			else if (fastcmp(type, "SPR2"))
 			{
 				// Search if we already have an SPR2 by that name...
 				for (i = SPR_FIRSTFREESLOT; i < free_spr2; i++)
