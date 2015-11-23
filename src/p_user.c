@@ -2120,30 +2120,7 @@ static void P_CheckInvincibilityTimer(player_t *player)
 		player->mo->color = (UINT8)(1 + (leveltime % (MAXSKINCOLORS-1)));
 	else if (leveltime % (TICRATE/7) == 0)
 	{
-		fixed_t destx, desty;
-		mobj_t *sparkle;
-
-		if (!splitscreen && rendermode != render_soft)
-		{
-			angle_t viewingangle;
-
-			if (players[displayplayer].awayviewtics)
-				viewingangle = R_PointToAngle2(player->mo->x, player->mo->y, players[displayplayer].awayviewmobj->x, players[displayplayer].awayviewmobj->y);
-			else if (!camera.chase && players[displayplayer].mo)
-				viewingangle = R_PointToAngle2(player->mo->x, player->mo->y, players[displayplayer].mo->x, players[displayplayer].mo->y);
-			else
-				viewingangle = R_PointToAngle2(player->mo->x, player->mo->y, camera.x, camera.y);
-
-			destx = player->mo->x + P_ReturnThrustX(player->mo, viewingangle, FixedMul(FRACUNIT, player->mo->scale));
-			desty = player->mo->y + P_ReturnThrustY(player->mo, viewingangle, FixedMul(FRACUNIT, player->mo->scale));
-		}
-		else
-		{
-			destx = player->mo->x;
-			desty = player->mo->y;
-		}
-
-		sparkle = P_SpawnMobj(destx, desty, player->mo->z, MT_IVSP);
+		mobj_t *sparkle = P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z, MT_IVSP);
 		sparkle->destscale = player->mo->scale;
 		P_SetScale(sparkle, player->mo->scale);
 	}
