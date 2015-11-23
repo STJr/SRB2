@@ -1257,7 +1257,8 @@ static void R_ProjectSprite(mobj_t *thing)
 	vis = R_NewVisSprite();
 	vis->heightsec = heightsec; //SoM: 3/17/2000
 	vis->mobjflags = thing->flags;
-	vis->scale = yscale + thing->info->dispoffset;           //<<detailshift;
+	vis->scale = yscale; //<<detailshift;
+	vis->dispoffset = thing->info->dispoffset; // Monster Iestyn: 23/11/15
 	vis->gx = thing->x;
 	vis->gy = thing->y;
 	vis->gz = gz;
@@ -1473,6 +1474,7 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	// store information in a vissprite
 	vis = R_NewVisSprite();
 	vis->scale = yscale; //<<detailshift;
+	vis->dispoffset = 0; // Monster Iestyn: 23/11/15
 	vis->gx = thing->x;
 	vis->gy = thing->y;
 	vis->gz = gz;
@@ -1624,6 +1626,7 @@ void R_SortVisSprites(void)
 	vissprite_t *best = NULL;
 	vissprite_t  unsorted;
 	fixed_t      bestscale;
+	INT32        bestdispoffset;
 
 	if (!visspritecount)
 		return;
@@ -1654,12 +1657,19 @@ void R_SortVisSprites(void)
 	vsprsortedhead.next = vsprsortedhead.prev = &vsprsortedhead;
 	for (i = 0; i < visspritecount; i++)
 	{
-		bestscale = INT32_MAX;
+		bestscale = bestdispoffset = INT32_MAX;
 		for (ds = unsorted.next; ds != &unsorted; ds = ds->next)
 		{
 			if (ds->scale < bestscale)
 			{
 				bestscale = ds->scale;
+				bestdispoffset = ds->dispoffset;
+				best = ds;
+			}
+			// order visprites of same scale by dispoffset, smallest first
+			else if (ds->scale == bestscale && ds->dispoffset < bestdispoffset)
+			{
+				bestdispoffset = ds->dispoffset;
 				best = ds;
 			}
 		}
@@ -1911,7 +1921,8 @@ static void R_CreateDrawNodes(void)
 				if (r2->sprite->szt > rover->sz || r2->sprite->sz < rover->szt)
 					continue;
 
-				if (r2->sprite->scale > rover->scale)
+				if (r2->sprite->scale > rover->scale
+				 || (r2->sprite->scale == rover->scale && r2->sprite->dispoffset > rover->dispoffset))
 				{
 					entry = R_CreateDrawNode(NULL);
 					(entry->prev = r2->prev)->next = entry;
