@@ -3998,6 +3998,7 @@ static void HWR_SortVisSprites(void)
 	gr_vissprite_t *best = NULL;
 	gr_vissprite_t unsorted;
 	float bestdist;
+	INT32 bestdispoffset;
 
 	if (!gr_visspritecount)
 		return;
@@ -4025,11 +4026,19 @@ static void HWR_SortVisSprites(void)
 	for (i = 0; i < gr_visspritecount; i++)
 	{
 		bestdist = ZCLIP_PLANE-1;
+		bestdispoffset = INT32_MAX;
 		for (ds = unsorted.next; ds != &unsorted; ds = ds->next)
 		{
 			if (ds->tz > bestdist)
 			{
 				bestdist = ds->tz;
+				bestdispoffset = ds->dispoffset;
+				best = ds;
+			}
+			// order visprites of same scale by dispoffset, smallest first
+			else if (ds->tz == bestdist && ds->dispoffset < bestdispoffset)
+			{
+				bestdispoffset = ds->dispoffset;
 				best = ds;
 			}
 		}
@@ -4653,6 +4662,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 #endif
 	vis->x2 = tx;
 	vis->tz = tz;
+	vis->dispoffset = thing->info->dispoffset; // Monster Iestyn: 23/11/15: HARDWARE SUPPORT AT LAST
 	vis->patchlumpnum = sprframe->lumppat[rot];
 	vis->flip = flip;
 	vis->mobj = thing;
@@ -4769,6 +4779,7 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 	vis->x1 = x1;
 	vis->x2 = tx;
 	vis->tz = tz;
+	vis->dispoffset = 0; // Monster Iestyn: 23/11/15: HARDWARE SUPPORT AT LAST
 	vis->patchlumpnum = sprframe->lumppat[rot];
 	vis->flip = flip;
 	vis->mobj = (mobj_t *)thing;
