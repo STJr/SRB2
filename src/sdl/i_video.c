@@ -27,7 +27,7 @@
 
 #ifdef HAVE_SDL
 
-#include "SDL.h"
+#include <SDL2/SDL.h>
 
 #ifdef _MSC_VER
 #pragma warning(default : 4214 4244)
@@ -56,7 +56,7 @@
 #include "../doomdef.h"
 
 #if defined (_WIN32)
-#include "SDL_syswm.h"
+#include <SDL2/SDL_syswm.h>
 #endif
 
 #include "../doomstat.h"

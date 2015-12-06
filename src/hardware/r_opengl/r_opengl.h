@@ -26,7 +26,7 @@
 #pragma warning(disable : 4214 4244)
 #endif
 
-#include "SDL_opengl.h" //Alam_GBC: Simple, yes?
+#include <SDL2/SDL_opengl.h> //Alam_GBC: Simple, yes?
 
 #ifdef _MSC_VER
 #pragma warning(default : 4214 4244)

@@ -23,7 +23,7 @@
 
 #ifdef HAVE_SDL
 
-#include "SDL.h"
+#include <SDL2/SDL.h>
 
 #include "sdlmain.h"
 
