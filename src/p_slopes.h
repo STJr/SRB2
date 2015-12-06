@@ -29,12 +29,17 @@
 #define P_SLOPES_H__
 
 #ifdef ESLOPE
+void P_CalculateSlopeNormal(pslope_t *slope);
+void P_ReconfigureVertexSlope(pslope_t *slope);
+
 void P_ResetDynamicSlopes(void);
 void P_RunDynamicSlopes(void);
 // P_SpawnSlope_Line
 // Creates one or more slopes based on the given line type and front/back
 // sectors.
 void P_SpawnSlope_Line(int linenum);
+
+pslope_t *P_NewVertexSlope(INT16 tag1, INT16 tag2, INT16 tag3, UINT8 flags);
 
 #ifdef SPRINGCLEAN
 // Loads just map objects that make slopes,

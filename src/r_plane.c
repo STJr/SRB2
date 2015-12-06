@@ -28,6 +28,8 @@
 
 #include "p_setup.h" // levelflats
 
+#include "p_slopes.h"
+
 //
 // opening
 //
@@ -952,6 +954,9 @@ void R_DrawSinglePlane(visplane_t *pl)
 		float ang;
 		float vx, vy, vz;
 		float fudge;
+		// compiler complains when P_GetZAt is used in FLOAT_TO_FIXED directly
+		// use this as a temp var to store P_GetZAt's return value each time
+		fixed_t temp;
 
 		xoffs &= ((1 << (32-nflatshiftup))-1);
 		yoffs &= ((1 << (32-nflatshiftup))-1);
@@ -969,7 +974,8 @@ void R_DrawSinglePlane(visplane_t *pl)
 		vy = FIXED_TO_FLOAT(viewy-yoffs);
 		vz = FIXED_TO_FLOAT(viewz);
 
-		zeroheight = FIXED_TO_FLOAT(P_GetZAt(pl->slope, viewx, viewy));
+		temp = P_GetZAt(pl->slope, viewx, viewy);
+		zeroheight = FIXED_TO_FLOAT(temp);
 
 #define ANG2RAD(angle) ((float)((angle)*M_PI)/ANGLE_180)
 
@@ -979,7 +985,8 @@ void R_DrawSinglePlane(visplane_t *pl)
 		ang = ANG2RAD(ANGLE_270 - viewangle);
 		p.x = vx * cos(ang) - vy * sin(ang);
 		p.z = vx * sin(ang) + vy * cos(ang);
-		p.y = FIXED_TO_FLOAT(P_GetZAt(pl->slope, -xoffs, yoffs)) - vz;
+		temp = P_GetZAt(pl->slope, -xoffs, yoffs);
+		p.y = FIXED_TO_FLOAT(temp) - vz;
 
 		// m is the v direction vector in view space
 		ang = ANG2RAD(ANGLE_180 - viewangle - pl->plangle);
@@ -991,8 +998,10 @@ void R_DrawSinglePlane(visplane_t *pl)
 		n.z = -cos(ang);
 
 		ang = ANG2RAD(pl->plangle);
-		m.y = FIXED_TO_FLOAT(P_GetZAt(pl->slope, viewx + FLOAT_TO_FIXED(sin(ang)), viewy + FLOAT_TO_FIXED(cos(ang)))) - zeroheight;
-		n.y = FIXED_TO_FLOAT(P_GetZAt(pl->slope, viewx + FLOAT_TO_FIXED(cos(ang)), viewy - FLOAT_TO_FIXED(sin(ang)))) - zeroheight;
+		temp = P_GetZAt(pl->slope, viewx + FLOAT_TO_FIXED(sin(ang)), viewy + FLOAT_TO_FIXED(cos(ang)));
+		m.y = FIXED_TO_FLOAT(temp) - zeroheight;
+		temp = P_GetZAt(pl->slope, viewx + FLOAT_TO_FIXED(cos(ang)), viewy - FLOAT_TO_FIXED(sin(ang)));
+		n.y = FIXED_TO_FLOAT(temp) - zeroheight;
 
 		m.x /= fudge;
 		m.y /= fudge;

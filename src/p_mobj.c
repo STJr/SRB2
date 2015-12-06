@@ -696,6 +696,7 @@ void P_ExplodeMissile(mobj_t *mo)
 // Returns TRUE if mobj is inside a non-solid 3d floor.
 boolean P_InsideANonSolidFFloor(mobj_t *mobj, ffloor_t *rover)
 {
+	fixed_t topheight, bottomheight;
 	if (!(rover->flags & FF_EXISTS))
 		return false;
 
@@ -703,8 +704,8 @@ boolean P_InsideANonSolidFFloor(mobj_t *mobj, ffloor_t *rover)
 		|| ((rover->flags & FF_BLOCKOTHERS) && !mobj->player)))
 		return false;
 
-	fixed_t topheight = *rover->topheight;
-	fixed_t bottomheight = *rover->bottomheight;
+	topheight = *rover->topheight;
+	bottomheight = *rover->bottomheight;
 
 #ifdef ESLOPE
 	if (*rover->t_slope)
@@ -3006,13 +3007,14 @@ void P_MobjCheckWater(mobj_t *mobj)
 
 	for (rover = sector->ffloors; rover; rover = rover->next)
 	{
+		fixed_t topheight, bottomheight;
 		if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_SWIMMABLE)
 		 || (((rover->flags & FF_BLOCKPLAYER) && mobj->player)
 		 || ((rover->flags & FF_BLOCKOTHERS) && !mobj->player)))
 			continue;
 
-		fixed_t topheight = *rover->topheight;
-		fixed_t bottomheight = *rover->bottomheight;
+		topheight = *rover->topheight;
+		bottomheight = *rover->bottomheight;
 
 #ifdef ESLOPE
 		if (*rover->t_slope)

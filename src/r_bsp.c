@@ -18,6 +18,7 @@
 
 #include "r_splats.h"
 #include "p_local.h" // camera
+#include "p_slopes.h"
 #include "z_zone.h" // Check R_Prep3DFloors
 
 seg_t *curline;

@@ -22,6 +22,7 @@
 #include "d_netcmd.h"
 #include "m_misc.h"
 #include "p_local.h" // Camera...
+#include "p_slopes.h"
 #include "console.h" // con_clipviewtop
 
 // OPTIMIZE: closed two sided lines as single sided
@@ -1489,7 +1490,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	fixed_t       hyp;
 	fixed_t       sineval;
 	angle_t       distangle, offsetangle;
-	fixed_t       vtop;
+	//fixed_t       vtop;
 	INT32           lightnum;
 	INT32           i, p;
 	lightlist_t   *light;
@@ -1501,6 +1502,10 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	static size_t maxdrawsegs = 0;
 
 	maskedtextureheight = NULL;
+
+	//initialize segleft and segright
+	memset(&segleft, 0x00, sizeof(segleft));
+	memset(&segright, 0x00, sizeof(segright));
 
 	if (ds_p == drawsegs+maxdrawsegs)
 	{
@@ -2630,11 +2635,11 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 		{
 			ffloor_t * rover;
-			i = 0;
 #ifdef ESLOPE
 			fixed_t rovertest;
 			fixed_t planevistest;
 #endif
+			i = 0;
 
 			if (backsector->ffloors)
 			{
