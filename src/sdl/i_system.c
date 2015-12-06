@@ -81,7 +81,7 @@ void __set_fpscr(long); // in libgcc / kernel's startup.s?
 
 #ifdef HAVE_SDL
 
-#include "SDL.h"
+#include <SDL2/SDL.h>
 
 #ifdef HAVE_TTF
 #include "i_ttf.h"
@@ -92,7 +92,7 @@ void __set_fpscr(long); // in libgcc / kernel's startup.s?
 #endif
 
 #if SDL_VERSION_ATLEAST(1,2,7) && !defined (DC)
-#include "SDL_cpuinfo.h" // 1.2.7 or greater
+#include <SDL2/SDL_cpuinfo.h> // 1.2.7 or greater
 #define HAVE_SDLCPUINFO
 #endif
 

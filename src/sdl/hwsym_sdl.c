@@ -31,7 +31,7 @@
 
 #ifdef HAVE_SDL
 
-#include "SDL.h"
+#include <SDL2/SDL.h>
 
 #ifdef _MSC_VER
 #pragma warning(default : 4214 4244)
@@ -42,7 +42,7 @@
 #endif
 
 #if SDL_VERSION_ATLEAST(1,2,6) && !defined (NOLOADSO)
-#include "SDL_loadso.h" // 1.2.6+
+#include <SDL2/SDL_loadso.h> // 1.2.6+
 #elif !defined (NOLOADSO)
 #define NOLOADSO
 #endif

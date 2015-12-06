@@ -50,7 +50,7 @@
 #include <string.h>
 #include <ctype.h>
 
-//#include "SDL_image.h"
+#include <SDL2/SDL_image.h>
 
 
 #ifdef LOAD_XPM
@@ -499,7 +499,7 @@ SDL_Surface *IMG_LoadXPM_RW(SDL_RWops *src)
 }
 #endif
 
-static inline SDL_Surface *IMG_ReadXPMFromArray(const char **xpm)
+extern DECLSPEC SDL_Surface *IMG_ReadXPMFromArray(char **xpm)
 {
     return NULL;
 }
