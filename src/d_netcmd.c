@@ -3371,8 +3371,13 @@ void D_GameTypeChanged(INT32 lastgametype)
 				if (!cv_timelimit.changed && !cv_pointlimit.changed) // user hasn't changed limits
 				{
 					// default settings for match: timelimit 10 mins, no pointlimit
-					CV_SetValue(&cv_pointlimit, 0);
-					CV_SetValue(&cv_timelimit, 10);
+					if (M_CheckParm("-nothokker") != 0) {
+						CV_SetValue(&cv_pointlimit, 0);
+						CV_SetValue(&cv_timelimit, 10);
+					} else {
+						CV_SetValue(&cv_pointlimit, 3);
+						CV_SetValue(&cv_timelimit, 0);
+					}
 				}
 				if (!cv_itemrespawntime.changed)
 					CV_Set(&cv_itemrespawntime, cv_itemrespawntime.defaultvalue); // respawn normally

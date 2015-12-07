@@ -844,6 +844,10 @@ static void IdentifyVersion(void)
 	// Add our crappy patches to fix our bugs
 	// D_AddFile(va(pandf,srb2waddir,"patch.dta"));
 
+	// Add the thokker WAD
+	if (M_CheckParm("-nothokker") == 0)
+        D_AddFile(va(pandf,srb2waddir,"thokker.thk"));
+
 #if !defined (HAVE_SDL) || defined (HAVE_MIXER)
 	{
 #if defined (DC) && 0
