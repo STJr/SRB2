@@ -173,6 +173,34 @@ int LUA_HookLib(lua_State *L)
 	return 0;
 }
 
+void LUAh_NetArchiveHook(lua_CFunction archFunc)
+{
+	int TABLESINDEX;
+	hook_p hookp;
+
+	if (!gL)
+		return;
+
+	TABLESINDEX = lua_gettop(gL);
+
+	lua_settop(gL, 0);
+
+	lua_pushvalue(gL, TABLESINDEX);
+	lua_pushcclosure(gL, archFunc, 1);
+	lua_pushnil(gL);
+
+	for (hookp = roothook; hookp; hookp = hookp->next)
+		if (hookp->type == hook_NetVars)
+		{
+			lua_pushfstring(gL, FMT_HOOKID, hookp->id);
+			lua_gettable(gL, LUA_REGISTRYINDEX);
+			lua_pushvalue(gL, -2);
+			LUA_Call(gL, 1);
+		}
+
+	lua_pop(gL, 2);
+}
+
 boolean LUAh_MobjHook(mobj_t *mo, enum hook which)
 {
 	hook_p hookp;
