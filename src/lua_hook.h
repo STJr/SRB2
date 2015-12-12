@@ -14,6 +14,7 @@
 
 #include "r_defs.h"
 #include "d_player.h"
+#include "blua/lua.h"
 
 enum hook {
 	hook_NetVars=0,
@@ -47,6 +48,7 @@ enum hook {
 };
 extern const char *const hookNames[];
 
+void LUAh_NetArchiveHook(lua_CFunction archFunc);
 void LUAh_MapChange(void); // Hook for map change (before load)
 void LUAh_MapLoad(void); // Hook for map load
 void LUAh_PlayerJoin(int playernum); // Hook for Got_AddPlayer
