@@ -998,7 +998,7 @@ static const struct {
 static void readlevelheader(MYFILE *f, INT32 num)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
-	char *word;
+	char *word = s;
 	char *word2;
 	//char *word3; // Non-uppercase version of word2
 	char *tmp;
@@ -1028,7 +1028,7 @@ static void readlevelheader(MYFILE *f, INT32 num)
 				continue; // Skip comment lines, but don't break.
 
 			// Set / reset word, because some things (Lua.) move it
-			word = s;
+			//word = s;
 
 			// Get the part before the " = "
 			tmp = strchr(s, '=');
@@ -7757,36 +7757,36 @@ struct {
 	{"FF_GOOWATER",FF_GOOWATER},               ///< Used with ::FF_SWIMMABLE. Makes thick bouncey goop.
 
 	// Angles
-	{"ANG1",ANG1>>16},
-	{"ANG2",ANG2>>16},
-	{"ANG10",ANG10>>16},
-	{"ANG15",ANG15>>16},
-	{"ANG20",ANG20>>16},
-	{"ANG30",ANG30>>16},
-	{"ANG60",ANG60>>16},
-	{"ANG64h",ANG64h>>16},
-	{"ANG105",ANG105>>16},
-	{"ANG210",ANG210>>16},
-	{"ANG255",ANG255>>16},
-	{"ANG340",ANG340>>16},
-	{"ANG350",ANG350>>16},
-	{"ANGLE_11hh",ANGLE_11hh>>16},
-	{"ANGLE_22h",ANGLE_22h>>16},
-	{"ANGLE_45",ANGLE_45>>16},
-	{"ANGLE_67h",ANGLE_67h>>16},
-	{"ANGLE_90",ANGLE_90>>16},
-	{"ANGLE_112h",ANGLE_112h>>16},
-	{"ANGLE_135",ANGLE_135>>16},
-	{"ANGLE_157h",ANGLE_157h>>16},
-	{"ANGLE_180",ANGLE_180>>16},
-	{"ANGLE_202h",ANGLE_202h>>16},
-	{"ANGLE_225",ANGLE_225>>16},
-	{"ANGLE_247h",ANGLE_247h>>16},
-	{"ANGLE_270",ANGLE_270>>16},
-	{"ANGLE_292h",ANGLE_292h>>16},
-	{"ANGLE_315",ANGLE_315>>16},
-	{"ANGLE_337h",ANGLE_337h>>16},
-	{"ANGLE_MAX",ANGLE_MAX>>16},
+	{"ANG1",ANG1>>0},
+	{"ANG2",ANG2>>0},
+	{"ANG10",ANG10>>0},
+	{"ANG15",ANG15>>0},
+	{"ANG20",ANG20>>0},
+	{"ANG30",ANG30>>0},
+	{"ANG60",ANG60>>0},
+	{"ANG64h",ANG64h>>0},
+	{"ANG105",ANG105>>0},
+	{"ANG210",ANG210>>0},
+	{"ANG255",ANG255>>0},
+	{"ANG340",ANG340>>0},
+	{"ANG350",ANG350>>0},
+	{"ANGLE_11hh",ANGLE_11hh>>0},
+	{"ANGLE_22h",ANGLE_22h>>0},
+	{"ANGLE_45",ANGLE_45>>0},
+	{"ANGLE_67h",ANGLE_67h>>0},
+	{"ANGLE_90",ANGLE_90>>0},
+	{"ANGLE_112h",ANGLE_112h>>0},
+	{"ANGLE_135",ANGLE_135>>0},
+	{"ANGLE_157h",ANGLE_157h>>0},
+	{"ANGLE_180",ANGLE_180>>0},
+	{"ANGLE_202h",ANGLE_202h>>0},
+	{"ANGLE_225",ANGLE_225>>0},
+	{"ANGLE_247h",ANGLE_247h>>0},
+	{"ANGLE_270",ANGLE_270>>0},
+	{"ANGLE_292h",ANGLE_292h>>0},
+	{"ANGLE_315",ANGLE_315>>0},
+	{"ANGLE_337h",ANGLE_337h>>0},
+	{"ANGLE_MAX",ANGLE_MAX>>0},
 
 	// P_Chase directions (dirtype_t)
 	{"DI_NODIR",DI_NODIR},

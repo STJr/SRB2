@@ -31,8 +31,8 @@
 
 // angle_t casting
 // we reduce the angle to a fixed point between 0.0 and 1.0
-#define luaL_checkangle(L, i) (((angle_t)(luaL_checkfixed(L, i)&0xFFFF))<<16)
-#define lua_pushangle(L, a) lua_pushfixed(L, a>>16)
+#define luaL_checkangle(L, i) (((angle_t)(luaL_checkfixed(L, i)&0xFFFFFFFF))<<0)
+#define lua_pushangle(L, a) lua_pushfixed(L, a>>0)
 
 #ifdef _DEBUG
 void LUA_ClearExtVars(void);
