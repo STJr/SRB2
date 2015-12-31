@@ -2635,20 +2635,20 @@ void A_MonitorPop(mobj_t *actor)
 	}
 }
 
-// Function: A_BigMonitorPop
+// Function: A_GoldMonitorPop
 //
 // Description: Used by repeating monitors when they turn off. They don't really pop, but, you know...
 //
 // var1 = unused
 // var2 = unused
 //
-void A_BigMonitorPop(mobj_t *actor)
+void A_GoldMonitorPop(mobj_t *actor)
 {
 	mobjtype_t item = 0;
 	mobj_t *newmobj;
 
 #ifdef HAVE_BLUA
-	if (LUA_CallAction("A_BigMonitorPop", actor))
+	if (LUA_CallAction("A_GoldMonitorPop", actor))
 		return;
 #endif
 
@@ -2685,7 +2685,7 @@ void A_BigMonitorPop(mobj_t *actor)
 
 	if (item == 0)
 	{
-		CONS_Debug(DBG_GAMELOGIC, "Powerup item not defined in 'damage' field for A_BigMonitorPop\n");
+		CONS_Debug(DBG_GAMELOGIC, "Powerup item not defined in 'damage' field for A_GoldMonitorPop\n");
 		return;
 	}
 
@@ -2716,17 +2716,17 @@ void A_BigMonitorPop(mobj_t *actor)
 	}
 }
 
-// Function: A_BigMonitorRestore
+// Function: A_GoldMonitorRestore
 //
 // Description: A repeating monitor is coming back to life. Reset monitor flags, etc.
 //
 // var1 = unused
 // var2 = unused
 //
-void A_BigMonitorRestore(mobj_t *actor)
+void A_GoldMonitorRestore(mobj_t *actor)
 {
 #ifdef HAVE_BLUA
-	if (LUA_CallAction("A_BigMonitorRestore", actor))
+	if (LUA_CallAction("A_GoldMonitorRestore", actor))
 		return;
 #endif
 
@@ -2735,19 +2735,19 @@ void A_BigMonitorRestore(mobj_t *actor)
 	actor->health = 1; // Just in case.
 }
 
-// Function: A_BigMonitorSparkle
+// Function: A_GoldMonitorSparkle
 //
 // Description: Spawns the little sparkly effect around big monitors. Looks pretty, doesn't it?
 //
 // var1 = unused
 // var2 = unused
 //
-void A_BigMonitorSparkle(mobj_t *actor)
+void A_GoldMonitorSparkle(mobj_t *actor)
 {
 	fixed_t i, ngangle, xofs, yofs;
 
 #ifdef HAVE_BLUA
-	if (LUA_CallAction("A_BigMonitorSparkle", actor))
+	if (LUA_CallAction("A_GoldMonitorSparkle", actor))
 		return;
 #endif
 

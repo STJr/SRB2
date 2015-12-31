@@ -8789,36 +8789,37 @@ void P_SpawnMapThing(mapthing_t *mthing)
 		if ((mobjinfo[i].flags & MF_ENEMY) || (mobjinfo[i].flags & MF_BOSS))
 			return;
 
-	// Set powerup boxes to user settings for competition.
-	if (gametype == GT_COMPETITION)
+	// Altering monitor spawns via cvars
+	// If MF_GRENADEBOUNCE is set in the monitor's info,
+	// skip this step. (Used for gold monitors)
+	// Yeah, this is a dirty hack.
+	if ((mobjinfo[i].flags & (MF_MONITOR|MF_GRENADEBOUNCE)) == MF_MONITOR)
 	{
-		if ((mobjinfo[i].flags & MF_MONITOR) && cv_competitionboxes.value) // not Normal
+		if (gametype == GT_COMPETITION)
 		{
+			// Set powerup boxes to user settings for competition.
 			if (cv_competitionboxes.value == 1) // Random
 				i = MT_MYSTERY_BOX;
 			else if (cv_competitionboxes.value == 2) // Teleports
 				i = MT_MIXUP_BOX;
 			else if (cv_competitionboxes.value == 3) // None
 				return; // Don't spawn!
+			// default case: normal
 		}
-	}
-
-	// Set powerup boxes to user settings for other netplay modes
-	else if (gametype != GT_COOP)
-	{
-		if ((mobjinfo[i].flags & MF_MONITOR) && cv_matchboxes.value) // not Normal
+		// Set powerup boxes to user settings for other netplay modes
+		else if (gametype != GT_COOP)
 		{
 			if (cv_matchboxes.value == 1) // Random
 				i = MT_MYSTERY_BOX;
-			else if (cv_matchboxes.value == 3) // Don't spawn
-				return;
-			else // cv_matchboxes.value == 2, Non-Random
+			else if (cv_matchboxes.value == 2) // Non-Random
 			{
 				if (i == MT_MYSTERY_BOX)
 					return; // don't spawn in Non-Random
-
 				mthing->options &= ~(MTF_AMBUSH|MTF_OBJECTSPECIAL); // no random respawning!
 			}
+			else if (cv_matchboxes.value == 3) // Don't spawn
+				return;
+			// default case: normal
 		}
 	}
 
@@ -8873,7 +8874,7 @@ void P_SpawnMapThing(mapthing_t *mthing)
 		if (i == MT_RING_BOX && !G_IsSpecialStage(gamemap))
 			return; // No rings in Ultimate mode (except special stages)
 
-		// Don't include the BIGBOXes (repeating monitors) here please.
+		// Don't include the gold repeating boxes here please.
 		// They're likely facets of the level's design and therefore required to progress.
 	}
 
@@ -9302,8 +9303,6 @@ ML_NOCLIMB : Direction not controllable
 	//count 10 ring boxes into the number of rings equation too.
 	if (i == MT_RING_BOX)
 		nummaprings += 10;
-	if (i == MT_RING_BIGBOX) // Theoretically infinite
-		nummaprings += 10000;
 
 	if (i == MT_BIGTUMBLEWEED || i == MT_LITTLETUMBLEWEED)
 	{
