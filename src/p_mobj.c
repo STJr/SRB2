@@ -5665,6 +5665,92 @@ static void P_KoopaThinker(mobj_t *koopa)
 	}
 }
 
+// Starts the CHROME Insta-laser
+static void P_TDStartInstaLaser(mobj_t *actor, mobj_t *target, sfxenum_t sound)
+{
+	thinker_t * th;
+	mobj_t *mo2;
+
+	// Go through and make sure this object is not already being targeted
+	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	{
+		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+			continue;
+
+		mo2 = (mobj_t *)th;
+
+		if (mo2->type != MT_CHROME_TARGET)
+			continue;
+
+		if (!mo2->target || !mo2->tracer)
+			continue;
+
+		if (mo2->target == target && mo2->tracer == actor) // the object is already being targeted by this CHROME
+			return;
+	}
+
+	// The object is not already being targeted, so let's target them
+	mobj_t *point = P_SpawnMobj(target->x, target->y, target->z + target->height/2, MT_CHROME_TARGET);
+	P_SetTarget(&point->target, target);
+	P_SetTarget(&point->tracer, actor);
+
+	if (sound)
+		S_StartSound(actor, sound);
+
+	return;
+}
+
+// Performs the CHROME Insta-laser
+static void P_TDInstaLaser(mobj_t *actor, mobj_t *target, mobjtype_t lasertype, mobjtype_t firetype)
+{
+	fixed_t x, y, z, floorz, speed;
+	INT32 i;
+	angle_t angle;
+	mobj_t *point;
+	mobj_t *lasermo;
+
+	if (!actor || !target)
+		return;
+
+	x = actor->x;
+	y = actor->y;
+	z = actor->z + actor->height/2;
+
+	angle = R_PointToAngle2(z + (mobjinfo[lasertype].height>>1), 0, target->z, R_PointToDist2(x, y, target->x, target->y));
+
+	point = P_SpawnMobj(x, y, z, lasertype);
+	P_SetTarget(&point->target, actor);
+	point->angle = R_PointToAngle2(x, y, target->x, target->y);
+	speed = point->radius*2;
+	point->momz = FixedMul(FINECOSINE(angle>>ANGLETOFINESHIFT), speed);
+	point->momx = FixedMul(FINESINE(angle>>ANGLETOFINESHIFT), FixedMul(FINECOSINE(point->angle>>ANGLETOFINESHIFT), speed));
+	point->momy = FixedMul(FINESINE(angle>>ANGLETOFINESHIFT), FixedMul(FINESINE(point->angle>>ANGLETOFINESHIFT), speed));
+
+	for (i = 0; i < 256; i++)
+	{
+		lasermo = P_SpawnMobj(point->x, point->y, point->z, point->type);
+		lasermo->angle = point->angle;
+		lasermo->flags = MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_SCENERY;
+		x = point->x;
+		y = point->y;
+		z = point->z;
+		if (P_RailThinker(point))
+			break;
+	}
+
+	floorz = P_FloorzAtPos(x, y, z, mobjinfo[firetype].height);
+	if (z - floorz < mobjinfo[firetype].height>>1)
+	{
+		point = P_SpawnMobj(x, y, floorz+1, firetype);
+		point->target = actor;
+		point->destscale = 3*FRACUNIT;
+		point->scalespeed = FRACUNIT>>2;
+		point->fuse = TICRATE;
+	}
+
+	return;
+}
+
 //
 // P_MobjThinker
 //
@@ -6783,6 +6869,26 @@ void P_MobjThinker(mobj_t *mobj)
 			if (mobj->health > 0 && !(mobj->flags & MF_NOCLIPTHING) && leveltime % 2 == 0)
 				S_StartSound(mobj, mobj->info->attacksound);
 			break;
+		case MT_PINBALL:
+			if (GETSECSPECIAL(mobj->subsector->sector->special, 1) == 8) // When in Instant Kill, kill the balls
+			{
+				P_KillMobj(mobj, NULL, NULL);
+				return;
+			}
+
+			mobj->momz = 0; // TEMPORARY HACK
+
+			if (mobj->fuse <= 35 && mobj->fuse > 0)
+			{
+				if ((mobj->fuse % 2) == 0)
+					mobj->flags2 |= MF2_DONTDRAW;
+				else
+					mobj->flags2 &= ~MF2_DONTDRAW;
+			}
+
+			if (P_AproxDistance(mobj->momx, mobj->momy) < mobj->info->speed)
+				P_InstaThrust(mobj, R_PointToAngle2(0, 0, mobj->momx, mobj->momy), mobj->info->speed);
+			break;
 		case MT_CLUCKOID:
 			if (mobj->state >= &states[S_CLUCKOIDEXHALE1] && mobj->state <= &states[S_CLUCKOIDEXHALE4])
 			{
@@ -7072,6 +7178,43 @@ void P_MobjThinker(mobj_t *mobj)
 				particle->destscale = mobj->scale << 2;
 				particle->scalespeed = FixedMul(particle->scalespeed, mobj->scale); // scale the scaling speed!
 				P_SetObjectMomZ(particle, FRACUNIT, false);
+			}
+			break;
+		case MT_CHROME:
+			{
+				INT32 i;
+				for (i = 0; i < MAXPLAYERS; i++)
+				{
+					if (!playeringame[i] || players[i].spectator)
+						continue;
+
+					if (!players[i].mo)
+						continue;
+
+					if (players[i].mo->health <= 0)
+						continue;
+
+					if (players[i].playerstate != PST_LIVE)
+						continue;
+
+					if (P_AproxDistance(players[i].mo->x - mobj->x, players[i].mo->y - mobj->y) < mobj->radius && players[i].mo->z + players[i].mo->height < mobj->z + mobj->height/2)
+						P_TDStartInstaLaser(mobj, players[i].mo, mobjinfo[MT_CHROME_LASER].seesound);
+				}
+			}
+			break;
+		case MT_CHROME_TARGET:
+			if (!mobj->tracer) // tracer is the CHROME that spawned it
+				break;
+
+			if (mobj->target) // target is the player it is targeting
+			{
+				if (P_AproxDistance(mobj->target->x - mobj->tracer->x, mobj->target->y - mobj->tracer->y) < mobj->tracer->radius && mobj->target->z + mobj->target->height/2 < mobj->tracer->z + mobj->tracer->height/2)
+				{
+					P_TeleportMove(mobj, mobj->target->x, mobj->target->y, mobj->target->z + mobj->target->height/2);
+					mobj->tics = states[mobj->info->spawnstate].tics;
+				}
+
+				P_TDInstaLaser(mobj->tracer, mobj, MT_CHROME_LASER, MT_EGGMOBILE_FIRE);
 			}
 			break;
 		case MT_SPINFIRE:
@@ -7750,6 +7893,9 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 #endif
 			nummaprings++;
 			break;
+		case MT_PINBALL:
+			mobj->fuse = 12*TICRATE;
+			break;
 		case MT_ZAPSPREAD:
 			mobj->fuse = 1*TICRATE;
 			break;
@@ -7765,11 +7911,13 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			|| mobj->type == MT_PLAYER
 			|| mobj->type == MT_RING || mobj->type == MT_FLINGRING
 			|| mobj->type == MT_SPIKEBALL || mobj->type == MT_SPECIALSPIKEBALL
+			|| mobj->type == MT_PINBALL
 			|| mobj->type == MT_REDEYEBALL
 			|| mobj->type == MT_PENGUINICE || mobj->type == MT_ICECUBE
 			|| mobj->type == MT_TDEMBLEM
 			|| mobj->type == MT_BOUNCECLOUD || mobj->type == MT_MOVINGBOUNCECLOUD
-			|| mobj->type == MT_CHECKERBALL || mobj->type == MT_SICHECKERBALL)
+			|| mobj->type == MT_CHECKERBALL || mobj->type == MT_SICHECKERBALL
+			|| mobj->type == MT_CHROME)
 			P_SpawnShadowMobj(mobj);
 	}
 #ifdef HAVE_BLUA
@@ -9268,6 +9416,7 @@ ML_NOCLIMB : Direction not controllable
 		mobj->movecount = mthing->extrainfo;
 		break;
 	case MT_POPUPTURRET:
+	case MT_PINBALLTURRET:
 		if (mthing->angle)
 			mobj->threshold = mthing->angle;
 		else

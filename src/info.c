@@ -55,10 +55,10 @@ char sprnames[NUMSPRITES + 1][5] =
 	"GWLR","SRBA","SRBB","SRBC","SRBD","SRBE","SRBF","SRBG","SRBH","SRBI",
 	"SRBJ","SRBK","SRBL","SRBM","SRBN","SRBO",
 
-	"SHAD","FLEN","BUBB","SBCH","BBCH","MHEL","MXCL","ARRO","CLUK","TOXO",
-	"KRKO","ZAPO","ZAPT","PENG","GANG","FLAR","GPUP","PLSM","MITR","HMIS",
-	"REDI","CHIL","CIRN","CLOD","CKBL","STAT","BLFM","PLMT","GFLO","BLUE",
-	"FFTR","BIST","SBUS","CONE",
+	"SHAD","FLEN","BUBB","SBCH","BBCH","MHEL","MXCL","ARRO","PINT","PINB",
+	"CLUK","TOXO","KRKO","ZAPO","ZAPT","PENG","GANG","FLAR","GPUP","PLSM",
+	"MITR","HMIS","REDI","CHIL","CIRN","CLOD","CKBL","CHRM","STAT","BLFM",
+	"PLMT","GFLO","BLUE","FFTR","BIST","SBUS","CONE",
 };
 
 // Doesn't work with g++, needs actionf_p1 (don't modify this comment)
@@ -3103,6 +3103,45 @@ state_t states[NUMSTATES] =
 	{SPR_ARRO, FF_FULLBRIGHT|9, 4, {NULL}, 0, 0, S_ARROWSTATIONARY1}, // S_ARROWSTATIONARY9
 
 	// Top Down Enemies
+
+	// Pinball Turret
+	{SPR_PINT, 0, 1, {A_Look}, 1, 0, S_PINBALLTURRETPOPDOWN8}, // S_PINBALLTURRETLOOK
+	{SPR_PINT, 0, 0, {A_FaceTarget}, 0, 0, S_PINBALLTURRETPOPUP1}, // S_PINBALLTURRETSEE
+	{SPR_PINT, 1, 2, {A_Pain}, 0, 0, S_PINBALLTURRETPOPUP2}, // S_PINBALLTURRETPOPUP1
+	{SPR_PINT, 2, 2, {NULL}, 0, 0, S_PINBALLTURRETPOPUP3}, // S_PINBALLTURRETPOPUP2
+	{SPR_PINT, 3, 2, {NULL}, 0, 0, S_PINBALLTURRETPOPUP4}, // S_PINBALLTURRETPOPUP3
+	{SPR_PINT, 4, 2, {NULL}, 0, 0, S_PINBALLTURRETPOPUP5}, // S_PINBALLTURRETPOPUP4
+	{SPR_PINT, 5, 2, {NULL}, 0, 0, S_PINBALLTURRETPOPUP6}, // S_PINBALLTURRETPOPUP5
+	{SPR_PINT, 6, 2, {NULL}, 0, 0, S_PINBALLTURRETPOPUP7}, // S_PINBALLTURRETPOPUP6
+	{SPR_PINT, 7, 2, {NULL}, 0, 0, S_PINBALLTURRETPOPUP8}, // S_PINBALLTURRETPOPUP7
+	{SPR_PINT, 8, 14,{NULL}, 0, 0, S_PINBALLTURRETSHOOT}, // S_PINBALLTURRETPOPUP8
+	{SPR_PINT, 8, 14,{A_JetgShoot}, 0, 0, S_PINBALLTURRETPOPDOWN1}, // S_PINBALLTURRETSHOOT
+	{SPR_PINT, 7, 2, {A_Pain}, 0, 0, S_PINBALLTURRETPOPDOWN2}, // S_PINBALLTURRETPOPDOWN1
+	{SPR_PINT, 6, 2, {NULL}, 0, 0, S_PINBALLTURRETPOPDOWN3}, // S_PINBALLTURRETPOPDOWN2
+	{SPR_PINT, 5, 2, {NULL}, 0, 0, S_PINBALLTURRETPOPDOWN4}, // S_PINBALLTURRETPOPDOWN3
+	{SPR_PINT, 4, 2, {NULL}, 0, 0, S_PINBALLTURRETPOPDOWN5}, // S_PINBALLTURRETPOPDOWN4
+	{SPR_PINT, 3, 2, {NULL}, 0, 0, S_PINBALLTURRETPOPDOWN6}, // S_PINBALLTURRETPOPDOWN5
+	{SPR_PINT, 2, 2, {NULL}, 0, 0, S_PINBALLTURRETPOPDOWN7}, // S_PINBALLTURRETPOPDOWN6
+	{SPR_PINT, 1, 2, {NULL}, 0, 0, S_PINBALLTURRETPOPDOWN8}, // S_PINBALLTURRETPOPDOWN7
+	{SPR_PINT, 0, 69,{A_SetTics}, 0, 1, S_PINBALLTURRETLOOK}, // S_PINBALLTURRETPOPDOWN8
+
+	{SPR_PINB, 0, 2, {NULL}, 0, 0, S_PINBALL_ENEMY2}, // S_PINBALL_ENEMY1
+	{SPR_PINB, 1, 2, {NULL}, 0, 0, S_PINBALL_ENEMY3}, // S_PINBALL_ENEMY2
+	{SPR_PINB, 0, 2, {NULL}, 0, 0, S_PINBALL_ENEMY4}, // S_PINBALL_ENEMY3
+	{SPR_PINB, 2, 2, {NULL}, 0, 0, S_PINBALL_ENEMY5}, // S_PINBALL_ENEMY4
+	{SPR_PINB, 0, 2, {NULL}, 0, 0, S_PINBALL_ENEMY6}, // S_PINBALL_ENEMY5
+	{SPR_PINB, 3, 2, {NULL}, 0, 0, S_PINBALL_ENEMY7}, // S_PINBALL_ENEMY6
+	{SPR_PINB, 0, 2, {NULL}, 0, 0, S_PINBALL_ENEMY8}, // S_PINBALL_ENEMY7
+	{SPR_PINB, 4, 2, {NULL}, 0, 0, S_PINBALL_ENEMY1}, // S_PINBALL_ENEMY8
+	{SPR_PINB, 5, 2, {NULL}, 0, 0, S_PINBALL_PLAYER2}, // S_PINBALL_PLAYER1
+	{SPR_PINB, 6, 2, {NULL}, 0, 0, S_PINBALL_PLAYER3}, // S_PINBALL_PLAYER2
+	{SPR_PINB, 5, 2, {NULL}, 0, 0, S_PINBALL_PLAYER4}, // S_PINBALL_PLAYER3
+	{SPR_PINB, 7, 2, {NULL}, 0, 0, S_PINBALL_PLAYER5}, // S_PINBALL_PLAYER4
+	{SPR_PINB, 5, 2, {NULL}, 0, 0, S_PINBALL_PLAYER6}, // S_PINBALL_PLAYER5
+	{SPR_PINB, 8, 2, {NULL}, 0, 0, S_PINBALL_PLAYER7}, // S_PINBALL_PLAYER6
+	{SPR_PINB, 5, 2, {NULL}, 0, 0, S_PINBALL_PLAYER8}, // S_PINBALL_PLAYER7
+	{SPR_PINB, 9, 2, {NULL}, 0, 0, S_PINBALL_PLAYER1}, // S_PINBALL_PLAYER8
+
 	// Cluckoid
 	{SPR_CLUK, 0, 1, {A_Look}, (512<<16)+1, 0, S_CLUCKOIDLOOK}, // S_CLUCKOIDLOOK
 	{SPR_CLUK, 1, 5, {NULL}, 0, 0, S_CLUCKOIDINHALE2}, // S_CLUCKOIDINHALE1
@@ -3373,6 +3412,11 @@ state_t states[NUMSTATES] =
 	{SPR_CKBL, 3, 2, {NULL}, 0, 0, S_CHECKERBALL6}, // S_CHECKERBALL5
 	{SPR_CKBL, 1, 2, {NULL}, 0, 0, S_CHECKERBALL7}, // S_CHECKERBALL6
 	{SPR_CKBL, 0, 2, {NULL}, 0, 0, S_CHECKERBALL2}, // S_CHECKERBALL7
+
+	// CHROME (Calling Heaven's Righteousness Onto Malicious Entities)
+	{SPR_CHRM, 0, -1, {NULL}, 0, 0, S_NULL}, // S_CHROME
+	{SPR_CHRM, 1, 2, {NULL}, 0, 0, S_NULL}, // S_CHROME_LASER
+	{SPR_NULL, 0, 35, {NULL}, 0, 0, S_NULL}, // S_CHROME_TARGET
 
 	// Static Generator
 	{SPR_STAT, 0, 1, {NULL}, 0, 0, S_STATICGENERATOR1}, // S_STATICGENERATORSPAWN
@@ -14936,6 +14980,60 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	// Top Down enemies
+	{           // MT_PINBALLTURRET
+		2010,           // doomednum
+		S_PINBALLTURRETLOOK,   // spawnstate
+		1,              // spawnhealth
+		S_PINBALLTURRETSEE,    // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_appear,     // attacksound
+		S_NULL,         // painstate
+		1024,           // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_XPLD1,        // deathstate
+		S_NULL,         // xdeathstate
+		sfx_pop,        // deathsound
+		0,              // speed
+		12*FRACUNIT,    // radius
+		48*FRACUNIT,    // height
+		0,              // display offset
+		0,              // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_ENEMY|MF_SHOOTABLE, // flags
+		MT_PINBALL      // raisestate
+	},
+
+	{           // MT_PINBALL
+		-1,             // doomednum
+		S_PINBALL_ENEMY1, // spawnstate
+		1,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_appear,     // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		18*FRACUNIT,    // speed
+		16*FRACUNIT,    // radius
+		32*FRACUNIT,    // height
+		0,              // display offset
+		0,              // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_SPECIAL|MF_SHOOTABLE|MF_NOGRAVITY|MF_BOUNCE, // flags
+		S_NULL          // raisestate
+	},
+
 	{           // MT_CLUCKOID
 		2020,           // doomednum
 		S_CLUCKOIDLOOK, // spawnstate
@@ -15829,6 +15927,87 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // activesound
 		MF_PAIN,        // flags
 		S_NULL          // raisestate
+	},
+
+	{           // MT_CHROME
+		2910,           // doomednum
+		S_CHROME,       // spawnstate
+		1,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_XPLD1,        // deathstate
+		S_NULL,         // xdeathstate
+		sfx_pop,        // deathsound
+		0,              // speed
+		64*FRACUNIT,    // radius
+		20*FRACUNIT,    // height
+		0,              // display offset
+		0,              // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOGRAVITY,   // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_CHROME_LASER
+		-1,             // doomednum
+		S_CHROME_LASER, // spawnstate
+		1,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_rlaunc,     // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		4*FRACUNIT,    // radius
+		8*FRACUNIT,    // height
+		0,              // display offset
+		0,              // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOBLOCKMAP|MF_MISSILE|MF_NOGRAVITY, // flags
+		S_NULL         // raisestate
+	},
+
+	{           // MT_CHROME_TARGET
+		-1,             // doomednum
+		S_CHROME_TARGET, // spawnstate
+		1,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		1*FRACUNIT,     // radius
+		2*FRACUNIT,     // height
+		0,              // display offset
+		0,              // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY, // flags
+		S_NULL         // raisestate
 	},
 
 	{           // MT_STATICGENERATOR

@@ -1569,6 +1569,46 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			}
 			return;
 
+		case MT_PINBALL:
+			if (((player->pflags & PF_NIGHTSMODE) && (player->pflags & PF_DRILLING))
+			|| ((player->pflags & (PF_JUMPED|PF_SPINNING|PF_GLIDING)) && !(player->pflags & PF_STARTDASH)) // Not if you're charging a spindash
+			|| player->powers[pw_invulnerability] || player->powers[pw_super]) // Do you possess the ability to subdue the object?
+			{
+				if (P_MobjFlip(toucher)*toucher->momz < 0)
+					toucher->momz = -toucher->momz;
+
+				P_InstaThrust(toucher, R_PointToAngle2(special->x, special->y, toucher->x, toucher->y), P_AproxDistance(toucher->momx, toucher->momy));
+
+				P_SetTarget(&special->tracer, toucher);  // it belongs to me!
+				P_SetMobjState(special, S_PINBALL_PLAYER1);
+				special->color = toucher->color;
+				P_InstaThrust(special, R_PointToAngle2(toucher->x, toucher->y, special->x, special->y), special->info->speed);
+				S_StartSound(special, sfx_s3k9e);
+			}
+			else if (((toucher->z < special->z && !(toucher->eflags & MFE_VERTICALFLIP))
+			|| (toucher->z + toucher->height > special->z + special->height && (toucher->eflags & MFE_VERTICALFLIP))) // Flame is bad at logic - JTE
+			&& player->charability == CA_FLY
+			&& ((player->powers[pw_tailsfly] && !(player->pflags & PF_JUMPED))
+			|| (toucher->state >= &states[S_PLAY_SPC1] && toucher->state <= &states[S_PLAY_SPC4]))) // Tails can shred stuff with his propeller.
+			{
+				if (P_MobjFlip(toucher)*toucher->momz < 0)
+					toucher->momz = -toucher->momz/2;
+
+				P_SetTarget(&special->tracer, toucher);  // it belongs to me!
+				P_SetMobjState(special, S_PINBALL_PLAYER1);
+				special->color = toucher->color;
+				P_InstaThrust(special, R_PointToAngle2(toucher->x, toucher->y, special->x, special->y), special->info->speed);
+				S_StartSound(special, sfx_s3k9e);
+			}
+			else
+			{
+				if (special->target)
+					P_DamageMobj(toucher, special, special->target, 1);
+				else
+					P_DamageMobj(toucher, special, special, 1);
+			}
+			return;
+
 		case MT_TOXOMISTERCLOUD:
 			{
 				thinker_t *th;
