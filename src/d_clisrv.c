@@ -572,6 +572,7 @@ static inline void resynch_write_player(resynch_pak *rsp, const size_t i)
 	// TD
 	rsp->maxflyheight = LONG(players[i].maxflyheight);
 	rsp->climbtime = (tic_t)LONG(players[i].climbtime);
+	rsp->bubbletag = players[i].bubbletag;
 
 	rsp->hasmo = false;
 	//Transfer important mo information if the player has a body.
@@ -701,6 +702,7 @@ static void resynch_read_player(resynch_pak *rsp)
 	// TD
 	players[i].maxflyheight = LONG(rsp->maxflyheight);
 	players[i].climbtime = (tic_t)LONG(rsp->climbtime);
+	players[i].bubbletag = rsp->bubbletag;
 
 	//We get a packet for each player in game.
 	if (!playeringame[i])

@@ -2347,6 +2347,7 @@ void G_SpawnPlayer(INT32 playernum, boolean starpost, boolean bubblepossible)
 		if (numplayers > 0)
 		{
 			P_MovePlayerToTDSpawn(playernum);
+			players[playernum].bubbletag = true;
 			P_BubblePlayer(&players[playernum]);
 			return;
 		}

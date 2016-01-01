@@ -259,6 +259,7 @@ typedef struct
 	fixed_t scale;
 	fixed_t destscale;
 	fixed_t scalespeed;
+	boolean bubbletag;
 } ATTRPACK resynch_pak;
 
 typedef struct

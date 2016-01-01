@@ -277,6 +277,7 @@ static inline void P_NetArchivePlayers(void)
 		WRITEUINT32(save_p, players[i].climbtime);
 		WRITEUINT32(save_p, players[i].damagededuct);
 		WRITEUINT32(save_p, players[i].levelscore);
+		WRITEUINT8(save_p, players[i].bubbletag);
 	}
 }
 
@@ -449,6 +450,7 @@ static inline void P_NetUnArchivePlayers(void)
 		players[i].climbtime = READUINT32(save_p);
 		players[i].damagededuct = READUINT32(save_p);
 		players[i].levelscore = READUINT32(save_p);
+		players[i].bubbletag = READUINT8(save_p);
 	}
 }
 

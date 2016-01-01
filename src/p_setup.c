@@ -2067,6 +2067,7 @@ static void P_LevelInitStuff(void)
 		players[i].levelscore = 0;
 
 		players[i].damagededuct = 0;
+		players[i].bubbletag = false;
 
 		players[i].emblems = 0; // ND emblems
 
