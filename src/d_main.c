@@ -1148,7 +1148,7 @@ void D_SRB2Main(void)
 	// Top Down file MD5s
 	//W_VerifyFileMD5(1, "b32517aa75cfcd3154037340a835ee99"); // zones.td
 	W_VerifyFileMD5(2, "e6d142d9fdaee3251b497358a53fb424"); // player.td
-	//W_VerifyFileMD5(4, "bfffe2fec3ad2b0d189ac5fa7573ce7a"); // assetpack.td
+	W_VerifyFileMD5(4, "bfffe2fec3ad2b0d189ac5fa7573ce7a"); // assetpack.td
 	//W_VerifyFileMD5(5, "3f273fb9e5b74904ac62c73037599d89"); // tddata.td
 
 	// don't check music.dta because people like to modify it, and it doesn't matter if they do
