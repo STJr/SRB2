@@ -9972,8 +9972,35 @@ void P_BubblePlayer(player_t *player)
 
 void P_UnbubblePlayer(player_t *player)
 {
-	if (GETSECSPECIAL(player->mo->subsector->sector->special, 1) >= 6 && GETSECSPECIAL(player->mo->subsector->sector->special, 1) <= 8 && player->bubbletag)
-		return;
+
+	sector_t *sec = player->mo->subsector->sector;
+    sector_t *checksec = sec;
+ 
+    // Check for a floor sector that's in our way
+    if (sec->ffloors)
+    {
+        ffloor_t *rover;
+        sector_t *roversec;
+ 
+        for (rover = sec->ffloors; rover; rover = rover->next)
+        {
+            if (!(rover->flags & FF_EXISTS))
+                continue;
+ 
+            if ((!(rover->flags & FF_SOLID) || (rover->flags & FF_SWIMMABLE)))
+                continue;
+ 
+            if (*rover->topheight > player->mo->z)
+                continue;
+ 
+            roversec = &sectors[rover->secnum];
+            if (roversec->ceilingheight > (checksec == sec ? checksec->floorheight : checksec->ceilingheight))
+                checksec = roversec;
+        }
+    }
+ 
+    if (GETSECSPECIAL(checksec->special, 1) >= 6 && GETSECSPECIAL(checksec->special, 1) <= 8 && player->bubbletag)
+        return;
 	player->playerstate = PST_LIVE; // They're alive
 	player->mo->momx = player->mo->momy = player->mo->momz = 0; // No speed
 	P_SetPlayerMobjState(player->mo, S_PLAY_FALL1);

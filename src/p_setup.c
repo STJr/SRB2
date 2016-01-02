@@ -991,7 +991,7 @@ static inline void P_SpawnEmblems(void)
 		emblemmobj->color = (UINT8)color;
 
 		if (emblemlocations[i].collected
-			|| (emblemlocations[i].type == ET_SKIN && emblemlocations[i].var != players[0].skin))
+			|| (emblemlocations[i].type == ET_SKIN && !netgame && emblemlocations[i].var != players[0].skin))
 		{
 			P_UnsetThingPosition(emblemmobj);
 			emblemmobj->flags |= MF_NOCLIP;
@@ -1008,7 +1008,7 @@ static inline void P_SpawnEmblems(void)
 static void P_SpawnSecretItems(boolean loademblems)
 {
 	// Now let's spawn those funky emblem things! Tails 12-08-2002
-	if (netgame || multiplayer || (modifiedgame && !savemoddata)) // No cheating!!
+	if (modifiedgame && !savemoddata) // No cheating!!
 		return;
 
 	if (loademblems)
