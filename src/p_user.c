@@ -4079,13 +4079,19 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					{
 						// Catapult the player
 						fixed_t actionspd = player->actionspd;
+						
+						if (player->charability == CA_DASHMODE)
+							actionspd = max(player->normalspeed, FixedDiv(player->speed, player->mo->scale));
+						
 						if (player->mo->eflags & MFE_UNDERWATER)
 							actionspd >>= 1;
+						
 						if ((player->charability == CA_JUMPTHOK) && !(player->pflags & PF_THOKKED))
 						{
 							player->pflags &= ~PF_JUMPED;
 							P_DoJump(player, false);
 						}
+						
 						P_InstaThrust(player->mo, player->mo->angle, FixedMul(actionspd, player->mo->scale));
 
 						if (maptol & TOL_2D)
