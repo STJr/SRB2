@@ -2823,7 +2823,7 @@ static void M_DrawSlider(INT32 x, INT32 y, const consvar_t *cv)
 void M_DrawTextBox(INT32 x, INT32 y, INT32 width, INT32 boxlines)
 {
 	// Solid color textbox.
-	V_DrawFill(x+5, y+5, width*8+6, boxlines*8+6, 239);
+	V_DrawFill(x+5, y+5, width*8+6, boxlines*8+6, 159);
 	//V_DrawFill(x+8, y+8, width*8, boxlines*8, 31);
 /*
 	patch_t *p;
@@ -7406,3 +7406,4 @@ static void M_HandleFogColor(INT32 choice)
 	}
 }
 #endif
+

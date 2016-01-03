@@ -2285,7 +2285,7 @@ static void Sk_SetDefaultValue(skin_t *skin)
 	strncpy(skin->face, "MISSING", 8);
 	strncpy(skin->superface, "MISSING", 8);
 
-	skin->starttranscolor = 160;
+	skin->starttranscolor = 96;
 	skin->prefcolor = SKINCOLOR_GREEN;
 
 	skin->normalspeed = 36<<FRACBITS;
