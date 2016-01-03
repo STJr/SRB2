@@ -8671,8 +8671,6 @@ void P_DoPityCheck(player_t *player)
 //
 
 boolean playerdeadview; // show match/chaos/tag/capture the flag rankings while in death view
-INT32 dashmode = 0; // initial variable set for CA_DASHMODE
-boolean dashmodeflag = false;
 
 void P_PlayerThink(player_t *player)
 {
@@ -9160,15 +9158,10 @@ void P_PlayerThink(player_t *player)
 	// Dash mode ability for Metal Sonic
 	if ((player->charability == CA_DASHMODE) && !(maptol & TOL_NIGHTS))		// woo, dashmode! no nights tho.
 	{
-		fixed_t defspeed = skins[player->skin].normalspeed; 	// Default normalspeed.
+#define dashmode player->glidetime
 		fixed_t maxtop = skins[player->skin].normalspeed * 55/36;
 
-		if (!(player->speed > player->normalspeed))		//are we currently exceeding our normalspeed?
-			player->actionspd = player->normalspeed;	//if not, force thok to normalspeed
-		else
-			player->actionspd = player->speed;		//otherwise, thok at your current speed (this fixes super and speedshoes thok slowing you down)
-
-		if (player->speed >= (defspeed - 5*FRACUNIT) || (player->pflags & PF_STARTDASH))   
+		if (player->speed >= FixedMul(skins[player->skin].normalspeed - 5*FRACUNIT, player->mo->scale) || (player->pflags & PF_STARTDASH))
 		{
 			dashmode++; 	// Counter. Adds 1 to dash mode per tic in top speed.
 			if (dashmode == 3*TICRATE)		// This isn't in the ">=" equation because it'd cause the sound to play infinitely.
@@ -9176,42 +9169,32 @@ void P_PlayerThink(player_t *player)
 		}
 		else if (!(player->pflags & PF_SPINNING))
 		{
-			if (dashmode > 0) 
+			if (dashmode > 3)
 				dashmode = dashmode - 3;	// Rather than lose it all, it gently counts back down!
-			else if (dashmode < 0) 
+			else
 				dashmode = 0;
 		}
-
-		if (dashmode >= 3*TICRATE && P_IsObjectOnGround(player->mo))  	// Dash Mode can continue counting in the air, but will only activate on floor touch.
-			dashmodeflag = true;												
 	
 		if (dashmode < 3*TICRATE)	// Exits Dash Mode if you drop below speed/dash counter tics. Not in the above block so it doesn't keep disabling in midair.
 		{
-			player->normalspeed = defspeed; 	// Reset to default if not capable of entering dash mode.
-			player->jumpfactor = 1*FRACUNIT;
-			dashmodeflag = false;
+			player->normalspeed = skins[player->skin].normalspeed; 	// Reset to default if not capable of entering dash mode.
+			player->jumpfactor = skins[player->skin].jumpfactor;
 		}
-		
-		//WHEN PARAMETERS ARE MET, REWARD THE DASH MODE EFFECTS
-		if (dashmodeflag) 
+		else if (P_IsObjectOnGround(player->mo))  	// Activate dash mode if we're on the ground.
 		{
-			if (player->normalspeed < maxtop)   // If the player is not currently at 50 normalspeed in dash mode, add speed each tic
-			{
+			if (player->normalspeed < skins[player->skin].actionspd)   // If the player normalspeed is not currently at actionspd in dash mode, add speed each tic
 				player->normalspeed = player->normalspeed + 1*FRACUNIT/5; 	// Enter Dash Mode smoothly.
-				if (player->jumpfactor < 5*FRACUNIT/4)
-					player->jumpfactor = player->jumpfactor + 1*FRACUNIT/300; 	// Boosts his jumpheight. Remember fractions instead of decimals. "1.5*FRACUNIT = 3*FRACUNIT/2"				
-			}	
+
+			if (player->jumpfactor < FixedMul(skins[player->skin].jumpfactor, 5*FRACUNIT/4)) // Boost jump height.
+				player->jumpfactor = player->jumpfactor + 1*FRACUNIT/300;
 		}
-		
-		//COSMETIC STUPIDITY!
-		if (dashmode > 108)		//Dash Mode will go down a tic a bit above activation, this makes dust spawn every other tic.
-			dashmode = 107;
-			
-		if (player->normalspeed >= maxtop) 
+
+		if (player->normalspeed >= skins[player->skin].actionspd)
 		{
 			mobj_t *ghost = P_SpawnGhostMobj(player->mo); 	// Spawns afterimages
 			ghost->fuse = 2;	// Makes the images fade quickly
 		}
+#undef dashmode
 	}
 	
 /*
