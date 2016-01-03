@@ -1085,7 +1085,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 	if (!cv_grmd2.value)
 		return;
 
-	if (!spr->precip)
+	if (spr->precip)
 		return;
 
 	// MD2 colormap fix
