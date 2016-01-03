@@ -5924,8 +5924,6 @@ static void P_NightsItemChase(mobj_t *thing)
 
 static boolean P_ShieldLook(mobj_t *thing, shieldtype_t shield)
 {
-	fixed_t destx, desty;
-
 	if (!thing->target || thing->target->health <= 0 || !thing->target->player
 		|| (thing->target->player->powers[pw_shield] & SH_NOSTACK) == SH_NONE || thing->target->player->powers[pw_super]
 		|| thing->target->player->powers[pw_invulnerability] > 1)
@@ -5948,26 +5946,6 @@ static boolean P_ShieldLook(mobj_t *thing, shieldtype_t shield)
 	{ // Force shields check for any force shield
 		P_RemoveMobj(thing);
 		return false;
-	}
-
-	if (!splitscreen && rendermode != render_soft)
-	{
-		angle_t viewingangle;
-
-		if (players[displayplayer].awayviewtics)
-			viewingangle = R_PointToAngle2(thing->target->x, thing->target->y, players[displayplayer].awayviewmobj->x, players[displayplayer].awayviewmobj->y);
-		else if (!camera.chase && players[displayplayer].mo)
-			viewingangle = R_PointToAngle2(thing->target->x, thing->target->y, players[displayplayer].mo->x, players[displayplayer].mo->y);
-		else
-			viewingangle = R_PointToAngle2(thing->target->x, thing->target->y, camera.x, camera.y);
-
-		destx = thing->target->x + P_ReturnThrustX(thing->target, viewingangle, FixedMul(FRACUNIT, thing->scale));
-		desty = thing->target->y + P_ReturnThrustY(thing->target, viewingangle, FixedMul(FRACUNIT, thing->scale));
-	}
-	else
-	{
-		destx = thing->target->x;
-		desty = thing->target->y;
 	}
 
 	if (shield == SH_FORCE && thing->movecount != (thing->target->player->powers[pw_shield] & 0xFF))
@@ -5994,8 +5972,8 @@ static boolean P_ShieldLook(mobj_t *thing, shieldtype_t shield)
 
 	P_SetScale(thing, thing->target->scale);
 	P_UnsetThingPosition(thing);
-	thing->x = destx;
-	thing->y = desty;
+	thing->x = thing->target->x;
+	thing->y = thing->target->y;
 	if (thing->eflags & MFE_VERTICALFLIP)
 		thing->z = thing->target->z + thing->target->height - thing->height + FixedDiv(P_GetPlayerHeight(thing->target->player) - thing->target->height, 3*FRACUNIT) - FixedMul(2*FRACUNIT, thing->target->scale);
 	else
