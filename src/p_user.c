@@ -9159,8 +9159,6 @@ void P_PlayerThink(player_t *player)
 	if ((player->charability == CA_DASHMODE) && !(maptol & TOL_NIGHTS))		// woo, dashmode! no nights tho.
 	{
 #define dashmode player->glidetime
-		fixed_t maxtop = skins[player->skin].normalspeed * 55/36;
-
 		if (player->speed >= FixedMul(skins[player->skin].normalspeed - 5*FRACUNIT, player->mo->scale) || (player->pflags & PF_STARTDASH))
 		{
 			dashmode++; 	// Counter. Adds 1 to dash mode per tic in top speed.
