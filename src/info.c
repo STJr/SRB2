@@ -6578,7 +6578,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_pop,        // deathsound
 		0,              // speed
 		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
+		36*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_PITY_ICON,   // damage
@@ -6605,7 +6605,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_pop,        // deathsound
 		0,              // speed
 		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
+		36*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_ATTRACT_ICON,// damage
@@ -6632,7 +6632,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_pop,        // deathsound
 		0,              // speed
 		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
+		36*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_FORCE_ICON,  // damage
@@ -6659,7 +6659,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_pop,        // deathsound
 		0,              // speed
 		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
+		36*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_ARMAGEDDON_ICON, // damage
@@ -6686,7 +6686,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_pop,        // deathsound
 		0,              // speed
 		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
+		36*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_WHIRLWIND_ICON, // damage
@@ -6713,7 +6713,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_pop,        // deathsound
 		0,              // speed
 		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
+		36*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_ELEMENTAL_ICON, // damage
@@ -6740,7 +6740,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_pop,        // deathsound
 		0,              // speed
 		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
+		36*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_SNEAKERS_ICON, // damage
@@ -6767,7 +6767,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_pop,        // deathsound
 		0,              // speed
 		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
+		36*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_INVULN_ICON, // damage
@@ -6794,7 +6794,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_pop,        // deathsound
 		0,              // speed
 		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
+		36*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		MT_GRAVITY_ICON, // damage
