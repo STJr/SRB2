@@ -143,9 +143,9 @@ extern FILE *logstream;
 #define SUBVERSION 0 // more precise version number
 #define VERSIONSTRING "Trunk"
 #else
-#define VERSION    201 // Game version
-#define SUBVERSION 14  // more precise version number
-#define VERSIONSTRING "v2.1.14"
+#define VERSION    120 // Game version
+#define SUBVERSION 4  // more precise version number
+#define VERSIONSTRING "TD v1.0" // Originally v2.1.14. Keep this updated.
 // Hey! If you change this, add 1 to the MODVERSION below!
 // Otherwise we can't force updates!
 #endif
@@ -197,7 +197,7 @@ extern FILE *logstream;
 // The Modification ID; must be obtained from Inuyasha ( http://mb.srb2.org/private.php?do=newpm&u=2604 ).
 // DO NOT try to set this otherwise, or your modification will be unplayable through the Master Server.
 // "12" is the default mod ID for version 2.1
-#define MODID 14
+#define MODID 14 // TopDown's MODID is 14. Do not change this.
 
 // The Modification Version, starting from 1. Do not follow your version string for this,
 // it's only for detection of the version the player is using so the MS can alert them of an update.
