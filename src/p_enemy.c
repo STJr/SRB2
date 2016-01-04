@@ -7678,48 +7678,35 @@ void A_SetTargetsTarget(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
-	mobj_t *targetedmobj = NULL;
-	thinker_t *th;
-	mobj_t *mo2;
+	mobj_t *oldtarg = NULL, *newtarg = NULL;
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_SetTargetsTarget", actor))
 		return;
 #endif
 
-	if ((!locvar1 && (!actor->target)) || (locvar1 && (!actor->tracer)))
+	// actor's target
+	if (locvar1) // or tracer
+		oldtarg = actor->tracer;
+	else
+		oldtarg = actor->target;
+
+	if (P_MobjWasRemoved(oldtarg))
 		return;
 
-	if ((!locvar1 && !locvar2 && (!actor->target->target))
-	|| (!locvar1 && locvar2 && (!actor->target->tracer))
-	|| (locvar1 && !locvar2 && (!actor->tracer->target))
-	|| (locvar1 && locvar2 && (!actor->tracer->tracer)))
-		return; // Don't search for nothing.
-
-	// scan the thinkers
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
-	{
-		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-			continue;
-
-		mo2 = (mobj_t *)th;
-
-		if ((!locvar1 && !locvar2 && (mo2 == actor->target->target))
-		|| (!locvar1 && locvar2 && (mo2 == actor->target->tracer))
-		|| (locvar1 && !locvar2 && (mo2 == actor->tracer->target))
-		|| (locvar1 && locvar2 && (mo2 == actor->tracer->tracer)))
-		{
-			targetedmobj = mo2;
-			break;
-		}
-	}
-
-	if (!targetedmobj)
-		return; // Oops, nothing found..
-
-	if (!locvar1)
-		P_SetTarget(&actor->target, targetedmobj);
+	// actor's target's target!
+	if (locvar2) // or tracer
+		newtarg = oldtarg->tracer;
 	else
-		P_SetTarget(&actor->tracer, targetedmobj);
+		newtarg = oldtarg->target;
+
+	if (P_MobjWasRemoved(newtarg))
+		return;
+
+	// set actor's new target
+	if (locvar1) // or tracer
+		P_SetTarget(&actor->tracer, newtarg);
+	else
+		P_SetTarget(&actor->target, newtarg);
 }
 
 // Function: A_SetObjectFlags
