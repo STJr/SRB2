@@ -2541,7 +2541,6 @@ void A_1upThinker(mobj_t *actor)
 
 	if (closestplayer == -1 || skins[players[closestplayer].skin].sprites[SPR2_LIFE].numframes == 0)
 	{ // Closest player not found (no players in game?? may be empty dedicated server!), or does not have correct sprite.
-		actor->sprite = SPR_TV1U;
 		if (actor->tracer) {
 			P_RemoveMobj(actor->tracer);
 			actor->tracer = NULL;
@@ -2549,11 +2548,19 @@ void A_1upThinker(mobj_t *actor)
 		return;
 	}
 
+	// We're using the overlay, so use the overlay 1up box (no text)
+	actor->sprite = SPR_TV1P;
+
 	if (!actor->tracer)
 	{
 		P_SetTarget(&actor->tracer, P_SpawnMobj(actor->x, actor->y, actor->z, MT_OVERLAY));
 		P_SetTarget(&actor->tracer->target, actor);
 		P_SetMobjState(actor->tracer, actor->info->seestate);
+
+		// The overlay is going to be one tic early turning off and on
+		// because it's going to get its thinker run the frame we spawned it.
+		// So make it take one tic longer if it just spawned.
+		++actor->tracer->tics;
 	}
 
 	actor->tracer->color = players[closestplayer].mo->color;
@@ -2621,7 +2628,7 @@ void A_MonitorPop(mobj_t *actor)
 		 || !newmobj->target->player
 		 || !newmobj->target->skin
 		 || ((skin_t *)newmobj->target->skin)->sprites[SPR2_LIFE].numframes == 0)
-			newmobj->sprite = SPR_TV1U; // No lives icon for this player, use the default.
+			{} // No lives icon for this player, use the default.
 		else
 		{ // Spawn the lives icon.
 			mobj_t *livesico = P_SpawnMobjFromMobj(newmobj, 0, 0, 0, MT_OVERLAY);
@@ -2631,6 +2638,9 @@ void A_MonitorPop(mobj_t *actor)
 			livesico->color = newmobj->target->player->mo->color;
 			livesico->skin = &skins[newmobj->target->player->skin];
 			P_SetMobjState(livesico, newmobj->info->seestate);
+
+			// We're using the overlay, so use the overlay 1up sprite (no text)
+			newmobj->sprite = SPR_TV1P;
 		}
 	}
 }
@@ -2702,7 +2712,7 @@ void A_GoldMonitorPop(mobj_t *actor)
 		 || !newmobj->target->player
 		 || !newmobj->target->skin
 		 || ((skin_t *)newmobj->target->skin)->sprites[SPR2_LIFE].numframes == 0)
-			newmobj->sprite = SPR_TV1U; // No lives icon for this player, use the default.
+			{} // No lives icon for this player, use the default.
 		else
 		{ // Spawn the lives icon.
 			mobj_t *livesico = P_SpawnMobjFromMobj(newmobj, 0, 0, 0, MT_OVERLAY);
@@ -2712,6 +2722,9 @@ void A_GoldMonitorPop(mobj_t *actor)
 			livesico->color = newmobj->target->player->mo->color;
 			livesico->skin = &skins[newmobj->target->player->skin];
 			P_SetMobjState(livesico, newmobj->info->seestate);
+
+			// We're using the overlay, so use the overlay 1up sprite (no text)
+			newmobj->sprite = SPR_TV1P;
 		}
 	}
 }
@@ -3241,8 +3254,11 @@ void A_ExtraLife(mobj_t *actor)
 
 	player = actor->target->player;
 
-	if (actor->type == MT_1UP_ICON && !actor->tracer)
-		actor->sprite = SPR_TV1U; // No lives icon for this player, use the default.
+	if (actor->type == MT_1UP_ICON && actor->tracer)
+	{
+		// We're using the overlay, so use the overlay 1up sprite (no text)
+		actor->sprite = SPR_TV1P;
+	}
 
 	if (ultimatemode) //I don't THINK so!
 	{
