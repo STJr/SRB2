@@ -1854,10 +1854,10 @@ static void Got_Pause(UINT8 **cp, INT32 playernum)
 		if (paused)
 		{
 			if (!menuactive || netgame)
-				S_PauseSound();
+				S_PauseAudio();
 		}
 		else
-			S_ResumeSound();
+			S_ResumeAudio();
 	}
 }
 
@@ -3761,46 +3761,53 @@ static void Command_Displayplayer_f(void)
 static void Command_Tunes_f(void)
 {
 	const char *tunearg;
-	UINT16 tune, track = 0;
+	UINT16 tunenum, track = 0;
 	const size_t argc = COM_Argc();
 
 	if (argc < 2) //tunes slot ...
 	{
-		CONS_Printf("tunes <slot #/map name/\"default\"> <speed> <track>:\n");
+		CONS_Printf("tunes <name/num/\"default\"/\"none\"> <speed> <track>:\n");
 		CONS_Printf(M_GetText("Play a music slot at a set speed (\"1\" being normal speed).\n"));
 		CONS_Printf(M_GetText("If the format supports multiple songs, you can specify which one to play.\n"));
-		CONS_Printf(M_GetText("The current tune is: %d\nThe current track is: %d\n"),
-			(mapmusic & MUSIC_SONGMASK), ((mapmusic & MUSIC_TRACKMASK) >> MUSIC_TRACKSHIFT));
+		CONS_Printf(M_GetText("The current tune is: %s\nThe current track is: %d\n"),
+			mapmusname, (mapmusflags & MUSIC_TRACKMASK));
 		return;
 	}
 
 	tunearg = COM_Argv(1);
-	tune = (UINT16)atoi(tunearg);
+	tunenum = (UINT16)atoi(tunearg);
 	track = 0;
 
-	if (!strcasecmp(tunearg, "default"))
+	if (!strcasecmp(tunearg, "none"))
 	{
-		tune = mapheaderinfo[gamemap-1]->musicslot;
-		track = mapheaderinfo[gamemap-1]->musicslottrack;
+		S_StopMusic();
+		return;
 	}
-	else if (toupper(tunearg[0]) >= 'A' && toupper(tunearg[0]) <= 'Z')
-		tune = (UINT16)M_MapNumber(tunearg[0], tunearg[1]);
-
-	if (tune >= NUMMUSIC)
+	else if (!strcasecmp(tunearg, "default"))
 	{
-		CONS_Alert(CONS_NOTICE, M_GetText("Valid slots are 1 to %d, or 0 to stop music\n"), NUMMUSIC - 1);
+		tunearg = mapheaderinfo[gamemap-1]->musname;
+		track = mapheaderinfo[gamemap-1]->mustrack;
+	}
+	else if (tunearg[3] == 0 && toupper(tunearg[0]) >= 'A' && toupper(tunearg[0]) <= 'Z')
+		tunenum = (UINT16)M_MapNumber(tunearg[0], tunearg[1]);
+
+	if (tunenum && tunenum >= 1036)
+	{
+		CONS_Alert(CONS_NOTICE, M_GetText("Valid music slots are 1 to 1035.\n"));
 		return;
 	}
 
 	if (argc > 3)
 		track = (UINT16)atoi(COM_Argv(3))-1;
 
-	mapmusic = tune | (track << MUSIC_TRACKSHIFT);
-
-	if (tune == mus_None)
-		S_StopMusic();
+	if (tunenum)
+		snprintf(mapmusname, 7, "%sM", G_BuildMapName(tunenum));
 	else
-		S_ChangeMusic(mapmusic, true);
+		strncpy(mapmusname, tunearg, 7);
+	mapmusname[6] = 0;
+	mapmusflags = (track & MUSIC_TRACKMASK);
+
+	S_ChangeMusic(mapmusname, mapmusflags, true);
 
 	if (argc > 2)
 	{

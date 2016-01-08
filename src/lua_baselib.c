@@ -1636,9 +1636,10 @@ static int lib_sStopSound(lua_State *L)
 
 static int lib_sChangeMusic(lua_State *L)
 {
-	UINT32 music_num = (UINT32)luaL_checkinteger(L, 1);
+	const char *music_name = luaL_checkstring(L, 1);
 	boolean looping = (boolean)lua_opttrueboolean(L, 2);
 	player_t *player = NULL;
+	UINT16 music_flags = 0;
 	NOHUD
 	if (!lua_isnone(L, 3) && lua_isuserdata(L, 3))
 	{
@@ -1646,8 +1647,10 @@ static int lib_sChangeMusic(lua_State *L)
 		if (!player)
 			return LUA_ErrInvalid(L, "player_t");
 	}
+	music_flags = (UINT16)luaL_optinteger(L, 4, 0);
+
 	if (!player || P_IsLocalPlayer(player))
-	S_ChangeMusic(music_num, looping);
+		S_ChangeMusic(music_name, music_flags, looping);
 	return 0;
 }
 

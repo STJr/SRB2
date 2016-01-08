@@ -65,7 +65,6 @@ static mobjtype_t get_mobjtype(const char *word);
 static statenum_t get_state(const char *word);
 static spritenum_t get_sprite(const char *word);
 static sfxenum_t get_sfx(const char *word);
-static UINT16 get_mus(const char *word);
 static hudnum_t get_huditem(const char *word);
 #ifndef HAVE_BLUA
 static powertype_t get_power(const char *word);
@@ -1164,19 +1163,34 @@ static void readlevelheader(MYFILE *f, INT32 num)
 					mapheaderinfo[num-1]->typeoflevel = tol;
 				}
 			}
-			else if (fastcmp(word, "MUSICSLOT"))
+			else if (fastcmp(word, "MUSIC"))
 			{
+				if (fastcmp(word2, "NONE"))
+					mapheaderinfo[num-1]->musname[0] = 0; // becomes empty string
+				else
+				{
+					deh_strlcpy(mapheaderinfo[num-1]->musname, word2,
+						sizeof(mapheaderinfo[num-1]->musname), va("Level header %d: music", num));
+				}
+			}
+			else if (fastcmp(word, "MUSICSLOT"))
+			{ // Backwards compatibility?
 				// Convert to map number
 				if (word2[0] >= 'A' && word2[0] <= 'Z' && word2[2] == '\0')
 					i = M_MapNumber(word2[0], word2[1]);
 
-				if (i) // it's just a number
-					mapheaderinfo[num-1]->musicslot = (UINT16)i;
-				else // No? Okay, now we'll get technical.
-					mapheaderinfo[num-1]->musicslot = get_mus(word2); // accepts all of O_CHRSEL, mus_chrsel, or just plain ChrSel
+				if (!i)
+					mapheaderinfo[num-1]->musname[0] = 0; // becomes empty string
+				else if (i > 1035)
+					deh_warning("Level header %d: musicslot out of range (0 - 1035)\n", num);
+				else // it's just a number
+				{
+					snprintf(mapheaderinfo[num-1]->musname, 7, va("%sM", G_BuildMapName(i)));
+					mapheaderinfo[num-1]->musname[6] = 0;
+				}
 			}
-			else if (fastcmp(word, "MUSICSLOTTRACK"))
-				mapheaderinfo[num-1]->musicslottrack = ((UINT16)i - 1);
+			else if (fastcmp(word, "MUSICTRACK"))
+				mapheaderinfo[num-1]->mustrack = ((UINT16)i - 1);
 			else if (fastcmp(word, "FORCECHARACTER"))
 			{
 				strlcpy(mapheaderinfo[num-1]->forcecharacter, word2, SKINNAMESIZE+1);
@@ -1443,10 +1457,16 @@ static void readcutscenescene(MYFILE *f, INT32 num, INT32 scenenum)
 				else
 					deh_warning("CutSceneScene %d: unknown word '%s'", num, word);
 			}
-			else if (fastcmp(word, "MUSICSLOT"))
+			else if (fastcmp(word, "MUSIC"))
 			{
-				DEH_WriteUndoline(word, va("%u", cutscenes[num]->scene[scenenum].musicslot), UNDO_NONE);
-				cutscenes[num]->scene[scenenum].musicslot = get_mus(word2); // accepts all of O_MAP01M, mus_map01m, or just plain MAP01M
+				DEH_WriteUndoline(word, cutscenes[num]->scene[scenenum].musswitch, UNDO_NONE);
+				strncpy(cutscenes[num]->scene[scenenum].musswitch, word2, 7);
+				cutscenes[num]->scene[scenenum].musswitch[6] = 0;
+			}
+			else if (fastcmp(word, "MUSICTRACK"))
+			{
+				DEH_WriteUndoline(word, va("%u", cutscenes[num]->scene[scenenum].musswitchflags), UNDO_NONE);
+				cutscenes[num]->scene[scenenum].musswitchflags = ((UINT16)i) & MUSIC_TRACKMASK;
 			}
 			else if (fastcmp(word, "MUSICLOOP"))
 			{
@@ -7958,22 +7978,6 @@ static sfxenum_t get_sfx(const char *word)
 	return sfx_None;
 }
 
-static UINT16 get_mus(const char *word)
-{ // Returns the value of SFX_ enumerations
-	UINT16 i;
-	if (*word >= '0' && *word <= '9')
-		return atoi(word);
-	if (fastncmp("MUS_",word,4))
-		word += 4; // take off the MUS_
-	else if (fastncmp("O_",word,2) || fastncmp("D_",word,2))
-		word += 2; // take off the O_ or D_
-	for (i = 0; i < NUMMUSIC; i++)
-		if (S_music[i].name && fasticmp(word, S_music[i].name))
-			return i;
-	deh_warning("Couldn't find music named 'MUS_%s'",word);
-	return mus_None;
-}
-
 static hudnum_t get_huditem(const char *word)
 { // Returns the value of HUD_ enumerations
 	hudnum_t i;
@@ -8169,11 +8173,6 @@ static fixed_t find_const(const char **rword)
 	}
 	else if (fastncmp("SFX_",word,4) || fastncmp("DS",word,2)) {
 		r = get_sfx(word);
-		free(word);
-		return r;
-	}
-	else if (fastncmp("MUS_",word,4) || fastncmp("O_",word,2)) {
-		r = get_mus(word);
 		free(word);
 		return r;
 	}
@@ -8546,33 +8545,6 @@ static inline int lib_getenum(lua_State *L)
 		if (mathlib) return luaL_error(L, "sfx '%s' could not be found.\n", word);
 		return 0;
 	}
-	else if (!mathlib && fastncmp("mus_",word,4)) {
-		p = word+4;
-		for (i = 0; i < NUMMUSIC; i++)
-			if (S_music[i].name && fastcmp(p, S_music[i].name)) {
-				lua_pushinteger(L, i);
-				return 1;
-			}
-		return 0;
-	}
-	else if (mathlib && fastncmp("MUS_",word,4)) { // SOCs are ALL CAPS!
-		p = word+4;
-		for (i = 0; i < NUMMUSIC; i++)
-			if (S_music[i].name && fasticmp(p, S_music[i].name)) {
-				lua_pushinteger(L, i);
-				return 1;
-			}
-		return luaL_error(L, "music '%s' could not be found.\n", word);
-	}
-	else if (mathlib && (fastncmp("O_",word,2) || fastncmp("D_",word,2))) {
-		p = word+2;
-		for (i = 0; i < NUMMUSIC; i++)
-			if (S_music[i].name && fasticmp(p, S_music[i].name)) {
-				lua_pushinteger(L, i);
-				return 1;
-			}
-		return luaL_error(L, "music '%s' could not be found.\n", word);
-	}
 	else if (!mathlib && fastncmp("pw_",word,3)) {
 		p = word+3;
 		for (i = 0; i < NUMPOWERS; i++)
@@ -8724,8 +8696,11 @@ static inline int lib_getenum(lua_State *L)
 	} else if (fastcmp(word,"globallevelskynum")) {
 		lua_pushinteger(L, globallevelskynum);
 		return 1;
-	} else if (fastcmp(word,"mapmusic")) {
-		lua_pushinteger(L, mapmusic);
+	} else if (fastcmp(word,"mapmusname")) {
+		lua_pushstring(L, mapmusname);
+		return 1;
+	} else if (fastcmp(word,"mapmusflags")) {
+		lua_pushinteger(L, mapmusflags);
 		return 1;
 	} else if (fastcmp(word,"server")) {
 		if ((!multiplayer || !netgame) && !playeringame[serverplayer])
