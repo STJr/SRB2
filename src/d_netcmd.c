@@ -3784,7 +3784,7 @@ static void Command_Tunes_f(void)
 		tunearg = mapheaderinfo[gamemap-1]->musname;
 		track = mapheaderinfo[gamemap-1]->mustrack;
 	}
-	else if (tunearg[3] == 0 && toupper(tunearg[0]) >= 'A' && toupper(tunearg[0]) <= 'Z')
+	else if (!tunearg[2] && toupper(tunearg[0]) >= 'A' && toupper(tunearg[0]) <= 'Z')
 		tunenum = (UINT16)M_MapNumber(tunearg[0], tunearg[1]);
 
 	if (tunenum && tunenum >= 1036)
