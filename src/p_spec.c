@@ -2392,7 +2392,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			{
 				UINT16 tracknum = (UINT16)sides[line->sidenum[0]].bottomtexture;
 
-				strncpy(mapmusname, line->text, 7);
+				strncpy(mapmusname, sides[line->sidenum[0]].text, 7);
 				mapmusname[6] = 0;
 
 				mapmusflags = tracknum & MUSIC_TRACKMASK;
