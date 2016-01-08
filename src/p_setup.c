@@ -1451,8 +1451,16 @@ static void P_LoadSideDefs2(lumpnum_t lumpnum)
 					sd->bottomtexture = get_number(process)-1;
 				}
 				M_Memcpy(process,msd->toptexture,8);
-				sd->text = Z_Malloc(strlen(process)+1, PU_LEVEL, NULL);
-				M_Memcpy(sd->text, process, strlen(process)+1);
+				process[8] = '\0';
+				sd->text = Z_Malloc(7, PU_LEVEL, NULL);
+
+				// If they type in O_ or D_ and their music name, just shrug,
+				// then copy the rest instead.
+				if ((process[0] == 'O' || process[0] == 'D') && process[7])
+					M_Memcpy(sd->text, process+2, 6);
+				else // Assume it's a proper music name.
+					M_Memcpy(sd->text, process, 6);
+				sd->text[6] = 0;
 				break;
 			}
 			case 414: // Play SFX
