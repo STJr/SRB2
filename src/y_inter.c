@@ -632,7 +632,7 @@ void Y_Ticker(void)
 		boolean anybonuses = false;
 
 		if (!intertic) // first time only
-			S_ChangeMusic(mus_lclear, false); // don't loop it
+			S_ChangeMusicInternal("lclear", false); // don't loop it
 
 		if (intertic < TICRATE) // one second pause before tally begins
 			return;
@@ -693,7 +693,7 @@ void Y_Ticker(void)
 
 		if (!intertic) // first time only
 		{
-			S_ChangeMusic(mus_lclear, false); // don't loop it
+			S_ChangeMusicInternal("lclear", false); // don't loop it
 			tallydonetic = 0;
 		}
 
@@ -754,7 +754,7 @@ void Y_Ticker(void)
 	else if (intertype == int_match || intertype == int_ctf || intertype == int_teammatch) // match
 	{
 		if (!intertic) // first time only
-			S_ChangeMusic(mus_racent, true); // loop it
+			S_ChangeMusicInternal("racent", true); // loop it
 
 		// If a player has left or joined, recalculate scores.
 		if (data.match.numplayers != D_NumPlayers())
@@ -763,7 +763,7 @@ void Y_Ticker(void)
 	else if (intertype == int_race || intertype == int_classicrace) // race
 	{
 		if (!intertic) // first time only
-			S_ChangeMusic(mus_racent, true); // loop it
+			S_ChangeMusicInternal("racent", true); // loop it
 
 		// Don't bother recalcing for race. It doesn't make as much sense.
 	}

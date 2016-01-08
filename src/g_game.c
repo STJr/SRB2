@@ -69,8 +69,10 @@ static void G_DoStartContinue(void);
 static void G_DoContinued(void);
 static void G_DoWorldDone(void);
 
+char   mapmusname[7]; // Music name
+UINT16 mapmusflags; // Track and reset bit
+
 INT16 gamemap = 1;
-UINT32 mapmusic; // music, track, and reset bit
 INT16 maptol;
 UINT8 globalweather = 0;
 INT32 curWeather = PRECIP_NONE;
@@ -2185,12 +2187,13 @@ void G_PlayerReborn(INT32 player)
 
 	if (p-players == consoleplayer)
 	{
-		if (mapmusic & MUSIC_RELOADRESET) // TODO: Might not need this here
+		if (mapmusflags & MUSIC_RELOADRESET)
 		{
-			mapmusic = mapheaderinfo[gamemap-1]->musicslot
-				| (mapheaderinfo[gamemap-1]->musicslottrack << MUSIC_TRACKSHIFT);
+			strncpy(mapmusname, mapheaderinfo[gamemap-1]->musname, 7);
+			mapmusname[6] = 0;
+			mapmusflags = mapheaderinfo[gamemap-1]->mustrack & MUSIC_TRACKMASK;
 		}
-		S_ChangeMusic(mapmusic, true);
+		S_ChangeMusic(mapmusname, mapmusflags, true);
 	}
 
 	if (gametype == GT_COOP)
@@ -3524,7 +3527,7 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 	if (paused)
 	{
 		paused = false;
-		S_ResumeSound();
+		S_ResumeAudio();
 	}
 
 	if (netgame || multiplayer) // Nice try, haxor.
@@ -3598,7 +3601,7 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 	globalweather = mapheaderinfo[gamemap-1]->weather;
 
 	// Don't carry over custom music change to another map.
-	mapmusic |= MUSIC_RELOADRESET;
+	mapmusflags |= MUSIC_RELOADRESET;
 
 	ultimatemode = pultmode;
 	playerdeadview = false;

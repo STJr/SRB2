@@ -1171,10 +1171,10 @@ static int mapheaderinfo_get(lua_State *L)
 		lua_pushinteger(L, header->typeoflevel);
 	else if (fastcmp(field,"nextlevel"))
 		lua_pushinteger(L, header->nextlevel);
-	else if (fastcmp(field,"musicslot"))
-		lua_pushinteger(L, header->musicslot);
-	else if (fastcmp(field,"musicslottrack"))
-		lua_pushinteger(L, header->musicslottrack);
+	else if (fastcmp(field,"musname"))
+		lua_pushlstring(L, header->musname, 6);
+	else if (fastcmp(field,"mustrack"))
+		lua_pushinteger(L, header->mustrack);
 	else if (fastcmp(field,"forcecharacter"))
 		lua_pushlstring(L, header->forcecharacter, 16);
 	else if (fastcmp(field,"weather"))
