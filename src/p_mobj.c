@@ -6997,7 +6997,7 @@ void P_MobjThinker(mobj_t *mobj)
 				{
 					fixed_t dist = P_AproxDistance(mobj->target->x - mobj->x, mobj->target->y - mobj->y);
 
-					if (dist < 256*FRACUNIT) // When he's close enough above the player, stop and fire
+					if (dist < 128*FRACUNIT) // When he's close enough above the player, stop and fire
 					{
 						mobj->momx = mobj->momy = mobj->momz = 0;
 
