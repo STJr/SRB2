@@ -2874,7 +2874,8 @@ static void G_DoCompleted(void)
 
 	// We are committed to this map now.
 	// We may as well allocate its header if it doesn't exist
-	if(!mapheaderinfo[nextmap])
+	// (That is, if it's a real map)
+	if (nextmap < NUMMAPS && !mapheaderinfo[nextmap])
 		P_AllocMapHeader(nextmap);
 
 	if (skipstats)
