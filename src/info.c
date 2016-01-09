@@ -57,8 +57,8 @@ char sprnames[NUMSPRITES + 1][5] =
 
 	"SHAD","FLEN","BUBB","SBCH","BBCH","MHEL","MXCL","ARRO","PINT","PINB",
 	"CLUK","TOXO","KRKO","ZAPO","ZAPT","PENG","GANG","FLAR","GPUP","PLSM",
-	"MITR","HMIS","REDI","CHIL","CIRN","CLOD","CKBL","CHRM","STAT","BLFM",
-	"PLMT","GFLO","BLUE","FFTR","BIST","SBUS","CONE",
+	"MITR","HMIS","PINE","REDI","CHIL","CIRN","CLOD","CKBL","CHRM","STAT",
+	"BLFM","PLMT","GFLO","BLUE","FFTR","BIST","SBUS","CONE",
 };
 
 // Doesn't work with g++, needs actionf_p1 (don't modify this comment)
@@ -3284,6 +3284,58 @@ state_t states[NUMSTATES] =
 	{SPR_HMIS, 0, 0, {A_SmokeTrailer}, MT_SMOKE, 0, S_ORBITALMISSILE2}, // S_OBRITALMISSILE5
 
 	// Top Down bosses
+	// Egg Pinball
+	{SPR_PINE, 0, 35, {NULL}, 0, 0, S_EGGPINBALL_INTROLAUGH1}, // S_EGGPINBALL_INTROSTART
+	{SPR_PINE, 1, 5, {NULL}, 0, 0, S_EGGPINBALL_INTROLAUGH2}, // S_EGGPINBALL_INTROLAUGH1
+	{SPR_PINE, 2, 5, {NULL}, 0, 0, S_EGGPINBALL_INTROLAUGH3}, // S_EGGPINBALL_INTROLAUGH2
+	{SPR_PINE, 1, 5, {NULL}, 0, 0, S_EGGPINBALL_INTROLAUGH4}, // S_EGGPINBALL_INTROLAUGH3
+	{SPR_PINE, 2, 5, {NULL}, 0, 0, S_EGGPINBALL_INTROLAUGH5}, // S_EGGPINBALL_INTROLAUGH4
+	{SPR_PINE, 1, 5, {NULL}, 0, 0, S_EGGPINBALL_INTROLAUGH6}, // S_EGGPINBALL_INTROLAUGH5
+	{SPR_PINE, 2, 18, {NULL}, 0, 0, S_EGGPINBALL_INTROWAIT}, // S_EGGPINBALL_INTROLAUGH6
+	{SPR_PINE, 0, 35, {NULL}, 0, 0, S_EGGPINBALL_BEGIN}, // S_EGGPINBALL_INTROWAIT
+	{SPR_PINE, 0, 1, {NULL}, 0, 0, S_EGGPINBALL_NEUTRAL}, // S_EGGPINBALL_BEGIN
+	{SPR_PINE, 0, -1, {NULL}, 0, 0, S_NULL}, // S_EGGPINBALL_NEUTRAL
+
+	{SPR_PINE, 1, 3, {NULL}, 0, 0, S_EGGPINBALL_LAUGH2}, // S_EGGPINBALL_LAUGH1
+	{SPR_PINE, 2, 3, {NULL}, 0, 0, S_EGGPINBALL_LAUGH3}, // S_EGGPINBALL_LAUGH2
+	{SPR_PINE, 1, 3, {NULL}, 0, 0, S_EGGPINBALL_LAUGH4}, // S_EGGPINBALL_LAUGH3
+	{SPR_PINE, 2, 3, {NULL}, 0, 0, S_EGGPINBALL_LAUGH5}, // S_EGGPINBALL_LAUGH4
+	{SPR_PINE, 1, 3, {NULL}, 0, 0, S_EGGPINBALL_LAUGH6}, // S_EGGPINBALL_LAUGH5
+	{SPR_PINE, 2, 3, {NULL}, 0, 0, S_EGGPINBALL_LAUGH7}, // S_EGGPINBALL_LAUGH6
+	{SPR_PINE, 1, 3, {NULL}, 0, 0, S_EGGPINBALL_LAUGH8}, // S_EGGPINBALL_LAUGH7
+	{SPR_PINE, 2, 3, {NULL}, 0, 0, S_EGGPINBALL_LAUGH9}, // S_EGGPINBALL_LAUGH8
+	{SPR_PINE, 1, 3, {NULL}, 0, 0, S_EGGPINBALL_NEUTRAL}, // S_EGGPINBALL_LAUGH9
+
+	{SPR_PINE, 3, 105, {A_Pain}, 0, 0, S_EGGPINBALL_NEUTRAL}, // S_EGGPINBALL_PAIN
+
+	{SPR_PINE, 1, 420, {A_Fall}, 0, 0, S_EGGPINBALL_DIE2}, // S_EGGPINBALL_DIE1
+	{SPR_PINE, 4, 5, {A_BossScream}, 0, 0, S_EGGPINBALL_DIE3}, // S_EGGPINBALL_DIE2
+	{SPR_PINE, 4, 5, {A_BossScream}, 0, 0, S_EGGPINBALL_DIE4}, // S_EGGPINBALL_DIE3
+	{SPR_PINE, 4, 5, {A_BossScream}, 0, 0, S_EGGPINBALL_DIE5}, // S_EGGPINBALL_DIE4
+	{SPR_PINE, 4, 5, {A_BossScream}, 0, 0, S_EGGPINBALL_DIE6}, // S_EGGPINBALL_DIE5
+	{SPR_PINE, 5, 5, {A_BossScream}, 0, 0, S_EGGPINBALL_DIE7}, // S_EGGPINBALL_DIE6
+	{SPR_PINE, 5, 5, {A_BossScream}, 0, 0, S_EGGPINBALL_DIE8}, // S_EGGPINBALL_DIE7
+	{SPR_PINE, 5, 5, {A_BossScream}, 0, 0, S_EGGPINBALL_DIE9}, // S_EGGPINBALL_DIE8
+	{SPR_PINE, 5, 5, {A_BossScream}, 0, 0, S_EGGPINBALL_DIE10}, // S_EGGPINBALL_DIE9
+	{SPR_PINE, 4, 5, {A_BossScream}, 0, 0, S_EGGPINBALL_DIE11}, // S_EGGPINBALL_DIE10
+	{SPR_PINE, 4, 5, {A_BossScream}, 0, 0, S_EGGPINBALL_DIE12}, // S_EGGPINBALL_DIE11
+	{SPR_PINE, 4, 5, {A_BossScream}, 0, 0, S_EGGPINBALL_DIE13}, // S_EGGPINBALL_DIE12
+	{SPR_PINE, 4, 5, {A_BossScream}, 0, 0, S_EGGPINBALL_DIE14}, // S_EGGPINBALL_DIE13
+	{SPR_PINE, 5, 5, {A_BossScream}, 0, 0, S_EGGPINBALL_DIE15}, // S_EGGPINBALL_DIE14
+	{SPR_PINE, 5, 5, {A_BossScream}, 0, 0, S_EGGPINBALL_DIE16}, // S_EGGPINBALL_DIE15
+	{SPR_PINE, 5, 5, {A_BossScream}, 0, 0, S_EGGPINBALL_DIE17}, // S_EGGPINBALL_DIE16
+	{SPR_PINE, 5, 5, {A_BossScream}, 0, 0, S_EGGPINBALL_DIE18}, // S_EGGPINBALL_DIE17
+	{SPR_PINE, 4, 5, {A_BossScream}, 0, 0, S_EGGPINBALL_DIE19}, // S_EGGPINBALL_DIE18
+	{SPR_PINE, 4, 5, {A_BossScream}, 0, 0, S_EGGPINBALL_DIE20}, // S_EGGPINBALL_DIE19
+	{SPR_PINE, 4, 5, {A_BossScream}, 0, 0, S_EGGPINBALL_DIE21}, // S_EGGPINBALL_DIE20
+	{SPR_PINE, 4, 5, {A_BossScream}, 0, 0, S_EGGPINBALL_DIEEND}, // S_EGGPINBALL_DIE21
+	{SPR_PINE, 6, 54, {NULL}, 0, 0, S_EGGPINBALL_STARTFLEE}, // S_EGGPINBALL_DIEEND
+	{SPR_PINE, 6, -1, {A_BossDeath}, 0, 0, S_NULL}, // S_EGGPINBALL_STARTFLEE
+	{SPR_PINE, 7, 2, {NULL}, 0, 0, S_EGGPINBALL_FLEE2}, // S_EGGPINBALL_FLEE1
+	{SPR_PINE, 8, 2, {NULL}, 0, 0, S_EGGPINBALL_FLEE1}, // S_EGGPINBALL_FLEE2
+
+	{SPR_PINE, 9, -1, {NULL}, 0, 0, S_NULL}, // S_EGGPINBALLCANNON
+
 	// Red Eye
 	{SPR_REDI, 0, 180, {NULL}, 0, MT_REDEYEBALL, S_REDEYE_NEUTRAL}, // S_REDEYE_SPAWN
 	{SPR_REDI, 0, -1, {A_CheckHealth}, 4, S_REDEYE_PANIC, S_NULL}, // S_REDEYE_NEUTRAL
@@ -15548,6 +15600,60 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	// Top Down bosses
+	{           // MT_EGGPINBALL
+		2110,           // doomednum
+		S_EGGPINBALL_INTROSTART, // spawnstate
+		8,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_EGGPINBALL_HURT, // painstate
+		0,              // painchance
+		sfx_dmpain,     // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_EGGPINBALL_DIE1, // deathstate
+		S_EGGPINBALL_FLEE1, // xdeathstate
+		sfx_cybdth,     // deathsound
+		6*FRACUNIT,     // speed
+		64*FRACUNIT,    // radius
+		128*FRACUNIT,   // height
+		0,              // display offset
+		0,              // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_SPECIAL|MF_SHOOTABLE|MF_BOSS|MF_NOGRAVITY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_EGGPINBALLCANNON
+		-1,             // doomednum
+		S_EGGPINBALLCANNON, // spawnstate
+		1,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_XPLD1,        // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		16*FRACUNIT,    // radius
+		32*FRACUNIT,    // height
+		0,              // display offset
+		0,              // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOGRAVITY|MF_NOCLIP|MF_NOCLIPHEIGHT, // flags
+		S_NULL          // raisestate
+	},
+
 	{           // MT_REDEYE
 		2120,           // doomednum
 		S_REDEYE_SPAWN, // spawnstate

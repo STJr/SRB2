@@ -293,8 +293,9 @@ enum {
 	LE_PINCHPHASE      = -2, // A boss entered pinch phase (and, in most cases, is preparing their pinch phase attack!)
 	LE_ALLBOSSESDEAD   = -3, // All bosses in the map are dead (Egg capsule raise)
 	LE_BOSSDEAD        = -4, // A boss in the map died (Chaos mode boss tally)
-	LE_BOSS4DROP       = -5,  // CEZ boss dropped its cage
-	LE_BRAKVILEATACK   = -6  // Brak's doing his LOS attack, oh noes
+	LE_BOSS4DROP       = -5, // CEZ boss dropped its cage
+	LE_BRAKVILEATACK   = -6, // Brak's doing his LOS attack, oh noes
+	LE_EXTRAATTACK     = -7, // Only used for MMZ extra attack for now
 };
 
 // Name of local directory for config files and savegames

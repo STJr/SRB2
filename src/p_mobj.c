@@ -4831,6 +4831,189 @@ static void P_Boss9Thinker(mobj_t *mobj)
 	}
 }
 
+static void P_BossPinballThinker(mobj_t *mobj)
+{
+	// move left to right
+	// stop and let cannon shoot ball
+	// if your ball hits a player, laugh
+
+    if (mobj->health <= 0)
+		return;
+
+	if (!mobj->tracer) // no cannon?
+	{
+		mobj_t *cannon = P_SpawnMobj(mobj->x + P_ReturnThrustX(mobj, mobj->angle, mobj->radius), mobj->y + P_ReturnThrustY(mobj, mobj->angle, mobj->radius), mobj->z + 28*FRACUNIT, MT_EGGPINBALLCANNON);
+		P_SetTarget(&mobj->tracer, cannon); // The spawner traces the cannon
+		P_SetTarget(&cannon->target, mobj); // The cannon targets the spawner
+		cannon->angle = mobj->angle;
+		cannon->movedir = 0;
+		cannon->movecount = 1;
+		mobj->movecount = 1;
+	}
+
+	if (mobj->state == &states[S_EGGPINBALL_NEUTRAL])
+		mobj->flags2 &= ~MF2_FRET;
+
+    if (mobj->tracer->fuse > 13)
+	{
+		thinker_t *th;
+		mobj_t *mo2;
+		mobj_t *otherwaypoint;
+
+		// Get your next target
+		if ((mobj->state == &states[S_EGGPINBALL_NEUTRAL] && !mobj->target)
+		|| (mobj->target && mobj->target->spawnpoint && mobj->threshold != mobj->target->spawnpoint->angle)
+		|| !mobj->target
+		|| mobj->target->type != MT_BOSS3WAYPOINT)
+		{
+			for (th = thinkercap.next; th != &thinkercap; th = th->next)
+			{
+				if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+					continue;
+
+				mo2 = (mobj_t *)th;
+
+				if (mo2->type == MT_BOSS3WAYPOINT && mo2->spawnpoint && mo2->spawnpoint->angle == mobj->threshold)
+				{
+					P_SetTarget(&mobj->target, mo2);
+					break;
+				}
+			}
+		}
+
+		if (!mobj->target) // Should NEVER happen
+		{
+			CONS_Debug(DBG_GAMELOGIC, "Error: Egg Pinball was unable to find specified waypoint: %d\n", mobj->threshold);
+			return;
+		}
+
+		otherwaypoint = mobj->target;
+
+		for (th = thinkercap.next; th != &thinkercap; th = th->next)
+		{
+			if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+				continue;
+
+			mo2 = (mobj_t *)th;
+
+			if (mo2->type == MT_BOSS3WAYPOINT && mo2->spawnpoint && mo2 != mobj->target && mo2->spawnpoint->angle != mobj->threshold)
+			{
+				otherwaypoint = mo2;
+				break;
+			}
+		}
+
+		if (otherwaypoint && otherwaypoint != mobj->target)
+		{
+			fixed_t totaldist = P_AproxDistance(mobj->target->x - otherwaypoint->x, mobj->target->y - otherwaypoint->y);
+			fixed_t disttonext = P_AproxDistance(mobj->target->x - mobj->x, mobj->target->y - mobj->y);
+			fixed_t disttolast = P_AproxDistance(otherwaypoint->x - mobj->x, otherwaypoint->y - mobj->y);
+			fixed_t speedvalue;
+
+			if (disttonext > disttolast)
+				speedvalue = FixedDiv(disttolast + FixedDiv(totaldist, 3*FRACUNIT), disttonext);
+			else
+				speedvalue = FixedDiv(disttonext + FixedDiv(totaldist, 3*FRACUNIT), disttolast);
+
+			fixed_t finalspeed = FixedMul(mobj->info->speed, speedvalue);
+
+			P_InstaThrust(mobj, R_PointToAngle2(mobj->x, mobj->y, mobj->target->x, mobj->target->y), finalspeed);
+
+			fixed_t checkdist = P_AproxDistance(mobj->target->x - (mobj->x + mobj->momx), mobj->target->y - (mobj->y + mobj->momy));
+
+			if (disttonext <= checkdist)
+			{
+				mobj->threshold += 1;
+				if (mobj->threshold > 1)
+					mobj->threshold = 0;
+			}
+		}
+	}
+	else if (mobj->tracer->fuse > 0)
+	{
+		mobj->momx = 0;
+		mobj->momy = 0;
+	}
+
+	return;
+}
+
+static void P_BossPinballCannonThinker(mobj_t *mobj)
+{
+	// rotate 45 degrees around the boss in both directions
+	// stop and shoot a ball every so often
+	// movedir is in relation to the direction the boss is facing
+	// movecount is the direction it is rotating -1 = clockwise, 1 = anticlockwise 0 = no turning
+	if (!mobj->target) // Should NEVER happen
+	{
+		CONS_Debug(DBG_GAMELOGIC, "Error: Egg Pinball cannon has no owner");
+		P_RemoveMobj(mobj);
+		return;
+	}
+
+	if (mobj->target->health <= 0)
+	{
+		mobj->fuse = 0;
+		if (mobj->target->state == &states[mobj->target->info->xdeathstate])
+			P_KillMobj(mobj, NULL, NULL);
+		return;
+	}
+
+	if (mobj->fuse > 13)
+	{
+		angle_t tempangle = mobj->movedir;
+		if (tempangle > ANGLE_180)
+			tempangle = InvAngle(tempangle);
+
+		fixed_t pinchadd = FixedMul(4*FRACUNIT, FixedDiv((mobj->target->info->spawnhealth+1-mobj->target->health)*FRACUNIT, mobj->target->info->spawnhealth*FRACUNIT));
+		fixed_t rotateadd = FixedMul(2*FRACUNIT, FixedDiv(AngleFixed((ANGLE_45 + (ANG1*4)) - tempangle), AngleFixed(ANGLE_45)));
+
+		if (mobj->movecount == 1)
+			mobj->movedir += FixedAngle(rotateadd + pinchadd);
+		else
+			mobj->movedir -= FixedAngle(rotateadd + pinchadd);
+
+		if (mobj->movedir >= ANGLE_45 && mobj->movedir < ANGLE_180)
+		{
+			mobj->movedir = ANGLE_45;
+			mobj->movecount = -1;
+		}
+		else if (mobj->movedir < ANGLE_315 && mobj->movedir > ANGLE_180)
+		{
+			mobj->movedir = ANGLE_315;
+			mobj->movecount = 1;
+		}
+		mobj->angle = mobj->target->angle + mobj->movedir;
+		P_TeleportMove(mobj, mobj->target->x + P_ReturnThrustX(mobj->target, mobj->angle, mobj->target->radius),
+						mobj->target->y + P_ReturnThrustY(mobj->target, mobj->angle, mobj->target->radius),
+						mobj->target->z + 28*FRACUNIT);
+	}
+
+	if (mobj->target->state == &states[S_EGGPINBALL_BEGIN])
+		mobj->fuse = 13;
+
+	if (mobj->fuse == 1) // time to reload
+		mobj->fuse = (53 - FixedMul(41*FRACUNIT, (FixedDiv((mobj->target->info->spawnhealth+1-mobj->target->health)*FRACUNIT, mobj->target->info->spawnhealth*FRACUNIT))>>FRACBITS)) + 13;
+
+	if (mobj->fuse == 13) // shoot shoot shoot
+	{
+		mobj_t *ball = P_SPMAngle(mobj, MT_PINBALL, mobj->angle, false, 0);
+		ball->z = mobj->z; //set correct height
+		ball->fuse = 420; // don't live forever
+		P_SetTarget(&ball->target, mobj->target); // ball belongs to the boss at spawning
+		P_SetTarget(&ball->tracer, mobj->target);
+		S_StartSound(mobj, sfx_appear);
+	}
+
+	// What do I feel when I shoot an enemy? Recoil.
+	if (mobj->fuse <= 13 && mobj->fuse > 0)
+		P_TeleportMove(mobj, mobj->target->x + P_ReturnThrustX(mobj->target, mobj->angle, mobj->target->radius - FixedMul(mobj->radius, FixedDiv(mobj->fuse*FRACUNIT, 13*FRACUNIT))),
+						mobj->target->y + P_ReturnThrustY(mobj->target, mobj->angle, mobj->target->radius - FixedMul(mobj->radius, FixedDiv(mobj->fuse*FRACUNIT, 13*FRACUNIT))),
+						mobj->target->z + 28*FRACUNIT);
+
+	return;
+}
+
 static void P_BossRedThinker(mobj_t *mobj)
 {
 	if ((statenum_t)(mobj->state-states) == mobj->info->spawnstate)
@@ -6280,6 +6463,9 @@ void P_MobjThinker(mobj_t *mobj)
 			case MT_METALSONIC_BATTLE:
 				P_Boss9Thinker(mobj);
 				break;
+			case MT_EGGPINBALL:
+				P_BossPinballThinker(mobj);
+				break;
 			case MT_REDEYE:
 				P_BossRedThinker(mobj);
 				break;
@@ -7050,6 +7236,13 @@ void P_MobjThinker(mobj_t *mobj)
 			if (mobj->eflags & (MFE_UNDERWATER|MFE_TOUCHWATER))
 			{
 				P_RemoveMobj(mobj); // just remove is since killing it will spawn the fire
+				return;
+			}
+			break;
+		case MT_EGGPINBALLCANNON:
+			P_BossPinballCannonThinker(mobj);
+			if (P_MobjWasRemoved(mobj))
+			{
 				return;
 			}
 			break;

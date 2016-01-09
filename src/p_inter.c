@@ -3355,6 +3355,39 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 	if (source && source->player && target)
 		G_GhostAddHit(target);
 
+	switch (target->type)
+	{
+	// Egg Pinball needs an attack before it dies
+	case MT_EGGPINBALL:
+		{
+			INT32 extraattack = target->info->spawnhealth - target->health;
+
+			if (extraattack > 0 && extraattack % 2 == 0)
+			{
+				INT8 i;
+				mobj_t *ball;
+
+				for (i = 0; i < 5; i++)
+				{
+					ball = P_SPMAngle(target->tracer, MT_PINBALL, target->angle - ANGLE_45 + ((ANGLE_90 / 5) * i), false, 0);
+					ball->z = target->tracer->z; // set correct height
+					ball->fuse = 420;
+					P_SetTarget(&ball->target, target);
+					P_SetTarget(&ball->tracer, target);
+				}
+
+				S_StartSound(target->tracer, sfx_appear);
+
+				P_LinedefExecute(LE_EXTRAATTACK, target, NULL); // Solid wall linedef
+
+				target->tracer->fuse += 420; // delay your next shot until after the wall
+			}
+		}
+		break;
+	default:
+		break;
+	}
+
 	if (target->health <= 0)
 	{
 		P_KillMobj(target, inflictor, source);
