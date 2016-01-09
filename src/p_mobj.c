@@ -7183,7 +7183,7 @@ void P_MobjThinker(mobj_t *mobj)
 				{
 					fixed_t dist = P_AproxDistance(mobj->target->x - mobj->x, mobj->target->y - mobj->y);
 
-					if (dist < 256*FRACUNIT) // When he's close enough above the player, stop and fire
+					if (dist < 128*FRACUNIT) // When he's close enough above the player, stop and fire
 					{
 						mobj->momx = mobj->momy = mobj->momz = 0;
 
@@ -8110,7 +8110,9 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			|| mobj->type == MT_TDEMBLEM
 			|| mobj->type == MT_BOUNCECLOUD || mobj->type == MT_MOVINGBOUNCECLOUD
 			|| mobj->type == MT_CHECKERBALL || mobj->type == MT_SICHECKERBALL
-			|| mobj->type == MT_CHROME)
+			|| mobj->type == MT_CHROME || mobj->type == MT_ORBITALMISSILE
+			|| mobj->type == MT_PLASMABULLET || mobj->type == MT_TOXOMISTERCLOUD
+			|| mobj->type == MT_UNIBALL || mobj->type == MT_TDEMBLEM)
 			P_SpawnShadowMobj(mobj);
 	}
 #ifdef HAVE_BLUA

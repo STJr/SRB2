@@ -30,6 +30,7 @@
 #include "r_sky.h"
 #include "p_polyobj.h"
 #include "lua_script.h"
+#include "m_cond.h"
 
 savedata_t savedata;
 UINT8 *save_p;
@@ -42,6 +43,209 @@ UINT8 *save_p;
 #define ARCHIVEBLOCK_POBJS    0x7F928546
 #define ARCHIVEBLOCK_THINKERS 0x7F37037C
 #define ARCHIVEBLOCK_SPECIALS 0x7F228378
+#define ARCHIVEBLOCK_EMBLEMS  0x7F4A5445 // 4A,54,45 spells 'J','T','E'. Vanity unbound~
+
+static inline void P_NetArchiveEmblems(void)
+{
+	INT32 i, j;
+	UINT8 btemp;
+	INT32 curmare;
+
+	WRITEUINT32(save_p, ARCHIVEBLOCK_EMBLEMS);
+
+	// These should be synchronized before savegame loading by the wad files being the same anyway,
+	// but just in case, for now, we'll leave them here for testing. It would be very bad if they mismatch.
+	WRITEUINT8(save_p, (UINT8)savemoddata);
+	WRITEINT32(save_p, numemblems);
+	WRITEINT32(save_p, numextraemblems);
+
+	// The rest of this is lifted straight from G_SaveGameData in g_game.c
+	// TODO: Optimize this to only send information about emblems, unlocks, etc. which actually exist
+	//       There is no need to go all the way up to MAXEMBLEMS when wads are guaranteed to be the same.
+
+	WRITEUINT32(save_p, totalplaytime);
+
+	for (i = 0; i < NUMMAPS; i++)
+		WRITEUINT8(save_p, mapvisited[i]);
+
+	// To save space, use one bit per collected/achieved/unlocked flag
+	for (i = 0; i < MAXEMBLEMS;)
+	{
+		btemp = 0;
+		for (j = 0; j < 8 && j+i < MAXEMBLEMS; ++j)
+			btemp |= (emblemlocations[j+i].collected << j);
+		WRITEUINT8(save_p, btemp);
+		i += j;
+	}
+	for (i = 0; i < MAXEXTRAEMBLEMS;)
+	{
+		btemp = 0;
+		for (j = 0; j < 8 && j+i < MAXEXTRAEMBLEMS; ++j)
+			btemp |= (extraemblems[j+i].collected << j);
+		WRITEUINT8(save_p, btemp);
+		i += j;
+	}
+	for (i = 0; i < MAXUNLOCKABLES;)
+	{
+		btemp = 0;
+		for (j = 0; j < 8 && j+i < MAXUNLOCKABLES; ++j)
+			btemp |= (unlockables[j+i].unlocked << j);
+		WRITEUINT8(save_p, btemp);
+		i += j;
+	}
+	for (i = 0; i < MAXCONDITIONSETS;)
+	{
+		btemp = 0;
+		for (j = 0; j < 8 && j+i < MAXCONDITIONSETS; ++j)
+			btemp |= (conditionSets[j+i].achieved << j);
+		WRITEUINT8(save_p, btemp);
+		i += j;
+	}
+
+	WRITEUINT32(save_p, timesBeaten);
+	WRITEUINT32(save_p, timesBeatenWithEmeralds);
+	WRITEUINT32(save_p, timesBeatenUltimate);
+
+	// Main records
+	for (i = 0; i < NUMMAPS; i++)
+	{
+		if (mainrecords[i])
+		{
+			WRITEUINT32(save_p, mainrecords[i]->score);
+			WRITEUINT32(save_p, mainrecords[i]->time);
+			WRITEUINT16(save_p, mainrecords[i]->rings);
+		}
+		else
+		{
+			WRITEUINT32(save_p, 0);
+			WRITEUINT32(save_p, 0);
+			WRITEUINT16(save_p, 0);
+		}
+	}
+
+	// NiGHTS records
+	for (i = 0; i < NUMMAPS; i++)
+	{
+		if (!nightsrecords[i] || !nightsrecords[i]->nummares)
+		{
+			WRITEUINT8(save_p, 0);
+			continue;
+		}
+
+		WRITEUINT8(save_p, nightsrecords[i]->nummares);
+
+		for (curmare = 0; curmare < (nightsrecords[i]->nummares + 1); ++curmare)
+		{
+			WRITEUINT32(save_p, nightsrecords[i]->score[curmare]);
+			WRITEUINT8(save_p, nightsrecords[i]->grade[curmare]);
+			WRITEUINT32(save_p, nightsrecords[i]->time[curmare]);
+		}
+	}
+}
+
+static inline void P_NetUnArchiveEmblems(void)
+{
+	INT32 i, j;
+	UINT8 rtemp;
+	UINT32 recscore;
+	tic_t rectime;
+	UINT16 recrings;
+	UINT8 recmares;
+	INT32 curmare;
+
+	if (READUINT32(save_p) != ARCHIVEBLOCK_EMBLEMS)
+		I_Error("Bad $$$.sav at archive block Emblems");
+
+	savemoddata = (boolean)READUINT8(save_p); // this one is actually necessary because savemoddata stays false otherwise for some reason.
+	if (numemblems != READINT32(save_p))
+		I_Error("numemblems mismatch");
+	if (numextraemblems != READINT32(save_p))
+		I_Error("numextraemblems mismatch");
+
+	// The rest of this is lifted straight from G_LoadGameData in g_game.c
+	// TODO: Optimize this to only read information about emblems, unlocks, etc. which actually exist
+	//       There is no need to go all the way up to MAXEMBLEMS when wads are guaranteed to be the same.
+
+	totalplaytime = READUINT32(save_p);
+
+	for (i = 0; i < NUMMAPS; i++)
+		if ((mapvisited[i] = READUINT8(save_p)) > MV_MAX)
+			I_Error("Bad $$$.sav dearchiving Emblems");
+
+	// To save space, use one bit per collected/achieved/unlocked flag
+	for (i = 0; i < MAXEMBLEMS;)
+	{
+		rtemp = READUINT8(save_p);
+		for (j = 0; j < 8 && j+i < MAXEMBLEMS; ++j)
+			emblemlocations[j+i].collected = ((rtemp >> j) & 1);
+		i += j;
+	}
+	for (i = 0; i < MAXEXTRAEMBLEMS;)
+	{
+		rtemp = READUINT8(save_p);
+		for (j = 0; j < 8 && j+i < MAXEXTRAEMBLEMS; ++j)
+			extraemblems[j+i].collected = ((rtemp >> j) & 1);
+		i += j;
+	}
+	for (i = 0; i < MAXUNLOCKABLES;)
+	{
+		rtemp = READUINT8(save_p);
+		for (j = 0; j < 8 && j+i < MAXUNLOCKABLES; ++j)
+			unlockables[j+i].unlocked = ((rtemp >> j) & 1);
+		i += j;
+	}
+	for (i = 0; i < MAXCONDITIONSETS;)
+	{
+		rtemp = READUINT8(save_p);
+		for (j = 0; j < 8 && j+i < MAXCONDITIONSETS; ++j)
+			conditionSets[j+i].achieved = ((rtemp >> j) & 1);
+		i += j;
+	}
+
+	timesBeaten = READUINT32(save_p);
+	timesBeatenWithEmeralds = READUINT32(save_p);
+	timesBeatenUltimate = READUINT32(save_p);
+
+	// Main records
+	for (i = 0; i < NUMMAPS; ++i)
+	{
+		recscore = READUINT32(save_p);
+		rectime  = (tic_t)READUINT32(save_p);
+		recrings = READUINT16(save_p);
+
+		if (recrings > 10000 || recscore > MAXSCORE)
+			I_Error("Bad $$$.sav dearchiving Emblems");
+
+		if (recscore || rectime || recrings)
+		{
+			G_AllocMainRecordData((INT16)i);
+			mainrecords[i]->score = recscore;
+			mainrecords[i]->time = rectime;
+			mainrecords[i]->rings = recrings;
+		}
+	}
+
+	// Nights records
+	for (i = 0; i < NUMMAPS; ++i)
+	{
+		if ((recmares = READUINT8(save_p)) == 0)
+			continue;
+
+		G_AllocNightsRecordData((INT16)i);
+
+		for (curmare = 0; curmare < (recmares+1); ++curmare)
+		{
+			nightsrecords[i]->score[curmare] = READUINT32(save_p);
+			nightsrecords[i]->grade[curmare] = READUINT8(save_p);
+			nightsrecords[i]->time[curmare] = (tic_t)READUINT32(save_p);
+
+			if (nightsrecords[i]->grade[curmare] > GRADE_S)
+				I_Error("Bad $$$.sav dearchiving Emblems");
+		}
+
+		nightsrecords[i]->nummares = recmares;
+	}
+}
 
 // Note: This cannot be bigger
 // than an UINT16
@@ -277,6 +481,7 @@ static inline void P_NetArchivePlayers(void)
 		WRITEUINT32(save_p, players[i].climbtime);
 		WRITEUINT32(save_p, players[i].damagededuct);
 		WRITEUINT32(save_p, players[i].levelscore);
+		WRITEUINT8(save_p, players[i].bubbletag);
 	}
 }
 
@@ -449,6 +654,7 @@ static inline void P_NetUnArchivePlayers(void)
 		players[i].climbtime = READUINT32(save_p);
 		players[i].damagededuct = READUINT32(save_p);
 		players[i].levelscore = READUINT32(save_p);
+		players[i].bubbletag = READUINT8(save_p);
 	}
 }
 
@@ -3269,6 +3475,7 @@ void P_SaveNetGame(void)
 
 	CV_SaveNetVars(&save_p);
 	P_NetArchiveMisc();
+	P_NetArchiveEmblems();
 
 	// Assign the mobjnumber for pointer tracking
 	for (th = thinkercap.next; th != &thinkercap; th = th->next)
@@ -3324,6 +3531,7 @@ boolean P_LoadNetGame(void)
 	CV_LoadNetVars(&save_p);
 	if (!P_NetUnArchiveMisc())
 		return false;
+	P_NetUnArchiveEmblems();
 	P_NetUnArchivePlayers();
 	if (gamestate == GS_LEVEL)
 	{

@@ -455,13 +455,13 @@ static const char *credits[] = {
 	"",
 	"\1Programming",
 	"\"Sryder13\"", // He's the reason this mod got this far, I swear
+	"\"Wolfy\"", // Oh, he did nothing special. Certainly not typing up credits strings or anything like that.
 	"",
 	"\1Programming",
 	"\1Assistance",
 	"\"JTE\"", // Advice regarding SRB2's source
 	"\"Zipper\"", // Most reliable on the team! Was always available and created tons of scripts. Even the scrapped ones helped.
 	"\"Badz\" / \"Badnik\"", // Also very reliable, did lots more than Wolfy~
-	"\"Wolfy\"", // Oh, he did nothing special. Certainly not typing up credits strings or anything like that.
 	"",
 	"\1Sprite Artists",
 	"\"Iceman404\"", // Did most of the sprites for this mod
@@ -469,12 +469,14 @@ static const char *credits[] = {
 	"\"Spherallic\"",
 	"\"Zipper\"",
 	"\"SevenColorsAlice\"", // Drew the Penguinator sprites
+	"\"Charybdizs\"", // Drew the Krackobot sprites
 	"",
 	"\1Texture Artists",
 	"\"Charybdizs\"",
 	"\"CoatRack\"",
 	"\"Spherallic\"", 
 	"\"Iceman404\"",
+	"\"Blade\"",
 	"",
 	"\1Level Design",
 	"\"CoatRack\"", // Weather Factory, Stormy Streets, Sky Islands, WFZ Boss, Hub fixes
@@ -482,7 +484,7 @@ static const char *credits[] = {
 	"\"Charybdizs\"", // Hub
 	"\"Sryder13\"", // Mainframe Metropolis
 	"\"Zipper\"", // Fixes to Checkered Mountain and Frozen Factory
-	"\"katsy\"", // Fixes to Stormy Streets
+	"\"katsy\"", // Fixes to... well, everything actually.
 	"",
 	"\1Music and Sound",
 	"Sonic Lost World - SEGA", // The game was awful, but the music was okay.
@@ -497,6 +499,7 @@ static const char *credits[] = {
 	"\"CyberIF\"", // Was almost always around for quick testing
 	"\"Fooruman\"", // Found lots of bugs!
 	"\"katsy\"", // She found bugs too, but she actually went ahead and fixed them as well.
+	"\"Ryuspark\"",
 	"",
 	"\1Ornaments",
 	"\"katsy\" - Lead Ornament", // Even though she isn't an ornament, she is an ornament.
@@ -512,6 +515,7 @@ static const char *credits[] = {
 	"\"Monster Iestyn\" - Hood Ornament", // No, not THAT hood, you fool
 	"\"Prime 2.0\" - Meaningful Ornament", // Well, meaningful ELSEWHERE
 	"\"Flame\" - +b Ornament", // *	ChanServ has kicked Flame from #srb2riders (You are not authorized to be on this channel)
+	"\"toaster\" - Last Minute Ornament", // Wow, you almost missed being included here!
 	"",
 	"\1Special Thanks",
 	"\"Jeck Jims\"", // For his work on MD2 models 

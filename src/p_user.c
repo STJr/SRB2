@@ -7696,6 +7696,7 @@ static void P_MovePlayer(player_t *player)
 		if (numplayers > 1)
 		{
 			INT32 healthlost = player->health - 5 < 1 ? player->health - 1: 5;
+			player->bubbletag = false;
 			P_BubblePlayer(player);
 			player->tossdelay = 2*TICRATE;
 
@@ -9971,6 +9972,35 @@ void P_BubblePlayer(player_t *player)
 
 void P_UnbubblePlayer(player_t *player)
 {
+
+	sector_t *sec = player->mo->subsector->sector;
+    sector_t *checksec = sec;
+ 
+    // Check for a floor sector that's in our way
+    if (sec->ffloors)
+    {
+        ffloor_t *rover;
+        sector_t *roversec;
+ 
+        for (rover = sec->ffloors; rover; rover = rover->next)
+        {
+            if (!(rover->flags & FF_EXISTS))
+                continue;
+ 
+            if ((!(rover->flags & FF_SOLID) || (rover->flags & FF_SWIMMABLE)))
+                continue;
+ 
+            if (*rover->topheight > player->mo->z)
+                continue;
+ 
+            roversec = &sectors[rover->secnum];
+            if (roversec->ceilingheight > (checksec == sec ? checksec->floorheight : checksec->ceilingheight))
+                checksec = roversec;
+        }
+    }
+ 
+    if (GETSECSPECIAL(checksec->special, 1) >= 6 && GETSECSPECIAL(checksec->special, 1) <= 8 && player->bubbletag)
+        return;
 	player->playerstate = PST_LIVE; // They're alive
 	player->mo->momx = player->mo->momy = player->mo->momz = 0; // No speed
 	P_SetPlayerMobjState(player->mo, S_PLAY_FALL1);
@@ -9978,10 +10008,11 @@ void P_UnbubblePlayer(player_t *player)
 	// un-set their flags, these get set in P_BubblePlayer
 	player->mo->flags &= ~MF_NOGRAVITY;
 	player->mo->flags &= ~MF_NOCLIPTHING;
+	player->bubbletag = false;
 }
 
 //
-// P_TDBubbleIfAway
+// P_BubbleIfAway
 //
 // Puts players into the bubble state if they get too far away from the group
 //
@@ -10083,6 +10114,7 @@ static void P_BubbleIfAway(player_t *player)
 		|| (player->mo->z < followz - 506*FRACUNIT && P_IsObjectOnGround(player->mo) && !P_CheckDeathPitCollide(player->mo))) // 450 + 56 , formerly 352 + 56
 	{
 		P_BubblePlayer(player); // Should've been doing this all along really
+		player->bubbletag = true;
 	}
 
 }
@@ -10600,7 +10632,10 @@ void P_PlayerThink(player_t *player)
 
 	player->mo->pmomz = 0;
 	player->pflags &= ~PF_SLIDING;
-
+	
+	if (!player->playerstate == PST_BUBBLE)
+		player->bubbletag = false;
+	
 /*
 //	Colormap verification
 	{

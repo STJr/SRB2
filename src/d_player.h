@@ -443,6 +443,7 @@ typedef struct player_s
 	tic_t climbtime;
 	UINT32 damagededuct; // number of times hit and killed for the damage deduction in TD
 	UINT32 levelscore; // the score you've gotten in the current level
+	boolean bubbletag; // protection for unbubbling
 } player_t;
 
 #endif
