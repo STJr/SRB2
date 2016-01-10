@@ -21,9 +21,9 @@
 /// \brief SRB2 system stuff for SDL
 
 #ifdef CMAKECONFIG
-#include "config.h"
+#include "../config.h"
 #else
-#include "config.h.in"
+#include "../config.h.in"
 #endif
 
 #ifndef _WIN32_WCE
