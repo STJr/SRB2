@@ -8102,8 +8102,11 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 	{
 		if (mobj->flags & MF_ENEMY || mobj->flags & MF_BOSS
 			|| mobj->type == MT_PLAYER
+			|| mobj->type == MT_UNIBALL
 			|| mobj->type == MT_RING || mobj->type == MT_FLINGRING
+			|| mobj->type == MT_EMBLEM
 			|| mobj->type == MT_SPIKEBALL || mobj->type == MT_SPECIALSPIKEBALL
+			|| mobj->type == MT_CHAOSCOIN
 			|| mobj->type == MT_PINBALL
 			|| mobj->type == MT_REDEYEBALL
 			|| mobj->type == MT_PENGUINICE || mobj->type == MT_ICECUBE
@@ -8112,7 +8115,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			|| mobj->type == MT_CHECKERBALL || mobj->type == MT_SICHECKERBALL
 			|| mobj->type == MT_CHROME || mobj->type == MT_ORBITALMISSILE
 			|| mobj->type == MT_PLASMABULLET || mobj->type == MT_TOXOMISTERCLOUD
-			|| mobj->type == MT_UNIBALL || mobj->type == MT_TDEMBLEM)
+			)
 			P_SpawnShadowMobj(mobj);
 	}
 #ifdef HAVE_BLUA
