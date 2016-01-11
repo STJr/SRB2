@@ -2034,6 +2034,8 @@ static void readsound(MYFILE *f, INT32 num, const char *savesfxnames[])
  * "Good" means that it contains only alphanumerics, _, and -;
  * ends in ".dat"; has at least one character before the ".dat";
  * and is not "gamedata.dat" (tested case-insensitively).
+ * test "tdgamedata.dat" for TD now, but still check gamedata.dat
+ * so people don't delete gamedata.dat from sillyness in mods
  *
  * Assumption: that gamedata.dat is the only .dat file that will
  * ever be treated specially by the game.
@@ -2059,8 +2061,10 @@ static boolean GoodDataFileName(const char *s)
 	if (p <= s) return false; // too short
 	if (!fasticmp(p, tail)) return false; // doesn't end in .dat
 #ifdef DELFILE
+	if (fasticmp(s, "tdgamedata.dat") && !disableundo) return false;
 	if (fasticmp(s, "gamedata.dat") && !disableundo) return false;
 #else
+	if (fasticmp(s, "tdgamedata.dat")) return false;
 	if (fasticmp(s, "gamedata.dat")) return false;
 #endif
 

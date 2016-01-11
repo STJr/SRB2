@@ -60,8 +60,8 @@ JoyType_t Joystick2;
 // 1024 bytes is plenty for a savegame
 #define SAVEGAMESIZE (1024)
 
-char gamedatafilename[64] = "gamedata.dat";
-char timeattackfolder[64] = "main";
+char gamedatafilename[64] = "tdgamedata.dat";
+char timeattackfolder[64] = "td";
 char customversionstring[32] = "\0";
 
 static void G_DoCompleted(void);
@@ -2218,7 +2218,7 @@ void G_PlayerReborn(INT32 player)
 	}
 	else
 		p->health = 1; // 0 rings
-    
+
 	p->panim = PA_IDLE; // standing animation
 
 	if ((netgame || multiplayer) && !p->spectator
@@ -3137,7 +3137,7 @@ void G_LoadGameData(void)
 
 	UINT8 recmares;
 	INT32 curmare;
-	
+
 	// don't override the server's emblems and unlocks
 	if (netgame && !server)
 		return;
@@ -3299,7 +3299,7 @@ void G_SaveGameData(void)
 
 	if (!gamedataloaded)
 		return; // If never loaded (-nodata), don't save
-		
+
 	// don't save the server's emblems and unlocks.
 	if (netgame && !server)
 		return;

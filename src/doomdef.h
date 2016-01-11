@@ -351,7 +351,7 @@ void CONS_Debug(INT32 debugflags, const char *fmt, ...) FUNCDEBUG;
 #define DEVMAPS "devmaps"
 #define DEVDATA "devdata"
 
-#define SAVEGAMENAME "srb2sav"
+#define SAVEGAMENAME "srb2tdsav"
 
 char savegamename[256];
 
