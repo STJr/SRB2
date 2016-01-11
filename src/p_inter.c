@@ -631,14 +631,15 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 		// Secret emblem thingy
 		case MT_EMBLEM:
+		case MT_CHAOSCOIN:
 			{
 				if (demoplayback || player->bot)
 					return;
-				
+
 				if (emblemlocations[special->health-1].type == ET_SKIN
 				&& emblemlocations[special->health-1].var != player->skin)
 					return;
-				
+
 				emblemlocations[special->health-1].collected = true;
 
 				M_UpdateUnlockablesAndExtraEmblems();

@@ -55,10 +55,10 @@ char sprnames[NUMSPRITES + 1][5] =
 	"GWLR","SRBA","SRBB","SRBC","SRBD","SRBE","SRBF","SRBG","SRBH","SRBI",
 	"SRBJ","SRBK","SRBL","SRBM","SRBN","SRBO",
 
-	"SHAD","FLEN","BUBB","SBCH","BBCH","MHEL","MXCL","ARRO","PINT","PINB",
-	"CLUK","TOXO","KRKO","ZAPO","ZAPT","PENG","GANG","FLAR","GPUP","PLSM",
-	"MITR","HMIS","PINE","REDI","CHIL","CIRN","CLOD","CKBL","CHRM","STAT",
-	"BLFM","PLMT","GFLO","BLUE","FFTR","BIST","SBUS","CONE",
+	"SHAD","FLEN","BUBB","SBCH","BBCH","MHEL","MXCL","ARRO","CCON","CSPK",
+	"PINT","PINB","CLUK","TOXO","KRKO","ZAPO","ZAPT","PENG","GANG","FLAR",
+	"GPUP","PLSM","MITR","HMIS","PINE","REDI","CHIL","CIRN","CLOD","CKBL",
+	"CHRM","STAT","BLFM","PLMT","GFLO","BLUE","FFTR","BIST","SBUS","CONE",
 };
 
 // Doesn't work with g++, needs actionf_p1 (don't modify this comment)
@@ -3101,6 +3101,18 @@ state_t states[NUMSTATES] =
 	{SPR_ARRO, FF_FULLBRIGHT|7, 4, {NULL}, 0, 0, S_ARROWSTATIONARY8}, // S_ARROWSTATIONARY7
 	{SPR_ARRO, FF_FULLBRIGHT|8, 4, {NULL}, 0, 0, S_ARROWSTATIONARY9}, // S_ARROWSTATIONARY8
 	{SPR_ARRO, FF_FULLBRIGHT|9, 4, {NULL}, 0, 0, S_ARROWSTATIONARY1}, // S_ARROWSTATIONARY9
+
+	// Chaos Coin
+	{SPR_CCON,  FF_FULLBRIGHT, 1, {NULL}, 0, 0, S_CHAOSCOIN2}, // S_CHAOSCOIN1
+	{SPR_CCON,  FF_FULLBRIGHT|1, 1, {NULL}, 0, 0, S_CHAOSCOIN1}, // S_CHAOSCOIN2
+
+	{SPR_CCON,  FF_FULLBRIGHT|FF_TRANS50, 1, {NULL}, 0, 0, S_CHAOSCOINCOLLECTED2}, // S_CHAOSCOINCOLLECTED1
+	{SPR_CCON,  FF_FULLBRIGHT|FF_TRANS50|1, 1, {NULL}, 0, 0, S_CHAOSCOINCOLLECTED1}, // S_CHAOSCOINCOLLECTED2
+
+	// Chaos Coin Spark
+	{SPR_CSPK, FF_FULLBRIGHT, 1, {NULL}, 0, 0, S_CHAOSSPRK2},  // S_CHAOSSPRK1
+	{SPR_CSPK, FF_FULLBRIGHT|1, 1, {NULL}, 0, 0, S_CHAOSSPRK3},  // S_CHAOSSPRK2
+	{SPR_CSPK, FF_FULLBRIGHT|2, 1, {NULL}, 0, 0, S_NULL},  // S_CHAOSSPRK3
 
 	// Top Down Enemies
 
@@ -15028,6 +15040,33 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_None,       // activesound
 		MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_CHAOSCOIN
+		-1,             // doomednum
+		S_CHAOSCOIN1,   // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_CHAOSSPRK1,   // deathstate
+		S_NULL,         // xdeathstate
+		sfx_ncitem,     // deathsound
+		1,              // speed
+		13*FRACUNIT,    // radius
+		26*FRACUNIT,    // height
+		0,              // display offset
+		4,              // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_SPECIAL|MF_NOGRAVITY|MF_NOCLIPHEIGHT, // flags
 		S_NULL          // raisestate
 	},
 

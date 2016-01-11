@@ -2247,7 +2247,7 @@ static INT32 ST_drawEmeraldHuntIcon(mobj_t *hunt, patch_t **patches, INT32 offse
 	if (twoplayer)
 	{
 		dist = ((UINT32)P_AproxDistance(P_AproxDistance(players[secondarydisplayplayer].mo->x - hunt->x, players[secondarydisplayplayer].mo->y - hunt->y), players[secondarydisplayplayer].mo->z - hunt->z))>>FRACBITS;
-	
+
 		if (dist < 128)
 		{
 			i = 5;
@@ -2383,7 +2383,7 @@ static void ST_doItemFinderIconsAndSound(void)
 			continue;
 		mo2 = (mobj_t *)th;
 
-		if (mo2->type == MT_EMBLEM)
+		if (mo2->type == MT_EMBLEM || mo2->type == MT_CHAOSCOIN)
 		{
 			if (!(mo2->flags & MF_SPECIAL))
 				continue;

@@ -6721,6 +6721,16 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_ARROWSTATIONARY8",
 	"S_ARROWSTATIONARY9",
 
+	// Chaos Coin
+	"S_CHAOSCOIN1",
+	"S_CHAOSCOIN2",
+	"S_CHAOSCOINCOLLECTED1",
+	"S_CHAOSCOINCOLLECTED2",
+
+	"S_CHAOSSPRK1",
+	"S_CHAOSSPRK2",
+	"S_CHAOSSPRK3",
+
 	// Top Down enemies
 	// Pinball Turret
 	"S_PINBALLTURRETLOOK",
@@ -7671,6 +7681,8 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_MINIHEALTHBAR", // The small health bar that appears over your head
 	"MT_NOHEALTHEXCLAMATION", // The small exclamation mark that appears over character's heads when they have no health
 	"MT_PLAYERARROW", // The arrow above your own players head
+
+	"MT_CHAOSCOIN",
 
 	// Top Down enemies
 	"MT_PINBALLTURRET",

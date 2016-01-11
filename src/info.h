@@ -588,6 +588,9 @@ typedef enum sprite
 	SPR_MXCL, // Small Exclamation mark above players
 	SPR_ARRO, // Small arrow above players
 
+	SPR_CCON, // Chaos Coin
+	SPR_CSPK, // Chaos Coin Spark
+
 	// Top Down Enemies
 	SPR_PINT, // Pinball Turret
 	SPR_PINB, // Pinball Turret Ball
@@ -3618,6 +3621,16 @@ typedef enum state
 	S_ARROWSTATIONARY8,
 	S_ARROWSTATIONARY9,
 
+	// Chaos Coin
+	S_CHAOSCOIN1,
+	S_CHAOSCOIN2,
+	S_CHAOSCOINCOLLECTED1,
+	S_CHAOSCOINCOLLECTED2,
+
+	S_CHAOSSPRK1,
+	S_CHAOSSPRK2,
+	S_CHAOSSPRK3,
+
 	// Top Down enemies
 	// Pinball Turret
 	S_PINBALLTURRETLOOK,
@@ -4585,6 +4598,8 @@ typedef enum mobj_type
 	MT_MINIHEALTHBAR, // The small health bar that appears over your head
 	MT_NOHEALTHEXCLAMATION, // The small exclamation mark that appears over character's heads when they have no health
 	MT_PLAYERARROW, // The arrow above your own players head
+
+	MT_CHAOSCOIN,
 
 	// Top Down enemies
 	MT_PINBALLTURRET,
