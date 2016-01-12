@@ -16,8 +16,6 @@
 
 #ifdef HWRENDER
 #include "hardware/hw_data.h"
-#else
-typedef void GLPatch_t;
 #endif
 
 #ifdef __GNUG__
