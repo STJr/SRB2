@@ -1598,7 +1598,7 @@ void P_DoPlayerExit(player_t *player)
 	{
 		player->climbing = 0;
 		player->pflags |= PF_JUMPED;
-		P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
+		P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
 	}
 	player->powers[pw_underwater] = 0;
 	player->powers[pw_spacetime] = 0;
@@ -2666,21 +2666,21 @@ static void P_DoClimbing(player_t *player)
 
 			player->climbing = 0;
 			player->pflags |= PF_JUMPED;
-			P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
+			P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
 		}
 
 		if (skyclimber)
 		{
 			player->climbing = 0;
 			player->pflags |= PF_JUMPED;
-			P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
+			P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
 		}
 	}
 	else
 	{
 		player->climbing = 0;
 		player->pflags |= PF_JUMPED;
-		P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
+		P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
 	}
 
 	if (cmd->sidemove != 0 || cmd->forwardmove != 0)
@@ -2698,7 +2698,7 @@ static void P_DoClimbing(player_t *player)
 	{
 		player->climbing = 0;
 		player->pflags |= PF_JUMPED;
-		P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
+		P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
 		P_SetObjectMomZ(player->mo, 4*FRACUNIT, false);
 		P_InstaThrust(player->mo, player->mo->angle, FixedMul(-4*FRACUNIT, player->mo->scale));
 	}
@@ -2709,7 +2709,7 @@ static void P_DoClimbing(player_t *player)
 		localangle2 = player->mo->angle;
 
 	if (player->climbing == 0)
-		P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
+		P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
 
 	if (player->climbing && P_IsObjectOnGround(player->mo))
 	{
@@ -3497,9 +3497,8 @@ static void P_DoSuperStuff(player_t *player)
 
 			if (player->mo->health > 0)
 			{
-				if (player->pflags & PF_JUMPED)
-					P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
-				else if (player->pflags & PF_SPINNING && player->mo->state-states != S_PLAY_DASH)
+				if ((player->pflags & PF_JUMPED || player->pflags & PF_SPINNING)
+				&& player->mo->state-states != S_PLAY_DASH)
 					P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
 				else switch (player->mo->state-states)
 				{
@@ -3517,8 +3516,8 @@ static void P_DoSuperStuff(player_t *player)
 				case S_PLAY_SUPER_PAIN:
 					P_SetPlayerMobjState(player->mo, S_PLAY_PAIN);
 					break;
-				case S_PLAY_SUPER_SPRING:
-					P_SetPlayerMobjState(player->mo, S_PLAY_SPRING);
+				case S_PLAY_SUPER_JUMP:
+					P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 					break;
 				case S_PLAY_SUPER_FALL:
 					P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
@@ -3738,9 +3737,9 @@ void P_DoJump(player_t *player, boolean soundandstate)
 			S_StartSound(player->mo, sfx_jump); // Play jump sound!
 
 		if (!(player->charability2 == CA2_SPINDASH))
-			P_SetPlayerMobjState(player->mo, S_PLAY_SPRING);
-		else
 			P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
+		else
+			P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
 	}
 }
 
@@ -6517,10 +6516,10 @@ static void P_MovePlayer(player_t *player)
 	}
 
 	// If Springing, but travelling DOWNWARD, change back!
-	if (player->panim == PA_SPRING && P_MobjFlip(player->mo)*player->mo->momz < 0)
+	if (player->panim == PA_JUMP && P_MobjFlip(player->mo)*player->mo->momz < 0)
 		P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
 	// If Springing but on the ground, change back!
-	else if (onground && (player->panim == PA_SPRING || player->panim == PA_FALL || player->panim == PA_RIDE) && !player->mo->momz)
+	else if (onground && (player->panim == PA_JUMP || player->panim == PA_FALL || player->panim == PA_RIDE) && !player->mo->momz)
 		P_SetPlayerMobjState(player->mo, S_PLAY_STND);
 
 	// If you are stopped and are still walking, stand still!
@@ -6559,7 +6558,7 @@ static void P_MovePlayer(player_t *player)
 			else
 			{
 				player->pflags |= PF_JUMPED;
-				P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
+				P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
 			}
 		}
 		player->pflags &= ~PF_GLIDING;
@@ -6617,7 +6616,7 @@ static void P_MovePlayer(player_t *player)
 				|| (player->powers[pw_super] && ALL7EMERALDS(player->powers[pw_emeralds]) && player->charability == CA_GLIDEANDCLIMB))
 			{
 				player->pflags |= PF_JUMPED;
-				P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
+				P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
 			}
 			else
 			{
@@ -6687,7 +6686,7 @@ static void P_MovePlayer(player_t *player)
 			else
 			{
 				player->pflags |= PF_JUMPED;
-				P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
+				P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
 			}
 		}
 		player->powers[pw_tailsfly] = 0;
@@ -7267,7 +7266,7 @@ static void P_DoRopeHang(player_t *player)
 
 		if (!(player->pflags & PF_SLIDING) && (player->pflags & PF_JUMPED)
 		&& !(player->panim == PA_ROLL) && player->charability2 == CA2_SPINDASH)
-			P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
+			P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
 		return;
 	}
 
@@ -7384,7 +7383,7 @@ static void P_DoRopeHang(player_t *player)
 
 				if (!(player->pflags & PF_SLIDING) && (player->pflags & PF_JUMPED)
 				&& !(player->panim == PA_ROLL) && player->charability2 == CA2_SPINDASH)
-					P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
+					P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
 			}
 
 			P_SetTarget(&player->mo->tracer, NULL);
@@ -8700,7 +8699,7 @@ void P_PlayerThink(player_t *player)
 			P_SetPlayerMobjState(player->mo, S_PLAY_GLIDE);
 	}
 	else if ((player->pflags & PF_JUMPED) && !player->powers[pw_super] && player->panim != PA_ROLL && player->charability2 == CA2_SPINDASH)
-		P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
+		P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
 
 	if (player->flashcount)
 		player->flashcount--;
@@ -9328,7 +9327,7 @@ void P_PlayerAfterThink(player_t *player)
 	&& ((!player->powers[pw_super] && player->panim != PA_ROLL)
 	|| player->mo->state == &states[player->mo->info->painstate])
 	&& player->charability2 == CA2_SPINDASH)
-		P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
+		P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
 
 	if (player->pflags & PF_CARRIED && player->mo->tracer)
 	{

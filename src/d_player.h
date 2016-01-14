@@ -166,7 +166,7 @@ typedef enum
 	PA_RUN,
 	PA_PAIN,
 	PA_ROLL,
-	PA_SPRING,
+	PA_JUMP,
 	PA_FALL,
 	PA_ABILITY,
 	PA_RIDE

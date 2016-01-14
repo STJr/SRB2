@@ -199,7 +199,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 		P_ResetPlayer(object->player);
 
 		if (P_MobjFlip(object)*vertispeed > 0)
-			P_SetPlayerMobjState(object, S_PLAY_SPRING);
+			P_SetPlayerMobjState(object, S_PLAY_JUMP);
 		else if (P_MobjFlip(object)*vertispeed < 0)
 			P_SetPlayerMobjState(object, S_PLAY_FALL);
 		else // horizontal spring
@@ -213,7 +213,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 		if (spring->info->painchance)
 		{
 			object->player->pflags |= PF_JUMPED;
-			P_SetPlayerMobjState(object, S_PLAY_JUMP);
+			P_SetPlayerMobjState(object, S_PLAY_SPIN);
 		}
 	}
 	return true;
@@ -1929,7 +1929,7 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 
 				// Don't 'step up' while springing,
 				// Only step up "if needed".
-				if (thing->player->panim == PA_SPRING
+				if (thing->player->panim == PA_JUMP
 				&& P_MobjFlip(thing)*thing->momz > FixedMul(FRACUNIT, thing->scale))
 					maxstep = 0;
 			}
