@@ -9,12 +9,14 @@
 
 #if (defined(CMAKECONFIG))
 #include "config.h"
+const char *compbranch = SRB2_COMP_BRANCH;
 const char *comprevision = SRB2_COMP_REVISION;
 
 #elif (defined(COMPVERSION))
 #include "comptime.h"
 
 #else
+const char *compbranch = "Unknown";
 const char *comprevision = "illegal";
 
 #endif
