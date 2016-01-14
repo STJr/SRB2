@@ -100,10 +100,12 @@ typedef long ssize_t;
 
 #if defined (_MSC_VER) || defined (__OS2__)
 	// Microsoft VisualC++
+#ifdef _MSC_VER
 #if (_MSC_VER <= 1800) // MSVC 2013 and back
 	#define snprintf                _snprintf
 #if (_MSC_VER <= 1200) // MSVC 2012 and back
 	#define vsnprintf               _vsnprintf
+#endif
 #endif
 #endif
 	#define strncasecmp             strnicmp
@@ -177,6 +179,8 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 // not the number of bytes in the buffer.
 #define STRBUFCPY(dst,src) strlcpy(dst, src, sizeof dst)
 
+// \note __BYTEBOOL__ used to be set above if "macintosh" was defined,
+// if macintosh's version of boolean type isn't needed anymore, then isn't this macro pointless now?
 #ifndef __BYTEBOOL__
 	#define __BYTEBOOL__
 
@@ -193,7 +197,6 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 	#else
 		typedef enum {false, true} boolean;
 	#endif
-	//#endif // __cplusplus
 #endif // __BYTEBOOL__
 
 /* 7.18.2.1  Limits of exact-width integer types */
