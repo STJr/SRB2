@@ -20,6 +20,7 @@ goto filwri
 :svnrev
 set BRA=Subversion
 FOR /F "usebackq" %%s IN (`svnversion .`) DO @SET REV=%%s
+set REV=r%REV%
 goto filwri
 
 :filwri
