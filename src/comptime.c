@@ -9,7 +9,7 @@
 
 #if (defined(CMAKECONFIG))
 #include "config.h"
-const char *compbranch = ""; // hell if I know what to do with cmake
+const char *compbranch = SRB2_COMP_BRANCH;
 const char *comprevision = SRB2_COMP_REVISION;
 
 #elif (defined(COMPVERSION))
