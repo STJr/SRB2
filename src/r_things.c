@@ -1330,9 +1330,9 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (!cv_translucency.value)
 		; // no translucency
 	else if (thing->flags2 & MF2_SHADOW) // actually only the player should use this (temporary invisibility)
-		vis->transmap = ((tr_trans80-1)<<FF_TRANSSHIFT) + transtables; // because now the translucency is set through FF_TRANSMASK
+		vis->transmap = transtables + ((tr_trans80-1)<<FF_TRANSSHIFT); // because now the translucency is set through FF_TRANSMASK
 	else if (thing->frame & FF_TRANSMASK)
-		vis->transmap = (thing->frame & FF_TRANSMASK) - 0x10000 + transtables;
+		vis->transmap = transtables + (thing->frame & FF_TRANSMASK) - 0x10000;
 
 	if (((thing->frame & FF_FULLBRIGHT) || (thing->flags2 & MF2_SHADOW))
 		&& (!vis->extra_colormap || !vis->extra_colormap->fog))
@@ -2296,7 +2296,7 @@ static void Sk_SetDefaultValue(skin_t *skin)
 	strncpy(skin->face, "MISSING", 8);
 	strncpy(skin->superface, "MISSING", 8);
 
-	skin->starttranscolor = 160;
+	skin->starttranscolor = 96;
 	skin->prefcolor = SKINCOLOR_GREEN;
 
 	skin->normalspeed = 36<<FRACBITS;

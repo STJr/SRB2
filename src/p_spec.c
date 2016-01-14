@@ -4647,114 +4647,19 @@ void P_PlayerInSpecialSector(player_t *player)
 
 /** Animate planes, scroll walls, etc. and keeps track of level timelimit and exits if time is up.
   *
-  * \sa cv_timelimit, P_CheckPointLimit
+  * \sa P_CheckTimeLimit, P_CheckPointLimit
   */
 void P_UpdateSpecials(void)
 {
 	anim_t *anim;
-	INT32 i, k;
+	INT32 i;
 	INT32 pic;
 	size_t j;
 
 	levelflat_t *foundflats; // for flat animation
 
 	// LEVEL TIMER
-	// Exit if the timer is equal to or greater the timelimit, unless you are
-	// in overtime. In which case leveltime may stretch out beyond timelimitintics
-	// and overtime's status will be checked here each tick.
-	if (cv_timelimit.value && timelimitintics <= leveltime && (multiplayer || netgame)
-		&& G_RingSlingerGametype() && (gameaction != ga_completed))
-	{
-		boolean pexit = false;
-
-		//Tagmode round end but only on the tic before the
-		//XD_EXITLEVEL packet is recieved by all players.
-		if (G_TagGametype())
-		{
-			if (leveltime == (timelimitintics + 1))
-			{
-				for (i = 0; i < MAXPLAYERS; i++)
-				{
-					if (!playeringame[i] || players[i].spectator
-					 || (players[i].pflags & PF_TAGGED) || (players[i].pflags & PF_TAGIT))
-						continue;
-
-					CONS_Printf(M_GetText("%s recieved double points for surviving the round.\n"), player_names[i]);
-					P_AddPlayerScore(&players[i], players[i].score);
-				}
-			}
-
-			pexit = true;
-		}
-
-		//Optional tie-breaker for Match/CTF
-		else if (G_RingSlingerGametype() && cv_overtime.value)
-		{
-			INT32 playerarray[MAXPLAYERS];
-			INT32 tempplayer = 0;
-			INT32 spectators = 0;
-			INT32 playercount = 0;
-
-			//Figure out if we have enough participating players to care.
-			for (i = 0; i < MAXPLAYERS; i++)
-			{
-				if (playeringame[i] && players[i].spectator)
-					spectators++;
-			}
-
-			if ((D_NumPlayers() - spectators) > 1)
-			{
-				// Play the starpost sfx after the first second of overtime.
-				if (gamestate == GS_LEVEL && (leveltime == (timelimitintics + TICRATE)))
-					S_StartSound(NULL, sfx_strpst);
-
-				// Normal Match
-				if (!G_GametypeHasTeams())
-				{
-					//Store the nodes of participating players in an array.
-					for (i = 0; i < MAXPLAYERS; i++)
-					{
-						if (playeringame[i] && !players[i].spectator)
-						{
-							playerarray[playercount] = i;
-							playercount++;
-						}
-					}
-
-					//Sort 'em.
-					for (i = 1; i < playercount; i++)
-					{
-						for (k = i; k < playercount; k++)
-						{
-							if (players[playerarray[i-1]].score < players[playerarray[k]].score)
-							{
-								tempplayer = playerarray[i-1];
-								playerarray[i-1] = playerarray[k];
-								playerarray[k] = tempplayer;
-							}
-						}
-					}
-
-					//End the round if the top players aren't tied.
-					if (!(players[playerarray[0]].score == players[playerarray[1]].score))
-						pexit = true;
-				}
-				else
-				{
-					//In team match and CTF, determining a tie is much simpler. =P
-					if (!(redscore == bluescore))
-						pexit = true;
-				}
-			}
-			else
-				pexit = true;
-		}
-		else
-			pexit = true;
-
-		if (server && pexit)
-			SendNetXCmd(XD_EXITLEVEL, NULL, 0);
-	}
+	P_CheckTimeLimit();
 
 	// POINT LIMIT
 	P_CheckPointLimit();
