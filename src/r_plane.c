@@ -750,31 +750,15 @@ void R_DrawSinglePlane(visplane_t *pl)
 		// Hacked up support for alpha value in software mode Tails 09-24-2002 (sidenote: ported to polys 10-15-2014, there was no time travel involved -Red)
 		if (pl->polyobj->translucency >= 10)
 			return; // Don't even draw it
-		else if (pl->polyobj->translucency == 9)
-			ds_transmap = ((tr_trans90)<<FF_TRANSSHIFT) - 0x10000 + transtables;
-		else if (pl->polyobj->translucency == 8)
-			ds_transmap = ((tr_trans80)<<FF_TRANSSHIFT) - 0x10000 + transtables;
-		else if (pl->polyobj->translucency == 7)
-			ds_transmap = ((tr_trans70)<<FF_TRANSSHIFT) - 0x10000 + transtables;
-		else if (pl->polyobj->translucency == 6)
-			ds_transmap = ((tr_trans60)<<FF_TRANSSHIFT) - 0x10000 + transtables;
-		else if (pl->polyobj->translucency == 5)
-			ds_transmap = ((tr_trans50)<<FF_TRANSSHIFT) - 0x10000 + transtables;
-		else if (pl->polyobj->translucency == 4)
-			ds_transmap = ((tr_trans40)<<FF_TRANSSHIFT) - 0x10000 + transtables;
-		else if (pl->polyobj->translucency == 3)
-			ds_transmap = ((tr_trans30)<<FF_TRANSSHIFT) - 0x10000 + transtables;
-		else if (pl->polyobj->translucency == 2)
-			ds_transmap = ((tr_trans20)<<FF_TRANSSHIFT) - 0x10000 + transtables;
-		else if (pl->polyobj->translucency == 1)
-			ds_transmap = ((tr_trans10)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+		else if (pl->polyobj->translucency <= 9 && pl->polyobj->translucency > 0)
+			ds_transmap = transtables + ((pl->polyobj->translucency-1)<<16);
 		else // Opaque, but allow transparent flat pixels
 			spanfunc = splatfunc;
 
 		if (pl->extra_colormap && pl->extra_colormap->fog)
 			light = (pl->lightlevel >> LIGHTSEGSHIFT);
 		else
-		light = LIGHTLEVELS-1;
+			light = LIGHTLEVELS-1;
 
 	} else
 #endif
@@ -805,23 +789,23 @@ void R_DrawSinglePlane(visplane_t *pl)
 			if (pl->ffloor->alpha < 12)
 				return; // Don't even draw it
 			else if (pl->ffloor->alpha < 38)
-				ds_transmap = ((tr_trans90)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+				ds_transmap = transtables + ((tr_trans90-1)<<16);
 			else if (pl->ffloor->alpha < 64)
-				ds_transmap = ((tr_trans80)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+				ds_transmap = transtables + ((tr_trans80-1)<<16);
 			else if (pl->ffloor->alpha < 89)
-				ds_transmap = ((tr_trans70)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+				ds_transmap = transtables + ((tr_trans70-1)<<16);
 			else if (pl->ffloor->alpha < 115)
-				ds_transmap = ((tr_trans60)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+				ds_transmap = transtables + ((tr_trans60-1)<<16);
 			else if (pl->ffloor->alpha < 140)
-				ds_transmap = ((tr_trans50)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+				ds_transmap = transtables + ((tr_trans50-1)<<16);
 			else if (pl->ffloor->alpha < 166)
-				ds_transmap = ((tr_trans40)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+				ds_transmap = transtables + ((tr_trans40-1)<<16);
 			else if (pl->ffloor->alpha < 192)
-				ds_transmap = ((tr_trans30)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+				ds_transmap = transtables + ((tr_trans30-1)<<16);
 			else if (pl->ffloor->alpha < 217)
-				ds_transmap = ((tr_trans20)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+				ds_transmap = transtables + ((tr_trans20-1)<<16);
 			else if (pl->ffloor->alpha < 243)
-				ds_transmap = ((tr_trans10)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+				ds_transmap = transtables + ((tr_trans10-1)<<16);
 			else // Opaque, but allow transparent flat pixels
 				spanfunc = splatfunc;
 
@@ -1082,7 +1066,7 @@ using the palette colors.
 	if (spanfunc == R_DrawSpan_8)
 	{
 		INT32 i;
-		ds_transmap = ((tr_trans50)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+		ds_transmap = transtables + ((tr_trans50-1)<<16);
 		spanfunc = R_DrawTranslucentSpan_8;
 		for (i=0; i<4; i++)
 		{
