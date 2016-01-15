@@ -163,7 +163,11 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		case S_PLAY_GASP:
 			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_GASP);
 		case S_PLAY_JUMP:
+			if (!(player->charflags & SF_SUPERSPIN))
+				return true;
 			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_JUMP);
+		case S_PLAY_SPRING:
+			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_SPRING);
 		case S_PLAY_FALL:
 			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_FALL);
 		case S_PLAY_EDGE:
@@ -209,12 +213,14 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		break;
 	case S_PLAY_SPIN:
 	case S_PLAY_DASH:
+	case S_PLAY_JUMP:
 	case S_PLAY_SUPER_SPIN:
+	case S_PLAY_SUPER_JUMP:
 		player->panim = PA_ROLL;
 		break;
-	case S_PLAY_JUMP:
-	case S_PLAY_SUPER_JUMP:
-		player->panim = PA_JUMP;
+	case S_PLAY_SPRING:
+	case S_PLAY_SUPER_SPRING:
+		player->panim = PA_SPRING;
 		break;
 	case S_PLAY_FALL:
 	case S_PLAY_SUPER_FALL:
@@ -317,9 +323,12 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 					spr2 = SPR2_SPIN;
 					break;
 				case SPR2_GASP:
-					spr2 = SPR2_JUMP;
+					spr2 = SPR2_SPNG;
 					break;
 				case SPR2_JUMP:
+					spr2 = SPR2_SPIN;
+					break;
+				case SPR2_SPNG: // spring
 					spr2 = SPR2_FALL;
 					break;
 				case SPR2_FALL:
@@ -330,7 +339,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 					break;
 
 				case SPR2_FLY:
-					spr2 = SPR2_JUMP;
+					spr2 = SPR2_SPNG;
 					break;
 				case SPR2_TIRE:
 					spr2 = SPR2_FLY;
@@ -378,6 +387,9 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 					break;
 				case SPR2_SJMP:
 					spr2 = SPR2_JUMP;
+					break;
+				case SPR2_SSPG:
+					spr2 = SPR2_SPNG;
 					break;
 				case SPR2_SFAL:
 					spr2 = SPR2_FALL;

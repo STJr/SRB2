@@ -1800,16 +1800,14 @@ UINT8 M_HighestBit(UINT32 num)
 
 const char *GetRevisionString(void)
 {
-	INT32 vinfo;
-	static char rev[8] = {0};
+	static char rev[9] = {0};
 	if (rev[0])
 		return rev;
 
-	vinfo = atoi(&comprevision[1]);
-	if (vinfo)
-		snprintf(rev, 7, "r%d", vinfo);
+	if (comprevision[0] == 'r')
+		strncpy(rev, comprevision, 7);
 	else
-		strcpy(rev, "rNULL");
+		snprintf(rev, 7, "r%s", comprevision);
 	rev[7] = '\0';
 
 	return rev;

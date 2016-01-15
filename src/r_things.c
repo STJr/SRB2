@@ -2665,9 +2665,6 @@ next_token:
 		}
 		free(buf2);
 
-		if (skin != &skins[0])
-			skin->flags &= ~SF_SUPER;
-
 		// Add sprites
 		{
 			UINT16 z;

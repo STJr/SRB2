@@ -594,6 +594,7 @@ enum playersprite
 	SPR2_DASH,
 	SPR2_GASP,
 	SPR2_JUMP,
+	SPR2_SPNG, // spring
 	SPR2_FALL,
 	SPR2_EDGE,
 	SPR2_RIDE,
@@ -619,6 +620,7 @@ enum playersprite
 	SPR2_SSPN,
 	SPR2_SGSP,
 	SPR2_SJMP,
+	SPR2_SSPG,
 	SPR2_SFAL,
 	SPR2_SEDG,
 	SPR2_SRID,
@@ -655,7 +657,8 @@ typedef enum state
 	S_PLAY_SPIN,
 	S_PLAY_DASH,
 	S_PLAY_GASP,
-	S_PLAY_JUMP,
+	S_PLAY_JUMP, // spin jump (todo: make jump separate from spring up for non-spin chars too?)
+	S_PLAY_SPRING,
 	S_PLAY_FALL,
 	S_PLAY_EDGE,
 	S_PLAY_RIDE,
@@ -679,7 +682,8 @@ typedef enum state
 	S_PLAY_SUPER_DRWN,
 	S_PLAY_SUPER_SPIN,
 	S_PLAY_SUPER_GASP,
-	S_PLAY_SUPER_JUMP,
+	S_PLAY_SUPER_JUMP, // see note above
+	S_PLAY_SUPER_SPRING,
 	S_PLAY_SUPER_FALL,
 	S_PLAY_SUPER_EDGE,
 	S_PLAY_SUPER_RIDE,
