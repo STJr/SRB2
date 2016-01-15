@@ -49,7 +49,7 @@ emblem_t emblemlocations[MAXEMBLEMS] =
 		"Streams come to an end\n"
 		"where they can no longer fall.\n"
 		"But if you went up...", 0},
-	{0,  -336,  2064,   195, 1, 'E', SKINCOLOR_NEONGREEN, 0,
+	{0,  -336,  2064,   195, 1, 'E', SKINCOLOR_EMERALD, 0,
 		"This one's in plain sight.\n"
 		"Why haven't you claimed it?\n"
 		"Surely you saw it.", 0},
@@ -77,7 +77,7 @@ emblem_t emblemlocations[MAXEMBLEMS] =
 		"Near the level's end,\n"
 		"another bridge spans a lake.\n"
 		"What could be under...?", 0},
-	{0,  -170,   491,  3821, 2, 'E', SKINCOLOR_NEONGREEN, 0,
+	{0,  -170,   491,  3821, 2, 'E', SKINCOLOR_EMERALD, 0,
 		"An ivied tunnel\n"
 		"has a corner that's sunlit.\n"
 		"Go reach for the sky!", 0},
@@ -110,7 +110,7 @@ emblem_t emblemlocations[MAXEMBLEMS] =
 		"Spinning through small gaps\n"
 		"can slip you into a cave.\n"
 		"In that cave's first stretch...", 0},
-	{0,  2848, -9088,   488, 4, 'E', SKINCOLOR_NEONGREEN, 0,
+	{0,  2848, -9088,   488, 4, 'E', SKINCOLOR_EMERALD, 0,
 		"The slime lake is deep,\n"
 		"but reaching the floor takes height.\n"
 		"Scream \"Geronimo!\"...", 0},
@@ -138,7 +138,7 @@ emblem_t emblemlocations[MAXEMBLEMS] =
 		"There is a hallway\n"
 		"that a button floods with slime.\n"
 		"Go through it again!", 0},
-	{0, -2468,-12128,  1312, 5, 'E', SKINCOLOR_NEONGREEN, 0,
+	{0, -2468,-12128,  1312, 5, 'E', SKINCOLOR_EMERALD, 0,
 		"Jumping on turtles\n"
 		"will send you springing skyward.\n"
 		"Now, do that six times...", 0},
@@ -171,7 +171,7 @@ emblem_t emblemlocations[MAXEMBLEMS] =
 		"A caved-in hallway?\n"
 		"The floor falls; the path goes down.\n"
 		"But those rocks looked weak...", 0},
-	{0, 12576, 16096,  -992, 7, 'E', SKINCOLOR_NEONGREEN, 0,
+	{0, 12576, 16096,  -992, 7, 'E', SKINCOLOR_EMERALD, 0,
 		"The end is quite dry.\n"
 		"Some rocks dam the water in.\n"
 		"Knuckles can fix that...", 0},
@@ -199,7 +199,7 @@ emblem_t emblemlocations[MAXEMBLEMS] =
 		"In the current maze\n"
 		"hides a dark room of columns.\n"
 		"Find it, then look up.", 0},
-	{0,  3104, 16192,  2408, 8, 'E', SKINCOLOR_NEONGREEN,  0,
+	{0,  3104, 16192,  2408, 8, 'E', SKINCOLOR_EMERALD,  0,
 		"That same dragon's eye\n"
 		"hides another secret room.\n"
 		"There, solve its riddle.", 0},
@@ -232,7 +232,7 @@ emblem_t emblemlocations[MAXEMBLEMS] =
 		"The final approach!\n"
 		"A tower holds the emblem\n"
 		"near a ring arrow.", 0},
-	{0,  9472, -5890,   710, 10, 'E', SKINCOLOR_NEONGREEN, 0,
+	{0,  9472, -5890,   710, 10, 'E', SKINCOLOR_EMERALD, 0,
 		"The right starting path\n"
 		"hides this near a canopy,\n"
 		"high, where two trees meet.", 0},
@@ -260,7 +260,7 @@ emblem_t emblemlocations[MAXEMBLEMS] =
 		"Some of these bookshelves\n"
 		"are not flush against the walls.\n"
 		"Wonder why that is?", 0},
-	{0, 12708,-13536,  4768, 11, 'E', SKINCOLOR_NEONGREEN, 0,
+	{0, 12708,-13536,  4768, 11, 'E', SKINCOLOR_EMERALD, 0,
 		"The ending's towers\n"
 		"are hiding a small alcove.\n"
 		"Check around outside.", 0},
@@ -293,7 +293,7 @@ emblem_t emblemlocations[MAXEMBLEMS] =
 		"Not far from the start,\n"
 		"if you climb toward the sky,\n"
 		"the cliffs hide something.", 0},
-	{0, 12504,  6848,  3424, 13, 'E', SKINCOLOR_NEONGREEN, 0,
+	{0, 12504,  6848,  3424, 13, 'E', SKINCOLOR_EMERALD, 0,
 		"Right by the exit,\n"
 		"an emblem lies on a cliff.\n"
 		"Ride ropes to reach it.", 0},
@@ -321,7 +321,7 @@ emblem_t emblemlocations[MAXEMBLEMS] =
 		"Where once a bridge stood,\n"
 		"now magma falls from above.\n"
 		"The bridge dropped something...", 0},
-	{0,  8287,-11043,  1328, 16, 'E', SKINCOLOR_NEONGREEN, 0,
+	{0,  8287,-11043,  1328, 16, 'E', SKINCOLOR_EMERALD, 0,
 		"A lake of magma\n"
 		"ebbs and flows unendingly.\n"
 		"Wait for its nadir.", 0},
@@ -349,7 +349,7 @@ emblem_t emblemlocations[MAXEMBLEMS] =
 		"Don't jump too high here!\n"
 		"No conveyor will catch you;\n"
 		"you'd fall to your death.", 0},
-	{0, -6432, -6192,   584, 22, 'E', SKINCOLOR_NEONGREEN, 0,
+	{0, -6432, -6192,   584, 22, 'E', SKINCOLOR_EMERALD, 0,
 		"Conveyors! Magma!\n"
 		"What an intense room this is!\n"
 		"But, what brought you here?", 0},
@@ -377,7 +377,7 @@ emblem_t emblemlocations[MAXEMBLEMS] =
 		"Gears with missing teeth\n"
 		"can hide a clever secret!\n"
 		"Think Green Hill Zone boss.", 0},
-	{0,  1920, 20608,  1064, 23, 'E', SKINCOLOR_NEONGREEN, 0,
+	{0,  1920, 20608,  1064, 23, 'E', SKINCOLOR_EMERALD, 0,
 		"Just before you reach\n"
 		"the defective cargo bay,\n"
 		"fly under a bridge.", 0},
@@ -398,7 +398,7 @@ emblem_t emblemlocations[MAXEMBLEMS] =
 		"[PH] In the ceiling of the conveyor belt + laser hallway.", 0},
 	{0,-13728,-13728,  1552, 24, 'D', SKINCOLOR_ORANGE, 0,
 		"[PH] On top of the platform with rows of spikes in reverse gravity.", 0},
-	{0,-14944,   768,  1232, 24, 'E', SKINCOLOR_NEONGREEN, 0,
+	{0,-14944,   768,  1232, 24, 'E', SKINCOLOR_EMERALD, 0,
 		"Follow the leader.", 0},
 */
 
@@ -430,7 +430,7 @@ emblem_t emblemlocations[MAXEMBLEMS] =
 		"The underground room\n"
 		"with platforms that fall and rise\n"
 		"only LOOKS empty...", 0},
-	{0 , 4960, -6112,  1312, 30, 'E', SKINCOLOR_NEONGREEN, 0,
+	{0 , 4960, -6112,  1312, 30, 'E', SKINCOLOR_EMERALD, 0,
 		"This one's straightforward.\n"
 		"What comes to mind when I say:\n"
 		"\"WELCOME TO WARP ZONE!\"?", 0},
@@ -458,7 +458,7 @@ emblem_t emblemlocations[MAXEMBLEMS] =
 		"Much like the last one,\n"
 		"you need to find some switches.\n"
 		"Only two, this time.", 0},
-	{0, 13184, 18880,  6672, 40, 'E', SKINCOLOR_NEONGREEN, 0,
+	{0, 13184, 18880,  6672, 40, 'E', SKINCOLOR_EMERALD, 0,
 		"The inner sanctum!\n"
 		"Teleport to its switches;\n"
 		"then, check near the goal.", 0},
@@ -486,7 +486,7 @@ emblem_t emblemlocations[MAXEMBLEMS] =
 		"A room of currents;\n"
 		"most of them are marked by spikes.\n"
 		"This one? A corner.", 0},
-	{0, -4128, 21344,  1120, 41, 'E', SKINCOLOR_NEONGREEN, 0,
+	{0, -4128, 21344,  1120, 41, 'E', SKINCOLOR_EMERALD, 0,
 		"The only way to hit\n"
 		"all those gems at once is with\n"
 		"a radial blast.", 0},
@@ -498,63 +498,63 @@ emblem_t emblemlocations[MAXEMBLEMS] =
 
 	// FLORAL FIELD
 	// ---
-	{0, 5394, -996, 160, 50, 'N', SKINCOLOR_ROSEWOOD, 0, "", 0},
+	{0, 5394, -996, 160, 50, 'N', SKINCOLOR_RUST, 0, "", 0},
 	{ET_NGRADE, 0,0,0,   50, 'Q', SKINCOLOR_TEAL,     GRADE_A, "", 0},
 	{ET_NTIME,  0,0,0,   50, 'T', SKINCOLOR_GREY,  40*TICRATE, "", 0},
 
 
 	// TOXIC PLATEAU
 	// ---
-	{0, 780, -1664, 32, 51, 'N', SKINCOLOR_ROSEWOOD, 0, "", 0},
+	{0, 780, -1664, 32, 51, 'N', SKINCOLOR_RUST, 0, "", 0},
 	{ET_NGRADE, 0,0,0,  51, 'Q', SKINCOLOR_TEAL,     GRADE_A, "", 0},
 	{ET_NTIME,  0,0,0,  51, 'T', SKINCOLOR_GREY,  50*TICRATE, "", 0},
 
 
 	// FLOODED COVE
 	// ---
-	{0, 1824, -1888, 2448, 52, 'N', SKINCOLOR_ROSEWOOD, 0, "", 0},
+	{0, 1824, -1888, 2448, 52, 'N', SKINCOLOR_RUST, 0, "", 0},
 	{ET_NGRADE, 0,0,0,     52, 'Q', SKINCOLOR_TEAL,     GRADE_A, "", 0},
 	{ET_NTIME,  0,0,0,     52, 'T', SKINCOLOR_GREY,  90*TICRATE, "", 0},
 
 
 	// CAVERN FORTRESS
 	// ---
-	{0, -3089, -431, 1328, 53, 'N', SKINCOLOR_ROSEWOOD, 0, "", 0},
+	{0, -3089, -431, 1328, 53, 'N', SKINCOLOR_RUST, 0, "", 0},
 	{ET_NGRADE, 0,0,0,     53, 'Q', SKINCOLOR_TEAL,     GRADE_A, "", 0},
 	{ET_NTIME,  0,0,0,     53, 'T', SKINCOLOR_GREY,  75*TICRATE, "", 0},
 
 
 	// DUSTY WASTELAND
 	// ---
-	{0, 957, 924, 2956, 54, 'N', SKINCOLOR_ROSEWOOD, 0, "", 0},
+	{0, 957, 924, 2956, 54, 'N', SKINCOLOR_RUST, 0, "", 0},
 	{ET_NGRADE, 0,0,0,  54, 'Q', SKINCOLOR_TEAL,     GRADE_A, "", 0},
 	{ET_NTIME,  0,0,0,  54, 'T', SKINCOLOR_GREY,  65*TICRATE, "", 0},
 
 
 	// MAGMA CAVES
 	// ---
-	{0, -2752, 3104, 1800, 55, 'N', SKINCOLOR_ROSEWOOD, 0, "", 0},
+	{0, -2752, 3104, 1800, 55, 'N', SKINCOLOR_RUST, 0, "", 0},
 	{ET_NGRADE, 0,0,0,     55, 'Q', SKINCOLOR_TEAL,     GRADE_A, "", 0},
 	{ET_NTIME,  0,0,0,     55, 'T', SKINCOLOR_GREY,  80*TICRATE, "", 0},
 
 
 	// EGG SATELLITE
 	// ---
-	{0, 5334, -609, 3426, 56, 'N', SKINCOLOR_ROSEWOOD, 0, "", 0},
+	{0, 5334, -609, 3426, 56, 'N', SKINCOLOR_RUST, 0, "", 0},
 	{ET_NGRADE, 0,0,0,    56, 'Q', SKINCOLOR_TEAL,     GRADE_A, "", 0},
 	{ET_NTIME,  0,0,0,    56, 'T', SKINCOLOR_GREY, 120*TICRATE, "", 0},
 
 
 	// BLACK HOLE
 	// ---
-	{0, 2108, 3776, 32, 57, 'N', SKINCOLOR_ROSEWOOD, 0, "", 0},
+	{0, 2108, 3776, 32, 57, 'N', SKINCOLOR_RUST, 0, "", 0},
 	{ET_NGRADE, 0,0,0,  57, 'Q', SKINCOLOR_TEAL,     GRADE_A, "", 0},
 	{ET_NTIME,  0,0,0,  57, 'T', SKINCOLOR_GREY, 150*TICRATE, "", 0},
 
 
 	// SPRING HILL
 	// ---
-	{0, -1840, -1024, 1644, 58, 'N', SKINCOLOR_ROSEWOOD, 0, "", 0},
+	{0, -1840, -1024, 1644, 58, 'N', SKINCOLOR_RUST, 0, "", 0},
 	{ET_NGRADE, 0,0,0,      58, 'Q', SKINCOLOR_TEAL,     GRADE_A, "", 0},
 	{ET_NTIME,  0,0,0,      58, 'T', SKINCOLOR_GREY,  60*TICRATE, "", 0},
 };
@@ -565,7 +565,7 @@ extraemblem_t extraemblems[MAXEXTRAEMBLEMS] =
 	{"Game Complete",  "Complete 1P Mode",                    10, 'X', SKINCOLOR_BLUE, 0},
 	{"All Emeralds",   "Complete 1P Mode with all Emeralds",  11, 'V', SKINCOLOR_GREY, 0},
 	{"Perfect Bonus",  "Perfect Bonus on a non-secret stage", 30, 'P', SKINCOLOR_GOLD, 0},
-	{"SRB1 Remake",    "Complete SRB1 Remake",                21, 'O', SKINCOLOR_ROSEWOOD, 0},
+	{"SRB1 Remake",    "Complete SRB1 Remake",                21, 'O', SKINCOLOR_RUST, 0},
 	{"NiGHTS Mastery", "Show your mastery of NiGHTS!",        22, 'W', SKINCOLOR_TEAL, 0},
 };
 

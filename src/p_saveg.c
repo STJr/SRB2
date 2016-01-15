@@ -636,7 +636,7 @@ static void P_NetArchiveWorld(void)
 		if (li->special != SHORT(mld->special))
 			diff |= LD_SPECIAL;
 
-		if (mld->special == 321 || mld->special == 322) // only reason li->callcount would be non-zero is if either of these are involved
+		if (SHORT(mld->special) == 321 || SHORT(mld->special) == 322) // only reason li->callcount would be non-zero is if either of these are involved
 			diff |= LD_CLLCOUNT;
 
 		if (li->sidenum[0] != 0xffff)

@@ -163,7 +163,11 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		case S_PLAY_GASP:
 			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_GASP);
 		case S_PLAY_JUMP:
+			if (!(player->charflags & SF_SUPERSPIN))
+				return true;
 			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_JUMP);
+		case S_PLAY_SPRING:
+			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_SPRING);
 		case S_PLAY_FALL:
 			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_FALL);
 		case S_PLAY_EDGE:
@@ -209,12 +213,14 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		break;
 	case S_PLAY_SPIN:
 	case S_PLAY_DASH:
+	case S_PLAY_JUMP:
 	case S_PLAY_SUPER_SPIN:
+	case S_PLAY_SUPER_JUMP:
 		player->panim = PA_ROLL;
 		break;
-	case S_PLAY_JUMP:
-	case S_PLAY_SUPER_JUMP:
-		player->panim = PA_JUMP;
+	case S_PLAY_SPRING:
+	case S_PLAY_SUPER_SPRING:
+		player->panim = PA_SPRING;
 		break;
 	case S_PLAY_FALL:
 	case S_PLAY_SUPER_FALL:
@@ -317,9 +323,12 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 					spr2 = SPR2_SPIN;
 					break;
 				case SPR2_GASP:
-					spr2 = SPR2_JUMP;
+					spr2 = SPR2_SPNG;
 					break;
 				case SPR2_JUMP:
+					spr2 = SPR2_SPIN;
+					break;
+				case SPR2_SPNG: // spring
 					spr2 = SPR2_FALL;
 					break;
 				case SPR2_FALL:
@@ -330,7 +339,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 					break;
 
 				case SPR2_FLY:
-					spr2 = SPR2_JUMP;
+					spr2 = SPR2_SPNG;
 					break;
 				case SPR2_TIRE:
 					spr2 = SPR2_FLY;
@@ -378,6 +387,9 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 					break;
 				case SPR2_SJMP:
 					spr2 = SPR2_JUMP;
+					break;
+				case SPR2_SSPG:
+					spr2 = SPR2_SPNG;
 					break;
 				case SPR2_SFAL:
 					spr2 = SPR2_FALL;
@@ -5924,8 +5936,6 @@ static void P_NightsItemChase(mobj_t *thing)
 
 static boolean P_ShieldLook(mobj_t *thing, shieldtype_t shield)
 {
-	fixed_t destx, desty;
-
 	if (!thing->target || thing->target->health <= 0 || !thing->target->player
 		|| (thing->target->player->powers[pw_shield] & SH_NOSTACK) == SH_NONE || thing->target->player->powers[pw_super]
 		|| thing->target->player->powers[pw_invulnerability] > 1)
@@ -5948,26 +5958,6 @@ static boolean P_ShieldLook(mobj_t *thing, shieldtype_t shield)
 	{ // Force shields check for any force shield
 		P_RemoveMobj(thing);
 		return false;
-	}
-
-	if (!splitscreen && rendermode != render_soft)
-	{
-		angle_t viewingangle;
-
-		if (players[displayplayer].awayviewtics)
-			viewingangle = R_PointToAngle2(thing->target->x, thing->target->y, players[displayplayer].awayviewmobj->x, players[displayplayer].awayviewmobj->y);
-		else if (!camera.chase && players[displayplayer].mo)
-			viewingangle = R_PointToAngle2(thing->target->x, thing->target->y, players[displayplayer].mo->x, players[displayplayer].mo->y);
-		else
-			viewingangle = R_PointToAngle2(thing->target->x, thing->target->y, camera.x, camera.y);
-
-		destx = thing->target->x + P_ReturnThrustX(thing->target, viewingangle, FixedMul(FRACUNIT, thing->scale));
-		desty = thing->target->y + P_ReturnThrustY(thing->target, viewingangle, FixedMul(FRACUNIT, thing->scale));
-	}
-	else
-	{
-		destx = thing->target->x;
-		desty = thing->target->y;
 	}
 
 	if (shield == SH_FORCE && thing->movecount != (thing->target->player->powers[pw_shield] & 0xFF))
@@ -5994,8 +5984,8 @@ static boolean P_ShieldLook(mobj_t *thing, shieldtype_t shield)
 
 	P_SetScale(thing, thing->target->scale);
 	P_UnsetThingPosition(thing);
-	thing->x = destx;
-	thing->y = desty;
+	thing->x = thing->target->x;
+	thing->y = thing->target->y;
 	if (thing->eflags & MFE_VERTICALFLIP)
 		thing->z = thing->target->z + thing->target->height - thing->height + FixedDiv(P_GetPlayerHeight(thing->target->player) - thing->target->height, 3*FRACUNIT) - FixedMul(2*FRACUNIT, thing->target->scale);
 	else

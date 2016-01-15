@@ -142,8 +142,10 @@ extern FILE *logstream;
 #ifdef DEVELOP
 #define VERSION    0 // Game version
 #define SUBVERSION 0 // more precise version number
-#define VERSIONSTRING "Trunk"
-#define VERSIONSTRINGW L"Trunk"
+#define VERSIONSTRING "Development EXE"
+#define VERSIONSTRINGW L"Development EXE"
+// most interface strings are ignored in development mode.
+// we use comprevision and compbranch instead.
 #else
 #define VERSION    202 // Game version
 #define SUBVERSION 0  // more precise version number
@@ -232,27 +234,31 @@ typedef enum
 	SKINCOLOR_SILVER,
 	SKINCOLOR_GREY,
 	SKINCOLOR_BLACK,
-	SKINCOLOR_CYAN,
-	SKINCOLOR_TEAL,
-	SKINCOLOR_STEELBLUE,
-	SKINCOLOR_BLUE,
-	SKINCOLOR_PEACH,
-	SKINCOLOR_TAN,
-	SKINCOLOR_PINK,
-	SKINCOLOR_LAVENDER,
-	SKINCOLOR_PURPLE,
-	SKINCOLOR_ORANGE,
-	SKINCOLOR_ROSEWOOD,
 	SKINCOLOR_BEIGE,
+	SKINCOLOR_PEACH,
 	SKINCOLOR_BROWN,
 	SKINCOLOR_RED,
-	SKINCOLOR_DARKRED,
-	SKINCOLOR_NEONGREEN,
-	SKINCOLOR_GREEN,
-	SKINCOLOR_ZIM,
-	SKINCOLOR_OLIVE,
-	SKINCOLOR_YELLOW,
+	SKINCOLOR_CRIMSON,
+	SKINCOLOR_ORANGE,
+	SKINCOLOR_RUST,
 	SKINCOLOR_GOLD,
+	SKINCOLOR_YELLOW,
+	SKINCOLOR_TAN,
+	SKINCOLOR_MOSS,
+	SKINCOLOR_PERIDOT,
+	SKINCOLOR_GREEN,
+	SKINCOLOR_EMERALD,
+	SKINCOLOR_AQUA,
+	SKINCOLOR_TEAL,
+	SKINCOLOR_CYAN,
+	SKINCOLOR_BLUE,
+	SKINCOLOR_AZURE,
+	SKINCOLOR_PASTEL,
+	SKINCOLOR_PURPLE,
+	SKINCOLOR_LAVENDER,
+	SKINCOLOR_MAGENTA,
+	SKINCOLOR_PINK,
+	SKINCOLOR_ROSY,
 
 	// Careful! MAXSKINCOLORS cannot be greater than 0x20!
 	MAXSKINCOLORS,
@@ -426,7 +432,7 @@ INT32 I_GetKey(void);
 #endif
 
 // Compile date and time and revision.
-extern const char *compdate, *comptime, *comprevision;
+extern const char *compdate, *comptime, *comprevision, *compbranch;
 
 // Disabled code and code under testing
 // None of these that are disabled in the normal build are guaranteed to work perfectly
@@ -500,3 +506,4 @@ extern const char *compdate, *comptime, *comprevision;
 //#define REDSANALOG
 
 #endif // __DOOMDEF__
+

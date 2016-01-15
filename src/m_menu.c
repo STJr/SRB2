@@ -2463,11 +2463,14 @@ void M_Drawer(void)
 			V_DrawThinString(vid.dupx, vid.height - 9*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, customversionstring);
 		}
 		else
-#if VERSION > 0 || SUBVERSION > 0
+		{
+#ifdef DEVELOP // Development -- show revision / branch info
+			V_DrawThinString(vid.dupx, vid.height - 17*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, compbranch);
+			V_DrawThinString(vid.dupx, vid.height - 9*vid.dupy,  V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, comprevision);
+#else // Regular build
 			V_DrawThinString(vid.dupx, vid.height - 9*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, va("%s", VERSIONSTRING));
-#else // Trunk build, show revision info
-			V_DrawThinString(vid.dupx, vid.height - 9*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, va("%s (%s)", VERSIONSTRING, comprevision));
 #endif
+		}
 	}
 }
 
@@ -2823,7 +2826,7 @@ static void M_DrawSlider(INT32 x, INT32 y, const consvar_t *cv)
 void M_DrawTextBox(INT32 x, INT32 y, INT32 width, INT32 boxlines)
 {
 	// Solid color textbox.
-	V_DrawFill(x+5, y+5, width*8+6, boxlines*8+6, 239);
+	V_DrawFill(x+5, y+5, width*8+6, boxlines*8+6, 159);
 	//V_DrawFill(x+8, y+8, width*8, boxlines*8, 31);
 /*
 	patch_t *p;
@@ -7406,3 +7409,4 @@ static void M_HandleFogColor(INT32 choice)
 	}
 }
 #endif
+

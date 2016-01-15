@@ -183,7 +183,7 @@ static void R_DrawWallSplats(void)
 					colfunc = basecolfunc;
 				else
 				{
-					dc_transmap = ((tr_trans50 - 1)<<FF_TRANSSHIFT) + transtables;
+					dc_transmap = transtables + ((tr_trans50 - 1)<<FF_TRANSSHIFT);
 					colfunc = fuzzcolfunc;
 				}
 
@@ -304,39 +304,15 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	switch (ldef->special)
 	{
 		case 900:
-			dc_transmap = ((tr_trans10)<<FF_TRANSSHIFT) - 0x10000 + transtables;
-			colfunc = fuzzcolfunc;
-			break;
 		case 901:
-			dc_transmap = ((tr_trans20)<<FF_TRANSSHIFT) - 0x10000 + transtables;
-			colfunc = fuzzcolfunc;
-			break;
 		case 902:
-			dc_transmap = ((tr_trans30)<<FF_TRANSSHIFT) - 0x10000 + transtables;
-			colfunc = fuzzcolfunc;
-			break;
 		case 903:
-			dc_transmap = ((tr_trans40)<<FF_TRANSSHIFT) - 0x10000 + transtables;
-			colfunc = fuzzcolfunc;
-			break;
 		case 904:
-			dc_transmap = ((tr_trans50)<<FF_TRANSSHIFT) - 0x10000 + transtables;
-			colfunc = fuzzcolfunc;
-			break;
 		case 905:
-			dc_transmap = ((tr_trans60)<<FF_TRANSSHIFT) - 0x10000 + transtables;
-			colfunc = fuzzcolfunc;
-			break;
 		case 906:
-			dc_transmap = ((tr_trans70)<<FF_TRANSSHIFT) - 0x10000 + transtables;
-			colfunc = fuzzcolfunc;
-			break;
 		case 907:
-			dc_transmap = ((tr_trans80)<<FF_TRANSSHIFT) - 0x10000 + transtables;
-			colfunc = fuzzcolfunc;
-			break;
 		case 908:
-			dc_transmap = ((tr_trans90)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+			dc_transmap = transtables + ((ldef->special-900)<<FF_TRANSSHIFT);
 			colfunc = fuzzcolfunc;
 			break;
 		case 909:
@@ -354,7 +330,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 		if (curline->polyseg->translucency >= NUMTRANSMAPS)
 			return;
 
-		dc_transmap = ((curline->polyseg->translucency)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+		dc_transmap = transtables + ((curline->polyseg->translucency-1)<<FF_TRANSSHIFT);
 		colfunc = fuzzcolfunc;
 	}
 
@@ -733,23 +709,23 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		if (pfloor->alpha < 12)
 			return; // Don't even draw it
 		else if (pfloor->alpha < 38)
-			dc_transmap = ((tr_trans90)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+			dc_transmap = transtables + ((tr_trans90-1)<<FF_TRANSSHIFT);
 		else if (pfloor->alpha < 64)
-			dc_transmap = ((tr_trans80)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+			dc_transmap = transtables + ((tr_trans80-1)<<FF_TRANSSHIFT);
 		else if (pfloor->alpha < 89)
-			dc_transmap = ((tr_trans70)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+			dc_transmap = transtables + ((tr_trans70-1)<<FF_TRANSSHIFT);
 		else if (pfloor->alpha < 115)
-			dc_transmap = ((tr_trans60)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+			dc_transmap = transtables + ((tr_trans60-1)<<FF_TRANSSHIFT);
 		else if (pfloor->alpha < 140)
-			dc_transmap = ((tr_trans50)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+			dc_transmap = transtables + ((tr_trans50-1)<<FF_TRANSSHIFT);
 		else if (pfloor->alpha < 166)
-			dc_transmap = ((tr_trans40)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+			dc_transmap = transtables + ((tr_trans40-1)<<FF_TRANSSHIFT);
 		else if (pfloor->alpha < 192)
-			dc_transmap = ((tr_trans30)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+			dc_transmap = transtables + ((tr_trans30-1)<<FF_TRANSSHIFT);
 		else if (pfloor->alpha < 217)
-			dc_transmap = ((tr_trans20)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+			dc_transmap = transtables + ((tr_trans20-1)<<FF_TRANSSHIFT);
 		else if (pfloor->alpha < 243)
-			dc_transmap = ((tr_trans10)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+			dc_transmap = transtables + ((tr_trans10-1)<<FF_TRANSSHIFT);
 		else
 			fuzzy = false; // Opaque
 
