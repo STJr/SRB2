@@ -6,6 +6,7 @@ copy nul: /b +%1\comptime.c tmp.$$$ > nul
 move tmp.$$$ %1\comptime.c > nul
 
 if exist .git goto gitrev
+if exist ..\.git goto gitrev
 if exist .svn goto svnrev
 goto filwri
 
