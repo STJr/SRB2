@@ -160,22 +160,14 @@ static int io_tostring (lua_State *L) {
 
 static int io_open (lua_State *L) {
   const char *filename = luaL_checkstring(L, 1);
+  if (strstr(filename, "../") || strstr(filename, "..\\"))
+  {
+	luaL_error(L,"access denied to %s", filename);
+	return pushresult(L,0,filename);
+  }
   const char *mode = luaL_optstring(L, 2, "r");
   FILE **pf = newfile(L);
   *pf = fopen(filename, mode);
-  return (*pf == NULL) ? pushresult(L, 0, filename) : 1;
-}
-
-
-/*
-** this function has a separated environment, which defines the
-** correct __close for 'popen' files
-*/
-static int io_popen (lua_State *L) {
-  const char *filename = luaL_checkstring(L, 1);
-  const char *mode = luaL_optstring(L, 2, "r");
-  FILE **pf = newfile(L);
-  *pf = lua_popen(L, filename, mode);
   return (*pf == NULL) ? pushresult(L, 0, filename) : 1;
 }
 
@@ -481,7 +473,6 @@ static const luaL_Reg iolib[] = {
   {"lines", io_lines},
   {"open", io_open},
   {"output", io_output},
-  {"popen", io_popen},
   {"read", io_read},
   {"tmpfile", io_tmpfile},
   {"type", io_type},
