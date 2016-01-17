@@ -21,6 +21,9 @@ LUALIB_API int (luaopen_base) (lua_State *L);
 #define LUA_TABLIBNAME	"table"
 LUALIB_API int (luaopen_table) (lua_State *L);
 
+#define LUA_IOLIBNAME	"io"
+LUALIB_API int (luaopen_io) (lua_State *L);
+
 #define LUA_STRLIBNAME	"string"
 LUALIB_API int (luaopen_string) (lua_State *L);
 
