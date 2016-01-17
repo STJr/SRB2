@@ -147,6 +147,16 @@ static inline void W_LoadDehackedLumps(UINT16 wadnum)
 	}
 #endif
 
+	{
+		lumpinfo_t *lump_p = wadfiles[wadnum]->lumpinfo;
+		for (lump = 0; lump < wadfiles[wadnum]->numlumps; lump++, lump_p++)
+			if (memcmp(lump_p->name,"SOC_",4)==0)
+			{
+				CONS_Printf(M_GetText("Loading SOC from %s\n"), wadfiles[wadnum]->filename);
+				DEH_LoadDehackedLumpPwad(wadnum, lump);
+			}
+	}
+
 	// Check for MAINCFG
 	for (lump = 0;lump != INT16_MAX;lump++)
 	{
