@@ -358,7 +358,7 @@ void Y_IntermissionDrawer(void)
 
 				if (data.compcoop.emblembonus[data.compcoop.topplayers[i]] != -1)
 					totalscore += data.compcoop.totalemblembonus[data.compcoop.topplayers[i]];
-                
+
                 totalscore = max(totalscore, 0);
 
 				V_DrawCenteredString((78*i)+43, 38+data.compcoop.quake, 0, va("%i", totalscore));
@@ -1077,8 +1077,16 @@ static void Y_UpdateRecordReplays(void)
 	if ((mainrecords[gamemap-1]->time == 0) || (players[consoleplayer].realtime < mainrecords[gamemap-1]->time))
 		mainrecords[gamemap-1]->time = players[consoleplayer].realtime;
 
-	if ((UINT16)(players[consoleplayer].health - 1) > mainrecords[gamemap-1]->rings)
-		mainrecords[gamemap-1]->rings = (UINT16)(players[consoleplayer].health - 1);
+	if (mapheaderinfo[gamemap-1]->typeoflevel & TOL_ND)
+	{
+		if ((UINT16)(players[consoleplayer].emblems) > mainrecords[gamemap-1]->rings)
+			mainrecords[gamemap-1]->rings = (UINT16)(players[consoleplayer].emblems);
+	}
+	else
+	{
+		if ((UINT16)(players[consoleplayer].health - 1) > mainrecords[gamemap-1]->rings)
+			mainrecords[gamemap-1]->rings = (UINT16)(players[consoleplayer].health - 1);
+	}
 
 	// Save demo!
 	bestdemo[255] = '\0';
@@ -1639,7 +1647,7 @@ static void Y_CalculateCompCoopWinners(void)
 				emblembonus = (players[i].health-1) * 100;
 
 			damagededuction = players[i].damagededuct * 100;
-			
+
 			// This checks the lives
 			finalscore = players[i].score + emblembonus - damagededuction;
             if (finalscore > players[i].score + emblembonus) // If it's greater than the original value + emblembonus, logically it has wrapped around
@@ -1651,7 +1659,7 @@ static void Y_CalculateCompCoopWinners(void)
 
 			if (ptlives > 0)
 				data.compcoop.gotlife = true; // a player has got at least 1 life from their points
-            
+
             // This checks the position
             finalscore = players[i].levelscore + emblembonus - damagededuction;
             if (finalscore > players[i].levelscore + emblembonus) // If it's greater than the original value + emblembonus, logically it has wrapped around
@@ -2030,7 +2038,10 @@ static void Y_SetPerfectBonus(player_t *player, y_bonus_t *bstruct)
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
 			if (!playeringame[i]) continue;
-			sharedringtotal += players[i].health - 1;
+			if (mapheaderinfo[gamemap-1]->typeoflevel & TOL_ND)
+				sharedringtotal += players[i].emblems;
+			else
+				sharedringtotal += players[i].health - 1;
 		}
 		if (!sharedringtotal || sharedringtotal < nummaprings)
 			data.coop.gotperfbonus = 0;

@@ -560,7 +560,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if (ALL7EMERALDS(emeralds)) // Got all 7
 			{
 				P_GivePlayerRings(player, 50);
-				nummaprings += 50; // no cheating towards Perfect!
+				if (!(mapheaderinfo[gamemap-1]->typeoflevel & TOL_ND))
+					nummaprings += 50; // no cheating towards Perfect!
 			}
 			else
 				token++;

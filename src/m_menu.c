@@ -3233,7 +3233,10 @@ static void M_DrawPauseMenu(void)
 					V_DrawString(56, 44 + (i*8), V_YELLOWMAP, "TIME:");
 					break;
 				case ET_RINGS:
-					V_DrawString(56, 44 + (i*8), V_YELLOWMAP, "RINGS:");
+					if (mapheaderinfo[gamemap]->typeoflevel & TOL_ND)
+						V_DrawString(56, 44 + (i*8), V_YELLOWMAP, "EMBLEMS:");
+					else
+						V_DrawString(56, 44 + (i*8), V_YELLOWMAP, "RINGS:");
 					break;
 			}
 			V_DrawRightAlignedString(284, 44 + (i*8), V_MONOSPACE, emblem_text[i]);
