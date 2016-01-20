@@ -1157,13 +1157,10 @@ static int mapheaderinfo_get(lua_State *L)
 {
 	mapheader_t *header = *((mapheader_t **)luaL_checkudata(L, 1, META_MAPHEADER));
 	const char *field = luaL_checkstring(L, 2);
-	//INT16 i;
-	if (fastcmp(field,"lvlttl")) {
-		//for (i = 0; i < 21; i++)
-		//	if (!header->lvlttl[i])
-		//		break;
+	INT16 i;
+	if (fastcmp(field,"lvlttl"))
 		lua_pushstring(L, header->lvlttl);
-	} else if (fastcmp(field,"subttl"))
+	else if (fastcmp(field,"subttl"))
 		lua_pushstring(L, header->subttl);
 	else if (fastcmp(field,"actnum"))
 		lua_pushinteger(L, header->actnum);
@@ -1187,9 +1184,12 @@ static int mapheaderinfo_get(lua_State *L)
 		lua_pushinteger(L, header->skybox_scaley);
 	else if (fastcmp(field,"skybox_scalez"))
 		lua_pushinteger(L, header->skybox_scalez);
-	else if (fastcmp(field,"interscreen"))
-		lua_pushstring(L, header->interscreen);
-	else if (fastcmp(field,"runsoc"))
+	else if (fastcmp(field,"interscreen")) {
+		for (i = 0; i < 8; i++)
+			if (!header->interscreen[i])
+				break;
+		lua_pushlstring(L, header->interscreen, i);
+	} else if (fastcmp(field,"runsoc"))
 		lua_pushstring(L, header->runsoc);
 	else if (fastcmp(field,"scriptname"))
 		lua_pushstring(L, header->scriptname);
