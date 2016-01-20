@@ -25,6 +25,13 @@
 
 
 static const char *const fnames[] = {"input", "output"};
+static const char *whitelist[] = { // Allow scripters to write files of these types to SRB2's folder
+	".txt",
+	".sav2",
+	".cfg",
+	".png",
+	".bmp"
+};
 
 
 static int pushresult (lua_State *L, int i, const char *filename) {
@@ -103,17 +110,6 @@ static int io_noclose (lua_State *L) {
 
 
 /*
-** function to close 'popen' files
-*/
-static int io_pclose (lua_State *L) {
-  FILE **p = tofilep(L);
-  int ok = lua_pclose(L, *p);
-  *p = NULL;
-  return pushresult(L, ok, NULL);
-}
-
-
-/*
 ** function to close regular files
 */
 static int io_fclose (lua_State *L) {
@@ -159,16 +155,26 @@ static int io_tostring (lua_State *L) {
 
 
 static int io_open (lua_State *L) {
-  const char *filename = luaL_checkstring(L, 1);
-  if (strstr(filename, "../") || strstr(filename, "..\\"))
-  {
-	luaL_error(L,"access denied to %s", filename);
-	return pushresult(L,0,filename);
-  }
-  const char *mode = luaL_optstring(L, 2, "r");
-  FILE **pf = newfile(L);
-  *pf = fopen(filename, mode);
-  return (*pf == NULL) ? pushresult(L, 0, filename) : 1;
+	const char *filename = luaL_checkstring(L, 1);
+	int pass = 0; int i;
+	int length = strlen(filename) - 1;
+	for (i = 0; i < 5; i++) // wolfs == noobcoder, so manually change this with any added file types
+	{
+		if (!stricmp(&filename[length - (strlen(whitelist[i]) - 1)], whitelist[i]))
+		{
+			pass = 1;
+			break;
+		}
+	}
+	if (strstr(filename, "../") || strstr(filename, "..\\") || !pass)
+	{
+		luaL_error(L,"access denied to %s", filename);
+		return pushresult(L,0,filename);
+	}
+	const char *mode = luaL_optstring(L, 2, "r");
+	FILE **pf = newfile(L);
+	*pf = fopen(filename, mode);
+	return (*pf == NULL) ? pushresult(L, 0, filename) : 1;
 }
 
 
@@ -535,10 +541,6 @@ LUALIB_API int luaopen_io (lua_State *L) {
   createstdfile(L, stdout, IO_OUTPUT, "stdout");
   createstdfile(L, stderr, 0, "stderr");
   lua_pop(L, 1);  /* pop environment for default files */
-  lua_getfield(L, -1, "popen");
-  newfenv(L, io_pclose);  /* create environment for 'popen' */
-  lua_setfenv(L, -2);  /* set fenv for 'popen' */
-  lua_pop(L, 1);  /* pop 'popen' */
   return 1;
 }
 
