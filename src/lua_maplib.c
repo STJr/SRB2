@@ -268,7 +268,7 @@ static int sectorlines_get(lua_State *L)
 {
 	line_t **seclines = *((line_t ***)luaL_checkudata(L, 1, META_SECTORLINES));
 	size_t i;
-	//size_t numoflines;
+	size_t numoflines = 0;
 	lua_settop(L, 2);
 	if (!lua_isnumber(L, 2))
 	{
@@ -286,21 +286,22 @@ static int sectorlines_get(lua_State *L)
 		}
 	}
 
-	/* \TODO: figure out how to find size of seclines array, rather than the size of a pointer!
-	Testing for sectors[0].lines in GFZ1 with a test Lua script:
-	sizeof(seclines) returns 4
-	sizeof(*seclines) returns 4
-	sizeof(**seclines) returns 84, presumably the size of line_t
-	You can probably see why I haven't been successful yet, hopefully
-	//CONS_Printf("sizeof(seclines): %d\n", sizeof(seclines));
-	//CONS_Printf("sizeof(seclines[0]): %d\n", sizeof(seclines[0]));*/
+	// check first linedef to figure which of its sectors owns this sector->lines pointer
+	// then check that sector's linecount to get a maximum index
+	//if (!seclines[0])
+		//return luaL_error(L, "no lines found!"); // no first linedef?????
+	if (seclines[0]->frontsector->lines == seclines)
+		numoflines = seclines[0]->frontsector->linecount;
+	else if (seclines[0]->backsector && seclines[0]->backsector->lines == seclines) // check backsector exists first
+		numoflines = seclines[0]->backsector->linecount;
+	//if neither sector has it then ???
 
-	/*numoflines = sizeof(seclines) / sizeof(seclines[0]);
 	if (!numoflines)
-		return luaL_error(L, "no lines found!");*/
+		return luaL_error(L, "no lines found!");
+
 	i = (size_t)lua_tointeger(L, 2);
-	/*if (i > numoflines)
-		return 0;*/
+	if (i >= numoflines)
+		return 0;
 	LUA_PushUserdata(L, seclines[i], META_LINE);
 	return 1;
 }
