@@ -142,8 +142,10 @@ extern FILE *logstream;
 #ifdef DEVELOP
 #define VERSION    0 // Game version
 #define SUBVERSION 0 // more precise version number
-#define VERSIONSTRING "Trunk"
-#define VERSIONSTRINGW L"Trunk"
+#define VERSIONSTRING "Development EXE"
+#define VERSIONSTRINGW L"Development EXE"
+// most interface strings are ignored in development mode.
+// we use comprevision and compbranch instead.
 #else
 #define VERSION    201 // Game version
 #define SUBVERSION 14  // more precise version number
@@ -426,7 +428,7 @@ INT32 I_GetKey(void);
 #endif
 
 // Compile date and time and revision.
-extern const char *compdate, *comptime, *comprevision;
+extern const char *compdate, *comptime, *comprevision, *compbranch;
 
 // Disabled code and code under testing
 // None of these that are disabled in the normal build are guaranteed to work perfectly
@@ -438,6 +440,9 @@ extern const char *compdate, *comptime, *comprevision;
 
 ///	Fun experimental slope stuff!
 //#define SLOPENESS
+
+/// Kalaron/Eternity Engine slope code (SRB2CB ported)
+#define ESLOPE
 
 ///	Delete file while the game is running.
 ///	\note	EXTREMELY buggy, tends to crash game.

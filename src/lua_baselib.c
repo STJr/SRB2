@@ -85,13 +85,6 @@ static int lib_print(lua_State *L)
 	return 0;
 }
 
-static int lib_evalMath(lua_State *L)
-{
-	const char *word = luaL_checkstring(L, 1);
-	lua_pushinteger(L, LUA_EvalMath(word));
-	return 1;
-}
-
 // M_RANDOM
 //////////////
 
@@ -138,25 +131,25 @@ static int lib_pRandomRange(lua_State *L)
 
 static int lib_pAproxDistance(lua_State *L)
 {
-	fixed_t dx = (fixed_t)luaL_checkinteger(L, 1);
-	fixed_t dy = (fixed_t)luaL_checkinteger(L, 2);
+	fixed_t dx = luaL_checkfixed(L, 1);
+	fixed_t dy = luaL_checkfixed(L, 2);
 	//HUDSAFE
-	lua_pushinteger(L, P_AproxDistance(dx, dy));
+	lua_pushfixed(L, P_AproxDistance(dx, dy));
 	return 1;
 }
 
 static int lib_pClosestPointOnLine(lua_State *L)
 {
-	fixed_t x = (fixed_t)luaL_checkinteger(L, 1);
-	fixed_t y = (fixed_t)luaL_checkinteger(L, 2);
+	fixed_t x = luaL_checkfixed(L, 1);
+	fixed_t y = luaL_checkfixed(L, 2);
 	line_t *line = *((line_t **)luaL_checkudata(L, 3, META_LINE));
 	vertex_t result;
 	//HUDSAFE
 	if (!line)
 		return LUA_ErrInvalid(L, "line_t");
 	P_ClosestPointOnLine(x, y, line, &result);
-	lua_pushinteger(L, result.x);
-	lua_pushinteger(L, result.y);
+	lua_pushfixed(L, result.x);
+	lua_pushfixed(L, result.y);
 	return 2;
 }
 
@@ -241,9 +234,9 @@ static int lib_pLookForPlayers(lua_State *L)
 
 static int lib_pSpawnMobj(lua_State *L)
 {
-	fixed_t x = (fixed_t)luaL_checkinteger(L, 1);
-	fixed_t y = (fixed_t)luaL_checkinteger(L, 2);
-	fixed_t z = (fixed_t)luaL_checkinteger(L, 3);
+	fixed_t x = luaL_checkfixed(L, 1);
+	fixed_t y = luaL_checkfixed(L, 2);
+	fixed_t z = luaL_checkfixed(L, 3);
 	mobjtype_t type = luaL_checkinteger(L, 4);
 	NOHUD
 	if (type > MT_LASTFREESLOT)
@@ -283,9 +276,9 @@ static int lib_pSpawnXYZMissile(lua_State *L)
 	mobj_t *source = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
 	mobj_t *dest = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
 	mobjtype_t type = luaL_checkinteger(L, 3);
-	fixed_t x = (fixed_t)luaL_checkinteger(L, 4);
-	fixed_t y = (fixed_t)luaL_checkinteger(L, 5);
-	fixed_t z = (fixed_t)luaL_checkinteger(L, 6);
+	fixed_t x = luaL_checkfixed(L, 4);
+	fixed_t y = luaL_checkfixed(L, 5);
+	fixed_t z = luaL_checkfixed(L, 6);
 	NOHUD
 	if (!source || !dest)
 		return LUA_ErrInvalid(L, "mobj_t");
@@ -298,13 +291,13 @@ static int lib_pSpawnXYZMissile(lua_State *L)
 static int lib_pSpawnPointMissile(lua_State *L)
 {
 	mobj_t *source = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
-	fixed_t xa = (fixed_t)luaL_checkinteger(L, 2);
-	fixed_t ya = (fixed_t)luaL_checkinteger(L, 3);
-	fixed_t za = (fixed_t)luaL_checkinteger(L, 4);
+	fixed_t xa = luaL_checkfixed(L, 2);
+	fixed_t ya = luaL_checkfixed(L, 3);
+	fixed_t za = luaL_checkfixed(L, 4);
 	mobjtype_t type = luaL_checkinteger(L, 5);
-	fixed_t x = (fixed_t)luaL_checkinteger(L, 6);
-	fixed_t y = (fixed_t)luaL_checkinteger(L, 7);
-	fixed_t z = (fixed_t)luaL_checkinteger(L, 8);
+	fixed_t x = luaL_checkfixed(L, 6);
+	fixed_t y = luaL_checkfixed(L, 7);
+	fixed_t z = luaL_checkfixed(L, 8);
 	NOHUD
 	if (!source)
 		return LUA_ErrInvalid(L, "mobj_t");
@@ -318,9 +311,9 @@ static int lib_pSpawnAlteredDirectionMissile(lua_State *L)
 {
 	mobj_t *source = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
 	mobjtype_t type = luaL_checkinteger(L, 2);
-	fixed_t x = (fixed_t)luaL_checkinteger(L, 3);
-	fixed_t y = (fixed_t)luaL_checkinteger(L, 4);
-	fixed_t z = (fixed_t)luaL_checkinteger(L, 5);
+	fixed_t x = luaL_checkfixed(L, 3);
+	fixed_t y = luaL_checkfixed(L, 4);
+	fixed_t z = luaL_checkfixed(L, 5);
 	INT32 shiftingAngle = (INT32)luaL_checkinteger(L, 5);
 	NOHUD
 	if (!source)
@@ -348,7 +341,7 @@ static int lib_pSPMAngle(lua_State *L)
 {
 	mobj_t *source = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
 	mobjtype_t type = luaL_checkinteger(L, 2);
-	angle_t angle = (angle_t)luaL_checkinteger(L, 3);
+	angle_t angle = luaL_checkangle(L, 3);
 	UINT8 allowaim = (UINT8)luaL_optinteger(L, 4, 0);
 	UINT32 flags2 = (UINT32)luaL_optinteger(L, 5, 0);
 	NOHUD
@@ -418,13 +411,13 @@ static int lib_pGetClosestAxis(lua_State *L)
 
 static int lib_pSpawnParaloop(lua_State *L)
 {
-	fixed_t x = (fixed_t)luaL_checkinteger(L, 1);
-	fixed_t y = (fixed_t)luaL_checkinteger(L, 2);
-	fixed_t z = (fixed_t)luaL_checkinteger(L, 3);
-	fixed_t radius = (fixed_t)luaL_checkinteger(L, 4);
+	fixed_t x = luaL_checkfixed(L, 1);
+	fixed_t y = luaL_checkfixed(L, 2);
+	fixed_t z = luaL_checkfixed(L, 3);
+	fixed_t radius = luaL_checkfixed(L, 4);
 	INT32 number = (INT32)luaL_checkinteger(L, 5);
 	mobjtype_t type = luaL_checkinteger(L, 6);
-	angle_t rotangle = (angle_t)luaL_checkinteger(L, 7);
+	angle_t rotangle = luaL_checkangle(L, 7);
 	statenum_t nstate = luaL_optinteger(L, 8, S_NULL);
 	boolean spawncenter = lua_optboolean(L, 9);
 	NOHUD
@@ -458,7 +451,7 @@ static int lib_pSupermanLook4Players(lua_State *L)
 static int lib_pSetScale(lua_State *L)
 {
 	mobj_t *mobj = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
-	fixed_t newscale = (fixed_t)luaL_checkinteger(L, 2);
+	fixed_t newscale = luaL_checkfixed(L, 2);
 	NOHUD
 	if (!mobj)
 		return LUA_ErrInvalid(L, "mobj_t");
@@ -526,7 +519,7 @@ static int lib_pGetPlayerHeight(lua_State *L)
 	//HUDSAFE
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
-	lua_pushinteger(L, P_GetPlayerHeight(player));
+	lua_pushfixed(L, P_GetPlayerHeight(player));
 	return 1;
 }
 
@@ -536,7 +529,7 @@ static int lib_pGetPlayerSpinHeight(lua_State *L)
 	//HUDSAFE
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
-	lua_pushinteger(L, P_GetPlayerSpinHeight(player));
+	lua_pushfixed(L, P_GetPlayerSpinHeight(player));
 	return 1;
 }
 
@@ -639,7 +632,7 @@ static int lib_pInQuicksand(lua_State *L)
 static int lib_pSetObjectMomZ(lua_State *L)
 {
 	mobj_t *mo = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
-	fixed_t value = (fixed_t)luaL_checkinteger(L, 2);
+	fixed_t value = luaL_checkfixed(L, 2);
 	boolean relative = lua_optboolean(L, 3);
 	NOHUD
 	if (!mo)
@@ -753,8 +746,8 @@ static int lib_pDoPlayerExit(lua_State *L)
 static int lib_pInstaThrust(lua_State *L)
 {
 	mobj_t *mo = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
-	angle_t angle = (angle_t)luaL_checkinteger(L, 2);
-	fixed_t move = (fixed_t)luaL_checkinteger(L, 3);
+	angle_t angle = luaL_checkangle(L, 2);
+	fixed_t move = luaL_checkfixed(L, 3);
 	NOHUD
 	if (!mo)
 		return LUA_ErrInvalid(L, "mobj_t");
@@ -768,10 +761,10 @@ static int lib_pReturnThrustX(lua_State *L)
 	fixed_t move;
 	if (lua_isnil(L, 1) || lua_isuserdata(L, 1))
 		lua_remove(L, 1); // ignore mobj as arg1
-	angle = (angle_t)luaL_checkinteger(L, 1);
-	move = (fixed_t)luaL_checkinteger(L, 2);
+	angle = luaL_checkangle(L, 1);
+	move = luaL_checkfixed(L, 2);
 	//HUDSAFE
-	lua_pushinteger(L, P_ReturnThrustX(NULL, angle, move));
+	lua_pushfixed(L, P_ReturnThrustX(NULL, angle, move));
 	return 1;
 }
 
@@ -781,10 +774,10 @@ static int lib_pReturnThrustY(lua_State *L)
 	fixed_t move;
 	if (lua_isnil(L, 1) || lua_isuserdata(L, 1))
 		lua_remove(L, 1); // ignore mobj as arg1
-	angle = (angle_t)luaL_checkinteger(L, 1);
-	move = (fixed_t)luaL_checkinteger(L, 2);
+	angle = luaL_checkangle(L, 1);
+	move = luaL_checkfixed(L, 2);
 	//HUDSAFE
-	lua_pushinteger(L, P_ReturnThrustY(NULL, angle, move));
+	lua_pushfixed(L, P_ReturnThrustY(NULL, angle, move));
 	return 1;
 }
 
@@ -802,7 +795,7 @@ static int lib_pNukeEnemies(lua_State *L)
 {
 	mobj_t *inflictor = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
 	mobj_t *source = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
-	fixed_t radius = (fixed_t)luaL_checkinteger(L, 3);
+	fixed_t radius = luaL_checkfixed(L, 3);
 	NOHUD
 	if (!inflictor || !source)
 		return LUA_ErrInvalid(L, "mobj_t");
@@ -868,8 +861,8 @@ static int lib_pSpawnSpinMobj(lua_State *L)
 static int lib_pTelekinesis(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
-	fixed_t thrust = (fixed_t)luaL_checkinteger(L, 2);
-	fixed_t range = (fixed_t)luaL_checkinteger(L, 3);
+	fixed_t thrust = luaL_checkfixed(L, 2);
+	fixed_t range = luaL_checkfixed(L, 3);
 	NOHUD
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
@@ -884,8 +877,8 @@ static int lib_pCheckPosition(lua_State *L)
 {
 	mobj_t *ptmthing = tmthing;
 	mobj_t *thing = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
-	fixed_t x = (fixed_t)luaL_checkinteger(L, 2);
-	fixed_t y = (fixed_t)luaL_checkinteger(L, 3);
+	fixed_t x = luaL_checkfixed(L, 2);
+	fixed_t y = luaL_checkfixed(L, 3);
 	NOHUD
 	if (!thing)
 		return LUA_ErrInvalid(L, "mobj_t");
@@ -899,8 +892,8 @@ static int lib_pTryMove(lua_State *L)
 {
 	mobj_t *ptmthing = tmthing;
 	mobj_t *thing = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
-	fixed_t x = (fixed_t)luaL_checkinteger(L, 2);
-	fixed_t y = (fixed_t)luaL_checkinteger(L, 3);
+	fixed_t x = luaL_checkfixed(L, 2);
+	fixed_t y = luaL_checkfixed(L, 3);
 	boolean allowdropoff = lua_optboolean(L, 4);
 	NOHUD
 	if (!thing)
@@ -915,7 +908,7 @@ static int lib_pMove(lua_State *L)
 {
 	mobj_t *ptmthing = tmthing;
 	mobj_t *actor = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
-	fixed_t speed = (fixed_t)luaL_checkinteger(L, 2);
+	fixed_t speed = luaL_checkfixed(L, 2);
 	NOHUD
 	if (!actor)
 		return LUA_ErrInvalid(L, "mobj_t");
@@ -929,9 +922,9 @@ static int lib_pTeleportMove(lua_State *L)
 {
 	mobj_t *ptmthing = tmthing;
 	mobj_t *thing = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
-	fixed_t x = (fixed_t)luaL_checkinteger(L, 2);
-	fixed_t y = (fixed_t)luaL_checkinteger(L, 3);
-	fixed_t z = (fixed_t)luaL_checkinteger(L, 4);
+	fixed_t x = luaL_checkfixed(L, 2);
+	fixed_t y = luaL_checkfixed(L, 3);
+	fixed_t z = luaL_checkfixed(L, 4);
 	NOHUD
 	if (!thing)
 		return LUA_ErrInvalid(L, "mobj_t");
@@ -975,10 +968,10 @@ static int lib_pCheckSight(lua_State *L)
 static int lib_pCheckHoopPosition(lua_State *L)
 {
 	mobj_t *hoopthing = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
-	fixed_t x = (fixed_t)luaL_checkinteger(L, 2);
-	fixed_t y = (fixed_t)luaL_checkinteger(L, 3);
-	fixed_t z = (fixed_t)luaL_checkinteger(L, 4);
-	fixed_t radius = (fixed_t)luaL_checkinteger(L, 5);
+	fixed_t x = luaL_checkfixed(L, 2);
+	fixed_t y = luaL_checkfixed(L, 3);
+	fixed_t z = luaL_checkfixed(L, 4);
+	fixed_t radius = luaL_checkfixed(L, 5);
 	NOHUD
 	if (!hoopthing)
 		return LUA_ErrInvalid(L, "mobj_t");
@@ -990,7 +983,7 @@ static int lib_pRadiusAttack(lua_State *L)
 {
 	mobj_t *spot = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
 	mobj_t *source = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
-	fixed_t damagedist = (fixed_t)luaL_checkinteger(L, 3);
+	fixed_t damagedist = luaL_checkfixed(L, 3);
 	NOHUD
 	if (!spot || !source)
 		return LUA_ErrInvalid(L, "mobj_t");
@@ -1000,12 +993,12 @@ static int lib_pRadiusAttack(lua_State *L)
 
 static int lib_pFloorzAtPos(lua_State *L)
 {
-	fixed_t x = (fixed_t)luaL_checkinteger(L, 1);
-	fixed_t y = (fixed_t)luaL_checkinteger(L, 2);
-	fixed_t z = (fixed_t)luaL_checkinteger(L, 3);
-	fixed_t height = (fixed_t)luaL_checkinteger(L, 4);
+	fixed_t x = luaL_checkfixed(L, 1);
+	fixed_t y = luaL_checkfixed(L, 2);
+	fixed_t z = luaL_checkfixed(L, 3);
+	fixed_t height = luaL_checkfixed(L, 4);
 	//HUDSAFE
-	lua_pushinteger(L, P_FloorzAtPos(x, y, z, height));
+	lua_pushfixed(L, P_FloorzAtPos(x, y, z, height));
 	return 1;
 }
 
@@ -1016,8 +1009,8 @@ static int lib_pDoSpring(lua_State *L)
 	NOHUD
 	if (!spring || !object)
 		return LUA_ErrInvalid(L, "mobj_t");
-	P_DoSpring(spring, object);
-	return 0;
+	lua_pushboolean(L, P_DoSpring(spring, object));
+	return 1;
 }
 
 // P_INTER
@@ -1209,8 +1202,8 @@ static int lib_pDoNightsScore(lua_State *L)
 static int lib_pThrust(lua_State *L)
 {
 	mobj_t *mo = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
-	angle_t angle = (angle_t)luaL_checkinteger(L, 2);
-	fixed_t move = (fixed_t)luaL_checkinteger(L, 3);
+	angle_t angle = luaL_checkangle(L, 2);
+	fixed_t move = luaL_checkfixed(L, 3);
 	NOHUD
 	if (!mo)
 		return LUA_ErrInvalid(L, "mobj_t");
@@ -1485,48 +1478,48 @@ static int lib_evCrumbleChain(lua_State *L)
 
 static int lib_rPointToAngle(lua_State *L)
 {
-	fixed_t x = (fixed_t)luaL_checkinteger(L, 1);
-	fixed_t y = (fixed_t)luaL_checkinteger(L, 2);
+	fixed_t x = luaL_checkfixed(L, 1);
+	fixed_t y = luaL_checkfixed(L, 2);
 	//HUDSAFE
-	lua_pushinteger(L, R_PointToAngle(x, y));
+	lua_pushangle(L, R_PointToAngle(x, y));
 	return 1;
 }
 
 static int lib_rPointToAngle2(lua_State *L)
 {
-	fixed_t px2 = (fixed_t)luaL_checkinteger(L, 1);
-	fixed_t py2 = (fixed_t)luaL_checkinteger(L, 2);
-	fixed_t px1 = (fixed_t)luaL_checkinteger(L, 3);
-	fixed_t py1 = (fixed_t)luaL_checkinteger(L, 4);
+	fixed_t px2 = luaL_checkfixed(L, 1);
+	fixed_t py2 = luaL_checkfixed(L, 2);
+	fixed_t px1 = luaL_checkfixed(L, 3);
+	fixed_t py1 = luaL_checkfixed(L, 4);
 	//HUDSAFE
-	lua_pushinteger(L, R_PointToAngle2(px2, py2, px1, py1));
+	lua_pushangle(L, R_PointToAngle2(px2, py2, px1, py1));
 	return 1;
 }
 
 static int lib_rPointToDist(lua_State *L)
 {
-	fixed_t x = (fixed_t)luaL_checkinteger(L, 1);
-	fixed_t y = (fixed_t)luaL_checkinteger(L, 2);
+	fixed_t x = luaL_checkfixed(L, 1);
+	fixed_t y = luaL_checkfixed(L, 2);
 	//HUDSAFE
-	lua_pushinteger(L, R_PointToDist(x, y));
+	lua_pushfixed(L, R_PointToDist(x, y));
 	return 1;
 }
 
 static int lib_rPointToDist2(lua_State *L)
 {
-	fixed_t px2 = (fixed_t)luaL_checkinteger(L, 1);
-	fixed_t py2 = (fixed_t)luaL_checkinteger(L, 2);
-	fixed_t px1 = (fixed_t)luaL_checkinteger(L, 3);
-	fixed_t py1 = (fixed_t)luaL_checkinteger(L, 4);
+	fixed_t px2 = luaL_checkfixed(L, 1);
+	fixed_t py2 = luaL_checkfixed(L, 2);
+	fixed_t px1 = luaL_checkfixed(L, 3);
+	fixed_t py1 = luaL_checkfixed(L, 4);
 	//HUDSAFE
-	lua_pushinteger(L, R_PointToDist2(px2, py2, px1, py1));
+	lua_pushfixed(L, R_PointToDist2(px2, py2, px1, py1));
 	return 1;
 }
 
 static int lib_rPointInSubsector(lua_State *L)
 {
-	fixed_t x = (fixed_t)luaL_checkinteger(L, 1);
-	fixed_t y = (fixed_t)luaL_checkinteger(L, 2);
+	fixed_t x = luaL_checkfixed(L, 1);
+	fixed_t y = luaL_checkfixed(L, 2);
 	//HUDSAFE
 	LUA_PushUserdata(L, R_PointInSubsector(x, y), META_SUBSECTOR);
 	return 1;
@@ -1660,7 +1653,7 @@ static int lib_sChangeMusic(lua_State *L)
 
 static int lib_sSpeedMusic(lua_State *L)
 {
-	fixed_t fixedspeed = (fixed_t)luaL_checkinteger(L, 1);
+	fixed_t fixedspeed = luaL_checkfixed(L, 1);
 	float speed = FIXED_TO_FLOAT(fixedspeed);
 	player_t *player = NULL;
 	NOHUD
@@ -1861,7 +1854,6 @@ static int lib_gTicsToMilliseconds(lua_State *L)
 
 static luaL_Reg lib[] = {
 	{"print", lib_print},
-	{"EvalMath", lib_evalMath},
 
 	// m_random
 	{"P_Random",lib_pRandom},

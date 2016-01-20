@@ -1478,7 +1478,7 @@ static void P_HitDeathMessages(player_t *player, mobj_t *inflictor, mobj_t *sour
 		return; // Presumably it's obvious what's happening in splitscreen.
 
 #ifdef HAVE_BLUA
-	if (LUAh_DeathMsg(player, inflictor, source))
+	if (LUAh_HurtMsg(player, inflictor, source))
 		return;
 #endif
 
@@ -1641,11 +1641,126 @@ static void P_HitDeathMessages(player_t *player, mobj_t *inflictor, mobj_t *sour
 		CONS_Printf(str, targetname, deadtarget ? M_GetText("killed") : M_GetText("hit"));
 }
 
+/** Checks if the level timer is over the timelimit and the round should end,
+  * unless you are in overtime. In which case leveltime may stretch out beyond
+  * timelimitintics and overtime's status will be checked here each tick.
+  * Verify that the value of ::cv_timelimit is greater than zero before
+  * calling this function.
+  *
+  * \sa cv_timelimit, P_CheckPointLimit, P_UpdateSpecials
+  */
+void P_CheckTimeLimit(void)
+{
+	INT32 i, k;
+
+	if (!cv_timelimit.value)
+		return;
+
+	if (!(multiplayer || netgame))
+		return;
+
+	if (G_PlatformGametype())
+		return;
+
+	if (leveltime < timelimitintics)
+		return;
+
+	if (gameaction == ga_completed)
+		return;
+
+	//Tagmode round end but only on the tic before the
+	//XD_EXITLEVEL packet is recieved by all players.
+	if (G_TagGametype())
+	{
+		if (leveltime == (timelimitintics + 1))
+		{
+			for (i = 0; i < MAXPLAYERS; i++)
+			{
+				if (!playeringame[i] || players[i].spectator
+				 || (players[i].pflags & PF_TAGGED) || (players[i].pflags & PF_TAGIT))
+					continue;
+
+				CONS_Printf(M_GetText("%s recieved double points for surviving the round.\n"), player_names[i]);
+				P_AddPlayerScore(&players[i], players[i].score);
+			}
+		}
+
+		if (server)
+			SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+	}
+
+	//Optional tie-breaker for Match/CTF
+	else if (cv_overtime.value)
+	{
+		INT32 playerarray[MAXPLAYERS];
+		INT32 tempplayer = 0;
+		INT32 spectators = 0;
+		INT32 playercount = 0;
+
+		//Figure out if we have enough participating players to care.
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			if (playeringame[i] && players[i].spectator)
+				spectators++;
+		}
+
+		if ((D_NumPlayers() - spectators) > 1)
+		{
+			// Play the starpost sfx after the first second of overtime.
+			if (gamestate == GS_LEVEL && (leveltime == (timelimitintics + TICRATE)))
+				S_StartSound(NULL, sfx_strpst);
+
+			// Normal Match
+			if (!G_GametypeHasTeams())
+			{
+				//Store the nodes of participating players in an array.
+				for (i = 0; i < MAXPLAYERS; i++)
+				{
+					if (playeringame[i] && !players[i].spectator)
+					{
+						playerarray[playercount] = i;
+						playercount++;
+					}
+				}
+
+				//Sort 'em.
+				for (i = 1; i < playercount; i++)
+				{
+					for (k = i; k < playercount; k++)
+					{
+						if (players[playerarray[i-1]].score < players[playerarray[k]].score)
+						{
+							tempplayer = playerarray[i-1];
+							playerarray[i-1] = playerarray[k];
+							playerarray[k] = tempplayer;
+						}
+					}
+				}
+
+				//End the round if the top players aren't tied.
+				if (players[playerarray[0]].score == players[playerarray[1]].score)
+					return;
+			}
+			else
+			{
+				//In team match and CTF, determining a tie is much simpler. =P
+				if (redscore == bluescore)
+					return;
+			}
+		}
+		if (server)
+			SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+	}
+
+	if (server)
+		SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+}
+
 /** Checks if a player's score is over the pointlimit and the round should end.
   * Verify that the value of ::cv_pointlimit is greater than zero before
   * calling this function.
   *
-  * \sa cv_pointlimit, P_UpdateSpecials
+  * \sa cv_pointlimit, P_CheckTimeLimit, P_UpdateSpecials
   */
 void P_CheckPointLimit(void)
 {
@@ -1988,7 +2103,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source)
 			// allow them to try again, rather than sitting the whole thing out.
 			if (leveltime >= hidetime * TICRATE)
 			{
-				if (gametype == GT_HIDEANDSEEK)//suiciding in survivor makes you IT.
+				if (gametype == GT_TAG)//suiciding in survivor makes you IT.
 				{
 					target->player->pflags |= PF_TAGIT;
 					CONS_Printf(M_GetText("%s is now IT!\n"), player_names[target->player-players]); // Tell everyone who is it!
