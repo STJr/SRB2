@@ -1115,8 +1115,8 @@ void HWR_AddSpriteMD2(size_t spritenum) // For MD2s that were added after startu
 static void HWR_CreateBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, GLMipmap_t *grmip, skincolors_t color)
 {
 	UINT16 w = gpatch->width, h = gpatch->height;
-    UINT32 size = w*h;
-    RGBA_t *image, *blendimage, *cur, blendcolor;
+	UINT32 size = w*h;
+	RGBA_t *image, *blendimage, *cur, blendcolor;
 
 	if (grmip->width == 0)
 	{
