@@ -158,7 +158,7 @@ static int io_open (lua_State *L) {
 	const char *filename = luaL_checkstring(L, 1);
 	int pass = 0; int i;
 	int length = strlen(filename) - 1;
-	for (i = 0; i < 5; i++) // wolfs == noobcoder, so manually change this with any added file types
+	for (i = 0; i < (sizeof (whitelist) / sizeof(const char *)); i++)
 	{
 		if (!stricmp(&filename[length - (strlen(whitelist[i]) - 1)], whitelist[i]))
 		{
