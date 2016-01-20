@@ -1162,9 +1162,9 @@ static int mapheaderinfo_get(lua_State *L)
 		//for (i = 0; i < 21; i++)
 		//	if (!header->lvlttl[i])
 		//		break;
-		lua_pushlstring(L, header->lvlttl, 21);
+		lua_pushstring(L, header->lvlttl);
 	} else if (fastcmp(field,"subttl"))
-		lua_pushlstring(L, header->subttl, 32);
+		lua_pushstring(L, header->subttl);
 	else if (fastcmp(field,"actnum"))
 		lua_pushinteger(L, header->actnum);
 	else if (fastcmp(field,"typeoflevel"))
@@ -1176,7 +1176,7 @@ static int mapheaderinfo_get(lua_State *L)
 	else if (fastcmp(field,"musicslottrack"))
 		lua_pushinteger(L, header->musicslottrack);
 	else if (fastcmp(field,"forcecharacter"))
-		lua_pushlstring(L, header->forcecharacter, 16);
+		lua_pushstring(L, header->forcecharacter);
 	else if (fastcmp(field,"weather"))
 		lua_pushinteger(L, header->weather);
 	else if (fastcmp(field,"skynum"))
@@ -1188,11 +1188,11 @@ static int mapheaderinfo_get(lua_State *L)
 	else if (fastcmp(field,"skybox_scalez"))
 		lua_pushinteger(L, header->skybox_scalez);
 	else if (fastcmp(field,"interscreen"))
-		lua_pushlstring(L, header->interscreen, 8);
+		lua_pushstring(L, header->interscreen);
 	else if (fastcmp(field,"runsoc"))
-		lua_pushlstring(L, header->runsoc, 32);
+		lua_pushstring(L, header->runsoc);
 	else if (fastcmp(field,"scriptname"))
-		lua_pushlstring(L, header->scriptname, 32);
+		lua_pushstring(L, header->scriptname);
 	else if (fastcmp(field,"precutscenenum"))
 		lua_pushinteger(L, header->precutscenenum);
 	else if (fastcmp(field,"cutscenenum"))
@@ -1221,7 +1221,7 @@ static int mapheaderinfo_get(lua_State *L)
 		for (;i < header->numCustomOptions && !fastcmp(field, header->customopts[i].option); ++i);
 
 		if(i < header->numCustomOptions)
-			lua_pushlstring(L, header->customopts[i].value, 255);
+			lua_pushstring(L, header->customopts[i].value);
 		else
 			lua_pushnil(L);
 	}
