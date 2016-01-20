@@ -306,6 +306,23 @@ static int sectorlines_get(lua_State *L)
 	return 1;
 }
 
+static int sectorlines_num(lua_State *L)
+{
+	line_t **seclines = *((line_t ***)luaL_checkudata(L, 1, META_SECTORLINES));
+	size_t numoflines = 0;
+	// check first linedef to figure which of its sectors owns this sector->lines pointer
+	// then check that sector's linecount to get a maximum index
+	//if (!seclines[0])
+		//return luaL_error(L, "no lines found!"); // no first linedef?????
+	if (seclines[0]->frontsector->lines == seclines)
+		numoflines = seclines[0]->frontsector->linecount;
+	else if (seclines[0]->backsector && seclines[0]->backsector->lines == seclines) // check backsector exists first
+		numoflines = seclines[0]->backsector->linecount;
+	//if neither sector has it then ???
+	lua_pushinteger(L, numoflines);
+	return 1;
+}
+
 static int sector_get(lua_State *L)
 {
 	sector_t *sector = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
@@ -1282,6 +1299,9 @@ int LUA_MapLib(lua_State *L)
 	luaL_newmetatable(L, META_SECTORLINES);
 		lua_pushcfunction(L, sectorlines_get);
 		lua_setfield(L, -2, "__index");
+
+		lua_pushcfunction(L, sectorlines_num);
+		lua_setfield(L, -2, "__len");
 	lua_pop(L, 1);
 
 	luaL_newmetatable(L, META_SECTOR);
