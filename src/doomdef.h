@@ -506,4 +506,3 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 //#define REDSANALOG
 
 #endif // __DOOMDEF__
-

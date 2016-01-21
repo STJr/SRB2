@@ -8824,4 +8824,3 @@ void LUA_SetActionByName(void *state, const char *actiontocompare)
 }
 
 #endif // HAVE_BLUA
-

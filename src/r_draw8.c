@@ -1388,4 +1388,3 @@ void R_DrawColumnShadowed_8(void)
 	if (dc_yl <= realyh)
 		walldrawerfunc();		// R_DrawWallColumn_8 for the appropriate architecture
 }
-

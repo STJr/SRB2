@@ -7409,4 +7409,3 @@ static void M_HandleFogColor(INT32 choice)
 	}
 }
 #endif
-
