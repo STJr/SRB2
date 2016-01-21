@@ -153,6 +153,12 @@ static int io_tostring (lua_State *L) {
   return 1;
 }
 
+static int StartsWith(const char *a, const char *b) // this is wolfs being lazy yet again
+{
+   if(strncmp(a, b, strlen(b)) == 0) return 1;
+   return 0;
+}
+
 
 static int io_open (lua_State *L) {
 	const char *filename = luaL_checkstring(L, 1);
@@ -166,7 +172,8 @@ static int io_open (lua_State *L) {
 			break;
 		}
 	}
-	if (strstr(filename, "../") || strstr(filename, "..\\") || !pass)
+	if (strstr(filename, "..") || strchr(filename, ':') || StartsWith(filename, "\\")
+		|| StartsWith(filename, "/") || !pass)
 	{
 		luaL_error(L,"access denied to %s", filename);
 		return pushresult(L,0,filename);
