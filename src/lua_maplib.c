@@ -1217,11 +1217,11 @@ static int mapheaderinfo_get(lua_State *L)
 	else {
 		// Read custom vars now
 		// (note: don't include the "LUA." in your lua scripts!)
-		UINT8 i = 0;
-		for (;i < header->numCustomOptions && !fastcmp(field, header->customopts[i].option); ++i);
+		UINT8 j = 0;
+		for (;j < header->numCustomOptions && !fastcmp(field, header->customopts[j].option); ++j);
 
-		if(i < header->numCustomOptions)
-			lua_pushstring(L, header->customopts[i].value);
+		if(j < header->numCustomOptions)
+			lua_pushstring(L, header->customopts[j].value);
 		else
 			lua_pushnil(L);
 	}
