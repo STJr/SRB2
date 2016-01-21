@@ -17,6 +17,9 @@
 
 #include "lauxlib.h"
 #include "lualib.h"
+#include "../i_system.h"
+#include "../doomdef.h"
+#include "../m_misc.h"
 
 
 
@@ -173,11 +176,14 @@ static int io_open (lua_State *L) {
 		}
 	}
 	if (strstr(filename, "..") || strchr(filename, ':') || StartsWith(filename, "\\")
-		|| StartsWith(filename, "/") || !pass)
+		|| StartsWith(filename, "/") || strchr(filename, '%') || !pass)
 	{
 		luaL_error(L,"access denied to %s", filename);
 		return pushresult(L,0,filename);
 	}
+	I_mkdir("luafiles", 0755);
+	char* destFilename = va("luafiles"PATHSEP"%s", filename);
+	filename = destFilename;
 	const char *mode = luaL_optstring(L, 2, "r");
 	FILE **pf = newfile(L);
 	*pf = fopen(filename, mode);
