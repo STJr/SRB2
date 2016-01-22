@@ -182,6 +182,22 @@ static int io_open (lua_State *L) {
 		return pushresult(L,0,filename);
 	}
 	I_mkdir("luafiles", 0755);
+	char *splitter = filename; 
+	while ((splitter = strchr(splitter, '/')))
+	{
+		*splitter = 0;
+		I_mkdir(va("luafiles"PATHSEP"%s", filename), 0755); 
+		*splitter = '/'; 
+		splitter++;
+	}
+	char *splitter2 = filename;
+	while ((splitter2 = strchr(splitter2, '\\')))
+	{
+		*splitter2 = 0;
+		I_mkdir(va("luafiles"PATHSEP"%s", filename), 0755); 
+		*splitter2 = '\\'; 
+		splitter2++;
+	}
 	char* destFilename = va("luafiles"PATHSEP"%s", filename);
 	filename = destFilename;
 	const char *mode = luaL_optstring(L, 2, "r");
