@@ -1363,6 +1363,9 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 	float cliplow = 0.0f, cliphigh = 0.0f;
 	INT32 gr_midtexture;
 	fixed_t h, l; // 3D sides and 2s middle textures
+#ifdef ESLOPE
+    fixed_t hS, lS;
+#endif
 
 	FUINT lightnum = 0; // shut up compiler
 	extracolormap_t *colormap;
@@ -2076,6 +2079,26 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 					texnum = texturetranslation[sides[newline->sidenum[0]].midtexture];
 				}
 
+#ifdef ESLOPE
+				h  = *rover->t_slope ? P_GetZAt(*rover->t_slope, v1x, v1y) : *rover->topheight;
+				hS = *rover->t_slope ? P_GetZAt(*rover->t_slope, v2x, v2y) : *rover->topheight;
+				l  = *rover->b_slope ? P_GetZAt(*rover->b_slope, v1x, v1y) : *rover->bottomheight;
+				lS = *rover->b_slope ? P_GetZAt(*rover->b_slope, v2x, v2y) : *rover->bottomheight;
+				if (!(*rover->t_slope) && !gr_frontsector->c_slope && !gr_backsector->c_slope && h > highcut)
+					h = hS = highcut;
+				if (!(*rover->b_slope) && !gr_frontsector->f_slope && !gr_backsector->f_slope && l < lowcut)
+					l = lS = lowcut;
+				//Hurdler: HW code starts here
+				//FIXME: check if peging is correct
+				// set top/bottom coords
+
+                wallVerts[3].y = FIXED_TO_FLOAT(h);
+                wallVerts[2].y = FIXED_TO_FLOAT(hS);
+                wallVerts[0].y = FIXED_TO_FLOAT(l);
+                wallVerts[1].y = FIXED_TO_FLOAT(lS);
+
+
+#else
 				h = *rover->topheight;
 				l = *rover->bottomheight;
 				if (h > highcut)
@@ -2087,6 +2110,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				// set top/bottom coords
 				wallVerts[2].y = wallVerts[3].y = FIXED_TO_FLOAT(h);
 				wallVerts[0].y = wallVerts[1].y = FIXED_TO_FLOAT(l);
+#endif
 				if (rover->flags & FF_FOG)
 				{
 					wallVerts[3].t = wallVerts[2].t = 0;
@@ -2096,6 +2120,15 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				}
 				else if (drawtextured)
 				{
+#ifdef ESLOPE // P.S. this is better-organized than the old version
+                    fixed_t offs = sides[(newline ?: rover->master)->sidenum[0]].rowoffset;
+					grTex = HWR_GetTexture(texnum);
+
+                    wallVerts[3].t = (*rover->topheight - h + offs) * grTex->scaleY;
+                    wallVerts[2].t = (*rover->topheight - hS + offs) * grTex->scaleY;
+                    wallVerts[0].t = (*rover->topheight - l + offs) * grTex->scaleY;
+                    wallVerts[1].t = (*rover->topheight - lS + offs) * grTex->scaleY;
+#else
 					grTex = HWR_GetTexture(texnum);
 
 					if (newline)
@@ -2108,6 +2141,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 						wallVerts[3].t = wallVerts[2].t = (*rover->topheight - h + sides[rover->master->sidenum[0]].rowoffset) * grTex->scaleY;
 						wallVerts[0].t = wallVerts[1].t = (h - l + (*rover->topheight - h + sides[rover->master->sidenum[0]].rowoffset)) * grTex->scaleY;
 					}
+#endif
 
 					wallVerts[0].s = wallVerts[3].s = cliplow * grTex->scaleX;
 					wallVerts[2].s = wallVerts[1].s = cliphigh * grTex->scaleX;
@@ -2180,7 +2214,26 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 					newline = rover->master->frontsector->lines[0] + linenum;
 					texnum = texturetranslation[sides[newline->sidenum[0]].midtexture];
 				}
+#ifdef ESLOPE //backsides
+				h  = *rover->t_slope ? P_GetZAt(*rover->t_slope, v1x, v1y) : *rover->topheight;
+				hS = *rover->t_slope ? P_GetZAt(*rover->t_slope, v2x, v2y) : *rover->topheight;
+				l  = *rover->b_slope ? P_GetZAt(*rover->b_slope, v1x, v1y) : *rover->bottomheight;
+				lS = *rover->b_slope ? P_GetZAt(*rover->b_slope, v2x, v2y) : *rover->bottomheight;
+				if (!(*rover->t_slope) && !gr_frontsector->c_slope && !gr_backsector->c_slope && h > highcut)
+					h = hS = highcut;
+				if (!(*rover->b_slope) && !gr_frontsector->f_slope && !gr_backsector->f_slope && l < lowcut)
+					l = lS = lowcut;
+				//Hurdler: HW code starts here
+				//FIXME: check if peging is correct
+				// set top/bottom coords
 
+                wallVerts[3].y = FIXED_TO_FLOAT(h);
+                wallVerts[2].y = FIXED_TO_FLOAT(hS);
+                wallVerts[0].y = FIXED_TO_FLOAT(l);
+                wallVerts[1].y = FIXED_TO_FLOAT(lS);
+
+
+#else
 				h = *rover->topheight;
 				l = *rover->bottomheight;
 				if (h > highcut)
@@ -2192,7 +2245,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				// set top/bottom coords
 				wallVerts[2].y = wallVerts[3].y = FIXED_TO_FLOAT(h);
 				wallVerts[0].y = wallVerts[1].y = FIXED_TO_FLOAT(l);
-
+#endif
 				if (rover->flags & FF_FOG)
 				{
 					wallVerts[3].t = wallVerts[2].t = 0;
@@ -3272,22 +3325,34 @@ static void HWR_Subsector(size_t num)
 		for (rover = gr_frontsector->ffloors;
 			rover; rover = rover->next)
 		{
+		    fixed_t cullHeight, centerHeight;
+
+            // bottom plane
+#ifdef ESLOPE
+            if (*rover->b_slope)
+            {
+                cullHeight = P_GetZAt(*rover->b_slope, viewx, viewy);
+                centerHeight = P_GetZAt(*rover->b_slope, gr_frontsector->soundorg.x, gr_frontsector->soundorg.y);
+            }
+            else
+#endif
+		    cullHeight = centerHeight = *rover->bottomheight;
 
 			if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_RENDERPLANES))
 				continue;
 			if (sub->validcount == validcount)
 				continue;
 
-			if (*rover->bottomheight <= gr_frontsector->ceilingheight &&
-			    *rover->bottomheight >= gr_frontsector->floorheight &&
-			    ((dup_viewz < *rover->bottomheight && !(rover->flags & FF_INVERTPLANES)) ||
-			     (dup_viewz > *rover->bottomheight && (rover->flags & FF_BOTHPLANES || rover->flags & FF_INVERTPLANES))))
+			if (centerHeight <= locCeilingHeight &&
+			    centerHeight >= locFloorHeight &&
+			    ((dup_viewz < cullHeight && !(rover->flags & FF_INVERTPLANES)) ||
+			     (dup_viewz > cullHeight && (rover->flags & FF_BOTHPLANES || rover->flags & FF_INVERTPLANES))))
 			{
 				if (rover->flags & FF_FOG)
 				{
 					UINT8 alpha;
 
-					light = R_GetPlaneLight(gr_frontsector, *rover->bottomheight, dup_viewz < *rover->bottomheight ? true : false);
+					light = R_GetPlaneLight(gr_frontsector, centerHeight, dup_viewz < cullHeight ? true : false);
 
 					if (rover->master->frontsector->extra_colormap)
 						alpha = HWR_FogBlockAlpha(*gr_frontsector->lightlist[light].lightlevel, rover->master->frontsector->extra_colormap->rgba, rover->master->frontsector->extra_colormap->fadergba);
@@ -3303,7 +3368,7 @@ static void HWR_Subsector(size_t num)
 				}
 				else if (rover->flags & FF_TRANSLUCENT) // SoM: Flags are more efficient
 				{
-					light = R_GetPlaneLight(gr_frontsector, *rover->bottomheight, dup_viewz < *rover->bottomheight ? true : false);
+					light = R_GetPlaneLight(gr_frontsector, centerHeight, dup_viewz < cullHeight ? true : false);
 #ifndef SORTING
 					HWR_Add3DWater(levelflats[*rover->bottompic].lumpnum,
 					               &extrasubsectors[num],
@@ -3322,21 +3387,33 @@ static void HWR_Subsector(size_t num)
 				else
 				{
 					HWR_GetFlat(levelflats[*rover->bottompic].lumpnum);
-					light = R_GetPlaneLight(gr_frontsector, *rover->bottomheight, dup_viewz < *rover->bottomheight ? true : false);
+					light = R_GetPlaneLight(gr_frontsector, centerHeight, dup_viewz < cullHeight ? true : false);
 					HWR_RenderPlane(NULL, &extrasubsectors[num], *rover->bottomheight, PF_Occlude, *gr_frontsector->lightlist[light].lightlevel, levelflats[*rover->bottompic].lumpnum,
 					                rover->master->frontsector, 255, false, gr_frontsector->lightlist[light].extra_colormap);
 				}
 			}
-			if (*rover->topheight >= gr_frontsector->floorheight &&
-			    *rover->topheight <= gr_frontsector->ceilingheight &&
-			    ((dup_viewz > *rover->topheight && !(rover->flags & FF_INVERTPLANES)) ||
-			     (dup_viewz < *rover->topheight && (rover->flags & FF_BOTHPLANES || rover->flags & FF_INVERTPLANES))))
+
+			// top plane
+#ifdef ESLOPE
+            if (*rover->t_slope)
+            {
+                cullHeight = P_GetZAt(*rover->t_slope, viewx, viewy);
+                centerHeight = P_GetZAt(*rover->t_slope, gr_frontsector->soundorg.x, gr_frontsector->soundorg.y);
+            }
+            else
+#endif
+		    cullHeight = centerHeight = *rover->topheight;
+
+			if (centerHeight >= locFloorHeight &&
+			    centerHeight <= locCeilingHeight &&
+			    ((dup_viewz > cullHeight && !(rover->flags & FF_INVERTPLANES)) ||
+			     (dup_viewz < cullHeight && (rover->flags & FF_BOTHPLANES || rover->flags & FF_INVERTPLANES))))
 			{
 				if (rover->flags & FF_FOG)
 				{
 					UINT8 alpha;
 
-					light = R_GetPlaneLight(gr_frontsector, *rover->topheight, dup_viewz < *rover->topheight ? true : false);
+					light = R_GetPlaneLight(gr_frontsector, centerHeight, dup_viewz < cullHeight ? true : false);
 
 					if (rover->master->frontsector->extra_colormap)
 						alpha = HWR_FogBlockAlpha(*gr_frontsector->lightlist[light].lightlevel, rover->master->frontsector->extra_colormap->rgba, rover->master->frontsector->extra_colormap->fadergba);
@@ -3352,7 +3429,7 @@ static void HWR_Subsector(size_t num)
 				}
 				else if (rover->flags & FF_TRANSLUCENT)
 				{
-					light = R_GetPlaneLight(gr_frontsector, *rover->topheight, dup_viewz < *rover->topheight ? true : false);
+					light = R_GetPlaneLight(gr_frontsector, centerHeight, dup_viewz < cullHeight ? true : false);
 #ifndef SORTING
 					HWR_Add3DWater(levelflats[*rover->toppic].lumpnum,
 					                          &extrasubsectors[num],
@@ -3372,7 +3449,7 @@ static void HWR_Subsector(size_t num)
 				else
 				{
 					HWR_GetFlat(levelflats[*rover->toppic].lumpnum);
-					light = R_GetPlaneLight(gr_frontsector, *rover->topheight, dup_viewz < *rover->topheight ? true : false);
+					light = R_GetPlaneLight(gr_frontsector, centerHeight, dup_viewz < cullHeight ? true : false);
 					HWR_RenderPlane(NULL, &extrasubsectors[num], *rover->topheight, PF_Occlude, *gr_frontsector->lightlist[light].lightlevel, levelflats[*rover->toppic].lumpnum,
 					                  rover->master->frontsector, 255, false, gr_frontsector->lightlist[light].extra_colormap);
 				}
