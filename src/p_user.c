@@ -9155,10 +9155,10 @@ void P_PlayerThink(player_t *player)
 
 	player->pflags &= ~PF_SLIDING;
 
+#define dashmode player->dashmode
 	// Dash mode ability for Metal Sonic
 	if ((player->charability == CA_DASHMODE) && !(maptol & TOL_NIGHTS))		// woo, dashmode! no nights tho.
 	{
-#define dashmode player->laps
 		if (player->speed >= FixedMul(skins[player->skin].normalspeed - 5*FRACUNIT, player->mo->scale) || (player->pflags & PF_STARTDASH))
 		{
 			dashmode++; 	// Counter. Adds 1 to dash mode per tic in top speed.
@@ -9172,10 +9172,10 @@ void P_PlayerThink(player_t *player)
 			else
 				dashmode = 0;
 		}
-		
+
 		if (dashmode > 254)
 			dashmode = 3*TICRATE+1;
-	
+
 		if (dashmode < 3*TICRATE)	// Exits Dash Mode if you drop below speed/dash counter tics. Not in the above block so it doesn't keep disabling in midair.
 		{
 			player->normalspeed = skins[player->skin].normalspeed; 	// Reset to default if not capable of entering dash mode.
@@ -9195,9 +9195,10 @@ void P_PlayerThink(player_t *player)
 			mobj_t *ghost = P_SpawnGhostMobj(player->mo); 	// Spawns afterimages
 			ghost->fuse = 2;	// Makes the images fade quickly
 		}
-#undef dashmode
 	}
-	
+	else
+		dashmode = 0;
+#undef dashmode
 /*
 //	Colormap verification
 	{

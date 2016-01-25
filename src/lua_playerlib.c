@@ -202,6 +202,8 @@ static int player_get(lua_State *L)
 		lua_pushinteger(L, plr->exiting);
 	else if (fastcmp(field,"homing"))
 		lua_pushinteger(L, plr->homing);
+	else if (fastcmp(field,"dashmode"))
+		lua_pushinteger(L, plr->dashmode);
 	else if (fastcmp(field,"skidtime"))
 		lua_pushinteger(L, plr->skidtime);
 	else if (fastcmp(field,"cmomx"))
@@ -452,6 +454,8 @@ static int player_set(lua_State *L)
 		plr->exiting = (tic_t)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"homing"))
 		plr->homing = (UINT8)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"dashmode"))
+		plr->dashmode = (tic_t)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"skidtime"))
 		plr->skidtime = (tic_t)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"cmomx"))

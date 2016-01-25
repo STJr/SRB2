@@ -191,6 +191,7 @@ typedef struct
 	INT32 deadtimer;
 	tic_t exiting;
 	UINT8 homing;
+	tic_t dashmode;
 	fixed_t cmomx;
 	fixed_t cmomy;
 	fixed_t rmomx;
