@@ -167,8 +167,12 @@ static int StartsWith(const char *a, const char *b) // this is wolfs being lazy 
 
 static int io_open (lua_State *L) {
 	const char *filename = luaL_checkstring(L, 1);
-	int pass = 0; int i;
+	int pass = 0; size_t i;
 	int length = strlen(filename) - 1;
+	char *splitter, *splitter2;
+	char *destFilename = NULL;
+	const char *mode = luaL_optstring(L, 2, "r");
+	FILE **pf;
 	for (i = 0; i < (sizeof (whitelist) / sizeof(const char *)); i++)
 	{
 		if (!stricmp(&filename[length - (strlen(whitelist[i]) - 1)], whitelist[i]))
@@ -184,26 +188,27 @@ static int io_open (lua_State *L) {
 		return pushresult(L,0,filename);
 	}
 	I_mkdir("luafiles", 0755);
-	char *splitter = filename; 
+
+	strcpy(destFilename, filename); // copy file name to temp string
+	splitter = destFilename;
 	while ((splitter = strchr(splitter, '/')))
 	{
 		*splitter = 0;
-		I_mkdir(va("luafiles"PATHSEP"%s", filename), 0755); 
+		I_mkdir(va("luafiles"PATHSEP"%s", destFilename), 0755);
 		*splitter = '/'; 
 		splitter++;
 	}
-	char *splitter2 = filename;
+	splitter2 = destFilename;
 	while ((splitter2 = strchr(splitter2, '\\')))
 	{
 		*splitter2 = 0;
-		I_mkdir(va("luafiles"PATHSEP"%s", filename), 0755); 
+		I_mkdir(va("luafiles"PATHSEP"%s", destFilename), 0755);
 		*splitter2 = '\\'; 
 		splitter2++;
 	}
-	char* destFilename = va("luafiles"PATHSEP"%s", filename);
+	destFilename = va("luafiles"PATHSEP"%s", destFilename);
 	filename = destFilename;
-	const char *mode = luaL_optstring(L, 2, "r");
-	FILE **pf = newfile(L);
+	pf = newfile(L);
 	*pf = fopen(filename, mode);
 	return (*pf == NULL) ? pushresult(L, 0, filename) : 1;
 }
