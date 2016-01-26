@@ -79,6 +79,7 @@ typedef struct gr_vissprite_s
 	boolean vflip;
    //Hurdler: 25/04/2000: now support colormap in hardware mode
 	UINT8 *colormap;
+	INT32 dispoffset; // copy of info->dispoffset, affects ordering but not drawing
 } gr_vissprite_t;
 
 // --------

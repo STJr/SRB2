@@ -1132,6 +1132,10 @@ static void readlevelheader(MYFILE *f, INT32 num)
 			}
 			else if (fastcmp(word, "NEXTLEVEL"))
 			{
+				if      (fastcmp(word2, "TITLE"))      i = 1100;
+				else if (fastcmp(word2, "EVALUATION")) i = 1101;
+				else if (fastcmp(word2, "CREDITS"))    i = 1102;
+				else
 				// Support using the actual map name,
 				// i.e., Nextlevel = AB, Nextlevel = FZ, etc.
 
@@ -3755,6 +3759,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PLAY_DASH",
 	"S_PLAY_GASP",
 	"S_PLAY_JUMP",
+	"S_PLAY_SPRING",
 	"S_PLAY_FALL",
 	"S_PLAY_EDGE",
 	"S_PLAY_RIDE",
@@ -3779,6 +3784,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PLAY_SUPER_SPIN",
 	"S_PLAY_SUPER_GASP",
 	"S_PLAY_SUPER_JUMP",
+	"S_PLAY_SUPER_SPRING",
 	"S_PLAY_SUPER_FALL",
 	"S_PLAY_SUPER_EDGE",
 	"S_PLAY_SUPER_RIDE",
@@ -7680,7 +7686,7 @@ struct {
 	{"PA_RUN",PA_RUN},
 	{"PA_PAIN",PA_PAIN},
 	{"PA_ROLL",PA_ROLL},
-	{"PA_JUMP",PA_JUMP},
+	{"PA_SPRING",PA_SPRING},
 	{"PA_FALL",PA_FALL},
 	{"PA_ABILITY",PA_ABILITY},
 	{"PA_RIDE",PA_RIDE},
@@ -8819,4 +8825,3 @@ void LUA_SetActionByName(void *state, const char *actiontocompare)
 }
 
 #endif // HAVE_BLUA
-

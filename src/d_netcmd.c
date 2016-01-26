@@ -3179,7 +3179,11 @@ static void Command_ListWADS_f(void)
   */
 static void Command_Version_f(void)
 {
+#ifdef DEVELOP
+	CONS_Printf("Sonic Robo Blast 2 %s-%s (%s %s)\n", compbranch, comprevision, compdate, comptime);
+#else
 	CONS_Printf("Sonic Robo Blast 2 %s (%s %s %s)\n", VERSIONSTRING, compdate, comptime, comprevision);
+#endif
 }
 
 #ifdef UPDATE_ALERT

@@ -1842,37 +1842,6 @@ static void ST_overlayDrawer(void)
 		LUAh_GameHUD(stplyr);
 #endif
 
-#if 0 // Pope XVI
-	if (!(netgame || multiplayer) && !modifiedgame && gamemap == 11 && ALL7EMERALDS(emeralds)
-		&& stplyr->mo && stplyr->mo->subsector && stplyr->mo->subsector->sector-sectors == 1361)
-	{
-		if (grade & 2048) // NAGZ
-		{
-			V_DrawCenteredString(BASEVIDWIDTH/2, 70, 0, M_GetText("I, Pope Rededict XVI proclaim"));
-			V_DrawCenteredString(BASEVIDWIDTH/2, 80, 0, M_GetText("AJ & Amy"));
-			V_DrawCenteredString(BASEVIDWIDTH/2, 90, 0, M_GetText("Husband & Wife"));
-			V_DrawCenteredString(BASEVIDWIDTH/2, 100, 0, M_GetText("on this day"));
-			V_DrawCenteredString(BASEVIDWIDTH/2, 110, 0, M_GetText("May 16, 2009"));
-
-			P_GivePlayerRings(stplyr, 9999);
-		}
-		else
-		{
-			V_DrawCenteredString(BASEVIDWIDTH/2,  60, 0, M_GetText("Oh... it's you again..."));
-			V_DrawCenteredString(BASEVIDWIDTH/2,  80, 0, M_GetText("Look, I wanted to apologize for the way"));
-			V_DrawCenteredString(BASEVIDWIDTH/2,  90, 0, M_GetText("I've acted in the past."));
-			V_DrawCenteredString(BASEVIDWIDTH/2, 110, 0, M_GetText("I've seen the error of my ways"));
-			V_DrawCenteredString(BASEVIDWIDTH/2, 120, 0, M_GetText("and turned over a new leaf."));
-			V_DrawCenteredString(BASEVIDWIDTH/2, 140, 0, M_GetText("Instead of sending people to hell,"));
-			V_DrawCenteredString(BASEVIDWIDTH/2, 150, 0, M_GetText("I now send them to heaven!"));
-
-			P_LinedefExecute(4200, stplyr->mo, stplyr->mo->subsector->sector);
-			P_LinedefExecute(4201, stplyr->mo, stplyr->mo->subsector->sector);
-			stplyr->mo->momx = stplyr->mo->momy = 0;
-		}
-	}
-#endif
-
 	// draw level title Tails
 	if (*mapheaderinfo[gamemap-1]->lvlttl != '\0' && !(hu_showscores && (netgame || multiplayer))
 #ifdef HAVE_BLUA

@@ -46,14 +46,14 @@ static pslope_t *slopelist = NULL;
 static UINT16 slopecount = 0;
 
 // Calculate line normal
-void P_CalculateSlopeNormal(pslope_t *slope) {
+static void P_CalculateSlopeNormal(pslope_t *slope) {
 	slope->normal.z = FINECOSINE(slope->zangle>>ANGLETOFINESHIFT);
 	slope->normal.x = -FixedMul(FINESINE(slope->zangle>>ANGLETOFINESHIFT), slope->d.x);
 	slope->normal.y = -FixedMul(FINESINE(slope->zangle>>ANGLETOFINESHIFT), slope->d.y);
 }
 
 // With a vertex slope that has its vertices set, configure relevant slope info
-void P_ReconfigureVertexSlope(pslope_t *slope)
+static void P_ReconfigureVertexSlope(pslope_t *slope)
 {
 	vector3_t vec1, vec2;
 
@@ -543,7 +543,7 @@ void P_SpawnSlope_Line(int linenum)
 //
 // Creates a new slope from three vertices with the specified IDs
 //
-pslope_t *P_NewVertexSlope(INT16 tag1, INT16 tag2, INT16 tag3, UINT8 flags)
+static pslope_t *P_NewVertexSlope(INT16 tag1, INT16 tag2, INT16 tag3, UINT8 flags)
 {
 	size_t i;
 	mapthing_t *mt = mapthings;

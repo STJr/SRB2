@@ -69,6 +69,7 @@ char spr2names[NUMPLAYERSPRITES][5] =
 	"DASH",
 	"GASP",
 	"JUMP",
+	"SPNG",
 	"FALL",
 	"EDGE",
 	"RIDE",
@@ -94,6 +95,7 @@ char spr2names[NUMPLAYERSPRITES][5] =
 	"SSPN",
 	"SGSP",
 	"SJMP",
+	"SSPG",
 	"SFAL",
 	"SEDG",
 	"SRID",
@@ -135,7 +137,8 @@ state_t states[NUMSTATES] =
 	{SPR_PLAY, SPR2_SPIN,   1, {NULL}, 0, 0, S_PLAY_SPIN}, // S_PLAY_SPIN
 	{SPR_PLAY, SPR2_DASH,   2, {NULL}, 0, 0, S_PLAY_DASH}, // S_PLAY_DASH
 	{SPR_PLAY, SPR2_GASP,  14, {NULL}, 0, 0, S_PLAY_WALK}, // S_PLAY_GASP
-	{SPR_PLAY, SPR2_JUMP,   2, {NULL}, 0, 0, S_PLAY_JUMP}, // S_PLAY_JUMP
+	{SPR_PLAY, SPR2_JUMP,   1, {NULL}, 0, 0, S_PLAY_JUMP}, // S_PLAY_JUMP
+	{SPR_PLAY, SPR2_SPNG,   2, {NULL}, 0, 0, S_PLAY_SPRING}, // S_PLAY_SPRING
 	{SPR_PLAY, SPR2_FALL,   2, {NULL}, 0, 0, S_PLAY_FALL}, // S_PLAY_FALL
 	{SPR_PLAY, SPR2_EDGE,  12, {NULL}, 0, 0, S_PLAY_EDGE}, // S_PLAY_EDGE
 	{SPR_PLAY, SPR2_RIDE,   4, {NULL}, 0, 0, S_PLAY_RIDE}, // S_PLAY_RIDE
@@ -159,7 +162,8 @@ state_t states[NUMSTATES] =
 	{SPR_PLAY, SPR2_SDRN,   4, {NULL}, 0, 0, S_PLAY_SUPER_DRWN}, // S_PLAY_SUPER_DRWN
 	{SPR_PLAY, SPR2_SSPN,   1, {NULL}, 0, 0, S_PLAY_SUPER_SPIN}, // S_PLAY_SUPER_SPIN
 	{SPR_PLAY, SPR2_SGSP,  14, {NULL}, 0, 0, S_PLAY_SUPER_WALK}, // S_PLAY_SUPER_GASP
-	{SPR_PLAY, SPR2_SJMP,   2, {NULL}, 0, 0, S_PLAY_SUPER_JUMP}, // S_PLAY_SUPER_JUMP
+	{SPR_PLAY, SPR2_SJMP,   1, {NULL}, 0, 0, S_PLAY_SUPER_JUMP}, // S_PLAY_SUPER_JUMP
+	{SPR_PLAY, SPR2_SSPG,   2, {NULL}, 0, 0, S_PLAY_SUPER_SPRING}, // S_PLAY_SUPER_SPRING
 	{SPR_PLAY, SPR2_SFAL,   2, {NULL}, 0, 0, S_PLAY_SUPER_FALL}, // S_PLAY_SUPER_FALL
 	{SPR_PLAY, SPR2_SEDG,  12, {NULL}, 0, 0, S_PLAY_SUPER_EDGE}, // S_PLAY_SUPER_EDGE
 	{SPR_PLAY, SPR2_SRID,   4, {NULL}, 0, 0, S_PLAY_SUPER_RIDE}, // S_PLAY_SUPER_RIDE
@@ -3426,7 +3430,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_NULL,         // deathstate
+		S_XPLD1,        // deathstate
 		S_DETON16,      // xdeathstate
 		sfx_pop,        // deathsound
 		1*FRACUNIT,     // speed

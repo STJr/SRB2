@@ -1472,4 +1472,3 @@ void CON_Drawer(void)
 	else if (gamestate == GS_LEVEL || gamestate == GS_INTERMISSION || gamestate == GS_CUTSCENE || gamestate == GS_CREDITS)
 		CON_DrawHudlines();
 }
-

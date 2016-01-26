@@ -77,7 +77,9 @@ static int lib_finecosine(lua_State *L)
 
 static int lib_finetangent(lua_State *L)
 {
-	lua_pushfixed(L, FINETANGENT((luaL_checkangle(L, 1)>>ANGLETOFINESHIFT) & FINEMASK));
+	// HACK: add ANGLE_90 to make tan() in Lua start at 0 like it should
+	// use & 4095 instead of & FINEMASK (8191), so it doesn't go out of the array's bounds
+	lua_pushfixed(L, FINETANGENT(((luaL_checkangle(L, 1)+ANGLE_90)>>ANGLETOFINESHIFT) & 4095));
 	return 1;
 }
 
@@ -164,7 +166,7 @@ static int lib_all7emeralds(lua_State *L)
 // Returns both color and frame numbers!
 static int lib_coloropposite(lua_State *L)
 {
-	int colornum = ((int)luaL_checkinteger(L, 1)) & MAXSKINCOLORS;
+	int colornum = ((int)luaL_checkinteger(L, 1)) % MAXSKINCOLORS;
 	lua_pushinteger(L, Color_Opposite[colornum*2]); // push color
 	lua_pushinteger(L, Color_Opposite[colornum*2+1]); // push frame
 	return 2;
