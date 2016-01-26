@@ -9173,9 +9173,6 @@ void P_PlayerThink(player_t *player)
 				dashmode = 0;
 		}
 
-		if (dashmode > 254)
-			dashmode = 3*TICRATE+1;
-
 		if (dashmode < 3*TICRATE)	// Exits Dash Mode if you drop below speed/dash counter tics. Not in the above block so it doesn't keep disabling in midair.
 		{
 			player->normalspeed = skins[player->skin].normalspeed; 	// Reset to default if not capable of entering dash mode.
