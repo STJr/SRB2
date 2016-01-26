@@ -873,7 +873,7 @@ void F_GameEvaluationDrawer(void)
 
 	if (finalecount == 5*TICRATE)
 	{
-		if ((!modifiedgame || savemoddata) && !(netgame || multiplayer))
+		if ((!modifiedgame || savemoddata) && (!(netgame || multiplayer) || &players[consoleplayer] == &players[serverplayer]))
 		{
 			++timesBeaten;
 

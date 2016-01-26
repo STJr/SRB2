@@ -1234,7 +1234,7 @@ void Y_StartIntermission(void)
 			// setup time data
 			data.coop.tics = players[consoleplayer].realtime;
 
-			if ((!modifiedgame || savemoddata) && !multiplayer && !demoplayback)
+			if ((!modifiedgame || savemoddata) && (!multiplayer || &players[consoleplayer] == &players[serverplayer]) && !demoplayback)
 			{
 				// Update visitation flags
 				mapvisited[gamemap-1] |= MV_BEATEN;
