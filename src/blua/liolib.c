@@ -174,7 +174,7 @@ static int io_open (lua_State *L) {
 	char *splitter, *forward, *backward;
 	char *destFilename;
 	const char *mode = luaL_optstring(L, 2, "r");
-	
+
 	for (i = 0; i < (sizeof (whitelist) / sizeof(const char *)); i++)
 	{
 		if (!stricmp(&filename[length - strlen(whitelist[i])], whitelist[i]))
@@ -189,12 +189,12 @@ static int io_open (lua_State *L) {
 		luaL_error(L,"access denied to %s", filename);
 		return pushresult(L,0,filename);
 	}
-	
+
 	destFilename = va("luafiles"PATHSEP"%s", filename);
-	
+
 	// Make directories as needed
 	splitter = destFilename;
-	
+
     forward = strchr(splitter, '/');
     backward = strchr(splitter, '\\');
 	while ((splitter = (forward && backward) ? min(forward, backward) : (forward ?: backward)))
@@ -203,11 +203,11 @@ static int io_open (lua_State *L) {
 		I_mkdir(destFilename, 0755);
 		*splitter = '/'; 
 		splitter++;
-		
+
         forward = strchr(splitter, '/');
         backward = strchr(splitter, '\\');
 	}
-	
+
 	pf = newfile(L);
 	*pf = fopen(destFilename, mode);
 	return (*pf == NULL) ? pushresult(L, 0, filename) : 1;
