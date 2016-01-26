@@ -166,16 +166,18 @@ static int StartsWith(const char *a, const char *b) // this is wolfs being lazy 
 
 
 static int io_open (lua_State *L) {
-	const char *filename = luaL_checkstring(L, 1);
-	int pass = 0; size_t i;
-	int length = strlen(filename) - 1;
-	char *splitter, *splitter2;
-	char *destFilename = NULL;
-	const char *mode = luaL_optstring(L, 2, "r");
 	FILE **pf;
+	const char *filename = luaL_checkstring(L, 1);
+	int pass = 0;
+	size_t i;
+	int length = strlen(filename);
+	char *splitter, *forward, *backward;
+	char *destFilename;
+	const char *mode = luaL_optstring(L, 2, "r");
+	
 	for (i = 0; i < (sizeof (whitelist) / sizeof(const char *)); i++)
 	{
-		if (!stricmp(&filename[length - (strlen(whitelist[i]) - 1)], whitelist[i]))
+		if (!stricmp(&filename[length - strlen(whitelist[i])], whitelist[i]))
 		{
 			pass = 1;
 			break;
@@ -187,29 +189,27 @@ static int io_open (lua_State *L) {
 		luaL_error(L,"access denied to %s", filename);
 		return pushresult(L,0,filename);
 	}
-	I_mkdir("luafiles", 0755);
-
-	strcpy(destFilename, filename); // copy file name to temp string
+	
+	destFilename = va("luafiles"PATHSEP"%s", filename);
+	
+	// Make directories as needed
 	splitter = destFilename;
-	while ((splitter = strchr(splitter, '/')))
+	
+    forward = strchr(splitter, '/');
+    backward = strchr(splitter, '\\');
+	while ((splitter = (forward && backward) ? min(forward, backward) : (forward ?: backward)))
 	{
 		*splitter = 0;
-		I_mkdir(va("luafiles"PATHSEP"%s", destFilename), 0755);
+		I_mkdir(destFilename, 0755);
 		*splitter = '/'; 
 		splitter++;
+		
+        forward = strchr(splitter, '/');
+        backward = strchr(splitter, '\\');
 	}
-	splitter2 = destFilename;
-	while ((splitter2 = strchr(splitter2, '\\')))
-	{
-		*splitter2 = 0;
-		I_mkdir(va("luafiles"PATHSEP"%s", destFilename), 0755);
-		*splitter2 = '\\'; 
-		splitter2++;
-	}
-	destFilename = va("luafiles"PATHSEP"%s", destFilename);
-	filename = destFilename;
+	
 	pf = newfile(L);
-	*pf = fopen(filename, mode);
+	*pf = fopen(destFilename, mode);
 	return (*pf == NULL) ? pushresult(L, 0, filename) : 1;
 }
 
