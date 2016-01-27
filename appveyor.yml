@@ -1,12 +1,12 @@
-version: 1.0.{build}
+version: 2.1.14.{branch}-{build}
 os: MinGW
 
 install:
-- set PATH=C:\mingw64\bin;%PATH%
 - set CC=i686-w64-mingw32-gcc
 - set WINDRES=windres
 
 build_script:
+- set Path=C:\mingw64\bin;%Path%
 - cmd: mingw32-make.exe -C src MINGW=1 WARNINGMODE=1 NOASM=1 NOUPX=1
 
 on_finish:
