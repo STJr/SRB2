@@ -1,0 +1,4 @@
+version: 1.0.{build}
+os: MinGW
+build_script:
+- cmd: make -C src MINGW=1
