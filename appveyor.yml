@@ -1,4 +1,5 @@
 version: 1.0.{build}
 os: MinGW
 build_script:
-- cmd: make -C src MINGW=1
+- cmd: C:\MinGW\bin\make.exe -C src MINGW=1 NOASM=1 NOPNG=1
+
