@@ -6,13 +6,13 @@ install:
 - set WINDRES=windres
 
 before_build:
-- set Path=c:\mingw64\bin;%Path%
-- c:\mingw64\bin\i686-w64-mingw32-gcc --version
-- c:\mingw64\bin\mingw32-make --version
+- set Path=c:\msys64\mingw32\bin;%Path%
+- i686-w64-mingw32-gcc --version
+- mingw32-make --version
 
 build_script:
 - cmd: mingw32-make.exe -C src MINGW=1 WARNINGMODE=1 NOASM=1 NOUPX=1
 
 on_finish:
-- ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+#- ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
 
