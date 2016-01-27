@@ -5,8 +5,12 @@ install:
 - set CC=i686-w64-mingw32-gcc
 - set WINDRES=windres
 
+before_build:
+- set Path=c:\mingw64\bin;%Path%
+- i686-w64-mingw32-gcc --version
+- mingw32-make --version
+
 build_script:
-- set Path=C:\mingw64\bin;%Path%
 - cmd: mingw32-make.exe -C src MINGW=1 WARNINGMODE=1 NOASM=1 NOUPX=1
 
 on_finish:
