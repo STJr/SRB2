@@ -1,9 +1,14 @@
 version: 1.0.{build}
 os: MinGW
 
+install:
+- set PATH=C:\mingw64\bin;%PATH%
+- set CC=i686-w64-mingw32-gcc
+- set WINDRES=windres
+
 build_script:
-- cmd: C:\MinGW\bin\make.exe -C src MINGW=1 NOASM=1 NOPNG=1
+- cmd: mingw32-make.exe -C src MINGW=1 WARNINGMODE=1 NOASM=1 NOUPX=1
 
 on_finish:
-- ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+#- ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
 
