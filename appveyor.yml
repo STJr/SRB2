@@ -5,5 +5,5 @@ build_script:
 - cmd: C:\MinGW\bin\make.exe -C src MINGW=1 NOASM=1 NOPNG=1
 
 on_finish:
--ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+- ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
 
