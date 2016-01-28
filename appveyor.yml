@@ -14,7 +14,7 @@ environment:
 
 install:
 - if not exist "%SDL2_ARCHIVE%" appveyor DownloadFile "%SDL2_URL%" -FileName "%SDL2_ARCHIVE%"
-- 7z x -y "%MINGW_ARCHIVE%" -o%TMP% > nul
+- 7z x -y "%SDL2_ARCHIVE%" -o%TMP% >null
 - robocopy /S %TMP%\%SDL2_MOVE% %MINGW_SDK%
 - ps: (Get-Content %TMP%\%SDL2_MOVE%\bin\sdl2-config) | ForEach-Object { $_ -replace "/usr/local/cross-tools/i686-w64-mingw32", "%MINGW_SDK%" } | Set-Content %MINGW_SDK%\bin\sdl2-config
 - ps: (Get-Content %TMP%\%SDL2_MOVE%\lib\cmake\SDL2\sdl2-config.cmake) | ForEach-Object { $_ -replace "/usr/local/cross-tools/i686-w64-mingw32", "%MINGW_SDK%" } | Set-Content %MINGW_SDK%\lib\cmake\SDL2\sdl2-config.cmake
@@ -32,5 +32,6 @@ build_script:
 #- cmd: mingw32-make.exe -C src MINGW=1 WARNINGMODE=1 NOASM=1 NOUPX=1 GCC52=1 SDL=1 NOMIXER=1 DEBUGMODE=1
 
 on_finish:
+- cmd: echo xfreerdp /u:appveyor /cert-ignore +clipboard /v:<ip>:<port>
 - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
 
