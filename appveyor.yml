@@ -1,18 +1,36 @@
 version: 2.1.14.{branch}-{build}
 os: MinGW
 
+cache:
+ SDL2-devel-2.0.4-mingw.tar.gz
+ 
+environment:
+ CC=i686-w64-mingw32-gcc
+ WINDRES=windres
+ MINGW_SDK=c:\msys64\mingw32
+ SDL2_URL=http://libsdl.org/release/SDL2-devel-2.0.4-mingw.tar.gz
+ SDL2_ARCHIVE=SDL2-devel-2.0.4-mingw.tar.gz
+ SDL2_MOVE=SDL2-2.0.4\i686-w64-mingw32
+
 install:
-- set CC=i686-w64-mingw32-gcc
-- set WINDRES=windres
+- if not exist "%SDL2_ARCHIVE%" appveyor DownloadFile "%SDL2_URL%" -FileName "%SDL2_ARCHIVE%"
+- 7z x -y "%MINGW_ARCHIVE%" -o%TMP% > nul
+- robocopy /S %TMP%\%SDL2_MOVE% %MINGW_SDK%
+- ps: (Get-Content %TMP%\%SDL2_MOVE%\bin\sdl2-config) | ForEach-Object { $_ -replace "/usr/local/cross-tools/i686-w64-mingw32", "%MINGW_SDK%" } | Set-Content %MINGW_SDK%\bin\sdl2-config
+- ps: (Get-Content %TMP%\%SDL2_MOVE%\lib\cmake\SDL2\sdl2-config.cmake) | ForEach-Object { $_ -replace "/usr/local/cross-tools/i686-w64-mingw32", "%MINGW_SDK%" } | Set-Content %MINGW_SDK%\lib\cmake\SDL2\sdl2-config.cmake
+- ps: (Get-Content %TMP%\%SDL2_MOVE%\lib\pkgconfig\sdl2.pc) | ForEach-Object { $_ -replace "/usr/local/cross-tools/i686-w64-mingw32", "%MINGW_SDK%" } | Set-Content %MINGW_SDK%\lib\pkgconfig\sdl2.pc
 
 before_build:
-- set Path=c:\msys64\mingw32\bin;%Path%
+- set Path=%MINGW_SDK%\bin;%Path%
 - i686-w64-mingw32-gcc --version
 - mingw32-make --version
 
 build_script:
-- cmd: mingw32-make.exe -C src MINGW=1 WARNINGMODE=1 NOASM=1 NOUPX=1 GCC52=1
+#- cmd: mingw32-make.exe -C src MINGW=1 WARNINGMODE=1 NOASM=1 NOUPX=1 GCC52=1
+#- cmd: mingw32-make.exe -C src MINGW=1 WARNINGMODE=1 NOASM=1 NOUPX=1 GCC52=1 DEBUGMODE=1
+- cmd: mingw32-make.exe -C src MINGW=1 WARNINGMODE=1 NOASM=1 NOUPX=1 GCC52=1 SDL=1 NOMIXER=1
+#- cmd: mingw32-make.exe -C src MINGW=1 WARNINGMODE=1 NOASM=1 NOUPX=1 GCC52=1 SDL=1 NOMIXER=1 DEBUGMODE=1
 
 on_finish:
-#- ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+- ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
 
