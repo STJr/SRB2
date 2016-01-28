@@ -22,7 +22,7 @@ install:
 - 7z x -y "%SDL2_ARCHIVE%.gz" -o%TMP% >null
 - 7z x -y "%TMP%\%SDL2_ARCHIVE%" -o%TMP% >null
 - 7z x -y "%SDL2_MIXER_ARCHIVE%.gz" -o%TMP% >null
-- 7z x -y "%TMP%\%SSDL2_MIXER_ARCHIVE%" -o%TMP% >null
+- 7z x -y "%TMP%\%SDL2_MIXER_ARCHIVE%" -o%TMP% >null
 #- robocopy /S /xx /ns /nc /nfl /ndl /np %TMP%\%SDL2_MOVE% %MINGW_SDK% || exit 0
 #- ps: (Get-Content [System.Environment]::ExpandEnvironmentVariables("%TMP%\%SDL2_MOVE%\bin\sdl2-config"))                  | ForEach-Object { $_ -replace "/usr/local/cross-tools/i686-w64-mingw32", [System.Environment]::ExpandEnvironmentVariables("%MINGW_SDK%") } | Set-Content [System.Environment]::ExpandEnvironmentVariables("%MINGW_SDK%\bin\sdl2-config")
 #- ps: (Get-Content [System.Environment]::ExpandEnvironmentVariables("%TMP%\%SDL2_MOVE%\lib\cmake\SDL2\sdl2-config.cmake")) | ForEach-Object { $_ -replace "/usr/local/cross-tools/i686-w64-mingw32", [System.Environment]::ExpandEnvironmentVariables("%MINGW_SDK%") } | Set-Content [System.Environment]::ExpandEnvironmentVariables("%MINGW_SDK%\lib\cmake\SDL2\sdl2-config.cmake")
