@@ -37,10 +37,10 @@ before_build:
 - mingw32-make --version
 
 build_script:
-#- cmd: mingw32-make.exe -C src MINGW=1 WARNINGMODE=1 NOASM=1 NOUPX=1 GCC52=1
-#- cmd: mingw32-make.exe -C src MINGW=1 WARNINGMODE=1 NOASM=1 NOUPX=1 GCC52=1 DEBUGMODE=1
-- cmd: mingw32-make.exe -C src MINGW=1 WARNINGMODE=1 NOASM=1 NOUPX=1 GCC52=1 SDL=1
-- cmd: mingw32-make.exe -C src MINGW=1 WARNINGMODE=1 NOASM=1 NOUPX=1 GCC52=1 SDL=1 DEBUGMODE=1
+#- cmd: mingw32-make.exe -C src MINGW=1 WARNINGMODE=1 NOASM=1 NOUPX=1 GCC52=1 ECHO=1
+#- cmd: mingw32-make.exe -C src MINGW=1 WARNINGMODE=1 NOASM=1 NOUPX=1 GCC52=1 DEBUGMODE=1 ECHO=1
+- cmd: mingw32-make.exe -C src MINGW=1 WARNINGMODE=1 NOASM=1 NOUPX=1 GCC52=1 SDL=1 ECHO=1
+- cmd: mingw32-make.exe -C src MINGW=1 WARNINGMODE=1 NOASM=1 NOUPX=1 GCC52=1 SDL=1 DEBUGMODE=1 ECHO=1
 
 on_finish:
 #- cmd: echo xfreerdp /u:appveyor /cert-ignore +clipboard /v:<ip>:<port>
