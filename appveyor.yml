@@ -2,8 +2,8 @@ version: 2.1.14.{branch}-{build}
 os: MinGW
 
 cache:
- SDL2-devel-2.0.4-mingw.tar.gz
- SDL2_mixer-devel-2.0.1-mingw.tar.gz
+- SDL2-devel-2.0.4-mingw.tar.gz
+- SDL2_mixer-devel-2.0.1-mingw.tar.gz
  
 environment:
  CC: i686-w64-mingw32-gcc
