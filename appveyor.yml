@@ -5,12 +5,12 @@ cache:
  SDL2-devel-2.0.4-mingw.tar.gz
  
 environment:
- CC=i686-w64-mingw32-gcc
- WINDRES=windres
- MINGW_SDK=c:\msys64\mingw32
- SDL2_URL=http://libsdl.org/release/SDL2-devel-2.0.4-mingw.tar.gz
- SDL2_ARCHIVE=SDL2-devel-2.0.4-mingw.tar.gz
- SDL2_MOVE=SDL2-2.0.4\i686-w64-mingw32
+ CC: i686-w64-mingw32-gcc
+ WINDRES: windres
+ MINGW_SDK: c:\msys64\mingw32
+ SDL2_URL: http://libsdl.org/release/SDL2-devel-2.0.4-mingw.tar.gz
+ SDL2_ARCHIVE: SDL2-devel-2.0.4-mingw.tar.gz
+ SDL2_MOVE: SDL2-2.0.4\i686-w64-mingw32
 
 install:
 - if not exist "%SDL2_ARCHIVE%" appveyor DownloadFile "%SDL2_URL%" -FileName "%SDL2_ARCHIVE%"
