@@ -14,7 +14,7 @@ environment:
 
 install:
 - if not exist "%SDL2_ARCHIVE%.gz" appveyor DownloadFile "%SDL2_URL%" -FileName "%SDL2_ARCHIVE%.gz"
-- 7z x -y "%SDL2_ARCHIVE%,gz" -o%TMP% >null
+- 7z x -y "%SDL2_ARCHIVE%.gz" -o%TMP% >null
 - 7z x -y "%TMP%\%SDL2_ARCHIVE%" -o%TMP% >null
 - robocopy /S %TMP%\%SDL2_MOVE% %MINGW_SDK%
 - ps: (Get-Content %TMP%\%SDL2_MOVE%\bin\sdl2-config) | ForEach-Object { $_ -replace "/usr/local/cross-tools/i686-w64-mingw32", "%MINGW_SDK%" } | Set-Content %MINGW_SDK%\bin\sdl2-config
