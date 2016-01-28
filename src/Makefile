@@ -703,13 +703,13 @@ $(OBJDIR)/depend.dep:
 	@echo "Creating dependency file, depend.dep"
 	@echo > comptime.h
 	-$(MKDIR) $(OBJDIR)
-	$(CC) $(CPPFLAGS) $(CFLAGS) -MM *.c > $(OBJDIR)/depend.ped
-	$(CC) $(CPPFLAGS) $(CFLAGS) -MM $(INTERFACE)/*.c >> $(OBJDIR)/depend.ped
+	$(CC) $(DEPFLAGS) $(CFLAGS) -MM *.c > $(OBJDIR)/depend.ped
+	$(CC) $(DEPFLAGS) $(CFLAGS) -MM $(INTERFACE)/*.c >> $(OBJDIR)/depend.ped
 ifndef NOHW
-	$(CC) $(CPPFLAGS) $(CFLAGS) -MM hardware/*.c >> $(OBJDIR)/depend.ped
+	$(CC) $(DEPFLAGS) $(CFLAGS) -MM hardware/*.c >> $(OBJDIR)/depend.ped
 endif
 ifndef NO_LUA
-	$(CC) $(CPPFLAGS) $(CFLAGS) -MM blua/*.c >> $(OBJDIR)/depend.ped
+	$(CC) $(DEPFLAGS) $(CFLAGS) -MM blua/*.c >> $(OBJDIR)/depend.ped
 endif
 	@sed -e 's,\(.*\)\.o: ,$(subst /,\/,$(OBJDIR))\/&,g' < $(OBJDIR)/depend.ped > $(OBJDIR)/depend.dep
 	$(REMOVE) $(OBJDIR)/depend.ped
