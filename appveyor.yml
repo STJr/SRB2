@@ -3,6 +3,7 @@ os: MinGW
 
 cache:
  SDL2-devel-2.0.4-mingw.tar.gz
+ SDL2_mixer-devel-2.0.1-mingw.tar.gz
  
 environment:
  CC: i686-w64-mingw32-gcc
@@ -11,20 +12,26 @@ environment:
  SDL2_URL: http://libsdl.org/release/SDL2-devel-2.0.4-mingw.tar.gz
  SDL2_ARCHIVE: SDL2-devel-2.0.4-mingw.tar
  SDL2_MOVE: SDL2-2.0.4\i686-w64-mingw32
+ SDL2_MIXER_URL=https://www.libsdl.org/projects/SDL_mixer/release/SDL2_mixer-devel-2.0.1-mingw.tar.gz
+ SDL2_MIXER_ARCHIVE: SDL2_mixer-devel-2.0.1-mingw.tar
+ SDL2_MIXER_MOVE: SDL2_mixer-2.0.1/i686-w64-mingw32
 
 install:
 - if not exist "%SDL2_ARCHIVE%.gz" appveyor DownloadFile "%SDL2_URL%" -FileName "%SDL2_ARCHIVE%.gz"
+- if not exist "%SDL2_MIXER_ARCHIVE%.gz" appveyor DownloadFile "%SDL2_MIXER_URL%" -FileName "%SDL2_MIXER_ARCHIVE%.gz"
 - 7z x -y "%SDL2_ARCHIVE%.gz" -o%TMP% >null
 - 7z x -y "%TMP%\%SDL2_ARCHIVE%" -o%TMP% >null
+- 7z x -y "%SDL2_MIXER_ARCHIVE%.gz" -o%TMP% >null
+- 7z x -y "%TMP%\%SSDL2_MIXER_ARCHIVE%" -o%TMP% >null
 #- robocopy /S /xx /ns /nc /nfl /ndl /np %TMP%\%SDL2_MOVE% %MINGW_SDK% || exit 0
 #- ps: (Get-Content [System.Environment]::ExpandEnvironmentVariables("%TMP%\%SDL2_MOVE%\bin\sdl2-config"))                  | ForEach-Object { $_ -replace "/usr/local/cross-tools/i686-w64-mingw32", [System.Environment]::ExpandEnvironmentVariables("%MINGW_SDK%") } | Set-Content [System.Environment]::ExpandEnvironmentVariables("%MINGW_SDK%\bin\sdl2-config")
 #- ps: (Get-Content [System.Environment]::ExpandEnvironmentVariables("%TMP%\%SDL2_MOVE%\lib\cmake\SDL2\sdl2-config.cmake")) | ForEach-Object { $_ -replace "/usr/local/cross-tools/i686-w64-mingw32", [System.Environment]::ExpandEnvironmentVariables("%MINGW_SDK%") } | Set-Content [System.Environment]::ExpandEnvironmentVariables("%MINGW_SDK%\lib\cmake\SDL2\sdl2-config.cmake")
 #- ps: (Get-Content [System.Environment]::ExpandEnvironmentVariables("%TMP%\%SDL2_MOVE%\lib\pkgconfig\sdl2.pc"))            | ForEach-Object { $_ -replace "/usr/local/cross-tools/i686-w64-mingw32", [System.Environment]::ExpandEnvironmentVariables("%MINGW_SDK%") } | Set-Content [System.Environment]::ExpandEnvironmentVariables("%MINGW_SDK%\lib\pkgconfig\sdl2.pc")
 
 before_build:
-- set CPPFLAGS=-I%TMP%\%SDL2_MOVE%\include\SDL2
-- set SDL_CFLAGS=-I%TMP%\%SDL2_MOVE%\include\SDL2 -Dmain=SDL_main
-- set SDL_LDFLAGS=-L%TMP%\%SDL2_MOVE%\lib  -lmingw32 -lSDL2main -lSDL2  -mwindows
+- set CPPFLAGS=-I%TMP%\%SDL2_MOVE%\include\SDL2 -I%TMP%\%SDL2_MIXER_MOVE%\include\SDL2
+- set SDL_CFLAGS=-I%TMP%\%SDL2_MOVE%\include\SDL2 -Dmain=SDL_main -I%TMP%\%SDL2_MIXER_MOVE%\include\SDL2
+- set SDL_LDFLAGS=-L%TMP%\%SDL2_MOVE%\lib  -lmingw32 -lSDL2main -lSDL2  -mwindows -L%TMP%\%SDL2_MIXER_MOVE%\lib
 - set Path=%MINGW_SDK%\bin;%Path%
 - i686-w64-mingw32-gcc --version
 - mingw32-make --version
@@ -32,8 +39,8 @@ before_build:
 build_script:
 #- cmd: mingw32-make.exe -C src MINGW=1 WARNINGMODE=1 NOASM=1 NOUPX=1 GCC52=1
 #- cmd: mingw32-make.exe -C src MINGW=1 WARNINGMODE=1 NOASM=1 NOUPX=1 GCC52=1 DEBUGMODE=1
-- cmd: mingw32-make.exe -C src MINGW=1 WARNINGMODE=1 NOASM=1 NOUPX=1 GCC52=1 SDL=1 NOMIXER=1
-#- cmd: mingw32-make.exe -C src MINGW=1 WARNINGMODE=1 NOASM=1 NOUPX=1 GCC52=1 SDL=1 NOMIXER=1 DEBUGMODE=1
+- cmd: mingw32-make.exe -C src MINGW=1 WARNINGMODE=1 NOASM=1 NOUPX=1 GCC52=1 SDL=1
+- cmd: mingw32-make.exe -C src MINGW=1 WARNINGMODE=1 NOASM=1 NOUPX=1 GCC52=1 SDL=1 DEBUGMODE=1
 
 on_finish:
 #- cmd: echo xfreerdp /u:appveyor /cert-ignore +clipboard /v:<ip>:<port>
