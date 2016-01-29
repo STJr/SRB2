@@ -43,8 +43,8 @@ build_script:
 - cmd: mingw32-make.exe -C src MINGW=1 WARNINGMODE=1 NOASM=1 NOUPX=1 GCC52=1 SDL=1 ERRORMODE=1
 
 after_build:
-- cmd: 7z a Build-{build}.7z bin\Mingw\Release -x!.gitignore
-- appveyor PushArtifact Build-{build}.7z
+- cmd: 7z a %APPVEYOR_REPO_BRANCH%-%APPVEYOR_REPO_COMMIT%.7z bin\Mingw\Release -x!.gitignore
+- appveyor PushArtifact %APPVEYOR_REPO_BRANCH%-%APPVEYOR_REPO_COMMIT%.7z
 
 test: off
 
@@ -57,7 +57,7 @@ deploy:
       secure: ejxi5mvk7oLYu7QtbYojajEPigMy0mokaKhuEVuDZcA=
     password:
       secure: Hbn6Uy3lT0YZ88yFJ3aW4w==
-    folder: {branch}
+    folder: appveyor
     application:
     active_mode: false
 
