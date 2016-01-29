@@ -240,8 +240,8 @@ int main(int argc, char **argv)
 #endif
 
 	// return to OS
-#ifndef __GNUC__
+//#ifndef __GNUC__
 	return 0;
-#endif
+//#endif
 }
 #endif
