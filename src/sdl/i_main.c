@@ -55,6 +55,10 @@ PSP_MAIN_THREAD_STACK_SIZE_KB(256);
 #include "i_ttf.h"
 #endif
 
+#if defined (_WIN32) && !defined (main)
+#define SDLMAIN
+#endif
+
 #ifdef SDLMAIN
 #include "SDL_main.h"
 #elif defined(FORCESDLMAIN)
@@ -132,7 +136,6 @@ static inline VOID MakeCodeWritable(VOID)
 
 	\return	int
 */
-FUNCNORETURN
 #if defined (_XBOX) && defined (__GNUC__)
 void XBoxStartup()
 {
