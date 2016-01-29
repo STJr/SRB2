@@ -43,8 +43,10 @@ build_script:
 - cmd: mingw32-make.exe -C src MINGW=1 WARNINGMODE=1 NOASM=1 NOUPX=1 GCC52=1 SDL=1 ERRORMODE=1
 
 after_build:
-- set BUILD_ARCHIVE=%APPVEYOR_REPO_BRANCH%-%APPVEYOR_REPO_COMMIT%.7z
-- cmd: 7z a %BUILD_ARCHIVE% bin\Mingw\Release -x!.gitignore
+- cmd: git rev-parse --short %APPVEYOR_REPO_COMMIT%>%TMP%/gitshort.txt
+- cmd: set /P GITSHORT=<%TMP%/gitshort.txt
+- set BUILD_ARCHIVE=%APPVEYOR_REPO_BRANCH%-%GITSHORT%.7z
+- cmd: 7z a %BUILD_ARCHIVE% bin\Mingw\Release -xr!.gitignore
 - appveyor PushArtifact %BUILD_ARCHIVE%
 
 test: off
