@@ -1234,7 +1234,7 @@ void Y_StartIntermission(void)
 			// setup time data
 			data.coop.tics = players[consoleplayer].realtime;
 
-			if ((!modifiedgame || savemoddata) && (!multiplayer || &players[consoleplayer] == &players[serverplayer]) && !demoplayback)
+			if ((!modifiedgame || savemoddata) && !demoplayback)
 			{
 				// Update visitation flags
 				mapvisited[gamemap-1] |= MV_BEATEN;
@@ -1340,6 +1340,18 @@ void Y_StartIntermission(void)
 
 			data.compcoop.scorepatch = W_CachePatchName("INTSCORE", PU_STATIC);
 			data.compcoop.guardpatch = W_CachePatchName("INTGUARD", PU_STATIC);
+			
+			if ((!modifiedgame || savemoddata) && !demoplayback)
+			{
+				// Update visitation flags
+				mapvisited[gamemap-1] |= MV_BEATEN;
+				if (ALL7EMERALDS(emeralds))
+					mapvisited[gamemap-1] |= MV_ALLEMERALDS;
+				if (ultimatemode)
+					mapvisited[gamemap-1] |= MV_ULTIMATE;
+				//if (data.coop.gotperfbonus)
+					//mapvisited[gamemap-1] |= MV_PERFECT;
+			}
 
 			if (maptol & TOL_ND)
 				data.compcoop.emblempatch = W_CachePatchName("SBOEMBLM", PU_STATIC);
