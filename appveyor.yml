@@ -11,6 +11,7 @@ environment:
  SDL2_MIXER_URL: https://www.libsdl.org/projects/SDL_mixer/release/SDL2_mixer-devel-2.0.1-mingw.tar.gz
  SDL2_MIXER_ARCHIVE: SDL2_mixer-devel-2.0.1-mingw.tar
  SDL2_MIXER_MOVE: SDL2_mixer-2.0.1\i686-w64-mingw32
+ BUILD_ARCHIVE: %APPVEYOR_REPO_BRANCH%-%APPVEYOR_REPO_COMMIT%.7z
 
 cache:
 - SDL2-devel-2.0.4-mingw.tar.gz
@@ -43,8 +44,8 @@ build_script:
 - cmd: mingw32-make.exe -C src MINGW=1 WARNINGMODE=1 NOASM=1 NOUPX=1 GCC52=1 SDL=1 ERRORMODE=1
 
 after_build:
-- cmd: 7z a %APPVEYOR_REPO_BRANCH%-%APPVEYOR_REPO_COMMIT%.7z bin\Mingw\Release -x!.gitignore
-- appveyor PushArtifact %APPVEYOR_REPO_BRANCH%-%APPVEYOR_REPO_COMMIT%.7z
+- cmd: 7z a %BUILD_ARCHIVE% bin\Mingw\Release -x!.gitignore
+- appveyor PushArtifact %BUILD_ARCHIVE%
 
 test: off
 
