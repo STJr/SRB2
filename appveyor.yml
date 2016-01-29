@@ -23,15 +23,15 @@ install:
 - 7z x -y "%TMP%\%SDL2_ARCHIVE%" -o%TMP% >null
 - 7z x -y "%SDL2_MIXER_ARCHIVE%.gz" -o%TMP% >null
 - 7z x -y "%TMP%\%SDL2_MIXER_ARCHIVE%" -o%TMP% >null
-
-#- robocopy /S /xx /ns /nc /nfl /ndl /np %TMP%\%SDL2_MOVE% %MINGW_SDK% || exit 0
+#- robocopy /S /xx /ns /nc /nfl /ndl /np /njh /njs %TMP%\%SDL2_MOVE% %MINGW_SDK% | exit 0
+#- robocopy /S /xx /ns /nc /nfl /ndl /np /njh /njs %TMP%\%SDL2_MIXER_MOVE% %MINGW_SDK% || exit 0
 #- ps: (Get-Content [System.Environment]::ExpandEnvironmentVariables("%TMP%\%SDL2_MOVE%\bin\sdl2-config"))                  | ForEach-Object { $_ -replace "/usr/local/cross-tools/i686-w64-mingw32", [System.Environment]::ExpandEnvironmentVariables("%MINGW_SDK%") } | Set-Content [System.Environment]::ExpandEnvironmentVariables("%MINGW_SDK%\bin\sdl2-config")
 #- ps: (Get-Content [System.Environment]::ExpandEnvironmentVariables("%TMP%\%SDL2_MOVE%\lib\cmake\SDL2\sdl2-config.cmake")) | ForEach-Object { $_ -replace "/usr/local/cross-tools/i686-w64-mingw32", [System.Environment]::ExpandEnvironmentVariables("%MINGW_SDK%") } | Set-Content [System.Environment]::ExpandEnvironmentVariables("%MINGW_SDK%\lib\cmake\SDL2\sdl2-config.cmake")
 #- ps: (Get-Content [System.Environment]::ExpandEnvironmentVariables("%TMP%\%SDL2_MOVE%\lib\pkgconfig\sdl2.pc"))            | ForEach-Object { $_ -replace "/usr/local/cross-tools/i686-w64-mingw32", [System.Environment]::ExpandEnvironmentVariables("%MINGW_SDK%") } | Set-Content [System.Environment]::ExpandEnvironmentVariables("%MINGW_SDK%\lib\pkgconfig\sdl2.pc")
 
 before_build:
-- set SDL_CFLAGS=-I%TMP%\%SDL2_MOVE%\include\SDL2 -Dmain=SDL_main -I%TMP%\%SDL2_MIXER_MOVE%\include\SDL2
-- set SDL_LDFLAGS=-L%TMP%\%SDL2_MOVE%\lib  -lmingw32 -lSDL2main -lSDL2  -mwindows -L%TMP%\%SDL2_MIXER_MOVE%\lib
+#- set SDL_CFLAGS=-I%TMP%\%SDL2_MOVE%\include\SDL2 -Dmain=SDL_main -I%TMP%\%SDL2_MIXER_MOVE%\include\SDL2
+#- set SDL_LDFLAGS=-L%TMP%\%SDL2_MOVE%\lib  -lmingw32 -lSDL2main -lSDL2  -mwindows -L%TMP%\%SDL2_MIXER_MOVE%\lib
 - set Path=%MINGW_SDK%\bin;%Path%
 - i686-w64-mingw32-gcc --version
 - mingw32-make --version
@@ -57,5 +57,5 @@ build_script:
 
 on_finish:
 #- cmd: echo xfreerdp /u:appveyor /cert-ignore +clipboard /v:<ip>:<port>
-#- ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+- ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
 
