@@ -1,10 +1,6 @@
 version: 2.1.14.{branch}-{build}
 os: MinGW
 
-cache:
-- SDL2-devel-2.0.4-mingw.tar.gz
-- SDL2_mixer-devel-2.0.1-mingw.tar.gz
- 
 environment:
  CC: i686-w64-mingw32-gcc
  WINDRES: windres
@@ -16,7 +12,12 @@ environment:
  SDL2_MIXER_ARCHIVE: SDL2_mixer-devel-2.0.1-mingw.tar
  SDL2_MIXER_MOVE: SDL2_mixer-2.0.1\i686-w64-mingw32
 
+cache:
+- SDL2-devel-2.0.4-mingw.tar.gz
+- SDL2_mixer-devel-2.0.1-mingw.tar.gz
+
 install:
+#Download SDL2
 - if not exist "%SDL2_ARCHIVE%.gz" appveyor DownloadFile "%SDL2_URL%" -FileName "%SDL2_ARCHIVE%.gz"
 - 7z x -y "%SDL2_ARCHIVE%.gz" -o%TMP% >null
 - 7z x -y "%TMP%\%SDL2_ARCHIVE%" -o%TMP% >null
@@ -24,7 +25,7 @@ install:
 - ps: (Get-Content ([System.Environment]::ExpandEnvironmentVariables("%TMP%\%SDL2_MOVE%\bin\sdl2-config")))                  | ForEach-Object { $_ -replace "/usr/local/cross-tools/i686-w64-mingw32", ([System.Environment]::ExpandEnvironmentVariables("%MINGW_SDK%")) } | Set-Content ([System.Environment]::ExpandEnvironmentVariables("%MINGW_SDK%\bin\sdl2-config"))
 - ps: (Get-Content ([System.Environment]::ExpandEnvironmentVariables("%TMP%\%SDL2_MOVE%\lib\cmake\SDL2\sdl2-config.cmake"))) | ForEach-Object { $_ -replace "/usr/local/cross-tools/i686-w64-mingw32", ([System.Environment]::ExpandEnvironmentVariables("%MINGW_SDK%")) } | Set-Content ([System.Environment]::ExpandEnvironmentVariables("%MINGW_SDK%\lib\cmake\SDL2\sdl2-config.cmake"))
 - ps: (Get-Content ([System.Environment]::ExpandEnvironmentVariables("%TMP%\%SDL2_MOVE%\lib\pkgconfig\sdl2.pc")))            | ForEach-Object { $_ -replace "/usr/local/cross-tools/i686-w64-mingw32", ([System.Environment]::ExpandEnvironmentVariables("%MINGW_SDK%")) } | Set-Content ([System.Environment]::ExpandEnvironmentVariables("%MINGW_SDK%\lib\pkgconfig\sdl2.pc"))
-
+#Download SDL2_Mixer
 - if not exist "%SDL2_MIXER_ARCHIVE%.gz" appveyor DownloadFile "%SDL2_MIXER_URL%" -FileName "%SDL2_MIXER_ARCHIVE%.gz"
 - 7z x -y "%SDL2_MIXER_ARCHIVE%.gz" -o%TMP% >null
 - 7z x -y "%TMP%\%SDL2_MIXER_ARCHIVE%" -o%TMP% >null
@@ -39,7 +40,25 @@ before_build:
 
 build_script:
 - cmd: mingw32-make.exe -C src MINGW=1 WARNINGMODE=1 NOASM=1 NOUPX=1 GCC52=1 SDL=1 clean
-- cmd: mingw32-make.exe -C src MINGW=1 WARNINGMODE=1 NOASM=1 NOUPX=1 GCC52=1 SDL=1 NOOBJDUMP=1 ERRORMODE=1
+- cmd: mingw32-make.exe -C src MINGW=1 WARNINGMODE=1 NOASM=1 NOUPX=1 GCC52=1 SDL=1 ERRORMODE=1
+
+test: off
+
+artifacts:
+ - path: bin\Mingw\$(configuration)
+
+deploy:
+  - provider: FTP
+    protocol: ftps
+    host: 
+      secure: NsLJEPIBvmwCOj8Tg8RoRQ==
+    username:
+      secure: z/r81kkL3Mm6wxjuN0sW1w==
+    password:
+      secure: Hbn6Uy3lT0YZ88yFJ3aW4w==
+    folder:
+    application:
+    active_mode: false
 
 
 on_finish:
