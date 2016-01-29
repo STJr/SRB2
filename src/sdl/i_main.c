@@ -141,8 +141,10 @@ void XBoxStartup()
 	myargv = NULL;
 #else
 #ifdef FORCESDLMAIN
+FUNCNORETURN
 int SDL_main(int argc, char **argv)
 #else
+FUNCNORETURN
 int main(int argc, char **argv)
 #endif
 {
@@ -240,8 +242,8 @@ int main(int argc, char **argv)
 #endif
 
 	// return to OS
-//#ifndef __GNUC__
+#ifndef __GNUC__
 	return 0;
-//#endif
+#endif
 }
 #endif
