@@ -184,7 +184,7 @@ static int io_open (lua_State *L) {
 		}
 	}
 	if (strstr(filename, "..") || strchr(filename, ':') || StartsWith(filename, "\\")
-		|| StartsWith(filename, "/") || strchr(filename, '%') || !pass)
+		|| StartsWith(filename, "/") || !pass)
 	{
 		luaL_error(L,"access denied to %s", filename);
 		return pushresult(L,0,filename);
