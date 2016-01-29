@@ -31,7 +31,7 @@ install:
 - ps: (Get-Content ([System.Environment]::ExpandEnvironmentVariables("%TMP%\%SDL2_MIXER_MOVE%\lib\pkgconfig\SDL2_mixer.pc")))| ForEach-Object { $_ -replace "/usr/local/cross-tools/i686-w64-mingw32", ([System.Environment]::ExpandEnvironmentVariables("%MINGW_SDK%")) } | Set-Content ([System.Environment]::ExpandEnvironmentVariables("%MINGW_SDK%\lib\pkgconfig\SDL2_mixer.pc"))
 
 before_build:
-- set SDL_PKGCONFIG=sdl2.pc
+- set SDL_PKGCONFIG=%MINGW_SDK%\lib\pkgconfig\sdl2.pc
 - set Path=%MINGW_SDK%\bin;%Path%
 - i686-w64-mingw32-gcc --version
 - mingw32-make --version
@@ -57,5 +57,4 @@ build_script:
 
 on_finish:
 #- cmd: echo xfreerdp /u:appveyor /cert-ignore +clipboard /v:<ip>:<port>
-#- ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
-
+- ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
