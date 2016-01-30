@@ -150,31 +150,21 @@ static inline void W_LoadDehackedLumps(UINT16 wadnum)
 	{
 		lumpinfo_t *lump_p = wadfiles[wadnum]->lumpinfo;
 		for (lump = 0; lump < wadfiles[wadnum]->numlumps; lump++, lump_p++)
-			if (memcmp(lump_p->name,"SOC_",4)==0)
+			if (memcmp(lump_p->name,"SOC_",4)==0) // Check for generic SOC lump
 			{
 				CONS_Printf(M_GetText("Loading SOC from %s\n"), wadfiles[wadnum]->filename);
 				DEH_LoadDehackedLumpPwad(wadnum, lump);
 			}
-	}
-
-	// Check for MAINCFG
-	for (lump = 0;lump != INT16_MAX;lump++)
-	{
-		lump = W_CheckNumForNamePwad("MAINCFG", wadnum, lump);
-		if (lump == INT16_MAX)
-			break;
-		CONS_Printf(M_GetText("Loading main config from %s\n"), wadfiles[wadnum]->filename);
-		DEH_LoadDehackedLumpPwad(wadnum, lump);
-	}
-
-	// Check for OBJCTCFG
-	for (lump = 0;lump < INT16_MAX;lump++)
-	{
-		lump = W_CheckNumForNamePwad("OBJCTCFG", wadnum, lump);
-		if (lump == INT16_MAX)
-			break;
-		CONS_Printf(M_GetText("Loading object config from %s\n"), wadfiles[wadnum]->filename);
-		DEH_LoadDehackedLumpPwad(wadnum, lump);
+			else if (memcmp(lump_p->name,"MAINCFG",8)==0) // Check for MAINCFG
+			{
+				CONS_Printf(M_GetText("Loading main config from %s\n"), wadfiles[wadnum]->filename);
+				DEH_LoadDehackedLumpPwad(wadnum, lump);
+			}
+			else if (memcmp(lump_p->name,"OBJCTCFG",8)==0) // Check for OBJCTCFG
+			{
+				CONS_Printf(M_GetText("Loading object config from %s\n"), wadfiles[wadnum]->filename);
+				DEH_LoadDehackedLumpPwad(wadnum, lump);
+			}
 	}
 
 #ifdef SCANTHINGS
