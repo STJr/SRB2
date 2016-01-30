@@ -29,4 +29,6 @@
 /libs/zlib/nintendods/README -whitespace
 /libs/zlib/watcom/watcom_f.mak -crlf -whitespace
 /libs/zlib/watcom/watcom_l.mak -crlf -whitespace
+#Appveyor
+/appveyor.yml -crlf -whitespace
 # Other

@@ -4671,11 +4671,11 @@ void P_UpdateSpecials(void)
 	// ANIMATE TEXTURES
 	for (anim = anims; anim < lastanim; anim++)
 	{
-		for (i = anim->basepic; i < anim->basepic + anim->numpics; i++)
+		for (i = 0; i < anim->numpics; i++)
 		{
 			pic = anim->basepic + ((leveltime/anim->speed + i) % anim->numpics);
 			if (anim->istexture)
-				texturetranslation[i] = pic;
+				texturetranslation[anim->basepic+i] = pic;
 		}
 	}
 
