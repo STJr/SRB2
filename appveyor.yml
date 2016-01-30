@@ -1,0 +1,70 @@
+version: 2.1.14.{branch}-{build}
+os: MinGW
+
+environment:
+ CC: i686-w64-mingw32-gcc
+ WINDRES: windres
+ MINGW_SDK: c:\msys64\mingw32
+ SDL2_URL: http://libsdl.org/release/SDL2-devel-2.0.4-mingw.tar.gz
+ SDL2_ARCHIVE: SDL2-devel-2.0.4-mingw.tar
+ SDL2_MOVE: SDL2-2.0.4\i686-w64-mingw32
+ SDL2_MIXER_URL: https://www.libsdl.org/projects/SDL_mixer/release/SDL2_mixer-devel-2.0.1-mingw.tar.gz
+ SDL2_MIXER_ARCHIVE: SDL2_mixer-devel-2.0.1-mingw.tar
+ SDL2_MIXER_MOVE: SDL2_mixer-2.0.1\i686-w64-mingw32
+
+cache:
+- SDL2-devel-2.0.4-mingw.tar.gz
+- SDL2_mixer-devel-2.0.1-mingw.tar.gz
+
+install:
+#Download SDL2
+- if not exist "%SDL2_ARCHIVE%.gz" appveyor DownloadFile "%SDL2_URL%" -FileName "%SDL2_ARCHIVE%.gz"
+- 7z x -y "%SDL2_ARCHIVE%.gz" -o%TMP% >null
+- 7z x -y "%TMP%\%SDL2_ARCHIVE%" -o%TMP% >null
+- robocopy /S /xx /ns /nc /nfl /ndl /np /njh /njs %TMP%\%SDL2_MOVE% %MINGW_SDK% || exit 0
+- ps: (Get-Content ([System.Environment]::ExpandEnvironmentVariables("%TMP%\%SDL2_MOVE%\bin\sdl2-config")))                  | ForEach-Object { $_ -replace "/usr/local/cross-tools/i686-w64-mingw32", ([System.Environment]::ExpandEnvironmentVariables("%MINGW_SDK%")) } | Set-Content ([System.Environment]::ExpandEnvironmentVariables("%MINGW_SDK%\bin\sdl2-config"))
+- ps: (Get-Content ([System.Environment]::ExpandEnvironmentVariables("%TMP%\%SDL2_MOVE%\lib\cmake\SDL2\sdl2-config.cmake"))) | ForEach-Object { $_ -replace "/usr/local/cross-tools/i686-w64-mingw32", ([System.Environment]::ExpandEnvironmentVariables("%MINGW_SDK%")) } | Set-Content ([System.Environment]::ExpandEnvironmentVariables("%MINGW_SDK%\lib\cmake\SDL2\sdl2-config.cmake"))
+- ps: (Get-Content ([System.Environment]::ExpandEnvironmentVariables("%TMP%\%SDL2_MOVE%\lib\pkgconfig\sdl2.pc")))            | ForEach-Object { $_ -replace "/usr/local/cross-tools/i686-w64-mingw32", ([System.Environment]::ExpandEnvironmentVariables("%MINGW_SDK%")) } | Set-Content ([System.Environment]::ExpandEnvironmentVariables("%MINGW_SDK%\lib\pkgconfig\sdl2.pc"))
+#Download SDL2_Mixer
+- if not exist "%SDL2_MIXER_ARCHIVE%.gz" appveyor DownloadFile "%SDL2_MIXER_URL%" -FileName "%SDL2_MIXER_ARCHIVE%.gz"
+- 7z x -y "%SDL2_MIXER_ARCHIVE%.gz" -o%TMP% >null
+- 7z x -y "%TMP%\%SDL2_MIXER_ARCHIVE%" -o%TMP% >null
+- robocopy /S /xx /ns /nc /nfl /ndl /np /njh /njs %TMP%\%SDL2_MIXER_MOVE% %MINGW_SDK% || exit 0
+- ps: (Get-Content ([System.Environment]::ExpandEnvironmentVariables("%TMP%\%SDL2_MIXER_MOVE%\lib\pkgconfig\SDL2_mixer.pc")))| ForEach-Object { $_ -replace "/usr/local/cross-tools/i686-w64-mingw32", ([System.Environment]::ExpandEnvironmentVariables("%MINGW_SDK%")) } | Set-Content ([System.Environment]::ExpandEnvironmentVariables("%MINGW_SDK%\lib\pkgconfig\SDL2_mixer.pc"))
+
+before_build:
+- set SDL_PKGCONFIG=%MINGW_SDK%\lib\pkgconfig\sdl2.pc
+- set Path=%MINGW_SDK%\bin;%Path%
+- i686-w64-mingw32-gcc --version
+- mingw32-make --version
+
+build_script:
+- cmd: mingw32-make.exe -C src MINGW=1 WARNINGMODE=1 NOASM=1 NOUPX=1 GCC52=1 SDL=1 clean
+- cmd: mingw32-make.exe -C src MINGW=1 WARNINGMODE=1 NOASM=1 NOUPX=1 GCC52=1 SDL=1 ERRORMODE=1
+
+after_build:
+- cmd: git rev-parse --short %APPVEYOR_REPO_COMMIT%>%TMP%/gitshort.txt
+- cmd: set /P GITSHORT=<%TMP%/gitshort.txt
+- set BUILD_ARCHIVE=%APPVEYOR_REPO_BRANCH%-%GITSHORT%.7z
+- cmd: 7z a %BUILD_ARCHIVE% bin\Mingw\Release -xr!.gitignore
+- appveyor PushArtifact %BUILD_ARCHIVE%
+
+test: off
+
+deploy:
+  - provider: FTP
+    protocol: ftps
+    host: 
+      secure: NsLJEPIBvmwCOj8Tg8RoRQ==
+    username:
+      secure: ejxi5mvk7oLYu7QtbYojajEPigMy0mokaKhuEVuDZcA=
+    password:
+      secure: Hbn6Uy3lT0YZ88yFJ3aW4w==
+    folder: appveyor
+    application:
+    active_mode: false
+
+
+on_finish:
+#- cmd: echo xfreerdp /u:appveyor /cert-ignore +clipboard /v:<ip>:<port>
+#- ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
