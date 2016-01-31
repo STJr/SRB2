@@ -529,10 +529,11 @@ static int libd_height(lua_State *L)
 static int libd_renderer(lua_State *L)
 {
 	HUDONLY
-	if (rendermode == render_opengl) // OpenGL renderer
-		lua_pushliteral(L, "opengl");
-	else // Software renderer
-		lua_pushliteral(L, "software");
+	switch (rendermode) {
+		case render_opengl: lua_pushliteral(L, "opengl");   break; // OpenGL renderer
+		case render_soft:   lua_pushliteral(L, "software"); break; // Software renderer
+		default:            lua_pushliteral(L, "none");     break; // render_none (for dedicated), in case there's any reason this should be run
+	}
 	return 1;
 }
 
