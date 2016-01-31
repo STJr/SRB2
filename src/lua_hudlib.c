@@ -16,7 +16,9 @@
 #include "r_local.h"
 #include "st_stuff.h" // hudinfo[]
 #include "g_game.h"
+#include "i_video.h" // rendermode
 #include "p_local.h" // camera_t
+#include "screen.h" // screen width/height
 #include "v_video.h"
 #include "w_wad.h"
 #include "z_zone.h"
@@ -510,6 +512,30 @@ static int libd_getColormap(lua_State *L)
 	return 1;
 }
 
+static int libd_width(lua_State *L)
+{
+	HUDONLY
+	lua_pushinteger(L, vid.width); // push screen width
+	return 1;
+}
+
+static int libd_height(lua_State *L)
+{
+	HUDONLY
+	lua_pushinteger(L, vid.height); // push screen height
+	return 1;
+}
+
+static int libd_renderer(lua_State *L)
+{
+	HUDONLY
+	if (rendermode == render_opengl) // OpenGL renderer
+		lua_pushliteral(L, "opengl");
+	else // Software renderer
+		lua_pushliteral(L, "software");
+	return 1;
+}
+
 static luaL_Reg lib_draw[] = {
 	{"patchExists", libd_patchExists},
 	{"cachePatch", libd_cachePatch},
@@ -521,6 +547,9 @@ static luaL_Reg lib_draw[] = {
 	{"drawString", libd_drawString},
 	{"stringWidth", libd_stringWidth},
 	{"getColormap", libd_getColormap},
+	{"width", libd_width},
+	{"height", libd_height},
+	{"renderer", libd_renderer},
 	{NULL, NULL}
 };
 
