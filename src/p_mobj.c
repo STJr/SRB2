@@ -8084,7 +8084,12 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 #ifdef BLUE_SPHERES
 		case MT_BLUEBALL:
 #endif
-			nummaprings++;
+			if (mapheaderinfo[gamemap-1]->typeoflevel & TOL_ND)
+				nummaprings++;
+			break;
+		case MT_TDEMBLEM:
+			if (!(mapheaderinfo[gamemap-1]->typeoflevel & TOL_ND))
+				nummaprings++;
 			break;
 		case MT_PINBALL:
 			mobj->fuse = 12*TICRATE;
@@ -9794,7 +9799,10 @@ ML_NOCLIMB : Direction not controllable
 
 	//count 10 ring boxes into the number of rings equation too.
 	if (i == MT_SUPERRINGBOX)
-		nummaprings += 10;
+	{
+		if (!(mapheaderinfo[gamemap-1]->typeoflevel & TOL_ND))
+			nummaprings += 10;
+	}
 
 	if (i == MT_BIGTUMBLEWEED || i == MT_LITTLETUMBLEWEED)
 	{
