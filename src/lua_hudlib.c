@@ -488,7 +488,7 @@ static int libd_getColormap(lua_State *L)
 	INT32 skinnum = TC_DEFAULT;
 	skincolors_t color = luaL_optinteger(L, 2, 0);
 	UINT8* colormap = NULL;
-	//HUDSAFE
+	HUDONLY
 	if (lua_isnoneornil(L, 1))
 		; // defaults to TC_DEFAULT
 	else if (lua_type(L, 1) == LUA_TNUMBER) // skin number
