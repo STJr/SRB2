@@ -145,6 +145,21 @@ static inline void W_LoadDehackedLumps(UINT16 wadnum)
 			if (memcmp(lump_p->name,"LUA_",4)==0)
 				LUA_LoadLump(wadnum, lump);
 	}
+
+	//Load a lua block by markers?
+	{
+	    UINT16 l_start, l_end;
+
+        l_start = W_CheckNumForNamePwad("LU_START", wadnum, 0);
+        l_end = W_CheckNumForNamePwad("LU_END",wadnum,l_start);
+
+        if (l_start != INT16_MAX && l_end != INT16_MAX && l_start < l_end)
+        {
+            for (lump = l_start+1; lump < l_end; lump++)
+				LUA_LoadLump(wadnum, lump);
+                CONS_Printf("does it work.....................");
+        }
+	}
 #endif
 
 	// Check for MAINCFG
