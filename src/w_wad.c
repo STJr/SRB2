@@ -157,7 +157,7 @@ static inline void W_LoadDehackedLumps(UINT16 wadnum)
         {
             for (lump = l_start+1; lump < l_end; lump++)
 				LUA_LoadLump(wadnum, lump);
-                CONS_Printf("does it work.....................");
+                //CONS_Printf("%d Lua script lumps loaded from wad.\n", l_end-l_start-1);
         }
 	}
 #endif
