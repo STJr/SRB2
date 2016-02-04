@@ -1119,7 +1119,7 @@ void P_RestoreMusic(player_t *player)
 		return;
 	S_SpeedMusic(1.0f);
 	if (player->powers[pw_super] && !(mapheaderinfo[gamemap-1]->levelflags & LF_NOSSMUSIC))
-		S_ChangeMusicInternal("_1up", true);
+		S_ChangeMusicInternal("_super", true);
 	else if (player->powers[pw_invulnerability] > 1)
 		S_ChangeMusicInternal((mariomode) ? "_minv" : "_inv", false);
 	else if (player->powers[pw_sneakers] > 1 && !player->powers[pw_super])
