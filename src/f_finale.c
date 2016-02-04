@@ -559,7 +559,7 @@ static void F_IntroDrawScene(void)
 				if (finalecount < 4)
 					S_StopMusic();
 				if (finalecount == 4)
-					S_ChangeMusicInternal("stjr", false);
+					S_ChangeMusicInternal("_stjr", false);
 				x = (BASEVIDWIDTH<<FRACBITS)/2 - FixedMul(334<<FRACBITS, aspect)/2;
 				y = (BASEVIDHEIGHT<<FRACBITS)/2 - FixedMul(358<<FRACBITS, aspect)/2;
 				V_DrawSciencePatch(x, y, 0, (patch = W_CachePatchName("WAHH1", PU_CACHE)), aspect);
@@ -771,7 +771,7 @@ void F_IntroDrawer(void)
 				F_RunWipe(99,true);
 			}
 
-			S_ChangeMusicInternal("read_m", false);
+			S_ChangeMusicInternal("_intro", false);
 		}
 		else if (intro_scenenum == 3)
 			roidtics = BASEVIDWIDTH - 64;
@@ -1125,7 +1125,7 @@ void F_StartCredits(void)
 	CON_ClearHUD();
 	S_StopMusic();
 
-	S_ChangeMusicInternal("credit", false);
+	S_ChangeMusicInternal("_creds", false);
 
 	finalecount = 0;
 	animtimer = 0;
@@ -1422,7 +1422,7 @@ void F_StartTitleScreen(void)
 
 	// IWAD dependent stuff.
 
-	S_ChangeMusicInternal("titles", looptitle);
+	S_ChangeMusicInternal("_title", looptitle);
 
 	animtimer = 0;
 
@@ -1588,7 +1588,7 @@ void F_StartContinue(void)
 	// In case menus are still up?!!
 	M_ClearMenus(true);
 
-	S_ChangeMusicInternal("contsc", false);
+	S_ChangeMusicInternal("_conti", false);
 	S_StopSounds();
 
 	timetonext = TICRATE*11;

@@ -3064,7 +3064,7 @@ void A_Invincibility(mobj_t *actor)
 		S_StopMusic();
 		if (mariomode)
 			G_GhostAddColor(GHC_INVINCIBLE);
-		S_ChangeMusicInternal((mariomode) ? "minvnc" : "invinc", false);
+		S_ChangeMusicInternal((mariomode) ? "_minv" : "_inv", false);
 	}
 }
 
@@ -3100,7 +3100,7 @@ void A_SuperSneakers(mobj_t *actor)
 		else
 		{
 			S_StopMusic();
-			S_ChangeMusicInternal("shoes", false);
+			S_ChangeMusicInternal("_shoes", false);
 		}
 	}
 }
