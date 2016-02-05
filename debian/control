@@ -4,7 +4,13 @@ Source: srb2
 Section: games
 Priority: extra
 Maintainer: Callum Dickinson <gcfreak_ag20@hotmail.com>
-Build-Depends: debhelper (>= 7.0.50~), libsdl1.2-dev (>= 1.2.7), libsdl-mixer1.2-dev (>= 1.2.7), libpng12-dev (>= 1.2.7), libglu1-dev | libglu-dev, libosmesa6-dev | libgl-dev, nasm [i386]
+Build-Depends: debhelper (>= 7.0.50~), 
+ libsdl1.2-dev (>= 1.2.7), 
+ libsdl-mixer1.2-dev (>= 1.2.7), 
+ libpng12-dev (>= 1.2.7), 
+ libglu-mesa-dev | libglu-mesa-dev, 
+ libosmesa6-dev | libgl-mesa-dev, 
+ nasm [i386]
 Standards-Version: 3.8.4
 Homepage: http://www.srb2.org
 
