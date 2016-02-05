@@ -13,12 +13,11 @@ compiler:
 addons:
   apt:
     packages:
-    - libsdl-mixer2-dev
+    - libsdl2-mixer-dev
     - libpng-dev
-    - libglu1-dev
+    - ibgl1-mesa-dev
 
 before_install:
-  - $(CC) --version
   - cmake --version
 
 before_script:
