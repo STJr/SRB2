@@ -1360,6 +1360,9 @@ void R_RenderPlayerView(player_t *player)
 		// okay done. free it.
 		portalcullsector = NULL; // Just in case...
 		portal_base = portal->next;
+		Z_Free(portal->ceilingclip);
+		Z_Free(portal->floorclip);
+		Z_Free(portal->frontscale);
 		Z_Free(portal);
 	}
 	// END PORTAL RENDERING
