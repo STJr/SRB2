@@ -1,0 +1,25 @@
+language: c
+
+os:
+  - linux
+  #- osx
+
+compiler:
+  - gcc
+  - clang
+
+addons:
+  apt:
+    packages:
+    - libsdl-mixer2-dev
+    - libpng-dev
+    - libglu1-dev
+
+before_install:
+  - $(CC) --version
+  - cmake --version
+
+before_script:
+  - mkdir build
+  - cd build
+  - cmake ..
