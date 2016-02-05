@@ -3766,11 +3766,12 @@ static void Command_Tunes_f(void)
 
 	if (argc < 2) //tunes slot ...
 	{
-		CONS_Printf("tunes <name/num/\"default\"/\"none\"> <speed> <track>:\n");
-		CONS_Printf(M_GetText("Play a music slot at a set speed (\"1\" being normal speed).\n"));
-		CONS_Printf(M_GetText("If the format supports multiple songs, you can specify which one to play.\n"));
-		CONS_Printf(M_GetText("The current tune is: %s\nThe current track is: %d\n"),
-			mapmusname, (mapmusflags & MUSIC_TRACKMASK));
+		CONS_Printf("tunes <name/num> [track] [speed] / <-show> / <-default> / <-none>:\n");
+		CONS_Printf(M_GetText("Play an arbitrary music lump. If a map number is used, 'MAP##M' is played.\n"));
+		CONS_Printf(M_GetText("If the format supports multiple songs, you can specify which one to play.\n\n"));
+		CONS_Printf(M_GetText("* With \"-show\", shows the currently playing tune and track.\n"));
+		CONS_Printf(M_GetText("* With \"-default\", returns to the default music for the map.\n"));
+		CONS_Printf(M_GetText("* With \"-none\", any music playing will be stopped.\n"));
 		return;
 	}
 
@@ -3778,12 +3779,18 @@ static void Command_Tunes_f(void)
 	tunenum = (UINT16)atoi(tunearg);
 	track = 0;
 
-	if (!strcasecmp(tunearg, "none"))
+	if (!strcasecmp(tunearg, "-show"))
+	{
+		CONS_Printf(M_GetText("The current tune is: %s [track %d]\n"),
+			mapmusname, (mapmusflags & MUSIC_TRACKMASK));
+		return;
+	}
+	if (!strcasecmp(tunearg, "-none"))
 	{
 		S_StopMusic();
 		return;
 	}
-	else if (!strcasecmp(tunearg, "default"))
+	else if (!strcasecmp(tunearg, "-default"))
 	{
 		tunearg = mapheaderinfo[gamemap-1]->musname;
 		track = mapheaderinfo[gamemap-1]->mustrack;
@@ -3796,9 +3803,11 @@ static void Command_Tunes_f(void)
 		CONS_Alert(CONS_NOTICE, M_GetText("Valid music slots are 1 to 1035.\n"));
 		return;
 	}
+	if (!tunenum && strlen(tunearg) > 6) // This is automatic -- just show the error just in case
+		CONS_Alert(CONS_NOTICE, M_GetText("Music name too long - truncated to six characters.\n"));
 
-	if (argc > 3)
-		track = (UINT16)atoi(COM_Argv(3))-1;
+	if (argc > 2)
+		track = (UINT16)atoi(COM_Argv(2))-1;
 
 	if (tunenum)
 		snprintf(mapmusname, 7, "%sM", G_BuildMapName(tunenum));
@@ -3809,9 +3818,9 @@ static void Command_Tunes_f(void)
 
 	S_ChangeMusic(mapmusname, mapmusflags, true);
 
-	if (argc > 2)
+	if (argc > 3)
 	{
-		float speed = (float)atof(COM_Argv(2));
+		float speed = (float)atof(COM_Argv(3));
 		if (speed > 0.0f)
 			S_SpeedMusic(speed);
 	}
