@@ -14,13 +14,14 @@ addons:
     - libpng-dev
     - libgl1-mesa-dev
     - libgme-dev
-    - p7zip
+    - p7zip-full
 
 before_install:
   - cmake --version
 
 before_script:
-  - curl http://rosenthalcastle.org/srb2/SRB2-v2114-Installer.exe -o cache/SRB2-v2114-Installer.exe
+  - make cache
+  - wget http://rosenthalcastle.org/srb2/SRB2-v2114-Installer.exe -c -O cache/SRB2-v2114-Installer.exe
   - 7z x cache/SRB2-v2114-Installer.exe -o assets
   - mkdir build
   - cd build
