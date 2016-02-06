@@ -23,7 +23,7 @@ addons:
     - p7zip-full
 
 before_script:
-  - mkdir cache
+  - mkdir $HOME/srb2_cache
   - wget http://rosenthalcastle.org/srb2/SRB2-v2114-Installer.exe -c -O $HOME/srb2_cache/SRB2-v2114-Installer.exe
   - 7z x $HOME/srb2_cache/SRB2-v2114-Installer.exe -oassets
   - mkdir build
