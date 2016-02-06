@@ -1,5 +1,4 @@
 language: c
-
 sudo: required
 dist: trusty
 
@@ -10,6 +9,10 @@ compiler:
   - gcc
   - clang
 
+cache:
+  directories:
+    - $HOME/srb2_cache
+
 addons:
   apt:
     packages:
@@ -19,20 +22,12 @@ addons:
     - libgme-dev
     - p7zip-full
 
-before_install:
-  - cmake --version
-
 before_script:
   - mkdir cache
-  - wget http://rosenthalcastle.org/srb2/SRB2-v2114-Installer.exe -c -O cache/SRB2-v2114-Installer.exe
-  - 7z x cache/SRB2-v2114-Installer.exe -oassets
+  - wget http://rosenthalcastle.org/srb2/SRB2-v2114-Installer.exe -c -O $HOME/srb2_cache/SRB2-v2114-Installer.exe
+  - 7z x $HOME/srb2_cache/SRB2-v2114-Installer.exe -oassets
   - mkdir build
   - cd build
   - cmake ..
 
 script: make
-
-cache:
-  directories:
-    - $HOME/.ccache
-    - cache
