@@ -2507,8 +2507,8 @@ isblocking:
 
 			climbangle += (ANGLE_90 * (whichside ? -1 : 1));
 
-			if (((!slidemo->player->climbing && abs(slidemo->angle - ANGLE_90 - climbline) < ANGLE_45)
-			|| (slidemo->player->climbing == 1 && abs(slidemo->angle - climbline) < ANGLE_135))
+			if (((!slidemo->player->climbing && abs((slidemo->angle - ANGLE_90 - climbline)) < ANGLE_45)
+			|| (slidemo->player->climbing == 1 && abs((slidemo->angle - climbline)) < ANGLE_135))
 			&& P_IsClimbingValid(slidemo->player, climbangle))
 			{
 				slidemo->angle = climbangle;

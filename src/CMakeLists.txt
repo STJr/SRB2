@@ -408,6 +408,10 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 	set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -mno-ms-bitfields)
 endif()
 
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+	set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -Wno-absolute-value)
+endif()
+
 add_definitions(-DCMAKECONFIG)
 
 #add_library(SRB2Core STATIC
