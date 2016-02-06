@@ -11,6 +11,7 @@ addons:
     - libsdl2-mixer-dev
     - libpng-dev
     - libgl1-mesa-dev
+    - libgme-dev
     - p7zip
 
 before_install:
