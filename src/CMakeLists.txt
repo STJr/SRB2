@@ -166,7 +166,7 @@ set(SRB2_CORE_GAME_SOURCES
 	p_tick.h
 )
 
-if(NOT CLANG)
+if(NOT (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
 	set(SRB2_CORE_SOURCES ${SRB2_CORE_SOURCES} string.c)
 endif()
 
@@ -404,7 +404,7 @@ endif()
 
 # Compatibility flag with later versions of GCC
 # We should really fix our code to not need this
-if(NOT CLANG AND NOT MSVC)
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 	set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -mno-ms-bitfields)
 endif()
 
