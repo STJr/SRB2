@@ -20,10 +20,14 @@ before_install:
   - cmake --version
 
 before_script:
-  - make cache
+  - mkdir cache
   - wget http://rosenthalcastle.org/srb2/SRB2-v2114-Installer.exe -c -O cache/SRB2-v2114-Installer.exe
   - 7z x cache/SRB2-v2114-Installer.exe -o assets
   - mkdir build
   - cd build
   - cmake ..
 
+cache:
+  directories:
+    - $HOME/.ccache
+    - cache
