@@ -26,9 +26,3 @@ before_script:
   - cd build
   - cmake ..
 
-install: false
-
-cache:
-  - ccache
-  directories:
-    - cache
