@@ -1,0 +1,7 @@
+Name=Sonic Robo Blast 2
+Exec=srb2
+Comment=SRB2
+Icon=/usr/share/pixmaps/srb2.png
+Terminal=false
+Type=Application
+Categories=games;application;
