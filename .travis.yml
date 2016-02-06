@@ -1,6 +1,10 @@
 language: c
 
-sudo: required
+matrix:
+  include:
+    - os: linux
+      dist: trusty
+      sudo: required
 
 os:
   - linux
@@ -19,7 +23,7 @@ addons:
     - cmake-data
     - libsdl2-mixer-dev
     - libpng-dev
-    - ibgl1-mesa-dev
+    - libgl1-mesa-dev
 
 before_install:
   - cmake --version
