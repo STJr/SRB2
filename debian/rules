@@ -66,9 +66,9 @@ MAKEARGS = $(OS) $(NONX86) $(PREFIX) EXENAME=$(EXENAME) DBGNAME=$(DBGNAME) SDL_P
 MENUFILE1 = ?package($(PACKAGE)):needs="X11" section="$(SECTION)"
 MENUFILE2 = title="$(TITLE)" command="/$(PKGDIR)/$(PACKAGE)"
 # FIXME pkg-config dir hacks
-export PKG_CONFIG_LIBDIR = /usr/$(CROSS_COMPILE_HOST)/lib/pkgconfig
+export PKG_CONFIG_LIBDIR = /usr/lib/$(CROSS_COMPILE_HOST)/pkgconfig
 BINDIR :=  $(DIR)/bin/Linux/Release
-LDFLAGS += "-Wl,-rpath=/usr/$(CROSS_COMPILE_HOST)/lib/"
+LDFLAGS += "-Wl,-rpath=/usr/lib/$(CROSS_COMPILE_HOST)"
 
 build:
 	$(MKDIR) $(BINDIR)/debug
