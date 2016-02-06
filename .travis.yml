@@ -7,19 +7,25 @@ compiler:
 
 addons:
   apt:
-    sources:
-    - george-edison55-precise-backports
     packages:
-    - cmake
-    - cmake-data
     - libsdl2-mixer-dev
     - libpng-dev
     - libgl1-mesa-dev
+    - p7zip
 
 before_install:
   - cmake --version
 
 before_script:
+  - curl http://rosenthalcastle.org/srb2/SRB2-v2114-Installer.exe -o cache/SRB2-v2114-Installer.exe
+  - 7z x cache/SRB2-v2114-Installer.exe -o assets
   - mkdir build
   - cd build
   - cmake ..
+
+install: false
+
+cache:
+  - ccache
+  directories:
+    - cache
