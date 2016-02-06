@@ -83,6 +83,9 @@ binary-arch:
 	$(MKDIR) $(DIR)/debian/tmp/$(PKGDIR) $(DIR)/debian/tmp/$(DBGDIR)
 	$(INSTALL) $(BINDIR)/$(EXENAME) $(DIR)/debian/tmp/$(PKGDIR)/$(PACKAGE)
 	$(INSTALL) $(BINDIR)/$(DBGNAME) $(DIR)/debian/tmp/$(DBGDIR)/$(PACKAGE)
+	# Install desktop file and banner image
+	$(INSTALL) $(DIR)/srb2.png $(DIR)/debian/tmp/usr/share/pixmaps
+	$(INSTALL) $(DIR)/debian/srb2.desktop $(DIR)/debian/tmp/usr/share/applications
 	# add compiled binaries to include-binaries
 	echo $(BINDIR)/$(EXENAME) >> $(DIR)/debian/source/include-binaries
 	echo $(BINDIR)/$(EXENAME) >> $(DIR)/debian/source/include-binaries
@@ -100,7 +103,6 @@ binary: binary-arch
 	dh_installdocs
 	# dh_installexamples
 	dh_install --sourcedir=$(DIR)/debian/tmp
-	dh_install --sourcedir=$(DIR)/srb2.png /usr/share/pixmaps/
 	dh_installmenu
 	# dh_installdebconf
 	# dh_installlogrotate
