@@ -2058,7 +2058,7 @@ void R_ClipSprites(void)
 				continue;
 			}
 
-			if (ds->portalpass > 0 && ds->portalpass == portalrender)
+			if (ds->portalpass > 0 && ds->portalpass <= portalrender)
 				continue; // is a portal
 
 			r1 = ds->x1 < spr->x1 ? spr->x1 : ds->x1;
