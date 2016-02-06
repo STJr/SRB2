@@ -1,14 +1,5 @@
-language: c
-
-matrix:
-  include:
-    - os: linux
-      dist: trusty
-      sudo: required
-
-os:
-  - linux
-  #- osx
+sudo: required
+dist: trusty
 
 compiler:
   - gcc
