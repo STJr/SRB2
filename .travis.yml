@@ -12,7 +12,11 @@ compiler:
 
 addons:
   apt:
+    sources:
+    - george-edison55-precise-backports
     packages:
+    - cmake
+    - cmake-data
     - libsdl2-mixer-dev
     - libpng-dev
     - ibgl1-mesa-dev
