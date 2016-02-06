@@ -3,6 +3,9 @@ language: c
 sudo: required
 dist: trusty
 
+env:
+- CFLAGS=-Wno-absolute-value -Werror
+
 compiler:
   - gcc
   - clang
