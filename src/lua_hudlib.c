@@ -674,8 +674,6 @@ void LUAh_GameHUD(player_t *stplayr)
 		LUA_Call(gL, 3);
 	}
 	lua_pop(gL, -1);
-	lua_gc(gL, LUA_GCCOLLECT, 0);
-
 	hud_running = false;
 }
 
@@ -701,8 +699,6 @@ void LUAh_ScoresHUD(void)
 		LUA_Call(gL, 1);
 	}
 	lua_pop(gL, -1);
-	lua_gc(gL, LUA_GCCOLLECT, 0);
-
 	hud_running = false;
 }
 

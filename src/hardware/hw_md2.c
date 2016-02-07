@@ -926,7 +926,7 @@ void HWR_InitMD2(void)
 			CONS_Printf("MD2 for sprite PLAY detected in md2.dat, use a player skin instead!\n");
 			continue;
 		}
-	
+
 		for (i = 0; i < NUMSPRITES; i++)
 		{
 			if (stricmp(name, sprnames[i]) == 0)
@@ -1085,7 +1085,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 	if (!cv_grmd2.value)
 		return;
 
-	if (!spr->precip)
+	if (spr->precip)
 		return;
 
 	// MD2 colormap fix

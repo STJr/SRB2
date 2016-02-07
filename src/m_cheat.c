@@ -880,12 +880,33 @@ static boolean OP_HeightOkay(player_t *player, UINT8 ceiling)
 
 static mapthing_t *OP_CreateNewMapThing(player_t *player, UINT16 type, boolean ceiling)
 {
-	mapthing_t *mt;
+	mapthing_t *mt = mapthings;
+
 #ifdef HAVE_BLUA
 	LUA_InvalidateMapthings();
 #endif
 
 	mapthings = Z_Realloc(mapthings, ++nummapthings * sizeof (*mapthings), PU_LEVEL, NULL);
+
+	// as Z_Realloc can relocate mapthings, quickly go through thinker list and correct
+	// the spawnpoints of any objects that have them to the new location
+	if (mt != mapthings)
+	{
+		thinker_t *th;
+		mobj_t *mo;
+
+		for (th = thinkercap.next; th != &thinkercap; th = th->next)
+		{
+			if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+				continue;
+
+			mo = (mobj_t *)th;
+			// get offset from mt, which points to old mapthings, then add new location
+			if (mo->spawnpoint)
+				mo->spawnpoint = (mo->spawnpoint - mt) + mapthings;
+		}
+	}
+
 	mt = (mapthings+nummapthings-1);
 
 	mt->type = type;

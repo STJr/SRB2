@@ -442,6 +442,8 @@ newseg:
 	// seg's ending vertex.
 	for (i = 0; i < numsegs; ++i)
 	{
+		if (segs[i].side != 0) // needs to be frontfacing
+			continue;
 		if (segs[i].v1->x == seg->v2->x && segs[i].v1->y == seg->v2->y)
 		{
 			// Make sure you didn't already add this seg...
@@ -610,14 +612,17 @@ static void Polyobj_spawnPolyObj(INT32 num, mobj_t *spawnSpot, INT32 id)
 		INT32 poflags = POF_SOLID|POF_TESTHEIGHT|POF_RENDERSIDES;
 		INT32 parentID = 0, potrans = 0;
 
+		if (seg->side != 0) // needs to be frontfacing
+			continue;
+
 		if (seg->linedef->special != POLYOBJ_START_LINE)
 			continue;
-		
+
 		if (seg->linedef->tag != po->id)
 			continue;
 
 		Polyobj_GetInfo(po->id, &poflags, &parentID, &potrans); // apply extra settings if they exist!
-		
+
 		// save original flags and translucency to reference later for netgames!
 		po->spawnflags = po->flags = poflags;
 		po->spawntrans = po->translucency = potrans;
@@ -657,6 +662,14 @@ static void Polyobj_spawnPolyObj(INT32 num, mobj_t *spawnSpot, INT32 id)
 		// TODO: sound sequence is in args[3]
 	}*/
 
+	// make sure array isn't empty
+	// since Polyobj_findExplicit is disabled currently, we have to do things here instead now!
+	if (po->segCount == 0)
+	{
+		po->isBad = true;
+		CONS_Debug(DBG_POLYOBJ, "Polyobject %d is empty\n", po->id);
+		return;
+	}
 
 	// set the polyobject's spawn spot
 	po->spawnSpot.x = spawnSpot->x;
@@ -848,10 +861,10 @@ static void Polyobj_linkToBlockmap(polyobj_t *po)
 		M_AddToBox(blockbox, po->vertices[i]->x, po->vertices[i]->y);
 
 	// adjust bounding box relative to blockmap
-	blockbox[BOXRIGHT]  = (blockbox[BOXRIGHT]  - bmaporgx) >> MAPBLOCKSHIFT;
-	blockbox[BOXLEFT]   = (blockbox[BOXLEFT]   - bmaporgx) >> MAPBLOCKSHIFT;
-	blockbox[BOXTOP]    = (blockbox[BOXTOP]    - bmaporgy) >> MAPBLOCKSHIFT;
-	blockbox[BOXBOTTOM] = (blockbox[BOXBOTTOM] - bmaporgy) >> MAPBLOCKSHIFT;
+	blockbox[BOXRIGHT]  = (unsigned)(blockbox[BOXRIGHT]  - bmaporgx) >> MAPBLOCKSHIFT;
+	blockbox[BOXLEFT]   = (unsigned)(blockbox[BOXLEFT]   - bmaporgx) >> MAPBLOCKSHIFT;
+	blockbox[BOXTOP]    = (unsigned)(blockbox[BOXTOP]    - bmaporgy) >> MAPBLOCKSHIFT;
+	blockbox[BOXBOTTOM] = (unsigned)(blockbox[BOXBOTTOM] - bmaporgy) >> MAPBLOCKSHIFT;
 
 	// link polyobject to every block its bounding box intersects
 	for (y = blockbox[BOXBOTTOM]; y <= blockbox[BOXTOP]; ++y)
@@ -1040,9 +1053,10 @@ static void Polyobj_carryThings(polyobj_t *po, fixed_t dx, fixed_t dy)
 
 				mo->lastlook = pomovecount;
 
-				// always push players even if not solid
-				if (!((mo->flags & MF_SOLID) || mo->player))
+				// Don't scroll objects that aren't affected by gravity
+				if (mo->flags & MF_NOGRAVITY)
 					continue;
+				// (The above check used to only move MF_SOLID objects, but that's inconsistent with conveyor behavior. -Red)
 
 				if (mo->flags & MF_NOCLIP)
 					continue;
@@ -1078,10 +1092,10 @@ static INT32 Polyobj_clipThings(polyobj_t *po, line_t *line)
 		return hitflags;
 
 	// adjust linedef bounding box to blockmap, extend by MAXRADIUS
-	linebox[BOXLEFT]   = (line->bbox[BOXLEFT]   - bmaporgx - MAXRADIUS) >> MAPBLOCKSHIFT;
-	linebox[BOXRIGHT]  = (line->bbox[BOXRIGHT]  - bmaporgx + MAXRADIUS) >> MAPBLOCKSHIFT;
-	linebox[BOXBOTTOM] = (line->bbox[BOXBOTTOM] - bmaporgy - MAXRADIUS) >> MAPBLOCKSHIFT;
-	linebox[BOXTOP]    = (line->bbox[BOXTOP]    - bmaporgy + MAXRADIUS) >> MAPBLOCKSHIFT;
+	linebox[BOXLEFT]   = (unsigned)(line->bbox[BOXLEFT]   - bmaporgx - MAXRADIUS) >> MAPBLOCKSHIFT;
+	linebox[BOXRIGHT]  = (unsigned)(line->bbox[BOXRIGHT]  - bmaporgx + MAXRADIUS) >> MAPBLOCKSHIFT;
+	linebox[BOXBOTTOM] = (unsigned)(line->bbox[BOXBOTTOM] - bmaporgy - MAXRADIUS) >> MAPBLOCKSHIFT;
+	linebox[BOXTOP]    = (unsigned)(line->bbox[BOXTOP]    - bmaporgy + MAXRADIUS) >> MAPBLOCKSHIFT;
 
 	// check all mobj blockmap cells the line contacts
 	for (y = linebox[BOXBOTTOM]; y <= linebox[BOXTOP]; ++y)
@@ -1094,9 +1108,11 @@ static INT32 Polyobj_clipThings(polyobj_t *po, line_t *line)
 
 				for (; mo; mo = mo->bnext)
 				{
-					// always push players even if not solid
-					if (!((mo->flags & MF_SOLID) || mo->player))
+
+					// Don't scroll objects that aren't affected by gravity
+					if (mo->flags & MF_NOGRAVITY)
 						continue;
+					// (The above check used to only move MF_SOLID objects, but that's inconsistent with conveyor behavior. -Red)
 
 					if (mo->flags & MF_NOCLIP)
 						continue;
@@ -1256,6 +1272,7 @@ static void Polyobj_rotateThings(polyobj_t *po, vertex_t origin, angle_t delta, 
 {
 	static INT32 pomovecount = 10000;
 	INT32 x, y;
+	angle_t deltafine = delta >> ANGLETOFINESHIFT;
 
 	pomovecount++;
 
@@ -1280,9 +1297,10 @@ static void Polyobj_rotateThings(polyobj_t *po, vertex_t origin, angle_t delta, 
 
 				mo->lastlook = pomovecount;
 
-				// always push players even if not solid
-				if (!((mo->flags & MF_SOLID) || mo->player))
+				// Don't scroll objects that aren't affected by gravity
+				if (mo->flags & MF_NOGRAVITY)
 					continue;
+				// (The above check used to only move MF_SOLID objects, but that's inconsistent with conveyor behavior. -Red)
 
 				if (mo->flags & MF_NOCLIP)
 					continue;
@@ -1297,21 +1315,28 @@ static void Polyobj_rotateThings(polyobj_t *po, vertex_t origin, angle_t delta, 
 					continue;
 
 				{
-					fixed_t newxoff, newyoff;
-					angle_t angletoobj = R_PointToAngle2(origin.x, origin.y, mo->x, mo->y);
-					fixed_t disttoobj = R_PointToDist2(origin.x, origin.y, mo->x, mo->y);
+					fixed_t oldxoff, oldyoff, newxoff, newyoff;
+					fixed_t c, s;
+
+					c = FINECOSINE(deltafine);
+					s = FINESINE(deltafine);
+
+					oldxoff = mo->x-origin.x;
+					oldyoff = mo->y-origin.y;
 
 					if (mo->player) // Hack to fix players sliding off of spinning polys -Red
 					{
-						disttoobj = FixedMul(disttoobj, 0xfe40);
+						fixed_t temp;
+
+						temp = FixedMul(oldxoff, c)-FixedMul(oldyoff, s);
+						oldyoff = FixedMul(oldyoff, c)+FixedMul(oldxoff, s);
+						oldxoff = temp;
 					}
 
-					angletoobj += delta;
-					angletoobj >>= ANGLETOFINESHIFT;
-					newxoff = FixedMul(FINECOSINE(angletoobj), disttoobj);
-					newyoff = FixedMul(FINESINE(angletoobj), disttoobj);
+					newxoff = FixedMul(oldxoff, c)-FixedMul(oldyoff, s);
+					newyoff = FixedMul(oldyoff, c)+FixedMul(oldxoff, s);
 
-					Polyobj_slideThing(mo, origin.x+newxoff-mo->x, origin.y+newyoff-mo->y);
+					Polyobj_slideThing(mo, newxoff-oldxoff, newyoff-oldyoff);
 
 					if (turnthings == 2 || (turnthings == 1 && !mo->player)) {
 						mo->angle += delta;
@@ -2487,6 +2512,10 @@ INT32 EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 		P_RemoveThinker(&th->thinker);
 		return 0;
 	}
+
+	// Hotfix to not crash on single-waypoint sequences -Red
+	if (!last)
+		last = first;
 
 	// Set diffx, diffy, diffz
 	// Put these at 0 for now...might not be needed after all.

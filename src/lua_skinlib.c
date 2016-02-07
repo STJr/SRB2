@@ -147,19 +147,19 @@ static int skin_get(lua_State *L)
 		lua_pushinteger(L, skin->revitem);
 		break;
 	case skin_actionspd:
-		lua_pushinteger(L, skin->actionspd);
+		lua_pushfixed(L, skin->actionspd);
 		break;
 	case skin_mindash:
-		lua_pushinteger(L, skin->mindash);
+		lua_pushfixed(L, skin->mindash);
 		break;
 	case skin_maxdash:
-		lua_pushinteger(L, skin->maxdash);
+		lua_pushfixed(L, skin->maxdash);
 		break;
 	case skin_normalspeed:
-		lua_pushinteger(L, skin->normalspeed);
+		lua_pushfixed(L, skin->normalspeed);
 		break;
 	case skin_runspeed:
-		lua_pushinteger(L, skin->runspeed);
+		lua_pushfixed(L, skin->runspeed);
 		break;
 	case skin_thrustfactor:
 		lua_pushinteger(L, skin->thrustfactor);
@@ -171,7 +171,7 @@ static int skin_get(lua_State *L)
 		lua_pushinteger(L, skin->acceleration);
 		break;
 	case skin_jumpfactor:
-		lua_pushinteger(L, skin->jumpfactor);
+		lua_pushfixed(L, skin->jumpfactor);
 		break;
 	case skin_starttranscolor:
 		lua_pushinteger(L, skin->starttranscolor);

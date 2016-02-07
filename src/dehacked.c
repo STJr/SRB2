@@ -998,7 +998,7 @@ static const struct {
 static void readlevelheader(MYFILE *f, INT32 num)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
-	char *word = s;
+	char *word;
 	char *word2;
 	//char *word3; // Non-uppercase version of word2
 	char *tmp;
@@ -1026,6 +1026,9 @@ static void readlevelheader(MYFILE *f, INT32 num)
 				*tmp = '\0';
 			if (s == tmp)
 				continue; // Skip comment lines, but don't break.
+
+			// Set / reset word, because some things (Lua.) move it
+			word = s;
 
 			// Get the part before the " = "
 			tmp = strchr(s, '=');
@@ -1129,6 +1132,10 @@ static void readlevelheader(MYFILE *f, INT32 num)
 			}
 			else if (fastcmp(word, "NEXTLEVEL"))
 			{
+				if      (fastcmp(word2, "TITLE"))      i = 1100;
+				else if (fastcmp(word2, "EVALUATION")) i = 1101;
+				else if (fastcmp(word2, "CREDITS"))    i = 1102;
+				else
 				// Support using the actual map name,
 				// i.e., Nextlevel = AB, Nextlevel = FZ, etc.
 
@@ -3747,9 +3754,12 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PLAY_RUN",
 	"S_PLAY_PAIN",
 	"S_PLAY_DEAD",
+	"S_PLAY_DRWN",
 	"S_PLAY_SPIN",
+	"S_PLAY_DASH",
 	"S_PLAY_GASP",
 	"S_PLAY_JUMP",
+	"S_PLAY_SPRING",
 	"S_PLAY_FALL",
 	"S_PLAY_EDGE",
 	"S_PLAY_RIDE",
@@ -3767,8 +3777,18 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PLAY_SUPER_STND",
 	"S_PLAY_SUPER_WALK",
 	"S_PLAY_SUPER_RUN",
-	"S_PLAY_SUPER_EDGE",
 	"S_PLAY_SUPER_PAIN",
+	"S_PLAY_SUPER_STUN",
+	"S_PLAY_SUPER_DEAD",
+	"S_PLAY_SUPER_DRWN",
+	"S_PLAY_SUPER_SPIN",
+	"S_PLAY_SUPER_GASP",
+	"S_PLAY_SUPER_JUMP",
+	"S_PLAY_SUPER_SPRING",
+	"S_PLAY_SUPER_FALL",
+	"S_PLAY_SUPER_EDGE",
+	"S_PLAY_SUPER_RIDE",
+	"S_PLAY_SUPER_FLOAT",
 
 	// SF_SUPER
 	"S_PLAY_SUPERTRANS1",
@@ -7189,6 +7209,7 @@ static const char *const MOBJEFLAG_LIST[] = {
 	"GOOWATER", // Goo water
 	"PUSHED", // Mobj was already pushed this tic
 	"SPRUNG", // Mobj was already sprung this tic
+	"APPLYPMOMZ", // Platform movement
 	NULL
 };
 
@@ -7298,27 +7319,31 @@ static const char *COLOR_ENUMS[] = {
 	"SILVER",   	// SKINCOLOR_SILVER
 	"GREY",	    	// SKINCOLOR_GREY
 	"BLACK",    	// SKINCOLOR_BLACK
-	"CYAN",     	// SKINCOLOR_CYAN
-	"TEAL",     	// SKINCOLOR_TEAL
-	"STEELBLUE",	// SKINCOLOR_STEELBLUE
-	"BLUE",     	// SKINCOLOR_BLUE
-	"PEACH",    	// SKINCOLOR_PEACH
-	"TAN",      	// SKINCOLOR_TAN
-	"PINK",     	// SKINCOLOR_PINK
-	"LAVENDER", 	// SKINCOLOR_LAVENDER
-	"PURPLE",   	// SKINCOLOR_PURPLE
-	"ORANGE",   	// SKINCOLOR_ORANGE
-	"ROSEWOOD", 	// SKINCOLOR_ROSEWOOD
 	"BEIGE",    	// SKINCOLOR_BEIGE
+	"PEACH",    	// SKINCOLOR_PEACH
 	"BROWN",    	// SKINCOLOR_BROWN
 	"RED",      	// SKINCOLOR_RED
-	"DARKRED",  	// SKINCOLOR_DARKRED
-	"NEONGREEN",	// SKINCOLOR_NEONGREEN
-	"GREEN",    	// SKINCOLOR_GREEN
-	"ZIM",      	// SKINCOLOR_ZIM
-	"OLIVE",    	// SKINCOLOR_OLIVE
+	"CRIMSON",     	// SKINCOLOR_CRIMSON
+	"ORANGE",   	// SKINCOLOR_ORANGE
+	"RUST",     	// SKINCOLOR_RUST
+	"GOLD",      	// SKINCOLOR_GOLD
 	"YELLOW",   	// SKINCOLOR_YELLOW
-	"GOLD",     	// SKINCOLOR_GOLD
+	"TAN",      	// SKINCOLOR_TAN
+	"MOSS",      	// SKINCOLOR_MOSS
+	"PERIDOT",    	// SKINCOLOR_PERIDOT
+	"GREEN",    	// SKINCOLOR_GREEN
+	"EMERALD",  	// SKINCOLOR_EMERALD
+	"AQUA",     	// SKINCOLOR_AQUA
+	"TEAL",     	// SKINCOLOR_TEAL
+	"CYAN",     	// SKINCOLOR_CYAN
+	"BLUE",     	// SKINCOLOR_BLUE
+	"AZURE",    	// SKINCOLOR_AZURE
+	"PASTEL",		// SKINCOLOR_PASTEL
+	"PURPLE",   	// SKINCOLOR_PURPLE
+	"LAVENDER", 	// SKINCOLOR_LAVENDER
+	"MAGENTA",   	// SKINCOLOR_MAGENTA
+	"PINK",     	// SKINCOLOR_PINK
+	"ROSY",     	// SKINCOLOR_ROSY
 	// Super special awesome Super flashing colors!
 	"SUPER1",   	// SKINCOLOR_SUPER1
 	"SUPER2",   	// SKINCOLOR_SUPER2,
@@ -7655,11 +7680,15 @@ struct {
 	// Player animation (panim_t)
 	{"PA_ETC",PA_ETC},
 	{"PA_IDLE",PA_IDLE},
+	{"PA_EDGE",PA_EDGE},
 	{"PA_WALK",PA_WALK},
 	{"PA_RUN",PA_RUN},
+	{"PA_PAIN",PA_PAIN},
 	{"PA_ROLL",PA_ROLL},
+	{"PA_SPRING",PA_SPRING},
 	{"PA_FALL",PA_FALL},
 	{"PA_ABILITY",PA_ABILITY},
+	{"PA_RIDE",PA_RIDE},
 
 	// Current weapon
 	{"WEP_AUTO",WEP_AUTO},
@@ -7738,36 +7767,36 @@ struct {
 	{"FF_GOOWATER",FF_GOOWATER},               ///< Used with ::FF_SWIMMABLE. Makes thick bouncey goop.
 
 	// Angles
-	{"ANG1",ANG1},
-	{"ANG2",ANG2},
-	{"ANG10",ANG10},
-	{"ANG15",ANG15},
-	{"ANG20",ANG20},
-	{"ANG30",ANG30},
-	{"ANG60",ANG60},
-	{"ANG64h",ANG64h},
-	{"ANG105",ANG105},
-	{"ANG210",ANG210},
-	{"ANG255",ANG255},
-	{"ANG340",ANG340},
-	{"ANG350",ANG350},
-	{"ANGLE_11hh",ANGLE_11hh},
-	{"ANGLE_22h",ANGLE_22h},
-	{"ANGLE_45",ANGLE_45},
-	{"ANGLE_67h",ANGLE_67h},
-	{"ANGLE_90",ANGLE_90},
-	{"ANGLE_112h",ANGLE_112h},
-	{"ANGLE_135",ANGLE_135},
-	{"ANGLE_157h",ANGLE_157h},
-	{"ANGLE_180",ANGLE_180},
-	{"ANGLE_202h",ANGLE_202h},
-	{"ANGLE_225",ANGLE_225},
-	{"ANGLE_247h",ANGLE_247h},
-	{"ANGLE_270",ANGLE_270},
-	{"ANGLE_292h",ANGLE_292h},
-	{"ANGLE_315",ANGLE_315},
-	{"ANGLE_337h",ANGLE_337h},
-	{"ANGLE_MAX",ANGLE_MAX},
+	{"ANG1",ANG1>>16},
+	{"ANG2",ANG2>>16},
+	{"ANG10",ANG10>>16},
+	{"ANG15",ANG15>>16},
+	{"ANG20",ANG20>>16},
+	{"ANG30",ANG30>>16},
+	{"ANG60",ANG60>>16},
+	{"ANG64h",ANG64h>>16},
+	{"ANG105",ANG105>>16},
+	{"ANG210",ANG210>>16},
+	{"ANG255",ANG255>>16},
+	{"ANG340",ANG340>>16},
+	{"ANG350",ANG350>>16},
+	{"ANGLE_11hh",ANGLE_11hh>>16},
+	{"ANGLE_22h",ANGLE_22h>>16},
+	{"ANGLE_45",ANGLE_45>>16},
+	{"ANGLE_67h",ANGLE_67h>>16},
+	{"ANGLE_90",ANGLE_90>>16},
+	{"ANGLE_112h",ANGLE_112h>>16},
+	{"ANGLE_135",ANGLE_135>>16},
+	{"ANGLE_157h",ANGLE_157h>>16},
+	{"ANGLE_180",ANGLE_180>>16},
+	{"ANGLE_202h",ANGLE_202h>>16},
+	{"ANGLE_225",ANGLE_225>>16},
+	{"ANGLE_247h",ANGLE_247h>>16},
+	{"ANGLE_270",ANGLE_270>>16},
+	{"ANGLE_292h",ANGLE_292h>>16},
+	{"ANGLE_315",ANGLE_315>>16},
+	{"ANGLE_337h",ANGLE_337h>>16},
+	{"ANGLE_MAX",ANGLE_MAX>>16},
 
 	// P_Chase directions (dirtype_t)
 	{"DI_NODIR",DI_NODIR},
@@ -8726,7 +8755,7 @@ static inline int lib_getenum(lua_State *L)
 		lua_pushinteger(L, mapmusic);
 		return 1;
 	} else if (fastcmp(word,"server")) {
-		if (!playeringame[serverplayer])
+		if ((!multiplayer || !netgame) && !playeringame[serverplayer])
 			return 0;
 		LUA_PushUserdata(L, &players[serverplayer], META_PLAYER);
 		return 1;

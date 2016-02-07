@@ -525,7 +525,7 @@ static inline void CL_DrawConnectionStatus(void)
 	if (cl_mode != cl_downloadfiles)
 	{
 		INT32 i, animtime = ((ccstime / 4) & 15) + 16;
-		UINT8 palstart = (cl_mode == cl_searching) ? 128 : 160;
+		UINT8 palstart = (cl_mode == cl_searching) ? 32 : 96;
 		// 15 pal entries total.
 		const char *cltext;
 
@@ -563,8 +563,8 @@ static inline void CL_DrawConnectionStatus(void)
 		dldlength = (INT32)((fileneeded[lastfilenum].currentsize/(double)fileneeded[lastfilenum].totalsize) * 256);
 		if (dldlength > 256)
 			dldlength = 256;
-		V_DrawFill(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-24, 256, 8, 175);
-		V_DrawFill(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-24, dldlength, 8, 160);
+		V_DrawFill(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-24, 256, 8, 111);
+		V_DrawFill(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-24, dldlength, 8, 96);
 
 		memset(tempname, 0, sizeof(tempname));
 		nameonly(strncpy(tempname, fileneeded[lastfilenum].filename, 31));

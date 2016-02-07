@@ -3,6 +3,10 @@ project(SRB2
 	VERSION 2.1.14
 	LANGUAGES C)
 
+if(${PROJECT_SOURCE_DIR} MATCHES ${PROJECT_BINARY_DIR})
+	message(FATAL_ERROR "In-source builds will bring you a world of pain. Please make a separate directory to invoke CMake from.")
+endif()
+
 # Set up CMAKE path
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
@@ -44,7 +48,7 @@ macro(copy_files_to_build_dir target dlllist_var)
 			add_custom_command(TARGET ${target} POST_BUILD
 				COMMAND ${CMAKE_COMMAND} -E copy_if_different
 				${dlllist_item}
-				${CMAKE_CURRENT_BINARY_DIR}/\$\(Configuration\)/${dllname}
+				$<TARGET_FILE_DIR:${target}>/${dllname}
 			)
 		endforeach()
 	endif()
@@ -99,7 +103,8 @@ set(GIT_EXECUTABLE "git" CACHE FILEPATH "Path to git binary")
 include(GitUtilities)
 git_describe(SRB2_GIT_DESCRIBE "${CMAKE_SOURCE_DIR}")
 git_current_branch(SRB2_GIT_BRANCH "${CMAKE_SOURCE_DIR}")
-set(SRB2_COMP_REVISION "${SRB2_GIT_DESCRIBE}-<${SRB2_GIT_BRANCH}>")
+set(SRB2_COMP_BRANCH "${SRB2_GIT_BRANCH}")
+set(SRB2_COMP_REVISION "${SRB2_GIT_DESCRIBE}")
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/src/config.h)
 
 ##### PACKAGE CONFIGURATION #####

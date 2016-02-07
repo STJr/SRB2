@@ -123,7 +123,7 @@ boolean useNightsSS = false;
 UINT8 skincolor_redteam = SKINCOLOR_RED;
 UINT8 skincolor_blueteam = SKINCOLOR_BLUE;
 UINT8 skincolor_redring = SKINCOLOR_RED;
-UINT8 skincolor_bluering = SKINCOLOR_STEELBLUE;
+UINT8 skincolor_bluering = SKINCOLOR_AZURE;
 
 tic_t countdowntimer = 0;
 boolean countdowntimeup = false;
@@ -293,9 +293,6 @@ static CV_PossibleValue_t joyaxis_cons_t[] = {{0, "None"},
 #endif
 #if JOYAXISSET > 2
 {5, "RTrigger"}, {6, "LTrigger"}, {-5, "RTrigger-"}, {-6, "LTrigger-"},
-#endif
-#if JOYAXISSET > 3
-{7, "Pitch"}, {8, "Roll"}, {-7, "Pitch-"}, {-8, "Roll-"},
 #endif
 #if JOYAXISSET > 3
 {7, "Pitch"}, {8, "Roll"}, {-7, "Pitch-"}, {-8, "Roll-"},
@@ -5586,7 +5583,7 @@ boolean G_CheckDemoStatus(void)
 		free(demobuffer);
 		demorecording = false;
 
-		if (!modeattacking == ATTACKING_RECORD)
+		if (modeattacking != ATTACKING_RECORD)
 		{
 			if (saved)
 				CONS_Printf(M_GetText("Demo %s recorded\n"), demoname);

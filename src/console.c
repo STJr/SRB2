@@ -202,7 +202,7 @@ static void CONS_Bind_f(void)
 	}
 
 	key = G_KeyStringtoNum(COM_Argv(1));
-	if (!key)
+	if (key <= 0 || key >= NUMINPUTS)
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("Invalid key name\n"));
 		return;
@@ -248,11 +248,11 @@ void CON_ReSetupBackColormap(UINT16 num)
 	{
 		j = pal[i] + pal[i+1] + pal[i+2];
 		cwhitemap[k] = (UINT8)(15 - (j>>6));
-		corangemap[k] = (UINT8)(95 - (j>>6));
-		cbluemap[k] = (UINT8)(239 - (j>>6));
-		cgreenmap[k] = (UINT8)(175 - (j>>6));
+		corangemap[k] = (UINT8)(63 - (j>>6));
+		cbluemap[k] = (UINT8)(159 - (j>>6));
+		cgreenmap[k] = (UINT8)(111 - (j>>6));
 		cgraymap[k] = (UINT8)(31 - (j>>6));
-		credmap[k] = (UINT8)(143 - (j>>6));
+		credmap[k] = (UINT8)(47 - (j>>6));
 	}
 }
 
@@ -283,11 +283,11 @@ static void CON_SetupBackColormap(void)
 	{
 		j = pal[i] + pal[i+1] + pal[i+2];
 		cwhitemap[k] = (UINT8)(15 - (j>>6));
-		corangemap[k] = (UINT8)(95 - (j>>6));
-		cbluemap[k] = (UINT8)(239 - (j>>6));
-		cgreenmap[k] = (UINT8)(175 - (j>>6));
+		corangemap[k] = (UINT8)(63 - (j>>6));
+		cbluemap[k] = (UINT8)(159 - (j>>6));
+		cgreenmap[k] = (UINT8)(111 - (j>>6));
 		cgraymap[k] = (UINT8)(31 - (j>>6));
-		credmap[k] = (UINT8)(143 - (j>>6));
+		credmap[k] = (UINT8)(47 - (j>>6));
 	}
 
 	// setup the other colormaps, for console text
@@ -306,20 +306,20 @@ static void CON_SetupBackColormap(void)
 		orangemap[i] = (UINT8)i;
 	}
 
-	yellowmap[3] = (UINT8)103;
-	yellowmap[9] = (UINT8)115;
-	purplemap[3] = (UINT8)195;
-	purplemap[9] = (UINT8)198;
-	lgreenmap[3] = (UINT8)162;
-	lgreenmap[9] = (UINT8)170;
-	bluemap[3]   = (UINT8)228;
-	bluemap[9]   = (UINT8)238;
+	yellowmap[3] = (UINT8)73;
+	yellowmap[9] = (UINT8)66;
+	purplemap[3] = (UINT8)184;
+	purplemap[9] = (UINT8)186;
+	lgreenmap[3] = (UINT8)102;
+	lgreenmap[9] = (UINT8)106;
+	bluemap[3]   = (UINT8)147;
+	bluemap[9]   = (UINT8)158;
 	graymap[3]   = (UINT8)10;
 	graymap[9]   = (UINT8)15;
-	redmap[3]    = (UINT8)124;
-	redmap[9]    = (UINT8)127;
-	orangemap[3] = (UINT8)85;
-	orangemap[9] = (UINT8)90;
+	redmap[3]    = (UINT8)210;
+	redmap[9]    = (UINT8)32;
+	orangemap[3] = (UINT8)52;
+	orangemap[9] = (UINT8)57;
 }
 
 // Setup the console text buffer

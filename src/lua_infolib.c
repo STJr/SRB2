@@ -175,8 +175,6 @@ static void A_Lua(mobj_t *actor)
 		--superstack;
 		superactions[superstack] = NULL;
 	}
-
-	lua_gc(gL, LUA_GCSTEP, 1);
 }
 
 // Arbitrary states[] table index -> state_t *
@@ -548,11 +546,11 @@ static int lib_setMobjInfo(lua_State *L)
 		else if (i == 15 || (str && fastcmp(str,"deathsound")))
 			info->deathsound = luaL_checkinteger(L, 3);
 		else if (i == 16 || (str && fastcmp(str,"speed")))
-			info->speed = (fixed_t)luaL_checkinteger(L, 3);
+			info->speed = luaL_checkfixed(L, 3);
 		else if (i == 17 || (str && fastcmp(str,"radius")))
-			info->radius = (fixed_t)luaL_checkinteger(L, 3);
+			info->radius = luaL_checkfixed(L, 3);
 		else if (i == 18 || (str && fastcmp(str,"height")))
-			info->height = (fixed_t)luaL_checkinteger(L, 3);
+			info->height = luaL_checkfixed(L, 3);
 		else if (i == 19 || (str && fastcmp(str,"dispoffset")))
 			info->dispoffset = (INT32)luaL_checkinteger(L, 3);
 		else if (i == 20 || (str && fastcmp(str,"mass")))
@@ -618,11 +616,11 @@ static int mobjinfo_get(lua_State *L)
 	else if (fastcmp(field,"deathsound"))
 		lua_pushinteger(L, info->deathsound);
 	else if (fastcmp(field,"speed"))
-		lua_pushinteger(L, info->speed);
+		lua_pushinteger(L, info->speed); // sometimes it's fixed_t, sometimes it's not...
 	else if (fastcmp(field,"radius"))
-		lua_pushinteger(L, info->radius);
+		lua_pushfixed(L, info->radius);
 	else if (fastcmp(field,"height"))
-		lua_pushinteger(L, info->height);
+		lua_pushfixed(L, info->height);
 	else if (fastcmp(field,"dispoffset"))
 		lua_pushinteger(L, info->dispoffset);
 	else if (fastcmp(field,"mass"))
@@ -694,11 +692,11 @@ static int mobjinfo_set(lua_State *L)
 	else if (fastcmp(field,"deathsound"))
 		info->deathsound = luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"speed"))
-		info->speed = (fixed_t)luaL_checkinteger(L, 3);
+		info->speed = luaL_checkfixed(L, 3);
 	else if (fastcmp(field,"radius"))
-		info->radius = (fixed_t)luaL_checkinteger(L, 3);
+		info->radius = luaL_checkfixed(L, 3);
 	else if (fastcmp(field,"height"))
-		info->height = (fixed_t)luaL_checkinteger(L, 3);
+		info->height = luaL_checkfixed(L, 3);
 	else if (fastcmp(field,"dispoffset"))
 		info->dispoffset = (INT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"mass"))

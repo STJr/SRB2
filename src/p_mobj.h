@@ -235,6 +235,8 @@ typedef enum
 	MFE_PUSHED            = 1<<7,
 	// Mobj was already sprung this tic
 	MFE_SPRUNG            = 1<<8,
+	// Platform movement
+	MFE_APPLYPMOMZ        = 1<<9,
 	// free: to and including 1<<15
 } mobjeflag_t;
 
@@ -355,6 +357,10 @@ typedef struct mobj_s
 	// They are for SOCs to store things in.
 	INT32 cusval;
 	INT32 cvmem;
+
+#ifdef ESLOPE
+	struct pslope_s *standingslope; // The slope that the object is standing on (shouldn't need synced in savegames, right?)
+#endif
 
 	// WARNING: New fields must be added separately to savegame and Lua.
 } mobj_t;
