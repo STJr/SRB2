@@ -97,8 +97,8 @@ binary-arch:
 	echo $(BINDIR)/$(EXENAME) >> $(DIR)/debian/source/include-binaries
 	# Generate install folder files
 	echo $(PKGDIR) > $(DIR)/debian/$(PACKAGE).install
-	echo $(DESKTOP_DIR) > $(DIR)/debian/$(PACKAGE).install
-	echo $(PIXMAPS_DIR) > $(DIR)/debian/$(PACKAGE).install
+	echo $(DESKTOP_DIR) >> $(DIR)/debian/$(PACKAGE).install
+	echo $(PIXMAPS_DIR) >> $(DIR)/debian/$(PACKAGE).install
 	echo $(DBGDIR) > $(DIR)/debian/$(DBGPKG).install
 
 binary: binary-arch
