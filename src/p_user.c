@@ -51,9 +51,6 @@
 #include "hardware/hw_main.h"
 #endif
 
-// Index of the special effects (INVUL inverse) map.
-#define INVERSECOLORMAP 32
-
 #if 0
 static void P_NukeAllPlayers(player_t *player);
 #endif
