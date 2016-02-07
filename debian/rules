@@ -59,6 +59,8 @@ DBGNAME	= debug/$(EXENAME)
 
 PKGDIR	= usr/games
 DBGDIR	= usr/lib/debug/$(PKGDIR)
+PIXMAPS_DIR = usr/share/pixmaps
+DESKTOP_DIR = usr/share/applications
 PREFIX	= $(shell test "$(CROSS_COMPILE_BUILD)" != "$(CROSS_COMPILE_HOST)" && echo "PREFIX=$(CROSS_COMPILE_HOST)")
 OS	= LINUX=1
 NONX86	= $(shell test "`echo $(CROSS_COMPILE_HOST) | grep 'i[3-6]86'`" || echo "NONX86=1")
@@ -66,9 +68,9 @@ MAKEARGS = $(OS) $(NONX86) $(PREFIX) EXENAME=$(EXENAME) DBGNAME=$(DBGNAME) SDL_P
 MENUFILE1 = ?package($(PACKAGE)):needs="X11" section="$(SECTION)"
 MENUFILE2 = title="$(TITLE)" command="/$(PKGDIR)/$(PACKAGE)"
 # FIXME pkg-config dir hacks
-export PKG_CONFIG_LIBDIR = /usr/$(CROSS_COMPILE_HOST)/lib/pkgconfig
+export PKG_CONFIG_LIBDIR = /usr/lib/$(CROSS_COMPILE_HOST)/pkgconfig
 BINDIR :=  $(DIR)/bin/Linux/Release
-LDFLAGS += "-Wl,-rpath=/usr/$(CROSS_COMPILE_HOST)/lib/"
+LDFLAGS += "-Wl,-rpath=/usr/lib/$(CROSS_COMPILE_HOST)"
 
 build:
 	$(MKDIR) $(BINDIR)/debug
@@ -80,14 +82,23 @@ binary-indep:
 	echo "no need to do any arch-independent stuff"
 
 binary-arch:
+	# create ddirs
 	$(MKDIR) $(DIR)/debian/tmp/$(PKGDIR) $(DIR)/debian/tmp/$(DBGDIR)
+	$(MKDIR) $(DIR)/debian/tmp/$(PKGDIR) $(DIR)/debian/tmp/$(DESKTOP_DIR)
+	$(MKDIR) $(DIR)/debian/tmp/$(PKGDIR) $(DIR)/debian/tmp/$(PIXMAPS_DIR)
+	# install main binaries
 	$(INSTALL) $(BINDIR)/$(EXENAME) $(DIR)/debian/tmp/$(PKGDIR)/$(PACKAGE)
 	$(INSTALL) $(BINDIR)/$(DBGNAME) $(DIR)/debian/tmp/$(DBGDIR)/$(PACKAGE)
+	# Install desktop file and banner image
+	$(INSTALL) $(DIR)/srb2.png $(DIR)/debian/tmp/usr/share/pixmaps
+	$(INSTALL) $(DIR)/debian/srb2.desktop $(DIR)/debian/tmp/usr/share/applications
 	# add compiled binaries to include-binaries
 	echo $(BINDIR)/$(EXENAME) >> $(DIR)/debian/source/include-binaries
 	echo $(BINDIR)/$(EXENAME) >> $(DIR)/debian/source/include-binaries
 	# Generate install folder files
 	echo $(PKGDIR) > $(DIR)/debian/$(PACKAGE).install
+	echo $(DESKTOP_DIR) >> $(DIR)/debian/$(PACKAGE).install
+	echo $(PIXMAPS_DIR) >> $(DIR)/debian/$(PACKAGE).install
 	echo $(DBGDIR) > $(DIR)/debian/$(DBGPKG).install
 
 binary: binary-arch
