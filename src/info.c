@@ -4225,7 +4225,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		MT_GOOP,           // painchance
 		sfx_dmpain,        // painsound
 		S_EGGMOBILE2_PAIN2, // meleestate
-		MT_EGGMOBILE2_POGO, // missilestate
+		(statenum_t)MT_EGGMOBILE2_POGO, // missilestate
 		S_EGGMOBILE2_DIE1, // deathstate
 		S_EGGMOBILE2_FLEE1,// xdeathstate
 		sfx_cybdth,        // deathsound
