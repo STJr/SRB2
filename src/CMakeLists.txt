@@ -404,6 +404,8 @@ else()
 	add_definitions(-DNOASM -DNONX86)
 endif()
 
+find_package(ENet)
+
 # Targets
 
 # Compatibility flag with later versions of GCC
