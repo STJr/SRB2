@@ -52,9 +52,6 @@
 #include "hardware/hw_main.h"
 #endif
 
-// Index of the special effects (INVUL inverse) map.
-#define INVERSECOLORMAP 32
-
 #if 0
 static void P_NukeAllPlayers(player_t *player);
 #endif
@@ -7969,9 +7966,9 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		if (player == &players[consoleplayer])
 		{
 			if (focusangle >= localangle)
-				localangle += abs(focusangle - localangle)>>5;
+				localangle += abs((focusangle - localangle))>>5;
 			else
-				localangle -= abs(focusangle - localangle)>>5;
+				localangle -= abs((focusangle - localangle))>>5;
 		}
 	}
 	else if (P_AnalogMove(player)) // Analog

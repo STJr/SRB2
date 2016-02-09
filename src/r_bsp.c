@@ -32,7 +32,6 @@ sector_t *backsector;
 // 896 drawsegs! So too bad here's a limit removal a-la-Boom
 drawseg_t *drawsegs = NULL;
 drawseg_t *ds_p = NULL;
-drawseg_t *firstnewseg = NULL;
 
 // indicates doors closed wrt automap bugfix:
 INT32 doorclosed;
@@ -935,14 +934,14 @@ static void R_Subsector(size_t num)
 
 			ffloor[numffloors].plane = NULL;
 			ffloor[numffloors].polyobj = NULL;
-			
-			floorcenterz = 
+
+			floorcenterz =
 #ifdef ESLOPE
 				frontsector->f_slope ? P_GetZAt(frontsector->f_slope, frontsector->soundorg.x, frontsector->soundorg.y) :
 #endif
 				frontsector->floorheight;
-				
-			ceilingcenterz = 
+
+			ceilingcenterz =
 #ifdef ESLOPE
 				frontsector->c_slope ? P_GetZAt(frontsector->c_slope, frontsector->soundorg.x, frontsector->soundorg.y) :
 #endif
@@ -953,8 +952,8 @@ static void R_Subsector(size_t num)
 				*rover->b_slope ? P_GetZAt(*rover->b_slope, viewx, viewy) :
 #endif
 				*rover->bottomheight;
-			
-			planecenterz = 
+
+			planecenterz =
 #ifdef ESLOPE
 				*rover->b_slope ? P_GetZAt(*rover->b_slope, frontsector->soundorg.x, frontsector->soundorg.y) :
 #endif
@@ -966,7 +965,7 @@ static void R_Subsector(size_t num)
 			{
 				light = R_GetPlaneLight(frontsector, planecenterz,
 					viewz < *rover->bottomheight);
-					
+
 				ffloor[numffloors].plane = R_FindPlane(*rover->bottomheight, *rover->bottompic,
 					*frontsector->lightlist[light].lightlevel, *rover->bottomxoffs,
 					*rover->bottomyoffs, *rover->bottomangle, frontsector->lightlist[light].extra_colormap, rover
@@ -1002,8 +1001,8 @@ static void R_Subsector(size_t num)
 				*rover->t_slope ? P_GetZAt(*rover->t_slope, viewx, viewy) :
 #endif
 				*rover->topheight;
-			
-			planecenterz = 
+
+			planecenterz =
 #ifdef ESLOPE
 				*rover->t_slope ? P_GetZAt(*rover->t_slope, frontsector->soundorg.x, frontsector->soundorg.y) :
 #endif
@@ -1014,7 +1013,7 @@ static void R_Subsector(size_t num)
 				|| (viewz < heightcheck && (rover->flags & FF_BOTHPLANES))))
 			{
 				light = R_GetPlaneLight(frontsector, planecenterz, viewz < *rover->topheight);
-				
+
 				ffloor[numffloors].plane = R_FindPlane(*rover->topheight, *rover->toppic,
 					*frontsector->lightlist[light].lightlevel, *rover->topxoffs, *rover->topyoffs, *rover->topangle,
 					frontsector->lightlist[light].extra_colormap, rover
