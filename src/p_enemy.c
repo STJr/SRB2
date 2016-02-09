@@ -6362,7 +6362,7 @@ void A_Boss2PogoTarget(mobj_t *actor)
 
 	if (actor->info->missilestate) // spawn the pogo stick collision box
 	{
-		mobj_t *pogo = P_SpawnMobj(actor->x, actor->y, actor->z - mobjinfo[actor->info->missilestate].height, actor->info->missilestate);
+		mobj_t *pogo = P_SpawnMobj(actor->x, actor->y, actor->z - mobjinfo[actor->info->missilestate].height, (mobjtype_t)actor->info->missilestate);
 		pogo->target = actor;
 	}
 

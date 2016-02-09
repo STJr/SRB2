@@ -56,7 +56,7 @@ PSP_MAIN_THREAD_STACK_SIZE_KB(256);
 #endif
 
 #if defined (_WIN32) && !defined (main)
-#define SDLMAIN
+//#define SDLMAIN
 #endif
 
 #ifdef SDLMAIN
