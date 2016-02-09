@@ -9696,7 +9696,7 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 	// Diagonal rings (handles both types)
 	else if (mthing->type == 602 || mthing->type == 603) // Diagonal rings (5)
 	{
-		angle_t angle = ANGLE_45 * (mthing->angle/45);
+		angle_t angle = FixedAngle(mthing->angle*FRACUNIT);
 		mobjtype_t ringthing = MT_RING;
 		INT32 iterations = 5;
 		if (mthing->type == 603)

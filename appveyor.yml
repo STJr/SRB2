@@ -37,10 +37,11 @@ before_build:
 - set Path=%MINGW_SDK%\bin;%Path%
 - i686-w64-mingw32-gcc --version
 - mingw32-make --version
+- set SRB2_MFLAGS=-C src MINGW=1 WARNINGMODE=1 NOASM=1 NOUPX=1 GCC53=1
 
 build_script:
-- cmd: mingw32-make.exe -C src MINGW=1 WARNINGMODE=1 NOASM=1 NOUPX=1 GCC52=1 SDL=1 clean
-- cmd: mingw32-make.exe -C src MINGW=1 WARNINGMODE=1 NOASM=1 NOUPX=1 GCC52=1 SDL=1 ERRORMODE=1
+- cmd: mingw32-make.exe %SRB2_MFLAGS% SDL=1 clean
+- cmd: mingw32-make.exe %SRB2_MFLAGS% SDL=1 ERRORMODE=1
 
 after_build:
 - cmd: git rev-parse --short %APPVEYOR_REPO_COMMIT%>%TMP%/gitshort.txt
