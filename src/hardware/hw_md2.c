@@ -1195,16 +1195,37 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 			HWR_GetMappedPatch(gpatch, spr->colormap);
 		}
 
+		if (spr->mobj->frame & FF_ANIMATE)
+		{
+			// set duration and tics to be the correct values for FF_ANIMATE states
+			durs = spr->mobj->state->var2;
+			tics = spr->mobj->anim_duration;
+		}
+
 		//FIXME: this is not yet correct
 		frame = (spr->mobj->frame & FF_FRAMEMASK) % md2->model->header.numFrames;
 		buff = md2->model->glCommandBuffer;
 		curr = &md2->model->frames[frame];
-		if (cv_grmd2.value == 1
-		    && spr->mobj->state->nextstate != S_NULL && states[spr->mobj->state->nextstate].sprite != SPR_NULL
-		    && !(spr->mobj->player && (spr->mobj->state->nextstate == S_PLAY_TAP1 || spr->mobj->state->nextstate == S_PLAY_TAP2) && spr->mobj->state == &states[S_PLAY_STND]))
+		if (cv_grmd2.value == 1)
 		{
-			const INT32 nextframe = (states[spr->mobj->state->nextstate].frame & FF_FRAMEMASK) % md2->model->header.numFrames;
-			next = &md2->model->frames[nextframe];
+			// frames are handled differently for states with FF_ANIMATE, so get the next frame differently for the interpolation
+			if (spr->mobj->frame & FF_ANIMATE)
+			{
+				UINT32 nextframe = (spr->mobj->frame & FF_FRAMEMASK) + 1;
+				if (nextframe >= (UINT32)spr->mobj->state->var1)
+					nextframe = (spr->mobj->state->frame & FF_FRAMEMASK);
+				nextframe %= md2->model->header.numFrames;
+				next = &md2->model->frames[nextframe];
+			}
+			else
+			{
+				if (spr->mobj->state->nextstate != S_NULL && states[spr->mobj->state->nextstate].sprite != SPR_NULL
+					&& !(spr->mobj->player && (spr->mobj->state->nextstate == S_PLAY_TAP1 || spr->mobj->state->nextstate == S_PLAY_TAP2) && spr->mobj->state == &states[S_PLAY_STND]))
+				{
+					const UINT32 nextframe = (states[spr->mobj->state->nextstate].frame & FF_FRAMEMASK) % md2->model->header.numFrames;
+					next = &md2->model->frames[nextframe];
+				}
+			}
 		}
 
 		//Hurdler: it seems there is still a small problem with mobj angle
