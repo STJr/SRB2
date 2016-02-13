@@ -839,10 +839,10 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		dc_texturemid = FixedDiv(dc_texturemid,this_scale);
 
 		//Oh lordy, mercy me. Don't freak out if sprites go offscreen!
-		if (vis->xiscale > 0)
+		/*if (vis->xiscale > 0)
 			frac = FixedDiv(frac, this_scale);
 		else if (vis->x1 <= 0)
-			frac = (vis->x1 - vis->x2) * vis->xiscale;
+			frac = (vis->x1 - vis->x2) * vis->xiscale;*/
 
 		sprtopscreen = centeryfrac - FixedMul(dc_texturemid, spryscale);
 		//dc_hires = 1;
@@ -1306,7 +1306,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	}
 
 	if (vis->x1 > x1)
-		vis->startfrac += vis->xiscale*(vis->x1-x1);
+		vis->startfrac += FixedDiv(vis->xiscale, this_scale)*(vis->x1-x1);
 
 	//Fab: lumppat is the lump number of the patch to use, this is different
 	//     than lumpid for sprites-in-pwad : the graphics are patched
