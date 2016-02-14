@@ -8296,8 +8296,7 @@ void P_SpawnPlayer(INT32 playernum)
 	P_DoPityCheck(p);
 	
 #ifdef HAVE_BLUA 
-	if (LUAh_PlayerSpawn(p)) // Lua hook for player spawning :)
-		;
+	LUAh_PlayerSpawn(p); // Lua hook for player spawning :)
 #endif
 
 }
