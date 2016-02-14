@@ -8294,6 +8294,12 @@ void P_SpawnPlayer(INT32 playernum)
 
 	// Spawn with a pity shield if necessary.
 	P_DoPityCheck(p);
+	
+#ifdef HAVE_BLUA 
+	if (LUAh_PlayerSpawn(p)) // Lua hook for player spawning :)
+		;
+#endif
+
 }
 
 void P_AfterPlayerSpawn(INT32 playernum)
