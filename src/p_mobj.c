@@ -8451,12 +8451,12 @@ void P_MovePlayerToStarpost(INT32 playernum)
 
 	floor =
 #ifdef ESLOPE
-	sector->f_slope ? P_GetZAt(sector->f_slope, x, y) :
+	sector->f_slope ? P_GetZAt(sector->f_slope, mobj->x, mobj->y) :
 #endif
 	sector->floorheight;
 	ceiling =
 #ifdef ESLOPE
-	sector->c_slope ? P_GetZAt(sector->c_slope, x, y) :
+	sector->c_slope ? P_GetZAt(sector->c_slope, mobj->x, mobj->y) :
 #endif
 	sector->ceilingheight;
 
