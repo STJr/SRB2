@@ -8357,7 +8357,7 @@ void P_MovePlayerToSpawn(INT32 playernum, mapthing_t *mthing)
 
 	fixed_t z;
 	sector_t *sector;
-
+	fixed_t floor, ceiling;
 
 	player_t *p = &players[playernum];
 	mobj_t *mobj = p->mo;
@@ -8373,19 +8373,31 @@ void P_MovePlayerToSpawn(INT32 playernum, mapthing_t *mthing)
 
 	// set Z height
 	sector = R_PointInSubsector(x, y)->sector;
+
+	floor =
+#ifdef ESLOPE
+	sector->f_slope ? P_GetZAt(sector->f_slope, x, y) :
+#endif
+	sector->floorheight;
+	ceiling =
+#ifdef ESLOPE
+	sector->c_slope ? P_GetZAt(sector->c_slope, x, y) :
+#endif
+	sector->ceilingheight;
+
 	if (mthing)
 	{
 		// Flagging a player's ambush will make them start on the ceiling
 		// Objectflip inverts
 		if (!!(mthing->options & MTF_AMBUSH) ^ !!(mthing->options & MTF_OBJECTFLIP))
 		{
-			z = sector->ceilingheight - mobjinfo[MT_PLAYER].height;
+			z = ceiling - mobjinfo[MT_PLAYER].height;
 			if (mthing->options >> ZSHIFT)
 				z -= ((mthing->options >> ZSHIFT) << FRACBITS);
 		}
 		else
 		{
-			z = sector->floorheight;
+			z = floor;
 			if (mthing->options >> ZSHIFT)
 				z += ((mthing->options >> ZSHIFT) << FRACBITS);
 		}
@@ -8397,15 +8409,15 @@ void P_MovePlayerToSpawn(INT32 playernum, mapthing_t *mthing)
 		}
 	}
 	else
-		z = sector->floorheight;
+		z = floor;
 
-	if (z < sector->floorheight)
-		z = sector->floorheight;
-	else if (z > sector->ceilingheight - mobjinfo[MT_PLAYER].height)
-		z = sector->ceilingheight - mobjinfo[MT_PLAYER].height;
+	if (z < floor)
+		z = floor;
+	else if (z > ceiling - mobjinfo[MT_PLAYER].height)
+		z = ceiling - mobjinfo[MT_PLAYER].height;
 
-	mobj->floorz = sector->floorheight;
-	mobj->ceilingz = sector->ceilingheight;
+	mobj->floorz = floor;
+	mobj->ceilingz = ceiling;
 
 	P_UnsetThingPosition(mobj);
 	mobj->x = x;
@@ -8413,7 +8425,7 @@ void P_MovePlayerToSpawn(INT32 playernum, mapthing_t *mthing)
 	P_SetThingPosition(mobj);
 
 	mobj->z = z;
-	if (mobj->z == sector->floorheight)
+	if (mobj->z == mobj->floorz)
 		mobj->eflags |= MFE_ONGROUND;
 
 	mobj->angle = angle;
@@ -8425,6 +8437,7 @@ void P_MovePlayerToStarpost(INT32 playernum)
 {
 	fixed_t z;
 	sector_t *sector;
+	fixed_t floor, ceiling;
 
 	player_t *p = &players[playernum];
 	mobj_t *mobj = p->mo;
@@ -8436,14 +8449,25 @@ void P_MovePlayerToStarpost(INT32 playernum)
 	P_SetThingPosition(mobj);
 	sector = R_PointInSubsector(mobj->x, mobj->y)->sector;
 
-	z = p->starpostz << FRACBITS;
-	if (z < sector->floorheight)
-		z = sector->floorheight;
-	else if (z > sector->ceilingheight - mobjinfo[MT_PLAYER].height)
-		z = sector->ceilingheight - mobjinfo[MT_PLAYER].height;
+	floor =
+#ifdef ESLOPE
+	sector->f_slope ? P_GetZAt(sector->f_slope, x, y) :
+#endif
+	sector->floorheight;
+	ceiling =
+#ifdef ESLOPE
+	sector->c_slope ? P_GetZAt(sector->c_slope, x, y) :
+#endif
+	sector->ceilingheight;
 
-	mobj->floorz = sector->floorheight;
-	mobj->ceilingz = sector->ceilingheight;
+	z = p->starpostz << FRACBITS;
+	if (z < floor)
+		z = floor;
+	else if (z > ceiling - mobjinfo[MT_PLAYER].height)
+		z = ceiling - mobjinfo[MT_PLAYER].height;
+
+	mobj->floorz = floor;
+	mobj->ceilingz = ceiling;
 
 	mobj->z = z;
 	if (mobj->z == mobj->floorz)
