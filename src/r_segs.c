@@ -1479,9 +1479,11 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 	maskedtextureheight = NULL;
 
+#ifdef ESLOPE
 	//initialize segleft and segright
 	memset(&segleft, 0x00, sizeof(segleft));
 	memset(&segright, 0x00, sizeof(segright));
+#endif
 
 	if (ds_p == drawsegs+maxdrawsegs)
 	{
