@@ -723,7 +723,7 @@ static menuitem_t SP_ReplayMenu[] =
 {
 	{IT_WHITESTRING|IT_CALL, NULL, "Replay Best Score", M_ReplayTimeAttack, 0},
 	{IT_WHITESTRING|IT_CALL, NULL, "Replay Best Time",  M_ReplayTimeAttack, 8},
-	{IT_WHITESTRING|IT_CALL, NULL, "Replay Best Rings", M_ReplayTimeAttack,16},
+	{IT_WHITESTRING|IT_CALL, NULL, "Replay Best Emblems", M_ReplayTimeAttack,16},
 
 	{IT_WHITESTRING|IT_CALL, NULL, "Replay Last",       M_ReplayTimeAttack,29},
 	{IT_WHITESTRING|IT_CALL, NULL, "Replay Guest",      M_ReplayTimeAttack,37},
@@ -746,7 +746,7 @@ static menuitem_t SP_GuestReplayMenu[] =
 {
 	{IT_WHITESTRING|IT_CALL, NULL, "Save Best Score as Guest", M_SetGuestReplay, 0},
 	{IT_WHITESTRING|IT_CALL, NULL, "Save Best Time as Guest",  M_SetGuestReplay, 8},
-	{IT_WHITESTRING|IT_CALL, NULL, "Save Best Rings as Guest", M_SetGuestReplay,16},
+	{IT_WHITESTRING|IT_CALL, NULL, "Save Best Emblems as Guest", M_SetGuestReplay,16},
 	{IT_WHITESTRING|IT_CALL, NULL, "Save Last as Guest",       M_SetGuestReplay,24},
 
 	{IT_WHITESTRING|IT_CALL, NULL, "Delete Guest Replay",      M_SetGuestReplay,37},
@@ -769,7 +769,7 @@ static menuitem_t SP_GhostMenu[] =
 {
 	{IT_STRING|IT_CVAR,         NULL, "Best Score", &cv_ghost_bestscore, 0},
 	{IT_STRING|IT_CVAR,         NULL, "Best Time",  &cv_ghost_besttime,  8},
-	{IT_STRING|IT_CVAR,         NULL, "Best Rings", &cv_ghost_bestrings,16},
+	{IT_STRING|IT_CVAR,         NULL, "Best Emblems", &cv_ghost_bestrings,16},
 	{IT_STRING|IT_CVAR,         NULL, "Last",       &cv_ghost_last,     24},
 
 	{IT_STRING|IT_CVAR,         NULL, "Guest",      &cv_ghost_guest,    37},
@@ -5291,8 +5291,12 @@ void M_DrawTimeAttackMenu(void)
 			sprintf(beststr, "(none)");
 		else
 			sprintf(beststr, "%hu", mainrecords[cv_nextmap.value-1]->rings);
-
-		V_DrawString(104-72, 68, V_YELLOWMAP, "RINGS:");
+		
+		if (mapheaderinfo[gamemap-1]->typeoflevel & TOL_ND)
+			V_DrawString(104-72, 68, V_YELLOWMAP, "EMBLEMS:");
+		else
+			V_DrawString(104-72, 68, V_YELLOWMAP, "RINGS:");
+		
 		V_DrawRightAlignedString(104+72, 68, V_ALLOWLOWERCASE, beststr);
 
 		// Draw record emblems.
