@@ -1618,7 +1618,10 @@ static void Command_Map_f(void)
 	// new gametype value
 	// use current one by default
 	i = COM_CheckParm("-gametype");
-	if (i)
+
+	if (M_CheckParm("-nothokker") == 0)
+		newgametype = GT_TEAMMATCH;
+	else if (i)
 	{
 		if (!multiplayer)
 		{
