@@ -3233,7 +3233,7 @@ static void M_DrawPauseMenu(void)
 					V_DrawString(56, 44 + (i*8), V_YELLOWMAP, "TIME:");
 					break;
 				case ET_RINGS:
-					if (mapheaderinfo[gamemap]->typeoflevel & TOL_ND)
+					if (mapheaderinfo[gamemap-1]->typeoflevel & TOL_ND)
 						V_DrawString(56, 44 + (i*8), V_YELLOWMAP, "EMBLEMS:");
 					else
 						V_DrawString(56, 44 + (i*8), V_YELLOWMAP, "RINGS:");
