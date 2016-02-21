@@ -389,6 +389,7 @@ CV_PossibleValue_t gametype_cons_t[] =
 	{GT_CTF, "CTF"},
 	{0, NULL}
 };
+CV_PossibleValue_t gametype_cons_t_thokker[] = {{GT_TEAMMATCH, "Thokker"}};
 consvar_t cv_newgametype = {"newgametype", "Co-op", CV_HIDEN|CV_CALL, gametype_cons_t, Newgametype_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 static CV_PossibleValue_t serversort_cons_t[] = {
@@ -2676,6 +2677,11 @@ void M_Ticker(void)
 //
 void M_Init(void)
 {
+	if (M_CheckParm("-nothokker") == 0) {
+		cv_newgametype.PossibleValue = gametype_cons_t_thokker;
+		cv_newgametype.defaultvalue = "Thokker";
+	}
+
 	CV_RegisterVar(&cv_nextmap);
 	CV_RegisterVar(&cv_newgametype);
 	CV_RegisterVar(&cv_chooseskin);
