@@ -301,7 +301,7 @@ void Got_RequestFilePak(INT32 node)
 }
 
 // client check if the fileneeded aren't already loaded or on the disk
-static INT32 CL_CheckFiles(void)
+INT32 CL_CheckFiles(void)
 {
 	INT32 i, j;
 	char wadfilename[MAX_WADPATH];

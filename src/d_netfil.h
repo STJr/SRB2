@@ -62,6 +62,7 @@ void CL_LoadServerFiles(void);
 void SendRam(INT32 node, void *data, size_t size, freemethod_t freemethod,
 	UINT8 fileid);
 
+INT32 CL_CheckFiles(void);
 boolean CL_CheckDownloadable(void);
 boolean CL_SendRequestFile(void);
 void Got_RequestFilePak(INT32 node);
