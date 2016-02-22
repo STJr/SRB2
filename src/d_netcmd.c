@@ -44,6 +44,7 @@
 #include "lua_hook.h"
 #include "m_cond.h"
 #include "m_anigif.h"
+#include "m_argv.h"
 
 #ifdef NETGAME_DEVMODE
 #define CV_RESTRICT CV_NETVAR
