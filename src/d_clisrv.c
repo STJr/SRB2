@@ -2163,7 +2163,7 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 	INT16 node, newplayernum;
 	boolean splitscreenplayer;
 
-	if (playernum != serverplayer && playernum != adminplayer)
+	if (playernum != serverplayer)
 	{
 		// protect against hacked/buggy client
 		CONS_Alert(CONS_WARNING, M_GetText("Illegal add player command received from %s\n"), player_names[playernum]);
