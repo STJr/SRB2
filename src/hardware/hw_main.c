@@ -4520,11 +4520,10 @@ static void HWR_SortVisSprites(void)
 	gr_vsprsortedhead.next = gr_vsprsortedhead.prev = &gr_vsprsortedhead;
 	for (i = 0; i < gr_visspritecount; i++)
 	{
-		bestdist = ZCLIP_PLANE-1;
-		bestdispoffset = INT32_MAX;
+		best = NULL;
 		for (ds = unsorted.next; ds != &unsorted; ds = ds->next)
 		{
-			if (ds->tz > bestdist)
+			if (!best || ds->tz > bestdist)
 			{
 				bestdist = ds->tz;
 				bestdispoffset = ds->dispoffset;
