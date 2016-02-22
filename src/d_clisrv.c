@@ -435,8 +435,6 @@ typedef enum
 	cl_aborted
 } cl_mode_t;
 
-static void GetPackets(void);
-
 static cl_mode_t cl_mode = cl_searching;
 
 // Player name send/load
@@ -548,214 +546,6 @@ static inline void CL_DrawConnectionStatus(void)
 	}
 }
 #endif
-
-//
-// CL_SendJoin
-//
-// send a special packet for declare how many player in local
-// used only in arbitratrenetstart()
-static boolean CL_SendJoin(void)
-{
-	UINT8 localplayers = 1;
-	if (netgame)
-		CONS_Printf(M_GetText("Sending join request...\n"));
-	netbuffer->packettype = PT_CLIENTJOIN;
-
-	if (splitscreen || botingame)
-		localplayers++;
-	netbuffer->u.clientcfg.localplayers = localplayers;
-	netbuffer->u.clientcfg.version = VERSION;
-	netbuffer->u.clientcfg.subversion = SUBVERSION;
-
-	return HSendPacket(servernode, true, 0, sizeof (clientconfig_pak));
-}
-
-static void SV_SendServerInfo(INT32 node, tic_t servertime)
-{
-	UINT8 *p;
-
-	netbuffer->packettype = PT_SERVERINFO;
-	netbuffer->u.serverinfo.version = VERSION;
-	netbuffer->u.serverinfo.subversion = SUBVERSION;
-	// return back the time value so client can compute their ping
-	netbuffer->u.serverinfo.time = (tic_t)LONG(servertime);
-	netbuffer->u.serverinfo.leveltime = (tic_t)LONG(leveltime);
-
-	netbuffer->u.serverinfo.numberofplayer = (UINT8)D_NumPlayers();
-	netbuffer->u.serverinfo.maxplayer = (UINT8)cv_maxplayers.value;
-	netbuffer->u.serverinfo.gametype = (UINT8)gametype;
-	netbuffer->u.serverinfo.modifiedgame = (UINT8)modifiedgame;
-	netbuffer->u.serverinfo.cheatsenabled = CV_CheatsEnabled();
-	netbuffer->u.serverinfo.isdedicated = (UINT8)dedicated;
-	strncpy(netbuffer->u.serverinfo.servername, cv_servername.string,
-		MAXSERVERNAME);
-	strncpy(netbuffer->u.serverinfo.mapname, G_BuildMapName(gamemap), 7);
-
-	M_Memcpy(netbuffer->u.serverinfo.mapmd5, mapmd5, 16);
-
-	if (strcmp(mapheaderinfo[gamemap-1]->lvlttl, ""))
-		strncpy(netbuffer->u.serverinfo.maptitle, (char *)mapheaderinfo[gamemap-1]->lvlttl, 33);
-	else
-		strncpy(netbuffer->u.serverinfo.maptitle, "UNKNOWN", 33);
-
-	netbuffer->u.serverinfo.maptitle[32] = '\0';
-
-	if (!(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE))
-		netbuffer->u.serverinfo.iszone = 1;
-	else
-		netbuffer->u.serverinfo.iszone = 0;
-
-	netbuffer->u.serverinfo.actnum = mapheaderinfo[gamemap-1]->actnum;
-
-	p = PutFileNeeded();
-
-	HSendPacket(node, false, 0, p - ((UINT8 *)&netbuffer->u));
-}
-
-static void SV_SendPlayerInfo(INT32 node)
-{
-	UINT8 i;
-	netbuffer->packettype = PT_PLAYERINFO;
-
-	for (i = 0; i < MAXPLAYERS; i++)
-	{
-		if (!playeringame[i])
-		{
-			netbuffer->u.playerinfo[i].node = 255; // This slot is empty.
-			continue;
-		}
-
-		netbuffer->u.playerinfo[i].node = (UINT8)playernode[i];
-		strncpy(netbuffer->u.playerinfo[i].name, (const char *)&player_names[i], MAXPLAYERNAME+1);
-		netbuffer->u.playerinfo[i].name[MAXPLAYERNAME] = '\0';
-
-		//fetch IP address
-		{
-			const char *claddress;
-			UINT32 numericaddress[4];
-
-			memset(netbuffer->u.playerinfo[i].address, 0, 4);
-			if (playernode[i] == 0)
-			{
-				//127.0.0.1
-				netbuffer->u.playerinfo[i].address[0] = 127;
-				netbuffer->u.playerinfo[i].address[3] = 1;
-			}
-			else if (playernode[i] > 0 && I_GetNodeAddress && (claddress = I_GetNodeAddress(playernode[i])) != NULL)
-			{
-				if (sscanf(claddress, "%d.%d.%d.%d", &numericaddress[0], &numericaddress[1], &numericaddress[2], &numericaddress[3]) < 4)
-					goto badaddress;
-				netbuffer->u.playerinfo[i].address[0] = (UINT8)numericaddress[0];
-				netbuffer->u.playerinfo[i].address[1] = (UINT8)numericaddress[1];
-				netbuffer->u.playerinfo[i].address[2] = (UINT8)numericaddress[2];
-				netbuffer->u.playerinfo[i].address[3] = (UINT8)numericaddress[3];
-			}
-		}
-		badaddress:
-
-		if (G_GametypeHasTeams())
-		{
-			if (!players[i].ctfteam)
-				netbuffer->u.playerinfo[i].team = 255;
-			else
-				netbuffer->u.playerinfo[i].team = (UINT8)players[i].ctfteam;
-		}
-		else
-		{
-			if (players[i].spectator)
-				netbuffer->u.playerinfo[i].team = 255;
-			else
-				netbuffer->u.playerinfo[i].team = 0;
-		}
-
-		netbuffer->u.playerinfo[i].score = LONG(players[i].score);
-		netbuffer->u.playerinfo[i].timeinserver = SHORT((UINT16)(players[i].jointime / TICRATE));
-		netbuffer->u.playerinfo[i].skin = (UINT8)players[i].skin;
-
-		// Extra data
-		netbuffer->u.playerinfo[i].data = players[i].skincolor;
-
-		if (players[i].pflags & PF_TAGIT)
-			netbuffer->u.playerinfo[i].data |= 0x20;
-
-		if (players[i].gotflag)
-			netbuffer->u.playerinfo[i].data |= 0x40;
-
-		if (players[i].powers[pw_super])
-			netbuffer->u.playerinfo[i].data |= 0x80;
-	}
-
-	HSendPacket(node, false, 0, sizeof(plrinfo) * MAXPLAYERS);
-}
-
-static boolean SV_SendServerConfig(INT32 node)
-{
-	INT32 i;
-	UINT8 *p, *op;
-	boolean waspacketsent;
-
-	netbuffer->packettype = PT_SERVERCFG;
-
-	netbuffer->u.servercfg.version = VERSION;
-	netbuffer->u.servercfg.subversion = SUBVERSION;
-
-	netbuffer->u.servercfg.serverplayer = (UINT8)serverplayer;
-	netbuffer->u.servercfg.totalslotnum = (UINT8)(doomcom->numslots);
-	netbuffer->u.servercfg.gametic = (tic_t)LONG(gametic);
-	netbuffer->u.servercfg.clientnode = (UINT8)node;
-	netbuffer->u.servercfg.gamestate = (UINT8)gamestate;
-	netbuffer->u.servercfg.gametype = (UINT8)gametype;
-	netbuffer->u.servercfg.modifiedgame = (UINT8)modifiedgame;
-	netbuffer->u.servercfg.adminplayer = (SINT8)adminplayer;
-
-	// we fill these structs with FFs so that any players not in game get sent as 0xFFFF
-	// which is nice and easy for us to detect
-	memset(netbuffer->u.servercfg.playerskins, 0xFF, sizeof(netbuffer->u.servercfg.playerskins));
-	memset(netbuffer->u.servercfg.playercolor, 0xFF, sizeof(netbuffer->u.servercfg.playercolor));
-
-	for (i = 0; i < MAXPLAYERS; i++)
-	{
-		if (!playeringame[i])
-			continue;
-		netbuffer->u.servercfg.playerskins[i] = (UINT8)players[i].skin;
-		netbuffer->u.servercfg.playercolor[i] = (UINT8)players[i].skincolor;
-	}
-
-	memcpy(netbuffer->u.servercfg.server_context, server_context, 8);
-	op = p = netbuffer->u.servercfg.varlengthinputs;
-
-	CV_SavePlayerNames(&p);
-	CV_SaveNetVars(&p);
-	{
-		const size_t len = sizeof (serverconfig_pak) + (size_t)(p - op);
-
-#ifdef DEBUGFILE
-		if (debugfile)
-		{
-			fprintf(debugfile, "ServerConfig Packet about to be sent, size of packet:%s to node:%d\n",
-				sizeu1(len), node);
-		}
-#endif
-
-		waspacketsent = HSendPacket(node, true, 0, len);
-	}
-
-#ifdef DEBUGFILE
-	if (debugfile)
-	{
-		if (waspacketsent)
-		{
-			fprintf(debugfile, "ServerConfig Packet was sent\n");
-		}
-		else
-		{
-			fprintf(debugfile, "ServerConfig Packet could not be sent right now\n");
-		}
-	}
-#endif
-
-	return waspacketsent;
-}
 
 #ifdef JOININGAME
 #define SAVEGAMESIZE (768*1024)
@@ -898,406 +688,6 @@ static void CL_LoadReceivedSavegame(void)
 #endif
 
 #ifndef NONET
-static void SendAskInfo(INT32 node, boolean viams)
-{
-	const tic_t asktime = I_GetTime();
-	netbuffer->packettype = PT_ASKINFO;
-	netbuffer->u.askinfo.version = VERSION;
-	netbuffer->u.askinfo.time = (tic_t)LONG(asktime);
-
-	// Even if this never arrives due to the host being firewalled, we've
-	// now allowed traffic from the host to us in, so once the MS relays
-	// our address to the host, it'll be able to speak to us.
-	HSendPacket(node, false, 0, sizeof (askinfo_pak));
-
-	// Also speak to the MS.
-	if (viams && node != 0 && node != BROADCASTADDR)
-		SendAskInfoViaMS(node, asktime);
-}
-
-serverelem_t serverlist[MAXSERVERLIST];
-UINT32 serverlistcount = 0;
-
-static void SL_ClearServerList(INT32 connectedserver)
-{
-	UINT32 i;
-
-	for (i = 0; i < serverlistcount; i++)
-		if (connectedserver != serverlist[i].node)
-		{
-			Net_CloseConnection(serverlist[i].node);
-			serverlist[i].node = 0;
-		}
-	serverlistcount = 0;
-}
-
-static UINT32 SL_SearchServer(INT32 node)
-{
-	UINT32 i;
-	for (i = 0; i < serverlistcount; i++)
-		if (serverlist[i].node == node)
-			return i;
-
-	return UINT32_MAX;
-}
-
-static void SL_InsertServer(serverinfo_pak* info, SINT8 node)
-{
-	UINT32 i;
-
-	// search if not already on it
-	i = SL_SearchServer(node);
-	if (i == UINT32_MAX)
-	{
-		// not found add it
-		if (serverlistcount >= MAXSERVERLIST)
-			return; // list full
-
-		if (info->version != VERSION)
-			return; // Not same version.
-
-		if (info->subversion != SUBVERSION)
-			return; // Close, but no cigar.
-
-		i = serverlistcount++;
-	}
-
-	serverlist[i].info = *info;
-	serverlist[i].node = node;
-
-	// resort server list
-	M_SortServerList();
-}
-
-void CL_UpdateServerList(boolean internetsearch, INT32 room)
-{
-	SL_ClearServerList(0);
-
-	if (!netgame && I_NetOpenSocket)
-	{
-		MSCloseUDPSocket();		// Tidy up before wiping the slate.
-		if (I_NetOpenSocket())
-		{
-			netgame = true;
-			multiplayer = true;
-		}
-	}
-
-	// search for local servers
-	if (netgame)
-		SendAskInfo(BROADCASTADDR, false);
-
-	if (internetsearch)
-	{
-		const msg_server_t *server_list;
-		INT32 i = -1;
-		server_list = GetShortServersList(room);
-		if (server_list)
-		{
-			char version[8] = "";
-#if VERSION > 0 || SUBVERSION > 0
-			snprintf(version, sizeof (version), "%d.%d.%d", VERSION/100, VERSION%100, SUBVERSION);
-#else
-			strcpy(version, GetRevisionString());
-#endif
-			version[sizeof (version) - 1] = '\0';
-
-			for (i = 0; server_list[i].header.buffer[0]; i++)
-			{
-				// Make sure MS version matches our own, to
-				// thwart nefarious servers who lie to the MS.
-
-				if(strcmp(version, server_list[i].version) == 0)
-				{
-					INT32 node = I_NetMakeNodewPort(server_list[i].ip, server_list[i].port);
-					if (node == -1)
-						break; // no more node free
-					SendAskInfo(node, true);
-				}
-			}
-		}
-
-		//no server list?(-1) or no servers?(0)
-		if (!i)
-		{
-			; /// TODO: display error or warning?
-		}
-	}
-}
-
-#endif // ifndef NONET
-
-// use adaptive send using net_bandwidth and stat.sendbytes
-static void CL_ConnectToServer(boolean viams)
-{
-	INT32 pnumnodes, nodewaited = doomcom->numnodes, i;
-	boolean waitmore;
-	tic_t oldtic;
-#ifndef NONET
-	tic_t asksent;
-#endif
-#ifdef JOININGAME
-	XBOXSTATIC char tmpsave[256];
-
-	sprintf(tmpsave, "%s" PATHSEP TMPSAVENAME, srb2home);
-#endif
-
-	cl_mode = cl_searching;
-
-#ifdef CLIENT_LOADINGSCREEN
-	lastfilenum = 0;
-#endif
-
-#ifdef JOININGAME
-	// don't get a corrupt savegame error because tmpsave already exists
-	if (FIL_FileExists(tmpsave) && unlink(tmpsave) == -1)
-		I_Error("Can't delete %s\n", tmpsave);
-#endif
-
-	if (netgame)
-	{
-		if (servernode < 0 || servernode >= MAXNETNODES)
-			CONS_Printf(M_GetText("Searching for a server...\n"));
-		else
-			CONS_Printf(M_GetText("Contacting the server...\n"));
-	}
-
-	if (gamestate == GS_INTERMISSION)
-		Y_EndIntermission(); // clean up intermission graphics etc
-
-	DEBFILE(va("waiting %d nodes\n", doomcom->numnodes));
-	G_SetGamestate(GS_WAITINGPLAYERS);
-	wipegamestate = GS_WAITINGPLAYERS;
-
-	adminplayer = -1;
-	pnumnodes = 1;
-	oldtic = I_GetTime() - 1;
-#ifndef NONET
-	asksent = (tic_t)-TICRATE;
-
-	i = SL_SearchServer(servernode);
-
-	if (i != -1)
-	{
-		INT32 j;
-		const char *gametypestr = NULL;
-		CONS_Printf(M_GetText("Connecting to: %s\n"), serverlist[i].info.servername);
-		for (j = 0; gametype_cons_t[j].strvalue; j++)
-		{
-			if (gametype_cons_t[j].value == serverlist[i].info.gametype)
-			{
-				gametypestr = gametype_cons_t[j].strvalue;
-				break;
-			}
-		}
-		if (gametypestr)
-			CONS_Printf(M_GetText("Gametype: %s\n"), gametypestr);
-		CONS_Printf(M_GetText("Version: %d.%d.%u\n"), serverlist[i].info.version/100,
-		 serverlist[i].info.version%100, serverlist[i].info.subversion);
-	}
-	SL_ClearServerList(servernode);
-#endif
-
-	do
-	{
-		switch (cl_mode)
-		{
-			case cl_searching:
-#ifndef NONET
-				// serverlist is updated by GetPacket function
-				if (serverlistcount > 0)
-				{
-					// this can be a responce to our broadcast request
-					if (servernode == -1 || servernode >= MAXNETNODES)
-					{
-						i = 0;
-						servernode = serverlist[i].node;
-						CONS_Printf(M_GetText("Found, "));
-					}
-					else
-					{
-						i = SL_SearchServer(servernode);
-						if (i < 0)
-							break; // the case
-					}
-
-					// Quit here rather than downloading files and being refused later.
-					if (serverlist[i].info.numberofplayer >= serverlist[i].info.maxplayer)
-					{
-						D_QuitNetGame();
-						CL_Reset();
-						D_StartTitle();
-						M_StartMessage(va(M_GetText("Maximum players reached: %d\n\nPress ESC\n"), serverlist[i].info.maxplayer), NULL, MM_NOTHING);
-						return;
-					}
-
-					if (!server)
-					{
-						D_ParseFileneeded(serverlist[i].info.fileneedednum,
-							serverlist[i].info.fileneeded);
-						CONS_Printf(M_GetText("Checking files...\n"));
-						i = CL_CheckFiles();
-						if (i == 2) // cannot join for some reason
-						{
-							D_QuitNetGame();
-							CL_Reset();
-							D_StartTitle();
-							M_StartMessage(M_GetText(
-								"You have WAD files loaded or have\n"
-								"modified the game in some way, and\n"
-								"your file list does not match\n"
-								"the server's file list.\n"
-								"Please restart SRB2 before connecting.\n\n"
-								"Press ESC\n"
-							), NULL, MM_NOTHING);
-							return;
-						}
-						else if (i == 1)
-							cl_mode = cl_askjoin;
-						else
-						{
-							// must download something
-							// can we, though?
-							if (!CL_CheckDownloadable()) // nope!
-							{
-								D_QuitNetGame();
-								CL_Reset();
-								D_StartTitle();
-								M_StartMessage(M_GetText(
-									"You cannot conect to this server\n"
-									"because you cannot download the files\n"
-									"that you are missing from the server.\n\n"
-									"See the console or log file for\n"
-									"more details.\n\n"
-									"Press ESC\n"
-								), NULL, MM_NOTHING);
-								return;
-							}
-							// no problem if can't send packet, we will retry later
-							if (CL_SendRequestFile())
-								cl_mode = cl_downloadfiles;
-						}
-					}
-					else
-						cl_mode = cl_askjoin; // files need not be checked for the server.
-					break;
-				}
-				// ask the info to the server (askinfo packet)
-				if (asksent + NEWTICRATE < I_GetTime())
-				{
-					SendAskInfo(servernode, viams);
-					asksent = I_GetTime();
-				}
-#else
-				(void)viams;
-				// No netgames, so we skip this state.
-				cl_mode = cl_askjoin;
-#endif // ifndef NONET/else
-				break;
-			case cl_downloadfiles:
-				waitmore = false;
-				for (i = 0; i < fileneedednum; i++)
-					if (fileneeded[i].status == FS_DOWNLOADING
-						|| fileneeded[i].status == FS_REQUESTED)
-					{
-						waitmore = true;
-						break;
-					}
-				if (waitmore)
-					break; // exit the case
-
-				cl_mode = cl_askjoin; // don't break case continue to cljoin request now
-			case cl_askjoin:
-				CL_LoadServerFiles();
-#ifdef JOININGAME
-				// prepare structures to save the file
-				// WARNING: this can be useless in case of server not in GS_LEVEL
-				// but since the network layer doesn't provide ordered packets...
-				CL_PrepareDownloadSaveGame(tmpsave);
-#endif
-				if (CL_SendJoin())
-					cl_mode = cl_waitjoinresponse;
-				break;
-#ifdef JOININGAME
-			case cl_downloadsavegame:
-				if (fileneeded[0].status == FS_FOUND)
-				{
-					// Gamestate is now handled within CL_LoadReceivedSavegame()
-					CL_LoadReceivedSavegame();
-					cl_mode = cl_connected;
-				} // don't break case continue to cl_connected
-				else
-					break;
-#endif
-			case cl_waitjoinresponse:
-			case cl_connected:
-			default:
-				break;
-
-			// Connection closed by cancel, timeout or refusal.
-			case cl_aborted:
-				cl_mode = cl_searching;
-				return;
-		}
-
-		GetPackets();
-		Net_AckTicker();
-
-		// call it only one by tic
-		if (oldtic != I_GetTime())
-		{
-			INT32 key;
-
-			I_OsPolling();
-			key = I_GetKey();
-			if (key == KEY_ESCAPE)
-			{
-				CONS_Printf(M_GetText("Network game synchronization aborted.\n"));
-//				M_StartMessage(M_GetText("Network game synchronization aborted.\n\nPress ESC\n"), NULL, MM_NOTHING);
-				D_QuitNetGame();
-				CL_Reset();
-				D_StartTitle();
-				return;
-			}
-
-			// why are these here? this is for servers, we're a client
-			//if (key == 's' && server)
-			//	doomcom->numnodes = (INT16)pnumnodes;
-			//FiletxTicker();
-			oldtic = I_GetTime();
-
-#ifdef CLIENT_LOADINGSCREEN
-			if (!server && cl_mode != cl_connected && cl_mode != cl_aborted)
-			{
-				F_TitleScreenTicker(true);
-				F_TitleScreenDrawer();
-				CL_DrawConnectionStatus();
-				I_UpdateNoVsync(); // page flip or blit buffer
-				if (moviemode)
-					M_SaveFrame();
-			}
-#else
-			CON_Drawer();
-			I_UpdateNoVsync();
-#endif
-		}
-		else I_Sleep();
-
-		if (server)
-		{
-			pnumnodes = 0;
-			for (i = 0; i < MAXNETNODES; i++)
-				if (nodeingame[i]) pnumnodes++;
-		}
-	}
-	while (!(cl_mode == cl_connected && (!server || (server && nodewaited <= pnumnodes))));
-
-	DEBFILE(va("Synchronisation Finished\n"));
-
-	displayplayer = consoleplayer;
-}
-
-#ifndef NONET
 typedef struct banreason_s
 {
 	char *reason;
@@ -1310,141 +700,27 @@ static banreason_t *reasonhead = NULL; //1st entry, use next
 
 static void Command_ShowBan(void) //Print out ban list
 {
-	size_t i;
-	const char *address, *mask;
-	banreason_t *reasonlist = reasonhead;
-
-	if (I_GetBanAddress)
-		CONS_Printf(M_GetText("Ban List:\n"));
-	else
-		return;
-
-	for (i = 0;(address = I_GetBanAddress(i)) != NULL;i++)
-	{
-		if (!I_GetBanMask || (mask = I_GetBanMask(i)) == NULL)
-			CONS_Printf("%s: %s ", sizeu1(i+1), address);
-		else
-			CONS_Printf("%s: %s/%s ", sizeu1(i+1), address, mask);
-
-		if (reasonlist && reasonlist->reason)
-			CONS_Printf("(%s)\n", reasonlist->reason);
-		else
-			CONS_Printf("\n");
-
-		if (reasonlist) reasonlist = reasonlist->next;
-	}
-
-	if (i == 0 && !address)
-		CONS_Printf(M_GetText("(empty)\n"));
+	// NET TODO
 }
 
 void D_SaveBan(void)
 {
-	FILE *f;
-	size_t i;
-	banreason_t *reasonlist = reasonhead;
-	const char *address, *mask;
-
-	if (!reasonhead)
-		return;
-
-	f = fopen(va("%s"PATHSEP"%s", srb2home, "ban.txt"), "w");
-
-	if (!f)
-	{
-		CONS_Alert(CONS_WARNING, M_GetText("Could not save ban list into ban.txt\n"));
-		return;
-	}
-
-	for (i = 0;(address = I_GetBanAddress(i)) != NULL;i++)
-	{
-		if (!I_GetBanMask || (mask = I_GetBanMask(i)) == NULL)
-			fprintf(f, "%s 0", address);
-		else
-			fprintf(f, "%s %s", address, mask);
-
-		if (reasonlist && reasonlist->reason)
-			fprintf(f, " %s\n", reasonlist->reason);
-		else
-			fprintf(f, " %s\n", "NA");
-
-		if (reasonlist) reasonlist = reasonlist->next;
-	}
-
-	fclose(f);
+	// NET TODO
 }
 
 static void Ban_Add(const char *reason)
 {
-	banreason_t *reasonlist = malloc(sizeof(*reasonlist));
-
-	if (!reasonlist)
-		return;
-	if (!reason)
-		reason = "NA";
-
-	reasonlist->next = NULL;
-	reasonlist->reason = Z_StrDup(reason);
-	if ((reasonlist->prev = reasontail) == NULL)
-		reasonhead = reasonlist;
-	else
-		reasontail->next = reasonlist;
-	reasontail = reasonlist;
+	// NET TODO
 }
 
 static void Command_ClearBans(void)
 {
-	banreason_t *temp;
-
-	if (!I_ClearBans)
-		return;
-
-	I_ClearBans();
-	reasontail = NULL;
-	while (reasonhead)
-	{
-		temp = reasonhead->next;
-		Z_Free(reasonhead->reason);
-		free(reasonhead);
-		reasonhead = temp;
-	}
+	// NET TODO
 }
 
 static void Ban_Load_File(boolean warning)
 {
-	FILE *f;
-	size_t i;
-	const char *address, *mask;
-	char buffer[MAX_WADPATH];
-
-	f = fopen(va("%s"PATHSEP"%s", srb2home, "ban.txt"), "r");
-
-	if (!f)
-	{
-		if (warning)
-			CONS_Alert(CONS_WARNING, M_GetText("Could not open ban.txt for ban list\n"));
-		return;
-	}
-
-	if (I_ClearBans)
-		Command_ClearBans();
-	else
-	{
-		fclose(f);
-		return;
-	}
-
-	for (i=0; fgets(buffer, (int)sizeof(buffer), f); i++)
-	{
-		address = strtok(buffer, " \t\r\n");
-		mask = strtok(NULL, " \t\r\n");
-
-		I_SetBanAddress(address, mask);
-
-		Ban_Add(strtok(NULL, "\r\n"));
-	}
-
-	fclose(f);
+	// NET TODO
 }
 
 static void Command_ReloadBan(void)  //recheck ban.txt
@@ -1499,7 +775,8 @@ static void Command_connect(void)
 			CONS_Printf(M_GetText("You cannot connect while in a game. End this game first.\n"));
 			return;
 		}
-		else if (I_NetOpenSocket)
+		// NET TODO
+		/*else if (I_NetOpenSocket)
 		{
 			MSCloseUDPSocket(); // Tidy up before wiping the slate.
 			I_NetOpenSocket();
@@ -1518,7 +795,7 @@ static void Command_connect(void)
 				D_CloseConnection();
 				return;
 			}
-		}
+		}*/
 		else
 			CONS_Alert(CONS_ERROR, M_GetText("There is no network driver\n"));
 	}
@@ -1734,8 +1011,7 @@ static void Command_Nodes(void)
 		{
 			CONS_Printf("%.2u: %*s", i, (int)maxlen, player_names[i]);
 			CONS_Printf(" - %.2d", playernode[i]);
-			if (I_GetNodeAddress && (address = I_GetNodeAddress(playernode[i])) != NULL)
-				CONS_Printf(" - %s", address);
+			// NET TODO: show network addresses
 
 			if (i == adminplayer)
 				CONS_Printf(M_GetText(" (verified admin)"));
@@ -1767,13 +1043,14 @@ static void Command_Ban(void)
 			return;
 		else
 			WRITEUINT8(p, pn);
-		if (I_Ban && !I_Ban(node))
+		// NET TODO
+		//if (I_Ban && !I_Ban(node))
 		{
-			CONS_Alert(CONS_WARNING, M_GetText("Too many bans! Geez, that's a lot of people you're excluding...\n"));
+			//CONS_Alert(CONS_WARNING, M_GetText("Too many bans! Geez, that's a lot of people you're excluding...\n"));
 			WRITEUINT8(p, KICK_MSG_GO_AWAY);
 			SendNetXCmd(XD_KICK, &buf, 2);
 		}
-		else
+		/*else
 		{
 			Ban_Add(COM_Argv(2));
 
@@ -1799,7 +1076,7 @@ static void Command_Ban(void)
 				WRITESTRINGN(p, message, MAX_REASONLENGTH);
 				SendNetXCmd(XD_KICK, &buf, p - buf);
 			}
-		}
+		}*/
 	}
 	else
 		CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
@@ -1926,10 +1203,7 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 	// If the playernum isn't zero (the server) then the server needs to record the ban.
 	if (server && playernum && msg == KICK_MSG_BANNED)
 	{
-		if (I_Ban && !I_Ban(playernode[(INT32)pnum]))
-		{
-			CONS_Alert(CONS_WARNING, M_GetText("Too many bans! Geez, that's a lot of people you're excluding...\n"));
-		}
+		// NET TODO
 	}
 
 	switch (msg)
@@ -2116,19 +1390,11 @@ void D_QuitNetGame(void)
 
 	if (server)
 	{
-		INT32 i;
-
-		netbuffer->packettype = PT_SERVERSHUTDOWN;
-		for (i = 0; i < MAXNETNODES; i++)
-			if (nodeingame[i])
-				HSendPacket(i, true, 0, 0);
-		if (serverrunning && ms_RoomId > 0)
-			UnregisterServer();
+		// NET TODO: Send server shutdown packets to everyone.
 	}
 	else if (servernode > 0 && servernode < MAXNETNODES && nodeingame[(UINT8)servernode]!=0)
 	{
-		netbuffer->packettype = PT_CLIENTQUIT;
-		HSendPacket(servernode, true, 0, 0);
+		// NET TODO: Send client quit packet to server.
 	}
 
 	D_CloseConnection();
@@ -2230,9 +1496,7 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 	}
 	else if (server && netgame && cv_showjoinaddress.value)
 	{
-		const char *address;
-		if (I_GetNodeAddress && (address = I_GetNodeAddress(node)) != NULL)
-			CONS_Printf(M_GetText("Player Address is %s\n"), address);
+		// NET TODO: Show player connection address.
 	}
 
 	if (server && multiplayer && motd[0] != '\0')
@@ -2336,18 +1600,14 @@ boolean SV_SpawnServer(void)
 		serverrunning = true;
 		SV_ResetServer();
 		SV_GenContext();
-		if (netgame && I_NetOpenSocket)
+		if (netgame)
 		{
-			MSCloseUDPSocket();		// Tidy up before wiping the slate.
-			I_NetOpenSocket();
-			if (ms_RoomId > 0)
-				RegisterServer();
+			// NET TODO: Open network socket, register to masterserver, etc.
 		}
 
 		// non dedicated server just connect to itself
 		if (!dedicated)
 			CL_ConnectToServer(false);
-		else doomcom->numslots = 1;
 	}
 
 	return SV_AddWaitingPlayers();
@@ -2363,7 +1623,6 @@ void SV_StopServer(void)
 
 	localtextcmd[0] = 0;
 	localtextcmd2[0] = 0;
-
 	for (i = 0; i < BACKUPTICS; i++)
 		D_Clearticcmd(i);
 
@@ -2385,361 +1644,6 @@ void SV_StartSinglePlayerServer(void)
 
 	if (splitscreen)
 		multiplayer = true;
-}
-
-static void SV_SendRefuse(INT32 node, const char *reason)
-{
-	strcpy(netbuffer->u.serverrefuse.reason, reason);
-
-	netbuffer->packettype = PT_SERVERREFUSE;
-	HSendPacket(node, true, 0, strlen(netbuffer->u.serverrefuse.reason) + 1);
-	Net_CloseConnection(node);
-}
-
-// used at txtcmds received to check packetsize bound
-static size_t TotalTextCmdPerTic(tic_t tic)
-{
-	INT32 i;
-	size_t total = 1; // num of textcmds in the tic (ntextcmd byte)
-
-	for (i = 0; i < MAXPLAYERS; i++)
-	{
-		UINT8 *textcmd = D_GetExistingTextcmd(tic, i);
-		if ((!i || playeringame[i]) && textcmd)
-			total += 2 + textcmd[0]; // "+2" for size and playernum
-	}
-
-	return total;
-}
-
-static void HandleConnect(SINT8 node)
-{
-	if (bannednode && bannednode[node])
-		SV_SendRefuse(node, M_GetText("You have been banned\nfrom the server"));
-	else if (netbuffer->u.clientcfg.version != VERSION
-		|| netbuffer->u.clientcfg.subversion != SUBVERSION)
-		SV_SendRefuse(node, va(M_GetText("Different SRB2 versions cannot\nplay a netgame!\n(server version %d.%d.%d)"), VERSION/100, VERSION%100, SUBVERSION));
-	else if (!cv_allownewplayer.value && node)
-		SV_SendRefuse(node, M_GetText("The server is not accepting\njoins for the moment"));
-	else if (D_NumPlayers() >= cv_maxplayers.value)
-		SV_SendRefuse(node, va(M_GetText("Maximum players reached: %d"), cv_maxplayers.value));
-	else if (netgame && netbuffer->u.clientcfg.localplayers > 1) // Hacked client?
-		SV_SendRefuse(node, M_GetText("Too many players from\nthis node."));
-	else if (netgame && !netbuffer->u.clientcfg.localplayers) // Stealth join?
-		SV_SendRefuse(node, M_GetText("No players from\nthis node."));
-	else
-	{
-#ifndef NONET
-		boolean newnode = false;
-#endif
-
-		// client authorised to join
-		nodewaiting[node] = (UINT8)(netbuffer->u.clientcfg.localplayers - playerpernode[node]);
-		if (!nodeingame[node])
-		{
-			gamestate_t backupstate = gamestate;
-#ifndef NONET
-			newnode = true;
-#endif
-			SV_AddNode(node);
-
-			if (cv_joinnextround.value && gameaction == ga_nothing)
-				G_SetGamestate(GS_WAITINGPLAYERS);
-			if (!SV_SendServerConfig(node))
-			{
-				G_SetGamestate(backupstate);
-				ResetNode(node);
-				SV_SendRefuse(node, M_GetText("Server couldn't send info, please try again"));
-				/// \todo fix this !!!
-				return; // restart the while
-			}
-			//if (gamestate != GS_LEVEL) // GS_INTERMISSION, etc?
-			//	SV_SendPlayerConfigs(node); // send bare minimum player info
-			G_SetGamestate(backupstate);
-			DEBFILE("new node joined\n");
-		}
-#ifdef JOININGAME
-		if (nodewaiting[node])
-		{
-			if ((gamestate == GS_LEVEL || gamestate == GS_INTERMISSION) && newnode)
-			{
-				SV_SendSaveGame(node); // send a complete game state
-				DEBFILE("send savegame\n");
-			}
-			SV_AddWaitingPlayers();
-		}
-#else
-#ifndef NONET
-		// I guess we have no use for this if we aren't doing mid-level joins?
-		(void)newnode;
-#endif
-#endif
-	}
-}
-
-static void HandleShutdown(SINT8 node)
-{
-	(void)node;
-	D_QuitNetGame();
-	CL_Reset();
-	D_StartTitle();
-	M_StartMessage(M_GetText("Server has shutdown\n\nPress Esc\n"), NULL, MM_NOTHING);
-}
-
-static void HandleTimeout(SINT8 node)
-{
-	(void)node;
-	D_QuitNetGame();
-	CL_Reset();
-	D_StartTitle();
-	M_StartMessage(M_GetText("Server Timeout\n\nPress Esc\n"), NULL, MM_NOTHING);
-}
-
-#ifndef NONET
-static void HandleServerInfo(SINT8 node)
-{
-	// compute ping in ms
-	const tic_t ticnow = I_GetTime();
-	const tic_t ticthen = (tic_t)LONG(netbuffer->u.serverinfo.time);
-	const tic_t ticdiff = (ticnow - ticthen)*1000/NEWTICRATE;
-	netbuffer->u.serverinfo.time = (tic_t)LONG(ticdiff);
-	netbuffer->u.serverinfo.servername[MAXSERVERNAME-1] = 0;
-
-	SL_InsertServer(&netbuffer->u.serverinfo, node);
-}
-#endif
-
-/**	\brief GetPackets
-
-  \todo  break this 300 line function into multiple functions
-*/
-static void GetPackets(void)
-{FILESTAMP
-	XBOXSTATIC INT32 netconsole;
-	XBOXSTATIC SINT8 node;
-	XBOXSTATIC tic_t realend,realstart;
-	XBOXSTATIC UINT8 *pak, *txtpak, numtxtpak;
-FILESTAMP
-
-	while (HGetPacket())
-	{
-		node = (SINT8)doomcom->remotenode;
-		if (netbuffer->packettype == PT_CLIENTJOIN && server)
-		{
-			HandleConnect(node);
-			continue;
-		}
-		if (netbuffer->packettype == PT_SERVERSHUTDOWN && node == servernode
-			&& !server && cl_mode != cl_searching)
-		{
-			HandleShutdown(node);
-			continue;
-		}
-		if (netbuffer->packettype == PT_NODETIMEOUT && node == servernode
-			&& !server && cl_mode != cl_searching)
-		{
-			HandleTimeout(node);
-			continue;
-		}
-
-#ifndef NONET
-		if (netbuffer->packettype == PT_SERVERINFO)
-		{
-			HandleServerInfo(node);
-			continue;
-		}
-#endif
-
-		if (netbuffer->packettype == PT_PLAYERINFO)
-			continue; // We do nothing with PLAYERINFO, that's for the MS browser.
-
-		if (!nodeingame[node])
-		{
-			if (node != servernode)
-				DEBFILE(va("Received packet from unknown host %d\n", node));
-
-			// anyone trying to join
-			switch (netbuffer->packettype)
-			{
-				case PT_ASKINFOVIAMS:
-					if (server && serverrunning)
-					{
-						INT32 clientnode = I_NetMakeNode(netbuffer->u.msaskinfo.clientaddr);
-						SV_SendServerInfo(clientnode, (tic_t)LONG(netbuffer->u.msaskinfo.time));
-						SV_SendPlayerInfo(clientnode); // send extra info
-						Net_CloseConnection(clientnode);
-						// Don't close connection to MS.
-					}
-					break;
-
-				case PT_ASKINFO:
-					if (server && serverrunning)
-					{
-						SV_SendServerInfo(node, (tic_t)LONG(netbuffer->u.askinfo.time));
-						SV_SendPlayerInfo(node); // send extra info
-						Net_CloseConnection(node);
-					}
-					break;
-				case PT_SERVERREFUSE: // negative response of client join request
-					if (server && serverrunning)
-					{ // but wait I thought I'm the server?
-						Net_CloseConnection(node);
-						break;
-					}
-					if (cl_mode == cl_waitjoinresponse)
-					{
-						D_QuitNetGame();
-						CL_Reset();
-						D_StartTitle();
-
-						M_StartMessage(va(M_GetText("Server refuses connection\n\nReason:\n%s"),
-							netbuffer->u.serverrefuse.reason), NULL, MM_NOTHING);
-
-						// Will be reset by caller. Signals refusal.
-						cl_mode = cl_aborted;
-					}
-					break;
-				case PT_SERVERCFG: // positive response of client join request
-				{
-					INT32 j;
-					UINT8 *scp;
-
-					if (server && serverrunning && node != servernode)
-					{ // but wait I thought I'm the server?
-						Net_CloseConnection(node);
-						break;
-					}
-					/// \note how would this happen? and is it doing the right thing if it does?
-					if (cl_mode != cl_waitjoinresponse)
-						break;
-
-					if (!server)
-					{
-						gametic = (tic_t)LONG(netbuffer->u.servercfg.gametic);
-						gametype = netbuffer->u.servercfg.gametype;
-						modifiedgame = netbuffer->u.servercfg.modifiedgame;
-						adminplayer = netbuffer->u.servercfg.adminplayer;
-						memcpy(server_context, netbuffer->u.servercfg.server_context, 8);
-					}
-
-					nodeingame[(UINT8)servernode] = true;
-					serverplayer = netbuffer->u.servercfg.serverplayer;
-					doomcom->numslots = SHORT(netbuffer->u.servercfg.totalslotnum);
-					mynode = netbuffer->u.servercfg.clientnode;
-					if (serverplayer >= 0)
-						playernode[(UINT8)serverplayer] = servernode;
-
-					if (netgame)
-#ifdef JOININGAME
-						CONS_Printf(M_GetText("Join accepted, waiting for complete game state...\n"));
-#else
-						CONS_Printf(M_GetText("Join accepted, waiting for next level change...\n"));
-#endif
-					DEBFILE(va("Server accept join gametic=%u mynode=%d\n", gametic, mynode));
-
-					memset(playeringame, 0, sizeof(playeringame));
-					for (j = 0; j < MAXPLAYERS; j++)
-					{
-						if (netbuffer->u.servercfg.playerskins[j] == 0xFF
-						 && netbuffer->u.servercfg.playercolor[j] == 0xFF)
-							continue; // not in game
-
-						playeringame[j] = true;
-						SetPlayerSkinByNum(j, (INT32)netbuffer->u.servercfg.playerskins[j]);
-						players[j].skincolor = netbuffer->u.servercfg.playercolor[j];
-					}
-
-					scp = netbuffer->u.servercfg.varlengthinputs;
-					CV_LoadPlayerNames(&scp);
-					CV_LoadNetVars(&scp);
-#ifdef JOININGAME
-					if (netbuffer->u.servercfg.gamestate == GS_LEVEL/* ||
-						netbuffer->u.servercfg.gamestate == GS_INTERMISSION*/)
-						cl_mode = cl_downloadsavegame;
-					else
-#endif
-						cl_mode = cl_connected;
-					break;
-				}
-				// handled in d_netfil.c
-				case PT_FILEFRAGMENT:
-					if (server)
-					{ // but wait I thought I'm the server?
-						Net_CloseConnection(node);
-						break;
-					}
-					else
-						Got_Filetxpak();
-					break;
-				case PT_REQUESTFILE:
-					if (server)
-						Got_RequestFilePak(node);
-					break;
-				case PT_NODETIMEOUT:
-				case PT_CLIENTQUIT:
-					if (server)
-						Net_CloseConnection(node);
-					break;
-				default:
-					DEBFILE(va("unknown packet received (%d) from unknown host\n",netbuffer->packettype));
-					Net_CloseConnection(node);
-					break; // ignore it
-			} // switch
-			continue; //while
-		}
-		if (dedicated && node == 0) netconsole = 0;
-		else netconsole = nodetoplayer[node];
-#ifdef PARANOIA
-		if (netconsole >= MAXPLAYERS)
-			I_Error("bad table nodetoplayer: node %d player %d", doomcom->remotenode, netconsole);
-#endif
-
-		txtpak = NULL;
-
-		switch (netbuffer->packettype)
-		{
-// -------------------------------------------- SERVER RECEIVE ----------
-			case PT_NODETIMEOUT:
-			case PT_CLIENTQUIT:
-				if (!server)
-					break;
-
-				// nodeingame will be put false in the execution of kick command
-				// this allow to send some packets to the quitting client to have their ack back
-				nodewaiting[node] = 0;
-				if (netconsole != -1 && playeringame[netconsole])
-				{
-					XBOXSTATIC UINT8 buf[2];
-					buf[0] = (UINT8)netconsole;
-					if (netbuffer->packettype == PT_NODETIMEOUT)
-						buf[1] = KICK_MSG_TIMEOUT;
-					else
-						buf[1] = KICK_MSG_PLAYER_QUIT;
-					SendNetXCmd(XD_KICK, &buf, 2);
-					nodetoplayer[node] = -1;
-					if (nodetoplayer2[node] != -1 && nodetoplayer2[node] >= 0
-						&& playeringame[(UINT8)nodetoplayer2[node]])
-					{
-						buf[0] = nodetoplayer2[node];
-						SendNetXCmd(XD_KICK, &buf, 2);
-						nodetoplayer2[node] = -1;
-					}
-				}
-				Net_CloseConnection(node);
-				nodeingame[node] = false;
-				break;
-// -------------------------------------------- CLIENT RECEIVE ----------
-			case PT_SERVERCFG:
-				break;
-			case PT_FILEFRAGMENT:
-				if (!server)
-					Got_Filetxpak();
-				break;
-			default:
-				DEBFILE(va("UNKNOWN PACKET TYPE RECEIVED %d from host %d\n",
-					netbuffer->packettype, node));
-		} // end switch
-	} // end while
 }
 
 //
@@ -2778,13 +1682,8 @@ void TryRunTics(tic_t realtics)
 	int i;
 
 	// the machine has lagged but it is not so bad
-	if (realtics > TICRATE/7) // FIXME: consistency failure!!
-	{
-		if (server)
-			realtics = 1;
-		else
-			realtics = TICRATE/7;
-	}
+	if (realtics > TICRATE/7)
+		realtics = 1;
 
 	if (singletics)
 		realtics = 1;
@@ -2797,8 +1696,6 @@ void TryRunTics(tic_t realtics)
 	}
 
 	NetUpdate();
-
-	GetPackets();
 
 #ifdef DEBUGFILE
 	if (debugfile && realtics)
@@ -2850,9 +1747,6 @@ void NetUpdate(void)
 
 	Local_Maketic(realtics); // make local tic, and call menu?
 
-FILESTAMP
-	GetPackets(); // get packet from client or from server
-FILESTAMP
 	// client send the command after a receive of the server
 	// the server send before because in single player is beter
 

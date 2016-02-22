@@ -44,7 +44,6 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 #include "doomdef.h"
 #include "am_map.h"
 #include "console.h"
-#include "d_net.h"
 #include "f_finale.h"
 #include "g_game.h"
 #include "hu_stuff.h"
@@ -485,12 +484,12 @@ static void D_Display(void)
 			// NET TODO
 			//snprintf(s, sizeof s - 1, "get %d b/s", getbps);
 			//V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-ST_HEIGHT-40, V_YELLOWMAP, s);
-			snprintf(s, sizeof s - 1, "send %d b/s", sendbps);
-			V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-ST_HEIGHT-30, V_YELLOWMAP, s);
-			snprintf(s, sizeof s - 1, "GameMiss %.2f%%", gamelostpercent);
-			V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-ST_HEIGHT-20, V_YELLOWMAP, s);
-			snprintf(s, sizeof s - 1, "SysMiss %.2f%%", lostpercent);
-			V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-ST_HEIGHT-10, V_YELLOWMAP, s);
+			//snprintf(s, sizeof s - 1, "send %d b/s", sendbps);
+			//V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-ST_HEIGHT-30, V_YELLOWMAP, s);
+			//snprintf(s, sizeof s - 1, "GameMiss %.2f%%", gamelostpercent);
+			//V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-ST_HEIGHT-20, V_YELLOWMAP, s);
+			//snprintf(s, sizeof s - 1, "SysMiss %.2f%%", lostpercent);
+			//V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-ST_HEIGHT-10, V_YELLOWMAP, s);
 		}
 
 		I_FinishUpdate(); // page flip or blit buffer
