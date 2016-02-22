@@ -5039,7 +5039,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	tz = (tr_x * gr_viewcos) + (tr_y * gr_viewsin);
 
 	// thing is behind view plane?
-	if (tz < ZCLIP_PLANE && md2_models[thing->sprite].notfound == true) //Yellow: Only MD2's dont disappear
+	if (tz < ZCLIP_PLANE && (!cv_grmd2.value || md2_models[thing->sprite].notfound == true)) //Yellow: Only MD2's dont disappear
 		return;
 
 	tx = (tr_x * gr_viewsin) - (tr_y * gr_viewcos);
