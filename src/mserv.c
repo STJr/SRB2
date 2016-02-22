@@ -80,11 +80,8 @@
 #include "doomstat.h"
 #include "doomdef.h"
 #include "command.h"
-#include "i_net.h"
 #include "console.h"
 #include "mserv.h"
-#include "d_net.h"
-#include "i_tcp.h"
 #include "i_system.h"
 #include "byteptr.h"
 #include "m_menu.h"
@@ -838,16 +835,7 @@ const char *GetMasterServerIP(void)
 
 void MSOpenUDPSocket(void)
 {
-#ifndef NONET
-	if (I_NetMakeNodewPort)
-	{
-		// If it's already open, there's nothing to do.
-		if (msnode < 0)
-			msnode = I_NetMakeNodewPort(GetMasterServerIP(), GetMasterServerPort());
-	}
-	else
-#endif
-		msnode = -1;
+	msnode = -1;
 }
 
 void MSCloseUDPSocket(void)
@@ -916,38 +904,7 @@ static inline void SendPingToMasterServer(void)
 
 void SendAskInfoViaMS(INT32 node, tic_t asktime)
 {
-	const char *address;
-	UINT16 port;
-	char *inip;
-	ms_holepunch_packet_t mshpp;
-
-	MSOpenUDPSocket();
-
-	// This must be called after calling MSOpenUDPSocket, due to the
-	// static buffer.
-	address = I_GetNodeAddress(node);
-
-	// no address?
-	if (!address)
-		return;
-
-	// Copy the IP address into the buffer.
-	inip = mshpp.ip;
-	while(*address && *address != ':') *inip++ = *address++;
-	*inip = '\0';
-
-	// Get the port.
-	port = (UINT16)(*address++ ? atoi(address) : 0);
-	mshpp.port = SHORT(port);
-
-	// Set the time for ping calculation.
-	mshpp.time = LONG(asktime);
-
-	// Send to the MS.
-	M_Memcpy(netbuffer, &mshpp, sizeof(mshpp));
-	doomcom->datalength = sizeof(ms_holepunch_packet_t);
-	doomcom->remotenode = (INT16)msnode;
-	I_NetSend();
+	// NET TODO
 }
 
 void UnregisterServer(void)

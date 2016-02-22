@@ -241,7 +241,6 @@ static char returnWadPath[256];
 #include "../i_sound.h"
 #include "../i_system.h"
 #include "../screen.h" //vid.WndParent
-#include "../d_net.h"
 #include "../g_game.h"
 #include "../filesrch.h"
 #include "endtxt.h"

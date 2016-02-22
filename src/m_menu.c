@@ -46,7 +46,6 @@
 #include "hardware/hw_main.h"
 #endif
 
-#include "d_net.h"
 #include "mserv.h"
 #include "m_misc.h"
 #include "m_anigif.h"

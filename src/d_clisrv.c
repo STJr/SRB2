@@ -1758,7 +1758,6 @@ void NetUpdate(void)
 		M_Ticker();
 		CON_Ticker();
 	}
-	FiletxTicker();
 }
 
 /** Returns the number of players playing.

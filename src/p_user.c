@@ -17,7 +17,6 @@
 #include "doomdef.h"
 #include "i_system.h"
 #include "d_event.h"
-#include "d_net.h"
 #include "g_game.h"
 #include "p_local.h"
 #include "r_main.h"
@@ -4872,10 +4871,6 @@ static void P_SpectatorMovement(player_t *player)
 
 	player->mo->angle = (cmd->angleturn<<16 /* not FRACBITS */);
 
-	ticruned++;
-	if (!(cmd->angleturn & TICCMD_RECEIVED))
-		ticmiss++;
-
 	if (player->mo->z > player->mo->ceilingz - player->mo->height)
 		player->mo->z = player->mo->ceilingz - player->mo->height;
 	if (player->mo->z < player->mo->floorz)
@@ -6470,10 +6465,6 @@ static void P_MovePlayer(player_t *player)
 	{
 		if (!player->climbing && (!P_AnalogMove(player)))
 			player->mo->angle = (cmd->angleturn<<16 /* not FRACBITS */);
-
-		ticruned++;
-		if ((cmd->angleturn & TICCMD_RECEIVED) == 0)
-			ticmiss++;
 
 		P_3dMovement(player);
 	}
@@ -8931,10 +8922,6 @@ void P_PlayerThink(player_t *player)
 		{
 			if (!P_AnalogMove(player))
 				player->mo->angle = (cmd->angleturn<<16 /* not FRACBITS */);
-
-			ticruned++;
-			if ((cmd->angleturn & TICCMD_RECEIVED) == 0)
-				ticmiss++;
 
 			P_DoRopeHang(player);
 			P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);

@@ -19,7 +19,6 @@
 #include "r_local.h"
 #include "p_local.h"
 #include "p_setup.h"
-#include "d_net.h"
 
 #include "m_cheat.h"
 #include "m_menu.h"
@@ -1076,10 +1075,6 @@ void OP_ObjectplaceMovement(player_t *player)
 
 	if (!player->climbing && (netgame || !cv_analog.value || (player->pflags & PF_SPINNING)))
 		player->mo->angle = (cmd->angleturn<<16 /* not FRACBITS */);
-
-	ticruned++;
-	if (!(cmd->angleturn & TICCMD_RECEIVED))
-		ticmiss++;
 
 	if (cmd->buttons & BT_JUMP)
 		player->mo->z += FRACUNIT*cv_speed.value;
