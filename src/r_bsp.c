@@ -32,7 +32,6 @@ sector_t *backsector;
 // 896 drawsegs! So too bad here's a limit removal a-la-Boom
 drawseg_t *drawsegs = NULL;
 drawseg_t *ds_p = NULL;
-drawseg_t *firstnewseg = NULL;
 
 // indicates doors closed wrt automap bugfix:
 INT32 doorclosed;

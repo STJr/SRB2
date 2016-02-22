@@ -5574,7 +5574,7 @@ boolean G_CheckDemoStatus(void)
 		free(demobuffer);
 		demorecording = false;
 
-		if (!modeattacking == ATTACKING_RECORD)
+		if (modeattacking != ATTACKING_RECORD)
 		{
 			if (saved)
 				CONS_Printf(M_GetText("Demo %s recorded\n"), demoname);

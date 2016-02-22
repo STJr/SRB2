@@ -217,10 +217,12 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 		}
 	}
 
+#ifdef HWRENDER
 	if (rendermode == render_opengl)
 	{
 		OglSdlSurface(vid.width, vid.height);
 	}
+#endif
 
 	if (rendermode == render_soft)
 	{
@@ -401,9 +403,11 @@ static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Scancode code)
 		default:
 			break;
 	}
+#ifdef HWRENDER
 	DBG_Printf("Unknown incoming scancode: %d, represented %c\n",
 				code,
 				SDL_GetKeyName(SDL_GetKeyFromScancode(code)));
+#endif
 	return 0;
 }
 

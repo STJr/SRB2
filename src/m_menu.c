@@ -2204,6 +2204,7 @@ boolean M_Responder(event_t *ev)
 				if (modeattacking)
 					return true;
 				M_StartControlPanel();
+				M_Options(0);
 				currentMenu = &OP_SoundOptionsDef;
 				itemOn = 0;
 				return true;
@@ -2213,6 +2214,7 @@ boolean M_Responder(event_t *ev)
 				if (modeattacking)
 					return true;
 				M_StartControlPanel();
+				M_Options(0);
 				M_VideoModeMenu(0);
 				return true;
 #endif
@@ -2224,6 +2226,7 @@ boolean M_Responder(event_t *ev)
 				if (modeattacking)
 					return true;
 				M_StartControlPanel();
+				M_Options(0);
 				M_SetupNextMenu(&OP_MainDef);
 				return true;
 
@@ -6074,7 +6077,7 @@ static void M_RoomMenu(INT32 choice)
 
 	for (i = 0; room_list[i].header.buffer[0]; i++)
 	{
-		if(room_list[i].name != '\0')
+		if(*room_list[i].name != '\0')
 		{
 			MP_RoomMenu[i+1].text = room_list[i].name;
 			roomIds[i] = room_list[i].id;

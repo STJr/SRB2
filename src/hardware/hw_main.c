@@ -3303,7 +3303,6 @@ static void HWR_AddPolyObjectPlanes(void)
 //                  : Draw one or more line segments.
 // Notes            : Sets gr_cursectorlight to the light of the parent sector, to modulate wall textures
 // -----------------+
-static lumpnum_t doomwaterflat;  //set by R_InitFlats hack
 static void HWR_Subsector(size_t num)
 {
 	INT16 count;
@@ -3315,7 +3314,6 @@ static void HWR_Subsector(size_t num)
 	INT32 locFloorHeight, locCeilingHeight;
 	INT32 cullFloorHeight, cullCeilingHeight;
 	INT32 light = 0;
-	fixed_t wh;
 	extracolormap_t *floorcolormap;
 	extracolormap_t *ceilingcolormap;
 
@@ -3688,26 +3686,6 @@ static void HWR_Subsector(size_t num)
 		}
 	}
 
-//20/08/99: Changed by Hurdler (taken from faB's code)
-#ifdef DOPLANES
-	// -------------------- WATER IN DEV. TEST ------------------------
-	//dck hack : use abs(tag) for waterheight
-	//ilag : Since we changed to UINT16 for sector tags, simulate INT16
-	if (gr_frontsector->tag > 32767)
-	{
-		wh = ((65535-gr_frontsector->tag) <<FRACBITS) + (FRACUNIT/2);
-		if (wh > gr_frontsector->floorheight &&
-			wh < gr_frontsector->ceilingheight)
-		{
-			HWR_GetFlat(doomwaterflat);
-			HWR_RenderPlane(gr_frontsector,
-				&extrasubsectors[num], wh, PF_Translucent,
-				gr_frontsector->lightlevel, doomwaterflat,
-				NULL, 255, false, gr_frontsector->lightlist[light].extra_colormap);
-		}
-	}
-	// -------------------- WATER IN DEV. TEST ------------------------
-#endif
 	sub->validcount = validcount;
 }
 
@@ -5982,11 +5960,6 @@ void HWR_Startup(void)
 		// add console cmds & vars
 		HWR_AddEngineCommands();
 		HWR_InitTextureCache();
-
-		// for test water translucent surface
-		doomwaterflat  = W_CheckNumForName("FWATER1");
-		if (doomwaterflat == LUMPERROR) // if FWATER1 not found (in doom shareware)
-			doomwaterflat = W_GetNumForName("WATER0");
 
 		HWR_InitMD2();
 
