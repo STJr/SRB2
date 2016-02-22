@@ -105,22 +105,25 @@ unlockable_t unlockables[MAXUNLOCKABLES] =
 	/* 04 */ {"EXTRA LEVELS", "", 60, 0, SECRET_HEADER, 0, true, true, 0},
 
 	/* 05 */ {"Stormy Streets",     "Collect 5 Chaos Coins",    70, 40, SECRET_WARP,         23, false, false, 0},
-	/* 05 */ {"Sky islands",        "Collect 20 Chaos Coins",    80, 47, SECRET_WARP,         25, false, false, 0},
+	/* 06 */ {"Sky Islands",        "Collect 20 Chaos Coins",    80, 47, SECRET_WARP,         25, false, false, 0},
 
-	/* 06 */ {"BONUS LEVELS", "", 100, 0, SECRET_HEADER, 0, true, true, 0},
+	/* 07 */ {"BONUS LEVELS", "", 100, 0, SECRET_HEADER, 0, true, true, 0},
 
-	/* 07 */ {"Grove",             "Collect 7 Chaos Coins",   110, 41, SECRET_WARP,         52, false, false, 0},
-	/* 08 */ {"Old HUB 1",         "Collect 9 Chaos Coins",   120, 42, SECRET_WARP,         50, false, false, 0},
-	/* 09 */ {"Ancient Waterway",  "Collect 10 Chaos Coins",  130, 43, SECRET_WARP,         54, false, false, 0},
-	/* 10 */ {"Grumpy Canyon",     "Collect 12 Chaos Coins",  140, 44, SECRET_WARP,         56, false, false, 0},
-	/* 11 */ {"Lava Mountain",     "Collect 16 Chaos Coins",  150, 45, SECRET_WARP,         57, false, false, 0},
-	/* 12 */ {"untitled",          "Collect 18 Chaos Coins",  160, 46, SECRET_WARP,         55, false, false, 0},
-	/* 13 */ {"Old HUB 2",         "Collect 25 Chaos Coins",  170, 48, SECRET_WARP,         51, false, false, 0},
-	/* 14 */ {"Tako Desert",       "Collect 26 Chaos Coins",  180, 49, SECRET_WARP,         53, false, false, 0},
-	/* 15 */ {"A Big Mistake",     "Collect 28 Chaos Coins",  190, 50, SECRET_WARP,         58, false, false, 0},
+	/* 08 */ {"Bonus Level Select", "Collect 7 Chaos Coins",	110, 41, SECRET_LEVELSELECT, 3, false, true, 0},
+	/* 09 */ {"Grove",             "Collect 7 Chaos Coins",   0, 41, SECRET_NONE,         52, false, true, 0},
+	/* 10 */ {"Old HUB 1",         "Collect 9 Chaos Coins",   0, 42, SECRET_NONE,         50, false, true, 0},
+	/* 11 */ {"Ancient Waterway",  "Collect 10 Chaos Coins",  0, 43, SECRET_NONE,         54, false, true, 0},
+	/* 12 */ {"Grumpy Canyon",     "Collect 12 Chaos Coins",  0, 44, SECRET_NONE,         56, false, true, 0},
+	/* 13 */ {"Lava Mountain",     "Collect 16 Chaos Coins",  0, 45, SECRET_NONE,         57, false, true, 0},
+	/* 14 */ {"untitled",          "Collect 18 Chaos Coins",  0, 46, SECRET_NONE,         55, false, true, 0},
+	/* 15 */ {"Old HUB 2",         "Collect 25 Chaos Coins",  0, 48, SECRET_NONE,         51, false, true, 0},
+	/* 16 */ {"Tako Desert",       "Collect 26 Chaos Coins",  0, 49, SECRET_NONE,         53, false, true, 0},
+	/* 17 */ {"A Big Mistake",     "Collect 28 Chaos Coins",  0, 50, SECRET_NONE,         58, false, true, 0},
 
-	/* 16 */ {"Pandora's Box", "Collect All Emblems",  0, 51, SECRET_PANDORA,     0, false, false, 0},
-	/* 17 */ {"Level Select",  "Collect All Emblems", 20, 51, SECRET_LEVELSELECT, 1, false,  true, 0},
+	/* 18 */ {"Pandora's Box", "Collect All Emblems",  0, 51, SECRET_PANDORA,     0, false, false, 0},
+	/* 19 */ {"Level Select",  "Collect All Emblems", 20, 51, SECRET_LEVELSELECT, 1, false,  true, 0},
+	/* 20 */ {"Scrapped Level Set 1", "Collect 7-16 Chaos Coins", 0, 41, SECRET_NONE, 0, true, false, 0},
+	/* 21 */ {"Scrapped Level Set 2", "Collect 18-28 Chaos Coins", 0, 46, SECRET_NONE, 0, true, false, 0},
 };
 
 // Default number of emblems and extra emblems
@@ -148,7 +151,7 @@ void M_SetupDefaultConditionSets(void)
 	M_AddRawCondition(30, 4,  UC_MAPPERFECT, 11, 0, 0);
 	M_AddRawCondition(30, 5,  UC_MAPPERFECT, 23, 0, 0);
 	M_AddRawCondition(30, 6,  UC_MAPPERFECT, 25, 0, 0);
-
+	
 	// --  40: Find 5 emblems
 	M_AddRawCondition(40, 1, UC_TOTALEMBLEMS,  5, 0, 0);
 

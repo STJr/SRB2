@@ -209,7 +209,7 @@ menu_t SPauseDef;
 // Sky Room
 static void M_CustomLevelSelect(INT32 choice);
 static void M_CustomWarp(INT32 choice);
-FUNCNORETURN static ATTRNORETURN void M_UltimateCheat(INT32 choice);
+static void M_UltimateCheat(INT32 choice);
 static void M_LoadGameLevelSelect(INT32 choice);
 static void M_GetAllEmeralds(INT32 choice);
 static void M_DestroyRobots(INT32 choice);
@@ -3921,8 +3921,12 @@ static void M_SelectableClearMenus(INT32 choice)
 
 static void M_UltimateCheat(INT32 choice)
 {
-	(void)choice;
-	I_Quit();
+	//(void)choice;
+	//I_Quit();
+	
+	startmap = 27;
+
+	M_SetupChoosePlayer(0);
 }
 
 static void M_GetAllEmeralds(INT32 choice)
