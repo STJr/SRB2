@@ -17,10 +17,8 @@
 #include <unistd.h> //for unlink
 #endif
 
-#include "i_net.h"
 #include "i_system.h"
 #include "i_video.h"
-#include "d_net.h"
 #include "d_main.h"
 #include "g_game.h"
 #include "hu_stuff.h"
@@ -94,8 +92,6 @@ static boolean cl_packetmissed;
 // here it is for the secondary local player (splitscreen)
 static UINT8 mynode; // my address pointofview server
 
-static UINT8 localtextcmd[MAXTEXTCMD];
-static UINT8 localtextcmd2[MAXTEXTCMD]; // splitscreen
 SINT8 servernode = 0; // the number of the server node
 /// \brief do we accept new players?
 /// \todo WORK!
@@ -201,42 +197,19 @@ void RegisterNetXCmd(netxcmd_t id, void (*cmd_f)(UINT8 **p, INT32 playernum))
 
 void SendNetXCmd(netxcmd_t id, const void *param, size_t nparam)
 {
-	if (localtextcmd[0]+2+nparam > MAXTEXTCMD)
-	{
-		// for future reference: if (cv_debug) != debug disabled.
-		CONS_Alert(CONS_ERROR, M_GetText("NetXCmd buffer full, cannot add netcmd %d! (size: %d, needed: %s)\n"), id, localtextcmd[0], sizeu1(nparam));
-		return;
-	}
-	localtextcmd[0]++;
-	localtextcmd[localtextcmd[0]] = (UINT8)id;
-	if (param && nparam)
-	{
-		M_Memcpy(&localtextcmd[localtextcmd[0]+1], param, nparam);
-		localtextcmd[0] = (UINT8)(localtextcmd[0] + (UINT8)nparam);
-	}
+	// NET TODO
 }
 
 // splitscreen player
 void SendNetXCmd2(netxcmd_t id, const void *param, size_t nparam)
 {
-	if (localtextcmd2[0]+2+nparam > MAXTEXTCMD)
-	{
-		I_Error("No more place in the buffer for netcmd %d\n",id);
-		return;
-	}
-	localtextcmd2[0]++;
-	localtextcmd2[localtextcmd2[0]] = (UINT8)id;
-	if (param && nparam)
-	{
-		M_Memcpy(&localtextcmd2[localtextcmd2[0]+1], param, nparam);
-		localtextcmd2[0] = (UINT8)(localtextcmd2[0] + (UINT8)nparam);
-	}
+	// NET TODO
 }
 
 UINT8 GetFreeXCmdSize(void)
 {
-	// -1 for the size and another -1 for the ID.
-	return (UINT8)(localtextcmd[0] - 2);
+	// NET TODO
+	return -1;
 }
 
 // Frees all textcmd memory for the specified tic
@@ -540,8 +513,9 @@ static inline void CL_DrawConnectionStatus(void)
 				Net_GetNetStat();
 				V_DrawString(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-24, V_20TRANS|V_MONOSPACE,
 					va(" %4uK",fileneeded[lastfilenum].currentsize>>10));
-				V_DrawRightAlignedString(BASEVIDWIDTH/2+128, BASEVIDHEIGHT-24, V_20TRANS|V_MONOSPACE,
-					va("%3.1fK/s ", ((double)getbps)/1024));
+				// NET TODO
+				//V_DrawRightAlignedString(BASEVIDWIDTH/2+128, BASEVIDHEIGHT-24, V_20TRANS|V_MONOSPACE,
+				//	va("%3.1fK/s ", ((double)getbps)/1024));
 				break;
 #endif
 			case cl_askjoin:
@@ -573,8 +547,9 @@ static inline void CL_DrawConnectionStatus(void)
 			va(M_GetText("Downloading \"%s\""), tempname));
 		V_DrawString(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-24, V_20TRANS|V_MONOSPACE,
 			va(" %4uK/%4uK",fileneeded[lastfilenum].currentsize>>10,fileneeded[lastfilenum].totalsize>>10));
-		V_DrawRightAlignedString(BASEVIDWIDTH/2+128, BASEVIDHEIGHT-24, V_20TRANS|V_MONOSPACE,
-			va("%3.1fK/s ", ((double)getbps)/1024));
+		// NET TODO
+		//V_DrawRightAlignedString(BASEVIDWIDTH/2+128, BASEVIDHEIGHT-24, V_20TRANS|V_MONOSPACE,
+		//	va("%3.1fK/s ", ((double)getbps)/1024));
 	}
 }
 #endif
@@ -1622,6 +1597,7 @@ void CL_ClearPlayer(INT32 playernum)
 	}
 	players[playernum].mo = NULL;
 	memset(&players[playernum], 0, sizeof (player_t));
+	sprintf(player_names[playernum], "New Player %u", playernum+1);
 }
 
 //
@@ -1689,9 +1665,6 @@ static void CL_RemovePlayer(INT32 playernum)
 	playernode[playernum] = UINT8_MAX;
 	while (!playeringame[doomcom->numslots-1] && doomcom->numslots > 1)
 		doomcom->numslots--;
-
-	// Reset the name
-	sprintf(player_names[playernum], "Player %d", playernum+1);
 
 	if (playernum == adminplayer)
 		adminplayer = -1; // don't stay admin after you're gone
@@ -2102,9 +2075,8 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 
 consvar_t cv_allownewplayer = {"allowjoin", "On", CV_NETVAR, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL	};
 consvar_t cv_joinnextround = {"joinnextround", "Off", CV_NETVAR, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL}; /// \todo not done
-static CV_PossibleValue_t maxplayers_cons_t[] = {{2, "MIN"}, {32, "MAX"}, {0, NULL}};
-consvar_t cv_maxplayers = {"maxplayers", "8", CV_SAVE, maxplayers_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_blamecfail = {"blamecfail", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL	};
+static CV_PossibleValue_t maxplayers_cons_t[] = {{2, "MIN"}, {MAXPLAYERS, "MAX"}, {0, NULL}};
+consvar_t cv_maxplayers = {"maxplayers", "12", CV_SAVE, maxplayers_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 // max file size to send to a player (in kilobytes)
 static CV_PossibleValue_t maxsend_cons_t[] = {{0, "MIN"}, {51200, "MAX"}, {0, NULL}};
@@ -2135,7 +2107,6 @@ void D_ClientServerInit(void)
 	CV_RegisterVar(&cv_allownewplayer);
 	CV_RegisterVar(&cv_joinnextround);
 	CV_RegisterVar(&cv_showjoinaddress);
-	CV_RegisterVar(&cv_blamecfail);
 #ifdef DUMPCONSISTENCY
 	CV_RegisterVar(&cv_dumpconsistency);
 #endif

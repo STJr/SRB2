@@ -24,6 +24,9 @@
 //  one that defines the actual packets to
 //  be transmitted.
 
+// Make sure we allocate a network node for every player, "server full" denials, the Master server heartbeat, and potential RCON connections.
+#define MAXNETNODES MAXPLAYERS+2
+
 // Networking and tick handling related.
 #define BACKUPTICS 32
 #define MAXTEXTCMD 256
@@ -285,7 +288,7 @@ extern UINT32 realpingtable[MAXPLAYERS];
 extern UINT32 playerpingtable[MAXPLAYERS];
 #endif
 
-extern consvar_t cv_joinnextround, cv_allownewplayer, cv_maxplayers, cv_blamecfail, cv_maxsend;
+extern consvar_t cv_joinnextround, cv_allownewplayer, cv_maxplayers, cv_maxsend;
 
 // used in d_net, the only dependence
 tic_t ExpandTics(INT32 low);
