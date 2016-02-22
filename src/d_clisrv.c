@@ -548,6 +548,33 @@ static inline void CL_DrawConnectionStatus(void)
 }
 #endif
 
+//
+// CL_SendJoin
+//
+// send a special packet for declare how many player in local
+// used only in arbitratrenetstart()
+static boolean CL_SendJoin(void)
+{
+	// NET TODO
+	return true;
+}
+
+static void SV_SendServerInfo(INT32 node, tic_t servertime)
+{
+	// NET TODO
+}
+
+static void SV_SendPlayerInfo(INT32 node)
+{
+	// NET TODO
+}
+
+static boolean SV_SendServerConfig(INT32 node)
+{
+	// NET TODO
+	return true;
+}
+
 #ifdef JOININGAME
 #define SAVEGAMESIZE (768*1024)
 
@@ -687,6 +714,342 @@ static void CL_LoadReceivedSavegame(void)
 	CON_ToggleOff();
 }
 #endif
+
+#ifndef NONET
+static void SendAskInfo(INT32 node, boolean viams)
+{
+	// NET TODO
+}
+
+serverelem_t serverlist[MAXSERVERLIST];
+UINT32 serverlistcount = 0;
+
+static void SL_ClearServerList(INT32 connectedserver)
+{
+	UINT32 i;
+
+	for (i = 0; i < serverlistcount; i++)
+		if (connectedserver != serverlist[i].node)
+		{
+			Net_CloseConnection(serverlist[i].node);
+			serverlist[i].node = 0;
+		}
+	serverlistcount = 0;
+}
+
+static UINT32 SL_SearchServer(INT32 node)
+{
+	UINT32 i;
+	for (i = 0; i < serverlistcount; i++)
+		if (serverlist[i].node == node)
+			return i;
+
+	return UINT32_MAX;
+}
+
+static void SL_InsertServer(serverinfo_pak* info, SINT8 node)
+{
+	UINT32 i;
+
+	// search if not already on it
+	i = SL_SearchServer(node);
+	if (i == UINT32_MAX)
+	{
+		// not found add it
+		if (serverlistcount >= MAXSERVERLIST)
+			return; // list full
+
+		if (info->version != VERSION)
+			return; // Not same version.
+
+		if (info->subversion != SUBVERSION)
+			return; // Close, but no cigar.
+
+		i = serverlistcount++;
+	}
+
+	serverlist[i].info = *info;
+	serverlist[i].node = node;
+
+	// resort server list
+	M_SortServerList();
+}
+
+void CL_UpdateServerList(boolean internetsearch, INT32 room)
+{
+	// NET TODO
+}
+
+#endif // ifndef NONET
+
+// use adaptive send using net_bandwidth and stat.sendbytes
+static void CL_ConnectToServer(boolean viams)
+{
+	INT32 pnumnodes, nodewaited = net_nodecount, i;
+	boolean waitmore;
+	tic_t oldtic;
+#ifndef NONET
+	tic_t asksent;
+#endif
+#ifdef JOININGAME
+	XBOXSTATIC char tmpsave[256];
+
+	sprintf(tmpsave, "%s" PATHSEP TMPSAVENAME, srb2home);
+#endif
+
+	cl_mode = cl_searching;
+
+#ifdef CLIENT_LOADINGSCREEN
+	lastfilenum = 0;
+#endif
+
+#ifdef JOININGAME
+	// don't get a corrupt savegame error because tmpsave already exists
+	if (FIL_FileExists(tmpsave) && unlink(tmpsave) == -1)
+		I_Error("Can't delete %s\n", tmpsave);
+#endif
+
+	if (netgame)
+	{
+		if (servernode < 0 || servernode >= MAXNETNODES)
+			CONS_Printf(M_GetText("Searching for a server...\n"));
+		else
+			CONS_Printf(M_GetText("Contacting the server...\n"));
+	}
+
+	if (gamestate == GS_INTERMISSION)
+		Y_EndIntermission(); // clean up intermission graphics etc
+
+	DEBFILE(va("waiting %d nodes\n", net_nodecount));
+	G_SetGamestate(GS_WAITINGPLAYERS);
+	wipegamestate = GS_WAITINGPLAYERS;
+
+	adminplayer = -1;
+	pnumnodes = 1;
+	oldtic = I_GetTime() - 1;
+#ifndef NONET
+	asksent = (tic_t)-TICRATE;
+
+	i = SL_SearchServer(servernode);
+
+	if (i != -1)
+	{
+		INT32 j;
+		const char *gametypestr = NULL;
+		CONS_Printf(M_GetText("Connecting to: %s\n"), serverlist[i].info.servername);
+		for (j = 0; gametype_cons_t[j].strvalue; j++)
+		{
+			if (gametype_cons_t[j].value == serverlist[i].info.gametype)
+			{
+				gametypestr = gametype_cons_t[j].strvalue;
+				break;
+			}
+		}
+		if (gametypestr)
+			CONS_Printf(M_GetText("Gametype: %s\n"), gametypestr);
+		CONS_Printf(M_GetText("Version: %d.%d.%u\n"), serverlist[i].info.version/100,
+		 serverlist[i].info.version%100, serverlist[i].info.subversion);
+	}
+	SL_ClearServerList(servernode);
+#endif
+
+	do
+	{
+		switch (cl_mode)
+		{
+			case cl_searching:
+#ifndef NONET
+				// serverlist is updated by GetPacket function
+				if (serverlistcount > 0)
+				{
+					// this can be a responce to our broadcast request
+					if (servernode == -1 || servernode >= MAXNETNODES)
+					{
+						i = 0;
+						servernode = serverlist[i].node;
+						CONS_Printf(M_GetText("Found, "));
+					}
+					else
+					{
+						i = SL_SearchServer(servernode);
+						if (i < 0)
+							break; // the case
+					}
+
+					// Quit here rather than downloading files and being refused later.
+					if (serverlist[i].info.numberofplayer >= serverlist[i].info.maxplayer)
+					{
+						D_QuitNetGame();
+						CL_Reset();
+						D_StartTitle();
+						M_StartMessage(va(M_GetText("Maximum players reached: %d\n\nPress ESC\n"), serverlist[i].info.maxplayer), NULL, MM_NOTHING);
+						return;
+					}
+
+					if (!server)
+					{
+						D_ParseFileneeded(serverlist[i].info.fileneedednum,
+							serverlist[i].info.fileneeded);
+						CONS_Printf(M_GetText("Checking files...\n"));
+						i = CL_CheckFiles();
+						if (i == 2) // cannot join for some reason
+						{
+							D_QuitNetGame();
+							CL_Reset();
+							D_StartTitle();
+							M_StartMessage(M_GetText(
+								"You have WAD files loaded or have\n"
+								"modified the game in some way, and\n"
+								"your file list does not match\n"
+								"the server's file list.\n"
+								"Please restart SRB2 before connecting.\n\n"
+								"Press ESC\n"
+							), NULL, MM_NOTHING);
+							return;
+						}
+						else if (i == 1)
+							cl_mode = cl_askjoin;
+						else
+						{
+							// must download something
+							// can we, though?
+							if (!CL_CheckDownloadable()) // nope!
+							{
+								D_QuitNetGame();
+								CL_Reset();
+								D_StartTitle();
+								M_StartMessage(M_GetText(
+									"You cannot conect to this server\n"
+									"because you cannot download the files\n"
+									"that you are missing from the server.\n\n"
+									"See the console or log file for\n"
+									"more details.\n\n"
+									"Press ESC\n"
+								), NULL, MM_NOTHING);
+								return;
+							}
+							// no problem if can't send packet, we will retry later
+							if (CL_SendRequestFile())
+								cl_mode = cl_downloadfiles;
+						}
+					}
+					else
+						cl_mode = cl_askjoin; // files need not be checked for the server.
+					break;
+				}
+				// ask the info to the server (askinfo packet)
+				if (asksent + NEWTICRATE < I_GetTime())
+				{
+					SendAskInfo(servernode, viams);
+					asksent = I_GetTime();
+				}
+#else
+				(void)viams;
+				// No netgames, so we skip this state.
+				cl_mode = cl_askjoin;
+#endif // ifndef NONET/else
+				break;
+			case cl_downloadfiles:
+				waitmore = false;
+				for (i = 0; i < fileneedednum; i++)
+					if (fileneeded[i].status == FS_DOWNLOADING
+						|| fileneeded[i].status == FS_REQUESTED)
+					{
+						waitmore = true;
+						break;
+					}
+				if (waitmore)
+					break; // exit the case
+
+				cl_mode = cl_askjoin; // don't break case continue to cljoin request now
+			case cl_askjoin:
+				CL_LoadServerFiles();
+#ifdef JOININGAME
+				// prepare structures to save the file
+				// WARNING: this can be useless in case of server not in GS_LEVEL
+				// but since the network layer doesn't provide ordered packets...
+				CL_PrepareDownloadSaveGame(tmpsave);
+#endif
+				if (CL_SendJoin())
+					cl_mode = cl_waitjoinresponse;
+				break;
+#ifdef JOININGAME
+			case cl_downloadsavegame:
+				if (fileneeded[0].status == FS_FOUND)
+				{
+					// Gamestate is now handled within CL_LoadReceivedSavegame()
+					CL_LoadReceivedSavegame();
+					cl_mode = cl_connected;
+				} // don't break case continue to cl_connected
+				else
+					break;
+#endif
+			case cl_waitjoinresponse:
+			case cl_connected:
+			default:
+				break;
+
+			// Connection closed by cancel, timeout or refusal.
+			case cl_aborted:
+				cl_mode = cl_searching;
+				return;
+		}
+
+		Net_AckTicker();
+
+		// call it only one by tic
+		if (oldtic != I_GetTime())
+		{
+			INT32 key;
+
+			I_OsPolling();
+			key = I_GetKey();
+			if (key == KEY_ESCAPE)
+			{
+				CONS_Printf(M_GetText("Network game synchronization aborted.\n"));
+//				M_StartMessage(M_GetText("Network game synchronization aborted.\n\nPress ESC\n"), NULL, MM_NOTHING);
+				D_QuitNetGame();
+				CL_Reset();
+				D_StartTitle();
+				return;
+			}
+
+			// why are these here? this is for servers, we're a client
+			//if (key == 's' && server)
+			//	doomcom->numnodes = (INT16)pnumnodes;
+			//FiletxTicker();
+			oldtic = I_GetTime();
+
+#ifdef CLIENT_LOADINGSCREEN
+			if (!server && cl_mode != cl_connected && cl_mode != cl_aborted)
+			{
+				F_TitleScreenTicker(true);
+				F_TitleScreenDrawer();
+				CL_DrawConnectionStatus();
+				I_UpdateNoVsync(); // page flip or blit buffer
+				if (moviemode)
+					M_SaveFrame();
+			}
+#else
+			CON_Drawer();
+			I_UpdateNoVsync();
+#endif
+		}
+		else I_Sleep();
+
+		if (server)
+		{
+			pnumnodes = 0;
+			for (i = 0; i < MAXNETNODES; i++)
+				if (nodeingame[i]) pnumnodes++;
+		}
+	}
+	while (!(cl_mode == cl_connected && (!server || (server && nodewaited <= pnumnodes))));
+
+	DEBFILE(va("Synchronisation Finished\n"));
+
+	displayplayer = consoleplayer;
+}
 
 #ifndef NONET
 typedef struct banreason_s
@@ -1620,6 +1983,7 @@ void SV_StopServer(void)
 	if (gamestate == GS_INTERMISSION)
 		Y_EndIntermission();
 	gamestate = wipegamestate = GS_NULL;
+
 
 	for (i = 0; i < BACKUPTICS; i++)
 		D_Clearticcmd(i);
