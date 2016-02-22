@@ -107,7 +107,7 @@ static UINT8 cheatf_devmode(void)
 	G_SetGameModified(false);
 	for (i = 0; i < MAXUNLOCKABLES; i++)
 		unlockables[i].unlocked = true;
-	devparm = TRUE;
+	devparm = true;
 	cv_debug |= 0x8000;
 
 	// Refresh secrets menu existing.

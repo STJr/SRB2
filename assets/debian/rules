@@ -37,7 +37,7 @@ RM	:= rm -rf
 DIR	:= $(shell pwd)
 
 PACKAGE := $(shell cat $(DIR)/debian/control | grep 'Package:' | sed -e 's/Package: //g')
-DATAFILES := drill.dta music.dta soar.dta zones.dta player.dta rings.wpn srb2.wad
+DATAFILES := srb2.srb zones.dta player.dta rings.dta music.dta
 
 DATADIR	:= usr/games/SRB2
 RESOURCEDIR := .
@@ -48,7 +48,7 @@ build:
 	# This will need to be updated every time SRB2 official version is
 	# Copy data files to their install locations, and add data files to include-binaries
 	for file in $(DATAFILES); do \
-		$(WGET) http://alam.srb2.org/SRB2/2.0.6-Final/Resources/$$file; \
+		$(WGET) http://alam.srb2.org/SRB2/2.1.14-Final/Resources/$$file; \
 		if test "$$file" = "srb2.wad"; then \
 			$(INSTALL) $(RESOURCEDIR)/$$file $(DIR)/debian/tmp/$(DATADIR)/srb2.srb; \
 		else \

@@ -116,7 +116,7 @@ if(${SDL2_FOUND})
 	add_executable(SRB2SDL2 MACOSX_BUNDLE WIN32 ${SRB2_SDL2_TOTAL_SOURCES})
 	set_target_properties(SRB2SDL2 PROPERTIES OUTPUT_NAME ${SRB2_SDL2_EXE_NAME})
 
-	if(CLANG)
+	if((CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang"))
 		add_framework(CoreFoundation SRB2SDL2)
 		add_framework(SDL2 SRB2SDL2)
 		add_framework(SDL2_mixer SRB2SDL2)
@@ -226,7 +226,7 @@ if(${SDL2_FOUND})
 	endif()
 
 	#### Installation ####
-	if (CLANG)
+	if (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
 		install(TARGETS SRB2SDL2
 			BUNDLE DESTINATION .
 		)
@@ -267,7 +267,7 @@ if(${SDL2_FOUND})
 
 
 	# Mac bundle fixup
-	if(CLANG)
+	if (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
 		install(CODE "
 			include(BundleUtilities)
 			fixup_bundle(\"${CMAKE_INSTALL_PREFIX}/Sonic Robo Blast 2.app\"

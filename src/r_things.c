@@ -1105,7 +1105,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	{
 		sprdef = &((skin_t *)thing->skin)->sprites[thing->sprite2];
 		if (rot >= sprdef->numframes) {
-			CONS_Alert(CONS_ERROR, M_GetText("R_ProjectSprite: invalid skins[\"%s\"].sprites[SPR2_%s] frame %d\n"), ((skin_t *)thing->skin)->name, spr2names[thing->sprite2], rot);
+			CONS_Alert(CONS_ERROR, M_GetText("R_ProjectSprite: invalid skins[\"%s\"].sprites[SPR2_%s] frame %s\n"), ((skin_t *)thing->skin)->name, spr2names[thing->sprite2], sizeu5(rot));
 			thing->sprite = states[S_UNKNOWN].sprite;
 			thing->frame = states[S_UNKNOWN].frame;
 			sprdef = &sprites[thing->sprite];
