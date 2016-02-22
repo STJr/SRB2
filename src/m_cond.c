@@ -72,7 +72,7 @@ emblem_t emblemlocations[MAXEMBLEMS] =
 	{ET_GLOBAL,  12907,  -1908,   178, 23, 'U', SKINCOLOR_NONE, 0, "", 0},
 	{ET_GLOBAL,  11774, -11384,   163, 23, 'U', SKINCOLOR_NONE, 0, "", 0},
 	{ET_GLOBAL,  18921,  -9762,  1326, 23, 'U', SKINCOLOR_NONE, 0, "", 0},
-	{ET_GLOBAL,   2871,  -4263,  1326, 23, 'U', SKINCOLOR_NONE, 0, "", 0},
+	{ET_GLOBAL,   20093,  970,  334, 23, 'U', SKINCOLOR_NONE, 0, "", 0},
 
 	{ET_RINGS, 0,0,0,  23, 'U', SKINCOLOR_NONE,          200, "", 0},
 
