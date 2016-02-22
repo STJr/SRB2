@@ -1225,7 +1225,7 @@ static void Got_NetVar(UINT8 **p, INT32 playernum)
 			XBOXSTATIC UINT8 buf[2];
 
 			buf[0] = (UINT8)playernum;
-			buf[1] = KICK_MSG_CON_FAIL;
+			buf[1] = KICK_MSG_STOP_HACKING;
 			SendNetXCmd(XD_KICK, &buf, 2);
 		}
 		return;

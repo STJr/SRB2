@@ -341,9 +341,6 @@ consvar_t cv_killingdead = {"killingdead", "Off", CV_NETVAR, CV_OnOff, NULL, 0, 
 consvar_t cv_netstat = {"netstat", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL}; // show bandwidth statistics
 static CV_PossibleValue_t nettimeout_cons_t[] = {{TICRATE/7, "MIN"}, {60*TICRATE, "MAX"}, {0, NULL}};
 consvar_t cv_nettimeout = {"nettimeout", "525", CV_CALL|CV_SAVE, nettimeout_cons_t, NetTimeout_OnChange, 0, NULL, NULL, 0, 0, NULL};
-#ifdef NEWPING
-consvar_t cv_maxping = {"maxping", "0", CV_SAVE, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
-#endif
 // Intermission time Tails 04-19-2002
 static CV_PossibleValue_t inttime_cons_t[] = {{0, "MIN"}, {3600, "MAX"}, {0, NULL}};
 consvar_t cv_inttime = {"inttime", "20", CV_NETVAR, inttime_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -523,9 +520,6 @@ void D_RegisterServerCommands(void)
 
 	CV_RegisterVar(&cv_skipmapcheck);
 	CV_RegisterVar(&cv_sleep);
-#ifdef NEWPING
-	CV_RegisterVar(&cv_maxping);
-#endif
 
 #ifdef SEENAMES
 	 CV_RegisterVar(&cv_allowseenames);
@@ -961,7 +955,7 @@ static void SetPlayerName(INT32 playernum, char *newname)
 			XBOXSTATIC UINT8 buf[2];
 
 			buf[0] = (UINT8)playernum;
-			buf[1] = KICK_MSG_CON_FAIL;
+			buf[1] = KICK_MSG_STOP_HACKING;
 			SendNetXCmd(XD_KICK, &buf, 2);
 		}
 	}
@@ -1292,7 +1286,7 @@ static void Got_NameAndColor(UINT8 **cp, INT32 playernum)
 			CONS_Alert(CONS_WARNING, M_GetText("Illegal color change received from %s (team: %d), color: %d)\n"), player_names[playernum], p->ctfteam, p->skincolor);
 
 			buf[0] = (UINT8)playernum;
-			buf[1] = KICK_MSG_CON_FAIL;
+			buf[1] = KICK_MSG_STOP_HACKING;
 			SendNetXCmd(XD_KICK, &buf, 2);
 			return;
 		}
@@ -1708,7 +1702,7 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 			XBOXSTATIC UINT8 buf[2];
 
 			buf[0] = (UINT8)playernum;
-			buf[1] = KICK_MSG_CON_FAIL;
+			buf[1] = KICK_MSG_STOP_HACKING;
 			SendNetXCmd(XD_KICK, &buf, 2);
 		}
 		return;
@@ -1824,7 +1818,7 @@ static void Got_Pause(UINT8 **cp, INT32 playernum)
 			XBOXSTATIC UINT8 buf[2];
 
 			buf[0] = (UINT8)playernum;
-			buf[1] = KICK_MSG_CON_FAIL;
+			buf[1] = KICK_MSG_STOP_HACKING;
 			SendNetXCmd(XD_KICK, &buf, 2);
 		}
 		return;
@@ -1904,7 +1898,7 @@ static void Got_Suicide(UINT8 **cp, INT32 playernum)
 			XBOXSTATIC UINT8 buf[2];
 
 			buf[0] = (UINT8)playernum;
-			buf[1] = KICK_MSG_CON_FAIL;
+			buf[1] = KICK_MSG_STOP_HACKING;
 			SendNetXCmd(XD_KICK, &buf, 2);
 		}
 		return;
@@ -1973,7 +1967,7 @@ static void Got_Clearscores(UINT8 **cp, INT32 playernum)
 			XBOXSTATIC UINT8 buf[2];
 
 			buf[0] = (UINT8)playernum;
-			buf[1] = KICK_MSG_CON_FAIL;
+			buf[1] = KICK_MSG_STOP_HACKING;
 			SendNetXCmd(XD_KICK, &buf, 2);
 		}
 		return;
@@ -2326,7 +2320,7 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 			XBOXSTATIC UINT8 buf[2];
 
 			buf[0] = (UINT8)playernum;
-			buf[1] = KICK_MSG_CON_FAIL;
+			buf[1] = KICK_MSG_STOP_HACKING;
 			SendNetXCmd(XD_KICK, &buf, 2);
 		}
 	}
@@ -2341,7 +2335,7 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 				XBOXSTATIC UINT8 buf[2];
 
 				buf[0] = (UINT8)playernum;
-				buf[1] = KICK_MSG_CON_FAIL;
+				buf[1] = KICK_MSG_STOP_HACKING;
 				SendNetXCmd(XD_KICK, &buf, 2);
 			}
 			return;
@@ -2380,7 +2374,7 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 				XBOXSTATIC UINT8 buf[2];
 
 				buf[0] = (UINT8)playernum;
-				buf[1] = KICK_MSG_CON_FAIL;
+				buf[1] = KICK_MSG_STOP_HACKING;
 				SendNetXCmd(XD_KICK, &buf, 2);
 			}
 		}
@@ -2433,7 +2427,7 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 		XBOXSTATIC UINT8 buf[2];
 
 		buf[0] = (UINT8)playernum;
-		buf[1] = KICK_MSG_CON_FAIL;
+		buf[1] = KICK_MSG_STOP_HACKING;
 		CONS_Alert(CONS_WARNING, M_GetText("Illegal team change received from player %s\n"), player_names[playernum]);
 		SendNetXCmd(XD_KICK, &buf, 2);
 	}
@@ -2728,7 +2722,7 @@ static void Got_Verification(UINT8 **cp, INT32 playernum)
 			XBOXSTATIC UINT8 buf[2];
 
 			buf[0] = (UINT8)playernum;
-			buf[1] = KICK_MSG_CON_FAIL;
+			buf[1] = KICK_MSG_STOP_HACKING;
 			SendNetXCmd(XD_KICK, &buf, 2);
 		}
 		return;
@@ -2808,7 +2802,7 @@ static void Got_MotD_f(UINT8 **cp, INT32 playernum)
 			XBOXSTATIC UINT8 buf[2];
 
 			buf[0] = (UINT8)playernum;
-			buf[1] = KICK_MSG_CON_FAIL;
+			buf[1] = KICK_MSG_STOP_HACKING;
 			SendNetXCmd(XD_KICK, &buf, 2);
 		}
 
@@ -2871,7 +2865,7 @@ static void Got_RunSOCcmd(UINT8 **cp, INT32 playernum)
 			XBOXSTATIC UINT8 buf[2];
 
 			buf[0] = (UINT8)playernum;
-			buf[1] = KICK_MSG_CON_FAIL;
+			buf[1] = KICK_MSG_STOP_HACKING;
 			SendNetXCmd(XD_KICK, &buf, 2);
 		}
 		return;
@@ -3048,7 +3042,7 @@ static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum)
 		CONS_Alert(CONS_WARNING, M_GetText("Illegal addfile command received from %s\n"), player_names[playernum]);
 
 		buf[0] = (UINT8)playernum;
-		buf[1] = KICK_MSG_CON_FAIL;
+		buf[1] = KICK_MSG_STOP_HACKING;
 		SendNetXCmd(XD_KICK, &buf, 2);
 		return;
 	}
@@ -3088,7 +3082,7 @@ static void Got_Delfilecmd(UINT8 **cp, INT32 playernum)
 			XBOXSTATIC UINT8 buf[2];
 
 			buf[0] = (UINT8)playernum;
-			buf[1] = KICK_MSG_CON_FAIL;
+			buf[1] = KICK_MSG_STOP_HACKING;
 			SendNetXCmd(XD_KICK, &buf, 2);
 		}
 		return;
@@ -3121,7 +3115,7 @@ static void Got_Addfilecmd(UINT8 **cp, INT32 playernum)
 			XBOXSTATIC UINT8 buf[2];
 
 			buf[0] = (UINT8)playernum;
-			buf[1] = KICK_MSG_CON_FAIL;
+			buf[1] = KICK_MSG_STOP_HACKING;
 			SendNetXCmd(XD_KICK, &buf, 2);
 		}
 		return;
@@ -3740,7 +3734,7 @@ static void Got_ExitLevelcmd(UINT8 **cp, INT32 playernum)
 			XBOXSTATIC UINT8 buf[2];
 
 			buf[0] = (UINT8)playernum;
-			buf[1] = KICK_MSG_CON_FAIL;
+			buf[1] = KICK_MSG_STOP_HACKING;
 			SendNetXCmd(XD_KICK, &buf, 2);
 		}
 		return;

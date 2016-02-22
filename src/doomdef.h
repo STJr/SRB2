@@ -458,18 +458,12 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 ///	Allows gravity changes in netgames, no questions asked.
 //#define NETGAME_GRAVITY
 
-///	Dumps the contents of a network save game upon consistency failure for debugging.
-//#define DUMPCONSISTENCY
-
 ///	Polyobject fake flat code
 #define POLYOBJECTS_PLANES
 
 ///	Blue spheres for future use.
 ///	\todo	Remove this define.
 #define BLUE_SPHERES // Blue spheres for future use.
-
-///	Improved way of dealing with ping values and a ping limit.
-#define NEWPING
 
 ///	See name of player in your crosshair
 #define SEENAMES

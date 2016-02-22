@@ -56,9 +56,6 @@ typedef enum {
 
 	PT_CLIENTJOIN,    // Client wants to join; used in start game.
 	PT_NODETIMEOUT,   // Packet sent to self if the connection times out.
-#ifdef NEWPING
-	PT_PING           // Packet sent to tell clients the other client's latency to server.
-#endif
 } packettype_t;
 
 #if defined(_MSC_VER)
@@ -233,9 +230,6 @@ typedef struct
 		msaskinfo_pak msaskinfo;    //       22 bytes
 		plrinfo playerinfo[MAXPLAYERS]; // 1152 bytes
 		plrconfig playerconfig[MAXPLAYERS]; // (up to) 896 bytes
-#ifdef NEWPING
-		UINT32 pingtable[MAXPLAYERS]; //    128 bytes
-#endif
 	} u; // this is needed to pack diff packet types data together
 } ATTRPACK doomdata_t;
 
@@ -263,16 +257,23 @@ extern consvar_t cv_playbackspeed;
 #define FILETXHEADER ((size_t)((filetx_pak *)0)->data)
 #define BASESERVERTICSSIZE ((size_t)&(((doomdata_t *)0)->u.serverpak.cmds[0]))
 
-#define KICK_MSG_GO_AWAY     1
-#define KICK_MSG_CON_FAIL    2
-#define KICK_MSG_PLAYER_QUIT 3
-#define KICK_MSG_TIMEOUT     4
-#define KICK_MSG_BANNED      5
-#ifdef NEWPING
-#define KICK_MSG_PING_HIGH   6
-#endif
-#define KICK_MSG_CUSTOM_KICK 7
-#define KICK_MSG_CUSTOM_BAN  8
+typedef enum {
+	// Player left
+	KICK_MSG_PLAYER_QUIT,
+
+	// Generic kick/ban
+	KICK_MSG_GO_AWAY,
+	KICK_MSG_BANNED,
+
+	// Custom kick/ban
+	KICK_MSG_CUSTOM_KICK,
+	KICK_MSG_CUSTOM_BAN,
+
+	// Networking errors
+	KICK_MSG_TIMEOUT,
+	KICK_MSG_PING_HIGH,
+	KICK_MSG_STOP_HACKING
+} kickmsg_e;
 
 extern boolean server;
 extern boolean dedicated; // for dedicated server
@@ -282,11 +283,6 @@ extern SINT8 servernode;
 
 void Command_Ping_f(void);
 extern tic_t connectiontimeout;
-#ifdef NEWPING
-extern UINT16 pingmeasurecount;
-extern UINT32 realpingtable[MAXPLAYERS];
-extern UINT32 playerpingtable[MAXPLAYERS];
-#endif
 
 extern consvar_t cv_joinnextround, cv_allownewplayer, cv_maxplayers, cv_maxsend;
 

@@ -70,11 +70,6 @@ char motd[254], server_context[8]; // Message of the Day, Unique Context (even w
 // server specific vars
 UINT8 playernode[MAXPLAYERS];
 
-#ifdef NEWPING
-UINT16 pingmeasurecount = 1;
-UINT32 realpingtable[MAXPLAYERS]; //the base table of ping where an average will be sent to everyone.
-UINT32 playerpingtable[MAXPLAYERS]; //table of player latency values.
-#endif
 SINT8 nodetoplayer[MAXNETNODES];
 SINT8 nodetoplayer2[MAXNETNODES]; // say the numplayer for this node if any (splitscreen)
 UINT8 playerpernode[MAXNETNODES]; // used specialy for scplitscreen
@@ -340,7 +335,7 @@ static void ExtraDataTicker(void)
 							XBOXSTATIC UINT8 buf[3];
 
 							buf[0] = (UINT8)i;
-							buf[1] = KICK_MSG_CON_FAIL;
+							buf[1] = KICK_MSG_STOP_HACKING;
 							SendNetXCmd(XD_KICK, &buf, 2);
 							DEBFILE(va("player %d kicked [gametic=%u] reason as follows:\n", i, gametic));
 						}
@@ -829,49 +824,6 @@ static void SV_SendSaveGame(INT32 node)
 	save_p = NULL;
 }
 
-#ifdef DUMPCONSISTENCY
-#define TMPSAVENAME "badmath.sav"
-static consvar_t cv_dumpconsistency = {"dumpconsistency", "Off", CV_NETVAR, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-
-static void SV_SavedGame(void)
-{
-	size_t length;
-	UINT8 *savebuffer;
-	XBOXSTATIC char tmpsave[256];
-
-	if (!cv_dumpconsistency.value)
-		return;
-
-	sprintf(tmpsave, "%s" PATHSEP TMPSAVENAME, srb2home);
-
-	// first save it in a malloced buffer
-	save_p = savebuffer = (UINT8 *)malloc(SAVEGAMESIZE);
-	if (!save_p)
-	{
-		CONS_Alert(CONS_ERROR, M_GetText("No more free memory for savegame\n"));
-		return;
-	}
-
-	P_SaveNetGame();
-
-	length = save_p - savebuffer;
-	if (length > SAVEGAMESIZE)
-	{
-		free(savebuffer);
-		save_p = NULL;
-		I_Error("Savegame buffer overrun");
-	}
-
-	// then save it!
-	if (!FIL_WriteFile(tmpsave, savebuffer, length))
-		CONS_Printf(M_GetText("Didn't save %s for netgame"), tmpsave);
-
-	free(savebuffer);
-	save_p = NULL;
-}
-
-#undef  TMPSAVENAME
-#endif
 #define TMPSAVENAME "$$$.sav"
 
 
@@ -1965,7 +1917,7 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 				nodetoplayer2[playernode[pnum]]);
 */
 		pnum = playernum;
-		msg = KICK_MSG_CON_FAIL;
+		msg = KICK_MSG_STOP_HACKING;
 	}
 
 	CONS_Printf("\x82%s ", player_names[pnum]);
@@ -1985,46 +1937,11 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 		case KICK_MSG_GO_AWAY:
 			CONS_Printf(M_GetText("has been kicked (Go away)\n"));
 			break;
-#ifdef NEWPING
 		case KICK_MSG_PING_HIGH:
 			CONS_Printf(M_GetText("left the game (Broke ping limit)\n"));
 			break;
-#endif
-		case KICK_MSG_CON_FAIL:
-			CONS_Printf(M_GetText("left the game (Synch failure)\n"));
-
-			if (M_CheckParm("-consisdump")) // Helps debugging some problems
-			{
-				INT32 i;
-
-				CONS_Printf(M_GetText("Player kicked is #%d, dumping consistency...\n"), pnum);
-
-				for (i = 0; i < MAXPLAYERS; i++)
-				{
-					if (!playeringame[i])
-						continue;
-					CONS_Printf("-------------------------------------\n");
-					CONS_Printf("Player %d: %s\n", i, player_names[i]);
-					CONS_Printf("Skin: %d\n", players[i].skin);
-					CONS_Printf("Color: %d\n", players[i].skincolor);
-					CONS_Printf("Speed: %d\n",players[i].speed>>FRACBITS);
-					if (players[i].mo)
-					{
-						if (!players[i].mo->skin)
-							CONS_Printf("Mobj skin: NULL!\n");
-						else
-							CONS_Printf("Mobj skin: %s\n", ((skin_t *)players[i].mo->skin)->name);
-						CONS_Printf("Position: %d, %d, %d\n", players[i].mo->x, players[i].mo->y, players[i].mo->z);
-						if (!players[i].mo->state)
-							CONS_Printf("State: S_NULL\n");
-						else
-							CONS_Printf("State: %d\n", (statenum_t)(players[i].mo->state-states));
-					}
-					else
-						CONS_Printf("Mobj: NULL\n");
-					CONS_Printf("-------------------------------------\n");
-				}
-			}
+		case KICK_MSG_STOP_HACKING:
+			CONS_Printf(M_GetText("left the game (Hack attempted)\n"));
 			break;
 		case KICK_MSG_TIMEOUT:
 			CONS_Printf(M_GetText("left the game (Connection timeout)\n"));
@@ -2048,18 +1965,13 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 
 	if (pnum == consoleplayer)
 	{
-#ifdef DUMPCONSISTENCY
-		if (msg == KICK_MSG_CON_FAIL) SV_SavedGame();
-#endif
 		D_QuitNetGame();
 		CL_Reset();
 		D_StartTitle();
-		if (msg == KICK_MSG_CON_FAIL)
-			M_StartMessage(M_GetText("Server closed connection\n(synch failure)\nPress ESC\n"), NULL, MM_NOTHING);
-#ifdef NEWPING
+		if (msg == KICK_MSG_STOP_HACKING) // You shouldn't have done that.
+			M_StartMessage(M_GetText("Server closed connection\n\nPress ESC\n"), NULL, MM_NOTHING);
 		else if (msg == KICK_MSG_PING_HIGH)
 			M_StartMessage(M_GetText("Server closed connection\n(Broke ping limit)\nPress ESC\n"), NULL, MM_NOTHING);
-#endif
 		else if (msg == KICK_MSG_BANNED)
 			M_StartMessage(M_GetText("You have been banned by the server\n\nPress ESC\n"), NULL, MM_NOTHING);
 		else if (msg == KICK_MSG_CUSTOM_KICK)
@@ -2107,9 +2019,6 @@ void D_ClientServerInit(void)
 	CV_RegisterVar(&cv_allownewplayer);
 	CV_RegisterVar(&cv_joinnextround);
 	CV_RegisterVar(&cv_showjoinaddress);
-#ifdef DUMPCONSISTENCY
-	CV_RegisterVar(&cv_dumpconsistency);
-#endif
 	Ban_Load_File(false);
 #endif
 
@@ -2263,7 +2172,7 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 			XBOXSTATIC UINT8 buf[2];
 
 			buf[0] = (UINT8)playernum;
-			buf[1] = KICK_MSG_CON_FAIL;
+			buf[1] = KICK_MSG_STOP_HACKING;
 			SendNetXCmd(XD_KICK, &buf, 2);
 		}
 		return;
@@ -2820,35 +2729,6 @@ FILESTAMP
 				nodeingame[node] = false;
 				break;
 // -------------------------------------------- CLIENT RECEIVE ----------
-#ifdef NEWPING
-			case PT_PING:
-				// Only accept PT_PING from the server.
-				if (node != servernode)
-				{
-					CONS_Alert(CONS_WARNING, M_GetText("%s recieved from non-host %d\n"), "PT_PING", node);
-
-					if (server)
-					{
-						XBOXSTATIC char buf[2];
-						buf[0] = (char)node;
-						buf[1] = KICK_MSG_CON_FAIL;
-						SendNetXCmd(XD_KICK, &buf, 2);
-					}
-
-					break;
-				}
-
-				//Update client ping table from the server.
-				if (!server)
-				{
-					INT32 i;
-					for (i = 0; i < MAXNETNODES; i++)
-						if (playeringame[i])
-							playerpingtable[i] = (tic_t)netbuffer->u.pingtable[i];
-				}
-
-				break;
-#endif
 			case PT_SERVERCFG:
 				break;
 			case PT_FILEFRAGMENT:
@@ -2945,66 +2825,6 @@ void TryRunTics(tic_t realtics)
 		}
 }
 
-#ifdef NEWPING
-static inline void PingUpdate(void)
-{
-	INT32 i;
-	boolean laggers[MAXPLAYERS];
-	UINT8 numlaggers = 0;
-	memset(laggers, 0, sizeof(boolean) * MAXPLAYERS);
-
-	netbuffer->packettype = PT_PING;
-
-	//check for ping limit breakage.
-	if (cv_maxping.value)
-	{
-		for (i = 1; i < MAXNETNODES; i++)
-		{
-			if (playeringame[i] && (realpingtable[i] / pingmeasurecount > (unsigned)cv_maxping.value))
-			{
-				if (players[i].jointime > 30 * TICRATE)
-					laggers[i] = true;
-				numlaggers++;
-			}
-		}
-
-		//kick lagging players... unless everyone but the server's ping sucks.
-		//in that case, it is probably the server's fault.
-		if (numlaggers < D_NumPlayers() - 1)
-		{
-			for (i = 1; i < MAXNETNODES; i++)
-			{
-				if (playeringame[i] && laggers[i])
-				{
-					XBOXSTATIC char buf[2];
-
-					buf[0] = (char)i;
-					buf[1] = KICK_MSG_PING_HIGH;
-					SendNetXCmd(XD_KICK, &buf, 2);
-				}
-			}
-		}
-	}
-
-	//make the ping packet and clear server data for next one
-	for (i = 0; i < MAXNETNODES; i++)
-	{
-		netbuffer->u.pingtable[i] = realpingtable[i] / pingmeasurecount;
-		//server takes a snapshot of the real ping for display.
-		//otherwise, pings fluctuate a lot and would be odd to look at.
-		playerpingtable[i] = realpingtable[i] / pingmeasurecount;
-		realpingtable[i] = 0; //Reset each as we go.
-	}
-
-	//send out our ping packets
-	for (i = 0; i < MAXNETNODES; i++)
-		if (playeringame[i])
-			HSendPacket(i, true, 0, sizeof(INT32) * MAXPLAYERS);
-
-	pingmeasurecount = 1; //Reset count
-}
-#endif
-
 void NetUpdate(void)
 {
 	static tic_t gametime = 0;
@@ -3027,24 +2847,6 @@ void NetUpdate(void)
 	}
 
 	gametime = nowtime;
-
-	if (!(gametime % 255) && netgame && server)
-	{
-#ifdef NEWPING
-		PingUpdate();
-#endif
-	}
-
-#ifdef NEWPING
-	if (server)
-	{
-		// update node latency values so we can take an average later.
-		for (i = 0; i < MAXNETNODES; i++)
-			if (playeringame[i])
-				realpingtable[i] += G_TicsToMilliseconds(GetLag(i));
-		pingmeasurecount++;
-	}
-#endif
 
 	Local_Maketic(realtics); // make local tic, and call menu?
 
