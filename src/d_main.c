@@ -99,6 +99,9 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 #include "lua_script.h"
 #endif
 
+
+FILE *debugfile;
+
 // platform independant focus loss
 UINT8 window_notinfocus = false;
 
