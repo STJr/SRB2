@@ -21,7 +21,6 @@ set(SRB2_SDL2_SOURCES
 	hwsym_sdl.c
 	i_cdmus.c
 	i_main.c
-	i_net.c
 	i_system.c
 	i_ttf.c
 	i_video.c

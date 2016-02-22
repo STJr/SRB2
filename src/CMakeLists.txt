@@ -9,10 +9,8 @@ set(SRB2_CORE_SOURCES
 	console.c
 	d_clisrv.c
 	d_main.c
-	d_net.c
 	d_netcmd.c
 	d_netfil.c
-	d_netmobj.c
 	dehacked.c
 	f_finale.c
 	f_wipe.c
@@ -20,7 +18,6 @@ set(SRB2_CORE_SOURCES
 	g_game.c
 	g_input.c
 	hu_stuff.c
-	i_tcp.c
 	info.c
 	lzf.c
 	m_anigif.c
@@ -56,10 +53,8 @@ set(SRB2_CORE_HEADERS
 	d_clisrv.h
 	d_event.h
 	d_main.h
-	d_net.h
 	d_netcmd.h
 	d_netfil.h
-	d_netmobj.h
 	d_player.h
 	d_think.h
 	d_ticcmd.h
@@ -77,10 +72,8 @@ set(SRB2_CORE_HEADERS
 	g_state.h
 	hu_stuff.h
 	i_joy.h
-	i_net.h
 	i_sound.h
 	i_system.h
-	i_tcp.h
 	i_video.h
 	info.h
 	keys.h
