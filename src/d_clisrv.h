@@ -24,9 +24,6 @@
 //  one that defines the actual packets to
 //  be transmitted.
 
-// Make sure we allocate a network node for every player, "server full" denials, the Master server heartbeat, and potential RCON connections.
-#define MAXNETNODES MAXPLAYERS+2
-
 // Networking and tick handling related.
 #define BACKUPTICS 32
 #define MAXTEXTCMD 256
@@ -248,9 +245,6 @@ extern serverelem_t serverlist[MAXSERVERLIST];
 extern UINT32 serverlistcount;
 extern INT32 mapchangepending;
 
-// points inside doomcom
-extern doomdata_t *netbuffer;
-
 extern consvar_t cv_playbackspeed;
 
 #define BASEPACKETSIZE ((size_t)&(((doomdata_t *)0)->u))
@@ -280,9 +274,6 @@ extern boolean dedicated; // for dedicated server
 extern UINT16 software_MAXPACKETLENGTH;
 extern boolean acceptnewnode;
 extern SINT8 servernode;
-
-void Command_Ping_f(void);
-extern tic_t connectiontimeout;
 
 extern consvar_t cv_joinnextround, cv_allownewplayer, cv_maxplayers, cv_maxsend;
 

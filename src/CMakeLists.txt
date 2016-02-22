@@ -8,6 +8,7 @@ set(SRB2_CORE_SOURCES
 	comptime.c
 	console.c
 	d_clisrv.c
+	d_enet.c
 	d_main.c
 	d_netcmd.c
 	d_netfil.c
@@ -51,6 +52,7 @@ set(SRB2_CORE_HEADERS
 	command.h
 	console.h
 	d_clisrv.h
+	d_enet.h
 	d_event.h
 	d_main.h
 	d_netcmd.h

@@ -44,6 +44,7 @@
 
 #include "doomdef.h"
 #include "doomstat.h"
+#include "d_enet.h"
 #include "d_main.h"
 #include "g_game.h"
 #include "i_system.h"
@@ -101,45 +102,8 @@ INT32 lastfilenum = 0;
   */
 UINT8 *PutFileNeeded(void)
 {
-	size_t i, count = 0;
-	UINT8 *p = netbuffer->u.serverinfo.fileneeded;
-	char wadfilename[MAX_WADPATH] = "";
-	UINT8 filestatus;
-	size_t bytesused = 0;
-
-	for (i = 0; i < numwadfiles; i++)
-	{
-		// if it has only music/sound lumps, mark it as unimportant
-		if (W_VerifyNMUSlumps(wadfiles[i]->filename))
-			filestatus = 0;
-		else
-			filestatus = 1; // important
-
-		// Store in the upper four bits
-		if (!cv_downloading.value)
-			filestatus += (2 << 4); // won't send
-		else if ((wadfiles[i]->filesize > (UINT32)cv_maxsend.value * 1024))
-			filestatus += (0 << 4); // won't send
-		else
-			filestatus += (1 << 4); // will send if requested
-
-		bytesused += (nameonlylength(wadfilename) + 22);
-
-		// Don't write too far...
-		if (bytesused > sizeof(netbuffer->u.serverinfo.fileneeded))
-			I_Error("Too many wad files added to host a game. (%s, stopped on %s)\n", sizeu1(bytesused), wadfilename);
-
-		WRITEUINT8(p, filestatus);
-
-		count++;
-		WRITEUINT32(p, wadfiles[i]->filesize);
-		nameonly(strcpy(wadfilename, wadfiles[i]->filename));
-		WRITESTRINGN(p, wadfilename, MAX_WADPATH);
-		WRITEMEM(p, wadfiles[i]->md5sum, 16);
-	}
-	netbuffer->u.serverinfo.fileneedednum = (UINT8)count;
-
-	return p;
+	// NET TODO
+	return NULL;
 }
 
 // parse the serverinfo packet and fill fileneeded table on client
@@ -242,62 +206,8 @@ boolean CL_CheckDownloadable(void)
   */
 boolean CL_SendRequestFile(void)
 {
-	char *p;
-	INT32 i;
-	INT64 totalfreespaceneeded = 0, availablefreespace;
-
-#ifdef PARANOIA
-	if (M_CheckParm("-nodownload"))
-		I_Error("Attempted to download files in -nodownload mode");
-
-	for (i = 0; i < fileneedednum; i++)
-		if (fileneeded[i].status != FS_FOUND && fileneeded[i].status != FS_OPEN
-			&& fileneeded[i].important && (fileneeded[i].willsend == 0 || fileneeded[i].willsend == 2))
-		{
-			I_Error("Attempted to download files that were not sendable");
-		}
-#endif
-
-	netbuffer->packettype = PT_REQUESTFILE;
-	p = (char *)netbuffer->u.textcmd;
-	for (i = 0; i < fileneedednum; i++)
-		if ((fileneeded[i].status == FS_NOTFOUND || fileneeded[i].status == FS_MD5SUMBAD)
-			&& fileneeded[i].important)
-		{
-			totalfreespaceneeded += fileneeded[i].totalsize;
-			nameonly(fileneeded[i].filename);
-			WRITEUINT8(p, i); // fileid
-			WRITESTRINGN(p, fileneeded[i].filename, MAX_WADPATH);
-			// put it in download dir
-			strcatbf(fileneeded[i].filename, downloaddir, "/");
-			fileneeded[i].status = FS_REQUESTED;
-		}
-	WRITEUINT8(p, 0xFF);
-	I_GetDiskFreeSpace(&availablefreespace);
-	if (totalfreespaceneeded > availablefreespace)
-		I_Error("To play on this server you must download %s KB,\n"
-			"but you have only %s KB free space on this drive\n",
-			sizeu1((size_t)(totalfreespaceneeded>>10)), sizeu2((size_t)(availablefreespace>>10)));
-
-	// prepare to download
-	I_mkdir(downloaddir, 0755);
-	return HSendPacket(servernode, true, 0, p - (char *)netbuffer->u.textcmd);
-}
-
-// get request filepak and put it on the send queue
-void Got_RequestFilePak(INT32 node)
-{
-	char wad[MAX_WADPATH+1];
-	UINT8 *p = netbuffer->u.textcmd;
-	UINT8 id;
-	while (p < netbuffer->u.textcmd + MAXTEXTCMD-1) // Don't allow hacked client to overflow
-	{
-		id = READUINT8(p);
-		if (id == 0xFF)
-			break;
-		READSTRINGN(p, wad, MAX_WADPATH);
-		SendFile(node, wad, id);
-	}
+	// NET TODO
+	return true;
 }
 
 // client check if the fileneeded aren't already loaded or on the disk

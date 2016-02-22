@@ -41,6 +41,7 @@
 #include "lzf.h"
 #include "lua_script.h"
 #include "lua_hook.h"
+#include "d_enet.h"
 
 #ifdef CLIENT_LOADINGSCREEN
 // cl loading screen
@@ -1742,7 +1743,7 @@ static inline void SV_GenContext(void)
 //
 void D_QuitNetGame(void)
 {
-	if (!netgame || !netbuffer)
+	if (!netgame)
 		return;
 
 	DEBFILE("===========================================================================\n"

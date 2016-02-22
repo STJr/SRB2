@@ -515,7 +515,6 @@ void D_RegisterServerCommands(void)
 	CV_RegisterVar(&cv_maxplayers);
 	CV_RegisterVar(&cv_maxsend);
 
-	COM_AddCommand("ping", Command_Ping_f);
 	CV_RegisterVar(&cv_nettimeout);
 
 	CV_RegisterVar(&cv_skipmapcheck);
@@ -3291,7 +3290,7 @@ static void NumLaps_OnChange(void)
 
 static void NetTimeout_OnChange(void)
 {
-	connectiontimeout = (tic_t)cv_nettimeout.value;
+	// NET TODO
 }
 
 UINT32 timelimitintics = 0;

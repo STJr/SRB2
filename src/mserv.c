@@ -380,80 +380,10 @@ static inline INT32 GetMSMOTD(void)
 //
 static INT32 MS_Connect(const char *ip_addr, const char *str_port, INT32 async)
 {
-#ifdef NONET
+	// NET TODO
 	(void)ip_addr;
 	(void)str_port;
 	(void)async;
-#else
-	struct my_addrinfo *ai, *runp, hints;
-	int gaie;
-
-	memset (&hints, 0x00, sizeof(hints));
-#ifdef AI_ADDRCONFIG
-	hints.ai_flags = AI_ADDRCONFIG;
-#endif
-	hints.ai_family = AF_INET;
-	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_protocol = IPPROTO_TCP;
-
-	//I_InitTcpNetwork(); this is already done on startup in D_SRB2Main()
-	if (!I_InitTcpDriver()) // this is done only if not already done
-		return MS_SOCKET_ERROR;
-
-	gaie = I_getaddrinfo(ip_addr, str_port, &hints, &ai);
-	if (gaie != 0)
-		return MS_GETHOSTBYNAME_ERROR;
-	else
-		runp = ai;
-
-	while (runp != NULL)
-	{
-		socket_fd = socket(runp->ai_family, runp->ai_socktype, runp->ai_protocol);
-		if (socket_fd != BADSOCKET && socket_fd != (SOCKET_TYPE)ERRSOCKET)
-		{
-			if (async) // do asynchronous connection
-			{
-#ifdef FIONBIO
-#ifdef WATTCP
-				char res = 1;
-#else
-				unsigned long res = 1;
-#endif
-
-				ioctl(socket_fd, FIONBIO, &res);
-#endif
-
-				if (connect(socket_fd, runp->ai_addr, (socklen_t)runp->ai_addrlen) == ERRSOCKET)
-				{
-#ifdef _WIN32 // humm, on win32/win64 it doesn't work with EINPROGRESS (stupid windows)
-					if (WSAGetLastError() != WSAEWOULDBLOCK)
-#else
-					if (errno != EINPROGRESS)
-#endif
-					{
-						con_state = MSCS_FAILED;
-						CloseConnection();
-						I_freeaddrinfo(ai);
-						return MS_CONNECT_ERROR;
-					}
-				}
-				con_state = MSCS_WAITING;
-				FD_ZERO(&wset);
-				FD_SET(socket_fd, &wset);
-				select_timeout.tv_sec = 0, select_timeout.tv_usec = 0;
-				I_freeaddrinfo(ai);
-				return 0;
-			}
-			else if (connect(socket_fd, runp->ai_addr, (socklen_t)runp->ai_addrlen) != ERRSOCKET)
-			{
-				I_freeaddrinfo(ai);
-				return 0;
-			}
-		}
-		runp = runp->ai_next;
-	}
-	I_freeaddrinfo(ai);
-#endif
 	return MS_CONNECT_ERROR;
 }
 
@@ -835,12 +765,13 @@ const char *GetMasterServerIP(void)
 
 void MSOpenUDPSocket(void)
 {
+	// NET TODO
 	msnode = -1;
 }
 
 void MSCloseUDPSocket(void)
 {
-	if (msnode != INT16_MAX) I_NetFreeNodenum(msnode);
+	// NET TODO
 	msnode = -1;
 }
 
