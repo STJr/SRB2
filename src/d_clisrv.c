@@ -1621,8 +1621,6 @@ void SV_StopServer(void)
 		Y_EndIntermission();
 	gamestate = wipegamestate = GS_NULL;
 
-	localtextcmd[0] = 0;
-	localtextcmd2[0] = 0;
 	for (i = 0; i < BACKUPTICS; i++)
 		D_Clearticcmd(i);
 
