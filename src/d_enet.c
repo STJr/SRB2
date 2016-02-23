@@ -38,7 +38,7 @@ void Net_AckTicker(void)
 	UINT8 i;
 	PeerData_t *pdata;
 
-	while (enet_host_service(ClientHost, &e, 0) > 0)
+	while (ClientHost && enet_host_service(ClientHost, &e, 0) > 0)
 		switch (e.type)
 		{
 		case ENET_EVENT_TYPE_CONNECT:
@@ -60,7 +60,8 @@ void Net_AckTicker(void)
 		default:
 			break;
 		}
-	while (enet_host_service(ServerHost, &e, 0) > 0)
+
+	while (ServerHost && enet_host_service(ServerHost, &e, 0) > 0)
 		switch (e.type)
 		{
 		case ENET_EVENT_TYPE_CONNECT:
@@ -111,6 +112,45 @@ void D_SetDoomcom(void)
 	net_playercount = 0;
 }
 
+void D_NetOpen(void)
+{
+	ENetAddress address = { ENET_HOST_ANY, 5029 };
+	ServerHost = enet_host_create(&address, MAXNETNODES, NETCHANNELS, 0, 0);
+	if (!ServerHost)
+		I_Error("ENet failed to open server host. (Check if the port is in use?)");
+	servernode = 0;
+}
+
+void D_NetConnect(const char *hostname, const char *port)
+{
+	ENetAddress address;
+	ENetEvent e;
+
+	ClientHost = enet_host_create(NULL, 1, NETCHANNELS, 0, 0);
+	if (!ClientHost)
+		I_Error("ENet failed to initialize client host.");
+
+	netgame = multiplayer = true;
+	servernode = 1;
+
+	enet_address_set_host(&address, hostname);
+	address.port = 5029;
+	if (port != NULL)
+		address.port = atoi(port) || address.port;
+
+	nodetopeer[servernode] = enet_host_connect(ClientHost, &address, NETCHANNELS, 0);
+	if (!nodetopeer[servernode])
+		I_Error("Failed to allocate ENet peer for connecting ???");
+
+	if (enet_host_service(ClientHost, &e, 5000) > 0
+	&& e.type == ENET_EVENT_TYPE_CONNECT)
+	{
+		CONS_Printf("Connection successful!");
+		return;
+	}
+	M_StartMessage(M_GetText("Failed to connect to server.\n\nPress ESC\n"), NULL, MM_NOTHING);
+}
+
 // Initialize network.
 // Returns true if the server is booting up right into a level according to startup args and whatnot.
 // netgame is set to true before this is called if -server was passed.
@@ -121,19 +161,9 @@ boolean D_CheckNetGame(void)
 	if (netgame)
 	{
 		if (server)
-		{
-			ENetAddress address = { ENET_HOST_ANY, 5029 };
-			ServerHost = enet_host_create(&address, MAXNETNODES, NETCHANNELS, 0, 0);
-			if (!ServerHost)
-				I_Error("ENet failed to open server host. (Check if the port is in use?)");
-		}
-		if (!dedicated)
-		{
-			ClientHost = enet_host_create(NULL, 1, NETCHANNELS, 0, 0);
-			if (!ClientHost)
-				I_Error("ENet failed to initialize client host.");
-		}
-	} else
+			D_NetOpen();
+	}
+	else
 		server = true;
 	multiplayer = netgame;
 	D_ClientServerInit();
@@ -214,18 +244,4 @@ void Net_SendAcks(INT32 node)
 
 void Net_WaitAllAckReceived(UINT32 timeout)
 {
-}
-
-void SendNetXCmd(netxcmd_t id, const void *param, size_t nparam)
-{
-}
-
-// splitscreen player
-void SendNetXCmd2(netxcmd_t id, const void *param, size_t nparam)
-{
-}
-
-UINT8 GetFreeXCmdSize(void)
-{
-	return -1;
 }

@@ -184,6 +184,26 @@ void RegisterNetXCmd(netxcmd_t id, void (*cmd_f)(UINT8 **p, INT32 playernum))
 	listnetxcmd[id] = cmd_f;
 }
 
+void SendNetXCmd(netxcmd_t id, const void *param, size_t nparam)
+{
+	//D_NetSendXCmd(id, param, nparam, consoleplayer);
+	UINT8 **p = (UINT8 **)&param;
+	(listnetxcmd[id])(p, consoleplayer);
+}
+
+// splitscreen player
+void SendNetXCmd2(netxcmd_t id, const void *param, size_t nparam)
+{
+	//D_NetSendXCmd(id, param, nparam, secondarydisplayplayer);
+	UINT8 **p = (UINT8 **)&param;
+	(listnetxcmd[id])(p, secondarydisplayplayer);
+}
+
+UINT8 GetFreeXCmdSize(void)
+{
+	return -1;
+}
+
 // Frees all textcmd memory for the specified tic
 static void D_FreeTextcmd(void)
 {
@@ -247,53 +267,6 @@ static UINT8* D_GetTextcmd(tic_t tic, INT32 playernum)
 	}
 
 	return textcmdplayer->cmd;
-}
-
-static void ExtraDataTicker(void)
-{
-	INT32 i;
-
-	for (i = 0; i < MAXPLAYERS; i++)
-		if (playeringame[i] || i == 0)
-		{
-			UINT8 *bufferstart = D_GetExistingTextcmd(gametic, i);
-
-			if (bufferstart)
-			{
-				UINT8 *curpos = bufferstart;
-				UINT8 *bufferend = &curpos[curpos[0]+1];
-
-				curpos++;
-				while (curpos < bufferend)
-				{
-					if (*curpos < MAXNETXCMD && listnetxcmd[*curpos])
-					{
-						const UINT8 id = *curpos;
-						curpos++;
-						DEBFILE(va("executing x_cmd %u ply %u ", id, i));
-						(listnetxcmd[id])(&curpos, i);
-						DEBFILE("done\n");
-					}
-					else
-					{
-						if (server)
-						{
-							XBOXSTATIC UINT8 buf[3];
-
-							buf[0] = (UINT8)i;
-							buf[1] = KICK_MSG_XD_FAIL;
-							SendNetXCmd(XD_KICK, &buf, 2);
-							DEBFILE(va("player %d kicked [gametic=%u] reason as follows:\n", i, gametic));
-						}
-						CONS_Alert(CONS_WARNING, M_GetText("Got unknown net command [%s]=%d (max %d)\n"), sizeu1(curpos - bufferstart), *curpos, bufferstart[0]);
-						D_FreeTextcmd();
-						return;
-					}
-				}
-			}
-		}
-
-	D_FreeTextcmd();
 }
 
 static void D_Clearticcmd(void)
@@ -1084,29 +1057,13 @@ static void Command_connect(void)
 			CONS_Printf(M_GetText("You cannot connect while in a game. End this game first.\n"));
 			return;
 		}
-		// NET TODO
-		/*else if (I_NetOpenSocket)
-		{
-			MSCloseUDPSocket(); // Tidy up before wiping the slate.
-			I_NetOpenSocket();
-			netgame = true;
-			multiplayer = true;
-
-			if (!stricmp(COM_Argv(1), "any"))
-				servernode = BROADCASTADDR;
-			else if (I_NetMakeNodewPort && COM_Argc() >= 3)
-				servernode = I_NetMakeNodewPort(COM_Argv(1), COM_Argv(2));
-			else if (I_NetMakeNodewPort)
-				servernode = I_NetMakeNode(COM_Argv(1));
-			else
-			{
-				CONS_Alert(CONS_ERROR, M_GetText("There is no server identification with this network driver\n"));
-				D_CloseConnection();
-				return;
-			}
-		}*/
 		else
-			CONS_Alert(CONS_ERROR, M_GetText("There is no network driver\n"));
+		{
+			if (COM_Argc() >= 3)
+				D_NetConnect(COM_Argv(1), COM_Argv(2));
+			else
+				D_NetConnect(COM_Argv(1), NULL);
+		}
 	}
 
 	splitscreen = false;
@@ -1905,9 +1862,7 @@ boolean SV_SpawnServer(void)
 		SV_ResetServer();
 		SV_GenContext();
 		if (netgame)
-		{
-			// NET TODO: Open network socket, register to masterserver, etc.
-		}
+			D_NetOpen();
 
 		// non dedicated server just connect to itself
 		if (!dedicated)
@@ -2019,7 +1974,6 @@ void TryRunTics(tic_t realtics)
 			DEBFILE(va("============ Running tic %d (local %d)\n", gametic, localgametic));
 
 			G_Ticker((gametic % NEWTICRATERATIO) == 0);
-			ExtraDataTicker();
 			gametic++;
 		}
 }
