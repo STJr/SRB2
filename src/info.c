@@ -58,7 +58,7 @@ char sprnames[NUMSPRITES + 1][5] =
 	"SHAD","FLEN","BUBB","SBCH","BBCH","MHEL","MXCL","ARRO","CCON","CSPK",
 	"PINT","PINB","CLUK","TOXO","KRKO","ZAPO","ZAPT","PENG","GANG","FLAR",
 	"GPUP","PLSM","MITR","HMIS","PINE","REDI","CHIL","CIRN","CLOD","CKBL",
-	"CHRM","STAT","BLFM","PLMT","GFLO","BLUE","FFTR","BIST","SBUS","CONE",
+	"CHRM", "CHRL", "STAT","BLFM","PLMT","GFLO","BLUE","FFTR","BIST","SBUS","CONE",
 };
 
 // Doesn't work with g++, needs actionf_p1 (don't modify this comment)
@@ -3478,8 +3478,11 @@ state_t states[NUMSTATES] =
 	{SPR_CKBL, 0, 2, {NULL}, 0, 0, S_CHECKERBALL2}, // S_CHECKERBALL7
 
 	// CHROME (Calling Heaven's Righteousness Onto Malicious Entities)
-	{SPR_CHRM, 0, -1, {NULL}, 0, 0, S_NULL}, // S_CHROME
-	{SPR_CHRM, 1, 2, {NULL}, 0, 0, S_NULL}, // S_CHROME_LASER
+	{SPR_CHRM, 0, 8, {NULL}, 0, 0, S_CHROME2}, // S_CHROME
+	{SPR_CHRM, 1, 8, {NULL}, 0, 0, S_CHROME3}, // S_CHROME2
+	{SPR_CHRM, 2, 8, {NULL}, 0, 0, S_CHROME4}, // S_CHROME3
+	{SPR_CHRM, 1, 8, {NULL}, 0, 0, S_CHROME}, // S_CHROME4
+	{SPR_CHRL, 0, 2, {NULL}, 0, 0, S_NULL}, // S_CHROME_LASER
 	{SPR_NULL, 0, 35, {NULL}, 0, 0, S_NULL}, // S_CHROME_TARGET
 
 	// Static Generator

@@ -7092,6 +7092,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// CHROME (Calling Heaven's Righteousness Onto Malicious Entities)
 	"S_CHROME",
+	"S_CHROME2",
+	"S_CHROME3",
+	"S_CHROME4",
 	"S_CHROME_LASER",
 	"S_CHROME_TARGET",
 
