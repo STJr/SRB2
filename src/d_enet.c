@@ -4,6 +4,7 @@
 
 boolean Net_GetNetStat(void)
 {
+	// set getbps, sendbps, gamelostpercent, lostpercent, etc.
 	return false;
 }
 
@@ -15,19 +16,6 @@ boolean Net_AllAckReceived(void)
 {
 	return true;
 }
-
-// if reliable return true if packet sent, 0 else
-boolean HSendPacket(INT32 node, boolean reliable, UINT8 acknum,
-	size_t packetlength)
-{
-	return false;
-}
-
-boolean HGetPacket(void)
-{
-	return false;
-}
-
 
 void D_SetDoomcom(void)
 {

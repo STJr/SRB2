@@ -4,11 +4,6 @@
 boolean Net_GetNetStat(void);
 void Net_AckTicker(void);
 boolean Net_AllAckReceived(void);
-
-// if reliable return true if packet sent, 0 else
-boolean HSendPacket(INT32 node, boolean reliable, UINT8 acknum,
-	size_t packetlength);
-boolean HGetPacket(void);
 void D_SetDoomcom(void);
 void D_SaveBan(void);
 boolean D_CheckNetGame(void);

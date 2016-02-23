@@ -478,7 +478,7 @@ void CloseNetFile(void)
 		}
 
 	// remove FILEFRAGMENT from acknledge list
-	Net_AbortPacketType(PT_FILEFRAGMENT);
+	//Net_AbortPacketType(PT_FILEFRAGMENT);
 }
 
 // functions cut and pasted from doomatic :)

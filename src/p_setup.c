@@ -2803,11 +2803,10 @@ boolean P_SetupLevel(boolean skipprecip)
 	skyVisible = true; // assume the skybox is visible on level load.
 	if (loadprecip) // uglier hack
 	{ // to make a newly loaded level start on the second frame.
-		INT32 buf = gametic % BACKUPTICS;
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
 			if (playeringame[i])
-				G_CopyTiccmd(&players[i].cmd, &netcmds[buf][i], 1);
+				G_CopyTiccmd(&players[i].cmd, &netcmds[i], 1);
 		}
 		P_PreTicker(2);
 #ifdef HAVE_BLUA

@@ -25,35 +25,7 @@
 //  be transmitted.
 
 // Networking and tick handling related.
-#define BACKUPTICS 32
 #define MAXTEXTCMD 256
-//
-// Packet structure
-//
-typedef enum {
-	PT_NOTHING,       // To send a nop through the network. ^_~
-	PT_SERVERCFG,     // Server config used in start game
-	                  // This is a positive response to a CLIENTJOIN request.
-	PT_SERVERREFUSE,  // Server refuses joiner (reason inside).
-	PT_SERVERSHUTDOWN,// Server is exiting.
-	PT_CLIENTQUIT,    // Client closes the connection.
-
-	PT_ASKINFO,       // Anyone can ask info of the server.
-	PT_SERVERINFO,    // Send game & server info (gamespy).
-	PT_PLAYERINFO,    // Send information for players in game (gamespy).
-	PT_REQUESTFILE,   // Client requests a file transfer
-	PT_ASKINFOVIAMS,  // Packet from the MS requesting info be sent to new client.
-	                  // If this ID changes, update masterserver definition.
-
-	PT_CANFAIL = 0x40, // This is kind of a priority. Anything >= PT_CANFAIL
-	                   // allows HSendPacket(,true,,) to return false.
-	                   // In addition, this packet can't occupy all the available slots.
-
-	PT_FILEFRAGMENT = PT_CANFAIL, // A part of a file.
-
-	PT_CLIENTJOIN,    // Client wants to join; used in start game.
-	PT_NODETIMEOUT,   // Packet sent to self if the connection times out.
-} packettype_t;
 
 #if defined(_MSC_VER)
 #pragma pack(1)

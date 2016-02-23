@@ -113,7 +113,7 @@ typedef struct textcmdtic_s
 	struct textcmdtic_s *next;
 } textcmdtic_t;
 
-ticcmd_t netcmds[BACKUPTICS][MAXPLAYERS];
+ticcmd_t netcmds[MAXPLAYERS];
 static textcmdtic_t *textcmds[TEXTCMD_HASH_SIZE] = {NULL};
 
 
@@ -210,40 +210,9 @@ UINT8 GetFreeXCmdSize(void)
 }
 
 // Frees all textcmd memory for the specified tic
-static void D_FreeTextcmd(tic_t tic)
+static void D_FreeTextcmd(void)
 {
-	textcmdtic_t **tctprev = &textcmds[tic & (TEXTCMD_HASH_SIZE - 1)];
-	textcmdtic_t *textcmdtic = *tctprev;
-
-	while (textcmdtic && textcmdtic->tic != tic)
-	{
-		tctprev = &textcmdtic->next;
-		textcmdtic = textcmdtic->next;
-	}
-
-	if (textcmdtic)
-	{
-		INT32 i;
-
-		// Remove this tic from the list.
-		*tctprev = textcmdtic->next;
-
-		// Free all players.
-		for (i = 0; i < TEXTCMD_HASH_SIZE; i++)
-		{
-			textcmdplayer_t *textcmdplayer = textcmdtic->playercmds[i];
-
-			while (textcmdplayer)
-			{
-				textcmdplayer_t *tcpnext = textcmdplayer->next;
-				Z_Free(textcmdplayer);
-				textcmdplayer = tcpnext;
-			}
-		}
-
-		// Free this tic's own memory.
-		Z_Free(textcmdtic);
-	}
+	// NET TODO
 }
 
 // Gets the buffer for the specified ticcmd, or NULL if there isn't one
@@ -342,26 +311,26 @@ static void ExtraDataTicker(void)
 							DEBFILE(va("player %d kicked [gametic=%u] reason as follows:\n", i, gametic));
 						}
 						CONS_Alert(CONS_WARNING, M_GetText("Got unknown net command [%s]=%d (max %d)\n"), sizeu1(curpos - bufferstart), *curpos, bufferstart[0]);
-						D_FreeTextcmd(gametic);
+						D_FreeTextcmd();
 						return;
 					}
 				}
 			}
 		}
 
-	D_FreeTextcmd(gametic);
+	D_FreeTextcmd();
 }
 
-static void D_Clearticcmd(tic_t tic)
+static void D_Clearticcmd(void)
 {
 	INT32 i;
 
-	D_FreeTextcmd(tic);
+	D_FreeTextcmd();
 
 	for (i = 0; i < MAXPLAYERS; i++)
-		netcmds[tic%BACKUPTICS][i].angleturn = 0;
+		netcmds[i].angleturn = 0;
 
-	DEBFILE(va("clear tic %5u (%2u)\n", tic, tic%BACKUPTICS));
+	DEBFILE(va("clear tic\n"));
 }
 
 // -----------------------------------------------------------------
@@ -1986,8 +1955,7 @@ void SV_StopServer(void)
 	gamestate = wipegamestate = GS_NULL;
 
 
-	for (i = 0; i < BACKUPTICS; i++)
-		D_Clearticcmd(i);
+	D_Clearticcmd();
 
 	consoleplayer = 0;
 	cl_mode = cl_searching;
