@@ -2077,8 +2077,13 @@ static boolean P_ZMovement(mobj_t *mo)
 	I_Assert(!P_MobjWasRemoved(mo));
 
 #ifdef ESLOPE
-	if (mo->standingslope && !P_IsObjectOnGround(mo))
+	if (mo->standingslope)
+	{
+		if (mo->flags & MF_NOCLIPHEIGHT)
+			mo->standingslope = NULL;
+		else if (!P_IsObjectOnGround(mo))
 			P_SlopeLaunch(mo);
+	}
 #endif
 
 	// Intercept the stupid 'fall through 3dfloors' bug
@@ -2561,8 +2566,13 @@ static void P_PlayerZMovement(mobj_t *mo)
 		return;
 
 #ifdef ESLOPE
-	if (mo->standingslope && !P_IsObjectOnGround(mo))
+	if (mo->standingslope)
+	{
+		if (mo->flags & MF_NOCLIPHEIGHT)
+			mo->standingslope = NULL;
+		else if (!P_IsObjectOnGround(mo))
 			P_SlopeLaunch(mo);
+	}
 #endif
 
 	// clip movement
