@@ -3921,9 +3921,9 @@ static void M_SelectableClearMenus(INT32 choice)
 
 static void M_UltimateCheat(INT32 choice)
 {
-	//(void)choice;
+	(void)choice;
 	//I_Quit();
-	
+
 	startmap = 27;
 
 	M_SetupChoosePlayer(0);
@@ -5295,12 +5295,12 @@ void M_DrawTimeAttackMenu(void)
 			sprintf(beststr, "(none)");
 		else
 			sprintf(beststr, "%hu", mainrecords[cv_nextmap.value-1]->rings);
-		
+
 		if (mapheaderinfo[gamemap-1]->typeoflevel & TOL_ND)
 			V_DrawString(104-72, 68, V_YELLOWMAP, "EMBLEMS:");
 		else
 			V_DrawString(104-72, 68, V_YELLOWMAP, "RINGS:");
-		
+
 		V_DrawRightAlignedString(104+72, 68, V_ALLOWLOWERCASE, beststr);
 
 		// Draw record emblems.
