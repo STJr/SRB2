@@ -550,14 +550,14 @@ static const char *Newsnapshotfile(const char *pathname, const char *ext)
 	int result; // -1 = guess too high, 0 = correct, 1 = guess too low
 
 	// find a file name to save it to
-	strcpy(freename+9,ext);
+	strcpy(freename+11,ext);
 
 	for (;;)
 	{
-		freename[4] = (char)('0' + (char)(i/1000));
-		freename[5] = (char)('0' + (char)((i/100)%10));
-		freename[6] = (char)('0' + (char)((i/10)%10));
-		freename[7] = (char)('0' + (char)(i%10));
+		freename[6] = (char)('0' + (char)(i/1000));
+		freename[7] = (char)('0' + (char)((i/100)%10));
+		freename[8] = (char)('0' + (char)((i/10)%10));
+		freename[9] = (char)('0' + (char)(i%10));
 
 		if (FIL_WriteFileOK(va(pandf,pathname,freename))) // access succeeds
 			result = 1; // too low
@@ -566,10 +566,10 @@ static const char *Newsnapshotfile(const char *pathname, const char *ext)
 			if (!i)
 				break; // not too high, so it must be equal! YAY!
 
-			freename[4] = (char)('0' + (char)((i-1)/1000));
-			freename[5] = (char)('0' + (char)(((i-1)/100)%10));
-			freename[6] = (char)('0' + (char)(((i-1)/10)%10));
-			freename[7] = (char)('0' + (char)((i-1)%10));
+			freename[6] = (char)('0' + (char)((i-1)/1000));
+			freename[7] = (char)('0' + (char)(((i-1)/100)%10));
+			freename[8] = (char)('0' + (char)(((i-1)/10)%10));
+			freename[9] = (char)('0' + (char)((i-1)%10));
 			if (!FIL_WriteFileOK(va(pandf,pathname,freename))) // access fails
 				result = -1; // too high
 			else
@@ -587,10 +587,10 @@ static const char *Newsnapshotfile(const char *pathname, const char *ext)
 			return NULL;
 	}
 
-	freename[4] = (char)('0' + (char)(i/1000));
-	freename[5] = (char)('0' + (char)((i/100)%10));
-	freename[6] = (char)('0' + (char)((i/10)%10));
-	freename[7] = (char)('0' + (char)(i%10));
+	freename[6] = (char)('0' + (char)(i/1000));
+	freename[7] = (char)('0' + (char)((i/100)%10));
+	freename[8] = (char)('0' + (char)((i/10)%10));
+	freename[9] = (char)('0' + (char)(i%10));
 
 	return freename;
 }
