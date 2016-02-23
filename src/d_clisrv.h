@@ -238,6 +238,7 @@ typedef enum {
 	// Networking errors
 	KICK_MSG_TIMEOUT,
 	KICK_MSG_PING_HIGH,
+	KICK_MSG_XD_FAIL,
 	KICK_MSG_STOP_HACKING
 } kickmsg_e;
 

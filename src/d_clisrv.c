@@ -306,7 +306,7 @@ static void ExtraDataTicker(void)
 							XBOXSTATIC UINT8 buf[3];
 
 							buf[0] = (UINT8)i;
-							buf[1] = KICK_MSG_STOP_HACKING;
+							buf[1] = KICK_MSG_XD_FAIL;
 							SendNetXCmd(XD_KICK, &buf, 2);
 							DEBFILE(va("player %d kicked [gametic=%u] reason as follows:\n", i, gametic));
 						}
@@ -1553,6 +1553,9 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 		case KICK_MSG_TIMEOUT:
 			CONS_Printf(M_GetText("left the game (Connection timeout)\n"));
 			break;
+		case KICK_MSG_XD_FAIL:
+			CONS_Printf(M_GetText("left the game (Command buffer error)\n"));
+			break;
 		case KICK_MSG_PLAYER_QUIT:
 			if (netgame) // not splitscreen/bots
 				CONS_Printf(M_GetText("left the game\n"));
@@ -1579,6 +1582,8 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 			M_StartMessage(M_GetText("Server closed connection\n\nPress ESC\n"), NULL, MM_NOTHING);
 		else if (msg == KICK_MSG_PING_HIGH)
 			M_StartMessage(M_GetText("Server closed connection\n(Broke ping limit)\nPress ESC\n"), NULL, MM_NOTHING);
+		else if (msg == KICK_MSG_XD_FAIL)
+			M_StartMessage(M_GetText("Server closed connection\n(Command buffer error)\nPress ESC\n"), NULL, MM_NOTHING);
 		else if (msg == KICK_MSG_BANNED)
 			M_StartMessage(M_GetText("You have been banned by the server\n\nPress ESC\n"), NULL, MM_NOTHING);
 		else if (msg == KICK_MSG_CUSTOM_KICK)
