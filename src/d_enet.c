@@ -75,6 +75,7 @@ static void ClientHandlePacket(UINT8 node, DataWrap data)
 	case SERVER_MAPINFO:
 	{
 		INT16 mapnum = data->ReadINT16(data);
+		gametype = data->ReadINT16(data);
 		G_InitNew(false, G_BuildMapName(mapnum), true, true);
 		break;
 	}
@@ -352,11 +353,12 @@ void Net_SendJoin(void)
 static void ServerSendMapInfo(UINT8 node)
 {
 	ENetPacket *packet;
-	UINT8 data[3];
+	UINT8 data[5];
 	UINT8 *buf = data;
 
 	WRITEUINT8(buf, SERVER_MAPINFO);
 	WRITEINT16(buf, gamemap);
+	WRITEINT16(buf, gametype);
 
 	packet = enet_packet_create(data, buf-data, ENET_PACKET_FLAG_RELIABLE);
 	enet_peer_send(nodetopeer[node], 0, packet);
