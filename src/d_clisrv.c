@@ -473,7 +473,7 @@ static inline void CL_DrawConnectionStatus(void)
 // used only in arbitratrenetstart()
 static boolean CL_SendJoin(void)
 {
-	if (server)
+	if (!netgame)
 	{
 		nodewaiting[servernode]++;
 		if (splitscreen || botingame)
@@ -481,8 +481,13 @@ static boolean CL_SendJoin(void)
 		net_playercount = nodewaiting[servernode];
 		return true;
 	}
-	// NET TODO
-	Net_SendJoin();
+	if (server) // no need to ask yourself if you can join!
+	{
+		cl_mode = cl_connected;
+		// TODO: Open character select here, since you haven't spawned in or anything.
+	}
+	else
+		Net_SendJoin();
 	return true;
 }
 
