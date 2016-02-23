@@ -1731,7 +1731,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			{ // Unlockable triggers required
 				INT32 trigid = (INT32)(sides[triggerline->sidenum[0]].textureoffset>>FRACBITS);
 
-				if ((modifiedgame && !savemoddata) || (netgame || multiplayer))
+				if (modifiedgame && !savemoddata)
 					return false;
 				else if (trigid < 0 || trigid > 31) // limited by 32 bit variable
 				{
@@ -1747,7 +1747,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			{ // An unlockable itself must be unlocked!
 				INT32 unlockid = (INT32)(sides[triggerline->sidenum[0]].textureoffset>>FRACBITS);
 
-				if ((modifiedgame && !savemoddata) || (netgame || multiplayer))
+				if (modifiedgame && !savemoddata)
 					return false;
 				else if (unlockid < 0 || unlockid >= MAXUNLOCKABLES) // limited by unlockable count
 				{
@@ -2999,7 +2999,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 
 		case 441: // Trigger unlockable
-			if ((!modifiedgame || savemoddata) && !(netgame || multiplayer))
+			if (!modifiedgame || savemoddata)
 			{
 				INT32 trigid = (INT32)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
 
