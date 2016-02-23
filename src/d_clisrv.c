@@ -478,6 +478,7 @@ static boolean CL_SendJoin(void)
 		nodewaiting[servernode]++;
 		if (splitscreen || botingame)
 			nodewaiting[servernode]++;
+		net_playercount = nodewaiting[servernode];
 		return true;
 	}
 	// NET TODO
@@ -1206,8 +1207,6 @@ void CL_Reset(void)
 	multiplayer = false;
 	servernode = 0;
 	server = true;
-	net_nodecount = 1;
-	net_playercount = 1;
 	SV_StopServer();
 	SV_ResetServer();
 

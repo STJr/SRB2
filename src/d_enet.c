@@ -20,8 +20,13 @@ boolean nodeingame[MAXNETNODES]; // set false as nodes leave game
 enum {
 	DISCONNECT_UNKNOWN = 0,
 	DISCONNECT_SHUTDOWN,
+	DISCONNECT_FULL,
 
-	CLIENT_JOIN = 0
+	CLIENT_ASKMSINFO = 0,
+	CLIENT_JOIN,
+
+	SERVER_MSINFO = 0,
+	SERVER_MAPINFO
 };
 
 static ENetHost *ServerHost = NULL,
@@ -32,6 +37,8 @@ static UINT8 nodeleaving[MAXNETNODES];
 typedef struct PeerData_s {
 	UINT8 node;
 } PeerData;
+
+static void ServerSendMapInfo(UINT8 node);
 
 boolean Net_GetNetStat(void)
 {
@@ -51,6 +58,24 @@ static void ServerHandlePacket(UINT8 node, DataWrap data)
 			CONS_Printf("NETWORK: Version mismatch!?\n");
 		char *name = data->ReadStringn(data, MAXPLAYERNAME);
 		CONS_Printf("NETWORK: Player '%s' joining...\n", name);
+		net_playercount++;
+		ServerSendMapInfo(node);
+		break;
+	}
+	default:
+		CONS_Printf("NETWORK: Unknown message type recieved from node %u!\n", node);
+		break;
+	}
+}
+
+static void ClientHandlePacket(UINT8 node, DataWrap data)
+{
+	switch(data->ReadUINT8(data))
+	{
+	case SERVER_MAPINFO:
+	{
+		INT16 mapnum = data->ReadINT16(data);
+		G_InitNew(false, G_BuildMapName(mapnum), true, true);
 		break;
 	}
 	default:
@@ -74,14 +99,27 @@ void Net_AckTicker(void)
 			{
 				CL_Reset();
 				D_StartTitle();
-				if (e.data == DISCONNECT_SHUTDOWN)
+				switch(e.data)
+				{
+				case DISCONNECT_SHUTDOWN:
 					M_StartMessage(M_GetText("Server shut down.\n\nPress ESC\n"), NULL, MM_NOTHING);
-				else
+					break;
+				case DISCONNECT_FULL:
+					M_StartMessage(M_GetText("Server is full.\n\nPress ESC\n"), NULL, MM_NOTHING);
+					break;
+				default:
 					M_StartMessage(M_GetText("Disconnected from server.\n\nPress ESC\n"), NULL, MM_NOTHING);
+					break;
+				}
 			}
 			break;
 
 		case ENET_EVENT_TYPE_RECEIVE:
+			pdata = (PeerData *)e.peer->data;
+			if (setjmp(safety))
+				CONS_Printf("NETWORK: There was an EOF error in a recieved packet from server! len %u\n", e.packet->dataLength);
+			else
+				ClientHandlePacket(pdata->node, D_NewDataWrap(e.packet->data, e.packet->dataLength, &safety));
 			enet_packet_destroy(e.packet);
 			break;
 
@@ -93,18 +131,33 @@ void Net_AckTicker(void)
 		switch (e.type)
 		{
 		case ENET_EVENT_TYPE_CONNECT:
+			// turn away new connections when maxplayers is hit
+			// TODO: wait to see if it's a remote console first or something.
+			if (net_playercount >= cv_maxplayers.value)
+			{
+				CONS_Printf("NETWORK: New connection tossed, server is full.\n");
+				enet_peer_disconnect(e.peer, DISCONNECT_FULL);
+				break;
+			}
+
 			for (i = 0; i < MAXNETNODES && nodeingame[i]; i++)
 				;
 			I_Assert(i < MAXNETNODES); // ENet should not be able to send connect events when nodes are full.
+
+			net_nodecount++;
 			nodeingame[i] = true;
 			nodetopeer[i] = e.peer;
+
 			pdata = ZZ_Alloc(sizeof(*pdata));
 			pdata->node = i;
 			e.peer->data = pdata;
+
 			CONS_Printf("NETWORK: Node %u connected.\n", i);
 			break;
 
 		case ENET_EVENT_TYPE_DISCONNECT:
+			if (!e.peer->data)
+				break;
 			pdata = (PeerData *)e.peer->data;
 			if (!nodeleaving[pdata->node])
 			{
@@ -146,8 +199,6 @@ boolean Net_AllAckReceived(void)
 
 void D_SetDoomcom(void)
 {
-	net_nodecount = 0;
-	net_playercount = 0;
 }
 
 void D_NetOpen(void)
@@ -159,6 +210,8 @@ void D_NetOpen(void)
 
 	servernode = 0;
 	nodeingame[servernode] = true;
+	net_nodecount = 1;
+	net_playercount = 0;
 }
 
 void D_NetConnect(const char *hostname, const char *port)
@@ -219,7 +272,7 @@ void D_CloseConnection(void)
 		UINT8 i, waiting=0;
 		// tell everyone to go away
 		for (i = 0; i < MAXNETNODES; i++)
-			if (nodeingame[i])
+			if (nodeingame[i] && servernode != i)
 			{
 				enet_peer_disconnect(nodetopeer[i], DISCONNECT_SHUTDOWN);
 				waiting++;
@@ -269,10 +322,7 @@ void D_CloseConnection(void)
 	netgame = false;
 	addedtogame = false;
 	servernode = 0;
-}
-
-void Net_UnAcknowledgPacket(INT32 node)
-{
+	net_nodecount = net_playercount = 0;
 }
 
 void Net_CloseConnection(INT32 node)
@@ -281,14 +331,6 @@ void Net_CloseConnection(INT32 node)
 		return;
 	nodeleaving[node] = true;
 	enet_peer_disconnect(nodetopeer[node], 0);
-}
-
-void Net_SendAcks(INT32 node)
-{
-}
-
-void Net_WaitAllAckReceived(UINT32 timeout)
-{
 }
 
 // Client: Can I play? =3 My name is Player so-and-so!
@@ -305,4 +347,17 @@ void Net_SendJoin(void)
 
 	packet = enet_packet_create(data, buf-data, ENET_PACKET_FLAG_RELIABLE);
 	enet_peer_send(nodetopeer[servernode], 0, packet);
+}
+
+static void ServerSendMapInfo(UINT8 node)
+{
+	ENetPacket *packet;
+	UINT8 data[3];
+	UINT8 *buf = data;
+
+	WRITEUINT8(buf, SERVER_MAPINFO);
+	WRITEINT16(buf, gamemap);
+
+	packet = enet_packet_create(data, buf-data, ENET_PACKET_FLAG_RELIABLE);
+	enet_peer_send(nodetopeer[node], 0, packet);
 }

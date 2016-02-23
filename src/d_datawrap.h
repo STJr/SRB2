@@ -8,6 +8,9 @@ typedef struct DataWrap_s {
 
 	UINT8 (*ReadUINT8)(struct DataWrap_s *);
 	UINT16 (*ReadUINT16)(struct DataWrap_s *);
+
+	INT16 (*ReadINT16)(struct DataWrap_s *);
+
 	char *(*ReadStringn)(struct DataWrap_s *, size_t n);
 } *DataWrap;
 
