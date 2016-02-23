@@ -1934,6 +1934,10 @@ static void Local_Maketic(INT32 realtics)
 		G_BuildTiccmd2(&localcmds2, realtics);
 
 	localcmds.angleturn |= TICCMD_RECEIVED;
+
+	G_CopyTiccmd(&netcmds[consoleplayer], &localcmds, 1);
+	if (splitscreen || botingame)
+		G_CopyTiccmd(&netcmds[secondarydisplayplayer], &localcmds2, 1);
 }
 
 void SV_SpawnPlayer(INT32 playernum, INT32 x, INT32 y, angle_t angle)
