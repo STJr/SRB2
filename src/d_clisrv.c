@@ -473,6 +473,11 @@ static inline void CL_DrawConnectionStatus(void)
 // used only in arbitratrenetstart()
 static boolean CL_SendJoin(void)
 {
+	if (server)
+	{
+		nodewaiting[servernode]++;
+		return true;
+	}
 	// NET TODO
 	return true;
 }
@@ -715,7 +720,10 @@ static void CL_ConnectToServer(boolean viams)
 	sprintf(tmpsave, "%s" PATHSEP TMPSAVENAME, srb2home);
 #endif
 
-	cl_mode = cl_searching;
+	if (servernode == 0)
+		cl_mode = cl_askjoin;
+	else
+		cl_mode = cl_searching;
 
 #ifdef CLIENT_LOADINGSCREEN
 	lastfilenum = 0;
@@ -881,7 +889,8 @@ static void CL_ConnectToServer(boolean viams)
 
 				cl_mode = cl_askjoin; // don't break case continue to cljoin request now
 			case cl_askjoin:
-				CL_LoadServerFiles();
+				if (!server)
+					CL_LoadServerFiles();
 #ifdef JOININGAME
 				// prepare structures to save the file
 				// WARNING: this can be useless in case of server not in GS_LEVEL
@@ -889,7 +898,7 @@ static void CL_ConnectToServer(boolean viams)
 				CL_PrepareDownloadSaveGame(tmpsave);
 #endif
 				if (CL_SendJoin())
-					cl_mode = cl_waitjoinresponse;
+					cl_mode = server ? cl_connected : cl_waitjoinresponse;
 				break;
 #ifdef JOININGAME
 			case cl_downloadsavegame:
