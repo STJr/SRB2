@@ -592,11 +592,6 @@ void D_SRB2Loop(void)
 		HW3S_BeginFrameUpdate();
 #endif
 
-		// don't skip more than 10 frames at a time
-		// (fadein / fadeout cause massive frame skip!)
-		if (realtics > 8)
-			realtics = 1;
-
 		// process tics (but maybe not if realtic == 0)
 		TryRunTics(realtics);
 

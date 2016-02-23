@@ -68,14 +68,6 @@ static boolean serverrunning = false;
 INT32 serverplayer = 0;
 char motd[254], server_context[8]; // Message of the Day, Unique Context (even without Mumble support)
 
-// server specific vars
-UINT8 playernode[MAXPLAYERS];
-UINT8 net_nodecount, net_playercount;
-
-SINT8 nodetoplayer[MAXNETNODES];
-SINT8 nodetoplayer2[MAXNETNODES]; // say the numplayer for this node if any (splitscreen)
-UINT8 playerpernode[MAXNETNODES]; // used specialy for scplitscreen
-boolean nodeingame[MAXNETNODES]; // set false as nodes leave game
 static tic_t nettics[MAXNETNODES]; // what tic the client have received
 static tic_t supposedtics[MAXNETNODES]; // nettics prevision for smaller packet
 static UINT8 nodewaiting[MAXNETNODES];
@@ -190,23 +182,6 @@ void RegisterNetXCmd(netxcmd_t id, void (*cmd_f)(UINT8 **p, INT32 playernum))
 		I_Error("Command id %d already used", id);
 #endif
 	listnetxcmd[id] = cmd_f;
-}
-
-void SendNetXCmd(netxcmd_t id, const void *param, size_t nparam)
-{
-	// NET TODO
-}
-
-// splitscreen player
-void SendNetXCmd2(netxcmd_t id, const void *param, size_t nparam)
-{
-	// NET TODO
-}
-
-UINT8 GetFreeXCmdSize(void)
-{
-	// NET TODO
-	return -1;
 }
 
 // Frees all textcmd memory for the specified tic
@@ -1726,15 +1701,6 @@ void D_QuitNetGame(void)
 
 	// abort send/receive of files
 	CloseNetFile();
-
-	if (server)
-	{
-		// NET TODO: Send server shutdown packets to everyone.
-	}
-	else if (servernode > 0 && servernode < MAXNETNODES && nodeingame[(UINT8)servernode]!=0)
-	{
-		// NET TODO: Send client quit packet to server.
-	}
 
 	D_CloseConnection();
 	adminplayer = -1;
