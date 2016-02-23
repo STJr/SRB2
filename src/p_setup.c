@@ -2770,6 +2770,9 @@ boolean P_SetupLevel(boolean skipprecip)
 
 		CV_SetValue(&cv_cam2_dist, 576);
 		CV_SetValue(&cv_cam2_height, 384);
+
+		CV_SetValue(&cv_analog2, false);
+		CV_SetValue(&cv_analog, false);
 	}
 
 	// clear special respawning que

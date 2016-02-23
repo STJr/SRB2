@@ -1572,7 +1572,7 @@ static void Analog_OnChange(void)
 	if (cv_analog.value || demoplayback)
 		CV_SetValue(&cv_cam_dist, 192);
 
-	if (!cv_chasecam.value && cv_analog.value) {
+	if ((!cv_chasecam.value && cv_analog.value) || ((maptol & TOL_TD) && cv_analog.value)) {
 		CV_SetValue(&cv_analog, 0);
 		return;
 	}
@@ -1597,7 +1597,7 @@ static void Analog2_OnChange(void)
 	if (cv_analog2.value)
 		CV_SetValue(&cv_cam2_dist, 192);
 
-	if (!cv_chasecam2.value && cv_analog2.value) {
+	if ((!cv_chasecam2.value && cv_analog2.value) || ((maptol & TOL_TD) && cv_analog2.value)) {
 		CV_SetValue(&cv_analog2, 0);
 		return;
 	}
