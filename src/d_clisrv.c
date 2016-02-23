@@ -481,6 +481,7 @@ static boolean CL_SendJoin(void)
 		return true;
 	}
 	// NET TODO
+	Net_SendJoin();
 	return true;
 }
 
@@ -643,6 +644,12 @@ static void CL_LoadReceivedSavegame(void)
 #ifndef NONET
 static void SendAskInfo(INT32 node, boolean viams)
 {
+	//if (server)
+	{// I'm the server, skip this.
+		// I'm the server, skip this.
+		cl_mode = cl_askjoin;
+		return;
+	}
 	// NET TODO
 }
 
@@ -722,10 +729,7 @@ static void CL_ConnectToServer(boolean viams)
 	sprintf(tmpsave, "%s" PATHSEP TMPSAVENAME, srb2home);
 #endif
 
-	if (servernode == 0)
-		cl_mode = cl_askjoin;
-	else
-		cl_mode = cl_searching;
+	cl_mode = cl_searching;
 
 #ifdef CLIENT_LOADINGSCREEN
 	lastfilenum = 0;
@@ -891,15 +895,9 @@ static void CL_ConnectToServer(boolean viams)
 
 				cl_mode = cl_askjoin; // don't break case continue to cljoin request now
 			case cl_askjoin:
-				if (!server)
+				if (!server) // the server already has their files loaded, duh!
 					CL_LoadServerFiles();
-#ifdef JOININGAME
-				// prepare structures to save the file
-				// WARNING: this can be useless in case of server not in GS_LEVEL
-				// but since the network layer doesn't provide ordered packets...
-				CL_PrepareDownloadSaveGame(tmpsave);
-#endif
-				if (CL_SendJoin())
+				if (CL_SendJoin()) // Send join request, server instantly connects.
 					cl_mode = server ? cl_connected : cl_waitjoinresponse;
 				break;
 #ifdef JOININGAME

@@ -17,6 +17,7 @@ boolean D_CheckNetGame(void);
 void D_CloseConnection(void);
 void Net_UnAcknowledgPacket(INT32 node);
 void Net_CloseConnection(INT32 node);
-void Net_AbortPacketType(UINT8 packettype);
 void Net_SendAcks(INT32 node);
 void Net_WaitAllAckReceived(UINT32 timeout);
+
+void Net_SendJoin(void);
