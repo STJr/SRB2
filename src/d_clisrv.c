@@ -476,6 +476,8 @@ static boolean CL_SendJoin(void)
 	if (server)
 	{
 		nodewaiting[servernode]++;
+		if (splitscreen || botingame)
+			nodewaiting[servernode]++;
 		return true;
 	}
 	// NET TODO
