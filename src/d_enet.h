@@ -10,9 +10,6 @@ extern boolean nodeingame[MAXNETNODES]; // set false as nodes leave game
 
 boolean Net_GetNetStat(void);
 void Net_AckTicker(void);
-boolean Net_AllAckReceived(void);
-void D_SetDoomcom(void);
-void D_SaveBan(void);
 boolean D_CheckNetGame(void);
 void D_CloseConnection(void);
 void Net_CloseConnection(INT32 node);

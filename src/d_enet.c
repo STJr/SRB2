@@ -21,6 +21,7 @@ enum {
 	DISCONNECT_UNKNOWN = 0,
 	DISCONNECT_SHUTDOWN,
 	DISCONNECT_FULL,
+	DISCONNECT_VERSION,
 
 	CLIENT_ASKMSINFO = 0,
 	CLIENT_JOIN,
@@ -55,7 +56,12 @@ static void ServerHandlePacket(UINT8 node, DataWrap data)
 		UINT16 version = data->ReadUINT16(data);
 		UINT16 subversion = data->ReadUINT16(data);
 		if (version != VERSION || subversion != SUBVERSION)
+		{
 			CONS_Printf("NETWORK: Version mismatch!?\n");
+			nodeleaving[node] = true;
+			enet_peer_disconnect(nodetopeer[node], DISCONNECT_VERSION);
+			break;
+		}
 		char *name = data->ReadStringn(data, MAXPLAYERNAME);
 		CONS_Printf("NETWORK: Player '%s' joining...\n", name);
 		net_playercount++;
@@ -193,15 +199,6 @@ void Net_AckTicker(void)
 		}
 }
 
-boolean Net_AllAckReceived(void)
-{
-	return true;
-}
-
-void D_SetDoomcom(void)
-{
-}
-
 void D_NetOpen(void)
 {
 	ENetAddress address = { ENET_HOST_ANY, 5029 };
@@ -301,7 +298,7 @@ void D_CloseConnection(void)
 
 	if (ClientHost)
 	{
-		enet_peer_disconnect(nodetopeer[servernode], 0);
+		enet_peer_disconnect(nodetopeer[servernode], DISCONNECT_SHUTDOWN);
 		while (enet_host_service(ServerHost, &e, 3000) > 0)
 		{
 			if (e.type == ENET_EVENT_TYPE_DISCONNECT)
