@@ -242,10 +242,13 @@ void Net_AckTicker(void)
 
 		case ENET_EVENT_TYPE_RECEIVE:
 			pdata = (PeerData *)e.peer->data;
-			if (setjmp(safety))
-				CONS_Printf("NETWORK: There was an EOF error in a recieved packet! Node %u, len %u\n", pdata->node, e.packet->dataLength);
-			else
-				ServerHandlePacket(pdata->node, D_NewDataWrap(e.packet->data, e.packet->dataLength, &safety));
+			if (!(pdata->flags & PEER_LEAVING))
+			{
+				if (setjmp(safety))
+					CONS_Printf("NETWORK: There was an EOF error in a recieved packet! Node %u, len %u\n", pdata->node, e.packet->dataLength);
+				else
+					ServerHandlePacket(pdata->node, D_NewDataWrap(e.packet->data, e.packet->dataLength, &safety));
+			}
 			enet_packet_destroy(e.packet);
 			break;
 
