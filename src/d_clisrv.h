@@ -272,6 +272,7 @@ void CL_RemoveSplitscreenPlayer(void);
 void CL_Reset(void);
 void D_SaveBan(void); // in the middle of frikking nowhere
 void CL_ClearPlayer(INT32 playernum);
+void CL_RemovePlayer(INT32 playernum);
 void CL_UpdateServerList(boolean internetsearch, INT32 room);
 // is there a game running
 boolean Playing(void);
