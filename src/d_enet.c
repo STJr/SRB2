@@ -225,7 +225,7 @@ void D_NetOpen(void)
 	net_playercount = 0;
 }
 
-void D_NetConnect(const char *hostname, const char *port)
+boolean D_NetConnect(const char *hostname, const char *port)
 {
 	ENetAddress address;
 	ENetEvent e;
@@ -250,10 +250,12 @@ void D_NetConnect(const char *hostname, const char *port)
 	if (enet_host_service(ClientHost, &e, 5000) > 0
 	&& e.type == ENET_EVENT_TYPE_CONNECT)
 	{
-		CONS_Printf("Connection successful!");
-		return;
+		CONS_Printf("NETWORK: Connection successful!");
+		return true;
 	}
-	M_StartMessage(M_GetText("Failed to connect to server.\n\nPress ESC\n"), NULL, MM_NOTHING);
+	enet_host_destroy(ClientHost);
+	ClientHost = NULL;
+	return false;
 }
 
 // Initialize network.

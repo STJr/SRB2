@@ -897,8 +897,7 @@ static void CL_ConnectToServer(boolean viams)
 
 				cl_mode = cl_askjoin; // don't break case continue to cljoin request now
 			case cl_askjoin:
-				if (!server) // the server already has their files loaded, duh!
-					CL_LoadServerFiles();
+				//CL_LoadServerFiles();
 				if (CL_SendJoin()) // Send join request, server instantly connects.
 					cl_mode = server ? cl_connected : cl_waitjoinresponse;
 				break;
@@ -1070,10 +1069,15 @@ static void Command_connect(void)
 		}
 		else
 		{
+			boolean success = false;
 			if (COM_Argc() >= 3)
-				D_NetConnect(COM_Argv(1), COM_Argv(2));
+				success = D_NetConnect(COM_Argv(1), COM_Argv(2));
 			else
-				D_NetConnect(COM_Argv(1), NULL);
+				success = D_NetConnect(COM_Argv(1), NULL);
+			if (!success) {
+				M_StartMessage(M_GetText("Failed to connect to server.\n\nPress ESC\n"), NULL, MM_NOTHING);
+				return;
+			}
 		}
 	}
 
