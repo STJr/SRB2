@@ -16,6 +16,7 @@ UINT8 playerpernode[MAXNETNODES]; // used specialy for scplitscreen
 boolean nodeingame[MAXNETNODES]; // set false as nodes leave game
 
 #define NETCHANNELS 4
+#define MAX_SERVER_MESSAGE 320
 
 enum {
 	DISCONNECT_UNKNOWN = 0,
@@ -25,9 +26,11 @@ enum {
 
 	CLIENT_ASKMSINFO = 0,
 	CLIENT_JOIN,
+	CLIENT_CHAT,
 
 	SERVER_MSINFO = 0,
-	SERVER_MAPINFO
+	SERVER_MAPINFO,
+	SERVER_MESSAGE
 };
 
 static ENetHost *ServerHost = NULL,
@@ -37,6 +40,7 @@ static ENetPeer *nodetopeer[MAXNETNODES];
 typedef struct PeerData_s {
 	UINT8 node;
 	UINT8 flags;
+	char name[MAXPLAYERNAME+1];
 } PeerData;
 
 enum {
@@ -62,24 +66,49 @@ static void DisconnectNode(UINT8 node, UINT8 why)
 
 static void ServerHandlePacket(UINT8 node, DataWrap data)
 {
+	PeerData *pdata = nodetopeer[node]->data;
+
 	switch(data->ReadUINT8(data))
 	{
 	case CLIENT_JOIN:
 	{
 		UINT16 version = data->ReadUINT16(data);
 		UINT16 subversion = data->ReadUINT16(data);
+
 		if (version != VERSION || subversion != SUBVERSION)
 		{
 			CONS_Printf("NETWORK: Version mismatch!?\n");
 			DisconnectNode(node, DISCONNECT_VERSION);
 			break;
 		}
+
 		char *name = data->ReadStringn(data, MAXPLAYERNAME);
-		CONS_Printf("NETWORK: Player '%s' joining...\n", name);
+		strcpy(pdata->name, name);
+		Z_Free(name);
+
+		CONS_Printf("NETWORK: Player '%s' joining...\n", pdata->name);
+
 		net_playercount++;
 		ServerSendMapInfo(node);
 		break;
 	}
+
+	case CLIENT_CHAT:
+	{
+		ENetPacket *packet;
+		UINT8 ndata[MAX_SERVER_MESSAGE];
+		UINT8 *buf = ndata;
+
+		WRITEUINT8(buf, SERVER_MESSAGE);
+		sprintf(buf, "\3<%s> %s", pdata->name, data->ReadStringn(data, 256));
+		buf += strlen(buf)+1;
+		CONS_Printf("%s\n", ndata+1);
+
+		packet = enet_packet_create(ndata, buf-ndata, ENET_PACKET_FLAG_RELIABLE);
+		enet_host_broadcast(ServerHost, 0, packet);
+		break;
+	}
+
 	default:
 		CONS_Printf("NETWORK: Unknown message type recieved from node %u!\n", node);
 		break;
@@ -95,16 +124,23 @@ static void ClientHandlePacket(UINT8 node, DataWrap data)
 	case SERVER_MAPINFO:
 	{
 		CL_ConnectionSuccessful();
-		CONS_Printf("NETWORK: Got Mapinfo!\n");
 		gamemap = data->ReadINT16(data);
 		gametype = data->ReadINT16(data);
 		CONS_Printf("NETWORK: Heading to map %u\n", gamemap);
 		G_InitNew(false, G_BuildMapName(gamemap), true, true);
-		CONS_Printf("NETWORK: Choose a player!\n");
 		M_StartControlPanel();
 		M_SetupNetgameChoosePlayer();
 		break;
 	}
+
+	case SERVER_MESSAGE:
+	{
+		char *msg = data->ReadStringn(data, MAX_SERVER_MESSAGE);
+		CONS_Printf("%s\n", msg);
+		Z_Free(msg);
+		break;
+	}
+
 	default:
 		CONS_Printf("NETWORK: Unknown message type recieved from node %u!\n", node);
 		break;
@@ -124,15 +160,23 @@ void Net_AckTicker(void)
 		case ENET_EVENT_TYPE_DISCONNECT:
 			if (!server)
 			{
+				INT32 disconnect_type = e.data;
+				nodetopeer[servernode] = NULL;
+				enet_host_destroy(ClientHost);
+				ClientHost = NULL;
+
 				CL_Reset();
 				D_StartTitle();
-				switch(e.data)
+				switch(disconnect_type)
 				{
 				case DISCONNECT_SHUTDOWN:
-					M_StartMessage(M_GetText("Server shut down.\n\nPress ESC\n"), NULL, MM_NOTHING);
+					M_StartMessage(M_GetText("Server shutting down.\n\nPress ESC\n"), NULL, MM_NOTHING);
 					break;
 				case DISCONNECT_FULL:
 					M_StartMessage(M_GetText("Server is full.\n\nPress ESC\n"), NULL, MM_NOTHING);
+					break;
+				case DISCONNECT_VERSION:
+					M_StartMessage(M_GetText("Game version mismatch.\n\nPress ESC\n"), NULL, MM_NOTHING);
 					break;
 				default:
 					M_StartMessage(M_GetText("Disconnected from server.\n\nPress ESC\n"), NULL, MM_NOTHING);
@@ -142,7 +186,6 @@ void Net_AckTicker(void)
 			break;
 
 		case ENET_EVENT_TYPE_RECEIVE:
-			CONS_Printf("NETWORK: Got a packet.\n");
 			if (setjmp(safety))
 				CONS_Printf("NETWORK: There was an EOF error in a recieved packet from server! len %u\n", e.packet->dataLength);
 			else
@@ -189,17 +232,7 @@ void Net_AckTicker(void)
 				break;
 			pdata = (PeerData *)e.peer->data;
 			if (!(pdata->flags & PEER_LEAVING))
-			{
-				XBOXSTATIC UINT8 buf[2];
-				buf[0] = nodetoplayer[pdata->node];
-				buf[1] = KICK_MSG_PLAYER_QUIT;
-				SendNetXCmd(XD_KICK, &buf, 2);
-				if (playerpernode[pdata->node] == 2)
-				{
-					buf[0] = nodetoplayer2[pdata->node];
-					SendNetXCmd(XD_KICK, &buf, 2);
-				}
-			}
+				CONS_Printf("NETWORK: %s disconnected.\n", pdata->name);
 			net_nodecount--;
 			nodetopeer[pdata->node] = NULL;
 			nodeingame[pdata->node] = false;
@@ -402,4 +435,30 @@ static void ServerSendMapInfo(UINT8 node)
 
 	packet = enet_packet_create(data, buf-data, ENET_PACKET_FLAG_RELIABLE);
 	enet_peer_send(nodetopeer[node], 0, packet);
+}
+
+void Net_SendChat(char *line)
+{
+	ENetPacket *packet;
+	UINT8 data[MAX_SERVER_MESSAGE];
+	UINT8 *buf = data;
+
+	if (server)
+	{
+		WRITEUINT8(buf, SERVER_MESSAGE);
+		sprintf(buf, "\3<~%s> %s", cv_playername.string, line);
+		buf += strlen(buf)+1;
+		CONS_Printf("%s\n", data+1);
+	}
+	else
+	{
+		WRITEUINT8(buf, CLIENT_CHAT);
+		WRITESTRINGN(buf, line, 256);
+	}
+
+	packet = enet_packet_create(data, buf-data, ENET_PACKET_FLAG_RELIABLE);
+	if (server)
+		enet_host_broadcast(ServerHost, 0, packet);
+	else
+		enet_peer_send(nodetopeer[servernode], 0, packet);
 }

@@ -382,13 +382,27 @@ static void DoSayCommand(SINT8 target, size_t usedargs, UINT8 flags)
   */
 static void Command_Say_f(void)
 {
+	size_t numwords, ix;
+	char msg[256];
+
 	if (COM_Argc() < 2)
 	{
 		CONS_Printf(M_GetText("say <message>: send a message\n"));
 		return;
 	}
 
-	DoSayCommand(0, 1, 0);
+	//DoSayCommand(0, 1, 0);
+
+	numwords = COM_Argc() - 1;
+
+	for (ix = 0; ix < numwords; ix++)
+	{
+		if (ix > 0)
+			strlcat(msg, " ", 256);
+		strlcat(msg, COM_Argv(ix + 1), 256);
+	}
+
+	Net_SendChat(msg);
 }
 
 /** Send a message to a particular person.
@@ -718,12 +732,13 @@ static void HU_queueChatChar(char c)
 
 		if (ci > 3) // don't send target+flags+empty message.
 		{
-			if (teamtalk)
+			Net_SendChat(&buf[2]);
+			/*if (teamtalk)
 				buf[0] = -1; // target
 			else
 				buf[0] = 0; // target
 			buf[1] = 0; // flags
-			SendNetXCmd(XD_SAY, buf, 2 + strlen(&buf[2]) + 1);
+			SendNetXCmd(XD_SAY, buf, 2 + strlen(&buf[2]) + 1);*/
 		}
 		return;
 	}
