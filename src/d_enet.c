@@ -33,11 +33,15 @@ enum {
 static ENetHost *ServerHost = NULL,
 	*ClientHost = NULL;
 static ENetPeer *nodetopeer[MAXNETNODES];
-static UINT8 nodeleaving[MAXNETNODES];
 
 typedef struct PeerData_s {
 	UINT8 node;
+	UINT8 flags;
 } PeerData;
+
+enum {
+	PEER_LEAVING = 1
+};
 
 static void ServerSendMapInfo(UINT8 node);
 
@@ -45,6 +49,15 @@ boolean Net_GetNetStat(void)
 {
 	// set getbps, sendbps, gamelostpercent, lostpercent, etc.
 	return false;
+}
+
+static void DisconnectNode(UINT8 node, UINT8 why)
+{
+	if (nodetopeer[node] == NULL)
+		return;
+	PeerData *pdata = nodetopeer[node]->data;
+	pdata->flags |= PEER_LEAVING;
+	enet_peer_disconnect(nodetopeer[node], why);
 }
 
 static void ServerHandlePacket(UINT8 node, DataWrap data)
@@ -58,8 +71,7 @@ static void ServerHandlePacket(UINT8 node, DataWrap data)
 		if (version != VERSION || subversion != SUBVERSION)
 		{
 			CONS_Printf("NETWORK: Version mismatch!?\n");
-			nodeleaving[node] = true;
-			enet_peer_disconnect(nodetopeer[node], DISCONNECT_VERSION);
+			DisconnectNode(node, DISCONNECT_VERSION);
 			break;
 		}
 		char *name = data->ReadStringn(data, MAXPLAYERNAME);
@@ -157,6 +169,8 @@ void Net_AckTicker(void)
 
 			pdata = ZZ_Alloc(sizeof(*pdata));
 			pdata->node = i;
+			pdata->flags = 0;
+
 			e.peer->data = pdata;
 
 			CONS_Printf("NETWORK: Node %u connected.\n", i);
@@ -166,7 +180,7 @@ void Net_AckTicker(void)
 			if (!e.peer->data)
 				break;
 			pdata = (PeerData *)e.peer->data;
-			if (!nodeleaving[pdata->node])
+			if (!(pdata->flags & PEER_LEAVING))
 			{
 				XBOXSTATIC UINT8 buf[2];
 				buf[0] = nodetoplayer[pdata->node];
@@ -179,7 +193,6 @@ void Net_AckTicker(void)
 				}
 			}
 			net_nodecount--;
-			nodeleaving[pdata->node] = false;
 			nodetopeer[pdata->node] = NULL;
 			Z_Free(pdata);
 			e.peer->data = NULL;
@@ -325,10 +338,7 @@ void D_CloseConnection(void)
 
 void Net_CloseConnection(INT32 node)
 {
-	if (nodeleaving[node] || nodetopeer[node] == NULL)
-		return;
-	nodeleaving[node] = true;
-	enet_peer_disconnect(nodetopeer[node], 0);
+	DisconnectNode(node, 0);
 }
 
 // Client: Can I play? =3 My name is Player so-and-so!

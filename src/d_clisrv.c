@@ -478,7 +478,6 @@ static boolean CL_SendJoin(void)
 		nodewaiting[servernode]++;
 		if (splitscreen || botingame)
 			nodewaiting[servernode]++;
-		net_playercount = nodewaiting[servernode];
 		return true;
 	}
 	if (server) // no need to ask yourself if you can join!
