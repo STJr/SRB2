@@ -199,16 +199,19 @@ int main(int argc, char **argv)
 	logdir = D_Home();
 
 #ifdef LOGMESSAGES
+	if (!M_CheckParm("-nolog"))
+	{
 #if defined(_WIN32_WCE) || defined(GP2X)
-	logstream = fopen(va("%s.log",argv[0]), "wt");
+		logstream = fopen(va("%s.log",argv[0]), "wt");
 #elif defined (_WII)
-	logstream = fopen(va("%s/log.txt",logdir), "wt");
+		logstream = fopen(va("%s/log.txt",logdir), "wt");
 #elif defined (DEFAULTDIR)
-	if (logdir)
-		logstream = fopen(va("%s/"DEFAULTDIR"/log.txt",logdir), "wt");
-	else
+		if (logdir)
+			logstream = fopen(va("%s/"DEFAULTDIR"/log.txt",logdir), "wt");
+		else
 #endif
-		logstream = fopen("./log.txt", "wt");
+			logstream = fopen("./log.txt", "wt");
+	}
 #endif
 
 	//I_OutputMsg("I_StartupSystem() ...\n");
