@@ -275,7 +275,12 @@ static void ClientHandlePacket(UINT8 node, DataWrap data)
 
 		mobj->state = &states[DW_ReadUINT16(data)];
 		mobj->sprite = mobj->state->sprite;
-		mobj->frame = mobj->state->frame;
+		if (mobj->sprite == SPR_PLAY) {
+			mobj->sprite2 = mobj->state->frame;
+			mobj->frame = DW_ReadUINT8(data);
+		}
+		else
+			mobj->frame = mobj->state->frame;
 		mobj->tics = -1;
 		break;
 	}
@@ -715,6 +720,8 @@ static void Net_MovePlayers(void)
 		WRITEINT16(buf, players[i].mo->momz >> 8);
 		WRITEUINT8(buf, players[i].mo->angle >> 24);
 		WRITEUINT16(buf, players[i].mo->state - states);
+		if (players[i].mo->sprite == SPR_PLAY)
+			WRITEUINT8(buf, players[i].mo->frame);
 
 		packet = enet_packet_create(data, buf-data, 0);
 		enet_host_broadcast(ServerHost, CHANNEL_MOVE, packet);
