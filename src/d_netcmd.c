@@ -4018,23 +4018,7 @@ static void Name2_OnChange(void)
   */
 static void Skin_OnChange(void)
 {
-	if (!Playing())
-		return; // do whatever you want
-
-	if (!(cv_debug || devparm) && !(multiplayer || netgame) // In single player.
-		&& (gamestate == GS_LEVEL || gamestate == GS_INTERMISSION || gamestate == GS_CONTINUING))
-	{
-		CV_StealthSet(&cv_skin, skins[players[consoleplayer].skin].name);
-		return;
-	}
-
-	if (CanChangeSkin(consoleplayer) && !P_PlayerMoving(consoleplayer))
-		SendNameAndColor();
-	else
-	{
-		CONS_Alert(CONS_NOTICE, M_GetText("You can't change your skin at the moment.\n"));
-		CV_StealthSet(&cv_skin, skins[players[consoleplayer].skin].name);
-	}
+	// NET TODO
 }
 
 /** Sends a skin change for the secondary splitscreen player, unless that

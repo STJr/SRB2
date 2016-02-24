@@ -451,6 +451,11 @@ static void readPlayer(MYFILE *f, INT32 num)
 	char *word2;
 	INT32 i;
 	boolean slotfound = false;
+	UINT8 mpslot;
+
+	for (mpslot = 0; mpslot < 32; mpslot++)
+		if (MP_PlayerMenu[mpslot].status != IT_CALL)
+			break;
 
 	DEH_WriteUndoline("PLAYERTEXT", description[num].notes, UNDO_ENDTEXT);
 
@@ -506,6 +511,9 @@ static void readPlayer(MYFILE *f, INT32 num)
 				}
 				description[num].notes[strlen(description[num].notes)-1] = '\0';
 				description[num].notes[i] = '\0';
+
+				if (MP_PlayerMenu[mpslot].status == IT_CALL)
+					strcpy(MP_Description[mpslot].notes, description[num].notes);
 				continue;
 			}
 
@@ -582,6 +590,12 @@ static void readPlayer(MYFILE *f, INT32 num)
 
 				strlcpy(description[num].skinname, word2, sizeof description[num].skinname);
 				strlwr(description[num].skinname);
+
+				if (!strpbrk(word2,"&"))
+				{
+					MP_PlayerMenu[mpslot].status = IT_CALL;
+					strlcpy(MP_Description[mpslot].skinname, description[num].skinname, MAXPLAYERNAME+1);
+				}
 			}
 			else
 				deh_warning("readPlayer %d: unknown word '%s'", num, word);

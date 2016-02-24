@@ -223,7 +223,7 @@ extern FILE *logstream;
 // NOTE: it needs more than this to increase the number of players...
 
 #define MAXPLAYERS 64
-#define MAXSKINS MAXPLAYERS
+#define MAXSKINS 32
 #define PLAYERSMASK (MAXPLAYERS-1)
 #define MAXPLAYERNAME 21
 

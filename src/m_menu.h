@@ -149,7 +149,12 @@ typedef struct menuitem_s
 	UINT8 alphaKey;
 } menuitem_t;
 
+#if (MAXSKINS != 32)
+#error Remember to update PlayerMenu[] and description[] to hold more skins! :3
+#endif
+
 extern menuitem_t PlayerMenu[32];
+extern menuitem_t MP_PlayerMenu[32];
 
 typedef struct menu_s
 {
@@ -205,6 +210,7 @@ typedef struct
 } saveinfo_t;
 
 extern description_t description[32];
+extern description_t MP_Description[32];
 
 extern consvar_t cv_newgametype, cv_nextmap, cv_chooseskin, cv_serversort;
 extern CV_PossibleValue_t gametype_cons_t[];

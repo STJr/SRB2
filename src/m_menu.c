@@ -145,6 +145,42 @@ description_t description[32] =
 static char *char_notes = NULL;
 static fixed_t char_scroll = 0;
 
+description_t MP_Description[32] =
+{
+	{"???", "", ""},
+	{"???", "", ""},
+	{"???", "", ""},
+	{"???", "", ""},
+	{"???", "", ""},
+	{"???", "", ""},
+	{"???", "", ""},
+	{"???", "", ""},
+	{"???", "", ""},
+	{"???", "", ""},
+	{"???", "", ""},
+	{"???", "", ""},
+	{"???", "", ""},
+	{"???", "", ""},
+	{"???", "", ""},
+	{"???", "", ""},
+	{"???", "", ""},
+	{"???", "", ""},
+	{"???", "", ""},
+	{"???", "", ""},
+	{"???", "", ""},
+	{"???", "", ""},
+	{"???", "", ""},
+	{"???", "", ""},
+	{"???", "", ""},
+	{"???", "", ""},
+	{"???", "", ""},
+	{"???", "", ""},
+	{"???", "", ""},
+	{"???", "", ""},
+	{"???", "", ""},
+	{"???", "", ""}
+};
+
 boolean menuactive = false;
 boolean fromlevelselect = false;
 
@@ -267,6 +303,7 @@ static void M_ChooseRoom(INT32 choice);
 #endif
 static void M_SetupMultiPlayer(INT32 choice);
 static void M_SetupMultiPlayer2(INT32 choice);
+static void M_NetgameChoosePlayer(INT32 choice);
 
 // Options
 // Split into multiple parts due to size
@@ -317,6 +354,7 @@ static void M_DrawGameStats(void);
 static void M_DrawTimeAttackMenu(void);
 static void M_DrawNightsAttackMenu(void);
 static void M_DrawSetupChoosePlayerMenu(void);
+static void M_DrawSetupNetgameChoosePlayerMenu(void);
 static void M_DrawControl(void);
 static void M_DrawVideoMode(void);
 static void M_DrawMonitorToggles(void);
@@ -972,6 +1010,42 @@ static menuitem_t MP_PlayerSetupMenu[] =
 	{IT_KEYHANDLER | IT_STRING,   NULL, "Your name",   M_HandleSetupMultiPlayer,   0},
 	{IT_KEYHANDLER | IT_STRING,   NULL, "Your color",  M_HandleSetupMultiPlayer,  16},
 	{IT_KEYHANDLER | IT_STRING,   NULL, "Your player", M_HandleSetupMultiPlayer,  96}, // Tails 01-18-2001
+};
+
+menuitem_t MP_PlayerMenu[32] =
+{
+	{IT_DISABLED, NULL, NULL, M_NetgameChoosePlayer, 0},
+	{IT_DISABLED, NULL, NULL, M_NetgameChoosePlayer, 0},
+	{IT_DISABLED, NULL, NULL, M_NetgameChoosePlayer, 0},
+	{IT_DISABLED, NULL, NULL, M_NetgameChoosePlayer, 0},
+	{IT_DISABLED, NULL, NULL, M_NetgameChoosePlayer, 0},
+	{IT_DISABLED, NULL, NULL, M_NetgameChoosePlayer, 0},
+	{IT_DISABLED, NULL, NULL, M_NetgameChoosePlayer, 0},
+	{IT_DISABLED, NULL, NULL, M_NetgameChoosePlayer, 0},
+	{IT_DISABLED, NULL, NULL, M_NetgameChoosePlayer, 0},
+	{IT_DISABLED, NULL, NULL, M_NetgameChoosePlayer, 0},
+	{IT_DISABLED, NULL, NULL, M_NetgameChoosePlayer, 0},
+	{IT_DISABLED, NULL, NULL, M_NetgameChoosePlayer, 0},
+	{IT_DISABLED, NULL, NULL, M_NetgameChoosePlayer, 0},
+	{IT_DISABLED, NULL, NULL, M_NetgameChoosePlayer, 0},
+	{IT_DISABLED, NULL, NULL, M_NetgameChoosePlayer, 0},
+	{IT_DISABLED, NULL, NULL, M_NetgameChoosePlayer, 0},
+	{IT_DISABLED, NULL, NULL, M_NetgameChoosePlayer, 0},
+	{IT_DISABLED, NULL, NULL, M_NetgameChoosePlayer, 0},
+	{IT_DISABLED, NULL, NULL, M_NetgameChoosePlayer, 0},
+	{IT_DISABLED, NULL, NULL, M_NetgameChoosePlayer, 0},
+	{IT_DISABLED, NULL, NULL, M_NetgameChoosePlayer, 0},
+	{IT_DISABLED, NULL, NULL, M_NetgameChoosePlayer, 0},
+	{IT_DISABLED, NULL, NULL, M_NetgameChoosePlayer, 0},
+	{IT_DISABLED, NULL, NULL, M_NetgameChoosePlayer, 0},
+	{IT_DISABLED, NULL, NULL, M_NetgameChoosePlayer, 0},
+	{IT_DISABLED, NULL, NULL, M_NetgameChoosePlayer, 0},
+	{IT_DISABLED, NULL, NULL, M_NetgameChoosePlayer, 0},
+	{IT_DISABLED, NULL, NULL, M_NetgameChoosePlayer, 0},
+	{IT_DISABLED, NULL, NULL, M_NetgameChoosePlayer, 0},
+	{IT_DISABLED, NULL, NULL, M_NetgameChoosePlayer, 0},
+	{IT_DISABLED, NULL, NULL, M_NetgameChoosePlayer, 0},
+	{IT_DISABLED, NULL, NULL, M_NetgameChoosePlayer, 0}
 };
 
 // ------------------------------------
@@ -1654,6 +1728,18 @@ menu_t MP_PlayerSetupDef =
 	M_QuitMultiPlayerMenu
 };
 
+menu_t MP_PlayerDef =
+{
+	"M_PICKP",
+	sizeof (MP_PlayerMenu)/sizeof (menuitem_t),//player_end,
+	NULL,
+	MP_PlayerMenu,
+	M_DrawSetupNetgameChoosePlayerMenu,
+	24, 32,
+	0,
+	NULL
+};
+
 // Options
 menu_t OP_MainDef = DEFAULTMENUSTYLE("M_OPTTTL", OP_MainMenu, &MainDef, 60, 30);
 menu_t OP_ControlsDef = DEFAULTMENUSTYLE("M_CONTRO", OP_ControlsMenu, &OP_MainDef, 60, 30);
@@ -2314,7 +2400,7 @@ boolean M_Responder(event_t *ev)
 		case KEY_DOWNARROW:
 			M_NextOpt();
 			S_StartSound(NULL, sfx_menu1);
-			if (currentMenu == &SP_PlayerDef)
+			if (char_notes)
 			{
 				Z_Free(char_notes);
 				char_notes = NULL;
@@ -2324,7 +2410,7 @@ boolean M_Responder(event_t *ev)
 		case KEY_UPARROW:
 			M_PrevOpt();
 			S_StartSound(NULL, sfx_menu1);
-			if (currentMenu == &SP_PlayerDef)
+			if (char_notes)
 			{
 				Z_Free(char_notes);
 				char_notes = NULL;
@@ -2406,6 +2492,8 @@ boolean M_Responder(event_t *ev)
 				else
 					M_SetupNextMenu(currentMenu->prevMenu);
 			}
+			else if (currentMenu == &MP_PlayerDef)
+				return false;
 			else
 				M_ClearMenus(true);
 
@@ -4930,6 +5018,188 @@ static void M_ChoosePlayer(INT32 choice)
 
 	G_DeferedInitNew(ultmode, G_BuildMapName(startmap), (UINT8)skinnum, false, fromlevelselect);
 	COM_BufAddText("dummyconsvar 1\n"); // G_DeferedInitNew doesn't do this
+}
+
+// ============================
+// MULTIPLAYER CHARACTER SELECT
+// ============================
+
+void M_SetupNetgameChoosePlayer(void)
+{
+	if (mapheaderinfo[gamemap-1] && mapheaderinfo[gamemap-1]->forcecharacter[0] != '\0')
+	{
+		M_NetgameChoosePlayer(0); //oh for crying out loud just get STARTED, it doesn't matter!
+		return;
+	}
+
+	S_StopMusic();
+	S_ChangeMusic(mus_chrsel, true);
+
+	M_SetupNextMenu(&MP_PlayerDef);
+	char_scroll = itemOn*128*FRACUNIT; // finish scrolling the menu
+	Z_Free(char_notes);
+	char_notes = NULL;
+}
+
+static void M_DrawSetupNetgameChoosePlayerMenu(void)
+{
+	const INT32 my = 24;
+	patch_t *patch;
+	INT32 i, o, j;
+	char *picname;
+
+	// Black BG
+	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+
+	// Character select profile images!1
+	M_DrawTextBox(0, my, 16, 20);
+
+	if (abs(itemOn*128*FRACUNIT - char_scroll) > 256*FRACUNIT)
+		char_scroll = itemOn*128*FRACUNIT;
+	else if (itemOn*128*FRACUNIT - char_scroll > 128*FRACUNIT)
+		char_scroll += 48*FRACUNIT;
+	else if (itemOn*128*FRACUNIT - char_scroll < -128*FRACUNIT)
+		char_scroll -= 48*FRACUNIT;
+	else if (itemOn*128*FRACUNIT > char_scroll+16*FRACUNIT)
+		char_scroll += 16*FRACUNIT;
+	else if (itemOn*128*FRACUNIT < char_scroll-16*FRACUNIT)
+		char_scroll -= 16*FRACUNIT;
+	else // close enough.
+		char_scroll = itemOn*128*FRACUNIT; // just be exact now.
+	i = (char_scroll+16*FRACUNIT)/(128*FRACUNIT);
+	o = ((char_scroll/FRACUNIT)+16)%128;
+
+	// prev character
+	if (i-1 >= 0 && MP_PlayerMenu[i-1].status != IT_DISABLED
+	&& o < 32)
+	{
+		picname = MP_Description[i-1].picname;
+		if (picname[0] == '\0')
+		{
+			picname = strtok(Z_StrDup(MP_Description[i-1].skinname), "&");
+			for (j = 0; j < numskins; j++)
+				if (stricmp(skins[j].name, picname) == 0)
+				{
+					Z_Free(picname);
+					picname = skins[j].charsel;
+					break;
+				}
+			if (j == numskins) // AAAAAAAAAA
+				picname = skins[0].charsel;
+		}
+		patch = W_CachePatchName(picname, PU_CACHE);
+		if (SHORT(patch->width) >= 256)
+			V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT/2, 0, patch, 0, SHORT(patch->height) - 64 + o*2, SHORT(patch->width), SHORT(patch->height));
+		else
+			V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT, 0, patch, 0, SHORT(patch->height) - 32 + o, SHORT(patch->width), SHORT(patch->height));
+		W_UnlockCachedPatch(patch);
+	}
+
+	// next character
+	if (i+1 < currentMenu->numitems && MP_PlayerMenu[i+1].status != IT_DISABLED
+	&& o < 128)
+	{
+		picname = MP_Description[i+1].picname;
+		if (picname[0] == '\0')
+		{
+			picname = strtok(Z_StrDup(MP_Description[i+1].skinname), "&");
+			for (j = 0; j < numskins; j++)
+				if (stricmp(skins[j].name, picname) == 0)
+				{
+					Z_Free(picname);
+					picname = skins[j].charsel;
+					break;
+				}
+			if (j == numskins) // AAAAAAAAAA
+				picname = skins[0].charsel;
+		}
+		patch = W_CachePatchName(picname, PU_CACHE);
+		if (SHORT(patch->width) >= 256)
+			V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, FRACUNIT/2, 0, patch, 0, 0, SHORT(patch->width), o*2);
+		else
+			V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, FRACUNIT, 0, patch, 0, 0, SHORT(patch->width), o);
+		W_UnlockCachedPatch(patch);
+	}
+
+	// current character
+	if (i < currentMenu->numitems && MP_PlayerMenu[i].status != IT_DISABLED)
+	{
+		picname = MP_Description[i].picname;
+		if (picname[0] == '\0')
+		{
+			picname = strtok(Z_StrDup(MP_Description[i].skinname), "&");
+			for (j = 0; j < numskins; j++)
+				if (stricmp(skins[j].name, picname) == 0)
+				{
+					Z_Free(picname);
+					picname = skins[j].charsel;
+					break;
+				}
+			if (j == numskins) // AAAAAAAAAA
+				picname = skins[0].charsel;
+		}
+		patch = W_CachePatchName(picname, PU_CACHE);
+		if (o >= 0 && o <= 32)
+		{
+			if (SHORT(patch->width) >= 256)
+				V_DrawSmallScaledPatch(8, my + 40 - o, 0, patch);
+			else
+				V_DrawScaledPatch(8, my + 40 - o, 0, patch);
+		}
+		else
+		{
+			if (SHORT(patch->width) >= 256)
+				V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT/2, 0, patch, 0, (o - 32)*2, SHORT(patch->width), SHORT(patch->height));
+			else
+				V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT, 0, patch, 0, o - 32, SHORT(patch->width), SHORT(patch->height));
+		}
+		W_UnlockCachedPatch(patch);
+	}
+
+	// draw title (or big pic)
+	M_DrawMenuTitle();
+
+	// Character description
+	M_DrawTextBox(136, my, 21, 20);
+	if (!char_notes)
+		char_notes = V_WordWrap(0, 21*8, V_ALLOWLOWERCASE, MP_Description[itemOn].notes);
+	V_DrawString(146, my + 9, V_RETURN8|V_ALLOWLOWERCASE, char_notes);
+}
+
+static void M_NetgameChoosePlayer(INT32 choice)
+{
+
+	// skip this if forcecharacter
+	if (mapheaderinfo[startmap-1] && mapheaderinfo[startmap-1]->forcecharacter[0] == '\0')
+	{
+		// M_SetupChoosePlayer didn't call us directly, that means we've been properly set up.
+		char_scroll = itemOn*128*FRACUNIT; // finish scrolling the menu
+		M_DrawSetupChoosePlayerMenu(); // draw the finally selected character one last time for the fadeout
+	}
+	M_ClearMenus(true);
+
+	CV_Set(&cv_skin, MP_Description[choice].skinname);
+	botingame = false;
+	botskin = 0;
+	botcolor = 0;
+
+	consoleplayer = 0;
+	CL_ClearPlayer(consoleplayer);
+	playeringame[consoleplayer] = true;
+	G_AddPlayer(consoleplayer);
+	playernode[consoleplayer] = 0;
+	addedtogame = true;
+
+	displayplayer = consoleplayer;
+	secondarydisplayplayer = consoleplayer;
+	splitscreen = botingame = false;
+
+	// Apply player flags as soon as possible!
+	players[consoleplayer].pflags &= ~(PF_FLIPCAM|PF_ANALOGMODE);
+	if (cv_flipcam.value)
+		players[consoleplayer].pflags |= PF_FLIPCAM;
+	if (cv_analog.value)
+		players[consoleplayer].pflags |= PF_ANALOGMODE;
 }
 
 // ===============

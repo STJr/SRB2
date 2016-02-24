@@ -1875,13 +1875,6 @@ void G_Ticker(boolean run)
 			default: I_Error("gameaction = %d\n", gameaction);
 		}
 
-	// read/write demo and check turbo cheat
-	for (i = 0; i < MAXPLAYERS; i++)
-	{
-		if (playeringame[i])
-			G_CopyTiccmd(&players[i].cmd, &netcmds[i], 1);
-	}
-
 	// do main actions
 	switch (gamestate)
 	{

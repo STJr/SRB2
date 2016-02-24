@@ -483,7 +483,8 @@ static boolean CL_SendJoin(void)
 	if (server) // no need to ask yourself if you can join!
 	{
 		cl_mode = cl_connected;
-		// TODO: Open character select here, since you haven't spawned in or anything.
+		M_StartControlPanel();
+		M_SetupNetgameChoosePlayer();
 	}
 	else
 		Net_SendJoin();
@@ -1938,9 +1939,12 @@ static void Local_Maketic(INT32 realtics)
 
 	localcmds.angleturn |= TICCMD_RECEIVED;
 
-	G_CopyTiccmd(&netcmds[consoleplayer], &localcmds, 1);
-	if (splitscreen || botingame)
-		G_CopyTiccmd(&netcmds[secondarydisplayplayer], &localcmds2, 1);
+	if (addedtogame)
+	{
+		G_CopyTiccmd(&players[consoleplayer].cmd, &localcmds, 1);
+		if (splitscreen || botingame)
+			G_CopyTiccmd(&players[secondarydisplayplayer].cmd, &localcmds2, 1);
+	}
 }
 
 void SV_SpawnPlayer(INT32 playernum, INT32 x, INT32 y, angle_t angle)
