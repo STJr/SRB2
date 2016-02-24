@@ -4982,7 +4982,7 @@ static void M_ChoosePlayer(INT32 choice)
 	boolean ultmode = (ultimate_selectable && SP_PlayerDef.prevMenu == &SP_LoadDef && saveSlotSelected == NOSAVESLOT);
 
 	// skip this if forcecharacter
-	if (mapheaderinfo[startmap-1] && mapheaderinfo[startmap-1]->forcecharacter[0] == '\0')
+	if (!mapheaderinfo[startmap-1] || mapheaderinfo[startmap-1]->forcecharacter[0] == '\0')
 	{
 		// M_SetupChoosePlayer didn't call us directly, that means we've been properly set up.
 		char_scroll = itemOn*128*FRACUNIT; // finish scrolling the menu
