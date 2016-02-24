@@ -2672,6 +2672,7 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	if (!dedicated)
 	{
+		displayplayer = consoleplayer; // Start with your OWN view, please!
 		if (players[displayplayer].mo && (server || addedtogame))
 		{
 			camera.x = players[displayplayer].mo->x;
@@ -2731,8 +2732,6 @@ boolean P_SetupLevel(boolean skipprecip)
 		if (rendermode != render_soft && rendermode != render_none)
 			CV_Set(&cv_grfov, cv_grfov.defaultvalue);
 #endif
-
-		displayplayer = consoleplayer; // Start with your OWN view, please!
 	}
 
 	if (cv_useranalog.value)
