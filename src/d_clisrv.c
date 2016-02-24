@@ -1824,7 +1824,7 @@ static void Local_Maketic(INT32 realtics)
 	if (splitscreen || botingame)
 		G_BuildTiccmd2(&localcmds2, realtics);
 
-	localcmds.angleturn |= TICCMD_RECEIVED;
+	//localcmds.angleturn |= TICCMD_RECEIVED;
 
 	if (addedtogame)
 	{

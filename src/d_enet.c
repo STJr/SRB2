@@ -8,6 +8,7 @@
 #include "m_menu.h"
 #include "d_datawrap.h"
 #include "g_game.h"
+#include "p_local.h"
 
 UINT8 net_nodecount, net_playercount;
 UINT8 playernode[MAXPLAYERS];
@@ -37,7 +38,10 @@ enum {
 
 	SERVER_MSINFO = 0,
 	SERVER_MAPINFO,
-	SERVER_MESSAGE
+	SERVER_MESSAGE,
+	SERVER_SPAWN,
+	SERVER_REMOVE,
+	SERVER_MOVE
 };
 
 static ENetHost *ServerHost = NULL,
@@ -64,8 +68,12 @@ enum {
 	PEER_LEAVING = 1
 };
 
+static UINT8 mynode;
+
+void Net_ServerMessage(const char *fmt, ...);
 static void ServerSendMapInfo(UINT8 node);
 static void Net_SendMove(void);
+static void Net_MovePlayers(void);
 
 boolean Net_GetNetStat(void)
 {
@@ -104,7 +112,7 @@ static void ServerHandlePacket(UINT8 node, DataWrap data)
 		strcpy(pdata->name, name);
 		Z_Free(name);
 
-		CONS_Printf("NETWORK: Player '%s' joining...\n", pdata->name);
+		Net_ServerMessage("%s connected.", pdata->name);
 
 		net_playercount++;
 		ServerSendMapInfo(node);
@@ -112,24 +120,12 @@ static void ServerHandlePacket(UINT8 node, DataWrap data)
 	}
 
 	case CLIENT_CHAT:
-	{
-		ENetPacket *packet;
-		UINT8 ndata[MAX_SERVER_MESSAGE];
-		UINT8 *buf = ndata;
-
-		WRITEUINT8(buf, SERVER_MESSAGE);
-		sprintf(buf, "\3<%s> %s", pdata->name, DW_ReadStringn(data, 256));
-		buf += strlen(buf)+1;
-		CONS_Printf("%s\n", ndata+1);
-
-		packet = enet_packet_create(ndata, buf-ndata, ENET_PACKET_FLAG_RELIABLE);
-		enet_host_broadcast(ServerHost, 0, packet);
+		Net_ServerMessage("\3<%s> %s", pdata->name, DW_ReadStringn(data, 256));
 		break;
-	}
 
 	case CLIENT_CHARACTER:
 	{
-		UINT8 pnum;
+		UINT8 pnum, i;
 		// this message might be sent when the player first spawns
 		if (nodetoplayer[node] == -1)
 		{
@@ -142,6 +138,10 @@ static void ServerHandlePacket(UINT8 node, DataWrap data)
 			G_AddPlayer(pnum);
 			playernode[pnum] = node;
 			nodetoplayer[node] = pnum;
+
+			for (i = 0; i < MAXPLAYERS; i++)
+				if (i != pnum && playeringame[i])
+					Net_SpawnPlayer(i, node);
 		}
 		pnum = nodetoplayer[node];
 		SetPlayerSkin(pnum, DW_ReadStringn(data, SKINNAMESIZE));
@@ -152,17 +152,32 @@ static void ServerHandlePacket(UINT8 node, DataWrap data)
 	case CLIENT_MOVE:
 	{
 		player_t *player;
+		GhostData ghost;
+
+		ghost.cmd.forwardmove = DW_ReadSINT8(data);
+		ghost.cmd.sidemove = DW_ReadSINT8(data);
+		ghost.cmd.angleturn = DW_ReadINT16(data);
+		ghost.cmd.aiming = DW_ReadINT16(data);
+		ghost.cmd.buttons = DW_ReadUINT16(data);
+		ghost.x = DW_ReadINT16(data) << 16;
+		ghost.y = DW_ReadINT16(data) << 16;
+		ghost.z = DW_ReadINT16(data) << 16;
+
+		// TODO: Compare new data to old data, etc.
+		memcpy(&pdata->ghost, &ghost, sizeof(ghost));
+
 		if (nodetoplayer[node] == -1)
 			break;
+
 		player = &players[nodetoplayer[node]];
-		player->cmd.forwardmove = DW_ReadSINT8(data);
-		player->cmd.sidemove = DW_ReadSINT8(data);
-		player->cmd.angleturn = DW_ReadINT16(data);
-		player->cmd.aiming = DW_ReadINT16(data);
-		player->cmd.buttons = DW_ReadUINT16(data);
-		player->mo->x = DW_ReadINT16(data) << 16;
-		player->mo->y = DW_ReadINT16(data) << 16;
-		player->mo->z = DW_ReadINT16(data) << 16;
+		player->cmd.forwardmove = ghost.cmd.forwardmove;
+		player->cmd.sidemove = ghost.cmd.sidemove;
+		player->cmd.angleturn = ghost.cmd.angleturn;
+		player->cmd.aiming = ghost.cmd.aiming;
+		player->cmd.buttons = ghost.cmd.buttons;
+		player->mo->x = ghost.x;
+		player->mo->y = ghost.y;
+		player->mo->z = ghost.z;
 		break;
 	}
 
@@ -181,9 +196,10 @@ static void ClientHandlePacket(UINT8 node, DataWrap data)
 	case SERVER_MAPINFO:
 	{
 		CL_ConnectionSuccessful();
+		mynode = DW_ReadUINT8(data);
+		CONS_Printf("NETWORK: I'm player %u\n", mynode);
 		gamemap = DW_ReadINT16(data);
 		gametype = DW_ReadINT16(data);
-		CONS_Printf("NETWORK: Heading to map %u\n", gamemap);
 		G_InitNew(false, G_BuildMapName(gamemap), true, true);
 		M_StartControlPanel();
 		M_SetupNetgameChoosePlayer();
@@ -195,6 +211,72 @@ static void ClientHandlePacket(UINT8 node, DataWrap data)
 		char *msg = DW_ReadStringn(data, MAX_SERVER_MESSAGE);
 		CONS_Printf("%s\n", msg);
 		Z_Free(msg);
+		break;
+	}
+
+	case SERVER_SPAWN:
+	{
+		UINT16 id = DW_ReadUINT16(data);
+
+		if (id == mynode+1)
+			break;
+
+		// Spawn a player.
+		if (id < 1000)
+		{
+			const fixed_t x = DW_ReadINT16(data) << 16,
+				y = DW_ReadINT16(data) << 16,
+				z = DW_ReadINT16(data) << 16;
+			mobj_t *mobj = P_SpawnMobj(x, y, z, MT_PLAYER);
+			mobj->flags &= ~MF_SOLID;
+			mobj->mobjnum = id;
+			mobj->angle = DW_ReadUINT8(data) << 24;
+			mobj->skin = &skins[DW_ReadUINT8(data)];
+			mobj->color = DW_ReadUINT8(data);
+		}
+		break;
+	}
+
+	case SERVER_MOVE:
+	{
+		thinker_t *th;
+		mobj_t *mobj = NULL;
+		UINT16 id = DW_ReadUINT16(data);
+		fixed_t x,y,z;
+
+		if (id == mynode+1)
+			break;
+
+		for (th = thinkercap.next; th != &thinkercap; th = th->next)
+			if (th->function.acp1 == (actionf_p1)P_MobjThinker && ((mobj_t *)th)->mobjnum == id)
+			{
+				mobj = (mobj_t *)th;
+				break;
+			}
+
+		if (!mobj)
+		{
+			//CONS_Printf("NETWORK: Failed to find mobj with id %u\n", id);
+			break;
+		}
+
+		x = DW_ReadINT16(data) << 16,
+		y = DW_ReadINT16(data) << 16,
+		z = DW_ReadINT16(data) << 16;
+		P_MapStart();
+		P_TeleportMove(mobj, x, y, z);
+		P_MapEnd();
+
+		mobj->momx = DW_ReadINT16(data) << 8,
+		mobj->momy = DW_ReadINT16(data) << 8,
+		mobj->momz = DW_ReadINT16(data) << 8;
+
+		mobj->angle = DW_ReadUINT8(data) << 24;
+
+		mobj->state = &states[DW_ReadUINT16(data)];
+		mobj->sprite = mobj->state->sprite;
+		mobj->frame = mobj->state->frame;
+		mobj->tics = -1;
 		break;
 	}
 
@@ -211,8 +293,8 @@ void Net_AckTicker(void)
 	PeerData *pdata;
 	jmp_buf safety;
 
-	if(addedtogame && ClientHost)
-		Net_SendMove();
+	Net_SendMove();
+	Net_MovePlayers();
 
 	while (ClientHost && enet_host_service(ClientHost, &e, 0) > 0)
 		switch (e.type)
@@ -294,7 +376,7 @@ void Net_AckTicker(void)
 				break;
 			pdata = (PeerData *)e.peer->data;
 			if (!(pdata->flags & PEER_LEAVING))
-				CONS_Printf("NETWORK: %s disconnected.\n", pdata->name);
+				Net_ServerMessage("%s disconnected.", pdata->name);
 			net_nodecount--;
 			nodetopeer[pdata->node] = NULL;
 			nodeingame[pdata->node] = false;
@@ -322,7 +404,7 @@ void Net_AckTicker(void)
 void D_NetOpen(void)
 {
 	ENetAddress address = { ENET_HOST_ANY, 5029 };
-	ServerHost = enet_host_create(&address, MAXNETNODES, NET_CHANNELS-1, 0, 0);
+	ServerHost = enet_host_create(&address, MAXNETNODES, NET_CHANNELS, 0, 0);
 	if (!ServerHost)
 		I_Error("ENet failed to open server host. (Check if the port is in use?)");
 
@@ -337,7 +419,7 @@ boolean D_NetConnect(const char *hostname, const char *port)
 	ENetAddress address;
 	ENetEvent e;
 
-	ClientHost = enet_host_create(NULL, 1, NET_CHANNELS-1, 0, 0);
+	ClientHost = enet_host_create(NULL, 1, NET_CHANNELS, 0, 0);
 	if (!ClientHost)
 		I_Error("ENet failed to initialize client host.\n");
 
@@ -349,7 +431,7 @@ boolean D_NetConnect(const char *hostname, const char *port)
 	if (port != NULL)
 		address.port = atoi(port) || address.port;
 
-	nodetopeer[servernode] = enet_host_connect(ClientHost, &address, NET_CHANNELS-1, 0);
+	nodetopeer[servernode] = enet_host_connect(ClientHost, &address, NET_CHANNELS, 0);
 	if (!nodetopeer[servernode])
 		I_Error("Failed to allocate ENet peer for connecting ???\n");
 	nodeingame[servernode] = true;
@@ -494,11 +576,29 @@ static void ServerSendMapInfo(UINT8 node)
 	UINT8 *buf = data;
 
 	WRITEUINT8(buf, SERVER_MAPINFO);
+	WRITEUINT8(buf, node);
 	WRITEINT16(buf, gamemap);
 	WRITEINT16(buf, gametype);
 
 	packet = enet_packet_create(data, buf-data, ENET_PACKET_FLAG_RELIABLE);
 	enet_peer_send(nodetopeer[node], CHANNEL_GENERAL, packet);
+}
+
+void Net_ServerMessage(const char *fmt, ...)
+{
+	va_list argptr;
+	ENetPacket *packet;
+	UINT8 data[1+MAX_SERVER_MESSAGE];
+	UINT8 *buf = data;
+
+	WRITEUINT8(buf, SERVER_MESSAGE);
+	va_start(argptr, fmt);
+	vsnprintf(buf, MAX_SERVER_MESSAGE, fmt, argptr);
+	va_end(argptr);
+	buf += strlen(buf)+1;
+
+	CONS_Printf("%s\n", data+1);
+	enet_host_broadcast(ServerHost, 0, enet_packet_create(data, buf-data, ENET_PACKET_FLAG_RELIABLE));
 }
 
 void Net_SendChat(char *line)
@@ -533,6 +633,9 @@ void Net_SendCharacter(void)
 	UINT8 data[1+SKINNAMESIZE+1];
 	UINT8 *buf = data;
 
+	if (server)
+		return;
+
 	WRITEUINT8(buf, CLIENT_CHARACTER);
 	WRITESTRINGN(buf, cv_skin.string, SKINNAMESIZE);
 	WRITEUINT8(buf, cv_playercolor.value);
@@ -544,10 +647,10 @@ void Net_SendCharacter(void)
 static void Net_SendMove(void)
 {
 	ENetPacket *packet;
-	UINT8 data[256];
+	UINT8 data[15];
 	UINT8 *buf = data;
 
-	if (!addedtogame)
+	if (server || !addedtogame || !players[consoleplayer].mo)
 		return;
 
 	WRITEUINT8(buf, CLIENT_MOVE);
@@ -562,4 +665,56 @@ static void Net_SendMove(void)
 
 	packet = enet_packet_create(data, buf-data, 0);
 	enet_peer_send(nodetopeer[servernode], CHANNEL_MOVE, packet);
+}
+
+void Net_SpawnPlayer(UINT8 pnum, UINT8 node)
+{
+	ENetPacket *packet;
+	UINT8 data[12];
+	UINT8 *buf = data;
+
+	WRITEUINT8(buf, SERVER_SPAWN);
+	WRITEUINT16(buf, pnum+1);
+	WRITEINT16(buf, players[pnum].mo->x >> 16);
+	WRITEINT16(buf, players[pnum].mo->y >> 16);
+	WRITEINT16(buf, players[pnum].mo->z >> 16);
+	WRITEUINT8(buf, players[pnum].mo->angle >> 24);
+	WRITEUINT8(buf, players[pnum].skin);
+	WRITEUINT8(buf, players[pnum].skincolor);
+
+	packet = enet_packet_create(data, buf-data, ENET_PACKET_FLAG_RELIABLE);
+	if (node == 0)
+		enet_host_broadcast(ServerHost, CHANNEL_MOVE, packet);
+	else
+		enet_peer_send(nodetopeer[node], CHANNEL_MOVE, packet);
+}
+
+static void Net_MovePlayers(void)
+{
+	ENetPacket *packet;
+	UINT8 data[18], *buf, i;
+
+	if (!server)
+		return;
+
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (!playeringame[i] || !players[i].mo)
+			continue;
+
+		buf = data;
+		WRITEUINT8(buf, SERVER_MOVE);
+		WRITEUINT16(buf, i+1);
+		WRITEINT16(buf, players[i].mo->x >> 16);
+		WRITEINT16(buf, players[i].mo->y >> 16);
+		WRITEINT16(buf, players[i].mo->z >> 16);
+		WRITEINT16(buf, players[i].mo->momx >> 8);
+		WRITEINT16(buf, players[i].mo->momy >> 8);
+		WRITEINT16(buf, players[i].mo->momz >> 8);
+		WRITEUINT8(buf, players[i].mo->angle >> 24);
+		WRITEUINT16(buf, players[i].mo->state - states);
+
+		packet = enet_packet_create(data, buf-data, 0);
+		enet_host_broadcast(ServerHost, CHANNEL_MOVE, packet);
+	}
 }

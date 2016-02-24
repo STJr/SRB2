@@ -15,3 +15,5 @@ void D_CloseConnection(void);
 void Net_CloseConnection(INT32 node);
 
 void Net_SendJoin(void);
+void Net_SendCharacter(void);
+void Net_SpawnPlayer(UINT8 pnum, UINT8 node);
