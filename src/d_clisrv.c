@@ -481,11 +481,7 @@ static boolean CL_SendJoin(void)
 		return true;
 	}
 	if (server) // no need to ask yourself if you can join!
-	{
-		cl_mode = cl_connected;
-		M_StartControlPanel();
-		M_SetupNetgameChoosePlayer();
-	}
+		return true;
 	else
 		Net_SendJoin();
 	return true;

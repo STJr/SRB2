@@ -5032,7 +5032,6 @@ void M_SetupNetgameChoosePlayer(void)
 		return;
 	}
 
-	S_StopMusic();
 	S_ChangeMusic(mus_chrsel, true);
 
 	M_SetupNextMenu(&MP_PlayerDef);

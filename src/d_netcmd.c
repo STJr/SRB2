@@ -1774,6 +1774,12 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	if (demorecording) // Okay, level loaded, character spawned and skinned,
 		G_BeginRecording(); // I AM NOW READY TO RECORD.
 	demo_start = true;
+
+	if (netgame && !addedtogame)
+	{
+		M_StartControlPanel();
+		M_SetupNetgameChoosePlayer();
+	}
 }
 
 static void Command_Pause(void)

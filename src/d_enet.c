@@ -95,8 +95,6 @@ static void ClientHandlePacket(UINT8 node, DataWrap data)
 		INT16 mapnum = data->ReadINT16(data);
 		gametype = data->ReadINT16(data);
 		G_InitNew(false, G_BuildMapName(mapnum), true, true);
-		M_StartControlPanel();
-		M_SetupNetgameChoosePlayer();
 		break;
 	}
 	default:
