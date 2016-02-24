@@ -5168,6 +5168,7 @@ static void M_DrawSetupNetgameChoosePlayerMenu(void)
 
 static void M_NetgameChoosePlayer(INT32 choice)
 {
+	INT32 foundskin;
 
 	// skip this if forcecharacter
 	if (mapheaderinfo[startmap-1] && mapheaderinfo[startmap-1]->forcecharacter[0] == '\0')
@@ -5178,7 +5179,6 @@ static void M_NetgameChoosePlayer(INT32 choice)
 	}
 	M_ClearMenus(true);
 
-	CV_Set(&cv_skin, MP_Description[choice].skinname);
 	botingame = false;
 	botskin = 0;
 	botcolor = 0;
@@ -5189,6 +5189,16 @@ static void M_NetgameChoosePlayer(INT32 choice)
 	G_AddPlayer(consoleplayer);
 	playernode[consoleplayer] = 0;
 	addedtogame = true;
+
+	if ((foundskin = R_SkinAvailable(MP_Description[choice].skinname)) != -1)
+	{
+		cv_skin.value = foundskin;
+		CV_StealthSet(&cv_skin, skins[foundskin].name);
+		SetPlayerSkin(consoleplayer, cv_skin.string);
+
+		CV_StealthSetValue(&cv_playercolor, skins[foundskin].prefcolor);
+		players[consoleplayer].skincolor = (cv_playercolor.value&0x1F) % MAXSKINCOLORS;
+	}
 
 	displayplayer = consoleplayer;
 	secondarydisplayplayer = consoleplayer;
