@@ -120,8 +120,8 @@ unlockable_t unlockables[MAXUNLOCKABLES] =
 	/* 16 */ {"Tako Desert",       "Collect 26 Chaos Coins",  0, 49, SECRET_NONE,         53, false, true, 0},
 	/* 17 */ {"A Big Mistake",     "Collect 28 Chaos Coins",  0, 50, SECRET_NONE,         58, false, true, 0},
 
-	/* 18 */ {"Pandora's Box", "Collect All Emblems",  0, 51, SECRET_PANDORA,     0, false, false, 0},
-	/* 19 */ {"Level Select",  "Collect All Emblems", 20, 51, SECRET_LEVELSELECT, 1, false,  true, 0},
+	/* 18 */ {"Pandora's Box", "Collect All Chaos Coins",  0, 51, SECRET_PANDORA,     0, false, false, 0},
+	/* 19 */ {"Level Select",  "Collect All Chaos Coins", 20, 51, SECRET_LEVELSELECT, 1, false,  true, 0},
 	/* 20 */ {"Scrapped Level Set 1", "Collect 7-16 Chaos Coins", 0, 41, SECRET_NONE, 0, true, false, 0},
 	/* 21 */ {"Scrapped Level Set 2", "Collect 18-28 Chaos Coins", 0, 46, SECRET_NONE, 0, true, false, 0},
 };
@@ -151,7 +151,7 @@ void M_SetupDefaultConditionSets(void)
 	M_AddRawCondition(30, 4,  UC_MAPPERFECT, 11, 0, 0);
 	M_AddRawCondition(30, 5,  UC_MAPPERFECT, 23, 0, 0);
 	M_AddRawCondition(30, 6,  UC_MAPPERFECT, 25, 0, 0);
-	
+
 	// --  40: Find 5 emblems
 	M_AddRawCondition(40, 1, UC_TOTALEMBLEMS,  5, 0, 0);
 
