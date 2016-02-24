@@ -202,7 +202,7 @@ static void CONS_Bind_f(void)
 	}
 
 	key = G_KeyStringtoNum(COM_Argv(1));
-	if (!key)
+	if (key <= 0 || key >= NUMINPUTS)
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("Invalid key name\n"));
 		return;

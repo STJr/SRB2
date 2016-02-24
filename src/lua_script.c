@@ -737,7 +737,7 @@ static int NetArchive(lua_State *L)
 {
 	int TABLESINDEX = lua_upvalueindex(1);
 	int i, n = lua_gettop(L);
-	for (i = 0; i < n; i++)
+	for (i = 1; i <= n; i++)
 		ArchiveValue(TABLESINDEX, i);
 	return n;
 }
@@ -884,7 +884,7 @@ static int NetUnArchive(lua_State *L)
 {
 	int TABLESINDEX = lua_upvalueindex(1);
 	int i, n = lua_gettop(L);
-	for (i = 0; i < n; i++)
+	for (i = 1; i <= n; i++)
 		UnArchiveValue(TABLESINDEX);
 	return n;
 }

@@ -100,7 +100,8 @@ set(GIT_EXECUTABLE "git" CACHE FILEPATH "Path to git binary")
 include(GitUtilities)
 git_describe(SRB2_GIT_DESCRIBE "${CMAKE_SOURCE_DIR}")
 git_current_branch(SRB2_GIT_BRANCH "${CMAKE_SOURCE_DIR}")
-set(SRB2_COMP_REVISION "${SRB2_GIT_DESCRIBE}-<${SRB2_GIT_BRANCH}>")
+set(SRB2_COMP_BRANCH "${SRB2_GIT_BRANCH}")
+set(SRB2_COMP_REVISION "${SRB2_GIT_DESCRIBE}")
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/src/config.h)
 
 ##### PACKAGE CONFIGURATION #####
