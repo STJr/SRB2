@@ -281,6 +281,7 @@ void D_CloseConnection(void)
 	if (ServerHost)
 	{
 		UINT8 i, waiting=0;
+
 		// tell everyone to go away
 		for (i = 0; i < MAXNETNODES; i++)
 			if (nodeingame[i] && servernode != i)
@@ -288,6 +289,7 @@ void D_CloseConnection(void)
 				enet_peer_disconnect(nodetopeer[i], DISCONNECT_SHUTDOWN);
 				waiting++;
 			}
+
 		// wait for messages to go through.
 		while (waiting > 0 && enet_host_service(ServerHost, &e, 3000) > 0)
 			switch (e.type)
@@ -296,22 +298,30 @@ void D_CloseConnection(void)
 			case ENET_EVENT_TYPE_RECEIVE:
 				enet_packet_destroy(e.packet);
 				break;
+
 			// good, go away.
 			case ENET_EVENT_TYPE_DISCONNECT:
 				waiting--;
 				break;
+
 			// no, we're shutting down.
 			case ENET_EVENT_TYPE_CONNECT:
 				enet_peer_reset(e.peer);
 				break;
+
+			default:
+				break;
 			}
+
 		// alright, we're finished.
 		enet_host_destroy(ServerHost);
+		ServerHost = NULL;
 	}
 
 	if (ClientHost)
 	{
 		enet_peer_disconnect(nodetopeer[servernode], DISCONNECT_SHUTDOWN);
+
 		while (enet_host_service(ServerHost, &e, 3000) > 0)
 		{
 			if (e.type == ENET_EVENT_TYPE_DISCONNECT)
@@ -321,13 +331,19 @@ void D_CloseConnection(void)
 			case ENET_EVENT_TYPE_RECEIVE:
 				enet_packet_destroy(e.packet);
 				break;
+
 			case ENET_EVENT_TYPE_CONNECT:
 				// how the what ???
 				enet_peer_reset(e.peer);
 				break;
+
+			default:
+				break;
 			}
 		}
+
 		enet_host_destroy(ClientHost);
+		ClientHost = NULL;
 	}
 
 	netgame = false;
