@@ -5167,10 +5167,11 @@ static void M_DrawSetupNetgameChoosePlayerMenu(void)
 
 static void M_NetgameChoosePlayer(INT32 choice)
 {
+	char *skinname;
 	INT32 foundskin;
 
 	// skip this if forcecharacter
-	if (mapheaderinfo[startmap-1] && mapheaderinfo[startmap-1]->forcecharacter[0] == '\0')
+	if (!mapheaderinfo[gamemap-1] || mapheaderinfo[gamemap-1]->forcecharacter[0] == '\0')
 	{
 		// M_SetupChoosePlayer didn't call us directly, that means we've been properly set up.
 		char_scroll = itemOn*128*FRACUNIT; // finish scrolling the menu
@@ -5189,7 +5190,12 @@ static void M_NetgameChoosePlayer(INT32 choice)
 	playernode[consoleplayer] = 0;
 	addedtogame = true;
 
-	if ((foundskin = R_SkinAvailable(MP_Description[choice].skinname)) != -1)
+	if (!mapheaderinfo[gamemap-1] || mapheaderinfo[gamemap-1]->forcecharacter[0] == '\0')
+		skinname = MP_Description[choice].skinname;
+	else
+		skinname = mapheaderinfo[gamemap-1]->forcecharacter;
+
+	if ((foundskin = R_SkinAvailable(skinname)) != -1)
 	{
 		cv_skin.value = foundskin;
 		CV_StealthSet(&cv_skin, skins[foundskin].name);
@@ -5209,6 +5215,8 @@ static void M_NetgameChoosePlayer(INT32 choice)
 		players[consoleplayer].pflags |= PF_FLIPCAM;
 	if (cv_analog.value)
 		players[consoleplayer].pflags |= PF_ANALOGMODE;
+
+	Net_SendCharacter();
 }
 
 // ===============
