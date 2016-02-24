@@ -86,15 +86,23 @@ static void ServerHandlePacket(UINT8 node, DataWrap data)
 	}
 }
 
+void CL_ConnectionSuccessful(void);
+
 static void ClientHandlePacket(UINT8 node, DataWrap data)
 {
 	switch(data->ReadUINT8(data))
 	{
 	case SERVER_MAPINFO:
 	{
-		INT16 mapnum = data->ReadINT16(data);
+		CL_ConnectionSuccessful();
+		CONS_Printf("NETWORK: Got Mapinfo!\n");
+		gamemap = data->ReadINT16(data);
 		gametype = data->ReadINT16(data);
-		G_InitNew(false, G_BuildMapName(mapnum), true, true);
+		CONS_Printf("NETWORK: Heading to map %u\n", gamemap);
+		G_InitNew(false, G_BuildMapName(gamemap), true, true);
+		CONS_Printf("NETWORK: Choose a player!\n");
+		M_StartControlPanel();
+		M_SetupNetgameChoosePlayer();
 		break;
 	}
 	default:
@@ -134,11 +142,11 @@ void Net_AckTicker(void)
 			break;
 
 		case ENET_EVENT_TYPE_RECEIVE:
-			pdata = (PeerData *)e.peer->data;
+			CONS_Printf("NETWORK: Got a packet.\n");
 			if (setjmp(safety))
 				CONS_Printf("NETWORK: There was an EOF error in a recieved packet from server! len %u\n", e.packet->dataLength);
 			else
-				ClientHandlePacket(pdata->node, D_NewDataWrap(e.packet->data, e.packet->dataLength, &safety));
+				ClientHandlePacket(servernode, D_NewDataWrap(e.packet->data, e.packet->dataLength, &safety));
 			enet_packet_destroy(e.packet);
 			break;
 
@@ -236,7 +244,7 @@ boolean D_NetConnect(const char *hostname, const char *port)
 		I_Error("ENet failed to initialize client host.\n");
 
 	netgame = multiplayer = true;
-	servernode = 0;
+	servernode = 1;
 
 	enet_address_set_host(&address, hostname);
 	address.port = 5029;
@@ -327,8 +335,10 @@ void D_CloseConnection(void)
 	if (ClientHost)
 	{
 		enet_peer_disconnect(nodetopeer[servernode], DISCONNECT_SHUTDOWN);
+		nodeingame[servernode] = false;
+		servernode = 0;
 
-		while (enet_host_service(ServerHost, &e, 3000) > 0)
+		while (enet_host_service(ClientHost, &e, 3000) > 0)
 		{
 			if (e.type == ENET_EVENT_TYPE_DISCONNECT)
 				break;
@@ -377,6 +387,7 @@ void Net_SendJoin(void)
 
 	packet = enet_packet_create(data, buf-data, ENET_PACKET_FLAG_RELIABLE);
 	enet_peer_send(nodetopeer[servernode], 0, packet);
+	CONS_Printf("NETWORK: Join request sent. Now...\n");
 }
 
 static void ServerSendMapInfo(UINT8 node)

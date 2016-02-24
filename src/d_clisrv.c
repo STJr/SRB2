@@ -473,6 +473,7 @@ static inline void CL_DrawConnectionStatus(void)
 // used only in arbitratrenetstart()
 static boolean CL_SendJoin(void)
 {
+	CONS_Printf("NETWORK: Sending join request.\n");
 	if (!netgame)
 	{
 		nodewaiting[servernode]++;
@@ -673,11 +674,7 @@ static void SL_ClearServerList(INT32 connectedserver)
 
 static UINT32 SL_SearchServer(INT32 node)
 {
-	UINT32 i;
-	for (i = 0; i < serverlistcount; i++)
-		if (serverlist[i].node == node)
-			return i;
-
+	// NET TODO
 	return UINT32_MAX;
 }
 
@@ -716,22 +713,25 @@ void CL_UpdateServerList(boolean internetsearch, INT32 room)
 
 #endif // ifndef NONET
 
+void CL_ConnectionSuccessful(void)
+{
+	if (cl_mode == cl_waitjoinresponse)
+		cl_mode = cl_connected;
+}
+
 // use adaptive send using net_bandwidth and stat.sendbytes
 static void CL_ConnectToServer(boolean viams)
 {
 	INT32 pnumnodes, nodewaited = net_nodecount, i;
 	boolean waitmore;
 	tic_t oldtic;
-#ifndef NONET
-	tic_t asksent;
-#endif
 #ifdef JOININGAME
 	XBOXSTATIC char tmpsave[256];
 
 	sprintf(tmpsave, "%s" PATHSEP TMPSAVENAME, srb2home);
 #endif
 
-	cl_mode = cl_searching;
+	cl_mode = cl_askjoin;
 
 #ifdef CLIENT_LOADINGSCREEN
 	lastfilenum = 0;
@@ -761,127 +761,14 @@ static void CL_ConnectToServer(boolean viams)
 	adminplayer = -1;
 	pnumnodes = 1;
 	oldtic = I_GetTime() - 1;
-#ifndef NONET
-	asksent = (tic_t)-TICRATE;
 
-	i = SL_SearchServer(servernode);
-
-	if (i != -1)
-	{
-		INT32 j;
-		const char *gametypestr = NULL;
-		CONS_Printf(M_GetText("Connecting to: %s\n"), serverlist[i].info.servername);
-		for (j = 0; gametype_cons_t[j].strvalue; j++)
-		{
-			if (gametype_cons_t[j].value == serverlist[i].info.gametype)
-			{
-				gametypestr = gametype_cons_t[j].strvalue;
-				break;
-			}
-		}
-		if (gametypestr)
-			CONS_Printf(M_GetText("Gametype: %s\n"), gametypestr);
-		CONS_Printf(M_GetText("Version: %d.%d.%u\n"), serverlist[i].info.version/100,
-		 serverlist[i].info.version%100, serverlist[i].info.subversion);
-	}
-	SL_ClearServerList(servernode);
-#endif
-
+	CONS_Printf("NETWORK: Entering connect loop.\n");
 	do
 	{
 		switch (cl_mode)
 		{
 			case cl_searching:
-#ifndef NONET
-				// serverlist is updated by GetPacket function
-				if (serverlistcount > 0)
-				{
-					// this can be a responce to our broadcast request
-					if (servernode == -1 || servernode >= MAXNETNODES)
-					{
-						i = 0;
-						servernode = serverlist[i].node;
-						CONS_Printf(M_GetText("Found, "));
-					}
-					else
-					{
-						i = SL_SearchServer(servernode);
-						if (i < 0)
-							break; // the case
-					}
-
-					// Quit here rather than downloading files and being refused later.
-					if (serverlist[i].info.numberofplayer >= serverlist[i].info.maxplayer)
-					{
-						D_QuitNetGame();
-						CL_Reset();
-						D_StartTitle();
-						M_StartMessage(va(M_GetText("Maximum players reached: %d\n\nPress ESC\n"), serverlist[i].info.maxplayer), NULL, MM_NOTHING);
-						return;
-					}
-
-					if (!server)
-					{
-						D_ParseFileneeded(serverlist[i].info.fileneedednum,
-							serverlist[i].info.fileneeded);
-						CONS_Printf(M_GetText("Checking files...\n"));
-						i = CL_CheckFiles();
-						if (i == 2) // cannot join for some reason
-						{
-							D_QuitNetGame();
-							CL_Reset();
-							D_StartTitle();
-							M_StartMessage(M_GetText(
-								"You have WAD files loaded or have\n"
-								"modified the game in some way, and\n"
-								"your file list does not match\n"
-								"the server's file list.\n"
-								"Please restart SRB2 before connecting.\n\n"
-								"Press ESC\n"
-							), NULL, MM_NOTHING);
-							return;
-						}
-						else if (i == 1)
-							cl_mode = cl_askjoin;
-						else
-						{
-							// must download something
-							// can we, though?
-							if (!CL_CheckDownloadable()) // nope!
-							{
-								D_QuitNetGame();
-								CL_Reset();
-								D_StartTitle();
-								M_StartMessage(M_GetText(
-									"You cannot conect to this server\n"
-									"because you cannot download the files\n"
-									"that you are missing from the server.\n\n"
-									"See the console or log file for\n"
-									"more details.\n\n"
-									"Press ESC\n"
-								), NULL, MM_NOTHING);
-								return;
-							}
-							// no problem if can't send packet, we will retry later
-							if (CL_SendRequestFile())
-								cl_mode = cl_downloadfiles;
-						}
-					}
-					else
-						cl_mode = cl_askjoin; // files need not be checked for the server.
-					break;
-				}
-				// ask the info to the server (askinfo packet)
-				if (asksent + NEWTICRATE < I_GetTime())
-				{
-					SendAskInfo(servernode, viams);
-					asksent = I_GetTime();
-				}
-#else
-				(void)viams;
-				// No netgames, so we skip this state.
-				cl_mode = cl_askjoin;
-#endif // ifndef NONET/else
+				// NET TODO
 				break;
 			case cl_downloadfiles:
 				waitmore = false;
