@@ -194,6 +194,7 @@ void Net_AckTicker(void)
 			}
 			net_nodecount--;
 			nodetopeer[pdata->node] = NULL;
+			nodeingame[pdata->node] = false;
 			Z_Free(pdata);
 			e.peer->data = NULL;
 			break;
@@ -232,7 +233,7 @@ boolean D_NetConnect(const char *hostname, const char *port)
 
 	ClientHost = enet_host_create(NULL, 1, NETCHANNELS, 0, 0);
 	if (!ClientHost)
-		I_Error("ENet failed to initialize client host.");
+		I_Error("ENet failed to initialize client host.\n");
 
 	netgame = multiplayer = true;
 	servernode = 0;
@@ -244,15 +245,18 @@ boolean D_NetConnect(const char *hostname, const char *port)
 
 	nodetopeer[servernode] = enet_host_connect(ClientHost, &address, NETCHANNELS, 0);
 	if (!nodetopeer[servernode])
-		I_Error("Failed to allocate ENet peer for connecting ???");
+		I_Error("Failed to allocate ENet peer for connecting ???\n");
 	nodeingame[servernode] = true;
 
 	if (enet_host_service(ClientHost, &e, 5000) > 0
 	&& e.type == ENET_EVENT_TYPE_CONNECT)
 	{
-		CONS_Printf("NETWORK: Connection successful!");
+		CONS_Printf("NETWORK: Connection successful!\n");
 		return true;
 	}
+
+	CONS_Printf("NETWORK: Connection failed...\n");
+	servernode = 0;
 	enet_host_destroy(ClientHost);
 	ClientHost = NULL;
 	return false;
