@@ -467,7 +467,7 @@ static const char *credits[] = {
 	"\"Iceman404\"", // Did most of the sprites for this mod
 	"\"CoatRack\"", // TD was pretty much built off of his ideas
 	"\"Spherallic\"",
-	"\"Zipper\"",
+	"\"Zipper\"", // CHROMEs and more
 	"\"SevenColorsAlice\"", // Drew the Penguinator sprites
 	"\"Charybdizs\"", // Drew the Krackobot sprites
 	"",
@@ -488,8 +488,9 @@ static const char *credits[] = {
 	"",
 	"\1Music and Sound",
 	"Sonic Lost World - SEGA", // The game was awful, but the music was okay.
+	"Sonic Riders: Zero Gravity - SEGA", // This game was better, same with the music.
 	"Super Mario 3D World - Nintendo",
-	"Sonic Team Junior", // So we're crediting STJr, even though they have a whole section of credits directly below? :v
+	"Sonic Team Junior", // So we're crediting STJr, even though they have a whole section of credits directly below? lol
 	"Karl Breuggemann",
 	"Drift City - NPluto", // Credits music!
 	"",
@@ -519,6 +520,7 @@ static const char *credits[] = {
 	"",
 	"\1Special Thanks",
 	"\"Jeck Jims\"", // For his work on MD2 models 
+	"\"Metalsonicmk72\"", // Looped music and tuned up some of the tracks
 	"",
 	"\1Sonic Robo Blast II",
 	"\1Credits",
