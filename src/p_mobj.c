@@ -92,9 +92,7 @@ FUNCINLINE static ATTRINLINE void P_CycleStateAnimation(mobj_t *mobj)
 	// compare the current sprite frame to the one we started from
 	// if more than var1 away from it, swap back to the original
 	// else just advance by one
-	if ((mobj->frame & FF_FRAMEMASK) - (mobj->state->frame & FF_FRAMEMASK) < (UINT32)mobj->state->var1)
-		++mobj->frame;
-	else
+	if (((++mobj->frame) & FF_FRAMEMASK) - (mobj->state->frame & FF_FRAMEMASK) > (UINT32)mobj->state->var1)
 		mobj->frame = (mobj->state->frame & FF_FRAMEMASK) | (mobj->frame & ~FF_FRAMEMASK);
 }
 
