@@ -2776,7 +2776,6 @@ static const char *locateWad(void)
     {
         return returnWadPath;
     }
-
 #endif
 
 	// examine default dirs
