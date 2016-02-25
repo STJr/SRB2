@@ -1701,21 +1701,11 @@ void I_StartupGraphics(void)
 	keyboard_started = true;
 
 #if !defined(HAVE_TTF)
-#ifdef _WIN32 // Initialize Audio as well, otherwise Win32's DirectX can not use audio
-	if (SDL_InitSubSystem(SDL_INIT_AUDIO|SDL_INIT_VIDEO) < 0)
-#else //SDL_OpenAudio will do SDL_InitSubSystem(SDL_INIT_AUDIO)
+	// Previously audio was init here for questionable reasons?
 	if (SDL_InitSubSystem(SDL_INIT_VIDEO) < 0)
-#endif
 	{
-#ifdef _WIN32
-		if (SDL_WasInit(SDL_INIT_AUDIO)==0)
-			CONS_Printf(M_GetText("Couldn't initialize SDL's Audio System with Video System: %s\n"), SDL_GetError());
-		if (SDL_WasInit(SDL_INIT_VIDEO)==0)
-#endif
-		{
-			CONS_Printf(M_GetText("Couldn't initialize SDL's Video System: %s\n"), SDL_GetError());
-			return;
-		}
+		CONS_Printf(M_GetText("Couldn't initialize SDL's Video System: %s\n"), SDL_GetError());
+		return;
 	}
 #endif
 	{
