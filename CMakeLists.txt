@@ -23,13 +23,13 @@ endfunction()
 # Macro to add OSX framework
 macro(add_framework fwname appname)
 	find_library(FRAMEWORK_${fwname}
-    	NAMES ${fwname}
-    	PATHS ${CMAKE_OSX_SYSROOT}/System/Library
-    		${CMAKE_OSX_SYSROOT}/Library
-    		/System/Library
-    		/Library
-    	PATH_SUFFIXES Frameworks
-    	NO_DEFAULT_PATH)
+	NAMES ${fwname}
+	PATHS ${CMAKE_OSX_SYSROOT}/System/Library
+		${CMAKE_OSX_SYSROOT}/Library
+		/System/Library
+		/Library
+	ATH_SUFFIXES Frameworks
+	NO_DEFAULT_PATH)
     if( ${FRAMEWORK_${fwname}} STREQUAL FRAMEWORK_${fwname}-NOTFOUND)
         MESSAGE(ERROR ": Framework ${fwname} not found")
     else()
