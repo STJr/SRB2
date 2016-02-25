@@ -489,9 +489,13 @@ static const char *credits[] = {
 	"\1Music and Sound",
 	"Sonic Lost World - SEGA", // The game was awful, but the music was okay.
 	"Sonic Riders: Zero Gravity - SEGA", // This game was better, same with the music.
+	"Spiral Knights - SEGA", // Sky Islands and some scrapped maps
+	"Chain Algorithm", // Weather Factory
 	"Super Mario 3D World - Nintendo",
+	"Ape Escape - Sony", // Hub music
 	"Sonic Team Junior", // So we're crediting STJr, even though they have a whole section of credits directly below? lol
-	"Karl Breuggemann",
+	"Karl Breuggemann", // Scrapped hub
+	"Toy Story 2 - Activision", // The game you dope, not the movie
 	"Drift City - NPluto", // Credits music!
 	"",
 	"\1Testing",
