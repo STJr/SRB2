@@ -4499,6 +4499,7 @@ static void HWR_SortVisSprites(void)
 	for (i = 0; i < gr_visspritecount; i++)
 	{
 		best = NULL;
+		bestdispoffset = INT32_MAX;
 		for (ds = unsorted.next; ds != &unsorted; ds = ds->next)
 		{
 			if (!best || ds->tz > bestdist)
