@@ -503,7 +503,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			return true; // overhead
 		if (thing->z + thing->height < tmthing->z)
 			return true; // underneath
-		if (tmthing->player && tmthing->flags & MF_SHOOTABLE)
+		if (tmthing->player && tmthing->flags & MF_SHOOTABLE && thing->health > 0)
 			P_DamageMobj(tmthing, thing, thing, 1);
 		return true;
 	}
@@ -514,7 +514,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			return true; // overhead
 		if (tmthing->z + tmthing->height < thing->z)
 			return true; // underneath
-		if (thing->player && thing->flags & MF_SHOOTABLE)
+		if (thing->player && thing->flags & MF_SHOOTABLE && tmthing->health > 0)
 			P_DamageMobj(thing, tmthing, tmthing, 1);
 		return true;
 	}

@@ -210,13 +210,6 @@ extern FILE *logstream;
 // Note that we use this to help keep internal testing in check; this is why v2.1.0 is not version "1".
 #define MODVERSION 19
 
-
-
-
-
-// some tests, enable or disable it if it run or not
-#define SPLITSCREEN
-
 // =========================================================================
 
 // The maximum number of players, multiplayer/networking.
@@ -352,11 +345,7 @@ void CONS_Debug(INT32 debugflags, const char *fmt, ...) FUNCDEBUG;
 #include "m_swap.h"
 
 // Things that used to be in dstrings.h
-#define DEVMAPS "devmaps"
-#define DEVDATA "devdata"
-
 #define SAVEGAMENAME "srb2sav"
-
 char savegamename[256];
 
 // m_misc.h
