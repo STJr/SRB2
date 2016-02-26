@@ -1041,12 +1041,12 @@ INT32 G_KeyStringtoNum(const char *keystr)
 	if (!keystr[1] && keystr[0] > ' ' && keystr[0] <= 'z')
 		return keystr[0];
 
+	if (!strncmp(keystr, "KEY", 3) && keystr[3] >= '0' && keystr[3] <= '9')
+		return atoi(&keystr[3]);
+
 	for (j = 0; j < NUMKEYNAMES; j++)
 		if (!stricmp(keynames[j].name, keystr))
 			return keynames[j].keynum;
-
-	if (strlen(keystr) > 3)
-		return atoi(&keystr[3]);
 
 	return 0;
 }

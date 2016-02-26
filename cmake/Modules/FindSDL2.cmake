@@ -1,6 +1,6 @@
 # Find SDL2
 # Once done, this will define
-# 
+#
 #  SDL2_FOUND - system has SDL2
 #  SDL2_INCLUDE_DIRS - SDL2 include directories
 #  SDL2_LIBRARIES - link libraries
