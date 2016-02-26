@@ -1185,7 +1185,7 @@ static void readlevelheader(MYFILE *f, INT32 num)
 					deh_warning("Level header %d: musicslot out of range (0 - 1035)\n", num);
 				else // it's just a number
 				{
-					snprintf(mapheaderinfo[num-1]->musname, 7, va("%sM", G_BuildMapName(i)));
+					snprintf(mapheaderinfo[num-1]->musname, 7, "%sM", G_BuildMapName(i));
 					mapheaderinfo[num-1]->musname[6] = 0;
 				}
 			}
