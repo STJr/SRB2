@@ -2330,8 +2330,7 @@ void G_SpawnPlayer(INT32 playernum, boolean starpost)
 	P_MovePlayerToSpawn(playernum, spawnpoint);
 	
 #ifdef HAVE_BLUA 
-	player_t *p = &players[playernum];
-	LUAh_PlayerSpawn(p); // Lua hook for player spawning :)
+	LUAh_PlayerSpawn(&players[playernum]); // Lua hook for player spawning :)
 #endif
 
 }
