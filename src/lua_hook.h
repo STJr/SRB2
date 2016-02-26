@@ -76,6 +76,6 @@ boolean LUAh_BotAI(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd); // Hook for B_B
 boolean LUAh_LinedefExecute(line_t *line, mobj_t *mo, sector_t *sector); // Hook for linedef executors
 boolean LUAh_PlayerMsg(int source, int target, int flags, char *msg); // Hook for chat messages
 boolean LUAh_HurtMsg(player_t *player, mobj_t *inflictor, mobj_t *source); // Hook for hurt messages
-#define LUAh_PlayerSpawn(player) LUAh_PlayerHook(player, hook_PlayerSpawn) // Hook for P_SpawnPlayer 
+#define LUAh_PlayerSpawn(player) LUAh_PlayerHook(player, hook_PlayerSpawn) // Hook for G_SpawnPlayer 
 
 #endif
