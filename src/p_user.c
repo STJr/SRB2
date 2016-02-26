@@ -52,9 +52,6 @@
 #include "hardware/hw_main.h"
 #endif
 
-// Index of the special effects (INVUL inverse) map.
-#define INVERSECOLORMAP 32
-
 #if 0
 static void P_NukeAllPlayers(player_t *player);
 #endif
@@ -6343,8 +6340,7 @@ static void P_MovePlayer(player_t *player)
 		if (!(player->powers[pw_nocontrol] & (1<<15)))
 			player->pflags |= PF_JUMPSTASIS;
 	}
-	else
-		player->pflags &= ~PF_FULLSTASIS;
+	// note: don't unset stasis here
 
 	if (!player->spectator && G_TagGametype())
 	{
@@ -7969,9 +7965,9 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		if (player == &players[consoleplayer])
 		{
 			if (focusangle >= localangle)
-				localangle += abs(focusangle - localangle)>>5;
+				localangle += abs((focusangle - localangle))>>5;
 			else
-				localangle -= abs(focusangle - localangle)>>5;
+				localangle -= abs((focusangle - localangle))>>5;
 		}
 	}
 	else if (P_AnalogMove(player)) // Analog
@@ -8930,6 +8926,11 @@ void P_PlayerThink(player_t *player)
 
 	if (!player->mo)
 		return; // P_MovePlayer removed player->mo.
+
+	// Unset statis flags after moving.
+	// In other words, if you manually set stasis via code,
+	// it lasts for one tic.
+	player->pflags &= ~PF_FULLSTASIS;
 
 #ifdef POLYOBJECTS
 	if (player->onconveyor == 1)

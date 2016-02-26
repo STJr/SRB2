@@ -30,7 +30,6 @@ extern INT32 checkcoord[12][4];
 
 extern drawseg_t *drawsegs;
 extern drawseg_t *ds_p;
-extern drawseg_t *firstnewseg;
 extern INT32 doorclosed;
 
 typedef void (*drawfunc_t)(INT32 start, INT32 stop);
