@@ -41,6 +41,7 @@
 #include "../r_things.h"
 
 #include "hw_main.h"
+#include "../v_video.h"
 #ifdef HAVE_PNG
 
 #ifndef _MSC_VER
@@ -881,6 +882,59 @@ static void md2_loadTexture(md2_t *model)
 	HWR_UnlockCachedPatch(grpatch);
 }
 
+// -----------------+
+// md2_loadBlendTexture  : Download a pcx or png texture for blending MD2 models
+// -----------------+
+static void md2_loadBlendTexture(md2_t *model)
+{
+	GLPatch_t *grpatch;
+	char *filename = Z_Malloc(strlen(model->filename)+7, PU_STATIC, NULL);
+	strcpy(filename, model->filename);
+
+	FIL_ForceExtension(filename, "_blend.png");
+
+	if (model->blendgrpatch)
+	{
+		grpatch = model->blendgrpatch;
+		Z_Free(grpatch->mipmap.grInfo.data);
+	}
+	else
+		grpatch = Z_Calloc(sizeof *grpatch, PU_HWRPATCHINFO,
+		                   &(model->blendgrpatch));
+
+	if (!grpatch->mipmap.downloaded && !grpatch->mipmap.grInfo.data)
+	{
+		int w = 0, h = 0;
+#ifdef HAVE_PNG
+		grpatch->mipmap.grInfo.format = PNG_Load(filename, &w, &h, grpatch);
+		if (grpatch->mipmap.grInfo.format == 0)
+#endif
+		grpatch->mipmap.grInfo.format = PCX_Load(filename, &w, &h, grpatch);
+		if (grpatch->mipmap.grInfo.format == 0)
+		{
+			Z_Free(filename);
+			return;
+		}
+
+		grpatch->mipmap.downloaded = 0;
+		grpatch->mipmap.flags = 0;
+
+		grpatch->width = (INT16)w;
+		grpatch->height = (INT16)h;
+		grpatch->mipmap.width = (UINT16)w;
+		grpatch->mipmap.height = (UINT16)h;
+
+		// not correct!
+		grpatch->mipmap.grInfo.smallLodLog2 = GR_LOD_LOG2_256;
+		grpatch->mipmap.grInfo.largeLodLog2 = GR_LOD_LOG2_256;
+		grpatch->mipmap.grInfo.aspectRatioLog2 = GR_ASPECT_LOG2_1x1;
+	}
+	HWD.pfnSetTexture(&grpatch->mipmap); // We do need to do this so that it can be cleared and knows to recreate it when necessary
+	HWR_UnlockCachedPatch(grpatch);
+
+	Z_Free(filename);
+}
+
 // Don't spam the console, or the OS with fopen requests!
 static boolean nomd2s = false;
 
@@ -1050,6 +1104,248 @@ spritemd2found:
 	fclose(f);
 }
 
+static void HWR_CreateBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, GLMipmap_t *grmip, skincolors_t color)
+{
+	UINT16 w = gpatch->width, h = gpatch->height;
+	UINT32 size = w*h;
+	RGBA_t *image, *blendimage, *cur, blendcolor;
+
+	if (grmip->width == 0)
+	{
+
+		grmip->width = gpatch->width;
+		grmip->height = gpatch->height;
+
+		// no wrap around, no chroma key
+		grmip->flags = 0;
+		// setup the texture info
+		grmip->grInfo.format = GR_RGBA;
+	}
+
+	Z_Free(grmip->grInfo.data);
+	grmip->grInfo.data = NULL;
+
+	cur = Z_Malloc(size*4, PU_HWRCACHE, &grmip->grInfo.data);
+	memset(cur, 0x00, size*4);
+
+	image = gpatch->mipmap.grInfo.data;
+	blendimage = blendgpatch->mipmap.grInfo.data;
+
+	switch (color)
+	{
+		case SKINCOLOR_WHITE:
+			blendcolor = V_GetColor(3);
+			break;
+		case SKINCOLOR_SILVER:
+			blendcolor = V_GetColor(10);
+			break;
+		case SKINCOLOR_GREY:
+			blendcolor = V_GetColor(15);
+			break;
+		case SKINCOLOR_BLACK:
+			blendcolor = V_GetColor(27);
+			break;
+		case SKINCOLOR_CYAN:
+			blendcolor = V_GetColor(215);
+			break;
+		case SKINCOLOR_TEAL:
+			blendcolor = V_GetColor(221);
+			break;
+		case SKINCOLOR_STEELBLUE:
+			blendcolor = V_GetColor(203);
+			break;
+		case SKINCOLOR_BLUE:
+			blendcolor = V_GetColor(232);
+			break;
+		case SKINCOLOR_PEACH:
+			blendcolor = V_GetColor(71);
+			break;
+		case SKINCOLOR_TAN:
+			blendcolor = V_GetColor(79);
+			break;
+		case SKINCOLOR_PINK:
+			blendcolor = V_GetColor(147);
+			break;
+		case SKINCOLOR_LAVENDER:
+			blendcolor = V_GetColor(251);
+			break;
+		case SKINCOLOR_PURPLE:
+			blendcolor = V_GetColor(195);
+			break;
+		case SKINCOLOR_ORANGE:
+			blendcolor = V_GetColor(87);
+			break;
+		case SKINCOLOR_ROSEWOOD:
+			blendcolor = V_GetColor(94);
+			break;
+		case SKINCOLOR_BEIGE:
+			blendcolor = V_GetColor(40);
+			break;
+		case SKINCOLOR_BROWN:
+			blendcolor = V_GetColor(57);
+			break;
+		case SKINCOLOR_RED:
+			blendcolor = V_GetColor(130);
+			break;
+		case SKINCOLOR_DARKRED:
+			blendcolor = V_GetColor(139);
+			break;
+		case SKINCOLOR_NEONGREEN:
+			blendcolor = V_GetColor(184);
+			break;
+		case SKINCOLOR_GREEN:
+			blendcolor = V_GetColor(166);
+			break;
+		case SKINCOLOR_ZIM:
+			blendcolor = V_GetColor(180);
+			break;
+		case SKINCOLOR_OLIVE:
+			blendcolor = V_GetColor(108);
+			break;
+		case SKINCOLOR_YELLOW:
+			blendcolor = V_GetColor(104);
+			break;
+		case SKINCOLOR_GOLD:
+			blendcolor = V_GetColor(115);
+			break;
+
+		case SKINCOLOR_SUPER1:
+			blendcolor = V_GetColor(97);
+			break;
+		case SKINCOLOR_SUPER2:
+			blendcolor = V_GetColor(100);
+			break;
+		case SKINCOLOR_SUPER3:
+			blendcolor = V_GetColor(103);
+			break;
+		case SKINCOLOR_SUPER4:
+			blendcolor = V_GetColor(113);
+			break;
+		case SKINCOLOR_SUPER5:
+			blendcolor = V_GetColor(116);
+			break;
+
+		case SKINCOLOR_TSUPER1:
+			blendcolor = V_GetColor(81);
+			break;
+		case SKINCOLOR_TSUPER2:
+			blendcolor = V_GetColor(82);
+			break;
+		case SKINCOLOR_TSUPER3:
+			blendcolor = V_GetColor(84);
+			break;
+		case SKINCOLOR_TSUPER4:
+			blendcolor = V_GetColor(85);
+			break;
+		case SKINCOLOR_TSUPER5:
+			blendcolor = V_GetColor(87);
+			break;
+
+		case SKINCOLOR_KSUPER1:
+			blendcolor = V_GetColor(122);
+			break;
+		case SKINCOLOR_KSUPER2:
+			blendcolor = V_GetColor(123);
+			break;
+		case SKINCOLOR_KSUPER3:
+			blendcolor = V_GetColor(124);
+			break;
+		case SKINCOLOR_KSUPER4:
+			blendcolor = V_GetColor(125);
+			break;
+		case SKINCOLOR_KSUPER5:
+			blendcolor = V_GetColor(126);
+			break;
+		default:
+			blendcolor = V_GetColor(247);
+			break;
+	}
+
+	while (size--)
+	{
+		if (blendimage->s.alpha == 0)
+		{
+			// Don't bother with blending the pixel if the alpha of the blend pixel is 0
+			cur->rgba = image->rgba;
+		}
+		else
+		{
+			INT32 tempcolor;
+			INT16 tempmult, tempalpha;
+			tempalpha = -(abs(blendimage->s.red-127)-127)*2;
+			if (tempalpha > 255)
+				tempalpha = 255;
+			else if (tempalpha < 0)
+				tempalpha = 0;
+
+			tempmult = (blendimage->s.red-127)*2;
+			if (tempmult > 255)
+				tempmult = 255;
+			else if (tempmult < 0)
+				tempmult = 0;
+
+			tempcolor = (image->s.red*(255-blendimage->s.alpha))/255 + ((tempmult + ((tempalpha*blendcolor.s.red)/255)) * blendimage->s.alpha)/255;
+			cur->s.red = (UINT8)tempcolor;
+			tempcolor = (image->s.green*(255-blendimage->s.alpha))/255 + ((tempmult + ((tempalpha*blendcolor.s.green)/255)) * blendimage->s.alpha)/255;
+			cur->s.green = (UINT8)tempcolor;
+			tempcolor = (image->s.blue*(255-blendimage->s.alpha))/255 + ((tempmult + ((tempalpha*blendcolor.s.blue)/255)) * blendimage->s.alpha)/255;
+			cur->s.blue = (UINT8)tempcolor;
+			cur->s.alpha = image->s.alpha;
+		}
+
+		cur++; image++; blendimage++;
+	}
+
+	return;
+}
+
+static void HWR_GetBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, const UINT8 *colormap, skincolors_t color)
+{
+	// mostly copied from HWR_GetMappedPatch, hence the similarities and comment
+	GLMipmap_t *grmip, *newmip;
+
+	if (colormap == colormaps || colormap == NULL)
+	{
+		// Don't do any blending
+		HWD.pfnSetTexture(&gpatch->mipmap);
+		return;
+	}
+
+	// search for the mimmap
+	// skip the first (no colormap translated)
+	for (grmip = &gpatch->mipmap; grmip->nextcolormap; )
+	{
+		grmip = grmip->nextcolormap;
+		if (grmip->colormap == colormap)
+		{
+			if (grmip->downloaded && grmip->grInfo.data)
+			{
+				HWD.pfnSetTexture(grmip); // found the colormap, set it to the correct texture
+				Z_ChangeTag(grmip->grInfo.data, PU_HWRCACHE_UNLOCKED);
+				return;
+			}
+		}
+	}
+
+	// If here, the blended texture has not been created
+	// So we create it
+
+	//BP: WARNING: don't free it manually without clearing the cache of harware renderer
+	//              (it have a liste of mipmap)
+	//    this malloc is cleared in HWR_FreeTextureCache
+	//    (...) unfortunately z_malloc fragment alot the memory :(so malloc is better
+	newmip = calloc(1, sizeof (*newmip));
+	if (newmip == NULL)
+		I_Error("%s: Out of memory", "HWR_GetMappedPatch");
+	grmip->nextcolormap = newmip;
+	newmip->colormap = colormap;
+
+	HWR_CreateBlendedTexture(gpatch, blendgpatch, newmip, color);
+
+	HWD.pfnSetTexture(newmip);
+	Z_ChangeTag(newmip->grInfo.data, PU_HWRCACHE_UNLOCKED);
+}
+
 
 // -----------------+
 // HWR_DrawMD2      : Draw MD2
@@ -1180,13 +1476,25 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		gpatch = md2->grpatch;
 		if (!gpatch || !gpatch->mipmap.grInfo.format || !gpatch->mipmap.downloaded)
 			md2_loadTexture(md2);
-
 		gpatch = md2->grpatch; // Load it again, because it isn't being loaded into gpatch after md2_loadtexture...
+
+		if ((gpatch && gpatch->mipmap.grInfo.format) // don't load the blend texture if the base texture isn't available
+			&& (!md2->blendgrpatch || !((GLPatch_t *)md2->blendgrpatch)->mipmap.grInfo.format || !((GLPatch_t *)md2->blendgrpatch)->mipmap.downloaded))
+			md2_loadBlendTexture(md2);
 
 		if (gpatch && gpatch->mipmap.grInfo.format) // else if meant that if a texture couldn't be loaded, it would just end up using something else's texture
 		{
-			// This is safe, since we know the texture has been downloaded
-			HWD.pfnSetTexture(&gpatch->mipmap);
+			if ((skincolors_t)spr->mobj->color != SKINCOLOR_NONE &&
+				md2->blendgrpatch && ((GLPatch_t *)md2->blendgrpatch)->mipmap.grInfo.format
+				&& gpatch->width == ((GLPatch_t *)md2->blendgrpatch)->width && gpatch->height == ((GLPatch_t *)md2->blendgrpatch)->height)
+			{
+				HWR_GetBlendedTexture(gpatch, (GLPatch_t *)md2->blendgrpatch, spr->colormap, (skincolors_t)spr->mobj->color);
+			}
+			else
+			{
+				// This is safe, since we know the texture has been downloaded
+				HWD.pfnSetTexture(&gpatch->mipmap);
+			}
 		}
 		else
 		{

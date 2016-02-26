@@ -1213,6 +1213,16 @@ void I_StartupSound(void)
 	// Configure sound device
 	CONS_Printf("I_StartupSound:\n");
 
+	// EE inits audio first so we're following along.
+	if (SDL_WasInit(SDL_INIT_AUDIO) == SDL_INIT_AUDIO)
+		CONS_Printf("SDL Audio already started\n");
+	else if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0)
+	{
+		CONS_Alert(CONS_ERROR, "Error initializing SDL Audio: %s\n", SDL_GetError());
+		// call to start audio failed -- we do not have it
+		return;
+	}
+
 	// Open the audio device
 	if (M_CheckParm ("-freq") && M_IsNextParm())
 	{
