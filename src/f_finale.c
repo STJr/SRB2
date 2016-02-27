@@ -917,6 +917,8 @@ void F_GameEvaluationDrawer(void)
 				if (unlockables[i].conditionset && unlockables[i].conditionset < MAXCONDITIONSETS
 					&& unlockables[i].type && !unlockables[i].nocecho)
 				{
+					if (!savemoddata && ((unlockables[i].conditionset >= 41 && unlockables[i].conditionset <= 50) || unlockables[i].conditionset == 52))
+						continue;
 					if (unlockables[i].unlocked)
 						V_DrawString(8, startcoord, 0, unlockables[i].name);
 					startcoord += 8;
