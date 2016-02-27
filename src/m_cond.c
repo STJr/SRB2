@@ -102,14 +102,14 @@ unlockable_t unlockables[MAXUNLOCKABLES] =
 	/* 02 */ {"Play Credits",      "Complete 1P Mode", 30, 10, SECRET_CREDITS,   0,  true,  true, 0},
 	/* 03 */ {"Sound Test",        "Complete 1P Mode", 40, 10, SECRET_SOUNDTEST, 0, false, false, 0},
 
-	/* 04 */ {"EXTRA LEVELS", "", 60, 0, SECRET_HEADER, 0, true, true, 0},
+	/* 04 */ {"EXTRA LEVELS", "", 70, 0, SECRET_HEADER, 0, true, true, 0},
 
-	/* 05 */ {"Stormy Streets",     "Collect 5 Chaos Coins",    70, 40, SECRET_WARP,         23, false, false, 0},
-	/* 06 */ {"Sky Islands",        "Collect 20 Chaos Coins",    80, 47, SECRET_WARP,         25, false, false, 0},
+	/* 05 */ {"Stormy Streets",     "Collect 5 Chaos Coins",    80, 40, SECRET_WARP,         23, false, false, 0},
+	/* 06 */ {"Sky Islands",        "Collect 20 Chaos Coins",    90, 47, SECRET_WARP,         25, false, false, 0},
 
-	/* 07 */ {"BONUS LEVELS", "", 100, 0, SECRET_HEADER, 0, true, true, 0},
+	/* 07 */ {"BONUS LEVELS", "", 110, 0, SECRET_HEADER, 0, true, true, 0},
 
-	/* 08 */ {"Bonus Level Select", "Collect 7 Chaos Coins",	110, 41, SECRET_LEVELSELECT, 3, false, true, 0},
+	/* 08 */ {"Bonus Level Select", "Collect 7 Chaos Coins",	120, 41, SECRET_LEVELSELECT, 3, false, true, 0},
 	/* 09 */ {"Grove",             "Collect 7 Chaos Coins",   0, 41, SECRET_NONE,         52, false, true, 0},
 	/* 10 */ {"Old HUB 1",         "Collect 9 Chaos Coins",   0, 42, SECRET_NONE,         50, false, true, 0},
 	/* 11 */ {"Ancient Waterway",  "Collect 10 Chaos Coins",  0, 43, SECRET_NONE,         54, false, true, 0},
@@ -120,10 +120,12 @@ unlockable_t unlockables[MAXUNLOCKABLES] =
 	/* 16 */ {"Tako Desert",       "Collect 26 Chaos Coins",  0, 49, SECRET_NONE,         53, false, true, 0},
 	/* 17 */ {"A Big Mistake",     "Collect 28 Chaos Coins",  0, 50, SECRET_NONE,         58, false, true, 0},
 
-	/* 18 */ {"Pandora's Box", "Collect All Chaos Coins",  0, 51, SECRET_PANDORA,     0, false, false, 0},
-	/* 19 */ {"Level Select",  "Collect All Chaos Coins", 20, 51, SECRET_LEVELSELECT, 1, false,  true, 0},
-	/* 20 */ {"Scrapped Level Set 1", "Collect 7-16 Chaos Coins", 0, 41, SECRET_NONE, 0, true, false, 0},
-	/* 21 */ {"Scrapped Level Set 2", "Collect 18-28 Chaos Coins", 0, 46, SECRET_NONE, 0, true, false, 0},
+	/* 18 */ {"Scrapped Level Set 1", "Collect 7-16 Chaos Coins", 0, 41, SECRET_NONE, 0, true, false, 0},
+	/* 19 */ {"Scrapped Level Set 2", "Collect 18-28 Chaos Coins", 0, 46, SECRET_NONE, 0, true, false, 0},
+	/* 20 */ {"Pandora's Box", "Collect All Chaos Coins",  0, 51, SECRET_PANDORA,     0, false, false, 0},
+	/* 21 */ {"Level Select",  "Collect All Chaos Coins", 20, 51, SECRET_LEVELSELECT, 1, false,  true, 0},
+	/* 22 */ {"Ultimate Cheat", "Collect All Chaos Coins", 50, 51, SECRET_WARP, 27, true, true, 0},
+	/* 23 */ {"???",  "Complete ???", 0, 52, SECRET_NONE, 0, true,  true, 0},
 };
 
 // Default number of emblems and extra emblems
@@ -187,6 +189,9 @@ void M_SetupDefaultConditionSets(void)
 
 	// --  51: Find 38 (all) emblems
 	M_AddRawCondition(51, 1, UC_TOTALEMBLEMS, 38, 0, 0);
+	
+	// -- 52: Complete ???
+	M_AddRawCondition(52, 1, UC_MAPBEATEN, 27, 0, 0);
 }
 
 void M_AddRawCondition(UINT8 set, UINT8 id, conditiontype_t c, INT32 r, INT16 x1, INT16 x2)

@@ -470,6 +470,7 @@ static const char *credits[] = {
 	"\"Zipper\"", // CHROMEs and more
 	"\"SevenColorsAlice\"", // Drew the Penguinator sprites
 	"\"Charybdizs\"", // Drew the Krackobot sprites
+	"\"Jeck Jims\"", // Extra hub icons
 	"",
 	"\1Texture Artists",
 	"\"Charybdizs\"",
@@ -493,6 +494,7 @@ static const char *credits[] = {
 	"Chain Algorithm", // Weather Factory
 	"Super Mario 3D World - Nintendo",
 	"Ape Escape - Sony", // Hub music
+	"LaTale - Actoz Soft", // Mainframe Metropolis 
 	"Sonic Team Junior", // So we're crediting STJr, even though they have a whole section of credits directly below? lol
 	"Karl Breuggemann", // Scrapped hub
 	"Toy Story 2 - Activision", // The game you dope, not the movie
