@@ -3087,7 +3087,7 @@ static void P_DoTeeter(player_t *player)
 							}
 
 							if (polybottom > player->mo->z + player->mo->height + tiptop
-							|| (polybottom < player->mo->z
+							|| (polytop < player->mo->z
 							&& player->mo->z + player->mo->height < player->mo->ceilingz - tiptop))
 								teeter = true;
 							else
@@ -3105,7 +3105,7 @@ static void P_DoTeeter(player_t *player)
 							}
 
 							if (polytop < player->mo->z - tiptop
-							|| (polytop > player->mo->z + player->mo->height
+							|| (polybottom > player->mo->z + player->mo->height
 							&& player->mo->z > player->mo->floorz + tiptop))
 								teeter = true;
 							else
