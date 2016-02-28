@@ -175,8 +175,16 @@ void M_SetupDefaultConditionSets(void)
 	// --  46: Find 18 emblems
 	M_AddRawCondition(46, 1, UC_TOTALEMBLEMS, 18, 0, 0);
 
-	// --  47: Find 20 emblems
+	// --  47: Find 20 emblems and beat all main levels
 	M_AddRawCondition(47, 1, UC_TOTALEMBLEMS, 20, 0, 0);
+	M_AddRawCondition(47, 1, UC_MAPBEATEN, 2, 0, 0);
+	M_AddRawCondition(47, 1, UC_MAPBEATEN, 5, 0, 0);
+	M_AddRawCondition(47, 1, UC_MAPBEATEN, 7, 0, 0);
+	M_AddRawCondition(47, 1, UC_MAPBEATEN, 8, 0, 0);
+	M_AddRawCondition(47, 1, UC_MAPBEATEN, 10, 0, 0);
+	M_AddRawCondition(47, 1, UC_MAPBEATEN, 11, 0, 0);
+	M_AddRawCondition(47, 1, UC_MAPBEATEN, 13, 0, 0);
+	M_AddRawCondition(47, 1, UC_MAPBEATEN, 23, 0, 0);
 
 	// --  48: Find 25 emblems
 	M_AddRawCondition(48, 1, UC_TOTALEMBLEMS, 25, 0, 0);
