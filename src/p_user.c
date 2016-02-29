@@ -3437,27 +3437,14 @@ static void P_DoSuperStuff(player_t *player)
 			player->mo->health--;
 		}
 
+		// future todo: a skin option for this, and possibly more colors
 		switch (player->skin)
 		{
-		case 1: // Golden orange supertails.
-			if (leveltime % 9 < 5)
-				player->mo->color = SKINCOLOR_TSUPER1 + leveltime % 9;
-			else
-				player->mo->color = SKINCOLOR_TSUPER1 + 9 - leveltime % 9;
-			break;
-		case 2: // Pink superknux.
-			if (leveltime % 9 < 5)
-				player->mo->color = SKINCOLOR_KSUPER1 + leveltime % 9;
-			else
-				player->mo->color = SKINCOLOR_KSUPER1 + 9 - leveltime % 9;
-			break;
-		default: // Yousa yellow now!
-			if (leveltime % 9 < 5)
-				player->mo->color = SKINCOLOR_SUPER1 + leveltime % 9;
-			else
-				player->mo->color = SKINCOLOR_SUPER1 + 9 - leveltime % 9;
-			break;
+			case 1:  /* Tails    */ player->mo->color = SKINCOLOR_TSUPER1; break;
+			case 2:  /* Knux     */ player->mo->color = SKINCOLOR_KSUPER1; break;
+			default: /* everyone */ player->mo->color = SKINCOLOR_SUPER1; break;
 		}
+		player->mo->color += abs( ( ( leveltime >> 1 ) % 9) - 4);
 
 		if ((cmd->forwardmove != 0 || cmd->sidemove != 0 || player->pflags & (PF_CARRIED|PF_ROPEHANG|PF_ITEMHANG|PF_MACESPIN))
 		&& !(leveltime % TICRATE) && (player->mo->momx || player->mo->momy))
