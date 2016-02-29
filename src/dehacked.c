@@ -3187,6 +3187,12 @@ static void readwipes(MYFILE *f)
 				else if (fastcmp(pword, "FINAL"))
 					wipeoffset = wipe_gameend_final;
 			}
+			else if (fastncmp(word, "SPECLEVEL_", 10))
+			{
+				pword = word + 10;
+				if (fastcmp(pword, "TOWHITE"))
+					wipeoffset = wipe_speclevel_towhite;
+			}
 
 			if (wipeoffset < 0)
 			{
@@ -3194,9 +3200,11 @@ static void readwipes(MYFILE *f)
 				continue;
 			}
 
-			if (value == UINT8_MAX // Cannot disable non-toblack wipes (or the level toblack wipe)
-			 && (wipeoffset <= wipe_level_toblack || wipeoffset >= wipe_level_final))
+			if (value == UINT8_MAX
+			 && (wipeoffset <= wipe_level_toblack || wipeoffset >= wipe_speclevel_towhite))
 			{
+				 // Cannot disable non-toblack wipes
+				 // (or the level toblack wipe, or the special towhite wipe)
 				deh_warning("Wipes: can't disable wipe of type '%s'", word);
 				continue;
 			}

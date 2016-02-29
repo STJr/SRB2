@@ -90,6 +90,7 @@ enum
 	// custom intermissions
 	wipe_specinter_toblack,
 	wipe_multinter_toblack,
+	wipe_speclevel_towhite,
 
 	wipe_level_final,
 	wipe_intermission_final,
@@ -108,7 +109,7 @@ enum
 
 	NUMWIPEDEFS
 };
-#define WIPEFINALSHIFT 12
+#define WIPEFINALSHIFT 13
 extern UINT8 wipedefs[NUMWIPEDEFS];
 
 #endif
