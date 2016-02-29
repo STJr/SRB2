@@ -1111,9 +1111,13 @@ static int ffloor_set(lua_State *L)
 	case ffloor_bottompic:
 		*ffloor->bottompic = P_AddLevelFlatRuntime(luaL_checkstring(L, 3));
 		break;
-	case ffloor_flags:
+	case ffloor_flags: {
+		ffloortype_e oldflags = ffloor->flags; // store FOF's old flags
 		ffloor->flags = luaL_checkinteger(L, 3);
+		if (ffloor->flags != oldflags)
+			ffloor->target->moved = true; // reset target sector's lightlist
 		break;
+	}
 	case ffloor_alpha:
 		ffloor->alpha = (INT32)luaL_checkinteger(L, 3);
 		break;
