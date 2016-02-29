@@ -310,7 +310,7 @@ static void CON_SetupBackColormap(void)
 	yellowmap[9] = (UINT8)66;
 	purplemap[3] = (UINT8)184;
 	purplemap[9] = (UINT8)186;
-	lgreenmap[3] = (UINT8)102;
+	lgreenmap[3] = (UINT8)98;
 	lgreenmap[9] = (UINT8)106;
 	bluemap[3]   = (UINT8)147;
 	bluemap[9]   = (UINT8)158;
