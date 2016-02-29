@@ -2369,7 +2369,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	// use gamemap to get map number.
 	// 99% of the things already did, so.
 	// Map header should always be in place at this point
-	INT32 i, loadprecip = 1;
+	INT32 i, loadprecip = 1, ranspecialwipe = 0;
 	INT32 loademblems = 1;
 	INT32 fromnetsave = 0;
 	boolean loadedbm = false;
@@ -2442,6 +2442,28 @@ boolean P_SetupLevel(boolean skipprecip)
 	// will be set by player think.
 	players[consoleplayer].viewz = 1;
 
+	// Special stage fade to white
+	// This is handled BEFORE sounds are stopped.
+	if (rendermode != render_none && G_IsSpecialStage(gamemap))
+	{
+		tic_t starttime = I_GetTime();
+		tic_t endtime = starttime + (3*TICRATE)/2;
+
+		S_StartSound(NULL, sfx_s3kaf);
+
+		F_WipeStartScreen();
+		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 0);
+
+		F_WipeEndScreen();
+		F_RunWipe(wipedefs[wipe_speclevel_towhite], false);
+
+		// Hold on white for extra effect.
+		while (I_GetTime() < endtime)
+			I_Sleep();
+
+		ranspecialwipe = 1;
+	}
+
 	// Make sure all sounds are stopped before Z_FreeTags.
 	S_StopSounds();
 	S_ClearSfx();
@@ -2451,25 +2473,28 @@ boolean P_SetupLevel(boolean skipprecip)
 	S_Start();
 
 	// Let's fade to black here
-	if (rendermode != render_none)
+	// But only if we didn't do the special stage wipe
+	if (rendermode != render_none && !ranspecialwipe)
 	{
 		F_WipeStartScreen();
 		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 
 		F_WipeEndScreen();
 		F_RunWipe(wipedefs[wipe_level_toblack], false);
+	}
 
+	// Print "SPEEDING OFF TO [ZONE] [ACT 1]..."
+	if (rendermode != render_none)
+	{
 		// Don't include these in the fade!
-		{
-			char tx[64];
-			V_DrawSmallString(1, 191, V_ALLOWLOWERCASE, M_GetText("Speeding off to..."));
-			snprintf(tx, 63, "%s%s%s",
-				mapheaderinfo[gamemap-1]->lvlttl,
-				(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE) ? "" : " ZONE",
-				(mapheaderinfo[gamemap-1]->actnum > 0) ? va(", Act %d",mapheaderinfo[gamemap-1]->actnum) : "");
-			V_DrawSmallString(1, 195, V_ALLOWLOWERCASE, tx);
-			I_UpdateNoVsync();
-		}
+		char tx[64];
+		V_DrawSmallString(1, 191, V_ALLOWLOWERCASE, M_GetText("Speeding off to..."));
+		snprintf(tx, 63, "%s%s%s",
+			mapheaderinfo[gamemap-1]->lvlttl,
+			(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE) ? "" : " ZONE",
+			(mapheaderinfo[gamemap-1]->actnum > 0) ? va(", Act %d",mapheaderinfo[gamemap-1]->actnum) : "");
+		V_DrawSmallString(1, 195, V_ALLOWLOWERCASE, tx);
+		I_UpdateNoVsync();
 	}
 
 #ifdef HAVE_BLUA
@@ -2767,7 +2792,7 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	// Remove the loading shit from the screen
 	if (rendermode != render_none)
-		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, (ranspecialwipe) ? 0 : 31);
 
 	if (precache || dedicated)
 		R_PrecacheLevel();

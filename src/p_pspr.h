@@ -36,9 +36,11 @@
 #endif
 
 /// \brief Frame flags: only the frame number
-#define FF_FRAMEMASK 0x7fff
+#define FF_FRAMEMASK 0x3fff
+/// \brief Frame flags: Simple stateless animation
+#define FF_ANIMATE 0x4000
 /// \brief Frame flags: frame always appears full bright
-#define FF_FULLBRIGHT 0x8000  //
+#define FF_FULLBRIGHT 0x8000
 /// \brief Frame flags: 0 = no trans(opaque), 1-15 = transl. table
 #define FF_TRANSMASK 0xf0000
 /// \brief shift for FF_TRANSMASK

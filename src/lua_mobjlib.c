@@ -34,6 +34,7 @@ enum mobj_e {
 	mobj_angle,
 	mobj_sprite,
 	mobj_frame,
+	mobj_anim_duration,
 	mobj_touching_sectorlist,
 	mobj_subsector,
 	mobj_floorz,
@@ -92,6 +93,7 @@ static const char *const mobj_opt[] = {
 	"angle",
 	"sprite",
 	"frame",
+	"anim_duration",
 	"touching_sectorlist",
 	"subsector",
 	"floorz",
@@ -186,6 +188,9 @@ static int mobj_get(lua_State *L)
 		break;
 	case mobj_frame:
 		lua_pushinteger(L, mo->frame);
+		break;
+	case mobj_anim_duration:
+		lua_pushinteger(L, mo->anim_duration);
 		break;
 	case mobj_touching_sectorlist:
 		return UNIMPLEMENTED;
@@ -405,6 +410,9 @@ static int mobj_set(lua_State *L)
 		break;
 	case mobj_frame:
 		mo->frame = (UINT32)luaL_checkinteger(L, 3);
+		break;
+	case mobj_anim_duration:
+		mo->anim_duration = (UINT16)luaL_checkinteger(L, 3);
 		break;
 	case mobj_touching_sectorlist:
 		return UNIMPLEMENTED;

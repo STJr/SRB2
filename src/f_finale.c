@@ -977,6 +977,7 @@ static const char *credits[] = {
 	"\"Monster\" Iestyn Jealous",
 	"Ronald \"Furyhunter\" Kinard", // The SDL2 port
 	"John \"JTE\" Muniz",
+	"Ehab \"Wolfy\" Saeed",
 	"\"SSNTails\"",
 	"Matthew \"Inuyasha\" Walsh",
 	"",
@@ -985,6 +986,7 @@ static const char *credits[] = {
 	"\"chi.miru\"", // Red's secret weapon, the REAL reason slopes exist (also helped port drawing code from ZDoom)
 	"Andrew \"orospakr\" Clunis",
 	"Gregor \"Oogaland\" Dick",
+	"Vivian \"toaster\" Grannell",
 	"Julio \"Chaos Zero 64\" Guir",
 	"\"Kalaron\"", // Coded some of Sryder13's collection of OpenGL fixes, especially fog
 	"Matthew \"Shuffle\" Marsalko",
@@ -1001,6 +1003,7 @@ static const char *credits[] = {
 	"Desmond \"Blade\" DesJardins",
 	"Sherman \"CoatRack\" DesJardins",
 	"Andrew \"Senku Niola\" Moran",
+	"Vivian \"toaster\" Grannell",
 	"David \"Instant Sonic\" Spencer Jr.",
 	"\"SSNTails\"",
 	"",
@@ -1020,7 +1023,7 @@ static const char *credits[] = {
 	"\"Monster\" Iestyn Jealous",
 	"Jarel \"Arrow\" Jones",
 	"Stefan \"Stuf\" Rimalia",
-	"Shane Strife",
+	"Shane Mychal Sexton",
 	"\"Spazzo\"",
 	"David \"Big Wave Dave\" Spencer Sr.",
 	"David \"Instant Sonic\" Spencer Jr.",
@@ -1033,6 +1036,7 @@ static const char *credits[] = {
 	"Sherman \"CoatRack\" DesJardins",
 	"Ben \"Mystic\" Geyer",
 	"Nathan \"Jazz\" Giroux",
+	"Vivian \"toaster\" Grannell",
 	"Dan \"Blitzzo\" Hagerstrand",
 	"Kepa \"Nev3r\" Iceta",
 	"Thomas \"Shadow Hog\" Igoe",
@@ -1069,7 +1073,7 @@ static const char *credits[] = {
 	"iD Software",
 	"Alex \"MistaED\" Fuller",
 	"FreeDoom Project", // Used some of the mancubus and rocket launcher sprites for Brak
-	"Randy Heit (<!>)", // For his MSPaint <!> sprite that we nicked
+	"Randi Heit (<!>)", // For their MSPaint <!> sprite that we nicked
 	"",
 	"\1Produced By",
 	"Sonic Team Junior",
