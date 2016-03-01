@@ -2121,8 +2121,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 					for (r2 = frontsector->ffloors; r2; r2 = r2->next)
 					{
-						if (!(r2->flags & FF_EXISTS) || !(r2->flags & FF_RENDERSIDES)
-						    || *r2->topheight < lowcut || *r2->bottomheight > highcut) ///TODO: make these account for slopes -Red
+						if (!(r2->flags & FF_EXISTS) || !(r2->flags & FF_RENDERSIDES))
 							continue;
 
 						if (r2->norender == leveltime)
@@ -2154,9 +2153,13 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 						} else
 							low2 = lowslope2 = *r2->bottomheight;
 
+						if ((high2 < lowcut && highslope2 < lowcutslope) || (low2 > highcut && lowslope2 > highcutslope))
+							continue;
 						if ((high1 > high2 && highslope1 > highslope2) || (low1 < low2 && lowslope1 < lowslope2))
 							continue;
 #else
+						if (*r2->topheight < lowcut || *r2->bottomheight > highcut)
+							continue;
 						if (*rover->topheight > *r2->topheight || *rover->bottomheight < *r2->bottomheight)
 							continue;
 #endif
@@ -2201,8 +2204,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 					for (r2 = backsector->ffloors; r2; r2 = r2->next)
 					{
-						if (!(r2->flags & FF_EXISTS) || !(r2->flags & FF_RENDERSIDES)
-						    || *r2->topheight < lowcut || *r2->bottomheight > highcut) ///TODO: make these account for slopes -Red
+						if (!(r2->flags & FF_EXISTS) || !(r2->flags & FF_RENDERSIDES))
 							continue;
 
 						if (r2->norender == leveltime)
@@ -2234,9 +2236,13 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 						} else
 							low2 = lowslope2 = *r2->bottomheight;
 
+						if ((high2 < lowcut && highslope2 < lowcutslope) || (low2 > highcut && lowslope2 > highcutslope))
+							continue;
 						if ((high1 > high2 && highslope1 > highslope2) || (low1 < low2 && lowslope1 < lowslope2))
 							continue;
 #else
+						if (*r2->topheight < lowcut || *r2->bottomheight > highcut)
+							continue;
 						if (*rover->topheight > *r2->topheight || *rover->bottomheight < *r2->bottomheight)
 							continue;
 #endif
