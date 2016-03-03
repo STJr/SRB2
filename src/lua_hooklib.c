@@ -788,8 +788,7 @@ void LUAh_NetArchiveHook(lua_CFunction archFunc)
 			LUA_Call(gL, 1);
 		}
 
-	// pop tables
-	lua_pop(gL, 1);
+	// stack: tables
 }
 
 #endif
