@@ -1213,9 +1213,9 @@ static int slope_get(lua_State *L)
 		return 1;
 	case slope_d: // d
 		lua_createtable(L, 0, 2);
-		lua_pushfixed(L, slope->o.x);
+		lua_pushfixed(L, slope->d.x);
 		lua_setfield(L, -2, "x");
-		lua_pushfixed(L, slope->o.y);
+		lua_pushfixed(L, slope->d.y);
 		lua_setfield(L, -2, "y");
 		return 1;
 	case slope_zdelta: // zdelta
@@ -1223,9 +1223,9 @@ static int slope_get(lua_State *L)
 		return 1;
 	case slope_normal: // normal
 		lua_createtable(L, 0, 2);
-		lua_pushfixed(L, slope->o.x);
+		lua_pushfixed(L, slope->normal.x);
 		lua_setfield(L, -2, "x");
-		lua_pushfixed(L, slope->o.y);
+		lua_pushfixed(L, slope->normal.y);
 		lua_setfield(L, -2, "y");
 		return 1;
 	case slope_zangle: // zangle
