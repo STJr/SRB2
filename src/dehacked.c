@@ -5463,6 +5463,36 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_RDIAG7",
 	"S_RDIAG8",
 
+	// Yellow Side Spring
+	"S_YHORIZ1",
+	"S_YHORIZ2",
+	"S_YHORIZ3",
+	"S_YHORIZ4",
+	"S_YHORIZ5",
+	"S_YHORIZ6",
+	"S_YHORIZ7",
+	"S_YHORIZ8",
+
+	// Red Side Spring
+	"S_RHORIZ1",
+	"S_RHORIZ2",
+	"S_RHORIZ3",
+	"S_RHORIZ4",
+	"S_RHORIZ5",
+	"S_RHORIZ6",
+	"S_RHORIZ7",
+	"S_RHORIZ8",
+
+	// Blue Side Spring
+	"S_BHORIZ1",
+	"S_BHORIZ2",
+	"S_BHORIZ3",
+	"S_BHORIZ4",
+	"S_BHORIZ5",
+	"S_BHORIZ6",
+	"S_BHORIZ7",
+	"S_BHORIZ8",
+
 	// Rain
 	"S_RAIN1",
 	"S_RAINRETURN",
@@ -6222,6 +6252,9 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_REDSPRING",
 	"MT_YELLOWDIAG", // Yellow Diagonal Spring
 	"MT_REDDIAG", // Red Diagonal Spring
+	"MT_YELLOWHORIZ", // Yellow Side Spring
+	"MT_REDHORIZ", // Red Side Spring
+	"MT_BLUEHORIZ", // Blue Side Spring
 
 	// Interactive Objects
 	"MT_BUBBLES", // Bubble source
