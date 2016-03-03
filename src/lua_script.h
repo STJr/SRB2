@@ -55,6 +55,7 @@ void Got_Luacmd(UINT8 **cp, INT32 playernum); // lua_consolelib.c
 void LUA_CVarChanged(const char *name); // lua_consolelib.c
 int Lua_optoption(lua_State *L, int narg,
 	const char *def, const char *const lst[]);
+void LUAh_NetArchiveHook(lua_CFunction archFunc);
 
 // Console wrapper
 void COM_Lua_f(void);

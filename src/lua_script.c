@@ -915,8 +915,6 @@ static void UnArchiveTables(void)
 	}
 }
 
-void LUAh_NetArchiveHook(lua_CFunction archFunc);
-
 void LUA_Step(void)
 {
 	if (!gL)
