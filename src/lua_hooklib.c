@@ -779,15 +779,21 @@ void LUAh_NetArchiveHook(lua_CFunction archFunc)
 	I_Assert(lua_gettop(gL) > 0);
 	I_Assert(lua_istable(gL, -1));
 
+	// tables becomes an upvalue of archFunc
+	lua_pushvalue(gL, -1);
+	lua_pushcclosure(gL, archFunc, 1);
+	// stack: tables, archFunc
+
 	for (hookp = roothook; hookp; hookp = hookp->next)
 		if (hookp->type == hook_NetVars)
 		{
 			lua_pushfstring(gL, FMT_HOOKID, hookp->id);
 			lua_gettable(gL, LUA_REGISTRYINDEX);
-			lua_pushvalue(gL, -2); // tables
+			lua_pushvalue(gL, -2); // archFunc
 			LUA_Call(gL, 1);
 		}
 
+	lua_pop(gL, 1); // pop archFunc
 	// stack: tables
 }
 
