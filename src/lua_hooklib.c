@@ -24,6 +24,8 @@
 #include "lua_hook.h"
 #include "lua_hud.h" // hud_running errors
 
+void LUAh_NetArchiveHook(lua_CFunction archFunc);
+
 static UINT8 hooksAvailable[(hook_MAX/8)+1];
 
 const char *const hookNames[hook_MAX+1] = {
