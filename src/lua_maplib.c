@@ -1169,7 +1169,7 @@ static int mapheaderinfo_get(lua_State *L)
 	else if (fastcmp(field,"nextlevel"))
 		lua_pushinteger(L, header->nextlevel);
 	else if (fastcmp(field,"musname"))
-		lua_pushlstring(L, header->musname, 6);
+		lua_pushstring(L, header->musname);
 	else if (fastcmp(field,"mustrack"))
 		lua_pushinteger(L, header->mustrack);
 	else if (fastcmp(field,"forcecharacter"))
