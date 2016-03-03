@@ -490,4 +490,8 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 /// Experimental tweaks to analog mode. (Needs a lot of work before it's ready for primetime.)
 //#define REDSANALOG
 
+/// Backwards compatibility with musicslots.
+/// \note	You should leave this enabled unless you're working with a future SRB2 version.
+#define MUSICSLOT_COMPATIBILITY
+
 #endif // __DOOMDEF__
