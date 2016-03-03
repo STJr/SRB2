@@ -29,6 +29,7 @@
 #define P_SLOPES_H__
 
 #ifdef ESLOPE
+void P_CalculateSlopeNormal(pslope_t *slope);
 void P_ResetDynamicSlopes(void);
 void P_RunDynamicSlopes(void);
 // P_SpawnSlope_Line

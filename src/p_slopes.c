@@ -46,7 +46,7 @@ static pslope_t *slopelist = NULL;
 static UINT16 slopecount = 0;
 
 // Calculate line normal
-static void P_CalculateSlopeNormal(pslope_t *slope) {
+void P_CalculateSlopeNormal(pslope_t *slope) {
 	slope->normal.z = FINECOSINE(slope->zangle>>ANGLETOFINESHIFT);
 	slope->normal.x = -FixedMul(FINESINE(slope->zangle>>ANGLETOFINESHIFT), slope->d.x);
 	slope->normal.y = -FixedMul(FINESINE(slope->zangle>>ANGLETOFINESHIFT), slope->d.y);

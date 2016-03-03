@@ -16,6 +16,8 @@
 #include "p_local.h"
 #include "p_setup.h"
 #include "z_zone.h"
+#include "p_slopes.h"
+#include "r_main.h"
 
 #include "lua_script.h"
 #include "lua_libs.h"
@@ -37,7 +39,10 @@ enum sector_e {
 	sector_thinglist,
 	sector_heightsec,
 	sector_camsec,
-	sector_ffloors
+	sector_ffloors,
+	sector_fslope,
+	sector_cslope,
+	sector_hasslope
 };
 
 static const char *const sector_opt[] = {
@@ -53,6 +58,9 @@ static const char *const sector_opt[] = {
 	"heightsec",
 	"camsec",
 	"ffloors",
+	"f_slope",
+	"c_slope",
+	"hasslope",
 	NULL};
 
 enum subsector_e {
@@ -158,6 +166,8 @@ enum ffloor_e {
 	ffloor_toplightlevel,
 	ffloor_bottomheight,
 	ffloor_bottompic,
+	ffloor_tslope,
+	ffloor_bslope,
 	ffloor_sector,
 	ffloor_flags,
 	ffloor_master,
@@ -174,6 +184,8 @@ static const char *const ffloor_opt[] = {
 	"toplightlevel",
 	"bottomheight",
 	"bottompic",
+	"t_slope",
+	"b_slope",
 	"sector", // secnum pushed as control sector userdata
 	"flags",
 	"master", // control linedef
@@ -181,6 +193,32 @@ static const char *const ffloor_opt[] = {
 	"next",
 	"prev",
 	"alpha",
+	NULL};
+
+enum slope_e {
+	slope_valid = 0,
+	slope_o,
+	slope_d,
+	slope_zdelta,
+	slope_normal,
+	slope_zangle,
+	slope_xydirection,
+	slope_sourceline,
+	slope_refpos,
+	slope_flags
+};
+
+static const char *const slope_opt[] = {
+	"valid",
+	"o",
+	"d",
+	"zdelta",
+	"normal",
+	"zangle",
+	"xydirection",
+	"sourceline",
+	"refpos",
+	"flags",
 	NULL};
 
 static const char *const array_opt[] ={"iterate",NULL};
@@ -330,6 +368,15 @@ static int sector_get(lua_State *L)
 		LUA_PushUserdata(L, sector->ffloors, META_FFLOOR);
 		lua_pushcclosure(L, sector_iterate, 2); // push lib_iterateFFloors and sector->ffloors as upvalues for the function
 		return 1;
+	case sector_fslope: // f_slope
+		LUA_PushUserdata(L, sector->f_slope, META_SLOPE);
+		return 1;
+	case sector_cslope: // c_slope
+		LUA_PushUserdata(L, sector->c_slope, META_SLOPE);
+		return 1;
+	case sector_hasslope: // hasslope
+		lua_pushboolean(L, sector->hasslope);
+		return 1;
 	}
 	return 0;
 }
@@ -392,6 +439,9 @@ static int sector_set(lua_State *L)
 	case sector_heightsec: // heightsec
 	case sector_camsec: // camsec
 	case sector_ffloors: // ffloors
+	case sector_fslope: // f_slope
+	case sector_cslope: // c_slope
+	case sector_hasslope: // hasslope
 	default:
 		return luaL_error(L, "sector_t field " LUA_QS " cannot be set.", sector_opt[field]);
 	case sector_floorheight: { // floorheight
@@ -1026,6 +1076,12 @@ static int ffloor_get(lua_State *L)
 		lua_pushlstring(L, levelflat->name, 8);
 		return 1;
 	}
+	case ffloor_tslope:
+		LUA_PushUserdata(L, *ffloor->t_slope, META_SLOPE);
+		return 1;
+	case ffloor_bslope:
+		LUA_PushUserdata(L, *ffloor->b_slope, META_SLOPE);
+		return 1;
 	case ffloor_sector:
 		LUA_PushUserdata(L, &sectors[ffloor->secnum], META_SECTOR);
 		return 1;
@@ -1065,6 +1121,8 @@ static int ffloor_set(lua_State *L)
 	switch(field)
 	{
 	case ffloor_valid: // valid
+	case ffloor_tslope: // t_slope
+	case ffloor_bslope: // b_slope
 	case ffloor_sector: // sector
 	case ffloor_master: // master
 	case ffloor_target: // target
@@ -1120,6 +1178,150 @@ static int ffloor_set(lua_State *L)
 	}
 	case ffloor_alpha:
 		ffloor->alpha = (INT32)luaL_checkinteger(L, 3);
+		break;
+	}
+	return 0;
+}
+
+static int slope_get(lua_State *L)
+{
+	pslope_t *slope = *((pslope_t **)luaL_checkudata(L, 1, META_SLOPE));
+	enum slope_e field = luaL_checkoption(L, 2, slope_opt[0], slope_opt);
+
+	if (!slope)
+	{
+		if (field == slope_valid) {
+			lua_pushboolean(L, 0);
+			return 1;
+		}
+		return luaL_error(L, "accessed pslope_t doesn't exist anymore.");
+	}
+
+	switch(field)
+	{
+	case slope_valid: // valid
+		lua_pushboolean(L, 1);
+		return 1;
+	case slope_o: // o
+		lua_createtable(L, 0, 3);
+		lua_pushfixed(L, slope->o.x);
+		lua_setfield(L, -2, "x");
+		lua_pushfixed(L, slope->o.y);
+		lua_setfield(L, -2, "y");
+		lua_pushfixed(L, slope->o.z);
+		lua_setfield(L, -2, "z");
+		return 1;
+	case slope_d: // d
+		lua_createtable(L, 0, 2);
+		lua_pushfixed(L, slope->o.x);
+		lua_setfield(L, -2, "x");
+		lua_pushfixed(L, slope->o.y);
+		lua_setfield(L, -2, "y");
+		return 1;
+	case slope_zdelta: // zdelta
+		lua_pushfixed(L, slope->zdelta);
+		return 1;
+	case slope_normal: // normal
+		lua_createtable(L, 0, 2);
+		lua_pushfixed(L, slope->o.x);
+		lua_setfield(L, -2, "x");
+		lua_pushfixed(L, slope->o.y);
+		lua_setfield(L, -2, "y");
+		return 1;
+	case slope_zangle: // zangle
+		lua_pushangle(L, slope->zangle);
+		return 1;
+	case slope_xydirection: // xydirection
+		lua_pushangle(L, slope->xydirection);
+		return 1;
+	case slope_sourceline: // source linedef
+		LUA_PushUserdata(L, slope->sourceline, META_LINE);
+		return 1;
+	case slope_refpos: // refpos
+		lua_pushinteger(L, slope->refpos);
+		return 1;
+	case slope_flags: // flags
+		lua_pushinteger(L, slope->flags);
+		return 1;
+	}
+	return 0;
+}
+
+static int slope_set(lua_State *L)
+{
+	pslope_t *slope = *((pslope_t **)luaL_checkudata(L, 1, META_SLOPE));
+	enum slope_e field = luaL_checkoption(L, 2, slope_opt[0], slope_opt);
+
+	if (!slope)
+		return luaL_error(L, "accessed pslope_t doesn't exist anymore.");
+
+	if (hud_running)
+		return luaL_error(L, "Do not alter pslope_t in HUD rendering code!");
+
+	switch(field) // todo: reorganize this shit
+	{
+	case slope_valid: // valid
+	case slope_sourceline: // sourceline
+	case slope_d: // d
+	case slope_flags: // flags
+	case slope_normal: // normal
+	case slope_refpos: // refpos
+	default:
+		return luaL_error(L, "pslope_t field " LUA_QS " cannot be set.", slope_opt[field]);
+	case slope_o: { // o
+		luaL_checktype(L, 3, LUA_TTABLE);
+
+		lua_getfield(L, 3, "x");
+		if (lua_isnil(L, -1))
+		{
+			lua_pop(L, 1);
+			lua_rawgeti(L, 3, 1);
+		}
+		if (!lua_isnil(L, -1))
+			slope->o.x = luaL_checkfixed(L, -1);
+		else
+			slope->o.x = 0;
+		lua_pop(L, 1);
+
+		lua_getfield(L, 3, "y");
+		if (lua_isnil(L, -1))
+		{
+			lua_pop(L, 1);
+			lua_rawgeti(L, 3, 2);
+		}
+		if (!lua_isnil(L, -1))
+			slope->o.y = luaL_checkfixed(L, -1);
+		else
+			slope->o.y = 0;
+		lua_pop(L, 1);
+
+		lua_getfield(L, 3, "z");
+		if (lua_isnil(L, -1))
+		{
+			lua_pop(L, 1);
+			lua_rawgeti(L, 3, 3);
+		}
+		if (!lua_isnil(L, -1))
+			slope->o.z = luaL_checkfixed(L, -1);
+		else
+			slope->o.z = 0;
+		lua_pop(L, 1);
+		break;
+	}
+	case slope_zdelta: { // zdelta, this is temp until i figure out wtf to do
+		slope->zdelta = luaL_checkfixed(L, 3);
+		slope->zangle = R_PointToAngle2(0, 0, FRACUNIT, slope->zdelta);
+		P_CalculateSlopeNormal(slope);
+		break;
+	}
+	case slope_zangle: // zangle
+		slope->zangle = luaL_checkangle(L, 3);
+		slope->zdelta = FINETANGENT(slope->zangle);
+		P_CalculateSlopeNormal(slope);
+		break;
+	case slope_xydirection: // xydirection
+		slope->xydirection = luaL_checkangle(L, 3);
+		P_CalculateSlopeNormal(slope);
 		break;
 	}
 	return 0;
@@ -1290,6 +1492,14 @@ int LUA_MapLib(lua_State *L)
 		lua_setfield(L, -2, "__index");
 
 		lua_pushcfunction(L, ffloor_set);
+		lua_setfield(L, -2, "__newindex");
+	lua_pop(L, 1);
+
+	luaL_newmetatable(L, META_SLOPE);
+		lua_pushcfunction(L, slope_get);
+		lua_setfield(L, -2, "__index");
+
+		lua_pushcfunction(L, slope_set);
 		lua_setfield(L, -2, "__newindex");
 	lua_pop(L, 1);
 
