@@ -1178,7 +1178,7 @@ static void readlevelheader(MYFILE *f, INT32 num)
 			}
 #ifdef MUSICSLOT_COMPATIBILITY
 			else if (fastcmp(word, "MUSICSLOT"))
-			{ // Backwards compatibility?
+			{
 				i = get_mus(word2, true);
 				if (i && i <= 1035)
 					snprintf(mapheaderinfo[num-1]->musname, 7, "%sM", G_BuildMapName(i));
