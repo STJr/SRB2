@@ -16,7 +16,9 @@
 #include "r_local.h"
 #include "st_stuff.h" // hudinfo[]
 #include "g_game.h"
+#include "i_video.h" // rendermode
 #include "p_local.h" // camera_t
+#include "screen.h" // screen width/height
 #include "v_video.h"
 #include "w_wad.h"
 #include "z_zone.h"
@@ -486,7 +488,7 @@ static int libd_getColormap(lua_State *L)
 	INT32 skinnum = TC_DEFAULT;
 	skincolors_t color = luaL_optinteger(L, 2, 0);
 	UINT8* colormap = NULL;
-	//HUDSAFE
+	HUDONLY
 	if (lua_isnoneornil(L, 1))
 		; // defaults to TC_DEFAULT
 	else if (lua_type(L, 1) == LUA_TNUMBER) // skin number
@@ -510,6 +512,31 @@ static int libd_getColormap(lua_State *L)
 	return 1;
 }
 
+static int libd_width(lua_State *L)
+{
+	HUDONLY
+	lua_pushinteger(L, vid.width); // push screen width
+	return 1;
+}
+
+static int libd_height(lua_State *L)
+{
+	HUDONLY
+	lua_pushinteger(L, vid.height); // push screen height
+	return 1;
+}
+
+static int libd_renderer(lua_State *L)
+{
+	HUDONLY
+	switch (rendermode) {
+		case render_opengl: lua_pushliteral(L, "opengl");   break; // OpenGL renderer
+		case render_soft:   lua_pushliteral(L, "software"); break; // Software renderer
+		default:            lua_pushliteral(L, "none");     break; // render_none (for dedicated), in case there's any reason this should be run
+	}
+	return 1;
+}
+
 static luaL_Reg lib_draw[] = {
 	{"patchExists", libd_patchExists},
 	{"cachePatch", libd_cachePatch},
@@ -521,6 +548,9 @@ static luaL_Reg lib_draw[] = {
 	{"drawString", libd_drawString},
 	{"stringWidth", libd_stringWidth},
 	{"getColormap", libd_getColormap},
+	{"width", libd_width},
+	{"height", libd_height},
+	{"renderer", libd_renderer},
 	{NULL, NULL}
 };
 
