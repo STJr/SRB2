@@ -53,6 +53,7 @@ const char *const hookNames[hook_MAX+1] = {
 	"LinedefExecute",
 	"PlayerMsg",
 	"HurtMsg",
+	"PlayerSpawn",
 	NULL
 };
 
