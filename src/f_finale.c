@@ -471,6 +471,7 @@ static const char *credits[] = {
 	"\"SevenColorsAlice\"", // Drew the Penguinator sprites
 	"\"Charybdizs\"", // Drew the Krackobot sprites
 	"\"Jeck Jims\"", // Extra hub icons
+	"\"MotorRoach\"", // Sky Islands fireballs
 	"",
 	"\1Texture Artists",
 	"\"Charybdizs\"",
