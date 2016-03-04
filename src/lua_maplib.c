@@ -1222,11 +1222,13 @@ static int slope_get(lua_State *L)
 		lua_pushfixed(L, slope->zdelta);
 		return 1;
 	case slope_normal: // normal
-		lua_createtable(L, 0, 2);
+		lua_createtable(L, 0, 3);
 		lua_pushfixed(L, slope->normal.x);
 		lua_setfield(L, -2, "x");
 		lua_pushfixed(L, slope->normal.y);
 		lua_setfield(L, -2, "y");
+		lua_pushfixed(L, slope->normal.z);
+		lua_setfield(L, -2, "z");
 		return 1;
 	case slope_zangle: // zangle
 		lua_pushangle(L, slope->zangle);
