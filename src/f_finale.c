@@ -559,7 +559,7 @@ static void F_IntroDrawScene(void)
 				if (finalecount < 4)
 					S_StopMusic();
 				if (finalecount == 4)
-					S_ChangeMusic(mus_stjr, false);
+					S_ChangeMusicInternal("stjr", false);
 				x = (BASEVIDWIDTH<<FRACBITS)/2 - FixedMul(334<<FRACBITS, aspect)/2;
 				y = (BASEVIDHEIGHT<<FRACBITS)/2 - FixedMul(358<<FRACBITS, aspect)/2;
 				V_DrawSciencePatch(x, y, 0, (patch = W_CachePatchName("WAHH1", PU_CACHE)), aspect);
@@ -771,7 +771,7 @@ void F_IntroDrawer(void)
 				F_RunWipe(99,true);
 			}
 
-			S_ChangeMusic(mus_read_m, false);
+			S_ChangeMusicInternal("read_m", false);
 		}
 		else if (intro_scenenum == 3)
 			roidtics = BASEVIDWIDTH - 64;
@@ -1002,8 +1002,8 @@ static const char *credits[] = {
 	"Jim \"MotorRoach\" DeMello",
 	"Desmond \"Blade\" DesJardins",
 	"Sherman \"CoatRack\" DesJardins",
-	"Andrew \"Senku Niola\" Moran",
 	"Vivian \"toaster\" Grannell",
+	"Andrew \"Senku Niola\" Moran",
 	"David \"Instant Sonic\" Spencer Jr.",
 	"\"SSNTails\"",
 	"",
@@ -1129,7 +1129,7 @@ void F_StartCredits(void)
 	CON_ClearHUD();
 	S_StopMusic();
 
-	S_ChangeMusic(mus_credit, false);
+	S_ChangeMusicInternal("credit", false);
 
 	finalecount = 0;
 	animtimer = 0;
@@ -1426,7 +1426,7 @@ void F_StartTitleScreen(void)
 
 	// IWAD dependent stuff.
 
-	S_ChangeMusic(mus_titles, looptitle);
+	S_ChangeMusicInternal("titles", looptitle);
 
 	animtimer = 0;
 
@@ -1592,7 +1592,7 @@ void F_StartContinue(void)
 	// In case menus are still up?!!
 	M_ClearMenus(true);
 
-	S_ChangeMusic(mus_contsc, false);
+	S_ChangeMusicInternal("contsc", false);
 	S_StopSounds();
 
 	timetonext = TICRATE*11;
@@ -1706,8 +1706,10 @@ static void F_AdvanceToNextScene(void)
 	picxpos = cutscenes[cutnum]->scene[scenenum].xcoord[picnum];
 	picypos = cutscenes[cutnum]->scene[scenenum].ycoord[picnum];
 
-	if (cutscenes[cutnum]->scene[scenenum].musicslot != 0)
-		S_ChangeMusic(cutscenes[cutnum]->scene[scenenum].musicslot, cutscenes[cutnum]->scene[scenenum].musicloop);
+	if (cutscenes[cutnum]->scene[scenenum].musswitch[0])
+		S_ChangeMusic(cutscenes[cutnum]->scene[scenenum].musswitch,
+			cutscenes[cutnum]->scene[scenenum].musswitchflags,
+			cutscenes[cutnum]->scene[scenenum].musicloop);
 
 	// Fade to the next
 	dofadenow = true;
@@ -1778,8 +1780,10 @@ void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean reset
 	animtimer = cutscenes[cutnum]->scene[0].picduration[0]; // Picture duration
 	stoptimer = 0;
 
-	if (cutscenes[cutnum]->scene[scenenum].musicslot != 0)
-		S_ChangeMusic(cutscenes[cutnum]->scene[scenenum].musicslot, cutscenes[cutnum]->scene[scenenum].musicloop);
+	if (cutscenes[cutnum]->scene[0].musswitch[0])
+		S_ChangeMusic(cutscenes[cutnum]->scene[0].musswitch,
+			cutscenes[cutnum]->scene[0].musswitchflags,
+			cutscenes[cutnum]->scene[0].musicloop);
 	else
 		S_StopMusic();
 }
