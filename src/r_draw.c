@@ -347,7 +347,7 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + i - 3);
 		}
 		break;
-		
+
 	case SKINCOLOR_PEACH:
 		// 11 colors
 		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
@@ -362,7 +362,7 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + i - 7); // Darkest
 		}
 		break;
-		
+
 	case SKINCOLOR_RED:
 		// 16 colors
 		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
@@ -957,4 +957,3 @@ void R_DrawViewBorder(void)
 // ==========================================================================
 
 #include "r_draw16.c"
-

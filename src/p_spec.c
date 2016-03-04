@@ -3038,6 +3038,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
 				sector_t *sec; // Sector that the FOF is visible (or not visible) in
 				ffloor_t *rover; // FOF to vanish/un-vanish
+				ffloortype_e oldflags; // store FOF's old flags
 
 				for (secnum = -1; (secnum = P_FindSectorFromTag(sectag, secnum)) >= 0 ;)
 				{
@@ -3061,11 +3062,17 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						return;
 					}
 
+					oldflags = rover->flags;
+
 					// Abracadabra!
 					if (line->flags & ML_NOCLIMB)
 						rover->flags |= FF_EXISTS;
 					else
 						rover->flags &= ~FF_EXISTS;
+
+					// if flags changed, reset sector's light list
+					if (rover->flags != oldflags)
+						sec->moved = true;
 				}
 			}
 			break;
@@ -4670,11 +4677,11 @@ void P_UpdateSpecials(void)
 	// ANIMATE TEXTURES
 	for (anim = anims; anim < lastanim; anim++)
 	{
-		for (i = anim->basepic; i < anim->basepic + anim->numpics; i++)
+		for (i = 0; i < anim->numpics; i++)
 		{
 			pic = anim->basepic + ((leveltime/anim->speed + i) % anim->numpics);
 			if (anim->istexture)
-				texturetranslation[i] = pic;
+				texturetranslation[anim->basepic+i] = pic;
 		}
 	}
 

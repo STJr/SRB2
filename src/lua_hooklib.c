@@ -768,4 +768,33 @@ boolean LUAh_HurtMsg(player_t *player, mobj_t *inflictor, mobj_t *source)
 	return hooked;
 }
 
+void LUAh_NetArchiveHook(lua_CFunction archFunc)
+{
+	hook_p hookp;
+
+	if (!gL || !(hooksAvailable[hook_NetVars/8] & (1<<(hook_NetVars%8))))
+		return;
+
+	// stack: tables
+	I_Assert(lua_gettop(gL) > 0);
+	I_Assert(lua_istable(gL, -1));
+
+	// tables becomes an upvalue of archFunc
+	lua_pushvalue(gL, -1);
+	lua_pushcclosure(gL, archFunc, 1);
+	// stack: tables, archFunc
+
+	for (hookp = roothook; hookp; hookp = hookp->next)
+		if (hookp->type == hook_NetVars)
+		{
+			lua_pushfstring(gL, FMT_HOOKID, hookp->id);
+			lua_gettable(gL, LUA_REGISTRYINDEX);
+			lua_pushvalue(gL, -2); // archFunc
+			LUA_Call(gL, 1);
+		}
+
+	lua_pop(gL, 1); // pop archFunc
+	// stack: tables
+}
+
 #endif

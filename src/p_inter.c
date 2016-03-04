@@ -1339,6 +1339,9 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			}
 			else
 				player->pflags |= PF_ITEMHANG;
+
+			// Can't jump first frame
+			player->pflags |= PF_JUMPSTASIS;
 			return;
 		case MT_BIGMINE:
 		case MT_BIGAIRMINE:

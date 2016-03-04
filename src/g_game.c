@@ -4340,10 +4340,8 @@ void G_GhostTicker(void)
 		switch(g->color)
 		{
 		case GHC_SUPER: // Super Sonic (P_DoSuperStuff)
-			if (leveltime % 9 < 5)
-				g->mo->color = SKINCOLOR_SUPER1 + leveltime % 9;
-			else
-				g->mo->color = SKINCOLOR_SUPER1 + 9 - leveltime % 9;
+			g->mo->color = SKINCOLOR_SUPER1;
+			g->mo->color += abs( ( ( leveltime >> 1 ) % 9) - 4);
 			break;
 		case GHC_INVINCIBLE: // Mario invincibility (P_CheckInvincibilityTimer)
 			g->mo->color = (UINT8)(leveltime % MAXSKINCOLORS);
@@ -5587,7 +5585,7 @@ boolean G_CheckDemoStatus(void)
 		free(demobuffer);
 		demorecording = false;
 
-		if (!modeattacking == ATTACKING_RECORD)
+		if (modeattacking != ATTACKING_RECORD)
 		{
 			if (saved)
 				CONS_Printf(M_GetText("Demo %s recorded\n"), demoname);

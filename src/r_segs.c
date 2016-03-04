@@ -1486,13 +1486,11 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	if (ds_p == drawsegs+maxdrawsegs)
 	{
 		size_t pos = ds_p - drawsegs;
-		size_t pos2 = firstnewseg - drawsegs;
 		size_t newmax = maxdrawsegs ? maxdrawsegs*2 : 128;
 		if (firstseg)
 			firstseg = (drawseg_t *)(firstseg - drawsegs);
 		drawsegs = Z_Realloc(drawsegs, newmax*sizeof (*drawsegs), PU_STATIC, NULL);
 		ds_p = drawsegs + pos;
-		firstnewseg = drawsegs + pos2;
 		maxdrawsegs = newmax;
 		if (firstseg)
 			firstseg = drawsegs + (size_t)firstseg;

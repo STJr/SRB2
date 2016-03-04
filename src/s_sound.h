@@ -139,4 +139,10 @@ void S_StopSoundByNum(sfxenum_t sfxnum);
 #define S_StartScreamSound S_StartSound
 #endif
 
+#ifdef MUSICSLOT_COMPATIBILITY
+// For compatibility with code/scripts relying on older versions
+// This is a list of all the "special" slot names and their associated numbers
+const char *compat_special_music_slots[16];
+#endif
+
 #endif

@@ -52,9 +52,6 @@
 #include "hardware/hw_main.h"
 #endif
 
-// Index of the special effects (INVUL inverse) map.
-#define INVERSECOLORMAP 32
-
 #if 0
 static void P_NukeAllPlayers(player_t *player);
 #endif
@@ -3440,27 +3437,14 @@ static void P_DoSuperStuff(player_t *player)
 			player->mo->health--;
 		}
 
+		// future todo: a skin option for this, and possibly more colors
 		switch (player->skin)
 		{
-		case 1: // Golden orange supertails.
-			if (leveltime % 9 < 5)
-				player->mo->color = SKINCOLOR_TSUPER1 + leveltime % 9;
-			else
-				player->mo->color = SKINCOLOR_TSUPER1 + 9 - leveltime % 9;
-			break;
-		case 2: // Pink superknux.
-			if (leveltime % 9 < 5)
-				player->mo->color = SKINCOLOR_KSUPER1 + leveltime % 9;
-			else
-				player->mo->color = SKINCOLOR_KSUPER1 + 9 - leveltime % 9;
-			break;
-		default: // Yousa yellow now!
-			if (leveltime % 9 < 5)
-				player->mo->color = SKINCOLOR_SUPER1 + leveltime % 9;
-			else
-				player->mo->color = SKINCOLOR_SUPER1 + 9 - leveltime % 9;
-			break;
+			case 1:  /* Tails    */ player->mo->color = SKINCOLOR_TSUPER1; break;
+			case 2:  /* Knux     */ player->mo->color = SKINCOLOR_KSUPER1; break;
+			default: /* everyone */ player->mo->color = SKINCOLOR_SUPER1; break;
 		}
+		player->mo->color += abs( ( ( leveltime >> 1 ) % 9) - 4);
 
 		if ((cmd->forwardmove != 0 || cmd->sidemove != 0 || player->pflags & (PF_CARRIED|PF_ROPEHANG|PF_ITEMHANG|PF_MACESPIN))
 		&& !(leveltime % TICRATE) && (player->mo->momx || player->mo->momy))
@@ -6366,8 +6350,7 @@ static void P_MovePlayer(player_t *player)
 		if (!(player->powers[pw_nocontrol] & (1<<15)))
 			player->pflags |= PF_JUMPSTASIS;
 	}
-	else
-		player->pflags &= ~PF_FULLSTASIS;
+	// note: don't unset stasis here
 
 	if (!player->spectator && G_TagGametype())
 	{
@@ -7996,9 +7979,9 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		if (player == &players[consoleplayer])
 		{
 			if (focusangle >= localangle)
-				localangle += abs(focusangle - localangle)>>5;
+				localangle += abs((focusangle - localangle))>>5;
 			else
-				localangle -= abs(focusangle - localangle)>>5;
+				localangle -= abs((focusangle - localangle))>>5;
 		}
 	}
 	else if (P_AnalogMove(player)) // Analog
@@ -8957,6 +8940,11 @@ void P_PlayerThink(player_t *player)
 
 	if (!player->mo)
 		return; // P_MovePlayer removed player->mo.
+
+	// Unset statis flags after moving.
+	// In other words, if you manually set stasis via code,
+	// it lasts for one tic.
+	player->pflags &= ~PF_FULLSTASIS;
 
 #ifdef POLYOBJECTS
 	if (player->onconveyor == 1)

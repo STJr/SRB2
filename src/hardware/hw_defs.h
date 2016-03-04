@@ -229,4 +229,3 @@ enum hwdfiltermode
 
 
 #endif //_HWR_DEFS_
-

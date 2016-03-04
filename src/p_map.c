@@ -503,7 +503,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			return true; // overhead
 		if (thing->z + thing->height < tmthing->z)
 			return true; // underneath
-		if (tmthing->player && tmthing->flags & MF_SHOOTABLE)
+		if (tmthing->player && tmthing->flags & MF_SHOOTABLE && thing->health > 0)
 		{
 			UINT8 damagetype = 0;
 			if (thing->flags & MF_FIRE) // BURN!
@@ -519,7 +519,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			return true; // overhead
 		if (tmthing->z + tmthing->height < thing->z)
 			return true; // underneath
-		if (thing->player && thing->flags & MF_SHOOTABLE)
+		if (thing->player && thing->flags & MF_SHOOTABLE && tmthing->health > 0)
 		{
 			UINT8 damagetype = 0;
 			if (tmthing->flags & MF_FIRE) // BURN!
@@ -2646,8 +2646,8 @@ isblocking:
 
 			climbangle += (ANGLE_90 * (whichside ? -1 : 1));
 
-			if (((!slidemo->player->climbing && abs(slidemo->angle - ANGLE_90 - climbline) < ANGLE_45)
-			|| (slidemo->player->climbing == 1 && abs(slidemo->angle - climbline) < ANGLE_135))
+			if (((!slidemo->player->climbing && abs((slidemo->angle - ANGLE_90 - climbline)) < ANGLE_45)
+			|| (slidemo->player->climbing == 1 && abs((slidemo->angle - climbline)) < ANGLE_135))
 			&& P_IsClimbingValid(slidemo->player, climbangle))
 			{
 				slidemo->angle = climbangle;

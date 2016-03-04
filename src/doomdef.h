@@ -210,13 +210,6 @@ extern FILE *logstream;
 // Note that we use this to help keep internal testing in check; this is why v2.1.0 is not version "1".
 #define MODVERSION 20
 
-
-
-
-
-// some tests, enable or disable it if it run or not
-#define SPLITSCREEN
-
 // =========================================================================
 
 // The maximum number of players, multiplayer/networking.
@@ -356,11 +349,7 @@ void CONS_Debug(INT32 debugflags, const char *fmt, ...) FUNCDEBUG;
 #include "m_swap.h"
 
 // Things that used to be in dstrings.h
-#define DEVMAPS "devmaps"
-#define DEVDATA "devdata"
-
 #define SAVEGAMENAME "srb2sav"
-
 char savegamename[256];
 
 // m_misc.h
@@ -505,5 +494,8 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 /// Experimental tweaks to analog mode. (Needs a lot of work before it's ready for primetime.)
 //#define REDSANALOG
 
-#endif // __DOOMDEF__
+/// Backwards compatibility with musicslots.
+/// \note	You should leave this enabled unless you're working with a future SRB2 version.
+#define MUSICSLOT_COMPATIBILITY
 
+#endif // __DOOMDEF__

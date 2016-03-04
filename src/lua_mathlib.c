@@ -166,7 +166,7 @@ static int lib_all7emeralds(lua_State *L)
 // Returns both color and frame numbers!
 static int lib_coloropposite(lua_State *L)
 {
-	int colornum = ((int)luaL_checkinteger(L, 1)) & MAXSKINCOLORS;
+	int colornum = ((int)luaL_checkinteger(L, 1)) % MAXSKINCOLORS;
 	lua_pushinteger(L, Color_Opposite[colornum*2]); // push color
 	lua_pushinteger(L, Color_Opposite[colornum*2+1]); // push frame
 	return 2;
