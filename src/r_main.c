@@ -972,14 +972,42 @@ void R_SkyboxFrame(player_t *player)
 		{
 			if (skyboxmo[1])
 			{
+				fixed_t x = 0, y = 0;
 				if (mh->skybox_scalex > 0)
-					viewx += (player->mo->x - skyboxmo[1]->x) / mh->skybox_scalex;
+					x = (player->mo->x - skyboxmo[1]->x) / mh->skybox_scalex;
 				else if (mh->skybox_scalex < 0)
-					viewx += (player->mo->x - skyboxmo[1]->x) * -mh->skybox_scalex;
+					x = (player->mo->x - skyboxmo[1]->x) * -mh->skybox_scalex;
 				if (mh->skybox_scaley > 0)
-					viewy += (player->mo->y - skyboxmo[1]->y) / mh->skybox_scaley;
+					y = (player->mo->y - skyboxmo[1]->y) / mh->skybox_scaley;
 				else if (mh->skybox_scaley < 0)
-					viewy += (player->mo->y - skyboxmo[1]->y) * -mh->skybox_scaley;
+					y = (player->mo->y - skyboxmo[1]->y) * -mh->skybox_scaley;
+
+				if (viewmobj->angle == 0)
+				{
+					viewx += x;
+					viewy += y;
+				}
+				else if (viewmobj->angle == ANGLE_90)
+				{
+					viewx -= y;
+					viewy += x;
+				}
+				else if (viewmobj->angle == ANGLE_180)
+				{
+					viewx -= x;
+					viewy -= y;
+				}
+				else if (viewmobj->angle == ANGLE_270)
+				{
+					viewx += y;
+					viewy -= x;
+				}
+				else
+				{
+					angle_t ang = viewmobj->angle>>ANGLETOFINESHIFT;
+					viewx += FixedMul(x,FINECOSINE(ang)) - FixedMul(y,  FINESINE(ang));
+					viewy += FixedMul(x,  FINESINE(ang)) + FixedMul(y,FINECOSINE(ang));
+				}
 			}
 			if (mh->skybox_scalez > 0)
 				viewz += player->viewz / mh->skybox_scalez;
