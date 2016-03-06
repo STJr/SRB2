@@ -51,7 +51,7 @@ boolean floatok;
 fixed_t tmfloorz, tmceilingz;
 static fixed_t tmdropoffz, tmdrpoffceilz; // drop-off floor/ceiling heights
 mobj_t *tmfloorthing; // the thing corresponding to tmfloorz or NULL if tmfloorz is from a sector
-static mobj_t *tmhitthing; // the solid thing you bumped into (for collisions)
+mobj_t *tmhitthing; // the solid thing you bumped into (for collisions)
 #ifdef ESLOPE
 pslope_t *tmfloorslope, *tmceilingslope;
 #endif
@@ -109,7 +109,7 @@ boolean P_TeleportMove(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z)
 //                       MOVEMENT ITERATOR FUNCTIONS
 // =========================================================================
 
-void P_DoSpring(mobj_t *spring, mobj_t *object)
+boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 {
 	INT32 pflags;
 	fixed_t offx, offy;
@@ -117,16 +117,16 @@ void P_DoSpring(mobj_t *spring, mobj_t *object)
 	fixed_t horizspeed = spring->info->damage;
 
 	if (object->eflags & MFE_SPRUNG) // Object was already sprung this tic
-		return;
+		return false;
 
 	// Spectators don't trigger springs.
 	if (object->player && object->player->spectator)
-		return;
+		return false;
 
 	if (object->player && (object->player->pflags & PF_NIGHTSMODE))
 	{
 		/*Someone want to make these work like bumpers?*/
-		return;
+		return false;
 	}
 
 	object->eflags |= MFE_SPRUNG; // apply this flag asap!
@@ -216,6 +216,7 @@ void P_DoSpring(mobj_t *spring, mobj_t *object)
 			P_SetPlayerMobjState(object, S_PLAY_ATK1);
 		}
 	}
+	return true;
 }
 
 static void P_DoFanAndGasJet(mobj_t *spring, mobj_t *object)
@@ -372,6 +373,7 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 static boolean PIT_CheckThing(mobj_t *thing)
 {
 	fixed_t blockdist;
+	boolean iwassprung = false;
 
 	// don't clip against self
 	if (thing == tmthing)
@@ -826,7 +828,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		{
 			if ( thing->z <= tmthing->z + tmthing->height
 			&& tmthing->z <= thing->z + thing->height)
-				P_DoSpring(thing, tmthing);
+				iwassprung = P_DoSpring(thing, tmthing);
 		}
 	}
 
@@ -913,7 +915,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		{
 			if ( thing->z <= tmthing->z + tmthing->height
 			&& tmthing->z <= thing->z + thing->height)
-				P_DoSpring(thing, tmthing);
+				iwassprung = P_DoSpring(thing, tmthing);
 		}
 		// Are you touching the side of the object you're interacting with?
 		else if (thing->z - FixedMul(FRACUNIT, thing->scale) <= tmthing->z + tmthing->height
@@ -935,12 +937,14 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		}
 	}
 
-
-	if (thing->flags & MF_SPRING && (tmthing->player || tmthing->flags & MF_PUSHABLE));
-	else
+	if (thing->flags & MF_SPRING && (tmthing->player || tmthing->flags & MF_PUSHABLE))
+	{
+		if (iwassprung) // this spring caused you to gain MFE_SPRUNG just now...
+			return false; // "cancel" P_TryMove via blocking so you keep your current position
+	}
 	// Monitors are not treated as solid to players who are jumping, spinning or gliding,
 	// unless it's a CTF team monitor and you're on the wrong team
-	if (thing->flags & MF_MONITOR && tmthing->player && tmthing->player->pflags & (PF_JUMPED|PF_SPINNING|PF_GLIDING)
+	else if (thing->flags & MF_MONITOR && tmthing->player && tmthing->player->pflags & (PF_JUMPED|PF_SPINNING|PF_GLIDING)
 	&& !((thing->type == MT_REDRINGBOX && tmthing->player->ctfteam != 1) || (thing->type == MT_BLUERINGBOX && tmthing->player->ctfteam != 2)))
 		;
 	// z checking at last
@@ -1241,17 +1245,19 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 
 		for (rover = newsubsec->sector->ffloors; rover; rover = rover->next)
 		{
+			fixed_t topheight, bottomheight;
+
 			if (!(rover->flags & FF_EXISTS))
 				continue;
 
-			fixed_t topheight = P_GetFOFTopZ(thing, newsubsec->sector, rover, x, y, NULL);
-			fixed_t bottomheight = P_GetFOFBottomZ(thing, newsubsec->sector, rover, x, y, NULL);
+			topheight = P_GetFOFTopZ(thing, newsubsec->sector, rover, x, y, NULL);
+			bottomheight = P_GetFOFBottomZ(thing, newsubsec->sector, rover, x, y, NULL);
 
 			if (rover->flags & FF_GOOWATER && !(thing->flags & MF_NOGRAVITY))
 			{
 				// If you're inside goowater and slowing down
 				fixed_t sinklevel = FixedMul(thing->info->height/6, thing->scale);
-				fixed_t minspeed = FixedMul(thing->info->height/12, thing->scale);
+				fixed_t minspeed = FixedMul(thing->info->height/9, thing->scale);
 				if (thing->z < topheight && bottomheight < thingtop
 				&& abs(thing->momz) < minspeed)
 				{
@@ -1545,11 +1551,12 @@ boolean P_CheckCameraPosition(fixed_t x, fixed_t y, camera_t *thiscam)
 
 		for (rover = newsubsec->sector->ffloors; rover; rover = rover->next)
 		{
+			fixed_t topheight, bottomheight;
 			if (!(rover->flags & FF_BLOCKOTHERS) || !(rover->flags & FF_EXISTS) || !(rover->flags & FF_RENDERALL) || GETSECSPECIAL(rover->master->frontsector->special, 4) == 12)
 				continue;
 
-			fixed_t topheight = P_CameraGetFOFTopZ(thiscam, newsubsec->sector, rover, x, y, NULL);
-			fixed_t bottomheight = P_CameraGetFOFBottomZ(thiscam, newsubsec->sector, rover, x, y, NULL);
+			topheight = P_CameraGetFOFTopZ(thiscam, newsubsec->sector, rover, x, y, NULL);
+			bottomheight = P_CameraGetFOFBottomZ(thiscam, newsubsec->sector, rover, x, y, NULL);
 
 			delta1 = thiscam->z - (bottomheight
 				+ ((topheight - bottomheight)/2));
@@ -2141,6 +2148,7 @@ boolean P_SceneryTryMove(mobj_t *thing, fixed_t x, fixed_t y)
 //
 static boolean P_ThingHeightClip(mobj_t *thing)
 {
+	boolean floormoved;
 	fixed_t oldfloorz = thing->floorz;
 	boolean onfloor = P_IsObjectOnGround(thing);//(thing->z <= thing->floorz);
 
@@ -2152,6 +2160,9 @@ static boolean P_ThingHeightClip(mobj_t *thing)
 	if (P_MobjWasRemoved(thing))
 		return true;
 
+	floormoved = (thing->eflags & MFE_VERTICALFLIP && tmceilingz != thing->ceilingz)
+		|| (!(thing->eflags & MFE_VERTICALFLIP) && tmfloorz != thing->floorz);
+
 	thing->floorz = tmfloorz;
 	thing->ceilingz = tmceilingz;
 
@@ -2160,20 +2171,13 @@ static boolean P_ThingHeightClip(mobj_t *thing)
 	if (tmfloorz > oldfloorz+thing->height)
 		return true;
 
-	if (/*!tmfloorthing && */onfloor && !(thing->flags & MF_NOGRAVITY))
+	if (onfloor && !(thing->flags & MF_NOGRAVITY) && floormoved)
 	{
 		if (thing->eflags & MFE_VERTICALFLIP)
 			thing->pmomz = thing->ceilingz - (thing->z + thing->height);
 		else
 			thing->pmomz = thing->floorz - thing->z;
-
-		if (thing->player)
-		{
-			if (splitscreen && camera2.chase && thing->player == &players[secondarydisplayplayer])
-				camera2.z += thing->pmomz;
-			else if (camera.chase && thing->player == &players[displayplayer])
-				camera.z += thing->pmomz;
-		}
+		thing->eflags |= MFE_APPLYPMOMZ;
 
 		if (thing->eflags & MFE_VERTICALFLIP)
 			thing->z = thing->ceilingz - thing->height;
@@ -3942,14 +3946,15 @@ fixed_t P_FloorzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height)
 
 		for (rover = sec->ffloors; rover; rover = rover->next)
 		{
+			fixed_t topheight, bottomheight;
 			if (!(rover->flags & FF_EXISTS))
 				continue;
 
 			if ((!(rover->flags & FF_SOLID || rover->flags & FF_QUICKSAND) || (rover->flags & FF_SWIMMABLE)))
 				continue;
 
-			fixed_t topheight = *rover->topheight;
-			fixed_t bottomheight = *rover->bottomheight;
+			topheight = *rover->topheight;
+			bottomheight = *rover->bottomheight;
 
 #ifdef ESLOPE
 			if (*rover->t_slope)

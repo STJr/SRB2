@@ -293,7 +293,7 @@ boolean P_LookForPlayers(mobj_t *actor, boolean allaround, boolean tracer, fixed
 extern boolean floatok;
 extern fixed_t tmfloorz;
 extern fixed_t tmceilingz;
-extern mobj_t *tmfloorthing, *tmthing;
+extern mobj_t *tmfloorthing, *tmhitthing, *tmthing;
 extern camera_t *mapcampointer;
 extern fixed_t tmx;
 extern fixed_t tmy;
@@ -338,7 +338,7 @@ void P_RadiusAttack(mobj_t *spot, mobj_t *source, fixed_t damagedist);
 fixed_t P_FloorzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height);
 boolean PIT_PushableMoved(mobj_t *thing);
 
-void P_DoSpring(mobj_t *spring, mobj_t *object);
+boolean P_DoSpring(mobj_t *spring, mobj_t *object);
 
 //
 // P_SETUP
@@ -380,6 +380,7 @@ void P_PlayerEmeraldBurst(player_t *player, boolean toss);
 
 void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck);
 void P_PlayerFlagBurst(player_t *player, boolean toss);
+void P_CheckTimeLimit(void);
 void P_CheckPointLimit(void);
 void P_CheckSurvivors(void);
 boolean P_CheckRacers(void);

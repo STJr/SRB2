@@ -180,10 +180,11 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->typeoflevel = 0;
 	DEH_WriteUndoline("NEXTLEVEL", va("%d", mapheaderinfo[num]->nextlevel), UNDO_NONE);
 	mapheaderinfo[num]->nextlevel = (INT16)(i + 1);
-	DEH_WriteUndoline("MUSICSLOT", va("%d", mapheaderinfo[num]->musicslot), UNDO_NONE);
-	mapheaderinfo[num]->musicslot = mus_map01m + num;
-	DEH_WriteUndoline("MUSICSLOTTRACK", va("%d", mapheaderinfo[num]->musicslottrack), UNDO_NONE);
-	mapheaderinfo[num]->musicslottrack = 0;
+	DEH_WriteUndoline("MUSIC", mapheaderinfo[num]->musname, UNDO_NONE);
+	snprintf(mapheaderinfo[num]->musname, 7, va("%sM", G_BuildMapName(i)));
+	mapheaderinfo[num]->musname[6] = 0;
+	DEH_WriteUndoline("MUSICTRACK", va("%d", mapheaderinfo[num]->mustrack), UNDO_NONE);
+	mapheaderinfo[num]->mustrack = 0;
 	DEH_WriteUndoline("FORCECHARACTER", va("%d", mapheaderinfo[num]->forcecharacter), UNDO_NONE);
 	mapheaderinfo[num]->forcecharacter[0] = '\0';
 	DEH_WriteUndoline("WEATHER", va("%d", mapheaderinfo[num]->weather), UNDO_NONE);
@@ -1439,6 +1440,29 @@ static void P_LoadSideDefs2(lumpnum_t lumpnum)
 #endif
 
 			case 413: // Change music
+			{
+				char process[8+1];
+
+				sd->toptexture = sd->midtexture = sd->bottomtexture = 0;
+				if (msd->bottomtexture[0] != '-' || msd->bottomtexture[1] != '\0')
+				{
+					M_Memcpy(process,msd->bottomtexture,8);
+					process[8] = '\0';
+					sd->bottomtexture = get_number(process)-1;
+				}
+				M_Memcpy(process,msd->toptexture,8);
+				process[8] = '\0';
+				sd->text = Z_Malloc(7, PU_LEVEL, NULL);
+
+				// If they type in O_ or D_ and their music name, just shrug,
+				// then copy the rest instead.
+				if ((process[0] == 'O' || process[0] == 'D') && process[7])
+					M_Memcpy(sd->text, process+2, 6);
+				else // Assume it's a proper music name.
+					M_Memcpy(sd->text, process, 6);
+				sd->text[6] = 0;
+				break;
+			}
 			case 414: // Play SFX
 			{
 				sd->toptexture = sd->midtexture = sd->bottomtexture = 0;
@@ -1448,13 +1472,6 @@ static void P_LoadSideDefs2(lumpnum_t lumpnum)
 					M_Memcpy(process,msd->toptexture,8);
 					process[8] = '\0';
 					sd->toptexture = get_number(process);
-				}
-				if (sd->special == 413 && (msd->bottomtexture[0] != '-' || msd->bottomtexture[1] != '\0'))
-				{
-					char process[8+1];
-					M_Memcpy(process,msd->bottomtexture,8);
-					process[8] = '\0';
-					sd->bottomtexture = get_number(process)-1;
 				}
 				break;
 			}

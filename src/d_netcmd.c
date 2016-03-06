@@ -1854,10 +1854,10 @@ static void Got_Pause(UINT8 **cp, INT32 playernum)
 		if (paused)
 		{
 			if (!menuactive || netgame)
-				S_PauseSound();
+				S_PauseAudio();
 		}
 		else
-			S_ResumeSound();
+			S_ResumeAudio();
 	}
 }
 
@@ -3179,7 +3179,11 @@ static void Command_ListWADS_f(void)
   */
 static void Command_Version_f(void)
 {
+#ifdef DEVELOP
+	CONS_Printf("Sonic Robo Blast 2 %s-%s (%s %s)\n", compbranch, comprevision, compdate, comptime);
+#else
 	CONS_Printf("Sonic Robo Blast 2 %s (%s %s %s)\n", VERSIONSTRING, compdate, comptime, comprevision);
+#endif
 }
 
 #ifdef UPDATE_ALERT
@@ -3759,54 +3763,66 @@ static void Command_Displayplayer_f(void)
 static void Command_Tunes_f(void)
 {
 	const char *tunearg;
-	UINT16 tune, track = 0;
+	UINT16 tunenum, track = 0;
 	const size_t argc = COM_Argc();
 
 	if (argc < 2) //tunes slot ...
 	{
-		CONS_Printf("tunes <slot #/map name/\"default\"> <speed> <track>:\n");
-		CONS_Printf(M_GetText("Play a music slot at a set speed (\"1\" being normal speed).\n"));
-		CONS_Printf(M_GetText("If the format supports multiple songs, you can specify which one to play.\n"));
-		CONS_Printf(M_GetText("The current tune is: %d\nThe current track is: %d\n"),
-			(mapmusic & MUSIC_SONGMASK), ((mapmusic & MUSIC_TRACKMASK) >> MUSIC_TRACKSHIFT));
+		CONS_Printf("tunes <name/num> [track] [speed] / <-show> / <-default> / <-none>:\n");
+		CONS_Printf(M_GetText("Play an arbitrary music lump. If a map number is used, 'MAP##M' is played.\n"));
+		CONS_Printf(M_GetText("If the format supports multiple songs, you can specify which one to play.\n\n"));
+		CONS_Printf(M_GetText("* With \"-show\", shows the currently playing tune and track.\n"));
+		CONS_Printf(M_GetText("* With \"-default\", returns to the default music for the map.\n"));
+		CONS_Printf(M_GetText("* With \"-none\", any music playing will be stopped.\n"));
 		return;
 	}
 
 	tunearg = COM_Argv(1);
-	tune = (UINT16)atoi(tunearg);
+	tunenum = (UINT16)atoi(tunearg);
 	track = 0;
 
-	if (!strcasecmp(tunearg, "default"))
+	if (!strcasecmp(tunearg, "-show"))
 	{
-		tune = mapheaderinfo[gamemap-1]->musicslot;
-		track = mapheaderinfo[gamemap-1]->musicslottrack;
-	}
-	else if ((toupper(tunearg[0]) >= 'A' && toupper(tunearg[0]) <= 'Z') && (strlen(tunearg) < 3))
-		tune = (UINT16)M_MapNumber(tunearg[0], tunearg[1]);
-    else if (fastncmp("mus_",tunearg,4)) //yellowtd: why not just give both tune options?
-        tune = get_mus(tunearg+4);
-    else if (tunearg) 
-        tune = get_mus(tunearg);  
-	
-	if (tune >= NUMMUSIC)
-	{
-		CONS_Alert(CONS_NOTICE, M_GetText("Valid slots are 1 to %d, or 0 to stop music\n"), NUMMUSIC - 1);
+		CONS_Printf(M_GetText("The current tune is: %s [track %d]\n"),
+			mapmusname, (mapmusflags & MUSIC_TRACKMASK));
 		return;
 	}
-
-	if (argc > 3)
-		track = (UINT16)atoi(COM_Argv(3))-1;
-
-	mapmusic = tune | (track << MUSIC_TRACKSHIFT);
-
-	if (tune == mus_None)
+	if (!strcasecmp(tunearg, "-none"))
+	{
 		S_StopMusic();
-	else
-		S_ChangeMusic(mapmusic, true);
+		return;
+	}
+	else if (!strcasecmp(tunearg, "-default"))
+	{
+		tunearg = mapheaderinfo[gamemap-1]->musname;
+		track = mapheaderinfo[gamemap-1]->mustrack;
+	}
+	else if (!tunearg[2] && toupper(tunearg[0]) >= 'A' && toupper(tunearg[0]) <= 'Z')
+		tunenum = (UINT16)M_MapNumber(tunearg[0], tunearg[1]);
+
+	if (tunenum && tunenum >= 1036)
+	{
+		CONS_Alert(CONS_NOTICE, M_GetText("Valid music slots are 1 to 1035.\n"));
+		return;
+	}
+	if (!tunenum && strlen(tunearg) > 6) // This is automatic -- just show the error just in case
+		CONS_Alert(CONS_NOTICE, M_GetText("Music name too long - truncated to six characters.\n"));
 
 	if (argc > 2)
+		track = (UINT16)atoi(COM_Argv(2))-1;
+
+	if (tunenum)
+		snprintf(mapmusname, 7, "%sM", G_BuildMapName(tunenum));
+	else
+		strncpy(mapmusname, tunearg, 7);
+	mapmusname[6] = 0;
+	mapmusflags = (track & MUSIC_TRACKMASK);
+
+	S_ChangeMusic(mapmusname, mapmusflags, true);
+
+	if (argc > 3)
 	{
-		float speed = (float)atof(COM_Argv(2));
+		float speed = (float)atof(COM_Argv(3));
 		if (speed > 0.0f)
 			S_SpeedMusic(speed);
 	}

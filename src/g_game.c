@@ -69,8 +69,10 @@ static void G_DoStartContinue(void);
 static void G_DoContinued(void);
 static void G_DoWorldDone(void);
 
+char   mapmusname[7]; // Music name
+UINT16 mapmusflags; // Track and reset bit
+
 INT16 gamemap = 1;
-UINT32 mapmusic; // music, track, and reset bit
 INT16 maptol;
 UINT8 globalweather = 0;
 INT32 curWeather = PRECIP_NONE;
@@ -293,9 +295,6 @@ static CV_PossibleValue_t joyaxis_cons_t[] = {{0, "None"},
 #endif
 #if JOYAXISSET > 2
 {5, "RTrigger"}, {6, "LTrigger"}, {-5, "RTrigger-"}, {-6, "LTrigger-"},
-#endif
-#if JOYAXISSET > 3
-{7, "Pitch"}, {8, "Roll"}, {-7, "Pitch-"}, {-8, "Roll-"},
 #endif
 #if JOYAXISSET > 3
 {7, "Pitch"}, {8, "Roll"}, {-7, "Pitch-"}, {-8, "Roll-"},
@@ -2185,12 +2184,13 @@ void G_PlayerReborn(INT32 player)
 
 	if (p-players == consoleplayer)
 	{
-		if (mapmusic & MUSIC_RELOADRESET) // TODO: Might not need this here
+		if (mapmusflags & MUSIC_RELOADRESET)
 		{
-			mapmusic = mapheaderinfo[gamemap-1]->musicslot
-				| (mapheaderinfo[gamemap-1]->musicslottrack << MUSIC_TRACKSHIFT);
+			strncpy(mapmusname, mapheaderinfo[gamemap-1]->musname, 7);
+			mapmusname[6] = 0;
+			mapmusflags = mapheaderinfo[gamemap-1]->mustrack & MUSIC_TRACKMASK;
 		}
-		S_ChangeMusic(mapmusic, true);
+		S_ChangeMusic(mapmusname, mapmusflags, true);
 	}
 
 	if (gametype == GT_COOP)
@@ -2874,7 +2874,8 @@ static void G_DoCompleted(void)
 
 	// We are committed to this map now.
 	// We may as well allocate its header if it doesn't exist
-	if(!mapheaderinfo[nextmap])
+	// (That is, if it's a real map)
+	if (nextmap < NUMMAPS && !mapheaderinfo[nextmap])
 		P_AllocMapHeader(nextmap);
 
 	if (skipstats)
@@ -3524,7 +3525,7 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 	if (paused)
 	{
 		paused = false;
-		S_ResumeSound();
+		S_ResumeAudio();
 	}
 
 	if (netgame || multiplayer) // Nice try, haxor.
@@ -3598,7 +3599,7 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 	globalweather = mapheaderinfo[gamemap-1]->weather;
 
 	// Don't carry over custom music change to another map.
-	mapmusic |= MUSIC_RELOADRESET;
+	mapmusflags |= MUSIC_RELOADRESET;
 
 	ultimatemode = pultmode;
 	playerdeadview = false;
@@ -5574,7 +5575,7 @@ boolean G_CheckDemoStatus(void)
 		free(demobuffer);
 		demorecording = false;
 
-		if (!modeattacking == ATTACKING_RECORD)
+		if (modeattacking != ATTACKING_RECORD)
 		{
 			if (saved)
 				CONS_Printf(M_GetText("Demo %s recorded\n"), demoname);

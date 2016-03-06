@@ -22,6 +22,7 @@
 #include "d_netcmd.h"
 #include "m_misc.h"
 #include "p_local.h" // Camera...
+#include "p_slopes.h"
 #include "console.h" // con_clipviewtop
 
 // OPTIMIZE: closed two sided lines as single sided
@@ -182,7 +183,7 @@ static void R_DrawWallSplats(void)
 					colfunc = basecolfunc;
 				else
 				{
-					dc_transmap = ((tr_trans50 - 1)<<FF_TRANSSHIFT) + transtables;
+					dc_transmap = transtables + ((tr_trans50 - 1)<<FF_TRANSSHIFT);
 					colfunc = fuzzcolfunc;
 				}
 
@@ -303,39 +304,15 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	switch (ldef->special)
 	{
 		case 900:
-			dc_transmap = ((tr_trans10)<<FF_TRANSSHIFT) - 0x10000 + transtables;
-			colfunc = fuzzcolfunc;
-			break;
 		case 901:
-			dc_transmap = ((tr_trans20)<<FF_TRANSSHIFT) - 0x10000 + transtables;
-			colfunc = fuzzcolfunc;
-			break;
 		case 902:
-			dc_transmap = ((tr_trans30)<<FF_TRANSSHIFT) - 0x10000 + transtables;
-			colfunc = fuzzcolfunc;
-			break;
 		case 903:
-			dc_transmap = ((tr_trans40)<<FF_TRANSSHIFT) - 0x10000 + transtables;
-			colfunc = fuzzcolfunc;
-			break;
 		case 904:
-			dc_transmap = ((tr_trans50)<<FF_TRANSSHIFT) - 0x10000 + transtables;
-			colfunc = fuzzcolfunc;
-			break;
 		case 905:
-			dc_transmap = ((tr_trans60)<<FF_TRANSSHIFT) - 0x10000 + transtables;
-			colfunc = fuzzcolfunc;
-			break;
 		case 906:
-			dc_transmap = ((tr_trans70)<<FF_TRANSSHIFT) - 0x10000 + transtables;
-			colfunc = fuzzcolfunc;
-			break;
 		case 907:
-			dc_transmap = ((tr_trans80)<<FF_TRANSSHIFT) - 0x10000 + transtables;
-			colfunc = fuzzcolfunc;
-			break;
 		case 908:
-			dc_transmap = ((tr_trans90)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+			dc_transmap = transtables + ((ldef->special-900)<<FF_TRANSSHIFT);
 			colfunc = fuzzcolfunc;
 			break;
 		case 909:
@@ -353,7 +330,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 		if (curline->polyseg->translucency >= NUMTRANSMAPS)
 			return;
 
-		dc_transmap = ((curline->polyseg->translucency)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+		dc_transmap = transtables + ((curline->polyseg->translucency-1)<<FF_TRANSSHIFT);
 		colfunc = fuzzcolfunc;
 	}
 
@@ -732,23 +709,23 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		if (pfloor->alpha < 12)
 			return; // Don't even draw it
 		else if (pfloor->alpha < 38)
-			dc_transmap = ((tr_trans90)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+			dc_transmap = transtables + ((tr_trans90-1)<<FF_TRANSSHIFT);
 		else if (pfloor->alpha < 64)
-			dc_transmap = ((tr_trans80)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+			dc_transmap = transtables + ((tr_trans80-1)<<FF_TRANSSHIFT);
 		else if (pfloor->alpha < 89)
-			dc_transmap = ((tr_trans70)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+			dc_transmap = transtables + ((tr_trans70-1)<<FF_TRANSSHIFT);
 		else if (pfloor->alpha < 115)
-			dc_transmap = ((tr_trans60)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+			dc_transmap = transtables + ((tr_trans60-1)<<FF_TRANSSHIFT);
 		else if (pfloor->alpha < 140)
-			dc_transmap = ((tr_trans50)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+			dc_transmap = transtables + ((tr_trans50-1)<<FF_TRANSSHIFT);
 		else if (pfloor->alpha < 166)
-			dc_transmap = ((tr_trans40)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+			dc_transmap = transtables + ((tr_trans40-1)<<FF_TRANSSHIFT);
 		else if (pfloor->alpha < 192)
-			dc_transmap = ((tr_trans30)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+			dc_transmap = transtables + ((tr_trans30-1)<<FF_TRANSSHIFT);
 		else if (pfloor->alpha < 217)
-			dc_transmap = ((tr_trans20)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+			dc_transmap = transtables + ((tr_trans20-1)<<FF_TRANSSHIFT);
 		else if (pfloor->alpha < 243)
-			dc_transmap = ((tr_trans10)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+			dc_transmap = transtables + ((tr_trans10-1)<<FF_TRANSSHIFT);
 		else
 			fuzzy = false; // Opaque
 
@@ -1489,7 +1466,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	fixed_t       hyp;
 	fixed_t       sineval;
 	angle_t       distangle, offsetangle;
-	fixed_t       vtop;
+	//fixed_t       vtop;
 	INT32           lightnum;
 	INT32           i, p;
 	lightlist_t   *light;
@@ -1502,16 +1479,18 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 	maskedtextureheight = NULL;
 
+	//initialize segleft and segright
+	memset(&segleft, 0x00, sizeof(segleft));
+	memset(&segright, 0x00, sizeof(segright));
+
 	if (ds_p == drawsegs+maxdrawsegs)
 	{
 		size_t pos = ds_p - drawsegs;
-		size_t pos2 = firstnewseg - drawsegs;
 		size_t newmax = maxdrawsegs ? maxdrawsegs*2 : 128;
 		if (firstseg)
 			firstseg = (drawseg_t *)(firstseg - drawsegs);
 		drawsegs = Z_Realloc(drawsegs, newmax*sizeof (*drawsegs), PU_STATIC, NULL);
 		ds_p = drawsegs + pos;
-		firstnewseg = drawsegs + pos2;
 		maxdrawsegs = newmax;
 		if (firstseg)
 			firstseg = drawsegs + (size_t)firstseg;
@@ -2630,11 +2609,11 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 		{
 			ffloor_t * rover;
-			i = 0;
 #ifdef ESLOPE
 			fixed_t rovertest;
 			fixed_t planevistest;
 #endif
+			i = 0;
 
 			if (backsector->ffloors)
 			{

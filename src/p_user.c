@@ -29,6 +29,7 @@
 #include "m_random.h"
 #include "m_misc.h"
 #include "i_video.h"
+#include "p_slopes.h"
 #include "p_spec.h"
 #include "r_splats.h"
 #include "z_zone.h"
@@ -50,9 +51,6 @@
 #include "hardware/hw_light.h"
 #include "hardware/hw_main.h"
 #endif
-
-// Index of the special effects (INVUL inverse) map.
-#define INVERSECOLORMAP 32
 
 #if 0
 static void P_NukeAllPlayers(player_t *player);
@@ -964,7 +962,7 @@ void P_DoSuperTransformation(player_t *player, boolean giverings)
 	if (!(mapheaderinfo[gamemap-1]->levelflags & LF_NOSSMUSIC) && P_IsLocalPlayer(player))
 	{
 		S_StopMusic();
-		S_ChangeMusic(mus_supers, true);
+		S_ChangeMusicInternal("supers", true);
 	}
 
 	S_StartSound(NULL, sfx_supert); //let all players hear it -mattw_cfi
@@ -1100,7 +1098,7 @@ void P_PlayLivesJingle(player_t *player)
 		if (player)
 			player->powers[pw_extralife] = extralifetics + 1;
 		S_StopMusic(); // otherwise it won't restart if this is done twice in a row
-		S_ChangeMusic(mus_xtlife, false);
+		S_ChangeMusicInternal("xtlife", false);
 	}
 }
 
@@ -1118,21 +1116,21 @@ void P_RestoreMusic(player_t *player)
 		return;
 	S_SpeedMusic(1.0f);
 	if (player->powers[pw_super] && !(mapheaderinfo[gamemap-1]->levelflags & LF_NOSSMUSIC))
-		S_ChangeMusic(mus_supers, true);
+		S_ChangeMusicInternal("supers", true);
 	else if (player->powers[pw_invulnerability] > 1)
-		S_ChangeMusic((mariomode) ? mus_minvnc : mus_invinc, false);
+		S_ChangeMusicInternal((mariomode) ? "minvnc" : "invinc", false);
 	else if (player->powers[pw_sneakers] > 1 && !player->powers[pw_super])
 	{
 		if (mapheaderinfo[gamemap-1]->levelflags & LF_SPEEDMUSIC)
 		{
 			S_SpeedMusic(1.4f);
-			S_ChangeMusic(mapmusic, true);
+			S_ChangeMusic(mapmusname, mapmusflags, true);
 		}
 		else
-			S_ChangeMusic(mus_shoes, true);
+			S_ChangeMusicInternal("shoes", true);
 	}
 	else
-		S_ChangeMusic(mapmusic, true);
+		S_ChangeMusic(mapmusname, mapmusflags, true);
 }
 
 //
@@ -2041,7 +2039,7 @@ static void P_CheckUnderwaterAndSpaceTimer(player_t *player)
 		mobj_t *killer;
 
 		if ((netgame || multiplayer) && P_IsLocalPlayer(player))
-			S_ChangeMusic(mapmusic, true);
+			S_ChangeMusic(mapmusname, mapmusflags, true);
 
 		killer = P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z, MT_NULL);
 		killer->threshold = 42; // Special flag that it was drowning which killed you.
@@ -2050,7 +2048,7 @@ static void P_CheckUnderwaterAndSpaceTimer(player_t *player)
 	else if (player->powers[pw_spacetime] == 1)
 	{
 		if ((netgame || multiplayer) && P_IsLocalPlayer(player))
-			S_ChangeMusic(mapmusic, true);
+			S_ChangeMusic(mapmusname, mapmusflags, true);
 
 		P_DamageMobj(player->mo, NULL, NULL, 10000);
 	}
@@ -2085,7 +2083,7 @@ static void P_CheckUnderwaterAndSpaceTimer(player_t *player)
 		&& player == &players[consoleplayer])
 		{
 			S_StopMusic();
-			S_ChangeMusic(mus_drown, false);
+			S_ChangeMusicInternal("drown", false);
 		}
 
 		if (player->powers[pw_underwater] == 25*TICRATE + 1)
@@ -2119,30 +2117,7 @@ static void P_CheckInvincibilityTimer(player_t *player)
 		player->mo->color = (UINT8)(1 + (leveltime % (MAXSKINCOLORS-1)));
 	else if (leveltime % (TICRATE/7) == 0)
 	{
-		fixed_t destx, desty;
-		mobj_t *sparkle;
-
-		if (!splitscreen && rendermode != render_soft)
-		{
-			angle_t viewingangle;
-
-			if (players[displayplayer].awayviewtics)
-				viewingangle = R_PointToAngle2(player->mo->x, player->mo->y, players[displayplayer].awayviewmobj->x, players[displayplayer].awayviewmobj->y);
-			else if (!camera.chase && players[displayplayer].mo)
-				viewingangle = R_PointToAngle2(player->mo->x, player->mo->y, players[displayplayer].mo->x, players[displayplayer].mo->y);
-			else
-				viewingangle = R_PointToAngle2(player->mo->x, player->mo->y, camera.x, camera.y);
-
-			destx = player->mo->x + P_ReturnThrustX(player->mo, viewingangle, FixedMul(FRACUNIT, player->mo->scale));
-			desty = player->mo->y + P_ReturnThrustY(player->mo, viewingangle, FixedMul(FRACUNIT, player->mo->scale));
-		}
-		else
-		{
-			destx = player->mo->x;
-			desty = player->mo->y;
-		}
-
-		sparkle = P_SpawnMobj(destx, desty, player->mo->z, MT_IVSP);
+		mobj_t *sparkle = P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z, MT_IVSP);
 		sparkle->destscale = player->mo->scale;
 		P_SetScale(sparkle, player->mo->scale);
 	}
@@ -2317,11 +2292,11 @@ static void P_DoClimbing(player_t *player)
 		boolean thrust;
 		boolean boostup;
 		boolean skyclimber;
+		fixed_t floorheight, ceilingheight; // ESLOPE
 		thrust = false;
 		floorclimb = false;
 		boostup = false;
 		skyclimber = false;
-		fixed_t floorheight, ceilingheight; // ESLOPE
 
 #ifdef ESLOPE
 		floorheight = glidesector->sector->f_slope ? P_GetZAt(glidesector->sector->f_slope, player->mo->x, player->mo->y)
@@ -3718,11 +3693,22 @@ void P_DoJump(player_t *player, boolean soundandstate)
 
 	// set just an eensy above the ground
 	if (player->mo->eflags & MFE_VERTICALFLIP)
+	{
 		player->mo->z--;
+		if (player->mo->pmomz < 0)
+			player->mo->momz += player->mo->pmomz; // Add the platform's momentum to your jump.
+		else
+			player->mo->pmomz = 0;
+	}
 	else
+	{
 		player->mo->z++;
-
-	player->mo->z += player->mo->pmomz; // Solves problem of 'hitting around again after jumping on a moving platform'.
+		if (player->mo->pmomz > 0)
+			player->mo->momz += player->mo->pmomz; // Add the platform's momentum to your jump.
+		else
+			player->mo->pmomz = 0;
+	}
+	player->mo->eflags &= ~MFE_APPLYPMOMZ;
 
 	player->pflags |= PF_JUMPED;
 
@@ -5606,7 +5592,7 @@ static void P_NiGHTSMovement(player_t *player)
 	}
 	else if (P_IsLocalPlayer(player) && player->nightstime == 10*TICRATE)
 //		S_StartSound(NULL, sfx_timeup); // that creepy "out of time" music from NiGHTS. Dummied out, as some on the dev team thought it wasn't Sonic-y enough (Mystic, notably). Uncomment to restore. -SH
-		S_ChangeMusic(mus_drown,false);
+		S_ChangeMusicInternal("drown",false);
 
 
 	if (player->mo->z < player->mo->floorz)
@@ -7745,7 +7731,7 @@ static void P_DeathThink(player_t *player)
 
 		// Return to level music
 		if (netgame && player->deadtimer == gameovertics && P_IsLocalPlayer(player))
-			S_ChangeMusic(mapmusic, true);
+			S_ChangeMusic(mapmusname, mapmusflags, true);
 	}
 
 	if (!player->mo)
@@ -8731,7 +8717,7 @@ void P_PlayerThink(player_t *player)
 		if (countdown == 11*TICRATE - 1)
 		{
 			if (P_IsLocalPlayer(player))
-				S_ChangeMusic(mus_drown, false);
+				S_ChangeMusicInternal("drown", false);
 		}
 
 		// If you've hit the countdown and you haven't made
@@ -9108,7 +9094,6 @@ void P_PlayerThink(player_t *player)
 			player->mo->tracer->flags2 &= ~MF2_DONTDRAW;
 	}
 
-	player->mo->pmomz = 0;
 	player->pflags &= ~PF_SLIDING;
 
 /*
@@ -9461,4 +9446,7 @@ void P_PlayerAfterThink(player_t *player)
 		player->mo->flags2 |= MF2_DONTDRAW;
 		player->mo->flags |= MF_NOGRAVITY;
 	}
+
+	if (P_IsObjectOnGround(player->mo))
+		player->mo->pmomz = 0;
 }

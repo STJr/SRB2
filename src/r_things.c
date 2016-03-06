@@ -24,6 +24,7 @@
 #include "r_plane.h"
 #include "p_tick.h"
 #include "p_local.h"
+#include "p_slopes.h"
 #include "dehacked.h" // get_number (for thok)
 #include "d_netfil.h" // blargh. for nameonly().
 #include "m_cheat.h" // objectplace
@@ -1256,7 +1257,8 @@ static void R_ProjectSprite(mobj_t *thing)
 	vis = R_NewVisSprite();
 	vis->heightsec = heightsec; //SoM: 3/17/2000
 	vis->mobjflags = thing->flags;
-	vis->scale = yscale + thing->info->dispoffset;           //<<detailshift;
+	vis->scale = yscale; //<<detailshift;
+	vis->dispoffset = thing->info->dispoffset; // Monster Iestyn: 23/11/15
 	vis->gx = thing->x;
 	vis->gy = thing->y;
 	vis->gz = gz;
@@ -1319,9 +1321,9 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (!cv_translucency.value)
 		; // no translucency
 	else if (thing->flags2 & MF2_SHADOW) // actually only the player should use this (temporary invisibility)
-		vis->transmap = ((tr_trans80-1)<<FF_TRANSSHIFT) + transtables; // because now the translucency is set through FF_TRANSMASK
+		vis->transmap = transtables + ((tr_trans80-1)<<FF_TRANSSHIFT); // because now the translucency is set through FF_TRANSMASK
 	else if (thing->frame & FF_TRANSMASK)
-		vis->transmap = (thing->frame & FF_TRANSMASK) - 0x10000 + transtables;
+		vis->transmap = transtables + (thing->frame & FF_TRANSMASK) - 0x10000;
 
 	if (((thing->frame & FF_FULLBRIGHT) || (thing->flags2 & MF2_SHADOW))
 		&& (!vis->extra_colormap || !vis->extra_colormap->fog))
@@ -1472,6 +1474,7 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	// store information in a vissprite
 	vis = R_NewVisSprite();
 	vis->scale = yscale; //<<detailshift;
+	vis->dispoffset = 0; // Monster Iestyn: 23/11/15
 	vis->gx = thing->x;
 	vis->gy = thing->y;
 	vis->gz = gz;
@@ -1623,6 +1626,7 @@ void R_SortVisSprites(void)
 	vissprite_t *best = NULL;
 	vissprite_t  unsorted;
 	fixed_t      bestscale;
+	INT32        bestdispoffset;
 
 	if (!visspritecount)
 		return;
@@ -1653,12 +1657,19 @@ void R_SortVisSprites(void)
 	vsprsortedhead.next = vsprsortedhead.prev = &vsprsortedhead;
 	for (i = 0; i < visspritecount; i++)
 	{
-		bestscale = INT32_MAX;
+		bestscale = bestdispoffset = INT32_MAX;
 		for (ds = unsorted.next; ds != &unsorted; ds = ds->next)
 		{
 			if (ds->scale < bestscale)
 			{
 				bestscale = ds->scale;
+				bestdispoffset = ds->dispoffset;
+				best = ds;
+			}
+			// order visprites of same scale by dispoffset, smallest first
+			else if (ds->scale == bestscale && ds->dispoffset < bestdispoffset)
+			{
+				bestdispoffset = ds->dispoffset;
 				best = ds;
 			}
 		}
@@ -1910,7 +1921,8 @@ static void R_CreateDrawNodes(void)
 				if (r2->sprite->szt > rover->sz || r2->sprite->sz < rover->szt)
 					continue;
 
-				if (r2->sprite->scale > rover->scale)
+				if (r2->sprite->scale > rover->scale
+				 || (r2->sprite->scale == rover->scale && r2->sprite->dispoffset > rover->dispoffset))
 				{
 					entry = R_CreateDrawNode(NULL);
 					(entry->prev = r2->prev)->next = entry;

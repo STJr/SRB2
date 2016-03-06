@@ -366,7 +366,7 @@ void V_DrawFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t 
 	}
 	if (alphalevel)
 	{
-		v_translevel = ((alphalevel)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+		v_translevel = transtables + ((alphalevel-1)<<FF_TRANSSHIFT);
 		patchdrawfunc = translucentpdraw;
 	}
 
@@ -1869,7 +1869,7 @@ void V_DoPostProcessor(INT32 view, postimg_t type, INT32 param)
 		angle_t disStart = (leveltime * 128) & FINEMASK; // in 0 to FINEANGLE
 		INT32 newpix;
 		INT32 sine;
-		//UINT8 *transme = ((tr_trans50)<<FF_TRANSSHIFT) + transtables;
+		//UINT8 *transme = transtables + ((tr_trans50-1)<<FF_TRANSSHIFT);
 
 		for (y = yoffset; y < yoffset+height; y++)
 		{
@@ -1926,7 +1926,7 @@ Unoptimized version
 		INT32 x, y;
 
 		// TODO: Add a postimg_param so that we can pick the translucency level...
-		UINT8 *transme = ((param)<<FF_TRANSSHIFT) - 0x10000 + transtables;
+		UINT8 *transme = transtables + ((param-1)<<FF_TRANSSHIFT);
 
 		for (y = yoffset; y < yoffset+height; y++)
 		{

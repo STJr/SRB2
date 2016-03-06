@@ -3063,12 +3063,8 @@ void A_Invincibility(mobj_t *actor)
 	{
 		S_StopMusic();
 		if (mariomode)
-		{
-			S_ChangeMusic(mus_minvnc, false);
 			G_GhostAddColor(GHC_INVINCIBLE);
-		}
-		else
-			S_ChangeMusic(mus_invinc, false);
+		S_ChangeMusicInternal((mariomode) ? "minvnc" : "invinc", false);
 	}
 }
 
@@ -3104,7 +3100,7 @@ void A_SuperSneakers(mobj_t *actor)
 		else
 		{
 			S_StopMusic();
-			S_ChangeMusic(mus_shoes, false);
+			S_ChangeMusicInternal("shoes", false);
 		}
 	}
 }
@@ -7597,48 +7593,35 @@ void A_SetTargetsTarget(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
-	mobj_t *targetedmobj = NULL;
-	thinker_t *th;
-	mobj_t *mo2;
+	mobj_t *oldtarg = NULL, *newtarg = NULL;
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_SetTargetsTarget", actor))
 		return;
 #endif
 
-	if ((!locvar1 && (!actor->target)) || (locvar1 && (!actor->tracer)))
+	// actor's target
+	if (locvar1) // or tracer
+		oldtarg = actor->tracer;
+	else
+		oldtarg = actor->target;
+
+	if (P_MobjWasRemoved(oldtarg))
 		return;
 
-	if ((!locvar1 && !locvar2 && (!actor->target->target))
-	|| (!locvar1 && locvar2 && (!actor->target->tracer))
-	|| (locvar1 && !locvar2 && (!actor->tracer->target))
-	|| (locvar1 && locvar2 && (!actor->tracer->tracer)))
-		return; // Don't search for nothing.
-
-	// scan the thinkers
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
-	{
-		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-			continue;
-
-		mo2 = (mobj_t *)th;
-
-		if ((!locvar1 && !locvar2 && (mo2 == actor->target->target))
-		|| (!locvar1 && locvar2 && (mo2 == actor->target->tracer))
-		|| (locvar1 && !locvar2 && (mo2 == actor->tracer->target))
-		|| (locvar1 && locvar2 && (mo2 == actor->tracer->tracer)))
-		{
-			targetedmobj = mo2;
-			break;
-		}
-	}
-
-	if (!targetedmobj)
-		return; // Oops, nothing found..
-
-	if (!locvar1)
-		P_SetTarget(&actor->target, targetedmobj);
+	// actor's target's target!
+	if (locvar2) // or tracer
+		newtarg = oldtarg->tracer;
 	else
-		P_SetTarget(&actor->tracer, targetedmobj);
+		newtarg = oldtarg->target;
+
+	if (P_MobjWasRemoved(newtarg))
+		return;
+
+	// set actor's new target
+	if (locvar1) // or tracer
+		P_SetTarget(&actor->tracer, newtarg);
+	else
+		P_SetTarget(&actor->target, newtarg);
 }
 
 // Function: A_SetObjectFlags
@@ -7655,26 +7638,33 @@ void A_SetObjectFlags(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
+	boolean unlinkthings = false;
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_SetObjectFlags", actor))
 		return;
 #endif
 
-	P_UnsetThingPosition(actor);
-	if (sector_list)
-	{
-		P_DelSeclist(sector_list);
-		sector_list = NULL;
+	if (locvar2 == 2)
+		locvar1 = actor->flags | locvar1;
+	else if (locvar2 == 1)
+		locvar1 = actor->flags & ~locvar1;
+
+	if ((locvar1 & (MF_NOBLOCKMAP|MF_NOSECTOR)) != (actor->flags & (MF_NOBLOCKMAP|MF_NOSECTOR))) // Blockmap/sector status has changed, so reset the links
+		unlinkthings = true;
+
+	if (unlinkthings) {
+		P_UnsetThingPosition(actor);
+		if (sector_list)
+		{
+			P_DelSeclist(sector_list);
+			sector_list = NULL;
+		}
 	}
 
-	if (locvar2 == 2)
-		actor->flags |= locvar1;
-	else if (locvar2 == 1)
-		actor->flags &= ~locvar1;
-	else
-		actor->flags = locvar1;
+	actor->flags = locvar1;
 
-	P_SetThingPosition(actor);
+	if (unlinkthings)
+		P_SetThingPosition(actor);
 }
 
 // Function: A_SetObjectFlags2

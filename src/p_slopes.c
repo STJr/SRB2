@@ -32,6 +32,7 @@
 #include "r_state.h"
 #include "m_bbox.h"
 #include "z_zone.h"
+#include "p_local.h"
 #include "p_spec.h"
 #include "p_slopes.h"
 #include "p_setup.h"
@@ -45,14 +46,14 @@ static pslope_t *slopelist = NULL;
 static UINT16 slopecount = 0;
 
 // Calculate line normal
-void P_CalculateSlopeNormal(pslope_t *slope) {
+static void P_CalculateSlopeNormal(pslope_t *slope) {
 	slope->normal.z = FINECOSINE(slope->zangle>>ANGLETOFINESHIFT);
 	slope->normal.x = -FixedMul(FINESINE(slope->zangle>>ANGLETOFINESHIFT), slope->d.x);
 	slope->normal.y = -FixedMul(FINESINE(slope->zangle>>ANGLETOFINESHIFT), slope->d.y);
 }
 
 // With a vertex slope that has its vertices set, configure relevant slope info
-void P_ReconfigureVertexSlope(pslope_t *slope)
+static void P_ReconfigureVertexSlope(pslope_t *slope)
 {
 	vector3_t vec1, vec2;
 
@@ -140,7 +141,8 @@ void P_RunDynamicSlopes(void) {
 		case 5: // vertices
 			{
 				mapthing_t *mt;
-				size_t i, l;
+				size_t i;
+				INT32 l;
 				line_t *line;
 
 				for (i = 0; i < 3; i++) {
@@ -322,7 +324,8 @@ void P_SpawnSlope_Line(int linenum)
 
 		if(frontfloor)
 		{
-
+			fixed_t highest, lowest;
+			size_t l;
 			point.z = line->frontsector->floorheight; // Startz
 			dz = FixedDiv(origin.z - point.z, extent); // Destinationz
 
@@ -351,12 +354,11 @@ void P_SpawnSlope_Line(int linenum)
 			// *You can use sourceline as a reference to see if two slopes really are the same
 
 			// Default points for high and low
-			fixed_t highest = point.z > origin.z ? point.z : origin.z;
-			fixed_t lowest = point.z < origin.z ? point.z : origin.z;
+			highest = point.z > origin.z ? point.z : origin.z;
+			lowest = point.z < origin.z ? point.z : origin.z;
 
 			// Now check to see what the REAL high and low points of the slope inside the sector
 			// TODO: Is this really needed outside of FOFs? -Red
-			size_t l;
 
 			for (l = 0; l < line->frontsector->linecount; l++)
 			{
@@ -380,6 +382,8 @@ void P_SpawnSlope_Line(int linenum)
 		}
 		if(frontceil)
 		{
+			fixed_t highest, lowest;
+			size_t l;
 			origin.z = line->backsector->ceilingheight;
 			point.z = line->frontsector->ceilingheight;
 			dz = FixedDiv(origin.z - point.z, extent);
@@ -396,9 +400,8 @@ void P_SpawnSlope_Line(int linenum)
 			cslope->sourceline = line;
 
 			// Remember the way the slope is formed
-			fixed_t highest = point.z > origin.z ? point.z : origin.z;
-			fixed_t lowest = point.z < origin.z ? point.z : origin.z;
-			size_t l;
+			highest = point.z > origin.z ? point.z : origin.z;
+			lowest = point.z < origin.z ? point.z : origin.z;
 
 			for (l = 0; l < line->frontsector->linecount; l++)
 			{
@@ -446,6 +449,8 @@ void P_SpawnSlope_Line(int linenum)
 
 		if(backfloor)
 		{
+			fixed_t highest, lowest;
+			size_t l;
 			point.z = line->backsector->floorheight;
 			dz = FixedDiv(origin.z - point.z, extent);
 
@@ -461,9 +466,8 @@ void P_SpawnSlope_Line(int linenum)
 			fslope->sourceline = line;
 
 			// Remember the way the slope is formed
-			fixed_t highest = point.z > origin.z ? point.z : origin.z;
-			fixed_t lowest = point.z < origin.z ? point.z : origin.z;
-			size_t l;
+			highest = point.z > origin.z ? point.z : origin.z;
+			lowest = point.z < origin.z ? point.z : origin.z;
 
 			for (l = 0; l < line->backsector->linecount; l++)
 			{
@@ -487,6 +491,8 @@ void P_SpawnSlope_Line(int linenum)
 		}
 		if(backceil)
 		{
+			fixed_t highest, lowest;
+			size_t l;
 			origin.z = line->frontsector->ceilingheight;
 			point.z = line->backsector->ceilingheight;
 			dz = FixedDiv(origin.z - point.z, extent);
@@ -503,10 +509,8 @@ void P_SpawnSlope_Line(int linenum)
 			cslope->sourceline = line;
 
 			// Remember the way the slope is formed
-			fixed_t highest = point.z > origin.z ? point.z : origin.z;
-			fixed_t lowest = point.z < origin.z ? point.z : origin.z;
-
-			size_t l;
+			highest = point.z > origin.z ? point.z : origin.z;
+			lowest = point.z < origin.z ? point.z : origin.z;
 
 			for (l = 0; l < line->backsector->linecount; l++)
 			{
@@ -539,7 +543,7 @@ void P_SpawnSlope_Line(int linenum)
 //
 // Creates a new slope from three vertices with the specified IDs
 //
-pslope_t *P_NewVertexSlope(INT16 tag1, INT16 tag2, INT16 tag3, UINT8 flags)
+static pslope_t *P_NewVertexSlope(INT16 tag1, INT16 tag2, INT16 tag3, UINT8 flags)
 {
 	size_t i;
 	mapthing_t *mt = mapthings;
@@ -1133,4 +1137,3 @@ void P_ButteredSlope(mobj_t *mo)
 
 // EOF
 #endif // #ifdef ESLOPE
-
