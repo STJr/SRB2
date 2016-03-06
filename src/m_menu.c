@@ -260,7 +260,6 @@ static void M_ConnectMenu(INT32 choice);
 static void M_ConnectIPMenu(INT32 choice);
 #endif
 static void M_StartSplitServerMenu(INT32 choice);
-static void M_StartServer(INT32 choice);
 #ifndef NONET
 static void M_Refresh(INT32 choice);
 static void M_Connect(INT32 choice);
@@ -6123,7 +6122,7 @@ static INT32 M_FindFirstMap(INT32 gtype)
 	return 1;
 }
 
-static void M_StartServer(INT32 choice)
+void M_StartServer(INT32 choice)
 {
 	boolean StartSplitScreenGame = (currentMenu == &MP_SplitServerDef);
 
