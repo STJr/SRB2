@@ -545,7 +545,6 @@ typedef enum
 
 void S_InitRuntimeSounds(void);
 sfxenum_t S_AddSoundFx(const char *name, boolean singular, INT32 flags, boolean skinsound);
-musicenum_t S_AddMusic(const char *name, INT32 dummyval);
 void S_RemoveSoundFx(sfxenum_t id);
 
 #endif

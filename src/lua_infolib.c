@@ -84,7 +84,7 @@ const char *const musicinfo_wopt[] = {
 	"dummyval",
 	NULL};
 //====================
-	
+
 //
 // Sprite Names
 //
@@ -877,121 +877,6 @@ static int sfxinfo_num(lua_State *L)
 	return 1;
 }
 
-//////////////
-// MUS INFO //
-//////////////
-static int lib_getMusicInfo(lua_State *L)
-{
-	UINT32 i;
-	lua_remove(L, 1);
-
-	i = luaL_checkinteger(L, 1);
-	LUA_PushUserdata(L, &S_music[i], META_MUSICINFO);
-	return 1;
-}
-static int lib_setMusicInfo(lua_State *L)
-{
-	musicinfo_t *info;
-
-	lua_remove(L, 1);
-	info = &S_music[luaL_checkinteger(L, 1)]; // get the mobjinfo to assign to.
-	luaL_checktype(L, 2, LUA_TTABLE); // check that we've been passed a table.
-	lua_remove(L, 1); // pop mobjtype num, don't need it any more.
-	lua_settop(L, 1); // cut the stack here. the only thing left now is the table of data we're assigning to the mobjinfo.
-    
-    
-    
-	if (hud_running)
-		return luaL_error(L, "Do not alter musicinfo in HUD rendering code!");
-
-	lua_pushnil(L);
-	while (lua_next(L, 1)) {
-		enum musicinfo_write i;
-
-		if (lua_isnumber(L, 2))
-			i = lua_tointeger(L, 2) - 1; // lua is one based, this enum is zero based.
-		else
-			i = luaL_checkoption(L, 2, NULL, musicinfo_wopt);
-
-		switch(i)
-		{
-		case musicinfow_dummyval:
-			info->dummyval = (INT32)luaL_checkinteger(L, 3);
-			break;
-		default:
-			break;
-		}
-		lua_pop(L, 1);
-	}
-
-	return 0;
-}
-
-static int lib_musiclen(lua_State *L)
-{
-	lua_pushinteger(L, NUMMUSIC);
-	return 1;
-}
-
-// musicinfo_t *, field
-static int musicinfo_get(lua_State *L)
-{
-	musicinfo_t *music = *((musicinfo_t **)luaL_checkudata(L, 1, META_MUSICINFO));
-	enum musicinfo_read field = luaL_checkoption(L, 2, NULL, musicinfo_ropt);
-
-	I_Assert(music != NULL);
-
-	switch (field)
-	{
-	case musicinfor_name:
-		lua_pushstring(L, music->name);
-		return 1;
-	case musicinfor_dummyval:
-		lua_pushinteger(L, music->dummyval);
-		return 1;
-	default:
-		return luaL_error(L, "impossible error");
-	}
-	return 0;
-}
-static int musicinfo_set(lua_State *L)
-{
-	musicinfo_t *music = *((musicinfo_t **)luaL_checkudata(L, 1, META_MUSICINFO));
-	enum musicinfo_write field = luaL_checkoption(L, 2, NULL, musicinfo_wopt);
-
-	if (hud_running)
-		return luaL_error(L, "Do not alter S_music in HUD rendering code!");
-
-	I_Assert(music != NULL);
-
-	lua_remove(L, 1); // remove sfxinfo
-	lua_remove(L, 1); // remove field
-	lua_settop(L, 1); // leave only one value
-
-	switch (field)
-	{
-	case musicinfow_name:
-		music->name = luaL_checkstring(L, 1);
-		break;
-	case musicinfow_dummyval:
-		music->dummyval = luaL_checkinteger(L, 1);
-		break;
-	default:
-		return luaL_error(L, "impossible error");
-	}
-	return 0;
-}
-
-static int musicinfo_num(lua_State *L)
-{
-	musicinfo_t *music = *((musicinfo_t **)luaL_checkudata(L, 1, META_MUSICINFO));
-
-	I_Assert(music != NULL);
-	I_Assert(music >= S_music);
-
-	lua_pushinteger(L, (UINT32)(music-S_music));
-	return 1;
-}
 
 //////////////////////////////
 //
@@ -1040,18 +925,7 @@ int LUA_InfoLib(lua_State *L)
 		lua_pushcfunction(L, sfxinfo_num);
 		lua_setfield(L, -2, "__len");
 	lua_pop(L, 1);
-	
-	luaL_newmetatable(L, META_MUSICINFO);
-		lua_pushcfunction(L, musicinfo_get);
-		lua_setfield(L, -2, "__index");
 
-		lua_pushcfunction(L, musicinfo_set);
-		lua_setfield(L, -2, "__newindex");
-
-		lua_pushcfunction(L, musicinfo_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
-	
 	lua_newuserdata(L, 0);
 		lua_createtable(L, 0, 2);
 			lua_pushcfunction(L, lib_getSprname);
@@ -1102,21 +976,6 @@ int LUA_InfoLib(lua_State *L)
 	lua_pushvalue(L, -1);
 	lua_setglobal(L, "S_sfx");
 	lua_setglobal(L, "sfxinfo");
-
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getMusicInfo);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_setMusicInfo);
-			lua_setfield(L, -2, "__newindex");
-
-			lua_pushcfunction(L, lib_musiclen);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_pushvalue(L, -1);
-	lua_setglobal(L, "S_music");
-	lua_setglobal(L, "musicinfo");	
 	return 0;
 }
 

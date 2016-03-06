@@ -471,17 +471,15 @@ sfxinfo_t S_sfx[NUMSFX] =
 };
 
 char freeslotnames[sfx_freeslot0 + NUMSFXFREESLOTS + NUMSKINSFXSLOTS][7];
-char musicfreeslotnames[mus_frees0 + NUMMUSFREESLOTS][7];
 
 // Prepare free sfx slots to add sfx at run time  (yellowtd: Include musics too~!)
 void S_InitRuntimeSounds (void)
 {
 	sfxenum_t i;
-	musicenum_t x;
 	INT32 value;
 	char soundname[7];
 	char musicname[7];
-	
+
 	for (i = sfx_freeslot0; i <= sfx_lastskinsoundslot; i++)
 	{
 		value = (i+1) - sfx_freeslot0;
@@ -507,28 +505,6 @@ void S_InitRuntimeSounds (void)
 		S_sfx[i].skinsound = -1;
 		S_sfx[i].usefulness = -1;
 		S_sfx[i].lumpnum = LUMPERROR;
-	}
-	
-	for (x = mus_frees0; x <= mus_lstfre; x++)
-	{
-		value = (x+1) - mus_frees0;
-
-		if (value < 10)
-			sprintf(musicname, "fre00%d", value);
-		else if (value < 100)
-			sprintf(musicname, "fre0%d", value);
-		else if (value < 1000)
-			sprintf(musicname, "fre%d", value);
-		else
-			sprintf(musicname, "fr%d", value);
-
-		strcpy(musicfreeslotnames[value-1], musicname);
-
-		S_music[x].name = musicfreeslotnames[value-1];
-		S_music[x].data = NULL;
-		S_music[x].lumpnum = 0;
-		S_music[x].handle = -1;
-		S_music[x].dummyval = 0;
 	}
 }
 
@@ -562,31 +538,6 @@ sfxenum_t S_AddSoundFx(const char *name, boolean singular, INT32 flags, boolean 
 		}
 	}
 	CONS_Alert(CONS_WARNING, M_GetText("No more free sound slots\n"));
-	return 0;
-}
-
-musicenum_t S_AddMusic(const char *name, INT32 dummyval)
-{
-	musicenum_t i, slot;
-
-	slot = mus_frees0;
-
-	for (i = slot; i < NUMMUSIC; i++)
-	{
-        //Dummy value because no .priority exists
-		if (!S_music[i].dummyval)
-		{
-			strncpy(musicfreeslotnames[i-mus_frees0], name, 6);
-			S_music[i].dummyval = dummyval;
-            S_music[i].handle = -1;
-			S_music[i].lumpnum = 0;
-
-			/// \todo if precached load it here
-			S_music[i].data = NULL;
-			return i;
-		}
-	}
-	CONS_Alert(CONS_WARNING, M_GetText("No more free music slots\n"));
 	return 0;
 }
 
