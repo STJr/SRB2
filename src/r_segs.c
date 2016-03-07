@@ -814,7 +814,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 					leftheight = P_GetZAt(*light->caster->b_slope, ds->leftpos.x, ds->leftpos.y);
 					rightheight = P_GetZAt(*light->caster->b_slope, ds->rightpos.x, ds->rightpos.y);
 				} else
-					leftheight = rightheight = light->caster->bottomheight;
+					leftheight = rightheight = *light->caster->bottomheight;
 
 				leftheight -= viewz;
 				rightheight -= viewz;
