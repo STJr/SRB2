@@ -2390,20 +2390,19 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			// console player only unless NOCLIMB is set
 			if ((line->flags & ML_NOCLIMB) || (mo && mo->player && P_IsLocalPlayer(mo->player)))
 			{
-				UINT16 musicnum = (UINT16)sides[line->sidenum[0]].toptexture; //P_AproxDistance(line->dx, line->dy)>>FRACBITS;
 				UINT16 tracknum = (UINT16)sides[line->sidenum[0]].bottomtexture;
 
-				mapmusic = musicnum | (tracknum << MUSIC_TRACKSHIFT);
-				if (!(line->flags & ML_BLOCKMONSTERS))
-					mapmusic |= MUSIC_RELOADRESET;
+				strncpy(mapmusname, sides[line->sidenum[0]].text, 7);
+				mapmusname[6] = 0;
 
-				if (musicnum >= NUMMUSIC || musicnum == mus_None)
-					S_StopMusic();
-				else
-					S_ChangeMusic(mapmusic, !(line->flags & ML_EFFECT4));
+				mapmusflags = tracknum & MUSIC_TRACKMASK;
+				if (!(line->flags & ML_BLOCKMONSTERS))
+					mapmusflags |= MUSIC_RELOADRESET;
+
+				S_ChangeMusic(mapmusname, mapmusflags, !(line->flags & ML_EFFECT4));
 
 				// Except, you can use the ML_BLOCKMONSTERS flag to change this behavior.
-				// if (mapmusic & MUSIC_RELOADRESET) then it will reset the music in G_PlayerReborn.
+				// if (mapmusflags & MUSIC_RELOADRESET) then it will reset the music in G_PlayerReborn.
 			}
 			break;
 
@@ -3039,6 +3038,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
 				sector_t *sec; // Sector that the FOF is visible (or not visible) in
 				ffloor_t *rover; // FOF to vanish/un-vanish
+				ffloortype_e oldflags; // store FOF's old flags
 
 				for (secnum = -1; (secnum = P_FindSectorFromTag(sectag, secnum)) >= 0 ;)
 				{
@@ -3062,11 +3062,17 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						return;
 					}
 
+					oldflags = rover->flags;
+
 					// Abracadabra!
 					if (line->flags & ML_NOCLIMB)
 						rover->flags |= FF_EXISTS;
 					else
 						rover->flags &= ~FF_EXISTS;
+
+					// if flags changed, reset sector's light list
+					if (rover->flags != oldflags)
+						sec->moved = true;
 				}
 			}
 			break;
