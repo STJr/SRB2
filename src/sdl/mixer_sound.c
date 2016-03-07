@@ -395,6 +395,7 @@ void I_FreeSfx(sfxinfo_t *sfx)
 	if (sfx->data)
 		Mix_FreeChunk(sfx->data);
 	sfx->data = NULL;
+	sfx->lumpnum = LUMPERROR;
 }
 
 INT32 I_StartSound(sfxenum_t id, UINT8 vol, UINT8 sep, UINT8 pitch, UINT8 priority)
