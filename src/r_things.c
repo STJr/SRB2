@@ -2701,9 +2701,6 @@ next_token:
 		}
 		free(buf2);
 
-		// Not in vanilla, you don't.
-		skin->flags &= ~SF_SUPER;
-
 		lump++; // if no sprite defined use spirte just after this one
 		if (skin->sprite[0] == '\0')
 		{

@@ -180,10 +180,11 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->typeoflevel = 0;
 	DEH_WriteUndoline("NEXTLEVEL", va("%d", mapheaderinfo[num]->nextlevel), UNDO_NONE);
 	mapheaderinfo[num]->nextlevel = (INT16)(i + 1);
-	DEH_WriteUndoline("MUSICSLOT", va("%d", mapheaderinfo[num]->musicslot), UNDO_NONE);
-	mapheaderinfo[num]->musicslot = mus_map01m + num;
-	DEH_WriteUndoline("MUSICSLOTTRACK", va("%d", mapheaderinfo[num]->musicslottrack), UNDO_NONE);
-	mapheaderinfo[num]->musicslottrack = 0;
+	DEH_WriteUndoline("MUSIC", mapheaderinfo[num]->musname, UNDO_NONE);
+	snprintf(mapheaderinfo[num]->musname, 7, "%sM", G_BuildMapName(i));
+	mapheaderinfo[num]->musname[6] = 0;
+	DEH_WriteUndoline("MUSICTRACK", va("%d", mapheaderinfo[num]->mustrack), UNDO_NONE);
+	mapheaderinfo[num]->mustrack = 0;
 	DEH_WriteUndoline("FORCECHARACTER", va("%d", mapheaderinfo[num]->forcecharacter), UNDO_NONE);
 	mapheaderinfo[num]->forcecharacter[0] = '\0';
 	DEH_WriteUndoline("WEATHER", va("%d", mapheaderinfo[num]->weather), UNDO_NONE);
@@ -1439,6 +1440,29 @@ static void P_LoadSideDefs2(lumpnum_t lumpnum)
 #endif
 
 			case 413: // Change music
+			{
+				char process[8+1];
+
+				sd->toptexture = sd->midtexture = sd->bottomtexture = 0;
+				if (msd->bottomtexture[0] != '-' || msd->bottomtexture[1] != '\0')
+				{
+					M_Memcpy(process,msd->bottomtexture,8);
+					process[8] = '\0';
+					sd->bottomtexture = get_number(process)-1;
+				}
+				M_Memcpy(process,msd->toptexture,8);
+				process[8] = '\0';
+				sd->text = Z_Malloc(7, PU_LEVEL, NULL);
+
+				// If they type in O_ or D_ and their music name, just shrug,
+				// then copy the rest instead.
+				if ((process[0] == 'O' || process[0] == 'D') && process[7])
+					M_Memcpy(sd->text, process+2, 6);
+				else // Assume it's a proper music name.
+					M_Memcpy(sd->text, process, 6);
+				sd->text[6] = 0;
+				break;
+			}
 			case 414: // Play SFX
 			{
 				sd->toptexture = sd->midtexture = sd->bottomtexture = 0;
@@ -1448,13 +1472,6 @@ static void P_LoadSideDefs2(lumpnum_t lumpnum)
 					M_Memcpy(process,msd->toptexture,8);
 					process[8] = '\0';
 					sd->toptexture = get_number(process);
-				}
-				if (sd->special == 413 && (msd->bottomtexture[0] != '-' || msd->bottomtexture[1] != '\0'))
-				{
-					char process[8+1];
-					M_Memcpy(process,msd->bottomtexture,8);
-					process[8] = '\0';
-					sd->bottomtexture = get_number(process)-1;
 				}
 				break;
 			}
@@ -2369,7 +2386,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	// use gamemap to get map number.
 	// 99% of the things already did, so.
 	// Map header should always be in place at this point
-	INT32 i, loadprecip = 1;
+	INT32 i, loadprecip = 1, ranspecialwipe = 0;
 	INT32 loademblems = 1;
 	INT32 fromnetsave = 0;
 	boolean loadedbm = false;
@@ -2442,6 +2459,28 @@ boolean P_SetupLevel(boolean skipprecip)
 	// will be set by player think.
 	players[consoleplayer].viewz = 1;
 
+	// Special stage fade to white
+	// This is handled BEFORE sounds are stopped.
+	if (rendermode != render_none && G_IsSpecialStage(gamemap))
+	{
+		tic_t starttime = I_GetTime();
+		tic_t endtime = starttime + (3*TICRATE)/2;
+
+		S_StartSound(NULL, sfx_s3kaf);
+
+		F_WipeStartScreen();
+		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 0);
+
+		F_WipeEndScreen();
+		F_RunWipe(wipedefs[wipe_speclevel_towhite], false);
+
+		// Hold on white for extra effect.
+		while (I_GetTime() < endtime)
+			I_Sleep();
+
+		ranspecialwipe = 1;
+	}
+
 	// Make sure all sounds are stopped before Z_FreeTags.
 	S_StopSounds();
 	S_ClearSfx();
@@ -2451,25 +2490,28 @@ boolean P_SetupLevel(boolean skipprecip)
 	S_Start();
 
 	// Let's fade to black here
-	if (rendermode != render_none)
+	// But only if we didn't do the special stage wipe
+	if (rendermode != render_none && !ranspecialwipe)
 	{
 		F_WipeStartScreen();
 		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 
 		F_WipeEndScreen();
 		F_RunWipe(wipedefs[wipe_level_toblack], false);
+	}
 
+	// Print "SPEEDING OFF TO [ZONE] [ACT 1]..."
+	if (rendermode != render_none)
+	{
 		// Don't include these in the fade!
-		{
-			char tx[64];
-			V_DrawSmallString(1, 191, V_ALLOWLOWERCASE, M_GetText("Speeding off to..."));
-			snprintf(tx, 63, "%s%s%s",
-				mapheaderinfo[gamemap-1]->lvlttl,
-				(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE) ? "" : " ZONE",
-				(mapheaderinfo[gamemap-1]->actnum > 0) ? va(", Act %d",mapheaderinfo[gamemap-1]->actnum) : "");
-			V_DrawSmallString(1, 195, V_ALLOWLOWERCASE, tx);
-			I_UpdateNoVsync();
-		}
+		char tx[64];
+		V_DrawSmallString(1, 191, V_ALLOWLOWERCASE, M_GetText("Speeding off to..."));
+		snprintf(tx, 63, "%s%s%s",
+			mapheaderinfo[gamemap-1]->lvlttl,
+			(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE) ? "" : " ZONE",
+			(mapheaderinfo[gamemap-1]->actnum > 0) ? va(", Act %d",mapheaderinfo[gamemap-1]->actnum) : "");
+		V_DrawSmallString(1, 195, V_ALLOWLOWERCASE, tx);
+		I_UpdateNoVsync();
 	}
 
 #ifdef HAVE_BLUA
@@ -2767,7 +2809,7 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	// Remove the loading shit from the screen
 	if (rendermode != render_none)
-		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, (ranspecialwipe) ? 0 : 31);
 
 	if (precache || dedicated)
 		R_PrecacheLevel();
