@@ -1069,7 +1069,7 @@ static const char *credits[] = {
 	"iD Software",
 	"Alex \"MistaED\" Fuller",
 	"FreeDoom Project", // Used some of the mancubus and rocket launcher sprites for Brak
-	"Randy Heit (<!>)", // For his MSPaint <!> sprite that we nicked
+	"Randi Heit (<!>)", // For their MSPaint <!> sprite that we nicked
 	"",
 	"\1Produced By",
 	"Sonic Team Junior",
