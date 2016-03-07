@@ -673,7 +673,9 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	fixed_t         offsetvalue = 0;
 	lightlist_t     *light;
 	r_lightlist_t   *rlight;
+#ifndef ESLOPE
 	fixed_t         lheight;
+#endif
 	line_t          *newline = NULL;
 #ifdef ESLOPE
 	// Render FOF sides kinda like normal sides, with the frac and step and everything
@@ -751,9 +753,49 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 
 		for (i = p = 0; i < dc_numlights; i++)
 		{
+#ifdef ESLOPE
+			fixed_t leftheight, rightheight;
+			fixed_t pfloorleft, pfloorright;
+#endif
 			light = &frontsector->lightlist[i];
 			rlight = &dc_lightlist[p];
+#ifdef ESLOPE
+			if (light->slope) {
+				leftheight = P_GetZAt(light->slope, ds->leftpos.x, ds->leftpos.y);
+				rightheight = P_GetZAt(light->slope, ds->rightpos.x, ds->rightpos.y);
+			} else
+				leftheight = rightheight = light->height;
 
+			if (*pfloor->b_slope) {
+				pfloorleft = P_GetZAt(*pfloor->b_slope, ds->leftpos.x, ds->leftpos.y);
+				pfloorright = P_GetZAt(*pfloor->b_slope, ds->rightpos.x, ds->rightpos.y);
+			} else
+				pfloorleft = pfloorright = *pfloor->bottomheight;
+
+			if (leftheight < pfloorleft && rightheight < pfloorright)
+				continue;
+
+			if (*pfloor->t_slope) {
+				pfloorleft = P_GetZAt(*pfloor->t_slope, ds->leftpos.x, ds->leftpos.y);
+				pfloorright = P_GetZAt(*pfloor->t_slope, ds->rightpos.x, ds->rightpos.y);
+			} else
+				pfloorleft = pfloorright = *pfloor->topheight;
+
+			if (leftheight > pfloorleft && rightheight > pfloorright && i+1 < dc_numlights)
+			{
+				lightlist_t *nextlight = &frontsector->lightlist[i+1];
+				if (nextlight->slope ? P_GetZAt(nextlight->slope, ds->leftpos.x, ds->leftpos.y) : nextlight->height > pfloorleft
+				 && nextlight->slope ? P_GetZAt(nextlight->slope, ds->rightpos.x, ds->rightpos.y) : nextlight->height > pfloorright)
+					continue;
+			}
+
+			leftheight -= viewz;
+			rightheight -= viewz;
+			rlight->height = (centeryfrac) - FixedMul(leftheight, ds->scale1);
+			rlight->heightstep = (centeryfrac) - FixedMul(rightheight, ds->scale2);
+			rlight->heightstep = (rlight->heightstep-rlight->height)/(ds->x2-ds->x1+1);
+			rlight->height -= rlight->heightstep;
+#else
 			if (light->height < *pfloor->bottomheight)
 				continue;
 
@@ -763,13 +805,29 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			lheight = light->height;// > *pfloor->topheight ? *pfloor->topheight + FRACUNIT : light->height;
 			rlight->heightstep = -FixedMul (rw_scalestep, (lheight - viewz));
 			rlight->height = (centeryfrac) - FixedMul((lheight - viewz), spryscale) - rlight->heightstep;
+#endif
 			rlight->flags = light->flags;
-
 			if (light->flags & FF_CUTLEVEL)
 			{
+#ifdef ESLOPE
+				if (*light->caster->b_slope) {
+					leftheight = P_GetZAt(*light->caster->b_slope, ds->leftpos.x, ds->leftpos.y);
+					rightheight = P_GetZAt(*light->caster->b_slope, ds->rightpos.x, ds->rightpos.y);
+				} else
+					leftheight = rightheight = light->caster->bottomheight;
+
+				leftheight -= viewz;
+				rightheight -= viewz;
+
+				rlight->botheight = (centeryfrac) - FixedMul(leftheight, ds->scale1);
+				rlight->botheightstep = (centeryfrac) - FixedMul(rightheight, ds->scale2);
+				rlight->botheightstep = (rlight->botheightstep-rlight->botheight)/(ds->x2-ds->x1+1);
+				rlight->botheight -= rlight->botheightstep;
+#else
 				lheight = *light->caster->bottomheight;// > *pfloor->topheight ? *pfloor->topheight + FRACUNIT : *light->caster->bottomheight;
 				rlight->botheightstep = -FixedMul (rw_scalestep, (lheight - viewz));
 				rlight->botheight = (centeryfrac) - FixedMul((lheight - viewz), spryscale) - rlight->botheightstep;
+#endif
 			}
 
 			rlight->lightlevel = *light->lightlevel;
