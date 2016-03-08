@@ -4052,9 +4052,6 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 #endif
 		if (player->pflags & PF_JUMPDOWN) // all situations below this require jump button not to be pressed already
 		{
-#ifdef HAVE_BLUA
-			if (!LUAh_AbilitySpecial(player))
-#endif
 			switch (player->charability)
 			{
 			case CA_FLY:
@@ -4169,19 +4166,10 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						{
 							player->pflags &= ~PF_JUMPED;
 							P_DoJump(player, false);
+							player->mo->momz = FixedMul(player->mo->momz, 3*FRACUNIT/4); // Half height
 						}
 						P_InstaThrust(player->mo, player->mo->angle, FixedMul(actionspd, player->mo->scale));
 
-						if (player->charability != CA_JUMPTHOK) // Jumpthok jump is done earlier
-						{
-							if (!(player->pflags & PF_THOKKED) // Never do the jump more than once, even if you have multiability
-								 && player->thokitem == (UINT32)mobjinfo[MT_PLAYER].painchance) // This is so that custom character that like to use the thokitem don't break
-							{
-								player->pflags &= ~PF_JUMPED;
-								P_DoJump(player, false);
-								player->mo->momz = FixedMul(player->mo->momz, 3*FRACUNIT/4); // Half height
-							}
-						}
 						if (maptol & TOL_2D)
 						{
 							player->mo->momx /= 2;

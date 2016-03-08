@@ -464,14 +464,15 @@ static const char *credits[] = {
 	"\"Badz\" / \"Badnik\"", // Also very reliable, did lots more than Wolfy~
 	"",
 	"\1Sprite Artists",
-	"\"Iceman404\"", // Did most of the sprites for this mod
-	"\"CoatRack\"", // TD was pretty much built off of his ideas
+	"\"Iceman404\"", // Did most of the sprites for this mod, and trust me, without this man we wouldn't have gotten ANYWHERE.
+	"\"CoatRack\"", // Huge Spiral Knights fan, which is where a lot of TD's inspiration came from.
 	"\"Spherallic\"",
 	"\"Zipper\"", // CHROMEs and more
 	"\"SevenColorsAlice\"", // Drew the Penguinator sprites
 	"\"Charybdizs\"", // Drew the Krackobot sprites
 	"\"Jeck Jims\"", // Extra hub icons
 	"\"MotorRoach\"", // Sky Islands fireballs
+	"\"EmaBuns\"", // Title screen coloring
 	"",
 	"\1Texture Artists",
 	"\"Charybdizs\"",
