@@ -6256,8 +6256,7 @@ void P_MobjThinker(mobj_t *mobj)
 	if (mobj->tracer && P_MobjWasRemoved(mobj->tracer))
 		P_SetTarget(&mobj->tracer, NULL);
 
-	mobj->flags2 &= ~MF2_PUSHED;
-	mobj->eflags &= ~MFE_SPRUNG;
+	mobj->eflags &= ~(MFE_PUSHED|MFE_SPRUNG);
 
 	tmfloorthing = tmhitthing = NULL;
 
