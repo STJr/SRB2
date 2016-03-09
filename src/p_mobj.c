@@ -2363,9 +2363,7 @@ static boolean P_ZMovement(mobj_t *mo)
 
 		case MT_RING: // Ignore still rings
 		case MT_COIN:
-#ifdef BLUE_SPHERES
 		case MT_BLUEBALL:
-#endif
 		case MT_REDTEAMRING:
 		case MT_BLUETEAMRING:
 		case MT_FLINGRING:
@@ -6258,7 +6256,8 @@ void P_MobjThinker(mobj_t *mobj)
 	if (mobj->tracer && P_MobjWasRemoved(mobj->tracer))
 		P_SetTarget(&mobj->tracer, NULL);
 
-	mobj->eflags &= ~(MFE_PUSHED|MFE_SPRUNG);
+	mobj->flags2 &= ~MF2_PUSHED;
+	mobj->eflags &= ~MFE_SPRUNG;
 
 	tmfloorthing = tmhitthing = NULL;
 
@@ -6653,14 +6652,12 @@ void P_MobjThinker(mobj_t *mobj)
 	else if (mobj->health <= 0) // Dead things think differently than the living.
 		switch (mobj->type)
 		{
-#ifdef BLUE_SPHERES
 		case MT_BLUEBALL:
 			if ((mobj->tics>>2)+1 > 0 && (mobj->tics>>2)+1 <= tr_trans60) // tr_trans50 through tr_trans90, shifting once every second frame
 				mobj->frame = (NUMTRANSMAPS-((mobj->tics>>2)+1))<<FF_TRANSSHIFT;
 			else // tr_trans60 otherwise
 				mobj->frame = tr_trans60<<FF_TRANSSHIFT;
 			break;
-#endif
 		case MT_EGGCAPSULE:
 			if (mobj->z <= mobj->floorz)
 			{
@@ -7118,9 +7115,7 @@ void P_MobjThinker(mobj_t *mobj)
 			break;
 		case MT_RING:
 		case MT_COIN:
-#ifdef BLUE_SPHERES
 		case MT_BLUEBALL:
-#endif
 		case MT_REDTEAMRING:
 		case MT_BLUETEAMRING:
 			// No need to check water. Who cares?
@@ -7886,9 +7881,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			break;
 		case MT_RING:
 		case MT_COIN:
-#ifdef BLUE_SPHERES
 		case MT_BLUEBALL:
-#endif
 			nummaprings++;
 		default:
 			break;
@@ -8014,9 +8007,7 @@ void P_RemoveMobj(mobj_t *mobj)
 	if (mobj->spawnpoint &&
 		(mobj->type == MT_RING
 		|| mobj->type == MT_COIN
-#ifdef BLUE_SPHERES
 		|| mobj->type == MT_BLUEBALL
-#endif
 		|| mobj->type == MT_REDTEAMRING
 		|| mobj->type == MT_BLUETEAMRING
 		|| P_WeaponOrPanel(mobj->type))
@@ -9802,11 +9793,9 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 				ringthing = (gametype == GT_CTF) ? MT_BLUETEAMRING : MT_RING;
 				break;
 			default:
-#ifdef BLUE_SPHERES
 				// Spawn rings as blue spheres in special stages, ala S3+K.
 				if (G_IsSpecialStage(gamemap) && useNightsSS)
 					ringthing = MT_BLUEBALL;
-#endif
 				break;
 		}
 
@@ -9871,11 +9860,9 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 		if (ultimatemode && !(G_IsSpecialStage(gamemap) || maptol & TOL_NIGHTS))
 			return;
 
-#ifdef BLUE_SPHERES
 		// Spawn rings as blue spheres in special stages, ala S3+K.
 		if (G_IsSpecialStage(gamemap) && useNightsSS)
 			ringthing = MT_BLUEBALL;
-#endif
 
 		for (r = 1; r <= 5; r++)
 		{
@@ -9926,11 +9913,9 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 		if (ultimatemode && !(G_IsSpecialStage(gamemap) || maptol & TOL_NIGHTS))
 			return;
 
-#ifdef BLUE_SPHERES
 		// Spawn rings as blue spheres in special stages, ala S3+K.
 		if (G_IsSpecialStage(gamemap) && useNightsSS)
 			ringthing = MT_BLUEBALL;
-#endif
 
 		angle >>= ANGLETOFINESHIFT;
 
@@ -10023,11 +10008,9 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 				if (ultimatemode && !(G_IsSpecialStage(gamemap) || (maptol & TOL_NIGHTS)))
 					continue;
 
-#ifdef BLUE_SPHERES
 				// Spawn rings as blue spheres in special stages, ala S3+K.
 				if (G_IsSpecialStage(gamemap) && useNightsSS)
 					itemToSpawn = MT_BLUEBALL;
-#endif
 			}
 
 			fa = i*FINEANGLES/numitems;

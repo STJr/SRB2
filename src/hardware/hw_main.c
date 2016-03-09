@@ -539,6 +539,8 @@ static void HWR_RenderPlane(sector_t *sector, extrasubsector_t *xsub, fixed_t fi
 	static FOutVector *planeVerts = NULL;
 	static UINT16 numAllocedPlaneVerts = 0;
 
+	(void)sector;
+
 	// no convex poly were generated for this subsector
 	if (!xsub->planepoly)
 		return;
@@ -678,25 +680,6 @@ static void HWR_RenderPlane(sector_t *sector, extrasubsector_t *xsub, fixed_t fi
 		v3d->x = pv->x;
 		v3d->y = height;
 		v3d->z = pv->y;
-#ifdef SLOPENESS
-		if (sector && sector->special == 65535)
-		{
-			size_t q;
-			for (q = 0; q < sector->linecount; q++)
-			{
-				if (v3d->x == sector->lines[q]->v1->x>>FRACBITS)
-				{
-					if (v3d->z == sector->lines[q]->v1->y>>FRACBITS)
-					{
-						v3d->y += sector->lines[q]->v1->z>>FRACBITS;
-						break;
-					}
-				}
-			}
-		}
-#else
-		(void)sector;
-#endif
 	}
 
 	// only useful for flat coloured triangles

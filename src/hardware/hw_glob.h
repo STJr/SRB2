@@ -36,9 +36,7 @@ typedef struct
 {
 	float x;
 	float y;
-//#ifdef SLOPENESS
 	float z;
-//#endif
 } polyvertex_t;
 
 #ifdef _MSC_VER

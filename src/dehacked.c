@@ -6227,9 +6227,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	// Collectible Items
 	"MT_RING",
 	"MT_FLINGRING", // Lost ring
-#ifdef BLUE_SPHERES
 	"MT_BLUEBALL",  // Blue sphere replacement for special stages
-#endif
 	"MT_REDTEAMRING",  //Rings collectable by red team.
 	"MT_BLUETEAMRING", //Rings collectable by blue team.
 	"MT_EMMY", // emerald token for special stage
@@ -6682,6 +6680,7 @@ static const char *const MOBJFLAG2_LIST[] = {
 	"EXPLOSION",	// Thrown ring has explosive properties
 	"SCATTER",		// Thrown ring has scatter properties
 	"BEYONDTHEGRAVE",// Source of this missile has died and has since respawned.
+	"PUSHED",		// Mobj was already pushed this tic
 	"SLIDEPUSH",	// MF_PUSHABLE that pushes continuously.
 	"CLASSICPUSH",	// Drops straight down when object has negative Z.
 	"STANDONME",	// While not pushable, stand on me anyway.
@@ -6710,7 +6709,6 @@ static const char *const MOBJEFLAG_LIST[] = {
 	"JUSTSTEPPEDDOWN", // used for ramp sectors
 	"VERTICALFLIP", // Vertically flip sprite/allow upside-down physics
 	"GOOWATER", // Goo water
-	"PUSHED", // Mobj was already pushed this tic
 	"SPRUNG", // Mobj was already sprung this tic
 	"APPLYPMOMZ", // Platform movement
 	NULL

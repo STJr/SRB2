@@ -431,9 +431,6 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 ///	\note	obsoleted by cv_maxportals
 //#define PORTAL_LIMIT 8
 
-///	Fun experimental slope stuff!
-//#define SLOPENESS
-
 /// Kalaron/Eternity Engine slope code (SRB2CB ported)
 #define ESLOPE
 
@@ -452,10 +449,6 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 
 ///	Polyobject fake flat code
 #define POLYOBJECTS_PLANES
-
-///	Blue spheres for future use.
-///	\todo	Remove this define.
-#define BLUE_SPHERES // Blue spheres for future use.
 
 ///	Improved way of dealing with ping values and a ping limit.
 #define NEWPING

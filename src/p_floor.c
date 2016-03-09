@@ -1971,71 +1971,51 @@ void T_NoEnemiesSector(levelspecthink_t *nobaddies)
 {
 	size_t i;
 	fixed_t upperbound, lowerbound;
-	sector_t *sec = NULL;
-	sector_t *targetsec = NULL;
-	INT32 secnum = -1;
+	INT32 s;
+	sector_t *checksector;
 	msecnode_t *node;
 	mobj_t *thing;
-	boolean FOFsector = false;
+	boolean exists = false;
 
-	while ((secnum = P_FindSectorFromLineTag(nobaddies->sourceline, secnum)) >= 0)
+	for (i = 0; i < nobaddies->sector->linecount; i++)
 	{
-		sec = &sectors[secnum];
-
-		FOFsector = false;
-
-		// Check the lines of this sector, to see if it is a FOF control sector.
-		for (i = 0; i < sec->linecount; i++)
+		if (nobaddies->sector->lines[i]->special == 223)
 		{
-			INT32 targetsecnum = -1;
 
-			if (sec->lines[i]->special < 100 || sec->lines[i]->special >= 300)
-				continue;
+			upperbound = nobaddies->sector->ceilingheight;
+			lowerbound = nobaddies->sector->floorheight;
 
-			FOFsector = true;
-
-			while ((targetsecnum = P_FindSectorFromLineTag(sec->lines[i], targetsecnum)) >= 0)
+			for (s = -1; (s = P_FindSectorFromLineTag(nobaddies->sector->lines[i], s)) >= 0 ;)
 			{
-				targetsec = &sectors[targetsecnum];
+				checksector = &sectors[s];
 
-				upperbound = targetsec->ceilingheight;
-				lowerbound = targetsec->floorheight;
-				node = targetsec->touching_thinglist; // things touching this sector
+				node = checksector->touching_thinglist; // things touching this sector
 				while (node)
 				{
 					thing = node->m_thing;
 
 					if ((thing->flags & (MF_ENEMY|MF_BOSS)) && thing->health > 0
-					&& thing->z < upperbound && thing->z+thing->height > lowerbound)
-						return;
+						&& thing->z < upperbound && thing->z+thing->height > lowerbound)
+					{
+						exists = true;
+						goto foundenemy;
+					}
 
 					node = node->m_snext;
 				}
 			}
 		}
-
-		if (!FOFsector)
-		{
-			upperbound = sec->ceilingheight;
-			lowerbound = sec->floorheight;
-			node = sec->touching_thinglist; // things touching this sector
-			while (node)
-			{
-				thing = node->m_thing;
-
-				if ((thing->flags & (MF_ENEMY|MF_BOSS)) && thing->health > 0
-				&& thing->z < upperbound && thing->z+thing->height > lowerbound)
-					return;
-
-				node = node->m_snext;
-			}
-		}
 	}
+foundenemy:
+	if (exists)
+		return;
 
-	CONS_Debug(DBG_GAMELOGIC, "Running no-more-enemies exec with tag of %d\n", nobaddies->sourceline->tag);
+	s = P_AproxDistance(nobaddies->sourceline->dx, nobaddies->sourceline->dy)>>FRACBITS;
 
-	// No enemies found, run the linedef exec and terminate this thinker
-	P_RunTriggerLinedef(nobaddies->sourceline, NULL, NULL);
+	CONS_Debug(DBG_GAMELOGIC, "Running no-more-enemies exec with tag of %d\n", s);
+
+	// Otherwise, run the linedef exec and terminate this thinker
+	P_LinedefExecute((INT16)s, NULL, NULL);
 	P_RemoveThinker(&nobaddies->thinker);
 }
 
