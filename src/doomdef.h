@@ -449,10 +449,6 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 ///	Polyobject fake flat code
 #define POLYOBJECTS_PLANES
 
-///	Blue spheres for future use.
-///	\todo	Remove this define.
-#define BLUE_SPHERES // Blue spheres for future use.
-
 ///	Improved way of dealing with ping values and a ping limit.
 #define NEWPING
 
