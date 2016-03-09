@@ -6711,7 +6711,6 @@ static const char *const MOBJEFLAG_LIST[] = {
 	"JUSTSTEPPEDDOWN", // used for ramp sectors
 	"VERTICALFLIP", // Vertically flip sprite/allow upside-down physics
 	"GOOWATER", // Goo water
-	"DUMMY", // free: 1<<7
 	"SPRUNG", // Mobj was already sprung this tic
 	"APPLYPMOMZ", // Platform movement
 	NULL
