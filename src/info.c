@@ -4612,7 +4612,6 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
-#ifdef BLUE_SPHERES
 	{           // MT_BLUEBALL
 		-1,             // doomednum
 		S_BLUEBALL,    // spawnstate
@@ -4639,7 +4638,6 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		MF_SLIDEME|MF_SPECIAL|MF_NOGRAVITY|MF_NOCLIPHEIGHT, // flags
 		S_NULL          // raisestate
 	},
-#endif
 
 	{           // MT_REDTEAMRING
 		308,            // doomednum
