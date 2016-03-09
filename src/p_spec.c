@@ -1891,6 +1891,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 	 || specialtype == 304  // Ring count - Once
 	 || specialtype == 307  // Character ability - Once
 	 || specialtype == 308  // Race only - Once
+	 || specialtype == 313  // No More Enemies - Once
 	 || specialtype == 315  // No of pushables - Once
 	 || specialtype == 318  // Unlockable trigger - Once
 	 || specialtype == 320  // Unlockable - Once
