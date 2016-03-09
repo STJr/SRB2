@@ -85,14 +85,6 @@ static int lib_print(lua_State *L)
 	return 0;
 }
 
-static int lib_evalMath(lua_State *L)
-{
-	const char *word = luaL_checkstring(L, 1);
-	LUA_Deprecated(L, "EvalMath(string)", "_G[string]");
-	lua_pushinteger(L, LUA_EvalMath(word));
-	return 1;
-}
-
 // M_RANDOM
 //////////////
 
@@ -1911,7 +1903,6 @@ static int lib_gTicsToMilliseconds(lua_State *L)
 
 static luaL_Reg lib[] = {
 	{"print", lib_print},
-	{"EvalMath", lib_evalMath},
 
 	// m_random
 	{"P_Random",lib_pRandom},
