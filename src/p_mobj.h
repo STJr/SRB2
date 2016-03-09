@@ -232,7 +232,8 @@ typedef enum
 	MFE_VERTICALFLIP      = 1<<5,
 	// Goo water
 	MFE_GOOWATER          = 1<<6,
-	// free: to and including 1<<7
+	// free: 1<<7
+	MFE_DUMMY             = 1<<7,
 	// Mobj was already sprung this tic
 	MFE_SPRUNG            = 1<<8,
 	// Platform movement
