@@ -70,4 +70,15 @@ void COM_Lua_f(void);
 
 #define LUA_ErrInvalid(L, type) luaL_error(L, "accessed " type " doesn't exist anymore, please check 'valid' before using " type ".");
 
+// Deprecation warnings
+// Shows once upon use. Then doesn't show again.
+#define LUA_Deprecated(L,this_func,use_instead)\
+{\
+	static UINT8 seen = 0;\
+	if (!seen) {\
+		seen = 1;\
+		CONS_Alert(CONS_WARNING,"\"%s\" is deprecated and will be removed.\nUse \"%s\" instead.\n", this_func, use_instead);\
+	}\
+}
+
 #endif
