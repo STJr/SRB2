@@ -427,9 +427,6 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 ///	\note	obsoleted by cv_maxportals
 //#define PORTAL_LIMIT 8
 
-///	Fun experimental slope stuff!
-//#define SLOPENESS
-
 /// Kalaron/Eternity Engine slope code (SRB2CB ported)
 #define ESLOPE
 

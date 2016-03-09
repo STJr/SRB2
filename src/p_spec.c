@@ -6028,31 +6028,6 @@ void P_SpawnSpecials(INT32 fromnetsave)
 				P_AddRaiseThinker(lines[i].frontsector, &lines[i]);
 				break;
 
-#ifdef SLOPENESS
-			case 999:
-				sec = sides[*lines[i].sidenum].sector-sectors;
-				for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
-				{
-					size_t counting;
-
-					sectors[s].floorangle = ANGLE_45;
-					for (counting = 0; counting < sectors[s].linecount/2; counting++)
-					{
-						sectors[s].lines[counting]->v1->z = sectors[sec].floorheight;
-						CONS_Debug(DBG_GAMELOGIC, "Set it to %d\n", sectors[s].lines[counting]->v1->z>>FRACBITS);
-					}
-
-					for (counting = sectors[s].linecount/2; counting < sectors[s].linecount; counting++)
-					{
-						sectors[s].lines[counting]->v1->z = sectors[sec].ceilingheight;
-						CONS_Debug(DBG_GAMELOGIC, "Set it to %d\n", sectors[s].lines[counting]->v1->z>>FRACBITS);
-					}
-					sectors[s].special = 65535;
-					CONS_Debug(DBG_GAMELOGIC, "Found & Set slope!\n");
-				}
-				break;
-#endif
-
 			case 200: // Double light effect
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_CUTSPRITES|FF_DOUBLESHADOW, secthinkers);
 				break;
