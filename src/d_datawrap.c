@@ -47,7 +47,7 @@ char *DW_ReadStringn(DataWrap dw, size_t n)
 {
 	char *string = ZZ_Alloc(n+1);
 	char *p = string;
-	int i;
+	size_t i;
 	for (i = 0; i < n; i++, p++)
 	{
 		CheckEOF(dw,1);

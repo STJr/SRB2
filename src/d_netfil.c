@@ -61,8 +61,6 @@
 
 #include <errno.h>
 
-static void SendFile(INT32 node, const char *filename, UINT8 fileid);
-
 // sender structure
 typedef struct filetx_s
 {
@@ -338,74 +336,6 @@ void CL_LoadServerFiles(void)
 
 // little optimization to test if there is a file in the queue
 static INT32 filetosend = 0;
-
-static void SendFile(INT32 node, const char *filename, UINT8 fileid)
-{
-	filetx_t **q;
-	filetx_t *p;
-	INT32 i;
-	char wadfilename[MAX_WADPATH];
-
-	q = &transfer[node].txlist;
-	while (*q)
-		q = &((*q)->next);
-	p = *q = (filetx_t *)malloc(sizeof (filetx_t));
-	if (p)
-		memset(p, 0, sizeof (filetx_t));
-	else
-		I_Error("SendFile: No more ram\n");
-	p->filename = (char *)malloc(MAX_WADPATH);
-	if (!p->filename)
-		I_Error("SendFile: No more ram\n");
-
-	// a minimum of security, can get only file in srb2 direcory
-	strlcpy(p->filename, filename, MAX_WADPATH);
-	nameonly(p->filename);
-
-	// check first in wads loaded the majority of case
-	for (i = 0; wadfiles[i]; i++)
-	{
-		strlcpy(wadfilename, wadfiles[i]->filename, MAX_WADPATH);
-		nameonly(wadfilename);
-		if (!stricmp(wadfilename, p->filename))
-		{
-			// copy filename with full path
-			strlcpy(p->filename, wadfiles[i]->filename, MAX_WADPATH);
-			break;
-		}
-	}
-
-	if (!wadfiles[i])
-	{
-		DEBFILE(va("%s not found in wadfiles\n", filename));
-		// this formerly checked if (!findfile(p->filename, NULL, true))
-
-		// not found
-		// don't inform client (probably hacker)
-		DEBFILE(va("Client %d request %s: not found\n", node, filename));
-		free(p->filename);
-		free(p);
-		*q = NULL;
-		return;
-	}
-
-	if (wadfiles[i]->filesize > (UINT32)cv_maxsend.value * 1024)
-	{
-		// too big
-		// don't inform client (client sucks, man)
-		DEBFILE(va("Client %d request %s: file too big, not sending\n", node, filename));
-		free(p->filename);
-		free(p);
-		*q = NULL;
-		return;
-	}
-
-	DEBFILE(va("Sending file %s (id=%d) to %d\n", filename, fileid, node));
-	p->ram = SF_FILE;
-	p->fileid = fileid;
-	p->next = NULL; // end of list
-	filetosend++;
-}
 
 void SendRam(INT32 node, void *data, size_t size, freemethod_t freemethod, UINT8 fileid)
 {

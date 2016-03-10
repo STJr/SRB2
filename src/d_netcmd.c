@@ -37,7 +37,6 @@
 #include "d_main.h"
 #include "m_random.h"
 #include "f_finale.h"
-#include "mserv.h"
 #include "md5.h"
 #include "z_zone.h"
 #include "lua_script.h"
@@ -442,9 +441,6 @@ void D_RegisterServerCommands(void)
 	COM_AddCommand("archivetest", Command_Archivetest_f);
 #endif
 #endif
-
-	// for master server connection
-	AddMServCommands();
 
 	// p_mobj.c
 	CV_RegisterVar(&cv_itemrespawntime);

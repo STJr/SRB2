@@ -45,6 +45,7 @@
 #include "b_bot.h"
 #include "m_cond.h" // condition sets
 #include "md5.h" // demo checksums
+#include "d_enet.h"
 
 gameaction_t gameaction;
 gamestate_t gamestate = GS_NULL;
@@ -1839,7 +1840,6 @@ boolean G_Responder(event_t *ev)
 void G_Ticker(boolean run)
 {
 	UINT32 i;
-	INT32 buf;
 
 	P_MapStart();
 	// do player reborns if needed

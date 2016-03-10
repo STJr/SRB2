@@ -42,6 +42,8 @@
 #include "p_local.h" // camera, camera2
 #include "p_tick.h"
 
+#include "d_enet.h"
+
 #ifdef HWRENDER
 #include "hardware/hw_main.h"
 #endif

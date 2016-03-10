@@ -8,6 +8,9 @@ extern SINT8 nodetoplayer2[MAXNETNODES]; // say the numplayer for this node if a
 extern UINT8 playerpernode[MAXNETNODES]; // used specialy for scplitscreen
 extern boolean nodeingame[MAXNETNODES]; // set false as nodes leave game
 
+void D_NetOpen(void);
+boolean D_NetConnect(const char *hostname, const char *port);
+
 boolean Net_GetNetStat(void);
 void Net_AckTicker(void);
 boolean D_CheckNetGame(void);
@@ -17,3 +20,4 @@ void Net_CloseConnection(INT32 node);
 void Net_SendJoin(void);
 void Net_SendCharacter(void);
 void Net_SpawnPlayer(UINT8 pnum, UINT8 node);
+void Net_SendChat(char *line);

@@ -33,7 +33,6 @@ set(SRB2_CORE_SOURCES
 	m_queue.c
 	m_random.c
 	md5.c
-	mserv.c
 	s_sound.c
 	screen.c
 	sounds.c
@@ -95,7 +94,6 @@ set(SRB2_CORE_HEADERS
 	m_random.h
 	m_swap.h
 	md5.h
-	mserv.h
 	p5prof.h
 	s_sound.h
 	screen.h

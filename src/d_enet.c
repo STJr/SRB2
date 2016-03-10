@@ -9,6 +9,7 @@
 #include "d_datawrap.h"
 #include "g_game.h"
 #include "p_local.h"
+#include "d_main.h"
 
 UINT8 net_nodecount, net_playercount;
 UINT8 playernode[MAXPLAYERS];
@@ -594,15 +595,14 @@ static void ServerSendMapInfo(UINT8 node)
 void Net_ServerMessage(const char *fmt, ...)
 {
 	va_list argptr;
-	ENetPacket *packet;
 	UINT8 data[1+MAX_SERVER_MESSAGE];
 	UINT8 *buf = data;
 
 	WRITEUINT8(buf, SERVER_MESSAGE);
 	va_start(argptr, fmt);
-	vsnprintf(buf, MAX_SERVER_MESSAGE, fmt, argptr);
+	vsnprintf((char *)buf, MAX_SERVER_MESSAGE, fmt, argptr);
 	va_end(argptr);
-	buf += strlen(buf)+1;
+	buf += strlen((char *)buf)+1;
 
 	CONS_Printf("%s\n", data+1);
 	enet_host_broadcast(ServerHost, 0, enet_packet_create(data, buf-data, ENET_PACKET_FLAG_RELIABLE));
@@ -617,8 +617,8 @@ void Net_SendChat(char *line)
 	if (server)
 	{
 		WRITEUINT8(buf, SERVER_MESSAGE);
-		sprintf(buf, "\3<~%s> %s", cv_playername.string, line);
-		buf += strlen(buf)+1;
+		sprintf((char *)buf, "\3<~%s> %s", cv_playername.string, line);
+		buf += strlen((char *)buf)+1;
 		CONS_Printf("%s\n", data+1);
 	}
 	else

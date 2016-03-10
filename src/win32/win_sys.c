@@ -657,9 +657,6 @@ void I_Error(const char *error, ...)
 	if (!errorcount)
 	{
 		M_SaveConfig(NULL); // save game config, cvars..
-#ifndef NONET
-		D_SaveBan(); // save the ban list
-#endif
 		G_SaveGameData();
 	}
 
@@ -757,9 +754,6 @@ void I_Quit(void)
 		G_StopMetalRecording();
 
 	M_SaveConfig(NULL); // save game config, cvars..
-#ifndef NONET
-	D_SaveBan(); // save the ban list
-#endif
 	G_SaveGameData();
 
 	// maybe it needs that the ticcount continues,

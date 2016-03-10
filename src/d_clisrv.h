@@ -207,14 +207,6 @@ typedef struct
 #endif
 
 #define MAXSERVERLIST 64 // depends only on the display
-typedef struct
-{
-	SINT8 node;
-	serverinfo_pak info;
-} serverelem_t;
-
-extern serverelem_t serverlist[MAXSERVERLIST];
-extern UINT32 serverlistcount;
 extern INT32 mapchangepending;
 
 extern consvar_t cv_playbackspeed;
@@ -270,7 +262,6 @@ void SV_ResetServer(void);
 void CL_AddSplitscreenPlayer(void);
 void CL_RemoveSplitscreenPlayer(void);
 void CL_Reset(void);
-void D_SaveBan(void); // in the middle of frikking nowhere
 void CL_ClearPlayer(INT32 playernum);
 void CL_RemovePlayer(INT32 playernum);
 void CL_UpdateServerList(boolean internetsearch, INT32 room);

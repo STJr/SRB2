@@ -45,9 +45,6 @@ void M_StartControlPanel(void);
 // Called upon end of a mode attack run
 void M_EndModeAttackRun(void);
 
-// Called on new server add, or other reasons
-void M_SortServerList(void);
-
 // Draws a box with a texture inside as background for messages
 void M_DrawTextBox(INT32 x, INT32 y, INT32 width, INT32 boxlines);
 
@@ -212,7 +209,7 @@ typedef struct
 extern description_t description[32];
 extern description_t MP_Description[32];
 
-extern consvar_t cv_newgametype, cv_nextmap, cv_chooseskin, cv_serversort;
+extern consvar_t cv_newgametype, cv_nextmap, cv_chooseskin;
 extern CV_PossibleValue_t gametype_cons_t[];
 
 extern INT16 startmap;
@@ -301,5 +298,8 @@ void Screenshot_option_Onchange(void);
 	0,\
 	NULL\
 }
+
+// Netgame stuff
+void M_SetupNetgameChoosePlayer(void);
 
 #endif //__X_MENU__

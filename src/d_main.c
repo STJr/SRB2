@@ -67,11 +67,11 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 #include "m_cheat.h"
 #include "y_inter.h"
 #include "p_local.h" // chasecam
-#include "mserv.h" // ms_RoomId
 #include "m_misc.h" // screenshot functionality
 #include "dehacked.h" // Dehacked list test
 #include "m_cond.h" // condition initialization
 #include "fastcmp.h"
+#include "d_enet.h"
 
 #ifdef CMAKECONFIG
 #include "config.h"
@@ -477,23 +477,8 @@ static void D_Display(void)
 	//
 	if (!wipe)
 	{
-		if (cv_netstat.value)
-		{
-			char s[50];
-			Net_GetNetStat();
-
-			s[sizeof s - 1] = '\0';
-
+		//if (cv_netstat.value)
 			// NET TODO
-			//snprintf(s, sizeof s - 1, "get %d b/s", getbps);
-			//V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-ST_HEIGHT-40, V_YELLOWMAP, s);
-			//snprintf(s, sizeof s - 1, "send %d b/s", sendbps);
-			//V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-ST_HEIGHT-30, V_YELLOWMAP, s);
-			//snprintf(s, sizeof s - 1, "GameMiss %.2f%%", gamelostpercent);
-			//V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-ST_HEIGHT-20, V_YELLOWMAP, s);
-			//snprintf(s, sizeof s - 1, "SysMiss %.2f%%", lostpercent);
-			//V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-ST_HEIGHT-10, V_YELLOWMAP, s);
-		}
 
 		I_FinishUpdate(); // page flip or blit buffer
 		return;
@@ -1219,17 +1204,6 @@ void D_SRB2Main(void)
 
 	CONS_Printf("ST_Init(): Init status bar.\n");
 	ST_Init();
-
-	if (M_CheckParm("-room"))
-	{
-		if (!M_IsNextParm())
-			I_Error("usage: -room <room_id>\nCheck the Master Server's webpage for room ID numbers.\n");
-		ms_RoomId = atoi(M_GetNextParm());
-
-#ifdef UPDATE_ALERT
-		GetMODVersion_Console();
-#endif
-	}
 
 	// init all NETWORK
 	CONS_Printf("D_CheckNetGame(): Checking network game status.\n");

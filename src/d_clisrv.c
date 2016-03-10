@@ -33,7 +33,6 @@
 #include "m_misc.h"
 #include "am_map.h"
 #include "m_random.h"
-#include "mserv.h"
 #include "y_inter.h"
 #include "r_local.h"
 #include "m_argv.h"
@@ -71,8 +70,6 @@ char motd[254], server_context[8]; // Message of the Day, Unique Context (even w
 static tic_t nettics[MAXNETNODES]; // what tic the client have received
 static tic_t supposedtics[MAXNETNODES]; // nettics prevision for smaller packet
 static UINT8 nodewaiting[MAXNETNODES];
-static tic_t firstticstosend; // min of the nettics
-static tic_t tictoclear = 0; // optimize d_clearticcmd
 
 // client specific
 static ticcmd_t localcmds;
@@ -106,7 +103,6 @@ typedef struct textcmdtic_s
 } textcmdtic_t;
 
 ticcmd_t netcmds[MAXPLAYERS];
-static textcmdtic_t *textcmds[TEXTCMD_HASH_SIZE] = {NULL};
 
 
 static consvar_t cv_showjoinaddress = {"showjoinaddress", "On", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -189,6 +185,7 @@ void SendNetXCmd(netxcmd_t id, const void *param, size_t nparam)
 	//D_NetSendXCmd(id, param, nparam, consoleplayer);
 	UINT8 **p = (UINT8 **)&param;
 	(listnetxcmd[id])(p, consoleplayer);
+	(void)nparam;
 }
 
 // splitscreen player
@@ -197,6 +194,7 @@ void SendNetXCmd2(netxcmd_t id, const void *param, size_t nparam)
 	//D_NetSendXCmd(id, param, nparam, secondarydisplayplayer);
 	UINT8 **p = (UINT8 **)&param;
 	(listnetxcmd[id])(p, secondarydisplayplayer);
+	(void)nparam;
 }
 
 UINT8 GetFreeXCmdSize(void)
@@ -208,65 +206,6 @@ UINT8 GetFreeXCmdSize(void)
 static void D_FreeTextcmd(void)
 {
 	// NET TODO
-}
-
-// Gets the buffer for the specified ticcmd, or NULL if there isn't one
-static UINT8* D_GetExistingTextcmd(tic_t tic, INT32 playernum)
-{
-	textcmdtic_t *textcmdtic = textcmds[tic & (TEXTCMD_HASH_SIZE - 1)];
-	while (textcmdtic && textcmdtic->tic != tic) textcmdtic = textcmdtic->next;
-
-	// Do we have an entry for the tic? If so, look for player.
-	if (textcmdtic)
-	{
-		textcmdplayer_t *textcmdplayer = textcmdtic->playercmds[playernum & (TEXTCMD_HASH_SIZE - 1)];
-		while (textcmdplayer && textcmdplayer->playernum != playernum) textcmdplayer = textcmdplayer->next;
-
-		if (textcmdplayer) return textcmdplayer->cmd;
-	}
-
-	return NULL;
-}
-
-// Gets the buffer for the specified ticcmd, creating one if necessary
-static UINT8* D_GetTextcmd(tic_t tic, INT32 playernum)
-{
-	textcmdtic_t *textcmdtic = textcmds[tic & (TEXTCMD_HASH_SIZE - 1)];
-	textcmdtic_t **tctprev = &textcmds[tic & (TEXTCMD_HASH_SIZE - 1)];
-	textcmdplayer_t *textcmdplayer, **tcpprev;
-
-	// Look for the tic.
-	while (textcmdtic && textcmdtic->tic != tic)
-	{
-		tctprev = &textcmdtic->next;
-		textcmdtic = textcmdtic->next;
-	}
-
-	// If we don't have an entry for the tic, make it.
-	if (!textcmdtic)
-	{
-		textcmdtic = *tctprev = Z_Calloc(sizeof (textcmdtic_t), PU_STATIC, NULL);
-		textcmdtic->tic = tic;
-	}
-
-	tcpprev = &textcmdtic->playercmds[playernum & (TEXTCMD_HASH_SIZE - 1)];
-	textcmdplayer = *tcpprev;
-
-	// Look for the player.
-	while (textcmdplayer && textcmdplayer->playernum != playernum)
-	{
-		tcpprev = &textcmdplayer->next;
-		textcmdplayer = textcmdplayer->next;
-	}
-
-	// If we don't have an entry for the player, make it.
-	if (!textcmdplayer)
-	{
-		textcmdplayer = *tcpprev = Z_Calloc(sizeof (textcmdplayer_t), PU_STATIC, NULL);
-		textcmdplayer->playernum = playernum;
-	}
-
-	return textcmdplayer->cmd;
 }
 
 static void D_Clearticcmd(void)
@@ -337,58 +276,17 @@ void ReadLmpExtraData(UINT8 **demo_pointer, INT32 playernum)
 // end extra data function for lmps
 // -----------------------------------------------------------------
 
-#ifndef NONET
-#define JOININGAME
-#endif
-
 typedef enum
 {
 	cl_searching,
 	cl_downloadfiles,
 	cl_askjoin,
 	cl_waitjoinresponse,
-#ifdef JOININGAME
-	cl_downloadsavegame,
-#endif
 	cl_connected,
 	cl_aborted
 } cl_mode_t;
 
 static cl_mode_t cl_mode = cl_searching;
-
-// Player name send/load
-
-static void CV_SavePlayerNames(UINT8 **p)
-{
-	INT32 i = 0;
-	// Players in game only.
-	for (; i < MAXPLAYERS; ++i)
-	{
-		if (!playeringame[i])
-		{
-			WRITEUINT8(*p, 0);
-			continue;
-		}
-		WRITESTRING(*p, player_names[i]);
-	}
-}
-
-static void CV_LoadPlayerNames(UINT8 **p)
-{
-	INT32 i = 0;
-	char tmp_name[MAXPLAYERNAME+1];
-	tmp_name[MAXPLAYERNAME] = 0;
-
-	for (; i < MAXPLAYERS; ++i)
-	{
-		READSTRING(*p, tmp_name);
-		if (tmp_name[0] == 0)
-			continue;
-		if (tmp_name[MAXPLAYERNAME]) // overflow detected
-			I_Error("Received bad server config packet when trying to join");
-		memcpy(player_names[i], tmp_name, MAXPLAYERNAME+1);
-	}
-}
 
 #ifdef CLIENT_LOADINGSCREEN
 //
@@ -419,17 +317,6 @@ static inline void CL_DrawConnectionStatus(void)
 
 		switch (cl_mode)
 		{
-#ifdef JOININGAME
-			case cl_downloadsavegame:
-				cltext = M_GetText("Downloading game state...");
-				Net_GetNetStat();
-				V_DrawString(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-24, V_20TRANS|V_MONOSPACE,
-					va(" %4uK",fileneeded[lastfilenum].currentsize>>10));
-				// NET TODO
-				//V_DrawRightAlignedString(BASEVIDWIDTH/2+128, BASEVIDHEIGHT-24, V_20TRANS|V_MONOSPACE,
-				//	va("%3.1fK/s ", ((double)getbps)/1024));
-				break;
-#endif
 			case cl_askjoin:
 			case cl_waitjoinresponse:
 				cltext = M_GetText("Requesting to join...");
@@ -488,231 +375,6 @@ static boolean CL_SendJoin(void)
 	return true;
 }
 
-static void SV_SendServerInfo(INT32 node, tic_t servertime)
-{
-	// NET TODO
-}
-
-static void SV_SendPlayerInfo(INT32 node)
-{
-	// NET TODO
-}
-
-static boolean SV_SendServerConfig(INT32 node)
-{
-	// NET TODO
-	return true;
-}
-
-#ifdef JOININGAME
-#define SAVEGAMESIZE (768*1024)
-
-static void SV_SendSaveGame(INT32 node)
-{
-	size_t length, compressedlen;
-	UINT8 *savebuffer;
-	UINT8 *compressedsave;
-	UINT8 *buffertosend;
-
-	// first save it in a malloced buffer
-	savebuffer = (UINT8 *)malloc(SAVEGAMESIZE);
-	if (!savebuffer)
-	{
-		CONS_Alert(CONS_ERROR, M_GetText("No more free memory for savegame\n"));
-		return;
-	}
-
-	// Leave room for the uncompressed length.
-	save_p = savebuffer + sizeof(UINT32);
-
-	P_SaveNetGame();
-
-	length = save_p - savebuffer;
-	if (length > SAVEGAMESIZE)
-	{
-		free(savebuffer);
-		save_p = NULL;
-		I_Error("Savegame buffer overrun");
-	}
-
-	// Allocate space for compressed save: one byte fewer than for the
-	// uncompressed data to ensure that the compression is worthwhile.
-	compressedsave = malloc(length - 1);
-	if (!compressedsave)
-	{
-		CONS_Alert(CONS_ERROR, M_GetText("No more free memory for savegame\n"));
-		return;
-	}
-
-	// Attempt to compress it.
-	if((compressedlen = lzf_compress(savebuffer + sizeof(UINT32), length - sizeof(UINT32), compressedsave + sizeof(UINT32), length - sizeof(UINT32) - 1)))
-	{
-		// Compressing succeeded; send compressed data
-
-		free(savebuffer);
-
-		// State that we're compressed.
-		buffertosend = compressedsave;
-		WRITEUINT32(compressedsave, length - sizeof(UINT32));
-		length = compressedlen + sizeof(UINT32);
-	}
-	else
-	{
-		// Compression failed to make it smaller; send original
-
-		free(compressedsave);
-
-		// State that we're not compressed
-		buffertosend = savebuffer;
-		WRITEUINT32(savebuffer, 0);
-	}
-
-	SendRam(node, buffertosend, length, SF_RAM, 0);
-	save_p = NULL;
-}
-
-#define TMPSAVENAME "$$$.sav"
-
-
-static void CL_LoadReceivedSavegame(void)
-{
-	UINT8 *savebuffer = NULL;
-	size_t length, decompressedlen;
-	XBOXSTATIC char tmpsave[256];
-
-	sprintf(tmpsave, "%s" PATHSEP TMPSAVENAME, srb2home);
-
-	length = FIL_ReadFile(tmpsave, &savebuffer);
-
-	CONS_Printf(M_GetText("Loading savegame length %s\n"), sizeu1(length));
-	if (!length)
-	{
-		I_Error("Can't read savegame sent");
-		return;
-	}
-
-	save_p = savebuffer;
-
-	// Decompress saved game if necessary.
-	decompressedlen = READUINT32(save_p);
-	if(decompressedlen > 0)
-	{
-		UINT8 *decompressedbuffer = Z_Malloc(decompressedlen, PU_STATIC, NULL);
-		lzf_decompress(save_p, length - sizeof(UINT32), decompressedbuffer, decompressedlen);
-		Z_Free(savebuffer);
-		save_p = savebuffer = decompressedbuffer;
-	}
-
-	paused = false;
-	demoplayback = false;
-	titledemo = false;
-	automapactive = false;
-
-	// load a base level
-	playerdeadview = false;
-
-	if (P_LoadNetGame())
-	{
-		const INT32 actnum = mapheaderinfo[gamemap-1]->actnum;
-		CONS_Printf(M_GetText("Map is now \"%s"), G_BuildMapName(gamemap));
-		if (strcmp(mapheaderinfo[gamemap-1]->lvlttl, ""))
-		{
-			CONS_Printf(": %s", mapheaderinfo[gamemap-1]->lvlttl);
-			if (!(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE))
-				CONS_Printf(M_GetText("ZONE"));
-			if (actnum > 0)
-				CONS_Printf(" %2d", actnum);
-		}
-		CONS_Printf("\"\n");
-	}
-	else
-	{
-		CONS_Alert(CONS_ERROR, M_GetText("Can't load the level!\n"));
-		Z_Free(savebuffer);
-		save_p = NULL;
-		if (unlink(tmpsave) == -1)
-			CONS_Alert(CONS_ERROR, M_GetText("Can't delete %s\n"), tmpsave);
-		return;
-	}
-
-	// done
-	Z_Free(savebuffer);
-	save_p = NULL;
-	if (unlink(tmpsave) == -1)
-		CONS_Alert(CONS_ERROR, M_GetText("Can't delete %s\n"), tmpsave);
-	CON_ToggleOff();
-}
-#endif
-
-#ifndef NONET
-static void SendAskInfo(INT32 node, boolean viams)
-{
-	//if (server)
-	{// I'm the server, skip this.
-		// I'm the server, skip this.
-		cl_mode = cl_askjoin;
-		return;
-	}
-	// NET TODO
-}
-
-serverelem_t serverlist[MAXSERVERLIST];
-UINT32 serverlistcount = 0;
-
-static void SL_ClearServerList(INT32 connectedserver)
-{
-	UINT32 i;
-
-	for (i = 0; i < serverlistcount; i++)
-		if (connectedserver != serverlist[i].node)
-		{
-			Net_CloseConnection(serverlist[i].node);
-			serverlist[i].node = 0;
-		}
-	serverlistcount = 0;
-}
-
-static UINT32 SL_SearchServer(INT32 node)
-{
-	// NET TODO
-	return UINT32_MAX;
-}
-
-static void SL_InsertServer(serverinfo_pak* info, SINT8 node)
-{
-	UINT32 i;
-
-	// search if not already on it
-	i = SL_SearchServer(node);
-	if (i == UINT32_MAX)
-	{
-		// not found add it
-		if (serverlistcount >= MAXSERVERLIST)
-			return; // list full
-
-		if (info->version != VERSION)
-			return; // Not same version.
-
-		if (info->subversion != SUBVERSION)
-			return; // Close, but no cigar.
-
-		i = serverlistcount++;
-	}
-
-	serverlist[i].info = *info;
-	serverlist[i].node = node;
-
-	// resort server list
-	M_SortServerList();
-}
-
-void CL_UpdateServerList(boolean internetsearch, INT32 room)
-{
-	// NET TODO
-}
-
-#endif // ifndef NONET
-
 void CL_ConnectionSuccessful(void)
 {
 	if (cl_mode == cl_waitjoinresponse)
@@ -720,27 +382,16 @@ void CL_ConnectionSuccessful(void)
 }
 
 // use adaptive send using net_bandwidth and stat.sendbytes
-static void CL_ConnectToServer(boolean viams)
+static void CL_ConnectToServer(void)
 {
 	INT32 pnumnodes, nodewaited = net_nodecount, i;
 	boolean waitmore;
 	tic_t oldtic;
-#ifdef JOININGAME
-	XBOXSTATIC char tmpsave[256];
-
-	sprintf(tmpsave, "%s" PATHSEP TMPSAVENAME, srb2home);
-#endif
 
 	cl_mode = cl_askjoin;
 
 #ifdef CLIENT_LOADINGSCREEN
 	lastfilenum = 0;
-#endif
-
-#ifdef JOININGAME
-	// don't get a corrupt savegame error because tmpsave already exists
-	if (FIL_FileExists(tmpsave) && unlink(tmpsave) == -1)
-		I_Error("Can't delete %s\n", tmpsave);
 #endif
 
 	if (netgame)
@@ -788,17 +439,6 @@ static void CL_ConnectToServer(boolean viams)
 				if (CL_SendJoin()) // Send join request, server instantly connects.
 					cl_mode = server ? cl_connected : cl_waitjoinresponse;
 				break;
-#ifdef JOININGAME
-			case cl_downloadsavegame:
-				if (fileneeded[0].status == FS_FOUND)
-				{
-					// Gamestate is now handled within CL_LoadReceivedSavegame()
-					CL_LoadReceivedSavegame();
-					cl_mode = cl_connected;
-				} // don't break case continue to cl_connected
-				else
-					break;
-#endif
 			case cl_waitjoinresponse:
 			case cl_connected:
 			default:
@@ -867,51 +507,8 @@ static void CL_ConnectToServer(boolean viams)
 }
 
 #ifndef NONET
-typedef struct banreason_s
-{
-	char *reason;
-	struct banreason_s *prev; //-1
-	struct banreason_s *next; //+1
-} banreason_t;
-
-static banreason_t *reasontail = NULL; //last entry, use prev
-static banreason_t *reasonhead = NULL; //1st entry, use next
-
-static void Command_ShowBan(void) //Print out ban list
-{
-	// NET TODO
-}
-
-void D_SaveBan(void)
-{
-	// NET TODO
-}
-
-static void Ban_Add(const char *reason)
-{
-	// NET TODO
-}
-
-static void Command_ClearBans(void)
-{
-	// NET TODO
-}
-
-static void Ban_Load_File(boolean warning)
-{
-	// NET TODO
-}
-
-static void Command_ReloadBan(void)  //recheck ban.txt
-{
-	Ban_Load_File(true);
-}
-
 static void Command_connect(void)
 {
-	// Assume we connect directly.
-	boolean viams = false;
-
 	if (COM_Argc() < 2)
 	{
 		CONS_Printf(M_GetText(
@@ -932,39 +529,21 @@ static void Command_connect(void)
 
 	server = false;
 
-	if (!stricmp(COM_Argv(1), "self"))
+	if (netgame)
 	{
-		servernode = 0;
-		server = true;
-		/// \bug should be but...
-		//SV_SpawnServer();
+		CONS_Printf(M_GetText("You cannot connect while in a game. End this game first.\n"));
+		return;
 	}
 	else
 	{
-		// used in menu to connect to a server in the list
-		if (netgame && !stricmp(COM_Argv(1), "node"))
-		{
-			servernode = (SINT8)atoi(COM_Argv(2));
-
-			// Use MS to traverse NAT firewalls.
-			viams = true;
-		}
-		else if (netgame)
-		{
-			CONS_Printf(M_GetText("You cannot connect while in a game. End this game first.\n"));
-			return;
-		}
+		boolean success = false;
+		if (COM_Argc() >= 3)
+			success = D_NetConnect(COM_Argv(1), COM_Argv(2));
 		else
-		{
-			boolean success = false;
-			if (COM_Argc() >= 3)
-				success = D_NetConnect(COM_Argv(1), COM_Argv(2));
-			else
-				success = D_NetConnect(COM_Argv(1), NULL);
-			if (!success) {
-				M_StartMessage(M_GetText("Failed to connect to server.\n\nPress ESC\n"), NULL, MM_NOTHING);
-				return;
-			}
+			success = D_NetConnect(COM_Argv(1), NULL);
+		if (!success) {
+			M_StartMessage(M_GetText("Failed to connect to server.\n\nPress ESC\n"), NULL, MM_NOTHING);
+			return;
 		}
 	}
 
@@ -972,7 +551,7 @@ static void Command_connect(void)
 	SplitScreen_OnChange();
 	botingame = false;
 	botskin = 0;
-	CL_ConnectToServer(viams);
+	CL_ConnectToServer();
 }
 #endif
 
@@ -1161,7 +740,6 @@ static void Command_Nodes(void)
 {
 	INT32 i;
 	size_t maxlen = 0;
-	const char *address;
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
@@ -1202,46 +780,18 @@ static void Command_Ban(void)
 		XBOXSTATIC UINT8 buf[3 + MAX_REASONLENGTH];
 		UINT8 *p = buf;
 		const SINT8 pn = nametonum(COM_Argv(1));
-		const INT32 node = playernode[(INT32)pn];
+		//const INT32 node = playernode[(INT32)pn];
 
 		if (pn == -1 || pn == 0)
 			return;
 		else
 			WRITEUINT8(p, pn);
 		// NET TODO
-		//if (I_Ban && !I_Ban(node))
 		{
 			//CONS_Alert(CONS_WARNING, M_GetText("Too many bans! Geez, that's a lot of people you're excluding...\n"));
 			WRITEUINT8(p, KICK_MSG_GO_AWAY);
 			SendNetXCmd(XD_KICK, &buf, 2);
 		}
-		/*else
-		{
-			Ban_Add(COM_Argv(2));
-
-			if (COM_Argc() == 2)
-			{
-				WRITEUINT8(p, KICK_MSG_BANNED);
-				SendNetXCmd(XD_KICK, &buf, 2);
-			}
-			else
-			{
-				size_t i, j = COM_Argc();
-				char message[MAX_REASONLENGTH];
-
-				//Steal from the motd code so you don't have to put the reason in quotes.
-				strlcpy(message, COM_Argv(2), sizeof message);
-				for (i = 3; i < j; i++)
-				{
-					strlcat(message, " ", sizeof message);
-					strlcat(message, COM_Argv(i), sizeof message);
-				}
-
-				WRITEUINT8(p, KICK_MSG_CUSTOM_BAN);
-				WRITESTRINGN(p, message, MAX_REASONLENGTH);
-				SendNetXCmd(XD_KICK, &buf, p - buf);
-			}
-		}*/
 	}
 	else
 		CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
@@ -1450,9 +1000,6 @@ void D_ClientServerInit(void)
 	COM_AddCommand("getplayernum", Command_GetPlayerNum);
 	COM_AddCommand("kick", Command_Kick);
 	COM_AddCommand("ban", Command_Ban);
-	COM_AddCommand("clearbans", Command_ClearBans);
-	COM_AddCommand("showbanlist", Command_ShowBan);
-	COM_AddCommand("reloadbans", Command_ReloadBan);
 	COM_AddCommand("connect", Command_connect);
 	COM_AddCommand("nodes", Command_Nodes);
 #endif
@@ -1463,7 +1010,6 @@ void D_ClientServerInit(void)
 	CV_RegisterVar(&cv_allownewplayer);
 	CV_RegisterVar(&cv_joinnextround);
 	CV_RegisterVar(&cv_showjoinaddress);
-	Ban_Load_File(false);
 #endif
 
 	gametic = 0;
@@ -1766,7 +1312,7 @@ boolean SV_SpawnServer(void)
 
 		// non dedicated server just connect to itself
 		if (!dedicated)
-			CL_ConnectToServer(false);
+			CL_ConnectToServer();
 	}
 
 	return SV_AddWaitingPlayers();
@@ -1774,8 +1320,6 @@ boolean SV_SpawnServer(void)
 
 void SV_StopServer(void)
 {
-	tic_t i;
-
 	if (gamestate == GS_INTERMISSION)
 		Y_EndIntermission();
 	gamestate = wipegamestate = GS_NULL;
@@ -1836,14 +1380,16 @@ static void Local_Maketic(INT32 realtics)
 
 void SV_SpawnPlayer(INT32 playernum, INT32 x, INT32 y, angle_t angle)
 {
+	(void)playernum;
 	(void)x;
 	(void)y;
-	// TODO: Send everyone a player spawn message??
+	(void)angle;
+	// NET TODO: Send everyone a player spawn message??
 }
 
 void TryRunTics(tic_t realtics)
 {
-	int i;
+	tic_t i;
 
 	// the machine has lagged but it is not so bad
 	if (realtics > TICRATE/7)
@@ -1875,7 +1421,7 @@ void TryRunTics(tic_t realtics)
 	if (advancedemo)
 		D_StartTitle();
 	else
-		// TODO: re-impliment cv_playbackspeed for demos
+		// NET TODO: re-impliment cv_playbackspeed for demos
 		for (i = 0; i < realtics; i++)
 		{
 			DEBFILE(va("============ Running tic %d (local %d)\n", gametic, localgametic));
@@ -1890,7 +1436,6 @@ void NetUpdate(void)
 	static tic_t gametime = 0;
 	static tic_t resptime = 0;
 	tic_t nowtime;
-	INT32 i;
 	INT32 realtics;
 
 	nowtime = I_GetTime();
@@ -1912,8 +1457,6 @@ void NetUpdate(void)
 
 	// client send the command after a receive of the server
 	// the server send before because in single player is beter
-
-	MasterClient_Ticker(); // acking the master server
 
 	Net_AckTicker();
 	nowtime /= NEWTICRATERATIO;
