@@ -4981,7 +4981,7 @@ static void M_DrawStatsMaps(int location)
 	extraemblem_t *exemblem;
 
 	V_DrawString(20,  y-12, 0, "LEVEL NAME");
-	V_DrawString(248, y-12, 0, "EMBLEMS");
+	V_DrawString(228, y-12, 0, "CHAOS COINS");
 
 	while (statsMapList[++i] != -1)
 	{
@@ -5015,7 +5015,7 @@ static void M_DrawStatsMaps(int location)
 		}
 
 		if (i == -1)
-			V_DrawString(20, y, V_GREENMAP, "EXTRA EMBLEMS");
+			V_DrawString(20, y, V_GREENMAP, "EXTRA CHAOS COINS");
 		else if (i >= 0)
 		{
 			exemblem = &extraemblems[i];
@@ -5160,7 +5160,7 @@ static void M_DrawGameStats(void)
 		V_DrawRightAlignedString(BASEVIDWIDTH-32, 128, V_REDMAP, va("(%d unfinished)", mapsunfinished[1]));
 
 	sprintf(beststr, "%u", bestrings);
-	V_DrawString(32, 140, V_YELLOWMAP, "RINGS:");
+	V_DrawString(32, 140, V_YELLOWMAP, "EMBLEMS:");
 	V_DrawRightAlignedString(BASEVIDWIDTH-32, 140, 0, beststr);
 	if (mapsunfinished[2])
 		V_DrawRightAlignedString(BASEVIDWIDTH-32, 148, V_REDMAP, va("(%d unfinished)", mapsunfinished[2]));

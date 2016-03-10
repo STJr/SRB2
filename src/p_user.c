@@ -4166,7 +4166,8 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						{
 							player->pflags &= ~PF_JUMPED;
 							P_DoJump(player, false);
-							player->mo->momz = FixedMul(player->mo->momz, 3*FRACUNIT/4); // Half height
+							if (maptol & TOL_TD)
+								player->mo->momz = FixedMul(player->mo->momz, 3*FRACUNIT/4); // Half height in TD
 						}
 						P_InstaThrust(player->mo, player->mo->angle, FixedMul(actionspd, player->mo->scale));
 
