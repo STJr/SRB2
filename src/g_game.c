@@ -2866,7 +2866,7 @@ void G_NextLevel(void)
 
 static void G_DoWorldDone(void)
 {
-	if (server)
+	//if (server)
 	{
 		if (gametype == GT_COOP)
 			// don't reset player between maps

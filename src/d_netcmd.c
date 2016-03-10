@@ -1507,7 +1507,7 @@ void D_MapChange(INT32 mapnum, INT32 newgametype, boolean pultmode, boolean rese
 		mapchangepending = 0;
 		// spawn the server if needed
 		// reset players if there is a new one
-		if (!(adminplayer == consoleplayer) && SV_SpawnServer())
+		if (server && SV_SpawnServer())
 			buf[0] &= ~(1<<1);
 
 		// Kick bot from special stages
