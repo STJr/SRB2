@@ -6050,7 +6050,7 @@ static void M_StartServerMenu(INT32 choice)
 // CONNECT VIA IP
 // ==============
 
-static char setupm_ip[16];
+static char setupm_ip[16] = "127.0.0.1";
 
 // Connect using IP address Tails 11-19-2002
 static void M_ConnectIPMenu(INT32 choice)
