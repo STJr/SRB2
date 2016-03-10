@@ -286,87 +286,6 @@ static void P_DoFanAndGasJet(mobj_t *spring, mobj_t *object)
 	}
 }
 
-static void P_DoTailsCarry(player_t *sonic, player_t *tails)
-{
-	INT32 p;
-	fixed_t zdist; // z distance between the two players' bottoms
-
-	if ((tails->pflags & PF_CARRIED) && tails->mo->tracer == sonic->mo)
-		return;
-	if ((sonic->pflags & PF_CARRIED) && sonic->mo->tracer == tails->mo)
-		return;
-
-	if (!tails->powers[pw_tailsfly] && !(tails->charability == CA_FLY && tails->mo->state-states == S_PLAY_FLY_TIRED))
-		return;
-
-	if (tails->bot == 1)
-		return;
-
-	if (sonic->pflags & PF_NIGHTSMODE)
-		return;
-
-	if (sonic->mo->tracer && sonic->mo->tracer->type == MT_TUBEWAYPOINT
-	&& !(sonic->pflags & PF_ROPEHANG))
-		return; // don't steal players from zoomtubes!
-
-	if ((sonic->mo->eflags & MFE_VERTICALFLIP) != (tails->mo->eflags & MFE_VERTICALFLIP))
-		return; // Both should be in same gravity
-
-	if (tails->mo->eflags & MFE_VERTICALFLIP)
-	{
-		if (tails->mo->ceilingz - (tails->mo->z + tails->mo->height) < sonic->mo->height-FixedMul(2*FRACUNIT, sonic->mo->scale))
-			return;
-	}
-	else if (tails->mo->z - tails->mo->floorz < sonic->mo->height-FixedMul(2*FRACUNIT, sonic->mo->scale))
-		return; // No room to pick up this guy!
-
-	// Search in case another player is already being carried by this fox.
-	for (p = 0; p < MAXPLAYERS; p++)
-		if (playeringame[p] && players[p].mo
-		&& players[p].pflags & PF_CARRIED && players[p].mo->tracer == tails->mo)
-			return;
-
-	if (tails->mo->eflags & MFE_VERTICALFLIP)
-		zdist = (sonic->mo->z + sonic->mo->height) - (tails->mo->z + tails->mo->height);
-	else
-		zdist = tails->mo->z - sonic->mo->z;
-
-	if (zdist <= sonic->mo->height + FixedMul(FRACUNIT, sonic->mo->scale)
-		&& zdist > sonic->mo->height*2/3
-		&& P_MobjFlip(tails->mo)*sonic->mo->momz <= 0)
-	{
-	// Why block opposing teams from tailsflying each other?
-		// Sneaking into the hands of a flying tails player in Race might be a viable strategy, who knows.
-		/*
-		if (gametype == GT_RACE || gametype == GT_COMPETITION
-			|| (netgame && (tails->spectator || sonic->spectator))
-			|| (G_TagGametype() && (!(tails->pflags & PF_TAGIT) != !(sonic->pflags & PF_TAGIT)))
-			|| (gametype == GT_MATCH)
-			|| (G_GametypeHasTeams() && tails->ctfteam != sonic->ctfteam))
-			sonic->pflags &= ~PF_CARRIED; */
-		if (tails->spectator || sonic->spectator)
-			sonic->pflags &= ~PF_CARRIED;
-		else
-		{
-			if (sonic-players == consoleplayer && botingame)
-				CV_SetValue(&cv_analog2, false);
-			P_ResetPlayer(sonic);
-			P_SetTarget(&sonic->mo->tracer, tails->mo);
-			sonic->pflags |= PF_CARRIED;
-			S_StartSound(sonic->mo, sfx_s3k4a);
-			P_UnsetThingPosition(sonic->mo);
-			sonic->mo->x = tails->mo->x;
-			sonic->mo->y = tails->mo->y;
-			P_SetThingPosition(sonic->mo);
-		}
-	}
-	else {
-		if (sonic-players == consoleplayer && botingame)
-			CV_SetValue(&cv_analog2, true);
-		sonic->pflags &= ~PF_CARRIED;
-	}
-}
-
 //
 // PIT_CheckThing
 //
@@ -871,11 +790,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	// Force solid players in hide and seek to avoid corner stacking.
 	if (cv_tailspickup.value && gametype != GT_HIDEANDSEEK)
 	{
-		if (tmthing->player && thing->player)
-		{
-			P_DoTailsCarry(thing->player, tmthing->player);
-			return true;
-		}
+		// NET TODO: P_DoTailsCarry
 	}
 	else if (thing->player) {
 		if (thing->player-players == consoleplayer && botingame)
