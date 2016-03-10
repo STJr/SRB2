@@ -180,7 +180,9 @@ static void ServerHandlePacket(UINT8 node, DataWrap data)
 		player->cmd.angleturn = ghost.cmd.angleturn;
 		player->cmd.aiming = ghost.cmd.aiming;
 		player->cmd.buttons = ghost.cmd.buttons;
+		P_MapStart();
 		P_TeleportMove(player->mo, ghost.x, ghost.y, ghost.z);
+		P_MapEnd();
 		break;
 	}
 
