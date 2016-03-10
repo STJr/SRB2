@@ -10,6 +10,8 @@ compiler:
   - clang
 
 cache:
+  apt:  true
+  ccache: true
   directories:
   - $HOME/srb2_cache
 
