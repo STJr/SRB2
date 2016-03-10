@@ -787,12 +787,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		}
 	}
 
-	// Force solid players in hide and seek to avoid corner stacking.
-	if (cv_tailspickup.value && gametype != GT_HIDEANDSEEK)
-	{
-		// NET TODO: P_DoTailsCarry
-	}
-	else if (thing->player) {
+	// NET TODO: P_DoTailsCarry
+	if (thing->player) {
 		if (thing->player-players == consoleplayer && botingame)
 			CV_SetValue(&cv_analog2, true);
 		thing->player->pflags &= ~PF_CARRIED;
