@@ -10,6 +10,7 @@
 #include "g_game.h"
 #include "p_local.h"
 #include "d_main.h"
+#include "i_system.h"
 
 UINT8 net_nodecount, net_playercount;
 UINT8 playernode[MAXPLAYERS];
@@ -19,6 +20,9 @@ UINT8 playerpernode[MAXNETNODES]; // used specialy for scplitscreen
 boolean nodeingame[MAXNETNODES]; // set false as nodes leave game
 
 #define MAX_SERVER_MESSAGE 320
+
+static tic_t lastMove;
+static ticcmd_t lastCmd;
 
 enum {
 	CHANNEL_GENERAL = 0,
@@ -176,9 +180,7 @@ static void ServerHandlePacket(UINT8 node, DataWrap data)
 		player->cmd.angleturn = ghost.cmd.angleturn;
 		player->cmd.aiming = ghost.cmd.aiming;
 		player->cmd.buttons = ghost.cmd.buttons;
-		player->mo->x = ghost.x;
-		player->mo->y = ghost.y;
-		player->mo->z = ghost.z;
+		P_TeleportMove(player->mo, ghost.x, ghost.y, ghost.z);
 		break;
 	}
 
@@ -274,14 +276,9 @@ static void ClientHandlePacket(UINT8 node, DataWrap data)
 
 		mobj->angle = DW_ReadUINT8(data) << 24;
 
-		mobj->state = &states[DW_ReadUINT16(data)];
-		mobj->sprite = mobj->state->sprite;
-		if (mobj->sprite == SPR_PLAY) {
-			mobj->sprite2 = mobj->state->frame;
-			mobj->frame = DW_ReadUINT8(data);
-		}
-		else
-			mobj->frame = mobj->state->frame;
+		mobj->sprite = SPR_PLAY;
+		mobj->sprite2 = DW_ReadUINT8(data);
+		mobj->frame = DW_ReadUINT8(data);
 		mobj->tics = -1;
 		break;
 	}
@@ -420,6 +417,7 @@ void D_NetOpen(void)
 	nodeingame[servernode] = true;
 	net_nodecount = 1;
 	net_playercount = 0;
+	lastMove = I_GetTime();
 }
 
 boolean D_NetConnect(const char *hostname, const char *port)
@@ -433,6 +431,8 @@ boolean D_NetConnect(const char *hostname, const char *port)
 
 	netgame = multiplayer = true;
 	servernode = 1;
+	lastMove = I_GetTime();
+	memset(&lastCmd, 0, sizeof(ticcmd_t));
 
 	enet_address_set_host(&address, hostname);
 	address.port = 5029;
@@ -660,6 +660,12 @@ static void Net_SendMove(void)
 	if (server || !addedtogame || !players[consoleplayer].mo)
 		return;
 
+	// only update once a second unless buttons changed.
+	if (lastMove+TICRATE < I_GetTime() && !memcmp(&lastCmd, &players[consoleplayer].cmd, sizeof(ticcmd_t)))
+		return;
+	lastMove = I_GetTime();
+	G_CopyTiccmd(&lastCmd, &players[consoleplayer].cmd, 1);
+
 	WRITEUINT8(buf, CLIENT_MOVE);
 	WRITESINT8(buf, players[consoleplayer].cmd.forwardmove);
 	WRITESINT8(buf, players[consoleplayer].cmd.sidemove);
@@ -701,8 +707,10 @@ static void Net_MovePlayers(void)
 	ENetPacket *packet;
 	UINT8 data[18], *buf, i;
 
-	if (!server)
+	if (!server || lastMove == I_GetTime())
 		return;
+
+	lastMove = I_GetTime();
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
@@ -719,9 +727,11 @@ static void Net_MovePlayers(void)
 		WRITEINT16(buf, players[i].mo->momy >> 8);
 		WRITEINT16(buf, players[i].mo->momz >> 8);
 		WRITEUINT8(buf, players[i].mo->angle >> 24);
-		WRITEUINT16(buf, players[i].mo->state - states);
 		if (players[i].mo->sprite == SPR_PLAY)
-			WRITEUINT8(buf, players[i].mo->frame);
+			WRITEUINT8(buf, players[i].mo->sprite2);
+		else
+			WRITEUINT8(buf, SPR2_STND);
+		WRITEUINT8(buf, players[i].mo->frame);
 
 		packet = enet_packet_create(data, buf-data, 0);
 		enet_host_broadcast(ServerHost, CHANNEL_MOVE, packet);
