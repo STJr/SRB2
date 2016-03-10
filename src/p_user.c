@@ -8788,18 +8788,12 @@ void P_PlayerThink(player_t *player)
 			}
 
 			if (i == MAXPLAYERS)
-			{
-				if (server)
-					SendNetXCmd(XD_EXITLEVEL, NULL, 0);
-			}
+				SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 			else
 				player->exiting = 3;
 		}
 		else
-		{
-			if (server)
-				SendNetXCmd(XD_EXITLEVEL, NULL, 0);
-		}
+			SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 	}
 
 	// check water content, set stuff in mobj

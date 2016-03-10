@@ -3709,14 +3709,15 @@ static void Command_Mapmd5_f(void)
 
 static void Command_ExitLevel_f(void)
 {
-	if (!(netgame || (multiplayer && gametype != GT_COOP)) && !cv_debug)
+	// NET TODO
+	/*if (!(netgame || (multiplayer && gametype != GT_COOP)) && !cv_debug)
 		CONS_Printf(M_GetText("This only works in a netgame.\n"));
 	else if (!(server || (adminplayer == consoleplayer)))
 		CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
 	else if (gamestate != GS_LEVEL || demoplayback)
 		CONS_Printf(M_GetText("You must be in a level to use this.\n"));
-	else
-		SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+	else*/
+	SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 }
 
 static void Got_ExitLevelcmd(UINT8 **cp, INT32 playernum)
