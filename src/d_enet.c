@@ -698,7 +698,7 @@ void Net_SpawnPlayer(UINT8 pnum, UINT8 node)
 		return;
 
 	WRITEUINT8(buf, SERVER_SPAWN);
-	WRITEUINT16(buf, pnum+1);
+	WRITEUINT16(buf, playernode[pnum]+1);
 	WRITEINT16(buf, players[pnum].mo->x >> 16);
 	WRITEINT16(buf, players[pnum].mo->y >> 16);
 	WRITEINT16(buf, players[pnum].mo->z >> 16);
@@ -730,7 +730,7 @@ static void Net_MovePlayers(void)
 
 		buf = net_buffer;
 		WRITEUINT8(buf, SERVER_MOVE);
-		WRITEUINT16(buf, i+1);
+		WRITEUINT16(buf, playernode[i]+1);
 		WRITEINT16(buf, players[i].mo->x >> 16);
 		WRITEINT16(buf, players[i].mo->y >> 16);
 		WRITEINT16(buf, players[i].mo->z >> 16);
