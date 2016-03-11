@@ -83,10 +83,21 @@ static void ServerSendMapInfo(UINT8 node);
 static void Net_SendMove(void);
 static void Net_MovePlayers(void);
 
-boolean Net_GetNetStat(void)
+void Net_GetNetStat(UINT8 node, UINT32 *ping, UINT32 *packetLoss)
 {
-	// set getbps, sendbps, gamelostpercent, lostpercent, etc.
-	return false;
+	ENetPeer *peer;
+
+	I_Assert(node < MAXNETNODES);
+	I_Assert(nodeingame[node]);
+
+	peer = nodetopeer[node];
+	if (peer == NULL)
+		return;
+
+	if (ping)
+		*ping = peer->lastRoundTripTime;
+	if (packetLoss)
+		*packetLoss = peer->packetLoss;
 }
 
 static void DisconnectNode(UINT8 node, UINT8 why)

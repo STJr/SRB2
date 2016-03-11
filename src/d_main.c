@@ -477,8 +477,19 @@ static void D_Display(void)
 	//
 	if (!wipe)
 	{
-		//if (cv_netstat.value)
-			// NET TODO
+		if (cv_netstat.value && netgame)
+		{
+			char stat[50];
+			UINT32 ping = 0, loss = 0;
+
+			stat[sizeof stat - 1] = '\0';
+			if (!server)
+				Net_GetNetStat(servernode, &ping, &loss);
+			snprintf(stat, sizeof stat - 1, "ping: %u ms", ping);
+			V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-20, V_YELLOWMAP|V_SNAPTORIGHT|V_SNAPTOBOTTOM, stat);
+			snprintf(stat, sizeof stat - 1, "loss: %u%%", loss);
+			V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-10, V_YELLOWMAP|V_SNAPTORIGHT|V_SNAPTOBOTTOM, stat);
+		}
 
 		I_FinishUpdate(); // page flip or blit buffer
 		return;

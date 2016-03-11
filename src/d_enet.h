@@ -11,7 +11,7 @@ extern boolean nodeingame[MAXNETNODES]; // set false as nodes leave game
 void D_NetOpen(void);
 boolean D_NetConnect(const char *hostname, const char *port);
 
-boolean Net_GetNetStat(void);
+void Net_GetNetStat(UINT8 node, UINT32 *ping, UINT32 *packetLoss);
 void Net_AckTicker(void);
 void D_CheckNetGame(void);
 void D_CloseConnection(void);
