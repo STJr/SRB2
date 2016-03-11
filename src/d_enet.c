@@ -676,12 +676,15 @@ static void Net_SendMove(void)
 {
 	ENetPacket *packet;
 	UINT8 *buf = net_buffer;
+	boolean reliable = false;
 
 	if (!netgame || server || !addedtogame || !players[consoleplayer].mo)
 		return;
 
 	// only update once a second unless buttons changed.
-	if (lastMove+TICRATE < I_GetTime() && !memcmp(&lastCmd, &players[consoleplayer].cmd, sizeof(ticcmd_t)))
+	if (memcmp(&lastCmd, &players[consoleplayer].cmd, sizeof(ticcmd_t)))
+		reliable = true;
+	if (lastMove+TICRATE < I_GetTime() && !reliable)
 		return;
 	lastMove = I_GetTime();
 	G_CopyTiccmd(&lastCmd, &players[consoleplayer].cmd, 1);
@@ -696,7 +699,7 @@ static void Net_SendMove(void)
 	WRITEFIXED(buf, players[consoleplayer].mo->y);
 	WRITEFIXED(buf, players[consoleplayer].mo->z);
 
-	packet = enet_packet_create(net_buffer, buf-net_buffer, 0);
+	packet = enet_packet_create(net_buffer, buf-net_buffer, reliable ? ENET_PACKET_FLAG_RELIABLE : 0);
 	enet_peer_send(nodetopeer[servernode], CHANNEL_MOVE, packet);
 }
 
