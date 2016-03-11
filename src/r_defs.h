@@ -369,14 +369,6 @@ typedef struct sector_s
 	double lineoutLength;
 #endif // ----- end special tricks -----
 
-	// ZDoom C++ to Legacy C conversion (for slopes)
-	// store floor and ceiling planes instead of heights
-	//secplane_t floorplane, ceilingplane;
-#ifdef SLOPENESS
-	//fixed_t floortexz, ceilingtexz; // [RH] used for wall texture mapping
-	angle_t floorangle;
-#endif
-
 	// This points to the master's floorheight, so it can be changed in realtime!
 	fixed_t *gravity; // per-sector gravity
 	boolean verticalflip; // If gravity < 0, then allow flipped physics
