@@ -390,6 +390,7 @@ void Net_AckTicker(void)
 			net_nodecount--;
 			nodetopeer[pdata->node] = NULL;
 			nodeingame[pdata->node] = false;
+			nodetoplayer[pdata->node] = -1;
 			Z_Free(pdata);
 			e.peer->data = NULL;
 			break;
