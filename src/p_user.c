@@ -9010,6 +9010,10 @@ void P_PlayerThink(player_t *player)
 	// Counters, time dependent power ups.
 	// Time Bonus & Ring Bonus count settings
 
+	// Only do these counters at 35 FPS
+	if ((gametic % NEWTICRATERATIO) != 0)
+		return;
+
 	// Strength counts up to diminish fade.
 	if (player->powers[pw_sneakers] && player->powers[pw_sneakers] < UINT16_MAX)
 		player->powers[pw_sneakers]--;
