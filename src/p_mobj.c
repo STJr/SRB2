@@ -2306,10 +2306,7 @@ static boolean P_ZMovement(mobj_t *mo)
 		mo->momz += mo->pmomz;
 		mo->eflags &= ~MFE_APPLYPMOMZ;
 	}
-	if (mo->player)
-		mo->z += mo->momz / NEWTICRATERATIO;
-	else
-		mo->z += mo->momz;
+	mo->z += mo->momz;
 
 	switch (mo->type)
 	{
@@ -2767,7 +2764,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 		mo->eflags &= ~MFE_APPLYPMOMZ;
 	}
 
-	mo->z += mo->momz;
+	mo->z += mo->momz / NEWTICRATERATIO;
 
 	// Have player fall through floor?
 	if (mo->player->playerstate == PST_DEAD
