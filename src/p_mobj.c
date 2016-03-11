@@ -1476,6 +1476,8 @@ void P_CheckGravity(mobj_t *mo, boolean affect)
 				mo->eflags ^= MFE_VERTICALFLIP;
 			}
 		}
+
+		gravityadd /= NEWTICRATERATIO;
 	}
 	else
 	{
