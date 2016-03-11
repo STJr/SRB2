@@ -43,6 +43,18 @@ INT16 DW_ReadINT16(DataWrap dw)
 	return READINT16(dw->p);
 }
 
+INT32 DW_ReadINT32(DataWrap dw)
+{
+	CheckEOF(dw, 4);
+	return READINT32(dw->p);
+}
+
+fixed_t DW_ReadFixed(DataWrap dw)
+{
+	CheckEOF(dw, 4);
+	return READFIXED(dw->p);
+}
+
 char *DW_ReadStringn(DataWrap dw, size_t n)
 {
 	char *string = ZZ_Alloc(n+1);

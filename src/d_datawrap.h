@@ -7,13 +7,16 @@ typedef struct DataWrap_s {
 	jmp_buf	*eofjmp;
 } *DataWrap;
 
-UINT8 DW_ReadUINT8(struct DataWrap_s *);
-UINT16 DW_ReadUINT16(struct DataWrap_s *);
-UINT32 DW_ReadUINT32(struct DataWrap_s *);
+UINT8 DW_ReadUINT8(DataWrap);
+UINT16 DW_ReadUINT16(DataWrap);
+UINT32 DW_ReadUINT32(DataWrap);
 
-SINT8 DW_ReadSINT8(struct DataWrap_s *);
-INT16 DW_ReadINT16(struct DataWrap_s *);
+SINT8 DW_ReadSINT8(DataWrap);
+INT16 DW_ReadINT16(DataWrap);
+INT32 DW_ReadINT32(DataWrap);
 
-char *DW_ReadStringn(struct DataWrap_s *, size_t n);
+fixed_t DW_ReadFixed(DataWrap);
+
+char *DW_ReadStringn(DataWrap, size_t n);
 
 DataWrap D_NewDataWrap(const void *data, size_t len, jmp_buf *eofjmp);
