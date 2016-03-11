@@ -438,10 +438,6 @@ consvar_t cv_fireaxis2 = {"joyaxis2_fire", "None", CV_SAVE, joyaxis_cons_t, NULL
 consvar_t cv_firenaxis2 = {"joyaxis2_firenormal", "None", CV_SAVE, joyaxis_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 #endif
 
-#ifdef SEENAMES
-player_t *seenplayer; // player we're aiming at right now
-#endif
-
 char player_names[MAXPLAYERS][MAXPLAYERNAME+1];
 
 INT16 rw_maximums[NUM_WEAPONS] =

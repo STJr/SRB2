@@ -6630,10 +6630,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	"S_SRB1_GENREX1",
 	"S_SRB1_GENREX2",
-
-#ifdef SEENAMES
-	"S_NAMECHECK",
-#endif
 };
 
 // RegEx to generate this from info.h: ^\tMT_([^,]+), --> \t"MT_\1",
@@ -7142,9 +7138,6 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_SRB1_METALSONIC",
 	"MT_SRB1_GOLDBOT",
 	"MT_SRB1_GENREX",
-#ifdef SEENAMES
-	"MT_NAMECHECK",
-#endif
 };
 
 static const char *const MOBJFLAG_LIST[] = {

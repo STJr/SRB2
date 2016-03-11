@@ -1276,9 +1276,6 @@ static menuitem_t OP_GameOptionsMenu[] =
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
 	                      NULL, "HUD Visibility",         &cv_translucenthud, 50},
 	{IT_STRING | IT_CVAR, NULL, "Timer Display",          &cv_timetic,     60},
-#ifdef SEENAMES
-	{IT_STRING | IT_CVAR, NULL, "HUD Player Names",       &cv_seenames,    80},
-#endif
 	{IT_STRING | IT_CVAR, NULL, "Log Hazard Damage",      &cv_hazardlog,   90},
 
 	{IT_STRING | IT_CVAR, NULL, "Console Back Color",     &cons_backcolor, 100},

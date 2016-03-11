@@ -3059,9 +3059,6 @@ state_t states[NUMSTATES] =
 
 	{SPR_SRBO, 0, 2, {A_Look}, 0, 0, S_SRB1_GENREX1}, // S_SRB1_GENREX1
 	{SPR_SRBO, 0, 2, {A_BuzzFly}, 0, 0, S_SRB1_GENREX2}, // S_SRB1_GENREX2
-#ifdef SEENAMES
-	{SPR_NULL, 0, 1, {NULL}, 0, 0, S_NULL}, // S_NAMECHECK
-#endif
 };
 
 mobjinfo_t mobjinfo[NUMMOBJTYPES] =

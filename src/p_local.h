@@ -244,9 +244,6 @@ mobj_t *P_SpawnPointMissile(mobj_t *source, fixed_t xa, fixed_t ya, fixed_t za, 
 mobj_t *P_SpawnAlteredDirectionMissile(mobj_t *source, mobjtype_t type, fixed_t x, fixed_t y, fixed_t z, INT32 shiftingAngle);
 mobj_t *P_SPMAngle(mobj_t *source, mobjtype_t type, angle_t angle, UINT8 aimtype, UINT32 flags2);
 #define P_SpawnPlayerMissile(s,t,f) P_SPMAngle(s,t,s->angle,true,f)
-#ifdef SEENAMES
-#define P_SpawnNameFinder(s,t) P_SPMAngle(s,t,s->angle,true,0)
-#endif
 void P_ColorTeamMissile(mobj_t *missile, player_t *source);
 SINT8 P_MobjFlip(mobj_t *mobj);
 boolean P_WeaponOrPanel(mobjtype_t type);

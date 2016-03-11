@@ -310,31 +310,6 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	|| (thing->player && thing->player->spectator))
 		return true;
 
-#ifdef SEENAMES
-  // Do name checks all the way up here
-  // So that NOTHING ELSE can see MT_NAMECHECK because it is client-side.
-	if (tmthing->type == MT_NAMECHECK)
-	{
-	  // Ignore things that aren't players, ignore spectators, ignore yourself.
-		// (also don't bother to check that tmthing->target->player is non-NULL because we're not actually using it here.)
-		if (!thing->player || thing->player->spectator || (tmthing->target && thing->player == tmthing->target->player))
-			return true;
-
-		// Now check that you actually hit them.
-		blockdist = thing->radius + tmthing->radius;
-		if (abs(thing->x - tmx) >= blockdist || abs(thing->y - tmy) >= blockdist)
-			return true; // didn't hit it
-		// see if it went over / under
-		if (tmthing->z > thing->z + thing->height)
-			return true; // overhead
-		if (tmthing->z + tmthing->height < thing->z)
-			return true; // underneath
-
-		seenplayer = thing->player;
-		return false;
-	}
-#endif
-
 	// Metal Sonic destroys tiny baby objects.
 	if (tmthing->type == MT_METALSONIC_RACE
 	&& (thing->flags & (MF_MISSILE|MF_ENEMY|MF_BOSS) || thing->type == MT_SPIKE))

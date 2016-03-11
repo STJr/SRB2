@@ -4881,7 +4881,6 @@ static void P_SpectatorMovement(player_t *player)
 	else if (cmd->buttons & BT_USE)
 		player->mo->z -= FRACUNIT*16;
 
-	// Aiming needed for SEENAMES, etc.
 	// We may not need to fire as a spectator, but this is still handy!
 	player->aiming = cmd->aiming<<FRACBITS;
 
@@ -8656,32 +8655,6 @@ void P_PlayerThink(player_t *player)
 			return;
 	}
 
-#ifdef SEENAMES
-	if (netgame && player == &players[displayplayer] && !(leveltime % (TICRATE/5)))
-	{
-		seenplayer = NULL;
-
-		if (cv_seenames.value && cv_allowseenames.value &&
-			!(G_TagGametype() && (player->pflags & PF_TAGIT)))
-		{
-			mobj_t *mo = P_SpawnNameFinder(player->mo, MT_NAMECHECK);
-
-			if (mo)
-			{
-				short int i;
-				mo->flags |= MF_NOCLIPHEIGHT;
-				for (i = 0; i < 32; i++)
-				{
-					// Debug drawing
-//					if (i&1)
-//						P_SpawnMobj(mo->x, mo->y, mo->z, MT_SPARK);
-					if (P_RailThinker(mo))
-						break; // mobj was removed (missile hit a wall) or couldn't move
-				}
-			}
-		}
-	}
-#endif
 	if (player->pflags & PF_GLIDING)
 	{
 		if (player->panim != PA_ABILITY)

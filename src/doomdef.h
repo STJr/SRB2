@@ -465,9 +465,6 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 ///	\todo	Remove this define.
 #define BLUE_SPHERES // Blue spheres for future use.
 
-///	See name of player in your crosshair
-#define SEENAMES
-
 ///	Who put weights on my recycler?  ... Inuyasha did.
 ///	\note	XMOD port.
 //#define WEIGHTEDRECYCLER

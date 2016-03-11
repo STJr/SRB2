@@ -1891,21 +1891,6 @@ static void ST_overlayDrawer(void)
 
 void ST_Drawer(boolean refresh)
 {
-#ifdef SEENAMES
-	if (cv_seenames.value && cv_allowseenames.value && displayplayer == consoleplayer && seenplayer && seenplayer->mo)
-	{
-		if (cv_seenames.value == 1)
-			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT/2 + 15, V_HUDTRANSHALF, player_names[seenplayer-players]);
-		else if (cv_seenames.value == 2)
-			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT/2 + 15, V_HUDTRANSHALF,
-			va("%s%s", G_GametypeHasTeams() ? ((seenplayer->ctfteam == 1) ? "\x85" : "\x84") : "", player_names[seenplayer-players]));
-		else //if (cv_seenames.value == 3)
-			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT/2 + 15, V_HUDTRANSHALF,
-			va("%s%s", !G_RingSlingerGametype() || (G_GametypeHasTeams() && players[consoleplayer].ctfteam == seenplayer->ctfteam)
-			 ? "\x83" : "\x85", player_names[seenplayer-players]));
-	}
-#endif
-
 	// force a set of the palette by using doPaletteStuff()
 	(void)refresh; //?
 	if (vid.recalc)
