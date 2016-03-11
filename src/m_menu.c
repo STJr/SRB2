@@ -4779,13 +4779,13 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	if (abs(itemOn*128*FRACUNIT - char_scroll) > 256*FRACUNIT)
 		char_scroll = itemOn*128*FRACUNIT;
 	else if (itemOn*128*FRACUNIT - char_scroll > 128*FRACUNIT)
-		char_scroll += 48*FRACUNIT;
+		char_scroll += 48*FRACUNIT/NEWTICRATERATIO;
 	else if (itemOn*128*FRACUNIT - char_scroll < -128*FRACUNIT)
-		char_scroll -= 48*FRACUNIT;
+		char_scroll -= 48*FRACUNIT/NEWTICRATERATIO;
 	else if (itemOn*128*FRACUNIT > char_scroll+16*FRACUNIT)
-		char_scroll += 16*FRACUNIT;
+		char_scroll += 16*FRACUNIT/NEWTICRATERATIO;
 	else if (itemOn*128*FRACUNIT < char_scroll-16*FRACUNIT)
-		char_scroll -= 16*FRACUNIT;
+		char_scroll -= 16*FRACUNIT/NEWTICRATERATIO;
 	else // close enough.
 		char_scroll = itemOn*128*FRACUNIT; // just be exact now.
 	i = (char_scroll+16*FRACUNIT)/(128*FRACUNIT);
