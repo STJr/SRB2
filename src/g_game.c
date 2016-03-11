@@ -946,7 +946,7 @@ angle_t localangle, localangle2;
 
 static fixed_t forwardmove[2] = {25<<FRACBITS>>16, 50<<FRACBITS>>16};
 static fixed_t sidemove[2] = {25<<FRACBITS>>16, 50<<FRACBITS>>16}; // faster!
-static fixed_t angleturn[3] = {640, 1280, 320}; // + slow turn
+static fixed_t angleturn[3] = {640/NEWTICRATERATIO, 1280/NEWTICRATERATIO, 320/NEWTICRATERATIO}; // + slow turn
 
 void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 {
