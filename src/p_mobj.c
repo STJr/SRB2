@@ -487,6 +487,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		for (;(state = seenstate[i]) > S_NULL; i = state - 1)
 			seenstate[i] = S_NULL; // erase memory of states
 
+	mobj->tics *= NEWTICRATERATIO;
 	return true;
 }
 
