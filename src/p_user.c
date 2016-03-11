@@ -4335,6 +4335,9 @@ static void P_2dMovement(player_t *player)
 	angle_t movepushangle = 0;
 	fixed_t normalspd = FixedMul(player->normalspeed, player->mo->scale);
 
+	if ((gametic % NEWTICRATERATIO) != 0)
+		return;
+
 	cmd = &player->cmd;
 
 	if (player->exiting || player->pflags & PF_STASIS)
@@ -4520,6 +4523,9 @@ static void P_3dMovement(player_t *player)
 	totalthrust.x = totalthrust.y = 0; // I forget if this is needed
 	totalthrust.z = FRACUNIT*P_MobjFlip(player->mo)/3; // A bit of extra push-back on slopes
 #endif // ESLOPE
+
+	if ((gametic % NEWTICRATERATIO) != 0)
+		return;
 
 	// Get the old momentum; this will be needed at the end of the function! -SH
 	oldMagnitude = R_PointToDist2(player->mo->momx - player->cmomx, player->mo->momy - player->cmomy, 0, 0);
