@@ -22,6 +22,7 @@ boolean nodeingame[MAXNETNODES]; // set false as nodes leave game
 
 #define MAX_SERVER_MESSAGE 320
 
+static UINT8 *net_buffer = NULL;
 static UINT16 portnum = 5029;
 static tic_t lastMove;
 static ticcmd_t lastCmd;
@@ -417,6 +418,9 @@ void D_NetOpen(void)
 	if (!ServerHost)
 		I_Error("ENet failed to open server host. (Check if the port is in use?)");
 
+	if (!net_buffer)
+		net_buffer = ZZ_Alloc(4096);
+
 	servernode = 0;
 	nodeingame[servernode] = true;
 	net_nodecount = 1;
@@ -432,6 +436,9 @@ boolean D_NetConnect(const char *hostname, const char *port)
 	ClientHost = enet_host_create(NULL, 1, NET_CHANNELS, 0, 0);
 	if (!ClientHost)
 		I_Error("ENet failed to initialize client host.\n");
+
+	if (!net_buffer)
+		net_buffer = ZZ_Alloc(4096);
 
 	netgame = multiplayer = true;
 	servernode = 1;
@@ -470,7 +477,10 @@ void D_CheckNetGame(void)
 		I_Error("Failed to initialize ENet.\n");
 
 	if ((M_CheckParm("-port") || M_CheckParm("-udpport")) && M_IsNextParm())
+	{
 		portnum = (UINT16)atoi(M_GetNextParm());
+		CONS_Printf("Port number changed to %u\n", portnum);
+	}
 
 	D_ClientServerInit();
 }
@@ -563,38 +573,35 @@ void Net_CloseConnection(INT32 node)
 void Net_SendJoin(void)
 {
 	ENetPacket *packet;
-	UINT8 data[5+MAXPLAYERNAME];
-	UINT8 *buf = data;
+	UINT8 *buf = net_buffer;
 
 	WRITEUINT8(buf, CLIENT_JOIN);
 	WRITEUINT16(buf, VERSION);
 	WRITEUINT16(buf, SUBVERSION);
 	WRITESTRINGN(buf, cv_playername.string, MAXPLAYERNAME);
 
-	packet = enet_packet_create(data, buf-data, ENET_PACKET_FLAG_RELIABLE);
+	packet = enet_packet_create(net_buffer, buf-net_buffer, ENET_PACKET_FLAG_RELIABLE);
 	enet_peer_send(nodetopeer[servernode], CHANNEL_GENERAL, packet);
 }
 
 static void ServerSendMapInfo(UINT8 node)
 {
 	ENetPacket *packet;
-	UINT8 data[5];
-	UINT8 *buf = data;
+	UINT8 *buf = net_buffer;
 
 	WRITEUINT8(buf, SERVER_MAPINFO);
 	WRITEUINT8(buf, node);
 	WRITEINT16(buf, gamemap);
 	WRITEINT16(buf, gametype);
 
-	packet = enet_packet_create(data, buf-data, ENET_PACKET_FLAG_RELIABLE);
+	packet = enet_packet_create(net_buffer, buf-net_buffer, ENET_PACKET_FLAG_RELIABLE);
 	enet_peer_send(nodetopeer[node], CHANNEL_GENERAL, packet);
 }
 
 void Net_ServerMessage(const char *fmt, ...)
 {
 	va_list argptr;
-	UINT8 data[1+MAX_SERVER_MESSAGE];
-	UINT8 *buf = data;
+	UINT8 *buf = net_buffer;
 
 	WRITEUINT8(buf, SERVER_MESSAGE);
 	va_start(argptr, fmt);
@@ -602,22 +609,21 @@ void Net_ServerMessage(const char *fmt, ...)
 	va_end(argptr);
 	buf += strlen((char *)buf)+1;
 
-	CONS_Printf("%s\n", data+1);
-	enet_host_broadcast(ServerHost, 0, enet_packet_create(data, buf-data, ENET_PACKET_FLAG_RELIABLE));
+	CONS_Printf("%s\n", net_buffer+1);
+	enet_host_broadcast(ServerHost, 0, enet_packet_create(net_buffer, buf-net_buffer, ENET_PACKET_FLAG_RELIABLE));
 }
 
 void Net_SendChat(char *line)
 {
 	ENetPacket *packet;
-	UINT8 data[MAX_SERVER_MESSAGE];
-	UINT8 *buf = data;
+	UINT8 *buf = net_buffer;
 
 	if (server)
 	{
 		WRITEUINT8(buf, SERVER_MESSAGE);
 		sprintf((char *)buf, "\3<~%s> %s", cv_playername.string, line);
 		buf += strlen((char *)buf)+1;
-		CONS_Printf("%s\n", data+1);
+		CONS_Printf("%s\n", net_buffer+1);
 	}
 	else
 	{
@@ -625,7 +631,7 @@ void Net_SendChat(char *line)
 		WRITESTRINGN(buf, line, 256);
 	}
 
-	packet = enet_packet_create(data, buf-data, ENET_PACKET_FLAG_RELIABLE);
+	packet = enet_packet_create(net_buffer, buf-net_buffer, ENET_PACKET_FLAG_RELIABLE);
 	if (server)
 		enet_host_broadcast(ServerHost, CHANNEL_CHAT, packet);
 	else
@@ -635,8 +641,7 @@ void Net_SendChat(char *line)
 void Net_SendCharacter(void)
 {
 	ENetPacket *packet;
-	UINT8 data[1+SKINNAMESIZE+1];
-	UINT8 *buf = data;
+	UINT8 *buf = net_buffer;
 
 	if (server)
 		return;
@@ -645,15 +650,14 @@ void Net_SendCharacter(void)
 	WRITESTRINGN(buf, cv_skin.string, SKINNAMESIZE);
 	WRITEUINT8(buf, cv_playercolor.value);
 
-	packet = enet_packet_create(data, buf-data, ENET_PACKET_FLAG_RELIABLE);
+	packet = enet_packet_create(net_buffer, buf-net_buffer, ENET_PACKET_FLAG_RELIABLE);
 	enet_peer_send(nodetopeer[servernode], CHANNEL_GENERAL, packet);
 }
 
 static void Net_SendMove(void)
 {
 	ENetPacket *packet;
-	UINT8 data[15];
-	UINT8 *buf = data;
+	UINT8 *buf = net_buffer;
 
 	if (server || !addedtogame || !players[consoleplayer].mo)
 		return;
@@ -674,15 +678,14 @@ static void Net_SendMove(void)
 	WRITEINT16(buf, players[consoleplayer].mo->y >> 16);
 	WRITEINT16(buf, players[consoleplayer].mo->z >> 16);
 
-	packet = enet_packet_create(data, buf-data, 0);
+	packet = enet_packet_create(net_buffer, buf-net_buffer, 0);
 	enet_peer_send(nodetopeer[servernode], CHANNEL_MOVE, packet);
 }
 
 void Net_SpawnPlayer(UINT8 pnum, UINT8 node)
 {
 	ENetPacket *packet;
-	UINT8 data[12];
-	UINT8 *buf = data;
+	UINT8 *buf = net_buffer;
 
 	WRITEUINT8(buf, SERVER_SPAWN);
 	WRITEUINT16(buf, pnum+1);
@@ -693,7 +696,7 @@ void Net_SpawnPlayer(UINT8 pnum, UINT8 node)
 	WRITEUINT8(buf, players[pnum].skin);
 	WRITEUINT8(buf, players[pnum].skincolor);
 
-	packet = enet_packet_create(data, buf-data, ENET_PACKET_FLAG_RELIABLE);
+	packet = enet_packet_create(net_buffer, buf-net_buffer, ENET_PACKET_FLAG_RELIABLE);
 	if (node == 0)
 		enet_host_broadcast(ServerHost, CHANNEL_MOVE, packet);
 	else
@@ -703,7 +706,7 @@ void Net_SpawnPlayer(UINT8 pnum, UINT8 node)
 static void Net_MovePlayers(void)
 {
 	ENetPacket *packet;
-	UINT8 data[18], *buf, i;
+	UINT8 *buf, i;
 
 	if (!server || lastMove == I_GetTime())
 		return;
@@ -715,7 +718,7 @@ static void Net_MovePlayers(void)
 		if (!playeringame[i] || !players[i].mo)
 			continue;
 
-		buf = data;
+		buf = net_buffer;
 		WRITEUINT8(buf, SERVER_MOVE);
 		WRITEUINT16(buf, i+1);
 		WRITEINT16(buf, players[i].mo->x >> 16);
@@ -731,7 +734,7 @@ static void Net_MovePlayers(void)
 			WRITEUINT8(buf, SPR2_STND);
 		WRITEUINT8(buf, players[i].mo->frame);
 
-		packet = enet_packet_create(data, buf-data, 0);
+		packet = enet_packet_create(net_buffer, buf-net_buffer, 0);
 		enet_host_broadcast(ServerHost, CHANNEL_MOVE, packet);
 	}
 }
