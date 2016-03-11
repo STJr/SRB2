@@ -305,7 +305,6 @@ static inline void CL_DrawConnectionStatus(void)
 	M_DrawTextBox(BASEVIDWIDTH/2-128-8, BASEVIDHEIGHT-24-8, 32, 1);
 	V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-24-24, V_YELLOWMAP, "Press ESC to abort");
 
-	if (cl_mode != cl_downloadfiles)
 	{
 		INT32 i, animtime = ((ccstime / 4) & 15) + 16;
 		UINT8 palstart = (cl_mode == cl_searching) ? 32 : 96;
@@ -326,29 +325,6 @@ static inline void CL_DrawConnectionStatus(void)
 				break;
 		}
 		V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-24-32, V_YELLOWMAP, cltext);
-	}
-	else
-	{
-		INT32 dldlength;
-		static char tempname[32];
-
-		Net_GetNetStat();
-		dldlength = (INT32)((fileneeded[lastfilenum].currentsize/(double)fileneeded[lastfilenum].totalsize) * 256);
-		if (dldlength > 256)
-			dldlength = 256;
-		V_DrawFill(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-24, 256, 8, 111);
-		V_DrawFill(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-24, dldlength, 8, 96);
-
-		memset(tempname, 0, sizeof(tempname));
-		nameonly(strncpy(tempname, fileneeded[lastfilenum].filename, 31));
-
-		V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-24-32, V_YELLOWMAP,
-			va(M_GetText("Downloading \"%s\""), tempname));
-		V_DrawString(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-24, V_20TRANS|V_MONOSPACE,
-			va(" %4uK/%4uK",fileneeded[lastfilenum].currentsize>>10,fileneeded[lastfilenum].totalsize>>10));
-		// NET TODO
-		//V_DrawRightAlignedString(BASEVIDWIDTH/2+128, BASEVIDHEIGHT-24, V_20TRANS|V_MONOSPACE,
-		//	va("%3.1fK/s ", ((double)getbps)/1024));
 	}
 }
 #endif
