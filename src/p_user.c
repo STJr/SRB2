@@ -3695,6 +3695,8 @@ void P_DoJump(player_t *player, boolean soundandstate)
 
 	P_SetObjectMomZ(player->mo, FixedMul(factor, player->mo->momz), false); // Custom height
 
+	player->mo->momz = FixedMul(player->mo->momz, FixedSqrt(FixedDiv(FRACUNIT, NEWTICRATERATIO << FRACBITS)));
+
 	// set just an eensy above the ground
 	if (player->mo->eflags & MFE_VERTICALFLIP)
 	{
