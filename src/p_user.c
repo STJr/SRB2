@@ -8745,27 +8745,7 @@ void P_PlayerThink(player_t *player)
 
 	if (player->exiting == 2 || countdown2 == 2)
 	{
-		if (cv_playersforexit.value) // Count to be sure everyone's exited
-		{
-			INT32 i;
-
-			for (i = 0; i < MAXPLAYERS; i++)
-			{
-				if (!playeringame[i] || players[i].spectator || players[i].bot)
-					continue;
-				if (players[i].lives <= 0)
-					continue;
-
-				if (!players[i].exiting || players[i].exiting > 3)
-					break;
-			}
-
-			if (i == MAXPLAYERS)
-				SendNetXCmd(XD_EXITLEVEL, NULL, 0);
-			else
-				player->exiting = 3;
-		}
-		else
+		if (player-players == consoleplayer)
 			SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 	}
 
