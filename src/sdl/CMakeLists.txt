@@ -56,7 +56,7 @@ if(${SDL2_FOUND})
 		${SRB2_SDL2_SOURCES}
 		${SRB2_SDL2_HEADERS}
 	)
-	
+
 	source_group("Main" FILES ${SRB2_CORE_SOURCES} ${SRB2_CORE_HEADERS})
 	source_group("Renderer" FILES ${SRB2_CORE_RENDER_SOURCES})
 	source_group("Game" FILES ${SRB2_CORE_GAME_SOURCES})

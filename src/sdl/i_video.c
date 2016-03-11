@@ -98,7 +98,7 @@ rendermode_t rendermode=render_soft;
 boolean highcolor = false;
 
 // synchronize page flipping with screen refresh
-consvar_t cv_vidwait = {"vid_wait", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_vidwait = {"vid_wait", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 static consvar_t cv_stretch = {"stretch", "Off", CV_SAVE|CV_NOSHOWHELP, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 UINT8 graphics_started = 0; // Is used in console.c and screen.c
@@ -1701,21 +1701,11 @@ void I_StartupGraphics(void)
 	keyboard_started = true;
 
 #if !defined(HAVE_TTF)
-#ifdef _WIN32 // Initialize Audio as well, otherwise Win32's DirectX can not use audio
-	if (SDL_InitSubSystem(SDL_INIT_AUDIO|SDL_INIT_VIDEO) < 0)
-#else //SDL_OpenAudio will do SDL_InitSubSystem(SDL_INIT_AUDIO)
+	// Previously audio was init here for questionable reasons?
 	if (SDL_InitSubSystem(SDL_INIT_VIDEO) < 0)
-#endif
 	{
-#ifdef _WIN32
-		if (SDL_WasInit(SDL_INIT_AUDIO)==0)
-			CONS_Printf(M_GetText("Couldn't initialize SDL's Audio System with Video System: %s\n"), SDL_GetError());
-		if (SDL_WasInit(SDL_INIT_VIDEO)==0)
-#endif
-		{
-			CONS_Printf(M_GetText("Couldn't initialize SDL's Video System: %s\n"), SDL_GetError());
-			return;
-		}
+		CONS_Printf(M_GetText("Couldn't initialize SDL's Video System: %s\n"), SDL_GetError());
+		return;
 	}
 #endif
 	{

@@ -590,12 +590,12 @@ void P_Ticker(boolean run)
 	if (paused || P_AutoPause())
 		return;
 
-	postimgtype = postimgtype2 = postimg_none;
-
 	P_MapStart();
 
 	if (run)
 	{
+		postimgtype = postimgtype2 = postimg_none;
+
 		if (demorecording)
 			G_WriteDemoTiccmd(&players[consoleplayer].cmd, 0);
 		if (demoplayback)
@@ -631,6 +631,7 @@ void P_Ticker(boolean run)
 
 	// Run shield positioning
 	P_RunShields();
+	P_RunOverlays();
 
 	P_UpdateSpecials();
 	P_RespawnSpecials();
@@ -742,6 +743,7 @@ void P_PreTicker(INT32 frames)
 
 		// Run shield positioning
 		P_RunShields();
+		P_RunOverlays();
 
 		P_UpdateSpecials();
 		P_RespawnSpecials();

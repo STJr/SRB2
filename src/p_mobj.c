@@ -80,10 +80,30 @@ void P_AddCachedAction(mobj_t *mobj, INT32 statenum)
 }
 
 //
+// P_CycleStateAnimation
+//
+FUNCINLINE static ATTRINLINE void P_CycleStateAnimation(mobj_t *mobj)
+{
+	// var2 determines delay between animation frames
+	if (!(mobj->frame & FF_ANIMATE) || --mobj->anim_duration != 0)
+		return;
+	mobj->anim_duration = (UINT16)mobj->state->var2;
+
+	// compare the current sprite frame to the one we started from
+	// if more than var1 away from it, swap back to the original
+	// else just advance by one
+	if (((++mobj->frame) & FF_FRAMEMASK) - (mobj->state->frame & FF_FRAMEMASK) > (UINT32)mobj->state->var1)
+		mobj->frame = (mobj->state->frame & FF_FRAMEMASK) | (mobj->frame & ~FF_FRAMEMASK);
+}
+
+//
 // P_CycleMobjState
 //
 static void P_CycleMobjState(mobj_t *mobj)
 {
+	// state animations
+	P_CycleStateAnimation(mobj);
+
 	// cycle through states,
 	// calling action functions at transitions
 	if (mobj->tics != -1)
@@ -102,6 +122,9 @@ static void P_CycleMobjState(mobj_t *mobj)
 //
 static void P_CyclePlayerMobjState(mobj_t *mobj)
 {
+	// state animations
+	P_CycleStateAnimation(mobj);
+
 	// cycle through states,
 	// calling action functions at transitions
 	if (mobj->tics != -1)
@@ -307,6 +330,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 			boolean noalt = false;
 			UINT8 spr2 = st->frame & FF_FRAMEMASK;
 			UINT16 frame = (mobj->frame & FF_FRAMEMASK)+1;
+		mobj->anim_duration = (UINT16)st->var2; // only used if FF_ANIMATE is set
 
 			while (((skin_t *)mobj->skin)->sprites[spr2].numframes <= 0
 				&& spr2 != SPR2_STND)
@@ -497,6 +521,7 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 		st = &states[state];
 		mobj->state = st;
 		mobj->tics = st->tics;
+		mobj->anim_duration = (UINT16)st->var2; // only used if FF_ANIMATE is set
 
 		// Player animations
 		if (st->sprite == SPR_PLAY)
@@ -574,6 +599,8 @@ boolean P_SetMobjStateNF(mobj_t *mobj, statenum_t state)
 	mobj->tics = st->tics;
 	mobj->sprite = st->sprite;
 	mobj->frame = st->frame;
+	mobj->anim_duration = (UINT16)st->var2; // only used if FF_ANIMATE is set
+
 	return true;
 }
 
@@ -591,6 +618,8 @@ static boolean P_SetPrecipMobjState(precipmobj_t *mobj, statenum_t state)
 	mobj->tics = st->tics;
 	mobj->sprite = st->sprite;
 	mobj->frame = st->frame;
+	mobj->anim_duration = (UINT16)st->var2; // only used if FF_ANIMATE is set
+
 	return true;
 }
 
@@ -2334,9 +2363,7 @@ static boolean P_ZMovement(mobj_t *mo)
 
 		case MT_RING: // Ignore still rings
 		case MT_COIN:
-#ifdef BLUE_SPHERES
 		case MT_BLUEBALL:
-#endif
 		case MT_REDTEAMRING:
 		case MT_BLUETEAMRING:
 		case MT_FLINGRING:
@@ -3891,6 +3918,8 @@ void P_NullPrecipThinker(precipmobj_t *mobj)
 
 void P_SnowThinker(precipmobj_t *mobj)
 {
+	P_CycleStateAnimation((mobj_t *)mobj);
+
 	// adjust height
 	if ((mobj->z += mobj->momz) <= mobj->floorz)
 		mobj->z = mobj->ceilingz;
@@ -3898,6 +3927,8 @@ void P_SnowThinker(precipmobj_t *mobj)
 
 void P_RainThinker(precipmobj_t *mobj)
 {
+	P_CycleStateAnimation((mobj_t *)mobj);
+
 	if (mobj->state != &states[S_RAIN1])
 	{
 		// cycle through states,
@@ -6008,8 +6039,6 @@ INT32 numshields = 0;
 void P_RunShields(void)
 {
 	INT32 i;
-	mobj_t *mo, *next;
-	fixed_t destx,desty,zoffs;
 
 	// run shields
 	for (i = 0; i < numshields; i++)
@@ -6018,60 +6047,6 @@ void P_RunShields(void)
 		P_SetTarget(&shields[i], NULL);
 	}
 	numshields = 0;
-
-	// run overlays
-	next = NULL;
-	for (mo = overlaycap; mo; mo = next)
-	{
-		I_Assert(!P_MobjWasRemoved(mo));
-
-		// grab next in chain, then unset the chain target
-		next = mo->hnext;
-		P_SetTarget(&mo->hnext, NULL);
-
-		if (!mo->target)
-			continue;
-		if (!splitscreen /*&& rendermode != render_soft*/)
-		{
-			angle_t viewingangle;
-
-			if (players[displayplayer].awayviewtics)
-				viewingangle = R_PointToAngle2(mo->target->x, mo->target->y, players[displayplayer].awayviewmobj->x, players[displayplayer].awayviewmobj->y);
-			else if (!camera.chase && players[displayplayer].mo)
-				viewingangle = R_PointToAngle2(mo->target->x, mo->target->y, players[displayplayer].mo->x, players[displayplayer].mo->y);
-			else
-				viewingangle = R_PointToAngle2(mo->target->x, mo->target->y, camera.x, camera.y);
-
-			if (mo->state->var1)
-				viewingangle += ANGLE_180;
-			destx = mo->target->x + P_ReturnThrustX(mo->target, viewingangle, FixedMul(FRACUNIT/4, mo->scale));
-			desty = mo->target->y + P_ReturnThrustY(mo->target, viewingangle, FixedMul(FRACUNIT/4, mo->scale));
-		}
-		else
-		{
-			destx = mo->target->x;
-			desty = mo->target->y;
-		}
-
-		mo->eflags = (mo->eflags & ~MFE_VERTICALFLIP) | (mo->target->eflags & MFE_VERTICALFLIP);
-		mo->scale = mo->destscale = mo->target->scale;
-		zoffs = FixedMul(((signed)mo->state->var2)*FRACUNIT, mo->scale);
-		mo->angle = mo->target->angle;
-
-		P_UnsetThingPosition(mo);
-		mo->x = destx;
-		mo->y = desty;
-		if (mo->eflags & MFE_VERTICALFLIP)
-			mo->z = (mo->target->z + mo->target->height - mo->height) - zoffs;
-		else
-			mo->z = mo->target->z + zoffs;
-		if (mo->state->var1)
-			P_SetUnderlayPosition(mo);
-		else
-			P_SetThingPosition(mo);
-		P_CheckPosition(mo, mo->x, mo->y);
-	}
-	P_SetTarget(&overlaycap, NULL);
 }
 
 static boolean P_AddShield(mobj_t *thing)
@@ -6106,6 +6081,71 @@ static boolean P_AddShield(mobj_t *thing)
 
 	P_SetTarget(&shields[numshields++], thing);
 	return true;
+}
+
+void P_RunOverlays(void)
+{
+	// run overlays
+	mobj_t *mo, *next = NULL;
+	fixed_t destx,desty,zoffs;
+
+	for (mo = overlaycap; mo; mo = next)
+	{
+		I_Assert(!P_MobjWasRemoved(mo));
+
+		// grab next in chain, then unset the chain target
+		next = mo->hnext;
+		P_SetTarget(&mo->hnext, NULL);
+
+		if (!mo->target)
+			continue;
+		if (!splitscreen /*&& rendermode != render_soft*/)
+		{
+			angle_t viewingangle;
+
+			if (players[displayplayer].awayviewtics)
+				viewingangle = R_PointToAngle2(mo->target->x, mo->target->y, players[displayplayer].awayviewmobj->x, players[displayplayer].awayviewmobj->y);
+			else if (!camera.chase && players[displayplayer].mo)
+				viewingangle = R_PointToAngle2(mo->target->x, mo->target->y, players[displayplayer].mo->x, players[displayplayer].mo->y);
+			else
+				viewingangle = R_PointToAngle2(mo->target->x, mo->target->y, camera.x, camera.y);
+
+			if (!(mo->state->frame & FF_ANIMATE) && mo->state->var1)
+				viewingangle += ANGLE_180;
+			destx = mo->target->x + P_ReturnThrustX(mo->target, viewingangle, FixedMul(FRACUNIT/4, mo->scale));
+			desty = mo->target->y + P_ReturnThrustY(mo->target, viewingangle, FixedMul(FRACUNIT/4, mo->scale));
+		}
+		else
+		{
+			destx = mo->target->x;
+			desty = mo->target->y;
+		}
+
+		mo->eflags = (mo->eflags & ~MFE_VERTICALFLIP) | (mo->target->eflags & MFE_VERTICALFLIP);
+		mo->scale = mo->destscale = mo->target->scale;
+		mo->angle = mo->target->angle;
+
+		if (!(mo->state->frame & FF_ANIMATE))
+			zoffs = FixedMul(((signed)mo->state->var2)*FRACUNIT, mo->scale);
+		// if you're using FF_ANIMATE on an overlay,
+		// then you're on your own.
+		else
+			zoffs = 0;
+
+		P_UnsetThingPosition(mo);
+		mo->x = destx;
+		mo->y = desty;
+		if (mo->eflags & MFE_VERTICALFLIP)
+			mo->z = (mo->target->z + mo->target->height - mo->height) - zoffs;
+		else
+			mo->z = mo->target->z + zoffs;
+		if (mo->state->var1)
+			P_SetUnderlayPosition(mo);
+		else
+			P_SetThingPosition(mo);
+		P_CheckPosition(mo, mo->x, mo->y);
+	}
+	P_SetTarget(&overlaycap, NULL);
 }
 
 // Called only when MT_OVERLAY thinks.
@@ -6619,14 +6659,12 @@ void P_MobjThinker(mobj_t *mobj)
 	else if (mobj->health <= 0) // Dead things think differently than the living.
 		switch (mobj->type)
 		{
-#ifdef BLUE_SPHERES
 		case MT_BLUEBALL:
 			if ((mobj->tics>>2)+1 > 0 && (mobj->tics>>2)+1 <= tr_trans60) // tr_trans50 through tr_trans90, shifting once every second frame
 				mobj->frame = (NUMTRANSMAPS-((mobj->tics>>2)+1))<<FF_TRANSSHIFT;
 			else // tr_trans60 otherwise
 				mobj->frame = tr_trans60<<FF_TRANSSHIFT;
 			break;
-#endif
 		case MT_EGGCAPSULE:
 			if (mobj->z <= mobj->floorz)
 			{
@@ -7084,9 +7122,7 @@ void P_MobjThinker(mobj_t *mobj)
 			break;
 		case MT_RING:
 		case MT_COIN:
-#ifdef BLUE_SPHERES
 		case MT_BLUEBALL:
-#endif
 		case MT_REDTEAMRING:
 		case MT_BLUETEAMRING:
 			// No need to check water. Who cares?
@@ -7685,6 +7721,8 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 	mobj->tics = st->tics;
 	mobj->sprite = st->sprite;
 	mobj->frame = st->frame; // FF_FRAMEMASK for frame, and other bits..
+	mobj->anim_duration = (UINT16)st->var2; // only used if FF_ANIMATE is set
+
 	mobj->friction = ORIG_FRICTION;
 
 	mobj->movefactor = ORIG_FRICTION_FACTOR;
@@ -7850,9 +7888,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			break;
 		case MT_RING:
 		case MT_COIN:
-#ifdef BLUE_SPHERES
 		case MT_BLUEBALL:
-#endif
 			nummaprings++;
 		default:
 			break;
@@ -7910,6 +7946,7 @@ static precipmobj_t *P_SpawnPrecipMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype
 	mobj->tics = st->tics;
 	mobj->sprite = st->sprite;
 	mobj->frame = st->frame; // FF_FRAMEMASK for frame, and other bits..
+	mobj->anim_duration = (UINT16)st->var2; // only used if FF_ANIMATE is set
 
 	// set subsector and/or block links
 	P_SetPrecipitationThingPosition(mobj);
@@ -7977,9 +8014,7 @@ void P_RemoveMobj(mobj_t *mobj)
 	if (mobj->spawnpoint &&
 		(mobj->type == MT_RING
 		|| mobj->type == MT_COIN
-#ifdef BLUE_SPHERES
 		|| mobj->type == MT_BLUEBALL
-#endif
 		|| mobj->type == MT_REDTEAMRING
 		|| mobj->type == MT_BLUETEAMRING
 		|| P_WeaponOrPanel(mobj->type))
@@ -9765,11 +9800,9 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 				ringthing = (gametype == GT_CTF) ? MT_BLUETEAMRING : MT_RING;
 				break;
 			default:
-#ifdef BLUE_SPHERES
 				// Spawn rings as blue spheres in special stages, ala S3+K.
 				if (G_IsSpecialStage(gamemap) && useNightsSS)
 					ringthing = MT_BLUEBALL;
-#endif
 				break;
 		}
 
@@ -9834,11 +9867,9 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 		if (ultimatemode && !(G_IsSpecialStage(gamemap) || maptol & TOL_NIGHTS))
 			return;
 
-#ifdef BLUE_SPHERES
 		// Spawn rings as blue spheres in special stages, ala S3+K.
 		if (G_IsSpecialStage(gamemap) && useNightsSS)
 			ringthing = MT_BLUEBALL;
-#endif
 
 		for (r = 1; r <= 5; r++)
 		{
@@ -9889,11 +9920,9 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 		if (ultimatemode && !(G_IsSpecialStage(gamemap) || maptol & TOL_NIGHTS))
 			return;
 
-#ifdef BLUE_SPHERES
 		// Spawn rings as blue spheres in special stages, ala S3+K.
 		if (G_IsSpecialStage(gamemap) && useNightsSS)
 			ringthing = MT_BLUEBALL;
-#endif
 
 		angle >>= ANGLETOFINESHIFT;
 
@@ -9986,11 +10015,9 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 				if (ultimatemode && !(G_IsSpecialStage(gamemap) || (maptol & TOL_NIGHTS)))
 					continue;
 
-#ifdef BLUE_SPHERES
 				// Spawn rings as blue spheres in special stages, ala S3+K.
 				if (G_IsSpecialStage(gamemap) && useNightsSS)
 					itemToSpawn = MT_BLUEBALL;
-#endif
 			}
 
 			fa = i*FINEANGLES/numitems;

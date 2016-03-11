@@ -1060,6 +1060,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		diff |= MD_SPRITE;
 	if (mobj->frame != mobj->state->frame)
 		diff |= MD_FRAME;
+	if (mobj->anim_duration != (UINT16)mobj->state->var2)
+		diff |= MD_FRAME;
 	if (mobj->eflags)
 		diff |= MD_EFLAGS;
 	if (mobj->player)
@@ -1183,7 +1185,10 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 			WRITEUINT8(save_p, mobj->sprite2);
 	}
 	if (diff & MD_FRAME)
+	{
 		WRITEUINT32(save_p, mobj->frame);
+		WRITEUINT16(save_p, mobj->anim_duration);
+	}
 	if (diff & MD_EFLAGS)
 		WRITEUINT16(save_p, mobj->eflags);
 	if (diff & MD_PLAYER)
@@ -2015,9 +2020,15 @@ static void LoadMobjThinker(actionf_p1 thinker)
 			mobj->sprite2 = mobj->state->frame&FF_FRAMEMASK;
 	}
 	if (diff & MD_FRAME)
+	{
 		mobj->frame = READUINT32(save_p);
+		mobj->anim_duration = READUINT16(save_p);
+	}
 	else
+	{
 		mobj->frame = mobj->state->frame;
+		mobj->anim_duration = (UINT16)mobj->state->var2;
+	}
 	if (diff & MD_EFLAGS)
 		mobj->eflags = READUINT16(save_p);
 	if (diff & MD_PLAYER)
@@ -3203,7 +3214,7 @@ static inline boolean P_NetUnArchiveMisc(void)
 
 	// tell the sound code to reset the music since we're skipping what
 	// normally sets this flag
-	mapmusic |= MUSIC_RELOADRESET;
+	mapmusflags |= MUSIC_RELOADRESET;
 
 	G_SetGamestate(READINT16(save_p));
 

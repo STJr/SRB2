@@ -210,13 +210,6 @@ extern FILE *logstream;
 // Note that we use this to help keep internal testing in check; this is why v2.1.0 is not version "1".
 #define MODVERSION 20
 
-
-
-
-
-// some tests, enable or disable it if it run or not
-#define SPLITSCREEN
-
 // =========================================================================
 
 // The maximum number of players, multiplayer/networking.
@@ -290,7 +283,7 @@ typedef enum
 // State updates, number of tics / second.
 // NOTE: used to setup the timer rate, see I_StartupTimer().
 #define TICRATE 35
-#define NEWTICRATERATIO 1 // try 4 for 140 fps :)
+#define NEWTICRATERATIO 2 // try 4 for 140 fps :)
 #define NEWTICRATE (TICRATE*NEWTICRATERATIO)
 
 #define RING_DIST 512*FRACUNIT // how close you need to be to a ring to attract it
@@ -356,11 +349,7 @@ void CONS_Debug(INT32 debugflags, const char *fmt, ...) FUNCDEBUG;
 #include "m_swap.h"
 
 // Things that used to be in dstrings.h
-#define DEVMAPS "devmaps"
-#define DEVDATA "devdata"
-
 #define SAVEGAMENAME "srb2sav"
-
 char savegamename[256];
 
 // m_misc.h
@@ -442,9 +431,6 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 ///	\note	obsoleted by cv_maxportals
 //#define PORTAL_LIMIT 8
 
-///	Fun experimental slope stuff!
-//#define SLOPENESS
-
 /// Kalaron/Eternity Engine slope code (SRB2CB ported)
 #define ESLOPE
 
@@ -461,9 +447,6 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 ///	Polyobject fake flat code
 #define POLYOBJECTS_PLANES
 
-///	Blue spheres for future use.
-///	\todo	Remove this define.
-#define BLUE_SPHERES // Blue spheres for future use.
 
 ///	Who put weights on my recycler?  ... Inuyasha did.
 ///	\note	XMOD port.
@@ -495,5 +478,9 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 
 /// Experimental tweaks to analog mode. (Needs a lot of work before it's ready for primetime.)
 //#define REDSANALOG
+
+/// Backwards compatibility with musicslots.
+/// \note	You should leave this enabled unless you're working with a future SRB2 version.
+#define MUSICSLOT_COMPATIBILITY
 
 #endif // __DOOMDEF__

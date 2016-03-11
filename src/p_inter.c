@@ -405,7 +405,6 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if ((maptol & TOL_NIGHTS) && special->type != MT_FLINGCOIN)
 				P_DoNightsScore(player);
 			break;
-#ifdef BLUE_SPHERES
 		case MT_BLUEBALL:
 			if (!(P_CanPickupItem(player, false)))
 				return;
@@ -422,7 +421,6 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if (maptol & TOL_NIGHTS)
 				P_DoNightsScore(player);
 			break;
-#endif
 		case MT_AUTOPICKUP:
 		case MT_BOUNCEPICKUP:
 		case MT_SCATTERPICKUP:
@@ -766,10 +764,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					}
 
 					if (!(mo2->type == MT_NIGHTSWING || mo2->type == MT_RING || mo2->type == MT_COIN
-#ifdef BLUE_SPHERES
-					      || mo2->type == MT_BLUEBALL
-#endif
-					     ))
+					   || mo2->type == MT_BLUEBALL))
 						continue;
 
 					// Yay! The thing's in reach! Pull it in!
@@ -1339,6 +1334,9 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			}
 			else
 				player->pflags |= PF_ITEMHANG;
+
+			// Can't jump first frame
+			player->pflags |= PF_JUMPSTASIS;
 			return;
 		case MT_BIGMINE:
 		case MT_BIGAIRMINE:
@@ -2081,7 +2079,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 				if (P_IsLocalPlayer(target->player) && target->player == &players[consoleplayer])
 				{
 					S_StopMusic(); // Stop the Music! Tails 03-14-2000
-					S_ChangeMusic(mus_gmover, false); // Yousa dead now, Okieday? Tails 03-14-2000
+					S_ChangeMusicInternal("gmover", false); // Yousa dead now, Okieday? Tails 03-14-2000
 				}
 			}
 		}
@@ -2478,7 +2476,7 @@ static inline void P_NiGHTSDamage(mobj_t *target, mobj_t *source)
 			&& player->nightstime < 10*TICRATE)
 		{
 			//S_StartSound(NULL, sfx_timeup); // that creepy "out of time" music from NiGHTS. Dummied out, as some on the dev team thought it wasn't Sonic-y enough (Mystic, notably). Uncomment to restore. -SH
-			S_ChangeMusic(mus_drown,false);
+			S_ChangeMusicInternal("drown",false);
 		}
 	}
 }
