@@ -182,6 +182,9 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 
 	if (object->player)
 	{
+		if (vertispeed)
+			object->momz = FixedMul(object->momz, FixedSqrt(FixedMul(FRACUNIT, NEWTICRATERATIO << FRACBITS)));
+
 		if (spring->flags & MF_ENEMY) // Spring shells
 			P_SetTarget(&spring->target, object);
 
