@@ -13,7 +13,7 @@ boolean D_NetConnect(const char *hostname, const char *port);
 
 boolean Net_GetNetStat(void);
 void Net_AckTicker(void);
-boolean D_CheckNetGame(void);
+void D_CheckNetGame(void);
 void D_CloseConnection(void);
 void Net_CloseConnection(INT32 node);
 

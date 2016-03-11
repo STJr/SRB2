@@ -11,6 +11,7 @@
 #include "p_local.h"
 #include "d_main.h"
 #include "i_system.h"
+#include "m_argv.h"
 
 UINT8 net_nodecount, net_playercount;
 UINT8 playernode[MAXPLAYERS];
@@ -21,6 +22,7 @@ boolean nodeingame[MAXNETNODES]; // set false as nodes leave game
 
 #define MAX_SERVER_MESSAGE 320
 
+static UINT16 portnum = 5029;
 static tic_t lastMove;
 static ticcmd_t lastCmd;
 
@@ -410,7 +412,7 @@ void Net_AckTicker(void)
 
 void D_NetOpen(void)
 {
-	ENetAddress address = { ENET_HOST_ANY, 5029 };
+	ENetAddress address = { ENET_HOST_ANY, portnum };
 	ServerHost = enet_host_create(&address, MAXNETNODES, NET_CHANNELS, 0, 0);
 	if (!ServerHost)
 		I_Error("ENet failed to open server host. (Check if the port is in use?)");
@@ -461,22 +463,16 @@ boolean D_NetConnect(const char *hostname, const char *port)
 }
 
 // Initialize network.
-// Returns true if the server is booting up right into a level according to startup args and whatnot.
 // netgame is set to true before this is called if -server was passed.
-boolean D_CheckNetGame(void)
+void D_CheckNetGame(void)
 {
 	if (enet_initialize())
 		I_Error("Failed to initialize ENet.\n");
-	if (netgame)
-	{
-		if (server)
-			D_NetOpen();
-	}
-	else
-		server = true;
-	multiplayer = netgame;
+
+	if ((M_CheckParm("-port") || M_CheckParm("-udpport")) && M_IsNextParm())
+		portnum = (UINT16)atoi(M_GetNextParm());
+
 	D_ClientServerInit();
-	return netgame;
 }
 
 void D_CloseConnection(void)

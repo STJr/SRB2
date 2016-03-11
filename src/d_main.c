@@ -1207,8 +1207,7 @@ void D_SRB2Main(void)
 
 	// init all NETWORK
 	CONS_Printf("D_CheckNetGame(): Checking network game status.\n");
-	if (D_CheckNetGame())
-		autostart = true;
+	D_CheckNetGame();
 
 	// check for a driver that wants intermission stats
 	// start the apropriate game based on parms
