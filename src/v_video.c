@@ -1866,7 +1866,7 @@ void V_DoPostProcessor(INT32 view, postimg_t type, INT32 param)
 		UINT8 *tmpscr = screens[4];
 		UINT8 *srcscr = screens[0];
 		INT32 y;
-		angle_t disStart = (leveltime * 128) & FINEMASK; // in 0 to FINEANGLE
+		angle_t disStart = (leveltime * (128 / NEWTICRATERATIO)) & FINEMASK; // in 0 to FINEANGLE
 		INT32 newpix;
 		INT32 sine;
 		//UINT8 *transme = transtables + ((tr_trans50-1)<<FF_TRANSSHIFT);

@@ -590,12 +590,12 @@ void P_Ticker(boolean run)
 	if (paused || P_AutoPause())
 		return;
 
-	postimgtype = postimgtype2 = postimg_none;
-
 	P_MapStart();
 
 	if (run)
 	{
+		postimgtype = postimgtype2 = postimg_none;
+
 		if (demorecording)
 			G_WriteDemoTiccmd(&players[consoleplayer].cmd, 0);
 		if (demoplayback)
