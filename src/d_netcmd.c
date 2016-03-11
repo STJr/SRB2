@@ -358,7 +358,7 @@ consvar_t cv_runscripts = {"runscripts", "Yes", 0, CV_YesNo, NULL, 0, NULL, NULL
 consvar_t cv_pause = {"pausepermission", "Server", CV_NETVAR, pause_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_mute = {"mute", "Off", CV_NETVAR|CV_CALL, CV_OnOff, Mute_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
-consvar_t cv_sleep = {"cpusleep", "-1", CV_SAVE, sleeping_cons_t, NULL, -1, NULL, NULL, 0, 0, NULL};
+consvar_t cv_sleep = {"cpusleep", "0", CV_NOSHOWHELP, sleeping_cons_t, NULL, -1, NULL, NULL, 0, 0, NULL};
 
 INT16 gametype = GT_COOP;
 boolean splitscreen = false;
