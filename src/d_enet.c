@@ -167,9 +167,9 @@ static void ServerHandlePacket(UINT8 node, DataWrap data)
 		ghost.cmd.angleturn = DW_ReadINT16(data);
 		ghost.cmd.aiming = DW_ReadINT16(data);
 		ghost.cmd.buttons = DW_ReadUINT16(data);
-		ghost.x = DW_ReadINT16(data) << 16;
-		ghost.y = DW_ReadINT16(data) << 16;
-		ghost.z = DW_ReadINT16(data) << 16;
+		ghost.x = DW_ReadFixed(data);
+		ghost.y = DW_ReadFixed(data);
+		ghost.z = DW_ReadFixed(data);
 
 		// TODO: Compare new data to old data, etc.
 		memcpy(&pdata->ghost, &ghost, sizeof(ghost));
@@ -674,9 +674,9 @@ static void Net_SendMove(void)
 	WRITEINT16(buf, players[consoleplayer].cmd.angleturn);
 	WRITEINT16(buf, players[consoleplayer].cmd.aiming);
 	WRITEUINT16(buf, players[consoleplayer].cmd.buttons);
-	WRITEINT16(buf, players[consoleplayer].mo->x >> 16);
-	WRITEINT16(buf, players[consoleplayer].mo->y >> 16);
-	WRITEINT16(buf, players[consoleplayer].mo->z >> 16);
+	WRITEFIXED(buf, players[consoleplayer].mo->x);
+	WRITEFIXED(buf, players[consoleplayer].mo->y);
+	WRITEFIXED(buf, players[consoleplayer].mo->z);
 
 	packet = enet_packet_create(net_buffer, buf-net_buffer, 0);
 	enet_peer_send(nodetopeer[servernode], CHANNEL_MOVE, packet);
