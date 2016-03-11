@@ -348,7 +348,7 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 	for (;;)
 	{
 		// get fademask first so we can tell if it exists or not
-		fmask = F_GetFadeMask(wipetype, wipeframe++);
+		fmask = F_GetFadeMask(wipetype, wipeframe);
 		if (!fmask)
 			break;
 
@@ -356,6 +356,9 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 		while (!((nowtime = I_GetTime()) - lastwipetic))
 			I_Sleep();
 		lastwipetic = nowtime;
+
+		if (nowtime % NEWTICRATERATIO == 0)
+			wipeframe++;
 
 #ifdef HWRENDER
 		if (rendermode == render_opengl)
