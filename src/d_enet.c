@@ -226,9 +226,6 @@ static void ClientHandlePacket(UINT8 node, DataWrap data)
 	{
 		UINT16 id = DW_ReadUINT16(data);
 
-		if (id == mynode+1)
-			break;
-
 		// Spawn a player.
 		if (id < 1000)
 		{
@@ -251,9 +248,6 @@ static void ClientHandlePacket(UINT8 node, DataWrap data)
 		mobj_t *mobj = NULL;
 		UINT16 id = DW_ReadUINT16(data);
 		fixed_t x,y,z;
-
-		if (id == mynode+1)
-			break;
 
 		for (th = thinkercap.next; th != &thinkercap; th = th->next)
 			if (th->function.acp1 == (actionf_p1)P_MobjThinker && ((mobj_t *)th)->mobjnum == id)
