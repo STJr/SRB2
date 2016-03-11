@@ -767,6 +767,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		if (thing->player-players == consoleplayer && botingame)
 			CV_SetValue(&cv_analog2, true);
 		thing->player->pflags &= ~PF_CARRIED;
+		return tmthing->player != NULL; // NET TODO make solid sometimes?
 	}
 
 	if (thing->player)
