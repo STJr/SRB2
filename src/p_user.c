@@ -8326,8 +8326,8 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	}
 	else
 	{
-		thiscam->momx = FixedMul(x - thiscam->x, camspeed);
-		thiscam->momy = FixedMul(y - thiscam->y, camspeed);
+		thiscam->momx = FixedMul(x - thiscam->x, camspeed / NEWTICRATERATIO);
+		thiscam->momy = FixedMul(y - thiscam->y, camspeed / NEWTICRATERATIO);
 
 		if (GETSECSPECIAL(thiscam->subsector->sector->special, 1) == 6
 			&& thiscam->z < thiscam->subsector->sector->floorheight + 256*FRACUNIT
@@ -8336,7 +8336,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 			thiscam->momz = 0; // Don't go down a death pit
 		}
 		else
-			thiscam->momz = FixedMul(z - thiscam->z, camspeed);
+			thiscam->momz = FixedMul(z - thiscam->z, camspeed / NEWTICRATERATIO);
 	}
 
 	// compute aming to look the viewed point
@@ -9175,15 +9175,7 @@ void P_PlayerAfterThink(player_t *player)
 		thiscam = &camera;
 
 	if (player->playerstate == PST_DEAD)
-	{
-		// camera may still move when guy is dead
-		//if (!netgame)
-		{
-			if (thiscam && thiscam->chase)
-				P_MoveChaseCamera(player, thiscam, false);
-		}
 		return;
-	}
 
 	if (player->pflags & PF_NIGHTSMODE)
 	{
@@ -9448,8 +9440,6 @@ void P_PlayerAfterThink(player_t *player)
 				player->viewz = player->mo->z + player->mo->height - player->viewheight;
 			else
 				player->viewz = player->mo->z + player->viewheight;
-			if (server || addedtogame)
-				P_MoveChaseCamera(player, thiscam, false); // calculate the camera movement
 		}
 	}
 
