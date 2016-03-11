@@ -684,7 +684,7 @@ static void Net_SendMove(void)
 	// only update once a second unless buttons changed.
 	if (memcmp(&lastCmd, &players[consoleplayer].cmd, sizeof(ticcmd_t)))
 		reliable = true;
-	if (lastMove+TICRATE < I_GetTime() && !reliable)
+	if (lastMove+NEWTICRATE < I_GetTime() && !reliable)
 		return;
 	lastMove = I_GetTime();
 	G_CopyTiccmd(&lastCmd, &players[consoleplayer].cmd, 1);
@@ -732,7 +732,7 @@ static void Net_MovePlayers(void)
 	ENetPacket *packet;
 	UINT8 *buf, i;
 
-	if (!netgame || !server || lastMove == I_GetTime())
+	if (!netgame || !server || lastMove+NEWTICRATE < I_GetTime())
 		return;
 
 	lastMove = I_GetTime();

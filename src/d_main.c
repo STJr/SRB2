@@ -485,9 +485,9 @@ static void D_Display(void)
 			stat[sizeof stat - 1] = '\0';
 			if (!server)
 				Net_GetNetStat(servernode, &ping, &loss);
-			snprintf(stat, sizeof stat - 1, "ping: %u ms", ping);
+			snprintf(stat, sizeof stat - 1, "ping: %u ms (%u frames)", ping, ping / (1000/NEWTICRATE));
 			V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-20, V_YELLOWMAP|V_SNAPTORIGHT|V_SNAPTOBOTTOM, stat);
-			snprintf(stat, sizeof stat - 1, "loss: %u%%", loss);
+			snprintf(stat, sizeof stat - 1, "loss: %u", loss);
 			V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-10, V_YELLOWMAP|V_SNAPTORIGHT|V_SNAPTOBOTTOM, stat);
 		}
 
