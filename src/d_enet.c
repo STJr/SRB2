@@ -576,6 +576,9 @@ void Net_SendJoin(void)
 	ENetPacket *packet;
 	UINT8 *buf = net_buffer;
 
+	if (!netgame)
+		return;
+
 	WRITEUINT8(buf, CLIENT_JOIN);
 	WRITEUINT16(buf, VERSION);
 	WRITEUINT16(buf, SUBVERSION);
@@ -589,6 +592,9 @@ static void ServerSendMapInfo(UINT8 node)
 {
 	ENetPacket *packet;
 	UINT8 *buf = net_buffer;
+
+	if (!netgame)
+		return;
 
 	WRITEUINT8(buf, SERVER_MAPINFO);
 	WRITEUINT8(buf, node);
@@ -604,6 +610,9 @@ void Net_ServerMessage(const char *fmt, ...)
 	va_list argptr;
 	UINT8 *buf = net_buffer;
 
+	if (!netgame)
+		return;
+
 	WRITEUINT8(buf, SERVER_MESSAGE);
 	va_start(argptr, fmt);
 	vsnprintf((char *)buf, MAX_SERVER_MESSAGE, fmt, argptr);
@@ -618,6 +627,9 @@ void Net_SendChat(char *line)
 {
 	ENetPacket *packet;
 	UINT8 *buf = net_buffer;
+
+	if (!netgame)
+		return;
 
 	if (server)
 	{
@@ -644,7 +656,7 @@ void Net_SendCharacter(void)
 	ENetPacket *packet;
 	UINT8 *buf = net_buffer;
 
-	if (server)
+	if (!netgame || server)
 		return;
 
 	WRITEUINT8(buf, CLIENT_CHARACTER);
@@ -660,7 +672,7 @@ static void Net_SendMove(void)
 	ENetPacket *packet;
 	UINT8 *buf = net_buffer;
 
-	if (server || !addedtogame || !players[consoleplayer].mo)
+	if (!netgame || server || !addedtogame || !players[consoleplayer].mo)
 		return;
 
 	// only update once a second unless buttons changed.
@@ -688,6 +700,9 @@ void Net_SpawnPlayer(UINT8 pnum, UINT8 node)
 	ENetPacket *packet;
 	UINT8 *buf = net_buffer;
 
+	if (!netgame)
+		return;
+
 	WRITEUINT8(buf, SERVER_SPAWN);
 	WRITEUINT16(buf, pnum+1);
 	WRITEINT16(buf, players[pnum].mo->x >> 16);
@@ -709,7 +724,7 @@ static void Net_MovePlayers(void)
 	ENetPacket *packet;
 	UINT8 *buf, i;
 
-	if (!server || lastMove == I_GetTime())
+	if (!netgame || !server || lastMove == I_GetTime())
 		return;
 
 	lastMove = I_GetTime();
