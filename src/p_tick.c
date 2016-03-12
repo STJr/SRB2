@@ -305,15 +305,10 @@ static inline void P_RunThinkers(void)
 
 static inline void P_RunPlayerThinkers(void)
 {
-	for (currentthinker = thinkercap.next; currentthinker != &thinkercap; currentthinker = currentthinker->next)
-	{
-		if (currentthinker->function.acp1 == (actionf_p1)P_MobjThinker)
-		{
-			mobj_t *mobj = (mobj_t *)currentthinker;
-			if (mobj->type == MT_PLAYER)
-				currentthinker->function.acp1(currentthinker);
-		}
-	}
+	UINT8 i;
+	for (i = 0; i < MAXPLAYERS; i++)
+		if (playeringame[i] && players[i].mo)
+			players[i].mo->thinker.function.acp1(players[i].mo);
 }
 
 //
