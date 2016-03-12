@@ -14,6 +14,7 @@
 #include "m_argv.h"
 
 UINT8 net_nodecount, net_playercount;
+UINT16 net_ringid;
 UINT8 playernode[MAXPLAYERS];
 SINT8 nodetoplayer[MAXNETNODES];
 SINT8 nodetoplayer2[MAXNETNODES]; // say the numplayer for this node if any (splitscreen)

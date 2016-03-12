@@ -76,6 +76,8 @@
 #include "p_slopes.h"
 #endif
 
+#include "d_enet.h"
+
 //
 // Map MD5, calculated on level load.
 // Sent to clients in PT_SERVERINFO.
@@ -762,6 +764,8 @@ void P_ReloadRings(void)
 		P_RemoveMobj(mo);
 	}
 
+	net_ringid = 1000+nummapthings;
+
 	// Reiterate through mapthings
 	for (i = 0; i < nummapthings; i++, mt++)
 	{
@@ -918,6 +922,8 @@ static void P_LoadThings(void)
 
 		mt->mobj = NULL;
 		P_SpawnMapThing(mt);
+		if (mt->mobj)
+			mt->mobj->mobjnum = 1000+i;
 	}
 
 	// random emeralds for hunt
@@ -968,6 +974,7 @@ static void P_LoadThings(void)
 		return;
 
 	// Run through the list of mapthings again to spawn hoops and rings
+	net_ringid = 1000+nummapthings;
 	mt = mapthings;
 	for (i = 0; i < nummapthings; i++, mt++)
 	{

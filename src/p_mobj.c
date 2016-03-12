@@ -9873,6 +9873,7 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 
 		mobj = P_SpawnMobj(x, y, z, ringthing);
 		mobj->spawnpoint = mthing;
+		mobj->mobjnum = net_ringid++;
 
 		if (mthing->options & MTF_OBJECTFLIP)
 		{
