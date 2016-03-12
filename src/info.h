@@ -3049,9 +3049,7 @@ typedef enum mobj_type
 	// Collectible Items
 	MT_RING,
 	MT_FLINGRING, // Lost ring
-#ifdef BLUE_SPHERES
 	MT_BLUEBALL,  // Blue sphere replacement for special stages
-#endif
 	MT_REDTEAMRING,  //Rings collectable by red team.
 	MT_BLUETEAMRING, //Rings collectable by blue team.
 	MT_EMMY, // emerald token for special stage
