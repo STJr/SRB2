@@ -2454,11 +2454,11 @@ void M_StartControlPanel(void)
 
 	if (!Playing())
 	{
-		// Secret menu!
-		MainMenu[secrets].status = (M_AnySecretUnlocked()) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
+		MainMenu[secrets].status = IT_DISABLED;
+		MainMenu[singleplr].status = IT_DISABLED;
 
 		currentMenu = &MainDef;
-		itemOn = singleplr;
+		itemOn = multiplr;
 	}
 	else if (modeattacking)
 	{
