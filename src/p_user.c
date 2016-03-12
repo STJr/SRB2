@@ -1568,6 +1568,9 @@ void P_SpawnSpinMobj(player_t *player, mobjtype_t type)
 // Player exits the map via sector trigger
 void P_DoPlayerExit(player_t *player)
 {
+	if (netgame)
+		return;
+
 	if (player->exiting)
 		return;
 
