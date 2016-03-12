@@ -4334,6 +4334,9 @@ static void P_2dMovement(player_t *player)
 	angle_t movepushangle = 0;
 	fixed_t normalspd = FixedMul(player->normalspeed, player->mo->scale);
 
+	if ((gametic % NEWTICRATERATIO) != 0)
+		return;
+
 	cmd = &player->cmd;
 
 	if (player->exiting || player->pflags & PF_STASIS)
@@ -4519,6 +4522,9 @@ static void P_3dMovement(player_t *player)
 	totalthrust.x = totalthrust.y = 0; // I forget if this is needed
 	totalthrust.z = FRACUNIT*P_MobjFlip(player->mo)/3; // A bit of extra push-back on slopes
 #endif // ESLOPE
+
+	if ((gametic % NEWTICRATERATIO) != 0)
+		return;
 
 	// Get the old momentum; this will be needed at the end of the function! -SH
 	oldMagnitude = R_PointToDist2(player->mo->momx - player->cmomx, player->mo->momy - player->cmomy, 0, 0);
@@ -8316,8 +8322,8 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	}
 	else
 	{
-		thiscam->momx = FixedMul(x - thiscam->x, camspeed);
-		thiscam->momy = FixedMul(y - thiscam->y, camspeed);
+		thiscam->momx = FixedMul(x - thiscam->x, camspeed / NEWTICRATERATIO);
+		thiscam->momy = FixedMul(y - thiscam->y, camspeed / NEWTICRATERATIO);
 
 		if (GETSECSPECIAL(thiscam->subsector->sector->special, 1) == 6
 			&& thiscam->z < thiscam->subsector->sector->floorheight + 256*FRACUNIT
@@ -8326,7 +8332,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 			thiscam->momz = 0; // Don't go down a death pit
 		}
 		else
-			thiscam->momz = FixedMul(z - thiscam->z, camspeed);
+			thiscam->momz = FixedMul(z - thiscam->z, camspeed / NEWTICRATERATIO);
 	}
 
 	// compute aming to look the viewed point
@@ -8936,6 +8942,10 @@ void P_PlayerThink(player_t *player)
 	// Counters, time dependent power ups.
 	// Time Bonus & Ring Bonus count settings
 
+	// Only do these counters at 35 FPS
+	if ((gametic % NEWTICRATERATIO) != 0)
+		return;
+
 	// Strength counts up to diminish fade.
 	if (player->powers[pw_sneakers] && player->powers[pw_sneakers] < UINT16_MAX)
 		player->powers[pw_sneakers]--;
@@ -9109,15 +9119,7 @@ void P_PlayerAfterThink(player_t *player)
 		thiscam = &camera;
 
 	if (player->playerstate == PST_DEAD)
-	{
-		// camera may still move when guy is dead
-		//if (!netgame)
-		{
-			if (thiscam && thiscam->chase)
-				P_MoveChaseCamera(player, thiscam, false);
-		}
 		return;
-	}
 
 	if (player->pflags & PF_NIGHTSMODE)
 	{
@@ -9382,8 +9384,6 @@ void P_PlayerAfterThink(player_t *player)
 				player->viewz = player->mo->z + player->mo->height - player->viewheight;
 			else
 				player->viewz = player->mo->z + player->viewheight;
-			if (server || addedtogame)
-				P_MoveChaseCamera(player, thiscam, false); // calculate the camera movement
 		}
 	}
 

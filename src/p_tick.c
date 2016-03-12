@@ -303,6 +303,14 @@ static inline void P_RunThinkers(void)
 	}
 }
 
+static inline void P_RunPlayerThinkers(void)
+{
+	UINT8 i;
+	for (i = 0; i < MAXPLAYERS; i++)
+		if (playeringame[i] && players[i].mo)
+			players[i].mo->thinker.function.acp1(players[i].mo);
+}
+
 //
 // P_DoAutobalanceTeams()
 //
@@ -592,19 +600,16 @@ void P_Ticker(boolean run)
 
 	P_MapStart();
 
-	if (run)
-	{
-		postimgtype = postimgtype2 = postimg_none;
+	postimgtype = postimgtype2 = postimg_none;
 
-		if (demorecording)
-			G_WriteDemoTiccmd(&players[consoleplayer].cmd, 0);
-		if (demoplayback)
-			G_ReadDemoTiccmd(&players[consoleplayer].cmd, 0);
+	if (demorecording)
+		G_WriteDemoTiccmd(&players[consoleplayer].cmd, 0);
+	if (demoplayback)
+		G_ReadDemoTiccmd(&players[consoleplayer].cmd, 0);
 
-		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
-				P_PlayerThink(&players[i]);
-	}
+	for (i = 0; i < MAXPLAYERS; i++)
+		if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
+			P_PlayerThink(&players[i]);
 
 	// Keep track of how long they've been playing!
 	totalplaytime++;
@@ -616,18 +621,18 @@ void P_Ticker(boolean run)
 		P_EmeraldManager(); // Power stone mode
 
 	if (run)
-	{
 		P_RunThinkers();
+	else
+		P_RunPlayerThinkers();
 
-		// Run any "after all the other thinkers" stuff
-		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
-				P_PlayerAfterThink(&players[i]);
+	// Run any "after all the other thinkers" stuff
+	for (i = 0; i < MAXPLAYERS; i++)
+		if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
+			P_PlayerAfterThink(&players[i]);
 
 #ifdef HAVE_BLUA
-		LUAh_ThinkFrame();
+	LUAh_ThinkFrame();
 #endif
-	}
 
 	// Run shield positioning
 	P_RunShields();
@@ -696,6 +701,12 @@ void P_Ticker(boolean run)
 		if (modeattacking)
 			G_GhostTicker();
 	}
+
+	// Always move the camera.
+	if (splitscreen && camera2.chase)
+		P_MoveChaseCamera(&players[secondarydisplayplayer], &camera2, false);
+	if (camera.chase)
+		P_MoveChaseCamera(&players[displayplayer], &camera, false);
 
 	P_MapEnd();
 
