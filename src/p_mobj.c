@@ -34,6 +34,7 @@
 #ifdef ESLOPE
 #include "p_slopes.h"
 #endif
+#include "d_enet.h"
 
 // protos.
 static CV_PossibleValue_t viewheight_cons_t[] = {{16, "MIN"}, {56, "MAX"}, {0, NULL}};
@@ -504,11 +505,22 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 	static INT32 recursion; // detects recursion
 	statenum_t i = state; // initial state
 	statenum_t tempstate[NUMSTATES]; // for use with recursion
+	mobj_t oldmo;
 
 #ifdef PARANOIA
 	if (mobj->player != NULL)
 		I_Error("P_SetMobjState used for player mobj. Use P_SetPlayerMobjState instead!\n(State called: %d)", state);
 #endif
+
+	{
+		oldmo.x = mobj->x;
+		oldmo.y = mobj->y;
+		oldmo.z = mobj->z;
+		oldmo.momx = mobj->momx;
+		oldmo.momy = mobj->momy;
+		oldmo.momz = mobj->momz;
+		oldmo.angle = mobj->angle >> 24;
+	}
 
 	if (recursion++) // if recursion detected,
 		memset(seenstate = tempstate, 0, sizeof tempstate); // clear state table
@@ -553,7 +565,7 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 		// Modified handling.
 		// Call action functions when the state is set
 
-		if (st->action.acp1)
+		if (st->action.acp1 && server)
 		{
 			var1 = st->var1;
 			var2 = st->var2;
@@ -569,6 +581,16 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 
 		state = st->nextstate;
 	} while (!mobj->tics && !seenstate[state]);
+
+	if (server && (
+	oldmo.x != mobj->x ||
+	oldmo.y != mobj->y ||
+	oldmo.z != mobj->z ||
+	oldmo.momx != mobj->momx ||
+	oldmo.momy != mobj->momy ||
+	oldmo.momz != mobj->momz ||
+	oldmo.angle != mobj->angle >> 24))
+		Net_SendMobjMove(mobj);
 
 	if (!mobj->tics)
 		CONS_Alert(CONS_WARNING, M_GetText("State cycle detected, exiting.\n"));
@@ -8042,6 +8064,9 @@ void P_RemoveMobj(mobj_t *mobj)
 #else
 	I_Assert(!P_MobjWasRemoved(mobj));
 #endif
+
+	if (server && mobj->mobjnum != 0)
+		Net_SendRemove(mobj->mobjnum);
 
 	// Rings only, please!
 	if (mobj->spawnpoint &&

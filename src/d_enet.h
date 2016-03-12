@@ -20,5 +20,10 @@ void Net_CloseConnection(INT32 node);
 
 void Net_SendJoin(void);
 void Net_SendCharacter(void);
+void Net_SendClientMove(void);
+
 void Net_SpawnPlayer(UINT8 pnum, UINT8 node);
 void Net_SendChat(char *line);
+void Net_SendPlayerDamage(UINT8 pnum, UINT8 damagetype);
+void Net_SendMobjMove(mobj_t *mobj);
+void Net_SendRemove(UINT16 id);

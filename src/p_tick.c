@@ -21,6 +21,7 @@
 #include "m_random.h"
 #include "lua_script.h"
 #include "lua_hook.h"
+#include "d_enet.h"
 
 // Object place
 #include "m_cheat.h"
@@ -597,6 +598,8 @@ void P_Ticker(boolean run)
 	// Check for pause or menu up in single player
 	if (paused || P_AutoPause())
 		return;
+
+	Net_SendClientMove();
 
 	P_MapStart();
 

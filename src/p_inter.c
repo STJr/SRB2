@@ -26,6 +26,7 @@
 #include "m_cheat.h" // objectplace
 #include "m_misc.h"
 #include "v_video.h" // video flags for CEchos
+#include "d_enet.h"
 
 void P_ForceFeed(const player_t *player, INT32 attack, INT32 fade, tic_t duration, INT32 period)
 {
@@ -234,7 +235,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 	player_t *player;
 	INT32 i;
 
-	if (objectplacing)
+	if (objectplacing || !server)
 		return;
 
 	I_Assert(special != NULL);
@@ -2316,6 +2317,12 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 		}
 	}
 
+	if (server && !target->player && target->mobjnum != 0)
+	{
+		Net_SendRemove(target->mobjnum);
+		target->mobjnum = 0;
+	}
+
 	if (target->type == MT_SPIKE && inflictor && target->info->deathstate != S_NULL)
 	{
 		const fixed_t x=target->x,y=target->y,z=target->z;
@@ -2839,6 +2846,9 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 	// Spectator handling
 	if (netgame)
 	{
+		if (!server)
+			return false;
+
 		if (damagetype != DMG_SPECTATOR && target->player && target->player->spectator)
 			return false;
 
@@ -3052,16 +3062,22 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 #endif
 		else if (!player->powers[pw_super] && (player->powers[pw_shield] || player->bot))  //If One-Hit Shield
 		{
+			if (server)
+				Net_SendPlayerDamage(player - players, damagetype);
 			P_ShieldDamage(player, inflictor, source, damage);
 			damage = 0;
 		}
 		else if (player->mo->health > 1) // No shield but have rings.
 		{
+			if (server)
+				Net_SendPlayerDamage(player - players, damagetype);
 			damage = player->mo->health - 1;
 			P_RingDamage(player, inflictor, source, damage, damagetype);
 		}
 		else // No shield, no rings, no invincibility.
 		{
+			if (server)
+				Net_SendPlayerDamage(player - players, damagetype);
 			// To reduce griefing potential, don't allow players to be killed
 			// by friendly fire. Spilling their rings and other items is enough.
 			if (force || !(G_GametypeHasTeams()
@@ -3108,7 +3124,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 		if (player->health < 0)
 			player->health = 0;
 
-		P_HitDeathMessages(player, inflictor, source, damagetype);
+		//P_HitDeathMessages(player, inflictor, source, damagetype);
 
 		P_ForceFeed(player, 40, 10, TICRATE, 40 + min(damage, 100)*2);
 	}

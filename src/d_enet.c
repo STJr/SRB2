@@ -12,6 +12,7 @@
 #include "d_main.h"
 #include "i_system.h"
 #include "m_argv.h"
+#include "m_random.h"
 
 UINT8 net_nodecount, net_playercount;
 UINT16 net_ringid;
@@ -50,7 +51,8 @@ enum {
 	SERVER_MESSAGE,
 	SERVER_SPAWN,
 	SERVER_REMOVE,
-	SERVER_MOVE
+	SERVER_MOVE,
+	SERVER_PLAYER_DAMAGE
 };
 
 static ENetHost *ServerHost = NULL,
@@ -81,7 +83,6 @@ static UINT8 mynode;
 
 void Net_ServerMessage(const char *fmt, ...);
 static void ServerSendMapInfo(UINT8 node);
-static void Net_SendMove(void);
 static void Net_MovePlayers(void);
 
 void Net_GetNetStat(UINT8 node, UINT32 *ping, UINT32 *packetLoss)
@@ -254,6 +255,24 @@ static void ClientHandlePacket(UINT8 node, DataWrap data)
 		break;
 	}
 
+	case SERVER_REMOVE:
+	{
+		thinker_t *th;
+		mobj_t *mobj = NULL;
+		UINT16 id = DW_ReadUINT16(data);
+
+		for (th = thinkercap.next; th != &thinkercap; th = th->next)
+			if (th->function.acp1 == (actionf_p1)P_MobjThinker && ((mobj_t *)th)->mobjnum == id)
+			{
+				mobj = (mobj_t *)th;
+				break;
+			}
+
+		if (mobj)
+			P_RemoveMobj(mobj);
+		break;
+	}
+
 	case SERVER_MOVE:
 	{
 		thinker_t *th;
@@ -287,12 +306,20 @@ static void ClientHandlePacket(UINT8 node, DataWrap data)
 
 		mobj->angle = DW_ReadUINT8(data) << 24;
 
-		mobj->sprite = SPR_PLAY;
-		mobj->sprite2 = DW_ReadUINT8(data);
-		mobj->frame = DW_ReadUINT8(data);
-		mobj->tics = -1;
+		if (mobj->type == MT_PLAYER)
+		{
+			mobj->sprite = SPR_PLAY;
+			mobj->sprite2 = DW_ReadUINT8(data);
+			mobj->frame = DW_ReadUINT8(data);
+			mobj->tics = -1;
+		}
 		break;
 	}
+
+	case SERVER_PLAYER_DAMAGE:
+		P_DoPlayerPain(&players[consoleplayer], NULL, NULL);
+		P_PlayRinglossSound(players[consoleplayer].mo);
+		break;
 
 	default:
 		CONS_Printf("NETWORK: Unknown message type recieved from node %u!\n", node);
@@ -307,7 +334,6 @@ void Net_AckTicker(void)
 	PeerData *pdata;
 	jmp_buf safety;
 
-	Net_SendMove();
 	Net_MovePlayers();
 
 	while (ClientHost && enet_host_service(ClientHost, &e, 0) > 0)
@@ -673,7 +699,7 @@ void Net_SendCharacter(void)
 	enet_peer_send(nodetopeer[servernode], CHANNEL_GENERAL, packet);
 }
 
-static void Net_SendMove(void)
+void Net_SendClientMove(void)
 {
 	ENetPacket *packet;
 	UINT8 *buf = net_buffer;
@@ -762,4 +788,56 @@ static void Net_MovePlayers(void)
 		packet = enet_packet_create(net_buffer, buf-net_buffer, 0);
 		enet_host_broadcast(ServerHost, CHANNEL_MOVE, packet);
 	}
+}
+
+void Net_SendPlayerDamage(UINT8 pnum, UINT8 damagetype)
+{
+	ENetPacket *packet;
+	UINT8 *buf = net_buffer;
+
+	if (!netgame)
+		return;
+
+	WRITEUINT8(buf, SERVER_PLAYER_DAMAGE);
+	(void)damagetype;
+
+	packet = enet_packet_create(net_buffer, buf-net_buffer, ENET_PACKET_FLAG_RELIABLE);
+	enet_peer_send(nodetopeer[playernode[pnum]], CHANNEL_MOVE, packet);
+}
+
+void Net_SendMobjMove(mobj_t *mobj)
+{
+	ENetPacket *packet;
+	UINT8 *buf = net_buffer;
+
+	if (!netgame || mobj->mobjnum == 0)
+		return;
+
+	WRITEUINT8(buf, SERVER_MOVE);
+	WRITEUINT16(buf, mobj->mobjnum);
+	WRITEINT16(buf, mobj->x >> 16);
+	WRITEINT16(buf, mobj->y >> 16);
+	WRITEINT16(buf, mobj->z >> 16);
+	WRITEINT16(buf, mobj->momx >> 8);
+	WRITEINT16(buf, mobj->momy >> 8);
+	WRITEINT16(buf, mobj->momz >> 8);
+	WRITEUINT8(buf, mobj->angle >> 24);
+
+	packet = enet_packet_create(net_buffer, buf-net_buffer, ENET_PACKET_FLAG_RELIABLE);
+	enet_host_broadcast(ServerHost, CHANNEL_MOVE, packet);
+}
+
+void Net_SendRemove(UINT16 id)
+{
+	ENetPacket *packet;
+	UINT8 *buf = net_buffer;
+
+	if (!netgame || id == 0)
+		return;
+
+	WRITEUINT8(buf, SERVER_REMOVE);
+	WRITEUINT16(buf, id);
+
+	packet = enet_packet_create(net_buffer, buf-net_buffer, ENET_PACKET_FLAG_RELIABLE);
+	enet_host_broadcast(ServerHost, CHANNEL_MOVE, packet);
 }
