@@ -4899,7 +4899,7 @@ void M_SetupNetgameChoosePlayer(void)
 		return;
 	}
 
-	S_ChangeMusic(mus_chrsel, true);
+	S_ChangeMusicInternal("chrsel", true);
 
 	M_SetupNextMenu(&MP_PlayerDef);
 	char_scroll = itemOn*128*FRACUNIT; // finish scrolling the menu
