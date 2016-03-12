@@ -3710,10 +3710,15 @@ static void CalculatePrecipFloor(precipmobj_t *mobj)
 		mobjsecsubsec = mobj->subsector->sector;
 	else
 		return;
-	mobj->floorz = mobjsecsubsec->floorheight;
+	mobj->floorz =
+#ifdef ESLOPE
+				mobjsecsubsec->f_slope ? P_GetZAt(mobjsecsubsec->f_slope, mobj->x, mobj->y) :
+#endif
+				mobjsecsubsec->floorheight;
 	if (mobjsecsubsec->ffloors)
 	{
 		ffloor_t *rover;
+		fixed_t topheight;
 
 		for (rover = mobjsecsubsec->ffloors; rover; rover = rover->next)
 		{
@@ -3724,8 +3729,15 @@ static void CalculatePrecipFloor(precipmobj_t *mobj)
 			if (!(rover->flags & FF_BLOCKOTHERS) && !(rover->flags & FF_SWIMMABLE))
 				continue;
 
-			if (*rover->topheight > mobj->floorz)
-				mobj->floorz = *rover->topheight;
+#ifdef ESLOPE
+			if (*rover->t_slope)
+				topheight = P_GetZAt(*rover->t_slope, mobj->x, mobj->y);
+			else
+#endif
+			topheight = *rover->topheight;
+
+			if (topheight > mobj->floorz)
+				mobj->floorz = topheight;
 		}
 	}
 }
@@ -7768,6 +7780,7 @@ static precipmobj_t *P_SpawnPrecipMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype
 {
 	state_t *st;
 	precipmobj_t *mobj = Z_Calloc(sizeof (*mobj), PU_LEVEL, NULL);
+	fixed_t starting_floorz;
 
 	mobj->x = x;
 	mobj->y = y;
@@ -7786,8 +7799,16 @@ static precipmobj_t *P_SpawnPrecipMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype
 	// set subsector and/or block links
 	P_SetPrecipitationThingPosition(mobj);
 
-	mobj->floorz = mobj->subsector->sector->floorheight;
-	mobj->ceilingz = mobj->subsector->sector->ceilingheight;
+	mobj->floorz = starting_floorz =
+#ifdef ESLOPE
+				mobj->subsector->sector->f_slope ? P_GetZAt(mobj->subsector->sector->f_slope, x, y) :
+#endif
+				mobj->subsector->sector->floorheight;
+	mobj->ceilingz =
+#ifdef ESLOPE
+				mobj->subsector->sector->c_slope ? P_GetZAt(mobj->subsector->sector->c_slope, x, y) :
+#endif
+				mobj->subsector->sector->ceilingheight;
 
 	mobj->z = z;
 	mobj->momz = mobjinfo[type].speed;
@@ -7797,7 +7818,7 @@ static precipmobj_t *P_SpawnPrecipMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype
 
 	CalculatePrecipFloor(mobj);
 
-	if (mobj->floorz != mobj->subsector->sector->floorheight)
+	if (mobj->floorz != starting_floorz)
 		mobj->precipflags |= PCF_FOF;
 	else if (GETSECSPECIAL(mobj->subsector->sector->special, 1) == 7
 	 || GETSECSPECIAL(mobj->subsector->sector->special, 1) == 6
