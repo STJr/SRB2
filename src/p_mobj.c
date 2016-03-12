@@ -487,7 +487,9 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		for (;(state = seenstate[i]) > S_NULL; i = state - 1)
 			seenstate[i] = S_NULL; // erase memory of states
 
+#if NEWTICRATERATIO != 1
 	mobj->tics *= NEWTICRATERATIO;
+#endif
 	return true;
 }
 
@@ -1477,7 +1479,9 @@ void P_CheckGravity(mobj_t *mo, boolean affect)
 			}
 		}
 
+#if NEWTICRATERATIO != 1
 		gravityadd /= NEWTICRATERATIO;
+#endif
 	}
 	else
 	{
@@ -1607,8 +1611,13 @@ static void P_XYFriction(mobj_t *mo, fixed_t oldx, fixed_t oldy)
 		if (player->pflags & PF_SPINNING && (player->rmomx || player->rmomy) && !(player->pflags & PF_STARTDASH))
 		{
 			const fixed_t ns = FixedDiv(549*FRICTION,500*FRACUNIT);
+#if NEWTICRATERATIO != 1
 			mo->momx = FixedMul(mo->momx, FRACUNIT - (FRACUNIT - ns) / NEWTICRATERATIO);
 			mo->momy = FixedMul(mo->momy, FRACUNIT - (FRACUNIT - ns) / NEWTICRATERATIO);
+#else
+			mo->momx = FixedMul(mo->momx, ns);
+			mo->momy = FixedMul(mo->momy, ns);
+#endif
 		}
 		else if (abs(player->rmomx) < FixedMul(STOPSPEED, mo->scale)
 		    && abs(player->rmomy) < FixedMul(STOPSPEED, mo->scale)
@@ -1626,6 +1635,7 @@ static void P_XYFriction(mobj_t *mo, fixed_t oldx, fixed_t oldy)
 		}
 		else
 		{
+#if NEWTICRATERATIO != 1
 			if (oldx == mo->x && oldy == mo->y) // didn't go anywhere
 			{
 				mo->momx = FixedMul(mo->momx, FRACUNIT - (FRACUNIT - ORIG_FRICTION) / NEWTICRATERATIO);
@@ -1636,6 +1646,18 @@ static void P_XYFriction(mobj_t *mo, fixed_t oldx, fixed_t oldy)
 				mo->momx = FixedMul(mo->momx, FRACUNIT - (FRACUNIT - mo->friction) / NEWTICRATERATIO);
 				mo->momy = FixedMul(mo->momy, FRACUNIT - (FRACUNIT - mo->friction) / NEWTICRATERATIO);
 			}
+#else
+			if (oldx == mo->x && oldy == mo->y) // didn't go anywhere
+			{
+				mo->momx = FixedMul(mo->momx, ORIG_FRICTION);
+				mo->momy = FixedMul(mo->momy, ORIG_FRICTION);
+			}
+			else
+			{
+				mo->momx = FixedMul(mo->momx, mo->friction);
+				mo->momy = FixedMul(mo->momy, mo->friction);
+			}
+#endif
 
 			mo->friction = ORIG_FRICTION;
 		}
@@ -1793,11 +1815,13 @@ void P_XYMovement(mobj_t *mo)
 	xmove = mo->momx;
 	ymove = mo->momy;
 
+#if NEWTICRATERATIO != 1
 	if (player)
 	{
 		xmove /= NEWTICRATERATIO;
 		ymove /= NEWTICRATERATIO;
 	}
+#endif
 
 	oldx = mo->x;
 	oldy = mo->y;
