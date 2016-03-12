@@ -1859,7 +1859,10 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		{
 			ds_p->silhouette = SIL_BOTTOM;
 #ifdef ESLOPE
-			ds_p->bsilheight = (frontsector->f_slope ? INT32_MAX : frontsector->floorheight);
+			if ((backsector->f_slope ? P_GetZAt(backsector->f_slope, viewx, viewy) : backsector->floorheight) > viewz)
+				ds_p->bsilheight = INT32_MAX;
+			else
+				ds_p->bsilheight = (frontsector->f_slope ? INT32_MAX : frontsector->floorheight);
 #else
 			ds_p->bsilheight = frontsector->floorheight;
 #endif
@@ -1883,7 +1886,10 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		{
 			ds_p->silhouette |= SIL_TOP;
 #ifdef ESLOPE
-			ds_p->tsilheight = (frontsector->c_slope ? INT32_MIN : frontsector->ceilingheight);
+			if ((backsector->c_slope ? P_GetZAt(backsector->c_slope, viewx, viewy) : backsector->ceilingheight) < viewz)
+				ds_p->tsilheight = INT32_MIN;
+			else
+				ds_p->tsilheight = (frontsector->c_slope ? INT32_MIN : frontsector->ceilingheight);
 #else
 			ds_p->tsilheight = frontsector->ceilingheight;
 #endif
