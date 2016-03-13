@@ -505,7 +505,10 @@ void Net_AckTicker(void)
 			if (!(pdata->flags & PEER_LEAVING))
 				Net_ServerMessage("%s disconnected.", pdata->name);
 			if (playeringame[nodetoplayer[pdata->node]])
+			{
+				Net_SendRemove(pdata->node);
 				CL_RemovePlayer(nodetoplayer[pdata->node]);
+			}
 			net_nodecount--;
 			nodetopeer[pdata->node] = NULL;
 			nodeingame[pdata->node] = false;
