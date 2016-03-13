@@ -321,7 +321,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		I_Assert(tmthing->player);
 
 		// we only care about monitors, springs, enemies, and bosses - things we can bounce off of.
-		if (!(thing->flags & (MF_SOLID|MF_MONITOR|MF_SPRING|MF_ENEMY|MF_BOSS)) && thing->type != MT_FAN && thing->type != MT_STEAM)
+		if (!(thing->flags & (MF_SOLID|MF_MONITOR|MF_SPRING|MF_ENEMY|MF_BOSS)) && thing->type != MT_FAN && thing->type != MT_STEAM && thing->type != MT_FLINGRING)
 			return true;
 
 		blockdist = thing->radius + tmthing->radius;
@@ -332,7 +332,12 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		if (thing->z + thing->height < tmthing->z)
 			return true; // underneath
 
-		if (thing->type == MT_FAN || thing->type == MT_STEAM)
+		if (thing->type == MT_FLINGRING && P_CanPickupItem(tmthing->player, false))
+		{
+			P_KillMobj(thing, NULL, NULL, 0);
+			return true;
+		}
+		else if (thing->type == MT_FAN || thing->type == MT_STEAM)
 			P_DoFanAndGasJet(thing, tmthing);
 		else if (thing->flags & MF_SPRING)
 		{
