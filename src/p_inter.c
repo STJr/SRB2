@@ -250,11 +250,11 @@ void P_DoMatchSuper(player_t *player)
 		S_StopMusic();
 		if (mariomode)
 		{
-			S_ChangeMusic(mus_minvnc, false);
+			S_ChangeMusicInternal("minvnc", false);
 			G_GhostAddColor(GHC_INVINCIBLE);
 		}
 		else
-			S_ChangeMusic(mus_invinc, false);
+			S_ChangeMusicInternal("invinc", false);
 	}
 
 	// Also steal 50 points from every enemy, sealing your victory.
@@ -275,11 +275,11 @@ void P_DoMatchSuper(player_t *player)
 					S_StopMusic();
 					if (mariomode)
 					{
-						S_ChangeMusic(mus_minvnc, false);
+						S_ChangeMusicInternal("minvnc", false);
 						G_GhostAddColor(GHC_INVINCIBLE);
 					}
 					else
-						S_ChangeMusic(mus_invinc, false);
+						S_ChangeMusicInternal("invinc", false);
 				}
 			}
 }
