@@ -320,8 +320,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 		I_Assert(tmthing->player);
 
-		// we only care about monitors, enemies, and bosses - things we can bounce off of.
-		if (!(thing->flags & (MF_SOLID|MF_MONITOR|MF_ENEMY|MF_BOSS)))
+		// we only care about monitors, springs, enemies, and bosses - things we can bounce off of.
+		if (!(thing->flags & (MF_SOLID|MF_MONITOR|MF_SPRING|MF_ENEMY|MF_BOSS)) && thing->type != MT_FAN && thing->type != MT_STEAM)
 			return true;
 
 		blockdist = thing->radius + tmthing->radius;
@@ -331,6 +331,43 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			return true; // overhead
 		if (thing->z + thing->height < tmthing->z)
 			return true; // underneath
+
+		if (thing->type == MT_FAN || thing->type == MT_STEAM)
+			P_DoFanAndGasJet(thing, tmthing);
+		else if (thing->flags & MF_SPRING)
+		{
+			if ( thing->z <= tmthing->z + tmthing->height
+			&& tmthing->z <= thing->z + thing->height)
+				iwassprung = P_DoSpring(thing, tmthing);
+			if (iwassprung)
+				return false;
+		}
+
+		// Do the springshell bounce!
+		if (thing->type == MT_SPRINGSHELL || thing->type == MT_YELLOWSHELL)
+		{
+			// Multiplying by -1 inherently flips "less than" and "greater than"
+			fixed_t tmz     = ((thing->eflags & MFE_VERTICALFLIP) ? -(tmthing->z + tmthing->height) : tmthing->z);
+			fixed_t tmznext = ((thing->eflags & MFE_VERTICALFLIP) ? -tmthing->momz : tmthing->momz) + tmz;
+			fixed_t thzh    = ((thing->eflags & MFE_VERTICALFLIP) ? -thing->z : thing->z + thing->height);
+			fixed_t sprarea = FixedMul(8*FRACUNIT, thing->scale) * P_MobjFlip(thing);
+
+			if ((tmznext <= thzh && tmz > thzh) || (tmznext > thzh - sprarea && tmznext < thzh))
+			{
+				const fixed_t oldz = tmthing->z;
+				if (tmthing->eflags & MFE_VERTICALFLIP)
+					tmthing->z = thing->z - tmthing->height - 1;
+				else
+					tmthing->z = thing->z + thing->height + 1;
+				Net_SendClientMove(true); // Tell the server EXACTLY where we were since we detected a potential hit here!
+				tmthing->z = oldz;
+
+				P_DoSpring(thing, tmthing);
+				return true;
+			}
+			else if (tmz > thzh - sprarea && tmz < thzh) // Don't damage people springing up / down
+				return true;
+		}
 
 		if (thing->flags & (MF_MONITOR|MF_ENEMY|MF_BOSS) && tmthing->player->pflags & (PF_JUMPED|PF_SPINNING|PF_GLIDING))
 		{
@@ -348,7 +385,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			}
 		}
 
-		return true;
+		return !(thing->flags & MF_SOLID);
 	}
 
 	// Metal Sonic destroys tiny baby objects.

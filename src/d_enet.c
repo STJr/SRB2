@@ -336,6 +336,9 @@ static void ClientHandlePacket(UINT8 node, DataWrap data)
 		UINT16 id = DW_ReadUINT16(data);
 		fixed_t x,y,z;
 
+		if (id-1 == mynode)
+			break;
+
 		for (th = thinkercap.next; th != &thinkercap; th = th->next)
 			if (th->function.acp1 == (actionf_p1)P_MobjThinker && ((mobj_t *)th)->mobjnum == id)
 			{
@@ -352,9 +355,11 @@ static void ClientHandlePacket(UINT8 node, DataWrap data)
 		x = DW_ReadINT16(data) << 16,
 		y = DW_ReadINT16(data) << 16,
 		z = DW_ReadINT16(data) << 16;
-		P_MapStart();
+		P_UnsetThingPosition(mobj);
+		mobj->flags |= MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY;
+		P_SetThingPosition(mobj);
 		P_TeleportMove(mobj, x, y, z);
-		P_MapEnd();
+		P_SetTarget(&tmthing, NULL);
 
 		mobj->momx = DW_ReadINT16(data) << 8,
 		mobj->momy = DW_ReadINT16(data) << 8,
@@ -373,14 +378,30 @@ static void ClientHandlePacket(UINT8 node, DataWrap data)
 	}
 
 	case SERVER_PLAYER_DAMAGE:
-		if (players[consoleplayer].health > 1)
+	{
+		const UINT8 damagetype = DW_ReadUINT8(data);
+		const fixed_t x = DW_ReadFixed(data),
+			y = DW_ReadFixed(data),
+			z = DW_ReadFixed(data);
+		P_TeleportMove(players[consoleplayer].mo, x, y, z);
+		P_SetTarget(&tmthing, NULL);
+		if (players[consoleplayer].health > 1 && !(damagetype & DMG_DEATHMASK))
 		{
 			P_DoPlayerPain(&players[consoleplayer], NULL, NULL);
-			P_PlayRinglossSound(players[consoleplayer].mo);
+			switch(damagetype)
+			{
+			case DMG_SPIKE:
+				S_StartSound(players[consoleplayer].mo, sfx_spkdth);
+				break;
+			default:
+				P_PlayRinglossSound(players[consoleplayer].mo);
+				break;
+			}
+			break;
 		}
-		else
-			P_KillMobj(players[consoleplayer].mo, NULL, NULL, 0);
+		P_KillMobj(players[consoleplayer].mo, NULL, NULL, damagetype);
 		break;
+	}
 
 	case SERVER_PLAYER_RINGS:
 		players[consoleplayer].health = DW_ReadUINT16(data) + 1;
@@ -869,7 +890,10 @@ void Net_SendPlayerDamage(UINT8 pnum, UINT8 damagetype)
 		return;
 
 	WRITEUINT8(buf, SERVER_PLAYER_DAMAGE);
-	(void)damagetype;
+	WRITEUINT8(buf, damagetype);
+	WRITEFIXED(buf, players[pnum].mo->x);
+	WRITEFIXED(buf, players[pnum].mo->y);
+	WRITEFIXED(buf, players[pnum].mo->z);
 
 	packet = enet_packet_create(net_buffer, buf-net_buffer, ENET_PACKET_FLAG_RELIABLE);
 	enet_peer_send(nodetopeer[playernode[pnum]], CHANNEL_GENERAL, packet);
@@ -893,7 +917,7 @@ void Net_SendMobjMove(mobj_t *mobj)
 	WRITEINT16(buf, mobj->momz >> 8);
 	WRITEUINT8(buf, mobj->angle >> 24);
 
-	packet = enet_packet_create(net_buffer, buf-net_buffer, ENET_PACKET_FLAG_RELIABLE);
+	packet = enet_packet_create(net_buffer, buf-net_buffer, 0);
 	enet_host_broadcast(ServerHost, CHANNEL_MOVE, packet);
 }
 
