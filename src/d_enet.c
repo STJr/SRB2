@@ -29,6 +29,7 @@ static UINT16 portnum = 5029;
 static tic_t lastMove;
 static ticcmd_t lastCmd;
 
+static UINT16 *removelist, removecount;
 enum {
 	CHANNEL_GENERAL = 0,
 	CHANNEL_CHAT,
@@ -51,6 +52,7 @@ enum {
 	SERVER_MESSAGE,
 	SERVER_SPAWN,
 	SERVER_REMOVE,
+	SERVER_REMOVE_LIST,
 	SERVER_MOVE,
 	SERVER_PLAYER_DAMAGE,
 	SERVER_PLAYER_RINGS
@@ -85,6 +87,7 @@ static UINT8 mynode;
 void Net_ServerMessage(const char *fmt, ...);
 static void ServerSendMapInfo(UINT8 node);
 static void Net_MovePlayers(void);
+static void Net_SendRemoveList(UINT8 node);
 
 void Net_GetNetStat(UINT8 node, UINT32 *ping, UINT32 *packetLoss)
 {
@@ -161,9 +164,13 @@ static void ServerHandlePacket(UINT8 node, DataWrap data)
 			playernode[pnum] = node;
 			nodetoplayer[node] = pnum;
 
+			// Update them on the current game state.
+			// Send players
 			for (i = 0; i < MAXPLAYERS; i++)
 				if (i != pnum && playeringame[i])
 					Net_SpawnPlayer(i, node);
+			// Send which mobjs have already been removed.
+			Net_SendRemoveList(node);
 		}
 		pnum = nodetoplayer[node];
 		SetPlayerSkin(pnum, DW_ReadStringn(data, SKINNAMESIZE));
@@ -278,6 +285,31 @@ static void ClientHandlePacket(UINT8 node, DataWrap data)
 
 		if (mobj)
 			P_RemoveMobj(mobj);
+		break;
+	}
+
+	case SERVER_REMOVE_LIST:
+	{
+		thinker_t *th;
+		mobj_t *mobj = NULL;
+		UINT16 i;
+
+		removecount = DW_ReadUINT16(data);
+		removelist = ZZ_Alloc(removecount * sizeof(UINT16));
+		for (i = 0; i < removecount; i++)
+			removelist[i] = DW_ReadUINT16(data);
+
+		for (th = thinkercap.next; th != &thinkercap; th = th->next)
+			if (th->function.acp1 == (actionf_p1)P_MobjThinker && ((mobj_t *)th)->mobjnum != 0)
+			{
+				mobj = (mobj_t *)th;
+				for (i = 0; i < removecount; i++)
+					if (mobj->mobjnum == removelist[i])
+					{
+						P_RemoveMobj(mobj);
+						break;
+					}
+			}
 		break;
 	}
 
@@ -857,6 +889,12 @@ void Net_SendRemove(UINT16 id)
 	if (!netgame || !server || id == 0)
 		return;
 
+	if (id >= 1000 && id < net_ringid)
+	{
+		removelist = Z_Realloc(removelist, ++removecount * sizeof(UINT16), PU_LEVEL, NULL);
+		removelist[removecount-1] = id;
+	}
+
 	WRITEUINT8(buf, SERVER_REMOVE);
 	WRITEUINT16(buf, id);
 
@@ -878,3 +916,28 @@ void Net_SendPlayerRings(UINT8 pnum)
 	packet = enet_packet_create(net_buffer, buf-net_buffer, ENET_PACKET_FLAG_RELIABLE);
 	enet_peer_send(nodetopeer[playernode[pnum]], CHANNEL_GENERAL, packet);
 }
+
+void Net_ResetLevel(void)
+{
+	removelist = NULL;
+	removecount = 0;
+}
+
+static void Net_SendRemoveList(UINT8 node)
+{
+	ENetPacket *packet;
+	UINT8 *buf = net_buffer;
+	UINT16 i;
+
+	if (!netgame || !server || removecount == 0)
+		return;
+
+	WRITEUINT8(buf, SERVER_REMOVE_LIST);
+	WRITEUINT16(buf, removecount);
+	for (i = 0; i < removecount; i++)
+		WRITEUINT16(buf, removelist[i]);
+
+	packet = enet_packet_create(net_buffer, buf-net_buffer, ENET_PACKET_FLAG_RELIABLE);
+	enet_peer_send(nodetopeer[node], CHANNEL_GENERAL, packet);
+}
+

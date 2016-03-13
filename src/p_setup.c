@@ -2400,6 +2400,8 @@ boolean P_SetupLevel(boolean skipprecip)
 	sector_t *ss;
 	boolean chase;
 
+	Net_ResetLevel();
+
 	levelloading = true;
 
 	// This is needed. Don't touch.
