@@ -354,14 +354,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 			if ((tmznext <= thzh && tmz > thzh) || (tmznext > thzh - sprarea && tmznext < thzh))
 			{
-				const fixed_t oldz = tmthing->z;
-				if (tmthing->eflags & MFE_VERTICALFLIP)
-					tmthing->z = thing->z - tmthing->height - 1;
-				else
-					tmthing->z = thing->z + thing->height + 1;
-				Net_SendClientMove(true); // Tell the server EXACTLY where we were since we detected a potential hit here!
-				tmthing->z = oldz;
-
+				// TODO: tell the server we're springing (somehow) so it doesn't hurt us.
 				P_DoSpring(thing, tmthing);
 				return true;
 			}
@@ -527,7 +520,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	}
 
 	if ((thing->type == MT_SPRINGSHELL || thing->type == MT_YELLOWSHELL) && thing->health > 0
-	 && (tmthing->player || (tmthing->flags & MF_PUSHABLE)) && tmthing->health > 0)
+	 && (tmthing->type == MT_PLAYER || (tmthing->flags & MF_PUSHABLE)) && tmthing->health > 0)
 	{
 		// Multiplying by -1 inherently flips "less than" and "greater than"
 		fixed_t tmz     = ((thing->eflags & MFE_VERTICALFLIP) ? -(tmthing->z + tmthing->height) : tmthing->z);

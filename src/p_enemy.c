@@ -23,6 +23,7 @@
 #include "r_things.h"
 #include "i_video.h"
 #include "lua_hook.h"
+#include "d_enet.h"
 
 #ifdef HW3SOUND
 #include "hardware/hw3sound.h"
@@ -2971,6 +2972,7 @@ void A_JumpShield(mobj_t *actor)
 		player->powers[pw_shield] = SH_JUMP|(player->powers[pw_shield] & SH_STACK);
 		P_SpawnShieldOrb(player);
 	}
+	Net_AwardPowerup(player, pw_shield, SH_JUMP);
 
 	S_StartSound(player->mo, actor->info->seesound);
 }
@@ -3003,6 +3005,7 @@ void A_RingShield(mobj_t *actor)
 		player->powers[pw_shield] = SH_ATTRACT|(player->powers[pw_shield] & SH_STACK);
 		P_SpawnShieldOrb(player);
 	}
+	Net_AwardPowerup(player, pw_shield, SH_ATTRACT);
 
 	S_StartSound(player->mo, actor->info->seesound);
 }
@@ -3201,6 +3204,7 @@ void A_BombShield(mobj_t *actor)
 		player->powers[pw_shield] = SH_BOMB|(player->powers[pw_shield] & SH_STACK);
 		P_SpawnShieldOrb(player);
 	}
+	Net_AwardPowerup(player, pw_shield, SH_BOMB);
 
 	S_StartSound(player->mo, actor->info->seesound);
 }
@@ -3233,6 +3237,7 @@ void A_WaterShield(mobj_t *actor)
 		player->powers[pw_shield] = SH_ELEMENTAL|(player->powers[pw_shield] & SH_STACK);
 		P_SpawnShieldOrb(player);
 	}
+	Net_AwardPowerup(player, pw_shield, SH_ELEMENTAL);
 
 	if (player->powers[pw_underwater] && player->powers[pw_underwater] <= 12*TICRATE + 1)
 		P_RestoreMusic(player);
@@ -3277,6 +3282,7 @@ void A_ForceShield(mobj_t *actor)
 	}
 	else
 		player->powers[pw_shield] = SH_FORCE|(player->powers[pw_shield] & SH_STACK)|0x01;
+	Net_AwardPowerup(player, pw_shield, SH_FORCE);
 
 	S_StartSound(player->mo, actor->info->seesound);
 }
@@ -3313,6 +3319,7 @@ void A_PityShield(mobj_t *actor)
 		player->powers[pw_shield] = SH_PITY+(player->powers[pw_shield] & SH_STACK);
 		P_SpawnShieldOrb(player);
 	}
+	Net_AwardPowerup(player, pw_shield, SH_PITY);
 
 	S_StartSound(player->mo, actor->info->seesound);
 }

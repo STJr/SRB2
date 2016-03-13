@@ -567,14 +567,14 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 
 		if (st->action.acp1)
 		{
-			boolean runit = server;
+			boolean runit = server || !mobj->mobjnum;
 			var1 = st->var1;
 			var2 = st->var2;
 #ifdef HAVE_BLUA
 			astate = st;
 #endif
-			if (!runit
-			&& (st->action.acp1 == A_PlayActiveSound
+			if (runit
+			|| st->action.acp1 == A_PlayActiveSound
 			|| st->action.acp1 == A_PlayAttackSound
 			|| st->action.acp1 == A_PlaySeeSound
 			|| st->action.acp1 == A_PlaySound
@@ -589,7 +589,7 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 			|| st->action.acp1 == A_ParticleSpawn
 			|| st->action.acp1 == A_SetSolidSteam
 			|| st->action.acp1 == A_UnsetSolidSteam
-			|| st->action.acp1 == A_BubbleCheck))
+			|| st->action.acp1 == A_BubbleCheck)
 				runit = true;
 			if (runit)
 				st->action.acp1(mobj);

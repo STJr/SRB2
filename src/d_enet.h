@@ -21,12 +21,14 @@ void Net_CloseConnection(INT32 node);
 void Net_SendJoin(void);
 void Net_SendCharacter(void);
 void Net_SendClientMove(boolean force);
+void Net_SendClientJump(void);
 
 void Net_SpawnPlayer(UINT8 pnum, UINT8 node);
 void Net_SendChat(char *line);
 void Net_SendPlayerDamage(UINT8 pnum, UINT8 damagetype);
 void Net_SendMobjMove(mobj_t *mobj);
 void Net_SendRemove(UINT16 id);
-void Net_SendKill(UINT16 id);
+void Net_SendKill(UINT16 id, UINT16 kid);
 void Net_SendPlayerRings(UINT8 pnum);
 void Net_ResetLevel(void);
+void Net_AwardPowerup(player_t *player, powertype_t power, UINT16 data);

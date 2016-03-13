@@ -3578,6 +3578,8 @@ void P_DoJump(player_t *player, boolean soundandstate)
 	if (!player->jumpfactor)
 		return;
 
+	Net_SendClientJump();
+
 	if (player->climbing)
 	{
 		// Jump this high.

@@ -47,6 +47,7 @@ enum {
 	CLIENT_CHAT,
 	CLIENT_CHARACTER,
 	CLIENT_MOVE,
+	CLIENT_ATTACK,
 
 	SERVER_MSINFO = 0,
 	SERVER_MAPINFO,
@@ -58,7 +59,8 @@ enum {
 	SERVER_MOVE,
 	SERVER_PLAYER_DAMAGE,
 	SERVER_PLAYER_RINGS,
-	SERVER_FORCE_MOVE
+	SERVER_FORCE_MOVE,
+	SERVER_POWERUP
 };
 
 static ENetHost *ServerHost = NULL,
@@ -221,6 +223,35 @@ static void ServerHandlePacket(UINT8 node, DataWrap data)
 		break;
 	}
 
+	case CLIENT_ATTACK:
+	{
+		player_t *player;
+		fixed_t x,y,z,oldz;
+
+		if (nodetoplayer[node] == -1)
+			break;
+
+		player = &players[nodetoplayer[node]];
+		if (player->pflags & PF_JUMPED)
+			break;
+
+		x = DW_ReadFixed(data);
+		y = DW_ReadFixed(data);
+		z = DW_ReadFixed(data);
+
+		oldz = player->mo->z;
+		player->mo->z = z;
+		if (!P_TryMove(player->mo, x, y, true))
+		{
+			player->mo->z = oldz;
+			Net_ForceMove(player);
+		}
+		player->pflags |= PF_JUMPDOWN;
+		P_DoJump(player, true);
+		P_SetTarget(&tmthing, NULL);
+		break;
+	}
+
 	default:
 		CONS_Printf("NETWORK: Unknown message type recieved from node %u!\n", node);
 		break;
@@ -229,8 +260,10 @@ static void ServerHandlePacket(UINT8 node, DataWrap data)
 
 void CL_ConnectionSuccessful(void);
 
-static void ClientHandlePacket(UINT8 node, DataWrap data)
+static void ClientHandlePacket(DataWrap data)
 {
+	player_t *player = &players[consoleplayer];
+
 	switch(DW_ReadUINT8(data))
 	{
 	case SERVER_MAPINFO:
@@ -264,13 +297,10 @@ static void ClientHandlePacket(UINT8 node, DataWrap data)
 		// Spawn a player.
 		if (id < 1000)
 		{
-			/*const fixed_t x = DW_ReadINT16(data) << 16,
-				y = DW_ReadINT16(data) << 16,
-				z = DW_ReadINT16(data) << 16;*/
 			mobj_t *mobj = P_SpawnMobj(0, 0, 0, MT_PLAYER);
 			mobj->flags &= ~MF_SOLID;
+			mobj->flags |= MF_SLIDEME;
 			mobj->mobjnum = id;
-			//mobj->angle = DW_ReadUINT8(data) << 24;
 			mobj->skin = &skins[DW_ReadUINT8(data)];
 			mobj->color = DW_ReadUINT8(data);
 		}
@@ -280,18 +310,30 @@ static void ClientHandlePacket(UINT8 node, DataWrap data)
 	case SERVER_KILL:
 	{
 		thinker_t *th;
-		mobj_t *mobj = NULL;
+		mobj_t *target = NULL;
+		mobj_t *killer = NULL;
 		UINT16 id = DW_ReadUINT16(data);
+		UINT16 kid = DW_ReadUINT16(data);
 
 		for (th = thinkercap.next; th != &thinkercap; th = th->next)
-			if (th->function.acp1 == (actionf_p1)P_MobjThinker && ((mobj_t *)th)->mobjnum == id)
+			if (th->function.acp1 == (actionf_p1)P_MobjThinker)
 			{
-				mobj = (mobj_t *)th;
-				break;
+				mobj_t *mobj = (mobj_t *)th;
+				if (mobj->mobjnum == id)
+					target = mobj;
+				if (kid && mobj->mobjnum == kid)
+					killer = mobj;
+				if (target && (killer || !kid))
+					break;
 			}
 
-		if (mobj)
-			P_KillMobj(mobj, NULL, NULL, 0);
+		if (target)
+		{
+			target->mobjnum = 0;
+			if (target->flags & MF_SPECIAL && !(target->flags & (MF_ENEMY|MF_BOSS)))
+				S_StartSound(killer, target->info->deathsound);
+			P_KillMobj(target, killer, killer, 0);
+		}
 		break;
 	}
 
@@ -392,29 +434,34 @@ static void ClientHandlePacket(UINT8 node, DataWrap data)
 		const fixed_t x = DW_ReadFixed(data),
 			y = DW_ReadFixed(data),
 			z = DW_ReadFixed(data);
-		P_TeleportMove(players[consoleplayer].mo, x, y, z);
+		player->mo->z = z;
+		P_TryMove(player->mo, x, y, true);
 		P_SetTarget(&tmthing, NULL);
-		if (players[consoleplayer].health > 1 && !(damagetype & DMG_DEATHMASK))
+
+		if (!(damagetype & DMG_DEATHMASK) && (player->health > 1 || player->powers[pw_shield]))
 		{
-			P_DoPlayerPain(&players[consoleplayer], NULL, NULL);
-			switch(damagetype)
-			{
-			case DMG_SPIKE:
-				S_StartSound(players[consoleplayer].mo, sfx_spkdth);
-				break;
-			default:
-				P_PlayRinglossSound(players[consoleplayer].mo);
-				break;
-			}
-			break;
+			P_DoPlayerPain(player, NULL, NULL);
+
+			if (player->powers[pw_shield])
+				P_RemoveShield(player);
+			else
+				P_PlayerRingBurst(player, player->health - 1);
+
+			if (damagetype == DMG_SPIKE)
+				S_StartSound(player->mo, sfx_spkdth);
+			else if (player->powers[pw_shield])
+				S_StartSound(player->mo, sfx_shldls);
+			else
+				P_PlayRinglossSound(player->mo);
 		}
-		P_KillMobj(players[consoleplayer].mo, NULL, NULL, damagetype);
+		else
+			P_KillMobj(player->mo, NULL, NULL, damagetype);
 		break;
 	}
 
 	case SERVER_PLAYER_RINGS:
-		players[consoleplayer].health = DW_ReadUINT16(data) + 1;
-		players[consoleplayer].mo->health = players[consoleplayer].health;
+		player->health = DW_ReadUINT16(data) + 1;
+		player->mo->health = player->health;
 		break;
 
 	case SERVER_FORCE_MOVE:
@@ -422,13 +469,48 @@ static void ClientHandlePacket(UINT8 node, DataWrap data)
 		const fixed_t x = DW_ReadFixed(data),
 			y = DW_ReadFixed(data),
 			z = DW_ReadFixed(data);
-		P_TeleportMove(players[consoleplayer].mo, x, y, z);
+		P_TeleportMove(player->mo, x, y, z);
 		P_SetTarget(&tmthing, NULL);
 		break;
 	}
 
+	case SERVER_POWERUP:
+	{
+		powertype_t power = DW_ReadUINT8(data);
+		UINT16 setting = DW_ReadUINT16(data);
+		switch(power)
+		{
+		case pw_shield:
+			player->powers[pw_shield] = setting | (player->powers[pw_shield] & SH_STACK);
+			switch(setting)
+			{
+			case SH_FORCE:
+				player->powers[pw_shield] |= 1;
+				break;
+			case SH_ELEMENTAL:
+				if (player->powers[pw_underwater] > 1 && player->powers[pw_underwater] <= 12*TICRATE + 1)
+					P_RestoreMusic(player);
+				player->powers[pw_underwater] = 0;
+
+				if (player->powers[pw_spacetime] > 1)
+					P_RestoreMusic(player);
+				player->powers[pw_spacetime] = 0;
+				break;
+			default:
+				break;
+			}
+			S_StartSound(player->mo, sfx_shield);
+			P_SpawnShieldOrb(player);
+			break;
+		default:
+			CONS_Printf("NETWORK: Unknown power type recieved from server.\n");
+			break;
+		}
+		break;
+	}
+
 	default:
-		CONS_Printf("NETWORK: Unknown message type recieved from node %u!\n", node);
+		CONS_Printf("NETWORK: Unknown message type recieved from server!\n");
 		break;
 	}
 }
@@ -477,7 +559,7 @@ void Net_AckTicker(void)
 			if (setjmp(safety))
 				CONS_Printf("NETWORK: There was an EOF error in a recieved packet from server! len %u\n", e.packet->dataLength);
 			else
-				ClientHandlePacket(servernode, D_NewDataWrap(e.packet->data, e.packet->dataLength, &safety));
+				ClientHandlePacket(D_NewDataWrap(e.packet->data, e.packet->dataLength, &safety));
 			enet_packet_destroy(e.packet);
 			break;
 
@@ -609,6 +691,7 @@ boolean D_NetConnect(const char *hostname, const char *port)
 	}
 
 	CONS_Printf("NETWORK: Connection failed...\n");
+	server = true;
 	servernode = 0;
 	enet_host_destroy(ClientHost);
 	ClientHost = NULL;
@@ -817,8 +900,9 @@ void Net_SendClientMove(boolean force)
 	ENetPacket *packet;
 	UINT8 *buf = net_buffer;
 	boolean reliable = false;
+	player_t *player = &players[consoleplayer];
 
-	if (!netgame || server || !addedtogame || !players[consoleplayer].mo)
+	if (!netgame || server || !addedtogame || !player->mo)
 		return;
 
 	// only update once a second unless buttons changed.
@@ -827,19 +911,36 @@ void Net_SendClientMove(boolean force)
 	if (lastMove+NEWTICRATE < I_GetTime() && !reliable)
 		return;
 	lastMove = I_GetTime();
-	G_CopyTiccmd(&lastCmd, &players[consoleplayer].cmd, 1);
+	G_CopyTiccmd(&lastCmd, &player->cmd, 1);
 
 	WRITEUINT8(buf, CLIENT_MOVE);
-	WRITESINT8(buf, players[consoleplayer].cmd.forwardmove);
-	WRITESINT8(buf, players[consoleplayer].cmd.sidemove);
-	WRITEINT16(buf, players[consoleplayer].cmd.angleturn);
-	WRITEINT16(buf, players[consoleplayer].cmd.aiming);
-	WRITEUINT16(buf, players[consoleplayer].cmd.buttons);
+	WRITESINT8(buf, player->cmd.forwardmove);
+	WRITESINT8(buf, player->cmd.sidemove);
+	WRITEINT16(buf, player->cmd.angleturn);
+	WRITEINT16(buf, player->cmd.aiming);
+	WRITEUINT16(buf, player->cmd.buttons);
+	WRITEFIXED(buf, player->mo->x);
+	WRITEFIXED(buf, player->mo->y);
+	WRITEFIXED(buf, player->mo->z);
+
+	packet = enet_packet_create(net_buffer, buf-net_buffer, reliable ? ENET_PACKET_FLAG_RELIABLE : 0);
+	enet_peer_send(nodetopeer[servernode], CHANNEL_MOVE, packet);
+}
+
+void Net_SendClientJump(void)
+{
+	ENetPacket *packet;
+	UINT8 *buf = net_buffer;
+
+	if (!netgame || server || !addedtogame || !players[consoleplayer].mo)
+		return;
+
+	WRITEUINT8(buf, CLIENT_ATTACK);
 	WRITEFIXED(buf, players[consoleplayer].mo->x);
 	WRITEFIXED(buf, players[consoleplayer].mo->y);
 	WRITEFIXED(buf, players[consoleplayer].mo->z);
 
-	packet = enet_packet_create(net_buffer, buf-net_buffer, reliable ? ENET_PACKET_FLAG_RELIABLE : 0);
+	packet = enet_packet_create(net_buffer, buf-net_buffer, ENET_PACKET_FLAG_RELIABLE);
 	enet_peer_send(nodetopeer[servernode], CHANNEL_MOVE, packet);
 }
 
@@ -971,7 +1072,7 @@ void Net_SendRemove(UINT16 id)
 	enet_host_broadcast(ServerHost, CHANNEL_MOVE, packet);
 }
 
-void Net_SendKill(UINT16 id)
+void Net_SendKill(UINT16 id, UINT16 kid)
 {
 	ENetPacket *packet;
 	UINT8 *buf = net_buffer;
@@ -994,6 +1095,7 @@ void Net_SendKill(UINT16 id)
 
 	WRITEUINT8(buf, SERVER_KILL);
 	WRITEUINT16(buf, id);
+	WRITEUINT16(buf, kid);
 
 	packet = enet_packet_create(net_buffer, buf-net_buffer, ENET_PACKET_FLAG_RELIABLE);
 	enet_host_broadcast(ServerHost, CHANNEL_MOVE, packet);
@@ -1050,6 +1152,23 @@ static void Net_ForceMove(player_t *player)
 	WRITEFIXED(buf, player->mo->x);
 	WRITEFIXED(buf, player->mo->y);
 	WRITEFIXED(buf, player->mo->z);
+
+	packet = enet_packet_create(net_buffer, buf-net_buffer, ENET_PACKET_FLAG_RELIABLE);
+	enet_peer_send(nodetopeer[playernode[player-players]], CHANNEL_GENERAL, packet);
+}
+
+void Net_AwardPowerup(player_t *player, powertype_t power, UINT16 data)
+{
+
+	ENetPacket *packet;
+	UINT8 *buf = net_buffer;
+
+	if (!netgame || !server)
+		return;
+
+	WRITEUINT8(buf, SERVER_POWERUP);
+	WRITEUINT8(buf, power);
+	WRITEUINT16(buf, data);
 
 	packet = enet_packet_create(net_buffer, buf-net_buffer, ENET_PACKET_FLAG_RELIABLE);
 	enet_peer_send(nodetopeer[playernode[player-players]], CHANNEL_GENERAL, packet);
