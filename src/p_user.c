@@ -51,6 +51,8 @@
 #include "hardware/hw_main.h"
 #endif
 
+#include "d_enet.h"
+
 #if 0
 static void P_NukeAllPlayers(player_t *player);
 #endif
@@ -915,6 +917,9 @@ void P_GivePlayerRings(player_t *player, INT32 num_rings)
 		player->mo->health = 1;
 		player->health = 1;
 	}
+
+	if (server)
+		Net_SendPlayerRings(player - players);
 
 	// Now extra life bonuses are handled here instead of in P_MovePlayer, since why not?
 	if (!ultimatemode && !modeattacking && !G_IsSpecialStage(gamemap) && G_GametypeUsesLives())

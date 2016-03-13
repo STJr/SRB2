@@ -52,7 +52,8 @@ enum {
 	SERVER_SPAWN,
 	SERVER_REMOVE,
 	SERVER_MOVE,
-	SERVER_PLAYER_DAMAGE
+	SERVER_PLAYER_DAMAGE,
+	SERVER_PLAYER_RINGS
 };
 
 static ENetHost *ServerHost = NULL,
@@ -167,6 +168,7 @@ static void ServerHandlePacket(UINT8 node, DataWrap data)
 		pnum = nodetoplayer[node];
 		SetPlayerSkin(pnum, DW_ReadStringn(data, SKINNAMESIZE));
 		players[pnum].skincolor = DW_ReadUINT8(data) % MAXSKINCOLORS;
+		Net_SpawnPlayer(pnum, 0);
 		break;
 	}
 
@@ -239,16 +241,19 @@ static void ClientHandlePacket(UINT8 node, DataWrap data)
 	{
 		UINT16 id = DW_ReadUINT16(data);
 
+		if (id-1 == mynode)
+			break;
+
 		// Spawn a player.
 		if (id < 1000)
 		{
-			const fixed_t x = DW_ReadINT16(data) << 16,
+			/*const fixed_t x = DW_ReadINT16(data) << 16,
 				y = DW_ReadINT16(data) << 16,
-				z = DW_ReadINT16(data) << 16;
-			mobj_t *mobj = P_SpawnMobj(x, y, z, MT_PLAYER);
+				z = DW_ReadINT16(data) << 16;*/
+			mobj_t *mobj = P_SpawnMobj(0, 0, 0, MT_PLAYER);
 			mobj->flags &= ~MF_SOLID;
 			mobj->mobjnum = id;
-			mobj->angle = DW_ReadUINT8(data) << 24;
+			//mobj->angle = DW_ReadUINT8(data) << 24;
 			mobj->skin = &skins[DW_ReadUINT8(data)];
 			mobj->color = DW_ReadUINT8(data);
 		}
@@ -260,6 +265,9 @@ static void ClientHandlePacket(UINT8 node, DataWrap data)
 		thinker_t *th;
 		mobj_t *mobj = NULL;
 		UINT16 id = DW_ReadUINT16(data);
+
+		if (id-1 == mynode)
+			break;
 
 		for (th = thinkercap.next; th != &thinkercap; th = th->next)
 			if (th->function.acp1 == (actionf_p1)P_MobjThinker && ((mobj_t *)th)->mobjnum == id)
@@ -317,8 +325,18 @@ static void ClientHandlePacket(UINT8 node, DataWrap data)
 	}
 
 	case SERVER_PLAYER_DAMAGE:
-		P_DoPlayerPain(&players[consoleplayer], NULL, NULL);
-		P_PlayRinglossSound(players[consoleplayer].mo);
+		if (players[consoleplayer].health > 1)
+		{
+			P_DoPlayerPain(&players[consoleplayer], NULL, NULL);
+			P_PlayRinglossSound(players[consoleplayer].mo);
+		}
+		else
+			P_KillMobj(players[consoleplayer].mo, NULL, NULL, 0);
+		break;
+
+	case SERVER_PLAYER_RINGS:
+		players[consoleplayer].health = DW_ReadUINT16(data) + 1;
+		players[consoleplayer].mo->health = players[consoleplayer].health;
 		break;
 
 	default:
@@ -428,6 +446,8 @@ void Net_AckTicker(void)
 			break;
 
 		case ENET_EVENT_TYPE_RECEIVE:
+			if (!e.peer->data)
+				break;
 			pdata = (PeerData *)e.peer->data;
 			if (!(pdata->flags & PEER_LEAVING))
 			{
@@ -453,6 +473,8 @@ void D_NetOpen(void)
 
 	if (!net_buffer)
 		net_buffer = ZZ_Alloc(4096);
+	if (!net_buffer)
+		I_Error("Failed to allocate net_buffer");
 
 	servernode = 0;
 	nodeingame[servernode] = true;
@@ -699,7 +721,7 @@ void Net_SendCharacter(void)
 	enet_peer_send(nodetopeer[servernode], CHANNEL_GENERAL, packet);
 }
 
-void Net_SendClientMove(void)
+void Net_SendClientMove(boolean force)
 {
 	ENetPacket *packet;
 	UINT8 *buf = net_buffer;
@@ -709,7 +731,7 @@ void Net_SendClientMove(void)
 		return;
 
 	// only update once a second unless buttons changed.
-	if (memcmp(&lastCmd, &players[consoleplayer].cmd, sizeof(ticcmd_t)))
+	if (force || memcmp(&lastCmd, &players[consoleplayer].cmd, sizeof(ticcmd_t)))
 		reliable = true;
 	if (lastMove+NEWTICRATE < I_GetTime() && !reliable)
 		return;
@@ -740,10 +762,10 @@ void Net_SpawnPlayer(UINT8 pnum, UINT8 node)
 
 	WRITEUINT8(buf, SERVER_SPAWN);
 	WRITEUINT16(buf, playernode[pnum]+1);
-	WRITEINT16(buf, players[pnum].mo->x >> 16);
+	/*WRITEINT16(buf, players[pnum].mo->x >> 16);
 	WRITEINT16(buf, players[pnum].mo->y >> 16);
 	WRITEINT16(buf, players[pnum].mo->z >> 16);
-	WRITEUINT8(buf, players[pnum].mo->angle >> 24);
+	WRITEUINT8(buf, players[pnum].mo->angle >> 24);*/
 	WRITEUINT8(buf, players[pnum].skin);
 	WRITEUINT8(buf, players[pnum].skincolor);
 
@@ -795,14 +817,14 @@ void Net_SendPlayerDamage(UINT8 pnum, UINT8 damagetype)
 	ENetPacket *packet;
 	UINT8 *buf = net_buffer;
 
-	if (!netgame)
+	if (!netgame || !server || !nodetopeer[playernode[pnum]])
 		return;
 
 	WRITEUINT8(buf, SERVER_PLAYER_DAMAGE);
 	(void)damagetype;
 
 	packet = enet_packet_create(net_buffer, buf-net_buffer, ENET_PACKET_FLAG_RELIABLE);
-	enet_peer_send(nodetopeer[playernode[pnum]], CHANNEL_MOVE, packet);
+	enet_peer_send(nodetopeer[playernode[pnum]], CHANNEL_GENERAL, packet);
 }
 
 void Net_SendMobjMove(mobj_t *mobj)
@@ -810,7 +832,7 @@ void Net_SendMobjMove(mobj_t *mobj)
 	ENetPacket *packet;
 	UINT8 *buf = net_buffer;
 
-	if (!netgame || mobj->mobjnum == 0)
+	if (!netgame || !server || mobj->mobjnum == 0)
 		return;
 
 	WRITEUINT8(buf, SERVER_MOVE);
@@ -832,7 +854,7 @@ void Net_SendRemove(UINT16 id)
 	ENetPacket *packet;
 	UINT8 *buf = net_buffer;
 
-	if (!netgame || id == 0)
+	if (!netgame || !server || id == 0)
 		return;
 
 	WRITEUINT8(buf, SERVER_REMOVE);
@@ -840,4 +862,19 @@ void Net_SendRemove(UINT16 id)
 
 	packet = enet_packet_create(net_buffer, buf-net_buffer, ENET_PACKET_FLAG_RELIABLE);
 	enet_host_broadcast(ServerHost, CHANNEL_MOVE, packet);
+}
+
+void Net_SendPlayerRings(UINT8 pnum)
+{
+	ENetPacket *packet;
+	UINT8 *buf = net_buffer;
+
+	if (!netgame || !server || !nodetopeer[playernode[pnum]])
+		return;
+
+	WRITEUINT8(buf, SERVER_PLAYER_RINGS);
+	WRITEUINT16(buf, players[pnum].mo->health-1);
+
+	packet = enet_packet_create(net_buffer, buf-net_buffer, ENET_PACKET_FLAG_RELIABLE);
+	enet_peer_send(nodetopeer[playernode[pnum]], CHANNEL_GENERAL, packet);
 }

@@ -34,6 +34,7 @@
 #include "z_zone.h"
 
 #include "lua_hook.h"
+#include "d_enet.h"
 
 fixed_t tmbbox[4];
 mobj_t *tmthing;
@@ -309,6 +310,46 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	if ((tmthing->player && tmthing->player->spectator)
 	|| (thing->player && thing->player->spectator))
 		return true;
+
+	// Client-side object interaction prediction
+	if (netgame && !server && (thing->player || tmthing->player))
+	{
+		// Nothing bothers with the local player unless the server says so.
+		if (thing->player)
+			return true;
+
+		I_Assert(tmthing->player);
+
+		// we only care about monitors, enemies, and bosses - things we can bounce off of.
+		if (!(thing->flags & (MF_SOLID|MF_MONITOR|MF_ENEMY|MF_BOSS)))
+			return true;
+
+		blockdist = thing->radius + tmthing->radius;
+		if (abs(thing->x - tmx) >= blockdist || abs(thing->y - tmy) >= blockdist)
+			return true; // didn't hit it
+		if (thing->z > tmthing->z + tmthing->height)
+			return true; // overhead
+		if (thing->z + thing->height < tmthing->z)
+			return true; // underneath
+
+		if (thing->flags & (MF_MONITOR|MF_ENEMY|MF_BOSS) && tmthing->player->pflags & (PF_JUMPED|PF_SPINNING|PF_GLIDING))
+		{
+			Net_SendClientMove(true); // Tell the server EXACTLY where we were since we detected a potential hit here!
+
+			// Do the crawla bounce!
+			if (P_MobjFlip(tmthing)*tmthing->momz < 0)
+				tmthing->momz = -tmthing->momz;
+
+			// Do the boss bounce!
+			if (thing->flags & MF_BOSS)
+			{
+				tmthing->momx = -tmthing->momx;
+				tmthing->momy = -tmthing->momy;
+			}
+		}
+
+		return true;
+	}
 
 	// Metal Sonic destroys tiny baby objects.
 	if (tmthing->type == MT_METALSONIC_RACE

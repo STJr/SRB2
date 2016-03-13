@@ -599,7 +599,7 @@ void P_Ticker(boolean run)
 	if (paused || P_AutoPause())
 		return;
 
-	Net_SendClientMove();
+	Net_SendClientMove(false);
 
 	P_MapStart();
 

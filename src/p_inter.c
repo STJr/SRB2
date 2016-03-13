@@ -3157,6 +3157,8 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 
 	if (player)
 	{
+		Net_SendPlayerRings(player - players);
+
 		if (!(player->powers[pw_super] && ALL7EMERALDS(player->powers[pw_emeralds])))
 			P_ResetPlayer(target->player);
 	}
