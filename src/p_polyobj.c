@@ -442,6 +442,8 @@ newseg:
 	// seg's ending vertex.
 	for (i = 0; i < numsegs; ++i)
 	{
+		if (segs[i].side != 0) // needs to be frontfacing
+			continue;
 		if (segs[i].v1->x == seg->v2->x && segs[i].v1->y == seg->v2->y)
 		{
 			// Make sure you didn't already add this seg...
@@ -610,14 +612,17 @@ static void Polyobj_spawnPolyObj(INT32 num, mobj_t *spawnSpot, INT32 id)
 		INT32 poflags = POF_SOLID|POF_TESTHEIGHT|POF_RENDERSIDES;
 		INT32 parentID = 0, potrans = 0;
 
+		if (seg->side != 0) // needs to be frontfacing
+			continue;
+
 		if (seg->linedef->special != POLYOBJ_START_LINE)
 			continue;
-		
+
 		if (seg->linedef->tag != po->id)
 			continue;
 
 		Polyobj_GetInfo(po->id, &poflags, &parentID, &potrans); // apply extra settings if they exist!
-		
+
 		// save original flags and translucency to reference later for netgames!
 		po->spawnflags = po->flags = poflags;
 		po->spawntrans = po->translucency = potrans;

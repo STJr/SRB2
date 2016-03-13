@@ -23,13 +23,13 @@ endfunction()
 # Macro to add OSX framework
 macro(add_framework fwname appname)
 	find_library(FRAMEWORK_${fwname}
-    	NAMES ${fwname}
-    	PATHS ${CMAKE_OSX_SYSROOT}/System/Library
-    		${CMAKE_OSX_SYSROOT}/Library
-    		/System/Library
-    		/Library
-    	PATH_SUFFIXES Frameworks
-    	NO_DEFAULT_PATH)
+	NAMES ${fwname}
+	PATHS ${CMAKE_OSX_SYSROOT}/System/Library
+		${CMAKE_OSX_SYSROOT}/Library
+		/System/Library
+		/Library
+	ATH_SUFFIXES Frameworks
+	NO_DEFAULT_PATH)
     if( ${FRAMEWORK_${fwname}} STREQUAL FRAMEWORK_${fwname}-NOTFOUND)
         MESSAGE(ERROR ": Framework ${fwname} not found")
     else()
@@ -80,9 +80,6 @@ endif()
 
 if(${CMAKE_SYSTEM} MATCHES "Darwin")
 	add_definitions(-DMACOSX)
-	if(${CMAKE_C_COMPILER_ID} MATCHES "Clang")
-		set(CLANG ON)
-	endif()
 endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
@@ -103,7 +100,8 @@ set(GIT_EXECUTABLE "git" CACHE FILEPATH "Path to git binary")
 include(GitUtilities)
 git_describe(SRB2_GIT_DESCRIBE "${CMAKE_SOURCE_DIR}")
 git_current_branch(SRB2_GIT_BRANCH "${CMAKE_SOURCE_DIR}")
-set(SRB2_COMP_REVISION "${SRB2_GIT_DESCRIBE}-<${SRB2_GIT_BRANCH}>")
+set(SRB2_COMP_BRANCH "${SRB2_GIT_BRANCH}")
+set(SRB2_COMP_REVISION "${SRB2_GIT_DESCRIBE}")
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/src/config.h)
 
 ##### PACKAGE CONFIGURATION #####

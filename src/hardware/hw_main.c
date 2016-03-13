@@ -539,6 +539,8 @@ static void HWR_RenderPlane(sector_t *sector, extrasubsector_t *xsub, fixed_t fi
 	static FOutVector *planeVerts = NULL;
 	static UINT16 numAllocedPlaneVerts = 0;
 
+	(void)sector;
+
 	// no convex poly were generated for this subsector
 	if (!xsub->planepoly)
 		return;
@@ -678,25 +680,6 @@ static void HWR_RenderPlane(sector_t *sector, extrasubsector_t *xsub, fixed_t fi
 		v3d->x = pv->x;
 		v3d->y = height;
 		v3d->z = pv->y;
-#ifdef SLOPENESS
-		if (sector && sector->special == 65535)
-		{
-			size_t q;
-			for (q = 0; q < sector->linecount; q++)
-			{
-				if (v3d->x == sector->lines[q]->v1->x>>FRACBITS)
-				{
-					if (v3d->z == sector->lines[q]->v1->y>>FRACBITS)
-					{
-						v3d->y += sector->lines[q]->v1->z>>FRACBITS;
-						break;
-					}
-				}
-			}
-		}
-#else
-		(void)sector;
-#endif
 	}
 
 	// only useful for flat coloured triangles
@@ -2856,7 +2839,6 @@ static void HWR_AddPolyObjectPlanes(void)
 //                  : Draw one or more line segments.
 // Notes            : Sets gr_cursectorlight to the light of the parent sector, to modulate wall textures
 // -----------------+
-static lumpnum_t doomwaterflat;  //set by R_InitFlats hack
 static void HWR_Subsector(size_t num)
 {
 	INT16 count;
@@ -2867,7 +2849,6 @@ static void HWR_Subsector(size_t num)
 	INT32 ceilinglightlevel;
 	INT32 locFloorHeight, locCeilingHeight;
 	INT32 light = 0;
-	fixed_t wh;
 	extracolormap_t *floorcolormap;
 	extracolormap_t *ceilingcolormap;
 
@@ -3193,26 +3174,6 @@ static void HWR_Subsector(size_t num)
 		}
 	}
 
-//20/08/99: Changed by Hurdler (taken from faB's code)
-#ifdef DOPLANES
-	// -------------------- WATER IN DEV. TEST ------------------------
-	//dck hack : use abs(tag) for waterheight
-	//ilag : Since we changed to UINT16 for sector tags, simulate INT16
-	if (gr_frontsector->tag > 32767)
-	{
-		wh = ((65535-gr_frontsector->tag) <<FRACBITS) + (FRACUNIT/2);
-		if (wh > gr_frontsector->floorheight &&
-			wh < gr_frontsector->ceilingheight)
-		{
-			HWR_GetFlat(doomwaterflat);
-			HWR_RenderPlane(gr_frontsector,
-				&extrasubsectors[num], wh, PF_Translucent,
-				gr_frontsector->lightlevel, doomwaterflat,
-				NULL, 255, false, gr_frontsector->lightlist[light].extra_colormap);
-		}
-	}
-	// -------------------- WATER IN DEV. TEST ------------------------
-#endif
 	sub->validcount = validcount;
 }
 
@@ -3998,6 +3959,7 @@ static void HWR_SortVisSprites(void)
 	gr_vissprite_t *best = NULL;
 	gr_vissprite_t unsorted;
 	float bestdist;
+	INT32 bestdispoffset;
 
 	if (!gr_visspritecount)
 		return;
@@ -4025,11 +3987,19 @@ static void HWR_SortVisSprites(void)
 	for (i = 0; i < gr_visspritecount; i++)
 	{
 		bestdist = ZCLIP_PLANE-1;
+		bestdispoffset = INT32_MAX;
 		for (ds = unsorted.next; ds != &unsorted; ds = ds->next)
 		{
 			if (ds->tz > bestdist)
 			{
 				bestdist = ds->tz;
+				bestdispoffset = ds->dispoffset;
+				best = ds;
+			}
+			// order visprites of same scale by dispoffset, smallest first
+			else if (ds->tz == bestdist && ds->dispoffset < bestdispoffset)
+			{
+				bestdispoffset = ds->dispoffset;
 				best = ds;
 			}
 		}
@@ -4653,6 +4623,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 #endif
 	vis->x2 = tx;
 	vis->tz = tz;
+	vis->dispoffset = thing->info->dispoffset; // Monster Iestyn: 23/11/15: HARDWARE SUPPORT AT LAST
 	vis->patchlumpnum = sprframe->lumppat[rot];
 	vis->flip = flip;
 	vis->mobj = thing;
@@ -4769,6 +4740,7 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 	vis->x1 = x1;
 	vis->x2 = tx;
 	vis->tz = tz;
+	vis->dispoffset = 0; // Monster Iestyn: 23/11/15: HARDWARE SUPPORT AT LAST
 	vis->patchlumpnum = sprframe->lumppat[rot];
 	vis->flip = flip;
 	vis->mobj = (mobj_t *)thing;
@@ -5487,11 +5459,6 @@ void HWR_Startup(void)
 		// add console cmds & vars
 		HWR_AddEngineCommands();
 		HWR_InitTextureCache();
-
-		// for test water translucent surface
-		doomwaterflat  = W_CheckNumForName("FWATER1");
-		if (doomwaterflat == LUMPERROR) // if FWATER1 not found (in doom shareware)
-			doomwaterflat = W_GetNumForName("WATER0");
 
 		HWR_InitMD2();
 

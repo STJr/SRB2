@@ -737,7 +737,7 @@ static int NetArchive(lua_State *L)
 {
 	int TABLESINDEX = lua_upvalueindex(1);
 	int i, n = lua_gettop(L);
-	for (i = 0; i < n; i++)
+	for (i = 1; i <= n; i++)
 		ArchiveValue(TABLESINDEX, i);
 	return n;
 }
@@ -884,7 +884,7 @@ static int NetUnArchive(lua_State *L)
 {
 	int TABLESINDEX = lua_upvalueindex(1);
 	int i, n = lua_gettop(L);
-	for (i = 0; i < n; i++)
+	for (i = 1; i <= n; i++)
 		UnArchiveValue(TABLESINDEX);
 	return n;
 }
@@ -913,30 +913,6 @@ static void UnArchiveTables(void)
 		}
 		lua_pop(gL, 1);
 	}
-}
-
-static void NetArchiveHook(lua_CFunction archFunc)
-{
-	int TABLESINDEX;
-
-	if (!gL)
-		return;
-
-	TABLESINDEX = lua_gettop(gL);
-	lua_getfield(gL, LUA_REGISTRYINDEX, "hook");
-	I_Assert(lua_istable(gL, -1));
-	lua_rawgeti(gL, -1, hook_NetVars);
-	lua_remove(gL, -2);
-	I_Assert(lua_istable(gL, -1));
-
-	lua_pushvalue(gL, TABLESINDEX);
-	lua_pushcclosure(gL, archFunc, 1);
-	lua_pushnil(gL);
-	while (lua_next(gL, -3) != 0) {
-		lua_pushvalue(gL, -3); // function
-		LUA_Call(gL, 1);
-	}
-	lua_pop(gL, 2);
 }
 
 void LUA_Step(void)
@@ -972,7 +948,7 @@ void LUA_Archive(void)
 		}
 	WRITEUINT32(save_p, UINT32_MAX); // end of mobjs marker, replaces mobjnum.
 
-	NetArchiveHook(NetArchive); // call the NetArchive hook in archive mode
+	LUAh_NetArchiveHook(NetArchive); // call the NetArchive hook in archive mode
 	ArchiveTables();
 
 	if (gL)
@@ -1003,7 +979,7 @@ void LUA_UnArchive(void)
 				UnArchiveExtVars(th); // apply variables
 	} while(mobjnum != UINT32_MAX); // repeat until end of mobjs marker.
 
-	NetArchiveHook(NetUnArchive); // call the NetArchive hook in unarchive mode
+	LUAh_NetArchiveHook(NetUnArchive); // call the NetArchive hook in unarchive mode
 	UnArchiveTables();
 
 	if (gL)

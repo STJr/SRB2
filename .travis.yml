@@ -1,0 +1,33 @@
+language: c
+sudo: required
+dist: trusty
+
+env:
+- CFLAGS=-Wno-absolute-value -Werror
+
+compiler:
+  - gcc
+  - clang
+
+cache:
+  directories:
+  - $HOME/srb2_cache
+
+addons:
+  apt:
+    packages:
+    - libsdl2-mixer-dev
+    - libpng-dev
+    - libgl1-mesa-dev
+    - libgme-dev
+    - p7zip-full
+
+before_script:
+  - mkdir -p $HOME/srb2_cache
+  - wget --verbose --server-response -c http://rosenthalcastle.org/srb2/SRB2-v2114-assets.7z -O $HOME/srb2_cache/SRB2-v2114-assets.7z
+  - 7z x $HOME/srb2_cache/SRB2-v2114-assets.7z -oassets
+  - mkdir build
+  - cd build
+  - cmake ..
+
+script: make

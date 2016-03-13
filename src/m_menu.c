@@ -2203,6 +2203,7 @@ boolean M_Responder(event_t *ev)
 				if (modeattacking)
 					return true;
 				M_StartControlPanel();
+				M_Options(0);
 				currentMenu = &OP_SoundOptionsDef;
 				itemOn = 0;
 				return true;
@@ -2212,6 +2213,7 @@ boolean M_Responder(event_t *ev)
 				if (modeattacking)
 					return true;
 				M_StartControlPanel();
+				M_Options(0);
 				M_VideoModeMenu(0);
 				return true;
 #endif
@@ -2223,6 +2225,7 @@ boolean M_Responder(event_t *ev)
 				if (modeattacking)
 					return true;
 				M_StartControlPanel();
+				M_Options(0);
 				M_SetupNextMenu(&OP_MainDef);
 				return true;
 
@@ -2460,11 +2463,14 @@ void M_Drawer(void)
 			V_DrawThinString(vid.dupx, vid.height - 9*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, customversionstring);
 		}
 		else
-#if VERSION > 0 || SUBVERSION > 0
+		{
+#ifdef DEVELOP // Development -- show revision / branch info
+			V_DrawThinString(vid.dupx, vid.height - 17*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, compbranch);
+			V_DrawThinString(vid.dupx, vid.height - 9*vid.dupy,  V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, comprevision);
+#else // Regular build
 			V_DrawThinString(vid.dupx, vid.height - 9*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, va("%s", VERSIONSTRING));
-#else // Trunk build, show revision info
-			V_DrawThinString(vid.dupx, vid.height - 9*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, va("%s (%s)", VERSIONSTRING, comprevision));
 #endif
+		}
 	}
 }
 
@@ -2820,7 +2826,7 @@ static void M_DrawSlider(INT32 x, INT32 y, const consvar_t *cv)
 void M_DrawTextBox(INT32 x, INT32 y, INT32 width, INT32 boxlines)
 {
 	// Solid color textbox.
-	V_DrawFill(x+5, y+5, width*8+6, boxlines*8+6, 239);
+	V_DrawFill(x+5, y+5, width*8+6, boxlines*8+6, 159);
 	//V_DrawFill(x+8, y+8, width*8, boxlines*8, 31);
 /*
 	patch_t *p;
@@ -4745,7 +4751,7 @@ static void M_SetupChoosePlayer(INT32 choice)
 	if (Playing() == false)
 	{
 		S_StopMusic();
-		S_ChangeMusic(mus_chrsel, true);
+		S_ChangeMusicInternal("chrsel", true);
 	}
 
 	SP_PlayerDef.prevMenu = currentMenu;
@@ -5196,7 +5202,7 @@ void M_DrawTimeAttackMenu(void)
 	lumpnum_t lumpnum;
 	char beststr[40];
 
-	S_ChangeMusic(mus_racent, true); // Eww, but needed for when user hits escape during demo playback
+	S_ChangeMusicInternal("racent", true); // Eww, but needed for when user hits escape during demo playback
 
 	V_DrawPatchFill(W_CachePatchName("SRB2BACK", PU_CACHE));
 
@@ -5359,7 +5365,7 @@ static void M_TimeAttack(INT32 choice)
 	itemOn = tastart; // "Start" is selected.
 
 	G_SetGamestate(GS_TIMEATTACK);
-	S_ChangeMusic(mus_racent, true);
+	S_ChangeMusicInternal("racent", true);
 }
 
 // Drawing function for Nights Attack
@@ -5369,7 +5375,7 @@ void M_DrawNightsAttackMenu(void)
 	lumpnum_t lumpnum;
 	char beststr[40];
 
-	S_ChangeMusic(mus_racent, true); // Eww, but needed for when user hits escape during demo playback
+	S_ChangeMusicInternal("racent", true); // Eww, but needed for when user hits escape during demo playback
 
 	V_DrawPatchFill(W_CachePatchName("SRB2BACK", PU_CACHE));
 
@@ -5492,7 +5498,7 @@ static void M_NightsAttack(INT32 choice)
 	itemOn = nastart; // "Start" is selected.
 
 	G_SetGamestate(GS_TIMEATTACK);
-	S_ChangeMusic(mus_racent, true);
+	S_ChangeMusicInternal("racent", true);
 }
 
 // Player has selected the "START" from the nights attack screen
@@ -5726,7 +5732,7 @@ static void M_ModeAttackEndGame(INT32 choice)
 	itemOn = currentMenu->lastOn;
 	G_SetGamestate(GS_TIMEATTACK);
 	modeattacking = ATTACKING_NONE;
-	S_ChangeMusic(mus_racent, true);
+	S_ChangeMusicInternal("racent", true);
 	// Update replay availability.
 	CV_AddValue(&cv_nextmap, 1);
 	CV_AddValue(&cv_nextmap, -1);
@@ -6068,7 +6074,7 @@ static void M_RoomMenu(INT32 choice)
 
 	for (i = 0; room_list[i].header.buffer[0]; i++)
 	{
-		if(room_list[i].name != '\0')
+		if(*room_list[i].name != '\0')
 		{
 			MP_RoomMenu[i+1].text = room_list[i].name;
 			roomIds[i] = room_list[i].id;
@@ -6932,7 +6938,7 @@ static void M_ToggleDigital(void)
 		if (nodigimusic) return;
 		S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
 		S_StopMusic();
-		S_ChangeMusic(mus_lclear, false);
+		S_ChangeMusicInternal("lclear", false);
 		M_StartMessage(M_GetText("Digital Music Enabled\n"), NULL, MM_NOTHING);
 	}
 	else
@@ -6959,7 +6965,7 @@ static void M_ToggleMIDI(void)
 		I_InitMIDIMusic();
 		if (nomidimusic) return;
 		S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
-		S_ChangeMusic(mus_lclear, false);
+		S_ChangeMusicInternal("lclear", false);
 		M_StartMessage(M_GetText("MIDI Music Enabled\n"), NULL, MM_NOTHING);
 	}
 	else

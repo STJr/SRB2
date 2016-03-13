@@ -142,8 +142,10 @@ extern FILE *logstream;
 #ifdef DEVELOP
 #define VERSION    0 // Game version
 #define SUBVERSION 0 // more precise version number
-#define VERSIONSTRING "Trunk"
-#define VERSIONSTRINGW L"Trunk"
+#define VERSIONSTRING "Development EXE"
+#define VERSIONSTRINGW L"Development EXE"
+// most interface strings are ignored in development mode.
+// we use comprevision and compbranch instead.
 #else
 #define VERSION    202 // Game version
 #define SUBVERSION 0  // more precise version number
@@ -208,13 +210,6 @@ extern FILE *logstream;
 // Note that we use this to help keep internal testing in check; this is why v2.1.0 is not version "1".
 #define MODVERSION 20
 
-
-
-
-
-// some tests, enable or disable it if it run or not
-#define SPLITSCREEN
-
 // =========================================================================
 
 // The maximum number of players, multiplayer/networking.
@@ -232,27 +227,31 @@ typedef enum
 	SKINCOLOR_SILVER,
 	SKINCOLOR_GREY,
 	SKINCOLOR_BLACK,
-	SKINCOLOR_CYAN,
-	SKINCOLOR_TEAL,
-	SKINCOLOR_STEELBLUE,
-	SKINCOLOR_BLUE,
-	SKINCOLOR_PEACH,
-	SKINCOLOR_TAN,
-	SKINCOLOR_PINK,
-	SKINCOLOR_LAVENDER,
-	SKINCOLOR_PURPLE,
-	SKINCOLOR_ORANGE,
-	SKINCOLOR_ROSEWOOD,
 	SKINCOLOR_BEIGE,
+	SKINCOLOR_PEACH,
 	SKINCOLOR_BROWN,
 	SKINCOLOR_RED,
-	SKINCOLOR_DARKRED,
-	SKINCOLOR_NEONGREEN,
-	SKINCOLOR_GREEN,
-	SKINCOLOR_ZIM,
-	SKINCOLOR_OLIVE,
-	SKINCOLOR_YELLOW,
+	SKINCOLOR_CRIMSON,
+	SKINCOLOR_ORANGE,
+	SKINCOLOR_RUST,
 	SKINCOLOR_GOLD,
+	SKINCOLOR_YELLOW,
+	SKINCOLOR_TAN,
+	SKINCOLOR_MOSS,
+	SKINCOLOR_PERIDOT,
+	SKINCOLOR_GREEN,
+	SKINCOLOR_EMERALD,
+	SKINCOLOR_AQUA,
+	SKINCOLOR_TEAL,
+	SKINCOLOR_CYAN,
+	SKINCOLOR_BLUE,
+	SKINCOLOR_AZURE,
+	SKINCOLOR_PASTEL,
+	SKINCOLOR_PURPLE,
+	SKINCOLOR_LAVENDER,
+	SKINCOLOR_MAGENTA,
+	SKINCOLOR_PINK,
+	SKINCOLOR_ROSY,
 
 	// Careful! MAXSKINCOLORS cannot be greater than 0x20!
 	MAXSKINCOLORS,
@@ -350,11 +349,7 @@ void CONS_Debug(INT32 debugflags, const char *fmt, ...) FUNCDEBUG;
 #include "m_swap.h"
 
 // Things that used to be in dstrings.h
-#define DEVMAPS "devmaps"
-#define DEVDATA "devdata"
-
 #define SAVEGAMENAME "srb2sav"
-
 char savegamename[256];
 
 // m_misc.h
@@ -426,7 +421,7 @@ INT32 I_GetKey(void);
 #endif
 
 // Compile date and time and revision.
-extern const char *compdate, *comptime, *comprevision;
+extern const char *compdate, *comptime, *comprevision, *compbranch;
 
 // Disabled code and code under testing
 // None of these that are disabled in the normal build are guaranteed to work perfectly
@@ -436,8 +431,8 @@ extern const char *compdate, *comptime, *comprevision;
 ///	\note	obsoleted by cv_maxportals
 //#define PORTAL_LIMIT 8
 
-///	Fun experimental slope stuff!
-//#define SLOPENESS
+/// Kalaron/Eternity Engine slope code (SRB2CB ported)
+#define ESLOPE
 
 ///	Delete file while the game is running.
 ///	\note	EXTREMELY buggy, tends to crash game.
@@ -454,10 +449,6 @@ extern const char *compdate, *comptime, *comprevision;
 
 ///	Polyobject fake flat code
 #define POLYOBJECTS_PLANES
-
-///	Blue spheres for future use.
-///	\todo	Remove this define.
-#define BLUE_SPHERES // Blue spheres for future use.
 
 ///	Improved way of dealing with ping values and a ping limit.
 #define NEWPING
@@ -495,5 +486,9 @@ extern const char *compdate, *comptime, *comprevision;
 
 /// Experimental tweaks to analog mode. (Needs a lot of work before it's ready for primetime.)
 //#define REDSANALOG
+
+/// Backwards compatibility with musicslots.
+/// \note	You should leave this enabled unless you're working with a future SRB2 version.
+#define MUSICSLOT_COMPATIBILITY
 
 #endif // __DOOMDEF__
