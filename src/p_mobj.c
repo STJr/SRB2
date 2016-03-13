@@ -7937,13 +7937,16 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			mobj->extravalue1 = -1; // timer for how long a player has been at the capsule
 		case MT_REDTEAMRING:
 			mobj->color = skincolor_redteam;
+			mobj->mobjnum = net_ringid++;
 			break;
 		case MT_BLUETEAMRING:
 			mobj->color = skincolor_blueteam;
+			mobj->mobjnum = net_ringid++;
 			break;
 		case MT_RING:
 		case MT_COIN:
 		case MT_BLUEBALL:
+			mobj->mobjnum = net_ringid++;
 			nummaprings++;
 		default:
 			break;
@@ -9898,7 +9901,6 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 
 		mobj = P_SpawnMobj(x, y, z, ringthing);
 		mobj->spawnpoint = mthing;
-		mobj->mobjnum = net_ringid++;
 
 		if (mthing->options & MTF_OBJECTFLIP)
 		{
