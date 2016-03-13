@@ -565,14 +565,34 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 		// Modified handling.
 		// Call action functions when the state is set
 
-		if (st->action.acp1 && server)
+		if (st->action.acp1)
 		{
+			boolean runit = server;
 			var1 = st->var1;
 			var2 = st->var2;
 #ifdef HAVE_BLUA
 			astate = st;
 #endif
-			st->action.acp1(mobj);
+			if (!runit
+			&& (st->action.acp1 == A_PlayActiveSound
+			|| st->action.acp1 == A_PlayAttackSound
+			|| st->action.acp1 == A_PlaySeeSound
+			|| st->action.acp1 == A_PlaySound
+
+			|| st->action.acp1 == A_Pain
+			|| st->action.acp1 == A_BossScream
+			|| st->action.acp1 == A_BossDeath
+
+			|| st->action.acp1 == A_SignPlayer
+			|| st->action.acp1 == A_1upThinker
+
+			|| st->action.acp1 == A_ParticleSpawn
+			|| st->action.acp1 == A_SetSolidSteam
+			|| st->action.acp1 == A_UnsetSolidSteam
+			|| st->action.acp1 == A_BubbleCheck))
+				runit = true;
+			if (runit)
+				st->action.acp1(mobj);
 			if (P_MobjWasRemoved(mobj))
 				return false;
 		}
