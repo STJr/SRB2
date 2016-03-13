@@ -3022,7 +3022,11 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 
 		// Instant-Death
 		if (damagetype & DMG_DEATHMASK)
+		{
+			if (server)
+				Net_SendPlayerDamage(player - players, damagetype);
 			P_KillPlayer(player, source, damage);
+		}
 		else if (metalrecording)
 		{
 			if (!inflictor)
