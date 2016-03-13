@@ -30,6 +30,7 @@ static tic_t lastMove;
 static ticcmd_t lastCmd;
 
 static UINT16 *removelist, removecount;
+
 enum {
 	CHANNEL_GENERAL = 0,
 	CHANNEL_CHAT,
@@ -56,7 +57,8 @@ enum {
 	SERVER_REMOVE_LIST,
 	SERVER_MOVE,
 	SERVER_PLAYER_DAMAGE,
-	SERVER_PLAYER_RINGS
+	SERVER_PLAYER_RINGS,
+	SERVER_FORCE_MOVE
 };
 
 static ENetHost *ServerHost = NULL,
@@ -89,6 +91,7 @@ void Net_ServerMessage(const char *fmt, ...);
 static void ServerSendMapInfo(UINT8 node);
 static void Net_MovePlayers(void);
 static void Net_SendRemoveList(UINT8 node);
+static void Net_ForceMove(player_t *player);
 
 void Net_GetNetStat(UINT8 node, UINT32 *ping, UINT32 *packetLoss)
 {
@@ -184,6 +187,7 @@ static void ServerHandlePacket(UINT8 node, DataWrap data)
 	{
 		player_t *player;
 		GhostData ghost;
+		fixed_t oldz;
 
 		ghost.cmd.forwardmove = DW_ReadSINT8(data);
 		ghost.cmd.sidemove = DW_ReadSINT8(data);
@@ -206,9 +210,14 @@ static void ServerHandlePacket(UINT8 node, DataWrap data)
 		player->cmd.angleturn = ghost.cmd.angleturn;
 		player->cmd.aiming = ghost.cmd.aiming;
 		player->cmd.buttons = ghost.cmd.buttons;
-		P_MapStart();
-		P_TeleportMove(player->mo, ghost.x, ghost.y, ghost.z);
-		P_MapEnd();
+		oldz = player->mo->z;
+		player->mo->z = ghost.z;
+		if (!P_TryMove(player->mo, ghost.x, ghost.y, true))
+		{
+			player->mo->z = oldz;
+			Net_ForceMove(player);
+		}
+		P_SetTarget(&tmthing, NULL);
 		break;
 	}
 
@@ -407,6 +416,16 @@ static void ClientHandlePacket(UINT8 node, DataWrap data)
 		players[consoleplayer].health = DW_ReadUINT16(data) + 1;
 		players[consoleplayer].mo->health = players[consoleplayer].health;
 		break;
+
+	case SERVER_FORCE_MOVE:
+	{
+		const fixed_t x = DW_ReadFixed(data),
+			y = DW_ReadFixed(data),
+			z = DW_ReadFixed(data);
+		P_TeleportMove(players[consoleplayer].mo, x, y, z);
+		P_SetTarget(&tmthing, NULL);
+		break;
+	}
 
 	default:
 		CONS_Printf("NETWORK: Unknown message type recieved from node %u!\n", node);
@@ -1019,3 +1038,19 @@ static void Net_SendRemoveList(UINT8 node)
 	enet_peer_send(nodetopeer[node], CHANNEL_GENERAL, packet);
 }
 
+static void Net_ForceMove(player_t *player)
+{
+	ENetPacket *packet;
+	UINT8 *buf = net_buffer;
+
+	if (!netgame || !server)
+		return;
+
+	WRITEUINT8(buf, SERVER_FORCE_MOVE);
+	WRITEFIXED(buf, player->mo->x);
+	WRITEFIXED(buf, player->mo->y);
+	WRITEFIXED(buf, player->mo->z);
+
+	packet = enet_packet_create(net_buffer, buf-net_buffer, ENET_PACKET_FLAG_RELIABLE);
+	enet_peer_send(nodetopeer[playernode[player-players]], CHANNEL_GENERAL, packet);
+}
