@@ -2319,7 +2319,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 
 	if (server && !target->player && target->mobjnum != 0)
 	{
-		Net_SendRemove(target->mobjnum);
+		Net_SendKill(target->mobjnum);
 		target->mobjnum = 0;
 	}
 

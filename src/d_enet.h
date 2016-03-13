@@ -27,5 +27,6 @@ void Net_SendChat(char *line);
 void Net_SendPlayerDamage(UINT8 pnum, UINT8 damagetype);
 void Net_SendMobjMove(mobj_t *mobj);
 void Net_SendRemove(UINT16 id);
+void Net_SendKill(UINT16 id);
 void Net_SendPlayerRings(UINT8 pnum);
 void Net_ResetLevel(void);

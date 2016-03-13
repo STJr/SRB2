@@ -51,6 +51,7 @@ enum {
 	SERVER_MAPINFO,
 	SERVER_MESSAGE,
 	SERVER_SPAWN,
+	SERVER_KILL,
 	SERVER_REMOVE,
 	SERVER_REMOVE_LIST,
 	SERVER_MOVE,
@@ -267,14 +268,29 @@ static void ClientHandlePacket(UINT8 node, DataWrap data)
 		break;
 	}
 
-	case SERVER_REMOVE:
+	case SERVER_KILL:
 	{
 		thinker_t *th;
 		mobj_t *mobj = NULL;
 		UINT16 id = DW_ReadUINT16(data);
 
-		if (id-1 == mynode)
-			break;
+		for (th = thinkercap.next; th != &thinkercap; th = th->next)
+			if (th->function.acp1 == (actionf_p1)P_MobjThinker && ((mobj_t *)th)->mobjnum == id)
+			{
+				mobj = (mobj_t *)th;
+				break;
+			}
+
+		if (mobj)
+			P_KillMobj(mobj, NULL, NULL, 0);
+		break;
+	}
+
+	case SERVER_REMOVE:
+	{
+		thinker_t *th;
+		mobj_t *mobj = NULL;
+		UINT16 id = DW_ReadUINT16(data);
 
 		for (th = thinkercap.next; th != &thinkercap; th = th->next)
 			if (th->function.acp1 == (actionf_p1)P_MobjThinker && ((mobj_t *)th)->mobjnum == id)
@@ -885,17 +901,52 @@ void Net_SendRemove(UINT16 id)
 {
 	ENetPacket *packet;
 	UINT8 *buf = net_buffer;
+	UINT16 i;
 
 	if (!netgame || !server || id == 0)
 		return;
 
 	if (id >= 1000 && id < net_ringid)
 	{
-		removelist = Z_Realloc(removelist, ++removecount * sizeof(UINT16), PU_LEVEL, NULL);
-		removelist[removecount-1] = id;
+		for (i = 0; i < removecount; i++)
+			if (removelist[i] == id)
+				break;
+		if (i == removecount)
+		{
+			removelist = Z_Realloc(removelist, ++removecount * sizeof(UINT16), PU_LEVEL, NULL);
+			removelist[removecount-1] = id;
+		}
 	}
 
 	WRITEUINT8(buf, SERVER_REMOVE);
+	WRITEUINT16(buf, id);
+
+	packet = enet_packet_create(net_buffer, buf-net_buffer, ENET_PACKET_FLAG_RELIABLE);
+	enet_host_broadcast(ServerHost, CHANNEL_MOVE, packet);
+}
+
+void Net_SendKill(UINT16 id)
+{
+	ENetPacket *packet;
+	UINT8 *buf = net_buffer;
+	UINT16 i;
+
+	if (!netgame || !server || id == 0)
+		return;
+
+	if (id >= 1000 && id < net_ringid)
+	{
+		for (i = 0; i < removecount; i++)
+			if (removelist[i] == id)
+				break;
+		if (i == removecount)
+		{
+			removelist = Z_Realloc(removelist, ++removecount * sizeof(UINT16), PU_LEVEL, NULL);
+			removelist[removecount-1] = id;
+		}
+	}
+
+	WRITEUINT8(buf, SERVER_KILL);
 	WRITEUINT16(buf, id);
 
 	packet = enet_packet_create(net_buffer, buf-net_buffer, ENET_PACKET_FLAG_RELIABLE);
