@@ -477,14 +477,13 @@ static void D_Display(void)
 	//
 	if (!wipe)
 	{
-		if (cv_netstat.value && netgame)
+		if (cv_netstat.value && netgame && !server)
 		{
 			char stat[50];
 			UINT32 ping = 0, loss = 0;
 
 			stat[sizeof stat - 1] = '\0';
-			if (!server)
-				Net_GetNetStat(servernode, &ping, &loss);
+			Net_GetNetStat(servernode, &ping, &loss);
 			snprintf(stat, sizeof stat - 1, "ping: %u ms (%u frames)", ping, ping / (1000/NEWTICRATE));
 			V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-20, V_YELLOWMAP|V_SNAPTORIGHT|V_SNAPTOBOTTOM, stat);
 			snprintf(stat, sizeof stat - 1, "loss: %u", loss);
