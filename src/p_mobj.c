@@ -7171,6 +7171,11 @@ void P_MobjThinker(mobj_t *mobj)
 		case MT_PLAYER:
 			if (mobj->player)
 				P_PlayerMobjThinker(mobj);
+			else
+			{
+				mobj->z += mobj->momz;
+				P_TryMove(mobj, mobj->x + mobj->momx, mobj->y + mobj->momy, true);
+			}
 			return;
 		case MT_SKIM:
 			// check mobj against possible water content, before movement code
