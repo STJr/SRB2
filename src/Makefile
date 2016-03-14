@@ -262,9 +262,7 @@ else
 	OBJS+=$(OBJDIR)/hw3sound.o
 endif
 
-ifndef NOVERSION
 OPTS += -DCOMPVERSION
-endif
 
 ifndef NONX86
 ifndef GCC29
@@ -550,9 +548,6 @@ cleandep:
 	$(REMOVE) comptime.h
 
 pre-build:
-ifdef NOVERSION
-	-@touch comptime.c
-else
 ifdef WINDOWSHELL
 	-..\comptime.bat .
 else
