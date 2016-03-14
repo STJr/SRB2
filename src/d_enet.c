@@ -740,6 +740,17 @@ void D_CloseConnection(void)
 
 			// good, go away.
 			case ENET_EVENT_TYPE_DISCONNECT:
+				if (e.peer->data)
+				{
+					PeerData *pdata = (PeerData *)e.peer->data;
+					if (playeringame[nodetoplayer[pdata->node]])
+						CL_RemovePlayer(nodetoplayer[pdata->node]);
+					nodetopeer[pdata->node] = NULL;
+					nodeingame[pdata->node] = false;
+					nodetoplayer[pdata->node] = -1;
+					Z_Free(pdata);
+					e.peer->data = NULL;
+				}
 				waiting--;
 				break;
 
@@ -752,6 +763,16 @@ void D_CloseConnection(void)
 				break;
 			}
 
+		// clean up the remaining nodes
+		for (i = 0; i < MAXNETNODES; i++)
+			if (nodetopeer[i])
+			{
+				enet_peer_reset(nodetopeer[i]);
+				nodetopeer[i] = NULL;
+				nodeingame[i] = false;
+				nodetoplayer[i] = -1;
+			}
+
 		// alright, we're finished.
 		enet_host_destroy(ServerHost);
 		ServerHost = NULL;
@@ -760,8 +781,6 @@ void D_CloseConnection(void)
 	if (ClientHost)
 	{
 		enet_peer_disconnect(nodetopeer[servernode], DISCONNECT_SHUTDOWN);
-		nodeingame[servernode] = false;
-		servernode = 0;
 
 		while (enet_host_service(ClientHost, &e, 3000) > 0)
 		{
@@ -783,13 +802,17 @@ void D_CloseConnection(void)
 			}
 		}
 
+		nodeingame[servernode] = false;
+		nodetopeer[servernode] = NULL;
+		servernode = 0;
+		server = true;
+
 		enet_host_destroy(ClientHost);
 		ClientHost = NULL;
 	}
 
 	netgame = false;
 	addedtogame = false;
-	servernode = 0;
 	net_nodecount = net_playercount = 0;
 }
 
