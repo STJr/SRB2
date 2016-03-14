@@ -553,7 +553,6 @@ ifdef WINDOWSHELL
 else
 	-@../comptime.sh .
 endif
-endif
 
 clean:
 	$(REMOVE) *~ *.flc
