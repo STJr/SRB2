@@ -1,3 +1,4 @@
+@echo off
 set BRA=Unknown
 set REV=illegal
 
