@@ -13,6 +13,7 @@
 ///	       like console commands, other miscellaneous commands (at the end)
 
 #include "doomdef.h"
+#include "doomstat.h"
 
 #include "console.h"
 #include "command.h"
@@ -1515,10 +1516,18 @@ void D_MapChange(INT32 mapnum, INT32 newgametype, boolean pultmode, boolean rese
 		if (splitscreen || twoplayer)
 		{
 			// maptol hasn't been set yet
-			if (splitscreen && ((mapheaderinfo[mapnum-1]->typeoflevel & TOL_TD) && newgametype == GT_COOP))
+			if ((mapheaderinfo[mapnum-1]->typeoflevel & TOL_TD) && newgametype == GT_COOP)
 			{
-				splitscreen = false; // Don't call splitscreen_onchange, because it will attempt to add another player
-				twoplayer = true;
+				if (mapheaderinfo[mapnum-1]->levelflags & LF_TDNOSHAREDCAMERA)
+				{
+					splitscreen = true;
+					twoplayer = false;
+				}
+				else
+				{
+					splitscreen = false; // Don't call splitscreen_onchange, because it will attempt to add another player
+					twoplayer = true;
+				}
 				R_ExecuteSetViewSize(); // Just call this, since the screen has changed size
 			}
 			else if (twoplayer && !((mapheaderinfo[mapnum-1]->typeoflevel & TOL_TD) && newgametype == GT_COOP))
