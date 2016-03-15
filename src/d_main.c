@@ -509,7 +509,6 @@ static void D_Display(void)
 // =========================================================================
 
 tic_t rendergametic;
-boolean supdate;
 
 void D_SRB2Loop(void)
 {
@@ -600,7 +599,6 @@ void D_SRB2Loop(void)
 
 			// Update display, next frame, with current state.
 			D_Display();
-			supdate = false;
 
 			if (moviemode)
 				M_SaveFrame();
