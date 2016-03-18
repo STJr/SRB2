@@ -360,10 +360,30 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 
 		for (i = 0; i < dc_numlights; i++)
 		{
+#ifdef ESLOPE
+			fixed_t leftheight, rightheight;
+#endif
 			light = &frontsector->lightlist[i];
 			rlight = &dc_lightlist[i];
+#ifdef ESLOPE
+			if (light->slope) {
+				leftheight = P_GetZAt(light->slope, ds->leftpos.x, ds->leftpos.y);
+				rightheight = P_GetZAt(light->slope, ds->rightpos.x, ds->rightpos.y);
+			} else
+				leftheight = rightheight = light->height;
+
+			leftheight -= viewz;
+			rightheight -= viewz;
+
+			rlight->height = (centeryfrac) - FixedMul(leftheight, ds->scale1);
+			rlight->heightstep = (centeryfrac) - FixedMul(rightheight, ds->scale2);
+			rlight->heightstep = (rlight->heightstep-rlight->height)/(ds->x2-ds->x1+1);
+			//if (x1 > ds->x1)
+				//rlight->height -= (x1 - ds->x1)*rlight->heightstep;
+#else
 			rlight->height = (centeryfrac) - FixedMul((light->height - viewz), spryscale);
 			rlight->heightstep = -FixedMul(rw_scalestep, (light->height - viewz));
+#endif
 			rlight->lightlevel = *light->lightlevel;
 			rlight->extra_colormap = light->extra_colormap;
 			rlight->flags = light->flags;
