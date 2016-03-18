@@ -460,26 +460,64 @@ static void R_AddLine(seg_t *line)
 
 	// Closed door.
 #ifdef ESLOPE
-	// Just don't bother checking this if one side is sloped. This is probably inefficient, but it's better than
-	// random renderer stopping around slopes...
-	if (!(frontsector->f_slope || frontsector->c_slope || backsector->f_slope || backsector->c_slope))
-#endif
-	if (backsector->ceilingheight <= frontsector->floorheight
-		|| backsector->floorheight >= frontsector->ceilingheight)
+	if (frontsector->f_slope || frontsector->c_slope || backsector->f_slope || backsector->c_slope)
 	{
-		goto clipsolid;
+		fixed_t frontf1,frontf2, frontc1, frontc2; // front floor/ceiling ends
+		fixed_t backf1, backf2, backc1, backc2; // back floor ceiling ends
+#define SLOPEPARAMS(slope, end1, end2, normalheight) \
+		if (slope) { \
+			end1 = P_GetZAt(slope, line->v1->x, line->v1->y); \
+			end2 = P_GetZAt(slope, line->v2->x, line->v2->y); \
+		} else \
+			end1 = end2 = normalheight;
+
+		SLOPEPARAMS(frontsector->f_slope, frontf1, frontf2, frontsector->floorheight)
+		SLOPEPARAMS(frontsector->c_slope, frontc1, frontc2, frontsector->ceilingheight)
+		SLOPEPARAMS( backsector->f_slope, backf1,  backf2,  backsector->floorheight)
+		SLOPEPARAMS( backsector->c_slope, backc1,  backc2,  backsector->ceilingheight)
+#undef SLOPEPARAMS
+		if ((backc1 <= frontf1 && backc2 <= frontf2)
+			|| (backf1 >= frontc1 && backf2 >= frontc2))
+		{
+			goto clipsolid;
+		}
+
+		// Check for automap fix. Store in doorclosed for r_segs.c
+		doorclosed = (backc1 <= backf1 && backc2 <= backf2
+		&& ((backc1 >= frontc1 && backc2 >= frontc2) || curline->sidedef->toptexture)
+		&& ((backf1 <= frontf1 && backf2 >= frontf2) || curline->sidedef->bottomtexture)
+		&& (backsector->ceilingpic != skyflatnum || frontsector->ceilingpic != skyflatnum));
+
+		if (doorclosed)
+			goto clipsolid;
+
+		// Window.
+		if (backc1 != frontc1 || backc2 != frontc2
+			|| backf1 != frontf1 || backf2 != frontf2)
+		{
+			goto clippass;
+		}
 	}
-
-	// Check for automap fix. Store in doorclosed for r_segs.c
-	doorclosed = R_DoorClosed();
-	if (doorclosed)
-		goto clipsolid;
-
-	// Window.
-	if (backsector->ceilingheight != frontsector->ceilingheight
-		|| backsector->floorheight != frontsector->floorheight)
+	else
+#endif
 	{
-		goto clippass;
+		if (backsector->ceilingheight <= frontsector->floorheight
+			|| backsector->floorheight >= frontsector->ceilingheight)
+		{
+			goto clipsolid;
+		}
+
+		// Check for automap fix. Store in doorclosed for r_segs.c
+		doorclosed = R_DoorClosed();
+		if (doorclosed)
+			goto clipsolid;
+
+		// Window.
+		if (backsector->ceilingheight != frontsector->ceilingheight
+			|| backsector->floorheight != frontsector->floorheight)
+		{
+			goto clippass;
+		}
 	}
 
 	// Reject empty lines used for triggers and special events.
