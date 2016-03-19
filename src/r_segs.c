@@ -288,6 +288,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	line_t *ldef;
 	sector_t *front, *back;
 	INT32 times, repeats;
+	INT32 range;
 
 	// Calculate light table.
 	// Use different light tables
@@ -334,6 +335,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 		colfunc = fuzzcolfunc;
 	}
 
+	range = max(ds->x2-ds->x1, 1);
 	rw_scalestep = ds->scalestep;
 	spryscale = ds->scale1 + (x1 - ds->x1)*rw_scalestep;
 
@@ -377,7 +379,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 
 			rlight->height = (centeryfrac) - FixedMul(leftheight, ds->scale1);
 			rlight->heightstep = (centeryfrac) - FixedMul(rightheight, ds->scale2);
-			rlight->heightstep = (rlight->heightstep-rlight->height)/(ds->x2-ds->x1+1);
+			rlight->heightstep = (rlight->heightstep-rlight->height)/(range);
 			//if (x1 > ds->x1)
 				//rlight->height -= (x1 - ds->x1)*rlight->heightstep;
 #else
@@ -693,6 +695,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	fixed_t         offsetvalue = 0;
 	lightlist_t     *light;
 	r_lightlist_t   *rlight;
+	INT32           range;
 #ifndef ESLOPE
 	fixed_t         lheight;
 #endif
@@ -757,6 +760,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	else if (pfloor->flags & FF_FOG)
 		colfunc = R_DrawFogColumn_8;
 
+	range = max(ds->x2-ds->x1, 1);
 	//SoM: Moved these up here so they are available for my lightlist calculations
 	rw_scalestep = ds->scalestep;
 	spryscale = ds->scale1 + (x1 - ds->x1)*rw_scalestep;
@@ -813,7 +817,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			rightheight -= viewz;
 			rlight->height = (centeryfrac) - FixedMul(leftheight, ds->scale1);
 			rlight->heightstep = (centeryfrac) - FixedMul(rightheight, ds->scale2);
-			rlight->heightstep = (rlight->heightstep-rlight->height)/(ds->x2-ds->x1+1);
+			rlight->heightstep = (rlight->heightstep-rlight->height)/(range);
 			rlight->height -= rlight->heightstep;
 #else
 			if (light->height < *pfloor->bottomheight)
@@ -841,7 +845,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 
 				rlight->botheight = (centeryfrac) - FixedMul(leftheight, ds->scale1);
 				rlight->botheightstep = (centeryfrac) - FixedMul(rightheight, ds->scale2);
-				rlight->botheightstep = (rlight->botheightstep-rlight->botheight)/(ds->x2-ds->x1+1);
+				rlight->botheightstep = (rlight->botheightstep-rlight->botheight)/(range);
 				rlight->botheight -= rlight->botheightstep;
 #else
 				lheight = *light->caster->bottomheight;// > *pfloor->topheight ? *pfloor->topheight + FRACUNIT : *light->caster->bottomheight;
@@ -951,8 +955,8 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		top_step = centeryfrac - FixedMul(right_top, ds->scale2);
 		bottom_step = centeryfrac - FixedMul(right_bottom, ds->scale2);
 
-		top_step = (top_step-top_frac)/(ds->x2-ds->x1+1);
-		bottom_step = (bottom_step-bottom_frac)/(ds->x2-ds->x1+1);
+		top_step = (top_step-top_frac)/(range);
+		bottom_step = (bottom_step-bottom_frac)/(range);
 
 		top_frac += top_step * (x1 - ds->x1);
 		bottom_frac += bottom_step * (x1 - ds->x1);
@@ -1549,6 +1553,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	INT32           i, p;
 	lightlist_t   *light;
 	r_lightlist_t *rlight;
+	INT32 range;
 #ifdef ESLOPE
 	vertex_t segleft, segright;
 	fixed_t ceilingfrontslide, floorfrontslide, ceilingbackslide, floorbackslide;
@@ -1633,7 +1638,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	if (stop > start)
 	{
 		ds_p->scale2 = R_ScaleFromGlobalAngle(viewangle + xtoviewangle[stop]);
-		ds_p->scalestep = rw_scalestep = (ds_p->scale2 - rw_scale) / (stop-start);
+		range = stop-start;
 	}
 	else
 	{
@@ -1654,7 +1659,10 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		}
 #endif
 		ds_p->scale2 = ds_p->scale1;
+		range = 1;
 	}
+
+	ds_p->scalestep = rw_scalestep = (ds_p->scale2 - rw_scale) / (range);
 
 	// calculate texture boundaries
 	//  and decide if floor / ceiling marks are needed
@@ -2531,11 +2539,11 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 #ifdef ESLOPE
 	if (frontsector->c_slope) {
 		fixed_t topfracend = (centeryfrac>>4) - FixedMul (worldtopslope, ds_p->scale2);
-		topstep = (topfracend-topfrac)/(stop-start+1);
+		topstep = (topfracend-topfrac)/(range);
 	}
 	if (frontsector->f_slope) {
 		fixed_t bottomfracend = (centeryfrac>>4) - FixedMul (worldbottomslope, ds_p->scale2);
-		bottomstep = (bottomfracend-bottomfrac)/(stop-start+1);
+		bottomstep = (bottomfracend-bottomfrac)/(range);
 	}
 #endif
 
@@ -2596,7 +2604,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 #ifdef ESLOPE
 			rlight->height = (centeryfrac>>4) - FixedMul(leftheight, rw_scale);
 			rlight->heightstep = (centeryfrac>>4) - FixedMul(rightheight, ds_p->scale2);
-			rlight->heightstep = (rlight->heightstep-rlight->height)/(stop-start+1);
+			rlight->heightstep = (rlight->heightstep-rlight->height)/(range);
 #else
 			rlight->height = (centeryfrac>>4) - FixedMul((light->height - viewz) >> 4, rw_scale);
 			rlight->heightstep = -FixedMul (rw_scalestep, (light->height - viewz) >> 4);
@@ -2623,7 +2631,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 				rlight->botheight = (centeryfrac>>4) - FixedMul(leftheight, rw_scale);
 				rlight->botheightstep = (centeryfrac>>4) - FixedMul(rightheight, ds_p->scale2);
-				rlight->botheightstep = (rlight->botheightstep-rlight->botheight)/(stop-start+1);
+				rlight->botheightstep = (rlight->botheightstep-rlight->botheight)/(range);
 
 #else
 				rlight->botheight = (centeryfrac >> 4) - FixedMul((*light->caster->bottomheight - viewz) >> 4, rw_scale);
@@ -2652,7 +2660,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 #ifdef ESLOPE
 			ffloor[i].f_pos_slope >>= 4;
 			ffloor[i].f_frac = (centeryfrac>>4) - FixedMul(ffloor[i].f_pos, rw_scale);
-			ffloor[i].f_step = ((centeryfrac>>4) - FixedMul(ffloor[i].f_pos_slope, ds_p->scale2) - ffloor[i].f_frac)/(stop-start+1);
+			ffloor[i].f_step = ((centeryfrac>>4) - FixedMul(ffloor[i].f_pos_slope, ds_p->scale2) - ffloor[i].f_frac)/(range);
 #else
 			ffloor[i].f_step = FixedMul(-rw_scalestep, ffloor[i].f_pos);
 			ffloor[i].f_frac = (centeryfrac>>4) - FixedMul(ffloor[i].f_pos, rw_scale);
@@ -2681,7 +2689,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 #ifdef ESLOPE
 			if (backsector->c_slope) {
 				fixed_t topfracend = (centeryfrac>>4) - FixedMul (worldhighslope, ds_p->scale2);
-				pixhighstep = (topfracend-pixhigh)/(stop-start+1);
+				pixhighstep = (topfracend-pixhigh)/(range);
 			}
 #endif
 		}
@@ -2697,7 +2705,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 #ifdef ESLOPE
 			if (backsector->f_slope) {
 				fixed_t bottomfracend = (centeryfrac>>4) - FixedMul (worldlowslope, ds_p->scale2);
-				pixlowstep = (bottomfracend-pixlow)/(stop-start+1);
+				pixlowstep = (bottomfracend-pixlow)/(range);
 			}
 #endif
 		}
@@ -2739,7 +2747,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 						ffloor[i].b_pos_slope >>= 4;
 						ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
 						ffloor[i].b_step = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos_slope, ds_p->scale2);
-						ffloor[i].b_step = (ffloor[i].b_step-ffloor[i].b_frac)/(stop-start+1);
+						ffloor[i].b_step = (ffloor[i].b_step-ffloor[i].b_frac)/(range);
 						i++;
 					}
 
@@ -2761,7 +2769,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 						ffloor[i].b_pos_slope >>= 4;
 						ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
 						ffloor[i].b_step = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos_slope, ds_p->scale2);
-						ffloor[i].b_step = (ffloor[i].b_step-ffloor[i].b_frac)/(stop-start+1);
+						ffloor[i].b_step = (ffloor[i].b_step-ffloor[i].b_frac)/(range);
 						i++;
 					}
 #else
@@ -2824,7 +2832,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 						ffloor[i].b_pos_slope >>= 4;
 						ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
 						ffloor[i].b_step = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos_slope, ds_p->scale2);
-						ffloor[i].b_step = (ffloor[i].b_step-ffloor[i].b_frac)/(stop-start+1);
+						ffloor[i].b_step = (ffloor[i].b_step-ffloor[i].b_frac)/(range);
 						i++;
 					}
 
@@ -2846,7 +2854,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 						ffloor[i].b_pos_slope >>= 4;
 						ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
 						ffloor[i].b_step = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos_slope, ds_p->scale2);
-						ffloor[i].b_step = (ffloor[i].b_step-ffloor[i].b_frac)/(stop-start+1);
+						ffloor[i].b_step = (ffloor[i].b_step-ffloor[i].b_frac)/(range);
 						i++;
 					}
 #else
