@@ -1555,9 +1555,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 #endif
 	static size_t maxdrawsegs = 0;
 
-	maskedtextureheight = NULL;
-
 #ifdef ESLOPE
+	maskedtextureheight = NULL;
 	//initialize segleft and segright
 	memset(&segleft, 0x00, sizeof(segleft));
 	memset(&segright, 0x00, sizeof(segright));
