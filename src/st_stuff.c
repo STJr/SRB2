@@ -858,7 +858,7 @@ static inline void ST_drawRings(void)
 
 	if (twoplayer)
 	{
-		INT32 ringnum = max(players[secondarydisplayplayer].health-1, 0);
+		ringnum = max(players[secondarydisplayplayer].health-1, 0);
 
 		ST_DrawPatchFromHudWS(HUD_RINGS2P, ((stplyr->health <= 1 && leveltime/5 & 1) ? rrings : sborings));
 
@@ -1079,6 +1079,8 @@ static void ST_drawNDScore(void)
 
 static void ST_drawNDTime(void)
 {
+	INT32 seconds, minutes, tictrn, tics;
+
 	if (gametype == GT_COOP && (netgame || multiplayer) && (maptol & TOL_TD))
 	{
 		INT32 i;
@@ -1090,8 +1092,6 @@ static void ST_drawNDTime(void)
 		if (i == MAXPLAYERS)
 			return;
 	}
-
-	INT32 seconds, minutes, tictrn, tics;
 
 	// TIME:
 	if (twoplayer)
@@ -1148,6 +1148,8 @@ static void ST_drawNDTime(void)
 
 static inline void ST_drawNDRings(void)
 {
+	INT32 ringnum, hits;
+
 	if (gametype == GT_COOP && (netgame || multiplayer) && (maptol & TOL_TD))
 	{
 		INT32 i;
@@ -1160,8 +1162,8 @@ static inline void ST_drawNDRings(void)
 			return;
 	}
 
-	INT32 ringnum = max(stplyr->health-1, 0);
-	INT32 hits = ringnum/5;
+	ringnum = max(stplyr->health-1, 0);
+	hits = ringnum/5;
 
 	if (hits > 5)
 		hits = 5;
@@ -1218,6 +1220,7 @@ static inline void ST_drawNDRings(void)
 
 static inline void ST_drawNDEmblems(void)
 {
+	INT32 emblemnum;
 	if (gametype == GT_COOP && (netgame || multiplayer) && (maptol & TOL_TD))
 	{
 		INT32 i;
@@ -1230,12 +1233,12 @@ static inline void ST_drawNDEmblems(void)
 			return;
 	}
 
-	INT32 emblemnum = max(stplyr->emblems, 0);
+	emblemnum = max(stplyr->emblems, 0);
 
 	if ((maptol & TOL_TD) && gametype == GT_COOP && (netgame || multiplayer))
 	{
-		emblemnum = 0;
 		INT32 i;
+		emblemnum = 0;
 
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
@@ -1956,7 +1959,7 @@ static void ST_drawNiGHTSHUD(void)
 		splitscreen = true;
 }
 
-static void ST_DrawNDHUD()
+static void ST_DrawNDHUD(void)
 {
 #ifdef HAVE_BLUA
 	if (LUA_HudEnabled(hud_ndscore))

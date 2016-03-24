@@ -2089,6 +2089,8 @@ void G_PlayerReborn(INT32 player)
 	UINT32 damagededuct;
 	UINT32 levelscore;
 
+	INT32 i;
+
 	score = players[player].score;
 	lives = players[player].lives;
 	continues = players[player].continues;
@@ -2137,7 +2139,6 @@ void G_PlayerReborn(INT32 player)
 
 	emblems = players[player].emblems;
 
-	INT32 i;
 	for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i] && !players[i].bot && players[i].mo && players[i].mo->health > 0 && players[i].playerstate == PST_LIVE) // There's a player left, so show the HUD
 				break;
