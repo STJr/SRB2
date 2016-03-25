@@ -513,7 +513,6 @@ static void D_Display(void)
 // =========================================================================
 
 tic_t rendergametic;
-boolean supdate;
 
 void D_SRB2Loop(void)
 {
@@ -604,7 +603,6 @@ void D_SRB2Loop(void)
 
 			// Update display, next frame, with current state.
 			D_Display();
-			supdate = false;
 
 			if (moviemode)
 				M_SaveFrame();
@@ -841,8 +839,10 @@ static void IdentifyVersion(void)
 	// Add the weapons
 	D_AddFile(va(pandf,srb2waddir,"rings.dta"));
 
+#ifdef USE_PATCH_DTA
 	// Add our crappy patches to fix our bugs
-	// D_AddFile(va(pandf,srb2waddir,"patch.dta"));
+	D_AddFile(va(pandf,srb2waddir,"patch.dta"));
+#endif
 
 #if !defined (HAVE_SDL) || defined (HAVE_MIXER)
 	{
@@ -1133,12 +1133,18 @@ void D_SRB2Main(void)
 	W_VerifyFileMD5(1, ASSET_HASH_ZONES_DTA); // zones.dta
 	W_VerifyFileMD5(2, ASSET_HASH_PLAYER_DTA); // player.dta
 	W_VerifyFileMD5(3, ASSET_HASH_RINGS_DTA); // rings.dta
-	//W_VerifyFileMD5(4, "0c66790502e648bfce90fdc5bb15722e"); // patch.dta
-	// don't check music.dta because people like to modify it, and it doesn't matter if they do
-	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.
+#ifdef USE_PATCH_DTA
+	W_VerifyFileMD5(4, ASSET_HASH_PATCH_DTA); // patch.dta
 #endif
 
-	mainwads = 4; // there are 5 wads not to unload
+	// don't check music.dta because people like to modify it, and it doesn't matter if they do
+	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.
+#endif //ifndef DEVELOP
+
+	mainwads = 4; // there are 4 wads not to unload
+#ifdef USE_PATCH_DTA
+	++mainwads; // patch.dta adds one more
+#endif
 
 	cht_Init();
 
