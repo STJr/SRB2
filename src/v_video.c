@@ -477,7 +477,16 @@ void V_DrawFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t 
 	}
 
 	deststart = desttop;
-	destend = desttop + SHORT(patch->width) * dupx;
+	if (pscale != FRACUNIT) // scale width properly
+	{
+		fixed_t pwidth = SHORT(patch->width)<<FRACBITS;
+		pwidth = FixedMul(pwidth, pscale);
+		pwidth = FixedMul(pwidth, dupx<<FRACBITS);
+		pwidth >>= FRACBITS;
+		destend = desttop + pwidth;
+	}
+	else
+		destend = desttop + SHORT(patch->width) * dupx;
 
 	for (col = 0; (col>>FRACBITS) < SHORT(patch->width); col += colfrac, ++x, desttop++)
 	{
