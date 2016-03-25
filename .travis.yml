@@ -39,6 +39,6 @@ before_script:
 
 before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install sdl2_mixer libpng game-music-emu p7zip ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install sdl2_mixer game-music-emu p7zip ; fi
 
 script: make
