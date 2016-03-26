@@ -10,7 +10,7 @@
 // See the 'LICENSE' file for more details.
 //-----------------------------------------------------------------------------
 /// \file  m_random.c
-/// \brief LCG PRNG originally created for XMOD
+/// \brief RNG for client effects and PRNG for game actions
 
 #include "doomdef.h"
 #include "doomtype.h"
@@ -42,7 +42,7 @@ UINT8 M_Random(void)
   */
 INT32 M_SignedRandom(void)
 {
-	return M_Random() - 128;
+	return (rand() & 255) - 128;
 }
 
 /** Provides a random number in between 0 and the given number - 1.
@@ -80,12 +80,29 @@ static UINT32 randomseed = 0;
 static UINT32 initialseed = 0;
 
 /**
-  * Provides a random byte and sets the seed appropriately.
-  * The nature of this PRNG allows it to cycle through about two million numbers
-  * before it finally starts repeating numeric sequences.
-  * That's more than good enough for our purposes.
+  * Provides a random fixed point number.
+  * This is a variant of an xorshift PRNG; state fits in a 32 bit integer structure.
   *
-  * \return A random byte, 0 to 255.
+  * \return A random fixed point number from [0,1).
+  */
+ATTRINLINE static fixed_t FUNCINLINE __internal_prng__(void)
+{
+	randomseed += 7069;
+	randomseed ^= randomseed << 17;
+	randomseed ^= randomseed >> 9;
+	randomseed *= 373;
+	randomseed ^= randomseed << 21;
+	randomseed ^= randomseed >> 15;
+	return (randomseed&((FRACUNIT-1)<<9))>>9;
+}
+
+/** Provides a random integer from 0 to 255.
+  * Distribution is uniform.
+  * If you're curious, (&0xFF00) >> 8 gives the same result
+  * as a fixed point multiplication by 256.
+  *
+  * \return Random integer from [0, 255].
+  * \sa __internal_prng__
   */
 #ifndef DEBUGRANDOM
 UINT8 P_Random(void)
@@ -95,15 +112,14 @@ UINT8 P_RandomD(const char *rfile, INT32 rline)
 {
 	CONS_Printf("P_Random() at: %sp %d\n", rfile, rline);
 #endif
-	randomseed = (randomseed*746151647)+48205429;
-	return (UINT8)((randomseed >> 17)&255);
+	return (UINT8)((__internal_prng__()&0xFF00)>>8);
 }
 
-/** Provides a random number from -128 to 127.
+/** Provides a random integer from -128 to 127.
   * Distribution is uniform.
   *
-  * \return Random number from -128 to 127.
-  * \sa P_Random
+  * \return Random integer from [-128, 127].
+  * \sa __internal_prng__
   */
 #ifndef DEBUGRANDOM
 INT32 P_SignedRandom(void)
@@ -113,15 +129,31 @@ INT32 P_SignedRandomD(const char *rfile, INT32 rline)
 {
 	CONS_Printf("P_SignedRandom() at: %sp %d\n", rfile, rline);
 #endif
-	return P_Random() - 128;
+	return (INT32)((__internal_prng__()&0xFF00)>>8) - 128;
 }
 
-/** Provides a random number in between 0 and the given number - 1.
-  * Distribution is uniform, also calls for two numbers for bigger output range.
-  * Use for picking random elements from an array.
+/**
+  * Provides a random fixed point number.
+  * Literally a wrapper for the internal PRNG function.
   *
-  * \return A random number, 0 to arg1-1.
-  * \sa P_Random
+  * \return A random fixed point number from [0,1).
+  */
+#ifndef DEBUGRANDOM
+fixed_t P_RandomFixed(void)
+{
+#else
+UINT8 P_RandomFixedD(const char *rfile, INT32 rline)
+{
+	CONS_Printf("P_Random() at: %sp %d\n", rfile, rline);
+#endif
+	return __internal_prng__();
+}
+
+/** Provides a random integer for picking random elements from an array.
+  * Distribution is uniform.
+  *
+  * \return A random integer from [0,a).
+  * \sa __internal_prng__
   */
 #ifndef DEBUGRANDOM
 INT32 P_RandomKey(INT32 a)
@@ -131,16 +163,14 @@ INT32 P_RandomKeyD(const char *rfile, INT32 rline, INT32 a)
 {
 	CONS_Printf("P_RandomKey() at: %sp %d\n", rfile, rline);
 #endif
-	INT32 prandom = P_Random(); // note: forcing explicit function call order
-	prandom |= P_Random() << 8; // (function call order is not strictly defined)
-	return (INT32)((prandom/65536.0f)*a);
+	return (INT32)((__internal_prng__() * a) >> FRACBITS);
 }
 
-/** Provides a random number in between a specific range.
-  * Distribution is uniform, also calls for two numbers for bigger output range.
+/** Provides a random integer in a given range.
+  * Distribution is uniform.
   *
-  * \return A random number, arg1 to arg2.
-  * \sa P_Random
+  * \return A random integer from [a,b].P_Random
+  * \sa __internal_prng__
   */
 #ifndef DEBUGRANDOM
 INT32 P_RandomRange(INT32 a, INT32 b)
@@ -150,21 +180,27 @@ INT32 P_RandomRangeD(const char *rfile, INT32 rline, INT32 a, INT32 b)
 {
 	CONS_Printf("P_RandomRange() at: %sp %d\n", rfile, rline);
 #endif
-	INT32 prandom = P_Random(); // note: forcing explicit function call order
-	prandom |= P_Random() << 8; // (function call order is not strictly defined)
-	return (INT32)((prandom/65536.0f)*(b-a+1))+a;
+	return (INT32)((__internal_prng__() * (b-a+1)) >> FRACBITS) + a;
 }
 
-/** Provides a random byte without saving what the seed would be.
-  * Used just to debug the PRNG.
+
+
+// ----------------------
+// PRNG seeds & debugging
+// ----------------------
+
+/** Peeks to see what the next result from the PRNG will be.
+  * Used for debugging.
   *
-  * \return A 'random' byte, 0 to 255.
-  * \sa P_Random
+  * \return A 'random' fixed point number from [0,1).
+  * \sa __internal_prng__
   */
-UINT8 P_RandomPeek(void)
+fixed_t P_RandomPeek(void)
 {
-	UINT32 r = (randomseed*746151647)+48205429;
-	return (UINT8)((r >> 17)&255);
+	UINT32 r = randomseed;
+	fixed_t ret = __internal_prng__();
+	randomseed = r;
+	return ret;
 }
 
 /** Gets the current random seed.  Used by netgame savegames.

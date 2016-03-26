@@ -20,8 +20,9 @@
 
 //#define DEBUGRANDOM
 
+
 // M_Random functions pull random numbers of various types that aren't network synced.
-// P_Random functions pulls random bytes from a LCG PRNG that is network synced.
+// P_Random functions pulls random bytes from a PRNG that is network synced.
 
 // RNG functions
 UINT8 M_Random(void);
@@ -31,21 +32,24 @@ INT32 M_RandomRange(INT32 a, INT32 b);
 
 // PRNG functions
 #ifdef DEBUGRANDOM
-#define P_Random() P_RandomD(__FILE__, __LINE__)
-#define P_SignedRandom() P_SignedRandomD(__FILE__, __LINE__)
-#define P_RandomKey(c) P_RandomKeyD(__FILE__, __LINE__, c)
+#define P_Random()          P_RandomD(__FILE__, __LINE__)
+#define P_SignedRandom()    P_SignedRandomD(__FILE__, __LINE__)
+#define P_RandomFixed()     P_RandomFixedD(__FILE__, __LINE__)
+#define P_RandomKey(c)      P_RandomKeyD(__FILE__, __LINE__, c)
 #define P_RandomRange(c, d) P_RandomRangeD(__FILE__, __LINE__, c, d)
 UINT8 P_RandomD(const char *rfile, INT32 rline);
 INT32 P_SignedRandomD(const char *rfile, INT32 rline);
+fixed_t P_RandomFixedD(const char *rfile, INT32 rline);
 INT32 P_RandomKeyD(const char *rfile, INT32 rline, INT32 a);
 INT32 P_RandomRangeD(const char *rfile, INT32 rline, INT32 a, INT32 b);
 #else
 UINT8 P_Random(void);
 INT32 P_SignedRandom(void);
+fixed_t P_RandomFixed(void);
 INT32 P_RandomKey(INT32 a);
 INT32 P_RandomRange(INT32 a, INT32 b);
 #endif
-UINT8 P_RandomPeek(void);
+fixed_t P_RandomPeek(void);
 
 // Working with the seed for PRNG
 #ifdef DEBUGRANDOM
