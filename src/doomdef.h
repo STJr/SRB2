@@ -148,12 +148,16 @@ extern FILE *logstream;
 // we use comprevision and compbranch instead.
 #else
 #define VERSION    201 // Game version
-#define SUBVERSION 14  // more precise version number
-#define VERSIONSTRING "v2.1.14"
-#define VERSIONSTRINGW L"v2.1.14"
+#define SUBVERSION 15  // more precise version number
+#define VERSIONSTRING "v2.1.15"
+#define VERSIONSTRINGW L"v2.1.15"
 // Hey! If you change this, add 1 to the MODVERSION below!
 // Otherwise we can't force updates!
 #endif
+
+// Does this version require an added patch file?
+// Comment or uncomment this as necessary.
+#define USE_PATCH_DTA
 
 // Modification options
 // If you want to take advantage of the Master Server's ability to force clients to update
@@ -208,7 +212,7 @@ extern FILE *logstream;
 // it's only for detection of the version the player is using so the MS can alert them of an update.
 // Only set it higher, not lower, obviously.
 // Note that we use this to help keep internal testing in check; this is why v2.1.0 is not version "1".
-#define MODVERSION 19
+#define MODVERSION 20
 
 // =========================================================================
 
@@ -427,9 +431,6 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 ///	\note	obsoleted by cv_maxportals
 //#define PORTAL_LIMIT 8
 
-///	Fun experimental slope stuff!
-//#define SLOPENESS
-
 /// Kalaron/Eternity Engine slope code (SRB2CB ported)
 #define ESLOPE
 
@@ -448,10 +449,6 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 
 ///	Polyobject fake flat code
 #define POLYOBJECTS_PLANES
-
-///	Blue spheres for future use.
-///	\todo	Remove this define.
-#define BLUE_SPHERES // Blue spheres for future use.
 
 ///	Improved way of dealing with ping values and a ping limit.
 #define NEWPING
@@ -489,5 +486,9 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 
 /// Experimental tweaks to analog mode. (Needs a lot of work before it's ready for primetime.)
 //#define REDSANALOG
+
+/// Backwards compatibility with musicslots.
+/// \note	You should leave this enabled unless you're working with a future SRB2 version.
+#define MUSICSLOT_COMPATIBILITY
 
 #endif // __DOOMDEF__

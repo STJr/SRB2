@@ -1891,7 +1891,6 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 	 || specialtype == 304  // Ring count - Once
 	 || specialtype == 307  // Character ability - Once
 	 || specialtype == 308  // Race only - Once
-	 || specialtype == 313  // No More Enemies - Once
 	 || specialtype == 315  // No of pushables - Once
 	 || specialtype == 318  // Unlockable trigger - Once
 	 || specialtype == 320  // Unlockable - Once
@@ -2390,20 +2389,19 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			// console player only unless NOCLIMB is set
 			if ((line->flags & ML_NOCLIMB) || (mo && mo->player && P_IsLocalPlayer(mo->player)))
 			{
-				UINT16 musicnum = (UINT16)sides[line->sidenum[0]].toptexture; //P_AproxDistance(line->dx, line->dy)>>FRACBITS;
 				UINT16 tracknum = (UINT16)sides[line->sidenum[0]].bottomtexture;
 
-				mapmusic = musicnum | (tracknum << MUSIC_TRACKSHIFT);
-				if (!(line->flags & ML_BLOCKMONSTERS))
-					mapmusic |= MUSIC_RELOADRESET;
+				strncpy(mapmusname, sides[line->sidenum[0]].text, 7);
+				mapmusname[6] = 0;
 
-				if (musicnum >= NUMMUSIC || musicnum == mus_None)
-					S_StopMusic();
-				else
-					S_ChangeMusic(mapmusic, !(line->flags & ML_EFFECT4));
+				mapmusflags = tracknum & MUSIC_TRACKMASK;
+				if (!(line->flags & ML_BLOCKMONSTERS))
+					mapmusflags |= MUSIC_RELOADRESET;
+
+				S_ChangeMusic(mapmusname, mapmusflags, !(line->flags & ML_EFFECT4));
 
 				// Except, you can use the ML_BLOCKMONSTERS flag to change this behavior.
-				// if (mapmusic & MUSIC_RELOADRESET) then it will reset the music in G_PlayerReborn.
+				// if (mapmusflags & MUSIC_RELOADRESET) then it will reset the music in G_PlayerReborn.
 			}
 			break;
 
@@ -6030,31 +6028,6 @@ void P_SpawnSpecials(INT32 fromnetsave)
 				P_AddRaiseThinker(lines[i].frontsector, &lines[i]);
 				break;
 
-#ifdef SLOPENESS
-			case 999:
-				sec = sides[*lines[i].sidenum].sector-sectors;
-				for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
-				{
-					size_t counting;
-
-					sectors[s].floorangle = ANGLE_45;
-					for (counting = 0; counting < sectors[s].linecount/2; counting++)
-					{
-						sectors[s].lines[counting]->v1->z = sectors[sec].floorheight;
-						CONS_Debug(DBG_GAMELOGIC, "Set it to %d\n", sectors[s].lines[counting]->v1->z>>FRACBITS);
-					}
-
-					for (counting = sectors[s].linecount/2; counting < sectors[s].linecount; counting++)
-					{
-						sectors[s].lines[counting]->v1->z = sectors[sec].ceilingheight;
-						CONS_Debug(DBG_GAMELOGIC, "Set it to %d\n", sectors[s].lines[counting]->v1->z>>FRACBITS);
-					}
-					sectors[s].special = 65535;
-					CONS_Debug(DBG_GAMELOGIC, "Found & Set slope!\n");
-				}
-				break;
-#endif
-
 			case 200: // Double light effect
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_CUTSPRITES|FF_DOUBLESHADOW, secthinkers);
 				break;
@@ -6469,7 +6442,7 @@ static void P_DoScrollMove(mobj_t *thing, fixed_t dx, fixed_t dy, INT32 exclusiv
 	thing->momy += dy;
 
 	if (exclusive)
-		thing->eflags |= MFE_PUSHED;
+		thing->flags2 |= MF2_PUSHED;
 }
 
 /** Processes an active scroller.
@@ -6573,7 +6546,7 @@ void T_Scroll(scroll_t *s)
 					{
 						thing = node->m_thing;
 
-						if (thing->eflags & MFE_PUSHED) // Already pushed this tic by an exclusive pusher.
+						if (thing->flags2 & MF2_PUSHED) // Already pushed this tic by an exclusive pusher.
 							continue;
 
 						height = P_GetSpecialBottomZ(thing, sec, psec);
@@ -6595,7 +6568,7 @@ void T_Scroll(scroll_t *s)
 				{
 					thing = node->m_thing;
 
-					if (thing->eflags & MFE_PUSHED)
+					if (thing->flags2 & MF2_PUSHED)
 						continue;
 
 					height = P_GetSpecialBottomZ(thing, sec, sec);
@@ -6636,7 +6609,7 @@ void T_Scroll(scroll_t *s)
 					{
 						thing = node->m_thing;
 
-						if (thing->eflags & MFE_PUSHED)
+						if (thing->flags2 & MF2_PUSHED)
 							continue;
 
 						height = P_GetSpecialTopZ(thing, sec, psec);
@@ -6658,7 +6631,7 @@ void T_Scroll(scroll_t *s)
 				{
 					thing = node->m_thing;
 
-					if (thing->eflags & MFE_PUSHED)
+					if (thing->flags2 & MF2_PUSHED)
 						continue;
 
 					height = P_GetSpecialTopZ(thing, sec, sec);
@@ -7141,7 +7114,7 @@ static pusher_t *tmpusher; // pusher structure for blockmap searches
   */
 static inline boolean PIT_PushThing(mobj_t *thing)
 {
-	if (thing->eflags & MFE_PUSHED)
+	if (thing->flags2 & MF2_PUSHED)
 		return false;
 
 	if (thing->player && thing->player->pflags & PF_ROPEHANG)
@@ -7271,7 +7244,7 @@ static inline boolean PIT_PushThing(mobj_t *thing)
 	}
 
 	if (tmpusher->exclusive)
-		thing->eflags |= MFE_PUSHED;
+		thing->flags2 |= MF2_PUSHED;
 
 	return true;
 }
@@ -7374,7 +7347,7 @@ void T_Pusher(pusher_t *p)
 			|| thing->type == MT_BIGTUMBLEWEED))
 			continue;
 
-		if (thing->eflags & MFE_PUSHED)
+		if (thing->flags2 & MF2_PUSHED)
 			continue;
 
 		if (thing->player && thing->player->pflags & PF_ROPEHANG)
@@ -7541,7 +7514,7 @@ void T_Pusher(pusher_t *p)
 			}
 
 			if (p->exclusive)
-				thing->eflags |= MFE_PUSHED;
+				thing->flags2 |= MF2_PUSHED;
 		}
 	}
 }

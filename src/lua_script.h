@@ -30,9 +30,9 @@
 #define lua_pushfixed(L, f) lua_pushinteger(L, f)
 
 // angle_t casting
-// we reduce the angle to a fixed point between 0.0 and 1.0
-#define luaL_checkangle(L, i) (((angle_t)(luaL_checkfixed(L, i)&0xFFFF))<<16)
-#define lua_pushangle(L, a) lua_pushfixed(L, a>>16)
+// TODO deal with signedness
+#define luaL_checkangle(L, i) ((angle_t)luaL_checkinteger(L, i))
+#define lua_pushangle(L, a) lua_pushinteger(L, a)
 
 #ifdef _DEBUG
 void LUA_ClearExtVars(void);
@@ -55,6 +55,7 @@ void Got_Luacmd(UINT8 **cp, INT32 playernum); // lua_consolelib.c
 void LUA_CVarChanged(const char *name); // lua_consolelib.c
 int Lua_optoption(lua_State *L, int narg,
 	const char *def, const char *const lst[]);
+void LUAh_NetArchiveHook(lua_CFunction archFunc);
 
 // Console wrapper
 void COM_Lua_f(void);
@@ -68,5 +69,16 @@ void COM_Lua_f(void);
 }
 
 #define LUA_ErrInvalid(L, type) luaL_error(L, "accessed " type " doesn't exist anymore, please check 'valid' before using " type ".");
+
+// Deprecation warnings
+// Shows once upon use. Then doesn't show again.
+#define LUA_Deprecated(L,this_func,use_instead)\
+{\
+	static UINT8 seen = 0;\
+	if (!seen) {\
+		seen = 1;\
+		CONS_Alert(CONS_WARNING,"\"%s\" is deprecated and will be removed.\nUse \"%s\" instead.\n", this_func, use_instead);\
+	}\
+}
 
 #endif
