@@ -4,7 +4,9 @@ dist: trusty
 
 os:
   - linux
+    env: CFLAGS=-Wno-absolute-value -Werror
   - osx
+    env: CFLAGS=--Werror
 
 env:
 - CFLAGS=-Wno-absolute-value -Wno-unknown-warning-option -Werror
