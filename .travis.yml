@@ -2,10 +2,9 @@ language: c
 sudo: required
 dist: trusty
 
-matrix:
-  include:
-    - os: linux
-    - os: osx
+os:
+  - linux
+  - osx
 
 env:
 - CFLAGS=-Wno-absolute-value -Werror
