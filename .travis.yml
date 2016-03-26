@@ -7,7 +7,7 @@ os:
   - osx
 
 env:
-- CFLAGS=-Wno-absolute-value -Werror
+- CFLAGS=-Wno-absolute-value -Wno-unknown-warning-option -Werror
 
 compiler:
   - gcc
