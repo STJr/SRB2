@@ -119,7 +119,6 @@ if(${SDL2_FOUND})
 
 	if(${CMAKE_SYSTEM} MATCHES Darwin)
 		target_link_libraries(SRB2SDL2 PRIVATE
-			CoreFoundation
 			SDL2
 			SDL2_mixer
 			${GME_LIBRARIES}
