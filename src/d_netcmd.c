@@ -808,7 +808,7 @@ static boolean IsNameGood(char *name, INT32 playernum)
 			else if (len == 1) // Agh!
 			{
 				// Last ditch effort...
-				sprintf(name, "%d", M_Random() & 7);
+				sprintf(name, "%d", M_RandomKey(10));
 				if (!IsNameGood (name, playernum))
 					return false;
 			}
@@ -3583,7 +3583,7 @@ retryscramble:
 		for (i = 0; i < playercount; i++)
 		{
 			if (repick)
-				newteam = (INT16)((M_Random() % 2) + 1);
+				newteam = (INT16)((M_RandomByte() % 2) + 1);
 
 			// One team has the most players they can get, assign the rest to the other team.
 			if (red == maxcomposition || blue == maxcomposition)
@@ -3628,7 +3628,7 @@ retryscramble:
 		{
 			if (repick)
 			{
-				newteam = (INT16)((M_Random() % 2) + 1);
+				newteam = (INT16)((M_RandomByte() % 2) + 1);
 				repick = false;
 			}
 			else

@@ -384,12 +384,12 @@ INT32 HW3S_I_StartSound(const void *origin_p, source3D_data_t *source_parm, chan
 		/*if (gamemode != heretic)
 		{
 			if (sfx_id >= sfx_sawup && sfx_id <= sfx_sawhit)
-				pitch += 8 - (M_Random()&15);
+				pitch += 8 - (M_RandomByte()&15);
 			else if (sfx_id != sfx_itemup && sfx_id != sfx_tink)
-				pitch += 16 - (M_Random()&31);
+				pitch += 16 - (M_RandomByte()&31);
 		}
 		else*/
-			pitch = 128 + (M_Random() & 7) - (M_Random() & 7);
+			pitch = 128 + (M_RandomByte() & 7) - (M_RandomByte() & 7);
 	}
 #endif
 

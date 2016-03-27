@@ -19,48 +19,51 @@
 #include "m_random.h"
 #include "m_fixed.h"
 
+
+
 // ---------------------------
 // RNG functions (not synched)
 // ---------------------------
 
-/** Provides a random byte.
-  * Used outside the p_xxx game code and not synchronized in netgames. This is
-  * for anything that doesn't need to be synced, e.g. precipitation.
+/** Provides a random fixed point number. Distribution is uniform.
+  * As with all M_Random functions, not synched in netgames.
   *
-  * \return A random byte, 0 to 255.
+  * \return A random fixed point number from [0,1).
   */
-UINT8 M_Random(void)
+fixed_t M_RandomFixed(void)
 {
-	return (rand() & 255);
+	return (rand() & 0xFFFF);
 }
 
-/** Provides a random signed byte.  Distribution is uniform.
-  * As with all M_*Random functions, not synched in netgames.
+/** Provides a random byte. Distribution is uniform.
+  * As with all M_Random functions, not synched in netgames.
   *
-  * \return A random byte, -128 to 127.
-  * \sa M_Random
+  * \return A random integer from [0, 255].
   */
-INT32 M_SignedRandom(void)
+UINT8 M_RandomByte(void)
 {
-	return (rand() & 255) - 128;
+	return (rand() & 0xFF);
 }
 
-/** Provides a random number in between 0 and the given number - 1.
-  * Distribution is uniform.  Use for picking random elements from an array.
-  * As with all M_*Random functions, not synched in netgames.
+/** Provides a random integer for picking random elements from an array.
+  * Distribution is uniform.
+  * As with all M_Random functions, not synched in netgames.
   *
-  * \return A random number, 0 to arg1-1.
+  * \param a Number of items in array.
+  * \return A random integer from [0,a).
   */
 INT32 M_RandomKey(INT32 a)
 {
 	return (INT32)((rand()/((unsigned)RAND_MAX+1.0f))*a);
 }
 
-/** Provides a random number in between a specific range.
+/** Provides a random integer in a given range.
   * Distribution is uniform.
-  * As with all M_*Random functions, not synched in netgames.
+  * As with all M_Random functions, not synched in netgames.
   *
-  * \return A random number, arg1 to arg2.
+  * \param a Lower bound.
+  * \param b Upper bound.
+  * \return A random integer from [a,b].
   */
 INT32 M_RandomRange(INT32 a, INT32 b)
 {
@@ -79,8 +82,7 @@ static UINT32 randomseed = 0;
 // Holds the INITIAL seed value.  Used for demos, possibly other debugging.
 static UINT32 initialseed = 0;
 
-/**
-  * Provides a random fixed point number.
+/** Provides a random fixed point number.
   * This is a variant of an xorshift PRNG; state fits in a 32 bit integer structure.
   *
   * \return A random fixed point number from [0,1).
@@ -96,44 +98,7 @@ ATTRINLINE static fixed_t FUNCINLINE __internal_prng__(void)
 	return (randomseed&((FRACUNIT-1)<<9))>>9;
 }
 
-/** Provides a random integer from 0 to 255.
-  * Distribution is uniform.
-  * If you're curious, (&0xFF00) >> 8 gives the same result
-  * as a fixed point multiplication by 256.
-  *
-  * \return Random integer from [0, 255].
-  * \sa __internal_prng__
-  */
-#ifndef DEBUGRANDOM
-UINT8 P_Random(void)
-{
-#else
-UINT8 P_RandomD(const char *rfile, INT32 rline)
-{
-	CONS_Printf("P_Random() at: %sp %d\n", rfile, rline);
-#endif
-	return (UINT8)((__internal_prng__()&0xFF00)>>8);
-}
-
-/** Provides a random integer from -128 to 127.
-  * Distribution is uniform.
-  *
-  * \return Random integer from [-128, 127].
-  * \sa __internal_prng__
-  */
-#ifndef DEBUGRANDOM
-INT32 P_SignedRandom(void)
-{
-#else
-INT32 P_SignedRandomD(const char *rfile, INT32 rline)
-{
-	CONS_Printf("P_SignedRandom() at: %sp %d\n", rfile, rline);
-#endif
-	return (INT32)((__internal_prng__()&0xFF00)>>8) - 128;
-}
-
-/**
-  * Provides a random fixed point number.
+/** Provides a random fixed point number. Distribution is uniform.
   * Literally a wrapper for the internal PRNG function.
   *
   * \return A random fixed point number from [0,1).
@@ -144,14 +109,34 @@ fixed_t P_RandomFixed(void)
 #else
 UINT8 P_RandomFixedD(const char *rfile, INT32 rline)
 {
-	CONS_Printf("P_Random() at: %sp %d\n", rfile, rline);
+	CONS_Printf("P_RandomFixed() at: %sp %d\n", rfile, rline);
 #endif
 	return __internal_prng__();
 }
 
+/** Provides a random byte. Distribution is uniform.
+  * If you're curious, (&0xFF00) >> 8 gives the same result
+  * as a fixed point multiplication by 256.
+  *
+  * \return Random integer from [0, 255].
+  * \sa __internal_prng__
+  */
+#ifndef DEBUGRANDOM
+UINT8 P_RandomByte(void)
+{
+#else
+UINT8 P_RandomByteD(const char *rfile, INT32 rline)
+{
+	CONS_Printf("P_RandomByte() at: %sp %d\n", rfile, rline);
+#endif
+	return (UINT8)((__internal_prng__()&0xFF00)>>8);
+}
+
 /** Provides a random integer for picking random elements from an array.
   * Distribution is uniform.
+  * NOTE: Maximum range is 65536.
   *
+  * \param a Number of items in array.
   * \return A random integer from [0,a).
   * \sa __internal_prng__
   */
@@ -168,8 +153,11 @@ INT32 P_RandomKeyD(const char *rfile, INT32 rline, INT32 a)
 
 /** Provides a random integer in a given range.
   * Distribution is uniform.
+  * NOTE: Maximum range is 65536.
   *
-  * \return A random integer from [a,b].P_Random
+  * \param a Lower bound.
+  * \param b Upper bound.
+  * \return A random integer from [a,b].
   * \sa __internal_prng__
   */
 #ifndef DEBUGRANDOM

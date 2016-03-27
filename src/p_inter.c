@@ -1236,7 +1236,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 				if (special->target && special->target->state == &states[S_BLACKEGG_SHOOT1])
 				{
-					if (special->target->health <= 2 && (P_Random() & 1))
+					if (special->target->health <= 2 && P_RandomChance(FRACUNIT/2))
 						P_SetMobjState(special->target, special->target->info->missilestate);
 					else
 						P_SetMobjState(special->target, special->target->info->raisestate);
@@ -2186,29 +2186,17 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source)
 
 				default:
 					if (target->info->doomednum)
+						prandom = target->info->doomednum%5; // "Random" animal for new enemies.
+					else
+						prandom = P_RandomKey(5); // No placable object, just use a random number.
+
+					switch(prandom)
 					{
-						switch(target->info->doomednum%5)
-						{
 						default: item = MT_BUNNY; break;
 						case 1: item = MT_BIRD; break;
 						case 2: item = MT_MOUSE; break;
 						case 3: item = MT_COW; break;
 						case 4: item = MT_CHICKEN; break;
-						}
-					}
-					else
-					{
-						prandom = P_Random();
-						if (prandom < 51)
-							item = MT_BUNNY;
-						else if (prandom < 102)
-							item = MT_BIRD;
-						else if (prandom < 153)
-							item = MT_MOUSE;
-						else if (prandom < 204)
-							item = MT_COW;
-						else
-							item = MT_CHICKEN;
 					}
 					break;
 			}
@@ -3086,7 +3074,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 
 	// Killing dead. Just for kicks.
 	// Require source and inflictor be player.  Don't hurt for firing rings.
-	if (cv_killingdead.value && (source && source->player) && (inflictor && inflictor->player) && P_Random() < 80)
+	if (cv_killingdead.value && (source && source->player) && (inflictor && inflictor->player) && P_RandomChance(5*FRACUNIT/16))
 		P_DamageMobj(source, target, target, 1);
 
 	// do the damage
@@ -3600,7 +3588,7 @@ void P_PlayerFlagBurst(player_t *player, boolean toss)
 		P_InstaThrust(flag, player->mo->angle, FixedMul(6*FRACUNIT, player->mo->scale));
 	else
 	{
-		angle_t fa = P_Random()*FINEANGLES/256;
+		angle_t fa = P_RandomByte()*FINEANGLES/256;
 		flag->momx = FixedMul(FINECOSINE(fa), FixedMul(6*FRACUNIT, player->mo->scale));
 		if (!(twodlevel || (player->mo->flags2 & MF2_TWOD)))
 			flag->momy = FixedMul(FINESINE(fa), FixedMul(6*FRACUNIT, player->mo->scale));
