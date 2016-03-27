@@ -32,7 +32,13 @@
   */
 fixed_t M_RandomFixed(void)
 {
+#if RAND_MAX < 65535
+	// Compensate for insufficient randomness.
+	fixed_t rndv = (rand()&1)<<15;
+	return rand()^rndv;
+#else
 	return (rand() & 0xFFFF);
+#endif
 }
 
 /** Provides a random byte. Distribution is uniform.
@@ -246,5 +252,5 @@ void P_SetRandSeedD(const char *rfile, INT32 rline, UINT32 seed)
   */
 UINT32 M_RandomizedSeed(void)
 {
-	return ((totalplaytime & 0xFFFF) << 16)|(rand() & 0xFFFF);
+	return ((totalplaytime & 0xFFFF) << 16)|M_RandomFixed();
 }
