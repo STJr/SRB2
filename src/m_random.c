@@ -95,13 +95,10 @@ static UINT32 initialseed = 0;
   */
 ATTRINLINE static fixed_t FUNCINLINE __internal_prng__(void)
 {
-	randomseed += 7069;
-	randomseed ^= randomseed << 17;
-	randomseed ^= randomseed >> 9;
-	randomseed *= 373;
+	randomseed ^= randomseed >> 13;
+	randomseed ^= randomseed >> 11;
 	randomseed ^= randomseed << 21;
-	randomseed ^= randomseed >> 15;
-	return (randomseed&((FRACUNIT-1)<<9))>>9;
+	return ( (randomseed*36548569) >> 4) & (FRACUNIT-1);
 }
 
 /** Provides a random fixed point number. Distribution is uniform.
