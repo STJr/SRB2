@@ -2248,9 +2248,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 						} else
 							low2 = lowslope2 = *r2->bottomheight;
 
-						if ((high2 < lowcut && highslope2 < lowcutslope) || (low2 > highcut && lowslope2 > highcutslope))
+						if ((high2 < lowcut || highslope2 < lowcutslope) || (low2 > highcut || lowslope2 > highcutslope))
 							continue;
-						if ((high1 > high2 && highslope1 > highslope2) || (low1 < low2 && lowslope1 < lowslope2))
+						if ((high1 > high2 || highslope1 > highslope2) || (low1 < low2 || lowslope1 < lowslope2))
 							continue;
 #else
 						if (*r2->topheight < lowcut || *r2->bottomheight > highcut)
@@ -2331,9 +2331,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 						} else
 							low2 = lowslope2 = *r2->bottomheight;
 
-						if ((high2 < lowcut && highslope2 < lowcutslope) || (low2 > highcut && lowslope2 > highcutslope))
+						if ((high2 < lowcut || highslope2 < lowcutslope) || (low2 > highcut || lowslope2 > highcutslope))
 							continue;
-						if ((high1 > high2 && highslope1 > highslope2) || (low1 < low2 && lowslope1 < lowslope2))
+						if ((high1 > high2 || highslope1 > highslope2) || (low1 < low2 || lowslope1 < lowslope2))
 							continue;
 #else
 						if (*r2->topheight < lowcut || *r2->bottomheight > highcut)
@@ -2679,7 +2679,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 		if (worldhigh < worldtop
 #ifdef ESLOPE
-			|| worldhighslope <= worldtopslope
+			|| worldhighslope < worldtopslope
 #endif
 			)
 		{
@@ -2696,7 +2696,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 		if (worldlow > worldbottom
 #ifdef ESLOPE
-			|| worldlowslope >= worldbottomslope
+			|| worldlowslope > worldbottomslope
 #endif
 			)
 		{
@@ -2713,7 +2713,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		{
 			ffloor_t * rover;
 #ifdef ESLOPE
-			fixed_t rovertest;
+			fixed_t roverleft, roverright;
 			fixed_t planevistest;
 #endif
 			i = 0;
@@ -2732,17 +2732,18 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 					if (*rover->b_slope || *rover->t_slope)
 						backsector->hasslope = true;
 
-					rovertest = (*rover->b_slope ? P_GetZAt(*rover->b_slope, backsector->soundorg.x, backsector->soundorg.y) : *rover->bottomheight) - viewz;
+					roverleft = (*rover->b_slope ? P_GetZAt(*rover->b_slope, segleft.x, segleft.y) : *rover->bottomheight) - viewz;
+					roverright = (*rover->b_slope ? P_GetZAt(*rover->b_slope, segright.x, segright.y) : *rover->bottomheight) - viewz;
 					planevistest = (*rover->b_slope ? P_GetZAt(*rover->b_slope, viewx, viewy) : *rover->bottomheight);
 
-					if (rovertest>>4 <= worldhigh &&
-					    rovertest>>4 >= worldlow &&
+					if ((roverleft>>4 <= worldhigh || roverright>>4 <= worldhighslope) &&
+					    (roverleft>>4 >= worldlow || roverright>>4 >= worldlowslope) &&
 					    ((viewz < planevistest && !(rover->flags & FF_INVERTPLANES)) ||
 					     (viewz > planevistest && (rover->flags & FF_BOTHPLANES))))
 					{
 						//ffloor[i].slope = *rover->b_slope;
-						ffloor[i].b_pos = (*rover->b_slope ? P_GetZAt(*rover->b_slope, segleft.x, segleft.y) : *rover->bottomheight) - viewz;
-						ffloor[i].b_pos_slope = (*rover->b_slope ? P_GetZAt(*rover->b_slope, segright.x, segright.y) : *rover->bottomheight) - viewz;
+						ffloor[i].b_pos = roverleft;
+						ffloor[i].b_pos_slope = roverright;
 						ffloor[i].b_pos >>= 4;
 						ffloor[i].b_pos_slope >>= 4;
 						ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
@@ -2754,17 +2755,18 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 					if (i >= MAXFFLOORS)
 						break;
 
-					rovertest = (*rover->t_slope ? P_GetZAt(*rover->t_slope, backsector->soundorg.x, backsector->soundorg.y) : *rover->topheight) - viewz;
+					roverleft = (*rover->t_slope ? P_GetZAt(*rover->t_slope, segleft.x, segleft.y) : *rover->topheight) - viewz;
+					roverright = (*rover->t_slope ? P_GetZAt(*rover->t_slope, segright.x, segright.y) : *rover->topheight) - viewz;
 					planevistest = (*rover->t_slope ? P_GetZAt(*rover->t_slope, viewx, viewy) : *rover->topheight);
 
-					if (rovertest>>4 <= worldhigh &&
-					    rovertest>>4 >= worldlow &&
+					if ((roverleft>>4 <= worldhigh || roverright>>4 <= worldhighslope) &&
+					    (roverleft>>4 >= worldlow || roverright>>4 >= worldlowslope) &&
 					    ((viewz > planevistest && !(rover->flags & FF_INVERTPLANES)) ||
 					     (viewz < planevistest && (rover->flags & FF_BOTHPLANES))))
 					{
 						//ffloor[i].slope = *rover->t_slope;
-						ffloor[i].b_pos = (*rover->t_slope ? P_GetZAt(*rover->t_slope, segleft.x, segleft.y) : *rover->topheight) - viewz;
-						ffloor[i].b_pos_slope = (*rover->t_slope ? P_GetZAt(*rover->t_slope, segright.x, segright.y) : *rover->topheight) - viewz;
+						ffloor[i].b_pos = roverleft;
+						ffloor[i].b_pos_slope = roverright;
 						ffloor[i].b_pos >>= 4;
 						ffloor[i].b_pos_slope >>= 4;
 						ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
@@ -2817,17 +2819,18 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 					if (*rover->b_slope || *rover->t_slope)
 						frontsector->hasslope = true;
 
-					rovertest = (*rover->b_slope ? P_GetZAt(*rover->b_slope, frontsector->soundorg.x, frontsector->soundorg.y) : *rover->bottomheight) - viewz;
+					roverleft = (*rover->b_slope ? P_GetZAt(*rover->b_slope, segleft.x, segleft.y) : *rover->bottomheight) - viewz;
+					roverright = (*rover->b_slope ? P_GetZAt(*rover->b_slope, segright.x, segright.y) : *rover->bottomheight) - viewz;
 					planevistest = (*rover->b_slope ? P_GetZAt(*rover->b_slope, viewx, viewy) : *rover->bottomheight);
 
-					if (rovertest>>4 <= worldtop &&
-					    rovertest>>4 >= worldbottom &&
+					if ((roverleft>>4 <= worldhigh || roverright>>4 <= worldhighslope) &&
+					    (roverleft>>4 >= worldlow || roverright>>4 >= worldlowslope) &&
 					    ((viewz < planevistest && !(rover->flags & FF_INVERTPLANES)) ||
 					     (viewz > planevistest && (rover->flags & FF_BOTHPLANES))))
 					{
 						//ffloor[i].slope = *rover->b_slope;
-						ffloor[i].b_pos = (*rover->b_slope ? P_GetZAt(*rover->b_slope, segleft.x, segleft.y) : *rover->bottomheight) - viewz;
-						ffloor[i].b_pos_slope = (*rover->b_slope ? P_GetZAt(*rover->b_slope, segright.x, segright.y) : *rover->bottomheight) - viewz;
+						ffloor[i].b_pos = roverleft;
+						ffloor[i].b_pos_slope = roverright;
 						ffloor[i].b_pos >>= 4;
 						ffloor[i].b_pos_slope >>= 4;
 						ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
@@ -2839,17 +2842,18 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 					if (i >= MAXFFLOORS)
 						break;
 
-					rovertest = (*rover->t_slope ? P_GetZAt(*rover->t_slope, frontsector->soundorg.x, frontsector->soundorg.y) : *rover->topheight) - viewz;
+					roverleft = (*rover->t_slope ? P_GetZAt(*rover->t_slope, segleft.x, segleft.y) : *rover->topheight) - viewz;
+					roverright = (*rover->t_slope ? P_GetZAt(*rover->t_slope, segright.x, segright.y) : *rover->topheight) - viewz;
 					planevistest = (*rover->t_slope ? P_GetZAt(*rover->t_slope, viewx, viewy) : *rover->topheight);
 
-					if (rovertest>>4 <= worldtop &&
-					    rovertest>>4 >= worldbottom &&
+					if ((roverleft>>4 <= worldhigh || roverright>>4 <= worldhighslope) &&
+					    (roverleft>>4 >= worldlow || roverright>>4 >= worldlowslope) &&
 					    ((viewz > planevistest && !(rover->flags & FF_INVERTPLANES)) ||
 					     (viewz < planevistest && (rover->flags & FF_BOTHPLANES))))
 					{
 						//ffloor[i].slope = *rover->t_slope;
-						ffloor[i].b_pos = (*rover->t_slope ? P_GetZAt(*rover->t_slope, segleft.x, segleft.y) : *rover->topheight) - viewz;
-						ffloor[i].b_pos_slope = (*rover->t_slope ? P_GetZAt(*rover->t_slope, segright.x, segright.y) : *rover->topheight) - viewz;
+						ffloor[i].b_pos = roverleft;
+						ffloor[i].b_pos_slope = roverright;
 						ffloor[i].b_pos >>= 4;
 						ffloor[i].b_pos_slope >>= 4;
 						ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
