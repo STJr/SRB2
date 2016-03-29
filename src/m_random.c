@@ -83,10 +83,10 @@ INT32 M_RandomRange(INT32 a, INT32 b)
 // ------------------------
 
 // Holds the current seed.
-static UINT32 randomseed = 0;
+static UINT32 randomseed = 0xBADE4404;
 
 // Holds the INITIAL seed value.  Used for demos, possibly other debugging.
-static UINT32 initialseed = 0;
+static UINT32 initialseed = 0xBADE4404;
 
 /** Provides a random fixed point number.
   * This is a variant of an xorshift PRNG; state fits in a 32 bit integer structure.
@@ -240,6 +240,9 @@ void P_SetRandSeedD(const char *rfile, INT32 rline, UINT32 seed)
 {
 	CONS_Printf("P_SetRandSeed() at: %sp %d\n", rfile, rline);
 #endif
+	// xorshift requires a nonzero seed
+	// this should never happen, but just in case it DOES, we check
+	if (!seed) seed = 0xBADE4404;
 	randomseed = initialseed = seed;
 }
 
