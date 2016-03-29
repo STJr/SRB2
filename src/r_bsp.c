@@ -1002,7 +1002,7 @@ static void R_Subsector(size_t num)
 				|| (viewz > heightcheck && (rover->flags & FF_BOTHPLANES))))
 			{
 				light = R_GetPlaneLight(frontsector, planecenterz,
-					viewz < *rover->bottomheight);
+					viewz < heightcheck);
 
 				ffloor[numffloors].plane = R_FindPlane(*rover->bottomheight, *rover->bottompic,
 					*frontsector->lightlist[light].lightlevel, *rover->bottomxoffs,
@@ -1020,12 +1020,7 @@ static void R_Subsector(size_t num)
 					frontsector->hasslope = true;
 #endif
 
-				ffloor[numffloors].height =
-#ifdef ESLOPE
-				*rover->b_slope ? P_GetZAt(*rover->b_slope, viewx, viewy) :
-#endif
-				*rover->bottomheight;
-
+				ffloor[numffloors].height = heightcheck;
 				ffloor[numffloors].ffloor = rover;
 				numffloors++;
 			}
@@ -1050,7 +1045,7 @@ static void R_Subsector(size_t num)
 				&& ((viewz > heightcheck && !(rover->flags & FF_INVERTPLANES))
 				|| (viewz < heightcheck && (rover->flags & FF_BOTHPLANES))))
 			{
-				light = R_GetPlaneLight(frontsector, planecenterz, viewz < *rover->topheight);
+				light = R_GetPlaneLight(frontsector, planecenterz, viewz < heightcheck);
 
 				ffloor[numffloors].plane = R_FindPlane(*rover->topheight, *rover->toppic,
 					*frontsector->lightlist[light].lightlevel, *rover->topxoffs, *rover->topyoffs, *rover->topangle,
@@ -1068,12 +1063,7 @@ static void R_Subsector(size_t num)
 					frontsector->hasslope = true;
 #endif
 
-				ffloor[numffloors].height =
-#ifdef ESLOPE
-				*rover->t_slope ? P_GetZAt(*rover->t_slope, viewx, viewy) :
-#endif
-				*rover->topheight;
-
+				ffloor[numffloors].height = heightcheck;
 				ffloor[numffloors].ffloor = rover;
 				numffloors++;
 			}
