@@ -8528,6 +8528,9 @@ void A_CheckRandom(mobj_t *actor)
 	if (LUA_CallAction("A_CheckRandom", actor))
 		return;
 #endif
+	if ((locvar1 & 0xFFFF) == 0)
+		return;
+
 	// The PRNG doesn't suck anymore, OK?
 	if (locvar1 >> 16)
 		chance *= (locvar1 >> 16);
