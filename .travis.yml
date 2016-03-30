@@ -3,7 +3,7 @@ sudo: required
 dist: trusty
 
 env:
-- CFLAGS=-Werror
+- CFLAGS=-Wall -W -Werror
 
 os:
   - linux
