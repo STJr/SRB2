@@ -550,11 +550,6 @@ void R_ClearSprites(void)
 	visspritecount = clippedvissprites = 0;
 }
 
-static inline void R_ResetVisSpriteChunks(void)
-{
-	memset(visspritechunks, 0, sizeof(visspritechunks));
-}
-
 //
 // R_NewVisSprite
 //
