@@ -49,7 +49,7 @@ static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cm
 		if (sonic->player->pflags & (PF_MACESPIN|PF_ITEMHANG))
 		{
 			cmd->forwardmove = sonic->player->cmd.forwardmove;
-			cmd->angleturn = (angle_t)((tails->angle - sonic->angle))>>16;
+			cmd->angleturn = abs((signed)(tails->angle - sonic->angle))>>16;
 			if (sonic->angle < tails->angle)
 				cmd->angleturn = -cmd->angleturn;
 		} else if (dist > FixedMul(512*FRACUNIT, tails->scale))

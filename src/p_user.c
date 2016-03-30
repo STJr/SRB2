@@ -7899,9 +7899,9 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		if (player == &players[consoleplayer])
 		{
 			if (focusangle >= localangle)
-				localangle += (angle_t)((focusangle - localangle))>>5;
+				localangle += abs((signed)(focusangle - localangle))>>5;
 			else
-				localangle -= (angle_t)((focusangle - localangle))>>5;
+				localangle -= abs((signed)(focusangle - localangle))>>5;
 		}
 	}
 	else if (P_AnalogMove(player)) // Analog
