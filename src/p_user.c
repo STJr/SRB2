@@ -3449,7 +3449,7 @@ static void P_DoSuperStuff(player_t *player)
 			case 2:  /* Knux     */ player->mo->color = SKINCOLOR_KSUPER1; break;
 			default: /* everyone */ player->mo->color = SKINCOLOR_SUPER1; break;
 		}
-		player->mo->color += abs( ( ( leveltime >> 1 ) % 9) - 4);
+		player->mo->color += ( ( ( leveltime >> 1 ) % 9) - 4);
 
 		if ((cmd->forwardmove != 0 || cmd->sidemove != 0 || player->pflags & (PF_CARRIED|PF_ROPEHANG|PF_ITEMHANG|PF_MACESPIN))
 		&& !(leveltime % TICRATE) && (player->mo->momx || player->mo->momy))
