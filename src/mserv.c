@@ -351,33 +351,6 @@ static INT32 GetServersList(void)
 }
 #endif
 
-/** Get the MOTD from the master server.
-  */
-static inline INT32 GetMSMOTD(void)
-{
-	msg_t msg;
-	INT32 count = 0;
-
-	msg.type = GET_MOTD_MSG;
-	msg.length = 0;
-	if (MS_Write(&msg) < 0)
-		return MS_WRITE_ERROR;
-
-	while (MS_Read(&msg) >= 0)
-	{
-		if (!msg.length)
-		{
-			if (!count)
-				CONS_Alert(CONS_NOTICE, M_GetText("No servers currently running.\n"));
-			return MS_NO_ERROR;
-		}
-		count++;
-		CONS_Printf("%s",msg.buffer);
-	}
-
-	return MS_READ_ERROR;
-}
-
 //
 // MS_Connect()
 //

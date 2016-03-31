@@ -395,7 +395,7 @@ static int libd_drawPaddedNum(lua_State *L)
 	HUDONLY
 	x = luaL_checkinteger(L, 1);
 	y = luaL_checkinteger(L, 2);
-	num = abs(luaL_checkinteger(L, 3));
+	num = labs(luaL_checkinteger(L, 3));
 	digits = luaL_optinteger(L, 4, 2);
 	flags = luaL_optinteger(L, 5, 0);
 	flags &= ~V_PARAMMASK; // Don't let crashes happen.
