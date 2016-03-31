@@ -3387,12 +3387,6 @@ static void HWR_ClearSprites(void)
 	gr_visspritecount = 0;
 }
 
-static inline void HWR_ResetVisSpriteChunks(void)
-{
-	memset(gr_visspritechunks, 0, sizeof(gr_visspritechunks));
-}
-
-
 // --------------------------------------------------------------------------
 // HWR_NewVisSprite
 // --------------------------------------------------------------------------

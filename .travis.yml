@@ -2,6 +2,9 @@ language: c
 sudo: required
 dist: trusty
 
+env:
+- CFLAGS=-Wall -W -Werror
+
 os:
   - linux
   - osx
