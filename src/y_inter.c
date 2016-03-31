@@ -755,7 +755,7 @@ void Y_Ticker(void)
 		{
 			if (intertic > tallydonetic)
 			{
-				endtic = intertic + 4*TICRATE; // 4 second pause after end of tally for sound
+				endtic = intertic + 4*TICRATE; // 4 second pause after end of tally
 				S_StartSound(NULL, sfx_flgcap); // cha-ching!
 			}
 			return;
@@ -775,7 +775,7 @@ void Y_Ticker(void)
 			if (data.spec.continues & 0x80) // don't set endtic yet!
 				tallydonetic = intertic + (3*TICRATE)/2;
 			else // okay we're good.
-				endtic = intertic + 3*TICRATE; // 3 second pause after end of tally
+				endtic = intertic + 4*TICRATE; // 4 second pause after end of tally
 
 			S_StartSound(NULL, sfx_chchng); // cha-ching!
 
