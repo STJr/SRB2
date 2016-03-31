@@ -3449,7 +3449,7 @@ static void P_DoSuperStuff(player_t *player)
 			case 2:  /* Knux     */ player->mo->color = SKINCOLOR_KSUPER1; break;
 			default: /* everyone */ player->mo->color = SKINCOLOR_SUPER1; break;
 		}
-		player->mo->color += abs( ( ( leveltime >> 1 ) % 9) - 4);
+		player->mo->color += ( ( ( leveltime >> 1 ) % 9) - 4);
 
 		if ((cmd->forwardmove != 0 || cmd->sidemove != 0 || player->pflags & (PF_CARRIED|PF_ROPEHANG|PF_ITEMHANG|PF_MACESPIN))
 		&& !(leveltime % TICRATE) && (player->mo->momx || player->mo->momy))
@@ -7960,9 +7960,9 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		if (player == &players[consoleplayer])
 		{
 			if (focusangle >= localangle)
-				localangle += abs((focusangle - localangle))>>5;
+				localangle += abs((signed)(focusangle - localangle))>>5;
 			else
-				localangle -= abs((focusangle - localangle))>>5;
+				localangle -= abs((signed)(focusangle - localangle))>>5;
 		}
 	}
 	else if (P_AnalogMove(player)) // Analog
