@@ -196,26 +196,6 @@ static UINT8 cht_CheckCheat(cheatseq_t *cht, char key)
 	return rc;
 }
 
-static inline void cht_GetParam(cheatseq_t *cht, char *buffer)
-{
-	UINT8 *p;
-	UINT8 c;
-
-	p = cht->sequence;
-	while (*(p++) != 1)
-		;
-
-	do
-	{
-		c = *p;
-		*(buffer++) = c;
-		*(p++) = 0;
-	} while (c && *p != 0xff);
-
-	if (*p == 0xff)
-		*buffer = 0;
-}
-
 boolean cht_Responder(event_t *ev)
 {
 	UINT8 ret = 0, ch = 0;

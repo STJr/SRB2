@@ -155,6 +155,10 @@ extern FILE *logstream;
 // Otherwise we can't force updates!
 #endif
 
+// Does this version require an added patch file?
+// Comment or uncomment this as necessary.
+#define USE_PATCH_DTA
+
 // Modification options
 // If you want to take advantage of the Master Server's ability to force clients to update
 // to the latest version, fill these out.  Otherwise, just comment out UPDATE_ALERT and leave
