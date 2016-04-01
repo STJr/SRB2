@@ -1616,7 +1616,7 @@ boolean P_CheckCameraPosition(fixed_t x, fixed_t y, camera_t *thiscam)
 
 						po->validcount = validcount;
 
-						if (!P_PointInsidePolyobj(po, x, y))
+						if (!P_PointInsidePolyobj(po, x, y) || !(po->flags & POF_SOLID))
 						{
 							plink = (polymaplink_t *)(plink->link.next);
 							continue;
