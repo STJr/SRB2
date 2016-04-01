@@ -26,6 +26,7 @@ side_t *sidedef;
 line_t *linedef;
 sector_t *frontsector;
 sector_t *backsector;
+boolean portalline; // is curline a portal seg?
 
 // very ugly realloc() of drawsegs at run-time, I upped it to 512
 // instead of 256.. and someone managed to send me a level with
@@ -378,6 +379,7 @@ static void R_AddLine(seg_t *line)
 		return;
 
 	curline = line;
+	portalline = false;
 
 	// OPTIMIZE: quickly reject orthogonal back sides.
 	angle1 = R_PointToAngle(line->v1->x, line->v1->y);
@@ -431,7 +433,7 @@ static void R_AddLine(seg_t *line)
 	backsector = line->backsector;
 
 	// Portal line
-	if (line->linedef->special == 40 && P_PointOnLineSide(viewx, viewy, line->linedef) == 0)
+	if (line->linedef->special == 40 && line->side == 0)
 	{
 		if (portalrender < cv_maxportals.value)
 		{

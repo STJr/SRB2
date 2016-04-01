@@ -148,14 +148,38 @@ static int lib_pAproxDistance(lua_State *L)
 
 static int lib_pClosestPointOnLine(lua_State *L)
 {
+	int n = lua_gettop(L);
 	fixed_t x = luaL_checkfixed(L, 1);
 	fixed_t y = luaL_checkfixed(L, 2);
-	line_t *line = *((line_t **)luaL_checkudata(L, 3, META_LINE));
 	vertex_t result;
 	//HUDSAFE
-	if (!line)
-		return LUA_ErrInvalid(L, "line_t");
-	P_ClosestPointOnLine(x, y, line, &result);
+	if (lua_isuserdata(L, 3)) // use a real linedef to get our points
+	{
+		line_t *line = *((line_t **)luaL_checkudata(L, 3, META_LINE));
+		if (!line)
+			return LUA_ErrInvalid(L, "line_t");
+		P_ClosestPointOnLine(x, y, line, &result);
+	}
+	else // use custom coordinates of our own!
+	{
+		vertex_t v1, v2; // fake vertexes
+		line_t junk; // fake linedef
+
+		if (n < 6)
+			return luaL_error(L, "arguments 3 to 6 not all given (expected 4 fixed-point integers)");
+
+		v1.x = luaL_checkfixed(L, 3);
+		v1.y = luaL_checkfixed(L, 4);
+		v2.x = luaL_checkfixed(L, 5);
+		v2.y = luaL_checkfixed(L, 6);
+
+		junk.v1 = &v1;
+		junk.v2 = &v2;
+		junk.dx = v2.x - v1.x;
+		junk.dy = v2.y - v1.y;
+		P_ClosestPointOnLine(x, y, &junk, &result);
+	}
+
 	lua_pushfixed(L, result.x);
 	lua_pushfixed(L, result.y);
 	return 2;
