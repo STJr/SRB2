@@ -139,7 +139,6 @@ set(SRB2_CORE_RENDER_SOURCES
 set(SRB2_CORE_GAME_SOURCES
 	p_ceilng.c
 	p_enemy.c
-	p_fab.c
 	p_floor.c
 	p_inter.c
 	p_lights.c

@@ -1616,7 +1616,7 @@ boolean P_CheckCameraPosition(fixed_t x, fixed_t y, camera_t *thiscam)
 
 						po->validcount = validcount;
 
-						if (!P_PointInsidePolyobj(po, x, y))
+						if (!P_PointInsidePolyobj(po, x, y) || !(po->flags & POF_SOLID))
 						{
 							plink = (polymaplink_t *)(plink->link.next);
 							continue;
@@ -3712,6 +3712,9 @@ static inline boolean PIT_GetSectors(line_t *ld)
 	if (P_BoxOnLineSide(tmbbox, ld) != -1)
 		return true;
 
+	if (ld->polyobj) // line belongs to a polyobject, don't add it
+		return true;
+
 	// This line crosses through the object.
 
 	// Collect the sector(s) from the line and add to the
@@ -3742,6 +3745,9 @@ static inline boolean PIT_GetPrecipSectors(line_t *ld)
 	return true;
 
 	if (P_BoxOnLineSide(preciptmbbox, ld) != -1)
+		return true;
+
+	if (ld->polyobj) // line belongs to a polyobject, don't add it
 		return true;
 
 	// This line crosses through the object.

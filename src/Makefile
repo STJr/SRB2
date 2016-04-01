@@ -437,7 +437,6 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/info.o     \
 		$(OBJDIR)/p_ceilng.o \
 		$(OBJDIR)/p_enemy.o  \
-		$(OBJDIR)/p_fab.o    \
 		$(OBJDIR)/p_floor.o  \
 		$(OBJDIR)/p_inter.o  \
 		$(OBJDIR)/p_lights.o \
