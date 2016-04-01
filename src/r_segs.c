@@ -2887,6 +2887,11 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		R_RenderSegLoop();
 	colfunc = wallcolfunc;
 
+	if (portalline) // if curline is a portal, set portalrender for drawseg
+		ds_p->portalpass = portalrender+1;
+	else
+		ds_p->portalpass = 0;
+
 	// save sprite clipping info
 	if (((ds_p->silhouette & SIL_TOP) || maskedtexture) && !ds_p->sprtopclip)
 	{
