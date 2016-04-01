@@ -4346,7 +4346,7 @@ void G_GhostTicker(void)
 		{
 		case GHC_SUPER: // Super Sonic (P_DoSuperStuff)
 			g->mo->color = SKINCOLOR_SUPER1;
-			g->mo->color += abs( ( ( leveltime >> 1 ) % 9) - 4);
+			g->mo->color += abs( ( (signed)( (unsigned)leveltime >> 1 ) % 9) - 4);
 			break;
 		case GHC_INVINCIBLE: // Mario invincibility (P_CheckInvincibilityTimer)
 			g->mo->color = (UINT8)(leveltime % MAXSKINCOLORS);

@@ -1626,7 +1626,7 @@ boolean P_CheckCameraPosition(fixed_t x, fixed_t y, camera_t *thiscam)
 
 						po->validcount = validcount;
 
-						if (!P_PointInsidePolyobj(po, x, y))
+						if (!P_PointInsidePolyobj(po, x, y) || !(po->flags & POF_SOLID))
 						{
 							plink = (polymaplink_t *)(plink->link.next);
 							continue;
@@ -2646,8 +2646,8 @@ isblocking:
 
 			climbangle += (ANGLE_90 * (whichside ? -1 : 1));
 
-			if (((!slidemo->player->climbing && abs((slidemo->angle - ANGLE_90 - climbline)) < ANGLE_45)
-			|| (slidemo->player->climbing == 1 && abs((slidemo->angle - climbline)) < ANGLE_135))
+			if (((!slidemo->player->climbing && abs((signed)(slidemo->angle - ANGLE_90 - climbline)) < ANGLE_45)
+			|| (slidemo->player->climbing == 1 && abs((signed)(slidemo->angle - climbline)) < ANGLE_135))
 			&& P_IsClimbingValid(slidemo->player, climbangle))
 			{
 				slidemo->angle = climbangle;
@@ -3715,6 +3715,9 @@ static inline boolean PIT_GetSectors(line_t *ld)
 	if (P_BoxOnLineSide(tmbbox, ld) != -1)
 		return true;
 
+	if (ld->polyobj) // line belongs to a polyobject, don't add it
+		return true;
+
 	// This line crosses through the object.
 
 	// Collect the sector(s) from the line and add to the
@@ -3745,6 +3748,9 @@ static inline boolean PIT_GetPrecipSectors(line_t *ld)
 	return true;
 
 	if (P_BoxOnLineSide(preciptmbbox, ld) != -1)
+		return true;
+
+	if (ld->polyobj) // line belongs to a polyobject, don't add it
 		return true;
 
 	// This line crosses through the object.

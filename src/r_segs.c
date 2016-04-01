@@ -1922,7 +1922,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		    || backsector->ceilingpic_angle != frontsector->ceilingpic_angle
 		    //SoM: 3/22/2000: Prevents bleeding.
 		    || (frontsector->heightsec != -1 && frontsector->ceilingpic != skyflatnum)
-		    || backsector->floorlightsec != frontsector->floorlightsec
+		    || backsector->ceilinglightsec != frontsector->ceilinglightsec
 		    //SoM: 4/3/2000: Check for colormaps
 		    || frontsector->extra_colormap != backsector->extra_colormap
 		    || (frontsector->ffloors != backsector->ffloors && frontsector->tag != backsector->tag))
@@ -2886,6 +2886,11 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 #endif
 		R_RenderSegLoop();
 	colfunc = wallcolfunc;
+
+	if (portalline) // if curline is a portal, set portalrender for drawseg
+		ds_p->portalpass = portalrender+1;
+	else
+		ds_p->portalpass = 0;
 
 	// save sprite clipping info
 	if (((ds_p->silhouette & SIL_TOP) || maskedtexture) && !ds_p->sprtopclip)

@@ -91,7 +91,6 @@ typedef struct portal_pair
 	INT16 *ceilingclip;
 	INT16 *floorclip;
 	fixed_t *frontscale;
-	size_t seg;
 } portal_pair;
 portal_pair *portal_base, *portal_cap;
 line_t *portalclipline;
@@ -1230,7 +1229,7 @@ void R_AddPortal(INT32 line1, INT32 line2, INT32 x1, INT32 x2)
 	portal->start = x1;
 	portal->end = x2;
 
-	portal->seg = ds_p-drawsegs;
+	portalline = true; // this tells R_StoreWallRange that curline is a portal seg
 
 	portal->viewx = viewx;
 	portal->viewy = viewy;
@@ -1344,14 +1343,6 @@ void R_RenderPlayerView(player_t *player)
 
 		validcount++;
 
-		if (portal->seg)
-		{
-			// Push the portal's old drawseg out of the way so it isn't interfering with sprite clipping. -Red
-			drawseg_t *seg = drawsegs+portal->seg;
-			seg->scale1 = 0;
-			seg->scale2 = 0;
-		}
-
 		R_RenderBSPNode((INT32)numnodes - 1);
 		R_ClipSprites();
 		//R_DrawPlanes();
@@ -1360,6 +1351,9 @@ void R_RenderPlayerView(player_t *player)
 		// okay done. free it.
 		portalcullsector = NULL; // Just in case...
 		portal_base = portal->next;
+		Z_Free(portal->ceilingclip);
+		Z_Free(portal->floorclip);
+		Z_Free(portal->frontscale);
 		Z_Free(portal);
 	}
 	// END PORTAL RENDERING

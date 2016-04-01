@@ -7223,7 +7223,7 @@ void A_ChangeAngleAbsolute(mobj_t *actor)
 	//const angle_t amin = FixedAngle(locvar1*FRACUNIT);
 	//const angle_t amax = FixedAngle(locvar2*FRACUNIT);
 #ifdef HAVE_BLUA
-	if (LUA_CallAction("A_ChangeAngelAbsolute", actor))
+	if (LUA_CallAction("A_ChangeAngleAbsolute", actor))
 		return;
 #endif
 

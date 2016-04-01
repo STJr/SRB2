@@ -17,7 +17,6 @@
 #include "d_event.h"
 #include "w_wad.h"   // for MAX_WADFILES
 
-extern boolean supdate;
 extern boolean advancedemo;
 
 // make sure not to write back the config until it's been correctly loaded
