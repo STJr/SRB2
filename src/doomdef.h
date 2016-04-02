@@ -427,10 +427,6 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 // None of these that are disabled in the normal build are guaranteed to work perfectly
 // Compile them at your own risk!
 
-///	Max recursive portal renders
-///	\note	obsoleted by cv_maxportals
-//#define PORTAL_LIMIT 8
-
 /// Kalaron/Eternity Engine slope code (SRB2CB ported)
 #define ESLOPE
 
