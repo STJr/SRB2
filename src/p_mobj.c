@@ -8557,6 +8557,9 @@ void P_SpawnMapThing(mapthing_t *mthing)
 		return;
 	}
 
+	else if (mthing->type == 750) // Slope vertex point (formerly chaos spawn)
+		return;
+
 	else if (mthing->type == 300 // Ring
 		|| mthing->type == 308 || mthing->type == 309 // Team Rings
 		|| mthing->type == 1706 // Nights Wing
@@ -8590,8 +8593,7 @@ void P_SpawnMapThing(mapthing_t *mthing)
 
 	if (i == NUMMOBJTYPES)
 	{
-		if (mthing->type == 3328 // 3D Mode start Thing
-		 || mthing->type == 750) // Chaos mode spawn
+		if (mthing->type == 3328) // 3D Mode start Thing
 			return;
 		CONS_Alert(CONS_WARNING, M_GetText("Unknown thing type %d placed at (%d, %d)\n"), mthing->type, mthing->x, mthing->y);
 		i = MT_UNKNOWN;
