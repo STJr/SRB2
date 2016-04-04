@@ -299,7 +299,7 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 	}
 
 	length = FixedMul (distance,distscale[x1]);
-	angle = (currentplane->viewangle + xtoviewangle[x1])>>ANGLETOFINESHIFT;
+	angle = (viewangle + xtoviewangle[x1])>>ANGLETOFINESHIFT;
 	/// \note Wouldn't it be faster just to add viewx and viewy
 	// to the plane's x/yoffs anyway??
 
@@ -501,7 +501,7 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 	check->viewx = viewx;
 	check->viewy = viewy;
 	check->viewz = viewz;
-	check->viewangle = viewangle + plangle;
+	check->viewangle = viewangle;
 	check->plangle = plangle;
 #ifdef POLYOBJECTS_PLANES
 	check->polyobj = NULL;
@@ -670,7 +670,6 @@ void R_MakeSpans(INT32 x, INT32 t1, INT32 b1, INT32 t2, INT32 b2)
 void R_DrawPlanes(void)
 {
 	visplane_t *pl;
-	angle_t skyviewangle = viewangle; // the flat angle itself can mess with viewangle, so do your own angle instead!
 	INT32 x;
 	INT32 angle;
 	INT32 i;
@@ -709,7 +708,7 @@ void R_DrawPlanes(void)
 
 					if (dc_yl <= dc_yh)
 					{
-						angle = (skyviewangle + xtoviewangle[x])>>ANGLETOSKYSHIFT;
+						angle = (pl->viewangle + xtoviewangle[x])>>ANGLETOSKYSHIFT;
 						dc_x = x;
 						dc_source =
 							R_GetColumn(skytexture,
@@ -862,13 +861,13 @@ void R_DrawSinglePlane(visplane_t *pl)
 #ifdef ESLOPE
 	if (!pl->slope) // Don't mess with angle on slopes! We'll handle this ourselves later
 #endif
-	if (viewangle != pl->viewangle)
+	if (viewangle != pl->viewangle+pl->plangle)
 	{
 		memset(cachedheight, 0, sizeof (cachedheight));
-		angle = (pl->viewangle-ANGLE_90)>>ANGLETOFINESHIFT;
+		angle = (pl->viewangle+pl->plangle-ANGLE_90)>>ANGLETOFINESHIFT;
 		basexscale = FixedDiv(FINECOSINE(angle),centerxfrac);
 		baseyscale = -FixedDiv(FINESINE(angle),centerxfrac);
-		viewangle = pl->viewangle;
+		viewangle = pl->viewangle+pl->plangle;
 	}
 
 	currentplane = pl;
@@ -978,7 +977,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 		p.y = FIXED_TO_FLOAT(temp) - vz;
 
 		// m is the v direction vector in view space
-		ang = ANG2RAD(ANGLE_180 - viewangle - pl->plangle);
+		ang = ANG2RAD(ANGLE_180 - pl->viewangle);
 		m.x = cos(ang);
 		m.z = sin(ang);
 
