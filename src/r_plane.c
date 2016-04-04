@@ -475,7 +475,8 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 			&& lightlevel == check->lightlevel
 			&& xoff == check->xoffs && yoff == check->yoffs
 			&& planecolormap == check->extra_colormap
-			&& !pfloor && !check->ffloor && check->viewz == viewz
+			&& !pfloor && !check->ffloor
+			&& check->viewx == viewx && check->viewy == viewy && check->viewz == viewz
 			&& check->viewangle == viewangle
 #ifdef ESLOPE
 			&& check->slope == slope
@@ -497,6 +498,8 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 	check->yoffs = yoff;
 	check->extra_colormap = planecolormap;
 	check->ffloor = pfloor;
+	check->viewx = viewx;
+	check->viewy = viewy;
 	check->viewz = viewz;
 	check->viewangle = viewangle + plangle;
 	check->plangle = plangle;
@@ -567,6 +570,8 @@ visplane_t *R_CheckPlane(visplane_t *pl, INT32 start, INT32 stop)
 		new_pl->yoffs = pl->yoffs;
 		new_pl->extra_colormap = pl->extra_colormap;
 		new_pl->ffloor = pl->ffloor;
+		new_pl->viewx = pl->viewx;
+		new_pl->viewy = pl->viewy;
 		new_pl->viewz = pl->viewz;
 		new_pl->viewangle = pl->viewangle;
 		new_pl->plangle = pl->plangle;
@@ -954,11 +959,11 @@ void R_DrawSinglePlane(visplane_t *pl)
 		xoffs *= fudge;
 		yoffs /= fudge;
 
-		vx = FIXED_TO_FLOAT(viewx+xoffs);
-		vy = FIXED_TO_FLOAT(viewy-yoffs);
-		vz = FIXED_TO_FLOAT(viewz);
+		vx = FIXED_TO_FLOAT(pl->viewx+xoffs);
+		vy = FIXED_TO_FLOAT(pl->viewy-yoffs);
+		vz = FIXED_TO_FLOAT(pl->viewz);
 
-		temp = P_GetZAt(pl->slope, viewx, viewy);
+		temp = P_GetZAt(pl->slope, pl->viewx, pl->viewy);
 		zeroheight = FIXED_TO_FLOAT(temp);
 
 #define ANG2RAD(angle) ((float)((angle)*M_PI)/ANGLE_180)
@@ -982,9 +987,9 @@ void R_DrawSinglePlane(visplane_t *pl)
 		n.z = -cos(ang);
 
 		ang = ANG2RAD(pl->plangle);
-		temp = P_GetZAt(pl->slope, viewx + FLOAT_TO_FIXED(sin(ang)), viewy + FLOAT_TO_FIXED(cos(ang)));
+		temp = P_GetZAt(pl->slope, pl->viewx + FLOAT_TO_FIXED(sin(ang)), pl->viewy + FLOAT_TO_FIXED(cos(ang)));
 		m.y = FIXED_TO_FLOAT(temp) - zeroheight;
-		temp = P_GetZAt(pl->slope, viewx + FLOAT_TO_FIXED(cos(ang)), viewy - FLOAT_TO_FIXED(sin(ang)));
+		temp = P_GetZAt(pl->slope, pl->viewx + FLOAT_TO_FIXED(cos(ang)), pl->viewy - FLOAT_TO_FIXED(sin(ang)));
 		n.y = FIXED_TO_FLOAT(temp) - zeroheight;
 
 		m.x /= fudge;
@@ -1039,6 +1044,14 @@ void R_DrawSinglePlane(visplane_t *pl)
 	pl->bottom[pl->minx-1] = 0x0000;
 
 	stop = pl->maxx + 1;
+
+	if (viewx != pl->viewx || viewy != pl->viewy)
+	{
+		viewx = pl->viewx;
+		viewy = pl->viewy;
+	}
+	if (viewz != pl->viewz)
+		viewz = pl->viewz;
 
 	for (x = pl->minx; x <= stop; x++)
 	{
