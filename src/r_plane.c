@@ -299,7 +299,7 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 	}
 
 	length = FixedMul (distance,distscale[x1]);
-	angle = (viewangle + xtoviewangle[x1])>>ANGLETOFINESHIFT;
+	angle = (currentplane->viewangle + currentplane->plangle + xtoviewangle[x1])>>ANGLETOFINESHIFT;
 	/// \note Wouldn't it be faster just to add viewx and viewy
 	// to the plane's x/yoffs anyway??
 
@@ -970,14 +970,14 @@ void R_DrawSinglePlane(visplane_t *pl)
 		// p is the texture origin in view space
 		// Don't add in the offsets at this stage, because doing so can result in
 		// errors if the flat is rotated.
-		ang = ANG2RAD(ANGLE_270 - viewangle);
+		ang = ANG2RAD(ANGLE_270 - pl->viewangle);
 		p.x = vx * cos(ang) - vy * sin(ang);
 		p.z = vx * sin(ang) + vy * cos(ang);
 		temp = P_GetZAt(pl->slope, -xoffs, yoffs);
 		p.y = FIXED_TO_FLOAT(temp) - vz;
 
 		// m is the v direction vector in view space
-		ang = ANG2RAD(ANGLE_180 - pl->viewangle);
+		ang = ANG2RAD(ANGLE_180 - (pl->viewangle + pl->plangle));
 		m.x = cos(ang);
 		m.z = sin(ang);
 
