@@ -1888,7 +1888,7 @@ static boolean P_LoadBlockMap(lumpnum_t lumpnum)
 //
 static void P_GroupLines(void)
 {
-	size_t i, j, total = 0;
+	size_t i, j;
 	line_t *li;
 	sector_t *sector;
 	subsector_t *ss = subsectors;
@@ -1922,14 +1922,10 @@ static void P_GroupLines(void)
 	// count number of lines in each sector
 	for (i = 0, li = lines; i < numlines; i++, li++)
 	{
-		total++;
 		li->frontsector->linecount++;
 
 		if (li->backsector && li->backsector != li->frontsector)
-		{
 			li->backsector->linecount++;
-			total++;
-		}
 	}
 
 	// allocate linebuffers for each sector

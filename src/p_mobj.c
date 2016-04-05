@@ -8620,6 +8620,9 @@ void P_SpawnMapThing(mapthing_t *mthing)
 		return;
 	}
 
+	else if (mthing->type == 750) // Slope vertex point (formerly chaos spawn)
+		return;
+
 	else if (mthing->type == 300 // Ring
 		|| mthing->type == 308 || mthing->type == 309 // Team Rings
 		|| mthing->type == 1706 // Nights Wing
@@ -8653,8 +8656,7 @@ void P_SpawnMapThing(mapthing_t *mthing)
 
 	if (i == NUMMOBJTYPES)
 	{
-		if (mthing->type == 3328 // 3D Mode start Thing
-		 || mthing->type == 750) // Chaos mode spawn
+		if (mthing->type == 3328) // 3D Mode start Thing
 			return;
 		CONS_Alert(CONS_WARNING, M_GetText("Unknown thing type %d placed at (%d, %d)\n"), mthing->type, mthing->x, mthing->y);
 		i = MT_UNKNOWN;
@@ -8962,6 +8964,7 @@ void P_SpawnMapThing(mapthing_t *mthing)
 		const size_t mthingi = (size_t)(mthing - mapthings);
 
 		// Why does P_FindSpecialLineFromTag not work here?!?
+		// Monster Iestyn: tag lists haven't been initialised yet for the map, that's why
 		for (line = 0; line < numlines; line++)
 		{
 			if (lines[line].special == 9 && lines[line].tag == mthing->angle)
@@ -9111,10 +9114,6 @@ ML_NOCLIMB : Direction not controllable
 	{
 		if (mthing->options & MTF_OBJECTSPECIAL) // No egg trap for this boss
 			mobj->flags2 |= MF2_BOSSNOTRAP;
-
-		z = ss->sector->floorheight + ((mthing->options >> (ZSHIFT)) << FRACBITS);
-
-		mthing->z = (INT16)(z>>FRACBITS);
 	}
 
 	if (i == MT_AXIS || i == MT_AXISTRANSFER || i == MT_AXISTRANSFERLINE) // Axis Points
