@@ -1146,13 +1146,17 @@ static boolean PIT_CheckLine(line_t *ld)
 	{
 		tmceilingz = opentop;
 		ceilingline = ld;
+#ifdef ESLOPE
 		tmceilingslope = opentopslope;
+#endif
 	}
 
 	if (openbottom > tmfloorz)
 	{
 		tmfloorz = openbottom;
+#ifdef ESLOPE
 		tmfloorslope = openbottomslope;
+#endif
 	}
 
 	if (highceiling > tmdrpoffceilz)

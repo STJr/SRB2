@@ -924,8 +924,12 @@ typedef enum
 	MD2_EXTVAL1     = 1<<5,
 	MD2_EXTVAL2     = 1<<6,
 	MD2_HNEXT       = 1<<7,
+#ifdef ESLOPE
 	MD2_HPREV       = 1<<8,
 	MD2_SLOPE       = 1<<9
+#else
+	MD2_HPREV       = 1<<8
+#endif
 } mobj_diff2_t;
 
 typedef enum
@@ -1115,8 +1119,10 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		diff2 |= MD2_HNEXT;
 	if (mobj->hprev)
 		diff2 |= MD2_HPREV;
+#ifdef ESLOPE
 	if (mobj->standingslope)
 		diff2 |= MD2_SLOPE;
+#endif
 	if (diff2 != 0)
 		diff |= MD_MORE;
 
@@ -1232,8 +1238,10 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		WRITEUINT32(save_p, mobj->hnext->mobjnum);
 	if (diff2 & MD2_HPREV)
 		WRITEUINT32(save_p, mobj->hprev->mobjnum);
+#ifdef ESLOPE
 	if (diff2 & MD2_SLOPE)
 		WRITEUINT16(save_p, mobj->standingslope->id);
+#endif
 
 	WRITEUINT32(save_p, mobj->mobjnum);
 }
@@ -2087,8 +2095,10 @@ static void LoadMobjThinker(actionf_p1 thinker)
 		mobj->hnext = (mobj_t *)(size_t)READUINT32(save_p);
 	if (diff2 & MD2_HPREV)
 		mobj->hprev = (mobj_t *)(size_t)READUINT32(save_p);
+#ifdef ESLOPE
 	if (diff2 & MD2_SLOPE)
 		mobj->standingslope = P_SlopeById(READUINT16(save_p));
+#endif
 
 
 	if (diff & MD_REDFLAG)

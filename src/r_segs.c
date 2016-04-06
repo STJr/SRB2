@@ -288,7 +288,9 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	line_t *ldef;
 	sector_t *front, *back;
 	INT32 times, repeats;
+#ifdef ESLOPE
 	INT32 range;
+#endif
 
 	// Calculate light table.
 	// Use different light tables
@@ -335,7 +337,9 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 		colfunc = fuzzcolfunc;
 	}
 
+#ifdef ESLOPE
 	range = max(ds->x2-ds->x1, 1);
+#endif
 	rw_scalestep = ds->scalestep;
 	spryscale = ds->scale1 + (x1 - ds->x1)*rw_scalestep;
 
@@ -695,7 +699,9 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	fixed_t         offsetvalue = 0;
 	lightlist_t     *light;
 	r_lightlist_t   *rlight;
+#ifdef ESLOPE
 	INT32           range;
+#endif
 #ifndef ESLOPE
 	fixed_t         lheight;
 #endif
@@ -760,7 +766,9 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	else if (pfloor->flags & FF_FOG)
 		colfunc = R_DrawFogColumn_8;
 
+#ifdef ESLOPE
 	range = max(ds->x2-ds->x1, 1);
+#endif
 	//SoM: Moved these up here so they are available for my lightlist calculations
 	rw_scalestep = ds->scalestep;
 	spryscale = ds->scale1 + (x1 - ds->x1)*rw_scalestep;
@@ -1192,7 +1200,9 @@ static void R_RenderSegLoop (void)
 
 	INT32     mid;
 	fixed_t texturecolumn = 0;
+#ifdef ESLOPE
 	fixed_t oldtexturecolumn = -1;
+#endif
 	INT32     top;
 	INT32     bottom;
 	INT32     i;
@@ -1548,7 +1558,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	fixed_t       hyp;
 	fixed_t       sineval;
 	angle_t       distangle, offsetangle;
-	//fixed_t       vtop;
+#ifndef ESLOPE
+	fixed_t       vtop;
+#endif
 	INT32           lightnum;
 	INT32           i, p;
 	lightlist_t   *light;
