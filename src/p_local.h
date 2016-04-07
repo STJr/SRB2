@@ -376,7 +376,8 @@ typedef struct BasicFF_s
 #define DMG_FIRE      2
 #define DMG_ELECTRIC  3
 #define DMG_SPIKE     4
-//#define DMG_SPECIALSTAGE 5
+#define DMG_NUKE      5 // bomb shield
+//#define DMG_SPECIALSTAGE 6
 //// Death types - cannot be combined with damage types
 #define DMG_INSTAKILL  0x80
 #define DMG_DROWNED    0x80+1

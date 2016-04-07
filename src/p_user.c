@@ -7440,12 +7440,12 @@ void P_NukeEnemies(mobj_t *inflictor, mobj_t *source, fixed_t radius)
 			mo->flags |= MF_SPECIAL|MF_SHOOTABLE;
 
 		if (mo->type == MT_EGGGUARD && mo->tracer) //nuke Egg Guard's shield!
-			P_KillMobj(mo->tracer, inflictor, source, 0);
+			P_KillMobj(mo->tracer, inflictor, source, DMG_NUKE);
 
 		if (mo->flags & MF_BOSS || mo->type == MT_PLAYER) //don't OHKO bosses nor players!
-			P_DamageMobj(mo, inflictor, source, 1, 0);
+			P_DamageMobj(mo, inflictor, source, 1, DMG_NUKE);
 		else
-			P_DamageMobj(mo, inflictor, source, 1000, 0);
+			P_DamageMobj(mo, inflictor, source, 1000, DMG_NUKE);
 	}
 }
 
