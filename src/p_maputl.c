@@ -37,21 +37,6 @@ fixed_t P_AproxDistance(fixed_t dx, fixed_t dy)
 }
 
 //
-// P_PartialDistance
-// Useful only for iterations finding the 'closest point'
-//
-FUNCMATH static inline fixed_t P_PartialDistance(fixed_t dx, fixed_t dy)
-{
-	dx >>= FRACBITS;
-	dy >>= FRACBITS;
-
-	dx *= dx;
-	dy *= dy;
-
-	return dx + dy;
-}
-
-//
 // P_ClosestPointOnLine
 // Finds the closest point on a given line to the supplied point
 //

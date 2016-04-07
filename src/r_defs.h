@@ -667,6 +667,8 @@ typedef struct drawseg_s
 	INT32 numthicksides;
 	fixed_t frontscale[MAXVIDWIDTH];
 
+	UINT8 portalpass; // if > 0 and <= portalrender, do not affect sprite clipping
+
 #ifdef ESLOPE
 	fixed_t maskedtextureheight[MAXVIDWIDTH]; // For handling sloped midtextures
 
