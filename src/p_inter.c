@@ -2068,7 +2068,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source)
 
 			if (target->player->lives <= 0) // Tails 03-14-2000
 			{
-				if (P_IsLocalPlayer(target->player) && target->player == &players[consoleplayer])
+				if (P_IsLocalPlayer(target->player)/* && target->player == &players[consoleplayer] */)
 				{
 					S_StopMusic(); // Stop the Music! Tails 03-14-2000
 					S_ChangeMusicInternal("gmover", false); // Yousa dead now, Okieday? Tails 03-14-2000

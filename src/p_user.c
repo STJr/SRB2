@@ -7716,8 +7716,25 @@ static void P_DeathThink(player_t *player)
 		}
 
 		// Return to level music
-		if (netgame && player->deadtimer == gameovertics && P_IsLocalPlayer(player))
-			S_ChangeMusic(mapmusname, mapmusflags, true);
+		if (player->lives <= 0)
+		{
+			if (netgame)
+			{
+				if (player->deadtimer == gameovertics && P_IsLocalPlayer(player))
+					S_ChangeMusic(mapmusname, mapmusflags, true);
+			}
+			else if (multiplayer) // local multiplayer only
+			{
+				if (player->deadtimer != gameovertics)
+					;
+				// Restore the other player's music once we're dead for long enough
+				// -- that is, as long as they aren't dead too
+				else if (player == &players[displayplayer] && players[secondarydisplayplayer].lives > 0)
+					P_RestoreMusic(&players[secondarydisplayplayer]);
+				else if (player == &players[secondarydisplayplayer] && players[displayplayer].lives > 0)
+					P_RestoreMusic(&players[displayplayer]);
+			}
+		}
 	}
 
 	if (!player->mo)

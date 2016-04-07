@@ -2935,9 +2935,9 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 			if (botingame)
 				players[newplayernum].bot = 1;
 			// Same goes for player 2 when relevant
-			players[newplayernum].pflags &= ~(/*PF_FLIPCAM|*/PF_ANALOGMODE);
-			//if (cv_flipcam2.value)
-				//players[newplayernum].pflags |= PF_FLIPCAM;
+			players[newplayernum].pflags &= ~(PF_FLIPCAM|PF_ANALOGMODE);
+			if (cv_flipcam2.value)
+				players[newplayernum].pflags |= PF_FLIPCAM;
 			if (cv_analog2.value)
 				players[newplayernum].pflags |= PF_ANALOGMODE;
 		}
