@@ -103,7 +103,7 @@ static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, mobj_t *
 static void Add_MasterDisappearer(tic_t appeartime, tic_t disappeartime, tic_t offset, INT32 line, INT32 sourceline);
 static void P_AddBlockThinker(sector_t *sec, line_t *sourceline);
 static void P_AddFloatThinker(sector_t *sec, INT32 tag, line_t *sourceline);
-static void P_AddBridgeThinker(line_t *sourceline, sector_t *sec);
+//static void P_AddBridgeThinker(line_t *sourceline, sector_t *sec);
 static void P_AddFakeFloorsByLine(size_t line, ffloortype_e ffloorflags, thinkerlist_t *secthinkers);
 static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec);
 static void Add_Friction(INT32 friction, INT32 movefactor, INT32 affectee, INT32 referrer);
@@ -594,6 +594,7 @@ void P_SetupLevelFlatAnims(void)
 // UTILITIES
 //
 
+#if 0
 /** Gets a side from a sector line.
   *
   * \param currentSector Sector the line is in.
@@ -633,6 +634,7 @@ static inline boolean twoSided(INT32 sector, INT32 line)
 {
 	return (sectors[sector].lines[line])->sidenum[1] != 0xffff;
 }
+#endif
 
 /** Finds sector next to current.
   *
@@ -1891,7 +1893,6 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 	 || specialtype == 304  // Ring count - Once
 	 || specialtype == 307  // Character ability - Once
 	 || specialtype == 308  // Race only - Once
-	 || specialtype == 313  // No More Enemies - Once
 	 || specialtype == 315  // No of pushables - Once
 	 || specialtype == 318  // Unlockable trigger - Once
 	 || specialtype == 320  // Unlockable - Once
@@ -2390,20 +2391,19 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			// console player only unless NOCLIMB is set
 			if ((line->flags & ML_NOCLIMB) || (mo && mo->player && P_IsLocalPlayer(mo->player)))
 			{
-				UINT16 musicnum = (UINT16)sides[line->sidenum[0]].toptexture; //P_AproxDistance(line->dx, line->dy)>>FRACBITS;
 				UINT16 tracknum = (UINT16)sides[line->sidenum[0]].bottomtexture;
 
-				mapmusic = musicnum | (tracknum << MUSIC_TRACKSHIFT);
-				if (!(line->flags & ML_BLOCKMONSTERS))
-					mapmusic |= MUSIC_RELOADRESET;
+				strncpy(mapmusname, sides[line->sidenum[0]].text, 7);
+				mapmusname[6] = 0;
 
-				if (musicnum >= NUMMUSIC || musicnum == mus_None)
-					S_StopMusic();
-				else
-					S_ChangeMusic(mapmusic, !(line->flags & ML_EFFECT4));
+				mapmusflags = tracknum & MUSIC_TRACKMASK;
+				if (!(line->flags & ML_BLOCKMONSTERS))
+					mapmusflags |= MUSIC_RELOADRESET;
+
+				S_ChangeMusic(mapmusname, mapmusflags, !(line->flags & ML_EFFECT4));
 
 				// Except, you can use the ML_BLOCKMONSTERS flag to change this behavior.
-				// if (mapmusic & MUSIC_RELOADRESET) then it will reset the music in G_PlayerReborn.
+				// if (mapmusflags & MUSIC_RELOADRESET) then it will reset the music in G_PlayerReborn.
 			}
 			break;
 
@@ -3039,6 +3039,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
 				sector_t *sec; // Sector that the FOF is visible (or not visible) in
 				ffloor_t *rover; // FOF to vanish/un-vanish
+				ffloortype_e oldflags; // store FOF's old flags
 
 				for (secnum = -1; (secnum = P_FindSectorFromTag(sectag, secnum)) >= 0 ;)
 				{
@@ -3062,11 +3063,17 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						return;
 					}
 
+					oldflags = rover->flags;
+
 					// Abracadabra!
 					if (line->flags & ML_NOCLIMB)
 						rover->flags |= FF_EXISTS;
 					else
 						rover->flags &= ~FF_EXISTS;
+
+					// if flags changed, reset sector's light list
+					if (rover->flags != oldflags)
+						sec->moved = true;
 				}
 			}
 			break;
@@ -3774,7 +3781,7 @@ DoneSection2:
 					HU_SetCEchoDuration(5);
 					HU_DoCEcho(va(M_GetText("%s\\captured the blue flag.\\\\\\\\"), player_names[player-players]));
 
-					if (players[consoleplayer].ctfteam == 1)
+					if (splitscreen || players[consoleplayer].ctfteam == 1)
 						S_StartSound(NULL, sfx_flgcap);
 					else if (players[consoleplayer].ctfteam == 2)
 						S_StartSound(NULL, sfx_lose);
@@ -3807,7 +3814,7 @@ DoneSection2:
 					HU_SetCEchoDuration(5);
 					HU_DoCEcho(va(M_GetText("%s\\captured the red flag.\\\\\\\\"), player_names[player-players]));
 
-					if (players[consoleplayer].ctfteam == 2)
+					if (splitscreen || players[consoleplayer].ctfteam == 2)
 						S_StartSound(NULL, sfx_flgcap);
 					else if (players[consoleplayer].ctfteam == 1)
 						S_StartSound(NULL, sfx_lose);
@@ -4974,6 +4981,7 @@ static void P_AddFloatThinker(sector_t *sec, INT32 tag, line_t *sourceline)
   * \sa P_SpawnSpecials, T_BridgeThinker
   * \author SSNTails <http://www.ssntails.org>
   */
+/*
 static inline void P_AddBridgeThinker(line_t *sourceline, sector_t *sec)
 {
 	levelspecthink_t *bridge;
@@ -4996,6 +5004,7 @@ static inline void P_AddBridgeThinker(line_t *sourceline, sector_t *sec)
 	bridge->vars[4] = sourceline->tag; // Start tag
 	bridge->vars[5] = (sides[sourceline->sidenum[0]].textureoffset>>FRACBITS); // End tag
 }
+*/
 
 /** Adds a Mario block thinker, which changes the block's texture between blank
   * and ? depending on whether it has contents.
@@ -6023,31 +6032,6 @@ void P_SpawnSpecials(INT32 fromnetsave)
 				P_AddRaiseThinker(lines[i].frontsector, &lines[i]);
 				break;
 
-#ifdef SLOPENESS
-			case 999:
-				sec = sides[*lines[i].sidenum].sector-sectors;
-				for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
-				{
-					size_t counting;
-
-					sectors[s].floorangle = ANGLE_45;
-					for (counting = 0; counting < sectors[s].linecount/2; counting++)
-					{
-						sectors[s].lines[counting]->v1->z = sectors[sec].floorheight;
-						CONS_Debug(DBG_GAMELOGIC, "Set it to %d\n", sectors[s].lines[counting]->v1->z>>FRACBITS);
-					}
-
-					for (counting = sectors[s].linecount/2; counting < sectors[s].linecount; counting++)
-					{
-						sectors[s].lines[counting]->v1->z = sectors[sec].ceilingheight;
-						CONS_Debug(DBG_GAMELOGIC, "Set it to %d\n", sectors[s].lines[counting]->v1->z>>FRACBITS);
-					}
-					sectors[s].special = 65535;
-					CONS_Debug(DBG_GAMELOGIC, "Found & Set slope!\n");
-				}
-				break;
-#endif
-
 			case 200: // Double light effect
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_CUTSPRITES|FF_DOUBLESHADOW, secthinkers);
 				break;
@@ -6462,7 +6446,7 @@ static void P_DoScrollMove(mobj_t *thing, fixed_t dx, fixed_t dy, INT32 exclusiv
 	thing->momy += dy;
 
 	if (exclusive)
-		thing->eflags |= MFE_PUSHED;
+		thing->flags2 |= MF2_PUSHED;
 }
 
 /** Processes an active scroller.
@@ -6566,7 +6550,7 @@ void T_Scroll(scroll_t *s)
 					{
 						thing = node->m_thing;
 
-						if (thing->eflags & MFE_PUSHED) // Already pushed this tic by an exclusive pusher.
+						if (thing->flags2 & MF2_PUSHED) // Already pushed this tic by an exclusive pusher.
 							continue;
 
 						height = P_GetSpecialBottomZ(thing, sec, psec);
@@ -6588,7 +6572,7 @@ void T_Scroll(scroll_t *s)
 				{
 					thing = node->m_thing;
 
-					if (thing->eflags & MFE_PUSHED)
+					if (thing->flags2 & MF2_PUSHED)
 						continue;
 
 					height = P_GetSpecialBottomZ(thing, sec, sec);
@@ -6629,7 +6613,7 @@ void T_Scroll(scroll_t *s)
 					{
 						thing = node->m_thing;
 
-						if (thing->eflags & MFE_PUSHED)
+						if (thing->flags2 & MF2_PUSHED)
 							continue;
 
 						height = P_GetSpecialTopZ(thing, sec, psec);
@@ -6651,7 +6635,7 @@ void T_Scroll(scroll_t *s)
 				{
 					thing = node->m_thing;
 
-					if (thing->eflags & MFE_PUSHED)
+					if (thing->flags2 & MF2_PUSHED)
 						continue;
 
 					height = P_GetSpecialTopZ(thing, sec, sec);
@@ -7134,7 +7118,7 @@ static pusher_t *tmpusher; // pusher structure for blockmap searches
   */
 static inline boolean PIT_PushThing(mobj_t *thing)
 {
-	if (thing->eflags & MFE_PUSHED)
+	if (thing->flags2 & MF2_PUSHED)
 		return false;
 
 	if (thing->player && thing->player->pflags & PF_ROPEHANG)
@@ -7264,7 +7248,7 @@ static inline boolean PIT_PushThing(mobj_t *thing)
 	}
 
 	if (tmpusher->exclusive)
-		thing->eflags |= MFE_PUSHED;
+		thing->flags2 |= MF2_PUSHED;
 
 	return true;
 }
@@ -7367,7 +7351,7 @@ void T_Pusher(pusher_t *p)
 			|| thing->type == MT_BIGTUMBLEWEED))
 			continue;
 
-		if (thing->eflags & MFE_PUSHED)
+		if (thing->flags2 & MF2_PUSHED)
 			continue;
 
 		if (thing->player && thing->player->pflags & PF_ROPEHANG)
@@ -7534,7 +7518,7 @@ void T_Pusher(pusher_t *p)
 			}
 
 			if (p->exclusive)
-				thing->eflags |= MFE_PUSHED;
+				thing->flags2 |= MF2_PUSHED;
 		}
 	}
 }

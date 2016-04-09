@@ -962,7 +962,7 @@ void P_DoSuperTransformation(player_t *player, boolean giverings)
 	if (!(mapheaderinfo[gamemap-1]->levelflags & LF_NOSSMUSIC) && P_IsLocalPlayer(player))
 	{
 		S_StopMusic();
-		S_ChangeMusic(mus_supers, true);
+		S_ChangeMusicInternal("supers", true);
 	}
 
 	S_StartSound(NULL, sfx_supert); //let all players hear it -mattw_cfi
@@ -1098,7 +1098,7 @@ void P_PlayLivesJingle(player_t *player)
 		if (player)
 			player->powers[pw_extralife] = extralifetics + 1;
 		S_StopMusic(); // otherwise it won't restart if this is done twice in a row
-		S_ChangeMusic(mus_xtlife, false);
+		S_ChangeMusicInternal("xtlife", false);
 	}
 }
 
@@ -1116,21 +1116,21 @@ void P_RestoreMusic(player_t *player)
 		return;
 	S_SpeedMusic(1.0f);
 	if (player->powers[pw_super] && !(mapheaderinfo[gamemap-1]->levelflags & LF_NOSSMUSIC))
-		S_ChangeMusic(mus_supers, true);
+		S_ChangeMusicInternal("supers", true);
 	else if (player->powers[pw_invulnerability] > 1)
-		S_ChangeMusic((mariomode) ? mus_minvnc : mus_invinc, false);
+		S_ChangeMusicInternal((mariomode) ? "minvnc" : "invinc", false);
 	else if (player->powers[pw_sneakers] > 1 && !player->powers[pw_super])
 	{
 		if (mapheaderinfo[gamemap-1]->levelflags & LF_SPEEDMUSIC)
 		{
 			S_SpeedMusic(1.4f);
-			S_ChangeMusic(mapmusic, true);
+			S_ChangeMusic(mapmusname, mapmusflags, true);
 		}
 		else
-			S_ChangeMusic(mus_shoes, true);
+			S_ChangeMusicInternal("shoes", true);
 	}
 	else
-		S_ChangeMusic(mapmusic, true);
+		S_ChangeMusic(mapmusname, mapmusflags, true);
 }
 
 //
@@ -2039,7 +2039,7 @@ static void P_CheckUnderwaterAndSpaceTimer(player_t *player)
 		mobj_t *killer;
 
 		if ((netgame || multiplayer) && P_IsLocalPlayer(player))
-			S_ChangeMusic(mapmusic, true);
+			S_ChangeMusic(mapmusname, mapmusflags, true);
 
 		killer = P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z, MT_NULL);
 		killer->threshold = 42; // Special flag that it was drowning which killed you.
@@ -2048,7 +2048,7 @@ static void P_CheckUnderwaterAndSpaceTimer(player_t *player)
 	else if (player->powers[pw_spacetime] == 1)
 	{
 		if ((netgame || multiplayer) && P_IsLocalPlayer(player))
-			S_ChangeMusic(mapmusic, true);
+			S_ChangeMusic(mapmusname, mapmusflags, true);
 
 		P_DamageMobj(player->mo, NULL, NULL, 10000);
 	}
@@ -2083,7 +2083,7 @@ static void P_CheckUnderwaterAndSpaceTimer(player_t *player)
 		&& player == &players[consoleplayer])
 		{
 			S_StopMusic();
-			S_ChangeMusic(mus_drown, false);
+			S_ChangeMusicInternal("drown", false);
 		}
 
 		if (player->powers[pw_underwater] == 25*TICRATE + 1)
@@ -3087,7 +3087,7 @@ static void P_DoTeeter(player_t *player)
 							}
 
 							if (polybottom > player->mo->z + player->mo->height + tiptop
-							|| (polybottom < player->mo->z
+							|| (polytop < player->mo->z
 							&& player->mo->z + player->mo->height < player->mo->ceilingz - tiptop))
 								teeter = true;
 							else
@@ -3105,7 +3105,7 @@ static void P_DoTeeter(player_t *player)
 							}
 
 							if (polytop < player->mo->z - tiptop
-							|| (polytop > player->mo->z + player->mo->height
+							|| (polybottom > player->mo->z + player->mo->height
 							&& player->mo->z > player->mo->floorz + tiptop))
 								teeter = true;
 							else
@@ -3442,27 +3442,14 @@ static void P_DoSuperStuff(player_t *player)
 			player->mo->health--;
 		}
 
+		// future todo: a skin option for this, and possibly more colors
 		switch (player->skin)
 		{
-		case 1: // Golden orange supertails.
-			if (leveltime % 9 < 5)
-				player->mo->color = SKINCOLOR_TSUPER1 + leveltime % 9;
-			else
-				player->mo->color = SKINCOLOR_TSUPER1 + 9 - leveltime % 9;
-			break;
-		case 2: // Pink superknux.
-			if (leveltime % 9 < 5)
-				player->mo->color = SKINCOLOR_KSUPER1 + leveltime % 9;
-			else
-				player->mo->color = SKINCOLOR_KSUPER1 + 9 - leveltime % 9;
-			break;
-		default: // Yousa yellow now!
-			if (leveltime % 9 < 5)
-				player->mo->color = SKINCOLOR_SUPER1 + leveltime % 9;
-			else
-				player->mo->color = SKINCOLOR_SUPER1 + 9 - leveltime % 9;
-			break;
+			case 1:  /* Tails    */ player->mo->color = SKINCOLOR_TSUPER1; break;
+			case 2:  /* Knux     */ player->mo->color = SKINCOLOR_KSUPER1; break;
+			default: /* everyone */ player->mo->color = SKINCOLOR_SUPER1; break;
 		}
+		player->mo->color += abs( ( (signed)( (unsigned)leveltime >> 1 ) % 9) - 4);
 
 		if ((cmd->forwardmove != 0 || cmd->sidemove != 0 || player->pflags & (PF_CARRIED|PF_ROPEHANG|PF_ITEMHANG|PF_MACESPIN))
 		&& !(leveltime % TICRATE) && (player->mo->momx || player->mo->momy))
@@ -5592,7 +5579,7 @@ static void P_NiGHTSMovement(player_t *player)
 	}
 	else if (P_IsLocalPlayer(player) && player->nightstime == 10*TICRATE)
 //		S_StartSound(NULL, sfx_timeup); // that creepy "out of time" music from NiGHTS. Dummied out, as some on the dev team thought it wasn't Sonic-y enough (Mystic, notably). Uncomment to restore. -SH
-		S_ChangeMusic(mus_drown,false);
+		S_ChangeMusicInternal("drown",false);
 
 
 	if (player->mo->z < player->mo->floorz)
@@ -7729,8 +7716,25 @@ static void P_DeathThink(player_t *player)
 		}
 
 		// Return to level music
-		if (netgame && player->deadtimer == gameovertics && P_IsLocalPlayer(player))
-			S_ChangeMusic(mapmusic, true);
+		if (player->lives <= 0)
+		{
+			if (netgame)
+			{
+				if (player->deadtimer == gameovertics && P_IsLocalPlayer(player))
+					S_ChangeMusic(mapmusname, mapmusflags, true);
+			}
+			else if (multiplayer) // local multiplayer only
+			{
+				if (player->deadtimer != gameovertics)
+					;
+				// Restore the other player's music once we're dead for long enough
+				// -- that is, as long as they aren't dead too
+				else if (player == &players[displayplayer] && players[secondarydisplayplayer].lives > 0)
+					P_RestoreMusic(&players[secondarydisplayplayer]);
+				else if (player == &players[secondarydisplayplayer] && players[displayplayer].lives > 0)
+					P_RestoreMusic(&players[displayplayer]);
+			}
+		}
 	}
 
 	if (!player->mo)
@@ -7965,9 +7969,9 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		if (player == &players[consoleplayer])
 		{
 			if (focusangle >= localangle)
-				localangle += abs((focusangle - localangle))>>5;
+				localangle += abs((signed)(focusangle - localangle))>>5;
 			else
-				localangle -= abs((focusangle - localangle))>>5;
+				localangle -= abs((signed)(focusangle - localangle))>>5;
 		}
 	}
 	else if (P_AnalogMove(player)) // Analog
@@ -8176,7 +8180,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 
 						po->validcount = validcount;
 
-						if (!P_PointInsidePolyobj(po, x, y))
+						if (!P_PointInsidePolyobj(po, x, y) || !(po->flags & POF_SOLID))
 						{
 							plink = (polymaplink_t *)(plink->link.next);
 							continue;
@@ -8452,9 +8456,9 @@ static boolean P_SpectatorJoinGame(player_t *player)
 			displayplayer = consoleplayer;
 
 		if (changeto == 1)
-			CONS_Printf(M_GetText("%s switched to the %c%s%c.\n"), player_names[player-players], '\x85', M_GetText("Red Team"), '\x80');
+			CONS_Printf(M_GetText("%s switched to the %c%s%c.\n"), player_names[player-players], '\x85', M_GetText("Red team"), '\x80');
 		else if (changeto == 2)
-			CONS_Printf(M_GetText("%s switched to the %c%s%c.\n"), player_names[player-players], '\x84', M_GetText("Blue Team"), '\x80');
+			CONS_Printf(M_GetText("%s switched to the %c%s%c.\n"), player_names[player-players], '\x84', M_GetText("Blue team"), '\x80');
 
 		return true; // no more player->mo, cannot continue.
 	}
@@ -8716,7 +8720,7 @@ void P_PlayerThink(player_t *player)
 		if (countdown == 11*TICRATE - 1)
 		{
 			if (P_IsLocalPlayer(player))
-				S_ChangeMusic(mus_drown, false);
+				S_ChangeMusicInternal("drown", false);
 		}
 
 		// If you've hit the countdown and you haven't made
@@ -8870,10 +8874,7 @@ void P_PlayerThink(player_t *player)
 			mo2 = (mobj_t *)th;
 
 			if (!(mo2->type == MT_NIGHTSWING || mo2->type == MT_RING || mo2->type == MT_COIN
-#ifdef BLUE_SPHERES
-			      || mo2->type == MT_BLUEBALL
-#endif
-			     ))
+			   || mo2->type == MT_BLUEBALL))
 				continue;
 
 			if (P_AproxDistance(P_AproxDistance(mo2->x - x, mo2->y - y), mo2->z - z) > FixedMul(128*FRACUNIT, player->mo->scale))

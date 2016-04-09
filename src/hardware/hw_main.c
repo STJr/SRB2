@@ -521,7 +521,7 @@ static UINT8 HWR_FogBlockAlpha(INT32 light, UINT32 color, UINT32 fadecolor) // L
 // -----------------+
 // HWR_RenderPlane  : Render a floor or ceiling convex polygon
 // -----------------+
-static void HWR_RenderPlane(sector_t *shittyUnusedVariable, extrasubsector_t *xsub, fixed_t fixedheight,
+static void HWR_RenderPlane(sector_t *sector, extrasubsector_t *xsub, fixed_t fixedheight,
                            FBITFIELD PolyFlags, INT32 lightlevel, lumpnum_t lumpnum, sector_t *FOFsector, UINT8 alpha, boolean fogplane, extracolormap_t *planecolormap)
 {
 	polyvertex_t *  pv;
@@ -544,7 +544,7 @@ static void HWR_RenderPlane(sector_t *shittyUnusedVariable, extrasubsector_t *xs
 	static FOutVector *planeVerts = NULL;
 	static UINT16 numAllocedPlaneVerts = 0;
 
-	(void)shittyUnusedVariable; ///@TODO remove shitty unused variable
+	(void)sector; ///@TODO remove shitty unused variable
 
 	// no convex poly were generated for this subsector
 	if (!xsub->planepoly)
@@ -3898,12 +3898,6 @@ static void HWR_ClearSprites(void)
 {
 	gr_visspritecount = 0;
 }
-
-static inline void HWR_ResetVisSpriteChunks(void)
-{
-	memset(gr_visspritechunks, 0, sizeof(gr_visspritechunks));
-}
-
 
 // --------------------------------------------------------------------------
 // HWR_NewVisSprite

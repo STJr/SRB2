@@ -85,6 +85,14 @@ static int lib_print(lua_State *L)
 	return 0;
 }
 
+static int lib_evalMath(lua_State *L)
+{
+	const char *word = luaL_checkstring(L, 1);
+	LUA_Deprecated(L, "EvalMath(string)", "_G[string]");
+	lua_pushinteger(L, LUA_EvalMath(word));
+	return 1;
+}
+
 // M_RANDOM
 //////////////
 
@@ -140,14 +148,38 @@ static int lib_pAproxDistance(lua_State *L)
 
 static int lib_pClosestPointOnLine(lua_State *L)
 {
+	int n = lua_gettop(L);
 	fixed_t x = luaL_checkfixed(L, 1);
 	fixed_t y = luaL_checkfixed(L, 2);
-	line_t *line = *((line_t **)luaL_checkudata(L, 3, META_LINE));
 	vertex_t result;
 	//HUDSAFE
-	if (!line)
-		return LUA_ErrInvalid(L, "line_t");
-	P_ClosestPointOnLine(x, y, line, &result);
+	if (lua_isuserdata(L, 3)) // use a real linedef to get our points
+	{
+		line_t *line = *((line_t **)luaL_checkudata(L, 3, META_LINE));
+		if (!line)
+			return LUA_ErrInvalid(L, "line_t");
+		P_ClosestPointOnLine(x, y, line, &result);
+	}
+	else // use custom coordinates of our own!
+	{
+		vertex_t v1, v2; // fake vertexes
+		line_t junk; // fake linedef
+
+		if (n < 6)
+			return luaL_error(L, "arguments 3 to 6 not all given (expected 4 fixed-point integers)");
+
+		v1.x = luaL_checkfixed(L, 3);
+		v1.y = luaL_checkfixed(L, 4);
+		v2.x = luaL_checkfixed(L, 5);
+		v2.y = luaL_checkfixed(L, 6);
+
+		junk.v1 = &v1;
+		junk.v2 = &v2;
+		junk.dx = v2.x - v1.x;
+		junk.dy = v2.y - v1.y;
+		P_ClosestPointOnLine(x, y, &junk, &result);
+	}
+
 	lua_pushfixed(L, result.x);
 	lua_pushfixed(L, result.y);
 	return 2;
@@ -1636,18 +1668,63 @@ static int lib_sStopSound(lua_State *L)
 
 static int lib_sChangeMusic(lua_State *L)
 {
-	UINT32 music_num = (UINT32)luaL_checkinteger(L, 1);
+#ifdef MUSICSLOT_COMPATIBILITY
+	const char *music_name;
+	UINT32 music_num;
+	char music_compat_name[7];
+
+	boolean looping;
+	player_t *player = NULL;
+	UINT16 music_flags = 0;
+	NOHUD
+
+	if (lua_isnumber(L, 1))
+	{
+		music_num = (UINT32)luaL_checkinteger(L, 1);
+		music_flags = (UINT16)(music_num & 0x0000FFFF);
+		if (music_flags && music_flags <= 1035)
+			snprintf(music_compat_name, 7, "%sM", G_BuildMapName((INT32)music_flags));
+		else if (music_flags && music_flags <= 1050)
+			strncpy(music_compat_name, compat_special_music_slots[music_flags - 1036], 7);
+		else
+			music_compat_name[0] = 0; // becomes empty string
+		music_compat_name[6] = 0;
+		music_name = (const char *)&music_compat_name;
+		music_flags = 0;
+	}
+	else
+	{
+		music_num = 0;
+		music_name = luaL_checkstring(L, 1);
+	}
+
+
+	looping = (boolean)lua_opttrueboolean(L, 2);
+
+#else
+	const char *music_name = luaL_checkstring(L, 1);
 	boolean looping = (boolean)lua_opttrueboolean(L, 2);
 	player_t *player = NULL;
+	UINT16 music_flags = 0;
 	NOHUD
+
+#endif
 	if (!lua_isnone(L, 3) && lua_isuserdata(L, 3))
 	{
 		player = *((player_t **)luaL_checkudata(L, 3, META_PLAYER));
 		if (!player)
 			return LUA_ErrInvalid(L, "player_t");
 	}
+
+#ifdef MUSICSLOT_COMPATIBILITY
+	if (music_num)
+		music_flags = (UINT16)((music_num & 0x7FFF0000) >> 16);
+	else
+#endif
+	music_flags = (UINT16)luaL_optinteger(L, 4, 0);
+
 	if (!player || P_IsLocalPlayer(player))
-	S_ChangeMusic(music_num, looping);
+		S_ChangeMusic(music_name, music_flags, looping);
 	return 0;
 }
 
@@ -1854,6 +1931,7 @@ static int lib_gTicsToMilliseconds(lua_State *L)
 
 static luaL_Reg lib[] = {
 	{"print", lib_print},
+	{"EvalMath", lib_evalMath},
 
 	// m_random
 	{"P_Random",lib_pRandom},

@@ -27,6 +27,10 @@
 #include "m_misc.h"
 #include "v_video.h" // video flags for CEchos
 
+// CTF player names
+#define CTFTEAMCODE(pl) pl->ctfteam ? (pl->ctfteam == 1 ? "\x85" : "\x84") : ""
+#define CTFTEAMENDCODE(pl) pl->ctfteam ? "\x80" : ""
+
 void P_ForceFeed(const player_t *player, INT32 attack, INT32 fade, tic_t duration, INT32 period)
 {
 	BasicFF_t Basicfeed;
@@ -405,7 +409,6 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if ((maptol & TOL_NIGHTS) && special->type != MT_FLINGCOIN)
 				P_DoNightsScore(player);
 			break;
-#ifdef BLUE_SPHERES
 		case MT_BLUEBALL:
 			if (!(P_CanPickupItem(player, false)))
 				return;
@@ -422,7 +425,6 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if (maptol & TOL_NIGHTS)
 				P_DoNightsScore(player);
 			break;
-#endif
 		case MT_AUTOPICKUP:
 		case MT_BOUNCEPICKUP:
 		case MT_SCATTERPICKUP:
@@ -576,11 +578,23 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			{
 				UINT8 flagteam = (special->type == MT_REDFLAG) ? 1 : 2;
 				const char *flagtext;
+				char flagcolor;
+				char plname[MAXPLAYERNAME+4];
 
 				if (special->type == MT_REDFLAG)
-					flagtext = M_GetText("red");
+				{
+					flagtext = M_GetText("Red flag");
+					flagcolor = '\x85';
+				}
 				else
-					flagtext = M_GetText("blue");
+				{
+					flagtext = M_GetText("Blue flag");
+					flagcolor = '\x84';
+				}
+				snprintf(plname, sizeof(plname), "%s%s%s",
+						 CTFTEAMCODE(player),
+						 player_names[player - players],
+						 CTFTEAMENDCODE(player));
 
 				if (player->ctfteam == flagteam) // Player is on the same team as the flag
 				{
@@ -594,10 +608,11 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 						if (!P_PlayerTouchingSectorSpecial(player, 4, 2 + flagteam))
 						{
-							CONS_Printf(M_GetText("%s returned the %s flag to base.\n"), player_names[player-players], flagtext);
+							CONS_Printf(M_GetText("%s returned the %c%s%c to base.\n"), plname, flagcolor, flagtext, 0x80);
 
-							if (players[consoleplayer].ctfteam == player->ctfteam)
-								S_StartSound(NULL, sfx_hoop1);
+							// The fuse code plays this sound effect
+							//if (players[consoleplayer].ctfteam == player->ctfteam)
+							//	S_StartSound(NULL, sfx_hoop1);
 						}
 					}
 				}
@@ -610,7 +625,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 						return;
 
 					player->gotflag |= flagflag;
-					CONS_Printf(M_GetText("%s picked up the %s flag!\n"), player_names[player-players], flagtext);
+					CONS_Printf(M_GetText("%s picked up the %c%s%c!\n"), plname, flagcolor, flagtext, 0x80);
 					(*flagmobj) = NULL;
 					// code for dealing with abilities is handled elsewhere now
 					break;
@@ -766,10 +781,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					}
 
 					if (!(mo2->type == MT_NIGHTSWING || mo2->type == MT_RING || mo2->type == MT_COIN
-#ifdef BLUE_SPHERES
-					      || mo2->type == MT_BLUEBALL
-#endif
-					     ))
+					   || mo2->type == MT_BLUEBALL))
 						continue;
 
 					// Yay! The thing's in reach! Pull it in!
@@ -1452,9 +1464,6 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 	P_KillMobj(special, NULL, toucher);
 }
 
-#define CTFTEAMCODE(pl) pl->ctfteam ? (pl->ctfteam == 1 ? "\x85" : "\x84") : ""
-#define CTFTEAMENDCODE(pl) pl->ctfteam ? "\x80" : ""
-
 /** Prints death messages relating to a dying or hit player.
   *
   * \param player    Affected player.
@@ -1476,6 +1485,9 @@ static void P_HitDeathMessages(player_t *player, mobj_t *inflictor, mobj_t *sour
 
 	if (!player)
 		return; // Impossible!
+
+	if (player->spectator)
+		return; // No messages for dying (crushed) spectators.
 
 	if (!netgame)
 		return; // Presumably it's obvious what's happening in splitscreen.
@@ -2073,10 +2085,10 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source)
 
 			if (target->player->lives <= 0) // Tails 03-14-2000
 			{
-				if (P_IsLocalPlayer(target->player) && target->player == &players[consoleplayer])
+				if (P_IsLocalPlayer(target->player)/* && target->player == &players[consoleplayer] */)
 				{
 					S_StopMusic(); // Stop the Music! Tails 03-14-2000
-					S_ChangeMusic(mus_gmover, false); // Yousa dead now, Okieday? Tails 03-14-2000
+					S_ChangeMusicInternal("gmover", false); // Yousa dead now, Okieday? Tails 03-14-2000
 				}
 			}
 		}
@@ -2464,7 +2476,7 @@ static inline void P_NiGHTSDamage(mobj_t *target, mobj_t *source)
 			&& player->nightstime < 10*TICRATE)
 		{
 			//S_StartSound(NULL, sfx_timeup); // that creepy "out of time" music from NiGHTS. Dummied out, as some on the dev team thought it wasn't Sonic-y enough (Mystic, notably). Uncomment to restore. -SH
-			S_ChangeMusic(mus_drown,false);
+			S_ChangeMusicInternal("drown",false);
 		}
 	}
 }
@@ -3623,10 +3635,33 @@ void P_PlayerFlagBurst(player_t *player, boolean toss)
 	flag->fuse = cv_flagtime.value * TICRATE;
 	P_SetTarget(&flag->target, player->mo);
 
-	if (toss)
-		CONS_Printf(M_GetText("%s tossed the %s flag.\n"), player_names[player-players], (type == MT_REDFLAG ? "red" : "blue"));
-	else
-		CONS_Printf(M_GetText("%s dropped the %s flag.\n"), player_names[player-players], (type == MT_REDFLAG ? "red" : "blue"));
+	// Flag text
+	{
+		char plname[MAXPLAYERNAME+4];
+		char *flagtext;
+		char flagcolor;
+
+		snprintf(plname, sizeof(plname), "%s%s%s",
+				 CTFTEAMCODE(player),
+				 player_names[player - players],
+				 CTFTEAMENDCODE(player));
+
+		if (type == MT_REDFLAG)
+		{
+			flagtext = M_GetText("Red flag");
+			flagcolor = '\x85';
+		}
+		else
+		{
+			flagtext = M_GetText("Blue flag");
+			flagcolor = '\x84';
+		}
+
+		if (toss)
+			CONS_Printf(M_GetText("%s tossed the %c%s%c.\n"), plname, flagcolor, flagtext, 0x80);
+		else
+			CONS_Printf(M_GetText("%s dropped the %c%s%c.\n"), plname, flagcolor, flagtext, 0x80);
+	}
 
 	player->gotflag = 0;
 

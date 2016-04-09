@@ -30,9 +30,7 @@ static const UINT8 REDRANGE    = 16;
 static const UINT8 GRAYS       = (1*16);
 static const UINT8 GRAYSRANGE  = 16;
 static const UINT8 BROWNS      = (3*16);
-static const UINT8 BROWNRANGE  = 16;
 static const UINT8 YELLOWS     = (7*16);
-static const UINT8 YELLOWRANGE = 8;
 static const UINT8 GREENS      = (10*16);
 static const UINT8 GREENRANGE  = 16;
 static const UINT8 DBLACK      = 31;
@@ -41,11 +39,8 @@ static const UINT8 DWHITE      = 0;
 static const UINT8 NOCLIMBREDS        = 248;
 static const UINT8 NOCLIMBREDRANGE    = 8;
 static const UINT8 NOCLIMBGRAYS       = 204;
-static const UINT8 NOCLIMBGRAYSRANGE  = 4;
 static const UINT8 NOCLIMBBROWNS      = (2*16);
-static const UINT8 NOCLIMBBROWNRANGE  = 16;
 static const UINT8 NOCLIMBYELLOWS     = (11*16);
-static const UINT8 NOCLIMBYELLOWRANGE = 8;
 
 
 #ifdef _NDS
@@ -67,15 +62,10 @@ static const UINT8 NOCLIMBYELLOWRANGE = 8;
 #define TSWALLCOLORS          GRAYS
 #define TSWALLRANGE           GRAYSRANGE
 #define NOCLIMBTSWALLCOLORS   NOCLIMBGRAYS
-#define NOCLIMBTSWALLRANGE    NOCLIMBGRAYSRANGE
 #define FDWALLCOLORS          BROWNS
-#define FDWALLRANGE           BROWNRANGE
 #define NOCLIMBFDWALLCOLORS   NOCLIMBBROWNS
-#define NOCLIMBFDWALLRANGE    NOCLIMBBROWNRANGE
 #define CDWALLCOLORS          YELLOWS
-#define CDWALLRANGE           YELLOWRANGE
 #define NOCLIMBCDWALLCOLORS   NOCLIMBYELLOWS
-#define NOCLIMBCDWALLRANGE    NOCLIMBYELLOWRANGE
 #define THINGCOLORS           GREENS
 #define THINGRANGE            GREENRANGE
 #define SECRETWALLCOLORS      WALLCOLORS
@@ -254,29 +244,6 @@ typedef void (*AMDRAWFLINEFUNC) (const fline_t *fl, INT32 color);
 static AMDRAWFLINEFUNC AM_drawFline;
 
 static void AM_drawFline_soft(const fline_t *fl, INT32 color);
-
-/** Calculates the slope and slope according to the x-axis of a line
-  * segment in map coordinates (with the upright y-axis and all) so
-  * that it can be used with the braindead drawing stuff.
-  *
-  * \param ml The line segment.
-  * \param is Holds the result.
-  */
-static inline void AM_getIslope(const mline_t *ml, islope_t *is)
-{
-	INT32 dx, dy;
-
-	dy = ml->a.y - ml->b.y;
-	dx = ml->b.x - ml->a.x;
-	if (!dy)
-		is->islp = (dx < 0 ? -INT32_MAX : INT32_MAX);
-	else
-		is->islp = FixedDiv(dx, dy);
-	if (!dx)
-		is->slp = (dy < 0 ? -INT32_MAX : INT32_MAX);
-	else
-		is->slp = FixedDiv(dy, dx);
-}
 
 static void AM_activateNewScale(void)
 {

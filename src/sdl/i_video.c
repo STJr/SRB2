@@ -126,8 +126,6 @@ static       Uint8       BitsPerPixel = 16;
 #endif
 Uint16      realwidth = BASEVIDWIDTH;
 Uint16      realheight = BASEVIDHEIGHT;
-static const Uint32      surfaceFlagsW = 0/*|SDL_RESIZABLE*/;
-static const Uint32      surfaceFlagsF = 0;
 static       SDL_bool    mousegrabok = SDL_TRUE;
 #define HalfWarpMouse(x,y) SDL_WarpMouseInWindow(window, (Uint16)(x/2),(Uint16)(y/2))
 static       SDL_bool    videoblitok = SDL_FALSE;
@@ -1250,17 +1248,6 @@ static inline boolean I_SkipFrame(void)
 		default:
 			return false;
 	}
-}
-
-static inline SDL_bool SDLmatchVideoformat(void)
-{
-	const SDL_PixelFormat *vidformat = vidSurface->format;
-	const INT32 vfBPP = vidformat?vidformat->BitsPerPixel:0;
-	return (((vfBPP == 8 && vid.bpp == 1 &&
-	 !vidformat->Rmask && !vidformat->Gmask && !vidformat->Bmask) ||
-	 (vfBPP == 15 && vid.bpp == 2 && vidformat->Rmask == 0x7C00 &&
-	 vidformat->Gmask == 0x03E0 && vidformat->Bmask == 0x001F )) &&
-	 !vidformat->Amask && (vidSurface->flags & SDL_RLEACCEL) == 0);
 }
 
 //
