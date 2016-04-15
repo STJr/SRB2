@@ -1654,6 +1654,71 @@ static int lib_sChangeMusic(lua_State *L)
 	return 0;
 }
 
+//=====================================================================
+//miru: A block where I can put my open functions to Lua...they can be organized later
+//(or just shoved into a future mir_lua.c like before)
+static int lib_sPositionMusic(lua_State *L)
+{
+	fixed_t fixedspeed = luaL_checkfixed(L, 1);
+	float position = fixedspeed*0.001f;
+	//CONS_Printf("set music pos %f\n", position);
+	player_t *player = NULL;
+	//NOHUD
+	if (!lua_isnone(L, 2) && lua_isuserdata(L, 2))
+	{
+		player = *((player_t **)luaL_checkudata(L, 2, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (!player || P_IsLocalPlayer(player))
+		S_PositionMusic(position);
+	return 0;
+}
+
+static int lib_sGetPositionMusic(lua_State *L)
+{
+    float fpos = S_GetPositionMusic();
+	lua_pushnumber(L, (lua_Number)(fpos*1000));
+    //CONS_Printf("GetPositionMusic: %05f\n\n\n",fpos);
+    return 1;
+}
+
+static int lib_sFadeOutMusic(lua_State *L)
+{
+	int millisecond = luaL_checkint(L, 1);
+	player_t *player = NULL;
+	//NOHUD
+	if (!lua_isnone(L, 2) && lua_isuserdata(L, 2))
+	{
+		player = *((player_t **)luaL_checkudata(L, 2, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (!player || P_IsLocalPlayer(player))
+		S_FadeOutMusic(millisecond);
+	return 0;
+}
+
+static int lib_pSetActiveMotionBlur(lua_State *L)
+{
+	boolean active = (boolean)lua_opttrueboolean(L, 1);
+	INT32 param = luaL_checkint(L, 2);
+	player_t *player = NULL;
+	//NOHUD
+	if (!lua_isnone(L, 3) && lua_isuserdata(L, 3))
+	{
+		player = *((player_t **)luaL_checkudata(L, 3, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (!player || P_IsLocalPlayer(player))
+		P_SetActiveMotionBlur(active, param);
+	return 0;
+}
+
+//=====================================================================
+
+
 static int lib_sSpeedMusic(lua_State *L)
 {
 	fixed_t fixedspeed = luaL_checkfixed(L, 1);
@@ -2000,6 +2065,8 @@ static luaL_Reg lib[] = {
 	{"S_StartSoundAtVolume",lib_sStartSoundAtVolume},
 	{"S_StopSound",lib_sStopSound},
 	{"S_ChangeMusic",lib_sChangeMusic},
+	//{"S_PositionMusic",lib_sPositionMusic},
+	//{"S_GetPositionMusic",lib_sGetPositionMusic},
 	{"S_SpeedMusic",lib_sSpeedMusic},
 	{"S_StopMusic",lib_sStopMusic},
 	{"S_OriginPlaying",lib_sOriginPlaying},
@@ -2022,6 +2089,12 @@ static luaL_Reg lib[] = {
 	{"G_TicsToSeconds",lib_gTicsToSeconds},
 	{"G_TicsToCentiseconds",lib_gTicsToCentiseconds},
 	{"G_TicsToMilliseconds",lib_gTicsToMilliseconds},
+
+    //miru: Put everything added here, categorizing right now isn't something I want to wander through
+	{"S_PositionMusic",lib_sPositionMusic},
+	{"S_GetPositionMusic",lib_sGetPositionMusic},
+	{"S_FadeOutMusic",lib_sFadeOutMusic},
+	{"P_SetActiveMotionBlur",lib_pSetActiveMotionBlur},
 
 	{NULL, NULL}
 };

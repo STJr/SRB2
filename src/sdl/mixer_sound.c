@@ -74,6 +74,17 @@ static Music_Emu *gme;
 static INT32 current_track;
 #endif
 
+//miru: new variables for use involving music infos
+int const SAMPLE_RATE = 44100;
+
+static double music_pos = 0.0;
+static long music_pos_time = -1;
+
+//static int music_frequency = 0;
+//static Uint16 music_format = 0;
+//static int music_channels = 0;
+
+
 void I_StartupSound(void)
 {
 	I_Assert(!sound_started);
@@ -86,7 +97,7 @@ void I_StartupSound(void)
 #if SDL_MIXER_VERSION_ATLEAST(1,2,11)
 	Mix_Init(MIX_INIT_FLAC|MIX_INIT_MOD|MIX_INIT_MP3|MIX_INIT_OGG);
 #endif
-	Mix_OpenAudio(44100, AUDIO_S16LSB, 2, 2048);
+	Mix_OpenAudio(SAMPLE_RATE, AUDIO_S16LSB, 2, 2048);
 	Mix_AllocateChannels(256);
 }
 
@@ -420,7 +431,30 @@ static void music_loop(void)
 {
 	Mix_PlayMusic(music, 0);
 	Mix_SetMusicPosition(loop_point);
+	music_pos = (int)(loop_point * SAMPLE_RATE);
 }
+
+//miru: some music hooks and callbacks (including music_pos above)
+/*static void music_fadeloop(void)
+{
+    Mix_HookMusicFinished(NULL);
+    // Mix_PlayMusic(music, 0);
+    //if (music_pos >= I_GetMusicPosition() - 1000)
+    //    Mix_SetMusicPosition(loop_point);
+
+    music_pos = (int)(loop_point * SAMPLE_RATE);
+}*/
+
+static void mixmusic_callback(void *udata, Uint8 *stream, int len)
+{
+    if(!Mix_PausedMusic()) {
+        music_pos += len/4;
+        music_pos_time = SDL_GetTicks();
+    }
+    //I_OutputMsg("MusicPos: %.3f", music_pos);
+    //HU_DoCEcho(va("MusicPos: %.3f\\Stream: %d\\Length: %i", music_pos,stream,len));
+}
+
 
 #ifdef HAVE_LIBGME
 static void mix_gme(void *udata, Uint8 *stream, int len)
@@ -660,7 +694,7 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 		}
 	}
 
-	if (Mix_PlayMusic(music, looping && loop_point == 0.0f ? -1 : 0) == -1)
+	if (Mix_PlayMusic(music, /*looping && loop_point == 0.0f ? -1 :*/ 0) == -1)
 	{
 		CONS_Alert(CONS_ERROR, "Mix_PlayMusic: %s\n", Mix_GetError());
 		return true;
@@ -670,7 +704,15 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 	else
 		Mix_VolumeMusic((UINT32)music_volume*128/31);
 
-	if (loop_point != 0.0f)
+    Mix_SetPostMix(mixmusic_callback, NULL);
+	music_pos = 0;
+	music_pos_time = SDL_GetTicks();
+
+    //Mix_Chunk* lengthmusic;
+	//HU_SetCEchoDuration(4);
+    //HU_DoCEcho(va("Length: %d\\", lengthmusic->alen));
+
+	if (looping)//if (loop_point != 0.0f)
 		Mix_HookMusicFinished(music_loop);
 	return true;
 }
@@ -702,6 +744,47 @@ void I_SetDigMusicVolume(UINT8 volume)
 	if (midimode || !music)
 		return;
 	Mix_VolumeMusic((UINT32)volume*128/31);
+}
+
+void I_SetMusicPosition(float position)
+{
+	Mix_SetMusicPosition(position);
+	music_pos = (int)(position * SAMPLE_RATE);
+}
+
+float I_GetMusicPosition(void)
+{
+	float const pos = SAMPLE_RATE;
+    return (
+        (music_pos-2048) / pos
+    ) + (
+        (SDL_GetTicks() - music_pos_time) * 0.001f
+    );
+}
+
+void I_FadeInMusic(int ms)
+{
+    Mix_FadeInMusic(music, 0, ms);
+}
+
+void I_FadeInMusicPos(int ms, float position)
+{
+    Mix_FadeInMusicPos(music, 0, ms, position);
+    //music_pos = (int)(position * SAMPLE_RATE);
+}
+/*
+void I_VolumeMusic(int volume)
+{
+}
+*/
+void I_FadeOutMusic(int ms)
+{
+    //TODO: music ends if fading before a loop point, fix it
+    Mix_PlayMusic(music, -1);
+    Mix_SetMusicPosition(I_GetMusicPosition());
+    Mix_FadeOutMusic(ms);
+    Mix_HookMusicFinished(NULL);
+    //Mix_HookMusicFinished(music_fadeloop);
 }
 
 boolean I_SetSongSpeed(float speed)
@@ -799,6 +882,7 @@ boolean I_PlaySong(INT32 handle, boolean looping)
 		CONS_Alert(CONS_ERROR, "Mix_PlayMusic: %s\n", Mix_GetError());
 		return false;
 	}
+	music_pos = 0;
 	Mix_VolumeMusic((UINT32)music_volume*128/31);
 	return true;
 }

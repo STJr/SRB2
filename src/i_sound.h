@@ -229,6 +229,48 @@ void I_StopDigSong(void);
 */
 void I_SetDigMusicVolume(UINT8 volume);
 
+//miru: Let's open up and add some music functions to SDL
+/** \brief Sets the position in the current song.
+
+    \param position How many seconds into the song to seek to
+
+    \return void
+*/
+void I_SetMusicPosition(float position);
+
+/** \brief Gets the position in the current song.
+
+    \return position value
+*/
+float I_GetMusicPosition(void);
+
+/** \brief Fade in Music
+
+    \param ms How long the effect should last
+
+    \return void
+*/
+void I_FadeInMusic(int ms);
+
+/** \brief Fade in Music at position
+
+    \param ms How long the effect should last
+    \param position the position the song should start at
+
+    \return void
+*/
+void I_FadeInMusicPos(int ms, float position);
+
+//void I_VolumeMusic(int volume);
+
+/** \brief Fade out Music
+
+    \param ms How long the effect should last
+
+    \return void
+*/
+void I_FadeOutMusic(int ms);
+
 //
 // CD MUSIC I/O
 //

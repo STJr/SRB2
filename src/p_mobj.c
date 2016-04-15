@@ -3376,6 +3376,25 @@ void P_DestroyRobots(void)
 	}
 }
 
+
+//miru: motion blur exists so I'll use it
+//Note: motion blur should never ever be used excessively
+void P_SetActiveMotionBlur(boolean active, INT32 param)
+{
+    camera_motionblur = active;
+    forward_postimgparam = param;
+}
+
+
+boolean P_CheckMotionBlur(void)
+{
+	if (camera_motionblur == true)
+        return true;
+
+	return false;
+}
+
+
 // P_CameraThinker
 //
 // Process the mobj-ish required functions of the camera
@@ -3403,6 +3422,13 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 			postimg = postimg_water;
 		else if (P_CameraCheckHeat(&dummycam))
 			postimg = postimg_heat;
+        // miru: Check for Motion Blur Activation
+        else if (P_CheckMotionBlur())
+			postimg = postimg_motion;
+			if (!forward_postimgparam)
+                forward_postimgparam = 1;
+            else
+                postimgparam = forward_postimgparam;
 	}
 	else
 	{
@@ -3411,6 +3437,13 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 			postimg = postimg_water;
 		else if (P_CameraCheckHeat(thiscam))
 			postimg = postimg_heat;
+		// miru: Check for Motion Blur Activation
+        else if (P_CheckMotionBlur())
+			postimg = postimg_motion;
+			if (!forward_postimgparam)
+                forward_postimgparam = 1;
+            else
+                postimgparam = forward_postimgparam;
 	}
 
 	if (postimg != postimg_none)

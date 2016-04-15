@@ -1249,6 +1249,21 @@ void S_ChangeMusic(const char *mmusic, UINT16 mflags, boolean looping)
 	I_SetSongTrack(mflags & MUSIC_TRACKMASK);
 }
 
+void S_PositionMusic(float position)
+{
+	I_SetMusicPosition(position);
+}
+
+float S_GetPositionMusic(void)
+{
+    return I_GetMusicPosition();
+}
+
+void S_FadeOutMusic(int ms)
+{
+    I_FadeOutMusic(ms);
+}
+
 boolean S_SpeedMusic(float speed)
 {
 	return I_SetSongSpeed(speed);

@@ -451,3 +451,8 @@ extern INT32 numhuntemeralds;
 extern boolean runemeraldmanager;
 extern INT32 numstarposts;
 #endif
+
+boolean camera_motionblur;
+INT32 forward_postimgparam;
+boolean P_CheckMotionBlur();
+void P_SetActiveMotionBlur(boolean active, INT32 param);

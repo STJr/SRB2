@@ -8573,6 +8573,17 @@ static void P_CalcPostImg(player_t *player)
 	if (player->mo->eflags & MFE_VERTICALFLIP)
 		*type = postimg_flip;
 
+    //miru: Motion blur won't work without this i guess, either way its enabled
+    //TODO: Opengl motion blur
+	// Motion blur
+	if (player->mo)
+	{
+		*type = postimg_motion;
+		*param = 5;
+	}
+
+	(void)param;
+/*
 #if 1
 	(void)param;
 #else
@@ -8585,7 +8596,7 @@ static void P_CalcPostImg(player_t *player)
 		if (*param > 5)
 			*param = 5;
 	}
-#endif
+#endif*/
 }
 
 void P_DoPityCheck(player_t *player)

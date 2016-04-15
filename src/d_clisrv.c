@@ -2128,7 +2128,7 @@ static void Command_connect(void)
 
 	server = false;
 
-    // RedEnchilada: host a game from connect
+    // mirmiru RedEnchilada: host a game from connect
     if (!stricmp(COM_Argv(1), "HOST"))
 	{
 	    const char *mapname;
