@@ -118,7 +118,7 @@ static int lib_fixedsqrt(lua_State *L)
 {
 	fixed_t i = luaL_checkfixed(L, 1);
 	if (i < 0)
-		return luaL_error(L, "can't take the square root of a negative number");
+		return luaL_error(L, "square root domain error");
 	lua_pushfixed(L, FixedSqrt(i));
 	return 1;
 }
