@@ -7149,9 +7149,10 @@ void P_MobjThinker(mobj_t *mobj)
 						if (mobj->type == MT_REDFLAG)
 						{
 							if (!(mobj->flags2 & MF2_JUSTATTACKED))
-								CONS_Printf(M_GetText("The red flag has returned to base.\n"));
+								CONS_Printf(M_GetText("The %c%s%c has returned to base.\n"), 0x85, M_GetText("Red flag"), 0x80);
 
-							if (players[consoleplayer].ctfteam == 1)
+							// Assumedly in splitscreen players will be on opposing teams
+							if (players[consoleplayer].ctfteam == 1 || splitscreen)
 								S_StartSound(NULL, sfx_hoop1);
 
 							redflag = flagmo;
@@ -7159,9 +7160,10 @@ void P_MobjThinker(mobj_t *mobj)
 						else // MT_BLUEFLAG
 						{
 							if (!(mobj->flags2 & MF2_JUSTATTACKED))
-								CONS_Printf(M_GetText("The blue flag has returned to base.\n"));
+								CONS_Printf(M_GetText("The %c%s%c has returned to base.\n"), 0x84, M_GetText("Blue flag"), 0x80);
 
-							if (players[consoleplayer].ctfteam == 2)
+							// Assumedly in splitscreen players will be on opposing teams
+							if (players[consoleplayer].ctfteam == 2 || splitscreen)
 								S_StartSound(NULL, sfx_hoop1);
 
 							blueflag = flagmo;
