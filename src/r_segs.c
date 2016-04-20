@@ -1421,7 +1421,7 @@ static void R_RenderSegLoop (void)
 			for (i = 0; i < dc_numlights; i++)
 			{
 				dc_lightlist[i].height += dc_lightlist[i].heightstep;
-				if (dc_lightlist[i].flags & FF_SOLID)
+				if (dc_lightlist[i].flags & FF_CUTSOLIDS)
 					dc_lightlist[i].botheight += dc_lightlist[i].botheightstep;
 			}
 		}
@@ -2508,7 +2508,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 #endif
 			rlight->flags = light->flags;
 
-			if (light->caster && light->caster->flags & FF_SOLID)
+			if (light->caster && light->caster->flags & FF_CUTSOLIDS)
 			{
 #ifdef ESLOPE
 				if (*light->caster->b_slope) {

@@ -1310,8 +1310,7 @@ void S_SetDigMusicVolume(INT32 volume)
 #ifdef DJGPPDOS
 	I_SetDigMusicVolume(31); // Trick for buggy dos drivers. Win32 doesn't need this.
 #endif
-	if (!nodigimusic)
-		I_SetDigMusicVolume(volume&31);
+	I_SetDigMusicVolume(volume&31);
 }
 
 void S_SetMIDIMusicVolume(INT32 volume)
