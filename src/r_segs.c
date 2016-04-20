@@ -1053,6 +1053,8 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 						}
 					}
 
+					solid = 0; // don't carry over solid-cutting flag from the previous light
+
 					// Check if the current light can cut the current 3D floor.
 					if (rlight->flags & FF_CUTSOLIDS && !(pfloor->flags & FF_EXTRA))
 						solid = 1;
