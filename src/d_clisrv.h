@@ -177,9 +177,9 @@ typedef struct
 	UINT32 thokitem; //mobjtype_t
 	UINT32 spinitem; //mobjtype_t
 	UINT32 revitem; //mobjtype_t
-	INT32 actionspd;
-	INT32 mindash;
-	INT32 maxdash;
+	fixed_t actionspd;
+	fixed_t mindash;
+	fixed_t maxdash;
 	fixed_t jumpfactor;
 
 	fixed_t speed;
@@ -191,6 +191,7 @@ typedef struct
 	INT32 deadtimer;
 	tic_t exiting;
 	UINT8 homing;
+	tic_t skidtime;
 	fixed_t cmomx;
 	fixed_t cmomy;
 	fixed_t rmomx;
@@ -241,11 +242,11 @@ typedef struct
 	fixed_t friction;
 	fixed_t movefactor;
 
-	INT16 tics;
+	INT32 tics;
 	statenum_t statenum;
 	UINT32 flags;
 	UINT32 flags2;
-	UINT8 eflags;
+	UINT16 eflags;
 
 	fixed_t radius;
 	fixed_t height;
