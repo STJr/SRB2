@@ -1384,6 +1384,7 @@ void R_RegisterEngineStuff(void)
 	CV_RegisterVar(&cv_allowmlook);
 	CV_RegisterVar(&cv_homremoval);
 	CV_RegisterVar(&cv_flipcam);
+	CV_RegisterVar(&cv_flipcam2);
 
 	// Enough for dedicated server
 	if (dedicated)

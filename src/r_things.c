@@ -964,7 +964,7 @@ static void R_SplitSprite(vissprite_t *sprite, mobj_t *thing)
 		cutfrac = (INT16)((centeryfrac - FixedMul(testheight - viewz, sprite->scale))>>FRACBITS);
 		if (cutfrac < 0)
 			continue;
-		if (cutfrac > vid.height)
+		if (cutfrac > viewheight)
 			return;
 
 		// Found a split! Make a new sprite, copy the old sprite to it, and

@@ -613,7 +613,7 @@ static void P_NetArchiveWorld(void)
 						WRITEUINT16(put, j); // save ffloor "number"
 						WRITEUINT8(put, fflr_diff);
 						if (fflr_diff & 1)
-							WRITEUINT16(put, rover->flags);
+							WRITEUINT32(put, rover->flags);
 						if (fflr_diff & 2)
 							WRITEINT16(put, rover->alpha);
 					}
@@ -815,7 +815,7 @@ static void P_NetUnArchiveWorld(void)
 				fflr_diff = READUINT8(get);
 
 				if (fflr_diff & 1)
-					rover->flags = READUINT16(get);
+					rover->flags = READUINT32(get);
 				if (fflr_diff & 2)
 					rover->alpha = READINT16(get);
 
