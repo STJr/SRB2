@@ -100,7 +100,11 @@ static int lib_fixedint(lua_State *L)
 
 static int lib_fixeddiv(lua_State *L)
 {
-	lua_pushfixed(L, FixedDiv(luaL_checkfixed(L, 1), luaL_checkfixed(L, 2)));
+	fixed_t i = luaL_checkfixed(L, 1);
+	fixed_t j = luaL_checkfixed(L, 2);
+	if (j == 0)
+		return luaL_error(L, "divide by zero");
+	lua_pushfixed(L, FixedDiv(i, j));
 	return 1;
 }
 
@@ -112,7 +116,10 @@ static int lib_fixedrem(lua_State *L)
 
 static int lib_fixedsqrt(lua_State *L)
 {
-	lua_pushfixed(L, FixedSqrt(luaL_checkfixed(L, 1)));
+	fixed_t i = luaL_checkfixed(L, 1);
+	if (i < 0)
+		return luaL_error(L, "square root domain error");
+	lua_pushfixed(L, FixedSqrt(i));
 	return 1;
 }
 
