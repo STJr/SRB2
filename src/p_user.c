@@ -7512,8 +7512,6 @@ boolean P_LookForEnemies(player_t *player)
 		if (an > ANGLE_90 && an < ANGLE_270)
 			continue; // behind back
 
-		player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, mo->x, mo->y);
-
 		if (!P_CheckSight(player->mo, mo))
 			continue; // out of sight
 
@@ -7524,6 +7522,7 @@ boolean P_LookForEnemies(player_t *player)
 	{
 		// Found a target monster
 		P_SetTarget(&player->mo->target, P_SetTarget(&player->mo->tracer, closestmo));
+		player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, closestmo->x, closestmo->y);
 		return true;
 	}
 
