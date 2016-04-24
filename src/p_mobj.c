@@ -652,9 +652,9 @@ void P_EmeraldManager(void)
 				break;
 
 			if (leveltime < TICRATE) // Start of map
-				spawnpoints[j]->threshold = 60*TICRATE + P_Random() * (TICRATE/5);
+				spawnpoints[j]->threshold = 60*TICRATE + P_RandomByte() * (TICRATE/5);
 			else
-				spawnpoints[j]->threshold = P_Random() * (TICRATE/5);
+				spawnpoints[j]->threshold = P_RandomByte() * (TICRATE/5);
 
 			break;
 		}
@@ -683,26 +683,26 @@ void P_ExplodeMissile(mobj_t *mo)
 		explodemo = P_SpawnMobj(mo->x, mo->y, mo->z, MT_EXPLODE);
 		P_SetScale(explodemo, mo->scale);
 		explodemo->destscale = mo->destscale;
-		explodemo->momx += (P_Random() % 32) * FixedMul(FRACUNIT/8, explodemo->scale);
-		explodemo->momy += (P_Random() % 32) * FixedMul(FRACUNIT/8, explodemo->scale);
+		explodemo->momx += (P_RandomByte() % 32) * FixedMul(FRACUNIT/8, explodemo->scale);
+		explodemo->momy += (P_RandomByte() % 32) * FixedMul(FRACUNIT/8, explodemo->scale);
 		S_StartSound(explodemo, sfx_pop);
 		explodemo = P_SpawnMobj(mo->x, mo->y, mo->z, MT_EXPLODE);
 		P_SetScale(explodemo, mo->scale);
 		explodemo->destscale = mo->destscale;
-		explodemo->momx += (P_Random() % 64) * FixedMul(FRACUNIT/8, explodemo->scale);
-		explodemo->momy -= (P_Random() % 64) * FixedMul(FRACUNIT/8, explodemo->scale);
+		explodemo->momx += (P_RandomByte() % 64) * FixedMul(FRACUNIT/8, explodemo->scale);
+		explodemo->momy -= (P_RandomByte() % 64) * FixedMul(FRACUNIT/8, explodemo->scale);
 		S_StartSound(explodemo, sfx_dmpain);
 		explodemo = P_SpawnMobj(mo->x, mo->y, mo->z, MT_EXPLODE);
 		P_SetScale(explodemo, mo->scale);
 		explodemo->destscale = mo->destscale;
-		explodemo->momx -= (P_Random() % 128) * FixedMul(FRACUNIT/8, explodemo->scale);
-		explodemo->momy += (P_Random() % 128) * FixedMul(FRACUNIT/8, explodemo->scale);
+		explodemo->momx -= (P_RandomByte() % 128) * FixedMul(FRACUNIT/8, explodemo->scale);
+		explodemo->momy += (P_RandomByte() % 128) * FixedMul(FRACUNIT/8, explodemo->scale);
 		S_StartSound(explodemo, sfx_pop);
 		explodemo = P_SpawnMobj(mo->x, mo->y, mo->z, MT_EXPLODE);
 		P_SetScale(explodemo, mo->scale);
 		explodemo->destscale = mo->destscale;
-		explodemo->momx -= (P_Random() % 96) * FixedMul(FRACUNIT/8, explodemo->scale);
-		explodemo->momy -= (P_Random() % 96) * FixedMul(FRACUNIT/8, explodemo->scale);
+		explodemo->momx -= (P_RandomByte() % 96) * FixedMul(FRACUNIT/8, explodemo->scale);
+		explodemo->momy -= (P_RandomByte() % 96) * FixedMul(FRACUNIT/8, explodemo->scale);
 		S_StartSound(explodemo, sfx_cybdth);
 
 		// Hack: Release an animal.
@@ -2405,12 +2405,12 @@ static boolean P_ZMovement(mobj_t *mo)
 							// If deafed, give the tumbleweed another random kick if it runs out of steam.
 							mom.z += P_MobjFlip(mo)*FixedMul(6*FRACUNIT, mo->scale);
 
-							if (P_Random() & 1)
+							if (P_RandomChance(FRACUNIT/2))
 								mom.x += FixedMul(6*FRACUNIT, mo->scale);
 							else
 								mom.x -= FixedMul(6*FRACUNIT, mo->scale);
 
-							if (P_Random() & 1)
+							if (P_RandomChance(FRACUNIT/2))
 								mom.y += FixedMul(6*FRACUNIT, mo->scale);
 							else
 								mom.y -= FixedMul(6*FRACUNIT, mo->scale);
@@ -2886,7 +2886,7 @@ static boolean P_SceneryZMovement(mobj_t *mo)
 
 				for (i = 0; i < 4; ++i) // split into four
 				{
-					prandom = P_Random();
+					prandom = P_RandomByte();
 					explodemo = P_SpawnMobj(mo->x, mo->y, mo->z, MT_SMALLBUBBLE);
 					explodemo->momx += ((prandom & 0x0F) << (FRACBITS-2)) * (i & 2 ? -1 : 1);
 					explodemo->momy += ((prandom & 0xF0) << (FRACBITS-6)) * (i & 1 ? -1 : 1);
@@ -3218,13 +3218,13 @@ void P_MobjCheckWater(mobj_t *mobj)
 			// Create tons of bubbles
 			for (i = 0; i < bubblecount; i++)
 			{
-				// P_Random()s are called individually to allow consistency
+				// P_RandomByte()s are called individually to allow consistency
 				// across various compilers, since the order of function calls
 				// in C is not part of the ANSI specification.
-				prandom[0] = P_Random();
-				prandom[1] = P_Random();
-				prandom[2] = P_Random();
-				prandom[3] = P_Random();
+				prandom[0] = P_RandomByte();
+				prandom[1] = P_RandomByte();
+				prandom[2] = P_RandomByte();
+				prandom[3] = P_RandomByte();
 
 				bubbletype = MT_SMALLBUBBLE;
 				if (!(prandom[0] & 0x3)) // medium bubble chance up to 64 from 32
@@ -3826,7 +3826,7 @@ boolean P_BossTargetPlayer(mobj_t *actor, boolean closest)
 
 	// first time init, this allow minimum lastlook changes
 	if (actor->lastlook < 0)
-		actor->lastlook = P_Random();
+		actor->lastlook = P_RandomByte();
 	actor->lastlook &= PLAYERSMASK;
 
 	for( ; ; actor->lastlook = (actor->lastlook+1) & PLAYERSMASK)
@@ -4707,7 +4707,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 
 	if (mobj->state == &states[S_BLACKEGG_STND] && mobj->tics == mobj->state->tics)
 	{
-		mobj->reactiontime += P_Random();
+		mobj->reactiontime += P_RandomByte();
 
 		if (mobj->health <= mobj->info->damage)
 			mobj->reactiontime /= 4;
@@ -4901,7 +4901,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 		if (mobj->tracer && mobj->tracer->type == MT_BOSS3WAYPOINT
 			&& mobj->tracer->spawnpoint && (mobj->tracer->spawnpoint->options & 7) == waypointNum)
 		{
-			if (P_Random() & 1)
+			if (P_RandomChance(FRACUNIT/2))
 				waypointNum++;
 			else
 				waypointNum--;
@@ -4913,7 +4913,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 		}
 
 		if (waypointNum == 0 && mobj->health <= mobj->info->damage)
-			waypointNum = 1 + (P_Random() & 1);
+			waypointNum = 1 + (P_RandomFixed() & 1);
 
 		// scan the thinkers to find
 		// the waypoint to use
@@ -5013,7 +5013,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 		P_SetMobjState(mobj, mobj->info->spawnstate);
 	}
 	else if (mobj->state == &states[mobj->info->deathstate] && mobj->tics == mobj->state->tics)
-		S_StartSound(0, sfx_bedie1 + (P_Random() & 1));
+		S_StartSound(0, sfx_bedie1 + (P_RandomFixed() & 1));
 
 }
 
@@ -5440,7 +5440,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 				// An incoming attack is detected! What should we do?!
 				// Go into vector form!
 				mobj->movedir = ANGLE_11hh - FixedAngle(FixedMul(AngleFixed(ANGLE_11hh), FixedDiv((mobj->info->spawnhealth - mobj->health)<<FRACBITS, (mobj->info->spawnhealth-1)<<FRACBITS)));
-				if (P_Random()&1)
+				if (P_RandomChance(FRACUNIT/2))
 					mobj->movedir = InvAngle(mobj->movedir);
 				mobj->threshold = 6 + (FixedMul(24<<FRACBITS, FixedDiv((mobj->info->spawnhealth - mobj->health)<<FRACBITS, (mobj->info->spawnhealth-1)<<FRACBITS))>>FRACBITS);
 				if (mobj->info->activesound)
@@ -6042,20 +6042,20 @@ static void P_KoopaThinker(mobj_t *koopa)
 
 	P_XYMovement(koopa);
 
-	if (P_Random() < 8 && koopa->z <= koopa->floorz)
+	if (P_RandomChance(FRACUNIT/32) && koopa->z <= koopa->floorz)
 		koopa->momz = FixedMul(5*FRACUNIT, koopa->scale);
 
 	if (koopa->z > koopa->floorz)
 		koopa->momz += FixedMul(FRACUNIT/4, koopa->scale);
 
-	if (P_Random() < 4)
+	if (P_RandomChance(FRACUNIT/64))
 	{
 		mobj_t *flame;
-		flame = P_SpawnMobj(koopa->x - koopa->radius + FixedMul(5*FRACUNIT, koopa->scale), koopa->y, koopa->z + (P_Random()<<(FRACBITS-2)), MT_KOOPAFLAME);
+		flame = P_SpawnMobj(koopa->x - koopa->radius + FixedMul(5*FRACUNIT, koopa->scale), koopa->y, koopa->z + (P_RandomByte()<<(FRACBITS-2)), MT_KOOPAFLAME);
 		flame->momx = -FixedMul(flame->info->speed, flame->scale);
 		S_StartSound(flame, sfx_koopfr);
 	}
-	else if (P_Random() > 250)
+	else if (P_RandomChance(5*FRACUNIT/256))
 	{
 		mobj_t *hammer;
 		hammer = P_SpawnMobj(koopa->x - koopa->radius, koopa->y, koopa->z + koopa->height, MT_HAMMER);
@@ -6499,11 +6499,11 @@ void P_MobjThinker(mobj_t *mobj)
 				fixed_t ns;
 				mobj_t *mo2;
 
-				i = P_Random();
-				z = mobj->subsector->sector->floorheight + ((P_Random()&63)*FRACUNIT);
+				i = P_RandomByte();
+				z = mobj->subsector->sector->floorheight + ((P_RandomByte()&63)*FRACUNIT);
 				for (j = 0; j < 2; j++)
 				{
-					const angle_t fa = (P_Random()*FINEANGLES/16) & FINEMASK;
+					const angle_t fa = (P_RandomByte()*FINEANGLES/16) & FINEMASK;
 					ns = 64 * FRACUNIT;
 					x = mobj->x + FixedMul(FINESINE(fa),ns);
 					y = mobj->y + FixedMul(FINECOSINE(fa),ns);
@@ -6513,7 +6513,7 @@ void P_MobjThinker(mobj_t *mobj)
 					mo2->momx = FixedMul(FINESINE(fa),ns);
 					mo2->momy = FixedMul(FINECOSINE(fa),ns);
 
-					i = P_Random();
+					i = P_RandomByte();
 
 					if (i % 5 == 0)
 						P_SpawnMobj(x, y, z, MT_CHICKEN);
@@ -7999,7 +7999,7 @@ void P_SpawnPrecipitation(void)
 					continue;
 
 				rainmo = P_SpawnSnowMobj(x, y, height, MT_SNOWFLAKE);
-				mrand = M_Random();
+				mrand = M_RandomByte();
 				if (mrand < 64)
 					P_SetPrecipMobjState(rainmo, S_SNOW3);
 				else if (mrand < 144)
@@ -9167,12 +9167,12 @@ ML_NOCLIMB : Direction not controllable
 		{
 			mobj->momz += FixedMul(16*FRACUNIT, mobj->scale);
 
-			if (P_Random() & 1)
+			if (P_RandomChance(FRACUNIT/2))
 				mobj->momx += FixedMul(16*FRACUNIT, mobj->scale);
 			else
 				mobj->momx -= FixedMul(16*FRACUNIT, mobj->scale);
 
-			if (P_Random() & 1)
+			if (P_RandomChance(FRACUNIT/2))
 				mobj->momy += FixedMul(16*FRACUNIT, mobj->scale);
 			else
 				mobj->momy -= FixedMul(16*FRACUNIT,mobj->scale);

@@ -598,9 +598,9 @@ void Command_CauseCfail_f(void)
 	}
 
 	P_UnsetThingPosition(players[consoleplayer].mo);
-	P_Random();
-	P_Random();
-	P_Random();
+	P_RandomFixed();
+	P_RandomByte();
+	P_RandomFixed();
 	players[consoleplayer].mo->x = 0;
 	players[consoleplayer].mo->y = 123311; //cfail cansuled kthxbye
 	players[consoleplayer].mo->z = 123311;

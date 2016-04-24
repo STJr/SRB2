@@ -1991,7 +1991,7 @@ Unoptimized version
 
 			for (y = 0; y < height; y++)
 			{
-				if (M_Random() < 32)
+				if (M_RandomChance(FRACUNIT/8)) // 12.5%
 					heatshifter[y] = true;
 			}
 
