@@ -2696,11 +2696,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		worldlowslope >>= 4;
 #endif
 
-		if (worldhigh < worldtop
-#ifdef ESLOPE
-			|| worldhighslope < worldtopslope
-#endif
-			)
+		if (toptexture)
 		{
 			pixhigh = (centeryfrac>>4) - FixedMul (worldhigh, rw_scale);
 			pixhighstep = -FixedMul (rw_scalestep,worldhigh);
@@ -2713,11 +2709,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 #endif
 		}
 
-		if (worldlow > worldbottom
-#ifdef ESLOPE
-			|| worldlowslope > worldbottomslope
-#endif
-			)
+		if (bottomtexture)
 		{
 			pixlow = (centeryfrac>>4) - FixedMul (worldlow, rw_scale);
 			pixlowstep = -FixedMul (rw_scalestep,worldlow);
