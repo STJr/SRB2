@@ -4672,8 +4672,10 @@ void P_UpdateSpecials(void)
 	// POINT LIMIT
 	P_CheckPointLimit();
 
+#ifdef ESLOPE
 	// Dynamic slopeness
 	P_RunDynamicSlopes();
+#endif
 
 	// ANIMATE TEXTURES
 	for (anim = anims; anim < lastanim; anim++)

@@ -288,6 +288,9 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	line_t *ldef;
 	sector_t *front, *back;
 	INT32 times, repeats;
+#ifdef ESLOPE
+	INT32 range;
+#endif
 
 	// Calculate light table.
 	// Use different light tables
@@ -334,6 +337,9 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 		colfunc = fuzzcolfunc;
 	}
 
+#ifdef ESLOPE
+	range = max(ds->x2-ds->x1, 1);
+#endif
 	rw_scalestep = ds->scalestep;
 	spryscale = ds->scale1 + (x1 - ds->x1)*rw_scalestep;
 
@@ -360,10 +366,30 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 
 		for (i = 0; i < dc_numlights; i++)
 		{
+#ifdef ESLOPE
+			fixed_t leftheight, rightheight;
+#endif
 			light = &frontsector->lightlist[i];
 			rlight = &dc_lightlist[i];
+#ifdef ESLOPE
+			if (light->slope) {
+				leftheight = P_GetZAt(light->slope, ds->leftpos.x, ds->leftpos.y);
+				rightheight = P_GetZAt(light->slope, ds->rightpos.x, ds->rightpos.y);
+			} else
+				leftheight = rightheight = light->height;
+
+			leftheight -= viewz;
+			rightheight -= viewz;
+
+			rlight->height = (centeryfrac) - FixedMul(leftheight, ds->scale1);
+			rlight->heightstep = (centeryfrac) - FixedMul(rightheight, ds->scale2);
+			rlight->heightstep = (rlight->heightstep-rlight->height)/(range);
+			//if (x1 > ds->x1)
+				//rlight->height -= (x1 - ds->x1)*rlight->heightstep;
+#else
 			rlight->height = (centeryfrac) - FixedMul((light->height - viewz), spryscale);
 			rlight->heightstep = -FixedMul(rw_scalestep, (light->height - viewz));
+#endif
 			rlight->lightlevel = *light->lightlevel;
 			rlight->extra_colormap = light->extra_colormap;
 			rlight->flags = light->flags;
@@ -673,7 +699,12 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	fixed_t         offsetvalue = 0;
 	lightlist_t     *light;
 	r_lightlist_t   *rlight;
+#ifdef ESLOPE
+	INT32           range;
+#endif
+#ifndef ESLOPE
 	fixed_t         lheight;
+#endif
 	line_t          *newline = NULL;
 #ifdef ESLOPE
 	// Render FOF sides kinda like normal sides, with the frac and step and everything
@@ -735,6 +766,9 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	else if (pfloor->flags & FF_FOG)
 		colfunc = R_DrawFogColumn_8;
 
+#ifdef ESLOPE
+	range = max(ds->x2-ds->x1, 1);
+#endif
 	//SoM: Moved these up here so they are available for my lightlist calculations
 	rw_scalestep = ds->scalestep;
 	spryscale = ds->scale1 + (x1 - ds->x1)*rw_scalestep;
@@ -751,9 +785,49 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 
 		for (i = p = 0; i < dc_numlights; i++)
 		{
+#ifdef ESLOPE
+			fixed_t leftheight, rightheight;
+			fixed_t pfloorleft, pfloorright;
+#endif
 			light = &frontsector->lightlist[i];
 			rlight = &dc_lightlist[p];
+#ifdef ESLOPE
+			if (light->slope) {
+				leftheight = P_GetZAt(light->slope, ds->leftpos.x, ds->leftpos.y);
+				rightheight = P_GetZAt(light->slope, ds->rightpos.x, ds->rightpos.y);
+			} else
+				leftheight = rightheight = light->height;
 
+			if (*pfloor->b_slope) {
+				pfloorleft = P_GetZAt(*pfloor->b_slope, ds->leftpos.x, ds->leftpos.y);
+				pfloorright = P_GetZAt(*pfloor->b_slope, ds->rightpos.x, ds->rightpos.y);
+			} else
+				pfloorleft = pfloorright = *pfloor->bottomheight;
+
+			if (leftheight < pfloorleft && rightheight < pfloorright)
+				continue;
+
+			if (*pfloor->t_slope) {
+				pfloorleft = P_GetZAt(*pfloor->t_slope, ds->leftpos.x, ds->leftpos.y);
+				pfloorright = P_GetZAt(*pfloor->t_slope, ds->rightpos.x, ds->rightpos.y);
+			} else
+				pfloorleft = pfloorright = *pfloor->topheight;
+
+			if (leftheight > pfloorleft && rightheight > pfloorright && i+1 < dc_numlights)
+			{
+				lightlist_t *nextlight = &frontsector->lightlist[i+1];
+				if (nextlight->slope ? P_GetZAt(nextlight->slope, ds->leftpos.x, ds->leftpos.y) : nextlight->height > pfloorleft
+				 && nextlight->slope ? P_GetZAt(nextlight->slope, ds->rightpos.x, ds->rightpos.y) : nextlight->height > pfloorright)
+					continue;
+			}
+
+			leftheight -= viewz;
+			rightheight -= viewz;
+			rlight->height = (centeryfrac) - FixedMul(leftheight, ds->scale1);
+			rlight->heightstep = (centeryfrac) - FixedMul(rightheight, ds->scale2);
+			rlight->heightstep = (rlight->heightstep-rlight->height)/(range);
+			rlight->height -= rlight->heightstep;
+#else
 			if (light->height < *pfloor->bottomheight)
 				continue;
 
@@ -763,13 +837,29 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			lheight = light->height;// > *pfloor->topheight ? *pfloor->topheight + FRACUNIT : light->height;
 			rlight->heightstep = -FixedMul (rw_scalestep, (lheight - viewz));
 			rlight->height = (centeryfrac) - FixedMul((lheight - viewz), spryscale) - rlight->heightstep;
+#endif
 			rlight->flags = light->flags;
-
 			if (light->flags & FF_CUTLEVEL)
 			{
+#ifdef ESLOPE
+				if (*light->caster->b_slope) {
+					leftheight = P_GetZAt(*light->caster->b_slope, ds->leftpos.x, ds->leftpos.y);
+					rightheight = P_GetZAt(*light->caster->b_slope, ds->rightpos.x, ds->rightpos.y);
+				} else
+					leftheight = rightheight = *light->caster->bottomheight;
+
+				leftheight -= viewz;
+				rightheight -= viewz;
+
+				rlight->botheight = (centeryfrac) - FixedMul(leftheight, ds->scale1);
+				rlight->botheightstep = (centeryfrac) - FixedMul(rightheight, ds->scale2);
+				rlight->botheightstep = (rlight->botheightstep-rlight->botheight)/(range);
+				rlight->botheight -= rlight->botheightstep;
+#else
 				lheight = *light->caster->bottomheight;// > *pfloor->topheight ? *pfloor->topheight + FRACUNIT : *light->caster->bottomheight;
 				rlight->botheightstep = -FixedMul (rw_scalestep, (lheight - viewz));
 				rlight->botheight = (centeryfrac) - FixedMul((lheight - viewz), spryscale) - rlight->botheightstep;
+#endif
 			}
 
 			rlight->lightlevel = *light->lightlevel;
@@ -873,8 +963,8 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		top_step = centeryfrac - FixedMul(right_top, ds->scale2);
 		bottom_step = centeryfrac - FixedMul(right_bottom, ds->scale2);
 
-		top_step = (top_step-top_frac)/(ds->x2-ds->x1+1);
-		bottom_step = (bottom_step-bottom_frac)/(ds->x2-ds->x1+1);
+		top_step = (top_step-top_frac)/(range);
+		bottom_step = (bottom_step-bottom_frac)/(range);
 
 		top_frac += top_step * (x1 - ds->x1);
 		bottom_frac += bottom_step * (x1 - ds->x1);
@@ -1112,7 +1202,9 @@ static void R_RenderSegLoop (void)
 
 	INT32     mid;
 	fixed_t texturecolumn = 0;
+#ifdef ESLOPE
 	fixed_t oldtexturecolumn = -1;
+#endif
 	INT32     top;
 	INT32     bottom;
 	INT32     i;
@@ -1468,22 +1560,26 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	fixed_t       hyp;
 	fixed_t       sineval;
 	angle_t       distangle, offsetangle;
-	//fixed_t       vtop;
+#ifndef ESLOPE
+	fixed_t       vtop;
+#endif
 	INT32           lightnum;
 	INT32           i, p;
 	lightlist_t   *light;
 	r_lightlist_t *rlight;
+	INT32 range;
 #ifdef ESLOPE
 	vertex_t segleft, segright;
 	fixed_t ceilingfrontslide, floorfrontslide, ceilingbackslide, floorbackslide;
 #endif
 	static size_t maxdrawsegs = 0;
 
+#ifdef ESLOPE
 	maskedtextureheight = NULL;
-
 	//initialize segleft and segright
 	memset(&segleft, 0x00, sizeof(segleft));
 	memset(&segright, 0x00, sizeof(segright));
+#endif
 
 	if (ds_p == drawsegs+maxdrawsegs)
 	{
@@ -1556,7 +1652,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	if (stop > start)
 	{
 		ds_p->scale2 = R_ScaleFromGlobalAngle(viewangle + xtoviewangle[stop]);
-		ds_p->scalestep = rw_scalestep = (ds_p->scale2 - rw_scale) / (stop-start);
+		range = stop-start;
 	}
 	else
 	{
@@ -1577,7 +1673,10 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		}
 #endif
 		ds_p->scale2 = ds_p->scale1;
+		range = 1;
 	}
+
+	ds_p->scalestep = rw_scalestep = (ds_p->scale2 - rw_scale) / (range);
 
 	// calculate texture boundaries
 	//  and decide if floor / ceiling marks are needed
@@ -1801,7 +1900,10 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		{
 			ds_p->silhouette = SIL_BOTTOM;
 #ifdef ESLOPE
-			ds_p->bsilheight = (frontsector->f_slope ? INT32_MAX : frontsector->floorheight);
+			if ((backsector->f_slope ? P_GetZAt(backsector->f_slope, viewx, viewy) : backsector->floorheight) > viewz)
+				ds_p->bsilheight = INT32_MAX;
+			else
+				ds_p->bsilheight = (frontsector->f_slope ? INT32_MAX : frontsector->floorheight);
 #else
 			ds_p->bsilheight = frontsector->floorheight;
 #endif
@@ -1825,7 +1927,10 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		{
 			ds_p->silhouette |= SIL_TOP;
 #ifdef ESLOPE
-			ds_p->tsilheight = (frontsector->c_slope ? INT32_MIN : frontsector->ceilingheight);
+			if ((backsector->c_slope ? P_GetZAt(backsector->c_slope, viewx, viewy) : backsector->ceilingheight) < viewz)
+				ds_p->tsilheight = INT32_MIN;
+			else
+				ds_p->tsilheight = (frontsector->c_slope ? INT32_MIN : frontsector->ceilingheight);
 #else
 			ds_p->tsilheight = frontsector->ceilingheight;
 #endif
@@ -1863,21 +1968,25 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			ds_p->silhouette |= SIL_TOP;
 		}
 
-#ifdef ESLOPE
-		// This causes issues with slopes.
-		if (!(frontsector->f_slope || frontsector->c_slope || backsector->f_slope || backsector->c_slope))
-#endif
 		//SoM: 3/25/2000: This code fixes an automap bug that didn't check
 		// frontsector->ceiling and backsector->floor to see if a door was closed.
 		// Without the following code, sprites get displayed behind closed doors.
 		{
+#ifdef ESLOPE
+			if (doorclosed || (worldhigh <= worldbottom && worldhighslope <= worldbottomslope))
+#else
 			if (doorclosed || backsector->ceilingheight <= frontsector->floorheight)
+#endif
 			{
 				ds_p->sprbottomclip = negonearray;
 				ds_p->bsilheight = INT32_MAX;
 				ds_p->silhouette |= SIL_BOTTOM;
 			}
+#ifdef ESLOPE
+			if (doorclosed || (worldlow >= worldtop && worldlowslope >= worldtopslope))
+#else
 			if (doorclosed || backsector->floorheight >= frontsector->ceilingheight)
+#endif
 			{                   // killough 1/17/98, 2/8/98
 				ds_p->sprtopclip = screenheightarray;
 				ds_p->tsilheight = INT32_MIN;
@@ -1937,8 +2046,13 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			markceiling = false;
 		}
 
+#ifdef ESLOPE
+		if ((worldhigh <= worldbottom && worldhighslope <= worldbottomslope)
+		|| (worldlow >= worldtop && worldlowslope >= worldtopslope))
+#else
 		if (backsector->ceilingheight <= frontsector->floorheight ||
 		    backsector->floorheight >= frontsector->ceilingheight)
+#endif
 		{
 			// closed door
 			markceiling = markfloor = true;
@@ -2121,8 +2235,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 					for (r2 = frontsector->ffloors; r2; r2 = r2->next)
 					{
-						if (!(r2->flags & FF_EXISTS) || !(r2->flags & FF_RENDERSIDES)
-						    || *r2->topheight < lowcut || *r2->bottomheight > highcut) ///TODO: make these account for slopes -Red
+						if (!(r2->flags & FF_EXISTS) || !(r2->flags & FF_RENDERSIDES))
 							continue;
 
 						if (r2->norender == leveltime)
@@ -2154,9 +2267,13 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 						} else
 							low2 = lowslope2 = *r2->bottomheight;
 
-						if ((high1 > high2 && highslope1 > highslope2) || (low1 < low2 && lowslope1 < lowslope2))
+						if ((high2 < lowcut || highslope2 < lowcutslope) || (low2 > highcut || lowslope2 > highcutslope))
+							continue;
+						if ((high1 > high2 || highslope1 > highslope2) || (low1 < low2 || lowslope1 < lowslope2))
 							continue;
 #else
+						if (*r2->topheight < lowcut || *r2->bottomheight > highcut)
+							continue;
 						if (*rover->topheight > *r2->topheight || *rover->bottomheight < *r2->bottomheight)
 							continue;
 #endif
@@ -2201,8 +2318,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 					for (r2 = backsector->ffloors; r2; r2 = r2->next)
 					{
-						if (!(r2->flags & FF_EXISTS) || !(r2->flags & FF_RENDERSIDES)
-						    || *r2->topheight < lowcut || *r2->bottomheight > highcut) ///TODO: make these account for slopes -Red
+						if (!(r2->flags & FF_EXISTS) || !(r2->flags & FF_RENDERSIDES))
 							continue;
 
 						if (r2->norender == leveltime)
@@ -2234,9 +2350,13 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 						} else
 							low2 = lowslope2 = *r2->bottomheight;
 
-						if ((high1 > high2 && highslope1 > highslope2) || (low1 < low2 && lowslope1 < lowslope2))
+						if ((high2 < lowcut || highslope2 < lowcutslope) || (low2 > highcut || lowslope2 > highcutslope))
+							continue;
+						if ((high1 > high2 || highslope1 > highslope2) || (low1 < low2 || lowslope1 < lowslope2))
 							continue;
 #else
+						if (*r2->topheight < lowcut || *r2->bottomheight > highcut)
+							continue;
 						if (*rover->topheight > *r2->topheight || *rover->bottomheight < *r2->bottomheight)
 							continue;
 #endif
@@ -2438,11 +2558,11 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 #ifdef ESLOPE
 	if (frontsector->c_slope) {
 		fixed_t topfracend = (centeryfrac>>4) - FixedMul (worldtopslope, ds_p->scale2);
-		topstep = (topfracend-topfrac)/(stop-start+1);
+		topstep = (topfracend-topfrac)/(range);
 	}
 	if (frontsector->f_slope) {
 		fixed_t bottomfracend = (centeryfrac>>4) - FixedMul (worldbottomslope, ds_p->scale2);
-		bottomstep = (bottomfracend-bottomfrac)/(stop-start+1);
+		bottomstep = (bottomfracend-bottomfrac)/(range);
 	}
 #endif
 
@@ -2503,7 +2623,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 #ifdef ESLOPE
 			rlight->height = (centeryfrac>>4) - FixedMul(leftheight, rw_scale);
 			rlight->heightstep = (centeryfrac>>4) - FixedMul(rightheight, ds_p->scale2);
-			rlight->heightstep = (rlight->heightstep-rlight->height)/(stop-start+1);
+			rlight->heightstep = (rlight->heightstep-rlight->height)/(range);
 #else
 			rlight->height = (centeryfrac>>4) - FixedMul((light->height - viewz) >> 4, rw_scale);
 			rlight->heightstep = -FixedMul (rw_scalestep, (light->height - viewz) >> 4);
@@ -2530,7 +2650,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 				rlight->botheight = (centeryfrac>>4) - FixedMul(leftheight, rw_scale);
 				rlight->botheightstep = (centeryfrac>>4) - FixedMul(rightheight, ds_p->scale2);
-				rlight->botheightstep = (rlight->botheightstep-rlight->botheight)/(stop-start+1);
+				rlight->botheightstep = (rlight->botheightstep-rlight->botheight)/(range);
 
 #else
 				rlight->botheight = (centeryfrac >> 4) - FixedMul((*light->caster->bottomheight - viewz) >> 4, rw_scale);
@@ -2559,7 +2679,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 #ifdef ESLOPE
 			ffloor[i].f_pos_slope >>= 4;
 			ffloor[i].f_frac = (centeryfrac>>4) - FixedMul(ffloor[i].f_pos, rw_scale);
-			ffloor[i].f_step = ((centeryfrac>>4) - FixedMul(ffloor[i].f_pos_slope, ds_p->scale2) - ffloor[i].f_frac)/(stop-start+1);
+			ffloor[i].f_step = ((centeryfrac>>4) - FixedMul(ffloor[i].f_pos_slope, ds_p->scale2) - ffloor[i].f_frac)/(range);
 #else
 			ffloor[i].f_step = FixedMul(-rw_scalestep, ffloor[i].f_pos);
 			ffloor[i].f_frac = (centeryfrac>>4) - FixedMul(ffloor[i].f_pos, rw_scale);
@@ -2576,11 +2696,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		worldlowslope >>= 4;
 #endif
 
-		if (worldhigh < worldtop
-#ifdef ESLOPE
-			|| worldhighslope <= worldtopslope
-#endif
-			)
+		if (toptexture)
 		{
 			pixhigh = (centeryfrac>>4) - FixedMul (worldhigh, rw_scale);
 			pixhighstep = -FixedMul (rw_scalestep,worldhigh);
@@ -2588,23 +2704,19 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 #ifdef ESLOPE
 			if (backsector->c_slope) {
 				fixed_t topfracend = (centeryfrac>>4) - FixedMul (worldhighslope, ds_p->scale2);
-				pixhighstep = (topfracend-pixhigh)/(stop-start+1);
+				pixhighstep = (topfracend-pixhigh)/(range);
 			}
 #endif
 		}
 
-		if (worldlow > worldbottom
-#ifdef ESLOPE
-			|| worldlowslope >= worldbottomslope
-#endif
-			)
+		if (bottomtexture)
 		{
 			pixlow = (centeryfrac>>4) - FixedMul (worldlow, rw_scale);
 			pixlowstep = -FixedMul (rw_scalestep,worldlow);
 #ifdef ESLOPE
 			if (backsector->f_slope) {
 				fixed_t bottomfracend = (centeryfrac>>4) - FixedMul (worldlowslope, ds_p->scale2);
-				pixlowstep = (bottomfracend-pixlow)/(stop-start+1);
+				pixlowstep = (bottomfracend-pixlow)/(range);
 			}
 #endif
 		}
@@ -2612,7 +2724,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		{
 			ffloor_t * rover;
 #ifdef ESLOPE
-			fixed_t rovertest;
+			fixed_t roverleft, roverright;
 			fixed_t planevistest;
 #endif
 			i = 0;
@@ -2631,44 +2743,46 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 					if (*rover->b_slope || *rover->t_slope)
 						backsector->hasslope = true;
 
-					rovertest = (*rover->b_slope ? P_GetZAt(*rover->b_slope, backsector->soundorg.x, backsector->soundorg.y) : *rover->bottomheight) - viewz;
+					roverleft = (*rover->b_slope ? P_GetZAt(*rover->b_slope, segleft.x, segleft.y) : *rover->bottomheight) - viewz;
+					roverright = (*rover->b_slope ? P_GetZAt(*rover->b_slope, segright.x, segright.y) : *rover->bottomheight) - viewz;
 					planevistest = (*rover->b_slope ? P_GetZAt(*rover->b_slope, viewx, viewy) : *rover->bottomheight);
 
-					if (rovertest>>4 <= worldhigh &&
-					    rovertest>>4 >= worldlow &&
+					if ((roverleft>>4 <= worldhigh || roverright>>4 <= worldhighslope) &&
+					    (roverleft>>4 >= worldlow || roverright>>4 >= worldlowslope) &&
 					    ((viewz < planevistest && !(rover->flags & FF_INVERTPLANES)) ||
 					     (viewz > planevistest && (rover->flags & FF_BOTHPLANES))))
 					{
 						//ffloor[i].slope = *rover->b_slope;
-						ffloor[i].b_pos = (*rover->b_slope ? P_GetZAt(*rover->b_slope, segleft.x, segleft.y) : *rover->bottomheight) - viewz;
-						ffloor[i].b_pos_slope = (*rover->b_slope ? P_GetZAt(*rover->b_slope, segright.x, segright.y) : *rover->bottomheight) - viewz;
+						ffloor[i].b_pos = roverleft;
+						ffloor[i].b_pos_slope = roverright;
 						ffloor[i].b_pos >>= 4;
 						ffloor[i].b_pos_slope >>= 4;
 						ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
 						ffloor[i].b_step = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos_slope, ds_p->scale2);
-						ffloor[i].b_step = (ffloor[i].b_step-ffloor[i].b_frac)/(stop-start+1);
+						ffloor[i].b_step = (ffloor[i].b_step-ffloor[i].b_frac)/(range);
 						i++;
 					}
 
 					if (i >= MAXFFLOORS)
 						break;
 
-					rovertest = (*rover->t_slope ? P_GetZAt(*rover->t_slope, backsector->soundorg.x, backsector->soundorg.y) : *rover->topheight) - viewz;
+					roverleft = (*rover->t_slope ? P_GetZAt(*rover->t_slope, segleft.x, segleft.y) : *rover->topheight) - viewz;
+					roverright = (*rover->t_slope ? P_GetZAt(*rover->t_slope, segright.x, segright.y) : *rover->topheight) - viewz;
 					planevistest = (*rover->t_slope ? P_GetZAt(*rover->t_slope, viewx, viewy) : *rover->topheight);
 
-					if (rovertest>>4 <= worldhigh &&
-					    rovertest>>4 >= worldlow &&
+					if ((roverleft>>4 <= worldhigh || roverright>>4 <= worldhighslope) &&
+					    (roverleft>>4 >= worldlow || roverright>>4 >= worldlowslope) &&
 					    ((viewz > planevistest && !(rover->flags & FF_INVERTPLANES)) ||
 					     (viewz < planevistest && (rover->flags & FF_BOTHPLANES))))
 					{
 						//ffloor[i].slope = *rover->t_slope;
-						ffloor[i].b_pos = (*rover->t_slope ? P_GetZAt(*rover->t_slope, segleft.x, segleft.y) : *rover->topheight) - viewz;
-						ffloor[i].b_pos_slope = (*rover->t_slope ? P_GetZAt(*rover->t_slope, segright.x, segright.y) : *rover->topheight) - viewz;
+						ffloor[i].b_pos = roverleft;
+						ffloor[i].b_pos_slope = roverright;
 						ffloor[i].b_pos >>= 4;
 						ffloor[i].b_pos_slope >>= 4;
 						ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
 						ffloor[i].b_step = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos_slope, ds_p->scale2);
-						ffloor[i].b_step = (ffloor[i].b_step-ffloor[i].b_frac)/(stop-start+1);
+						ffloor[i].b_step = (ffloor[i].b_step-ffloor[i].b_frac)/(range);
 						i++;
 					}
 #else
@@ -2716,44 +2830,46 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 					if (*rover->b_slope || *rover->t_slope)
 						frontsector->hasslope = true;
 
-					rovertest = (*rover->b_slope ? P_GetZAt(*rover->b_slope, frontsector->soundorg.x, frontsector->soundorg.y) : *rover->bottomheight) - viewz;
+					roverleft = (*rover->b_slope ? P_GetZAt(*rover->b_slope, segleft.x, segleft.y) : *rover->bottomheight) - viewz;
+					roverright = (*rover->b_slope ? P_GetZAt(*rover->b_slope, segright.x, segright.y) : *rover->bottomheight) - viewz;
 					planevistest = (*rover->b_slope ? P_GetZAt(*rover->b_slope, viewx, viewy) : *rover->bottomheight);
 
-					if (rovertest>>4 <= worldtop &&
-					    rovertest>>4 >= worldbottom &&
+					if ((roverleft>>4 <= worldhigh || roverright>>4 <= worldhighslope) &&
+					    (roverleft>>4 >= worldlow || roverright>>4 >= worldlowslope) &&
 					    ((viewz < planevistest && !(rover->flags & FF_INVERTPLANES)) ||
 					     (viewz > planevistest && (rover->flags & FF_BOTHPLANES))))
 					{
 						//ffloor[i].slope = *rover->b_slope;
-						ffloor[i].b_pos = (*rover->b_slope ? P_GetZAt(*rover->b_slope, segleft.x, segleft.y) : *rover->bottomheight) - viewz;
-						ffloor[i].b_pos_slope = (*rover->b_slope ? P_GetZAt(*rover->b_slope, segright.x, segright.y) : *rover->bottomheight) - viewz;
+						ffloor[i].b_pos = roverleft;
+						ffloor[i].b_pos_slope = roverright;
 						ffloor[i].b_pos >>= 4;
 						ffloor[i].b_pos_slope >>= 4;
 						ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
 						ffloor[i].b_step = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos_slope, ds_p->scale2);
-						ffloor[i].b_step = (ffloor[i].b_step-ffloor[i].b_frac)/(stop-start+1);
+						ffloor[i].b_step = (ffloor[i].b_step-ffloor[i].b_frac)/(range);
 						i++;
 					}
 
 					if (i >= MAXFFLOORS)
 						break;
 
-					rovertest = (*rover->t_slope ? P_GetZAt(*rover->t_slope, frontsector->soundorg.x, frontsector->soundorg.y) : *rover->topheight) - viewz;
+					roverleft = (*rover->t_slope ? P_GetZAt(*rover->t_slope, segleft.x, segleft.y) : *rover->topheight) - viewz;
+					roverright = (*rover->t_slope ? P_GetZAt(*rover->t_slope, segright.x, segright.y) : *rover->topheight) - viewz;
 					planevistest = (*rover->t_slope ? P_GetZAt(*rover->t_slope, viewx, viewy) : *rover->topheight);
 
-					if (rovertest>>4 <= worldtop &&
-					    rovertest>>4 >= worldbottom &&
+					if ((roverleft>>4 <= worldhigh || roverright>>4 <= worldhighslope) &&
+					    (roverleft>>4 >= worldlow || roverright>>4 >= worldlowslope) &&
 					    ((viewz > planevistest && !(rover->flags & FF_INVERTPLANES)) ||
 					     (viewz < planevistest && (rover->flags & FF_BOTHPLANES))))
 					{
 						//ffloor[i].slope = *rover->t_slope;
-						ffloor[i].b_pos = (*rover->t_slope ? P_GetZAt(*rover->t_slope, segleft.x, segleft.y) : *rover->topheight) - viewz;
-						ffloor[i].b_pos_slope = (*rover->t_slope ? P_GetZAt(*rover->t_slope, segright.x, segright.y) : *rover->topheight) - viewz;
+						ffloor[i].b_pos = roverleft;
+						ffloor[i].b_pos_slope = roverright;
 						ffloor[i].b_pos >>= 4;
 						ffloor[i].b_pos_slope >>= 4;
 						ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
 						ffloor[i].b_step = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos_slope, ds_p->scale2);
-						ffloor[i].b_step = (ffloor[i].b_step-ffloor[i].b_frac)/(stop-start+1);
+						ffloor[i].b_step = (ffloor[i].b_step-ffloor[i].b_frac)/(range);
 						i++;
 					}
 #else

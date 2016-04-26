@@ -517,7 +517,9 @@ static void R_InitTextureMapping(void)
 	focallength = FixedDiv(centerxfrac,
 		FINETANGENT(FINEANGLES/4+/*cv_fov.value*/ FIELDOFVIEW/2));
 
+#ifdef ESLOPE
 	focallengthf = FIXED_TO_FLOAT(focallength);
+#endif
 
 	for (i = 0; i < FINEANGLES/2; i++)
 	{
