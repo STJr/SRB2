@@ -592,9 +592,13 @@ static void ST_drawDebugInfo(void)
 
 	if (cv_debug & DBG_RANDOMIZER) // randomizer testing
 	{
+		fixed_t peekres = P_RandomPeek();
+		peekres *= 10000;     // Change from fixed point
+		peekres >>= FRACBITS; // to displayable decimal
+
 		V_DrawRightAlignedString(320, height - 16, V_MONOSPACE, va("Init: %08x", P_GetInitSeed()));
 		V_DrawRightAlignedString(320, height - 8,  V_MONOSPACE, va("Seed: %08x", P_GetRandSeed()));
-		V_DrawRightAlignedString(320, height,      V_MONOSPACE, va("==  : %8d", P_RandomPeek()));
+		V_DrawRightAlignedString(320, height,      V_MONOSPACE, va("==  :    .%04d", peekres));
 
 		height -= 32;
 	}
@@ -1889,7 +1893,7 @@ static void ST_overlayDrawer(void)
 	ST_drawDebugInfo();
 }
 
-void ST_Drawer(boolean refresh)
+void ST_Drawer(void)
 {
 #ifdef SEENAMES
 	if (cv_seenames.value && cv_allowseenames.value && displayplayer == consoleplayer && seenplayer && seenplayer->mo)
@@ -1906,8 +1910,11 @@ void ST_Drawer(boolean refresh)
 	}
 #endif
 
+	// Doom's status bar only updated if necessary.
+	// However, ours updates every frame regardless, so the "refresh" param was removed
+	//(void)refresh;
+
 	// force a set of the palette by using doPaletteStuff()
-	(void)refresh; //?
 	if (vid.recalc)
 		st_palette = -1;
 

@@ -1156,13 +1156,17 @@ static boolean PIT_CheckLine(line_t *ld)
 	{
 		tmceilingz = opentop;
 		ceilingline = ld;
+#ifdef ESLOPE
 		tmceilingslope = opentopslope;
+#endif
 	}
 
 	if (openbottom > tmfloorz)
 	{
 		tmfloorz = openbottom;
+#ifdef ESLOPE
 		tmfloorslope = openbottomslope;
+#endif
 	}
 
 	if (highceiling > tmdrpoffceilz)
@@ -2061,21 +2065,26 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 	thing->ceilingz = tmceilingz;
 
 #ifdef ESLOPE
-	// Assign thing's standingslope if needed
-	if (thing->z <= tmfloorz && !(thing->eflags & MFE_VERTICALFLIP)) {
-		if (!startingonground && tmfloorslope)
-			P_HandleSlopeLanding(thing, tmfloorslope);
+	if (!(thing->flags & MF_NOCLIPHEIGHT))
+	{
+		// Assign thing's standingslope if needed
+		if (thing->z <= tmfloorz && !(thing->eflags & MFE_VERTICALFLIP)) {
+			if (!startingonground && tmfloorslope)
+				P_HandleSlopeLanding(thing, tmfloorslope);
 
-		if (thing->momz <= 0)
-			thing->standingslope = tmfloorslope;
-	}
-	else if (thing->z+thing->height >= tmceilingz && (thing->eflags & MFE_VERTICALFLIP)) {
-		if (!startingonground && tmceilingslope)
-			P_HandleSlopeLanding(thing, tmceilingslope);
+			if (thing->momz <= 0)
+				thing->standingslope = tmfloorslope;
+		}
+		else if (thing->z+thing->height >= tmceilingz && (thing->eflags & MFE_VERTICALFLIP)) {
+			if (!startingonground && tmceilingslope)
+				P_HandleSlopeLanding(thing, tmceilingslope);
 
-		if (thing->momz >= 0)
-			thing->standingslope = tmceilingslope;
+			if (thing->momz >= 0)
+				thing->standingslope = tmceilingslope;
+		}
 	}
+	else // don't set standingslope if you're not going to clip against it
+		thing->standingslope = NULL;
 #endif
 
 	thing->x = x;

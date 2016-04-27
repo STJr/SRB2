@@ -88,17 +88,17 @@ static int lib_print(lua_State *L)
 // M_RANDOM
 //////////////
 
-static int lib_pRandom(lua_State *L)
+static int lib_pRandomFixed(lua_State *L)
 {
 	NOHUD
-	lua_pushinteger(L, P_Random());
+	lua_pushfixed(L, P_RandomFixed());
 	return 1;
 }
 
-static int lib_pSignedRandom(lua_State *L)
+static int lib_pRandomByte(lua_State *L)
 {
 	NOHUD
-	lua_pushinteger(L, P_SignedRandom());
+	lua_pushinteger(L, P_RandomByte());
 	return 1;
 }
 
@@ -123,6 +123,30 @@ static int lib_pRandomRange(lua_State *L)
 		b = c;
 	}
 	lua_pushinteger(L, P_RandomRange(a, b));
+	return 1;
+}
+
+// Deprecated, macros, etc.
+static int lib_pRandom(lua_State *L)
+{
+	NOHUD
+	LUA_Deprecated(L, "P_Random", "P_RandomByte");
+	lua_pushinteger(L, P_RandomByte());
+	return 1;
+}
+
+static int lib_pSignedRandom(lua_State *L)
+{
+	NOHUD
+	lua_pushinteger(L, P_SignedRandom());
+	return 1;
+}
+
+static int lib_pRandomChance(lua_State *L)
+{
+	fixed_t p = luaL_checkfixed(L, 1);
+	NOHUD
+	lua_pushboolean(L, P_RandomChance(p));
 	return 1;
 }
 
@@ -1929,10 +1953,13 @@ static luaL_Reg lib[] = {
 	{"print", lib_print},
 
 	// m_random
-	{"P_Random",lib_pRandom},
-	{"P_SignedRandom",lib_pSignedRandom},
+	{"P_RandomFixed",lib_pRandomFixed},
+	{"P_RandomByte",lib_pRandomByte},
 	{"P_RandomKey",lib_pRandomKey},
 	{"P_RandomRange",lib_pRandomRange},
+	{"P_Random",lib_pRandom}, // DEPRECATED
+	{"P_SignedRandom",lib_pSignedRandom}, // MACRO
+	{"P_RandomChance",lib_pRandomChance}, // MACRO
 
 	// p_maputil
 	{"P_AproxDistance",lib_pAproxDistance},
