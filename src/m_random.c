@@ -110,7 +110,7 @@ ATTRINLINE static fixed_t FUNCINLINE __internal_prng__(void)
 fixed_t P_RandomFixed(void)
 {
 #else
-UINT8 P_RandomFixedD(const char *rfile, INT32 rline)
+fixed_t P_RandomFixedD(const char *rfile, INT32 rline)
 {
 	CONS_Printf("P_RandomFixed() at: %sp %d\n", rfile, rline);
 #endif
