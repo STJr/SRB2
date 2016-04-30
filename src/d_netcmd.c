@@ -597,7 +597,9 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_gif_optimize);
 	CV_RegisterVar(&cv_gif_downscale);
 
+#ifdef WALLSPLATS
 	CV_RegisterVar(&cv_splats);
+#endif
 
 	// register these so it is saved to config
 	if ((username = I_GetUserName()))

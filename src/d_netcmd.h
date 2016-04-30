@@ -81,7 +81,9 @@ extern consvar_t cv_useranalog, cv_useranalog2;
 extern consvar_t cv_analog, cv_analog2;
 
 extern consvar_t cv_netstat;
+#ifdef WALLSPLATS
 extern consvar_t cv_splats;
+#endif
 
 extern consvar_t cv_countdowntime;
 extern consvar_t cv_runscripts;
