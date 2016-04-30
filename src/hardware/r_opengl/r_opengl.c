@@ -2307,22 +2307,22 @@ EXPORT void HWRAPI(DoScreenWipe)(float alpha)
 
 			// Bottom left
 			pglMultiTexCoord2f(GL_TEXTURE0, 0.0f, 0.0f);
-			pglMultiTexCoord2f(GL_TEXTURE1, 0.0f, 0.0f);
+			pglMultiTexCoord2f(GL_TEXTURE1, 0.0f, 1.0f);
 			pglVertex3f(-1.0f, -1.0f, 1.0f);
 
 			// Top left
 			pglMultiTexCoord2f(GL_TEXTURE0, 0.0f, yfix);
-			pglMultiTexCoord2f(GL_TEXTURE1, 0.0f, 1.0f);
+			pglMultiTexCoord2f(GL_TEXTURE1, 0.0f, 0.0f);
 			pglVertex3f(-1.0f, 1.0f, 1.0f);
 
 			// Top right
 			pglMultiTexCoord2f(GL_TEXTURE0, xfix, yfix);
-			pglMultiTexCoord2f(GL_TEXTURE1, 1.0f, 1.0f);
+			pglMultiTexCoord2f(GL_TEXTURE1, 1.0f, 0.0f);
 			pglVertex3f(1.0f, 1.0f, 1.0f);
 
 			// Bottom right
 			pglMultiTexCoord2f(GL_TEXTURE0, xfix, 0.0f);
-			pglMultiTexCoord2f(GL_TEXTURE1, 1.0f, 0.0f);
+			pglMultiTexCoord2f(GL_TEXTURE1, 1.0f, 1.0f);
 			pglVertex3f(1.0f, -1.0f, 1.0f);
 		pglEnd();
 
