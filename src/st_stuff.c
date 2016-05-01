@@ -259,9 +259,9 @@ hudinfo_t hudinfo[NUMHUDITEMS] =
 	{ 282,  14}, // HUD_ND_LIVESPIC2P
 	{ 317,  17}, // HUD_ND_LIVESNUM2P
 
-	{ 317, 177}, // HUD_BOSS
+	{  80, 184}, // HUD_BOSS
 	{   3, 177}, // HUD_ND_BOSS
-	{ 160, 177}, // HUD_ND_BOSS2P
+	{  64, 177}, // HUD_ND_BOSS2P
 };
 
 //
@@ -1024,11 +1024,6 @@ static void ST_drawLives(void)
 	}
 }
 
-static inline void ST_drawBossHealth(void)
-{
-
-}
-
 static void ST_drawNDScore(void)
 {
 	if (gametype == GT_COOP && (netgame || multiplayer) && (maptol & TOL_TD))
@@ -1359,13 +1354,24 @@ static void ST_drawNDLives(void)
 	}
 }
 
-static inline void ST_drawNDBossHealth(void)
+static inline void ST_drawBossHealth(void)
 {
 	thinker_t *th;
 	mobj_t *mo2;
 	INT32 bosshealth = 0, bosshealthmax = 0;
 	INT32 x = hudinfo[HUD_ND_BOSS].x, y = hudinfo[HUD_ND_BOSS].y;
 	INT32 i;
+
+	if (twoplayer)
+	{
+		x = hudinfo[HUD_ND_BOSS2P].x;
+		y = hudinfo[HUD_ND_BOSS2P].y;
+	}
+	if (!(maptol & TOL_ND))
+	{
+		x = hudinfo[HUD_BOSS].x;
+		y = hudinfo[HUD_BOSS].y;
+	}
 	for (th = thinkercap.next; th != &thinkercap; th = th->next)
 	{
 		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
@@ -2040,8 +2046,10 @@ static void ST_DrawNDHUD()
 #endif
 	)
 		ST_drawNDLives();
-
-	ST_drawNDBossHealth();
+#ifdef HAVE_BLUA
+	if (LUA_HudEnabled(hud_bosshealth))
+#endif // HAVE_BLUA
+	ST_drawBossHealth();
 }
 
 static void ST_drawWeaponRing(powertype_t weapon, INT32 rwflag, INT32 wepflag, INT32 xoffs, patch_t *pat)
@@ -2504,6 +2512,10 @@ static void ST_overlayDrawer(void)
 #endif
 			)
 				ST_drawLives();
+#ifdef HAVE_BLUA
+			if (LUA_HudEnabled(hud_bosshealth))
+#endif // HAVE_BLUA
+			ST_drawBossHealth();
 		}
 	}
 

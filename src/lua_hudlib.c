@@ -53,6 +53,12 @@ static const char *const hud_disable_options[] = {
 	"coopemeralds",
 	"tokens",
 	"tabemblems",
+	"ndringenergy",
+	"ndemblems",
+	"ndtime",
+	"ndscore",
+	"ndlives",
+	"bosshealth",
 	NULL};
 
 enum hudinfo {
