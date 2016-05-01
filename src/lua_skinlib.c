@@ -244,7 +244,7 @@ static int lib_getSkin(lua_State *L)
 	{
 		i = luaL_checkinteger(L, 2);
 		if (i < 0 || i >= MAXSKINS)
-			return luaL_error(L, "skins[] index cannot exceed MAXSKINS");
+			return luaL_error(L, "skins[] index %d out of range (0 - %d)", i, MAXSKINS-1);
 		if (i >= numskins)
 			return 0;
 		LUA_PushUserdata(L, &skins[i], META_SKIN);

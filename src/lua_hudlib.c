@@ -166,6 +166,8 @@ static int lib_getHudInfo(lua_State *L)
 	lua_remove(L, 1);
 
 	i = luaL_checkinteger(L, 1);
+	if (i >= NUMHUDITEMS)
+		return luaL_error(L, "hudinfo[] index %d out of range (0 - %d)", i, NUMHUDITEMS-1);
 	LUA_PushUserdata(L, &hudinfo[i], META_HUDINFO);
 	return 1;
 }
