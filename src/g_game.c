@@ -1617,6 +1617,32 @@ void G_DoLoadLevel(boolean resetplayer)
 {
 	INT32 i;
 
+	if (splitscreen || twoplayer)
+	{
+		// maptol hasn't been set yet
+		if ((mapheaderinfo[gamemap-1]->typeoflevel & TOL_TD) && gametype == GT_COOP)
+		{
+			if (twoplayer && (mapheaderinfo[gamemap-1]->levelflags & LF_TDNOSHAREDCAMERA))
+			{
+				splitscreen = true;
+				twoplayer = false;
+				R_ExecuteSetViewSize(); // Just call this, since the screen has changed size
+			}
+			else if (splitscreen && !(mapheaderinfo[gamemap-1]->levelflags & LF_TDNOSHAREDCAMERA))
+			{
+				splitscreen = false; // Don't call splitscreen_onchange, because it will attempt to add another player
+				twoplayer = true;
+				R_ExecuteSetViewSize(); // Just call this, since the screen has changed size
+			}
+		}
+		else if (twoplayer && !((mapheaderinfo[gamemap-1]->typeoflevel & TOL_TD) && gametype == GT_COOP))
+		{
+			splitscreen = true;
+			twoplayer = false;
+			R_ExecuteSetViewSize(); // Just call this, since the screen has changed size
+		}
+	}
+
 	// Make sure objectplace is OFF when you first start the level!
 	OP_ResetObjectplace();
 

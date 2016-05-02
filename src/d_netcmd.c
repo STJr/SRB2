@@ -1512,32 +1512,6 @@ void D_MapChange(INT32 mapnum, INT32 newgametype, boolean pultmode, boolean rese
 		WRITEUINT8(buf_p, newgametype);
 
 		WRITESTRINGN(buf_p, mapname, MAX_WADPATH);
-
-		if (splitscreen || twoplayer)
-		{
-			// maptol hasn't been set yet
-			if ((mapheaderinfo[mapnum-1]->typeoflevel & TOL_TD) && newgametype == GT_COOP)
-			{
-				if (twoplayer && (mapheaderinfo[mapnum-1]->levelflags & LF_TDNOSHAREDCAMERA))
-				{
-					splitscreen = true;
-					twoplayer = false;
-					R_ExecuteSetViewSize(); // Just call this, since the screen has changed size
-				}
-				else if (splitscreen && !(mapheaderinfo[mapnum-1]->levelflags & LF_TDNOSHAREDCAMERA))
-				{
-					splitscreen = false; // Don't call splitscreen_onchange, because it will attempt to add another player
-					twoplayer = true;
-					R_ExecuteSetViewSize(); // Just call this, since the screen has changed size
-				}
-			}
-			else if (twoplayer && !((mapheaderinfo[mapnum-1]->typeoflevel & TOL_TD) && newgametype == GT_COOP))
-			{
-				splitscreen = true;
-				twoplayer = false;
-				R_ExecuteSetViewSize(); // Just call this, since the screen has changed size
-			}
-		}
 	}
 
 	if (delay == 1)
