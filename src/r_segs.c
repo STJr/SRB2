@@ -288,6 +288,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	line_t *ldef;
 	sector_t *front, *back;
 	INT32 times, repeats;
+	INT64 overflow_test;
 #ifdef ESLOPE
 	INT32 range;
 #endif
@@ -485,7 +486,6 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 			spryscale = ds->scale1 + (x1 - ds->x1)*rw_scalestep;
 		}
 
-
 #ifndef ESLOPE
 		if (curline->linedef->flags & ML_DONTPEGBOTTOM)
 		{
@@ -523,6 +523,16 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 			// calculate lighting
 			if (maskedtexturecol[dc_x] != INT16_MAX)
 			{
+				// Check for overflows first
+				overflow_test = (INT64)centeryfrac - (((INT64)dc_texturemid*spryscale)>>FRACBITS);
+				if (overflow_test < 0) overflow_test = -overflow_test;
+				if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL)
+				{
+					// Eh, no, go away, don't waste our time
+					spryscale += rw_scalestep;
+					continue;
+				}
+
 				if (dc_numlights)
 				{
 					lighttable_t **xwalllights;
@@ -947,16 +957,38 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	// Set heights according to plane, or slope, whichever
 	{
 		fixed_t left_top, right_top, left_bottom, right_bottom;
+		INT64 overflow_test;
 
-		left_top = *pfloor->t_slope ? P_GetZAt(*pfloor->t_slope, ds->leftpos.x, ds->leftpos.y) : *pfloor->topheight;
-		right_top = *pfloor->t_slope ? P_GetZAt(*pfloor->t_slope, ds->rightpos.x, ds->rightpos.y) : *pfloor->topheight;
-		left_bottom = *pfloor->b_slope ? P_GetZAt(*pfloor->b_slope, ds->leftpos.x, ds->leftpos.y) : *pfloor->bottomheight;
-		right_bottom = *pfloor->b_slope ? P_GetZAt(*pfloor->b_slope, ds->rightpos.x, ds->rightpos.y) : *pfloor->bottomheight;
+		if (*pfloor->t_slope)
+		{
+			left_top = P_GetZAt(*pfloor->t_slope, ds->leftpos.x, ds->leftpos.y) - viewz;
+			right_top = P_GetZAt(*pfloor->t_slope, ds->rightpos.x, ds->rightpos.y) - viewz;
+		}
+		else
+			left_top = right_top = *pfloor->topheight - viewz;
 
-		left_top -= viewz;
-		right_top -= viewz;
-		left_bottom -= viewz;
-		right_bottom -= viewz;
+		if (*pfloor->b_slope)
+		{
+			left_bottom = P_GetZAt(*pfloor->b_slope, ds->leftpos.x, ds->leftpos.y) - viewz;
+			right_bottom = P_GetZAt(*pfloor->b_slope, ds->rightpos.x, ds->rightpos.y) - viewz;
+		}
+		else
+			left_bottom = right_bottom = *pfloor->bottomheight - viewz;
+
+		// overflow tests
+		// if any of these fail, abandon. likely we're too high up to see anything anyway
+		overflow_test = (INT64)centeryfrac - (((INT64)left_top*ds->scale1)>>FRACBITS);
+		if (overflow_test < 0) overflow_test = -overflow_test;
+		if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) return;
+		overflow_test = (INT64)centeryfrac - (((INT64)left_bottom*ds->scale1)>>FRACBITS);
+		if (overflow_test < 0) overflow_test = -overflow_test;
+		if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) return;
+		overflow_test = (INT64)centeryfrac - (((INT64)right_top*ds->scale2)>>FRACBITS);
+		if (overflow_test < 0) overflow_test = -overflow_test;
+		if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) return;
+		overflow_test = (INT64)centeryfrac - (((INT64)right_bottom*ds->scale2)>>FRACBITS);
+		if (overflow_test < 0) overflow_test = -overflow_test;
+		if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) return;
 
 		top_frac = centeryfrac - FixedMul(left_top, ds->scale1);
 		bottom_frac = centeryfrac - FixedMul(left_bottom, ds->scale1);
@@ -1132,19 +1164,6 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 				dc_colormap = frontsector->extra_colormap->colormap + (dc_colormap - colormaps);
 			if (pfloor->flags & FF_FOG && pfloor->master->frontsector->extra_colormap)
 				dc_colormap = pfloor->master->frontsector->extra_colormap->colormap + (dc_colormap - colormaps);
-
-			//Handle over/underflows before they happen.  This fixes the textures part of the FOF rendering bug.
-			//...for the most part, anyway.
-			if (((signed)dc_texturemid > 0 && (spryscale>>FRACBITS > INT32_MAX / (signed)dc_texturemid))
-			 || ((signed)dc_texturemid < 0 && (spryscale) && (signed)(dc_texturemid)>>FRACBITS < (INT32_MIN / spryscale)))
-			{
-				spryscale += rw_scalestep;
-#ifdef ESLOPE
-				top_frac += top_step;
-				bottom_frac += bottom_step;
-#endif
-				continue;
-			}
 
 #ifdef ESLOPE
 			sprtopscreen = windowtop = top_frac;
