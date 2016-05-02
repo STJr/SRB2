@@ -2046,13 +2046,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			markceiling = false;
 		}
 
-#ifdef ESLOPE
-		if ((worldhigh <= worldbottom && worldhighslope <= worldbottomslope)
-		|| (worldlow >= worldtop && worldlowslope >= worldtopslope))
-#else
 		if (backsector->ceilingheight <= frontsector->floorheight ||
 		    backsector->floorheight >= frontsector->ceilingheight)
-#endif
 		{
 			// closed door
 			markceiling = markfloor = true;
