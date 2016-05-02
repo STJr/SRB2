@@ -9316,6 +9316,9 @@ static inline int lib_getenum(lua_State *L)
 	} else if (fastcmp(word,"splitscreen")) {
 		lua_pushboolean(L, splitscreen);
 		return 1;
+	} else if (fastcmp(word,"twoplayer")) {
+		lua_pushboolean(L, twoplayer);
+		return 1;
 	} else if (fastcmp(word,"gamecomplete")) {
 		lua_pushboolean(L, gamecomplete);
 		return 1;
@@ -9351,6 +9354,9 @@ static inline int lib_getenum(lua_State *L)
 		return 1;
 	} else if (fastcmp(word,"mapmusic")) {
 		lua_pushinteger(L, mapmusic);
+		return 1;
+	} else if (fastcmp(word,"sharedlives")) {
+		lua_pushinteger(L, sharedlives);
 		return 1;
 	} else if (fastcmp(word,"server")) {
 		if (!playeringame[serverplayer])
