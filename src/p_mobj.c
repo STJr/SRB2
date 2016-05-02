@@ -38,7 +38,9 @@
 // protos.
 static CV_PossibleValue_t viewheight_cons_t[] = {{16, "MIN"}, {56, "MAX"}, {0, NULL}};
 consvar_t cv_viewheight = {"viewheight", VIEWHEIGHTS, 0, viewheight_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+#ifdef WALLSPLATS
 consvar_t cv_splats = {"splats", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+#endif
 
 actioncache_t actioncachehead;
 
@@ -652,9 +654,9 @@ void P_EmeraldManager(void)
 				break;
 
 			if (leveltime < TICRATE) // Start of map
-				spawnpoints[j]->threshold = 60*TICRATE + P_Random() * (TICRATE/5);
+				spawnpoints[j]->threshold = 60*TICRATE + P_RandomByte() * (TICRATE/5);
 			else
-				spawnpoints[j]->threshold = P_Random() * (TICRATE/5);
+				spawnpoints[j]->threshold = P_RandomByte() * (TICRATE/5);
 
 			break;
 		}
@@ -683,26 +685,26 @@ void P_ExplodeMissile(mobj_t *mo)
 		explodemo = P_SpawnMobj(mo->x, mo->y, mo->z, MT_EXPLODE);
 		P_SetScale(explodemo, mo->scale);
 		explodemo->destscale = mo->destscale;
-		explodemo->momx += (P_Random() % 32) * FixedMul(FRACUNIT/8, explodemo->scale);
-		explodemo->momy += (P_Random() % 32) * FixedMul(FRACUNIT/8, explodemo->scale);
+		explodemo->momx += (P_RandomByte() % 32) * FixedMul(FRACUNIT/8, explodemo->scale);
+		explodemo->momy += (P_RandomByte() % 32) * FixedMul(FRACUNIT/8, explodemo->scale);
 		S_StartSound(explodemo, sfx_pop);
 		explodemo = P_SpawnMobj(mo->x, mo->y, mo->z, MT_EXPLODE);
 		P_SetScale(explodemo, mo->scale);
 		explodemo->destscale = mo->destscale;
-		explodemo->momx += (P_Random() % 64) * FixedMul(FRACUNIT/8, explodemo->scale);
-		explodemo->momy -= (P_Random() % 64) * FixedMul(FRACUNIT/8, explodemo->scale);
+		explodemo->momx += (P_RandomByte() % 64) * FixedMul(FRACUNIT/8, explodemo->scale);
+		explodemo->momy -= (P_RandomByte() % 64) * FixedMul(FRACUNIT/8, explodemo->scale);
 		S_StartSound(explodemo, sfx_dmpain);
 		explodemo = P_SpawnMobj(mo->x, mo->y, mo->z, MT_EXPLODE);
 		P_SetScale(explodemo, mo->scale);
 		explodemo->destscale = mo->destscale;
-		explodemo->momx -= (P_Random() % 128) * FixedMul(FRACUNIT/8, explodemo->scale);
-		explodemo->momy += (P_Random() % 128) * FixedMul(FRACUNIT/8, explodemo->scale);
+		explodemo->momx -= (P_RandomByte() % 128) * FixedMul(FRACUNIT/8, explodemo->scale);
+		explodemo->momy += (P_RandomByte() % 128) * FixedMul(FRACUNIT/8, explodemo->scale);
 		S_StartSound(explodemo, sfx_pop);
 		explodemo = P_SpawnMobj(mo->x, mo->y, mo->z, MT_EXPLODE);
 		P_SetScale(explodemo, mo->scale);
 		explodemo->destscale = mo->destscale;
-		explodemo->momx -= (P_Random() % 96) * FixedMul(FRACUNIT/8, explodemo->scale);
-		explodemo->momy -= (P_Random() % 96) * FixedMul(FRACUNIT/8, explodemo->scale);
+		explodemo->momx -= (P_RandomByte() % 96) * FixedMul(FRACUNIT/8, explodemo->scale);
+		explodemo->momy -= (P_RandomByte() % 96) * FixedMul(FRACUNIT/8, explodemo->scale);
 		S_StartSound(explodemo, sfx_cybdth);
 
 		// Hack: Release an animal.
@@ -752,6 +754,7 @@ boolean P_InsideANonSolidFFloor(mobj_t *mobj, ffloor_t *rover)
 	return true;
 }
 
+#ifdef ESLOPE
 // P_GetFloorZ (and its ceiling counterpart)
 // Gets the floor height (or ceiling height) of the mobj's contact point in sector, assuming object's center if moved to [x, y]
 // If line is supplied, it's a divider line on the sector. Set it to NULL if you're not checking for collision with a line
@@ -855,10 +858,13 @@ static fixed_t HighestOnLine(fixed_t radius, fixed_t x, fixed_t y, line_t *line,
 			P_GetZAt(slope, v2.x, v2.y)
 		);
 }
+#endif
 
 fixed_t P_MobjFloorZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, line_t *line, boolean lowest, boolean perfect)
 {
+#ifdef ESLOPE
 	I_Assert(mobj != NULL);
+#endif
 	I_Assert(sector != NULL);
 #ifdef ESLOPE
 	if (sector->f_slope) {
@@ -930,13 +936,23 @@ fixed_t P_MobjFloorZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t
 
 		return HighestOnLine(mobj->radius, x, y, line, slope, lowest);
 	} else // Well, that makes it easy. Just get the floor height
+#else
+	(void)mobj;
+	(void)boundsec;
+	(void)x;
+	(void)y;
+	(void)line;
+	(void)lowest;
+	(void)perfect;
 #endif
 		return sector->floorheight;
 }
 
 fixed_t P_MobjCeilingZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, line_t *line, boolean lowest, boolean perfect)
 {
+#ifdef ESLOPE
 	I_Assert(mobj != NULL);
+#endif
 	I_Assert(sector != NULL);
 #ifdef ESLOPE
 	if (sector->c_slope) {
@@ -1008,6 +1024,14 @@ fixed_t P_MobjCeilingZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed
 
 		return HighestOnLine(mobj->radius, x, y, line, slope, lowest);
 	} else // Well, that makes it easy. Just get the ceiling height
+#else
+	(void)mobj;
+	(void)boundsec;
+	(void)x;
+	(void)y;
+	(void)line;
+	(void)lowest;
+	(void)perfect;
 #endif
 		return sector->ceilingheight;
 }
@@ -1015,7 +1039,9 @@ fixed_t P_MobjCeilingZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed
 // Now do the same as all above, but for cameras because apparently cameras are special?
 fixed_t P_CameraFloorZ(camera_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, line_t *line, boolean lowest, boolean perfect)
 {
+#ifdef ESLOPE
 	I_Assert(mobj != NULL);
+#endif
 	I_Assert(sector != NULL);
 #ifdef ESLOPE
 	if (sector->f_slope) {
@@ -1087,13 +1113,23 @@ fixed_t P_CameraFloorZ(camera_t *mobj, sector_t *sector, sector_t *boundsec, fix
 
 		return HighestOnLine(mobj->radius, x, y, line, slope, lowest);
 	} else // Well, that makes it easy. Just get the floor height
+#else
+	(void)mobj;
+	(void)boundsec;
+	(void)x;
+	(void)y;
+	(void)line;
+	(void)lowest;
+	(void)perfect;
 #endif
 		return sector->floorheight;
 }
 
 fixed_t P_CameraCeilingZ(camera_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, line_t *line, boolean lowest, boolean perfect)
 {
+#ifdef ESLOPE
 	I_Assert(mobj != NULL);
+#endif
 	I_Assert(sector != NULL);
 #ifdef ESLOPE
 	if (sector->c_slope) {
@@ -1165,6 +1201,14 @@ fixed_t P_CameraCeilingZ(camera_t *mobj, sector_t *sector, sector_t *boundsec, f
 
 		return HighestOnLine(mobj->radius, x, y, line, slope, lowest);
 	} else // Well, that makes it easy. Just get the ceiling height
+#else
+	(void)mobj;
+	(void)boundsec;
+	(void)x;
+	(void)y;
+	(void)line;
+	(void)lowest;
+	(void)perfect;
 #endif
 		return sector->ceilingheight;
 }
@@ -2106,8 +2150,13 @@ static boolean P_ZMovement(mobj_t *mo)
 	I_Assert(!P_MobjWasRemoved(mo));
 
 #ifdef ESLOPE
-	if (mo->standingslope && !P_IsObjectOnGround(mo))
+	if (mo->standingslope)
+	{
+		if (mo->flags & MF_NOCLIPHEIGHT)
+			mo->standingslope = NULL;
+		else if (!P_IsObjectOnGround(mo))
 			P_SlopeLaunch(mo);
+	}
 #endif
 
 	// Intercept the stupid 'fall through 3dfloors' bug
@@ -2405,12 +2454,12 @@ static boolean P_ZMovement(mobj_t *mo)
 							// If deafed, give the tumbleweed another random kick if it runs out of steam.
 							mom.z += P_MobjFlip(mo)*FixedMul(6*FRACUNIT, mo->scale);
 
-							if (P_Random() & 1)
+							if (P_RandomChance(FRACUNIT/2))
 								mom.x += FixedMul(6*FRACUNIT, mo->scale);
 							else
 								mom.x -= FixedMul(6*FRACUNIT, mo->scale);
 
-							if (P_Random() & 1)
+							if (P_RandomChance(FRACUNIT/2))
 								mom.y += FixedMul(6*FRACUNIT, mo->scale);
 							else
 								mom.y -= FixedMul(6*FRACUNIT, mo->scale);
@@ -2588,8 +2637,13 @@ static void P_PlayerZMovement(mobj_t *mo)
 		return;
 
 #ifdef ESLOPE
-	if (mo->standingslope && !P_IsObjectOnGround(mo))
+	if (mo->standingslope)
+	{
+		if (mo->flags & MF_NOCLIPHEIGHT)
+			mo->standingslope = NULL;
+		else if (!P_IsObjectOnGround(mo))
 			P_SlopeLaunch(mo);
+	}
 #endif
 
 	// clip movement
@@ -2886,7 +2940,7 @@ static boolean P_SceneryZMovement(mobj_t *mo)
 
 				for (i = 0; i < 4; ++i) // split into four
 				{
-					prandom = P_Random();
+					prandom = P_RandomByte();
 					explodemo = P_SpawnMobj(mo->x, mo->y, mo->z, MT_SMALLBUBBLE);
 					explodemo->momx += ((prandom & 0x0F) << (FRACBITS-2)) * (i & 2 ? -1 : 1);
 					explodemo->momy += ((prandom & 0xF0) << (FRACBITS-6)) * (i & 1 ? -1 : 1);
@@ -3218,13 +3272,13 @@ void P_MobjCheckWater(mobj_t *mobj)
 			// Create tons of bubbles
 			for (i = 0; i < bubblecount; i++)
 			{
-				// P_Random()s are called individually to allow consistency
+				// P_RandomByte()s are called individually to allow consistency
 				// across various compilers, since the order of function calls
 				// in C is not part of the ANSI specification.
-				prandom[0] = P_Random();
-				prandom[1] = P_Random();
-				prandom[2] = P_Random();
-				prandom[3] = P_Random();
+				prandom[0] = P_RandomByte();
+				prandom[1] = P_RandomByte();
+				prandom[2] = P_RandomByte();
+				prandom[3] = P_RandomByte();
 
 				bubbletype = MT_SMALLBUBBLE;
 				if (!(prandom[0] & 0x3)) // medium bubble chance up to 64 from 32
@@ -3698,10 +3752,15 @@ static void CalculatePrecipFloor(precipmobj_t *mobj)
 		mobjsecsubsec = mobj->subsector->sector;
 	else
 		return;
-	mobj->floorz = mobjsecsubsec->floorheight;
+	mobj->floorz =
+#ifdef ESLOPE
+				mobjsecsubsec->f_slope ? P_GetZAt(mobjsecsubsec->f_slope, mobj->x, mobj->y) :
+#endif
+				mobjsecsubsec->floorheight;
 	if (mobjsecsubsec->ffloors)
 	{
 		ffloor_t *rover;
+		fixed_t topheight;
 
 		for (rover = mobjsecsubsec->ffloors; rover; rover = rover->next)
 		{
@@ -3712,8 +3771,15 @@ static void CalculatePrecipFloor(precipmobj_t *mobj)
 			if (!(rover->flags & FF_BLOCKOTHERS) && !(rover->flags & FF_SWIMMABLE))
 				continue;
 
-			if (*rover->topheight > mobj->floorz)
-				mobj->floorz = *rover->topheight;
+#ifdef ESLOPE
+			if (*rover->t_slope)
+				topheight = P_GetZAt(*rover->t_slope, mobj->x, mobj->y);
+			else
+#endif
+			topheight = *rover->topheight;
+
+			if (topheight > mobj->floorz)
+				mobj->floorz = topheight;
 		}
 	}
 }
@@ -3826,7 +3892,7 @@ boolean P_BossTargetPlayer(mobj_t *actor, boolean closest)
 
 	// first time init, this allow minimum lastlook changes
 	if (actor->lastlook < 0)
-		actor->lastlook = P_Random();
+		actor->lastlook = P_RandomByte();
 	actor->lastlook &= PLAYERSMASK;
 
 	for( ; ; actor->lastlook = (actor->lastlook+1) & PLAYERSMASK)
@@ -4707,7 +4773,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 
 	if (mobj->state == &states[S_BLACKEGG_STND] && mobj->tics == mobj->state->tics)
 	{
-		mobj->reactiontime += P_Random();
+		mobj->reactiontime += P_RandomByte();
 
 		if (mobj->health <= mobj->info->damage)
 			mobj->reactiontime /= 4;
@@ -4901,7 +4967,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 		if (mobj->tracer && mobj->tracer->type == MT_BOSS3WAYPOINT
 			&& mobj->tracer->spawnpoint && (mobj->tracer->spawnpoint->options & 7) == waypointNum)
 		{
-			if (P_Random() & 1)
+			if (P_RandomChance(FRACUNIT/2))
 				waypointNum++;
 			else
 				waypointNum--;
@@ -4913,7 +4979,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 		}
 
 		if (waypointNum == 0 && mobj->health <= mobj->info->damage)
-			waypointNum = 1 + (P_Random() & 1);
+			waypointNum = 1 + (P_RandomFixed() & 1);
 
 		// scan the thinkers to find
 		// the waypoint to use
@@ -5013,7 +5079,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 		P_SetMobjState(mobj, mobj->info->spawnstate);
 	}
 	else if (mobj->state == &states[mobj->info->deathstate] && mobj->tics == mobj->state->tics)
-		S_StartSound(0, sfx_bedie1 + (P_Random() & 1));
+		S_StartSound(0, sfx_bedie1 + (P_RandomFixed() & 1));
 
 }
 
@@ -5440,7 +5506,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 				// An incoming attack is detected! What should we do?!
 				// Go into vector form!
 				mobj->movedir = ANGLE_11hh - FixedAngle(FixedMul(AngleFixed(ANGLE_11hh), FixedDiv((mobj->info->spawnhealth - mobj->health)<<FRACBITS, (mobj->info->spawnhealth-1)<<FRACBITS)));
-				if (P_Random()&1)
+				if (P_RandomChance(FRACUNIT/2))
 					mobj->movedir = InvAngle(mobj->movedir);
 				mobj->threshold = 6 + (FixedMul(24<<FRACBITS, FixedDiv((mobj->info->spawnhealth - mobj->health)<<FRACBITS, (mobj->info->spawnhealth-1)<<FRACBITS))>>FRACBITS);
 				if (mobj->info->activesound)
@@ -6042,20 +6108,20 @@ static void P_KoopaThinker(mobj_t *koopa)
 
 	P_XYMovement(koopa);
 
-	if (P_Random() < 8 && koopa->z <= koopa->floorz)
+	if (P_RandomChance(FRACUNIT/32) && koopa->z <= koopa->floorz)
 		koopa->momz = FixedMul(5*FRACUNIT, koopa->scale);
 
 	if (koopa->z > koopa->floorz)
 		koopa->momz += FixedMul(FRACUNIT/4, koopa->scale);
 
-	if (P_Random() < 4)
+	if (P_RandomChance(FRACUNIT/64))
 	{
 		mobj_t *flame;
-		flame = P_SpawnMobj(koopa->x - koopa->radius + FixedMul(5*FRACUNIT, koopa->scale), koopa->y, koopa->z + (P_Random()<<(FRACBITS-2)), MT_KOOPAFLAME);
+		flame = P_SpawnMobj(koopa->x - koopa->radius + FixedMul(5*FRACUNIT, koopa->scale), koopa->y, koopa->z + (P_RandomByte()<<(FRACBITS-2)), MT_KOOPAFLAME);
 		flame->momx = -FixedMul(flame->info->speed, flame->scale);
 		S_StartSound(flame, sfx_koopfr);
 	}
-	else if (P_Random() > 250)
+	else if (P_RandomChance(5*FRACUNIT/256))
 	{
 		mobj_t *hammer;
 		hammer = P_SpawnMobj(koopa->x - koopa->radius, koopa->y, koopa->z + koopa->height, MT_HAMMER);
@@ -6499,11 +6565,11 @@ void P_MobjThinker(mobj_t *mobj)
 				fixed_t ns;
 				mobj_t *mo2;
 
-				i = P_Random();
-				z = mobj->subsector->sector->floorheight + ((P_Random()&63)*FRACUNIT);
+				i = P_RandomByte();
+				z = mobj->subsector->sector->floorheight + ((P_RandomByte()&63)*FRACUNIT);
 				for (j = 0; j < 2; j++)
 				{
-					const angle_t fa = (P_Random()*FINEANGLES/16) & FINEMASK;
+					const angle_t fa = (P_RandomByte()*FINEANGLES/16) & FINEMASK;
 					ns = 64 * FRACUNIT;
 					x = mobj->x + FixedMul(FINESINE(fa),ns);
 					y = mobj->y + FixedMul(FINECOSINE(fa),ns);
@@ -6513,7 +6579,7 @@ void P_MobjThinker(mobj_t *mobj)
 					mo2->momx = FixedMul(FINESINE(fa),ns);
 					mo2->momy = FixedMul(FINECOSINE(fa),ns);
 
-					i = P_Random();
+					i = P_RandomByte();
 
 					if (i % 5 == 0)
 						P_SpawnMobj(x, y, z, MT_CHICKEN);
@@ -7753,6 +7819,7 @@ static precipmobj_t *P_SpawnPrecipMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype
 {
 	state_t *st;
 	precipmobj_t *mobj = Z_Calloc(sizeof (*mobj), PU_LEVEL, NULL);
+	fixed_t starting_floorz;
 
 	mobj->x = x;
 	mobj->y = y;
@@ -7771,8 +7838,16 @@ static precipmobj_t *P_SpawnPrecipMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype
 	// set subsector and/or block links
 	P_SetPrecipitationThingPosition(mobj);
 
-	mobj->floorz = mobj->subsector->sector->floorheight;
-	mobj->ceilingz = mobj->subsector->sector->ceilingheight;
+	mobj->floorz = starting_floorz =
+#ifdef ESLOPE
+				mobj->subsector->sector->f_slope ? P_GetZAt(mobj->subsector->sector->f_slope, x, y) :
+#endif
+				mobj->subsector->sector->floorheight;
+	mobj->ceilingz =
+#ifdef ESLOPE
+				mobj->subsector->sector->c_slope ? P_GetZAt(mobj->subsector->sector->c_slope, x, y) :
+#endif
+				mobj->subsector->sector->ceilingheight;
 
 	mobj->z = z;
 	mobj->momz = mobjinfo[type].speed;
@@ -7782,7 +7857,7 @@ static precipmobj_t *P_SpawnPrecipMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype
 
 	CalculatePrecipFloor(mobj);
 
-	if (mobj->floorz != mobj->subsector->sector->floorheight)
+	if (mobj->floorz != starting_floorz)
 		mobj->precipflags |= PCF_FOF;
 	else if (GETSECSPECIAL(mobj->subsector->sector->special, 1) == 7
 	 || GETSECSPECIAL(mobj->subsector->sector->special, 1) == 6
@@ -7999,7 +8074,7 @@ void P_SpawnPrecipitation(void)
 					continue;
 
 				rainmo = P_SpawnSnowMobj(x, y, height, MT_SNOWFLAKE);
-				mrand = M_Random();
+				mrand = M_RandomByte();
 				if (mrand < 64)
 					P_SetPrecipMobjState(rainmo, S_SNOW3);
 				else if (mrand < 144)
@@ -8209,7 +8284,11 @@ void P_RespawnSpecials(void)
 
 		if (mthing->options & MTF_OBJECTFLIP)
 		{
-			z = ss->sector->ceilingheight - (mthing->options >> ZSHIFT) * FRACUNIT;
+			z = (
+#ifdef ESLOPE
+			ss->sector->c_slope ? P_GetZAt(ss->sector->c_slope, x, y) :
+#endif
+			ss->sector->ceilingheight) - (mthing->options >> ZSHIFT) * FRACUNIT;
 			if (mthing->options & MTF_AMBUSH
 			&& (i == MT_RING || i == MT_REDTEAMRING || i == MT_BLUETEAMRING || i == MT_COIN || P_WeaponOrPanel(i)))
 				z -= 24*FRACUNIT;
@@ -8217,7 +8296,11 @@ void P_RespawnSpecials(void)
 		}
 		else
 		{
-			z = ss->sector->floorheight + (mthing->options >> ZSHIFT) * FRACUNIT;
+			z = (
+#ifdef ESLOPE
+			ss->sector->f_slope ? P_GetZAt(ss->sector->f_slope, x, y) :
+#endif
+			ss->sector->floorheight) + (mthing->options >> ZSHIFT) * FRACUNIT;
 			if (mthing->options & MTF_AMBUSH
 			&& (i == MT_RING || i == MT_REDTEAMRING || i == MT_BLUETEAMRING || i == MT_COIN || P_WeaponOrPanel(i)))
 				z += 24*FRACUNIT;
@@ -8387,7 +8470,7 @@ void P_MovePlayerToSpawn(INT32 playernum, mapthing_t *mthing)
 
 	fixed_t z;
 	sector_t *sector;
-
+	fixed_t floor, ceiling;
 
 	player_t *p = &players[playernum];
 	mobj_t *mobj = p->mo;
@@ -8403,19 +8486,31 @@ void P_MovePlayerToSpawn(INT32 playernum, mapthing_t *mthing)
 
 	// set Z height
 	sector = R_PointInSubsector(x, y)->sector;
+
+	floor =
+#ifdef ESLOPE
+	sector->f_slope ? P_GetZAt(sector->f_slope, x, y) :
+#endif
+	sector->floorheight;
+	ceiling =
+#ifdef ESLOPE
+	sector->c_slope ? P_GetZAt(sector->c_slope, x, y) :
+#endif
+	sector->ceilingheight;
+
 	if (mthing)
 	{
 		// Flagging a player's ambush will make them start on the ceiling
 		// Objectflip inverts
 		if (!!(mthing->options & MTF_AMBUSH) ^ !!(mthing->options & MTF_OBJECTFLIP))
 		{
-			z = sector->ceilingheight - mobjinfo[MT_PLAYER].height;
+			z = ceiling - mobjinfo[MT_PLAYER].height;
 			if (mthing->options >> ZSHIFT)
 				z -= ((mthing->options >> ZSHIFT) << FRACBITS);
 		}
 		else
 		{
-			z = sector->floorheight;
+			z = floor;
 			if (mthing->options >> ZSHIFT)
 				z += ((mthing->options >> ZSHIFT) << FRACBITS);
 		}
@@ -8427,15 +8522,15 @@ void P_MovePlayerToSpawn(INT32 playernum, mapthing_t *mthing)
 		}
 	}
 	else
-		z = sector->floorheight;
+		z = floor;
 
-	if (z < sector->floorheight)
-		z = sector->floorheight;
-	else if (z > sector->ceilingheight - mobjinfo[MT_PLAYER].height)
-		z = sector->ceilingheight - mobjinfo[MT_PLAYER].height;
+	if (z < floor)
+		z = floor;
+	else if (z > ceiling - mobjinfo[MT_PLAYER].height)
+		z = ceiling - mobjinfo[MT_PLAYER].height;
 
-	mobj->floorz = sector->floorheight;
-	mobj->ceilingz = sector->ceilingheight;
+	mobj->floorz = floor;
+	mobj->ceilingz = ceiling;
 
 	P_UnsetThingPosition(mobj);
 	mobj->x = x;
@@ -8443,7 +8538,7 @@ void P_MovePlayerToSpawn(INT32 playernum, mapthing_t *mthing)
 	P_SetThingPosition(mobj);
 
 	mobj->z = z;
-	if (mobj->z == sector->floorheight)
+	if (mobj->z == mobj->floorz)
 		mobj->eflags |= MFE_ONGROUND;
 
 	mobj->angle = angle;
@@ -8455,6 +8550,7 @@ void P_MovePlayerToStarpost(INT32 playernum)
 {
 	fixed_t z;
 	sector_t *sector;
+	fixed_t floor, ceiling;
 
 	player_t *p = &players[playernum];
 	mobj_t *mobj = p->mo;
@@ -8466,14 +8562,25 @@ void P_MovePlayerToStarpost(INT32 playernum)
 	P_SetThingPosition(mobj);
 	sector = R_PointInSubsector(mobj->x, mobj->y)->sector;
 
-	z = p->starpostz << FRACBITS;
-	if (z < sector->floorheight)
-		z = sector->floorheight;
-	else if (z > sector->ceilingheight - mobjinfo[MT_PLAYER].height)
-		z = sector->ceilingheight - mobjinfo[MT_PLAYER].height;
+	floor =
+#ifdef ESLOPE
+	sector->f_slope ? P_GetZAt(sector->f_slope, mobj->x, mobj->y) :
+#endif
+	sector->floorheight;
+	ceiling =
+#ifdef ESLOPE
+	sector->c_slope ? P_GetZAt(sector->c_slope, mobj->x, mobj->y) :
+#endif
+	sector->ceilingheight;
 
-	mobj->floorz = sector->floorheight;
-	mobj->ceilingz = sector->ceilingheight;
+	z = p->starpostz << FRACBITS;
+	if (z < floor)
+		z = floor;
+	else if (z > ceiling - mobjinfo[MT_PLAYER].height)
+		z = ceiling - mobjinfo[MT_PLAYER].height;
+
+	mobj->floorz = floor;
+	mobj->ceilingz = ceiling;
 
 	mobj->z = z;
 	if (mobj->z == mobj->floorz)
@@ -9167,12 +9274,12 @@ ML_NOCLIMB : Direction not controllable
 		{
 			mobj->momz += FixedMul(16*FRACUNIT, mobj->scale);
 
-			if (P_Random() & 1)
+			if (P_RandomChance(FRACUNIT/2))
 				mobj->momx += FixedMul(16*FRACUNIT, mobj->scale);
 			else
 				mobj->momx -= FixedMul(16*FRACUNIT, mobj->scale);
 
-			if (P_Random() & 1)
+			if (P_RandomChance(FRACUNIT/2))
 				mobj->momy += FixedMul(16*FRACUNIT, mobj->scale);
 			else
 				mobj->momy -= FixedMul(16*FRACUNIT,mobj->scale);

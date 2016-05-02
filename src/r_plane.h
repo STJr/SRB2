@@ -27,7 +27,8 @@ typedef struct visplane_s
 {
 	struct visplane_s *next;
 
-	fixed_t height, viewz;
+	fixed_t height;
+	fixed_t viewx, viewy, viewz;
 	angle_t viewangle;
 	angle_t plangle;
 	INT32 picnum;

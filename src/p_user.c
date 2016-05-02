@@ -2172,9 +2172,9 @@ static void P_DoBubbleBreath(player_t *player)
 	if (!(player->mo->eflags & MFE_UNDERWATER) || ((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL && !(player->pflags & PF_NIGHTSMODE)) || player->spectator)
 		return;
 
-	if (!(P_Random() % 16))
+	if (P_RandomChance(FRACUNIT/16))
 		bubble = P_SpawnMobj(player->mo->x, player->mo->y, zh, MT_SMALLBUBBLE);
-	else if (!(P_Random() % 96))
+	else if (P_RandomChance(3*FRACUNIT/256))
 		bubble = P_SpawnMobj(player->mo->x, player->mo->y, zh, MT_MEDIUMBUBBLE);
 	if (bubble)
 	{
@@ -6180,6 +6180,14 @@ void P_ElementalFireTrail(player_t *player)
 	{
 		newx = player->mo->x + P_ReturnThrustX(player->mo, travelangle + ((i&1) ? -1 : 1)*ANGLE_135, FixedMul(24*FRACUNIT, player->mo->scale));
 		newy = player->mo->y + P_ReturnThrustY(player->mo, travelangle + ((i&1) ? -1 : 1)*ANGLE_135, FixedMul(24*FRACUNIT, player->mo->scale));
+#ifdef ESLOPE
+		if (player->mo->standingslope)
+		{
+			ground = P_GetZAt(player->mo->standingslope, newx, newy);
+			if (player->mo->eflags & MFE_VERTICALFLIP)
+				ground -= FixedMul(mobjinfo[MT_SPINFIRE].height, player->mo->scale);
+		}
+#endif
 		flame = P_SpawnMobj(newx, newy, ground, MT_SPINFIRE);
 		P_SetTarget(&flame->target, player->mo);
 		flame->angle = travelangle;
@@ -6620,7 +6628,7 @@ static void P_MovePlayer(player_t *player)
 	// Little water sound while touching water - just a nicety.
 	if ((player->mo->eflags & MFE_TOUCHWATER) && !(player->mo->eflags & MFE_UNDERWATER) && !player->spectator)
 	{
-		if (P_Random() & 1 && leveltime % TICRATE == 0)
+		if (P_RandomChance(FRACUNIT/2) && leveltime % TICRATE == 0)
 			S_StartSound(player->mo, sfx_floush);
 	}
 
@@ -6834,7 +6842,7 @@ static void P_MovePlayer(player_t *player)
 				}
 			}
 			// Super Sonic move
-			if (player->charflags & SF_SUPER && player->powers[pw_super] && player->speed > FixedMul(5<<FRACBITS, player->mo->scale)
+			if (player->skin == 0 && player->powers[pw_super] && player->speed > FixedMul(5<<FRACBITS, player->mo->scale)
 			&& P_MobjFlip(player->mo)*player->mo->momz <= 0)
 			{
 				if (player->panim == PA_ROLL || player->mo->state == &states[S_PLAY_PAIN])
@@ -7512,8 +7520,6 @@ boolean P_LookForEnemies(player_t *player)
 		if (an > ANGLE_90 && an < ANGLE_270)
 			continue; // behind back
 
-		player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, mo->x, mo->y);
-
 		if (!P_CheckSight(player->mo, mo))
 			continue; // out of sight
 
@@ -7524,6 +7530,7 @@ boolean P_LookForEnemies(player_t *player)
 	{
 		// Found a target monster
 		P_SetTarget(&player->mo->target, P_SetTarget(&player->mo->tracer, closestmo));
+		player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, closestmo->x, closestmo->y);
 		return true;
 	}
 
@@ -8440,7 +8447,7 @@ static boolean P_SpectatorJoinGame(player_t *player)
 		else if (redscore > bluescore)
 			changeto = 2;
 		else
-			changeto = (P_Random() & 1) + 1;
+			changeto = (P_RandomFixed() & 1) + 1;
 
 		if (player->mo)
 		{
@@ -8691,7 +8698,7 @@ void P_PlayerThink(player_t *player)
 
 	// Add some extra randomization.
 	if (cmd->forwardmove)
-		P_Random();
+		P_RandomFixed();
 
 #ifdef PARANOIA
 	if (player->playerstate == PST_REBORN)
