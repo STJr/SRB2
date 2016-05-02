@@ -4908,18 +4908,18 @@ static void P_BossPinballThinker(mobj_t *mobj)
 			fixed_t totaldist = P_AproxDistance(mobj->target->x - otherwaypoint->x, mobj->target->y - otherwaypoint->y);
 			fixed_t disttonext = P_AproxDistance(mobj->target->x - mobj->x, mobj->target->y - mobj->y);
 			fixed_t disttolast = P_AproxDistance(otherwaypoint->x - mobj->x, otherwaypoint->y - mobj->y);
-			fixed_t speedvalue;
+			fixed_t speedvalue, finalspeed, checkdist;
 
 			if (disttonext > disttolast)
 				speedvalue = FixedDiv(disttolast + FixedDiv(totaldist, 3*FRACUNIT), disttonext);
 			else
 				speedvalue = FixedDiv(disttonext + FixedDiv(totaldist, 3*FRACUNIT), disttolast);
 
-			fixed_t finalspeed = FixedMul(mobj->info->speed, speedvalue);
+			finalspeed = FixedMul(mobj->info->speed, speedvalue);
 
 			P_InstaThrust(mobj, R_PointToAngle2(mobj->x, mobj->y, mobj->target->x, mobj->target->y), finalspeed);
 
-			fixed_t checkdist = P_AproxDistance(mobj->target->x - (mobj->x + mobj->momx), mobj->target->y - (mobj->y + mobj->momy));
+			checkdist = P_AproxDistance(mobj->target->x - (mobj->x + mobj->momx), mobj->target->y - (mobj->y + mobj->momy));
 
 			if (disttonext <= checkdist)
 			{
@@ -4962,11 +4962,12 @@ static void P_BossPinballCannonThinker(mobj_t *mobj)
 	if (mobj->fuse > 13)
 	{
 		angle_t tempangle = mobj->movedir;
+		fixed_t pinchadd, rotateadd;
 		if (tempangle > ANGLE_180)
 			tempangle = InvAngle(tempangle);
 
-		fixed_t pinchadd = FixedMul(4*FRACUNIT, FixedDiv((mobj->target->info->spawnhealth+1-mobj->target->health)*FRACUNIT, mobj->target->info->spawnhealth*FRACUNIT));
-		fixed_t rotateadd = FixedMul(2*FRACUNIT, FixedDiv(AngleFixed((ANGLE_45 + (ANG1*4)) - tempangle), AngleFixed(ANGLE_45)));
+		pinchadd = FixedMul(4*FRACUNIT, FixedDiv((mobj->target->info->spawnhealth+1-mobj->target->health)*FRACUNIT, mobj->target->info->spawnhealth*FRACUNIT));
+		rotateadd = FixedMul(2*FRACUNIT, FixedDiv(AngleFixed((ANGLE_45 + (ANG1*4)) - tempangle), AngleFixed(ANGLE_45)));
 
 		if (mobj->movecount == 1)
 			mobj->movedir += FixedAngle(rotateadd + pinchadd);
@@ -5731,7 +5732,7 @@ static void P_RemoveOverlay(mobj_t *thing)
 		}
 }
 
-void P_RunShadows()
+void P_RunShadows(void)
 {
 	thinker_t * th;
 	mobj_t * mobj;
@@ -5762,10 +5763,10 @@ void P_RunShadows()
 
 			if (mobj->floorz < mobj->z)
 			{
-				mobj->z = mobj->floorz;
-
 				INT32 i;
 				fixed_t prevz;
+
+				mobj->z = mobj->floorz;
 
 				for (i = 0; i < MAXFFLOORS; i++)
 				{
@@ -5853,6 +5854,7 @@ static void P_TDStartInstaLaser(mobj_t *actor, mobj_t *target, sfxenum_t sound)
 {
 	thinker_t * th;
 	mobj_t *mo2;
+	mobj_t *point;
 
 	// Go through and make sure this object is not already being targeted
 	for (th = thinkercap.next; th != &thinkercap; th = th->next)
@@ -5873,7 +5875,7 @@ static void P_TDStartInstaLaser(mobj_t *actor, mobj_t *target, sfxenum_t sound)
 	}
 
 	// The object is not already being targeted, so let's target them
-	mobj_t *point = P_SpawnMobj(target->x, target->y, target->z + target->height/2, MT_CHROME_TARGET);
+	point = P_SpawnMobj(target->x, target->y, target->z + target->height/2, MT_CHROME_TARGET);
 	P_SetTarget(&point->target, target);
 	P_SetTarget(&point->tracer, actor);
 

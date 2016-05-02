@@ -286,7 +286,6 @@ void Y_IntermissionDrawer(void)
 	}
 	else if (intertype == int_compcoop)
 	{
-		INT32 i;
 		INT32 totalscore;
 		char name[MAXPLAYERNAME+1];
 		INT32 x, y; // These are used for the below 4th place players to place their icons
@@ -873,6 +872,7 @@ void Y_Ticker(void)
 	else if (intertype == int_compcoop)
 	{
 		INT32 i;
+		boolean soundplayed = false; // Whether the place sound has already been played (no random sound increases)
 
 		if (!intertic) // first time only
 			S_ChangeMusic(mus_lclear, false); // don't loop it
@@ -908,8 +908,6 @@ void Y_Ticker(void)
 			if (data.compcoop.gotlife)
 				P_PlayLivesJingle(NULL);
 		}
-
-		boolean soundplayed = false; // Whether the place sound has already been played (no random sound increases)
 
 		for (i = 0; i < min(4, data.compcoop.numplayers); i++)
 		{
@@ -1716,22 +1714,24 @@ static void Y_CalculateCompCoopWinners(void)
 			data.compcoop.place[i] = i+1;
 	}
 
-	INT32 topplayersplayernum[4] = {MAXPLAYERS, MAXPLAYERS, MAXPLAYERS, MAXPLAYERS};
-
-	memset(completed, 0, sizeof (completed));
-	memset(data.compcoop.topplayers, 0, sizeof (data.compcoop.topplayers));
-
-	for (i = 0; i < min(4, data.compcoop.numplayers); i++)
 	{
-		for (j = 0; j < min(4, data.compcoop.numplayers); j++)
+		INT32 topplayersplayernum[4] = {MAXPLAYERS, MAXPLAYERS, MAXPLAYERS, MAXPLAYERS};
+
+		memset(completed, 0, sizeof (completed));
+		memset(data.compcoop.topplayers, 0, sizeof (data.compcoop.topplayers));
+
+		for (i = 0; i < min(4, data.compcoop.numplayers); i++)
 		{
-			if (data.compcoop.num[j] < topplayersplayernum[i] && completed[j] == false)
+			for (j = 0; j < min(4, data.compcoop.numplayers); j++)
 			{
-				data.compcoop.topplayers[i] = j;
-				topplayersplayernum[i] = data.compcoop.num[j];
+				if (data.compcoop.num[j] < topplayersplayernum[i] && completed[j] == false)
+				{
+					data.compcoop.topplayers[i] = j;
+					topplayersplayernum[i] = data.compcoop.num[j];
+				}
 			}
+			completed[data.compcoop.topplayers[i]] = true;
 		}
-		completed[data.compcoop.topplayers[i]] = true;
 	}
 }
 
