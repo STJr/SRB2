@@ -35,6 +35,7 @@ enum hud {
 	hud_ndtime,
 	hud_ndscore,
 	hud_ndlives,
+	hud_bosshealth,
 	hud_MAX
 };
 
