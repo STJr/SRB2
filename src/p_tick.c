@@ -602,22 +602,25 @@ void P_Ticker(boolean run)
 		if (demoplayback)
 			G_ReadDemoTiccmd(&players[consoleplayer].cmd, 0);
 
-		if (splitscreen || twoplayer)
+		if ((mapheaderinfo[gamemap-1]->typeoflevel & TOL_TD) && gametype == GT_COOP)
 		{
-			if (twoplayer && ((players[displayplayer].pflags & PF_NOTDSHAREDCAMERA) || (players[secondarydisplayplayer].pflags & PF_NOTDSHAREDCAMERA)))
+			if (splitscreen || twoplayer)
 			{
-				splitscreen = true;
-				twoplayer = false;
-				R_ExecuteSetViewSize();
-				P_ResetCamera(&players[displayplayer], &camera); // Reset the cameras because view settings are changing
-				P_ResetCamera(&players[secondarydisplayplayer], &camera2);
-			}
-			else if (splitscreen && !(players[displayplayer].pflags & PF_NOTDSHAREDCAMERA) && !(players[secondarydisplayplayer].pflags & PF_NOTDSHAREDCAMERA))
-			{
-				splitscreen = false;
-				twoplayer = true;
-				R_ExecuteSetViewSize();
-				P_ResetCamera(&players[displayplayer], &camera); // Only need to reset player 1 camera because player 2 camera is now unused
+				if (twoplayer && ((players[displayplayer].pflags & PF_NOTDSHAREDCAMERA) || (players[secondarydisplayplayer].pflags & PF_NOTDSHAREDCAMERA)))
+				{
+					splitscreen = true;
+					twoplayer = false;
+					R_ExecuteSetViewSize();
+					P_ResetCamera(&players[displayplayer], &camera); // Reset the cameras because view settings are changing
+					P_ResetCamera(&players[secondarydisplayplayer], &camera2);
+				}
+				else if (splitscreen && !(players[displayplayer].pflags & PF_NOTDSHAREDCAMERA) && !(players[secondarydisplayplayer].pflags & PF_NOTDSHAREDCAMERA))
+				{
+					splitscreen = false;
+					twoplayer = true;
+					R_ExecuteSetViewSize();
+					P_ResetCamera(&players[displayplayer], &camera); // Only need to reset player 1 camera because player 2 camera is now unused
+				}
 			}
 		}
 
