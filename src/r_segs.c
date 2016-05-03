@@ -1903,11 +1903,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			&& backsector->ceilingpic == skyflatnum)
 		{
 #ifdef ESLOPE
-			worldtopslope = max(worldtopslope, worldhighslope);
-			worldhighslope = worldtopslope;
+			worldtopslope = worldhighslope =
 #endif
-			worldtop = max(worldtop, worldhigh);
-			worldhigh = worldtop;
+			worldtop = worldhigh;
 		}
 
 		ds_p->sprtopclip = ds_p->sprbottomclip = NULL;
@@ -2067,13 +2065,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			markceiling = false;
 		}
 
-#ifdef ESLOPE
-		if ((worldhigh <= worldbottom && worldhighslope <= worldbottomslope) ||
-		    (worldlow >= worldtop && worldlowslope >= worldtopslope))
-#else
 		if (backsector->ceilingheight <= frontsector->floorheight ||
 		    backsector->floorheight >= frontsector->ceilingheight)
-#endif
 		{
 			// closed door
 			markceiling = markfloor = true;
