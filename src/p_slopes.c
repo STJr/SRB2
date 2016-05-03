@@ -1099,6 +1099,9 @@ void P_ButteredSlope(mobj_t *mo)
 	if (!mo->standingslope)
 		return;
 
+	if (mo->flags & (MF_NOCLIPHEIGHT|MF_NOGRAVITY))
+		return; // don't slide down slopes if you can't touch them or you're not affected by gravity
+
 	if (mo->player) {
 		if (abs(mo->standingslope->zdelta) < FRACUNIT/4 && !(mo->player->pflags & PF_SPINNING))
 			return; // Don't slide on non-steep slopes unless spinning

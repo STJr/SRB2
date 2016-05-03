@@ -51,7 +51,7 @@ void T_FireFlicker(fireflicker_t *flick)
 	if (--flick->count)
 		return;
 
-	amount = (INT16)((UINT8)(P_Random() & 3) * 16);
+	amount = (INT16)((UINT8)(P_RandomByte() & 3) * 16);
 
 	if (flick->sector->lightlevel - amount < flick->minlight)
 		flick->sector->lightlevel = (INT16)flick->minlight;
@@ -235,7 +235,7 @@ strobe_t *P_SpawnAdjustableStrobeFlash(sector_t *minsector, sector_t *maxsector,
 		flash->minlight = 0;
 
 	if (!inSync)
-		flash->count = (P_Random() & 7) + 1;
+		flash->count = (P_RandomByte() & 7) + 1;
 	else
 		flash->count = 1;
 

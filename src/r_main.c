@@ -517,7 +517,9 @@ static void R_InitTextureMapping(void)
 	focallength = FixedDiv(centerxfrac,
 		FINETANGENT(FINEANGLES/4+/*cv_fov.value*/ FIELDOFVIEW/2));
 
+#ifdef ESLOPE
 	focallengthf = FIXED_TO_FLOAT(focallength);
+#endif
 
 	for (i = 0; i < FINEANGLES/2; i++)
 	{
@@ -971,14 +973,42 @@ void R_SkyboxFrame(player_t *player)
 		{
 			if (skyboxmo[1])
 			{
+				fixed_t x = 0, y = 0;
 				if (mh->skybox_scalex > 0)
-					viewx += (player->mo->x - skyboxmo[1]->x) / mh->skybox_scalex;
+					x = (player->mo->x - skyboxmo[1]->x) / mh->skybox_scalex;
 				else if (mh->skybox_scalex < 0)
-					viewx += (player->mo->x - skyboxmo[1]->x) * -mh->skybox_scalex;
+					x = (player->mo->x - skyboxmo[1]->x) * -mh->skybox_scalex;
 				if (mh->skybox_scaley > 0)
-					viewy += (player->mo->y - skyboxmo[1]->y) / mh->skybox_scaley;
+					y = (player->mo->y - skyboxmo[1]->y) / mh->skybox_scaley;
 				else if (mh->skybox_scaley < 0)
-					viewy += (player->mo->y - skyboxmo[1]->y) * -mh->skybox_scaley;
+					y = (player->mo->y - skyboxmo[1]->y) * -mh->skybox_scaley;
+
+				if (viewmobj->angle == 0)
+				{
+					viewx += x;
+					viewy += y;
+				}
+				else if (viewmobj->angle == ANGLE_90)
+				{
+					viewx -= y;
+					viewy += x;
+				}
+				else if (viewmobj->angle == ANGLE_180)
+				{
+					viewx -= x;
+					viewy -= y;
+				}
+				else if (viewmobj->angle == ANGLE_270)
+				{
+					viewx += y;
+					viewy -= x;
+				}
+				else
+				{
+					angle_t ang = viewmobj->angle>>ANGLETOFINESHIFT;
+					viewx += FixedMul(x,FINECOSINE(ang)) - FixedMul(y,  FINESINE(ang));
+					viewy += FixedMul(x,  FINESINE(ang)) + FixedMul(y,FINECOSINE(ang));
+				}
 			}
 			if (mh->skybox_scalez > 0)
 				viewz += player->viewz / mh->skybox_scalez;
@@ -1433,10 +1463,12 @@ void R_RegisterEngineStuff(void)
 	CV_RegisterVar(&cv_voodoocompatibility);
 	CV_RegisterVar(&cv_grfogcolor);
 	CV_RegisterVar(&cv_grsoftwarefog);
+#ifdef ALAM_LIGHTING
 	CV_RegisterVar(&cv_grstaticlighting);
 	CV_RegisterVar(&cv_grdynamiclighting);
 	CV_RegisterVar(&cv_grcoronas);
 	CV_RegisterVar(&cv_grcoronasize);
+#endif
 	CV_RegisterVar(&cv_grmd2);
 #endif
 

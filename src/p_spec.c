@@ -2059,7 +2059,7 @@ void P_SwitchWeather(INT32 weathernum)
 				precipmobj = (precipmobj_t *)think;
 
 				precipmobj->flags = mobjinfo[MT_SNOWFLAKE].flags;
-				z = M_Random();
+				z = M_RandomByte();
 
 				if (z < 64)
 					z = 2;
@@ -4675,8 +4675,10 @@ void P_UpdateSpecials(void)
 	// POINT LIMIT
 	P_CheckPointLimit();
 
+#ifdef ESLOPE
 	// Dynamic slopeness
 	P_RunDynamicSlopes();
+#endif
 
 	// ANIMATE TEXTURES
 	for (anim = anims; anim < lastanim; anim++)

@@ -744,9 +744,15 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	patch_t *patch = W_CacheLumpNum(vis->patch, PU_CACHE);
 	fixed_t this_scale = vis->mobj->scale;
 	INT32 x1, x2;
+	INT64 overflow_test;
 
 	if (!patch)
 		return;
+
+	// Check for overflow
+	overflow_test = (INT64)centeryfrac - (((INT64)vis->texturemid*vis->scale)>>FRACBITS);
+	if (overflow_test < 0) overflow_test = -overflow_test;
+	if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) return; // fixed point mult would overflow
 
 	colfunc = basecolfunc; // hack: this isn't resetting properly somewhere.
 	dc_colormap = vis->colormap;
@@ -1239,15 +1245,6 @@ static void R_ProjectSprite(mobj_t *thing)
 			return;
 	}
 
-	// quick check for possible overflows
-	// if either of these triggers then there's a possibility that drawing is unsafe
-	if (M_HighestBit(abs(gzt - viewz)) + M_HighestBit(abs(yscale)) > 47 // 31 bits + 16 from the division by FRACUNIT
-	 || M_HighestBit(abs(gz  - viewz)) + M_HighestBit(abs(yscale)) > 47)
-	{
-		CONS_Debug(DBG_RENDER, "Suspected overflow in ProjectSprite (sprite %s), ignoring\n", sprnames[thing->sprite]);
-		return;
-	}
-
 	// store information in a vissprite
 	vis = R_NewVisSprite();
 	vis->heightsec = heightsec; //SoM: 3/17/2000
@@ -1456,14 +1453,6 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	{
 		if (R_DoCulling(thing->subsector->sector->cullheight, viewsector->cullheight, viewz, gz, gzt))
 			return;
-	}
-
-	// quick check for possible overflows
-	// if either of these triggers then there's a possibility that drawing is unsafe
-	if (M_HighestBit(abs(gzt - viewz)) + M_HighestBit(abs(yscale)) > 47) // 31 bits + 16 from the division by FRACUNIT
-	{
-		CONS_Debug(DBG_RENDER, "Suspected overflow in ProjectPrecipitationSprite (sprite %s), ignoring\n", sprnames[thing->sprite]);
-		return;
 	}
 
 	// store information in a vissprite
