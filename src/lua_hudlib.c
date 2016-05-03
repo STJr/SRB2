@@ -528,6 +528,22 @@ static int libd_height(lua_State *L)
 	return 1;
 }
 
+static int libd_dupx(lua_State *L)
+{
+	HUDONLY
+	lua_pushinteger(L, vid.dupx); // push integral scale (patch scale)
+	lua_pushfixed(L, vid.fdupx); // push fixed point scale (position scale)
+	return 2;
+}
+
+static int libd_dupy(lua_State *L)
+{
+	HUDONLY
+	lua_pushinteger(L, vid.dupy); // push integral scale (patch scale)
+	lua_pushfixed(L, vid.fdupy); // push fixed point scale (position scale)
+	return 2;
+}
+
 static int libd_renderer(lua_State *L)
 {
 	HUDONLY
@@ -552,6 +568,8 @@ static luaL_Reg lib_draw[] = {
 	{"getColormap", libd_getColormap},
 	{"width", libd_width},
 	{"height", libd_height},
+	{"dupx", libd_dupx},
+	{"dupy", libd_dupy},
 	{"renderer", libd_renderer},
 	{NULL, NULL}
 };
