@@ -1239,10 +1239,10 @@ static void SendNameAndColor2(void)
 		}
 		else
 		{
-			cv_skin.value = players[secondplaya].skin;
-			CV_StealthSet(&cv_skin, skins[players[secondplaya].skin].name);
+			cv_skin2.value = players[secondplaya].skin;
+			CV_StealthSet(&cv_skin2, skins[players[secondplaya].skin].name);
 			// will always be same as current
-			SetPlayerSkin(secondplaya, cv_skin.string);
+			SetPlayerSkin(secondplaya, cv_skin2.string);
 		}
 		return;
 	}
