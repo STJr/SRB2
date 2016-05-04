@@ -10495,13 +10495,13 @@ void A_OrbitalChase(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
+	mobj_t *target; // Who are we chasing?
+	fixed_t dist, scaledspeed, oldspeed;
 
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_OrbitalChase", actor))
 		return;
 #endif
-
-	mobj_t *target; // Who are we chasing?
 
 	if (locvar1 >> 16 == 0)
 		target = actor->target;
@@ -10511,7 +10511,6 @@ void A_OrbitalChase(mobj_t *actor)
 	if (!target)
 		return;
 
-	fixed_t dist, scaledspeed, oldspeed;
 	if (locvar2 >> 16 == 0)
 		dist = P_AproxDistance(P_AproxDistance(target->x - actor->x, target->y - actor->y), (target->z + target->height/2) - (actor->z + actor->height/2));
 	else

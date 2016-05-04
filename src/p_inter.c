@@ -1239,7 +1239,6 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 			if ((maptol & TOL_TD) && gametype == GT_COOP && (netgame || multiplayer))
 			{
-				INT32 i;
 				for (i = 0; i < MAXPLAYERS; i++)
 				{
 					if (playeringame[i])
