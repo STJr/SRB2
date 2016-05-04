@@ -8086,11 +8086,11 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 #ifdef BLUE_SPHERES
 		case MT_BLUEBALL:
 #endif
-			if (mapheaderinfo[gamemap-1]->typeoflevel & TOL_ND)
+			if (!(mapheaderinfo[gamemap-1]->typeoflevel & TOL_ND))
 				nummaprings++;
 			break;
 		case MT_TDEMBLEM:
-			if (!(mapheaderinfo[gamemap-1]->typeoflevel & TOL_ND))
+			if (mapheaderinfo[gamemap-1]->typeoflevel & TOL_ND)
 				nummaprings++;
 			break;
 		case MT_PINBALL:
