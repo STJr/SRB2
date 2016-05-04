@@ -1006,6 +1006,7 @@ static const char *credits[] = {
 	"\1Texture Artists",
 	"Ryan \"Blaze Hedgehog\" Bloom",
 	"Buddy \"KinkaJoy\" Fischer",
+	"Vivian \"toaster\" Grannell",
 	"Kepa \"Nev3r\" Iceta",
 	"Jarrett \"JEV3\" Voight",
 	"",
