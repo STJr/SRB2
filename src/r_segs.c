@@ -529,6 +529,14 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 				if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL)
 				{
 					// Eh, no, go away, don't waste our time
+					if (dc_numlights)
+					{
+						for (i = 0; i < dc_numlights; i++)
+						{
+							rlight = &dc_lightlist[i];
+							rlight->height += rlight->heightstep;
+						}
+					}
 					spryscale += rw_scalestep;
 					continue;
 				}
