@@ -718,7 +718,8 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	line_t          *newline = NULL;
 #ifdef ESLOPE
 	// Render FOF sides kinda like normal sides, with the frac and step and everything
-	fixed_t         top_frac, top_step, bottom_frac, bottom_step;
+	// NOTE: INT64 instead of fixed_t because overflow concerns
+	INT64         top_frac, top_step, bottom_frac, bottom_step;
 #endif
 
 	void (*colfunc_2s) (column_t *);
@@ -798,6 +799,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 #ifdef ESLOPE
 			fixed_t leftheight, rightheight;
 			fixed_t pfloorleft, pfloorright;
+			INT64 overflow_test;
 #endif
 			light = &frontsector->lightlist[i];
 			rlight = &dc_lightlist[p];
@@ -833,6 +835,14 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 
 			leftheight -= viewz;
 			rightheight -= viewz;
+
+			overflow_test = (INT64)centeryfrac - (((INT64)leftheight*ds->scale1)>>FRACBITS);
+			if (overflow_test < 0) overflow_test = -overflow_test;
+			if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) continue;
+			overflow_test = (INT64)centeryfrac - (((INT64)rightheight*ds->scale2)>>FRACBITS);
+			if (overflow_test < 0) overflow_test = -overflow_test;
+			if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) continue;
+
 			rlight->height = (centeryfrac) - FixedMul(leftheight, ds->scale1);
 			rlight->heightstep = (centeryfrac) - FixedMul(rightheight, ds->scale2);
 			rlight->heightstep = (rlight->heightstep-rlight->height)/(range);
@@ -842,7 +852,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 				continue;
 
 			if (light->height > *pfloor->topheight && i+1 < dc_numlights && frontsector->lightlist[i+1].height > *pfloor->topheight)
-					continue;
+				continue;
 
 			lheight = light->height;// > *pfloor->topheight ? *pfloor->topheight + FRACUNIT : light->height;
 			rlight->heightstep = -FixedMul (rw_scalestep, (lheight - viewz));
@@ -860,6 +870,13 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 
 				leftheight -= viewz;
 				rightheight -= viewz;
+
+				overflow_test = (INT64)centeryfrac - (((INT64)leftheight*ds->scale1)>>FRACBITS);
+				if (overflow_test < 0) overflow_test = -overflow_test;
+				if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) continue;
+				overflow_test = (INT64)centeryfrac - (((INT64)rightheight*ds->scale2)>>FRACBITS);
+				if (overflow_test < 0) overflow_test = -overflow_test;
+				if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) continue;
 
 				rlight->botheight = (centeryfrac) - FixedMul(leftheight, ds->scale1);
 				rlight->botheightstep = (centeryfrac) - FixedMul(rightheight, ds->scale2);
@@ -957,7 +974,6 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	// Set heights according to plane, or slope, whichever
 	{
 		fixed_t left_top, right_top, left_bottom, right_bottom;
-		INT64 overflow_test;
 
 		if (*pfloor->t_slope)
 		{
@@ -975,25 +991,11 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		else
 			left_bottom = right_bottom = *pfloor->bottomheight - viewz;
 
-		// overflow tests
-		// if any of these fail, abandon. likely we're too high up to see anything anyway
-		overflow_test = (INT64)centeryfrac - (((INT64)left_top*ds->scale1)>>FRACBITS);
-		if (overflow_test < 0) overflow_test = -overflow_test;
-		if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) return;
-		overflow_test = (INT64)centeryfrac - (((INT64)left_bottom*ds->scale1)>>FRACBITS);
-		if (overflow_test < 0) overflow_test = -overflow_test;
-		if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) return;
-		overflow_test = (INT64)centeryfrac - (((INT64)right_top*ds->scale2)>>FRACBITS);
-		if (overflow_test < 0) overflow_test = -overflow_test;
-		if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) return;
-		overflow_test = (INT64)centeryfrac - (((INT64)right_bottom*ds->scale2)>>FRACBITS);
-		if (overflow_test < 0) overflow_test = -overflow_test;
-		if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) return;
-
-		top_frac = centeryfrac - FixedMul(left_top, ds->scale1);
-		bottom_frac = centeryfrac - FixedMul(left_bottom, ds->scale1);
-		top_step = centeryfrac - FixedMul(right_top, ds->scale2);
-		bottom_step = centeryfrac - FixedMul(right_bottom, ds->scale2);
+		// using INT64 to avoid 32bit overflow
+		top_frac =    (INT64)centeryfrac - (((INT64)left_top     * ds->scale1) >> FRACBITS);
+		bottom_frac = (INT64)centeryfrac - (((INT64)left_bottom  * ds->scale1) >> FRACBITS);
+		top_step =    (INT64)centeryfrac - (((INT64)right_top    * ds->scale2) >> FRACBITS);
+		bottom_step = (INT64)centeryfrac - (((INT64)right_bottom * ds->scale2) >> FRACBITS);
 
 		top_step = (top_step-top_frac)/(range);
 		bottom_step = (bottom_step-bottom_frac)/(range);
@@ -1019,8 +1021,12 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 				INT32 lighteffect = 0;
 
 #ifdef ESLOPE
-				sprtopscreen = windowtop = top_frac;
-				sprbotscreen = windowbottom = bottom_frac;
+				if      (top_frac > (INT64)INT32_MAX) sprtopscreen = windowtop = INT32_MAX;
+				else if (top_frac < (INT64)INT32_MIN) sprtopscreen = windowtop = INT32_MIN;
+				else                                  sprtopscreen = windowtop = (fixed_t)top_frac;
+				if      (bottom_frac > (INT64)INT32_MAX) sprbotscreen = windowbottom = INT32_MAX;
+				else if (bottom_frac < (INT64)INT32_MIN) sprbotscreen = windowbottom = INT32_MIN;
+				else                                     sprbotscreen = windowbottom = (fixed_t)bottom_frac;
 
 				top_frac += top_step;
 				bottom_frac += bottom_step;
@@ -1166,8 +1172,12 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 				dc_colormap = pfloor->master->frontsector->extra_colormap->colormap + (dc_colormap - colormaps);
 
 #ifdef ESLOPE
-			sprtopscreen = windowtop = top_frac;
-			sprbotscreen = windowbottom = bottom_frac;
+			if      (top_frac > (INT64)INT32_MAX) sprtopscreen = windowtop = INT32_MAX;
+			else if (top_frac < (INT64)INT32_MIN) sprtopscreen = windowtop = INT32_MIN;
+			else                                  sprtopscreen = windowtop = (fixed_t)top_frac;
+			if      (bottom_frac > (INT64)INT32_MAX) sprbotscreen = windowbottom = INT32_MAX;
+			else if (bottom_frac < (INT64)INT32_MIN) sprbotscreen = windowbottom = INT32_MIN;
+			else                                     sprbotscreen = windowbottom = (fixed_t)bottom_frac;
 
 			top_frac += top_step;
 			bottom_frac += bottom_step;
