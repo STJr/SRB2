@@ -1005,6 +1005,9 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	}
 #endif
 
+#define CLAMPMAX INT32_MAX
+#define CLAMPMIN (-INT32_MAX) // This is not INT32_MIN on purpose! INT32_MIN makes the drawers freak out.
+
 	// draw the columns
 	for (dc_x = x1; dc_x <= x2; dc_x++)
 	{
@@ -1021,12 +1024,12 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 				INT32 lighteffect = 0;
 
 #ifdef ESLOPE
-				if      (top_frac > (INT64)INT32_MAX) sprtopscreen = windowtop = INT32_MAX;
-				else if (top_frac < (INT64)INT32_MIN) sprtopscreen = windowtop = INT32_MIN;
-				else                                  sprtopscreen = windowtop = (fixed_t)top_frac;
-				if      (bottom_frac > (INT64)INT32_MAX) sprbotscreen = windowbottom = INT32_MAX;
-				else if (bottom_frac < (INT64)INT32_MIN) sprbotscreen = windowbottom = INT32_MIN;
-				else                                     sprbotscreen = windowbottom = (fixed_t)bottom_frac;
+				if      (top_frac > (INT64)CLAMPMAX) sprtopscreen = windowtop = CLAMPMAX;
+				else if (top_frac < (INT64)CLAMPMIN) sprtopscreen = windowtop = CLAMPMIN;
+				else                                 sprtopscreen = windowtop = (fixed_t)top_frac;
+				if      (bottom_frac > (INT64)CLAMPMAX) sprbotscreen = windowbottom = CLAMPMAX;
+				else if (bottom_frac < (INT64)CLAMPMIN) sprbotscreen = windowbottom = CLAMPMIN;
+				else                                    sprbotscreen = windowbottom = (fixed_t)bottom_frac;
 
 				top_frac += top_step;
 				bottom_frac += bottom_step;
@@ -1172,12 +1175,12 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 				dc_colormap = pfloor->master->frontsector->extra_colormap->colormap + (dc_colormap - colormaps);
 
 #ifdef ESLOPE
-			if      (top_frac > (INT64)INT32_MAX) sprtopscreen = windowtop = INT32_MAX;
-			else if (top_frac < (INT64)INT32_MIN) sprtopscreen = windowtop = INT32_MIN;
-			else                                  sprtopscreen = windowtop = (fixed_t)top_frac;
-			if      (bottom_frac > (INT64)INT32_MAX) sprbotscreen = windowbottom = INT32_MAX;
-			else if (bottom_frac < (INT64)INT32_MIN) sprbotscreen = windowbottom = INT32_MIN;
-			else                                     sprbotscreen = windowbottom = (fixed_t)bottom_frac;
+			if      (top_frac > (INT64)CLAMPMAX) sprtopscreen = windowtop = CLAMPMAX;
+			else if (top_frac < (INT64)CLAMPMIN) sprtopscreen = windowtop = CLAMPMIN;
+			else                                 sprtopscreen = windowtop = (fixed_t)top_frac;
+			if      (bottom_frac > (INT64)CLAMPMAX) sprbotscreen = windowbottom = CLAMPMAX;
+			else if (bottom_frac < (INT64)CLAMPMIN) sprbotscreen = windowbottom = CLAMPMIN;
+			else                                    sprbotscreen = windowbottom = (fixed_t)bottom_frac;
 
 			top_frac += top_step;
 			bottom_frac += bottom_step;
@@ -1196,6 +1199,9 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		}
 	}
 	colfunc = wallcolfunc;
+
+#undef CLAMPMAX
+#undef CLAMPMIN
 }
 
 //
