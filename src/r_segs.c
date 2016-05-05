@@ -1025,11 +1025,11 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 
 #ifdef ESLOPE
 				if      (top_frac > (INT64)CLAMPMAX) sprtopscreen = windowtop = CLAMPMAX;
-				else if (top_frac < (INT64)CLAMPMIN) sprtopscreen = windowtop = CLAMPMIN;
-				else                                 sprtopscreen = windowtop = (fixed_t)top_frac;
+				else if (top_frac > (INT64)CLAMPMIN) sprtopscreen = windowtop = (fixed_t)top_frac;
+				else                                 sprtopscreen = windowtop = CLAMPMIN;
 				if      (bottom_frac > (INT64)CLAMPMAX) sprbotscreen = windowbottom = CLAMPMAX;
-				else if (bottom_frac < (INT64)CLAMPMIN) sprbotscreen = windowbottom = CLAMPMIN;
-				else                                    sprbotscreen = windowbottom = (fixed_t)bottom_frac;
+				else if (bottom_frac > (INT64)CLAMPMIN) sprbotscreen = windowbottom = (fixed_t)bottom_frac;
+				else                                    sprbotscreen = windowbottom = CLAMPMIN;
 
 				top_frac += top_step;
 				bottom_frac += bottom_step;
@@ -1176,11 +1176,11 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 
 #ifdef ESLOPE
 			if      (top_frac > (INT64)CLAMPMAX) sprtopscreen = windowtop = CLAMPMAX;
-			else if (top_frac < (INT64)CLAMPMIN) sprtopscreen = windowtop = CLAMPMIN;
-			else                                 sprtopscreen = windowtop = (fixed_t)top_frac;
+			else if (top_frac > (INT64)CLAMPMIN) sprtopscreen = windowtop = (fixed_t)top_frac;
+			else                                 sprtopscreen = windowtop = CLAMPMIN;
 			if      (bottom_frac > (INT64)CLAMPMAX) sprbotscreen = windowbottom = CLAMPMAX;
-			else if (bottom_frac < (INT64)CLAMPMIN) sprbotscreen = windowbottom = CLAMPMIN;
-			else                                    sprbotscreen = windowbottom = (fixed_t)bottom_frac;
+			else if (bottom_frac > (INT64)CLAMPMIN) sprbotscreen = windowbottom = (fixed_t)bottom_frac;
+			else                                    sprbotscreen = windowbottom = CLAMPMIN;
 
 			top_frac += top_step;
 			bottom_frac += bottom_step;
