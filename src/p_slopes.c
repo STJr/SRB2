@@ -1133,7 +1133,9 @@ void P_ButteredSlope(mobj_t *mo)
 	// This makes it harder to zigzag up steep slopes, as well as allows greater top speed when rolling down
 
 	// Multiply by gravity
-	thrust = FixedMul(thrust, FRACUNIT/2); // TODO actually get this
+	thrust = FixedMul(thrust, gravity); // TODO account for per-sector gravity etc
+	// Multiply by scale (gravity strength depends on mobj scale)
+	thrust = FixedMul(thrust, mo->scale);
 
 	P_Thrust(mo, mo->standingslope->xydirection, thrust);
 }
