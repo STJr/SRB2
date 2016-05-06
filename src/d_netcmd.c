@@ -1113,6 +1113,13 @@ static void SendNameAndColor(void)
 					players[consoleplayer].mo->color = (UINT8)players[consoleplayer].skincolor;
 			}
 		}
+		else
+		{
+			cv_skin.value = players[consoleplayer].skin;
+			CV_StealthSet(&cv_skin, skins[players[consoleplayer].skin].name);
+			// will always be same as current
+			SetPlayerSkin(consoleplayer, cv_skin.string);
+		}
 
 		return;
 	}
@@ -1229,6 +1236,13 @@ static void SendNameAndColor2(void)
 				if (players[secondplaya].mo)
 					players[secondplaya].mo->color = players[secondplaya].skincolor;
 			}
+		}
+		else
+		{
+			cv_skin2.value = players[secondplaya].skin;
+			CV_StealthSet(&cv_skin2, skins[players[secondplaya].skin].name);
+			// will always be same as current
+			SetPlayerSkin(secondplaya, cv_skin2.string);
 		}
 		return;
 	}

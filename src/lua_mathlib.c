@@ -32,13 +32,17 @@ static int lib_abs(lua_State *L)
 
 static int lib_min(lua_State *L)
 {
-	lua_pushinteger(L, min(luaL_checkinteger(L, 1), luaL_checkinteger(L, 2)));
+	int a = luaL_checkinteger(L, 1);
+	int b = luaL_checkinteger(L, 2);
+	lua_pushinteger(L, min(a,b));
 	return 1;
 }
 
 static int lib_max(lua_State *L)
 {
-	lua_pushinteger(L, max(luaL_checkinteger(L, 1), luaL_checkinteger(L, 2)));
+	int a = luaL_checkinteger(L, 1);
+	int b = luaL_checkinteger(L, 2);
+	lua_pushinteger(L, max(a,b));
 	return 1;
 }
 

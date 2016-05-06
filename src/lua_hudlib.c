@@ -166,6 +166,8 @@ static int lib_getHudInfo(lua_State *L)
 	lua_remove(L, 1);
 
 	i = luaL_checkinteger(L, 1);
+	if (i >= NUMHUDITEMS)
+		return luaL_error(L, "hudinfo[] index %d out of range (0 - %d)", i, NUMHUDITEMS-1);
 	LUA_PushUserdata(L, &hudinfo[i], META_HUDINFO);
 	return 1;
 }
@@ -526,6 +528,22 @@ static int libd_height(lua_State *L)
 	return 1;
 }
 
+static int libd_dupx(lua_State *L)
+{
+	HUDONLY
+	lua_pushinteger(L, vid.dupx); // push integral scale (patch scale)
+	lua_pushfixed(L, vid.fdupx); // push fixed point scale (position scale)
+	return 2;
+}
+
+static int libd_dupy(lua_State *L)
+{
+	HUDONLY
+	lua_pushinteger(L, vid.dupy); // push integral scale (patch scale)
+	lua_pushfixed(L, vid.fdupy); // push fixed point scale (position scale)
+	return 2;
+}
+
 static int libd_renderer(lua_State *L)
 {
 	HUDONLY
@@ -550,6 +568,8 @@ static luaL_Reg lib_draw[] = {
 	{"getColormap", libd_getColormap},
 	{"width", libd_width},
 	{"height", libd_height},
+	{"dupx", libd_dupx},
+	{"dupy", libd_dupy},
 	{"renderer", libd_renderer},
 	{NULL, NULL}
 };
