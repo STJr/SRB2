@@ -85,11 +85,16 @@ static int lib_finetangent(lua_State *L)
 	boolean newtan = lua_optboolean(L, 2);
 
 	if (newtan)
+	{
 		// HACK: add ANGLE_90 to make tan() in Lua start at 0 like it should
 		// use & 4095 instead of & FINEMASK (8191), so it doesn't go out of the array's bounds
 		lua_pushfixed(L, FINETANGENT(((luaL_checkangle(L, 1)+ANGLE_90)>>ANGLETOFINESHIFT) & 4095));
+	}
 	else
+	{
+		LUA_Deprecated(L, "tan(angle)", "tan(angle, true)");
 		lua_pushfixed(L, FINETANGENT((luaL_checkangle(L, 1)>>ANGLETOFINESHIFT) & 4095));
+	}
 	return 1;
 }
 
