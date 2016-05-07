@@ -189,10 +189,13 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 		{
 			object->angle = spring->angle;
 
-			if (object->player == &players[consoleplayer])
-				localangle = spring->angle;
-			else if (object->player == &players[secondarydisplayplayer])
-				localangle2 = spring->angle;
+			if (!demoplayback || P_AnalogMove(object->player))
+			{
+				if (object->player == &players[consoleplayer])
+					localangle = spring->angle;
+				else if (object->player == &players[secondarydisplayplayer])
+					localangle2 = spring->angle;
+			}
 		}
 
 		pflags = object->player->pflags & (PF_JUMPED|PF_SPINNING|PF_THOKKED); // I still need these.
@@ -672,10 +675,13 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 			thing->angle = tmthing->angle;
 
-			if (thing->player == &players[consoleplayer])
-				localangle = thing->angle;
-			else if (thing->player == &players[secondarydisplayplayer])
-				localangle2 = thing->angle;
+			if (!demoplayback || P_AnalogMove(thing->player))
+			{
+				if (thing->player == &players[consoleplayer])
+					localangle = thing->angle;
+				else if (thing->player == &players[secondarydisplayplayer])
+					localangle2 = thing->angle;
+			}
 
 			return true;
 		}
@@ -2666,10 +2672,13 @@ isblocking:
 			&& P_IsClimbingValid(slidemo->player, climbangle))
 			{
 				slidemo->angle = climbangle;
-				if (slidemo->player == &players[consoleplayer])
-					localangle = slidemo->angle;
-				else if (slidemo->player == &players[secondarydisplayplayer])
-					localangle2 = slidemo->angle;
+				if (!demoplayback || P_AnalogMove(slidemo->player))
+				{
+					if (slidemo->player == &players[consoleplayer])
+						localangle = slidemo->angle;
+					else if (slidemo->player == &players[secondarydisplayplayer])
+						localangle2 = slidemo->angle;
+				}
 
 				if (!slidemo->player->climbing)
 				{

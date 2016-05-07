@@ -3670,10 +3670,13 @@ DoneSection2:
 
 				player->mo->angle = lineangle;
 
-				if (player == &players[consoleplayer])
-					localangle = player->mo->angle;
-				else if (player == &players[secondarydisplayplayer])
-					localangle2 = player->mo->angle;
+				if (!demoplayback || P_AnalogMove(player))
+				{
+					if (player == &players[consoleplayer])
+						localangle = player->mo->angle;
+					else if (player == &players[secondarydisplayplayer])
+						localangle2 = player->mo->angle;
+				}
 
 				if (!(lines[i].flags & ML_EFFECT4))
 				{
@@ -7500,24 +7503,27 @@ void T_Pusher(pusher_t *p)
 				P_SetPlayerMobjState (thing, thing->info->painstate); // Whee!
 				thing->angle = R_PointToAngle2 (0, 0, xspeed<<(FRACBITS-PUSH_FACTOR), yspeed<<(FRACBITS-PUSH_FACTOR));
 
-				if (thing->player == &players[consoleplayer])
+				if (!demoplayback || P_AnalogMove(thing->player))
 				{
-					if (thing->angle - localangle > ANGLE_180)
-						localangle -= (localangle - thing->angle) / 8;
-					else
-						localangle += (thing->angle - localangle) / 8;
+					if (thing->player == &players[consoleplayer])
+					{
+						if (thing->angle - localangle > ANGLE_180)
+							localangle -= (localangle - thing->angle) / 8;
+						else
+							localangle += (thing->angle - localangle) / 8;
+					}
+					else if (thing->player == &players[secondarydisplayplayer])
+					{
+						if (thing->angle - localangle2 > ANGLE_180)
+							localangle2 -= (localangle2 - thing->angle) / 8;
+						else
+							localangle2 += (thing->angle - localangle2) / 8;
+					}
+					/*if (thing->player == &players[consoleplayer])
+						localangle = thing->angle;
+					else if (thing->player == &players[secondarydisplayplayer])
+						localangle2 = thing->angle;*/
 				}
-				else if (thing->player == &players[secondarydisplayplayer])
-				{
-					if (thing->angle - localangle2 > ANGLE_180)
-						localangle2 -= (localangle2 - thing->angle) / 8;
-					else
-						localangle2 += (thing->angle - localangle2) / 8;
-				}
-				/*if (thing->player == &players[consoleplayer])
-					localangle = thing->angle;
-				else if (thing->player == &players[secondarydisplayplayer])
-					localangle2 = thing->angle;*/
 			}
 
 			if (p->exclusive)

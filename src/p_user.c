@@ -2700,10 +2700,13 @@ static void P_DoClimbing(player_t *player)
 		P_InstaThrust(player->mo, player->mo->angle, FixedMul(-4*FRACUNIT, player->mo->scale));
 	}
 
-	if (player == &players[consoleplayer])
-		localangle = player->mo->angle;
-	else if (player == &players[secondarydisplayplayer])
-		localangle2 = player->mo->angle;
+	if (!demoplayback || P_AnalogMove(player))
+	{
+		if (player == &players[consoleplayer])
+			localangle = player->mo->angle;
+		else if (player == &players[secondarydisplayplayer])
+			localangle2 = player->mo->angle;
+	}
 
 	if (player->climbing == 0)
 		P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
@@ -3583,10 +3586,13 @@ void P_DoJump(player_t *player, boolean soundandstate)
 
 		player->mo->angle = player->mo->angle - ANGLE_180; // Turn around from the wall you were climbing.
 
-		if (player == &players[consoleplayer])
-			localangle = player->mo->angle; // Adjust the local control angle.
-		else if (player == &players[secondarydisplayplayer])
-			localangle2 = player->mo->angle;
+		if (!demoplayback || P_AnalogMove(player))
+		{
+			if (player == &players[consoleplayer])
+				localangle = player->mo->angle; // Adjust the local control angle.
+			else if (player == &players[secondarydisplayplayer])
+				localangle2 = player->mo->angle;
+		}
 
 		player->climbing = 0; // Stop climbing, duh!
 		P_InstaThrust(player->mo, player->mo->angle, FixedMul(6*FRACUNIT, player->mo->scale)); // Jump off the wall.
@@ -4242,7 +4248,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 	}
 }
 
-static boolean P_AnalogMove(player_t *player)
+boolean P_AnalogMove(player_t *player)
 {
 	return player->pflags & PF_ANALOGMODE;
 }
@@ -7577,7 +7583,7 @@ void P_HomingAttack(mobj_t *source, mobj_t *enemy) // Home in on your target
 
 	// change angle
 	source->angle = R_PointToAngle2(source->x, source->y, enemy->x, enemy->y);
-	if (source->player)
+	if (source->player && (!demoplayback || P_AnalogMove(source->player)))
 	{
 		if (source->player == &players[consoleplayer])
 			localangle = source->angle;
@@ -7996,6 +8002,8 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 				angle = R_PointToAngle2(player->mo->x, player->mo->y, player->mo->target->x, player->mo->target->y);
 		}
 	}
+	else if (P_AnalogMove(player)) // Analog
+		angle = R_PointToAngle2(thiscam->x, thiscam->y, mo->x, mo->y);
 	else if (demoplayback)
 	{
 		angle = focusangle;
@@ -8008,8 +8016,6 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 				localangle -= abs((signed)(focusangle - localangle))>>5;
 		}
 	}
-	else if (P_AnalogMove(player)) // Analog
-		angle = R_PointToAngle2(thiscam->x, thiscam->y, mo->x, mo->y);
 	else
 		angle = focusangle + FixedAngle(camrotate*FRACUNIT);
 
@@ -8020,7 +8026,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		thiscam->angle = angle;
 	}
 
-	if (!objectplacing && !(twodlevel || (mo->flags2 & MF2_TWOD)) && !(player->pflags & PF_NIGHTSMODE))
+	if (!objectplacing && !(twodlevel || (mo->flags2 & MF2_TWOD)) && !(player->pflags & PF_NIGHTSMODE) && displayplayer == consoleplayer)
 	{
 #ifdef REDSANALOG
 		if ((player->cmd.buttons & (BT_CAMLEFT|BT_CAMRIGHT)) == (BT_CAMLEFT|BT_CAMRIGHT)); else
@@ -9379,10 +9385,13 @@ void P_PlayerAfterThink(player_t *player)
 		{
 			player->mo->angle = player->mo->tracer->angle;
 
-			if (player == &players[consoleplayer])
-				localangle = player->mo->angle;
-			else if (player == &players[secondarydisplayplayer])
-				localangle2 = player->mo->angle;
+			if (!demoplayback || P_AnalogMove(player))
+			{
+				if (player == &players[consoleplayer])
+					localangle = player->mo->angle;
+				else if (player == &players[secondarydisplayplayer])
+					localangle2 = player->mo->angle;
+			}
 		}
 
 		if (P_AproxDistance(player->mo->x - player->mo->tracer->x, player->mo->y - player->mo->tracer->y) > player->mo->radius)
@@ -9449,10 +9458,13 @@ void P_PlayerAfterThink(player_t *player)
 			player->mo->tracer->target->health += cmd->sidemove;
 			player->mo->angle += cmd->sidemove<<ANGLETOFINESHIFT; // 2048 --> ANGLE_MAX
 
-			if (player == &players[consoleplayer])
-				localangle = player->mo->angle; // Adjust the local control angle.
-			else if (player == &players[secondarydisplayplayer])
-				localangle2 = player->mo->angle;
+			if (!demoplayback || P_AnalogMove(player))
+			{
+				if (player == &players[consoleplayer])
+					localangle = player->mo->angle; // Adjust the local control angle.
+				else if (player == &players[secondarydisplayplayer])
+					localangle2 = player->mo->angle;
+			}
 		}
 	}
 
