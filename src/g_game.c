@@ -1009,10 +1009,10 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	}
 	if (cv_analog.value || twodlevel
 		|| (player->mo && (player->mo->flags2 & MF2_TWOD))
-		|| player->climbing
+		|| (!demoplayback && (player->climbing
 		|| (player->pflags & PF_NIGHTSMODE)
 		|| (player->pflags & PF_SLIDING)
-		|| (player->pflags & PF_FORCESTRAFE)) // Analog
+		|| (player->pflags & PF_FORCESTRAFE)))) // Analog
 			forcestrafe = true;
 	if (forcestrafe) // Analog
 	{
@@ -1184,8 +1184,9 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	if (!mouseaiming && cv_mousemove.value)
 		forward += mousey;
 
-	if (cv_analog.value || player->climbing
-		|| (player->pflags & PF_SLIDING)) // Analog for mouse
+	if (cv_analog.value ||
+		(!demoplayback && (player->climbing
+		|| (player->pflags & PF_SLIDING)))) // Analog for mouse
 		side += mousex*2;
 	else
 		cmd->angleturn = (INT16)(cmd->angleturn - (mousex*8));
