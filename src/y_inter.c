@@ -100,6 +100,7 @@ typedef union
 		patch_t *scorepatch;
 		patch_t *guardpatch;
 		patch_t *emblempatch;
+		patch_t *perfectpatch;
 
 		INT32 topplayers[4]; // top players sorted based on player number
 		patch_t *placeicons[4];
@@ -419,6 +420,10 @@ void Y_IntermissionDrawer(void)
 				}
 			}
 		}
+
+		// Perfect Bonus
+		if (data.compcoop.gotperfbonus && data.compcoop.perfectpatch)
+			V_DrawScaledPatch(96, 2, 0, data.compcoop.perfectpatch);
 	}
 	else if (intertype == int_spec)
 	{
@@ -965,6 +970,12 @@ void Y_Ticker(void)
 			data.compcoop.titleoffset = 0;
 		}
 
+		if (data.compcoop.gotperfbonus && intertic == 13*TICRATE)
+		{
+			data.compcoop.perfectpatch = W_CachePatchName("GOTEMBLM", PU_STATIC);
+			S_StartSound(NULL, sfx_ncitem);
+		}
+
 		// If a player has left or joined, recalculate scores.
 		if (data.compcoop.numplayers != D_NumPlayers())
 			Y_CalculateCompCoopWinners();
@@ -1354,7 +1365,7 @@ void Y_StartIntermission(void)
 
 			data.compcoop.scorepatch = W_CachePatchName("INTSCORE", PU_STATIC);
 			data.compcoop.guardpatch = W_CachePatchName("INTGUARD", PU_STATIC);
-			
+
 			if ((!modifiedgame || savemoddata) && !demoplayback)
 			{
 				// Update visitation flags
@@ -1382,6 +1393,7 @@ void Y_StartIntermission(void)
 				{
 					data.compcoop.placeicons[i] = NULL;
 				}
+				data.compcoop.perfectpatch = NULL;
 			}
 #endif
 
@@ -2080,7 +2092,7 @@ static void Y_SetPerfectBonus(player_t *player, y_bonus_t *bstruct)
 //
 // Y_SetCompCoopPerfectBonus
 //
-static void Y_SetCompCoopPerfectBonus(void) // We're taking a simpler approach here. 
+static void Y_SetCompCoopPerfectBonus(void) // We're taking a simpler approach here.
 {
 	INT32 i;
 
@@ -2364,6 +2376,7 @@ static void Y_UnloadData(void)
 			UNLOAD(data.compcoop.scorepatch);
 			UNLOAD(data.compcoop.guardpatch);
 			UNLOAD(data.compcoop.emblempatch);
+			UNLOAD(data.compcoop.perfectpatch);
 			UNLOAD(data.compcoop.placeicons[0]);
 			UNLOAD(data.compcoop.placeicons[1]);
 			UNLOAD(data.compcoop.placeicons[2]);
