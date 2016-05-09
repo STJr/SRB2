@@ -1696,9 +1696,14 @@ void I_StartupGraphics(void)
 	}
 #endif
 	{
-		char vd[100]; //stack space for video name
-		//CONS_Printf(M_GetText("Starting up with video driver : %s\n"), SDL_VideoDriverName(vd,100));
-		if (strncasecmp(vd, "gcvideo", 8) == 0 || strncasecmp(vd, "fbcon", 6) == 0 || strncasecmp(vd, "wii", 4) == 0 || strncasecmp(vd, "psl1ght", 8) == 0)
+		const char *vd = SDL_GetCurrentVideoDriver();
+		//CONS_Printf(M_GetText("Starting up with video driver: %s\n"), vd);
+		if (vd && (
+			strncasecmp(vd, "gcvideo", 8) == 0 ||
+			strncasecmp(vd, "fbcon", 6) == 0 ||
+			strncasecmp(vd, "wii", 4) == 0 ||
+			strncasecmp(vd, "psl1ght", 8) == 0
+		))
 			framebuffer = SDL_TRUE;
 	}
 	if (M_CheckParm("-software"))
