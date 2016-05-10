@@ -372,7 +372,7 @@ else
 
 	# build a normal optimised version
 	WINDRESFLAGS = -DNDEBUG
-	CFLAGS+=-O2
+	#CFLAGS+=-O2
 endif
 	CFLAGS+=-g $(OPTS) $(M5) $(WINDRESFLAGS)
 
