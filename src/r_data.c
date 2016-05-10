@@ -1604,17 +1604,17 @@ void R_PrecacheLevel(void)
 	//
 	// no need to precache all software textures in 3D mode
 	// (note they are still used with the reference software view)
-	texturepresent = calloc(numtextures+1, sizeof (*texturepresent));
+	texturepresent = calloc(numtextures, sizeof (*texturepresent));
 	if (texturepresent == NULL) I_Error("%s: Out of memory looking up textures", "R_PrecacheLevel");
 
 	for (j = 0; j < numsides; j++)
 	{
 		// huh, a potential bug here????
-		if (sides[j].toptexture < numtextures)
+		if (sides[j].toptexture >= 0 && sides[j].toptexture < numtextures)
 			texturepresent[sides[j].toptexture] = 1;
-		if (sides[j].midtexture < numtextures)
+		if (sides[j].midtexture >= 0 && sides[j].midtexture < numtextures)
 			texturepresent[sides[j].midtexture] = 1;
-		if (sides[j].bottomtexture < numtextures)
+		if (sides[j].bottomtexture >= 0 && sides[j].bottomtexture < numtextures)
 			texturepresent[sides[j].bottomtexture] = 1;
 	}
 
