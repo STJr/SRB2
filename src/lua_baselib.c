@@ -115,6 +115,8 @@ static int lib_pRandomKey(lua_State *L)
 	INT32 a = (INT32)luaL_checkinteger(L, 1);
 
 	NOHUD
+	if (a > 65536)
+		LUA_UsageWarning(L, "P_RandomKey: range > 65536 is undefined behavior");
 	lua_pushinteger(L, P_RandomKey(a));
 	return 1;
 }
@@ -130,6 +132,8 @@ static int lib_pRandomRange(lua_State *L)
 		a = b;
 		b = c;
 	}
+	if ((b-a+1) > 65536)
+		LUA_UsageWarning(L, "P_RandomRange: range > 65536 is undefined behavior");
 	lua_pushinteger(L, P_RandomRange(a, b));
 	return 1;
 }

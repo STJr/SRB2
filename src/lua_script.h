@@ -81,4 +81,15 @@ void COM_Lua_f(void);
 	}\
 }
 
+// Warnings about incorrect function usage.
+// Shows once, then never again, like deprecation
+#define LUA_UsageWarning(L, warningmsg)\
+{\
+	static UINT8 seen = 0;\
+	if (!seen) {\
+		seen = 1;\
+		CONS_Alert(CONS_WARNING,"%s\n", warningmsg);\
+	}\
+}
+
 #endif
