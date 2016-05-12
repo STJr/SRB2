@@ -1712,7 +1712,7 @@ void P_XYMovement(mobj_t *mo)
 				mo->threshold++;
 
 				// Gain lower amounts of time on each bounce.
-				if (mo->threshold < 5)
+				if (mo->fuse && mo->threshold < 5)
 					mo->fuse += ((5 - mo->threshold) * TICRATE);
 
 				// Check for hit against sky here
@@ -2185,7 +2185,7 @@ static boolean P_ZMovement(mobj_t *mo)
 
 				// Be sure to change the XY one too if you change this.
 				// Gain lower amounts of time on each bounce.
-				if (mo->threshold < 5)
+				if (mo->fuse && mo->threshold < 5)
 					mo->fuse += ((5 - mo->threshold) * TICRATE);
 			}
 			break;

@@ -2494,7 +2494,7 @@ static inline boolean P_TagDamage(mobj_t *target, mobj_t *inflictor, mobj_t *sou
 		if (!(inflictor->flags & MF_FIRE))
 			P_GivePlayerRings(player, 1);
 		if (inflictor->flags2 & MF2_BOUNCERING)
-			inflictor->fuse = 1;
+			inflictor->fuse = 0; // bounce ring disappears at -1 not 0
 		return false;
 	}
 
@@ -2577,7 +2577,7 @@ static inline boolean P_PlayerHitsPlayer(mobj_t *target, mobj_t *inflictor, mobj
 			if (!(inflictor->flags & MF_FIRE))
 				P_GivePlayerRings(target->player, 1);
 			if (inflictor->flags2 & MF2_BOUNCERING)
-				inflictor->fuse = 1;
+				inflictor->fuse = 0; // bounce ring disappears at -1 not 0
 
 			return false;
 		}
