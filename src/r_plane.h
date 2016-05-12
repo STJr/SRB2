@@ -21,7 +21,7 @@
 //
 // Now what is a visplane, anyway?
 // Simple: kinda floor/ceiling polygon optimised for SRB2 rendering.
-// 7748 bytes! (for win32, anyway)
+// 7764 bytes! (for win32, anyway)
 //
 typedef struct visplane_s
 {
