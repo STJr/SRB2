@@ -5681,19 +5681,6 @@ static void P_NiGHTSMovement(player_t *player)
 			player->angle_pos += FixedAngleC(FixedDiv(xspeed,5*FRACUNIT),40*FRACUNIT);
 		}
 
-		if (player->pflags & PF_TRANSFERTOCLOSEST)
-		{
-			const angle_t fa = R_PointToAngle2(player->axis1->x, player->axis1->y, player->axis2->x, player->axis2->y);
-			P_InstaThrust(player->mo, fa, xspeed/10);
-		}
-		else
-		{
-			const angle_t fa = player->angle_pos>>ANGLETOFINESHIFT;
-
-			player->mo->momx = player->mo->target->x + FixedMul(FINECOSINE(fa),radius) - player->mo->x;
-			player->mo->momy = player->mo->target->y + FixedMul(FINESINE(fa),radius) - player->mo->y;
-		}
-
 		player->mo->momz = 0;
 
 		P_NightsTransferPoints(player, xspeed, radius);
