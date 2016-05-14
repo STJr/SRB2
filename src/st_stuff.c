@@ -129,6 +129,11 @@ static patch_t *renergy[26]; // These 2 are used in intermission
 static patch_t *sboemblm;
 static patch_t *sbostime;
 static patch_t *sbosscore;
+static patch_t *bosstext;
+static patch_t *bosstart;
+static patch_t *bosson;
+static patch_t *bossoff;
+static patch_t *bossend;
 static patch_t *sboslash;
 patch_t *sboscolon;
 patch_t *sbosperiod;
@@ -253,6 +258,10 @@ hudinfo_t hudinfo[NUMHUDITEMS] =
 
 	{ 282,  14}, // HUD_ND_LIVESPIC2P
 	{ 317,  17}, // HUD_ND_LIVESNUM2P
+
+	{  80, 184}, // HUD_BOSS
+	{   3, 177}, // HUD_ND_BOSS
+	{  64, 177}, // HUD_ND_BOSS2P
 };
 
 //
@@ -438,6 +447,11 @@ void ST_LoadGraphics(void)
 	sboemblm = W_CachePatchName("SBOEMBLM", PU_HUDGFX);
 	sbostime = W_CachePatchName("SBOSTIME", PU_HUDGFX);
 	sbosscore = W_CachePatchName("SBOSSCOR", PU_HUDGFX);
+	bosstext = W_CachePatchName("BOSSTEXT", PU_HUDGFX);
+	bosstart = W_CachePatchName("BOSSTART", PU_HUDGFX);
+	bosson = W_CachePatchName("BOSSON", PU_HUDGFX);
+	bossoff = W_CachePatchName("BOSSOFF", PU_HUDGFX);
+	bossend = W_CachePatchName("BOSSEND", PU_HUDGFX);
 	sboslash = W_CachePatchName("SBOSLASH", PU_HUDGFX);
 	sboscolon = W_CachePatchName("SBOSCOLN", PU_HUDGFX);
 	sbosperiod = W_CachePatchName("SBOSPERI", PU_HUDGFX); // Period for time centiseconds
@@ -858,7 +872,7 @@ static inline void ST_drawRings(void)
 
 	if (twoplayer)
 	{
-		INT32 ringnum = max(players[secondarydisplayplayer].health-1, 0);
+		ringnum = max(players[secondarydisplayplayer].health-1, 0);
 
 		ST_DrawPatchFromHudWS(HUD_RINGS2P, ((stplyr->health <= 1 && leveltime/5 & 1) ? rrings : sborings));
 
@@ -1079,6 +1093,8 @@ static void ST_drawNDScore(void)
 
 static void ST_drawNDTime(void)
 {
+	INT32 seconds, minutes, tictrn, tics;
+
 	if (gametype == GT_COOP && (netgame || multiplayer) && (maptol & TOL_TD))
 	{
 		INT32 i;
@@ -1090,8 +1106,6 @@ static void ST_drawNDTime(void)
 		if (i == MAXPLAYERS)
 			return;
 	}
-
-	INT32 seconds, minutes, tictrn, tics;
 
 	// TIME:
 	if (twoplayer)
@@ -1148,6 +1162,8 @@ static void ST_drawNDTime(void)
 
 static inline void ST_drawNDRings(void)
 {
+	INT32 ringnum, hits;
+
 	if (gametype == GT_COOP && (netgame || multiplayer) && (maptol & TOL_TD))
 	{
 		INT32 i;
@@ -1160,8 +1176,8 @@ static inline void ST_drawNDRings(void)
 			return;
 	}
 
-	INT32 ringnum = max(stplyr->health-1, 0);
-	INT32 hits = ringnum/5;
+	ringnum = max(stplyr->health-1, 0);
+	hits = ringnum/5;
 
 	if (hits > 5)
 		hits = 5;
@@ -1218,6 +1234,7 @@ static inline void ST_drawNDRings(void)
 
 static inline void ST_drawNDEmblems(void)
 {
+	INT32 emblemnum;
 	if (gametype == GT_COOP && (netgame || multiplayer) && (maptol & TOL_TD))
 	{
 		INT32 i;
@@ -1230,12 +1247,12 @@ static inline void ST_drawNDEmblems(void)
 			return;
 	}
 
-	INT32 emblemnum = max(stplyr->emblems, 0);
+	emblemnum = max(stplyr->emblems, 0);
 
 	if ((maptol & TOL_TD) && gametype == GT_COOP && (netgame || multiplayer))
 	{
-		emblemnum = 0;
 		INT32 i;
+		emblemnum = 0;
 
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
@@ -1338,6 +1355,58 @@ static void ST_drawNDLives(void)
 		// twoplayer is only in Coop mode
 		ST_DrawNumFromHud(HUD_ND_LIVESNUM, stplyr->lives);
 	}
+}
+
+static inline void ST_drawBossHealth(void)
+{
+	thinker_t *th;
+	mobj_t *mo2;
+	INT32 bosshealth = 0, bosshealthmax = 0;
+	INT32 x = hudinfo[HUD_ND_BOSS].x, y = hudinfo[HUD_ND_BOSS].y;
+	INT32 i;
+
+	if (twoplayer)
+	{
+		x = hudinfo[HUD_ND_BOSS2P].x;
+		y = hudinfo[HUD_ND_BOSS2P].y;
+	}
+	if (!(maptol & TOL_ND))
+	{
+		x = hudinfo[HUD_BOSS].x;
+		y = hudinfo[HUD_BOSS].y;
+	}
+	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	{
+		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+			continue;
+		mo2 = (mobj_t *)th;
+
+		if (mo2->flags & MF_BOSS)
+		{
+			bosshealth = mo2->health;
+			bosshealthmax = mo2->info->spawnhealth;
+			break;
+		}
+	}
+
+	if (bosshealthmax <= 0) // nothing to draw
+		return;
+
+	V_DrawScaledPatch(x, y, V_HUDTRANS, bosstext);
+	x += 26;
+	V_DrawScaledPatch(x, y, V_HUDTRANS, bosstart);
+	x +=6;
+	for (i = 0; i < bosshealth; i++)
+	{
+		V_DrawScaledPatch(x, y, V_HUDTRANS, bosson);
+		x += 8;
+	}
+	for (; i < bosshealthmax; i++)
+	{
+		V_DrawScaledPatch(x, y, V_HUDTRANS, bossoff);
+		x += 8;
+	}
+	V_DrawScaledPatch(x, y, V_HUDTRANS, bossend);
 }
 
 static void ST_drawLevelTitle(void)
@@ -1956,7 +2025,7 @@ static void ST_drawNiGHTSHUD(void)
 		splitscreen = true;
 }
 
-static void ST_DrawNDHUD()
+static void ST_DrawNDHUD(void)
 {
 #ifdef HAVE_BLUA
 	if (LUA_HudEnabled(hud_ndscore))
@@ -1980,6 +2049,10 @@ static void ST_DrawNDHUD()
 #endif
 	)
 		ST_drawNDLives();
+#ifdef HAVE_BLUA
+	if (LUA_HudEnabled(hud_bosshealth))
+#endif // HAVE_BLUA
+	ST_drawBossHealth();
 }
 
 static void ST_drawWeaponRing(powertype_t weapon, INT32 rwflag, INT32 wepflag, INT32 xoffs, patch_t *pat)
@@ -2247,7 +2320,7 @@ static INT32 ST_drawEmeraldHuntIcon(mobj_t *hunt, patch_t **patches, INT32 offse
 	if (twoplayer)
 	{
 		dist = ((UINT32)P_AproxDistance(P_AproxDistance(players[secondarydisplayplayer].mo->x - hunt->x, players[secondarydisplayplayer].mo->y - hunt->y), players[secondarydisplayplayer].mo->z - hunt->z))>>FRACBITS;
-	
+
 		if (dist < 128)
 		{
 			i = 5;
@@ -2383,7 +2456,7 @@ static void ST_doItemFinderIconsAndSound(void)
 			continue;
 		mo2 = (mobj_t *)th;
 
-		if (mo2->type == MT_EMBLEM)
+		if (mo2->type == MT_EMBLEM || mo2->type == MT_CHAOSCOIN)
 		{
 			if (!(mo2->flags & MF_SPECIAL))
 				continue;
@@ -2442,6 +2515,10 @@ static void ST_overlayDrawer(void)
 #endif
 			)
 				ST_drawLives();
+#ifdef HAVE_BLUA
+			if (LUA_HudEnabled(hud_bosshealth))
+#endif // HAVE_BLUA
+			ST_drawBossHealth();
 		}
 	}
 

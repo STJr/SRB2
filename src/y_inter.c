@@ -85,6 +85,7 @@ typedef union
 		INT32 totalemblembonus[MAXPLAYERS];
 		INT32 damagededuction[MAXPLAYERS];
 		INT32 emblembonus[MAXPLAYERS];
+		SINT8 gotperfbonus; // Used for visitation flags.
 
 		INT32 place[MAXPLAYERS]; // Their final place, useful for draws.
 		UINT32 scores[MAXPLAYERS]; // Winner's score
@@ -187,6 +188,7 @@ static void Y_CalculateCompetitionWinners(void);
 static void Y_CalculateTimeRaceWinners(void);
 static void Y_CalculateMatchWinners(void);
 static void Y_FollowIntermission(void);
+static void Y_SetCompCoopPerfectBonus(void);
 static void Y_UnloadData(void);
 
 //
@@ -284,7 +286,6 @@ void Y_IntermissionDrawer(void)
 	}
 	else if (intertype == int_compcoop)
 	{
-		INT32 i;
 		INT32 totalscore;
 		char name[MAXPLAYERNAME+1];
 		INT32 x, y; // These are used for the below 4th place players to place their icons
@@ -358,7 +359,7 @@ void Y_IntermissionDrawer(void)
 
 				if (data.compcoop.emblembonus[data.compcoop.topplayers[i]] != -1)
 					totalscore += data.compcoop.totalemblembonus[data.compcoop.topplayers[i]];
-                
+
                 totalscore = max(totalscore, 0);
 
 				V_DrawCenteredString((78*i)+43, 38+data.compcoop.quake, 0, va("%i", totalscore));
@@ -871,6 +872,7 @@ void Y_Ticker(void)
 	else if (intertype == int_compcoop)
 	{
 		INT32 i;
+		boolean soundplayed = false; // Whether the place sound has already been played (no random sound increases)
 
 		if (!intertic) // first time only
 			S_ChangeMusic(mus_lclear, false); // don't loop it
@@ -906,8 +908,6 @@ void Y_Ticker(void)
 			if (data.compcoop.gotlife)
 				P_PlayLivesJingle(NULL);
 		}
-
-		boolean soundplayed = false; // Whether the place sound has already been played (no random sound increases)
 
 		for (i = 0; i < min(4, data.compcoop.numplayers); i++)
 		{
@@ -1077,13 +1077,24 @@ static void Y_UpdateRecordReplays(void)
 	if ((mainrecords[gamemap-1]->time == 0) || (players[consoleplayer].realtime < mainrecords[gamemap-1]->time))
 		mainrecords[gamemap-1]->time = players[consoleplayer].realtime;
 
-	if ((UINT16)(players[consoleplayer].health - 1) > mainrecords[gamemap-1]->rings)
-		mainrecords[gamemap-1]->rings = (UINT16)(players[consoleplayer].health - 1);
+	if (mapheaderinfo[gamemap-1]->typeoflevel & TOL_ND)
+	{
+		if ((UINT16)(players[consoleplayer].emblems) > mainrecords[gamemap-1]->rings)
+			mainrecords[gamemap-1]->rings = (UINT16)(players[consoleplayer].emblems);
+	}
+	else
+	{
+		if ((UINT16)(players[consoleplayer].health - 1) > mainrecords[gamemap-1]->rings)
+			mainrecords[gamemap-1]->rings = (UINT16)(players[consoleplayer].health - 1);
+	}
 
 	// Save demo!
 	bestdemo[255] = '\0';
 	lastdemo[255] = '\0';
-	G_SetDemoTime(players[consoleplayer].realtime, players[consoleplayer].score, (UINT16)(players[consoleplayer].health-1));
+	if (mapheaderinfo[gamemap-1]->typeoflevel & TOL_ND)
+		G_SetDemoTime(players[consoleplayer].realtime, players[consoleplayer].score, (UINT16)(players[consoleplayer].emblems));
+	else
+		G_SetDemoTime(players[consoleplayer].realtime, players[consoleplayer].score, (UINT16)(players[consoleplayer].health-1));
 	G_CheckDemoStatus();
 
 	I_mkdir(va("%s"PATHSEP"replay", srb2home), 0755);
@@ -1118,13 +1129,13 @@ static void Y_UpdateRecordReplays(void)
 			CONS_Printf("\x83%s\x80 %s '%s'\n", M_GetText("NEW HIGH SCORE!"), M_GetText("Saved replay as"), bestdemo);
 		}
 
-		snprintf(bestdemo, 255, "%s-%s-rings-best.lmp", gpath, cv_chooseskin.string);
+		snprintf(bestdemo, 255, "%s-%s-emblems-best.lmp", gpath, cv_chooseskin.string);
 		if (!FIL_FileExists(bestdemo) || (G_CmpDemoTime(bestdemo, lastdemo) & (1<<2)))
 		{ // Better rings, save this demo.
 			if (FIL_FileExists(bestdemo))
 				remove(bestdemo);
 			FIL_WriteFile(bestdemo, buf, len);
-			CONS_Printf("\x83%s\x80 %s '%s'\n", M_GetText("NEW MOST RINGS!"), M_GetText("Saved replay as"), bestdemo);
+			CONS_Printf("\x83%s\x80 %s '%s'\n", M_GetText("NEW MOST EMBLEMS!"), M_GetText("Saved replay as"), bestdemo);
 		}
 
 		//CONS_Printf("%s '%s'\n", M_GetText("Saved replay as"), lastdemo);
@@ -1135,7 +1146,7 @@ static void Y_UpdateRecordReplays(void)
 
 	// Check emblems when level data is updated
 	if ((earnedEmblems = M_CheckLevelEmblems()))
-		CONS_Printf(M_GetText("\x82" "Earned %hu emblem%s for Record Attack records.\n"), (UINT16)earnedEmblems, earnedEmblems > 1 ? "s" : "");
+		CONS_Printf(M_GetText("\x82" "Earned %hu Chaos Coin%s for Record Attack records.\n"), (UINT16)earnedEmblems, earnedEmblems > 1 ? "s" : "");
 
 	// Update timeattack menu's replay availability.
 	CV_AddValue(&cv_nextmap, 1);
@@ -1234,7 +1245,7 @@ void Y_StartIntermission(void)
 			// setup time data
 			data.coop.tics = players[consoleplayer].realtime;
 
-			if ((!modifiedgame || savemoddata) && !multiplayer && !demoplayback)
+			if ((!modifiedgame || savemoddata) && !demoplayback)
 			{
 				// Update visitation flags
 				mapvisited[gamemap-1] |= MV_BEATEN;
@@ -1324,6 +1335,9 @@ void Y_StartIntermission(void)
 			// Calculate who won
 			Y_CalculateCompCoopWinners();
 
+			// Set perfect bonus if achieved
+			Y_SetCompCoopPerfectBonus();
+
 			// set up the levelstring
 			if (mapheaderinfo[prevmap]->actnum)
 				snprintf(data.compcoop.levelstring,
@@ -1340,6 +1354,20 @@ void Y_StartIntermission(void)
 
 			data.compcoop.scorepatch = W_CachePatchName("INTSCORE", PU_STATIC);
 			data.compcoop.guardpatch = W_CachePatchName("INTGUARD", PU_STATIC);
+			
+			if ((!modifiedgame || savemoddata) && !demoplayback)
+			{
+				// Update visitation flags
+				mapvisited[gamemap-1] |= MV_BEATEN;
+				if (ALL7EMERALDS(emeralds))
+					mapvisited[gamemap-1] |= MV_ALLEMERALDS;
+				if (ultimatemode)
+					mapvisited[gamemap-1] |= MV_ULTIMATE;
+				if (data.compcoop.gotperfbonus)
+					mapvisited[gamemap-1] |= MV_PERFECT;
+			}
+
+			M_SilentUpdateUnlockablesAndEmblems(); // Just in case. I actually have no idea if we need this in the first place...
 
 			if (maptol & TOL_ND)
 				data.compcoop.emblempatch = W_CachePatchName("SBOEMBLM", PU_STATIC);
@@ -1639,7 +1667,7 @@ static void Y_CalculateCompCoopWinners(void)
 				emblembonus = (players[i].health-1) * 100;
 
 			damagededuction = players[i].damagededuct * 100;
-			
+
 			// This checks the lives
 			finalscore = players[i].score + emblembonus - damagededuction;
             if (finalscore > players[i].score + emblembonus) // If it's greater than the original value + emblembonus, logically it has wrapped around
@@ -1651,7 +1679,7 @@ static void Y_CalculateCompCoopWinners(void)
 
 			if (ptlives > 0)
 				data.compcoop.gotlife = true; // a player has got at least 1 life from their points
-            
+
             // This checks the position
             finalscore = players[i].levelscore + emblembonus - damagededuction;
             if (finalscore > players[i].levelscore + emblembonus) // If it's greater than the original value + emblembonus, logically it has wrapped around
@@ -1686,22 +1714,24 @@ static void Y_CalculateCompCoopWinners(void)
 			data.compcoop.place[i] = i+1;
 	}
 
-	INT32 topplayersplayernum[4] = {MAXPLAYERS, MAXPLAYERS, MAXPLAYERS, MAXPLAYERS};
-
-	memset(completed, 0, sizeof (completed));
-	memset(data.compcoop.topplayers, 0, sizeof (data.compcoop.topplayers));
-
-	for (i = 0; i < min(4, data.compcoop.numplayers); i++)
 	{
-		for (j = 0; j < min(4, data.compcoop.numplayers); j++)
+		INT32 topplayersplayernum[4] = {MAXPLAYERS, MAXPLAYERS, MAXPLAYERS, MAXPLAYERS};
+
+		memset(completed, 0, sizeof (completed));
+		memset(data.compcoop.topplayers, 0, sizeof (data.compcoop.topplayers));
+
+		for (i = 0; i < min(4, data.compcoop.numplayers); i++)
 		{
-			if (data.compcoop.num[j] < topplayersplayernum[i] && completed[j] == false)
+			for (j = 0; j < min(4, data.compcoop.numplayers); j++)
 			{
-				data.compcoop.topplayers[i] = j;
-				topplayersplayernum[i] = data.compcoop.num[j];
+				if (data.compcoop.num[j] < topplayersplayernum[i] && completed[j] == false)
+				{
+					data.compcoop.topplayers[i] = j;
+					topplayersplayernum[i] = data.compcoop.num[j];
+				}
 			}
+			completed[data.compcoop.topplayers[i]] = true;
 		}
-		completed[data.compcoop.topplayers[i]] = true;
 	}
 }
 
@@ -2030,7 +2060,10 @@ static void Y_SetPerfectBonus(player_t *player, y_bonus_t *bstruct)
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
 			if (!playeringame[i]) continue;
-			sharedringtotal += players[i].health - 1;
+			if (mapheaderinfo[gamemap-1]->typeoflevel & TOL_ND)
+				sharedringtotal += players[i].emblems;
+			else
+				sharedringtotal += players[i].health - 1;
 		}
 		if (!sharedringtotal || sharedringtotal < nummaprings)
 			data.coop.gotperfbonus = 0;
@@ -2042,6 +2075,35 @@ static void Y_SetPerfectBonus(player_t *player, y_bonus_t *bstruct)
 
 	bstruct->display = true;
 	bstruct->points = 50000;
+}
+
+//
+// Y_SetCompCoopPerfectBonus
+//
+static void Y_SetCompCoopPerfectBonus(void) // We're taking a simpler approach here. 
+{
+	INT32 i;
+
+	if (mapheaderinfo[gamemap-1]->typeoflevel & TOL_ND)
+	{
+		INT32 sharedringtotal = 0;
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			if (!playeringame[i]) continue;
+			sharedringtotal += players[i].emblems;
+		}
+		if (!sharedringtotal || sharedringtotal < nummaprings)
+			data.compcoop.gotperfbonus = 0;
+		else
+		{
+			data.compcoop.gotperfbonus = 1;
+			if (!mainrecords[gamemap-1])
+				G_AllocMainRecordData(gamemap-1);
+			mainrecords[gamemap-1]->rings = (UINT16)sharedringtotal; // Set a new record for Record Attack (shh, i know we're in MP)
+		}
+	}
+	else
+		return;
 }
 
 // This list can be extended in the future with SOC/Lua, perhaps.

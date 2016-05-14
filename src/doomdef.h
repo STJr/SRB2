@@ -138,14 +138,15 @@
 extern FILE *logstream;
 #endif
 
-#if 0
+#define DEVELOP // Disable this for release builds to remove excessive cheat commands and enable MD5 checking and stuff, all in one go. :3
+#ifdef DEVELOP
 #define VERSION    0 // Game version
 #define SUBVERSION 0 // more precise version number
 #define VERSIONSTRING "Trunk"
 #else
-#define VERSION    201 // Game version
-#define SUBVERSION 14  // more precise version number
-#define VERSIONSTRING "v2.1.14"
+#define VERSION    100 // Game version
+#define SUBVERSION 0  // more precise version number
+#define VERSIONSTRING "TD v1.0.0" // Originally v2.1.14. Keep this updated.
 // Hey! If you change this, add 1 to the MODVERSION below!
 // Otherwise we can't force updates!
 #endif
@@ -161,8 +162,8 @@ extern FILE *logstream;
 // The string used in the alert that pops up in the event of an update being available.
 // Please change to apply to your modification (we don't want everyone asking where your mod is on SRB2.org!).
 #define UPDATE_ALERT_STRING \
-"A new update is available for SRB2.\n"\
-"Please visit SRB2.org to download it.\n"\
+"A new update is available for SRB2TD.\n"\
+"Please visit mb.srb2.org to download it.\n"\
 "\n"\
 "You are using version: %s\n"\
 "The newest version is: %s\n"\
@@ -178,8 +179,8 @@ extern FILE *logstream;
 // The string used in the I_Error alert upon trying to host through command line parameters.
 // Generally less filled with newlines, since Windows gives you lots more room to work with.
 #define UPDATE_ALERT_STRING_CONSOLE \
-"A new update is available for SRB2.\n"\
-"Please visit SRB2.org to download it.\n"\
+"A new update is available for SRB2TD.\n"\
+"Please visit mb.srb2.org to download it.\n"\
 "\n"\
 "You are using version: %s\n"\
 "The newest version is: %s\n"\
@@ -197,13 +198,13 @@ extern FILE *logstream;
 // The Modification ID; must be obtained from Inuyasha ( http://mb.srb2.org/private.php?do=newpm&u=2604 ).
 // DO NOT try to set this otherwise, or your modification will be unplayable through the Master Server.
 // "12" is the default mod ID for version 2.1
-#define MODID 12
+#define MODID 14 // TopDown's MODID is 14. Do not change this.
 
 // The Modification Version, starting from 1. Do not follow your version string for this,
 // it's only for detection of the version the player is using so the MS can alert them of an update.
 // Only set it higher, not lower, obviously.
 // Note that we use this to help keep internal testing in check; this is why v2.1.0 is not version "1".
-#define MODVERSION 19
+#define MODVERSION 1
 
 
 
@@ -293,8 +294,9 @@ enum {
 	LE_PINCHPHASE      = -2, // A boss entered pinch phase (and, in most cases, is preparing their pinch phase attack!)
 	LE_ALLBOSSESDEAD   = -3, // All bosses in the map are dead (Egg capsule raise)
 	LE_BOSSDEAD        = -4, // A boss in the map died (Chaos mode boss tally)
-	LE_BOSS4DROP       = -5,  // CEZ boss dropped its cage
-	LE_BRAKVILEATACK   = -6  // Brak's doing his LOS attack, oh noes
+	LE_BOSS4DROP       = -5, // CEZ boss dropped its cage
+	LE_BRAKVILEATACK   = -6, // Brak's doing his LOS attack, oh noes
+	LE_EXTRAATTACK     = -7, // Only used for MMZ extra attack for now
 };
 
 // Name of local directory for config files and savegames
@@ -350,7 +352,7 @@ void CONS_Debug(INT32 debugflags, const char *fmt, ...) FUNCDEBUG;
 #define DEVMAPS "devmaps"
 #define DEVDATA "devdata"
 
-#define SAVEGAMENAME "srb2sav"
+#define SAVEGAMENAME "srb2tdsav"
 
 char savegamename[256];
 

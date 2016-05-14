@@ -963,9 +963,9 @@ void D_SRB2Main(void)
 #endif
 
 #if defined (_WIN32_WCE) //|| defined (_DEBUG) || defined (GP2X)
-	devparm = !M_CheckParm("-nodebug");
+	devparm = M_CheckParm("-nodebug") == 0;
 #else
-	devparm = M_CheckParm("-debug");
+	devparm = M_CheckParm("-debug") != 0;
 #endif
 
 	// for dedicated server
@@ -1138,17 +1138,19 @@ void D_SRB2Main(void)
 #endif
 	D_CleanFile();
 
-#if 1 // md5s last updated 12/14/14
+#ifndef DEVELOP // md5s last updated 6/10/15
 
 	// Check MD5s of autoloaded files
 	W_VerifyFileMD5(0, "c1b9577687f8a795104aef4600720ea7"); // srb2.srb/srb2.wad
-	W_VerifyFileMD5(1, "07288367ef8adb68bf2475f87f8ea7d3"); // zones.td
-	W_VerifyFileMD5(2, "e6d142d9fdaee3251b497358a53fb424"); // player.td
 	W_VerifyFileMD5(3, "85901ad4bf94637e5753d2ac2c03ea26"); // rings.dta
 	//W_VerifyFileMD5(4, "0c66790502e648bfce90fdc5bb15722e"); // patch.dta
 
+	// Top Down file MD5s
+	//W_VerifyFileMD5(1, "b32517aa75cfcd3154037340a835ee99"); // zones.td
+	W_VerifyFileMD5(2, "e6d142d9fdaee3251b497358a53fb424"); // player.td
 	W_VerifyFileMD5(4, "bfffe2fec3ad2b0d189ac5fa7573ce7a"); // assetpack.td
-	W_VerifyFileMD5(5, "d23bc8ac6a89d37caf892165bf970688"); // tddata.td
+	//W_VerifyFileMD5(5, "3f273fb9e5b74904ac62c73037599d89"); // tddata.td
+
 	// don't check music.dta because people like to modify it, and it doesn't matter if they do
 	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.
 #endif

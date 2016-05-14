@@ -979,11 +979,19 @@ static inline void P_SpawnEmblems(void)
 		if (emblemlocations[i].level != gamemap || emblemlocations[i].type > ET_SKIN)
 			continue;
 
-		emblemmobj = P_SpawnMobj(emblemlocations[i].x<<FRACBITS, emblemlocations[i].y<<FRACBITS,
-			emblemlocations[i].z<<FRACBITS, MT_EMBLEM);
+		if (emblemlocations[i].sprite == 'U')
+		{
+			emblemmobj = P_SpawnMobj(emblemlocations[i].x<<FRACBITS, emblemlocations[i].y<<FRACBITS,
+				emblemlocations[i].z<<FRACBITS, MT_CHAOSCOIN);
+		}
+		else
+		{
+			emblemmobj = P_SpawnMobj(emblemlocations[i].x<<FRACBITS, emblemlocations[i].y<<FRACBITS,
+				emblemlocations[i].z<<FRACBITS, MT_EMBLEM);
 
-		I_Assert(emblemlocations[i].sprite >= 'A' && emblemlocations[i].sprite <= 'Z');
-		P_SetMobjStateNF(emblemmobj, emblemmobj->info->spawnstate + (emblemlocations[i].sprite - 'A'));
+			I_Assert(emblemlocations[i].sprite >= 'A' && emblemlocations[i].sprite <= 'Z');
+			P_SetMobjStateNF(emblemmobj, emblemmobj->info->spawnstate + (emblemlocations[i].sprite - 'A'));
+		}
 
 		emblemmobj->health = i+1;
 		color = M_GetEmblemColor(&emblemlocations[i]);
@@ -991,7 +999,7 @@ static inline void P_SpawnEmblems(void)
 		emblemmobj->color = (UINT8)color;
 
 		if (emblemlocations[i].collected
-			|| (emblemlocations[i].type == ET_SKIN && emblemlocations[i].var != players[0].skin))
+			|| (emblemlocations[i].type == ET_SKIN && !netgame && emblemlocations[i].var != players[0].skin))
 		{
 			P_UnsetThingPosition(emblemmobj);
 			emblemmobj->flags |= MF_NOCLIP;
@@ -999,6 +1007,9 @@ static inline void P_SpawnEmblems(void)
 			emblemmobj->flags |= MF_NOBLOCKMAP;
 			emblemmobj->frame |= (tr_trans50<<FF_TRANSSHIFT);
 			P_SetThingPosition(emblemmobj);
+
+			if (emblemmobj->type == MT_CHAOSCOIN)
+				P_SetMobjStateNF(emblemmobj, S_CHAOSCOINCOLLECTED1);
 		}
 		else
 			emblemmobj->frame &= ~FF_TRANSMASK;
@@ -1008,7 +1019,7 @@ static inline void P_SpawnEmblems(void)
 static void P_SpawnSecretItems(boolean loademblems)
 {
 	// Now let's spawn those funky emblem things! Tails 12-08-2002
-	if (netgame || multiplayer || (modifiedgame && !savemoddata)) // No cheating!!
+	if (modifiedgame && !savemoddata) // No cheating!!
 		return;
 
 	if (loademblems)
@@ -2067,6 +2078,7 @@ static void P_LevelInitStuff(void)
 		players[i].levelscore = 0;
 
 		players[i].damagededuct = 0;
+		players[i].bubbletag = false;
 
 		players[i].emblems = 0; // ND emblems
 
@@ -2758,6 +2770,9 @@ boolean P_SetupLevel(boolean skipprecip)
 
 		CV_SetValue(&cv_cam2_dist, 576);
 		CV_SetValue(&cv_cam2_height, 384);
+
+		CV_SetValue(&cv_analog2, false);
+		CV_SetValue(&cv_analog, false);
 	}
 
 	// clear special respawning que

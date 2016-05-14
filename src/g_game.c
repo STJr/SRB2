@@ -60,8 +60,8 @@ JoyType_t Joystick2;
 // 1024 bytes is plenty for a savegame
 #define SAVEGAMESIZE (1024)
 
-char gamedatafilename[64] = "gamedata.dat";
-char timeattackfolder[64] = "main";
+char gamedatafilename[64] = "tdgamedata.dat";
+char timeattackfolder[64] = "td";
 char customversionstring[32] = "\0";
 
 static void G_DoCompleted(void);
@@ -1572,7 +1572,7 @@ static void Analog_OnChange(void)
 	if (cv_analog.value || demoplayback)
 		CV_SetValue(&cv_cam_dist, 192);
 
-	if (!cv_chasecam.value && cv_analog.value) {
+	if ((!cv_chasecam.value && cv_analog.value) || ((maptol & TOL_TD) && cv_analog.value)) {
 		CV_SetValue(&cv_analog, 0);
 		return;
 	}
@@ -1597,7 +1597,7 @@ static void Analog2_OnChange(void)
 	if (cv_analog2.value)
 		CV_SetValue(&cv_cam2_dist, 192);
 
-	if (!cv_chasecam2.value && cv_analog2.value) {
+	if ((!cv_chasecam2.value && cv_analog2.value) || ((maptol & TOL_TD) && cv_analog2.value)) {
 		CV_SetValue(&cv_analog2, 0);
 		return;
 	}
@@ -1616,6 +1616,32 @@ static void Analog2_OnChange(void)
 void G_DoLoadLevel(boolean resetplayer)
 {
 	INT32 i;
+
+	if (splitscreen || twoplayer)
+	{
+		// maptol hasn't been set yet
+		if ((mapheaderinfo[gamemap-1]->typeoflevel & TOL_TD) && gametype == GT_COOP)
+		{
+			if (twoplayer && (mapheaderinfo[gamemap-1]->levelflags & LF_TDNOSHAREDCAMERA))
+			{
+				splitscreen = true;
+				twoplayer = false;
+				R_ExecuteSetViewSize(); // Just call this, since the screen has changed size
+			}
+			else if (splitscreen && !(mapheaderinfo[gamemap-1]->levelflags & LF_TDNOSHAREDCAMERA))
+			{
+				splitscreen = false; // Don't call splitscreen_onchange, because it will attempt to add another player
+				twoplayer = true;
+				R_ExecuteSetViewSize(); // Just call this, since the screen has changed size
+			}
+		}
+		else if (twoplayer && !((mapheaderinfo[gamemap-1]->typeoflevel & TOL_TD) && gametype == GT_COOP))
+		{
+			splitscreen = true;
+			twoplayer = false;
+			R_ExecuteSetViewSize(); // Just call this, since the screen has changed size
+		}
+	}
 
 	// Make sure objectplace is OFF when you first start the level!
 	OP_ResetObjectplace();
@@ -2089,6 +2115,8 @@ void G_PlayerReborn(INT32 player)
 	UINT32 damagededuct;
 	UINT32 levelscore;
 
+	INT32 i;
+
 	score = players[player].score;
 	lives = players[player].lives;
 	continues = players[player].continues;
@@ -2137,7 +2165,6 @@ void G_PlayerReborn(INT32 player)
 
 	emblems = players[player].emblems;
 
-	INT32 i;
 	for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i] && !players[i].bot && players[i].mo && players[i].mo->health > 0 && players[i].playerstate == PST_LIVE) // There's a player left, so show the HUD
 				break;
@@ -2218,7 +2245,7 @@ void G_PlayerReborn(INT32 player)
 	}
 	else
 		p->health = 1; // 0 rings
-    
+
 	p->panim = PA_IDLE; // standing animation
 
 	if ((netgame || multiplayer) && !p->spectator
@@ -2347,6 +2374,7 @@ void G_SpawnPlayer(INT32 playernum, boolean starpost, boolean bubblepossible)
 		if (numplayers > 0)
 		{
 			P_MovePlayerToTDSpawn(playernum);
+			players[playernum].bubbletag = true;
 			P_BubblePlayer(&players[playernum]);
 			return;
 		}
@@ -3137,6 +3165,10 @@ void G_LoadGameData(void)
 	UINT8 recmares;
 	INT32 curmare;
 
+	// don't override the server's emblems and unlocks
+	if (netgame && !server)
+		return;
+
 	// Clear things so previously read gamedata doesn't transfer
 	// to new gamedata
 	G_ClearRecords(); // main and nights records
@@ -3294,6 +3326,10 @@ void G_SaveGameData(void)
 
 	if (!gamedataloaded)
 		return; // If never loaded (-nodata), don't save
+
+	// don't save the server's emblems and unlocks.
+	if (netgame && !server)
+		return;
 
 	save_p = savebuffer = (UINT8 *)malloc(GAMEDATASIZE);
 	if (!save_p)

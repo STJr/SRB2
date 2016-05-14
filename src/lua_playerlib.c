@@ -310,6 +310,8 @@ static int player_get(lua_State *L)
 		lua_pushinteger(L, plr->damagededuct);
 	else if (fastcmp(field,"levelscore"))
 		lua_pushinteger(L, plr->levelscore);
+	else if (fastcmp(field,"bubbletag"))
+		lua_pushboolean(L, plr->bubbletag);
 	else if (fastcmp(field,"awayviewmobj"))
 		LUA_PushUserdata(L, plr->awayviewmobj, META_MOBJ);
 	else if (fastcmp(field,"awayviewtics"))
@@ -575,6 +577,8 @@ static int player_set(lua_State *L)
 		plr->emblems = (UINT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"levelscore"))
 		plr->emblems = (UINT32)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"bubbletag"))
+		plr->bubbletag = luaL_checkboolean(L, 3);
 	else if (fastcmp(field,"awayviewmobj"))
 	{
 		mobj_t *mo = NULL;

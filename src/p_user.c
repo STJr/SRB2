@@ -4052,9 +4052,6 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 #endif
 		if (player->pflags & PF_JUMPDOWN) // all situations below this require jump button not to be pressed already
 		{
-#ifdef HAVE_BLUA
-			if (!LUAh_AbilitySpecial(player))
-#endif
 			switch (player->charability)
 			{
 			case CA_FLY:
@@ -4169,19 +4166,11 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						{
 							player->pflags &= ~PF_JUMPED;
 							P_DoJump(player, false);
+							if (maptol & TOL_TD)
+								player->mo->momz = FixedMul(player->mo->momz, 3*FRACUNIT/4); // Half height in TD
 						}
 						P_InstaThrust(player->mo, player->mo->angle, FixedMul(actionspd, player->mo->scale));
 
-						if (player->charability != CA_JUMPTHOK) // Jumpthok jump is done earlier
-						{
-							if (!(player->pflags & PF_THOKKED) // Never do the jump more than once, even if you have multiability
-								 && player->thokitem == (UINT32)mobjinfo[MT_PLAYER].painchance) // This is so that custom character that like to use the thokitem don't break
-							{
-								player->pflags &= ~PF_JUMPED;
-								P_DoJump(player, false);
-								player->mo->momz = FixedMul(player->mo->momz, 3*FRACUNIT/4); // Half height
-							}
-						}
 						if (maptol & TOL_2D)
 						{
 							player->mo->momx /= 2;
@@ -5402,7 +5391,7 @@ static void P_BubbleMove(player_t *player)
 {
 	INT32 i = 0;
 	player_t *closestplayer = player; // If it's still player afterwards, it hasn't found anyone
-	fixed_t closestdist = INT32_MAX, closestdist2 = INT32_MAX;;
+	fixed_t closestdist = INT32_MAX, closestdist2 = INT32_MAX;
 	fixed_t targetx = 0, targety = 0, targetz = 0;
 	angle_t rotationangle = (FixedAngle(2*FRACUNIT)*leveltime)>>ANGLETOFINESHIFT;
 	fixed_t rotationradius = FixedMul(29*FRACUNIT, player->mo->scale); // note: this needs to be smaller than the speed and max distance before noclip so that players can't go through walls sometimes
@@ -7677,7 +7666,7 @@ static void P_MovePlayer(player_t *player)
 	}
 	else if (gametype == GT_COOP && (maptol & TOL_TD) && player->playerstate == PST_LIVE && (cmd->buttons & BT_TOSSFLAG) && (netgame || multiplayer) && onground && !(player->pflags & PF_NOTDSHAREDCAMERA))
 	{
-		INT32 numplayers = 0, i;
+		INT32 numplayers = 0;
 
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
@@ -7696,6 +7685,7 @@ static void P_MovePlayer(player_t *player)
 		if (numplayers > 1)
 		{
 			INT32 healthlost = player->health - 5 < 1 ? player->health - 1: 5;
+			player->bubbletag = false;
 			P_BubblePlayer(player);
 			player->tossdelay = 2*TICRATE;
 
@@ -9663,6 +9653,8 @@ boolean P_MoveTDChaseCamera(player_t *player, camera_t *thiscam, boolean resetca
 		// Super TD special, centres around ALL players, zooms in and out as you get further away/closer together
 		INT32 minx, miny;
 		INT32 maxx, maxy;
+		boolean followjump = true; // Whether to follow the players in the air because they're ALL jumping
+		fixed_t distmultiply; // How much to multiply the camera values by as players spread out further
 
 		x = y = 0;
 		z = INT32_MIN; // If the player's absolute height is higher, follow that
@@ -9670,8 +9662,6 @@ boolean P_MoveTDChaseCamera(player_t *player, camera_t *thiscam, boolean resetca
 		maxx = maxy = INT32_MIN;
 
 		pviewheight = 0;
-
-		boolean followjump = true; // Whether to follow the players in the air because they're ALL jumping
 
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
@@ -9787,8 +9777,6 @@ boolean P_MoveTDChaseCamera(player_t *player, camera_t *thiscam, boolean resetca
 		}
 		else // Just do it anyway
 			thiscam->aimz += FixedMul(z - thiscam->aimz, FixedDiv(3<<FRACBITS, 100<<FRACBITS));
-
-		fixed_t distmultiply; // How much to multiply the camera values by as players spread out further
 
 		distmultiply = FixedDiv(maxx - x, 288*FRACUNIT); // east
 
@@ -9942,6 +9930,7 @@ boolean P_MoveTDChaseCamera(player_t *player, camera_t *thiscam, boolean resetca
 
 void P_BubblePlayer(player_t *player)
 {
+	mobj_t *bubble;
 	P_ResetPlayer(player);
 
 	player->playerstate = PST_BUBBLE;
@@ -9949,8 +9938,6 @@ void P_BubblePlayer(player_t *player)
 
 	if (player->mo->state - states < S_PLAY_FALL1 || player->mo->state - states > S_PLAY_FALL2)
 		P_SetPlayerMobjState(player->mo, S_PLAY_FALL1);
-
-	mobj_t *bubble;
 
 	bubble = P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z, MT_BUBBLE);
 	P_SetTarget(&bubble->target, player->mo);
@@ -9971,6 +9958,35 @@ void P_BubblePlayer(player_t *player)
 
 void P_UnbubblePlayer(player_t *player)
 {
+
+	sector_t *sec = player->mo->subsector->sector;
+	sector_t *checksec = sec;
+ 
+	// Check for a floor sector that's in our way
+	if (sec->ffloors)
+	{
+		ffloor_t *rover;
+		sector_t *roversec;
+
+		for (rover = sec->ffloors; rover; rover = rover->next)
+		{
+			if (!(rover->flags & FF_EXISTS))
+				continue;
+
+			if ((!(rover->flags & FF_SOLID) || (rover->flags & FF_SWIMMABLE)))
+				continue;
+
+			if (*rover->topheight > player->mo->z)
+				continue;
+
+			roversec = &sectors[rover->secnum];
+			if (roversec->ceilingheight > (checksec == sec ? checksec->floorheight : checksec->ceilingheight))
+				checksec = roversec;
+		}
+	}
+ 
+	if (GETSECSPECIAL(checksec->special, 1) >= 6 && GETSECSPECIAL(checksec->special, 1) <= 8 && player->bubbletag)
+		return;
 	player->playerstate = PST_LIVE; // They're alive
 	player->mo->momx = player->mo->momy = player->mo->momz = 0; // No speed
 	P_SetPlayerMobjState(player->mo, S_PLAY_FALL1);
@@ -9978,10 +9994,11 @@ void P_UnbubblePlayer(player_t *player)
 	// un-set their flags, these get set in P_BubblePlayer
 	player->mo->flags &= ~MF_NOGRAVITY;
 	player->mo->flags &= ~MF_NOCLIPTHING;
+	player->bubbletag = false;
 }
 
 //
-// P_TDBubbleIfAway
+// P_BubbleIfAway
 //
 // Puts players into the bubble state if they get too far away from the group
 //
@@ -9993,6 +10010,8 @@ static void P_BubbleIfAway(player_t *player)
 	fixed_t centrex = 0, centrey = 0;
 	fixed_t followz = INT32_MIN; // What Z height it is currently following
 	boolean followJump = true; // Whether all the players are in the air, so it's following the highest player
+	fixed_t maxnorth, maxsouth, maxside;
+	fixed_t playerx, playery;
 
 	if (!player->mo || player->mo->health <= 0 || player->playerstate != PST_LIVE || player->exiting)
 		return;
@@ -10057,12 +10076,10 @@ static void P_BubbleIfAway(player_t *player)
 		}
 	}
 
-	fixed_t maxnorth, maxsouth, maxside;
 	maxnorth = 412*FRACUNIT + 155*FRACUNIT;
 	maxside = 592*FRACUNIT + 216*FRACUNIT;
 	maxsouth = 312*FRACUNIT + 96*FRACUNIT;
 
-	fixed_t playerx, playery;
 	if (mapheaderinfo[gamemap-1]->tdblast)
 	{
 		angle_t transang = (-FixedAngle(mapheaderinfo[gamemap-1]->tdblast*FRACUNIT)>>ANGLETOFINESHIFT) & FINEMASK;
@@ -10083,6 +10100,7 @@ static void P_BubbleIfAway(player_t *player)
 		|| (player->mo->z < followz - 506*FRACUNIT && P_IsObjectOnGround(player->mo) && !P_CheckDeathPitCollide(player->mo))) // 450 + 56 , formerly 352 + 56
 	{
 		P_BubblePlayer(player); // Should've been doing this all along really
+		player->bubbletag = true;
 	}
 
 }
@@ -10600,7 +10618,10 @@ void P_PlayerThink(player_t *player)
 
 	player->mo->pmomz = 0;
 	player->pflags &= ~PF_SLIDING;
-
+	
+	if (!player->playerstate == PST_BUBBLE)
+		player->bubbletag = false;
+	
 /*
 //	Colormap verification
 	{

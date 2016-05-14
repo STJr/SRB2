@@ -1731,7 +1731,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			{ // Unlockable triggers required
 				INT32 trigid = (INT32)(sides[triggerline->sidenum[0]].textureoffset>>FRACBITS);
 
-				if ((modifiedgame && !savemoddata) || (netgame || multiplayer))
+				if (modifiedgame && !savemoddata)
 					return false;
 				else if (trigid < 0 || trigid > 31) // limited by 32 bit variable
 				{
@@ -1747,7 +1747,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			{ // An unlockable itself must be unlocked!
 				INT32 unlockid = (INT32)(sides[triggerline->sidenum[0]].textureoffset>>FRACBITS);
 
-				if ((modifiedgame && !savemoddata) || (netgame || multiplayer))
+				if (modifiedgame && !savemoddata)
 					return false;
 				else if (unlockid < 0 || unlockid >= MAXUNLOCKABLES) // limited by unlockable count
 				{
@@ -2363,13 +2363,13 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				}
 				else
 				{
+					INT32 i;
 					if ((secnum = P_FindSectorFromLineTag(line, -1)) < 0)
 						return;
 
 					dest = P_GetObjectTypeInSectorNum(MT_TELEPORTMAN, secnum);
 					if (!dest)
 						return;
-					INT32 i;
 					if (bot)
 						P_Teleport(bot, dest->x, dest->y, dest->z, (line->flags & ML_NOCLIMB) ?  mo->angle : dest->angle, (line->flags & ML_BLOCKMONSTERS) == 0, (line->flags & ML_EFFECT4) == ML_EFFECT4);
 					if (line->flags & ML_BLOCKMONSTERS)
@@ -2999,7 +2999,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 
 		case 441: // Trigger unlockable
-			if ((!modifiedgame || savemoddata) && !(netgame || multiplayer))
+			if (!modifiedgame || savemoddata)
 			{
 				INT32 trigid = (INT32)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
 
@@ -3625,7 +3625,8 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 			{
 				if ((maptol & TOL_TD) && gametype == GT_COOP && (netgame || multiplayer))
 				{
-					if (playeringame[i] && !players[i].bot && players[i].mo && (gametype != GT_COOP || sharedlives > -1))
+					if ((sharedlives > 0 && playeringame[i] && !players[i].bot && players[i].mo && players[i].playerstate != PST_BUBBLE)
+						|| (sharedlives == 0 && playeringame[i] && !players[i].bot && players[i].mo && players[i].playerstate != PST_BUBBLE && players[i].playerstate != PST_DEAD))
 					{
 						if (roversector)
 						{

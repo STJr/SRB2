@@ -2297,7 +2297,7 @@ void R_InitSkins(void)
 	strncpy(skin->superface, "LIVSUPER", 8);
 	skin->prefcolor = SKINCOLOR_BLUE;
 
-	skin->ability =   CA_THOK;
+	skin->ability =   CA_JUMPTHOK;
 	skin->actionspd = 13<<FRACBITS;
 
 	skin->normalspeed =  (25<<FRACBITS)/2;

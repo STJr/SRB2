@@ -560,7 +560,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if (ALL7EMERALDS(emeralds)) // Got all 7
 			{
 				P_GivePlayerRings(player, 50);
-				nummaprings += 50; // no cheating towards Perfect!
+				if (!(mapheaderinfo[gamemap-1]->typeoflevel & TOL_ND))
+					nummaprings += 50; // no cheating towards Perfect!
 			}
 			else
 				token++;
@@ -631,9 +632,15 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 		// Secret emblem thingy
 		case MT_EMBLEM:
+		case MT_CHAOSCOIN:
 			{
 				if (demoplayback || player->bot)
 					return;
+
+				if (emblemlocations[special->health-1].type == ET_SKIN
+				&& emblemlocations[special->health-1].var != player->skin)
+					return;
+
 				emblemlocations[special->health-1].collected = true;
 
 				M_UpdateUnlockablesAndExtraEmblems();
@@ -1232,7 +1239,6 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 			if ((maptol & TOL_TD) && gametype == GT_COOP && (netgame || multiplayer))
 			{
-				INT32 i;
 				for (i = 0; i < MAXPLAYERS; i++)
 				{
 					if (playeringame[i])
@@ -1566,6 +1572,46 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				special->flags |= MF_NOGRAVITY;
 				P_SetMobjState (special, special->info->deathstate);
 				S_StartSound (special, special->info->deathsound+(P_RandomKey(special->info->mass)));
+			}
+			return;
+
+		case MT_PINBALL:
+			if (((player->pflags & PF_NIGHTSMODE) && (player->pflags & PF_DRILLING))
+			|| ((player->pflags & (PF_JUMPED|PF_SPINNING|PF_GLIDING)) && !(player->pflags & PF_STARTDASH)) // Not if you're charging a spindash
+			|| player->powers[pw_invulnerability] || player->powers[pw_super]) // Do you possess the ability to subdue the object?
+			{
+				if (P_MobjFlip(toucher)*toucher->momz < 0)
+					toucher->momz = -toucher->momz;
+
+				P_InstaThrust(toucher, R_PointToAngle2(special->x, special->y, toucher->x, toucher->y), P_AproxDistance(toucher->momx, toucher->momy));
+
+				P_SetTarget(&special->tracer, toucher);  // it belongs to me!
+				P_SetMobjState(special, S_PINBALL_PLAYER1);
+				special->color = toucher->color;
+				P_InstaThrust(special, R_PointToAngle2(toucher->x, toucher->y, special->x, special->y), special->info->speed);
+				S_StartSound(special, sfx_s3k9e);
+			}
+			else if (((toucher->z < special->z && !(toucher->eflags & MFE_VERTICALFLIP))
+			|| (toucher->z + toucher->height > special->z + special->height && (toucher->eflags & MFE_VERTICALFLIP))) // Flame is bad at logic - JTE
+			&& player->charability == CA_FLY
+			&& ((player->powers[pw_tailsfly] && !(player->pflags & PF_JUMPED))
+			|| (toucher->state >= &states[S_PLAY_SPC1] && toucher->state <= &states[S_PLAY_SPC4]))) // Tails can shred stuff with his propeller.
+			{
+				if (P_MobjFlip(toucher)*toucher->momz < 0)
+					toucher->momz = -toucher->momz/2;
+
+				P_SetTarget(&special->tracer, toucher);  // it belongs to me!
+				P_SetMobjState(special, S_PINBALL_PLAYER1);
+				special->color = toucher->color;
+				P_InstaThrust(special, R_PointToAngle2(toucher->x, toucher->y, special->x, special->y), special->info->speed);
+				S_StartSound(special, sfx_s3k9e);
+			}
+			else
+			{
+				if (special->target)
+					P_DamageMobj(toucher, special, special->target, 1);
+				else
+					P_DamageMobj(toucher, special, special, 1);
 			}
 			return;
 
@@ -3314,6 +3360,39 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 
 	if (source && source->player && target)
 		G_GhostAddHit(target);
+
+	switch (target->type)
+	{
+	// Egg Pinball needs an attack before it dies
+	case MT_EGGPINBALL:
+		{
+			INT32 extraattack = target->info->spawnhealth - target->health;
+
+			if (extraattack > 0 && extraattack % 2 == 0)
+			{
+				INT8 i;
+				mobj_t *ball;
+
+				for (i = 0; i < 5; i++)
+				{
+					ball = P_SPMAngle(target->tracer, MT_PINBALL, target->angle - ANGLE_45 + ((ANGLE_90 / 5) * i), false, 0);
+					ball->z = target->tracer->z; // set correct height
+					ball->fuse = 420;
+					P_SetTarget(&ball->target, target);
+					P_SetTarget(&ball->tracer, target);
+				}
+
+				S_StartSound(target->tracer, sfx_appear);
+
+				P_LinedefExecute(LE_EXTRAATTACK, target, NULL); // Solid wall linedef
+
+				target->tracer->fuse += 420; // delay your next shot until after the wall
+			}
+		}
+		break;
+	default:
+		break;
+	}
 
 	if (target->health <= 0)
 	{

@@ -209,7 +209,7 @@ menu_t SPauseDef;
 // Sky Room
 static void M_CustomLevelSelect(INT32 choice);
 static void M_CustomWarp(INT32 choice);
-FUNCNORETURN static ATTRNORETURN void M_UltimateCheat(INT32 choice);
+static void M_UltimateCheat(INT32 choice);
 static void M_LoadGameLevelSelect(INT32 choice);
 static void M_GetAllEmeralds(INT32 choice);
 static void M_DestroyRobots(INT32 choice);
@@ -723,7 +723,7 @@ static menuitem_t SP_ReplayMenu[] =
 {
 	{IT_WHITESTRING|IT_CALL, NULL, "Replay Best Score", M_ReplayTimeAttack, 0},
 	{IT_WHITESTRING|IT_CALL, NULL, "Replay Best Time",  M_ReplayTimeAttack, 8},
-	{IT_WHITESTRING|IT_CALL, NULL, "Replay Best Rings", M_ReplayTimeAttack,16},
+	{IT_WHITESTRING|IT_CALL, NULL, "Replay Best Emblems", M_ReplayTimeAttack,16},
 
 	{IT_WHITESTRING|IT_CALL, NULL, "Replay Last",       M_ReplayTimeAttack,29},
 	{IT_WHITESTRING|IT_CALL, NULL, "Replay Guest",      M_ReplayTimeAttack,37},
@@ -746,7 +746,7 @@ static menuitem_t SP_GuestReplayMenu[] =
 {
 	{IT_WHITESTRING|IT_CALL, NULL, "Save Best Score as Guest", M_SetGuestReplay, 0},
 	{IT_WHITESTRING|IT_CALL, NULL, "Save Best Time as Guest",  M_SetGuestReplay, 8},
-	{IT_WHITESTRING|IT_CALL, NULL, "Save Best Rings as Guest", M_SetGuestReplay,16},
+	{IT_WHITESTRING|IT_CALL, NULL, "Save Best Emblems as Guest", M_SetGuestReplay,16},
 	{IT_WHITESTRING|IT_CALL, NULL, "Save Last as Guest",       M_SetGuestReplay,24},
 
 	{IT_WHITESTRING|IT_CALL, NULL, "Delete Guest Replay",      M_SetGuestReplay,37},
@@ -769,7 +769,7 @@ static menuitem_t SP_GhostMenu[] =
 {
 	{IT_STRING|IT_CVAR,         NULL, "Best Score", &cv_ghost_bestscore, 0},
 	{IT_STRING|IT_CVAR,         NULL, "Best Time",  &cv_ghost_besttime,  8},
-	{IT_STRING|IT_CVAR,         NULL, "Best Rings", &cv_ghost_bestrings,16},
+	{IT_STRING|IT_CVAR,         NULL, "Best Emblems", &cv_ghost_bestrings,16},
 	{IT_STRING|IT_CVAR,         NULL, "Last",       &cv_ghost_last,     24},
 
 	{IT_STRING|IT_CVAR,         NULL, "Guest",      &cv_ghost_guest,    37},
@@ -3233,7 +3233,10 @@ static void M_DrawPauseMenu(void)
 					V_DrawString(56, 44 + (i*8), V_YELLOWMAP, "TIME:");
 					break;
 				case ET_RINGS:
-					V_DrawString(56, 44 + (i*8), V_YELLOWMAP, "RINGS:");
+					if (mapheaderinfo[gamemap-1]->typeoflevel & TOL_ND)
+						V_DrawString(56, 44 + (i*8), V_YELLOWMAP, "EMBLEMS:");
+					else
+						V_DrawString(56, 44 + (i*8), V_YELLOWMAP, "RINGS:");
 					break;
 			}
 			V_DrawRightAlignedString(284, 44 + (i*8), V_MONOSPACE, emblem_text[i]);
@@ -3919,7 +3922,11 @@ static void M_SelectableClearMenus(INT32 choice)
 static void M_UltimateCheat(INT32 choice)
 {
 	(void)choice;
-	I_Quit();
+	//I_Quit();
+
+	startmap = 27;
+
+	M_SetupChoosePlayer(0);
 }
 
 static void M_GetAllEmeralds(INT32 choice)
@@ -4974,7 +4981,7 @@ static void M_DrawStatsMaps(int location)
 	extraemblem_t *exemblem;
 
 	V_DrawString(20,  y-12, 0, "LEVEL NAME");
-	V_DrawString(248, y-12, 0, "EMBLEMS");
+	V_DrawString(228, y-12, 0, "CHAOS COINS");
 
 	while (statsMapList[++i] != -1)
 	{
@@ -5008,7 +5015,7 @@ static void M_DrawStatsMaps(int location)
 		}
 
 		if (i == -1)
-			V_DrawString(20, y, V_GREENMAP, "EXTRA EMBLEMS");
+			V_DrawString(20, y, V_GREENMAP, "EXTRA CHAOS COINS");
 		else if (i >= 0)
 		{
 			exemblem = &extraemblems[i];
@@ -5153,7 +5160,7 @@ static void M_DrawGameStats(void)
 		V_DrawRightAlignedString(BASEVIDWIDTH-32, 128, V_REDMAP, va("(%d unfinished)", mapsunfinished[1]));
 
 	sprintf(beststr, "%u", bestrings);
-	V_DrawString(32, 140, V_YELLOWMAP, "RINGS:");
+	V_DrawString(32, 140, V_YELLOWMAP, "EMBLEMS:");
 	V_DrawRightAlignedString(BASEVIDWIDTH-32, 140, 0, beststr);
 	if (mapsunfinished[2])
 		V_DrawRightAlignedString(BASEVIDWIDTH-32, 148, V_REDMAP, va("(%d unfinished)", mapsunfinished[2]));
@@ -5289,7 +5296,11 @@ void M_DrawTimeAttackMenu(void)
 		else
 			sprintf(beststr, "%hu", mainrecords[cv_nextmap.value-1]->rings);
 
-		V_DrawString(104-72, 68, V_YELLOWMAP, "RINGS:");
+		if (mapheaderinfo[gamemap-1]->typeoflevel & TOL_ND)
+			V_DrawString(104-72, 68, V_YELLOWMAP, "EMBLEMS:");
+		else
+			V_DrawString(104-72, 68, V_YELLOWMAP, "RINGS:");
+
 		V_DrawRightAlignedString(104+72, 68, V_ALLOWLOWERCASE, beststr);
 
 		// Draw record emblems.

@@ -455,26 +455,31 @@ static const char *credits[] = {
 	"",
 	"\1Programming",
 	"\"Sryder13\"", // He's the reason this mod got this far, I swear
+	"\"Wolfy\"", // Oh, he did nothing special. Certainly not typing up credits strings or anything like that.
 	"",
 	"\1Programming",
 	"\1Assistance",
 	"\"JTE\"", // Advice regarding SRB2's source
 	"\"Zipper\"", // Most reliable on the team! Was always available and created tons of scripts. Even the scrapped ones helped.
 	"\"Badz\" / \"Badnik\"", // Also very reliable, did lots more than Wolfy~
-	"\"Wolfy\"", // Oh, he did nothing special. Certainly not typing up credits strings or anything like that.
 	"",
 	"\1Sprite Artists",
-	"\"Iceman404\"", // Did most of the sprites for this mod
-	"\"CoatRack\"", // TD was pretty much built off of his ideas
+	"\"Iceman404\"", // Did most of the sprites for this mod, and trust me, without this man we wouldn't have gotten ANYWHERE.
+	"\"CoatRack\"", // Huge Spiral Knights fan, which is where a lot of TD's inspiration came from.
 	"\"Spherallic\"",
-	"\"Zipper\"",
+	"\"Zipper\"", // CHROMEs and more
 	"\"SevenColorsAlice\"", // Drew the Penguinator sprites
+	"\"Charybdizs\"", // Drew the Krackobot sprites
+	"\"Jeck Jims\"", // Extra hub icons
+	"\"MotorRoach\"", // Sky Islands fireballs
+	"\"EmaBuns\"", // Title screen coloring
 	"",
 	"\1Texture Artists",
 	"\"Charybdizs\"",
 	"\"CoatRack\"",
 	"\"Spherallic\"", 
 	"\"Iceman404\"",
+	"\"Blade\"",
 	"",
 	"\1Level Design",
 	"\"CoatRack\"", // Weather Factory, Stormy Streets, Sky Islands, WFZ Boss, Hub fixes
@@ -482,13 +487,19 @@ static const char *credits[] = {
 	"\"Charybdizs\"", // Hub
 	"\"Sryder13\"", // Mainframe Metropolis
 	"\"Zipper\"", // Fixes to Checkered Mountain and Frozen Factory
-	"\"katsy\"", // Fixes to Stormy Streets
+	"\"katsy\"", // Fixes to... well, everything actually.
 	"",
 	"\1Music and Sound",
 	"Sonic Lost World - SEGA", // The game was awful, but the music was okay.
+	"Sonic Riders: Zero Gravity - SEGA", // This game was better, same with the music.
+	"Spiral Knights - SEGA", // Sky Islands and some scrapped maps
+	"Chain Algorithm", // Weather Factory
 	"Super Mario 3D World - Nintendo",
-	"Sonic Team Junior", // So we're crediting STJr, even though they have a whole section of credits directly below? :v
-	"Karl Breuggemann",
+	"Ape Escape - Sony", // Hub music
+	"LaTale - Actoz Soft", // Mainframe Metropolis 
+	"Sonic Team Junior", // So we're crediting STJr, even though they have a whole section of credits directly below? lol
+	"Karl Breuggemann", // Scrapped hub
+	"Toy Story 2 - Activision", // The game you dope, not the movie
 	"Drift City - NPluto", // Credits music!
 	"",
 	"\1Testing",
@@ -497,6 +508,7 @@ static const char *credits[] = {
 	"\"CyberIF\"", // Was almost always around for quick testing
 	"\"Fooruman\"", // Found lots of bugs!
 	"\"katsy\"", // She found bugs too, but she actually went ahead and fixed them as well.
+	"\"Ryuspark\"",
 	"",
 	"\1Ornaments",
 	"\"katsy\" - Lead Ornament", // Even though she isn't an ornament, she is an ornament.
@@ -512,9 +524,11 @@ static const char *credits[] = {
 	"\"Monster Iestyn\" - Hood Ornament", // No, not THAT hood, you fool
 	"\"Prime 2.0\" - Meaningful Ornament", // Well, meaningful ELSEWHERE
 	"\"Flame\" - +b Ornament", // *	ChanServ has kicked Flame from #srb2riders (You are not authorized to be on this channel)
+	"\"toaster\" - Last Minute Ornament", // Wow, you almost missed being included here!
 	"",
 	"\1Special Thanks",
 	"\"Jeck Jims\"", // For his work on MD2 models 
+	"\"Metalsonicmk72\"", // Looped music and tuned up some of the tracks
 	"",
 	"\1Sonic Robo Blast II",
 	"\1Credits",
@@ -869,7 +883,7 @@ void F_GameEvaluationDrawer(void)
 
 	if (finalecount == 5*TICRATE)
 	{
-		if ((!modifiedgame || savemoddata) && !(netgame || multiplayer))
+		if ((!modifiedgame || savemoddata))
 		{
 			++timesBeaten;
 
@@ -905,6 +919,8 @@ void F_GameEvaluationDrawer(void)
 				if (unlockables[i].conditionset && unlockables[i].conditionset < MAXCONDITIONSETS
 					&& unlockables[i].type && !unlockables[i].nocecho)
 				{
+					if (!savemoddata && ((unlockables[i].conditionset >= 41 && unlockables[i].conditionset <= 50) || unlockables[i].conditionset == 52))
+						continue;
 					if (unlockables[i].unlocked)
 						V_DrawString(8, startcoord, 0, unlockables[i].name);
 					startcoord += 8;

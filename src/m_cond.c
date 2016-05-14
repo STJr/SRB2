@@ -31,589 +31,114 @@ conditionset_t conditionSets[MAXCONDITIONSETS];
 // Default Emblem locations
 emblem_t emblemlocations[MAXEMBLEMS] =
 {
-	// GREEN FLOWER 1
-	// ---
-	{0,  8156,  6936,   129, 1, 'A', SKINCOLOR_BLUE, 0,
-		"Go get your feet wet\n"
-		"to find this, the first emblem.\n"
-		"Yes, it's very deep.", 0},
-	{0,  3184,  1812,   928, 1, 'B', SKINCOLOR_LAVENDER, 0,
-		"There are many rings,\n"
-		"but this one's not what you think.\n"
-		"There lies the emblem.", 0},
-	{0,  9024,  6716,   769, 1, 'C', SKINCOLOR_RED, 0,
-		"Right next to a lake,\n"
-		"a ledge has been constructed.\n"
-		"Near there is the goal.", 0},
-	{0,  2080,  -384,   512, 1, 'D', SKINCOLOR_ORANGE, 0,
-		"Streams come to an end\n"
-		"where they can no longer fall.\n"
-		"But if you went up...", 0},
-	{0,  -336,  2064,   195, 1, 'E', SKINCOLOR_NEONGREEN, 0,
-		"This one's in plain sight.\n"
-		"Why haven't you claimed it?\n"
-		"Surely you saw it.", 0},
-
-	{ET_SCORE, 0,0,0,  1, 'S', SKINCOLOR_BROWN,      125000, "", 0},
-	{ET_TIME,  0,0,0,  1, 'T', SKINCOLOR_GREY,   20*TICRATE, "", 0},
-	{ET_RINGS, 0,0,0,  1, 'R', SKINCOLOR_GOLD,          200, "", 0},
-
-
-	// GREEN FLOWER 2
-	// ---
-	{0,  2624, -6816,  1332, 2, 'A', SKINCOLOR_BLUE, 0,
-		"Near the giant lake\n"
-		"lies a cave with a 1-Up.\n"
-		"An emblem's there, too!", 0},
-	{0, -5728, -2848,  2848, 2, 'B', SKINCOLOR_LAVENDER, 0,
-		"Near the final lake,\n"
-		"a higher lake falls on in.\n"
-		"Three platforms await.", 0},
-	{0,  3648,  6464,  2576, 2, 'C', SKINCOLOR_RED, 0,
-		"Near the level's start,\n"
-		"a bridge crosses a river.\n"
-		"What's that river's source?", 0},
-	{0, -2032,-10048,   986, 2, 'D', SKINCOLOR_ORANGE, 0,
-		"Near the level's end,\n"
-		"another bridge spans a lake.\n"
-		"What could be under...?", 0},
-	{0,  -170,   491,  3821, 2, 'E', SKINCOLOR_NEONGREEN, 0,
-		"An ivied tunnel\n"
-		"has a corner that's sunlit.\n"
-		"Go reach for the sky!", 0},
-
-	{ET_SCORE, 0,0,0,  2, 'S', SKINCOLOR_BROWN,      150000, "", 0},
-	{ET_TIME,  0,0,0,  2, 'T', SKINCOLOR_GREY,   40*TICRATE, "", 0},
-	{ET_RINGS, 0,0,0,  2, 'R', SKINCOLOR_GOLD,          200, "", 0},
-
-
-	// GREEN FLOWER 3
-	// ---
-	{ET_TIME,  0,0,0,  3, 'T', SKINCOLOR_GREY,   30*TICRATE, "", 0},
-
-
-	// TECHNO HILL 1
-	// ---
-	{0, -5664, -5072,  2396, 4, 'A', SKINCOLOR_BLUE, 0,
-		"Three pipes reside near\n"
-		"where our heroes' paths split off.\n"
-		"You'll have to look up!", 0},
-	{0,  -784,-13968,  2888, 4, 'B', SKINCOLOR_LAVENDER, 0,
-		"Climbing yields great range.\n"
-		"Yet, on a path for climbers,\n"
-		"flying is the key.", 0},
-	{0,  4160, -5824,  3776, 4, 'C', SKINCOLOR_RED, 0,
-		"That's sure lots of slime.\n"
-		"Say, do you ever wonder\n"
-		"what's dumping it all?", 0},
-	{0,  6400, -8352,  1764, 4, 'D', SKINCOLOR_ORANGE, 0,
-		"Spinning through small gaps\n"
-		"can slip you into a cave.\n"
-		"In that cave's first stretch...", 0},
-	{0,  2848, -9088,   488, 4, 'E', SKINCOLOR_NEONGREEN, 0,
-		"The slime lake is deep,\n"
-		"but reaching the floor takes height.\n"
-		"Scream \"Geronimo!\"...", 0},
-
-	{ET_SCORE, 0,0,0,  4, 'S', SKINCOLOR_BROWN,       75000, "", 0},
-	{ET_TIME,  0,0,0,  4, 'T', SKINCOLOR_GREY,   75*TICRATE, "", 0},
-	{ET_RINGS, 0,0,0,  4, 'R', SKINCOLOR_GOLD,          300, "", 0},
-
-
-	// TECHNO HILL 2
-	// ---
-	{0,-19138, -2692,   688, 5, 'A', SKINCOLOR_BLUE, 0,
-		"Near the first checkpoint,\n"
-		"a bridge crosses a slime pool.\n"
-		"(Sensing a pattern?)", 0},
-	{0,-13120,  8062,  1248, 5, 'B', SKINCOLOR_LAVENDER, 0,
-		"Behind the windows,\n"
-		"near crushers, ever smashing\n"
-		"a conveyor belt.", 0},
-	{0,   580,  4552,  1344, 5, 'C', SKINCOLOR_RED, 0,
-		"A pipe drops onto\n"
-		"a half-outdoors conveyor.\n"
-		"But is it empty?", 0},
-	{0,   192, -8768,    24, 5, 'D', SKINCOLOR_ORANGE, 0,
-		"There is a hallway\n"
-		"that a button floods with slime.\n"
-		"Go through it again!", 0},
-	{0, -2468,-12128,  1312, 5, 'E', SKINCOLOR_NEONGREEN, 0,
-		"Jumping on turtles\n"
-		"will send you springing skyward.\n"
-		"Now, do that six times...", 0},
-
-	{ET_SCORE, 0,0,0,  5, 'S', SKINCOLOR_BROWN,      100000, "", 0},
-	{ET_TIME,  0,0,0,  5, 'T', SKINCOLOR_GREY,  120*TICRATE, "", 0},
-	{ET_RINGS, 0,0,0,  5, 'R', SKINCOLOR_GOLD,          600, "", 0},
-
-
-	// TECHNO HILL 3
-	// ---
-	{ET_TIME,  0,0,0,  6, 'T', SKINCOLOR_GREY,   40*TICRATE, "", 0},
-
-
-	// DEEP SEA 1
-	// ---
-	{0,-16224, -2880,  3530, 7, 'A', SKINCOLOR_BLUE, 0,
-		"Climb up two maze walls.\n"
-		"Break the roof, then a corner.\n"
-		"There, glide, but stay dry.", 0},
-	{0, -8224,   896,  1056, 7, 'B', SKINCOLOR_LAVENDER, 0,
-		"Follow the left path.\n"
-		"A square green button lurks deep.\n"
-		"Weight it down, somehow.", 0},
-	{0,  4992, -5072,  4136, 7, 'C', SKINCOLOR_RED, 0,
-		"A certain path holds\n"
-		"many gargoyle puzzles.\n"
-		"Victors reach a \"V\".", 0},
-	{0,  4576,  5168,  2660, 7, 'D', SKINCOLOR_ORANGE, 0,
-		"A caved-in hallway?\n"
-		"The floor falls; the path goes down.\n"
-		"But those rocks looked weak...", 0},
-	{0, 12576, 16096,  -992, 7, 'E', SKINCOLOR_NEONGREEN, 0,
-		"The end is quite dry.\n"
-		"Some rocks dam the water in.\n"
-		"Knuckles can fix that...", 0},
-
-	{ET_SCORE, 0,0,0,  7, 'S', SKINCOLOR_BROWN,       75000, "", 0},
-	{ET_TIME,  0,0,0,  7, 'T', SKINCOLOR_GREY,  120*TICRATE, "", 0},
-	{ET_RINGS, 0,0,0,  7, 'R', SKINCOLOR_GOLD,          400, "", 0},
-
-
-	// DEEP SEA 2
-	// ---
-	{0,-15040,  6976,  2016, 8, 'A', SKINCOLOR_BLUE, 0,
-		"A waterfall lands\n"
-		"near a starpost in a cave.\n"
-		"It's dark up there, but...", 0},
-	{0,  4288,  2912,   544, 8, 'B', SKINCOLOR_LAVENDER, 0,
-		"So many blocks here!\n"
-		"Take five; bathe in the fountain.\n"
-		"Hmmm? A hidden path...?", 0},
-	{0, -5696, 16992,   791, 8, 'C', SKINCOLOR_RED, 0,
-		"An ornate dragon\n"
-		"faces a secret passage.\n"
-		"Knuckles! Don't get crushed!", 0},
-	{0,-13344, 18688,  1034, 8, 'D', SKINCOLOR_ORANGE, 0,
-		"In the current maze\n"
-		"hides a dark room of columns.\n"
-		"Find it, then look up.", 0},
-	{0,  3104, 16192,  2408, 8, 'E', SKINCOLOR_NEONGREEN,  0,
-		"That same dragon's eye\n"
-		"hides another secret room.\n"
-		"There, solve its riddle.", 0},
-
-	{ET_SCORE, 0,0,0,  8, 'S', SKINCOLOR_BROWN,       50000, "", 0},
-	{ET_TIME,  0,0,0,  8, 'T', SKINCOLOR_GREY,  150*TICRATE, "", 0},
-	{ET_RINGS, 0,0,0,  8, 'R', SKINCOLOR_GOLD,          250, "", 0},
-
-
-	// DEEP SEA 3
-	// ---
-	{ET_TIME,  0,0,0,  9, 'T', SKINCOLOR_GREY,   90*TICRATE, "", 0},
-
-
-	// CASTLE EGGMAN 1
-	// ---
-	{0, -6176, -5184,  -128, 10, 'A', SKINCOLOR_BLUE, 0,
-		"A drain feeds the lake.\n"
-		"Water rushes quickly through.\n"
-		"Go against the flow.", 0},
-	{0,  3648,-15296,  -992, 10, 'B', SKINCOLOR_LAVENDER, 0,
-		"The left starting path\n"
-		"goes atop a large wood deck.\n"
-		"Checked underneath yet?", 0},
-	{0, 11712, 21312,  5472, 10, 'C', SKINCOLOR_RED, 0,
-		"At last, the castle!\n"
-		"Hold up! Don't just barge right in!\n"
-		"What's the facade hold...?", 0},
-	{0, 20224, 13344,  3104, 10, 'D', SKINCOLOR_ORANGE, 0,
-		"The final approach!\n"
-		"A tower holds the emblem\n"
-		"near a ring arrow.", 0},
-	{0,  9472, -5890,   710, 10, 'E', SKINCOLOR_NEONGREEN, 0,
-		"The right starting path\n"
-		"hides this near a canopy,\n"
-		"high, where two trees meet.", 0},
-
-	{ET_SCORE, 0,0,0, 10, 'S', SKINCOLOR_BROWN,       50000, "", 0},
-	{ET_TIME,  0,0,0, 10, 'T', SKINCOLOR_GREY,  120*TICRATE, "", 0},
-	{ET_RINGS, 0,0,0, 10, 'R', SKINCOLOR_GOLD,          200, "", 0},
-
-
-	// CASTLE EGGMAN 2
-	// ---
-	{0,   832,-15168,  7808, 11, 'A', SKINCOLOR_BLUE, 0,
-		"Find a trick bookcase\n"
-		"that hides a darkened hallway.\n"
-		"There, climb a tower.", 0},
-	{0,-18460,-22180,  2416, 11, 'B', SKINCOLOR_LAVENDER, 0,
-		"Down in the dungeon,\n"
-		"a cracked wall hides secret paths.\n"
-		"Echidnas only!", 0},
-	{0, -6144,-11792,  3232, 11, 'C', SKINCOLOR_RED, 0,
-		"A room you can flood!\n"
-		"A brown grate's near its exit.\n"
-		"Knuckles can break it...", 0},
-	{0,  4608, -7024,  4256, 11, 'D', SKINCOLOR_ORANGE, 0,
-		"Some of these bookshelves\n"
-		"are not flush against the walls.\n"
-		"Wonder why that is?", 0},
-	{0, 12708,-13536,  4768, 11, 'E', SKINCOLOR_NEONGREEN, 0,
-		"The ending's towers\n"
-		"are hiding a small alcove.\n"
-		"Check around outside.", 0},
-
-	{ET_SCORE, 0,0,0, 11, 'S', SKINCOLOR_BROWN,      400000, "", 0},
-	{ET_TIME,  0,0,0, 11, 'T', SKINCOLOR_GREY,  210*TICRATE, "", 0},
-	{ET_RINGS, 0,0,0, 11, 'R', SKINCOLOR_GOLD,          600, "", 0},
-
-
-	// CASTLE EGGMAN 3
-	// ---
-	{ET_TIME,  0,0,0, 12, 'T', SKINCOLOR_GREY,  120*TICRATE, "", 0},
-
-
-	// ARID CANYON 1
-	// ---
-	{0,  3488,  2208,  3072, 13, 'A', SKINCOLOR_BLUE, 0,
-		"A rather large gap\n"
-		"must be crossed by way of tram.\n"
-		"At its end, jump left.", 0},
-	{0, -7552, 10464,  4094, 13, 'B', SKINCOLOR_LAVENDER, 0,
-		"Crushers that go up!\n"
-		"Mind your step; if they're triggered,\n"
-		"they'll block this emblem.", 0},
-	{0,-12093, 14575,  5752, 13, 'C', SKINCOLOR_RED, 0,
-		"There's an oil lake\n"
-		"that you can sink deep into.\n"
-		"Drain it, and explore.", 0},
-	{0,   512, -7136,  4640, 13, 'D', SKINCOLOR_ORANGE, 0,
-		"Not far from the start,\n"
-		"if you climb toward the sky,\n"
-		"the cliffs hide something.", 0},
-	{0, 12504,  6848,  3424, 13, 'E', SKINCOLOR_NEONGREEN, 0,
-		"Right by the exit,\n"
-		"an emblem lies on a cliff.\n"
-		"Ride ropes to reach it.", 0},
-
-	{ET_SCORE, 0,0,0, 13, 'S', SKINCOLOR_BROWN,       50000, "", 0},
-	{ET_TIME,  0,0,0, 13, 'T', SKINCOLOR_GREY,  120*TICRATE, "", 0},
-	{ET_RINGS, 0,0,0, 13, 'R', SKINCOLOR_GOLD,          300, "", 0},
-
-
-	// RED VOLCANO 1
-	// ---
-	{0,-13184, 11424,  3080, 16, 'A', SKINCOLOR_BLUE, 0,
-		"Look around the room,\n"
-		"just before you clear the stage;\n"
-		"something's hidden there!", 0},
-	{0, -2816,  3120,  3044, 16, 'B', SKINCOLOR_LAVENDER, 0,
-		"Ever look upwards\n"
-		"when you're traversing across\n"
-		"collapsing platforms?", 0},
-	{0,  6720,  6784,  1452, 16, 'C', SKINCOLOR_RED, 0,
-		"Check out a corner\n"
-		"of a lake of magma near\n"
-		"spinning jets of flame.", 0},
-	{0, -5504,  9824,   800, 16, 'D', SKINCOLOR_ORANGE, 0,
-		"Where once a bridge stood,\n"
-		"now magma falls from above.\n"
-		"The bridge dropped something...", 0},
-	{0,  8287,-11043,  1328, 16, 'E', SKINCOLOR_NEONGREEN, 0,
-		"A lake of magma\n"
-		"ebbs and flows unendingly.\n"
-		"Wait for its nadir.", 0},
-
-	{ET_SCORE, 0,0,0, 16, 'S', SKINCOLOR_BROWN,       30000, "", 0},
-	{ET_TIME,  0,0,0, 16, 'T', SKINCOLOR_GREY,  120*TICRATE, "", 0},
-	{ET_RINGS, 0,0,0, 16, 'R', SKINCOLOR_GOLD,          100, "", 0},
-
-
-	// EGG ROCK 1
-	// ---
-	{0,-10976, -7328,  1584, 22, 'A', SKINCOLOR_BLUE, 0,
-		"Vanishing platforms,\n"
-		"then collapsing ones herald\n"
-		"a last-second jump.", 0},
-	{0, -6592,-11200,  2208, 22, 'B', SKINCOLOR_LAVENDER, 0,
-		"What is this red stuff?\n"
-		"You can't breathe it in, but look!\n"
-		"It can't reach up there...", 0},
-	{0,  6816,   832,   936, 22, 'C', SKINCOLOR_RED, 0,
-		"The team's paths diverge.\n"
-		"Should Tails run the crusher path?\n"
-		"No! Fly outside it!", 0},
-	{0,  6942, -8902,  2080, 22, 'D', SKINCOLOR_ORANGE, 0,
-		"Don't jump too high here!\n"
-		"No conveyor will catch you;\n"
-		"you'd fall to your death.", 0},
-	{0, -6432, -6192,   584, 22, 'E', SKINCOLOR_NEONGREEN, 0,
-		"Conveyors! Magma!\n"
-		"What an intense room this is!\n"
-		"But, what brought you here?", 0},
-
-	{ET_SCORE, 0,0,0, 22, 'S', SKINCOLOR_BROWN,       25000, "", 0},
-	{ET_TIME,  0,0,0, 22, 'T', SKINCOLOR_GREY,  120*TICRATE, "", 0},
-	{ET_RINGS, 0,0,0, 22, 'R', SKINCOLOR_GOLD,          150, "", 0},
-
-
-	// EGG ROCK 2
-	// ---
-	{0, -6672,  7792,   352, 23, 'A', SKINCOLOR_BLUE, 0,
-		"Walk on the ceiling;\n"
-		"resist the urge to flip back!\n"
-		"Find the cyan path...", 0},
-	{0,-12256, 15136,  -288, 23, 'B', SKINCOLOR_LAVENDER, 0,
-		"X marks the spot? Nope!\n"
-		"Try standing further away\n"
-		"when the timer flips.", 0},
-	{0,  1536, 16224,  1144, 23, 'C', SKINCOLOR_RED, 0,
-		"There is more than one\n"
-		"elevator inside the\n"
-		"elevator shaft...", 0},
-	{0,-15968, 14192,  3152, 23, 'D', SKINCOLOR_ORANGE, 0,
-		"Gears with missing teeth\n"
-		"can hide a clever secret!\n"
-		"Think Green Hill Zone boss.", 0},
-	{0,  1920, 20608,  1064, 23, 'E', SKINCOLOR_NEONGREEN, 0,
-		"Just before you reach\n"
-		"the defective cargo bay,\n"
-		"fly under a bridge.", 0},
-
-	{ET_SCORE, 0,0,0, 23, 'S', SKINCOLOR_BROWN,       60000, "", 0},
-	{ET_TIME,  0,0,0, 23, 'T', SKINCOLOR_GREY,  300*TICRATE, "", 0},
-	{ET_RINGS, 0,0,0, 23, 'R', SKINCOLOR_GOLD,          250, "", 0},
-
-
-	// EGG ROCK 3
-	// ---
-/* Just in case, I'll leave these here in the source.
-	{0,   848, -3584,   592, 24, 'A', SKINCOLOR_BLUE, 0,
-		"[PH] Hiding at the end of the first hallway.", 0},
-	{0,-10368, -2816,   144, 24, 'B', SKINCOLOR_LAVENDER, 0,
-		"Directions are meaningless.", 0},
-	{0, -8160, -5952,   560, 24, 'C', SKINCOLOR_RED, 0,
-		"[PH] In the ceiling of the conveyor belt + laser hallway.", 0},
-	{0,-13728,-13728,  1552, 24, 'D', SKINCOLOR_ORANGE, 0,
-		"[PH] On top of the platform with rows of spikes in reverse gravity.", 0},
-	{0,-14944,   768,  1232, 24, 'E', SKINCOLOR_NEONGREEN, 0,
-		"Follow the leader.", 0},
-*/
-
-	{ET_SCORE, 0,0,0, 24, 'S', SKINCOLOR_BROWN,       14000, "", 0},
-	{ET_TIME,  0,0,0, 24, 'T', SKINCOLOR_GREY,  210*TICRATE, "", 0},
-	{ET_RINGS, 0,0,0, 24, 'R', SKINCOLOR_GOLD,          100, "", 0},
-
-
-	// EGG ROCK CORE
-	// ---
-	{ET_TIME,  0,0,0, 25, 'T', SKINCOLOR_GREY,  100*TICRATE, "", 0},
-
-
-	// PIPE TOWERS
-	// ---
-	{0,  3182,  5040,  3008, 30, 'A', SKINCOLOR_BLUE, 0,
-		"A pipe in the roof\n"
-		"eternally drops water.\n"
-		"Something's stuck up there.", 0},
-	{0, -2400,  5984,  2752, 30, 'B', SKINCOLOR_LAVENDER, 0,
-		"Pushing a red switch\n"
-		"raises the water level;\n"
-		"from there, can't miss it.", 0},
-	{0,  6112,  7008,  4032, 30, 'C', SKINCOLOR_RED, 0,
-		"A high-up passage\n"
-		"hides near the second checkpoint.\n"
-		"Climb in; then, climb more.", 0},
-	{0, 11424, -4832,  1376, 30, 'D', SKINCOLOR_ORANGE, 0,
-		"The underground room\n"
-		"with platforms that fall and rise\n"
-		"only LOOKS empty...", 0},
-	{0 , 4960, -6112,  1312, 30, 'E', SKINCOLOR_NEONGREEN, 0,
-		"This one's straightforward.\n"
-		"What comes to mind when I say:\n"
-		"\"WELCOME TO WARP ZONE!\"?", 0},
-
-	{ET_SCORE, 0,0,0, 30, 'S', SKINCOLOR_BROWN,       75000, "", 0},
-	{ET_TIME,  0,0,0, 30, 'T', SKINCOLOR_GREY,  100*TICRATE, "", 0},
-	{ET_RINGS, 0,0,0, 30, 'R', SKINCOLOR_GOLD,          300, "", 0},
-
-
-	// AERIAL GARDEN
-	// ---
-	{0, 10176,-14304,  1796, 40, 'A', SKINCOLOR_BLUE, 0,
-		"A central tower,\n"
-		"one with many waterfalls,\n"
-		"hides a secret room.", 0},
-	{0,   480, 17696,  6496, 40, 'B', SKINCOLOR_LAVENDER, 0,
-		"Hidden off the path\n"
-		"lies a skyscraping tower.\n"
-		"A lake's at the top.", 0},
-	{0, -8896, 13248,  3362, 40, 'C', SKINCOLOR_RED, 0,
-		"Find all four buttons\n"
-		"that sink when you stand on them.\n"
-		"They'll open a door...", 0},
-	{0, -8896, -9952,  2480, 40, 'D', SKINCOLOR_ORANGE, 0,
-		"Much like the last one,\n"
-		"you need to find some switches.\n"
-		"Only two, this time.", 0},
-	{0, 13184, 18880,  6672, 40, 'E', SKINCOLOR_NEONGREEN, 0,
-		"The inner sanctum!\n"
-		"Teleport to its switches;\n"
-		"then, check near the goal.", 0},
-
-	{ET_SCORE, 0,0,0, 40, 'S', SKINCOLOR_BROWN,      300000, "", 0},
-	{ET_TIME,  0,0,0, 40, 'T', SKINCOLOR_GREY,  240*TICRATE, "", 0},
-	{ET_RINGS, 0,0,0, 40, 'R', SKINCOLOR_GOLD,         1200, "", 0},
-
-
-	// AZURE TEMPLE
-	// ---
-	{0, -2400,  7552,  1120, 41, 'A', SKINCOLOR_BLUE, 0,
-		"For those who can swim,\n"
-		"a long tunnel hides rewards.\n"
-		"Do mind the Buzzes!", 0},
-	{0,   -64, 14016,  2072, 41, 'B', SKINCOLOR_LAVENDER, 0,
-		"So many skylights!\n"
-		"A markedly large one hides\n"
-		"behind a starpost...", 0},
-	{0,  2976, 13920,   -32, 41, 'C', SKINCOLOR_RED, 0,
-		"When you reach gauntlets\n"
-		"of diagonal fire,\n"
-		"check out the corners.", 0},
-	{0,  2176, 22592,  1376, 41, 'D', SKINCOLOR_ORANGE, 0,
-		"A room of currents;\n"
-		"most of them are marked by spikes.\n"
-		"This one? A corner.", 0},
-	{0, -4128, 21344,  1120, 41, 'E', SKINCOLOR_NEONGREEN, 0,
-		"The only way to hit\n"
-		"all those gems at once is with\n"
-		"a radial blast.", 0},
-
-	{ET_SCORE, 0,0,0, 41, 'S', SKINCOLOR_BROWN,      425000, "", 0},
-	{ET_TIME,  0,0,0, 41, 'T', SKINCOLOR_GREY,  240*TICRATE, "", 0},
-	{ET_RINGS, 0,0,0, 41, 'R', SKINCOLOR_GOLD,          300, "", 0},
-
-
-	// FLORAL FIELD
-	// ---
-	{0, 5394, -996, 160, 50, 'N', SKINCOLOR_ROSEWOOD, 0, "", 0},
-	{ET_NGRADE, 0,0,0,   50, 'Q', SKINCOLOR_TEAL,     GRADE_A, "", 0},
-	{ET_NTIME,  0,0,0,   50, 'T', SKINCOLOR_GREY,  40*TICRATE, "", 0},
-
-
-	// TOXIC PLATEAU
-	// ---
-	{0, 780, -1664, 32, 51, 'N', SKINCOLOR_ROSEWOOD, 0, "", 0},
-	{ET_NGRADE, 0,0,0,  51, 'Q', SKINCOLOR_TEAL,     GRADE_A, "", 0},
-	{ET_NTIME,  0,0,0,  51, 'T', SKINCOLOR_GREY,  50*TICRATE, "", 0},
-
-
-	// FLOODED COVE
-	// ---
-	{0, 1824, -1888, 2448, 52, 'N', SKINCOLOR_ROSEWOOD, 0, "", 0},
-	{ET_NGRADE, 0,0,0,     52, 'Q', SKINCOLOR_TEAL,     GRADE_A, "", 0},
-	{ET_NTIME,  0,0,0,     52, 'T', SKINCOLOR_GREY,  90*TICRATE, "", 0},
-
-
-	// CAVERN FORTRESS
-	// ---
-	{0, -3089, -431, 1328, 53, 'N', SKINCOLOR_ROSEWOOD, 0, "", 0},
-	{ET_NGRADE, 0,0,0,     53, 'Q', SKINCOLOR_TEAL,     GRADE_A, "", 0},
-	{ET_NTIME,  0,0,0,     53, 'T', SKINCOLOR_GREY,  75*TICRATE, "", 0},
-
-
-	// DUSTY WASTELAND
-	// ---
-	{0, 957, 924, 2956, 54, 'N', SKINCOLOR_ROSEWOOD, 0, "", 0},
-	{ET_NGRADE, 0,0,0,  54, 'Q', SKINCOLOR_TEAL,     GRADE_A, "", 0},
-	{ET_NTIME,  0,0,0,  54, 'T', SKINCOLOR_GREY,  65*TICRATE, "", 0},
-
-
-	// MAGMA CAVES
-	// ---
-	{0, -2752, 3104, 1800, 55, 'N', SKINCOLOR_ROSEWOOD, 0, "", 0},
-	{ET_NGRADE, 0,0,0,     55, 'Q', SKINCOLOR_TEAL,     GRADE_A, "", 0},
-	{ET_NTIME,  0,0,0,     55, 'T', SKINCOLOR_GREY,  80*TICRATE, "", 0},
-
-
-	// EGG SATELLITE
-	// ---
-	{0, 5334, -609, 3426, 56, 'N', SKINCOLOR_ROSEWOOD, 0, "", 0},
-	{ET_NGRADE, 0,0,0,    56, 'Q', SKINCOLOR_TEAL,     GRADE_A, "", 0},
-	{ET_NTIME,  0,0,0,    56, 'T', SKINCOLOR_GREY, 120*TICRATE, "", 0},
-
-
-	// BLACK HOLE
-	// ---
-	{0, 2108, 3776, 32, 57, 'N', SKINCOLOR_ROSEWOOD, 0, "", 0},
-	{ET_NGRADE, 0,0,0,  57, 'Q', SKINCOLOR_TEAL,     GRADE_A, "", 0},
-	{ET_NTIME,  0,0,0,  57, 'T', SKINCOLOR_GREY, 150*TICRATE, "", 0},
-
-
-	// SPRING HILL
-	// ---
-	{0, -1840, -1024, 1644, 58, 'N', SKINCOLOR_ROSEWOOD, 0, "", 0},
-	{ET_NGRADE, 0,0,0,      58, 'Q', SKINCOLOR_TEAL,     GRADE_A, "", 0},
-	{ET_NTIME,  0,0,0,      58, 'T', SKINCOLOR_GREY,  60*TICRATE, "", 0},
+	// CHECKER MOUNTAIN 1
+	{ET_GLOBAL,  -1377,  -3168,  1152, 2, 'U', SKINCOLOR_NONE, 0, "", 0},
+	{ET_GLOBAL,   -826,   3731,  1880, 2, 'U', SKINCOLOR_NONE, 0, "", 0},
+	{ET_GLOBAL,   -802,   5132,  4999, 2, 'U', SKINCOLOR_NONE, 0, "", 0},
+	{ET_GLOBAL,   3584,   4332,    97, 2, 'U', SKINCOLOR_NONE, 0, "", 0},
+	{ET_GLOBAL,   6883,   6372,  -256, 2, 'U', SKINCOLOR_NONE, 0, "", 0},
+
+	{ET_RINGS, 0,0,0,  2, 'U', SKINCOLOR_NONE,          200, "", 0},
+
+	// MAINFRAME METROPOLIS 1
+	{ET_GLOBAL,  -1285,   2430,   512, 5, 'U', SKINCOLOR_NONE, 0, "", 0},
+	{ET_GLOBAL,   -780,   3238,  1024, 5, 'U', SKINCOLOR_NONE, 0, "", 0},
+	{ET_GLOBAL,   3937,  11969,  1312, 5, 'U', SKINCOLOR_NONE, 0, "", 0},
+	{ET_GLOBAL,   4306,  22139,  1344, 5, 'U', SKINCOLOR_NONE, 0, "", 0},
+	{ET_GLOBAL,  12288,  26630,  1792, 5, 'U', SKINCOLOR_NONE, 0, "", 0},
+
+	{ET_RINGS, 0,0,0,  5, 'U', SKINCOLOR_NONE,          200, "", 0},
+
+	// FROZEN FACTORY 1
+	{ET_GLOBAL,   1496,   -979,   664, 8, 'U', SKINCOLOR_NONE, 0, "", 0},
+	{ET_GLOBAL,  -7041,    229,   604, 8, 'U', SKINCOLOR_NONE, 0, "", 0},
+	{ET_GLOBAL,   4712,   1194,  1885, 8, 'U', SKINCOLOR_NONE, 0, "", 0},
+	{ET_GLOBAL,   7196,  -1371,   394, 8, 'U', SKINCOLOR_NONE, 0, "", 0},
+	{ET_GLOBAL,   4368,   4027,   204, 8, 'U', SKINCOLOR_NONE, 0, "", 0},
+
+	{ET_RINGS, 0,0,0,  8, 'U', SKINCOLOR_NONE,          200, "", 0},
+
+	// WEATHER FACTORY 1
+	{ET_GLOBAL,   2967,   9370,   538, 11, 'U', SKINCOLOR_NONE, 0, "", 0},
+	{ET_GLOBAL,   6481,  -9606,   534, 11, 'U', SKINCOLOR_NONE, 0, "", 0},
+	{ET_GLOBAL,   8387,  -6214,  1536, 11, 'U', SKINCOLOR_NONE, 0, "", 0},
+	{ET_GLOBAL,  14081, -14851,  1093, 11, 'U', SKINCOLOR_NONE, 0, "", 0},
+	{ET_GLOBAL,  14913,  -5994,  1832, 11, 'U', SKINCOLOR_NONE, 0, "", 0},
+
+	{ET_RINGS, 0,0,0,  11, 'U', SKINCOLOR_NONE,          200, "", 0},
+
+	// STORMY STREETS
+	{ET_GLOBAL,   2871,  -4263,   576, 23, 'U', SKINCOLOR_NONE, 0, "", 0},
+	{ET_GLOBAL,  12907,  -1908,   178, 23, 'U', SKINCOLOR_NONE, 0, "", 0},
+	{ET_GLOBAL,  11774, -11384,   163, 23, 'U', SKINCOLOR_NONE, 0, "", 0},
+	{ET_GLOBAL,  18921,  -9762,  1326, 23, 'U', SKINCOLOR_NONE, 0, "", 0},
+	{ET_GLOBAL,   20093,  970,  334, 23, 'U', SKINCOLOR_NONE, 0, "", 0},
+
+	{ET_RINGS, 0,0,0,  23, 'U', SKINCOLOR_NONE,          200, "", 0},
+
+	// SKY ISLANDS
+	{ET_GLOBAL,   1031,   1409,   417, 25, 'U', SKINCOLOR_NONE, 0, "", 0},
+	{ET_GLOBAL,    576,   5354,   304, 25, 'U', SKINCOLOR_NONE, 0, "", 0},
+	{ET_GLOBAL,    799,  13381,  -168, 25, 'U', SKINCOLOR_NONE, 0, "", 0},
+	{ET_GLOBAL,  -4931,   2423,   973, 25, 'U', SKINCOLOR_NONE, 0, "", 0},
+	{ET_GLOBAL, -12292,  -1412,   827, 25, 'U', SKINCOLOR_NONE, 0, "", 0},
+
+	{ET_RINGS, 0,0,0,  25, 'U', SKINCOLOR_NONE,          200, "", 0},
 };
 
 // Default Extra Emblems
 extraemblem_t extraemblems[MAXEXTRAEMBLEMS] =
 {
 	{"Game Complete",  "Complete 1P Mode",                    10, 'X', SKINCOLOR_BLUE, 0},
-	{"All Emeralds",   "Complete 1P Mode with all Emeralds",  11, 'V', SKINCOLOR_GREY, 0},
 	{"Perfect Bonus",  "Perfect Bonus on a non-secret stage", 30, 'P', SKINCOLOR_GOLD, 0},
-	{"SRB1 Remake",    "Complete SRB1 Remake",                21, 'O', SKINCOLOR_ROSEWOOD, 0},
-	{"NiGHTS Mastery", "Show your mastery of NiGHTS!",        22, 'W', SKINCOLOR_TEAL, 0},
 };
 
 // Default Unlockables
 unlockable_t unlockables[MAXUNLOCKABLES] =
 {
 	// Name, Objective, Menu Height, ConditionSet, Unlock Type, Variable, NoCecho, NoChecklist
-	/* 01 */ {"Record Attack",     "Complete Greenflower Zone, Act 1", 0, 1, SECRET_RECORDATTACK,  0,  true,  true, 0},
-	/* 02 */ {"NiGHTS Mode",       "Complete Floral Field",            0, 2, SECRET_NIGHTSMODE,    0,  true,  true, 0},
+	/* 01 */ {"Record Attack",     "Complete Checker Mountain Zone, Act 1", 0, 1, SECRET_RECORDATTACK,  0,  true,  true, 0},
 
-	/* 03 */ {"Play Credits",      "Complete 1P Mode", 30, 10, SECRET_CREDITS,   0,  true,  true, 0},
-	/* 04 */ {"Sound Test",        "Complete 1P Mode", 40, 10, SECRET_SOUNDTEST, 0, false, false, 0},
+	/* 02 */ {"Play Credits",      "Complete 1P Mode", 30, 10, SECRET_CREDITS,   0,  true,  true, 0},
+	/* 03 */ {"Sound Test",        "Complete 1P Mode", 40, 10, SECRET_SOUNDTEST, 0, false, false, 0},
 
-	/* 05 */ {"EXTRA LEVELS", "", 60, 0, SECRET_HEADER, 0, true, true, 0},
+	/* 04 */ {"EXTRA LEVELS", "", 70, 0, SECRET_HEADER, 0, true, true, 0},
 
-	/* 06 */ {"Aerial Garden Zone", "Complete 1P Mode w/ all emeralds", 70, 11, SECRET_WARP, 40, false, false, 0},
-	/* 07 */ {"Azure Temple Zone",  "Complete Aerial Garden Zone",      80, 20, SECRET_WARP, 41, false, false, 0},
+	/* 05 */ {"Stormy Streets",     "Collect 5 Chaos Coins",    80, 40, SECRET_WARP,         23, false, false, 0},
+	/* 06 */ {"Sky Islands",        "Collect 20 Chaos Coins",    90, 47, SECRET_WARP,         25, false, false, 0},
 
-	/* 08 */ {"BONUS LEVELS", "", 100, 0, SECRET_HEADER, 0, true, true, 0},
+	/* 07 */ {"BONUS LEVELS", "", 110, 0, SECRET_HEADER, 0, true, true, 0},
 
-	/* 09 */ {"SRB1 Remake",       "Collect 20 Emblems",   130, 40, SECRET_WARP,        101, false, false, 0},
-	/* 10 */ {"Mario Koopa Blast", "Collect 60 Emblems",   110, 42, SECRET_WARP,         30, false, false, 0},
-	/* 11 */ {"SRB1 Level Select", "Complete SRB1 Remake", 140, 21, SECRET_LEVELSELECT,   2, false,  true, 0},
+	/* 08 */ {"Bonus Level Select", "Collect 7 Chaos Coins",	120, 41, SECRET_LEVELSELECT, 3, false, true, 0},
+	/* 09 */ {"Grove",             "Collect 7 Chaos Coins",   0, 41, SECRET_NONE,         52, false, true, 0},
+	/* 10 */ {"Old HUB 1",         "Collect 9 Chaos Coins",   0, 42, SECRET_NONE,         50, false, true, 0},
+	/* 11 */ {"Ancient Waterway",  "Collect 10 Chaos Coins",  0, 43, SECRET_NONE,         54, false, true, 0},
+	/* 12 */ {"Grumpy Canyon",     "Collect 12 Chaos Coins",  0, 44, SECRET_NONE,         56, false, true, 0},
+	/* 13 */ {"Lava Mountain",     "Collect 16 Chaos Coins",  0, 45, SECRET_NONE,         57, false, true, 0},
+	/* 14 */ {"untitled",          "Collect 18 Chaos Coins",  0, 46, SECRET_NONE,         55, false, true, 0},
+	/* 15 */ {"Old HUB 2",         "Collect 25 Chaos Coins",  0, 48, SECRET_NONE,         51, false, true, 0},
+	/* 16 */ {"Tako Desert",       "Collect 26 Chaos Coins",  0, 49, SECRET_NONE,         53, false, true, 0},
+	/* 17 */ {"A Big Mistake",     "Collect 28 Chaos Coins",  0, 50, SECRET_NONE,         58, false, true, 0},
 
-	/* 12 */ {"Spring Hill Zone", "Collect 100 Emblems",          0, 44, SECRET_NONE, 0, false, false, 0},
-	/* 13 */ {"Black Hole",       "A Rank in all Special Stages", 0, 50, SECRET_NONE, 0, false, true, 0},
-
-	/* 14 */ {"Emblem Hints", "Collect 40 Emblems", 0, 41, SECRET_EMBLEMHINTS, 0, false,  true, 0},
-	/* 15 */ {"Emblem Radar", "Collect 80 Emblems", 0, 43, SECRET_ITEMFINDER,  0, false,  true, 0},
-
-	/* 16 */ {"Pandora's Box", "Collect All Emblems",  0, 45, SECRET_PANDORA,     0, false, false, 0},
-	/* 17 */ {"Level Select",  "Collect All Emblems", 20, 45, SECRET_LEVELSELECT, 1, false,  true, 0},
+	/* 18 */ {"Scrapped Level Set 1", "Collect 7-16 Chaos Coins", 0, 41, SECRET_NONE, 0, true, false, 0},
+	/* 19 */ {"Scrapped Level Set 2", "Collect 18-28 Chaos Coins", 0, 46, SECRET_NONE, 0, true, false, 0},
+	/* 20 */ {"Pandora's Box", "Collect All Chaos Coins",  0, 51, SECRET_PANDORA,     0, false, false, 0},
+	/* 21 */ {"Level Select",  "Collect All Chaos Coins", 20, 51, SECRET_LEVELSELECT, 1, false,  true, 0},
+	/* 22 */ {"Ultimate Cheat", "Collect All Chaos Coins", 50, 51, SECRET_WARP, 27, true, true, 0},
+	/* 23 */ {"???",  "Complete ???", 0, 52, SECRET_NONE, 0, true,  true, 0},
 };
 
 // Default number of emblems and extra emblems
-INT32 numemblems = 155;
-INT32 numextraemblems = 5;
+INT32 numemblems = 36;
+INT32 numextraemblems = 2;
 
 // DEFAULT CONDITION SETS FOR SRB2 2.1:
 void M_SetupDefaultConditionSets(void)
 {
 	memset(conditionSets, 0, sizeof(conditionSets));
 
-	// --   1: Complete GFZ1
-	M_AddRawCondition(1, 1, UC_MAPBEATEN, 1, 0, 0);
-
-	// --   2: Complete SS1
-	M_AddRawCondition(2, 1, UC_MAPBEATEN, 50, 0, 0);
+	// --   1: Complete CMZ1
+	M_AddRawCondition(1, 1, UC_MAPBEATEN, 2, 0, 0);
 
 	// --  10: Complete the game
 	M_AddRawCondition(10, 1, UC_GAMECLEAR, 1, 0, 0);
@@ -621,58 +146,60 @@ void M_SetupDefaultConditionSets(void)
 	// --  11: Complete the game with all emeralds
 	M_AddRawCondition(11, 1, UC_ALLEMERALDS, 1, 0, 0);
 
-	// --  20: Beat AGZ
-	M_AddRawCondition(20, 1, UC_MAPBEATEN, 40, 0, 0);
-
-	// --  21: Beat SRB1 Remake
-	M_AddRawCondition(21, 1, UC_MAPBEATEN, 132, 0, 0);
-
-	// --  22: Beat Black Hole
-	M_AddRawCondition(22, 1, UC_MAPBEATEN, 57, 0, 0);
-
 	// --  30: Perfect Bonus
-	M_AddRawCondition(30, 1,  UC_MAPPERFECT,  1, 0, 0);
-	M_AddRawCondition(30, 2,  UC_MAPPERFECT,  2, 0, 0);
-	M_AddRawCondition(30, 3,  UC_MAPPERFECT,  4, 0, 0);
-	M_AddRawCondition(30, 4,  UC_MAPPERFECT,  5, 0, 0);
-	M_AddRawCondition(30, 5,  UC_MAPPERFECT,  7, 0, 0);
-	M_AddRawCondition(30, 6,  UC_MAPPERFECT,  8, 0, 0);
-	M_AddRawCondition(30, 7,  UC_MAPPERFECT, 10, 0, 0);
-	M_AddRawCondition(30, 8,  UC_MAPPERFECT, 11, 0, 0);
-	M_AddRawCondition(30, 9,  UC_MAPPERFECT, 13, 0, 0);
-	M_AddRawCondition(30, 10, UC_MAPPERFECT, 16, 0, 0);
-	M_AddRawCondition(30, 11, UC_MAPPERFECT, 22, 0, 0);
-	M_AddRawCondition(30, 12, UC_MAPPERFECT, 23, 0, 0);
-	M_AddRawCondition(30, 13, UC_MAPPERFECT, 24, 0, 0);
-	M_AddRawCondition(30, 14, UC_MAPPERFECT, 40, 0, 0);
-	M_AddRawCondition(30, 15, UC_MAPPERFECT, 41, 0, 0);
+	M_AddRawCondition(30, 1,  UC_MAPPERFECT,  2, 0, 0);
+	M_AddRawCondition(30, 2,  UC_MAPPERFECT,  5, 0, 0);
+	M_AddRawCondition(30, 3,  UC_MAPPERFECT,  8, 0, 0);
+	M_AddRawCondition(30, 4,  UC_MAPPERFECT, 11, 0, 0);
+	M_AddRawCondition(30, 5,  UC_MAPPERFECT, 23, 0, 0);
+	M_AddRawCondition(30, 6,  UC_MAPPERFECT, 25, 0, 0);
 
-	// --  40: Find 20 emblems
-	M_AddRawCondition(40, 1, UC_TOTALEMBLEMS, 20, 0, 0);
+	// --  40: Find 5 emblems
+	M_AddRawCondition(40, 1, UC_TOTALEMBLEMS,  5, 0, 0);
 
-	// --  41: Find 40 emblems
-	M_AddRawCondition(41, 1, UC_TOTALEMBLEMS, 40, 0, 0);
+	// --  41: Find 7 emblems
+	M_AddRawCondition(41, 1, UC_TOTALEMBLEMS,  7, 0, 0);
 
-	// --  42: Find 60 emblems
-	M_AddRawCondition(42, 1, UC_TOTALEMBLEMS, 60, 0, 0);
+	// --  42: Find 9 emblems
+	M_AddRawCondition(42, 1, UC_TOTALEMBLEMS,  9, 0, 0);
 
-	// --  43: Find 80 emblems
-	M_AddRawCondition(43, 1, UC_TOTALEMBLEMS, 80, 0, 0);
+	// --  43: Find 10 emblems
+	M_AddRawCondition(43, 1, UC_TOTALEMBLEMS, 10, 0, 0);
 
-	// --  44: Find 100 emblems
-	M_AddRawCondition(44, 1, UC_TOTALEMBLEMS, 100, 0, 0);
+	// --  44: Find 12 emblems
+	M_AddRawCondition(44, 1, UC_TOTALEMBLEMS, 12, 0, 0);
 
-	// --  45: Find 160 (all) emblems
-	M_AddRawCondition(45, 1, UC_TOTALEMBLEMS, 160, 0, 0);
+	// --  45: Find 16 emblems
+	M_AddRawCondition(45, 1, UC_TOTALEMBLEMS, 16, 0, 0);
 
-	// --  50: A rank all NiGHTS special stages
-	M_AddRawCondition(50, 1, UC_NIGHTSGRADE, GRADE_A, 50, 0);
-	M_AddRawCondition(50, 1, UC_NIGHTSGRADE, GRADE_A, 51, 0);
-	M_AddRawCondition(50, 1, UC_NIGHTSGRADE, GRADE_A, 52, 0);
-	M_AddRawCondition(50, 1, UC_NIGHTSGRADE, GRADE_A, 53, 0);
-	M_AddRawCondition(50, 1, UC_NIGHTSGRADE, GRADE_A, 54, 0);
-	M_AddRawCondition(50, 1, UC_NIGHTSGRADE, GRADE_A, 55, 0);
-	M_AddRawCondition(50, 1, UC_NIGHTSGRADE, GRADE_A, 56, 0);
+	// --  46: Find 18 emblems
+	M_AddRawCondition(46, 1, UC_TOTALEMBLEMS, 18, 0, 0);
+
+	// --  47: Find 20 emblems and beat all main levels
+	M_AddRawCondition(47, 1, UC_TOTALEMBLEMS, 20, 0, 0);
+	M_AddRawCondition(47, 1, UC_MAPBEATEN, 2, 0, 0);
+	M_AddRawCondition(47, 1, UC_MAPBEATEN, 5, 0, 0);
+	M_AddRawCondition(47, 1, UC_MAPBEATEN, 7, 0, 0);
+	M_AddRawCondition(47, 1, UC_MAPBEATEN, 8, 0, 0);
+	M_AddRawCondition(47, 1, UC_MAPBEATEN, 10, 0, 0);
+	M_AddRawCondition(47, 1, UC_MAPBEATEN, 11, 0, 0);
+	M_AddRawCondition(47, 1, UC_MAPBEATEN, 13, 0, 0);
+	M_AddRawCondition(47, 1, UC_MAPBEATEN, 23, 0, 0);
+
+	// --  48: Find 25 emblems
+	M_AddRawCondition(48, 1, UC_TOTALEMBLEMS, 25, 0, 0);
+
+	// --  49: Find 26 emblems
+	M_AddRawCondition(49, 1, UC_TOTALEMBLEMS, 26, 0, 0);
+
+	// --  50: Find 28 emblems
+	M_AddRawCondition(50, 1, UC_TOTALEMBLEMS, 28, 0, 0);
+
+	// --  51: Find 38 (all) emblems
+	M_AddRawCondition(51, 1, UC_TOTALEMBLEMS, 38, 0, 0);
+	
+	// -- 52: Complete ???
+	M_AddRawCondition(52, 1, UC_MAPBEATEN, 27, 0, 0);
 }
 
 void M_AddRawCondition(UINT8 set, UINT8 id, conditiontype_t c, INT32 r, INT16 x1, INT16 x2)

@@ -2034,6 +2034,8 @@ static void readsound(MYFILE *f, INT32 num, const char *savesfxnames[])
  * "Good" means that it contains only alphanumerics, _, and -;
  * ends in ".dat"; has at least one character before the ".dat";
  * and is not "gamedata.dat" (tested case-insensitively).
+ * test "tdgamedata.dat" for TD now, but still check gamedata.dat
+ * so people don't delete gamedata.dat from sillyness in mods
  *
  * Assumption: that gamedata.dat is the only .dat file that will
  * ever be treated specially by the game.
@@ -2059,8 +2061,10 @@ static boolean GoodDataFileName(const char *s)
 	if (p <= s) return false; // too short
 	if (!fasticmp(p, tail)) return false; // doesn't end in .dat
 #ifdef DELFILE
+	if (fasticmp(s, "tdgamedata.dat") && !disableundo) return false;
 	if (fasticmp(s, "gamedata.dat") && !disableundo) return false;
 #else
+	if (fasticmp(s, "tdgamedata.dat")) return false;
 	if (fasticmp(s, "gamedata.dat")) return false;
 #endif
 
@@ -6654,6 +6658,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// topdown misc
 	"S_SHADOW",
+	"S_WHITESHADOW",
 
 	// Damage energy
 	"S_FLINGENERGY1",
@@ -6716,7 +6721,55 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_ARROWSTATIONARY8",
 	"S_ARROWSTATIONARY9",
 
+	// Chaos Coin
+	"S_CHAOSCOIN1",
+	"S_CHAOSCOIN2",
+	"S_CHAOSCOINCOLLECTED1",
+	"S_CHAOSCOINCOLLECTED2",
+
+	"S_CHAOSSPRK1",
+	"S_CHAOSSPRK2",
+	"S_CHAOSSPRK3",
+
 	// Top Down enemies
+	// Pinball Turret
+	"S_PINBALLTURRETLOOK",
+	"S_PINBALLTURRETSEE",
+	"S_PINBALLTURRETPOPUP1",
+	"S_PINBALLTURRETPOPUP2",
+	"S_PINBALLTURRETPOPUP3",
+	"S_PINBALLTURRETPOPUP4",
+	"S_PINBALLTURRETPOPUP5",
+	"S_PINBALLTURRETPOPUP6",
+	"S_PINBALLTURRETPOPUP7",
+	"S_PINBALLTURRETPOPUP8",
+	"S_PINBALLTURRETSHOOT",
+	"S_PINBALLTURRETPOPDOWN1",
+	"S_PINBALLTURRETPOPDOWN2",
+	"S_PINBALLTURRETPOPDOWN3",
+	"S_PINBALLTURRETPOPDOWN4",
+	"S_PINBALLTURRETPOPDOWN5",
+	"S_PINBALLTURRETPOPDOWN6",
+	"S_PINBALLTURRETPOPDOWN7",
+	"S_PINBALLTURRETPOPDOWN8",
+
+	"S_PINBALL_ENEMY1",
+	"S_PINBALL_ENEMY2",
+	"S_PINBALL_ENEMY3",
+	"S_PINBALL_ENEMY4",
+	"S_PINBALL_ENEMY5",
+	"S_PINBALL_ENEMY6",
+	"S_PINBALL_ENEMY7",
+	"S_PINBALL_ENEMY8",
+	"S_PINBALL_PLAYER1",
+	"S_PINBALL_PLAYER2",
+	"S_PINBALL_PLAYER3",
+	"S_PINBALL_PLAYER4",
+	"S_PINBALL_PLAYER5",
+	"S_PINBALL_PLAYER6",
+	"S_PINBALL_PLAYER7",
+	"S_PINBALL_PLAYER8",
+
 	// Cluckoid
 	"S_CLUCKOIDLOOK",
 	"S_CLUCKOIDINHALE1",
@@ -6860,6 +6913,55 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 
 	// Top Down bosses
+	// Egg Pinball
+	"S_EGGPINBALL_INTROSTART",
+	"S_EGGPINBALL_INTROLAUGH1",
+	"S_EGGPINBALL_INTROLAUGH2",
+	"S_EGGPINBALL_INTROLAUGH3",
+	"S_EGGPINBALL_INTROLAUGH4",
+	"S_EGGPINBALL_INTROLAUGH5",
+	"S_EGGPINBALL_INTROLAUGH6",
+	"S_EGGPINBALL_INTROWAIT",
+	"S_EGGPINBALL_BEGIN",
+	"S_EGGPINBALL_NEUTRAL",
+	"S_EGGPINBALL_LAUGH1",
+	"S_EGGPINBALL_LAUGH2",
+	"S_EGGPINBALL_LAUGH3",
+	"S_EGGPINBALL_LAUGH4",
+	"S_EGGPINBALL_LAUGH5",
+	"S_EGGPINBALL_LAUGH6",
+	"S_EGGPINBALL_LAUGH7",
+	"S_EGGPINBALL_LAUGH8",
+	"S_EGGPINBALL_LAUGH9",
+	"S_EGGPINBALL_HURT",
+	"S_EGGPINBALL_DIE1",
+	"S_EGGPINBALL_DIE2",
+	"S_EGGPINBALL_DIE3",
+	"S_EGGPINBALL_DIE4",
+	"S_EGGPINBALL_DIE5",
+	"S_EGGPINBALL_DIE6",
+	"S_EGGPINBALL_DIE7",
+	"S_EGGPINBALL_DIE8",
+	"S_EGGPINBALL_DIE9",
+	"S_EGGPINBALL_DIE10",
+	"S_EGGPINBALL_DIE11",
+	"S_EGGPINBALL_DIE12",
+	"S_EGGPINBALL_DIE13",
+	"S_EGGPINBALL_DIE14",
+	"S_EGGPINBALL_DIE15",
+	"S_EGGPINBALL_DIE16",
+	"S_EGGPINBALL_DIE17",
+	"S_EGGPINBALL_DIE18",
+	"S_EGGPINBALL_DIE19",
+	"S_EGGPINBALL_DIE20",
+	"S_EGGPINBALL_DIE21",
+	"S_EGGPINBALL_DIEEND",
+	"S_EGGPINBALL_STARTFLEE",
+	"S_EGGPINBALL_FLEE1",
+	"S_EGGPINBALL_FLEE2",
+
+	"S_EGGPINBALLCANNON",
+
 	// Red Eye
 	"S_REDEYE_SPAWN",
 	"S_REDEYE_NEUTRAL",
@@ -7102,6 +7204,14 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_CHECKERBALL5",
 	"S_CHECKERBALL6",
 	"S_CHECKERBALL7",
+
+	// CHROME (Calling Heaven's Righteousness Onto Malicious Entities)
+	"S_CHROME",
+	"S_CHROME2",
+	"S_CHROME3",
+	"S_CHROME4",
+	"S_CHROME_LASER",
+	"S_CHROME_TARGET",
 
 	// Static Generator
 	"S_STATICGENERATORSPAWN",
@@ -7690,7 +7800,12 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_NOHEALTHEXCLAMATION", // The small exclamation mark that appears over character's heads when they have no health
 	"MT_PLAYERARROW", // The arrow above your own players head
 
+	"MT_CHAOSCOIN",
+
 	// Top Down enemies
+	"MT_PINBALLTURRET",
+	"MT_PINBALL",
+
 	"MT_CLUCKOID",
 	"MT_CLUCKOIDWIND",
 
@@ -7721,6 +7836,9 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_ORBITALMISSILE",
 
 	// Top Down bosses
+	"MT_EGGPINBALL",
+	"MT_EGGPINBALLCANNON",
+
 	"MT_REDEYE",
 	"MT_REDEYEBALL",
 
@@ -7755,6 +7873,10 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	// Top Down hazards
 	"MT_CHECKERBALLSPAWNER",
 	"MT_CHECKERBALL",
+
+	"MT_CHROME",
+	"MT_CHROME_LASER",
+	"MT_CHROME_TARGET",
 
 	"MT_STATICGENERATOR",
 
@@ -8106,6 +8228,7 @@ struct {
 	{"LE_BOSSDEAD",LE_BOSSDEAD}, // A boss in the map died (Chaos mode boss tally)
 	{"LE_BOSS4DROP",LE_BOSS4DROP}, // CEZ boss dropped its cage
 	{"LE_BRAKVILEATACK",LE_BRAKVILEATACK}, // Brak's doing his LOS attack, oh noes
+	{"LE_EXTRAATTACK",LE_EXTRAATTACK}, // Only used for MMZ extra attack for now
 
 	/// \todo Get all this stuff into its own sections, maybe. Maybe.
 
@@ -9321,6 +9444,9 @@ static inline int lib_getenum(lua_State *L)
 	} else if (fastcmp(word,"splitscreen")) {
 		lua_pushboolean(L, splitscreen);
 		return 1;
+	} else if (fastcmp(word,"twoplayer")) {
+		lua_pushboolean(L, twoplayer);
+		return 1;
 	} else if (fastcmp(word,"gamecomplete")) {
 		lua_pushboolean(L, gamecomplete);
 		return 1;
@@ -9356,6 +9482,9 @@ static inline int lib_getenum(lua_State *L)
 		return 1;
 	} else if (fastcmp(word,"mapmusic")) {
 		lua_pushinteger(L, mapmusic);
+		return 1;
+	} else if (fastcmp(word,"sharedlives")) {
+		lua_pushinteger(L, sharedlives);
 		return 1;
 	} else if (fastcmp(word,"server")) {
 		if (!playeringame[serverplayer])
