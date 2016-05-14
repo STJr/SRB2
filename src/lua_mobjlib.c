@@ -509,8 +509,13 @@ static int mobj_set(lua_State *L)
 		return luaL_error(L, "mobj.skin '%s' not found!", skin);
 	}
 	case mobj_color:
-		mo->color = ((UINT8)luaL_checkinteger(L, 3)) % MAXTRANSLATIONS;
+	{
+		UINT8 newcolor = (UINT8)luaL_checkinteger(L,3);
+		if (newcolor >= MAXTRANSLATIONS)
+			return luaL_error(L, "mobj.color %d out of range (0 - %d).", newcolor, MAXTRANSLATIONS-1);
+		mo->color = newcolor;
 		break;
+	}
 	case mobj_bnext:
 		return NOSETPOS;
 	case mobj_bprev:
@@ -524,8 +529,8 @@ static int mobj_set(lua_State *L)
 	case mobj_type: // yeah sure, we'll let you change the mobj's type.
 	{
 		mobjtype_t newtype = luaL_checkinteger(L, 3);
-		if (newtype > MT_LASTFREESLOT)
-			return luaL_error(L, "mobj.type %u is out of bounds.", newtype);
+		if (newtype >= NUMMOBJTYPES)
+			return luaL_error(L, "mobj.type %d out of range (0 - %d).", newtype, NUMMOBJTYPES-1);
 		mo->type = newtype;
 		mo->info = &mobjinfo[newtype];
 		P_SetScale(mo, mo->scale);

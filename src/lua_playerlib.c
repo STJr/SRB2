@@ -389,7 +389,12 @@ static int player_set(lua_State *L)
 	else if (fastcmp(field,"flashpal"))
 		plr->flashpal = (UINT16)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"skincolor"))
-		plr->skincolor = ((UINT8)luaL_checkinteger(L, 3)) % MAXSKINCOLORS;
+	{
+		UINT8 newcolor = (UINT8)luaL_checkinteger(L,3);
+		if (newcolor >= MAXSKINCOLORS)
+			return luaL_error(L, "player.skincolor %d out of range (0 - %d).", newcolor, MAXSKINCOLORS-1);
+		plr->skincolor = newcolor;
+	}
 	else if (fastcmp(field,"score"))
 		plr->score = (UINT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"dashspeed"))
