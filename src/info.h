@@ -213,6 +213,10 @@ void A_InflatableSnowman();
 void A_CheckGround();
 void A_LookTracer();
 void A_SpreadShot();
+void A_StartQuake();
+void A_RotateExtend();
+void A_RotateShrink();
+void A_FireRandomShot();
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
 #define NUMMOBJFREESLOTS 256
@@ -3975,17 +3979,17 @@ typedef enum state
 	S_OKUUWAIT5,
 	S_OKUUWAITREPEAT,
 	S_OKUUFLY1,
-	S_OKUUFLYSTOP,
 	S_OKUUFLY2SOUND,
 	S_OKUUFLY2,
-	S_OKUUFLYREPEAT,
 	S_OKUUFLY3,
-	S_OKUUFLY3STOP,
 	S_OKUUFLY3CHECK,
-	S_OKUUFLY3FIRESOUND,
-	S_OKUUFLY3FIRE,
 	S_OKUUFLY3ZOOM,
+	S_OKUUFLY3STOP,
+	S_OKUUFLY3FIRE,
+	S_OKUUFLY3FIRESOUND,
 	S_OKUUFLY3ZOOMREPEAT,
+	S_OKUUFLYREPEAT,
+	S_OKUUFLYSTOP,
 	S_OKUULAND1,
 	S_OKUULAND2,
 	S_OKUULANDCHECK,

@@ -242,6 +242,10 @@ void A_InflatableSnowman(mobj_t *actor);
 void A_CheckGround(mobj_t *actor);
 void A_LookTracer(mobj_t *actor);
 void A_SpreadShot(mobj_t *actor);
+void A_StartQuake(mobj_t *actor);
+void A_RotateExtend(mobj_t *actor);
+void A_RotateShrink(mobj_t *actor);
+void A_FireRandomShot(mobj_t *actor);
 
 //
 // ENEMY THINKING
@@ -10503,7 +10507,7 @@ void A_OrbitalChase(mobj_t *actor)
 		return;
 #endif
 
-	if (locvar1 >> 16 == 0)
+	if (locvar1 >> 16 == 0 || actor->type == MT_OKUU)
 		target = actor->target;
 	else
 		target = actor->tracer;
@@ -10718,4 +10722,113 @@ void A_SpreadShot(mobj_t *actor)
 
 	if (actor->info->attacksound)
 		S_StartSound(actor, actor->info->attacksound);
+}
+
+// Function: A_StartQuake
+//
+// Description: Starts a quake using the intensity and time specified. Okuu-only.
+//
+// var1: Intensity
+// var2: Time (tics)
+//
+void A_StartQuake(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_StartQuake", actor))
+		return;
+#endif
+
+	quake.intensity = (fixed_t)locvar1;
+	quake.time = (fixed_t)locvar2;
+	S_StartSound(NULL, sfx_suns);
+}
+
+// Function: A_RotateExtend
+//
+// Description: I wish I knew.
+//
+// var1: Speed
+// var2: Radius
+//
+void A_RotateExtend(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	if (!actor->extravalue1)
+		actor->extravalue1 = (locvar1>>16)*FRACUNIT;
+	fixed_t radius = FixedMul(12*actor->extravalue1, actor->scale);
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_RotateExtend", actor))
+		return;
+#endif
+
+	if (!actor->target)
+	{
+		P_RemoveMobj(actor);
+		return;
+	}
+
+	actor->angle += FixedAngle((locvar1 & 65535)*FRACUNIT);
+	P_TeleportMove(actor, actor->target->x + FixedMul(FINECOSINE(actor->angle>>ANGLETOFINESHIFT), radius), actor->target->y + FixedMul(FINESINE(actor->angle>>ANGLETOFINESHIFT), radius), actor->target->z + actor->target->height/2 + (locvar2 >> 16)*FRACUNIT);
+	if (actor->extravalue1 < ((locvar2 & 65535)*FRACUNIT))
+		actor->extravalue1 += FRACUNIT/4;
+}
+
+// Function: A_RotateShrink
+//
+// Description: I wish I knew.
+//
+// var1: Speed
+// var2: Radius
+//
+void A_RotateShrink(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	if (!actor->extravalue1)
+		actor->extravalue1 = (locvar1>>16)*FRACUNIT;
+	fixed_t radius = FixedMul(12*actor->extravalue1, actor->scale);
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_RotateShrink", actor))
+		return;
+#endif
+
+	if (!actor->target)
+	{
+		P_RemoveMobj(actor);
+		return;
+	}
+
+	actor->angle += FixedAngle((locvar1 & 65535)*FRACUNIT);
+	P_TeleportMove(actor, actor->target->x + FixedMul(FINECOSINE(actor->angle>>ANGLETOFINESHIFT), radius), actor->target->y + FixedMul(FINESINE(actor->angle>>ANGLETOFINESHIFT), radius), actor->target->z + actor->target->height/2 + (locvar2 >> 16)*FRACUNIT);
+	if (actor->extravalue1 > ((locvar2 & 65535)*FRACUNIT))
+		actor->extravalue1 -= FRACUNIT/4;
+}
+
+// Function: A_FireRandomShot
+//
+// Description: Fire a random shot?
+//
+// var1: Object type
+// var2: Random (whatever that means)
+//
+void A_FireRandomShot(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	fixed_t sideoff = P_RandomRange(-locvar2, locvar2)*FRACUNIT;
+	fixed_t x = actor->x + P_ReturnThrustX(actor, actor->angle-ANGLE_90, sideoff);
+	fixed_t y = actor->y + P_ReturnThrustY(actor, actor->angle-ANGLE_90, sideoff);
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FireRandomShot", actor))
+		return;
+#endif
+
+	P_SpawnXYZMissile(actor, actor->target, locvar1, x, y, actor->z);
 }
