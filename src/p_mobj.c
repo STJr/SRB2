@@ -8122,6 +8122,9 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			|| mobj->type == MT_CHECKERBALL || mobj->type == MT_SICHECKERBALL
 			|| mobj->type == MT_CHROME || mobj->type == MT_ORBITALMISSILE
 			|| mobj->type == MT_PLASMABULLET || mobj->type == MT_TOXOMISTERCLOUD
+			|| mobj->type == MT_STARBIG || mobj->type == MT_STARROTATE
+			|| mobj->type == MT_STARROTATE2 || mobj->type == MT_LAVAPLUME
+			|| mobj->type == MT_SHRINKINGSTAR
 			)
 			P_SpawnShadowMobj(mobj);
 	}
