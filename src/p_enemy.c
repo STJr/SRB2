@@ -10507,7 +10507,7 @@ void A_OrbitalChase(mobj_t *actor)
 		return;
 #endif
 
-	if (locvar1 >> 16 == 0 || actor->type == MT_OKUU)
+	if (locvar1 >> 16 == 0)
 		target = actor->target;
 	else
 		target = actor->tracer;
