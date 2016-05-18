@@ -9,23 +9,21 @@ void OSX_GetResourcesPath(char * buffer)
     mainBundle = CFBundleGetMainBundle();
     if (mainBundle)
     {
+        const int BUF_SIZE = 256; // because we somehow always know that
+
         CFURLRef appUrlRef = CFBundleCopyBundleURL(mainBundle);
         CFStringRef macPath = CFURLCopyFileSystemPath(appUrlRef, kCFURLPOSIXPathStyle);
-        CFStringRef resources = CFStringCreateWithCString(kCFAllocatorMalloc, "/Contents/Resources", kCFStringEncodingASCII);
-        const void* rawarray[2] = {macPath, resources};
-        CFArrayRef array = CFArrayCreate(kCFAllocatorMalloc, rawarray, 2, NULL);
-        CFStringRef separator = CFStringCreateWithCString(kCFAllocatorMalloc, "", kCFStringEncodingASCII);
-        CFStringRef fullPath = CFStringCreateByCombiningStrings(kCFAllocatorMalloc, array, separator);
-        const char * path = CFStringGetCStringPtr(fullPath, kCFStringEncodingASCII);
-        strcpy(buffer, path);
-        CFRelease(fullPath);
-        path = NULL;
-        CFRelease(array);
-        CFRelease(resources);
+
+        const char* rawPath = CFStringGetCStringPtr(macPath, kCFStringEncodingASCII);
+ 
+        if (CFStringGetLength(macPath) + strlen("/Contents/Resources") < BUF_SIZE)
+        {
+            strcpy(buffer, rawPath);
+            strcat(buffer, "/Contents/Resources");
+        }
+
         CFRelease(macPath);
         CFRelease(appUrlRef);
-        //CFRelease(mainBundle);
-        CFRelease(separator);
     }
-
+    CFRelease(mainBundle);
 }
