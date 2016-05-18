@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -27,18 +27,22 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseOfMfc>false</UseOfMfc>
+    <PlatformToolset>v140</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseOfMfc>false</UseOfMfc>
+    <PlatformToolset>v140</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseOfMfc>false</UseOfMfc>
+    <PlatformToolset>v140</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseOfMfc>false</UseOfMfc>
+    <PlatformToolset>v140</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -318,6 +322,18 @@
     <ClCompile Include="..\blua\lvm.c" />
     <ClCompile Include="..\blua\lzio.c" />
     <ClCompile Include="..\b_bot.c" />
+    <ClCompile Include="..\lua_baselib.c" />
+    <ClCompile Include="..\lua_consolelib.c" />
+    <ClCompile Include="..\lua_hooklib.c" />
+    <ClCompile Include="..\lua_hudlib.c" />
+    <ClCompile Include="..\lua_infolib.c" />
+    <ClCompile Include="..\lua_maplib.c" />
+    <ClCompile Include="..\lua_mathlib.c" />
+    <ClCompile Include="..\lua_mobjlib.c" />
+    <ClCompile Include="..\lua_playerlib.c" />
+    <ClCompile Include="..\lua_script.c" />
+    <ClCompile Include="..\lua_skinlib.c" />
+    <ClCompile Include="..\lua_thinkerlib.c" />
     <ClCompile Include="..\m_cond.c" />
     <ClCompile Include="dosstr.c">
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -1279,6 +1295,10 @@
     <ClInclude Include="..\blua\lvm.h" />
     <ClInclude Include="..\blua\lzio.h" />
     <ClInclude Include="..\b_bot.h" />
+    <ClInclude Include="..\lua_hook.h" />
+    <ClInclude Include="..\lua_hud.h" />
+    <ClInclude Include="..\lua_libs.h" />
+    <ClInclude Include="..\lua_script.h" />
     <ClInclude Include="..\m_cond.h" />
     <ClInclude Include="endtxt.h" />
     <ClInclude Include="..\filesrch.h" />

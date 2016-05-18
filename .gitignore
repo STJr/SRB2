@@ -13,3 +13,7 @@ Win32_LIB_ASM_Release
 *.dgb
 *.debug
 *.debug.txt
+/bin/VC10/Win32/Debug
+/objs/VC10/Win32/Debug
+*.user
+*.db
