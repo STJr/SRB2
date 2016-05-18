@@ -4952,8 +4952,9 @@ static void P_NightsTransferPoints(player_t *player, fixed_t xspeed, fixed_t rad
 	else
 	{
 		const angle_t fa = player->angle_pos>>ANGLETOFINESHIFT;
-		player->mo->momx = player->mo->target->x + FixedMul(FINECOSINE(fa),radius) - player->mo->x;
-		player->mo->momy = player->mo->target->y + FixedMul(FINESINE(fa),radius) - player->mo->y;
+		const angle_t faold = player->old_angle_pos>>ANGLETOFINESHIFT;
+		player->mo->momx = FixedMul(FINECOSINE(fa),radius) - FixedMul(FINECOSINE(faold),radius);
+		player->mo->momy = FixedMul(FINESINE(fa),radius) - FixedMul(FINESINE(faold),radius);
 	}
 
 	if (player->exiting)
@@ -5659,6 +5660,29 @@ static void P_NiGHTSMovement(player_t *player)
 
 	if (player->mo->eflags & MFE_VERTICALFLIP)
 		cmd->forwardmove = (SINT8)(-cmd->forwardmove);
+
+	if (!(player->pflags & PF_TRANSFERTOCLOSEST))
+	{
+		fixed_t realdist = R_PointToDist2(player->mo->x, player->mo->y, player->mo->target->x, player->mo->target->y);
+		// teleport player to correct radius if neccessary
+		if (realdist>>FRACBITS != radius>>FRACBITS)
+		{
+			CONS_Debug(DBG_NIGHTS, "Aligning player with axis\n");
+			P_UnsetThingPosition(player->mo);
+			if (realdist == 0) // other method won't work if we're exactly on the target lol
+			{
+				const angle_t fa = player->old_angle_pos>>ANGLETOFINESHIFT;
+				player->mo->x = player->mo->target->x + FixedMul(FINECOSINE(fa), radius);
+				player->mo->y = player->mo->target->y + FixedMul(FINESINE(fa), radius);
+			}
+			else
+			{
+				player->mo->x = player->mo->target->x + FixedMul(FixedDiv(player->mo->x - player->mo->target->x, realdist), radius);
+				player->mo->y = player->mo->target->y + FixedMul(FixedDiv(player->mo->y - player->mo->target->y, realdist), radius);
+			}
+			P_SetThingPosition(player->mo);
+		}
+	}
 
 	// Currently reeling from being hit.
 	if (player->powers[pw_flashing] > (2*flashingtics)/3)
