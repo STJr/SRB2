@@ -6422,7 +6422,7 @@ void P_MobjThinker(mobj_t *mobj)
 
 	if (mobj->flags2 & MF2_FIRING && mobj->target && mobj->health > 0)
 	{
-		if (mobj->state->action.acp1 == A_Boss1Laser)
+		if (mobj->state->action.acp1 == (actionf_p1)A_Boss1Laser)
 		{
 			var1 = mobj->state->var1;
 			var2 = mobj->state->var2;

@@ -184,7 +184,9 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 	#define __BYTEBOOL__
 
 	//faB: clean that up !!
-	#if (defined (_WIN32) || (defined (_WIN32_WCE) && !defined (__GNUC__))) && !defined (_XBOX)
+	#if defined( _MSC_VER)  && (_MSC_VER >= 1800) // MSVC 2013 and forward
+	#include "stdbool.h"
+	#elif (defined (_WIN32) || (defined (_WIN32_WCE) && !defined (__GNUC__))) && !defined (_XBOX)
 		#define false   FALSE           // use windows types
 		#define true    TRUE
 		#define boolean BOOL
