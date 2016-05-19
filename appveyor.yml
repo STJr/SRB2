@@ -7,15 +7,31 @@ environment:
  WINDRES: windres
  MINGW_SDK: c:\msys64\mingw32
  CFLAGS: -Wall -W -Werror
+ NASM_ZIP: nasm-2.12.01
+ NASM_URL: http://www.nasm.us/pub/nasm/releasebuilds/2.12.01/win64/nasm-2.12.01-win64.zip
+ UPX_ZIP: upx391w
+ UPX_URL: http://upx.sourceforge.net/download/upx391w.zip
  CCACHE_EXE: ccache.exe
  CCACHE_URL: http://alam.srb2.org/ccache.exe
  CCACHE_COMPRESS: true
+ CCACHE_DIR: C:\Users\appveyor\.ccache
+ CCACHE_LOGFILE: C:\Users\appveyor\ccache.log
 
 cache:
+- nasm-2.12.01.zip
+- upx391w.zip
 - ccache.exe
-- C:\Users\appveyor\AppData\Roaming\.ccache
+- C:\Users\appveyor\.ccache
 
 install:
+- if not exist "%NASM_ZIP%.zip" appveyor DownloadFile "%NASM_URL%" -FileName "%NASM_ZIP%.zip"
+- 7z x -y "%NASM_ZIP%" -o%TMP% >null
+- robocopy /S /xx /ns /nc /nfl /ndl /np /njh /njs %TMP%\%NASM_ZIP% %MINGW_SDK% nasm.exe || exit 0
+
+- if not exist "%UPX_ZIP%.zip" appveyor DownloadFile "%UPX_URL%" -FileName "%UPX_ZIP%.zip"
+- 7z x -y "%UPX_ZIP%" -o%TMP% >null
+- robocopy /S /xx /ns /nc /nfl /ndl /np /njh /njs %TMP%\%UPX_ZIP% %MINGW_SDK% upx.exe || exit 0
+
 - if not exist "%CCACHE_EXE%" appveyor DownloadFile "%CCACHE_URL%" -FileName "%CCACHE_EXE%"
 - ccache -M 99M
 - xcopy /Y /V /I ccache.exe %MINGW_SDK%\bin
@@ -24,13 +40,14 @@ configuration:
 - SDL
 - DD
 
-
 before_build:
 - set Path=%MINGW_SDK%\bin;%Path%
 - i686-w64-mingw32-gcc --version
 - mingw32-make --version
+- upx -V
+- nasm -v
 - ccache -s
-- set SRB2_MFLAGS=-C src MINGW=1 WARNINGMODE=1 NOASM=1 NOUPX=1 GCC53=1
+- set SRB2_MFLAGS=-C src MINGW=1 WARNINGMODE=1 GCC53=1 ECHO=1
 
 build_script:
 - cmd: mingw32-make.exe %SRB2_MFLAGS% %CONFIGURATION%=1 clean
@@ -43,6 +60,7 @@ after_build:
 - set BUILD_ARCHIVE=%APPVEYOR_REPO_BRANCH%-%GITSHORT%-%CONFIGURATION%.7z
 - cmd: 7z a %BUILD_ARCHIVE% bin\Mingw\Release -xr!.gitignore
 - appveyor PushArtifact %BUILD_ARCHIVE%
+- type C:\Users\appveyor\ccache.log
 
 test: off
 
