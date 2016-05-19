@@ -13,7 +13,7 @@ environment:
 
 cache:
 - ccache.exe
-- :\Users\appveyor\AppData\Roaming\.ccache
+- C:\Users\appveyor\AppData\Roaming\.ccache
 
 install:
 - if not exist "%CCACHE_EXE%" appveyor DownloadFile "%CCACHE_URL%" -FileName "%CCACHE_EXE%"
