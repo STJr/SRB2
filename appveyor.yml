@@ -25,12 +25,12 @@ cache:
 
 install:
 - if not exist "%NASM_ZIP%.zip" appveyor DownloadFile "%NASM_URL%" -FileName "%NASM_ZIP%.zip"
-- 7z x -y "%NASM_ZIP%.zip" -o%TMP%
-- robocopy /S /xx %TMP%\%NASM_ZIP% %MINGW_SDK% nasm.exe || exit 0
+- 7z x -y "%NASM_ZIP%.zip" -o%TMP% >null
+- robocopy /S /xx /ns /nc /nfl /ndl /np /njh /njs %TMP%\%NASM_ZIP% %MINGW_SDK\bin% nasm.exe || exit 0
 
 - if not exist "%UPX_ZIP%.zip" appveyor DownloadFile "%UPX_URL%" -FileName "%UPX_ZIP%.zip"
-- 7z x -y "%UPX_ZIP%.zip" -o%TMP%
-- robocopy /S /xx %TMP%\%UPX_ZIP% %MINGW_SDK% upx.exe || exit 0
+- 7z x -y "%UPX_ZIP%.zip" -o%TMP% >null
+- robocopy /S /xx /ns /nc /nfl /ndl /np /njh /njs %TMP%\%UPX_ZIP% %MINGW_SDK\bin% upx.exe || exit 0
 
 - if not exist "%CCACHE_EXE%" appveyor DownloadFile "%CCACHE_URL%" -FileName "%CCACHE_EXE%"
 - ccache -M 99M
