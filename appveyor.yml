@@ -11,7 +11,7 @@ environment:
  CCACHE_URL: http://alam.srb2.org/ccache.exe
  CCACHE_COMPRESS: true
 
--cache:
+cache:
 - ccache.exe
 - C:\Users\appveyor\.ccache
 
