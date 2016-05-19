@@ -189,6 +189,10 @@ ifdef FREEBSD
 UNIXCOMMON=1
 endif
 
+ifdef MACOSX
+UNIXCOMMON=1
+endif
+
 ifdef NDS
 NOPNG=1
 NONET=1
@@ -588,10 +592,15 @@ ifndef WINDOWSHELL
 	-$(GZIP) $(GZIP_OPT2) $(BIN)/$(DBGNAME).txt
 endif
 endif
+
+# i dont know why, but the os x executable absolutely hates
+# being touched by objcopy. so let's not do it
+ifndef MACOSX
 ifndef PSP
 	$(OBJCOPY) $(BIN)/$(EXENAME) $(BIN)/$(DBGNAME)
 	$(OBJCOPY) --strip-debug $(BIN)/$(EXENAME)
 	-$(OBJCOPY) --add-gnu-debuglink=$(BIN)/$(DBGNAME) $(BIN)/$(EXENAME)
+endif
 endif
 ifndef NOUPX
 	-$(UPX) $(UPX_OPTS) $(BIN)/$(EXENAME)
@@ -736,6 +745,11 @@ $(OBJDIR)/%.o: %.c
 
 $(OBJDIR)/%.o: $(INTERFACE)/%.c
 	$(CC) $(CFLAGS) $(WFLAGS) -c $< -o $@
+
+ifdef MACOSX
+$(OBJDIR)/%.o: sdl/macosx/%.c
+	$(CC) $(CFLAGS) $(WFLAGS) -c $< -o $@
+endif
 
 $(OBJDIR)/%.o: hardware/%.c
 	$(CC) $(CFLAGS) $(WFLAGS) -c $< -o $@

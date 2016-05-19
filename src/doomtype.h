@@ -92,7 +92,7 @@ typedef long ssize_t;
 #endif
 
 #ifdef __APPLE_CC__
-#define DIRECTFULLSCREEN
+#define DIRECTFULLSCREEN 1
 #define DEBUG_LOG
 #define NOIPX
 #endif
