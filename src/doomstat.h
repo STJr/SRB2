@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -31,15 +31,11 @@
 
 // Selected by user.
 extern INT16 gamemap;
-
-// ----------------xxxxxxxxxxxxxxxx = music slot
-// -xxxxxxxxxxxxxxx---------------- = track slot
-// x------------------------------- = reset music bit
-extern UINT32 mapmusic;
-#define MUSIC_TRACKSHIFT  16
-#define MUSIC_SONGMASK    0x0000FFFF
-#define MUSIC_TRACKMASK   0x7FFF0000
-#define MUSIC_RELOADRESET 0x80000000
+extern char mapmusname[7];
+extern UINT16 mapmusflags;
+#define MUSIC_TRACKMASK   0x0FFF // ----************
+#define MUSIC_RELOADRESET 0x8000 // *---------------
+// Use other bits if necessary.
 
 extern INT16 maptol;
 extern UINT8 globalweather;
@@ -146,10 +142,12 @@ typedef struct
 	UINT16 xcoord[8];
 	UINT16 ycoord[8];
 	UINT16 picduration[8];
-	UINT16 musicslot;
 	UINT8 musicloop;
 	UINT16 textxpos;
 	UINT16 textypos;
+
+	char   musswitch[7];
+	UINT16 musswitchflags;
 
 	UINT8 fadecolor; // Color number for fade, 0 means don't do the first fade
 	UINT8 fadeinid;  // ID of the first fade, to a color -- ignored if fadecolor is 0
@@ -218,8 +216,8 @@ typedef struct
 	UINT8 actnum;          ///< Act number or 0 for none.
 	UINT16 typeoflevel;    ///< Combination of typeoflevel flags.
 	INT16 nextlevel;       ///< Map number of next level, or 1100-1102 to end.
-	UINT16 musicslot;      ///< Music slot number to play. 0 for no music.
-	UINT16 musicslottrack; ///< Subsong to play. Only really relevant for music modules and specific formats supported by GME. 0 to ignore.
+	char musname[7];       ///< Music track to play. "" for no music.
+	UINT16 mustrack;       ///< Subsong to play. Only really relevant for music modules and specific formats supported by GME. 0 to ignore.
 	char forcecharacter[17];  ///< (SKINNAMESIZE+1) Skin to switch to or "" to disable.
 	UINT8 weather;         ///< 0 = sunny day, 1 = storm, 2 = snow, 3 = rain, 4 = blank, 5 = thunder w/o rain, 6 = rain w/o lightning, 7 = heat wave.
 	INT16 skynum;          ///< Sky number to use.

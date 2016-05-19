@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -24,6 +24,7 @@
 #include "r_plane.h"
 #include "p_tick.h"
 #include "p_local.h"
+#include "p_slopes.h"
 #include "dehacked.h" // get_number (for thok)
 #include "d_netfil.h" // blargh. for nameonly().
 #include "m_cheat.h" // objectplace
@@ -743,9 +744,15 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	patch_t *patch = W_CacheLumpNum(vis->patch, PU_CACHE);
 	fixed_t this_scale = vis->mobj->scale;
 	INT32 x1, x2;
+	INT64 overflow_test;
 
 	if (!patch)
 		return;
+
+	// Check for overflow
+	overflow_test = (INT64)centeryfrac - (((INT64)vis->texturemid*vis->scale)>>FRACBITS);
+	if (overflow_test < 0) overflow_test = -overflow_test;
+	if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) return; // fixed point mult would overflow
 
 	colfunc = basecolfunc; // hack: this isn't resetting properly somewhere.
 	dc_colormap = vis->colormap;
@@ -833,10 +840,10 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		dc_texturemid = FixedDiv(dc_texturemid,this_scale);
 
 		//Oh lordy, mercy me. Don't freak out if sprites go offscreen!
-		if (vis->xiscale > 0)
+		/*if (vis->xiscale > 0)
 			frac = FixedDiv(frac, this_scale);
 		else if (vis->x1 <= 0)
-			frac = (vis->x1 - vis->x2) * vis->xiscale;
+			frac = (vis->x1 - vis->x2) * vis->xiscale;*/
 
 		sprtopscreen = centeryfrac - FixedMul(dc_texturemid, spryscale);
 		//dc_hires = 1;
@@ -945,15 +952,25 @@ static void R_SplitSprite(vissprite_t *sprite, mobj_t *thing)
 
 	for (i = 1; i < sector->numlights; i++)
 	{
-		if (sector->lightlist[i].height >= sprite->gzt || !(sector->lightlist[i].caster->flags & FF_CUTSPRITES))
+		fixed_t testheight = sector->lightlist[i].height;
+
+		if (!(sector->lightlist[i].caster->flags & FF_CUTSPRITES))
 			continue;
-		if (sector->lightlist[i].height <= sprite->gz)
+
+#ifdef ESLOPE
+		if (sector->lightlist[i].slope)
+			testheight = P_GetZAt(sector->lightlist[i].slope, sprite->gx, sprite->gy);
+#endif
+
+		if (testheight >= sprite->gzt)
+			continue;
+		if (testheight <= sprite->gz)
 			return;
 
-		cutfrac = (INT16)((centeryfrac - FixedMul(sector->lightlist[i].height - viewz, sprite->scale))>>FRACBITS);
+		cutfrac = (INT16)((centeryfrac - FixedMul(testheight - viewz, sprite->scale))>>FRACBITS);
 		if (cutfrac < 0)
 			continue;
-		if (cutfrac > vid.height)
+		if (cutfrac > viewheight)
 			return;
 
 		// Found a split! Make a new sprite, copy the old sprite to it, and
@@ -961,15 +978,15 @@ static void R_SplitSprite(vissprite_t *sprite, mobj_t *thing)
 		newsprite = M_Memcpy(R_NewVisSprite(), sprite, sizeof (vissprite_t));
 
 		sprite->cut |= SC_BOTTOM;
-		sprite->gz = sector->lightlist[i].height;
+		sprite->gz = testheight;
 
 		newsprite->gzt = sprite->gz;
 
 		sprite->sz = cutfrac;
 		newsprite->szt = (INT16)(sprite->sz - 1);
 
-		if (sector->lightlist[i].height < sprite->pzt && sector->lightlist[i].height > sprite->pz)
-			sprite->pz = newsprite->pzt = sector->lightlist[i].height;
+		if (testheight < sprite->pzt && testheight > sprite->pz)
+			sprite->pz = newsprite->pzt = testheight;
 		else
 		{
 			newsprite->pz = newsprite->gz;
@@ -1002,7 +1019,7 @@ static void R_SplitSprite(vissprite_t *sprite, mobj_t *thing)
 			if (!((thing->frame & (FF_FULLBRIGHT|FF_TRANSMASK) || thing->flags2 & MF2_SHADOW)
 				&& (!newsprite->extra_colormap || !newsprite->extra_colormap->fog)))
 			{
-				lindex = sprite->xscale>>(LIGHTSCALESHIFT);
+				lindex = FixedMul(sprite->xscale, FixedDiv(640, vid.width))>>(LIGHTSCALESHIFT);
 
 				if (lindex >= MAXLIGHTSCALE)
 					lindex = MAXLIGHTSCALE-1;
@@ -1186,7 +1203,20 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (thing->subsector->sector->numlights)
 	{
 		INT32 lightnum;
+#ifdef ESLOPE // R_GetPlaneLight won't work on sloped lights!
+		light = thing->subsector->sector->numlights - 1;
+
+		for (lightnum = 1; lightnum < thing->subsector->sector->numlights; lightnum++) {
+			fixed_t h = thing->subsector->sector->lightlist[lightnum].slope ? P_GetZAt(thing->subsector->sector->lightlist[lightnum].slope, thing->x, thing->y)
+			            : thing->subsector->sector->lightlist[lightnum].height;
+			if (h <= gzt) {
+				light = lightnum - 1;
+				break;
+			}
+		}
+#else
 		light = R_GetPlaneLight(thing->subsector->sector, gzt, false);
+#endif
 		lightnum = (*thing->subsector->sector->lightlist[light].lightlevel >> LIGHTSEGSHIFT);
 
 		if (lightnum < 0)
@@ -1215,20 +1245,12 @@ static void R_ProjectSprite(mobj_t *thing)
 			return;
 	}
 
-	// quick check for possible overflows
-	// if either of these triggers then there's a possibility that drawing is unsafe
-	if (M_HighestBit(abs(gzt - viewz)) + M_HighestBit(abs(yscale)) > 47 // 31 bits + 16 from the division by FRACUNIT
-	 || M_HighestBit(abs(gz  - viewz)) + M_HighestBit(abs(yscale)) > 47)
-	{
-		CONS_Debug(DBG_RENDER, "Suspected overflow in ProjectSprite (sprite %s), ignoring\n", sprnames[thing->sprite]);
-		return;
-	}
-
 	// store information in a vissprite
 	vis = R_NewVisSprite();
 	vis->heightsec = heightsec; //SoM: 3/17/2000
 	vis->mobjflags = thing->flags;
-	vis->scale = yscale + thing->info->dispoffset;           //<<detailshift;
+	vis->scale = yscale; //<<detailshift;
+	vis->dispoffset = thing->info->dispoffset; // Monster Iestyn: 23/11/15
 	vis->gx = thing->x;
 	vis->gy = thing->y;
 	vis->gz = gz;
@@ -1276,7 +1298,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	}
 
 	if (vis->x1 > x1)
-		vis->startfrac += vis->xiscale*(vis->x1-x1);
+		vis->startfrac += FixedDiv(vis->xiscale, this_scale)*(vis->x1-x1);
 
 	//Fab: lumppat is the lump number of the patch to use, this is different
 	//     than lumpid for sprites-in-pwad : the graphics are patched
@@ -1291,9 +1313,9 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (!cv_translucency.value)
 		; // no translucency
 	else if (thing->flags2 & MF2_SHADOW) // actually only the player should use this (temporary invisibility)
-		vis->transmap = ((tr_trans80-1)<<FF_TRANSSHIFT) + transtables; // because now the translucency is set through FF_TRANSMASK
+		vis->transmap = transtables + ((tr_trans80-1)<<FF_TRANSSHIFT); // because now the translucency is set through FF_TRANSMASK
 	else if (thing->frame & FF_TRANSMASK)
-		vis->transmap = (thing->frame & FF_TRANSMASK) - 0x10000 + transtables;
+		vis->transmap = transtables + (thing->frame & FF_TRANSMASK) - 0x10000;
 
 	if (((thing->frame & FF_FULLBRIGHT) || (thing->flags2 & MF2_SHADOW))
 		&& (!vis->extra_colormap || !vis->extra_colormap->fog))
@@ -1304,7 +1326,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	else
 	{
 		// diminished light
-		lindex = xscale>>(LIGHTSCALESHIFT);
+		lindex = FixedMul(xscale, FixedDiv(640, vid.width))>>(LIGHTSCALESHIFT);
 
 		if (lindex >= MAXLIGHTSCALE)
 			lindex = MAXLIGHTSCALE-1;
@@ -1433,17 +1455,10 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 			return;
 	}
 
-	// quick check for possible overflows
-	// if either of these triggers then there's a possibility that drawing is unsafe
-	if (M_HighestBit(abs(gzt - viewz)) + M_HighestBit(abs(yscale)) > 47) // 31 bits + 16 from the division by FRACUNIT
-	{
-		CONS_Debug(DBG_RENDER, "Suspected overflow in ProjectPrecipitationSprite (sprite %s), ignoring\n", sprnames[thing->sprite]);
-		return;
-	}
-
 	// store information in a vissprite
 	vis = R_NewVisSprite();
 	vis->scale = yscale; //<<detailshift;
+	vis->dispoffset = 0; // Monster Iestyn: 23/11/15
 	vis->gx = thing->x;
 	vis->gy = thing->y;
 	vis->gz = gz;
@@ -1541,23 +1556,12 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel)
 	// If a limit exists, handle things a tiny bit different.
 	if ((limit_dist = (fixed_t)((maptol & TOL_NIGHTS) ? cv_drawdist_nights.value : cv_drawdist.value) << FRACBITS))
 	{
-		if (!players[displayplayer].mo)
-			return; // Draw nothing if no player.
-			// todo: is this really the best option for this situation?
-
 		for (thing = sec->thinglist; thing; thing = thing->snext)
 		{
 			if (thing->sprite == SPR_NULL || thing->flags2 & MF2_DONTDRAW)
 				continue;
 
-			approx_dist = P_AproxDistance(
-				players[displayplayer].mo->x - thing->x,
-				players[displayplayer].mo->y - thing->y);
-
-			if (splitscreen && approx_dist > limit_dist && players[secondarydisplayplayer].mo)
-				approx_dist = P_AproxDistance(
-					players[secondarydisplayplayer].mo->x - thing->x,
-					players[secondarydisplayplayer].mo->y - thing->y);
+			approx_dist = P_AproxDistance(viewx-thing->x, viewy-thing->y);
 
 			if (approx_dist <= limit_dist)
 				R_ProjectSprite(thing);
@@ -1574,23 +1578,12 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel)
 	// Someone seriously wants infinite draw distance for precipitation?
 	if ((limit_dist = (fixed_t)cv_drawdist_precip.value << FRACBITS))
 	{
-		if (!players[displayplayer].mo)
-			return; // Draw nothing if no player.
-			// todo: is this really the best option for this situation?
-
 		for (precipthing = sec->preciplist; precipthing; precipthing = precipthing->snext)
 		{
 			if (precipthing->precipflags & PCF_INVISIBLE)
 				continue;
 
-			approx_dist = P_AproxDistance(
-				players[displayplayer].mo->x - precipthing->x,
-				players[displayplayer].mo->y - precipthing->y);
-
-			if (splitscreen && approx_dist > limit_dist && players[secondarydisplayplayer].mo)
-				approx_dist = P_AproxDistance(
-					players[secondarydisplayplayer].mo->x - precipthing->x,
-					players[secondarydisplayplayer].mo->y - precipthing->y);
+			approx_dist = P_AproxDistance(viewx-precipthing->x, viewy-precipthing->y);
 
 			if (approx_dist <= limit_dist)
 				R_ProjectPrecipitationSprite(precipthing);
@@ -1617,6 +1610,7 @@ void R_SortVisSprites(void)
 	vissprite_t *best = NULL;
 	vissprite_t  unsorted;
 	fixed_t      bestscale;
+	INT32        bestdispoffset;
 
 	if (!visspritecount)
 		return;
@@ -1647,12 +1641,19 @@ void R_SortVisSprites(void)
 	vsprsortedhead.next = vsprsortedhead.prev = &vsprsortedhead;
 	for (i = 0; i < visspritecount; i++)
 	{
-		bestscale = INT32_MAX;
+		bestscale = bestdispoffset = INT32_MAX;
 		for (ds = unsorted.next; ds != &unsorted; ds = ds->next)
 		{
 			if (ds->scale < bestscale)
 			{
 				bestscale = ds->scale;
+				bestdispoffset = ds->dispoffset;
+				best = ds;
+			}
+			// order visprites of same scale by dispoffset, smallest first
+			else if (ds->scale == bestscale && ds->dispoffset < bestdispoffset)
+			{
+				bestdispoffset = ds->dispoffset;
 				best = ds;
 			}
 		}
@@ -1699,6 +1700,19 @@ static void R_CreateDrawNodes(void)
 		}
 		if (ds->maskedtexturecol)
 		{
+#ifdef POLYOBJECTS_PLANES
+			// Check for a polyobject plane, but only if this is a front line
+			if (ds->curline->polyseg && ds->curline->polyseg->visplane && !ds->curline->side) {
+				// Put it in!
+
+				entry = R_CreateDrawNode(&nodehead);
+				entry->plane = ds->curline->polyseg->visplane;
+				entry->seg = ds;
+				ds->curline->polyseg->visplane->polyobj = ds->curline->polyseg;
+				ds->curline->polyseg->visplane = NULL;
+			}
+#endif
+
 			entry = R_CreateDrawNode(&nodehead);
 			entry->seg = ds;
 		}
@@ -1715,7 +1729,7 @@ static void R_CreateDrawNodes(void)
 					plane = ds->ffloorplanes[p];
 					R_PlaneBounds(plane);
 
-					if (plane->low < con_clipviewtop || plane->high > vid.height || plane->high > plane->low)
+					if (plane->low < con_clipviewtop || plane->high > vid.height || plane->high > plane->low || plane->polyobj)
 					{
 						ds->ffloorplanes[p] = NULL;
 						continue;
@@ -1756,24 +1770,34 @@ static void R_CreateDrawNodes(void)
 		{
 			if (r2->plane)
 			{
+				fixed_t planeobjectz, planecameraz;
 				if (r2->plane->minx > rover->x2 || r2->plane->maxx < rover->x1)
 					continue;
 				if (rover->szt > r2->plane->low || rover->sz < r2->plane->high)
 					continue;
 
+#ifdef ESLOPE
+				// Effective height may be different for each comparison in the case of slopes
+				if (r2->plane->slope) {
+					planeobjectz = P_GetZAt(r2->plane->slope, rover->gx, rover->gy);
+					planecameraz = P_GetZAt(r2->plane->slope, viewx, viewy);
+				} else
+#endif
+					planeobjectz = planecameraz = r2->plane->height;
+
 				if (rover->mobjflags & MF_NOCLIPHEIGHT)
 				{
 					//Objects with NOCLIPHEIGHT can appear halfway in.
-					if (r2->plane->height < viewz && rover->pz+(rover->thingheight/2) >= r2->plane->height)
+					if (planecameraz < viewz && rover->pz+(rover->thingheight/2) >= planeobjectz)
 						continue;
-					if (r2->plane->height > viewz && rover->pzt-(rover->thingheight/2) <= r2->plane->height)
+					if (planecameraz > viewz && rover->pzt-(rover->thingheight/2) <= planeobjectz)
 						continue;
 				}
 				else
 				{
-					if (r2->plane->height < viewz && rover->pz >= r2->plane->height)
+					if (planecameraz < viewz && rover->pz >= planeobjectz)
 						continue;
-					if (r2->plane->height > viewz && rover->pzt <= r2->plane->height)
+					if (planecameraz > viewz && rover->pzt <= planeobjectz)
 						continue;
 				}
 
@@ -1803,6 +1827,7 @@ static void R_CreateDrawNodes(void)
 			}
 			else if (r2->thickseg)
 			{
+				fixed_t topplaneobjectz, topplanecameraz, botplaneobjectz, botplanecameraz;
 				if (rover->x1 > r2->thickseg->x2 || rover->x2 < r2->thickseg->x1)
 					continue;
 
@@ -1813,9 +1838,25 @@ static void R_CreateDrawNodes(void)
 				if (scale <= rover->scale)
 					continue;
 
-				if ((*r2->ffloor->topheight > viewz && *r2->ffloor->bottomheight < viewz) ||
-				    (*r2->ffloor->topheight < viewz && rover->gzt < *r2->ffloor->topheight) ||
-				    (*r2->ffloor->bottomheight > viewz && rover->gz > *r2->ffloor->bottomheight))
+#ifdef ESLOPE
+				if (*r2->ffloor->t_slope) {
+					topplaneobjectz = P_GetZAt(*r2->ffloor->t_slope, rover->gx, rover->gy);
+					topplanecameraz = P_GetZAt(*r2->ffloor->t_slope, viewx, viewy);
+				} else
+#endif
+					topplaneobjectz = topplanecameraz = *r2->ffloor->topheight;
+
+#ifdef ESLOPE
+				if (*r2->ffloor->b_slope) {
+					botplaneobjectz = P_GetZAt(*r2->ffloor->b_slope, rover->gx, rover->gy);
+					botplanecameraz = P_GetZAt(*r2->ffloor->b_slope, viewx, viewy);
+				} else
+#endif
+					botplaneobjectz = botplanecameraz = *r2->ffloor->bottomheight;
+
+				if ((topplanecameraz > viewz && botplanecameraz < viewz) ||
+				    (topplanecameraz < viewz && rover->gzt < topplaneobjectz) ||
+				    (botplanecameraz > viewz && rover->gz > botplaneobjectz))
 				{
 					entry = R_CreateDrawNode(NULL);
 					(entry->prev = r2->prev)->next = entry;
@@ -1826,7 +1867,7 @@ static void R_CreateDrawNodes(void)
 			}
 			else if (r2->seg)
 			{
-#ifdef POLYOBJECTS_PLANES
+#if 0 //#ifdef POLYOBJECTS_PLANES
 				if (r2->seg->curline->polyseg && rover->mobj && P_MobjInsidePolyobj(r2->seg->curline->polyseg, rover->mobj)) {
 					// Determine if we need to sort in front of the polyobj, based on the planes. This fixes the issue where
 					// polyobject planes render above the object standing on them. (A bit hacky... but it works.) -Red
@@ -1864,7 +1905,8 @@ static void R_CreateDrawNodes(void)
 				if (r2->sprite->szt > rover->sz || r2->sprite->sz < rover->szt)
 					continue;
 
-				if (r2->sprite->scale > rover->scale)
+				if (r2->sprite->scale > rover->scale
+				 || (r2->sprite->scale == rover->scale && r2->sprite->dispoffset > rover->dispoffset))
 				{
 					entry = R_CreateDrawNode(NULL);
 					(entry->prev = r2->prev)->next = entry;
@@ -2000,6 +2042,9 @@ void R_ClipSprites(void)
 				continue;
 			}
 
+			if (ds->portalpass > 0 && ds->portalpass <= portalrender)
+				continue; // is a portal
+
 			r1 = ds->x1 < spr->x1 ? spr->x1 : ds->x1;
 			r2 = ds->x2 > spr->x2 ? spr->x2 : ds->x2;
 
@@ -2034,21 +2079,21 @@ void R_ClipSprites(void)
 			if (spr->gzt <= ds->tsilheight)
 				silhouette &= ~SIL_TOP;
 
-			if (silhouette == 1)
+			if (silhouette == SIL_BOTTOM)
 			{
 				// bottom sil
 				for (x = r1; x <= r2; x++)
 					if (spr->clipbot[x] == -2)
 						spr->clipbot[x] = ds->sprbottomclip[x];
 			}
-			else if (silhouette == 2)
+			else if (silhouette == SIL_TOP)
 			{
 				// top sil
 				for (x = r1; x <= r2; x++)
 					if (spr->cliptop[x] == -2)
 						spr->cliptop[x] = ds->sprtopclip[x];
 			}
-			else if (silhouette == 3)
+			else if (silhouette == (SIL_TOP|SIL_BOTTOM))
 			{
 				// both
 				for (x = r1; x <= r2; x++)
@@ -2639,9 +2684,6 @@ next_token:
 			stoken = strtok(NULL, "\r\n= ");
 		}
 		free(buf2);
-
-		// Not in vanilla, you don't.
-		skin->flags &= ~SF_SUPER;
 
 		lump++; // if no sprite defined use spirte just after this one
 		if (skin->sprite[0] == '\0')

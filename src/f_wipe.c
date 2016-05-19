@@ -2,8 +2,8 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 2013-2014 by Matthew "Inuyasha" Walsh.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 2013-2016 by Matthew "Inuyasha" Walsh.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -58,6 +58,7 @@ UINT8 wipedefs[NUMWIPEDEFS] = {
 
 	0,  // wipe_specinter_toblack
 	0,  // wipe_multinter_toblack
+	0,  // wipe_speclevel_towhite
 
 	0,  // wipe_level_final
 	0,  // wipe_intermission_final
@@ -231,34 +232,52 @@ static void F_DoWipe(fademask_t *fademask)
 		maskx = masky = 0;
 		do
 		{
-			// pointer to transtable that this mask would use
-			transtbl = transtables + ((9 - *mask)<<FF_TRANSSHIFT);
-			// (ignore that it goes out of bounds if *mask is 0 or 10 --
-			//  it wouldn't be used in those cases anyway)
-
 			draw_rowstart = scrxpos[maskx];
 			draw_rowend   = scrxpos[maskx + 1];
 			draw_linestart = scrypos[masky];
 			draw_lineend   = scrypos[masky + 1];
 
-			// DRAWING LOOP
 			relativepos = (draw_linestart * vid.width) + draw_rowstart;
 			draw_linestogo = draw_lineend - draw_linestart;
-			while (draw_linestogo--)
+
+			if (*mask == 0)
 			{
-				w = w_base + relativepos;
-				s = s_base + relativepos;
-				e = e_base + relativepos;
-				draw_rowstogo = draw_rowend - draw_rowstart;
-				while (draw_rowstogo--)
+				// shortcut - memcpy source to work
+				while (draw_linestogo--)
 				{
-					if (*s != *e)
-						*w = ((*mask == 0) ? *s : (*mask == 10) ? *e : transtbl[(*e<<8) + *s]);
-					++w, ++s, ++e;
+					M_Memcpy(w_base+relativepos, s_base+relativepos, draw_rowend-draw_rowstart);
+					relativepos += vid.width;
 				}
-				relativepos += vid.width;
 			}
-			// END DRAWING LOOP
+			else if (*mask == 10)
+			{
+				// shortcut - memcpy target to work
+				while (draw_linestogo--)
+				{
+					M_Memcpy(w_base+relativepos, e_base+relativepos, draw_rowend-draw_rowstart);
+					relativepos += vid.width;
+				}
+			}
+			else
+			{
+				// pointer to transtable that this mask would use
+				transtbl = transtables + ((9 - *mask)<<FF_TRANSSHIFT);
+
+				// DRAWING LOOP
+				while (draw_linestogo--)
+				{
+					w = w_base + relativepos;
+					s = s_base + relativepos;
+					e = e_base + relativepos;
+					draw_rowstogo = draw_rowend - draw_rowstart;
+
+					while (draw_rowstogo--)
+						*w++ = transtbl[ ( *e++ << 8 ) + *s++ ];
+
+					relativepos += vid.width;
+				}
+				// END DRAWING LOOP
+			}
 
 			if (++maskx >= fademask->width)
 				++masky, maskx = 0;

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -30,6 +30,9 @@
 #include "r_sky.h"
 #include "p_polyobj.h"
 #include "lua_script.h"
+#ifdef ESLOPE
+#include "p_slopes.h"
+#endif
 
 savedata_t savedata;
 UINT8 *save_p;
@@ -610,7 +613,7 @@ static void P_NetArchiveWorld(void)
 						WRITEUINT16(put, j); // save ffloor "number"
 						WRITEUINT8(put, fflr_diff);
 						if (fflr_diff & 1)
-							WRITEUINT16(put, rover->flags);
+							WRITEUINT32(put, rover->flags);
 						if (fflr_diff & 2)
 							WRITEINT16(put, rover->alpha);
 					}
@@ -633,7 +636,7 @@ static void P_NetArchiveWorld(void)
 		if (li->special != SHORT(mld->special))
 			diff |= LD_SPECIAL;
 
-		if (mld->special == 321 || mld->special == 322) // only reason li->callcount would be non-zero is if either of these are involved
+		if (SHORT(mld->special) == 321 || SHORT(mld->special) == 322) // only reason li->callcount would be non-zero is if either of these are involved
 			diff |= LD_CLLCOUNT;
 
 		if (li->sidenum[0] != 0xffff)
@@ -812,7 +815,7 @@ static void P_NetUnArchiveWorld(void)
 				fflr_diff = READUINT8(get);
 
 				if (fflr_diff & 1)
-					rover->flags = READUINT16(get);
+					rover->flags = READUINT32(get);
 				if (fflr_diff & 2)
 					rover->alpha = READINT16(get);
 
@@ -921,7 +924,12 @@ typedef enum
 	MD2_EXTVAL1     = 1<<5,
 	MD2_EXTVAL2     = 1<<6,
 	MD2_HNEXT       = 1<<7,
+#ifdef ESLOPE
+	MD2_HPREV       = 1<<8,
+	MD2_SLOPE       = 1<<9
+#else
 	MD2_HPREV       = 1<<8
+#endif
 } mobj_diff2_t;
 
 typedef enum
@@ -1054,6 +1062,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		diff |= MD_SPRITE;
 	if (mobj->frame != mobj->state->frame)
 		diff |= MD_FRAME;
+	if (mobj->anim_duration != (UINT16)mobj->state->var2)
+		diff |= MD_FRAME;
 	if (mobj->eflags)
 		diff |= MD_EFLAGS;
 	if (mobj->player)
@@ -1109,6 +1119,10 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		diff2 |= MD2_HNEXT;
 	if (mobj->hprev)
 		diff2 |= MD2_HPREV;
+#ifdef ESLOPE
+	if (mobj->standingslope)
+		diff2 |= MD2_SLOPE;
+#endif
 	if (diff2 != 0)
 		diff |= MD_MORE;
 
@@ -1172,9 +1186,12 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 	if (diff & MD_SPRITE)
 		WRITEUINT16(save_p, mobj->sprite);
 	if (diff & MD_FRAME)
+	{
 		WRITEUINT32(save_p, mobj->frame);
+		WRITEUINT16(save_p, mobj->anim_duration);
+	}
 	if (diff & MD_EFLAGS)
-		WRITEUINT8(save_p, mobj->eflags);
+		WRITEUINT16(save_p, mobj->eflags);
 	if (diff & MD_PLAYER)
 		WRITEUINT8(save_p, mobj->player-players);
 	if (diff & MD_MOVEDIR)
@@ -1221,6 +1238,10 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		WRITEUINT32(save_p, mobj->hnext->mobjnum);
 	if (diff2 & MD2_HPREV)
 		WRITEUINT32(save_p, mobj->hprev->mobjnum);
+#ifdef ESLOPE
+	if (diff2 & MD2_SLOPE)
+		WRITEUINT16(save_p, mobj->standingslope->id);
+#endif
 
 	WRITEUINT32(save_p, mobj->mobjnum);
 }
@@ -1996,11 +2017,17 @@ static void LoadMobjThinker(actionf_p1 thinker)
 	else
 		mobj->sprite = mobj->state->sprite;
 	if (diff & MD_FRAME)
+	{
 		mobj->frame = READUINT32(save_p);
+		mobj->anim_duration = READUINT16(save_p);
+	}
 	else
+	{
 		mobj->frame = mobj->state->frame;
+		mobj->anim_duration = (UINT16)mobj->state->var2;
+	}
 	if (diff & MD_EFLAGS)
-		mobj->eflags = READUINT8(save_p);
+		mobj->eflags = READUINT16(save_p);
 	if (diff & MD_PLAYER)
 	{
 		i = READUINT8(save_p);
@@ -2068,6 +2095,11 @@ static void LoadMobjThinker(actionf_p1 thinker)
 		mobj->hnext = (mobj_t *)(size_t)READUINT32(save_p);
 	if (diff2 & MD2_HPREV)
 		mobj->hprev = (mobj_t *)(size_t)READUINT32(save_p);
+#ifdef ESLOPE
+	if (diff2 & MD2_SLOPE)
+		mobj->standingslope = P_SlopeById(READUINT16(save_p));
+#endif
+
 
 	if (diff & MD_REDFLAG)
 	{
@@ -3181,7 +3213,7 @@ static inline boolean P_NetUnArchiveMisc(void)
 
 	// tell the sound code to reset the music since we're skipping what
 	// normally sets this flag
-	mapmusic |= MUSIC_RELOADRESET;
+	mapmusflags |= MUSIC_RELOADRESET;
 
 	G_SetGamestate(READINT16(save_p));
 

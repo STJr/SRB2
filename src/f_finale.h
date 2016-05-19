@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -90,6 +90,7 @@ enum
 	// custom intermissions
 	wipe_specinter_toblack,
 	wipe_multinter_toblack,
+	wipe_speclevel_towhite,
 
 	wipe_level_final,
 	wipe_intermission_final,
@@ -108,7 +109,7 @@ enum
 
 	NUMWIPEDEFS
 };
-#define WIPEFINALSHIFT 12
+#define WIPEFINALSHIFT 13
 extern UINT8 wipedefs[NUMWIPEDEFS];
 
 #endif

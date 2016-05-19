@@ -27,7 +27,6 @@ find_library(SDL2_LIBRARY
 		"/usr/local/lib"
 )
 
-
 # set include dir variables
 set(SDL2_PROCESS_INCLUDES SDL2_INCLUDE_DIR)
 set(SDL2_PROCESS_LIBS SDL2_LIBRARY)

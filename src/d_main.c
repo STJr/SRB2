@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -94,6 +94,10 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 
 #ifdef HW3SOUND
 #include "hardware/hw3sound.h"
+#endif
+
+#ifdef HAVE_BLUA
+#include "lua_script.h"
 #endif
 
 // platform independant focus loss
@@ -217,10 +221,7 @@ gamestate_t wipegamestate = GS_LEVEL;
 
 static void D_Display(void)
 {
-	static boolean menuactivestate = false;
-	static gamestate_t oldgamestate = -1;
-	boolean redrawsbar = false;
-
+	boolean forcerefresh = false;
 	static boolean wipe = false;
 	INT32 wipedefindex = 0;
 
@@ -241,23 +242,15 @@ static void D_Display(void)
 	if (setsizeneeded)
 	{
 		R_ExecuteSetViewSize();
-		oldgamestate = -1; // force background redraw
-		redrawsbar = true;
+		forcerefresh = true; // force background redraw
 	}
-
-	// save the current screen if about to wipe
-	if (gamestate != wipegamestate)
-	{
-		wipe = true;
-		F_WipeStartScreen();
-	}
-	else
-		wipe = false;
 
 	// draw buffered stuff to screen
 	// Used only by linux GGI version
 	I_UpdateNoBlit();
 
+	// save the current screen if about to wipe
+	wipe = (gamestate != wipegamestate);
 	if (wipe)
 	{
 		// set for all later
@@ -276,6 +269,7 @@ static void D_Display(void)
 			if (gamestate != GS_LEVEL // fades to black on its own timing, always
 			 && wipedefs[wipedefindex] != UINT8_MAX)
 			{
+				F_WipeStartScreen();
 				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 				F_WipeEndScreen();
 				F_RunWipe(wipedefs[wipedefindex], gamestate != GS_TIMEATTACK);
@@ -294,8 +288,6 @@ static void D_Display(void)
 			HU_Erase();
 			if (automapactive)
 				AM_Drawer();
-			if (wipe || menuactivestate || (rendermode != render_soft && rendermode != render_none) || vid.recalc)
-				redrawsbar = true;
 			break;
 
 		case GS_INTERMISSION:
@@ -353,11 +345,6 @@ static void D_Display(void)
 	// see if the border needs to be initially drawn
 	if (gamestate == GS_LEVEL)
 	{
-#if 0
-		if (oldgamestate != GS_LEVEL)
-			R_FillBackScreen(); // draw the pattern into the back screen
-#endif
-
 		// draw the view directly
 		if (!automapactive && !dedicated && cv_renderview.value)
 		{
@@ -413,17 +400,17 @@ static void D_Display(void)
 			lastdraw = false;
 		}
 
-		ST_Drawer(redrawsbar);
+		ST_Drawer();
 
 		HU_Drawer();
 	}
 
 	// change gamma if needed
-	if (gamestate != oldgamestate && gamestate != GS_LEVEL)
+	// (GS_LEVEL handles this already due to level-specific palettes)
+	if (forcerefresh && gamestate != GS_LEVEL)
 		V_SetPalette(0);
 
-	menuactivestate = menuactive;
-	oldgamestate = wipegamestate = gamestate;
+	wipegamestate = gamestate;
 
 	// draw pause pic
 	if (paused && cv_showhud.value && (!menuactive || netgame))
@@ -446,15 +433,22 @@ static void D_Display(void)
 		CON_Drawer();
 
 	M_Drawer(); // menu is drawn even on top of everything
+	// focus lost moved to M_Drawer
 
-	// focus lost notification goes on top of everything, even the former everything
-	if (window_notinfocus)
+	//
+	// wipe update
+	//
+	if (wipe)
 	{
-		M_DrawTextBox((BASEVIDWIDTH/2) - (60), (BASEVIDHEIGHT/2) - (16), 13, 2);
-		if (gamestate == GS_LEVEL && (P_AutoPause() || paused))
-			V_DrawCenteredString(BASEVIDWIDTH/2, (BASEVIDHEIGHT/2) - (4), V_YELLOWMAP, "Game Paused");
-		else
-			V_DrawCenteredString(BASEVIDWIDTH/2, (BASEVIDHEIGHT/2) - (4), V_YELLOWMAP, "Focus Lost");
+		// note: moved up here because NetUpdate does input changes
+		// and input during wipe tends to mess things up
+		wipedefindex += WIPEFINALSHIFT;
+
+		if (rendermode != render_none)
+		{
+			F_WipeEndScreen();
+			F_RunWipe(wipedefs[wipedefindex], gamestate != GS_TIMEATTACK);
+		}
 	}
 
 	NetUpdate(); // send out any new accumulation
@@ -489,18 +483,6 @@ static void D_Display(void)
 		}
 
 		I_FinishUpdate(); // page flip or blit buffer
-		return;
-	}
-
-	//
-	// wipe update
-	//
-	wipedefindex += WIPEFINALSHIFT;
-
-	if (rendermode != render_none)
-	{
-		F_WipeEndScreen();
-		F_RunWipe(wipedefs[wipedefindex], gamestate != GS_TIMEATTACK);
 	}
 }
 
@@ -631,6 +613,10 @@ void D_SRB2Loop(void)
 
 #ifdef HW3SOUND
 		HW3S_EndFrameUpdate();
+#endif
+
+#ifdef HAVE_BLUA
+		LUA_Step();
 #endif
 	}
 }
@@ -831,8 +817,10 @@ static void IdentifyVersion(void)
 	// Add the weapons
 	D_AddFile(va(pandf,srb2waddir,"rings.dta"));
 
+#ifdef USE_PATCH_DTA
 	// Add our crappy patches to fix our bugs
-	// D_AddFile(va(pandf,srb2waddir,"patch.dta"));
+	D_AddFile(va(pandf,srb2waddir,"patch.dta"));
+#endif
 
 #if !defined (HAVE_SDL) || defined (HAVE_MIXER)
 	{
@@ -941,9 +929,9 @@ void D_SRB2Main(void)
 #endif
 
 #if defined (_WIN32_WCE) //|| defined (_DEBUG) || defined (GP2X)
-	devparm = !M_CheckParm("-nodebug");
+	devparm = M_CheckParm("-nodebug") == 0;
 #else
-	devparm = M_CheckParm("-debug");
+	devparm = M_CheckParm("-debug") != 0;
 #endif
 
 	// for dedicated server
@@ -1116,19 +1104,25 @@ void D_SRB2Main(void)
 #endif
 	D_CleanFile();
 
-#if 1 // md5s last updated 12/14/14
+#ifndef DEVELOP // md5s last updated 12/14/14
 
 	// Check MD5s of autoloaded files
 	W_VerifyFileMD5(0, ASSET_HASH_SRB2_SRB); // srb2.srb/srb2.wad
 	W_VerifyFileMD5(1, ASSET_HASH_ZONES_DTA); // zones.dta
 	W_VerifyFileMD5(2, ASSET_HASH_PLAYER_DTA); // player.dta
 	W_VerifyFileMD5(3, ASSET_HASH_RINGS_DTA); // rings.dta
-	//W_VerifyFileMD5(4, "0c66790502e648bfce90fdc5bb15722e"); // patch.dta
-	// don't check music.dta because people like to modify it, and it doesn't matter if they do
-	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.
+#ifdef USE_PATCH_DTA
+	W_VerifyFileMD5(4, ASSET_HASH_PATCH_DTA); // patch.dta
 #endif
 
-	mainwads = 4; // there are 5 wads not to unload
+	// don't check music.dta because people like to modify it, and it doesn't matter if they do
+	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.
+#endif //ifndef DEVELOP
+
+	mainwads = 4; // there are 4 wads not to unload
+#ifdef USE_PATCH_DTA
+	++mainwads; // patch.dta adds one more
+#endif
 
 	cht_Init();
 

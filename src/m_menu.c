@@ -2,8 +2,8 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 2011-2014 by Matthew "Inuyasha" Walsh.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 2011-2016 by Matthew "Inuyasha" Walsh.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -2059,6 +2059,10 @@ static void M_PrevOpt(void)
 	} while (oldItemOn != itemOn && (currentMenu->menuitems[itemOn].status & IT_TYPE) == IT_SPACE);
 }
 
+// lock out further input in a tic when important buttons are pressed
+// (in other words -- stop bullshit happening by mashing buttons in fades)
+static boolean noFurtherInput = false;
+
 //
 // M_Responder
 //
@@ -2079,6 +2083,12 @@ boolean M_Responder(event_t *ev)
 	if (ev->type == ev_keyup && (ev->data1 == KEY_LSHIFT || ev->data1 == KEY_RSHIFT))
 	{
 		shiftdown = false;
+		return false;
+	}
+	if (noFurtherInput)
+	{
+		// Ignore input after enter/escape/other buttons
+		// (but still allow shift keyup so caps doesn't get stuck)
 		return false;
 	}
 	else if (ev->type == ev_keydown)
@@ -2182,6 +2192,7 @@ boolean M_Responder(event_t *ev)
 	// F-Keys
 	if (!menuactive)
 	{
+		noFurtherInput = true;
 		switch (ch)
 		{
 			case KEY_F1: // Help key
@@ -2252,6 +2263,7 @@ boolean M_Responder(event_t *ev)
 					M_StartControlPanel();
 				return true;
 		}
+		noFurtherInput = false; // turns out we didn't care
 		return false;
 	}
 
@@ -2275,6 +2287,7 @@ boolean M_Responder(event_t *ev)
 				if (routine)
 					routine(ch);
 				M_StopMessage(0);
+				noFurtherInput = true;
 				return true;
 			}
 			return true;
@@ -2354,6 +2367,7 @@ boolean M_Responder(event_t *ev)
 			return true;
 
 		case KEY_ENTER:
+			noFurtherInput = true;
 			currentMenu->lastOn = itemOn;
 			if (routine)
 			{
@@ -2387,6 +2401,7 @@ boolean M_Responder(event_t *ev)
 			return true;
 
 		case KEY_ESCAPE:
+			noFurtherInput = true;
 			currentMenu->lastOn = itemOn;
 			if (currentMenu->prevMenu)
 			{
@@ -2443,34 +2458,44 @@ void M_Drawer(void)
 	if (currentMenu == &MessageDef)
 		menuactive = true;
 
-	if (!menuactive)
-		return;
-
-	// now that's more readable with a faded background (yeah like Quake...)
-	if (!WipeInAction)
-		V_DrawFadeScreen();
-
-	if (currentMenu->drawroutine)
-		currentMenu->drawroutine(); // call current menu Draw routine
-
-	// Draw version down in corner
-	// ... but only in the MAIN MENU.  I'm a picky bastard.
-	if (currentMenu == &MainDef)
+	if (menuactive)
 	{
-		if (customversionstring[0] != '\0')
+		// now that's more readable with a faded background (yeah like Quake...)
+		if (!WipeInAction)
+			V_DrawFadeScreen();
+
+		if (currentMenu->drawroutine)
+			currentMenu->drawroutine(); // call current menu Draw routine
+
+		// Draw version down in corner
+		// ... but only in the MAIN MENU.  I'm a picky bastard.
+		if (currentMenu == &MainDef)
 		{
-			V_DrawThinString(vid.dupx, vid.height - 17*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT, "Mod version:");
-			V_DrawThinString(vid.dupx, vid.height - 9*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, customversionstring);
-		}
-		else
-		{
+			if (customversionstring[0] != '\0')
+			{
+				V_DrawThinString(vid.dupx, vid.height - 17*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT, "Mod version:");
+				V_DrawThinString(vid.dupx, vid.height - 9*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, customversionstring);
+			}
+			else
+			{
 #ifdef DEVELOP // Development -- show revision / branch info
-			V_DrawThinString(vid.dupx, vid.height - 17*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, compbranch);
-			V_DrawThinString(vid.dupx, vid.height - 9*vid.dupy,  V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, comprevision);
+				V_DrawThinString(vid.dupx, vid.height - 17*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, compbranch);
+				V_DrawThinString(vid.dupx, vid.height - 9*vid.dupy,  V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, comprevision);
 #else // Regular build
-			V_DrawThinString(vid.dupx, vid.height - 9*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, va("%s", VERSIONSTRING));
+				V_DrawThinString(vid.dupx, vid.height - 9*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, va("%s", VERSIONSTRING));
 #endif
+			}
 		}
+	}
+
+	// focus lost notification goes on top of everything, even the former everything
+	if (window_notinfocus)
+	{
+		M_DrawTextBox((BASEVIDWIDTH/2) - (60), (BASEVIDHEIGHT/2) - (16), 13, 2);
+		if (gamestate == GS_LEVEL && (P_AutoPause() || paused))
+			V_DrawCenteredString(BASEVIDWIDTH/2, (BASEVIDHEIGHT/2) - (4), V_YELLOWMAP, "Game Paused");
+		else
+			V_DrawCenteredString(BASEVIDWIDTH/2, (BASEVIDHEIGHT/2) - (4), V_YELLOWMAP, "Focus Lost");
 	}
 }
 
@@ -2656,6 +2681,9 @@ void M_SetupNextMenu(menu_t *menudef)
 //
 void M_Ticker(void)
 {
+	// reset input trigger
+	noFurtherInput = false;
+
 	if (dedicated)
 		return;
 
@@ -4751,7 +4779,7 @@ static void M_SetupChoosePlayer(INT32 choice)
 	if (Playing() == false)
 	{
 		S_StopMusic();
-		S_ChangeMusic(mus_chrsel, true);
+		S_ChangeMusicInternal("chrsel", true);
 	}
 
 	SP_PlayerDef.prevMenu = currentMenu;
@@ -5202,7 +5230,7 @@ void M_DrawTimeAttackMenu(void)
 	lumpnum_t lumpnum;
 	char beststr[40];
 
-	S_ChangeMusic(mus_racent, true); // Eww, but needed for when user hits escape during demo playback
+	S_ChangeMusicInternal("racent", true); // Eww, but needed for when user hits escape during demo playback
 
 	V_DrawPatchFill(W_CachePatchName("SRB2BACK", PU_CACHE));
 
@@ -5365,7 +5393,7 @@ static void M_TimeAttack(INT32 choice)
 	itemOn = tastart; // "Start" is selected.
 
 	G_SetGamestate(GS_TIMEATTACK);
-	S_ChangeMusic(mus_racent, true);
+	S_ChangeMusicInternal("racent", true);
 }
 
 // Drawing function for Nights Attack
@@ -5375,7 +5403,7 @@ void M_DrawNightsAttackMenu(void)
 	lumpnum_t lumpnum;
 	char beststr[40];
 
-	S_ChangeMusic(mus_racent, true); // Eww, but needed for when user hits escape during demo playback
+	S_ChangeMusicInternal("racent", true); // Eww, but needed for when user hits escape during demo playback
 
 	V_DrawPatchFill(W_CachePatchName("SRB2BACK", PU_CACHE));
 
@@ -5498,7 +5526,7 @@ static void M_NightsAttack(INT32 choice)
 	itemOn = nastart; // "Start" is selected.
 
 	G_SetGamestate(GS_TIMEATTACK);
-	S_ChangeMusic(mus_racent, true);
+	S_ChangeMusicInternal("racent", true);
 }
 
 // Player has selected the "START" from the nights attack screen
@@ -5732,7 +5760,7 @@ static void M_ModeAttackEndGame(INT32 choice)
 	itemOn = currentMenu->lastOn;
 	G_SetGamestate(GS_TIMEATTACK);
 	modeattacking = ATTACKING_NONE;
-	S_ChangeMusic(mus_racent, true);
+	S_ChangeMusicInternal("racent", true);
 	// Update replay availability.
 	CV_AddValue(&cv_nextmap, 1);
 	CV_AddValue(&cv_nextmap, -1);
@@ -6944,7 +6972,7 @@ static void M_ToggleDigital(void)
 		if (nodigimusic) return;
 		S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
 		S_StopMusic();
-		S_ChangeMusic(mus_lclear, false);
+		S_ChangeMusicInternal("lclear", false);
 		M_StartMessage(M_GetText("Digital Music Enabled\n"), NULL, MM_NOTHING);
 	}
 	else
@@ -6971,7 +6999,7 @@ static void M_ToggleMIDI(void)
 		I_InitMIDIMusic();
 		if (nomidimusic) return;
 		S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
-		S_ChangeMusic(mus_lclear, false);
+		S_ChangeMusicInternal("lclear", false);
 		M_StartMessage(M_GetText("MIDI Music Enabled\n"), NULL, MM_NOTHING);
 	}
 	else
