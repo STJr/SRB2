@@ -593,8 +593,7 @@ ifndef WINDOWSHELL
 endif
 endif
 
-# i dont know why, but the os x executable absolutely hates
-# being touched by objcopy. so let's not do it
+# mac os x lsdlsrb2 does not like objcopy
 ifndef MACOSX
 ifndef PSP
 	$(OBJCOPY) $(BIN)/$(EXENAME) $(BIN)/$(DBGNAME)
