@@ -23,7 +23,7 @@
 
 extern HWND hWndMain;
 
-extern int appActive;
+extern boolean appActive;
 
 VOID I_GetSysMouseEvents(INT mouse_state);
 extern UINT MSHWheelMessage;

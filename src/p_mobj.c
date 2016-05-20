@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1887,7 +1887,7 @@ void P_XYMovement(mobj_t *mo)
 				mo->threshold++;
 
 				// Gain lower amounts of time on each bounce.
-				if (mo->threshold < 5)
+				if (mo->fuse && mo->threshold < 5)
 					mo->fuse += ((5 - mo->threshold) * TICRATE);
 
 				// Check for hit against sky here
@@ -2074,6 +2074,9 @@ void P_XYMovement(mobj_t *mo)
 
 	if (player && player->homing) // no friction for homing
 		return;
+
+	if (player && player->pflags & PF_NIGHTSMODE)
+		return; // no friction for NiGHTS players
 
 #ifdef ESLOPE
 	if ((mo->type == MT_BIGTUMBLEWEED || mo->type == MT_LITTLETUMBLEWEED)
@@ -2360,7 +2363,7 @@ static boolean P_ZMovement(mobj_t *mo)
 
 				// Be sure to change the XY one too if you change this.
 				// Gain lower amounts of time on each bounce.
-				if (mo->threshold < 5)
+				if (mo->fuse && mo->threshold < 5)
 					mo->fuse += ((5 - mo->threshold) * TICRATE);
 			}
 			break;
@@ -2831,11 +2834,16 @@ static void P_PlayerZMovement(mobj_t *mo)
 
 		if (mo->player->pflags & PF_NIGHTSMODE)
 		{
-			if (mo->player->flyangle < 90 || mo->player->flyangle >= 270)
-				mo->player->flyangle += P_MobjFlip(mo)*90;
-			else
-				mo->player->flyangle -= P_MobjFlip(mo)*90;
-			mo->player->speed = FixedMul(mo->player->speed, 4*FRACUNIT/5);
+			// bounce off floor if you were flying towards it
+			if ((mo->eflags & MFE_VERTICALFLIP && mo->player->flyangle > 0 && mo->player->flyangle < 180)
+			|| (!(mo->eflags & MFE_VERTICALFLIP) && mo->player->flyangle > 180 && mo->player->flyangle <= 359))
+			{
+				if (mo->player->flyangle < 90 || mo->player->flyangle >= 270)
+					mo->player->flyangle += P_MobjFlip(mo)*90;
+				else
+					mo->player->flyangle -= P_MobjFlip(mo)*90;
+				mo->player->speed = FixedMul(mo->player->speed, 4*FRACUNIT/5);
+			}
 			goto nightsdone;
 		}
 		// Get up if you fell.
@@ -3026,12 +3034,17 @@ nightsdone:
 
 		if (mo->player->pflags & PF_NIGHTSMODE)
 		{
-			if (mo->player->flyangle < 90 || mo->player->flyangle >= 270)
-				mo->player->flyangle -= P_MobjFlip(mo)*90;
-			else
-				mo->player->flyangle += P_MobjFlip(mo)*90;
-			mo->player->flyangle %= 360;
-			mo->player->speed = FixedMul(mo->player->speed, 4*FRACUNIT/5);
+			// bounce off ceiling if you were flying towards it
+			if ((mo->eflags & MFE_VERTICALFLIP && mo->player->flyangle > 180 && mo->player->flyangle <= 359)
+			|| (!(mo->eflags & MFE_VERTICALFLIP) && mo->player->flyangle > 0 && mo->player->flyangle < 180))
+				{
+				if (mo->player->flyangle < 90 || mo->player->flyangle >= 270)
+					mo->player->flyangle -= P_MobjFlip(mo)*90;
+				else
+					mo->player->flyangle += P_MobjFlip(mo)*90;
+				mo->player->flyangle %= 360;
+				mo->player->speed = FixedMul(mo->player->speed, 4*FRACUNIT/5);
+			}
 		}
 
 		// Check for "Mario" blocks to hit and bounce them
@@ -3894,7 +3907,8 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 	}
 	else
 	{
-		mobj->player->jumping = 0;
+		if (!(mobj->player->pflags & PF_NIGHTSMODE)) // "jumping" is used for drilling
+			mobj->player->jumping = 0;
 		mobj->player->pflags &= ~PF_JUMPED;
 		if (mobj->player->secondjump || mobj->player->powers[pw_tailsfly])
 		{
@@ -7294,7 +7308,7 @@ void P_MobjThinker(mobj_t *mobj)
 
 	if (mobj->flags2 & MF2_FIRING && mobj->target && mobj->health > 0)
 	{
-		if (mobj->state->action.acp1 == A_Boss1Laser)
+		if (mobj->state->action.acp1 == (actionf_p1)A_Boss1Laser)
 		{
 			var1 = mobj->state->var1;
 			var2 = mobj->state->var2;

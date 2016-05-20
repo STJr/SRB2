@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -21,7 +21,7 @@
 //
 // Now what is a visplane, anyway?
 // Simple: kinda floor/ceiling polygon optimised for SRB2 rendering.
-// 7748 bytes! (for win32, anyway)
+// 7764 bytes! (for win32, anyway)
 //
 typedef struct visplane_s
 {

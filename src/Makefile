@@ -372,7 +372,7 @@ else
 
 	# build a normal optimised version
 	WINDRESFLAGS = -DNDEBUG
-	CFLAGS+=-O2
+	#CFLAGS+=-O2
 endif
 	CFLAGS+=-g $(OPTS) $(M5) $(WINDRESFLAGS)
 
@@ -623,7 +623,10 @@ opengl_dll: $(BIN)/r_opengl.dll
 $(BIN)/r_opengl.dll: $(OBJDIR)/ogl_win.o $(OBJDIR)/r_opengl.o
 	-$(MKDIR) $(BIN)
 	@echo Linking R_OpenGL.dll...
-	$(CC) --shared  $^ -o $@ -g -Wl,--add-stdcall-alias -lgdi32
+	$(CC) --shared  $^ -o $@ -g -Wl,--add-stdcall-alias -lgdi32 -static-libgcc
+ifndef NOUPX
+	-$(UPX) $(UPX_OPTS) $@
+endif
 
 minigl_dll: $(BIN)/r_minigl.dll
 $(BIN)/r_minigl.dll: $(OBJDIR)/r_minigl.o

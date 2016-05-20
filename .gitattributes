@@ -13,22 +13,6 @@
 *.manifest -crlf -whitespace
 # Patches
 /tools/SDL-1.2.14-gc/SDL-1.2.14-gc.patch -whitespace
-# LibPNG
-/libs/libpng-src/CMakeLists.txt -whitespace
-/libs/libpng-src/libpng-1.2.*.txt -whitespace
-/libs/libpng-src/libpng.3 -whitespace
-/libs/libpng-src/*.c -whitespace
-# Zlib
-/libs/zlib/contrib/amd64/amd64-match.S -whitespace
-/libs/zlib/contrib/delphi/zlibd32.mak -crlf -whitespace
-/libs/zlib/contrib/gcc_gvmat64/gvmat64.S -whitespace
-/libs/zlib/contrib/minizip/MiniZip64_Changes.txt -whitespace
-/libs/zlib/contrib/minizip/MiniZip64_info.txt -whitespace
-/libs/zlib/contrib/pascal/zlibd32.mak -whitespace
-/libs/zlib/nintendods/Makefile -whitespace
-/libs/zlib/nintendods/README -whitespace
-/libs/zlib/watcom/watcom_f.mak -crlf -whitespace
-/libs/zlib/watcom/watcom_l.mak -crlf -whitespace
 #Appveyor
 /appveyor.yml -crlf -whitespace
 # Other

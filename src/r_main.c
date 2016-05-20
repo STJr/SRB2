@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -67,6 +67,7 @@ fixed_t viewx, viewy, viewz;
 angle_t viewangle, aimingangle;
 fixed_t viewcos, viewsin;
 boolean viewsky, skyVisible;
+boolean skyVisible1, skyVisible2; // saved values of skyVisible for P1 and P2, for splitscreen
 sector_t *viewsector;
 player_t *viewplayer;
 
@@ -1301,6 +1302,12 @@ void R_RenderPlayerView(player_t *player)
 			V_DrawFill(0, 0, vid.width, vid.height, 32+(timeinmap&15));
 	}
 
+	// load previous saved value of skyVisible for the player
+	if (splitscreen && player == &players[secondarydisplayplayer])
+		skyVisible = skyVisible2;
+	else
+		skyVisible = skyVisible1;
+
 	portalrender = 0;
 	portal_base = portal_cap = NULL;
 
@@ -1398,6 +1405,13 @@ void R_RenderPlayerView(player_t *player)
 
 	// Check for new console commands.
 	NetUpdate();
+
+	// save value to skyVisible1 or skyVisible2
+	// this is so that P1 can't affect whether P2 can see a skybox or not, or vice versa
+	if (splitscreen && player == &players[secondarydisplayplayer])
+		skyVisible2 = skyVisible;
+	else
+		skyVisible1 = skyVisible;
 }
 
 // =========================================================================

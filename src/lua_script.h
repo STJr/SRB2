@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2012-2014 by John "JTE" Muniz.
-// Copyright (C) 2012-2014 by Sonic Team Junior.
+// Copyright (C) 2012-2016 by John "JTE" Muniz.
+// Copyright (C) 2012-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -78,6 +78,17 @@ void COM_Lua_f(void);
 	if (!seen) {\
 		seen = 1;\
 		CONS_Alert(CONS_WARNING,"\"%s\" is deprecated and will be removed.\nUse \"%s\" instead.\n", this_func, use_instead);\
+	}\
+}
+
+// Warnings about incorrect function usage.
+// Shows once, then never again, like deprecation
+#define LUA_UsageWarning(L, warningmsg)\
+{\
+	static UINT8 seen = 0;\
+	if (!seen) {\
+		seen = 1;\
+		CONS_Alert(CONS_WARNING,"%s\n", warningmsg);\
 	}\
 }
 

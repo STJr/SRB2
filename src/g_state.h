@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -51,7 +51,6 @@ typedef enum
 
 extern gamestate_t gamestate;
 extern UINT8 ultimatemode; // was sk_insane
-extern boolean oncontinuescreen;
 extern gameaction_t gameaction;
 
 extern boolean botingame;

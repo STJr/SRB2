@@ -2,8 +2,8 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 2012-2014 by Matthew "Inuyasha" Walsh.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 2012-2016 by Matthew "Inuyasha" Walsh.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -151,7 +151,7 @@ INT32 P_RandomKeyD(const char *rfile, INT32 rline, INT32 a)
 {
 	CONS_Printf("P_RandomKey() at: %sp %d\n", rfile, rline);
 #endif
-	return (INT32)((__internal_prng__() * a) >> FRACBITS);
+	return (INT32)(((INT64)__internal_prng__() * a) >> FRACBITS);
 }
 
 /** Provides a random integer in a given range.
@@ -171,7 +171,7 @@ INT32 P_RandomRangeD(const char *rfile, INT32 rline, INT32 a, INT32 b)
 {
 	CONS_Printf("P_RandomRange() at: %sp %d\n", rfile, rline);
 #endif
-	return (INT32)((__internal_prng__() * (b-a+1)) >> FRACBITS) + a;
+	return (INT32)(((INT64)__internal_prng__() * (b-a+1)) >> FRACBITS) + a;
 }
 
 
