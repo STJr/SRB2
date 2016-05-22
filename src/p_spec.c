@@ -407,7 +407,7 @@ void P_ParseANIMDEFSLump(INT32 wadNum, UINT16 lumpnum, INT32 *i)
 void P_ParseAnimationDefintion(SINT8 istexture, INT32 *i)
 {
 	char *animdefsToken;
-	UINT8 animdefsTokenLength;
+	size_t animdefsTokenLength;
 	char *endPos;
 	INT32 animSpeed;
 

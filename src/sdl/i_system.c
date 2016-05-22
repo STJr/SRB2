@@ -1679,7 +1679,7 @@ void I_UpdateMumble(const mobj_t *mobj, const listener_t listener)
 		UINT8 *p = mumble->context;
 		WRITEMEM(p, server_context, 8);
 		WRITEINT16(p, gamemap);
-		mumble->context_len = p - mumble->context;
+		mumble->context_len = (UINT32)(p - mumble->context);
 	}
 
 	if (mobj) {
