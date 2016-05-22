@@ -7,16 +7,6 @@
     <ClCompile>
       <PreprocessorDefinitions>USEASM;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <CustomBuild />
-    <CustomBuild />
-    <CustomBuild />
-    <PreBuildEvent>
-      <Command>
-      </Command>
-    </PreBuildEvent>
-    <CustomBuildStep />
-    <CustomBuildStep />
-    <CustomBuildStep />
     <Link>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>

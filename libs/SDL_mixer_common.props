@@ -4,7 +4,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <IncludePath>$(SolutionDir)libs\SDL2_mixer\include;$(IncludePath)</IncludePath>
-	<LibraryPath>..\..\libs\SDL2_mixer\lib\$(PlatformTarget);$(LibraryPath)</LibraryPath>
+	<LibraryPath>$(SolutionDir)libs\SDL2_mixer\lib\$(PlatformTarget);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <Link>
