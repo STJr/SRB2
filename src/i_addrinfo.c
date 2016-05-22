@@ -105,7 +105,7 @@ static void WS_addrinfosetup(void)
 		return; // already have the functions
 	// why not hold it into ipv6dll? becase we already link with ws2_32, silly!
 	if (WS_getfunctions(GetModuleHandleA("ws2_32.dll")) == NULL)
-		ipv6dll = WS_getfunctions(LoadLibrary("wship6.dll"));
+		ipv6dll = WS_getfunctions(LoadLibraryA("wship6.dll"));
 }
 
 void WS_addrinfocleanup(void)

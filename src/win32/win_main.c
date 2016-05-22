@@ -88,8 +88,7 @@ static LRESULT CALLBACK MainWndproc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 	if (message == MSHWheelMessage)
 	{
 		message = WM_MOUSEWHEEL;
-		if (win9x)
-			wParam <<= 16;
+		wParam <<= 16;
 	}
 
 	//I_OutputMsg("MainWndproc: %p,%i,%i,%i",hWnd, message, wParam, (UINT)lParam);
@@ -471,7 +470,7 @@ static inline BOOL tlErrorMessage(const TCHAR *err)
 	//
 	// warn user if there is one
 	//
-	printf("Error %s..\n", err);
+	printf("Error %Ts..\n", err);
 	fflush(stdout);
 
 	MessageBox(hWndMain, err, TEXT("ERROR"), MB_OK);

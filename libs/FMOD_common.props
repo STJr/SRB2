@@ -3,8 +3,8 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <IncludePath>..\..\libs\fmodex\inc;$(IncludePath)</IncludePath>
-    <LibraryPath>..\..\libs\fmodex\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)libs\fmodex\inc;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)libs\fmodex\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup />
   <ItemGroup />

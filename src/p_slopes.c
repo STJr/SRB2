@@ -90,7 +90,7 @@ static void P_ReconfigureVertexSlope(pslope_t *slope)
 
 		// Get angles
 		slope->xydirection = R_PointToAngle2(0, 0, slope->d.x, slope->d.y)+ANGLE_180;
-		slope->zangle = -R_PointToAngle2(0, 0, FRACUNIT, slope->zdelta);
+		slope->zangle = InvAngle(R_PointToAngle2(0, 0, FRACUNIT, slope->zdelta))-1;
 	}
 }
 
