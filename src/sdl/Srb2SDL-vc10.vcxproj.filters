@@ -837,9 +837,6 @@
     <ClCompile Include="i_main.c">
       <Filter>SDLApp</Filter>
     </ClCompile>
-    <ClCompile Include="i_net.c">
-      <Filter>SDLApp</Filter>
-    </ClCompile>
     <ClCompile Include="i_system.c">
       <Filter>SDLApp</Filter>
     </ClCompile>
