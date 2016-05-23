@@ -50,21 +50,19 @@
   <ImportGroup Label="Shared">
     <Import Project="..\..\SRB2_common.props" />
     <Import Project="..\..\comptime.props" />
-    <Import Project="..\..\libs\zlib_common.props" />
-    <Import Project="..\..\libs\libpng_common.props" />
-    <Import Project="..\..\libs\SDL2_common.props" />
-    <Import Project="..\..\libs\SDL_mixer_common.props" />
-    <Import Project="SRB2SDL_common.props" />
+    <Import Project="..\..\libs\zlib.props" />
+    <Import Project="..\..\libs\libpng.props" />
+    <Import Project="..\..\libs\SDL2.props" />
+    <Import Project="..\..\libs\SDL_mixer.props" />
+    <Import Project="Srb2SDL.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\..\SRB2_Debug.props" />
-    <Import Project="..\..\SRB2_x86.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\..\SRB2_Release.props" />
-    <Import Project="..\..\SRB2_x86.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -222,31 +220,16 @@
   <ItemGroup>
     <CustomBuild Include="..\tmap.nas">
       <FileType>Document</FileType>
-      <Command>nasm -g -o $(IntDir)%(Filename).obj -f win32 "%(FullPath)"</Command>
-      <Message>Compiling %(Filename).nas with NASM...</Message>
-      <Outputs>$(IntDir)%(Filename).obj;%(Outputs)</Outputs>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\tmap_mmx.nas">
       <FileType>Document</FileType>
-      <Command>nasm -g -o $(IntDir)%(Filename).obj -f win32 "%(FullPath)"</Command>
-      <Message>Compiling %(Filename).nas with NASM...</Message>
-      <Outputs>$(IntDir)%(Filename).obj;%(Outputs)</Outputs>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\tmap_vc.nas">
       <FileType>Document</FileType>
-      <Command>nasm -g -o $(IntDir)%(Filename).obj -f win32 "%(FullPath)"</Command>
-      <Message>Compiling %(Filename).nas with NASM...</Message>
-      <Outputs>$(IntDir)%(Filename).obj;%(Outputs)</Outputs>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
