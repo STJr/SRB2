@@ -423,7 +423,7 @@ void Y_IntermissionDrawer(void)
 
 		// Perfect Bonus
 		if (data.compcoop.gotperfbonus && data.compcoop.perfectpatch)
-			V_DrawScaledPatch(96, 2, 0, data.compcoop.perfectpatch);
+			V_DrawScaledPatch(96, 52, 0, data.compcoop.perfectpatch);
 	}
 	else if (intertype == int_spec)
 	{
