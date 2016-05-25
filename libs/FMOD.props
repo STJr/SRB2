@@ -7,5 +7,15 @@
     <LibraryPath>$(SolutionDir)libs\fmodex\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup />
+  <ItemDefinitionGroup Condition="'$(PlatformTarget)'=='x64'">
+    <Link>
+      <AdditionalDependencies>fmodexL64_vc.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(PlatformTarget)'=='x86'">
+    <Link>
+      <AdditionalDependencies>fmodexL_vc.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
   <ItemGroup />
 </Project>

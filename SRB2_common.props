@@ -3,7 +3,6 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <CodeAnalysisRuleSet>MixedMinimumRules.ruleset</CodeAnalysisRuleSet>
     <OutDir>$(SolutionDir)bin\VC10\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)objs\VC10\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
@@ -24,6 +23,24 @@
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(PlatformTarget)'=='x86'">
+    <ClCompile>
+      <PreprocessorDefinitions>USEASM;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+    </Link>
+    <CustomBuild>
+      <Command>nasm -g -o $(IntDir)%(Filename).obj -f win32 "%(FullPath)"</Command>
+      <Message>Compiling %(Filename).nas with NASM...</Message>
+      <Outputs>$(IntDir)%(Filename).obj;%(Outputs)</Outputs>
+    </CustomBuild>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(PlatformTarget)'!='x86'">
+    <CustomBuild>
+      <LinkObjects>false</LinkObjects>
+    </CustomBuild>
   </ItemDefinitionGroup>
   <ItemGroup />
 </Project>
