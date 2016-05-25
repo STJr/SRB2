@@ -2480,7 +2480,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 				ds_p->maskedtexturecol = ds_p->thicksidecol;
 
 #ifdef ESLOPE
-			maskedtextureheight = &(ds_p->maskedtextureheight[0]); // ????
+			maskedtextureheight = ds_p->maskedtextureheight; // note to red, this == &(ds_p->maskedtextureheight[0])
 
 			// Set midtexture starting height
 			if (linedef->flags & ML_EFFECT2) { // Ignore slopes when texturing
