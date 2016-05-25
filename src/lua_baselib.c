@@ -205,6 +205,16 @@ static int lib_pClosestPointOnLine(lua_State *L)
 	return 2;
 }
 
+static int lib_pPointOnLineSide(lua_State *L)
+{
+	fixed_t x = luaL_checkfixed(L, 1);
+	fixed_t y = luaL_checkfixed(L, 2);
+	line_t *line = *((line_t **)luaL_checkudata(L, 3, META_LINE));
+	//HUDSAFE
+	lua_pushinteger(L, P_PointOnLineSide(x, y, line));
+	return 1;
+}
+
 // P_ENEMY
 /////////////
 
@@ -1981,6 +1991,7 @@ static luaL_Reg lib[] = {
 	// p_maputil
 	{"P_AproxDistance",lib_pAproxDistance},
 	{"P_ClosestPointOnLine",lib_pClosestPointOnLine},
+	{"P_PointOnLineSide",lib_pPointOnLineSide},
 
 	// p_enemy
 	{"P_CheckMeleeRange", lib_pCheckMeleeRange},
