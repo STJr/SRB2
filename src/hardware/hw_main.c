@@ -2292,7 +2292,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				else if (drawtextured)
 				{
 #ifdef ESLOPE // P.S. this is better-organized than the old version
-					fixed_t offs = sides[(newline ?: rover->master)->sidenum[0]].rowoffset;
+					fixed_t offs = sides[(newline ? newline : rover->master)->sidenum[0]].rowoffset;
 					grTex = HWR_GetTexture(texnum);
 
 					wallVerts[3].t = (*rover->topheight - h + offs) * grTex->scaleY;
