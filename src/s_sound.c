@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1310,8 +1310,7 @@ void S_SetDigMusicVolume(INT32 volume)
 #ifdef DJGPPDOS
 	I_SetDigMusicVolume(31); // Trick for buggy dos drivers. Win32 doesn't need this.
 #endif
-	if (!nodigimusic)
-		I_SetDigMusicVolume(volume&31);
+	I_SetDigMusicVolume(volume&31);
 }
 
 void S_SetMIDIMusicVolume(INT32 volume)

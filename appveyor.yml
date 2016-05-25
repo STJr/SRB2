@@ -2,52 +2,62 @@ version: 2.1.14.{branch}-{build}
 os: MinGW
 
 environment:
- CC: i686-w64-mingw32-gcc
+ CC: ccache
+ CCACHE_CC: i686-w64-mingw32-gcc
  WINDRES: windres
  MINGW_SDK: c:\msys64\mingw32
- SDL2_URL: http://libsdl.org/release/SDL2-devel-2.0.4-mingw.tar.gz
- SDL2_ARCHIVE: SDL2-devel-2.0.4-mingw.tar
- SDL2_MOVE: SDL2-2.0.4\i686-w64-mingw32
- SDL2_MIXER_URL: https://www.libsdl.org/projects/SDL_mixer/release/SDL2_mixer-devel-2.0.1-mingw.tar.gz
- SDL2_MIXER_ARCHIVE: SDL2_mixer-devel-2.0.1-mingw.tar
- SDL2_MIXER_MOVE: SDL2_mixer-2.0.1\i686-w64-mingw32
  CFLAGS: -Wall -W -Werror
+ NASM_ZIP: nasm-2.12.01
+ NASM_URL: http://www.nasm.us/pub/nasm/releasebuilds/2.12.01/win64/nasm-2.12.01-win64.zip
+ UPX_ZIP: upx391w
+ UPX_URL: http://upx.sourceforge.net/download/upx391w.zip
+ CCACHE_EXE: ccache.exe
+ CCACHE_URL: http://alam.srb2.org/ccache.exe
+ CCACHE_COMPRESS: true
+ CCACHE_DIR: C:\Users\appveyor\.ccache
 
 cache:
-- SDL2-devel-2.0.4-mingw.tar.gz
-- SDL2_mixer-devel-2.0.1-mingw.tar.gz
+- nasm-2.12.01.zip
+- upx391w.zip
+- ccache.exe
+- C:\Users\appveyor\.ccache
 
 install:
-#Download SDL2
-- if not exist "%SDL2_ARCHIVE%.gz" appveyor DownloadFile "%SDL2_URL%" -FileName "%SDL2_ARCHIVE%.gz"
-- 7z x -y "%SDL2_ARCHIVE%.gz" -o%TMP% >null
-- 7z x -y "%TMP%\%SDL2_ARCHIVE%" -o%TMP% >null
-- robocopy /S /xx /ns /nc /nfl /ndl /np /njh /njs %TMP%\%SDL2_MOVE% %MINGW_SDK% || exit 0
-- ps: (Get-Content ([System.Environment]::ExpandEnvironmentVariables("%TMP%\%SDL2_MOVE%\bin\sdl2-config")))                  | ForEach-Object { $_ -replace "/usr/local/cross-tools/i686-w64-mingw32", ([System.Environment]::ExpandEnvironmentVariables("%MINGW_SDK%")) } | Set-Content ([System.Environment]::ExpandEnvironmentVariables("%MINGW_SDK%\bin\sdl2-config"))
-- ps: (Get-Content ([System.Environment]::ExpandEnvironmentVariables("%TMP%\%SDL2_MOVE%\lib\cmake\SDL2\sdl2-config.cmake"))) | ForEach-Object { $_ -replace "/usr/local/cross-tools/i686-w64-mingw32", ([System.Environment]::ExpandEnvironmentVariables("%MINGW_SDK%")) } | Set-Content ([System.Environment]::ExpandEnvironmentVariables("%MINGW_SDK%\lib\cmake\SDL2\sdl2-config.cmake"))
-- ps: (Get-Content ([System.Environment]::ExpandEnvironmentVariables("%TMP%\%SDL2_MOVE%\lib\pkgconfig\sdl2.pc")))            | ForEach-Object { $_ -replace "/usr/local/cross-tools/i686-w64-mingw32", ([System.Environment]::ExpandEnvironmentVariables("%MINGW_SDK%")) } | Set-Content ([System.Environment]::ExpandEnvironmentVariables("%MINGW_SDK%\lib\pkgconfig\sdl2.pc"))
-#Download SDL2_Mixer
-- if not exist "%SDL2_MIXER_ARCHIVE%.gz" appveyor DownloadFile "%SDL2_MIXER_URL%" -FileName "%SDL2_MIXER_ARCHIVE%.gz"
-- 7z x -y "%SDL2_MIXER_ARCHIVE%.gz" -o%TMP% >null
-- 7z x -y "%TMP%\%SDL2_MIXER_ARCHIVE%" -o%TMP% >null
-- robocopy /S /xx /ns /nc /nfl /ndl /np /njh /njs %TMP%\%SDL2_MIXER_MOVE% %MINGW_SDK% || exit 0
-- ps: (Get-Content ([System.Environment]::ExpandEnvironmentVariables("%TMP%\%SDL2_MIXER_MOVE%\lib\pkgconfig\SDL2_mixer.pc")))| ForEach-Object { $_ -replace "/usr/local/cross-tools/i686-w64-mingw32", ([System.Environment]::ExpandEnvironmentVariables("%MINGW_SDK%")) } | Set-Content ([System.Environment]::ExpandEnvironmentVariables("%MINGW_SDK%\lib\pkgconfig\SDL2_mixer.pc"))
+- if not exist "%NASM_ZIP%.zip" appveyor DownloadFile "%NASM_URL%" -FileName "%NASM_ZIP%.zip"
+- 7z x -y "%NASM_ZIP%.zip" -o%TMP% >null
+- robocopy /S /xx /ns /nc /nfl /ndl /np /njh /njs %TMP%\%NASM_ZIP% %MINGW_SDK%\bin nasm.exe || exit 0
+
+- if not exist "%UPX_ZIP%.zip" appveyor DownloadFile "%UPX_URL%" -FileName "%UPX_ZIP%.zip"
+- 7z x -y "%UPX_ZIP%.zip" -o%TMP% >null
+- robocopy /S /xx /ns /nc /nfl /ndl /np /njh /njs %TMP%\%UPX_ZIP% %MINGW_SDK%\bin upx.exe || exit 0
+
+- if not exist "%CCACHE_EXE%" appveyor DownloadFile "%CCACHE_URL%" -FileName "%CCACHE_EXE%"
+- ccache -M 99M
+- xcopy /Y /V /I ccache.exe %MINGW_SDK%\bin
+
+configuration:
+- SDL
+- DD
 
 before_build:
-- set SDL_PKGCONFIG=%MINGW_SDK%\lib\pkgconfig\sdl2.pc
 - set Path=%MINGW_SDK%\bin;%Path%
 - i686-w64-mingw32-gcc --version
 - mingw32-make --version
-- set SRB2_MFLAGS=-C src MINGW=1 WARNINGMODE=1 NOASM=1 NOUPX=1 GCC53=1
+- nasm -v
+- upx -V
+- ccache -V
+- ccache -s
+- set SRB2_MFLAGS=-C src MINGW=1 WARNINGMODE=1 GCC53=1 CCACHE=1
 
 build_script:
-- cmd: mingw32-make.exe %SRB2_MFLAGS% SDL=1 clean
-- cmd: mingw32-make.exe %SRB2_MFLAGS% SDL=1 ERRORMODE=1
+- cmd: mingw32-make.exe %SRB2_MFLAGS% %CONFIGURATION%=1 clean
+- cmd: mingw32-make.exe %SRB2_MFLAGS% %CONFIGURATION%=1 ERRORMODE=1
 
 after_build:
+- ccache -s
 - cmd: git rev-parse --short %APPVEYOR_REPO_COMMIT%>%TMP%/gitshort.txt
 - cmd: set /P GITSHORT=<%TMP%/gitshort.txt
-- set BUILD_ARCHIVE=%APPVEYOR_REPO_BRANCH%-%GITSHORT%.7z
+- set BUILD_ARCHIVE=%APPVEYOR_REPO_BRANCH%-%GITSHORT%-%CONFIGURATION%.7z
 - cmd: 7z a %BUILD_ARCHIVE% bin\Mingw\Release -xr!.gitignore
 - appveyor PushArtifact %BUILD_ARCHIVE%
 

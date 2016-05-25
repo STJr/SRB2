@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -67,6 +67,7 @@ fixed_t viewx, viewy, viewz;
 angle_t viewangle, aimingangle;
 fixed_t viewcos, viewsin;
 boolean viewsky, skyVisible;
+boolean skyVisible1, skyVisible2; // saved values of skyVisible for P1 and P2, for splitscreen
 sector_t *viewsector;
 player_t *viewplayer;
 
@@ -517,7 +518,9 @@ static void R_InitTextureMapping(void)
 	focallength = FixedDiv(centerxfrac,
 		FINETANGENT(FINEANGLES/4+/*cv_fov.value*/ FIELDOFVIEW/2));
 
+#ifdef ESLOPE
 	focallengthf = FIXED_TO_FLOAT(focallength);
+#endif
 
 	for (i = 0; i < FINEANGLES/2; i++)
 	{
@@ -971,14 +974,42 @@ void R_SkyboxFrame(player_t *player)
 		{
 			if (skyboxmo[1])
 			{
+				fixed_t x = 0, y = 0;
 				if (mh->skybox_scalex > 0)
-					viewx += (player->mo->x - skyboxmo[1]->x) / mh->skybox_scalex;
+					x = (player->mo->x - skyboxmo[1]->x) / mh->skybox_scalex;
 				else if (mh->skybox_scalex < 0)
-					viewx += (player->mo->x - skyboxmo[1]->x) * -mh->skybox_scalex;
+					x = (player->mo->x - skyboxmo[1]->x) * -mh->skybox_scalex;
 				if (mh->skybox_scaley > 0)
-					viewy += (player->mo->y - skyboxmo[1]->y) / mh->skybox_scaley;
+					y = (player->mo->y - skyboxmo[1]->y) / mh->skybox_scaley;
 				else if (mh->skybox_scaley < 0)
-					viewy += (player->mo->y - skyboxmo[1]->y) * -mh->skybox_scaley;
+					y = (player->mo->y - skyboxmo[1]->y) * -mh->skybox_scaley;
+
+				if (viewmobj->angle == 0)
+				{
+					viewx += x;
+					viewy += y;
+				}
+				else if (viewmobj->angle == ANGLE_90)
+				{
+					viewx -= y;
+					viewy += x;
+				}
+				else if (viewmobj->angle == ANGLE_180)
+				{
+					viewx -= x;
+					viewy -= y;
+				}
+				else if (viewmobj->angle == ANGLE_270)
+				{
+					viewx += y;
+					viewy -= x;
+				}
+				else
+				{
+					angle_t ang = viewmobj->angle>>ANGLETOFINESHIFT;
+					viewx += FixedMul(x,FINECOSINE(ang)) - FixedMul(y,  FINESINE(ang));
+					viewy += FixedMul(x,  FINESINE(ang)) + FixedMul(y,FINECOSINE(ang));
+				}
 			}
 			if (mh->skybox_scalez > 0)
 				viewz += player->viewz / mh->skybox_scalez;
@@ -1271,6 +1302,12 @@ void R_RenderPlayerView(player_t *player)
 			V_DrawFill(0, 0, vid.width, vid.height, 32+(timeinmap&15));
 	}
 
+	// load previous saved value of skyVisible for the player
+	if (splitscreen && player == &players[secondarydisplayplayer])
+		skyVisible = skyVisible2;
+	else
+		skyVisible = skyVisible1;
+
 	portalrender = 0;
 	portal_base = portal_cap = NULL;
 
@@ -1368,6 +1405,13 @@ void R_RenderPlayerView(player_t *player)
 
 	// Check for new console commands.
 	NetUpdate();
+
+	// save value to skyVisible1 or skyVisible2
+	// this is so that P1 can't affect whether P2 can see a skybox or not, or vice versa
+	if (splitscreen && player == &players[secondarydisplayplayer])
+		skyVisible2 = skyVisible;
+	else
+		skyVisible1 = skyVisible;
 }
 
 // =========================================================================
@@ -1382,6 +1426,7 @@ void R_RegisterEngineStuff(void)
 	CV_RegisterVar(&cv_allowmlook);
 	CV_RegisterVar(&cv_homremoval);
 	CV_RegisterVar(&cv_flipcam);
+	CV_RegisterVar(&cv_flipcam2);
 
 	// Enough for dedicated server
 	if (dedicated)
@@ -1432,10 +1477,12 @@ void R_RegisterEngineStuff(void)
 	CV_RegisterVar(&cv_voodoocompatibility);
 	CV_RegisterVar(&cv_grfogcolor);
 	CV_RegisterVar(&cv_grsoftwarefog);
+#ifdef ALAM_LIGHTING
 	CV_RegisterVar(&cv_grstaticlighting);
 	CV_RegisterVar(&cv_grdynamiclighting);
 	CV_RegisterVar(&cv_grcoronas);
 	CV_RegisterVar(&cv_grcoronasize);
+#endif
 	CV_RegisterVar(&cv_grmd2);
 #endif
 

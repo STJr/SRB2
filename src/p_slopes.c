@@ -1,31 +1,14 @@
-// Emacs style mode select   -*- C++ -*-
+// SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
+// Copyright (C) 2004      by Stephen McGranahan
+// Copyright (C) 2015-2016 by Sonic Team Junior.
 //
-// Copyright(C) 2004 Stephen McGranahan
-//
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-//
-//--------------------------------------------------------------------------
-//
-// DESCRIPTION:
-//      Slopes
-//      SoM created 05/10/09
-//      ZDoom + Eternity Engine Slopes, ported and enhanced by Kalaron
-//
+// This program is free software distributed under the
+// terms of the GNU General Public License, version 2.
+// See the 'LICENSE' file for more details.
 //-----------------------------------------------------------------------------
-
+/// \file  p_slopes.c
+/// \brief ZDoom + Eternity Engine Slopes, ported and enhanced by Kalaron
 
 #include "doomdef.h"
 #include "r_defs.h"
@@ -107,7 +90,7 @@ static void P_ReconfigureVertexSlope(pslope_t *slope)
 
 		// Get angles
 		slope->xydirection = R_PointToAngle2(0, 0, slope->d.x, slope->d.y)+ANGLE_180;
-		slope->zangle = -R_PointToAngle2(0, 0, FRACUNIT, slope->zdelta);
+		slope->zangle = InvAngle(R_PointToAngle2(0, 0, FRACUNIT, slope->zdelta));
 	}
 }
 
@@ -1099,6 +1082,9 @@ void P_ButteredSlope(mobj_t *mo)
 	if (!mo->standingslope)
 		return;
 
+	if (mo->flags & (MF_NOCLIPHEIGHT|MF_NOGRAVITY))
+		return; // don't slide down slopes if you can't touch them or you're not affected by gravity
+
 	if (mo->player) {
 		if (abs(mo->standingslope->zdelta) < FRACUNIT/4 && !(mo->player->pflags & PF_SPINNING))
 			return; // Don't slide on non-steep slopes unless spinning
@@ -1130,7 +1116,9 @@ void P_ButteredSlope(mobj_t *mo)
 	// This makes it harder to zigzag up steep slopes, as well as allows greater top speed when rolling down
 
 	// Multiply by gravity
-	thrust = FixedMul(thrust, FRACUNIT/2); // TODO actually get this
+	thrust = FixedMul(thrust, gravity); // TODO account for per-sector gravity etc
+	// Multiply by scale (gravity strength depends on mobj scale)
+	thrust = FixedMul(thrust, mo->scale);
 
 	P_Thrust(mo, mo->standingslope->xydirection, thrust);
 }

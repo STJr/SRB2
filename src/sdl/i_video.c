@@ -26,7 +26,7 @@
 #endif
 
 #ifdef HAVE_SDL
-
+#define _MATH_DEFINES_DEFINED
 #include "SDL.h"
 
 #ifdef _MSC_VER
@@ -250,6 +250,11 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 		if (vidSurface != NULL)
 		{
 			SDL_FreeSurface(vidSurface);
+		}
+		if (vid.buffer)
+		{
+			free(vid.buffer);
+			vid.buffer = NULL;
 		}
 		SDL_PixelFormatEnumToMasks(sw_texture_format, &bpp, &rmask, &gmask, &bmask, &amask);
 		vidSurface = SDL_CreateRGBSurface(0, width, height, bpp, rmask, gmask, bmask, amask);
@@ -1654,12 +1659,10 @@ static void Impl_VideoSetupBuffer(void)
 	{
 		vid.rowbytes = vid.width * vid.bpp;
 		vid.direct = NULL;
-		vid.buffer = malloc(vid.rowbytes*vid.height*NUMSCREENS);
 		if (vid.buffer)
-		{
-			memset(vid.buffer,0x00,vid.rowbytes*vid.height*NUMSCREENS);
-		}
-		else
+			free(vid.buffer);
+		vid.buffer = calloc(vid.rowbytes*vid.height, NUMSCREENS);
+		if (!vid.buffer)
 		{
 			I_Error("%s", M_GetText("Not enough memory for video buffer\n"));
 		}
@@ -1696,9 +1699,14 @@ void I_StartupGraphics(void)
 	}
 #endif
 	{
-		char vd[100]; //stack space for video name
-		//CONS_Printf(M_GetText("Starting up with video driver : %s\n"), SDL_VideoDriverName(vd,100));
-		if (strncasecmp(vd, "gcvideo", 8) == 0 || strncasecmp(vd, "fbcon", 6) == 0 || strncasecmp(vd, "wii", 4) == 0 || strncasecmp(vd, "psl1ght", 8) == 0)
+		const char *vd = SDL_GetCurrentVideoDriver();
+		//CONS_Printf(M_GetText("Starting up with video driver: %s\n"), vd);
+		if (vd && (
+			strncasecmp(vd, "gcvideo", 8) == 0 ||
+			strncasecmp(vd, "fbcon", 6) == 0 ||
+			strncasecmp(vd, "wii", 4) == 0 ||
+			strncasecmp(vd, "psl1ght", 8) == 0
+		))
 			framebuffer = SDL_TRUE;
 	}
 	if (M_CheckParm("-software"))
@@ -1761,7 +1769,6 @@ void I_StartupGraphics(void)
 	//Impl_SetWindowName("SRB2 "VERSIONSTRING);
 	VID_SetMode(VID_GetModeForSize(BASEVIDWIDTH, BASEVIDHEIGHT));
 
-	vid.buffer = NULL;  // For software mode
 	vid.width = BASEVIDWIDTH; // Default size for startup
 	vid.height = BASEVIDHEIGHT; // BitsPerPixel is the SDL interface's
 	vid.recalc = true; // Set up the console stufff
@@ -1811,7 +1818,8 @@ void I_ShutdownGraphics(void)
 	icoSurface = NULL;
 	if (render_soft == oldrendermode)
 	{
-		vidSurface = NULL; //Alam: SDL_Video system free vidSurface for me
+		if (vidSurface) SDL_FreeSurface(vidSurface);
+		vidSurface = NULL;
 		if (vid.buffer) free(vid.buffer);
 		vid.buffer = NULL;
 		if (bufSurface) SDL_FreeSurface(bufSurface);

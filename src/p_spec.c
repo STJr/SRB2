@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -407,7 +407,7 @@ void P_ParseANIMDEFSLump(INT32 wadNum, UINT16 lumpnum, INT32 *i)
 void P_ParseAnimationDefintion(SINT8 istexture, INT32 *i)
 {
 	char *animdefsToken;
-	UINT8 animdefsTokenLength;
+	size_t animdefsTokenLength;
 	char *endPos;
 	INT32 animSpeed;
 
@@ -2060,7 +2060,7 @@ void P_SwitchWeather(INT32 weathernum)
 				precipmobj = (precipmobj_t *)think;
 
 				precipmobj->flags = mobjinfo[MT_SNOWFLAKE].flags;
-				z = M_Random();
+				z = M_RandomByte();
 
 				if (z < 64)
 					z = 2;
@@ -3668,10 +3668,13 @@ DoneSection2:
 
 				player->mo->angle = lineangle;
 
-				if (player == &players[consoleplayer])
-					localangle = player->mo->angle;
-				else if (player == &players[secondarydisplayplayer])
-					localangle2 = player->mo->angle;
+				if (!demoplayback || P_AnalogMove(player))
+				{
+					if (player == &players[consoleplayer])
+						localangle = player->mo->angle;
+					else if (player == &players[secondarydisplayplayer])
+						localangle2 = player->mo->angle;
+				}
 
 				if (!(lines[i].flags & ML_EFFECT4))
 				{
@@ -3780,7 +3783,7 @@ DoneSection2:
 					HU_SetCEchoDuration(5);
 					HU_DoCEcho(va(M_GetText("%s\\captured the blue flag.\\\\\\\\"), player_names[player-players]));
 
-					if (players[consoleplayer].ctfteam == 1)
+					if (splitscreen || players[consoleplayer].ctfteam == 1)
 						S_StartSound(NULL, sfx_flgcap);
 					else if (players[consoleplayer].ctfteam == 2)
 						S_StartSound(NULL, sfx_lose);
@@ -3813,7 +3816,7 @@ DoneSection2:
 					HU_SetCEchoDuration(5);
 					HU_DoCEcho(va(M_GetText("%s\\captured the red flag.\\\\\\\\"), player_names[player-players]));
 
-					if (players[consoleplayer].ctfteam == 2)
+					if (splitscreen || players[consoleplayer].ctfteam == 2)
 						S_StartSound(NULL, sfx_flgcap);
 					else if (players[consoleplayer].ctfteam == 1)
 						S_StartSound(NULL, sfx_lose);
@@ -4671,8 +4674,10 @@ void P_UpdateSpecials(void)
 	// POINT LIMIT
 	P_CheckPointLimit();
 
+#ifdef ESLOPE
 	// Dynamic slopeness
 	P_RunDynamicSlopes();
+#endif
 
 	// ANIMATE TEXTURES
 	for (anim = anims; anim < lastanim; anim++)
@@ -7496,24 +7501,27 @@ void T_Pusher(pusher_t *p)
 				P_SetPlayerMobjState (thing, thing->info->painstate); // Whee!
 				thing->angle = R_PointToAngle2 (0, 0, xspeed<<(FRACBITS-PUSH_FACTOR), yspeed<<(FRACBITS-PUSH_FACTOR));
 
-				if (thing->player == &players[consoleplayer])
+				if (!demoplayback || P_AnalogMove(thing->player))
 				{
-					if (thing->angle - localangle > ANGLE_180)
-						localangle -= (localangle - thing->angle) / 8;
-					else
-						localangle += (thing->angle - localangle) / 8;
+					if (thing->player == &players[consoleplayer])
+					{
+						if (thing->angle - localangle > ANGLE_180)
+							localangle -= (localangle - thing->angle) / 8;
+						else
+							localangle += (thing->angle - localangle) / 8;
+					}
+					else if (thing->player == &players[secondarydisplayplayer])
+					{
+						if (thing->angle - localangle2 > ANGLE_180)
+							localangle2 -= (localangle2 - thing->angle) / 8;
+						else
+							localangle2 += (thing->angle - localangle2) / 8;
+					}
+					/*if (thing->player == &players[consoleplayer])
+						localangle = thing->angle;
+					else if (thing->player == &players[secondarydisplayplayer])
+						localangle2 = thing->angle;*/
 				}
-				else if (thing->player == &players[secondarydisplayplayer])
-				{
-					if (thing->angle - localangle2 > ANGLE_180)
-						localangle2 -= (localangle2 - thing->angle) / 8;
-					else
-						localangle2 += (thing->angle - localangle2) / 8;
-				}
-				/*if (thing->player == &players[consoleplayer])
-					localangle = thing->angle;
-				else if (thing->player == &players[secondarydisplayplayer])
-					localangle2 = thing->angle;*/
 			}
 
 			if (p->exclusive)

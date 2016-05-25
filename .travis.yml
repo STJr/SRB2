@@ -29,9 +29,8 @@ addons:
     - p7zip-full
 
 before_script:
-  - mkdir -p $HOME/srb2_cache
-  - wget --verbose --server-response -c http://rosenthalcastle.org/srb2/SRB2-v2114-assets.7z -O $HOME/srb2_cache/SRB2-v2114-assets.7z
-  - 7z x $HOME/srb2_cache/SRB2-v2114-assets.7z -oassets
+  - wget --verbose --server-response -c http://rosenthalcastle.org/srb2/SRB2-v2115-assets-2.7z -O $HOME/srb2_cache/SRB2-v2115-assets-2.7z
+  - 7z x $HOME/srb2_cache/SRB2-v2115-assets-2.7z -oassets
   - mkdir build
   - cd build
   - cmake ..
@@ -41,5 +40,6 @@ before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install sdl2_mixer game-music-emu p7zip ; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then curl -O -L https://www.libsdl.org/release/SDL2-2.0.4.dmg; hdiutil attach SDL2-2.0.4.dmg; sudo cp -a /Volumes/SDL2/SDL2.framework /Library/Frameworks/; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then curl -O -L https://www.libsdl.org/projects/SDL_mixer/release/SDL2_mixer-2.0.1.dmg; hdiutil attach SDL2_mixer-2.0.1.dmg; sudo cp -a /Volumes/SDL2_mixer/SDL2_mixer.framework /Library/Frameworks/; fi
+  - mkdir -p $HOME/srb2_cache
 
 script: make

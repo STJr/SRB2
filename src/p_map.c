@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -189,10 +189,13 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 		{
 			object->angle = spring->angle;
 
-			if (object->player == &players[consoleplayer])
-				localangle = spring->angle;
-			else if (object->player == &players[secondarydisplayplayer])
-				localangle2 = spring->angle;
+			if (!demoplayback || P_AnalogMove(object->player))
+			{
+				if (object->player == &players[consoleplayer])
+					localangle = spring->angle;
+				else if (object->player == &players[secondarydisplayplayer])
+					localangle2 = spring->angle;
+			}
 		}
 
 		pflags = object->player->pflags & (PF_JUMPED|PF_SPINNING|PF_THOKKED); // I still need these.
@@ -672,10 +675,13 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 			thing->angle = tmthing->angle;
 
-			if (thing->player == &players[consoleplayer])
-				localangle = thing->angle;
-			else if (thing->player == &players[secondarydisplayplayer])
-				localangle2 = thing->angle;
+			if (!demoplayback || P_AnalogMove(thing->player))
+			{
+				if (thing->player == &players[consoleplayer])
+					localangle = thing->angle;
+				else if (thing->player == &players[secondarydisplayplayer])
+					localangle2 = thing->angle;
+			}
 
 			return true;
 		}
@@ -1156,13 +1162,17 @@ static boolean PIT_CheckLine(line_t *ld)
 	{
 		tmceilingz = opentop;
 		ceilingline = ld;
+#ifdef ESLOPE
 		tmceilingslope = opentopslope;
+#endif
 	}
 
 	if (openbottom > tmfloorz)
 	{
 		tmfloorz = openbottom;
+#ifdef ESLOPE
 		tmfloorslope = openbottomslope;
+#endif
 	}
 
 	if (highceiling > tmdrpoffceilz)
@@ -1975,22 +1985,28 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 						thing->z = (thing->ceilingz = thingtop = tmceilingz) - thing->height;
 						thing->eflags |= MFE_JUSTSTEPPEDDOWN;
 					}
-					else if (tmceilingz < thingtop && thingtop - tmceilingz <= maxstep)
+#ifdef ESLOPE
+					// HACK TO FIX DSZ2: apply only if slopes are involved
+					else if (tmceilingslope && tmceilingz < thingtop && thingtop - tmceilingz <= maxstep)
 					{
 						thing->z = (thing->ceilingz = thingtop = tmceilingz) - thing->height;
 						thing->eflags |= MFE_JUSTSTEPPEDDOWN;
 					}
+#endif
 				}
 				else if (thing->z == thing->floorz && tmfloorz < thing->z && thing->z - tmfloorz <= maxstep)
 				{
 					thing->z = thing->floorz = tmfloorz;
 					thing->eflags |= MFE_JUSTSTEPPEDDOWN;
 				}
-				else if (tmfloorz > thing->z && tmfloorz - thing->z <= maxstep)
+#ifdef ESLOPE
+				// HACK TO FIX DSZ2: apply only if slopes are involved
+				else if (tmfloorslope && tmfloorz > thing->z && tmfloorz - thing->z <= maxstep)
 				{
 					thing->z = thing->floorz = tmfloorz;
 					thing->eflags |= MFE_JUSTSTEPPEDDOWN;
 				}
+#endif
 			}
 
 			if (thing->eflags & MFE_VERTICALFLIP)
@@ -2061,21 +2077,26 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 	thing->ceilingz = tmceilingz;
 
 #ifdef ESLOPE
-	// Assign thing's standingslope if needed
-	if (thing->z <= tmfloorz && !(thing->eflags & MFE_VERTICALFLIP)) {
-		if (!startingonground && tmfloorslope)
-			P_HandleSlopeLanding(thing, tmfloorslope);
+	if (!(thing->flags & MF_NOCLIPHEIGHT))
+	{
+		// Assign thing's standingslope if needed
+		if (thing->z <= tmfloorz && !(thing->eflags & MFE_VERTICALFLIP)) {
+			if (!startingonground && tmfloorslope)
+				P_HandleSlopeLanding(thing, tmfloorslope);
 
-		if (thing->momz <= 0)
-			thing->standingslope = tmfloorslope;
-	}
-	else if (thing->z+thing->height >= tmceilingz && (thing->eflags & MFE_VERTICALFLIP)) {
-		if (!startingonground && tmceilingslope)
-			P_HandleSlopeLanding(thing, tmceilingslope);
+			if (thing->momz <= 0)
+				thing->standingslope = tmfloorslope;
+		}
+		else if (thing->z+thing->height >= tmceilingz && (thing->eflags & MFE_VERTICALFLIP)) {
+			if (!startingonground && tmceilingslope)
+				P_HandleSlopeLanding(thing, tmceilingslope);
 
-		if (thing->momz >= 0)
-			thing->standingslope = tmceilingslope;
+			if (thing->momz >= 0)
+				thing->standingslope = tmceilingslope;
+		}
 	}
+	else // don't set standingslope if you're not going to clip against it
+		thing->standingslope = NULL;
 #endif
 
 	thing->x = x;
@@ -2651,10 +2672,13 @@ isblocking:
 			&& P_IsClimbingValid(slidemo->player, climbangle))
 			{
 				slidemo->angle = climbangle;
-				if (slidemo->player == &players[consoleplayer])
-					localangle = slidemo->angle;
-				else if (slidemo->player == &players[secondarydisplayplayer])
-					localangle2 = slidemo->angle;
+				if (!demoplayback || P_AnalogMove(slidemo->player))
+				{
+					if (slidemo->player == &players[consoleplayer])
+						localangle = slidemo->angle;
+					else if (slidemo->player == &players[secondarydisplayplayer])
+						localangle2 = slidemo->angle;
+				}
 
 				if (!slidemo->player->climbing)
 				{

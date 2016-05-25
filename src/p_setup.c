@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1214,7 +1214,7 @@ static void P_LoadLineDefs2(void)
 		case 443: // Calls a named Lua function
 			if (sides[ld->sidenum[0]].text)
 			{
-				UINT8 len = strlen(sides[ld->sidenum[0]].text)+1;
+				size_t len = strlen(sides[ld->sidenum[0]].text)+1;
 				if (ld->sidenum[1] != 0xffff && sides[ld->sidenum[1]].text)
 					len += strlen(sides[ld->sidenum[1]].text);
 				ld->text = Z_Malloc(len, PU_LEVEL, NULL);
@@ -1888,7 +1888,7 @@ static boolean P_LoadBlockMap(lumpnum_t lumpnum)
 //
 static void P_GroupLines(void)
 {
-	size_t i, j, total = 0;
+	size_t i, j;
 	line_t *li;
 	sector_t *sector;
 	subsector_t *ss = subsectors;
@@ -1922,14 +1922,10 @@ static void P_GroupLines(void)
 	// count number of lines in each sector
 	for (i = 0, li = lines; i < numlines; i++, li++)
 	{
-		total++;
 		li->frontsector->linecount++;
 
 		if (li->backsector && li->backsector != li->frontsector)
-		{
 			li->backsector->linecount++;
-			total++;
-		}
 	}
 
 	// allocate linebuffers for each sector
@@ -2843,7 +2839,7 @@ boolean P_SetupLevel(boolean skipprecip)
 		savedata.lives = 0;
 	}
 
-	skyVisible = true; // assume the skybox is visible on level load.
+	skyVisible = skyVisible1 = skyVisible2 = true; // assume the skybox is visible on level load.
 	if (loadprecip) // uglier hack
 	{ // to make a newly loaded level start on the second frame.
 		INT32 buf = gametic % BACKUPTICS;

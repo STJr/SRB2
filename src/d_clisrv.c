@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -517,9 +517,9 @@ static inline void resynch_write_player(resynch_pak *rsp, const size_t i)
 	rsp->thokitem = (UINT32)LONG(players[i].thokitem); //mobjtype_t
 	rsp->spinitem = (UINT32)LONG(players[i].spinitem); //mobjtype_t
 	rsp->revitem = (UINT32)LONG(players[i].revitem); //mobjtype_t
-	rsp->actionspd = LONG(players[i].actionspd);
-	rsp->mindash = LONG(players[i].mindash);
-	rsp->maxdash = LONG(players[i].maxdash);
+	rsp->actionspd = (fixed_t)LONG(players[i].actionspd);
+	rsp->mindash = (fixed_t)LONG(players[i].mindash);
+	rsp->maxdash = (fixed_t)LONG(players[i].maxdash);
 	rsp->jumpfactor = (fixed_t)LONG(players[i].jumpfactor);
 
 	rsp->speed = (fixed_t)LONG(players[i].speed);
@@ -531,6 +531,7 @@ static inline void resynch_write_player(resynch_pak *rsp, const size_t i)
 	rsp->deadtimer = players[i].deadtimer;
 	rsp->exiting = (tic_t)LONG(players[i].exiting);
 	rsp->homing = players[i].homing;
+	rsp->skidtime = (tic_t)LONG(players[i].skidtime);
 	rsp->cmomx = (fixed_t)LONG(players[i].cmomx);
 	rsp->cmomy = (fixed_t)LONG(players[i].cmomy);
 	rsp->rmomx = (fixed_t)LONG(players[i].rmomx);
@@ -589,7 +590,7 @@ static inline void resynch_write_player(resynch_pak *rsp, const size_t i)
 
 	rsp->tics = LONG(players[i].mo->tics);
 	rsp->statenum = (statenum_t)LONG(players[i].mo->state-states); // :(
-	rsp->eflags = (UINT32)LONG(players[i].mo->eflags);
+	rsp->eflags = (UINT16)SHORT(players[i].mo->eflags);
 	rsp->flags = LONG(players[i].mo->flags);
 	rsp->flags2 = LONG(players[i].mo->flags2);
 
@@ -641,9 +642,9 @@ static void resynch_read_player(resynch_pak *rsp)
 	players[i].thokitem = (UINT32)LONG(rsp->thokitem); //mobjtype_t
 	players[i].spinitem = (UINT32)LONG(rsp->spinitem); //mobjtype_t
 	players[i].revitem = (UINT32)LONG(rsp->revitem); //mobjtype_t
-	players[i].actionspd = LONG(rsp->actionspd);
-	players[i].mindash = LONG(rsp->mindash);
-	players[i].maxdash = LONG(rsp->maxdash);
+	players[i].actionspd = (fixed_t)LONG(rsp->actionspd);
+	players[i].mindash = (fixed_t)LONG(rsp->mindash);
+	players[i].maxdash = (fixed_t)LONG(rsp->maxdash);
 	players[i].jumpfactor = (fixed_t)LONG(rsp->jumpfactor);
 
 	players[i].speed = (fixed_t)LONG(rsp->speed);
@@ -655,6 +656,7 @@ static void resynch_read_player(resynch_pak *rsp)
 	players[i].deadtimer = rsp->deadtimer;
 	players[i].exiting = (tic_t)LONG(rsp->exiting);
 	players[i].homing = rsp->homing;
+	players[i].skidtime = (tic_t)LONG(rsp->skidtime);
 	players[i].cmomx = (fixed_t)LONG(rsp->cmomx);
 	players[i].cmomy = (fixed_t)LONG(rsp->cmomy);
 	players[i].rmomx = (fixed_t)LONG(rsp->rmomx);
@@ -712,7 +714,7 @@ static void resynch_read_player(resynch_pak *rsp)
 	//At this point, the player should have a body, whether they were respawned or not.
 	P_UnsetThingPosition(players[i].mo);
 	players[i].mo->angle = (angle_t)LONG(rsp->angle);
-	players[i].mo->eflags = (UINT32)LONG(rsp->eflags);
+	players[i].mo->eflags = (UINT16)SHORT(rsp->eflags);
 	players[i].mo->flags = LONG(rsp->flags);
 	players[i].mo->flags2 = LONG(rsp->flags2);
 	players[i].mo->friction = LONG(rsp->friction);
@@ -2934,9 +2936,9 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 			if (botingame)
 				players[newplayernum].bot = 1;
 			// Same goes for player 2 when relevant
-			players[newplayernum].pflags &= ~(/*PF_FLIPCAM|*/PF_ANALOGMODE);
-			//if (cv_flipcam2.value)
-				//players[newplayernum].pflags |= PF_FLIPCAM;
+			players[newplayernum].pflags &= ~(PF_FLIPCAM|PF_ANALOGMODE);
+			if (cv_flipcam2.value)
+				players[newplayernum].pflags |= PF_FLIPCAM;
 			if (cv_analog2.value)
 				players[newplayernum].pflags |= PF_ANALOGMODE;
 		}

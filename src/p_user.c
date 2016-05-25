@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -2194,9 +2194,9 @@ static void P_DoBubbleBreath(player_t *player)
 	if (!(player->mo->eflags & MFE_UNDERWATER) || ((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL && !(player->pflags & PF_NIGHTSMODE)) || player->spectator)
 		return;
 
-	if (!(P_Random() % 16))
+	if (P_RandomChance(FRACUNIT/16))
 		bubble = P_SpawnMobj(player->mo->x, player->mo->y, zh, MT_SMALLBUBBLE);
-	else if (!(P_Random() % 96))
+	else if (P_RandomChance(3*FRACUNIT/256))
 		bubble = P_SpawnMobj(player->mo->x, player->mo->y, zh, MT_MEDIUMBUBBLE);
 	if (bubble)
 	{
@@ -2727,10 +2727,13 @@ static void P_DoClimbing(player_t *player)
 		P_InstaThrust(player->mo, player->mo->angle, FixedMul(-4*FRACUNIT, player->mo->scale));
 	}
 
-	if (player == &players[consoleplayer])
-		localangle = player->mo->angle;
-	else if (player == &players[secondarydisplayplayer])
-		localangle2 = player->mo->angle;
+	if (!demoplayback || P_AnalogMove(player))
+	{
+		if (player == &players[consoleplayer])
+			localangle = player->mo->angle;
+		else if (player == &players[secondarydisplayplayer])
+			localangle2 = player->mo->angle;
+	}
 
 	if (player->climbing == 0)
 		P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
@@ -3582,10 +3585,13 @@ void P_DoJump(player_t *player, boolean soundandstate)
 
 		player->mo->angle = player->mo->angle - ANGLE_180; // Turn around from the wall you were climbing.
 
-		if (player == &players[consoleplayer])
-			localangle = player->mo->angle; // Adjust the local control angle.
-		else if (player == &players[secondarydisplayplayer])
-			localangle2 = player->mo->angle;
+		if (!demoplayback || P_AnalogMove(player))
+		{
+			if (player == &players[consoleplayer])
+				localangle = player->mo->angle; // Adjust the local control angle.
+			else if (player == &players[secondarydisplayplayer])
+				localangle2 = player->mo->angle;
+		}
 
 		player->climbing = 0; // Stop climbing, duh!
 		P_InstaThrust(player->mo, player->mo->angle, FixedMul(6*FRACUNIT, player->mo->scale)); // Jump off the wall.
@@ -4233,7 +4239,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 	}
 }
 
-static boolean P_AnalogMove(player_t *player)
+boolean P_AnalogMove(player_t *player)
 {
 	return player->pflags & PF_ANALOGMODE;
 }
@@ -4948,8 +4954,9 @@ static void P_NightsTransferPoints(player_t *player, fixed_t xspeed, fixed_t rad
 	else
 	{
 		const angle_t fa = player->angle_pos>>ANGLETOFINESHIFT;
-		player->mo->momx = player->mo->target->x + FixedMul(FINECOSINE(fa),radius) - player->mo->x;
-		player->mo->momy = player->mo->target->y + FixedMul(FINESINE(fa),radius) - player->mo->y;
+		const angle_t faold = player->old_angle_pos>>ANGLETOFINESHIFT;
+		player->mo->momx = FixedMul(FINECOSINE(fa),radius) - FixedMul(FINECOSINE(faold),radius);
+		player->mo->momy = FixedMul(FINESINE(fa),radius) - FixedMul(FINESINE(faold),radius);
 	}
 
 	if (player->exiting)
@@ -5653,6 +5660,29 @@ static void P_NiGHTSMovement(player_t *player)
 	if (player->mo->eflags & MFE_VERTICALFLIP)
 		cmd->forwardmove = (SINT8)(-cmd->forwardmove);
 
+	if (!(player->pflags & PF_TRANSFERTOCLOSEST))
+	{
+		fixed_t realdist = R_PointToDist2(player->mo->x, player->mo->y, player->mo->target->x, player->mo->target->y);
+		// teleport player to correct radius if neccessary
+		if (realdist>>FRACBITS != radius>>FRACBITS)
+		{
+			CONS_Debug(DBG_NIGHTS, "Aligning player with axis\n");
+			P_UnsetThingPosition(player->mo);
+			if (realdist == 0) // other method won't work if we're exactly on the target lol
+			{
+				const angle_t fa = player->old_angle_pos>>ANGLETOFINESHIFT;
+				player->mo->x = player->mo->target->x + FixedMul(FINECOSINE(fa), radius);
+				player->mo->y = player->mo->target->y + FixedMul(FINESINE(fa), radius);
+			}
+			else
+			{
+				player->mo->x = player->mo->target->x + FixedMul(FixedDiv(player->mo->x - player->mo->target->x, realdist), radius);
+				player->mo->y = player->mo->target->y + FixedMul(FixedDiv(player->mo->y - player->mo->target->y, realdist), radius);
+			}
+			P_SetThingPosition(player->mo);
+		}
+	}
+
 	// Currently reeling from being hit.
 	if (player->powers[pw_flashing] > (2*flashingtics)/3)
 	{
@@ -5672,19 +5702,6 @@ static void P_NiGHTSMovement(player_t *player)
 				xspeed *= -1;
 
 			player->angle_pos += FixedAngleC(FixedDiv(xspeed,5*FRACUNIT),40*FRACUNIT);
-		}
-
-		if (player->pflags & PF_TRANSFERTOCLOSEST)
-		{
-			const angle_t fa = R_PointToAngle2(player->axis1->x, player->axis1->y, player->axis2->x, player->axis2->y);
-			P_InstaThrust(player->mo, fa, xspeed/10);
-		}
-		else
-		{
-			const angle_t fa = player->angle_pos>>ANGLETOFINESHIFT;
-
-			player->mo->momx = player->mo->target->x + FixedMul(FINECOSINE(fa),radius) - player->mo->x;
-			player->mo->momy = player->mo->target->y + FixedMul(FINESINE(fa),radius) - player->mo->y;
 		}
 
 		player->mo->momz = 0;
@@ -6179,6 +6196,14 @@ void P_ElementalFireTrail(player_t *player)
 	{
 		newx = player->mo->x + P_ReturnThrustX(player->mo, travelangle + ((i&1) ? -1 : 1)*ANGLE_135, FixedMul(24*FRACUNIT, player->mo->scale));
 		newy = player->mo->y + P_ReturnThrustY(player->mo, travelangle + ((i&1) ? -1 : 1)*ANGLE_135, FixedMul(24*FRACUNIT, player->mo->scale));
+#ifdef ESLOPE
+		if (player->mo->standingslope)
+		{
+			ground = P_GetZAt(player->mo->standingslope, newx, newy);
+			if (player->mo->eflags & MFE_VERTICALFLIP)
+				ground -= FixedMul(mobjinfo[MT_SPINFIRE].height, player->mo->scale);
+		}
+#endif
 		flame = P_SpawnMobj(newx, newy, ground, MT_SPINFIRE);
 		P_SetTarget(&flame->target, player->mo);
 		flame->angle = travelangle;
@@ -6628,7 +6653,7 @@ static void P_MovePlayer(player_t *player)
 	// Little water sound while touching water - just a nicety.
 	if ((player->mo->eflags & MFE_TOUCHWATER) && !(player->mo->eflags & MFE_UNDERWATER) && !player->spectator)
 	{
-		if (P_Random() & 1 && leveltime % TICRATE == 0)
+		if (P_RandomChance(FRACUNIT/2) && leveltime % TICRATE == 0)
 			S_StartSound(player->mo, sfx_floush);
 	}
 
@@ -6836,7 +6861,7 @@ static void P_MovePlayer(player_t *player)
 				}
 			}
 			// Super Sonic move
-			if (player->charflags & SF_SUPER && player->powers[pw_super] && player->speed > FixedMul(5<<FRACBITS, player->mo->scale)
+			if (player->skin == 0 && player->powers[pw_super] && player->speed > FixedMul(5<<FRACBITS, player->mo->scale)
 			&& P_MobjFlip(player->mo)*player->mo->momz <= 0)
 			{
 				if (player->panim == PA_ROLL || player->mo->state-states == S_PLAY_PAIN || player->panim == PA_WALK)
@@ -7510,8 +7535,6 @@ boolean P_LookForEnemies(player_t *player)
 		if (an > ANGLE_90 && an < ANGLE_270)
 			continue; // behind back
 
-		player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, mo->x, mo->y);
-
 		if (!P_CheckSight(player->mo, mo))
 			continue; // out of sight
 
@@ -7522,6 +7545,7 @@ boolean P_LookForEnemies(player_t *player)
 	{
 		// Found a target monster
 		P_SetTarget(&player->mo->target, P_SetTarget(&player->mo->tracer, closestmo));
+		player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, closestmo->x, closestmo->y);
 		return true;
 	}
 
@@ -7541,7 +7565,7 @@ void P_HomingAttack(mobj_t *source, mobj_t *enemy) // Home in on your target
 
 	// change angle
 	source->angle = R_PointToAngle2(source->x, source->y, enemy->x, enemy->y);
-	if (source->player)
+	if (source->player && (!demoplayback || P_AnalogMove(source->player)))
 	{
 		if (source->player == &players[consoleplayer])
 			localangle = source->angle;
@@ -7714,8 +7738,25 @@ static void P_DeathThink(player_t *player)
 		}
 
 		// Return to level music
-		if (netgame && player->deadtimer == gameovertics && P_IsLocalPlayer(player))
-			S_ChangeMusic(mapmusname, mapmusflags, true);
+		if (player->lives <= 0)
+		{
+			if (netgame)
+			{
+				if (player->deadtimer == gameovertics && P_IsLocalPlayer(player))
+					S_ChangeMusic(mapmusname, mapmusflags, true);
+			}
+			else if (multiplayer) // local multiplayer only
+			{
+				if (player->deadtimer != gameovertics)
+					;
+				// Restore the other player's music once we're dead for long enough
+				// -- that is, as long as they aren't dead too
+				else if (player == &players[displayplayer] && players[secondarydisplayplayer].lives > 0)
+					P_RestoreMusic(&players[secondarydisplayplayer]);
+				else if (player == &players[secondarydisplayplayer] && players[displayplayer].lives > 0)
+					P_RestoreMusic(&players[displayplayer]);
+			}
+		}
 	}
 
 	if (!player->mo)
@@ -7943,6 +7984,8 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 				angle = R_PointToAngle2(player->mo->x, player->mo->y, player->mo->target->x, player->mo->target->y);
 		}
 	}
+	else if (P_AnalogMove(player)) // Analog
+		angle = R_PointToAngle2(thiscam->x, thiscam->y, mo->x, mo->y);
 	else if (demoplayback)
 	{
 		angle = focusangle;
@@ -7955,8 +7998,6 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 				localangle -= abs((signed)(focusangle - localangle))>>5;
 		}
 	}
-	else if (P_AnalogMove(player)) // Analog
-		angle = R_PointToAngle2(thiscam->x, thiscam->y, mo->x, mo->y);
 	else
 		angle = focusangle + FixedAngle(camrotate*FRACUNIT);
 
@@ -7967,7 +8008,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		thiscam->angle = angle;
 	}
 
-	if (!objectplacing && !(twodlevel || (mo->flags2 & MF2_TWOD)) && !(player->pflags & PF_NIGHTSMODE))
+	if (!objectplacing && !(twodlevel || (mo->flags2 & MF2_TWOD)) && !(player->pflags & PF_NIGHTSMODE) && displayplayer == consoleplayer)
 	{
 #ifdef REDSANALOG
 		if ((player->cmd.buttons & (BT_CAMLEFT|BT_CAMRIGHT)) == (BT_CAMLEFT|BT_CAMRIGHT)); else
@@ -8421,7 +8462,7 @@ static boolean P_SpectatorJoinGame(player_t *player)
 		else if (redscore > bluescore)
 			changeto = 2;
 		else
-			changeto = (P_Random() & 1) + 1;
+			changeto = (P_RandomFixed() & 1) + 1;
 
 		if (player->mo)
 		{
@@ -8437,9 +8478,9 @@ static boolean P_SpectatorJoinGame(player_t *player)
 			displayplayer = consoleplayer;
 
 		if (changeto == 1)
-			CONS_Printf(M_GetText("%s switched to the %c%s%c.\n"), player_names[player-players], '\x85', M_GetText("Red Team"), '\x80');
+			CONS_Printf(M_GetText("%s switched to the %c%s%c.\n"), player_names[player-players], '\x85', M_GetText("Red team"), '\x80');
 		else if (changeto == 2)
-			CONS_Printf(M_GetText("%s switched to the %c%s%c.\n"), player_names[player-players], '\x84', M_GetText("Blue Team"), '\x80');
+			CONS_Printf(M_GetText("%s switched to the %c%s%c.\n"), player_names[player-players], '\x84', M_GetText("Blue team"), '\x80');
 
 		return true; // no more player->mo, cannot continue.
 	}
@@ -8672,7 +8713,7 @@ void P_PlayerThink(player_t *player)
 
 	// Add some extra randomization.
 	if (cmd->forwardmove)
-		P_Random();
+		P_RandomFixed();
 
 #ifdef PARANOIA
 	if (player->playerstate == PST_REBORN)
@@ -9322,10 +9363,13 @@ void P_PlayerAfterThink(player_t *player)
 		{
 			player->mo->angle = player->mo->tracer->angle;
 
-			if (player == &players[consoleplayer])
-				localangle = player->mo->angle;
-			else if (player == &players[secondarydisplayplayer])
-				localangle2 = player->mo->angle;
+			if (!demoplayback || P_AnalogMove(player))
+			{
+				if (player == &players[consoleplayer])
+					localangle = player->mo->angle;
+				else if (player == &players[secondarydisplayplayer])
+					localangle2 = player->mo->angle;
+			}
 		}
 
 		if (P_AproxDistance(player->mo->x - player->mo->tracer->x, player->mo->y - player->mo->tracer->y) > player->mo->radius)
@@ -9392,10 +9436,13 @@ void P_PlayerAfterThink(player_t *player)
 			player->mo->tracer->target->health += cmd->sidemove;
 			player->mo->angle += cmd->sidemove<<ANGLETOFINESHIFT; // 2048 --> ANGLE_MAX
 
-			if (player == &players[consoleplayer])
-				localangle = player->mo->angle; // Adjust the local control angle.
-			else if (player == &players[secondarydisplayplayer])
-				localangle2 = player->mo->angle;
+			if (!demoplayback || P_AnalogMove(player))
+			{
+				if (player == &players[consoleplayer])
+					localangle = player->mo->angle; // Adjust the local control angle.
+				else if (player == &players[secondarydisplayplayer])
+					localangle2 = player->mo->angle;
+			}
 		}
 	}
 

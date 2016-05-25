@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -95,7 +95,6 @@ void M_SetupMemcpy(void);
 
 // counting bits, for weapon ammo code, usually
 FUNCMATH UINT8 M_CountBits(UINT32 num, UINT8 size);
-FUNCMATH UINT8 M_HighestBit(UINT32 num);
 
 // Flags for AA trees.
 #define AATREE_ZUSER	1		// Treat values as z_zone-allocated blocks and set their user fields

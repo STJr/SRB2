@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -527,13 +527,17 @@ void P_LineOpening(line_t *linedef)
 		{
 			opentop = frontheight;
 			highceiling = backheight;
+#ifdef ESLOPE
 			opentopslope = front->c_slope;
+#endif
 		}
 		else
 		{
 			opentop = backheight;
 			highceiling = frontheight;
+#ifdef ESLOPE
 			opentopslope = back->c_slope;
+#endif
 		}
 
 		frontheight = P_GetFloorZ(tmthing, front, tmx, tmy, linedef);
@@ -543,13 +547,17 @@ void P_LineOpening(line_t *linedef)
 		{
 			openbottom = frontheight;
 			lowfloor = backheight;
+#ifdef ESLOPE
 			openbottomslope = front->f_slope;
+#endif
 		}
 		else
 		{
 			openbottom = backheight;
 			lowfloor = frontheight;
+#ifdef ESLOPE
 			openbottomslope = back->f_slope;
+#endif
 		}
 	}
 
