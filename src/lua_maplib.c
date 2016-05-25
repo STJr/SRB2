@@ -185,6 +185,32 @@ static const char *const ffloor_opt[] = {
 	"alpha",
 	NULL};
 
+enum seg_e {
+	seg_valid = 0,
+	seg_v1,
+	seg_v2,
+	seg_side,
+	seg_offset,
+	seg_angle,
+	seg_sidedef,
+	seg_linedef,
+	seg_frontsector,
+	seg_backsector,
+};
+
+static const char *const seg_opt[] = {
+	"valid",
+	"v1",
+	"v2",
+	"side",
+	"offset",
+	"angle",
+	"sidedef",
+	"linedef",
+	"frontsector",
+	"backsector",
+	NULL};
+
 static const char *const array_opt[] ={"iterate",NULL};
 static const char *const valid_opt[] ={"valid",NULL};
 
@@ -818,6 +844,63 @@ static int vertex_num(lua_State *L)
 	return 1;
 }
 
+static int seg_get(lua_State *L)
+{
+	seg_t *seg = *((seg_t **)luaL_checkudata(L, 1, META_SEG));
+	enum seg_e field = luaL_checkoption(L, 2, seg_opt[0], seg_opt);
+
+	if (!seg)
+	{
+		if (field == seg_valid) {
+			lua_pushboolean(L, 0);
+			return 1;
+		}
+		return luaL_error(L, "accessed seg_t doesn't exist anymore.");
+	}
+
+	switch(field)
+	{
+	case seg_valid: // valid
+		lua_pushboolean(L, 1);
+		return 1;
+	case seg_v1:
+		LUA_PushUserdata(L, seg->v1, META_VERTEX);
+		return 1;
+	case seg_v2:
+		LUA_PushUserdata(L, seg->v2, META_VERTEX);
+		return 1;
+	case seg_side:
+		lua_pushinteger(L, seg->side);
+		return 1;
+	case seg_offset:
+		lua_pushfixed(L, seg->offset);
+		return 1;
+	case seg_angle:
+		lua_pushangle(L, seg->angle);
+		return 1;
+	case seg_sidedef:
+		LUA_PushUserdata(L, seg->sidedef, META_SIDE);
+		return 1;
+	case seg_linedef:
+		LUA_PushUserdata(L, seg->linedef, META_LINE);
+		return 1;
+	case seg_frontsector:
+		LUA_PushUserdata(L, seg->frontsector, META_SECTOR);
+		return 1;
+	case seg_backsector:
+		LUA_PushUserdata(L, seg->backsector, META_SECTOR);
+		return 1;
+	}
+	return 0;
+}
+
+static int seg_num(lua_State *L)
+{
+	seg_t *seg = *((seg_t **)luaL_checkudata(L, 1, META_SEG));
+	lua_pushinteger(L, seg-segs);
+	return 1;
+}
+
 static int lib_iterateSectors(lua_State *L)
 {
 	size_t i = 0;
@@ -1045,6 +1128,52 @@ static int lib_getVertex(lua_State *L)
 static int lib_numvertexes(lua_State *L)
 {
 	lua_pushinteger(L, numvertexes);
+	return 1;
+}
+
+static int lib_iterateSegs(lua_State *L)
+{
+	size_t i = 0;
+	if (lua_gettop(L) < 2)
+		return luaL_error(L, "Don't call segs.iterate() directly, use it as 'for seg in segs.iterate do <block> end'.");
+	lua_settop(L, 2);
+	lua_remove(L, 1); // state is unused.
+	if (!lua_isnil(L, 1))
+		i = (size_t)(*((seg_t **)luaL_checkudata(L, 1, META_SEG)) - segs)+1;
+	if (i < numsegs)
+	{
+		LUA_PushUserdata(L, &segs[i], META_SEG);
+		return 1;
+	}
+	return 0;
+}
+
+static int lib_getSeg(lua_State *L)
+{
+	int field;
+	lua_settop(L, 2);
+	lua_remove(L, 1); // dummy userdata table is unused.
+	if (lua_isnumber(L, 1))
+	{
+		size_t i = lua_tointeger(L, 1);
+		if (i >= numsegs)
+			return 0;
+		LUA_PushUserdata(L, &segs[i], META_SEG);
+		return 1;
+	}
+	field = luaL_checkoption(L, 1, NULL, array_opt);
+	switch(field)
+	{
+	case 0: // iterate
+		lua_pushcfunction(L, lib_iterateSegs);
+		return 1;
+	}
+	return 0;
+}
+
+static int lib_numsegs(lua_State *L)
+{
+	lua_pushinteger(L, numsegs);
 	return 1;
 }
 
@@ -1367,6 +1496,14 @@ int LUA_MapLib(lua_State *L)
 		lua_setfield(L, -2, "__newindex");
 	lua_pop(L, 1);
 
+	luaL_newmetatable(L, META_SEG);
+		lua_pushcfunction(L, seg_get);
+		lua_setfield(L, -2, "__index");
+
+		lua_pushcfunction(L, seg_num);
+		lua_setfield(L, -2, "__len");
+	lua_pop(L, 1);
+
 	luaL_newmetatable(L, META_MAPHEADER);
 		lua_pushcfunction(L, mapheaderinfo_get);
 		lua_setfield(L, -2, "__index");
@@ -1424,6 +1561,16 @@ int LUA_MapLib(lua_State *L)
 			lua_setfield(L, -2, "__len");
 		lua_setmetatable(L, -2);
 	lua_setglobal(L, "vertexes");
+
+	lua_newuserdata(L, 0);
+		lua_createtable(L, 0, 2);
+			lua_pushcfunction(L, lib_getSeg);
+			lua_setfield(L, -2, "__index");
+
+			lua_pushcfunction(L, lib_numsegs);
+			lua_setfield(L, -2, "__len");
+		lua_setmetatable(L, -2);
+	lua_setglobal(L, "segs");
 
 	lua_newuserdata(L, 0);
 		lua_createtable(L, 0, 2);

@@ -38,6 +38,7 @@ extern lua_State *gL;
 #define META_SUBSECTOR "SUBSECTOR_T*"
 #define META_SECTOR "SECTOR_T*"
 #define META_FFLOOR "FFLOOR_T*"
+#define META_SEG "SEG_T*"
 #define META_MAPHEADER "MAPHEADER_T*"
 
 #define META_CVAR "CONSVAR_T*"
