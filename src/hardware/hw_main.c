@@ -544,7 +544,7 @@ static void HWR_RenderPlane(sector_t *shittyUnusedVariable, extrasubsector_t *xs
 	static FOutVector *planeVerts = NULL;
 	static UINT16 numAllocedPlaneVerts = 0;
 
-	(void)sector; ///@TODO remove shitty unused variable
+	(void)shittyUnusedVariable; ///@TODO remove shitty unused variable
 
 	// no convex poly were generated for this subsector
 	if (!xsub->planepoly)

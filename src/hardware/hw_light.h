@@ -22,8 +22,6 @@
 #include "hw_glob.h"
 #include "hw_defs.h"
 
-#define ALAM_LIGHTING //yellowtd: Define ALAM_LIGHTING for this branch
-
 #define NUMLIGHTFREESLOTS 32 // Free light slots (for SOCs)
 
 #ifdef ALAM_LIGHTING
