@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1155,6 +1155,28 @@ void S_StartSoundName(void *mo, const char *soundname)
 /// Music
 /// ------------------------
 
+#ifdef MUSICSLOT_COMPATIBILITY
+const char *compat_special_music_slots[16] =
+{
+	"titles", // 1036  title screen
+	"read_m", // 1037  intro
+	"lclear", // 1038  level clear
+	"invinc", // 1039  invincibility
+	"shoes",  // 1040  super sneakers
+	"minvnc", // 1041  Mario invincibility
+	"drown",  // 1042  drowning
+	"gmover", // 1043  game over
+	"xtlife", // 1044  extra life
+	"contsc", // 1045  continue screen
+	"supers", // 1046  Super Sonic
+	"chrsel", // 1047  character select
+	"credit", // 1048  credits
+	"racent", // 1049  Race Results
+	"stjr",   // 1050  Sonic Team Jr. Presents
+	""
+};
+#endif
+
 #define music_playing (music_name[0]) // String is empty if no music is playing
 
 static char      music_name[7]; // up to 6-character name
@@ -1303,8 +1325,7 @@ void S_SetDigMusicVolume(INT32 volume)
 #ifdef DJGPPDOS
 	I_SetDigMusicVolume(31); // Trick for buggy dos drivers. Win32 doesn't need this.
 #endif
-	if (!nodigimusic)
-		I_SetDigMusicVolume(volume&31);
+	I_SetDigMusicVolume(volume&31);
 }
 
 void S_SetMIDIMusicVolume(INT32 volume)

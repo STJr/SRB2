@@ -88,7 +88,16 @@ static long music_pos_time = -1;
 void I_StartupSound(void)
 {
 	I_Assert(!sound_started);
-	sound_started = true;
+
+	// EE inits audio first so we're following along.
+	if (SDL_WasInit(SDL_INIT_AUDIO) == SDL_INIT_AUDIO)
+		CONS_Printf("SDL Audio already started\n");
+	else if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0)
+	{
+		CONS_Alert(CONS_ERROR, "Error initializing SDL Audio: %s\n", SDL_GetError());
+		// call to start audio failed -- we do not have it
+		return;
+	}
 
 	midimode = false;
 	music = NULL;
@@ -97,19 +106,31 @@ void I_StartupSound(void)
 #if SDL_MIXER_VERSION_ATLEAST(1,2,11)
 	Mix_Init(MIX_INIT_FLAC|MIX_INIT_MOD|MIX_INIT_MP3|MIX_INIT_OGG);
 #endif
-	Mix_OpenAudio(SAMPLE_RATE, AUDIO_S16LSB, 2, 2048);
+
+	if (Mix_OpenAudio(SAMPLE_RATE, AUDIO_S16SYS, 2, 2048) < 0)
+	{
+		CONS_Alert(CONS_ERROR, "Error starting SDL_Mixer: %s\n", Mix_GetError());
+		// call to start audio failed -- we do not have it
+		return;
+	}
+
+	sound_started = true;
 	Mix_AllocateChannels(256);
 }
 
 void I_ShutdownSound(void)
 {
-	I_Assert(sound_started);
+	if (!sound_started)
+		return; // not an error condition
 	sound_started = false;
 
 	Mix_CloseAudio();
 #if SDL_MIXER_VERSION_ATLEAST(1,2,11)
 	Mix_Quit();
 #endif
+
+	SDL_QuitSubSystem(SDL_INIT_AUDIO);
+
 #ifdef HAVE_LIBGME
 	if (gme)
 		gme_delete(gme);
@@ -229,7 +250,7 @@ static Mix_Chunk *ds2chunk(void *stream)
 	}
 
 	// return Mixer Chunk.
-	return Mix_QuickLoad_RAW(sound, (UINT8*)d-sound);
+	return Mix_QuickLoad_RAW(sound, (Uint32)((UINT8*)d-sound));
 }
 
 void *I_GetSfx(sfxinfo_t *sfx)
@@ -542,14 +563,8 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 #endif
 
 	if (lumpnum == LUMPERROR)
-	{
-		lumpnum = W_CheckNumForName(va("D_%s",musicname));
-		if (lumpnum == LUMPERROR)
-			return false;
-		midimode = true;
-	}
-	else
-		midimode = false;
+		return false;
+	midimode = false;
 
 	data = (char *)W_CacheLumpNum(lumpnum, PU_MUSIC);
 	len = W_LumpLength(lumpnum);
@@ -666,9 +681,9 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 		const char *key1 = "LOOP";
 		const char *key2 = "POINT=";
 		const char *key3 = "MS=";
-		const UINT8 key1len = strlen(key1);
-		const UINT8 key2len = strlen(key2);
-		const UINT8 key3len = strlen(key3);
+		const size_t key1len = strlen(key1);
+		const size_t key2len = strlen(key2);
+		const size_t key3len = strlen(key3);
 		char *p = data;
 		while ((UINT32)(p - data) < len)
 		{
@@ -687,7 +702,7 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 			else if (!strncmp(p, key3, key3len)) // is it LOOPMS=?
 			{
 				p += key3len; // skip MS=
-				loop_point = atoi(p) / 1000.0L; // LOOPMS works by real time, as miliseconds.
+				loop_point = (float)(atoi(p) / 1000.0L); // LOOPMS works by real time, as miliseconds.
 				// Everything that uses LOOPMS will work perfectly with SDL_Mixer.
 			}
 			// Neither?! Continue searching.
@@ -699,10 +714,7 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 		CONS_Alert(CONS_ERROR, "Mix_PlayMusic: %s\n", Mix_GetError());
 		return true;
 	}
-	if (midimode)
-		Mix_VolumeMusic((UINT32)midi_volume*128/31);
-	else
-		Mix_VolumeMusic((UINT32)music_volume*128/31);
+	Mix_VolumeMusic((UINT32)music_volume*128/31);
 
     Mix_SetPostMix(mixmusic_callback, NULL);
 	music_pos = 0;
@@ -854,10 +866,15 @@ void I_ShutdownMIDIMusic(void)
 
 void I_SetMIDIMusicVolume(UINT8 volume)
 {
-	midi_volume = volume;
+	// HACK: Until we stop using native MIDI,
+	// disable volume changes
+	(void)volume;
+	midi_volume = 31;
+	//midi_volume = volume;
+
 	if (!midimode || !music)
 		return;
-	Mix_VolumeMusic((UINT32)volume*128/31);
+	Mix_VolumeMusic((UINT32)midi_volume*128/31);
 }
 
 INT32 I_RegisterSong(void *data, size_t len)
@@ -883,7 +900,8 @@ boolean I_PlaySong(INT32 handle, boolean looping)
 		return false;
 	}
 	music_pos = 0;
-	Mix_VolumeMusic((UINT32)music_volume*128/31);
+	Mix_VolumeMusic((UINT32)midi_volume*128/31);
+
 	return true;
 }
 

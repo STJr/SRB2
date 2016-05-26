@@ -1,13 +1,13 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2004-2014 by Sonic Team Junior.
+// Copyright (C) 2004-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
 // See the 'LICENSE' file for more details.
 //-----------------------------------------------------------------------------
 /// \file  y_inter.c
-/// \brief Intermission
+/// \brief Tally screens, or "Intermissions" as they were formally called in Doom
 
 #include "doomdef.h"
 #include "doomstat.h"
@@ -77,10 +77,14 @@ typedef union
 
 	struct
 	{
-		char passed1[13]; // KNUCKLES GOT
-		char passed2[16]; // A CHAOS EMERALD
+		char passed1[SKINNAMESIZE+1]; // KNUCKLES GOT    / CRAWLA HONCHO
+		char passed2[17];             // A CHAOS EMERALD / GOT THEM ALL!
+		char passed3[15];             //                   CAN NOW BECOME
+		char passed4[SKINNAMESIZE+7]; //                   SUPER CRAWLA HONCHO
 		INT32 passedx1;
 		INT32 passedx2;
+		INT32 passedx3;
+		INT32 passedx4;
 
 		y_bonus_t bonus;
 		patch_t *bonuspatch;
@@ -250,19 +254,62 @@ void Y_IntermissionDrawer(void)
 	}
 	else if (intertype == int_spec)
 	{
-		// draw the header
-/*		if (endtic != -1 && ALL7EMERALDS(emeralds) && data.spec.nowsuper != NULL)
-			V_DrawScaledPatch(48, 32, 0, data.spec.nowsuper);
-		else
-			V_DrawScaledPatch(data.spec.headx, 26, 0, data.spec.cemerald); */
+		static tic_t animatetic = 0;
+		INT32 ttheight = 16;
+		INT32 xoffset1 = 0; // Line 1 x offset
+		INT32 xoffset2 = 0; // Line 2 x offset
+		INT32 xoffset3 = 0; // Line 3 x offset
+		UINT8 drawsection = 0;
 
-		if (data.spec.passed1[0] != '\0')
+		// draw the header
+		if (intertic <= TICRATE)
+			animatetic = 0;
+		else if (!animatetic && data.spec.bonus.points == 0 && data.spec.passed3[0] != '\0')
+			animatetic = intertic;
+
+		if (animatetic)
 		{
-			V_DrawLevelTitle(data.spec.passedx1, 24, 0, data.spec.passed1);
-			V_DrawLevelTitle(data.spec.passedx2, 24+V_LevelNameHeight(data.spec.passed2)+2, 0, data.spec.passed2);
+			INT32 animatetimer = (intertic - animatetic);
+			if (animatetimer <= 8)
+			{
+				xoffset1 = -(animatetimer     * 40);
+				xoffset2 = -((animatetimer-2) * 40);
+				if (xoffset2 > 0) xoffset2 = 0;
+			}
+			else if (animatetimer <= 19)
+			{
+				drawsection = 1;
+				xoffset1 = (16-animatetimer) * 40;
+				xoffset2 = (18-animatetimer) * 40;
+				xoffset3 = (20-animatetimer) * 40;
+				if (xoffset1 < 0) xoffset1 = 0;
+				if (xoffset2 < 0) xoffset2 = 0;
+			}
+			else
+				drawsection = 1;
+		}
+
+		if (drawsection == 1)
+		{
+			ttheight = 16;
+			V_DrawLevelTitle(data.spec.passedx1 + xoffset1, ttheight, 0, data.spec.passed1);
+			ttheight += V_LevelNameHeight(data.spec.passed3) + 2;
+			V_DrawLevelTitle(data.spec.passedx3 + xoffset2, ttheight, 0, data.spec.passed3);
+			ttheight += V_LevelNameHeight(data.spec.passed4) + 2;
+			V_DrawLevelTitle(data.spec.passedx4 + xoffset3, ttheight, 0, data.spec.passed4);
+		}
+		else if (data.spec.passed1[0] != '\0')
+		{
+			ttheight = 24;
+			V_DrawLevelTitle(data.spec.passedx1 + xoffset1, ttheight, 0, data.spec.passed1);
+			ttheight += V_LevelNameHeight(data.spec.passed2) + 2;
+			V_DrawLevelTitle(data.spec.passedx2 + xoffset2, ttheight, 0, data.spec.passed2);
 		}
 		else
-			V_DrawLevelTitle(data.spec.passedx2, 24+(V_LevelNameHeight(data.spec.passed2)/2)+2, 0, data.spec.passed2);
+		{
+			ttheight = 24 + (V_LevelNameHeight(data.spec.passed2)/2) + 2;
+			V_DrawLevelTitle(data.spec.passedx2 + xoffset1, ttheight, 0, data.spec.passed2);
+		}
 
 		// draw the emeralds
 		if (intertic & 1)
@@ -708,7 +755,7 @@ void Y_Ticker(void)
 		{
 			if (intertic > tallydonetic)
 			{
-				endtic = intertic + 4*TICRATE; // 4 second pause after end of tally for sound
+				endtic = intertic + 4*TICRATE; // 4 second pause after end of tally
 				S_StartSound(NULL, sfx_flgcap); // cha-ching!
 			}
 			return;
@@ -728,7 +775,7 @@ void Y_Ticker(void)
 			if (data.spec.continues & 0x80) // don't set endtic yet!
 				tallydonetic = intertic + (3*TICRATE)/2;
 			else // okay we're good.
-				endtic = intertic + 3*TICRATE; // 3 second pause after end of tally
+				endtic = intertic + 4*TICRATE; // 4 second pause after end of tally
 
 			S_StartSound(NULL, sfx_chchng); // cha-ching!
 
@@ -1098,6 +1145,10 @@ void Y_StartIntermission(void)
 				data.spec.nowsuper = NULL;
 			} */
 
+			// Super form stuff (normally blank)
+			data.spec.passed3[0] = '\0';
+			data.spec.passed4[0] = '\0';
+
 			// set up the "got through act" message according to skin name
 			if (stagefailed)
 			{
@@ -1111,10 +1162,19 @@ void Y_StartIntermission(void)
 					skins[players[consoleplayer].skin].realname);
 				data.spec.passed1[sizeof data.spec.passed1 - 1] = '\0';
 				strcpy(data.spec.passed2, "GOT THEM ALL!");
+
+				if (skins[players[consoleplayer].skin].flags & SF_SUPER)
+				{
+					strcpy(data.spec.passed3, "CAN NOW BECOME");
+					snprintf(data.spec.passed4,
+						sizeof data.spec.passed4, "SUPER %s",
+						skins[players[consoleplayer].skin].realname);
+					data.spec.passed4[sizeof data.spec.passed4 - 1] = '\0';
+				}
 			}
 			else
 			{
-				if (strlen(skins[players[consoleplayer].skin].realname) <= 8)
+				if (strlen(skins[players[consoleplayer].skin].realname) <= SKINNAMESIZE-5)
 				{
 					snprintf(data.spec.passed1,
 						sizeof data.spec.passed1, "%s GOT",
@@ -1127,6 +1187,8 @@ void Y_StartIntermission(void)
 			}
 			data.spec.passedx1 = (BASEVIDWIDTH - V_LevelNameWidth(data.spec.passed1))/2;
 			data.spec.passedx2 = (BASEVIDWIDTH - V_LevelNameWidth(data.spec.passed2))/2;
+			data.spec.passedx3 = (BASEVIDWIDTH - V_LevelNameWidth(data.spec.passed3))/2;
+			data.spec.passedx4 = (BASEVIDWIDTH - V_LevelNameWidth(data.spec.passed4))/2;
 			break;
 		}
 

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2012-2014 by John "JTE" Muniz.
-// Copyright (C) 2012-2014 by Sonic Team Junior.
+// Copyright (C) 2012-2016 by John "JTE" Muniz.
+// Copyright (C) 2012-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -85,20 +85,28 @@ static int lib_print(lua_State *L)
 	return 0;
 }
 
-// M_RANDOM
-//////////////
-
-static int lib_pRandom(lua_State *L)
+static int lib_evalMath(lua_State *L)
 {
-	NOHUD
-	lua_pushinteger(L, P_Random());
+	const char *word = luaL_checkstring(L, 1);
+	LUA_Deprecated(L, "EvalMath(string)", "_G[string]");
+	lua_pushinteger(L, LUA_EvalMath(word));
 	return 1;
 }
 
-static int lib_pSignedRandom(lua_State *L)
+// M_RANDOM
+//////////////
+
+static int lib_pRandomFixed(lua_State *L)
 {
 	NOHUD
-	lua_pushinteger(L, P_SignedRandom());
+	lua_pushfixed(L, P_RandomFixed());
+	return 1;
+}
+
+static int lib_pRandomByte(lua_State *L)
+{
+	NOHUD
+	lua_pushinteger(L, P_RandomByte());
 	return 1;
 }
 
@@ -107,6 +115,8 @@ static int lib_pRandomKey(lua_State *L)
 	INT32 a = (INT32)luaL_checkinteger(L, 1);
 
 	NOHUD
+	if (a > 65536)
+		LUA_UsageWarning(L, "P_RandomKey: range > 65536 is undefined behavior");
 	lua_pushinteger(L, P_RandomKey(a));
 	return 1;
 }
@@ -122,7 +132,33 @@ static int lib_pRandomRange(lua_State *L)
 		a = b;
 		b = c;
 	}
+	if ((b-a+1) > 65536)
+		LUA_UsageWarning(L, "P_RandomRange: range > 65536 is undefined behavior");
 	lua_pushinteger(L, P_RandomRange(a, b));
+	return 1;
+}
+
+// Deprecated, macros, etc.
+static int lib_pRandom(lua_State *L)
+{
+	NOHUD
+	LUA_Deprecated(L, "P_Random", "P_RandomByte");
+	lua_pushinteger(L, P_RandomByte());
+	return 1;
+}
+
+static int lib_pSignedRandom(lua_State *L)
+{
+	NOHUD
+	lua_pushinteger(L, P_SignedRandom());
+	return 1;
+}
+
+static int lib_pRandomChance(lua_State *L)
+{
+	fixed_t p = luaL_checkfixed(L, 1);
+	NOHUD
+	lua_pushboolean(L, P_RandomChance(p));
 	return 1;
 }
 
@@ -140,14 +176,38 @@ static int lib_pAproxDistance(lua_State *L)
 
 static int lib_pClosestPointOnLine(lua_State *L)
 {
+	int n = lua_gettop(L);
 	fixed_t x = luaL_checkfixed(L, 1);
 	fixed_t y = luaL_checkfixed(L, 2);
-	line_t *line = *((line_t **)luaL_checkudata(L, 3, META_LINE));
 	vertex_t result;
 	//HUDSAFE
-	if (!line)
-		return LUA_ErrInvalid(L, "line_t");
-	P_ClosestPointOnLine(x, y, line, &result);
+	if (lua_isuserdata(L, 3)) // use a real linedef to get our points
+	{
+		line_t *line = *((line_t **)luaL_checkudata(L, 3, META_LINE));
+		if (!line)
+			return LUA_ErrInvalid(L, "line_t");
+		P_ClosestPointOnLine(x, y, line, &result);
+	}
+	else // use custom coordinates of our own!
+	{
+		vertex_t v1, v2; // fake vertexes
+		line_t junk; // fake linedef
+
+		if (n < 6)
+			return luaL_error(L, "arguments 3 to 6 not all given (expected 4 fixed-point integers)");
+
+		v1.x = luaL_checkfixed(L, 3);
+		v1.y = luaL_checkfixed(L, 4);
+		v2.x = luaL_checkfixed(L, 5);
+		v2.y = luaL_checkfixed(L, 6);
+
+		junk.v1 = &v1;
+		junk.v2 = &v2;
+		junk.dx = v2.x - v1.x;
+		junk.dy = v2.y - v1.y;
+		P_ClosestPointOnLine(x, y, &junk, &result);
+	}
+
 	lua_pushfixed(L, result.x);
 	lua_pushfixed(L, result.y);
 	return 2;
@@ -239,8 +299,8 @@ static int lib_pSpawnMobj(lua_State *L)
 	fixed_t z = luaL_checkfixed(L, 3);
 	mobjtype_t type = luaL_checkinteger(L, 4);
 	NOHUD
-	if (type > MT_LASTFREESLOT)
-		return luaL_error(L, "mobjtype_t out of bounds error!");
+	if (type >= NUMMOBJTYPES)
+		return luaL_error(L, "mobj type %d out of range (0 - %d)", type, NUMMOBJTYPES-1);
 	LUA_PushUserdata(L, P_SpawnMobj(x, y, z, type), META_MOBJ);
 	return 1;
 }
@@ -265,8 +325,8 @@ static int lib_pSpawnMissile(lua_State *L)
 	NOHUD
 	if (!source || !dest)
 		return LUA_ErrInvalid(L, "mobj_t");
-	if (type > MT_LASTFREESLOT)
-		return luaL_error(L, "mobjtype_t out of bounds error!");
+	if (type >= NUMMOBJTYPES)
+		return luaL_error(L, "mobj type %d out of range (0 - %d)", type, NUMMOBJTYPES-1);
 	LUA_PushUserdata(L, P_SpawnMissile(source, dest, type), META_MOBJ);
 	return 1;
 }
@@ -282,8 +342,8 @@ static int lib_pSpawnXYZMissile(lua_State *L)
 	NOHUD
 	if (!source || !dest)
 		return LUA_ErrInvalid(L, "mobj_t");
-	if (type > MT_LASTFREESLOT)
-		return luaL_error(L, "mobjtype_t out of bounds error!");
+	if (type >= NUMMOBJTYPES)
+		return luaL_error(L, "mobj type %d out of range (0 - %d)", type, NUMMOBJTYPES-1);
 	LUA_PushUserdata(L, P_SpawnXYZMissile(source, dest, type, x, y, z), META_MOBJ);
 	return 1;
 }
@@ -301,8 +361,8 @@ static int lib_pSpawnPointMissile(lua_State *L)
 	NOHUD
 	if (!source)
 		return LUA_ErrInvalid(L, "mobj_t");
-	if (type > MT_LASTFREESLOT)
-		return luaL_error(L, "mobjtype_t out of bounds error!");
+	if (type >= NUMMOBJTYPES)
+		return luaL_error(L, "mobj type %d out of range (0 - %d)", type, NUMMOBJTYPES-1);
 	LUA_PushUserdata(L, P_SpawnPointMissile(source, xa, ya, za, type, x, y, z), META_MOBJ);
 	return 1;
 }
@@ -318,8 +378,8 @@ static int lib_pSpawnAlteredDirectionMissile(lua_State *L)
 	NOHUD
 	if (!source)
 		return LUA_ErrInvalid(L, "mobj_t");
-	if (type > MT_LASTFREESLOT)
-		return luaL_error(L, "mobjtype_t out of bounds error!");
+	if (type >= NUMMOBJTYPES)
+		return luaL_error(L, "mobj type %d out of range (0 - %d)", type, NUMMOBJTYPES-1);
 	LUA_PushUserdata(L, P_SpawnAlteredDirectionMissile(source, type, x, y, z, shiftingAngle), META_MOBJ);
 	return 1;
 }
@@ -347,8 +407,8 @@ static int lib_pSPMAngle(lua_State *L)
 	NOHUD
 	if (!source)
 		return LUA_ErrInvalid(L, "mobj_t");
-	if (type > MT_LASTFREESLOT)
-		return luaL_error(L, "mobjtype_t out of bounds error!");
+	if (type >= NUMMOBJTYPES)
+		return luaL_error(L, "mobj type %d out of range (0 - %d)", type, NUMMOBJTYPES-1);
 	LUA_PushUserdata(L, P_SPMAngle(source, type, angle, allowaim, flags2), META_MOBJ);
 	return 1;
 }
@@ -361,8 +421,8 @@ static int lib_pSpawnPlayerMissile(lua_State *L)
 	NOHUD
 	if (!source)
 		return LUA_ErrInvalid(L, "mobj_t");
-	if (type > MT_LASTFREESLOT)
-		return luaL_error(L, "mobjtype_t out of bounds error!");
+	if (type >= NUMMOBJTYPES)
+		return luaL_error(L, "mobj type %d out of range (0 - %d)", type, NUMMOBJTYPES-1);
 	LUA_PushUserdata(L, P_SpawnPlayerMissile(source, type, flags2), META_MOBJ);
 	return 1;
 }
@@ -381,8 +441,8 @@ static int lib_pWeaponOrPanel(lua_State *L)
 {
 	mobjtype_t type = luaL_checkinteger(L, 1);
 	//HUDSAFE
-	if (type > MT_LASTFREESLOT)
-		return luaL_error(L, "mobjtype_t out of bounds error!");
+	if (type >= NUMMOBJTYPES)
+		return luaL_error(L, "mobj type %d out of range (0 - %d)", type, NUMMOBJTYPES-1);
 	lua_pushboolean(L, P_WeaponOrPanel(type));
 	return 1;
 }
@@ -421,8 +481,10 @@ static int lib_pSpawnParaloop(lua_State *L)
 	statenum_t nstate = luaL_optinteger(L, 8, S_NULL);
 	boolean spawncenter = lua_optboolean(L, 9);
 	NOHUD
-	if (type > MT_LASTFREESLOT)
-		return luaL_error(L, "mobjtype_t out of bounds error!");
+	if (type >= NUMMOBJTYPES)
+		return luaL_error(L, "mobj type %d out of range (0 - %d)", type, NUMMOBJTYPES-1);
+	if (nstate >= NUMSTATES)
+		return luaL_error(L, "state %d out of range (0 - %d)", nstate, NUMSTATES-1);
 	P_SpawnParaloop(x, y, z, radius, number, type, nstate, rotangle, spawncenter);
 	return 0;
 }
@@ -852,8 +914,8 @@ static int lib_pSpawnSpinMobj(lua_State *L)
 	NOHUD
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
-	if (type > MT_LASTFREESLOT)
-		return luaL_error(L, "mobjtype_t out of bounds error!");
+	if (type >= NUMMOBJTYPES)
+		return luaL_error(L, "mobj type %d out of range (0 - %d)", type, NUMMOBJTYPES-1);
 	P_SpawnSpinMobj(player, type);
 	return 0;
 }
@@ -1218,6 +1280,8 @@ static int lib_pSetMobjStateNF(lua_State *L)
 	NOHUD
 	if (!mobj)
 		return LUA_ErrInvalid(L, "mobj_t");
+	if (state >= NUMSTATES)
+		return luaL_error(L, "state %d out of range (0 - %d)", state, NUMSTATES-1);
 	if (mobj->player && state == S_NULL)
 		return luaL_error(L, "Attempt to remove player mobj with S_NULL.");
 	lua_pushboolean(L, P_SetMobjStateNF(mobj, state));
@@ -1329,8 +1393,8 @@ static int lib_pIsFlagAtBase(lua_State *L)
 {
 	mobjtype_t flag = luaL_checkinteger(L, 1);
 	NOHUD
-	if (flag > MT_LASTFREESLOT)
-		return luaL_error(L, "mobjtype_t out of bounds error!");
+	if (flag >= NUMMOBJTYPES)
+		return luaL_error(L, "mobj type %d out of range (0 - %d)", flag, NUMMOBJTYPES-1);
 	lua_pushboolean(L, P_IsFlagAtBase(flag));
 	return 1;
 }
@@ -1563,7 +1627,7 @@ static int lib_rSetPlayerSkin(lua_State *L)
 	{
 		INT32 i = luaL_checkinteger(L, 2);
 		if (i < 0 || i >= MAXSKINS)
-			return luaL_error(L, "argument #2 cannot exceed MAXSKINS");
+			return luaL_error(L, "skin number (argument #2) %d out of range (0 - %d)", i, MAXSKINS-1);
 		SetPlayerSkinByNum(player-players, i);
 	}
 	else // skin name
@@ -1583,6 +1647,8 @@ static int lib_sStartSound(lua_State *L)
 	sfxenum_t sound_id = luaL_checkinteger(L, 2);
 	player_t *player = NULL;
 	NOHUD
+	if (sound_id >= NUMSFX)
+		return luaL_error(L, "sfx %d out of range (0 - %d)", sound_id, NUMSFX-1);
 	if (!lua_isnil(L, 1))
 	{
 		origin = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
@@ -1607,12 +1673,15 @@ static int lib_sStartSoundAtVolume(lua_State *L)
 	INT32 volume = (INT32)luaL_checkinteger(L, 3);
 	player_t *player = NULL;
 	NOHUD
+
 	if (!lua_isnil(L, 1))
 	{
 		origin = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
 		if (!origin)
 			return LUA_ErrInvalid(L, "mobj_t");
 	}
+	if (sound_id >= NUMSFX)
+		return luaL_error(L, "sfx %d out of range (0 - %d)", sound_id, NUMSFX-1);
 	if (!lua_isnone(L, 4) && lua_isuserdata(L, 4))
 	{
 		player = *((player_t **)luaL_checkudata(L, 4, META_PLAYER));
@@ -1636,17 +1705,59 @@ static int lib_sStopSound(lua_State *L)
 
 static int lib_sChangeMusic(lua_State *L)
 {
+#ifdef MUSICSLOT_COMPATIBILITY
+	const char *music_name;
+	UINT32 music_num;
+	char music_compat_name[7];
+
+	boolean looping;
+	player_t *player = NULL;
+	UINT16 music_flags = 0;
+	NOHUD
+
+	if (lua_isnumber(L, 1))
+	{
+		music_num = (UINT32)luaL_checkinteger(L, 1);
+		music_flags = (UINT16)(music_num & 0x0000FFFF);
+		if (music_flags && music_flags <= 1035)
+			snprintf(music_compat_name, 7, "%sM", G_BuildMapName((INT32)music_flags));
+		else if (music_flags && music_flags <= 1050)
+			strncpy(music_compat_name, compat_special_music_slots[music_flags - 1036], 7);
+		else
+			music_compat_name[0] = 0; // becomes empty string
+		music_compat_name[6] = 0;
+		music_name = (const char *)&music_compat_name;
+		music_flags = 0;
+	}
+	else
+	{
+		music_num = 0;
+		music_name = luaL_checkstring(L, 1);
+	}
+
+
+	looping = (boolean)lua_opttrueboolean(L, 2);
+
+#else
 	const char *music_name = luaL_checkstring(L, 1);
 	boolean looping = (boolean)lua_opttrueboolean(L, 2);
 	player_t *player = NULL;
 	UINT16 music_flags = 0;
 	NOHUD
+
+#endif
 	if (!lua_isnone(L, 3) && lua_isuserdata(L, 3))
 	{
 		player = *((player_t **)luaL_checkudata(L, 3, META_PLAYER));
 		if (!player)
 			return LUA_ErrInvalid(L, "player_t");
 	}
+
+#ifdef MUSICSLOT_COMPATIBILITY
+	if (music_num)
+		music_flags = (UINT16)((music_num & 0x7FFF0000) >> 16);
+	else
+#endif
 	music_flags = (UINT16)luaL_optinteger(L, 4, 0);
 
 	if (!player || P_IsLocalPlayer(player))
@@ -1767,6 +1878,8 @@ static int lib_sIdPlaying(lua_State *L)
 {
 	sfxenum_t id = luaL_checkinteger(L, 1);
 	NOHUD
+	if (id >= NUMSFX)
+		return luaL_error(L, "sfx %d out of range (0 - %d)", id, NUMSFX-1);
 	lua_pushboolean(L, S_IdPlaying(id));
 	return 1;
 }
@@ -1778,6 +1891,8 @@ static int lib_sSoundPlaying(lua_State *L)
 	NOHUD
 	if (!origin)
 		return LUA_ErrInvalid(L, "mobj_t");
+	if (id >= NUMSFX)
+		return luaL_error(L, "sfx %d out of range (0 - %d)", id, NUMSFX-1);
 	lua_pushboolean(L, S_SoundPlaying(origin, id));
 	return 1;
 }
@@ -1798,7 +1913,7 @@ static int lib_gDoReborn(lua_State *L)
 	INT32 playernum = luaL_checkinteger(L, 1);
 	NOHUD
 	if (playernum >= MAXPLAYERS)
-		return luaL_error(L, "playernum out of bounds error!");
+		return luaL_error(L, "playernum %d out of range (0 - %d)", playernum, MAXPLAYERS-1);
 	G_DoReborn(playernum);
 	return 0;
 }
@@ -1922,12 +2037,16 @@ static int lib_gTicsToMilliseconds(lua_State *L)
 
 static luaL_Reg lib[] = {
 	{"print", lib_print},
+	{"EvalMath", lib_evalMath},
 
 	// m_random
-	{"P_Random",lib_pRandom},
-	{"P_SignedRandom",lib_pSignedRandom},
+	{"P_RandomFixed",lib_pRandomFixed},
+	{"P_RandomByte",lib_pRandomByte},
 	{"P_RandomKey",lib_pRandomKey},
 	{"P_RandomRange",lib_pRandomRange},
+	{"P_Random",lib_pRandom}, // DEPRECATED
+	{"P_SignedRandom",lib_pSignedRandom}, // MACRO
+	{"P_RandomChance",lib_pRandomChance}, // MACRO
 
 	// p_maputil
 	{"P_AproxDistance",lib_pAproxDistance},

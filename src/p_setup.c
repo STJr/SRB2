@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -181,7 +181,7 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	DEH_WriteUndoline("NEXTLEVEL", va("%d", mapheaderinfo[num]->nextlevel), UNDO_NONE);
 	mapheaderinfo[num]->nextlevel = (INT16)(i + 1);
 	DEH_WriteUndoline("MUSIC", mapheaderinfo[num]->musname, UNDO_NONE);
-	snprintf(mapheaderinfo[num]->musname, 7, va("%sM", G_BuildMapName(i)));
+	snprintf(mapheaderinfo[num]->musname, 7, "%sM", G_BuildMapName(i));
 	mapheaderinfo[num]->musname[6] = 0;
 	DEH_WriteUndoline("MUSICTRACK", va("%d", mapheaderinfo[num]->mustrack), UNDO_NONE);
 	mapheaderinfo[num]->mustrack = 0;
@@ -1214,7 +1214,7 @@ static void P_LoadLineDefs2(void)
 		case 443: // Calls a named Lua function
 			if (sides[ld->sidenum[0]].text)
 			{
-				UINT8 len = strlen(sides[ld->sidenum[0]].text)+1;
+				size_t len = strlen(sides[ld->sidenum[0]].text)+1;
 				if (ld->sidenum[1] != 0xffff && sides[ld->sidenum[1]].text)
 					len += strlen(sides[ld->sidenum[1]].text);
 				ld->text = Z_Malloc(len, PU_LEVEL, NULL);
@@ -1888,7 +1888,7 @@ static boolean P_LoadBlockMap(lumpnum_t lumpnum)
 //
 static void P_GroupLines(void)
 {
-	size_t i, j, total = 0;
+	size_t i, j;
 	line_t *li;
 	sector_t *sector;
 	subsector_t *ss = subsectors;
@@ -1922,14 +1922,10 @@ static void P_GroupLines(void)
 	// count number of lines in each sector
 	for (i = 0, li = lines; i < numlines; i++, li++)
 	{
-		total++;
 		li->frontsector->linecount++;
 
 		if (li->backsector && li->backsector != li->frontsector)
-		{
 			li->backsector->linecount++;
-			total++;
-		}
 	}
 
 	// allocate linebuffers for each sector
@@ -2386,7 +2382,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	// use gamemap to get map number.
 	// 99% of the things already did, so.
 	// Map header should always be in place at this point
-	INT32 i, loadprecip = 1;
+	INT32 i, loadprecip = 1, ranspecialwipe = 0;
 	INT32 loademblems = 1;
 	INT32 fromnetsave = 0;
 	boolean loadedbm = false;
@@ -2459,6 +2455,28 @@ boolean P_SetupLevel(boolean skipprecip)
 	// will be set by player think.
 	players[consoleplayer].viewz = 1;
 
+	// Special stage fade to white
+	// This is handled BEFORE sounds are stopped.
+	if (rendermode != render_none && G_IsSpecialStage(gamemap))
+	{
+		tic_t starttime = I_GetTime();
+		tic_t endtime = starttime + (3*TICRATE)/2;
+
+		S_StartSound(NULL, sfx_s3kaf);
+
+		F_WipeStartScreen();
+		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 0);
+
+		F_WipeEndScreen();
+		F_RunWipe(wipedefs[wipe_speclevel_towhite], false);
+
+		// Hold on white for extra effect.
+		while (I_GetTime() < endtime)
+			I_Sleep();
+
+		ranspecialwipe = 1;
+	}
+
 	// Make sure all sounds are stopped before Z_FreeTags.
 	S_StopSounds();
 	S_ClearSfx();
@@ -2468,25 +2486,28 @@ boolean P_SetupLevel(boolean skipprecip)
 	S_Start();
 
 	// Let's fade to black here
-	if (rendermode != render_none)
+	// But only if we didn't do the special stage wipe
+	if (rendermode != render_none && !ranspecialwipe)
 	{
 		F_WipeStartScreen();
 		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 
 		F_WipeEndScreen();
 		F_RunWipe(wipedefs[wipe_level_toblack], false);
+	}
 
+	// Print "SPEEDING OFF TO [ZONE] [ACT 1]..."
+	if (rendermode != render_none)
+	{
 		// Don't include these in the fade!
-		{
-			char tx[64];
-			V_DrawSmallString(1, 191, V_ALLOWLOWERCASE, M_GetText("Speeding off to..."));
-			snprintf(tx, 63, "%s%s%s",
-				mapheaderinfo[gamemap-1]->lvlttl,
-				(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE) ? "" : " ZONE",
-				(mapheaderinfo[gamemap-1]->actnum > 0) ? va(", Act %d",mapheaderinfo[gamemap-1]->actnum) : "");
-			V_DrawSmallString(1, 195, V_ALLOWLOWERCASE, tx);
-			I_UpdateNoVsync();
-		}
+		char tx[64];
+		V_DrawSmallString(1, 191, V_ALLOWLOWERCASE, M_GetText("Speeding off to..."));
+		snprintf(tx, 63, "%s%s%s",
+			mapheaderinfo[gamemap-1]->lvlttl,
+			(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE) ? "" : " ZONE",
+			(mapheaderinfo[gamemap-1]->actnum > 0) ? va(", Act %d",mapheaderinfo[gamemap-1]->actnum) : "");
+		V_DrawSmallString(1, 195, V_ALLOWLOWERCASE, tx);
+		I_UpdateNoVsync();
 	}
 
 #ifdef HAVE_BLUA
@@ -2784,7 +2805,7 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	// Remove the loading shit from the screen
 	if (rendermode != render_none)
-		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, (ranspecialwipe) ? 0 : 31);
 
 	if (precache || dedicated)
 		R_PrecacheLevel();
@@ -2817,7 +2838,7 @@ boolean P_SetupLevel(boolean skipprecip)
 		savedata.lives = 0;
 	}
 
-	skyVisible = true; // assume the skybox is visible on level load.
+	skyVisible = skyVisible1 = skyVisible2 = true; // assume the skybox is visible on level load.
 	if (loadprecip) // uglier hack
 	{ // to make a newly loaded level start on the second frame.
 		INT32 buf = gametic % BACKUPTICS;

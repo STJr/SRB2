@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2012-2014 by John "JTE" Muniz.
-// Copyright (C) 2012-2014 by Sonic Team Junior.
+// Copyright (C) 2012-2016 by John "JTE" Muniz.
+// Copyright (C) 2012-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -34,6 +34,7 @@ enum mobj_e {
 	mobj_angle,
 	mobj_sprite,
 	mobj_frame,
+	mobj_anim_duration,
 	mobj_touching_sectorlist,
 	mobj_subsector,
 	mobj_floorz,
@@ -92,6 +93,7 @@ static const char *const mobj_opt[] = {
 	"angle",
 	"sprite",
 	"frame",
+	"anim_duration",
 	"touching_sectorlist",
 	"subsector",
 	"floorz",
@@ -186,6 +188,9 @@ static int mobj_get(lua_State *L)
 		break;
 	case mobj_frame:
 		lua_pushinteger(L, mo->frame);
+		break;
+	case mobj_anim_duration:
+		lua_pushinteger(L, mo->anim_duration);
 		break;
 	case mobj_touching_sectorlist:
 		return UNIMPLEMENTED;
@@ -406,6 +411,9 @@ static int mobj_set(lua_State *L)
 	case mobj_frame:
 		mo->frame = (UINT32)luaL_checkinteger(L, 3);
 		break;
+	case mobj_anim_duration:
+		mo->anim_duration = (UINT16)luaL_checkinteger(L, 3);
+		break;
 	case mobj_touching_sectorlist:
 		return UNIMPLEMENTED;
 	case mobj_subsector:
@@ -501,8 +509,13 @@ static int mobj_set(lua_State *L)
 		return luaL_error(L, "mobj.skin '%s' not found!", skin);
 	}
 	case mobj_color:
-		mo->color = ((UINT8)luaL_checkinteger(L, 3)) % MAXTRANSLATIONS;
+	{
+		UINT8 newcolor = (UINT8)luaL_checkinteger(L,3);
+		if (newcolor >= MAXTRANSLATIONS)
+			return luaL_error(L, "mobj.color %d out of range (0 - %d).", newcolor, MAXTRANSLATIONS-1);
+		mo->color = newcolor;
 		break;
+	}
 	case mobj_bnext:
 		return NOSETPOS;
 	case mobj_bprev:
@@ -516,8 +529,8 @@ static int mobj_set(lua_State *L)
 	case mobj_type: // yeah sure, we'll let you change the mobj's type.
 	{
 		mobjtype_t newtype = luaL_checkinteger(L, 3);
-		if (newtype > MT_LASTFREESLOT)
-			return luaL_error(L, "mobj.type %u is out of bounds.", newtype);
+		if (newtype >= NUMMOBJTYPES)
+			return luaL_error(L, "mobj.type %d out of range (0 - %d).", newtype, NUMMOBJTYPES-1);
 		mo->type = newtype;
 		mo->info = &mobjinfo[newtype];
 		P_SetScale(mo, mo->scale);

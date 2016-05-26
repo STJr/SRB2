@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2012-2014 by John "JTE" Muniz.
-// Copyright (C) 2012-2014 by Sonic Team Junior.
+// Copyright (C) 2012-2016 by John "JTE" Muniz.
+// Copyright (C) 2012-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -37,6 +37,7 @@ enum sector_e {
 	sector_thinglist,
 	sector_heightsec,
 	sector_camsec,
+	sector_lines,
 	sector_ffloors
 };
 
@@ -52,6 +53,7 @@ static const char *const sector_opt[] = {
 	"thinglist",
 	"heightsec",
 	"camsec",
+	"lines",
 	"ffloors",
 	NULL};
 
@@ -260,6 +262,67 @@ static int sector_iterate(lua_State *L)
 	return 3;
 }
 
+// sector.lines, i -> sector.lines[i]
+// sector.lines.valid, for validity checking
+static int sectorlines_get(lua_State *L)
+{
+	line_t **seclines = *((line_t ***)luaL_checkudata(L, 1, META_SECTORLINES));
+	size_t i;
+	size_t numoflines = 0;
+	lua_settop(L, 2);
+	if (!lua_isnumber(L, 2))
+	{
+		int field = luaL_checkoption(L, 2, NULL, valid_opt);
+		if (!seclines)
+		{
+			if (field == 0) {
+				lua_pushboolean(L, 0);
+				return 1;
+			}
+			return luaL_error(L, "accessed sector_t doesn't exist anymore.");
+		} else if (field == 0) {
+			lua_pushboolean(L, 1);
+			return 1;
+		}
+	}
+
+	// check first linedef to figure which of its sectors owns this sector->lines pointer
+	// then check that sector's linecount to get a maximum index
+	//if (!seclines[0])
+		//return luaL_error(L, "no lines found!"); // no first linedef?????
+	if (seclines[0]->frontsector->lines == seclines)
+		numoflines = seclines[0]->frontsector->linecount;
+	else if (seclines[0]->backsector && seclines[0]->backsector->lines == seclines) // check backsector exists first
+		numoflines = seclines[0]->backsector->linecount;
+	//if neither sector has it then ???
+
+	if (!numoflines)
+		return luaL_error(L, "no lines found!");
+
+	i = (size_t)lua_tointeger(L, 2);
+	if (i >= numoflines)
+		return 0;
+	LUA_PushUserdata(L, seclines[i], META_LINE);
+	return 1;
+}
+
+static int sectorlines_num(lua_State *L)
+{
+	line_t **seclines = *((line_t ***)luaL_checkudata(L, 1, META_SECTORLINES));
+	size_t numoflines = 0;
+	// check first linedef to figure which of its sectors owns this sector->lines pointer
+	// then check that sector's linecount to get a maximum index
+	//if (!seclines[0])
+		//return luaL_error(L, "no lines found!"); // no first linedef?????
+	if (seclines[0]->frontsector->lines == seclines)
+		numoflines = seclines[0]->frontsector->linecount;
+	else if (seclines[0]->backsector && seclines[0]->backsector->lines == seclines) // check backsector exists first
+		numoflines = seclines[0]->backsector->linecount;
+	//if neither sector has it then ???
+	lua_pushinteger(L, numoflines);
+	return 1;
+}
+
 static int sector_get(lua_State *L)
 {
 	sector_t *sector = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
@@ -324,6 +387,9 @@ static int sector_get(lua_State *L)
 		if (sector->camsec < 0)
 			return 0;
 		LUA_PushUserdata(L, &sectors[sector->camsec], META_SECTOR);
+		return 1;
+	case sector_lines: // lines
+		LUA_PushUserdata(L, sector->lines, META_SECTORLINES);
 		return 1;
 	case sector_ffloors: // ffloors
 		lua_pushcfunction(L, lib_iterateSectorFFloors);
@@ -1111,9 +1177,13 @@ static int ffloor_set(lua_State *L)
 	case ffloor_bottompic:
 		*ffloor->bottompic = P_AddLevelFlatRuntime(luaL_checkstring(L, 3));
 		break;
-	case ffloor_flags:
+	case ffloor_flags: {
+		ffloortype_e oldflags = ffloor->flags; // store FOF's old flags
 		ffloor->flags = luaL_checkinteger(L, 3);
+		if (ffloor->flags != oldflags)
+			ffloor->target->moved = true; // reset target sector's lightlist
 		break;
+	}
 	case ffloor_alpha:
 		ffloor->alpha = (INT32)luaL_checkinteger(L, 3);
 		break;
@@ -1169,7 +1239,7 @@ static int mapheaderinfo_get(lua_State *L)
 	else if (fastcmp(field,"nextlevel"))
 		lua_pushinteger(L, header->nextlevel);
 	else if (fastcmp(field,"musname"))
-		lua_pushlstring(L, header->musname, 6);
+		lua_pushstring(L, header->musname);
 	else if (fastcmp(field,"mustrack"))
 		lua_pushinteger(L, header->mustrack);
 	else if (fastcmp(field,"forcecharacter"))
@@ -1230,6 +1300,14 @@ static int mapheaderinfo_get(lua_State *L)
 
 int LUA_MapLib(lua_State *L)
 {
+	luaL_newmetatable(L, META_SECTORLINES);
+		lua_pushcfunction(L, sectorlines_get);
+		lua_setfield(L, -2, "__index");
+
+		lua_pushcfunction(L, sectorlines_num);
+		lua_setfield(L, -2, "__len");
+	lua_pop(L, 1);
+
 	luaL_newmetatable(L, META_SECTOR);
 		lua_pushcfunction(L, sector_get);
 		lua_setfield(L, -2, "__index");

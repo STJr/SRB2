@@ -45,9 +45,6 @@ typedef DWORD (WINAPI *p_timeGetTime) (void);
 typedef UINT (WINAPI *p_timeEndPeriod) (UINT);
 typedef HANDLE (WINAPI *p_OpenFileMappingA) (DWORD, BOOL, LPCSTR);
 typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
-typedef HANDLE (WINAPI *p_GetCurrentProcess) (VOID);
-typedef BOOL (WINAPI *p_GetProcessAffinityMask) (HANDLE, PDWORD_PTR, PDWORD_PTR);
-typedef BOOL (WINAPI *p_SetProcessAffinityMask) (HANDLE, DWORD_PTR);
 #endif
 #endif
 #include <stdio.h>
@@ -80,7 +77,7 @@ void __set_fpscr(long); // in libgcc / kernel's startup.s?
 #endif
 
 #ifdef HAVE_SDL
-
+#define _MATH_DEFINES_DEFINED
 #include "SDL.h"
 
 #ifdef HAVE_TTF
@@ -1682,7 +1679,7 @@ void I_UpdateMumble(const mobj_t *mobj, const listener_t listener)
 		UINT8 *p = mumble->context;
 		WRITEMEM(p, server_context, 8);
 		WRITEINT16(p, gamemap);
-		mumble->context_len = p - mumble->context;
+		mumble->context_len = (UINT32)(p - mumble->context);
 	}
 
 	if (mobj) {
@@ -2779,7 +2776,6 @@ static const char *locateWad(void)
     {
         return returnWadPath;
     }
-
 #endif
 
 	// examine default dirs
@@ -3070,52 +3066,6 @@ const CPUInfoFlags *I_CPUInfo(void)
 #endif
 }
 
-#if (defined (_WIN32) && !defined (_WIN32_WCE)) && !defined (_XBOX)
-static void CPUAffinity_OnChange(void);
-static consvar_t cv_cpuaffinity = {"cpuaffinity", "-1", CV_SAVE | CV_CALL, NULL, CPUAffinity_OnChange, 0, NULL, NULL, 0, 0, NULL};
-
-static p_GetCurrentProcess pfnGetCurrentProcess = NULL;
-static p_GetProcessAffinityMask pfnGetProcessAffinityMask = NULL;
-static p_SetProcessAffinityMask pfnSetProcessAffinityMask = NULL;
-
-static inline VOID GetAffinityFuncs(VOID)
-{
-	HMODULE h = GetModuleHandleA("kernel32.dll");
-	pfnGetCurrentProcess = (p_GetCurrentProcess)GetProcAddress(h, "GetCurrentProcess");
-	pfnGetProcessAffinityMask = (p_GetProcessAffinityMask)GetProcAddress(h, "GetProcessAffinityMask");
-	pfnSetProcessAffinityMask = (p_SetProcessAffinityMask)GetProcAddress(h, "SetProcessAffinityMask");
-}
-
-static void CPUAffinity_OnChange(void)
-{
-	DWORD_PTR dwProcMask, dwSysMask;
-	HANDLE selfpid;
-
-	if (!pfnGetCurrentProcess || !pfnGetProcessAffinityMask || !pfnSetProcessAffinityMask)
-		return;
-	else
-		selfpid = pfnGetCurrentProcess();
-
-	pfnGetProcessAffinityMask(selfpid, &dwProcMask, &dwSysMask);
-
-	/* If resulting mask is zero, don't change anything and fall back to
-	 * actual mask.
-	 */
-	if(dwSysMask & cv_cpuaffinity.value)
-	{
-		pfnSetProcessAffinityMask(selfpid, dwSysMask & cv_cpuaffinity.value);
-		CV_StealthSetValue(&cv_cpuaffinity, (INT32)(dwSysMask & cv_cpuaffinity.value));
-	}
-	else
-		CV_StealthSetValue(&cv_cpuaffinity, (INT32)dwProcMask);
-}
-#endif
-
-void I_RegisterSysCommands(void)
-{
-#if (defined (_WIN32) && !defined (_WIN32_WCE)) && !defined (_XBOX)
-	GetAffinityFuncs();
-	CV_RegisterVar(&cv_cpuaffinity);
-#endif
-}
+// note CPUAFFINITY code used to reside here
+void I_RegisterSysCommands(void) {}
 #endif

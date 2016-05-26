@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -94,7 +94,6 @@ typedef long ssize_t;
 #ifdef __APPLE_CC__
 #define DIRECTFULLSCREEN
 #define DEBUG_LOG
-#define HWRENDER
 #define NOIPX
 #endif
 
@@ -185,7 +184,9 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 	#define __BYTEBOOL__
 
 	//faB: clean that up !!
-	#if (defined (_WIN32) || (defined (_WIN32_WCE) && !defined (__GNUC__))) && !defined (_XBOX)
+	#if defined( _MSC_VER)  && (_MSC_VER >= 1800) // MSVC 2013 and forward
+	#include "stdbool.h"
+	#elif (defined (_WIN32) || (defined (_WIN32_WCE) && !defined (__GNUC__))) && !defined (_XBOX)
 		#define false   FALSE           // use windows types
 		#define true    TRUE
 		#define boolean BOOL

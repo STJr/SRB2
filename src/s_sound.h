@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -163,6 +163,12 @@ void S_StopSoundByNum(sfxenum_t sfxnum);
 #ifndef HW3SOUND
 #define S_StartAttackSound S_StartSound
 #define S_StartScreamSound S_StartSound
+#endif
+
+#ifdef MUSICSLOT_COMPATIBILITY
+// For compatibility with code/scripts relying on older versions
+// This is a list of all the "special" slot names and their associated numbers
+const char *compat_special_music_slots[16];
 #endif
 
 #endif

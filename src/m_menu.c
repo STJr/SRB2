@@ -2,8 +2,8 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 2011-2014 by Matthew "Inuyasha" Walsh.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 2011-2016 by Matthew "Inuyasha" Walsh.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -2058,6 +2058,10 @@ static void M_PrevOpt(void)
 	} while (oldItemOn != itemOn && (currentMenu->menuitems[itemOn].status & IT_TYPE) == IT_SPACE);
 }
 
+// lock out further input in a tic when important buttons are pressed
+// (in other words -- stop bullshit happening by mashing buttons in fades)
+static boolean noFurtherInput = false;
+
 //
 // M_Responder
 //
@@ -2078,6 +2082,12 @@ boolean M_Responder(event_t *ev)
 	if (ev->type == ev_keyup && (ev->data1 == KEY_LSHIFT || ev->data1 == KEY_RSHIFT))
 	{
 		shiftdown = false;
+		return false;
+	}
+	if (noFurtherInput)
+	{
+		// Ignore input after enter/escape/other buttons
+		// (but still allow shift keyup so caps doesn't get stuck)
 		return false;
 	}
 	else if (ev->type == ev_keydown)
@@ -2181,6 +2191,7 @@ boolean M_Responder(event_t *ev)
 	// F-Keys
 	if (!menuactive)
 	{
+		noFurtherInput = true;
 		switch (ch)
 		{
 			case KEY_F1: // Help key
@@ -2251,6 +2262,7 @@ boolean M_Responder(event_t *ev)
 					M_StartControlPanel();
 				return true;
 		}
+		noFurtherInput = false; // turns out we didn't care
 		return false;
 	}
 
@@ -2274,6 +2286,7 @@ boolean M_Responder(event_t *ev)
 				if (routine)
 					routine(ch);
 				M_StopMessage(0);
+				noFurtherInput = true;
 				return true;
 			}
 			return true;
@@ -2353,6 +2366,7 @@ boolean M_Responder(event_t *ev)
 			return true;
 
 		case KEY_ENTER:
+			noFurtherInput = true;
 			currentMenu->lastOn = itemOn;
 			if (routine)
 			{
@@ -2386,6 +2400,7 @@ boolean M_Responder(event_t *ev)
 			return true;
 
 		case KEY_ESCAPE:
+			noFurtherInput = true;
 			currentMenu->lastOn = itemOn;
 			if (currentMenu->prevMenu)
 			{
@@ -2442,34 +2457,44 @@ void M_Drawer(void)
 	if (currentMenu == &MessageDef)
 		menuactive = true;
 
-	if (!menuactive)
-		return;
-
-	// now that's more readable with a faded background (yeah like Quake...)
-	if (!WipeInAction)
-		V_DrawFadeScreen();
-
-	if (currentMenu->drawroutine)
-		currentMenu->drawroutine(); // call current menu Draw routine
-
-	// Draw version down in corner
-	// ... but only in the MAIN MENU.  I'm a picky bastard.
-	if (currentMenu == &MainDef)
+	if (menuactive)
 	{
-		if (customversionstring[0] != '\0')
+		// now that's more readable with a faded background (yeah like Quake...)
+		if (!WipeInAction)
+			V_DrawFadeScreen();
+
+		if (currentMenu->drawroutine)
+			currentMenu->drawroutine(); // call current menu Draw routine
+
+		// Draw version down in corner
+		// ... but only in the MAIN MENU.  I'm a picky bastard.
+		if (currentMenu == &MainDef)
 		{
-			V_DrawThinString(vid.dupx, vid.height - 17*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT, "Mod version:");
-			V_DrawThinString(vid.dupx, vid.height - 9*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, customversionstring);
-		}
-		else
-		{
+			if (customversionstring[0] != '\0')
+			{
+				V_DrawThinString(vid.dupx, vid.height - 17*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT, "Mod version:");
+				V_DrawThinString(vid.dupx, vid.height - 9*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, customversionstring);
+			}
+			else
+			{
 #ifdef DEVELOP // Development -- show revision / branch info
-			V_DrawThinString(vid.dupx, vid.height - 17*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, compbranch);
-			V_DrawThinString(vid.dupx, vid.height - 9*vid.dupy,  V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, comprevision);
+				V_DrawThinString(vid.dupx, vid.height - 17*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, compbranch);
+				V_DrawThinString(vid.dupx, vid.height - 9*vid.dupy,  V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, comprevision);
 #else // Regular build
-			V_DrawThinString(vid.dupx, vid.height - 9*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, va("%s", VERSIONSTRING));
+				V_DrawThinString(vid.dupx, vid.height - 9*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, va("%s", VERSIONSTRING));
 #endif
+			}
 		}
+	}
+
+	// focus lost notification goes on top of everything, even the former everything
+	if (window_notinfocus)
+	{
+		M_DrawTextBox((BASEVIDWIDTH/2) - (60), (BASEVIDHEIGHT/2) - (16), 13, 2);
+		if (gamestate == GS_LEVEL && (P_AutoPause() || paused))
+			V_DrawCenteredString(BASEVIDWIDTH/2, (BASEVIDHEIGHT/2) - (4), V_YELLOWMAP, "Game Paused");
+		else
+			V_DrawCenteredString(BASEVIDWIDTH/2, (BASEVIDHEIGHT/2) - (4), V_YELLOWMAP, "Focus Lost");
 	}
 }
 
@@ -2655,6 +2680,9 @@ void M_SetupNextMenu(menu_t *menudef)
 //
 void M_Ticker(void)
 {
+	// reset input trigger
+	noFurtherInput = false;
+
 	if (dedicated)
 		return;
 
@@ -6073,7 +6101,7 @@ static void M_RoomMenu(INT32 choice)
 
 	for (i = 0; room_list[i].header.buffer[0]; i++)
 	{
-		if(room_list[i].name != '\0')
+		if(*room_list[i].name != '\0')
 		{
 			MP_RoomMenu[i+1].text = room_list[i].name;
 			roomIds[i] = room_list[i].id;

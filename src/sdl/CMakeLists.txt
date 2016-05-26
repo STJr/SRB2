@@ -57,7 +57,7 @@ if(${SDL2_FOUND})
 		${SRB2_SDL2_SOURCES}
 		${SRB2_SDL2_HEADERS}
 	)
-	
+
 	source_group("Main" FILES ${SRB2_CORE_SOURCES} ${SRB2_CORE_HEADERS})
 	source_group("Renderer" FILES ${SRB2_CORE_RENDER_SOURCES})
 	source_group("Game" FILES ${SRB2_CORE_GAME_SOURCES})
@@ -117,11 +117,13 @@ if(${SDL2_FOUND})
 	add_executable(SRB2SDL2 MACOSX_BUNDLE WIN32 ${SRB2_SDL2_TOTAL_SOURCES})
 	set_target_properties(SRB2SDL2 PROPERTIES OUTPUT_NAME ${SRB2_SDL2_EXE_NAME})
 
-	if(CLANG)
-		add_framework(CoreFoundation SRB2SDL2)
-		add_framework(SDL2 SRB2SDL2)
-		add_framework(SDL2_mixer SRB2SDL2)
+	if(${CMAKE_SYSTEM} MATCHES Darwin)
+		find_library(CORE_LIB CoreFoundation)
 		target_link_libraries(SRB2SDL2 PRIVATE
+			${CORE_LIB}
+			SDL2
+			SDL2_mixer
+			${GME_LIBRARIES}
 			${PNG_LIBRARIES}
 			${ZLIB_LIBRARIES}
 			${OPENGL_LIBRARIES}
@@ -131,6 +133,7 @@ if(${SDL2_FOUND})
 		target_link_libraries(SRB2SDL2 PRIVATE
 			${SDL2_LIBRARIES}
 			${SDL2_MIXER_LIBRARIES}
+			${GME_LIBRARIES}
 			${PNG_LIBRARIES}
 			${ZLIB_LIBRARIES}
 			${OPENGL_LIBRARIES}
@@ -198,6 +201,7 @@ if(${SDL2_FOUND})
 	target_include_directories(SRB2SDL2 PRIVATE
 		${SDL2_INCLUDE_DIRS}
 		${SDL2_MIXER_INCLUDE_DIRS}
+		${GME_INCLUDE_DIRS}
 		${PNG_INCLUDE_DIRS}
 		${ZLIB_INCLUDE_DIRS}
 		${OPENGL_INCLUDE_DIRS}
@@ -224,7 +228,7 @@ if(${SDL2_FOUND})
 	endif()
 
 	#### Installation ####
-	if (CLANG)
+	if(${CMAKE_SYSTEM} MATCHES Darwin)
 		install(TARGETS SRB2SDL2
 			BUNDLE DESTINATION .
 		)
@@ -265,7 +269,7 @@ if(${SDL2_FOUND})
 
 
 	# Mac bundle fixup
-	if(CLANG)
+	if(${CMAKE_SYSTEM} MATCHES Darwin)
 		install(CODE "
 			include(BundleUtilities)
 			fixup_bundle(\"${CMAKE_INSTALL_PREFIX}/Sonic Robo Blast 2.app\"
