@@ -5,13 +5,13 @@ dist: trusty
 matrix:
     include:
         - os: linux
-        env: CC=gcc
+          env: CC=gcc
         - os: linux
-        env: CC=clang
+          env: CC=clang
         - os: osx
-        env: CC=gcc
+          env: CC=gcc
         - os: osx
-        env: CC=clang
+          env: CC=clang
 
 cache:
   apt:  true
