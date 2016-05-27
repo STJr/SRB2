@@ -280,7 +280,7 @@ static void P_NetArchivePlayers(void)
 //
 // P_NetUnArchivePlayers
 //
-static inline void P_NetUnArchivePlayers(void)
+static void P_NetUnArchivePlayers(void)
 {
 	INT32 i, j;
 	UINT16 flags;
