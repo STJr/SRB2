@@ -8121,6 +8121,8 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	{
 		fixed_t myfloorz, myceilingz;
 		fixed_t midz = thiscam->z + (thiscam->z - mo->z)/2;
+		fixed_t midx = ((mo->x>>FRACBITS) + (thiscam->x>>FRACBITS))<<(FRACBITS-1);
+		fixed_t midy = ((mo->y>>FRACBITS) + (thiscam->y>>FRACBITS))<<(FRACBITS-1);
 
 		// Cameras use the heightsec's heights rather then the actual sector heights.
 		// If you can see through it, why not move the camera through it too?
@@ -8136,8 +8138,8 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		}
 		else
 		{
-			myfloorz = newsubsec->sector->floorheight;
-			myceilingz = newsubsec->sector->ceilingheight;
+			myfloorz = P_CameraGetFloorZ(thiscam, newsubsec->sector, midx, midy, NULL);
+			myceilingz = P_CameraGetCeilingZ(thiscam, newsubsec->sector, midx, midy, NULL);
 		}
 
 		// Check list of fake floors and see if floorz/ceilingz need to be altered.
@@ -8149,17 +8151,21 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 
 			for (rover = newsubsec->sector->ffloors; rover; rover = rover->next)
 			{
+				fixed_t topheight, bottomheight;
 				if (!(rover->flags & FF_BLOCKOTHERS) || !(rover->flags & FF_EXISTS) || !(rover->flags & FF_RENDERALL) || GETSECSPECIAL(rover->master->frontsector->special, 4) == 12)
 					continue;
 
-				delta1 = midz - (*rover->bottomheight
-					+ ((*rover->topheight - *rover->bottomheight)/2));
-				delta2 = thingtop - (*rover->bottomheight
-					+ ((*rover->topheight - *rover->bottomheight)/2));
-				if (*rover->topheight > myfloorz && abs(delta1) < abs(delta2))
-					myfloorz = *rover->topheight;
-				if (*rover->bottomheight < myceilingz && abs(delta1) >= abs(delta2))
-					myceilingz = *rover->bottomheight;
+				topheight = P_CameraGetFOFTopZ(thiscam, newsubsec->sector, rover, midx, midy, NULL);
+				bottomheight = P_CameraGetFOFBottomZ(thiscam, newsubsec->sector, rover, midx, midy, NULL);
+
+				delta1 = midz - (bottomheight
+					+ ((topheight - bottomheight)/2));
+				delta2 = thingtop - (bottomheight
+					+ ((topheight - bottomheight)/2));
+				if (topheight > myfloorz && abs(delta1) < abs(delta2))
+					myfloorz = topheight;
+				if (bottomheight < myceilingz && abs(delta1) >= abs(delta2))
+					myceilingz = bottomheight;
 			}
 		}
 
@@ -8273,18 +8279,22 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 
 			for (rover = newsubsec->sector->ffloors; rover; rover = rover->next)
 			{
+				fixed_t topheight, bottomheight;
 				if ((rover->flags & FF_BLOCKOTHERS) && (rover->flags & FF_RENDERALL) && (rover->flags & FF_EXISTS) && GETSECSPECIAL(rover->master->frontsector->special, 4) != 12)
 				{
-					if (*rover->bottomheight - thiscam->height < z
-						&& midz < *rover->bottomheight)
-						z = *rover->bottomheight - thiscam->height-FixedMul(11*FRACUNIT, mo->scale);
+					topheight = P_CameraGetFOFTopZ(thiscam, newsubsec->sector, rover, midx, midy, NULL);
+					bottomheight = P_CameraGetFOFBottomZ(thiscam, newsubsec->sector, rover, midx, midy, NULL);
 
-					else if (*rover->topheight + thiscam->height > z
-						&& midz > *rover->topheight)
-						z = *rover->topheight;
+					if (bottomheight - thiscam->height < z
+						&& midz < bottomheight)
+						z = bottomheight - thiscam->height-FixedMul(11*FRACUNIT, mo->scale);
 
-					if ((mo->z >= *rover->topheight && midz < *rover->bottomheight)
-						|| ((mo->z < *rover->bottomheight && mo->z+mo->height < *rover->topheight) && midz >= *rover->topheight))
+					else if (topheight + thiscam->height > z
+						&& midz > topheight)
+						z = topheight;
+
+					if ((mo->z >= topheight && midz < bottomheight)
+						|| ((mo->z < bottomheight && mo->z+mo->height < topheight) && midz >= topheight))
 					{
 						// Can't see
 						if (!resetcalled)
