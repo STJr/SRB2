@@ -126,8 +126,6 @@ static       Uint8       BitsPerPixel = 16;
 #endif
 Uint16      realwidth = BASEVIDWIDTH;
 Uint16      realheight = BASEVIDHEIGHT;
-static const Uint32      surfaceFlagsW = 0/*|SDL_RESIZABLE*/;
-static const Uint32      surfaceFlagsF = 0;
 static       SDL_bool    mousegrabok = SDL_TRUE;
 #define HalfWarpMouse(x,y) SDL_WarpMouseInWindow(window, (Uint16)(x/2),(Uint16)(y/2))
 static       SDL_bool    videoblitok = SDL_FALSE;
@@ -217,10 +215,12 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 		}
 	}
 
+#ifdef HWRENDER
 	if (rendermode == render_opengl)
 	{
 		OglSdlSurface(vid.width, vid.height);
 	}
+#endif
 
 	if (rendermode == render_soft)
 	{
@@ -251,6 +251,11 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 		{
 			SDL_FreeSurface(vidSurface);
 		}
+		if (vid.buffer)
+		{
+			free(vid.buffer);
+			vid.buffer = NULL;
+		}
 		SDL_PixelFormatEnumToMasks(sw_texture_format, &bpp, &rmask, &gmask, &bmask, &amask);
 		vidSurface = SDL_CreateRGBSurface(0, width, height, bpp, rmask, gmask, bmask, amask);
 	}
@@ -271,12 +276,17 @@ static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Scancode code)
 	{
 		return '0';
 	}
-	if (code >= SDL_SCANCODE_F1 && code <= SDL_SCANCODE_F12)
+	if (code >= SDL_SCANCODE_F1 && code <= SDL_SCANCODE_F10)
 	{
 		return KEY_F1 + (code - SDL_SCANCODE_F1);
 	}
 	switch (code)
 	{
+		case SDL_SCANCODE_F11: // F11 and F12 are
+			return KEY_F11;    // separated from the
+		case SDL_SCANCODE_F12: // rest of the function
+			return KEY_F12;    // keys
+
 		case SDL_SCANCODE_KP_0:
 			return KEY_KEYPAD0;
 		case SDL_SCANCODE_KP_1:
@@ -396,9 +406,11 @@ static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Scancode code)
 		default:
 			break;
 	}
+#ifdef HWRENDER
 	DBG_Printf("Unknown incoming scancode: %d, represented %c\n",
 				code,
 				SDL_GetKeyName(SDL_GetKeyFromScancode(code)));
+#endif
 	return 0;
 }
 
@@ -1243,17 +1255,6 @@ static inline boolean I_SkipFrame(void)
 	}
 }
 
-static inline SDL_bool SDLmatchVideoformat(void)
-{
-	const SDL_PixelFormat *vidformat = vidSurface->format;
-	const INT32 vfBPP = vidformat?vidformat->BitsPerPixel:0;
-	return (((vfBPP == 8 && vid.bpp == 1 &&
-	 !vidformat->Rmask && !vidformat->Gmask && !vidformat->Bmask) ||
-	 (vfBPP == 15 && vid.bpp == 2 && vidformat->Rmask == 0x7C00 &&
-	 vidformat->Gmask == 0x03E0 && vidformat->Bmask == 0x001F )) &&
-	 !vidformat->Amask && (vidSurface->flags & SDL_RLEACCEL) == 0);
-}
-
 //
 // I_FinishUpdate
 //
@@ -1658,12 +1659,10 @@ static void Impl_VideoSetupBuffer(void)
 	{
 		vid.rowbytes = vid.width * vid.bpp;
 		vid.direct = NULL;
-		vid.buffer = malloc(vid.rowbytes*vid.height*NUMSCREENS);
 		if (vid.buffer)
-		{
-			memset(vid.buffer,0x00,vid.rowbytes*vid.height*NUMSCREENS);
-		}
-		else
+			free(vid.buffer);
+		vid.buffer = calloc(vid.rowbytes*vid.height, NUMSCREENS);
+		if (!vid.buffer)
 		{
 			I_Error("%s", M_GetText("Not enough memory for video buffer\n"));
 		}
@@ -1692,27 +1691,22 @@ void I_StartupGraphics(void)
 	keyboard_started = true;
 
 #if !defined(HAVE_TTF)
-#ifdef _WIN32 // Initialize Audio as well, otherwise Win32's DirectX can not use audio
-	if (SDL_InitSubSystem(SDL_INIT_AUDIO|SDL_INIT_VIDEO) < 0)
-#else //SDL_OpenAudio will do SDL_InitSubSystem(SDL_INIT_AUDIO)
+	// Previously audio was init here for questionable reasons?
 	if (SDL_InitSubSystem(SDL_INIT_VIDEO) < 0)
-#endif
 	{
-#ifdef _WIN32
-		if (SDL_WasInit(SDL_INIT_AUDIO)==0)
-			CONS_Printf(M_GetText("Couldn't initialize SDL's Audio System with Video System: %s\n"), SDL_GetError());
-		if (SDL_WasInit(SDL_INIT_VIDEO)==0)
-#endif
-		{
-			CONS_Printf(M_GetText("Couldn't initialize SDL's Video System: %s\n"), SDL_GetError());
-			return;
-		}
+		CONS_Printf(M_GetText("Couldn't initialize SDL's Video System: %s\n"), SDL_GetError());
+		return;
 	}
 #endif
 	{
-		char vd[100]; //stack space for video name
-		//CONS_Printf(M_GetText("Starting up with video driver : %s\n"), SDL_VideoDriverName(vd,100));
-		if (strncasecmp(vd, "gcvideo", 8) == 0 || strncasecmp(vd, "fbcon", 6) == 0 || strncasecmp(vd, "wii", 4) == 0 || strncasecmp(vd, "psl1ght", 8) == 0)
+		const char *vd = SDL_GetCurrentVideoDriver();
+		//CONS_Printf(M_GetText("Starting up with video driver: %s\n"), vd);
+		if (vd && (
+			strncasecmp(vd, "gcvideo", 8) == 0 ||
+			strncasecmp(vd, "fbcon", 6) == 0 ||
+			strncasecmp(vd, "wii", 4) == 0 ||
+			strncasecmp(vd, "psl1ght", 8) == 0
+		))
 			framebuffer = SDL_TRUE;
 	}
 	if (M_CheckParm("-software"))
@@ -1775,7 +1769,6 @@ void I_StartupGraphics(void)
 	//Impl_SetWindowName("SRB2 "VERSIONSTRING);
 	VID_SetMode(VID_GetModeForSize(BASEVIDWIDTH, BASEVIDHEIGHT));
 
-	vid.buffer = NULL;  // For software mode
 	vid.width = BASEVIDWIDTH; // Default size for startup
 	vid.height = BASEVIDHEIGHT; // BitsPerPixel is the SDL interface's
 	vid.recalc = true; // Set up the console stufff
@@ -1825,7 +1818,8 @@ void I_ShutdownGraphics(void)
 	icoSurface = NULL;
 	if (render_soft == oldrendermode)
 	{
-		vidSurface = NULL; //Alam: SDL_Video system free vidSurface for me
+		if (vidSurface) SDL_FreeSurface(vidSurface);
+		vidSurface = NULL;
 		if (vid.buffer) free(vid.buffer);
 		vid.buffer = NULL;
 		if (bufSurface) SDL_FreeSurface(bufSurface);

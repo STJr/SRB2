@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -356,7 +356,7 @@ void F_IntroDrawer(void)
 			D_StartTitle();
 			return;
 
-			S_ChangeMusic(mus_read_m, false);
+			S_ChangeMusicInternal("read_m", false);
 		}
 
 		F_NewCutscene(introtext[++intro_scenenum]);
@@ -477,7 +477,7 @@ static const char *credits[] = {
 	"\1Texture Artists",
 	"\"Charybdizs\"",
 	"\"CoatRack\"",
-	"\"Spherallic\"", 
+	"\"Spherallic\"",
 	"\"Iceman404\"",
 	"\"Blade\"",
 	"",
@@ -496,7 +496,7 @@ static const char *credits[] = {
 	"Chain Algorithm", // Weather Factory
 	"Super Mario 3D World - Nintendo",
 	"Ape Escape - Sony", // Hub music
-	"LaTale - Actoz Soft", // Mainframe Metropolis 
+	"LaTale - Actoz Soft", // Mainframe Metropolis
 	"Sonic Team Junior", // So we're crediting STJr, even though they have a whole section of credits directly below? lol
 	"Karl Breuggemann", // Scrapped hub
 	"Toy Story 2 - Activision", // The game you dope, not the movie
@@ -518,7 +518,7 @@ static const char *credits[] = {
 	"\"CyberIF\" - Ultra Oldbie Ornament",
 	"\"Whackjood\" - Special Rare Ornament", // For his perfect attendance!
 	"\"SevenColorsAlice\" - Concept Ornament", // Was originally going to be "Colorful Ornament", but V_DrawStringAtFixed lacks string colors.
-	"\"Nev3r\" - Fool's Gold Ornament", 
+	"\"Nev3r\" - Fool's Gold Ornament",
 	"\"AlamA\" - Compiling Ornament", // Thanks to him, I can at least compile this file to test!
 	"\"LoganA\" - Not-Compiling Ornament", // I think Logan does server stuff, actually
 	"\"Monster Iestyn\" - Hood Ornament", // No, not THAT hood, you fool
@@ -527,7 +527,7 @@ static const char *credits[] = {
 	"\"toaster\" - Last Minute Ornament", // Wow, you almost missed being included here!
 	"",
 	"\1Special Thanks",
-	"\"Jeck Jims\"", // For his work on MD2 models 
+	"\"Jeck Jims\"", // For his work on MD2 models
 	"\"Metalsonicmk72\"", // Looped music and tuned up some of the tracks
 	"",
 	"\1Sonic Robo Blast II",
@@ -549,11 +549,13 @@ static const char *credits[] = {
 	"\"Monster\" Iestyn Jealous",
 	"Ronald \"Furyhunter\" Kinard", // The SDL2 port
 	"John \"JTE\" Muniz",
+	"Ehab \"Wolfy\" Saeed",
 	"\"SSNTails\"",
 	"Matthew \"Inuyasha\" Walsh",
 	"",
 	"\1Programming",
 	"\1Assistance",
+	"\"chi.miru\"", // Red's secret weapon, the REAL reason slopes exist (also helped port drawing code from ZDoom)
 	"Andrew \"orospakr\" Clunis",
 	"Gregor \"Oogaland\" Dick",
 	"Julio \"Chaos Zero 64\" Guir",
@@ -567,7 +569,7 @@ static const char *credits[] = {
 	"",
 	"\1Sprite Artists",
 	"Odi \"Iceman404\" Atunzu",
-	"Victor \"VAdaPEGA\" Ara\x1Fjo", // Araújo -- sorry for our limited font! D:
+	"Victor \"VAdaPEGA\" Ara\x1Fjo", // Araï¿½jo -- sorry for our limited font! D:
 	"Jim \"MotorRoach\" DeMello",
 	"Desmond \"Blade\" DesJardins",
 	"Sherman \"CoatRack\" DesJardins",
@@ -578,6 +580,7 @@ static const char *credits[] = {
 	"\1Texture Artists",
 	"Ryan \"Blaze Hedgehog\" Bloom",
 	"Buddy \"KinkaJoy\" Fischer",
+	"Vivian \"toaster\" Grannell",
 	"Kepa \"Nev3r\" Iceta",
 	"Jarrett \"JEV3\" Voight",
 	"",
@@ -591,7 +594,7 @@ static const char *credits[] = {
 	"\"Monster\" Iestyn Jealous",
 	"Jarel \"Arrow\" Jones",
 	"Stefan \"Stuf\" Rimalia",
-	"Shane Strife",
+	"Shane Mychal Sexton",
 	"\"Spazzo\"",
 	"David \"Big Wave Dave\" Spencer Sr.",
 	"David \"Instant Sonic\" Spencer Jr.",
@@ -640,7 +643,7 @@ static const char *credits[] = {
 	"iD Software",
 	"Alex \"MistaED\" Fuller",
 	"FreeDoom Project", // Used some of the mancubus and rocket launcher sprites for Brak
-	"Randy Heit (<!>)", // For his MSPaint <!> sprite that we nicked
+	"Randi Heit (<!>)", // For their MSPaint <!> sprite that we nicked
 	"",
 	"\1Produced By",
 	"Sonic Team Junior",
@@ -696,7 +699,7 @@ void F_StartCredits(void)
 	CON_ClearHUD();
 	S_StopMusic();
 
-	S_ChangeMusic(mus_credit, false);
+	S_ChangeMusicInternal("credit", false);
 
 	finalecount = 0;
 	animtimer = 0;
@@ -995,7 +998,7 @@ void F_StartTitleScreen(void)
 
 	// IWAD dependent stuff.
 
-	S_ChangeMusic(mus_titles, looptitle);
+	S_ChangeMusicInternal("titles", looptitle);
 
 	animtimer = 0;
 
@@ -1161,7 +1164,7 @@ void F_StartContinue(void)
 	// In case menus are still up?!!
 	M_ClearMenus(true);
 
-	S_ChangeMusic(mus_contsc, false);
+	S_ChangeMusicInternal("contsc", false);
 	S_StopSounds();
 
 	timetonext = TICRATE*11;
@@ -1275,8 +1278,10 @@ static void F_AdvanceToNextScene(void)
 	picxpos = cutscenes[cutnum]->scene[scenenum].xcoord[picnum];
 	picypos = cutscenes[cutnum]->scene[scenenum].ycoord[picnum];
 
-	if (cutscenes[cutnum]->scene[scenenum].musicslot != 0)
-		S_ChangeMusic(cutscenes[cutnum]->scene[scenenum].musicslot, cutscenes[cutnum]->scene[scenenum].musicloop);
+	if (cutscenes[cutnum]->scene[scenenum].musswitch[0])
+		S_ChangeMusic(cutscenes[cutnum]->scene[scenenum].musswitch,
+			cutscenes[cutnum]->scene[scenenum].musswitchflags,
+			cutscenes[cutnum]->scene[scenenum].musicloop);
 
 	// Fade to the next
 	dofadenow = true;
@@ -1347,8 +1352,10 @@ void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean reset
 	animtimer = cutscenes[cutnum]->scene[0].picduration[0]; // Picture duration
 	stoptimer = 0;
 
-	if (cutscenes[cutnum]->scene[scenenum].musicslot != 0)
-		S_ChangeMusic(cutscenes[cutnum]->scene[scenenum].musicslot, cutscenes[cutnum]->scene[scenenum].musicloop);
+	if (cutscenes[cutnum]->scene[0].musswitch[0])
+		S_ChangeMusic(cutscenes[cutnum]->scene[0].musswitch,
+			cutscenes[cutnum]->scene[0].musswitchflags,
+			cutscenes[cutnum]->scene[0].musicloop);
 	else
 		S_StopMusic();
 }

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -357,8 +357,6 @@ FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FixedRound(fixed_t x)
 	return INT32_MAX;
 }
 
-#ifdef NEED_FIXED_VECTOR
-
 typedef struct
 {
 	fixed_t x;
@@ -436,7 +434,5 @@ void FM_MultMatrixVec3(const matrix_t *matrix, const vector3_t *vec, vector3_t *
 void FM_MultMatrix(matrix_t *dest, const matrix_t *multme);
 void FM_Translate(matrix_t *dest, fixed_t x, fixed_t y, fixed_t z);
 void FM_Scale(matrix_t *dest, fixed_t x, fixed_t y, fixed_t z);
-
-#endif // defined NEED_FIXED_VECTOR
 
 #endif //m_fixed.h

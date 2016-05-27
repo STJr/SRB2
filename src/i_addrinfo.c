@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2011-2014 by Sonic Team Junior.
+// Copyright (C) 2011-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -49,7 +49,7 @@
 
 #ifndef I_getaddrinfo
 
-#ifndef _MSC_VER
+#if !defined (_MSC_VER) || (_MSC_VER >= 1800) // MSVC 2013 and forward
 #include <stdbool.h>
 #else
 typedef char bool;

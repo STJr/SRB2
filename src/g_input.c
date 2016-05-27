@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -16,7 +16,6 @@
 #include "g_input.h"
 #include "keys.h"
 #include "hu_stuff.h" // need HUFONT start & end
-#include "keys.h"
 #include "d_net.h"
 #include "console.h"
 
@@ -1042,12 +1041,12 @@ INT32 G_KeyStringtoNum(const char *keystr)
 	if (!keystr[1] && keystr[0] > ' ' && keystr[0] <= 'z')
 		return keystr[0];
 
+	if (!strncmp(keystr, "KEY", 3) && keystr[3] >= '0' && keystr[3] <= '9')
+		return atoi(&keystr[3]);
+
 	for (j = 0; j < NUMKEYNAMES; j++)
 		if (!stricmp(keynames[j].name, keystr))
 			return keynames[j].keynum;
-
-	if (strlen(keystr) > 3)
-		return atoi(&keystr[3]);
 
 	return 0;
 }
