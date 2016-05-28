@@ -19,7 +19,7 @@ matrix:
               - libgl1-mesa-dev
               - libgme-dev
               - p7zip-full
-          env: CC=gcc-4.8
+          env: GCC=gcc-4.8
         - os: linux
           compiler: gcc
           addons:
@@ -33,7 +33,7 @@ matrix:
               - libgl1-mesa-dev
               - libgme-dev
               - p7zip-full
-          env: CC=gcc-4.9
+          env: GCC=gcc-4.9
         - os: linux
           compiler: gcc
           addons:
@@ -47,7 +47,7 @@ matrix:
               - libgl1-mesa-dev
               - libgme-dev
               - p7zip-full
-          env: CC=gcc-5
+          env: GCC=gcc-5
         - os: linux
           compiler: gcc
           addons:
@@ -61,15 +61,15 @@ matrix:
               - libgl1-mesa-dev
               - libgme-dev
               - p7zip-full
-          env: CC=gcc-6
+          env: GCC=gcc-6
         - os: linux
           compiler: clang
-        - os: osx
-          osx_image: beta-xcode6.1
-          compiler: gcc
-        - os: osx
-          osx_image: beta-xcode6.1
-          compiler: clang
+#        - os: osx
+#          osx_image: beta-xcode6.1
+#          compiler: gcc
+#        - os: osx
+#          osx_image: beta-xcode6.1
+#          compiler: clang
 #        - os: osx
 #          osx_image: beta-xcode6.2
 #          compiler: gcc    
@@ -114,7 +114,7 @@ matrix:
 #         compiler: clang
 
 cache:
-  apt:  true
+  apt: true
   ccache: true
   directories:
   - $HOME/srb2_cache
@@ -129,6 +129,7 @@ addons:
     - p7zip-full
 
 before_script:
+  - set CC=$GCC
   - $CC --version
   - wget --verbose --server-response -c http://rosenthalcastle.org/srb2/SRB2-v2115-assets-2.7z -O $HOME/srb2_cache/SRB2-v2115-assets-2.7z
   - 7z x $HOME/srb2_cache/SRB2-v2115-assets-2.7z -oassets
