@@ -75,10 +75,10 @@ matrix:
           osx_image: beta-xcode6.2
           compiler: gcc
           #Apple LLVM version 6.0 (clang-600.0.57) (based on LLVM 3.5svn)
-        - os: osx
-          osx_image: beta-xcode6.3
-          #
-        - os: osx
+#        - os: osx
+#          osx_image: beta-xcode6.3
+#          #
+#        - os: osx
           osx_image: xcode6.4
           #Apple LLVM version 6.1.0 (clang-602.0.53) (based on LLVM 3.6.0svn)
         - os: osx
