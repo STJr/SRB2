@@ -15,6 +15,11 @@ matrix:
               packages:
               - gcc-4.8
               env: CC=gcc-4.8
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
         - os: linux
           compiler: gcc
           addons:
@@ -24,6 +29,11 @@ matrix:
               packages:
               - gcc-4.9
               env: CC=gcc-4.9
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
         - os: linux
           compiler: gcc
           addons:
@@ -33,6 +43,11 @@ matrix:
               packages:
               - gcc-5
               env: CC=gcc-5
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
         - os: linux
           compiler: gcc
           addons:
@@ -41,6 +56,11 @@ matrix:
               - ubuntu-toolchain-r-test
               packages:
               - gcc-6
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
               env: CC=gcc-6
         - os: linux
           compiler: clang
