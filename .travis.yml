@@ -73,9 +73,9 @@ matrix:
           osx_image: beta-xcode6.2
           compiler: gcc
           #Apple LLVM version 6.0 (clang-600.0.57) (based on LLVM 3.5svn)
-        - os: osx
-          osx_image: beta-xcode6.3
-          #
+#        - os: osx
+#          osx_image: beta-xcode6.3
+#          #
         - os: osx
           osx_image: xcode6.4
           #Apple LLVM version 6.1.0 (clang-602.0.53) (based on LLVM 3.6.0svn)
@@ -108,12 +108,11 @@ addons:
     - p7zip-full
 
 before_script:
-  - if $_CC --version 2>/dev/null; then export CC=$_CC; fi;
   - wget --verbose --server-response -c http://rosenthalcastle.org/srb2/SRB2-v2115-assets-2.7z -O $HOME/srb2_cache/SRB2-v2115-assets-2.7z
   - 7z x $HOME/srb2_cache/SRB2-v2115-assets-2.7z -oassets
   - mkdir build
   - cd build
-  - export CFLAGS=-Wall -W -Werror
+  - export CFLAGS="-Wall -W -Werror"
   - cmake .. -DCMAKE_BUILD_TYPE=Release
 
 before_install:
