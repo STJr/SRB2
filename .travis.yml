@@ -19,7 +19,7 @@ matrix:
               - libgl1-mesa-dev
               - libgme-dev
               - p7zip-full
-          env: GCC=gcc-4.8
+          env: _CC=gcc-4.8
         - os: linux
           compiler: gcc
           addons:
@@ -33,7 +33,7 @@ matrix:
               - libgl1-mesa-dev
               - libgme-dev
               - p7zip-full
-          env: GCC=gcc-4.9
+          env: _CC=gcc-4.9
         - os: linux
           compiler: gcc
           addons:
@@ -47,7 +47,7 @@ matrix:
               - libgl1-mesa-dev
               - libgme-dev
               - p7zip-full
-          env: GCC=gcc-5
+          env: _CC=gcc-5
         - os: linux
           compiler: gcc
           addons:
@@ -61,7 +61,7 @@ matrix:
               - libgl1-mesa-dev
               - libgme-dev
               - p7zip-full
-          env: GCC=gcc-6
+          env: _CC=gcc-6
         - os: linux
           compiler: clang
 #        - os: osx
@@ -129,8 +129,7 @@ addons:
     - p7zip-full
 
 before_script:
-  - export CC=$GCC
-  - $CC --version
+  - $_CC --version&&export CC=$_CC
   - wget --verbose --server-response -c http://rosenthalcastle.org/srb2/SRB2-v2115-assets-2.7z -O $HOME/srb2_cache/SRB2-v2115-assets-2.7z
   - 7z x $HOME/srb2_cache/SRB2-v2115-assets-2.7z -oassets
   - mkdir build
