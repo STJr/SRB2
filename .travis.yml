@@ -113,8 +113,8 @@ before_script:
   - 7z x $HOME/srb2_cache/SRB2-v2115-assets-2.7z -oassets
   - mkdir build
   - cd build
-  - cmake ..
-  - set CFLAGS=-Wall -W -Werror
+  - export CFLAGS=-Wall -W -Werror
+  - cmake .. -DCMAKE_BUILD_TYPE=Release
 
 before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update ; fi
