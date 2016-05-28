@@ -129,7 +129,7 @@ addons:
     - p7zip-full
 
 before_script:
-  -if $_CC --version 2>/dev/null; then export CC=$_CC; fi;
+  - if $_CC --version 2>/dev/null; then export CC=$_CC; fi;
   - wget --verbose --server-response -c http://rosenthalcastle.org/srb2/SRB2-v2115-assets-2.7z -O $HOME/srb2_cache/SRB2-v2115-assets-2.7z
   - 7z x $HOME/srb2_cache/SRB2-v2115-assets-2.7z -oassets
   - mkdir build
