@@ -2601,7 +2601,7 @@ static void D_MD5PasswordPass(const UINT8 *buffer, size_t len, const char *salt,
 
 	if (len > 256-strlen(salt))
 		len = 256-strlen(salt);
-	memcpy(tmpbuf, buffer, len);
+	memmove(tmpbuf, buffer, len);
 	strcpy(&tmpbuf[len], salt);
 	len += strlen(salt);
 	if (len < 256)
