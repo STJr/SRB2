@@ -245,7 +245,7 @@ int main(int argc, char **argv)
 #endif
 
 	// return to OS
-#ifndef __GNUC__
+#if !defined (__GNUC__) || (__GNUC__ < 5)
 	return 0;
 #endif
 }
