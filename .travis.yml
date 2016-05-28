@@ -7,6 +7,42 @@ matrix:
         compiler: gcc-6
     include:
         - os: linux
+          addons:
+            apt:
+              packages:
+              - gcc-4.4
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
+          compiler: gcc-4.4
+          #gcc-4.4
+        - os: linux
+          addons:
+            apt:
+              packages:
+              - gcc-4.6
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
+          compiler: gcc-4.6
+          #gcc-4.6
+        - os: linux
+          addons:
+            apt:
+              packages:
+              - gcc-4.7
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
+          compiler: gcc-4.7
+          #gcc-4.7
+        - os: linux
           compiler: gcc
           #gcc (Ubuntu 4.8.4-2ubuntu1~14.04) 4.8.4
         - os: linux
