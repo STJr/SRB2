@@ -158,7 +158,7 @@ extern FILE *logstream;
 
 // Does this version require an added patch file?
 // Comment or uncomment this as necessary.
-#define USE_PATCH_DTA
+//#define USE_PATCH_DTA
 
 // Modification options
 // If you want to take advantage of the Master Server's ability to force clients to update
