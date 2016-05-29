@@ -5561,45 +5561,41 @@ void P_SpawnSpecials(INT32 fromnetsave)
 #endif
 
 			case 7: // Flat alignment
-				if (lines[i].flags & ML_EFFECT4) // Align angle
+				if ((lines[i].flags & (ML_EFFECT1|ML_NOCLIMB)) != (ML_EFFECT1|ML_NOCLIMB)) // If you can do something...
 				{
-					if (!(lines[i].flags & ML_EFFECT5)) // Align floor unless ALLTRIGGER flag is set
-					{
-						for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
-							sectors[s].spawn_flrpic_angle = sectors[s].floorpic_angle = R_PointToAngle2(lines[i].v1->x, lines[i].v1->y, lines[i].v2->x, lines[i].v2->y);
-					}
+					line_t line = lines[i];
+					angle_t flatangle = 0;
+					if (!(line.flags & ML_EFFECT2)) // Change flat angles unless EFFECT2 flag is set
+						flatangle = R_PointToAngle2(line.v1->x, line.v1->y, line.v2->x, line.v2->y);
 
-					if (!(lines[i].flags & ML_BOUNCY)) // Align ceiling unless BOUNCY flag is set
+					for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
 					{
-						for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
-							sectors[s].spawn_ceilpic_angle = sectors[s].ceilingpic_angle = R_PointToAngle2(lines[i].v1->x, lines[i].v1->y, lines[i].v2->x, lines[i].v2->y);
-					}
-				}
-				else // Do offsets
-				{
-					if (!(lines[i].flags & ML_BLOCKMONSTERS)) // Align floor unless BLOCKMONSTERS flag is set
-					{
-						for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
+						if (!(line.flags & ML_EFFECT1)) // Change floor flat unless EFFECT1 flag is set
 						{
-							sectors[s].floor_xoffs += lines[i].dx;
-							sectors[s].floor_yoffs += lines[i].dy;
+							sectors[s].spawn_flrpic_angle = sectors[s].floorpic_angle = flatangle;
+							sectors[s].floor_xoffs += sides[line.sidenum[0]].textureoffset;
+							sectors[s].floor_yoffs += sides[line.sidenum[0]].rowoffset;
 							// saved for netgames
 							sectors[s].spawn_flr_xoffs = sectors[s].floor_xoffs;
 							sectors[s].spawn_flr_yoffs = sectors[s].floor_yoffs;
 						}
-					}
-
-					if (!(lines[i].flags & ML_NOCLIMB)) // Align ceiling unless NOCLIMB flag is set
-					{
-						for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
+						
+						if (!(line.flags & ML_NOCLIMB)) // Change ceiling flat unless NOCLIMB flag is set
 						{
-							sectors[s].ceiling_xoffs += lines[i].dx;
-							sectors[s].ceiling_yoffs += lines[i].dy;
+							sectors[s].spawn_ceilpic_angle = sectors[s].ceilingpic_angle = flatangle;
+							sectors[s].ceiling_xoffs += sides[line.sidenum[0]].textureoffset;
+							sectors[s].ceiling_yoffs += sides[line.sidenum[0]].rowoffset;
 							// saved for netgames
 							sectors[s].spawn_ceil_xoffs = sectors[s].ceiling_xoffs;
 							sectors[s].spawn_ceil_yoffs = sectors[s].ceiling_yoffs;
 						}
 					}
+				}
+				else // Otherwise, print a helpful warning. Can I do no less?
+				{
+					CONS_Alert(CONS_WARNING,
+					M_GetText("Flat alignment linedef with tag %d doesn't have anything to do.\nConsider changing the linedef's flag configuration or removing it entirely.\n"),
+					lines[i].tag);
 				}
 				break;
 
