@@ -3,8 +3,6 @@ sudo: required
 dist: trusty
 
 matrix:
-    allow_failures:
-        compiler: gcc-6
     include:
         - os: linux
           addons:
@@ -17,7 +15,7 @@ matrix:
               - libgme-dev
               - p7zip-full
           compiler: gcc-4.4
-          #gcc-4.4
+          #gcc-4.4 (Ubuntu/Linaro 4.4.7-8ubuntu1) 4.4.7
         - os: linux
           addons:
             apt:
@@ -29,7 +27,7 @@ matrix:
               - libgme-dev
               - p7zip-full
           compiler: gcc-4.6
-          #gcc-4.6
+          #gcc-4.6 (Ubuntu/Linaro 4.6.4-6ubuntu2) 4.6.4
         - os: linux
           addons:
             apt:
@@ -114,7 +112,7 @@ matrix:
           #Apple LLVM version 6.0 (clang-600.0.57) (based on LLVM 3.5svn)
 #        - os: osx
 #          osx_image: beta-xcode6.3
-#          #
+#          #I think xcode.6.3 VM is broken, it does not boot
 #        - os: osx
           osx_image: xcode6.4
           #Apple LLVM version 6.1.0 (clang-602.0.53) (based on LLVM 3.6.0svn)
