@@ -100,6 +100,7 @@ matrix:
               - libgme-dev
               - p7zip-full
           compiler: gcc-6
+          env: WFLAGS=-Werror -Wno-tautological-compare -Wno-error=tautological-compare
           #gcc-6 (Ubuntu 6.1.1-3ubuntu11~14.04.1) 6.1.1 20160511
         - os: linux
           compiler: clang
@@ -150,8 +151,7 @@ before_script:
   - 7z x $HOME/srb2_cache/SRB2-v2115-assets-2.7z -oassets
   - mkdir build
   - cd build
-  - export CFLAGS="-Wall -W -Werror -Wno-tautological-compare -Wno-error=tautological-compare"
-  - $CC -Wno-error=tautological-compare -dM -E - < /dev/null&>/dev/null||export CFLAGS="Wall -W -Werror"
+  - export CFLAGS="-Wall -W $WFLAGS"
   - cmake .. -DCMAKE_BUILD_TYPE=Release
 
 before_install:
