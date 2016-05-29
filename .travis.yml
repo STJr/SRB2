@@ -87,20 +87,20 @@ matrix:
               - p7zip-full
           compiler: gcc-5
           #gcc-5 (Ubuntu 5.3.0-3ubuntu1~14.04) 5.3.0 20151204
-#        - os: linux
-#          addons:
-#            apt:
-#              sources:
-#              - ubuntu-toolchain-r-test
-#              packages:
-#              - gcc-6
-#              - libsdl2-mixer-dev
-#              - libpng-dev
-#              - libgl1-mesa-dev
-#              - libgme-dev
-#              - p7zip-full
-#          compiler: gcc-6
-#          #gcc-6 (Ubuntu 6.1.1-3ubuntu11~14.04.1) 6.1.1 20160511
+        - os: linux
+          addons:
+            apt:
+              sources:
+              - ubuntu-toolchain-r-test
+              packages:
+              - gcc-6
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
+          compiler: gcc-6
+          #gcc-6 (Ubuntu 6.1.1-3ubuntu11~14.04.1) 6.1.1 20160511
         - os: linux
           compiler: clang
           #clang version 3.5.0 (tags/RELEASE_350/final)
