@@ -100,7 +100,7 @@ matrix:
               - libgme-dev
               - p7zip-full
           compiler: gcc-6
-          env: WFLAGS=-Werror -Wno-tautological-compare -Wno-error=tautological-compare
+          env: WFLAGS="-Wno-tautological-compare -Wno-error=tautological-compare"
           #gcc-6 (Ubuntu 6.1.1-3ubuntu11~14.04.1) 6.1.1 20160511
         - os: linux
           compiler: clang
