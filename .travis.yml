@@ -129,7 +129,7 @@ matrix:
               - libgme-dev
               - p7zip-full
               - clang-3.6
-          compiler: clang
+          compiler: clang-3.6
           #
         - os: linux
           addons:
@@ -143,7 +143,7 @@ matrix:
               - libgme-dev
               - p7zip-full
               - clang-3.7
-          compiler: clang
+          compiler: clang-3.7
           #
         - os: linux
           addons:
@@ -157,7 +157,7 @@ matrix:
               - libgme-dev
               - p7zip-full
               - clang-3.8
-          compiler: clang
+          compiler: clang-3.8
           #
         - os: osx
           osx_image: beta-xcode6.1
