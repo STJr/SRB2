@@ -51,6 +51,9 @@ mobj_t *skyboxmo[2];
 // Amount (dx, dy) vector linedef is shifted right to get scroll amount
 #define SCROLL_SHIFT 5
 
+// This must be updated whenever we up the max flat size - quicker to assume rather than figuring out the sqrt of the specific flat's filesize.
+#define MAXFLATSIZE (2048<<FRACBITS)
+
 /** Animated texture descriptor
   * This keeps track of an animated texture or an animated flat.
   * \sa P_UpdateSpecials, P_InitPicAnims, animdef_t
@@ -5489,32 +5492,27 @@ void P_SpawnSpecials(INT32 fromnetsave)
 	// Init line EFFECTs
 	for (i = 0; i < numlines; i++)
 	{
-		// set line specials to 0 here too, same reason as above
-		if (netgame || multiplayer)
+		if (lines[i].special != 7) // This is a hack. I can at least hope nobody wants to prevent flat alignment with arbitrary skin setups...
 		{
-			// future: nonet flag?
-		}
-		else if ((lines[i].flags & ML_NETONLY) == ML_NETONLY)
-		{
-			lines[i].special = 0;
-			continue;
-		}
-		else
-		{
-			if (players[consoleplayer].charability == CA_THOK && (lines[i].flags & ML_NOSONIC))
+			// set line specials to 0 here too, same reason as above
+			if (netgame || multiplayer)
+			{
+				// future: nonet flag?
+			}
+			else if ((lines[i].flags & ML_NETONLY) == ML_NETONLY)
 			{
 				lines[i].special = 0;
 				continue;
 			}
-			if (players[consoleplayer].charability == CA_FLY && (lines[i].flags & ML_NOTAILS))
+			else
 			{
-				lines[i].special = 0;
-				continue;
-			}
-			if (players[consoleplayer].charability == CA_GLIDEANDCLIMB && (lines[i].flags & ML_NOKNUX))
-			{
-				lines[i].special = 0;
-				continue;
+				if ((players[consoleplayer].charability == CA_THOK && (lines[i].flags & ML_NOSONIC))
+				|| (players[consoleplayer].charability == CA_FLY && (lines[i].flags & ML_NOTAILS))
+				|| (players[consoleplayer].charability == CA_GLIDEANDCLIMB && (lines[i].flags & ML_NOKNUX)))
+				{
+					lines[i].special = 0;
+					continue;
+				}
 			}
 		}
 
@@ -5560,31 +5558,43 @@ void P_SpawnSpecials(INT32 fromnetsave)
 				break;
 #endif
 
-			case 7: // Flat alignment
-				if ((lines[i].flags & (ML_EFFECT1|ML_NOCLIMB)) != (ML_EFFECT1|ML_NOCLIMB)) // If you can do something...
+			case 7: // Flat alignment - redone by toast
+				if ((lines[i].flags & (ML_NOSONIC|ML_NOTAILS)) != (ML_NOSONIC|ML_NOTAILS)) // If you can do something...
 				{
-					line_t line = lines[i];
-					angle_t flatangle = 0;
-					if (!(line.flags & ML_EFFECT2)) // Change flat angles unless EFFECT2 flag is set
-						flatangle = R_PointToAngle2(line.v1->x, line.v1->y, line.v2->x, line.v2->y);
-
+					angle_t flatangle = InvAngle(R_PointToAngle2(lines[i].v1->x, lines[i].v1->y, lines[i].v2->x, lines[i].v2->y));
+					fixed_t xoffs;
+					fixed_t yoffs;
+					
+					if (lines[i].flags & ML_NOKNUX) // Set offset through x and y texture offsets if NOKNUX flag is set
+					{
+						xoffs = sides[lines[i].sidenum[0]].textureoffset;
+						yoffs = sides[lines[i].sidenum[0]].rowoffset;
+					}
+					else // Otherwise, set calculated offsets such that line's v1 is the apparent origin
+					{
+						fixed_t cosinecomponent = FINECOSINE(flatangle>>ANGLETOFINESHIFT);
+						fixed_t sinecomponent = FINESINE(flatangle>>ANGLETOFINESHIFT);
+						xoffs = (-FixedMul(lines[i].v1->x, cosinecomponent) % MAXFLATSIZE) + (FixedMul(lines[i].v1->y, sinecomponent) % MAXFLATSIZE); // No danger of overflow thanks to the strategically placed modulo operations.
+						yoffs = (FixedMul(lines[i].v1->x, sinecomponent) % MAXFLATSIZE) + (FixedMul(lines[i].v1->y, cosinecomponent) % MAXFLATSIZE); // Ditto.
+					}
+						
 					for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
 					{
-						if (!(line.flags & ML_EFFECT1)) // Change floor flat unless EFFECT1 flag is set
+						if (!(lines[i].flags & ML_NOSONIC)) // Modify floor flat alignment unless NOSONIC flag is set
 						{
 							sectors[s].spawn_flrpic_angle = sectors[s].floorpic_angle = flatangle;
-							sectors[s].floor_xoffs += sides[line.sidenum[0]].textureoffset;
-							sectors[s].floor_yoffs += sides[line.sidenum[0]].rowoffset;
+							sectors[s].floor_xoffs += xoffs;
+							sectors[s].floor_yoffs += yoffs;
 							// saved for netgames
 							sectors[s].spawn_flr_xoffs = sectors[s].floor_xoffs;
 							sectors[s].spawn_flr_yoffs = sectors[s].floor_yoffs;
 						}
 						
-						if (!(line.flags & ML_NOCLIMB)) // Change ceiling flat unless NOCLIMB flag is set
+						if (!(lines[i].flags & ML_NOTAILS)) // Modify ceiling flat alignment unless NOTAILS flag is set
 						{
 							sectors[s].spawn_ceilpic_angle = sectors[s].ceilingpic_angle = flatangle;
-							sectors[s].ceiling_xoffs += sides[line.sidenum[0]].textureoffset;
-							sectors[s].ceiling_yoffs += sides[line.sidenum[0]].rowoffset;
+							sectors[s].ceiling_xoffs += xoffs;
+							sectors[s].ceiling_yoffs += yoffs;
 							// saved for netgames
 							sectors[s].spawn_ceil_xoffs = sectors[s].ceiling_xoffs;
 							sectors[s].spawn_ceil_yoffs = sectors[s].ceiling_yoffs;
@@ -5592,11 +5602,9 @@ void P_SpawnSpecials(INT32 fromnetsave)
 					}
 				}
 				else // Otherwise, print a helpful warning. Can I do no less?
-				{
 					CONS_Alert(CONS_WARNING,
-					M_GetText("Flat alignment linedef with tag %d doesn't have anything to do.\nConsider changing the linedef's flag configuration or removing it entirely.\n"),
+					M_GetText("Flat alignment linedef (tag %d) doesn't have anything to do.\nConsider changing the linedef's flag configuration or removing it entirely.\n"),
 					lines[i].tag);
-				}
 				break;
 
 			case 8: // Sector Parameters
