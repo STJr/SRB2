@@ -116,6 +116,51 @@ matrix:
               - p7zip-full
               - clang-3.5
           compiler: clang-3.5
+          #Ubuntu clang version 3.5.0-4ubuntu2~trusty2 (tags/RELEASE_350/final) (based on LLVM 3.5.0)
+        - os: linux
+          addons:
+            apt:
+              sources:
+              - llvm-toolchain-precise-3.6
+              - ubuntu-toolchain-r-test
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
+              - clang-3.6
+          compiler: clang-3.6
+          #
+        - os: linux
+          addons:
+            apt:
+              sources:
+              - llvm-toolchain-precise-3.7
+              - ubuntu-toolchain-r-test
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
+              - clang-3.7
+          compiler: clang-3.7
+          #
+        - os: linux
+          addons:
+            apt:
+              sources:
+              - llvm-toolchain-precise-3.8
+              - ubuntu-toolchain-r-test
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
+              - clang-3.8
+          compiler: clang-3.8
           #
         - os: osx
           osx_image: beta-xcode6.1
