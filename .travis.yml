@@ -8,36 +8,36 @@ matrix:
           addons:
             apt:
               packages:
-              - gcc-4.4
               - libsdl2-mixer-dev
               - libpng-dev
               - libgl1-mesa-dev
               - libgme-dev
               - p7zip-full
+              - gcc-4.4
           compiler: gcc-4.4
           #gcc-4.4 (Ubuntu/Linaro 4.4.7-8ubuntu1) 4.4.7
         - os: linux
           addons:
             apt:
               packages:
-              - gcc-4.6
               - libsdl2-mixer-dev
               - libpng-dev
               - libgl1-mesa-dev
               - libgme-dev
               - p7zip-full
+              - gcc-4.6
           compiler: gcc-4.6
           #gcc-4.6 (Ubuntu/Linaro 4.6.4-6ubuntu2) 4.6.4
         - os: linux
           addons:
             apt:
               packages:
-              - gcc-4.7
               - libsdl2-mixer-dev
               - libpng-dev
               - libgl1-mesa-dev
               - libgme-dev
               - p7zip-full
+              - gcc-4.7
           compiler: gcc-4.7
           #gcc-4.7
         - os: linux
@@ -49,12 +49,12 @@ matrix:
               sources:
               - ubuntu-toolchain-r-test
               packages:
-              - gcc-4.8
               - libsdl2-mixer-dev
               - libpng-dev
               - libgl1-mesa-dev
               - libgme-dev
               - p7zip-full
+              - gcc-4.8
           compiler: gcc-4.8
           #gcc-4.8 (Ubuntu 4.8.5-2ubuntu1~14.04.1) 4.8.5
         - os: linux
@@ -63,12 +63,12 @@ matrix:
               sources:
               - ubuntu-toolchain-r-test
               packages:
-              - gcc-4.9
               - libsdl2-mixer-dev
               - libpng-dev
               - libgl1-mesa-dev
               - libgme-dev
               - p7zip-full
+              - gcc-4.9
           compiler: gcc-4.9
           #gcc-4.9 (Ubuntu 4.9.3-8ubuntu2~14.04) 4.9.3
         - os: linux
@@ -77,12 +77,12 @@ matrix:
               sources:
               - ubuntu-toolchain-r-test
               packages:
-              - gcc-5
               - libsdl2-mixer-dev
               - libpng-dev
               - libgl1-mesa-dev
               - libgme-dev
               - p7zip-full
+              - gcc-5
           compiler: gcc-5
           #gcc-5 (Ubuntu 5.3.0-3ubuntu1~14.04) 5.3.0 20151204
         - os: linux
@@ -91,18 +91,70 @@ matrix:
               sources:
               - ubuntu-toolchain-r-test
               packages:
-              - gcc-6
               - libsdl2-mixer-dev
               - libpng-dev
               - libgl1-mesa-dev
               - libgme-dev
               - p7zip-full
+              - gcc-6
           compiler: gcc-6
           env: WFLAGS="-Wno-error=tautological-compare"
           #gcc-6 (Ubuntu 6.1.1-3ubuntu11~14.04.1) 6.1.1 20160511
         - os: linux
           compiler: clang
           #clang version 3.5.0 (tags/RELEASE_350/final)
+        - os: linux
+            apt:
+              sources:
+              - llvm-toolchain-precise-3.5
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
+              - clang-3.5
+          compiler: clang
+          #
+        - os: linux
+            apt:
+              sources:
+              - llvm-toolchain-precise-3.6
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
+              - clang-3.6
+          compiler: clang
+          #
+        - os: linux
+            apt:
+              sources:
+              - llvm-toolchain-precise-3.7
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
+              - clang-3.7
+          compiler: clang
+          #
+        - os: linux
+            apt:
+              sources:
+              - llvm-toolchain-precise-3.8
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
+              - clang-3.8
+          compiler: clang
+          #
         - os: osx
           osx_image: beta-xcode6.1
           #Apple LLVM version 6.0 (clang-600.0.54) (based on LLVM 3.5svn)
