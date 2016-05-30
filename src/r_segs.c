@@ -1487,10 +1487,20 @@ static void R_RenderSegLoop (void)
 			else
 			{
 				// note: don't use min/max macros here
-				if (markceiling && yl >= 0)
-					ceilingclip[rw_x] = (yl-1 > viewheight) ? (INT16)viewheight : (INT16)((INT16)yl - 1);
-				if (markfloor && yh < viewheight)
-					floorclip[rw_x] = (yh < -1) ? -1 : (INT16)((INT16)yh + 1);
+				if (markceiling)
+				{
+					if (yl >= 0)
+						ceilingclip[rw_x] = (yl > viewheight) ? (INT16)viewheight : (INT16)((INT16)yl - 1);
+					else
+						ceilingclip[rw_x] = -1;
+				}
+				else if (markfloor)
+				{
+					if (yh < viewheight)
+						floorclip[rw_x] = (yh < -1) ? -1 : (INT16)((INT16)yh + 1);
+					else
+						floorclip[rw_x] = (INT16)viewheight;
+				}
 			}
 		}
 		else
@@ -1505,9 +1515,7 @@ static void R_RenderSegLoop (void)
 				if (mid >= floorclip[rw_x])
 					mid = floorclip[rw_x]-1;
 
-				if (yl < 0)
-					; // do nothing, off-screen
-				else if (mid >= yl && yl < viewheight)
+				if (mid >= yl && yl < viewheight)
 				{
 					if (mid >= 0)
 					{
@@ -1519,13 +1527,21 @@ static void R_RenderSegLoop (void)
 						colfunc();
 						ceilingclip[rw_x] = (INT16)mid;
 					}
-					// else do nothing, off-screen
+					else
+						ceilingclip[rw_x] = -1;
 				}
-				else
+				else if (yl >= 0)
 					ceilingclip[rw_x] = (yl > viewheight) ? (INT16)viewheight : (INT16)((INT16)yl - 1);
+				else
+					ceilingclip[rw_x] = -1;
 			}
-			else if (markceiling && yl >= 0) // no top wall
-				ceilingclip[rw_x] = (yl > viewheight) ? (INT16)viewheight : (INT16)((INT16)yl - 1);
+			else if (markceiling) // no top wall
+			{
+				if (yl >= 0)
+					ceilingclip[rw_x] = (yl > viewheight) ? (INT16)viewheight : (INT16)((INT16)yl - 1);
+				else
+					ceilingclip[rw_x] = -1;
+			}
 
 			if (bottomtexture)
 			{
@@ -1537,9 +1553,7 @@ static void R_RenderSegLoop (void)
 				if (mid <= ceilingclip[rw_x])
 					mid = ceilingclip[rw_x]+1;
 
-				if (yh >= viewheight)
-					; // do nothing, off-screen
-				else if (mid <= yh && yh >= 0)
+				if (mid <= yh && yh >= 0)
 				{
 					if (mid < viewheight)
 					{
@@ -1552,13 +1566,21 @@ static void R_RenderSegLoop (void)
 						colfunc();
 						floorclip[rw_x] = (INT16)mid;
 					}
-					// else do nothing, off-screen
+					else
+						floorclip[rw_x] = (INT16)viewheight;
 				}
-				else
+				else if (yh < viewheight)
 					floorclip[rw_x] = (yh < -1) ? -1 : (INT16)((INT16)yh + 1);
+				else
+					floorclip[rw_x] = (INT16)viewheight;
 			}
-			else if (markfloor && yh < viewheight) // no bottom wall
-				floorclip[rw_x] = (yh < -1) ? -1 : (INT16)((INT16)yh + 1), -1;
+			else if (markfloor) // no bottom wall
+			{
+				if (yh < viewheight)
+					floorclip[rw_x] = (yh < -1) ? -1 : (INT16)((INT16)yh + 1);
+				else
+					floorclip[rw_x] = (INT16)viewheight;
+			}
 		}
 
 		if (floorclip[rw_x] > viewheight)
