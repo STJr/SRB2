@@ -1486,21 +1486,11 @@ static void R_RenderSegLoop (void)
 			}
 			else
 			{
-				// note: don't use min/max macros here
+				// note: don't use min/max macros, since casting from INT32 to INT16 is involved here
 				if (markceiling)
-				{
-					if (yl >= 0)
-						ceilingclip[rw_x] = (yl > viewheight) ? (INT16)viewheight : (INT16)((INT16)yl - 1);
-					else
-						ceilingclip[rw_x] = -1;
-				}
-				else if (markfloor)
-				{
-					if (yh < viewheight)
-						floorclip[rw_x] = (yh < -1) ? -1 : (INT16)((INT16)yh + 1);
-					else
-						floorclip[rw_x] = (INT16)viewheight;
-				}
+					ceilingclip[rw_x] = (yh >= 0) ? ((yl > viewheight) ? (INT16)viewheight : (INT16)((INT16)yl - 1)) : -1;
+				if (markfloor)
+					floorclip[rw_x] = (yh < viewheight) ? ((yh < -1) ? -1 : (INT16)((INT16)yh + 1)) : (INT16)viewheight;
 			}
 		}
 		else
@@ -1515,9 +1505,11 @@ static void R_RenderSegLoop (void)
 				if (mid >= floorclip[rw_x])
 					mid = floorclip[rw_x]-1;
 
-				if (mid >= yl && yl < viewheight)
+				if (mid >= yl) // back ceiling lower than front ceiling ?
 				{
-					if (mid >= 0)
+					if (yl >= viewheight) // entirely off bottom of screen
+						ceilingclip[rw_x] = (INT16)viewheight;
+					else if (mid >= 0) // safe to draw top texture
 					{
 						dc_yl = yl;
 						dc_yh = mid;
@@ -1527,21 +1519,14 @@ static void R_RenderSegLoop (void)
 						colfunc();
 						ceilingclip[rw_x] = (INT16)mid;
 					}
-					else
+					else // entirely off top of screen
 						ceilingclip[rw_x] = -1;
 				}
-				else if (yl >= 0)
-					ceilingclip[rw_x] = (yl > viewheight) ? (INT16)viewheight : (INT16)((INT16)yl - 1);
 				else
-					ceilingclip[rw_x] = -1;
+					ceilingclip[rw_x] = (yh >= 0) ? ((yl > viewheight) ? (INT16)viewheight : (INT16)((INT16)yl - 1)) : -1;
 			}
 			else if (markceiling) // no top wall
-			{
-				if (yl >= 0)
-					ceilingclip[rw_x] = (yl > viewheight) ? (INT16)viewheight : (INT16)((INT16)yl - 1);
-				else
-					ceilingclip[rw_x] = -1;
-			}
+				ceilingclip[rw_x] = (yh >= 0) ? ((yl > viewheight) ? (INT16)viewheight : (INT16)((INT16)yl - 1)) : -1;
 
 			if (bottomtexture)
 			{
@@ -1553,9 +1538,11 @@ static void R_RenderSegLoop (void)
 				if (mid <= ceilingclip[rw_x])
 					mid = ceilingclip[rw_x]+1;
 
-				if (mid <= yh && yh >= 0)
+				if (mid <= yh) // back floor higher than front floor ?
 				{
-					if (mid < viewheight)
+					if (yh < 0) // entirely off top of screen
+						floorclip[rw_x] = -1;
+					else if (mid < viewheight) // safe to draw bottom texture
 					{
 						dc_yl = mid;
 						dc_yh = yh;
@@ -1566,25 +1553,15 @@ static void R_RenderSegLoop (void)
 						colfunc();
 						floorclip[rw_x] = (INT16)mid;
 					}
-					else
+					else  // entirely off bottom of screen
 						floorclip[rw_x] = (INT16)viewheight;
 				}
-				else if (yh < viewheight)
-					floorclip[rw_x] = (yh < -1) ? -1 : (INT16)((INT16)yh + 1);
 				else
-					floorclip[rw_x] = (INT16)viewheight;
+					floorclip[rw_x] = (yh < viewheight) ? ((yh < -1) ? -1 : (INT16)((INT16)yh + 1)) : (INT16)viewheight;
 			}
 			else if (markfloor) // no bottom wall
-			{
-				if (yh < viewheight)
-					floorclip[rw_x] = (yh < -1) ? -1 : (INT16)((INT16)yh + 1);
-				else
-					floorclip[rw_x] = (INT16)viewheight;
-			}
+				floorclip[rw_x] = (yh < viewheight) ? ((yh < -1) ? -1 : (INT16)((INT16)yh + 1)) : (INT16)viewheight;
 		}
-
-		if (floorclip[rw_x] > viewheight)
-			I_Error("floorclip[%d] > viewheight (value is %d)", rw_x, floorclip[rw_x]);
 
 		if (maskedtexture || numthicksides)
 		{
