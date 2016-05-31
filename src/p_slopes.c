@@ -764,10 +764,11 @@ fixed_t P_GetZAt(pslope_t *slope, fixed_t x, fixed_t y)
 // When given a vector, rotates it and aligns it to a slope
 void P_QuantizeMomentumToSlope(vector3_t *momentum, pslope_t *slope)
 {
+	vector3_t axis; // Fuck you, C90.
+
 	if (slope->flags & SL_NOPHYSICS)
 		return; // No physics, no quantizing.
 
-	vector3_t axis;
 	axis.x = -slope->d.y;
 	axis.y = slope->d.x;
 	axis.z = 0;
@@ -804,6 +805,8 @@ void P_SlopeLaunch(mobj_t *mo)
 // Function to help handle landing on slopes
 void P_HandleSlopeLanding(mobj_t *thing, pslope_t *slope)
 {
+	vector3_t mom; // Ditto.
+
 	if (slope->flags & SL_NOPHYSICS) { // No physics, no need to make anything complicated.
 		if (P_MobjFlip(thing)*(thing->momz) < 0) { // falling, land on slope
 			thing->momz = -P_MobjFlip(thing);
@@ -812,7 +815,6 @@ void P_HandleSlopeLanding(mobj_t *thing, pslope_t *slope)
 		return;
 	}
 
-	vector3_t mom;
 	mom.x = thing->momx;
 	mom.y = thing->momy;
 	mom.z = thing->momz*2;
