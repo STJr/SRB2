@@ -16,6 +16,7 @@
 #include "m_bbox.h"
 #include "z_zone.h"
 #include "p_local.h"
+#include "p_mobj.h"
 #include "p_spec.h"
 #include "p_slopes.h"
 #include "p_setup.h"
@@ -881,7 +882,7 @@ void P_SetSlopesFromVertexHeights(lumpnum_t lumpnum)
 // Reset the dynamic slopes pointer, and read all of the fancy schmancy slopes
 void P_ResetDynamicSlopes(void) {
 	size_t i;
-#if 1 // Rewrite old specials to new ones, and give a console warning
+#ifdef ESLOPE_TYPESHIM // Rewrite old specials to new ones, and give a console warning
 	boolean warned = false;
 #endif
 
@@ -894,7 +895,7 @@ void P_ResetDynamicSlopes(void) {
 	{
 		switch (lines[i].special)
 		{
-#if 1 // Rewrite old specials to new ones, and give a console warning
+#ifdef ESLOPE_TYPESHIM // Rewrite old specials to new ones, and give a console warning
 #define WARNME if (!warned) {warned = true; CONS_Alert(CONS_WARNING, "This level uses old slope specials.\nA conversion will be needed before 2.2's release.\n");}
 			case 386:
 			case 387:
@@ -1018,6 +1019,9 @@ fixed_t P_GetZAt(pslope_t *slope, fixed_t x, fixed_t y)
 // When given a vector, rotates it and aligns it to a slope
 void P_QuantizeMomentumToSlope(vector3_t *momentum, pslope_t *slope)
 {
+	if (slope->flags & SL_NOPHYSICS)
+		return; // No physics, no quantizing.
+	
 	vector3_t axis;
 	axis.x = -slope->d.y;
 	axis.y = slope->d.x;
@@ -1032,26 +1036,37 @@ void P_QuantizeMomentumToSlope(vector3_t *momentum, pslope_t *slope)
 // Handles slope ejection for objects
 void P_SlopeLaunch(mobj_t *mo)
 {
-	// Double the pre-rotation Z, then halve the post-rotation Z. This reduces the
-	// vertical launch given from slopes while increasing the horizontal launch
-	// given. Good for SRB2's gravity and horizontal speeds.
-	vector3_t slopemom;
-	slopemom.x = mo->momx;
-	slopemom.y = mo->momy;
-	slopemom.z = mo->momz*2;
-	P_QuantizeMomentumToSlope(&slopemom, mo->standingslope);
+	if (!(mo->standingslope->flags & SL_NOPHYSICS)) // If there's physics, time for launching.
+	{
+		// Double the pre-rotation Z, then halve the post-rotation Z. This reduces the
+		// vertical launch given from slopes while increasing the horizontal launch
+		// given. Good for SRB2's gravity and horizontal speeds.
+		vector3_t slopemom;
+		slopemom.x = mo->momx;
+		slopemom.y = mo->momy;
+		slopemom.z = mo->momz*2;
+		P_QuantizeMomentumToSlope(&slopemom, mo->standingslope);
 
-	mo->momx = slopemom.x;
-	mo->momy = slopemom.y;
-	mo->momz = slopemom.z/2;
-
+		mo->momx = slopemom.x;
+		mo->momy = slopemom.y;
+		mo->momz = slopemom.z/2;
+	}
+	
 	//CONS_Printf("Launched off of slope.\n");
 	mo->standingslope = NULL;
 }
 
 // Function to help handle landing on slopes
 void P_HandleSlopeLanding(mobj_t *thing, pslope_t *slope)
-{
+{	
+	if (slope->flags & SL_NOPHYSICS) { // No physics, no need to make anything complicated.
+		if (P_MobjFlip(thing)*(thing->momz) < 0) { // falling, land on slope
+			thing->momz = -P_MobjFlip(thing);
+			thing->standingslope = slope;
+		}
+		return;
+	}
+
 	vector3_t mom;
 	mom.x = thing->momx;
 	mom.y = thing->momy;
@@ -1081,6 +1096,9 @@ void P_ButteredSlope(mobj_t *mo)
 
 	if (!mo->standingslope)
 		return;
+	
+	if (mo->standingslope->flags & SL_NOPHYSICS)
+		return; // No physics, no butter.
 
 	if (mo->flags & (MF_NOCLIPHEIGHT|MF_NOGRAVITY))
 		return; // don't slide down slopes if you can't touch them or you're not affected by gravity
@@ -1116,7 +1134,7 @@ void P_ButteredSlope(mobj_t *mo)
 	// This makes it harder to zigzag up steep slopes, as well as allows greater top speed when rolling down
 
 	// Multiply by gravity
-	thrust = FixedMul(thrust, gravity); // TODO account for per-sector gravity etc
+	thrust = FixedMul(thrust, FixedMul(gravity, abs(P_GetMobjGravity(mo)))); // Now uses the absolute of mobj gravity. You're welcome.
 	// Multiply by scale (gravity strength depends on mobj scale)
 	thrust = FixedMul(thrust, mo->scale);
 
