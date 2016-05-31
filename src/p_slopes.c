@@ -200,7 +200,6 @@ static fixed_t P_GetExtent(sector_t *sector, line_t *line)
 
 	// Find furthest vertex from the reference line. It, along with the two ends
 	// of the line, will define the plane.
-	// SRB2CBTODO: Use a formula to get the slope to slide objects depending on how steep
 	for(i = 0; i < sector->linecount; i++)
 	{
 		line_t *li = sector->lines[i];
@@ -232,7 +231,6 @@ static fixed_t P_GetExtent(sector_t *sector, line_t *line)
 //
 // Creates one or more slopes based on the given line type and front/back
 // sectors.
-// Kalaron: Check if dynamic slopes need recalculation
 //
 void P_SpawnSlope_Line(int linenum)
 {
@@ -277,7 +275,7 @@ void P_SpawnSlope_Line(int linenum)
 		ny = -FixedDiv(line->dx, len);
 	}
 
-	// SRB2CBTODO: Transform origin relative to the bounds of an individual FOF
+	// TODO: Transform origin relative to the bounds of an individual FOF
 	origin.x = line->v1->x + (line->v2->x - line->v1->x)/2;
 	origin.y = line->v1->y + (line->v2->y - line->v1->y)/2;
 
@@ -328,7 +326,7 @@ void P_SpawnSlope_Line(int linenum)
 			// fslope->normal is a 3D line perpendicular to the 3D vector
 
 			// Sync the linedata of the line that started this slope
-			// SRB2CBTODO: Anything special for remote(control sector)-based slopes later?
+			// TODO: Anything special for control sector based slopes later?
 			fslope->sourceline = line;
 
 			// To find the real highz/lowz of a slope, you need to check all the vertexes
@@ -380,7 +378,7 @@ void P_SpawnSlope_Line(int linenum)
             cslope->refpos = 2;
 
 			// Sync the linedata of the line that started this slope
-			// SRB2CBTODO: Anything special for remote(control sector)-based slopes later?
+			// TODO: Anything special for control sector based slopes later?
 			cslope->sourceline = line;
 
 			// Remember the way the slope is formed
@@ -446,7 +444,7 @@ void P_SpawnSlope_Line(int linenum)
             fslope->refpos = 3;
 
 			// Sync the linedata of the line that started this slope
-			// SRB2CBTODO: Anything special for remote(control sector)-based slopes later?
+			// TODO: Anything special for control sector based slopes later?
 			fslope->sourceline = line;
 
 			// Remember the way the slope is formed
@@ -489,7 +487,7 @@ void P_SpawnSlope_Line(int linenum)
             cslope->refpos = 4;
 
 			// Sync the linedata of the line that started this slope
-			// SRB2CBTODO: Anything special for remote(control sector)-based slopes later?
+			// TODO: Anything special for control sector based slopes later?
 			cslope->sourceline = line;
 
 			// Remember the way the slope is formed
@@ -555,16 +553,11 @@ static pslope_t *P_NewVertexSlope(INT16 tag1, INT16 tag2, INT16 tag3, UINT8 flag
 			ret->vertices[2] = mt;
 	}
 
-	if (!ret->vertices[0])
-		CONS_Printf("PANIC 0\n");
-	if (!ret->vertices[1])
-		CONS_Printf("PANIC 1\n");
-	if (!ret->vertices[2])
-		CONS_Printf("PANIC 2\n");
-
 	// Now set heights for each vertex, because they haven't been set yet
 	for (i = 0; i < 3; i++) {
 		mt = ret->vertices[i];
+		if (!mt) // If a vertex wasn't found, it's game over. There's nothing you can do to recover (except maybe try and kill the slope instead - TODO?)
+			I_Error("Slope vertex %d (for linedef tag %d) not found.", i, tag1);
 		if (mt->extrainfo)
 			mt->z = mt->options;
 		else
