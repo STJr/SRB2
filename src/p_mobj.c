@@ -1401,7 +1401,7 @@ fixed_t P_GetMobjGravity(mobj_t *mo)
 
 	if (mo->player && !!(mo->eflags & MFE_VERTICALFLIP) != wasflip)
 		P_PlayerFlip(mo);
-	
+
 	return gravityadd;
 }
 

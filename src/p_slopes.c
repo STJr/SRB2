@@ -1021,7 +1021,7 @@ void P_QuantizeMomentumToSlope(vector3_t *momentum, pslope_t *slope)
 {
 	if (slope->flags & SL_NOPHYSICS)
 		return; // No physics, no quantizing.
-	
+
 	vector3_t axis;
 	axis.x = -slope->d.y;
 	axis.y = slope->d.x;
@@ -1051,14 +1051,14 @@ void P_SlopeLaunch(mobj_t *mo)
 		mo->momy = slopemom.y;
 		mo->momz = slopemom.z/2;
 	}
-	
+
 	//CONS_Printf("Launched off of slope.\n");
 	mo->standingslope = NULL;
 }
 
 // Function to help handle landing on slopes
 void P_HandleSlopeLanding(mobj_t *thing, pslope_t *slope)
-{	
+{
 	if (slope->flags & SL_NOPHYSICS) { // No physics, no need to make anything complicated.
 		if (P_MobjFlip(thing)*(thing->momz) < 0) { // falling, land on slope
 			thing->momz = -P_MobjFlip(thing);
@@ -1096,7 +1096,7 @@ void P_ButteredSlope(mobj_t *mo)
 
 	if (!mo->standingslope)
 		return;
-	
+
 	if (mo->standingslope->flags & SL_NOPHYSICS)
 		return; // No physics, no butter.
 
