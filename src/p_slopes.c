@@ -546,9 +546,17 @@ static pslope_t *P_NewVertexSlope(INT16 tag1, INT16 tag2, INT16 tag3, UINT8 flag
 			continue;
 
 		if (!ret->vertices[0] && mt->angle == tag1)
+		{
 			ret->vertices[0] = mt;
+			mt = mapthings;
+			i = 0;
+		}
 		else if (!ret->vertices[1] && mt->angle == tag2)
+		{
 			ret->vertices[1] = mt;
+			mt = mapthings;
+			i = 0;
+		}
 		else if (!ret->vertices[2] && mt->angle == tag3)
 			ret->vertices[2] = mt;
 	}
