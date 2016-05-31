@@ -131,7 +131,7 @@ matrix:
               - p7zip-full
               - clang-3.6
           compiler: clang-3.6
-          #
+          #Ubuntu clang version 3.6.2-svn240577-1~exp1 (branches/release_36) (based on LLVM 3.6.2)
         - os: linux
           addons:
             apt:
@@ -146,7 +146,7 @@ matrix:
               - p7zip-full
               - clang-3.7
           compiler: clang-3.7
-          #
+          #Ubuntu clang version 3.7.1-svn253571-1~exp1 (branches/release_37) (based on LLVM 3.7.1)
         - os: linux
           addons:
             apt:
@@ -161,7 +161,7 @@ matrix:
               - p7zip-full
               - clang-3.8
           compiler: clang-3.8
-          #
+          #clang version 3.8.1-svn271127-1~exp1 (branches/release_38)
         - os: osx
           osx_image: beta-xcode6.1
           #Apple LLVM version 6.0 (clang-600.0.54) (based on LLVM 3.5svn)
