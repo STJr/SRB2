@@ -2598,11 +2598,13 @@ static void D_MD5PasswordPass(const UINT8 *buffer, size_t len, const char *salt,
 	memset(dest, 0, 16);
 #else
 	XBOXSTATIC char tmpbuf[256];
+	const size_t sl = strlen(salt);
 
-	if (len > 256-strlen(salt))
-		len = 256-strlen(salt);
+	if (len > 256-sl)
+		len = 256-sl;
 	memcpy(tmpbuf, buffer, len);
-	strcpy(&tmpbuf[len], salt);
+	memmove(&tmpbuf[len], salt, sl);
+	//strcpy(&tmpbuf[len], salt);
 	len += strlen(salt);
 	if (len < 256)
 		memset(&tmpbuf[len],0,256-len);
