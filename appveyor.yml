@@ -75,6 +75,9 @@ deploy:
     folder: appveyor
     application:
     active_mode: false
+    on:
+      branch: master
+      appveyor_repo_tag: true
 
 
 on_finish:
