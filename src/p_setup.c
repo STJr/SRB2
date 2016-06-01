@@ -1214,7 +1214,7 @@ static void P_LoadLineDefs2(void)
 		case 443: // Calls a named Lua function
 			if (sides[ld->sidenum[0]].text)
 			{
-				UINT8 len = strlen(sides[ld->sidenum[0]].text)+1;
+				size_t len = strlen(sides[ld->sidenum[0]].text)+1;
 				if (ld->sidenum[1] != 0xffff && sides[ld->sidenum[1]].text)
 					len += strlen(sides[ld->sidenum[1]].text);
 				ld->text = Z_Malloc(len, PU_LEVEL, NULL);

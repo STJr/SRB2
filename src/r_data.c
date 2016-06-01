@@ -497,7 +497,7 @@ void R_LoadTextures(void)
 static texpatch_t *R_ParsePatch(boolean actuallyLoadPatch)
 {
 	char *texturesToken;
-	UINT8 texturesTokenLength;
+	size_t texturesTokenLength;
 	char *endPos;
 	char *patchName = NULL;
 	INT16 patchXPos;
@@ -623,7 +623,7 @@ static texpatch_t *R_ParsePatch(boolean actuallyLoadPatch)
 static texture_t *R_ParseTexture(boolean actuallyLoadTexture)
 {
 	char *texturesToken;
-	UINT8 texturesTokenLength;
+	size_t texturesTokenLength;
 	char *endPos;
 	INT32 newTextureWidth;
 	INT32 newTextureHeight;

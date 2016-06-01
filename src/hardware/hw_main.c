@@ -1675,9 +1675,9 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				else
 				{
 					// Skewed by bottom
-					wallVerts[0].t = (texturevpegtop + worldhigh - worldtop) * grTex->scaleY;
-					wallVerts[2].t = wallVerts[3].t - (worldhighslope - worldhigh) * grTex->scaleY;
-					wallVerts[1].t = wallVerts[2].t - (worldhighslope - worldtopslope) * grTex->scaleY;
+					wallVerts[0].t = wallVerts[1].t = (texturevpegtop + worldtop - worldhigh) * grTex->scaleY;
+					wallVerts[3].t = wallVerts[0].t - (worldtop - worldhigh) * grTex->scaleY;
+					wallVerts[2].t = wallVerts[1].t - (worldtopslope - worldhighslope) * grTex->scaleY;
 				}
 #endif
 			}
@@ -1719,12 +1719,12 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				if (!(gr_linedef->flags & ML_DONTPEGBOTTOM))
 					texturevpegbottom = 0;
 				else if (gr_linedef->flags & ML_EFFECT1)
-					texturevpegbottom = worldtop - worldlow;
+					texturevpegbottom = worldbottom - worldlow;
 				else
-					texturevpegbottom = gr_frontsector->ceilingheight - gr_backsector->floorheight;
+					texturevpegbottom = gr_frontsector->floorheight - gr_backsector->floorheight;
 #else
 				if (gr_linedef->flags & ML_DONTPEGBOTTOM)
-					texturevpegbottom = worldtop - worldlow;
+					texturevpegbottom = worldbottom - worldlow;
                 else
                     texturevpegbottom = 0;
 #endif
@@ -1752,9 +1752,9 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				else if (gr_linedef->flags & ML_DONTPEGBOTTOM)
 				{
 					// Skewed by bottom
-					wallVerts[0].t = (texturevpegbottom + worldlow - worldbottom) * grTex->scaleY;
-					wallVerts[2].t = wallVerts[3].t - (worldlowslope - worldlow) * grTex->scaleY;
-					wallVerts[1].t = wallVerts[2].t - (worldbottomslope - worldlowslope) * grTex->scaleY;
+					wallVerts[0].t = wallVerts[1].t = (texturevpegbottom + worldlow - worldbottom) * grTex->scaleY;
+					//wallVerts[3].t = wallVerts[0].t - (worldlow - worldbottom) * grTex->scaleY; // no need, [3] is already this
+					wallVerts[2].t = wallVerts[1].t - (worldlowslope - worldbottomslope) * grTex->scaleY;
 				}
 				else
 				{
@@ -2292,7 +2292,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				else if (drawtextured)
 				{
 #ifdef ESLOPE // P.S. this is better-organized than the old version
-					fixed_t offs = sides[(newline ?: rover->master)->sidenum[0]].rowoffset;
+					fixed_t offs = sides[(newline ? newline : rover->master)->sidenum[0]].rowoffset;
 					grTex = HWR_GetTexture(texnum);
 
 					wallVerts[3].t = (*rover->topheight - h + offs) * grTex->scaleY;
@@ -3280,16 +3280,18 @@ static void HWR_AddPolyObjectPlanes(void)
 			if (po_ptrs[i]->translucency > 0)
 			{
 				FSurfaceInfo Surf;
-				FBITFIELD blendmode = HWR_TranstableToAlpha(po_ptrs[i]->translucency, &Surf);
+				FBITFIELD blendmode;
+				memset(&Surf, 0x00, sizeof(Surf));
+				blendmode = HWR_TranstableToAlpha(po_ptrs[i]->translucency, &Surf);
 				HWR_AddTransparentPolyobjectFloor(levelflats[polyobjsector->ceilingpic].lumpnum, po_ptrs[i], polyobjsector->ceilingheight,
-													polyobjsector->lightlevel, Surf.FlatColor.s.alpha, polyobjsector, blendmode, NULL);
+				                                  polyobjsector->lightlevel, Surf.FlatColor.s.alpha, polyobjsector, blendmode, NULL);
 			}
 			else
 			{
 				HWR_GetFlat(levelflats[polyobjsector->ceilingpic].lumpnum);
 				HWR_RenderPolyObjectPlane(po_ptrs[i], polyobjsector->ceilingheight, PF_Occlude,
-										polyobjsector->lightlevel, levelflats[polyobjsector->floorpic].lumpnum,
-										polyobjsector, 255, NULL);
+				                          polyobjsector->lightlevel, levelflats[polyobjsector->floorpic].lumpnum,
+				                          polyobjsector, 255, NULL);
 			}
 		}
 	}

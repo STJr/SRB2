@@ -366,13 +366,18 @@ ifdef DEBUGMODE
 
 	# build with debugging information
 	WINDRESFLAGS = -D_DEBUG
-	CFLAGS+=-O0 -Wall -DPARANOIA -DRANGECHECK
+ifdef GCC48
+	CFLAGS+=-Og
+else
+	CFLAGS+=-O0
+endif
+	CFLAGS+= -Wall -DPARANOIA -DRANGECHECK
 else
 
 
 	# build a normal optimised version
 	WINDRESFLAGS = -DNDEBUG
-	#CFLAGS+=-O2
+	CFLAGS+=-O3
 endif
 	CFLAGS+=-g $(OPTS) $(M5) $(WINDRESFLAGS)
 
