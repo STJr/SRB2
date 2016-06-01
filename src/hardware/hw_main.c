@@ -1675,9 +1675,9 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				else
 				{
 					// Skewed by bottom
-					wallVerts[0].t = (texturevpegtop + worldhigh - worldtop) * grTex->scaleY;
-					wallVerts[2].t = wallVerts[3].t - (worldhighslope - worldhigh) * grTex->scaleY;
-					wallVerts[1].t = wallVerts[2].t - (worldhighslope - worldtopslope) * grTex->scaleY;
+					wallVerts[0].t = wallVerts[1].t = (texturevpegtop + worldtop - worldhigh) * grTex->scaleY;
+					wallVerts[3].t = wallVerts[0].t - (worldtop - worldhigh) * grTex->scaleY;
+					wallVerts[2].t = wallVerts[1].t - (worldtopslope - worldhighslope) * grTex->scaleY;
 				}
 #endif
 			}
