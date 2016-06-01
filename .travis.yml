@@ -214,6 +214,7 @@ before_script:
   - mkdir build
   - cd build
   - export CFLAGS="-Wall -W $WFLAGS"
+  - export CCACHE_COMPRESS=true
   - cmake .. -DCMAKE_BUILD_TYPE=Release
 
 before_install:
