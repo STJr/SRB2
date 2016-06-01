@@ -214,12 +214,14 @@ int main(int argc, char **argv)
 #if defined (_WIN32) && !defined (_XBOX)
 #ifndef _WIN32_WCE
 	{
+#if 0 // just load the DLL
 		p_IsDebuggerPresent pfnIsDebuggerPresent = (p_IsDebuggerPresent)GetProcAddress(GetModuleHandleA("kernel32.dll"), "IsDebuggerPresent");
 		if ((!pfnIsDebuggerPresent || !pfnIsDebuggerPresent())
 #ifdef BUGTRAP
 			&& !InitBugTrap()
 #endif
 			)
+#endif
 		{
 			LoadLibraryA("exchndl.dll");
 		}
