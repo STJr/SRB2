@@ -13,6 +13,7 @@
 #include "doomdef.h"
 #ifdef HAVE_BLUA
 #include "p_local.h"
+#include "p_mobj.h" // So we can have P_GetMobjGravity
 #include "p_setup.h" // So we can have P_SetupLevelSky
 #include "z_zone.h"
 #include "r_main.h"
@@ -434,6 +435,16 @@ static int lib_pMobjFlip(lua_State *L)
 	if (!mobj)
 		return LUA_ErrInvalid(L, "mobj_t");
 	lua_pushinteger(L, P_MobjFlip(mobj));
+	return 1;
+}
+
+static int lib_pGetMobjGravity(lua_State *L)
+{
+	mobj_t *mobj = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	//HUDSAFE
+	if (!mobj)
+		return LUA_ErrInvalid(L, "mobj_t");
+	lua_pushinteger(L, P_GetMobjGravity(mobj));
 	return 1;
 }
 
@@ -2008,6 +2019,7 @@ static luaL_Reg lib[] = {
 	{"P_SPMAngle",lib_pSPMAngle},
 	{"P_SpawnPlayerMissile",lib_pSpawnPlayerMissile},
 	{"P_MobjFlip",lib_pMobjFlip},
+	{"P_GetMobjGravity",lib_pGetMobjGravity},
 	{"P_WeaponOrPanel",lib_pWeaponOrPanel},
 	{"P_FlashPal",lib_pFlashPal},
 	{"P_GetClosestAxis",lib_pGetClosestAxis},
