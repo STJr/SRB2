@@ -444,7 +444,7 @@ static int lib_pGetMobjGravity(lua_State *L)
 	//HUDSAFE
 	if (!mobj)
 		return LUA_ErrInvalid(L, "mobj_t");
-	lua_pushinteger(L, P_GetMobjGravity(mobj));
+	lua_pushfixed(L, P_GetMobjGravity(mobj));
 	return 1;
 }
 
