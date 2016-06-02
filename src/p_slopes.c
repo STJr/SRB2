@@ -864,8 +864,6 @@ void P_ButteredSlope(mobj_t *mo)
 			mult = FINECOSINE(angle >> ANGLETOFINESHIFT);
 		}
 
-		//CONS_Printf("%d\n", mult);
-
 		thrust = FixedMul(thrust, FRACUNIT*2/3 + mult/8);
 	}
 
@@ -873,10 +871,17 @@ void P_ButteredSlope(mobj_t *mo)
 		thrust = FixedMul(thrust, FRACUNIT+P_AproxDistance(mo->momx, mo->momy)/16);
 	// This makes it harder to zigzag up steep slopes, as well as allows greater top speed when rolling down
 
-	// Multiply by gravity
-	thrust = FixedMul(thrust, FixedMul(gravity, abs(P_GetMobjGravity(mo)))); // Now uses the absolute of mobj gravity. You're welcome.
-	// Multiply by scale (gravity strength depends on mobj scale)
+	// The strength of gravity depends on the global gravity base setting...
+	thrust = FixedMul(thrust, gravity);
+
+	// ...the sector-based gravity strength...
+	thrust = FixedMul(thrust, abs(P_GetMobjGravity(mo)));
+
+	// ...and the scale of the object.
 	thrust = FixedMul(thrust, mo->scale);
+
+	// Let's also multiply by friction for good measure.
+	thrust = FixedMul(thrust, mo->friction);
 
 	P_Thrust(mo, mo->standingslope->xydirection, thrust);
 }
