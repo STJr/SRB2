@@ -109,7 +109,7 @@ static void P_AddFloatThinker(sector_t *sec, INT32 tag, line_t *sourceline);
 //static void P_AddBridgeThinker(line_t *sourceline, sector_t *sec);
 static void P_AddFakeFloorsByLine(size_t line, ffloortype_e ffloorflags, thinkerlist_t *secthinkers);
 static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec);
-static void Add_Friction(INT32 friction, INT32 movefactor, INT32 affectee, INT32 referrer);
+static void Add_Friction(INT32 friction, INT32 affectee, INT32 referrer);
 static void P_AddSpikeThinker(sector_t *sec, INT32 referrer);
 
 
@@ -4879,7 +4879,7 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 			f = (friction_t *)th;
 
 			if (f->affectee == (INT32)sec2num)
-				Add_Friction(f->friction, f->movefactor, (INT32)(sec-sectors), f->affectee);
+				Add_Friction(f->friction, (INT32)(sec-sectors), f->affectee);
 		}
 		// Should this FOF have wind/current/pusher?
 		else if(th->function.acp1 == (actionf_p1)T_Pusher)
@@ -6911,18 +6911,16 @@ void T_Disappear(disappear_t *d)
 /** Adds friction thinker.
   *
   * \param friction      Friction value, 0xe800 is normal.
-  * \param movefactor    Inertia factor.
   * \param affectee      Target sector.
   * \param roverfriction FOF or not
   * \sa T_Friction, P_SpawnFriction
   */
-static void Add_Friction(INT32 friction, INT32 movefactor, INT32 affectee, INT32 referrer)
+static void Add_Friction(INT32 friction, INT32 affectee, INT32 referrer)
 {
 	friction_t *f = Z_Calloc(sizeof *f, PU_LEVSPEC, NULL);
 
 	f->thinker.function.acp1 = (actionf_p1)T_Friction;
 	f->friction = friction;
-	f->movefactor = movefactor;
 	f->affectee = affectee;
 
 	if (referrer != -1)
@@ -6980,17 +6978,11 @@ void T_Friction(friction_t *f)
 
 				if ((thing->friction == ORIG_FRICTION) // normal friction?
 					|| (f->friction < thing->friction))
-				{
 					thing->friction = f->friction;
-					thing->movefactor = f->movefactor;
-				}
 			}
 			else if (P_GetSpecialBottomZ(thing, sec, sec) == thing->floorz && (thing->friction == ORIG_FRICTION // normal friction?
 				|| f->friction < thing->friction))
-			{
 				thing->friction = f->friction;
-				thing->movefactor = f->movefactor;
-			}
 		}
 		node = node->m_snext;
 	}
@@ -7007,7 +6999,6 @@ static void P_SpawnFriction(void)
 	register INT32 s;
 	fixed_t strength; // frontside texture offset controls magnitude
 	fixed_t friction; // friction value to be applied during movement
-	INT32 movefactor; // applied to each player move to simulate inertia
 
 	for (i = 0; i < numlines; i++, l++)
 		if (l->special == 540)
@@ -7016,6 +7007,9 @@ static void P_SpawnFriction(void)
 			if (strength > 0) // sludge
 				strength = strength*2; // otherwise, the maximum sludginess value is +967...
 
+			// The following might seem odd. At the time of movement,
+			// the move distance is multiplied by 'friction/0x10000', so a
+			// higher friction value actually means 'less friction'.
 			friction = ORIG_FRICTION - (0x1EB8*strength)/0x80; // ORIG_FRICTION is 0xE800
 
 			if (friction > FRACUNIT)
@@ -7023,21 +7017,8 @@ static void P_SpawnFriction(void)
 			if (friction < 0)
 				friction = 0;
 
-			// The following check might seem odd. At the time of movement,
-			// the move distance is multiplied by 'friction/0x10000', so a
-			// higher friction value actually means 'less friction'.
-
-			if (friction < ORIG_FRICTION) // ice
-				movefactor = ((0x10092 - friction)*(0x70))/0x158;
-			else // sludge
-				movefactor = ((friction - 0xDB34)*(0xA))/0x80;
-
-			// killough 8/28/98: prevent odd situations
-			if (movefactor < 32)
-				movefactor = 32;
-
 			for (s = -1; (s = P_FindSectorFromLineTag(l, s)) >= 0 ;)
-				Add_Friction(friction, movefactor, s, -1);
+				Add_Friction(friction, s, -1);
 		}
 }
 
