@@ -874,8 +874,8 @@ void P_ButteredSlope(mobj_t *mo)
 	// Let's get the gravity strength for the object...
 	thrust = FixedMul(thrust, abs(P_GetMobjGravity(mo)));
 
-	// ... and its friction against the ground for good measure.
-	thrust = FixedMul(thrust, mo->friction);
+	// ... and its friction against the ground for good measure (divided by original friction to keep behaviour for normal slopes the same).
+	thrust = FixedMul(thrust, FixedDiv(mo->friction, ORIG_FRICTION));
 
 	P_Thrust(mo, mo->standingslope->xydirection, thrust);
 }
