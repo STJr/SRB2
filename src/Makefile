@@ -366,7 +366,12 @@ ifdef DEBUGMODE
 
 	# build with debugging information
 	WINDRESFLAGS = -D_DEBUG
-	CFLAGS+=-O0 -Wall -DPARANOIA -DRANGECHECK
+ifdef GCC48
+	CFLAGS+=-Og
+else
+	CFLAGS+=-O0
+endif
+	CFLAGS+= -Wall -DPARANOIA -DRANGECHECK
 else
 
 
