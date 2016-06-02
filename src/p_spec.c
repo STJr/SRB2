@@ -3650,9 +3650,9 @@ DoneSection2:
 	// Process Section 3
 	switch (special)
 	{
-		case 1: // Ice/Sludge
+		case 1: // N/A (formerly Ice/Sludge)
 		case 2: // Wind/Current
-		case 3: // Ice/Sludge and Wind/Current
+		case 3: // N/A (formerly Ice/Sludge and Wind/Current)
 		case 4: // Conveyor Belt
 			break;
 
@@ -6949,21 +6949,9 @@ void T_Friction(friction_t *f)
 
 	sec = sectors + f->affectee;
 
-	// Make sure the sector type hasn't changed
+	// Get FOF control sector
 	if (f->roverfriction)
-	{
 		referrer = sectors + f->referrer;
-
-		if (!(GETSECSPECIAL(referrer->special, 3) == 1
-			|| GETSECSPECIAL(referrer->special, 3) == 3))
-			return;
-	}
-	else
-	{
-		if (!(GETSECSPECIAL(sec->special, 3) == 1
-			|| GETSECSPECIAL(sec->special, 3) == 3))
-			return;
-	}
 
 	// Assign the friction value to players on the floor, non-floating,
 	// and clipped. Normally the object's friction value is kept at
@@ -7017,15 +7005,18 @@ static void P_SpawnFriction(void)
 	size_t i;
 	line_t *l = lines;
 	register INT32 s;
-	fixed_t length; // line length controls magnitude
+	fixed_t strength; // frontside texture offset controls magnitude
 	fixed_t friction; // friction value to be applied during movement
 	INT32 movefactor; // applied to each player move to simulate inertia
 
 	for (i = 0; i < numlines; i++, l++)
 		if (l->special == 540)
 		{
-			length = P_AproxDistance(l->dx, l->dy)>>FRACBITS;
-			friction = (0x1EB8*length)/0x80 + 0xD000;
+			strength = sides[l->sidenum[0]].textureoffset>>FRACBITS;
+			if (strength > 0) // sludge
+				strength = strength*2; // otherwise, the maximum sludginess value is +967...
+
+			friction = ORIG_FRICTION - (0x1EB8*strength)/0x80; // ORIG_FRICTION is 0xE800
 
 			if (friction > FRACUNIT)
 				friction = FRACUNIT;
@@ -7036,9 +7027,9 @@ static void P_SpawnFriction(void)
 			// the move distance is multiplied by 'friction/0x10000', so a
 			// higher friction value actually means 'less friction'.
 
-			if (friction > ORIG_FRICTION) // ice
+			if (friction < ORIG_FRICTION) // ice
 				movefactor = ((0x10092 - friction)*(0x70))/0x158;
-			else
+			else // sludge
 				movefactor = ((friction - 0xDB34)*(0xA))/0x80;
 
 			// killough 8/28/98: prevent odd situations
@@ -7293,12 +7284,10 @@ void T_Pusher(pusher_t *p)
 	{
 		referrer = &sectors[p->referrer];
 
-		if (!(GETSECSPECIAL(referrer->special, 3) == 2
-			|| GETSECSPECIAL(referrer->special, 3) == 3))
+		if (GETSECSPECIAL(referrer->special, 3) != 2)
 			return;
 	}
-	else if (!(GETSECSPECIAL(sec->special, 3) == 2
-			|| GETSECSPECIAL(sec->special, 3) == 3))
+	else if (GETSECSPECIAL(sec->special, 3) != 2)
 		return;
 
 	// For constant pushers (wind/current) there are 3 situations:
