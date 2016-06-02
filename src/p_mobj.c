@@ -1316,9 +1316,6 @@ fixed_t P_GetMobjGravity(mobj_t *mo)
 	if (mo->eflags & MFE_UNDERWATER && !goopgravity)
 		gravityadd = gravityadd/3;
 
-	if (!mo->momz) // mobj at stop, no floor, so feel the push of gravity!
-		gravityadd <<= 1;
-
 	if (mo->player)
 	{
 		if (mo->player->charability == CA_FLY && (mo->player->powers[pw_tailsfly]
@@ -1402,6 +1399,8 @@ fixed_t P_GetMobjGravity(mobj_t *mo)
 	if (mo->player && !!(mo->eflags & MFE_VERTICALFLIP) != wasflip)
 		P_PlayerFlip(mo);
 
+	gravityadd = FixedMul(gravityadd, mo->scale);
+
 	return gravityadd;
 }
 
@@ -1416,8 +1415,11 @@ void P_CheckGravity(mobj_t *mo, boolean affect)
 {
 	fixed_t gravityadd = P_GetMobjGravity(mo);
 
+	if (!mo->momz) // mobj at stop, no floor, so feel the push of gravity!
+		gravityadd <<= 1;
+
 	if (affect)
-		mo->momz += FixedMul(gravityadd, mo->scale);
+		mo->momz += gravityadd;
 
 	if (mo->type == MT_SKIM && mo->z + mo->momz <= mo->watertop && mo->z >= mo->watertop)
 	{

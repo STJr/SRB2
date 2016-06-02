@@ -812,7 +812,7 @@ void P_HandleSlopeLanding(mobj_t *thing, pslope_t *slope)
 	mom.y = thing->momy;
 	mom.z = thing->momz*2;
 
-	//CONS_Printf("langing on slope\n");
+	//CONS_Printf("Landing on slope\n");
 
 	// Reverse quantizing might could use its own function later
 	slope->zangle = ANGLE_MAX-slope->zangle;
@@ -871,16 +871,10 @@ void P_ButteredSlope(mobj_t *mo)
 		thrust = FixedMul(thrust, FRACUNIT+P_AproxDistance(mo->momx, mo->momy)/16);
 	// This makes it harder to zigzag up steep slopes, as well as allows greater top speed when rolling down
 
-	// The strength of gravity depends on the global gravity base setting...
-	thrust = FixedMul(thrust, gravity);
-
-	// ...the sector-based gravity strength...
+	// Let's get the gravity strength for the object...
 	thrust = FixedMul(thrust, abs(P_GetMobjGravity(mo)));
 
-	// ...and the scale of the object.
-	thrust = FixedMul(thrust, mo->scale);
-
-	// Let's also multiply by friction for good measure.
+	// ... and its friction against the ground for good measure.
 	thrust = FixedMul(thrust, mo->friction);
 
 	P_Thrust(mo, mo->standingslope->xydirection, thrust);
