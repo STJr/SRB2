@@ -999,7 +999,7 @@ static inline void AM_drawWalls(void)
 	static mline_t l;
 #ifdef ESLOPE
 	fixed_t frontf1,frontf2, frontc1, frontc2; // front floor/ceiling ends
-	fixed_t backf1, backf2, backc1, backc2; // back floor ceiling ends
+	fixed_t backf1 = 0, backf2 = 0, backc1 = 0, backc2 = 0; // back floor ceiling ends
 #endif
 
 	for (i = 0; i < numlines; i++)
