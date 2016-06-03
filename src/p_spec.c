@@ -3890,8 +3890,14 @@ DoneSection2:
 				}
 
 				// Grab speed and sequence values
-				speed = abs(lines[lineindex].dx)/8;
-				sequence = abs(lines[lineindex].dy)>>FRACBITS;
+				speed = abs(sides[lines[lineindex].sidenum[0]].textureoffset)/8;
+				sequence = abs(sides[lines[lineindex].sidenum[0]].rowoffset)>>FRACBITS;
+
+				if (speed == 0)
+				{
+					CONS_Debug(DBG_GAMELOGIC, "ERROR: Waypoint sequence %d at zero speed.\n", sequence);
+					break;
+				}
 
 				// scan the thinkers
 				// to find the first waypoint
@@ -3963,8 +3969,14 @@ DoneSection2:
 				}
 
 				// Grab speed and sequence values
-				speed = -(abs(lines[lineindex].dx)/8); // Negative means reverse
-				sequence = abs(lines[lineindex].dy)>>FRACBITS;
+				speed = -abs(sides[lines[lineindex].sidenum[0]].textureoffset)/8; // Negative means reverse
+				sequence = abs(sides[lines[lineindex].sidenum[0]].rowoffset)>>FRACBITS;
+
+				if (speed == 0)
+				{
+					CONS_Debug(DBG_GAMELOGIC, "ERROR: Waypoint sequence %d at zero speed.\n", sequence);
+					break;
+				}
 
 				// scan the thinkers
 				// to find the last waypoint
@@ -4101,8 +4113,14 @@ DoneSection2:
 				}
 
 				// Grab speed and sequence values
-				speed = abs(lines[lineindex].dx)/8;
-				sequence = abs(lines[lineindex].dy)>>FRACBITS;
+				speed = abs(sides[lines[lineindex].sidenum[0]].textureoffset)/8;
+				sequence = abs(sides[lines[lineindex].sidenum[0]].rowoffset)>>FRACBITS;
+
+				if (speed == 0)
+				{
+					CONS_Debug(DBG_GAMELOGIC, "ERROR: Waypoint sequence %d at zero speed.\n", sequence);
+					break;
+				}
 
 				// Find the closest waypoint
 				// Find the preceding waypoint
