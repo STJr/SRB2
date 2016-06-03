@@ -5271,7 +5271,7 @@ static inline void P_AddCameraScanner(sector_t *sourcesec, sector_t *actionsecto
 	elevator->distance = FixedInt(AngleFixed(angle));
 }
 
-static const ffloortype_e laserflags = FF_EXISTS|FF_RENDERALL|FF_NOSHADE|FF_EXTRA|FF_CUTEXTRA;
+static const ffloortype_e laserflags = FF_EXISTS|FF_RENDERALL|FF_NOSHADE|FF_EXTRA|FF_CUTEXTRA|FF_TRANSLUCENT;
 
 /** Flashes a laser block.
   *
@@ -5292,9 +5292,11 @@ void T_LaserFlash(laserthink_t *flash)
 		return;
 
 	if (leveltime & 1)
-		ffloor->flags |= FF_RENDERALL;
+		//ffloor->flags |= FF_RENDERALL;
+		ffloor->alpha = 0xC0;
 	else
-		ffloor->flags &= ~FF_RENDERALL;
+		//ffloor->flags &= ~FF_RENDERALL;
+		ffloor->alpha = 0x60;
 
 	sourcesec = ffloor->master->frontsector; // Less to type!
 
