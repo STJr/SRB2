@@ -4673,6 +4673,9 @@ static void P_3dMovement(player_t *player)
 		acceleration = player->accelstart + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * player->acceleration;
 	}
 
+	// Friction-scaled acceleration...
+	acceleration = FixedMul(acceleration<<FRACBITS, player->mo->movefactor)>>FRACBITS;
+
 	// Forward movement
 	if (player->climbing)
 	{
@@ -6327,7 +6330,8 @@ static void P_SkidStuff(player_t *player)
 			// If your push angle is more than this close to a full 180 degrees, trigger a skid.
 			if (dang > ANGLE_157h)
 			{
-				player->skidtime = TICRATE/2;
+				//player->skidtime = TICRATE/2;
+				player->skidtime = (FixedDiv(35<<(FRACBITS-1), FixedSqrt(player->mo->movefactor)))>>FRACBITS;
 				S_StartSound(player->mo, sfx_skid);
 				if (player->panim != PA_WALK)
 					P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
@@ -6363,6 +6367,14 @@ static void P_MovePlayer(player_t *player)
 
 	cmd = &player->cmd;
 	runspd = FixedMul(player->runspeed, player->mo->scale);
+
+	// Let's have some movement speed fun on low-friction surfaces, JUST for players... (high friction surfaces shouldn't have any adjustment, since the acceleration in this game is super high and that ends up cheesing high-friction surfaces.)
+	player->mo->movefactor = FixedDiv(ORIG_FRICTION, player->mo->movefactor);
+	if (player->mo->movefactor < FRACUNIT)
+		player->mo->movefactor = 8*player->mo->movefactor - 7*FRACUNIT;
+	else
+		player->mo->movefactor = FRACUNIT;
+	runspd = FixedMul(runspd, player->mo->movefactor);
 
 	// Control relinquishing stuff!
 	if (player->powers[pw_ingoop])
@@ -6535,6 +6547,7 @@ static void P_MovePlayer(player_t *player)
 	if (!player->mo->momx && !player->mo->momy && !player->mo->momz && player->panim == PA_WALK)
 		P_SetPlayerMobjState(player->mo, S_PLAY_STND);
 
+	player->mo->movefactor = ORIG_FRICTION; // We're not going to do any more with this, so let's change it back for the next frame.
 
 //////////////////
 //GAMEPLAY STUFF//

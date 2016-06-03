@@ -285,7 +285,8 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		// Adjust the player's animation speed to match their velocity.
 		if (!(disableSpeedAdjust || player->charflags & SF_NOSPEEDADJUST))
 		{
-			fixed_t speed = FixedDiv(player->speed, mobj->scale);
+			fixed_t speed = FixedDiv(player->speed, FixedMul(mobj->scale, player->mo->movefactor));
+
 			if (player->panim == PA_ROLL)
 			{
 				if (speed > 16<<FRACBITS)
@@ -1622,7 +1623,6 @@ static void P_SceneryXYFriction(mobj_t *mo, fixed_t oldx, fixed_t oldy)
 		{
 			// Stolen from P_SpawnFriction
 			mo->friction = FRACUNIT - 0x100;
-			mo->movefactor = ((0x10092 - mo->friction)*(0x70))/0x158;
 		}
 		else
 			mo->friction = ORIG_FRICTION;
@@ -2658,7 +2658,6 @@ static boolean P_ZMovement(mobj_t *mo)
 
 					// Stolen from P_SpawnFriction
 					mo->friction = FRACUNIT - 0x100;
-					mo->movefactor = ((0x10092 - mo->friction)*(0x70))/0x158;
 				}
 				else if (mo->type == MT_FALLINGROCK)
 				{
@@ -7799,7 +7798,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 
 	mobj->friction = ORIG_FRICTION;
 
-	mobj->movefactor = ORIG_FRICTION_FACTOR;
+	mobj->movefactor = ORIG_FRICTION;
 
 	// All mobjs are created at 100% scale.
 	mobj->scale = FRACUNIT;

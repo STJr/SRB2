@@ -6998,11 +6998,19 @@ void T_Friction(friction_t *f)
 
 				if ((thing->friction == ORIG_FRICTION) // normal friction?
 					|| (f->friction < thing->friction))
+				{
 					thing->friction = f->friction;
+					if (thing->player)
+						thing->movefactor = f->friction;
+				}
 			}
 			else if (P_GetSpecialBottomZ(thing, sec, sec) == thing->floorz && (thing->friction == ORIG_FRICTION // normal friction?
 				|| f->friction < thing->friction))
+			{
 				thing->friction = f->friction;
+				if (thing->player)
+					thing->movefactor = f->friction;
+			}
 		}
 		node = node->m_snext;
 	}
