@@ -5584,7 +5584,7 @@ void P_SpawnSpecials(INT32 fromnetsave)
 					angle_t flatangle = InvAngle(R_PointToAngle2(lines[i].v1->x, lines[i].v1->y, lines[i].v2->x, lines[i].v2->y));
 					fixed_t xoffs;
 					fixed_t yoffs;
-					
+
 					if (lines[i].flags & ML_NOKNUX) // Set offset through x and y texture offsets if NOKNUX flag is set
 					{
 						xoffs = sides[lines[i].sidenum[0]].textureoffset;
@@ -5597,7 +5597,7 @@ void P_SpawnSpecials(INT32 fromnetsave)
 						xoffs = (-FixedMul(lines[i].v1->x, cosinecomponent) % MAXFLATSIZE) + (FixedMul(lines[i].v1->y, sinecomponent) % MAXFLATSIZE); // No danger of overflow thanks to the strategically placed modulo operations.
 						yoffs = (FixedMul(lines[i].v1->x, sinecomponent) % MAXFLATSIZE) + (FixedMul(lines[i].v1->y, cosinecomponent) % MAXFLATSIZE); // Ditto.
 					}
-						
+
 					for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
 					{
 						if (!(lines[i].flags & ML_NOSONIC)) // Modify floor flat alignment unless NOSONIC flag is set
@@ -5609,7 +5609,7 @@ void P_SpawnSpecials(INT32 fromnetsave)
 							sectors[s].spawn_flr_xoffs = sectors[s].floor_xoffs;
 							sectors[s].spawn_flr_yoffs = sectors[s].floor_yoffs;
 						}
-						
+
 						if (!(lines[i].flags & ML_NOTAILS)) // Modify ceiling flat alignment unless NOTAILS flag is set
 						{
 							sectors[s].spawn_ceilpic_angle = sectors[s].ceilingpic_angle = flatangle;
