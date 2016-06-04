@@ -2949,7 +2949,7 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 					if (spawned->frame & FF_ANIMATE)
 						spawned->frame += P_RandomKey(spawned->state->var2);
 
-					spawned->angle += P_RandomKey(36)*ANG1; // irrelevant for default objects but might make sense for some custom ones
+					spawned->angle += P_RandomKey(36)*ANG10; // irrelevant for default objects but might make sense for some custom ones
 
 					if (flags & ML_EFFECT1)
 					{
