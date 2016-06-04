@@ -275,7 +275,6 @@ void P_SpawnSlope_Line(int linenum)
 		ny = -FixedDiv(line->dx, len);
 	}
 
-	// TODO: Transform origin relative to the bounds of an individual FOF
 	origin.x = line->v1->x + (line->v2->x - line->v1->x)/2;
 	origin.y = line->v1->y + (line->v2->y - line->v1->y)/2;
 
