@@ -4933,7 +4933,8 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 
 	if ((flags & FF_MARIO))
 	{
-		P_AddBlockThinker(sec2, master);
+		if (!(master->flags & ML_NOCLIMB)) // Don't change the textures of a brick block, just a question block
+			P_AddBlockThinker(sec2, master);
 		CheckForMarioBlocks = true;
 	}
 

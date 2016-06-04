@@ -1797,13 +1797,10 @@ static mobj_t *SearchMarioNode(msecnode_t *node)
 void T_MarioBlockChecker(levelspecthink_t *block)
 {
 	line_t *masterline = block->sourceline;
-	if (!(masterline->flags & ML_NOCLIMB)) // Don't change the textures of a brick block, just a question block
-	{
-		if (SearchMarioNode(block->sector->touching_thinglist))
-			sides[masterline->sidenum[0]].midtexture = sides[masterline->sidenum[0]].bottomtexture;
-		else
-			sides[masterline->sidenum[0]].midtexture = sides[masterline->sidenum[0]].toptexture;
-	}
+	if (SearchMarioNode(block->sector->touching_thinglist))
+		sides[masterline->sidenum[0]].midtexture = sides[masterline->sidenum[0]].bottomtexture;
+	else
+		sides[masterline->sidenum[0]].midtexture = sides[masterline->sidenum[0]].toptexture;
 }
 
 // This is the Thwomp's 'brain'. It looks around for players nearby, and if
