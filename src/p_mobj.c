@@ -3068,8 +3068,13 @@ nightsdone:
 						if (rover->flags & FF_MARIO
 						&& !(mo->eflags & MFE_VERTICALFLIP) // if you were flipped, your head isn't actually hitting your ceilingz is it?
 						&& *rover->bottomheight == mo->ceilingz) // The player's head hit the bottom!
+						{
 							// DO THE MARIO!
-							EV_MarioBlock(rover->master->frontsector, node->m_sector, *rover->topheight, mo);
+							if (rover->master->flags & ML_NOCLIMB) // Brick block!
+								EV_CrumbleChain(node->m_sector, rover);
+							else // Question block!
+								EV_MarioBlock(rover->master->frontsector, node->m_sector, *rover->topheight, mo);
+						}
 					}
 				} // Ugly ugly billions of braces! Argh!
 			}

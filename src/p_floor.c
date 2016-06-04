@@ -1797,10 +1797,13 @@ static mobj_t *SearchMarioNode(msecnode_t *node)
 void T_MarioBlockChecker(levelspecthink_t *block)
 {
 	line_t *masterline = block->sourceline;
-	if (SearchMarioNode(block->sector->touching_thinglist))
-		sides[masterline->sidenum[0]].midtexture = sides[masterline->sidenum[0]].bottomtexture;
-	else
-		sides[masterline->sidenum[0]].midtexture = sides[masterline->sidenum[0]].toptexture;
+	if (!(masterline->flags & ML_NOCLIMB)) // Don't change the textures of a brick block, just a question block
+	{
+		if (SearchMarioNode(block->sector->touching_thinglist))
+			sides[masterline->sidenum[0]].midtexture = sides[masterline->sidenum[0]].bottomtexture;
+		else
+			sides[masterline->sidenum[0]].midtexture = sides[masterline->sidenum[0]].toptexture;
+	}
 }
 
 // This is the Thwomp's 'brain'. It looks around for players nearby, and if
@@ -2878,17 +2881,35 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 	fixed_t leftx, rightx;
 	fixed_t topy, bottomy;
 	fixed_t topz;
+	fixed_t widthfactor, heightfactor;
 	fixed_t a, b, c;
 	mobjtype_t type = MT_ROCKCRUMBLE1;
+	fixed_t spacing = (32<<FRACBITS);
+	tic_t lifetime = 3*TICRATE;
+	INT16 flags = 0;
 
-	// If the control sector has a special
-	// of Section3:7-15, use the custom debris.
-	if (GETSECSPECIAL(rover->master->frontsector->special, 3) >= 8)
-		type = MT_ROCKCRUMBLE1+(GETSECSPECIAL(rover->master->frontsector->special, 3)-7);
+#define controlsec rover->master->frontsector
+
+	for (i = 0; i < controlsec->linecount; i++)
+	{
+		if (controlsec->lines[i]->special == 14) // If we can use bustable block parameters, we will.
+		{
+			if (sides[controlsec->lines[i]->sidenum[0]].toptexture)
+				type = (mobjtype_t)sides[controlsec->lines[i]->sidenum[0]].toptexture; // Set as object type in p_setup.c...
+			if (sides[controlsec->lines[i]->sidenum[0]].textureoffset)
+				spacing = sides[controlsec->lines[i]->sidenum[0]].textureoffset;
+			if (sides[controlsec->lines[i]->sidenum[0]].rowoffset)
+				lifetime = (sides[controlsec->lines[i]->sidenum[0]].rowoffset>>FRACBITS);
+			flags = controlsec->lines[i]->flags;
+			break; // If someone has multiple parameter linedefs per control sector, TOUGH.
+		}
+	}
+
+#undef controlsec
 
 	// soundorg z height never gets set normally, so MEH.
 	sec->soundorg.z = sec->floorheight;
-	S_StartSound(&sec->soundorg, sfx_crumbl);
+	S_StartSound(&sec->soundorg, mobjinfo[type].activesound);
 
 	// Find the outermost vertexes in the subsector
 	for (i = 0; i < sec->linecount; i++)
@@ -2907,23 +2928,32 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 			bottommostvertex = i;
 	}
 
-	leftx = sec->lines[leftmostvertex]->v1->x+(16<<FRACBITS);
+	leftx = sec->lines[leftmostvertex]->v1->x+(spacing>>1);
 	rightx = sec->lines[rightmostvertex]->v1->x;
-	topy = sec->lines[topmostvertex]->v1->y-(16<<FRACBITS);
+	topy = sec->lines[topmostvertex]->v1->y-(spacing>>1);
 	bottomy = sec->lines[bottommostvertex]->v1->y;
-	topz = *rover->topheight-(16<<FRACBITS);
+	topz = *rover->topheight-(spacing>>1);
 
-	for (a = leftx; a < rightx; a += (32<<FRACBITS))
+	widthfactor = (rightx + topy - leftx - bottomy)>>3;
+	heightfactor = (topz - *rover->bottomheight)>>2;
+
+	for (a = leftx; a < rightx; a += spacing)
 	{
-		for (b = topy; b > bottomy; b -= (32<<FRACBITS))
+		for (b = topy; b > bottomy; b -= spacing)
 		{
 			if (R_PointInSubsector(a, b)->sector == sec)
 			{
 				mobj_t *spawned = NULL;
-				for (c = topz; c > *rover->bottomheight; c -= (32<<FRACBITS))
+				for (c = topz; c > *rover->bottomheight; c -= spacing)
 				{
 					spawned = P_SpawnMobj(a, b, c, type);
-					spawned->fuse = 3*TICRATE;
+					if (flags & ML_EFFECT1)
+					{
+						P_InstaThrust(spawned, R_PointToAngle2(sec->soundorg.x, sec->soundorg.y, a, b), FixedDiv(P_AproxDistance(a - sec->soundorg.x, b - sec->soundorg.y), widthfactor));
+						P_SetObjectMomZ(spawned, FixedDiv((c - *rover->bottomheight), heightfactor), false);
+					}
+					if (lifetime != -1)
+						spawned->fuse = lifetime;
 				}
 			}
 		}

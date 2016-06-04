@@ -3712,7 +3712,7 @@ DoneSection2:
 			}
 			break;
 
-		case 7: // Bustable block sprite parameter
+		case 7: // N/A (formerly bustable block sprite parameters)
 		case 8:
 		case 9:
 		case 10:
