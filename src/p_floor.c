@@ -13,6 +13,7 @@
 
 #include "doomdef.h"
 #include "doomstat.h"
+#include "m_random.h"
 #include "p_local.h"
 #include "r_state.h"
 #include "s_sound.h"
@@ -2944,6 +2945,12 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 				for (c = topz; c > *rover->bottomheight; c -= spacing)
 				{
 					spawned = P_SpawnMobj(a, b, c, type);
+
+					if (spawned->frame & FF_ANIMATE)
+						spawned->frame += P_RandomKey(spawned->state->var2);
+
+					spawned->angle += P_RandomKey(36)*ANG1; // irrelevant for default objects but might make sense for some custom ones
+
 					if (flags & ML_EFFECT1)
 					{
 						P_InstaThrust(spawned, R_PointToAngle2(sec->soundorg.x, sec->soundorg.y, a, b), FixedDiv(P_AproxDistance(a - sec->soundorg.x, b - sec->soundorg.y), widthfactor));
