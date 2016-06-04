@@ -2890,18 +2890,18 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 
 #define controlsec rover->master->frontsector
 
-	for (i = 0; i < controlsec->linecount; i++)
+	if (controlsec->tag != 0)
 	{
-		if (controlsec->lines[i]->special == 14) // If we can use bustable block parameters, we will.
+		size_t tagline = P_FindSpecialLineFromTag(14, controlsec->tag, -1);
+		if (tagline != -1)
 		{
-			if (sides[controlsec->lines[i]->sidenum[0]].toptexture)
-				type = (mobjtype_t)sides[controlsec->lines[i]->sidenum[0]].toptexture; // Set as object type in p_setup.c...
-			if (sides[controlsec->lines[i]->sidenum[0]].textureoffset)
-				spacing = sides[controlsec->lines[i]->sidenum[0]].textureoffset;
-			if (sides[controlsec->lines[i]->sidenum[0]].rowoffset)
-				lifetime = (sides[controlsec->lines[i]->sidenum[0]].rowoffset>>FRACBITS);
-			flags = controlsec->lines[i]->flags;
-			break; // If someone has multiple parameter linedefs per control sector, TOUGH.
+			if (sides[lines[tagline].sidenum[0]].toptexture)
+				type = (mobjtype_t)sides[lines[tagline].sidenum[0]].toptexture; // Set as object type in p_setup.c...
+			if (sides[lines[tagline].sidenum[0]].textureoffset)
+				spacing = sides[lines[tagline].sidenum[0]].textureoffset;
+			if (sides[lines[tagline].sidenum[0]].rowoffset)
+				lifetime = (sides[lines[tagline].sidenum[0]].rowoffset>>FRACBITS);
+			flags = lines[tagline].flags;
 		}
 	}
 
