@@ -2890,7 +2890,7 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 
 	if (controlsec->tag != 0)
 	{
-		size_t tagline = P_FindSpecialLineFromTag(14, controlsec->tag, -1);
+		INT32 tagline = P_FindSpecialLineFromTag(14, controlsec->tag, -1);
 		if (tagline != -1)
 		{
 			if (sides[lines[tagline].sidenum[0]].toptexture)
@@ -2898,7 +2898,12 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 			if (sides[lines[tagline].sidenum[0]].textureoffset)
 				spacing = sides[lines[tagline].sidenum[0]].textureoffset;
 			if (sides[lines[tagline].sidenum[0]].rowoffset)
-				lifetime = (sides[lines[tagline].sidenum[0]].rowoffset>>FRACBITS);
+			{
+				if (sides[lines[tagline].sidenum[0]].rowoffset>>FRACBITS == -1)
+					lifetime = (sides[lines[tagline].sidenum[0]].rowoffset>>FRACBITS);
+				else
+					lifetime = 0;
+			}
 			flags = lines[tagline].flags;
 		}
 	}
@@ -2956,8 +2961,8 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 						P_InstaThrust(spawned, R_PointToAngle2(sec->soundorg.x, sec->soundorg.y, a, b), FixedDiv(P_AproxDistance(a - sec->soundorg.x, b - sec->soundorg.y), widthfactor));
 						P_SetObjectMomZ(spawned, FixedDiv((c - *rover->bottomheight), heightfactor), false);
 					}
-					if (lifetime != -1)
-						spawned->fuse = lifetime;
+
+					spawned->fuse = lifetime;
 				}
 			}
 		}
