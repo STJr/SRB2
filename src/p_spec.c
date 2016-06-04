@@ -2415,7 +2415,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			{
 				fixed_t sfxnum;
 
-				sfxnum = sides[line->sidenum[0]].toptexture; //P_AproxDistance(line->dx, line->dy)>>FRACBITS;
+				sfxnum = sides[line->sidenum[0]].toptexture;
 
 				if (line->tag != 0 && line->flags & ML_EFFECT5)
 				{
@@ -3650,14 +3650,13 @@ DoneSection2:
 	// Process Section 3
 	switch (special)
 	{
-		case 1: // N/A (formerly Ice/Sludge)
+		case 1: // Unused
 		case 2: // Wind/Current
-		case 3: // N/A (formerly Ice/Sludge and Wind/Current)
+		case 3: // Unused
 		case 4: // Conveyor Belt
 			break;
 
-		case 5: // Speed pad w/o spin
-		case 6: // Speed pad w/ spin
+		case 5: // Speed pad
 			if (player->powers[pw_flashing] != 0 && player->powers[pw_flashing] < TICRATE/2)
 				break;
 
@@ -3669,7 +3668,13 @@ DoneSection2:
 				fixed_t linespeed;
 
 				lineangle = R_PointToAngle2(lines[i].v1->x, lines[i].v1->y, lines[i].v2->x, lines[i].v2->y);
-				linespeed = P_AproxDistance(lines[i].v2->x-lines[i].v1->x, lines[i].v2->y-lines[i].v1->y);
+				linespeed = sides[lines[i].sidenum[0]].textureoffset;
+
+				if (linespeed == 0)
+				{
+					CONS_Debug(DBG_GAMELOGIC, "ERROR: Speed pad (tag %d) at zero speed.\n", sector->tag);
+					break;
+				}
 
 				player->mo->angle = lineangle;
 
@@ -3699,7 +3704,7 @@ DoneSection2:
 
 				P_InstaThrust(player->mo, player->mo->angle, linespeed);
 
-				if (GETSECSPECIAL(sector->special, 3) == 6 && (player->charability2 == CA2_SPINDASH))
+				if ((lines[i].flags & ML_EFFECT5) && (player->charability2 == CA2_SPINDASH)) // Roll!
 				{
 					if (!(player->pflags & PF_SPINNING))
 						player->pflags |= PF_SPINNING;
@@ -3708,19 +3713,26 @@ DoneSection2:
 				}
 
 				player->powers[pw_flashing] = TICRATE/3;
-				S_StartSound(player->mo, sfx_spdpad);
+
+				fixed_t sfxnum = sides[lines[i].sidenum[0]].toptexture;
+
+				if (!sfxnum)
+					sfxnum = sfx_spdpad;
+
+				S_StartSound(player->mo, sfxnum);
 			}
 			break;
 
-		case 7: // N/A (formerly bustable block sprite parameters)
-		case 8:
-		case 9:
-		case 10:
-		case 11:
-		case 12:
-		case 13:
-		case 14:
-		case 15:
+		case 6: // Unused
+		case 7: // Unused
+		case 8: // Unused
+		case 9: // Unused
+		case 10: // Unused
+		case 11: // Unused
+		case 12: // Unused
+		case 13: // Unused
+		case 14: // Unused
+		case 15: // Unused
 			break;
 	}
 

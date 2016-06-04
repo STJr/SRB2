@@ -1463,6 +1463,8 @@ static void P_LoadSideDefs2(lumpnum_t lumpnum)
 				sd->text[6] = 0;
 				break;
 			}
+
+			case 4: // Speed pad parameters
 			case 414: // Play SFX
 			{
 				sd->toptexture = sd->midtexture = sd->bottomtexture = 0;
@@ -1476,7 +1478,7 @@ static void P_LoadSideDefs2(lumpnum_t lumpnum)
 				break;
 			}
 
-			case 14: // Bustable block parameter
+			case 14: // Bustable block parameters
 			case 425: // Calls P_SetMobjState on calling mobj
 			case 434: // Custom Power
 			case 442: // Calls P_SetMobjState on mobjs of a given type in the tagged sectors
