@@ -3380,12 +3380,13 @@ void A_ParticleSpawn(mobj_t *actor)
 	{
 		for (i = 0; i < actor->lastlook; i++)
 		{
-			spawn = P_SpawnMobj(actor->x + FixedMul(actor->friction, FINECOSINE(actor->angle>>ANGLETOFINESHIFT)),
-				actor->y + FixedMul(actor->friction, FINESINE(actor->angle>>ANGLETOFINESHIFT)),
+			spawn = P_SpawnMobj(
+				actor->x + FixedMul(FixedMul(actor->friction, actor->scale), FINECOSINE(actor->angle>>ANGLETOFINESHIFT)),
+				actor->y + FixedMul(FixedMul(actor->friction, actor->scale), FINESINE(actor->angle>>ANGLETOFINESHIFT)),
 				actor->z,
 				(mobjtype_t)actor->cvmem);
 			P_SetScale(spawn, actor->scale);
-			spawn->momz = actor->movefactor;
+			spawn->momz = FixedMul(actor->movefactor, spawn->scale);
 			spawn->destscale = spawn->scale/100;
 			spawn->scalespeed = spawn->scale/actor->health;
 			spawn->tics = (tic_t)actor->health;
