@@ -1675,9 +1675,9 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				else
 				{
 					// Skewed by bottom
-					wallVerts[0].t = (texturevpegtop + worldhigh - worldtop) * grTex->scaleY;
-					wallVerts[2].t = wallVerts[3].t - (worldhighslope - worldhigh) * grTex->scaleY;
-					wallVerts[1].t = wallVerts[2].t - (worldhighslope - worldtopslope) * grTex->scaleY;
+					wallVerts[0].t = wallVerts[1].t = (texturevpegtop + worldtop - worldhigh) * grTex->scaleY;
+					wallVerts[3].t = wallVerts[0].t - (worldtop - worldhigh) * grTex->scaleY;
+					wallVerts[2].t = wallVerts[1].t - (worldtopslope - worldhighslope) * grTex->scaleY;
 				}
 #endif
 			}
@@ -1719,12 +1719,12 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				if (!(gr_linedef->flags & ML_DONTPEGBOTTOM))
 					texturevpegbottom = 0;
 				else if (gr_linedef->flags & ML_EFFECT1)
-					texturevpegbottom = worldtop - worldlow;
+					texturevpegbottom = worldbottom - worldlow;
 				else
-					texturevpegbottom = gr_frontsector->ceilingheight - gr_backsector->floorheight;
+					texturevpegbottom = gr_frontsector->floorheight - gr_backsector->floorheight;
 #else
 				if (gr_linedef->flags & ML_DONTPEGBOTTOM)
-					texturevpegbottom = worldtop - worldlow;
+					texturevpegbottom = worldbottom - worldlow;
                 else
                     texturevpegbottom = 0;
 #endif
@@ -1752,9 +1752,9 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				else if (gr_linedef->flags & ML_DONTPEGBOTTOM)
 				{
 					// Skewed by bottom
-					wallVerts[0].t = (texturevpegbottom + worldlow - worldbottom) * grTex->scaleY;
-					wallVerts[2].t = wallVerts[3].t - (worldlowslope - worldlow) * grTex->scaleY;
-					wallVerts[1].t = wallVerts[2].t - (worldbottomslope - worldlowslope) * grTex->scaleY;
+					wallVerts[0].t = wallVerts[1].t = (texturevpegbottom + worldlow - worldbottom) * grTex->scaleY;
+					//wallVerts[3].t = wallVerts[0].t - (worldlow - worldbottom) * grTex->scaleY; // no need, [3] is already this
+					wallVerts[2].t = wallVerts[1].t - (worldlowslope - worldbottomslope) * grTex->scaleY;
 				}
 				else
 				{
@@ -2892,15 +2892,57 @@ static void HWR_AddLine(seg_t * line)
 
 	gr_backsector = R_FakeFlat(gr_backsector, &tempsec, NULL, NULL, true);
 
-	// Closed door.
-	if (gr_backsector->ceilingheight <= gr_frontsector->floorheight ||
-	    gr_backsector->floorheight >= gr_frontsector->ceilingheight)
-		goto clipsolid;
+#ifdef ESLOPE
+	if (gr_frontsector->f_slope || gr_frontsector->c_slope || gr_backsector->f_slope || gr_backsector->c_slope)
+	{
+		fixed_t v1x, v1y, v2x, v2y; // the seg's vertexes as fixed_t
+		fixed_t frontf1,frontf2, frontc1, frontc2; // front floor/ceiling ends
+		fixed_t backf1, backf2, backc1, backc2; // back floor ceiling ends
 
-	// Window.
-	if (gr_backsector->ceilingheight != gr_frontsector->ceilingheight ||
-	    gr_backsector->floorheight != gr_frontsector->floorheight)
-		goto clippass;
+		v1x = FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->v1)->x);
+		v1y = FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->v1)->y);
+		v2x = FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->v2)->x);
+		v2y = FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->v2)->y);
+#define SLOPEPARAMS(slope, end1, end2, normalheight) \
+		if (slope) { \
+			end1 = P_GetZAt(slope, v1x, v1y); \
+			end2 = P_GetZAt(slope, v2x, v2y); \
+		} else \
+			end1 = end2 = normalheight;
+
+		SLOPEPARAMS(gr_frontsector->f_slope, frontf1, frontf2, gr_frontsector->floorheight)
+		SLOPEPARAMS(gr_frontsector->c_slope, frontc1, frontc2, gr_frontsector->ceilingheight)
+		SLOPEPARAMS( gr_backsector->f_slope, backf1,  backf2,  gr_backsector->floorheight)
+		SLOPEPARAMS( gr_backsector->c_slope, backc1,  backc2,  gr_backsector->ceilingheight)
+#undef SLOPEPARAMS
+
+		// Closed door.
+		if ((backc1 <= frontf1 && backc2 <= frontf2)
+			|| (backf1 >= frontc1 && backf2 >= frontc2))
+		{
+			goto clipsolid;
+		}
+
+		// Window.
+		if (backc1 != frontc1 || backc2 != frontc2
+			|| backf1 != frontf1 || backf2 != frontf2)
+		{
+			goto clippass;
+		}
+	}
+	else
+#endif
+	{
+		// Closed door.
+		if (gr_backsector->ceilingheight <= gr_frontsector->floorheight ||
+			gr_backsector->floorheight >= gr_frontsector->ceilingheight)
+			goto clipsolid;
+
+		// Window.
+		if (gr_backsector->ceilingheight != gr_frontsector->ceilingheight ||
+			gr_backsector->floorheight != gr_frontsector->floorheight)
+			goto clippass;
+	}
 
 	// Reject empty lines used for triggers and special events.
 	// Identical floor and ceiling on both sides,
