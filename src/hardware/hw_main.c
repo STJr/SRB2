@@ -2892,15 +2892,57 @@ static void HWR_AddLine(seg_t * line)
 
 	gr_backsector = R_FakeFlat(gr_backsector, &tempsec, NULL, NULL, true);
 
-	// Closed door.
-	if (gr_backsector->ceilingheight <= gr_frontsector->floorheight ||
-	    gr_backsector->floorheight >= gr_frontsector->ceilingheight)
-		goto clipsolid;
+#ifdef ESLOPE
+	if (gr_frontsector->f_slope || gr_frontsector->c_slope || gr_backsector->f_slope || gr_backsector->c_slope)
+	{
+		fixed_t v1x, v1y, v2x, v2y; // the seg's vertexes as fixed_t
+		fixed_t frontf1,frontf2, frontc1, frontc2; // front floor/ceiling ends
+		fixed_t backf1, backf2, backc1, backc2; // back floor ceiling ends
 
-	// Window.
-	if (gr_backsector->ceilingheight != gr_frontsector->ceilingheight ||
-	    gr_backsector->floorheight != gr_frontsector->floorheight)
-		goto clippass;
+		v1x = FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->v1)->x);
+		v1y = FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->v1)->y);
+		v2x = FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->v2)->x);
+		v2y = FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->v2)->y);
+#define SLOPEPARAMS(slope, end1, end2, normalheight) \
+		if (slope) { \
+			end1 = P_GetZAt(slope, v1x, v1y); \
+			end2 = P_GetZAt(slope, v2x, v2y); \
+		} else \
+			end1 = end2 = normalheight;
+
+		SLOPEPARAMS(gr_frontsector->f_slope, frontf1, frontf2, gr_frontsector->floorheight)
+		SLOPEPARAMS(gr_frontsector->c_slope, frontc1, frontc2, gr_frontsector->ceilingheight)
+		SLOPEPARAMS( gr_backsector->f_slope, backf1,  backf2,  gr_backsector->floorheight)
+		SLOPEPARAMS( gr_backsector->c_slope, backc1,  backc2,  gr_backsector->ceilingheight)
+#undef SLOPEPARAMS
+
+		// Closed door.
+		if ((backc1 <= frontf1 && backc2 <= frontf2)
+			|| (backf1 >= frontc1 && backf2 >= frontc2))
+		{
+			goto clipsolid;
+		}
+
+		// Window.
+		if (backc1 != frontc1 || backc2 != frontc2
+			|| backf1 != frontf1 || backf2 != frontf2)
+		{
+			goto clippass;
+		}
+	}
+	else
+#endif
+	{
+		// Closed door.
+		if (gr_backsector->ceilingheight <= gr_frontsector->floorheight ||
+			gr_backsector->floorheight >= gr_frontsector->ceilingheight)
+			goto clipsolid;
+
+		// Window.
+		if (gr_backsector->ceilingheight != gr_frontsector->ceilingheight ||
+			gr_backsector->floorheight != gr_frontsector->floorheight)
+			goto clippass;
+	}
 
 	// Reject empty lines used for triggers and special events.
 	// Identical floor and ceiling on both sides,
