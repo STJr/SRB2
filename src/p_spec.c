@@ -4027,6 +4027,8 @@ DoneSection2:
 				player->speed = speed;
 				player->pflags |= PF_SPINNING;
 				player->pflags &= ~PF_JUMPED;
+				player->pflags &= ~PF_GLIDING;
+				player->climbing = 0;
 
 				if (player->mo->state-states != S_PLAY_SPIN)
 				{
