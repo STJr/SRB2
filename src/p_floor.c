@@ -2899,7 +2899,7 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 				spacing = sides[lines[tagline].sidenum[0]].textureoffset;
 			if (sides[lines[tagline].sidenum[0]].rowoffset)
 			{
-				if (sides[lines[tagline].sidenum[0]].rowoffset>>FRACBITS == -1)
+				if (sides[lines[tagline].sidenum[0]].rowoffset>>FRACBITS != -1)
 					lifetime = (sides[lines[tagline].sidenum[0]].rowoffset>>FRACBITS);
 				else
 					lifetime = 0;
