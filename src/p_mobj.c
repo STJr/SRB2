@@ -9303,6 +9303,85 @@ ML_NOCLIMB : Direction not controllable
 		}
 		break;
 	}
+	case MT_PARTICLEGEN:
+	{
+		fixed_t radius, speed, bottomheight, topheight;
+		INT32 type, numdivisions, time, anglespeed;
+		angle_t angledivision;
+		size_t line;
+		const size_t mthingi = (size_t)(mthing - mapthings);
+
+		for (line = 0; line < numlines; line++)
+		{
+			if (lines[line].special == 15 && lines[line].tag == mthing->angle)
+				break;
+		}
+
+		if (line == numlines)
+		{
+			CONS_Debug(DBG_GAMELOGIC, "Particle generator (mapthing #%s) needs tagged to a #15 parameter line (trying to find tag %d).\n", sizeu1(mthingi), mthing->angle);
+			return;
+		}
+
+		if (sides[lines[line].sidenum[0]].toptexture)
+			type = sides[lines[line].sidenum[0]].toptexture; // Set as object type in p_setup.c...
+		else
+			type = (INT32)MT_PARTICLE;
+
+		speed = abs(sides[lines[line].sidenum[0]].textureoffset);
+		bottomheight = lines[line].frontsector->floorheight;
+		topheight = lines[line].frontsector->ceilingheight - mobjinfo[(mobjtype_t)type].height;
+
+		numdivisions = (mthing->options >> ZSHIFT);
+
+		if (numdivisions)
+		{
+			radius = R_PointToDist2(lines[line].v1->x, lines[line].v1->y, lines[line].v2->x, lines[line].v2->y);
+			anglespeed = (sides[lines[line].sidenum[0]].rowoffset >> FRACBITS) % 360;
+			angledivision = 360/numdivisions;
+		}
+		else
+		{
+			numdivisions = 1; // Simple trick to make A_ParticleSpawn simpler.
+			radius = 0;
+			anglespeed = 0;
+			angledivision = 0;
+		}
+
+		if ((speed) && (topheight > bottomheight))
+			time = (INT32)(FixedDiv((topheight - bottomheight), speed) >> FRACBITS);
+		else
+			time = 1; // There's no reasonable way to set it, so just show the object for one tic and move on.
+
+		if (mthing->options & MTF_OBJECTFLIP)
+		{
+			mobj->z = topheight;
+			speed *= -1;
+		}
+		else
+			mobj->z = bottomheight;
+
+		CONS_Debug(DBG_GAMELOGIC, "Particle Generator (mapthing #%s):\n"
+				"Radius is %d\n"
+				"Speed is %d\n"
+				"Anglespeed is %d\n"
+				"Numdivisions is %d\n"
+				"Angledivision is %d\n"
+				"Time is %d\n"
+				"Type is %d\n",
+				sizeu1(mthingi), radius, speed, anglespeed, numdivisions, angledivision, time, type);
+
+		mobj->angle = 0;
+		mobj->movefactor = speed;
+		mobj->lastlook = numdivisions;
+		mobj->movedir = angledivision*ANG1;
+		mobj->movecount = anglespeed*ANG1;
+		mobj->health = time;
+		mobj->friction = radius;
+		mobj->cvmem = type;
+
+		break;
+	}
 	case MT_ROCKSPAWNER:
 		mobj->threshold = mthing->angle;
 		mobj->movecount = mthing->extrainfo;
