@@ -2013,13 +2013,14 @@ static void P_AdjustMobjFloorZ_FFloors(mobj_t *mo, sector_t *sector, UINT8 motyp
 		delta1 = mo->z - (bottomheight + ((topheight - bottomheight)/2));
 		delta2 = thingtop - (bottomheight + ((topheight - bottomheight)/2));
 		if (topheight > mo->floorz && abs(delta1) < abs(delta2)
-			&& !(rover->flags & FF_REVERSEPLATFORM))
+			&& !(rover->flags & FF_REVERSEPLATFORM)
+			&& ((P_MobjFlip(mo)*mo->momz < 0) || (!(rover->flags & FF_PLATFORM)))) // In reverse gravity, only clip for FOFs that are intangible from their bottom (the "top" you're falling through) if you're coming from above ("below" in your frame of reference)
 		{
 			mo->floorz = topheight;
 		}
 		if (bottomheight < mo->ceilingz && abs(delta1) >= abs(delta2)
 			&& !(rover->flags & FF_PLATFORM)
-			&& ((mo->momz > 0) || (!(rover->flags & FF_REVERSEPLATFORM)))) // Only clip for FOFs that are intangible from the top if you're coming from below
+			&& ((P_MobjFlip(mo)*mo->momz > 0) || (!(rover->flags & FF_REVERSEPLATFORM)))) // In normal gravity, only clip for FOFs that are intangible from the top if you're coming from below
 		{
 			mo->ceilingz = bottomheight;
 		}
