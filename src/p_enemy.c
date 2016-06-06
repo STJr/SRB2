@@ -3376,7 +3376,7 @@ void A_ParticleSpawn(mobj_t *actor)
 	if (!actor->health)
 		return;
 
-	if ((actor->lastlook) && (actor->cvmem))
+	if ((actor->lastlook) && (actor->threshold))
 	{
 		for (i = 0; i < actor->lastlook; i++)
 		{
@@ -3384,7 +3384,7 @@ void A_ParticleSpawn(mobj_t *actor)
 				actor->x + FixedMul(FixedMul(actor->friction, actor->scale), FINECOSINE(actor->angle>>ANGLETOFINESHIFT)),
 				actor->y + FixedMul(FixedMul(actor->friction, actor->scale), FINESINE(actor->angle>>ANGLETOFINESHIFT)),
 				actor->z,
-				(mobjtype_t)actor->cvmem);
+				(mobjtype_t)actor->threshold);
 			P_SetScale(spawn, actor->scale);
 			spawn->momz = FixedMul(actor->movefactor, spawn->scale);
 			spawn->destscale = spawn->scale/100;

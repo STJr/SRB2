@@ -9378,7 +9378,7 @@ ML_NOCLIMB : Direction not controllable
 		mobj->movecount = anglespeed*ANG1;
 		mobj->health = time;
 		mobj->friction = radius;
-		mobj->cvmem = type;
+		mobj->threshold = type;
 
 		break;
 	}
