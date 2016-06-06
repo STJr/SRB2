@@ -1132,7 +1132,10 @@ void T_MarioBlock(levelspecthink_t *block)
 	);
 
 	if (block->sector->ceilingheight >= block->ceilingwasheight + 32*FRACUNIT) // Go back down now..
+	{
 		block->direction = -block->direction;
+		block->sector->floorspeed = 0;
+	}
 	else if (block->sector->ceilingheight <= block->ceilingwasheight)
 	{
 		block->sector->ceilingheight = block->ceilingwasheight;
@@ -1140,8 +1143,6 @@ void T_MarioBlock(levelspecthink_t *block)
 		P_RemoveThinker(&block->thinker);
 		block->sector->floordata = NULL;
 		block->sector->ceilingdata = NULL;
-		block->sector->floorspeed = 0;
-		block->sector->ceilspeed = 0;
 	}
 
 	for (i = -1; (i = P_FindSectorFromTag((INT16)block->vars[0], i)) >= 0 ;)
@@ -1797,6 +1798,8 @@ static mobj_t *SearchMarioNode(msecnode_t *node)
 
 void T_MarioBlockChecker(levelspecthink_t *block)
 {
+	if (block->sector->floorspeed) // Don't update the textures when the block's being bumped upwards.
+		return;
 	line_t *masterline = block->sourceline;
 	if (SearchMarioNode(block->sector->touching_thinglist))
 		sides[masterline->sidenum[0]].midtexture = sides[masterline->sidenum[0]].bottomtexture;
@@ -3122,8 +3125,10 @@ INT32 EV_StartCrumble(sector_t *sec, ffloor_t *rover, boolean floating,
 	return 1;
 }
 
-INT32 EV_MarioBlock(sector_t *sec, sector_t *roversector, fixed_t topheight, mobj_t *puncher)
+INT32 EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher)
 {
+	sector_t *roversec = rover->master->frontsector;
+	fixed_t topheight = *rover->topheight;
 	levelspecthink_t *block;
 	mobj_t *thing;
 	fixed_t oldx = 0, oldy = 0, oldz = 0;
@@ -3131,11 +3136,14 @@ INT32 EV_MarioBlock(sector_t *sec, sector_t *roversector, fixed_t topheight, mob
 	I_Assert(puncher != NULL);
 	I_Assert(puncher->player != NULL);
 
-	if (sec->floordata || sec->ceilingdata)
+	if (roversec->floordata || roversec->ceilingdata)
 		return 0;
 
+	if (!(rover->flags & FF_SOLID))
+		rover->flags |= (FF_SOLID|FF_RENDERALL|FF_CUTLEVEL);
+
 	// Find an item to pop out!
-	thing = SearchMarioNode(sec->touching_thinglist);
+	thing = SearchMarioNode(roversec->touching_thinglist);
 
 	// Found something!
 	if (thing)
@@ -3145,13 +3153,14 @@ INT32 EV_MarioBlock(sector_t *sec, sector_t *roversector, fixed_t topheight, mob
 
 		block = Z_Calloc(sizeof (*block), PU_LEVSPEC, NULL);
 		P_AddThinker(&block->thinker);
-		sec->floordata = block;
-		sec->ceilingdata = block;
+		roversec->floordata = block;
+		roversec->ceilingdata = block;
 		block->thinker.function.acp1 = (actionf_p1)T_MarioBlock;
 
 		// Set up the fields
-		block->sector = sec;
-		block->vars[0] = roversector->tag; // actionsector
+		roversec->floorspeed = 1; // Flag to prevent side changing.
+		block->sector = roversec;
+		block->vars[0] = sector->tag; // actionsector
 		block->vars[1] = 4*FRACUNIT; // speed
 		block->vars[2] = 1; // Up // direction
 		block->vars[3] = block->sector->floorheight; // floorwasheight
@@ -3167,8 +3176,8 @@ INT32 EV_MarioBlock(sector_t *sec, sector_t *roversector, fixed_t topheight, mob
 		}
 
 		P_UnsetThingPosition(thing);
-		thing->x = roversector->soundorg.x;
-		thing->y = roversector->soundorg.y;
+		thing->x = sector->soundorg.x;
+		thing->y = sector->soundorg.y;
 		thing->z = topheight;
 		thing->momz = FixedMul(6*FRACUNIT, thing->scale);
 		P_SetThingPosition(thing);
@@ -3185,7 +3194,7 @@ INT32 EV_MarioBlock(sector_t *sec, sector_t *roversector, fixed_t topheight, mob
 		{
 			if (thing->type == MT_EMMY && thing->spawnpoint && (thing->spawnpoint->options & MTF_OBJECTSPECIAL))
 			{
-				mobj_t *tokenobj = P_SpawnMobj(roversector->soundorg.x, roversector->soundorg.y, topheight, MT_TOKEN);
+				mobj_t *tokenobj = P_SpawnMobj(sector->soundorg.x, sector->soundorg.y, topheight, MT_TOKEN);
 				P_SetTarget(&thing->tracer, tokenobj);
 				P_SetTarget(&tokenobj->target, thing);
 				P_SetMobjState(tokenobj, mobjinfo[MT_TOKEN].seestate);

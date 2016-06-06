@@ -5793,11 +5793,8 @@ void P_SpawnSpecials(INT32 fromnetsave)
 				// Draw the 'insides' of the block too
 				if (lines[i].flags & ML_NOCLIMB)
 				{
-					ffloorflags |= FF_CUTLEVEL;
-					ffloorflags |= FF_BOTHPLANES;
-					ffloorflags |= FF_ALLSIDES;
-					ffloorflags &= ~FF_EXTRA;
-					ffloorflags &= ~FF_CUTEXTRA;
+					ffloorflags |= FF_CUTLEVEL|FF_BOTHPLANES|FF_ALLSIDES;
+					ffloorflags &= ~(FF_EXTRA|FF_CUTEXTRA);
 				}
 
 				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
@@ -5904,11 +5901,8 @@ void P_SpawnSpecials(INT32 fromnetsave)
 				// Draw the 'insides' of the block too
 				if (lines[i].flags & ML_EFFECT2)
 				{
-					ffloorflags |= FF_CUTLEVEL;
-					ffloorflags |= FF_BOTHPLANES;
-					ffloorflags |= FF_ALLSIDES;
-					ffloorflags &= ~FF_EXTRA;
-					ffloorflags &= ~FF_CUTEXTRA;
+					ffloorflags |= FF_CUTLEVEL|FF_BOTHPLANES|FF_ALLSIDES;
+					ffloorflags &= ~(FF_EXTRA|FF_CUTEXTRA);
 				}
 
 				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
@@ -5922,11 +5916,8 @@ void P_SpawnSpecials(INT32 fromnetsave)
 				// Draw the 'insides' of the block too
 				if (lines[i].flags & ML_EFFECT2)
 				{
-					ffloorflags |= FF_CUTLEVEL;
-					ffloorflags |= FF_BOTHPLANES;
-					ffloorflags |= FF_ALLSIDES;
-					ffloorflags &= ~FF_EXTRA;
-					ffloorflags &= ~FF_CUTEXTRA;
+					ffloorflags |= FF_CUTLEVEL|FF_BOTHPLANES|FF_ALLSIDES;
+					ffloorflags &= ~(FF_EXTRA|FF_CUTEXTRA);
 				}
 
 				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
@@ -5950,11 +5941,8 @@ void P_SpawnSpecials(INT32 fromnetsave)
 				// Draw the 'insides' of the block too
 				if (lines[i].flags & ML_EFFECT2)
 				{
-					ffloorflags |= FF_CUTLEVEL;
-					ffloorflags |= FF_BOTHPLANES;
-					ffloorflags |= FF_ALLSIDES;
-					ffloorflags &= ~FF_EXTRA;
-					ffloorflags &= ~FF_CUTEXTRA;
+					ffloorflags |= FF_CUTLEVEL|FF_BOTHPLANES|FF_ALLSIDES;
+					ffloorflags &= ~(FF_EXTRA|FF_CUTEXTRA);
 				}
 
 				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
@@ -5968,11 +5956,8 @@ void P_SpawnSpecials(INT32 fromnetsave)
 				// Draw the 'insides' of the block too
 				if (lines[i].flags & ML_EFFECT2)
 				{
-					ffloorflags |= FF_CUTLEVEL;
-					ffloorflags |= FF_BOTHPLANES;
-					ffloorflags |= FF_ALLSIDES;
-					ffloorflags &= ~FF_EXTRA;
-					ffloorflags &= ~FF_CUTEXTRA;
+					ffloorflags |= FF_CUTLEVEL|FF_BOTHPLANES|FF_ALLSIDES;
+					ffloorflags &= ~(FF_EXTRA|FF_CUTEXTRA);
 				}
 
 				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
@@ -6150,7 +6135,13 @@ void P_SpawnSpecials(INT32 fromnetsave)
 				break;
 
 			case 250: // Mario Block
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_MARIO, secthinkers);
+				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_MARIO;
+				if (lines[i].flags & ML_NOCLIMB)
+					ffloorflags |= FF_SHATTERBOTTOM;
+				if (lines[i].flags & ML_EFFECT1)
+					ffloorflags &= ~(FF_SOLID|FF_RENDERALL|FF_CUTLEVEL);
+
+				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
 				break;
 
 			case 251: // A THWOMP!
@@ -6164,10 +6155,11 @@ void P_SpawnSpecials(INT32 fromnetsave)
 				break;
 
 			case 252: // Shatter block (breaks when touched)
+				ffloorflags = FF_EXISTS|FF_RENDERALL|FF_BUSTUP|FF_SHATTER;
 				if (lines[i].flags & ML_NOCLIMB)
-					P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_BUSTUP|FF_SHATTER|FF_SHATTERBOTTOM, secthinkers);
-				else
-					P_AddFakeFloorsByLine(i, FF_EXISTS|FF_RENDERALL|FF_BUSTUP|FF_SHATTER, secthinkers);
+					ffloorflags |= FF_SOLID|FF_SHATTERBOTTOM;
+
+				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
 				break;
 
 			case 253: // Translucent shatter block (see 76)
@@ -6175,10 +6167,11 @@ void P_SpawnSpecials(INT32 fromnetsave)
 				break;
 
 			case 254: // Bustable block
+				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_BUSTUP;
 				if (lines[i].flags & ML_NOCLIMB)
-					P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_BUSTUP|FF_ONLYKNUX, secthinkers);
-				else
-					P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_BUSTUP, secthinkers);
+					ffloorflags |= FF_ONLYKNUX;
+
+				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
 				break;
 
 			case 255: // Spin bust block (breaks when jumped or spun downwards onto)
@@ -6190,10 +6183,11 @@ void P_SpawnSpecials(INT32 fromnetsave)
 				break;
 
 			case 257: // Quicksand
+				ffloorflags = FF_EXISTS|FF_QUICKSAND|FF_RENDERALL|FF_ALLSIDES|FF_CUTSPRITES;
 				if (lines[i].flags & ML_EFFECT5)
-					P_AddFakeFloorsByLine(i, FF_EXISTS|FF_QUICKSAND|FF_RENDERALL|FF_ALLSIDES|FF_CUTSPRITES|FF_RIPPLE, secthinkers);
-				else
-					P_AddFakeFloorsByLine(i, FF_EXISTS|FF_QUICKSAND|FF_RENDERALL|FF_ALLSIDES|FF_CUTSPRITES, secthinkers);
+					ffloorflags |= FF_RIPPLE;
+
+				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
 				break;
 
 			case 258: // Laser block

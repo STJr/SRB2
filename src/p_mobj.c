@@ -2154,14 +2154,16 @@ static void P_AdjustMobjFloorZ_FFloors(mobj_t *mo, sector_t *sector, UINT8 motyp
 		topheight = P_GetFOFTopZ(mo, sector, rover, mo->x, mo->y, NULL);
 		bottomheight = P_GetFOFBottomZ(mo, sector, rover, mo->x, mo->y, NULL);
 
-		if (mo->player && (P_CheckSolidLava(mo, rover) || P_CanRunOnWater(mo->player, rover))) // only the player should be affected
+		if (mo->player && (P_CheckSolidLava(mo, rover) || P_CanRunOnWater(mo->player, rover))) // only the player should stand on lava or run on water
 			;
 		else if (motype != 0 && rover->flags & FF_SWIMMABLE) // "scenery" only
 			continue;
 		else if (rover->flags & FF_QUICKSAND) // quicksand
 			;
-		else if (!((rover->flags & FF_BLOCKPLAYER && mo->player) // solid to players?
-			    || (rover->flags & FF_BLOCKOTHERS && !mo->player))) // solid to others?
+		else if (!( // if it's not either of the following...
+				(rover->flags & (FF_BLOCKPLAYER|FF_MARIO) && mo->player) // ...solid to players? (mario blocks are always solid from beneath to players)
+			    || (rover->flags & FF_BLOCKOTHERS && !mo->player) // ...solid to others?
+				)) // ...don't take it into account.
 			continue;
 		if (rover->flags & FF_QUICKSAND)
 		{
@@ -2186,13 +2188,16 @@ static void P_AdjustMobjFloorZ_FFloors(mobj_t *mo, sector_t *sector, UINT8 motyp
 
 		delta1 = mo->z - (bottomheight + ((topheight - bottomheight)/2));
 		delta2 = thingtop - (bottomheight + ((topheight - bottomheight)/2));
+
 		if (topheight > mo->floorz && abs(delta1) < abs(delta2)
-			&& !(rover->flags & FF_REVERSEPLATFORM))
+			&& !(rover->flags & FF_REVERSEPLATFORM)
+			&& (rover->flags & FF_SOLID)) // Non-FF_SOLID Mario blocks are only solid from bottom
 		{
 			mo->floorz = topheight;
 		}
 		if (bottomheight < mo->ceilingz && abs(delta1) >= abs(delta2)
-			&& !(rover->flags & FF_PLATFORM))
+			&& !(rover->flags & FF_PLATFORM)
+			&& ((mo->momz > 0) || ((rover->flags & FF_SOLID) && !(rover->flags & FF_REVERSEPLATFORM)))) // Only clip for FOFs that are intangible from the top if you're coming from below
 		{
 			mo->ceilingz = bottomheight;
 		}
@@ -3070,10 +3075,10 @@ nightsdone:
 						&& *rover->bottomheight == mo->ceilingz) // The player's head hit the bottom!
 						{
 							// DO THE MARIO!
-							if (rover->master->flags & ML_NOCLIMB) // Brick block!
+							if (rover->flags & FF_SHATTERBOTTOM) // Brick block!
 								EV_CrumbleChain(node->m_sector, rover);
 							else // Question block!
-								EV_MarioBlock(rover->master->frontsector, node->m_sector, *rover->topheight, mo);
+								EV_MarioBlock(rover, node->m_sector, mo);
 						}
 					}
 				} // Ugly ugly billions of braces! Argh!

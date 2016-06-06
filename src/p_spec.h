@@ -323,7 +323,7 @@ INT32 EV_StartCrumble(sector_t *sector, ffloor_t *rover,
 
 INT32 EV_DoContinuousFall(sector_t *sec, sector_t *pbacksector, fixed_t spd, boolean backwards);
 
-INT32 EV_MarioBlock(sector_t *sector, sector_t *roversector, fixed_t topheight, mobj_t *puncher);
+INT32 EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher);
 
 void T_MoveFloor(floormove_t *movefloor);
 
