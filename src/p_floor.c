@@ -1802,9 +1802,21 @@ void T_MarioBlockChecker(levelspecthink_t *block)
 		return;
 	line_t *masterline = block->sourceline;
 	if (SearchMarioNode(block->sector->touching_thinglist))
-		sides[masterline->sidenum[0]].midtexture = sides[masterline->sidenum[0]].bottomtexture;
+	{
+		sides[masterline->sidenum[0]].midtexture = sides[masterline->sidenum[0]].bottomtexture; // Update textures
+		if (masterline->sidenum[1])
+		{
+			sides[masterline->sidenum[0]].sector->ceilingpic = sides[masterline->sidenum[0]].sector->floorpic = sides[masterline->sidenum[1]].sector->ceilingpic; // Update flats to be backside's ceiling if there's a back sector, otherwise leave them alone
+		}
+	}
 	else
+	{
 		sides[masterline->sidenum[0]].midtexture = sides[masterline->sidenum[0]].toptexture;
+		if (masterline->sidenum[1])
+		{
+			sides[masterline->sidenum[0]].sector->ceilingpic = sides[masterline->sidenum[0]].sector->floorpic = sides[masterline->sidenum[1]].sector->floorpic; // Update flats to be backside's floor if there's a back sector, otherwise leave them alone
+		}
+	}
 }
 
 // This is the Thwomp's 'brain'. It looks around for players nearby, and if
