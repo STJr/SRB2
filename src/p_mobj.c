@@ -2018,7 +2018,8 @@ static void P_AdjustMobjFloorZ_FFloors(mobj_t *mo, sector_t *sector, UINT8 motyp
 			mo->floorz = topheight;
 		}
 		if (bottomheight < mo->ceilingz && abs(delta1) >= abs(delta2)
-			&& !(rover->flags & FF_PLATFORM))
+			&& !(rover->flags & FF_PLATFORM)
+			&& ((mo->momz > 0) || (!(rover->flags & FF_REVERSEPLATFORM)))) // Only clip for FOFs that are intangible from the top if you're coming from below
 		{
 			mo->ceilingz = bottomheight;
 		}
