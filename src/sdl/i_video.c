@@ -749,7 +749,12 @@ static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
 			return;
 		}
 
-		if ((evt.x == realwidth/2) && (evt.y == realheight/2))
+		if (!wrapmouseok)
+		{
+			event.data2 = evt.xrel;
+			event.data3 = evt.yrel;
+		}
+		else if ((evt.x == realwidth/2) && (evt.y == realheight/2))
 		{
 			return;
 		}
