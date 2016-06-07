@@ -2853,77 +2853,106 @@ static void P_DoTeeter(player_t *player)
 	boolean teeter = false;
 	boolean roverfloor; // solid 3d floors?
 	boolean checkedforteeter = false;
+	fixed_t floorheight, ceilingheight;
+	fixed_t topheight, bottomheight; // for 3d floor usage
 	const fixed_t tiptop = FixedMul(MAXSTEPMOVE, player->mo->scale); // Distance you have to be above the ground in order to teeter.
 
-	for (node = player->mo->touching_sectorlist; node; node = node->m_snext)
+#define maxzdelta 3<<(FRACBITS-2) // 3/4 on the fixed scale
+	if (player->mo->standingslope && player->mo->standingslope->zdelta >= maxzdelta) // Always teeter if the slope is too steep.
+		teeter = true;
+#undef maxzdelta
+	else // Let's do some checks...
 	{
-		// Ledge teetering. Check if any nearby sectors are low enough from your current one.
-		checkedforteeter = true;
-		roverfloor = false;
-		if (node->m_sector->ffloors)
+		for (node = player->mo->touching_sectorlist; node; node = node->m_snext)
 		{
-			ffloor_t *rover;
-			for (rover = node->m_sector->ffloors; rover; rover = rover->next)
+			// Ledge teetering. Check if any nearby sectors are low enough from your current one.
+			checkedforteeter = true;
+			roverfloor = false;
+
+			ceilingheight = node->m_sector->ceilingheight;
+			floorheight = node->m_sector->floorheight;
+#ifdef ESLOPE
+			if (node->m_sector->c_slope)
+				ceilingheight = P_GetZAt(node->m_sector->c_slope, player->mo->x, player->mo->y) + FixedMul(node->m_sector->c_slope->zdelta, tiptop);
+			if (node->m_sector->f_slope)
+				floorheight = P_GetZAt(node->m_sector->f_slope, player->mo->x, player->mo->y);
+#endif
+
+			if (node->m_sector->ffloors)
 			{
-				if (!(rover->flags & FF_EXISTS)) continue;
-
-				if (P_CheckSolidLava(player->mo, rover))
-					;
-				else if (!(rover->flags & FF_BLOCKPLAYER || rover->flags & FF_QUICKSAND))
-					continue; // intangible 3d floor
-
-				if (player->mo->eflags & MFE_VERTICALFLIP)
+				ffloor_t *rover;
+				for (rover = node->m_sector->ffloors; rover; rover = rover->next)
 				{
-					if (*rover->bottomheight > node->m_sector->ceilingheight) // Above the ceiling
-						continue;
+					if (!(rover->flags & FF_EXISTS)) continue;
 
-					if (*rover->bottomheight > player->mo->z + player->mo->height + tiptop
-						|| (*rover->topheight < player->mo->z
-						&& player->mo->z + player->mo->height < node->m_sector->ceilingheight - tiptop))
+					topheight = *rover->topheight;
+					bottomheight = *rover->bottomheight;
+
+#ifdef ESLOPE
+					if (*rover->t_slope)
+						topheight = P_GetZAt(*rover->t_slope, player->mo->x, player->mo->y);
+					if (*rover->b_slope)
+						bottomheight = P_GetZAt(*rover->b_slope, player->mo->x, player->mo->y);
+#endif
+
+					if (P_CheckSolidLava(player->mo, rover))
+						;
+					else if (!(rover->flags & FF_BLOCKPLAYER || rover->flags & FF_QUICKSAND))
+						continue; // intangible 3d floor
+
+					if (player->mo->eflags & MFE_VERTICALFLIP)
 					{
-						teeter = true;
-						roverfloor = true;
+						if (bottomheight > ceilingheight) // Above the ceiling
+							continue;
+
+						if (bottomheight > player->mo->z + player->mo->height + tiptop
+							|| (topheight < player->mo->z
+							&& player->mo->z + player->mo->height < ceilingheight - tiptop))
+						{
+							teeter = true;
+							roverfloor = true;
+						}
+						else
+						{
+							teeter = false;
+							roverfloor = true;
+							break;
+						}
 					}
 					else
 					{
-						teeter = false;
-						roverfloor = true;
-						break;
+						if (topheight < floorheight) // Below the floor
+							continue;
+
+						if (topheight < player->mo->z - tiptop
+							|| (bottomheight > player->mo->z + player->mo->height
+							&& player->mo->z > floorheight + tiptop))
+						{
+							teeter = true;
+							roverfloor = true;
+						}
+						else
+						{
+							teeter = false;
+							roverfloor = true;
+							break;
+						}
 					}
+				}
+			}
+
+			if (!teeter && !roverfloor)
+			{
+				if (player->mo->eflags & MFE_VERTICALFLIP)
+				{
+					if (ceilingheight > player->mo->z + player->mo->height + tiptop)
+						teeter = true;
 				}
 				else
 				{
-					if (*rover->topheight < node->m_sector->floorheight) // Below the floor
-						continue;
-
-					if (*rover->topheight < player->mo->z - tiptop
-						|| (*rover->bottomheight > player->mo->z + player->mo->height
-						&& player->mo->z > node->m_sector->floorheight + tiptop))
-					{
+					if (floorheight < player->mo->z - tiptop)
 						teeter = true;
-						roverfloor = true;
-					}
-					else
-					{
-						teeter = false;
-						roverfloor = true;
-						break;
-					}
 				}
-			}
-		}
-
-		if (!teeter && !roverfloor)
-		{
-			if (player->mo->eflags & MFE_VERTICALFLIP)
-			{
-				if (node->m_sector->ceilingheight > player->mo->z + player->mo->height + tiptop)
-					teeter = true;
-			}
-			else
-			{
-				if (node->m_sector->floorheight < player->mo->z - tiptop)
-					teeter = true;
 			}
 		}
 	}
@@ -2931,18 +2960,41 @@ static void P_DoTeeter(player_t *player)
 	if (checkedforteeter && !teeter) // Backup code
 	{
 		subsector_t *subsec[4]; // changed abcd into array instead
+		fixed_t subsecfloorheight[4];
+		fixed_t subsecceilingheight[4];
 		UINT8 i;
 
+		// Following is replaced by xsign and ysign code
+		/*
 		subsec[0] = R_PointInSubsector(player->mo->x + FixedMul(5*FRACUNIT, player->mo->scale), player->mo->y + FixedMul(5*FRACUNIT, player->mo->scale));
 		subsec[1] = R_PointInSubsector(player->mo->x - FixedMul(5*FRACUNIT, player->mo->scale), player->mo->y + FixedMul(5*FRACUNIT, player->mo->scale));
 		subsec[2] = R_PointInSubsector(player->mo->x + FixedMul(5*FRACUNIT, player->mo->scale), player->mo->y - FixedMul(5*FRACUNIT, player->mo->scale));
 		subsec[3] = R_PointInSubsector(player->mo->x - FixedMul(5*FRACUNIT, player->mo->scale), player->mo->y - FixedMul(5*FRACUNIT, player->mo->scale));
+		*/
 
 		teeter = false;
 		roverfloor = false;
 		for (i = 0; i < 4; i++)
 		{
 			ffloor_t *rover;
+
+#define xsign ((i & 1) ? -1 : 1) // 0 -> 1 | 1 -> -1 | 2 -> 1 | 3 -> -1
+#define ysign ((i & 2) ? 1 : -1) // 0 -> 1 | 1 -> 1 | 2 -> -1 | 3 -> -1
+			fixed_t checkx = player->mo->x + (xsign*FixedMul(5*FRACUNIT, player->mo->scale));
+			fixed_t checky = player->mo->y + (ysign*FixedMul(5*FRACUNIT, player->mo->scale));
+
+			subsec[i] = R_PointInSubsector(checkx, checky);
+
+			subsecceilingheight[i] = subsec[i]->sector->ceilingheight;
+			subsecfloorheight[i] = subsec[i]->sector->floorheight;
+#ifdef ESLOPE
+			if (subsec[i]->sector->c_slope)
+				subsecceilingheight[i] = P_GetZAt(subsec[i]->sector->c_slope, checkx, checky);
+			if (subsec[i]->sector->f_slope)
+				subsecfloorheight[i] = P_GetZAt(subsec[i]->sector->f_slope, checkx, checky);
+#endif
+#undef xsign
+#undef ysign
 
 			if (!(subsec[i]->sector->ffloors))
 				continue; // move on to the next subsector
@@ -2951,6 +3003,16 @@ static void P_DoTeeter(player_t *player)
 			{
 				if (!(rover->flags & FF_EXISTS)) continue;
 
+				topheight = *rover->topheight;
+				bottomheight = *rover->bottomheight;
+
+#ifdef ESLOPE
+				if (*rover->t_slope)
+					topheight = P_GetZAt(*rover->t_slope, player->mo->x, player->mo->y);
+				if (*rover->b_slope)
+					bottomheight = P_GetZAt(*rover->b_slope, player->mo->x, player->mo->y);
+#endif
+
 				if (P_CheckSolidLava(player->mo, rover))
 					;
 				else if (!(rover->flags & FF_BLOCKPLAYER || rover->flags & FF_QUICKSAND))
@@ -2958,12 +3020,12 @@ static void P_DoTeeter(player_t *player)
 
 				if (player->mo->eflags & MFE_VERTICALFLIP)
 				{
-					if (*rover->bottomheight > subsec[i]->sector->ceilingheight) // Above the ceiling
+					if (bottomheight > subsecceilingheight[i]) // Above the ceiling
 						continue;
 
-					if (*rover->bottomheight > player->mo->z + player->mo->height + tiptop
-						|| (*rover->topheight < player->mo->z
-						&& player->mo->z + player->mo->height < subsec[i]->sector->ceilingheight - tiptop))
+					if (bottomheight > player->mo->z + player->mo->height + tiptop
+						|| (topheight < player->mo->z
+						&& player->mo->z + player->mo->height < subsecceilingheight[i] - tiptop))
 					{
 						teeter = true;
 						roverfloor = true;
@@ -2977,12 +3039,12 @@ static void P_DoTeeter(player_t *player)
 				}
 				else
 				{
-					if (*rover->topheight < subsec[i]->sector->floorheight) // Below the floor
+					if (topheight < subsecfloorheight[i]) // Below the floor
 						continue;
 
-					if (*rover->topheight < player->mo->z - tiptop
-						|| (*rover->bottomheight > player->mo->z + player->mo->height
-						&& player->mo->z > subsec[i]->sector->floorheight + tiptop))
+					if (topheight < player->mo->z - tiptop
+						|| (bottomheight > player->mo->z + player->mo->height
+						&& player->mo->z > subsecfloorheight[i] + tiptop))
 					{
 						teeter = true;
 						roverfloor = true;
@@ -3000,18 +3062,18 @@ static void P_DoTeeter(player_t *player)
 
 		if (player->mo->eflags & MFE_VERTICALFLIP)
 		{
-			if (!teeter && !roverfloor && (subsec[0]->sector->ceilingheight > player->mo->ceilingz + tiptop
-				|| subsec[1]->sector->ceilingheight > player->mo->ceilingz + tiptop
-				|| subsec[2]->sector->ceilingheight > player->mo->ceilingz + tiptop
-				|| subsec[3]->sector->ceilingheight > player->mo->ceilingz + tiptop))
+			if (!teeter && !roverfloor && (subsecceilingheight[0] > player->mo->ceilingz + tiptop
+				|| subsecceilingheight[1] > player->mo->ceilingz + tiptop
+				|| subsecceilingheight[2] > player->mo->ceilingz + tiptop
+				|| subsecceilingheight[3] > player->mo->ceilingz + tiptop))
 					teeter = true;
 		}
 		else
 		{
-			if (!teeter && !roverfloor && (subsec[0]->sector->floorheight < player->mo->floorz - tiptop
-				|| subsec[1]->sector->floorheight < player->mo->floorz - tiptop
-				|| subsec[2]->sector->floorheight < player->mo->floorz - tiptop
-				|| subsec[3]->sector->floorheight < player->mo->floorz - tiptop))
+			if (!teeter && !roverfloor && (subsecfloorheight[0] < player->mo->floorz - tiptop
+				|| subsecfloorheight[1] < player->mo->floorz - tiptop
+				|| subsecfloorheight[2] < player->mo->floorz - tiptop
+				|| subsecfloorheight[3] < player->mo->floorz - tiptop))
 					teeter = true;
 		}
 	}
