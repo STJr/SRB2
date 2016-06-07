@@ -2977,8 +2977,8 @@ static void P_DoTeeter(player_t *player)
 
 			sec = R_PointInSubsector(checkx, checky)->sector;
 
-			fixed_t ceilingheight = sec->ceilingheight;
-			fixed_t floorheight = sec->floorheight;
+			ceilingheight = sec->ceilingheight;
+			floorheight = sec->floorheight;
 #ifdef ESLOPE
 			if (sec->c_slope)
 				ceilingheight = P_GetZAt(sec->c_slope, checkx, checky);
