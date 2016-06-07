@@ -749,7 +749,7 @@ static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
 			return;
 		}
 
-		if (!wrapmouseok)
+		if (SDL_GetRelativeMouseMode())
 		{
 			event.data2 = evt.xrel;
 			event.data3 = evt.yrel;
