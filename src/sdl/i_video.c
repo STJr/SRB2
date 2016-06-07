@@ -127,7 +127,8 @@ static       Uint8       BitsPerPixel = 16;
 Uint16      realwidth = BASEVIDWIDTH;
 Uint16      realheight = BASEVIDHEIGHT;
 static       SDL_bool    mousegrabok = SDL_TRUE;
-#define HalfWarpMouse(x,y) SDL_WarpMouseInWindow(window, (Uint16)(x/2),(Uint16)(y/2))
+static       SDL_bool    wrapmouseok = SDL_FALSE;
+#define HalfWarpMouse(x,y) if (wrapmouseok) SDL_WarpMouseInWindow(window, (Uint16)(x/2),(Uint16)(y/2))
 static       SDL_bool    videoblitok = SDL_FALSE;
 static       SDL_bool    exposevideo = SDL_FALSE;
 static       SDL_bool    usesdl2soft = SDL_FALSE;
@@ -417,6 +418,8 @@ static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Scancode code)
 static void SDLdoUngrabMouse(void)
 {
 	SDL_SetWindowGrab(window, SDL_FALSE);
+	wrapmouseok = SDL_FALSE;
+	SDL_SetRelativeMouseMode(SDL_FALSE);
 }
 
 void SDLforceUngrabMouse(void)
@@ -424,6 +427,8 @@ void SDLforceUngrabMouse(void)
 	if (SDL_WasInit(SDL_INIT_VIDEO)==SDL_INIT_VIDEO && window != NULL)
 	{
 		SDL_SetWindowGrab(window, SDL_FALSE);
+		wrapmouseok = SDL_FALSE;
+		SDL_SetRelativeMouseMode(SDL_FALSE);
 	}
 }
 
@@ -760,6 +765,8 @@ static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
 		{
 			D_PostEvent(&event);
 			SDL_SetWindowGrab(window, SDL_TRUE);
+			if (SDL_SetRelativeMouseMode(SDL_TRUE) == 0)
+				wrapmouseok = SDL_TRUE;
 			HalfWarpMouse(wwidth, wheight);
 		}
 	}
