@@ -2960,9 +2960,9 @@ static void P_DoTeeter(player_t *player)
 	if (checkedforteeter && !teeter) // Backup code
 	{
 		sector_t *sec;
-		fixed_t secfloorheight[4];
-		fixed_t secceilingheight[4];
 		UINT8 i;
+		fixed_t highestceilingheight = INT32_MIN;
+		fixed_t lowestfloorheight = INT32_MAX;
 
 		teeter = false;
 		roverfloor = false;
@@ -2977,14 +2977,16 @@ static void P_DoTeeter(player_t *player)
 
 			sec = R_PointInSubsector(checkx, checky)->sector;
 
-			secceilingheight[i] = sec->ceilingheight;
-			secfloorheight[i] = sec->floorheight;
+			fixed_t ceilingheight = sec->ceilingheight;
+			fixed_t floorheight = sec->floorheight;
 #ifdef ESLOPE
 			if (sec->c_slope)
-				secceilingheight[i] = P_GetZAt(sec->c_slope, checkx, checky);
+				ceilingheight = P_GetZAt(sec->c_slope, checkx, checky);
 			if (sec->f_slope)
-				secfloorheight[i] = P_GetZAt(sec->f_slope, checkx, checky);
+				floorheight = P_GetZAt(sec->f_slope, checkx, checky);
 #endif
+			highestceilingheight = (ceilingheight > highestceilingheight) ? ceilingheight : highestceilingheight;
+			lowestfloorheight = (floorheight < lowestfloorheight) ? floorheight : lowestfloorheight;
 #undef xsign
 #undef ysign
 
@@ -3012,12 +3014,12 @@ static void P_DoTeeter(player_t *player)
 
 				if (player->mo->eflags & MFE_VERTICALFLIP)
 				{
-					if (bottomheight > secceilingheight[i]) // Above the ceiling
+					if (bottomheight > ceilingheight) // Above the ceiling
 						continue;
 
 					if (bottomheight > player->mo->z + player->mo->height + tiptop
 						|| (topheight < player->mo->z
-						&& player->mo->z + player->mo->height < secceilingheight[i] - tiptop))
+						&& player->mo->z + player->mo->height < ceilingheight - tiptop))
 					{
 						teeter = true;
 						roverfloor = true;
@@ -3031,12 +3033,12 @@ static void P_DoTeeter(player_t *player)
 				}
 				else
 				{
-					if (topheight < secfloorheight[i]) // Below the floor
+					if (topheight < floorheight) // Below the floor
 						continue;
 
 					if (topheight < player->mo->z - tiptop
 						|| (bottomheight > player->mo->z + player->mo->height
-						&& player->mo->z > secfloorheight[i] + tiptop))
+						&& player->mo->z > floorheight + tiptop))
 					{
 						teeter = true;
 						roverfloor = true;
@@ -3054,18 +3056,12 @@ static void P_DoTeeter(player_t *player)
 
 		if (player->mo->eflags & MFE_VERTICALFLIP)
 		{
-			if (!teeter && !roverfloor && (secceilingheight[0] > player->mo->ceilingz + tiptop
-				|| secceilingheight[1] > player->mo->ceilingz + tiptop
-				|| secceilingheight[2] > player->mo->ceilingz + tiptop
-				|| secceilingheight[3] > player->mo->ceilingz + tiptop))
+			if (!teeter && !roverfloor && (highestceilingheight > player->mo->ceilingz + tiptop))
 					teeter = true;
 		}
 		else
 		{
-			if (!teeter && !roverfloor && (secfloorheight[0] < player->mo->floorz - tiptop
-				|| secfloorheight[1] < player->mo->floorz - tiptop
-				|| secfloorheight[2] < player->mo->floorz - tiptop
-				|| secfloorheight[3] < player->mo->floorz - tiptop))
+			if (!teeter && !roverfloor && (lowestfloorheight < player->mo->floorz - tiptop))
 					teeter = true;
 		}
 	}
