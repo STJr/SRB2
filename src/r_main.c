@@ -1324,6 +1324,7 @@ void R_RenderPlayerView(player_t *player)
 #endif
 
 		R_RenderBSPNode((INT32)numnodes - 1);
+		R_ClipSprites();
 		R_DrawPlanes();
 #ifdef FLOORSPLATS
 		R_DrawVisibleFloorSplats();
