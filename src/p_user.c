@@ -1684,7 +1684,7 @@ static void P_CheckBustableBlocks(player_t *player)
 	player->mo->y += player->mo->momy;
 	P_SetThingPosition(player->mo);
 
-	for (node = player->mo->touching_sectorlist; node; node = node->m_snext)
+	for (node = player->mo->touching_sectorlist; node; node = node->m_tnext)
 	{
 		if (!node->m_sector)
 			break;
@@ -1801,7 +1801,7 @@ static void P_CheckBouncySectors(player_t *player)
 	player->mo->z += player->mo->momz;
 	P_SetThingPosition(player->mo);
 
-	for (node = player->mo->touching_sectorlist; node; node = node->m_snext)
+	for (node = player->mo->touching_sectorlist; node; node = node->m_tnext)
 	{
 		if (!node->m_sector)
 			break;

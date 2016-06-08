@@ -1530,7 +1530,7 @@ static void P_PushableCheckBustables(mobj_t *mo)
 	mo->y += mo->momy;
 	P_SetThingPosition(mo);
 
-	for (node = mo->touching_sectorlist; node; node = node->m_snext)
+	for (node = mo->touching_sectorlist; node; node = node->m_tnext)
 	{
 		if (!node->m_sector)
 			break;
@@ -2880,7 +2880,7 @@ nightsdone:
 			if (CheckForMarioBlocks && !(netgame && mo->player->spectator)) // Only let the player punch
 			{
 				// Search the touching sectors, from side-to-side...
-				for (node = mo->touching_sectorlist; node; node = node->m_snext)
+				for (node = mo->touching_sectorlist; node; node = node->m_tnext)
 				{
 					ffloor_t *rover;
 					if (!node->m_sector->ffloors)
