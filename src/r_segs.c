@@ -1862,8 +1862,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			if (linedef->flags & ML_DONTPEGBOTTOM)
 				rw_midtexturemid = frontsector->floorheight + textureheight[sidedef->midtexture] - viewz;
 			else
-				rw_midtexturemid = frontsector->ceilingheight;
+				rw_midtexturemid = frontsector->ceilingheight - viewz;
 		}
+		else
 #endif
 		if (linedef->flags & ML_DONTPEGBOTTOM)
 		{
