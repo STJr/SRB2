@@ -2483,6 +2483,15 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 #ifdef ESLOPE
 			maskedtextureheight = ds_p->maskedtextureheight; // note to red, this == &(ds_p->maskedtextureheight[0])
 
+#ifdef POLYOBJECTS
+			if (curline->polyseg) { // use REAL front and back floors please, so midtexture rendering isn't mucked up
+				rw_midtextureslide = rw_midtexturebackslide = 0;
+				if (!!(linedef->flags & ML_DONTPEGBOTTOM) ^ !!(linedef->flags & ML_EFFECT3))
+					rw_midtexturemid = rw_midtextureback = max(curline->frontsector->floorheight, curline->backsector->floorheight) - viewz;
+				else
+					rw_midtexturemid = rw_midtextureback = min(curline->frontsector->ceilingheight, curline->backsector->ceilingheight) - viewz;
+			} else
+#endif
 			// Set midtexture starting height
 			if (linedef->flags & ML_EFFECT2) { // Ignore slopes when texturing
 				rw_midtextureslide = rw_midtexturebackslide = 0;
