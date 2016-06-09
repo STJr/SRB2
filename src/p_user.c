@@ -1684,7 +1684,7 @@ static void P_CheckBustableBlocks(player_t *player)
 	player->mo->y += player->mo->momy;
 	P_SetThingPosition(player->mo);
 
-	for (node = player->mo->touching_sectorlist; node; node = node->m_tnext)
+	for (node = player->mo->touching_sectorlist; node; node = node->m_sectorlist_next)
 	{
 		if (!node->m_sector)
 			break;
@@ -1801,7 +1801,7 @@ static void P_CheckBouncySectors(player_t *player)
 	player->mo->z += player->mo->momz;
 	P_SetThingPosition(player->mo);
 
-	for (node = player->mo->touching_sectorlist; node; node = node->m_tnext)
+	for (node = player->mo->touching_sectorlist; node; node = node->m_sectorlist_next)
 	{
 		if (!node->m_sector)
 			break;
@@ -2855,7 +2855,7 @@ static void P_DoTeeter(player_t *player)
 	boolean checkedforteeter = false;
 	const fixed_t tiptop = FixedMul(MAXSTEPMOVE, player->mo->scale); // Distance you have to be above the ground in order to teeter.
 
-	for (node = player->mo->touching_sectorlist; node; node = node->m_snext)
+	for (node = player->mo->touching_sectorlist; node; node = node->m_thinglist_next)
 	{
 		// Ledge teetering. Check if any nearby sectors are low enough from your current one.
 		checkedforteeter = true;
@@ -7037,7 +7037,7 @@ static void P_MovePlayer(player_t *player)
 		player->mo->y += player->mo->momy;
 		P_SetThingPosition(player->mo);
 
-		for (node = player->mo->touching_sectorlist; node; node = node->m_snext)
+		for (node = player->mo->touching_sectorlist; node; node = node->m_thinglist_next)
 		{
 			if (!node->m_sector)
 				break;

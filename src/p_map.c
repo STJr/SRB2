@@ -3365,7 +3365,7 @@ boolean P_CheckSector(sector_t *sector, boolean crunch)
 		for (i = 0; i < sector->numattached; i++)
 		{
 			sec = &sectors[sector->attached[i]];
-			for (n = sec->touching_thinglist; n; n = n->m_snext)
+			for (n = sec->touching_thinglist; n; n = n->m_thinglist_next)
 				n->visited = false;
 
 			sec->moved = true;
@@ -3377,7 +3377,7 @@ boolean P_CheckSector(sector_t *sector, boolean crunch)
 
 			do
 			{
-				for (n = sec->touching_thinglist; n; n = n->m_snext)
+				for (n = sec->touching_thinglist; n; n = n->m_thinglist_next)
 				if (!n->visited)
 				{
 					n->visited = true;
@@ -3398,12 +3398,12 @@ boolean P_CheckSector(sector_t *sector, boolean crunch)
 	// Mark all things invalid
 	sector->moved = true;
 
-	for (n = sector->touching_thinglist; n; n = n->m_snext)
+	for (n = sector->touching_thinglist; n; n = n->m_thinglist_next)
 		n->visited = false;
 
 	do
 	{
-		for (n = sector->touching_thinglist; n; n = n->m_snext) // go through list
+		for (n = sector->touching_thinglist; n; n = n->m_thinglist_next) // go through list
 			if (!n->visited) // unprocessed thing found
 			{
 				n->visited = true; // mark thing as processed
@@ -3427,7 +3427,7 @@ boolean P_CheckSector(sector_t *sector, boolean crunch)
 		for (i = 0; i < sector->numattached; i++)
 		{
 			sec = &sectors[sector->attached[i]];
-			for (n = sec->touching_thinglist; n; n = n->m_snext)
+			for (n = sec->touching_thinglist; n; n = n->m_thinglist_next)
 				n->visited = false;
 
 			sec->moved = true;
@@ -3439,7 +3439,7 @@ boolean P_CheckSector(sector_t *sector, boolean crunch)
 
 			do
 			{
-				for (n = sec->touching_thinglist; n; n = n->m_snext)
+				for (n = sec->touching_thinglist; n; n = n->m_thinglist_next)
 				if (!n->visited)
 				{
 					n->visited = true;
@@ -3457,12 +3457,12 @@ boolean P_CheckSector(sector_t *sector, boolean crunch)
 	// Mark all things invalid
 	sector->moved = true;
 
-	for (n = sector->touching_thinglist; n; n = n->m_snext)
+	for (n = sector->touching_thinglist; n; n = n->m_thinglist_next)
 		n->visited = false;
 
 	do
 	{
-		for (n = sector->touching_thinglist; n; n = n->m_snext) // go through list
+		for (n = sector->touching_thinglist; n; n = n->m_thinglist_next) // go through list
 			if (!n->visited) // unprocessed thing found
 			{
 				n->visited = true; // mark thing as processed
@@ -3502,7 +3502,7 @@ static msecnode_t *P_GetSecnode(void)
 	if (headsecnode)
 	{
 		node = headsecnode;
-		headsecnode = headsecnode->m_snext;
+		headsecnode = headsecnode->m_thinglist_next;
 	}
 	else
 		node = Z_Calloc(sizeof (*node), PU_LEVEL, NULL);
@@ -3516,7 +3516,7 @@ static mprecipsecnode_t *P_GetPrecipSecnode(void)
 	if (headprecipsecnode)
 	{
 		node = headprecipsecnode;
-		headprecipsecnode = headprecipsecnode->m_snext;
+		headprecipsecnode = headprecipsecnode->m_thinglist_next;
 	}
 	else
 		node = Z_Calloc(sizeof (*node), PU_LEVEL, NULL);
@@ -3527,14 +3527,14 @@ static mprecipsecnode_t *P_GetPrecipSecnode(void)
 
 static inline void P_PutSecnode(msecnode_t *node)
 {
-	node->m_snext = headsecnode;
+	node->m_thinglist_next = headsecnode;
 	headsecnode = node;
 }
 
 // Tails 08-25-2002
 static inline void P_PutPrecipSecnode(mprecipsecnode_t *node)
 {
-	node->m_snext = headprecipsecnode;
+	node->m_thinglist_next = headprecipsecnode;
 	headprecipsecnode = node;
 }
 
@@ -3555,7 +3555,7 @@ static msecnode_t *P_AddSecnode(sector_t *s, mobj_t *thing, msecnode_t *nextnode
 			node->m_thing = thing; // Yes. Setting m_thing says 'keep it'.
 			return nextnode;
 		}
-		node = node->m_tnext;
+		node = node->m_sectorlist_next;
 	}
 
 	// Couldn't find an existing node for this sector. Add one at the head
@@ -3568,17 +3568,17 @@ static msecnode_t *P_AddSecnode(sector_t *s, mobj_t *thing, msecnode_t *nextnode
 
 	node->m_sector = s; // sector
 	node->m_thing = thing; // mobj
-	node->m_tprev = NULL; // prev node on Thing thread
-	node->m_tnext = nextnode; // next node on Thing thread
+	node->m_sectorlist_prev = NULL; // prev node on Thing thread
+	node->m_sectorlist_next = nextnode; // next node on Thing thread
 	if (nextnode)
-		nextnode->m_tprev = node; // set back link on Thing
+		nextnode->m_sectorlist_prev = node; // set back link on Thing
 
 	// Add new node at head of sector thread starting at s->touching_thinglist
 
-	node->m_sprev = NULL; // prev node on sector thread
-	node->m_snext = s->touching_thinglist; // next node on sector thread
+	node->m_thinglist_prev = NULL; // prev node on sector thread
+	node->m_thinglist_next = s->touching_thinglist; // next node on sector thread
 	if (s->touching_thinglist)
-		node->m_snext->m_sprev = node;
+		node->m_thinglist_next->m_thinglist_prev = node;
 	s->touching_thinglist = node;
 	return node;
 }
@@ -3596,7 +3596,7 @@ static mprecipsecnode_t *P_AddPrecipSecnode(sector_t *s, precipmobj_t *thing, mp
 			node->m_thing = thing; // Yes. Setting m_thing says 'keep it'.
 			return nextnode;
 		}
-		node = node->m_tnext;
+		node = node->m_sectorlist_next;
 	}
 
 	// Couldn't find an existing node for this sector. Add one at the head
@@ -3609,17 +3609,17 @@ static mprecipsecnode_t *P_AddPrecipSecnode(sector_t *s, precipmobj_t *thing, mp
 
 	node->m_sector = s; // sector
 	node->m_thing = thing; // mobj
-	node->m_tprev = NULL; // prev node on Thing thread
-	node->m_tnext = nextnode; // next node on Thing thread
+	node->m_sectorlist_prev = NULL; // prev node on Thing thread
+	node->m_sectorlist_next = nextnode; // next node on Thing thread
 	if (nextnode)
-		nextnode->m_tprev = node; // set back link on Thing
+		nextnode->m_sectorlist_prev = node; // set back link on Thing
 
 	// Add new node at head of sector thread starting at s->touching_thinglist
 
-	node->m_sprev = NULL; // prev node on sector thread
-	node->m_snext = s->touching_preciplist; // next node on sector thread
+	node->m_thinglist_prev = NULL; // prev node on sector thread
+	node->m_thinglist_next = s->touching_preciplist; // next node on sector thread
 	if (s->touching_preciplist)
-		node->m_snext->m_sprev = node;
+		node->m_thinglist_next->m_thinglist_prev = node;
 	s->touching_preciplist = node;
 	return node;
 }
@@ -3641,24 +3641,24 @@ static msecnode_t *P_DelSecnode(msecnode_t *node)
 	// Unlink from the Thing thread. The Thing thread begins at
 	// sector_list and not from mobj_t->touching_sectorlist.
 
-	tp = node->m_tprev;
-	tn = node->m_tnext;
+	tp = node->m_sectorlist_prev;
+	tn = node->m_sectorlist_next;
 	if (tp)
-		tp->m_tnext = tn;
+		tp->m_sectorlist_next = tn;
 	if (tn)
-		tn->m_tprev = tp;
+		tn->m_sectorlist_prev = tp;
 
 	// Unlink from the sector thread. This thread begins at
 	// sector_t->touching_thinglist.
 
-	sp = node->m_sprev;
-	sn = node->m_snext;
+	sp = node->m_thinglist_prev;
+	sn = node->m_thinglist_next;
 	if (sp)
-		sp->m_snext = sn;
+		sp->m_thinglist_next = sn;
 	else
 		node->m_sector->touching_thinglist = sn;
 	if (sn)
-		sn->m_sprev = sp;
+		sn->m_thinglist_prev = sp;
 
 	// Return this node to the freelist
 
@@ -3680,24 +3680,24 @@ static mprecipsecnode_t *P_DelPrecipSecnode(mprecipsecnode_t *node)
 	// Unlink from the Thing thread. The Thing thread begins at
 	// sector_list and not from mobj_t->touching_sectorlist.
 
-	tp = node->m_tprev;
-	tn = node->m_tnext;
+	tp = node->m_sectorlist_prev;
+	tn = node->m_sectorlist_next;
 	if (tp)
-		tp->m_tnext = tn;
+		tp->m_sectorlist_next = tn;
 	if (tn)
-		tn->m_tprev = tp;
+		tn->m_sectorlist_prev = tp;
 
 	// Unlink from the sector thread. This thread begins at
 	// sector_t->touching_thinglist.
 
-	sp = node->m_sprev;
-	sn = node->m_snext;
+	sp = node->m_thinglist_prev;
+	sn = node->m_thinglist_next;
 	if (sp)
-		sp->m_snext = sn;
+		sp->m_thinglist_next = sn;
 	else
 		node->m_sector->touching_preciplist = sn;
 	if (sn)
-		sn->m_sprev = sp;
+		sn->m_thinglist_prev = sp;
 
 	// Return this node to the freelist
 
@@ -3812,7 +3812,7 @@ void P_CreateSecNodeList(mobj_t *thing, fixed_t x, fixed_t y)
 	while (node)
 	{
 		node->m_thing = NULL;
-		node = node->m_tnext;
+		node = node->m_sectorlist_next;
 	}
 
 	P_SetTarget(&tmthing, thing);
@@ -3850,11 +3850,11 @@ void P_CreateSecNodeList(mobj_t *thing, fixed_t x, fixed_t y)
 		if (!node->m_thing)
 		{
 			if (node == sector_list)
-				sector_list = node->m_tnext;
+				sector_list = node->m_sectorlist_next;
 			node = P_DelSecnode(node);
 		}
 		else
-			node = node->m_tnext;
+			node = node->m_sectorlist_next;
 	}
 
 	/* cph -
@@ -3895,7 +3895,7 @@ void P_CreatePrecipSecNodeList(precipmobj_t *thing,fixed_t x,fixed_t y)
 	while (node)
 	{
 		node->m_thing = NULL;
-		node = node->m_tnext;
+		node = node->m_sectorlist_next;
 	}
 
 	tmprecipthing = thing;
@@ -3929,11 +3929,11 @@ void P_CreatePrecipSecNodeList(precipmobj_t *thing,fixed_t x,fixed_t y)
 		if (!node->m_thing)
 		{
 			if (node == precipsector_list)
-				precipsector_list = node->m_tnext;
+				precipsector_list = node->m_sectorlist_next;
 			node = P_DelPrecipSecnode(node);
 		}
 		else
-			node = node->m_tnext;
+			node = node->m_sectorlist_next;
 	}
 
 	/* cph -
