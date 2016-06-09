@@ -13,7 +13,6 @@
 #include "doomdef.h"
 #ifdef HAVE_BLUA
 #include "p_local.h"
-#include "p_mobj.h" // So we can have P_GetMobjGravity
 #include "p_setup.h" // So we can have P_SetupLevelSky
 #include "z_zone.h"
 #include "r_main.h"

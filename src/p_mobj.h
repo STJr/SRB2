@@ -425,9 +425,6 @@ void P_AddCachedAction(mobj_t *mobj, INT32 statenum);
 // check mobj against water content, before movement code
 void P_MobjCheckWater(mobj_t *mobj);
 
-// get mobj gravity
-fixed_t P_GetMobjGravity(mobj_t *mo);
-
 // Player spawn points
 void P_SpawnPlayer(INT32 playernum);
 void P_MovePlayerToSpawn(INT32 playernum, mapthing_t *mthing);

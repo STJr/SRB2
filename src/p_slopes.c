@@ -16,7 +16,6 @@
 #include "m_bbox.h"
 #include "z_zone.h"
 #include "p_local.h"
-#include "p_mobj.h"
 #include "p_spec.h"
 #include "p_slopes.h"
 #include "p_setup.h"
