@@ -3308,7 +3308,7 @@ sector_t *P_PlayerTouchingSectorSpecial(player_t *player, INT32 section, INT32 n
 		return rover->master->frontsector;
 	}
 
-	for (node = player->mo->touching_sectorlist; node; node = node->m_thinglist_next)
+	for (node = player->mo->touching_sectorlist; node; node = node->m_sectorlist_next)
 	{
 		if (GETSECSPECIAL(node->m_sector->special, section) == number)
 		{
@@ -4657,7 +4657,7 @@ void P_PlayerInSpecialSector(player_t *player)
 		P_RunSpecialSectorCheck(player, sector);
 
 	// Iterate through touching_sectorlist
-	for (node = player->mo->touching_sectorlist; node; node = node->m_thinglist_next)
+	for (node = player->mo->touching_sectorlist; node; node = node->m_sectorlist_next)
 	{
 		sector = node->m_sector;
 
