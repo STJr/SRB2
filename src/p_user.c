@@ -2878,6 +2878,8 @@ static void P_DoTeeter(player_t *player)
 #define ysign ((i & 2) ? 1 : -1) // 0 -> 1 | 1 -> 1 | 2 -> -1 | 3 -> -1
 			fixed_t checkx = player->mo->x + (xsign*FixedMul(5*FRACUNIT, player->mo->scale));
 			fixed_t checky = player->mo->y + (ysign*FixedMul(5*FRACUNIT, player->mo->scale));
+#undef xsign
+#undef ysign
 
 			sec = R_PointInSubsector(checkx, checky)->sector;
 
@@ -2891,8 +2893,6 @@ static void P_DoTeeter(player_t *player)
 #endif
 			highestceilingheight = (ceilingheight > highestceilingheight) ? ceilingheight : highestceilingheight;
 			lowestfloorheight = (floorheight < lowestfloorheight) ? floorheight : lowestfloorheight;
-#undef xsign
-#undef ysign
 
 			if (!(sec->ffloors))
 				continue; // move on to the next subsector
