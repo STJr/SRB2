@@ -1988,7 +1988,7 @@ static void P_LoadReject(lumpnum_t lumpnum)
 	const char *lumpname = W_CheckNameForNum(lumpnum);
 
 	// Check if the lump exists, and if it's named "REJECT"
-	if (!lumpname || memcmp(lumpname, "REJECT", 8) != 0)
+	if (!lumpname || memcmp(lumpname, "REJECT", 5) != 0)
 	{
 		rejectmatrix = NULL;
 		return;
