@@ -1931,10 +1931,18 @@ static void P_GroupLines(void)
 	// allocate linebuffers for each sector
 	for (i = 0, sector = sectors; i < numsectors; i++, sector++)
 	{
-		sector->lines = Z_Calloc(sector->linecount * sizeof(line_t*), PU_LEVEL, NULL);
+		if (sector->linecount == 0) // no lines found?
+		{
+			sector->lines = NULL;
+			CONS_Debug(DBG_SETUP, "P_GroupLines: sector %d has no lines\n", i);
+		}
+		else
+		{
+			sector->lines = Z_Calloc(sector->linecount * sizeof(line_t*), PU_LEVEL, NULL);
 
-		// zero the count, since we'll later use this to track how many we've recorded
-		sector->linecount = 0;
+			// zero the count, since we'll later use this to track how many we've recorded
+			sector->linecount = 0;
+		}
 	}
 
 	// iterate through lines, assigning them to sectors' linebuffers,
@@ -1952,11 +1960,14 @@ static void P_GroupLines(void)
 	{
 		M_ClearBox(bbox);
 
-		for (j = 0; j < sector->linecount; j++)
+		if (sector->linecount != 0)
 		{
-			li = sector->lines[j];
-			M_AddToBox(bbox, li->v1->x, li->v1->y);
-			M_AddToBox(bbox, li->v2->x, li->v2->y);
+			for (j = 0; j < sector->linecount; j++)
+			{
+				li = sector->lines[j];
+				M_AddToBox(bbox, li->v1->x, li->v1->y);
+				M_AddToBox(bbox, li->v2->x, li->v2->y);
+			}
 		}
 
 		// set the degenmobj_t to the middle of the bounding box
