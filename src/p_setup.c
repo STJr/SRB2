@@ -1977,6 +1977,31 @@ static void P_GroupLines(void)
 	}
 }
 
+//
+// P_LoadReject
+//
+// Detect if the REJECT lump is valid,
+// if not, rejectmatrix will be NULL
+static void P_LoadReject(lumpnum_t lumpnum)
+{
+	size_t count;
+	const char *lumpname = W_CheckNameForNum(lumpnum);
+
+	// Check if the lump exists, and if it's named "REJECT"
+	if (!lumpname || memcmp(lumpname, "REJECT", 8) != 0)
+	{
+		rejectmatrix = NULL;
+		return;
+	}
+
+	count = W_LumpLength(lumpnum);
+
+	if (!count) // zero length, someone probably used ZDBSP
+		rejectmatrix = NULL;
+	else
+		rejectmatrix = W_CacheLumpNum(lumpnum, PU_LEVEL);
+}
+
 #if 0
 static char *levellumps[] =
 {
@@ -2585,7 +2610,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	P_LoadSubsectors(lastloadedmaplumpnum + ML_SSECTORS);
 	P_LoadNodes(lastloadedmaplumpnum + ML_NODES);
 	P_LoadSegs(lastloadedmaplumpnum + ML_SEGS);
-	rejectmatrix = W_CacheLumpNum(lastloadedmaplumpnum + ML_REJECT, PU_LEVEL);
+	P_LoadReject(lastloadedmaplumpnum + ML_REJECT);
 	P_GroupLines();
 
 	numdmstarts = numredctfstarts = numbluectfstarts = 0;
