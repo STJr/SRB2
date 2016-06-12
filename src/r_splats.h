@@ -63,7 +63,11 @@ typedef struct floorsplat_s
 fixed_t P_SegLength(seg_t *seg);
 
 // call at P_SetupLevel()
+#if !(defined (WALLSPLATS) || defined (FLOORSPLATS))
+FUNCMATH void R_ClearLevelSplats(void);
+#else
 void R_ClearLevelSplats(void);
+#endif
 
 #ifdef WALLSPLATS
 void R_AddWallSplat(line_t *wallline, INT16 sectorside, const char *patchname, fixed_t top,
