@@ -1991,13 +1991,17 @@ static void P_LoadReject(lumpnum_t lumpnum)
 	if (!lumpname || memcmp(lumpname, "REJECT\0\0", 8) != 0)
 	{
 		rejectmatrix = NULL;
+		CONS_Debug(DBG_SETUP, "P_LoadReject: No valid REJECT lump found\n");
 		return;
 	}
 
 	count = W_LumpLength(lumpnum);
 
 	if (!count) // zero length, someone probably used ZDBSP
+	{
 		rejectmatrix = NULL;
+		CONS_Debug(DBG_SETUP, "P_LoadReject: REJECT lump has size 0, will not be loaded\n");
+	}
 	else
 		rejectmatrix = W_CacheLumpNum(lumpnum, PU_LEVEL);
 }
