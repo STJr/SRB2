@@ -1858,7 +1858,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		// a single sided line is terminal, so it must mark ends
 		markfloor = markceiling = true;
 #ifdef ESLOPE
-		if (!(linedef->flags & ML_EFFECT1)) {
+		if (linedef->flags & ML_EFFECT2) {
 			if (linedef->flags & ML_DONTPEGBOTTOM)
 				rw_midtexturemid = frontsector->floorheight + textureheight[sidedef->midtexture] - viewz;
 			else
