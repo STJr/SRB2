@@ -768,6 +768,17 @@ void P_QuantizeMomentumToSlope(vector3_t *momentum, pslope_t *slope)
 }
 
 //
+// P_ReverseQuantizeMomentumToSlope
+//
+// When given a vector, rotates and aligns it to a flat surface (from being relative to a given slope)
+void P_ReverseQuantizeMomentumToSlope(vector3_t *momentum, pslope_t *slope)
+{
+	slope->zangle = InvAngle(slope->zangle);
+	P_QuantizeMomentumToSlope(momentum, slope);
+	slope->zangle = InvAngle(slope->zangle);
+}
+
+//
 // P_SlopeLaunch
 //
 // Handles slope ejection for objects
@@ -810,12 +821,7 @@ void P_HandleSlopeLanding(mobj_t *thing, pslope_t *slope)
 	mom.y = thing->momy;
 	mom.z = thing->momz*2;
 
-	//CONS_Printf("Landing on slope\n");
-
-	// Reverse quantizing might could use its own function later
-	slope->zangle = ANGLE_MAX-slope->zangle;
-	P_QuantizeMomentumToSlope(&mom, slope);
-	slope->zangle = ANGLE_MAX-slope->zangle;
+	P_ReverseQuantizeMomentumToSlope(&mom, slope);
 
 	if (P_MobjFlip(thing)*mom.z < 0) { // falling, land on slope
 		thing->momx = mom.x;

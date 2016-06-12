@@ -1851,12 +1851,8 @@ static void P_CheckBouncySectors(player_t *player)
 						momentum.y = player->mo->momy;
 						momentum.z = player->mo->momz*2;
 
-						if (slope) {
-							// Reverse quantizing might could use its own function later
-							slope->zangle = ANGLE_MAX-slope->zangle;
-							P_QuantizeMomentumToSlope(&momentum, slope);
-							slope->zangle = ANGLE_MAX-slope->zangle;
-						}
+						if (slope)
+							P_ReverseQuantizeMomentumToSlope(&momentum, slope);
 
 						newmom = momentum.z = -FixedMul(momentum.z,linedist)/2;
 #else
@@ -2856,7 +2852,7 @@ static void P_DoTeeter(player_t *player)
 	fixed_t topheight, bottomheight; // for 3d floor usage
 	const fixed_t tiptop = FixedMul(MAXSTEPMOVE, player->mo->scale); // Distance you have to be above the ground in order to teeter.
 
-#define maxzdelta 3<<(FRACBITS-2) // 3/4 on the fixed scale
+#define maxzdelta 1<<(FRACBITS-1) // 1/2 on the fixed scale
 	if (player->mo->standingslope && player->mo->standingslope->zdelta >= maxzdelta) // Always teeter if the slope is too steep.
 		teeter = true;
 #undef maxzdelta
