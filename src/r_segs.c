@@ -1453,34 +1453,45 @@ static void R_RenderSegLoop (void)
 		frontscale[rw_x] = rw_scale;
 
 		// draw the wall tiers
-		if (midtexture && yl <= yh && yh < vid.height && yh > 0)
+		if (midtexture)
 		{
 			// single sided line
-			dc_yl = yl;
-			dc_yh = yh;
-			dc_texturemid = rw_midtexturemid;
-			dc_source = R_GetColumn(midtexture,texturecolumn);
-			dc_texheight = textureheight[midtexture]>>FRACBITS;
+			if (yl <= yh && yh >= 0 && yl < viewheight)
+			{
+				dc_yl = yl;
+				dc_yh = yh;
+				dc_texturemid = rw_midtexturemid;
+				dc_source = R_GetColumn(midtexture,texturecolumn);
+				dc_texheight = textureheight[midtexture]>>FRACBITS;
 
-			//profile stuff ---------------------------------------------------------
+				//profile stuff ---------------------------------------------------------
 #ifdef TIMING
-			ProfZeroTimer();
+				ProfZeroTimer();
 #endif
-			colfunc();
+				colfunc();
 #ifdef TIMING
-			RDMSR(0x10,&mycount);
-			mytotal += mycount;      //64bit add
+				RDMSR(0x10,&mycount);
+				mytotal += mycount;      //64bit add
 
-			if (nombre--==0)
-				I_Error("R_DrawColumn CPU Spy reports: 0x%d %d\n", *((INT32 *)&mytotal+1),
-					(INT32)mytotal);
+				if (nombre--==0)
+					I_Error("R_DrawColumn CPU Spy reports: 0x%d %d\n", *((INT32 *)&mytotal+1),
+						(INT32)mytotal);
 #endif
-			//profile stuff ---------------------------------------------------------
+				//profile stuff ---------------------------------------------------------
 
-			// dont draw anything more for this column, since
-			// a midtexture blocks the view
-			ceilingclip[rw_x] = (INT16)viewheight;
-			floorclip[rw_x] = -1;
+				// dont draw anything more for this column, since
+				// a midtexture blocks the view
+				ceilingclip[rw_x] = (INT16)viewheight;
+				floorclip[rw_x] = -1;
+			}
+			else
+			{
+				// note: don't use min/max macros, since casting from INT32 to INT16 is involved here
+				if (markceiling)
+					ceilingclip[rw_x] = (yh >= 0) ? ((yl > viewheight) ? (INT16)viewheight : (INT16)((INT16)yl - 1)) : -1;
+				if (markfloor)
+					floorclip[rw_x] = (yh < viewheight) ? ((yh < -1) ? -1 : (INT16)((INT16)yh + 1)) : (INT16)viewheight;
+			}
 		}
 		else
 		{
@@ -1494,21 +1505,28 @@ static void R_RenderSegLoop (void)
 				if (mid >= floorclip[rw_x])
 					mid = floorclip[rw_x]-1;
 
-				if (mid >= yl && yh < vid.height && yh > 0)
+				if (mid >= yl) // back ceiling lower than front ceiling ?
 				{
-					dc_yl = yl;
-					dc_yh = mid;
-					dc_texturemid = rw_toptexturemid;
-					dc_source = R_GetColumn(toptexture,texturecolumn);
-					dc_texheight = textureheight[toptexture]>>FRACBITS;
-					colfunc();
-					ceilingclip[rw_x] = (INT16)mid;
+					if (yl >= viewheight) // entirely off bottom of screen
+						ceilingclip[rw_x] = (INT16)viewheight;
+					else if (mid >= 0) // safe to draw top texture
+					{
+						dc_yl = yl;
+						dc_yh = mid;
+						dc_texturemid = rw_toptexturemid;
+						dc_source = R_GetColumn(toptexture,texturecolumn);
+						dc_texheight = textureheight[toptexture]>>FRACBITS;
+						colfunc();
+						ceilingclip[rw_x] = (INT16)mid;
+					}
+					else // entirely off top of screen
+						ceilingclip[rw_x] = -1;
 				}
 				else
-					ceilingclip[rw_x] = (INT16)((INT16)yl - 1);
+					ceilingclip[rw_x] = (yh >= 0) ? ((yl > viewheight) ? (INT16)viewheight : (INT16)((INT16)yl - 1)) : -1;
 			}
 			else if (markceiling) // no top wall
-				ceilingclip[rw_x] = (INT16)((INT16)yl - 1);
+				ceilingclip[rw_x] = (yh >= 0) ? ((yl > viewheight) ? (INT16)viewheight : (INT16)((INT16)yl - 1)) : -1;
 
 			if (bottomtexture)
 			{
@@ -1520,22 +1538,29 @@ static void R_RenderSegLoop (void)
 				if (mid <= ceilingclip[rw_x])
 					mid = ceilingclip[rw_x]+1;
 
-				if (mid <= yh && yh < vid.height && yh > 0)
+				if (mid <= yh) // back floor higher than front floor ?
 				{
-					dc_yl = mid;
-					dc_yh = yh;
-					dc_texturemid = rw_bottomtexturemid;
-					dc_source = R_GetColumn(bottomtexture,
-						texturecolumn);
-					dc_texheight = textureheight[bottomtexture]>>FRACBITS;
-					colfunc();
-					floorclip[rw_x] = (INT16)mid;
+					if (yh < 0) // entirely off top of screen
+						floorclip[rw_x] = -1;
+					else if (mid < viewheight) // safe to draw bottom texture
+					{
+						dc_yl = mid;
+						dc_yh = yh;
+						dc_texturemid = rw_bottomtexturemid;
+						dc_source = R_GetColumn(bottomtexture,
+							texturecolumn);
+						dc_texheight = textureheight[bottomtexture]>>FRACBITS;
+						colfunc();
+						floorclip[rw_x] = (INT16)mid;
+					}
+					else  // entirely off bottom of screen
+						floorclip[rw_x] = (INT16)viewheight;
 				}
 				else
-					floorclip[rw_x] = (INT16)((INT16)yh + 1);
+					floorclip[rw_x] = (yh < viewheight) ? ((yh < -1) ? -1 : (INT16)((INT16)yh + 1)) : (INT16)viewheight;
 			}
 			else if (markfloor) // no bottom wall
-				floorclip[rw_x] = (INT16)((INT16)yh + 1);
+				floorclip[rw_x] = (yh < viewheight) ? ((yh < -1) ? -1 : (INT16)((INT16)yh + 1)) : (INT16)viewheight;
 		}
 
 		if (maskedtexture || numthicksides)
