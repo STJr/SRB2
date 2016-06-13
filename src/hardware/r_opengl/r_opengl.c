@@ -1928,7 +1928,7 @@ static inline void DrawMD2Ex(INT32 *gl_cmd_buffer, md2_frame_t *frame, UINT32 du
 	//pglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // alpha = level of transparency
 
 	// Remove depth mask when the model is transparent so it doesn't cut thorugh sprites // SRB2CBTODO: For all stuff too?!
-	if (color[3] < 255)
+	if (color && color[3] < 255)
 	{
 		pglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // alpha = level of transparency
 		pglDepthMask(GL_FALSE);
