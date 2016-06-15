@@ -5095,8 +5095,15 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	if (sprframe->rotate)
 	{
 		// choose a different rotation based on player view
-		ang = R_PointToAngle(thing->x, thing->y); // uses viewx,viewy
-		rot = (ang-thing->angle+ANGLE_202h)>>29;
+		ang = R_PointToAngle (thing->x, thing->y) - thing->angle;
+
+		if ((ang < ANGLE_180) && (sprframe->rotate & 4)) // See from right
+			rot = 6; // F7 slot
+		else if ((ang >= ANGLE_180) && (sprframe->rotate & 2)) // See from left
+			rot = 2; // F3 slot
+		else // Normal behaviour
+			rot = (ang+ANGLE_202h)>>29;
+
 		//Fab: lumpid is the index for spritewidth,spriteoffset... tables
 		lumpoff = sprframe->lumpid[rot];
 		flip = sprframe->flip & (1<<rot);

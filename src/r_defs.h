@@ -739,10 +739,16 @@ typedef struct
 //  object and may have multiple rotations predrawn.
 // Horizontal flipping is used to save space, thus NNNNF2F5 defines a mirrored patch.
 // Some sprites will only have one picture used for all views: NNNNF0
+// Some sprites will take the entirety of the left side: NNNNFL
+// Or the right side: NNNNFR
+// Or both, mirrored: NNNNFLFR
 //
 typedef struct
 {
 	// If false use 0 for any position.
+	// If L is present, (rotate & 2) == 2.
+	// If R is present, (rotate & 4) == 4.
+	// Otherwise, use 1.
 	// Note: as eight entries are available, we might as well insert the same
 	//  name eight times.
 	UINT8 rotate;
