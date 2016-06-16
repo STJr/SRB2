@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -101,6 +101,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define _USE_MATH_DEFINES // fixes M_PI errors in r_plane.c for Visual Studio
 #include <math.h>
 
 #ifdef GETTEXT
@@ -154,6 +155,10 @@ extern FILE *logstream;
 // Hey! If you change this, add 1 to the MODVERSION below!
 // Otherwise we can't force updates!
 #endif
+
+// Does this version require an added patch file?
+// Comment or uncomment this as necessary.
+#define USE_PATCH_DTA
 
 // Modification options
 // If you want to take advantage of the Master Server's ability to force clients to update
@@ -426,10 +431,6 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 // Disabled code and code under testing
 // None of these that are disabled in the normal build are guaranteed to work perfectly
 // Compile them at your own risk!
-
-///	Max recursive portal renders
-///	\note	obsoleted by cv_maxportals
-//#define PORTAL_LIMIT 8
 
 /// Kalaron/Eternity Engine slope code (SRB2CB ported)
 #define ESLOPE

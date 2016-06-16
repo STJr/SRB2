@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -85,6 +85,7 @@ extern side_t *sides;
 extern fixed_t viewx, viewy, viewz;
 extern angle_t viewangle, aimingangle;
 extern boolean viewsky, skyVisible;
+extern boolean skyVisible1, skyVisible2; // saved values of skyVisible for P1 and P2, for splitscreen
 extern sector_t *viewsector;
 extern player_t *viewplayer;
 extern UINT8 portalrender;

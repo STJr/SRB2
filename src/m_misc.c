@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1785,17 +1785,6 @@ UINT8 M_CountBits(UINT32 num, UINT8 size)
 		if (num & (1 << i))
 			++sum;
 	return sum;
-}
-
-
-/** Get the most significant bit in a number.
-  * (integer log2)
-  */
-UINT8 M_HighestBit(UINT32 num)
-{
-	UINT8 i = 0;
-	while (num >>= 1) ++i;
-	return i;
 }
 
 const char *GetRevisionString(void)

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -592,9 +592,13 @@ static void ST_drawDebugInfo(void)
 
 	if (cv_debug & DBG_RANDOMIZER) // randomizer testing
 	{
+		fixed_t peekres = P_RandomPeek();
+		peekres *= 10000;     // Change from fixed point
+		peekres >>= FRACBITS; // to displayable decimal
+
 		V_DrawRightAlignedString(320, height - 16, V_MONOSPACE, va("Init: %08x", P_GetInitSeed()));
 		V_DrawRightAlignedString(320, height - 8,  V_MONOSPACE, va("Seed: %08x", P_GetRandSeed()));
-		V_DrawRightAlignedString(320, height,      V_MONOSPACE, va("==  : %8d", P_RandomPeek()));
+		V_DrawRightAlignedString(320, height,      V_MONOSPACE, va("==  :    .%04d", peekres));
 
 		height -= 32;
 	}
@@ -1889,10 +1893,24 @@ static void ST_overlayDrawer(void)
 	ST_drawDebugInfo();
 }
 
-void ST_Drawer(boolean refresh)
+void ST_Drawer(void)
 {
+#ifdef SEENAMES
+	if (cv_seenames.value && cv_allowseenames.value && displayplayer == consoleplayer && seenplayer && seenplayer->mo)
+	{
+		if (cv_seenames.value == 1)
+			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT/2 + 15, V_HUDTRANSHALF, player_names[seenplayer-players]);
+		else if (cv_seenames.value == 2)
+			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT/2 + 15, V_HUDTRANSHALF,
+			va("%s%s", G_GametypeHasTeams() ? ((seenplayer->ctfteam == 1) ? "\x85" : "\x84") : "", player_names[seenplayer-players]));
+		else //if (cv_seenames.value == 3)
+			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT/2 + 15, V_HUDTRANSHALF,
+			va("%s%s", !G_RingSlingerGametype() || (G_GametypeHasTeams() && players[consoleplayer].ctfteam == seenplayer->ctfteam)
+			 ? "\x83" : "\x85", player_names[seenplayer-players]));
+	}
+#endif
+
 	// force a set of the palette by using doPaletteStuff()
-	(void)refresh; //?
 	if (vid.recalc)
 		st_palette = -1;
 

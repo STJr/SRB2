@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -967,10 +967,10 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	}
 	if (cv_analog.value || twodlevel
 		|| (player->mo && (player->mo->flags2 & MF2_TWOD))
-		|| player->climbing
+		|| (!demoplayback && (player->climbing
 		|| (player->pflags & PF_NIGHTSMODE)
 		|| (player->pflags & PF_SLIDING)
-		|| (player->pflags & PF_FORCESTRAFE)) // Analog
+		|| (player->pflags & PF_FORCESTRAFE)))) // Analog
 			forcestrafe = true;
 	if (forcestrafe) // Analog
 	{
@@ -1142,8 +1142,9 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	if (!mouseaiming && cv_mousemove.value)
 		forward += mousey;
 
-	if (cv_analog.value || player->climbing
-		|| (player->pflags & PF_SLIDING)) // Analog for mouse
+	if (cv_analog.value ||
+		(!demoplayback && (player->climbing
+		|| (player->pflags & PF_SLIDING)))) // Analog for mouse
 		side += mousex*2;
 	else
 		cmd->angleturn = (INT16)(cmd->angleturn - (mousex*8));
@@ -2297,7 +2298,7 @@ mapthing_t *G_FindCTFStart(INT32 playernum)
 		return NULL;
 	}
 
-	if ((!players[playernum].ctfteam && numredctfstarts && (!numbluectfstarts || P_Random() & 1)) || players[playernum].ctfteam == 1) //red
+	if ((!players[playernum].ctfteam && numredctfstarts && (!numbluectfstarts || P_RandomChance(FRACUNIT/2))) || players[playernum].ctfteam == 1) //red
 	{
 		if (!numredctfstarts)
 		{
@@ -4294,7 +4295,7 @@ void G_GhostTicker(void)
 		{
 		case GHC_SUPER: // Super Sonic (P_DoSuperStuff)
 			g->mo->color = SKINCOLOR_SUPER1;
-			g->mo->color += abs( ( ( leveltime >> 1 ) % 9) - 4);
+			g->mo->color += abs( ( (signed)( (unsigned)leveltime >> 1 ) % 9) - 4);
 			break;
 		case GHC_INVINCIBLE: // Mario invincibility (P_CheckInvincibilityTimer)
 			g->mo->color = (UINT8)(leveltime % MAXSKINCOLORS);
@@ -5447,7 +5448,7 @@ ATTRNORETURN void FUNCNORETURN G_StopMetalRecording(void)
 		UINT8 i;
 		WRITEUINT8(demo_p, DEMOMARKER); // add the demo end marker
 		for (i = 0; i < 16; i++, p++)
-			*p = P_Random(); // This MD5 was chosen by fair dice roll and most likely < 50% correct.
+			*p = P_RandomByte(); // This MD5 was chosen by fair dice roll and most likely < 50% correct.
 #else
 		WRITEUINT8(demo_p, DEMOMARKER); // add the demo end marker
 		md5_buffer((char *)p+16, demo_p - (p+16), (void *)p); // make a checksum of everything after the checksum in the file.
@@ -5529,7 +5530,7 @@ boolean G_CheckDemoStatus(void)
 		UINT8 i;
 		WRITEUINT8(demo_p, DEMOMARKER); // add the demo end marker
 		for (i = 0; i < 16; i++, p++)
-			*p = P_Random(); // This MD5 was chosen by fair dice roll and most likely < 50% correct.
+			*p = P_RandomByte(); // This MD5 was chosen by fair dice roll and most likely < 50% correct.
 #else
 		WRITEUINT8(demo_p, DEMOMARKER); // add the demo end marker
 		md5_buffer((char *)p+16, demo_p - (p+16), p); // make a checksum of everything after the checksum in the file.

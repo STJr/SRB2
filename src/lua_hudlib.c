@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2014      by John "JTE" Muniz.
-// Copyright (C) 2014      by Sonic Team Junior.
+// Copyright (C) 2014-2016 by John "JTE" Muniz.
+// Copyright (C) 2014-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -166,6 +166,8 @@ static int lib_getHudInfo(lua_State *L)
 	lua_remove(L, 1);
 
 	i = luaL_checkinteger(L, 1);
+	if (i >= NUMHUDITEMS)
+		return luaL_error(L, "hudinfo[] index %d out of range (0 - %d)", i, NUMHUDITEMS-1);
 	LUA_PushUserdata(L, &hudinfo[i], META_HUDINFO);
 	return 1;
 }
@@ -395,7 +397,7 @@ static int libd_drawPaddedNum(lua_State *L)
 	HUDONLY
 	x = luaL_checkinteger(L, 1);
 	y = luaL_checkinteger(L, 2);
-	num = abs(luaL_checkinteger(L, 3));
+	num = labs(luaL_checkinteger(L, 3));
 	digits = luaL_optinteger(L, 4, 2);
 	flags = luaL_optinteger(L, 5, 0);
 	flags &= ~V_PARAMMASK; // Don't let crashes happen.
@@ -495,7 +497,7 @@ static int libd_getColormap(lua_State *L)
 	{
 		skinnum = (INT32)luaL_checkinteger(L, 1);
 		if (skinnum < TC_ALLWHITE || skinnum >= MAXSKINS)
-			return luaL_error(L, "argument #1 is out of range");
+			return luaL_error(L, "skin number %d is out of range (%d - %d)", skinnum, TC_ALLWHITE, MAXSKINS-1);
 	}
 	else // skin name
 	{
@@ -526,6 +528,22 @@ static int libd_height(lua_State *L)
 	return 1;
 }
 
+static int libd_dupx(lua_State *L)
+{
+	HUDONLY
+	lua_pushinteger(L, vid.dupx); // push integral scale (patch scale)
+	lua_pushfixed(L, vid.fdupx); // push fixed point scale (position scale)
+	return 2;
+}
+
+static int libd_dupy(lua_State *L)
+{
+	HUDONLY
+	lua_pushinteger(L, vid.dupy); // push integral scale (patch scale)
+	lua_pushfixed(L, vid.fdupy); // push fixed point scale (position scale)
+	return 2;
+}
+
 static int libd_renderer(lua_State *L)
 {
 	HUDONLY
@@ -550,6 +568,8 @@ static luaL_Reg lib_draw[] = {
 	{"getColormap", libd_getColormap},
 	{"width", libd_width},
 	{"height", libd_height},
+	{"dupx", libd_dupx},
+	{"dupy", libd_dupy},
 	{"renderer", libd_renderer},
 	{NULL, NULL}
 };

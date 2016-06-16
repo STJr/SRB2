@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -666,6 +666,8 @@ typedef struct drawseg_s
 	INT16 *thicksidecol;
 	INT32 numthicksides;
 	fixed_t frontscale[MAXVIDWIDTH];
+
+	UINT8 portalpass; // if > 0 and <= portalrender, do not affect sprite clipping
 
 #ifdef ESLOPE
 	fixed_t maskedtextureheight[MAXVIDWIDTH]; // For handling sloped midtextures

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -555,11 +555,6 @@ void R_ClearSprites(void)
 	visspritecount = clippedvissprites = 0;
 }
 
-static inline void R_ResetVisSpriteChunks(void)
-{
-	memset(visspritechunks, 0, sizeof(visspritechunks));
-}
-
 //
 // R_NewVisSprite
 //
@@ -753,9 +748,15 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	patch_t *patch = W_CacheLumpNum(vis->patch, PU_CACHE);
 	fixed_t this_scale = vis->mobj->scale;
 	INT32 x1, x2;
+	INT64 overflow_test;
 
 	if (!patch)
 		return;
+
+	// Check for overflow
+	overflow_test = (INT64)centeryfrac - (((INT64)vis->texturemid*vis->scale)>>FRACBITS);
+	if (overflow_test < 0) overflow_test = -overflow_test;
+	if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) return; // fixed point mult would overflow
 
 	colfunc = basecolfunc; // hack: this isn't resetting properly somewhere.
 	dc_colormap = vis->colormap;
@@ -843,10 +844,10 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		dc_texturemid = FixedDiv(dc_texturemid,this_scale);
 
 		//Oh lordy, mercy me. Don't freak out if sprites go offscreen!
-		if (vis->xiscale > 0)
+		/*if (vis->xiscale > 0)
 			frac = FixedDiv(frac, this_scale);
 		else if (vis->x1 <= 0)
-			frac = (vis->x1 - vis->x2) * vis->xiscale;
+			frac = (vis->x1 - vis->x2) * vis->xiscale;*/
 
 		sprtopscreen = centeryfrac - FixedMul(dc_texturemid, spryscale);
 		//dc_hires = 1;
@@ -973,7 +974,7 @@ static void R_SplitSprite(vissprite_t *sprite, mobj_t *thing)
 		cutfrac = (INT16)((centeryfrac - FixedMul(testheight - viewz, sprite->scale))>>FRACBITS);
 		if (cutfrac < 0)
 			continue;
-		if (cutfrac > vid.height)
+		if (cutfrac > viewheight)
 			return;
 
 		// Found a split! Make a new sprite, copy the old sprite to it, and
@@ -1022,7 +1023,7 @@ static void R_SplitSprite(vissprite_t *sprite, mobj_t *thing)
 			if (!((thing->frame & (FF_FULLBRIGHT|FF_TRANSMASK) || thing->flags2 & MF2_SHADOW)
 				&& (!newsprite->extra_colormap || !newsprite->extra_colormap->fog)))
 			{
-				lindex = sprite->xscale>>(LIGHTSCALESHIFT);
+				lindex = FixedMul(sprite->xscale, FixedDiv(640, vid.width))>>(LIGHTSCALESHIFT);
 
 				if (lindex >= MAXLIGHTSCALE)
 					lindex = MAXLIGHTSCALE-1;
@@ -1253,15 +1254,6 @@ static void R_ProjectSprite(mobj_t *thing)
 			return;
 	}
 
-	// quick check for possible overflows
-	// if either of these triggers then there's a possibility that drawing is unsafe
-	if (M_HighestBit(abs(gzt - viewz)) + M_HighestBit(abs(yscale)) > 47 // 31 bits + 16 from the division by FRACUNIT
-	 || M_HighestBit(abs(gz  - viewz)) + M_HighestBit(abs(yscale)) > 47)
-	{
-		CONS_Debug(DBG_RENDER, "Suspected overflow in ProjectSprite (sprite %s), ignoring\n", sprnames[thing->sprite]);
-		return;
-	}
-
 	// store information in a vissprite
 	vis = R_NewVisSprite();
 	vis->heightsec = heightsec; //SoM: 3/17/2000
@@ -1315,7 +1307,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	}
 
 	if (vis->x1 > x1)
-		vis->startfrac += vis->xiscale*(vis->x1-x1);
+		vis->startfrac += FixedDiv(vis->xiscale, this_scale)*(vis->x1-x1);
 
 	//Fab: lumppat is the lump number of the patch to use, this is different
 	//     than lumpid for sprites-in-pwad : the graphics are patched
@@ -1343,7 +1335,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	else
 	{
 		// diminished light
-		lindex = xscale>>(LIGHTSCALESHIFT);
+		lindex = FixedMul(xscale, FixedDiv(640, vid.width))>>(LIGHTSCALESHIFT);
 
 		if (lindex >= MAXLIGHTSCALE)
 			lindex = MAXLIGHTSCALE-1;
@@ -1470,14 +1462,6 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	{
 		if (R_DoCulling(thing->subsector->sector->cullheight, viewsector->cullheight, viewz, gz, gzt))
 			return;
-	}
-
-	// quick check for possible overflows
-	// if either of these triggers then there's a possibility that drawing is unsafe
-	if (M_HighestBit(abs(gzt - viewz)) + M_HighestBit(abs(yscale)) > 47) // 31 bits + 16 from the division by FRACUNIT
-	{
-		CONS_Debug(DBG_RENDER, "Suspected overflow in ProjectPrecipitationSprite (sprite %s), ignoring\n", sprnames[thing->sprite]);
-		return;
 	}
 
 	// store information in a vissprite
@@ -2066,6 +2050,9 @@ void R_ClipSprites(void)
 				// does not cover sprite
 				continue;
 			}
+
+			if (ds->portalpass > 0 && ds->portalpass <= portalrender)
+				continue; // is a portal
 
 			r1 = ds->x1 < spr->x1 ? spr->x1 : ds->x1;
 			r2 = ds->x2 > spr->x2 ? spr->x2 : ds->x2;

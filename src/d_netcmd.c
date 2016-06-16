@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -576,7 +576,9 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_gif_optimize);
 	CV_RegisterVar(&cv_gif_downscale);
 
+#ifdef WALLSPLATS
 	CV_RegisterVar(&cv_splats);
+#endif
 
 	// register these so it is saved to config
 	if ((username = I_GetUserName()))
@@ -784,7 +786,7 @@ static boolean IsNameGood(char *name, INT32 playernum)
 			else if (len == 1) // Agh!
 			{
 				// Last ditch effort...
-				sprintf(name, "%d", M_Random() & 7);
+				sprintf(name, "%d", M_RandomKey(10));
 				if (!IsNameGood (name, playernum))
 					return false;
 			}
@@ -1103,6 +1105,13 @@ static void SendNameAndColor2(void)
 				if (players[secondplaya].mo)
 					players[secondplaya].mo->color = players[secondplaya].skincolor;
 			}
+		}
+		else
+		{
+			cv_skin2.value = players[secondplaya].skin;
+			CV_StealthSet(&cv_skin2, skins[players[secondplaya].skin].name);
+			// will always be same as current
+			SetPlayerSkin(secondplaya, cv_skin2.string);
 		}
 		return;
 	}
@@ -2464,11 +2473,13 @@ static void D_MD5PasswordPass(const UINT8 *buffer, size_t len, const char *salt,
 	memset(dest, 0, 16);
 #else
 	XBOXSTATIC char tmpbuf[256];
+	const size_t sl = strlen(salt);
 
-	if (len > 256-strlen(salt))
-		len = 256-strlen(salt);
+	if (len > 256-sl)
+		len = 256-sl;
 	memcpy(tmpbuf, buffer, len);
-	strcpy(&tmpbuf[len], salt);
+	memmove(&tmpbuf[len], salt, sl);
+	//strcpy(&tmpbuf[len], salt);
 	len += strlen(salt);
 	if (len < 256)
 		memset(&tmpbuf[len],0,256-len);
@@ -3465,7 +3476,7 @@ retryscramble:
 		for (i = 0; i < playercount; i++)
 		{
 			if (repick)
-				newteam = (INT16)((M_Random() % 2) + 1);
+				newteam = (INT16)((M_RandomByte() % 2) + 1);
 
 			// One team has the most players they can get, assign the rest to the other team.
 			if (red == maxcomposition || blue == maxcomposition)
@@ -3510,7 +3521,7 @@ retryscramble:
 		{
 			if (repick)
 			{
-				newteam = (INT16)((M_Random() % 2) + 1);
+				newteam = (INT16)((M_RandomByte() % 2) + 1);
 				repick = false;
 			}
 			else

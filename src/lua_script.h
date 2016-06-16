@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2012-2014 by John "JTE" Muniz.
-// Copyright (C) 2012-2014 by Sonic Team Junior.
+// Copyright (C) 2012-2016 by John "JTE" Muniz.
+// Copyright (C) 2012-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -30,9 +30,9 @@
 #define lua_pushfixed(L, f) lua_pushinteger(L, f)
 
 // angle_t casting
-// we reduce the angle to a fixed point between 0.0 and 1.0
-#define luaL_checkangle(L, i) (((angle_t)(luaL_checkfixed(L, i)&0xFFFF))<<16)
-#define lua_pushangle(L, a) lua_pushfixed(L, a>>16)
+// TODO deal with signedness
+#define luaL_checkangle(L, i) ((angle_t)luaL_checkinteger(L, i))
+#define lua_pushangle(L, a) lua_pushinteger(L, a)
 
 #ifdef _DEBUG
 void LUA_ClearExtVars(void);
@@ -78,6 +78,17 @@ void COM_Lua_f(void);
 	if (!seen) {\
 		seen = 1;\
 		CONS_Alert(CONS_WARNING,"\"%s\" is deprecated and will be removed.\nUse \"%s\" instead.\n", this_func, use_instead);\
+	}\
+}
+
+// Warnings about incorrect function usage.
+// Shows once, then never again, like deprecation
+#define LUA_UsageWarning(L, warningmsg)\
+{\
+	static UINT8 seen = 0;\
+	if (!seen) {\
+		seen = 1;\
+		CONS_Alert(CONS_WARNING,"%s\n", warningmsg);\
 	}\
 }
 

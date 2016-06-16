@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -78,7 +78,9 @@ extern consvar_t cv_useranalog, cv_useranalog2;
 extern consvar_t cv_analog, cv_analog2;
 
 extern consvar_t cv_netstat;
+#ifdef WALLSPLATS
 extern consvar_t cv_splats;
+#endif
 
 extern consvar_t cv_countdowntime;
 extern consvar_t cv_runscripts;

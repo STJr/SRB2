@@ -136,7 +136,6 @@ set(SRB2_CORE_RENDER_SOURCES
 set(SRB2_CORE_GAME_SOURCES
 	p_ceilng.c
 	p_enemy.c
-	p_fab.c
 	p_floor.c
 	p_inter.c
 	p_lights.c
@@ -313,6 +312,7 @@ if(${SRB2_CONFIG_HAVE_GME})
 	find_package(GME)
 	if(${GME_FOUND})
 		set(SRB2_HAVE_GME ON)
+		add_definitions(-DHAVE_LIBGME)
 	else()
 		message(WARNING "You have specified that GME is available but it was not found.")
 	endif()

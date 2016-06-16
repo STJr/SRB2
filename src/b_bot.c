@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2007-2014 by John "JTE" Muniz.
-// Copyright (C) 2011-2014 by Sonic Team Junior.
+// Copyright (C) 2007-2016 by John "JTE" Muniz.
+// Copyright (C) 2011-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -49,7 +49,7 @@ static inline void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cm
 		if (sonic->player->pflags & (PF_MACESPIN|PF_ITEMHANG))
 		{
 			cmd->forwardmove = sonic->player->cmd.forwardmove;
-			cmd->angleturn = abs((tails->angle - sonic->angle))>>16;
+			cmd->angleturn = abs((signed)(tails->angle - sonic->angle))>>16;
 			if (sonic->angle < tails->angle)
 				cmd->angleturn = -cmd->angleturn;
 		} else if (dist > FixedMul(512*FRACUNIT, tails->scale))

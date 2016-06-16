@@ -77,7 +77,7 @@ void __set_fpscr(long); // in libgcc / kernel's startup.s?
 #endif
 
 #ifdef HAVE_SDL
-
+#define _MATH_DEFINES_DEFINED
 #include "SDL.h"
 
 #ifdef HAVE_TTF
@@ -1678,7 +1678,7 @@ void I_UpdateMumble(const mobj_t *mobj, const listener_t listener)
 		UINT8 *p = mumble->context;
 		WRITEMEM(p, server_context, 8);
 		WRITEINT16(p, gamemap);
-		mumble->context_len = p - mumble->context;
+		mumble->context_len = (UINT32)(p - mumble->context);
 	}
 
 	if (mobj) {
