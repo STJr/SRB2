@@ -729,11 +729,21 @@ typedef struct
 #pragma pack()
 #endif
 
+typedef enum
+{
+	SRF_SINGLE      = 0,   // 0-angle for all rotations
+	SRF_3D          = 1,   // Angles 1-8
+	SRF_LEFT        = 2,   // Left side has single patch
+	SRF_RIGHT       = 4,   // Right side has single patch
+	SRF_2D          = 6,   // SRF_LEFT|SRF_RIGHT
+	SRF_NONE        = 0xff // Initial value
+} spriterotateflags_t;     // SRF's up!
+
 //
 // Sprites are patches with a special naming convention so they can be
 //  recognized by R_InitSprites.
 // The base name is NNNNFx or NNNNFxFx, with x indicating the rotation,
-//  x = 0, 1-7.
+//  x = 0, 1-8, L/R
 // The sprite and frame specified by a thing_t is range checked at run time.
 // A sprite is a patch_t that is assumed to represent a three dimensional
 //  object and may have multiple rotations predrawn.
@@ -745,13 +755,9 @@ typedef struct
 //
 typedef struct
 {
-	// If false use 0 for any position.
-	// If L is present, (rotate & 2) == 2.
-	// If R is present, (rotate & 4) == 4.
-	// Otherwise, use 1.
 	// Note: as eight entries are available, we might as well insert the same
 	//  name eight times.
-	UINT8 rotate;
+	UINT8 rotate; // see spriterotateflags_t above
 
 	// Lump to use for view angles 0-7.
 	lumpnum_t lumppat[8]; // lump number 16 : 16 wad : lump
