@@ -135,14 +135,14 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has both L/R and 1-8 rotations\n", spritename, cn);
 		// Let's not complain about multiple L/R rotations. It's not worth the effort.
 
+		if (sprtemp[frame].rotate == 0xff)
+			sprtemp[frame].rotate = 0;
+
 		sprtemp[frame].rotate |= ((rotation == ROT_R) ? 4 : 2);
-		for (r = 0; r < 4; r++)
+		for (r = 1; r < 4; r++) // Don't set for front/back frames
 		{
-			if ((r != 0) || (sprtemp[frame].lumppat[rotation] == LUMPERROR)) // Only set front/back angles if they don't exist
-			{
-				sprtemp[frame].lumppat[r + rightfactor] = lumppat;
-				sprtemp[frame].lumpid[r + rightfactor] = lumpid;
-			}
+			sprtemp[frame].lumppat[r + rightfactor] = lumppat;
+			sprtemp[frame].lumpid[r + rightfactor] = lumpid;
 		}
 		sprtemp[frame].flip |= (flipped ? (0x0F << rightfactor) : 0); // 00001111 or 11110000 in binary, depending on rotation being ROT_L or ROT_R
 		return;
@@ -315,6 +315,14 @@ static boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef,
 
 			case 0:
 			// only the first rotation is needed
+			break;
+
+			case 6: // (rotate & (2|4)) == (2|4) - both Left and Right rotations
+			case 7:
+				// we test to see whether the left and right slots are present
+				if ((sprtemp[frame].lumppat[2] == LUMPERROR) || (sprtemp[frame].lumppat[6] == LUMPERROR))
+					I_Error("R_AddSingleSpriteDef: Sprite %s frame %c is missing rotations",
+					        sprname, R_Frame2Char(frame));
 			break;
 
 			default:
