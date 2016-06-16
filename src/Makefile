@@ -414,7 +414,6 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/string.o   \
 		$(OBJDIR)/d_main.o   \
 		$(OBJDIR)/d_clisrv.o \
-		$(OBJDIR)/d_net.o    \
 		$(OBJDIR)/d_netfil.o \
 		$(OBJDIR)/d_netcmd.o \
 		$(OBJDIR)/dehacked.o \
@@ -473,13 +472,12 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/sounds.o   \
 		$(OBJDIR)/w_wad.o    \
 		$(OBJDIR)/filesrch.o \
-		$(OBJDIR)/mserv.o    \
-		$(OBJDIR)/i_tcp.o    \
-		$(OBJDIR)/lzf.o	     \
+		$(OBJDIR)/lzf.o      \
 		$(OBJDIR)/vid_copy.o \
+		$(OBJDIR)/d_enet.o \
+		$(OBJDIR)/d_datawrap.o \
 		$(OBJDIR)/b_bot.o \
 		$(i_cdmus_o)    \
-		$(i_net_o)      \
 		$(i_system_o)   \
 		$(i_sound_o)    \
 		$(OBJS)

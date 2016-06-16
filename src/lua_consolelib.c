@@ -79,14 +79,14 @@ deny:
 	//must be hacked/buggy client
 	lua_settop(gL, 0); // clear stack
 	CONS_Alert(CONS_WARNING, M_GetText("Illegal lua command received from %s\n"), player_names[playernum]);
-	if (server)
+	/*if (server)
 	{
 		XBOXSTATIC UINT8 bufn[2];
 
 		bufn[0] = (UINT8)playernum;
 		bufn[1] = KICK_MSG_CON_FAIL;
 		SendNetXCmd(XD_KICK, &bufn, 2);
-	}
+	}*/ ///@NET TODO
 }
 
 // Wrapper for COM_AddCommand commands
