@@ -111,7 +111,7 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 		// the lump should be used for all rotations
 		if (sprtemp[frame].rotate == 0)
 			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has multiple rot = 0 lump\n", spritename, cn);
-		else // Let's complain for both 1-8 and L/R rotations.
+		else if (sprtemp[frame].rotate != 0xff) // Let's complain for both 1-8 and L/R rotations.
 			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has rotations and a rot = 0 lump\n", spritename, cn);
 
 		sprtemp[frame].rotate = 0;
@@ -154,15 +154,15 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 	else if (sprtemp[frame].rotate != 1)
 		CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has both L/R and 1-8 rotations\n", spritename, cn);
 
+	// make 0 based
+	rotation--;
+
 	if (rotation == 0 || rotation == 4) // Front or back...
 		sprtemp[frame].rotate = 1; // Prevent L and R changeover
 	else if (rotation > 3) // Right side
 		sprtemp[frame].rotate = (1 | (sprtemp[frame].rotate & 2)); // Continue allowing L frame changeover
 	else // if (rotation <= 3) // Left side
 		sprtemp[frame].rotate = (1 | (sprtemp[frame].rotate & 4)); // Continue allowing R frame changeover
-
-	// make 0 based
-	rotation--;
 
 	if (sprtemp[frame].lumppat[rotation] != LUMPERROR)
 		CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s: %c%c has two lumps mapped to it\n", spritename, cn, '1'+rotation);
