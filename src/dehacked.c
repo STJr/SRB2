@@ -644,8 +644,13 @@ static void readfreeslots(MYFILE *f)
 				{
 					if (used_spr[(i-SPR_FIRSTFREESLOT)/8] & (1<<(i%8)))
 					{
-						if (!sprnames[i][4] && memcmp(sprnames[i],word,4)==0)
-							sprnames[i][4] = (char)f->wad;
+						if (memcmp(sprnames[i],word,4)==0)
+						{
+							if (!sprnames[i][4])
+								sprnames[i][4] = (char)f->wad;
+							deh_warning("Freeslots: Sprite 'SPR_%s' already exists", word);
+							break; // don't continue
+						}
 						continue; // Already allocated, next.
 					}
 					// Found a free slot!
@@ -657,21 +662,31 @@ static void readfreeslots(MYFILE *f)
 			}
 			else if (fastcmp(type, "S"))
 			{
-				for (i = 0; i < NUMSTATEFREESLOTS; i++)
+				for (i = 0; i < NUMSTATEFREESLOTS; i++) {
 					if (!FREE_STATES[i]) {
 						FREE_STATES[i] = Z_Malloc(strlen(word)+1, PU_STATIC, NULL);
 						strcpy(FREE_STATES[i],word);
 						break;
 					}
+					else if (fastcmp(word, FREE_STATES[i])) {
+						deh_warning("Freeslots: State 'S_%s' already exists", word);
+						break; // don't continue
+					}
+				}
 			}
 			else if (fastcmp(type, "MT"))
 			{
-				for (i = 0; i < NUMMOBJFREESLOTS; i++)
+				for (i = 0; i < NUMMOBJFREESLOTS; i++) {
 					if (!FREE_MOBJS[i]) {
 						FREE_MOBJS[i] = Z_Malloc(strlen(word)+1, PU_STATIC, NULL);
 						strcpy(FREE_MOBJS[i],word);
 						break;
 					}
+					else if (fastcmp(word, FREE_MOBJS[i])) {
+						deh_warning("Freeslots: MobjType 'MT_%s' already exists", word);
+						break; // don't continue
+					}
+				}
 			}
 			else
 				deh_warning("Freeslots: unknown enum class '%s' for '%s_%s'", type, type, word);
@@ -7840,8 +7855,12 @@ static inline int lib_freeslot(lua_State *L)
 			{
 				if (used_spr[(j-SPR_FIRSTFREESLOT)/8] & (1<<(j%8)))
 				{
-					if (!sprnames[j][4] && memcmp(sprnames[j],word,4)==0)
-						sprnames[j][4] = wad;
+					if (memcmp(sprnames[j],word,4)==0) {
+						if (!sprnames[j][4])
+							sprnames[j][4] = wad;
+						CONS_Printf("Sprite SPR_%s already exists.\n", word);
+						break; // don't continue
+					}
 					continue; // Already allocated, next.
 				}
 				// Found a free slot!
@@ -7859,7 +7878,7 @@ static inline int lib_freeslot(lua_State *L)
 		else if (fastcmp(type, "S"))
 		{
 			statenum_t i;
-			for (i = 0; i < NUMSTATEFREESLOTS; i++)
+			for (i = 0; i < NUMSTATEFREESLOTS; i++) {
 				if (!FREE_STATES[i]) {
 					CONS_Printf("State S_%s allocated.\n",word);
 					FREE_STATES[i] = Z_Malloc(strlen(word)+1, PU_STATIC, NULL);
@@ -7868,13 +7887,18 @@ static inline int lib_freeslot(lua_State *L)
 					r++;
 					break;
 				}
+				else if (fastcmp(word, FREE_STATES[i])) {
+					CONS_Printf("State S_%s already exists.\n", word);
+					break;
+				}
+			}
 			if (i == NUMSTATEFREESLOTS)
 				return r;
 		}
 		else if (fastcmp(type, "MT"))
 		{
 			mobjtype_t i;
-			for (i = 0; i < NUMMOBJFREESLOTS; i++)
+			for (i = 0; i < NUMMOBJFREESLOTS; i++) {
 				if (!FREE_MOBJS[i]) {
 					CONS_Printf("MobjType MT_%s allocated.\n",word);
 					FREE_MOBJS[i] = Z_Malloc(strlen(word)+1, PU_STATIC, NULL);
@@ -7883,6 +7907,11 @@ static inline int lib_freeslot(lua_State *L)
 					r++;
 					break;
 				}
+				else if (fastcmp(word, FREE_MOBJS[i])) {
+					CONS_Printf("MobjType MT_%s already exists.\n", word);
+					break;
+				}
+			}
 			if (i == NUMMOBJFREESLOTS)
 				return r;
 		}
@@ -8041,11 +8070,16 @@ static inline int lib_getenum(lua_State *L)
 	}
 	else if (fastncmp("SPR_",word,4)) {
 		p = word+4;
-		for (i = 0; i < NUMSPRITES; i++)
-			if (!sprnames[i][4] && fastncmp(p,sprnames[i],4)) {
+		for (i = 0; i < NUMSPRITES; i++) {
+			if (i >= SPR_FIRSTFREESLOT) {
+				if (!(used_spr[(i-SPR_FIRSTFREESLOT)/8] & (1<<(i%8))))
+					break;
+			}
+			if (fastncmp(p,sprnames[i],4)) {
 				lua_pushinteger(L, i);
 				return 1;
 			}
+		}
 		if (mathlib) return luaL_error(L, "sprite '%s' could not be found.\n", word);
 		return 0;
 	}
