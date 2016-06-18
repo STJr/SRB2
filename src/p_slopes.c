@@ -250,7 +250,7 @@ void P_SpawnSlope_Line(int linenum)
 
 	UINT8 flags = 0; // Slope flags
 	if (line->flags & ML_NOSONIC)
-		flags |= SL_NOPHYSICS;
+		; // flags |= SL_NOPHYSICS;  - disabled for 2.1
 	if (line->flags & ML_NOTAILS)
 		flags |= SL_NODYNAMIC;
 	if (line->flags & ML_NOKNUX)
@@ -686,7 +686,7 @@ void P_ResetDynamicSlopes(void) {
 
 					UINT8 flags = SL_VERTEXSLOPE;
 					if (lines[i].flags & ML_NOSONIC)
-						flags |= SL_NOPHYSICS;
+						; // flags |= SL_NOPHYSICS; - disabled for 2.1
 					if (!(lines[i].flags & ML_NOTAILS))
 						flags |= SL_NODYNAMIC;
 
