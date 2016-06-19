@@ -973,7 +973,6 @@ static const char *credits[] = {
 	"Callum Dickinson",
 	"Scott \"Graue\" Feeney",
 	"Nathan \"Jazz\" Giroux",
-	"Vivian \"toaster\" Grannell",
 	"Thomas \"Shadow Hog\" Igoe",
 	"\"Monster\" Iestyn Jealous",
 	"Ronald \"Furyhunter\" Kinard", // The SDL2 port
@@ -987,6 +986,7 @@ static const char *credits[] = {
 	"\"chi.miru\"", // Red's secret weapon, the REAL reason slopes exist (also helped port drawing code from ZDoom)
 	"Andrew \"orospakr\" Clunis",
 	"Gregor \"Oogaland\" Dick",
+	"Vivian \"toaster\" Grannell",
 	"Julio \"Chaos Zero 64\" Guir",
 	"\"Kalaron\"", // Coded some of Sryder13's collection of OpenGL fixes, especially fog
 	"Matthew \"Shuffle\" Marsalko",
