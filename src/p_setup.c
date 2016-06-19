@@ -1934,7 +1934,7 @@ static void P_GroupLines(void)
 		if (sector->linecount == 0) // no lines found?
 		{
 			sector->lines = NULL;
-			CONS_Debug(DBG_SETUP, "P_GroupLines: sector %d has no lines\n", i);
+			CONS_Debug(DBG_SETUP, "P_GroupLines: sector %s has no lines\n", sizeu1(i));
 		}
 		else
 		{
