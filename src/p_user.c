@@ -2845,6 +2845,7 @@ static boolean PIT_CheckSolidsTeeter(mobj_t *thing)
 //
 static void P_DoTeeter(player_t *player)
 {
+	msecnode_t *node;
 	boolean teeter = false;
 	boolean roverfloor; // solid 3d floors?
 	fixed_t floorheight, ceilingheight;
