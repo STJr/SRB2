@@ -325,9 +325,12 @@ boolean P_CheckSight(mobj_t *t1, mobj_t *t2)
 	s2 = t2->subsector->sector;
 	pnum = (s1-sectors)*numsectors + (s2-sectors);
 
-	// Check in REJECT table.
-	if (rejectmatrix[pnum>>3] & (1 << (pnum&7))) // can't possibly be connected
-		return false;
+	if (rejectmatrix != NULL)
+	{
+		// Check in REJECT table.
+		if (rejectmatrix[pnum>>3] & (1 << (pnum&7))) // can't possibly be connected
+			return false;
+	}
 
 	// killough 11/98: shortcut for melee situations
 	// same subsector? obviously visible
