@@ -1642,7 +1642,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			mo = node->m_thing;
 			if (mo->flags & MF_PUSHABLE)
 				numpush++;
-			node = node->m_snext;
+			node = node->m_thinglist_next;
 		}
 
 		if (triggerline->flags & ML_NOCLIMB) // Need at least or more
@@ -3144,7 +3144,7 @@ void P_SetupSignExit(player_t *player)
 	thinker_t *think;
 	INT32 numfound = 0;
 
-	for (; node; node = node->m_snext)
+	for (; node; node = node->m_thinglist_next)
 	{
 		thing = node->m_thing;
 		if (thing->type != MT_SIGN)
@@ -3308,7 +3308,7 @@ sector_t *P_PlayerTouchingSectorSpecial(player_t *player, INT32 section, INT32 n
 		return rover->master->frontsector;
 	}
 
-	for (node = player->mo->touching_sectorlist; node; node = node->m_snext)
+	for (node = player->mo->touching_sectorlist; node; node = node->m_sectorlist_next)
 	{
 		if (GETSECSPECIAL(node->m_sector->special, section) == number)
 		{
@@ -4657,7 +4657,7 @@ void P_PlayerInSpecialSector(player_t *player)
 		P_RunSpecialSectorCheck(player, sector);
 
 	// Iterate through touching_sectorlist
-	for (node = player->mo->touching_sectorlist; node; node = node->m_snext)
+	for (node = player->mo->touching_sectorlist; node; node = node->m_sectorlist_next)
 	{
 		sector = node->m_sector;
 
@@ -5308,7 +5308,7 @@ void T_LaserFlash(laserthink_t *flash)
 	S_StartSound(&sector->soundorg, sfx_laser);
 
 	// Seek out objects to DESTROY! MUAHAHHAHAHAA!!!*cough*
-	for (node = sector->touching_thinglist; node && node->m_thing; node = node->m_snext)
+	for (node = sector->touching_thinglist; node && node->m_thing; node = node->m_thinglist_next)
 	{
 		thing = node->m_thing;
 
@@ -6579,7 +6579,7 @@ void T_Scroll(scroll_t *s)
 					sector_t *psec;
 					psec = sectors + sect;
 
-					for (node = psec->touching_thinglist; node; node = node->m_snext)
+					for (node = psec->touching_thinglist; node; node = node->m_thinglist_next)
 					{
 						thing = node->m_thing;
 
@@ -6601,7 +6601,7 @@ void T_Scroll(scroll_t *s)
 
 			if (!is3dblock)
 			{
-				for (node = sec->touching_thinglist; node; node = node->m_snext)
+				for (node = sec->touching_thinglist; node; node = node->m_thinglist_next)
 				{
 					thing = node->m_thing;
 
@@ -6642,7 +6642,7 @@ void T_Scroll(scroll_t *s)
 					sector_t *psec;
 					psec = sectors + sect;
 
-					for (node = psec->touching_thinglist; node; node = node->m_snext)
+					for (node = psec->touching_thinglist; node; node = node->m_thinglist_next)
 					{
 						thing = node->m_thing;
 
@@ -6664,7 +6664,7 @@ void T_Scroll(scroll_t *s)
 
 			if (!is3dblock)
 			{
-				for (node = sec->touching_thinglist; node; node = node->m_snext)
+				for (node = sec->touching_thinglist; node; node = node->m_thinglist_next)
 				{
 					thing = node->m_thing;
 
@@ -7014,7 +7014,7 @@ void T_Friction(friction_t *f)
 			{
 				if (thing->floorz != P_GetSpecialTopZ(thing, referrer, sec))
 				{
-					node = node->m_snext;
+					node = node->m_thinglist_next;
 					continue;
 				}
 
@@ -7032,7 +7032,7 @@ void T_Friction(friction_t *f)
 				thing->movefactor = f->movefactor;
 			}
 		}
-		node = node->m_snext;
+		node = node->m_thinglist_next;
 	}
 }
 
@@ -7372,7 +7372,7 @@ void T_Pusher(pusher_t *p)
 
 	// constant pushers p_wind and p_current
 	node = sec->touching_thinglist; // things touching this sector
-	for (; node; node = node->m_snext)
+	for (; node; node = node->m_thinglist_next)
 	{
 		thing = node->m_thing;
 		if (thing->flags & (MF_NOGRAVITY | MF_NOCLIP)
