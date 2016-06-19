@@ -98,7 +98,7 @@ matrix:
               - p7zip-full
               - gcc-6
           compiler: gcc-6
-          env: WFLAGS="-Wno-error=tautological-compare"
+          env: WFLAGS="-Wno-tautological-compare"
           #gcc-6 (Ubuntu 6.1.1-3ubuntu11~14.04.1) 6.1.1 20160511
         - os: linux
           compiler: clang
@@ -213,7 +213,7 @@ before_script:
   - 7z x $HOME/srb2_cache/SRB2-v2115-assets-2.7z -oassets
   - mkdir build
   - cd build
-  - export CFLAGS="-Wall -W $WFLAGS"
+  - export CFLAGS="-Wall -W -Werror $WFLAGS"
   - export CCACHE_COMPRESS=true
   - cmake .. -DCMAKE_BUILD_TYPE=Release
 
