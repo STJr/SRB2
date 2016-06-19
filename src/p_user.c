@@ -1684,7 +1684,7 @@ static void P_CheckBustableBlocks(player_t *player)
 	player->mo->y += player->mo->momy;
 	P_SetThingPosition(player->mo);
 
-	for (node = player->mo->touching_sectorlist; node; node = node->m_snext)
+	for (node = player->mo->touching_sectorlist; node; node = node->m_sectorlist_next)
 	{
 		if (!node->m_sector)
 			break;
@@ -1801,7 +1801,7 @@ static void P_CheckBouncySectors(player_t *player)
 	player->mo->z += player->mo->momz;
 	P_SetThingPosition(player->mo);
 
-	for (node = player->mo->touching_sectorlist; node; node = node->m_snext)
+	for (node = player->mo->touching_sectorlist; node; node = node->m_sectorlist_next)
 	{
 		if (!node->m_sector)
 			break;
@@ -2845,118 +2845,18 @@ static boolean PIT_CheckSolidsTeeter(mobj_t *thing)
 //
 static void P_DoTeeter(player_t *player)
 {
-	msecnode_t *node;
 	boolean teeter = false;
 	boolean roverfloor; // solid 3d floors?
-	boolean checkedforteeter = false;
 	fixed_t floorheight, ceilingheight;
 	fixed_t topheight, bottomheight; // for 3d floor usage
 	const fixed_t tiptop = FixedMul(MAXSTEPMOVE, player->mo->scale); // Distance you have to be above the ground in order to teeter.
 
-#define maxzdelta 1<<(FRACBITS-1) // 1/2 on the fixed scale
-	if (player->mo->standingslope && player->mo->standingslope->zdelta >= maxzdelta) // Always teeter if the slope is too steep.
+	if (player->mo->standingslope && player->mo->standingslope->zdelta >= (FRACUNIT/2)) // Always teeter if the slope is too steep.
 		teeter = true;
-#undef maxzdelta
 	else // Let's do some checks...
 	{
-		for (node = player->mo->touching_sectorlist; node; node = node->m_snext)
-		{
-			// Ledge teetering. Check if any nearby sectors are low enough from your current one.
-			checkedforteeter = true;
-			roverfloor = false;
-
-			ceilingheight = node->m_sector->ceilingheight;
-			floorheight = node->m_sector->floorheight;
-#ifdef ESLOPE
-			if (node->m_sector->c_slope)
-				ceilingheight = P_GetZAt(node->m_sector->c_slope, player->mo->x, player->mo->y) + FixedMul(node->m_sector->c_slope->zdelta, tiptop);
-			if (node->m_sector->f_slope)
-				floorheight = P_GetZAt(node->m_sector->f_slope, player->mo->x, player->mo->y);
-#endif
-
-			if (node->m_sector->ffloors)
-			{
-				ffloor_t *rover;
-				for (rover = node->m_sector->ffloors; rover; rover = rover->next)
-				{
-					if (!(rover->flags & FF_EXISTS)) continue;
-
-					topheight = *rover->topheight;
-					bottomheight = *rover->bottomheight;
-
-#ifdef ESLOPE
-					if (*rover->t_slope)
-						topheight = P_GetZAt(*rover->t_slope, player->mo->x, player->mo->y);
-					if (*rover->b_slope)
-						bottomheight = P_GetZAt(*rover->b_slope, player->mo->x, player->mo->y);
-#endif
-
-					if (P_CheckSolidLava(player->mo, rover))
-						;
-					else if (!(rover->flags & FF_BLOCKPLAYER || rover->flags & FF_QUICKSAND))
-						continue; // intangible 3d floor
-
-					if (player->mo->eflags & MFE_VERTICALFLIP)
-					{
-						if (bottomheight > ceilingheight) // Above the ceiling
-							continue;
-
-						if (bottomheight > player->mo->z + player->mo->height + tiptop
-							|| (topheight < player->mo->z
-							&& player->mo->z + player->mo->height < ceilingheight - tiptop))
-						{
-							teeter = true;
-							roverfloor = true;
-						}
-						else
-						{
-							teeter = false;
-							roverfloor = true;
-							break;
-						}
-					}
-					else
-					{
-						if (topheight < floorheight) // Below the floor
-							continue;
-
-						if (topheight < player->mo->z - tiptop
-							|| (bottomheight > player->mo->z + player->mo->height
-							&& player->mo->z > floorheight + tiptop))
-						{
-							teeter = true;
-							roverfloor = true;
-						}
-						else
-						{
-							teeter = false;
-							roverfloor = true;
-							break;
-						}
-					}
-				}
-			}
-
-			if (!teeter && !roverfloor)
-			{
-				if (player->mo->eflags & MFE_VERTICALFLIP)
-				{
-					if (ceilingheight > player->mo->z + player->mo->height + tiptop)
-						teeter = true;
-				}
-				else
-				{
-					if (floorheight < player->mo->z - tiptop)
-						teeter = true;
-				}
-			}
-		}
-	}
-
-	if (checkedforteeter && !teeter) // Backup code
-	{
-		sector_t *sec;
 		UINT8 i;
+		sector_t *sec;
 		fixed_t highestceilingheight = INT32_MIN;
 		fixed_t lowestfloorheight = INT32_MAX;
 
@@ -3193,7 +3093,7 @@ teeterdone:
 		if ((player->mo->state == &states[S_PLAY_STND] || player->mo->state == &states[S_PLAY_TAP1] || player->mo->state == &states[S_PLAY_TAP2] || player->mo->state == &states[S_PLAY_SUPERSTAND]))
 			P_SetPlayerMobjState(player->mo, S_PLAY_TEETER1);
 	}
-	else if (checkedforteeter && (player->mo->state == &states[S_PLAY_TEETER1] || player->mo->state == &states[S_PLAY_TEETER2] || player->mo->state == &states[S_PLAY_SUPERTEETER]))
+	else if ((player->mo->state == &states[S_PLAY_TEETER1] || player->mo->state == &states[S_PLAY_TEETER2] || player->mo->state == &states[S_PLAY_SUPERTEETER]))
 		P_SetPlayerMobjState(player->mo, S_PLAY_STND);
 }
 
@@ -7083,7 +6983,7 @@ static void P_MovePlayer(player_t *player)
 		player->mo->y += player->mo->momy;
 		P_SetThingPosition(player->mo);
 
-		for (node = player->mo->touching_sectorlist; node; node = node->m_snext)
+		for (node = player->mo->touching_sectorlist; node; node = node->m_sectorlist_next)
 		{
 			if (!node->m_sector)
 				break;
