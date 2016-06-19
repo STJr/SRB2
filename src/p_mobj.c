@@ -1530,7 +1530,7 @@ static void P_PushableCheckBustables(mobj_t *mo)
 	mo->y += mo->momy;
 	P_SetThingPosition(mo);
 
-	for (node = mo->touching_sectorlist; node; node = node->m_snext)
+	for (node = mo->touching_sectorlist; node; node = node->m_sectorlist_next)
 	{
 		if (!node->m_sector)
 			break;
@@ -2013,12 +2013,14 @@ static void P_AdjustMobjFloorZ_FFloors(mobj_t *mo, sector_t *sector, UINT8 motyp
 		delta1 = mo->z - (bottomheight + ((topheight - bottomheight)/2));
 		delta2 = thingtop - (bottomheight + ((topheight - bottomheight)/2));
 		if (topheight > mo->floorz && abs(delta1) < abs(delta2)
-			&& !(rover->flags & FF_REVERSEPLATFORM))
+			&& !(rover->flags & FF_REVERSEPLATFORM)
+			&& ((P_MobjFlip(mo)*mo->momz > 0) || (!(rover->flags & FF_PLATFORM)))) // In reverse gravity, only clip for FOFs that are intangible from their bottom (the "top" you're falling through) if you're coming from above ("below" in your frame of reference)
 		{
 			mo->floorz = topheight;
 		}
 		if (bottomheight < mo->ceilingz && abs(delta1) >= abs(delta2)
-			&& !(rover->flags & FF_PLATFORM))
+			&& !(rover->flags & FF_PLATFORM)
+			&& ((P_MobjFlip(mo)*mo->momz > 0) || (!(rover->flags & FF_REVERSEPLATFORM)))) // In normal gravity, only clip for FOFs that are intangible from the top if you're coming from below
 		{
 			mo->ceilingz = bottomheight;
 		}
@@ -2703,7 +2705,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 					msecnode_t *node;
 					boolean stopmovecut = false;
 
-					for (node = mo->touching_sectorlist; node; node = node->m_snext)
+					for (node = mo->touching_sectorlist; node; node = node->m_sectorlist_next)
 					{
 						sector_t *sec = node->m_sector;
 						subsector_t *newsubsec;
@@ -2880,7 +2882,7 @@ nightsdone:
 			if (CheckForMarioBlocks && !(netgame && mo->player->spectator)) // Only let the player punch
 			{
 				// Search the touching sectors, from side-to-side...
-				for (node = mo->touching_sectorlist; node; node = node->m_snext)
+				for (node = mo->touching_sectorlist; node; node = node->m_sectorlist_next)
 				{
 					ffloor_t *rover;
 					if (!node->m_sector->ffloors)
@@ -3648,7 +3650,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 	if (!(netgame && mobj->player->spectator))
 	{
 		// Crumbling platforms
-		for (node = mobj->touching_sectorlist; node; node = node->m_snext)
+		for (node = mobj->touching_sectorlist; node; node = node->m_sectorlist_next)
 		{
 			fixed_t topheight, bottomheight;
 			ffloor_t *rover;
@@ -3673,7 +3675,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 	{
 		boolean thereiswater = false;
 
-		for (node = mobj->touching_sectorlist; node; node = node->m_snext)
+		for (node = mobj->touching_sectorlist; node; node = node->m_sectorlist_next)
 		{
 			if (node->m_sector->ffloors)
 			{
@@ -3694,7 +3696,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 		}
 		if (thereiswater)
 		{
-			for (node = mobj->touching_sectorlist; node; node = node->m_snext)
+			for (node = mobj->touching_sectorlist; node; node = node->m_sectorlist_next)
 			{
 				if (node->m_sector->ffloors)
 				{
@@ -3807,7 +3809,7 @@ void P_RecalcPrecipInSector(sector_t *sector)
 
 	sector->moved = true; // Recalc lighting and things too, maybe
 
-	for (psecnode = sector->touching_preciplist; psecnode; psecnode = psecnode->m_snext)
+	for (psecnode = sector->touching_preciplist; psecnode; psecnode = psecnode->m_thinglist_next)
 		CalculatePrecipFloor(psecnode->m_thing);
 }
 
