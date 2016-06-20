@@ -2649,6 +2649,7 @@ isblocking:
 		// see about climbing on the wall
 		if (!(checkline->flags & ML_NOCLIMB))
 		{
+			boolean canclimb; // FUCK C90
 			angle_t climbangle, climbline;
 			INT32 whichside = P_PointOnLineSide(slidemo->x, slidemo->y, li);
 
@@ -2659,7 +2660,7 @@ isblocking:
 
 			climbangle += (ANGLE_90 * (whichside ? -1 : 1));
 
-			boolean canclimb = (li->backsector ? P_IsClimbingValid(slidemo->player, climbangle) : true);
+			canclimb = (li->backsector ? P_IsClimbingValid(slidemo->player, climbangle) : true);
 
 			if (((!slidemo->player->climbing && abs((signed)(slidemo->angle - ANGLE_90 - climbline)) < ANGLE_45)
 			|| (slidemo->player->climbing == 1 && abs((signed)(slidemo->angle - climbline)) < ANGLE_135))
