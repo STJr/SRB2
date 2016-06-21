@@ -3079,6 +3079,51 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			}
 			break;
 
+		case 446: // Make block fall remotely (acts like FF_CRUMBLE)
+			{
+				INT16 sectag = (INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
+				INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
+				sector_t *sec; // Sector that the FOF is visible in
+				ffloor_t *rover; // FOF that we are going to make fall down
+				player_t *player = NULL; // player that caused FOF to fall
+				boolean respawn = true; // should the fallen FOF respawn?
+
+				if (mo) // NULL check
+					player = mo->player;
+
+				if (line->flags & ML_NOCLIMB) // don't respawn!
+					respawn = false;
+
+				for (secnum = -1; (secnum = P_FindSectorFromTag(sectag, secnum)) >= 0 ;)
+				{
+					sec = sectors + secnum;
+
+					if (!sec->ffloors)
+					{
+						CONS_Debug(DBG_GAMELOGIC, "Line type 446 Executor: Target sector #%d has no FOFs.\n", secnum);
+						return;
+					}
+
+					for (rover = sec->ffloors; rover; rover = rover->next)
+					{
+						if (rover->master->frontsector->tag == foftag)
+							break;
+					}
+
+					if (!rover)
+					{
+						CONS_Debug(DBG_GAMELOGIC, "Line type 446 Executor: Can't find a FOF control sector with tag %d\n", foftag);
+						return;
+					}
+
+					if (line->flags & ML_BLOCKMONSTERS) // FOF flags determine respawn ability instead?
+						respawn = !(rover->flags & FF_NORETURN) ^ !!(line->flags & ML_NOCLIMB); // no climb inverts
+
+					EV_StartCrumble(rover->master->frontsector, rover, (rover->flags & FF_FLOATBOB), player, rover->alpha, respawn);
+				}
+			}
+			break;
+
 		case 450: // Execute Linedef Executor - for recursion
 			P_LinedefExecute(line->tag, mo, NULL);
 			break;
