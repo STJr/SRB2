@@ -1252,13 +1252,12 @@ static void P_PlayerFlip(mobj_t *mo)
 }
 
 //
-// P_CheckGravity
+// P_GetMobjGravity
 //
-// Checks the current gravity state
-// of the object. If affect is true,
-// a gravity force will be applied.
+// Returns the current gravity
+// value of the object.
 //
-void P_CheckGravity(mobj_t *mo, boolean affect)
+fixed_t P_GetMobjGravity(mobj_t *mo)
 {
 	fixed_t gravityadd = 0;
 	boolean no3dfloorgrav = true; // Custom gravity
@@ -1316,9 +1315,6 @@ void P_CheckGravity(mobj_t *mo, boolean affect)
 	// Less gravity underwater.
 	if (mo->eflags & MFE_UNDERWATER && !goopgravity)
 		gravityadd = gravityadd/3;
-
-	if (!mo->momz) // mobj at stop, no floor, so feel the push of gravity!
-		gravityadd <<= 1;
 
 	if (mo->player)
 	{
@@ -1400,11 +1396,30 @@ void P_CheckGravity(mobj_t *mo, boolean affect)
 	if (goopgravity)
 		gravityadd = -gravityadd/5;
 
-	if (affect)
-		mo->momz += FixedMul(gravityadd, mo->scale);
-
 	if (mo->player && !!(mo->eflags & MFE_VERTICALFLIP) != wasflip)
 		P_PlayerFlip(mo);
+
+	gravityadd = FixedMul(gravityadd, mo->scale);
+
+	return gravityadd;
+}
+
+//
+// P_CheckGravity
+//
+// Checks the current gravity state
+// of the object. If affect is true,
+// a gravity force will be applied.
+//
+void P_CheckGravity(mobj_t *mo, boolean affect)
+{
+	fixed_t gravityadd = P_GetMobjGravity(mo);
+
+	if (!mo->momz) // mobj at stop, no floor, so feel the push of gravity!
+		gravityadd <<= 1;
+
+	if (affect)
+		mo->momz += gravityadd;
 
 	if (mo->type == MT_SKIM && mo->z + mo->momz <= mo->watertop && mo->z >= mo->watertop)
 	{
@@ -1480,7 +1495,7 @@ static void P_XYFriction(mobj_t *mo, fixed_t oldx, fixed_t oldy)
 		    && abs(player->rmomy) < FixedMul(STOPSPEED, mo->scale)
 		    && (!(player->cmd.forwardmove && !(twodlevel || mo->flags2 & MF2_TWOD)) && !player->cmd.sidemove && !(player->pflags & PF_SPINNING))
 #ifdef ESLOPE
-			&& !(player->mo->standingslope && abs(player->mo->standingslope->zdelta) >= FRACUNIT/2)
+			&& !(player->mo->standingslope && (!(player->mo->standingslope->flags & SL_NOPHYSICS)) && (abs(player->mo->standingslope->zdelta) >= FRACUNIT/2))
 #endif
 				)
 		{
@@ -2154,16 +2169,6 @@ static boolean P_ZMovement(mobj_t *mo)
 	I_Assert(mo != NULL);
 	I_Assert(!P_MobjWasRemoved(mo));
 
-#ifdef ESLOPE
-	if (mo->standingslope)
-	{
-		if (mo->flags & MF_NOCLIPHEIGHT)
-			mo->standingslope = NULL;
-		else if (!P_IsObjectOnGround(mo))
-			P_SlopeLaunch(mo);
-	}
-#endif
-
 	// Intercept the stupid 'fall through 3dfloors' bug
 	if (mo->subsector->sector->ffloors)
 		P_AdjustMobjFloorZ_FFloors(mo, mo->subsector->sector, 0);
@@ -2177,6 +2182,16 @@ static boolean P_ZMovement(mobj_t *mo)
 		mo->eflags &= ~MFE_APPLYPMOMZ;
 	}
 	mo->z += mo->momz;
+
+#ifdef ESLOPE
+	if (mo->standingslope)
+	{
+		if (mo->flags & MF_NOCLIPHEIGHT)
+			mo->standingslope = NULL;
+		else if (!P_IsObjectOnGround(mo))
+			P_SlopeLaunch(mo);
+	}
+#endif
 
 	switch (mo->type)
 	{
@@ -2364,10 +2379,7 @@ static boolean P_ZMovement(mobj_t *mo)
 		if ((mo->eflags & MFE_VERTICALFLIP) ? tmceilingslope : tmfloorslope) {
 			mo->standingslope = (mo->eflags & MFE_VERTICALFLIP) ? tmceilingslope : tmfloorslope;
 
-			// Reverse quantizing might could use its own function later
-			mo->standingslope->zangle = ANGLE_MAX-mo->standingslope->zangle;
-			P_QuantizeMomentumToSlope(&mom, mo->standingslope);
-			mo->standingslope->zangle = ANGLE_MAX-mo->standingslope->zangle;
+			P_ReverseQuantizeMomentumToSlope(&mom, mo->standingslope);
 		}
 #endif
 
