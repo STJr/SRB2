@@ -223,7 +223,12 @@ static int hudinfo_num(lua_State *L)
 
 static int colormap_get(lua_State *L)
 {
-	return luaL_error(L, "colormap is not a struct.");
+	const UINT8 *colormap = *((UINT8 **)luaL_checkudata(L, 1, META_COLORMAP));
+	UINT32 i = luaL_checkinteger(L, 2);
+	if (i >= 256)
+		return luaL_error(L, "colormap index %d out of range (0 - %d)", i, 255);
+	lua_pushinteger(L, colormap[i]);
+	return 1;
 }
 
 static int patch_get(lua_State *L)
