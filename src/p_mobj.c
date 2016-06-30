@@ -2376,9 +2376,9 @@ static boolean P_ZMovement(mobj_t *mo)
 
 #ifdef ESLOPE
 		P_CheckPosition(mo, mo->x, mo->y); // Sets mo->standingslope correctly
-		if ((mo->eflags & MFE_VERTICALFLIP) ? tmceilingslope : tmfloorslope) {
+		if (((mo->eflags & MFE_VERTICALFLIP) ? tmceilingslope : tmfloorslope) && (mo->type != MT_STEAM))
+		{
 			mo->standingslope = (mo->eflags & MFE_VERTICALFLIP) ? tmceilingslope : tmfloorslope;
-
 			P_ReverseQuantizeMomentumToSlope(&mom, mo->standingslope);
 		}
 #endif
@@ -2532,7 +2532,7 @@ static boolean P_ZMovement(mobj_t *mo)
 			mom.z = tmfloorthing->momz;
 
 #ifdef ESLOPE
-		if (mo->standingslope) {
+		if (mo->standingslope) { // MT_STEAM will never have a standingslope, see above.
 			P_QuantizeMomentumToSlope(&mom, mo->standingslope);
 		}
 #endif
