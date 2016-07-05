@@ -1846,6 +1846,7 @@ static actionpointer_t actionpointers[] =
 	{{A_BrakLobShot},          "A_BRAKLOBSHOT"},
 	{{A_NapalmScatter},        "A_NAPALMSCATTER"},
 	{{A_SpawnFreshCopy},       "A_SPAWNFRESHCOPY"},
+	{{A_Boss5Jump},       		"A_BOSS5JUMP"},
 
 	{{NULL},                   "NONE"},
 
