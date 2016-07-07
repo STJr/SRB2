@@ -657,6 +657,9 @@ void HWR_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color)
 	FOutVector v[4];
 	FSurfaceInfo Surf;
 
+	if (w < 0 || h < 0)
+		return; // consistency w/ software
+
 //  3--2
 //  | /|
 //  |/ |

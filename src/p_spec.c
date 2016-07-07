@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -103,7 +103,7 @@ static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, mobj_t *
 static void Add_MasterDisappearer(tic_t appeartime, tic_t disappeartime, tic_t offset, INT32 line, INT32 sourceline);
 static void P_AddBlockThinker(sector_t *sec, line_t *sourceline);
 static void P_AddFloatThinker(sector_t *sec, INT32 tag, line_t *sourceline);
-static void P_AddBridgeThinker(line_t *sourceline, sector_t *sec);
+//static void P_AddBridgeThinker(line_t *sourceline, sector_t *sec);
 static void P_AddFakeFloorsByLine(size_t line, ffloortype_e ffloorflags, thinkerlist_t *secthinkers);
 static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec);
 static void Add_Friction(INT32 friction, INT32 movefactor, INT32 affectee, INT32 referrer);
@@ -407,7 +407,7 @@ void P_ParseANIMDEFSLump(INT32 wadNum, UINT16 lumpnum, INT32 *i)
 void P_ParseAnimationDefintion(SINT8 istexture, INT32 *i)
 {
 	char *animdefsToken;
-	UINT8 animdefsTokenLength;
+	size_t animdefsTokenLength;
 	char *endPos;
 	INT32 animSpeed;
 
@@ -594,6 +594,7 @@ void P_SetupLevelFlatAnims(void)
 // UTILITIES
 //
 
+#if 0
 /** Gets a side from a sector line.
   *
   * \param currentSector Sector the line is in.
@@ -633,6 +634,7 @@ static inline boolean twoSided(INT32 sector, INT32 line)
 {
 	return (sectors[sector].lines[line])->sidenum[1] != 0xffff;
 }
+#endif
 
 /** Finds sector next to current.
   *
@@ -2058,7 +2060,7 @@ void P_SwitchWeather(INT32 weathernum)
 				precipmobj = (precipmobj_t *)think;
 
 				precipmobj->flags = mobjinfo[MT_SNOWFLAKE].flags;
-				z = M_Random();
+				z = M_RandomByte();
 
 				if (z < 64)
 					z = 2;
@@ -2390,20 +2392,19 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			// console player only unless NOCLIMB is set
 			if ((line->flags & ML_NOCLIMB) || (mo && mo->player && P_IsLocalPlayer(mo->player)))
 			{
-				UINT16 musicnum = (UINT16)sides[line->sidenum[0]].toptexture; //P_AproxDistance(line->dx, line->dy)>>FRACBITS;
 				UINT16 tracknum = (UINT16)sides[line->sidenum[0]].bottomtexture;
 
-				mapmusic = musicnum | (tracknum << MUSIC_TRACKSHIFT);
-				if (!(line->flags & ML_BLOCKMONSTERS))
-					mapmusic |= MUSIC_RELOADRESET;
+				strncpy(mapmusname, sides[line->sidenum[0]].text, 7);
+				mapmusname[6] = 0;
 
-				if (musicnum >= NUMMUSIC || musicnum == mus_None)
-					S_StopMusic();
-				else
-					S_ChangeMusic(mapmusic, !(line->flags & ML_EFFECT4));
+				mapmusflags = tracknum & MUSIC_TRACKMASK;
+				if (!(line->flags & ML_BLOCKMONSTERS))
+					mapmusflags |= MUSIC_RELOADRESET;
+
+				S_ChangeMusic(mapmusname, mapmusflags, !(line->flags & ML_EFFECT4));
 
 				// Except, you can use the ML_BLOCKMONSTERS flag to change this behavior.
-				// if (mapmusic & MUSIC_RELOADRESET) then it will reset the music in G_PlayerReborn.
+				// if (mapmusflags & MUSIC_RELOADRESET) then it will reset the music in G_PlayerReborn.
 			}
 			break;
 
@@ -2434,10 +2435,10 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						if (rover->master->frontsector->tag != line->tag)
 							continue;
 
-						if (mo->z > *rover->topheight)
+						if (mo->z > P_GetSpecialTopZ(mo, sectors + rover->secnum, mo->subsector->sector))
 							continue;
 
-						if (mo->z + mo->height < *rover->bottomheight)
+						if (mo->z + mo->height < P_GetSpecialBottomZ(mo, sectors + rover->secnum, mo->subsector->sector))
 							continue;
 
 						foundit = true;
@@ -3039,6 +3040,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
 				sector_t *sec; // Sector that the FOF is visible (or not visible) in
 				ffloor_t *rover; // FOF to vanish/un-vanish
+				ffloortype_e oldflags; // store FOF's old flags
 
 				for (secnum = -1; (secnum = P_FindSectorFromTag(sectag, secnum)) >= 0 ;)
 				{
@@ -3062,11 +3064,17 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						return;
 					}
 
+					oldflags = rover->flags;
+
 					// Abracadabra!
 					if (line->flags & ML_NOCLIMB)
 						rover->flags |= FF_EXISTS;
 					else
 						rover->flags &= ~FF_EXISTS;
+
+					// if flags changed, reset sector's light list
+					if (rover->flags != oldflags)
+						sec->moved = true;
 				}
 			}
 			break;
@@ -3220,8 +3228,8 @@ boolean P_IsFlagAtBase(mobjtype_t flag)
 				if (GETSECSPECIAL(rover->master->frontsector->special, 4) != specialnum)
 					continue;
 
-				if (mo->z <= *rover->topheight
-					&& mo->z >= *rover->bottomheight)
+				if (mo->z <= P_GetSpecialTopZ(mo, sectors + rover->secnum, mo->subsector->sector)
+					&& mo->z >= P_GetSpecialBottomZ(mo, sectors + rover->secnum, mo->subsector->sector))
 					return true;
 			}
 		}
@@ -3255,11 +3263,16 @@ sector_t *P_PlayerTouchingSectorSpecial(player_t *player, INT32 section, INT32 n
 	// Hmm.. maybe there's a FOF that has it...
 	for (rover = player->mo->subsector->sector->ffloors; rover; rover = rover->next)
 	{
+		fixed_t topheight, bottomheight;
+
 		if (GETSECSPECIAL(rover->master->frontsector->special, section) != number)
 			continue;
 
 		if (!(rover->flags & FF_EXISTS))
 			continue;
+
+		topheight = P_GetSpecialTopZ(player->mo, sectors + rover->secnum, player->mo->subsector->sector);
+		bottomheight = P_GetSpecialBottomZ(player->mo, sectors + rover->secnum, player->mo->subsector->sector);
 
 		// Check the 3D floor's type...
 		if (rover->flags & FF_BLOCKPLAYER)
@@ -3268,27 +3281,27 @@ sector_t *P_PlayerTouchingSectorSpecial(player_t *player, INT32 section, INT32 n
 			if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR)
 				&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING))
 			{
-				if ((player->mo->eflags & MFE_VERTICALFLIP) || player->mo->z != *rover->topheight)
+				if ((player->mo->eflags & MFE_VERTICALFLIP) || player->mo->z != topheight)
 					continue;
 			}
 			else if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING)
 				&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR))
 			{
 				if (!(player->mo->eflags & MFE_VERTICALFLIP)
-					|| player->mo->z + player->mo->height != *rover->bottomheight)
+					|| player->mo->z + player->mo->height != bottomheight)
 					continue;
 			}
 			else if (rover->master->frontsector->flags & SF_FLIPSPECIAL_BOTH)
 			{
-				if (!((player->mo->eflags & MFE_VERTICALFLIP && player->mo->z + player->mo->height == *rover->bottomheight)
-					|| (!(player->mo->eflags & MFE_VERTICALFLIP) && player->mo->z == *rover->topheight)))
+				if (!((player->mo->eflags & MFE_VERTICALFLIP && player->mo->z + player->mo->height == bottomheight)
+					|| (!(player->mo->eflags & MFE_VERTICALFLIP) && player->mo->z == topheight)))
 					continue;
 			}
 		}
 		else
 		{
 			// Water and DEATH FOG!!! heh
-			if (player->mo->z > *rover->topheight || (player->mo->z + player->mo->height) < *rover->bottomheight)
+			if (player->mo->z > topheight || (player->mo->z + player->mo->height) < bottomheight)
 				continue;
 		}
 
@@ -3310,11 +3323,16 @@ sector_t *P_PlayerTouchingSectorSpecial(player_t *player, INT32 section, INT32 n
 		// Hmm.. maybe there's a FOF that has it...
 		for (rover = node->m_sector->ffloors; rover; rover = rover->next)
 		{
+			fixed_t topheight, bottomheight;
+
 			if (GETSECSPECIAL(rover->master->frontsector->special, section) != number)
 				continue;
 
 			if (!(rover->flags & FF_EXISTS))
 				continue;
+
+			topheight = P_GetSpecialTopZ(player->mo, sectors + rover->secnum, player->mo->subsector->sector);
+			bottomheight = P_GetSpecialBottomZ(player->mo, sectors + rover->secnum, player->mo->subsector->sector);
 
 			// Check the 3D floor's type...
 			if (rover->flags & FF_BLOCKPLAYER)
@@ -3323,27 +3341,27 @@ sector_t *P_PlayerTouchingSectorSpecial(player_t *player, INT32 section, INT32 n
 				if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR)
 					&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING))
 				{
-					if ((player->mo->eflags & MFE_VERTICALFLIP) || player->mo->z != *rover->topheight)
+					if ((player->mo->eflags & MFE_VERTICALFLIP) || player->mo->z != topheight)
 						continue;
 				}
 				else if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING)
 					&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR))
 				{
 					if (!(player->mo->eflags & MFE_VERTICALFLIP)
-						|| player->mo->z + player->mo->height != *rover->bottomheight)
+						|| player->mo->z + player->mo->height != bottomheight)
 						continue;
 				}
 				else if (rover->master->frontsector->flags & SF_FLIPSPECIAL_BOTH)
 				{
-					if (!((player->mo->eflags & MFE_VERTICALFLIP && player->mo->z + player->mo->height == *rover->bottomheight)
-						|| (!(player->mo->eflags & MFE_VERTICALFLIP) && player->mo->z == *rover->topheight)))
+					if (!((player->mo->eflags & MFE_VERTICALFLIP && player->mo->z + player->mo->height == bottomheight)
+						|| (!(player->mo->eflags & MFE_VERTICALFLIP) && player->mo->z == topheight)))
 						continue;
 				}
 			}
 			else
 			{
 				// Water and DEATH FOG!!! heh
-				if (player->mo->z > *rover->topheight || (player->mo->z + player->mo->height) < *rover->bottomheight)
+				if (player->mo->z > topheight || (player->mo->z + player->mo->height) < bottomheight)
 					continue;
 			}
 
@@ -3662,10 +3680,13 @@ DoneSection2:
 
 				player->mo->angle = lineangle;
 
-				if (player == &players[consoleplayer])
-					localangle = player->mo->angle;
-				else if (player == &players[secondarydisplayplayer])
-					localangle2 = player->mo->angle;
+				if (!demoplayback || P_AnalogMove(player))
+				{
+					if (player == &players[consoleplayer])
+						localangle = player->mo->angle;
+					else if (player == &players[secondarydisplayplayer])
+						localangle2 = player->mo->angle;
+				}
 
 				if (!(lines[i].flags & ML_EFFECT4))
 				{
@@ -3774,7 +3795,7 @@ DoneSection2:
 					HU_SetCEchoDuration(5);
 					HU_DoCEcho(va(M_GetText("%s\\captured the blue flag.\\\\\\\\"), player_names[player-players]));
 
-					if (players[consoleplayer].ctfteam == 1)
+					if (splitscreen || players[consoleplayer].ctfteam == 1)
 						S_StartSound(NULL, sfx_flgcap);
 					else if (players[consoleplayer].ctfteam == 2)
 						S_StartSound(NULL, sfx_lose);
@@ -3807,7 +3828,7 @@ DoneSection2:
 					HU_SetCEchoDuration(5);
 					HU_DoCEcho(va(M_GetText("%s\\captured the red flag.\\\\\\\\"), player_names[player-players]));
 
-					if (players[consoleplayer].ctfteam == 2)
+					if (splitscreen || players[consoleplayer].ctfteam == 2)
 						S_StartSound(NULL, sfx_flgcap);
 					else if (players[consoleplayer].ctfteam == 1)
 						S_StartSound(NULL, sfx_lose);
@@ -4325,11 +4346,16 @@ sector_t *P_ThingOnSpecial3DFloor(mobj_t *mo)
 
 	for (rover = sector->ffloors; rover; rover = rover->next)
 	{
+		fixed_t topheight, bottomheight;
+
 		if (!rover->master->frontsector->special)
 			continue;
 
 		if (!(rover->flags & FF_EXISTS))
 			continue;
+
+		topheight = P_GetSpecialTopZ(mo, sectors + rover->secnum, sector);
+		bottomheight = P_GetSpecialBottomZ(mo, sectors + rover->secnum, sector);
 
 		// Check the 3D floor's type...
 		if (((rover->flags & FF_BLOCKPLAYER) && mo->player)
@@ -4339,27 +4365,27 @@ sector_t *P_ThingOnSpecial3DFloor(mobj_t *mo)
 			if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR)
 				&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING))
 			{
-				if ((mo->eflags & MFE_VERTICALFLIP) || mo->z != *rover->topheight)
+				if ((mo->eflags & MFE_VERTICALFLIP) || mo->z != topheight)
 					continue;
 			}
 			else if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING)
 				&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR))
 			{
 				if (!(mo->eflags & MFE_VERTICALFLIP)
-					|| mo->z + mo->height != *rover->bottomheight)
+					|| mo->z + mo->height != bottomheight)
 					continue;
 			}
 			else if (rover->master->frontsector->flags & SF_FLIPSPECIAL_BOTH)
 			{
-				if (!((mo->eflags & MFE_VERTICALFLIP && mo->z + mo->height == *rover->bottomheight)
-					|| (!(mo->eflags & MFE_VERTICALFLIP) && mo->z == *rover->topheight)))
+				if (!((mo->eflags & MFE_VERTICALFLIP && mo->z + mo->height == bottomheight)
+					|| (!(mo->eflags & MFE_VERTICALFLIP) && mo->z == topheight)))
 					continue;
 			}
 		}
 		else
 		{
 			// Water and intangible FOFs
-			if (mo->z > *rover->topheight || (mo->z + mo->height) < *rover->bottomheight)
+			if (mo->z > topheight || (mo->z + mo->height) < bottomheight)
 				continue;
 		}
 
@@ -4381,11 +4407,16 @@ static void P_PlayerOnSpecial3DFloor(player_t *player, sector_t *sector)
 
 	for (rover = sector->ffloors; rover; rover = rover->next)
 	{
+		fixed_t topheight, bottomheight;
+
 		if (!rover->master->frontsector->special)
 			continue;
 
 		if (!(rover->flags & FF_EXISTS))
 			continue;
+
+		topheight = P_GetSpecialTopZ(player->mo, sectors + rover->secnum, sector);
+		bottomheight = P_GetSpecialBottomZ(player->mo, sectors + rover->secnum, sector);
 
 		// Check the 3D floor's type...
 		if (rover->flags & FF_BLOCKPLAYER)
@@ -4394,27 +4425,27 @@ static void P_PlayerOnSpecial3DFloor(player_t *player, sector_t *sector)
 			if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR)
 				&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING))
 			{
-				if ((player->mo->eflags & MFE_VERTICALFLIP) || player->mo->z != P_GetSpecialTopZ(player->mo, sectors + rover->secnum, sector))
+				if ((player->mo->eflags & MFE_VERTICALFLIP) || player->mo->z != topheight)
 					continue;
 			}
 			else if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING)
 				&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR))
 			{
 				if (!(player->mo->eflags & MFE_VERTICALFLIP)
-					|| player->mo->z + player->mo->height != P_GetSpecialBottomZ(player->mo, sectors + rover->secnum, sector))
+					|| player->mo->z + player->mo->height != bottomheight)
 					continue;
 			}
 			else if (rover->master->frontsector->flags & SF_FLIPSPECIAL_BOTH)
 			{
-				if (!((player->mo->eflags & MFE_VERTICALFLIP && player->mo->z + player->mo->height == P_GetSpecialBottomZ(player->mo, sectors + rover->secnum, sector))
-					|| (!(player->mo->eflags & MFE_VERTICALFLIP) && player->mo->z == P_GetSpecialTopZ(player->mo, sectors + rover->secnum, sector))))
+				if (!((player->mo->eflags & MFE_VERTICALFLIP && player->mo->z + player->mo->height == bottomheight)
+					|| (!(player->mo->eflags & MFE_VERTICALFLIP) && player->mo->z == topheight)))
 					continue;
 			}
 		}
 		else
 		{
 			// Water and DEATH FOG!!! heh
-			if (player->mo->z > P_GetSpecialTopZ(player->mo, sectors + rover->secnum, sector) || (player->mo->z + player->mo->height) < P_GetSpecialBottomZ(player->mo, sectors + rover->secnum, sector))
+			if (player->mo->z > topheight || (player->mo->z + player->mo->height) < bottomheight)
 				continue;
 		}
 
@@ -4665,8 +4696,10 @@ void P_UpdateSpecials(void)
 	// POINT LIMIT
 	P_CheckPointLimit();
 
+#ifdef ESLOPE
 	// Dynamic slopeness
 	P_RunDynamicSlopes();
+#endif
 
 	// ANIMATE TEXTURES
 	for (anim = anims; anim < lastanim; anim++)
@@ -4974,6 +5007,7 @@ static void P_AddFloatThinker(sector_t *sec, INT32 tag, line_t *sourceline)
   * \sa P_SpawnSpecials, T_BridgeThinker
   * \author SSNTails <http://www.ssntails.org>
   */
+/*
 static inline void P_AddBridgeThinker(line_t *sourceline, sector_t *sec)
 {
 	levelspecthink_t *bridge;
@@ -4996,6 +5030,7 @@ static inline void P_AddBridgeThinker(line_t *sourceline, sector_t *sec)
 	bridge->vars[4] = sourceline->tag; // Start tag
 	bridge->vars[5] = (sides[sourceline->sidenum[0]].textureoffset>>FRACBITS); // End tag
 }
+*/
 
 /** Adds a Mario block thinker, which changes the block's texture between blank
   * and ? depending on whether it has contents.
@@ -5262,7 +5297,15 @@ void T_LaserFlash(laserthink_t *flash)
 
 	sourcesec = ffloor->master->frontsector; // Less to type!
 
+#ifdef ESLOPE
+	top = (*ffloor->t_slope) ? P_GetZAt(*ffloor->t_slope, sector->soundorg.x, sector->soundorg.y)
+			: *ffloor->topheight;
+	bottom = (*ffloor->b_slope) ? P_GetZAt(*ffloor->b_slope, sector->soundorg.x, sector->soundorg.y)
+			: *ffloor->bottomheight;
+	sector->soundorg.z = (top + bottom)/2;
+#else
 	sector->soundorg.z = (*ffloor->topheight + *ffloor->bottomheight)/2;
+#endif
 	S_StartSound(&sector->soundorg, sfx_laser);
 
 	// Seek out objects to DESTROY! MUAHAHHAHAHAA!!!*cough*
@@ -6022,31 +6065,6 @@ void P_SpawnSpecials(INT32 fromnetsave)
 				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
 				P_AddRaiseThinker(lines[i].frontsector, &lines[i]);
 				break;
-
-#ifdef SLOPENESS
-			case 999:
-				sec = sides[*lines[i].sidenum].sector-sectors;
-				for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
-				{
-					size_t counting;
-
-					sectors[s].floorangle = ANGLE_45;
-					for (counting = 0; counting < sectors[s].linecount/2; counting++)
-					{
-						sectors[s].lines[counting]->v1->z = sectors[sec].floorheight;
-						CONS_Debug(DBG_GAMELOGIC, "Set it to %d\n", sectors[s].lines[counting]->v1->z>>FRACBITS);
-					}
-
-					for (counting = sectors[s].linecount/2; counting < sectors[s].linecount; counting++)
-					{
-						sectors[s].lines[counting]->v1->z = sectors[sec].ceilingheight;
-						CONS_Debug(DBG_GAMELOGIC, "Set it to %d\n", sectors[s].lines[counting]->v1->z>>FRACBITS);
-					}
-					sectors[s].special = 65535;
-					CONS_Debug(DBG_GAMELOGIC, "Found & Set slope!\n");
-				}
-				break;
-#endif
 
 			case 200: // Double light effect
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_CUTSPRITES|FF_DOUBLESHADOW, secthinkers);
@@ -6886,6 +6904,11 @@ void T_Disappear(disappear_t *d)
 
 					if (!(lines[d->sourceline].flags & ML_NOCLIMB))
 					{
+#ifdef ESLOPE
+						if (*rover->t_slope)
+							sectors[s].soundorg.z = P_GetZAt(*rover->t_slope, sectors[s].soundorg.x, sectors[s].soundorg.y);
+						else
+#endif
 						sectors[s].soundorg.z = *rover->topheight;
 						S_StartSound(&sectors[s].soundorg, sfx_appear);
 					}
@@ -7513,24 +7536,27 @@ void T_Pusher(pusher_t *p)
 				P_SetPlayerMobjState (thing, thing->info->painstate); // Whee!
 				thing->angle = R_PointToAngle2 (0, 0, xspeed<<(FRACBITS-PUSH_FACTOR), yspeed<<(FRACBITS-PUSH_FACTOR));
 
-				if (thing->player == &players[consoleplayer])
+				if (!demoplayback || P_AnalogMove(thing->player))
 				{
-					if (thing->angle - localangle > ANGLE_180)
-						localangle -= (localangle - thing->angle) / 8;
-					else
-						localangle += (thing->angle - localangle) / 8;
+					if (thing->player == &players[consoleplayer])
+					{
+						if (thing->angle - localangle > ANGLE_180)
+							localangle -= (localangle - thing->angle) / 8;
+						else
+							localangle += (thing->angle - localangle) / 8;
+					}
+					else if (thing->player == &players[secondarydisplayplayer])
+					{
+						if (thing->angle - localangle2 > ANGLE_180)
+							localangle2 -= (localangle2 - thing->angle) / 8;
+						else
+							localangle2 += (thing->angle - localangle2) / 8;
+					}
+					/*if (thing->player == &players[consoleplayer])
+						localangle = thing->angle;
+					else if (thing->player == &players[secondarydisplayplayer])
+						localangle2 = thing->angle;*/
 				}
-				else if (thing->player == &players[secondarydisplayplayer])
-				{
-					if (thing->angle - localangle2 > ANGLE_180)
-						localangle2 -= (localangle2 - thing->angle) / 8;
-					else
-						localangle2 += (thing->angle - localangle2) / 8;
-				}
-				/*if (thing->player == &players[consoleplayer])
-					localangle = thing->angle;
-				else if (thing->player == &players[secondarydisplayplayer])
-					localangle2 = thing->angle;*/
 			}
 
 			if (p->exclusive)

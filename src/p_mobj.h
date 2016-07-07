@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -271,6 +271,7 @@ typedef struct mobj_s
 	spritenum_t sprite; // used to find patch_t and flip value
 	UINT32 frame; // frame number, plus bits see p_pspr.h
 	UINT8 sprite2; // player sprites
+	UINT16 anim_duration; // for FF_ANIMATE states
 
 	struct msecnode_s *touching_sectorlist; // a linked list of sectors where this object appears
 
@@ -384,7 +385,8 @@ typedef struct precipmobj_s
 	// More drawing info: to determine current sprite.
 	angle_t angle;  // orientation
 	spritenum_t sprite; // used to find patch_t and flip value
-	INT32 frame; // frame number, plus bits see p_pspr.h
+	UINT32 frame; // frame number, plus bits see p_pspr.h
+	UINT16 anim_duration; // for FF_ANIMATE states
 
 	struct mprecipsecnode_s *touching_sectorlist; // a linked list of sectors where this object appears
 
