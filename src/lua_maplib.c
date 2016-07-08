@@ -211,6 +211,26 @@ static const char *const seg_opt[] = {
 	"backsector",
 	NULL};
 
+enum node_e {
+	node_valid = 0,
+	node_x,
+	node_y,
+	node_dx,
+	node_dy,
+	node_bbox,
+	node_children,
+};
+
+static const char *const node_opt[] = {
+	"valid",
+	"x",
+	"y",
+	"dx",
+	"dy",
+	"bbox",
+	"children",
+	NULL};
+
 static const char *const array_opt[] ={"iterate",NULL};
 static const char *const valid_opt[] ={"valid",NULL};
 
@@ -901,6 +921,145 @@ static int seg_num(lua_State *L)
 	return 1;
 }
 
+static int node_get(lua_State *L)
+{
+	node_t *node = *((node_t **)luaL_checkudata(L, 1, META_NODE));
+	enum node_e field = luaL_checkoption(L, 2, node_opt[0], node_opt);
+
+	if (!node)
+	{
+		if (field == node_valid) {
+			lua_pushboolean(L, 0);
+			return 1;
+		}
+		return luaL_error(L, "accessed node_t doesn't exist anymore.");
+	}
+
+	switch(field)
+	{
+	case node_valid: // valid
+		lua_pushboolean(L, 1);
+		return 1;
+	case node_x:
+		lua_pushfixed(L, node->x);
+		return 1;
+	case node_y:
+		lua_pushfixed(L, node->y);
+		return 1;
+	case node_dx:
+		lua_pushfixed(L, node->x);
+		return 1;
+	case node_dy:
+		lua_pushfixed(L, node->x);
+		return 1;
+	case node_bbox:
+		LUA_PushUserdata(L, node->bbox, META_NODEBBOX);
+		return 1;
+	case node_children:
+		LUA_PushUserdata(L, node->children, META_NODECHILDREN);
+		return 1;
+	}
+	return 0;
+}
+
+static int node_num(lua_State *L)
+{
+	node_t *node = *((node_t **)luaL_checkudata(L, 1, META_NODE));
+	lua_pushinteger(L, node-nodes);
+	return 1;
+}
+
+// node.bbox[i][j]: i = 0 or 1, j = 0 1 2 or 3
+// NOTE: 2D arrays are NOT double pointers,
+//       the second bbox will be directly after the first in memory (hence the way the bbox is pushed here)
+// this function handles the [i] part, bbox_get handles the [j] part
+static int nodebbox_get(lua_State *L)
+{
+	fixed_t *bbox = *((fixed_t **)luaL_checkudata(L, 1, META_NODEBBOX));
+	int i;
+	lua_settop(L, 2);
+	if (!lua_isnumber(L, 2))
+	{
+		int field = luaL_checkoption(L, 2, NULL, valid_opt);
+		if (!bbox)
+		{
+			if (field == 0) {
+				lua_pushboolean(L, 0);
+				return 1;
+			}
+			return luaL_error(L, "accessed node_t doesn't exist anymore.");
+		} else if (field == 0) {
+			lua_pushboolean(L, 1);
+			return 1;
+		}
+	}
+
+	i = lua_tointeger(L, 2);
+	if (i < 0 || i > 1)
+		return 0;
+	LUA_PushUserdata(L, bbox + i*4*sizeof(fixed_t), META_BBOX);
+	return 1;
+}
+
+// node.children[i]: i = 0 or 1
+static int nodechildren_get(lua_State *L)
+{
+	UINT16 *children = *((UINT16 **)luaL_checkudata(L, 1, META_NODECHILDREN));
+	int i;
+	lua_settop(L, 2);
+	if (!lua_isnumber(L, 2))
+	{
+		int field = luaL_checkoption(L, 2, NULL, valid_opt);
+		if (!children)
+		{
+			if (field == 0) {
+				lua_pushboolean(L, 0);
+				return 1;
+			}
+			return luaL_error(L, "accessed node_t doesn't exist anymore.");
+		} else if (field == 0) {
+			lua_pushboolean(L, 1);
+			return 1;
+		}
+	}
+
+	i = lua_tointeger(L, 2);
+	if (i < 0 || i > 1)
+		return 0;
+	lua_pushinteger(L, children[i]);
+	return 1;
+}
+
+// bounding box (aka fixed_t array with four elements)
+// NOTE: may be useful for polyobjects or other things later
+static int bbox_get(lua_State *L)
+{
+	fixed_t *bbox = *((fixed_t **)luaL_checkudata(L, 1, META_BBOX));
+	int i;
+	lua_settop(L, 2);
+	if (!lua_isnumber(L, 2))
+	{
+		int field = luaL_checkoption(L, 2, NULL, valid_opt);
+		if (!bbox)
+		{
+			if (field == 0) {
+				lua_pushboolean(L, 0);
+				return 1;
+			}
+			return luaL_error(L, "accessed node_t doesn't exist anymore.");
+		} else if (field == 0) {
+			lua_pushboolean(L, 1);
+			return 1;
+		}
+	}
+
+	i = lua_tointeger(L, 2);
+	if (i < 0 || i > 3)
+		return 0;
+	lua_pushinteger(L, bbox[i]);
+	return 1;
+}
+
 static int lib_iterateSectors(lua_State *L)
 {
 	size_t i = 0;
@@ -1174,6 +1333,52 @@ static int lib_getSeg(lua_State *L)
 static int lib_numsegs(lua_State *L)
 {
 	lua_pushinteger(L, numsegs);
+	return 1;
+}
+
+static int lib_iterateNodes(lua_State *L)
+{
+	size_t i = 0;
+	if (lua_gettop(L) < 2)
+		return luaL_error(L, "Don't call nodes.iterate() directly, use it as 'for node in nodes.iterate do <block> end'.");
+	lua_settop(L, 2);
+	lua_remove(L, 1); // state is unused.
+	if (!lua_isnil(L, 1))
+		i = (size_t)(*((node_t **)luaL_checkudata(L, 1, META_NODE)) - nodes)+1;
+	if (i < numsegs)
+	{
+		LUA_PushUserdata(L, &nodes[i], META_NODE);
+		return 1;
+	}
+	return 0;
+}
+
+static int lib_getNode(lua_State *L)
+{
+	int field;
+	lua_settop(L, 2);
+	lua_remove(L, 1); // dummy userdata table is unused.
+	if (lua_isnumber(L, 1))
+	{
+		size_t i = lua_tointeger(L, 1);
+		if (i >= numnodes)
+			return 0;
+		LUA_PushUserdata(L, &nodes[i], META_NODE);
+		return 1;
+	}
+	field = luaL_checkoption(L, 1, NULL, array_opt);
+	switch(field)
+	{
+	case 0: // iterate
+		lua_pushcfunction(L, lib_iterateNodes);
+		return 1;
+	}
+	return 0;
+}
+
+static int lib_numnodes(lua_State *L)
+{
+	lua_pushinteger(L, numnodes);
 	return 1;
 }
 
@@ -1504,6 +1709,29 @@ int LUA_MapLib(lua_State *L)
 		lua_setfield(L, -2, "__len");
 	lua_pop(L, 1);
 
+	luaL_newmetatable(L, META_NODE);
+		lua_pushcfunction(L, node_get);
+		lua_setfield(L, -2, "__index");
+
+		lua_pushcfunction(L, node_num);
+		lua_setfield(L, -2, "__len");
+	lua_pop(L, 1);
+
+	luaL_newmetatable(L, META_NODEBBOX);
+		lua_pushcfunction(L, nodebbox_get);
+		lua_setfield(L, -2, "__index");
+	lua_pop(L, 1);
+
+	luaL_newmetatable(L, META_NODECHILDREN);
+		lua_pushcfunction(L, nodechildren_get);
+		lua_setfield(L, -2, "__index");
+	lua_pop(L, 1);
+
+	luaL_newmetatable(L, META_BBOX);
+		lua_pushcfunction(L, bbox_get);
+		lua_setfield(L, -2, "__index");
+	lua_pop(L, 1);
+
 	luaL_newmetatable(L, META_MAPHEADER);
 		lua_pushcfunction(L, mapheaderinfo_get);
 		lua_setfield(L, -2, "__index");
@@ -1571,6 +1799,16 @@ int LUA_MapLib(lua_State *L)
 			lua_setfield(L, -2, "__len");
 		lua_setmetatable(L, -2);
 	lua_setglobal(L, "segs");
+
+	lua_newuserdata(L, 0);
+		lua_createtable(L, 0, 2);
+			lua_pushcfunction(L, lib_getNode);
+			lua_setfield(L, -2, "__index");
+
+			lua_pushcfunction(L, lib_numnodes);
+			lua_setfield(L, -2, "__len");
+		lua_setmetatable(L, -2);
+	lua_setglobal(L, "nodes");
 
 	lua_newuserdata(L, 0);
 		lua_createtable(L, 0, 2);

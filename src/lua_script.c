@@ -456,6 +456,7 @@ enum
 	ARCH_SUBSECTOR,
 	ARCH_SECTOR,
 	ARCH_SEG,
+	ARCH_NODE,
 	ARCH_MAPHEADER,
 
 	ARCH_TEND=0xFF,
@@ -476,6 +477,7 @@ static const struct {
 	{META_SUBSECTOR,ARCH_SUBSECTOR},
 	{META_SECTOR,   ARCH_SECTOR},
 	{META_SEG,      ARCH_SEG},
+	{META_NODE,     ARCH_NODE},
 	{META_MAPHEADER,   ARCH_MAPHEADER},
 	{NULL,          ARCH_NULL}
 };
@@ -677,6 +679,17 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 			}
 			break;
 		}
+		case ARCH_NODE:
+		{
+			node_t *node = *((node_t **)lua_touserdata(gL, myindex));
+			if (!node)
+				WRITEUINT8(save_p, ARCH_NULL);
+			else {
+				WRITEUINT8(save_p, ARCH_NODE);
+				WRITEUINT16(save_p, node - nodes);
+			}
+			break;
+		}
 		case ARCH_MAPHEADER:
 		{
 			mapheader_t *header = *((mapheader_t **)lua_touserdata(gL, myindex));
@@ -857,6 +870,9 @@ static UINT8 UnArchiveValue(int TABLESINDEX)
 		break;
 	case ARCH_SEG:
 		LUA_PushUserdata(gL, &segs[READUINT16(save_p)], META_SEG);
+		break;
+	case ARCH_NODE:
+		LUA_PushUserdata(gL, &nodes[READUINT16(save_p)], META_NODE);
 		break;
 	case ARCH_MAPHEADER:
 		LUA_PushUserdata(gL, &sectors[READUINT16(save_p)], META_MAPHEADER);
