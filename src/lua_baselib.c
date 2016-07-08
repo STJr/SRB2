@@ -780,7 +780,7 @@ static int lib_pBlackOw(lua_State *L)
 static int lib_pElementalFireTrail(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
-	boolean cropcircle = lua_opttrueboolean(L, 2);
+	boolean cropcircle = lua_optboolean(L, 2);
 	NOHUD
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
