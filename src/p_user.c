@@ -6222,7 +6222,7 @@ void P_ElementalFireTrail(player_t *player, boolean cropcircle)
 	{
 		travelangle = player->mo->angle + P_RandomRange(-ANGLE_45, ANGLE_45);
 #define numangles 8
-		for (i = 0; i < 8; i++)
+		for (i = 0; i < numangles; i++)
 		{
 			flame = P_SpawnMobj(player->mo->x, player->mo->y, ground, MT_AIRSPINFIRE);
 			P_SetTarget(&flame->target, player->mo);
