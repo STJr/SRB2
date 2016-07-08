@@ -2988,7 +2988,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 						else // create a fire pattern on the ground
 						{
 							S_StartSound(mo, sfx_s3k47);
-							P_ElementalFireTrail(mo->player, true);
+							P_ElementalFire(mo->player, true);
 						}
 					}
 					mo->player->pflags &= ~(PF_THOKKED|PF_SHIELDABILITY);

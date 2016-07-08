@@ -777,14 +777,14 @@ static int lib_pBlackOw(lua_State *L)
 	return 0;
 }
 
-static int lib_pElementalFireTrail(lua_State *L)
+static int lib_pElementalFire(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
 	boolean cropcircle = lua_optboolean(L, 2);
 	NOHUD
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
-	P_ElementalFireTrail(player, cropcircle);
+	P_ElementalFire(player, cropcircle);
 	return 0;
 }
 
@@ -2038,7 +2038,7 @@ static luaL_Reg lib[] = {
 	{"P_ResetScore",lib_pResetScore},
 	{"P_DoJumpShield",lib_pDoJumpShield},
 	{"P_BlackOw",lib_pBlackOw},
-	{"P_ElementalFireTrail",lib_pElementalFireTrail},
+	{"P_ElementalFire",lib_pElementalFire},
 	{"P_DoPlayerExit",lib_pDoPlayerExit},
 	{"P_InstaThrust",lib_pInstaThrust},
 	{"P_ReturnThrustX",lib_pReturnThrustX},

@@ -6200,7 +6200,7 @@ void P_BlackOw(player_t *player)
 	player->powers[pw_shield] = player->powers[pw_shield] & SH_STACK;
 }
 
-void P_ElementalFireTrail(player_t *player, boolean cropcircle)
+void P_ElementalFire(player_t *player, boolean cropcircle)
 {
 	fixed_t newx;
 	fixed_t newy;
@@ -6812,7 +6812,7 @@ static void P_MovePlayer(player_t *player)
 	if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL
 	&& (player->pflags & PF_SPINNING) && player->speed > FixedMul(4<<FRACBITS, player->mo->scale) && onground && (leveltime & 1)
 	&& !(player->mo->eflags & (MFE_UNDERWATER|MFE_TOUCHWATER)))
-		P_ElementalFireTrail(player, false);
+		P_ElementalFire(player, false);
 
 	P_DoSpinDash(player, cmd);
 
