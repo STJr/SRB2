@@ -2980,7 +2980,19 @@ static void P_PlayerZMovement(mobj_t *mo)
 
 					if (!(mo->player->pflags & PF_GLIDING))
 						mo->player->pflags &= ~PF_JUMPED;
+
+					if (((mo->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL) && (mo->player->pflags & PF_SHIELDABILITY)) // Elemental pierce attack.
+					{
+						if (mo->eflags & (MFE_UNDERWATER|MFE_TOUCHWATER)) // play a blunt sound
+							S_StartSound(mo, sfx_s3k4c);
+						else // create a fire pattern on the ground
+						{
+							S_StartSound(mo, sfx_s3k47);
+							P_ElementalFireTrail(mo->player, true);
+						}
+					}
 					mo->player->pflags &= ~(PF_THOKKED|PF_SHIELDABILITY);
+
 					//mo->player->pflags &= ~PF_GLIDING;
 					mo->player->jumping = 0;
 					mo->player->secondjump = 0;
@@ -6456,6 +6468,16 @@ void P_MobjThinker(mobj_t *mobj)
 				}
 				else
 					P_AddOverlay(mobj);
+				if ((mobj->target->type == MT_GREENORB)
+					&& (mobj->target->target)
+					&& (mobj->target->target->player)
+					&& ((mobj->target->target->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL)
+					&& (mobj->target->target->player->pflags & PF_SHIELDABILITY)
+					&& (mobj->state->nextstate < mobj->target->info->painstate)) // Special casing for elemental shield piercing attack.
+					{
+						P_SetMobjState(mobj, mobj->target->info->painstate);
+						mobj->tics++;
+					}
 				break;
 			case MT_BLACKORB:
 			case MT_WHITEORB:

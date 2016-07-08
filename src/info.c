@@ -1123,13 +1123,23 @@ state_t states[NUMSTATES] =
 	{SPR_SPIK, 6, 1, {A_RotateSpikeBall}, 0, 0, S_SPIKEBALL8}, // S_SPIKEBALL7
 	{SPR_SPIK, 7, 1, {A_RotateSpikeBall}, 0, 0, S_SPIKEBALL1}, // S_SPIKEBALL8
 
-	// Red Shield's Spawn
-	{SPR_SFLM, FF_FULLBRIGHT,   2, {NULL}, 0, 0, S_SPINFIRE2}, // S_SPINFIRE1
-	{SPR_SFLM, FF_FULLBRIGHT|1, 2, {NULL}, 0, 0, S_SPINFIRE3}, // S_SPINFIRE2
-	{SPR_SFLM, FF_FULLBRIGHT|2, 2, {NULL}, 0, 0, S_SPINFIRE4}, // S_SPINFIRE3
-	{SPR_SFLM, FF_FULLBRIGHT|3, 2, {NULL}, 0, 0, S_SPINFIRE5}, // S_SPINFIRE4
-	{SPR_SFLM, FF_FULLBRIGHT|4, 2, {NULL}, 0, 0, S_SPINFIRE6}, // S_SPINFIRE5
-	{SPR_SFLM, FF_FULLBRIGHT|5, 2, {NULL}, 0, 0, S_SPINFIRE1}, // S_SPINFIRE6
+	// Elemental Shield's Spawn
+	{SPR_SFLM, FF_FULLBRIGHT|5, 2, {A_SetFuse}, 6*TICRATE, 0, S_SPINFIRE1}, // S_SPINFIRE0
+	{SPR_SFLM, FF_FULLBRIGHT,   2, {NULL},      0,         0, S_SPINFIRE2}, // S_SPINFIRE1
+	{SPR_SFLM, FF_FULLBRIGHT|1, 2, {NULL},      0,         0, S_SPINFIRE3}, // S_SPINFIRE2
+	{SPR_SFLM, FF_FULLBRIGHT|2, 2, {NULL},      0,         0, S_SPINFIRE4}, // S_SPINFIRE3
+	{SPR_SFLM, FF_FULLBRIGHT|3, 2, {NULL},      0,         0, S_SPINFIRE5}, // S_SPINFIRE4
+	{SPR_SFLM, FF_FULLBRIGHT|4, 2, {NULL},      0,         0, S_SPINFIRE6}, // S_SPINFIRE5
+	{SPR_SFLM, FF_FULLBRIGHT|5, 2, {NULL},      0,         0, S_SPINFIRE1}, // S_SPINFIRE6
+
+	// Elemental Shield's FLYING Spawn
+	{SPR_SFLM, FF_FULLBRIGHT,   2, {NULL}, 0, 0, S_AIRSPINFIRE_FLY2}, //S_AIRSPINFIRE_FLY1,
+	{SPR_SFLM, FF_FULLBRIGHT|1, 2, {NULL}, 0, 0, S_AIRSPINFIRE_FLY3}, //S_AIRSPINFIRE_FLY2,
+	{SPR_SFLM, FF_FULLBRIGHT|2, 2, {NULL}, 0, 0, S_AIRSPINFIRE_FLY4}, //S_AIRSPINFIRE_FLY3,
+	{SPR_SFLM, FF_FULLBRIGHT|3, 2, {NULL}, 0, 0, S_AIRSPINFIRE_FLY5}, //S_AIRSPINFIRE_FLY4,
+	{SPR_SFLM, FF_FULLBRIGHT|4, 2, {NULL}, 0, 0, S_AIRSPINFIRE_FLY6}, //S_AIRSPINFIRE_FLY5,
+	{SPR_SFLM, FF_FULLBRIGHT|5, 2, {NULL}, 0, 0, S_AIRSPINFIRE_FLY1}, //S_AIRSPINFIRE_FLY6,
+	{SPR_SFLM, FF_FULLBRIGHT,   0, {A_SpawnObjectRelative}, 0, MT_SPINFIRE, S_NULL}, //S_AIRSPINFIRE_DIE,
 
 	// Floor Spike
 	{SPR_USPK, 0,-1, {A_SpikeRetract}, 1, 0, S_SPIKE2}, // S_SPIKE1 -- Fully extended
@@ -1742,14 +1752,16 @@ state_t states[NUMSTATES] =
 	{SPR_ELEM, FF_TRANS50|10, 4, {NULL}, 0, 0, S_ELEM12}, // S_ELEM11
 	{SPR_ELEM, FF_TRANS50|11, 4, {NULL}, 0, 0, S_ELEM1 }, // S_ELEM12
 
-	{SPR_ELEM, FF_FULLBRIGHT|12, 3, {NULL}, 0, 0, S_ELEMF2}, // S_ELEMF1
-	{SPR_ELEM, FF_FULLBRIGHT|13, 3, {NULL}, 0, 0, S_ELEMF3}, // S_ELEMF2
-	{SPR_ELEM, FF_FULLBRIGHT|14, 3, {NULL}, 0, 0, S_ELEMF4}, // S_ELEMF3
-	{SPR_ELEM, FF_FULLBRIGHT|15, 3, {NULL}, 0, 0, S_ELEMF5}, // S_ELEMF4
-	{SPR_ELEM, FF_FULLBRIGHT|16, 3, {NULL}, 0, 0, S_ELEMF6}, // S_ELEMF5
-	{SPR_ELEM, FF_FULLBRIGHT|17, 3, {NULL}, 0, 0, S_ELEMF7}, // S_ELEMF6
-	{SPR_ELEM, FF_FULLBRIGHT|18, 3, {NULL}, 0, 0, S_ELEMF8}, // S_ELEMF7
-	{SPR_ELEM, FF_FULLBRIGHT|19, 3, {NULL}, 0, 0, S_ELEMF1}, // S_ELEMF8
+	{SPR_ELEM, FF_FULLBRIGHT|12, 3, {NULL}, 0, 0, S_ELEMF2 }, // S_ELEMF1
+	{SPR_ELEM, FF_FULLBRIGHT|13, 3, {NULL}, 0, 0, S_ELEMF3 }, // S_ELEMF2
+	{SPR_ELEM, FF_FULLBRIGHT|14, 3, {NULL}, 0, 0, S_ELEMF4 }, // S_ELEMF3
+	{SPR_ELEM, FF_FULLBRIGHT|15, 3, {NULL}, 0, 0, S_ELEMF5 }, // S_ELEMF4
+	{SPR_ELEM, FF_FULLBRIGHT|16, 3, {NULL}, 0, 0, S_ELEMF6 }, // S_ELEMF5
+	{SPR_ELEM, FF_FULLBRIGHT|17, 3, {NULL}, 0, 0, S_ELEMF7 }, // S_ELEMF6
+	{SPR_ELEM, FF_FULLBRIGHT|18, 3, {NULL}, 0, 0, S_ELEMF8 }, // S_ELEMF7
+	{SPR_ELEM, FF_FULLBRIGHT|19, 3, {NULL}, 0, 0, S_ELEMF1 }, // S_ELEMF8
+	{SPR_ELEM, FF_FULLBRIGHT|20, 1, {NULL}, 0, 0, S_ELEMF10}, // S_ELEMF9
+	{SPR_NULL, 0,                1, {NULL}, 0, 0, S_ELEMF1 }, // S_ELEMF10
 
 	{SPR_PITY, FF_TRANS20  , 1, {NULL}, 0, 0, S_PITY2 }, // S_PITY1
 	{SPR_PITY, FF_TRANS20|1, 1, {NULL}, 0, 0, S_PITY3 }, // S_PITY2
@@ -5392,7 +5404,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_SPINFIRE
 		-1,             // doomednum
-		S_SPINFIRE1,    // spawnstate
+		S_SPINFIRE0,    // spawnstate
 		1,              // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -5413,7 +5425,34 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		100,            // mass
 		1,              // damage
 		sfx_None,       // activesound
-		MF_NOBLOCKMAP|MF_MISSILE|MF_NOGRAVITY|MF_FIRE, // flags
+		MF_NOBLOCKMAP|MF_MISSILE|MF_NOGRAVITY|MF_FIRE|MF_RUNSPAWNFUNC, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_AIRSPINFIRE
+		-1,             // doomednum
+		S_AIRSPINFIRE_FLY1, // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_AIRSPINFIRE_DIE, // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		10*FRACUNIT,    // speed
+		8*FRACUNIT,     // radius
+		14*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		1,              // damage
+		sfx_None,       // activesound
+		MF_NOBLOCKMAP|MF_MISSILE|MF_FIRE, // flags
 		S_NULL          // raisestate
 	},
 
@@ -9833,7 +9872,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // seesound
 		0,              // reactiontime
 		sfx_None,       // attacksound
-		S_NULL,         // painstate
+		S_ELEMF9,       // painstate
 		SKINCOLOR_NONE, // painchance
 		sfx_None,       // painsound
 		S_NULL,         // meleestate

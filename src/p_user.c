@@ -1347,6 +1347,8 @@ void P_SpawnShieldOrb(player_t *player)
 		I_Error("P_SpawnShieldOrb: player->mo is NULL!\n");
 #endif
 
+	player->pflags &= ~PF_SHIELDABILITY; // Prevent edge cases when switching shields.
+
 	if (player->powers[pw_shield] & SH_FORCE)
 		orbtype = MT_BLUEORB;
 	else switch (player->powers[pw_shield] & SH_NOSTACK)
@@ -6198,7 +6200,7 @@ void P_BlackOw(player_t *player)
 	player->powers[pw_shield] = player->powers[pw_shield] & SH_STACK;
 }
 
-void P_ElementalFireTrail(player_t *player)
+void P_ElementalFireTrail(player_t *player, boolean cropcircle)
 {
 	fixed_t newx;
 	fixed_t newy;
@@ -6216,40 +6218,61 @@ void P_ElementalFireTrail(player_t *player)
 	else
 		ground = player->mo->floorz;
 
-	travelangle = R_PointToAngle2(0, 0, player->rmomx, player->rmomy);
-
-	for (i = 0; i < 2; i++)
+	if (cropcircle)
 	{
-		newx = player->mo->x + P_ReturnThrustX(player->mo, travelangle + ((i&1) ? -1 : 1)*ANGLE_135, FixedMul(24*FRACUNIT, player->mo->scale));
-		newy = player->mo->y + P_ReturnThrustY(player->mo, travelangle + ((i&1) ? -1 : 1)*ANGLE_135, FixedMul(24*FRACUNIT, player->mo->scale));
-#ifdef ESLOPE
-		if (player->mo->standingslope)
+		travelangle = player->mo->angle + P_RandomRange(-ANGLE_45, ANGLE_45);
+#define numangles 8
+		for (i = 0; i < 8; i++)
 		{
-			ground = P_GetZAt(player->mo->standingslope, newx, newy);
-			if (player->mo->eflags & MFE_VERTICALFLIP)
-				ground -= FixedMul(mobjinfo[MT_SPINFIRE].height, player->mo->scale);
+			flame = P_SpawnMobj(player->mo->x, player->mo->y, ground, MT_AIRSPINFIRE);
+			P_SetTarget(&flame->target, player->mo);
+			flame->angle = travelangle + i*(ANGLE_MAX/numangles);
+			flame->destscale = player->mo->scale;
+			P_SetScale(flame, player->mo->scale);
+			flame->eflags = (flame->eflags & ~MFE_VERTICALFLIP)|(player->mo->eflags & MFE_VERTICALFLIP);
+			P_InstaThrust(flame, flame->angle, FixedMul(3*FRACUNIT, flame->scale));
+			P_SetObjectMomZ(flame, 3*FRACUNIT, false);
 		}
-#endif
-		flame = P_SpawnMobj(newx, newy, ground, MT_SPINFIRE);
-		P_SetTarget(&flame->target, player->mo);
-		flame->angle = travelangle;
-		flame->fuse = TICRATE*6;
-		flame->destscale = player->mo->scale;
-		P_SetScale(flame, player->mo->scale);
-		flame->eflags = (flame->eflags & ~MFE_VERTICALFLIP)|(player->mo->eflags & MFE_VERTICALFLIP);
-
-		flame->momx = 8;
-		P_XYMovement(flame);
-		if (P_MobjWasRemoved(flame))
-			continue;
-
-		if (player->mo->eflags & MFE_VERTICALFLIP)
+#undef numangles
+	}
+	else
+	{
+		travelangle = R_PointToAngle2(0, 0, player->rmomx, player->rmomy);
+		for (i = 0; i < 2; i++)
 		{
-			if (flame->z + flame->height < flame->ceilingz)
+
+			newx = player->mo->x + P_ReturnThrustX(player->mo, (travelangle + ((i&1) ? -1 : 1)*ANGLE_135), FixedMul(24*FRACUNIT, player->mo->scale));
+			newy = player->mo->y + P_ReturnThrustY(player->mo, (travelangle + ((i&1) ? -1 : 1)*ANGLE_135), FixedMul(24*FRACUNIT, player->mo->scale));
+
+#ifdef ESLOPE
+			if (player->mo->standingslope)
+			{
+				ground = P_GetZAt(player->mo->standingslope, newx, newy);
+				if (player->mo->eflags & MFE_VERTICALFLIP)
+					ground -= FixedMul(mobjinfo[MT_SPINFIRE].height, player->mo->scale);
+			}
+#endif
+			flame = P_SpawnMobj(newx, newy, ground, MT_SPINFIRE);
+			P_SetTarget(&flame->target, player->mo);
+			flame->angle = travelangle;
+			// flame->fuse = TICRATE*6; // now done in spawnstate
+			flame->destscale = player->mo->scale;
+			P_SetScale(flame, player->mo->scale);
+			flame->eflags = (flame->eflags & ~MFE_VERTICALFLIP)|(player->mo->eflags & MFE_VERTICALFLIP);
+
+			flame->momx = 8;
+			P_XYMovement(flame);
+			if (P_MobjWasRemoved(flame))
+				continue;
+
+			if (player->mo->eflags & MFE_VERTICALFLIP)
+			{
+				if (flame->z + flame->height < flame->ceilingz)
+					P_RemoveMobj(flame);
+			}
+			else if (flame->z > flame->floorz)
 				P_RemoveMobj(flame);
 		}
-		else if (flame->z > flame->floorz)
-			P_RemoveMobj(flame);
 	}
 }
 
@@ -6789,7 +6812,7 @@ static void P_MovePlayer(player_t *player)
 	if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL
 	&& (player->pflags & PF_SPINNING) && player->speed > FixedMul(4<<FRACBITS, player->mo->scale) && onground && (leveltime & 1)
 	&& !(player->mo->eflags & (MFE_UNDERWATER|MFE_TOUCHWATER)))
-		P_ElementalFireTrail(player);
+		P_ElementalFireTrail(player, false);
 
 	P_DoSpinDash(player, cmd);
 
@@ -6897,9 +6920,24 @@ static void P_MovePlayer(player_t *player)
 					{
 						player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
 						player->homing = 2;
-						S_StartSound(player->mo, sfx_spdpad);
 						if (P_LookForEnemies(player, false) && player->mo->tracer)
+						{
+							S_StartSound(player->mo, sfx_s3k40);
 							player->homing = 3*TICRATE;
+						}
+						else
+							S_StartSound(player->mo, sfx_s3k41);
+					}
+				}
+				// Elemental shield activation
+				if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL)
+				{
+					if (!(player->pflags & PF_THOKKED))
+					{
+						player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
+						S_StartSound(player->mo, sfx_s3k43);
+						player->mo->momx = player->mo->momy = 0;
+						P_SetObjectMomZ(player->mo, -24*FRACUNIT, false);
 					}
 				}
 			}

@@ -237,6 +237,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 {
 	player_t *player;
 	INT32 i;
+	boolean elementalpierce;
 
 	if (objectplacing)
 		return;
@@ -291,6 +292,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		return;
 #endif
 
+	elementalpierce = (((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL) && (player->pflags & PF_SHIELDABILITY));
+
 	if (special->flags & MF_BOSS)
 	{
 		if (special->type == MT_BLACKEGGMAN)
@@ -301,9 +304,10 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 		if (((player->pflags & PF_NIGHTSMODE) && (player->pflags & PF_DRILLING))
 		|| (player->pflags & (PF_JUMPED|PF_SPINNING|PF_GLIDING))
-		|| player->powers[pw_invulnerability] || player->powers[pw_super]) // Do you possess the ability to subdue the object?
+		|| player->powers[pw_invulnerability] || player->powers[pw_super]
+		|| elementalpierce) // Do you possess the ability to subdue the object?
 		{
-			if (P_MobjFlip(toucher)*toucher->momz < 0)
+			if ((P_MobjFlip(toucher)*toucher->momz < 0) && !elementalpierce)
 				toucher->momz = -toucher->momz;
 			toucher->momx = -toucher->momx;
 			toucher->momy = -toucher->momy;
@@ -330,7 +334,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		/////ENEMIES!!//////////////////////////////////////////
 		////////////////////////////////////////////////////////
 		if (special->type == MT_GSNAPPER && !(((player->pflags & PF_NIGHTSMODE) && (player->pflags & PF_DRILLING))
-		|| player->powers[pw_invulnerability] || player->powers[pw_super])
+		|| player->powers[pw_invulnerability] || player->powers[pw_super] || elementalpierce)
 		&& toucher->z < special->z + special->height && toucher->z + toucher->height > special->z)
 		{
 			// Can only hit snapper from above
@@ -346,7 +350,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		|| (player->pflags & (PF_JUMPED|PF_SPINNING|PF_GLIDING))
 		|| player->powers[pw_invulnerability] || player->powers[pw_super]) // Do you possess the ability to subdue the object?
 		{
-			if (P_MobjFlip(toucher)*toucher->momz < 0)
+			if ((P_MobjFlip(toucher)*toucher->momz < 0) && !elementalpierce)
 				toucher->momz = -toucher->momz;
 
 			P_DamageMobj(special, toucher, toucher, 1, 0);

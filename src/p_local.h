@@ -151,7 +151,7 @@ boolean P_AutoPause(void);
 
 void P_DoJumpShield(player_t *player);
 void P_BlackOw(player_t *player);
-void P_ElementalFireTrail(player_t *player);
+void P_ElementalFireTrail(player_t *player, boolean cropcircle);
 
 void P_DoPityCheck(player_t *player);
 void P_PlayerThink(player_t *player);

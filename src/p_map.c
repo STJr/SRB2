@@ -855,10 +855,10 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	{
 		if (G_RingSlingerGametype() && (!G_GametypeHasTeams() || tmthing->player->ctfteam != thing->player->ctfteam))
 		{
-			if ((tmthing->player->powers[pw_invulnerability] || tmthing->player->powers[pw_super])
+			if ((tmthing->player->powers[pw_invulnerability] || tmthing->player->powers[pw_super] || (((tmthing->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL) && (tmthing->player->pflags & PF_SHIELDABILITY)))
 				&& !thing->player->powers[pw_super])
 				P_DamageMobj(thing, tmthing, tmthing, 1, 0);
-			else if ((thing->player->powers[pw_invulnerability] || thing->player->powers[pw_super])
+			else if ((thing->player->powers[pw_invulnerability] || thing->player->powers[pw_super] || (((thing->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL) && (thing->player->pflags & PF_SHIELDABILITY)))
 				&& !tmthing->player->powers[pw_super])
 				P_DamageMobj(tmthing, thing, thing, 1, 0);
 		}
@@ -942,11 +942,13 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			{
 				SINT8 flipval = P_MobjFlip(thing); // Save this value in case monitor gets removed.
 				fixed_t *momz = &tmthing->momz; // tmthing gets changed by P_DamageMobj, so we need a new pointer?! X_x;;
+				boolean elementalpierce = (((tmthing->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL) && (tmthing->player->pflags & PF_SHIELDABILITY));
 				P_DamageMobj(thing, tmthing, tmthing, 1, 0); // break the monitor
 				// Going down? Then bounce back up.
 				if ((P_MobjWasRemoved(thing) // Monitor was removed
 					|| !thing->health) // or otherwise popped
-				&& (flipval*(*momz) < 0)) // monitor is on the floor and you're going down, or on the ceiling and you're going up
+				&& (flipval*(*momz) < 0) // monitor is on the floor and you're going down, or on the ceiling and you're going up
+				&& !elementalpierce) // you're not piercing through the monitor...
 					*momz = -*momz; // Therefore, you should be thrust in the opposite direction, vertically.
 				return false;
 			}
