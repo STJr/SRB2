@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -677,7 +677,7 @@ static void M_PNGText(png_structp png_ptr, png_infop png_info_ptr, PNG_CONST png
 	else
 		snprintf(maptext, 8, "Unknown");
 
-	if (gamestate == GS_LEVEL && mapheaderinfo[gamemap-1]->lvlttl)
+	if (gamestate == GS_LEVEL && mapheaderinfo[gamemap-1]->lvlttl[0] != '\0')
 		snprintf(lvlttltext, 48, "%s%s%s",
 			mapheaderinfo[gamemap-1]->lvlttl,
 			(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE) ? "" : " ZONE",
@@ -1787,29 +1787,16 @@ UINT8 M_CountBits(UINT32 num, UINT8 size)
 	return sum;
 }
 
-
-/** Get the most significant bit in a number.
-  * (integer log2)
-  */
-UINT8 M_HighestBit(UINT32 num)
-{
-	UINT8 i = 0;
-	while (num >>= 1) ++i;
-	return i;
-}
-
 const char *GetRevisionString(void)
 {
-	INT32 vinfo;
-	static char rev[8] = {0};
+	static char rev[9] = {0};
 	if (rev[0])
 		return rev;
 
-	vinfo = atoi(&comprevision[1]);
-	if (vinfo)
-		snprintf(rev, 7, "r%d", vinfo);
+	if (comprevision[0] == 'r')
+		strncpy(rev, comprevision, 7);
 	else
-		strcpy(rev, "rNULL");
+		snprintf(rev, 7, "r%s", comprevision);
 	rev[7] = '\0';
 
 	return rev;

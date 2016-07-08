@@ -1,7 +1,7 @@
 ;; SONIC ROBO BLAST 2
 ;;-----------------------------------------------------------------------------
 ;; Copyright (C) 1998-2000 by DOSDOOM.
-;; Copyright (C) 2010-2014 by Sonic Team Junior.
+;; Copyright (C) 2010-2016 by Sonic Team Junior.
 ;;
 ;; This program is free software distributed under the
 ;; terms of the GNU General Public License, version 2.
@@ -18,7 +18,7 @@
 [BITS 32]
 
 %define FRACBITS 16
-%define TRANSPARENTPIXEL 247
+%define TRANSPARENTPIXEL 255
 
 %ifdef LINUX
 %macro cextern 1

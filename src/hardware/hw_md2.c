@@ -41,6 +41,7 @@
 #include "../r_things.h"
 
 #include "hw_main.h"
+#include "../v_video.h"
 #ifdef HAVE_PNG
 
 #ifndef _MSC_VER
@@ -405,191 +406,6 @@ static md2_model_t *md2_readModel(const char *filename)
 	return model;
 }
 
-/*
- * center model
- */
-static inline void md2_getBoundingBox (md2_model_t *model, float *minmax)
-{
-	size_t i;
-	float minx, maxx;
-	float miny, maxy;
-	float minz, maxz;
-
-	minx = miny = minz = 999999.0f;
-	maxx = maxy = maxz = -999999.0f;
-
-	/* get bounding box */
-	for (i = 0; i < model->header.numVertices; i++)
-	{
-		md2_triangleVertex_t *v = &model->frames[0].vertices[i];
-
-		if (v->vertex[0] < minx)
-			minx = v->vertex[0];
-		else if (v->vertex[0] > maxx)
-			maxx = v->vertex[0];
-
-		if (v->vertex[1] < miny)
-			miny = v->vertex[1];
-		else if (v->vertex[1] > maxy)
-			maxy = v->vertex[1];
-
-		if (v->vertex[2] < minz)
-			minz = v->vertex[2];
-		else if (v->vertex[2] > maxz)
-			maxz = v->vertex[2];
-	}
-
-	minmax[0] = minx;
-	minmax[1] = maxx;
-	minmax[2] = miny;
-	minmax[3] = maxy;
-	minmax[4] = minz;
-	minmax[5] = maxz;
-}
-
-static inline INT32 md2_getAnimationCount(md2_model_t *model)
-{
-	size_t i, pos;
-	INT32 j = 0, count;
-	char name[16], last[16];
-
-	strcpy(last, model->frames[0].name);
-	pos = strlen(last) - 1;
-	while (last[pos] >= '0' && last[pos] <= '9' && j < 2)
-	{
-		pos--;
-		j++;
-	}
-	last[pos + 1] = '\0';
-
-	count = 0;
-
-	for (i = 0; i <= model->header.numFrames; i++)
-	{
-		if (i == model->header.numFrames)
-			strcpy(name, ""); // some kind of a sentinel
-		else
-			strcpy(name, model->frames[i].name);
-		pos = strlen(name) - 1;
-		j = 0;
-		while (name[pos] >= '0' && name[pos] <= '9' && j < 2)
-		{
-			pos--;
-			j++;
-		}
-		name[pos + 1] = '\0';
-
-		if (strcmp(last, name))
-		{
-			strcpy(last, name);
-			count++;
-		}
-	}
-
-	return count;
-}
-
-static inline const char * md2_getAnimationName (md2_model_t *model, INT32 animation)
-{
-	size_t i, pos;
-	INT32 j = 0, count;
-	static char last[32];
-	char name[32];
-
-	strcpy(last, model->frames[0].name);
-	pos = strlen(last) - 1;
-	while (last[pos] >= '0' && last[pos] <= '9' && j < 2)
-	{
-		pos--;
-		j++;
-	}
-	last[pos + 1] = '\0';
-
-	count = 0;
-
-	for (i = 0; i <= model->header.numFrames; i++)
-	{
-		if (i == model->header.numFrames)
-			strcpy(name, ""); // some kind of a sentinel
-		else
-			strcpy(name, model->frames[i].name);
-		pos = strlen(name) - 1;
-		j = 0;
-		while (name[pos] >= '0' && name[pos] <= '9' && j < 2)
-		{
-			pos--;
-			j++;
-		}
-		name[pos + 1] = '\0';
-
-		if (strcmp(last, name))
-		{
-			if (count == animation)
-				return last;
-
-			strcpy(last, name);
-			count++;
-		}
-	}
-
-	return 0;
-}
-
-static inline void md2_getAnimationFrames(md2_model_t *model,
-	INT32 animation, INT32 *startFrame, INT32 *endFrame)
-{
-	size_t i, pos;
-	INT32 j = 0, count, numFrames, frameCount;
-	char name[16], last[16];
-
-	strcpy(last, model->frames[0].name);
-	pos = strlen(last) - 1;
-	while (last[pos] >= '0' && last[pos] <= '9' && j < 2)
-	{
-		pos--;
-		j++;
-	}
-	last[pos + 1] = '\0';
-
-	count = 0;
-	numFrames = 0;
-	frameCount = 0;
-
-	for (i = 0; i <= model->header.numFrames; i++)
-	{
-		if (i == model->header.numFrames)
-			strcpy(name, ""); // some kind of a sentinel
-		else
-			strcpy(name, model->frames[i].name);
-		pos = strlen(name) - 1;
-		j = 0;
-		while (name[pos] >= '0' && name[pos] <= '9' && j < 2)
-		{
-			pos--;
-			j++;
-		}
-		name[pos + 1] = '\0';
-
-		if (strcmp(last, name))
-		{
-			strcpy(last, name);
-
-			if (count == animation)
-			{
-				*startFrame = frameCount - numFrames;
-				*endFrame = frameCount - 1;
-				return;
-			}
-
-			count++;
-			numFrames = 0;
-		}
-		frameCount++;
-		numFrames++;
-	}
-	*startFrame = *endFrame = 0;
-}
-
 static inline void md2_printModelInfo (md2_model_t *model)
 {
 #if 0
@@ -881,6 +697,59 @@ static void md2_loadTexture(md2_t *model)
 	HWR_UnlockCachedPatch(grpatch);
 }
 
+// -----------------+
+// md2_loadBlendTexture  : Download a pcx or png texture for blending MD2 models
+// -----------------+
+static void md2_loadBlendTexture(md2_t *model)
+{
+	GLPatch_t *grpatch;
+	char *filename = Z_Malloc(strlen(model->filename)+7, PU_STATIC, NULL);
+	strcpy(filename, model->filename);
+
+	FIL_ForceExtension(filename, "_blend.png");
+
+	if (model->blendgrpatch)
+	{
+		grpatch = model->blendgrpatch;
+		Z_Free(grpatch->mipmap.grInfo.data);
+	}
+	else
+		grpatch = Z_Calloc(sizeof *grpatch, PU_HWRPATCHINFO,
+		                   &(model->blendgrpatch));
+
+	if (!grpatch->mipmap.downloaded && !grpatch->mipmap.grInfo.data)
+	{
+		int w = 0, h = 0;
+#ifdef HAVE_PNG
+		grpatch->mipmap.grInfo.format = PNG_Load(filename, &w, &h, grpatch);
+		if (grpatch->mipmap.grInfo.format == 0)
+#endif
+		grpatch->mipmap.grInfo.format = PCX_Load(filename, &w, &h, grpatch);
+		if (grpatch->mipmap.grInfo.format == 0)
+		{
+			Z_Free(filename);
+			return;
+		}
+
+		grpatch->mipmap.downloaded = 0;
+		grpatch->mipmap.flags = 0;
+
+		grpatch->width = (INT16)w;
+		grpatch->height = (INT16)h;
+		grpatch->mipmap.width = (UINT16)w;
+		grpatch->mipmap.height = (UINT16)h;
+
+		// not correct!
+		grpatch->mipmap.grInfo.smallLodLog2 = GR_LOD_LOG2_256;
+		grpatch->mipmap.grInfo.largeLodLog2 = GR_LOD_LOG2_256;
+		grpatch->mipmap.grInfo.aspectRatioLog2 = GR_ASPECT_LOG2_1x1;
+	}
+	HWD.pfnSetTexture(&grpatch->mipmap); // We do need to do this so that it can be cleared and knows to recreate it when necessary
+	HWR_UnlockCachedPatch(grpatch);
+
+	Z_Free(filename);
+}
+
 // Don't spam the console, or the OS with fopen requests!
 static boolean nomd2s = false;
 
@@ -926,7 +795,7 @@ void HWR_InitMD2(void)
 			CONS_Printf("MD2 for sprite PLAY detected in md2.dat, use a player skin instead!\n");
 			continue;
 		}
-	
+
 		for (i = 0; i < NUMSPRITES; i++)
 		{
 			if (stricmp(name, sprnames[i]) == 0)
@@ -1050,6 +919,238 @@ spritemd2found:
 	fclose(f);
 }
 
+static void HWR_CreateBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, GLMipmap_t *grmip, skincolors_t color)
+{
+	UINT16 w = gpatch->width, h = gpatch->height;
+	UINT32 size = w*h;
+	RGBA_t *image, *blendimage, *cur, blendcolor;
+
+	if (grmip->width == 0)
+	{
+
+		grmip->width = gpatch->width;
+		grmip->height = gpatch->height;
+
+		// no wrap around, no chroma key
+		grmip->flags = 0;
+		// setup the texture info
+		grmip->grInfo.format = GR_RGBA;
+	}
+
+	Z_Free(grmip->grInfo.data);
+	grmip->grInfo.data = NULL;
+
+	cur = Z_Malloc(size*4, PU_HWRCACHE, &grmip->grInfo.data);
+	memset(cur, 0x00, size*4);
+
+	image = gpatch->mipmap.grInfo.data;
+	blendimage = blendgpatch->mipmap.grInfo.data;
+
+	switch (color)
+	{
+		case SKINCOLOR_WHITE:
+			blendcolor = V_GetColor(3);
+			break;
+		case SKINCOLOR_SILVER:
+			blendcolor = V_GetColor(10);
+			break;
+		case SKINCOLOR_GREY:
+			blendcolor = V_GetColor(15);
+			break;
+		case SKINCOLOR_BLACK:
+			blendcolor = V_GetColor(27);
+			break;
+		case SKINCOLOR_BEIGE:
+			blendcolor = V_GetColor(247);
+			break;
+		case SKINCOLOR_PEACH:
+			blendcolor = V_GetColor(218);
+			break;
+		case SKINCOLOR_BROWN:
+			blendcolor = V_GetColor(234);
+			break;
+		case SKINCOLOR_RED:
+			blendcolor = V_GetColor(38);
+			break;
+		case SKINCOLOR_CRIMSON:
+			blendcolor = V_GetColor(45);
+			break;
+		case SKINCOLOR_ORANGE:
+			blendcolor = V_GetColor(54);
+			break;
+		case SKINCOLOR_RUST:
+			blendcolor = V_GetColor(60);
+			break;
+		case SKINCOLOR_GOLD:
+			blendcolor = V_GetColor(67);
+			break;
+		case SKINCOLOR_YELLOW:
+			blendcolor = V_GetColor(73);
+			break;
+		case SKINCOLOR_TAN:
+			blendcolor = V_GetColor(85);
+			break;
+		case SKINCOLOR_MOSS:
+			blendcolor = V_GetColor(92);
+			break;
+		case SKINCOLOR_PERIDOT:
+			blendcolor = V_GetColor(188);
+			break;
+		case SKINCOLOR_GREEN:
+			blendcolor = V_GetColor(101);
+			break;
+		case SKINCOLOR_EMERALD:
+			blendcolor = V_GetColor(112);
+			break;
+		case SKINCOLOR_AQUA:
+			blendcolor = V_GetColor(122);
+			break;
+		case SKINCOLOR_TEAL:
+			blendcolor = V_GetColor(141);
+			break;
+		case SKINCOLOR_CYAN:
+			blendcolor = V_GetColor(131);
+			break;
+		case SKINCOLOR_BLUE:
+			blendcolor = V_GetColor(152);
+			break;
+		case SKINCOLOR_AZURE:
+			blendcolor = V_GetColor(171);
+			break;
+		case SKINCOLOR_PASTEL:
+			blendcolor = V_GetColor(161);
+			break;
+		case SKINCOLOR_PURPLE:
+			blendcolor = V_GetColor(165);
+			break;
+		case SKINCOLOR_LAVENDER:
+			blendcolor = V_GetColor(195);
+			break;
+		case SKINCOLOR_MAGENTA:
+			blendcolor = V_GetColor(183);
+			break;
+		case SKINCOLOR_PINK:
+			blendcolor = V_GetColor(211);
+			break;
+		case SKINCOLOR_ROSY:
+			blendcolor = V_GetColor(202);
+			break;
+		case SKINCOLOR_SUPER1:
+			blendcolor = V_GetColor(80);
+			break;
+		case SKINCOLOR_SUPER2:
+			blendcolor = V_GetColor(83);
+			break;
+		case SKINCOLOR_SUPER3:
+			blendcolor = V_GetColor(73);
+			break;
+		case SKINCOLOR_SUPER4:
+			blendcolor = V_GetColor(64);
+			break;
+		case SKINCOLOR_SUPER5:
+			blendcolor = V_GetColor(67);
+			break;
+
+		case SKINCOLOR_TSUPER1:
+		case SKINCOLOR_TSUPER2:
+		case SKINCOLOR_TSUPER3:
+		case SKINCOLOR_TSUPER4:
+		case SKINCOLOR_TSUPER5:
+		case SKINCOLOR_KSUPER1:
+		case SKINCOLOR_KSUPER2:
+		case SKINCOLOR_KSUPER3:
+		case SKINCOLOR_KSUPER4:
+		case SKINCOLOR_KSUPER5:
+		default:
+			blendcolor = V_GetColor(255);
+			break;
+	}
+
+	while (size--)
+	{
+		if (blendimage->s.alpha == 0)
+		{
+			// Don't bother with blending the pixel if the alpha of the blend pixel is 0
+			cur->rgba = image->rgba;
+		}
+		else
+		{
+			INT32 tempcolor;
+			INT16 tempmult, tempalpha;
+			tempalpha = -(abs(blendimage->s.red-127)-127)*2;
+			if (tempalpha > 255)
+				tempalpha = 255;
+			else if (tempalpha < 0)
+				tempalpha = 0;
+
+			tempmult = (blendimage->s.red-127)*2;
+			if (tempmult > 255)
+				tempmult = 255;
+			else if (tempmult < 0)
+				tempmult = 0;
+
+			tempcolor = (image->s.red*(255-blendimage->s.alpha))/255 + ((tempmult + ((tempalpha*blendcolor.s.red)/255)) * blendimage->s.alpha)/255;
+			cur->s.red = (UINT8)tempcolor;
+			tempcolor = (image->s.green*(255-blendimage->s.alpha))/255 + ((tempmult + ((tempalpha*blendcolor.s.green)/255)) * blendimage->s.alpha)/255;
+			cur->s.green = (UINT8)tempcolor;
+			tempcolor = (image->s.blue*(255-blendimage->s.alpha))/255 + ((tempmult + ((tempalpha*blendcolor.s.blue)/255)) * blendimage->s.alpha)/255;
+			cur->s.blue = (UINT8)tempcolor;
+			cur->s.alpha = image->s.alpha;
+		}
+
+		cur++; image++; blendimage++;
+	}
+
+	return;
+}
+
+static void HWR_GetBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, const UINT8 *colormap, skincolors_t color)
+{
+	// mostly copied from HWR_GetMappedPatch, hence the similarities and comment
+	GLMipmap_t *grmip, *newmip;
+
+	if (colormap == colormaps || colormap == NULL)
+	{
+		// Don't do any blending
+		HWD.pfnSetTexture(&gpatch->mipmap);
+		return;
+	}
+
+	// search for the mimmap
+	// skip the first (no colormap translated)
+	for (grmip = &gpatch->mipmap; grmip->nextcolormap; )
+	{
+		grmip = grmip->nextcolormap;
+		if (grmip->colormap == colormap)
+		{
+			if (grmip->downloaded && grmip->grInfo.data)
+			{
+				HWD.pfnSetTexture(grmip); // found the colormap, set it to the correct texture
+				Z_ChangeTag(grmip->grInfo.data, PU_HWRCACHE_UNLOCKED);
+				return;
+			}
+		}
+	}
+
+	// If here, the blended texture has not been created
+	// So we create it
+
+	//BP: WARNING: don't free it manually without clearing the cache of harware renderer
+	//              (it have a liste of mipmap)
+	//    this malloc is cleared in HWR_FreeTextureCache
+	//    (...) unfortunately z_malloc fragment alot the memory :(so malloc is better
+	newmip = calloc(1, sizeof (*newmip));
+	if (newmip == NULL)
+		I_Error("%s: Out of memory", "HWR_GetMappedPatch");
+	grmip->nextcolormap = newmip;
+	newmip->colormap = colormap;
+
+	HWR_CreateBlendedTexture(gpatch, blendgpatch, newmip, color);
+
+	HWD.pfnSetTexture(newmip);
+	Z_ChangeTag(newmip->grInfo.data, PU_HWRCACHE_UNLOCKED);
+}
+
 
 // -----------------+
 // HWR_DrawMD2      : Draw MD2
@@ -1085,7 +1186,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 	if (!cv_grmd2.value)
 		return;
 
-	if (!spr->precip)
+	if (spr->precip)
 		return;
 
 	// MD2 colormap fix
@@ -1180,13 +1281,25 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		gpatch = md2->grpatch;
 		if (!gpatch || !gpatch->mipmap.grInfo.format || !gpatch->mipmap.downloaded)
 			md2_loadTexture(md2);
-
 		gpatch = md2->grpatch; // Load it again, because it isn't being loaded into gpatch after md2_loadtexture...
+
+		if ((gpatch && gpatch->mipmap.grInfo.format) // don't load the blend texture if the base texture isn't available
+			&& (!md2->blendgrpatch || !((GLPatch_t *)md2->blendgrpatch)->mipmap.grInfo.format || !((GLPatch_t *)md2->blendgrpatch)->mipmap.downloaded))
+			md2_loadBlendTexture(md2);
 
 		if (gpatch && gpatch->mipmap.grInfo.format) // else if meant that if a texture couldn't be loaded, it would just end up using something else's texture
 		{
-			// This is safe, since we know the texture has been downloaded
-			HWD.pfnSetTexture(&gpatch->mipmap);
+			if ((skincolors_t)spr->mobj->color != SKINCOLOR_NONE &&
+				md2->blendgrpatch && ((GLPatch_t *)md2->blendgrpatch)->mipmap.grInfo.format
+				&& gpatch->width == ((GLPatch_t *)md2->blendgrpatch)->width && gpatch->height == ((GLPatch_t *)md2->blendgrpatch)->height)
+			{
+				HWR_GetBlendedTexture(gpatch, (GLPatch_t *)md2->blendgrpatch, spr->colormap, (skincolors_t)spr->mobj->color);
+			}
+			else
+			{
+				// This is safe, since we know the texture has been downloaded
+				HWD.pfnSetTexture(&gpatch->mipmap);
+			}
 		}
 		else
 		{
@@ -1195,16 +1308,37 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 			HWR_GetMappedPatch(gpatch, spr->colormap);
 		}
 
+		if (spr->mobj->frame & FF_ANIMATE)
+		{
+			// set duration and tics to be the correct values for FF_ANIMATE states
+			durs = spr->mobj->state->var2;
+			tics = spr->mobj->anim_duration;
+		}
+
 		//FIXME: this is not yet correct
 		frame = (spr->mobj->frame & FF_FRAMEMASK) % md2->model->header.numFrames;
 		buff = md2->model->glCommandBuffer;
 		curr = &md2->model->frames[frame];
-		if (cv_grmd2.value == 1
-		    && spr->mobj->state->nextstate != S_NULL && states[spr->mobj->state->nextstate].sprite != SPR_NULL
-		    && !(spr->mobj->player && spr->mobj->state->nextstate == S_PLAY_WAIT && spr->mobj->state == &states[S_PLAY_STND]))
+		if (cv_grmd2.value == 1)
 		{
-			const INT32 nextframe = (states[spr->mobj->state->nextstate].frame & FF_FRAMEMASK) % md2->model->header.numFrames;
-			next = &md2->model->frames[nextframe];
+			// frames are handled differently for states with FF_ANIMATE, so get the next frame differently for the interpolation
+			if (spr->mobj->frame & FF_ANIMATE)
+			{
+				UINT32 nextframe = (spr->mobj->frame & FF_FRAMEMASK) + 1;
+				if (nextframe >= (UINT32)spr->mobj->state->var1)
+					nextframe = (spr->mobj->state->frame & FF_FRAMEMASK);
+				nextframe %= md2->model->header.numFrames;
+				next = &md2->model->frames[nextframe];
+			}
+			else
+			{
+				if (spr->mobj->state->nextstate != S_NULL && states[spr->mobj->state->nextstate].sprite != SPR_NULL
+					&& !(spr->mobj->player && spr->mobj->state->nextstate == S_PLAY_WAIT && spr->mobj->state == &states[S_PLAY_STND]))
+				{
+					const UINT32 nextframe = (states[spr->mobj->state->nextstate].frame & FF_FRAMEMASK) % md2->model->header.numFrames;
+					next = &md2->model->frames[nextframe];
+				}
+			}
 		}
 
 		//Hurdler: it seems there is still a small problem with mobj angle
@@ -1243,10 +1377,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		// SRB2CBTODO: MD2 scaling support
 		finalscale *= FIXED_TO_FLOAT(spr->mobj->scale);
 
-		if (postimgtype == postimg_flip)
-			p.flip = true;
-		else
-			p.flip = false;
+		p.flip = atransform.flip;
 
 		HWD.pfnDrawMD2i(buff, curr, durs, tics, next, &p, finalscale, flip, color);
 	}

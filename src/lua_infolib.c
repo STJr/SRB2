@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2012-2014 by John "JTE" Muniz.
-// Copyright (C) 2012-2014 by Sonic Team Junior.
+// Copyright (C) 2012-2016 by John "JTE" Muniz.
+// Copyright (C) 2012-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -175,8 +175,6 @@ static void A_Lua(mobj_t *actor)
 		--superstack;
 		superactions[superstack] = NULL;
 	}
-
-	lua_gc(gL, LUA_GCSTEP, 1);
 }
 
 // Arbitrary states[] table index -> state_t *
@@ -186,6 +184,8 @@ static int lib_getState(lua_State *L)
 	lua_remove(L, 1);
 
 	i = luaL_checkinteger(L, 1);
+	if (i >= NUMSTATES)
+		return luaL_error(L, "states[] index %d out of range (0 - %d)", i, NUMSTATES-1);
 	LUA_PushUserdata(L, &states[i], META_STATE);
 	return 1;
 }
@@ -195,7 +195,12 @@ static int lib_setState(lua_State *L)
 {
 	state_t *state;
 	lua_remove(L, 1); // don't care about states[] userdata.
-	state = &states[luaL_checkinteger(L, 1)]; // get the state to assign to.
+	{
+		UINT32 i = luaL_checkinteger(L, 1);
+		if (i >= NUMSTATES)
+			return luaL_error(L, "states[] index %d out of range (0 - %d)", i, NUMSTATES-1);
+		state = &states[i]; // get the state to assign to.
+	}
 	luaL_checktype(L, 2, LUA_TTABLE); // check that we've been passed a table.
 	lua_remove(L, 1); // pop state num, don't need it any more.
 	lua_settop(L, 1); // cut the stack here. the only thing left now is the table of data we're assigning to the state.
@@ -476,6 +481,8 @@ static int lib_getMobjInfo(lua_State *L)
 	lua_remove(L, 1);
 
 	i = luaL_checkinteger(L, 1);
+	if (i >= NUMMOBJTYPES)
+		return luaL_error(L, "mobjinfo[] index %d out of range (0 - %d)", i, NUMMOBJTYPES-1);
 	LUA_PushUserdata(L, &mobjinfo[i], META_MOBJINFO);
 	return 1;
 }
@@ -485,7 +492,12 @@ static int lib_setMobjInfo(lua_State *L)
 {
 	mobjinfo_t *info;
 	lua_remove(L, 1); // don't care about mobjinfo[] userdata.
-	info = &mobjinfo[luaL_checkinteger(L, 1)]; // get the mobjinfo to assign to.
+	{
+		UINT32 i = luaL_checkinteger(L, 1);
+		if (i >= NUMMOBJTYPES)
+			return luaL_error(L, "mobjinfo[] index %d out of range (0 - %d)", i, NUMMOBJTYPES-1);
+		info = &mobjinfo[i]; // get the mobjinfo to assign to.
+	}
 	luaL_checktype(L, 2, LUA_TTABLE); // check that we've been passed a table.
 	lua_remove(L, 1); // pop mobjtype num, don't need it any more.
 	lua_settop(L, 1); // cut the stack here. the only thing left now is the table of data we're assigning to the mobjinfo.
@@ -548,11 +560,11 @@ static int lib_setMobjInfo(lua_State *L)
 		else if (i == 15 || (str && fastcmp(str,"deathsound")))
 			info->deathsound = luaL_checkinteger(L, 3);
 		else if (i == 16 || (str && fastcmp(str,"speed")))
-			info->speed = (fixed_t)luaL_checkinteger(L, 3);
+			info->speed = luaL_checkfixed(L, 3);
 		else if (i == 17 || (str && fastcmp(str,"radius")))
-			info->radius = (fixed_t)luaL_checkinteger(L, 3);
+			info->radius = luaL_checkfixed(L, 3);
 		else if (i == 18 || (str && fastcmp(str,"height")))
-			info->height = (fixed_t)luaL_checkinteger(L, 3);
+			info->height = luaL_checkfixed(L, 3);
 		else if (i == 19 || (str && fastcmp(str,"dispoffset")))
 			info->dispoffset = (INT32)luaL_checkinteger(L, 3);
 		else if (i == 20 || (str && fastcmp(str,"mass")))
@@ -618,11 +630,11 @@ static int mobjinfo_get(lua_State *L)
 	else if (fastcmp(field,"deathsound"))
 		lua_pushinteger(L, info->deathsound);
 	else if (fastcmp(field,"speed"))
-		lua_pushinteger(L, info->speed);
+		lua_pushinteger(L, info->speed); // sometimes it's fixed_t, sometimes it's not...
 	else if (fastcmp(field,"radius"))
-		lua_pushinteger(L, info->radius);
+		lua_pushfixed(L, info->radius);
 	else if (fastcmp(field,"height"))
-		lua_pushinteger(L, info->height);
+		lua_pushfixed(L, info->height);
 	else if (fastcmp(field,"dispoffset"))
 		lua_pushinteger(L, info->dispoffset);
 	else if (fastcmp(field,"mass"))
@@ -694,11 +706,11 @@ static int mobjinfo_set(lua_State *L)
 	else if (fastcmp(field,"deathsound"))
 		info->deathsound = luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"speed"))
-		info->speed = (fixed_t)luaL_checkinteger(L, 3);
+		info->speed = luaL_checkfixed(L, 3);
 	else if (fastcmp(field,"radius"))
-		info->radius = (fixed_t)luaL_checkinteger(L, 3);
+		info->radius = luaL_checkfixed(L, 3);
 	else if (fastcmp(field,"height"))
-		info->height = (fixed_t)luaL_checkinteger(L, 3);
+		info->height = luaL_checkfixed(L, 3);
 	else if (fastcmp(field,"dispoffset"))
 		info->dispoffset = (INT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"mass"))
@@ -757,6 +769,8 @@ static int lib_getSfxInfo(lua_State *L)
 	lua_remove(L, 1);
 
 	i = luaL_checkinteger(L, 1);
+	if (i >= NUMSFX)
+		return luaL_error(L, "sfxinfo[] index %d out of range (0 - %d)", i, NUMSFX-1);
 	LUA_PushUserdata(L, &S_sfx[i], META_SFXINFO);
 	return 1;
 }
@@ -767,7 +781,12 @@ static int lib_setSfxInfo(lua_State *L)
 	sfxinfo_t *info;
 
 	lua_remove(L, 1);
-	info = &S_sfx[luaL_checkinteger(L, 1)]; // get the mobjinfo to assign to.
+	{
+		UINT32 i = luaL_checkinteger(L, 1);
+		if (i >= NUMSFX)
+			return luaL_error(L, "sfxinfo[] index %d out of range (0 - %d)", i, NUMSFX-1);
+		info = &S_sfx[i]; // get the mobjinfo to assign to.
+	}
 	luaL_checktype(L, 2, LUA_TTABLE); // check that we've been passed a table.
 	lua_remove(L, 1); // pop mobjtype num, don't need it any more.
 	lua_settop(L, 1); // cut the stack here. the only thing left now is the table of data we're assigning to the mobjinfo.

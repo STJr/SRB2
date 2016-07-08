@@ -55,6 +55,10 @@ PSP_MAIN_THREAD_STACK_SIZE_KB(256);
 #include "i_ttf.h"
 #endif
 
+#if defined (_WIN32) && !defined (main)
+//#define SDLMAIN
+#endif
+
 #ifdef SDLMAIN
 #include "SDL_main.h"
 #elif defined(FORCESDLMAIN)
@@ -132,7 +136,6 @@ static inline VOID MakeCodeWritable(VOID)
 
 	\return	int
 */
-FUNCNORETURN
 #if defined (_XBOX) && defined (__GNUC__)
 void XBoxStartup()
 {
@@ -211,12 +214,14 @@ int main(int argc, char **argv)
 #if defined (_WIN32) && !defined (_XBOX)
 #ifndef _WIN32_WCE
 	{
+#if 0 // just load the DLL
 		p_IsDebuggerPresent pfnIsDebuggerPresent = (p_IsDebuggerPresent)GetProcAddress(GetModuleHandleA("kernel32.dll"), "IsDebuggerPresent");
 		if ((!pfnIsDebuggerPresent || !pfnIsDebuggerPresent())
 #ifdef BUGTRAP
 			&& !InitBugTrap()
 #endif
 			)
+#endif
 		{
 			LoadLibraryA("exchndl.dll");
 		}
@@ -240,8 +245,6 @@ int main(int argc, char **argv)
 #endif
 
 	// return to OS
-#ifndef __GNUC__
 	return 0;
-#endif
 }
 #endif

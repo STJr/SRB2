@@ -139,7 +139,6 @@ set(SRB2_CORE_RENDER_SOURCES
 set(SRB2_CORE_GAME_SOURCES
 	p_ceilng.c
 	p_enemy.c
-	p_fab.c
 	p_floor.c
 	p_inter.c
 	p_lights.c
@@ -150,6 +149,7 @@ set(SRB2_CORE_GAME_SOURCES
 	p_saveg.c
 	p_setup.c
 	p_sight.c
+	p_slopes.c
 	p_spec.c
 	p_telept.c
 	p_tick.c
@@ -162,11 +162,12 @@ set(SRB2_CORE_GAME_SOURCES
 	p_pspr.h
 	p_saveg.h
 	p_setup.h
+	p_slopes.h
 	p_spec.h
 	p_tick.h
 )
 
-if(NOT CLANG)
+if(NOT (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
 	set(SRB2_CORE_SOURCES ${SRB2_CORE_SOURCES} string.c)
 endif()
 
@@ -314,6 +315,7 @@ if(${SRB2_CONFIG_HAVE_GME})
 	find_package(GME)
 	if(${GME_FOUND})
 		set(SRB2_HAVE_GME ON)
+		add_definitions(-DHAVE_LIBGME)
 	else()
 		message(WARNING "You have specified that GME is available but it was not found.")
 	endif()
@@ -404,8 +406,12 @@ endif()
 
 # Compatibility flag with later versions of GCC
 # We should really fix our code to not need this
-if(NOT CLANG AND NOT MSVC)
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 	set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -mno-ms-bitfields)
+endif()
+
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+	set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -Wno-absolute-value)
 endif()
 
 add_definitions(-DCMAKECONFIG)

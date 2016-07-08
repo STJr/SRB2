@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -162,6 +162,7 @@ typedef struct vissprite_s
 	boolean precip;
 	boolean vflip; // Flip vertically
 	boolean isScaled;
+	INT32 dispoffset; // copy of info->dispoffset, affects ordering but not drawing
 } vissprite_t;
 
 // A drawnode is something that points to a 3D floor, 3D side, or masked

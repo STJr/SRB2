@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -235,6 +235,8 @@ typedef enum
 	MFE_PUSHED            = 1<<7,
 	// Mobj was already sprung this tic
 	MFE_SPRUNG            = 1<<8,
+	// Platform movement
+	MFE_APPLYPMOMZ        = 1<<9,
 	// free: to and including 1<<15
 } mobjeflag_t;
 
@@ -269,6 +271,7 @@ typedef struct mobj_s
 	spritenum_t sprite; // used to find patch_t and flip value
 	UINT32 frame; // frame number, plus bits see p_pspr.h
 	UINT8 sprite2; // player sprites
+	UINT16 anim_duration; // for FF_ANIMATE states
 
 	struct msecnode_s *touching_sectorlist; // a linked list of sectors where this object appears
 
@@ -353,6 +356,10 @@ typedef struct mobj_s
 	INT32 cusval;
 	INT32 cvmem;
 
+#ifdef ESLOPE
+	struct pslope_s *standingslope; // The slope that the object is standing on (shouldn't need synced in savegames, right?)
+#endif
+
 	// WARNING: New fields must be added separately to savegame and Lua.
 } mobj_t;
 
@@ -378,7 +385,8 @@ typedef struct precipmobj_s
 	// More drawing info: to determine current sprite.
 	angle_t angle;  // orientation
 	spritenum_t sprite; // used to find patch_t and flip value
-	INT32 frame; // frame number, plus bits see p_pspr.h
+	UINT32 frame; // frame number, plus bits see p_pspr.h
+	UINT16 anim_duration; // for FF_ANIMATE states
 
 	struct mprecipsecnode_s *touching_sectorlist; // a linked list of sectors where this object appears
 

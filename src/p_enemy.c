@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -386,7 +386,7 @@ boolean P_CheckMissileRange(mobj_t *actor)
 	if (actor->type == MT_EGGMOBILE && dist > 160)
 		dist = 160;
 
-	if (P_Random() < dist)
+	if (P_RandomByte() < dist)
 		return false;
 
 	return true;
@@ -486,7 +486,7 @@ static boolean P_TryWalk(mobj_t *actor)
 {
 	if (!P_Move(actor, actor->info->speed))
 		return false;
-	actor->movecount = P_Random() & 15;
+	actor->movecount = P_RandomByte() & 15;
 	return true;
 }
 
@@ -539,7 +539,7 @@ void P_NewChaseDir(mobj_t *actor)
 	}
 
 	// try other directions
-	if (P_Random() > 200 || abs(deltay) > abs(deltax))
+	if (P_RandomChance(25*FRACUNIT/32) || abs(deltay) > abs(deltax))
 	{
 		tdir = d[1];
 		d[1] = d[2];
@@ -577,7 +577,7 @@ void P_NewChaseDir(mobj_t *actor)
 	}
 
 	// randomly determine direction of search
-	if (P_Random() & 1)
+	if (P_RandomChance(FRACUNIT/2))
 	{
 		for (tdir = DI_EAST; tdir <= DI_SOUTHEAST; tdir++)
 		{
@@ -632,7 +632,7 @@ boolean P_LookForPlayers(mobj_t *actor, boolean allaround, boolean tracer, fixed
 
 	// BP: first time init, this allow minimum lastlook changes
 	if (actor->lastlook < 0)
-		actor->lastlook = P_Random();
+		actor->lastlook = P_RandomByte();
 
 	actor->lastlook %= MAXPLAYERS;
 
@@ -707,7 +707,7 @@ static boolean P_LookForShield(mobj_t *actor)
 
 	// BP: first time init, this allow minimum lastlook changes
 	if (actor->lastlook < 0)
-		actor->lastlook = P_Random();
+		actor->lastlook = P_RandomByte();
 
 	actor->lastlook %= MAXPLAYERS;
 
@@ -2293,12 +2293,7 @@ void A_SkullAttack(mobj_t *actor)
 	if (locvar1 == 1)
 		actor->angle += ANGLE_180;
 	else if (locvar1 == 2)
-	{
-		if (P_Random() & 1)
-			actor->angle += ANGLE_90;
-		else
-			actor->angle -= ANGLE_90;
-	}
+		actor->angle += (P_RandomChance(FRACUNIT/2)) ? ANGLE_90 : -ANGLE_90;
 
 	an = actor->angle >> ANGLETOFINESHIFT;
 
@@ -2398,9 +2393,9 @@ void A_BossScream(mobj_t *actor)
 		explodetype = (mobjtype_t)locvar2;
 
 	if (actor->eflags & MFE_VERTICALFLIP)
-		z = actor->z + actor->height - mobjinfo[explodetype].height - FixedMul((P_Random()<<(FRACBITS-2)) - 8*FRACUNIT, actor->scale);
+		z = actor->z + actor->height - mobjinfo[explodetype].height - FixedMul((P_RandomByte()<<(FRACBITS-2)) - 8*FRACUNIT, actor->scale);
 	else
-		z = actor->z + FixedMul((P_Random()<<(FRACBITS-2)) - 8*FRACUNIT, actor->scale);
+		z = actor->z + FixedMul((P_RandomByte()<<(FRACBITS-2)) - 8*FRACUNIT, actor->scale);
 
 	mo = P_SpawnMobj(x, y, z, explodetype);
 	if (actor->eflags & MFE_VERTICALFLIP)
@@ -3063,12 +3058,8 @@ void A_Invincibility(mobj_t *actor)
 	{
 		S_StopMusic();
 		if (mariomode)
-		{
-			S_ChangeMusic(mus_minvnc, false);
 			G_GhostAddColor(GHC_INVINCIBLE);
-		}
-		else
-			S_ChangeMusic(mus_invinc, false);
+		S_ChangeMusicInternal((mariomode) ? "minvnc" : "invinc", false);
 	}
 }
 
@@ -3104,7 +3095,7 @@ void A_SuperSneakers(mobj_t *actor)
 		else
 		{
 			S_StopMusic();
-			S_ChangeMusic(mus_shoes, false);
+			S_ChangeMusicInternal("shoes", false);
 		}
 	}
 }
@@ -3466,7 +3457,7 @@ void A_BubbleSpawn(mobj_t *actor)
 			return; // don't make bubble!
 	}
 
-	prandom = P_Random();
+	prandom = P_RandomByte();
 
 	if (leveltime % (3*TICRATE) < 8)
 		bubble = P_SpawnMobj(actor->x, actor->y, actor->z + (actor->height / 2), MT_EXTRALARGEBUBBLE);
@@ -3514,7 +3505,7 @@ void A_FanBubbleSpawn(mobj_t *actor)
 			return; // don't make bubble!
 	}
 
-	prandom = P_Random();
+	prandom = P_RandomByte();
 
 	if ((prandom & 0x7) == 0x7)
 		bubble = P_SpawnMobj(actor->x, actor->y, hz, MT_SMALLBUBBLE);
@@ -3555,7 +3546,7 @@ void A_BubbleRise(mobj_t *actor)
 		// Move around slightly to make it look like it's bending around the water
 		if (!locvar1)
 		{
-			UINT8 prandom = P_Random();
+			UINT8 prandom = P_RandomByte();
 			if (!(prandom & 0x7)) // *****000
 			{
 				P_InstaThrust(actor, prandom & 0x70 ? actor->angle + ANGLE_90 : actor->angle,
@@ -3838,7 +3829,7 @@ void A_ThrownRing(mobj_t *actor)
 
 	// first time init, this allow minimum lastlook changes
 	if (actor->lastlook < 0)
-		actor->lastlook = P_Random();
+		actor->lastlook = P_RandomByte();
 
 	actor->lastlook %= MAXPLAYERS;
 
@@ -3918,7 +3909,7 @@ void A_SetSolidSteam(mobj_t *actor)
 #endif
 	actor->flags &= ~MF_NOCLIP;
 	actor->flags |= MF_SOLID;
-	if (!(P_Random() & 7))
+	if (P_RandomChance(FRACUNIT/8))
 	{
 		if (actor->info->deathsound)
 			S_StartSound(actor, actor->info->deathsound); // Hiss!
@@ -4060,7 +4051,7 @@ void A_JetChase(mobj_t *actor)
 	if (actor->reactiontime)
 		actor->reactiontime--;
 
-	if (P_Random() % 32 == 1)
+	if (P_RandomChance(FRACUNIT/32))
 	{
 		actor->momx = actor->momx / 2;
 		actor->momy = actor->momy / 2;
@@ -4421,7 +4412,7 @@ void A_JetgThink(mobj_t *actor)
 
 	if (actor->target)
 	{
-		if (P_Random() <= 32 && !actor->reactiontime)
+		if (P_RandomChance(FRACUNIT/8) && !actor->reactiontime)
 			P_SetMobjState(actor, actor->info->missilestate);
 		else
 			A_JetChase (actor);
@@ -4474,10 +4465,10 @@ void A_MouseThink(mobj_t *actor)
 	{
 		if (twodlevel || actor->flags2 & MF2_TWOD)
 		{
-			if (P_Random() & 1)
+			if (P_RandomChance(FRACUNIT/2))
 				actor->angle += ANGLE_180;
 		}
-		else if (P_Random() & 1)
+		else if (P_RandomChance(FRACUNIT/2))
 			actor->angle += ANGLE_90;
 		else
 			actor->angle -= ANGLE_90;
@@ -4883,7 +4874,7 @@ void A_RockSpawn(mobj_t *actor)
 	type = MT_ROCKCRUMBLE1 + (sides[line->sidenum[0]].rowoffset >> FRACBITS);
 
 	if (line->flags & ML_NOCLIMB)
-		randomoomph = P_Random() * (FRACUNIT/32);
+		randomoomph = P_RandomByte() * (FRACUNIT/32);
 	else
 		randomoomph = 0;
 
@@ -5177,7 +5168,7 @@ void A_CrawlaCommanderThink(mobj_t *actor)
 
 	if (locvar1)
 	{
-		if (actor->health < 2 && P_Random() < 2)
+		if (actor->health < 2 && P_RandomChance(FRACUNIT/128))
 			P_SpawnMissile(actor, actor->target, locvar1);
 	}
 
@@ -5192,8 +5183,8 @@ void A_CrawlaCommanderThink(mobj_t *actor)
 		actor->threshold = 0;
 
 		// Roam around, somewhat in the player's direction.
-		actor->angle += (P_Random()<<10);
-		actor->angle -= (P_Random()<<10);
+		actor->angle += (P_RandomByte()<<10);
+		actor->angle -= (P_RandomByte()<<10);
 
 		if (actor->health > 1)
 			P_InstaThrust(actor, actor->angle, FixedMul(10*FRACUNIT, actor->scale));
@@ -5209,7 +5200,7 @@ void A_CrawlaCommanderThink(mobj_t *actor)
 				actor->threshold = 1;
 			}
 		}
-		actor->reactiontime = 2*TICRATE + P_Random()/2;
+		actor->reactiontime = 2*TICRATE + P_RandomByte()/2;
 	}
 
 	if (actor->health == 1)
@@ -5227,8 +5218,8 @@ void A_CrawlaCommanderThink(mobj_t *actor)
 		}
 		else
 		{
-			UINT8 prandom = P_Random();
-			actor->angle = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y) + (P_Random() & 1 ? -prandom : +prandom);
+			UINT8 prandom = P_RandomByte();
+			actor->angle = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y) + (P_RandomChance(FRACUNIT/2) ? -prandom : +prandom);
 			P_InstaThrust(actor, actor->angle, FixedDiv(FixedMul(locvar2, actor->scale), 3*FRACUNIT/2));
 			actor->momz = FixedMul(locvar2, actor->scale); // Bounce up in air
 		}
@@ -5557,7 +5548,7 @@ void A_MixUp(mobj_t *actor)
 		{
 			if (counter > 255) // fail-safe to avoid endless loop
 				break;
-			prandom = P_Random();
+			prandom = P_RandomByte();
 			prandom %= numplayers; // I love modular arithmetic, don't you?
 			if (prandom) // Make sure it's not a useless mix
 				break;
@@ -5607,8 +5598,13 @@ void A_MixUp(mobj_t *actor)
 
 				P_SetThingPosition(players[i].mo);
 
+#ifdef ESLOPE
+				players[i].mo->floorz = P_GetFloorZ(players[i].mo, players[i].mo->subsector->sector, players[i].mo->x, players[i].mo->y, NULL);
+				players[i].mo->ceilingz = P_GetCeilingZ(players[i].mo, players[i].mo->subsector->sector, players[i].mo->x, players[i].mo->y, NULL);
+#else
 				players[i].mo->floorz = players[i].mo->subsector->sector->floorheight;
 				players[i].mo->ceilingz = players[i].mo->subsector->sector->ceilingheight;
+#endif
 
 				P_CheckPosition(players[i].mo, players[i].mo->x, players[i].mo->y);
 			}
@@ -5701,7 +5697,7 @@ void A_RecyclePowers(mobj_t *actor)
 	{
 		UINT8 tempint;
 
-		i = j + ((P_Random() + leveltime) % (numplayers - j));
+		i = j + ((P_RandomByte() + leveltime) % (numplayers - j));
 		tempint = postscramble[j];
 		postscramble[j] = postscramble[i];
 		postscramble[i] = tempint;
@@ -5814,7 +5810,7 @@ void A_Boss1Chase(mobj_t *actor)
 	{
 		if (actor->health > actor->info->damage)
 		{
-			if (P_Random() & 1)
+			if (P_RandomChance(FRACUNIT/2))
 				P_SetMobjState(actor, actor->info->missilestate);
 			else
 				P_SetMobjState(actor, actor->info->meleestate);
@@ -5833,7 +5829,7 @@ void A_Boss1Chase(mobj_t *actor)
 	// ?
 nomissile:
 	// possibly choose another target
-	if (multiplayer && P_Random() < 2)
+	if (multiplayer && P_RandomChance(FRACUNIT/128))
 	{
 		if (P_LookForPlayers(actor, true, false, 0))
 			return; // got a new target
@@ -5871,7 +5867,7 @@ nomissile:
 		deltay = actor->target->y - actor->y;
 
 		actor->movedir = diags[((deltay < 0)<<1) + (deltax > 0)];
-		actor->movecount = P_Random() & 15;
+		actor->movecount = P_RandomByte() & 15;
 	}
 }
 
@@ -5897,13 +5893,13 @@ void A_Boss2Chase(mobj_t *actor)
 
 	// Startup randomness
 	if (actor->reactiontime <= -666)
-		actor->reactiontime = 2*TICRATE + P_Random();
+		actor->reactiontime = 2*TICRATE + P_RandomByte();
 
 	// When reactiontime hits zero, he will go the other way
 	if (--actor->reactiontime <= 0)
 	{
 		reverse = true;
-		actor->reactiontime = 2*TICRATE + P_Random();
+		actor->reactiontime = 2*TICRATE + P_RandomByte();
 	}
 
 	P_SetTarget(&actor->target, P_GetClosestAxis(actor));
@@ -5990,12 +5986,12 @@ void A_Boss2Chase(mobj_t *actor)
 			if (actor->info->attacksound)
 				S_StartAttackSound(actor, actor->info->attacksound);
 
-			if (P_Random() & 1)
+			if (P_RandomChance(FRACUNIT/2))
 			{
 				goop->momx *= 2;
 				goop->momy *= 2;
 			}
-			else if (P_Random() > 128)
+			else if (P_RandomChance(129*FRACUNIT/256))
 			{
 				goop->momx *= 3;
 				goop->momy *= 3;
@@ -6153,7 +6149,7 @@ void A_Boss7Chase(mobj_t *actor)
 	{
 		A_FaceTarget(actor);
 		P_SetMobjState(actor, S_BLACKEGG_SHOOT1);
-		actor->movecount = TICRATE + P_Random()/2;
+		actor->movecount = TICRATE + P_RandomByte()/2;
 		return;
 	}
 
@@ -6162,7 +6158,7 @@ void A_Boss7Chase(mobj_t *actor)
 
 	if (actor->reactiontime <= 0 && actor->z == actor->floorz)
 	{
-		// Here, we'll call P_Random() and decide what kind of attack to do
+		// Here, we'll call P_RandomByte() and decide what kind of attack to do
 		switch(actor->threshold)
 		{
 			case 0: // Lob cannon balls
@@ -6170,7 +6166,7 @@ void A_Boss7Chase(mobj_t *actor)
 				{
 					A_FaceTarget(actor);
 					P_SetMobjState(actor, actor->info->xdeathstate);
-					actor->movecount = 7*TICRATE + P_Random();
+					actor->movecount = 7*TICRATE + P_RandomByte();
 					break;
 				}
 				actor->threshold++;
@@ -6180,9 +6176,9 @@ void A_Boss7Chase(mobj_t *actor)
 				P_SetMobjState(actor, S_BLACKEGG_SHOOT1);
 
 				if (actor->health > actor->info->damage)
-					actor->movecount = TICRATE + P_Random()/3;
+					actor->movecount = TICRATE + P_RandomByte()/3;
 				else
-					actor->movecount = TICRATE + P_Random()/2;
+					actor->movecount = TICRATE + P_RandomByte()/2;
 				break;
 			case 2: // Homing Missile
 				A_FaceTarget(actor);
@@ -6266,8 +6262,8 @@ void A_Boss2PogoSFX(mobj_t *actor)
 	}
 	else
 	{
-		UINT8 prandom = P_Random();
-		actor->angle = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y) + (P_Random() & 1 ? -prandom : +prandom);
+		UINT8 prandom = P_RandomByte();
+		actor->angle = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y) + (P_RandomChance(FRACUNIT/2) ? -prandom : +prandom);
 		P_InstaThrust(actor, actor->angle, FixedMul(FixedMul(actor->info->speed,(locvar2)), actor->scale));
 	}
 	if (actor->info->activesound) S_StartSound(actor, actor->info->activesound);
@@ -6307,10 +6303,10 @@ void A_Boss2PogoTarget(mobj_t *actor)
 	// Target hit, retreat!
 	if (actor->target->player->powers[pw_flashing] > TICRATE || actor->flags2 & MF2_FRET)
 	{
-		UINT8 prandom = P_Random();
+		UINT8 prandom = P_RandomByte();
 		actor->z++; // unstick from the floor
 		actor->momz = FixedMul(locvar1, actor->scale); // Bounce up in air
-		actor->angle = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y) + (P_Random() & 1 ? -prandom : +prandom); // Pick a direction, and randomize it.
+		actor->angle = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y) + (P_RandomChance(FRACUNIT/2) ? -prandom : +prandom); // Pick a direction, and randomize it.
 		P_InstaThrust(actor, actor->angle+ANGLE_180, FixedMul(FixedMul(actor->info->speed,(locvar2)), actor->scale)); // Move at wandering speed
 	}
 	// Try to land on top of the player.
@@ -6347,10 +6343,10 @@ void A_Boss2PogoTarget(mobj_t *actor)
 	// Wander semi-randomly towards the player to get closer.
 	else
 	{
-		UINT8 prandom = P_Random();
+		UINT8 prandom = P_RandomByte();
 		actor->z++; // unstick from the floor
 		actor->momz = FixedMul(locvar1, actor->scale); // Bounce up in air
-		actor->angle = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y) + (P_Random() & 1 ? -prandom : +prandom); // Pick a direction, and randomize it.
+		actor->angle = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y) + (P_RandomChance(FRACUNIT/2) ? -prandom : +prandom); // Pick a direction, and randomize it.
 		P_InstaThrust(actor, actor->angle, FixedMul(FixedMul(actor->info->speed,(locvar2)), actor->scale)); // Move at wandering speed
 	}
 	// Boing!
@@ -6358,7 +6354,7 @@ void A_Boss2PogoTarget(mobj_t *actor)
 
 	if (actor->info->missilestate) // spawn the pogo stick collision box
 	{
-		mobj_t *pogo = P_SpawnMobj(actor->x, actor->y, actor->z - mobjinfo[actor->info->missilestate].height, actor->info->missilestate);
+		mobj_t *pogo = P_SpawnMobj(actor->x, actor->y, actor->z - mobjinfo[actor->info->missilestate].height, (mobjtype_t)actor->info->missilestate);
 		pogo->target = actor;
 	}
 
@@ -7084,7 +7080,7 @@ void A_SmokeTrailer(mobj_t *actor)
 	P_SetObjectMomZ(th, FRACUNIT, false);
 	th->destscale = actor->scale;
 	P_SetScale(th, actor->scale);
-	th->tics -= P_Random() & 3;
+	th->tics -= P_RandomByte() & 3;
 	if (th->tics < 1)
 		th->tics = 1;
 }
@@ -7183,7 +7179,7 @@ void A_ChangeAngleRelative(mobj_t *actor)
 	//  rather than the ranges, so <0 and >360 work as possible values. -Red
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
-	//angle_t angle = (P_Random()+1)<<24;
+	//angle_t angle = (P_RandomByte()+1)<<24;
 	const fixed_t amin = locvar1*FRACUNIT;
 	const fixed_t amax = locvar2*FRACUNIT;
 	//const angle_t amin = FixedAngle(locvar1*FRACUNIT);
@@ -7217,13 +7213,13 @@ void A_ChangeAngleAbsolute(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
-	//angle_t angle = (P_Random()+1)<<24;
+	//angle_t angle = (P_RandomByte()+1)<<24;
 	const fixed_t amin = locvar1*FRACUNIT;
 	const fixed_t amax = locvar2*FRACUNIT;
 	//const angle_t amin = FixedAngle(locvar1*FRACUNIT);
 	//const angle_t amax = FixedAngle(locvar2*FRACUNIT);
 #ifdef HAVE_BLUA
-	if (LUA_CallAction("A_ChangeAngelAbsolute", actor))
+	if (LUA_CallAction("A_ChangeAngleAbsolute", actor))
 		return;
 #endif
 
@@ -7593,48 +7589,35 @@ void A_SetTargetsTarget(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
-	mobj_t *targetedmobj = NULL;
-	thinker_t *th;
-	mobj_t *mo2;
+	mobj_t *oldtarg = NULL, *newtarg = NULL;
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_SetTargetsTarget", actor))
 		return;
 #endif
 
-	if ((!locvar1 && (!actor->target)) || (locvar1 && (!actor->tracer)))
+	// actor's target
+	if (locvar1) // or tracer
+		oldtarg = actor->tracer;
+	else
+		oldtarg = actor->target;
+
+	if (P_MobjWasRemoved(oldtarg))
 		return;
 
-	if ((!locvar1 && !locvar2 && (!actor->target->target))
-	|| (!locvar1 && locvar2 && (!actor->target->tracer))
-	|| (locvar1 && !locvar2 && (!actor->tracer->target))
-	|| (locvar1 && locvar2 && (!actor->tracer->tracer)))
-		return; // Don't search for nothing.
-
-	// scan the thinkers
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
-	{
-		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-			continue;
-
-		mo2 = (mobj_t *)th;
-
-		if ((!locvar1 && !locvar2 && (mo2 == actor->target->target))
-		|| (!locvar1 && locvar2 && (mo2 == actor->target->tracer))
-		|| (locvar1 && !locvar2 && (mo2 == actor->tracer->target))
-		|| (locvar1 && locvar2 && (mo2 == actor->tracer->tracer)))
-		{
-			targetedmobj = mo2;
-			break;
-		}
-	}
-
-	if (!targetedmobj)
-		return; // Oops, nothing found..
-
-	if (!locvar1)
-		P_SetTarget(&actor->target, targetedmobj);
+	// actor's target's target!
+	if (locvar2) // or tracer
+		newtarg = oldtarg->tracer;
 	else
-		P_SetTarget(&actor->tracer, targetedmobj);
+		newtarg = oldtarg->target;
+
+	if (P_MobjWasRemoved(newtarg))
+		return;
+
+	// set actor's new target
+	if (locvar1) // or tracer
+		P_SetTarget(&actor->tracer, newtarg);
+	else
+		P_SetTarget(&actor->target, newtarg);
 }
 
 // Function: A_SetObjectFlags
@@ -7651,26 +7634,33 @@ void A_SetObjectFlags(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
+	boolean unlinkthings = false;
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_SetObjectFlags", actor))
 		return;
 #endif
 
-	P_UnsetThingPosition(actor);
-	if (sector_list)
-	{
-		P_DelSeclist(sector_list);
-		sector_list = NULL;
+	if (locvar2 == 2)
+		locvar1 = actor->flags | locvar1;
+	else if (locvar2 == 1)
+		locvar1 = actor->flags & ~locvar1;
+
+	if ((locvar1 & (MF_NOBLOCKMAP|MF_NOSECTOR)) != (actor->flags & (MF_NOBLOCKMAP|MF_NOSECTOR))) // Blockmap/sector status has changed, so reset the links
+		unlinkthings = true;
+
+	if (unlinkthings) {
+		P_UnsetThingPosition(actor);
+		if (sector_list)
+		{
+			P_DelSeclist(sector_list);
+			sector_list = NULL;
+		}
 	}
 
-	if (locvar2 == 2)
-		actor->flags |= locvar1;
-	else if (locvar2 == 1)
-		actor->flags &= ~locvar1;
-	else
-		actor->flags = locvar1;
+	actor->flags = locvar1;
 
-	P_SetThingPosition(actor);
+	if (unlinkthings)
+		P_SetThingPosition(actor);
 }
 
 // Function: A_SetObjectFlags2
@@ -7831,7 +7821,7 @@ void A_RandomState(mobj_t *actor)
 		return;
 #endif
 
-	P_SetMobjState(actor, P_Random()&1 ? locvar1 : locvar2);
+	P_SetMobjState(actor, P_RandomChance(FRACUNIT/2) ? locvar1 : locvar2);
 }
 
 // Function: A_RandomStateRange
@@ -8522,34 +8512,32 @@ void A_SearchForPlayers(mobj_t *actor)
 
 // Function: A_CheckRandom
 //
-// Description: Calls a state by chance (around 1/var1).
+// Description: Calls a state by chance.
 //
-// var1 = denominator (can't exceed 100)
+// var1:
+//		lower 16 bits = denominator
+//		upper 16 bits = numerator (defaults to 1 if zero)
 // var2 = state number
 //
 void A_CheckRandom(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
-	INT32 i, chance;
-	INT32 rndadd = 0;
+	fixed_t chance = FRACUNIT;
+
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_CheckRandom", actor))
 		return;
 #endif
+	if ((locvar1 & 0xFFFF) == 0)
+		return;
 
-	if(locvar1 > 100)
-		locvar1 = 100;
+	// The PRNG doesn't suck anymore, OK?
+	if (locvar1 >> 16)
+		chance *= (locvar1 >> 16);
+	chance /= (locvar1 & 0xFFFF);
 
-	for (i = 0; i < MAXPLAYERS; i++)
-		if (playeringame[i])
-			rndadd += abs((int)players[i].mo->x) + abs((int)players[i].mo->y) + abs((int)players[i].mo->z);
-
-	rndadd = rndadd % 10000; //additional component to enlarge random number
-
-	chance = (P_Random() + rndadd) % locvar1;
-
-	if (chance == 0)
+	if (P_RandomChance(chance))
 		P_SetMobjState(actor, locvar2);
 }
 
@@ -9896,7 +9884,7 @@ void A_BrakChase(mobj_t *actor)
 		S_StartSound(actor, (sfxenum_t)locvar2);
 
 	// make active sound
-	if (actor->type != MT_CYBRAKDEMON && actor->info->activesound && P_Random() < 3)
+	if (actor->type != MT_CYBRAKDEMON && actor->info->activesound && P_RandomChance(3*FRACUNIT/256))
 	{
 		S_StartSound(actor, actor->info->activesound);
 	}

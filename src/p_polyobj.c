@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2006      by James Haley
-// Copyright (C) 2006-2014 by Sonic Team Junior.
+// Copyright (C) 2006-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -442,6 +442,8 @@ newseg:
 	// seg's ending vertex.
 	for (i = 0; i < numsegs; ++i)
 	{
+		if (segs[i].side != 0) // needs to be frontfacing
+			continue;
 		if (segs[i].v1->x == seg->v2->x && segs[i].v1->y == seg->v2->y)
 		{
 			// Make sure you didn't already add this seg...
@@ -610,14 +612,17 @@ static void Polyobj_spawnPolyObj(INT32 num, mobj_t *spawnSpot, INT32 id)
 		INT32 poflags = POF_SOLID|POF_TESTHEIGHT|POF_RENDERSIDES;
 		INT32 parentID = 0, potrans = 0;
 
+		if (seg->side != 0) // needs to be frontfacing
+			continue;
+
 		if (seg->linedef->special != POLYOBJ_START_LINE)
 			continue;
-		
+
 		if (seg->linedef->tag != po->id)
 			continue;
 
 		Polyobj_GetInfo(po->id, &poflags, &parentID, &potrans); // apply extra settings if they exist!
-		
+
 		// save original flags and translucency to reference later for netgames!
 		po->spawnflags = po->flags = poflags;
 		po->spawntrans = po->translucency = potrans;
@@ -657,6 +662,14 @@ static void Polyobj_spawnPolyObj(INT32 num, mobj_t *spawnSpot, INT32 id)
 		// TODO: sound sequence is in args[3]
 	}*/
 
+	// make sure array isn't empty
+	// since Polyobj_findExplicit is disabled currently, we have to do things here instead now!
+	if (po->segCount == 0)
+	{
+		po->isBad = true;
+		CONS_Debug(DBG_POLYOBJ, "Polyobject %d is empty\n", po->id);
+		return;
+	}
 
 	// set the polyobject's spawn spot
 	po->spawnSpot.x = spawnSpot->x;
@@ -848,10 +861,10 @@ static void Polyobj_linkToBlockmap(polyobj_t *po)
 		M_AddToBox(blockbox, po->vertices[i]->x, po->vertices[i]->y);
 
 	// adjust bounding box relative to blockmap
-	blockbox[BOXRIGHT]  = (blockbox[BOXRIGHT]  - bmaporgx) >> MAPBLOCKSHIFT;
-	blockbox[BOXLEFT]   = (blockbox[BOXLEFT]   - bmaporgx) >> MAPBLOCKSHIFT;
-	blockbox[BOXTOP]    = (blockbox[BOXTOP]    - bmaporgy) >> MAPBLOCKSHIFT;
-	blockbox[BOXBOTTOM] = (blockbox[BOXBOTTOM] - bmaporgy) >> MAPBLOCKSHIFT;
+	blockbox[BOXRIGHT]  = (unsigned)(blockbox[BOXRIGHT]  - bmaporgx) >> MAPBLOCKSHIFT;
+	blockbox[BOXLEFT]   = (unsigned)(blockbox[BOXLEFT]   - bmaporgx) >> MAPBLOCKSHIFT;
+	blockbox[BOXTOP]    = (unsigned)(blockbox[BOXTOP]    - bmaporgy) >> MAPBLOCKSHIFT;
+	blockbox[BOXBOTTOM] = (unsigned)(blockbox[BOXBOTTOM] - bmaporgy) >> MAPBLOCKSHIFT;
 
 	// link polyobject to every block its bounding box intersects
 	for (y = blockbox[BOXBOTTOM]; y <= blockbox[BOXTOP]; ++y)
@@ -1079,10 +1092,10 @@ static INT32 Polyobj_clipThings(polyobj_t *po, line_t *line)
 		return hitflags;
 
 	// adjust linedef bounding box to blockmap, extend by MAXRADIUS
-	linebox[BOXLEFT]   = (line->bbox[BOXLEFT]   - bmaporgx - MAXRADIUS) >> MAPBLOCKSHIFT;
-	linebox[BOXRIGHT]  = (line->bbox[BOXRIGHT]  - bmaporgx + MAXRADIUS) >> MAPBLOCKSHIFT;
-	linebox[BOXBOTTOM] = (line->bbox[BOXBOTTOM] - bmaporgy - MAXRADIUS) >> MAPBLOCKSHIFT;
-	linebox[BOXTOP]    = (line->bbox[BOXTOP]    - bmaporgy + MAXRADIUS) >> MAPBLOCKSHIFT;
+	linebox[BOXLEFT]   = (unsigned)(line->bbox[BOXLEFT]   - bmaporgx - MAXRADIUS) >> MAPBLOCKSHIFT;
+	linebox[BOXRIGHT]  = (unsigned)(line->bbox[BOXRIGHT]  - bmaporgx + MAXRADIUS) >> MAPBLOCKSHIFT;
+	linebox[BOXBOTTOM] = (unsigned)(line->bbox[BOXBOTTOM] - bmaporgy - MAXRADIUS) >> MAPBLOCKSHIFT;
+	linebox[BOXTOP]    = (unsigned)(line->bbox[BOXTOP]    - bmaporgy + MAXRADIUS) >> MAPBLOCKSHIFT;
 
 	// check all mobj blockmap cells the line contacts
 	for (y = linebox[BOXBOTTOM]; y <= linebox[BOXTOP]; ++y)

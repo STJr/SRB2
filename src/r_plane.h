@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -21,13 +21,14 @@
 //
 // Now what is a visplane, anyway?
 // Simple: kinda floor/ceiling polygon optimised for SRB2 rendering.
-// 7748 bytes! (for win32, anyway)
+// 7764 bytes! (for win32, anyway)
 //
 typedef struct visplane_s
 {
 	struct visplane_s *next;
 
-	fixed_t height, viewz;
+	fixed_t height;
+	fixed_t viewx, viewy, viewz;
 	angle_t viewangle;
 	angle_t plangle;
 	INT32 picnum;
@@ -61,6 +62,9 @@ typedef struct visplane_s
 #ifdef POLYOBJECTS_PLANES
 	polyobj_t *polyobj;
 #endif
+#ifdef ESLOPE
+	pslope_t *slope;
+#endif
 } visplane_t;
 
 extern visplane_t *floorplane;
@@ -69,7 +73,6 @@ extern visplane_t *ceilingplane;
 // Visplane related.
 extern INT16 *lastopening, *openings;
 extern size_t maxopenings;
-typedef void (*planefunction_t)(INT32 top, INT32 bottom);
 
 extern INT16 floorclip[MAXVIDWIDTH], ceilingclip[MAXVIDWIDTH];
 extern fixed_t frontscale[MAXVIDWIDTH], yslopetab[MAXVIDHEIGHT*4];
@@ -78,6 +81,8 @@ extern fixed_t cacheddistance[MAXVIDHEIGHT];
 extern fixed_t cachedxstep[MAXVIDHEIGHT];
 extern fixed_t cachedystep[MAXVIDHEIGHT];
 extern fixed_t basexscale, baseyscale;
+
+extern lighttable_t **planezlight;
 
 extern fixed_t *yslope;
 extern fixed_t distscale[MAXVIDWIDTH];
@@ -91,7 +96,11 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2);
 void R_MakeSpans(INT32 x, INT32 t1, INT32 b1, INT32 t2, INT32 b2);
 void R_DrawPlanes(void);
 visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel, fixed_t xoff, fixed_t yoff, angle_t plangle,
-	extracolormap_t *planecolormap, ffloor_t *ffloor);
+	extracolormap_t *planecolormap, ffloor_t *ffloor
+#ifdef ESLOPE
+	, pslope_t *slope
+#endif
+	);
 visplane_t *R_CheckPlane(visplane_t *pl, INT32 start, INT32 stop);
 void R_ExpandPlane(visplane_t *pl, INT32 start, INT32 stop);
 void R_PlaneBounds(visplane_t *plane);
@@ -109,6 +118,14 @@ typedef struct planemgr_s
 	fixed_t b_frac, b_step;
 	INT16 f_clip[MAXVIDWIDTH];
 	INT16 c_clip[MAXVIDWIDTH];
+
+#ifdef ESLOPE
+	// For slope rendering; the height at the other end
+	fixed_t f_pos_slope;
+	fixed_t b_pos_slope;
+
+	struct pslope_s *slope;
+#endif
 
 	struct ffloor_s *ffloor;
 #ifdef POLYOBJECTS_PLANES

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -160,11 +160,15 @@ typedef enum
 	// Are animation frames playing?
 	PA_ETC=0,
 	PA_IDLE,
+	PA_EDGE,
 	PA_WALK,
 	PA_RUN,
+	PA_PAIN,
 	PA_ROLL,
+	PA_SPRING,
 	PA_FALL,
-	PA_ABILITY
+	PA_ABILITY,
+	PA_RIDE
 } panim_t;
 
 typedef enum
