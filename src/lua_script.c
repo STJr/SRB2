@@ -416,6 +416,14 @@ void LUA_InvalidateLevel(void)
 		LUA_InvalidateUserdata(&sides[i]);
 	for (i = 0; i < numvertexes; i++)
 		LUA_InvalidateUserdata(&vertexes[i]);
+	for (i = 0; i < numsegs; i++)
+		LUA_InvalidateUserdata(&segs[i]);
+	for (i = 0; i < numnodes; i++)
+	{
+		LUA_InvalidateUserdata(&nodes[i]);
+		LUA_InvalidateUserdata(nodes[i].bbox);
+		LUA_InvalidateUserdata(nodes[i].children);
+	}
 }
 
 void LUA_InvalidateMapthings(void)
