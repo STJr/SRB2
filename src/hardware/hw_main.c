@@ -1719,12 +1719,12 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				if (!(gr_linedef->flags & ML_DONTPEGBOTTOM))
 					texturevpegbottom = 0;
 				else if (gr_linedef->flags & ML_EFFECT1)
-					texturevpegbottom = worldbottom - worldlow;
+					texturevpegbottom = worldtop - worldlow;
 				else
-					texturevpegbottom = gr_frontsector->floorheight - gr_backsector->floorheight;
+					texturevpegbottom = gr_frontsector->ceilingheight - gr_backsector->floorheight;
 #else
 				if (gr_linedef->flags & ML_DONTPEGBOTTOM)
-					texturevpegbottom = worldbottom - worldlow;
+					texturevpegbottom = worldtop - worldlow;
                 else
                     texturevpegbottom = 0;
 #endif

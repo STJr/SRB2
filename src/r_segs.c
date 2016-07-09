@@ -2214,7 +2214,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 #ifdef ESLOPE
 			if (!(linedef->flags & ML_EFFECT1)) { // Ignore slopes for lower/upper textures unless flag is checked
 				if (linedef->flags & ML_DONTPEGBOTTOM)
-					rw_bottomtexturemid = frontsector->floorheight - viewz;
+					rw_bottomtexturemid = frontsector->ceilingheight - viewz; // use front ceilingheight, not floorheight
 				else
 					rw_bottomtexturemid = backsector->floorheight - viewz;
 			} else
@@ -2223,7 +2223,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			{
 				// bottom of texture at bottom
 				// top of texture at top
-				rw_bottomtexturemid = worldbottom;
+				rw_bottomtexturemid = worldtop; // use front ceilingheight, not floorheight
 #ifdef ESLOPE
 				rw_bottomtextureslide = floorfrontslide;
 #endif
