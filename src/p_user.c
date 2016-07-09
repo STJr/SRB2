@@ -3501,6 +3501,9 @@ static void P_DoSuperStuff(player_t *player)
 				case S_PLAY_SUPER_RUN:
 					P_SetPlayerMobjState(player->mo, S_PLAY_RUN);
 					break;
+				case S_PLAY_SUPER_PEEL:
+					P_SetPlayerMobjState(player->mo, S_PLAY_PEEL);
+					break;
 				case S_PLAY_SUPER_PAIN:
 					P_SetPlayerMobjState(player->mo, S_PLAY_PAIN);
 					break;
@@ -6507,9 +6510,12 @@ static void P_MovePlayer(player_t *player)
 
 	if ((cmd->forwardmove != 0 || cmd->sidemove != 0) || (player->powers[pw_super] && !onground))
 	{
+		// If the player is in dashmode, here's their peelout.
+		if (player->charability == CA_DASHMODE && player->dashmode >= 3*TICRATE && player->panim == PA_RUN && !player->skidtime && (onground || player->powers[pw_super]))
+			P_SetPlayerMobjState (player->mo, S_PLAY_PEEL);
 		// If the player is moving fast enough,
 		// break into a run!
-		if (player->speed >= runspd && player->panim == PA_WALK && !player->skidtime && (onground || player->powers[pw_super]))
+		else if (player->speed >= runspd && player->panim == PA_WALK && !player->skidtime && (onground || player->powers[pw_super]))
 			P_SetPlayerMobjState (player->mo, S_PLAY_RUN);
 
 		// Super floating at slow speeds has its own special animation.
@@ -6520,6 +6526,11 @@ static void P_MovePlayer(player_t *player)
 		else if ((player->rmomx || player->rmomy) && player->panim == PA_IDLE)
 			P_SetPlayerMobjState (player->mo, S_PLAY_WALK);
 	}
+
+	// If your peelout animation is playing, and you're
+	// going too slow, switch back to the run.
+	if (player->panim == PA_PEEL && player->dashmode < 3*TICRATE)
+		P_SetPlayerMobjState(player->mo, S_PLAY_RUN);
 
 	// If your running animation is playing, and you're
 	// going too slow, switch back to the walking frames.
@@ -6851,7 +6862,7 @@ static void P_MovePlayer(player_t *player)
 #endif
 		}
 		// Otherwise, face the direction you're travelling.
-		else if (player->panim == PA_WALK || player->panim == PA_RUN || player->panim == PA_ROLL
+		else if (player->panim == PA_WALK || player->panim == PA_RUN || player->panim == PA_PEEL || player->panim == PA_ROLL
 		|| (player->mo->state-states == S_PLAY_FLY || player->mo->state-states == S_PLAY_FLY_TIRED))
 			player->mo->angle = R_PointToAngle2(0, 0, player->rmomx, player->rmomy);
 
@@ -9173,7 +9184,7 @@ void P_PlayerThink(player_t *player)
 	// Dash mode ability for Metal Sonic
 	if ((player->charability == CA_DASHMODE) && !(maptol & TOL_NIGHTS)) // woo, dashmode! no nights tho.
 	{
-		if (player->speed >= FixedMul(skins[player->skin].normalspeed - 5*FRACUNIT, player->mo->scale) || (player->pflags & PF_STARTDASH))
+		if (player->speed >= FixedMul(player->runspeed, player->mo->scale) || (player->pflags & PF_STARTDASH))
 		{
 			dashmode++; // Counter. Adds 1 to dash mode per tic in top speed.
 			if (dashmode == 3*TICRATE) // This isn't in the ">=" equation because it'd cause the sound to play infinitely.

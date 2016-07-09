@@ -165,6 +165,7 @@ typedef enum
 	PA_EDGE,
 	PA_WALK,
 	PA_RUN,
+	PA_PEEL,
 	PA_PAIN,
 	PA_ROLL,
 	PA_SPRING,
