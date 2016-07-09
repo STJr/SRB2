@@ -3676,6 +3676,7 @@ DoneSection2:
 			{
 				angle_t lineangle;
 				fixed_t linespeed;
+				fixed_t sfxnum;
 
 				lineangle = R_PointToAngle2(lines[i].v1->x, lines[i].v1->y, lines[i].v2->x, lines[i].v2->y);
 				linespeed = sides[lines[i].sidenum[0]].textureoffset;
@@ -3724,7 +3725,7 @@ DoneSection2:
 
 				player->powers[pw_flashing] = TICRATE/3;
 
-				fixed_t sfxnum = sides[lines[i].sidenum[0]].toptexture;
+				sfxnum = sides[lines[i].sidenum[0]].toptexture;
 
 				if (!sfxnum)
 					sfxnum = sfx_spdpad;

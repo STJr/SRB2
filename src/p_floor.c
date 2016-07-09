@@ -1798,9 +1798,9 @@ static mobj_t *SearchMarioNode(msecnode_t *node)
 
 void T_MarioBlockChecker(levelspecthink_t *block)
 {
+	line_t *masterline = block->sourceline;
 	if (block->sector->floorspeed) // Don't update the textures when the block's being bumped upwards.
 		return;
-	line_t *masterline = block->sourceline;
 	if (SearchMarioNode(block->sector->touching_thinglist))
 	{
 		sides[masterline->sidenum[0]].midtexture = sides[masterline->sidenum[0]].bottomtexture; // Update textures
