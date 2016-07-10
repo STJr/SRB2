@@ -474,6 +474,7 @@ enum
 	ARCH_SECTOR,
 	ARCH_SEG,
 	ARCH_NODE,
+	ARCH_FFLOOR,
 	ARCH_MAPHEADER,
 
 	ARCH_TEND=0xFF,
@@ -495,6 +496,7 @@ static const struct {
 	{META_SECTOR,   ARCH_SECTOR},
 	{META_SEG,      ARCH_SEG},
 	{META_NODE,     ARCH_NODE},
+	{META_FFLOOR,	ARCH_FFLOOR},
 	{META_MAPHEADER,   ARCH_MAPHEADER},
 	{NULL,          ARCH_NULL}
 };
@@ -707,6 +709,32 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 			}
 			break;
 		}
+		case ARCH_FFLOOR:
+		{
+			ffloor_t *rover = *((ffloor_t **)lua_touserdata(gL, myindex));
+			if (!rover)
+				WRITEUINT8(save_p, ARCH_NULL);
+			else {
+				ffloor_t *r2 = NULL;
+				UINT16 i = 0;
+				// search for id
+				for (r2 = rover->target->ffloors; r2; r2 = r2->next);
+				{
+					if (r2 == rover)
+						break;
+					i++;
+				}
+				if (!r2)
+					WRITEUINT8(save_p, ARCH_NULL);
+				else
+				{
+					WRITEUINT8(save_p, ARCH_FFLOOR);
+					WRITEUINT16(save_p, rover->target - sectors);
+					WRITEUINT16(save_p, i);
+				}
+			}
+			break;
+		}
 		case ARCH_MAPHEADER:
 		{
 			mapheader_t *header = *((mapheader_t **)lua_touserdata(gL, myindex));
@@ -891,6 +919,15 @@ static UINT8 UnArchiveValue(int TABLESINDEX)
 	case ARCH_NODE:
 		LUA_PushUserdata(gL, &nodes[READUINT16(save_p)], META_NODE);
 		break;
+	case ARCH_FFLOOR:
+	{
+		sector_t *sector = &sectors[READUINT16(save_p)];
+		UINT16 id = READUINT16(save_p);
+		ffloor_t *rover = P_GetFFloorByID(sector, id);
+		if (rover)
+			LUA_PushUserdata(gL, rover, META_FFLOOR);
+		break;
+	}
 	case ARCH_MAPHEADER:
 		LUA_PushUserdata(gL, &sectors[READUINT16(save_p)], META_MAPHEADER);
 		break;
