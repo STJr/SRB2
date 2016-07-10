@@ -6989,7 +6989,8 @@ static void P_MovePlayer(player_t *player)
 
 		// Less height while spinning. Good for spinning under things...?
 		if ((player->mo->state == &states[player->mo->info->painstate] || player->mo->state == &states[S_PLAY_SUPER_PAIN])
-		|| (!(player->charflags & SF_NOJUMPSPIN) && (player->pflags & (PF_SPINNING|PF_JUMPED)))
+		|| (!(player->charflags & SF_NOJUMPSPIN) && (player->pflags & PF_JUMPED))
+		|| (player->pflags & PF_SPINNING)
 		|| player->powers[pw_tailsfly] || player->pflags & PF_GLIDING
 		|| (player->charability == CA_FLY && player->mo->state-states == S_PLAY_FLY_TIRED))
 			player->mo->height = P_GetPlayerSpinHeight(player);
