@@ -4812,7 +4812,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	if (abs(i) > 128)
 	{
 		o = (lastdirection) ? -1 : 1;
-		char_scroll = (itemOn+o)*128*FRACUNIT;
+		char_scroll = (itemOn + o)*128*FRACUNIT;
 	}
 
 	i = (itemOn*128 - char_scroll/FRACUNIT);
@@ -4849,7 +4849,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 			prev = (currentMenu->numitems - 1);
 	} while (prev != i && PlayerMenu[prev].status == IT_DISABLED); // Skip over all disabled characters.
 
-	if (prev >= 0 && PlayerMenu[prev].status != IT_DISABLED
+	if (prev != i
 	&& o < 32)
 	{
 		picname = description[prev].picname;
@@ -4883,7 +4883,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 			next = 0;
 	} while (next != i && PlayerMenu[next].status == IT_DISABLED); // Skip over all disabled characters.
 
-	if (next < currentMenu->numitems && PlayerMenu[next].status != IT_DISABLED
+	if (next != i
 	&& o < 128)
 	{
 		picname = description[next].picname;
@@ -4910,9 +4910,9 @@ static void M_DrawSetupChoosePlayerMenu(void)
 
 	// current character
 	if (PlayerMenu[i].status == IT_DISABLED) // Prevent flickering.
-		i = (lastdirection) ? prev : next;
+		i = (lastdirection) ? prev : next; // This actually causes duplication at slow scroll speeds (<16FU per tic), but thankfully we always go quickly.
 
-	if (i < currentMenu->numitems && PlayerMenu[i].status != IT_DISABLED)
+	if (PlayerMenu[i].status != IT_DISABLED)
 	{
 		picname = description[i].picname;
 		if (picname[0] == '\0')
