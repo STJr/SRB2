@@ -2625,10 +2625,24 @@ void R_AddSkins(UINT16 wadnum)
 				skin->jumpfactor = FLOAT_TO_FIXED(atof(value));
 			else if (!stricmp(stoken, "highresscale"))
 				skin->highresscale = FLOAT_TO_FIXED(atof(value));
-			else
+			else // let's check if it's a sound, otherwise error out
 			{
-				INT32 found = false;
+				boolean found = false;
 				sfxenum_t i;
+				size_t stokenadjust;
+
+				// Remove the prefix. (We need to affect an adjusting variable so that we can print error messages if it's not actually a sound.)
+				if ((stoken[0] == 'D' || stoken[0] == 'd') && (stoken[1] == 'S' || stoken[1] == 's')) // DS*
+					stokenadjust = 2;
+				else // sfx_*
+					stokenadjust = 4;
+
+				// Remove the prefix. (We can affect this directly since we're not going to use it again.)
+				if ((value[0] == 'D' || value[0] == 'd') && (value[1] == 'S' || value[1] == 's')) // DS*
+					value += 2;
+				else // sfx_*
+					value += 4;
+
 				// copy name of sounds that are remapped
 				// for this skin
 				for (i = 0; i < sfx_skinsoundslot0; i++)
@@ -2637,15 +2651,15 @@ void R_AddSkins(UINT16 wadnum)
 						continue;
 					if (S_sfx[i].skinsound != -1
 						&& !stricmp(S_sfx[i].name,
-							stoken + 2))
+							stoken + stokenadjust))
 					{
 						skin->soundsid[S_sfx[i].skinsound] =
-							S_AddSoundFx(value+2, S_sfx[i].singularity, S_sfx[i].pitch, true);
+							S_AddSoundFx(value, S_sfx[i].singularity, S_sfx[i].pitch, true);
 						found = true;
 					}
 				}
 				if (!found)
-					CONS_Debug(DBG_SETUP, "R_AddSkins: Unknown keyword '%s' in S_SKIN lump# %d (WAD %s)\n", stoken, lump, wadfiles[wadnum]->filename);
+					CONS_Debug(DBG_SETUP, "R_AddSkins: Unknown keyword '%s' in S_SKIN lump #%d (WAD %s)\n", stoken, lump, wadfiles[wadnum]->filename);
 			}
 next_token:
 			stoken = strtok(NULL, "\r\n= ");
