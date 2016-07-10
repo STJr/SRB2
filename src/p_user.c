@@ -3727,10 +3727,7 @@ void P_DoJump(player_t *player, boolean soundandstate)
 		if (!player->spectator)
 			S_StartSound(player->mo, sfx_jump); // Play jump sound!
 
-		if (!(player->charability2 == CA2_SPINDASH))
-			P_SetPlayerMobjState(player->mo, S_PLAY_SPRING);
-		else
-			P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
+		P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 	}
 }
 
@@ -3780,7 +3777,7 @@ static void P_DoSpinDash(player_t *player, ticcmd_t *cmd)
 					S_StartSound(player->mo, sfx_spndsh); // Make the rev sound!
 
 				// Now spawn the color thok circle.
-				if (player->mo->sprite2 != SPR2_DASH)
+				if (player->revitem)
 				{
 					P_SpawnSpinMobj(player, player->revitem);
 					if (demorecording)
@@ -3827,19 +3824,29 @@ static void P_DoSpinDash(player_t *player, ticcmd_t *cmd)
 	}
 
 	// Catapult the player from a spindash rev!
-	if (onground && !(player->pflags & PF_USEDOWN) && player->dashspeed && (player->pflags & PF_STARTDASH) && (player->pflags & PF_SPINNING))
+	if (onground && !(player->pflags & PF_USEDOWN) && (player->pflags & PF_STARTDASH) && (player->pflags & PF_SPINNING))
 	{
+		player->pflags &= ~PF_STARTDASH;
 		if (player->powers[pw_ingoop])
 			player->dashspeed = 0;
 
-		player->pflags &= ~PF_STARTDASH;
 		if (!((gametype == GT_RACE || gametype == GT_COMPETITION) && leveltime < 4*TICRATE))
 		{
-			P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
-			P_InstaThrust(player->mo, player->mo->angle, player->dashspeed); // catapult forward ho!!
+			if (player->dashspeed)
+			{
+				P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
+				P_InstaThrust(player->mo, player->mo->angle, player->dashspeed); // catapult forward ho!!
+			}
+			else
+			{
+				P_SetPlayerMobjState(player->mo, S_PLAY_STND);
+				player->pflags &= ~PF_SPINNING;
+			}
+
 			if (!player->spectator)
 				S_StartSound(player->mo, sfx_zoom);
 		}
+
 		player->dashspeed = 0;
 	}
 
@@ -6524,8 +6531,10 @@ static void P_MovePlayer(player_t *player)
 			P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
 	}
 
-	// If Springing, but travelling DOWNWARD, change back!
-	if (player->panim == PA_SPRING && P_MobjFlip(player->mo)*player->mo->momz < 0)
+	// If Springing (or nojumpspinning), but travelling DOWNWARD, change back! (nojumpspin also turns to fall once PF_THOKKED is added.)
+	if ((player->panim == PA_SPRING && P_MobjFlip(player->mo)*player->mo->momz < 0)
+		|| ((((player->charflags & SF_NOJUMPSPIN) && (player->pflags & PF_JUMPED) && player->panim == PA_JUMP))
+			&& (P_MobjFlip(player->mo)*player->mo->momz < 0 || player->pflags & PF_THOKKED)))
 		P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
 	// If Springing but on the ground, change back!
 	else if (onground && (player->panim == PA_SPRING || player->panim == PA_FALL || player->panim == PA_RIDE) && !player->mo->momz)
@@ -6844,7 +6853,7 @@ static void P_MovePlayer(player_t *player)
 #endif
 		}
 		// Otherwise, face the direction you're travelling.
-		else if (player->panim == PA_WALK || player->panim == PA_RUN || player->panim == PA_ROLL
+		else if (player->panim == PA_WALK || player->panim == PA_RUN || player->panim == PA_ROLL || player->panim == PA_JUMP
 		|| (player->mo->state-states == S_PLAY_FLY || player->mo->state-states == S_PLAY_FLY_TIRED))
 			player->mo->angle = R_PointToAngle2(0, 0, player->rmomx, player->rmomy);
 
@@ -6893,7 +6902,7 @@ static void P_MovePlayer(player_t *player)
 			if (player->skin == 0 && player->powers[pw_super] && player->speed > FixedMul(5<<FRACBITS, player->mo->scale)
 			&& P_MobjFlip(player->mo)*player->mo->momz <= 0)
 			{
-				if (player->panim == PA_ROLL || player->mo->state-states == S_PLAY_PAIN || player->panim == PA_WALK)
+				if (player->panim == PA_ROLL || player->panim == PA_JUMP || player->mo->state-states == S_PLAY_PAIN || player->panim == PA_WALK)
 					P_SetPlayerMobjState(player->mo, S_PLAY_SUPER_FLOAT);
 
 				player->mo->momz = 0;
@@ -6980,7 +6989,7 @@ static void P_MovePlayer(player_t *player)
 
 		// Less height while spinning. Good for spinning under things...?
 		if ((player->mo->state == &states[player->mo->info->painstate] || player->mo->state == &states[S_PLAY_SUPER_PAIN])
-		|| (player->charability2 == CA2_SPINDASH && (player->pflags & (PF_SPINNING|PF_JUMPED)))
+		|| (!(player->charflags & SF_NOJUMPSPIN) && (player->pflags & (PF_SPINNING|PF_JUMPED)))
 		|| player->powers[pw_tailsfly] || player->pflags & PF_GLIDING
 		|| (player->charability == CA_FLY && player->mo->state-states == S_PLAY_FLY_TIRED))
 			player->mo->height = P_GetPlayerSpinHeight(player);
@@ -7274,7 +7283,7 @@ static void P_DoRopeHang(player_t *player)
 		player->pflags &= ~PF_ROPEHANG;
 
 		if (!(player->pflags & PF_SLIDING) && (player->pflags & PF_JUMPED)
-		&& !(player->panim == PA_ROLL) && player->charability2 == CA2_SPINDASH)
+		&& !(player->panim == PA_JUMP))
 			P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 		return;
 	}
@@ -7391,7 +7400,7 @@ static void P_DoRopeHang(player_t *player)
 				player->pflags &= ~PF_ROPEHANG;
 
 				if (!(player->pflags & PF_SLIDING) && (player->pflags & PF_JUMPED)
-				&& !(player->panim == PA_ROLL) && player->charability2 == CA2_SPINDASH)
+				&& !(player->panim == PA_JUMP))
 					P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 			}
 
@@ -8733,7 +8742,7 @@ void P_PlayerThink(player_t *player)
 		if (player->panim != PA_ABILITY)
 			P_SetPlayerMobjState(player->mo, S_PLAY_GLIDE);
 	}
-	else if ((player->pflags & PF_JUMPED) && !player->powers[pw_super] && player->panim != PA_ROLL && player->charability2 == CA2_SPINDASH)
+	else if ((player->pflags & PF_JUMPED) && !player->powers[pw_super] && player->panim != PA_JUMP && !(player->charflags & SF_NOJUMPSPIN))
 		P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 
 	if (player->flashcount)
@@ -8977,7 +8986,7 @@ void P_PlayerThink(player_t *player)
 		else
 		{
 			P_DoZoomTube(player);
-			if (!(player->panim == PA_ROLL) && player->charability2 == CA2_SPINDASH)
+			if (!(player->panim == PA_ROLL))
 				P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
 		}
 		player->rmomx = player->rmomy = 0; // no actual momentum from your controls
@@ -9361,9 +9370,9 @@ void P_PlayerAfterThink(player_t *player)
 	else if (player->pflags & PF_SLIDING)
 		P_SetPlayerMobjState(player->mo, player->mo->info->painstate);
 	else if (player->pflags & PF_JUMPED
-	&& ((!player->powers[pw_super] && player->panim != PA_ROLL)
+	&& ((!player->powers[pw_super] && player->panim != PA_JUMP)
 	|| player->mo->state == &states[player->mo->info->painstate])
-	&& player->charability2 == CA2_SPINDASH)
+	&& !(player->charflags & SF_NOJUMPSPIN))
 		P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 
 	if (player->pflags & PF_CARRIED && player->mo->tracer)

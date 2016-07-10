@@ -300,7 +300,9 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		}
 
 		if (((player->pflags & PF_NIGHTSMODE) && (player->pflags & PF_DRILLING))
-		|| (player->pflags & (PF_JUMPED|PF_SPINNING|PF_GLIDING))
+		|| ((player->pflags & PF_JUMPED) && !(player->charflags & SF_NOJUMPDAMAGE))
+		|| (player->pflags & (PF_SPINNING|PF_GLIDING))
+		|| ((player->charflags & SF_STOMPDAMAGE) && (P_MobjFlip(toucher)*(toucher->z - (special->z + special->height/2)) > 0) && (P_MobjFlip(toucher)*toucher->momz < 0))
 		|| player->powers[pw_invulnerability] || player->powers[pw_super]) // Do you possess the ability to subdue the object?
 		{
 			if (P_MobjFlip(toucher)*toucher->momz < 0)
@@ -343,7 +345,9 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			P_DamageMobj(toucher, special, special, 1, 0);
 		}
 		else if (((player->pflags & PF_NIGHTSMODE) && (player->pflags & PF_DRILLING))
-		|| (player->pflags & (PF_JUMPED|PF_SPINNING|PF_GLIDING))
+		|| ((player->pflags & PF_JUMPED) && !(player->charflags & SF_NOJUMPDAMAGE))
+		|| (player->pflags & (PF_SPINNING|PF_GLIDING))
+		|| ((player->charflags & SF_STOMPDAMAGE) && (P_MobjFlip(toucher)*(toucher->z - (special->z + special->height/2)) > 0) && (P_MobjFlip(toucher)*toucher->momz < 0))
 		|| player->powers[pw_invulnerability] || player->powers[pw_super]) // Do you possess the ability to subdue the object?
 		{
 			if (P_MobjFlip(toucher)*toucher->momz < 0)
@@ -1298,7 +1302,10 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					S_StartSound(toucher, special->info->painsound);
 					return;
 				}
-				else if (((player->pflags & PF_NIGHTSMODE) && (player->pflags & PF_DRILLING)) || (player->pflags & (PF_JUMPED|PF_SPINNING|PF_GLIDING))
+				else if (((player->pflags & PF_NIGHTSMODE) && (player->pflags & PF_DRILLING))
+						|| ((player->pflags & PF_JUMPED) && !(player->charflags & SF_NOJUMPDAMAGE))
+						|| ((player->charflags & SF_STOMPDAMAGE) && (P_MobjFlip(toucher)*(toucher->z - (special->z + special->height/2)) > 0) && (P_MobjFlip(toucher)*toucher->momz < 0))
+						|| (player->pflags & (PF_SPINNING|PF_GLIDING))
 						|| player->powers[pw_invulnerability] || player->powers[pw_super]) // Do you possess the ability to subdue the object?
 				{
 					// Shatter the shield!

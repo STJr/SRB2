@@ -938,7 +938,9 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			&& thing->z + thing->height + FixedMul(FRACUNIT, thing->scale) >= tmthing->z)
 		{
 			if (thing->flags & MF_MONITOR
-				&& tmthing->player->pflags & (PF_JUMPED|PF_SPINNING|PF_GLIDING))
+				&& (tmthing->player->pflags & (PF_SPINNING|PF_GLIDING)
+				|| ((tmthing->player->pflags & PF_JUMPED) && !(tmthing->player->charflags & SF_NOJUMPDAMAGE))
+				|| ((tmthing->player->charflags & SF_STOMPDAMAGE) && (P_MobjFlip(tmthing)*(tmthing->z - (thing->z + thing->height/2)) > 0) && (P_MobjFlip(tmthing)*tmthing->momz < 0))))
 			{
 				SINT8 flipval = P_MobjFlip(thing); // Save this value in case monitor gets removed.
 				fixed_t *momz = &tmthing->momz; // tmthing gets changed by P_DamageMobj, so we need a new pointer?! X_x;;
@@ -960,7 +962,10 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	}
 	// Monitors are not treated as solid to players who are jumping, spinning or gliding,
 	// unless it's a CTF team monitor and you're on the wrong team
-	else if (thing->flags & MF_MONITOR && tmthing->player && tmthing->player->pflags & (PF_JUMPED|PF_SPINNING|PF_GLIDING)
+	else if (thing->flags & MF_MONITOR && tmthing->player
+	&& (tmthing->player->pflags & (PF_SPINNING|PF_GLIDING)
+		|| ((tmthing->player->pflags & PF_JUMPED) && !(tmthing->player->charflags & SF_NOJUMPDAMAGE))
+		|| ((tmthing->player->charflags & SF_STOMPDAMAGE) && (P_MobjFlip(tmthing)*(tmthing->z - (thing->z + thing->height/2)) > 0) && (P_MobjFlip(tmthing)*tmthing->momz < 0)))
 	&& !((thing->type == MT_REDRINGBOX && tmthing->player->ctfteam != 1) || (thing->type == MT_BLUERINGBOX && tmthing->player->ctfteam != 2)))
 		;
 	// z checking at last

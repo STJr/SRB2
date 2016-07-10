@@ -238,10 +238,12 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		break;
 	case S_PLAY_SPIN:
 	case S_PLAY_DASH:
-	case S_PLAY_JUMP:
 	case S_PLAY_SUPER_SPIN:
-	case S_PLAY_SUPER_JUMP:
 		player->panim = PA_ROLL;
+		break;
+	case S_PLAY_JUMP:
+	case S_PLAY_SUPER_JUMP:
+		player->panim = PA_JUMP;
 		break;
 	case S_PLAY_SPRING:
 	case S_PLAY_SUPER_SPRING:
@@ -286,7 +288,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		if (!(disableSpeedAdjust || player->charflags & SF_NOSPEEDADJUST))
 		{
 			fixed_t speed = FixedDiv(player->speed, mobj->scale);
-			if (player->panim == PA_ROLL)
+			if (player->panim == PA_ROLL || player->panim == PA_JUMP)
 			{
 				if (speed > 16<<FRACBITS)
 					mobj->tics = 1;
@@ -329,12 +331,13 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		// Player animations
 		if (st->sprite == SPR_PLAY)
 		{
+			skin_t *skin = ((skin_t *)mobj->skin);
 			boolean noalt = false;
 			UINT8 spr2 = st->frame & FF_FRAMEMASK;
 			UINT16 frame = (mobj->frame & FF_FRAMEMASK)+1;
 		mobj->anim_duration = (UINT16)st->var2; // only used if FF_ANIMATE is set
 
-			while (((skin_t *)mobj->skin)->sprites[spr2].numframes <= 0
+			while (skin->sprites[spr2].numframes <= 0
 				&& spr2 != SPR2_STND)
 			{
 				switch(spr2)
@@ -352,7 +355,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 					spr2 = SPR2_SPNG;
 					break;
 				case SPR2_JUMP:
-					spr2 = SPR2_SPIN;
+					spr2 = (skin->flags & SF_NOJUMPSPIN) ? SPR2_SPNG : SPR2_SPIN;
 					break;
 				case SPR2_SPNG: // spring
 					spr2 = SPR2_FALL;
