@@ -1766,9 +1766,9 @@ static int lib_sChangeMusic(lua_State *L)
 }
 
 //=====================================================================
-//miru: A block where I can put my open functions to Lua...they can be organized later
+//miru: A block where I, can put my open functions to Lua...they can be organized later
 //(or just shoved into a future mir_lua.c like before)
-static int lib_sPositionMusic(lua_State *L)
+static int lib_sSetMusicPosition(lua_State *L)
 {
 	fixed_t fixedspeed = luaL_checkfixed(L, 1);
 	float position = fixedspeed*0.001f;
@@ -1782,15 +1782,15 @@ static int lib_sPositionMusic(lua_State *L)
 			return LUA_ErrInvalid(L, "player_t");
 	}
 	if (!player || P_IsLocalPlayer(player))
-		S_PositionMusic(position);
+		S_SetMusicPosition(position);
 	return 0;
 }
 
-static int lib_sGetPositionMusic(lua_State *L)
+static int lib_sGetMusicPosition(lua_State *L)
 {
-    float fpos = S_GetPositionMusic();
+    float fpos = S_GetMusicPosition();
 	lua_pushnumber(L, (lua_Number)(fpos*1000));
-    //CONS_Printf("GetPositionMusic: %05f\n\n\n",fpos);
+    //CONS_Printf("GetMusicPosition: %05f\n\n\n",fpos);
     return 1;
 }
 
@@ -2210,8 +2210,8 @@ static luaL_Reg lib[] = {
 	{"G_TicsToMilliseconds",lib_gTicsToMilliseconds},
 
     //miru: Put everything added here, categorizing right now isn't something I want to wander through
-	{"S_PositionMusic",lib_sPositionMusic},
-	{"S_GetPositionMusic",lib_sGetPositionMusic},
+	{"S_SetMusicPosition",lib_sSetMusicPosition},
+	{"S_GetMusicPosition",lib_sGetMusicPosition},
 	{"S_FadeOutMusic",lib_sFadeOutMusic},
 	{"P_SetActiveMotionBlur",lib_pSetActiveMotionBlur},
 

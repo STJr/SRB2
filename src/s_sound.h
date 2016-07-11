@@ -111,10 +111,10 @@ void S_ChangeMusic(const char *mmusic, UINT16 mflags, boolean looping);
 //(because I'm not allowed to name it to not be as sloppily named the way it is)
 
 // Seek to a point in the current song
-void S_PositionMusic(float position);
+void S_SetMusicPosition(float position);
 
 // Get the current music position
-float S_GetPositionMusic(void);
+float S_GetMusicPosition(void);
 
 // Fade in over milliseconds of time
 void S_FadeInMusic(int ms);

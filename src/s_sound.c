@@ -1271,12 +1271,12 @@ void S_ChangeMusic(const char *mmusic, UINT16 mflags, boolean looping)
 	I_SetSongTrack(mflags & MUSIC_TRACKMASK);
 }
 
-void S_PositionMusic(float position)
+void S_SetMusicPosition(float position)
 {
 	I_SetMusicPosition(position);
 }
 
-float S_GetPositionMusic(void)
+float S_GetMusicPosition(void)
 {
     return I_GetMusicPosition();
 }
