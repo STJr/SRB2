@@ -355,7 +355,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 					spr2 = SPR2_SPNG;
 					break;
 				case SPR2_JUMP:
-					spr2 = (skin->flags & SF_NOJUMPSPIN) ? SPR2_SPNG : SPR2_SPIN;
+					spr2 = (player->charflags & SF_NOJUMPSPIN) ? SPR2_SPNG : SPR2_SPIN;
 					break;
 				case SPR2_SPNG: // spring
 					spr2 = SPR2_FALL;
@@ -382,11 +382,6 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 					break;
 				case SPR2_CLNG:
 					spr2 = SPR2_CLMB;
-					break;
-
-				case SPR2_SIGN:
-				case SPR2_LIFE:
-					noalt = true;
 					break;
 
 				// Super sprites fallback to regular sprites
@@ -431,6 +426,12 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 					break;
 				case SPR2_SFLT:
 					spr2 = SPR2_SWLK;
+					break;
+
+				// Sprites for non-player objects? There's nothing we can do.
+				case SPR2_SIGN:
+				case SPR2_LIFE:
+					noalt = true;
 					break;
 
 				// Dunno? Just go to standing then.
