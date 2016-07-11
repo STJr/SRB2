@@ -584,6 +584,8 @@ static void readPlayer(MYFILE *f, INT32 num)
 
 				strlcpy(description[num].skinname, word2, sizeof description[num].skinname);
 				strlwr(description[num].skinname);
+
+				description[num].picname[0] = '\0'; // Redesign your logo. (See M_DrawSetupChoosePlayerMenu in m_menu.c...)
 			}
 			else
 				deh_warning("readPlayer %d: unknown word '%s'", num, word);

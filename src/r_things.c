@@ -2337,6 +2337,7 @@ INT32 R_SkinAvailable(const char *name)
 
 	for (i = 0; i < numskins; i++)
 	{
+		// search in the skin list
 		if (stricmp(skins[i].name,name)==0)
 			return i;
 	}
@@ -2346,17 +2347,13 @@ INT32 R_SkinAvailable(const char *name)
 // network code calls this when a 'skin change' is received
 void SetPlayerSkin(INT32 playernum, const char *skinname)
 {
-	INT32 i;
+	INT32 i = R_SkinAvailable(skinname);
 	player_t *player = &players[playernum];
 
-	for (i = 0; i < numskins; i++)
+	if (i != -1)
 	{
-		// search in the skin list
-		if (stricmp(skins[i].name, skinname) == 0)
-		{
-			SetPlayerSkinByNum(playernum, i);
-			return;
-		}
+		SetPlayerSkinByNum(playernum, i);
+		return;
 	}
 
 	if (P_IsLocalPlayer(player))
