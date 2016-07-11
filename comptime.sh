@@ -1,4 +1,4 @@
-#!/bin/sh -e
+#!/bin/bash -e
 path="."
 if [ x"$1" != x ]; then
 	path="$1"

@@ -874,7 +874,7 @@ void HWR_DoCoronasLighting(FOutVector *outVerts, gr_vissprite_t *spr)
 				size  = p_lspr->corona_radius  * ((outVerts[0].z+120.0f)/950.0f); // d'ou vienne ces constante ?
 				break;
 			case ROCKET_SPR:
-				p_lspr->corona_color = (((M_Random()>>1)&0xff)<<24)|0x0040ff;
+				p_lspr->corona_color = (((M_RandomByte()>>1)&0xff)<<24)|0x0040ff;
 				// don't need a break
 			case CORONA_SPR:
 				size  = p_lspr->corona_radius  * ((outVerts[0].z+60.0f)/100.0f); // d'ou vienne ces constante ?
@@ -977,7 +977,7 @@ void HWR_DrawCoronas(void)
 				size  = p_lspr->corona_radius  * ((cz+120.0f)/950.0f); // d'ou vienne ces constante ?
 				break;
 			case ROCKET_SPR:
-				Surf.FlatColor.s.alpha = (UINT8)((M_Random()>>1)&0xff);
+				Surf.FlatColor.s.alpha = (UINT8)((M_RandomByte()>>1)&0xff);
 				// don't need a break
 			case CORONA_SPR:
 				size  = p_lspr->corona_radius  * ((cz+60.0f)/100.0f); // d'ou vienne ces constante ?

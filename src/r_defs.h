@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -369,14 +369,6 @@ typedef struct sector_s
 	double lineoutLength;
 #endif // ----- end special tricks -----
 
-	// ZDoom C++ to Legacy C conversion (for slopes)
-	// store floor and ceiling planes instead of heights
-	//secplane_t floorplane, ceilingplane;
-#ifdef SLOPENESS
-	//fixed_t floortexz, ceilingtexz; // [RH] used for wall texture mapping
-	angle_t floorangle;
-#endif
-
 	// This points to the master's floorheight, so it can be changed in realtime!
 	fixed_t *gravity; // per-sector gravity
 	boolean verticalflip; // If gravity < 0, then allow flipped physics
@@ -674,6 +666,8 @@ typedef struct drawseg_s
 	INT16 *thicksidecol;
 	INT32 numthicksides;
 	fixed_t frontscale[MAXVIDWIDTH];
+
+	UINT8 portalpass; // if > 0 and <= portalrender, do not affect sprite clipping
 
 #ifdef ESLOPE
 	fixed_t maskedtextureheight[MAXVIDWIDTH]; // For handling sloped midtextures

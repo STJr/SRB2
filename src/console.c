@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -202,7 +202,7 @@ static void CONS_Bind_f(void)
 	}
 
 	key = G_KeyStringtoNum(COM_Argv(1));
-	if (!key)
+	if (key <= 0 || key >= NUMINPUTS)
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("Invalid key name\n"));
 		return;
@@ -310,7 +310,7 @@ static void CON_SetupBackColormap(void)
 	yellowmap[9] = (UINT8)66;
 	purplemap[3] = (UINT8)184;
 	purplemap[9] = (UINT8)186;
-	lgreenmap[3] = (UINT8)102;
+	lgreenmap[3] = (UINT8)98;
 	lgreenmap[9] = (UINT8)106;
 	bluemap[3]   = (UINT8)147;
 	bluemap[9]   = (UINT8)158;
@@ -1472,4 +1472,3 @@ void CON_Drawer(void)
 	else if (gamestate == GS_LEVEL || gamestate == GS_INTERMISSION || gamestate == GS_CUTSCENE || gamestate == GS_CREDITS)
 		CON_DrawHudlines();
 }
-

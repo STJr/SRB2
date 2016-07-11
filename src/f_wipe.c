@@ -2,8 +2,8 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 2013-2014 by Matthew "Inuyasha" Walsh.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 2013-2016 by Matthew "Inuyasha" Walsh.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -58,6 +58,7 @@ UINT8 wipedefs[NUMWIPEDEFS] = {
 
 	0,  // wipe_specinter_toblack
 	0,  // wipe_multinter_toblack
+	0,  // wipe_speclevel_towhite
 
 	0,  // wipe_level_final
 	0,  // wipe_intermission_final

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -347,7 +347,7 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + i - 3);
 		}
 		break;
-		
+
 	case SKINCOLOR_PEACH:
 		// 11 colors
 		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
@@ -362,7 +362,7 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + i - 7); // Darkest
 		}
 		break;
-		
+
 	case SKINCOLOR_RED:
 		// 16 colors
 		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
@@ -956,5 +956,6 @@ void R_DrawViewBorder(void)
 //                   INCLUDE 16bpp DRAWING CODE HERE
 // ==========================================================================
 
+#ifdef HIGHCOLOR
 #include "r_draw16.c"
-
+#endif
