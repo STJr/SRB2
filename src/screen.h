@@ -175,9 +175,7 @@ void SCR_SetDefaultMode (void);
 
 void SCR_Startup (void);
 
-void SCR_ChangeFullscreen (void);
-
-boolean SCR_IsAspectCorrect(INT32 width, INT32 height);
+FUNCMATH boolean SCR_IsAspectCorrect(INT32 width, INT32 height);
 
 // move out to main code for consistency
 void SCR_DisplayTicRate(void);

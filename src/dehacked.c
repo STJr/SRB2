@@ -6714,12 +6714,14 @@ static const char *const MOBJEFLAG_LIST[] = {
 	NULL
 };
 
+#ifdef HAVE_BLUA
 static const char *const MAPTHINGFLAG_LIST[4] = {
 	NULL,
 	"OBJECTFLIP", // Reverse gravity flag for objects.
 	"OBJECTSPECIAL", // Special flag used with certain objects.
 	"AMBUSH" // Deaf monsters/do not react to sound.
 };
+#endif
 
 static const char *const PLAYERFLAG_LIST[] = {
 	// Flip camera angle with gravity flip prefrence.
@@ -6792,6 +6794,7 @@ static const char *const PLAYERFLAG_LIST[] = {
 	NULL // stop loop here.
 };
 
+#ifdef HAVE_BLUA
 // Linedef flags
 static const char *const ML_LIST[16] = {
 	"IMPASSIBLE",
@@ -6811,6 +6814,7 @@ static const char *const ML_LIST[16] = {
 	"BOUNCY",
 	"TFERLINE"
 };
+#endif
 
 // This DOES differ from r_draw's Color_Names, unfortunately.
 // Also includes Super colors
@@ -7767,7 +7771,7 @@ fixed_t get_number(const char *word)
 #endif
 }
 
-void DEH_Check(void)
+void FUNCMATH DEH_Check(void)
 {
 #if defined(_DEBUG) || defined(PARANOIA)
 	const size_t dehstates = sizeof(STATE_LIST)/sizeof(const char*);
