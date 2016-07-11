@@ -1,0 +1,228 @@
+language: c
+sudo: required
+dist: trusty
+
+matrix:
+    include:
+        - os: linux
+          addons:
+            apt:
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
+              - gcc-4.4
+          compiler: gcc-4.4
+          #gcc-4.4 (Ubuntu/Linaro 4.4.7-8ubuntu1) 4.4.7
+        - os: linux
+          addons:
+            apt:
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
+              - gcc-4.6
+          compiler: gcc-4.6
+          #gcc-4.6 (Ubuntu/Linaro 4.6.4-6ubuntu2) 4.6.4
+        - os: linux
+          addons:
+            apt:
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
+              - gcc-4.7
+          compiler: gcc-4.7
+          #gcc-4.7
+        - os: linux
+          compiler: gcc
+          #gcc (Ubuntu 4.8.4-2ubuntu1~14.04) 4.8.4
+        - os: linux
+          addons:
+            apt:
+              sources:
+              - ubuntu-toolchain-r-test
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
+              - gcc-4.8
+          compiler: gcc-4.8
+          #gcc-4.8 (Ubuntu 4.8.5-2ubuntu1~14.04.1) 4.8.5
+        - os: linux
+          addons:
+            apt:
+              sources:
+              - ubuntu-toolchain-r-test
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
+              - gcc-4.9
+          compiler: gcc-4.9
+          #gcc-4.9 (Ubuntu 4.9.3-8ubuntu2~14.04) 4.9.3
+        - os: linux
+          addons:
+            apt:
+              sources:
+              - ubuntu-toolchain-r-test
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
+              - gcc-5
+          compiler: gcc-5
+          #gcc-5 (Ubuntu 5.3.0-3ubuntu1~14.04) 5.3.0 20151204
+        - os: linux
+          addons:
+            apt:
+              sources:
+              - ubuntu-toolchain-r-test
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
+              - gcc-6
+          compiler: gcc-6
+          env: WFLAGS="-Wno-error=tautological-compare"
+          #gcc-6 (Ubuntu 6.1.1-3ubuntu11~14.04.1) 6.1.1 20160511
+        - os: linux
+          compiler: clang
+          #clang version 3.5.0 (tags/RELEASE_350/final)
+        - os: linux
+          addons:
+            apt:
+              sources:
+              - llvm-toolchain-precise-3.5
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
+              - clang-3.5
+          compiler: clang-3.5
+          #Ubuntu clang version 3.5.0-4ubuntu2~trusty2 (tags/RELEASE_350/final) (based on LLVM 3.5.0)
+        - os: linux
+          addons:
+            apt:
+              sources:
+              - llvm-toolchain-precise-3.6
+              - ubuntu-toolchain-r-test
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
+              - clang-3.6
+          compiler: clang-3.6
+          #Ubuntu clang version 3.6.2-svn240577-1~exp1 (branches/release_36) (based on LLVM 3.6.2)
+        - os: linux
+          addons:
+            apt:
+              sources:
+              - llvm-toolchain-precise-3.7
+              - ubuntu-toolchain-r-test
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
+              - clang-3.7
+          compiler: clang-3.7
+          #Ubuntu clang version 3.7.1-svn253571-1~exp1 (branches/release_37) (based on LLVM 3.7.1)
+        - os: linux
+          addons:
+            apt:
+              sources:
+              - llvm-toolchain-precise-3.8
+              - ubuntu-toolchain-r-test
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
+              - clang-3.8
+          compiler: clang-3.8
+          #clang version 3.8.1-svn271127-1~exp1 (branches/release_38)
+        - os: osx
+          osx_image: beta-xcode6.1
+          #Apple LLVM version 6.0 (clang-600.0.54) (based on LLVM 3.5svn)
+        - os: osx
+          osx_image: beta-xcode6.2
+          compiler: gcc
+          #Apple LLVM version 6.0 (clang-600.0.57) (based on LLVM 3.5svn)
+#        - os: osx
+#          osx_image: beta-xcode6.3
+#          #I think xcode.6.3 VM is broken, it does not boot
+        - os: osx
+          osx_image: xcode6.4
+          #Apple LLVM version 6.1.0 (clang-602.0.53) (based on LLVM 3.6.0svn)
+        - os: osx
+          osx_image: xcode7
+          #Apple LLVM version 7.0.0 (clang-700.0.72)
+        - os: osx
+          osx_image: xcode7.1
+          #Apple LLVM version 7.0.0 (clang-700.1.76)
+        - os: osx
+          osx_image: xcode7.2
+          #Apple LLVM version 7.0.2 (clang-700.1.81)
+        - os: osx
+          osx_image: xcode7.3
+          #Apple LLVM version 7.3.0 (clang-703.0.31)
+    allow_failures:
+      - compiler: clang-3.5
+      - compiler: clang-3.6
+      - compiler: clang-3.7
+      - compiler: clang-3.8
+
+cache:
+  apt: true
+  ccache: true
+  directories:
+  - $HOME/srb2_cache
+
+addons:
+  apt:
+    packages:
+    - libsdl2-mixer-dev
+    - libpng-dev
+    - libgl1-mesa-dev
+    - libgme-dev
+    - p7zip-full
+
+before_script:
+  - wget --verbose --server-response -c http://rosenthalcastle.org/srb2/SRB2-v2115-assets-2.7z -O $HOME/srb2_cache/SRB2-v2115-assets-2.7z
+  - 7z x $HOME/srb2_cache/SRB2-v2115-assets-2.7z -oassets
+  - mkdir build
+  - cd build
+  - export CFLAGS="-Wall -W $WFLAGS"
+  - export CCACHE_COMPRESS=true
+  - cmake .. -DCMAKE_BUILD_TYPE=Release
+
+before_install:
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install sdl2_mixer game-music-emu p7zip; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install cmake||true; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then curl -O -L https://www.libsdl.org/release/SDL2-2.0.4.dmg; hdiutil attach SDL2-2.0.4.dmg; sudo cp -a /Volumes/SDL2/SDL2.framework /Library/Frameworks/; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then curl -O -L https://www.libsdl.org/projects/SDL_mixer/release/SDL2_mixer-2.0.1.dmg; hdiutil attach SDL2_mixer-2.0.1.dmg; sudo cp -a /Volumes/SDL2_mixer/SDL2_mixer.framework /Library/Frameworks/; fi
+  - mkdir -p $HOME/srb2_cache
+
+script: make -k

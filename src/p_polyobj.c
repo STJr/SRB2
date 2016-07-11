@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2006      by James Haley
-// Copyright (C) 2006-2014 by Sonic Team Junior.
+// Copyright (C) 2006-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -442,6 +442,8 @@ newseg:
 	// seg's ending vertex.
 	for (i = 0; i < numsegs; ++i)
 	{
+		if (segs[i].side != 0) // needs to be frontfacing
+			continue;
 		if (segs[i].v1->x == seg->v2->x && segs[i].v1->y == seg->v2->y)
 		{
 			// Make sure you didn't already add this seg...
@@ -609,6 +611,9 @@ static void Polyobj_spawnPolyObj(INT32 num, mobj_t *spawnSpot, INT32 id)
 		seg_t *seg = &segs[i];
 		INT32 poflags = POF_SOLID|POF_TESTHEIGHT|POF_RENDERSIDES;
 		INT32 parentID = 0, potrans = 0;
+
+		if (seg->side != 0) // needs to be frontfacing
+			continue;
 
 		if (seg->linedef->special != POLYOBJ_START_LINE)
 			continue;

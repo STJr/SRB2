@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -597,7 +597,9 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_gif_optimize);
 	CV_RegisterVar(&cv_gif_downscale);
 
+#ifdef WALLSPLATS
 	CV_RegisterVar(&cv_splats);
+#endif
 
 	// register these so it is saved to config
 	if ((username = I_GetUserName()))
@@ -808,7 +810,7 @@ static boolean IsNameGood(char *name, INT32 playernum)
 			else if (len == 1) // Agh!
 			{
 				// Last ditch effort...
-				sprintf(name, "%d", M_Random() & 7);
+				sprintf(name, "%d", M_RandomKey(10));
 				if (!IsNameGood (name, playernum))
 					return false;
 			}
@@ -1111,6 +1113,13 @@ static void SendNameAndColor(void)
 					players[consoleplayer].mo->color = (UINT8)players[consoleplayer].skincolor;
 			}
 		}
+		else
+		{
+			cv_skin.value = players[consoleplayer].skin;
+			CV_StealthSet(&cv_skin, skins[players[consoleplayer].skin].name);
+			// will always be same as current
+			SetPlayerSkin(consoleplayer, cv_skin.string);
+		}
 
 		return;
 	}
@@ -1227,6 +1236,13 @@ static void SendNameAndColor2(void)
 				if (players[secondplaya].mo)
 					players[secondplaya].mo->color = players[secondplaya].skincolor;
 			}
+		}
+		else
+		{
+			cv_skin2.value = players[secondplaya].skin;
+			CV_StealthSet(&cv_skin2, skins[players[secondplaya].skin].name);
+			// will always be same as current
+			SetPlayerSkin(secondplaya, cv_skin2.string);
 		}
 		return;
 	}
@@ -1854,10 +1870,10 @@ static void Got_Pause(UINT8 **cp, INT32 playernum)
 		if (paused)
 		{
 			if (!menuactive || netgame)
-				S_PauseSound();
+				S_PauseAudio();
 		}
 		else
-			S_ResumeSound();
+			S_ResumeAudio();
 	}
 }
 
@@ -2582,11 +2598,13 @@ static void D_MD5PasswordPass(const UINT8 *buffer, size_t len, const char *salt,
 	memset(dest, 0, 16);
 #else
 	XBOXSTATIC char tmpbuf[256];
+	const size_t sl = strlen(salt);
 
-	if (len > 256-strlen(salt))
-		len = 256-strlen(salt);
+	if (len > 256-sl)
+		len = 256-sl;
 	memcpy(tmpbuf, buffer, len);
-	strcpy(&tmpbuf[len], salt);
+	memmove(&tmpbuf[len], salt, sl);
+	//strcpy(&tmpbuf[len], salt);
 	len += strlen(salt);
 	if (len < 256)
 		memset(&tmpbuf[len],0,256-len);
@@ -3583,7 +3601,7 @@ retryscramble:
 		for (i = 0; i < playercount; i++)
 		{
 			if (repick)
-				newteam = (INT16)((M_Random() % 2) + 1);
+				newteam = (INT16)((M_RandomByte() % 2) + 1);
 
 			// One team has the most players they can get, assign the rest to the other team.
 			if (red == maxcomposition || blue == maxcomposition)
@@ -3628,7 +3646,7 @@ retryscramble:
 		{
 			if (repick)
 			{
-				newteam = (INT16)((M_Random() % 2) + 1);
+				newteam = (INT16)((M_RandomByte() % 2) + 1);
 				repick = false;
 			}
 			else
@@ -3761,50 +3779,66 @@ static void Command_Displayplayer_f(void)
 static void Command_Tunes_f(void)
 {
 	const char *tunearg;
-	UINT16 tune, track = 0;
+	UINT16 tunenum, track = 0;
 	const size_t argc = COM_Argc();
 
 	if (argc < 2) //tunes slot ...
 	{
-		CONS_Printf("tunes <slot #/map name/\"default\"> <speed> <track>:\n");
-		CONS_Printf(M_GetText("Play a music slot at a set speed (\"1\" being normal speed).\n"));
-		CONS_Printf(M_GetText("If the format supports multiple songs, you can specify which one to play.\n"));
-		CONS_Printf(M_GetText("The current tune is: %d\nThe current track is: %d\n"),
-			(mapmusic & MUSIC_SONGMASK), ((mapmusic & MUSIC_TRACKMASK) >> MUSIC_TRACKSHIFT));
+		CONS_Printf("tunes <name/num> [track] [speed] / <-show> / <-default> / <-none>:\n");
+		CONS_Printf(M_GetText("Play an arbitrary music lump. If a map number is used, 'MAP##M' is played.\n"));
+		CONS_Printf(M_GetText("If the format supports multiple songs, you can specify which one to play.\n\n"));
+		CONS_Printf(M_GetText("* With \"-show\", shows the currently playing tune and track.\n"));
+		CONS_Printf(M_GetText("* With \"-default\", returns to the default music for the map.\n"));
+		CONS_Printf(M_GetText("* With \"-none\", any music playing will be stopped.\n"));
 		return;
 	}
 
 	tunearg = COM_Argv(1);
-	tune = (UINT16)atoi(tunearg);
+	tunenum = (UINT16)atoi(tunearg);
 	track = 0;
 
-	if (!strcasecmp(tunearg, "default"))
+	if (!strcasecmp(tunearg, "-show"))
 	{
-		tune = mapheaderinfo[gamemap-1]->musicslot;
-		track = mapheaderinfo[gamemap-1]->musicslottrack;
-	}
-	else if (toupper(tunearg[0]) >= 'A' && toupper(tunearg[0]) <= 'Z')
-		tune = (UINT16)M_MapNumber(tunearg[0], tunearg[1]);
-
-	if (tune >= NUMMUSIC)
-	{
-		CONS_Alert(CONS_NOTICE, M_GetText("Valid slots are 1 to %d, or 0 to stop music\n"), NUMMUSIC - 1);
+		CONS_Printf(M_GetText("The current tune is: %s [track %d]\n"),
+			mapmusname, (mapmusflags & MUSIC_TRACKMASK));
 		return;
 	}
-
-	if (argc > 3)
-		track = (UINT16)atoi(COM_Argv(3))-1;
-
-	mapmusic = tune | (track << MUSIC_TRACKSHIFT);
-
-	if (tune == mus_None)
+	if (!strcasecmp(tunearg, "-none"))
+	{
 		S_StopMusic();
-	else
-		S_ChangeMusic(mapmusic, true);
+		return;
+	}
+	else if (!strcasecmp(tunearg, "-default"))
+	{
+		tunearg = mapheaderinfo[gamemap-1]->musname;
+		track = mapheaderinfo[gamemap-1]->mustrack;
+	}
+	else if (!tunearg[2] && toupper(tunearg[0]) >= 'A' && toupper(tunearg[0]) <= 'Z')
+		tunenum = (UINT16)M_MapNumber(tunearg[0], tunearg[1]);
+
+	if (tunenum && tunenum >= 1036)
+	{
+		CONS_Alert(CONS_NOTICE, M_GetText("Valid music slots are 1 to 1035.\n"));
+		return;
+	}
+	if (!tunenum && strlen(tunearg) > 6) // This is automatic -- just show the error just in case
+		CONS_Alert(CONS_NOTICE, M_GetText("Music name too long - truncated to six characters.\n"));
 
 	if (argc > 2)
+		track = (UINT16)atoi(COM_Argv(2))-1;
+
+	if (tunenum)
+		snprintf(mapmusname, 7, "%sM", G_BuildMapName(tunenum));
+	else
+		strncpy(mapmusname, tunearg, 7);
+	mapmusname[6] = 0;
+	mapmusflags = (track & MUSIC_TRACKMASK);
+
+	S_ChangeMusic(mapmusname, mapmusflags, true);
+
+	if (argc > 3)
 	{
-		float speed = (float)atof(COM_Argv(2));
+		float speed = (float)atof(COM_Argv(3));
 		if (speed > 0.0f)
 			S_SpeedMusic(speed);
 	}
