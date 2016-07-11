@@ -2433,6 +2433,8 @@ isblocking:
 //
 // P_IsClimbingValid
 //
+// Unlike P_DoClimbing, don't use when up against a one-sided linedef.
+//
 static boolean P_IsClimbingValid(player_t *player, angle_t angle)
 {
 	fixed_t platx, platy;
@@ -2657,6 +2659,7 @@ isblocking:
 		// see about climbing on the wall
 		if (!(checkline->flags & ML_NOCLIMB))
 		{
+			boolean canclimb; // FUCK C90
 			angle_t climbangle, climbline;
 			INT32 whichside = P_PointOnLineSide(slidemo->x, slidemo->y, li);
 
@@ -2667,9 +2670,11 @@ isblocking:
 
 			climbangle += (ANGLE_90 * (whichside ? -1 : 1));
 
+			canclimb = (li->backsector ? P_IsClimbingValid(slidemo->player, climbangle) : true);
+
 			if (((!slidemo->player->climbing && abs((signed)(slidemo->angle - ANGLE_90 - climbline)) < ANGLE_45)
 			|| (slidemo->player->climbing == 1 && abs((signed)(slidemo->angle - climbline)) < ANGLE_135))
-			&& P_IsClimbingValid(slidemo->player, climbangle))
+			&& canclimb)
 			{
 				slidemo->angle = climbangle;
 				if (!demoplayback || P_AnalogMove(slidemo->player))
