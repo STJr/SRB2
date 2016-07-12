@@ -2355,9 +2355,6 @@ INT32 R_SkinAvailable(const char *name)
 {
 	INT32 i;
 
-	if (stricmp("NONE",name) == 0)
-		return -1;
-
 	for (i = 0; i < numskins; i++)
 	{
 		// search in the skin list
@@ -2531,10 +2528,11 @@ void R_AddSkins(UINT16 wadnum)
 
 			if (!stricmp(stoken, "name"))
 			{
+				INT32 skinnum = R_SkinAvailable(value);
 				// the skin name must uniquely identify a single skin
 				// I'm lazy so if name is already used I leave the 'skin x'
 				// default skin name set in Sk_SetDefaultValue
-				if (R_SkinAvailable(value) == -1)
+				if (skinnum == -1)
 				{
 					STRBUFCPY(skin->name, value);
 					strlwr(skin->name);
@@ -2639,7 +2637,15 @@ void R_AddSkins(UINT16 wadnum)
 			else if (!stricmp(stoken, "availability"))
 #ifdef DEVELOP
 			{
-				PlayerMenu[R_SkinAvailable(skin->name)].status = (IT_DISABLED|IT_CENTER);
+				char *name;
+				INT32 i;
+				for (i = 0; i < 32; i++)
+				{
+					name = strtok(Z_StrDup(description[i].skinname), "&");
+					if (name == skin->name && PlayerMenu[i].status != IT_DISABLED)
+						PlayerMenu[i].status = (IT_DISABLED|IT_CENTER);
+					Z_Free(name);
+				}
 				skin->availability = atoi(value);
 			}
 #else

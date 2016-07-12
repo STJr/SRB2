@@ -177,6 +177,7 @@ typedef struct
 	char notes[441];
 	char picname[8];
 	char skinname[SKINNAMESIZE*2+2]; // skin&skin\0
+	UINT16 wadnum; // for duplicate characters
 } description_t;
 
 // mode descriptions for video mode menu

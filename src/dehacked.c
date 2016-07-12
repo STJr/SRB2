@@ -430,15 +430,19 @@ static void readAnimTex(MYFILE *f, INT32 num)
 }
 */
 
-static boolean findFreeSlot(INT32 *num)
+static boolean findFreeSlot(INT32 *num, UINT16 wadnum)
 {
 	// Send the character select entry to a free slot.
-	while (*num < 32 && !(PlayerMenu[*num].status & IT_DISABLED)) // Will overwrite hidden characters, but it works out. You can't unlock if you're adding extra characters anyways.
+	while (*num < 32 && !(PlayerMenu[*num].status & IT_DISABLED && description[*num].wadnum != wadnum)) // Will kill hidden characters from other files, but that's okay.
 		*num = *num+1;
 
 	// No more free slots. :(
 	if (*num >= 32)
 		return false;
+
+	PlayerMenu[*num].status = IT_CALL;
+	description[*num].wadnum = wadnum;
+	description[*num].picname[0] = '\0'; // Redesign your logo. (See M_DrawSetupChoosePlayerMenu in m_menu.c...)
 
 	// Found one! ^_^
 	return true;
@@ -473,9 +477,8 @@ static void readPlayer(MYFILE *f, INT32 num)
 			{
 				char *playertext = NULL;
 
-				if (!slotfound && (slotfound = findFreeSlot(&num)) == false)
+				if (!slotfound && (slotfound = findFreeSlot(&num, f->wad)) == false)
 					goto done;
-				PlayerMenu[num].status = IT_CALL;
 
 				for (i = 0; i < MAXLINELEN-3; i++)
 				{
@@ -521,34 +524,12 @@ static void readPlayer(MYFILE *f, INT32 num)
 				word2[strlen(word2)-1] = '\0';
 			i = atoi(word2);
 
-			/*if (fastcmp(word, "PLAYERNAME"))
+			if (fastcmp(word, "PICNAME"))
 			{
-				if (!slotfound && (slotfound = findFreeSlot(&num)) == false)
-					goto done;
-				DEH_WriteUndoline(word, description[num].text, UNDO_NONE);
-				strlcpy(description[num].text, word2, sizeof (description[num].text));
-				for (word2 = description[num].text; *word2; word2++)
-					if (*word2 == '_')
-						*word2 = ' ';
-				PlayerMenu[num].text = description[num].text;
-			}*/
-/* 			else if (fastcmp(word, "MENUPOSITION"))
-			{ // Make sure you make MENUPOSITION the first thing under CHARACTER if you're using it!
-				// This is to manually choose a slot and overwrite existing characters! It is NOT necessary for most individual character wads!!
-#ifdef DELFILE
-				if (disableundo)
-#endif
-				{
-					slotfound = true;
-					num = i;
-				}
-			} */
-			/*else*/ if (fastcmp(word, "PICNAME"))
-			{
-				if (!slotfound && (slotfound = findFreeSlot(&num)) == false)
+				if (!slotfound && (slotfound = findFreeSlot(&num, f->wad)) == false)
 					goto done;
 				DEH_WriteUndoline(word, &description[num].picname[0], UNDO_NONE);
-				PlayerMenu[num].status = IT_CALL;
+
 				strncpy(description[num].picname, word2, 8);
 			}
 			else if (fastcmp(word, "STATUS"))
@@ -565,11 +546,8 @@ static void readPlayer(MYFILE *f, INT32 num)
 
 					Because of this, you are allowed to edit any previous entries you like, but only if you
 					signal that you are purposely doing so by disabling and then reenabling the slot.
-
-					... Or use MENUPOSITION first, that works too. Hell, you could edit multiple character
-					slots in a single section that way, due to how SOC editing works.
 				*/
-				if (i != IT_DISABLED && !slotfound && (slotfound = findFreeSlot(&num)) == false)
+				if (i != IT_DISABLED && !slotfound && (slotfound = findFreeSlot(&num, f->wad)) == false)
 					goto done;
 				DEH_WriteUndoline(word, va("%d", PlayerMenu[num].status), UNDO_NONE);
 				PlayerMenu[num].status = (INT16)i;
@@ -577,15 +555,12 @@ static void readPlayer(MYFILE *f, INT32 num)
 			else if (fastcmp(word, "SKINNAME"))
 			{
 				// Send to free slot.
-				if (!slotfound && (slotfound = findFreeSlot(&num)) == false)
+				if (!slotfound && (slotfound = findFreeSlot(&num, f->wad)) == false)
 					goto done;
 				DEH_WriteUndoline(word, description[num].skinname, UNDO_NONE);
-				PlayerMenu[num].status = IT_CALL;
 
 				strlcpy(description[num].skinname, word2, sizeof description[num].skinname);
 				strlwr(description[num].skinname);
-
-				description[num].picname[0] = '\0'; // Redesign your logo. (See M_DrawSetupChoosePlayerMenu in m_menu.c...)
 			}
 			else
 				deh_warning("readPlayer %d: unknown word '%s'", num, word);
