@@ -18,6 +18,7 @@
 #include "st_stuff.h"
 #include "w_wad.h"
 #include "z_zone.h"
+#include "m_menu.h" // Player character select
 #include "m_misc.h"
 #include "i_video.h" // rendermode
 #include "r_things.h"
@@ -2335,11 +2336,17 @@ void R_InitSkins(void)
 // warning don't use with an invalid skinnum
 boolean R_SkinUnlock(INT32 skinnum)
 {
-	return ((skins[skinnum].availability == 2) // SP/Coop is strict
+	return ((skinnum == -1) // Simplifies things elsewhere, since there's already plenty of checks for less-than-0...
+		|| (skins[skinnum].availability == 2) // SP/Coop is strict
 		|| (modeattacking) // If you have someone else's run you might as well take a look
 		|| ((netgame)
-			&& ((cv_forceskin.value == skinnum) // Forceskin is weak
-			|| (G_RingSlingerGametype() && (skins[skinnum].availability != 0))))); // Ringslinger is disciplined
+			&& ((dedicated) // Same reasoning as Command_Map_f - dedicated would be a nightmare otherwise
+			|| ((cv_forceskin.value == skinnum) // Forceskin is weak
+				|| (G_RingSlingerGametype() && (skins[skinnum].availability != 0)) // Ringslinger is disciplined
+				)
+			)
+		)
+	);
 }
 
 // returns true if the skin name is found (loaded from pwad)
@@ -2347,6 +2354,9 @@ boolean R_SkinUnlock(INT32 skinnum)
 INT32 R_SkinAvailable(const char *name)
 {
 	INT32 i;
+
+	if (stricmp("NONE",name) == 0)
+		return -1;
 
 	for (i = 0; i < numskins; i++)
 	{
@@ -2628,7 +2638,10 @@ void R_AddSkins(UINT16 wadnum)
 
 			else if (!stricmp(stoken, "availability"))
 #ifdef DEVELOP
+			{
+				PlayerMenu[R_SkinAvailable(skin->name)].status = (IT_DISABLED|IT_CENTER);
 				skin->availability = atoi(value);
+			}
 #else
 				;
 #endif
@@ -2704,7 +2717,8 @@ next_token:
 
 		R_FlushTranslationColormapCache();
 
-		CONS_Printf(M_GetText("Added skin '%s'\n"), skin->name);
+		if (skin->availability == 2) // Safe to print...
+			CONS_Printf(M_GetText("Added skin '%s'\n"), skin->name);
 #ifdef SKINVALUES
 		skin_cons_t[numskins].value = numskins;
 		skin_cons_t[numskins].strvalue = skin->name;
