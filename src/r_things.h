@@ -102,6 +102,8 @@ typedef struct
 	sfxenum_t soundsid[NUMSKINSOUNDS]; // sound # in S_sfx table
 
 	spritedef_t sprites[NUMPLAYERSPRITES];
+
+	UINT8 availability; // lock? safe to put here as is not networked
 } skin_t;
 
 // -----------
@@ -184,6 +186,7 @@ extern skin_t skins[MAXSKINS + 1];
 
 void SetPlayerSkin(INT32 playernum,const char *skinname);
 void SetPlayerSkinByNum(INT32 playernum,INT32 skinnum); // Tails 03-16-2002
+boolean R_SkinUnlock(INT32 skinnum);
 INT32 R_SkinAvailable(const char *name);
 void R_AddSkins(UINT16 wadnum);
 

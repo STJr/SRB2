@@ -3429,9 +3429,9 @@ static void M_PatchSkinNameTable(void)
 
 	for (j = 0; j < MAXSKINS; j++)
 	{
-		if (skins[j].name[0] != '\0')
+		if (skins[j].name[0] != '\0' && R_SkinUnlock(j))
 		{
-			skins_cons_t[j].strvalue = skins[j].name;
+			skins_cons_t[j].strvalue = skins[j].realname;
 			skins_cons_t[j].value = j+1;
 		}
 		else
@@ -4771,13 +4771,41 @@ void M_ForceSaveSlotSelected(INT32 sslot)
 
 static void M_SetupChoosePlayer(INT32 choice)
 {
+	INT32 availablecount = 0;
+	INT32 i, skinnum;
+	char *name;
 	(void)choice;
 
-	if (mapheaderinfo[startmap-1] && mapheaderinfo[startmap-1]->forcecharacter[0] != '\0')
+	for (i = 0; i < 32; i++) // Handle charsels, availability, and unlocks.
 	{
-		M_ChoosePlayer(0); //oh for crying out loud just get STARTED, it doesn't matter!
+		if (PlayerMenu[i].status != IT_DISABLED) // If the character's disabled through SOC, there's nothing we can do for it.
+		{
+			name = strtok(Z_StrDup(description[i].skinname), "&");
+			skinnum = R_SkinAvailable(name);
+			if ((skinnum != -1) && (R_SkinUnlock(skinnum)))
+			{
+				if (PlayerMenu[i].status == (IT_DISABLED|IT_CENTER))
+					PlayerMenu[i].status = IT_CALL;
+				if (description[i].picname[0] == '\0')
+					strncpy(description[i].picname, skins[skinnum].charsel, 8);
+			}
+			else // Technically, character select icons without corresponding skins get bundled away behind this too. Sucks to be them.
+				PlayerMenu[i].status = (IT_DISABLED|IT_CENTER);
+			Z_Free(name);
+
+			if (!(PlayerMenu[i].status & IT_DISABLED)) // If this character is available at all...
+				availablecount++;
+		}
+	}
+
+	if (!(availablecount)
+	|| (mapheaderinfo[startmap-1] && mapheaderinfo[startmap-1]->forcecharacter[0] != '\0'))
+	{
+		PlayerMenu[0].status = (IT_CALL|IT_CENTER); // This is a hack to make availablecount not softlock the game. Again, I use IT_CENTER as a dummy flag.
+		M_ChoosePlayer(0); // oh for crying out loud just get STARTED, it doesn't matter!
 		return;
 	}
+
 
 	if (Playing() == false)
 	{
@@ -4798,7 +4826,6 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	const INT32 my = 24;
 	patch_t *patch;
 	INT32 i, o, j, prev, next;
-	char *picname;
 
 	// Black BG
 	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
@@ -4836,7 +4863,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 			i--;
 			if (i < 0)
 				i = (currentMenu->numitems - 1);
-		} while (i != j && PlayerMenu[i].status == IT_DISABLED); // Skip over all disabled characters.
+		} while (i != j && PlayerMenu[i].status & IT_DISABLED);
 	}
 
 	// Get prev character...
@@ -4846,7 +4873,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		prev--;
 		if (prev < 0)
 			prev = (currentMenu->numitems - 1);
-	} while (prev != i && PlayerMenu[prev].status == IT_DISABLED); // Skip over all disabled characters.
+	} while (prev != i && PlayerMenu[prev].status & IT_DISABLED);
 
 	if (prev != i) // If there's more than one character available...
 	{
@@ -4857,23 +4884,12 @@ static void M_DrawSetupChoosePlayerMenu(void)
 			next++;
 			if (next >= currentMenu->numitems)
 				next = 0;
-		} while (next != i && PlayerMenu[next].status == IT_DISABLED); // Skip over all disabled characters.
+		} while (next != i && PlayerMenu[next].status & IT_DISABLED);
 
 		// Draw prev character if it's visible and its number isn't greater than the current one or there's more than two
 		if ((o < 32) && !((prev == next) && prev > i)) // (prev != i) was previously a part of this, but we don't need to check again after above.
 		{
-			picname = description[prev].picname;
-			if (picname[0] == '\0')
-			{
-				picname = strtok(Z_StrDup(description[prev].skinname), "&");
-				j = R_SkinAvailable(picname);
-				Z_Free(picname);
-				if (j == -1)
-					j = 0;
-				picname = skins[j].charsel;
-				strncpy(description[prev].picname, picname, 8); // Only iterate once.
-			}
-			patch = W_CachePatchName(picname, PU_CACHE);
+			patch = W_CachePatchName(description[prev].picname, PU_CACHE);
 			if (SHORT(patch->width) >= 256)
 				V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT/2, 0, patch, 0, SHORT(patch->height) - 64 + o*2, SHORT(patch->width), SHORT(patch->height));
 			else
@@ -4884,18 +4900,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		// Draw next character if it's visible and its number isn't less than the current one or there's more than two
 		if ((o < 128) && !((prev == next) && next < i)) // (next != i) was previously a part of this, but it's implicitly true if (prev != i) is true.
 		{
-			picname = description[next].picname;
-			if (picname[0] == '\0')
-			{
-				picname = strtok(Z_StrDup(description[next].skinname), "&");
-				j = R_SkinAvailable(picname);
-				Z_Free(picname);
-				if (j == -1)
-					j = 0;
-				picname = skins[j].charsel;
-				strncpy(description[next].picname, picname, 8); // Only iterate once.
-			}
-			patch = W_CachePatchName(picname, PU_CACHE);
+			patch = W_CachePatchName(description[next].picname, PU_CACHE);
 			if (SHORT(patch->width) >= 256)
 				V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, FRACUNIT/2, 0, patch, 0, 0, SHORT(patch->width), o*2);
 			else
@@ -4904,24 +4909,13 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		}
 
 		// current character
-		if (PlayerMenu[i].status == IT_DISABLED) // Prevent flickering.
+		if (PlayerMenu[i].status & IT_DISABLED) // Prevent flickering.
 			i = (lastdirection) ? prev : next; // This actually causes duplication at slow scroll speeds (<16FU per tic), but thankfully we always go quickly.
 	}
 
-	if (PlayerMenu[i].status != IT_DISABLED)
+	if (!(PlayerMenu[i].status & IT_DISABLED))
 	{
-		picname = description[i].picname;
-		if (picname[0] == '\0')
-			{
-			picname = strtok(Z_StrDup(description[i].skinname), "&");
-				j = R_SkinAvailable(picname);
-				Z_Free(picname);
-				if (j == -1)
-					j = 0;
-				picname = skins[j].charsel;
-			strncpy(description[i].picname, picname, 8); // Only iterate once.
-			}
-		patch = W_CachePatchName(picname, PU_CACHE);
+		patch = W_CachePatchName(description[i].picname, PU_CACHE);
 		if (o >= 0 && o <= 32)
 		{
 			if (SHORT(patch->width) >= 256)
@@ -4956,8 +4950,8 @@ static void M_ChoosePlayer(INT32 choice)
 	INT32 skinnum;
 	boolean ultmode = (ultimate_selectable && SP_PlayerDef.prevMenu == &SP_LoadDef && saveSlotSelected == NOSAVESLOT);
 
-	// skip this if forcecharacter
-	if (mapheaderinfo[startmap-1] && mapheaderinfo[startmap-1]->forcecharacter[0] == '\0')
+	// skip this if forcecharacter or no characters available
+	if (!(PlayerMenu[choice].status & IT_CENTER))
 	{
 		// M_SetupChoosePlayer didn't call us directly, that means we've been properly set up.
 		char_scroll = itemOn*128*FRACUNIT; // finish scrolling the menu
@@ -6503,6 +6497,7 @@ static void M_DrawSetupMultiPlayerMenu(void)
 static void M_HandleSetupMultiPlayer(INT32 choice)
 {
 	size_t   l;
+	INT32 prev_setupm_fakeskin;
 	boolean  exitmenu = false;  // exit to previous menu and send name change
 
 	switch (choice)
@@ -6521,7 +6516,14 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 			if (itemOn == 2)       //player skin
 			{
 				S_StartSound(NULL,sfx_menu1); // Tails
-				setupm_fakeskin--;
+				prev_setupm_fakeskin = setupm_fakeskin;
+				do
+				{
+					setupm_fakeskin--;
+					if (setupm_fakeskin < 0)
+						setupm_fakeskin = numskins-1;
+				}
+				while ((prev_setupm_fakeskin != setupm_fakeskin) && !(R_SkinUnlock(setupm_fakeskin)));
 			}
 			else if (itemOn == 1) // player color
 			{
@@ -6534,7 +6536,14 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 			if (itemOn == 2)       //player skin
 			{
 				S_StartSound(NULL,sfx_menu1); // Tails
-				setupm_fakeskin++;
+				prev_setupm_fakeskin = setupm_fakeskin;
+				do
+				{
+					setupm_fakeskin++;
+					if (setupm_fakeskin > numskins-1)
+						setupm_fakeskin = 0;
+				}
+				while ((prev_setupm_fakeskin != setupm_fakeskin) && !(R_SkinUnlock(setupm_fakeskin)));
 			}
 			else if (itemOn == 1) // player color
 			{
@@ -6567,12 +6576,6 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 			}
 			break;
 	}
-
-	// check skin
-	if (setupm_fakeskin < 0)
-		setupm_fakeskin = numskins-1;
-	if (setupm_fakeskin > numskins-1)
-		setupm_fakeskin = 0;
 
 	// check color
 	if (setupm_fakecolor < 1)

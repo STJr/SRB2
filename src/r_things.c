@@ -2305,6 +2305,8 @@ static void Sk_SetDefaultValue(skin_t *skin)
 
 	skin->highresscale = FRACUNIT>>1;
 
+	skin->availability = 2;
+
 	for (i = 0; i < sfx_skinsoundslot0; i++)
 		if (S_sfx[i].skinsound != -1)
 			skin->soundsid[S_sfx[i].skinsound] = i;
@@ -2327,6 +2329,17 @@ void R_InitSkins(void)
 
 	// no default skin!
 	numskins = 0;
+}
+
+// returns true if available in circumstances, otherwise nope
+// warning don't use with an invalid skinnum
+boolean R_SkinUnlock(INT32 skinnum)
+{
+	return ((skins[skinnum].availability == 2) // SP/Coop is strict
+		|| (modeattacking) // If you have someone else's run you might as well take a look
+		|| ((netgame)
+			&& ((cv_forceskin.value == skinnum) // Forceskin is weak
+			|| (G_RingSlingerGametype() && (skins[skinnum].availability != 0))))); // Ringslinger is disciplined
 }
 
 // returns true if the skin name is found (loaded from pwad)
@@ -2371,7 +2384,8 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 	player_t *player = &players[playernum];
 	skin_t *skin = &skins[skinnum];
 
-	if (skinnum >= 0 && skinnum < numskins) // Make sure it exists!
+	if ((skinnum >= 0 && skinnum < numskins) // Make sure it exists!
+	&& (!P_IsLocalPlayer(player) || R_SkinUnlock(skinnum))) // ...but is it allowed? We must always allow external players to change skin. The server should vet that...
 	{
 		player->skin = skinnum;
 		if (player->mo)
@@ -2611,6 +2625,13 @@ void R_AddSkins(UINT16 wadnum)
 			GETINT(accelstart)
 			GETINT(acceleration)
 #undef GETINT
+
+			else if (!stricmp(stoken, "availability"))
+#ifdef DEVELOP
+				skin->availability = atoi(value);
+#else
+				;
+#endif
 
 			// custom translation table
 			else if (!stricmp(stoken, "startcolor"))
