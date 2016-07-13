@@ -1343,7 +1343,7 @@ static menuitem_t OP_NetgameOptionsMenu[] =
 	{IT_STRING | IT_CVAR, NULL, "Sudden Death",          &cv_suddendeath,      90},
 	{IT_STRING | IT_CVAR, NULL, "Player respawn delay",  &cv_respawntime,      98},
 
-	{IT_STRING | IT_CVAR, NULL, "Force Skin #",          &cv_forceskin,          114},
+	{IT_STRING | IT_CVAR, NULL, "Force Skin",            &cv_forceskin,          114},
 	{IT_STRING | IT_CVAR, NULL, "Restrict skin changes", &cv_restrictskinchange, 122},
 
 	{IT_STRING | IT_CVAR, NULL, "Autobalance Teams",            &cv_autobalance,      138},

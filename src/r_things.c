@@ -2308,7 +2308,7 @@ static void Sk_SetDefaultValue(skin_t *skin)
 
 	skin->thokitem = -1;
 	skin->spinitem = -1;
-	skin->revitem = -1;
+	skin->revitem = 0;
 
 	skin->highresscale = FRACUNIT>>1;
 
@@ -2345,7 +2345,8 @@ boolean R_SkinUnlock(INT32 skinnum)
 	return ((skinnum == -1) // Simplifies things elsewhere, since there's already plenty of checks for less-than-0...
 		|| (skins[skinnum].availability)
 		|| (modeattacking) // If you have someone else's run you might as well take a look
-		|| ((netgame) && (cv_forceskin.value == skinnum)) // Forceskin is weak
+		|| (Playing() && (R_SkinAvailable(mapheaderinfo[gamemap-1]->forcecharacter) == skinnum)) // Force 1.
+		|| ((netgame) && (cv_forceskin.value == skinnum)) // Force 2.
 		);
 }
 
