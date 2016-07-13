@@ -2312,7 +2312,7 @@ static void Sk_SetDefaultValue(skin_t *skin)
 
 	skin->highresscale = FRACUNIT>>1;
 
-	skin->availability = 2;
+	skin->availability = 1;
 
 	for (i = 0; i < sfx_skinsoundslot0; i++)
 		if (S_sfx[i].skinsound != -1)
@@ -2343,16 +2343,10 @@ void R_InitSkins(void)
 boolean R_SkinUnlock(INT32 skinnum)
 {
 	return ((skinnum == -1) // Simplifies things elsewhere, since there's already plenty of checks for less-than-0...
-		|| (skins[skinnum].availability == 2) // SP/Coop is strict
+		|| (skins[skinnum].availability)
 		|| (modeattacking) // If you have someone else's run you might as well take a look
-		|| ((netgame)
-			&& ((dedicated) // Same reasoning as Command_Map_f - dedicated would be a nightmare otherwise
-			|| ((cv_forceskin.value == skinnum) // Forceskin is weak
-				|| (G_RingSlingerGametype() && (skins[skinnum].availability != 0)) // Ringslinger is disciplined
-				)
-			)
-		)
-	);
+		|| ((netgame) && (cv_forceskin.value == skinnum)) // Forceskin is weak
+		);
 }
 
 // returns true if the skin name is found (loaded from pwad)
