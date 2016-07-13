@@ -433,7 +433,7 @@ static void readAnimTex(MYFILE *f, INT32 num)
 static boolean findFreeSlot(INT32 *num, UINT16 wadnum)
 {
 	// Send the character select entry to a free slot.
-	while (*num < 32 && !(PlayerMenu[*num].status & IT_DISABLED && description[*num].wadnum != wadnum)) // Will kill hidden characters from other files, but that's okay.
+	while (*num < 32 && (!(PlayerMenu[*num].status & IT_DISABLED) || description[*num].wadnum == wadnum)) // Will kill hidden characters from other files, but that's okay.
 		*num = *num+1;
 
 	// No more free slots. :(
