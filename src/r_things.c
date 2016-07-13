@@ -2434,6 +2434,8 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 			P_SetScale(player->mo, player->mo->scale);
 		return;
 	}
+	else if !R_SkinUnlock(skinnum) // Sneaky sneaky.
+		skinnum = -1;
 
 	if (P_IsLocalPlayer(player))
 		CONS_Alert(CONS_WARNING, M_GetText("Skin %d not found\n"), skinnum);

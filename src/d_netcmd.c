@@ -4002,7 +4002,7 @@ static void Command_Archivetest_f(void)
   */
 static void ForceSkin_OnChange(void)
 {
-	if ((server || adminplayer == consoleplayer) && (cv_forceskin.value < -1 || cv_forceskin.value >= numskins || !R_SkinUnlock(cv_forceskin.value)))
+	if ((server || adminplayer == consoleplayer) && (cv_forceskin.value < -1 || cv_forceskin.value >= numskins || !(dedicated || R_SkinUnlock(cv_forceskin.value)))) // Dedicated servers have everything when it comes to forceskin because they have no gamedata.
 	{
 		if (cv_forceskin.value == -2)
 			CV_SetValue(&cv_forceskin, numskins-1);
