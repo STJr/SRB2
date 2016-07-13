@@ -2529,13 +2529,13 @@ void R_AddSkins(UINT16 wadnum)
 			if (!stricmp(stoken, "name"))
 			{
 				INT32 skinnum = R_SkinAvailable(value);
+				strlwr(value);
 				// the skin name must uniquely identify a single skin
 				// I'm lazy so if name is already used I leave the 'skin x'
 				// default skin name set in Sk_SetDefaultValue
 				if (skinnum == -1)
 				{
 					STRBUFCPY(skin->name, value);
-					strlwr(skin->name);
 				}
 				// I'm not lazy, so if the name is already used I make the name 'namex'
 				// using the default skin name's number set above
@@ -2549,10 +2549,20 @@ void R_AddSkins(UINT16 wadnum)
 					value2[stringspace - 1] = '\0';
 					if (R_SkinAvailable(value2) == -1)
 					{
-						STRBUFCPY(skin->name,
-							value2);
-						strlwr(skin->name);
+						char* name;
+						INT32 i;
+						STRBUFCPY(skin->name, value2);
+						for (i = 0; i < 32; i++)
+						{
+							name = strtok(Z_StrDup(description[i].skinname), "&");
+							strlwr(name);
+							if (name == value && description[i].wadnum == wadnum) // Update all character selects added with this WAD to refer to the new name.
+								STRBUFCPY(description[i].skinname, value2); // Breaks char&char2.
+							Z_Free(name);
+						}
 					}
+					else
+						CONS_Debug(DBG_SETUP, "R_AddSkins: Duplicate skin name replacement failure, S_SKIN lump #%d (WAD %s)\n", lump, wadfiles[wadnum]->filename);
 					Z_Free(value2);
 				}
 
