@@ -2435,7 +2435,7 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 		return;
 	}
 	else if (skinnum >= 0 && skinnum < numskins)
-		skinnum = -1;
+		skinnum = 255; // Cheeky emulation.
 
 	if (P_IsLocalPlayer(player))
 		CONS_Alert(CONS_WARNING, M_GetText("Skin %d not found\n"), skinnum);
