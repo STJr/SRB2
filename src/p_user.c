@@ -4104,14 +4104,17 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					break;
 
 				case CA_FLY:
-				case CA_SWIM: // Swim
+				case CA_SWIM:
 					// If currently in the air from a jump, and you pressed the
 					// button again and have the ability to fly, do so!
 					if (player->charability == CA_SWIM && !(player->mo->eflags & MFE_UNDERWATER))
 						; // Can't do anything if you're a fish out of water!
 					else if (!(player->pflags & PF_THOKKED) && !(player->powers[pw_tailsfly]))
 					{
-						P_SetPlayerMobjState(player->mo, S_PLAY_FLY); // Change to the flying animation
+						if (player->mo->eflags & MFE_UNDERWATER)
+							P_SetPlayerMobjState(player->mo, S_PLAY_SWIM); // Change to the swimming animation
+						else
+							P_SetPlayerMobjState(player->mo, S_PLAY_FLY); // Change to the flying animation
 
 						player->powers[pw_tailsfly] = tailsflytics + 1; // Set the fly timer
 
@@ -4121,8 +4124,6 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					break;
 				case CA_GLIDEANDCLIMB:
 					// Now Knuckles-type abilities are checked.
-					// If you can turn super and aren't already,
-					// and you don't have a shield, do it!
 					if (!(player->pflags & PF_THOKKED) || player->charability2 == CA2_MULTIABILITY)
 					{
 						INT32 glidespeed = player->actionspd;
@@ -6727,6 +6728,14 @@ static void P_MovePlayer(player_t *player)
 	// If not in a fly position, don't think you're flying!
 	if (player->panim != PA_ABILITY)
 		player->powers[pw_tailsfly] = 0;
+
+	if (player->charability == CA_FLY || player->charability == CA_SWIM) // Frustratingly has to remain seperate from the below block.
+	{
+		if (player->mo->state-states == S_PLAY_FLY && player->mo->eflags & MFE_UNDERWATER)
+			P_SetPlayerMobjState(player->mo, S_PLAY_SWIM); // Change to the swimming animation
+		else if (player->mo->state-states == S_PLAY_SWIM && !(player->mo->eflags & MFE_UNDERWATER))
+			P_SetPlayerMobjState(player->mo, S_PLAY_FLY); // Change to the flying animation
+	}
 
 	if (player->charability == CA_FLY || (player->charability == CA_SWIM && player->mo->eflags & MFE_UNDERWATER))
 	{

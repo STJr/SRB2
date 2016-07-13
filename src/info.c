@@ -78,6 +78,7 @@ char spr2names[NUMPLAYERSPRITES][5] =
 	"LIFE",
 
 	"FLY_",
+	"SWIM",
 	"TIRE",
 
 	"GLID",
@@ -146,6 +147,7 @@ state_t states[NUMSTATES] =
 
 	// Tails abilities
 	{SPR_PLAY, SPR2_FLY ,   2, {NULL}, 0, 0, S_PLAY_FLY},  // S_PLAY_FLY
+	{SPR_PLAY, SPR2_SWIM,   2, {NULL}, 0, 0, S_PLAY_SWIM}, // S_PLAY_SWIM
 	{SPR_PLAY, SPR2_TIRE,  12, {NULL}, 0, 0, S_PLAY_FLY_TIRED}, // S_PLAY_FLY_TIRED
 
 	// Knuckles abilities

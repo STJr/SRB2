@@ -597,6 +597,7 @@ enum playersprite
 	SPR2_LIFE,
 
 	SPR2_FLY ,
+	SPR2_SWIM,
 	SPR2_TIRE,
 
 	SPR2_GLID,
@@ -659,6 +660,7 @@ typedef enum state
 
 	// CA_FLY
 	S_PLAY_FLY,
+	S_PLAY_SWIM,
 	S_PLAY_FLY_TIRED,
 
 	// CA_GLIDEANDCLIMB

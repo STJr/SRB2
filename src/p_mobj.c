@@ -254,6 +254,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		player->panim = PA_FALL;
 		break;
 	case S_PLAY_FLY:
+	case S_PLAY_SWIM:
 	case S_PLAY_GLIDE:
 		player->panim = PA_ABILITY;
 		break;
@@ -370,8 +371,11 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 				case SPR2_FLY:
 					spr2 = SPR2_SPNG;
 					break;
-				case SPR2_TIRE:
+				case SPR2_SWIM:
 					spr2 = SPR2_FLY;
+					break;
+				case SPR2_TIRE:
+					spr2 = (player->charability == CA_FLY) ? SPR2_FLY : SPR2_SWIM;
 					break;
 
 				case SPR2_GLID:
@@ -3248,7 +3252,7 @@ static boolean P_SceneryZMovement(mobj_t *mo)
 boolean P_CanRunOnWater(player_t *player, ffloor_t *rover)
 {
 	if (!(player->pflags & PF_NIGHTSMODE) && !player->homing
-		&& (((player->charability == CA_SWIM) || player->powers[pw_super] || player->charflags & SF_RUNONWATER) && player->mo->ceilingz-*rover->topheight >= player->mo->height)
+		&& ((player->powers[pw_super] || player->charflags & SF_RUNONWATER) && player->mo->ceilingz-*rover->topheight >= player->mo->height)
 		&& (rover->flags & FF_SWIMMABLE) && !(player->pflags & PF_SPINNING) && player->speed > FixedMul(player->runspeed, player->mo->scale)
 		&& !(player->pflags & PF_SLIDING)
 		&& abs(player->mo->z - *rover->topheight) < FixedMul(30*FRACUNIT, player->mo->scale))

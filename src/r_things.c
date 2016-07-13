@@ -2339,7 +2339,7 @@ void R_InitSkins(void)
 }
 
 // returns true if available in circumstances, otherwise nope
-// warning don't use with an invalid skinnum
+// warning don't use with an invalid skinnum other than -1 which always returns true
 boolean R_SkinUnlock(INT32 skinnum)
 {
 	return ((skinnum == -1) // Simplifies things elsewhere, since there's already plenty of checks for less-than-0...
