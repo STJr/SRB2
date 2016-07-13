@@ -93,6 +93,12 @@ typedef struct
 
 	fixed_t jumpfactor; // multiple of standard jump height
 
+	fixed_t radius; // Bounding box changes.
+	fixed_t height;
+	fixed_t spinheight;
+
+	fixed_t shieldscale; // no change to bounding box, but helps set the shield's sprite size
+
 	// Definable color translation table
 	UINT8 starttranscolor;
 	UINT8 prefcolor;

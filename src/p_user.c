@@ -1297,6 +1297,17 @@ void P_SetObjectMomZ(mobj_t *mo, fixed_t value, boolean relative)
 }
 
 //
+// P_GetPlayerRadius
+//
+// Returns the radius
+// of the player.
+//
+fixed_t P_GetPlayerRadius(player_t *player)
+{
+	return FixedMul(skins[player->skin].radius, player->mo->scale);
+}
+
+//
 // P_GetPlayerHeight
 //
 // Returns the height
@@ -1304,7 +1315,7 @@ void P_SetObjectMomZ(mobj_t *mo, fixed_t value, boolean relative)
 //
 fixed_t P_GetPlayerHeight(player_t *player)
 {
-	return FixedMul(player->mo->info->height, player->mo->scale);
+	return FixedMul(skins[player->skin].height, player->mo->scale);
 }
 
 //
@@ -1315,7 +1326,7 @@ fixed_t P_GetPlayerHeight(player_t *player)
 //
 fixed_t P_GetPlayerSpinHeight(player_t *player)
 {
-	return FixedMul(FixedMul(player->mo->info->height, player->mo->scale),2*FRACUNIT/3);
+	return FixedMul(skins[player->skin].spinheight, player->mo->scale);
 }
 
 //
@@ -6536,8 +6547,8 @@ static void P_MovePlayer(player_t *player)
 		|| ((((player->charflags & SF_NOJUMPSPIN) && (player->pflags & PF_JUMPED) && player->panim == PA_JUMP))
 			&& (P_MobjFlip(player->mo)*player->mo->momz < 0 || player->pflags & PF_THOKKED)))
 		P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
-	// If Springing but on the ground, change back!
-	else if (onground && (player->panim == PA_SPRING || player->panim == PA_FALL || player->panim == PA_RIDE) && !player->mo->momz)
+	// If doing an air animation but on the ground, change back!
+	else if (onground && (player->panim == PA_SPRING || player->panim == PA_FALL || player->panim == PA_RIDE || player->panim == PA_JUMP) && !player->mo->momz)
 		P_SetPlayerMobjState(player->mo, S_PLAY_STND);
 
 	// If you are stopped and are still walking, stand still!
@@ -6996,6 +7007,7 @@ static void P_MovePlayer(player_t *player)
 			player->mo->height = P_GetPlayerSpinHeight(player);
 		else
 			player->mo->height = P_GetPlayerHeight(player);
+		player->mo->radius = P_GetPlayerRadius(player);
 
 		if (player->mo->eflags & MFE_VERTICALFLIP && player->mo->height != oldheight) // adjust z height for reverse gravity, similar to how it's done for scaling
 			player->mo->z -= player->mo->height - oldheight;

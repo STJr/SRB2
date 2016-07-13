@@ -119,6 +119,7 @@ extern consvar_t cv_cam2_speed, cv_cam2_rotate, cv_cam2_rotspeed;
 extern fixed_t t_cam_dist, t_cam_height, t_cam_rotate;
 extern fixed_t t_cam2_dist, t_cam2_height, t_cam2_rotate;
 
+fixed_t P_GetPlayerRadius(player_t *player);
 fixed_t P_GetPlayerHeight(player_t *player);
 fixed_t P_GetPlayerSpinHeight(player_t *player);
 INT32 P_GetPlayerControlDirection(player_t *player);

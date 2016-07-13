@@ -44,6 +44,10 @@ enum skin {
 	skin_accelstart,
 	skin_acceleration,
 	skin_jumpfactor,
+	skin_radius,
+	skin_height,
+	skin_spinheight,
+	skin_shieldscale,
 	skin_starttranscolor,
 	skin_prefcolor,
 	skin_highresscale,
@@ -74,6 +78,10 @@ static const char *const skin_opt[] = {
 	"accelstart",
 	"acceleration",
 	"jumpfactor",
+	"radius",
+	"height",
+	"spinheight",
+	"shieldscale",
 	"starttranscolor",
 	"prefcolor",
 	"highresscale",
@@ -172,6 +180,18 @@ static int skin_get(lua_State *L)
 		break;
 	case skin_jumpfactor:
 		lua_pushfixed(L, skin->jumpfactor);
+		break;
+	case skin_radius:
+		lua_pushfixed(L, skin->radius);
+		break;
+	case skin_height:
+		lua_pushfixed(L, skin->height);
+		break;
+	case skin_spinheight:
+		lua_pushfixed(L, skin->spinheight);
+		break;
+	case skin_shieldscale:
+		lua_pushfixed(L, skin->shieldscale);
 		break;
 	case skin_starttranscolor:
 		lua_pushinteger(L, skin->starttranscolor);

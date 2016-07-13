@@ -2300,6 +2300,12 @@ static void Sk_SetDefaultValue(skin_t *skin)
 	skin->mindash = 15<<FRACBITS;
 	skin->maxdash = 90<<FRACBITS;
 
+	skin->radius = mobjinfo[MT_PLAYER].radius;
+	skin->height = mobjinfo[MT_PLAYER].height;
+	skin->spinheight = FixedMul(skin->height, 2*FRACUNIT/3);
+
+	skin->shieldscale = FRACUNIT;
+
 	skin->thokitem = -1;
 	skin->spinitem = -1;
 	skin->revitem = -1;
@@ -2545,7 +2551,7 @@ void R_AddSkins(UINT16 wadnum)
 					value2[stringspace - 1] = '\0';
 					if (R_SkinAvailable(value2) == -1)
 						// I'm lazy so if NEW name is already used I leave the 'skin x'
--						// default skin name set in Sk_SetDefaultValue
+						// default skin name set in Sk_SetDefaultValue
 						STRBUFCPY(skin->name, value2);
 					Z_Free(value2);
 				}
@@ -2620,6 +2626,9 @@ void R_AddSkins(UINT16 wadnum)
 			GETSPEED(mindash)
 			GETSPEED(maxdash)
 			GETSPEED(actionspd)
+			GETSPEED(radius)
+			GETSPEED(height)
+			GETSPEED(spinheight)
 #undef GETSPEED
 
 #define GETINT(field) else if (!stricmp(stoken, #field)) skin->field = atoi(value);
@@ -2652,10 +2661,13 @@ void R_AddSkins(UINT16 wadnum)
 
 			else if (!stricmp(stoken, "prefcolor"))
 				skin->prefcolor = R_GetColorByName(value);
-			else if (!stricmp(stoken, "jumpfactor"))
-				skin->jumpfactor = FLOAT_TO_FIXED(atof(value));
-			else if (!stricmp(stoken, "highresscale"))
-				skin->highresscale = FLOAT_TO_FIXED(atof(value));
+
+#define GETFLOAT(field) else if (!stricmp(stoken, #field)) skin->field = FLOAT_TO_FIXED(atof(value));
+			GETFLOAT(jumpfactor)
+			GETFLOAT(highresscale)
+			GETFLOAT(shieldscale)
+#undef GETFLOAT
+
 			else // let's check if it's a sound, otherwise error out
 			{
 				boolean found = false;
