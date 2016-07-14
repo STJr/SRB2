@@ -2639,7 +2639,9 @@ void R_AddSkins(UINT16 wadnum)
 			else if (!stricmp(stoken, "availability"))
 			{
 				skin->availability = atoi(value);
-				if (skin->availability && (skin->availability < MAXUNLOCKABLES))
+				if (skin->availability >= MAXUNLOCKABLES)
+					skin->availability = 0;
+				if (skin->availability)
 					STRBUFCPY(unlockables[skin->availability - 1].name, skin->realname);
 			}
 
