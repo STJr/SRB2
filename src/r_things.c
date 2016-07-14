@@ -2344,7 +2344,7 @@ void R_InitSkins(void)
 boolean R_SkinUnlock(INT32 skinnum)
 {
 	return ((skinnum == -1) // Simplifies things elsewhere, since there's already plenty of checks for less-than-0...
-		|| (skins[skinnum].availability == 0)
+		|| (!skins[skinnum].availability)
 		|| (unlockables[skins[skinnum].availability - 1].unlocked)
 		|| (modeattacking) // If you have someone else's run you might as well take a look
 		|| (Playing() && (R_SkinAvailable(mapheaderinfo[gamemap-1]->forcecharacter) == skinnum)) // Force 1.
@@ -2719,7 +2719,7 @@ next_token:
 
 		R_FlushTranslationColormapCache();
 
-		if (skin->availability == 2) // Safe to print...
+		if (!skin->availability) // Safe to print...
 			CONS_Printf(M_GetText("Added skin '%s'\n"), skin->name);
 #ifdef SKINVALUES
 		skin_cons_t[numskins].value = numskins;
