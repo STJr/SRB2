@@ -18,7 +18,7 @@
 #include "st_stuff.h"
 #include "w_wad.h"
 #include "z_zone.h"
-#include "m_menu.h" // Player character select
+#include "m_menu.h" // character select
 #include "m_misc.h"
 #include "i_video.h" // rendermode
 #include "r_things.h"
@@ -29,6 +29,7 @@
 #include "dehacked.h" // get_number (for thok)
 #include "d_netfil.h" // blargh. for nameonly().
 #include "m_cheat.h" // objectplace
+#include "m_cond.h"
 #ifdef HWRENDER
 #include "hardware/hw_md2.h"
 #endif
@@ -2312,7 +2313,7 @@ static void Sk_SetDefaultValue(skin_t *skin)
 
 	skin->highresscale = FRACUNIT>>1;
 
-	skin->availability = 1;
+	skin->availability = 0;
 
 	for (i = 0; i < sfx_skinsoundslot0; i++)
 		if (S_sfx[i].skinsound != -1)
@@ -2343,7 +2344,8 @@ void R_InitSkins(void)
 boolean R_SkinUnlock(INT32 skinnum)
 {
 	return ((skinnum == -1) // Simplifies things elsewhere, since there's already plenty of checks for less-than-0...
-		|| (skins[skinnum].availability)
+		|| (skins[skinnum].availability == 0)
+		|| (unlockables[skins[skinnum].availability - 1].unlocked)
 		|| (modeattacking) // If you have someone else's run you might as well take a look
 		|| (Playing() && (R_SkinAvailable(mapheaderinfo[gamemap-1]->forcecharacter) == skinnum)) // Force 1.
 		|| (netgame && !(server || adminplayer == consoleplayer) && (cv_forceskin.value == skinnum)) // Force 2.
@@ -2635,22 +2637,11 @@ void R_AddSkins(UINT16 wadnum)
 #undef GETINT
 
 			else if (!stricmp(stoken, "availability"))
-#ifdef DEVELOP
 			{
-				char *name;
-				INT32 i;
-				for (i = 0; i < 32; i++)
-				{
-					name = strtok(Z_StrDup(description[i].skinname), "&");
-					if (name == skin->name && PlayerMenu[i].status != IT_DISABLED)
-						PlayerMenu[i].status = (IT_DISABLED|IT_CENTER);
-					Z_Free(name);
-				}
 				skin->availability = atoi(value);
+				if (skin->availability && (skin->availability < MAXUNLOCKABLES))
+					STRBUFCPY(unlockables[skin->availability - 1].name, skin->realname);
 			}
-#else
-				;
-#endif
 
 			// custom translation table
 			else if (!stricmp(stoken, "startcolor"))
