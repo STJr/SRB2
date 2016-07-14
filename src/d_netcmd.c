@@ -4002,17 +4002,10 @@ static void Command_Archivetest_f(void)
   */
 static void ForceSkin_OnChange(void)
 {
-	if ((server || adminplayer == consoleplayer) && (cv_forceskin.value < -1 || cv_forceskin.value >= numskins || !(dedicated || R_SkinUnlock(cv_forceskin.value)))) // Dedicated servers have everything when it comes to forceskin because they have no gamedata.
+	if ((server || adminplayer == consoleplayer) && ((cv_forceskin.value == -1 && stricmp(cv_forceskin.string, "None")) || !(R_SkinUnlock(cv_forceskin.value))))
 	{
-		if (cv_forceskin.value == -2)
-			CV_SetValue(&cv_forceskin, numskins-1);
-		else
-		{
-			// hack because I can't restrict this and still allow added skins to be used with forceskin.
-			if (!menuactive)
-				CONS_Printf(M_GetText("Valid skin numbers are 0 to %d (-1 disables)\n"), numskins - 1);
-			CV_SetValue(&cv_forceskin, -1);
-		}
+		CONS_Printf("Please provide a valid skin name (\"None\" disables).\n");
+		CV_SetValue(&cv_forceskin, -1);
 		return;
 	}
 
@@ -4024,7 +4017,7 @@ static void ForceSkin_OnChange(void)
 		CONS_Printf("The server has lifted the forced skin restrictions.\n");
 	else
 	{
-		CONS_Printf("The server is restricting all players to skin \"%s\".\n",skins[cv_forceskin.value].name);
+		CONS_Printf("The server is restricting all players to skin \"%s\".\n",skins[cv_forceskin.value].realname);
 		ForceAllSkins(cv_forceskin.value);
 	}
 }

@@ -1161,7 +1161,11 @@ found:
 	else
 	{
 		if (var == &cv_forceskin)
+		{
 			var->value = R_SkinAvailable(var->string);
+			if (!R_SkinUnlock(var->value))
+				var->value = -1;
+		}
 		else
 			var->value = atoi(var->string);
 	}

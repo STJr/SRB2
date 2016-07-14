@@ -2346,7 +2346,7 @@ boolean R_SkinUnlock(INT32 skinnum)
 		|| (skins[skinnum].availability)
 		|| (modeattacking) // If you have someone else's run you might as well take a look
 		|| (Playing() && (R_SkinAvailable(mapheaderinfo[gamemap-1]->forcecharacter) == skinnum)) // Force 1.
-		|| ((netgame) && (cv_forceskin.value == skinnum)) // Force 2.
+		|| (netgame && !(server || adminplayer == consoleplayer) && (cv_forceskin.value == skinnum)) // Force 2.
 		);
 }
 
