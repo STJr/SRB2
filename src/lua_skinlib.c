@@ -51,7 +51,8 @@ enum skin {
 	skin_starttranscolor,
 	skin_prefcolor,
 	skin_highresscale,
-	skin_soundsid
+	skin_soundsid,
+	skin_availability
 };
 static const char *const skin_opt[] = {
 	"valid",
@@ -86,6 +87,7 @@ static const char *const skin_opt[] = {
 	"prefcolor",
 	"highresscale",
 	"soundsid",
+	"availability",
 	NULL};
 
 #define UNIMPLEMENTED luaL_error(L, LUA_QL("skin_t") " field " LUA_QS " is not implemented for Lua and cannot be accessed.", skin_opt[field])
@@ -204,6 +206,9 @@ static int skin_get(lua_State *L)
 		break;
 	case skin_soundsid:
 		LUA_PushUserdata(L, skin->soundsid, META_SOUNDSID);
+		break;
+	case skin_availability:
+		lua_pushinteger(L, skin->availability);
 		break;
 	}
 	return 1;
