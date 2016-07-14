@@ -109,7 +109,7 @@ typedef struct
 
 	spritedef_t sprites[NUMPLAYERSPRITES];
 
-	UINT8 availability; // lock? safe to put here as is not networked
+	UINT8 availability; // lock?
 } skin_t;
 
 // -----------
