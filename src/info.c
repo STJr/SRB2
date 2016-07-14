@@ -2639,7 +2639,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		MT_THOK,        // damage
 		sfx_None,       // activesound
 		MF_SOLID|MF_SHOOTABLE, // flags
-		(statenum_t)MT_THOK // raisestate
+		(statenum_t)MT_NULL // raisestate
 	},
 
 	{           // MT_BLUECRAWLA

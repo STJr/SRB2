@@ -2308,7 +2308,7 @@ static void Sk_SetDefaultValue(skin_t *skin)
 
 	skin->thokitem = -1;
 	skin->spinitem = -1;
-	skin->revitem = 0;
+	skin->revitem = -1;
 
 	skin->highresscale = FRACUNIT>>1;
 
