@@ -43,6 +43,7 @@ typedef enum
 	SF_NOJUMPDAMAGE     = 1<<8, // Don't damage enemies, etc whilst jumping?
 	SF_STOMPDAMAGE      = 1<<9, // Always damage enemies, etc by landing on them, no matter your vunerability?
 	SF_MARIODAMAGE      = SF_NOJUMPDAMAGE|SF_STOMPDAMAGE, // The Mario method of being able to damage enemies, etc.
+	SF_NOMIDDLESTART    = 1<<10, // Some animations can randomly start you halfway through. Disable this?
 } skinflags_t;
 
 //Primary and secondary skin abilities
