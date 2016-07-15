@@ -329,6 +329,8 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 			}
 		}
 
+		mobj->anim_duration = (UINT16)st->var2; // only used if FF_ANIMATE is set
+
 		// Player animations
 		if (st->sprite == SPR_PLAY)
 		{
@@ -336,9 +338,9 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 			boolean noalt = false;
 			UINT8 spr2 = st->frame & FF_FRAMEMASK;
 			UINT16 frame = (mobj->frame & FF_FRAMEMASK)+1;
-		mobj->anim_duration = (UINT16)st->var2; // only used if FF_ANIMATE is set
+			UINT8 numframes;
 
-			while (skin->sprites[spr2].numframes <= 0
+			while (skin && ((numframes = skin->sprites[spr2].numframes) <= 0)
 				&& spr2 != SPR2_STND)
 			{
 				switch(spr2)
@@ -447,17 +449,39 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 					break;
 			}
 
+			if (!skin)
+			{
+				frame = 0;
+				numframes = 0;
+			}
+
 			if (mobj->sprite != SPR_PLAY)
 			{
 				mobj->sprite = SPR_PLAY;
 				frame = 0;
 			}
 			else if (mobj->sprite2 != spr2)
-				frame = 0;
+			{
+				if ((st->frame & FF_MIDDLESTARTCHANCE) && numframes && P_RandomChance(FRACUNIT/2))
+					frame = numframes/2;
+				else
+					frame = 0;
+			}
+
+			if (frame >= numframes)
+			{
+				if (st->frame & FF_SPR2ENDSTATE)
+				{
+					if (st->var1 == S_NULL)
+						frame--; // no frame advancement
+					else
+						return P_SetPlayerMobjState(mobj, st->var1);
+				}
+				else
+					frame = 0;
+			}
 
 			mobj->sprite2 = spr2;
-			if (!mobj->skin || frame >= ((skin_t *)mobj->skin)->sprites[spr2].numframes)
-				frame = 0;
 			mobj->frame = frame|(st->frame&~FF_FRAMEMASK);
 		}
 		// Regular sprites
@@ -465,6 +489,8 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		{
 			mobj->sprite = st->sprite;
 			mobj->frame = st->frame;
+			if ((st->frame & (FF_ANIMATE|FF_MIDDLESTARTCHANCE)) == (FF_ANIMATE|FF_MIDDLESTARTCHANCE))
+				mobj->frame += (st->var1)/2;
 		}
 
 		// Modified handling.
@@ -536,18 +562,46 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 		// Player animations
 		if (st->sprite == SPR_PLAY)
 		{
+			skin_t *skin = ((skin_t *)mobj->skin);
 			UINT8 spr2 = st->frame & FF_FRAMEMASK;
 			UINT16 frame = (mobj->frame & FF_FRAMEMASK)+1;
+			UINT8 numframes;
+
+			if (skin)
+				numframes = skin->sprites[spr2].numframes;
+			else
+			{
+				frame = 0;
+				numframes = 0;
+			}
+
 			if (mobj->sprite != SPR_PLAY)
 			{
 				mobj->sprite = SPR_PLAY;
 				frame = 0;
 			}
 			else if (mobj->sprite2 != spr2)
-				frame = 0;
+			{
+				if ((st->frame & FF_MIDDLESTARTCHANCE) && numframes && P_RandomChance(FRACUNIT/2))
+					frame = numframes/2;
+				else
+					frame = 0;
+			}
+
+			if (frame >= numframes)
+			{
+				if (st->frame & FF_SPR2ENDSTATE)
+				{
+					if (st->var1 == S_NULL)
+						frame--; // no frame advancement
+					else
+						return P_SetPlayerMobjState(mobj, st->var1);
+				}
+				else
+					frame = 0;
+			}
+
 			mobj->sprite2 = spr2;
-			if (!mobj->skin || frame >= ((skin_t *)mobj->skin)->sprites[spr2].numframes)
-				frame = 0;
 			mobj->frame = frame|(st->frame&~FF_FRAMEMASK);
 		}
 		// Regular sprites
@@ -555,6 +609,8 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 		{
 			mobj->sprite = st->sprite;
 			mobj->frame = st->frame;
+			if ((st->frame & (FF_ANIMATE|FF_MIDDLESTARTCHANCE)) == (FF_ANIMATE|FF_MIDDLESTARTCHANCE))
+				mobj->frame += (st->var1)/2;
 		}
 
 		// Modified handling.
