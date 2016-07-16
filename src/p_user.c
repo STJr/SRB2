@@ -2018,9 +2018,15 @@ static void P_CheckUnderwaterAndSpaceTimer(player_t *player)
 
 		mobj_t *numbermobj = P_SpawnMobj(player->mo->x, player->mo->y, height, MT_DROWNNUMBERS);
 
-		timeleft /= (2*TICRATE); // To be strictly accurate it'd need to be ((timeleft/TICRATE) - 1)/2, but integer division rounds down for us
+		timeleft /= (2*TICRATE); // To be strictly accurate it'd need to be (((timeleft - 1)/TICRATE) - 1)/2, but integer division rounds down for us
 
-		S_StartSound(player->mo, sfx_dwnind);
+		if (player->charflags & SF_MACHINE)
+		{
+			S_StartSound(player->mo, sfx_buzz1);
+			timeleft += 6;
+		}
+		else
+			S_StartSound(player->mo, sfx_dwnind);
 
 		if (timeleft) // Don't waste time setting the state if the time is 0.
 			P_SetMobjState(numbermobj, numbermobj->info->spawnstate+timeleft);
@@ -2059,11 +2065,9 @@ static void P_CheckUnderwaterAndSpaceTimer(player_t *player)
 	// Underwater audio cues
 	if (P_IsLocalPlayer(player) && !player->bot)
 	{
-		if (player->powers[pw_underwater] == 25*TICRATE + 1)
-			S_StartSound(NULL, sfx_wtrdng);
-		else if (player->powers[pw_underwater] == 20*TICRATE + 1)
-			S_StartSound(NULL, sfx_wtrdng);
-		else if (player->powers[pw_underwater] == 15*TICRATE + 1)
+		if ((player->powers[pw_underwater] == 25*TICRATE + 1)
+		|| (player->powers[pw_underwater] == 20*TICRATE + 1)
+		|| (player->powers[pw_underwater] == 15*TICRATE + 1))
 			S_StartSound(NULL, sfx_wtrdng);
 
 		if (player->powers[pw_underwater] == 11*TICRATE + 1
@@ -2141,21 +2145,39 @@ static void P_CheckInvincibilityTimer(player_t *player)
 //
 static void P_DoBubbleBreath(player_t *player)
 {
-	fixed_t zh;
+	fixed_t x = player->mo->x;
+	fixed_t y = player->mo->y;
+	fixed_t z = player->mo->z;
 	mobj_t *bubble = NULL;
-
-	if (player->mo->eflags & MFE_VERTICALFLIP)
-		zh = player->mo->z + player->mo->height - FixedDiv(player->mo->height,5*(FRACUNIT/4));
-	else
-		zh = player->mo->z + FixedDiv(player->mo->height,5*(FRACUNIT/4));
 
 	if (!(player->mo->eflags & MFE_UNDERWATER) || ((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL && !(player->pflags & PF_NIGHTSMODE)) || player->spectator)
 		return;
 
-	if (P_RandomChance(FRACUNIT/16))
-		bubble = P_SpawnMobj(player->mo->x, player->mo->y, zh, MT_SMALLBUBBLE);
-	else if (P_RandomChance(3*FRACUNIT/256))
-		bubble = P_SpawnMobj(player->mo->x, player->mo->y, zh, MT_MEDIUMBUBBLE);
+	if (player->charflags & SF_MACHINE)
+	{
+		if (P_RandomChance((128-(player->powers[pw_underwater]/4))*FRACUNIT/256))
+		{
+			fixed_t rad = player->mo->radius>>FRACBITS;
+			x += (P_RandomRange(rad, -rad)<<FRACBITS);
+			y += (P_RandomRange(rad, -rad)<<FRACBITS);
+			z += (P_RandomKey(player->mo->height>>FRACBITS)<<FRACBITS);
+			bubble = P_SpawnMobj(x, y, z, MT_WATERZAP);
+			S_StartSound(bubble, sfx_beelec);
+		}
+	}
+	else
+	{
+		if (player->mo->eflags & MFE_VERTICALFLIP)
+			z += player->mo->height - FixedDiv(player->mo->height,5*(FRACUNIT/4));
+		else
+			z += FixedDiv(player->mo->height,5*(FRACUNIT/4));
+
+		if (P_RandomChance(FRACUNIT/16))
+			bubble = P_SpawnMobj(x, y, z, MT_SMALLBUBBLE);
+		else if (P_RandomChance(3*FRACUNIT/256))
+			bubble = P_SpawnMobj(x, y, z, MT_MEDIUMBUBBLE);
+	}
+
 	if (bubble)
 	{
 		bubble->threshold = 42;

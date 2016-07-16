@@ -489,7 +489,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 			}
 			else if (mobj->sprite2 != spr2)
 			{
-				if ((st->frame & FF_MIDDLESTARTCHANCE) && !(player->charflags & SF_NOMIDDLESTART) && numframes && P_RandomChance(FRACUNIT/2))
+				if ((st->frame & FF_MIDDLESTARTCHANCE) && numframes && P_RandomChance(FRACUNIT/2))
 					frame = numframes/2;
 				else
 					frame = 0;
@@ -609,7 +609,7 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 			}
 			else if (mobj->sprite2 != spr2)
 			{
-				if ((st->frame & FF_MIDDLESTARTCHANCE) && !(skin->flags & SF_NOMIDDLESTART) && numframes && P_RandomChance(FRACUNIT/2))
+				if ((st->frame & FF_MIDDLESTARTCHANCE) && numframes && P_RandomChance(FRACUNIT/2))
 					frame = numframes/2;
 				else
 					frame = 0;

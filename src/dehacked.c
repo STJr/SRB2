@@ -5552,6 +5552,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	"S_POP1", // Extra Large bubble goes POP!
 
+	"S_WATERZAP",
+
 	"S_FOG1",
 	"S_FOG2",
 	"S_FOG3",
@@ -5592,6 +5594,13 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_THREE1",
 	"S_FOUR1",
 	"S_FIVE1",
+
+	"S_ZERO2",
+	"S_ONE2",
+	"S_TWO2",
+	"S_THREE2",
+	"S_FOUR2",
+	"S_FIVE2",
 
 	// Tag Sign
 	"S_TTAG1",
@@ -6501,6 +6510,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_SMALLBUBBLE", // small bubble
 	"MT_MEDIUMBUBBLE", // medium bubble
 	"MT_EXTRALARGEBUBBLE", // extra large bubble
+	"MT_WATERZAP",
 	"MT_TFOG",
 	"MT_SEED",
 	"MT_PARTICLE",
@@ -7146,7 +7156,7 @@ struct {
 	{"SF_NOJUMPDAMAGE",SF_NOJUMPDAMAGE},
 	{"SF_STOMPDAMAGE",SF_STOMPDAMAGE},
 	{"SF_MARIODAMAGE",SF_MARIODAMAGE},
-	{"SF_NOMIDDLESTART",SF_NOMIDDLESTART},
+	{"SF_MACHINE",SF_MACHINE},
 
 	// Character abilities!
 	// Primary

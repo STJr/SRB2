@@ -45,15 +45,15 @@ char sprnames[NUMSPRITES + 1][5] =
 	"ELEM","FORC","PITY","IVSP","SSPK","GOAL","BIRD","BUNY","MOUS","CHIC",
 	"COWZ","RBRD","SPRY","SPRR","SPRB","YSPR","RSPR","SSWY","SSWR","SSWB",
 	"RAIN","SNO1","SPLH","SPLA","SMOK","BUBP","BUBO","BUBN","BUBM","POPP",
-	"TFOG","SEED","PRTL","SCOR","DRWN","TTAG","GFLG","RRNG","RNGB","RNGR",
-	"RNGI","RNGA","RNGE","RNGS","RNGG","PIKB","PIKR","PIKA","PIKE","PIKS",
-	"PIKG","TAUT","TGRE","TSCR","COIN","CPRK","GOOM","BGOM","FFWR","FBLL",
-	"SHLL","PUMA","HAMM","KOOP","BFLM","MAXE","MUS1","MUS2","TOAD","NDRN",
-	"SUPE","SUPZ","NDRL","NSPK","NBMP","HOOP","NSCR","NPRU","CAPS","SUPT",
-	"SPRK","BOM1","BOM2","BOM3","BOM4","ROIA","ROIB","ROIC","ROID","ROIE",
-	"ROIF","ROIG","ROIH","ROII","ROIJ","ROIK","ROIL","ROIM","ROIN","ROIO",
-	"ROIP","BBAL","GWLG","GWLR","SRBA","SRBB","SRBC","SRBD","SRBE","SRBF",
-	"SRBG","SRBH","SRBI","SRBJ","SRBK","SRBL","SRBM","SRBN","SRBO",
+	"WZAP","TFOG","SEED","PRTL","SCOR","DRWN","TTAG","GFLG","RRNG","RNGB",
+	"RNGR","RNGI","RNGA","RNGE","RNGS","RNGG","PIKB","PIKR","PIKA","PIKE",
+	"PIKS","PIKG","TAUT","TGRE","TSCR","COIN","CPRK","GOOM","BGOM","FFWR",
+	"FBLL","SHLL","PUMA","HAMM","KOOP","BFLM","MAXE","MUS1","MUS2","TOAD",
+	"NDRN","SUPE","SUPZ","NDRL","NSPK","NBMP","HOOP","NSCR","NPRU","CAPS",
+	"SUPT","SPRK","BOM1","BOM2","BOM3","BOM4","ROIA","ROIB","ROIC","ROID",
+	"ROIE","ROIF","ROIG","ROIH","ROII","ROIJ","ROIK","ROIL","ROIM","ROIN",
+	"ROIO","ROIP","BBAL","GWLG","GWLR","SRBA","SRBB","SRBC","SRBD","SRBE",
+	"SRBF","SRBG","SRBH","SRBI","SRBJ","SRBK","SRBL","SRBM","SRBN","SRBO",
 };
 
 char spr2names[NUMPLAYERSPRITES][5] =
@@ -1936,6 +1936,8 @@ state_t states[NUMSTATES] =
 	// Extra Large Bubble goes POP!
 	{SPR_POPP, 0, 16, {NULL}, 0, 0, S_NULL}, // S_POP1
 
+	{SPR_WZAP, FF_TRANS10|FF_ANIMATE|FF_MIDDLESTARTCHANCE, 4, {NULL}, 3, 2, S_NULL},  // S_WATERZAP
+
 	{SPR_TFOG, FF_FULLBRIGHT|FF_TRANS50,    2, {NULL}, 0, 0, S_FOG2},  // S_FOG1
 	{SPR_TFOG, FF_FULLBRIGHT|FF_TRANS50|1,  2, {NULL}, 0, 0, S_FOG3},  // S_FOG2
 	{SPR_TFOG, FF_FULLBRIGHT|FF_TRANS50|2,  2, {NULL}, 0, 0, S_FOG4},  // S_FOG3
@@ -1977,6 +1979,13 @@ state_t states[NUMSTATES] =
 	{SPR_DRWN, 3, 40, {NULL}, 0, 0, S_NULL}, // S_THREE1
 	{SPR_DRWN, 4, 40, {NULL}, 0, 0, S_NULL}, // S_FOUR1
 	{SPR_DRWN, 5, 40, {NULL}, 0, 0, S_NULL}, // S_FIVE1
+
+	{SPR_DRWN,  6, 40, {NULL}, 0, 0, S_NULL}, // S_ZERO2
+	{SPR_DRWN,  7, 40, {NULL}, 0, 0, S_NULL}, // S_ONE2
+	{SPR_DRWN,  8, 40, {NULL}, 0, 0, S_NULL}, // S_TWO2
+	{SPR_DRWN,  9, 40, {NULL}, 0, 0, S_NULL}, // S_THREE2
+	{SPR_DRWN, 10, 40, {NULL}, 0, 0, S_NULL}, // S_FOUR2
+	{SPR_DRWN, 11, 40, {NULL}, 0, 0, S_NULL}, // S_FIVE2
 
 	{SPR_TTAG, FF_FULLBRIGHT, 2, {NULL}, 0, 0, S_NULL}, // S_TTAG1
 
@@ -10511,6 +10520,33 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_None,       // activesound
 		MF_SPECIAL|MF_NOGRAVITY|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_WATERZAP
+		-1,             // doomednum
+		S_WATERZAP,     // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		8,              // speed
+		4*FRACUNIT,     // radius
+		4*FRACUNIT,     // height
+		0,              // display offset
+		16,             // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOBLOCKMAP|MF_NOCLIP|MF_NOGRAVITY|MF_SCENERY, // flags
 		S_NULL          // raisestate
 	},
 

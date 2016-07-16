@@ -387,6 +387,7 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_BUBN
 	&lspr[NOLIGHT],     // SPR_BUBM
 	&lspr[NOLIGHT],     // SPR_POPP
+	&lspr[SUPERSPARK_L], // SPR_WZAP
 	&lspr[SUPERSPARK_L], // SPR_TFOG
 	&lspr[NIGHTSLIGHT_L],     // SPR_SEED // Sonic CD flower seed
 	&lspr[NOLIGHT],     // SPR_PRTL

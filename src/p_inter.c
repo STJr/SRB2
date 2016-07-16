@@ -2261,7 +2261,10 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			target->momx = target->momy = target->momz = 0;
 			if (damagetype == DMG_DROWNED) // drowned
 			{
-				S_StartSound(target, sfx_drown);
+				if (target->player->charflags & SF_MACHINE)
+					S_StartSound(target, sfx_fizzle);
+				else
+					S_StartSound(target, sfx_drown);
 				// Don't jump up when drowning
 			}
 			else
