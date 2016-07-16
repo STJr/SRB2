@@ -2007,65 +2007,43 @@ static void P_CheckSneakerAndLivesTimer(player_t *player)
 //
 static void P_CheckUnderwaterAndSpaceTimer(player_t *player)
 {
-	fixed_t height;
-	mobj_t *numbermobj = NULL;
+	tic_t timeleft = (player->powers[pw_spacetime]) ? player->powers[pw_spacetime] : player->powers[pw_underwater];
 
-	if (player->mo->eflags & MFE_VERTICALFLIP)
-		height = player->mo->z - FixedMul(8*FRACUNIT - mobjinfo[MT_DROWNNUMBERS].height, player->mo->scale);
-	else
-		height = player->mo->z + player->mo->height + FixedMul(8*FRACUNIT, player->mo->scale);
+	if ((timeleft == 11*TICRATE + 1) // 5
+	 || (timeleft ==  9*TICRATE + 1) // 4
+	 || (timeleft ==  7*TICRATE + 1) // 3
+	 || (timeleft ==  5*TICRATE + 1) // 2
+	 || (timeleft ==  3*TICRATE + 1) // 1
+	 || (timeleft ==  1*TICRATE + 1) // 0
+	) {
+		fixed_t height = (player->mo->eflags & MFE_VERTICALFLIP)
+		? player->mo->z - FixedMul(8*FRACUNIT - mobjinfo[MT_DROWNNUMBERS].height, player->mo->scale)
+		: player->mo->z + player->mo->height + FixedMul(8*FRACUNIT, player->mo->scale);
 
-	if (player->powers[pw_underwater] == 11*TICRATE + 1 || player->powers[pw_spacetime] == 11*TICRATE + 1)
-	{
-		numbermobj = P_SpawnMobj(player->mo->x, player->mo->y, height, MT_DROWNNUMBERS);
-		P_SetMobjState(numbermobj, numbermobj->info->spawnstate+5);
-	}
-	else if (player->powers[pw_underwater] == 9*TICRATE + 1 || player->powers[pw_spacetime] == 9*TICRATE + 1)
-	{
-		numbermobj = P_SpawnMobj(player->mo->x, player->mo->y, height, MT_DROWNNUMBERS);
-		P_SetMobjState(numbermobj, numbermobj->info->spawnstate+4);
-	}
-	else if (player->powers[pw_underwater] == 7*TICRATE + 1 || player->powers[pw_spacetime] == 7*TICRATE + 1)
-	{
-		numbermobj = P_SpawnMobj(player->mo->x, player->mo->y, height, MT_DROWNNUMBERS);
-		P_SetMobjState(numbermobj, numbermobj->info->spawnstate+3);
-	}
-	else if (player->powers[pw_underwater] == 5*TICRATE + 1 || player->powers[pw_spacetime] == 5*TICRATE + 1)
-	{
-		numbermobj = P_SpawnMobj(player->mo->x, player->mo->y, height, MT_DROWNNUMBERS);
-		P_SetMobjState(numbermobj, numbermobj->info->spawnstate+2);
-	}
-	else if (player->powers[pw_underwater] == 3*TICRATE + 1 || player->powers[pw_spacetime] == 3*TICRATE + 1)
-	{
-		numbermobj = P_SpawnMobj(player->mo->x, player->mo->y, height, MT_DROWNNUMBERS);
-		P_SetMobjState(numbermobj, numbermobj->info->spawnstate+1);
-	}
-	else if (player->powers[pw_underwater] == 1*TICRATE + 1 || player->powers[pw_spacetime] == 1*TICRATE + 1)
-	{
-		numbermobj = P_SpawnMobj(player->mo->x, player->mo->y, height, MT_DROWNNUMBERS);
-		//P_SetMobjState(numbermobj, numbermobj->info->spawnstate+0);
-	}
-	// Underwater timer runs out
-	else if (player->powers[pw_underwater] == 1)
-	{
-		if ((netgame || multiplayer) && P_IsLocalPlayer(player))
-			S_ChangeMusic(mapmusname, mapmusflags, true);
-		P_DamageMobj(player->mo, NULL, NULL, 1, DMG_DROWNED);
-	}
-	else if (player->powers[pw_spacetime] == 1)
-	{
-		if ((netgame || multiplayer) && P_IsLocalPlayer(player))
-			S_ChangeMusic(mapmusname, mapmusflags, true);
-		P_DamageMobj(player->mo, NULL, NULL, 1, DMG_SPACEDROWN);
-	}
+		mobj_t *numbermobj = P_SpawnMobj(player->mo->x, player->mo->y, height, MT_DROWNNUMBERS);
 
-	if (numbermobj)
-	{
+		timeleft /= (2*TICRATE); // To be strictly accurate it'd need to be ((timeleft/TICRATE) - 1)/2, but integer division rounds down for us
+
+		S_StartSound(player->mo, sfx_dwnind);
+
+		if (timeleft) // Don't waste time setting the state if the time is 0.
+			P_SetMobjState(numbermobj, numbermobj->info->spawnstate+timeleft);
+
 		P_SetTarget(&numbermobj->target, player->mo);
 		numbermobj->threshold = 40;
-		S_StartSound(player->mo, sfx_dwnind);
 		numbermobj->destscale = player->mo->scale;
 		P_SetScale(numbermobj, player->mo->scale);
+	}
+	// Underwater timer runs out
+	else if (timeleft == 1)
+	{
+		if ((netgame || multiplayer) && P_IsLocalPlayer(player))
+			S_ChangeMusic(mapmusname, mapmusflags, true);
+
+		if (player->powers[pw_spacetime] == 1)
+			P_DamageMobj(player->mo, NULL, NULL, 1, DMG_SPACEDROWN);
+		else
+			P_DamageMobj(player->mo, NULL, NULL, 1, DMG_DROWNED);
 	}
 
 	if (!(player->mo->eflags & MFE_UNDERWATER) && player->powers[pw_underwater])
@@ -2085,19 +2063,19 @@ static void P_CheckUnderwaterAndSpaceTimer(player_t *player)
 	// Underwater audio cues
 	if (P_IsLocalPlayer(player) && !player->bot)
 	{
-		if (player->powers[pw_underwater] == 11*TICRATE + 1
-		&& player == &players[consoleplayer])
-		{
-			S_StopMusic();
-			S_ChangeMusicInternal("drown", false);
-		}
-
 		if (player->powers[pw_underwater] == 25*TICRATE + 1)
 			S_StartSound(NULL, sfx_wtrdng);
 		else if (player->powers[pw_underwater] == 20*TICRATE + 1)
 			S_StartSound(NULL, sfx_wtrdng);
 		else if (player->powers[pw_underwater] == 15*TICRATE + 1)
 			S_StartSound(NULL, sfx_wtrdng);
+
+		if (player->powers[pw_underwater] == 11*TICRATE + 1
+		&& player == &players[consoleplayer])
+		{
+			S_StopMusic();
+			S_ChangeMusicInternal("drown", false);
+		}
 	}
 
 	if (player->exiting)
