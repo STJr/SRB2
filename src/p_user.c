@@ -2157,9 +2157,9 @@ static void P_DoBubbleBreath(player_t *player)
 	{
 		if (P_RandomChance((128-(player->powers[pw_underwater]/4))*FRACUNIT/256))
 		{
-			fixed_t rad = player->mo->radius>>FRACBITS;
-			x += (P_RandomRange(rad, -rad)<<FRACBITS);
-			y += (P_RandomRange(rad, -rad)<<FRACBITS);
+			fixed_t r = player->mo->radius>>FRACBITS;
+			x += (P_RandomRange(r, -r)<<FRACBITS);
+			y += (P_RandomRange(r, -r)<<FRACBITS);
 			z += (P_RandomKey(player->mo->height>>FRACBITS)<<FRACBITS);
 			bubble = P_SpawnMobj(x, y, z, MT_WATERZAP);
 			S_StartSound(bubble, sfx_beelec);

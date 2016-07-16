@@ -2261,6 +2261,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			target->momx = target->momy = target->momz = 0;
 			if (damagetype == DMG_DROWNED) // drowned
 			{
+				target->movedir = damagetype; // we're MOVING the Damage Into anotheR function... Okay, this is a bit of a hack.
 				if (target->player->charflags & SF_MACHINE)
 					S_StartSound(target, sfx_fizzle);
 				else

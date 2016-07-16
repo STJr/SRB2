@@ -6908,7 +6908,22 @@ void P_MobjThinker(mobj_t *mobj)
 					}
 				}
 				else // Apply gravity to fall downwards.
-					P_SetObjectMomZ(mobj, -2*FRACUNIT/3, true);
+				{
+					if (mobj->player && !(mobj->fuse % 8) && (mobj->player->charflags & SF_MACHINE))
+					{
+							fixed_t r = mobj->radius>>FRACBITS;
+							mobj_t *explosion = P_SpawnMobj(
+								mobj->x + (P_RandomRange(r, -r)<<FRACBITS),
+								mobj->y + (P_RandomRange(r, -r)<<FRACBITS),
+								mobj->z + (P_RandomKey(mobj->height>>FRACBITS)<<FRACBITS),
+								MT_BOSSEXPLODE);
+							S_StartSound(explosion, sfx_cybdth);
+					}
+					if (mobj->movedir == DMG_DROWNED)
+						P_SetObjectMomZ(mobj, -FRACUNIT/2, true); // slower fall from drowning
+					else
+						P_SetObjectMomZ(mobj, -2*FRACUNIT/3, true);
+				}
 			}
 			break;
 		default:
