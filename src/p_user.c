@@ -4019,19 +4019,19 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					{
 						// Catapult the player
 						fixed_t actionspd = player->actionspd;
-						
+
 						if (player->charability == CA_DASHMODE)
 							actionspd = max(player->normalspeed, FixedDiv(player->speed, player->mo->scale));
-						
+
 						if (player->mo->eflags & MFE_UNDERWATER)
 							actionspd >>= 1;
-						
+
 						if ((player->charability == CA_JUMPTHOK) && !(player->pflags & PF_THOKKED))
 						{
 							player->pflags &= ~PF_JUMPED;
 							P_DoJump(player, false);
 						}
-						
+
 						P_InstaThrust(player->mo, player->mo->angle, FixedMul(actionspd, player->mo->scale));
 
 						if (maptol & TOL_2D)
@@ -4141,14 +4141,14 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						S_StartSound(player->mo, sfx_spndsh);
 					}
 					break;
-				case CA_TWINSPIN: 
-					if(!(player->pflags & PF_THOKKED)) 
-					{ 
-						player->pflags |= PF_THOKKED; 
+				case CA_TWINSPIN:
+					if(!(player->pflags & PF_THOKKED))
+					{
+						player->pflags |= PF_THOKKED;
 						S_StartSound(player->mo, sfx_s3k42);
 						player->mo->frame = 0;
 						P_SetPlayerMobjState(player->mo, S_PLAY_TWINSPIN);
-					} 
+					}
 					break;
 				default:
 					break;
@@ -9167,7 +9167,7 @@ void P_PlayerThink(player_t *player)
 		{
 			dashmode++; // Counter. Adds 1 to dash mode per tic in top speed.
 			if (dashmode == 3*TICRATE) // This isn't in the ">=" equation because it'd cause the sound to play infinitely.
-				S_StartSound(player->mo, sfx_s3ka2); // If the player enters dashmode, play this sound on the the tic it starts.		
+				S_StartSound(player->mo, sfx_s3ka2); // If the player enters dashmode, play this sound on the the tic it starts.
 		}
 		else if (!(player->pflags & PF_SPINNING))
 		{
