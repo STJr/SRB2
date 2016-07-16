@@ -163,6 +163,10 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		I_Error("P_SetPlayerMobjState used for non-player mobj. Use P_SetMobjState instead!\n(Mobj type: %d, State: %d)", mobj->type, state);
 #endif
 
+	// Catch falling for nojumpspin
+	if ((state == S_PLAY_JUMP) && (player->charflags & SF_NOJUMPSPIN) && (P_MobjFlip(mobj)*mobj->momz < 0 || player->pflags & PF_THOKKED))
+		return P_SetPlayerMobjState(mobj, S_PLAY_FALL);
+
 	// Catch state changes for Super Sonic
 	if (player->powers[pw_super] && (player->charflags & SF_SUPERANIMS))
 	{
@@ -256,6 +260,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 	case S_PLAY_FLY:
 	case S_PLAY_SWIM:
 	case S_PLAY_GLIDE:
+	case S_PLAY_TWINSPIN:
 		player->panim = PA_ABILITY;
 		break;
 	case S_PLAY_RIDE:
@@ -388,6 +393,10 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 					break;
 				case SPR2_CLNG:
 					spr2 = SPR2_CLMB;
+					break;
+
+				case SPR2_TWIN:
+					spr2 = SPR2_SPIN;
 					break;
 
 				// Super sprites fallback to regular sprites
@@ -591,12 +600,7 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 			if (frame >= numframes)
 			{
 				if (st->frame & FF_SPR2ENDSTATE)
-				{
-					if (st->var1 == S_NULL)
-						frame--; // no frame advancement
-					else
-						return P_SetPlayerMobjState(mobj, st->var1);
-				}
+					return P_SetPlayerMobjState(mobj, st->var1); // Differs from P_SetPlayerMobjState - allows object to be removed via S_NULL
 				else
 					frame = 0;
 			}

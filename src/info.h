@@ -604,6 +604,8 @@ enum playersprite
 	SPR2_CLNG,
 	SPR2_CLMB,
 
+	SPR2_TWIN, // twinspin
+
 	SPR2_TRNS,
 	SPR2_SSTD,
 	SPR2_SWLK,
@@ -652,13 +654,13 @@ typedef enum state
 	S_PLAY_SPIN,
 	S_PLAY_DASH,
 	S_PLAY_GASP,
-	S_PLAY_JUMP, // spin jump (todo: make jump separate from spring up for non-spin chars too?)
+	S_PLAY_JUMP, // spin jump
 	S_PLAY_SPRING,
 	S_PLAY_FALL,
 	S_PLAY_EDGE,
 	S_PLAY_RIDE,
 
-	// CA_FLY
+	// CA_FLY/SWIM
 	S_PLAY_FLY,
 	S_PLAY_SWIM,
 	S_PLAY_FLY_TIRED,
@@ -667,6 +669,9 @@ typedef enum state
 	S_PLAY_GLIDE,
 	S_PLAY_CLING,
 	S_PLAY_CLIMB,
+
+	// CA_TWINSPIN
+	S_PLAY_TWINSPIN,
 
 	// SF_SUPERANIMS
 	S_PLAY_SUPER_STND,

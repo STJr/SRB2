@@ -939,7 +939,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		{
 			if (thing->flags & MF_MONITOR
 				&& (tmthing->player->pflags & (PF_SPINNING|PF_GLIDING)
-				|| ((tmthing->player->pflags & PF_JUMPED) && !(tmthing->player->charflags & SF_NOJUMPDAMAGE))
+				|| ((tmthing->player->pflags & PF_JUMPED) && !(tmthing->player->charflags & SF_NOJUMPDAMAGE && !(tmthing->player->charability == CA_TWINSPIN && tmthing->player->panim == PA_ABILITY)))
 				|| ((tmthing->player->charflags & SF_STOMPDAMAGE) && (P_MobjFlip(tmthing)*(tmthing->z - (thing->z + thing->height/2)) > 0) && (P_MobjFlip(tmthing)*tmthing->momz < 0))))
 			{
 				SINT8 flipval = P_MobjFlip(thing); // Save this value in case monitor gets removed.
@@ -964,7 +964,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	// unless it's a CTF team monitor and you're on the wrong team
 	else if (thing->flags & MF_MONITOR && tmthing->player
 	&& (tmthing->player->pflags & (PF_SPINNING|PF_GLIDING)
-		|| ((tmthing->player->pflags & PF_JUMPED) && !(tmthing->player->charflags & SF_NOJUMPDAMAGE))
+		|| ((tmthing->player->pflags & PF_JUMPED) && !(tmthing->player->charflags & SF_NOJUMPDAMAGE && !(tmthing->player->charability == CA_TWINSPIN && tmthing->player->panim == PA_ABILITY)))
 		|| ((tmthing->player->charflags & SF_STOMPDAMAGE) && (P_MobjFlip(tmthing)*(tmthing->z - (thing->z + thing->height/2)) > 0) && (P_MobjFlip(tmthing)*tmthing->momz < 0)))
 	&& !((thing->type == MT_REDRINGBOX && tmthing->player->ctfteam != 1) || (thing->type == MT_BLUERINGBOX && tmthing->player->ctfteam != 2)))
 		;

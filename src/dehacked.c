@@ -3793,6 +3793,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PLAY_CLING",
 	"S_PLAY_CLIMB",
 
+	// CA_TWINSPIN
+	"S_PLAY_TWINSPIN",
+
 	// SF_SUPERANIMS
 	"S_PLAY_SUPER_STND",
 	"S_PLAY_SUPER_WALK",
@@ -7122,6 +7125,7 @@ struct {
 	{"CA_JUMPBOOST",CA_JUMPBOOST},
 	{"CA_AIRDRILL",CA_AIRDRILL},
 	{"CA_JUMPTHOK",CA_JUMPTHOK},
+	{"CA_TWINSPIN",CA_TWINSPIN},
 	// Secondary
 	{"CA2_NONE",CA2_NONE}, // now slot 0!
 	{"CA2_SPINDASH",CA2_SPINDASH},
