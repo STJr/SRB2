@@ -448,9 +448,12 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		return true;
 	}
 
-	// Dashmode users destroy spikes and monitors.
-	if ((tmthing->player) && (tmthing->player->charability == CA_DASHMODE) && (tmthing->player->dashmode >= 3*TICRATE)
-	&& (thing->flags & (MF_MONITOR) || thing->type == MT_SPIKE))
+	// CA_DASHMODE users destroy spikes and monitors, CA_TWINSPIN users destroy spikes.
+	if ((tmthing->player)
+		&& (((tmthing->player->charability == CA_DASHMODE) && (tmthing->player->dashmode >= 3*TICRATE)
+		&& (thing->flags & (MF_MONITOR) || thing->type == MT_SPIKE))
+	|| ((tmthing->player->charability == CA_TWINSPIN) && (tmthing->player->panim == PA_ABILITY)
+		&& (thing->type == MT_SPIKE))))
 	{
 		if ((thing->flags & (MF_MONITOR)) && (thing->health <= 0 || !(thing->flags & MF_SHOOTABLE)))
 			return true;
