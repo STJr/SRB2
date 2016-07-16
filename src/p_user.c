@@ -4119,14 +4119,14 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						S_StartSound(player->mo, sfx_spndsh);
 					}
 					break;
-				case CA_TWINSPIN: 
-					if(!(player->pflags & PF_THOKKED)) 
-					{ 
-						player->pflags |= PF_THOKKED; 
+				case CA_TWINSPIN:
+					if(!(player->pflags & PF_THOKKED))
+					{
+						player->pflags |= PF_THOKKED;
 						S_StartSound(player->mo, sfx_s3k42);
 						player->mo->frame = 0;
 						P_SetPlayerMobjState(player->mo, S_PLAY_TWINSPIN);
-					} 
+					}
 					break;
 				default:
 					break;
