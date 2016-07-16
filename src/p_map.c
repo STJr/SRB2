@@ -448,6 +448,35 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		return true;
 	}
 
+	// Dashmode users destroy spikes and monitors.
+	if ((tmthing->player) && (tmthing->player->charability == CA_DASHMODE) && (tmthing->player->dashmode >= 3*TICRATE)
+	&& (thing->flags & (MF_MONITOR) || thing->type == MT_SPIKE))
+	{
+		if ((thing->flags & (MF_MONITOR)) && (thing->health <= 0 || !(thing->flags & MF_SHOOTABLE)))
+			return true;
+		blockdist = thing->radius + tmthing->radius;
+		if (abs(thing->x - tmx) >= blockdist || abs(thing->y - tmy) >= blockdist)
+			return true; // didn't hit it
+		// see if it went over / under
+		if (tmthing->z > thing->z + thing->height)
+			return true; // overhead
+		if (tmthing->z + tmthing->height < thing->z)
+			return true; // underneath
+		if (thing->type == MT_SPIKE)
+		{
+			S_StartSound(tmthing, thing->info->deathsound);
+			for (thing = thing->subsector->sector->thinglist; thing; thing = thing->snext)
+				if (thing->type == MT_SPIKE && thing->health > 0 && thing->flags & MF_SOLID && P_AproxDistance(thing->x - tmthing->x, thing->y - tmthing->y) < FixedMul(56*FRACUNIT, thing->scale))
+					P_KillMobj(thing, tmthing, tmthing, 0);
+		}
+		else
+		{
+			thing->health = 0;
+			P_KillMobj(thing, tmthing, tmthing, 0);
+		}
+		return true;
+	}
+
 	if (!(thing->flags & (MF_SOLID|MF_SPECIAL|MF_PAIN|MF_SHOOTABLE)))
 		return true;
 

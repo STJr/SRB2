@@ -175,6 +175,8 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_WALK);
 		case S_PLAY_RUN:
 			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_RUN);
+		case S_PLAY_PEEL:
+			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_PEEL);
 		case S_PLAY_PAIN:
 			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_PAIN);
 		case S_PLAY_DEAD:
@@ -230,6 +232,10 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 	case S_PLAY_RUN:
 	case S_PLAY_SUPER_RUN:
 		player->panim = PA_RUN;
+		break;
+	case S_PLAY_PEEL:
+	case S_PLAY_SUPER_PEEL:
+		player->panim = PA_PEEL;
 		break;
 	case S_PLAY_PAIN:
 	case S_PLAY_SUPER_PAIN:
@@ -316,7 +322,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 					else
 						mobj->tics = 4;
 				}
-				else if (player->panim == PA_RUN)
+				else if ((player->panim == PA_RUN) || (player->panim == PA_PEEL))
 				{
 					if (speed > 52<<FRACBITS)
 						mobj->tics = 1;
@@ -339,6 +345,9 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 			{
 				switch(spr2)
 				{
+				case SPR2_PEEL:
+					spr2 = SPR2_RUN;
+					break;
 				case SPR2_RUN:
 					spr2 = SPR2_WALK;
 					break;
@@ -392,6 +401,9 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 					break;
 				case SPR2_SRUN:
 					spr2 = SPR2_RUN;
+					break;
+				case SPR2_SPEE:
+					spr2 = SPR2_PEEL;
 					break;
 				case SPR2_SPAN:
 					spr2 = SPR2_PAIN;
@@ -2969,7 +2981,9 @@ static void P_PlayerZMovement(mobj_t *mo)
 					{
 						if (mo->player->cmomx || mo->player->cmomy)
 						{
-							if (mo->player->speed >= FixedMul(mo->player->runspeed, mo->scale) && mo->player->panim != PA_RUN)
+							if (mo->player->dashmode >= 3*TICRATE && mo->player->panim != PA_PEEL)
+								P_SetPlayerMobjState(mo, S_PLAY_PEEL);
+							else if (mo->player->speed >= FixedMul(mo->player->runspeed, mo->scale) && mo->player->panim != PA_RUN)
 								P_SetPlayerMobjState(mo, S_PLAY_RUN);
 							else if ((mo->player->rmomx || mo->player->rmomy) && (mo->player->panim != PA_WALK || mo->state-states == S_PLAY_SUPER_FLOAT))
 								P_SetPlayerMobjState(mo, S_PLAY_WALK);
@@ -2978,6 +2992,8 @@ static void P_PlayerZMovement(mobj_t *mo)
 						}
 						else
 						{
+							if (mo->player->dashmode >= 3*TICRATE && mo->player->panim != PA_PEEL)
+								P_SetPlayerMobjState(mo, S_PLAY_PEEL);
 							if (mo->player->speed >= FixedMul(mo->player->runspeed, mo->scale) && mo->player->panim != PA_RUN)
 								P_SetPlayerMobjState(mo, S_PLAY_RUN);
 							else if ((mo->momx || mo->momy) && (mo->player->panim != PA_WALK || mo->state-states == S_PLAY_SUPER_FLOAT))

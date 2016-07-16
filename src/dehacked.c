@@ -3794,6 +3794,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PLAY_WAIT",
 	"S_PLAY_WALK",
 	"S_PLAY_RUN",
+	"S_PLAY_PEEL",
 	"S_PLAY_PAIN",
 	"S_PLAY_DEAD",
 	"S_PLAY_DRWN",
@@ -3819,6 +3820,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PLAY_SUPER_STND",
 	"S_PLAY_SUPER_WALK",
 	"S_PLAY_SUPER_RUN",
+	"S_PLAY_SUPER_PEEL",
 	"S_PLAY_SUPER_PAIN",
 	"S_PLAY_SUPER_STUN",
 	"S_PLAY_SUPER_DEAD",
@@ -7141,6 +7143,7 @@ struct {
 	{"CA_JUMPBOOST",CA_JUMPBOOST},
 	{"CA_AIRDRILL",CA_AIRDRILL},
 	{"CA_JUMPTHOK",CA_JUMPTHOK},
+	{"CA_DASHMODE",CA_DASHMODE},
 	// Secondary
 	{"CA2_NONE",CA2_NONE}, // now slot 0!
 	{"CA2_SPINDASH",CA2_SPINDASH},
@@ -7191,6 +7194,7 @@ struct {
 	{"PA_EDGE",PA_EDGE},
 	{"PA_WALK",PA_WALK},
 	{"PA_RUN",PA_RUN},
+	{"PA_PEEL",PA_PEEL},
 	{"PA_PAIN",PA_PAIN},
 	{"PA_ROLL",PA_ROLL},
 	{"PA_SPRING",PA_SPRING},
