@@ -4111,10 +4111,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						; // Can't do anything if you're a fish out of water!
 					else if (!(player->pflags & PF_THOKKED) && !(player->powers[pw_tailsfly]))
 					{
-						if (player->mo->eflags & MFE_UNDERWATER)
-							P_SetPlayerMobjState(player->mo, S_PLAY_SWIM); // Change to the swimming animation
-						else
-							P_SetPlayerMobjState(player->mo, S_PLAY_FLY); // Change to the flying animation
+						P_SetPlayerMobjState(player->mo, S_PLAY_FLY); // Change to the flying animation
 
 						player->powers[pw_tailsfly] = tailsflytics + 1; // Set the fly timer
 
@@ -6736,14 +6733,6 @@ static void P_MovePlayer(player_t *player)
 	// If not in a fly position, don't think you're flying!
 	if (player->panim != PA_ABILITY)
 		player->powers[pw_tailsfly] = 0;
-
-	if (player->charability == CA_FLY || player->charability == CA_SWIM) // Frustratingly has to remain seperate from the below block.
-	{
-		if (player->mo->state-states == S_PLAY_FLY && player->mo->eflags & MFE_UNDERWATER)
-			P_SetPlayerMobjState(player->mo, S_PLAY_SWIM); // Change to the swimming animation
-		else if (player->mo->state-states == S_PLAY_SWIM && !(player->mo->eflags & MFE_UNDERWATER))
-			P_SetPlayerMobjState(player->mo, S_PLAY_FLY); // Change to the flying animation
-	}
 
 	if (player->charability == CA_FLY || (player->charability == CA_SWIM && player->mo->eflags & MFE_UNDERWATER))
 	{

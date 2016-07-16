@@ -167,6 +167,12 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 	if ((state == S_PLAY_JUMP) && (player->charflags & SF_NOJUMPSPIN) && (P_MobjFlip(mobj)*mobj->momz < 0 || player->pflags & PF_THOKKED))
 		return P_SetPlayerMobjState(mobj, S_PLAY_FALL);
 
+	// Catch swimming versus flying
+	if (state == S_PLAY_FLY && player->mo->eflags & MFE_UNDERWATER)
+		return P_SetPlayerMobjState(player->mo, S_PLAY_SWIM);
+	else if (state == S_PLAY_SWIM && !(player->mo->eflags & MFE_UNDERWATER))
+		return P_SetPlayerMobjState(player->mo, S_PLAY_FLY);
+
 	// Catch state changes for Super Sonic
 	if (player->powers[pw_super] && (player->charflags & SF_SUPERANIMS))
 	{
