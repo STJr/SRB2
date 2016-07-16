@@ -3771,6 +3771,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PLAY_WAIT",
 	"S_PLAY_WALK",
 	"S_PLAY_RUN",
+	"S_PLAY_PEEL",
 	"S_PLAY_PAIN",
 	"S_PLAY_DEAD",
 	"S_PLAY_DRWN",
@@ -3800,6 +3801,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PLAY_SUPER_STND",
 	"S_PLAY_SUPER_WALK",
 	"S_PLAY_SUPER_RUN",
+	"S_PLAY_SUPER_PEEL",
 	"S_PLAY_SUPER_PAIN",
 	"S_PLAY_SUPER_STUN",
 	"S_PLAY_SUPER_DEAD",
@@ -6695,12 +6697,14 @@ static const char *const MOBJEFLAG_LIST[] = {
 	NULL
 };
 
+#ifdef HAVE_BLUA
 static const char *const MAPTHINGFLAG_LIST[4] = {
 	NULL,
 	"OBJECTFLIP", // Reverse gravity flag for objects.
 	"OBJECTSPECIAL", // Special flag used with certain objects.
 	"AMBUSH" // Deaf monsters/do not react to sound.
 };
+#endif
 
 static const char *const PLAYERFLAG_LIST[] = {
 	// Flip camera angle with gravity flip prefrence.
@@ -6773,6 +6777,7 @@ static const char *const PLAYERFLAG_LIST[] = {
 	NULL // stop loop here.
 };
 
+#ifdef HAVE_BLUA
 // Linedef flags
 static const char *const ML_LIST[16] = {
 	"IMPASSIBLE",
@@ -6792,6 +6797,7 @@ static const char *const ML_LIST[16] = {
 	"BOUNCY",
 	"TFERLINE"
 };
+#endif
 
 // This DOES differ from r_draw's Color_Names, unfortunately.
 // Also includes Super colors
@@ -7125,6 +7131,7 @@ struct {
 	{"CA_JUMPBOOST",CA_JUMPBOOST},
 	{"CA_AIRDRILL",CA_AIRDRILL},
 	{"CA_JUMPTHOK",CA_JUMPTHOK},
+	{"CA_DASHMODE",CA_DASHMODE},
 	{"CA_TWINSPIN",CA_TWINSPIN},
 	// Secondary
 	{"CA2_NONE",CA2_NONE}, // now slot 0!
@@ -7176,6 +7183,7 @@ struct {
 	{"PA_EDGE",PA_EDGE},
 	{"PA_WALK",PA_WALK},
 	{"PA_RUN",PA_RUN},
+	{"PA_PEEL",PA_PEEL},
 	{"PA_PAIN",PA_PAIN},
 	{"PA_ROLL",PA_ROLL},
 	{"PA_JUMP",PA_JUMP},
@@ -7757,7 +7765,7 @@ fixed_t get_number(const char *word)
 #endif
 }
 
-void DEH_Check(void)
+void FUNCMATH DEH_Check(void)
 {
 #if defined(_DEBUG) || defined(PARANOIA)
 	const size_t dehstates = sizeof(STATE_LIST)/sizeof(const char*);
