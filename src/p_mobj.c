@@ -164,7 +164,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 #endif
 
 	// Catch falling for nojumpspin
-	if ((state == S_PLAY_JUMP) && (player->charflags & SF_NOJUMPSPIN) && (P_MobjFlip(mobj)*mobj->momz < 0 || player->pflags & PF_THOKKED))
+	if ((state == S_PLAY_JUMP) && (player->charflags & SF_NOJUMPSPIN) && (P_MobjFlip(mobj)*mobj->momz < 0))
 		return P_SetPlayerMobjState(mobj, S_PLAY_FALL);
 
 	// Catch swimming versus flying
