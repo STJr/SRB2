@@ -72,7 +72,8 @@ typedef enum
 {
 	CA2_NONE=0,
 	CA2_SPINDASH,
-	CA2_MULTIABILITY
+	CA2_MULTIABILITY,
+	CA2_MELEE
 } charability2_t;
 
 //
@@ -178,6 +179,7 @@ typedef enum
 	PA_SPRING,
 	PA_FALL,
 	PA_ABILITY,
+	PA_ABILITY2,
 	PA_RIDE
 } panim_t;
 

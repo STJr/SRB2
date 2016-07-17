@@ -3797,6 +3797,10 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	// CA_TWINSPIN
 	"S_PLAY_TWINSPIN",
 
+	// CA2_MELEE
+	"S_PLAY_MELEE",
+	"S_PLAY_MELEE_FINISH",
+
 	// SF_SUPERANIMS
 	"S_PLAY_SUPER_STND",
 	"S_PLAY_SUPER_WALK",
@@ -7180,6 +7184,7 @@ struct {
 	{"CA2_NONE",CA2_NONE}, // now slot 0!
 	{"CA2_SPINDASH",CA2_SPINDASH},
 	{"CA2_MULTIABILITY",CA2_MULTIABILITY},
+	{"CA2_MELEE",CA2_MELEE},
 
 	// Sound flags
 	{"SF_TOTALLYSINGLE",SF_TOTALLYSINGLE},
@@ -7233,6 +7238,7 @@ struct {
 	{"PA_SPRING",PA_SPRING},
 	{"PA_FALL",PA_FALL},
 	{"PA_ABILITY",PA_ABILITY},
+	{"PA_ABILITY2",PA_ABILITY2},
 	{"PA_RIDE",PA_RIDE},
 
 	// Current weapon

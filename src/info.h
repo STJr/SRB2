@@ -609,7 +609,9 @@ enum playersprite
 	SPR2_CLNG,
 	SPR2_CLMB,
 
-	SPR2_TWIN, // twinspin
+	SPR2_TWIN,
+
+	SPR2_MLEE,
 
 	SPR2_TRNS,
 	SPR2_SSTD,
@@ -679,6 +681,10 @@ typedef enum state
 
 	// CA_TWINSPIN
 	S_PLAY_TWINSPIN,
+
+	// CA2_MELEE
+	S_PLAY_MELEE,
+	S_PLAY_MELEE_FINISH,
 
 	// SF_SUPERANIMS
 	S_PLAY_SUPER_STND,

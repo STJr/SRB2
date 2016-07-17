@@ -2620,15 +2620,15 @@ void R_AddSkins(UINT16 wadnum)
 			FULLPROCESS(revitem)
 #undef FULLPROCESS
 
-#define GETSPEED(field) else if (!stricmp(stoken, #field)) skin->field = atoi(value)<<FRACBITS;
-			GETSPEED(normalspeed)
-			GETSPEED(runspeed)
-			GETSPEED(mindash)
-			GETSPEED(maxdash)
-			GETSPEED(actionspd)
-			GETSPEED(radius)
-			GETSPEED(height)
-			GETSPEED(spinheight)
+#define GETFRACBITS(field) else if (!stricmp(stoken, #field)) skin->field = atoi(value)<<FRACBITS;
+			GETFRACBITS(normalspeed)
+			GETFRACBITS(runspeed)
+			GETFRACBITS(mindash)
+			GETFRACBITS(maxdash)
+			GETFRACBITS(actionspd)
+			GETFRACBITS(radius)
+			GETFRACBITS(height)
+			GETFRACBITS(spinheight)
 #undef GETSPEED
 
 #define GETINT(field) else if (!stricmp(stoken, #field)) skin->field = atoi(value);

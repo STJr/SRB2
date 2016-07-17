@@ -1721,6 +1721,7 @@ static void P_CheckBustableBlocks(player_t *player)
 					// or have CA_GLIDEANDCLIMB
 					// or be in dashmode with CA_DASHMODE
 					// or be using CA_TWINSPIN
+					// or be using CA2_MELEE
 					// or are drilling in NiGHTS
 					// or are recording for Metal Sonic
 					if (!(rover->flags & FF_SHATTER) && !(rover->flags & FF_SPINBUST)
@@ -1729,13 +1730,16 @@ static void P_CheckBustableBlocks(player_t *player)
 						&& !(player->charability == CA_GLIDEANDCLIMB)
 						&& !((player->charability == CA_DASHMODE) && (player->dashmode >= 3*TICRATE))
 						&& !((player->charability == CA_TWINSPIN) && (player->panim == PA_ABILITY))
+						&& !(player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2)
 						&& !(player->pflags & PF_DRILLING)
 						&& !metalrecording)
 						continue;
 
-					// Only CA_GLIDEANDCLIMB or CA_TWINSPIN users can break this rock...
+					// Only players with CA_GLIDEANDCLIMB, or CA_TWINSPIN/CA2_MELEE users can break this rock...
 					if (!(rover->flags & FF_SHATTER) && (rover->flags & FF_ONLYKNUX)
-						&& !(player->charability == CA_GLIDEANDCLIMB || ((player->charability == CA_TWINSPIN) && (player->panim == PA_ABILITY))))
+						&& !(player->charability == CA_GLIDEANDCLIMB
+						|| ((player->charability == CA_TWINSPIN) && (player->panim == PA_ABILITY))
+						|| (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2)))
 						continue;
 
 					// Height checks
@@ -3706,11 +3710,11 @@ void P_DoJump(player_t *player, boolean soundandstate)
 }
 
 //
-// P_DoSpinDash
+// P_DoSpinAbility
 //
 // Player spindash handling
 //
-static void P_DoSpinDash(player_t *player, ticcmd_t *cmd)
+static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 {
 	if (player->pflags & PF_STASIS)
 		return;
@@ -3828,6 +3832,25 @@ static void P_DoSpinDash(player_t *player, ticcmd_t *cmd)
 		P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
 	else if (onground && player->pflags & PF_SPINNING && !(player->panim == PA_ROLL))
 		P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
+
+	// Melee attack
+	if ((player->charability2 == CA2_MELEE) && !(player->panim == PA_ABILITY2) && !player->exiting
+		&& !P_PlayerInPain(player) && (cmd->buttons & BT_USE) && player->speed < FixedMul(10<<FRACBITS, player->mo->scale)
+		&& !player->mo->momz && onground && !(player->pflags & PF_USEDOWN)
+#ifdef ESLOPE
+		&& (!player->mo->standingslope || (player->mo->standingslope->flags & SL_NOPHYSICS) || abs(player->mo->standingslope->zdelta) < FRACUNIT/2)
+#endif
+		)
+	{
+		player->mo->z += P_MobjFlip(player->mo);
+		player->mo->momx = player->cmomx = 0;
+		player->mo->momy = player->cmomy = 0;
+		P_SetObjectMomZ(player->mo, player->mindash, false);
+		P_InstaThrust(player->mo, player->mo->angle, FixedMul(player->maxdash, player->mo->scale));
+		P_SetPlayerMobjState(player->mo, S_PLAY_MELEE);
+		player->pflags |= PF_USEDOWN;
+		S_StartSound(player->mo, sfx_s3k8b);
+	}
 }
 
 //
@@ -6796,7 +6819,7 @@ static void P_MovePlayer(player_t *player)
 	&& !(player->mo->eflags & (MFE_UNDERWATER|MFE_TOUCHWATER)))
 		P_ElementalFireTrail(player);
 
-	P_DoSpinDash(player, cmd);
+	P_DoSpinAbility(player, cmd);
 
 	// jumping
 	P_DoJumpStuff(player, cmd);

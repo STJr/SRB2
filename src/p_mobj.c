@@ -173,6 +173,10 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 	else if (state == S_PLAY_SWIM && !(player->mo->eflags & MFE_UNDERWATER))
 		return P_SetPlayerMobjState(player->mo, S_PLAY_FLY);
 
+	// Catch melee into goop
+	//if (state == S_PLAY_MELEE && player->mo->eflags & MFE_GOOWATER)
+		//return P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
+
 	// Catch state changes for Super Sonic
 	if (player->powers[pw_super] && (player->charflags & SF_SUPERANIMS))
 	{
@@ -274,6 +278,10 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 	case S_PLAY_GLIDE:
 	case S_PLAY_TWINSPIN:
 		player->panim = PA_ABILITY;
+		break;
+	case S_PLAY_MELEE:
+	case S_PLAY_MELEE_FINISH:
+		player->panim = PA_ABILITY2;
 		break;
 	case S_PLAY_RIDE:
 	case S_PLAY_SUPER_RIDE:
@@ -414,6 +422,10 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 					spr2 = SPR2_SPIN;
 					break;
 
+				case SPR2_MLEE:
+					spr2 = SPR2_TWIN;
+					break;
+
 				// Super sprites fallback to regular sprites
 				case SPR2_SWLK:
 					spr2 = SPR2_WALK;
@@ -497,12 +509,16 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 
 			if (frame >= numframes)
 			{
-				if (st->frame & FF_SPR2ENDSTATE)
+				if (st->frame & FF_SPR2ENDSTATE) // no frame advancement
 				{
 					if (st->var1 == S_NULL)
-						frame--; // no frame advancement
+						frame--;
 					else
+					{
+						if (mobj->frame & FF_FRAMEMASK)
+							mobj->frame--;
 						return P_SetPlayerMobjState(mobj, st->var1);
+					}
 				}
 				else
 					frame = 0;
@@ -3049,6 +3065,11 @@ static void P_PlayerZMovement(mobj_t *mo)
 					{
 						mo->player->skidtime = TICRATE;
 						mo->tics = -1;
+					}
+					else if (mo->player->charability2 == CA2_MELEE && mo->player->panim == PA_ABILITY2)
+					{
+						P_InstaThrust(mo, mo->angle, 0);
+						P_SetPlayerMobjState(mo, S_PLAY_STND);
 					}
 					else if (mo->player->pflags & PF_JUMPED || (mo->player->pflags & (PF_SPINNING|PF_USEDOWN)) != (PF_SPINNING|PF_USEDOWN)
 					|| mo->player->powers[pw_tailsfly] || mo->state-states == S_PLAY_FLY_TIRED)
