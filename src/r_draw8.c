@@ -913,9 +913,9 @@ void R_DrawTiltedSplat_8(void)
 		for (i = SPANSIZE-1; i >= 0; i--)
 		{
 			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
-			val = colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]];
+			val = source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
 			if (val != TRANSPARENTPIXEL)
-				*dest = val;
+				*dest = colormap[val];
 			dest++;
 			u += stepu;
 			v += stepv;
@@ -931,9 +931,9 @@ void R_DrawTiltedSplat_8(void)
 			u = (INT64)(startu);
 			v = (INT64)(startv);
 			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
-			val = colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]];
+			val = source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
 			if (val != TRANSPARENTPIXEL)
-				*dest = val;
+				*dest = colormap[val];
 		}
 		else
 		{
@@ -954,9 +954,9 @@ void R_DrawTiltedSplat_8(void)
 			for (; width != 0; width--)
 			{
 				colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
-				val = colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]];
+				val = source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
 				if (val != TRANSPARENTPIXEL)
-					*dest = val;
+					*dest = colormap[val];
 				dest++;
 				u += stepu;
 				v += stepv;
