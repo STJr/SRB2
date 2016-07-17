@@ -4776,6 +4776,9 @@ static void M_SetupChoosePlayer(INT32 choice)
 	char *name;
 	(void)choice;
 
+	if (PlayerMenu[0].status & (IT_DYBIGSPACE)) // Correcting a hack that may be made below.
+		PlayerMenu[0].status = (IT_DISABLED|(PlayerMenu[0].status & IT_CENTER));
+
 	for (i = 0; i < 32; i++) // Handle charsels, availability, and unlocks.
 	{
 		if (PlayerMenu[i].status != IT_DISABLED) // If the character's disabled through SOC, there's nothing we can do for it.
@@ -4784,7 +4787,7 @@ static void M_SetupChoosePlayer(INT32 choice)
 			skinnum = R_SkinAvailable(name);
 			if ((skinnum != -1) && (R_SkinUnlock(skinnum)))
 			{
-				if (PlayerMenu[i].status == (IT_DISABLED|IT_CENTER))
+				if (PlayerMenu[i].status & (IT_DISABLED|IT_CENTER))
 					PlayerMenu[i].status = IT_CALL;
 				if (description[i].picname[0] == '\0')
 					strncpy(description[i].picname, skins[skinnum].charsel, 8);
@@ -4801,7 +4804,7 @@ static void M_SetupChoosePlayer(INT32 choice)
 	if (!(availablecount)
 	|| (mapheaderinfo[startmap-1] && mapheaderinfo[startmap-1]->forcecharacter[0] != '\0'))
 	{
-		PlayerMenu[0].status = (IT_CALL|IT_CENTER); // This is a hack to make availablecount not softlock the game. Again, I use IT_CENTER as a dummy flag.
+		PlayerMenu[0].status = (IT_CALL|IT_DYBIGSPACE|(PlayerMenu[0].status & IT_CENTER)); // This is a hack to make a non-IT_CALL character in slot 0 not softlock the game. IT_DYBIGSPACE is a dummy flag, whilst IT_CENTER is preserved.
 		M_ChoosePlayer(0); // oh for crying out loud just get STARTED, it doesn't matter!
 		return;
 	}
@@ -4834,7 +4837,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	// Character select profile images!1
 	M_DrawTextBox(0, my, 16, 20);
 
-	i = (itemOn*128 - char_scroll/FRACUNIT);
+	i = (itemOn*128 - (char_scroll / FRACUNIT));
 
 	if (abs(i) > 128)
 	{
@@ -4887,7 +4890,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		} while (next != i && PlayerMenu[next].status & IT_DISABLED);
 
 		// Draw prev character if it's visible and its number isn't greater than the current one or there's more than two
-		if ((o < 32) && !((prev == next) && prev > i)) // (prev != i) was previously a part of this, but we don't need to check again after above.
+		if (o < 32) // (prev != i) was previously a part of this, but we don't need to check again after above.
 		{
 			patch = W_CachePatchName(description[prev].picname, PU_CACHE);
 			if (SHORT(patch->width) >= 256)
@@ -4898,7 +4901,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		}
 
 		// Draw next character if it's visible and its number isn't less than the current one or there's more than two
-		if ((o < 128) && !((prev == next) && next < i)) // (next != i) was previously a part of this, but it's implicitly true if (prev != i) is true.
+		if (o < 128) // (next != i) was previously a part of this, but it's implicitly true if (prev != i) is true.
 		{
 			patch = W_CachePatchName(description[next].picname, PU_CACHE);
 			if (SHORT(patch->width) >= 256)
@@ -4951,7 +4954,7 @@ static void M_ChoosePlayer(INT32 choice)
 	boolean ultmode = (ultimate_selectable && SP_PlayerDef.prevMenu == &SP_LoadDef && saveSlotSelected == NOSAVESLOT);
 
 	// skip this if forcecharacter or no characters available
-	if (!(PlayerMenu[choice].status & IT_CENTER))
+	if (!(PlayerMenu[choice].status & IT_DYBIGSPACE))
 	{
 		// M_SetupChoosePlayer didn't call us directly, that means we've been properly set up.
 		char_scroll = itemOn*128*FRACUNIT; // finish scrolling the menu

@@ -79,7 +79,7 @@ boolean M_CanShowLevelInList(INT32 mapnum, INT32 gt);
 #define IT_SUBMENU           6     // go to sub menu
 #define IT_CVAR              8     // handle as a cvar
 #define IT_SPACE            10     // no handling
-#define IT_MSGHANDLER       12     // same as key but with event and sometime can handle y/n key (special for message
+#define IT_MSGHANDLER       12     // same as key but with event and sometime can handle y/n key (special for message)
 
 #define IT_DISPLAY   (48+64+128)    // 16+32+64+128
 #define IT_NOTHING            0     // space
