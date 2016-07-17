@@ -3641,13 +3641,10 @@ void P_DoJump(player_t *player, boolean soundandstate)
 			}
 		}
 		else if (player->charability2 == CA2_MULTIABILITY &&
-			(player->charability == CA_DOUBLEJUMP || player->charability == CA_FLOAT || player->charability == CA_SLOWFALL))
+			(player->charability == CA_FLOAT || player->charability == CA_SLOWFALL))
 		{
 			// Multiability exceptions, since some abilities cannot effectively use it and need a boost.
-			if (player->charability == CA_DOUBLEJUMP)
-				player->mo->momz = 23*(FRACUNIT/2); // Increased jump height instead of infinite jumps.
-			else if (player->charability == CA_FLOAT || player->charability == CA_SLOWFALL)
-				player->mo->momz = 12*FRACUNIT; // Increased jump height due to ineffective repeat.
+			player->mo->momz = 12*FRACUNIT; // Increased jump height due to ineffective repeat.
 		}
 		else
 		{
@@ -3672,6 +3669,9 @@ void P_DoJump(player_t *player, boolean soundandstate)
 
 	if (twodlevel || (player->mo->flags2 & MF2_TWOD))
 		factor += player->jumpfactor / 10;
+
+	if (player->charability2 == CA2_MULTIABILITY && player->charability == CA_DOUBLEJUMP)
+		factor -= max(0, player->secondjump * player->jumpfactor / ((player->actionspd >> FRACBITS) + 1)); // Reduce the jump height each time
 
 	P_SetObjectMomZ(player->mo, FixedMul(factor, player->mo->momz), false); // Custom height
 
@@ -4111,14 +4111,17 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					}
 					break;
 				case CA_DOUBLEJUMP: // Double-Jump
-					if (!(player->pflags & PF_THOKKED))
+					if (!(player->pflags & PF_THOKKED) || ((player->charability2 == CA2_MULTIABILITY) && (player->secondjump < (player->actionspd >> FRACBITS))))
 					{
-						player->pflags &= ~PF_JUMPED;
-						P_DoJump(player, true);
-
 						// Allow infinite double jumping if super.
 						if (!player->powers[pw_super])
 							player->pflags |= PF_THOKKED;
+						else
+							player->secondjump = 0;
+
+						player->pflags &= ~PF_JUMPED;
+						P_DoJump(player, true);
+						player->secondjump++;
 					}
 					break;
 				case CA_FLOAT: // Float
@@ -4151,7 +4154,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					}
 					break;
 				case CA_TWINSPIN:
-					if(!(player->pflags & PF_THOKKED))
+					if (!(player->pflags & PF_THOKKED) || player->charability2 == CA2_MULTIABILITY)
 					{
 						player->pflags |= PF_THOKKED;
 						S_StartSound(player->mo, sfx_s3k42);
