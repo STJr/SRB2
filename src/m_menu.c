@@ -4839,11 +4839,15 @@ static void M_DrawSetupChoosePlayerMenu(void)
 
 	i = (itemOn*128 - (char_scroll / FRACUNIT));
 
-	if (abs(i) > 128)
+	if (!char_notes)
 	{
-		o = (lastdirection) ? -1 : 1;
-		char_scroll = (itemOn + o)*128*FRACUNIT;
-		i = -o*128;
+		if (i) // turns out this and the preceding check is better then (abs(i) > 128)
+		{
+			o = (lastdirection) ? -1 : 1;
+			char_scroll = (itemOn + o)*128*FRACUNIT;
+			i = -o*128;
+		}
+		char_notes = V_WordWrap(0, 21*8, V_ALLOWLOWERCASE, description[itemOn].notes);
 	}
 
 	if (abs(i) > 1)
@@ -4941,8 +4945,6 @@ static void M_DrawSetupChoosePlayerMenu(void)
 
 	// Character description
 	M_DrawTextBox(136, my, 21, 20);
-	if (!char_notes)
-		char_notes = V_WordWrap(0, 21*8, V_ALLOWLOWERCASE, description[itemOn].notes);
 	V_DrawString(146, my + 9, V_RETURN8|V_ALLOWLOWERCASE, char_notes);
 }
 
