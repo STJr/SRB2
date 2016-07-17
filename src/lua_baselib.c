@@ -1827,6 +1827,19 @@ static int lib_pSetActiveMotionBlur(lua_State *L)
 	return 0;
 }
 
+static int lib_gSetDisplayPlayer(lua_State *L)
+{
+    // set args 1 2 & 3
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	INT32 dispnum = luaL_checkint(L, 2);
+	boolean alldisps = luaL_checkboolean(L, 3);
+	NOHUD
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	G_SetDisplayPlayer(player, dispnum, alldisps);
+	return 0;
+}
+
 //=====================================================================
 
 
@@ -2214,6 +2227,7 @@ static luaL_Reg lib[] = {
 	{"S_GetMusicPosition",lib_sGetMusicPosition},
 	{"S_FadeOutMusic",lib_sFadeOutMusic},
 	{"P_SetActiveMotionBlur",lib_pSetActiveMotionBlur},
+    {"G_SetDisplayPlayer",lib_gSetDisplayPlayer},
 
 	{NULL, NULL}
 };

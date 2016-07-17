@@ -1829,8 +1829,9 @@ static void ST_overlayDrawer(void)
 			strlcpy(name, player_names[stplyr-players], 13);
 
 			// Show name of player being displayed
-			V_DrawCenteredString((BASEVIDWIDTH/6), BASEVIDHEIGHT-80, 0, M_GetText("Viewpoint:"));
-			V_DrawCenteredString((BASEVIDWIDTH/6), BASEVIDHEIGHT-64, V_ALLOWLOWERCASE, name);
+			// miru: do something about this "viewpoint:", make it optional or non-existent
+			V_DrawCenteredString((BASEVIDWIDTH/6), BASEVIDHEIGHT-80, V_90TRANS, M_GetText("Viewpoint:"));
+			V_DrawCenteredString((BASEVIDWIDTH/6), BASEVIDHEIGHT-64, V_90TRANS|V_ALLOWLOWERCASE, name);
 		}
 
 		// This is where we draw all the fun cheese if you have the chasecam off!

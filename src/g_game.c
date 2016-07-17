@@ -5670,3 +5670,48 @@ INT32 G_TicsToMilliseconds(tic_t tics)
 	return (INT32)((tics%TICRATE) * (1000.00f/TICRATE));
 }
 
+//miru: change the displayed player
+// player - player to forward the function to
+// displayNumber - the player number (node) to view
+// setAllDisplays - set all displays to the player number/node specified
+void G_SetDisplayPlayer(player_t *player, INT32 displayNumber, boolean setAllDisplays)
+{
+    //TODO: fix black flashes when touching controls (this has to do with
+    //((cmd->forwardmove || cmd->sidemove || cmd->buttons) && displayplayer != consoleplayer) )
+    //TODO: proper implementation for using player node instead of -1 (unsure how)
+	if (gamestate == GS_LEVEL)
+	{
+	    // no, not for non-sp
+		if (!netgame)
+			displayplayer = consoleplayer;
+		else
+		{
+            // the player has to exist or you just get a bleeding display
+            if (playeringame[displayNumber] || players[displayplayer].spectator && player == &players[displayplayer])
+            {
+                // switch the display number locally
+                if (P_IsLocalPlayer(player) && displayplayer == consoleplayer)
+                {
+                    displayplayer = displayNumber;
+                }
+                // or force all
+                else if (setAllDisplays == true)
+                {
+                    displayplayer = displayNumber;
+                }
+
+                // tell who's the view
+                //CONS_Printf(M_GetText("Viewpoint: %s\n"), player_names[displayplayer]);
+            }
+            // Setting as -1 resets your view to normal
+            else if (displayNumber == -1 && P_IsLocalPlayer(player)
+                     && displayplayer != consoleplayer)
+                displayplayer = consoleplayer;
+            else
+            {
+                // or do...nothing
+                //CONS_Printf("Player doesn't exist (or viewing self).\n");
+            }
+		}
+	}
+}

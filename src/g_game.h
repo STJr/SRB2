@@ -216,4 +216,6 @@ FUNCMATH INT32 G_TicsToMilliseconds(tic_t tics);
 // Don't split up TOL handling
 INT16 G_TOLFlag(INT32 pgametype);
 
+void G_SetDisplayPlayer(player_t *player, INT32 displayNumber, boolean setAllDisplays);
+
 #endif
