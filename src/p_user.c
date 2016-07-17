@@ -1717,16 +1717,25 @@ static void P_CheckBustableBlocks(player_t *player)
 						continue;
 
 					// if it's not an FF_SHATTER, you must be spinning (and not jumping)
-					// or have Knuckles's abilities (or Super Sonic)
-					// ...or are drilling in NiGHTS (or Metal Sonic)
+					// or be super
+					// or have CA_GLIDEANDCLIMB
+					// or be in dashmode with CA_DASHMODE
+					// or be using CA_TWINSPIN
+					// or are drilling in NiGHTS
+					// or are recording for Metal Sonic
 					if (!(rover->flags & FF_SHATTER) && !(rover->flags & FF_SPINBUST)
 						&& !((player->pflags & PF_SPINNING) && !(player->pflags & PF_JUMPED))
-						&& (player->charability != CA_GLIDEANDCLIMB && !player->powers[pw_super])
-						&& !(player->pflags & PF_DRILLING) && !metalrecording)
+						&& !(player->powers[pw_super])
+						&& !(player->charability == CA_GLIDEANDCLIMB)
+						&& !((player->charability == CA_DASHMODE) && (player->dashmode >= 3*TICRATE))
+						&& !((player->charability == CA_TWINSPIN) && (player->panim == PA_ABILITY))
+						&& !(player->pflags & PF_DRILLING)
+						&& !metalrecording)
 						continue;
 
-					// Only Knuckles can break this rock...
-					if (!(rover->flags & FF_SHATTER) && (rover->flags & FF_ONLYKNUX) && !(player->charability == CA_GLIDEANDCLIMB))
+					// Only CA_GLIDEANDCLIMB or CA_TWINSPIN users can break this rock...
+					if (!(rover->flags & FF_SHATTER) && (rover->flags & FF_ONLYKNUX)
+						&& !(player->charability == CA_GLIDEANDCLIMB || ((player->charability == CA_TWINSPIN) && (player->panim == PA_ABILITY))))
 						continue;
 
 					// Height checks
