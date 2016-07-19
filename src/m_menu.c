@@ -4829,6 +4829,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	const INT32 my = 24;
 	patch_t *patch;
 	INT32 i, o, j, prev, next;
+	boolean loophack = false;
 
 	// Black BG
 	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
@@ -4858,12 +4859,16 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	o = ((char_scroll / FRACUNIT) + 16);
 
 	if (o < 0) // This hack is to prevent visual glitches when looping from the last character to the 1st character.
-	{
+		loophack = true;
+
+	if (loophack)
 		o += 128;
 
-		i = (o / 128);
-		o = (o % 128);
+	i = (o / 128);
+	o = (o % 128);
 
+	if (loophack)
+	{
 		j = i;
 		do // subtract 1 from i to counteract the +128 from the prior hack
 		{
@@ -4871,11 +4876,6 @@ static void M_DrawSetupChoosePlayerMenu(void)
 			if (i < 0)
 				i = (currentMenu->numitems - 1);
 		} while (i != j && PlayerMenu[i].status & IT_DISABLED);
-	}
-	else // Regular circumstances
-	{
-		i = (o / 128);
-		o = (o % 128);
 	}
 
 	// Get prev character...
