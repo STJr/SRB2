@@ -533,7 +533,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 			mobj->sprite = st->sprite;
 			mobj->frame = st->frame;
 			if ((st->frame & (FF_ANIMATE|FF_MIDDLESTARTCHANCE)) == (FF_ANIMATE|FF_MIDDLESTARTCHANCE))
-				mobj->frame += (st->var1)/2;
+				mobj->frame += P_RandomKey(st->var1);
 		}
 
 		// Modified handling.
@@ -648,7 +648,7 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 			mobj->sprite = st->sprite;
 			mobj->frame = st->frame;
 			if ((st->frame & (FF_ANIMATE|FF_MIDDLESTARTCHANCE)) == (FF_ANIMATE|FF_MIDDLESTARTCHANCE))
-				mobj->frame += (st->var1)/2;
+				mobj->frame += P_RandomKey(st->var1);
 		}
 
 		// Modified handling.
