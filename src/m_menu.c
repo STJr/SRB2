@@ -4856,21 +4856,26 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		char_scroll = itemOn*128*FRACUNIT; // just be exact now.
 
 	o = ((char_scroll / FRACUNIT) + 16);
-	if (lastdirection)
-		o += 128; // This one-directional hack is to prevent visual glitches when going from the (currentMenu->numitems)nd character to the 1st character.
-	i = (o / 128);
-	o = (o % 128);
 
-	// subtract 1 from i to counteract the +128 from the prior hack, if we made it happen
-	if (lastdirection)
+	if (o < 0) // This hack is to prevent visual glitches when looping from the last character to the 1st character.
 	{
+		o += 128;
+
+		i = (o / 128);
+		o = (o % 128);
+
 		j = i;
-		do
+		do // subtract 1 from i to counteract the +128 from the prior hack
 		{
 			i--;
 			if (i < 0)
 				i = (currentMenu->numitems - 1);
 		} while (i != j && PlayerMenu[i].status & IT_DISABLED);
+	}
+	else // Regular circumstances
+	{
+		i = (o / 128);
+		o = (o % 128);
 	}
 
 	// Get prev character...
