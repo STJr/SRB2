@@ -50,6 +50,7 @@ enum skin {
 	skin_shieldscale,
 	skin_starttranscolor,
 	skin_prefcolor,
+	skin_prefoppositecolor,
 	skin_highresscale,
 	skin_soundsid,
 	skin_availability
@@ -85,6 +86,7 @@ static const char *const skin_opt[] = {
 	"shieldscale",
 	"starttranscolor",
 	"prefcolor",
+	"prefoppositecolor",
 	"highresscale",
 	"soundsid",
 	"availability",
@@ -200,6 +202,9 @@ static int skin_get(lua_State *L)
 		break;
 	case skin_prefcolor:
 		lua_pushinteger(L, skin->prefcolor);
+		break;
+	case skin_prefoppositecolor:
+		lua_pushinteger(L, skin->prefoppositecolor);
 		break;
 	case skin_highresscale:
 		lua_pushinteger(L, skin->highresscale);
