@@ -1565,7 +1565,7 @@ static void P_HitDeathMessages(player_t *player, mobj_t *inflictor, mobj_t *sour
 		return; // Presumably it's obvious what's happening in splitscreen.
 
 #ifdef HAVE_BLUA
-	if (LUAh_HurtMsg(player, inflictor, source))
+	if (LUAh_HurtMsg(player, inflictor, source, damagetype))
 		return;
 #endif
 
@@ -2037,7 +2037,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 	target->health = 0; // This makes it easy to check if something's dead elsewhere.
 
 #ifdef HAVE_BLUA
-	if (LUAh_MobjDeath(target, inflictor, source) || P_MobjWasRemoved(target))
+	if (LUAh_MobjDeath(target, inflictor, source, damagetype) || P_MobjWasRemoved(target))
 		return;
 #endif
 
@@ -2917,7 +2917,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 	// Everything above here can't be forced.
 	if (!metalrecording)
 	{
-		UINT8 shouldForce = LUAh_ShouldDamage(target, inflictor, source, damage);
+		UINT8 shouldForce = LUAh_ShouldDamage(target, inflictor, source, damage, damagetype);
 		if (P_MobjWasRemoved(target))
 			return (shouldForce == 1); // mobj was removed
 		if (shouldForce == 1)
@@ -2960,7 +2960,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			return false;
 
 #ifdef HAVE_BLUA
-		if (LUAh_MobjDamage(target, inflictor, source, damage) || P_MobjWasRemoved(target))
+		if (LUAh_MobjDamage(target, inflictor, source, damage, damagetype) || P_MobjWasRemoved(target))
 			return true;
 #endif
 
@@ -2988,7 +2988,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			return false;
 
 #ifdef HAVE_BLUA
-		if (LUAh_MobjDamage(target, inflictor, source, damage) || P_MobjWasRemoved(target))
+		if (LUAh_MobjDamage(target, inflictor, source, damage, damagetype) || P_MobjWasRemoved(target))
 			return true;
 #endif
 
@@ -2998,7 +2998,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 #ifdef HAVE_BLUA
 	else if (target->flags & MF_ENEMY)
 	{
-		if (LUAh_MobjDamage(target, inflictor, source, damage) || P_MobjWasRemoved(target))
+		if (LUAh_MobjDamage(target, inflictor, source, damage, damagetype) || P_MobjWasRemoved(target))
 			return true;
 	}
 #endif
@@ -3046,7 +3046,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 					return false; // Don't run eachother over in special stages and team games and such
 			}
 #ifdef HAVE_BLUA
-			if (LUAh_MobjDamage(target, inflictor, source, damage))
+			if (LUAh_MobjDamage(target, inflictor, source, damage, damagetype))
 				return true;
 #endif
 			P_NiGHTSDamage(target, source); // -5s :(
@@ -3108,7 +3108,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 				&& player->powers[pw_super]))
 			{
 #ifdef HAVE_BLUA
-				if (!LUAh_MobjDamage(target, inflictor, source, damage))
+				if (!LUAh_MobjDamage(target, inflictor, source, damage, damagetype))
 #endif
 					P_SuperDamage(player, inflictor, source, damage);
 				return true;
@@ -3117,7 +3117,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 				return false;
 		}
 #ifdef HAVE_BLUA
-		else if (LUAh_MobjDamage(target, inflictor, source, damage))
+		else if (LUAh_MobjDamage(target, inflictor, source, damage, damagetype))
 			return true;
 #endif
 		else if (player->powers[pw_shield] || player->bot)  //If One-Hit Shield
