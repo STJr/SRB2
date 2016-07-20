@@ -166,9 +166,13 @@ const char *Color_Names[MAXSKINCOLORS] =
 	"Lavender", 	// SKINCOLOR_LAVENDER
 	"Magenta",   	// SKINCOLOR_MAGENTA
 	"Pink",     	// SKINCOLOR_PINK
-	"Rosy"     	// SKINCOLOR_ROSY
+	"Rosy"			// SKINCOLOR_ROSY
 };
 
+/*
+A word of warning: If the following array is non-symmetrical,
+A_SignPlayer's prefoppositecolor behaviour will break.
+*/
 const UINT8 Color_Opposite[MAXSKINCOLORS*2] =
 {
 	SKINCOLOR_NONE,8,   	// SKINCOLOR_NONE
@@ -183,7 +187,7 @@ const UINT8 Color_Opposite[MAXSKINCOLORS*2] =
 	SKINCOLOR_CYAN,8,   	// SKINCOLOR_CRIMSON - ditto
 	SKINCOLOR_BLUE,12,  	// SKINCOLOR_ORANGE
 	SKINCOLOR_TAN,8,   		// SKINCOLOR_RUST - ditto
-	SKINCOLOR_LAVENDER,8,    // SKINCOLOR_GOLD - ditto
+	SKINCOLOR_LAVENDER,8,   // SKINCOLOR_GOLD - ditto
 	SKINCOLOR_TEAL,8,   	// SKINCOLOR_YELLOW - ditto
 	SKINCOLOR_RUST,8,   	// SKINCOLOR_TAN - ditto
 	SKINCOLOR_MAGENTA,3, 	// SKINCOLOR_MOSS
@@ -200,7 +204,7 @@ const UINT8 Color_Opposite[MAXSKINCOLORS*2] =
 	SKINCOLOR_GOLD,8,   	// SKINCOLOR_LAVENDER - ditto
 	SKINCOLOR_MOSS,8,   	// SKINCOLOR_MAGENTA - ditto
 	SKINCOLOR_AZURE,8,   	// SKINCOLOR_PINK - ditto
-	SKINCOLOR_AQUA,8   	// SKINCOLOR_ROSY - ditto
+	SKINCOLOR_AQUA,8   		// SKINCOLOR_ROSY - ditto
 };
 
 CV_PossibleValue_t Color_cons_t[MAXSKINCOLORS+1];

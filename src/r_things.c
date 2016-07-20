@@ -2288,6 +2288,7 @@ static void Sk_SetDefaultValue(skin_t *skin)
 
 	skin->starttranscolor = 96;
 	skin->prefcolor = SKINCOLOR_GREEN;
+	skin->prefoppositecolor = 0; // use tables
 
 	skin->normalspeed = 36<<FRACBITS;
 	skin->runspeed = 28<<FRACBITS;
@@ -2623,9 +2624,11 @@ void R_AddSkins(UINT16 wadnum)
 #define GETFRACBITS(field) else if (!stricmp(stoken, #field)) skin->field = atoi(value)<<FRACBITS;
 			GETFRACBITS(normalspeed)
 			GETFRACBITS(runspeed)
+
 			GETFRACBITS(mindash)
 			GETFRACBITS(maxdash)
 			GETFRACBITS(actionspd)
+
 			GETFRACBITS(radius)
 			GETFRACBITS(height)
 			GETFRACBITS(spinheight)
@@ -2650,8 +2653,10 @@ void R_AddSkins(UINT16 wadnum)
 			else if (!stricmp(stoken, "startcolor"))
 				skin->starttranscolor = atoi(value);
 
-			else if (!stricmp(stoken, "prefcolor"))
-				skin->prefcolor = R_GetColorByName(value);
+#define GETSKINCOLOR(field) else if (!stricmp(stoken, #field)) skin->field = R_GetColorByName(value);
+			GETSKINCOLOR(prefcolor)
+			GETSKINCOLOR(prefoppositecolor)
+#undef GETSKINCOLOR
 
 #define GETFLOAT(field) else if (!stricmp(stoken, #field)) skin->field = FLOAT_TO_FIXED(atof(value));
 			GETFLOAT(jumpfactor)

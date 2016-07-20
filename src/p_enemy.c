@@ -3949,6 +3949,7 @@ void A_UnsetSolidSteam(mobj_t *actor)
 void A_SignPlayer(mobj_t *actor)
 {
 	mobj_t *ov;
+	skin_t *skin;
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_SignPlayer", actor))
 		return;
@@ -3959,15 +3960,35 @@ void A_SignPlayer(mobj_t *actor)
 	if (!actor->target->player)
 		return;
 
-	// Set the sign to be an appropriate background color for this player's skincolor.
-	actor->color = Color_Opposite[actor->target->player->skincolor*2];
-	actor->frame += Color_Opposite[actor->target->player->skincolor*2+1];
+	skin = &skins[actor->target->player->skin];
+
+	if ((actor->target->player->skincolor == skin->prefcolor) && (skin->prefoppositecolor)) // Set it as the skin's preferred oppositecolor?
+	{
+		actor->color = skin->prefoppositecolor;
+		/*
+		If you're here from the comment above Color_Opposite,
+		the following line is the one which is dependent on the
+		array being symmetrical. It gets the opposite of the
+		opposite of your desired colour just so it can get the
+		brightness frame for the End Sign. It's not a great
+		design choice, but it's constant time array access and
+		the idea that the colours should be OPPOSITES is kind
+		of in the name. If you have a better idea, feel free
+		to let me know. ~toast 2016/07/20
+		*/
+		actor->frame += Color_Opposite[Color_Opposite[skin->prefoppositecolor*2]*2+1];
+	}
+	else // Set the sign to be an appropriate background color for this player's skincolor.
+	{
+		actor->color = Color_Opposite[actor->target->player->skincolor*2];
+		actor->frame += Color_Opposite[actor->target->player->skincolor*2+1];
+	}
 
 	// spawn an overlay of the player's face.
 	ov = P_SpawnMobj(actor->x, actor->y, actor->z, MT_OVERLAY);
 	P_SetTarget(&ov->target, actor);
 	ov->color = actor->target->player->skincolor;
-	ov->skin = &skins[actor->target->player->skin];
+	ov->skin = skin;
 	P_SetMobjState(ov, actor->info->seestate); // S_PLAY_SIGN
 }
 
