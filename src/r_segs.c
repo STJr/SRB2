@@ -1488,7 +1488,7 @@ static void R_RenderSegLoop (void)
 			{
 				// note: don't use min/max macros, since casting from INT32 to INT16 is involved here
 				if (markceiling)
-					ceilingclip[rw_x] = (yh >= 0) ? ((yl > viewheight) ? (INT16)viewheight : (INT16)((INT16)yl - 1)) : -1;
+					ceilingclip[rw_x] = (yl >= 0) ? ((yl > viewheight) ? (INT16)viewheight : (INT16)((INT16)yl - 1)) : -1;
 				if (markfloor)
 					floorclip[rw_x] = (yh < viewheight) ? ((yh < -1) ? -1 : (INT16)((INT16)yh + 1)) : (INT16)viewheight;
 			}
@@ -1523,10 +1523,10 @@ static void R_RenderSegLoop (void)
 						ceilingclip[rw_x] = -1;
 				}
 				else
-					ceilingclip[rw_x] = (yh >= 0) ? ((yl > viewheight) ? (INT16)viewheight : (INT16)((INT16)yl - 1)) : -1;
+					ceilingclip[rw_x] = (yl >= 0) ? ((yl > viewheight) ? (INT16)viewheight : (INT16)((INT16)yl - 1)) : -1;
 			}
 			else if (markceiling) // no top wall
-				ceilingclip[rw_x] = (yh >= 0) ? ((yl > viewheight) ? (INT16)viewheight : (INT16)((INT16)yl - 1)) : -1;
+				ceilingclip[rw_x] = (yl >= 0) ? ((yl > viewheight) ? (INT16)viewheight : (INT16)((INT16)yl - 1)) : -1;
 
 			if (bottomtexture)
 			{
