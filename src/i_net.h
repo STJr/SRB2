@@ -148,7 +148,4 @@ extern const char *(*I_GetBanMask) (size_t ban);
 extern boolean (*I_SetBanAddress) (const char *address,const char *mask);
 extern boolean *bannednode;
 
-/// \brief Called by D_SRB2Main to be defined by extern network driver
-boolean I_InitNetwork(void);
-
 #endif
