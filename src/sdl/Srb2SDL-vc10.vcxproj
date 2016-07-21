@@ -381,6 +381,7 @@
     </ClCompile>
     <ClCompile Include="i_cdmus.c" />
     <ClCompile Include="i_main.c" />
+    <ClCompile Include="i_net.c" />
     <ClCompile Include="i_system.c" />
     <ClCompile Include="i_ttf.c" />
     <ClCompile Include="i_video.c" />
