@@ -433,6 +433,7 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/hu_stuff.o \
 		$(OBJDIR)/y_inter.o  \
 		$(OBJDIR)/st_stuff.o \
+		$(OBJDIR)/m_aatree.o \
 		$(OBJDIR)/m_anigif.o \
 		$(OBJDIR)/m_argv.o   \
 		$(OBJDIR)/m_bbox.o   \
