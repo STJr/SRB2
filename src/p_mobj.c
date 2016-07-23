@@ -6515,7 +6515,6 @@ void P_MobjThinker(mobj_t *mobj)
 					mobj->frame &= ~FF_TRANSMASK;
 					if (!(leveltime & 15))
 					{
-						S_StopSound(mobj->target);
 						S_StartSound(mobj->target, sfx_ding);
 					}
 				}
