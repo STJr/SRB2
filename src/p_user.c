@@ -6940,6 +6940,15 @@ static void P_MovePlayer(player_t *player)
 						P_SetObjectMomZ(player->mo, -24*FRACUNIT, false);
 					}
 				}
+				// Force shield activation
+				if ((player->powers[pw_shield] & SH_FORCE) == SH_FORCE)
+				{
+					if (!(player->pflags & PF_THOKKED))
+					{
+						player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
+						S_StartSound(player->mo, sfx_ding);
+					}
+				}
 			}
 			// Super Sonic move
 			if (player->skin == 0 && player->powers[pw_super] && player->speed > FixedMul(5<<FRACBITS, player->mo->scale)

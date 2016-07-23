@@ -2981,14 +2981,25 @@ static void P_PlayerZMovement(mobj_t *mo)
 					if (!(mo->player->pflags & PF_GLIDING))
 						mo->player->pflags &= ~PF_JUMPED;
 
-					if (((mo->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL) && (mo->player->pflags & PF_SHIELDABILITY)) // Elemental pierce attack.
+					if (mo->player->pflags & PF_SHIELDABILITY)
 					{
-						if (mo->eflags & (MFE_UNDERWATER|MFE_TOUCHWATER)) // play a blunt sound
-							S_StartSound(mo, sfx_s3k4c);
-						else // create a fire pattern on the ground
+						if ((mo->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL) // Elemental shield's stomp attack.
 						{
-							S_StartSound(mo, sfx_s3k47);
-							P_ElementalFire(mo->player, true);
+							if (mo->eflags & (MFE_UNDERWATER|MFE_TOUCHWATER)) // play a blunt sound
+								S_StartSound(mo, sfx_s3k4c);
+							else // create a fire pattern on the ground
+							{
+								S_StartSound(mo, sfx_s3k47);
+								P_ElementalFire(mo->player, true);
+							}
+						}
+						if ((mo->player->powers[pw_shield] & SH_FORCE) == SH_FORCE) // Force Shield's drop dash.
+						{
+							fixed_t magnitude = max(FixedHypot((FixedHypot(mo->momx, mo->momy)), mo->momz), abs(mo->momz)*2); // vertical momentum is amplified here, since otherwise this was kind of weak.
+							P_InstaThrust(mo, mo->angle, magnitude);
+							S_StartSound(mo, sfx_zoom);
+							mo->player->pflags |= PF_SPINNING;
+							P_SetPlayerMobjState(mo, S_PLAY_SPIN);
 						}
 					}
 					mo->player->pflags &= ~(PF_THOKKED|PF_SHIELDABILITY);
@@ -6482,7 +6493,6 @@ void P_MobjThinker(mobj_t *mobj)
 			case MT_BLACKORB:
 			case MT_WHITEORB:
 			case MT_GREENORB:
-			case MT_BLUEORB:
 			case MT_PITYORB:
 				if (!P_AddShield(mobj))
 					return;
@@ -6490,8 +6500,25 @@ void P_MobjThinker(mobj_t *mobj)
 			case MT_YELLOWORB:
 				if (!P_AddShield(mobj))
 					return;
-				if (mobj->target->player->homing)
+				if ((mobj->target)
+				&& (mobj->target->player)
+				&& (mobj->target->player->homing))
 					P_SetMobjState(mobj, mobj->info->painstate);
+				break;
+			case MT_BLUEORB:
+				if (!P_AddShield(mobj))
+					return;
+				if ((mobj->target)
+				&& (mobj->target->player)
+				&& (mobj->target->player->pflags & PF_SHIELDABILITY))
+				{
+					mobj->frame &= ~FF_TRANSMASK;
+					if (!(leveltime & 15))
+					{
+						S_StopSound(mobj->target);
+						S_StartSound(mobj->target, sfx_ding);
+					}
+				}
 				break;
 			case MT_WATERDROP:
 				P_SceneryCheckWater(mobj);
