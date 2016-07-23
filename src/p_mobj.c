@@ -2995,7 +2995,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 						}
 						if ((mo->player->powers[pw_shield] & SH_FORCE) == SH_FORCE) // Force Shield's drop dash.
 						{
-							fixed_t magnitude = max(FixedHypot((FixedHypot(mo->momx, mo->momy)), mo->momz), abs(mo->momz)*2); // vertical momentum is amplified here, since otherwise this was kind of weak.
+							fixed_t magnitude = min(max(FixedHypot((FixedHypot(mo->momx, mo->momy)), mo->momz), abs(mo->momz)*2), 75<<FRACBITS); // vertical momentum is amplified here, since otherwise this was kind of weak.
 							P_InstaThrust(mo, mo->angle, magnitude);
 							S_StartSound(mo, sfx_zoom);
 							mo->player->pflags |= PF_SPINNING;
