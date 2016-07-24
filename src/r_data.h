@@ -30,7 +30,7 @@ typedef struct
 {
 	// Block origin (always UL), which has already accounted for the internal origin of the patch.
 	INT16 originx, originy;
-	INT16 wad, lump;
+	UINT16 wad, lump;
 } texpatch_t;
 
 // A maptexturedef_t describes a rectangular texture,
