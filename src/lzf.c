@@ -61,6 +61,8 @@
 #ifndef STRICT_ALIGN
 #if !(defined(__i386) || defined (__amd64)) || defined (__clang__)
 #define STRICT_ALIGN 1
+#else
+#define STRICT_ALIGN 0
 #endif
 #endif
 
