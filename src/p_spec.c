@@ -1188,7 +1188,10 @@ INT32 P_FindSpecialLineFromTag(INT16 special, INT16 tag, INT32 start)
 	{
 		start++;
 
-		while (lines[start].special != special)
+		if (start >= (INT32)numlines)
+			return -1;
+
+		while (start < (INT32)numlines && lines[start].special != special)
 			start++;
 
 		if (start >= (INT32)numlines)
