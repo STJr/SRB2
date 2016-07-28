@@ -127,7 +127,7 @@ typedef struct
 // you seriously need to get a life.
 #define MAXCONDITIONSETS 128
 #define MAXEMBLEMS       512
-#define MAXEXTRAEMBLEMS   32 // I probably do need to.
+#define MAXEXTRAEMBLEMS  512 // I probably do need to.
 #define MAXUNLOCKABLES    32
 
 extern conditionset_t conditionSets[MAXCONDITIONSETS];
