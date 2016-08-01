@@ -35,8 +35,8 @@
 #pragma interface
 #endif
 
-/// \brief Frame flags: only the frame number - 0 to 127 (Frames and Sprite2)
-#define FF_FRAMEMASK 0x7f
+/// \brief Frame flags: only the frame number - 0 to 511 (Frames from 0 to 63, Sprite2 number uses full range)
+#define FF_FRAMEMASK 0x1ff
 /// \brief Frame flags: A change of state at the end of Sprite2 animation
 #define FF_SPR2ENDSTATE 0x1000
 /// \brief Frame flags: 50% of starting in middle of animation (Sprite2 and FF_ANIMATE)
