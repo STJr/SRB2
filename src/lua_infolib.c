@@ -105,7 +105,7 @@ static int lib_getSpr2name(lua_State *L)
 	if (lua_isnumber(L, 1))
 	{
 		i = lua_tonumber(L, 1);
-		if (i > NUMPLAYERSPRITES)
+		if (i >= free_spr2)
 			return 0;
 		lua_pushlstring(L, spr2names[i], 4);
 		return 1;
@@ -113,7 +113,7 @@ static int lib_getSpr2name(lua_State *L)
 	else if (lua_isstring(L, 1))
 	{
 		const char *name = lua_tostring(L, 1);
-		for (i = 0; i < NUMPLAYERSPRITES; i++)
+		for (i = 0; i < free_spr2; i++)
 			if (fastcmp(name, spr2names[i]))
 			{
 				lua_pushinteger(L, i);
@@ -125,7 +125,7 @@ static int lib_getSpr2name(lua_State *L)
 
 static int lib_spr2namelen(lua_State *L)
 {
-	lua_pushinteger(L, NUMPLAYERSPRITES);
+	lua_pushinteger(L, free_spr2);
 	return 1;
 }
 
