@@ -231,6 +231,34 @@ static const char *const node_opt[] = {
 	"children",
 	NULL};
 
+enum nodechild_e {
+	nodechild_valid = 0,
+	nodechild_right,
+	nodechild_left,
+};
+
+static const char *const nodechild_opt[] = {
+	"valid",
+	"right",
+	"left",
+	NULL};
+
+enum bbox_e {
+	bbox_valid = 0,
+	bbox_top,
+	bbox_bottom,
+	bbox_left,
+	bbox_right,
+};
+
+static const char *const bbox_opt[] = {
+	"valid",
+	"top",
+	"bottom",
+	"left",
+	"right",
+	NULL};
+
 static const char *const array_opt[] ={"iterate",NULL};
 static const char *const valid_opt[] ={"valid",NULL};
 
@@ -968,7 +996,7 @@ static int node_num(lua_State *L)
 	lua_pushinteger(L, node-nodes);
 	return 1;
 }
-
+/*
 // node.bbox[i][j]: i = 0 or 1, j = 0 1 2 or 3
 // NOTE: 2D arrays are NOT double pointers,
 //       the second bbox will be directly after the first in memory (hence the way the bbox is pushed here)
@@ -998,6 +1026,52 @@ static int nodebbox_get(lua_State *L)
 	if (i < 0 || i > 1)
 		return 0;
 	LUA_PushUserdata(L, bbox + i*4*sizeof(fixed_t), META_BBOX);
+	return 1;
+}
+*/
+static int nodebbox_call(lua_State *L)
+{
+	fixed_t *bbox = *((fixed_t **)luaL_checkudata(L, 1, META_NODEBBOX));
+	int i, j;
+	int n = lua_gettop(L);
+
+	if (!bbox)
+		return luaL_error(L, "accessed node bbox doesn't exist anymore.");
+	if (n < 3)
+		return luaL_error(L, "arguments 2 and/or 3 not given (expected node.bbox(child, coord))");
+	// get child
+	if (!lua_isnumber(L, 2)) {
+		enum nodechild_e field = luaL_checkoption(L, 2, nodechild_opt[0], nodechild_opt);
+		switch (field) {
+			case nodechild_right: i = 0; break;
+			case nodechild_left:  i = 1; break;
+			default:
+				return luaL_error(L, "invalid node child \"%s\".", lua_tostring(L, 2));
+		}
+	}
+	else {
+		i = lua_tointeger(L, 2);
+		if (i < 0 || i > 1)
+			return 0;
+	}
+	// get bbox coord
+	if (!lua_isnumber(L, 3)) {
+		enum bbox_e field = luaL_checkoption(L, 3, bbox_opt[0], bbox_opt);
+		switch (field) {
+			case bbox_top:    j = BOXTOP;    break;
+			case bbox_bottom: j = BOXBOTTOM; break;
+			case bbox_left:   j = BOXLEFT;   break;
+			case bbox_right:  j = BOXRIGHT;  break;
+			default:
+				return luaL_error(L, "invalid bbox coordinate \"%s\".", lua_tostring(L, 3));
+		}
+	}
+	else {
+		j = lua_tointeger(L, 3);
+		if (j < 0 || j > 3)
+			return 0;
+	}
+	lua_pushinteger(L, bbox[i*4 + j]);
 	return 1;
 }
 
@@ -1039,23 +1113,31 @@ static int bbox_get(lua_State *L)
 	lua_settop(L, 2);
 	if (!lua_isnumber(L, 2))
 	{
-		int field = luaL_checkoption(L, 2, NULL, valid_opt);
+		enum bbox_e field = luaL_checkoption(L, 2, bbox_opt[0], bbox_opt);
 		if (!bbox)
 		{
-			if (field == 0) {
+			if (field == bbox_valid) {
 				lua_pushboolean(L, 0);
 				return 1;
 			}
-			return luaL_error(L, "accessed node_t doesn't exist anymore.");
-		} else if (field == 0) {
+			return luaL_error(L, "accessed bbox doesn't exist anymore.");
+		} else if (field == bbox_valid) {
 			lua_pushboolean(L, 1);
 			return 1;
 		}
+		else switch (field) {
+			case bbox_top:    i = BOXTOP;    break;
+			case bbox_bottom: i = BOXBOTTOM; break;
+			case bbox_left:   i = BOXLEFT;   break;
+			case bbox_right:  i = BOXRIGHT;  break;
+			default:          return 0;
+		}
 	}
-
-	i = lua_tointeger(L, 2);
-	if (i < 0 || i > 3)
-		return 0;
+	else {
+		i = lua_tointeger(L, 2);
+		if (i < 0 || i > 3)
+			return 0;
+	}
 	lua_pushinteger(L, bbox[i]);
 	return 1;
 }
@@ -1718,8 +1800,10 @@ int LUA_MapLib(lua_State *L)
 	lua_pop(L, 1);
 
 	luaL_newmetatable(L, META_NODEBBOX);
-		lua_pushcfunction(L, nodebbox_get);
-		lua_setfield(L, -2, "__index");
+		//lua_pushcfunction(L, nodebbox_get);
+		//lua_setfield(L, -2, "__index");
+		lua_pushcfunction(L, nodebbox_call);
+		lua_setfield(L, -2, "__call");
 	lua_pop(L, 1);
 
 	luaL_newmetatable(L, META_NODECHILDREN);
