@@ -1083,23 +1083,28 @@ static int nodechildren_get(lua_State *L)
 	lua_settop(L, 2);
 	if (!lua_isnumber(L, 2))
 	{
-		int field = luaL_checkoption(L, 2, NULL, valid_opt);
+		enum nodechild_e field = luaL_checkoption(L, 2, nodechild_opt[0], nodechild_opt);
 		if (!children)
 		{
-			if (field == 0) {
+			if (field == nodechild_valid) {
 				lua_pushboolean(L, 0);
 				return 1;
 			}
 			return luaL_error(L, "accessed node_t doesn't exist anymore.");
-		} else if (field == 0) {
+		} else if (field == nodechild_valid) {
 			lua_pushboolean(L, 1);
 			return 1;
+		} else switch (field) {
+			case nodechild_right: i = 0; break;
+			case nodechild_left:  i = 1; break;
+			default:              return 0;
 		}
 	}
-
-	i = lua_tointeger(L, 2);
-	if (i < 0 || i > 1)
-		return 0;
+	else {
+		i = lua_tointeger(L, 2);
+		if (i < 0 || i > 1)
+			return 0;
+	}
 	lua_pushinteger(L, children[i]);
 	return 1;
 }
@@ -1124,8 +1129,7 @@ static int bbox_get(lua_State *L)
 		} else if (field == bbox_valid) {
 			lua_pushboolean(L, 1);
 			return 1;
-		}
-		else switch (field) {
+		} else switch (field) {
 			case bbox_top:    i = BOXTOP;    break;
 			case bbox_bottom: i = BOXBOTTOM; break;
 			case bbox_left:   i = BOXLEFT;   break;
