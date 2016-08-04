@@ -2815,6 +2815,39 @@ HW3SOUND for 3D hardware sound  support
 			<Option target="Debug Mingw64/DirectX" />
 			<Option target="Release Mingw64/DirectX" />
 		</Unit>
+		<Unit filename="src/m_aatree.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
+		<Unit filename="src/m_aatree.h">
+			<Option target="Debug Native/SDL" />
+			<Option target="Release Native/SDL" />
+			<Option target="Debug Mingw/SDL" />
+			<Option target="Release Mingw/SDL" />
+			<Option target="Debug Mingw/DirectX" />
+			<Option target="Release Mingw/DirectX" />
+			<Option target="Debug Any/Dummy" />
+			<Option target="Release Any/Dummy" />
+			<Option target="Debug Linux/SDL" />
+			<Option target="Release Linux/SDL" />
+			<Option target="Debug Mingw64/SDL" />
+			<Option target="Release Mingw64/SDL" />
+			<Option target="Debug Mingw64/DirectX" />
+			<Option target="Release Mingw64/DirectX" />
+		</Unit>
 		<Unit filename="src/m_anigif.c">
 			<Option compilerVar="CC" />
 			<Option target="Debug Native/SDL" />

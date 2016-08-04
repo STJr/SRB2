@@ -57,7 +57,8 @@ typedef enum
 	CA_FALLSWITCH,
 	CA_JUMPBOOST,
 	CA_AIRDRILL,
-	CA_JUMPTHOK
+	CA_JUMPTHOK,
+	CA_DASHMODE
 } charability_t;
 
 //Secondary skin abilities
@@ -164,6 +165,7 @@ typedef enum
 	PA_EDGE,
 	PA_WALK,
 	PA_RUN,
+	PA_PEEL,
 	PA_PAIN,
 	PA_ROLL,
 	PA_SPRING,
@@ -351,6 +353,7 @@ typedef struct player_s
 	tic_t exiting; // Exitlevel timer
 
 	UINT8 homing; // Are you homing?
+	tic_t dashmode; // counter for dashmode ability
 
 	tic_t skidtime; // Skid timer
 
