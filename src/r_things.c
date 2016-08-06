@@ -2308,6 +2308,7 @@ static void Sk_SetDefaultValue(skin_t *skin)
 	skin->spinheight = FixedMul(skin->height, 2*FRACUNIT/3);
 
 	skin->shieldscale = FRACUNIT;
+	skin->camerascale = FRACUNIT;
 
 	skin->thokitem = -1;
 	skin->spinitem = -1;
@@ -2662,6 +2663,7 @@ void R_AddSkins(UINT16 wadnum)
 			GETFLOAT(jumpfactor)
 			GETFLOAT(highresscale)
 			GETFLOAT(shieldscale)
+			GETFLOAT(camerascale)
 #undef GETFLOAT
 
 			else // let's check if it's a sound, otherwise error out

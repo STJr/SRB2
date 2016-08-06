@@ -48,6 +48,7 @@ enum skin {
 	skin_height,
 	skin_spinheight,
 	skin_shieldscale,
+	skin_camerascale,
 	skin_starttranscolor,
 	skin_prefcolor,
 	skin_prefoppositecolor,
@@ -84,6 +85,7 @@ static const char *const skin_opt[] = {
 	"height",
 	"spinheight",
 	"shieldscale",
+	"camerascale",
 	"starttranscolor",
 	"prefcolor",
 	"prefoppositecolor",
@@ -196,6 +198,9 @@ static int skin_get(lua_State *L)
 		break;
 	case skin_shieldscale:
 		lua_pushfixed(L, skin->shieldscale);
+		break;
+	case skin_camerascale:
+		lua_pushfixed(L, skin->camerascale);
 		break;
 	case skin_starttranscolor:
 		lua_pushinteger(L, skin->starttranscolor);

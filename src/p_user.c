@@ -8002,16 +8002,16 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		camspeed = cv_cam_speed.value;
 		camstill = cv_cam_still.value;
 		camrotate = cv_cam_rotate.value;
-		camdist = FixedMul(cv_cam_dist.value, mo->scale);
-		camheight = FixedMul(cv_cam_height.value, mo->scale);
+		camdist = FixedMul(cv_cam_dist.value, FixedMul(skins[player->skin].camerascale, mo->scale));
+		camheight = FixedMul(cv_cam_height.value, FixedMul(skins[player->skin].camerascale, mo->scale));
 	}
 	else // Camera 2
 	{
 		camspeed = cv_cam2_speed.value;
 		camstill = cv_cam2_still.value;
 		camrotate = cv_cam2_rotate.value;
-		camdist = FixedMul(cv_cam2_dist.value, mo->scale);
-		camheight = FixedMul(cv_cam2_height.value, mo->scale);
+		camdist = FixedMul(cv_cam2_dist.value, FixedMul(skins[player->skin].camerascale, mo->scale));
+		camheight = FixedMul(cv_cam2_height.value, FixedMul(skins[player->skin].camerascale, mo->scale));
 	}
 
 #ifdef REDSANALOG

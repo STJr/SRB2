@@ -98,6 +98,7 @@ typedef struct
 	fixed_t spinheight;
 
 	fixed_t shieldscale; // no change to bounding box, but helps set the shield's sprite size
+	fixed_t camerascale;
 
 	// Definable color translation table
 	UINT8 starttranscolor;
