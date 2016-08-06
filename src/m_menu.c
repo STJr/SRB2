@@ -110,38 +110,38 @@ const char *quitmsg[NUM_QUITMESSAGES];
 // Stuff for customizing the player select screen Tails 09-22-2003
 description_t description[32] =
 {
-	{"???", "", "", 0},
-	{"???", "", "", 0},
-	{"???", "", "", 0},
-	{"???", "", "", 0},
-	{"???", "", "", 0},
-	{"???", "", "", 0},
-	{"???", "", "", 0},
-	{"???", "", "", 0},
-	{"???", "", "", 0},
-	{"???", "", "", 0},
-	{"???", "", "", 0},
-	{"???", "", "", 0},
-	{"???", "", "", 0},
-	{"???", "", "", 0},
-	{"???", "", "", 0},
-	{"???", "", "", 0},
-	{"???", "", "", 0},
-	{"???", "", "", 0},
-	{"???", "", "", 0},
-	{"???", "", "", 0},
-	{"???", "", "", 0},
-	{"???", "", "", 0},
-	{"???", "", "", 0},
-	{"???", "", "", 0},
-	{"???", "", "", 0},
-	{"???", "", "", 0},
-	{"???", "", "", 0},
-	{"???", "", "", 0},
-	{"???", "", "", 0},
-	{"???", "", "", 0},
-	{"???", "", "", 0},
-	{"???", "", "", 0}
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0}
 };
 static char *char_notes = NULL;
 static fixed_t char_scroll = 0;
@@ -4771,8 +4771,10 @@ void M_ForceSaveSlotSelected(INT32 sslot)
 
 static void M_SetupChoosePlayer(INT32 choice)
 {
-	INT32 availablecount = 0;
-	INT32 i, skinnum;
+	INT32 skinnum;
+	UINT8 i;
+	UINT8 firstvalid = 255;
+	UINT8 lastvalid = 0;
 	char *name;
 	(void)choice;
 
@@ -4787,6 +4789,17 @@ static void M_SetupChoosePlayer(INT32 choice)
 			skinnum = R_SkinAvailable(name);
 			if ((skinnum != -1) && (R_SkinUnlock(skinnum)))
 			{
+				// Handling order.
+				if (firstvalid == 255)
+					firstvalid = i;
+				else
+				{
+					description[i].prev = lastvalid;
+					description[lastvalid].next = i;
+				}
+				lastvalid = i;
+
+				// Handling visibility.
 				if (PlayerMenu[i].status & (IT_DISABLED|IT_CENTER))
 					PlayerMenu[i].status = IT_CALL;
 				if (description[i].picname[0] == '\0')
@@ -4795,17 +4808,22 @@ static void M_SetupChoosePlayer(INT32 choice)
 			else // Technically, character select icons without corresponding skins get bundled away behind this too. Sucks to be them.
 				PlayerMenu[i].status = (IT_DISABLED|IT_CENTER);
 			Z_Free(name);
-
-			if (!(PlayerMenu[i].status & IT_DISABLED)) // If this character is available at all...
-				availablecount++;
 		}
 	}
 
-	if (!(availablecount)
-	|| (mapheaderinfo[startmap-1] && mapheaderinfo[startmap-1]->forcecharacter[0] != '\0'))
+	if ((firstvalid != 255)
+		&& !(mapheaderinfo[startmap-1]
+			&& (mapheaderinfo[startmap-1]->forcecharacter[0] != '\0')
+			)
+		)
+	{ // One last bit of order we can't do in the iteration above.
+		description[firstvalid].prev = lastvalid;
+		description[lastvalid].next = firstvalid;
+	}
+	else // We're being forced into a specific character, so might as well.
 	{
 		PlayerMenu[0].status = (IT_CALL|IT_DYBIGSPACE|(PlayerMenu[0].status & IT_CENTER)); // This is a hack to make a non-IT_CALL character in slot 0 not softlock the game. IT_DYBIGSPACE is a dummy flag, whilst IT_CENTER is preserved.
-		M_ChoosePlayer(0); // oh for crying out loud just get STARTED, it doesn't matter!
+		M_ChoosePlayer(0);
 		return;
 	}
 
@@ -4828,7 +4846,8 @@ static void M_DrawSetupChoosePlayerMenu(void)
 {
 	const INT32 my = 24;
 	patch_t *patch;
-	INT32 i, o, j, prev, next;
+	INT32 i, o;
+	UINT8 prev, next;
 	boolean loophack = false;
 
 	// Black BG
@@ -4868,35 +4887,15 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	o = (o % 128);
 
 	if (loophack)
-	{
-		j = i;
-		do // subtract 1 from i to counteract the +128 from the prior hack
-		{
-			i--;
-			if (i < 0)
-				i = (currentMenu->numitems - 1);
-		} while (i != j && PlayerMenu[i].status & IT_DISABLED);
-	}
+		i = description[i].prev;
 
 	// Get prev character...
-	prev = i;
-	do
-	{
-		prev--;
-		if (prev < 0)
-			prev = (currentMenu->numitems - 1);
-	} while (prev != i && PlayerMenu[prev].status & IT_DISABLED);
+	prev = description[i].prev;
 
 	if (prev != i) // If there's more than one character available...
 	{
 		// Let's get the next character now.
-		next = i;
-		do
-		{
-			next++;
-			if (next >= currentMenu->numitems)
-				next = 0;
-		} while (next != i && PlayerMenu[next].status & IT_DISABLED);
+		next = description[i].next;
 
 		// Draw prev character if it's visible and its number isn't greater than the current one or there's more than two
 		if (o < 32) // (prev != i) was previously a part of this, but we don't need to check again after above.

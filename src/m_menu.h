@@ -178,6 +178,8 @@ typedef struct
 	char picname[8];
 	char skinname[SKINNAMESIZE*2+2]; // skin&skin\0
 	UINT16 wadnum; // for duplicate characters
+	UINT8 prev;
+	UINT8 next;
 } description_t;
 
 // mode descriptions for video mode menu
