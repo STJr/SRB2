@@ -579,6 +579,9 @@ typedef enum sprite
 	NUMSPRITES
 } spritenum_t;
 
+// Make sure to be conscious of FF_FRAMEMASK whenever you change this table.
+// Currently, FF_FRAMEMASK is 0x1ff, or 511 - and NUMSPRITEFREESLOTS is 256.
+// Since this is zero-based, there can be at most 256 different SPR2_'s without changing that.
 enum playersprite
 {
 	SPR2_STND = 0,
@@ -632,7 +635,7 @@ enum playersprite
 	SPR2_SFLT,
 
 	SPR2_FIRSTFREESLOT,
-	SPR2_LASTFREESLOT = 0x1ff, // FF_FRAMEMASK (cannot use #define'd constants as enum value...) - previously set to SPR2_FIRSTFREESLOT + NUMSPRITEFREESLOTS - 1,
+	SPR2_LASTFREESLOT = SPR2_FIRSTFREESLOT + NUMSPRITEFREESLOTS - 1,
 	NUMPLAYERSPRITES
 };
 
