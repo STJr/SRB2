@@ -129,6 +129,10 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 		return false;
 	}
 
+#ifdef ESLOPE
+	object->standingslope = NULL; // Okay, now we can't return - no launching off at silly angles for you.
+#endif
+
 	object->eflags |= MFE_SPRUNG; // apply this flag asap!
 	spring->flags &= ~(MF_SOLID|MF_SPECIAL); // De-solidify
 
@@ -232,19 +236,23 @@ static void P_DoFanAndGasJet(mobj_t *spring, mobj_t *object)
 	if (p && object->state == &states[object->info->painstate]) // can't use fans and gas jets when player is in pain!
 		return;
 
-	// is object below thruster's position? if not, calculate distance between their bottoms
+	// is object's top below thruster's position? if not, calculate distance between their bottoms
 	if (spring->eflags & MFE_VERTICALFLIP)
 	{
-		if (object->z + object->height > spring->z + spring->height)
+		if (object->z > spring->z + spring->height)
 			return;
 		zdist = (spring->z + spring->height) - (object->z + object->height);
 	}
 	else
 	{
-		if (object->z < spring->z)
+		if (object->z + object->height < spring->z)
 			return;
 		zdist = object->z - spring->z;
 	}
+
+#ifdef ESLOPE
+	object->standingslope = NULL; // No launching off at silly angles for you.
+#endif
 
 	switch (spring->type)
 	{

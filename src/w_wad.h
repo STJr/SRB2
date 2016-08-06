@@ -54,10 +54,8 @@ typedef struct
 
 #define lumpcache_t void *
 
-// Annoying cyclic dependency workaround: this inlcusion must come after
-// the definition of MAX_WADPATH.
 #ifdef HWRENDER
-#include "m_misc.h"
+#include "m_aatree.h"
 #endif
 
 typedef struct wadfile_s
