@@ -5108,9 +5108,9 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		// choose a different rotation based on player view
 		ang = R_PointToAngle (thing->x, thing->y) - thing->angle;
 
-		if ((ang < ANGLE_180) && (sprframe->rotate & SRF_RIGHT)) // See from right
+		if ((sprframe->rotate & SRF_RIGHT) && (ang < ANGLE_180)) // See from right
 			rot = 6; // F7 slot
-		else if ((ang >= ANGLE_180) && (sprframe->rotate & SRF_LEFT)) // See from left
+		else if ((sprframe->rotate & SRF_LEFT) && (ang >= ANGLE_180)) // See from left
 			rot = 2; // F3 slot
 		else // Normal behaviour
 			rot = (ang+ANGLE_202h)>>29;
