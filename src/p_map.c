@@ -443,7 +443,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			return true; // underneath
 		if (thing->type == MT_SPIKE)
 		{
-			S_StartSound(tmthing, thing->info->deathsound);
+			if (thing->flags & MF_SOLID)
+				S_StartSound(tmthing, thing->info->deathsound);
 			for (thing = thing->subsector->sector->thinglist; thing; thing = thing->snext)
 				if (thing->type == MT_SPIKE && thing->health > 0 && thing->flags & MF_SOLID && P_AproxDistance(thing->x - tmthing->x, thing->y - tmthing->y) < FixedMul(56*FRACUNIT, thing->scale))
 					P_KillMobj(thing, tmthing, tmthing, 0);
@@ -476,7 +477,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			return true; // underneath
 		if (thing->type == MT_SPIKE)
 		{
-			S_StartSound(tmthing, thing->info->deathsound);
+			if (thing->flags & MF_SOLID)
+				S_StartSound(tmthing, thing->info->deathsound);
 			for (thing = thing->subsector->sector->thinglist; thing; thing = thing->snext)
 				if (thing->type == MT_SPIKE && thing->health > 0 && thing->flags & MF_SOLID && P_AproxDistance(thing->x - tmthing->x, thing->y - tmthing->y) < FixedMul(56*FRACUNIT, thing->scale))
 					P_KillMobj(thing, tmthing, tmthing, 0);
