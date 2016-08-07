@@ -625,6 +625,8 @@ enum playersprite
 	SPR2_SRID,
 	SPR2_SFLT,
 
+	SPR2_FIRSTFREESLOT,
+	SPR2_LASTFREESLOT = SPR2_FIRSTFREESLOT + NUMSPRITEFREESLOTS - 1,
 	NUMPLAYERSPRITES
 };
 
@@ -3030,8 +3032,9 @@ typedef struct
 
 extern state_t states[NUMSTATES];
 extern char sprnames[NUMSPRITES + 1][5];
-char spr2names[NUMPLAYERSPRITES][5];
+extern char spr2names[NUMPLAYERSPRITES][5];
 extern state_t *astate;
+extern enum playersprite free_spr2;
 
 typedef enum mobj_type
 {
