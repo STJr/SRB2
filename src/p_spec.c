@@ -1188,6 +1188,8 @@ INT32 P_FindSpecialLineFromTag(INT16 special, INT16 tag, INT32 start)
 	{
 		start++;
 
+		// This redundant check stops the compiler from complaining about function expansion
+		// elsewhere for some reason and everything is awful
 		if (start >= (INT32)numlines)
 			return -1;
 
