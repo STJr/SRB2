@@ -316,7 +316,7 @@ static boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef,
 		{
 			case SRF_NONE:
 			// no rotations were found for that frame at all
-			I_Error("R_AddSingleSpriteDef: No patches found for %s frame %c", sprname, R_Frame2Char(frame));
+			I_Error("R_AddSingleSpriteDef: No patches found for %.4s frame %c", sprname, R_Frame2Char(frame));
 			break;
 
 			case SRF_SINGLE:
@@ -336,7 +336,7 @@ static boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef,
 				// we test the patch lump, or the id lump whatever
 				// if it was not loaded the two are LUMPERROR
 				if (sprtemp[frame].lumppat[rotation] == LUMPERROR)
-					I_Error("R_AddSingleSpriteDef: Sprite %s frame %c is missing rotations",
+					I_Error("R_AddSingleSpriteDef: Sprite %.4s frame %c is missing rotations",
 					        sprname, R_Frame2Char(frame));
 			break;
 		}
