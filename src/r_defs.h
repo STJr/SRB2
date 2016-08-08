@@ -733,9 +733,9 @@ typedef enum
 {
 	SRF_SINGLE      = 0,   // 0-angle for all rotations
 	SRF_3D          = 1,   // Angles 1-8
-	SRF_LEFT        = 2,   // Left side has single patch
-	SRF_RIGHT       = 4,   // Right side has single patch
-	SRF_2D          = 6,   // SRF_LEFT|SRF_RIGHT
+	SRF_LEFT        = 2,   // Left side uses single patch
+	SRF_RIGHT       = 4,   // Right side uses single patch
+	SRF_2D          = SRF_LEFT|SRF_RIGHT, // 6
 	SRF_NONE        = 0xff // Initial value
 } spriterotateflags_t;     // SRF's up!
 
