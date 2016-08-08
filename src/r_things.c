@@ -2666,25 +2666,28 @@ void R_AddSkins(UINT16 wadnum)
 			GETFLOAT(camerascale)
 #undef GETFLOAT
 
-#define GETFLAG(field, flag) else if (!stricmp(stoken, #field)) { \
-	if (atoi(value) == 1) \
-		skin->flags |= flag; \
+#define GETFLAG(field) else if (!stricmp(stoken, #field)) { \
+	strupr(value); \
+	if (atoi(value) || value[0] == 'T' || value[0] == 'Y') \
+		skin->flags |= (SF_##field); \
 	else \
-		skin->flags &= ~flag; \
+		skin->flags &= ~(SF_##field); \
 }
 			// parameters for individual character flags
-			GETFLAG(super,         SF_SUPER)
-			GETFLAG(superanims,    SF_SUPERANIMS)
-			GETFLAG(superspin,     SF_SUPERSPIN)
-			GETFLAG(hires,         SF_HIRES)
-			GETFLAG(noskid,        SF_NOSKID)
-			GETFLAG(nospeedadjust, SF_NOSPEEDADJUST)
-			GETFLAG(runonwater,    SF_RUNONWATER)
-			GETFLAG(nojumpspin,    SF_NOJUMPSPIN)
-			GETFLAG(nojumpdamage,  SF_NOJUMPDAMAGE)
-			GETFLAG(stompdamage,   SF_STOMPDAMAGE)
-			GETFLAG(mariodamage,   SF_MARIODAMAGE)
-			GETFLAG(machine,       SF_MACHINE)
+			// these are uppercase so they can be concatenated with SF_
+			// 1, true, yes are all valid values
+			GETFLAG(SUPER)
+			GETFLAG(SUPERANIMS)
+			GETFLAG(SUPERSPIN)
+			GETFLAG(HIRES)
+			GETFLAG(NOSKID)
+			GETFLAG(NOSPEEDADJUST)
+			GETFLAG(RUNONWATER)
+			GETFLAG(NOJUMPSPIN)
+			GETFLAG(NOJUMPDAMAGE)
+			GETFLAG(STOMPDAMAGE)
+			GETFLAG(MARIODAMAGE)
+			GETFLAG(MACHINE)
 #undef GETFLAG
 
 			else // let's check if it's a sound, otherwise error out
