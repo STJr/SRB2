@@ -4350,7 +4350,7 @@ void G_GhostTicker(void)
 			g->mo->color += abs( ( (signed)( (unsigned)leveltime >> 1 ) % 9) - 4);
 			break;
 		case GHC_INVINCIBLE: // Mario invincibility (P_CheckInvincibilityTimer)
-			g->mo->color = (UINT8)(leveltime % MAXSKINCOLORS);
+			g->mo->color = (UINT8)(SKINCOLOR_RED + (leveltime % (MAXSKINCOLORS - SKINCOLOR_RED))); // Passes through all saturated colours
 			break;
 		default:
 			break;
