@@ -331,11 +331,10 @@ static boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef,
 			case SRF_2D: // both Left and Right rotations
 			// we test to see whether the left and right slots are present
 			if ((sprtemp[frame].lumppat[2] == LUMPERROR) || (sprtemp[frame].lumppat[6] == LUMPERROR))
-			{
 				I_Error("R_AddSingleSpriteDef: Sprite %s frame %c is missing rotations",
 				sprname, R_Frame2Char(frame));
-				break;
-			}
+			break;
+
 			default:
 			// must have all 8 frames
 			for (rotation = 0; rotation < 8; rotation++)
