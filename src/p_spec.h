@@ -386,6 +386,7 @@ typedef struct
 {
 	thinker_t thinker;   ///< Thinker structure for friction.
 	INT32 friction;      ///< Friction value, 0xe800 = normal.
+	INT32 movefactor;    ///< Inertia factor when adding to momentum, FRACUNIT = normal.
 	INT32 affectee;      ///< Number of affected sector.
 	INT32 referrer;      ///< If roverfriction == true, then this will contain the sector # of the control sector where the effect was applied.
 	UINT8 roverfriction;  ///< flag for whether friction originated from a FOF or not

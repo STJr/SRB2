@@ -1434,6 +1434,7 @@ static inline void SaveFrictionThinker(const thinker_t *th, const UINT8 type)
 	const friction_t *ht = (const void *)th;
 	WRITEUINT8(save_p, type);
 	WRITEINT32(save_p, ht->friction);
+	WRITEINT32(save_p, ht->movefactor);
 	WRITEINT32(save_p, ht->affectee);
 	WRITEINT32(save_p, ht->referrer);
 	WRITEUINT8(save_p, ht->roverfriction);
@@ -2368,6 +2369,7 @@ static inline void LoadFrictionThinker(actionf_p1 thinker)
 	friction_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
 	ht->thinker.function.acp1 = thinker;
 	ht->friction = READINT32(save_p);
+	ht->movefactor = READINT32(save_p);
 	ht->affectee = READINT32(save_p);
 	ht->referrer = READINT32(save_p);
 	ht->roverfriction = READUINT8(save_p);

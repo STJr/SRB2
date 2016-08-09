@@ -6369,11 +6369,6 @@ static void P_MovePlayer(player_t *player)
 	runspd = FixedMul(player->runspeed, player->mo->scale);
 
 	// Let's have some movement speed fun on low-friction surfaces, JUST for players... (high friction surfaces shouldn't have any adjustment, since the acceleration in this game is super high and that ends up cheesing high-friction surfaces.)
-	player->mo->movefactor = FixedDiv(ORIG_FRICTION, player->mo->movefactor);
-	if (player->mo->movefactor < FRACUNIT)
-		player->mo->movefactor = 8*player->mo->movefactor - 7*FRACUNIT;
-	else
-		player->mo->movefactor = FRACUNIT;
 	runspd = FixedMul(runspd, player->mo->movefactor);
 
 	// Control relinquishing stuff!
@@ -6547,7 +6542,7 @@ static void P_MovePlayer(player_t *player)
 	if (!player->mo->momx && !player->mo->momy && !player->mo->momz && player->panim == PA_WALK)
 		P_SetPlayerMobjState(player->mo, S_PLAY_STND);
 
-	player->mo->movefactor = ORIG_FRICTION; // We're not going to do any more with this, so let's change it back for the next frame.
+	player->mo->movefactor = FRACUNIT; // We're not going to do any more with this, so let's change it back for the next frame.
 
 //////////////////
 //GAMEPLAY STUFF//
