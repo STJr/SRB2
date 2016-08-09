@@ -280,7 +280,7 @@ static boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef,
 		{
 			case 0xff:
 			// no rotations were found for that frame at all
-			I_Error("R_AddSingleSpriteDef: No patches found for %s frame %c", sprname, R_Frame2Char(frame));
+			I_Error("R_AddSingleSpriteDef: No patches found for %.4s frame %c", sprname, R_Frame2Char(frame));
 			break;
 
 			case 0:
@@ -293,7 +293,7 @@ static boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef,
 				// we test the patch lump, or the id lump whatever
 				// if it was not loaded the two are LUMPERROR
 				if (sprtemp[frame].lumppat[rotation] == LUMPERROR)
-					I_Error("R_AddSingleSpriteDef: Sprite %s frame %c is missing rotations",
+					I_Error("R_AddSingleSpriteDef: Sprite %.4s frame %c is missing rotations",
 					        sprname, R_Frame2Char(frame));
 			break;
 		}
@@ -1643,7 +1643,8 @@ void R_SortVisSprites(void)
 	// Fix first and last. ds still points to the last one after the loop
 	dsfirst->prev = &unsorted;
 	unsorted.next = dsfirst;
-	ds->next = &unsorted;
+	if (ds)
+		ds->next = &unsorted;
 	unsorted.prev = ds;
 
 	// pull the vissprites out by scale
@@ -2666,7 +2667,7 @@ next_token:
 			if (z < lastlump) lastlump = z;
 
 			// load all sprite sets we are aware of.
-			for (sprite2 = 0; sprite2 < NUMPLAYERSPRITES; sprite2++)
+			for (sprite2 = 0; sprite2 < free_spr2; sprite2++)
 				R_AddSingleSpriteDef(spr2names[sprite2], &skin->sprites[sprite2], wadnum, lump, lastlump);
 		}
 

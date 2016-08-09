@@ -24,7 +24,7 @@
 //
 
 // Called by main loop.
-void ST_Ticker(void);
+FUNCMATH void ST_Ticker(void);
 
 // Called by main loop.
 void ST_Drawer(void);

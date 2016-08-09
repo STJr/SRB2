@@ -35,7 +35,7 @@ void F_CutsceneTicker(void);
 void F_TitleDemoTicker(void);
 
 // Called by main loop.
-void F_GameEndDrawer(void);
+FUNCMATH void F_GameEndDrawer(void);
 void F_IntroDrawer(void);
 void F_TitleScreenDrawer(void);
 

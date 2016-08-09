@@ -1165,7 +1165,7 @@ void T_SpikeSector(levelspecthink_t *spikes)
 
 	node = spikes->sector->touching_thinglist; // things touching this sector
 
-	for (; node; node = node->m_snext)
+	for (; node; node = node->m_thinglist_next)
 	{
 		thing = node->m_thing;
 		if (!thing->player)
@@ -1316,7 +1316,7 @@ void T_BridgeThinker(levelspecthink_t *bridge)
 			controlsec = &sectors[k];
 
 			// Is a player standing on me?
-			for (node = sector->touching_thinglist; node; node = node->m_snext)
+			for (node = sector->touching_thinglist; node; node = node->m_thinglist_next)
 			{
 				thing = node->m_thing;
 
@@ -1739,7 +1739,7 @@ wegotit:
 static mobj_t *SearchMarioNode(msecnode_t *node)
 {
 	mobj_t *thing = NULL;
-	for (; node; node = node->m_snext)
+	for (; node; node = node->m_thinglist_next)
 	{
 		// Things which should NEVER be ejected from a MarioBlock, by type.
 		switch (node->m_thing->type)
@@ -2025,7 +2025,7 @@ void T_NoEnemiesSector(levelspecthink_t *nobaddies)
 					&& thing->z < upperbound && thing->z+thing->height > lowerbound)
 						return;
 
-					node = node->m_snext;
+					node = node->m_thinglist_next;
 				}
 			}
 		}
@@ -2043,7 +2043,7 @@ void T_NoEnemiesSector(levelspecthink_t *nobaddies)
 				&& thing->z < upperbound && thing->z+thing->height > lowerbound)
 					return;
 
-				node = node->m_snext;
+				node = node->m_thinglist_next;
 			}
 		}
 	}
@@ -2322,7 +2322,7 @@ void T_RaiseSector(levelspecthink_t *raise)
 		sector = &sectors[i];
 
 		// Is a player standing on me?
-		for (node = sector->touching_thinglist; node; node = node->m_snext)
+		for (node = sector->touching_thinglist; node; node = node->m_thinglist_next)
 		{
 			thing = node->m_thing;
 
