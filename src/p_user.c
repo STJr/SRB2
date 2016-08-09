@@ -4634,8 +4634,8 @@ static void P_3dMovement(player_t *player)
 		acceleration = player->accelstart + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * player->acceleration;
 	}
 
-	// Friction-scaled acceleration...
-	acceleration = FixedMul(acceleration<<FRACBITS, player->mo->movefactor)>>FRACBITS;
+	if (player->mo->movefactor != FRACUNIT) // Friction-scaled acceleration...
+		acceleration = FixedMul(acceleration<<FRACBITS, player->mo->movefactor)>>FRACBITS;
 
 	// Forward movement
 	if (player->climbing)
@@ -6291,8 +6291,7 @@ static void P_SkidStuff(player_t *player)
 			// If your push angle is more than this close to a full 180 degrees, trigger a skid.
 			if (dang > ANGLE_157h)
 			{
-				//player->skidtime = TICRATE/2;
-				player->skidtime = (FixedDiv(35<<(FRACBITS-1), FixedSqrt(player->mo->movefactor)))>>FRACBITS;
+				player->skidtime = (player->mo->movefactor == FRACUNIT) ? TICRATE/2 : (FixedDiv(35<<(FRACBITS-1), FixedSqrt(player->mo->movefactor)))>>FRACBITS;
 				S_StartSound(player->mo, sfx_skid);
 				if (player->panim != PA_WALK)
 					P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
