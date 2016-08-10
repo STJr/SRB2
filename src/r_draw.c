@@ -1159,9 +1159,9 @@ UINT8 R_GetColorByName(const char *name)
 
 UINT8 R_GetSuperColorByName(const char *name)
 {
-	UINT8 color = (UINT8)atoi(name);
-	if (color > MAXSKINCOLORS && color < MAXTRANSLATIONS)
-		return color;
+	UINT8 color; /* = (UINT8)atoi(name); -- This isn't relevant to S_SKIN, which is the only way it's accessible right now. Let's simplify things.
+	if (color > MAXSKINCOLORS && color < MAXTRANSLATIONS && !((color - MAXSKINCOLORS) % 5))
+		return color;*/
 	for (color = 0; color < NUMSUPERCOLORS; color++)
 		if (!stricmp(Color_Names[color + MAXSKINCOLORS], name))
 			return ((color*5) + MAXSKINCOLORS);

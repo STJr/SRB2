@@ -3415,7 +3415,7 @@ static void P_DoSuperStuff(player_t *player)
 			player->mo->health--;
 		}
 
-		player->mo->color = (player->pflags & PF_GODMODE)
+		player->mo->color = (player->pflags & PF_GODMODE && cv_debug == 0)
 		? (SKINCOLOR_SUPERSILVER1 + 5*((leveltime >> 1) % 7)) // A wholesome easter egg.
 		: skins[player->skin].supercolor + (unsigned)abs( ( (signed)(leveltime >> 1) % 9) - 4); // This is where super flashing is handled.
 
