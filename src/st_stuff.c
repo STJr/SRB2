@@ -890,11 +890,19 @@ static void ST_drawFirstPersonHUD(void)
 			V_NOSCALESTART|V_OFFSET|V_TRANSLUCENT, p);
 }
 
-// [21:42] <+Rob> Beige - Lavender - Steel Blue - Peach - Orange - Purple - Silver - Yellow - Pink - Red - Blue - Green - Cyan - Gold
-static skincolors_t linkColor[14] =
+// 2.0-1: [21:42] <+Rob> Beige - Lavender - Steel Blue - Peach - Orange - Purple - Silver - Yellow - Pink - Red - Blue - Green - Cyan - Gold
+/*#define NUMLINKCOLORS 14
+static skincolors_t linkColor[NUMLINKCOLORS] =
 {SKINCOLOR_BEIGE,  SKINCOLOR_LAVENDER, SKINCOLOR_AZURE, SKINCOLOR_PEACH, SKINCOLOR_ORANGE,
  SKINCOLOR_MAGENTA, SKINCOLOR_SILVER,   SKINCOLOR_SUPERGOLD4,    SKINCOLOR_PINK,  SKINCOLOR_RED,
- SKINCOLOR_BLUE,   SKINCOLOR_GREEN,    SKINCOLOR_CYAN,      SKINCOLOR_GOLD};
+ SKINCOLOR_BLUE,   SKINCOLOR_GREEN,    SKINCOLOR_CYAN,      SKINCOLOR_GOLD};*/
+
+// 2.2+: (unix time 1470866042) <Rob> Emerald, Aqua, Cyan, Blue, Pastel, Purple, Magenta, Rosy, Red, Orange, Gold, Yellow, Peridot
+#define NUMLINKCOLORS 13
+static skincolors_t linkColor[NUMLINKCOLORS] =
+{SKINCOLOR_EMERALD,  SKINCOLOR_AQUA, SKINCOLOR_CYAN, SKINCOLOR_BLUE, SKINCOLOR_PASTEL,
+ SKINCOLOR_PURPLE, SKINCOLOR_MAGENTA,   SKINCOLOR_ROSY,    SKINCOLOR_RED,  SKINCOLOR_ORANGE,
+ SKINCOLOR_GOLD,   SKINCOLOR_YELLOW,    SKINCOLOR_PERIDOT};
 
 static void ST_drawNightsRecords(void)
 {
@@ -994,7 +1002,7 @@ static void ST_drawNiGHTSHUD(void)
 #endif
 	stplyr->linkcount > minlink)
 	{
-		skincolors_t colornum = linkColor[((stplyr->linkcount-1) / 5) % (sizeof(linkColor) / sizeof(skincolors_t))];
+		skincolors_t colornum = linkColor[((stplyr->linkcount-1) / 5) % NUMLINKCOLORS];
 		if (stplyr->powers[pw_nights_linkfreeze])
 			colornum = SKINCOLOR_WHITE;
 
