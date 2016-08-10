@@ -1036,7 +1036,7 @@ static void HWR_CreateBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, 
 			blendcolor = V_GetColor(202);
 			break;
 
-		case SKINCOLOR_SUPERSILVER1: // Super white
+		case SKINCOLOR_SUPERSILVER1: // Super silver
 			blendcolor = V_GetColor(0);
 			break;
 		case SKINCOLOR_SUPERSILVER2:
