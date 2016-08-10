@@ -1017,6 +1017,7 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 			dest_colormap[starttranscolor + i] = (UINT8)(238 + ((i-12) >> 1));
 		break;
 
+	// Super tans.
 	case SKINCOLOR_SUPERTAN1:
 		for (i = 0; i < 10; i++)
 			dest_colormap[starttranscolor + i] = (UINT8)0;
