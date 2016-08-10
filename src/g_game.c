@@ -4345,8 +4345,14 @@ void G_GhostTicker(void)
 		// Tick ghost colors (Super and Mario Invincibility flashing)
 		switch(g->color)
 		{
-		case GHC_SUPER: // Super Sonic (P_DoSuperStuff)
-			g->mo->color = SKINCOLOR_SUPER1;
+		case GHC_SUPER: // Super (P_DoSuperStuff)
+			if (g->mo->skin)
+			{
+				skin_t *skin = (skin_t *)g->mo->skin;
+				g->mo->color = skin->supercolor;
+			}
+			else
+				g->mo->color = SKINCOLOR_SUPERGOLD1;
 			g->mo->color += abs( ( (signed)( (unsigned)leveltime >> 1 ) % 9) - 4);
 			break;
 		case GHC_INVINCIBLE: // Mario invincibility (P_CheckInvincibilityTimer)

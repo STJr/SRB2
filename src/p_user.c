@@ -3415,14 +3415,9 @@ static void P_DoSuperStuff(player_t *player)
 			player->mo->health--;
 		}
 
-		// future todo: a skin option for this, and possibly more colors
-		switch (player->skin)
-		{
-			case 1:  /* Tails    */ player->mo->color = SKINCOLOR_TSUPER1; break;
-			case 2:  /* Knux     */ player->mo->color = SKINCOLOR_KSUPER1; break;
-			default: /* everyone */ player->mo->color = SKINCOLOR_SUPER1; break;
-		}
-		player->mo->color += abs( ( (signed)( (unsigned)leveltime >> 1 ) % 9) - 4);
+		player->mo->color = (player->pflags & PF_GODMODE)
+		? (SKINCOLOR_SUPERSILVER1 + 5*((leveltime >> 1) % 7)) // A wholesome easter egg.
+		: skins[player->skin].supercolor + (unsigned)abs( ( (signed)(leveltime >> 1) % 9) - 4); // This is where super flashing is handled.
 
 		if ((cmd->forwardmove != 0 || cmd->sidemove != 0 || player->pflags & (PF_CARRIED|PF_ROPEHANG|PF_ITEMHANG|PF_MACESPIN))
 		&& !(leveltime % TICRATE) && (player->mo->momx || player->mo->momy))

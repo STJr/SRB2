@@ -2288,6 +2288,7 @@ static void Sk_SetDefaultValue(skin_t *skin)
 
 	skin->starttranscolor = 96;
 	skin->prefcolor = SKINCOLOR_GREEN;
+	skin->supercolor = SKINCOLOR_SUPERGOLD1;
 	skin->prefoppositecolor = 0; // use tables
 
 	skin->normalspeed = 36<<FRACBITS;
@@ -2658,6 +2659,8 @@ void R_AddSkins(UINT16 wadnum)
 			GETSKINCOLOR(prefcolor)
 			GETSKINCOLOR(prefoppositecolor)
 #undef GETSKINCOLOR
+			else if (!stricmp(stoken, "supercolor"))
+				skin->supercolor = R_GetSuperColorByName(value);
 
 #define GETFLOAT(field) else if (!stricmp(stoken, #field)) skin->field = FLOAT_TO_FIXED(atof(value));
 			GETFLOAT(jumpfactor)

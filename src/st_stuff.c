@@ -893,7 +893,7 @@ static void ST_drawFirstPersonHUD(void)
 // [21:42] <+Rob> Beige - Lavender - Steel Blue - Peach - Orange - Purple - Silver - Yellow - Pink - Red - Blue - Green - Cyan - Gold
 static skincolors_t linkColor[14] =
 {SKINCOLOR_BEIGE,  SKINCOLOR_LAVENDER, SKINCOLOR_AZURE, SKINCOLOR_PEACH, SKINCOLOR_ORANGE,
- SKINCOLOR_MAGENTA, SKINCOLOR_SILVER,   SKINCOLOR_SUPER4,    SKINCOLOR_PINK,  SKINCOLOR_RED,
+ SKINCOLOR_MAGENTA, SKINCOLOR_SILVER,   SKINCOLOR_SUPERGOLD4,    SKINCOLOR_PINK,  SKINCOLOR_RED,
  SKINCOLOR_BLUE,   SKINCOLOR_GREEN,    SKINCOLOR_CYAN,      SKINCOLOR_GOLD};
 
 static void ST_drawNightsRecords(void)
@@ -1299,7 +1299,7 @@ static void ST_drawNiGHTSHUD(void)
 				nightsnum, SKINCOLOR_RED);
 		else
 			ST_DrawNightsOverlayNum(160 + numbersize, STRINGY(12), SPLITFLAGS(V_SNAPTOTOP), realnightstime,
-				nightsnum, SKINCOLOR_SUPER4);
+				nightsnum, SKINCOLOR_SUPERGOLD4);
 
 		// Show exact time in debug
 		if (cv_debug & DBG_NIGHTSBASIC)

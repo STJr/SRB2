@@ -135,7 +135,7 @@ static UINT8** translationtablecache[MAXSKINS + 4] = {NULL};
 
 // See also the enum skincolors_t
 // TODO Callum: Can this be translated?
-const char *Color_Names[MAXSKINCOLORS] =
+const char *Color_Names[MAXSKINCOLORS + NUMSUPERCOLORS] =
 {
 	"None",     	// SKINCOLOR_NONE
 	"White",    	// SKINCOLOR_WHITE
@@ -166,7 +166,17 @@ const char *Color_Names[MAXSKINCOLORS] =
 	"Lavender", 	// SKINCOLOR_LAVENDER
 	"Magenta",   	// SKINCOLOR_MAGENTA
 	"Pink",     	// SKINCOLOR_PINK
-	"Rosy"			// SKINCOLOR_ROSY
+	"Rosy",			// SKINCOLOR_ROSY
+	// Super behaves by different rules (one name per 5 colours), and will be accessed exclusively via R_GetSuperColorByName instead of R_GetColorByName.
+	"Silver",		// SKINCOLOR_SUPERSILVER1
+	"Red",			// SKINCOLOR_SUPERRED1
+	"Orange",		// SKINCOLOR_SUPERORANGE1
+	"Gold",			// SKINCOLOR_SUPERGOLD1
+	"Peridot",		// SKINCOLOR_SUPERPERIDOT1
+	"Cyan",			// SKINCOLOR_SUPERCYAN1
+	"Purple",		// SKINCOLOR_SUPERPURPLE1
+	"Rust",			// SKINCOLOR_SUPERRUST1
+	"Tan"			// SKINCOLOR_SUPERTAN1
 };
 
 /*
@@ -573,49 +583,186 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 		break;
 
 	// Super colors, from lightest to darkest!
-	case SKINCOLOR_SUPER1:
-		// Super White
+
+	// Super silvers.
+	case SKINCOLOR_SUPERSILVER1:
+		for (i = 0; i < 12; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)0;
+		for (; i < 14; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)1;
+		for (; i < 16; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(i-12);
+		break;
+
+	case SKINCOLOR_SUPERSILVER2:
+		for (i = 0; i < 3; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(i);
+		dest_colormap[starttranscolor + (i++)] = (UINT8)2;
+		for (; i < 8; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)3;
+		for (; i < 14; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)4;
+		for (; i < 16; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(i-9);
+		break;
+
+	case SKINCOLOR_SUPERSILVER3:
+		dest_colormap[starttranscolor] = (UINT8)1;
+		for (i = 1; i < 3; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)2;
+		for (; i < 6; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)3;
+		for (; i < 12; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)4;
+		for (; i < 16; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(5 + ((i-12)*2));
+		break;
+
+	case SKINCOLOR_SUPERSILVER4:
+		dest_colormap[starttranscolor] = (UINT8)2;
+		for (i = 1; i < 3; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)3;
+		for (; i < 9; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)4;
+		for (; i < 16; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(5 + ((i-9)*2));
+		break;
+
+	case SKINCOLOR_SUPERSILVER5:
+		for (i = 0; i < 2; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)3;
+		for (; i < 8; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)4;
+		for (; i < 16; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(5 + ((i-8)*2));
+		break;
+
+	// Super reds.
+	case SKINCOLOR_SUPERRED1:
+		for (i = 0; i < 10; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)0;
+		for (; i < 16; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(208 + ((i-10) >> 1));
+		break;
+
+	case SKINCOLOR_SUPERRED2:
+		for (i = 0; i < 3; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)0;
+		for (; i < 12; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(208 + ((i-3) / 3));
+		for (; i < 16; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(32 + ((i-12) >> 1));
+		break;
+
+	case SKINCOLOR_SUPERRED3:
+		for (i = 0; i < 2; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)0;
+		for (; i < 8; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(208 + ((i-2) >> 1));
+		for (; i < 16; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(32 + ((i-8) >> 1));
+		break;
+
+	case SKINCOLOR_SUPERRED4:
+		dest_colormap[starttranscolor] = (UINT8)0;
+		for (i = 1; i < 6; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(208 + (i >> 1));
+		for (; i < 16; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(32 + ((i-6) >> 1));
+		break;
+
+	case SKINCOLOR_SUPERRED5:
+		dest_colormap[starttranscolor] = (UINT8)208;
+		for (i = 1; i < 4; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(209 + (i >> 1));
+		for (; i < 16; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(32 + ((i-4) >> 1));
+		break;
+
+	// Super oranges.
+	case SKINCOLOR_SUPERORANGE1:
+		for (i = 0; i < 10; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)0;
+		dest_colormap[starttranscolor + (i++)] = (UINT8)208;
+		for (; i < 16; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(48 + (i-11));
+		break;
+
+	case SKINCOLOR_SUPERORANGE2:
+		for (i = 0; i < 4; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)0;
+		for (; i < 6; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)208;
+		for (; i < 16; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(48 + ((i-6) >> 1));
+		break;
+
+	case SKINCOLOR_SUPERORANGE3:
+		for (i = 0; i < 2; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)0;
+		for (; i < 4; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)208;
+		for (; i < 16; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(48 + ((i-4) >> 1));
+		break;
+
+	case SKINCOLOR_SUPERORANGE4:
+		dest_colormap[starttranscolor] = (UINT8)0;
+		dest_colormap[starttranscolor + 1] = (UINT8)208;
+		for (i = 2; i < 13; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(48 + (i-2));
+		for (; i < 16; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(68 + (i-13));
+		break;
+
+	case SKINCOLOR_SUPERORANGE5:
+		dest_colormap[starttranscolor] = (UINT8)208;
+		for (i = 1; i < 12; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(48 + (i-1));
+		for (; i < 16; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(68 + (i-12));
+		break;
+
+	// Super golds.
+	case SKINCOLOR_SUPERGOLD1:
 		for (i = 0; i < 10; i++)
 			dest_colormap[starttranscolor + i] = (UINT8)0; // True white
 		for (; i < 12; i++) // White-yellow fade
-			dest_colormap[starttranscolor + i] = (UINT8)(80);
+			dest_colormap[starttranscolor + i] = (UINT8)80;
 		for (; i < 15; i++) // White-yellow fade
 			dest_colormap[starttranscolor + i] = (UINT8)(81 + (i-12));
-		dest_colormap[starttranscolor + 15] = (UINT8)(72);
+		dest_colormap[starttranscolor + 15] = (UINT8)72;
 		break;
 
-	case SKINCOLOR_SUPER2:
-		// Super Bright
+	case SKINCOLOR_SUPERGOLD2:
 		dest_colormap[starttranscolor] = (UINT8)(0);
 		for (i = 1; i < 4; i++) // White-yellow fade
 			dest_colormap[starttranscolor + i] = (UINT8)(80 + (i-1));
 		for (; i < 6; i++) // Yellow
-			dest_colormap[starttranscolor + i] = (UINT8)(83);
+			dest_colormap[starttranscolor + i] = (UINT8)83;
 		for (; i < 8; i++) // Yellow
-			dest_colormap[starttranscolor + i] = (UINT8)(72);
+			dest_colormap[starttranscolor + i] = (UINT8)72;
 		for (; i < 14; i++) // Yellow
-			dest_colormap[starttranscolor + i] = (UINT8)(73);
+			dest_colormap[starttranscolor + i] = (UINT8)73;
 		for (; i < 16; i++) // With a fine golden finish! :3
 			dest_colormap[starttranscolor + i] = (UINT8)(64 + (i-14));
 		break;
 
-	case SKINCOLOR_SUPER3:
-		// Super Yellow
+	case SKINCOLOR_SUPERGOLD3:
 		for (i = 0; i < 2; i++) // White-yellow fade
 			dest_colormap[starttranscolor + i] = (UINT8)(81 + i);
 		for (; i < 4; i++)
-			dest_colormap[starttranscolor + i] = (UINT8)(83);
+			dest_colormap[starttranscolor + i] = (UINT8)83;
 		for (; i < 6; i++) // Yellow
-			dest_colormap[starttranscolor + i] = (UINT8)(72);
+			dest_colormap[starttranscolor + i] = (UINT8)72;
 		for (; i < 12; i++) // Yellow
-			dest_colormap[starttranscolor + i] = (UINT8)(73);
+			dest_colormap[starttranscolor + i] = (UINT8)73;
 		for (; i < 16; i++) // With a fine golden finish! :3
 			dest_colormap[starttranscolor + i] = (UINT8)(64 + (i-12));
 		break;
 
-	case SKINCOLOR_SUPER4:
-		// "The SSNTails"
-		dest_colormap[starttranscolor] = 83; // Golden shine
+	case SKINCOLOR_SUPERGOLD4: // "The SSNTails"
+		dest_colormap[starttranscolor] = (UINT8)83; // Golden shine
 		for (i = 1; i < 3; i++) // Yellow
 			dest_colormap[starttranscolor + i] = (UINT8)(72);
 		for (; i < 9; i++) // Yellow
@@ -624,30 +771,309 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 			dest_colormap[starttranscolor + i] = (UINT8)(64 + (i-9));
 		break;
 
-	case SKINCOLOR_SUPER5:
-		// Golden Delicious
+	case SKINCOLOR_SUPERGOLD5: // Golden Delicious
 		for (i = 0; i < 2; i++) // Yellow
 			dest_colormap[starttranscolor + i] = (UINT8)(72);
 		for (; i < 8; i++) // Yellow
 			dest_colormap[starttranscolor + i] = (UINT8)(73);
-		for (; i < 15; i++) // With a fine golden finish! :3
+		for (; i < 16; i++) // With a fine golden finish! :3
 			dest_colormap[starttranscolor + i] = (UINT8)(64 + (i-8));
-		dest_colormap[starttranscolor + 15] = (UINT8)63;
 		break;
 
-	// Super Tails and Knuckles, who really should be dummied out by now
-	case SKINCOLOR_TSUPER1:
-	case SKINCOLOR_TSUPER2:
-	case SKINCOLOR_TSUPER3:
-	case SKINCOLOR_TSUPER4:
-	case SKINCOLOR_TSUPER5:
-	case SKINCOLOR_KSUPER1:
-	case SKINCOLOR_KSUPER2:
-	case SKINCOLOR_KSUPER3:
-	case SKINCOLOR_KSUPER4:
-	case SKINCOLOR_KSUPER5:
-		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
-			dest_colormap[starttranscolor + i] = 0xFF;
+	// Super peridots. (nyeheheheh)
+	case SKINCOLOR_SUPERPERIDOT1:
+		for (i = 0; i < 10; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)0;
+		for (; i < 13; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)88;
+		for (; i < 16; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)188;
+		break;
+
+	case SKINCOLOR_SUPERPERIDOT2:
+		dest_colormap[starttranscolor] = (UINT8)(0);
+		for (i = 1; i < 4; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)88;
+		for (; i < 8; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)188;
+		for (; i < 14; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)189;
+		for (; i < 16; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)190;
+		break;
+
+	case SKINCOLOR_SUPERPERIDOT3:
+		for (i = 0; i < 2; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)88;
+		for (; i < 6; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)188;
+		for (; i < 12; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)189;
+		for (; i < 16; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(190 + ((i-12) >> 1));
+		break;
+
+	case SKINCOLOR_SUPERPERIDOT4:
+		dest_colormap[starttranscolor] = (UINT8)88;
+		for (i = 1; i < 3; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)188;
+		for (; i < 9; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)189;
+		for (; i < 13; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(190 + ((i-9) >> 1));
+		for (; i < 15; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)94;
+		dest_colormap[starttranscolor + i] = (UINT8)95;
+		break;
+
+	case SKINCOLOR_SUPERPERIDOT5:
+		for (i = 0; i < 2; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)188;
+		for (; i < 8; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)189;
+		for (; i < 12; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(190 + ((i-8) >> 1));
+		for (; i < 14; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)94;
+		dest_colormap[starttranscolor + (i++)] = (UINT8)95;
+		dest_colormap[starttranscolor + i] = (UINT8)119;
+		break;
+
+	// Super cyans.
+	case SKINCOLOR_SUPERCYAN1:
+		for (i = 0; i < 10; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)0;
+		for (; i < 12; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)128;
+		for (; i < 16; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(129 + (i-12));
+		break;
+
+	case SKINCOLOR_SUPERCYAN2:
+		dest_colormap[starttranscolor] = (UINT8)0;
+		for (i = 1; i < 4; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(128 + (i-1));
+		for (; i < 8; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(131 + ((i-4) >> 1));
+		for (; i < 14; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)133;
+		for (; i < 16; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)134;
+		break;
+
+	case SKINCOLOR_SUPERCYAN3:
+		for (i = 0; i < 2; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(129 + i);
+		for (; i < 6; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(131 + ((i-2) >> 1));
+		for (; i < 12; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)133;
+		for (; i < 16; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(134 + ((i-12) >> 1));
+		break;
+
+	case SKINCOLOR_SUPERCYAN4:
+		dest_colormap[starttranscolor] = (UINT8)131;
+		for (i = 1; i < 3; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)132;
+		for (; i < 9; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)133;
+		for (; i < 13; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(134 + ((i-9) >> 1));
+		for (; i < 16; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(136 + (i-13));
+		break;
+
+	case SKINCOLOR_SUPERCYAN5:
+		for (i = 0; i < 2; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)132;
+		for (; i < 8; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)133;
+		for (; i < 12; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(134 + ((i-8) >> 1));
+		for (; i < 16; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(136 + (i-12));
+		break;
+
+	// Super purples.
+	case SKINCOLOR_SUPERPURPLE1:
+		for (i = 0; i < 10; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)0;
+		for (; i < 12; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)144;
+		for (; i < 16; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(160 + (i-12));
+		break;
+
+	case SKINCOLOR_SUPERPURPLE2:
+		dest_colormap[starttranscolor] = (UINT8)0;
+		dest_colormap[starttranscolor + 1] = (UINT8)144;
+		for (i = 2; i < 4; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(160 + (i-2));
+		for (; i < 8; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(162 + ((i-4) >> 1));
+		for (; i < 14; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)164;
+		for (; i < 16; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)165;
+		break;
+
+	case SKINCOLOR_SUPERPURPLE3:
+		for (i = 0; i < 2; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(160 + i);
+		for (; i < 6; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(162 + ((i-2) >> 1));
+		for (; i < 12; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)164;
+		for (; i < 16; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(165 + ((i-12) >> 1));
+		break;
+
+	case SKINCOLOR_SUPERPURPLE4:
+		dest_colormap[starttranscolor] = (UINT8)162;
+		for (i = 1; i < 3; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)163;
+		for (; i < 9; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)164;
+		for (; i < 13; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(165 + ((i-9) >> 1));
+		for (; i < 16; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(167 + (i-13));
+		break;
+
+	case SKINCOLOR_SUPERPURPLE5:
+		for (i = 0; i < 2; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)163;
+		for (; i < 8; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)164;
+		for (; i < 12; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(165 + ((i-8) >> 1));
+		for (; i < 15; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(167 + (i-12));
+		dest_colormap[starttranscolor + i] = (UINT8)253;
+		break;
+
+	// Super rusts.
+	case SKINCOLOR_SUPERRUST1:
+		for (i = 0; i < 2; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)0;
+		for (; i < 5; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)208;
+		for (; i < 7; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)48;
+		for (; i < 10; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(49 + (i-7));
+		for (; i < 12; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(55 + ((i-10)*3));
+		for (; i < 16; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(68 + (i-11));
+		break;
+
+	case SKINCOLOR_SUPERRUST2:
+		for (i = 0; i < 4; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)48;
+		for (; i < 9; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(49 + (i-4));
+		for (; i < 11; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(56 + ((i-9)*2));
+		for (; i < 15; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(68 + (i-11));
+		dest_colormap[starttranscolor + i] = (UINT8)71;
+		break;
+
+	case SKINCOLOR_SUPERRUST3:
+		dest_colormap[starttranscolor] = (UINT8)49;
+		for (i = 1; i < 3; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)50;
+		for (; i < 5; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(51 + (i-3));
+		for (; i < 8; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(54 + (i-5));
+		dest_colormap[starttranscolor + (i++)] = (UINT8)58;
+		for (; i < 15; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(68 + ((i-7) >> 1));
+		dest_colormap[starttranscolor + i] = (UINT8)46;
+		break;
+
+	case SKINCOLOR_SUPERRUST4:
+		dest_colormap[starttranscolor] = (UINT8)83;
+		dest_colormap[starttranscolor + 1] = (UINT8)72;
+		for (i = 2; i < 6; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(64 + (i-2));
+		for (; i < 14; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(68 + ((i-6) >> 1));
+		for (; i < 16; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)46;
+		break;
+
+	case SKINCOLOR_SUPERRUST5:
+		for (i = 0; i < 3; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(64 + i);
+		for (; i < 7; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(67 + ((i-3) >> 1));
+		for (; i < 12; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(233 + (i-7));
+		for (; i < 16; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(238 + ((i-12) >> 1));
+		break;
+
+	case SKINCOLOR_SUPERTAN1:
+		for (i = 0; i < 10; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)0;
+		for (; i < 16; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(80 + ((i-10) >> 1));
+		break;
+
+	case SKINCOLOR_SUPERTAN2:
+		dest_colormap[starttranscolor] = (UINT8)0;
+		for (i = 1; i < 7; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(80 + ((i-1) >> 1));
+		dest_colormap[starttranscolor + (i++)] = (UINT8)82;
+		for (; i < 12; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)84;
+		for (; i < 15; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(85 + (i-12));
+		dest_colormap[starttranscolor + i] = (UINT8)245;
+		break;
+
+	case SKINCOLOR_SUPERTAN3:
+		dest_colormap[starttranscolor] = (UINT8)80;
+		for (i = 1; i < 5; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(81 + ((i-1) >> 1));
+		dest_colormap[starttranscolor + (i++)] = (UINT8)82;
+		for (; i < 10; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)84;
+		for (; i < 13; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(85 + (i-10));
+		for (; i < 16; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(245 + ((i-13)*2));
+		break;
+
+	case SKINCOLOR_SUPERTAN4:
+		dest_colormap[starttranscolor] = (UINT8)81;
+		for (i = 1; i < 5; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)82;
+		for (; i < 8; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)84;
+		for (; i < 11; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(85 + (i-8));
+		for (; i < 15; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(245 + ((i-11)*2));
+		dest_colormap[starttranscolor + i] = (UINT8)237;
+		break;
+
+	case SKINCOLOR_SUPERTAN5:
+		for (i = 0; i < 2; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)82;
+		for (; i < 5; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)84;
+		for (; i < 8; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(85 + (i-5));
+		for (; i < 12; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(245 + (i-8));
+		for (; i < 15; i++)
+			dest_colormap[starttranscolor + i] = (UINT8)(237 + (i-12));
+		dest_colormap[starttranscolor + i] = (UINT8)239;
 		break;
 
 	default:
@@ -728,6 +1154,17 @@ UINT8 R_GetColorByName(const char *name)
 	for (color = 1; color < MAXSKINCOLORS; color++)
 		if (!stricmp(Color_Names[color], name))
 			return color;
+	return 0;
+}
+
+UINT8 R_GetSuperColorByName(const char *name)
+{
+	UINT8 color = (UINT8)atoi(name);
+	if (color > MAXSKINCOLORS && color < MAXTRANSLATIONS)
+		return color;
+	for (color = 0; color < NUMSUPERCOLORS; color++)
+		if (!stricmp(Color_Names[color + MAXSKINCOLORS], name))
+			return ((color*5) + MAXSKINCOLORS);
 	return 0;
 }
 

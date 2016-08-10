@@ -103,6 +103,7 @@ typedef struct
 	// Definable color translation table
 	UINT8 starttranscolor;
 	UINT8 prefcolor;
+	UINT8 supercolor;
 	UINT8 prefoppositecolor; // if 0 use tables instead
 
 	fixed_t highresscale; // scale of highres, default is 0.5

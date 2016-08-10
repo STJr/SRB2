@@ -1035,32 +1035,151 @@ static void HWR_CreateBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, 
 		case SKINCOLOR_ROSY:
 			blendcolor = V_GetColor(202);
 			break;
-		case SKINCOLOR_SUPER1:
+
+		case SKINCOLOR_SUPERSILVER1: // Super white
+			blendcolor = V_GetColor(0);
+			break;
+		case SKINCOLOR_SUPERSILVER2:
+			blendcolor = V_GetColor(2);
+			break;
+		case SKINCOLOR_SUPERSILVER3:
+			blendcolor = V_GetColor(4);
+			break;
+		case SKINCOLOR_SUPERSILVER4:
+			blendcolor = V_GetColor(7);
+			break;
+		case SKINCOLOR_SUPERSILVER5:
+			blendcolor = V_GetColor(10);
+			break;
+
+		case SKINCOLOR_SUPERRED1: // Super red
+			blendcolor = V_GetColor(208);
+			break;
+		case SKINCOLOR_SUPERRED2:
+			blendcolor = V_GetColor(210);
+			break;
+		case SKINCOLOR_SUPERRED3:
+			blendcolor = V_GetColor(32);
+			break;
+		case SKINCOLOR_SUPERRED4:
+			blendcolor = V_GetColor(33);
+			break;
+		case SKINCOLOR_SUPERRED5:
+			blendcolor = V_GetColor(35);
+			break;
+
+		case SKINCOLOR_SUPERORANGE1: // Super orange
+			blendcolor = V_GetColor(208);
+			break;
+		case SKINCOLOR_SUPERORANGE2:
+			blendcolor = V_GetColor(48);
+			break;
+		case SKINCOLOR_SUPERORANGE3:
+			blendcolor = V_GetColor(50);
+			break;
+		case SKINCOLOR_SUPERORANGE4:
+			blendcolor = V_GetColor(54);
+			break;
+		case SKINCOLOR_SUPERORANGE5:
+			blendcolor = V_GetColor(58);
+			break;
+
+		case SKINCOLOR_SUPERGOLD1: // Super gold
 			blendcolor = V_GetColor(80);
 			break;
-		case SKINCOLOR_SUPER2:
+		case SKINCOLOR_SUPERGOLD2:
 			blendcolor = V_GetColor(83);
 			break;
-		case SKINCOLOR_SUPER3:
+		case SKINCOLOR_SUPERGOLD3:
 			blendcolor = V_GetColor(73);
 			break;
-		case SKINCOLOR_SUPER4:
+		case SKINCOLOR_SUPERGOLD4:
 			blendcolor = V_GetColor(64);
 			break;
-		case SKINCOLOR_SUPER5:
+		case SKINCOLOR_SUPERGOLD5:
 			blendcolor = V_GetColor(67);
 			break;
 
-		case SKINCOLOR_TSUPER1:
-		case SKINCOLOR_TSUPER2:
-		case SKINCOLOR_TSUPER3:
-		case SKINCOLOR_TSUPER4:
-		case SKINCOLOR_TSUPER5:
-		case SKINCOLOR_KSUPER1:
-		case SKINCOLOR_KSUPER2:
-		case SKINCOLOR_KSUPER3:
-		case SKINCOLOR_KSUPER4:
-		case SKINCOLOR_KSUPER5:
+		case SKINCOLOR_SUPERPERIDOT1: // Super peridot
+			blendcolor = V_GetColor(88);
+			break;
+		case SKINCOLOR_SUPERPERIDOT2:
+			blendcolor = V_GetColor(188);
+			break;
+		case SKINCOLOR_SUPERPERIDOT3:
+			blendcolor = V_GetColor(189);
+			break;
+		case SKINCOLOR_SUPERPERIDOT4:
+			blendcolor = V_GetColor(190);
+			break;
+		case SKINCOLOR_SUPERPERIDOT5:
+			blendcolor = V_GetColor(191);
+			break;
+
+		case SKINCOLOR_SUPERCYAN1: // Super cyan
+			blendcolor = V_GetColor(128);
+			break;
+		case SKINCOLOR_SUPERCYAN2:
+			blendcolor = V_GetColor(131);
+			break;
+		case SKINCOLOR_SUPERCYAN3:
+			blendcolor = V_GetColor(133);
+			break;
+		case SKINCOLOR_SUPERCYAN4:
+			blendcolor = V_GetColor(134);
+			break;
+		case SKINCOLOR_SUPERCYAN5:
+			blendcolor = V_GetColor(136);
+			break;
+
+		case SKINCOLOR_SUPERPURPLE1: // Super purple
+			blendcolor = V_GetColor(144);
+			break;
+		case SKINCOLOR_SUPERPURPLE2:
+			blendcolor = V_GetColor(162);
+			break;
+		case SKINCOLOR_SUPERPURPLE3:
+			blendcolor = V_GetColor(164);
+			break;
+		case SKINCOLOR_SUPERPURPLE4:
+			blendcolor = V_GetColor(166);
+			break;
+		case SKINCOLOR_SUPERPURPLE5:
+			blendcolor = V_GetColor(168);
+			break;
+
+		case SKINCOLOR_SUPERRUST1: // Super rust
+			blendcolor = V_GetColor(51);
+			break;
+		case SKINCOLOR_SUPERRUST2:
+			blendcolor = V_GetColor(54);
+			break;
+		case SKINCOLOR_SUPERRUST3:
+			blendcolor = V_GetColor(68);
+			break;
+		case SKINCOLOR_SUPERRUST4:
+			blendcolor = V_GetColor(70);
+			break;
+		case SKINCOLOR_SUPERRUST5:
+			blendcolor = V_GetColor(234);
+			break;
+
+		case SKINCOLOR_SUPERTAN1: // Super tan
+			blendcolor = V_GetColor(80);
+			break;
+		case SKINCOLOR_SUPERTAN2:
+			blendcolor = V_GetColor(82);
+			break;
+		case SKINCOLOR_SUPERTAN3:
+			blendcolor = V_GetColor(84);
+			break;
+		case SKINCOLOR_SUPERTAN4:
+			blendcolor = V_GetColor(87);
+			break;
+		case SKINCOLOR_SUPERTAN5:
+			blendcolor = V_GetColor(247);
+			break;
+
 		default:
 			blendcolor = V_GetColor(255);
 			break;
