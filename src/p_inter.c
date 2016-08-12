@@ -652,16 +652,16 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				if (G_IsSpecialStage(gamemap)) //After-mare bonus time/emerald reward in special stages.
 				{
 					// only allow the player with the emerald in-hand to leave.
-					if (toucher->tracer && toucher->tracer->target
-					&& toucher->tracer->target->type == MT_GOTEMERALD)
+					if (toucher->tracer
+					&& toucher->tracer->type == MT_GOTEMERALD)
 					{
 					}
 					else // Make sure that SOMEONE has the emerald, at least!
 					{
 						for (i = 0; i < MAXPLAYERS; i++)
 							if (playeringame[i] && players[i].playerstate == PST_LIVE
-							&& players[i].mo->tracer && players[i].mo->tracer->target
-							&& players[i].mo->tracer->target->type == MT_GOTEMERALD)
+							&& players[i].mo->tracer
+							&& players[i].mo->tracer->type == MT_GOTEMERALD)
 								return;
 						// Well no one has an emerald, so exit anyway!
 					}
@@ -2487,7 +2487,7 @@ static inline void P_NiGHTSDamage(mobj_t *target, mobj_t *source)
 		}
 
 		player->powers[pw_flashing] = flashingtics;
-		P_SetMobjState(target->tracer, S_NIGHTSHURT1);
+		P_SetPlayerMobjState(target, S_PLAY_NIGHTS_PAIN);
 		S_StartSound(target, sfx_nghurt);
 
 		if (oldnightstime > 10*TICRATE

@@ -2357,7 +2357,7 @@ static void Sk_SetDefaultValue(skin_t *skin)
 	skin->jumpfactor = FRACUNIT;
 	skin->actionspd = 30<<FRACBITS;
 	skin->mindash = 15<<FRACBITS;
-	skin->maxdash = 90<<FRACBITS;
+	skin->maxdash = 70<<FRACBITS;
 
 	skin->radius = mobjinfo[MT_PLAYER].radius;
 	skin->height = mobjinfo[MT_PLAYER].height;

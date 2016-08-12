@@ -8039,7 +8039,7 @@ void A_OrbitNights(mobj_t* actor)
 #endif
 
 	if (!actor->target || !actor->target->player ||
-	    !actor->target->tracer || !actor->target->player->nightstime
+	    !(actor->target->player->pflags & PF_NIGHTSMODE) || !actor->target->player->nightstime
 	    // Also remove this object if they no longer have a NiGHTS helper
 		|| (ishelper && !actor->target->player->powers[pw_nights_helper]))
 	{
@@ -8058,14 +8058,21 @@ void A_OrbitNights(mobj_t* actor)
 			const fixed_t fh = FixedMul(FINECOSINE(ofa),FixedMul(20*FRACUNIT, actor->scale));
 			const fixed_t fs = FixedMul(FINESINE(fa),FixedMul(32*FRACUNIT, actor->scale));
 
-			actor->x = actor->target->tracer->x + fc;
-			actor->y = actor->target->tracer->y + fs;
-			actor->z = actor->target->tracer->z + fh + FixedMul(16*FRACUNIT, actor->scale);
+			actor->x = actor->target->x + fc;
+			actor->y = actor->target->y + fs;
+			actor->z = actor->target->z + fh + FixedMul(16*FRACUNIT, actor->scale);
 
 			// Semi-lazy hack
 			actor->angle = (angle_t)actor->extravalue1 + ANGLE_90;
 		}
 		P_SetThingPosition(actor);
+
+		if (ishelper // Flash a helper that's about to be removed.
+		&& (actor->target->player->powers[pw_nights_helper] < TICRATE)
+		&& (actor->target->player->powers[pw_nights_helper] & 1))
+			actor->flags2 |= MF2_DONTDRAW;
+		else
+			actor->flags2 &= ~MF2_DONTDRAW;
 	}
 }
 

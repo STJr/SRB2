@@ -576,9 +576,6 @@ static void P_DeNightserizePlayer(player_t *player)
 
 	player->pflags &= ~PF_NIGHTSMODE;
 
-	//if (player->mo->tracer)
-		//P_RemoveMobj(player->mo->tracer);
-
 	player->powers[pw_underwater] = 0;
 	player->pflags &= ~(PF_USEDOWN|PF_JUMPDOWN|PF_ATTACKDOWN|PF_STARTDASH|PF_GLIDING|PF_JUMPED|PF_THOKKED|PF_SPINNING|PF_DRILLING|PF_TRANSFERTOCLOSEST);
 	player->secondjump = 0;
@@ -592,7 +589,8 @@ static void P_DeNightserizePlayer(player_t *player)
 
 	player->mo->flags &= ~MF_NOGRAVITY;
 
-	player->mo->flags2 &= ~MF2_DONTDRAW;
+	player->mo->skin = &skins[player->skin];
+	player->mo->color = player->skincolor;
 
 	// Restore aiming angle
 	if (player == &players[consoleplayer])
@@ -603,8 +601,6 @@ static void P_DeNightserizePlayer(player_t *player)
 	// If you screwed up, kiss your score goodbye.
 	player->marescore = 0;
 
-	if (player->mo->tracer)
-		P_RemoveMobj(player->mo->tracer);
 	P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
 	player->pflags |= PF_NIGHTSFALL;
 
@@ -638,6 +634,9 @@ static void P_DeNightserizePlayer(player_t *player)
 	// Restore from drowning music
 	P_RestoreMusic(player);
 }
+
+#define DEFAULTNIGHTSSKIN 0
+
 //
 // P_NightserizePlayer
 //
@@ -652,11 +651,8 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 
 	if (!(player->pflags & PF_NIGHTSMODE))
 	{
-		P_SetTarget(&player->mo->tracer, P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z, MT_NIGHTSCHAR));
-		player->mo->tracer->destscale = player->mo->scale;
-		P_SetScale(player->mo->tracer, player->mo->scale);
-		player->mo->tracer->eflags = (player->mo->tracer->eflags & ~MFE_VERTICALFLIP)|(player->mo->eflags & MFE_VERTICALFLIP);
-		player->mo->height = player->mo->tracer->height;
+		player->mo->radius = 16*FRACUNIT;
+		player->mo->height = 48*FRACUNIT;
 	}
 
 	player->pflags &= ~(PF_USEDOWN|PF_JUMPDOWN|PF_ATTACKDOWN|PF_STARTDASH|PF_GLIDING|PF_JUMPED|PF_THOKKED|PF_SPINNING|PF_DRILLING);
@@ -670,13 +666,17 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 
 	player->mo->flags |= MF_NOGRAVITY;
 
-	player->mo->flags2 |= MF2_DONTDRAW;
+	if (skins[player->skin].sprites[SPR2_NGT0].numframes == 0) // If you don't have a sprite for flying horizontally, use the default NiGHTS skin.
+	{
+		player->mo->skin = &skins[DEFAULTNIGHTSSKIN];
+		player->mo->color = ((skin_t *)(player->mo->skin))->prefcolor;
+	}
 
 	player->nightstime = player->startedtime = nighttime*TICRATE;
 	player->bonustime = false;
 
 	P_RestoreMusic(player);
-	P_SetMobjState(player->mo->tracer, S_SUPERTRANS1);
+	P_SetPlayerMobjState(player->mo, S_PLAY_NIGHTS_TRANS);
 
 	if (gametype == GT_RACE || gametype == GT_COMPETITION)
 	{
@@ -771,6 +771,8 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 
 	player->pflags |= PF_NIGHTSMODE;
 }
+
+#undef DEFAULTNIGHTSSKIN
 
 //
 // P_PlayerInPain
@@ -4999,13 +5001,13 @@ static void P_NightsTransferPoints(player_t *player, fixed_t xspeed, fixed_t rad
 		return;
 
 	// You're welcome, Rob. (Now with slightly less horrendous hacking  -Red
-	player->mo->tracer->flags &= ~MF_NOCLIP;
+	/*player->mo->tracer->flags &= ~MF_NOCLIP;
 	player->mo->tracer->z = player->mo->z;
 	if (!P_TryMove(player->mo->tracer, player->mo->x+player->mo->momx, player->mo->y+player->mo->momy, true)) {
 		player->mo->tracer->flags |= MF_NOCLIP;
 		return;
 	}
-	player->mo->tracer->flags |= MF_NOCLIP;
+	player->mo->tracer->flags |= MF_NOCLIP;*/
 	{
 		const INT32 sequence = player->mo->target->threshold;
 		mobj_t *transfer1 = NULL;
@@ -5395,10 +5397,6 @@ static void P_DoNiGHTSCapsule(player_t *player)
 {
 	INT32 i;
 
-	if ((player->pflags & PF_NIGHTSMODE) && (player->mo->tracer->state < &states[S_NIGHTSHURT1]
-		|| player->mo->tracer->state > &states[S_NIGHTSHURT32]))
-		P_SetMobjState(player->mo->tracer, S_NIGHTSHURT1);
-
 	if (abs(player->mo->x-player->capsule->x) <= 2*FRACUNIT)
 	{
 		P_UnsetThingPosition(player->mo);
@@ -5436,6 +5434,20 @@ static void P_DoNiGHTSCapsule(player_t *player)
 	else if (player->mo->z < player->capsule->z+(player->capsule->height/3))
 		player->mo->momz = 2*FRACUNIT;
 
+	if (player->pflags & PF_NIGHTSMODE)
+	{
+		if (player->mo->momx || player->mo->momy || player->mo->momz)
+		{
+			if (player->mo->state != &states[S_PLAY_NIGHTS_PULL])
+				P_SetPlayerMobjState(player->mo, S_PLAY_NIGHTS_PULL);
+		}
+		else if (player->mo->state != &states[S_PLAY_NIGHTS_ATTACK])
+		{
+			S_StartSound(player->mo, sfx_spin);
+			P_SetPlayerMobjState(player->mo, S_PLAY_NIGHTS_ATTACK);
+		}
+	}
+
 	if (G_IsSpecialStage(gamemap))
 	{ // In special stages, share rings. Everyone gives up theirs to the capsule player always, because we can't have any individualism here!
 		for (i = 0; i < MAXPLAYERS; i++)
@@ -5465,7 +5477,7 @@ static void P_DoNiGHTSCapsule(player_t *player)
 				S_StartSound(P_SpawnMobj(player->capsule->x + ((P_SignedRandom()/2)<<FRACBITS),
 				player->capsule->y + ((P_SignedRandom()/2)<<FRACBITS),
 				player->capsule->z + (player->capsule->height/2) + ((P_SignedRandom()/2)<<FRACBITS),
-				MT_EXPLODE),sfx_pop);
+				MT_BOSSEXPLODE),sfx_cybdth);
 
 			if (player->capsule->health <= 0)
 			{
@@ -5503,13 +5515,13 @@ static void P_DoNiGHTSCapsule(player_t *player)
 						P_SetMobjState(emmo, mobjinfo[MT_GOTEMERALD].meleestate + em);
 					}*/
 
-					if (player->mo->tracer)
+					if (player->pflags & PF_NIGHTSMODE)
 					{
 						// Only give it to ONE person, and THAT player has to get to the goal!
 						emmo = P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z + player->mo->info->height, MT_GOTEMERALD);
 						P_SetTarget(&emmo->target, player->mo);
 						P_SetMobjState(emmo, mobjinfo[MT_GOTEMERALD].meleestate + em);
-						P_SetTarget(&player->mo->tracer->target, emmo);
+						P_SetTarget(&player->mo->tracer, emmo);
 					}
 
 					// Okay, we're doing this down here because we're handling time weirdly for co-op special stages
@@ -5568,7 +5580,8 @@ static void P_NiGHTSMovement(player_t *player)
 	ticcmd_t *cmd = &player->cmd;
 	INT32 thrustfactor;
 	INT32 i;
-	statenum_t flystate = S_NIGHTSFLY1A;
+	statenum_t flystate;
+	UINT16 visangle;
 
 	player->pflags &= ~PF_DRILLING;
 
@@ -5587,7 +5600,7 @@ static void P_NiGHTSMovement(player_t *player)
 			player->drillmeter = TICRATE/10;
 	}
 
-	if (!player->mo->tracer)
+	if (!(player->pflags & PF_NIGHTSMODE))
 	{
 		P_DeNightserizePlayer(player);
 		return;
@@ -5602,13 +5615,14 @@ static void P_NiGHTSMovement(player_t *player)
 			&& (players[i].capsule && players[i].capsule->reactiontime))
 				capsule = true;
 		if (!capsule
-		&& !(player->mo->tracer->state >= &states[S_SUPERTRANS1]
-			&& player->mo->tracer->state <= &states[S_SUPERTRANS9])
+		&& !(player->mo->state >= &states[S_PLAY_NIGHTS_TRANS]
+			&& player->mo->state <= &states[S_PLAY_NIGHTS_TRANS9])
 		&& !player->exiting)
 			player->nightstime--;
 	}
 	else if (gametype != GT_RACE && gametype != GT_COMPETITION
-	&& !(player->mo->tracer->state >= &states[S_SUPERTRANS1] && player->mo->tracer->state <= &states[S_SUPERTRANS9])
+	&& !(player->mo->state >= &states[S_PLAY_NIGHTS_TRANS]
+			&& player->mo->state <= &states[S_PLAY_NIGHTS_TRANS9])
 	&& !(player->capsule && player->capsule->reactiontime)
 	&& !player->exiting)
 		player->nightstime--;
@@ -5693,8 +5707,6 @@ static void P_NiGHTSMovement(player_t *player)
 	radius = player->mo->target->radius;
 
 	player->mo->flags |= MF_NOGRAVITY;
-	player->mo->flags2 |= MF2_DONTDRAW;
-	P_SetScale(player->mo->tracer, player->mo->scale);
 
 	if (player->mo->eflags & MFE_VERTICALFLIP)
 		cmd->forwardmove = (SINT8)(-cmd->forwardmove);
@@ -5749,8 +5761,8 @@ static void P_NiGHTSMovement(player_t *player)
 		return;
 	}
 
-	if (player->mo->tracer->state >= &states[S_SUPERTRANS1]
-		&& player->mo->tracer->state <= &states[S_SUPERTRANS9])
+	if (player->mo->state >= &states[S_PLAY_NIGHTS_TRANS]
+		&& player->mo->state <= &states[S_PLAY_NIGHTS_TRANS9])
 	{
 		player->mo->momx = player->mo->momy = player->mo->momz = 0;
 		return;
@@ -5761,16 +5773,13 @@ static void P_NiGHTSMovement(player_t *player)
 		player->mo->momx = player->mo->momy = 0;
 
 		if (gametype != GT_RACE && gametype != GT_COMPETITION)
-			P_SetObjectMomZ(player->mo, 30*FRACUNIT, false);
+			P_SetObjectMomZ(player->mo, FRACUNIT/2, true);
 
-		player->mo->tracer->angle += ANGLE_11hh;
+		if (player->mo->state  != &states[S_PLAY_NIGHTS_DRILL6])
+			P_SetPlayerMobjState(player->mo, S_PLAY_NIGHTS_DRILL6);
 
-		if (!(player->mo->tracer->state  >= &states[S_NIGHTSDRONE1]
-			&& player->mo->tracer->state <= &states[S_NIGHTSDRONE2]))
-			P_SetMobjState(player->mo->tracer, S_NIGHTSDRONE1);
-
-		player->mo->tracer->flags |= MF_NOCLIPHEIGHT;
 		player->mo->flags |= MF_NOCLIPHEIGHT;
+
 		return;
 	}
 
@@ -6036,73 +6045,40 @@ static void P_NiGHTSMovement(player_t *player)
 
 	// NiGHTS flying state
 	// Yep, I just ripped out almost 1000 lines of code.
-	if      ((player->anotherflyangle >=  12 && player->anotherflyangle <=  33)  // +x +y
-	      || (player->anotherflyangle >= 147 && player->anotherflyangle <= 168)) // -x +y
-		flystate = S_NIGHTSFLY2A;
-	else if ((player->anotherflyangle >=  34 && player->anotherflyangle <=  56)  // +x +y
-	      || (player->anotherflyangle >= 124 && player->anotherflyangle <= 146)) // -x +y
-		flystate = S_NIGHTSFLY3A;
-	else if ((player->anotherflyangle >=  57 && player->anotherflyangle <=  79)  // +x +y
-	      || (player->anotherflyangle >= 102 && player->anotherflyangle <= 123)) // -x +y
-		flystate = S_NIGHTSFLY4A;
-	else if  (player->anotherflyangle >=  80 && player->anotherflyangle <= 101)
-		flystate = S_NIGHTSFLY5A;
-	else if ((player->anotherflyangle >= 192 && player->anotherflyangle <= 213)  // -x -y
-	      || (player->anotherflyangle >= 327 && player->anotherflyangle <= 348)) // +x -y
-		flystate = S_NIGHTSFLY6A;
-	else if ((player->anotherflyangle >= 214 && player->anotherflyangle <= 236)  // -x -y
-	      || (player->anotherflyangle >= 305 && player->anotherflyangle <= 326)) // +x -y
-		flystate = S_NIGHTSFLY7A;
-	else if ((player->anotherflyangle >= 237 && player->anotherflyangle <= 258)  // -x -y
-	      || (player->anotherflyangle >= 282 && player->anotherflyangle <= 304)) // +x -y
-		flystate = S_NIGHTSFLY8A;
-	else if  (player->anotherflyangle >= 259 && player->anotherflyangle <= 281)
-		flystate = S_NIGHTSFLY9A;
+	// (and then toast revamped the entire thing again to be better, but not by much)
+	if (still)
+		flystate = (P_IsObjectOnGround(player->mo)) ? S_PLAY_NIGHTS_STAND : S_PLAY_NIGHTS_FLOAT;
 	else
-		flystate = S_NIGHTSFLY1A;
-
-	if (player->mo->eflags & MFE_VERTICALFLIP)
 	{
-		if (flystate >= S_NIGHTSFLY2A && flystate <= S_NIGHTSFLY5A)
-			flystate += 24; // shift to S_NIGHTSFLY6A
-		else if (flystate >= S_NIGHTSFLY6A && flystate <= S_NIGHTSFLY9A)
-			flystate -= 24; // shift to S_NIGHTSFLY2A
-	}
+		visangle = ((player->anotherflyangle + 7) % 360)/15;
+		if (visangle > 18) // Over 270 degrees.
+			visangle = 30 - visangle;
+		else if (visangle > 12) // Over 180 degrees.
+			visangle -= 6;
+		else if (visangle > 6) // Over 90 degrees.
+			visangle = 12 - visangle;
 
-	if (player->pflags & PF_DRILLING)
-	{
-		const statenum_t drillstate = flystate + 2;
-
-		if (!(player->mo->tracer->state >= &states[drillstate]
-		 && player->mo->tracer->state <= &states[drillstate+4]))
+		if (player->mo->eflags & MFE_VERTICALFLIP && visangle) // S_PLAY_NIGHTS_FLY0 stays the same, even in reverse gravity
 		{
-			if (!(player->mo->tracer->state >= &states[S_NIGHTSFLY1A]
-			 && player->mo->tracer->state <= &states[S_NIGHTSFLY9B]))
-			{
-				const INT32 framenum = player->mo->tracer->state->frame & 3;
-
-				if (framenum == 3) // Drilld special case
-					P_SetMobjStateNF(player->mo->tracer, drillstate);
-				else
-					P_SetMobjStateNF(player->mo->tracer, drillstate+framenum+1);
-			}
+			if (visangle > 6)
+				visangle -= 6; // shift to S_PLAY_NIGHTS_FLY1-6
 			else
-				P_SetMobjStateNF(player->mo->tracer, drillstate);
+				visangle += 6; // shift to S_PLAY_NIGHTS_FLY7-C
 		}
+
+		flystate = S_PLAY_NIGHTS_FLY0 + (visangle*2); // S_PLAY_FLY0-C - the *2 is to skip over drill states
+
+		if (player->pflags & PF_DRILLING)
+			flystate++; // shift to S_PLAY_NIGHTS_DRILL0-C
 	}
-	else
-		P_SetMobjStateNF(player->mo->tracer, leveltime & 1 ? flystate : flystate+1);
+
+	if (player->mo->state != &states[flystate])
+		P_SetPlayerMobjState(player->mo, flystate);
 
 	if (player == &players[consoleplayer])
 		localangle = player->mo->angle;
 	else if (player == &players[secondarydisplayplayer])
 		localangle2 = player->mo->angle;
-
-	if (still)
-	{
-		P_SetMobjStateNF(player->mo->tracer, S_NIGHTSDRONE1);
-		player->mo->tracer->angle = player->mo->angle;
-	}
 
 	// Check for crushing in our new location
 	if ((player->mo->ceilingz - player->mo->floorz < player->mo->height)
@@ -6126,8 +6102,6 @@ static void P_NiGHTSMovement(player_t *player)
 		localaiming = movingangle;
 	else if (player == &players[secondarydisplayplayer])
 		localaiming2 = movingangle;
-
-	player->mo->tracer->angle = player->mo->angle;
 
 	if ((player->pflags & PF_DRILLING) && !player->bumpertime)
 	{
@@ -6433,6 +6407,15 @@ static void P_MovePlayer(player_t *player)
 	// Locate the capsule for this mare.
 	else if (maptol & TOL_NIGHTS)
 	{
+		if ((player->pflags & PF_NIGHTSMODE)
+		&& !(player->mo->state >= &states[S_PLAY_NIGHTS_TRANS]
+		&& player->mo->state <= &states[S_PLAY_NIGHTS_TRANS9]
+		&& !(player->exiting)))
+		{
+			skin_t *skin = ((skin_t *)(player->mo->skin));
+			player->mo->color = (skin->flags & SF_SUPER) ? skin->supercolor + (unsigned)abs(((signed)(leveltime >> 1) % 9) - 4) : player->mo->color; // This is where super flashing is handled.
+		}
+
 		if (!player->capsule && !player->bonustime)
 		{
 			thinker_t *th;
@@ -9063,19 +9046,6 @@ void P_PlayerThink(player_t *player)
 		else
 			player->pflags &= ~PF_USEDOWN;
 	}
-	else if (player->mo->tracer) // match tracer's position with yours when NiGHTS
-	{
-		P_UnsetThingPosition(player->mo->tracer);
-		player->mo->tracer->x = player->mo->x;
-		player->mo->tracer->y = player->mo->y;
-		if (player->mo->eflags & MFE_VERTICALFLIP)
-			player->mo->tracer->z = player->mo->z + player->mo->height - player->mo->tracer->height;
-		else
-			player->mo->tracer->z = player->mo->z;
-		player->mo->tracer->floorz = player->mo->floorz;
-		player->mo->tracer->ceilingz = player->mo->ceilingz;
-		P_SetThingPosition(player->mo->tracer);
-	}
 
 	// Counters, time dependent power ups.
 	// Time Bonus & Ring Bonus count settings
@@ -9172,20 +9142,10 @@ void P_PlayerThink(player_t *player)
 		player->losstime--;
 
 	// Flash player after being hit.
-	if (!(player->pflags & PF_NIGHTSMODE))
-	{
-		if (player->powers[pw_flashing] > 0 && player->powers[pw_flashing] < flashingtics && (leveltime & 1))
-			player->mo->flags2 |= MF2_DONTDRAW;
-		else
-			player->mo->flags2 &= ~MF2_DONTDRAW;
-	}
-	else if (player->mo->tracer)
-	{
-		if (player->powers[pw_flashing] & 1)
-			player->mo->tracer->flags2 |= MF2_DONTDRAW;
-		else
-			player->mo->tracer->flags2 &= ~MF2_DONTDRAW;
-	}
+	if (player->powers[pw_flashing] > 0 && player->powers[pw_flashing] < flashingtics && (leveltime & 1))
+		player->mo->flags2 |= MF2_DONTDRAW;
+	else
+		player->mo->flags2 &= ~MF2_DONTDRAW;
 
 	player->pflags &= ~PF_SLIDING;
 

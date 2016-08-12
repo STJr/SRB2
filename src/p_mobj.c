@@ -173,10 +173,6 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 	else if (state == S_PLAY_SWIM && !(player->mo->eflags & MFE_UNDERWATER))
 		return P_SetPlayerMobjState(player->mo, S_PLAY_FLY);
 
-	// Catch melee into goop
-	//if (state == S_PLAY_MELEE && player->mo->eflags & MFE_GOOWATER)
-		//return P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
-
 	// Catch state changes for Super Sonic
 	if (player->powers[pw_super] && (player->charflags & SF_SUPERANIMS))
 	{
@@ -439,7 +435,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 				case SPR2_SPAN:
 					spr2 = SPR2_PAIN;
 					break;
-				case SPR2_SMSL:
+				case SPR2_SSTN:
 					spr2 = SPR2_SPAN;
 					break;
 				case SPR2_SDTH:
@@ -472,6 +468,81 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 				case SPR2_SFLT:
 					spr2 = SPR2_SWLK;
 					break;
+
+				// NiGHTS sprites.
+				case SPR2_NTRN:
+					spr2 = SPR2_TRNS;
+					break;
+				case SPR2_NSTD:
+					spr2 = SPR2_SSTD;
+					break;
+				case SPR2_NFLT:
+					spr2 = (skin->flags & SF_SUPERANIMS) ? SPR2_SFLT : SPR2_FALL; // This is skin-exclusive so the default NiGHTS skin changing system plays nice.
+					break;
+				case SPR2_NPUL:
+					spr2 = SPR2_NFLT;
+					break;
+				case SPR2_NPAN:
+					spr2 = SPR2_NPUL;
+					break;
+				case SPR2_NATK:
+					spr2 = SPR2_SSPN;
+					break;
+				/*case SPR2_NGT0:
+					spr2 = SPR2_STND;
+					break;*/
+				case SPR2_NGT1:
+				case SPR2_NGT7:
+				case SPR2_DRL0:
+					spr2 = SPR2_NGT0;
+					break;
+				case SPR2_NGT2:
+				case SPR2_DRL1:
+					spr2 = SPR2_NGT1;
+					break;
+				case SPR2_NGT3:
+				case SPR2_DRL2:
+					spr2 = SPR2_NGT2;
+					break;
+				case SPR2_NGT4:
+				case SPR2_DRL3:
+					spr2 = SPR2_NGT3;
+					break;
+				case SPR2_NGT5:
+				case SPR2_DRL4:
+					spr2 = SPR2_NGT4;
+					break;
+				case SPR2_NGT6:
+				case SPR2_DRL5:
+					spr2 = SPR2_NGT5;
+					break;
+				case SPR2_DRL6:
+					spr2 = SPR2_NGT6;
+					break;
+				case SPR2_NGT8:
+				case SPR2_DRL7:
+					spr2 = SPR2_NGT7;
+					break;
+				case SPR2_NGT9:
+				case SPR2_DRL8:
+					spr2 = SPR2_NGT8;
+					break;
+				case SPR2_NGTA:
+				case SPR2_DRL9:
+					spr2 = SPR2_NGT9;
+					break;
+				case SPR2_NGTB:
+				case SPR2_DRLA:
+					spr2 = SPR2_NGTA;
+					break;
+				case SPR2_NGTC:
+				case SPR2_DRLB:
+					spr2 = SPR2_NGTB;
+					break;
+				case SPR2_DRLC:
+					spr2 = SPR2_NGTC;
+					break;
+
 
 				// Sprites for non-player objects? There's nothing we can do.
 				case SPR2_SIGN:
@@ -526,6 +597,8 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 
 			mobj->sprite2 = spr2;
 			mobj->frame = frame|(st->frame&~FF_FRAMEMASK);
+			if (mobj->color > MAXSKINCOLORS) // Super colours? Super bright!
+				mobj->frame |= FF_FULLBRIGHT;
 		}
 		// Regular sprites
 		else
