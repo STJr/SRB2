@@ -29,6 +29,8 @@
 #define VISSPRITESPERCHUNK (1 << VISSPRITECHUNKBITS)
 #define VISSPRITEINDEXMASK (VISSPRITESPERCHUNK - 1)
 
+#define DEFAULTNIGHTSSKIN 0
+
 // Constant arrays used for psprite clipping
 //  and initializing clipping.
 extern INT16 negonearray[MAXVIDWIDTH];

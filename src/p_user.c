@@ -668,8 +668,6 @@ static void P_DeNightserizePlayer(player_t *player)
 	P_RestoreMusic(player);
 }
 
-#define DEFAULTNIGHTSSKIN 0
-
 //
 // P_NightserizePlayer
 //
@@ -801,8 +799,6 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 
 	player->pflags |= PF_NIGHTSMODE;
 }
-
-#undef DEFAULTNIGHTSSKIN
 
 //
 // P_PlayerInPain

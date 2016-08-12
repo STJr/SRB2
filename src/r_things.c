@@ -2452,13 +2452,12 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 {
 	player_t *player = &players[playernum];
 	skin_t *skin = &skins[skinnum];
+	UINT8 newcolor = 0;
 
 	if ((skinnum >= 0 && skinnum < numskins) // Make sure it exists!
 	&& (!P_IsLocalPlayer(player) || R_SkinUnlock(skinnum))) // ...but is it allowed? We must always allow external players to change skin. The server should vet that...
 	{
 		player->skin = skinnum;
-		if (player->mo)
-			player->mo->skin = skin;
 
 		player->charability = (UINT8)skin->ability;
 		player->charability2 = (UINT8)skin->ability2;
@@ -2487,13 +2486,21 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 				CV_StealthSetValue(&cv_playercolor, skin->prefcolor);
 			else if (playernum == secondarydisplayplayer)
 				CV_StealthSetValue(&cv_playercolor2, skin->prefcolor);
-			player->skincolor = skin->prefcolor;
-			if (player->mo)
-				player->mo->color = player->skincolor;
+			player->skincolor = newcolor = skin->prefcolor;
 		}
 
 		if (player->mo)
+		{
+			if ((player->pflags & PF_NIGHTSMODE) && (skin->sprites[SPR2_NGT0].numframes == 0)) // If you don't have a sprite for flying horizontally, use the default NiGHTS skin.
+			{
+				skin = &skins[DEFAULTNIGHTSSKIN];
+				newcolor = ((skin->flags & SF_SUPER) ? skin->supercolor : skin->prefcolor);
+			}
+			player->mo->skin = skin;
+			if (newcolor)
+				player->mo->color = newcolor;
 			P_SetScale(player->mo, player->mo->scale);
+		}
 		return;
 	}
 	else if (skinnum >= 0 && skinnum < numskins)
