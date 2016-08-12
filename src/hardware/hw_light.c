@@ -438,16 +438,12 @@ light_t *t_lspr[NUMSPRITES] =
 
 	// NiGHTS Stuff
 	&lspr[SUPERSONIC_L],     // SPR_NDRN // NiGHTS drone
-	&lspr[SUPERSONIC_L],     // SPR_SUPE // NiGHTS character flying
-	&lspr[SUPERSONIC_L],     // SPR_SUPZ // NiGHTS hurt
-	&lspr[SUPERSONIC_L],     // SPR_NDRL // NiGHTS character drilling
 	&lspr[NOLIGHT],     // SPR_NSPK
 	&lspr[NOLIGHT],     // SPR_NBMP
 	&lspr[NOLIGHT],     // SPR_HOOP
 	&lspr[NOLIGHT],     // SPR_HSCR
 	&lspr[NOLIGHT],     // SPR_NPRU
 	&lspr[NOLIGHT],     // SPR_CAPS
-	&lspr[SUPERSONIC_L], // SPR_SUPT
 
 	// Debris
 	&lspr[RINGSPARK_L],  // SPR_SPRK

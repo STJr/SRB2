@@ -597,7 +597,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 
 			mobj->sprite2 = spr2;
 			mobj->frame = frame|(st->frame&~FF_FRAMEMASK);
-			if (mobj->color > MAXSKINCOLORS) // Super colours? Super bright!
+			if (mobj->color >= MAXSKINCOLORS && mobj->color < MAXTRANSLATIONS) // Super colours? Super bright!
 				mobj->frame |= FF_FULLBRIGHT;
 		}
 		// Regular sprites

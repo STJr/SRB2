@@ -8067,12 +8067,14 @@ void A_OrbitNights(mobj_t* actor)
 		}
 		P_SetThingPosition(actor);
 
-		if (ishelper // Flash a helper that's about to be removed.
-		&& (actor->target->player->powers[pw_nights_helper] < TICRATE)
-		&& (actor->target->player->powers[pw_nights_helper] & 1))
-			actor->flags2 |= MF2_DONTDRAW;
-		else
-			actor->flags2 &= ~MF2_DONTDRAW;
+		if (ishelper) // Flash a helper that's about to be removed.
+		{
+			if ((actor->target->player->powers[pw_nights_helper] < TICRATE)
+			&& (actor->target->player->powers[pw_nights_helper] & 1))
+				actor->flags2 |= MF2_DONTDRAW;
+			else
+				actor->flags2 &= ~MF2_DONTDRAW;
+		}
 	}
 }
 

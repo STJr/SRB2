@@ -514,16 +514,12 @@ typedef enum sprite
 
 	// NiGHTS Stuff
 	SPR_NDRN, // NiGHTS drone
-	SPR_SUPE, // NiGHTS character flying
-	SPR_SUPZ, // NiGHTS hurt
-	SPR_NDRL, // NiGHTS character drilling
 	SPR_NSPK, // NiGHTS sparkle
 	SPR_NBMP, // NiGHTS Bumper
 	SPR_HOOP, // NiGHTS hoop sprite
 	SPR_NSCR, // NiGHTS score sprite
 	SPR_NPRU, // Nights Powerups
 	SPR_CAPS, // Capsule thingy for NiGHTS
-	SPR_SUPT, // Super Sonic Transformation (NiGHTS)
 
 	// Debris
 	SPR_SPRK, // spark

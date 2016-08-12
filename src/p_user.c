@@ -57,6 +57,39 @@ static void P_NukeAllPlayers(player_t *player);
 #endif
 
 //
+// P_GetPlayerRadius
+//
+// Returns the radius
+// of the player.
+//
+fixed_t P_GetPlayerRadius(player_t *player)
+{
+	return FixedMul(skins[player->skin].radius, player->mo->scale);
+}
+
+//
+// P_GetPlayerHeight
+//
+// Returns the height
+// of the player.
+//
+fixed_t P_GetPlayerHeight(player_t *player)
+{
+	return FixedMul(skins[player->skin].height, player->mo->scale);
+}
+
+//
+// P_GetPlayerSpinHeight
+//
+// Returns the 'spin height'
+// of the player.
+//
+fixed_t P_GetPlayerSpinHeight(player_t *player)
+{
+	return FixedMul(skins[player->skin].spinheight, player->mo->scale);
+}
+
+//
 // Movement.
 //
 
@@ -650,10 +683,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		return;
 
 	if (!(player->pflags & PF_NIGHTSMODE))
-	{
-		player->mo->radius = 16*FRACUNIT;
-		player->mo->height = 48*FRACUNIT;
-	}
+		player->mo->height = P_GetPlayerHeight(player); // Just to make sure jumping into the drone doesn't result in a squashed hitbox.
 
 	player->pflags &= ~(PF_USEDOWN|PF_JUMPDOWN|PF_ATTACKDOWN|PF_STARTDASH|PF_GLIDING|PF_JUMPED|PF_THOKKED|PF_SPINNING|PF_DRILLING);
 	player->homing = 0;
@@ -1296,39 +1326,6 @@ void P_SetObjectMomZ(mobj_t *mo, fixed_t value, boolean relative)
 		mo->momz += value;
 	else
 		mo->momz = value;
-}
-
-//
-// P_GetPlayerRadius
-//
-// Returns the radius
-// of the player.
-//
-fixed_t P_GetPlayerRadius(player_t *player)
-{
-	return FixedMul(skins[player->skin].radius, player->mo->scale);
-}
-
-//
-// P_GetPlayerHeight
-//
-// Returns the height
-// of the player.
-//
-fixed_t P_GetPlayerHeight(player_t *player)
-{
-	return FixedMul(skins[player->skin].height, player->mo->scale);
-}
-
-//
-// P_GetPlayerSpinHeight
-//
-// Returns the 'spin height'
-// of the player.
-//
-fixed_t P_GetPlayerSpinHeight(player_t *player)
-{
-	return FixedMul(skins[player->skin].spinheight, player->mo->scale);
 }
 
 //
@@ -5000,14 +4997,30 @@ static void P_NightsTransferPoints(player_t *player, fixed_t xspeed, fixed_t rad
 	if (player->exiting)
 		return;
 
-	// You're welcome, Rob. (Now with slightly less horrendous hacking  -Red
-	/*player->mo->tracer->flags &= ~MF_NOCLIP;
-	player->mo->tracer->z = player->mo->z;
-	if (!P_TryMove(player->mo->tracer, player->mo->x+player->mo->momx, player->mo->y+player->mo->momy, true)) {
-		player->mo->tracer->flags |= MF_NOCLIP;
-		return;
+	/*
+	In some ways worse, in some ways better.
+	I did the following this way because the player object has to deal with touchspecials too, not just solids.
+	There were all sorts of fun bugs when the player got to touch the goal a frame earlier than it should've.
+	We could've applied MF_NOCLIPTHING, but then we'd lose out on clipping against MF_SOLIDs. Which is bad.
+	Instead, the object TEMPORARILY LOSES ITS PLAYER STATUS. Is that nuts? It's probably a little nuts. I know
+	we probably could've kept around MT_NIGHTSCHAR in some fashion, having an invisible hitbox following the
+	player around... but I'd already removed all its references, restructured the way the chaos emerald follows
+	the player around to fill the player->mo->tracer gap left behind, and NiGHTS is a lag magnet (lagnet?)
+	enough as it is... so whatever. You're welcome to tell me I'm terrible, but at least it works.
+	~toast
+	*/
+	{
+		fixed_t prevx = player->mo->x;
+		fixed_t prevy = player->mo->y;
+		boolean notallowed;
+		player->mo->player = NULL; // YIKES
+		notallowed = (!(P_TryMove(player->mo, player->mo->x+player->mo->momx, player->mo->y+player->mo->momy, true)));
+		P_TeleportMove(player->mo, prevx, prevy, player->mo->z);
+		player->mo->player = player; // unyikes
+		if (notallowed)
+			return;
 	}
-	player->mo->tracer->flags |= MF_NOCLIP;*/
+
 	{
 		const INT32 sequence = player->mo->target->threshold;
 		mobj_t *transfer1 = NULL;
@@ -5768,7 +5781,7 @@ static void P_NiGHTSMovement(player_t *player)
 		return;
 	}
 
-	if (player->exiting > 0 && player->exiting < 2*TICRATE)
+	if (player->exiting > 0) //&& player->exiting < 2*TICRATE)
 	{
 		player->mo->momx = player->mo->momy = 0;
 
@@ -6409,7 +6422,7 @@ static void P_MovePlayer(player_t *player)
 	{
 		if ((player->pflags & PF_NIGHTSMODE)
 		&& !(player->mo->state >= &states[S_PLAY_NIGHTS_TRANS]
-		&& player->mo->state <= &states[S_PLAY_NIGHTS_TRANS9]
+		&& player->mo->state <= &states[S_PLAY_NIGHTS_TRANS6] // NOT 9 - it's 6 when the player turns their supercolor.
 		&& !(player->exiting)))
 		{
 			skin_t *skin = ((skin_t *)(player->mo->skin));
