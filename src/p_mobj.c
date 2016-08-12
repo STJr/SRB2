@@ -6931,6 +6931,7 @@ void P_MobjThinker(mobj_t *mobj)
 					{
 						mobj->flags &= ~MF_NOGRAVITY;
 						P_SetMobjState(mobj, S_NIGHTSDRONE1);
+						mobj->flags2 |= MF2_DONTDRAW;
 					}
 				}
 				else if (mobj->tracer && mobj->tracer->player)
