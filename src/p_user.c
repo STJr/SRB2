@@ -5781,7 +5781,7 @@ static void P_NiGHTSMovement(player_t *player)
 		return;
 	}
 
-	if (player->exiting > 0) //&& player->exiting < 2*TICRATE)
+	if (player->exiting > 0) // && player->exiting < 2*TICRATE)
 	{
 		player->mo->momx = player->mo->momy = 0;
 
@@ -8158,10 +8158,15 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 
 	pviewheight = FixedMul(cv_viewheight.value<<FRACBITS, mo->scale);
 
-	if (mo->eflags & MFE_VERTICALFLIP)
-		z = mo->z + mo->height - pviewheight - camheight;
+	if (!(player->pflags & PF_NIGHTSMODE && player->exiting)) // I never liked how the camera moved with the player.
+	{
+		if (mo->eflags & MFE_VERTICALFLIP)
+			z = mo->z + mo->height - pviewheight - camheight;
+		else
+			z = mo->z + pviewheight + camheight;
+	}
 	else
-		z = mo->z + pviewheight + camheight;
+		z = thiscam->z;
 
 	// move camera down to move under lower ceilings
 	newsubsec = R_IsPointInSubsector(((mo->x>>FRACBITS) + (thiscam->x>>FRACBITS))<<(FRACBITS-1), ((mo->y>>FRACBITS) + (thiscam->y>>FRACBITS))<<(FRACBITS-1));
@@ -8418,12 +8423,17 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	f2 = viewpointy-thiscam->y;
 	dist = FixedHypot(f1, f2);
 
-	if (mo->eflags & MFE_VERTICALFLIP)
-		angle = R_PointToAngle2(0, thiscam->z + thiscam->height, dist, mo->z + mo->height - P_GetPlayerHeight(player));
+	if (!(player->pflags & PF_NIGHTSMODE && player->exiting)) // Ditto.
+	{
+		if (mo->eflags & MFE_VERTICALFLIP)
+			angle = R_PointToAngle2(0, thiscam->z + thiscam->height, dist, mo->z + mo->height - P_GetPlayerHeight(player));
+		else
+			angle = R_PointToAngle2(0, thiscam->z, dist, mo->z + P_GetPlayerHeight(player));
+		if (player->playerstate != PST_DEAD)
+			angle += (focusaiming < ANGLE_180 ? focusaiming/2 : InvAngle(InvAngle(focusaiming)/2)); // overcomplicated version of '((signed)focusaiming)/2;'
+	}
 	else
-		angle = R_PointToAngle2(0, thiscam->z, dist, mo->z + P_GetPlayerHeight(player));
-	if (player->playerstate != PST_DEAD && !(player->pflags & PF_NIGHTSMODE && player->exiting))
-		angle += (focusaiming < ANGLE_180 ? focusaiming/2 : InvAngle(InvAngle(focusaiming)/2)); // overcomplicated version of '((signed)focusaiming)/2;'
+		angle = 0;
 
 	if (twodlevel || (mo->flags2 & MF2_TWOD) || !camstill) // Keep the view still...
 	{

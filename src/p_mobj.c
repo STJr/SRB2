@@ -451,7 +451,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 					spr2 = SPR2_GASP;
 					break;
 				case SPR2_SJMP:
-					spr2 = SPR2_JUMP;
+					spr2 = (player->charflags & SF_NOJUMPSPIN) ? SPR2_SSPG : SPR2_SSPN;
 					break;
 				case SPR2_SSPG:
 					spr2 = SPR2_SPNG;
