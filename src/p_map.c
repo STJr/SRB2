@@ -1153,7 +1153,7 @@ static boolean PIT_CheckLine(line_t *ld)
 	}
 
 	// set openrange, opentop, openbottom
-	P_LineOpening(ld);
+	P_LineOpening(ld, tmthing);
 
 	// adjust floor / ceiling heights
 	if (opentop < tmceilingz)
@@ -2581,7 +2581,7 @@ static boolean PTR_SlideTraverse(intercept_t *in)
 	}
 
 	// set openrange, opentop, openbottom
-	P_LineOpening(li);
+	P_LineOpening(li, slidemo);
 
 	if (openrange < slidemo->height)
 		goto isblocking; // doesn't fit

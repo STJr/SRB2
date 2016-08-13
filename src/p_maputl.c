@@ -489,7 +489,7 @@ void P_CameraLineOpening(line_t *linedef)
 	}
 }
 
-void P_LineOpening(line_t *linedef)
+void P_LineOpening(line_t *linedef, mobj_t *mobj)
 {
 	sector_t *front, *back;
 
@@ -520,8 +520,8 @@ void P_LineOpening(line_t *linedef)
 	{ // Set open and high/low values here
 		fixed_t frontheight, backheight;
 
-		frontheight = P_GetCeilingZ(tmthing, front, tmx, tmy, linedef);
-		backheight = P_GetCeilingZ(tmthing, back, tmx, tmy, linedef);
+		frontheight = P_GetCeilingZ(mobj, front, tmx, tmy, linedef);
+		backheight = P_GetCeilingZ(mobj, back, tmx, tmy, linedef);
 
 		if (frontheight < backheight)
 		{
@@ -540,8 +540,8 @@ void P_LineOpening(line_t *linedef)
 #endif
 		}
 
-		frontheight = P_GetFloorZ(tmthing, front, tmx, tmy, linedef);
-		backheight = P_GetFloorZ(tmthing, back, tmx, tmy, linedef);
+		frontheight = P_GetFloorZ(mobj, front, tmx, tmy, linedef);
+		backheight = P_GetFloorZ(mobj, back, tmx, tmy, linedef);
 
 		if (frontheight > backheight)
 		{
@@ -561,9 +561,9 @@ void P_LineOpening(line_t *linedef)
 		}
 	}
 
-	if (tmthing)
+	if (mobj)
 	{
-		fixed_t thingtop = tmthing->z + tmthing->height;
+		fixed_t thingtop = mobj->z + mobj->height;
 
 		// Check for collision with front side's midtexture if Effect 4 is set
 		if (linedef->flags & ML_EFFECT4) {
@@ -598,7 +598,7 @@ void P_LineOpening(line_t *linedef)
 
 			texmid = texbottom+(textop-texbottom)/2;
 
-			delta1 = abs(tmthing->z - texmid);
+			delta1 = abs(mobj->z - texmid);
 			delta2 = abs(thingtop - texmid);
 
 			if (delta1 > delta2) { // Below
@@ -636,16 +636,16 @@ void P_LineOpening(line_t *linedef)
 				if (!(rover->flags & FF_EXISTS))
 					continue;
 
-				if (tmthing->player && (P_CheckSolidLava(tmthing, rover) || P_CanRunOnWater(tmthing->player, rover)))
+				if (mobj->player && (P_CheckSolidLava(mobj, rover) || P_CanRunOnWater(mobj->player, rover)))
 					;
-				else if (!((rover->flags & FF_BLOCKPLAYER && tmthing->player)
-					|| (rover->flags & FF_BLOCKOTHERS && !tmthing->player)))
+				else if (!((rover->flags & FF_BLOCKPLAYER && mobj->player)
+					|| (rover->flags & FF_BLOCKOTHERS && !mobj->player)))
 					continue;
 
-				topheight = P_GetFOFTopZ(tmthing, front, rover, tmx, tmy, linedef);
-				bottomheight = P_GetFOFBottomZ(tmthing, front, rover, tmx, tmy, linedef);
+				topheight = P_GetFOFTopZ(mobj, front, rover, tmx, tmy, linedef);
+				bottomheight = P_GetFOFBottomZ(mobj, front, rover, tmx, tmy, linedef);
 
-				delta1 = abs(tmthing->z - (bottomheight + ((topheight - bottomheight)/2)));
+				delta1 = abs(mobj->z - (bottomheight + ((topheight - bottomheight)/2)));
 				delta2 = abs(thingtop - (bottomheight + ((topheight - bottomheight)/2)));
 
 				if (delta1 >= delta2 && !(rover->flags & FF_PLATFORM)) // thing is below FOF
@@ -680,16 +680,16 @@ void P_LineOpening(line_t *linedef)
 				if (!(rover->flags & FF_EXISTS))
 					continue;
 
-				if (tmthing->player && (P_CheckSolidLava(tmthing, rover) || P_CanRunOnWater(tmthing->player, rover)))
+				if (mobj->player && (P_CheckSolidLava(mobj, rover) || P_CanRunOnWater(mobj->player, rover)))
 					;
-				else if (!((rover->flags & FF_BLOCKPLAYER && tmthing->player)
-					|| (rover->flags & FF_BLOCKOTHERS && !tmthing->player)))
+				else if (!((rover->flags & FF_BLOCKPLAYER && mobj->player)
+					|| (rover->flags & FF_BLOCKOTHERS && !mobj->player)))
 					continue;
 
-				topheight = P_GetFOFTopZ(tmthing, back, rover, tmx, tmy, linedef);
-				bottomheight = P_GetFOFBottomZ(tmthing, back, rover, tmx, tmy, linedef);
+				topheight = P_GetFOFTopZ(mobj, back, rover, tmx, tmy, linedef);
+				bottomheight = P_GetFOFBottomZ(mobj, back, rover, tmx, tmy, linedef);
 
-				delta1 = abs(tmthing->z - (bottomheight + ((topheight - bottomheight)/2)));
+				delta1 = abs(mobj->z - (bottomheight + ((topheight - bottomheight)/2)));
 				delta2 = abs(thingtop - (bottomheight + ((topheight - bottomheight)/2)));
 
 				if (delta1 >= delta2 && !(rover->flags & FF_PLATFORM)) // thing is below FOF
@@ -723,7 +723,7 @@ void P_LineOpening(line_t *linedef)
 			{
 				const sector_t *polysec = linedef->backsector;
 
-				delta1 = abs(tmthing->z - (polysec->floorheight + ((polysec->ceilingheight - polysec->floorheight)/2)));
+				delta1 = abs(mobj->z - (polysec->floorheight + ((polysec->ceilingheight - polysec->floorheight)/2)));
 				delta2 = abs(thingtop - (polysec->floorheight + ((polysec->ceilingheight - polysec->floorheight)/2)));
 				if (polysec->floorheight < lowestceiling && delta1 >= delta2) {
 					lowestceiling = polysec->floorheight;
