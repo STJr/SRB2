@@ -1650,8 +1650,6 @@ void P_XYMovement(mobj_t *mo)
 	I_Assert(mo != NULL);
 	I_Assert(!P_MobjWasRemoved(mo));
 
-	moved = true;
-
 	// if it's stopped
 	if (!mo->momx && !mo->momy)
 	{
@@ -1708,9 +1706,9 @@ void P_XYMovement(mobj_t *mo)
 	if (!P_TryMove(mo, mo->x + xmove, mo->y + ymove, true) && !(mo->eflags & MFE_SPRUNG))
 	{
 		// blocked move
+		moved = false;
 
 		if (player) {
-			moved = false;
 			if (player->bot)
 				B_MoveBlocked(player);
 		}
@@ -1815,7 +1813,7 @@ void P_XYMovement(mobj_t *mo)
 		else
 			mo->momx = mo->momy = 0;
 	}
-	else if (player)
+	else
 		moved = true;
 
 	if (P_MobjWasRemoved(mo)) // MF_SPECIAL touched a player! O_o;;
