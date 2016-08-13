@@ -33,6 +33,7 @@
 
 #ifdef HWRENDER
 #include "hardware/hw_main.h"
+#include "hardware/hw_glob.h" // polyvertex_t
 #endif
 
 //profile stuff ---------------------------------------------------------
@@ -268,10 +269,28 @@ INT32 R_PointOnSide(fixed_t x, fixed_t y, node_t *node)
 // killough 5/2/98: reformatted
 INT32 R_PointOnSegSide(fixed_t x, fixed_t y, seg_t *line)
 {
-	fixed_t lx = line->v1->x;
-	fixed_t ly = line->v1->y;
-	fixed_t ldx = line->v2->x - lx;
-	fixed_t ldy = line->v2->y - ly;
+	fixed_t lx, ly, ldx, ldy;
+
+#ifdef HWRENDER // how did nobody notice this for years
+	// used for the hardware render
+	if (rendermode != render_soft && rendermode != render_none)
+	{
+		lx = FLOAT_TO_FIXED(((polyvertex_t *)line->v1)->x);
+		ly = FLOAT_TO_FIXED(((polyvertex_t *)line->v1)->y);
+		ldx = FLOAT_TO_FIXED(((polyvertex_t *)line->v2)->x);
+		ldy = FLOAT_TO_FIXED(((polyvertex_t *)line->v2)->y);
+	}
+	else
+#endif
+	{
+		lx = line->v1->x;
+		ly = line->v1->y;
+		ldx = line->v2->x;
+		ldy = line->v2->y;
+	}
+
+	ldx -= lx;
+	ldy -= ly;
 
 	if (!ldx)
 		return x <= lx ? ldy > 0 : ldy < 0;
