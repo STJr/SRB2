@@ -2373,6 +2373,12 @@ static boolean P_ZMovement(mobj_t *mo)
 			mo->z = mo->floorz;
 
 #ifdef ESLOPE
+		if (mo->standingslope) // You're still on the ground; why are we here?
+		{
+			mo->momz = 0;
+			return;
+		}
+
 		P_CheckPosition(mo, mo->x, mo->y); // Sets mo->standingslope correctly
 		if (((mo->eflags & MFE_VERTICALFLIP) ? tmceilingslope : tmfloorslope) && (mo->type != MT_STEAM))
 		{
