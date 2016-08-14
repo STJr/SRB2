@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -102,6 +102,12 @@ fixed_t ds_xfrac, ds_yfrac, ds_xstep, ds_ystep;
 
 UINT8 *ds_source; // start of a 64*64 tile image
 UINT8 *ds_transmap; // one of the translucency tables
+
+#ifdef ESLOPE
+pslope_t *ds_slope; // Current slope being used
+floatv3_t ds_su, ds_sv, ds_sz; // Vectors for... stuff?
+float focallengthf, zeroheight;
+#endif
 
 /**	\brief Variable flat sizes
 */
@@ -795,4 +801,6 @@ void R_DrawViewBorder(void)
 //                   INCLUDE 16bpp DRAWING CODE HERE
 // ==========================================================================
 
+#ifdef HIGHCOLOR
 #include "r_draw16.c"
+#endif

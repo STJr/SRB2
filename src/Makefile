@@ -262,9 +262,7 @@ else
 	OBJS+=$(OBJDIR)/hw3sound.o
 endif
 
-ifndef NOVERSION
 OPTS += -DCOMPVERSION
-endif
 
 ifndef NONX86
 ifndef GCC29
@@ -303,6 +301,10 @@ else
 PNG_CFLAGS?=$(shell $(PNG_CONFIG) --cflags)
 PNG_LDFLAGS?=$(shell $(PNG_CONFIG) --ldflags)
 endif
+endif
+
+ifdef LINUX
+PNG_CFLAGS+=-D_LARGEFILE64_SOURCE
 endif
 
 LIBS+=$(PNG_LDFLAGS)
@@ -370,7 +372,7 @@ else
 
 	# build a normal optimised version
 	WINDRESFLAGS = -DNDEBUG
-	CFLAGS+=-O2
+	#CFLAGS+=-O2
 endif
 	CFLAGS+=-g $(OPTS) $(M5) $(WINDRESFLAGS)
 
@@ -435,7 +437,6 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/info.o     \
 		$(OBJDIR)/p_ceilng.o \
 		$(OBJDIR)/p_enemy.o  \
-		$(OBJDIR)/p_fab.o    \
 		$(OBJDIR)/p_floor.o  \
 		$(OBJDIR)/p_inter.o  \
 		$(OBJDIR)/p_lights.o \
@@ -450,6 +451,7 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/p_telept.o \
 		$(OBJDIR)/p_tick.o   \
 		$(OBJDIR)/p_user.o   \
+		$(OBJDIR)/p_slopes.o \
 		$(OBJDIR)/tables.o   \
 		$(OBJDIR)/r_bsp.o    \
 		$(OBJDIR)/r_data.o   \
@@ -546,14 +548,10 @@ cleandep:
 	$(REMOVE) comptime.h
 
 pre-build:
-ifdef NOVERSION
-	-@touch comptime.c
-else
 ifdef WINDOWSHELL
 	-..\comptime.bat .
 else
 	-@../comptime.sh .
-endif
 endif
 
 clean:

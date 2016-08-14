@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2006      by James Haley
-// Copyright (C) 2006-2014 by Sonic Team Junior.
+// Copyright (C) 2006-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -99,6 +99,8 @@ typedef struct polyobj_s
 
 	UINT8 isBad;         // a bad polyobject: should not be rendered/manipulated
 	INT32 translucency; // index to translucency tables
+
+	struct visplane_s *visplane; // polyobject's visplane, for ease of putting into the list later
 
 	// these are saved for netgames, so do not let Lua touch these!
 	INT32 spawnflags; // Flags the polyobject originally spawned with

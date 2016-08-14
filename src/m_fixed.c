@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -118,8 +118,6 @@ fixed_t FixedHypot(fixed_t x, fixed_t y)
 	yx1 = FixedSqrt(1*FRACUNIT + yx2); // (1 + (x/y)^2)^1/2
 	return FixedMul(ax, yx1); // |x|*((1 + (x/y)^2)^1/2)
 }
-
-#ifdef NEED_FIXED_VECTOR
 
 vector2_t *FV2_Load(vector2_t *vec, fixed_t x, fixed_t y)
 {
@@ -862,8 +860,6 @@ void FM_Scale(matrix_t *dest, fixed_t x, fixed_t y, fixed_t z)
 	FM_MultMatrix(dest, &scale);
 #undef M
 }
-
-#endif
 
 #ifdef M_TESTCASE
 //#define MULDIV_TEST

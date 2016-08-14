@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -625,11 +625,11 @@ static texture_t *R_ParseTexture(boolean actuallyLoadTexture)
 	char *texturesToken;
 	UINT8 texturesTokenLength;
 	char *endPos;
-	char *newTextureName = NULL;
 	INT32 newTextureWidth;
 	INT32 newTextureHeight;
 	texture_t *resultTexture = NULL;
 	texpatch_t *newPatch;
+	char newTextureName[9]; // no longer dynamically allocated
 
 	// Texture name
 	texturesToken = M_GetToken(NULL);
@@ -644,13 +644,10 @@ static texture_t *R_ParseTexture(boolean actuallyLoadTexture)
 	}
 	else
 	{
-		if (newTextureName != NULL)
-		{
-			Z_Free(newTextureName);
-		}
-		newTextureName = (char *)Z_Malloc((texturesTokenLength+1)*sizeof(char),PU_STATIC,NULL);
-		M_Memcpy(newTextureName,texturesToken,texturesTokenLength*sizeof(char));
-		newTextureName[texturesTokenLength] = '\0';
+		memset(&newTextureName, 0, 9);
+		M_Memcpy(newTextureName, texturesToken, texturesTokenLength);
+		// ^^ we've confirmed that the token is <= 8 characters so it will never overflow a 9 byte char buffer
+		strupr(newTextureName); // Just do this now so we don't have to worry about it
 	}
 	Z_Free(texturesToken);
 
@@ -734,7 +731,6 @@ static texture_t *R_ParseTexture(boolean actuallyLoadTexture)
 		{
 			// Allocate memory for a zero-patch texture. Obviously, we'll be adding patches momentarily.
 			resultTexture = (texture_t *)Z_Calloc(sizeof(texture_t),PU_STATIC,NULL);
-			strupr(newTextureName);
 			M_Memcpy(resultTexture->name, newTextureName, 8);
 			resultTexture->width = newTextureWidth;
 			resultTexture->height = newTextureHeight;
@@ -790,7 +786,6 @@ static texture_t *R_ParseTexture(boolean actuallyLoadTexture)
 	}
 	Z_Free(texturesToken);
 
-	Z_Free(newTextureName); // Can't BELIEVE I forgot to free this before ._.;
 	if (actuallyLoadTexture) return resultTexture;
 	else return NULL;
 }
@@ -1615,11 +1610,11 @@ void R_PrecacheLevel(void)
 	for (j = 0; j < numsides; j++)
 	{
 		// huh, a potential bug here????
-		if (sides[j].toptexture < numtextures)
+		if (sides[j].toptexture >= 0 && sides[j].toptexture < numtextures)
 			texturepresent[sides[j].toptexture] = 1;
-		if (sides[j].midtexture < numtextures)
+		if (sides[j].midtexture >= 0 && sides[j].midtexture < numtextures)
 			texturepresent[sides[j].midtexture] = 1;
-		if (sides[j].bottomtexture < numtextures)
+		if (sides[j].bottomtexture >= 0 && sides[j].bottomtexture < numtextures)
 			texturepresent[sides[j].bottomtexture] = 1;
 	}
 

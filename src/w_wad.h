@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -16,8 +16,6 @@
 
 #ifdef HWRENDER
 #include "hardware/hw_data.h"
-#else
-typedef void GLPatch_t;
 #endif
 
 #ifdef __GNUG__

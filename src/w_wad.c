@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -32,6 +32,7 @@
 
 #include "w_wad.h"
 #include "z_zone.h"
+#include "fastcmp.h"
 
 #include "i_video.h" // rendermode
 #include "d_netfil.h"
@@ -147,24 +148,32 @@ static inline void W_LoadDehackedLumps(UINT16 wadnum)
 	}
 #endif
 
-	// Check for MAINCFG
-	for (lump = 0;lump != INT16_MAX;lump++)
 	{
-		lump = W_CheckNumForNamePwad("MAINCFG", wadnum, lump);
-		if (lump == INT16_MAX)
-			break;
-		CONS_Printf(M_GetText("Loading main config from %s\n"), wadfiles[wadnum]->filename);
-		DEH_LoadDehackedLumpPwad(wadnum, lump);
-	}
-
-	// Check for OBJCTCFG
-	for (lump = 0;lump < INT16_MAX;lump++)
-	{
-		lump = W_CheckNumForNamePwad("OBJCTCFG", wadnum, lump);
-		if (lump == INT16_MAX)
-			break;
-		CONS_Printf(M_GetText("Loading object config from %s\n"), wadfiles[wadnum]->filename);
-		DEH_LoadDehackedLumpPwad(wadnum, lump);
+		lumpinfo_t *lump_p = wadfiles[wadnum]->lumpinfo;
+		for (lump = 0; lump < wadfiles[wadnum]->numlumps; lump++, lump_p++)
+			if (memcmp(lump_p->name,"SOC_",4)==0) // Check for generic SOC lump
+			{	// shameless copy+paste of code from LUA_LoadLump
+				char *name = malloc(strlen(wadfiles[wadnum]->filename)+10);
+				strcpy(name, wadfiles[wadnum]->filename);
+				if (!fasticmp(&name[strlen(name) - 4], ".soc")) {
+					// If it's not a .soc file, copy the lump name in too.
+					name[strlen(wadfiles[wadnum]->filename)] = '|';
+					M_Memcpy(name+strlen(wadfiles[wadnum]->filename)+1, lump_p->name, 8);
+					name[strlen(wadfiles[wadnum]->filename)+9] = '\0';
+				}
+				CONS_Printf(M_GetText("Loading SOC from %s\n"), name);
+				DEH_LoadDehackedLumpPwad(wadnum, lump);
+			}
+			else if (memcmp(lump_p->name,"MAINCFG",8)==0) // Check for MAINCFG
+			{
+				CONS_Printf(M_GetText("Loading main config from %s\n"), wadfiles[wadnum]->filename);
+				DEH_LoadDehackedLumpPwad(wadnum, lump);
+			}
+			else if (memcmp(lump_p->name,"OBJCTCFG",8)==0) // Check for OBJCTCFG
+			{
+				CONS_Printf(M_GetText("Loading object config from %s\n"), wadfiles[wadnum]->filename);
+				DEH_LoadDehackedLumpPwad(wadnum, lump);
+			}
 	}
 
 #ifdef SCANTHINGS
@@ -413,6 +422,7 @@ UINT16 W_LoadWadFile(const char *filename)
 				lump_p->disksize -= 4;
 			}
 			else lump_p->compressed = 0;
+			memset(lump_p->name, 0x00, 9);
 			strncpy(lump_p->name, fileinfo->name, 8);
 		}
 		free(fileinfov);
