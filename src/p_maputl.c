@@ -566,7 +566,9 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 		fixed_t thingtop = mobj->z + mobj->height;
 
 		// Check for collision with front side's midtexture if Effect 4 is set
-		if (linedef->flags & ML_EFFECT4) {
+		if (linedef->flags & ML_EFFECT4
+			&& !linedef->polyobj // don't do anything for polyobjects! ...for now
+			) {
 			side_t *side = &sides[linedef->sidenum[0]];
 			fixed_t textop, texbottom, texheight;
 			fixed_t texmid, delta1, delta2;
@@ -575,23 +577,25 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 			texheight = textures[texturetranslation[side->midtexture]]->height << FRACBITS;
 
 			// Set texbottom and textop to the Z coordinates of the texture's boundaries
-#ifdef POLYOBJECTS
+#if 0 // #ifdef POLYOBJECTS
+			// don't remove this code unless solid midtextures
+			// on non-solid polyobjects should NEVER happen in the future
 			if (linedef->polyobj && (linedef->polyobj->flags & POF_TESTHEIGHT)) {
-				if (linedef->flags & ML_DONTPEGBOTTOM) {
+				if (!!(linedef->flags & ML_DONTPEGBOTTOM) ^ !!(linedef->flags & ML_EFFECT3)) {
 					texbottom = back->floorheight + side->rowoffset;
 					textop = texbottom + texheight*(side->repeatcnt+1);
 				} else {
-					textop = back->ceilingheight - side->rowoffset;
+					textop = back->ceilingheight + side->rowoffset;
 					texbottom = textop - texheight*(side->repeatcnt+1);
 				}
 			} else
 #endif
 			{
-				if (linedef->flags & ML_DONTPEGBOTTOM) {
+				if (!!(linedef->flags & ML_DONTPEGBOTTOM) ^ !!(linedef->flags & ML_EFFECT3)) {
 					texbottom = openbottom + side->rowoffset;
 					textop = texbottom + texheight*(side->repeatcnt+1);
 				} else {
-					textop = opentop - side->rowoffset;
+					textop = opentop + side->rowoffset;
 					texbottom = textop - texheight*(side->repeatcnt+1);
 				}
 			}
