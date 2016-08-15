@@ -913,6 +913,9 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, frac += vis->xiscale)
 	{
 #ifdef RANGECHECK
+		sprtopscreen = (centeryfrac - FixedMul(dc_texturemid, spryscale));
+		dc_iscale = 0xffffffffu / (unsigned)spryscale;
+
 		texturecolumn = frac>>FRACBITS;
 
 		if (texturecolumn < 0 || texturecolumn >= SHORT(patch->width))
@@ -925,6 +928,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 			R_DrawFlippedMaskedColumn(column, patch->height);
 		else
 			R_DrawMaskedColumn(column);
+		spryscale += vis->scalestep;
 	}
 
 	colfunc = basecolfunc;
@@ -1109,12 +1113,15 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	angle_t ang;
 	fixed_t iscale;
+	fixed_t scalestep = 0; // toast '16
 
 	//SoM: 3/17/2000
 	fixed_t gz, gzt;
 	INT32 heightsec, phs;
 	INT32 light = 0;
 	fixed_t this_scale = thing->scale;
+
+	fixed_t ang_scale = FRACUNIT;
 
 	// transform the origin point
 	tr_x = thing->x - viewx;
@@ -1186,6 +1193,15 @@ static void R_ProjectSprite(mobj_t *thing)
 		I_Error("R_ProjectSprite: sprframes NULL for sprite %d\n", thing->sprite);
 #endif
 
+	if (1) //(sprframe->rotate != SRF_SINGLE || flatsprite)
+		ang = R_PointToAngle (thing->x, thing->y) - thing->angle;
+
+	if (1) //(flatsprite)
+	{
+		ang_scale = abs(FINESINE(ang>>ANGLETOFINESHIFT));
+		scalestep = (FINECOSINE(ang>>ANGLETOFINESHIFT));
+	}
+
 	if (sprframe->rotate == SRF_SINGLE)
 	{
 		// use single rotation for all views
@@ -1196,7 +1212,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	else
 	{
 		// choose a different rotation based on player view
-		ang = R_PointToAngle (thing->x, thing->y) - thing->angle;
+		//ang = R_PointToAngle (thing->x, thing->y) - thing->angle;
 
 		if ((sprframe->rotate & SRF_RIGHT) && (ang < ANGLE_180)) // See from right
 			rot = 6; // F7 slot
@@ -1217,21 +1233,26 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	// calculate edges of the shape
 	if (flip)
-		tx -= FixedMul(spritecachedinfo[lump].width-spritecachedinfo[lump].offset, this_scale);
+		tx -= FixedMul(spritecachedinfo[lump].width-spritecachedinfo[lump].offset, FixedMul(this_scale, ang_scale));
 	else
-		tx -= FixedMul(spritecachedinfo[lump].offset, this_scale);
+		tx -= FixedMul(spritecachedinfo[lump].offset, FixedMul(this_scale, ang_scale));
 	x1 = (centerxfrac + FixedMul (tx,xscale)) >>FRACBITS;
 
 	// off the right side?
 	if (x1 > viewwidth)
 		return;
 
-	tx += FixedMul(spritecachedinfo[lump].width, this_scale);
+	tx += FixedMul(spritecachedinfo[lump].width, FixedMul(this_scale, ang_scale));
 	x2 = ((centerxfrac + FixedMul (tx,xscale)) >>FRACBITS) - 1;
 
 	// off the left side
 	if (x2 < 0)
 		return;
+
+	if (1) // (flatsprite)
+		yscale = yscale - (x2 - x1)*scalestep/2;
+
+	xscale = FixedMul(xscale, ang_scale);
 
 	// PORTAL SPRITE CLIPPING
 	if (portalrender)
@@ -1323,6 +1344,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	vis->pz = thing->z;
 	vis->pzt = vis->pz + vis->thingheight;
 	vis->texturemid = vis->gzt - viewz;
+	vis->scalestep = scalestep;
 
 	vis->mobj = thing; // Easy access! Tails 06-07-2002
 
