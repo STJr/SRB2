@@ -1413,7 +1413,10 @@ static void R_ProjectSprite(mobj_t *thing)
 	}
 
 	if (vis->x1 > x1)
+	{
 		vis->startfrac += FixedDiv(vis->xiscale, this_scale)*(vis->x1-x1);
+		vis->scale += scalestep*(vis->x1 - x1);
+	}
 
 	//Fab: lumppat is the lump number of the patch to use, this is different
 	//     than lumpid for sprites-in-pwad : the graphics are patched
