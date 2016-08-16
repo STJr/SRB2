@@ -1256,6 +1256,7 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	if (1) // (flatsprite)
 	{
+		fixed_t yscale1;
 		fixed_t yscale2;
 		INT32 range;
 
@@ -1264,7 +1265,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		gxt = FixedMul(tr_x, viewcos);
 		gyt = -FixedMul(tr_y, viewsin);
 		tz = gxt-gyt;
-		yscale = FixedDiv(projectiony, tz);
+		yscale1 = FixedDiv(projectiony, tz);
 
 		leftoffset += spritecachedinfo[lump].width;
 		tr_x = thing->x + FixedMul(leftoffset, FINECOSINE(ang>>ANGLETOFINESHIFT)) - viewx;
@@ -1274,11 +1275,20 @@ static void R_ProjectSprite(mobj_t *thing)
 		tz = gxt-gyt;
 		yscale2 = FixedDiv(projectiony, tz);
 
+		if (ang >= ANGLE_180)
+		{
+			fixed_t temp = yscale2;
+			yscale2 = yscale1;
+			yscale1 = temp;
+		}
+
 		if (x2 > x1)
 			range = (x2 - x1);
 		else
 			range = 1;
-		scalestep = (yscale2 - yscale)/range;
+		scalestep = (yscale2 - yscale1)/range;
+		yscale = yscale1;
+		//this_scale = FixedMul(this_scale, FixedDiv(yscale, yscale1));
 	}
 
 	xscale = FixedMul(xscale, ang_scale);
