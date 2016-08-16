@@ -1117,7 +1117,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	angle_t ang;
 	fixed_t iscale;
 	fixed_t scalestep = 0; // toast '16
-	fixed_t leftoffset;
+	fixed_t offset;
 
 	//SoM: 3/17/2000
 	fixed_t gz, gzt;
@@ -1237,10 +1237,10 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	// calculate edges of the shape
 	if (flip)
-		leftoffset = spritecachedinfo[lump].width-spritecachedinfo[lump].offset;
+		offset = spritecachedinfo[lump].width-spritecachedinfo[lump].offset;
 	else
-		leftoffset = spritecachedinfo[lump].offset;
-	tx -= FixedMul(leftoffset, FixedMul(this_scale, ang_scale));
+		offset = spritecachedinfo[lump].offset;
+	tx -= FixedMul(offset, FixedMul(this_scale, ang_scale));
 	x1 = (centerxfrac + FixedMul (tx,xscale)) >>FRACBITS;
 
 	// off the right side?
@@ -1260,16 +1260,16 @@ static void R_ProjectSprite(mobj_t *thing)
 		fixed_t yscale2;
 		INT32 range;
 
-		tr_x = thing->x + FixedMul(-leftoffset, FINECOSINE(ang>>ANGLETOFINESHIFT)) - viewx;
-		tr_y = thing->y + FixedMul(-leftoffset, FINESINE(ang>>ANGLETOFINESHIFT)) - viewy;
+		tr_x = thing->x + FixedMul(-offset, FINECOSINE(ang>>ANGLETOFINESHIFT)) - viewx;
+		tr_y = thing->y + FixedMul(-offset, FINESINE(ang>>ANGLETOFINESHIFT)) - viewy;
 		gxt = FixedMul(tr_x, viewcos);
 		gyt = -FixedMul(tr_y, viewsin);
 		tz = gxt-gyt;
 		yscale1 = FixedDiv(projectiony, tz);
 
-		leftoffset += spritecachedinfo[lump].width;
-		tr_x = thing->x + FixedMul(leftoffset, FINECOSINE(ang>>ANGLETOFINESHIFT)) - viewx;
-		tr_y = thing->y + FixedMul(leftoffset, FINESINE(ang>>ANGLETOFINESHIFT)) - viewy;
+		offset += spritecachedinfo[lump].width;
+		tr_x = thing->x + FixedMul(offset, FINECOSINE(ang>>ANGLETOFINESHIFT)) - viewx;
+		tr_y = thing->y + FixedMul(offset, FINESINE(ang>>ANGLETOFINESHIFT)) - viewy;
 		gxt = FixedMul(tr_x, viewcos);
 		gyt = -FixedMul(tr_y, viewsin);
 		tz = gxt-gyt;
