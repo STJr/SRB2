@@ -1260,16 +1260,16 @@ static void R_ProjectSprite(mobj_t *thing)
 		fixed_t yscale2;
 		INT32 range;
 
-		tr_x = thing->x + FixedMul(-offset, FINECOSINE(ang>>ANGLETOFINESHIFT)) - viewx;
-		tr_y = thing->y + FixedMul(-offset, FINESINE(ang>>ANGLETOFINESHIFT)) - viewy;
+		tr_x = thing->x + FixedMul(-offset, FINECOSINE(thing->angle>>ANGLETOFINESHIFT)) - viewx;
+		tr_y = thing->y + FixedMul(-offset, FINESINE(thing->angle>>ANGLETOFINESHIFT)) - viewy;
 		gxt = FixedMul(tr_x, viewcos);
 		gyt = -FixedMul(tr_y, viewsin);
 		tz = gxt-gyt;
 		yscale1 = FixedDiv(projectiony, tz);
 
 		offset += spritecachedinfo[lump].width;
-		tr_x = thing->x + FixedMul(offset, FINECOSINE(ang>>ANGLETOFINESHIFT)) - viewx;
-		tr_y = thing->y + FixedMul(offset, FINESINE(ang>>ANGLETOFINESHIFT)) - viewy;
+		tr_x = thing->x + FixedMul(offset, FINECOSINE(thing->angle>>ANGLETOFINESHIFT)) - viewx;
+		tr_y = thing->y + FixedMul(offset, FINESINE(thing->angle>>ANGLETOFINESHIFT)) - viewy;
 		gxt = FixedMul(tr_x, viewcos);
 		gyt = -FixedMul(tr_y, viewsin);
 		tz = gxt-gyt;
