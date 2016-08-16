@@ -4997,22 +4997,21 @@ static void P_NightsTransferPoints(player_t *player, fixed_t xspeed, fixed_t rad
 	In some ways worse, in some ways better.
 	I did the following this way because the player object has to deal with touchspecials too, not just solids.
 	There were all sorts of fun bugs when the player got to touch the goal a frame earlier than it should've.
-	We could've applied MF_NOCLIPTHING, but then we'd lose out on clipping against MF_SOLIDs. Which is bad.
-	Instead, the object TEMPORARILY LOSES ITS PLAYER STATUS. Is that nuts? It's probably a little nuts. I know
-	we probably could've kept around MT_NIGHTSCHAR in some fashion, having an invisible hitbox following the
+	Technically, we lose out on being blocked by MF_SOLID objects, but official stages don't use them on the track.
+	I know we probably could've kept around MT_NIGHTSCHAR in some fashion, having an invisible hitbox following the
 	player around... but I'd already removed all its references, restructured the way the chaos emerald follows
 	the player around to fill the player->mo->tracer gap left behind, and NiGHTS is a lag magnet (lagnet?)
-	enough as it is... so whatever. You're welcome to tell me I'm terrible, but at least it works.
+	enough as it is... so whatever.
 	~toast
 	*/
 	{
 		fixed_t prevx = player->mo->x;
 		fixed_t prevy = player->mo->y;
 		boolean notallowed;
-		player->mo->player = NULL; // YIKES
+		player->mo->flags |= MF_NOCLIPTHING; // player = NULL; // YIKES
 		notallowed = (!(P_TryMove(player->mo, player->mo->x+player->mo->momx, player->mo->y+player->mo->momy, true)));
 		P_TeleportMove(player->mo, prevx, prevy, player->mo->z);
-		player->mo->player = player; // unyikes
+		player->mo->flags &= ~MF_NOCLIPTHING; // player = player; // unyikes
 		if (notallowed)
 			return;
 	}

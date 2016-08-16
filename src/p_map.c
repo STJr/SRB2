@@ -379,6 +379,195 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 }
 
 //
+// P_ConsiderSolids (moved out of PIT_CheckThing in order to have additional flexibility)
+//
+
+static boolean P_ConsiderSolids(mobj_t *thing)
+{
+	// Monitors are not treated as solid to players who are jumping, spinning or gliding,
+	// unless it's a CTF team monitor and you're on the wrong team
+	if (thing->flags & MF_MONITOR && tmthing->player
+	&& (tmthing->player->pflags & (PF_SPINNING|PF_GLIDING)
+		|| ((tmthing->player->pflags & PF_JUMPED)
+			&& !(tmthing->player->charflags & SF_NOJUMPDAMAGE
+			&& !(tmthing->player->charability == CA_TWINSPIN && tmthing->player->panim == PA_ABILITY)))
+		|| (tmthing->player->charability2 == CA2_MELEE && tmthing->player->panim == PA_ABILITY2)
+		|| ((tmthing->player->charflags & SF_STOMPDAMAGE)
+			&& (P_MobjFlip(tmthing)*(tmthing->z - (thing->z + thing->height/2)) > 0) && (P_MobjFlip(tmthing)*tmthing->momz < 0)))
+	&& !((thing->type == MT_REDRINGBOX && tmthing->player->ctfteam != 1) || (thing->type == MT_BLUERINGBOX && tmthing->player->ctfteam != 2)))
+		;
+	// z checking at last
+	// Treat noclip things as non-solid!
+	else if ((thing->flags & (MF_SOLID|MF_NOCLIP)) == MF_SOLID
+		&& (tmthing->flags & (MF_SOLID|MF_NOCLIP)) == MF_SOLID)
+	{
+		fixed_t topz, tmtopz;
+
+		if (tmthing->eflags & MFE_VERTICALFLIP)
+		{
+			// pass under
+			tmtopz = tmthing->z;
+
+			if (tmtopz > thing->z + thing->height)
+			{
+				if (thing->z + thing->height > tmfloorz)
+				{
+					tmfloorz = thing->z + thing->height;
+#ifdef ESLOPE
+					tmfloorslope = NULL;
+#endif
+				}
+				return true;
+			}
+
+			topz = thing->z - FixedMul(FRACUNIT, thing->scale);
+
+			// block only when jumping not high enough,
+			// (dont climb max. 24units while already in air)
+			// if not in air, let P_TryMove() decide if it's not too high
+			if (tmthing->player && tmthing->z + tmthing->height > topz
+				&& tmthing->z + tmthing->height < tmthing->ceilingz)
+				return false; // block while in air
+
+			if (thing->flags & MF_SPRING)
+				;
+			else if (topz < tmceilingz && tmthing->z+tmthing->height <= thing->z+thing->height)
+			{
+				tmceilingz = topz;
+#ifdef ESLOPE
+				tmceilingslope = NULL;
+#endif
+				tmfloorthing = thing; // thing we may stand on
+			}
+		}
+		else
+		{
+			// pass under
+			tmtopz = tmthing->z + tmthing->height;
+
+			if (tmtopz < thing->z)
+			{
+				if (thing->z < tmceilingz)
+				{
+					tmceilingz = thing->z;
+#ifdef ESLOPE
+					tmceilingslope = NULL;
+#endif
+				}
+				return true;
+			}
+
+			topz = thing->z + thing->height + FixedMul(FRACUNIT, thing->scale);
+
+			// block only when jumping not high enough,
+			// (dont climb max. 24units while already in air)
+			// if not in air, let P_TryMove() decide if it's not too high
+			if (tmthing->player && tmthing->z < topz && tmthing->z > tmthing->floorz)
+				return false; // block while in air
+
+			if (thing->flags & MF_SPRING)
+				;
+			else if (topz > tmfloorz && tmthing->z >= thing->z)
+			{
+				tmfloorz = topz;
+#ifdef ESLOPE
+				tmfloorslope = NULL;
+#endif
+				tmfloorthing = thing; // thing we may stand on
+			}
+		}
+	}
+
+	// not solid not blocked
+	return true;
+}
+
+#if 0
+//
+// PIT_CheckSolid (PIT_CheckThing, but for solids only, and guaranteed no side effects)
+//
+static boolean PIT_CheckSolid(mobj_t *thing)
+{
+	fixed_t blockdist;
+
+	// don't clip against self
+	if (thing == tmthing)
+		return true;
+
+	// Ignore... things.
+	if (!tmthing || !thing || P_MobjWasRemoved(thing))
+		return true;
+
+	I_Assert(!P_MobjWasRemoved(tmthing));
+	I_Assert(!P_MobjWasRemoved(thing));
+
+	if (!(thing->flags & MF_SOLID))
+		return true;
+
+	// Ignore spectators
+	if ((tmthing->player && tmthing->player->spectator)
+	|| (thing->player && thing->player->spectator))
+		return true;
+
+	// Metal Sonic destroys tiny baby objects.
+	if (tmthing->type == MT_METALSONIC_RACE
+	&& (thing->flags & (MF_MISSILE|MF_ENEMY|MF_BOSS) || thing->type == MT_SPIKE))
+		return true;
+
+	// CA_DASHMODE users destroy spikes and monitors, CA_TWINSPIN users and CA2_MELEE users destroy spikes.
+	if ((tmthing->player)
+		&& (((tmthing->player->charability == CA_DASHMODE) && (tmthing->player->dashmode >= 3*TICRATE)
+		&& (thing->flags & (MF_MONITOR) || thing->type == MT_SPIKE))
+	|| ((((tmthing->player->charability == CA_TWINSPIN) && (tmthing->player->panim == PA_ABILITY))
+	|| (tmthing->player->charability2 == CA2_MELEE && tmthing->player->panim == PA_ABILITY2))
+		&& (thing->type == MT_SPIKE))))
+		return true;
+
+	// Don't collide with your buddies while NiGHTS-flying.
+	if (tmthing->player && thing->player && (maptol & TOL_NIGHTS)
+		&& ((tmthing->player->pflags & PF_NIGHTSMODE) || (thing->player->pflags & PF_NIGHTSMODE)))
+		return true;
+
+	blockdist = thing->radius + tmthing->radius;
+
+	if (abs(thing->x - tmx) >= blockdist || abs(thing->y - tmy) >= blockdist)
+		return true; // didn't hit it
+
+	// Force solid players in hide and seek to avoid corner stacking.
+	if (cv_tailspickup.value && gametype != GT_HIDEANDSEEK)
+	{
+		if (tmthing->player && thing->player)
+			return true;
+	}
+
+	if (tmthing->player) // Is the moving/interacting object the player?
+	{
+		if (!tmthing->health)
+			return true;
+
+		// Are you touching the side of the object you're interacting with?
+		else if (thing->z - FixedMul(FRACUNIT, thing->scale) <= tmthing->z + tmthing->height
+			&& thing->z + thing->height + FixedMul(FRACUNIT, thing->scale) >= tmthing->z)
+		{
+			if (thing->flags & MF_MONITOR
+				&& (tmthing->player->pflags & (PF_SPINNING|PF_GLIDING)
+				|| ((tmthing->player->pflags & PF_JUMPED)
+					&& !(tmthing->player->charflags & SF_NOJUMPDAMAGE
+					&& !(tmthing->player->charability == CA_TWINSPIN && tmthing->player->panim == PA_ABILITY)))
+				|| (tmthing->player->charability2 == CA2_MELEE && tmthing->player->panim == PA_ABILITY2)
+				|| ((tmthing->player->charflags & SF_STOMPDAMAGE)
+					&& (P_MobjFlip(tmthing)*(tmthing->z - (thing->z + thing->height/2)) > 0) && (P_MobjFlip(tmthing)*tmthing->momz < 0))))
+			{
+				return false;
+			}
+		}
+	}
+
+	return P_ConsiderSolids(thing);
+}
+#endif
+
+//
 // PIT_CheckThing
 //
 static boolean PIT_CheckThing(mobj_t *thing)
@@ -1007,99 +1196,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		if (iwassprung) // this spring caused you to gain MFE_SPRUNG just now...
 			return false; // "cancel" P_TryMove via blocking so you keep your current position
 	}
-	// Monitors are not treated as solid to players who are jumping, spinning or gliding,
-	// unless it's a CTF team monitor and you're on the wrong team
-	else if (thing->flags & MF_MONITOR && tmthing->player
-	&& (tmthing->player->pflags & (PF_SPINNING|PF_GLIDING)
-		|| ((tmthing->player->pflags & PF_JUMPED)
-			&& !(tmthing->player->charflags & SF_NOJUMPDAMAGE
-			&& !(tmthing->player->charability == CA_TWINSPIN && tmthing->player->panim == PA_ABILITY)))
-		|| (tmthing->player->charability2 == CA2_MELEE && tmthing->player->panim == PA_ABILITY2)
-		|| ((tmthing->player->charflags & SF_STOMPDAMAGE)
-			&& (P_MobjFlip(tmthing)*(tmthing->z - (thing->z + thing->height/2)) > 0) && (P_MobjFlip(tmthing)*tmthing->momz < 0)))
-	&& !((thing->type == MT_REDRINGBOX && tmthing->player->ctfteam != 1) || (thing->type == MT_BLUERINGBOX && tmthing->player->ctfteam != 2)))
-		;
-	// z checking at last
-	// Treat noclip things as non-solid!
-	else if ((thing->flags & (MF_SOLID|MF_NOCLIP)) == MF_SOLID
-		&& (tmthing->flags & (MF_SOLID|MF_NOCLIP)) == MF_SOLID)
-	{
-		fixed_t topz, tmtopz;
-
-		if (tmthing->eflags & MFE_VERTICALFLIP)
-		{
-			// pass under
-			tmtopz = tmthing->z;
-
-			if (tmtopz > thing->z + thing->height)
-			{
-				if (thing->z + thing->height > tmfloorz)
-				{
-					tmfloorz = thing->z + thing->height;
-#ifdef ESLOPE
-					tmfloorslope = NULL;
-#endif
-				}
-				return true;
-			}
-
-			topz = thing->z - FixedMul(FRACUNIT, thing->scale);
-
-			// block only when jumping not high enough,
-			// (dont climb max. 24units while already in air)
-			// if not in air, let P_TryMove() decide if it's not too high
-			if (tmthing->player && tmthing->z + tmthing->height > topz
-				&& tmthing->z + tmthing->height < tmthing->ceilingz)
-				return false; // block while in air
-
-			if (thing->flags & MF_SPRING)
-				;
-			else if (topz < tmceilingz && tmthing->z+tmthing->height <= thing->z+thing->height)
-			{
-				tmceilingz = topz;
-#ifdef ESLOPE
-				tmceilingslope = NULL;
-#endif
-				tmfloorthing = thing; // thing we may stand on
-			}
-		}
-		else
-		{
-			// pass under
-			tmtopz = tmthing->z + tmthing->height;
-
-			if (tmtopz < thing->z)
-			{
-				if (thing->z < tmceilingz)
-				{
-					tmceilingz = thing->z;
-#ifdef ESLOPE
-					tmceilingslope = NULL;
-#endif
-				}
-				return true;
-			}
-
-			topz = thing->z + thing->height + FixedMul(FRACUNIT, thing->scale);
-
-			// block only when jumping not high enough,
-			// (dont climb max. 24units while already in air)
-			// if not in air, let P_TryMove() decide if it's not too high
-			if (tmthing->player && tmthing->z < topz && tmthing->z > tmthing->floorz)
-				return false; // block while in air
-
-			if (thing->flags & MF_SPRING)
-				;
-			else if (topz > tmfloorz && tmthing->z >= thing->z)
-			{
-				tmfloorz = topz;
-#ifdef ESLOPE
-				tmfloorslope = NULL;
-#endif
-				tmfloorthing = thing; // thing we may stand on
-			}
-		}
-	}
+	else
+		return P_ConsiderSolids(thing);
 
 	// not solid not blocked
 	return true;
