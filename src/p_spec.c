@@ -6719,6 +6719,7 @@ static void Add_Scroller(INT32 type, fixed_t dx, fixed_t dy, INT32 control, INT3
 	P_AddThinker(&s->thinker);
 }
 
+#if 0
 /** Adds a wall scroller.
   * Scroll amount is rotated with respect to wall's linedef first, so that
   * scrolling towards the wall in a perpendicular direction is translated into
@@ -6743,6 +6744,7 @@ static void Add_WallScroller(fixed_t dx, fixed_t dy, const line_t *l, INT32 cont
 	y = -FixedDiv(FixedMul(dx, l->dy) - FixedMul(dy, l->dx), d);
 	Add_Scroller(sc_side, x, y, control, *l->sidenum, accel, 0);
 }
+#endif
 
 /** Initializes the scrollers.
   *
@@ -6826,7 +6828,7 @@ static void P_SpawnScrollers(void)
 			case 502:
 				for (s = -1; (s = P_FindLineFromLineTag(l, s)) >= 0 ;)
 					if (s != (INT32)i)
-						Add_WallScroller(dx, dy, lines+s, control, accel);
+						Add_Scroller(sc_side, dx, dy, control, lines[s].sidenum[0], accel, 0); //Add_WallScroller(dx, dy, lines+s, control, accel);
 				break;
 
 			case 505:
