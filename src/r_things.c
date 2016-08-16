@@ -913,8 +913,6 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, frac += vis->xiscale)
 	{
 #ifdef RANGECHECK
-		sprtopscreen = (centeryfrac - FixedMul(dc_texturemid, spryscale));
-		dc_iscale = 0xffffffffu / (unsigned)spryscale;
 
 		texturecolumn = frac>>FRACBITS;
 
@@ -924,6 +922,11 @@ static void R_DrawVisSprite(vissprite_t *vis)
 #else
 		column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[frac>>FRACBITS]));
 #endif
+		if (vis->scalestep)
+		{
+			sprtopscreen = (centeryfrac - FixedMul(dc_texturemid, spryscale));
+			dc_iscale = FixedMul((0xffffffffu / (unsigned)spryscale), this_scale);
+		}
 		if (vis->vflip)
 			R_DrawFlippedMaskedColumn(column, patch->height);
 		else
@@ -1114,6 +1117,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	angle_t ang;
 	fixed_t iscale;
 	fixed_t scalestep = 0; // toast '16
+	fixed_t leftoffset;
 
 	//SoM: 3/17/2000
 	fixed_t gz, gzt;
@@ -1199,7 +1203,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (1) //(flatsprite)
 	{
 		ang_scale = abs(FINESINE(ang>>ANGLETOFINESHIFT));
-		scalestep = (FINECOSINE(ang>>ANGLETOFINESHIFT));
+		//scalestep = (FINECOSINE(ang>>ANGLETOFINESHIFT));
 	}
 
 	if (sprframe->rotate == SRF_SINGLE)
@@ -1233,9 +1237,10 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	// calculate edges of the shape
 	if (flip)
-		tx -= FixedMul(spritecachedinfo[lump].width-spritecachedinfo[lump].offset, FixedMul(this_scale, ang_scale));
+		leftoffset = spritecachedinfo[lump].width-spritecachedinfo[lump].offset;
 	else
-		tx -= FixedMul(spritecachedinfo[lump].offset, FixedMul(this_scale, ang_scale));
+		leftoffset = spritecachedinfo[lump].offset;
+	tx -= FixedMul(leftoffset, FixedMul(this_scale, ang_scale));
 	x1 = (centerxfrac + FixedMul (tx,xscale)) >>FRACBITS;
 
 	// off the right side?
@@ -1250,7 +1255,31 @@ static void R_ProjectSprite(mobj_t *thing)
 		return;
 
 	if (1) // (flatsprite)
-		yscale = yscale - (x2 - x1)*scalestep/2;
+	{
+		fixed_t yscale2;
+		INT32 range;
+
+		tr_x = thing->x + FixedMul(-leftoffset, FINECOSINE(ang>>ANGLETOFINESHIFT)) - viewx;
+		tr_y = thing->y + FixedMul(-leftoffset, FINESINE(ang>>ANGLETOFINESHIFT)) - viewy;
+		gxt = FixedMul(tr_x, viewcos);
+		gyt = -FixedMul(tr_y, viewsin);
+		tz = gxt-gyt;
+		yscale = FixedDiv(projectiony, tz);
+
+		leftoffset += spritecachedinfo[lump].width;
+		tr_x = thing->x + FixedMul(leftoffset, FINECOSINE(ang>>ANGLETOFINESHIFT)) - viewx;
+		tr_y = thing->y + FixedMul(leftoffset, FINESINE(ang>>ANGLETOFINESHIFT)) - viewy;
+		gxt = FixedMul(tr_x, viewcos);
+		gyt = -FixedMul(tr_y, viewsin);
+		tz = gxt-gyt;
+		yscale2 = FixedDiv(projectiony, tz);
+
+		if (x2 > x1)
+			range = (x2 - x1);
+		else
+			range = 1;
+		scalestep = (yscale2 - yscale)/range;
+	}
 
 	xscale = FixedMul(xscale, ang_scale);
 
