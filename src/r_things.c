@@ -925,7 +925,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		if (vis->scalestep)
 		{
 			sprtopscreen = (centeryfrac - FixedMul(dc_texturemid, spryscale));
-			dc_iscale = FixedMul((0xffffffffu / (unsigned)spryscale), this_scale);
+			dc_iscale = FixedDiv((0xffffffffu / (unsigned)spryscale), this_scale);
 		}
 		if (vis->vflip)
 			R_DrawFlippedMaskedColumn(column, patch->height);
