@@ -137,6 +137,8 @@ static patch_t *bossend;
 static patch_t *sboslash;
 patch_t *sboscolon;
 patch_t *sbosperiod;
+static patch_t *siren;
+static patch_t *okuu;
 
 static boolean facefreed[MAXPLAYERS];
 
@@ -455,6 +457,8 @@ void ST_LoadGraphics(void)
 	sboslash = W_CachePatchName("SBOSLASH", PU_HUDGFX);
 	sboscolon = W_CachePatchName("SBOSCOLN", PU_HUDGFX);
 	sbosperiod = W_CachePatchName("SBOSPERI", PU_HUDGFX); // Period for time centiseconds
+	siren = W_CachePatchName("CAUTION2", PU_HUDGFX);
+	okuu = W_CachePatchName("OKUUSELF", PU_HUDGFX);
 }
 
 // made separate so that skins code can reload custom face graphics
@@ -1411,6 +1415,33 @@ static inline void ST_drawBossHealth(void)
 		x += 8;
 	}
 	V_DrawScaledPatch(x, y, V_HUDTRANS, bossend);
+}
+
+static void ST_drawOkuuStuff(player_t *player)
+{
+	INT32 hudtimer = player->mo->hudtimer;
+	INT32 hudpinch = player->mo->hudpinch;
+	INT32 timeout = player->mo->timeout;
+
+	if (hudtimer > 0)
+	{
+		if (hudtimer > 70)
+			V_DrawFixedPatch((525 - 5 * hudtimer)<<FRACBITS, 0, FRACUNIT, V_TRANSLUCENT, okuu, NULL);
+		else
+			V_DrawFixedPatch((201 - max(hudtimer-44, 0))<<FRACBITS, 0, FRACUNIT, V_TRANSLUCENT, okuu, NULL);
+		
+		if ((hudtimer > 95 && hudtimer <= 105) || (hudtimer > 0 && hudtimer <= 10))
+			V_DrawFixedPatch(0, 100<<FRACBITS, FRACUNIT, V_90TRANS, siren, NULL);
+		else if ((hudtimer > 85 && hudtimer <= 95) || (hudtimer > 10 && hudtimer <= 20))
+			V_DrawFixedPatch(0, 100<<FRACBITS, FRACUNIT, V_70TRANS, siren, NULL);
+		else if ((hudtimer > 75 && hudtimer <= 85) || (hudtimer > 20 && hudtimer <= 30))
+			V_DrawFixedPatch(0, 100<<FRACBITS, FRACUNIT, V_TRANSLUCENT, siren, NULL);
+		else if (hudtimer > 30 && hudtimer <= 75)
+			V_DrawFixedPatch(0, 100<<FRACBITS, FRACUNIT, V_30TRANS, siren, NULL);
+	}
+
+	if (hudpinch == 1 && timeout > 0 && timeout <= 1050)
+		V_DrawFill(100, 35, timeout*4/TICRATE, 3, 217);
 }
 
 static void ST_drawLevelTitle(void)
@@ -2622,6 +2653,9 @@ static void ST_overlayDrawer(void)
 	if (!(netgame || multiplayer) || !hu_showscores)
 		LUAh_GameHUD(stplyr);
 #endif
+
+	// handle okuu HUD stuff here because wolfs is some unique kind of idiot
+	ST_drawOkuuStuff(stplyr);
 
 	// draw level title Tails
 	if (*mapheaderinfo[gamemap-1]->lvlttl != '\0' && !(hu_showscores && (netgame || multiplayer))

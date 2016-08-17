@@ -359,6 +359,16 @@ typedef struct mobj_s
 	struct pslope_s *standingslope; // The slope that the object is standing on (shouldn't need synced in savegames, right?)
 #endif
 
+	// Okuu variables below
+	INT32 hudtimer;
+	INT32 timeout;
+	INT32 hudpinch;
+	boolean scaled;
+	INT32 justhurt;
+	INT32 growing;
+	INT32 shrinking;
+	INT32 pinchphase;
+
 	// WARNING: New fields must be added separately to savegame and Lua.
 } mobj_t;
 

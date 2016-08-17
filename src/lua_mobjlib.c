@@ -80,7 +80,15 @@ enum mobj_e {
 	mobj_extravalue1,
 	mobj_extravalue2,
 	mobj_cusval,
-	mobj_cvmem
+	mobj_cvmem,
+	mobj_hudtimer,
+	mobj_timeout,
+	mobj_hudpinch,
+	mobj_scaled,
+	mobj_justhurt,
+	mobj_growing,
+	mobj_shrinking,
+	mobj_pinchphase
 };
 
 static const char *const mobj_opt[] = {
@@ -140,6 +148,14 @@ static const char *const mobj_opt[] = {
 	"extravalue2",
 	"cusval",
 	"cvmem",
+	"hudtimer",
+	"timeout",
+	"hudpinch",
+	"scaled",
+	"justhurt",
+	"growing",
+	"shrinking",
+	"pinchphase",
 	NULL};
 
 #define UNIMPLEMENTED luaL_error(L, LUA_QL("mobj_t") " field " LUA_QS " is not implemented for Lua and cannot be accessed.", mobj_opt[field])
@@ -342,6 +358,30 @@ static int mobj_get(lua_State *L)
 		break;
 	case mobj_cvmem:
 		lua_pushinteger(L, mo->cvmem);
+		break;
+	case mobj_hudtimer:
+		lua_pushinteger(L, mo->hudtimer);
+		break;
+	case mobj_timeout:
+		lua_pushinteger(L, mo->timeout);
+		break;
+	case mobj_hudpinch:
+		lua_pushinteger(L, mo->hudpinch);
+		break;
+	case mobj_scaled:
+		lua_pushboolean(L, mo->scaled);
+		break;
+	case mobj_justhurt:
+		lua_pushinteger(L, mo->justhurt);
+		break;
+	case mobj_growing:
+		lua_pushinteger(L, mo->growing);
+		break;
+	case mobj_shrinking:
+		lua_pushinteger(L, mo->shrinking);
+		break;
+	case mobj_pinchphase:
+		lua_pushinteger(L, mo->pinchphase);
 		break;
 	default: // extra custom variables in Lua memory
 		lua_getfield(L, LUA_REGISTRYINDEX, LREG_EXTVARS);
@@ -633,6 +673,30 @@ static int mobj_set(lua_State *L)
 		break;
 	case mobj_cvmem:
 		mo->cvmem = luaL_checkinteger(L, 3);
+		break;
+	case mobj_hudtimer:
+		mo->hudtimer = luaL_checkinteger(L, 3);
+		break;
+	case mobj_timeout:
+		mo->timeout = luaL_checkinteger(L, 3);
+		break;
+	case mobj_hudpinch:
+		mo->hudpinch = luaL_checkinteger(L, 3);
+		break;
+	case mobj_scaled:
+		mo->scaled = luaL_checkboolean(L, 3);
+		break;
+	case mobj_justhurt:
+		mo->justhurt = luaL_checkinteger(L, 3);
+		break;
+	case mobj_growing:
+		mo->growing = luaL_checkinteger(L, 3);
+		break;
+	case mobj_shrinking:
+		mo->shrinking = luaL_checkinteger(L, 3);
+		break;
+	case mobj_pinchphase:
+		mo->pinchphase = luaL_checkinteger(L, 3);
 		break;
 	default:
 		lua_getfield(L, LUA_REGISTRYINDEX, LREG_EXTVARS);

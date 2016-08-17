@@ -1142,12 +1142,19 @@ typedef enum
 	MD2_EXTVAL1     = 1<<5,
 	MD2_EXTVAL2     = 1<<6,
 	MD2_HNEXT       = 1<<7,
-#ifdef ESLOPE
 	MD2_HPREV       = 1<<8,
-	MD2_SLOPE       = 1<<9
-#else
-	MD2_HPREV       = 1<<8
+#ifdef ESLOPE
+	MD2_SLOPE       = 1<<9,
 #endif
+	// Okuu variables
+	MD2_HUDTIMER	= 1<<10,
+	MD2_TIMEOUT 	= 1<<11,
+	MD2_HUDPINCH	= 1<<12,
+	MD2_SCALED  	= 1<<13,
+	MD2_JUSTHURT 	= 1<<14,
+	MD2_GROWING 	= 1<<15,
+	MD2_SHRINKING 	= 1<<16,
+	MD2_PINCHPHASE	= 1<<17
 } mobj_diff2_t;
 
 typedef enum
@@ -1341,6 +1348,24 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 	if (mobj->standingslope)
 		diff2 |= MD2_SLOPE;
 #endif
+	// Okuu variables
+	if (mobj->hudtimer)
+		diff2 |= MD2_HUDTIMER;
+	if (mobj->timeout)
+		diff2 |= MD2_TIMEOUT;
+	if (mobj->hudpinch)
+		diff2 |= MD2_HUDPINCH;
+	if (mobj->scaled)
+		diff2 |= MD2_SCALED;
+	if (mobj->justhurt)
+		diff2 |= MD2_JUSTHURT;
+	if (mobj->growing)
+		diff2 |= MD2_GROWING;
+	if (mobj->shrinking)
+		diff2 |= MD2_SHRINKING;
+	if (mobj->pinchphase)
+		diff2 |= MD2_PINCHPHASE;
+
 	if (diff2 != 0)
 		diff |= MD_MORE;
 
@@ -1460,6 +1485,22 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 	if (diff2 & MD2_SLOPE)
 		WRITEUINT16(save_p, mobj->standingslope->id);
 #endif
+	if (diff2 & MD2_HUDTIMER)
+		WRITEINT32(save_p, mobj->hudtimer);
+	if (diff2 & MD2_TIMEOUT)
+		WRITEINT32(save_p, mobj->timeout);
+	if (diff2 & MD2_HUDPINCH)
+		WRITEINT32(save_p, mobj->hudpinch);
+	if (diff2 & MD2_SCALED)
+		WRITEUINT8(save_p, mobj->scaled);
+	if (diff2 & MD2_JUSTHURT)
+		WRITEINT32(save_p, mobj->justhurt);
+	if (diff2 & MD2_GROWING)
+		WRITEINT32(save_p, mobj->growing);
+	if (diff2 & MD2_SHRINKING)
+		WRITEINT32(save_p, mobj->shrinking);
+	if (diff2 & MD2_PINCHPHASE)
+		WRITEINT32(save_p, mobj->pinchphase);
 
 	WRITEUINT32(save_p, mobj->mobjnum);
 }
@@ -2317,6 +2358,23 @@ static void LoadMobjThinker(actionf_p1 thinker)
 	if (diff2 & MD2_SLOPE)
 		mobj->standingslope = P_SlopeById(READUINT16(save_p));
 #endif
+	// Okuu variables
+	if (diff2 & MD2_HUDTIMER)
+		mobj->hudtimer = READINT32(save_p);
+	if (diff2 & MD2_TIMEOUT)
+		mobj->timeout = READINT32(save_p);
+	if (diff2 & MD2_HUDPINCH)
+		mobj->hudpinch = READINT32(save_p);
+	if (diff2 & MD2_SCALED)
+		mobj->scaled = READUINT8(save_p);
+	if (diff2 & MD2_JUSTHURT)
+		mobj->justhurt = READINT32(save_p);
+	if (diff2 & MD2_GROWING)
+		mobj->growing = READINT32(save_p);
+	if (diff2 & MD2_SHRINKING)
+		mobj->shrinking = READINT32(save_p);
+	if (diff2 & MD2_PINCHPHASE)
+		mobj->pinchphase = READINT32(save_p);
 
 
 	if (diff & MD_REDFLAG)

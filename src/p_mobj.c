@@ -5900,6 +5900,158 @@ static void P_BossChillThinker(mobj_t *mobj)
 	}
 }
 
+// Sirinate - for entering attacks
+// Used by Okuu
+static void Sirenate(mobj_t *bird, statenum_t state)
+{
+	thinker_t *th;
+	mobj_t *mobj;
+	INT32 i;
+
+	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	{
+		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+			continue;
+
+		mobj = (mobj_t *)th;
+
+		if (mobj->flags & (MF_MISSILE|MF_PAIN))
+			P_SetMobjState(mobj, mobj->info->deathstate);
+	}
+		
+	
+	P_SetMobjState(bird, state);
+	bird->pinchphase += 1;
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (!playeringame[i] || players[i].spectator)
+			continue;
+
+		if (!players[i].mo)
+			continue;
+
+		if (players[i].mo->health <= 0)
+			continue;
+
+		if (players[i].playerstate != PST_LIVE)
+			continue;
+		
+		players[i].mo->hudtimer = 105;
+	}
+		//print("time for phase "+(bird->pinchphase+1)+" baby!")
+	
+	S_StartSound(NULL, sfx_siren);
+	P_SpawnMobj(bird->x, bird->y, bird->z, MT_SUPERRINGBOX);
+}
+
+// Dispelate - for exiting attacks
+// Used by Okuu
+static void Dispelate(mobj_t *bird, statenum_t state)
+{
+	thinker_t *th;
+	mobj_t *mobj;
+	mobj_t *ring;
+
+	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	{
+		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+			continue;
+
+		mobj = (mobj_t *)th;
+
+		if (mobj->type == MT_STARBIG)
+		{	
+			ring = P_SpawnMobj(mobj->x,mobj->y,mobj->z,MT_FLINGRING);
+			P_SetObjectMomZ(ring, -16*FRACUNIT, false);
+			ring->fuse = 5*TICRATE;
+			P_SetMobjState(mobj, mobj->info->deathstate); // apparently P_RemoveMobj ruins everything in this scenario
+			//numremoved = $ + 1
+		}
+	}
+
+	//print("removed "+numremoved+" objects of type "+MT_STARBIG)
+	P_SetMobjState(bird, state);
+	S_StartSound(NULL, sfx_cancel);
+	P_SpawnMobj(bird->x, bird->y, bird->z, MT_SUPERRINGBOX);
+	bird->pinchphase += 1;
+}
+
+static void P_BossBirdThinker(mobj_t *mobj)
+{
+	INT32 i;
+
+	if (mobj->justhurt > 0)
+		mobj->justhurt--;
+
+	if (mobj->justhurt == 0 && mobj->flags2 & MF2_FRET)
+	{
+		mobj->flags2 &= ~MF2_FRET;
+		mobj->flags |= MF_SHOOTABLE;
+	}
+
+	if (mobj->timeout > 0)
+		mobj->timeout--;
+
+	if (mobj->timeout == 1)
+		P_KillMobj(mobj, NULL, NULL);
+	
+	if (((mobj->state >= &states[S_OKUUFLY2] && mobj->state <= &states[S_OKUULAND1]) || (mobj->state >= &states[S_OKUUHOP4SOUND] && mobj->state <= &states[S_OKUUHOP7]))
+		&& leveltime % 4)
+	{
+		mobj_t *fire = P_SpawnMobj(mobj->x, mobj->y, mobj->z, MT_FLAMEJETFLAMEB);
+		P_SetTarget(&fire->target, mobj);
+		P_SetMobjState(fire, S_FLAMEJETFLAMEB3);
+	}
+	if (mobj->health < 21 && mobj->pinchphase == 0)
+		Sirenate(mobj, S_OKUUSPELLCARD1_1);
+	
+	if (mobj->health < 17 && mobj->pinchphase == 1)
+		Dispelate(mobj, S_OKUUHOP1);
+
+	if (mobj->health < 9 && mobj->pinchphase == 2)
+		Sirenate(mobj, S_OKUUSPELLCARD2_1);
+	
+	if (mobj->state == &states[S_OKUUSPELLCARD2_9] || mobj->state == &states[S_OKUUSPELLCARD2_10])
+		P_SpawnGhostMobj(mobj);
+
+	if (mobj->state == &states[S_OKUUSPELLCARD2_9] && mobj->justhurt > 60)
+		P_SetMobjState(mobj, S_OKUUSPELLCARD2_10);
+	
+	if (mobj->health < 2 && mobj->pinchphase == 3)
+	{
+		Sirenate(mobj, S_OKUUSPELLCARD3_1);
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			if (!playeringame[i] || players[i].spectator)
+				continue;
+
+			if (!players[i].mo)
+				continue;
+
+			if (players[i].mo->health <= 0)
+				continue;
+
+			if (players[i].playerstate != PST_LIVE)
+				continue;
+
+			players[i].mo->timeout = (30*TICRATE)+91;
+			players[i].mo->hudpinch = 1;
+		}
+		
+		mobj->timeout = (30*TICRATE)+91;
+	}
+	if (mobj->timeout % 35 == 0 && mobj->timeout > 0 && mobj->timeout <= 1050)
+	{	
+		if (mobj->timeout > 350)
+			S_StartSound(NULL, sfx_heal);
+		else
+			S_StartSound(NULL, sfx_time);
+	}	
+
+	if (mobj->health == 1)
+		mobj->flags &= ~(MF_SHOOTABLE|MF_SPECIAL);
+}
+
 //
 // P_GetClosestAxis
 //
@@ -7190,6 +7342,8 @@ void P_MobjThinker(mobj_t *mobj)
 			case MT_CHILLPENGUIN:
 				P_BossChillThinker(mobj);
 				break;
+			case MT_OKUU:
+				P_BossBirdThinker(mobj);
 			default: // Generic SOC-made boss
 				if (mobj->flags2 & MF2_SKULLFLY)
 					P_SpawnGhostMobj(mobj);
@@ -7639,6 +7793,10 @@ void P_MobjThinker(mobj_t *mobj)
 		case MT_PLAYER:
 			if (mobj->player)
 				P_PlayerMobjThinker(mobj);
+			if (mobj->hudtimer > 0)
+				mobj->hudtimer--;
+			if (mobj->timeout > 0)
+				mobj->timeout--;
 			return;
 		case MT_SKIM:
 			// check mobj against possible water content, before movement code
@@ -8122,6 +8280,37 @@ void P_MobjThinker(mobj_t *mobj)
 				}
 
 				P_TDInstaLaser(mobj->tracer, mobj, MT_CHROME_LASER, MT_EGGMOBILE_FIRE);
+			}
+			break;
+		case MT_STARBIG:
+			if (mobj->growing == 1 && mobj->shrinking == 0 && mobj->scale < 3*FRACUNIT)
+			{
+				mobj->destscale += FRACUNIT/2;
+				P_SetScale(mobj, mobj->destscale);
+			}
+
+			if (mobj->shrinking == 1 && mobj->scale > FRACUNIT/2)
+			{
+				mobj->destscale -= FRACUNIT/32;
+				P_SetScale(mobj, mobj->destscale);
+			}
+
+			if (mobj->scale >= 3*FRACUNIT)
+			{
+				mobj->growing = 2;
+				mobj->shrinking = 1;
+			}
+			if (mobj->scale <= FRACUNIT/2)
+				P_KillMobj(mobj, NULL, NULL);
+
+			break;
+		case MT_STARROTATE:
+		case MT_STARROTATE2:
+			if (!mobj->scaled)
+			{	
+				mobj->destscale = 12*FRACUNIT/5;
+				P_SetScale(mobj, mobj->destscale);
+				mobj->scaled = true;
 			}
 			break;
 		case MT_SPINFIRE:
@@ -8646,6 +8835,14 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 	mobj->destscale = mobj->scale;
 	mobj->scalespeed = FRACUNIT/12;
 
+	// stupid okuu stuff
+	mobj->timeout = 0;
+	mobj->scaled = false;
+	mobj->justhurt = 0;
+	mobj->pinchphase = 0;
+	mobj->hudpinch = 0;
+	mobj->hudtimer = 0;
+
 	// TODO: Make this a special map header
 	if ((maptol & TOL_ERZ3) && !(mobj->type == MT_BLACKEGGMAN))
 		mobj->destscale = FRACUNIT/2;
@@ -8819,6 +9016,15 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			break;
 		case MT_ZAPSPREADTRAIL:
 			mobj->fuse = 12;
+			break;
+		case MT_PLAYER:
+			mobj->timeout = 0;
+			mobj->hudpinch = 0;
+			mobj->hudtimer = 0;
+			break;
+		case MT_STARBIG:
+			mobj->growing = 1;
+			mobj->shrinking = 0;
 			break;
 		default:
 			break;

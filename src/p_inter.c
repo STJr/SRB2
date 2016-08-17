@@ -2200,6 +2200,22 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source)
 	if (LUAh_MobjDeath(target, inflictor, source) || P_MobjWasRemoved(target))
 		return;
 #endif
+	if (target->type == MT_OKUU)
+	{
+		thinker_t *th;
+		mobj_t *mobj;
+
+		for (th = thinkercap.next; th != &thinkercap; th = th->next)
+		{
+			if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+				continue;
+
+			mobj = (mobj_t *)th;
+
+			if ((mobj->flags & MF_MISSILE || mobj->flags & MF_PAIN) || mobj->type == MT_HELPER)
+				P_SetMobjState(mobj, mobj->info->deathstate);
+		}
+	}
 
 	// Let EVERYONE know what happened to a player! 01-29-2002 Tails
 	if (target->player && !target->player->spectator)
@@ -3251,6 +3267,23 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 		if (LUAh_MobjDamage(target, inflictor, source, damage) || P_MobjWasRemoved(target))
 			return true;
 #endif
+		if (target->type == MT_OKUU)
+		{
+			target->health--;
+			if (target->health < 1)
+			{
+				S_StartSound(NULL, mobjinfo[target->type].deathsound);
+				P_KillMobj(target, NULL, NULL);
+			}
+			else
+			{
+				S_StartSound(NULL, mobjinfo[target->type].painsound);
+				target->justhurt = 70;
+				target->flags2 |= MF2_FRET;
+				target->flags &= ~MF_SHOOTABLE;
+			}
+			return true;
+		}
 
 		if (target->health > 1)
 			target->flags2 |= MF2_FRET;
