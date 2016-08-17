@@ -1266,6 +1266,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		gyt = -FixedMul(tr_y, viewsin);
 		tz = gxt-gyt;
 		yscale1 = FixedDiv(projectiony, tz);
+		if (yscale1 < 64) return; // Fix some funky visuals
 
 		offset += spritecachedinfo[lump].width;
 		tr_x = thing->x + FixedMul(offset, FINECOSINE(thing->angle>>ANGLETOFINESHIFT)) - viewx;
@@ -1274,6 +1275,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		gyt = -FixedMul(tr_y, viewsin);
 		tz = gxt-gyt;
 		yscale2 = FixedDiv(projectiony, tz);
+		if (yscale2 < 64) return; // Fix some funky visuals
 
 		if (ang >= ANGLE_180)
 		{
@@ -1287,8 +1289,8 @@ static void R_ProjectSprite(mobj_t *thing)
 		else
 			range = 1;
 		scalestep = (yscale2 - yscale1)/range;
-		yscale = yscale1;
 		//this_scale = FixedMul(this_scale, FixedDiv(yscale, yscale1));
+		yscale = yscale1;
 	}
 
 	xscale = FixedMul(xscale, ang_scale);
