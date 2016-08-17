@@ -471,6 +471,10 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"chilht", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"chilic", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"winds",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
+  {"intbon", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
+  {"int2nd", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
+  {"int1st", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
+  {"intwin", false,  64,  0, -1, NULL, 0, SKSINTWIN,  -1, LUMPERROR},
   {"card",   false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"dsssb1", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"dsssb2", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
@@ -491,10 +495,6 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"wetrv3", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"wetrv4", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"wetrv5", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
-  {"intbon", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
-  {"int2nd", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
-  {"int1st", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
-  {"intwin", false,  64,  0, -1, NULL, 0, SKSINTWIN,  -1, LUMPERROR},
 
   // skin sounds free slots to add sounds at run time (Boris HACK!!!)
   // initialized to NULL
