@@ -1119,7 +1119,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	fixed_t iscale;
 	fixed_t scalestep; // toast '16
 	fixed_t offset, offset2;
-	boolean flatsprite = true; //(thing->flags2 & MF2_PAPER);
+	boolean flatsprite = (thing->flags & MF_PAPER);
 
 	//SoM: 3/17/2000
 	fixed_t gz, gzt;

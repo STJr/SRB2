@@ -6691,7 +6691,7 @@ static const char *const MOBJFLAG_LIST[] = {
 	"SHOOTABLE",
 	"NOSECTOR",
 	"NOBLOCKMAP",
-	"AMBUSH",
+	"PAPER",
 	"PUSHABLE",
 	"BOSS",
 	"SPAWNCEILING",
@@ -6748,6 +6748,7 @@ static const char *const MOBJFLAG2_LIST[] = {
 	"BOSSNOTRAP",	// No Egg Trap after boss
 	"BOSSFLEE",		// Boss is fleeing!
 	"BOSSDEAD",		// Boss is dead! (Not necessarily fleeing, if a fleeing point doesn't exist.)
+	"AMBUSH",       // Alternate behaviour typically set by MTF_AMBUSH
 	NULL
 };
 
