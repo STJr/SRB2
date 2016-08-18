@@ -18,7 +18,7 @@ enum hud {
 	hud_time,
 	hud_rings,
 	hud_lives,
-	// Match
+	// Match / CTF / Tag / Ringslinger
 	hud_weaponrings,
 	hud_powerstones,
 	// NiGHTS mode
