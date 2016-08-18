@@ -1232,11 +1232,28 @@ static boolean PIT_CheckLine(line_t *ld)
 
 	if (tmthing->flags & MF_PAPER) // Caution! Turning whilst up against a wall will get you stuck. You probably shouldn't give the player this flag.
 	{
-		fixed_t cosradius = FixedMul(tmthing->radius, FINECOSINE(tmthing->angle>>ANGLETOFINESHIFT));
-		fixed_t sinradius = FixedMul(tmthing->radius, FINESINE(tmthing->angle>>ANGLETOFINESHIFT));
+		fixed_t cosradius, sinradius;
+		cosradius = FixedMul(tmthing->radius, FINECOSINE(tmthing->angle>>ANGLETOFINESHIFT));
+		sinradius = FixedMul(tmthing->radius, FINESINE(tmthing->angle>>ANGLETOFINESHIFT));
 		if (P_PointOnLineSide(tmx - cosradius, tmy - sinradius, ld)
 		== P_PointOnLineSide(tmx + cosradius, tmy + sinradius, ld))
 			return true; // the line doesn't cross between collider's start or end
+#ifdef PAPER_COLLISIONCORRECTION
+		{
+			fixed_t dist;
+			vertex_t result;
+			angle_t langle;
+			P_ClosestPointOnLine(tmx, tmy, ld, &result);
+			langle = R_PointToAngle2(ld->v1->x, ld->v1->y, ld->v2->x, ld->v2->y);
+			langle += ANGLE_90*(P_PointOnLineSide(tmx, tmy, ld) ? -1 : 1);
+			dist = abs(FixedMul(tmthing->radius, FINECOSINE((tmthing->angle - langle)>>ANGLETOFINESHIFT)));
+			cosradius = FixedMul(dist, FINECOSINE(langle>>ANGLETOFINESHIFT));
+			sinradius = FixedMul(dist, FINESINE(langle>>ANGLETOFINESHIFT));
+			tmthing->flags |= MF_NOCLIP;
+			P_TeleportMove(tmthing, result.x + cosradius - tmthing->momx, result.y + sinradius - tmthing->momy, tmthing->z);
+			tmthing->flags &= ~MF_NOCLIP;
+		}
+#endif
 	}
 
 	// A line has been hit
