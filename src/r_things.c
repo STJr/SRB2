@@ -1258,7 +1258,7 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	if (flatsprite)
 	{
-		fixed_t yscale2;
+		fixed_t yscale2, cosmul, sinmul;
 		INT32 range;
 
 		if (ang >= ANGLE_180)
@@ -1266,23 +1266,25 @@ static void R_ProjectSprite(mobj_t *thing)
 			offset *= -1;
 			offset2 *= -1;
 		}
-		offset2 += offset;
 
-		tr_x = thing->x + FixedMul(offset, FINECOSINE(thing->angle>>ANGLETOFINESHIFT)) - viewx;
-		tr_y = thing->y + FixedMul(offset, FINESINE(thing->angle>>ANGLETOFINESHIFT)) - viewy;
+		cosmul = FINECOSINE(thing->angle>>ANGLETOFINESHIFT);
+		sinmul = FINESINE(thing->angle>>ANGLETOFINESHIFT);
+
+		tr_x += FixedMul(offset, cosmul);
+		tr_y += FixedMul(offset, sinmul);
 		gxt = FixedMul(tr_x, viewcos);
 		gyt = -FixedMul(tr_y, viewsin);
 		tz = gxt-gyt;
 		yscale = FixedDiv(projectiony, tz);
 		if (yscale < 64) return; // Fix some funky visuals
 
-		tr_x = thing->x + FixedMul(offset2, FINECOSINE(thing->angle>>ANGLETOFINESHIFT)) - viewx;
-		tr_y = thing->y + FixedMul(offset2, FINESINE(thing->angle>>ANGLETOFINESHIFT)) - viewy;
+		tr_x += FixedMul(offset2, cosmul);
+		tr_y += FixedMul(offset2, sinmul);
 		gxt = FixedMul(tr_x, viewcos);
 		gyt = -FixedMul(tr_y, viewsin);
 		tz = gxt-gyt;
 		yscale2 = FixedDiv(projectiony, tz);
-		if (yscale2 < 64) return; // Fix some funky visuals
+		if (yscale2 < 64) return; // ditto
 
 		if (x2 > x1)
 			range = (x2 - x1);
