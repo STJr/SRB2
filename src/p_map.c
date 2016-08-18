@@ -498,7 +498,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	if (abs(thing->x - tmx) >= blockdist || abs(thing->y - tmy) >= blockdist)
 		return true; // didn't hit it
 
-	if (thing->flags & MF_PAPER)
+	if (thing->flags & MF_PAPER) // CAUTION! Very easy to get stuck inside MF_SOLID objects. Giving the player MF_PAPER is a bad idea unless you know what you're doing.
 	{
 		fixed_t cosradius, sinradius;
 		vertex_t v1, v2; // fake vertexes
@@ -517,12 +517,16 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		junk.dx = v2.x - v1.x;
 		junk.dy = v2.y - v1.y;
 
-		if (tmthing->flags & MF_PAPER)
+		if (tmthing->flags & MF_PAPER) // more strenuous checking to prevent clipping issues
 		{
+			INT32 check1, check2, check3, check4;
 			cosradius = FixedMul(tmthing->radius, FINECOSINE(tmthing->angle>>ANGLETOFINESHIFT));
 			sinradius = FixedMul(tmthing->radius, FINESINE(tmthing->angle>>ANGLETOFINESHIFT));
-			if (P_PointOnLineSide(tmx - cosradius, tmy - sinradius, &junk)
-			== P_PointOnLineSide(tmx + cosradius, tmy + sinradius, &junk))
+			check1 = P_PointOnLineSide(tmx - cosradius, tmy - sinradius, &junk);
+			check2 = P_PointOnLineSide(tmx + cosradius, tmy + sinradius, &junk);
+			check3 = P_PointOnLineSide(tmx + tmthing->momx - cosradius, tmy + tmthing->momy - sinradius, &junk);
+			check4 = P_PointOnLineSide(tmx + tmthing->momx + cosradius, tmy + tmthing->momy + sinradius, &junk);
+			if ((check1 == check2) && (check2 == check3) && (check3 == check4))
 				return true; // the line doesn't cross between collider's start or end
 		}
 		else
@@ -1225,6 +1229,15 @@ static boolean PIT_CheckLine(line_t *ld)
 
 	if (P_BoxOnLineSide(tmbbox, ld) != -1)
 		return true;
+
+	if (tmthing->flags & MF_PAPER) // Caution! Turning whilst up against a wall will get you stuck. You probably shouldn't give the player this flag.
+	{
+		fixed_t cosradius = FixedMul(tmthing->radius, FINECOSINE(tmthing->angle>>ANGLETOFINESHIFT));
+		fixed_t sinradius = FixedMul(tmthing->radius, FINESINE(tmthing->angle>>ANGLETOFINESHIFT));
+		if (P_PointOnLineSide(tmx - cosradius, tmy - sinradius, ld)
+		== P_PointOnLineSide(tmx + cosradius, tmy + sinradius, ld))
+			return true; // the line doesn't cross between collider's start or end
+	}
 
 	// A line has been hit
 
