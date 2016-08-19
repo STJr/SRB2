@@ -1152,7 +1152,7 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	// aspect ratio stuff
 	xscale = FixedDiv(projection, tz);
-	yscale = FixedDiv(projectiony, tz);
+	sortscale = FixedDiv(projectiony, tz);
 
 	// decide which patch to use for sprite relative to player
 #ifdef RANGECHECK
@@ -1293,12 +1293,13 @@ static void R_ProjectSprite(mobj_t *thing)
 
 		scalestep = (yscale2 - yscale)/range;
 
-		sortscale = max(yscale, yscale2);
+		//sortscale = yscale + scalestep*((centerxfrac>>FRACBITS) - x1);
+		//sortscale = max(yscale, yscale2);
 	}
 	else
 	{
 		scalestep = 0;
-		sortscale = yscale;
+		yscale = sortscale;
 	}
 
 	xscale = FixedMul(xscale, ang_scale);
@@ -1412,8 +1413,8 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	vis->xscale = xscale; //SoM: 4/17/2000
 	vis->sector = thing->subsector->sector;
-	vis->szt = (INT16)((centeryfrac - FixedMul(vis->gzt - viewz, yscale))>>FRACBITS);
-	vis->sz = (INT16)((centeryfrac - FixedMul(vis->gz - viewz, yscale))>>FRACBITS);
+	vis->szt = (INT16)((centeryfrac - FixedMul(vis->gzt - viewz, sortscale))>>FRACBITS);
+	vis->sz = (INT16)((centeryfrac - FixedMul(vis->gz - viewz, sortscale))>>FRACBITS);
 	vis->cut = SC_NONE;
 	if (thing->subsector->sector->numlights)
 		vis->extra_colormap = thing->subsector->sector->lightlist[light].extra_colormap;
@@ -1596,7 +1597,7 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 
 	// store information in a vissprite
 	vis = R_NewVisSprite();
-	vis->scale = yscale; //<<detailshift;
+	vis->scale = vis->sortscale = yscale; //<<detailshift;
 	vis->dispoffset = 0; // Monster Iestyn: 23/11/15
 	vis->gx = thing->x;
 	vis->gy = thing->y;
