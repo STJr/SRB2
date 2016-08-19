@@ -1152,7 +1152,7 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	// aspect ratio stuff
 	xscale = FixedDiv(projection, tz);
-	sortscale = FixedDiv(projectiony, tz);
+	yscale = FixedDiv(projectiony, tz);
 
 	// decide which patch to use for sprite relative to player
 #ifdef RANGECHECK
@@ -1292,11 +1292,13 @@ static void R_ProjectSprite(mobj_t *thing)
 			range = 1;
 
 		scalestep = (yscale2 - yscale)/range;
+
+		sortscale = max(yscale, yscale2);
 	}
 	else
 	{
-		yscale = sortscale;
 		scalestep = 0;
+		sortscale = yscale;
 	}
 
 	xscale = FixedMul(xscale, ang_scale);
