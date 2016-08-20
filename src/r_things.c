@@ -817,7 +817,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	dc_colormap = vis->colormap;
 	if ((vis->mobj->flags & MF_BOSS) && (vis->mobj->flags2 & MF2_FRET) && (leveltime & 1)) // Bosses "flash"
 	{
-		// translate green skin to another color
+		// translate certain pixels to white
 		colfunc = transcolfunc;
 		if (vis->mobj->type == MT_CYBRAKDEMON)
 			dc_translation = R_GetTranslationColormap(TC_ALLWHITE, 0, GTC_CACHE);
@@ -873,13 +873,10 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	if (!dc_colormap)
 		dc_colormap = colormaps;
 
-	dc_iscale = FixedDiv(FRACUNIT, vis->scale);
 	dc_texturemid = vis->texturemid;
 	dc_texheight = 0;
 
 	frac = vis->startfrac;
-	spryscale = vis->scale;
-	sprtopscreen = centeryfrac - FixedMul(dc_texturemid, spryscale);
 	windowtop = windowbottom = sprbotscreen = INT32_MAX;
 
 	if (vis->mobj->skin && ((skin_t *)vis->mobj->skin)->flags & SF_HIRES)
@@ -892,28 +889,28 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		{
 			vis->scale = FixedMul(vis->scale, this_scale);
 			vis->scalestep = FixedMul(vis->scalestep, this_scale);
-			spryscale = vis->scale;
-			dc_iscale = FixedDiv(FRACUNIT, vis->scale);
 			vis->xiscale = FixedDiv(vis->xiscale,this_scale);
 			vis->isScaled = true;
 		}
 		dc_texturemid = FixedDiv(dc_texturemid,this_scale);
+	}
 
-		//Oh lordy, mercy me. Don't freak out if sprites go offscreen!
-		/*if (vis->xiscale > 0)
-			frac = FixedDiv(frac, this_scale);
-		else if (vis->x1 <= 0)
-			frac = (vis->x1 - vis->x2) * vis->xiscale;*/
+	spryscale = vis->scale;
 
+	if (!(vis->scalestep))
+	{
 		sprtopscreen = centeryfrac - FixedMul(dc_texturemid, spryscale);
-		//dc_hires = 1;
+		dc_iscale = FixedDiv(FRACUNIT, vis->scale);
 	}
 
 	x1 = vis->x1;
 	x2 = vis->x2;
 
 	if (vis->x1 < 0)
+	{
+		spryscale += vis->scalestep*(-vis->x1);
 		vis->x1 = 0;
+	}
 
 	if (vis->x2 >= vid.width)
 		vis->x2 = vid.width-1;
@@ -1146,7 +1143,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	tz = gxt-gyt;
 
 	// thing is behind view plane?
-	if (tz < FixedMul(MINZ, this_scale))
+	if (!(flatsprite) && (tz < FixedMul(MINZ, this_scale))) // flatsprite clipping is handled later
 		return;
 
 	gxt = -FixedMul(tr_x, viewsin);
@@ -1265,7 +1262,7 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	if (flatsprite)
 	{
-		fixed_t yscale2, cosmul, sinmul;
+		fixed_t yscale2, cosmul, sinmul, tz2;
 		INT32 range;
 
 		if (ang >= ANGLE_180)
@@ -1289,9 +1286,12 @@ static void R_ProjectSprite(mobj_t *thing)
 		tr_y += FixedMul(offset2, sinmul);
 		gxt = FixedMul(tr_x, viewcos);
 		gyt = -FixedMul(tr_y, viewsin);
-		tz = gxt-gyt;
-		yscale2 = FixedDiv(projectiony, tz);
+		tz2 = gxt-gyt;
+		yscale2 = FixedDiv(projectiony, tz2);
 		if (yscale2 < 64) return; // ditto
+
+		if (max(tz, tz2) < FixedMul(MINZ, this_scale)) // non-flatsprite clipping is handled earlier
+			return;
 
 		if (x2 > x1)
 			range = (x2 - x1);
@@ -1300,8 +1300,9 @@ static void R_ProjectSprite(mobj_t *thing)
 
 		scalestep = (yscale2 - yscale)/range;
 
-		//sortscale = yscale + scalestep*((centerxfrac>>FRACBITS) - x1);
-		//sortscale = max(yscale, yscale2);
+		// The following two are alternate sorting methods which might be more applicable in some circumstances. TODO - maybe enable via MF2?
+		// sortscale = max(yscale, yscale2);
+		// sortscale = min(yscale, yscale2);
 	}
 	else
 	{
