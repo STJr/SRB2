@@ -1123,7 +1123,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	fixed_t iscale;
 	fixed_t scalestep; // toast '16
 	fixed_t offset, offset2;
-	boolean flatsprite = (thing->flags & MF_PAPER);
+	boolean papersprite = (thing->frame & FF_PAPERSPRITE);
 
 	//SoM: 3/17/2000
 	fixed_t gz, gzt;
@@ -1143,7 +1143,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	tz = gxt-gyt;
 
 	// thing is behind view plane?
-	if (!(flatsprite) && (tz < FixedMul(MINZ, this_scale))) // flatsprite clipping is handled later
+	if (!(papersprite) && (tz < FixedMul(MINZ, this_scale))) // papersprite clipping is handled later
 		return;
 
 	gxt = -FixedMul(tr_x, viewsin);
@@ -1203,10 +1203,10 @@ static void R_ProjectSprite(mobj_t *thing)
 		I_Error("R_ProjectSprite: sprframes NULL for sprite %d\n", thing->sprite);
 #endif
 
-	if (sprframe->rotate != SRF_SINGLE || flatsprite)
+	if (sprframe->rotate != SRF_SINGLE || papersprite)
 	{
 		ang = R_PointToAngle (thing->x, thing->y) - thing->angle;
-		if (flatsprite)
+		if (papersprite)
 			ang_scale = abs(FINESINE(ang>>ANGLETOFINESHIFT));
 	}
 
@@ -1260,7 +1260,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (x2 < 0)
 		return;
 
-	if (flatsprite)
+	if (papersprite)
 	{
 		fixed_t yscale2, cosmul, sinmul, tz2;
 		INT32 range;
@@ -1290,7 +1290,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		yscale2 = FixedDiv(projectiony, tz2);
 		if (yscale2 < 64) return; // ditto
 
-		if (max(tz, tz2) < FixedMul(MINZ, this_scale)) // non-flatsprite clipping is handled earlier
+		if (max(tz, tz2) < FixedMul(MINZ, this_scale)) // non-papersprite clipping is handled earlier
 			return;
 
 		if (x2 > x1)

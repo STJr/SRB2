@@ -498,7 +498,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	if (abs(thing->x - tmx) >= blockdist || abs(thing->y - tmy) >= blockdist)
 		return true; // didn't hit it
 
-	if (thing->flags & MF_PAPER) // CAUTION! Very easy to get stuck inside MF_SOLID objects. Giving the player MF_PAPER is a bad idea unless you know what you're doing.
+	if (thing->flags & MF_PAPERCOLLISION) // CAUTION! Very easy to get stuck inside MF_SOLID objects. Giving the player MF_PAPERCOLLISION is a bad idea unless you know what you're doing.
 	{
 		fixed_t cosradius, sinradius;
 		vertex_t v1, v2; // fake vertexes
@@ -517,7 +517,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		junk.dx = v2.x - v1.x;
 		junk.dy = v2.y - v1.y;
 
-		if (tmthing->flags & MF_PAPER) // more strenuous checking to prevent clipping issues
+		if (tmthing->flags & MF_PAPERCOLLISION) // more strenuous checking to prevent clipping issues
 		{
 			INT32 check1, check2, check3, check4;
 			cosradius = FixedMul(tmthing->radius, FINECOSINE(tmthing->angle>>ANGLETOFINESHIFT));
@@ -538,7 +538,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				return true; // the line doesn't cross between either pair of opposite corners
 		}
 	}
-	else if (tmthing->flags & MF_PAPER)
+	else if (tmthing->flags & MF_PAPERCOLLISION)
 	{
 		fixed_t cosradius, sinradius;
 		vertex_t v1, v2; // fake vertexes
@@ -557,7 +557,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		junk.dx = v2.x - v1.x;
 		junk.dy = v2.y - v1.y;
 
-		// no need to check whether thing has MF_PAPER, since checked above
+		// no need to check whether thing has MF_PAPERCOLLISION, since checked above
 
 		if ((P_PointOnLineSide(thing->x - thing->radius, thing->y - thing->radius, &junk)
 		== P_PointOnLineSide(thing->x + thing->radius, thing->y + thing->radius, &junk))
@@ -1230,7 +1230,7 @@ static boolean PIT_CheckLine(line_t *ld)
 	if (P_BoxOnLineSide(tmbbox, ld) != -1)
 		return true;
 
-	if (tmthing->flags & MF_PAPER) // Caution! Turning whilst up against a wall will get you stuck. You probably shouldn't give the player this flag.
+	if (tmthing->flags & MF_PAPERCOLLISION) // Caution! Turning whilst up against a wall will get you stuck. You probably shouldn't give the player this flag.
 	{
 		fixed_t cosradius, sinradius;
 		cosradius = FixedMul(tmthing->radius, FINECOSINE(tmthing->angle>>ANGLETOFINESHIFT));

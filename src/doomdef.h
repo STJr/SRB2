@@ -498,7 +498,7 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 /// \note	You should leave this enabled unless you're working with a future SRB2 version.
 #define MUSICSLOT_COMPATIBILITY
 
-/// Experimental attempts at preventing MF_PAPER objects from getting stuck in walls.
+/// Experimental attempts at preventing MF_PAPERCOLLISION objects from getting stuck in walls.
 //#define PAPER_COLLISIONCORRECTION
 
 #endif // __DOOMDEF__

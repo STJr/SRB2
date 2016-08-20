@@ -107,8 +107,8 @@ typedef enum
 	MF_NOSECTOR         = 1<<3,
 	// Don't use the blocklinks (inert but displayable)
 	MF_NOBLOCKMAP       = 1<<4,
-	// Paper-thin. Drawn like a midtexture, has a flat collision bound.
-	MF_PAPER            = 1<<5,
+	// Thin, paper-like collision bound (for visual equivalent, see FF_PAPERSPRITE)
+	MF_PAPERCOLLISION            = 1<<5,
 	// You can push this object. It can activate switches and things by pushing it on top.
 	MF_PUSHABLE         = 1<<6,
 	// Object is a boss.
