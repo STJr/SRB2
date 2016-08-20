@@ -1962,7 +1962,7 @@ static void R_CreateDrawNodes(void)
 
 				for (i = x1; i <= x2; i++)
 				{
-					if (r2->seg->frontscale[i] > rover->scale)
+					if (r2->seg->frontscale[i] > rover->sortscale)
 						break;
 				}
 				if (i > x2)
@@ -1981,10 +1981,10 @@ static void R_CreateDrawNodes(void)
 					continue;
 
 				scale = r2->thickseg->scale1 > r2->thickseg->scale2 ? r2->thickseg->scale1 : r2->thickseg->scale2;
-				if (scale <= rover->scale)
+				if (scale <= rover->sortscale)
 					continue;
 				scale = r2->thickseg->scale1 + (r2->thickseg->scalestep * (sintersect - r2->thickseg->x1));
-				if (scale <= rover->scale)
+				if (scale <= rover->sortscale)
 					continue;
 
 #ifdef ESLOPE
@@ -2034,11 +2034,11 @@ static void R_CreateDrawNodes(void)
 					continue;
 
 				scale = r2->seg->scale1 > r2->seg->scale2 ? r2->seg->scale1 : r2->seg->scale2;
-				if (scale <= rover->scale)
+				if (scale <= rover->sortscale)
 					continue;
 				scale = r2->seg->scale1 + (r2->seg->scalestep * (sintersect - r2->seg->x1));
 
-				if (rover->scale < scale)
+				if (rover->sortscale < scale)
 				{
 					entry = R_CreateDrawNode(NULL);
 					(entry->prev = r2->prev)->next = entry;
@@ -2054,8 +2054,8 @@ static void R_CreateDrawNodes(void)
 				if (r2->sprite->szt > rover->sz || r2->sprite->sz < rover->szt)
 					continue;
 
-				if (r2->sprite->sortscale > rover->scale
-				 || (r2->sprite->sortscale == rover->scale && r2->sprite->dispoffset > rover->dispoffset))
+				if (r2->sprite->sortscale > rover->sortscale
+				 || (r2->sprite->sortscale == rover->sortscale && r2->sprite->dispoffset > rover->dispoffset))
 				{
 					entry = R_CreateDrawNode(NULL);
 					(entry->prev = r2->prev)->next = entry;
