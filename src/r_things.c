@@ -806,6 +806,13 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	if (overflow_test < 0) overflow_test = -overflow_test;
 	if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) return; // fixed point mult would overflow
 
+	if (vis->scalestep) // handles right edge too
+	{
+		overflow_test = (INT64)centeryfrac - (((INT64)vis->texturemid*(vis->scale + (vis->scalestep*(vis->x2 - vis->x1))))>>FRACBITS);
+		if (overflow_test < 0) overflow_test = -overflow_test;
+		if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) return; // ditto
+	}
+
 	colfunc = basecolfunc; // hack: this isn't resetting properly somewhere.
 	dc_colormap = vis->colormap;
 	if ((vis->mobj->flags & MF_BOSS) && (vis->mobj->flags2 & MF2_FRET) && (leveltime & 1)) // Bosses "flash"
@@ -1607,6 +1614,7 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	vis->pz = thing->z;
 	vis->pzt = vis->pz + vis->thingheight;
 	vis->texturemid = vis->gzt - viewz;
+	vis->scalestep = 0;
 
 	vis->x1 = x1 < 0 ? 0 : x1;
 	vis->x2 = x2 >= viewwidth ? viewwidth-1 : x2;
