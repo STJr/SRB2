@@ -1124,12 +1124,12 @@ state_t states[NUMSTATES] =
 	{SPR_SPIK, 7, 1, {A_RotateSpikeBall}, 0, 0, S_SPIKEBALL1}, // S_SPIKEBALL8
 
 	// Elemental Shield's Spawn
-	{SPR_SFLM, FF_FULLBRIGHT,   2, {NULL},      0,         0, S_SPINFIRE2}, // S_SPINFIRE1
-	{SPR_SFLM, FF_FULLBRIGHT|1, 2, {NULL},      0,         0, S_SPINFIRE3}, // S_SPINFIRE2
-	{SPR_SFLM, FF_FULLBRIGHT|2, 2, {NULL},      0,         0, S_SPINFIRE4}, // S_SPINFIRE3
-	{SPR_SFLM, FF_FULLBRIGHT|3, 2, {NULL},      0,         0, S_SPINFIRE5}, // S_SPINFIRE4
-	{SPR_SFLM, FF_FULLBRIGHT|4, 2, {NULL},      0,         0, S_SPINFIRE6}, // S_SPINFIRE5
-	{SPR_SFLM, FF_FULLBRIGHT|5, 2, {NULL},      0,         0, S_SPINFIRE1}, // S_SPINFIRE6
+	{SPR_SFLM, FF_FULLBRIGHT,   2, {NULL}, 0, 0, S_SPINFIRE2}, // S_SPINFIRE1
+	{SPR_SFLM, FF_FULLBRIGHT|1, 2, {NULL}, 0, 0, S_SPINFIRE3}, // S_SPINFIRE2
+	{SPR_SFLM, FF_FULLBRIGHT|2, 2, {NULL}, 0, 0, S_SPINFIRE4}, // S_SPINFIRE3
+	{SPR_SFLM, FF_FULLBRIGHT|3, 2, {NULL}, 0, 0, S_SPINFIRE5}, // S_SPINFIRE4
+	{SPR_SFLM, FF_FULLBRIGHT|4, 2, {NULL}, 0, 0, S_SPINFIRE6}, // S_SPINFIRE5
+	{SPR_SFLM, FF_FULLBRIGHT|5, 2, {NULL}, 0, 0, S_SPINFIRE1}, // S_SPINFIRE6
 
 	// Floor Spike
 	{SPR_USPK, 0,-1, {A_SpikeRetract}, 1, 0, S_SPIKE2}, // S_SPIKE1 -- Fully extended
@@ -5415,7 +5415,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		100,            // mass
 		1,              // damage
 		sfx_None,       // activesound
-		MF_NOBLOCKMAP|MF_MISSILE|MF_NOGRAVITY|MF_FIRE|MF_RUNSPAWNFUNC, // flags
+		MF_NOBLOCKMAP|MF_MISSILE|MF_NOGRAVITY|MF_FIRE, // flags
 		S_NULL          // raisestate
 	},
 
