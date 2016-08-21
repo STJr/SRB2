@@ -6224,9 +6224,11 @@ void P_ElementalFire(player_t *player, boolean cropcircle)
 #define numangles 8
 		for (i = 0; i < numangles; i++)
 		{
-			flame = P_SpawnMobj(player->mo->x, player->mo->y, ground, MT_AIRSPINFIRE);
+			flame = P_SpawnMobj(player->mo->x, player->mo->y, ground, MT_SPINFIRE);
+			flame->flags &= ~MF_NOGRAVITY;
 			P_SetTarget(&flame->target, player->mo);
 			flame->angle = travelangle + i*(ANGLE_MAX/numangles);
+			flame->fuse = TICRATE*7; // takes about an extra second to hit the ground
 			flame->destscale = player->mo->scale;
 			P_SetScale(flame, player->mo->scale);
 			flame->eflags = (flame->eflags & ~MFE_VERTICALFLIP)|(player->mo->eflags & MFE_VERTICALFLIP);
@@ -6255,7 +6257,7 @@ void P_ElementalFire(player_t *player, boolean cropcircle)
 			flame = P_SpawnMobj(newx, newy, ground, MT_SPINFIRE);
 			P_SetTarget(&flame->target, player->mo);
 			flame->angle = travelangle;
-			// flame->fuse = TICRATE*6; // now done in spawnstate
+			flame->fuse = TICRATE*6;
 			flame->destscale = player->mo->scale;
 			P_SetScale(flame, player->mo->scale);
 			flame->eflags = (flame->eflags & ~MFE_VERTICALFLIP)|(player->mo->eflags & MFE_VERTICALFLIP);

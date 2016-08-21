@@ -4783,22 +4783,12 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SPIKEBALL8",
 
 	// Elemental Shield's Spawn
-	"S_SPINFIRE0",
 	"S_SPINFIRE1",
 	"S_SPINFIRE2",
 	"S_SPINFIRE3",
 	"S_SPINFIRE4",
 	"S_SPINFIRE5",
 	"S_SPINFIRE6",
-
-	// Elemental Shield's FLYING Spawn
-	"S_AIRSPINFIRE_FLY1",
-	"S_AIRSPINFIRE_FLY2",
-	"S_AIRSPINFIRE_FLY3",
-	"S_AIRSPINFIRE_FLY4",
-	"S_AIRSPINFIRE_FLY5",
-	"S_AIRSPINFIRE_FLY6",
-	"S_AIRSPINFIRE_DIE",
 
 	// Spikes
 	"S_SPIKE1",

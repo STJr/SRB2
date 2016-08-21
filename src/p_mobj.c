@@ -2377,6 +2377,19 @@ static boolean P_ZMovement(mobj_t *mo)
 				mo->flags |= MF_NOGRAVITY;
 			}
 			break;
+		case MT_SPINFIRE:
+			if (P_CheckDeathPitCollide(mo))
+			{
+				P_RemoveMobj(mo);
+				return false;
+			}
+			if (mo->z <= mo->floorz && mo->momz)
+			{
+				mo->flags |= MF_NOGRAVITY;
+				mo->momx = mo->momy = mo->momz = 0;
+				mo->z = mo->floorz;
+			}
+			break;
 		case MT_GOOP:
 			if (P_CheckDeathPitCollide(mo))
 			{
@@ -7338,10 +7351,13 @@ void P_MobjThinker(mobj_t *mobj)
 #endif
 			break;
 		case MT_SPINFIRE:
-			if (mobj->eflags & MFE_VERTICALFLIP)
-				mobj->z = mobj->ceilingz - mobj->height;
-			else
-				mobj->z = mobj->floorz;
+			if (mobj->flags & MF_NOGRAVITY)
+			{
+				if (mobj->eflags & MFE_VERTICALFLIP)
+					mobj->z = mobj->ceilingz - mobj->height;
+				else
+					mobj->z = mobj->floorz;
+			}
 			// THERE IS NO BREAK HERE ON PURPOSE
 		default:
 			// check mobj against possible water content, before movement code

@@ -1124,22 +1124,12 @@ state_t states[NUMSTATES] =
 	{SPR_SPIK, 7, 1, {A_RotateSpikeBall}, 0, 0, S_SPIKEBALL1}, // S_SPIKEBALL8
 
 	// Elemental Shield's Spawn
-	{SPR_SFLM, FF_FULLBRIGHT|5, 2, {A_SetFuse}, 6*TICRATE, 0, S_SPINFIRE1}, // S_SPINFIRE0
 	{SPR_SFLM, FF_FULLBRIGHT,   2, {NULL},      0,         0, S_SPINFIRE2}, // S_SPINFIRE1
 	{SPR_SFLM, FF_FULLBRIGHT|1, 2, {NULL},      0,         0, S_SPINFIRE3}, // S_SPINFIRE2
 	{SPR_SFLM, FF_FULLBRIGHT|2, 2, {NULL},      0,         0, S_SPINFIRE4}, // S_SPINFIRE3
 	{SPR_SFLM, FF_FULLBRIGHT|3, 2, {NULL},      0,         0, S_SPINFIRE5}, // S_SPINFIRE4
 	{SPR_SFLM, FF_FULLBRIGHT|4, 2, {NULL},      0,         0, S_SPINFIRE6}, // S_SPINFIRE5
 	{SPR_SFLM, FF_FULLBRIGHT|5, 2, {NULL},      0,         0, S_SPINFIRE1}, // S_SPINFIRE6
-
-	// Elemental Shield's FLYING Spawn
-	{SPR_SFLM, FF_FULLBRIGHT,   2, {NULL}, 0, 0, S_AIRSPINFIRE_FLY2}, //S_AIRSPINFIRE_FLY1,
-	{SPR_SFLM, FF_FULLBRIGHT|1, 2, {NULL}, 0, 0, S_AIRSPINFIRE_FLY3}, //S_AIRSPINFIRE_FLY2,
-	{SPR_SFLM, FF_FULLBRIGHT|2, 2, {NULL}, 0, 0, S_AIRSPINFIRE_FLY4}, //S_AIRSPINFIRE_FLY3,
-	{SPR_SFLM, FF_FULLBRIGHT|3, 2, {NULL}, 0, 0, S_AIRSPINFIRE_FLY5}, //S_AIRSPINFIRE_FLY4,
-	{SPR_SFLM, FF_FULLBRIGHT|4, 2, {NULL}, 0, 0, S_AIRSPINFIRE_FLY6}, //S_AIRSPINFIRE_FLY5,
-	{SPR_SFLM, FF_FULLBRIGHT|5, 2, {NULL}, 0, 0, S_AIRSPINFIRE_FLY1}, //S_AIRSPINFIRE_FLY6,
-	{SPR_SFLM, FF_FULLBRIGHT,   0, {A_SpawnObjectRelative}, 0, MT_SPINFIRE, S_NULL}, //S_AIRSPINFIRE_DIE,
 
 	// Floor Spike
 	{SPR_USPK, 0,-1, {A_SpikeRetract}, 1, 0, S_SPIKE2}, // S_SPIKE1 -- Fully extended
@@ -5404,7 +5394,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_SPINFIRE
 		-1,             // doomednum
-		S_SPINFIRE0,    // spawnstate
+		S_SPINFIRE1,    // spawnstate
 		1,              // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -5426,33 +5416,6 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		1,              // damage
 		sfx_None,       // activesound
 		MF_NOBLOCKMAP|MF_MISSILE|MF_NOGRAVITY|MF_FIRE|MF_RUNSPAWNFUNC, // flags
-		S_NULL          // raisestate
-	},
-
-	{           // MT_AIRSPINFIRE
-		-1,             // doomednum
-		S_AIRSPINFIRE_FLY1, // spawnstate
-		1000,           // spawnhealth
-		S_NULL,         // seestate
-		sfx_None,       // seesound
-		8,              // reactiontime
-		sfx_None,       // attacksound
-		S_NULL,         // painstate
-		0,              // painchance
-		sfx_None,       // painsound
-		S_NULL,         // meleestate
-		S_NULL,         // missilestate
-		S_AIRSPINFIRE_DIE, // deathstate
-		S_NULL,         // xdeathstate
-		sfx_None,       // deathsound
-		10*FRACUNIT,    // speed
-		8*FRACUNIT,     // radius
-		14*FRACUNIT,    // height
-		0,              // display offset
-		100,            // mass
-		1,              // damage
-		sfx_None,       // activesound
-		MF_NOBLOCKMAP|MF_MISSILE|MF_FIRE, // flags
 		S_NULL          // raisestate
 	},
 
