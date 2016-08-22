@@ -1232,7 +1232,7 @@ void R_Prep3DFloors(sector_t *sector)
 	INT32 count, i, mapnum;
 	sector_t *sec;
 #ifdef ESLOPE
-	pslope_t *bestslope;
+	pslope_t *bestslope = NULL;
 	fixed_t heighttest; // I think it's better to check the Z height at the sector's center
 	                    // than assume unsloped heights are accurate indicators of order in sloped sectors. -Red
 #endif

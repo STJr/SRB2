@@ -4168,7 +4168,7 @@ void P_PlayerFlagBurst(player_t *player, boolean toss)
 	// Flag text
 	{
 		char plname[MAXPLAYERNAME+4];
-		char *flagtext;
+		const char *flagtext;
 		char flagcolor;
 
 		snprintf(plname, sizeof(plname), "%s%s%s",

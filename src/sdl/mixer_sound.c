@@ -126,7 +126,7 @@ void I_ShutdownSound(void)
 #endif
 }
 
-void I_UpdateSound(void)
+FUNCMATH void I_UpdateSound(void)
 {
 }
 
@@ -239,7 +239,7 @@ static Mix_Chunk *ds2chunk(void *stream)
 	}
 
 	// return Mixer Chunk.
-	return Mix_QuickLoad_RAW(sound, (UINT8*)d-sound);
+	return Mix_QuickLoad_RAW(sound, (Uint32)((UINT8*)d-sound));
 }
 
 void *I_GetSfx(sfxinfo_t *sfx)
@@ -464,7 +464,7 @@ static void mix_gme(void *udata, Uint8 *stream, int len)
 }
 #endif
 
-void I_InitMusic(void)
+FUNCMATH void I_InitMusic(void)
 {
 }
 
@@ -647,9 +647,9 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 		const char *key1 = "LOOP";
 		const char *key2 = "POINT=";
 		const char *key3 = "MS=";
-		const UINT8 key1len = strlen(key1);
-		const UINT8 key2len = strlen(key2);
-		const UINT8 key3len = strlen(key3);
+		const size_t key1len = strlen(key1);
+		const size_t key2len = strlen(key2);
+		const size_t key3len = strlen(key3);
 		char *p = data;
 		while ((UINT32)(p - data) < len)
 		{
@@ -668,7 +668,7 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 			else if (!strncmp(p, key3, key3len)) // is it LOOPMS=?
 			{
 				p += key3len; // skip MS=
-				loop_point = atoi(p) / 1000.0L; // LOOPMS works by real time, as miliseconds.
+				loop_point = (float)(atoi(p) / 1000.0L); // LOOPMS works by real time, as miliseconds.
 				// Everything that uses LOOPMS will work perfectly with SDL_Mixer.
 			}
 			// Neither?! Continue searching.
@@ -769,7 +769,7 @@ boolean I_SetSongTrack(int track)
 // MIDI Music
 //
 
-void I_InitMIDIMusic(void)
+FUNCMATH void I_InitMIDIMusic(void)
 {
 }
 

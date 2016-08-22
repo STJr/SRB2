@@ -22,6 +22,7 @@
 #endif
 
 #ifdef HAVE_SDL
+#define _MATH_DEFINES_DEFINED
 
 #include "SDL.h"
 

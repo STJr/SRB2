@@ -33,8 +33,6 @@ extern drawseg_t *drawsegs;
 extern drawseg_t *ds_p;
 extern INT32 doorclosed;
 
-typedef void (*drawfunc_t)(INT32 start, INT32 stop);
-
 // BSP?
 void R_ClearClipSegs(void);
 void R_PortalClearClipSegs(INT32 start, INT32 end);

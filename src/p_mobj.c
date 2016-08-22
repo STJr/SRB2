@@ -891,7 +891,7 @@ fixed_t P_MobjFloorZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t
 		testy += y;
 
 		// If the highest point is in the sector, then we have it easy! Just get the Z at that point
-		if (R_PointInSubsector(testx, testy)->sector == (boundsec ?: sector))
+		if (R_PointInSubsector(testx, testy)->sector == (boundsec ? boundsec : sector))
 			return P_GetZAt(slope, testx, testy);
 
 		// If boundsec is set, we're looking for specials. In that case, iterate over every line in this sector to find the TRUE highest/lowest point
@@ -979,7 +979,7 @@ fixed_t P_MobjCeilingZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed
 		testy += y;
 
 		// If the highest point is in the sector, then we have it easy! Just get the Z at that point
-		if (R_PointInSubsector(testx, testy)->sector == (boundsec ?: sector))
+		if (R_PointInSubsector(testx, testy)->sector == (boundsec ? boundsec : sector))
 			return P_GetZAt(slope, testx, testy);
 
 		// If boundsec is set, we're looking for specials. In that case, iterate over every line in this sector to find the TRUE highest/lowest point
@@ -1068,7 +1068,7 @@ fixed_t P_CameraFloorZ(camera_t *mobj, sector_t *sector, sector_t *boundsec, fix
 		testy += y;
 
 		// If the highest point is in the sector, then we have it easy! Just get the Z at that point
-		if (R_PointInSubsector(testx, testy)->sector == (boundsec ?: sector))
+		if (R_PointInSubsector(testx, testy)->sector == (boundsec ? boundsec : sector))
 			return P_GetZAt(slope, testx, testy);
 
 		// If boundsec is set, we're looking for specials. In that case, iterate over every line in this sector to find the TRUE highest/lowest point
@@ -1156,7 +1156,7 @@ fixed_t P_CameraCeilingZ(camera_t *mobj, sector_t *sector, sector_t *boundsec, f
 		testy += y;
 
 		// If the highest point is in the sector, then we have it easy! Just get the Z at that point
-		if (R_PointInSubsector(testx, testy)->sector == (boundsec ?: sector))
+		if (R_PointInSubsector(testx, testy)->sector == (boundsec ? boundsec : sector))
 			return P_GetZAt(slope, testx, testy);
 
 		// If boundsec is set, we're looking for specials. In that case, iterate over every line in this sector to find the TRUE highest/lowest point
@@ -1252,13 +1252,12 @@ static void P_PlayerFlip(mobj_t *mo)
 }
 
 //
-// P_CheckGravity
+// P_GetMobjGravity
 //
-// Checks the current gravity state
-// of the object. If affect is true,
-// a gravity force will be applied.
+// Returns the current gravity
+// value of the object.
 //
-void P_CheckGravity(mobj_t *mo, boolean affect)
+fixed_t P_GetMobjGravity(mobj_t *mo)
 {
 	fixed_t gravityadd = 0;
 	boolean no3dfloorgrav = true; // Custom gravity
@@ -1316,9 +1315,6 @@ void P_CheckGravity(mobj_t *mo, boolean affect)
 	// Less gravity underwater.
 	if (mo->eflags & MFE_UNDERWATER && !goopgravity)
 		gravityadd = gravityadd/3;
-
-	if (!mo->momz) // mobj at stop, no floor, so feel the push of gravity!
-		gravityadd <<= 1;
 
 	if (mo->player)
 	{
@@ -1401,11 +1397,30 @@ void P_CheckGravity(mobj_t *mo, boolean affect)
 	if (goopgravity)
 		gravityadd = -gravityadd/5;
 
-	if (affect)
-		mo->momz += FixedMul(gravityadd, mo->scale);
-
 	if (mo->player && !!(mo->eflags & MFE_VERTICALFLIP) != wasflip)
 		P_PlayerFlip(mo);
+
+	gravityadd = FixedMul(gravityadd, mo->scale);
+
+	return gravityadd;
+}
+
+//
+// P_CheckGravity
+//
+// Checks the current gravity state
+// of the object. If affect is true,
+// a gravity force will be applied.
+//
+void P_CheckGravity(mobj_t *mo, boolean affect)
+{
+	fixed_t gravityadd = P_GetMobjGravity(mo);
+
+	if (!mo->momz) // mobj at stop, no floor, so feel the push of gravity!
+		gravityadd <<= 1;
+
+	if (affect)
+		mo->momz += gravityadd;
 
 	if (mo->type == MT_SKIM && mo->z + mo->momz <= mo->watertop && mo->z >= mo->watertop)
 	{
@@ -1481,7 +1496,7 @@ static void P_XYFriction(mobj_t *mo, fixed_t oldx, fixed_t oldy)
 		    && abs(player->rmomy) < FixedMul(STOPSPEED, mo->scale)
 		    && (!(player->cmd.forwardmove && !(twodlevel || mo->flags2 & MF2_TWOD)) && !player->cmd.sidemove && !(player->pflags & PF_SPINNING))
 #ifdef ESLOPE
-			&& !(player->mo->standingslope && abs(player->mo->standingslope->zdelta) >= FRACUNIT/2)
+			&& !(player->mo->standingslope && (!(player->mo->standingslope->flags & SL_NOPHYSICS)) && (abs(player->mo->standingslope->zdelta) >= FRACUNIT/2))
 #endif
 				)
 		{
@@ -1531,7 +1546,7 @@ static void P_PushableCheckBustables(mobj_t *mo)
 	mo->y += mo->momy;
 	P_SetThingPosition(mo);
 
-	for (node = mo->touching_sectorlist; node; node = node->m_snext)
+	for (node = mo->touching_sectorlist; node; node = node->m_sectorlist_next)
 	{
 		if (!node->m_sector)
 			break;
@@ -1636,8 +1651,6 @@ void P_XYMovement(mobj_t *mo)
 	I_Assert(mo != NULL);
 	I_Assert(!P_MobjWasRemoved(mo));
 
-	moved = true;
-
 	// if it's stopped
 	if (!mo->momx && !mo->momy)
 	{
@@ -1694,9 +1707,9 @@ void P_XYMovement(mobj_t *mo)
 	if (!P_TryMove(mo, mo->x + xmove, mo->y + ymove, true) && !(mo->eflags & MFE_SPRUNG))
 	{
 		// blocked move
+		moved = false;
 
 		if (player) {
-			moved = false;
 			if (player->bot)
 				B_MoveBlocked(player);
 		}
@@ -1801,7 +1814,7 @@ void P_XYMovement(mobj_t *mo)
 		else
 			mo->momx = mo->momy = 0;
 	}
-	else if (player)
+	else
 		moved = true;
 
 	if (P_MobjWasRemoved(mo)) // MF_SPECIAL touched a player! O_o;;
@@ -2014,12 +2027,14 @@ static void P_AdjustMobjFloorZ_FFloors(mobj_t *mo, sector_t *sector, UINT8 motyp
 		delta1 = mo->z - (bottomheight + ((topheight - bottomheight)/2));
 		delta2 = thingtop - (bottomheight + ((topheight - bottomheight)/2));
 		if (topheight > mo->floorz && abs(delta1) < abs(delta2)
-			&& !(rover->flags & FF_REVERSEPLATFORM))
+			&& !(rover->flags & FF_REVERSEPLATFORM)
+			&& ((P_MobjFlip(mo)*mo->momz > 0) || (!(rover->flags & FF_PLATFORM)))) // In reverse gravity, only clip for FOFs that are intangible from their bottom (the "top" you're falling through) if you're coming from above ("below" in your frame of reference)
 		{
 			mo->floorz = topheight;
 		}
 		if (bottomheight < mo->ceilingz && abs(delta1) >= abs(delta2)
-			&& !(rover->flags & FF_PLATFORM))
+			&& !(rover->flags & FF_PLATFORM)
+			&& ((P_MobjFlip(mo)*mo->momz > 0) || (!(rover->flags & FF_REVERSEPLATFORM)))) // In normal gravity, only clip for FOFs that are intangible from the top if you're coming from below
 		{
 			mo->ceilingz = bottomheight;
 		}
@@ -2153,16 +2168,6 @@ static boolean P_ZMovement(mobj_t *mo)
 	I_Assert(mo != NULL);
 	I_Assert(!P_MobjWasRemoved(mo));
 
-#ifdef ESLOPE
-	if (mo->standingslope)
-	{
-		if (mo->flags & MF_NOCLIPHEIGHT)
-			mo->standingslope = NULL;
-		else if (!P_IsObjectOnGround(mo))
-			P_SlopeLaunch(mo);
-	}
-#endif
-
 	// Intercept the stupid 'fall through 3dfloors' bug
 	if (mo->subsector->sector->ffloors)
 		P_AdjustMobjFloorZ_FFloors(mo, mo->subsector->sector, 0);
@@ -2176,6 +2181,16 @@ static boolean P_ZMovement(mobj_t *mo)
 		mo->eflags &= ~MFE_APPLYPMOMZ;
 	}
 	mo->z += mo->momz;
+
+#ifdef ESLOPE
+	if (mo->standingslope)
+	{
+		if (mo->flags & MF_NOCLIPHEIGHT)
+			mo->standingslope = NULL;
+		else if (!P_IsObjectOnGround(mo))
+			P_SlopeLaunch(mo);
+	}
+#endif
 
 	switch (mo->type)
 	{
@@ -2246,6 +2261,7 @@ static boolean P_ZMovement(mobj_t *mo)
 		case MT_BLUETEAMRING:
 		case MT_FLINGRING:
 		case MT_FLINGCOIN:
+		case MT_FLINGEMERALD:
 			// Remove flinged stuff from death pits.
 			if (P_CheckDeathPitCollide(mo))
 			{
@@ -2277,7 +2293,6 @@ static boolean P_ZMovement(mobj_t *mo)
 			if (!(mo->momx || mo->momy || mo->momz))
 				return true;
 			break;
-		case MT_FLINGEMERALD:
 		case MT_NIGHTSWING:
 			if (!(mo->momx || mo->momy || mo->momz))
 				return true;
@@ -2366,14 +2381,17 @@ static boolean P_ZMovement(mobj_t *mo)
 			mo->z = mo->floorz;
 
 #ifdef ESLOPE
-		P_CheckPosition(mo, mo->x, mo->y); // Sets mo->standingslope correctly
-		if ((mo->eflags & MFE_VERTICALFLIP) ? tmceilingslope : tmfloorslope) {
-			mo->standingslope = (mo->eflags & MFE_VERTICALFLIP) ? tmceilingslope : tmfloorslope;
+		if (mo->standingslope) // You're still on the ground; why are we here?
+		{
+			mo->momz = 0;
+			return true;
+		}
 
-			// Reverse quantizing might could use its own function later
-			mo->standingslope->zangle = ANGLE_MAX-mo->standingslope->zangle;
-			P_QuantizeMomentumToSlope(&mom, mo->standingslope);
-			mo->standingslope->zangle = ANGLE_MAX-mo->standingslope->zangle;
+		P_CheckPosition(mo, mo->x, mo->y); // Sets mo->standingslope correctly
+		if (((mo->eflags & MFE_VERTICALFLIP) ? tmceilingslope : tmfloorslope) && (mo->type != MT_STEAM))
+		{
+			mo->standingslope = (mo->eflags & MFE_VERTICALFLIP) ? tmceilingslope : tmfloorslope;
+			P_ReverseQuantizeMomentumToSlope(&mom, mo->standingslope);
 		}
 #endif
 
@@ -2526,7 +2544,7 @@ static boolean P_ZMovement(mobj_t *mo)
 			mom.z = tmfloorthing->momz;
 
 #ifdef ESLOPE
-		if (mo->standingslope) {
+		if (mo->standingslope) { // MT_STEAM will never have a standingslope, see above.
 			P_QuantizeMomentumToSlope(&mom, mo->standingslope);
 		}
 #endif
@@ -2711,7 +2729,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 					msecnode_t *node;
 					boolean stopmovecut = false;
 
-					for (node = mo->touching_sectorlist; node; node = node->m_snext)
+					for (node = mo->touching_sectorlist; node; node = node->m_sectorlist_next)
 					{
 						sector_t *sec = node->m_sector;
 						subsector_t *newsubsec;
@@ -2889,7 +2907,7 @@ nightsdone:
 			if (CheckForMarioBlocks && !(netgame && mo->player->spectator)) // Only let the player punch
 			{
 				// Search the touching sectors, from side-to-side...
-				for (node = mo->touching_sectorlist; node; node = node->m_snext)
+				for (node = mo->touching_sectorlist; node; node = node->m_sectorlist_next)
 				{
 					ffloor_t *rover;
 					if (!node->m_sector->ffloors)
@@ -2957,7 +2975,7 @@ static boolean P_SceneryZMovement(mobj_t *mo)
 			|| (mo->eflags & MFE_VERTICALFLIP && mo->z+mo->height >= mo->ceilingz)) // Hit the floor, so split!
 			{
 				// split
-				mobj_t *explodemo;
+				mobj_t *explodemo = NULL;
 				UINT8 prandom, i;
 
 				for (i = 0; i < 4; ++i) // split into four
@@ -3663,7 +3681,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 	if (!(netgame && mobj->player->spectator))
 	{
 		// Crumbling platforms
-		for (node = mobj->touching_sectorlist; node; node = node->m_snext)
+		for (node = mobj->touching_sectorlist; node; node = node->m_sectorlist_next)
 		{
 			fixed_t topheight, bottomheight;
 			ffloor_t *rover;
@@ -3688,7 +3706,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 	{
 		boolean thereiswater = false;
 
-		for (node = mobj->touching_sectorlist; node; node = node->m_snext)
+		for (node = mobj->touching_sectorlist; node; node = node->m_sectorlist_next)
 		{
 			if (node->m_sector->ffloors)
 			{
@@ -3709,7 +3727,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 		}
 		if (thereiswater)
 		{
-			for (node = mobj->touching_sectorlist; node; node = node->m_snext)
+			for (node = mobj->touching_sectorlist; node; node = node->m_sectorlist_next)
 			{
 				if (node->m_sector->ffloors)
 				{
@@ -3822,7 +3840,7 @@ void P_RecalcPrecipInSector(sector_t *sector)
 
 	sector->moved = true; // Recalc lighting and things too, maybe
 
-	for (psecnode = sector->touching_preciplist; psecnode; psecnode = psecnode->m_snext)
+	for (psecnode = sector->touching_preciplist; psecnode; psecnode = psecnode->m_thinglist_next)
 		CalculatePrecipFloor(psecnode->m_thing);
 }
 

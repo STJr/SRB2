@@ -261,7 +261,8 @@ mobj_t *P_SPMAngle(mobj_t *source, mobjtype_t type, angle_t angle, UINT8 aimtype
 #endif
 void P_ColorTeamMissile(mobj_t *missile, player_t *source);
 SINT8 P_MobjFlip(mobj_t *mobj);
-boolean P_WeaponOrPanel(mobjtype_t type);
+fixed_t P_GetMobjGravity(mobj_t *mo);
+FUNCMATH boolean P_WeaponOrPanel(mobjtype_t type);
 
 boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled);
 

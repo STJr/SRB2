@@ -920,9 +920,9 @@ void R_SkyboxFrame(player_t *player)
 				}
 			}
 			if (mh->skybox_scalez > 0)
-				viewz += player->awayviewmobj->z / mh->skybox_scalez;
+				viewz += (player->awayviewmobj->z + 20*FRACUNIT) / mh->skybox_scalez;
 			else if (mh->skybox_scalez < 0)
-				viewz += player->awayviewmobj->z * -mh->skybox_scalez;
+				viewz += (player->awayviewmobj->z + 20*FRACUNIT) * -mh->skybox_scalez;
 		}
 		else if (thiscam->chase)
 		{
@@ -967,9 +967,9 @@ void R_SkyboxFrame(player_t *player)
 				}
 			}
 			if (mh->skybox_scalez > 0)
-				viewz += thiscam->z / mh->skybox_scalez;
+				viewz += (thiscam->z + (thiscam->height>>1)) / mh->skybox_scalez;
 			else if (mh->skybox_scalez < 0)
-				viewz += thiscam->z * -mh->skybox_scalez;
+				viewz += (thiscam->z + (thiscam->height>>1)) * -mh->skybox_scalez;
 		}
 		else
 		{
@@ -1325,6 +1325,7 @@ void R_RenderPlayerView(player_t *player)
 #endif
 
 		R_RenderBSPNode((INT32)numnodes - 1);
+		R_ClipSprites();
 		R_DrawPlanes();
 #ifdef FLOORSPLATS
 		R_DrawVisibleFloorSplats();

@@ -312,7 +312,7 @@ static inline void P_UnArchivePlayer(void)
 //
 // P_NetArchivePlayers
 //
-static inline void P_NetArchivePlayers(void)
+static void P_NetArchivePlayers(void)
 {
 	INT32 i, j;
 	UINT16 flags;

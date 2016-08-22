@@ -26,7 +26,7 @@
 #endif
 
 #ifdef HAVE_SDL
-
+#define _MATH_DEFINES_DEFINED
 #include "SDL.h"
 
 #ifdef _MSC_VER
@@ -1346,7 +1346,7 @@ void I_SetPalette(RGBA_t *palette)
 }
 
 // return number of fullscreen + X11 modes
-INT32 VID_NumModes(void)
+FUNCMATH INT32 VID_NumModes(void)
 {
 	if (USE_FULLSCREEN && numVidModes != -1)
 		return numVidModes - firstEntry;
@@ -1354,7 +1354,7 @@ INT32 VID_NumModes(void)
 		return MAXWINMODES;
 }
 
-const char *VID_GetModeName(INT32 modeNum)
+FUNCMATH const char *VID_GetModeName(INT32 modeNum)
 {
 #if 0
 	if (USE_FULLSCREEN && numVidModes != -1) // fullscreen modes
@@ -1384,7 +1384,7 @@ const char *VID_GetModeName(INT32 modeNum)
 	return &vidModeName[modeNum][0];
 }
 
-INT32 VID_GetModeForSize(INT32 w, INT32 h)
+FUNCMATH INT32 VID_GetModeForSize(INT32 w, INT32 h)
 {
 	int i;
 	for (i = 0; i < MAXWINMODES; i++)
