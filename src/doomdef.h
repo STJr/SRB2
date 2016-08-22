@@ -151,7 +151,7 @@ extern FILE *logstream;
 #define VERSION    100 // Game version
 #define SUBVERSION 0  // more precise version number
 #define VERSIONSTRING "TD v1.0.0" // Originally v2.1.14. Keep this updated.
-#define VERSIONSTRINGW L"v2.1.16"
+#define VERSIONSTRINGW L"TD v1.0.0"
 // Hey! If you change this, add 1 to the MODVERSION below!
 // Otherwise we can't force updates!
 #endif
