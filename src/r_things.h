@@ -131,7 +131,8 @@ typedef struct vissprite_s
 	fixed_t pz, pzt; // physical bottom/top for sorting with 3D floors
 
 	fixed_t startfrac; // horizontal position of x1
-	fixed_t scale;
+	fixed_t scale, sortscale; // sortscale only differs from scale for flat sprites
+	fixed_t scalestep; // only for flat sprites, 0 otherwise
 	fixed_t xiscale; // negative if flipped
 
 	fixed_t texturemid;

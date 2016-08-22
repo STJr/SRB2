@@ -754,11 +754,18 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	if (overflow_test < 0) overflow_test = -overflow_test;
 	if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) return; // fixed point mult would overflow
 
+	if (vis->scalestep) // handles right edge too
+	{
+		overflow_test = (INT64)centeryfrac - (((INT64)vis->texturemid*(vis->scale + (vis->scalestep*(vis->x2 - vis->x1))))>>FRACBITS);
+		if (overflow_test < 0) overflow_test = -overflow_test;
+		if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) return; // ditto
+	}
+
 	colfunc = basecolfunc; // hack: this isn't resetting properly somewhere.
 	dc_colormap = vis->colormap;
 	if ((vis->mobj->flags & MF_BOSS) && (vis->mobj->flags2 & MF2_FRET) && (leveltime & 1)) // Bosses "flash"
 	{
-		// translate green skin to another color
+		// translate certain pixels to white
 		colfunc = transcolfunc;
 		if (vis->mobj->type == MT_CYBRAKDEMON)
 			dc_translation = R_GetTranslationColormap(TC_ALLWHITE, 0, GTC_CACHE);
@@ -814,13 +821,10 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	if (!dc_colormap)
 		dc_colormap = colormaps;
 
-	dc_iscale = FixedDiv(FRACUNIT, vis->scale);
 	dc_texturemid = vis->texturemid;
 	dc_texheight = 0;
 
 	frac = vis->startfrac;
-	spryscale = vis->scale;
-	sprtopscreen = centeryfrac - FixedMul(dc_texturemid, spryscale);
 	windowtop = windowbottom = sprbotscreen = INT32_MAX;
 
 	if (vis->mobj->skin && ((skin_t *)vis->mobj->skin)->flags & SF_HIRES)
@@ -832,28 +836,29 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		if (!vis->isScaled)
 		{
 			vis->scale = FixedMul(vis->scale, this_scale);
-			spryscale = vis->scale;
-			dc_iscale = FixedDiv(FRACUNIT, vis->scale);
+			vis->scalestep = FixedMul(vis->scalestep, this_scale);
 			vis->xiscale = FixedDiv(vis->xiscale,this_scale);
 			vis->isScaled = true;
 		}
 		dc_texturemid = FixedDiv(dc_texturemid,this_scale);
+	}
 
-		//Oh lordy, mercy me. Don't freak out if sprites go offscreen!
-		/*if (vis->xiscale > 0)
-			frac = FixedDiv(frac, this_scale);
-		else if (vis->x1 <= 0)
-			frac = (vis->x1 - vis->x2) * vis->xiscale;*/
+	spryscale = vis->scale;
 
+	if (!(vis->scalestep))
+	{
 		sprtopscreen = centeryfrac - FixedMul(dc_texturemid, spryscale);
-		//dc_hires = 1;
+		dc_iscale = FixedDiv(FRACUNIT, vis->scale);
 	}
 
 	x1 = vis->x1;
 	x2 = vis->x2;
 
 	if (vis->x1 < 0)
+	{
+		spryscale += vis->scalestep*(-vis->x1);
 		vis->x1 = 0;
+	}
 
 	if (vis->x2 >= vid.width)
 		vis->x2 = vid.width-1;
@@ -869,10 +874,16 @@ static void R_DrawVisSprite(vissprite_t *vis)
 #else
 		column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[frac>>FRACBITS]));
 #endif
+		if (vis->scalestep)
+		{
+			sprtopscreen = (centeryfrac - FixedMul(dc_texturemid, spryscale));
+			dc_iscale = (0xffffffffu / (unsigned)spryscale);
+		}
 		if (vis->vflip)
 			R_DrawFlippedMaskedColumn(column, patch->height);
 		else
 			R_DrawMaskedColumn(column);
+		spryscale += vis->scalestep;
 	}
 
 	colfunc = basecolfunc;
@@ -967,7 +978,7 @@ static void R_SplitSprite(vissprite_t *sprite, mobj_t *thing)
 		if (testheight <= sprite->gz)
 			return;
 
-		cutfrac = (INT16)((centeryfrac - FixedMul(testheight - viewz, sprite->scale))>>FRACBITS);
+		cutfrac = (INT16)((centeryfrac - FixedMul(testheight - viewz, sprite->sortscale))>>FRACBITS);
 		if (cutfrac < 0)
 			continue;
 		if (cutfrac > viewheight)
@@ -1040,7 +1051,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	fixed_t tr_x, tr_y;
 	fixed_t gxt, gyt;
 	fixed_t tx, tz;
-	fixed_t xscale, yscale; //added : 02-02-98 : aaargll..if I were a math-guy!!!
+	fixed_t xscale, yscale, sortscale; //added : 02-02-98 : aaargll..if I were a math-guy!!!
 
 	INT32 x1, x2;
 
@@ -1057,12 +1068,17 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	angle_t ang;
 	fixed_t iscale;
+	fixed_t scalestep; // toast '16
+	fixed_t offset, offset2;
+	boolean papersprite = (thing->frame & FF_PAPERSPRITE);
 
 	//SoM: 3/17/2000
 	fixed_t gz, gzt;
 	INT32 heightsec, phs;
 	INT32 light = 0;
 	fixed_t this_scale = thing->scale;
+
+	fixed_t ang_scale = FRACUNIT;
 
 	// transform the origin point
 	tr_x = thing->x - viewx;
@@ -1074,7 +1090,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	tz = gxt-gyt;
 
 	// thing is behind view plane?
-	if (tz < FixedMul(MINZ, this_scale))
+	if (!(papersprite) && (tz < FixedMul(MINZ, this_scale))) // papersprite clipping is handled later
 		return;
 
 	gxt = -FixedMul(tr_x, viewsin);
@@ -1087,7 +1103,7 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	// aspect ratio stuff
 	xscale = FixedDiv(projection, tz);
-	yscale = FixedDiv(projectiony, tz);
+	sortscale = FixedDiv(projectiony, tz);
 
 	// decide which patch to use for sprite relative to player
 #ifdef RANGECHECK
@@ -1129,10 +1145,17 @@ static void R_ProjectSprite(mobj_t *thing)
 		I_Error("R_ProjectSprite: sprframes NULL for sprite %d\n", thing->sprite);
 #endif
 
+	if (sprframe->rotate != SRF_SINGLE || papersprite)
+	{
+		ang = R_PointToAngle (thing->x, thing->y) - thing->angle;
+		if (papersprite)
+			ang_scale = abs(FINESINE(ang>>ANGLETOFINESHIFT));
+	}
+
 	if (sprframe->rotate)
 	{
 		// choose a different rotation based on player view
-		ang = R_PointToAngle (thing->x, thing->y);
+		//ang = R_PointToAngle (thing->x, thing->y);
 		rot = (ang-thing->angle+ANGLE_202h)>>29;
 		//Fab: lumpid is the index for spritewidth,spriteoffset... tables
 		lump = sprframe->lumpid[rot];
@@ -1153,21 +1176,76 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	// calculate edges of the shape
 	if (flip)
-		tx -= FixedMul(spritecachedinfo[lump].width-spritecachedinfo[lump].offset, this_scale);
+		offset = spritecachedinfo[lump].offset - spritecachedinfo[lump].width;
 	else
-		tx -= FixedMul(spritecachedinfo[lump].offset, this_scale);
+		offset = -spritecachedinfo[lump].offset;
+	offset = FixedMul(offset, this_scale);
+	tx += FixedMul(offset, ang_scale);
 	x1 = (centerxfrac + FixedMul (tx,xscale)) >>FRACBITS;
 
 	// off the right side?
 	if (x1 > viewwidth)
 		return;
 
-	tx += FixedMul(spritecachedinfo[lump].width, this_scale);
+	offset2 = FixedMul(spritecachedinfo[lump].width, this_scale);
+	tx += FixedMul(offset2, ang_scale);
 	x2 = ((centerxfrac + FixedMul (tx,xscale)) >>FRACBITS) - 1;
 
 	// off the left side
 	if (x2 < 0)
 		return;
+
+	if (papersprite)
+	{
+		fixed_t yscale2, cosmul, sinmul, tz2;
+		INT32 range;
+
+		if (ang >= ANGLE_180)
+		{
+			offset *= -1;
+			offset2 *= -1;
+		}
+
+		cosmul = FINECOSINE(thing->angle>>ANGLETOFINESHIFT);
+		sinmul = FINESINE(thing->angle>>ANGLETOFINESHIFT);
+
+		tr_x += FixedMul(offset, cosmul);
+		tr_y += FixedMul(offset, sinmul);
+		gxt = FixedMul(tr_x, viewcos);
+		gyt = -FixedMul(tr_y, viewsin);
+		tz = gxt-gyt;
+		yscale = FixedDiv(projectiony, tz);
+		if (yscale < 64) return; // Fix some funky visuals
+
+		tr_x += FixedMul(offset2, cosmul);
+		tr_y += FixedMul(offset2, sinmul);
+		gxt = FixedMul(tr_x, viewcos);
+		gyt = -FixedMul(tr_y, viewsin);
+		tz2 = gxt-gyt;
+		yscale2 = FixedDiv(projectiony, tz2);
+		if (yscale2 < 64) return; // ditto
+
+		if (max(tz, tz2) < FixedMul(MINZ, this_scale)) // non-papersprite clipping is handled earlier
+			return;
+
+		if (x2 > x1)
+			range = (x2 - x1);
+		else
+			range = 1;
+
+		scalestep = (yscale2 - yscale)/range;
+
+		// The following two are alternate sorting methods which might be more applicable in some circumstances. TODO - maybe enable via MF2?
+		// sortscale = max(yscale, yscale2);
+		// sortscale = min(yscale, yscale2);
+	}
+	else
+	{
+		scalestep = 0;
+		yscale = sortscale;
+	}
+
+	xscale = FixedMul(xscale, ang_scale);
 
 	// PORTAL SPRITE CLIPPING
 	if (portalrender)
@@ -1250,6 +1328,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	vis->heightsec = heightsec; //SoM: 3/17/2000
 	vis->mobjflags = thing->flags;
 	vis->scale = yscale; //<<detailshift;
+	vis->sortscale = sortscale;
 	vis->dispoffset = thing->info->dispoffset; // Monster Iestyn: 23/11/15
 	vis->gx = thing->x;
 	vis->gy = thing->y;
@@ -1259,6 +1338,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	vis->pz = thing->z;
 	vis->pzt = vis->pz + vis->thingheight;
 	vis->texturemid = vis->gzt - viewz;
+	vis->scalestep = scalestep;
 
 	vis->mobj = thing; // Easy access! Tails 06-07-2002
 
@@ -1276,8 +1356,8 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	vis->xscale = xscale; //SoM: 4/17/2000
 	vis->sector = thing->subsector->sector;
-	vis->szt = (INT16)((centeryfrac - FixedMul(vis->gzt - viewz, yscale))>>FRACBITS);
-	vis->sz = (INT16)((centeryfrac - FixedMul(vis->gz - viewz, yscale))>>FRACBITS);
+	vis->szt = (INT16)((centeryfrac - FixedMul(vis->gzt - viewz, sortscale))>>FRACBITS);
+	vis->sz = (INT16)((centeryfrac - FixedMul(vis->gz - viewz, sortscale))>>FRACBITS);
 	vis->cut = SC_NONE;
 	if (thing->subsector->sector->numlights)
 		vis->extra_colormap = thing->subsector->sector->lightlist[light].extra_colormap;
@@ -1298,7 +1378,10 @@ static void R_ProjectSprite(mobj_t *thing)
 	}
 
 	if (vis->x1 > x1)
+	{
 		vis->startfrac += FixedDiv(vis->xiscale, this_scale)*(vis->x1-x1);
+		vis->scale += scalestep*(vis->x1 - x1);
+	}
 
 	//Fab: lumppat is the lump number of the patch to use, this is different
 	//     than lumpid for sprites-in-pwad : the graphics are patched
@@ -1457,7 +1540,7 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 
 	// store information in a vissprite
 	vis = R_NewVisSprite();
-	vis->scale = yscale; //<<detailshift;
+	vis->scale = vis->sortscale = yscale; //<<detailshift;
 	vis->dispoffset = 0; // Monster Iestyn: 23/11/15
 	vis->gx = thing->x;
 	vis->gy = thing->y;
@@ -1467,6 +1550,7 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	vis->pz = thing->z;
 	vis->pzt = vis->pz + vis->thingheight;
 	vis->texturemid = vis->gzt - viewz;
+	vis->scalestep = 0;
 
 	vis->x1 = x1 < 0 ? 0 : x1;
 	vis->x2 = x2 >= viewwidth ? viewwidth-1 : x2;
@@ -1645,14 +1729,14 @@ void R_SortVisSprites(void)
 		bestscale = bestdispoffset = INT32_MAX;
 		for (ds = unsorted.next; ds != &unsorted; ds = ds->next)
 		{
-			if (ds->scale < bestscale)
+			if (ds->sortscale < bestscale)
 			{
-				bestscale = ds->scale;
+				bestscale = ds->sortscale;
 				bestdispoffset = ds->dispoffset;
 				best = ds;
 			}
 			// order visprites of same scale by dispoffset, smallest first
-			else if (ds->scale == bestscale && ds->dispoffset < bestdispoffset)
+			else if (ds->sortscale == bestscale && ds->dispoffset < bestdispoffset)
 			{
 				bestdispoffset = ds->dispoffset;
 				best = ds;
@@ -1814,7 +1898,7 @@ static void R_CreateDrawNodes(void)
 
 				for (i = x1; i <= x2; i++)
 				{
-					if (r2->seg->frontscale[i] > rover->scale)
+					if (r2->seg->frontscale[i] > rover->sortscale)
 						break;
 				}
 				if (i > x2)
@@ -1833,10 +1917,10 @@ static void R_CreateDrawNodes(void)
 					continue;
 
 				scale = r2->thickseg->scale1 > r2->thickseg->scale2 ? r2->thickseg->scale1 : r2->thickseg->scale2;
-				if (scale <= rover->scale)
+				if (scale <= rover->sortscale)
 					continue;
 				scale = r2->thickseg->scale1 + (r2->thickseg->scalestep * (sintersect - r2->thickseg->x1));
-				if (scale <= rover->scale)
+				if (scale <= rover->sortscale)
 					continue;
 
 #ifdef ESLOPE
@@ -1886,11 +1970,11 @@ static void R_CreateDrawNodes(void)
 					continue;
 
 				scale = r2->seg->scale1 > r2->seg->scale2 ? r2->seg->scale1 : r2->seg->scale2;
-				if (scale <= rover->scale)
+				if (scale <= rover->sortscale)
 					continue;
 				scale = r2->seg->scale1 + (r2->seg->scalestep * (sintersect - r2->seg->x1));
 
-				if (rover->scale < scale)
+				if (rover->sortscale < scale)
 				{
 					entry = R_CreateDrawNode(NULL);
 					(entry->prev = r2->prev)->next = entry;
@@ -1906,8 +1990,8 @@ static void R_CreateDrawNodes(void)
 				if (r2->sprite->szt > rover->sz || r2->sprite->sz < rover->szt)
 					continue;
 
-				if (r2->sprite->scale > rover->scale
-				 || (r2->sprite->scale == rover->scale && r2->sprite->dispoffset > rover->dispoffset))
+				if (r2->sprite->sortscale > rover->sortscale
+				 || (r2->sprite->sortscale == rover->sortscale && r2->sprite->dispoffset > rover->dispoffset))
 				{
 					entry = R_CreateDrawNode(NULL);
 					(entry->prev = r2->prev)->next = entry;
@@ -2060,8 +2144,8 @@ void R_ClipSprites(void)
 				scale = ds->scale2;
 			}
 
-			if (scale < spr->scale ||
-			    (lowscale < spr->scale &&
+			if (scale < spr->sortscale ||
+			    (lowscale < spr->sortscale &&
 			     !R_PointOnSegSide (spr->gx, spr->gy, ds->curline)))
 			{
 				// masked mid texture?
@@ -2112,7 +2196,7 @@ void R_ClipSprites(void)
 			fixed_t mh, h;
 			INT32 phs = viewplayer->mo->subsector->sector->heightsec;
 			if ((mh = sectors[spr->heightsec].floorheight) > spr->gz &&
-				(h = centeryfrac - FixedMul(mh -= viewz, spr->scale)) >= 0 &&
+				(h = centeryfrac - FixedMul(mh -= viewz, spr->sortscale)) >= 0 &&
 				(h >>= FRACBITS) < viewheight)
 			{
 				if (mh <= 0 || (phs != -1 && viewz > sectors[phs].floorheight))
@@ -2130,7 +2214,7 @@ void R_ClipSprites(void)
 			}
 
 			if ((mh = sectors[spr->heightsec].ceilingheight) < spr->gzt &&
-			    (h = centeryfrac - FixedMul(mh-viewz, spr->scale)) >= 0 &&
+			    (h = centeryfrac - FixedMul(mh-viewz, spr->sortscale)) >= 0 &&
 			    (h >>= FRACBITS) < viewheight)
 			{
 				if (phs != -1 && viewz >= sectors[phs].ceilingheight)
