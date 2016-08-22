@@ -1203,7 +1203,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	else
 	{
 		// choose a different rotation based on player view
-		ang = R_PointToAngle (thing->x, thing->y) - thing->angle;
+		//ang = R_PointToAngle (thing->x, thing->y) - thing->angle;
 
 		if ((ang < ANGLE_180) && (sprframe->rotate & SRF_RIGHT)) // See from right
 			rot = 6; // F7 slot
