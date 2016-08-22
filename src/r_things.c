@@ -1119,7 +1119,7 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	vissprite_t *vis;
 
-	angle_t ang;
+	angle_t ang = 0;
 	fixed_t iscale;
 	fixed_t scalestep; // toast '16
 	fixed_t offset, offset2;
