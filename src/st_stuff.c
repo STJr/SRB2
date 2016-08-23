@@ -1365,7 +1365,7 @@ static void ST_drawNDLives(void)
 	}
 }
 
-static inline void ST_drawBossHealth(void)
+static void ST_drawBossHealth(void)
 {
 	thinker_t *th;
 	mobj_t *mo2;
@@ -1429,7 +1429,7 @@ static void ST_drawOkuuStuff(player_t *player)
 			V_DrawFixedPatch((525 - 5 * hudtimer)<<FRACBITS, 0, FRACUNIT, V_TRANSLUCENT, okuu, NULL);
 		else
 			V_DrawFixedPatch((201 - max(hudtimer-44, 0))<<FRACBITS, 0, FRACUNIT, V_TRANSLUCENT, okuu, NULL);
-		
+
 		if ((hudtimer > 95 && hudtimer <= 105) || (hudtimer > 0 && hudtimer <= 10))
 			V_DrawFixedPatch(0, 100<<FRACBITS, FRACUNIT, V_90TRANS, siren, NULL);
 		else if ((hudtimer > 85 && hudtimer <= 95) || (hudtimer > 10 && hudtimer <= 20))

@@ -988,7 +988,7 @@ static void P_LoadThings(void)
 	}
 }
 
-static inline void P_SpawnEmblems(void)
+static void P_SpawnEmblems(void)
 {
 	INT32 i, color;
 	mobj_t *emblemmobj;
