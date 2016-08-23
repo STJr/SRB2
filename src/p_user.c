@@ -8603,7 +8603,7 @@ static void P_CalcPostImg(player_t *player)
     //miru: Motion blur won't work without this i guess, either way its enabled
     //TODO: Opengl motion blur
 	// Motion blur
-	if (player->mo)
+	if (player->mo && P_CheckMotionBlur())
 	{
 		*type = postimg_motion;
 		*param = 5;
