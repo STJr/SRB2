@@ -772,7 +772,7 @@ subsector_t *R_PointInSubsector(fixed_t x, fixed_t y)
 }
 
 //
-// R_IsPointInSubsector, same as above but returns 0 if not in subsector
+// R_IsPointInSubsector, same as above but returns 0 if not in subsector - this does not work in opengl because of polyvertex_t
 //
 subsector_t *R_IsPointInSubsector(fixed_t x, fixed_t y)
 {
