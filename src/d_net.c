@@ -1229,7 +1229,7 @@ void D_CloseConnection(void)
 		I_NetMakeNodewPort = NULL;
 		netgame = false;
 		addedtogame = false;
-		
+
 		if (!server) // If you were connected to someone else,
 			G_LoadGameData(); // wipe the game data downloaded from their server.
 	}

@@ -10780,7 +10780,7 @@ void A_RotateShrink(mobj_t *actor)
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
 	fixed_t radius = FixedMul(12*actor->extravalue1, actor->scale);
-	
+
 	if (!actor->extravalue1)
 		actor->extravalue1 = (locvar1>>16)*FRACUNIT;
 

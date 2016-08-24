@@ -5936,8 +5936,8 @@ static void Sirenate(mobj_t *bird, statenum_t state)
 		if (mobj->flags & (MF_MISSILE|MF_PAIN))
 			P_SetMobjState(mobj, mobj->info->deathstate);
 	}
-		
-	
+
+
 	P_SetMobjState(bird, state);
 	bird->pinchphase += 1;
 	for (i = 0; i < MAXPLAYERS; i++)
@@ -5953,11 +5953,11 @@ static void Sirenate(mobj_t *bird, statenum_t state)
 
 		if (players[i].playerstate != PST_LIVE)
 			continue;
-		
+
 		players[i].mo->hudtimer = 105;
 	}
 		//print("time for phase "+(bird->pinchphase+1)+" baby!")
-	
+
 	S_StartSound(NULL, sfx_siren);
 	P_SpawnMobj(bird->x, bird->y, bird->z, MT_SUPERRINGBOX);
 }
@@ -5978,7 +5978,7 @@ static void Dispelate(mobj_t *bird, statenum_t state)
 		mobj = (mobj_t *)th;
 
 		if (mobj->type == MT_STARBIG)
-		{	
+		{
 			ring = P_SpawnMobj(mobj->x,mobj->y,mobj->z,MT_FLINGRING);
 			P_SetObjectMomZ(ring, -16*FRACUNIT, false);
 			ring->fuse = 5*TICRATE;
@@ -6012,7 +6012,7 @@ static void P_BossBirdThinker(mobj_t *mobj)
 
 	if (mobj->timeout == 1)
 		P_KillMobj(mobj, NULL, NULL);
-	
+
 	if (((mobj->state >= &states[S_OKUUFLY2] && mobj->state <= &states[S_OKUULAND1]) || (mobj->state >= &states[S_OKUUHOP4SOUND] && mobj->state <= &states[S_OKUUHOP7]))
 		&& leveltime % 4)
 	{
@@ -6022,19 +6022,19 @@ static void P_BossBirdThinker(mobj_t *mobj)
 	}
 	if (mobj->health < 21 && mobj->pinchphase == 0)
 		Sirenate(mobj, S_OKUUSPELLCARD1_1);
-	
+
 	if (mobj->health < 17 && mobj->pinchphase == 1)
 		Dispelate(mobj, S_OKUUHOP1);
 
 	if (mobj->health < 9 && mobj->pinchphase == 2)
 		Sirenate(mobj, S_OKUUSPELLCARD2_1);
-	
+
 	if (mobj->state == &states[S_OKUUSPELLCARD2_9] || mobj->state == &states[S_OKUUSPELLCARD2_10])
 		P_SpawnGhostMobj(mobj);
 
 	if (mobj->state == &states[S_OKUUSPELLCARD2_9] && mobj->justhurt > 60)
 		P_SetMobjState(mobj, S_OKUUSPELLCARD2_10);
-	
+
 	if (mobj->health < 2 && mobj->pinchphase == 3)
 	{
 		Sirenate(mobj, S_OKUUSPELLCARD3_1);
@@ -6055,16 +6055,16 @@ static void P_BossBirdThinker(mobj_t *mobj)
 			players[i].mo->timeout = (30*TICRATE)+91;
 			players[i].mo->hudpinch = 1;
 		}
-		
+
 		mobj->timeout = (30*TICRATE)+91;
 	}
 	if (mobj->timeout % 35 == 0 && mobj->timeout > 0 && mobj->timeout <= 1050)
-	{	
+	{
 		if (mobj->timeout > 350)
 			S_StartSound(NULL, sfx_heal);
 		else
 			S_StartSound(NULL, sfx_time);
-	}	
+	}
 
 	if (mobj->health == 1)
 		mobj->flags &= ~(MF_SHOOTABLE|MF_SPECIAL);
@@ -8325,7 +8325,7 @@ void P_MobjThinker(mobj_t *mobj)
 		case MT_STARROTATE:
 		case MT_STARROTATE2:
 			if (!mobj->scaled)
-			{	
+			{
 				mobj->destscale = 12*FRACUNIT/5;
 				P_SetScale(mobj, mobj->destscale);
 				mobj->scaled = true;
