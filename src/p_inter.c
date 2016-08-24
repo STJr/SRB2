@@ -2214,6 +2214,8 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source)
 
 			if ((mobj->flags & MF_MISSILE || mobj->flags & MF_PAIN) || mobj->type == MT_HELPER)
 				P_SetMobjState(mobj, mobj->info->deathstate);
+
+			S_StartSound(NULL, sfx_toudie);
 		}
 	}
 
