@@ -2985,7 +2985,7 @@ static void P_KillPlayer(player_t *player, mobj_t *source, INT32 damage)
 	}
 }
 
-static inline void P_SuperDamage(player_t *player, mobj_t *inflictor, mobj_t *source, INT32 damage)
+static void P_SuperDamage(player_t *player, mobj_t *inflictor, mobj_t *source, INT32 damage)
 {
 	fixed_t fallbackspeed;
 	angle_t ang;
