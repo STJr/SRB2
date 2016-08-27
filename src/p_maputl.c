@@ -581,7 +581,10 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 			// don't remove this code unless solid midtextures
 			// on non-solid polyobjects should NEVER happen in the future
 			if (linedef->polyobj && (linedef->polyobj->flags & POF_TESTHEIGHT)) {
-				if (!!(linedef->flags & ML_DONTPEGBOTTOM) ^ !!(linedef->flags & ML_EFFECT3)) {
+				if (linedef->flags & ML_EFFECT5 && !side->repeatcnt) { // "infinite" repeat
+					texbottom = back->floorheight + side->rowoffset;
+					textop = back->ceilingheight + side->rowoffset;
+				} else if (!!(linedef->flags & ML_DONTPEGBOTTOM) ^ !!(linedef->flags & ML_EFFECT3)) {
 					texbottom = back->floorheight + side->rowoffset;
 					textop = texbottom + texheight*(side->repeatcnt+1);
 				} else {
@@ -591,7 +594,10 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 			} else
 #endif
 			{
-				if (!!(linedef->flags & ML_DONTPEGBOTTOM) ^ !!(linedef->flags & ML_EFFECT3)) {
+				if (linedef->flags & ML_EFFECT5 && !side->repeatcnt) { // "infinite" repeat
+					texbottom = openbottom + side->rowoffset;
+					textop = opentop + side->rowoffset;
+				} else if (!!(linedef->flags & ML_DONTPEGBOTTOM) ^ !!(linedef->flags & ML_EFFECT3)) {
 					texbottom = openbottom + side->rowoffset;
 					textop = texbottom + texheight*(side->repeatcnt+1);
 				} else {
