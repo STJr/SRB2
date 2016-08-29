@@ -633,7 +633,7 @@ typedef enum sprite
 	SPR_CKBL, // Checker ball
 
 	SPR_CHRM, // CHROME (Calling Heaven's Righteousness Onto Malicious Entities)
-	
+
 	SPR_CHRL, // CHROME Laser
 
 	SPR_STAT, // Static Generator
