@@ -968,45 +968,45 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		left_bottom = P_GetZAt(*pfloor->b_slope, ds->leftpos.x, ds->leftpos.y) - viewz;
 	else
 		left_bottom = *pfloor->bottomheight - viewz;
-	dc_texturemid = left_top;
 	skewslope = *pfloor->t_slope; // skew using top slope by default
-#else
-	dc_texturemid = *pfloor->topheight - viewz;
+	if (newline && newline->flags & ML_DONTPEGTOP)
+		slopeskew = true;
+	else if (pfloor->master->flags & ML_DONTPEGTOP)
+		slopeskew = true;
+
+	if (slopeskew)
+		dc_texturemid = left_top;
+	else
 #endif
+	dc_texturemid = *pfloor->topheight - viewz;
 
 	if (newline)
 	{
 		offsetvalue = sides[newline->sidenum[0]].rowoffset;
 		if (newline->flags & ML_DONTPEGBOTTOM)
-#ifdef ESLOPE
 		{
-			dc_texturemid = left_bottom;
-			skewslope = *pfloor->b_slope; // skew using bottom slope
-		}
-#else
-			offsetvalue -= *pfloor->topheight - *pfloor->bottomheight;
-#endif
 #ifdef ESLOPE
-		if (newline->flags & ML_DONTPEGTOP)
-			slopeskew = true;
+			skewslope = *pfloor->b_slope; // skew using bottom slope
+			if (slopeskew)
+				dc_texturemid = left_bottom;
+			else
 #endif
+			offsetvalue -= *pfloor->topheight - *pfloor->bottomheight;
+		}
 	}
 	else
 	{
 		offsetvalue = sides[pfloor->master->sidenum[0]].rowoffset;
 		if (curline->linedef->flags & ML_DONTPEGBOTTOM)
-#ifdef ESLOPE
 		{
-			dc_texturemid = left_bottom;
-			skewslope = *pfloor->b_slope; // skew using bottom slope
-		}
-#else
-			offsetvalue -= *pfloor->topheight - *pfloor->bottomheight;
-#endif
 #ifdef ESLOPE
-		if (pfloor->master->flags & ML_DONTPEGTOP) // use control linedef's flags
-			slopeskew = true;
+			skewslope = *pfloor->b_slope; // skew using bottom slope
+			if (slopeskew)
+				dc_texturemid = left_bottom;
+			else
 #endif
+			offsetvalue -= *pfloor->topheight - *pfloor->bottomheight;
+		}
 	}
 
 #ifdef ESLOPE
