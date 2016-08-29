@@ -969,8 +969,11 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	else
 		left_bottom = *pfloor->bottomheight - viewz;
 	skewslope = *pfloor->t_slope; // skew using top slope by default
-	if (newline && newline->flags & ML_DONTPEGTOP)
-		slopeskew = true;
+	if (newline)
+	{
+		if (newline->flags & ML_DONTPEGTOP)
+			slopeskew = true;
+	}
 	else if (pfloor->master->flags & ML_DONTPEGTOP)
 		slopeskew = true;
 
