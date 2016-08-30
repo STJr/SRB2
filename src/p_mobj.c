@@ -6198,7 +6198,6 @@ void P_SetScale(mobj_t *mobj, fixed_t newscale)
 	{
 		G_GhostAddScale(newscale);
 		player->viewheight = FixedMul(FixedDiv(player->viewheight, oldscale), newscale); // Nonono don't calculate viewheight elsewhere, this is the best place for it!
-		player->dashspeed = FixedMul(FixedDiv(player->dashspeed, oldscale), newscale); // Prevents the player from having to re-charge up spindash if the player grew in size
 	}
 }
 
