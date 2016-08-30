@@ -147,7 +147,7 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 		if (sprtemp[frame].rotate == (SRF_3D|SRF_2D))
 			sprtemp[frame].rotate = SRF_2D; // SRF_3D|SRF_2D being enabled at the same time doesn't HURT in the current sprite angle implementation, but it DOES mean more to check in some of the helper functions. Let's not allow this scenario to happen.
 
-		for (r = 1; r < 4; r++) // Don't set for front/back frames
+		for (r = 0; r < 4; r++) // Thanks to R_PrecacheLevel, we can't leave sprtemp[*].lumppat[*] == LUMPERROR... so we load into the front/back angle too.
 		{
 			sprtemp[frame].lumppat[r + rightfactor] = lumppat;
 			sprtemp[frame].lumpid[r + rightfactor] = lumpid;

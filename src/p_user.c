@@ -2290,25 +2290,24 @@ static void P_DoClimbing(player_t *player)
 	fixed_t platy;
 	subsector_t *glidesector;
 	boolean climb = true;
+	boolean onesided = ((player->lastsidehit != -1 && player->lastlinehit != -1) && !(lines[player->lastlinehit].backsector));
 
 	platx = P_ReturnThrustX(player->mo, player->mo->angle, player->mo->radius + FixedMul(8*FRACUNIT, player->mo->scale));
 	platy = P_ReturnThrustY(player->mo, player->mo->angle, player->mo->radius + FixedMul(8*FRACUNIT, player->mo->scale));
 
-	glidesector = R_IsPointInSubsector(player->mo->x + platx, player->mo->y + platy);
+	glidesector = R_PointInSubsector(player->mo->x + platx, player->mo->y + platy);
 
-	if (!glidesector || glidesector->sector != player->mo->subsector->sector)
+	if (onesided || glidesector->sector != player->mo->subsector->sector)
 	{
-		boolean floorclimb;
-		boolean thrust;
-		boolean boostup;
-		boolean skyclimber;
+		boolean floorclimb = false;
+		boolean thrust = false;
+		boolean boostup = false;
+		boolean skyclimber = false;
 		fixed_t floorheight, ceilingheight; // ESLOPE
-		thrust = false;
-		floorclimb = false;
-		boostup = false;
-		skyclimber = false;
 
-		if (glidesector)
+		if (onesided)
+			floorclimb = true;
+		else
 		{
 #ifdef ESLOPE
 			floorheight = glidesector->sector->f_slope ? P_GetZAt(glidesector->sector->f_slope, player->mo->x, player->mo->y)
@@ -2603,8 +2602,6 @@ static void P_DoClimbing(player_t *player)
 				}
 			}
 		}
-		else
-			floorclimb = true;
 
 		if (player->lastsidehit != -1 && player->lastlinehit != -1)
 		{
