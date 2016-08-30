@@ -253,7 +253,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		player->panim = PA_PAIN;
 		break;
 	case S_PLAY_SPIN:
-	case S_PLAY_DASH:
+	//case S_PLAY_DASH: -- everyone can ROLL thanks to zoom tubes...
 	case S_PLAY_SUPER_SPIN:
 		player->panim = PA_ROLL;
 		break;
@@ -275,6 +275,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 	case S_PLAY_TWINSPIN:
 		player->panim = PA_ABILITY;
 		break;
+	case S_PLAY_DASH: // ...but the act of SPINDASHING is charability2 specific.
 	case S_PLAY_MELEE:
 	case S_PLAY_MELEE_FINISH:
 		player->panim = PA_ABILITY2;
@@ -309,15 +310,8 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		// Adjust the player's animation speed to match their velocity.
 		if (!(disableSpeedAdjust || player->charflags & SF_NOSPEEDADJUST))
 		{
-			fixed_t speed = FixedDiv(player->speed, mobj->scale);
-			if (player->panim == PA_ROLL || player->panim == PA_JUMP)
-			{
-				if (speed > 16<<FRACBITS)
-					mobj->tics = 1;
-				else
-					mobj->tics = 2;
-			}
-			else if (player->panim == PA_FALL)
+			fixed_t speed;// = FixedDiv(player->speed, mobj->scale);
+			if (player->panim == PA_FALL)
 			{
 				speed = FixedDiv(abs(mobj->momz), mobj->scale);
 				if (speed < 10<<FRACBITS)
@@ -329,23 +323,44 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 				else
 					mobj->tics = 1;
 			}
-			else if (P_IsObjectOnGround(mobj) || player->powers[pw_super]) // Only if on the ground or superflying.
+			else if (player->panim == PA_ABILITY2 && player->charability2 == CA2_SPINDASH)
 			{
-				if (player->panim == PA_WALK)
+				speed = player->maxdash/3; // We're using dashspeed as the variable to check against, but reusing speed to reduce the number of calculations done.
+				if (player->dashspeed > 2*speed)
+					mobj->tics = 1;
+				else if (player->dashspeed > speed)
+					mobj->tics = 2;
+				else
+					mobj->tics = 3;
+			}
+			else
+			{
+				speed = FixedDiv(player->speed, mobj->scale);
+				if (player->panim == PA_ROLL || player->panim == PA_JUMP)
 				{
-					if (speed > 12<<FRACBITS)
-						mobj->tics = 2;
-					else if (speed > 6<<FRACBITS)
-						mobj->tics = 3;
-					else
-						mobj->tics = 4;
-				}
-				else if ((player->panim == PA_RUN) || (player->panim == PA_PEEL))
-				{
-					if (speed > 52<<FRACBITS)
+					if (speed > 16<<FRACBITS)
 						mobj->tics = 1;
 					else
 						mobj->tics = 2;
+				}
+				else if (P_IsObjectOnGround(mobj) || player->powers[pw_super]) // Only if on the ground or superflying.
+				{
+					if (player->panim == PA_WALK)
+					{
+						if (speed > 12<<FRACBITS)
+							mobj->tics = 2;
+						else if (speed > 6<<FRACBITS)
+							mobj->tics = 3;
+						else
+							mobj->tics = 4;
+					}
+					else if ((player->panim == PA_RUN) || (player->panim == PA_PEEL))
+					{
+						if (speed > 52<<FRACBITS)
+							mobj->tics = 1;
+						else
+							mobj->tics = 2;
+					}
 				}
 			}
 		}
@@ -408,7 +423,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 					spr2 = SPR2_FLY;
 					break;
 				case SPR2_CLMB:
-					spr2 = SPR2_WALK;
+					spr2 = SPR2_SPIN;
 					break;
 				case SPR2_CLNG:
 					spr2 = SPR2_CLMB;

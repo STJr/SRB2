@@ -900,7 +900,7 @@ void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor)
 // Useful when you want to kill everything the player is doing.
 void P_ResetPlayer(player_t *player)
 {
-	player->pflags &= ~(PF_ROPEHANG|PF_ITEMHANG|PF_MACESPIN|PF_SPINNING|PF_JUMPED|PF_GLIDING|PF_THOKKED|PF_CARRIED);
+	player->pflags &= ~(PF_ROPEHANG|PF_ITEMHANG|PF_MACESPIN|PF_SPINNING|PF_STARTDASH|PF_JUMPED|PF_GLIDING|PF_THOKKED|PF_CARRIED);
 	player->jumping = 0;
 	player->secondjump = 0;
 	player->glidetime = 0;
@@ -3727,18 +3727,18 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 			player->mo->momx = player->cmomx;
 			player->mo->momy = player->cmomy;
 			player->pflags |= PF_STARTDASH|PF_SPINNING;
-			player->dashspeed = FixedMul(FRACUNIT, player->mo->scale);
+			player->dashspeed = FRACUNIT;
 			player->dashtime = 0;
 			P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
 			player->pflags |= PF_USEDOWN;
 		}
 		else if ((cmd->buttons & BT_USE) && (player->pflags & PF_STARTDASH))
 		{
-			player->dashspeed += FixedMul(FRACUNIT, player->mo->scale);
+			player->dashspeed += FRACUNIT;
 
 			if (!(player->dashtime++ % 5))
 			{
-				if (!player->spectator && player->dashspeed < FixedMul(player->maxdash, player->mo->scale))
+				if (!player->spectator && player->dashspeed < player->maxdash)
 					S_StartSound(player->mo, sfx_spndsh); // Make the rev sound!
 
 				// Now spawn the color thok circle.
@@ -3800,7 +3800,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 			if (player->dashspeed)
 			{
 				P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
-				P_InstaThrust(player->mo, player->mo->angle, player->dashspeed); // catapult forward ho!!
+				P_InstaThrust(player->mo, player->mo->angle, FixedMul(player->dashspeed, player->mo->scale)); // catapult forward ho!!
 			}
 			else
 			{
@@ -3815,8 +3815,11 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 		player->dashspeed = 0;
 	}
 
-	if (onground && player->pflags & PF_STARTDASH && player->mo->state-states != S_PLAY_DASH)
-		P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
+	if (onground && player->pflags & PF_STARTDASH)
+	{
+		if (player->mo->state-states != S_PLAY_DASH)
+			P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
+	}
 	else if (onground && player->pflags & PF_SPINNING && !(player->panim == PA_ROLL))
 		P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
 
@@ -3829,6 +3832,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 #endif
 		)
 	{
+		P_ResetPlayer(player);
 		player->mo->z += P_MobjFlip(player->mo);
 		player->mo->momx = player->cmomx = 0;
 		player->mo->momy = player->cmomy = 0;
@@ -6566,10 +6570,10 @@ static void P_MovePlayer(player_t *player)
 
 	// Cap the speed limit on a spindash
 	// Up the 60*FRACUNIT number to boost faster, you speed demon you!
-	if (player->dashspeed > FixedMul(player->maxdash, player->mo->scale))
-		player->dashspeed = FixedMul(player->maxdash, player->mo->scale);
-	else if (player->dashspeed > 0 && player->dashspeed < FixedMul(player->mindash, player->mo->scale))
-		player->dashspeed = FixedMul(player->mindash, player->mo->scale);
+	if (player->dashspeed > player->maxdash)
+		player->dashspeed = player->maxdash;
+	else if (player->dashspeed > 0 && player->dashspeed < player->mindash)
+		player->dashspeed = player->mindash;
 
 	if (!(player->charability == CA_GLIDEANDCLIMB) || player->gotflag) // If you can't glide, then why the heck would you be gliding?
 	{
