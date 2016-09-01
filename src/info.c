@@ -3079,6 +3079,9 @@ state_t states[NUMSTATES] =
 	{SPR_CHRM, 1, 6, {NULL}, 0, 0, S_CHROME}, // S_CHROME4
 	{SPR_CHRL, 0, 2, {NULL}, 0, 0, S_NULL}, // S_CHROME_LASER
 	{SPR_NULL, 0, 35, {NULL}, 0, 0, S_NULL}, // S_CHROME_TARGET
+	{SPR_NULL, 0, 140, {A_SpawnObjectRelative}, 0, MT_MOVINGCHROME, S_MOVINGCHROMESPAWNER}, // S_MOVINGCHROMESPAWNER
+	{SPR_NULL, 0, -1, {NULL}, 0, 0, S_NULL}, // S_MOVINGCHROMESPAWNERIDLE
+	{SPR_CHRM, 0, 6, {A_Thrust}, 11, 1, S_CHROME2}, // S_CHROMEMOVE
 
 	// Static Generator
 	{SPR_STAT, 0, 1, {NULL}, 0, 0, S_STATICGENERATOR1}, // S_STATICGENERATORSPAWN
@@ -16047,6 +16050,61 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY, // flags
 		S_NULL         // raisestate
 	},
+
+	{           // MT_MOVINGCHROMESPAWNER
+		2911,           // doomednum
+		S_MOVINGCHROMESPAWNER, // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		64*FRACUNIT,    // radius
+		20*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOGRAVITY|MF_NOCLIP|MF_SCENERY, // flags
+		S_MOVINGCHROMESPAWNERIDLE // raisestate
+	},
+
+	{           // MT_MOVINGCHROME
+		-1,             // doomednum
+		S_CHROMEMOVE, // spawnstate
+		1,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_XPLD1,        // deathstate
+		S_NULL,         // xdeathstate
+		sfx_pop,        // deathsound
+		11*FRACUNIT,    // speed
+		64*FRACUNIT,    // radius
+		20*FRACUNIT,    // height
+		0,              // display offset
+		0,              // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOGRAVITY|MF_RUNSPAWNFUNC, // flags
+		S_NULL          // raisestate
+	},
+
 
 	{           // MT_STATICGENERATOR
 		2920,           // doomednum

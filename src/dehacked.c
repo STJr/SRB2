@@ -6732,6 +6732,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_CHROME4",
 	"S_CHROME_LASER",
 	"S_CHROME_TARGET",
+	"S_MOVINGCHROMESPAWNER",
+	"S_MOVINGCHROMESPAWNERIDLE",
+	"S_CHROMEMOVE",
 
 	// Static Generator
 	"S_STATICGENERATORSPAWN",
@@ -7395,6 +7398,8 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_CHROME",
 	"MT_CHROME_LASER",
 	"MT_CHROME_TARGET",
+	"MT_MOVINGCHROMESPAWNER",
+	"MT_MOVINGCHROME",
 
 	"MT_STATICGENERATOR",
 
