@@ -6976,6 +6976,7 @@ static void P_MovePlayer(player_t *player)
 		msecnode_t *node; // only place it's being used in P_MovePlayer now
 		fixed_t oldx;
 		fixed_t oldy;
+		fixed_t floorz, ceilingz;
 
 		oldx = player->mo->x;
 		oldy = player->mo->y;
@@ -6993,31 +6994,34 @@ static void P_MovePlayer(player_t *player)
 			if (node->m_sector->ffloors)
 			{
 				ffloor_t *rover;
+				fixed_t topheight, bottomheight;
 
 				for (rover = node->m_sector->ffloors; rover; rover = rover->next)
 				{
-					if (!(rover->flags & FF_EXISTS)) continue;
+					if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_BLOCKPLAYER))
+						continue;
 
-					if ((rover->flags & FF_BLOCKPLAYER))
+					topheight = P_GetFOFTopZ(player->mo, node->m_sector, rover, player->mo->x, player->mo->y, NULL);
+					bottomheight = P_GetFOFBottomZ(player->mo, node->m_sector, rover, player->mo->x, player->mo->y, NULL);
+					if (topheight > player->mo->z && bottomheight < player->mo->z)
 					{
-						if (*rover->topheight > player->mo->z && *rover->bottomheight < player->mo->z)
-						{
-							P_ResetPlayer(player);
-							S_StartSound(player->mo, sfx_s3k4a);
-							player->climbing = 5;
-							player->mo->momx = player->mo->momy = player->mo->momz = 0;
-							break;
-						}
+						P_ResetPlayer(player);
+						S_StartSound(player->mo, sfx_s3k4a);
+						player->climbing = 5;
+						player->mo->momx = player->mo->momy = player->mo->momz = 0;
+						break;
 					}
 				}
 			}
 
-			if (player->mo->z+player->mo->height > node->m_sector->ceilingheight
+			floorz = P_GetFloorZ(player->mo, node->m_sector, player->mo->x, player->mo->y, NULL);
+			ceilingz = P_GetCeilingZ(player->mo, node->m_sector, player->mo->x, player->mo->y, NULL);
+
+			if (player->mo->z+player->mo->height > ceilingz
 				&& node->m_sector->ceilingpic == skyflatnum)
 				continue;
 
-			if (node->m_sector->floorheight > player->mo->z
-				|| node->m_sector->ceilingheight < player->mo->z)
+			if (floorz > player->mo->z || ceilingz < player->mo->z)
 			{
 				P_ResetPlayer(player);
 				S_StartSound(player->mo, sfx_s3k4a);
