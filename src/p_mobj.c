@@ -325,10 +325,11 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 			}
 			else if (player->panim == PA_ABILITY2 && player->charability2 == CA2_SPINDASH)
 			{
-				speed = player->maxdash/3; // We're using dashspeed as the variable to check against, but reusing speed to reduce the number of calculations done.
-				if (player->dashspeed > 2*speed)
+				fixed_t step = (player->maxdash - player->mindash)/4;
+				speed = (player->dashspeed - player->mindash);
+				if (speed > 3*step)
 					mobj->tics = 1;
-				else if (player->dashspeed > speed)
+				else if (speed > step)
 					mobj->tics = 2;
 				else
 					mobj->tics = 3;

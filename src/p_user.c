@@ -3731,15 +3731,22 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 			player->dashtime = 0;
 			P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
 			player->pflags |= PF_USEDOWN;
+			if (!player->spectator)
+				S_StartSound(player->mo, sfx_s3kab); // Make the rev sound! Previously sfx_spndsh.
 		}
 		else if ((cmd->buttons & BT_USE) && (player->pflags & PF_STARTDASH))
 		{
+#define chargecalculation (6*(player->dashspeed - player->mindash))/(player->maxdash - player->mindash)
+			fixed_t soundcalculation = chargecalculation;
 			player->dashspeed += FRACUNIT;
+			if (!player->spectator && soundcalculation != chargecalculation)
+				S_StartSound(player->mo, sfx_s3kab); // Make the rev sound! Previously sfx_spndsh.
+#undef chargecalculation
 
-			if (!(player->dashtime++ % 5))
+			/*if (!(player->dashtime++ % 5))
 			{
 				if (!player->spectator && player->dashspeed < player->maxdash)
-					S_StartSound(player->mo, sfx_spndsh); // Make the rev sound!
+					S_StartSound(player->mo, sfx_s3kab); // Make the rev sound! Previously sfx_spndsh.
 
 				// Now spawn the color thok circle.
 				if (player->revitem)
@@ -3748,7 +3755,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 					if (demorecording)
 						G_GhostAddRev();
 				}
-			}
+			}*/
 		}
 		// If not moving up or down, and travelling faster than a speed of four while not holding
 		// down the spin button and not spinning.
