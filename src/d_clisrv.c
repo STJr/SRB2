@@ -550,7 +550,6 @@ static inline void resynch_write_player(resynch_pak *rsp, const size_t i)
 
 	rsp->maxlink = LONG(players[i].maxlink);
 	rsp->dashspeed = (fixed_t)LONG(players[i].dashspeed);
-	rsp->dashtime = LONG(players[i].dashtime);
 	rsp->angle_pos = (angle_t)LONG(players[i].angle_pos);
 	rsp->old_angle_pos = (angle_t)LONG(players[i].old_angle_pos);
 	rsp->bumpertime = (tic_t)LONG(players[i].bumpertime);
@@ -677,7 +676,6 @@ static void resynch_read_player(resynch_pak *rsp)
 
 	players[i].maxlink = LONG(rsp->maxlink);
 	players[i].dashspeed = (fixed_t)LONG(rsp->dashspeed);
-	players[i].dashtime = LONG(rsp->dashtime);
 	players[i].angle_pos = (angle_t)LONG(rsp->angle_pos);
 	players[i].old_angle_pos = (angle_t)LONG(rsp->old_angle_pos);
 	players[i].bumpertime = (tic_t)LONG(rsp->bumpertime);
