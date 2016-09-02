@@ -1271,7 +1271,7 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 			topheight = P_GetFOFTopZ(thing, newsubsec->sector, rover, x, y, NULL);
 			bottomheight = P_GetFOFBottomZ(thing, newsubsec->sector, rover, x, y, NULL);
 
-			if (rover->flags & FF_GOOWATER && !(thing->flags & MF_NOGRAVITY))
+			if ((rover->flags & (FF_SWIMMABLE|FF_GOOWATER)) == (FF_SWIMMABLE|FF_GOOWATER) && !(thing->flags & MF_NOGRAVITY))
 			{
 				// If you're inside goowater and slowing down
 				fixed_t sinklevel = FixedMul(thing->info->height/6, thing->scale);
