@@ -1692,6 +1692,7 @@ static void P_CheckBustableBlocks(player_t *player)
 		if (node->m_sector->ffloors)
 		{
 			ffloor_t *rover;
+			fixed_t topheight, bottomheight;
 
 			for (rover = node->m_sector->ffloors; rover; rover = rover->next)
 			{
@@ -1717,42 +1718,45 @@ static void P_CheckBustableBlocks(player_t *player)
 					if (!(rover->flags & FF_SHATTER) && (rover->flags & FF_ONLYKNUX) && !(player->charability == CA_GLIDEANDCLIMB))
 						continue;
 
+					topheight = P_GetFOFTopZ(player->mo, node->m_sector, rover, player->mo->x, player->mo->y, NULL);
+					bottomheight = P_GetFOFBottomZ(player->mo, node->m_sector, rover, player->mo->x, player->mo->y, NULL);
+
 					// Height checks
 					if (rover->flags & FF_SHATTERBOTTOM)
 					{
-						if (player->mo->z+player->mo->momz + player->mo->height < *rover->bottomheight)
+						if (player->mo->z+player->mo->momz + player->mo->height < bottomheight)
 							continue;
 
-						if (player->mo->z+player->mo->height > *rover->bottomheight)
+						if (player->mo->z+player->mo->height > bottomheight)
 							continue;
 					}
 					else if (rover->flags & FF_SPINBUST)
 					{
-						if (player->mo->z+player->mo->momz > *rover->topheight)
+						if (player->mo->z+player->mo->momz > topheight)
 							continue;
 
-						if (player->mo->z + player->mo->height < *rover->bottomheight)
+						if (player->mo->z + player->mo->height < bottomheight)
 							continue;
 					}
 					else if (rover->flags & FF_SHATTER)
 					{
-						if (player->mo->z + player->mo->momz > *rover->topheight)
+						if (player->mo->z + player->mo->momz > topheight)
 							continue;
 
-						if (player->mo->z+player->mo->momz + player->mo->height < *rover->bottomheight)
+						if (player->mo->z+player->mo->momz + player->mo->height < bottomheight)
 							continue;
 					}
 					else
 					{
-						if (player->mo->z >= *rover->topheight)
+						if (player->mo->z >= topheight)
 							continue;
 
-						if (player->mo->z + player->mo->height < *rover->bottomheight)
+						if (player->mo->z + player->mo->height < bottomheight)
 							continue;
 					}
 
 					// Impede the player's fall a bit
-					if (((rover->flags & FF_SPINBUST) || (rover->flags & FF_SHATTER)) && player->mo->z >= *rover->topheight)
+					if (((rover->flags & FF_SPINBUST) || (rover->flags & FF_SHATTER)) && player->mo->z >= topheight)
 						player->mo->momz >>= 1;
 					else if (rover->flags & FF_SHATTER)
 					{
