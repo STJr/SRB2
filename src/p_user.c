@@ -3728,6 +3728,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 			player->mo->momy = player->cmomy;
 			player->pflags |= PF_STARTDASH|PF_SPINNING;
 			player->dashspeed = FRACUNIT;
+			player->dashtime = 0;
 			P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
 			player->pflags |= PF_USEDOWN;
 			if (!player->spectator)
@@ -3741,14 +3742,21 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 			if (!player->spectator && soundcalculation != chargecalculation)
 				S_StartSound(player->mo, sfx_s3kab); // Make the rev sound! Previously sfx_spndsh.
 #undef chargecalculation
-			if (player->revitem && !(leveltime % 5)) // Now spawn the color thok circle.
-			{
-				P_SpawnSpinMobj(player, player->revitem);
-				if (demorecording)
-					G_GhostAddRev();
-			}
-		}
 
+			/*if (!(player->dashtime++ % 5))
+			{
+				if (!player->spectator && player->dashspeed < player->maxdash)
+					S_StartSound(player->mo, sfx_s3kab); // Make the rev sound! Previously sfx_spndsh.
+
+				// Now spawn the color thok circle.
+				if (player->revitem)
+				{
+					P_SpawnSpinMobj(player, player->revitem);
+					if (demorecording)
+						G_GhostAddRev();
+				}
+			}*/
+		}
 		// If not moving up or down, and travelling faster than a speed of four while not holding
 		// down the spin button and not spinning.
 		// AKA Just go into a spin on the ground, you idiot. ;)

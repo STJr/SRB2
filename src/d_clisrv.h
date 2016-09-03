@@ -210,6 +210,7 @@ typedef struct
 
 	INT32 maxlink;
 	fixed_t dashspeed;
+	INT32 dashtime;
 	angle_t angle_pos;
 	angle_t old_angle_pos;
 	tic_t bumpertime;

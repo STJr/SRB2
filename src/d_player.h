@@ -319,6 +319,7 @@ typedef struct player_s
 
 	UINT32 score; // player score
 	fixed_t dashspeed; // dashing speed
+	INT32 dashtime; // tics dashing, used for rev sound
 
 	fixed_t normalspeed; // Normal ground
 	fixed_t runspeed; // Speed you break into the run animation
