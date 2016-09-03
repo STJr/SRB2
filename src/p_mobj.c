@@ -1278,25 +1278,23 @@ fixed_t P_GetMobjGravity(mobj_t *mo)
 
 		for (rover = mo->subsector->sector->ffloors; rover; rover = rover->next)
 		{
-			if (!(rover->flags & FF_EXISTS))
+			if (!(rover->flags & FF_EXISTS) || !P_InsideANonSolidFFloor(mo, rover)) // P_InsideANonSolidFFloor checks for FF_EXISTS itself, but let's not always call this function
 				continue;
 
-			if (P_InsideANonSolidFFloor(mo, rover))
-			{
-				if ((rover->flags & (FF_SWIMMABLE|FF_GOOWATER)) == (FF_SWIMMABLE|FF_GOOWATER))
-					goopgravity = true;
-				if (rover->master->frontsector->gravity)
-				{
-					gravityadd = -FixedMul(gravity,
-						(FixedDiv(*rover->master->frontsector->gravity>>FRACBITS, 1000)));
+			if ((rover->flags & (FF_SWIMMABLE|FF_GOOWATER)) == (FF_SWIMMABLE|FF_GOOWATER))
+				goopgravity = true;
 
-					if (rover->master->frontsector->verticalflip && gravityadd > 0)
-						mo->eflags |= MFE_VERTICALFLIP;
+			if (!(rover->master->frontsector->gravity))
+				continue;
 
-					no3dfloorgrav = false;
-					break;
-				}
-			}
+			gravityadd = -FixedMul(gravity,
+				(FixedDiv(*rover->master->frontsector->gravity>>FRACBITS, 1000)));
+
+			if (rover->master->frontsector->verticalflip && gravityadd > 0)
+				mo->eflags |= MFE_VERTICALFLIP;
+
+			no3dfloorgrav = false;
+			break;
 		}
 	}
 
@@ -1318,28 +1316,20 @@ fixed_t P_GetMobjGravity(mobj_t *mo)
 
 	if (mo->player)
 	{
-		if (mo->player->charability == CA_FLY && (mo->player->powers[pw_tailsfly]
-		|| (mo->state >= &states[S_PLAY_SPC1] && mo->state <= &states[S_PLAY_SPC4])))
-			gravityadd = gravityadd/3; // less gravity while flying
-		if (mo->player->pflags & PF_GLIDING)
-			gravityadd = gravityadd/3; // less gravity while gliding
-		if (mo->player->climbing)
-			gravityadd = 0;
-		if (mo->player->pflags & PF_NIGHTSMODE)
+		if ((mo->player->pflags & PF_GLIDING)
+		|| (mo->player->charability == CA_FLY && (mo->player->powers[pw_tailsfly]
+			|| (mo->state >= &states[S_PLAY_SPC1] && mo->state <= &states[S_PLAY_SPC4]))))
+			gravityadd = gravityadd/3; // less gravity while flying/gliding
+		if (mo->player->climbing || (mo->player->pflags & PF_NIGHTSMODE))
 			gravityadd = 0;
 
+		if (!(mo->flags2 & MF2_OBJECTFLIP) != !(mo->player->powers[pw_gravityboots])) // negated to turn numeric into bool - would be double negated, but not needed if both would be
 		{
-			UINT8 bits = 0;
-			if (mo->flags2 & MF2_OBJECTFLIP)
-				bits ^= 1;
-			if (mo->player->powers[pw_gravityboots])
-				bits ^= 1;
-			if (bits & 1)
-			{
-				gravityadd = -gravityadd;
-				mo->eflags ^= MFE_VERTICALFLIP;
-			}
+			gravityadd = -gravityadd;
+			mo->eflags ^= MFE_VERTICALFLIP;
 		}
+		if (!!(mo->eflags & MFE_VERTICALFLIP) != wasflip)
+			P_PlayerFlip(mo);
 	}
 	else
 	{
@@ -1347,10 +1337,10 @@ fixed_t P_GetMobjGravity(mobj_t *mo)
 		if (mo->flags2 & MF2_OBJECTFLIP)
 		{
 			mo->eflags |= MFE_VERTICALFLIP;
-			if (gravityadd < 0) // Don't sink, only rise up
-				gravityadd *= -1;
 			if (mo->z + mo->height >= mo->ceilingz)
 				gravityadd = 0;
+			else if (gravityadd < 0) // Don't sink, only rise up
+				gravityadd *= -1;
 		}
 		else //Otherwise, sort through the other exceptions.
 		{
@@ -1395,9 +1385,6 @@ fixed_t P_GetMobjGravity(mobj_t *mo)
 	// Goop has slower, reversed gravity
 	if (goopgravity)
 		gravityadd = -gravityadd/5;
-
-	if (mo->player && !!(mo->eflags & MFE_VERTICALFLIP) != wasflip)
-		P_PlayerFlip(mo);
 
 	gravityadd = FixedMul(gravityadd, mo->scale);
 
