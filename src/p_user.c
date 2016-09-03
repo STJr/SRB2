@@ -3727,7 +3727,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 			player->mo->momx = player->cmomx;
 			player->mo->momy = player->cmomy;
 			player->pflags |= PF_STARTDASH|PF_SPINNING;
-			player->dashspeed = FRACUNIT;
+			player->dashspeed = player->mindash;
 			P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
 			player->pflags |= PF_USEDOWN;
 			if (!player->spectator)
@@ -3735,12 +3735,15 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 		}
 		else if ((cmd->buttons & BT_USE) && (player->pflags & PF_STARTDASH))
 		{
+			if (player->dashspeed < player->maxdash)
+			{
 #define chargecalculation (6*(player->dashspeed - player->mindash))/(player->maxdash - player->mindash)
-			fixed_t soundcalculation = chargecalculation;
-			player->dashspeed += FRACUNIT;
-			if (!player->spectator && soundcalculation != chargecalculation)
-				S_StartSound(player->mo, sfx_s3kab); // Make the rev sound! Previously sfx_spndsh.
+				fixed_t soundcalculation = chargecalculation;
+				player->dashspeed += FRACUNIT;
+				if (!player->spectator && soundcalculation != chargecalculation)
+					S_StartSound(player->mo, sfx_s3kab); // Make the rev sound! Previously sfx_spndsh.
 #undef chargecalculation
+			}
 			if (player->revitem && !(leveltime % 5)) // Now spawn the color thok circle.
 			{
 				P_SpawnSpinMobj(player, player->revitem);
@@ -6566,13 +6569,6 @@ static void P_MovePlayer(player_t *player)
 		player->pflags &= ~PF_THOKKED;
 		P_SetPlayerMobjState(player->mo, S_PLAY_STND);
 	}
-
-	// Cap the speed limit on a spindash
-	// Up the 60*FRACUNIT number to boost faster, you speed demon you!
-	if (player->dashspeed > player->maxdash)
-		player->dashspeed = player->maxdash;
-	else if (player->dashspeed > 0 && player->dashspeed < player->mindash)
-		player->dashspeed = player->mindash;
 
 	if (!(player->charability == CA_GLIDEANDCLIMB) || player->gotflag) // If you can't glide, then why the heck would you be gliding?
 	{
