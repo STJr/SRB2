@@ -142,8 +142,6 @@ static int player_get(lua_State *L)
 		lua_pushinteger(L, plr->score);
 	else if (fastcmp(field,"dashspeed"))
 		lua_pushfixed(L, plr->dashspeed);
-	else if (fastcmp(field,"dashtime"))
-		lua_pushinteger(L, plr->dashtime);
 	else if (fastcmp(field,"normalspeed"))
 		lua_pushfixed(L, plr->normalspeed);
 	else if (fastcmp(field,"runspeed"))
@@ -401,8 +399,6 @@ static int player_set(lua_State *L)
 		plr->score = (UINT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"dashspeed"))
 		plr->dashspeed = luaL_checkfixed(L, 3);
-	else if (fastcmp(field,"dashtime"))
-		plr->dashtime = (INT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"normalspeed"))
 		plr->normalspeed = luaL_checkfixed(L, 3);
 	else if (fastcmp(field,"runspeed"))
