@@ -3481,10 +3481,11 @@ void P_MobjCheckWater(mobj_t *mobj)
 	boolean waterwasnotset = (mobj->watertop == INT32_MAX);
 	boolean wasinwater = (mobj->eflags & MFE_UNDERWATER) == MFE_UNDERWATER;
 	boolean wasingoo = (mobj->eflags & MFE_GOOWATER) == MFE_GOOWATER;
-	fixed_t thingtop = mobj->z + mobj->height; // especially for players, infotable height does not neccessarily match actual height
+	fixed_t thingtop = mobj->z + mobj->height;
 	sector_t *sector = mobj->subsector->sector;
 	ffloor_t *rover;
 	player_t *p = mobj->player; // Will just be null if not a player.
+	fixed_t height = (p ? P_GetPlayerHeight(p) : mobj->height); // for players, calculation height does not necessarily match actual height for gameplay reasons (spin, etc)
 
 	// Default if no water exists.
 	mobj->watertop = mobj->waterbottom = mobj->z - 1000*FRACUNIT;
@@ -3513,14 +3514,14 @@ void P_MobjCheckWater(mobj_t *mobj)
 
 		if (mobj->eflags & MFE_VERTICALFLIP)
 		{
-			if (topheight < (thingtop - FixedMul(mobj->info->height/2, mobj->scale))
+			if (topheight < (thingtop - (height>>1))
 			 || bottomheight > thingtop)
 				continue;
 		}
 		else
 		{
 			if (topheight < mobj->z
-			 || bottomheight > (mobj->z + FixedMul(mobj->info->height/2, mobj->scale)))
+			 || bottomheight > (mobj->z + (height>>1)))
 				continue;
 		}
 
@@ -3529,22 +3530,26 @@ void P_MobjCheckWater(mobj_t *mobj)
 		mobj->waterbottom = bottomheight;
 
 		// Just touching the water?
-		if (((mobj->eflags & MFE_VERTICALFLIP) && thingtop - FixedMul(mobj->info->height, mobj->scale) < bottomheight)
-		 || (!(mobj->eflags & MFE_VERTICALFLIP) && mobj->z + FixedMul(mobj->info->height, mobj->scale) > topheight))
+		if (((mobj->eflags & MFE_VERTICALFLIP) && thingtop - height < bottomheight)
+		 || (!(mobj->eflags & MFE_VERTICALFLIP) && mobj->z + height > topheight))
 		{
 			mobj->eflags |= MFE_TOUCHWATER;
 			if (rover->flags & FF_GOOWATER && !(mobj->flags & MF_NOGRAVITY))
 				mobj->eflags |= MFE_GOOWATER;
 		}
 		// Actually in the water?
-		if (((mobj->eflags & MFE_VERTICALFLIP) && thingtop - FixedMul(mobj->info->height/2, mobj->scale) > bottomheight)
-		 || (!(mobj->eflags & MFE_VERTICALFLIP) && mobj->z + FixedMul(mobj->info->height/2, mobj->scale) < topheight))
+		if (((mobj->eflags & MFE_VERTICALFLIP) && thingtop - (height>>1) > bottomheight)
+		 || (!(mobj->eflags & MFE_VERTICALFLIP) && mobj->z + (height>>1) < topheight))
 		{
 			mobj->eflags |= MFE_UNDERWATER;
 			if (rover->flags & FF_GOOWATER && !(mobj->flags & MF_NOGRAVITY))
 				mobj->eflags |= MFE_GOOWATER;
 		}
 	}
+
+	// Spectators and dead players don't get to do any of the things after this.
+	if (p && (p->spectator || p->playerstate != PST_LIVE))
+		return;
 
 	// Specific things for underwater players
 	if (p && (mobj->eflags & MFE_UNDERWATER) == MFE_UNDERWATER)
@@ -3578,10 +3583,6 @@ void P_MobjCheckWater(mobj_t *mobj)
 	if (waterwasnotset || !!(mobj->eflags & MFE_UNDERWATER) == wasinwater)
 		return;
 
-	// Spectators and dead players also don't count.
-	if (p && (p->spectator || p->playerstate != PST_LIVE))
-		return;
-
 	if ((p) // Players
 	 || (mobj->flags & MF_PUSHABLE) // Pushables
 	 || ((mobj->info->flags & MF_PUSHABLE) && mobj->fuse) // Previously pushable, might be moving still
@@ -3589,10 +3590,8 @@ void P_MobjCheckWater(mobj_t *mobj)
 	{
 		// Check to make sure you didn't just cross into a sector to jump out of
 		// that has shallower water than the block you were originally in.
-		if (!(mobj->eflags & MFE_VERTICALFLIP) && mobj->watertop-mobj->floorz <= FixedMul(mobj->info->height, mobj->scale)>>1)
-			return;
-
-		if ((mobj->eflags & MFE_VERTICALFLIP) && mobj->ceilingz-mobj->waterbottom <= FixedMul(mobj->info->height, mobj->scale)>>1)
+		if ((!(mobj->eflags & MFE_VERTICALFLIP) && mobj->watertop-mobj->floorz <= height>>1)
+			|| ((mobj->eflags & MFE_VERTICALFLIP) && mobj->ceilingz-mobj->waterbottom <= height>>1))
 			return;
 
 		if ((mobj->eflags & MFE_GOOWATER || wasingoo)) { // Decide what happens to your momentum when you enter/leave goopy water.
@@ -3604,8 +3603,8 @@ void P_MobjCheckWater(mobj_t *mobj)
 
 		if (P_MobjFlip(mobj)*mobj->momz < 0)
 		{
-			if ((mobj->eflags & MFE_VERTICALFLIP && thingtop-(FixedMul(mobj->info->height, mobj->scale)>>1)-mobj->momz <= mobj->waterbottom)
-				|| (!(mobj->eflags & MFE_VERTICALFLIP) && mobj->z+(FixedMul(mobj->info->height, mobj->scale)>>1)-mobj->momz >= mobj->watertop))
+			if ((mobj->eflags & MFE_VERTICALFLIP && thingtop-(height>>1)-mobj->momz <= mobj->waterbottom)
+				|| (!(mobj->eflags & MFE_VERTICALFLIP) && mobj->z+(height>>1)-mobj->momz >= mobj->watertop))
 			{
 				// Spawn a splash
 				mobj_t *splish;
@@ -3638,8 +3637,8 @@ void P_MobjCheckWater(mobj_t *mobj)
 		}
 		else if (P_MobjFlip(mobj)*mobj->momz > 0)
 		{
-			if (((mobj->eflags & MFE_VERTICALFLIP && thingtop-(FixedMul(mobj->info->height, mobj->scale)>>1)-mobj->momz > mobj->waterbottom)
-				|| (!(mobj->eflags & MFE_VERTICALFLIP) && mobj->z+(FixedMul(mobj->info->height, mobj->scale)>>1)-mobj->momz < mobj->watertop))
+			if (((mobj->eflags & MFE_VERTICALFLIP && thingtop-(height>>1)-mobj->momz > mobj->waterbottom)
+				|| (!(mobj->eflags & MFE_VERTICALFLIP) && mobj->z+(height>>1)-mobj->momz < mobj->watertop))
 				&& !(mobj->eflags & MFE_UNDERWATER)) // underwater check to prevent splashes on opposite side
 			{
 				// Spawn a splash
@@ -3744,10 +3743,10 @@ static void P_SceneryCheckWater(mobj_t *mobj)
 #endif
 
 			if (topheight <= mobj->z
-				|| bottomheight > (mobj->z + FixedMul(mobj->info->height >> 1, mobj->scale)))
+				|| bottomheight > (mobj->z + (mobj->height>>1)))
 				continue;
 
-			if (mobj->z + FixedMul(mobj->info->height, mobj->scale) > topheight)
+			if (mobj->z + mobj->height > topheight)
 				mobj->eflags |= MFE_TOUCHWATER;
 			else
 				mobj->eflags &= ~MFE_TOUCHWATER;
@@ -3756,7 +3755,7 @@ static void P_SceneryCheckWater(mobj_t *mobj)
 			mobj->watertop = topheight;
 			mobj->waterbottom = bottomheight;
 
-			if (mobj->z + FixedMul(mobj->info->height >> 1, mobj->scale) < topheight)
+			if (mobj->z + (mobj->height>>1) < topheight)
 				mobj->eflags |= MFE_UNDERWATER;
 			else
 				mobj->eflags &= ~MFE_UNDERWATER;

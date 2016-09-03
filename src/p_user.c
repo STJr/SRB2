@@ -6671,7 +6671,7 @@ static void P_MovePlayer(player_t *player)
 	&& (player->speed > runspd || (player->pflags & PF_STARTDASH))
 	&& leveltime % (TICRATE/7) == 0 && player->mo->momz == 0 && !(player->pflags & PF_SLIDING) && !player->spectator)
 	{
-		mobj_t *water = P_SpawnMobj(player->mo->x, player->mo->y,
+		mobj_t *water = P_SpawnMobj(player->mo->x - P_ReturnThrustX(NULL, player->mo->angle, player->mo->radius), player->mo->y - P_ReturnThrustY(NULL, player->mo->angle, player->mo->radius),
 			((player->mo->eflags & MFE_VERTICALFLIP) ? player->mo->waterbottom - FixedMul(mobjinfo[MT_SPLISH].height, player->mo->scale) : player->mo->watertop), MT_SPLISH);
 		if (player->mo->eflags & MFE_GOOWATER)
 			S_StartSound(water, sfx_ghit);
