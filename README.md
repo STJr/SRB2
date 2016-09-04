@@ -18,5 +18,5 @@ Warning: 64-bit builds are not netgame compatible with 32-bit builds. Use at you
 
 See [SRB2 Wiki/Source code compiling](http://wiki.srb2.org/wiki/Source_code_compiling)
 
-### Disclaimer
+## Disclaimer
 Sonic Team Junior is in no way affiliated with SEGA or Sonic Team. We do not claim ownership of any of SEGA's intellectual property used in SRB2.
