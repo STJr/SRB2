@@ -1553,6 +1553,7 @@ static void P_PushableCheckBustables(mobj_t *mo)
 		if (node->m_sector->ffloors)
 		{
 			ffloor_t *rover;
+			fixed_t topheight, bottomheight;
 
 			for (rover = node->m_sector->ffloors; rover; rover = rover->next)
 			{
@@ -1565,37 +1566,39 @@ static void P_PushableCheckBustables(mobj_t *mo)
 
 				if (!rover->master->frontsector->crumblestate)
 				{
+					topheight = P_GetFOFTopZ(mo, node->m_sector, rover, mo->x, mo->y, NULL);
+					bottomheight = P_GetFOFBottomZ(mo, node->m_sector, rover, mo->x, mo->y, NULL);
 					// Height checks
 					if (rover->flags & FF_SHATTERBOTTOM)
 					{
-						if (mo->z+mo->momz + mo->height < *rover->bottomheight)
+						if (mo->z+mo->momz + mo->height < bottomheight)
 							continue;
 
-						if (mo->z+mo->height > *rover->bottomheight)
+						if (mo->z+mo->height > bottomheight)
 							continue;
 					}
 					else if (rover->flags & FF_SPINBUST)
 					{
-						if (mo->z+mo->momz > *rover->topheight)
+						if (mo->z+mo->momz > topheight)
 							continue;
 
-						if (mo->z+mo->height < *rover->bottomheight)
+						if (mo->z+mo->height < bottomheight)
 							continue;
 					}
 					else if (rover->flags & FF_SHATTER)
 					{
-						if (mo->z+mo->momz > *rover->topheight)
+						if (mo->z+mo->momz > topheight)
 							continue;
 
-						if (mo->z+mo->momz + mo->height < *rover->bottomheight)
+						if (mo->z+mo->momz + mo->height < bottomheight)
 							continue;
 					}
 					else
 					{
-						if (mo->z >= *rover->topheight)
+						if (mo->z >= topheight)
 							continue;
 
-						if (mo->z+mo->height < *rover->bottomheight)
+						if (mo->z+mo->height < bottomheight)
 							continue;
 					}
 
