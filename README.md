@@ -12,7 +12,7 @@
 - libupnp (Linux/OS X only)
 - libgme (Linux/OS X only)
 
-Warning: 64-bit builds are not netgame compatible. Use at your own risk.
+Warning: 64-bit builds are not netgame compatible with 32-bit builds. Use at your own risk.
 
 ## Compiling
 
