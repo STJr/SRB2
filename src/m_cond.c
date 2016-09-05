@@ -197,7 +197,7 @@ void M_SetupDefaultConditionSets(void)
 
 	// --  51: Find 38 (all) emblems
 	M_AddRawCondition(51, 1, UC_TOTALEMBLEMS, 38, 0, 0);
-	
+
 	// -- 52: Complete ???
 	M_AddRawCondition(52, 1, UC_MAPBEATEN, 27, 0, 0);
 }

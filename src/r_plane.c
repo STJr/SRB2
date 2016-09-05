@@ -955,8 +955,8 @@ void R_DrawSinglePlane(visplane_t *pl)
 		// Okay, look, don't ask me why this works, but without this setup there's a disgusting-looking misalignment with the textures. -Red
 		fudge = ((1<<nflatshiftup)+1.0f)/(1<<nflatshiftup);
 
-		xoffs *= fudge;
-		yoffs /= fudge;
+		xoffs = (fixed_t)(xoffs*fudge);
+		yoffs = (fixed_t)(yoffs/fudge);
 
 		vx = FIXED_TO_FLOAT(pl->viewx+xoffs);
 		vy = FIXED_TO_FLOAT(pl->viewy-yoffs);

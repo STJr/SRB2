@@ -21,6 +21,7 @@
 #define _R_OPENGL_H_
 
 #ifdef HAVE_SDL
+#define _MATH_DEFINES_DEFINED
 
 #ifdef _MSC_VER
 #pragma warning(disable : 4214 4244)

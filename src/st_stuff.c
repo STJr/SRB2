@@ -1365,7 +1365,7 @@ static void ST_drawNDLives(void)
 	}
 }
 
-static inline void ST_drawBossHealth(void)
+static void ST_drawBossHealth(void)
 {
 	thinker_t *th;
 	mobj_t *mo2;
@@ -1429,7 +1429,7 @@ static void ST_drawOkuuStuff(player_t *player)
 			V_DrawFixedPatch((525 - 5 * hudtimer)<<FRACBITS, 0, FRACUNIT, V_TRANSLUCENT, okuu, NULL);
 		else
 			V_DrawFixedPatch((201 - max(hudtimer-44, 0))<<FRACBITS, 0, FRACUNIT, V_TRANSLUCENT, okuu, NULL);
-		
+
 		if ((hudtimer > 95 && hudtimer <= 105) || (hudtimer > 0 && hudtimer <= 10))
 			V_DrawFixedPatch(0, 100<<FRACBITS, FRACUNIT, V_90TRANS, siren, NULL);
 		else if ((hudtimer > 85 && hudtimer <= 95) || (hudtimer > 10 && hudtimer <= 20))
@@ -2132,6 +2132,10 @@ static void ST_drawMatchHUD(void)
 	if (G_TagGametype() && !(stplyr->pflags & PF_TAGIT))
 		return;
 
+#ifdef HAVE_BLUA
+	if (LUA_HudEnabled(hud_weaponrings)) {
+#endif
+
 	if (stplyr->powers[pw_infinityring])
 		ST_drawWeaponRing(pw_infinityring, 0, 0, offset, infinityring);
 	else if (stplyr->health > 1)
@@ -2154,6 +2158,12 @@ static void ST_drawMatchHUD(void)
 	ST_drawWeaponRing(pw_explosionring, RW_EXPLODE, WEP_EXPLODE, offset, explosionring);
 	offset += 20;
 	ST_drawWeaponRing(pw_railring, RW_RAIL, WEP_RAIL, offset, railring);
+
+#ifdef HAVE_BLUA
+	}
+
+	if (LUA_HudEnabled(hud_powerstones)) {
+#endif
 
 	// Power Stones collected
 	offset = 136; // Used for Y now
@@ -2186,6 +2196,10 @@ static void ST_drawMatchHUD(void)
 
 	if (stplyr->powers[pw_emeralds] & EMERALD7)
 		V_DrawScaledPatch(28, STRINGY(offset), V_SNAPTOLEFT, tinyemeraldpics[6]);
+
+#ifdef HAVE_BLUA
+	}
+#endif
 }
 
 static inline void ST_drawRaceHUD(void)

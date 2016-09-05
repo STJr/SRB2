@@ -77,7 +77,7 @@ void __set_fpscr(long); // in libgcc / kernel's startup.s?
 #endif
 
 #ifdef HAVE_SDL
-
+#define _MATH_DEFINES_DEFINED
 #include "SDL.h"
 
 #ifdef HAVE_TTF
@@ -1679,7 +1679,7 @@ void I_UpdateMumble(const mobj_t *mobj, const listener_t listener)
 		UINT8 *p = mumble->context;
 		WRITEMEM(p, server_context, 8);
 		WRITEINT16(p, gamemap);
-		mumble->context_len = p - mumble->context;
+		mumble->context_len = (UINT32)(p - mumble->context);
 	}
 
 	if (mobj) {
@@ -2049,14 +2049,14 @@ void I_StartupMouse2(void)
 //
 // I_Tactile
 //
-void I_Tactile(FFType pFFType, const JoyFF_t *FFEffect)
+FUNCMATH void I_Tactile(FFType pFFType, const JoyFF_t *FFEffect)
 {
 	// UNUSED.
 	(void)pFFType;
 	(void)FFEffect;
 }
 
-void I_Tactile2(FFType pFFType, const JoyFF_t *FFEffect)
+FUNCMATH void I_Tactile2(FFType pFFType, const JoyFF_t *FFEffect)
 {
 	// UNUSED.
 	(void)pFFType;
@@ -2067,7 +2067,7 @@ void I_Tactile2(FFType pFFType, const JoyFF_t *FFEffect)
 */
 static ticcmd_t emptycmd;
 
-ticcmd_t *I_BaseTiccmd(void)
+FUNCMATH ticcmd_t *I_BaseTiccmd(void)
 {
 	return &emptycmd;
 }
@@ -2076,7 +2076,7 @@ ticcmd_t *I_BaseTiccmd(void)
 */
 static ticcmd_t emptycmd2;
 
-ticcmd_t *I_BaseTiccmd2(void)
+FUNCMATH ticcmd_t *I_BaseTiccmd2(void)
 {
 	return &emptycmd2;
 }
@@ -2179,7 +2179,7 @@ tic_t I_GetTime (void)
 //
 //I_StartupTimer
 //
-void I_StartupTimer(void)
+FUNCMATH void I_StartupTimer(void)
 {
 #if (defined (_WIN32) && !defined (_WIN32_WCE)) && !defined (_XBOX)
 	// for win2k time bug
@@ -2313,11 +2313,11 @@ void I_WaitVBL(INT32 count)
 	SDL_Delay(count);
 }
 
-void I_BeginRead(void)
+FUNCMATH void I_BeginRead(void)
 {
 }
 
-void I_EndRead(void)
+FUNCMATH void I_EndRead(void)
 {
 }
 
@@ -3067,5 +3067,5 @@ const CPUInfoFlags *I_CPUInfo(void)
 }
 
 // note CPUAFFINITY code used to reside here
-void I_RegisterSysCommands(void) {}
+FUNCMATH void I_RegisterSysCommands(void) {}
 #endif

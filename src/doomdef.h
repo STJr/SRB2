@@ -151,7 +151,7 @@ extern FILE *logstream;
 #define VERSION    100 // Game version
 #define SUBVERSION 0  // more precise version number
 #define VERSIONSTRING "TD v1.0.0" // Originally v2.1.14. Keep this updated.
-#define VERSIONSTRINGW L"v2.1.15"
+#define VERSIONSTRINGW L"TD v1.0.0"
 // Hey! If you change this, add 1 to the MODVERSION below!
 // Otherwise we can't force updates!
 #endif
@@ -431,6 +431,12 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 
 /// Kalaron/Eternity Engine slope code (SRB2CB ported)
 #define ESLOPE
+
+#ifdef ESLOPE
+/// Backwards compatibility with SRB2CB's slope linedef types.
+///	\note	A simple shim that prints a warning.
+#define ESLOPE_TYPESHIM
+#endif
 
 ///	Delete file while the game is running.
 ///	\note	EXTREMELY buggy, tends to crash game.

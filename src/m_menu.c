@@ -7441,7 +7441,7 @@ static void M_HandleFogColor(INT32 choice)
 				l = strlen(temp);
 				for (i = 0; i < l; i++)
 					cv_grfogcolor.zstring[5 - i] = temp[l - i];
-					cv_grfogcolor.zstring[5] = (char)choice;
+				cv_grfogcolor.zstring[5] = (char)choice;
 			}
 			break;
 	}

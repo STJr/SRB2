@@ -2214,6 +2214,8 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source)
 
 			if ((mobj->flags & MF_MISSILE || mobj->flags & MF_PAIN) || mobj->type == MT_HELPER)
 				P_SetMobjState(mobj, mobj->info->deathstate);
+
+			S_StartSound(NULL, sfx_toudie);
 		}
 	}
 
@@ -2985,7 +2987,7 @@ static void P_KillPlayer(player_t *player, mobj_t *source, INT32 damage)
 	}
 }
 
-static inline void P_SuperDamage(player_t *player, mobj_t *inflictor, mobj_t *source, INT32 damage)
+static void P_SuperDamage(player_t *player, mobj_t *inflictor, mobj_t *source, INT32 damage)
 {
 	fixed_t fallbackspeed;
 	angle_t ang;
@@ -4168,7 +4170,7 @@ void P_PlayerFlagBurst(player_t *player, boolean toss)
 	// Flag text
 	{
 		char plname[MAXPLAYERNAME+4];
-		char *flagtext;
+		const char *flagtext;
 		char flagcolor;
 
 		snprintf(plname, sizeof(plname), "%s%s%s",

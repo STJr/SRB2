@@ -189,6 +189,10 @@ ifdef FREEBSD
 UNIXCOMMON=1
 endif
 
+ifdef MACOSX
+UNIXCOMMON=1
+endif
+
 ifdef NDS
 NOPNG=1
 NONET=1
@@ -366,13 +370,18 @@ ifdef DEBUGMODE
 
 	# build with debugging information
 	WINDRESFLAGS = -D_DEBUG
-	CFLAGS+=-O0 -Wall -DPARANOIA -DRANGECHECK
+ifdef GCC48
+	CFLAGS+=-Og
+else
+	CFLAGS+=-O0
+endif
+	CFLAGS+= -Wall -DPARANOIA -DRANGECHECK
 else
 
 
 	# build a normal optimised version
 	WINDRESFLAGS = -DNDEBUG
-	#CFLAGS+=-O2
+	CFLAGS+=-O3
 endif
 	CFLAGS+=-g $(OPTS) $(M5) $(WINDRESFLAGS)
 
@@ -424,6 +433,7 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/hu_stuff.o \
 		$(OBJDIR)/y_inter.o  \
 		$(OBJDIR)/st_stuff.o \
+		$(OBJDIR)/m_aatree.o \
 		$(OBJDIR)/m_anigif.o \
 		$(OBJDIR)/m_argv.o   \
 		$(OBJDIR)/m_bbox.o   \
@@ -588,10 +598,14 @@ ifndef WINDOWSHELL
 	-$(GZIP) $(GZIP_OPT2) $(BIN)/$(DBGNAME).txt
 endif
 endif
+
+# mac os x lsdlsrb2 does not like objcopy
+ifndef MACOSX
 ifndef PSP
 	$(OBJCOPY) $(BIN)/$(EXENAME) $(BIN)/$(DBGNAME)
 	$(OBJCOPY) --strip-debug $(BIN)/$(EXENAME)
 	-$(OBJCOPY) --add-gnu-debuglink=$(BIN)/$(DBGNAME) $(BIN)/$(EXENAME)
+endif
 endif
 ifndef NOUPX
 	-$(UPX) $(UPX_OPTS) $(BIN)/$(EXENAME)
@@ -623,7 +637,10 @@ opengl_dll: $(BIN)/r_opengl.dll
 $(BIN)/r_opengl.dll: $(OBJDIR)/ogl_win.o $(OBJDIR)/r_opengl.o
 	-$(MKDIR) $(BIN)
 	@echo Linking R_OpenGL.dll...
-	$(CC) --shared  $^ -o $@ -g -Wl,--add-stdcall-alias -lgdi32
+	$(CC) --shared  $^ -o $@ -g -Wl,--add-stdcall-alias -lgdi32 -static-libgcc
+ifndef NOUPX
+	-$(UPX) $(UPX_OPTS) $@
+endif
 
 minigl_dll: $(BIN)/r_minigl.dll
 $(BIN)/r_minigl.dll: $(OBJDIR)/r_minigl.o
@@ -736,6 +753,11 @@ $(OBJDIR)/%.o: %.c
 
 $(OBJDIR)/%.o: $(INTERFACE)/%.c
 	$(CC) $(CFLAGS) $(WFLAGS) -c $< -o $@
+
+ifdef MACOSX
+$(OBJDIR)/%.o: sdl/macosx/%.c
+	$(CC) $(CFLAGS) $(WFLAGS) -c $< -o $@
+endif
 
 $(OBJDIR)/%.o: hardware/%.c
 	$(CC) $(CFLAGS) $(WFLAGS) -c $< -o $@
