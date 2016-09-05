@@ -56,7 +56,9 @@
 //#define NONET
 #endif
 
-#ifndef NONET
+#ifdef NONET
+#undef HAVE_MINIUPNPC
+#else
 #ifdef USE_WINSOCK1
 #include <winsock.h>
 #elif !defined (SCOUW2) && !defined (SCOUW7) && !defined (__OS2__)
