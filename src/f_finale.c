@@ -1727,6 +1727,7 @@ static void F_AdvanceToNextScene(void)
 
 void F_EndCutScene(void)
 {
+	cutsceneover = true; // do this first, just in case Y_EndGame or something wants to turn it back false later
 	if (runningprecutscene)
 	{
 		if (server)
@@ -1743,7 +1744,6 @@ void F_EndCutScene(void)
 		else
 			Y_EndGame();
 	}
-	cutsceneover = true;
 }
 
 void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean resetplayer)
