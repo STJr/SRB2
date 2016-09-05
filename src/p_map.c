@@ -2231,7 +2231,6 @@ boolean P_SceneryTryMove(mobj_t *thing, fixed_t x, fixed_t y)
 //
 static boolean P_ThingHeightClip(mobj_t *thing)
 {
-	boolean floormoved;
 	fixed_t oldfloorz = thing->floorz;
 	boolean onfloor = P_IsObjectOnGround(thing);//(thing->z <= thing->floorz);
 
@@ -2243,9 +2242,6 @@ static boolean P_ThingHeightClip(mobj_t *thing)
 	if (P_MobjWasRemoved(thing))
 		return true;
 
-	floormoved = (thing->eflags & MFE_VERTICALFLIP && tmceilingz != thing->ceilingz)
-		|| (!(thing->eflags & MFE_VERTICALFLIP) && tmfloorz != thing->floorz);
-
 	thing->floorz = tmfloorz;
 	thing->ceilingz = tmceilingz;
 
@@ -2254,13 +2250,20 @@ static boolean P_ThingHeightClip(mobj_t *thing)
 	if (tmfloorz > oldfloorz+thing->height)
 		return true;
 
-	if (onfloor && !(thing->flags & MF_NOGRAVITY) && floormoved)
+	if (/*!tmfloorthing && */onfloor && !(thing->flags & MF_NOGRAVITY))
 	{
 		if (thing->eflags & MFE_VERTICALFLIP)
 			thing->pmomz = thing->ceilingz - (thing->z + thing->height);
 		else
 			thing->pmomz = thing->floorz - thing->z;
-		thing->eflags |= MFE_APPLYPMOMZ;
+
+		if (thing->player)
+		{
+			if (splitscreen && camera2.chase && thing->player == &players[secondarydisplayplayer])
+				camera2.z += thing->pmomz;
+			else if (camera.chase && thing->player == &players[displayplayer])
+				camera.z += thing->pmomz;
+		}
 
 		if (thing->eflags & MFE_VERTICALFLIP)
 			thing->z = thing->ceilingz - thing->height;

@@ -7502,7 +7502,6 @@ static const char *const MOBJEFLAG_LIST[] = {
 	"GOOWATER", // Goo water
 	"\x01", // free: 1<<7 (name un-matchable)
 	"SPRUNG", // Mobj was already sprung this tic
-	"APPLYPMOMZ", // Platform movement
 	NULL
 };
 

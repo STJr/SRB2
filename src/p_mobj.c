@@ -2096,10 +2096,10 @@ static void P_RingZMovement(mobj_t *mo)
 		P_AdjustMobjFloorZ_PolyObjs(mo, mo->subsector);
 
 	// adjust height
-	if (mo->eflags & MFE_APPLYPMOMZ && !P_IsObjectOnGround(mo))
+	if (mo->pmomz && mo->z != mo->floorz)
 	{
 		mo->momz += mo->pmomz;
-		mo->eflags &= ~MFE_APPLYPMOMZ;
+		mo->pmomz = 0;
 	}
 	mo->z += mo->momz;
 
@@ -2165,10 +2165,10 @@ static boolean P_ZMovement(mobj_t *mo)
 		P_AdjustMobjFloorZ_PolyObjs(mo, mo->subsector);
 
 	// adjust height
-	if (mo->eflags & MFE_APPLYPMOMZ && !P_IsObjectOnGround(mo))
+	if (mo->pmomz && mo->z != mo->floorz)
 	{
 		mo->momz += mo->pmomz;
-		mo->eflags &= ~MFE_APPLYPMOMZ;
+		mo->pmomz = 0;
 	}
 	mo->z += mo->momz;
 
@@ -2642,11 +2642,11 @@ static void P_PlayerZMovement(mobj_t *mo)
 	}
 
 	// adjust height
-	if (mo->eflags & MFE_APPLYPMOMZ && !P_IsObjectOnGround(mo))
+/*	if (mo->pmomz && mo->z > mo->floorz && !(mo->player->pflags & PF_JUMPED))
 	{
 		mo->momz += mo->pmomz;
-		mo->eflags &= ~MFE_APPLYPMOMZ;
-	}
+		mo->pmomz = 0;
+	}*/
 
 	mo->z += mo->momz;
 
@@ -2673,7 +2673,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 		else
 			mo->z = mo->floorz;
 
-		if (mo->player->pflags & PF_NIGHTSMODE)
+		if (mo->player && (mo->player->pflags & PF_NIGHTSMODE))
 		{
 			// bounce off floor if you were flying towards it
 			if ((mo->eflags & MFE_VERTICALFLIP && mo->player->flyangle > 0 && mo->player->flyangle < 180)
@@ -2700,11 +2700,12 @@ static void P_PlayerZMovement(mobj_t *mo)
 
 		if (P_MobjFlip(mo)*mo->momz < 0) // falling
 		{
-			mo->pmomz = 0; // We're on a new floor, don't keep doing platform movement.
-
 			// Squat down. Decrease viewheight for a moment after hitting the ground (hard),
-			if (P_MobjFlip(mo)*mo->momz < -FixedMul(8*FRACUNIT, mo->scale))
-				mo->player->deltaviewheight = (P_MobjFlip(mo)*mo->momz)>>3; // make sure momz is negative
+			if (mo->player)
+			{
+				if (P_MobjFlip(mo)*mo->momz < -FixedMul(8*FRACUNIT, mo->scale))
+					mo->player->deltaviewheight = (P_MobjFlip(mo)*mo->momz)>>3; // make sure momz is negative
+			}
 
 			if (!tmfloorthing || tmfloorthing->flags & (MF_PUSHABLE|MF_MONITOR)
 				|| tmfloorthing->flags2 & MF2_STANDONME || tmfloorthing->type == MT_PLAYER) // Spin Attack
@@ -2777,14 +2778,14 @@ static void P_PlayerZMovement(mobj_t *mo)
 
 					// Cut momentum in half when you hit the ground and
 					// aren't pressing any controls.
-					if (!(mo->player->cmd.forwardmove || mo->player->cmd.sidemove) && !mo->player->cmomx && !mo->player->cmomy && !(mo->player->pflags & PF_SPINNING))
+					if (!mo->player || (!(mo->player->cmd.forwardmove || mo->player->cmd.sidemove) && !mo->player->cmomx && !mo->player->cmomy && !(mo->player->pflags & PF_SPINNING)))
 					{
 						mo->momx = mo->momx/2;
 						mo->momy = mo->momy/2;
 					}
 				}
 
-				if (mo->health)
+				if (mo->health && mo->player)
 				{
 					if (mo->player->pflags & PF_GLIDING) // ground gliding
 					{
@@ -2831,7 +2832,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 					mo->player->climbtime = 0;
 				}
 			}
-			if (!(mo->player->pflags & PF_SPINNING))
+			if (mo->player && !(mo->player->pflags & PF_SPINNING))
 				mo->player->pflags &= ~PF_STARTDASH;
 
 			if (tmfloorthing && (tmfloorthing->flags & (MF_PUSHABLE|MF_MONITOR)
@@ -2874,7 +2875,7 @@ nightsdone:
 		else
 			mo->z = mo->ceilingz - mo->height;
 
-		if (mo->player->pflags & PF_NIGHTSMODE)
+		if (mo->player && (mo->player->pflags & PF_NIGHTSMODE))
 		{
 			// bounce off ceiling if you were flying towards it
 			if ((mo->eflags & MFE_VERTICALFLIP && mo->player->flyangle > 180 && mo->player->flyangle <= 359)
@@ -2894,7 +2895,7 @@ nightsdone:
 		{
 			msecnode_t *node;
 
-			if (CheckForMarioBlocks && !(netgame && mo->player->spectator)) // Only let the player punch
+			if (CheckForMarioBlocks && mo->player && !(netgame && mo->player->spectator)) // Only let the player punch
 			{
 				// Search the touching sectors, from side-to-side...
 				for (node = mo->touching_sectorlist; node; node = node->m_sectorlist_next)
@@ -2922,7 +2923,7 @@ nightsdone:
 			if (mariomode)
 				S_StartSound(mo, sfx_mario1);
 
-			if (!mo->player->climbing)
+			if (!(mo->player && mo->player->climbing))
 				mo->momz = 0;
 		}
 	}
@@ -2937,10 +2938,10 @@ static boolean P_SceneryZMovement(mobj_t *mo)
 		P_AdjustMobjFloorZ_PolyObjs(mo, mo->subsector);
 
 	// adjust height
-	if (mo->eflags & MFE_APPLYPMOMZ && !P_IsObjectOnGround(mo))
+	if (mo->pmomz && mo->z != mo->floorz)
 	{
 		mo->momz += mo->pmomz;
-		mo->eflags &= ~MFE_APPLYPMOMZ;
+		mo->pmomz = 0;
 	}
 	mo->z += mo->momz;
 
@@ -3561,10 +3562,10 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 	thiscam->floorz = tmfloorz;
 	thiscam->ceilingz = tmceilingz;
 
-	if (thiscam->momz || player->mo->pmomz)
+	if (thiscam->momz)
 	{
 		// adjust height
-		thiscam->z += thiscam->momz + player->mo->pmomz;
+		thiscam->z += thiscam->momz;
 
 		if (!itsatwodlevel && !(player->pflags & PF_NOCLIP))
 		{
@@ -3626,7 +3627,6 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 	msecnode_t *node;
 
 	I_Assert(mobj != NULL);
-	I_Assert(mobj->player != NULL);
 	I_Assert(!P_MobjWasRemoved(mobj));
 
 	P_MobjCheckWater(mobj);
@@ -3649,7 +3649,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 		P_CheckPosition(mobj, mobj->x, mobj->y);
 		goto animonly;
 	}
-	else if (mobj->player->pflags & PF_MACESPIN && mobj->tracer)
+	else if (mobj->player && (mobj->player->pflags & PF_MACESPIN) && mobj->tracer)
 	{
 		P_CheckPosition(mobj, mobj->x, mobj->y);
 		goto animonly;
@@ -3668,7 +3668,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 	else
 		P_TryMove(mobj, mobj->x, mobj->y, true);
 
-	if (!(netgame && mobj->player->spectator))
+	if (!(netgame && mobj->player && mobj->player->spectator))
 	{
 		// Crumbling platforms
 		for (node = mobj->touching_sectorlist; node; node = node->m_sectorlist_next)
@@ -3760,10 +3760,16 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 		mobj->player->pflags &= ~PF_JUMPED;
 		if (mobj->player->secondjump || mobj->player->powers[pw_tailsfly])
 		{
-			mobj->player->secondjump = 0;
-			mobj->player->powers[pw_tailsfly] = 0;
-			P_SetPlayerMobjState(mobj, S_PLAY_RUN1);
+			mobj->player->jumping = 0;
+			mobj->player->pflags &= ~PF_JUMPED;
+			if (mobj->player->secondjump || mobj->player->powers[pw_tailsfly])
+			{
+				mobj->player->secondjump = 0;
+				mobj->player->powers[pw_tailsfly] = 0;
+				P_SetPlayerMobjState(mobj, S_PLAY_RUN1);
+			}
 		}
+		mobj->pmomz = 0;
 		mobj->eflags &= ~MFE_JUSTHITFLOOR;
 	}
 
@@ -8589,6 +8595,17 @@ for (i = ((mobj->flags2 & MF2_STRONGBOX) ? strongboxamt : weakboxamt); i; --i) s
 	}
 	else
 	{
+		if (mobj->player)
+		{
+			mobj->player->jumping = 0;
+			mobj->player->pflags &= ~PF_JUMPED;
+			if (mobj->player->secondjump || mobj->player->powers[pw_tailsfly])
+			{
+				mobj->player->secondjump = 0;
+				mobj->player->powers[pw_tailsfly] = 0;
+				P_SetPlayerMobjState(mobj, S_PLAY_RUN1);
+			}
+		}
 		mobj->pmomz = 0; // to prevent that weird rocketing gargoyle bug
 		mobj->eflags &= ~MFE_JUSTHITFLOOR;
 	}
@@ -8804,6 +8821,17 @@ void P_SceneryThinker(mobj_t *mobj)
 	}
 	else
 	{
+		if (mobj->player)
+		{
+			mobj->player->jumping = 0;
+			mobj->player->pflags &= ~PF_JUMPED;
+			if (mobj->player->secondjump || mobj->player->powers[pw_tailsfly])
+			{
+				mobj->player->secondjump = 0;
+				mobj->player->powers[pw_tailsfly] = 0;
+				P_SetPlayerMobjState(mobj, S_PLAY_RUN1);
+			}
+		}
 		mobj->pmomz = 0; // to prevent that weird rocketing gargoyle bug
 		mobj->eflags &= ~MFE_JUSTHITFLOOR;
 	}

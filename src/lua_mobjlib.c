@@ -497,7 +497,6 @@ static int mobj_set(lua_State *L)
 		break;
 	case mobj_pmomz:
 		mo->pmomz = luaL_checkfixed(L, 3);
-		mo->eflags |= MFE_APPLYPMOMZ;
 		break;
 	case mobj_tics:
 		mo->tics = luaL_checkinteger(L, 3);
