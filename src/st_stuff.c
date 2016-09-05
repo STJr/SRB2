@@ -1691,7 +1691,7 @@ static void ST_drawNiGHTSHUD(void)
 	if (cv_debug & DBG_NIGHTSBASIC)
 		minlink = 0;
 
-	// Cheap hack: don't display when the score is showing
+	// Cheap hack: don't display when the score is showing (it popping up for a split second when exiting a map is intentional)
 	if (stplyr->texttimer && stplyr->textvar == 4)
 		minlink = INT32_MAX;
 

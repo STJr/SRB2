@@ -713,6 +713,10 @@ void G_SetGameModified(boolean silent)
 
 	if (!silent)
 		CONS_Alert(CONS_NOTICE, M_GetText("Game must be restarted to record statistics.\n"));
+
+	// If in record attack recording, cancel it.
+	if (modeattacking)
+		M_EndModeAttackRun();
 }
 
 /** Builds an original game map name from a map number.
