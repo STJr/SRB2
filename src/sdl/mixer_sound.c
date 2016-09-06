@@ -137,7 +137,7 @@ void I_ShutdownSound(void)
 #endif
 }
 
-void I_UpdateSound(void)
+FUNCMATH void I_UpdateSound(void)
 {
 }
 
@@ -498,7 +498,7 @@ static void mix_gme(void *udata, Uint8 *stream, int len)
 }
 #endif
 
-void I_InitMusic(void)
+FUNCMATH void I_InitMusic(void)
 {
 }
 
@@ -852,7 +852,7 @@ boolean I_SetSongTrack(int track)
 // MIDI Music
 //
 
-void I_InitMIDIMusic(void)
+FUNCMATH void I_InitMIDIMusic(void)
 {
 }
 

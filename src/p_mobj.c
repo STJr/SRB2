@@ -1252,13 +1252,12 @@ static void P_PlayerFlip(mobj_t *mo)
 }
 
 //
-// P_CheckGravity
+// P_GetMobjGravity
 //
-// Checks the current gravity state
-// of the object. If affect is true,
-// a gravity force will be applied.
+// Returns the current gravity
+// value of the object.
 //
-void P_CheckGravity(mobj_t *mo, boolean affect)
+fixed_t P_GetMobjGravity(mobj_t *mo)
 {
 	fixed_t gravityadd = 0;
 	boolean no3dfloorgrav = true; // Custom gravity
@@ -1279,25 +1278,23 @@ void P_CheckGravity(mobj_t *mo, boolean affect)
 
 		for (rover = mo->subsector->sector->ffloors; rover; rover = rover->next)
 		{
-			if (!(rover->flags & FF_EXISTS))
+			if (!(rover->flags & FF_EXISTS) || !P_InsideANonSolidFFloor(mo, rover)) // P_InsideANonSolidFFloor checks for FF_EXISTS itself, but let's not always call this function
 				continue;
 
-			if (P_InsideANonSolidFFloor(mo, rover))
-			{
-				if ((rover->flags & (FF_SWIMMABLE|FF_GOOWATER)) == (FF_SWIMMABLE|FF_GOOWATER))
-					goopgravity = true;
-				if (rover->master->frontsector->gravity)
-				{
-					gravityadd = -FixedMul(gravity,
-						(FixedDiv(*rover->master->frontsector->gravity>>FRACBITS, 1000)));
+			if ((rover->flags & (FF_SWIMMABLE|FF_GOOWATER)) == (FF_SWIMMABLE|FF_GOOWATER))
+				goopgravity = true;
 
-					if (rover->master->frontsector->verticalflip && gravityadd > 0)
-						mo->eflags |= MFE_VERTICALFLIP;
+			if (!(rover->master->frontsector->gravity))
+				continue;
 
-					no3dfloorgrav = false;
-					break;
-				}
-			}
+			gravityadd = -FixedMul(gravity,
+				(FixedDiv(*rover->master->frontsector->gravity>>FRACBITS, 1000)));
+
+			if (rover->master->frontsector->verticalflip && gravityadd > 0)
+				mo->eflags |= MFE_VERTICALFLIP;
+
+			no3dfloorgrav = false;
+			break;
 		}
 	}
 
@@ -1317,33 +1314,22 @@ void P_CheckGravity(mobj_t *mo, boolean affect)
 	if (mo->eflags & MFE_UNDERWATER && !goopgravity)
 		gravityadd = gravityadd/3;
 
-	if (!mo->momz) // mobj at stop, no floor, so feel the push of gravity!
-		gravityadd <<= 1;
-
 	if (mo->player)
 	{
-		if (mo->player->charability == CA_FLY && (mo->player->powers[pw_tailsfly]
-		|| (mo->state >= &states[S_PLAY_SPC1] && mo->state <= &states[S_PLAY_SPC4])))
-			gravityadd = gravityadd/3; // less gravity while flying
-		if (mo->player->pflags & PF_GLIDING)
-			gravityadd = gravityadd/3; // less gravity while gliding
-		if (mo->player->climbing)
-			gravityadd = 0;
-		if (mo->player->pflags & PF_NIGHTSMODE)
+		if ((mo->player->pflags & PF_GLIDING)
+		|| (mo->player->charability == CA_FLY && (mo->player->powers[pw_tailsfly]
+			|| (mo->state >= &states[S_PLAY_SPC1] && mo->state <= &states[S_PLAY_SPC4]))))
+			gravityadd = gravityadd/3; // less gravity while flying/gliding
+		if (mo->player->climbing || (mo->player->pflags & PF_NIGHTSMODE))
 			gravityadd = 0;
 
+		if (!(mo->flags2 & MF2_OBJECTFLIP) != !(mo->player->powers[pw_gravityboots])) // negated to turn numeric into bool - would be double negated, but not needed if both would be
 		{
-			UINT8 bits = 0;
-			if (mo->flags2 & MF2_OBJECTFLIP)
-				bits ^= 1;
-			if (mo->player->powers[pw_gravityboots])
-				bits ^= 1;
-			if (bits & 1)
-			{
-				gravityadd = -gravityadd;
-				mo->eflags ^= MFE_VERTICALFLIP;
-			}
+			gravityadd = -gravityadd;
+			mo->eflags ^= MFE_VERTICALFLIP;
 		}
+		if (wasflip == !(mo->eflags & MFE_VERTICALFLIP)) // note!! == ! is not equivalent to != here - turns numeric into bool this way
+			P_PlayerFlip(mo);
 	}
 	else
 	{
@@ -1351,10 +1337,10 @@ void P_CheckGravity(mobj_t *mo, boolean affect)
 		if (mo->flags2 & MF2_OBJECTFLIP)
 		{
 			mo->eflags |= MFE_VERTICALFLIP;
-			if (gravityadd < 0) // Don't sink, only rise up
-				gravityadd *= -1;
 			if (mo->z + mo->height >= mo->ceilingz)
 				gravityadd = 0;
+			else if (gravityadd < 0) // Don't sink, only rise up
+				gravityadd *= -1;
 		}
 		else //Otherwise, sort through the other exceptions.
 		{
@@ -1400,11 +1386,27 @@ void P_CheckGravity(mobj_t *mo, boolean affect)
 	if (goopgravity)
 		gravityadd = -gravityadd/5;
 
-	if (affect)
-		mo->momz += FixedMul(gravityadd, mo->scale);
+	gravityadd = FixedMul(gravityadd, mo->scale);
 
-	if (mo->player && !!(mo->eflags & MFE_VERTICALFLIP) != wasflip)
-		P_PlayerFlip(mo);
+	return gravityadd;
+}
+
+//
+// P_CheckGravity
+//
+// Checks the current gravity state
+// of the object. If affect is true,
+// a gravity force will be applied.
+//
+void P_CheckGravity(mobj_t *mo, boolean affect)
+{
+	fixed_t gravityadd = P_GetMobjGravity(mo);
+
+	if (!mo->momz) // mobj at stop, no floor, so feel the push of gravity!
+		gravityadd <<= 1;
+
+	if (affect)
+		mo->momz += gravityadd;
 
 	if (mo->type == MT_SKIM && mo->z + mo->momz <= mo->watertop && mo->z >= mo->watertop)
 	{
@@ -1480,7 +1482,7 @@ static void P_XYFriction(mobj_t *mo, fixed_t oldx, fixed_t oldy)
 		    && abs(player->rmomy) < FixedMul(STOPSPEED, mo->scale)
 		    && (!(player->cmd.forwardmove && !(twodlevel || mo->flags2 & MF2_TWOD)) && !player->cmd.sidemove && !(player->pflags & PF_SPINNING))
 #ifdef ESLOPE
-			&& !(player->mo->standingslope && abs(player->mo->standingslope->zdelta) >= FRACUNIT/2)
+			&& !(player->mo->standingslope && (!(player->mo->standingslope->flags & SL_NOPHYSICS)) && (abs(player->mo->standingslope->zdelta) >= FRACUNIT/2))
 #endif
 				)
 		{
@@ -1530,7 +1532,7 @@ static void P_PushableCheckBustables(mobj_t *mo)
 	mo->y += mo->momy;
 	P_SetThingPosition(mo);
 
-	for (node = mo->touching_sectorlist; node; node = node->m_snext)
+	for (node = mo->touching_sectorlist; node; node = node->m_sectorlist_next)
 	{
 		if (!node->m_sector)
 			break;
@@ -1538,6 +1540,7 @@ static void P_PushableCheckBustables(mobj_t *mo)
 		if (node->m_sector->ffloors)
 		{
 			ffloor_t *rover;
+			fixed_t topheight, bottomheight;
 
 			for (rover = node->m_sector->ffloors; rover; rover = rover->next)
 			{
@@ -1550,37 +1553,39 @@ static void P_PushableCheckBustables(mobj_t *mo)
 
 				if (!rover->master->frontsector->crumblestate)
 				{
+					topheight = P_GetFOFTopZ(mo, node->m_sector, rover, mo->x, mo->y, NULL);
+					bottomheight = P_GetFOFBottomZ(mo, node->m_sector, rover, mo->x, mo->y, NULL);
 					// Height checks
 					if (rover->flags & FF_SHATTERBOTTOM)
 					{
-						if (mo->z+mo->momz + mo->height < *rover->bottomheight)
+						if (mo->z+mo->momz + mo->height < bottomheight)
 							continue;
 
-						if (mo->z+mo->height > *rover->bottomheight)
+						if (mo->z+mo->height > bottomheight)
 							continue;
 					}
 					else if (rover->flags & FF_SPINBUST)
 					{
-						if (mo->z+mo->momz > *rover->topheight)
+						if (mo->z+mo->momz > topheight)
 							continue;
 
-						if (mo->z+mo->height < *rover->bottomheight)
+						if (mo->z+mo->height < bottomheight)
 							continue;
 					}
 					else if (rover->flags & FF_SHATTER)
 					{
-						if (mo->z+mo->momz > *rover->topheight)
+						if (mo->z+mo->momz > topheight)
 							continue;
 
-						if (mo->z+mo->momz + mo->height < *rover->bottomheight)
+						if (mo->z+mo->momz + mo->height < bottomheight)
 							continue;
 					}
 					else
 					{
-						if (mo->z >= *rover->topheight)
+						if (mo->z >= topheight)
 							continue;
 
-						if (mo->z+mo->height < *rover->bottomheight)
+						if (mo->z+mo->height < bottomheight)
 							continue;
 					}
 
@@ -1634,8 +1639,6 @@ void P_XYMovement(mobj_t *mo)
 
 	I_Assert(mo != NULL);
 	I_Assert(!P_MobjWasRemoved(mo));
-
-	moved = true;
 
 	// if it's stopped
 	if (!mo->momx && !mo->momy)
@@ -1693,9 +1696,9 @@ void P_XYMovement(mobj_t *mo)
 	if (!P_TryMove(mo, mo->x + xmove, mo->y + ymove, true) && !(mo->eflags & MFE_SPRUNG))
 	{
 		// blocked move
+		moved = false;
 
 		if (player) {
-			moved = false;
 			if (player->bot)
 				B_MoveBlocked(player);
 		}
@@ -1800,7 +1803,7 @@ void P_XYMovement(mobj_t *mo)
 		else
 			mo->momx = mo->momy = 0;
 	}
-	else if (player)
+	else
 		moved = true;
 
 	if (P_MobjWasRemoved(mo)) // MF_SPECIAL touched a player! O_o;;
@@ -2013,12 +2016,14 @@ static void P_AdjustMobjFloorZ_FFloors(mobj_t *mo, sector_t *sector, UINT8 motyp
 		delta1 = mo->z - (bottomheight + ((topheight - bottomheight)/2));
 		delta2 = thingtop - (bottomheight + ((topheight - bottomheight)/2));
 		if (topheight > mo->floorz && abs(delta1) < abs(delta2)
-			&& !(rover->flags & FF_REVERSEPLATFORM))
+			&& !(rover->flags & FF_REVERSEPLATFORM)
+			&& ((P_MobjFlip(mo)*mo->momz > 0) || (!(rover->flags & FF_PLATFORM)))) // In reverse gravity, only clip for FOFs that are intangible from their bottom (the "top" you're falling through) if you're coming from above ("below" in your frame of reference)
 		{
 			mo->floorz = topheight;
 		}
 		if (bottomheight < mo->ceilingz && abs(delta1) >= abs(delta2)
-			&& !(rover->flags & FF_PLATFORM))
+			&& !(rover->flags & FF_PLATFORM)
+			&& ((P_MobjFlip(mo)*mo->momz > 0) || (!(rover->flags & FF_REVERSEPLATFORM)))) // In normal gravity, only clip for FOFs that are intangible from the top if you're coming from below
 		{
 			mo->ceilingz = bottomheight;
 		}
@@ -2152,16 +2157,6 @@ static boolean P_ZMovement(mobj_t *mo)
 	I_Assert(mo != NULL);
 	I_Assert(!P_MobjWasRemoved(mo));
 
-#ifdef ESLOPE
-	if (mo->standingslope)
-	{
-		if (mo->flags & MF_NOCLIPHEIGHT)
-			mo->standingslope = NULL;
-		else if (!P_IsObjectOnGround(mo))
-			P_SlopeLaunch(mo);
-	}
-#endif
-
 	// Intercept the stupid 'fall through 3dfloors' bug
 	if (mo->subsector->sector->ffloors)
 		P_AdjustMobjFloorZ_FFloors(mo, mo->subsector->sector, 0);
@@ -2175,6 +2170,16 @@ static boolean P_ZMovement(mobj_t *mo)
 		mo->eflags &= ~MFE_APPLYPMOMZ;
 	}
 	mo->z += mo->momz;
+
+#ifdef ESLOPE
+	if (mo->standingslope)
+	{
+		if (mo->flags & MF_NOCLIPHEIGHT)
+			mo->standingslope = NULL;
+		else if (!P_IsObjectOnGround(mo))
+			P_SlopeLaunch(mo);
+	}
+#endif
 
 	switch (mo->type)
 	{
@@ -2245,6 +2250,7 @@ static boolean P_ZMovement(mobj_t *mo)
 		case MT_BLUETEAMRING:
 		case MT_FLINGRING:
 		case MT_FLINGCOIN:
+		case MT_FLINGEMERALD:
 			// Remove flinged stuff from death pits.
 			if (P_CheckDeathPitCollide(mo))
 			{
@@ -2276,7 +2282,6 @@ static boolean P_ZMovement(mobj_t *mo)
 			if (!(mo->momx || mo->momy || mo->momz))
 				return true;
 			break;
-		case MT_FLINGEMERALD:
 		case MT_NIGHTSWING:
 			if (!(mo->momx || mo->momy || mo->momz))
 				return true;
@@ -2358,14 +2363,17 @@ static boolean P_ZMovement(mobj_t *mo)
 			mo->z = mo->floorz;
 
 #ifdef ESLOPE
-		P_CheckPosition(mo, mo->x, mo->y); // Sets mo->standingslope correctly
-		if ((mo->eflags & MFE_VERTICALFLIP) ? tmceilingslope : tmfloorslope) {
-			mo->standingslope = (mo->eflags & MFE_VERTICALFLIP) ? tmceilingslope : tmfloorslope;
+		if (mo->standingslope) // You're still on the ground; why are we here?
+		{
+			mo->momz = 0;
+			return true;
+		}
 
-			// Reverse quantizing might could use its own function later
-			mo->standingslope->zangle = ANGLE_MAX-mo->standingslope->zangle;
-			P_QuantizeMomentumToSlope(&mom, mo->standingslope);
-			mo->standingslope->zangle = ANGLE_MAX-mo->standingslope->zangle;
+		P_CheckPosition(mo, mo->x, mo->y); // Sets mo->standingslope correctly
+		if (((mo->eflags & MFE_VERTICALFLIP) ? tmceilingslope : tmfloorslope) && (mo->type != MT_STEAM))
+		{
+			mo->standingslope = (mo->eflags & MFE_VERTICALFLIP) ? tmceilingslope : tmfloorslope;
+			P_ReverseQuantizeMomentumToSlope(&mom, mo->standingslope);
 		}
 #endif
 
@@ -2518,7 +2526,7 @@ static boolean P_ZMovement(mobj_t *mo)
 			mom.z = tmfloorthing->momz;
 
 #ifdef ESLOPE
-		if (mo->standingslope) {
+		if (mo->standingslope) { // MT_STEAM will never have a standingslope, see above.
 			P_QuantizeMomentumToSlope(&mom, mo->standingslope);
 		}
 #endif
@@ -2703,7 +2711,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 					msecnode_t *node;
 					boolean stopmovecut = false;
 
-					for (node = mo->touching_sectorlist; node; node = node->m_snext)
+					for (node = mo->touching_sectorlist; node; node = node->m_sectorlist_next)
 					{
 						sector_t *sec = node->m_sector;
 						subsector_t *newsubsec;
@@ -2880,7 +2888,7 @@ nightsdone:
 			if (CheckForMarioBlocks && !(netgame && mo->player->spectator)) // Only let the player punch
 			{
 				// Search the touching sectors, from side-to-side...
-				for (node = mo->touching_sectorlist; node; node = node->m_snext)
+				for (node = mo->touching_sectorlist; node; node = node->m_sectorlist_next)
 				{
 					ffloor_t *rover;
 					if (!node->m_sector->ffloors)
@@ -3681,7 +3689,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 	if (!(netgame && mobj->player->spectator))
 	{
 		// Crumbling platforms
-		for (node = mobj->touching_sectorlist; node; node = node->m_snext)
+		for (node = mobj->touching_sectorlist; node; node = node->m_sectorlist_next)
 		{
 			fixed_t topheight, bottomheight;
 			ffloor_t *rover;
@@ -3706,7 +3714,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 	{
 		boolean thereiswater = false;
 
-		for (node = mobj->touching_sectorlist; node; node = node->m_snext)
+		for (node = mobj->touching_sectorlist; node; node = node->m_sectorlist_next)
 		{
 			if (node->m_sector->ffloors)
 			{
@@ -3727,7 +3735,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 		}
 		if (thereiswater)
 		{
-			for (node = mobj->touching_sectorlist; node; node = node->m_snext)
+			for (node = mobj->touching_sectorlist; node; node = node->m_sectorlist_next)
 			{
 				if (node->m_sector->ffloors)
 				{
@@ -3840,7 +3848,7 @@ void P_RecalcPrecipInSector(sector_t *sector)
 
 	sector->moved = true; // Recalc lighting and things too, maybe
 
-	for (psecnode = sector->touching_preciplist; psecnode; psecnode = psecnode->m_snext)
+	for (psecnode = sector->touching_preciplist; psecnode; psecnode = psecnode->m_thinglist_next)
 		CalculatePrecipFloor(psecnode->m_thing);
 }
 
@@ -6950,6 +6958,7 @@ void P_MobjThinker(mobj_t *mobj)
 					{
 						mobj->flags &= ~MF_NOGRAVITY;
 						P_SetMobjState(mobj, S_NIGHTSDRONE1);
+						mobj->flags2 |= MF2_DONTDRAW;
 					}
 				}
 				else if (mobj->tracer && mobj->tracer->player)

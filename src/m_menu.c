@@ -704,7 +704,7 @@ static menuitem_t SP_TimeAttackMenu[] =
 	{IT_DISABLED,              NULL, "Guest Option...", &SP_GuestReplayDef, 100},
 	{IT_DISABLED,              NULL, "Replay...",     &SP_ReplayDef,        110},
 	{IT_DISABLED,              NULL, "Ghosts...",     &SP_GhostDef,         120},
-	{IT_WHITESTRING|IT_CALL,   NULL, "Start",         M_ChooseTimeAttack,   130},
+	{IT_WHITESTRING|IT_CALL|IT_CALL_NOTMODIFIED,   NULL, "Start",         M_ChooseTimeAttack,   130},
 };
 
 enum
@@ -796,7 +796,7 @@ static menuitem_t SP_NightsAttackMenu[] =
 	{IT_DISABLED,              NULL, "Guest Option...",  &SP_NightsGuestReplayDef,   108},
 	{IT_DISABLED,              NULL, "Replay...",        &SP_NightsReplayDef,        118},
 	{IT_DISABLED,              NULL, "Ghosts...",        &SP_NightsGhostDef,         128},
-	{IT_WHITESTRING|IT_CALL,   NULL, "Start",            M_ChooseNightsAttack, 138},
+	{IT_WHITESTRING|IT_CALL|IT_CALL_NOTMODIFIED,   NULL, "Start",            M_ChooseNightsAttack, 138},
 };
 
 enum
@@ -3701,6 +3701,11 @@ static void M_DrawMessageMenu(void)
 
 	mlines = currentMenu->lastOn>>8;
 	max = (INT16)((UINT8)(currentMenu->lastOn & 0xFF)*8);
+
+	// hack: draw RA background in RA menus
+	if (gamestate == GS_TIMEATTACK)
+		V_DrawPatchFill(W_CachePatchName("SRB2BACK", PU_CACHE));
+
 	M_DrawTextBox(currentMenu->x, y - 8, (max+7)>>3, mlines);
 
 	while (*(msg+start))
@@ -4309,9 +4314,9 @@ static void M_SinglePlayerMenu(INT32 choice)
 {
 	(void)choice;
 	SP_MainMenu[sprecordattack].status =
-		(M_SecretUnlocked(SECRET_RECORDATTACK)) ? IT_CALL|IT_STRING|IT_CALL_NOTMODIFIED : IT_SECRET;
+		(M_SecretUnlocked(SECRET_RECORDATTACK)) ? IT_CALL|IT_STRING : IT_SECRET;
 	SP_MainMenu[spnightsmode].status =
-		(M_SecretUnlocked(SECRET_NIGHTSMODE)) ? IT_CALL|IT_STRING|IT_CALL_NOTMODIFIED : IT_SECRET;
+		(M_SecretUnlocked(SECRET_NIGHTSMODE)) ? IT_CALL|IT_STRING : IT_SECRET;
 
 	M_SetupNextMenu(&SP_MainDef);
 }
@@ -7429,7 +7434,7 @@ static void M_HandleFogColor(INT32 choice)
 				l = strlen(temp);
 				for (i = 0; i < l; i++)
 					cv_grfogcolor.zstring[5 - i] = temp[l - i];
-					cv_grfogcolor.zstring[5] = (char)choice;
+				cv_grfogcolor.zstring[5] = (char)choice;
 			}
 			break;
 	}

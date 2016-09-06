@@ -986,6 +986,7 @@ static const char *credits[] = {
 	"\"chi.miru\"", // Red's secret weapon, the REAL reason slopes exist (also helped port drawing code from ZDoom)
 	"Andrew \"orospakr\" Clunis",
 	"Gregor \"Oogaland\" Dick",
+	"Vivian \"toaster\" Grannell",
 	"Julio \"Chaos Zero 64\" Guir",
 	"\"Kalaron\"", // Coded some of Sryder13's collection of OpenGL fixes, especially fog
 	"Matthew \"Shuffle\" Marsalko",
@@ -1724,6 +1725,7 @@ static void F_AdvanceToNextScene(void)
 
 void F_EndCutScene(void)
 {
+	cutsceneover = true; // do this first, just in case Y_EndGame or something wants to turn it back false later
 	if (runningprecutscene)
 	{
 		if (server)
@@ -1740,7 +1742,6 @@ void F_EndCutScene(void)
 		else
 			Y_EndGame();
 	}
-	cutsceneover = true;
 }
 
 void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean resetplayer)

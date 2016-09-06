@@ -21,26 +21,6 @@ void P_RunDynamicSlopes(void);
 // sectors.
 void P_SpawnSlope_Line(int linenum);
 
-#ifdef SPRINGCLEAN
-// Loads just map objects that make slopes,
-// terrain affecting objects have to be spawned first
-void P_SetSlopesFromVertexHeights(lumpnum_t lumpnum);
-
-typedef enum
-{
-	THING_SlopeFloorPointLine = 9500,
-	THING_SlopeCeilingPointLine = 9501,
-	THING_SetFloorSlope = 9502,
-	THING_SetCeilingSlope = 9503,
-	THING_CopyFloorPlane = 9510,
-	THING_CopyCeilingPlane = 9511,
-	THING_VavoomFloor=1500,
-	THING_VavoomCeiling=1501,
-	THING_VertexFloorZ=1504,
-	THING_VertexCeilingZ=1505,
-} slopething_e;
-#endif
-
 //
 // P_CopySectorSlope
 //
@@ -55,6 +35,7 @@ fixed_t P_GetZAt(pslope_t *slope, fixed_t x, fixed_t y);
 
 // Lots of physics-based bullshit
 void P_QuantizeMomentumToSlope(vector3_t *momentum, pslope_t *slope);
+void P_ReverseQuantizeMomentumToSlope(vector3_t *momentum, pslope_t *slope);
 void P_SlopeLaunch(mobj_t *mo);
 void P_HandleSlopeLanding(mobj_t *thing, pslope_t *slope);
 void P_ButteredSlope(mobj_t *mo);

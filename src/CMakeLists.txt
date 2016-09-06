@@ -22,6 +22,7 @@ set(SRB2_CORE_SOURCES
 	i_tcp.c
 	info.c
 	lzf.c
+	m_aatree.c
 	m_anigif.c
 	m_argv.c
 	m_bbox.c
@@ -83,6 +84,7 @@ set(SRB2_CORE_HEADERS
 	info.h
 	keys.h
 	lzf.h
+	m_aatree.h
 	m_anigif.h
 	m_argv.h
 	m_bbox.h

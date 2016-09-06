@@ -441,7 +441,7 @@ boolean P_SupermanLook4Players(mobj_t *actor);
 void P_DestroyRobots(void);
 void P_SnowThinker(precipmobj_t *mobj);
 void P_RainThinker(precipmobj_t *mobj);
-void P_NullPrecipThinker(precipmobj_t *mobj);
+FUNCMATH void P_NullPrecipThinker(precipmobj_t *mobj);
 void P_RemovePrecipMobj(precipmobj_t *mobj);
 void P_SetScale(mobj_t *mobj, fixed_t newscale);
 void P_XYMovement(mobj_t *mo);
