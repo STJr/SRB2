@@ -36,7 +36,9 @@
 #endif
 
 /// \brief Frame flags: only the frame number
-#define FF_FRAMEMASK 0x3fff
+#define FF_FRAMEMASK 0x1ff
+/// \brief Frame flags: Thin, paper-like sprite (for collision equivalent, see MF_PAPERCOLLISION)
+#define FF_PAPERSPRITE 0x800
 /// \brief Frame flags: Simple stateless animation
 #define FF_ANIMATE 0x4000
 /// \brief Frame flags: frame always appears full bright

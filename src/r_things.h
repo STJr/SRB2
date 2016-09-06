@@ -17,6 +17,10 @@
 #include "sounds.h"
 #include "r_plane.h"
 
+// "Left" and "Right" character symbols for additional rotation functionality
+#define ROT_L ('L' - '0')
+#define ROT_R ('R' - '0')
+
 // number of sprite lumps for spritewidth,offset,topoffset lookup tables
 // Fab: this is a hack : should allocate the lookup tables per sprite
 #define MAXVISSPRITES 2048 // added 2-2-98 was 128
@@ -131,7 +135,8 @@ typedef struct vissprite_s
 	fixed_t pz, pzt; // physical bottom/top for sorting with 3D floors
 
 	fixed_t startfrac; // horizontal position of x1
-	fixed_t scale;
+	fixed_t scale, sortscale; // sortscale only differs from scale for flat sprites
+	fixed_t scalestep; // only for flat sprites, 0 otherwise
 	fixed_t xiscale; // negative if flipped
 
 	fixed_t texturemid;
@@ -228,6 +233,11 @@ FUNCMATH FUNCINLINE static ATTRINLINE UINT8 R_Char2Frame(char cn)
 	if (cn == '@') return 63;
 	return 255;
 #endif
+}
+
+FUNCMATH FUNCINLINE static ATTRINLINE boolean R_ValidSpriteAngle(UINT8 rotation)
+{
+	return ((rotation <= 8) || (rotation == ROT_L) || (rotation == ROT_R));
 }
 
 #endif //__R_THINGS__
