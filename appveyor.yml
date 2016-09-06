@@ -3,7 +3,7 @@ os: MinGW
 
 environment:
  CC: ccache
- CCACHE_CC: i686-w64-mingw32-gcc
+ CCACHE_CC: mingw32-gcc
  WINDRES: windres
  MINGW_SDK: c:\MinGW
  CFLAGS: -Wall -W -Werror
@@ -75,9 +75,9 @@ deploy:
     folder: appveyor
     application:
     active_mode: false
-    on:
-      branch: master
-      appveyor_repo_tag: false
+#    on:
+#      branch: master
+#      appveyor_repo_tag: true
 
 
 on_finish:
