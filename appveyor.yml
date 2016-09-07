@@ -2,9 +2,7 @@ version: 2.1.16.{branch}-{build}
 os: MinGW
 
 environment:
- CC: ccache
- CCACHE_CC: mingw32-gcc.exe
- CCACHE_PATH: C:\MinGW\bin
+ CC: mingw32-gcc.exe
  WINDRES: windres
  MINGW_SDK: c:\msys64\mingw32
  CFLAGS: -Wall -W -Werror
@@ -41,8 +39,8 @@ configuration:
 - DD
 
 before_build:
-- set PATH=%MINGW_SDK%\bin;%PATH%
-- C:\MinGW\bin\mingw32-gcc.exe --version
+- set PATH=%MINGW_SDK%\bin;C:\Mingw\bin;%PATH%
+- mingw32-gcc.exe --version
 - mingw32-make --version
 - nasm -v
 - upx -V
