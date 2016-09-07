@@ -3,7 +3,7 @@ os: MinGW
 
 environment:
  CC: ccache
- CCACHE_CC: mingw32-gcc
+ CCACHE_CC: C:\MinGW\bin\mingw32-gcc.exe
  WINDRES: windres
  MINGW_SDK: c:\MinGW
  CFLAGS: -Wall -W -Werror
@@ -41,7 +41,7 @@ configuration:
 
 before_build:
 - set PATH=%MINGW_SDK%\bin;%PATH%
-- mingw32-gcc --version
+- C:\MinGW\bin\mingw32-gcc.exe --version
 - mingw32-make --version
 - nasm -v
 - upx -V
