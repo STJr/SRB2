@@ -3,7 +3,8 @@ os: MinGW
 
 environment:
  CC: ccache
- CCACHE_CC: C:\MinGW\bin\mingw32-gcc.exe
+ CCACHE_CC: mingw32-gcc.exe
+ CCACHE_PATH: C:\MinGW\bin
  WINDRES: windres
  MINGW_SDK: c:\MinGW
  CFLAGS: -Wall -W -Werror
