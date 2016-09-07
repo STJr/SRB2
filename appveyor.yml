@@ -40,8 +40,8 @@ configuration:
 - DD
 
 before_build:
-- set Path=%MINGW_SDK%\bin;%Path%
-- i686-w64-mingw32-gcc --version
+- set PATH=%MINGW_SDK%\bin;%PATH%
+- mingw32-gcc --version
 - mingw32-make --version
 - nasm -v
 - upx -V
@@ -81,5 +81,5 @@ deploy:
 
 
 on_finish:
-- cmd: echo xfreerdp /u:appveyor /cert-ignore +clipboard /v:<ip>:<port>
-- ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+#- cmd: echo xfreerdp /u:appveyor /cert-ignore +clipboard /v:<ip>:<port>
+#- ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
