@@ -6857,7 +6857,7 @@ static void P_MovePlayer(player_t *player)
 		}
 		// Otherwise, face the direction you're travelling.
 		else if (player->panim == PA_WALK || player->panim == PA_RUN || player->panim == PA_PEEL || player->panim == PA_ROLL || player->panim == PA_JUMP
-		|| (player->mo->state-states == S_PLAY_FLY || player->mo->state-states == S_PLAY_FLY_TIRED))
+		|| (player->panim == PA_ABILITY && player->mo->state-states == S_PLAY_GLIDE))
 			player->mo->angle = R_PointToAngle2(0, 0, player->rmomx, player->rmomy);
 
 		// Update the local angle control.
