@@ -307,7 +307,10 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 	if ((sonic->pflags & PF_CARRIED) && sonic->mo->tracer == tails->mo)
 		return;
 
-	if (!tails->powers[pw_tailsfly] && !(tails->charability == CA_FLY && tails->mo->state-states == S_PLAY_FLY_TIRED))
+	if (tails->charability != CA_FLY && tails->charability != CA_SWIM)
+		return;
+
+	if (!tails->powers[pw_tailsfly] && tails->mo->state-states != S_PLAY_FLY_TIRED)
 		return;
 
 	if (tails->bot == 1)

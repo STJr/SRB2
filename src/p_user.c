@@ -9405,7 +9405,7 @@ void P_PlayerAfterThink(player_t *player)
 		player->mo->height = FixedDiv(P_GetPlayerHeight(player), FixedDiv(14*FRACUNIT,10*FRACUNIT));
 
 		if (player->mo->tracer->player
-			&& player->mo->tracer->state-states != S_PLAY_FLY
+			&& !player->mo->tracer->player->powers[pw_tailsfly]
 			&& player->mo->tracer->state-states != S_PLAY_FLY_TIRED)
 				player->pflags &= ~PF_CARRIED;
 
