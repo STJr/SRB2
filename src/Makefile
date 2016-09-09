@@ -315,12 +315,12 @@ LIBS+=$(PNG_LDFLAGS)
 CFLAGS+=$(PNG_CFLAGS)
 endif
 
-ifdef HAVE_LIBGME
+ifndef NOGME
 OPTS+=-DHAVE_LIBGME
 
 LIBGME_PKGCONFIG?=libgme
 LIBGME_CFLAGS?=$(shell $(PKG_CONFIG) $(LIBGME_PKGCONFIG) --cflags)
-LIBGME_LDFLAGS?=$(shell $(PKG_CONFIG) $(LIBGME_PKGCONFIG) --libs)
+LIBGME_LDFLAGS?=-lz $(shell $(PKG_CONFIG) $(LIBGME_PKGCONFIG) --libs)
 
 LIBS+=$(LIBGME_LDFLAGS)
 CFLAGS+=$(LIBGME_CFLAGS)
@@ -503,6 +503,7 @@ endif
 
 ifdef DJGPPDOS
 all:	 pre-build $(BIN)/$(EXENAME)
+NOGME=1
 endif
 
 ifdef XBOX
@@ -511,14 +512,17 @@ endif
 
 ifdef PS3N
 all:	 pre-build $(BIN)/$(PKGNAME)
+NOGME=1
 endif
 
 ifdef WII
 all:	pre-build $(BIN)/$(DOLNAME)
+NOGME=1
 endif
 
 ifdef PANDORA
 all:	pre-build $(BIN)/$(PNDNAME)
+NOGME=1
 endif
 
 ifdef PSP
@@ -527,10 +531,11 @@ endif
 
 ifdef DC
 all:	 pre-build $(BIN)/$(BINNAME) post-build
+NOGME=1
 endif
 
 ifndef DC
-ifndef PSP
+ifndef PSP`
 ifndef XBOX
 ifdef MINGW
 ifndef SDL
