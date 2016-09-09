@@ -106,6 +106,7 @@ endif
 
 ifdef HAIKU
 SDL=1
+NOGME=1
 endif
 
 ifdef NDS
@@ -158,6 +159,7 @@ ifdef WII
 NONX86=1
 NOHW=1
 NOPOSTPROCESSING=1
+NOGME=1
 endif
 
 ifdef PS3N
@@ -167,6 +169,7 @@ endif
 
 ifdef DJGPPDOS
 include djgppdos/Makefile.cfg
+NOGME=1
 endif
 
 ifdef MINGW
@@ -535,7 +538,7 @@ NOGME=1
 endif
 
 ifndef DC
-ifndef PSP`
+ifndef PSP
 ifndef XBOX
 ifdef MINGW
 ifndef SDL
