@@ -3169,7 +3169,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 					{
 						if (mo->player->cmomx || mo->player->cmomy)
 						{
-							if (mo->player->dashmode >= 3*TICRATE && mo->player->panim != PA_PEEL)
+							if (mo->player->charability == CA_DASHMODE && mo->player->dashmode >= 3*TICRATE && mo->player->panim != PA_PEEL)
 								P_SetPlayerMobjState(mo, S_PLAY_PEEL);
 							else if (mo->player->speed >= FixedMul(mo->player->runspeed, mo->scale) && mo->player->panim != PA_RUN)
 								P_SetPlayerMobjState(mo, S_PLAY_RUN);
@@ -3180,7 +3180,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 						}
 						else
 						{
-							if (mo->player->dashmode >= 3*TICRATE && mo->player->panim != PA_PEEL)
+							if (mo->player->charability == CA_DASHMODE && mo->player->dashmode >= 3*TICRATE && mo->player->panim != PA_PEEL)
 								P_SetPlayerMobjState(mo, S_PLAY_PEEL);
 							if (mo->player->speed >= FixedMul(mo->player->runspeed, mo->scale) && mo->player->panim != PA_RUN)
 								P_SetPlayerMobjState(mo, S_PLAY_RUN);

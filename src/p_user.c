@@ -6528,7 +6528,7 @@ static void P_MovePlayer(player_t *player)
 
 	// If your peelout animation is playing, and you're
 	// going too slow, switch back to the run.
-	if (player->panim == PA_PEEL && player->dashmode < 3*TICRATE)
+	if (player->charability == CA_DASHMODE && player->panim == PA_PEEL && player->dashmode < 3*TICRATE)
 		P_SetPlayerMobjState(player->mo, S_PLAY_RUN);
 
 	// If your running animation is playing, and you're
