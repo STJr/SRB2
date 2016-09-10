@@ -6570,17 +6570,15 @@ static void P_MovePlayer(player_t *player)
 		P_SetPlayerMobjState(player->mo, S_PLAY_STND);
 	}
 
-	if (!(player->charability == CA_GLIDEANDCLIMB) || player->gotflag) // If you can't glide, then why the heck would you be gliding?
+	if ((!(player->charability == CA_GLIDEANDCLIMB) || player->gotflag) // If you can't glide, then why the heck would you be gliding?
+		&& (player->pflags & PF_GLIDING || player->climbing))
 	{
-		if (player->pflags & PF_GLIDING || player->climbing)
+		if (onground)
+			P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
+		else
 		{
-			if (onground)
-				P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
-			else
-			{
-				player->pflags |= PF_JUMPED;
-				P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
-			}
+			player->pflags |= PF_JUMPED;
+			P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 		}
 		player->pflags &= ~PF_GLIDING;
 		player->glidetime = 0;
