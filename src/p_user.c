@@ -9153,7 +9153,7 @@ void P_PlayerThink(player_t *player)
 
 #define dashmode player->dashmode
 	// Dash mode ability for Metal Sonic
-	if ((player->charability == CA_DASHMODE) && !(maptol & TOL_NIGHTS)) // woo, dashmode! no nights tho.
+	if ((player->charability == CA_DASHMODE) && !(player->gotflag) && !(maptol & TOL_NIGHTS)) // woo, dashmode! no nights tho.
 	{
 		if (player->speed >= FixedMul(player->runspeed, player->mo->scale) || (player->pflags & PF_STARTDASH))
 		{
