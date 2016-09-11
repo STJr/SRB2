@@ -5579,7 +5579,10 @@ boolean G_CheckDemoStatus(void)
 		WRITEUINT8(demo_p, DEMOMARKER); // add the demo end marker
 		md5_buffer((char *)p+16, demo_p - (p+16), p); // make a checksum of everything after the checksum in the file.
 #endif
-		saved = FIL_WriteFile(demoname, demobuffer, demo_p - demobuffer); // finally output the file.
+
+		char fulldemoname [128];
+		sprintf(fulldemoname, "%s"PATHSEP"%s", srb2home, demoname);
+		saved = FIL_WriteFile(fulldemoname, demobuffer, demo_p - demobuffer); // finally output the file.
 		free(demobuffer);
 		demorecording = false;
 
