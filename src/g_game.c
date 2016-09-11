@@ -5529,6 +5529,7 @@ void G_StopDemo(void)
 boolean G_CheckDemoStatus(void)
 {
 	boolean saved;
+	char fulldemoname[128]; //Demo name with srb2home path
 
 	if(ghosts) // ... ... ...
 		ghosts = NULL; // :)
@@ -5580,7 +5581,6 @@ boolean G_CheckDemoStatus(void)
 		md5_buffer((char *)p+16, demo_p - (p+16), p); // make a checksum of everything after the checksum in the file.
 #endif
 
-		char fulldemoname [128];
 		sprintf(fulldemoname, "%s"PATHSEP"%s", srb2home, demoname);
 		saved = FIL_WriteFile(fulldemoname, demobuffer, demo_p - demobuffer); // finally output the file.
 		free(demobuffer);
