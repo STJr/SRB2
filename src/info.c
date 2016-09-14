@@ -15509,26 +15509,26 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{  	 // MT_OKUU
-		2492,             // doomednum REMEMBER TO CHANGE THIS TO YOUR LIKING
-		S_OKUUWAIT1,         // spawnstate
-		24,              // spawnhealth
+		2198,           // doomednum
+		S_OKUUWAIT1,    // spawnstate
+		24,             // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
-		32,              // reactiontime
+		32,             // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
-		200,              // painchance
-		sfx_dmged,       // painsound
+		200,            // painchance
+		sfx_dmged,      // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_OKUUDEATH1,         // deathstate
+		S_OKUUDEATH1,   // deathstate
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
 		3,              // speed
-		52*FRACUNIT,              // radius
-		108*FRACUNIT,              // height
+		52*FRACUNIT,    // radius
+		108*FRACUNIT,   // height
 		0,              // display offset
-		100,              // mass
+		100,            // mass
 		8,              // damage
 		sfx_None,       // activesound
 		MF_SPECIAL|MF_SHOOTABLE|MF_BOSS|MF_NOGRAVITY|MF_RUNSPAWNFUNC, // flags
@@ -15536,9 +15536,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{        // MT_SCENERYSTAR
-		2493,             // doomednum REMEMBER TO CHANGE THIS TO YOUR LIKING
-		S_SCENERYSTAR1,         // spawnstate
-		1000,              // spawnhealth
+		2199,           // doomednum
+		S_SCENERYSTAR1, // spawnstate
+		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
 		8,              // reactiontime
@@ -15548,14 +15548,14 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_STARDEATH,         // deathstate
+		S_STARDEATH,    // deathstate
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
 		8,              // speed
-		10*FRACUNIT,              // radius
-		10*FRACUNIT,              // height
+		10*FRACUNIT,    // radius
+		10*FRACUNIT,    // height
 		0,              // display offset
-		100,              // mass
+		100,            // mass
 		0,              // damage
 		sfx_None,       // activesound
 		MF_NOGRAVITY|MF_SCENERY, // flags
@@ -15564,8 +15564,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{       // MT_HELPER
 		-1,             // doomednum
-		S_HELPER1,         // spawnstate
-		1000,              // spawnhealth
+		S_HELPER1,      // spawnstate
+		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
 		8,              // reactiontime
@@ -15575,42 +15575,42 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_STARDEATH,         // deathstate
+		S_STARDEATH,    // deathstate
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
 		8,              // speed
-		10*FRACUNIT,              // radius
-		10*FRACUNIT,              // height
+		10*FRACUNIT,    // radius
+		10*FRACUNIT,    // height
 		0,              // display offset
-		100,              // mass
+		100,            // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_NOGRAVITY, // flags
+		MF_NOGRAVITY,   // flags
 		S_NULL          // raisestate
 	},
 
 	{       // MT_STARROTATE
 		-1,             // doomednum
-		S_STAR1,         // spawnstate
-		1000,              // spawnhealth
+		S_STAR1,        // spawnstate
+		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_star,       // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
-		200,              // painchance
+		200,            // painchance
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_STARDEATH,         // deathstate
+		S_STARDEATH,    // deathstate
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
-		8*FRACUNIT,              // speed
-		25*FRACUNIT,              // radius
-		102*FRACUNIT,              // height
+		8*FRACUNIT,     // speed
+		25*FRACUNIT,    // radius
+		102*FRACUNIT,   // height
 		0,              // display offset
-		100,              // mass
-		20,              // damage
+		100,            // mass
+		20,             // damage
 		sfx_None,       // activesound
 		MF_PAIN|MF_NOGRAVITY, // flags
 		S_NULL          // raisestate
@@ -15618,26 +15618,26 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{  		 // MT_STARROTATE2
 		-1,             // doomednum
-		S_STAR3,         // spawnstate
-		1000,              // spawnhealth
+		S_STAR3,        // spawnstate
+		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_star,       // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
-		200,              // painchance
+		200,            // painchance
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_STARDEATH,         // deathstate
+		S_STARDEATH,    // deathstate
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
-		8*FRACUNIT,              // speed
-		25*FRACUNIT,              // radius
-		102*FRACUNIT,              // height
+		8*FRACUNIT,     // speed
+		25*FRACUNIT,    // radius
+		102*FRACUNIT,   // height
 		0,              // display offset
-		100,              // mass
-		20,              // damage
+		100,            // mass
+		20,             // damage
 		sfx_None,       // activesound
 		MF_PAIN|MF_NOGRAVITY, // flags
 		S_NULL          // raisestate
@@ -15645,26 +15645,26 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{       // MT_STARBIG
 		-1,             // doomednum
-		S_STAR5,         // spawnstate
-		1000,              // spawnhealth
+		S_STAR5,        // spawnstate
+		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_star,       // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
-		200,              // painchance
+		200,            // painchance
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_STARDEATH,         // deathstate
+		S_STARDEATH,    // deathstate
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
-		8*FRACUNIT,              // speed
-		34*FRACUNIT,              // radius
-		122*FRACUNIT,              // height
+		8*FRACUNIT,     // speed
+		34*FRACUNIT,    // radius
+		122*FRACUNIT,   // height
 		0,              // display offset
-		100,              // mass
-		20,              // damage
+		100,            // mass
+		20,             // damage
 		sfx_None,       // activesound
 		MF_PAIN|MF_NOGRAVITY|MF_RUNSPAWNFUNC|MF_NOCLIPHEIGHT, // flags
 		S_NULL          // raisestate
@@ -15672,26 +15672,26 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{  	 // MT_STARHUGE
 		-1,             // doomednum
-		S_STAR9,         // spawnstate
-		1000,              // spawnhealth
+		S_STAR9,        // spawnstate
+		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_star,       // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
-		200,              // painchance
+		200,            // painchance
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_STARDEATH,         // deathstate
+		S_STARDEATH,    // deathstate
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
-		8*FRACUNIT,              // speed
-		56*FRACUNIT,              // radius
-		122*FRACUNIT,              // height
+		8*FRACUNIT,     // speed
+		56*FRACUNIT,    // radius
+		122*FRACUNIT,   // height
 		0,              // display offset
-		100,              // mass
-		20,              // damage
+		100,            // mass
+		20,             // damage
 		sfx_None,       // activesound
 		MF_PAIN|MF_NOGRAVITY|MF_NOCLIPHEIGHT, // flags
 		S_NULL          // raisestate
@@ -15699,26 +15699,26 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{  	 // MT_SHRINKINGSTAR
 		-1,             // doomednum
-		S_STAR12,         // spawnstate
-		1000,              // spawnhealth
+		S_STAR12,       // spawnstate
+		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
-		200,              // painchance
+		200,            // painchance
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_STARDEATH,         // deathstate
+		S_STARDEATH,    // deathstate
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
-		8*FRACUNIT,              // speed
-		12*FRACUNIT,              // radius
-		24*FRACUNIT,              // height
+		8*FRACUNIT,     // speed
+		12*FRACUNIT,    // radius
+		24*FRACUNIT,    // height
 		0,              // display offset
-		100,              // mass
-		20,              // damage
+		100,            // mass
+		20,             // damage
 		sfx_None,       // activesound
 		MF_PAIN|MF_NOGRAVITY|MF_NOCLIPHEIGHT|MF_RUNSPAWNFUNC, // flags
 		S_NULL          // raisestate
@@ -15727,25 +15727,25 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	{  	 // MT_BALL
 		-1,             // doomednum
 		S_BALL,         // spawnstate
-		1000,              // spawnhealth
+		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_beam,       // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
-		200,              // painchance
+		200,            // painchance
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_STARDEATH,         // deathstate
+		S_STARDEATH,    // deathstate
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
-		20*FRACUNIT,              // speed
-		12*FRACUNIT,              // radius
-		24*FRACUNIT,              // height
+		20*FRACUNIT,    // speed
+		12*FRACUNIT,    // radius
+		24*FRACUNIT,    // height
 		0,              // display offset
-		100,              // mass
-		20,              // damage
+		100,            // mass
+		20,             // damage
 		sfx_None,       // activesound
 		MF_NOGRAVITY|MF_NOBLOCKMAP|MF_MISSILE, // flags
 		S_NULL          // raisestate
@@ -15753,26 +15753,26 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{  	 // MT_LAVAPLUME
 		-1,             // doomednum
-		S_LAVAPLUME1,         // spawnstate
-		1000,              // spawnhealth
+		S_LAVAPLUME1,   // spawnstate
+		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_star,       // seesound
 		8,              // reactiontime
 		sfx_star,       // attacksound
 		S_NULL,         // painstate
-		200,              // painchance
+		200,            // painchance
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_STARDEATH,         // deathstate
+		S_STARDEATH,    // deathstate
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
-		20*FRACUNIT,              // speed
-		30*FRACUNIT,              // radius
-		70*FRACUNIT,              // height
+		20*FRACUNIT,    // speed
+		30*FRACUNIT,    // radius
+		70*FRACUNIT,    // height
 		0,              // display offset
-		100,              // mass
-		20,              // damage
+		100,            // mass
+		20,             // damage
 		sfx_None,       // activesound
 		MF_PAIN|MF_RUNSPAWNFUNC, // flags
 		S_NULL          // raisestate
@@ -15780,26 +15780,26 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{  	 // MT_LAVAFLOOR
 		-1,             // doomednum
-		S_LAVAFLOOR1,         // spawnstate
-		1000,              // spawnhealth
+		S_LAVAFLOOR1,   // spawnstate
+		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_star,       // seesound
 		8,              // reactiontime
 		sfx_star,       // attacksound
 		S_NULL,         // painstate
-		200,              // painchance
+		200,            // painchance
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_STARDEATH,         // deathstate
+		S_STARDEATH,    // deathstate
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
 		0,              // speed
-		56*FRACUNIT,              // radius
-		5*FRACUNIT,              // height
+		56*FRACUNIT,    // radius
+		5*FRACUNIT,     // height
 		0,              // display offset
-		100,              // mass
-		20,              // damage
+		100,            // mass
+		20,             // damage
 		sfx_None,       // activesound
 		MF_PAIN|MF_RUNSPAWNFUNC, // flags
 		S_NULL          // raisestate
