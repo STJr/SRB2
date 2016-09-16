@@ -6749,6 +6749,7 @@ static const char *const MOBJFLAG2_LIST[] = {
 	"BOSSFLEE",		// Boss is fleeing!
 	"BOSSDEAD",		// Boss is dead! (Not necessarily fleeing, if a fleeing point doesn't exist.)
 	"AMBUSH",       // Alternate behaviour typically set by MTF_AMBUSH
+	"LINKDRAW",
 	NULL
 };
 

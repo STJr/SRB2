@@ -192,6 +192,7 @@ typedef enum
 	MF2_BOSSFLEE       = 1<<25, // Boss is fleeing!
 	MF2_BOSSDEAD       = 1<<26, // Boss is dead! (Not necessarily fleeing, if a fleeing point doesn't exist.)
 	MF2_AMBUSH         = 1<<27, // Alternate behaviour typically set by MTF_AMBUSH
+	MF2_LINKDRAW       = 1<<28, // Draw vissprite of mobj immediately before/after tracer's vissprite (dependent on dispoffset and position)
 	// free: to and including 1<<31
 } mobjflag2_t;
 

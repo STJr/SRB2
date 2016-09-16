@@ -1119,11 +1119,13 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	vissprite_t *vis;
 
-	angle_t ang = 0;
+	angle_t ang = 0; // compiler complaints
 	fixed_t iscale;
-	fixed_t scalestep; // toast '16
+	fixed_t scalestep;
 	fixed_t offset, offset2;
 	boolean papersprite = (thing->frame & FF_PAPERSPRITE);
+
+	INT32 dispoffset = thing->info->dispoffset;
 
 	//SoM: 3/17/2000
 	fixed_t gz, gzt;
@@ -1312,6 +1314,36 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	xscale = FixedMul(xscale, ang_scale);
 
+	if ((thing->flags2 & MF2_LINKDRAW) && thing->tracer) // toast 16/09/16 (SYMMETRY)
+	{
+		mobj_t *link, *link2;
+		fixed_t linkscale;
+
+		for (link = thing->tracer; (link->tracer && (link->flags2 & MF2_LINKDRAW)); link = link->tracer)
+			link->flags2 &= ~MF2_LINKDRAW; // to prevent infinite loops, otherwise would just be a ;
+
+		for (link2 = thing->tracer; (link2->tracer && (link2 != link)); link2 = link2->tracer)
+			link->flags2 |= MF2_LINKDRAW; // only needed for correction of the above
+
+		if (link->flags2 & MF2_LINKDRAW)
+			link->flags2 &= ~MF2_LINKDRAW; // let's try and make sure this doesn't happen again...
+
+		tr_x = link->x - viewx;
+		tr_y = link->y - viewy;
+		gxt = FixedMul(tr_x, viewcos);
+		gyt = -FixedMul(tr_y, viewsin);
+		tz = gxt-gyt;
+		linkscale = FixedDiv(projectiony, tz);
+
+		if (tz < FixedMul(MINZ, this_scale))
+			return;
+
+		if (sortscale < linkscale)
+			dispoffset *= -1; // if it's physically behind, make sure it's ordered behind (if dispoffset > 0)
+
+		sortscale = linkscale; // now make sure it's linked 
+	}
+
 	// PORTAL SPRITE CLIPPING
 	if (portalrender)
 	{
@@ -1394,7 +1426,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	vis->mobjflags = thing->flags;
 	vis->scale = yscale; //<<detailshift;
 	vis->sortscale = sortscale;
-	vis->dispoffset = thing->info->dispoffset; // Monster Iestyn: 23/11/15
+	vis->dispoffset = dispoffset; // Monster Iestyn: 23/11/15
 	vis->gx = thing->x;
 	vis->gy = thing->y;
 	vis->gz = gz;
