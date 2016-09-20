@@ -245,6 +245,11 @@ typedef struct
 	UINT8 numGradedMares;   ///< Internal. For grade support.
 	nightsgrades_t *grades; ///< NiGHTS grades. Allocated dynamically for space reasons. Be careful.
 
+    // miru: to use custom mapheaderinfo options, we need to add them to the struct first
+    INT16 levelwipe;
+    INT16 postlevelwipe;
+    INT16 wipecolor;
+
 	// Lua stuff.
 	// (This is not ifdeffed so the map header structure can stay identical, just in case.)
 	UINT8 numCustomOptions;     ///< Internal. For Lua custom value support.
