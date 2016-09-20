@@ -1620,8 +1620,17 @@ void G_DoLoadLevel(boolean resetplayer)
 
 	levelstarttic = gametic; // for time calculation
 
-	if (wipegamestate == GS_LEVEL)
-		wipegamestate = -1; // force a wipe
+    // miru: postlevelwipe - just in case
+    if (!mapheaderinfo[gamemap-1]->postlevelwipe)
+    {
+        if (wipegamestate == GS_LEVEL)
+            wipegamestate = -1; // force a wipe
+    }
+    else
+    {
+        if (wipegamestate == GS_LEVEL)
+            wipegamestate = -1; // force a wipe
+    }
 
 	if (gamestate == GS_INTERMISSION)
 		Y_EndIntermission();

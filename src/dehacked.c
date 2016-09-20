@@ -1321,6 +1321,20 @@ static void readlevelheader(MYFILE *f, INT32 num)
 				else
 					mapheaderinfo[num-1]->menuflags &= ~LF2_NOVISITNEEDED;
 			}
+
+			// miru: we can build custom map header words here
+			else if (fastcmp(word, "LEVELWIPE"))
+			{
+				mapheaderinfo[num-1]->levelwipe = (INT16)i;
+			}
+			else if (fastcmp(word, "POSTLEVELWIPE"))
+			{
+				mapheaderinfo[num-1]->postlevelwipe = (INT16)i;
+			}
+			else if (fastcmp(word, "WIPECOLOR"))
+			{
+				mapheaderinfo[num-1]->wipecolor = (INT16)i;
+			}
 			else
 				deh_warning("Level header %d: unknown word '%s'", num, word);
 		}
