@@ -985,7 +985,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				return true;
 			}
 
-			topz = thing->z - FixedMul(FRACUNIT, thing->scale);
+			topz = thing->z - thing->scale;
 
 			// block only when jumping not high enough,
 			// (dont climb max. 24units while already in air)
@@ -996,7 +996,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 			if (thing->flags & MF_SPRING)
 				;
-			else if (topz < tmceilingz && tmthing->z+tmthing->height <= thing->z+thing->height)
+			else if (topz < tmceilingz && tmthing->z <= thing->z+thing->height)
 			{
 				tmceilingz = topz;
 #ifdef ESLOPE
@@ -1022,7 +1022,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				return true;
 			}
 
-			topz = thing->z + thing->height + FixedMul(FRACUNIT, thing->scale);
+			topz = thing->z + thing->height + thing->scale;
 
 			// block only when jumping not high enough,
 			// (dont climb max. 24units while already in air)
@@ -1032,7 +1032,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 			if (thing->flags & MF_SPRING)
 				;
-			else if (topz > tmfloorz && tmthing->z >= thing->z)
+			else if (topz > tmfloorz && tmthing->z+tmthing->height >= thing->z)
 			{
 				tmfloorz = topz;
 #ifdef ESLOPE
