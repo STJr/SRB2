@@ -3496,6 +3496,13 @@ boolean P_CheckMotionBlur(void)
 	return false;
 }
 
+static boolean P_CheckViewRoll(player_t *player)
+{
+	if (player->viewrollangle != 0)
+	    return true;
+
+	return false;
+}
 
 // P_CameraThinker
 //
@@ -3524,13 +3531,20 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 			postimg = postimg_water;
 		else if (P_CameraCheckHeat(&dummycam))
 			postimg = postimg_heat;
-        // miru: Check for Motion Blur Activation
+        // miru: assign new postimg on displays
+        else if (P_CheckViewRoll(player))
+        {
+            postimg = postimg_roll;
+            postimgparam = player->viewrollangle;
+        }
         else if (P_CheckMotionBlur())
-			postimg = postimg_motion;
+		{
+		    postimg = postimg_motion;
 			if (!forward_postimgparam)
                 forward_postimgparam = 1;
             else
                 postimgparam = forward_postimgparam;
+		}
 	}
 	else
 	{
@@ -3539,13 +3553,19 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 			postimg = postimg_water;
 		else if (P_CameraCheckHeat(thiscam))
 			postimg = postimg_heat;
-		// miru: Check for Motion Blur Activation
+        else if (P_CheckViewRoll(player))
+        {
+            postimg = postimg_roll;
+            postimgparam = player->viewrollangle;
+        }
         else if (P_CheckMotionBlur())
-			postimg = postimg_motion;
+		{
+		    postimg = postimg_motion;
 			if (!forward_postimgparam)
                 forward_postimgparam = 1;
             else
                 postimgparam = forward_postimgparam;
+		}
 	}
 
 	if (postimg != postimg_none)

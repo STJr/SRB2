@@ -427,6 +427,9 @@ typedef struct player_s
 	INT32 awayviewtics;
 	angle_t awayviewaiming; // Used for cut-away view
 
+    // miru: let's add stuff to player struct!
+	angle_t viewrollangle; // Roll angle (software)
+
 	boolean spectator;
 	UINT8 bot;
 

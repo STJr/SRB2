@@ -1849,6 +1849,7 @@ INT32 V_ThinStringWidth(const char *string, INT32 option)
 boolean *heatshifter = NULL;
 INT32 lastheight = 0;
 INT32 heatindex[2] = { 0, 0 };
+#define ANG2RAD(angle) ((float)((angle)*M_PI)/ANGLE_180)
 
 //
 // V_DoPostProcessor
@@ -2018,6 +2019,84 @@ Unoptimized version
 
 		VID_BlitLinearScreen(tmpscr+vid.width*vid.bpp*yoffset, screens[0]+vid.width*vid.bpp*yoffset,
 				vid.width*vid.bpp, height, vid.width*vid.bpp, vid.width);
+	}
+	else if (type == postimg_roll) // miru: View Roll Angle
+	{
+        UINT8 *tmpscr = screens[4];
+        UINT8 *srcscr = screens[0];
+        INT32 x, y;
+        angle_t your_angle = param;
+        float f_angle = ANG2RAD(your_angle);
+        //CONS_Printf("%f\n", f_angle);
+
+        INT32 hwidth = vid.width / 2;
+        INT32 hheight = height / 2;
+
+        float sinma = sin(f_angle);
+
+        float cosma = cos(f_angle);
+
+        float xst = (INT32)round((cosma * -hwidth - sinma * -hheight) + hwidth);
+        float yst = (INT32)round((sinma * -hwidth + cosma * -hheight) + hheight);
+
+#define OUT_OF_RANGE (xs < 0 || xs >= vid.width || ys < 0 || ys >= height)
+        for (y = 0; y < hheight; y++) {
+            float xs = xst;
+            float ys = yst;
+
+            x = 0;
+
+            while (x < vid.width && OUT_OF_RANGE) {
+                xs += cosma;
+                ys += sinma;
+                x++;
+            }
+
+            for (; x < vid.width && !OUT_OF_RANGE; x++) {
+                INT16 xn = (int) xs,
+                      yn = (int) ys;
+
+                tmpscr[x + (y + yoffset) * vid.width] = srcscr[xn + (yn + yoffset) * vid.width];
+
+                xn = vid.width - 1 - xn;
+                yn = height - 1 - yn;
+
+                tmpscr[(vid.width - 1 - x) + (height - 1 - y + yoffset) * vid.width] = srcscr[xn + (yn + yoffset) * vid.width];
+
+                xs += cosma;
+                ys += sinma;
+            }
+
+            xst -= sinma;
+            yst += cosma;
+        }
+#undef OUT_OF_RANGE
+/* reference implementation
+        for(x = 0; x < vid.width; x++) {
+            for(y = 0; y < height; y++) {
+
+                INT32 xt = x - hwidth;
+                INT32 yt = y - hheight;
+
+                INT32 xs = (INT32)round((cosma * xt - sinma * yt) + hwidth);
+                INT32 ys = (INT32)round((sinma * xt + cosma * yt) + hheight);
+
+                if(xs >= 0 && xs < vid.width && ys >= 0 && ys < height)
+                {
+                    // set target pixel (x,y) to color at (xs,ys)
+                    tmpscr[x + (y + yoffset) * vid.width] = srcscr[xs + (ys + yoffset) * vid.width];
+                }
+                else
+                {
+                    // set target pixel (x,y) to some default background
+                    tmpscr[x + (y+yoffset)*vid.width] = 0;
+                }
+            }
+        }
+*/
+
+        VID_BlitLinearScreen(tmpscr+vid.width*vid.bpp*yoffset, screens[0]+vid.width*vid.bpp*yoffset,
+                vid.width*vid.bpp, height, vid.width*vid.bpp, vid.width);
 	}
 #endif
 }

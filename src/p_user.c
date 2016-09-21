@@ -8566,6 +8566,14 @@ static void P_CalcPostImg(player_t *player)
 	if (player->mo->eflags & MFE_VERTICALFLIP)
 		*type = postimg_flip;
 
+    // miru: postimg types and params need to be set here
+
+    if (player->viewrollangle != 0)
+    {
+        *type = postimg_roll;
+        *param = (player->viewrollangle);
+    }
+
     //miru: Motion blur won't work without this i guess, either way its enabled
     //TODO: Opengl motion blur
 	// Motion blur
