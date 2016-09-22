@@ -2039,6 +2039,9 @@ Unoptimized version
         float xst = (INT32)round((cosma * -hwidth - sinma * -hheight) + hwidth);
         float yst = (INT32)round((sinma * -hwidth + cosma * -hheight) + hheight);
 
+        // Fills the empty space with a solid color from palette index
+        //memset(screens[4], (UINT8)(31), vid.width*vid.height*vid.bpp);
+
 #define OUT_OF_RANGE (xs < 0 || xs >= vid.width || ys < 0 || ys >= height)
         for (y = 0; y < hheight; y++) {
             float xs = xst;
