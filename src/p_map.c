@@ -989,12 +989,18 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 			// block only when jumping not high enough,
 			// (dont climb max. 24units while already in air)
-			// if not in air, let P_TryMove() decide if it's not too high
+			// since return false doesn't handle momentum properly,
+			// we lie to P_TryMove() so it's always too high
 			if (tmthing->player && tmthing->z + tmthing->height > topz
 				&& tmthing->z + tmthing->height < tmthing->ceilingz)
-				return false; // block while in air
-
-			if (thing->flags & MF_SPRING)
+			{
+				tmceilingz = INT32_MIN; // block while in air
+#ifdef ESLOPE
+				tmceilingslope = NULL;
+#endif
+				tmfloorthing = thing; // needed for side collision
+			}
+			else if (thing->flags & MF_SPRING)
 				;
 			else if (topz < tmceilingz && tmthing->z <= thing->z+thing->height)
 			{
@@ -1026,11 +1032,18 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 			// block only when jumping not high enough,
 			// (dont climb max. 24units while already in air)
-			// if not in air, let P_TryMove() decide if it's not too high
-			if (tmthing->player && tmthing->z < topz && tmthing->z > tmthing->floorz)
-				return false; // block while in air
-
-			if (thing->flags & MF_SPRING)
+			// since return false doesn't handle momentum properly,
+			// we lie to P_TryMove() so it's always too high
+			if (tmthing->player && tmthing->z < topz
+				&& tmthing->z > tmthing->floorz)
+			{
+				tmfloorz = INT32_MAX; // block while in air
+#ifdef ESLOPE
+				tmfloorslope = NULL;
+#endif
+				tmfloorthing = thing; // needed for side collision
+			}
+			else if (thing->flags & MF_SPRING)
 				;
 			else if (topz > tmfloorz && tmthing->z+tmthing->height >= thing->z)
 			{
