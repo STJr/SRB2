@@ -985,7 +985,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				return true;
 			}
 
-			topz = thing->z - thing->scale;
+			topz = thing->z - thing->scale; // FixedMul(FRACUNIT, thing->scale), but thing->scale == FRACUNIT in base scale anyways
 
 			// block only when jumping not high enough,
 			// (dont climb max. 24units while already in air)
@@ -1028,7 +1028,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				return true;
 			}
 
-			topz = thing->z + thing->height + thing->scale;
+			topz = thing->z + thing->height + thing->scale; // FixedMul(FRACUNIT, thing->scale), but thing->scale == FRACUNIT in base scale anyways
 
 			// block only when jumping not high enough,
 			// (dont climb max. 24units while already in air)
