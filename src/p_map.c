@@ -994,7 +994,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			if (tmthing->player && tmthing->z + tmthing->height > topz
 				&& tmthing->z + tmthing->height < tmthing->ceilingz)
 			{
-				tmceilingz = INT32_MIN; // block while in air
+				tmfloorz = tmceilingz = INT32_MIN; // block while in air
 #ifdef ESLOPE
 				tmceilingslope = NULL;
 #endif
@@ -1037,7 +1037,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			if (tmthing->player && tmthing->z < topz
 				&& tmthing->z > tmthing->floorz)
 			{
-				tmfloorz = INT32_MAX; // block while in air
+				tmfloorz = tmceilingz = INT32_MAX; // block while in air
 #ifdef ESLOPE
 				tmfloorslope = NULL;
 #endif
