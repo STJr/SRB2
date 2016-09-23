@@ -6750,20 +6750,8 @@ static const char *const PLAYERFLAG_LIST[] = {
 	// Are you gliding?
 	"GLIDING",
 
-	// Tails pickup!
-	"CARRIED",
-
 	// Sliding (usually in water) like Labyrinth/Oil Ocean
 	"SLIDING",
-
-	// Hanging on a rope
-	"ROPEHANG",
-
-	// Hanging on an item of some kind - zipline, chain, etc. (->tracer)
-	"ITEMHANG",
-
-	// On the mace chain spinning around (->tracer)
-	"MACESPIN",
 
 	/*** NIGHTS STUFF ***/
 	// Is the player in NiGHTS mode?
@@ -6903,6 +6891,7 @@ static const char *const POWERS_LIST[] = {
 	"SNEAKERS",
 	"FLASHING",
 	"SHIELD",
+	"CARRY",
 	"TAILSFLY", // tails flying
 	"UNDERWATER", // underwater timer
 	"SPACETIME", // In space, no one can hear you spin!
@@ -7137,6 +7126,14 @@ struct {
 	// Stack masks
 	{"SH_STACK",SH_STACK},
 	{"SH_NOSTACK",SH_NOSTACK},
+
+	// Carrying
+	{"CR_NONE",CR_NONE},
+	{"CR_GENERIC",CR_GENERIC},
+	{"CR_PLAYER",CR_PLAYER},
+	{"CR_ZOOMTUBE",CR_ZOOMTUBE},
+	{"CR_ROPEHANG",CR_ROPEHANG},
+	{"CR_MACESPIN",CR_MACESPIN},
 
 	// Ring weapons (ringweapons_t)
 	// Useful for A_GiveWeapon

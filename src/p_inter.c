@@ -1249,10 +1249,10 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 				player->powers[pw_ingoop] = 2;
 
-				if (player->pflags & PF_ITEMHANG)
+				if (player->powers[pw_carry] == CR_GENERIC)
 				{
 					P_SetTarget(&toucher->tracer, NULL);
-					player->pflags &= ~PF_ITEMHANG;
+					player->powers[pw_carry] = CR_NONE;
 				}
 
 				P_ResetPlayer(player);
@@ -1337,7 +1337,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		case MT_BIGMACECHAIN:
 			// Is this the last link in the chain?
 			if (toucher->momz > 0 || !(special->flags & MF_AMBUSH)
-				|| (player->pflags & PF_ITEMHANG) || (player->pflags & PF_MACESPIN))
+				|| (player->powers[pw_carry]))
 				return;
 
 			if (toucher->z > special->z + special->height/2)
@@ -1354,12 +1354,12 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 			if (special->target && (special->target->type == MT_SPINMACEPOINT || special->target->type == MT_HIDDEN_SLING))
 			{
-				player->pflags |= PF_MACESPIN;
+				player->powers[pw_carry] = CR_MACESPIN;
 				S_StartSound(toucher, sfx_spin);
 				P_SetPlayerMobjState(toucher, S_PLAY_SPIN);
 			}
 			else
-				player->pflags |= PF_ITEMHANG;
+				player->powers[pw_carry] = CR_GENERIC;
 
 			// Can't jump first frame
 			player->pflags |= PF_JUMPSTASIS;
@@ -2623,7 +2623,9 @@ static inline boolean P_PlayerHitsPlayer(mobj_t *target, mobj_t *inflictor, mobj
 
 static void P_KillPlayer(player_t *player, mobj_t *source, INT32 damage)
 {
-	player->pflags &= ~(PF_CARRIED|PF_SLIDING|PF_ITEMHANG|PF_MACESPIN|PF_ROPEHANG|PF_NIGHTSMODE);
+	player->pflags &= ~(PF_SLIDING|PF_NIGHTSMODE);
+
+	player->powers[pw_carry] = CR_NONE;
 
 	// Burst weapons and emeralds in Match/CTF only
 	if (source && (gametype == GT_MATCH || gametype == GT_TEAMMATCH || gametype == GT_CTF))

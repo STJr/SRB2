@@ -873,7 +873,7 @@ void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor)
 
 	P_InstaThrust(player->mo, ang, fallbackspeed);
 
-	if (player->pflags & PF_ROPEHANG)
+	if (player->powers[pw_carry] == CR_ROPEHANG)
 		P_SetTarget(&player->mo->tracer, NULL);
 
 	// Point penalty for hitting a hazard during tag.
@@ -900,7 +900,8 @@ void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor)
 // Useful when you want to kill everything the player is doing.
 void P_ResetPlayer(player_t *player)
 {
-	player->pflags &= ~(PF_ROPEHANG|PF_ITEMHANG|PF_MACESPIN|PF_SPINNING|PF_STARTDASH|PF_JUMPED|PF_GLIDING|PF_THOKKED|PF_CARRIED);
+	player->pflags &= ~(PF_SPINNING|PF_STARTDASH|PF_JUMPED|PF_GLIDING|PF_THOKKED);
+	player->powers[pw_carry] = CR_NONE;
 	player->jumping = 0;
 	player->secondjump = 0;
 	player->glidetime = 0;
@@ -3415,7 +3416,7 @@ static void P_DoSuperStuff(player_t *player)
 		? (SKINCOLOR_SUPERSILVER1 + 5*((leveltime >> 1) % 7)) // A wholesome easter egg.
 		: skins[player->skin].supercolor + (unsigned)abs( ( (signed)(leveltime >> 1) % 9) - 4); // This is where super flashing is handled.
 
-		if ((cmd->forwardmove != 0 || cmd->sidemove != 0 || player->pflags & (PF_CARRIED|PF_ROPEHANG|PF_ITEMHANG|PF_MACESPIN))
+		if ((cmd->forwardmove != 0 || cmd->sidemove != 0 || player->powers[pw_carry])
 		&& !(leveltime % TICRATE) && (player->mo->momx || player->mo->momy))
 		{
 			spark = P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z, MT_SUPERSPARK);
@@ -3583,22 +3584,22 @@ void P_DoJump(player_t *player, boolean soundandstate)
 			return;
 
 		// Jump this high.
-		if (player->pflags & PF_CARRIED)
+		if (player->powers[pw_carry] == CR_PLAYER)
 		{
 			player->mo->momz = 9*FRACUNIT;
-			player->pflags &= ~PF_CARRIED;
+			player->powers[pw_carry] = CR_NONE;
 			if (player-players == consoleplayer && botingame)
 				CV_SetValue(&cv_analog2, true);
 		}
-		else if (player->pflags & PF_ITEMHANG)
+		else if (player->powers[pw_carry] == CR_GENERIC)
 		{
 			player->mo->momz = 9*FRACUNIT;
-			player->pflags &= ~PF_ITEMHANG;
+			player->powers[pw_carry] = CR_NONE;
 		}
-		else if (player->pflags & PF_ROPEHANG)
+		else if (player->powers[pw_carry] == CR_ROPEHANG)
 		{
 			player->mo->momz = 12*FRACUNIT;
-			player->pflags &= ~PF_ROPEHANG;
+			player->powers[pw_carry] = CR_NONE;
 			P_SetTarget(&player->mo->tracer, NULL);
 		}
 		else if (player->mo->eflags & MFE_GOOWATER)
@@ -3935,9 +3936,9 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 
 	if (cmd->buttons & BT_USE && !(player->pflags & PF_JUMPDOWN) && !player->exiting && !P_PlayerInPain(player))
 	{
-		if (onground || player->climbing || player->pflags & (PF_CARRIED|PF_ITEMHANG|PF_ROPEHANG))
+		if (player->mo->tracer && player->powers[pw_carry] == CR_MACESPIN)
 		{}
-		else if (player->pflags & PF_MACESPIN && player->mo->tracer)
+		else if (onground || player->climbing || (player->mo->tracer && player->powers[pw_carry]))
 		{}
 		else if (!(player->pflags & PF_SLIDING) && ((gametype != GT_CTF) || (!player->gotflag)))
 		{
@@ -4010,18 +4011,18 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 			player->secondjump = 0;
 			player->pflags &= ~PF_THOKKED;
 		}
+		else if (player->powers[pw_carry] == CR_MACESPIN && player->mo->tracer)
+		{
+			player->powers[pw_carry] = CR_NONE;
+			player->powers[pw_flashing] = TICRATE/4;
+		}
 		else
 		// can't jump while in air, can't jump while jumping
-		if (onground || player->climbing || player->pflags & (PF_CARRIED|PF_ITEMHANG|PF_ROPEHANG))
+		if (onground || player->climbing || player->powers[pw_carry])
 		{
 			P_DoJump(player, true);
 			player->secondjump = 0;
 			player->pflags &= ~PF_THOKKED;
-		}
-		else if (player->pflags & PF_MACESPIN && player->mo->tracer)
-		{
-			player->pflags &= ~PF_MACESPIN;
-			player->powers[pw_flashing] = TICRATE/4;
 		}
 		else if (player->pflags & PF_SLIDING || (gametype == GT_CTF && player->gotflag))
 			;
@@ -6973,7 +6974,7 @@ static void P_MovePlayer(player_t *player)
 
 	// Check for teeter!
 	if (!(player->mo->momz || player->mo->momx || player->mo->momy) && !(player->mo->eflags & MFE_GOOWATER)
-	&& player->panim == PA_IDLE && !(player->pflags & (PF_CARRIED|PF_ITEMHANG|PF_ROPEHANG)))
+	&& player->panim == PA_IDLE && !(player->powers[pw_carry]))
 		P_DoTeeter(player);
 
 	// Toss a flag
@@ -7244,6 +7245,7 @@ static void P_DoZoomTube(player_t *player)
 		else
 		{
 			P_SetTarget(&player->mo->tracer, NULL); // Else, we just let him fly.
+			player->powers[pw_carry] = CR_NONE;
 
 			CONS_Debug(DBG_GAMELOGIC, "Next waypoint not found, releasing from track...\n");
 		}
@@ -7291,7 +7293,7 @@ static void P_DoRopeHang(player_t *player)
 		P_SetTarget(&player->mo->tracer, NULL);
 
 		player->pflags |= PF_JUMPED;
-		player->pflags &= ~PF_ROPEHANG;
+		player->powers[pw_carry] = CR_NONE;
 
 		if (!(player->pflags & PF_SLIDING) && (player->pflags & PF_JUMPED)
 		&& !(player->panim == PA_JUMP))
@@ -7309,6 +7311,10 @@ static void P_DoRopeHang(player_t *player)
 
 	sequence = player->mo->tracer->threshold;
 
+	// If not allowed to move, we're done here.
+	if (!speed)
+		return;
+
 	// change slope
 	dist = P_AproxDistance(P_AproxDistance(player->mo->tracer->x - player->mo->x, player->mo->tracer->y - player->mo->y), player->mo->tracer->z - playerz);
 
@@ -7319,22 +7325,28 @@ static void P_DoRopeHang(player_t *player)
 	speedy = FixedMul(FixedDiv(player->mo->tracer->y - player->mo->y, dist), (speed));
 	speedz = FixedMul(FixedDiv(player->mo->tracer->z - playerz, dist), (speed));
 
-	// If not allowed to move, we're done here.
-	if (!speed)
-		return;
-
 	// Calculate the distance between the player and the waypoint
 	// 'dist' already equals this.
 
-	// Will the player be FURTHER away if the momx/momy/momz is added to
-	// his current coordinates, or closer? (shift down to fracunits to avoid approximation errors)
-	if (dist>>FRACBITS <= P_AproxDistance(P_AproxDistance(player->mo->tracer->x - player->mo->x - speedx, player->mo->tracer->y - player->mo->y - speedy), player->mo->tracer->z - playerz - speedz)>>FRACBITS)
+	// Will the player go past the waypoint?
+	if (
+		((speedx || speedy)
+		&& (R_PointToAngle2(player->mo->x, player->mo->y, player->mo->tracer->x, player->mo->tracer->y)
+			- R_PointToAngle2(player->mo->x + speedx, player->mo->y + speedy, player->mo->tracer->x, player->mo->tracer->y)) > ANG1)
+	|| ((speedz)
+		&& ((playerz - player->mo->tracer->z) > 0) != ((playerz + speedz - player->mo->tracer->z) > 0))
+		)
 	{
+		if (speed > dist)
+			speed -= dist;
+		else
+			speed = 0;
 		// If further away, set XYZ of player to waypoint location
 		P_UnsetThingPosition(player->mo);
 		player->mo->x = player->mo->tracer->x;
 		player->mo->y = player->mo->tracer->y;
 		player->mo->z = player->mo->tracer->z - player->mo->height;
+		playerz = player->mo->tracer->z;
 		P_SetThingPosition(player->mo);
 
 		CONS_Debug(DBG_GAMELOGIC, "Looking for next waypoint...\n");
@@ -7390,6 +7402,8 @@ static void P_DoRopeHang(player_t *player)
 		{
 			CONS_Debug(DBG_GAMELOGIC, "Found waypoint (sequence %d, number %d).\n", waypoint->threshold, waypoint->health);
 
+			P_SetTarget(&player->mo->tracer, waypoint);
+
 			// calculate MOMX/MOMY/MOMZ for next waypoint
 			// change slope
 			dist = P_AproxDistance(P_AproxDistance(player->mo->tracer->x - player->mo->x, player->mo->tracer->y - player->mo->y), player->mo->tracer->z - playerz);
@@ -7400,15 +7414,12 @@ static void P_DoRopeHang(player_t *player)
 			player->mo->momx = FixedMul(FixedDiv(player->mo->tracer->x - player->mo->x, dist), (speed));
 			player->mo->momy = FixedMul(FixedDiv(player->mo->tracer->y - player->mo->y, dist), (speed));
 			player->mo->momz = FixedMul(FixedDiv(player->mo->tracer->z - playerz, dist), (speed));
-
-			P_SetTarget(&player->mo->tracer, waypoint);
 		}
 		else
 		{
 			if (player->mo->tracer->flags & MF_SLIDEME)
 			{
 				player->pflags |= PF_JUMPED;
-				player->pflags &= ~PF_ROPEHANG;
 
 				if (!(player->pflags & PF_SLIDING) && (player->pflags & PF_JUMPED)
 				&& !(player->panim == PA_JUMP))
@@ -7416,6 +7427,7 @@ static void P_DoRopeHang(player_t *player)
 			}
 
 			P_SetTarget(&player->mo->tracer, NULL);
+			player->powers[pw_carry] = CR_NONE;
 
 			CONS_Debug(DBG_GAMELOGIC, "Next waypoint not found!\n");
 		}
@@ -8109,7 +8121,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	{
 		dist = camdist;
 
-		if (player->climbing || player->exiting || player->playerstate == PST_DEAD || (player->pflags & (PF_MACESPIN|PF_ITEMHANG|PF_ROPEHANG)))
+		if (player->climbing || player->exiting || player->playerstate == PST_DEAD || (player->powers[pw_carry] && player->powers[pw_carry] != CR_PLAYER))
 			dist <<= 1;
 	}
 
@@ -8979,9 +8991,9 @@ void P_PlayerThink(player_t *player)
 	//  for a bit after a teleport.
 	if (player->mo->reactiontime)
 		player->mo->reactiontime--;
-	else if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT)
+	else if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT && (player->powers[pw_carry] == CR_ROPEHANG || player->powers[pw_carry] == CR_ZOOMTUBE))
 	{
-		if (player->pflags & PF_ROPEHANG)
+		if (player->powers[pw_carry] == CR_ROPEHANG)
 		{
 			if (!P_AnalogMove(player))
 				player->mo->angle = (cmd->angleturn<<16 /* not FRACBITS */);
@@ -8994,7 +9006,7 @@ void P_PlayerThink(player_t *player)
 			P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
 			P_DoJumpStuff(player, &player->cmd);
 		}
-		else
+		else if (player->powers[pw_carry] == CR_ZOOMTUBE)
 		{
 			P_DoZoomTube(player);
 			if (!(player->panim == PA_ROLL))
@@ -9406,14 +9418,14 @@ void P_PlayerAfterThink(player_t *player)
 	&& !(player->charflags & SF_NOJUMPSPIN))
 		P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 
-	if (player->pflags & PF_CARRIED && player->mo->tracer)
+	if (player->powers[pw_carry] == CR_PLAYER && player->mo->tracer)
 	{
 		player->mo->height = FixedDiv(P_GetPlayerHeight(player), FixedDiv(14*FRACUNIT,10*FRACUNIT));
 
 		if (player->mo->tracer->player
 			&& !player->mo->tracer->player->powers[pw_tailsfly]
 			&& player->mo->tracer->state-states != S_PLAY_FLY_TIRED)
-				player->pflags &= ~PF_CARRIED;
+				player->powers[pw_carry] = CR_NONE;
 
 		if (player->mo->eflags & MFE_VERTICALFLIP)
 		{
@@ -9421,7 +9433,7 @@ void P_PlayerAfterThink(player_t *player)
 				&& (player->mo->tracer->eflags & MFE_VERTICALFLIP)) // Reverse gravity check for the carrier - Flame
 				player->mo->z = player->mo->tracer->z + player->mo->tracer->height + FixedMul(FRACUNIT, player->mo->scale);
 			else
-				player->pflags &= ~PF_CARRIED;
+				player->powers[pw_carry] = CR_NONE;
 		}
 		else
 		{
@@ -9429,11 +9441,11 @@ void P_PlayerAfterThink(player_t *player)
 				&& !(player->mo->tracer->eflags & MFE_VERTICALFLIP)) // Correct gravity check for the carrier - Flame
 				player->mo->z = player->mo->tracer->z - player->mo->height - FixedMul(FRACUNIT, player->mo->scale);
 			else
-				player->pflags &= ~PF_CARRIED;
+				player->powers[pw_carry] = CR_NONE;
 		}
 
 		if (player->mo->tracer->health <= 0)
-			player->pflags &= ~PF_CARRIED;
+			player->powers[pw_carry] = CR_NONE;
 		else
 		{
 			P_TryMove(player->mo, player->mo->tracer->x, player->mo->tracer->y, true);
@@ -9456,14 +9468,14 @@ void P_PlayerAfterThink(player_t *player)
 		}
 
 		if (P_AproxDistance(player->mo->x - player->mo->tracer->x, player->mo->y - player->mo->tracer->y) > player->mo->radius)
-			player->pflags &= ~PF_CARRIED;
+			player->powers[pw_carry] = CR_NONE;
 
 		P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
 
 		if (player-players == consoleplayer && botingame)
-			CV_SetValue(&cv_analog2, !(player->pflags & PF_CARRIED));
+			CV_SetValue(&cv_analog2, (player->powers[pw_carry] != CR_PLAYER));
 	}
-	else if (player->pflags & PF_ITEMHANG && player->mo->tracer)
+	else if (player->powers[pw_carry] == CR_GENERIC && player->mo->tracer)
 	{
 		// tracer is what you're hanging onto
 		P_UnsetThingPosition(player->mo);
@@ -9491,12 +9503,12 @@ void P_PlayerAfterThink(player_t *player)
 			if (player->mo->z <= player->mo->floorz
 				|| player->mo->tracer->health <= 0)
 			{
-				player->pflags &= ~PF_ITEMHANG;
+				player->powers[pw_carry] = CR_NONE;
 				P_SetTarget(&player->mo->tracer, NULL);
 			}
 		}
 	}
-	else if (player->pflags & PF_MACESPIN && player->mo->tracer && player->mo->tracer->target)
+	else if (player->powers[pw_carry] == CR_MACESPIN && player->mo->tracer && player->mo->tracer->target)
 	{
 		player->mo->height = P_GetPlayerSpinHeight(player);
 		// tracer is what you're hanging onto....

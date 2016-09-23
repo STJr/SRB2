@@ -44,6 +44,7 @@ typedef enum
 	SF_STOMPDAMAGE      = 1<<9, // Always damage enemies, etc by landing on them, no matter your vunerability?
 	SF_MARIODAMAGE      = SF_NOJUMPDAMAGE|SF_STOMPDAMAGE, // The Mario method of being able to damage enemies, etc.
 	SF_MACHINE          = 1<<10, // Beep boop. Are you a robot?
+	// free up to and including 1<<31
 } skinflags_t;
 
 //Primary and secondary skin abilities
@@ -128,40 +129,28 @@ typedef enum
 	// Are you gliding?
 	PF_GLIDING   = 1<<16,
 
-	// Tails pickup!
-	PF_CARRIED   = 1<<17,
-
 	// Sliding (usually in water) like Labyrinth/Oil Ocean
-	PF_SLIDING   = 1<<18,
-
-	// Hanging on a rope
-	PF_ROPEHANG = 1<<19,
-
-	// Hanging on an item of some kind - zipline, chain, etc. (->tracer)
-	PF_ITEMHANG = 1<<20,
-
-	// On the mace chain spinning around (->tracer)
-	PF_MACESPIN = 1<<21,
+	PF_SLIDING   = 1<<17,
 
 	/*** NIGHTS STUFF ***/
 	// Is the player in NiGHTS mode?
-	PF_NIGHTSMODE        = 1<<22,
-	PF_TRANSFERTOCLOSEST = 1<<23,
+	PF_NIGHTSMODE        = 1<<18,
+	PF_TRANSFERTOCLOSEST = 1<<19,
 
 	// Spill rings after falling
-	PF_NIGHTSFALL        = 1<<24,
-	PF_DRILLING          = 1<<25,
-	PF_SKIDDOWN          = 1<<26,
+	PF_NIGHTSFALL        = 1<<20,
+	PF_DRILLING          = 1<<21,
+	PF_SKIDDOWN          = 1<<22,
 
 	/*** TAG STUFF ***/
-	PF_TAGGED            = 1<<27, // Player has been tagged and awaits the next round in hide and seek.
-	PF_TAGIT             = 1<<28, // The player is it! For Tag Mode
+	PF_TAGGED            = 1<<23, // Player has been tagged and awaits the next round in hide and seek.
+	PF_TAGIT             = 1<<24, // The player is it! For Tag Mode
 
 	/*** misc ***/
-	PF_FORCESTRAFE       = 1<<29, // Turning inputs are translated into strafing inputs
-	PF_ANALOGMODE        = 1<<30, // Analog mode?
+	PF_FORCESTRAFE       = 1<<25, // Turning inputs are translated into strafing inputs
+	PF_ANALOGMODE        = 1<<26, // Analog mode?
 
-	// free: 1<<30 and 1<<31
+	// free up to and including 1<<31
 } pflags_t;
 
 typedef enum
@@ -204,7 +193,20 @@ typedef enum
 
 	SH_STACK = SH_FIREFLOWER,
 	SH_NOSTACK = ~SH_STACK
-} shieldtype_t;
+} shieldtype_t; // pw_shield
+
+typedef enum
+{
+	CR_NONE = 0,
+	// The generic case is suitable for most objects.
+	CR_GENERIC,
+	// Tails carry.
+	CR_PLAYER,
+	// Specific level gimmicks.
+	CR_ZOOMTUBE,
+	CR_ROPEHANG,
+	CR_MACESPIN
+} carrytype_t; // pw_carry
 
 // Player powers. (don't edit this comment)
 typedef enum
@@ -213,6 +215,7 @@ typedef enum
 	pw_sneakers,
 	pw_flashing,
 	pw_shield,
+	pw_carry,
 	pw_tailsfly, // tails flying
 	pw_underwater, // underwater timer
 	pw_spacetime, // In space, no one can hear you spin!

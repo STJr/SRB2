@@ -3998,20 +3998,23 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 	mobj->eflags &= ~MFE_JUSTSTEPPEDDOWN;
 
 	// Zoom tube
-	if (mobj->tracer && mobj->tracer->type == MT_TUBEWAYPOINT)
+	if (mobj->tracer)
 	{
-		P_UnsetThingPosition(mobj);
-		mobj->x += mobj->momx;
-		mobj->y += mobj->momy;
-		mobj->z += mobj->momz;
-		P_SetThingPosition(mobj);
-		P_CheckPosition(mobj, mobj->x, mobj->y);
-		goto animonly;
-	}
-	else if (mobj->player->pflags & PF_MACESPIN && mobj->tracer)
-	{
-		P_CheckPosition(mobj, mobj->x, mobj->y);
-		goto animonly;
+		if (mobj->player->powers[pw_carry] == CR_ZOOMTUBE)
+		{
+			P_UnsetThingPosition(mobj);
+			mobj->x += mobj->momx;
+			mobj->y += mobj->momy;
+			mobj->z += mobj->momz;
+			P_SetThingPosition(mobj);
+			P_CheckPosition(mobj, mobj->x, mobj->y);
+			goto animonly;
+		}
+		else if (mobj->player->powers[pw_carry] == CR_MACESPIN)
+		{
+			P_CheckPosition(mobj, mobj->x, mobj->y);
+			goto animonly;
+		}
 	}
 
 	// Needed for gravity boots

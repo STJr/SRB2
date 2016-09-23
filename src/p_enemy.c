@@ -5428,8 +5428,8 @@ void A_MixUp(mobj_t *actor)
 
 		// Zoom tube stuff
 		mobj_t *tempthing = NULL; //tracer
-		pflags_t flags1,flags2;   //player pflags
-		INT32 transspeed;          //player speed
+		UINT16 carry1,carry2;     //carry
+		INT32 transspeed;         //player speed
 
 		// Starpost stuff
 		INT16 starpostx, starposty, starpostz;
@@ -5466,8 +5466,8 @@ void A_MixUp(mobj_t *actor)
 		players[two].speed = transspeed;
 
 		//set flags variables now but DON'T set them.
-		flags1 = (players[one].pflags & (PF_ITEMHANG|PF_MACESPIN|PF_ROPEHANG));
-		flags2 = (players[two].pflags & (PF_ITEMHANG|PF_MACESPIN|PF_ROPEHANG));
+		carry1 = (players[one].powers[pw_carry] == CR_PLAYER ? CR_NONE : players[one].powers[pw_carry]);
+		carry2 = (players[two].powers[pw_carry] == CR_PLAYER ? CR_NONE : players[two].powers[pw_carry]);
 
 		x = players[one].mo->x;
 		y = players[one].mo->y;
@@ -5492,12 +5492,10 @@ void A_MixUp(mobj_t *actor)
 				starpostnum, starposttime, starpostangle,
 				mflags2);
 
-		//flags set after mixup.  Stupid P_ResetPlayer() takes away some of the flags we look for...
-		//but not all of them!  So we need to make sure they aren't set wrong or anything.
-		players[one].pflags &= ~(PF_ITEMHANG|PF_MACESPIN|PF_ROPEHANG);
-		players[one].pflags |= flags2;
-		players[two].pflags &= ~(PF_ITEMHANG|PF_MACESPIN|PF_ROPEHANG);
-		players[two].pflags |= flags1;
+		//carry set after mixup.  Stupid P_ResetPlayer() takes away some of the stuff we look for...
+		//but not all of it!  So we need to make sure they aren't set wrong or anything.
+		players[one].powers[pw_carry] = carry2;
+		players[two].powers[pw_carry] = carry1;
 
 		teleported[one] = true;
 		teleported[two] = true;
@@ -5509,8 +5507,9 @@ void A_MixUp(mobj_t *actor)
 		INT32 pindex[MAXPLAYERS], counter = 0, teleportfrom = 0;
 
 		// Zoom tube stuff
-		mobj_t *transtracer[MAXPLAYERS]; //tracer
-		pflags_t transflag[MAXPLAYERS];  //player pflags
+		mobj_t *transtracer[MAXPLAYERS];  //tracer
+		//pflags_t transflag[MAXPLAYERS]; //cyan pink white pink cyan
+		UINT16 transcarry[MAXPLAYERS];    //player carry
 		INT32 transspeed[MAXPLAYERS];     //player speed
 
 		// Star post stuff
@@ -5544,7 +5543,7 @@ void A_MixUp(mobj_t *actor)
 					players[i].rmomx = players[i].rmomy = 1;
 				players[i].cmomx = players[i].cmomy = 0;
 
-				transflag[counter] = (players[i].pflags & (PF_ITEMHANG|PF_MACESPIN|PF_ROPEHANG));
+				transcarry[counter] = (players[i].powers[pw_carry] == CR_PLAYER ? CR_NONE : players[i].powers[pw_carry]);
 				transspeed[counter] = players[i].speed;
 				transtracer[counter] = players[i].mo->tracer;
 
@@ -5596,9 +5595,8 @@ void A_MixUp(mobj_t *actor)
 					starpostnum[teleportfrom], starposttime[teleportfrom], starpostangle[teleportfrom],
 					flags2[teleportfrom]);
 
-				//...flags after.  same reasoning.
-				players[i].pflags &= ~(PF_ITEMHANG|PF_MACESPIN|PF_ROPEHANG);
-				players[i].pflags |= transflag[teleportfrom];
+				//...carry after.  same reasoning.
+				players[i].powers[pw_carry] = transcarry[teleportfrom];
 
 				teleported[i] = true;
 				counter++;
@@ -6165,7 +6163,7 @@ void A_Boss7Chase(mobj_t *actor)
 	if (actor->health <= actor->info->damage
 		&& actor->target
 		&& actor->target->player
-		&& (actor->target->player->pflags & PF_ITEMHANG))
+		&& (actor->target->player->powers[pw_carry] == CR_GENERIC))
 	{
 		A_FaceTarget(actor);
 		P_SetMobjState(actor, S_BLACKEGG_SHOOT1);
