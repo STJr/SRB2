@@ -7178,10 +7178,19 @@ static void P_DoZoomTube(player_t *player)
 	// Calculate the distance between the player and the waypoint
 	// 'dist' already equals this.
 
-	// Will the player be FURTHER away if the momx/momy/momz is added to
-	// his current coordinates, or closer? (shift down to fracunits to avoid approximation errors)
-	if (dist>>FRACBITS <= P_AproxDistance(P_AproxDistance(player->mo->tracer->x - player->mo->x - speedx, player->mo->tracer->y - player->mo->y - speedy), player->mo->tracer->z - player->mo->z - speedz)>>FRACBITS)
+	// Will the player go past the waypoint?
+	if (speed && (
+		((speedx || speedy)
+		&& (R_PointToAngle2(player->mo->x, player->mo->y, player->mo->tracer->x, player->mo->tracer->y)
+			- R_PointToAngle2(player->mo->x + speedx, player->mo->y + speedy, player->mo->tracer->x, player->mo->tracer->y)) > ANG1)
+	|| ((speedz)
+		&& ((player->mo->z - player->mo->tracer->z) > 0) != ((player->mo->z + speedz - player->mo->tracer->z) > 0))
+		))
 	{
+		if (speed > dist)
+			speed -= dist;
+		else
+			speed = 0;
 		// If further away, set XYZ of player to waypoint location
 		P_UnsetThingPosition(player->mo);
 		player->mo->x = player->mo->tracer->x;
@@ -7221,6 +7230,8 @@ static void P_DoZoomTube(player_t *player)
 		{
 			CONS_Debug(DBG_GAMELOGIC, "Found waypoint (sequence %d, number %d).\n", waypoint->threshold, waypoint->health);
 
+			P_SetTarget(&player->mo->tracer, waypoint);
+
 			// calculate MOMX/MOMY/MOMZ for next waypoint
 			// change angle
 			player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, player->mo->tracer->x, player->mo->tracer->y);
@@ -7239,8 +7250,6 @@ static void P_DoZoomTube(player_t *player)
 			player->mo->momx = FixedMul(FixedDiv(player->mo->tracer->x - player->mo->x, dist), (speed));
 			player->mo->momy = FixedMul(FixedDiv(player->mo->tracer->y - player->mo->y, dist), (speed));
 			player->mo->momz = FixedMul(FixedDiv(player->mo->tracer->z - player->mo->z, dist), (speed));
-
-			P_SetTarget(&player->mo->tracer, waypoint);
 		}
 		else
 		{
@@ -7255,17 +7264,6 @@ static void P_DoZoomTube(player_t *player)
 		player->mo->momx = speedx;
 		player->mo->momy = speedy;
 		player->mo->momz = speedz;
-	}
-
-	// change angle
-	if (player->mo->tracer)
-	{
-		player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, player->mo->tracer->x, player->mo->tracer->y);
-
-		if (player == &players[consoleplayer])
-			localangle = player->mo->angle;
-		else if (player == &players[secondarydisplayplayer])
-			localangle2 = player->mo->angle;
 	}
 }
 
@@ -7311,10 +7309,6 @@ static void P_DoRopeHang(player_t *player)
 
 	sequence = player->mo->tracer->threshold;
 
-	// If not allowed to move, we're done here.
-	if (!speed)
-		return;
-
 	// change slope
 	dist = P_AproxDistance(P_AproxDistance(player->mo->tracer->x - player->mo->x, player->mo->tracer->y - player->mo->y), player->mo->tracer->z - playerz);
 
@@ -7324,6 +7318,10 @@ static void P_DoRopeHang(player_t *player)
 	speedx = FixedMul(FixedDiv(player->mo->tracer->x - player->mo->x, dist), (speed));
 	speedy = FixedMul(FixedDiv(player->mo->tracer->y - player->mo->y, dist), (speed));
 	speedz = FixedMul(FixedDiv(player->mo->tracer->z - playerz, dist), (speed));
+
+	// If not allowed to move, we're done here.
+	if (!speed)
+		return;
 
 	// Calculate the distance between the player and the waypoint
 	// 'dist' already equals this.
@@ -9006,7 +9004,7 @@ void P_PlayerThink(player_t *player)
 			P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
 			P_DoJumpStuff(player, &player->cmd);
 		}
-		else if (player->powers[pw_carry] == CR_ZOOMTUBE)
+		else //if (player->powers[pw_carry] == CR_ZOOMTUBE)
 		{
 			P_DoZoomTube(player);
 			if (!(player->panim == PA_ROLL))

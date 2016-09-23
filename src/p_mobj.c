@@ -4000,7 +4000,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 	// Zoom tube
 	if (mobj->tracer)
 	{
-		if (mobj->player->powers[pw_carry] == CR_ZOOMTUBE)
+		if (mobj->player->powers[pw_carry] == CR_ZOOMTUBE || mobj->player->powers[pw_carry] == CR_ROPEHANG)
 		{
 			P_UnsetThingPosition(mobj);
 			mobj->x += mobj->momx;

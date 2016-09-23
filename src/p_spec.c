@@ -4315,8 +4315,6 @@ DoneSection2:
 				else
 					player->speed = speed;
 
-				player->powers[pw_carry] = CR_ROPEHANG;
-
 				S_StartSound(player->mo, sfx_s3k4a);
 
 				player->pflags &= ~PF_JUMPED;
