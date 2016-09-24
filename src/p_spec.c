@@ -3941,8 +3941,7 @@ DoneSection2:
 				player->powers[pw_carry] = CR_ZOOMTUBE;
 				player->speed = speed;
 				player->pflags |= PF_SPINNING;
-				player->pflags &= ~PF_JUMPED;
-				player->pflags &= ~PF_GLIDING;
+				player->pflags &= ~(PF_JUMPED|PF_GLIDING|PF_SLIDING|PF_CANCARRY);
 				player->climbing = 0;
 
 				if (player->mo->state-states != S_PLAY_SPIN)
@@ -4016,7 +4015,7 @@ DoneSection2:
 				player->powers[pw_carry] = CR_ZOOMTUBE;
 				player->speed = speed;
 				player->pflags |= PF_SPINNING;
-				player->pflags &= ~PF_JUMPED;
+				player->pflags &= ~(PF_JUMPED|PF_GLIDING|PF_SLIDING|PF_CANCARRY);
 
 				if (player->mo->state-states != S_PLAY_SPIN)
 				{
@@ -4317,9 +4316,7 @@ DoneSection2:
 
 				S_StartSound(player->mo, sfx_s3k4a);
 
-				player->pflags &= ~PF_JUMPED;
-				player->pflags &= ~PF_GLIDING;
-				player->pflags &= ~PF_SLIDING;
+				player->pflags &= ~(PF_JUMPED|PF_GLIDING|PF_SLIDING|PF_CANCARRY);
 				player->climbing = 0;
 				P_SetThingPosition(player->mo);
 				P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);

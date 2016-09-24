@@ -900,7 +900,7 @@ void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor)
 // Useful when you want to kill everything the player is doing.
 void P_ResetPlayer(player_t *player)
 {
-	player->pflags &= ~(PF_SPINNING|PF_STARTDASH|PF_JUMPED|PF_GLIDING|PF_THOKKED);
+	player->pflags &= ~(PF_SPINNING|PF_STARTDASH|PF_JUMPED|PF_GLIDING|PF_THOKKED|PF_CANCARRY);
 	player->powers[pw_carry] = CR_NONE;
 	player->jumping = 0;
 	player->secondjump = 0;
@@ -4107,7 +4107,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						player->powers[pw_tailsfly] = tailsflytics + 1; // Set the fly timer
 
 						player->pflags &= ~(PF_JUMPED|PF_SPINNING|PF_STARTDASH);
-						player->pflags |= PF_THOKKED;
+						player->pflags |= PF_THOKKED|PF_CANCARRY;
 					}
 					break;
 				case CA_GLIDEANDCLIMB:
@@ -7253,7 +7253,7 @@ static void P_DoZoomTube(player_t *player)
 		}
 		else
 		{
-			P_SetTarget(&player->mo->tracer, NULL); // Else, we just let him fly.
+			P_SetTarget(&player->mo->tracer, NULL); // Else, we just let them fly.
 			player->powers[pw_carry] = CR_NONE;
 
 			CONS_Debug(DBG_GAMELOGIC, "Next waypoint not found, releasing from track...\n");
@@ -9420,11 +9420,7 @@ void P_PlayerAfterThink(player_t *player)
 	{
 		player->mo->height = FixedDiv(P_GetPlayerHeight(player), FixedDiv(14*FRACUNIT,10*FRACUNIT));
 
-		if (player->mo->tracer->player
-			// && !player->mo->tracer->player->powers[pw_tailsfly] -- race hazard - pw_tailsfly gets set to 0 a tic before the state switch to S_PLAY_FLY_TIRED...
-			&& player->mo->tracer->state-states != S_PLAY_FLY
-			&& player->mo->tracer->state-states != S_PLAY_SWIM
-			&& player->mo->tracer->state-states != S_PLAY_FLY_TIRED)
+		if (player->mo->tracer->player && !(player->mo->tracer->player->pflags & PF_CANCARRY))
 				player->powers[pw_carry] = CR_NONE;
 
 		if (player->mo->eflags & MFE_VERTICALFLIP)

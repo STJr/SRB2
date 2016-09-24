@@ -150,6 +150,9 @@ typedef enum
 	PF_FORCESTRAFE       = 1<<25, // Turning inputs are translated into strafing inputs
 	PF_ANALOGMODE        = 1<<26, // Analog mode?
 
+	// Can carry another player?
+	PF_CANCARRY          = 1<<27
+
 	// free up to and including 1<<31
 } pflags_t;
 

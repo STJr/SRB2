@@ -302,15 +302,17 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 	INT32 p;
 	fixed_t zdist; // z distance between the two players' bottoms
 
-	if (tails->powers[pw_carry])// && tails->mo->tracer == sonic->mo) <-- why was this here?
+	if (tails->powers[pw_carry])
 		return;
 	if (sonic->powers[pw_carry])
 		return;
 
-	if (tails->charability != CA_FLY && tails->charability != CA_SWIM)
+	if (tails->spectator)
+		return;
+	if (sonic->spectator)
 		return;
 
-	if (!tails->powers[pw_tailsfly] && tails->mo->state-states != S_PLAY_FLY_TIRED)
+	if (!(tails->pflags & PF_CANCARRY))
 		return;
 
 	if (tails->bot == 1)
@@ -336,39 +338,35 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 		&& players[p].powers[pw_carry] == CR_PLAYER && players[p].mo->tracer == tails->mo)
 			return;
 
+	// Why block opposing teams from tailsflying each other?
+	// Sneaking into the hands of a flying tails player in Race might be a viable strategy, who knows.
+	/*
+	if (gametype == GT_RACE || gametype == GT_COMPETITION
+		|| (netgame && (tails->spectator || sonic->spectator))
+		|| (G_TagGametype() && (!(tails->pflags & PF_TAGIT) != !(sonic->pflags & PF_TAGIT)))
+		|| (gametype == GT_MATCH)
+		|| (G_GametypeHasTeams() && tails->ctfteam != sonic->ctfteam))
+		return; */
+
 	if (tails->mo->eflags & MFE_VERTICALFLIP)
 		zdist = (sonic->mo->z + sonic->mo->height) - (tails->mo->z + tails->mo->height);
 	else
 		zdist = tails->mo->z - sonic->mo->z;
 
-	if (zdist <= sonic->mo->height + FixedMul(FRACUNIT, sonic->mo->scale)
+	if (zdist <= sonic->mo->height + sonic->mo->scale // FixedMul(FRACUNIT, sonic->mo->scale), but scale == FRACUNIT by default
 		&& zdist > sonic->mo->height*2/3
 		&& P_MobjFlip(tails->mo)*sonic->mo->momz <= 0)
 	{
-	// Why block opposing teams from tailsflying each other?
-		// Sneaking into the hands of a flying tails player in Race might be a viable strategy, who knows.
-		/*
-		if (gametype == GT_RACE || gametype == GT_COMPETITION
-			|| (netgame && (tails->spectator || sonic->spectator))
-			|| (G_TagGametype() && (!(tails->pflags & PF_TAGIT) != !(sonic->pflags & PF_TAGIT)))
-			|| (gametype == GT_MATCH)
-			|| (G_GametypeHasTeams() && tails->ctfteam != sonic->ctfteam))
-			sonic->powers[pw_carry] = CR_NONE; */
-		if (tails->spectator || sonic->spectator)
-			sonic->powers[pw_carry] = CR_NONE;
-		else
-		{
-			if (sonic-players == consoleplayer && botingame)
-				CV_SetValue(&cv_analog2, false);
-			P_ResetPlayer(sonic);
-			P_SetTarget(&sonic->mo->tracer, tails->mo);
-			sonic->powers[pw_carry] = CR_PLAYER;
-			S_StartSound(sonic->mo, sfx_s3k4a);
-			P_UnsetThingPosition(sonic->mo);
-			sonic->mo->x = tails->mo->x;
-			sonic->mo->y = tails->mo->y;
-			P_SetThingPosition(sonic->mo);
-		}
+		if (sonic-players == consoleplayer && botingame)
+			CV_SetValue(&cv_analog2, false);
+		P_ResetPlayer(sonic);
+		P_SetTarget(&sonic->mo->tracer, tails->mo);
+		sonic->powers[pw_carry] = CR_PLAYER;
+		S_StartSound(sonic->mo, sfx_s3k4a);
+		P_UnsetThingPosition(sonic->mo);
+		sonic->mo->x = tails->mo->x;
+		sonic->mo->y = tails->mo->y;
+		P_SetThingPosition(sonic->mo);
 	}
 	else {
 		if (sonic-players == consoleplayer && botingame)
