@@ -1114,6 +1114,7 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	size_t rot;
 	UINT8 flip;
+	boolean vflip = (!(thing->eflags & MFE_VERTICALFLIP) != !(thing->frame & FF_VERTICALFLIP));
 
 	INT32 lindex;
 
@@ -1123,7 +1124,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	fixed_t iscale;
 	fixed_t scalestep;
 	fixed_t offset, offset2;
-	boolean papersprite = (thing->frame & FF_PAPERSPRITE);
+	boolean papersprite = !!(thing->frame & FF_PAPERSPRITE);
 
 	INT32 dispoffset = thing->info->dispoffset;
 
@@ -1355,7 +1356,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	}
 
 	//SoM: 3/17/2000: Disregard sprites that are out of view..
-	if (thing->eflags & MFE_VERTICALFLIP)
+	if (vflip)
 	{
 		// When vertical flipped, draw sprites from the top down, at least as far as offsets are concerned.
 		// sprite height - sprite topoffset is the proper inverse of the vertical offset, of course.
@@ -1516,10 +1517,7 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	vis->precip = false;
 
-	if (thing->eflags & MFE_VERTICALFLIP)
-		vis->vflip = true;
-	else
-		vis->vflip = false;
+	vis->vflip = vflip;
 
 	vis->isScaled = false;
 

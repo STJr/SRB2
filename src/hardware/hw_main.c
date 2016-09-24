@@ -5040,6 +5040,8 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	size_t lumpoff;
 	unsigned rot;
 	UINT8 flip;
+	boolean vflip = (!(thing->eflags & MFE_VERTICALFLIP) != !(thing->frame & FF_VERTICALFLIP));
+
 	angle_t ang;
 	INT32 heightsec, phs;
 
@@ -5139,7 +5141,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	tx += FIXED_TO_FLOAT(spritecachedinfo[lumpoff].width) * this_scale;
 	x2 = gr_windowcenterx + (tx * gr_centerx / tz);
 
-	if (thing->eflags & MFE_VERTICALFLIP)
+	if (vflip)
 	{
 		gz = FIXED_TO_FLOAT(thing->z+thing->height) - FIXED_TO_FLOAT(spritecachedinfo[lumpoff].topoffset) * this_scale;
 		gzt = gz + FIXED_TO_FLOAT(spritecachedinfo[lumpoff].height) * this_scale;
@@ -5216,10 +5218,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	//CONS_Debug(DBG_RENDER, "------------------\nH: sprite  : %d\nH: frame   : %x\nH: type    : %d\nH: sname   : %s\n\n",
 	//            thing->sprite, thing->frame, thing->type, sprnames[thing->sprite]);
 
-	if (thing->eflags & MFE_VERTICALFLIP)
-		vis->vflip = true;
-	else
-		vis->vflip = false;
+	vis->vflip = vflip;
 
 	vis->precip = false;
 }
