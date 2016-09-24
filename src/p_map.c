@@ -302,9 +302,9 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 	INT32 p;
 	fixed_t zdist; // z distance between the two players' bottoms
 
-	if (tails->powers[pw_carry] == CR_PLAYER)// && tails->mo->tracer == sonic->mo) <-- why was this here?
+	if (tails->powers[pw_carry])// && tails->mo->tracer == sonic->mo) <-- why was this here?
 		return;
-	if (sonic->powers[pw_carry] == CR_PLAYER && sonic->mo->tracer == tails->mo)
+	if (sonic->powers[pw_carry])
 		return;
 
 	if (tails->charability != CA_FLY && tails->charability != CA_SWIM)
@@ -318,9 +318,6 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 
 	if (sonic->pflags & PF_NIGHTSMODE)
 		return;
-
-	if (sonic->mo->tracer && sonic->powers[pw_carry] == CR_ZOOMTUBE)
-		return; // don't steal players from zoomtubes!
 
 	if ((sonic->mo->eflags & MFE_VERTICALFLIP) != (tails->mo->eflags & MFE_VERTICALFLIP))
 		return; // Both should be in same gravity
