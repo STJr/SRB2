@@ -314,7 +314,7 @@ typedef enum sprite
 
 	// Interactive Objects
 	SPR_FANS,
-	SPR_BUBL, // water bubble source
+	SPR_BBLS, // water bubble source
 	SPR_SIGN, // Level end sign
 	SPR_STEM, // Steam riser
 	SPR_SPIK, // Spike Ball
@@ -458,11 +458,7 @@ typedef enum sprite
 	SPR_SPLH, // Water Splish
 	SPR_SPLA, // Water Splash
 	SPR_SMOK,
-	SPR_BUBP, // Small bubble
-	SPR_BUBO, // Medium bubble
-	SPR_BUBN, // Large bubble
-	SPR_BUBM, // Extra Large (would you like fries with that?) bubble
-	SPR_POPP, // Extra Large bubble goes POP!
+	SPR_BUBL, // Bubble
 	SPR_WZAP,
 	SPR_TFOG, // Teleport Fog
 	SPR_SEED, // Sonic CD flower seed
@@ -1660,6 +1656,8 @@ typedef enum state
 	// Bubble Source
 	S_BUBBLES1,
 	S_BUBBLES2,
+	S_BUBBLES3,
+	S_BUBBLES4,
 
 	// Level End Sign
 	S_SIGN1,
@@ -2515,10 +2513,9 @@ typedef enum state
 
 	// Bubbles
 	S_SMALLBUBBLE,
-	S_SMALLBUBBLE1,
 	S_MEDIUMBUBBLE,
-	S_MEDIUMBUBBLE1,
-	S_LARGEBUBBLE,
+	S_LARGEBUBBLE1,
+	S_LARGEBUBBLE2,
 	S_EXTRALARGEBUBBLE, // breathable
 
 	S_POP1, // Extra Large bubble goes POP!

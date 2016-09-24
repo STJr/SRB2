@@ -237,7 +237,7 @@ light_t *t_lspr[NUMSPRITES] =
 
 	// Interactive Objects
 	&lspr[NOLIGHT],     // SPR_FANS
-	&lspr[NOLIGHT],     // SPR_BUBL
+	&lspr[NOLIGHT],     // SPR_BBLS
 	&lspr[NOLIGHT],     // SPR_SIGN
 	&lspr[NOLIGHT],     // SPR_STEM
 	&lspr[NOLIGHT],     // SPR_SPIK
@@ -382,11 +382,7 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_SPLH
 	&lspr[NOLIGHT],     // SPR_SPLA
 	&lspr[NOLIGHT],     // SPR_SMOK
-	&lspr[NOLIGHT],     // SPR_BUBP
-	&lspr[NOLIGHT],     // SPR_BUBO
-	&lspr[NOLIGHT],     // SPR_BUBN
-	&lspr[NOLIGHT],     // SPR_BUBM
-	&lspr[NOLIGHT],     // SPR_POPP
+	&lspr[NOLIGHT],     // SPR_BUBL
 	&lspr[SUPERSPARK_L], // SPR_WZAP
 	&lspr[SUPERSPARK_L], // SPR_TFOG
 	&lspr[NIGHTSLIGHT_L],     // SPR_SEED // Sonic CD flower seed

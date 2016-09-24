@@ -33,7 +33,7 @@ char sprnames[NUMSPRITES + 1][5] =
 	"BBUZ","JETF","EGGM","EGGN","TNKA","TNKB","SPNK","GOOP","EGGO","PRPL",
 	"FAKE","EGGP","EFIR","EGGQ","EGGR","BRAK","BGOO","BMSL","EGGT","RCKT",
 	"ELEC","TARG","NPLM","MNPL","METL","MSCF","MSCB","RING","TRNG","EMMY",
-	"TOKE","RFLG","BFLG","NWNG","EMBM","CEMG","EMER","FANS","BUBL","SIGN",
+	"TOKE","RFLG","BFLG","NWNG","EMBM","CEMG","EMER","FANS","BBLS","SIGN",
 	"STEM","SPIK","SFLM","USPK","STPT","BMNE","SRBX","RRBX","BRBX","SHTV",
 	"PINV","YLTV","BLTV","BKTV","WHTV","GRTV","ELTV","EGGB","MIXU","RECY",
 	"QUES","GBTV","PRUP","PTTV","MTEX","MISL","TORP","ENRG","MINE","JBUL",
@@ -44,16 +44,16 @@ char sprnames[NUMSPRITES + 1][5] =
 	"BSZ7","BSZ8","STLG","DBAL","RCRY","ARMA","ARMF","ARMB","WIND","MAGN",
 	"ELEM","FORC","PITY","IVSP","SSPK","GOAL","BIRD","BUNY","MOUS","CHIC",
 	"COWZ","RBRD","SPRY","SPRR","SPRB","YSPR","RSPR","SSWY","SSWR","SSWB",
-	"RAIN","SNO1","SPLH","SPLA","SMOK","BUBP","BUBO","BUBN","BUBM","POPP",
-	"WZAP","TFOG","SEED","PRTL","SCOR","DRWN","TTAG","GFLG","RRNG","RNGB",
-	"RNGR","RNGI","RNGA","RNGE","RNGS","RNGG","PIKB","PIKR","PIKA","PIKE",
-	"PIKS","PIKG","TAUT","TGRE","TSCR","COIN","CPRK","GOOM","BGOM","FFWR",
-	"FBLL","SHLL","PUMA","HAMM","KOOP","BFLM","MAXE","MUS1","MUS2","TOAD",
-	"NDRN","NSPK","NBMP","HOOP","NSCR","NPRU","CAPS","SPRK","BOM1","BOM2",
-	"BOM3","BOM4","ROIA","ROIB","ROIC","ROID","ROIE","ROIF","ROIG","ROIH",
-	"ROII","ROIJ","ROIK","ROIL","ROIM","ROIN","ROIO","ROIP","BBAL","GWLG",
-	"GWLR","SRBA","SRBB","SRBC","SRBD","SRBE","SRBF","SRBG","SRBH","SRBI",
-	"SRBJ","SRBK","SRBL","SRBM","SRBN","SRBO",
+	"RAIN","SNO1","SPLH","SPLA","SMOK","BUBL","WZAP","TFOG","SEED","PRTL",
+	"SCOR","DRWN","TTAG","GFLG","RRNG","RNGB","RNGR","RNGI","RNGA","RNGE",
+	"RNGS","RNGG","PIKB","PIKR","PIKA","PIKE","PIKS","PIKG","TAUT","TGRE",
+	"TSCR","COIN","CPRK","GOOM","BGOM","FFWR","FBLL","SHLL","PUMA","HAMM",
+	"KOOP","BFLM","MAXE","MUS1","MUS2","TOAD","NDRN","NSPK","NBMP","HOOP",
+	"NSCR","NPRU","CAPS","SPRK","BOM1","BOM2","BOM3","BOM4","ROIA","ROIB",
+	"ROIC","ROID","ROIE","ROIF","ROIG","ROIH","ROII","ROIJ","ROIK","ROIL",
+	"ROIM","ROIN","ROIO","ROIP","BBAL","GWLG","GWLR","SRBA","SRBB","SRBC",
+	"SRBD","SRBE","SRBF","SRBG","SRBH","SRBI","SRBJ","SRBK","SRBL","SRBM",
+	"SRBN","SRBO",
 };
 
 char spr2names[NUMPLAYERSPRITES][5] =
@@ -1144,8 +1144,10 @@ state_t states[NUMSTATES] =
 	{SPR_FANS, 4, 1, {A_FanBubbleSpawn},  512, 0, S_FAN},  // S_FAN5
 
 	// Bubble Source
-	{SPR_BUBL, 0, 8, {A_BubbleSpawn}, 2048, 0, S_BUBBLES2}, // S_BUBBLES1
-	{SPR_BUBL, 1, 8, {A_BubbleCheck}, 0, 0, S_BUBBLES1}, // S_BUBBLES2
+	{SPR_BBLS, 0, 8, {A_BubbleSpawn}, 2048, 0, S_BUBBLES2}, // S_BUBBLES1
+	{SPR_BBLS, 1, 8, {A_BubbleCheck}, 0, 0, S_BUBBLES3}, // S_BUBBLES2
+	{SPR_BBLS, 2, 8, {A_BubbleSpawn}, 2048, 0, S_BUBBLES4}, // S_BUBBLES3
+	{SPR_BBLS, 3, 8, {A_BubbleCheck}, 0, 0, S_BUBBLES1}, // S_BUBBLES4
 
 	// Level End Sign
 	{SPR_SIGN, 0, 1, {NULL}, 0, 0, S_SIGN2},         // S_SIGN1
@@ -2012,17 +2014,16 @@ state_t states[NUMSTATES] =
 	{SPR_SMOK, FF_TRANS50|4, 8, {NULL}, 0, 0, S_NULL},   // S_SMOKE5
 
 	// Bubbles
-	{SPR_BUBP, FF_TRANS50, 1, {A_BubbleRise}, 0, 1024, S_SMALLBUBBLE1},  // S_SMALLBUBBLE
-	{SPR_BUBP, FF_TRANS50, 1, {A_BubbleRise}, 0, 1024, S_SMALLBUBBLE},   // S_SMALLBUBBLE1
-	{SPR_BUBO, FF_TRANS50, 1, {A_BubbleRise}, 0, 1024, S_MEDIUMBUBBLE1}, // S_MEDIUMBUBBLE
-	{SPR_BUBO, FF_TRANS50, 1, {A_BubbleRise}, 0, 1024, S_MEDIUMBUBBLE},  // S_MEDIUMBUBBLE1
+	{SPR_BUBL, FF_TRANS50,   1, {A_BubbleRise}, 0, 1024, S_SMALLBUBBLE},  // S_SMALLBUBBLE
+	{SPR_BUBL, FF_TRANS50|1, 1, {A_BubbleRise}, 0, 1024, S_MEDIUMBUBBLE}, // S_MEDIUMBUBBLE
 
 	// Extra Large Bubble (breathable)
-	{SPR_BUBN, FF_TRANS50|FF_FULLBRIGHT, 16, {A_BubbleRise}, 0, 1024, S_EXTRALARGEBUBBLE}, // S_LARGEBUBBLE
-	{SPR_BUBM, FF_TRANS50|FF_FULLBRIGHT, 16, {A_BubbleRise}, 0, 1024, S_EXTRALARGEBUBBLE}, // S_EXTRALARGEBUBBLE
+	{SPR_BUBL, FF_TRANS50|FF_FULLBRIGHT|2,   8, {A_BubbleRise}, 0, 1024, S_LARGEBUBBLE2}, // S_LARGEBUBBLE1
+	{SPR_BUBL, FF_TRANS50|FF_FULLBRIGHT|3,   8, {A_BubbleRise}, 0, 1024, S_EXTRALARGEBUBBLE}, // S_LARGEBUBBLE2
+	{SPR_BUBL, FF_TRANS50|FF_FULLBRIGHT|4,  16, {A_BubbleRise}, 0, 1024, S_EXTRALARGEBUBBLE}, // S_EXTRALARGEBUBBLE
 
 	// Extra Large Bubble goes POP!
-	{SPR_POPP, 0, 16, {NULL}, 0, 0, S_NULL}, // S_POP1
+	{SPR_BUBL, 5, 16, {NULL}, 0, 0, S_NULL}, // S_POP1
 
 	{SPR_WZAP, FF_TRANS10|FF_ANIMATE|FF_MIDDLESTARTCHANCE, 4, {NULL}, 3, 2, S_NULL},  // S_WATERZAP
 
@@ -10486,7 +10487,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_EXTRALARGEBUBBLE
 		-1,             // doomednum
-		S_LARGEBUBBLE,  // spawnstate
+		S_LARGEBUBBLE1, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -10501,8 +10502,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_gasp,       // deathsound
 		8,              // speed
-		8*FRACUNIT,     // radius
-		12*FRACUNIT,    // height
+		23*FRACUNIT,    // radius
+		43*FRACUNIT,    // height
 		0,              // display offset
 		16,             // mass
 		0,              // damage

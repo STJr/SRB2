@@ -4753,6 +4753,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	// Bubble Source
 	"S_BUBBLES1",
 	"S_BUBBLES2",
+	"S_BUBBLES3",
+	"S_BUBBLES4",
 
 	// Level End Sign
 	"S_SIGN1",
@@ -5608,10 +5610,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Bubbles
 	"S_SMALLBUBBLE",
-	"S_SMALLBUBBLE1",
 	"S_MEDIUMBUBBLE",
-	"S_MEDIUMBUBBLE1",
-	"S_LARGEBUBBLE",
+	"S_LARGEBUBBLE1",
+	"S_LARGEBUBBLE2",
 	"S_EXTRALARGEBUBBLE", // breathable
 
 	"S_POP1", // Extra Large bubble goes POP!
