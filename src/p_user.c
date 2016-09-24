@@ -9421,7 +9421,9 @@ void P_PlayerAfterThink(player_t *player)
 		player->mo->height = FixedDiv(P_GetPlayerHeight(player), FixedDiv(14*FRACUNIT,10*FRACUNIT));
 
 		if (player->mo->tracer->player
-			&& !player->mo->tracer->player->powers[pw_tailsfly]
+			// && !player->mo->tracer->player->powers[pw_tailsfly] -- race hazard - pw_tailsfly gets set to 0 a tic before the state switch to S_PLAY_FLY_TIRED...
+			&& player->mo->tracer->state-states != S_PLAY_FLY
+			&& player->mo->tracer->state-states != S_PLAY_SWIM
 			&& player->mo->tracer->state-states != S_PLAY_FLY_TIRED)
 				player->powers[pw_carry] = CR_NONE;
 
