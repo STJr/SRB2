@@ -4107,7 +4107,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						player->powers[pw_tailsfly] = tailsflytics + 1; // Set the fly timer
 
 						player->pflags &= ~(PF_JUMPED|PF_SPINNING|PF_STARTDASH);
-						player->pflags |= PF_THOKKED|PF_CANCARRY;
+						player->pflags |= (PF_THOKKED|PF_CANCARRY);
 					}
 					break;
 				case CA_GLIDEANDCLIMB:
