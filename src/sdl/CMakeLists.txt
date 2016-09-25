@@ -3,7 +3,13 @@
 set(SRB2_CONFIG_SDL2_USEMIXER ON CACHE BOOL "Use SDL2_mixer or regular sdl sound")
 
 if(${SRB2_CONFIG_SDL2_USEMIXER})
-	find_package(SDL2_mixer)
+	if(${SRB2_CONFIG_USE_INTERNAL_LIBRARIES})
+		set(SDL2_MIXER_FOUND ON)
+		set(SDL2_MIXER_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/libs/SDL2_mixer/i686-w64-mingw32/include/SDL2)
+		set(SDL2_MIXER_LIBRARIES "-L${CMAKE_SOURCE_DIR}/libs/SDL2_mixer/i686-w64-mingw32/lib -lSDL2_mixer")
+	else()
+		find_package(SDL2_mixer)
+	endif()
 	if(${SDL2_MIXER_FOUND})
 		set(SRB2_HAVE_MIXER ON)
 		set(SRB2_SDL2_SOUNDIMPL mixer_sound.c)
@@ -42,7 +48,13 @@ set(SRB2_SDL2_HEADERS
 source_group("Interface Code" FILES ${SRB2_SDL2_SOURCES} ${SRB2_SDL2_HEADERS})
 
 # Dependency
-find_package(SDL2)
+if(${SRB2_CONFIG_USE_INTERNAL_LIBRARIES})
+	set(SDL2_FOUND ON)
+	set(SDL2_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/libs/SDL2/i686-w64-mingw32/include/SDL2)
+	set(SDL2_LIBRARIES "-L${CMAKE_SOURCE_DIR}/libs/SDL2/i686-w64-mingw32/lib -lSDL2")
+else()
+	find_package(SDL2)
+endif()
 
 if(${SDL2_FOUND})
 	set(SRB2_SDL2_TOTAL_SOURCES
@@ -185,7 +197,13 @@ if(${SDL2_FOUND})
 	endif()
 
 	if(MSVC)
-		find_package(SDL2_MAIN REQUIRED)
+		if(${SRB2_CONFIG_USE_INTERNAL_LIBRARIES})
+			set(SDL2_MAIN_FOUND ON)
+			set(SDL2_MAIN_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/libs/SDL2/i686-w64-mingw32/include/SDL2)
+			set(SDL2_MAIN_LIBRARIES "-L${CMAKE_SOURCE_DIR}/libs/SDL2/i686-w64-mingw32/lib -lSDL2main")
+		else()
+			find_package(SDL2_MAIN REQUIRED)
+		endif()
 		target_link_libraries(SRB2SDL2 PRIVATE
 			${SDL2_MAIN_LIBRARIES}
 		)
