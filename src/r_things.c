@@ -2696,7 +2696,7 @@ void R_AddSkins(UINT16 wadnum)
 			GETFRACBITS(radius)
 			GETFRACBITS(height)
 			GETFRACBITS(spinheight)
-#undef GETSPEED
+#undef GETFRACBITS
 
 #define GETINT(field) else if (!stricmp(stoken, #field)) skin->field = atoi(value);
 			GETINT(thrustfactor)
