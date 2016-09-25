@@ -2432,7 +2432,7 @@ void SetPlayerSkin(INT32 playernum, const char *skinname)
 	INT32 i = R_SkinAvailable(skinname);
 	player_t *player = &players[playernum];
 
-	if (i != -1)
+	if ((i != -1) && (!P_IsLocalPlayer(player) || R_SkinUnlock(i)))
 	{
 		SetPlayerSkinByNum(playernum, i);
 		return;
@@ -2459,6 +2459,9 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 	{
 		player->skin = skinnum;
 
+		player->camerascale = skin->camerascale;
+		player->shieldscale = skin->shieldscale;
+
 		player->charability = (UINT8)skin->ability;
 		player->charability2 = (UINT8)skin->ability2;
 
@@ -2480,6 +2483,9 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 
 		player->jumpfactor = skin->jumpfactor;
 
+		player->height = skin->height;
+		player->spinheight = skin->spinheight;
+
 		if (!(cv_debug || devparm) && !(netgame || multiplayer || demoplayback))
 		{
 			if (playernum == consoleplayer)
@@ -2500,6 +2506,7 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 			if (newcolor)
 				player->mo->color = newcolor;
 			P_SetScale(player->mo, player->mo->scale);
+			player->mo->radius = FixedMul(skin->radius, player->mo->scale);
 		}
 		return;
 	}

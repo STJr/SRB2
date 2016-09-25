@@ -57,39 +57,6 @@ static void P_NukeAllPlayers(player_t *player);
 #endif
 
 //
-// P_GetPlayerRadius
-//
-// Returns the radius
-// of the player.
-//
-fixed_t P_GetPlayerRadius(player_t *player)
-{
-	return FixedMul(skins[player->skin].radius, player->mo->scale);
-}
-
-//
-// P_GetPlayerHeight
-//
-// Returns the height
-// of the player.
-//
-fixed_t P_GetPlayerHeight(player_t *player)
-{
-	return FixedMul(skins[player->skin].height, player->mo->scale);
-}
-
-//
-// P_GetPlayerSpinHeight
-//
-// Returns the 'spin height'
-// of the player.
-//
-fixed_t P_GetPlayerSpinHeight(player_t *player)
-{
-	return FixedMul(skins[player->skin].spinheight, player->mo->scale);
-}
-
-//
 // Movement.
 //
 
@@ -7002,7 +6969,6 @@ static void P_MovePlayer(player_t *player)
 			player->mo->height = P_GetPlayerSpinHeight(player);
 		else
 			player->mo->height = P_GetPlayerHeight(player);
-		player->mo->radius = P_GetPlayerRadius(player);
 
 		if (player->mo->eflags & MFE_VERTICALFLIP && player->mo->height != oldheight) // adjust z height for reverse gravity, similar to how it's done for scaling
 			player->mo->z -= player->mo->height - oldheight;
@@ -7968,16 +7934,16 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		camspeed = cv_cam_speed.value;
 		camstill = cv_cam_still.value;
 		camrotate = cv_cam_rotate.value;
-		camdist = FixedMul(cv_cam_dist.value, FixedMul(skins[player->skin].camerascale, mo->scale));
-		camheight = FixedMul(cv_cam_height.value, FixedMul(skins[player->skin].camerascale, mo->scale));
+		camdist = FixedMul(cv_cam_dist.value, FixedMul(player->camerascale, mo->scale));
+		camheight = FixedMul(cv_cam_height.value, FixedMul(player->camerascale, mo->scale));
 	}
 	else // Camera 2
 	{
 		camspeed = cv_cam2_speed.value;
 		camstill = cv_cam2_still.value;
 		camrotate = cv_cam2_rotate.value;
-		camdist = FixedMul(cv_cam2_dist.value, FixedMul(skins[player->skin].camerascale, mo->scale));
-		camheight = FixedMul(cv_cam2_height.value, FixedMul(skins[player->skin].camerascale, mo->scale));
+		camdist = FixedMul(cv_cam2_dist.value, FixedMul(player->camerascale, mo->scale));
+		camheight = FixedMul(cv_cam2_height.value, FixedMul(player->camerascale, mo->scale));
 	}
 
 #ifdef REDSANALOG

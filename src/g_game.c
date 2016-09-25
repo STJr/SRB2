@@ -2047,6 +2047,8 @@ void G_PlayerReborn(INT32 player)
 	INT32 score;
 	INT32 lives;
 	INT32 continues;
+	fixed_t camerascale;
+	fixed_t shieldscale;
 	UINT8 charability;
 	UINT8 charability2;
 	fixed_t normalspeed;
@@ -2070,6 +2072,8 @@ void G_PlayerReborn(INT32 player)
 	INT32 starpostnum;
 	INT32 starpostangle;
 	fixed_t jumpfactor;
+	fixed_t height;
+	fixed_t spinheight;
 	INT32 exiting;
 	INT16 numboxes;
 	INT16 totalring;
@@ -2101,6 +2105,8 @@ void G_PlayerReborn(INT32 player)
 
 	skincolor = players[player].skincolor;
 	skin = players[player].skin;
+	camerascale = players[player].camerascale;
+	shieldscale = players[player].shieldscale;
 	charability = players[player].charability;
 	charability2 = players[player].charability2;
 	normalspeed = players[player].normalspeed;
@@ -2117,6 +2123,8 @@ void G_PlayerReborn(INT32 player)
 	starpostnum = players[player].starpostnum;
 	starpostangle = players[player].starpostangle;
 	jumpfactor = players[player].jumpfactor;
+	height = players[player].height;
+	spinheight = players[player].spinheight;
 	thokitem = players[player].thokitem;
 	spinitem = players[player].spinitem;
 	revitem = players[player].revitem;
@@ -2142,6 +2150,8 @@ void G_PlayerReborn(INT32 player)
 	// save player config truth reborn
 	p->skincolor = skincolor;
 	p->skin = skin;
+	p->camerascale = camerascale;
+	p->shieldscale = shieldscale;
 	p->charability = charability;
 	p->charability2 = charability2;
 	p->normalspeed = normalspeed;
@@ -2164,6 +2174,8 @@ void G_PlayerReborn(INT32 player)
 	p->starpostnum = starpostnum;
 	p->starpostangle = starpostangle;
 	p->jumpfactor = jumpfactor;
+	p->height = height;
+	p->spinheight = spinheight;
 	p->exiting = exiting;
 
 	p->numboxes = numboxes;
@@ -4696,6 +4708,8 @@ void G_BeginRecording(void)
 	demo_p += 16;
 
 	// Stats
+	WRITEUINT8(demo_p,player->camerascale>>FRACBITS);
+	WRITEUINT8(demo_p,player->shieldscale>>FRACBITS);
 	WRITEUINT8(demo_p,player->charability);
 	WRITEUINT8(demo_p,player->charability2);
 	WRITEUINT8(demo_p,player->actionspd>>FRACBITS);
@@ -4706,6 +4720,8 @@ void G_BeginRecording(void)
 	WRITEUINT8(demo_p,player->thrustfactor);
 	WRITEUINT8(demo_p,player->accelstart);
 	WRITEUINT8(demo_p,player->acceleration);
+	WRITEUINT8(demo_p,player->height>>FRACBITS);
+	WRITEUINT8(demo_p,player->spinheight>>FRACBITS);
 
 	// Trying to convert it back to % causes demo desync due to precision loss.
 	// Don't do it.
@@ -4936,7 +4952,7 @@ void G_DoPlayDemo(char *defdemoname)
 	char skin[17],color[17],*n,*pdemoname;
 	UINT8 version,subversion,charability,charability2,thrustfactor,accelstart,acceleration;
 	UINT32 randseed;
-	fixed_t actionspd,mindash,maxdash,normalspeed,runspeed,jumpfactor;
+	fixed_t camerascale,shieldscale,actionspd,mindash,maxdash,normalspeed,runspeed,jumpfactor,height,spinheight;
 	char msg[1024];
 
 	skin[16] = '\0';
@@ -5072,6 +5088,8 @@ void G_DoPlayDemo(char *defdemoname)
 	M_Memcpy(color,demo_p,16);
 	demo_p += 16;
 
+	camerascale = (fixed_t)READUINT8(demo_p)<<FRACBITS;
+	shieldscale = (fixed_t)READUINT8(demo_p)<<FRACBITS;
 	charability = READUINT8(demo_p);
 	charability2 = READUINT8(demo_p);
 	actionspd = (fixed_t)READUINT8(demo_p)<<FRACBITS;
@@ -5082,6 +5100,8 @@ void G_DoPlayDemo(char *defdemoname)
 	thrustfactor = READUINT8(demo_p);
 	accelstart = READUINT8(demo_p);
 	acceleration = READUINT8(demo_p);
+	height = (fixed_t)READUINT8(demo_p)<<FRACBITS;
+	spinheight = (fixed_t)READUINT8(demo_p)<<FRACBITS;
 	jumpfactor = READFIXED(demo_p);
 
 	// net var data
@@ -5145,6 +5165,8 @@ void G_DoPlayDemo(char *defdemoname)
 	// Set saved attribute values
 	// No cheat checking here, because even if they ARE wrong...
 	// it would only break the replay if we clipped them.
+	players[0].camerascale = camerascale;
+	players[0].shieldscale = shieldscale;
 	players[0].charability = charability;
 	players[0].charability2 = charability2;
 	players[0].actionspd = actionspd;
@@ -5156,6 +5178,8 @@ void G_DoPlayDemo(char *defdemoname)
 	players[0].accelstart = accelstart;
 	players[0].acceleration = acceleration;
 	players[0].jumpfactor = jumpfactor;
+	players[0].height = height;
+	players[0].spinheight = spinheight;
 
 	demo_start = true;
 }

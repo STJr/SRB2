@@ -506,6 +506,8 @@ static inline void resynch_write_player(resynch_pak *rsp, const size_t i)
 	rsp->skin = LONG(players[i].skin);
 	// Just in case Lua does something like
 	// modify these at runtime
+	rsp->camerascale = (fixed_t)LONG(players[i].camerascale);
+	rsp->shieldscale = (fixed_t)LONG(players[i].shieldscale);
 	rsp->normalspeed = (fixed_t)LONG(players[i].normalspeed);
 	rsp->runspeed = (fixed_t)LONG(players[i].runspeed);
 	rsp->thrustfactor = players[i].thrustfactor;
@@ -521,6 +523,8 @@ static inline void resynch_write_player(resynch_pak *rsp, const size_t i)
 	rsp->mindash = (fixed_t)LONG(players[i].mindash);
 	rsp->maxdash = (fixed_t)LONG(players[i].maxdash);
 	rsp->jumpfactor = (fixed_t)LONG(players[i].jumpfactor);
+	rsp->playerheight = (fixed_t)LONG(players[i].height);
+	rsp->playerspinheight = (fixed_t)LONG(players[i].spinheight);
 
 	rsp->speed = (fixed_t)LONG(players[i].speed);
 	rsp->jumping = players[i].jumping;
@@ -632,6 +636,8 @@ static void resynch_read_player(resynch_pak *rsp)
 	players[i].skin = LONG(rsp->skin);
 	// Just in case Lua does something like
 	// modify these at runtime
+	players[i].camerascale = (fixed_t)LONG(rsp->camerascale);
+	players[i].shieldscale = (fixed_t)LONG(rsp->shieldscale);
 	players[i].normalspeed = (fixed_t)LONG(rsp->normalspeed);
 	players[i].runspeed = (fixed_t)LONG(rsp->runspeed);
 	players[i].thrustfactor = rsp->thrustfactor;
@@ -647,6 +653,8 @@ static void resynch_read_player(resynch_pak *rsp)
 	players[i].mindash = (fixed_t)LONG(rsp->mindash);
 	players[i].maxdash = (fixed_t)LONG(rsp->maxdash);
 	players[i].jumpfactor = (fixed_t)LONG(rsp->jumpfactor);
+	players[i].height = (fixed_t)LONG(rsp->playerheight);
+	players[i].spinheight = (fixed_t)LONG(rsp->playerspinheight);
 
 	players[i].speed = (fixed_t)LONG(rsp->speed);
 	players[i].jumping = rsp->jumping;

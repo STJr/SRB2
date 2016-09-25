@@ -282,6 +282,8 @@ typedef struct player_s
 	playerstate_t playerstate;
 
 	// Determine POV, including viewpoint bobbing during movement.
+	fixed_t camerascale;
+	fixed_t shieldscale;
 	// Focal origin above r.z
 	fixed_t viewz;
 	// Base height above floor for viewz.
@@ -348,6 +350,9 @@ typedef struct player_s
 	fixed_t maxdash; // Maximum spindash speed
 
 	fixed_t jumpfactor; // How high can the player jump?
+
+	fixed_t height; // Bounding box changes.
+	fixed_t spinheight;
 
 	SINT8 lives;
 	SINT8 continues; // continues that player has acquired
