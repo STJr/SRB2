@@ -7150,7 +7150,6 @@ static void P_DoZoomTube(player_t *player)
 	mobj_t *waypoint = NULL;
 	fixed_t dist;
 	boolean reverse;
-	fixed_t speedx,speedy,speedz;
 
 	player->mo->height = P_GetPlayerSpinHeight(player);
 
@@ -7171,26 +7170,17 @@ static void P_DoZoomTube(player_t *player)
 	if (dist < 1)
 		dist = 1;
 
-	speedx = FixedMul(FixedDiv(player->mo->tracer->x - player->mo->x, dist), (speed));
-	speedy = FixedMul(FixedDiv(player->mo->tracer->y - player->mo->y, dist), (speed));
-	speedz = FixedMul(FixedDiv(player->mo->tracer->z - player->mo->z, dist), (speed));
+	player->mo->momx = FixedMul(FixedDiv(player->mo->tracer->x - player->mo->x, dist), (speed));
+	player->mo->momy = FixedMul(FixedDiv(player->mo->tracer->y - player->mo->y, dist), (speed));
+	player->mo->momz = FixedMul(FixedDiv(player->mo->tracer->z - player->mo->z, dist), (speed));
 
 	// Calculate the distance between the player and the waypoint
 	// 'dist' already equals this.
 
 	// Will the player go past the waypoint?
-	if (speed && (
-		((speedx || speedy)
-		&& (R_PointToAngle2(player->mo->x, player->mo->y, player->mo->tracer->x, player->mo->tracer->y)
-			- R_PointToAngle2(player->mo->x + speedx, player->mo->y + speedy, player->mo->tracer->x, player->mo->tracer->y)) > ANG1)
-	|| ((speedz)
-		&& ((player->mo->z - player->mo->tracer->z) > 0) != ((player->mo->z + speedz - player->mo->tracer->z) > 0))
-		))
+	if (speed > dist)
 	{
-		if (speed > dist)
-			speed -= dist;
-		else
-			speed = 0;
+		speed -= dist;
 		// If further away, set XYZ of player to waypoint location
 		P_UnsetThingPosition(player->mo);
 		player->mo->x = player->mo->tracer->x;
@@ -7259,12 +7249,6 @@ static void P_DoZoomTube(player_t *player)
 			CONS_Debug(DBG_GAMELOGIC, "Next waypoint not found, releasing from track...\n");
 		}
 	}
-	else
-	{
-		player->mo->momx = speedx;
-		player->mo->momy = speedy;
-		player->mo->momz = speedz;
-	}
 }
 
 //
@@ -7281,23 +7265,9 @@ static void P_DoRopeHang(player_t *player)
 	mobj_t *mo2;
 	mobj_t *waypoint = NULL;
 	fixed_t dist;
-	fixed_t speedx,speedy,speedz;
 	fixed_t playerz;
 
 	player->mo->height = P_GetPlayerHeight(player);
-
-	if (player->cmd.buttons & BT_USE && !(player->pflags & PF_STASIS)) // Drop off of the rope
-	{
-		P_SetTarget(&player->mo->tracer, NULL);
-
-		player->pflags |= PF_JUMPED;
-		player->powers[pw_carry] = CR_NONE;
-
-		if (!(player->pflags & PF_SLIDING) && (player->pflags & PF_JUMPED)
-		&& !(player->panim == PA_JUMP))
-			P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
-		return;
-	}
 
 	// Play the 'clink' sound only if the player is moving.
 	if (!(leveltime & 7) && player->speed)
@@ -7315,9 +7285,22 @@ static void P_DoRopeHang(player_t *player)
 	if (dist < 1)
 		dist = 1;
 
-	speedx = FixedMul(FixedDiv(player->mo->tracer->x - player->mo->x, dist), (speed));
-	speedy = FixedMul(FixedDiv(player->mo->tracer->y - player->mo->y, dist), (speed));
-	speedz = FixedMul(FixedDiv(player->mo->tracer->z - playerz, dist), (speed));
+	player->mo->momx = FixedMul(FixedDiv(player->mo->tracer->x - player->mo->x, dist), (speed));
+	player->mo->momy = FixedMul(FixedDiv(player->mo->tracer->y - player->mo->y, dist), (speed));
+	player->mo->momz = FixedMul(FixedDiv(player->mo->tracer->z - playerz, dist), (speed));
+
+	if (player->cmd.buttons & BT_USE && !(player->pflags & PF_STASIS)) // Drop off of the rope
+	{
+		P_SetTarget(&player->mo->tracer, NULL);
+
+		player->pflags |= PF_JUMPED;
+		player->powers[pw_carry] = CR_NONE;
+
+		if (!(player->pflags & PF_SLIDING) && (player->pflags & PF_JUMPED)
+		&& !(player->panim == PA_JUMP))
+			P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
+		return;
+	}
 
 	// If not allowed to move, we're done here.
 	if (!speed)
@@ -7327,18 +7310,9 @@ static void P_DoRopeHang(player_t *player)
 	// 'dist' already equals this.
 
 	// Will the player go past the waypoint?
-	if (
-		((speedx || speedy)
-		&& (R_PointToAngle2(player->mo->x, player->mo->y, player->mo->tracer->x, player->mo->tracer->y)
-			- R_PointToAngle2(player->mo->x + speedx, player->mo->y + speedy, player->mo->tracer->x, player->mo->tracer->y)) > ANG1)
-	|| ((speedz)
-		&& ((playerz - player->mo->tracer->z) > 0) != ((playerz + speedz - player->mo->tracer->z) > 0))
-		)
+	if (speed > dist)
 	{
-		if (speed > dist)
-			speed -= dist;
-		else
-			speed = 0;
+		speed -= dist;
 		// If further away, set XYZ of player to waypoint location
 		P_UnsetThingPosition(player->mo);
 		player->mo->x = player->mo->tracer->x;
@@ -7429,12 +7403,6 @@ static void P_DoRopeHang(player_t *player)
 
 			CONS_Debug(DBG_GAMELOGIC, "Next waypoint not found!\n");
 		}
-	}
-	else
-	{
-		player->mo->momx = speedx;
-		player->mo->momy = speedy;
-		player->mo->momz = speedz;
 	}
 }
 
