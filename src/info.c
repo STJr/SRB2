@@ -27,33 +27,62 @@
 // Hey, moron! If you change this table, don't forget about the sprite enum in info.h and the sprite lights in hw_light.c!
 char sprnames[NUMSPRITES + 1][5] =
 {
-	"NULL","UNKN","THOK","PLAY","POSS","SPOS","FISH","BUZZ","RBUZ","JETB",
-	"JETW","JETG","CCOM","DETN","SKIM","TRET","TURR","SHRP","JJAW","SNLR",
-	"VLTR","PNTY","ARCH","CBFS","SPSH","ESHI","GSNP","MNUS","SSHL","UNID",
-	"BBUZ","JETF","EGGM","EGGN","TNKA","TNKB","SPNK","GOOP","EGGO","PRPL",
-	"FAKE","EGGP","EFIR","EGGQ","EGGR","BRAK","BGOO","BMSL","EGGT","RCKT",
-	"ELEC","TARG","NPLM","MNPL","METL","MSCF","MSCB","RING","TRNG","EMMY",
-	"TOKE","RFLG","BFLG","NWNG","EMBM","CEMG","EMER","FANS","BUBL","SIGN",
-	"STEM","SPIK","SFLM","USPK","STPT","BMNE","MSTV","XLTV","TRRI","TBRI",
-	"TVRI","TVPI","TVAT","TVFO","TVAR","TVWW","TVEL","TVSS","TVIV","TV1U",
-	"TV1P","TVEG","TVMX","TVMY","TVGV","TVRC","TV1K","TVTK","MISL","TORP",
-	"ENRG","MINE","JBUL","TRLS","CBLL","AROW","CFIR","FWR1","FWR2","FWR3",
-	"FWR4","BUS1","BUS2","THZP","ALRM","GARG","SEWE","DRIP","CRL1","CRL2",
-	"CRL3","BCRY","CHAN","FLAM","ESTA","SMCH","BMCH","SMCE","BMCE","BTBL",
-	"STBL","CACT","FLME","DFLM","XMS1","XMS2","XMS3","BSZ1","BSZ2","BSZ3",
-	"BSZ4","BSZ5","BSZ6","BSZ7","BSZ8","STLG","DBAL","RCRY","ARMA","ARMF",
-	"ARMB","WIND","MAGN","ELEM","FORC","PITY","IVSP","SSPK","GOAL","BIRD",
-	"BUNY","MOUS","CHIC","COWZ","RBRD","SPRY","SPRR","SPRB","YSPR","RSPR",
+	"NULL","UNKN","THOK","PLAY",
+
+	"POSS","SPOS","FISH","BUZZ","RBUZ","JETB","JETW","JETG","CCOM","DETN",
+	"SKIM","TRET","TURR","SHRP","JJAW","SNLR","VLTR","PNTY","ARCH","CBFS",
+	"SPSH","ESHI","GSNP","MNUS","SSHL","UNID","BBUZ",
+
+	"JETF","EGGM","EGGN","TNKA","TNKB","SPNK","GOOP","EGGO","PRPL","FAKE",
+	"EGGP","EFIR","EGGQ","EGGR","BRAK","BGOO","BMSL","EGGT","RCKT","ELEC",
+	"TARG","NPLM","MNPL","METL","MSCF","MSCB",
+
+	"RING","TRNG","EMMY","TOKE","RFLG","BFLG","NWNG","EMBM","CEMG","EMER",
+
+	"FANS","BUBL","SIGN","STEM","SPIK","SFLM","USPK","STPT","BMNE",
+	
+	"MSTV","XLTV","TRRI","TBRI","TVRI","TVPI","TVAT","TVFO","TVAR","TVWW",
+	"TVEL","TVSS","TVIV","TV1U","TV1P","TVEG","TVMX","TVMY","TVGV","TVRC",
+	"TV1K","TVTK",
+
+	"MISL","TORP","ENRG","MINE","JBUL","TRLS","CBLL","AROW","CFIR",
+
+	"FWR1","FWR2","FWR3","FWR4","BUS1","BUS2","THZP","ALRM","GARG","SEWE",
+	"DRIP","CRL1","CRL2","CRL3","BCRY","CHAN","FLAM","ESTA","SMCH","BMCH",
+	"SMCE","BMCE","BTBL","STBL","CACT","FLME","DFLM","XMS1","XMS2","XMS3",
+	"BSZ1","BSZ2","BSZ3","BSZ4","BSZ5","BSZ6","BSZ7","BSZ8","STLG","DBAL",
+	"RCRY",
+
+	"ARMA","ARMF","ARMB","WIND","MAGN","ELEM","FORC","PITY","IVSP","SSPK",
+	"GOAL",
+
+	"BIRD","BUNY","MOUS","CHIC","COWZ","RBRD",
+
+	"SPRY","SPRR","SPRB","YSPR","RSPR","SSWY","SSWR","SSWB",
+
 	"RAIN","SNO1","SPLH","SPLA","SMOK","BUBP","BUBO","BUBN","BUBM","POPP",
-	"TFOG","SEED","PRTL","SCOR","DRWN","TTAG","GFLG","RRNG","RNGB","RNGR",
-	"RNGI","RNGA","RNGE","RNGS","RNGG","PIKB","PIKR","PIKA","PIKE","PIKS",
-	"PIKG","TAUT","TGRE","TSCR","COIN","CPRK","GOOM","BGOM","FFWR","FBLL",
-	"SHLL","PUMA","HAMM","KOOP","BFLM","MAXE","MUS1","MUS2","TOAD","NDRN",
+	"TFOG","SEED","PRTL",
+
+	"SCOR","DRWN","TTAG","GFLG",
+
+	"RRNG","RNGB","RNGR","RNGI","RNGA","RNGE","RNGS","RNGG","PIKB","PIKR",
+	"PIKA","PIKE","PIKS","PIKG","TAUT","TGRE","TSCR",
+
+	"COIN","CPRK","GOOM","BGOM","FFWR","FBLL","SHLL","PUMA","HAMM","KOOP",
+	"BFLM","MAXE","MUS1","MUS2","TOAD","NDRN",
+
 	"SUPE","SUPZ","NDRL","NSPK","NBMP","HOOP","NSCR","NPRU","CAPS","SUPT",
-	"SPRK","BOM1","BOM2","BOM3","BOM4","ROIA","ROIB","ROIC","ROID","ROIE",
-	"ROIF","ROIG","ROIH","ROII","ROIJ","ROIK","ROIL","ROIM","ROIN","ROIO",
-	"ROIP","BBAL","GWLG","GWLR","SRBA","SRBB","SRBC","SRBD","SRBE","SRBF",
-	"SRBG","SRBH","SRBI","SRBJ","SRBK","SRBL","SRBM","SRBN","SRBO",
+	"SPRK",
+
+	"BOM1","BOM2","BOM3","BOM4",
+
+	"ROIA","ROIB","ROIC","ROID","ROIE","ROIF","ROIG","ROIH","ROII","ROIJ",
+	"ROIK","ROIL","ROIM","ROIN","ROIO","ROIP",
+
+	"BBAL","GWLG","GWLR",
+
+	"SRBA","SRBB","SRBC","SRBD","SRBE","SRBF","SRBG","SRBH","SRBI","SRBJ",
+	"SRBK","SRBL","SRBM","SRBN","SRBO",
 };
 
 char spr2names[NUMPLAYERSPRITES][5] =
@@ -62,6 +91,7 @@ char spr2names[NUMPLAYERSPRITES][5] =
 	"WAIT",
 	"WALK",
 	"RUN_",
+	"PEEL",
 	"PAIN",
 	"DEAD",
 	"DRWN",
@@ -88,6 +118,7 @@ char spr2names[NUMPLAYERSPRITES][5] =
 	"SSTD",
 	"SWLK",
 	"SRUN",
+	"SPEE",
 	"SPAN",
 	"SMSL",
 	"SDTH",
@@ -101,6 +132,7 @@ char spr2names[NUMPLAYERSPRITES][5] =
 	"SRID",
 	"SFLT"
 };
+enum playersprite free_spr2 = SPR2_FIRSTFREESLOT;
 
 // Doesn't work with g++, needs actionf_p1 (don't modify this comment)
 state_t states[NUMSTATES] =
@@ -132,6 +164,7 @@ state_t states[NUMSTATES] =
 	{SPR_PLAY, SPR2_WAIT,  16, {NULL}, 0, 0, S_PLAY_WAIT}, // S_PLAY_WAIT
 	{SPR_PLAY, SPR2_WALK,   4, {NULL}, 0, 0, S_PLAY_WALK}, // S_PLAY_WALK
 	{SPR_PLAY, SPR2_RUN ,   2, {NULL}, 0, 0, S_PLAY_RUN},  // S_PLAY_RUN
+	{SPR_PLAY, SPR2_PEEL,   2, {NULL}, 0, 0, S_PLAY_PEEL}, // S_PLAY_PEEL
 	{SPR_PLAY, SPR2_PAIN, 350, {NULL}, 0, 0, S_PLAY_FALL}, // S_PLAY_PAIN
 	{SPR_PLAY, SPR2_DEAD,   4, {NULL}, 0, 0, S_PLAY_DEAD}, // S_PLAY_DEAD
 	{SPR_PLAY, SPR2_DRWN,   4, {NULL}, 0, 0, S_PLAY_DRWN}, // S_PLAY_DRWN
@@ -157,6 +190,7 @@ state_t states[NUMSTATES] =
 	{SPR_PLAY, SPR2_SSTD,   7, {NULL}, 0, 0, S_PLAY_SUPER_STND}, // S_PLAY_SUPER_STND
 	{SPR_PLAY, SPR2_SWLK,   7, {NULL}, 0, 0, S_PLAY_SUPER_WALK}, // S_PLAY_SUPER_WALK
 	{SPR_PLAY, SPR2_SRUN,   7, {NULL}, 0, 0, S_PLAY_SUPER_RUN},  // S_PLAY_SUPER_RUN
+	{SPR_PLAY, SPR2_SPEE,   7, {NULL}, 0, 0, S_PLAY_SUPER_PEEL}, // S_PLAY_SUPER_PEEL
 	{SPR_PLAY, SPR2_SPAN,  -1, {NULL}, 0, 0, S_PLAY_SUPER_STND}, // S_PLAY_SUPER_PAIN
 	{SPR_PLAY, SPR2_SMSL,  -1, {NULL}, 0, 0, S_PLAY_SUPER_STND}, // S_PLAY_SUPER_STUN
 	{SPR_PLAY, SPR2_SDTH,   4, {NULL}, 0, 0, S_PLAY_SUPER_DEAD}, // S_PLAY_SUPER_DEAD
@@ -1840,6 +1874,36 @@ state_t states[NUMSTATES] =
 	{SPR_RSPR, 3, 1, {NULL}, 0, 0, S_RDIAG7},   // S_RDIAG6
 	{SPR_RSPR, 2, 1, {NULL}, 0, 0, S_RDIAG8},   // S_RDIAG7
 	{SPR_RSPR, 1, 1, {NULL}, 0, 0, S_RDIAG1},   // S_RDIAG8
+
+	// Yellow Side Spring
+	{SPR_SSWY, 0, -1, {NULL}, 0, 0, S_NULL},    // S_YHORIZ1
+	{SPR_SSWY, 1, 1, {A_Pain}, 0, 0, S_YHORIZ3}, // S_YHORIZ2
+	{SPR_SSWY, 2, 1, {NULL}, 0, 0, S_YHORIZ4},   // S_YHORIZ3
+	{SPR_SSWY, 3, 1, {NULL}, 0, 0, S_YHORIZ5},   // S_YHORIZ4
+	{SPR_SSWY, 4, 1, {NULL}, 0, 0, S_YHORIZ6},   // S_YHORIZ5
+	{SPR_SSWY, 3, 1, {NULL}, 0, 0, S_YHORIZ7},   // S_YHORIZ6
+	{SPR_SSWY, 2, 1, {NULL}, 0, 0, S_YHORIZ8},   // S_YHORIZ7
+	{SPR_SSWY, 1, 1, {NULL}, 0, 0, S_YHORIZ1},   // S_YHORIZ8
+
+	// Red Side Spring
+	{SPR_SSWR, 0, -1, {NULL}, 0, 0, S_NULL},    // S_RHORIZ1
+	{SPR_SSWR, 1, 1, {A_Pain}, 0, 0, S_RHORIZ3}, // S_RHORIZ2
+	{SPR_SSWR, 2, 1, {NULL}, 0, 0, S_RHORIZ4},   // S_RHORIZ3
+	{SPR_SSWR, 3, 1, {NULL}, 0, 0, S_RHORIZ5},   // S_RHORIZ4
+	{SPR_SSWR, 4, 1, {NULL}, 0, 0, S_RHORIZ6},   // S_RHORIZ5
+	{SPR_SSWR, 3, 1, {NULL}, 0, 0, S_RHORIZ7},   // S_RHORIZ6
+	{SPR_SSWR, 2, 1, {NULL}, 0, 0, S_RHORIZ8},   // S_RHORIZ7
+	{SPR_SSWR, 1, 1, {NULL}, 0, 0, S_RHORIZ1},   // S_RHORIZ8
+
+	// Blue Side Spring
+	{SPR_SSWB, 0, -1, {NULL}, 0, 0, S_NULL},    // S_BHORIZ1
+	{SPR_SSWB, 1, 1, {A_Pain}, 0, 0, S_BHORIZ3}, // S_BHORIZ2
+	{SPR_SSWB, 2, 1, {NULL}, 0, 0, S_BHORIZ4},   // S_BHORIZ3
+	{SPR_SSWB, 3, 1, {NULL}, 0, 0, S_BHORIZ5},   // S_BHORIZ4
+	{SPR_SSWB, 4, 1, {NULL}, 0, 0, S_BHORIZ6},   // S_BHORIZ5
+	{SPR_SSWB, 3, 1, {NULL}, 0, 0, S_BHORIZ7},   // S_BHORIZ6
+	{SPR_SSWB, 2, 1, {NULL}, 0, 0, S_BHORIZ8},   // S_BHORIZ7
+	{SPR_SSWB, 1, 1, {NULL}, 0, 0, S_BHORIZ1},   // S_BHORIZ8
 
 	// Rain
 	{SPR_RAIN, FF_TRANS50, -1, {NULL}, 0, 0, S_NULL}, // S_RAIN1
@@ -5270,6 +5334,87 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // activesound
 		MF_SOLID|MF_SPRING, // flags
 		S_RDIAG2        // raisestate
+	},
+
+	{           // MT_YELLOWHORIZ
+		558,            // doomednum
+		S_YHORIZ1,      // spawnstate
+		1,              // spawnhealth
+		S_YHORIZ2,      // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_spring,     // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		16*FRACUNIT,    // radius
+		32*FRACUNIT,    // height
+		0,              // display offset
+		0,              // mass
+		16*FRACUNIT,    // damage
+		sfx_None,       // activesound
+		MF_SOLID|MF_SPRING|MF_NOGRAVITY, // flags
+		S_YHORIZ2       // raisestate
+	},
+
+	{           // MT_REDHORIZ
+		559,            // doomednum
+		S_RHORIZ1,      // spawnstate
+		1,              // spawnhealth
+		S_RHORIZ2,      // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_spring,     // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		16*FRACUNIT,    // radius
+		32*FRACUNIT,    // height
+		0,              // display offset
+		0,              // mass
+		64*FRACUNIT,    // damage
+		sfx_None,       // activesound
+		MF_SOLID|MF_SPRING|MF_NOGRAVITY, // flags
+		S_RHORIZ2       // raisestate
+	},
+
+	{           // MT_BLUEHORIZ
+		560,            // doomednum
+		S_BHORIZ1,      // spawnstate
+		1,              // spawnhealth
+		S_BHORIZ2,      // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_spring,     // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		16*FRACUNIT,    // radius
+		32*FRACUNIT,    // height
+		0,              // display offset
+		0,              // mass
+		4*FRACUNIT,    // damage
+		sfx_None,       // activesound
+		MF_SOLID|MF_SPRING|MF_NOGRAVITY, // flags
+		S_BHORIZ2       // raisestate
 	},
 
 	{           // MT_BUBBLES

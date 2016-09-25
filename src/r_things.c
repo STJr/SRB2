@@ -100,7 +100,7 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 	lumppat <<= 16;
 	lumppat += lump;
 
-	if (frame >= 64 || rotation > 8)
+	if (frame >= 64 || !(R_ValidSpriteAngle(rotation)))
 		I_Error("R_InstallSpriteLump: Bad frame characters in lump %s", W_CheckNameForNum(lumppat));
 
 	if (maxframe ==(size_t)-1 || frame > maxframe)
@@ -109,30 +109,71 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 	if (rotation == 0)
 	{
 		// the lump should be used for all rotations
-		if (sprtemp[frame].rotate == 0)
+		if (sprtemp[frame].rotate == SRF_SINGLE)
 			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has multiple rot = 0 lump\n", spritename, cn);
-
-		if (sprtemp[frame].rotate == 1)
+		else if (sprtemp[frame].rotate != SRF_NONE) // Let's bundle 1-8 and L/R rotations into one debug message.
 			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has rotations and a rot = 0 lump\n", spritename, cn);
 
-		sprtemp[frame].rotate = 0;
+		sprtemp[frame].rotate = SRF_SINGLE;
 		for (r = 0; r < 8; r++)
 		{
 			sprtemp[frame].lumppat[r] = lumppat;
 			sprtemp[frame].lumpid[r] = lumpid;
 		}
-		sprtemp[frame].flip = flipped ? UINT8_MAX : 0;
+		sprtemp[frame].flip = flipped ? 0xFF : 0; // 11111111 in binary
+		return;
+	}
+
+	if (rotation == ROT_L || rotation == ROT_R)
+	{
+		UINT8 rightfactor = ((rotation == ROT_R) ? 4 : 0);
+
+		// the lump should be used for half of all rotations
+		if (sprtemp[frame].rotate == SRF_SINGLE)
+			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has L/R rotations and a rot = 0 lump\n", spritename, cn);
+		else if (sprtemp[frame].rotate == SRF_3D)
+			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has both L/R and 1-8 rotations\n", spritename, cn);
+		else if ((sprtemp[frame].rotate & SRF_LEFT) && (rotation == ROT_L))
+			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has multiple L rotations\n", spritename, cn);
+		else if ((sprtemp[frame].rotate & SRF_RIGHT) && (rotation == ROT_R))
+			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has multiple R rotations\n", spritename, cn);
+
+		if (sprtemp[frame].rotate == SRF_NONE)
+			sprtemp[frame].rotate = SRF_SINGLE;
+
+		sprtemp[frame].rotate |= ((rotation == ROT_R) ? SRF_RIGHT : SRF_LEFT);
+		if (sprtemp[frame].rotate == (SRF_3D|SRF_2D))
+			sprtemp[frame].rotate = SRF_2D; // SRF_3D|SRF_2D being enabled at the same time doesn't HURT in the current sprite angle implementation, but it DOES mean more to check in some of the helper functions. Let's not allow this scenario to happen.
+
+		for (r = 0; r < 4; r++) // Thanks to R_PrecacheLevel, we can't leave sprtemp[*].lumppat[*] == LUMPERROR... so we load into the front/back angle too.
+		{
+			sprtemp[frame].lumppat[r + rightfactor] = lumppat;
+			sprtemp[frame].lumpid[r + rightfactor] = lumpid;
+		}
+
+		if (flipped)
+			sprtemp[frame].flip |= (0x0F<<rightfactor); // 00001111 or 11110000 in binary, depending on rotation being ROT_L or ROT_R
+		else
+			sprtemp[frame].flip &= ~(0x0F<<rightfactor); // ditto
+
 		return;
 	}
 
 	// the lump is only used for one rotation
-	if (sprtemp[frame].rotate == 0)
-		CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has rotations and a rot = 0 lump\n", spritename, cn);
-
-	sprtemp[frame].rotate = 1;
+	if (sprtemp[frame].rotate == SRF_SINGLE)
+		CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has 1-8 rotations and a rot = 0 lump\n", spritename, cn);
+	else if ((sprtemp[frame].rotate != SRF_3D) && (sprtemp[frame].rotate != SRF_NONE))
+		CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has both L/R and 1-8 rotations\n", spritename, cn);
 
 	// make 0 based
 	rotation--;
+
+	if (rotation == 0 || rotation == 4) // Front or back...
+		sprtemp[frame].rotate = SRF_3D; // Prevent L and R changeover
+	else if (rotation > 3) // Right side
+		sprtemp[frame].rotate = (SRF_3D | (sprtemp[frame].rotate & SRF_LEFT)); // Continue allowing L frame changeover
+	else // if (rotation <= 3) // Left side
+		sprtemp[frame].rotate = (SRF_3D | (sprtemp[frame].rotate & SRF_RIGHT)); // Continue allowing R frame changeover
 
 	if (sprtemp[frame].lumppat[rotation] != LUMPERROR)
 		CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s: %c%c has two lumps mapped to it\n", spritename, cn, '1'+rotation);
@@ -195,7 +236,7 @@ static boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef,
 			frame = R_Char2Frame(lumpinfo[l].name[4]);
 			rotation = (UINT8)(lumpinfo[l].name[5] - '0');
 
-			if (frame >= 64 || rotation > 8) // Give an actual NAME error -_-...
+			if (frame >= 64 || !(R_ValidSpriteAngle(rotation))) // Give an actual NAME error -_-...
 			{
 				CONS_Alert(CONS_WARNING, M_GetText("Bad sprite name: %s\n"), W_CheckNameForNumPwad(wadnum,l));
 				continue;
@@ -278,22 +319,29 @@ static boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef,
 	{
 		switch (sprtemp[frame].rotate)
 		{
-			case 0xff:
+			case SRF_NONE:
 			// no rotations were found for that frame at all
-			I_Error("R_AddSingleSpriteDef: No patches found for %s frame %c", sprname, R_Frame2Char(frame));
+			I_Error("R_AddSingleSpriteDef: No patches found for %.4s frame %c", sprname, R_Frame2Char(frame));
 			break;
 
-			case 0:
+			case SRF_SINGLE:
 			// only the first rotation is needed
 			break;
 
-			case 1:
+			case SRF_2D: // both Left and Right rotations
+			// we test to see whether the left and right slots are present
+			if ((sprtemp[frame].lumppat[2] == LUMPERROR) || (sprtemp[frame].lumppat[6] == LUMPERROR))
+				I_Error("R_AddSingleSpriteDef: Sprite %.4s frame %c is missing rotations",
+				sprname, R_Frame2Char(frame));
+			break;
+
+			default:
 			// must have all 8 frames
 			for (rotation = 0; rotation < 8; rotation++)
 				// we test the patch lump, or the id lump whatever
 				// if it was not loaded the two are LUMPERROR
 				if (sprtemp[frame].lumppat[rotation] == LUMPERROR)
-					I_Error("R_AddSingleSpriteDef: Sprite %s frame %c is missing rotations",
+					I_Error("R_AddSingleSpriteDef: Sprite %.4s frame %c is missing rotations",
 					        sprname, R_Frame2Char(frame));
 			break;
 		}
@@ -1138,21 +1186,28 @@ static void R_ProjectSprite(mobj_t *thing)
 		I_Error("R_ProjectSprite: sprframes NULL for sprite %d\n", thing->sprite);
 #endif
 
-	if (sprframe->rotate)
-	{
-		// choose a different rotation based on player view
-		ang = R_PointToAngle (thing->x, thing->y);
-		rot = (ang-thing->angle+ANGLE_202h)>>29;
-		//Fab: lumpid is the index for spritewidth,spriteoffset... tables
-		lump = sprframe->lumpid[rot];
-		flip = sprframe->flip & (1<<rot);
-	}
-	else
+	if (sprframe->rotate == SRF_SINGLE)
 	{
 		// use single rotation for all views
 		rot = 0;                        //Fab: for vis->patch below
 		lump = sprframe->lumpid[0];     //Fab: see note above
 		flip = sprframe->flip; // Will only be 0x00 or 0xFF
+	}
+	else
+	{
+		// choose a different rotation based on player view
+		ang = R_PointToAngle (thing->x, thing->y) - thing->angle;
+
+		if ((sprframe->rotate & SRF_RIGHT) && (ang < ANGLE_180)) // See from right
+			rot = 6; // F7 slot
+		else if ((sprframe->rotate & SRF_LEFT) && (ang >= ANGLE_180)) // See from left
+			rot = 2; // F3 slot
+		else // Normal behaviour
+			rot = (ang+ANGLE_202h)>>29;
+
+		//Fab: lumpid is the index for spritewidth,spriteoffset... tables
+		lump = sprframe->lumpid[rot];
+		flip = sprframe->flip & (1<<rot);
 	}
 
 	I_Assert(lump < max_spritelumps);
@@ -1643,7 +1698,8 @@ void R_SortVisSprites(void)
 	// Fix first and last. ds still points to the last one after the loop
 	dsfirst->prev = &unsorted;
 	unsorted.next = dsfirst;
-	ds->next = &unsorted;
+	if (ds)
+		ds->next = &unsorted;
 	unsorted.prev = ds;
 
 	// pull the vissprites out by scale
@@ -2666,7 +2722,7 @@ next_token:
 			if (z < lastlump) lastlump = z;
 
 			// load all sprite sets we are aware of.
-			for (sprite2 = 0; sprite2 < NUMPLAYERSPRITES; sprite2++)
+			for (sprite2 = 0; sprite2 < free_spr2; sprite2++)
 				R_AddSingleSpriteDef(spr2names[sprite2], &skin->sprites[sprite2], wadnum, lump, lastlump);
 		}
 

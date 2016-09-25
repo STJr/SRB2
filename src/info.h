@@ -454,6 +454,9 @@ typedef enum sprite
 	SPR_SPRB, // Blue springs
 	SPR_YSPR, // Yellow Diagonal Spring
 	SPR_RSPR, // Red Diagonal Spring
+	SPR_SSWY, // Yellow Side Spring
+	SPR_SSWR, // Red Side Spring
+	SPR_SSWB, // Blue Side Spring
 
 	// Environmental Effects
 	SPR_RAIN, // Rain
@@ -587,6 +590,7 @@ enum playersprite
 	SPR2_WAIT,
 	SPR2_WALK,
 	SPR2_RUN ,
+	SPR2_PEEL,
 	SPR2_PAIN,
 	SPR2_DEAD,
 	SPR2_DRWN,
@@ -613,6 +617,7 @@ enum playersprite
 	SPR2_SSTD,
 	SPR2_SWLK,
 	SPR2_SRUN,
+	SPR2_SPEE,
 	SPR2_SPAN,
 	SPR2_SMSL,
 	SPR2_SDTH,
@@ -626,6 +631,8 @@ enum playersprite
 	SPR2_SRID,
 	SPR2_SFLT,
 
+	SPR2_FIRSTFREESLOT,
+	SPR2_LASTFREESLOT = SPR2_FIRSTFREESLOT + NUMSPRITEFREESLOTS - 1,
 	NUMPLAYERSPRITES
 };
 
@@ -651,6 +658,7 @@ typedef enum state
 	S_PLAY_WAIT,
 	S_PLAY_WALK,
 	S_PLAY_RUN,
+	S_PLAY_PEEL,
 	S_PLAY_PAIN,
 	S_PLAY_DEAD,
 	S_PLAY_DRWN,
@@ -676,6 +684,7 @@ typedef enum state
 	S_PLAY_SUPER_STND,
 	S_PLAY_SUPER_WALK,
 	S_PLAY_SUPER_RUN,
+	S_PLAY_SUPER_PEEL,
 	S_PLAY_SUPER_PAIN,
 	S_PLAY_SUPER_STUN,
 	S_PLAY_SUPER_DEAD,
@@ -2347,6 +2356,36 @@ typedef enum state
 	S_RDIAG7,
 	S_RDIAG8,
 
+	// Yellow Side Spring
+	S_YHORIZ1,
+	S_YHORIZ2,
+	S_YHORIZ3,
+	S_YHORIZ4,
+	S_YHORIZ5,
+	S_YHORIZ6,
+	S_YHORIZ7,
+	S_YHORIZ8,
+
+	// Red Side Spring
+	S_RHORIZ1,
+	S_RHORIZ2,
+	S_RHORIZ3,
+	S_RHORIZ4,
+	S_RHORIZ5,
+	S_RHORIZ6,
+	S_RHORIZ7,
+	S_RHORIZ8,
+
+	// Blue Side Spring
+	S_BHORIZ1,
+	S_BHORIZ2,
+	S_BHORIZ3,
+	S_BHORIZ4,
+	S_BHORIZ5,
+	S_BHORIZ6,
+	S_BHORIZ7,
+	S_BHORIZ8,
+
 	// Rain
 	S_RAIN1,
 	S_RAINRETURN,
@@ -2992,8 +3031,9 @@ typedef struct
 
 extern state_t states[NUMSTATES];
 extern char sprnames[NUMSPRITES + 1][5];
-char spr2names[NUMPLAYERSPRITES][5];
+extern char spr2names[NUMPLAYERSPRITES][5];
 extern state_t *astate;
+extern enum playersprite free_spr2;
 
 typedef enum mobj_type
 {
@@ -3122,6 +3162,9 @@ typedef enum mobj_type
 	MT_REDSPRING,
 	MT_YELLOWDIAG, // Yellow Diagonal Spring
 	MT_REDDIAG, // Red Diagonal Spring
+	MT_YELLOWHORIZ, // Yellow Side Spring
+	MT_REDHORIZ, // Red Side Spring
+	MT_BLUEHORIZ, // Blue Side Spring
 
 	// Interactive Objects
 	MT_BUBBLES, // Bubble source

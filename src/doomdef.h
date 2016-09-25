@@ -60,6 +60,7 @@
 #endif
 
 #ifdef _WINDOWS
+#define NONET
 #if !defined (HWRENDER) && !defined (NOHW)
 #define HWRENDER
 #endif
@@ -213,7 +214,7 @@ extern FILE *logstream;
 // it's only for detection of the version the player is using so the MS can alert them of an update.
 // Only set it higher, not lower, obviously.
 // Note that we use this to help keep internal testing in check; this is why v2.1.0 is not version "1".
-#define MODVERSION 20
+#define MODVERSION 21
 
 // =========================================================================
 
@@ -434,6 +435,12 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 
 /// Kalaron/Eternity Engine slope code (SRB2CB ported)
 #define ESLOPE
+
+#ifdef ESLOPE
+/// Backwards compatibility with SRB2CB's slope linedef types.
+///	\note	A simple shim that prints a warning.
+#define ESLOPE_TYPESHIM
+#endif
 
 ///	Delete file while the game is running.
 ///	\note	EXTREMELY buggy, tends to crash game.

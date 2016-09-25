@@ -771,7 +771,7 @@ subsector_t *R_PointInSubsector(fixed_t x, fixed_t y)
 }
 
 //
-// R_IsPointInSubsector, same as above but returns 0 if not in subsector
+// R_IsPointInSubsector, same as above but returns 0 if not in subsector - this does not work in opengl because of polyvertex_t
 //
 subsector_t *R_IsPointInSubsector(fixed_t x, fixed_t y)
 {
@@ -919,9 +919,9 @@ void R_SkyboxFrame(player_t *player)
 				}
 			}
 			if (mh->skybox_scalez > 0)
-				viewz += player->awayviewmobj->z / mh->skybox_scalez;
+				viewz += (player->awayviewmobj->z + 20*FRACUNIT) / mh->skybox_scalez;
 			else if (mh->skybox_scalez < 0)
-				viewz += player->awayviewmobj->z * -mh->skybox_scalez;
+				viewz += (player->awayviewmobj->z + 20*FRACUNIT) * -mh->skybox_scalez;
 		}
 		else if (thiscam->chase)
 		{
@@ -966,9 +966,9 @@ void R_SkyboxFrame(player_t *player)
 				}
 			}
 			if (mh->skybox_scalez > 0)
-				viewz += thiscam->z / mh->skybox_scalez;
+				viewz += (thiscam->z + (thiscam->height>>1)) / mh->skybox_scalez;
 			else if (mh->skybox_scalez < 0)
-				viewz += thiscam->z * -mh->skybox_scalez;
+				viewz += (thiscam->z + (thiscam->height>>1)) * -mh->skybox_scalez;
 		}
 		else
 		{
