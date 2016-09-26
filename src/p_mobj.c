@@ -8834,6 +8834,8 @@ void P_AfterPlayerSpawn(INT32 playernum)
 	player_t *p = &players[playernum];
 	mobj_t *mobj = p->mo;
 
+	mobj->radius = skins[p->skin].radius;
+
 	if (playernum == consoleplayer)
 		localangle = mobj->angle;
 	else if (playernum == secondarydisplayplayer)
