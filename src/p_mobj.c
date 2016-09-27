@@ -8811,8 +8811,6 @@ void P_SpawnPlayer(INT32 playernum)
 	// the dead body mobj retains the skin through the 'spritedef' override).
 	mobj->skin = &skins[p->skin];
 
-	mobj->radius = FixedMul(skins[p->skin].radius, mobj->destscale);
-
 	mobj->health = p->health;
 	p->playerstate = PST_LIVE;
 
@@ -8826,6 +8824,10 @@ void P_SpawnPlayer(INT32 playernum)
 	// set the scale to the mobj's destscale so settings get correctly set.  if we don't, they sometimes don't.
 	P_SetScale(mobj, mobj->destscale);
 	P_FlashPal(p, 0, 0); // Resets
+
+	// Set bounds accurately.
+	mobj->radius = FixedMul(skins[p->skin].radius, mobj->scale);
+	mobj->height = P_GetPlayerHeight(p);
 
 	// Spawn with a pity shield if necessary.
 	P_DoPityCheck(p);
