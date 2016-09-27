@@ -303,7 +303,10 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		}
 
 		if (((player->pflags & PF_NIGHTSMODE) && (player->pflags & PF_DRILLING))
-		|| (player->pflags & (PF_JUMPED|PF_SPINNING|PF_GLIDING))
+		|| ((player->pflags & PF_JUMPED) && !(player->charflags & SF_NOJUMPDAMAGE && !(player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)))
+		|| (player->pflags & (PF_SPINNING|PF_GLIDING))
+		|| (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2)
+		|| ((player->charflags & SF_STOMPDAMAGE) && (P_MobjFlip(toucher)*(toucher->z - (special->z + special->height/2)) > 0) && (P_MobjFlip(toucher)*toucher->momz < 0))
 		|| player->powers[pw_invulnerability] || player->powers[pw_super]
 		|| elementalpierce) // Do you possess the ability to subdue the object?
 		{
@@ -347,7 +350,10 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			P_DamageMobj(toucher, special, special, 1, 0);
 		}
 		else if (((player->pflags & PF_NIGHTSMODE) && (player->pflags & PF_DRILLING))
-		|| (player->pflags & (PF_JUMPED|PF_SPINNING|PF_GLIDING))
+		|| ((player->pflags & PF_JUMPED) && !(player->charflags & SF_NOJUMPDAMAGE && !(player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)))
+		|| (player->pflags & (PF_SPINNING|PF_GLIDING))
+		|| (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2)
+		|| ((player->charflags & SF_STOMPDAMAGE) && (P_MobjFlip(toucher)*(toucher->z - (special->z + special->height/2)) > 0) && (P_MobjFlip(toucher)*toucher->momz < 0))
 		|| player->powers[pw_invulnerability] || player->powers[pw_super]) // Do you possess the ability to subdue the object?
 		{
 			if ((P_MobjFlip(toucher)*toucher->momz < 0) && !elementalpierce)
@@ -650,16 +656,16 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				if (G_IsSpecialStage(gamemap)) //After-mare bonus time/emerald reward in special stages.
 				{
 					// only allow the player with the emerald in-hand to leave.
-					if (toucher->tracer && toucher->tracer->target
-					&& toucher->tracer->target->type == MT_GOTEMERALD)
+					if (toucher->tracer
+					&& toucher->tracer->type == MT_GOTEMERALD)
 					{
 					}
 					else // Make sure that SOMEONE has the emerald, at least!
 					{
 						for (i = 0; i < MAXPLAYERS; i++)
 							if (playeringame[i] && players[i].playerstate == PST_LIVE
-							&& players[i].mo->tracer && players[i].mo->tracer->target
-							&& players[i].mo->tracer->target->type == MT_GOTEMERALD)
+							&& players[i].mo->tracer
+							&& players[i].mo->tracer->type == MT_GOTEMERALD)
 								return;
 						// Well no one has an emerald, so exit anyway!
 					}
@@ -1247,10 +1253,10 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 				player->powers[pw_ingoop] = 2;
 
-				if (player->pflags & PF_ITEMHANG)
+				if (player->powers[pw_carry] == CR_GENERIC)
 				{
 					P_SetTarget(&toucher->tracer, NULL);
-					player->pflags &= ~PF_ITEMHANG;
+					player->powers[pw_carry] = CR_NONE;
 				}
 
 				P_ResetPlayer(player);
@@ -1302,7 +1308,10 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					S_StartSound(toucher, special->info->painsound);
 					return;
 				}
-				else if (((player->pflags & PF_NIGHTSMODE) && (player->pflags & PF_DRILLING)) || (player->pflags & (PF_JUMPED|PF_SPINNING|PF_GLIDING))
+				else if (((player->pflags & PF_NIGHTSMODE) && (player->pflags & PF_DRILLING))
+						|| ((player->pflags & PF_JUMPED) && !(player->charflags & SF_NOJUMPDAMAGE))
+						|| ((player->charflags & SF_STOMPDAMAGE) && (P_MobjFlip(toucher)*(toucher->z - (special->z + special->height/2)) > 0) && (P_MobjFlip(toucher)*toucher->momz < 0))
+						|| (player->pflags & (PF_SPINNING|PF_GLIDING))
 						|| player->powers[pw_invulnerability] || player->powers[pw_super]) // Do you possess the ability to subdue the object?
 				{
 					// Shatter the shield!
@@ -1332,7 +1341,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		case MT_BIGMACECHAIN:
 			// Is this the last link in the chain?
 			if (toucher->momz > 0 || !(special->flags & MF_AMBUSH)
-				|| (player->pflags & PF_ITEMHANG) || (player->pflags & PF_MACESPIN))
+				|| (player->powers[pw_carry]))
 				return;
 
 			if (toucher->z > special->z + special->height/2)
@@ -1349,12 +1358,12 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 			if (special->target && (special->target->type == MT_SPINMACEPOINT || special->target->type == MT_HIDDEN_SLING))
 			{
-				player->pflags |= PF_MACESPIN;
+				player->powers[pw_carry] = CR_MACESPIN;
 				S_StartSound(toucher, sfx_spin);
 				P_SetPlayerMobjState(toucher, S_PLAY_SPIN);
 			}
 			else
-				player->pflags |= PF_ITEMHANG;
+				player->powers[pw_carry] = CR_GENERIC;
 
 			// Can't jump first frame
 			player->pflags |= PF_JUMPSTASIS;
@@ -2258,7 +2267,11 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			target->momx = target->momy = target->momz = 0;
 			if (damagetype == DMG_DROWNED) // drowned
 			{
-				S_StartSound(target, sfx_drown);
+				target->movedir = damagetype; // we're MOVING the Damage Into anotheR function... Okay, this is a bit of a hack.
+				if (target->player->charflags & SF_MACHINE)
+					S_StartSound(target, sfx_fizzle);
+				else
+					S_StartSound(target, sfx_drown);
 				// Don't jump up when drowning
 			}
 			else
@@ -2478,7 +2491,7 @@ static inline void P_NiGHTSDamage(mobj_t *target, mobj_t *source)
 		}
 
 		player->powers[pw_flashing] = flashingtics;
-		P_SetMobjState(target->tracer, S_NIGHTSHURT1);
+		P_SetPlayerMobjState(target, S_PLAY_NIGHTS_PAIN);
 		S_StartSound(target, sfx_nghurt);
 
 		if (oldnightstime > 10*TICRATE
@@ -2614,7 +2627,9 @@ static inline boolean P_PlayerHitsPlayer(mobj_t *target, mobj_t *inflictor, mobj
 
 static void P_KillPlayer(player_t *player, mobj_t *source, INT32 damage)
 {
-	player->pflags &= ~(PF_CARRIED|PF_SLIDING|PF_ITEMHANG|PF_MACESPIN|PF_ROPEHANG|PF_NIGHTSMODE);
+	player->pflags &= ~(PF_SLIDING|PF_NIGHTSMODE);
+
+	player->powers[pw_carry] = CR_NONE;
 
 	// Burst weapons and emeralds in Match/CTF only
 	if (source && (gametype == GT_MATCH || gametype == GT_TEAMMATCH || gametype == GT_CTF))
@@ -3661,7 +3676,7 @@ void P_PlayerFlagBurst(player_t *player, boolean toss)
 	// Flag text
 	{
 		char plname[MAXPLAYERNAME+4];
-		char *flagtext;
+		const char *flagtext;
 		char flagcolor;
 
 		snprintf(plname, sizeof(plname), "%s%s%s",

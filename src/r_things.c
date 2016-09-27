@@ -18,6 +18,7 @@
 #include "st_stuff.h"
 #include "w_wad.h"
 #include "z_zone.h"
+#include "m_menu.h" // character select
 #include "m_misc.h"
 #include "i_video.h" // rendermode
 #include "r_things.h"
@@ -28,6 +29,7 @@
 #include "dehacked.h" // get_number (for thok)
 #include "d_netfil.h" // blargh. for nameonly().
 #include "m_cheat.h" // objectplace
+#include "m_cond.h"
 #ifdef HWRENDER
 #include "hardware/hw_md2.h"
 #endif
@@ -100,7 +102,7 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 	lumppat <<= 16;
 	lumppat += lump;
 
-	if (frame >= 64 || rotation > 8)
+	if (frame >= 64 || !(R_ValidSpriteAngle(rotation)))
 		I_Error("R_InstallSpriteLump: Bad frame characters in lump %s", W_CheckNameForNum(lumppat));
 
 	if (maxframe ==(size_t)-1 || frame > maxframe)
@@ -109,30 +111,71 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 	if (rotation == 0)
 	{
 		// the lump should be used for all rotations
-		if (sprtemp[frame].rotate == 0)
+		if (sprtemp[frame].rotate == SRF_SINGLE)
 			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has multiple rot = 0 lump\n", spritename, cn);
-
-		if (sprtemp[frame].rotate == 1)
+		else if (sprtemp[frame].rotate != SRF_NONE) // Let's bundle 1-8 and L/R rotations into one debug message.
 			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has rotations and a rot = 0 lump\n", spritename, cn);
 
-		sprtemp[frame].rotate = 0;
+		sprtemp[frame].rotate = SRF_SINGLE;
 		for (r = 0; r < 8; r++)
 		{
 			sprtemp[frame].lumppat[r] = lumppat;
 			sprtemp[frame].lumpid[r] = lumpid;
 		}
-		sprtemp[frame].flip = flipped ? UINT8_MAX : 0;
+		sprtemp[frame].flip = flipped ? 0xFF : 0; // 11111111 in binary
+		return;
+	}
+
+	if (rotation == ROT_L || rotation == ROT_R)
+	{
+		UINT8 rightfactor = ((rotation == ROT_R) ? 4 : 0);
+
+		// the lump should be used for half of all rotations
+		if (sprtemp[frame].rotate == SRF_SINGLE)
+			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has L/R rotations and a rot = 0 lump\n", spritename, cn);
+		else if (sprtemp[frame].rotate == SRF_3D)
+			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has both L/R and 1-8 rotations\n", spritename, cn);
+		else if ((sprtemp[frame].rotate & SRF_LEFT) && (rotation == ROT_L))
+			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has multiple L rotations\n", spritename, cn);
+		else if ((sprtemp[frame].rotate & SRF_RIGHT) && (rotation == ROT_R))
+			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has multiple R rotations\n", spritename, cn);
+
+		if (sprtemp[frame].rotate == SRF_NONE)
+			sprtemp[frame].rotate = SRF_SINGLE;
+
+		sprtemp[frame].rotate |= ((rotation == ROT_R) ? SRF_RIGHT : SRF_LEFT);
+		if (sprtemp[frame].rotate == (SRF_3D|SRF_2D))
+			sprtemp[frame].rotate = SRF_2D; // SRF_3D|SRF_2D being enabled at the same time doesn't HURT in the current sprite angle implementation, but it DOES mean more to check in some of the helper functions. Let's not allow this scenario to happen.
+
+		for (r = 0; r < 4; r++) // Thanks to R_PrecacheLevel, we can't leave sprtemp[*].lumppat[*] == LUMPERROR... so we load into the front/back angle too.
+		{
+			sprtemp[frame].lumppat[r + rightfactor] = lumppat;
+			sprtemp[frame].lumpid[r + rightfactor] = lumpid;
+		}
+
+		if (flipped)
+			sprtemp[frame].flip |= (0x0F<<rightfactor); // 00001111 or 11110000 in binary, depending on rotation being ROT_L or ROT_R
+		else
+			sprtemp[frame].flip &= ~(0x0F<<rightfactor); // ditto
+
 		return;
 	}
 
 	// the lump is only used for one rotation
-	if (sprtemp[frame].rotate == 0)
-		CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has rotations and a rot = 0 lump\n", spritename, cn);
-
-	sprtemp[frame].rotate = 1;
+	if (sprtemp[frame].rotate == SRF_SINGLE)
+		CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has 1-8 rotations and a rot = 0 lump\n", spritename, cn);
+	else if ((sprtemp[frame].rotate != SRF_3D) && (sprtemp[frame].rotate != SRF_NONE))
+		CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has both L/R and 1-8 rotations\n", spritename, cn);
 
 	// make 0 based
 	rotation--;
+
+	if (rotation == 0 || rotation == 4) // Front or back...
+		sprtemp[frame].rotate = SRF_3D; // Prevent L and R changeover
+	else if (rotation > 3) // Right side
+		sprtemp[frame].rotate = (SRF_3D | (sprtemp[frame].rotate & SRF_LEFT)); // Continue allowing L frame changeover
+	else // if (rotation <= 3) // Left side
+		sprtemp[frame].rotate = (SRF_3D | (sprtemp[frame].rotate & SRF_RIGHT)); // Continue allowing R frame changeover
 
 	if (sprtemp[frame].lumppat[rotation] != LUMPERROR)
 		CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s: %c%c has two lumps mapped to it\n", spritename, cn, '1'+rotation);
@@ -195,7 +238,7 @@ static boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef,
 			frame = R_Char2Frame(lumpinfo[l].name[4]);
 			rotation = (UINT8)(lumpinfo[l].name[5] - '0');
 
-			if (frame >= 64 || rotation > 8) // Give an actual NAME error -_-...
+			if (frame >= 64 || !(R_ValidSpriteAngle(rotation))) // Give an actual NAME error -_-...
 			{
 				CONS_Alert(CONS_WARNING, M_GetText("Bad sprite name: %s\n"), W_CheckNameForNumPwad(wadnum,l));
 				continue;
@@ -278,22 +321,29 @@ static boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef,
 	{
 		switch (sprtemp[frame].rotate)
 		{
-			case 0xff:
+			case SRF_NONE:
 			// no rotations were found for that frame at all
-			I_Error("R_AddSingleSpriteDef: No patches found for %s frame %c", sprname, R_Frame2Char(frame));
+			I_Error("R_AddSingleSpriteDef: No patches found for %.4s frame %c", sprname, R_Frame2Char(frame));
 			break;
 
-			case 0:
+			case SRF_SINGLE:
 			// only the first rotation is needed
 			break;
 
-			case 1:
+			case SRF_2D: // both Left and Right rotations
+			// we test to see whether the left and right slots are present
+			if ((sprtemp[frame].lumppat[2] == LUMPERROR) || (sprtemp[frame].lumppat[6] == LUMPERROR))
+				I_Error("R_AddSingleSpriteDef: Sprite %.4s frame %c is missing rotations",
+				sprname, R_Frame2Char(frame));
+			break;
+
+			default:
 			// must have all 8 frames
 			for (rotation = 0; rotation < 8; rotation++)
 				// we test the patch lump, or the id lump whatever
 				// if it was not loaded the two are LUMPERROR
 				if (sprtemp[frame].lumppat[rotation] == LUMPERROR)
-					I_Error("R_AddSingleSpriteDef: Sprite %s frame %c is missing rotations",
+					I_Error("R_AddSingleSpriteDef: Sprite %.4s frame %c is missing rotations",
 					        sprname, R_Frame2Char(frame));
 			break;
 		}
@@ -1138,21 +1188,28 @@ static void R_ProjectSprite(mobj_t *thing)
 		I_Error("R_ProjectSprite: sprframes NULL for sprite %d\n", thing->sprite);
 #endif
 
-	if (sprframe->rotate)
-	{
-		// choose a different rotation based on player view
-		ang = R_PointToAngle (thing->x, thing->y);
-		rot = (ang-thing->angle+ANGLE_202h)>>29;
-		//Fab: lumpid is the index for spritewidth,spriteoffset... tables
-		lump = sprframe->lumpid[rot];
-		flip = sprframe->flip & (1<<rot);
-	}
-	else
+	if (sprframe->rotate == SRF_SINGLE)
 	{
 		// use single rotation for all views
 		rot = 0;                        //Fab: for vis->patch below
 		lump = sprframe->lumpid[0];     //Fab: see note above
 		flip = sprframe->flip; // Will only be 0x00 or 0xFF
+	}
+	else
+	{
+		// choose a different rotation based on player view
+		ang = R_PointToAngle (thing->x, thing->y) - thing->angle;
+
+		if ((sprframe->rotate & SRF_RIGHT) && (ang < ANGLE_180)) // See from right
+			rot = 6; // F7 slot
+		else if ((sprframe->rotate & SRF_LEFT) && (ang >= ANGLE_180)) // See from left
+			rot = 2; // F3 slot
+		else // Normal behaviour
+			rot = (ang+ANGLE_202h)>>29;
+
+		//Fab: lumpid is the index for spritewidth,spriteoffset... tables
+		lump = sprframe->lumpid[rot];
+		flip = sprframe->flip & (1<<rot);
 	}
 
 	I_Assert(lump < max_spritelumps);
@@ -1643,7 +1700,8 @@ void R_SortVisSprites(void)
 	// Fix first and last. ds still points to the last one after the loop
 	dsfirst->prev = &unsorted;
 	unsorted.next = dsfirst;
-	ds->next = &unsorted;
+	if (ds)
+		ds->next = &unsorted;
 	unsorted.prev = ds;
 
 	// pull the vissprites out by scale
@@ -2285,6 +2343,8 @@ static void Sk_SetDefaultValue(skin_t *skin)
 
 	skin->starttranscolor = 96;
 	skin->prefcolor = SKINCOLOR_GREEN;
+	skin->supercolor = SKINCOLOR_SUPERGOLD1;
+	skin->prefoppositecolor = 0; // use tables
 
 	skin->normalspeed = 36<<FRACBITS;
 	skin->runspeed = 28<<FRACBITS;
@@ -2297,13 +2357,22 @@ static void Sk_SetDefaultValue(skin_t *skin)
 	skin->jumpfactor = FRACUNIT;
 	skin->actionspd = 30<<FRACBITS;
 	skin->mindash = 15<<FRACBITS;
-	skin->maxdash = 90<<FRACBITS;
+	skin->maxdash = 70<<FRACBITS;
+
+	skin->radius = mobjinfo[MT_PLAYER].radius;
+	skin->height = mobjinfo[MT_PLAYER].height;
+	skin->spinheight = FixedMul(skin->height, 2*FRACUNIT/3);
+
+	skin->shieldscale = FRACUNIT;
+	skin->camerascale = FRACUNIT;
 
 	skin->thokitem = -1;
 	skin->spinitem = -1;
 	skin->revitem = -1;
 
 	skin->highresscale = FRACUNIT>>1;
+
+	skin->availability = 0;
 
 	for (i = 0; i < sfx_skinsoundslot0; i++)
 		if (S_sfx[i].skinsound != -1)
@@ -2329,6 +2398,19 @@ void R_InitSkins(void)
 	numskins = 0;
 }
 
+// returns true if available in circumstances, otherwise nope
+// warning don't use with an invalid skinnum other than -1 which always returns true
+boolean R_SkinUnlock(INT32 skinnum)
+{
+	return ((skinnum == -1) // Simplifies things elsewhere, since there's already plenty of checks for less-than-0...
+		|| (!skins[skinnum].availability)
+		|| (unlockables[skins[skinnum].availability - 1].unlocked)
+		|| (modeattacking) // If you have someone else's run you might as well take a look
+		|| (Playing() && (R_SkinAvailable(mapheaderinfo[gamemap-1]->forcecharacter) == skinnum)) // Force 1.
+		|| (netgame && !(server || adminplayer == consoleplayer) && (cv_forceskin.value == skinnum)) // Force 2.
+		);
+}
+
 // returns true if the skin name is found (loaded from pwad)
 // warning return -1 if not found
 INT32 R_SkinAvailable(const char *name)
@@ -2337,6 +2419,7 @@ INT32 R_SkinAvailable(const char *name)
 
 	for (i = 0; i < numskins; i++)
 	{
+		// search in the skin list
 		if (stricmp(skins[i].name,name)==0)
 			return i;
 	}
@@ -2346,17 +2429,13 @@ INT32 R_SkinAvailable(const char *name)
 // network code calls this when a 'skin change' is received
 void SetPlayerSkin(INT32 playernum, const char *skinname)
 {
-	INT32 i;
+	INT32 i = R_SkinAvailable(skinname);
 	player_t *player = &players[playernum];
 
-	for (i = 0; i < numskins; i++)
+	if ((i != -1) && (!P_IsLocalPlayer(player) || R_SkinUnlock(i)))
 	{
-		// search in the skin list
-		if (stricmp(skins[i].name, skinname) == 0)
-		{
-			SetPlayerSkinByNum(playernum, i);
-			return;
-		}
+		SetPlayerSkinByNum(playernum, i);
+		return;
 	}
 
 	if (P_IsLocalPlayer(player))
@@ -2373,12 +2452,15 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 {
 	player_t *player = &players[playernum];
 	skin_t *skin = &skins[skinnum];
+	UINT8 newcolor = 0;
 
-	if (skinnum >= 0 && skinnum < numskins) // Make sure it exists!
+	if ((skinnum >= 0 && skinnum < numskins) // Make sure it exists!
+	&& (!P_IsLocalPlayer(player) || R_SkinUnlock(skinnum))) // ...but is it allowed? We must always allow external players to change skin. The server should vet that...
 	{
 		player->skin = skinnum;
-		if (player->mo)
-			player->mo->skin = skin;
+
+		player->camerascale = skin->camerascale;
+		player->shieldscale = skin->shieldscale;
 
 		player->charability = (UINT8)skin->ability;
 		player->charability2 = (UINT8)skin->ability2;
@@ -2401,21 +2483,35 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 
 		player->jumpfactor = skin->jumpfactor;
 
+		player->height = skin->height;
+		player->spinheight = skin->spinheight;
+
 		if (!(cv_debug || devparm) && !(netgame || multiplayer || demoplayback))
 		{
 			if (playernum == consoleplayer)
 				CV_StealthSetValue(&cv_playercolor, skin->prefcolor);
 			else if (playernum == secondarydisplayplayer)
 				CV_StealthSetValue(&cv_playercolor2, skin->prefcolor);
-			player->skincolor = skin->prefcolor;
-			if (player->mo)
-				player->mo->color = player->skincolor;
+			player->skincolor = newcolor = skin->prefcolor;
 		}
 
 		if (player->mo)
+		{
+			if ((player->pflags & PF_NIGHTSMODE) && (skin->sprites[SPR2_NGT0].numframes == 0)) // If you don't have a sprite for flying horizontally, use the default NiGHTS skin.
+			{
+				skin = &skins[DEFAULTNIGHTSSKIN];
+				newcolor = ((skin->flags & SF_SUPER) ? skin->supercolor : skin->prefcolor);
+			}
+			player->mo->skin = skin;
+			if (newcolor)
+				player->mo->color = newcolor;
 			P_SetScale(player->mo, player->mo->scale);
+			player->mo->radius = FixedMul(skin->radius, player->mo->scale);
+		}
 		return;
 	}
+	else if (skinnum >= 0 && skinnum < numskins)
+		skinnum = 255; // Cheeky emulation.
 
 	if (P_IsLocalPlayer(player))
 		CONS_Alert(CONS_WARNING, M_GetText("Skin %d not found\n"), skinnum);
@@ -2510,15 +2606,12 @@ void R_AddSkins(UINT16 wadnum)
 
 			if (!stricmp(stoken, "name"))
 			{
-				// the skin name must uniquely identify a single skin
-				// I'm lazy so if name is already used I leave the 'skin x'
-				// default skin name set in Sk_SetDefaultValue
-				if (R_SkinAvailable(value) == -1)
-				{
+				INT32 skinnum = R_SkinAvailable(value);
+				strlwr(value);
+				if (skinnum == -1)
 					STRBUFCPY(skin->name, value);
-					strlwr(skin->name);
-				}
-				// I'm not lazy, so if the name is already used I make the name 'namex'
+				// the skin name must uniquely identify a single skin
+				// if the name is already used I make the name 'namex'
 				// using the default skin name's number set above
 				else
 				{
@@ -2529,11 +2622,9 @@ void R_AddSkins(UINT16 wadnum)
 						"%s%d", value, numskins);
 					value2[stringspace - 1] = '\0';
 					if (R_SkinAvailable(value2) == -1)
-					{
-						STRBUFCPY(skin->name,
-							value2);
-						strlwr(skin->name);
-					}
+						// I'm lazy so if NEW name is already used I leave the 'skin x'
+						// default skin name set in Sk_SetDefaultValue
+						STRBUFCPY(skin->name, value2);
 					Z_Free(value2);
 				}
 
@@ -2601,13 +2692,18 @@ void R_AddSkins(UINT16 wadnum)
 			FULLPROCESS(revitem)
 #undef FULLPROCESS
 
-#define GETSPEED(field) else if (!stricmp(stoken, #field)) skin->field = atoi(value)<<FRACBITS;
-			GETSPEED(normalspeed)
-			GETSPEED(runspeed)
-			GETSPEED(mindash)
-			GETSPEED(maxdash)
-			GETSPEED(actionspd)
-#undef GETSPEED
+#define GETFRACBITS(field) else if (!stricmp(stoken, #field)) skin->field = atoi(value)<<FRACBITS;
+			GETFRACBITS(normalspeed)
+			GETFRACBITS(runspeed)
+
+			GETFRACBITS(mindash)
+			GETFRACBITS(maxdash)
+			GETFRACBITS(actionspd)
+
+			GETFRACBITS(radius)
+			GETFRACBITS(height)
+			GETFRACBITS(spinheight)
+#undef GETFRACBITS
 
 #define GETINT(field) else if (!stricmp(stoken, #field)) skin->field = atoi(value);
 			GETINT(thrustfactor)
@@ -2615,20 +2711,75 @@ void R_AddSkins(UINT16 wadnum)
 			GETINT(acceleration)
 #undef GETINT
 
+			else if (!stricmp(stoken, "availability"))
+			{
+				skin->availability = atoi(value);
+				if (skin->availability >= MAXUNLOCKABLES)
+					skin->availability = 0;
+				if (skin->availability)
+					STRBUFCPY(unlockables[skin->availability - 1].name, skin->realname);
+			}
+
 			// custom translation table
 			else if (!stricmp(stoken, "startcolor"))
 				skin->starttranscolor = atoi(value);
 
-			else if (!stricmp(stoken, "prefcolor"))
-				skin->prefcolor = R_GetColorByName(value);
-			else if (!stricmp(stoken, "jumpfactor"))
-				skin->jumpfactor = FLOAT_TO_FIXED(atof(value));
-			else if (!stricmp(stoken, "highresscale"))
-				skin->highresscale = FLOAT_TO_FIXED(atof(value));
-			else
+#define GETSKINCOLOR(field) else if (!stricmp(stoken, #field)) skin->field = R_GetColorByName(value);
+			GETSKINCOLOR(prefcolor)
+			GETSKINCOLOR(prefoppositecolor)
+#undef GETSKINCOLOR
+			else if (!stricmp(stoken, "supercolor"))
+				skin->supercolor = R_GetSuperColorByName(value);
+
+#define GETFLOAT(field) else if (!stricmp(stoken, #field)) skin->field = FLOAT_TO_FIXED(atof(value));
+			GETFLOAT(jumpfactor)
+			GETFLOAT(highresscale)
+			GETFLOAT(shieldscale)
+			GETFLOAT(camerascale)
+#undef GETFLOAT
+
+#define GETFLAG(field) else if (!stricmp(stoken, #field)) { \
+	strupr(value); \
+	if (atoi(value) || value[0] == 'T' || value[0] == 'Y') \
+		skin->flags |= (SF_##field); \
+	else \
+		skin->flags &= ~(SF_##field); \
+}
+			// parameters for individual character flags
+			// these are uppercase so they can be concatenated with SF_
+			// 1, true, yes are all valid values
+			GETFLAG(SUPER)
+			GETFLAG(SUPERANIMS)
+			GETFLAG(SUPERSPIN)
+			GETFLAG(HIRES)
+			GETFLAG(NOSKID)
+			GETFLAG(NOSPEEDADJUST)
+			GETFLAG(RUNONWATER)
+			GETFLAG(NOJUMPSPIN)
+			GETFLAG(NOJUMPDAMAGE)
+			GETFLAG(STOMPDAMAGE)
+			GETFLAG(MARIODAMAGE)
+			GETFLAG(MACHINE)
+#undef GETFLAG
+
+			else // let's check if it's a sound, otherwise error out
 			{
-				INT32 found = false;
+				boolean found = false;
 				sfxenum_t i;
+				size_t stokenadjust;
+
+				// Remove the prefix. (We need to affect an adjusting variable so that we can print error messages if it's not actually a sound.)
+				if ((stoken[0] == 'D' || stoken[0] == 'd') && (stoken[1] == 'S' || stoken[1] == 's')) // DS*
+					stokenadjust = 2;
+				else // sfx_*
+					stokenadjust = 4;
+
+				// Remove the prefix. (We can affect this directly since we're not going to use it again.)
+				if ((value[0] == 'D' || value[0] == 'd') && (value[1] == 'S' || value[1] == 's')) // DS*
+					value += 2;
+				else // sfx_*
+					value += 4;
+
 				// copy name of sounds that are remapped
 				// for this skin
 				for (i = 0; i < sfx_skinsoundslot0; i++)
@@ -2637,15 +2788,15 @@ void R_AddSkins(UINT16 wadnum)
 						continue;
 					if (S_sfx[i].skinsound != -1
 						&& !stricmp(S_sfx[i].name,
-							stoken + 2))
+							stoken + stokenadjust))
 					{
 						skin->soundsid[S_sfx[i].skinsound] =
-							S_AddSoundFx(value+2, S_sfx[i].singularity, S_sfx[i].pitch, true);
+							S_AddSoundFx(value, S_sfx[i].singularity, S_sfx[i].pitch, true);
 						found = true;
 					}
 				}
 				if (!found)
-					CONS_Debug(DBG_SETUP, "R_AddSkins: Unknown keyword '%s' in S_SKIN lump# %d (WAD %s)\n", stoken, lump, wadfiles[wadnum]->filename);
+					CONS_Debug(DBG_SETUP, "R_AddSkins: Unknown keyword '%s' in S_SKIN lump #%d (WAD %s)\n", stoken, lump, wadfiles[wadnum]->filename);
 			}
 next_token:
 			stoken = strtok(NULL, "\r\n= ");
@@ -2666,13 +2817,14 @@ next_token:
 			if (z < lastlump) lastlump = z;
 
 			// load all sprite sets we are aware of.
-			for (sprite2 = 0; sprite2 < NUMPLAYERSPRITES; sprite2++)
+			for (sprite2 = 0; sprite2 < free_spr2; sprite2++)
 				R_AddSingleSpriteDef(spr2names[sprite2], &skin->sprites[sprite2], wadnum, lump, lastlump);
 		}
 
 		R_FlushTranslationColormapCache();
 
-		CONS_Printf(M_GetText("Added skin '%s'\n"), skin->name);
+		if (!skin->availability) // Safe to print...
+			CONS_Printf(M_GetText("Added skin '%s'\n"), skin->name);
 #ifdef SKINVALUES
 		skin_cons_t[numskins].value = numskins;
 		skin_cons_t[numskins].strvalue = skin->name;

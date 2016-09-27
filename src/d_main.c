@@ -1060,10 +1060,11 @@ void D_SRB2Main(void)
 	if (M_CheckParm("-warp") && M_IsNextParm())
 	{
 		const char *word = M_GetNextParm();
-		if (fastncmp(word, "MAP", 3))
+		char ch; // use this with sscanf to catch non-digits with
+		if (fastncmp(word, "MAP", 3)) // MAPxx name
 			pstartmap = M_MapNumber(word[3], word[4]);
-		else
-			pstartmap = atoi(word);
+		else if (sscanf(word, "%d%c", &pstartmap, &ch) != 1) // a plain number
+			I_Error("Cannot warp to map %s (invalid map name)\n", word);
 		// Don't check if lump exists just yet because the wads haven't been loaded!
 		// Just do a basic range check here.
 		if (pstartmap < 1 || pstartmap > NUMMAPS)

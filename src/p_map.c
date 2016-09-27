@@ -129,6 +129,10 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 		return false;
 	}
 
+#ifdef ESLOPE
+	object->standingslope = NULL; // Okay, now we can't return - no launching off at silly angles for you.
+#endif
+
 	object->eflags |= MFE_SPRUNG; // apply this flag asap!
 	spring->flags &= ~(MF_SOLID|MF_SPECIAL); // De-solidify
 
@@ -207,7 +211,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 			P_SetPlayerMobjState(object, S_PLAY_FALL);
 		else // horizontal spring
 		{
-			if (pflags & (PF_JUMPED|PF_SPINNING) && object->player->panim == PA_ROLL)
+			if (pflags & (PF_JUMPED|PF_SPINNING) && (object->player->panim == PA_ROLL || object->player->panim == PA_JUMP || object->player->panim == PA_FALL))
 				object->player->pflags = pflags;
 			else
 				P_SetPlayerMobjState(object, S_PLAY_WALK);
@@ -232,19 +236,23 @@ static void P_DoFanAndGasJet(mobj_t *spring, mobj_t *object)
 	if (p && object->state == &states[object->info->painstate]) // can't use fans and gas jets when player is in pain!
 		return;
 
-	// is object below thruster's position? if not, calculate distance between their bottoms
+	// is object's top below thruster's position? if not, calculate distance between their bottoms
 	if (spring->eflags & MFE_VERTICALFLIP)
 	{
-		if (object->z + object->height > spring->z + spring->height)
+		if (object->z > spring->z + spring->height)
 			return;
 		zdist = (spring->z + spring->height) - (object->z + object->height);
 	}
 	else
 	{
-		if (object->z < spring->z)
+		if (object->z + object->height < spring->z)
 			return;
 		zdist = object->z - spring->z;
 	}
+
+#ifdef ESLOPE
+	object->standingslope = NULL; // No launching off at silly angles for you.
+#endif
 
 	switch (spring->type)
 	{
@@ -294,12 +302,17 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 	INT32 p;
 	fixed_t zdist; // z distance between the two players' bottoms
 
-	if ((tails->pflags & PF_CARRIED) && tails->mo->tracer == sonic->mo)
+	if (tails->powers[pw_carry])
 		return;
-	if ((sonic->pflags & PF_CARRIED) && sonic->mo->tracer == tails->mo)
+	if (sonic->powers[pw_carry])
 		return;
 
-	if (!tails->powers[pw_tailsfly] && !(tails->charability == CA_FLY && tails->mo->state-states == S_PLAY_FLY_TIRED))
+	if (tails->spectator)
+		return;
+	if (sonic->spectator)
+		return;
+
+	if (!(tails->pflags & PF_CANCARRY))
 		return;
 
 	if (tails->bot == 1)
@@ -307,10 +320,6 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 
 	if (sonic->pflags & PF_NIGHTSMODE)
 		return;
-
-	if (sonic->mo->tracer && sonic->mo->tracer->type == MT_TUBEWAYPOINT
-	&& !(sonic->pflags & PF_ROPEHANG))
-		return; // don't steal players from zoomtubes!
 
 	if ((sonic->mo->eflags & MFE_VERTICALFLIP) != (tails->mo->eflags & MFE_VERTICALFLIP))
 		return; // Both should be in same gravity
@@ -326,47 +335,43 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 	// Search in case another player is already being carried by this fox.
 	for (p = 0; p < MAXPLAYERS; p++)
 		if (playeringame[p] && players[p].mo
-		&& players[p].pflags & PF_CARRIED && players[p].mo->tracer == tails->mo)
+		&& players[p].powers[pw_carry] == CR_PLAYER && players[p].mo->tracer == tails->mo)
 			return;
+
+	// Why block opposing teams from tailsflying each other?
+	// Sneaking into the hands of a flying tails player in Race might be a viable strategy, who knows.
+	/*
+	if (gametype == GT_RACE || gametype == GT_COMPETITION
+		|| (netgame && (tails->spectator || sonic->spectator))
+		|| (G_TagGametype() && (!(tails->pflags & PF_TAGIT) != !(sonic->pflags & PF_TAGIT)))
+		|| (gametype == GT_MATCH)
+		|| (G_GametypeHasTeams() && tails->ctfteam != sonic->ctfteam))
+		return; */
 
 	if (tails->mo->eflags & MFE_VERTICALFLIP)
 		zdist = (sonic->mo->z + sonic->mo->height) - (tails->mo->z + tails->mo->height);
 	else
 		zdist = tails->mo->z - sonic->mo->z;
 
-	if (zdist <= sonic->mo->height + FixedMul(FRACUNIT, sonic->mo->scale)
+	if (zdist <= sonic->mo->height + sonic->mo->scale // FixedMul(FRACUNIT, sonic->mo->scale), but scale == FRACUNIT by default
 		&& zdist > sonic->mo->height*2/3
 		&& P_MobjFlip(tails->mo)*sonic->mo->momz <= 0)
 	{
-	// Why block opposing teams from tailsflying each other?
-		// Sneaking into the hands of a flying tails player in Race might be a viable strategy, who knows.
-		/*
-		if (gametype == GT_RACE || gametype == GT_COMPETITION
-			|| (netgame && (tails->spectator || sonic->spectator))
-			|| (G_TagGametype() && (!(tails->pflags & PF_TAGIT) != !(sonic->pflags & PF_TAGIT)))
-			|| (gametype == GT_MATCH)
-			|| (G_GametypeHasTeams() && tails->ctfteam != sonic->ctfteam))
-			sonic->pflags &= ~PF_CARRIED; */
-		if (tails->spectator || sonic->spectator)
-			sonic->pflags &= ~PF_CARRIED;
-		else
-		{
-			if (sonic-players == consoleplayer && botingame)
-				CV_SetValue(&cv_analog2, false);
-			P_ResetPlayer(sonic);
-			P_SetTarget(&sonic->mo->tracer, tails->mo);
-			sonic->pflags |= PF_CARRIED;
-			S_StartSound(sonic->mo, sfx_s3k4a);
-			P_UnsetThingPosition(sonic->mo);
-			sonic->mo->x = tails->mo->x;
-			sonic->mo->y = tails->mo->y;
-			P_SetThingPosition(sonic->mo);
-		}
+		if (sonic-players == consoleplayer && botingame)
+			CV_SetValue(&cv_analog2, false);
+		P_ResetPlayer(sonic);
+		P_SetTarget(&sonic->mo->tracer, tails->mo);
+		sonic->powers[pw_carry] = CR_PLAYER;
+		S_StartSound(sonic->mo, sfx_s3k4a);
+		P_UnsetThingPosition(sonic->mo);
+		sonic->mo->x = tails->mo->x;
+		sonic->mo->y = tails->mo->y;
+		P_SetThingPosition(sonic->mo);
 	}
 	else {
 		if (sonic-players == consoleplayer && botingame)
 			CV_SetValue(&cv_analog2, true);
-		sonic->pflags &= ~PF_CARRIED;
+		sonic->powers[pw_carry] = CR_NONE;
 	}
 }
 
@@ -435,7 +440,42 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			return true; // underneath
 		if (thing->type == MT_SPIKE)
 		{
-			S_StartSound(tmthing, thing->info->deathsound);
+			if (thing->flags & MF_SOLID)
+				S_StartSound(tmthing, thing->info->deathsound);
+			for (thing = thing->subsector->sector->thinglist; thing; thing = thing->snext)
+				if (thing->type == MT_SPIKE && thing->health > 0 && thing->flags & MF_SOLID && P_AproxDistance(thing->x - tmthing->x, thing->y - tmthing->y) < FixedMul(56*FRACUNIT, thing->scale))
+					P_KillMobj(thing, tmthing, tmthing, 0);
+		}
+		else
+		{
+			thing->health = 0;
+			P_KillMobj(thing, tmthing, tmthing, 0);
+		}
+		return true;
+	}
+
+	// CA_DASHMODE users destroy spikes and monitors, CA_TWINSPIN users and CA2_MELEE users destroy spikes.
+	if ((tmthing->player)
+		&& (((tmthing->player->charability == CA_DASHMODE) && (tmthing->player->dashmode >= 3*TICRATE)
+		&& (thing->flags & (MF_MONITOR) || thing->type == MT_SPIKE))
+	|| ((((tmthing->player->charability == CA_TWINSPIN) && (tmthing->player->panim == PA_ABILITY))
+	|| (tmthing->player->charability2 == CA2_MELEE && tmthing->player->panim == PA_ABILITY2))
+		&& (thing->type == MT_SPIKE))))
+	{
+		if ((thing->flags & (MF_MONITOR)) && (thing->health <= 0 || !(thing->flags & MF_SHOOTABLE)))
+			return true;
+		blockdist = thing->radius + tmthing->radius;
+		if (abs(thing->x - tmx) >= blockdist || abs(thing->y - tmy) >= blockdist)
+			return true; // didn't hit it
+		// see if it went over / under
+		if (tmthing->z > thing->z + thing->height)
+			return true; // overhead
+		if (tmthing->z + tmthing->height < thing->z)
+			return true; // underneath
+		if (thing->type == MT_SPIKE)
+		{
+			if (thing->flags & MF_SOLID)
+				S_StartSound(tmthing, thing->info->deathsound);
 			for (thing = thing->subsector->sector->thinglist; thing; thing = thing->snext)
 				if (thing->type == MT_SPIKE && thing->health > 0 && thing->flags & MF_SOLID && P_AproxDistance(thing->x - tmthing->x, thing->y - tmthing->y) < FixedMul(56*FRACUNIT, thing->scale))
 					P_KillMobj(thing, tmthing, tmthing, 0);
@@ -623,7 +663,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 		if (tmthing->flags & MF_MISSILE && thing->player && tmthing->target && tmthing->target->player
 		&& thing->player->ctfteam == tmthing->target->player->ctfteam
-		&& thing->player->pflags & PF_CARRIED && thing->tracer == tmthing->target)
+		&& thing->player->powers[pw_carry] == CR_PLAYER && thing->tracer == tmthing->target)
 			return true; // Don't give rings to your carry player by accident.
 
 		if (thing->type == MT_EGGSHIELD)
@@ -666,7 +706,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			&& tmthing->target != thing)
 		{
 			// Hop on the missile for a ride!
-			thing->player->pflags |= PF_ITEMHANG;
+			thing->player->powers[pw_carry] = CR_GENERIC;
 			thing->player->pflags &= ~PF_JUMPED;
 			P_SetTarget(&thing->tracer, tmthing);
 			P_SetTarget(&tmthing->target, thing); // Set owner to the player
@@ -685,7 +725,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 			return true;
 		}
-		else if (tmthing->type == MT_BLACKEGGMAN_MISSILE && thing->player && ((thing->player->pflags & PF_ITEMHANG) || (thing->player->pflags & PF_JUMPED)))
+		else if (tmthing->type == MT_BLACKEGGMAN_MISSILE && thing->player && ((thing->player->powers[pw_carry] == CR_GENERIC) || (thing->player->pflags & PF_JUMPED)))
 		{
 			// Ignore
 		}
@@ -886,7 +926,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	else if (thing->player) {
 		if (thing->player-players == consoleplayer && botingame)
 			CV_SetValue(&cv_analog2, true);
-		thing->player->pflags &= ~PF_CARRIED;
+		if (thing->player->powers[pw_carry] == CR_PLAYER)
+			thing->player->powers[pw_carry] = CR_NONE;
 	}
 
 	if (thing->player)
@@ -938,7 +979,13 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			&& thing->z + thing->height + FixedMul(FRACUNIT, thing->scale) >= tmthing->z)
 		{
 			if (thing->flags & MF_MONITOR
-				&& tmthing->player->pflags & (PF_JUMPED|PF_SPINNING|PF_GLIDING))
+				&& (tmthing->player->pflags & (PF_SPINNING|PF_GLIDING)
+				|| ((tmthing->player->pflags & PF_JUMPED)
+					&& !(tmthing->player->charflags & SF_NOJUMPDAMAGE
+					&& !(tmthing->player->charability == CA_TWINSPIN && tmthing->player->panim == PA_ABILITY)))
+				|| (tmthing->player->charability2 == CA2_MELEE && tmthing->player->panim == PA_ABILITY2)
+				|| ((tmthing->player->charflags & SF_STOMPDAMAGE)
+					&& (P_MobjFlip(tmthing)*(tmthing->z - (thing->z + thing->height/2)) > 0) && (P_MobjFlip(tmthing)*tmthing->momz < 0))))
 			{
 				SINT8 flipval = P_MobjFlip(thing); // Save this value in case monitor gets removed.
 				fixed_t *momz = &tmthing->momz; // tmthing gets changed by P_DamageMobj, so we need a new pointer?! X_x;;
@@ -962,7 +1009,14 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	}
 	// Monitors are not treated as solid to players who are jumping, spinning or gliding,
 	// unless it's a CTF team monitor and you're on the wrong team
-	else if (thing->flags & MF_MONITOR && tmthing->player && tmthing->player->pflags & (PF_JUMPED|PF_SPINNING|PF_GLIDING)
+	else if (thing->flags & MF_MONITOR && tmthing->player
+	&& (tmthing->player->pflags & (PF_SPINNING|PF_GLIDING)
+		|| ((tmthing->player->pflags & PF_JUMPED)
+			&& !(tmthing->player->charflags & SF_NOJUMPDAMAGE
+			&& !(tmthing->player->charability == CA_TWINSPIN && tmthing->player->panim == PA_ABILITY)))
+		|| (tmthing->player->charability2 == CA2_MELEE && tmthing->player->panim == PA_ABILITY2)
+		|| ((tmthing->player->charflags & SF_STOMPDAMAGE)
+			&& (P_MobjFlip(tmthing)*(tmthing->z - (thing->z + thing->height/2)) > 0) && (P_MobjFlip(tmthing)*tmthing->momz < 0)))
 	&& !((thing->type == MT_REDRINGBOX && tmthing->player->ctfteam != 1) || (thing->type == MT_BLUERINGBOX && tmthing->player->ctfteam != 2)))
 		;
 	// z checking at last
@@ -1157,7 +1211,7 @@ static boolean PIT_CheckLine(line_t *ld)
 	}
 
 	// set openrange, opentop, openbottom
-	P_LineOpening(ld);
+	P_LineOpening(ld, tmthing);
 
 	// adjust floor / ceiling heights
 	if (opentop < tmceilingz)
@@ -1275,7 +1329,7 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 			topheight = P_GetFOFTopZ(thing, newsubsec->sector, rover, x, y, NULL);
 			bottomheight = P_GetFOFBottomZ(thing, newsubsec->sector, rover, x, y, NULL);
 
-			if (rover->flags & FF_GOOWATER && !(thing->flags & MF_NOGRAVITY))
+			if ((rover->flags & (FF_SWIMMABLE|FF_GOOWATER)) == (FF_SWIMMABLE|FF_GOOWATER) && !(thing->flags & MF_NOGRAVITY))
 			{
 				// If you're inside goowater and slowing down
 				fixed_t sinklevel = FixedMul(thing->info->height/6, thing->scale);
@@ -1974,8 +2028,12 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 			}
 
 			// Ramp test
-			if (thing->player && maxstep > 0
-			&& !(P_PlayerTouchingSectorSpecial(thing->player, 1, 14) || GETSECSPECIAL(R_PointInSubsector(x, y)->sector->special, 1) == 14))
+			if (maxstep > 0 && !(
+				thing->player && (
+				P_PlayerTouchingSectorSpecial(thing->player, 1, 14)
+				|| GETSECSPECIAL(R_PointInSubsector(x, y)->sector->special, 1) == 14)
+				)
+			)
 			{
 				// If the floor difference is MAXSTEPMOVE or less, and the sector isn't Section1:14, ALWAYS
 				// step down! Formerly required a Section1:13 sector for the full MAXSTEPMOVE, but no more.
@@ -2435,6 +2493,8 @@ isblocking:
 //
 // P_IsClimbingValid
 //
+// Unlike P_DoClimbing, don't use when up against a one-sided linedef.
+//
 static boolean P_IsClimbingValid(player_t *player, angle_t angle)
 {
 	fixed_t platx, platy;
@@ -2583,7 +2643,7 @@ static boolean PTR_SlideTraverse(intercept_t *in)
 	}
 
 	// set openrange, opentop, openbottom
-	P_LineOpening(li);
+	P_LineOpening(li, slidemo);
 
 	if (openrange < slidemo->height)
 		goto isblocking; // doesn't fit
@@ -2659,6 +2719,7 @@ isblocking:
 		// see about climbing on the wall
 		if (!(checkline->flags & ML_NOCLIMB))
 		{
+			boolean canclimb;
 			angle_t climbangle, climbline;
 			INT32 whichside = P_PointOnLineSide(slidemo->x, slidemo->y, li);
 
@@ -2669,9 +2730,11 @@ isblocking:
 
 			climbangle += (ANGLE_90 * (whichside ? -1 : 1));
 
+			canclimb = (li->backsector ? P_IsClimbingValid(slidemo->player, climbangle) : true);
+
 			if (((!slidemo->player->climbing && abs((signed)(slidemo->angle - ANGLE_90 - climbline)) < ANGLE_45)
 			|| (slidemo->player->climbing == 1 && abs((signed)(slidemo->angle - climbline)) < ANGLE_135))
-			&& P_IsClimbingValid(slidemo->player, climbangle))
+			&& canclimb)
 			{
 				slidemo->angle = climbangle;
 				if (!demoplayback || P_AnalogMove(slidemo->player))
@@ -3370,7 +3433,7 @@ boolean P_CheckSector(sector_t *sector, boolean crunch)
 		for (i = 0; i < sector->numattached; i++)
 		{
 			sec = &sectors[sector->attached[i]];
-			for (n = sec->touching_thinglist; n; n = n->m_snext)
+			for (n = sec->touching_thinglist; n; n = n->m_thinglist_next)
 				n->visited = false;
 
 			sec->moved = true;
@@ -3382,7 +3445,7 @@ boolean P_CheckSector(sector_t *sector, boolean crunch)
 
 			do
 			{
-				for (n = sec->touching_thinglist; n; n = n->m_snext)
+				for (n = sec->touching_thinglist; n; n = n->m_thinglist_next)
 				if (!n->visited)
 				{
 					n->visited = true;
@@ -3403,12 +3466,12 @@ boolean P_CheckSector(sector_t *sector, boolean crunch)
 	// Mark all things invalid
 	sector->moved = true;
 
-	for (n = sector->touching_thinglist; n; n = n->m_snext)
+	for (n = sector->touching_thinglist; n; n = n->m_thinglist_next)
 		n->visited = false;
 
 	do
 	{
-		for (n = sector->touching_thinglist; n; n = n->m_snext) // go through list
+		for (n = sector->touching_thinglist; n; n = n->m_thinglist_next) // go through list
 			if (!n->visited) // unprocessed thing found
 			{
 				n->visited = true; // mark thing as processed
@@ -3432,7 +3495,7 @@ boolean P_CheckSector(sector_t *sector, boolean crunch)
 		for (i = 0; i < sector->numattached; i++)
 		{
 			sec = &sectors[sector->attached[i]];
-			for (n = sec->touching_thinglist; n; n = n->m_snext)
+			for (n = sec->touching_thinglist; n; n = n->m_thinglist_next)
 				n->visited = false;
 
 			sec->moved = true;
@@ -3444,7 +3507,7 @@ boolean P_CheckSector(sector_t *sector, boolean crunch)
 
 			do
 			{
-				for (n = sec->touching_thinglist; n; n = n->m_snext)
+				for (n = sec->touching_thinglist; n; n = n->m_thinglist_next)
 				if (!n->visited)
 				{
 					n->visited = true;
@@ -3462,12 +3525,12 @@ boolean P_CheckSector(sector_t *sector, boolean crunch)
 	// Mark all things invalid
 	sector->moved = true;
 
-	for (n = sector->touching_thinglist; n; n = n->m_snext)
+	for (n = sector->touching_thinglist; n; n = n->m_thinglist_next)
 		n->visited = false;
 
 	do
 	{
-		for (n = sector->touching_thinglist; n; n = n->m_snext) // go through list
+		for (n = sector->touching_thinglist; n; n = n->m_thinglist_next) // go through list
 			if (!n->visited) // unprocessed thing found
 			{
 				n->visited = true; // mark thing as processed
@@ -3507,7 +3570,7 @@ static msecnode_t *P_GetSecnode(void)
 	if (headsecnode)
 	{
 		node = headsecnode;
-		headsecnode = headsecnode->m_snext;
+		headsecnode = headsecnode->m_thinglist_next;
 	}
 	else
 		node = Z_Calloc(sizeof (*node), PU_LEVEL, NULL);
@@ -3521,7 +3584,7 @@ static mprecipsecnode_t *P_GetPrecipSecnode(void)
 	if (headprecipsecnode)
 	{
 		node = headprecipsecnode;
-		headprecipsecnode = headprecipsecnode->m_snext;
+		headprecipsecnode = headprecipsecnode->m_thinglist_next;
 	}
 	else
 		node = Z_Calloc(sizeof (*node), PU_LEVEL, NULL);
@@ -3532,14 +3595,14 @@ static mprecipsecnode_t *P_GetPrecipSecnode(void)
 
 static inline void P_PutSecnode(msecnode_t *node)
 {
-	node->m_snext = headsecnode;
+	node->m_thinglist_next = headsecnode;
 	headsecnode = node;
 }
 
 // Tails 08-25-2002
 static inline void P_PutPrecipSecnode(mprecipsecnode_t *node)
 {
-	node->m_snext = headprecipsecnode;
+	node->m_thinglist_next = headprecipsecnode;
 	headprecipsecnode = node;
 }
 
@@ -3560,7 +3623,7 @@ static msecnode_t *P_AddSecnode(sector_t *s, mobj_t *thing, msecnode_t *nextnode
 			node->m_thing = thing; // Yes. Setting m_thing says 'keep it'.
 			return nextnode;
 		}
-		node = node->m_tnext;
+		node = node->m_sectorlist_next;
 	}
 
 	// Couldn't find an existing node for this sector. Add one at the head
@@ -3573,17 +3636,17 @@ static msecnode_t *P_AddSecnode(sector_t *s, mobj_t *thing, msecnode_t *nextnode
 
 	node->m_sector = s; // sector
 	node->m_thing = thing; // mobj
-	node->m_tprev = NULL; // prev node on Thing thread
-	node->m_tnext = nextnode; // next node on Thing thread
+	node->m_sectorlist_prev = NULL; // prev node on Thing thread
+	node->m_sectorlist_next = nextnode; // next node on Thing thread
 	if (nextnode)
-		nextnode->m_tprev = node; // set back link on Thing
+		nextnode->m_sectorlist_prev = node; // set back link on Thing
 
 	// Add new node at head of sector thread starting at s->touching_thinglist
 
-	node->m_sprev = NULL; // prev node on sector thread
-	node->m_snext = s->touching_thinglist; // next node on sector thread
+	node->m_thinglist_prev = NULL; // prev node on sector thread
+	node->m_thinglist_next = s->touching_thinglist; // next node on sector thread
 	if (s->touching_thinglist)
-		node->m_snext->m_sprev = node;
+		node->m_thinglist_next->m_thinglist_prev = node;
 	s->touching_thinglist = node;
 	return node;
 }
@@ -3601,7 +3664,7 @@ static mprecipsecnode_t *P_AddPrecipSecnode(sector_t *s, precipmobj_t *thing, mp
 			node->m_thing = thing; // Yes. Setting m_thing says 'keep it'.
 			return nextnode;
 		}
-		node = node->m_tnext;
+		node = node->m_sectorlist_next;
 	}
 
 	// Couldn't find an existing node for this sector. Add one at the head
@@ -3614,17 +3677,17 @@ static mprecipsecnode_t *P_AddPrecipSecnode(sector_t *s, precipmobj_t *thing, mp
 
 	node->m_sector = s; // sector
 	node->m_thing = thing; // mobj
-	node->m_tprev = NULL; // prev node on Thing thread
-	node->m_tnext = nextnode; // next node on Thing thread
+	node->m_sectorlist_prev = NULL; // prev node on Thing thread
+	node->m_sectorlist_next = nextnode; // next node on Thing thread
 	if (nextnode)
-		nextnode->m_tprev = node; // set back link on Thing
+		nextnode->m_sectorlist_prev = node; // set back link on Thing
 
 	// Add new node at head of sector thread starting at s->touching_thinglist
 
-	node->m_sprev = NULL; // prev node on sector thread
-	node->m_snext = s->touching_preciplist; // next node on sector thread
+	node->m_thinglist_prev = NULL; // prev node on sector thread
+	node->m_thinglist_next = s->touching_preciplist; // next node on sector thread
 	if (s->touching_preciplist)
-		node->m_snext->m_sprev = node;
+		node->m_thinglist_next->m_thinglist_prev = node;
 	s->touching_preciplist = node;
 	return node;
 }
@@ -3646,24 +3709,24 @@ static msecnode_t *P_DelSecnode(msecnode_t *node)
 	// Unlink from the Thing thread. The Thing thread begins at
 	// sector_list and not from mobj_t->touching_sectorlist.
 
-	tp = node->m_tprev;
-	tn = node->m_tnext;
+	tp = node->m_sectorlist_prev;
+	tn = node->m_sectorlist_next;
 	if (tp)
-		tp->m_tnext = tn;
+		tp->m_sectorlist_next = tn;
 	if (tn)
-		tn->m_tprev = tp;
+		tn->m_sectorlist_prev = tp;
 
 	// Unlink from the sector thread. This thread begins at
 	// sector_t->touching_thinglist.
 
-	sp = node->m_sprev;
-	sn = node->m_snext;
+	sp = node->m_thinglist_prev;
+	sn = node->m_thinglist_next;
 	if (sp)
-		sp->m_snext = sn;
+		sp->m_thinglist_next = sn;
 	else
 		node->m_sector->touching_thinglist = sn;
 	if (sn)
-		sn->m_sprev = sp;
+		sn->m_thinglist_prev = sp;
 
 	// Return this node to the freelist
 
@@ -3685,24 +3748,24 @@ static mprecipsecnode_t *P_DelPrecipSecnode(mprecipsecnode_t *node)
 	// Unlink from the Thing thread. The Thing thread begins at
 	// sector_list and not from mobj_t->touching_sectorlist.
 
-	tp = node->m_tprev;
-	tn = node->m_tnext;
+	tp = node->m_sectorlist_prev;
+	tn = node->m_sectorlist_next;
 	if (tp)
-		tp->m_tnext = tn;
+		tp->m_sectorlist_next = tn;
 	if (tn)
-		tn->m_tprev = tp;
+		tn->m_sectorlist_prev = tp;
 
 	// Unlink from the sector thread. This thread begins at
 	// sector_t->touching_thinglist.
 
-	sp = node->m_sprev;
-	sn = node->m_snext;
+	sp = node->m_thinglist_prev;
+	sn = node->m_thinglist_next;
 	if (sp)
-		sp->m_snext = sn;
+		sp->m_thinglist_next = sn;
 	else
 		node->m_sector->touching_preciplist = sn;
 	if (sn)
-		sn->m_sprev = sp;
+		sn->m_thinglist_prev = sp;
 
 	// Return this node to the freelist
 
@@ -3817,7 +3880,7 @@ void P_CreateSecNodeList(mobj_t *thing, fixed_t x, fixed_t y)
 	while (node)
 	{
 		node->m_thing = NULL;
-		node = node->m_tnext;
+		node = node->m_sectorlist_next;
 	}
 
 	P_SetTarget(&tmthing, thing);
@@ -3855,11 +3918,11 @@ void P_CreateSecNodeList(mobj_t *thing, fixed_t x, fixed_t y)
 		if (!node->m_thing)
 		{
 			if (node == sector_list)
-				sector_list = node->m_tnext;
+				sector_list = node->m_sectorlist_next;
 			node = P_DelSecnode(node);
 		}
 		else
-			node = node->m_tnext;
+			node = node->m_sectorlist_next;
 	}
 
 	/* cph -
@@ -3900,7 +3963,7 @@ void P_CreatePrecipSecNodeList(precipmobj_t *thing,fixed_t x,fixed_t y)
 	while (node)
 	{
 		node->m_thing = NULL;
-		node = node->m_tnext;
+		node = node->m_sectorlist_next;
 	}
 
 	tmprecipthing = thing;
@@ -3934,11 +3997,11 @@ void P_CreatePrecipSecNodeList(precipmobj_t *thing,fixed_t x,fixed_t y)
 		if (!node->m_thing)
 		{
 			if (node == precipsector_list)
-				precipsector_list = node->m_tnext;
+				precipsector_list = node->m_sectorlist_next;
 			node = P_DelPrecipSecnode(node);
 		}
 		else
-			node = node->m_tnext;
+			node = node->m_sectorlist_next;
 	}
 
 	/* cph -
