@@ -3889,7 +3889,7 @@ DoneSection2:
 				mobj_t *mo2;
 				angle_t an;
 
-				if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT)
+				if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT && player->powers[pw_carry] == CR_ZOOMTUBE)
 					break;
 
 				// Find line #3 tagged to this sector
@@ -3938,10 +3938,10 @@ DoneSection2:
 					break; // behind back
 
 				P_SetTarget(&player->mo->tracer, waypoint);
+				player->powers[pw_carry] = CR_ZOOMTUBE;
 				player->speed = speed;
 				player->pflags |= PF_SPINNING;
-				player->pflags &= ~PF_JUMPED;
-				player->pflags &= ~PF_GLIDING;
+				player->pflags &= ~(PF_JUMPED|PF_GLIDING|PF_SLIDING|PF_CANCARRY);
 				player->climbing = 0;
 
 				if (player->mo->state-states != S_PLAY_SPIN)
@@ -3962,7 +3962,7 @@ DoneSection2:
 				mobj_t *mo2;
 				angle_t an;
 
-				if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT)
+				if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT && player->powers[pw_carry] == CR_ZOOMTUBE)
 					break;
 
 				// Find line #3 tagged to this sector
@@ -4012,9 +4012,10 @@ DoneSection2:
 					break; // behind back
 
 				P_SetTarget(&player->mo->tracer, waypoint);
+				player->powers[pw_carry] = CR_ZOOMTUBE;
 				player->speed = speed;
 				player->pflags |= PF_SPINNING;
-				player->pflags &= ~PF_JUMPED;
+				player->pflags &= ~(PF_JUMPED|PF_GLIDING|PF_SLIDING|PF_CANCARRY);
 
 				if (player->mo->state-states != S_PLAY_SPIN)
 				{
@@ -4084,7 +4085,7 @@ DoneSection2:
 				vertex_t v1, v2, resulthigh, resultlow;
 				mobj_t *highest = NULL;
 
-				if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT)
+				if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT && player->powers[pw_carry] == CR_ROPEHANG)
 					break;
 
 				if (player->mo->momz > 0)
@@ -4305,6 +4306,7 @@ DoneSection2:
 				}
 
 				P_SetTarget(&player->mo->tracer, closest);
+				player->powers[pw_carry] = CR_ROPEHANG;
 
 				// Option for static ropes.
 				if (lines[lineindex].flags & ML_NOCLIMB)
@@ -4312,13 +4314,9 @@ DoneSection2:
 				else
 					player->speed = speed;
 
-				player->pflags |= PF_ROPEHANG;
-
 				S_StartSound(player->mo, sfx_s3k4a);
 
-				player->pflags &= ~PF_JUMPED;
-				player->pflags &= ~PF_GLIDING;
-				player->pflags &= ~PF_SLIDING;
+				player->pflags &= ~(PF_JUMPED|PF_GLIDING|PF_SLIDING|PF_CANCARRY);
 				player->climbing = 0;
 				P_SetThingPosition(player->mo);
 				P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
@@ -7165,7 +7163,7 @@ static inline boolean PIT_PushThing(mobj_t *thing)
 	if (thing->eflags & MFE_PUSHED)
 		return false;
 
-	if (thing->player && thing->player->pflags & PF_ROPEHANG)
+	if (thing->player && thing->player->powers[pw_carry] == CR_ROPEHANG)
 		return false;
 
 	// Allow this to affect pushable objects at some point?
@@ -7398,7 +7396,7 @@ void T_Pusher(pusher_t *p)
 		if (thing->eflags & MFE_PUSHED)
 			continue;
 
-		if (thing->player && thing->player->pflags & PF_ROPEHANG)
+		if (thing->player && thing->player->powers[pw_carry] == CR_ROPEHANG)
 			continue;
 
 		if (thing->player && (thing->state == &states[thing->info->painstate]) && (thing->player->powers[pw_flashing] > (flashingtics/4)*3 && thing->player->powers[pw_flashing] <= flashingtics))

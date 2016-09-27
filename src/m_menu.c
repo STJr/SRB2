@@ -110,38 +110,38 @@ const char *quitmsg[NUM_QUITMESSAGES];
 // Stuff for customizing the player select screen Tails 09-22-2003
 description_t description[32] =
 {
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""},
-	{"???", "", ""}
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0},
+	{"???", "", "", 0, 0, 0}
 };
 static char *char_notes = NULL;
 static fixed_t char_scroll = 0;
@@ -170,6 +170,7 @@ static saveinfo_t savegameinfo[MAXSAVEGAMES]; // Extra info about the save games
 INT16 startmap; // Mario, NiGHTS, or just a plain old normal game?
 
 static INT16 itemOn = 1; // menu item skull is on, Hack by Tails 09-18-2002
+static boolean lastdirection = true; // toaster - Only You Can Prevent Hacks - true is for forward, false is for backwards
 static INT16 skullAnimCounter = 10; // skull animation counter
 
 static  boolean setupcontrols_secondaryplayer;
@@ -1342,7 +1343,7 @@ static menuitem_t OP_NetgameOptionsMenu[] =
 	{IT_STRING | IT_CVAR, NULL, "Sudden Death",          &cv_suddendeath,      90},
 	{IT_STRING | IT_CVAR, NULL, "Player respawn delay",  &cv_respawntime,      98},
 
-	{IT_STRING | IT_CVAR, NULL, "Force Skin #",          &cv_forceskin,          114},
+	{IT_STRING | IT_CVAR, NULL, "Force Skin",            &cv_forceskin,          114},
 	{IT_STRING | IT_CVAR, NULL, "Restrict skin changes", &cv_restrictskinchange, 122},
 
 	{IT_STRING | IT_CVAR, NULL, "Autobalance Teams",            &cv_autobalance,      138},
@@ -2036,6 +2037,7 @@ static boolean M_ChangeStringCvar(INT32 choice)
 static void M_NextOpt(void)
 {
 	INT16 oldItemOn = itemOn; // prevent infinite loop
+	lastdirection = true;
 
 	do
 	{
@@ -2049,6 +2051,7 @@ static void M_NextOpt(void)
 static void M_PrevOpt(void)
 {
 	INT16 oldItemOn = itemOn; // prevent infinite loop
+	lastdirection = false;
 
 	do
 	{
@@ -3426,9 +3429,9 @@ static void M_PatchSkinNameTable(void)
 
 	for (j = 0; j < MAXSKINS; j++)
 	{
-		if (skins[j].name[0] != '\0')
+		if (skins[j].name[0] != '\0' && R_SkinUnlock(j))
 		{
-			skins_cons_t[j].strvalue = skins[j].name;
+			skins_cons_t[j].strvalue = skins[j].realname;
 			skins_cons_t[j].value = j+1;
 		}
 		else
@@ -4773,13 +4776,62 @@ void M_ForceSaveSlotSelected(INT32 sslot)
 
 static void M_SetupChoosePlayer(INT32 choice)
 {
+	INT32 skinnum;
+	UINT8 i;
+	UINT8 firstvalid = 255;
+	UINT8 lastvalid = 0;
+	char *name;
 	(void)choice;
 
-	if (mapheaderinfo[startmap-1] && mapheaderinfo[startmap-1]->forcecharacter[0] != '\0')
+	if (PlayerMenu[0].status & (IT_DYBIGSPACE)) // Correcting a hack that may be made below.
+		PlayerMenu[0].status = (IT_DISABLED|(PlayerMenu[0].status & IT_CENTER));
+
+	for (i = 0; i < 32; i++) // Handle charsels, availability, and unlocks.
 	{
-		M_ChoosePlayer(0); //oh for crying out loud just get STARTED, it doesn't matter!
+		if (PlayerMenu[i].status != IT_DISABLED) // If the character's disabled through SOC, there's nothing we can do for it.
+		{
+			name = strtok(Z_StrDup(description[i].skinname), "&");
+			skinnum = R_SkinAvailable(name);
+			if ((skinnum != -1) && (R_SkinUnlock(skinnum)))
+			{
+				// Handling order.
+				if (firstvalid == 255)
+					firstvalid = i;
+				else
+				{
+					description[i].prev = lastvalid;
+					description[lastvalid].next = i;
+				}
+				lastvalid = i;
+
+				// Handling visibility.
+				if (PlayerMenu[i].status & (IT_DISABLED|IT_CENTER))
+					PlayerMenu[i].status = IT_CALL;
+				if (description[i].picname[0] == '\0')
+					strncpy(description[i].picname, skins[skinnum].charsel, 8);
+			}
+			else // Technically, character select icons without corresponding skins get bundled away behind this too. Sucks to be them.
+				PlayerMenu[i].status = (IT_DISABLED|IT_CENTER);
+			Z_Free(name);
+		}
+	}
+
+	if ((firstvalid != 255)
+		&& !(mapheaderinfo[startmap-1]
+			&& (mapheaderinfo[startmap-1]->forcecharacter[0] != '\0')
+			)
+		)
+	{ // One last bit of order we can't do in the iteration above.
+		description[firstvalid].prev = lastvalid;
+		description[lastvalid].next = firstvalid;
+	}
+	else // We're being forced into a specific character, so might as well.
+	{
+		PlayerMenu[0].status = (IT_CALL|IT_DYBIGSPACE|(PlayerMenu[0].status & IT_CENTER)); // This is a hack to make a non-IT_CALL character in slot 0 not softlock the game. IT_DYBIGSPACE is a dummy flag, whilst IT_CENTER is preserved.
+		M_ChoosePlayer(0);
 		return;
 	}
+
 
 	if (Playing() == false)
 	{
@@ -4799,8 +4851,9 @@ static void M_DrawSetupChoosePlayerMenu(void)
 {
 	const INT32 my = 24;
 	patch_t *patch;
-	INT32 i, o, j;
-	char *picname;
+	INT32 i, o;
+	UINT8 prev, next;
+	boolean loophack = false;
 
 	// Black BG
 	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
@@ -4809,91 +4862,76 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	// Character select profile images!1
 	M_DrawTextBox(0, my, 16, 20);
 
-	if (abs(itemOn*128*FRACUNIT - char_scroll) > 256*FRACUNIT)
-		char_scroll = itemOn*128*FRACUNIT;
-	else if (itemOn*128*FRACUNIT - char_scroll > 128*FRACUNIT)
-		char_scroll += 48*FRACUNIT;
-	else if (itemOn*128*FRACUNIT - char_scroll < -128*FRACUNIT)
-		char_scroll -= 48*FRACUNIT;
-	else if (itemOn*128*FRACUNIT > char_scroll+16*FRACUNIT)
-		char_scroll += 16*FRACUNIT;
-	else if (itemOn*128*FRACUNIT < char_scroll-16*FRACUNIT)
-		char_scroll -= 16*FRACUNIT;
+	i = (itemOn*128 - (char_scroll / FRACUNIT));
+
+	if (!char_notes)
+	{
+		if (i) // turns out this and the preceding check is better then (abs(i) > 128)
+		{
+			o = (lastdirection) ? -1 : 1;
+			char_scroll = (itemOn + o)*128*FRACUNIT;
+			i = -o*128;
+		}
+		char_notes = V_WordWrap(0, 21*8, V_ALLOWLOWERCASE, description[itemOn].notes);
+	}
+
+	if (abs(i) > 1)
+		char_scroll += i*FRACUNIT>>2;
 	else // close enough.
 		char_scroll = itemOn*128*FRACUNIT; // just be exact now.
-	i = (char_scroll+16*FRACUNIT)/(128*FRACUNIT);
-	o = ((char_scroll/FRACUNIT)+16)%128;
 
-	// prev character
-	if (i-1 >= 0 && PlayerMenu[i-1].status != IT_DISABLED
-	&& o < 32)
+	o = ((char_scroll / FRACUNIT) + 16);
+
+	if (o < 0) // This hack is to prevent visual glitches when looping from the last character to the 1st character.
+		loophack = true;
+
+	if (loophack)
+		o += 128;
+
+	i = (o / 128);
+	o = (o % 128);
+
+	if (loophack)
+		i = description[i].prev;
+
+	// Get prev character...
+	prev = description[i].prev;
+
+	if (prev != i) // If there's more than one character available...
 	{
-		picname = description[i-1].picname;
-		if (picname[0] == '\0')
+		// Let's get the next character now.
+		next = description[i].next;
+
+		// Draw prev character if it's visible and its number isn't greater than the current one or there's more than two
+		if (o < 32) // (prev != i) was previously a part of this, but we don't need to check again after above.
 		{
-			picname = strtok(Z_StrDup(description[i-1].skinname), "&");
-			for (j = 0; j < numskins; j++)
-				if (stricmp(skins[j].name, picname) == 0)
-				{
-					Z_Free(picname);
-					picname = skins[j].charsel;
-					break;
-				}
-			if (j == numskins) // AAAAAAAAAA
-				picname = skins[0].charsel;
+			patch = W_CachePatchName(description[prev].picname, PU_CACHE);
+			if (SHORT(patch->width) >= 256)
+				V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT/2, 0, patch, 0, SHORT(patch->height) - 64 + o*2, SHORT(patch->width), SHORT(patch->height));
+			else
+				V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT, 0, patch, 0, SHORT(patch->height) - 32 + o, SHORT(patch->width), SHORT(patch->height));
+			W_UnlockCachedPatch(patch);
 		}
-		patch = W_CachePatchName(picname, PU_CACHE);
-		if (SHORT(patch->width) >= 256)
-			V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT/2, 0, patch, 0, SHORT(patch->height) - 64 + o*2, SHORT(patch->width), SHORT(patch->height));
-		else
-			V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT, 0, patch, 0, SHORT(patch->height) - 32 + o, SHORT(patch->width), SHORT(patch->height));
-		W_UnlockCachedPatch(patch);
+
+		// Draw next character if it's visible and its number isn't less than the current one or there's more than two
+		if (o < 128) // (next != i) was previously a part of this, but it's implicitly true if (prev != i) is true.
+		{
+			patch = W_CachePatchName(description[next].picname, PU_CACHE);
+			if (SHORT(patch->width) >= 256)
+				V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, FRACUNIT/2, 0, patch, 0, 0, SHORT(patch->width), o*2);
+			else
+				V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, FRACUNIT, 0, patch, 0, 0, SHORT(patch->width), o);
+			W_UnlockCachedPatch(patch);
+		}
+
+		// current character
+		if (PlayerMenu[i].status & IT_DISABLED) // Prevent flickering.
+			i = (lastdirection) ? prev : next; // This actually causes duplication at slow scroll speeds (<16FU per tic), but thankfully we always go quickly.
 	}
 
-	// next character
-	if (i+1 < currentMenu->numitems && PlayerMenu[i+1].status != IT_DISABLED
-	&& o < 128)
+	if (!(PlayerMenu[i].status & IT_DISABLED))
 	{
-		picname = description[i+1].picname;
-		if (picname[0] == '\0')
-		{
-			picname = strtok(Z_StrDup(description[i+1].skinname), "&");
-			for (j = 0; j < numskins; j++)
-				if (stricmp(skins[j].name, picname) == 0)
-				{
-					Z_Free(picname);
-					picname = skins[j].charsel;
-					break;
-				}
-			if (j == numskins) // AAAAAAAAAA
-				picname = skins[0].charsel;
-		}
-		patch = W_CachePatchName(picname, PU_CACHE);
-		if (SHORT(patch->width) >= 256)
-			V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, FRACUNIT/2, 0, patch, 0, 0, SHORT(patch->width), o*2);
-		else
-			V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, FRACUNIT, 0, patch, 0, 0, SHORT(patch->width), o);
-		W_UnlockCachedPatch(patch);
-	}
-
-	// current character
-	if (i < currentMenu->numitems && PlayerMenu[i].status != IT_DISABLED)
-	{
-		picname = description[i].picname;
-		if (picname[0] == '\0')
-		{
-			picname = strtok(Z_StrDup(description[i].skinname), "&");
-			for (j = 0; j < numskins; j++)
-				if (stricmp(skins[j].name, picname) == 0)
-				{
-					Z_Free(picname);
-					picname = skins[j].charsel;
-					break;
-				}
-			if (j == numskins) // AAAAAAAAAA
-				picname = skins[0].charsel;
-		}
-		patch = W_CachePatchName(picname, PU_CACHE);
+		patch = W_CachePatchName(description[i].picname, PU_CACHE);
 		if (o >= 0 && o <= 32)
 		{
 			if (SHORT(patch->width) >= 256)
@@ -4916,8 +4954,6 @@ static void M_DrawSetupChoosePlayerMenu(void)
 
 	// Character description
 	M_DrawTextBox(136, my, 21, 20);
-	if (!char_notes)
-		char_notes = V_WordWrap(0, 21*8, V_ALLOWLOWERCASE, description[itemOn].notes);
 	V_DrawString(146, my + 9, V_RETURN8|V_ALLOWLOWERCASE, char_notes);
 }
 
@@ -4928,8 +4964,8 @@ static void M_ChoosePlayer(INT32 choice)
 	INT32 skinnum;
 	boolean ultmode = (ultimate_selectable && SP_PlayerDef.prevMenu == &SP_LoadDef && saveSlotSelected == NOSAVESLOT);
 
-	// skip this if forcecharacter
-	if (mapheaderinfo[startmap-1] && mapheaderinfo[startmap-1]->forcecharacter[0] == '\0')
+	// skip this if forcecharacter or no characters available
+	if (!(PlayerMenu[choice].status & IT_DYBIGSPACE))
 	{
 		// M_SetupChoosePlayer didn't call us directly, that means we've been properly set up.
 		char_scroll = itemOn*128*FRACUNIT; // finish scrolling the menu
@@ -6475,6 +6511,7 @@ static void M_DrawSetupMultiPlayerMenu(void)
 static void M_HandleSetupMultiPlayer(INT32 choice)
 {
 	size_t   l;
+	INT32 prev_setupm_fakeskin;
 	boolean  exitmenu = false;  // exit to previous menu and send name change
 
 	switch (choice)
@@ -6493,7 +6530,14 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 			if (itemOn == 2)       //player skin
 			{
 				S_StartSound(NULL,sfx_menu1); // Tails
-				setupm_fakeskin--;
+				prev_setupm_fakeskin = setupm_fakeskin;
+				do
+				{
+					setupm_fakeskin--;
+					if (setupm_fakeskin < 0)
+						setupm_fakeskin = numskins-1;
+				}
+				while ((prev_setupm_fakeskin != setupm_fakeskin) && !(R_SkinUnlock(setupm_fakeskin)));
 			}
 			else if (itemOn == 1) // player color
 			{
@@ -6506,7 +6550,14 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 			if (itemOn == 2)       //player skin
 			{
 				S_StartSound(NULL,sfx_menu1); // Tails
-				setupm_fakeskin++;
+				prev_setupm_fakeskin = setupm_fakeskin;
+				do
+				{
+					setupm_fakeskin++;
+					if (setupm_fakeskin > numskins-1)
+						setupm_fakeskin = 0;
+				}
+				while ((prev_setupm_fakeskin != setupm_fakeskin) && !(R_SkinUnlock(setupm_fakeskin)));
 			}
 			else if (itemOn == 1) // player color
 			{
@@ -6539,12 +6590,6 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 			}
 			break;
 	}
-
-	// check skin
-	if (setupm_fakeskin < 0)
-		setupm_fakeskin = numskins-1;
-	if (setupm_fakeskin > numskins-1)
-		setupm_fakeskin = 0;
 
 	// check color
 	if (setupm_fakecolor < 1)
