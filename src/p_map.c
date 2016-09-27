@@ -211,7 +211,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 			P_SetPlayerMobjState(object, S_PLAY_FALL);
 		else // horizontal spring
 		{
-			if (pflags & (PF_JUMPED|PF_SPINNING) && object->player->panim == PA_ROLL)
+			if (pflags & (PF_JUMPED|PF_SPINNING) && (object->player->panim == PA_ROLL || object->player->panim == PA_JUMP || object->player->panim == PA_FALL))
 				object->player->pflags = pflags;
 			else
 				P_SetPlayerMobjState(object, S_PLAY_WALK);
@@ -302,12 +302,17 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 	INT32 p;
 	fixed_t zdist; // z distance between the two players' bottoms
 
-	if ((tails->pflags & PF_CARRIED) && tails->mo->tracer == sonic->mo)
+	if (tails->powers[pw_carry])
 		return;
-	if ((sonic->pflags & PF_CARRIED) && sonic->mo->tracer == tails->mo)
+	if (sonic->powers[pw_carry])
 		return;
 
-	if (!tails->powers[pw_tailsfly] && !(tails->charability == CA_FLY && tails->mo->state-states == S_PLAY_FLY_TIRED))
+	if (tails->spectator)
+		return;
+	if (sonic->spectator)
+		return;
+
+	if (!(tails->pflags & PF_CANCARRY))
 		return;
 
 	if (tails->bot == 1)
@@ -315,10 +320,6 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 
 	if (sonic->pflags & PF_NIGHTSMODE)
 		return;
-
-	if (sonic->mo->tracer && sonic->mo->tracer->type == MT_TUBEWAYPOINT
-	&& !(sonic->pflags & PF_ROPEHANG))
-		return; // don't steal players from zoomtubes!
 
 	if ((sonic->mo->eflags & MFE_VERTICALFLIP) != (tails->mo->eflags & MFE_VERTICALFLIP))
 		return; // Both should be in same gravity
@@ -334,47 +335,43 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 	// Search in case another player is already being carried by this fox.
 	for (p = 0; p < MAXPLAYERS; p++)
 		if (playeringame[p] && players[p].mo
-		&& players[p].pflags & PF_CARRIED && players[p].mo->tracer == tails->mo)
+		&& players[p].powers[pw_carry] == CR_PLAYER && players[p].mo->tracer == tails->mo)
 			return;
+
+	// Why block opposing teams from tailsflying each other?
+	// Sneaking into the hands of a flying tails player in Race might be a viable strategy, who knows.
+	/*
+	if (gametype == GT_RACE || gametype == GT_COMPETITION
+		|| (netgame && (tails->spectator || sonic->spectator))
+		|| (G_TagGametype() && (!(tails->pflags & PF_TAGIT) != !(sonic->pflags & PF_TAGIT)))
+		|| (gametype == GT_MATCH)
+		|| (G_GametypeHasTeams() && tails->ctfteam != sonic->ctfteam))
+		return; */
 
 	if (tails->mo->eflags & MFE_VERTICALFLIP)
 		zdist = (sonic->mo->z + sonic->mo->height) - (tails->mo->z + tails->mo->height);
 	else
 		zdist = tails->mo->z - sonic->mo->z;
 
-	if (zdist <= sonic->mo->height + FixedMul(FRACUNIT, sonic->mo->scale)
+	if (zdist <= sonic->mo->height + sonic->mo->scale // FixedMul(FRACUNIT, sonic->mo->scale), but scale == FRACUNIT by default
 		&& zdist > sonic->mo->height*2/3
 		&& P_MobjFlip(tails->mo)*sonic->mo->momz <= 0)
 	{
-	// Why block opposing teams from tailsflying each other?
-		// Sneaking into the hands of a flying tails player in Race might be a viable strategy, who knows.
-		/*
-		if (gametype == GT_RACE || gametype == GT_COMPETITION
-			|| (netgame && (tails->spectator || sonic->spectator))
-			|| (G_TagGametype() && (!(tails->pflags & PF_TAGIT) != !(sonic->pflags & PF_TAGIT)))
-			|| (gametype == GT_MATCH)
-			|| (G_GametypeHasTeams() && tails->ctfteam != sonic->ctfteam))
-			sonic->pflags &= ~PF_CARRIED; */
-		if (tails->spectator || sonic->spectator)
-			sonic->pflags &= ~PF_CARRIED;
-		else
-		{
-			if (sonic-players == consoleplayer && botingame)
-				CV_SetValue(&cv_analog2, false);
-			P_ResetPlayer(sonic);
-			P_SetTarget(&sonic->mo->tracer, tails->mo);
-			sonic->pflags |= PF_CARRIED;
-			S_StartSound(sonic->mo, sfx_s3k4a);
-			P_UnsetThingPosition(sonic->mo);
-			sonic->mo->x = tails->mo->x;
-			sonic->mo->y = tails->mo->y;
-			P_SetThingPosition(sonic->mo);
-		}
+		if (sonic-players == consoleplayer && botingame)
+			CV_SetValue(&cv_analog2, false);
+		P_ResetPlayer(sonic);
+		P_SetTarget(&sonic->mo->tracer, tails->mo);
+		sonic->powers[pw_carry] = CR_PLAYER;
+		S_StartSound(sonic->mo, sfx_s3k4a);
+		P_UnsetThingPosition(sonic->mo);
+		sonic->mo->x = tails->mo->x;
+		sonic->mo->y = tails->mo->y;
+		P_SetThingPosition(sonic->mo);
 	}
 	else {
 		if (sonic-players == consoleplayer && botingame)
 			CV_SetValue(&cv_analog2, true);
-		sonic->pflags &= ~PF_CARRIED;
+		sonic->powers[pw_carry] = CR_NONE;
 	}
 }
 
@@ -443,7 +440,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			return true; // underneath
 		if (thing->type == MT_SPIKE)
 		{
-			S_StartSound(tmthing, thing->info->deathsound);
+			if (thing->flags & MF_SOLID)
+				S_StartSound(tmthing, thing->info->deathsound);
 			for (thing = thing->subsector->sector->thinglist; thing; thing = thing->snext)
 				if (thing->type == MT_SPIKE && thing->health > 0 && thing->flags & MF_SOLID && P_AproxDistance(thing->x - tmthing->x, thing->y - tmthing->y) < FixedMul(56*FRACUNIT, thing->scale))
 					P_KillMobj(thing, tmthing, tmthing, 0);
@@ -456,9 +454,13 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		return true;
 	}
 
-	// Dashmode users destroy spikes and monitors.
-	if ((tmthing->player) && (tmthing->player->charability == CA_DASHMODE) && (tmthing->player->dashmode >= 3*TICRATE)
-	&& (thing->flags & (MF_MONITOR) || thing->type == MT_SPIKE))
+	// CA_DASHMODE users destroy spikes and monitors, CA_TWINSPIN users and CA2_MELEE users destroy spikes.
+	if ((tmthing->player)
+		&& (((tmthing->player->charability == CA_DASHMODE) && (tmthing->player->dashmode >= 3*TICRATE)
+		&& (thing->flags & (MF_MONITOR) || thing->type == MT_SPIKE))
+	|| ((((tmthing->player->charability == CA_TWINSPIN) && (tmthing->player->panim == PA_ABILITY))
+	|| (tmthing->player->charability2 == CA2_MELEE && tmthing->player->panim == PA_ABILITY2))
+		&& (thing->type == MT_SPIKE))))
 	{
 		if ((thing->flags & (MF_MONITOR)) && (thing->health <= 0 || !(thing->flags & MF_SHOOTABLE)))
 			return true;
@@ -472,7 +474,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			return true; // underneath
 		if (thing->type == MT_SPIKE)
 		{
-			S_StartSound(tmthing, thing->info->deathsound);
+			if (thing->flags & MF_SOLID)
+				S_StartSound(tmthing, thing->info->deathsound);
 			for (thing = thing->subsector->sector->thinglist; thing; thing = thing->snext)
 				if (thing->type == MT_SPIKE && thing->health > 0 && thing->flags & MF_SOLID && P_AproxDistance(thing->x - tmthing->x, thing->y - tmthing->y) < FixedMul(56*FRACUNIT, thing->scale))
 					P_KillMobj(thing, tmthing, tmthing, 0);
@@ -728,7 +731,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 		if (tmthing->flags & MF_MISSILE && thing->player && tmthing->target && tmthing->target->player
 		&& thing->player->ctfteam == tmthing->target->player->ctfteam
-		&& thing->player->pflags & PF_CARRIED && thing->tracer == tmthing->target)
+		&& thing->player->powers[pw_carry] == CR_PLAYER && thing->tracer == tmthing->target)
 			return true; // Don't give rings to your carry player by accident.
 
 		if (thing->type == MT_EGGSHIELD)
@@ -771,7 +774,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			&& tmthing->target != thing)
 		{
 			// Hop on the missile for a ride!
-			thing->player->pflags |= PF_ITEMHANG;
+			thing->player->powers[pw_carry] = CR_GENERIC;
 			thing->player->pflags &= ~PF_JUMPED;
 			P_SetTarget(&thing->tracer, tmthing);
 			P_SetTarget(&tmthing->target, thing); // Set owner to the player
@@ -790,7 +793,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 			return true;
 		}
-		else if (tmthing->type == MT_BLACKEGGMAN_MISSILE && thing->player && ((thing->player->pflags & PF_ITEMHANG) || (thing->player->pflags & PF_JUMPED)))
+		else if (tmthing->type == MT_BLACKEGGMAN_MISSILE && thing->player && ((thing->player->powers[pw_carry] == CR_GENERIC) || (thing->player->pflags & PF_JUMPED)))
 		{
 			// Ignore
 		}
@@ -991,7 +994,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	else if (thing->player) {
 		if (thing->player-players == consoleplayer && botingame)
 			CV_SetValue(&cv_analog2, true);
-		thing->player->pflags &= ~PF_CARRIED;
+		if (thing->player->powers[pw_carry] == CR_PLAYER)
+			thing->player->powers[pw_carry] = CR_NONE;
 	}
 
 	if (thing->player)
@@ -1043,7 +1047,13 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			&& thing->z + thing->height + FixedMul(FRACUNIT, thing->scale) >= tmthing->z)
 		{
 			if (thing->flags & MF_MONITOR
-				&& tmthing->player->pflags & (PF_JUMPED|PF_SPINNING|PF_GLIDING))
+				&& (tmthing->player->pflags & (PF_SPINNING|PF_GLIDING)
+				|| ((tmthing->player->pflags & PF_JUMPED)
+					&& !(tmthing->player->charflags & SF_NOJUMPDAMAGE
+					&& !(tmthing->player->charability == CA_TWINSPIN && tmthing->player->panim == PA_ABILITY)))
+				|| (tmthing->player->charability2 == CA2_MELEE && tmthing->player->panim == PA_ABILITY2)
+				|| ((tmthing->player->charflags & SF_STOMPDAMAGE)
+					&& (P_MobjFlip(tmthing)*(tmthing->z - (thing->z + thing->height/2)) > 0) && (P_MobjFlip(tmthing)*tmthing->momz < 0))))
 			{
 				SINT8 flipval = P_MobjFlip(thing); // Save this value in case monitor gets removed.
 				fixed_t *momz = &tmthing->momz; // tmthing gets changed by P_DamageMobj, so we need a new pointer?! X_x;;
@@ -1065,7 +1075,14 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	}
 	// Monitors are not treated as solid to players who are jumping, spinning or gliding,
 	// unless it's a CTF team monitor and you're on the wrong team
-	else if (thing->flags & MF_MONITOR && tmthing->player && tmthing->player->pflags & (PF_JUMPED|PF_SPINNING|PF_GLIDING)
+	else if (thing->flags & MF_MONITOR && tmthing->player
+	&& (tmthing->player->pflags & (PF_SPINNING|PF_GLIDING)
+		|| ((tmthing->player->pflags & PF_JUMPED)
+			&& !(tmthing->player->charflags & SF_NOJUMPDAMAGE
+			&& !(tmthing->player->charability == CA_TWINSPIN && tmthing->player->panim == PA_ABILITY)))
+		|| (tmthing->player->charability2 == CA2_MELEE && tmthing->player->panim == PA_ABILITY2)
+		|| ((tmthing->player->charflags & SF_STOMPDAMAGE)
+			&& (P_MobjFlip(tmthing)*(tmthing->z - (thing->z + thing->height/2)) > 0) && (P_MobjFlip(tmthing)*tmthing->momz < 0)))
 	&& !((thing->type == MT_REDRINGBOX && tmthing->player->ctfteam != 1) || (thing->type == MT_BLUERINGBOX && tmthing->player->ctfteam != 2)))
 		;
 	// z checking at last
@@ -1286,7 +1303,7 @@ static boolean PIT_CheckLine(line_t *ld)
 	}
 
 	// set openrange, opentop, openbottom
-	P_LineOpening(ld);
+	P_LineOpening(ld, tmthing);
 
 	// adjust floor / ceiling heights
 	if (opentop < tmceilingz)
@@ -1404,7 +1421,7 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 			topheight = P_GetFOFTopZ(thing, newsubsec->sector, rover, x, y, NULL);
 			bottomheight = P_GetFOFBottomZ(thing, newsubsec->sector, rover, x, y, NULL);
 
-			if (rover->flags & FF_GOOWATER && !(thing->flags & MF_NOGRAVITY))
+			if ((rover->flags & (FF_SWIMMABLE|FF_GOOWATER)) == (FF_SWIMMABLE|FF_GOOWATER) && !(thing->flags & MF_NOGRAVITY))
 			{
 				// If you're inside goowater and slowing down
 				fixed_t sinklevel = FixedMul(thing->info->height/6, thing->scale);
@@ -2103,8 +2120,12 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 			}
 
 			// Ramp test
-			if (thing->player && maxstep > 0
-			&& !(P_PlayerTouchingSectorSpecial(thing->player, 1, 14) || GETSECSPECIAL(R_PointInSubsector(x, y)->sector->special, 1) == 14))
+			if (maxstep > 0 && !(
+				thing->player && (
+				P_PlayerTouchingSectorSpecial(thing->player, 1, 14)
+				|| GETSECSPECIAL(R_PointInSubsector(x, y)->sector->special, 1) == 14)
+				)
+			)
 			{
 				// If the floor difference is MAXSTEPMOVE or less, and the sector isn't Section1:14, ALWAYS
 				// step down! Formerly required a Section1:13 sector for the full MAXSTEPMOVE, but no more.
@@ -2714,7 +2735,7 @@ static boolean PTR_SlideTraverse(intercept_t *in)
 	}
 
 	// set openrange, opentop, openbottom
-	P_LineOpening(li);
+	P_LineOpening(li, slidemo);
 
 	if (openrange < slidemo->height)
 		goto isblocking; // doesn't fit
@@ -2790,7 +2811,7 @@ isblocking:
 		// see about climbing on the wall
 		if (!(checkline->flags & ML_NOCLIMB))
 		{
-			boolean canclimb; // FUCK C90
+			boolean canclimb;
 			angle_t climbangle, climbline;
 			INT32 whichside = P_PointOnLineSide(slidemo->x, slidemo->y, li);
 
