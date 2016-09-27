@@ -6181,8 +6181,8 @@ void P_SetScale(mobj_t *mobj, fixed_t newscale)
 
 	mobj->scale = newscale;
 
-	mobj->radius = FixedMul(mobj->info->radius, newscale);
-	mobj->height = FixedMul(mobj->info->height, newscale);
+	mobj->radius = FixedMul(FixedDiv(mobj->radius, oldscale), newscale);
+	mobj->height = FixedMul(FixedDiv(mobj->height, oldscale), newscale);
 
 	player = mobj->player;
 
@@ -8811,6 +8811,8 @@ void P_SpawnPlayer(INT32 playernum)
 	// the dead body mobj retains the skin through the 'spritedef' override).
 	mobj->skin = &skins[p->skin];
 
+	mobj->radius = FixedMul(skins[p->skin].radius, mobj->destscale);
+
 	mobj->health = p->health;
 	p->playerstate = PST_LIVE;
 
@@ -8833,8 +8835,6 @@ void P_AfterPlayerSpawn(INT32 playernum)
 {
 	player_t *p = &players[playernum];
 	mobj_t *mobj = p->mo;
-
-	mobj->radius = skins[p->skin].radius;
 
 	if (playernum == consoleplayer)
 		localangle = mobj->angle;
