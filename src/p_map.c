@@ -216,7 +216,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 		else if (P_MobjFlip(object)*vertispeed > 0)
 			P_SetPlayerMobjState(object, S_PLAY_SPRING);
 		else if (P_MobjFlip(object)*vertispeed < 0)
-			P_SetPlayerMobjState(object, S_PLAY_FALL);
+			P_SetPlayerMobjState(object, S_PLAY_FALL)
 		else // horizontal spring
 		{
 			if (pflags & (PF_JUMPED|PF_SPINNING) && (object->player->panim == PA_ROLL || object->player->panim == PA_JUMP || object->player->panim == PA_FALL))
