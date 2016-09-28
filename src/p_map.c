@@ -115,6 +115,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 	fixed_t offx, offy;
 	fixed_t vertispeed = spring->info->mass;
 	fixed_t horizspeed = spring->info->damage;
+	UINT8 jumping, secondjump;
 
 	if (object->eflags & MFE_SPRUNG) // Object was already sprung this tic
 		return false;
@@ -203,24 +204,29 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 		}
 
 		pflags = object->player->pflags & (PF_JUMPED|PF_SPINNING|PF_THOKKED); // I still need these.
+		jumping = object->player->jumping;
+		secondjump = object->player->secondjump;
 		P_ResetPlayer(object->player);
 
-		if (P_MobjFlip(object)*vertispeed > 0)
+		if (spring->info->painchance)
+		{
+			object->player->pflags |= PF_JUMPED;
+			P_SetPlayerMobjState(object, S_PLAY_JUMP);
+		}
+		else if (P_MobjFlip(object)*vertispeed > 0)
 			P_SetPlayerMobjState(object, S_PLAY_SPRING);
 		else if (P_MobjFlip(object)*vertispeed < 0)
 			P_SetPlayerMobjState(object, S_PLAY_FALL);
 		else // horizontal spring
 		{
 			if (pflags & (PF_JUMPED|PF_SPINNING) && (object->player->panim == PA_ROLL || object->player->panim == PA_JUMP || object->player->panim == PA_FALL))
-				object->player->pflags = pflags;
+			{
+				object->player->pflags |= pflags;
+				object->player->jumping = jumping;
+				object->player->secondjump = secondjump;
+			}
 			else
 				P_SetPlayerMobjState(object, S_PLAY_WALK);
-		}
-
-		if (spring->info->painchance)
-		{
-			object->player->pflags |= PF_JUMPED;
-			P_SetPlayerMobjState(object, S_PLAY_JUMP);
 		}
 	}
 	return true;
