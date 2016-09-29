@@ -2098,8 +2098,9 @@ void A_Boss1Laser(mobj_t *actor)
 			P_SetTarget(&actor->target, point);
 		}
 	}
-	else if (actor->target && actor->target->type != MT_EGGMOBILE_TARGET && !(actor->spawnpoint && actor->spawnpoint->options & MTF_AMBUSH))
-		actor->angle = R_PointToAngle2(x, y, actor->target->x, actor->target->y);
+	/* -- the following was relevant when the MT_EGGMOBILE_TARGET was allowed to move left and right from its path
+	else if (actor->target && !(actor->spawnpoint && actor->spawnpoint->options & MTF_AMBUSH))
+		actor->angle = R_PointToAngle2(x, y, actor->target->x, actor->target->y);*/
 
 	if (actor->spawnpoint && actor->spawnpoint->options & MTF_AMBUSH)
 		angle = FixedAngle(FixedDiv(actor->tics*160*FRACUNIT, actor->state->tics*FRACUNIT) + 10*FRACUNIT);
