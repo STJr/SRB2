@@ -867,6 +867,15 @@ void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor)
 // Useful when you want to kill everything the player is doing.
 void P_ResetPlayer(player_t *player)
 {
+	if (player->mo
+	&& (player->powers[pw_shield] & SH_FORCE) == SH_FORCE // Dash.
+	&& player->pflags & PF_SHIELDABILITY)
+	{
+		P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
+		player->mo->flags &= ~MF_NOGRAVITY;
+		player->pflags &= ~PF_FULLSTASIS;
+	}
+
 	player->pflags &= ~(PF_SPINNING|PF_STARTDASH|PF_JUMPED|PF_GLIDING|PF_THOKKED|PF_CANCARRY|PF_SHIELDABILITY);
 	player->powers[pw_carry] = CR_NONE;
 	player->jumping = 0;
@@ -3835,7 +3844,7 @@ void P_DoJumpShield(player_t *player)
 	player->pflags &= ~PF_JUMPED;
 	player->secondjump = 0;
 	player->jumping = 0;
-	player->pflags |= PF_THOKKED;
+	player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
 	player->pflags &= ~PF_SPINNING;
 	P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
 	S_StartSound(player->mo, sfx_wdjump);
@@ -6930,8 +6939,21 @@ static void P_MovePlayer(player_t *player)
 				{
 					if (!(player->pflags & PF_THOKKED))
 					{
-						player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
-						S_StartSound(player->mo, sfx_ding);
+						angle_t dashangle = player->mo->angle;
+						if (player->cmd.forwardmove || player->cmd.sidemove)
+						{
+							dashangle += R_PointToAngle2(0, 0, player->cmd.forwardmove<<FRACBITS, -player->cmd.sidemove<<FRACBITS);
+						}
+						P_ResetPlayer(player);
+						player->homing = 2;
+						if ((player->powers[pw_shield] & SH_NOSTACK) - SH_FORCE)
+							player->homing++;
+						S_StartSound(player->mo, sfx_s3k47);
+						P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
+						player->pflags |= PF_SPINNING|PF_THOKKED|PF_SHIELDABILITY;
+						player->mo->flags |= MF_NOGRAVITY;
+						P_InstaThrust(player->mo, dashangle, 64*FRACUNIT);
+						player->mo->momz = 0;
 					}
 				}
 			}
@@ -6950,7 +6972,25 @@ static void P_MovePlayer(player_t *player)
 	}
 
 	// HOMING option.
-	if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT
+	if ((player->powers[pw_shield] & SH_FORCE) == SH_FORCE // Dash.
+	&& player->pflags & PF_SHIELDABILITY)
+	{
+		if (player->homing)
+		{
+			player->pflags |= PF_FULLSTASIS;
+			player->mo->momz = 0;
+			if (!(player->pflags & PF_SPINNING))
+				player->homing = 0;
+		}
+
+		if (player->homing == 0)
+		{
+			P_ResetPlayer(player);
+			player->mo->momx >>= 3;
+			player->mo->momy >>= 3;
+		}
+	}
+	else if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT // Sonic 3D Blast.
 	&& player->pflags & PF_SHIELDABILITY)
 	{
 		if (player->homing && player->mo->tracer)
@@ -6969,7 +7009,7 @@ static void P_MovePlayer(player_t *player)
 		if (!(player->pflags & PF_JUMPED))
 			player->homing = 0;
 	}
-	else if (player->charability == CA_HOMINGTHOK)
+	else if (player->charability == CA_HOMINGTHOK) // Sonic Adventure.
 	{
 		// If you've got a target, chase after it!
 		if (player->homing && player->mo->tracer)
@@ -9185,7 +9225,7 @@ void P_PlayerThink(player_t *player)
 		player->losstime--;
 
 	// Flash player after being hit.
-	if (player->powers[pw_flashing] > 0 && player->powers[pw_flashing] < flashingtics && (leveltime & 1))
+	if ((player->powers[pw_flashing] > 0 && player->powers[pw_flashing] < flashingtics && (leveltime & 1)) || ((player->powers[pw_shield] & SH_FORCE) == SH_FORCE && player->pflags & PF_SHIELDABILITY))
 		player->mo->flags2 |= MF2_DONTDRAW;
 	else
 		player->mo->flags2 &= ~MF2_DONTDRAW;
