@@ -3223,7 +3223,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 							P_SetPlayerMobjState(mo, S_PLAY_FALL);
 							clipmomz = false;
 						}
-						else if ((mo->player->powers[pw_shield] & SH_FORCE) == SH_FORCE) // Force shield's dodge dash.
+						else if (mo->player->powers[pw_shield] & SH_FORCE) // Force shield's dodge dash.
 						{
 							P_SetPlayerMobjState(mo, S_PLAY_WALK);
 							mo->flags &= ~MF_NOGRAVITY;

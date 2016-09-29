@@ -868,7 +868,7 @@ void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor)
 void P_ResetPlayer(player_t *player)
 {
 	if (player->mo
-	&& (player->powers[pw_shield] & SH_FORCE) == SH_FORCE // Dash.
+	&& player->powers[pw_shield] & SH_FORCE // Dash.
 	&& player->pflags & PF_SHIELDABILITY)
 	{
 		P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
@@ -6935,17 +6935,22 @@ static void P_MovePlayer(player_t *player)
 					}
 				}
 				// Force shield activation
-				if ((player->powers[pw_shield] & SH_FORCE) == SH_FORCE)
+				if (player->powers[pw_shield] & SH_FORCE)
 				{
 					if (!(player->pflags & PF_THOKKED))
 					{
 						angle_t dashangle = player->mo->angle;
-						if (player->cmd.forwardmove || player->cmd.sidemove)
-						{
+#if 1 // shadow.wad style redirection - hold down directional keys to set your path, go backwards by default
+						if (!(player->pflags & PF_ANALOGMODE) && (player->cmd.forwardmove || player->cmd.sidemove))
 							dashangle += R_PointToAngle2(0, 0, player->cmd.forwardmove<<FRACBITS, -player->cmd.sidemove<<FRACBITS);
-						}
+						else
+#else // go backwards from your current momentum direction
+						if (player->mo->momx || player->mo->momy)
+							dashangle = R_PointToAngle2(0, 0, player->mo->momx, player->mo->momy);
+#endif
+						dashangle += ANGLE_180;
 						P_ResetPlayer(player);
-						player->homing = 2 + ((player->powers[pw_shield] & SH_NOSTACK) - SH_FORCE);
+						player->homing = 2 + ((player->powers[pw_shield] & SH_NOSTACK) - SH_FORCE); // might get ridiculous with 256 hitpoints, don't you think?
 						S_StartSound(player->mo, sfx_s3k47);
 						P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
 						player->pflags |= PF_SPINNING|PF_THOKKED|PF_SHIELDABILITY;
@@ -6970,7 +6975,7 @@ static void P_MovePlayer(player_t *player)
 	}
 
 	// HOMING option.
-	if ((player->powers[pw_shield] & SH_FORCE) == SH_FORCE // Dash.
+	if (player->powers[pw_shield] & SH_FORCE // Dash.
 	&& player->pflags & PF_SHIELDABILITY)
 	{
 		if (player->homing)
@@ -8072,6 +8077,9 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		camdist = FixedMul(cv_cam2_dist.value, FixedMul(player->camerascale, mo->scale));
 		camheight = FixedMul(cv_cam2_height.value, FixedMul(player->camerascale, mo->scale));
 	}
+
+	if (player->powers[pw_shield] & SH_FORCE && player->pflags & PF_SHIELDABILITY)
+		camspeed <<= 1;
 
 #ifdef REDSANALOG
 	if (P_AnalogMove(player) && (player->cmd.buttons & (BT_CAMLEFT|BT_CAMRIGHT)) == (BT_CAMLEFT|BT_CAMRIGHT)) {
@@ -9223,7 +9231,7 @@ void P_PlayerThink(player_t *player)
 		player->losstime--;
 
 	// Flash player after being hit.
-	if ((player->powers[pw_flashing] > 0 && player->powers[pw_flashing] < flashingtics && (leveltime & 1)) || ((player->powers[pw_shield] & SH_FORCE) == SH_FORCE && player->pflags & PF_SHIELDABILITY))
+	if (player->powers[pw_flashing] > 0 && player->powers[pw_flashing] < flashingtics && (leveltime & 1))
 		player->mo->flags2 |= MF2_DONTDRAW;
 	else
 		player->mo->flags2 &= ~MF2_DONTDRAW;
