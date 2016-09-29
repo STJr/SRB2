@@ -15,6 +15,7 @@
 #include "doomstat.h"
 #include "m_random.h"
 #include "p_local.h"
+#include "p_slopes.h"
 #include "r_state.h"
 #include "s_sound.h"
 #include "z_zone.h"
@@ -2893,7 +2894,7 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 	size_t topmostvertex = 0, bottommostvertex = 0;
 	fixed_t leftx, rightx;
 	fixed_t topy, bottomy;
-	fixed_t topz;
+	fixed_t topz, bottomz;
 	fixed_t widthfactor, heightfactor;
 	fixed_t a, b, c;
 	mobjtype_t type = MT_ROCKCRUMBLE1;
@@ -2950,10 +2951,15 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 	rightx = sec->lines[rightmostvertex]->v1->x;
 	topy = sec->lines[topmostvertex]->v1->y-(spacing>>1);
 	bottomy = sec->lines[bottommostvertex]->v1->y;
-	topz = *rover->topheight-(spacing>>1);
 
-	widthfactor = (rightx + topy - leftx - bottomy)>>3;
-	heightfactor = (topz - *rover->bottomheight)>>2;
+	topz = *rover->topheight-(spacing>>1);
+	bottomz = *rover->bottomheight;
+
+	if (flags & ML_EFFECT1)
+	{
+		widthfactor = (rightx + topy - leftx - bottomy)>>3;
+		heightfactor = (topz - *rover->bottomheight)>>2;
+	}
 
 	for (a = leftx; a < rightx; a += spacing)
 	{
@@ -2962,13 +2968,14 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 			if (R_PointInSubsector(a, b)->sector == sec)
 			{
 				mobj_t *spawned = NULL;
-				for (c = topz; c > *rover->bottomheight; c -= spacing)
+				if (*rover->t_slope)
+					topz = P_GetZAt(*rover->t_slope, a, b) - (spacing>>1);
+				if (*rover->b_slope)
+					bottomz = P_GetZAt(*rover->b_slope, a, b);
+
+				for (c = topz; c > bottomz; c -= spacing)
 				{
 					spawned = P_SpawnMobj(a, b, c, type);
-
-					if (spawned->frame & FF_ANIMATE)
-						spawned->frame += P_RandomKey(spawned->state->var1);
-
 					spawned->angle += P_RandomKey(36)*ANG10; // irrelevant for default objects but might make sense for some custom ones
 
 					if (flags & ML_EFFECT1)
