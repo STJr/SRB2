@@ -162,28 +162,28 @@ matrix:
               - clang-3.8
           compiler: clang-3.8
           #clang version 3.8.1-svn271127-1~exp1 (branches/release_38)
-        - os: osx
-          osx_image: beta-xcode6.1
-          #Apple LLVM version 6.0 (clang-600.0.54) (based on LLVM 3.5svn)
-        - os: osx
-          osx_image: beta-xcode6.2
-          compiler: gcc
-          #Apple LLVM version 6.0 (clang-600.0.57) (based on LLVM 3.5svn)
 #        - os: osx
-#          osx_image: beta-xcode6.3
-#          #I think xcode.6.3 VM is broken, it does not boot
-        - os: osx
-          osx_image: xcode6.4
-          #Apple LLVM version 6.1.0 (clang-602.0.53) (based on LLVM 3.6.0svn)
-        - os: osx
-          osx_image: xcode7
-          #Apple LLVM version 7.0.0 (clang-700.0.72)
-        - os: osx
-          osx_image: xcode7.1
-          #Apple LLVM version 7.0.0 (clang-700.1.76)
-        - os: osx
-          osx_image: xcode7.2
-          #Apple LLVM version 7.0.2 (clang-700.1.81)
+#          osx_image: beta-xcode6.1
+#          #Apple LLVM version 6.0 (clang-600.0.54) (based on LLVM 3.5svn)
+#        - os: osx
+#          osx_image: beta-xcode6.2
+#          compiler: gcc
+#          #Apple LLVM version 6.0 (clang-600.0.57) (based on LLVM 3.5svn)
+##        - os: osx
+##          osx_image: beta-xcode6.3
+##          #I think xcode.6.3 VM is broken, it does not boot
+#        - os: osx
+#          osx_image: xcode6.4
+#          #Apple LLVM version 6.1.0 (clang-602.0.53) (based on LLVM 3.6.0svn)
+#        - os: osx
+#          osx_image: xcode7
+#          #Apple LLVM version 7.0.0 (clang-700.0.72)
+#        - os: osx
+#          osx_image: xcode7.1
+#          #Apple LLVM version 7.0.0 (clang-700.1.76)
+#        - os: osx
+#          osx_image: xcode7.2
+#          #Apple LLVM version 7.0.2 (clang-700.1.81)
         - os: osx
           osx_image: xcode7.3
           #Apple LLVM version 7.3.0 (clang-703.0.31)
