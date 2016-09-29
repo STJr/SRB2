@@ -3216,8 +3216,11 @@ static void P_PlayerZMovement(mobj_t *mo)
 						}
 						else if ((mo->player->powers[pw_shield] & SH_FORCE) == SH_FORCE) // Force shield's dodge dash.
 						{
+							P_SetPlayerMobjState(mo, S_PLAY_WALK);
 							mo->flags &= ~MF_NOGRAVITY;
-							mo->player->pflags &= ~PF_FULLSTASIS;
+							mo->player->pflags &= ~(PF_FULLSTASIS|PF_SPINNING);
+							mo->momx >>= 3;
+							mo->momy >>= 3;
 						}
 					}
 					mo->player->pflags &= ~(PF_THOKKED|PF_CANCARRY|PF_SHIELDABILITY/*|PF_GLIDING*/);
