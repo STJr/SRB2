@@ -6244,7 +6244,7 @@ void P_ElementalFire(player_t *player, boolean cropcircle)
 			P_SetScale(flame, player->mo->scale);
 			flame->eflags = (flame->eflags & ~MFE_VERTICALFLIP)|(player->mo->eflags & MFE_VERTICALFLIP);
 
-			flame->momx = 8;
+			flame->momx = 8; // this is a hack which is used to ensure it still behaves as a missile and can damage others
 			P_XYMovement(flame);
 			if (P_MobjWasRemoved(flame))
 				continue;

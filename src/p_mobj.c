@@ -2579,11 +2579,15 @@ static boolean P_ZMovement(mobj_t *mo)
 				P_RemoveMobj(mo);
 				return false;
 			}
-			if (mo->z <= mo->floorz && mo->momz)
+			if (mo->momz
+			&& !(mo->flags & MF_NOGRAVITY)
+			&& ((!(mo->eflags & MFE_VERTICALFLIP) && mo->z <= mo->floorz)
+			|| ((mo->eflags & MFE_VERTICALFLIP) && mo->z+mo->height >= mo->ceilingz)))
 			{
 				mo->flags |= MF_NOGRAVITY;
-				mo->momx = mo->momy = mo->momz = 0;
-				mo->z = mo->floorz;
+				mo->momx = 8; // this is a hack which is used to ensure it still behaves as a missile and can damage others
+				mo->momy = mo->momz = 0;
+				mo->z = ((mo->eflags & MFE_VERTICALFLIP) ? mo->ceilingz-mo->height : mo->floorz);
 			}
 			break;
 		case MT_GOOP:
@@ -3071,6 +3075,8 @@ static void P_PlayerZMovement(mobj_t *mo)
 
 		if (P_MobjFlip(mo)*mo->momz < 0) // falling
 		{
+			boolean clipmomz = true;
+
 			mo->pmomz = 0; // We're on a new floor, don't keep doing platform movement.
 
 			// Squat down. Decrease viewheight for a moment after hitting the ground (hard),
@@ -3213,6 +3219,9 @@ static void P_PlayerZMovement(mobj_t *mo)
 								S_StartSound(mo, sfx_s3k47);
 								P_ElementalFire(mo->player, true);
 							}
+							P_SetObjectMomZ(mo, 5*FRACUNIT/2, false);
+							P_SetPlayerMobjState(mo, S_PLAY_FALL);
+							clipmomz = false;
 						}
 						else if ((mo->player->powers[pw_shield] & SH_FORCE) == SH_FORCE) // Force shield's dodge dash.
 						{
@@ -3234,11 +3243,14 @@ static void P_PlayerZMovement(mobj_t *mo)
 			if (!(mo->player->pflags & PF_SPINNING))
 				mo->player->pflags &= ~PF_STARTDASH;
 
-			if (tmfloorthing && (tmfloorthing->flags & (MF_PUSHABLE|MF_MONITOR)
-			|| tmfloorthing->flags2 & MF2_STANDONME || tmfloorthing->type == MT_PLAYER))
-				mo->momz = tmfloorthing->momz;
-			else if (!tmfloorthing)
-				mo->momz = 0;
+			if (clipmomz)
+			{
+				if (tmfloorthing && (tmfloorthing->flags & (MF_PUSHABLE|MF_MONITOR)
+				|| tmfloorthing->flags2 & MF2_STANDONME || tmfloorthing->type == MT_PLAYER))
+					mo->momz = tmfloorthing->momz;
+				else if (!tmfloorthing)
+					mo->momz = 0;
+			}
 		}
 		else if (tmfloorthing && (tmfloorthing->flags & (MF_PUSHABLE|MF_MONITOR)
 		|| tmfloorthing->flags2 & MF2_STANDONME || tmfloorthing->type == MT_PLAYER))
