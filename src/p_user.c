@@ -6945,9 +6945,7 @@ static void P_MovePlayer(player_t *player)
 							dashangle += R_PointToAngle2(0, 0, player->cmd.forwardmove<<FRACBITS, -player->cmd.sidemove<<FRACBITS);
 						}
 						P_ResetPlayer(player);
-						player->homing = 2;
-						if ((player->powers[pw_shield] & SH_NOSTACK) - SH_FORCE)
-							player->homing++;
+						player->homing = 2 + ((player->powers[pw_shield] & SH_NOSTACK) - SH_FORCE);
 						S_StartSound(player->mo, sfx_s3k47);
 						P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
 						player->pflags |= PF_SPINNING|PF_THOKKED|PF_SHIELDABILITY;

@@ -3214,6 +3214,11 @@ static void P_PlayerZMovement(mobj_t *mo)
 								P_ElementalFire(mo->player, true);
 							}
 						}
+						else if ((mo->player->powers[pw_shield] & SH_FORCE) == SH_FORCE) // Force shield's dodge dash.
+						{
+							mo->flags &= ~MF_NOGRAVITY;
+							mo->player->pflags &= ~PF_FULLSTASIS;
+						}
 					}
 					mo->player->pflags &= ~(PF_THOKKED|PF_CANCARRY|PF_SHIELDABILITY/*|PF_GLIDING*/);
 					mo->player->jumping = 0;
