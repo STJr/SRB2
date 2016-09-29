@@ -4438,12 +4438,11 @@ static void P_Boss1Thinker(mobj_t *mobj)
 
 	if (mobj->flags2 & MF2_SKULLFLY)
 	{
-		if (P_MobjFlip(mobj)*mobj->momz > 0
-			&& ((mobj->eflags & MFE_VERTICALFLIP
-				&& (mobj->z+mobj->height) < (mobj->ceilingz-(2*mobj->height)))
-			|| (!(mobj->eflags & MFE_VERTICALFLIP)
-				&& mobj->z > (mobj->floorz+(2*mobj->height)))))
-			mobj->momz = FixedMul(mobj->momz, 60000);
+		fixed_t dist = (mobj->eflags & MFE_VERTICALFLIP)
+						? ((mobj->ceilingz-(2*mobj->height)) - (mobj->z+mobj->height))
+						: (mobj->z - (mobj->floorz+(2*mobj->height)));
+		if (dist > 0 && P_MobjFlip(mobj)*mobj->momz > 0)
+			mobj->momz = FixedMul(mobj->momz, FRACUNIT - (dist>>12));
 	}
 	else if (mobj->state != &states[mobj->info->spawnstate] && mobj->health > 0 && mobj->flags & MF_FLOAT)
 		mobj->momz = FixedMul(mobj->momz,7*FRACUNIT/8);
