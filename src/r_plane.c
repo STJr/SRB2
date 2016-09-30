@@ -711,7 +711,7 @@ void R_DrawPlanes(void)
 						angle = (pl->viewangle + xtoviewangle[x])>>ANGLETOSKYSHIFT;
 						dc_x = x;
 						dc_source =
-							R_GetColumn(skytexture,
+							R_GetColumn(texturetranslation[skytexture],
 								angle);
 						wallcolfunc();
 					}

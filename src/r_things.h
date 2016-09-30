@@ -29,6 +29,8 @@
 #define VISSPRITESPERCHUNK (1 << VISSPRITECHUNKBITS)
 #define VISSPRITEINDEXMASK (VISSPRITESPERCHUNK - 1)
 
+#define DEFAULTNIGHTSSKIN 0
+
 // Constant arrays used for psprite clipping
 //  and initializing clipping.
 extern INT16 negonearray[MAXVIDWIDTH];
@@ -97,15 +99,27 @@ typedef struct
 
 	fixed_t jumpfactor; // multiple of standard jump height
 
+	fixed_t radius; // Bounding box changes.
+	fixed_t height;
+	fixed_t spinheight;
+
+	fixed_t shieldscale; // no change to bounding box, but helps set the shield's sprite size
+	fixed_t camerascale;
+
 	// Definable color translation table
 	UINT8 starttranscolor;
 	UINT8 prefcolor;
+	UINT8 supercolor;
+	UINT8 prefoppositecolor; // if 0 use tables instead
+
 	fixed_t highresscale; // scale of highres, default is 0.5
 
 	// specific sounds per skin
 	sfxenum_t soundsid[NUMSKINSOUNDS]; // sound # in S_sfx table
 
 	spritedef_t sprites[NUMPLAYERSPRITES];
+
+	UINT8 availability; // lock?
 } skin_t;
 
 // -----------
@@ -188,6 +202,7 @@ extern skin_t skins[MAXSKINS + 1];
 
 void SetPlayerSkin(INT32 playernum,const char *skinname);
 void SetPlayerSkinByNum(INT32 playernum,INT32 skinnum); // Tails 03-16-2002
+boolean R_SkinUnlock(INT32 skinnum);
 INT32 R_SkinAvailable(const char *name);
 void R_AddSkins(UINT16 wadnum);
 

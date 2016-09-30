@@ -430,15 +430,19 @@ static void readAnimTex(MYFILE *f, INT32 num)
 }
 */
 
-static boolean findFreeSlot(INT32 *num)
+static boolean findFreeSlot(INT32 *num, UINT16 wadnum)
 {
 	// Send the character select entry to a free slot.
-	while (*num < 32 && PlayerMenu[*num].status != IT_DISABLED)
+	while (*num < 32 && (!(PlayerMenu[*num].status & IT_DISABLED) || description[*num].wadnum == wadnum)) // Will kill hidden characters from other files, but that's okay.
 		*num = *num+1;
 
 	// No more free slots. :(
 	if (*num >= 32)
 		return false;
+
+	PlayerMenu[*num].status = IT_CALL;
+	description[*num].wadnum = wadnum;
+	description[*num].picname[0] = '\0'; // Redesign your logo. (See M_DrawSetupChoosePlayerMenu in m_menu.c...)
 
 	// Found one! ^_^
 	return true;
@@ -473,9 +477,8 @@ static void readPlayer(MYFILE *f, INT32 num)
 			{
 				char *playertext = NULL;
 
-				if (!slotfound && (slotfound = findFreeSlot(&num)) == false)
+				if (!slotfound && (slotfound = findFreeSlot(&num, f->wad)) == false)
 					goto done;
-				PlayerMenu[num].status = IT_CALL;
 
 				for (i = 0; i < MAXLINELEN-3; i++)
 				{
@@ -521,34 +524,12 @@ static void readPlayer(MYFILE *f, INT32 num)
 				word2[strlen(word2)-1] = '\0';
 			i = atoi(word2);
 
-			/*if (fastcmp(word, "PLAYERNAME"))
+			if (fastcmp(word, "PICNAME"))
 			{
-				if (!slotfound && (slotfound = findFreeSlot(&num)) == false)
-					goto done;
-				DEH_WriteUndoline(word, description[num].text, UNDO_NONE);
-				strlcpy(description[num].text, word2, sizeof (description[num].text));
-				for (word2 = description[num].text; *word2; word2++)
-					if (*word2 == '_')
-						*word2 = ' ';
-				PlayerMenu[num].text = description[num].text;
-			}*/
-/* 			else if (fastcmp(word, "MENUPOSITION"))
-			{ // Make sure you make MENUPOSITION the first thing under CHARACTER if you're using it!
-				// This is to manually choose a slot and overwrite existing characters! It is NOT necessary for most individual character wads!!
-#ifdef DELFILE
-				if (disableundo)
-#endif
-				{
-					slotfound = true;
-					num = i;
-				}
-			} */
-			/*else*/ if (fastcmp(word, "PICNAME"))
-			{
-				if (!slotfound && (slotfound = findFreeSlot(&num)) == false)
+				if (!slotfound && (slotfound = findFreeSlot(&num, f->wad)) == false)
 					goto done;
 				DEH_WriteUndoline(word, &description[num].picname[0], UNDO_NONE);
-				PlayerMenu[num].status = IT_CALL;
+
 				strncpy(description[num].picname, word2, 8);
 			}
 			else if (fastcmp(word, "STATUS"))
@@ -563,13 +544,10 @@ static void readPlayer(MYFILE *f, INT32 num)
 					You MAY disable previous entries if you so desire...
 					But try to enable something that's already enabled and you will be sent to a free slot.
 
-					Because of this, you are allowed to edit any previous entrys you like, but only if you
+					Because of this, you are allowed to edit any previous entries you like, but only if you
 					signal that you are purposely doing so by disabling and then reenabling the slot.
-
-					... Or use MENUPOSITION first, that works too. Hell, you could edit multiple character
-					slots in a single section that way, due to how SOC editing works.
 				*/
-				if (i != IT_DISABLED && !slotfound && (slotfound = findFreeSlot(&num)) == false)
+				if (i != IT_DISABLED && !slotfound && (slotfound = findFreeSlot(&num, f->wad)) == false)
 					goto done;
 				DEH_WriteUndoline(word, va("%d", PlayerMenu[num].status), UNDO_NONE);
 				PlayerMenu[num].status = (INT16)i;
@@ -577,10 +555,9 @@ static void readPlayer(MYFILE *f, INT32 num)
 			else if (fastcmp(word, "SKINNAME"))
 			{
 				// Send to free slot.
-				if (!slotfound && (slotfound = findFreeSlot(&num)) == false)
+				if (!slotfound && (slotfound = findFreeSlot(&num, f->wad)) == false)
 					goto done;
 				DEH_WriteUndoline(word, description[num].skinname, UNDO_NONE);
-				PlayerMenu[num].status = IT_CALL;
 
 				strlcpy(description[num].skinname, word2, sizeof description[num].skinname);
 				strlwr(description[num].skinname);
@@ -3826,14 +3803,22 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PLAY_EDGE",
 	"S_PLAY_RIDE",
 
-	// CA_FLY
+	// CA_FLY/SWIM
 	"S_PLAY_FLY",
+	"S_PLAY_SWIM",
 	"S_PLAY_FLY_TIRED",
 
 	// CA_GLIDEANDCLIMB
 	"S_PLAY_GLIDE",
 	"S_PLAY_CLING",
 	"S_PLAY_CLIMB",
+
+	// CA_TWINSPIN
+	"S_PLAY_TWINSPIN",
+
+	// CA2_MELEE
+	"S_PLAY_MELEE",
+	"S_PLAY_MELEE_FINISH",
 
 	// SF_SUPERANIMS
 	"S_PLAY_SUPER_STND",
@@ -3876,6 +3861,50 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Level end sign (uses player sprite)
 	"S_PLAY_SIGN",
+
+	// NiGHTS character (uses player sprite)
+	"S_PLAY_NIGHTS_TRANS",
+	"S_PLAY_NIGHTS_TRANS2",
+	"S_PLAY_NIGHTS_TRANS3",
+	"S_PLAY_NIGHTS_TRANS4",
+	"S_PLAY_NIGHTS_TRANS5",
+	"S_PLAY_NIGHTS_TRANS6",
+	"S_PLAY_NIGHTS_TRANS7",
+	"S_PLAY_NIGHTS_TRANS8",
+	"S_PLAY_NIGHTS_TRANS9",
+
+	"S_PLAY_NIGHTS_STAND",
+	"S_PLAY_NIGHTS_FLOAT",
+	"S_PLAY_NIGHTS_PAIN",
+	"S_PLAY_NIGHTS_PULL",
+	"S_PLAY_NIGHTS_ATTACK",
+
+	"S_PLAY_NIGHTS_FLY0",
+	"S_PLAY_NIGHTS_DRILL0",
+	"S_PLAY_NIGHTS_FLY1",
+	"S_PLAY_NIGHTS_DRILL1",
+	"S_PLAY_NIGHTS_FLY2",
+	"S_PLAY_NIGHTS_DRILL2",
+	"S_PLAY_NIGHTS_FLY3",
+	"S_PLAY_NIGHTS_DRILL3",
+	"S_PLAY_NIGHTS_FLY4",
+	"S_PLAY_NIGHTS_DRILL4",
+	"S_PLAY_NIGHTS_FLY5",
+	"S_PLAY_NIGHTS_DRILL5",
+	"S_PLAY_NIGHTS_FLY6",
+	"S_PLAY_NIGHTS_DRILL6",
+	"S_PLAY_NIGHTS_FLY7",
+	"S_PLAY_NIGHTS_DRILL7",
+	"S_PLAY_NIGHTS_FLY8",
+	"S_PLAY_NIGHTS_DRILL8",
+	"S_PLAY_NIGHTS_FLY9",
+	"S_PLAY_NIGHTS_DRILL9",
+	"S_PLAY_NIGHTS_FLYA",
+	"S_PLAY_NIGHTS_DRILLA",
+	"S_PLAY_NIGHTS_FLYB",
+	"S_PLAY_NIGHTS_DRILLB",
+	"S_PLAY_NIGHTS_FLYC",
+	"S_PLAY_NIGHTS_DRILLC",
 
 	// Blue Crawla
 	"S_POSS_STND",
@@ -4727,6 +4756,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	// Bubble Source
 	"S_BUBBLES1",
 	"S_BUBBLES2",
+	"S_BUBBLES3",
+	"S_BUBBLES4",
 
 	// Level End Sign
 	"S_SIGN1",
@@ -5525,13 +5556,14 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Bubbles
 	"S_SMALLBUBBLE",
-	"S_SMALLBUBBLE1",
 	"S_MEDIUMBUBBLE",
-	"S_MEDIUMBUBBLE1",
-	"S_LARGEBUBBLE",
+	"S_LARGEBUBBLE1",
+	"S_LARGEBUBBLE2",
 	"S_EXTRALARGEBUBBLE", // breathable
 
 	"S_POP1", // Extra Large bubble goes POP!
+
+	"S_WATERZAP",
 
 	"S_FOG1",
 	"S_FOG2",
@@ -5573,6 +5605,13 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_THREE1",
 	"S_FOUR1",
 	"S_FIVE1",
+
+	"S_ZERO2",
+	"S_ONE2",
+	"S_TWO2",
+	"S_THREE2",
+	"S_FOUR2",
+	"S_FIVE2",
 
 	// Tag Sign
 	"S_TTAG1",
@@ -5806,93 +5845,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_NIGHTSGOAL3",
 	"S_NIGHTSGOAL4",
 
-	"S_NIGHTSFLY1A",
-	"S_NIGHTSFLY1B",
-	"S_NIGHTSDRILL1A",
-	"S_NIGHTSDRILL1B",
-	"S_NIGHTSDRILL1C",
-	"S_NIGHTSDRILL1D",
-	"S_NIGHTSFLY2A",
-	"S_NIGHTSFLY2B",
-	"S_NIGHTSDRILL2A",
-	"S_NIGHTSDRILL2B",
-	"S_NIGHTSDRILL2C",
-	"S_NIGHTSDRILL2D",
-	"S_NIGHTSFLY3A",
-	"S_NIGHTSFLY3B",
-	"S_NIGHTSDRILL3A",
-	"S_NIGHTSDRILL3B",
-	"S_NIGHTSDRILL3C",
-	"S_NIGHTSDRILL3D",
-	"S_NIGHTSFLY4A",
-	"S_NIGHTSFLY4B",
-	"S_NIGHTSDRILL4A",
-	"S_NIGHTSDRILL4B",
-	"S_NIGHTSDRILL4C",
-	"S_NIGHTSDRILL4D",
-	"S_NIGHTSFLY5A",
-	"S_NIGHTSFLY5B",
-	"S_NIGHTSDRILL5A",
-	"S_NIGHTSDRILL5B",
-	"S_NIGHTSDRILL5C",
-	"S_NIGHTSDRILL5D",
-	"S_NIGHTSFLY6A",
-	"S_NIGHTSFLY6B",
-	"S_NIGHTSDRILL6A",
-	"S_NIGHTSDRILL6B",
-	"S_NIGHTSDRILL6C",
-	"S_NIGHTSDRILL6D",
-	"S_NIGHTSFLY7A",
-	"S_NIGHTSFLY7B",
-	"S_NIGHTSDRILL7A",
-	"S_NIGHTSDRILL7B",
-	"S_NIGHTSDRILL7C",
-	"S_NIGHTSDRILL7D",
-	"S_NIGHTSFLY8A",
-	"S_NIGHTSFLY8B",
-	"S_NIGHTSDRILL8A",
-	"S_NIGHTSDRILL8B",
-	"S_NIGHTSDRILL8C",
-	"S_NIGHTSDRILL8D",
-	"S_NIGHTSFLY9A",
-	"S_NIGHTSFLY9B",
-	"S_NIGHTSDRILL9A",
-	"S_NIGHTSDRILL9B",
-	"S_NIGHTSDRILL9C",
-	"S_NIGHTSDRILL9D",
-	"S_NIGHTSHURT1",
-	"S_NIGHTSHURT2",
-	"S_NIGHTSHURT3",
-	"S_NIGHTSHURT4",
-	"S_NIGHTSHURT5",
-	"S_NIGHTSHURT6",
-	"S_NIGHTSHURT7",
-	"S_NIGHTSHURT8",
-	"S_NIGHTSHURT9",
-	"S_NIGHTSHURT10",
-	"S_NIGHTSHURT11",
-	"S_NIGHTSHURT12",
-	"S_NIGHTSHURT13",
-	"S_NIGHTSHURT14",
-	"S_NIGHTSHURT15",
-	"S_NIGHTSHURT16",
-	"S_NIGHTSHURT17",
-	"S_NIGHTSHURT18",
-	"S_NIGHTSHURT19",
-	"S_NIGHTSHURT20",
-	"S_NIGHTSHURT21",
-	"S_NIGHTSHURT22",
-	"S_NIGHTSHURT23",
-	"S_NIGHTSHURT24",
-	"S_NIGHTSHURT25",
-	"S_NIGHTSHURT26",
-	"S_NIGHTSHURT27",
-	"S_NIGHTSHURT28",
-	"S_NIGHTSHURT29",
-	"S_NIGHTSHURT30",
-	"S_NIGHTSHURT31",
-	"S_NIGHTSHURT32",
-
 	"S_NIGHTSPARKLE1",
 	"S_NIGHTSPARKLE2",
 	"S_NIGHTSPARKLE3",
@@ -5988,16 +5940,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	"S_CRUMBLE1",
 	"S_CRUMBLE2",
-
-	"S_SUPERTRANS1",
-	"S_SUPERTRANS2",
-	"S_SUPERTRANS3",
-	"S_SUPERTRANS4",
-	"S_SUPERTRANS5",
-	"S_SUPERTRANS6",
-	"S_SUPERTRANS7",
-	"S_SUPERTRANS8",
-	"S_SUPERTRANS9",
 
 	// Spark
 	"S_SPRK1",
@@ -6495,6 +6437,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_SMALLBUBBLE", // small bubble
 	"MT_MEDIUMBUBBLE", // medium bubble
 	"MT_EXTRALARGEBUBBLE", // extra large bubble
+	"MT_WATERZAP",
 	"MT_TFOG",
 	"MT_SEED",
 	"MT_PARTICLE",
@@ -6567,7 +6510,6 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_AXISTRANSFERLINE",
 	"MT_NIGHTSDRONE",
 	"MT_NIGHTSGOAL",
-	"MT_NIGHTSCHAR",
 	"MT_NIGHTSPARKLE",
 	"MT_NIGHTSLOOPHELPER",
 	"MT_NIGHTSBUMPER", // NiGHTS Bumper
@@ -6768,20 +6710,8 @@ static const char *const PLAYERFLAG_LIST[] = {
 	// Are you gliding?
 	"GLIDING",
 
-	// Tails pickup!
-	"CARRIED",
-
 	// Sliding (usually in water) like Labyrinth/Oil Ocean
 	"SLIDING",
-
-	// Hanging on a rope
-	"ROPEHANG",
-
-	// Hanging on an item of some kind - zipline, chain, etc. (->tracer)
-	"ITEMHANG",
-
-	// On the mace chain spinning around (->tracer)
-	"MACESPIN",
 
 	/*** NIGHTS STUFF ***/
 	// Is the player in NiGHTS mode?
@@ -6859,24 +6789,61 @@ static const char *COLOR_ENUMS[] = {
 	"MAGENTA",   	// SKINCOLOR_MAGENTA
 	"PINK",     	// SKINCOLOR_PINK
 	"ROSY",     	// SKINCOLOR_ROSY
+
 	// Super special awesome Super flashing colors!
-	"SUPER1",   	// SKINCOLOR_SUPER1
-	"SUPER2",   	// SKINCOLOR_SUPER2,
-	"SUPER3",   	// SKINCOLOR_SUPER3,
-	"SUPER4",   	// SKINCOLOR_SUPER4,
-	"SUPER5",   	// SKINCOLOR_SUPER5,
-	// Super Tails
-	"TSUPER1",  	// SKINCOLOR_TSUPER1,
-	"TSUPER2",  	// SKINCOLOR_TSUPER2,
-	"TSUPER3",  	// SKINCOLOR_TSUPER3,
-	"TSUPER4",  	// SKINCOLOR_TSUPER4,
-	"TSUPER5",  	// SKINCOLOR_TSUPER5,
-	// Super Knuckles
-	"KSUPER1",  	// SKINCOLOR_KSUPER1,
-	"KSUPER2",  	// SKINCOLOR_KSUPER2,
-	"KSUPER3",  	// SKINCOLOR_KSUPER3,
-	"KSUPER4",  	// SKINCOLOR_KSUPER4,
-	"KSUPER5"   	// SKINCOLOR_KSUPER5,
+	"SUPERSILVER1", // SKINCOLOR_SUPERSILVER1
+	"SUPERSILVER2", // SKINCOLOR_SUPERSILVER2,
+	"SUPERSILVER3", // SKINCOLOR_SUPERSILVER3,
+	"SUPERSILVER4", // SKINCOLOR_SUPERSILVER4,
+	"SUPERSILVER5", // SKINCOLOR_SUPERSILVER5,
+
+	"SUPERRED1", // SKINCOLOR_SUPERRED1
+	"SUPERRED2", // SKINCOLOR_SUPERRED2,
+	"SUPERRED3", // SKINCOLOR_SUPERRED3,
+	"SUPERRED4", // SKINCOLOR_SUPERRED4,
+	"SUPERRED5", // SKINCOLOR_SUPERRED5,
+
+	"SUPERORANGE1", // SKINCOLOR_SUPERORANGE1
+	"SUPERORANGE2", // SKINCOLOR_SUPERORANGE2,
+	"SUPERORANGE3", // SKINCOLOR_SUPERORANGE3,
+	"SUPERORANGE4", // SKINCOLOR_SUPERORANGE4,
+	"SUPERORANGE5", // SKINCOLOR_SUPERORANGE5,
+
+	"SUPERGOLD1", // SKINCOLOR_SUPERGOLD1
+	"SUPERGOLD2", // SKINCOLOR_SUPERGOLD2,
+	"SUPERGOLD3", // SKINCOLOR_SUPERGOLD3,
+	"SUPERGOLD4", // SKINCOLOR_SUPERGOLD4,
+	"SUPERGOLD5", // SKINCOLOR_SUPERGOLD5,
+
+	"SUPERPERIDOT1", // SKINCOLOR_SUPERPERIDOT1
+	"SUPERPERIDOT2", // SKINCOLOR_SUPERPERIDOT2,
+	"SUPERPERIDOT3", // SKINCOLOR_SUPERPERIDOT3,
+	"SUPERPERIDOT4", // SKINCOLOR_SUPERPERIDOT4,
+	"SUPERPERIDOT5", // SKINCOLOR_SUPERPERIDOT5,
+
+	"SUPERCYAN1", // SKINCOLOR_SUPERCYAN1
+	"SUPERCYAN2", // SKINCOLOR_SUPERCYAN2,
+	"SUPERCYAN3", // SKINCOLOR_SUPERCYAN3,
+	"SUPERCYAN4", // SKINCOLOR_SUPERCYAN4,
+	"SUPERCYAN5", // SKINCOLOR_SUPERCYAN5,
+
+	"SUPERPURPLE1",  	// SKINCOLOR_SUPERPURPLE1,
+	"SUPERPURPLE2",  	// SKINCOLOR_SUPERPURPLE2,
+	"SUPERPURPLE3",  	// SKINCOLOR_SUPERPURPLE3,
+	"SUPERPURPLE4",  	// SKINCOLOR_SUPERPURPLE4,
+	"SUPERPURPLE5",   	// SKINCOLOR_SUPERPURPLE5,
+
+	"SUPERRUST1", // SKINCOLOR_SUPERRUST1
+	"SUPERRUST2", // SKINCOLOR_SUPERRUST2,
+	"SUPERRUST3", // SKINCOLOR_SUPERRUST3,
+	"SUPERRUST4", // SKINCOLOR_SUPERRUST4,
+	"SUPERRUST5", // SKINCOLOR_SUPERRUST5,
+
+	"SUPERTAN1", // SKINCOLOR_SUPERTAN1
+	"SUPERTAN2", // SKINCOLOR_SUPERTAN2,
+	"SUPERTAN3", // SKINCOLOR_SUPERTAN3,
+	"SUPERTAN4", // SKINCOLOR_SUPERTAN4,
+	"SUPERTAN5" // SKINCOLOR_SUPERTAN5,
 };
 
 static const char *const POWERS_LIST[] = {
@@ -6884,6 +6851,7 @@ static const char *const POWERS_LIST[] = {
 	"SNEAKERS",
 	"FLASHING",
 	"SHIELD",
+	"CARRY",
 	"TAILSFLY", // tails flying
 	"UNDERWATER", // underwater timer
 	"SPACETIME", // In space, no one can hear you spin!
@@ -7003,6 +6971,8 @@ struct {
 
 	// Frame settings
 	{"FF_FRAMEMASK",FF_FRAMEMASK},
+	{"FF_SPR2ENDSTATE",FF_SPR2ENDSTATE},
+	{"FF_MIDDLESTARTCHANCE",FF_MIDDLESTARTCHANCE},
 	{"FF_ANIMATE",FF_ANIMATE},
 	{"FF_FULLBRIGHT",FF_FULLBRIGHT},
 	{"FF_TRANSMASK",FF_TRANSMASK},
@@ -7117,6 +7087,14 @@ struct {
 	{"SH_STACK",SH_STACK},
 	{"SH_NOSTACK",SH_NOSTACK},
 
+	// Carrying
+	{"CR_NONE",CR_NONE},
+	{"CR_GENERIC",CR_GENERIC},
+	{"CR_PLAYER",CR_PLAYER},
+	{"CR_ZOOMTUBE",CR_ZOOMTUBE},
+	{"CR_ROPEHANG",CR_ROPEHANG},
+	{"CR_MACESPIN",CR_MACESPIN},
+
 	// Ring weapons (ringweapons_t)
 	// Useful for A_GiveWeapon
 	{"RW_AUTO",RW_AUTO},
@@ -7134,6 +7112,11 @@ struct {
 	{"SF_NOSKID",SF_NOSKID},
 	{"SF_NOSPEEDADJUST",SF_NOSPEEDADJUST},
 	{"SF_RUNONWATER",SF_RUNONWATER},
+	{"SF_NOJUMPSPIN",SF_NOJUMPSPIN},
+	{"SF_NOJUMPDAMAGE",SF_NOJUMPDAMAGE},
+	{"SF_STOMPDAMAGE",SF_STOMPDAMAGE},
+	{"SF_MARIODAMAGE",SF_MARIODAMAGE},
+	{"SF_MACHINE",SF_MACHINE},
 
 	// Character abilities!
 	// Primary
@@ -7152,10 +7135,12 @@ struct {
 	{"CA_AIRDRILL",CA_AIRDRILL},
 	{"CA_JUMPTHOK",CA_JUMPTHOK},
 	{"CA_DASHMODE",CA_DASHMODE},
+	{"CA_TWINSPIN",CA_TWINSPIN},
 	// Secondary
 	{"CA2_NONE",CA2_NONE}, // now slot 0!
 	{"CA2_SPINDASH",CA2_SPINDASH},
 	{"CA2_MULTIABILITY",CA2_MULTIABILITY},
+	{"CA2_MELEE",CA2_MELEE},
 
 	// Sound flags
 	{"SF_TOTALLYSINGLE",SF_TOTALLYSINGLE},
@@ -7205,9 +7190,11 @@ struct {
 	{"PA_PEEL",PA_PEEL},
 	{"PA_PAIN",PA_PAIN},
 	{"PA_ROLL",PA_ROLL},
+	{"PA_JUMP",PA_JUMP},
 	{"PA_SPRING",PA_SPRING},
 	{"PA_FALL",PA_FALL},
 	{"PA_ABILITY",PA_ABILITY},
+	{"PA_ABILITY2",PA_ABILITY2},
 	{"PA_RIDE",PA_RIDE},
 
 	// Current weapon
