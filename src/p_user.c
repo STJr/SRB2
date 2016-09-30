@@ -3952,7 +3952,8 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 		else if (onground || player->climbing || (player->mo->tracer && player->powers[pw_carry]))
 		{}
 		else if ((player->powers[pw_shield] & SH_NOSTACK) == SH_JUMP
-		&& !(player->pflags & PF_JUMPED))
+		&& !(player->pflags & PF_JUMPED)
+		&& !(player->pflags & PF_USEDOWN))
 			P_DoJumpShield(player);
 		else if (!(player->pflags & PF_SLIDING) && ((gametype != GT_CTF) || (!player->gotflag)))
 		{
