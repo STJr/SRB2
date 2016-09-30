@@ -2972,20 +2972,28 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			if (!(target->player->pflags & (PF_NIGHTSMODE|PF_NIGHTSFALL)) && (maptol & TOL_NIGHTS))
 				return false;
 
+#define shieldtype (player->powers[pw_shield] & SH_NOSTACK)
 			switch (damagetype)
 			{
 				case DMG_WATER:
+					if (shieldtype == SH_BUBBLEWRAP
+					|| shieldtype == SH_ELEMENTAL)
+						return false; // Invincible to water damage
+					break;
 				case DMG_FIRE:
-					if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL)
-						return false; // Invincible to water/fire damage
+					if (shieldtype == SH_FLAMEAURA
+					|| shieldtype == SH_ELEMENTAL)
+						return false; // Invincible to fire damage
 					break;
 				case DMG_ELECTRIC:
-					if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT)
+					if (shieldtype == SH_ATTRACT
+					|| shieldtype == SH_THUNDERCOIN)
 						return false; // Invincible to electric damage
 					break;
 				default:
 					break;
 			}
+#undef shieldtype
 		}
 
 		if (player->pflags & PF_NIGHTSMODE) // NiGHTS damage handling

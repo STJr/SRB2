@@ -196,6 +196,7 @@ typedef enum
 	SH_FIREFLOWER = 0x100,
 	// The force shield uses the lower 8 bits to count how many hits are left.
 	SH_FORCE = 0x200,
+	SH_FORCEHP = 0xFF, // to be used as a bitmask only
 
 	SH_STACK = SH_FIREFLOWER,
 	SH_NOSTACK = ~SH_STACK

@@ -6326,9 +6326,9 @@ static boolean P_ShieldLook(mobj_t *thing, shieldtype_t shield)
 		return false;
 	}
 
-	if (shield == SH_FORCE && thing->movecount != (thing->target->player->powers[pw_shield] & 0xFF))
+	if (shield == SH_FORCE && thing->movecount != (thing->target->player->powers[pw_shield] & SH_FORCEHP))
 	{
-		thing->movecount = (thing->target->player->powers[pw_shield] & 0xFF);
+		thing->movecount = (thing->target->player->powers[pw_shield] & SH_FORCEHP);
 		if (thing->movecount < 1)
 		{
 			if (thing->info->painstate)

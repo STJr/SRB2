@@ -1392,7 +1392,7 @@ void P_SpawnShieldOrb(player_t *player)
 	if (player->powers[pw_shield] & SH_FORCE)
 	{
 		//Copy and pasted from P_ShieldLook in p_mobj.c
-		shieldobj->movecount = (player->powers[pw_shield] & 0xFF);
+		shieldobj->movecount = (player->powers[pw_shield] & SH_FORCEHP);
 		if (shieldobj->movecount < 1)
 		{
 			if (shieldobj->info->painstate)
@@ -6950,7 +6950,7 @@ static void P_MovePlayer(player_t *player)
 #endif
 						dashangle += ANGLE_180;
 						P_ResetPlayer(player);
-						player->homing = 2 + ((player->powers[pw_shield] & SH_NOSTACK) - SH_FORCE); // might get ridiculous with 256 hitpoints, don't you think?
+						player->homing = 2 + (player->powers[pw_shield] & SH_FORCEHP); // might get ridiculous with 256 hitpoints, don't you think?
 						S_StartSound(player->mo, sfx_s3k47);
 						P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
 						player->pflags |= PF_SPINNING|PF_THOKKED|PF_SHIELDABILITY;
