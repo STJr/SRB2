@@ -1403,6 +1403,15 @@ void P_SpawnShieldOrb(player_t *player)
 	}
 }
 
+//
+// P_SwitchShield
+//
+// Handles the possibility of switching
+// between shields thoroughly, then
+// adds the desired one.
+//
+// Not for use if shieldtype would be SH_FORCE.
+//
 void P_SwitchShield(player_t *player, UINT16 shieldtype)
 {
 	if ((player->powers[pw_shield] & SH_NOSTACK) != shieldtype)
