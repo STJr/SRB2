@@ -7013,6 +7013,7 @@ static void P_MovePlayer(player_t *player)
 		if (player->homing == 0)
 		{
 			P_ResetPlayer(player);
+			player->pflags |= PF_THOKKED; // silly silly
 			player->mo->momx >>= 3;
 			player->mo->momy >>= 3;
 		}
