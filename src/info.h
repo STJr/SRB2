@@ -1824,6 +1824,7 @@ typedef enum state
 	S_ELEMENTAL_GOLDBOX,
 	S_SNEAKERS_GOLDBOX,
 	S_INVULN_GOLDBOX,
+	S_EGGMAN_GOLDBOX,
 	S_GRAVITY_GOLDBOX,
 
 	// Team Ring Boxes (these are special)
@@ -3164,6 +3165,7 @@ typedef enum mobj_type
 	MT_ELEMENTAL_GOLDBOX,
 	MT_SNEAKERS_GOLDBOX,
 	MT_INVULN_GOLDBOX,
+	MT_EGGMAN_GOLDBOX,
 	MT_GRAVITY_GOLDBOX,
 
 	// Monitor boxes -- special

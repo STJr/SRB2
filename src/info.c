@@ -25,63 +25,360 @@
 #endif
 
 // Hey, moron! If you change this table, don't forget about the sprite enum in info.h and the sprite lights in hw_light.c!
+// For the sake of constant merge conflicts, let's spread this out
 char sprnames[NUMSPRITES + 1][5] =
 {
-	"NULL","UNKN","THOK","PLAY",
+	"NULL", // invisible object
+	"UNKN",
 
-	"POSS","SPOS","FISH","BUZZ","RBUZ","JETB","JETW","JETG","CCOM","DETN",
-	"SKIM","TRET","TURR","SHRP","JJAW","SNLR","VLTR","PNTY","ARCH","CBFS",
-	"SPSH","ESHI","GSNP","MNUS","SSHL","UNID","BBUZ",
+	"THOK", // Thok! mobj
+	"PLAY",
 
-	"JETF","EGGM","EGGN","TNKA","TNKB","SPNK","GOOP","EGGO","PRPL","FAKE",
-	"EGGP","EFIR","EGGQ","EGGR","BRAK","BGOO","BMSL","EGGT","RCKT","ELEC",
-	"TARG","NPLM","MNPL","METL","MSCF","MSCB",
+	// Enemies
+	"POSS",
+	"SPOS",
+	"FISH", // Greenflower Fish
+	"BUZZ", // Buzz (Gold)
+	"RBUZ", // Buzz (Red)
+	"JETB", // Jetty-Syn Bomber
+	"JETW", // Jetty-Syn Water Bomber
+	"JETG", // Jetty-Syn Gunner
+	"CCOM", // Crawla Commander
+	"DETN", // Deton
+	"SKIM", // Skim mine dropper
+	"TRET",
+	"TURR", // Pop-Up Turret
+	"SHRP", // Sharp
+	"JJAW", // Jet Jaw
+	"SNLR", // Snailer
+	"VLTR", // Vulture
+	"PNTY", // Pointy
+	"ARCH", // Robo-Hood
+	"CBFS", // CastleBot FaceStabber (Egg Knight?)
+	"SPSH", // Egg Guard
+	"ESHI", // Egg Shield for Egg Guard
+	"GSNP", // Green Snapper
+	"MNUS", // Minus
+	"SSHL", // Spring Shell
+	"UNID", // Unidus
+	"BBUZ", // AquaBuzz, for Azure Temple
 
-	"RING","TRNG","EMMY","TOKE","RFLG","BFLG","NWNG","EMBM","CEMG","EMER",
+	// Generic Boss Items
+	"JETF", // Boss jet fumes
 
-	"FANS","BBLS","SIGN","STEM","SPIK","SFLM","USPK","STPT","BMNE",
+	// Boss 1 (Greenflower)
+	"EGGM",
 
-	"MSTV","XLTV","TRRI","TBRI","TVRI","TVPI","TVAT","TVFO","TVAR","TVWW",
-	"TVEL","TVSS","TVIV","TV1U","TV1P","TVEG","TVMX","TVMY","TVGV","TVRC",
-	"TV1K","TVTK",
+	// Boss 2 (Techno Hill)
+	"EGGN", // Boss 2
+	"TNKA", // Boss 2 Tank 1
+	"TNKB", // Boss 2 Tank 2
+	"SPNK", // Boss 2 Spigot
+	"GOOP", // Boss 2 Goop
 
-	"MISL","TORP","ENRG","MINE","JBUL","TRLS","CBLL","AROW","CFIR",
+	// Boss 3 (Deep Sea)
+	"EGGO", // Boss 3
+	"PRPL", // Boss 3 Propeller
+	"FAKE", // Boss 3 Fakemobile
 
-	"FWR1","FWR2","FWR3","FWR4","BUS1","BUS2","THZP","ALRM","GARG","SEWE",
-	"DRIP","CRL1","CRL2","CRL3","BCRY","CHAN","FLAM","ESTA","SMCH","BMCH",
-	"SMCE","BMCE","BTBL","STBL","CACT","FLME","DFLM","XMS1","XMS2","XMS3",
-	"BSZ1","BSZ2","BSZ3","BSZ4","BSZ5","BSZ6","BSZ7","BSZ8","STLG","DBAL",
-	"RCRY",
+	// Boss 4 (Castle Eggman)
+	"EGGP",
+	"EFIR", // Boss 4 jet flame
 
-	"ARMA","ARMF","ARMB","WIND","MAGN","ELEM","FORC","PITY","IVSP","SSPK",
-	"GOAL",
+	// Boss 5 (Arid Canyon)
+	"EGGQ",
 
-	"BIRD","BUNY","MOUS","CHIC","COWZ","RBRD",
+	// Boss 6 (Red Volcano)
+	"EGGR",
 
-	"SPRY","SPRR","SPRB","YSPR","RSPR","SSWY","SSWR","SSWB",
+	// Boss 7 (Dark City)
+	"BRAK",
+	"BGOO", // Goop
+	"BMSL",
 
-	"RAIN","SNO1","SPLH","SPLA","SMOK","BUBL","WZAP","TFOG","SEED","PRTL",
+	// Boss 8 (Egg Rock)
+	"EGGT",
 
-	"SCOR","DRWN","TTAG","GFLG",
+	// Cy-Brak-Demon; uses "BRAK" as well, but has some extras
+	"RCKT", // Rockets!
+	"ELEC", // Electricity!
+	"TARG", // Targeting reticules!
+	"NPLM", // Big napalm bombs!
+	"MNPL", // Mini napalm bombs!
 
-	"RRNG","RNGB","RNGR","RNGI","RNGA","RNGE","RNGS","RNGG","PIKB","PIKR",
-	"PIKA","PIKE","PIKS","PIKG","TAUT","TGRE","TSCR",
+	// Metal Sonic
+	"METL",
+	"MSCF",
+	"MSCB",
 
-	"COIN","CPRK","GOOM","BGOM","FFWR","FBLL","SHLL","PUMA","HAMM","KOOP",
-	"BFLM","MAXE","MUS1","MUS2","TOAD","NDRN",
+	// Collectible Items
+	"RING",
+	"TRNG", // Team Rings
+	"EMMY", // emerald test
+	"TOKE", // Special Stage Token
+	"RFLG", // Red CTF Flag
+	"BFLG", // Blue CTF Flag
+	"NWNG", // NiGHTS Wing collectable item.
+	"EMBM", // Emblem
+	"CEMG", // Chaos Emeralds
+	"EMER", // Emerald Hunt
 
-	"SUPE","SUPZ","NDRL","NSPK","NBMP","HOOP","NSCR","NPRU","CAPS","SUPT",
-	"SPRK",
+	// Interactive Objects
+	"FANS",
+	"BBLS", // water bubble source
+	"SIGN", // Level end sign
+	"STEM", // Steam riser
+	"SPIK", // Spike Ball
+	"SFLM", // Spin fire
+	"USPK", // Floor spike
+	"STPT", // Starpost
+	"BMNE", // Big floating mine
 
-	"BOM1","BOM2","BOM3","BOM4",
+	// Monitor Boxes
+	"MSTV", // MiSc TV sprites
+	"XLTV", // eXtra Large TV sprites
 
-	"ROIA","ROIB","ROIC","ROID","ROIE","ROIF","ROIG","ROIH","ROII","ROIJ",
-	"ROIK","ROIL","ROIM","ROIN","ROIO","ROIP",
+	"TRRI", // Red team:  10 RIngs
+	"TBRI", // Blue team: 10 RIngs
 
-	"BBAL","GWLG","GWLR",
+	"TVRI", // 10 RIng
+	"TVPI", // PIty shield
+	"TVAT", // ATtraction shield
+	"TVFO", // FOrce shield
+	"TVAR", // ARmageddon shield
+	"TVWW", // WhirlWind shield
+	"TVEL", // ELemental shield
+	"TVSS", // Super Sneakers
+	"TVIV", // InVincibility
+	"TV1U", // 1Up
+	"TV1P", // 1uP (textless)
+	"TVEG", // EGgman
+	"TVMX", // MiXup
+	"TVMY", // MYstery
+	"TVGV", // GraVity boots
+	"TVRC", // ReCycler
+	"TV1K", // 1,000 points  (1 K)
+	"TVTK", // 10,000 points (Ten K)
 
-	"SRBA","SRBB","SRBC","SRBD","SRBE","SRBF","SRBG","SRBH","SRBI","SRBJ",
-	"SRBK","SRBL","SRBM","SRBN","SRBO",
+	// Projectiles
+	"MISL",
+	"TORP", // Torpedo
+	"ENRG", // Energy ball
+	"MINE", // Skim mine
+	"JBUL", // Jetty-Syn Bullet
+	"TRLS",
+	"CBLL", // Cannonball
+	"AROW", // Arrow
+	"CFIR", // Colored fire of various sorts
+
+	// Greenflower Scenery
+	"FWR1",
+	"FWR2", // GFZ Sunflower
+	"FWR3", // GFZ budding flower
+	"FWR4",
+	"BUS1", // GFZ Bush w/ berries
+	"BUS2", // GFZ Bush w/o berries
+
+	// Techno Hill Scenery
+	"THZP", // Techno Hill Zone Plant
+	"ALRM", // THZ2 Alarm
+
+	// Deep Sea Scenery
+	"GARG", // Deep Sea Gargoyle
+	"SEWE", // Deep Sea Seaweed
+	"DRIP", // Dripping water
+	"CRL1", // Coral 1
+	"CRL2", // Coral 2
+	"CRL3", // Coral 3
+	"BCRY", // Blue Crystal
+
+	// Castle Eggman Scenery
+	"CHAN", // CEZ Chain
+	"FLAM", // Flame
+	"ESTA", // Eggman esta una estatua!
+	"SMCH", // Small Mace Chain
+	"BMCH", // Big Mace Chain
+	"SMCE", // Small Mace
+	"BMCE", // Big Mace
+
+	// Arid Canyon Scenery
+	"BTBL", // Big tumbleweed
+	"STBL", // Small tumbleweed
+	"CACT", // Cacti sprites
+
+	// Red Volcano Scenery
+	"FLME", // Flame jet
+	"DFLM", // Blade's flame
+
+	// Dark City Scenery
+
+	// Egg Rock Scenery
+
+	// Christmas Scenery
+	"XMS1",
+	"XMS2",
+	"XMS3",
+
+	// Botanic Serenity Scenery
+	"BSZ1", // Tall flowers
+	"BSZ2", // Medium flowers
+	"BSZ3", // Small flowers
+	"BSZ4", // Tulip
+	"BSZ5", // Cluster of Tulips
+	"BSZ6", // Bush
+	"BSZ7", // Vine
+	"BSZ8", // Misc things
+
+	// Misc Scenery
+	"STLG", // Stalagmites
+	"DBAL", // Disco
+	"RCRY", // ATZ Red Crystal (Target)
+
+	// Powerup Indicators
+	"ARMA", // Armageddon Shield Orb
+	"ARMF", // Armageddon Shield Ring, Front
+	"ARMB", // Armageddon Shield Ring, Back
+	"WIND", // Whirlwind Shield Orb
+	"MAGN", // Attract Shield Orb
+	"ELEM", // Elemental Shield Orb and Fire
+	"FORC", // Force Shield Orb
+	"PITY", // Pity Shield Orb
+	"IVSP", // invincibility sparkles
+	"SSPK", // Super Sonic Spark
+
+	"GOAL", // Special Stage goal (here because lol NiGHTS)
+
+	// Freed Animals
+	"BIRD", // Birdie freed!
+	"BUNY", // Bunny freed!
+	"MOUS", // Mouse
+	"CHIC", // Chicken
+	"COWZ", // Cow
+	"RBRD", // Red Birdie in Bubble
+
+	// Springs
+	"SPRY", // yellow spring
+	"SPRR", // red spring
+	"SPRB", // Blue springs
+	"YSPR", // Yellow Diagonal Spring
+	"RSPR", // Red Diagonal Spring
+	"SSWY", // Yellow Side Spring
+	"SSWR", // Red Side Spring
+	"SSWB", // Blue Side Spring
+
+	// Environmental Effects
+	"RAIN", // Rain
+	"SNO1", // Snowflake
+	"SPLH", // Water Splish
+	"SPLA", // Water Splash
+	"SMOK",
+	"BUBL", // Bubble
+	"WZAP",
+	"TFOG", // Teleport Fog
+	"SEED", // Sonic CD flower seed
+	"PRTL", // Particle (for fans, etc.)
+
+	// Game Indicators
+	"SCOR", // Score logo
+	"DRWN", // Drowning Timer
+	"TTAG", // Tag Sign
+	"GFLG", // Got Flag sign
+
+	// Ring Weapons
+	"RRNG", // Red Ring
+	"RNGB", // Bounce Ring
+	"RNGR", // Rail Ring
+	"RNGI", // Infinity Ring
+	"RNGA", // Automatic Ring
+	"RNGE", // Explosion Ring
+	"RNGS", // Scatter Ring
+	"RNGG", // Grenade Ring
+
+	"PIKB", // Bounce Ring Pickup
+	"PIKR", // Rail Ring Pickup
+	"PIKA", // Automatic Ring Pickup
+	"PIKE", // Explosion Ring Pickup
+	"PIKS", // Scatter Ring Pickup
+	"PIKG", // Grenade Ring Pickup
+
+	"TAUT", // Thrown Automatic Ring
+	"TGRE", // Thrown Grenade Ring
+	"TSCR", // Thrown Scatter Ring
+
+	// Mario-specific stuff
+	"COIN",
+	"CPRK",
+	"GOOM",
+	"BGOM",
+	"FFWR",
+	"FBLL",
+	"SHLL",
+	"PUMA",
+	"HAMM",
+	"KOOP",
+	"BFLM",
+	"MAXE",
+	"MUS1",
+	"MUS2",
+	"TOAD",
+
+	// NiGHTS Stuff
+	"NDRN", // NiGHTS drone
+	"NSPK", // NiGHTS sparkle
+	"NBMP", // NiGHTS Bumper
+	"HOOP", // NiGHTS hoop sprite
+	"NSCR", // NiGHTS score sprite
+	"NPRU", // Nights Powerups
+	"CAPS", // Capsule thingy for NiGHTS
+
+	// Debris
+	"SPRK", // spark
+	"BOM1", // Robot Explosion
+	"BOM2", // Boss Explosion 1
+	"BOM3", // Boss Explosion 2
+	"BOM4", // Underwater Explosion
+
+	// Crumbly rocks
+	"ROIA",
+	"ROIB",
+	"ROIC",
+	"ROID",
+	"ROIE",
+	"ROIF",
+	"ROIG",
+	"ROIH",
+	"ROII",
+	"ROIJ",
+	"ROIK",
+	"ROIL",
+	"ROIM",
+	"ROIN",
+	"ROIO",
+	"ROIP",
+
+	// Blue Spheres
+	"BBAL",
+
+	// Gravity Well Objects
+	"GWLG",
+	"GWLR",
+
+	// SRB1 Sprites
+	"SRBA",
+	"SRBB",
+	"SRBC",
+	"SRBD",
+	"SRBE",
+	"SRBF",
+	"SRBG",
+	"SRBH",
+	"SRBI",
+	"SRBJ",
+	"SRBK",
+	"SRBL",
+	"SRBM",
+	"SRBN",
+	"SRBO",
 };
 
 char spr2names[NUMPLAYERSPRITES][5] =
@@ -1336,6 +1633,7 @@ state_t states[NUMSTATES] =
 	{SPR_TVEL, 1, 2, {A_GoldMonitorSparkle}, 0, 0, S_GOLDBOX_FLICKER}, // S_ELEMENTAL_GOLDBOX
 	{SPR_TVSS, 1, 2, {A_GoldMonitorSparkle}, 0, 0, S_GOLDBOX_FLICKER}, // S_SNEAKERS_GOLDBOX
 	{SPR_TVIV, 1, 2, {A_GoldMonitorSparkle}, 0, 0, S_GOLDBOX_FLICKER}, // S_INVULN_GOLDBOX
+	{SPR_TVEG, 1, 2, {A_GoldMonitorSparkle}, 0, 0, S_GOLDBOX_FLICKER}, // S_EGGMAN_GOLDBOX
 	{SPR_TVGV, 1, 2, {A_GoldMonitorSparkle}, 0, 0, S_GOLDBOX_FLICKER}, // S_GRAVITY_GOLDBOX
 
 	// Team Ring Boxes (these are special)
@@ -6339,6 +6637,33 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // display offset
 		100,            // mass
 		MT_INVULN_ICON, // damage
+		sfx_None,       // activesound
+		MF_SOLID|MF_SHOOTABLE|MF_MONITOR|MF_GRENADEBOUNCE, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_EGGMAN_GOLDBOX
+		440,            // doomednum
+		S_EGGMAN_GOLDBOX, // spawnstate
+		1,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_monton,     // attacksound
+		S_EGGMAN_GOLDBOX, // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_GOLDBOX_OFF1, // deathstate
+		S_NULL,         // xdeathstate
+		sfx_pop,        // deathsound
+		0,              // speed
+		16*FRACUNIT,    // radius
+		36*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		MT_EGGMAN_ICON, // damage
 		sfx_None,       // activesound
 		MF_SOLID|MF_SHOOTABLE|MF_MONITOR|MF_GRENADEBOUNCE, // flags
 		S_NULL          // raisestate
