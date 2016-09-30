@@ -425,9 +425,9 @@ void SCR_DisplayTicRate(void)
 	if (totaltics <= TICRATE/2) ticcntcolor = V_REDMAP;
 	else if (totaltics == TICRATE) ticcntcolor = V_GREENMAP;
 
-	V_DrawString(vid.width-(24*vid.dupx), vid.height-((16-offs)*vid.dupy),
+	V_DrawString(vid.width-((24+(6*offs))*vid.dupx), vid.height-((16-offs)*vid.dupy),
 		V_YELLOWMAP|V_NOSCALESTART, "FPS");
-	V_DrawString(vid.width-((40+(4*offs))*vid.dupx), vid.height-(8*vid.dupy),
+	V_DrawString(vid.width-(40*vid.dupx), vid.height-(8*vid.dupy),
 		ticcntcolor|V_NOSCALESTART, va("%02d/%02u", totaltics, TICRATE));
 
 	lasttic = ontic;
