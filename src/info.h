@@ -315,7 +315,7 @@ typedef enum sprite
 
 	// Interactive Objects
 	SPR_FANS,
-	SPR_BUBL, // water bubble source
+	SPR_BBLS, // water bubble source
 	SPR_SIGN, // Level end sign
 	SPR_STEM, // Steam riser
 	SPR_SPIK, // Spike Ball
@@ -449,6 +449,9 @@ typedef enum sprite
 	SPR_SPRB, // Blue springs
 	SPR_YSPR, // Yellow Diagonal Spring
 	SPR_RSPR, // Red Diagonal Spring
+	SPR_SSWY, // Yellow Side Spring
+	SPR_SSWR, // Red Side Spring
+	SPR_SSWB, // Blue Side Spring
 
 	// Environmental Effects
 	SPR_RAIN, // Rain
@@ -456,11 +459,8 @@ typedef enum sprite
 	SPR_SPLH, // Water Splish
 	SPR_SPLA, // Water Splash
 	SPR_SMOK,
-	SPR_BUBP, // Small bubble
-	SPR_BUBO, // Medium bubble
-	SPR_BUBN, // Large bubble
-	SPR_BUBM, // Extra Large (would you like fries with that?) bubble
-	SPR_POPP, // Extra Large bubble goes POP!
+	SPR_BUBL, // Bubble
+	SPR_WZAP,
 	SPR_TFOG, // Teleport Fog
 	SPR_SEED, // Sonic CD flower seed
 	SPR_PRTL, // Particle (for fans, etc.)
@@ -511,16 +511,12 @@ typedef enum sprite
 
 	// NiGHTS Stuff
 	SPR_NDRN, // NiGHTS drone
-	SPR_SUPE, // NiGHTS character flying
-	SPR_SUPZ, // NiGHTS hurt
-	SPR_NDRL, // NiGHTS character drilling
 	SPR_NSPK, // NiGHTS sparkle
 	SPR_NBMP, // NiGHTS Bumper
 	SPR_HOOP, // NiGHTS hoop sprite
 	SPR_NSCR, // NiGHTS score sprite
 	SPR_NPRU, // Nights Powerups
 	SPR_CAPS, // Capsule thingy for NiGHTS
-	SPR_SUPT, // Super Sonic Transformation (NiGHTS)
 
 	// Debris
 	SPR_SPRK, // spark
@@ -576,17 +572,21 @@ typedef enum sprite
 	NUMSPRITES
 } spritenum_t;
 
+// Make sure to be conscious of FF_FRAMEMASK whenever you change this table.
+// Currently, FF_FRAMEMASK is 0x1ff, or 511 - and NUMSPRITEFREESLOTS is 256.
+// Since this is zero-based, there can be at most 256 different SPR2_'s without changing that.
 enum playersprite
 {
 	SPR2_STND = 0,
 	SPR2_WAIT,
 	SPR2_WALK,
 	SPR2_RUN ,
+	SPR2_PEEL,
 	SPR2_PAIN,
 	SPR2_DEAD,
-	SPR2_DRWN,
+	SPR2_DRWN, // drown
 	SPR2_SPIN,
-	SPR2_DASH,
+	SPR2_DASH, // spindash charge
 	SPR2_GASP,
 	SPR2_JUMP,
 	SPR2_SPNG, // spring
@@ -594,33 +594,78 @@ enum playersprite
 	SPR2_EDGE,
 	SPR2_RIDE,
 
-	SPR2_SIGN,
-	SPR2_LIFE,
+	SPR2_SIGN, // end sign head
+	SPR2_LIFE, // life monitor icon
 
 	SPR2_FLY ,
-	SPR2_TIRE,
+	SPR2_SWIM,
+	SPR2_TIRE, // tired
 
-	SPR2_GLID,
-	SPR2_CLNG,
-	SPR2_CLMB,
+	SPR2_GLID, // glide
+	SPR2_CLNG, // cling
+	SPR2_CLMB, // climb
 
-	SPR2_TRNS,
-	SPR2_SSTD,
-	SPR2_SWLK,
-	SPR2_SRUN,
-	SPR2_SPAN,
-	SPR2_SMSL,
-	SPR2_SDTH,
-	SPR2_SDRN,
-	SPR2_SSPN,
-	SPR2_SGSP,
-	SPR2_SJMP,
-	SPR2_SSPG,
-	SPR2_SFAL,
-	SPR2_SEDG,
-	SPR2_SRID,
-	SPR2_SFLT,
+	SPR2_TWIN, // twinspin
 
+	SPR2_MLEE, // melee
+
+	SPR2_TRNS, // super transformation
+	SPR2_SSTD, // super stand
+	SPR2_SWLK, // super walk
+	SPR2_SRUN, // super run
+	SPR2_SPEE, // super peelout
+	SPR2_SPAN, // super pain
+	SPR2_SSTN, // super stun
+	SPR2_SDTH, // super death
+	SPR2_SDRN, // super drown
+	SPR2_SSPN, // super spin
+	SPR2_SGSP, // super gasp
+	SPR2_SJMP, // super jump
+	SPR2_SSPG, // super spring
+	SPR2_SFAL, // super fall
+	SPR2_SEDG, // super edge
+	SPR2_SRID, // super ride
+	SPR2_SFLT, // super float
+
+	SPR2_NTRN, // NiGHTS transformation
+	SPR2_NSTD, // NiGHTS stand
+	SPR2_NFLT, // NiGHTS float
+	SPR2_NPAN, // NiGHTS pain
+	SPR2_NPUL, // NiGHTS pull
+	SPR2_NATK, // NiGHTS attack
+
+	// NiGHTS flight.
+	SPR2_NGT0,
+	SPR2_NGT1,
+	SPR2_NGT2,
+	SPR2_NGT3,
+	SPR2_NGT4,
+	SPR2_NGT5,
+	SPR2_NGT6,
+	SPR2_NGT7,
+	SPR2_NGT8,
+	SPR2_NGT9,
+	SPR2_NGTA,
+	SPR2_NGTB,
+	SPR2_NGTC,
+
+	// NiGHTS drill.
+	SPR2_DRL0,
+	SPR2_DRL1,
+	SPR2_DRL2,
+	SPR2_DRL3,
+	SPR2_DRL4,
+	SPR2_DRL5,
+	SPR2_DRL6,
+	SPR2_DRL7,
+	SPR2_DRL8,
+	SPR2_DRL9,
+	SPR2_DRLA,
+	SPR2_DRLB,
+	SPR2_DRLC,
+
+	SPR2_FIRSTFREESLOT,
+	SPR2_LASTFREESLOT = SPR2_FIRSTFREESLOT + NUMSPRITEFREESLOTS - 1,
 	NUMPLAYERSPRITES
 };
 
@@ -646,20 +691,22 @@ typedef enum state
 	S_PLAY_WAIT,
 	S_PLAY_WALK,
 	S_PLAY_RUN,
+	S_PLAY_PEEL,
 	S_PLAY_PAIN,
 	S_PLAY_DEAD,
 	S_PLAY_DRWN,
 	S_PLAY_SPIN,
 	S_PLAY_DASH,
 	S_PLAY_GASP,
-	S_PLAY_JUMP, // spin jump (todo: make jump separate from spring up for non-spin chars too?)
+	S_PLAY_JUMP, // spin jump
 	S_PLAY_SPRING,
 	S_PLAY_FALL,
 	S_PLAY_EDGE,
 	S_PLAY_RIDE,
 
-	// CA_FLY
+	// CA_FLY/SWIM
 	S_PLAY_FLY,
+	S_PLAY_SWIM,
 	S_PLAY_FLY_TIRED,
 
 	// CA_GLIDEANDCLIMB
@@ -667,10 +714,18 @@ typedef enum state
 	S_PLAY_CLING,
 	S_PLAY_CLIMB,
 
+	// CA_TWINSPIN
+	S_PLAY_TWINSPIN,
+
+	// CA2_MELEE
+	S_PLAY_MELEE,
+	S_PLAY_MELEE_FINISH,
+
 	// SF_SUPERANIMS
 	S_PLAY_SUPER_STND,
 	S_PLAY_SUPER_WALK,
 	S_PLAY_SUPER_RUN,
+	S_PLAY_SUPER_PEEL,
 	S_PLAY_SUPER_PAIN,
 	S_PLAY_SUPER_STUN,
 	S_PLAY_SUPER_DEAD,
@@ -707,6 +762,50 @@ typedef enum state
 
 	// Level end sign overlay (uses player sprite)
 	S_PLAY_SIGN,
+
+	// NiGHTS character (uses player sprite)
+	S_PLAY_NIGHTS_TRANS,
+	S_PLAY_NIGHTS_TRANS2,
+	S_PLAY_NIGHTS_TRANS3,
+	S_PLAY_NIGHTS_TRANS4,
+	S_PLAY_NIGHTS_TRANS5,
+	S_PLAY_NIGHTS_TRANS6,
+	S_PLAY_NIGHTS_TRANS7,
+	S_PLAY_NIGHTS_TRANS8,
+	S_PLAY_NIGHTS_TRANS9,
+
+	S_PLAY_NIGHTS_STAND,
+	S_PLAY_NIGHTS_FLOAT,
+	S_PLAY_NIGHTS_PAIN,
+	S_PLAY_NIGHTS_PULL,
+	S_PLAY_NIGHTS_ATTACK,
+
+	S_PLAY_NIGHTS_FLY0,
+	S_PLAY_NIGHTS_DRILL0,
+	S_PLAY_NIGHTS_FLY1,
+	S_PLAY_NIGHTS_DRILL1,
+	S_PLAY_NIGHTS_FLY2,
+	S_PLAY_NIGHTS_DRILL2,
+	S_PLAY_NIGHTS_FLY3,
+	S_PLAY_NIGHTS_DRILL3,
+	S_PLAY_NIGHTS_FLY4,
+	S_PLAY_NIGHTS_DRILL4,
+	S_PLAY_NIGHTS_FLY5,
+	S_PLAY_NIGHTS_DRILL5,
+	S_PLAY_NIGHTS_FLY6,
+	S_PLAY_NIGHTS_DRILL6,
+	S_PLAY_NIGHTS_FLY7,
+	S_PLAY_NIGHTS_DRILL7,
+	S_PLAY_NIGHTS_FLY8,
+	S_PLAY_NIGHTS_DRILL8,
+	S_PLAY_NIGHTS_FLY9,
+	S_PLAY_NIGHTS_DRILL9,
+	S_PLAY_NIGHTS_FLYA,
+	S_PLAY_NIGHTS_DRILLA,
+	S_PLAY_NIGHTS_FLYB,
+	S_PLAY_NIGHTS_DRILLB,
+	S_PLAY_NIGHTS_FLYC,
+	S_PLAY_NIGHTS_DRILLC,
 
 	// Blue Crawla
 	S_POSS_STND,
@@ -1558,6 +1657,8 @@ typedef enum state
 	// Bubble Source
 	S_BUBBLES1,
 	S_BUBBLES2,
+	S_BUBBLES3,
+	S_BUBBLES4,
 
 	// Level End Sign
 	S_SIGN1,
@@ -2349,6 +2450,36 @@ typedef enum state
 	S_RDIAG7,
 	S_RDIAG8,
 
+	// Yellow Side Spring
+	S_YHORIZ1,
+	S_YHORIZ2,
+	S_YHORIZ3,
+	S_YHORIZ4,
+	S_YHORIZ5,
+	S_YHORIZ6,
+	S_YHORIZ7,
+	S_YHORIZ8,
+
+	// Red Side Spring
+	S_RHORIZ1,
+	S_RHORIZ2,
+	S_RHORIZ3,
+	S_RHORIZ4,
+	S_RHORIZ5,
+	S_RHORIZ6,
+	S_RHORIZ7,
+	S_RHORIZ8,
+
+	// Blue Side Spring
+	S_BHORIZ1,
+	S_BHORIZ2,
+	S_BHORIZ3,
+	S_BHORIZ4,
+	S_BHORIZ5,
+	S_BHORIZ6,
+	S_BHORIZ7,
+	S_BHORIZ8,
+
 	// Rain
 	S_RAIN1,
 	S_RAINRETURN,
@@ -2383,13 +2514,14 @@ typedef enum state
 
 	// Bubbles
 	S_SMALLBUBBLE,
-	S_SMALLBUBBLE1,
 	S_MEDIUMBUBBLE,
-	S_MEDIUMBUBBLE1,
-	S_LARGEBUBBLE,
+	S_LARGEBUBBLE1,
+	S_LARGEBUBBLE2,
 	S_EXTRALARGEBUBBLE, // breathable
 
 	S_POP1, // Extra Large bubble goes POP!
+
+	S_WATERZAP,
 
 	S_FOG1,
 	S_FOG2,
@@ -2431,6 +2563,13 @@ typedef enum state
 	S_THREE1,
 	S_FOUR1,
 	S_FIVE1,
+
+	S_ZERO2,
+	S_ONE2,
+	S_TWO2,
+	S_THREE2,
+	S_FOUR2,
+	S_FIVE2,
 
 	// Tag Sign
 	S_TTAG1,
@@ -2664,93 +2803,6 @@ typedef enum state
 	S_NIGHTSGOAL3,
 	S_NIGHTSGOAL4,
 
-	S_NIGHTSFLY1A,
-	S_NIGHTSFLY1B,
-	S_NIGHTSDRILL1A,
-	S_NIGHTSDRILL1B,
-	S_NIGHTSDRILL1C,
-	S_NIGHTSDRILL1D,
-	S_NIGHTSFLY2A,
-	S_NIGHTSFLY2B,
-	S_NIGHTSDRILL2A,
-	S_NIGHTSDRILL2B,
-	S_NIGHTSDRILL2C,
-	S_NIGHTSDRILL2D,
-	S_NIGHTSFLY3A,
-	S_NIGHTSFLY3B,
-	S_NIGHTSDRILL3A,
-	S_NIGHTSDRILL3B,
-	S_NIGHTSDRILL3C,
-	S_NIGHTSDRILL3D,
-	S_NIGHTSFLY4A,
-	S_NIGHTSFLY4B,
-	S_NIGHTSDRILL4A,
-	S_NIGHTSDRILL4B,
-	S_NIGHTSDRILL4C,
-	S_NIGHTSDRILL4D,
-	S_NIGHTSFLY5A,
-	S_NIGHTSFLY5B,
-	S_NIGHTSDRILL5A,
-	S_NIGHTSDRILL5B,
-	S_NIGHTSDRILL5C,
-	S_NIGHTSDRILL5D,
-	S_NIGHTSFLY6A,
-	S_NIGHTSFLY6B,
-	S_NIGHTSDRILL6A,
-	S_NIGHTSDRILL6B,
-	S_NIGHTSDRILL6C,
-	S_NIGHTSDRILL6D,
-	S_NIGHTSFLY7A,
-	S_NIGHTSFLY7B,
-	S_NIGHTSDRILL7A,
-	S_NIGHTSDRILL7B,
-	S_NIGHTSDRILL7C,
-	S_NIGHTSDRILL7D,
-	S_NIGHTSFLY8A,
-	S_NIGHTSFLY8B,
-	S_NIGHTSDRILL8A,
-	S_NIGHTSDRILL8B,
-	S_NIGHTSDRILL8C,
-	S_NIGHTSDRILL8D,
-	S_NIGHTSFLY9A,
-	S_NIGHTSFLY9B,
-	S_NIGHTSDRILL9A,
-	S_NIGHTSDRILL9B,
-	S_NIGHTSDRILL9C,
-	S_NIGHTSDRILL9D,
-	S_NIGHTSHURT1,
-	S_NIGHTSHURT2,
-	S_NIGHTSHURT3,
-	S_NIGHTSHURT4,
-	S_NIGHTSHURT5,
-	S_NIGHTSHURT6,
-	S_NIGHTSHURT7,
-	S_NIGHTSHURT8,
-	S_NIGHTSHURT9,
-	S_NIGHTSHURT10,
-	S_NIGHTSHURT11,
-	S_NIGHTSHURT12,
-	S_NIGHTSHURT13,
-	S_NIGHTSHURT14,
-	S_NIGHTSHURT15,
-	S_NIGHTSHURT16,
-	S_NIGHTSHURT17,
-	S_NIGHTSHURT18,
-	S_NIGHTSHURT19,
-	S_NIGHTSHURT20,
-	S_NIGHTSHURT21,
-	S_NIGHTSHURT22,
-	S_NIGHTSHURT23,
-	S_NIGHTSHURT24,
-	S_NIGHTSHURT25,
-	S_NIGHTSHURT26,
-	S_NIGHTSHURT27,
-	S_NIGHTSHURT28,
-	S_NIGHTSHURT29,
-	S_NIGHTSHURT30,
-	S_NIGHTSHURT31,
-	S_NIGHTSHURT32,
-
 	S_NIGHTSPARKLE1,
 	S_NIGHTSPARKLE2,
 	S_NIGHTSPARKLE3,
@@ -2846,16 +2898,6 @@ typedef enum state
 
 	S_CRUMBLE1,
 	S_CRUMBLE2,
-
-	S_SUPERTRANS1,
-	S_SUPERTRANS2,
-	S_SUPERTRANS3,
-	S_SUPERTRANS4,
-	S_SUPERTRANS5,
-	S_SUPERTRANS6,
-	S_SUPERTRANS7,
-	S_SUPERTRANS8,
-	S_SUPERTRANS9,
 
 	// Spark
 	S_SPRK1,
@@ -2994,8 +3036,9 @@ typedef struct
 
 extern state_t states[NUMSTATES];
 extern char sprnames[NUMSPRITES + 1][5];
-char spr2names[NUMPLAYERSPRITES][5];
+extern char spr2names[NUMPLAYERSPRITES][5];
 extern state_t *astate;
+extern enum playersprite free_spr2;
 
 typedef enum mobj_type
 {
@@ -3124,6 +3167,9 @@ typedef enum mobj_type
 	MT_REDSPRING,
 	MT_YELLOWDIAG, // Yellow Diagonal Spring
 	MT_REDDIAG, // Red Diagonal Spring
+	MT_YELLOWHORIZ, // Yellow Side Spring
+	MT_REDHORIZ, // Red Side Spring
+	MT_BLUEHORIZ, // Blue Side Spring
 
 	// Interactive Objects
 	MT_BUBBLES, // Bubble source
@@ -3355,6 +3401,7 @@ typedef enum mobj_type
 	MT_SMALLBUBBLE, // small bubble
 	MT_MEDIUMBUBBLE, // medium bubble
 	MT_EXTRALARGEBUBBLE, // extra large bubble
+	MT_WATERZAP,
 	MT_TFOG,
 	MT_SEED,
 	MT_PARTICLE,
@@ -3427,7 +3474,6 @@ typedef enum mobj_type
 	MT_AXISTRANSFERLINE,
 	MT_NIGHTSDRONE,
 	MT_NIGHTSGOAL,
-	MT_NIGHTSCHAR,
 	MT_NIGHTSPARKLE,
 	MT_NIGHTSLOOPHELPER,
 	MT_NIGHTSBUMPER, // NiGHTS Bumper

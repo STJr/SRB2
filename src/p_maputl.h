@@ -59,7 +59,7 @@ extern fixed_t opentop, openbottom, openrange, lowfloor, highceiling;
 extern pslope_t *opentopslope, *openbottomslope;
 #endif
 
-void P_LineOpening(line_t *plinedef);
+void P_LineOpening(line_t *plinedef, mobj_t *mobj);
 
 boolean P_BlockLinesIterator(INT32 x, INT32 y, boolean(*func)(line_t *));
 boolean P_BlockThingsIterator(INT32 x, INT32 y, boolean(*func)(mobj_t *));

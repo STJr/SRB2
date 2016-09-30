@@ -1188,7 +1188,12 @@ INT32 P_FindSpecialLineFromTag(INT16 special, INT16 tag, INT32 start)
 	{
 		start++;
 
-		while (lines[start].special != special)
+		// This redundant check stops the compiler from complaining about function expansion
+		// elsewhere for some reason and everything is awful
+		if (start >= (INT32)numlines)
+			return -1;
+
+		while (start < (INT32)numlines && lines[start].special != special)
 			start++;
 
 		if (start >= (INT32)numlines)
@@ -1642,7 +1647,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			mo = node->m_thing;
 			if (mo->flags & MF_PUSHABLE)
 				numpush++;
-			node = node->m_snext;
+			node = node->m_thinglist_next;
 		}
 
 		if (triggerline->flags & ML_NOCLIMB) // Need at least or more
@@ -3145,7 +3150,7 @@ void P_SetupSignExit(player_t *player)
 	thinker_t *think;
 	INT32 numfound = 0;
 
-	for (; node; node = node->m_snext)
+	for (; node; node = node->m_thinglist_next)
 	{
 		thing = node->m_thing;
 		if (thing->type != MT_SIGN)
@@ -3309,7 +3314,7 @@ sector_t *P_PlayerTouchingSectorSpecial(player_t *player, INT32 section, INT32 n
 		return rover->master->frontsector;
 	}
 
-	for (node = player->mo->touching_sectorlist; node; node = node->m_snext)
+	for (node = player->mo->touching_sectorlist; node; node = node->m_sectorlist_next)
 	{
 		if (GETSECSPECIAL(node->m_sector->special, section) == number)
 		{
@@ -3884,7 +3889,7 @@ DoneSection2:
 				mobj_t *mo2;
 				angle_t an;
 
-				if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT)
+				if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT && player->powers[pw_carry] == CR_ZOOMTUBE)
 					break;
 
 				// Find line #3 tagged to this sector
@@ -3933,10 +3938,10 @@ DoneSection2:
 					break; // behind back
 
 				P_SetTarget(&player->mo->tracer, waypoint);
+				player->powers[pw_carry] = CR_ZOOMTUBE;
 				player->speed = speed;
 				player->pflags |= PF_SPINNING;
-				player->pflags &= ~PF_JUMPED;
-				player->pflags &= ~PF_GLIDING;
+				player->pflags &= ~(PF_JUMPED|PF_GLIDING|PF_SLIDING|PF_CANCARRY);
 				player->climbing = 0;
 
 				if (player->mo->state-states != S_PLAY_SPIN)
@@ -3957,7 +3962,7 @@ DoneSection2:
 				mobj_t *mo2;
 				angle_t an;
 
-				if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT)
+				if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT && player->powers[pw_carry] == CR_ZOOMTUBE)
 					break;
 
 				// Find line #3 tagged to this sector
@@ -4007,9 +4012,10 @@ DoneSection2:
 					break; // behind back
 
 				P_SetTarget(&player->mo->tracer, waypoint);
+				player->powers[pw_carry] = CR_ZOOMTUBE;
 				player->speed = speed;
 				player->pflags |= PF_SPINNING;
-				player->pflags &= ~PF_JUMPED;
+				player->pflags &= ~(PF_JUMPED|PF_GLIDING|PF_SLIDING|PF_CANCARRY);
 
 				if (player->mo->state-states != S_PLAY_SPIN)
 				{
@@ -4079,7 +4085,7 @@ DoneSection2:
 				vertex_t v1, v2, resulthigh, resultlow;
 				mobj_t *highest = NULL;
 
-				if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT)
+				if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT && player->powers[pw_carry] == CR_ROPEHANG)
 					break;
 
 				if (player->mo->momz > 0)
@@ -4300,6 +4306,7 @@ DoneSection2:
 				}
 
 				P_SetTarget(&player->mo->tracer, closest);
+				player->powers[pw_carry] = CR_ROPEHANG;
 
 				// Option for static ropes.
 				if (lines[lineindex].flags & ML_NOCLIMB)
@@ -4307,13 +4314,9 @@ DoneSection2:
 				else
 					player->speed = speed;
 
-				player->pflags |= PF_ROPEHANG;
-
 				S_StartSound(player->mo, sfx_s3k4a);
 
-				player->pflags &= ~PF_JUMPED;
-				player->pflags &= ~PF_GLIDING;
-				player->pflags &= ~PF_SLIDING;
+				player->pflags &= ~(PF_JUMPED|PF_GLIDING|PF_SLIDING|PF_CANCARRY);
 				player->climbing = 0;
 				P_SetThingPosition(player->mo);
 				P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
@@ -4658,7 +4661,7 @@ void P_PlayerInSpecialSector(player_t *player)
 		P_RunSpecialSectorCheck(player, sector);
 
 	// Iterate through touching_sectorlist
-	for (node = player->mo->touching_sectorlist; node; node = node->m_snext)
+	for (node = player->mo->touching_sectorlist; node; node = node->m_sectorlist_next)
 	{
 		sector = node->m_sector;
 
@@ -5309,7 +5312,7 @@ void T_LaserFlash(laserthink_t *flash)
 	S_StartSound(&sector->soundorg, sfx_laser);
 
 	// Seek out objects to DESTROY! MUAHAHHAHAHAA!!!*cough*
-	for (node = sector->touching_thinglist; node && node->m_thing; node = node->m_snext)
+	for (node = sector->touching_thinglist; node && node->m_thing; node = node->m_thinglist_next)
 	{
 		thing = node->m_thing;
 
@@ -6580,7 +6583,7 @@ void T_Scroll(scroll_t *s)
 					sector_t *psec;
 					psec = sectors + sect;
 
-					for (node = psec->touching_thinglist; node; node = node->m_snext)
+					for (node = psec->touching_thinglist; node; node = node->m_thinglist_next)
 					{
 						thing = node->m_thing;
 
@@ -6602,7 +6605,7 @@ void T_Scroll(scroll_t *s)
 
 			if (!is3dblock)
 			{
-				for (node = sec->touching_thinglist; node; node = node->m_snext)
+				for (node = sec->touching_thinglist; node; node = node->m_thinglist_next)
 				{
 					thing = node->m_thing;
 
@@ -6643,7 +6646,7 @@ void T_Scroll(scroll_t *s)
 					sector_t *psec;
 					psec = sectors + sect;
 
-					for (node = psec->touching_thinglist; node; node = node->m_snext)
+					for (node = psec->touching_thinglist; node; node = node->m_thinglist_next)
 					{
 						thing = node->m_thing;
 
@@ -6665,7 +6668,7 @@ void T_Scroll(scroll_t *s)
 
 			if (!is3dblock)
 			{
-				for (node = sec->touching_thinglist; node; node = node->m_snext)
+				for (node = sec->touching_thinglist; node; node = node->m_thinglist_next)
 				{
 					thing = node->m_thing;
 
@@ -7015,7 +7018,7 @@ void T_Friction(friction_t *f)
 			{
 				if (thing->floorz != P_GetSpecialTopZ(thing, referrer, sec))
 				{
-					node = node->m_snext;
+					node = node->m_thinglist_next;
 					continue;
 				}
 
@@ -7033,7 +7036,7 @@ void T_Friction(friction_t *f)
 				thing->movefactor = f->movefactor;
 			}
 		}
-		node = node->m_snext;
+		node = node->m_thinglist_next;
 	}
 }
 
@@ -7160,7 +7163,7 @@ static inline boolean PIT_PushThing(mobj_t *thing)
 	if (thing->eflags & MFE_PUSHED)
 		return false;
 
-	if (thing->player && thing->player->pflags & PF_ROPEHANG)
+	if (thing->player && thing->player->powers[pw_carry] == CR_ROPEHANG)
 		return false;
 
 	// Allow this to affect pushable objects at some point?
@@ -7373,7 +7376,7 @@ void T_Pusher(pusher_t *p)
 
 	// constant pushers p_wind and p_current
 	node = sec->touching_thinglist; // things touching this sector
-	for (; node; node = node->m_snext)
+	for (; node; node = node->m_thinglist_next)
 	{
 		thing = node->m_thing;
 		if (thing->flags & (MF_NOGRAVITY | MF_NOCLIP)
@@ -7393,7 +7396,7 @@ void T_Pusher(pusher_t *p)
 		if (thing->eflags & MFE_PUSHED)
 			continue;
 
-		if (thing->player && thing->player->pflags & PF_ROPEHANG)
+		if (thing->player && thing->player->powers[pw_carry] == CR_ROPEHANG)
 			continue;
 
 		if (thing->player && (thing->state == &states[thing->info->painstate]) && (thing->player->powers[pw_flashing] > (flashingtics/4)*3 && thing->player->powers[pw_flashing] <= flashingtics))
