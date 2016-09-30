@@ -3058,11 +3058,7 @@ void A_JumpShield(mobj_t *actor)
 
 	player = actor->target->player;
 
-	if ((player->powers[pw_shield] & SH_NOSTACK) != SH_JUMP)
-	{
-		player->powers[pw_shield] = SH_JUMP|(player->powers[pw_shield] & SH_STACK);
-		P_SpawnShieldOrb(player);
-	}
+	P_SwitchShield(player, SH_JUMP);
 
 	S_StartSound(player->mo, actor->info->seesound);
 }
@@ -3090,11 +3086,7 @@ void A_RingShield(mobj_t *actor)
 
 	player = actor->target->player;
 
-	if ((player->powers[pw_shield] & SH_NOSTACK) != SH_ATTRACT)
-	{
-		player->powers[pw_shield] = SH_ATTRACT|(player->powers[pw_shield] & SH_STACK);
-		P_SpawnShieldOrb(player);
-	}
+	P_SwitchShield(player, SH_ATTRACT);
 
 	S_StartSound(player->mo, actor->info->seesound);
 }
@@ -3296,8 +3288,8 @@ void A_BombShield(mobj_t *actor)
 		P_BlackOw(player);
 
 	// Now we know for certain that we don't have a bomb shield, so add one. :3
-	player->powers[pw_shield] = SH_BOMB|(player->powers[pw_shield] & SH_STACK);
-	P_SpawnShieldOrb(player);
+	P_SwitchShield(player, SH_BOMB);
+
 	S_StartSound(player->mo, actor->info->seesound);
 }
 
@@ -3324,11 +3316,7 @@ void A_WaterShield(mobj_t *actor)
 
 	player = actor->target->player;
 
-	if ((player->powers[pw_shield] & SH_NOSTACK) != SH_ELEMENTAL)
-	{
-		player->powers[pw_shield] = SH_ELEMENTAL|(player->powers[pw_shield] & SH_STACK);
-		P_SpawnShieldOrb(player);
-	}
+	P_SwitchShield(player, SH_ELEMENTAL);
 
 	if (player->powers[pw_underwater] && player->powers[pw_underwater] <= 12*TICRATE + 1)
 		P_RestoreMusic(player);
@@ -3366,8 +3354,17 @@ void A_ForceShield(mobj_t *actor)
 
 	player = actor->target->player;
 
+	//can't use P_SwitchShield(player, SH_FORCE) - special case
+
 	if (!(player->powers[pw_shield] & SH_FORCE))
 	{
+		// Just in case.
+		if (player->pflags & PF_SHIELDABILITY)
+		{
+			player->pflags &= ~PF_SHIELDABILITY;
+			player->homing = 0;
+		}
+
 		player->powers[pw_shield] = SH_FORCE|(player->powers[pw_shield] & SH_STACK)|0x01;
 		P_SpawnShieldOrb(player);
 	}
@@ -3404,11 +3401,7 @@ void A_PityShield(mobj_t *actor)
 
 	player = actor->target->player;
 
-	if ((player->powers[pw_shield] & SH_NOSTACK) != SH_PITY)
-	{
-		player->powers[pw_shield] = SH_PITY+(player->powers[pw_shield] & SH_STACK);
-		P_SpawnShieldOrb(player);
-	}
+	P_SwitchShield(player, SH_PITY);
 
 	S_StartSound(player->mo, actor->info->seesound);
 }

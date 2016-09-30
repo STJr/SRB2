@@ -1403,6 +1403,30 @@ void P_SpawnShieldOrb(player_t *player)
 	}
 }
 
+void P_SwitchShield(player_t *player, UINT16 shieldtype)
+{
+	if ((player->powers[pw_shield] & SH_NOSTACK) != shieldtype)
+	{
+		// Just in case.
+		if (player->pflags & PF_SHIELDABILITY)
+		{
+			player->pflags &= ~PF_SPINNING|PF_SHIELDABILITY; // They'll still have PF_THOKKED...
+			player->homing = 0;
+			if (player->powers[pw_shield] & SH_FORCE) // Dash.
+			{
+				P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
+				player->mo->flags &= ~MF_NOGRAVITY;
+				player->pflags &= ~PF_FULLSTASIS;
+				player->mo->momx >>= 3;
+				player->mo->momy >>= 3;
+			}
+		}
+
+		player->powers[pw_shield] = shieldtype|(player->powers[pw_shield] & SH_STACK);
+		P_SpawnShieldOrb(player);
+	}
+}
+
 //
 // P_SpawnGhostMobj
 //
