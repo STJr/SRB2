@@ -222,6 +222,7 @@ typedef enum
 	sfx_lvpass,
 	sfx_mindig,
 	sfx_mixup,
+	sfx_monton,
 	sfx_pogo,
 	sfx_pop,
 	sfx_rail1,

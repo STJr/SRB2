@@ -7658,9 +7658,60 @@ void P_MobjThinker(mobj_t *mobj)
 			mobj_t *flagmo, *newmobj;
 
 #ifdef HAVE_BLUA
-			if (!LUAh_MobjFuse(mobj) && !P_MobjWasRemoved(mobj))
+			if (LUAh_MobjFuse(mobj) || P_MobjWasRemoved(mobj))
+				;
+			else
 #endif
-			switch (mobj->type)
+			if (mobj->info->flags & MF_MONITOR)
+			{
+				// Special case for ALL monitors.
+				// If a box's speed is nonzero, it's allowed to respawn as a WRM/SRM.
+				if (mobj->info->speed != 0 && (mobj->flags & MF_AMBUSH || mobj->flags2 & MF2_STRONGBOX))
+				{
+					mobjtype_t spawnchance[64];
+					INT32 numchoices = 0, i = 0;
+
+// This define should make it a lot easier to organize and change monitor weights
+#define SETMONITORCHANCES(type, strongboxamt, weakboxamt) \
+for (i = ((mobj->flags2 & MF2_STRONGBOX) ? strongboxamt : weakboxamt); i; --i) spawnchance[numchoices++] = type
+
+					//                Type             SRM WRM
+					SETMONITORCHANCES(MT_SNEAKERS_BOX,   0, 10); // Super Sneakers
+					SETMONITORCHANCES(MT_INVULN_BOX,     2,  0); // Invincibility
+					SETMONITORCHANCES(MT_WHIRLWIND_BOX,  3,  8); // Whirlwind Shield
+					SETMONITORCHANCES(MT_ELEMENTAL_BOX,  3,  8); // Elemental Shield
+					SETMONITORCHANCES(MT_ATTRACT_BOX,    2,  0); // Attraction Shield
+					SETMONITORCHANCES(MT_FORCE_BOX,      3,  3); // Force Shield
+					SETMONITORCHANCES(MT_ARMAGEDDON_BOX, 2,  0); // Armageddon Shield
+					SETMONITORCHANCES(MT_MIXUP_BOX,      0,  1); // Teleporters
+					SETMONITORCHANCES(MT_RECYCLER_BOX,   0,  1); // Recycler
+					SETMONITORCHANCES(MT_1UP_BOX,        1,  1); // 1-Up
+					// =======================================
+					//                Total             16  32
+
+#undef SETMONITORCHANCES
+
+					i = P_RandomKey(numchoices); // Gotta love those random numbers!
+					newmobj = P_SpawnMobj(mobj->x, mobj->y, mobj->z, spawnchance[i]);
+
+					// If the monitor respawns randomly, transfer the flag.
+					if (mobj->flags & MF_AMBUSH)
+						newmobj->flags |= MF_AMBUSH;
+
+					// Transfer flags2 (strongbox, objectflip)
+					newmobj->flags2 = mobj->flags2;
+				}
+				else
+				{
+					newmobj = P_SpawnMobj(mobj->x, mobj->y, mobj->z, mobj->type);
+
+					// Transfer flags2 (strongbox, objectflip)
+					newmobj->flags2 = mobj->flags2;
+				}
+				P_RemoveMobj(mobj); // make sure they disappear
+				return;
+			}
+			else switch (mobj->type)
 			{
 				// gargoyle and snowman handled in P_PushableThinker, not here
 				case MT_THROWNGRENADE:
@@ -7719,68 +7770,6 @@ void P_MobjThinker(mobj_t *mobj)
 					}
 					P_RemoveMobj(mobj);
 					return;
-				case MT_YELLOWTV: // Ring shield box
-				case MT_BLUETV: // Force shield box
-				case MT_GREENTV: // Water shield box
-				case MT_BLACKTV: // Bomb shield box
-				case MT_WHITETV: // Jump shield box
-				case MT_SNEAKERTV: // Super Sneaker box
-				case MT_SUPERRINGBOX: // 10-Ring box
-				case MT_REDRINGBOX: // Red Team 10-Ring box
-				case MT_BLUERINGBOX: // Blue Team 10-Ring box
-				case MT_INV: // Invincibility box
-				case MT_MIXUPBOX: // Teleporter Mixup box
-				case MT_RECYCLETV: // Recycler box
-				case MT_SCORETVSMALL:
-				case MT_SCORETVLARGE:
-				case MT_PRUP: // 1up!
-				case MT_EGGMANBOX: // Eggman box
-				case MT_GRAVITYBOX: // Gravity box
-				case MT_QUESTIONBOX:
-					if ((mobj->flags & MF_AMBUSH || mobj->flags2 & MF2_STRONGBOX) && mobj->type != MT_QUESTIONBOX)
-					{
-						mobjtype_t spawnchance[64];
-						INT32 numchoices = 0, i = 0;
-
-// This define should make it a lot easier to organize and change monitor weights
-#define SETMONITORCHANCES(type, strongboxamt, weakboxamt) \
-for (i = ((mobj->flags2 & MF2_STRONGBOX) ? strongboxamt : weakboxamt); i; --i) spawnchance[numchoices++] = type
-
-						//                Type            SRM WRM
-						SETMONITORCHANCES(MT_SNEAKERTV,     0, 10); // Super Sneakers
-						SETMONITORCHANCES(MT_INV,           2,  0); // Invincibility
-						SETMONITORCHANCES(MT_WHITETV,       3,  8); // Whirlwind Shield
-						SETMONITORCHANCES(MT_GREENTV,       3,  8); // Elemental Shield
-						SETMONITORCHANCES(MT_YELLOWTV,      2,  0); // Attraction Shield
-						SETMONITORCHANCES(MT_BLUETV,        3,  3); // Force Shield
-						SETMONITORCHANCES(MT_BLACKTV,       2,  0); // Armageddon Shield
-						SETMONITORCHANCES(MT_MIXUPBOX,      0,  1); // Teleporters
-						SETMONITORCHANCES(MT_RECYCLETV,     0,  1); // Recycler
-						SETMONITORCHANCES(MT_PRUP,          1,  1); // 1-Up
-						// ======================================
-						//                Total            16  32
-
-#undef SETMONITORCHANCES
-
-						i = P_RandomKey(numchoices); // Gotta love those random numbers!
-						newmobj = P_SpawnMobj(mobj->x, mobj->y, mobj->z, spawnchance[i]);
-
-						// If the monitor respawns randomly, transfer the flag.
-						if (mobj->flags & MF_AMBUSH)
-							newmobj->flags |= MF_AMBUSH;
-
-						// Transfer flags2 (strongbox, objectflip)
-						newmobj->flags2 = mobj->flags2;
-					}
-					else
-					{
-						newmobj = P_SpawnMobj(mobj->x, mobj->y, mobj->z, mobj->type);
-
-						// Transfer flags2 (strongbox, objectflip)
-						newmobj->flags2 = mobj->flags2;
-					}
-					P_RemoveMobj(mobj); // make sure they disappear
-					return;
 				case MT_METALSONIC_BATTLE:
 					break; // don't remove
 				case MT_SPIKE:
@@ -7797,6 +7786,7 @@ for (i = ((mobj->flags2 & MF2_STRONGBOX) ? strongboxamt : weakboxamt); i; --i) s
 				default:
 					P_SetMobjState(mobj, mobj->info->xdeathstate); // will remove the mobj if S_NULL.
 					break;
+				// Looking for monitors? They moved to a special condition above.
 			}
 			if (P_MobjWasRemoved(mobj))
 				return;
@@ -9247,36 +9237,37 @@ void P_SpawnMapThing(mapthing_t *mthing)
 		if ((mobjinfo[i].flags & MF_ENEMY) || (mobjinfo[i].flags & MF_BOSS))
 			return;
 
-	// Set powerup boxes to user settings for competition.
-	if (gametype == GT_COMPETITION)
+	// Altering monitor spawns via cvars
+	// If MF_GRENADEBOUNCE is set in the monitor's info,
+	// skip this step. (Used for gold monitors)
+	// Yeah, this is a dirty hack.
+	if ((mobjinfo[i].flags & (MF_MONITOR|MF_GRENADEBOUNCE)) == MF_MONITOR)
 	{
-		if ((mobjinfo[i].flags & MF_MONITOR) && cv_competitionboxes.value) // not Normal
+		if (gametype == GT_COMPETITION)
 		{
+			// Set powerup boxes to user settings for competition.
 			if (cv_competitionboxes.value == 1) // Random
-				i = MT_QUESTIONBOX;
+				i = MT_MYSTERY_BOX;
 			else if (cv_competitionboxes.value == 2) // Teleports
-				i = MT_MIXUPBOX;
+				i = MT_MIXUP_BOX;
 			else if (cv_competitionboxes.value == 3) // None
 				return; // Don't spawn!
+			// default case: normal
 		}
-	}
-
-	// Set powerup boxes to user settings for other netplay modes
-	else if (gametype != GT_COOP)
-	{
-		if ((mobjinfo[i].flags & MF_MONITOR) && cv_matchboxes.value) // not Normal
+		// Set powerup boxes to user settings for other netplay modes
+		else if (gametype != GT_COOP)
 		{
 			if (cv_matchboxes.value == 1) // Random
-				i = MT_QUESTIONBOX;
-			else if (cv_matchboxes.value == 3) // Don't spawn
-				return;
-			else // cv_matchboxes.value == 2, Non-Random
+				i = MT_MYSTERY_BOX;
+			else if (cv_matchboxes.value == 2) // Non-Random
 			{
-				if (i == MT_QUESTIONBOX)
+				if (i == MT_MYSTERY_BOX)
 					return; // don't spawn in Non-Random
-
 				mthing->options &= ~(MTF_AMBUSH|MTF_OBJECTSPECIAL); // no random respawning!
 			}
+			else if (cv_matchboxes.value == 3) // Don't spawn
+				return;
+			// default case: normal
 		}
 	}
 
@@ -9284,8 +9275,8 @@ void P_SpawnMapThing(mapthing_t *mthing)
 	{
 		if (i == MT_BLUETEAMRING || i == MT_REDTEAMRING)
 			i = MT_RING;
-		else if (i == MT_BLUERINGBOX || i == MT_REDRINGBOX)
-			i = MT_SUPERRINGBOX;
+		else if (i == MT_RING_BLUEBOX || i == MT_RING_REDBOX)
+			i = MT_RING_BOX;
 		else if (i == MT_BLUEFLAG || i == MT_REDFLAG)
 			return; // No flags in non-CTF modes!
 	}
@@ -9312,23 +9303,27 @@ void P_SpawnMapThing(mapthing_t *mthing)
 			return; /// \todo
 
 		// 1UPs -->> Score TVs
-		else if (i == MT_PRUP) // 1UP
+		else if (i == MT_1UP_BOX) // 1UP
 		{
 			// Either or, doesn't matter which.
 			if (mthing->options & (MTF_AMBUSH|MTF_OBJECTSPECIAL))
-				i = MT_SCORETVLARGE; // 10,000
+				i = MT_SCORE10K_BOX; // 10,000
 			else
-				i = MT_SCORETVSMALL; // 1,000
+				i = MT_SCORE1K_BOX; // 1,000
 		}
 	}
 
 	if (ultimatemode)
 	{
-		if (i == MT_PITYTV || i == MT_GREENTV || i == MT_YELLOWTV || i == MT_BLUETV || i == MT_BLACKTV || i == MT_WHITETV)
+		if (i == MT_PITY_BOX || i == MT_ELEMENTAL_BOX || i == MT_ATTRACT_BOX
+		 || i == MT_FORCE_BOX || i == MT_ARMAGEDDON_BOX || i == MT_WHIRLWIND_BOX)
 			return; // No shields in Ultimate mode
 
-		if (i == MT_SUPERRINGBOX && !G_IsSpecialStage(gamemap))
+		if (i == MT_RING_BOX && !G_IsSpecialStage(gamemap))
 			return; // No rings in Ultimate mode (except special stages)
+
+		// Don't include the gold repeating boxes here please.
+		// They're likely facets of the level's design and therefore required to progress.
 	}
 
 	if (i == MT_EMMY && (gametype != GT_COOP || ultimatemode || tokenbits == 30 || tokenlist & (1 << tokenbits++)))
@@ -9751,7 +9746,7 @@ ML_NOCLIMB : Direction not controllable
 	}
 
 	//count 10 ring boxes into the number of rings equation too.
-	if (i == MT_SUPERRINGBOX)
+	if (i == MT_RING_BOX)
 		nummaprings += 10;
 
 	if (i == MT_BIGTUMBLEWEED || i == MT_LITTLETUMBLEWEED)
@@ -9830,16 +9825,11 @@ ML_NOCLIMB : Direction not controllable
 				mobj->flags2 |= MF2_STANDONME;
 			}
 
-			if (mobj->flags & MF_MONITOR)
+			if ((mobj->flags & MF_MONITOR) && mobj->info->speed != 0)
 			{
 				// flag for strong/weak random boxes
-				if (mthing->type == mobjinfo[MT_SUPERRINGBOX].doomednum || mthing->type == mobjinfo[MT_PRUP].doomednum ||
-					mthing->type == mobjinfo[MT_SNEAKERTV].doomednum || mthing->type == mobjinfo[MT_INV].doomednum ||
-					mthing->type == mobjinfo[MT_WHITETV].doomednum || mthing->type == mobjinfo[MT_GREENTV].doomednum ||
-					mthing->type == mobjinfo[MT_YELLOWTV].doomednum || mthing->type == mobjinfo[MT_BLUETV].doomednum ||
-					mthing->type == mobjinfo[MT_BLACKTV].doomednum || mthing->type == mobjinfo[MT_PITYTV].doomednum ||
-					mthing->type == mobjinfo[MT_RECYCLETV].doomednum || mthing->type == mobjinfo[MT_MIXUPBOX].doomednum)
-						mobj->flags |= MF_AMBUSH;
+				// any monitor with nonzero speed is allowed to respawn like this
+				mobj->flags |= MF_AMBUSH;
 			}
 
 			else if (mthing->type != mobjinfo[MT_AXIS].doomednum &&
@@ -9852,14 +9842,12 @@ ML_NOCLIMB : Direction not controllable
 
 		if (mthing->options & MTF_OBJECTSPECIAL)
 		{
-			// flag for strong/weak random boxes
-			if (mthing->type == mobjinfo[MT_SUPERRINGBOX].doomednum || mthing->type == mobjinfo[MT_PRUP].doomednum ||
-				mthing->type == mobjinfo[MT_SNEAKERTV].doomednum || mthing->type == mobjinfo[MT_INV].doomednum ||
-				mthing->type == mobjinfo[MT_WHITETV].doomednum || mthing->type == mobjinfo[MT_GREENTV].doomednum ||
-				mthing->type == mobjinfo[MT_YELLOWTV].doomednum || mthing->type == mobjinfo[MT_BLUETV].doomednum ||
-				mthing->type == mobjinfo[MT_BLACKTV].doomednum || mthing->type == mobjinfo[MT_PITYTV].doomednum ||
-				mthing->type == mobjinfo[MT_RECYCLETV].doomednum || mthing->type == mobjinfo[MT_MIXUPBOX].doomednum)
-					mobj->flags2 |= MF2_STRONGBOX;
+			if ((mobj->flags & MF_MONITOR) && mobj->info->speed != 0)
+			{
+				// flag for strong/weak random boxes
+				// any monitor with nonzero speed is allowed to respawn like this
+				mobj->flags2 |= MF2_STRONGBOX;
+			}
 
 			// Requires you to be in bonus time to activate
 			if (mobj->flags & MF_NIGHTSITEM)
@@ -10848,3 +10836,35 @@ void P_FlashPal(player_t *pl, UINT16 type, UINT16 duration)
 	pl->flashcount = duration;
 	pl->flashpal = type;
 }
+
+//
+// P_SpawnMobjFromMobj
+// Spawns an object with offsets relative to the position of another object.
+// Scale, gravity flip, etc. is taken into account automatically.
+//
+mobj_t *P_SpawnMobjFromMobj(mobj_t *mobj, fixed_t xofs, fixed_t yofs, fixed_t zofs, mobjtype_t type)
+{
+	mobj_t *newmobj;
+
+	xofs = FixedMul(xofs, mobj->scale);
+	yofs = FixedMul(yofs, mobj->scale);
+	zofs = FixedMul(zofs, mobj->scale);
+
+	newmobj = P_SpawnMobj(mobj->x + xofs, mobj->y + yofs, mobj->z + zofs, type);
+	if (!newmobj)
+		return NULL;
+
+	if (mobj->eflags & MFE_VERTICALFLIP)
+	{
+		fixed_t elementheight = FixedMul(newmobj->info->height, mobj->scale);
+
+		newmobj->eflags |= MFE_VERTICALFLIP;
+		newmobj->flags2 |= MF2_OBJECTFLIP;
+		newmobj->z = mobj->z + mobj->height - zofs - elementheight;
+	}
+
+	newmobj->destscale = mobj->destscale;
+	P_SetScale(newmobj, mobj->scale);
+	return newmobj;
+}
+
