@@ -108,6 +108,10 @@ static int player_get(lua_State *L)
 		LUA_PushUserdata(L, &plr->cmd, META_TICCMD);
 	else if (fastcmp(field,"playerstate"))
 		lua_pushinteger(L, plr->playerstate);
+	else if (fastcmp(field,"camerascale"))
+		lua_pushfixed(L, plr->camerascale);
+	else if (fastcmp(field,"shieldscale"))
+		lua_pushfixed(L, plr->shieldscale);
 	else if (fastcmp(field,"viewz"))
 		lua_pushfixed(L, plr->viewz);
 	else if (fastcmp(field,"viewheight"))
@@ -142,8 +146,6 @@ static int player_get(lua_State *L)
 		lua_pushinteger(L, plr->score);
 	else if (fastcmp(field,"dashspeed"))
 		lua_pushfixed(L, plr->dashspeed);
-	else if (fastcmp(field,"dashtime"))
-		lua_pushinteger(L, plr->dashtime);
 	else if (fastcmp(field,"normalspeed"))
 		lua_pushfixed(L, plr->normalspeed);
 	else if (fastcmp(field,"runspeed"))
@@ -174,6 +176,10 @@ static int player_get(lua_State *L)
 		lua_pushfixed(L, plr->maxdash);
 	else if (fastcmp(field,"jumpfactor"))
 		lua_pushfixed(L, plr->jumpfactor);
+	else if (fastcmp(field,"height"))
+		lua_pushfixed(L, plr->height);
+	else if (fastcmp(field,"spinheight"))
+		lua_pushfixed(L, plr->spinheight);
 	else if (fastcmp(field,"lives"))
 		lua_pushinteger(L, plr->lives);
 	else if (fastcmp(field,"continues"))
@@ -202,6 +208,8 @@ static int player_get(lua_State *L)
 		lua_pushinteger(L, plr->exiting);
 	else if (fastcmp(field,"homing"))
 		lua_pushinteger(L, plr->homing);
+	else if (fastcmp(field,"dashmode"))
+		lua_pushinteger(L, plr->dashmode);
 	else if (fastcmp(field,"skidtime"))
 		lua_pushinteger(L, plr->skidtime);
 	else if (fastcmp(field,"cmomx"))
@@ -355,6 +363,10 @@ static int player_set(lua_State *L)
 		return NOSET;
 	else if (fastcmp(field,"playerstate"))
 		plr->playerstate = luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"camerascale"))
+		plr->camerascale = luaL_checkfixed(L, 3);
+	else if (fastcmp(field,"shieldscale"))
+		plr->shieldscale = luaL_checkfixed(L, 3);
 	else if (fastcmp(field,"viewz"))
 		plr->viewz = luaL_checkfixed(L, 3);
 	else if (fastcmp(field,"viewheight"))
@@ -399,8 +411,6 @@ static int player_set(lua_State *L)
 		plr->score = (UINT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"dashspeed"))
 		plr->dashspeed = luaL_checkfixed(L, 3);
-	else if (fastcmp(field,"dashtime"))
-		plr->dashtime = (INT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"normalspeed"))
 		plr->normalspeed = luaL_checkfixed(L, 3);
 	else if (fastcmp(field,"runspeed"))
@@ -431,6 +441,10 @@ static int player_set(lua_State *L)
 		plr->maxdash = (INT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"jumpfactor"))
 		plr->jumpfactor = (INT32)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"height"))
+		plr->height = luaL_checkfixed(L, 3);
+	else if (fastcmp(field,"spinheight"))
+		plr->spinheight = luaL_checkfixed(L, 3);
 	else if (fastcmp(field,"lives"))
 		plr->lives = (SINT8)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"continues"))
@@ -459,6 +473,8 @@ static int player_set(lua_State *L)
 		plr->exiting = (tic_t)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"homing"))
 		plr->homing = (UINT8)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"dashmode"))
+		plr->dashmode = (tic_t)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"skidtime"))
 		plr->skidtime = (tic_t)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"cmomx"))

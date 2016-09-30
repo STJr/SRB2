@@ -147,7 +147,6 @@ static void P_NetArchivePlayers(void)
 
 		WRITEUINT32(save_p, players[i].score);
 		WRITEFIXED(save_p, players[i].dashspeed);
-		WRITEINT32(save_p, players[i].dashtime);
 		WRITESINT8(save_p, players[i].lives);
 		WRITESINT8(save_p, players[i].continues);
 		WRITESINT8(save_p, players[i].xtralife);
@@ -162,6 +161,7 @@ static void P_NetArchivePlayers(void)
 		WRITEINT32(save_p, players[i].deadtimer);
 		WRITEUINT32(save_p, players[i].exiting);
 		WRITEUINT8(save_p, players[i].homing);
+		WRITEUINT32(save_p, players[i].dashmode);
 		WRITEUINT32(save_p, players[i].skidtime);
 
 		////////////////////////////
@@ -259,6 +259,9 @@ static void P_NetArchivePlayers(void)
 		if (flags & AWAYVIEW)
 			WRITEUINT32(save_p, players[i].awayviewmobj->mobjnum);
 
+		WRITEFIXED(save_p, players[i].camerascale);
+		WRITEFIXED(save_p, players[i].shieldscale);
+
 		WRITEUINT8(save_p, players[i].charability);
 		WRITEUINT8(save_p, players[i].charability2);
 		WRITEUINT32(save_p, players[i].charflags);
@@ -274,6 +277,8 @@ static void P_NetArchivePlayers(void)
 		WRITEUINT8(save_p, players[i].accelstart);
 		WRITEUINT8(save_p, players[i].acceleration);
 		WRITEFIXED(save_p, players[i].jumpfactor);
+		WRITEFIXED(save_p, players[i].height);
+		WRITEFIXED(save_p, players[i].spinheight);
 	}
 }
 
@@ -322,7 +327,6 @@ static void P_NetUnArchivePlayers(void)
 
 		players[i].score = READUINT32(save_p);
 		players[i].dashspeed = READFIXED(save_p); // dashing speed
-		players[i].dashtime = READINT32(save_p); // dashing speed
 		players[i].lives = READSINT8(save_p);
 		players[i].continues = READSINT8(save_p); // continues that player has acquired
 		players[i].xtralife = READSINT8(save_p); // Ring Extra Life counter
@@ -337,6 +341,7 @@ static void P_NetUnArchivePlayers(void)
 		players[i].deadtimer = READINT32(save_p); // End game if game over lasts too long
 		players[i].exiting = READUINT32(save_p); // Exitlevel timer
 		players[i].homing = READUINT8(save_p); // Are you homing?
+		players[i].dashmode = READUINT32(save_p); // counter for dashmode ability
 		players[i].skidtime = READUINT32(save_p); // Skid timer
 
 		////////////////////////////
@@ -424,6 +429,9 @@ static void P_NetUnArchivePlayers(void)
 
 		players[i].viewheight = cv_viewheight.value<<FRACBITS;
 
+		players[i].camerascale = READFIXED(save_p);
+		players[i].shieldscale = READFIXED(save_p);
+
 		//SetPlayerSkinByNum(i, players[i].skin);
 		players[i].charability = READUINT8(save_p);
 		players[i].charability2 = READUINT8(save_p);
@@ -440,6 +448,8 @@ static void P_NetUnArchivePlayers(void)
 		players[i].accelstart = READUINT8(save_p);
 		players[i].acceleration = READUINT8(save_p);
 		players[i].jumpfactor = READFIXED(save_p);
+		players[i].height = READFIXED(save_p);
+		players[i].spinheight = READFIXED(save_p);
 	}
 }
 

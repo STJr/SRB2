@@ -1188,7 +1188,12 @@ INT32 P_FindSpecialLineFromTag(INT16 special, INT16 tag, INT32 start)
 	{
 		start++;
 
-		while (lines[start].special != special)
+		// This redundant check stops the compiler from complaining about function expansion
+		// elsewhere for some reason and everything is awful
+		if (start >= (INT32)numlines)
+			return -1;
+
+		while (start < (INT32)numlines && lines[start].special != special)
 			start++;
 
 		if (start >= (INT32)numlines)
@@ -1642,7 +1647,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			mo = node->m_thing;
 			if (mo->flags & MF_PUSHABLE)
 				numpush++;
-			node = node->m_snext;
+			node = node->m_thinglist_next;
 		}
 
 		if (triggerline->flags & ML_NOCLIMB) // Need at least or more
@@ -2435,10 +2440,10 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						if (rover->master->frontsector->tag != line->tag)
 							continue;
 
-						if (mo->z > *rover->topheight)
+						if (mo->z > P_GetSpecialTopZ(mo, sectors + rover->secnum, mo->subsector->sector))
 							continue;
 
-						if (mo->z + mo->height < *rover->bottomheight)
+						if (mo->z + mo->height < P_GetSpecialBottomZ(mo, sectors + rover->secnum, mo->subsector->sector))
 							continue;
 
 						foundit = true;
@@ -3145,7 +3150,7 @@ void P_SetupSignExit(player_t *player)
 	thinker_t *think;
 	INT32 numfound = 0;
 
-	for (; node; node = node->m_snext)
+	for (; node; node = node->m_thinglist_next)
 	{
 		thing = node->m_thing;
 		if (thing->type != MT_SIGN)
@@ -3228,8 +3233,8 @@ boolean P_IsFlagAtBase(mobjtype_t flag)
 				if (GETSECSPECIAL(rover->master->frontsector->special, 4) != specialnum)
 					continue;
 
-				if (mo->z <= *rover->topheight
-					&& mo->z >= *rover->bottomheight)
+				if (mo->z <= P_GetSpecialTopZ(mo, sectors + rover->secnum, mo->subsector->sector)
+					&& mo->z >= P_GetSpecialBottomZ(mo, sectors + rover->secnum, mo->subsector->sector))
 					return true;
 			}
 		}
@@ -3263,11 +3268,16 @@ sector_t *P_PlayerTouchingSectorSpecial(player_t *player, INT32 section, INT32 n
 	// Hmm.. maybe there's a FOF that has it...
 	for (rover = player->mo->subsector->sector->ffloors; rover; rover = rover->next)
 	{
+		fixed_t topheight, bottomheight;
+
 		if (GETSECSPECIAL(rover->master->frontsector->special, section) != number)
 			continue;
 
 		if (!(rover->flags & FF_EXISTS))
 			continue;
+
+		topheight = P_GetSpecialTopZ(player->mo, sectors + rover->secnum, player->mo->subsector->sector);
+		bottomheight = P_GetSpecialBottomZ(player->mo, sectors + rover->secnum, player->mo->subsector->sector);
 
 		// Check the 3D floor's type...
 		if (rover->flags & FF_BLOCKPLAYER)
@@ -3276,27 +3286,27 @@ sector_t *P_PlayerTouchingSectorSpecial(player_t *player, INT32 section, INT32 n
 			if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR)
 				&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING))
 			{
-				if ((player->mo->eflags & MFE_VERTICALFLIP) || player->mo->z != *rover->topheight)
+				if ((player->mo->eflags & MFE_VERTICALFLIP) || player->mo->z != topheight)
 					continue;
 			}
 			else if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING)
 				&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR))
 			{
 				if (!(player->mo->eflags & MFE_VERTICALFLIP)
-					|| player->mo->z + player->mo->height != *rover->bottomheight)
+					|| player->mo->z + player->mo->height != bottomheight)
 					continue;
 			}
 			else if (rover->master->frontsector->flags & SF_FLIPSPECIAL_BOTH)
 			{
-				if (!((player->mo->eflags & MFE_VERTICALFLIP && player->mo->z + player->mo->height == *rover->bottomheight)
-					|| (!(player->mo->eflags & MFE_VERTICALFLIP) && player->mo->z == *rover->topheight)))
+				if (!((player->mo->eflags & MFE_VERTICALFLIP && player->mo->z + player->mo->height == bottomheight)
+					|| (!(player->mo->eflags & MFE_VERTICALFLIP) && player->mo->z == topheight)))
 					continue;
 			}
 		}
 		else
 		{
 			// Water and DEATH FOG!!! heh
-			if (player->mo->z > *rover->topheight || (player->mo->z + player->mo->height) < *rover->bottomheight)
+			if (player->mo->z > topheight || (player->mo->z + player->mo->height) < bottomheight)
 				continue;
 		}
 
@@ -3304,7 +3314,7 @@ sector_t *P_PlayerTouchingSectorSpecial(player_t *player, INT32 section, INT32 n
 		return rover->master->frontsector;
 	}
 
-	for (node = player->mo->touching_sectorlist; node; node = node->m_snext)
+	for (node = player->mo->touching_sectorlist; node; node = node->m_sectorlist_next)
 	{
 		if (GETSECSPECIAL(node->m_sector->special, section) == number)
 		{
@@ -3318,11 +3328,16 @@ sector_t *P_PlayerTouchingSectorSpecial(player_t *player, INT32 section, INT32 n
 		// Hmm.. maybe there's a FOF that has it...
 		for (rover = node->m_sector->ffloors; rover; rover = rover->next)
 		{
+			fixed_t topheight, bottomheight;
+
 			if (GETSECSPECIAL(rover->master->frontsector->special, section) != number)
 				continue;
 
 			if (!(rover->flags & FF_EXISTS))
 				continue;
+
+			topheight = P_GetSpecialTopZ(player->mo, sectors + rover->secnum, player->mo->subsector->sector);
+			bottomheight = P_GetSpecialBottomZ(player->mo, sectors + rover->secnum, player->mo->subsector->sector);
 
 			// Check the 3D floor's type...
 			if (rover->flags & FF_BLOCKPLAYER)
@@ -3331,27 +3346,27 @@ sector_t *P_PlayerTouchingSectorSpecial(player_t *player, INT32 section, INT32 n
 				if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR)
 					&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING))
 				{
-					if ((player->mo->eflags & MFE_VERTICALFLIP) || player->mo->z != *rover->topheight)
+					if ((player->mo->eflags & MFE_VERTICALFLIP) || player->mo->z != topheight)
 						continue;
 				}
 				else if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING)
 					&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR))
 				{
 					if (!(player->mo->eflags & MFE_VERTICALFLIP)
-						|| player->mo->z + player->mo->height != *rover->bottomheight)
+						|| player->mo->z + player->mo->height != bottomheight)
 						continue;
 				}
 				else if (rover->master->frontsector->flags & SF_FLIPSPECIAL_BOTH)
 				{
-					if (!((player->mo->eflags & MFE_VERTICALFLIP && player->mo->z + player->mo->height == *rover->bottomheight)
-						|| (!(player->mo->eflags & MFE_VERTICALFLIP) && player->mo->z == *rover->topheight)))
+					if (!((player->mo->eflags & MFE_VERTICALFLIP && player->mo->z + player->mo->height == bottomheight)
+						|| (!(player->mo->eflags & MFE_VERTICALFLIP) && player->mo->z == topheight)))
 						continue;
 				}
 			}
 			else
 			{
 				// Water and DEATH FOG!!! heh
-				if (player->mo->z > *rover->topheight || (player->mo->z + player->mo->height) < *rover->bottomheight)
+				if (player->mo->z > topheight || (player->mo->z + player->mo->height) < bottomheight)
 					continue;
 			}
 
@@ -3872,7 +3887,7 @@ DoneSection2:
 				mobj_t *mo2;
 				angle_t an;
 
-				if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT)
+				if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT && player->powers[pw_carry] == CR_ZOOMTUBE)
 					break;
 
 				// Find line #3 tagged to this sector
@@ -3921,10 +3936,10 @@ DoneSection2:
 					break; // behind back
 
 				P_SetTarget(&player->mo->tracer, waypoint);
+				player->powers[pw_carry] = CR_ZOOMTUBE;
 				player->speed = speed;
 				player->pflags |= PF_SPINNING;
-				player->pflags &= ~PF_JUMPED;
-				player->pflags &= ~PF_GLIDING;
+				player->pflags &= ~(PF_JUMPED|PF_GLIDING|PF_SLIDING|PF_CANCARRY);
 				player->climbing = 0;
 
 				if (player->mo->state-states != S_PLAY_SPIN)
@@ -3945,7 +3960,7 @@ DoneSection2:
 				mobj_t *mo2;
 				angle_t an;
 
-				if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT)
+				if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT && player->powers[pw_carry] == CR_ZOOMTUBE)
 					break;
 
 				// Find line #3 tagged to this sector
@@ -3995,9 +4010,10 @@ DoneSection2:
 					break; // behind back
 
 				P_SetTarget(&player->mo->tracer, waypoint);
+				player->powers[pw_carry] = CR_ZOOMTUBE;
 				player->speed = speed;
 				player->pflags |= PF_SPINNING;
-				player->pflags &= ~PF_JUMPED;
+				player->pflags &= ~(PF_JUMPED|PF_GLIDING|PF_SLIDING|PF_CANCARRY);
 
 				if (player->mo->state-states != S_PLAY_SPIN)
 				{
@@ -4067,7 +4083,7 @@ DoneSection2:
 				vertex_t v1, v2, resulthigh, resultlow;
 				mobj_t *highest = NULL;
 
-				if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT)
+				if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT && player->powers[pw_carry] == CR_ROPEHANG)
 					break;
 
 				if (player->mo->momz > 0)
@@ -4288,6 +4304,7 @@ DoneSection2:
 				}
 
 				P_SetTarget(&player->mo->tracer, closest);
+				player->powers[pw_carry] = CR_ROPEHANG;
 
 				// Option for static ropes.
 				if (lines[lineindex].flags & ML_NOCLIMB)
@@ -4295,13 +4312,9 @@ DoneSection2:
 				else
 					player->speed = speed;
 
-				player->pflags |= PF_ROPEHANG;
-
 				S_StartSound(player->mo, sfx_s3k4a);
 
-				player->pflags &= ~PF_JUMPED;
-				player->pflags &= ~PF_GLIDING;
-				player->pflags &= ~PF_SLIDING;
+				player->pflags &= ~(PF_JUMPED|PF_GLIDING|PF_SLIDING|PF_CANCARRY);
 				player->climbing = 0;
 				P_SetThingPosition(player->mo);
 				P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
@@ -4334,11 +4347,16 @@ sector_t *P_ThingOnSpecial3DFloor(mobj_t *mo)
 
 	for (rover = sector->ffloors; rover; rover = rover->next)
 	{
+		fixed_t topheight, bottomheight;
+
 		if (!rover->master->frontsector->special)
 			continue;
 
 		if (!(rover->flags & FF_EXISTS))
 			continue;
+
+		topheight = P_GetSpecialTopZ(mo, sectors + rover->secnum, sector);
+		bottomheight = P_GetSpecialBottomZ(mo, sectors + rover->secnum, sector);
 
 		// Check the 3D floor's type...
 		if (((rover->flags & FF_BLOCKPLAYER) && mo->player)
@@ -4348,27 +4366,27 @@ sector_t *P_ThingOnSpecial3DFloor(mobj_t *mo)
 			if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR)
 				&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING))
 			{
-				if ((mo->eflags & MFE_VERTICALFLIP) || mo->z != *rover->topheight)
+				if ((mo->eflags & MFE_VERTICALFLIP) || mo->z != topheight)
 					continue;
 			}
 			else if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING)
 				&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR))
 			{
 				if (!(mo->eflags & MFE_VERTICALFLIP)
-					|| mo->z + mo->height != *rover->bottomheight)
+					|| mo->z + mo->height != bottomheight)
 					continue;
 			}
 			else if (rover->master->frontsector->flags & SF_FLIPSPECIAL_BOTH)
 			{
-				if (!((mo->eflags & MFE_VERTICALFLIP && mo->z + mo->height == *rover->bottomheight)
-					|| (!(mo->eflags & MFE_VERTICALFLIP) && mo->z == *rover->topheight)))
+				if (!((mo->eflags & MFE_VERTICALFLIP && mo->z + mo->height == bottomheight)
+					|| (!(mo->eflags & MFE_VERTICALFLIP) && mo->z == topheight)))
 					continue;
 			}
 		}
 		else
 		{
 			// Water and intangible FOFs
-			if (mo->z > *rover->topheight || (mo->z + mo->height) < *rover->bottomheight)
+			if (mo->z > topheight || (mo->z + mo->height) < bottomheight)
 				continue;
 		}
 
@@ -4390,11 +4408,16 @@ static void P_PlayerOnSpecial3DFloor(player_t *player, sector_t *sector)
 
 	for (rover = sector->ffloors; rover; rover = rover->next)
 	{
+		fixed_t topheight, bottomheight;
+
 		if (!rover->master->frontsector->special)
 			continue;
 
 		if (!(rover->flags & FF_EXISTS))
 			continue;
+
+		topheight = P_GetSpecialTopZ(player->mo, sectors + rover->secnum, sector);
+		bottomheight = P_GetSpecialBottomZ(player->mo, sectors + rover->secnum, sector);
 
 		// Check the 3D floor's type...
 		if (rover->flags & FF_BLOCKPLAYER)
@@ -4403,27 +4426,27 @@ static void P_PlayerOnSpecial3DFloor(player_t *player, sector_t *sector)
 			if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR)
 				&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING))
 			{
-				if ((player->mo->eflags & MFE_VERTICALFLIP) || player->mo->z != P_GetSpecialTopZ(player->mo, sectors + rover->secnum, sector))
+				if ((player->mo->eflags & MFE_VERTICALFLIP) || player->mo->z != topheight)
 					continue;
 			}
 			else if ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING)
 				&& !(rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR))
 			{
 				if (!(player->mo->eflags & MFE_VERTICALFLIP)
-					|| player->mo->z + player->mo->height != P_GetSpecialBottomZ(player->mo, sectors + rover->secnum, sector))
+					|| player->mo->z + player->mo->height != bottomheight)
 					continue;
 			}
 			else if (rover->master->frontsector->flags & SF_FLIPSPECIAL_BOTH)
 			{
-				if (!((player->mo->eflags & MFE_VERTICALFLIP && player->mo->z + player->mo->height == P_GetSpecialBottomZ(player->mo, sectors + rover->secnum, sector))
-					|| (!(player->mo->eflags & MFE_VERTICALFLIP) && player->mo->z == P_GetSpecialTopZ(player->mo, sectors + rover->secnum, sector))))
+				if (!((player->mo->eflags & MFE_VERTICALFLIP && player->mo->z + player->mo->height == bottomheight)
+					|| (!(player->mo->eflags & MFE_VERTICALFLIP) && player->mo->z == topheight)))
 					continue;
 			}
 		}
 		else
 		{
 			// Water and DEATH FOG!!! heh
-			if (player->mo->z > P_GetSpecialTopZ(player->mo, sectors + rover->secnum, sector) || (player->mo->z + player->mo->height) < P_GetSpecialBottomZ(player->mo, sectors + rover->secnum, sector))
+			if (player->mo->z > topheight || (player->mo->z + player->mo->height) < bottomheight)
 				continue;
 		}
 
@@ -4636,7 +4659,7 @@ void P_PlayerInSpecialSector(player_t *player)
 		P_RunSpecialSectorCheck(player, sector);
 
 	// Iterate through touching_sectorlist
-	for (node = player->mo->touching_sectorlist; node; node = node->m_snext)
+	for (node = player->mo->touching_sectorlist; node; node = node->m_sectorlist_next)
 	{
 		sector = node->m_sector;
 
@@ -5275,11 +5298,19 @@ void T_LaserFlash(laserthink_t *flash)
 
 	sourcesec = ffloor->master->frontsector; // Less to type!
 
+#ifdef ESLOPE
+	top = (*ffloor->t_slope) ? P_GetZAt(*ffloor->t_slope, sector->soundorg.x, sector->soundorg.y)
+			: *ffloor->topheight;
+	bottom = (*ffloor->b_slope) ? P_GetZAt(*ffloor->b_slope, sector->soundorg.x, sector->soundorg.y)
+			: *ffloor->bottomheight;
+	sector->soundorg.z = (top + bottom)/2;
+#else
 	sector->soundorg.z = (*ffloor->topheight + *ffloor->bottomheight)/2;
+#endif
 	S_StartSound(&sector->soundorg, sfx_laser);
 
 	// Seek out objects to DESTROY! MUAHAHHAHAHAA!!!*cough*
-	for (node = sector->touching_thinglist; node && node->m_thing; node = node->m_snext)
+	for (node = sector->touching_thinglist; node && node->m_thing; node = node->m_thinglist_next)
 	{
 		thing = node->m_thing;
 
@@ -6550,7 +6581,7 @@ void T_Scroll(scroll_t *s)
 					sector_t *psec;
 					psec = sectors + sect;
 
-					for (node = psec->touching_thinglist; node; node = node->m_snext)
+					for (node = psec->touching_thinglist; node; node = node->m_thinglist_next)
 					{
 						thing = node->m_thing;
 
@@ -6572,7 +6603,7 @@ void T_Scroll(scroll_t *s)
 
 			if (!is3dblock)
 			{
-				for (node = sec->touching_thinglist; node; node = node->m_snext)
+				for (node = sec->touching_thinglist; node; node = node->m_thinglist_next)
 				{
 					thing = node->m_thing;
 
@@ -6613,7 +6644,7 @@ void T_Scroll(scroll_t *s)
 					sector_t *psec;
 					psec = sectors + sect;
 
-					for (node = psec->touching_thinglist; node; node = node->m_snext)
+					for (node = psec->touching_thinglist; node; node = node->m_thinglist_next)
 					{
 						thing = node->m_thing;
 
@@ -6635,7 +6666,7 @@ void T_Scroll(scroll_t *s)
 
 			if (!is3dblock)
 			{
-				for (node = sec->touching_thinglist; node; node = node->m_snext)
+				for (node = sec->touching_thinglist; node; node = node->m_thinglist_next)
 				{
 					thing = node->m_thing;
 
@@ -6874,6 +6905,11 @@ void T_Disappear(disappear_t *d)
 
 					if (!(lines[d->sourceline].flags & ML_NOCLIMB))
 					{
+#ifdef ESLOPE
+						if (*rover->t_slope)
+							sectors[s].soundorg.z = P_GetZAt(*rover->t_slope, sectors[s].soundorg.x, sectors[s].soundorg.y);
+						else
+#endif
 						sectors[s].soundorg.z = *rover->topheight;
 						S_StartSound(&sectors[s].soundorg, sfx_appear);
 					}
@@ -6980,7 +7016,7 @@ void T_Friction(friction_t *f)
 			{
 				if (thing->floorz != P_GetSpecialTopZ(thing, referrer, sec))
 				{
-					node = node->m_snext;
+					node = node->m_thinglist_next;
 					continue;
 				}
 
@@ -6998,7 +7034,7 @@ void T_Friction(friction_t *f)
 				thing->movefactor = f->movefactor;
 			}
 		}
-		node = node->m_snext;
+		node = node->m_thinglist_next;
 	}
 }
 
@@ -7125,7 +7161,7 @@ static inline boolean PIT_PushThing(mobj_t *thing)
 	if (thing->eflags & MFE_PUSHED)
 		return false;
 
-	if (thing->player && thing->player->pflags & PF_ROPEHANG)
+	if (thing->player && thing->player->powers[pw_carry] == CR_ROPEHANG)
 		return false;
 
 	// Allow this to affect pushable objects at some point?
@@ -7338,7 +7374,7 @@ void T_Pusher(pusher_t *p)
 
 	// constant pushers p_wind and p_current
 	node = sec->touching_thinglist; // things touching this sector
-	for (; node; node = node->m_snext)
+	for (; node; node = node->m_thinglist_next)
 	{
 		thing = node->m_thing;
 		if (thing->flags & (MF_NOGRAVITY | MF_NOCLIP)
@@ -7358,7 +7394,7 @@ void T_Pusher(pusher_t *p)
 		if (thing->eflags & MFE_PUSHED)
 			continue;
 
-		if (thing->player && thing->player->pflags & PF_ROPEHANG)
+		if (thing->player && thing->player->powers[pw_carry] == CR_ROPEHANG)
 			continue;
 
 		if (thing->player && (thing->state == &states[thing->info->painstate]) && (thing->player->powers[pw_flashing] > (flashingtics/4)*3 && thing->player->powers[pw_flashing] <= flashingtics))

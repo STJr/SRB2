@@ -294,6 +294,9 @@
     <ClInclude Include="..\md5.h">
       <Filter>M_Misc</Filter>
     </ClInclude>
+    <ClInclude Include="..\m_aatree.h">
+      <Filter>M_Misc</Filter>
+    </ClInclude>
     <ClInclude Include="..\m_anigif.h">
       <Filter>M_Misc</Filter>
     </ClInclude>
@@ -664,6 +667,9 @@
       <Filter>LUA</Filter>
     </ClCompile>
     <ClCompile Include="..\md5.c">
+      <Filter>M_Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\m_aatree.c">
       <Filter>M_Misc</Filter>
     </ClCompile>
     <ClCompile Include="..\m_anigif.c">

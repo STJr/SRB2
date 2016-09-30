@@ -69,7 +69,7 @@ boolean LUAh_MobjDeath(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 
 #define LUAh_MobjRemoved(mo) LUAh_MobjHook(mo, hook_MobjRemoved) // Hook for P_RemoveMobj by mobj type
 #define LUAh_JumpSpecial(player) LUAh_PlayerHook(player, hook_JumpSpecial) // Hook for P_DoJumpStuff (Any-jumping)
 #define LUAh_AbilitySpecial(player) LUAh_PlayerHook(player, hook_AbilitySpecial) // Hook for P_DoJumpStuff (Double-jumping)
-#define LUAh_SpinSpecial(player) LUAh_PlayerHook(player, hook_SpinSpecial) // Hook for P_DoSpinDash (Spin button effect)
+#define LUAh_SpinSpecial(player) LUAh_PlayerHook(player, hook_SpinSpecial) // Hook for P_DoSpinAbility (Spin button effect)
 #define LUAh_JumpSpinSpecial(player) LUAh_PlayerHook(player, hook_JumpSpinSpecial) // Hook for P_DoJumpStuff (Spin button effect (mid-air))
 boolean LUAh_BotTiccmd(player_t *bot, ticcmd_t *cmd); // Hook for B_BuildTiccmd
 boolean LUAh_BotAI(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd); // Hook for B_BuildTailsTiccmd by skin name

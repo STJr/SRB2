@@ -56,7 +56,9 @@
 //#define NONET
 #endif
 
-#ifndef NONET
+#ifdef NONET
+#undef HAVE_MINIUPNPC
+#else
 #ifdef USE_WINSOCK1
 #include <winsock.h>
 #elif !defined (SCOUW2) && !defined (SCOUW7) && !defined (__OS2__)
@@ -466,7 +468,7 @@ static boolean SOCK_cmpaddr(mysockaddr_t *a, mysockaddr_t *b, UINT8 mask)
 	UINT32 bitmask = INADDR_NONE;
 
 	if (mask && mask < 32)
-		bitmask = htonl(-1 << (32 - mask));
+		bitmask = htonl((UINT32)(-1) << (32 - mask));
 
 	if (b->any.sa_family == AF_INET)
 		return (a->ip4.sin_addr.s_addr & bitmask) == (b->ip4.sin_addr.s_addr & bitmask)

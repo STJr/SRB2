@@ -60,6 +60,7 @@
 #endif
 
 #ifdef _WINDOWS
+#define NONET
 #if !defined (HWRENDER) && !defined (NOHW)
 #define HWRENDER
 #endif
@@ -158,7 +159,7 @@ extern FILE *logstream;
 
 // Does this version require an added patch file?
 // Comment or uncomment this as necessary.
-//#define USE_PATCH_DTA
+#define USE_PATCH_DTA
 
 // Modification options
 // If you want to take advantage of the Master Server's ability to force clients to update
@@ -213,7 +214,7 @@ extern FILE *logstream;
 // it's only for detection of the version the player is using so the MS can alert them of an update.
 // Only set it higher, not lower, obviously.
 // Note that we use this to help keep internal testing in check; this is why v2.1.0 is not version "1".
-#define MODVERSION 20
+#define MODVERSION 21
 
 // =========================================================================
 
@@ -257,32 +258,69 @@ typedef enum
 	SKINCOLOR_MAGENTA,
 	SKINCOLOR_PINK,
 	SKINCOLOR_ROSY,
+	//SKINCOLOR_?
+	//SKINCOLOR_?
 
-	// Careful! MAXSKINCOLORS cannot be greater than 0x20!
+	// Careful! MAXSKINCOLORS cannot be greater than 0x20! Two slots left...
 	MAXSKINCOLORS,
 
 	// Super special awesome Super flashing colors!
-	SKINCOLOR_SUPER1 = MAXSKINCOLORS,
-	SKINCOLOR_SUPER2,
-	SKINCOLOR_SUPER3,
-	SKINCOLOR_SUPER4,
-	SKINCOLOR_SUPER5,
+	SKINCOLOR_SUPERSILVER1 = MAXSKINCOLORS,
+	SKINCOLOR_SUPERSILVER2,
+	SKINCOLOR_SUPERSILVER3,
+	SKINCOLOR_SUPERSILVER4,
+	SKINCOLOR_SUPERSILVER5,
 
-	// Super Tails
-	SKINCOLOR_TSUPER1,
-	SKINCOLOR_TSUPER2,
-	SKINCOLOR_TSUPER3,
-	SKINCOLOR_TSUPER4,
-	SKINCOLOR_TSUPER5,
+	SKINCOLOR_SUPERRED1,
+	SKINCOLOR_SUPERRED2,
+	SKINCOLOR_SUPERRED3,
+	SKINCOLOR_SUPERRED4,
+	SKINCOLOR_SUPERRED5,
 
-	// Super Knuckles
-	SKINCOLOR_KSUPER1,
-	SKINCOLOR_KSUPER2,
-	SKINCOLOR_KSUPER3,
-	SKINCOLOR_KSUPER4,
-	SKINCOLOR_KSUPER5,
+	SKINCOLOR_SUPERORANGE1,
+	SKINCOLOR_SUPERORANGE2,
+	SKINCOLOR_SUPERORANGE3,
+	SKINCOLOR_SUPERORANGE4,
+	SKINCOLOR_SUPERORANGE5,
 
-	MAXTRANSLATIONS
+	SKINCOLOR_SUPERGOLD1,
+	SKINCOLOR_SUPERGOLD2,
+	SKINCOLOR_SUPERGOLD3,
+	SKINCOLOR_SUPERGOLD4,
+	SKINCOLOR_SUPERGOLD5,
+
+	SKINCOLOR_SUPERPERIDOT1,
+	SKINCOLOR_SUPERPERIDOT2,
+	SKINCOLOR_SUPERPERIDOT3,
+	SKINCOLOR_SUPERPERIDOT4,
+	SKINCOLOR_SUPERPERIDOT5,
+
+	SKINCOLOR_SUPERCYAN1,
+	SKINCOLOR_SUPERCYAN2,
+	SKINCOLOR_SUPERCYAN3,
+	SKINCOLOR_SUPERCYAN4,
+	SKINCOLOR_SUPERCYAN5,
+
+	SKINCOLOR_SUPERPURPLE1,
+	SKINCOLOR_SUPERPURPLE2,
+	SKINCOLOR_SUPERPURPLE3,
+	SKINCOLOR_SUPERPURPLE4,
+	SKINCOLOR_SUPERPURPLE5,
+
+	SKINCOLOR_SUPERRUST1,
+	SKINCOLOR_SUPERRUST2,
+	SKINCOLOR_SUPERRUST3,
+	SKINCOLOR_SUPERRUST4,
+	SKINCOLOR_SUPERRUST5,
+
+	SKINCOLOR_SUPERTAN1,
+	SKINCOLOR_SUPERTAN2,
+	SKINCOLOR_SUPERTAN3,
+	SKINCOLOR_SUPERTAN4,
+	SKINCOLOR_SUPERTAN5,
+
+	MAXTRANSLATIONS,
+	NUMSUPERCOLORS = ((MAXTRANSLATIONS - MAXSKINCOLORS)/5)
 } skincolors_t;
 
 // State updates, number of tics / second.
@@ -434,6 +472,12 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 
 /// Kalaron/Eternity Engine slope code (SRB2CB ported)
 #define ESLOPE
+
+#ifdef ESLOPE
+/// Backwards compatibility with SRB2CB's slope linedef types.
+///	\note	A simple shim that prints a warning.
+#define ESLOPE_TYPESHIM
+#endif
 
 ///	Delete file while the game is running.
 ///	\note	EXTREMELY buggy, tends to crash game.

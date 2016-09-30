@@ -270,6 +270,7 @@ static int boolK (FuncState *fs, int b) {
 
 static int nilK (FuncState *fs) {
   TValue k, v;
+  setbvalue(&v, 0);
   setnilvalue(&v);
   /* cannot use nil as key; instead use table itself to represent nil */
   sethvalue(fs->L, &k, fs->h);

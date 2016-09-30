@@ -166,6 +166,8 @@ typedef struct
 	INT32 skin;
 	// Just in case Lua does something like
 	// modify these at runtime
+	fixed_t camerascale;
+	fixed_t shieldscale;
 	fixed_t normalspeed;
 	fixed_t runspeed;
 	UINT8 thrustfactor;
@@ -181,6 +183,8 @@ typedef struct
 	fixed_t mindash;
 	fixed_t maxdash;
 	fixed_t jumpfactor;
+	fixed_t playerheight;
+	fixed_t playerspinheight;
 
 	fixed_t speed;
 	UINT8 jumping;
@@ -191,6 +195,7 @@ typedef struct
 	INT32 deadtimer;
 	tic_t exiting;
 	UINT8 homing;
+	tic_t dashmode;
 	tic_t skidtime;
 	fixed_t cmomx;
 	fixed_t cmomy;
@@ -209,7 +214,6 @@ typedef struct
 
 	INT32 maxlink;
 	fixed_t dashspeed;
-	INT32 dashtime;
 	angle_t angle_pos;
 	angle_t old_angle_pos;
 	tic_t bumpertime;

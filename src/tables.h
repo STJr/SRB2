@@ -82,7 +82,7 @@ typedef UINT32 angle_t;
 extern angle_t tantoangle[SLOPERANGE+1];
 
 // Utility function, called by R_PointToAngle.
-unsigned SlopeDiv(unsigned num, unsigned den);
+FUNCMATH unsigned SlopeDiv(unsigned num, unsigned den);
 
 // 360 - angle_t(ANGLE_45) = ANGLE_315
 FUNCMATH FUNCINLINE static ATTRINLINE angle_t InvAngle(angle_t a)
