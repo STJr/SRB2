@@ -867,6 +867,8 @@ void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor)
 // Useful when you want to kill everything the player is doing.
 void P_ResetPlayer(player_t *player)
 {
+	pflags_t removelist = (PF_SPINNING|PF_STARTDASH|PF_JUMPED|PF_GLIDING|PF_THOKKED|PF_CANCARRY|PF_SHIELDABILITY);
+
 	if (player->mo
 	&& player->powers[pw_shield] & SH_FORCE // Dash.
 	&& player->pflags & PF_SHIELDABILITY)
@@ -874,9 +876,10 @@ void P_ResetPlayer(player_t *player)
 		P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
 		player->mo->flags &= ~MF_NOGRAVITY;
 		player->pflags &= ~PF_FULLSTASIS;
+		removelist &= ~PF_THOKKED;
 	}
 
-	player->pflags &= ~(PF_SPINNING|PF_STARTDASH|PF_JUMPED|PF_GLIDING|PF_THOKKED|PF_CANCARRY|PF_SHIELDABILITY);
+	player->pflags &= ~removelist;
 	player->powers[pw_carry] = CR_NONE;
 	player->jumping = 0;
 	player->secondjump = 0;
