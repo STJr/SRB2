@@ -4918,6 +4918,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_ELEMENTAL_GOLDBOX",
 	"S_SNEAKERS_GOLDBOX",
 	"S_INVULN_GOLDBOX",
+	"S_EGGMAN_GOLDBOX",
 	"S_GRAVITY_GOLDBOX",
 
 	// Team Ring Boxes (these are special)
@@ -6237,6 +6238,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_ELEMENTAL_GOLDBOX",
 	"MT_SNEAKERS_GOLDBOX",
 	"MT_INVULN_GOLDBOX",
+	"MT_EGGMAN_GOLDBOX",
 	"MT_GRAVITY_GOLDBOX",
 
 	// Monitor boxes -- special
