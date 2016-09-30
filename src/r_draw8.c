@@ -1363,7 +1363,19 @@ void R_DrawColumnShadowed_8(void)
 
 		height = dc_lightlist[i].height >> LIGHTSCALESHIFT;
 		if (solid)
+		{
 			bheight = dc_lightlist[i].botheight >> LIGHTSCALESHIFT;
+			if (bheight < height)
+			{
+				// confounded slopes sometimes allow partial invertedness,
+				// even including cases where the top and bottom heights
+				// should actually be the same!
+				// swap the height values as a workaround for this quirk
+				INT32 temp = height;
+				height = bheight;
+				bheight = temp;
+			}
+		}
 		if (height <= dc_yl)
 		{
 			dc_colormap = dc_lightlist[i].rcolormap;

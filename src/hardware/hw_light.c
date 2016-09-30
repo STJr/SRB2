@@ -237,7 +237,7 @@ light_t *t_lspr[NUMSPRITES] =
 
 	// Interactive Objects
 	&lspr[NOLIGHT],     // SPR_FANS
-	&lspr[NOLIGHT],     // SPR_BUBL
+	&lspr[NOLIGHT],     // SPR_BBLS
 	&lspr[NOLIGHT],     // SPR_SIGN
 	&lspr[NOLIGHT],     // SPR_STEM
 	&lspr[NOLIGHT],     // SPR_SPIK
@@ -247,27 +247,30 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_BMNE
 
 	// Monitor Boxes
-	&lspr[NOLIGHT],     // SPR_SRBX
-	&lspr[NOLIGHT],     // SPR_RRBX
-	&lspr[NOLIGHT],     // SPR_BRBX
-	&lspr[NOLIGHT],     // SPR_SHTV
-	&lspr[NOLIGHT],     // SPR_PINV
-	&lspr[NOLIGHT],     // SPR_YLTV
-	&lspr[NOLIGHT],     // SPR_BLTV
-	&lspr[NOLIGHT],     // SPR_BKTV
-	&lspr[NOLIGHT],     // SPR_WHTV
-	&lspr[NOLIGHT],     // SPR_GRTV
-	&lspr[NOLIGHT],     // SPR_ELTV
-	&lspr[NOLIGHT],     // SPR_EGGB
-	&lspr[NOLIGHT],     // SPR_MIXU
-	&lspr[NOLIGHT],     // SPR_RECY
-	&lspr[NOLIGHT],     // SPR_QUES
-	&lspr[NOLIGHT],     // SPR_GBTV
-	&lspr[NOLIGHT],     // SPR_PRUP
-	&lspr[NOLIGHT],     // SPR_PTTV
+	&lspr[NOLIGHT],     // SPR_MSTV
+	&lspr[NOLIGHT],     // SPR_XLTV
 
-	// Monitor Miscellany
-	&lspr[NOLIGHT],     // SPR_MTEX
+	&lspr[NOLIGHT],     // SPR_TRRI
+	&lspr[NOLIGHT],     // SPR_TBRI
+
+	&lspr[NOLIGHT],     // SPR_TVRI
+	&lspr[NOLIGHT],     // SPR_TVPI
+	&lspr[NOLIGHT],     // SPR_TVAT
+	&lspr[NOLIGHT],     // SPR_TVFO
+	&lspr[NOLIGHT],     // SPR_TVAR
+	&lspr[NOLIGHT],     // SPR_TVWW
+	&lspr[NOLIGHT],     // SPR_TVEL
+	&lspr[NOLIGHT],     // SPR_TVSS
+	&lspr[NOLIGHT],     // SPR_TVIV
+	&lspr[NOLIGHT],     // SPR_TV1U
+	&lspr[NOLIGHT],     // SPR_TV1P
+	&lspr[NOLIGHT],     // SPR_TVEG
+	&lspr[NOLIGHT],     // SPR_TVMX
+	&lspr[NOLIGHT],     // SPR_TVMY
+	&lspr[NOLIGHT],     // SPR_TVGV
+	&lspr[NOLIGHT],     // SPR_TVRC
+	&lspr[NOLIGHT],     // SPR_TV1K
+	&lspr[NOLIGHT],     // SPR_TVTK
 
 	// Projectiles
 	&lspr[NOLIGHT],     // SPR_MISL
@@ -382,11 +385,8 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_SPLH
 	&lspr[NOLIGHT],     // SPR_SPLA
 	&lspr[NOLIGHT],     // SPR_SMOK
-	&lspr[NOLIGHT],     // SPR_BUBP
-	&lspr[NOLIGHT],     // SPR_BUBO
-	&lspr[NOLIGHT],     // SPR_BUBN
-	&lspr[NOLIGHT],     // SPR_BUBM
-	&lspr[NOLIGHT],     // SPR_POPP
+	&lspr[NOLIGHT],     // SPR_BUBL
+	&lspr[SUPERSPARK_L], // SPR_WZAP
 	&lspr[SUPERSPARK_L], // SPR_TFOG
 	&lspr[NIGHTSLIGHT_L],     // SPR_SEED // Sonic CD flower seed
 	&lspr[NOLIGHT],     // SPR_PRTL
@@ -437,16 +437,12 @@ light_t *t_lspr[NUMSPRITES] =
 
 	// NiGHTS Stuff
 	&lspr[SUPERSONIC_L],     // SPR_NDRN // NiGHTS drone
-	&lspr[SUPERSONIC_L],     // SPR_SUPE // NiGHTS character flying
-	&lspr[SUPERSONIC_L],     // SPR_SUPZ // NiGHTS hurt
-	&lspr[SUPERSONIC_L],     // SPR_NDRL // NiGHTS character drilling
 	&lspr[NOLIGHT],     // SPR_NSPK
 	&lspr[NOLIGHT],     // SPR_NBMP
 	&lspr[NOLIGHT],     // SPR_HOOP
 	&lspr[NOLIGHT],     // SPR_HSCR
 	&lspr[NOLIGHT],     // SPR_NPRU
 	&lspr[NOLIGHT],     // SPR_CAPS
-	&lspr[SUPERSONIC_L], // SPR_SUPT
 
 	// Debris
 	&lspr[RINGSPARK_L],  // SPR_SPRK
