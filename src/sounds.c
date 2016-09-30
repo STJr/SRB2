@@ -159,6 +159,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"lvpass", false,  96,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"mindig", false,   8, 64, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"mixup",   true, 127,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
+  {"monton", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"pogo" ,  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"pop"  ,  false,  78,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"rail1",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},

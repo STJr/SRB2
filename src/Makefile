@@ -189,6 +189,10 @@ ifdef FREEBSD
 UNIXCOMMON=1
 endif
 
+ifdef MACOSX
+UNIXCOMMON=1
+endif
+
 ifdef NDS
 NOPNG=1
 NONET=1
@@ -429,6 +433,7 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/hu_stuff.o \
 		$(OBJDIR)/y_inter.o  \
 		$(OBJDIR)/st_stuff.o \
+		$(OBJDIR)/m_aatree.o \
 		$(OBJDIR)/m_anigif.o \
 		$(OBJDIR)/m_argv.o   \
 		$(OBJDIR)/m_bbox.o   \
@@ -593,10 +598,14 @@ ifndef WINDOWSHELL
 	-$(GZIP) $(GZIP_OPT2) $(BIN)/$(DBGNAME).txt
 endif
 endif
+
+# mac os x lsdlsrb2 does not like objcopy
+ifndef MACOSX
 ifndef PSP
 	$(OBJCOPY) $(BIN)/$(EXENAME) $(BIN)/$(DBGNAME)
 	$(OBJCOPY) --strip-debug $(BIN)/$(EXENAME)
 	-$(OBJCOPY) --add-gnu-debuglink=$(BIN)/$(DBGNAME) $(BIN)/$(EXENAME)
+endif
 endif
 ifndef NOUPX
 	-$(UPX) $(UPX_OPTS) $(BIN)/$(EXENAME)
@@ -744,6 +753,11 @@ $(OBJDIR)/%.o: %.c
 
 $(OBJDIR)/%.o: $(INTERFACE)/%.c
 	$(CC) $(CFLAGS) $(WFLAGS) -c $< -o $@
+
+ifdef MACOSX
+$(OBJDIR)/%.o: sdl/macosx/%.c
+	$(CC) $(CFLAGS) $(WFLAGS) -c $< -o $@
+endif
 
 $(OBJDIR)/%.o: hardware/%.c
 	$(CC) $(CFLAGS) $(WFLAGS) -c $< -o $@

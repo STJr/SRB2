@@ -28,6 +28,9 @@ void A_Explode();
 void A_Pain();
 void A_Fall();
 void A_MonitorPop();
+void A_GoldMonitorPop();
+void A_GoldMonitorRestore();
+void A_GoldMonitorSparkle();
 void A_Look();
 void A_Chase();
 void A_FaceStabChase();
@@ -314,7 +317,7 @@ typedef enum sprite
 
 	// Interactive Objects
 	SPR_FANS,
-	SPR_BUBL, // water bubble source
+	SPR_BBLS, // water bubble source
 	SPR_SIGN, // Level end sign
 	SPR_STEM, // Steam riser
 	SPR_SPIK, // Spike Ball
@@ -324,27 +327,30 @@ typedef enum sprite
 	SPR_BMNE, // Big floating mine
 
 	// Monitor Boxes
-	SPR_SRBX,
-	SPR_RRBX,
-	SPR_BRBX,
-	SPR_SHTV,
-	SPR_PINV,
-	SPR_YLTV,
-	SPR_BLTV, // Force shield
-	SPR_BKTV, // Bomb shield TV
-	SPR_WHTV, // Jump shield TV
-	SPR_GRTV, // Pity shield TV
-	SPR_ELTV, // Elemental shield TV
-	SPR_EGGB, // Eggman box
-	SPR_MIXU, // Player mixing monitor
-	SPR_RECY, // Recycler (power mixing) monitor
-	SPR_QUES, // Random monitor
-	SPR_GBTV, // Gravity boots TV
-	SPR_PRUP, // 1up
-	SPR_PTTV, // Score TVs
+	SPR_MSTV, // MiSc TV sprites
+	SPR_XLTV, // eXtra Large TV sprites
 
-	// Monitor Miscellany
-	SPR_MTEX, // Exploding monitor
+	SPR_TRRI, // Red team:  10 RIngs
+	SPR_TBRI, // Blue team: 10 RIngs
+
+	SPR_TVRI, // 10 RIng
+	SPR_TVPI, // PIty shield
+	SPR_TVAT, // ATtraction shield
+	SPR_TVFO, // FOrce shield
+	SPR_TVAR, // ARmageddon shield
+	SPR_TVWW, // WhirlWind shield
+	SPR_TVEL, // ELemental shield
+	SPR_TVSS, // Super Sneakers
+	SPR_TVIV, // InVincibility
+	SPR_TV1U, // 1Up
+	SPR_TV1P, // 1uP (textless)
+	SPR_TVEG, // EGgman
+	SPR_TVMX, // MiXup
+	SPR_TVMY, // MYstery
+	SPR_TVGV, // GraVity boots
+	SPR_TVRC, // ReCycler
+	SPR_TV1K, // 1,000 points  (1 K)
+	SPR_TVTK, // 10,000 points (Ten K)
 
 	// Projectiles
 	SPR_MISL,
@@ -448,6 +454,9 @@ typedef enum sprite
 	SPR_SPRB, // Blue springs
 	SPR_YSPR, // Yellow Diagonal Spring
 	SPR_RSPR, // Red Diagonal Spring
+	SPR_SSWY, // Yellow Side Spring
+	SPR_SSWR, // Red Side Spring
+	SPR_SSWB, // Blue Side Spring
 
 	// Environmental Effects
 	SPR_RAIN, // Rain
@@ -455,11 +464,8 @@ typedef enum sprite
 	SPR_SPLH, // Water Splish
 	SPR_SPLA, // Water Splash
 	SPR_SMOK,
-	SPR_BUBP, // Small bubble
-	SPR_BUBO, // Medium bubble
-	SPR_BUBN, // Large bubble
-	SPR_BUBM, // Extra Large (would you like fries with that?) bubble
-	SPR_POPP, // Extra Large bubble goes POP!
+	SPR_BUBL, // Bubble
+	SPR_WZAP,
 	SPR_TFOG, // Teleport Fog
 	SPR_SEED, // Sonic CD flower seed
 	SPR_PRTL, // Particle (for fans, etc.)
@@ -510,16 +516,12 @@ typedef enum sprite
 
 	// NiGHTS Stuff
 	SPR_NDRN, // NiGHTS drone
-	SPR_SUPE, // NiGHTS character flying
-	SPR_SUPZ, // NiGHTS hurt
-	SPR_NDRL, // NiGHTS character drilling
 	SPR_NSPK, // NiGHTS sparkle
 	SPR_NBMP, // NiGHTS Bumper
 	SPR_HOOP, // NiGHTS hoop sprite
 	SPR_NSCR, // NiGHTS score sprite
 	SPR_NPRU, // Nights Powerups
 	SPR_CAPS, // Capsule thingy for NiGHTS
-	SPR_SUPT, // Super Sonic Transformation (NiGHTS)
 
 	// Debris
 	SPR_SPRK, // spark
@@ -575,17 +577,21 @@ typedef enum sprite
 	NUMSPRITES
 } spritenum_t;
 
+// Make sure to be conscious of FF_FRAMEMASK whenever you change this table.
+// Currently, FF_FRAMEMASK is 0x1ff, or 511 - and NUMSPRITEFREESLOTS is 256.
+// Since this is zero-based, there can be at most 256 different SPR2_'s without changing that.
 enum playersprite
 {
 	SPR2_STND = 0,
 	SPR2_WAIT,
 	SPR2_WALK,
 	SPR2_RUN ,
+	SPR2_PEEL,
 	SPR2_PAIN,
 	SPR2_DEAD,
-	SPR2_DRWN,
+	SPR2_DRWN, // drown
 	SPR2_SPIN,
-	SPR2_DASH,
+	SPR2_DASH, // spindash charge
 	SPR2_GASP,
 	SPR2_JUMP,
 	SPR2_SPNG, // spring
@@ -593,33 +599,78 @@ enum playersprite
 	SPR2_EDGE,
 	SPR2_RIDE,
 
-	SPR2_SIGN,
-	SPR2_LIFE,
+	SPR2_SIGN, // end sign head
+	SPR2_LIFE, // life monitor icon
 
 	SPR2_FLY ,
-	SPR2_TIRE,
+	SPR2_SWIM,
+	SPR2_TIRE, // tired
 
-	SPR2_GLID,
-	SPR2_CLNG,
-	SPR2_CLMB,
+	SPR2_GLID, // glide
+	SPR2_CLNG, // cling
+	SPR2_CLMB, // climb
 
-	SPR2_TRNS,
-	SPR2_SSTD,
-	SPR2_SWLK,
-	SPR2_SRUN,
-	SPR2_SPAN,
-	SPR2_SMSL,
-	SPR2_SDTH,
-	SPR2_SDRN,
-	SPR2_SSPN,
-	SPR2_SGSP,
-	SPR2_SJMP,
-	SPR2_SSPG,
-	SPR2_SFAL,
-	SPR2_SEDG,
-	SPR2_SRID,
-	SPR2_SFLT,
+	SPR2_TWIN, // twinspin
 
+	SPR2_MLEE, // melee
+
+	SPR2_TRNS, // super transformation
+	SPR2_SSTD, // super stand
+	SPR2_SWLK, // super walk
+	SPR2_SRUN, // super run
+	SPR2_SPEE, // super peelout
+	SPR2_SPAN, // super pain
+	SPR2_SSTN, // super stun
+	SPR2_SDTH, // super death
+	SPR2_SDRN, // super drown
+	SPR2_SSPN, // super spin
+	SPR2_SGSP, // super gasp
+	SPR2_SJMP, // super jump
+	SPR2_SSPG, // super spring
+	SPR2_SFAL, // super fall
+	SPR2_SEDG, // super edge
+	SPR2_SRID, // super ride
+	SPR2_SFLT, // super float
+
+	SPR2_NTRN, // NiGHTS transformation
+	SPR2_NSTD, // NiGHTS stand
+	SPR2_NFLT, // NiGHTS float
+	SPR2_NPAN, // NiGHTS pain
+	SPR2_NPUL, // NiGHTS pull
+	SPR2_NATK, // NiGHTS attack
+
+	// NiGHTS flight.
+	SPR2_NGT0,
+	SPR2_NGT1,
+	SPR2_NGT2,
+	SPR2_NGT3,
+	SPR2_NGT4,
+	SPR2_NGT5,
+	SPR2_NGT6,
+	SPR2_NGT7,
+	SPR2_NGT8,
+	SPR2_NGT9,
+	SPR2_NGTA,
+	SPR2_NGTB,
+	SPR2_NGTC,
+
+	// NiGHTS drill.
+	SPR2_DRL0,
+	SPR2_DRL1,
+	SPR2_DRL2,
+	SPR2_DRL3,
+	SPR2_DRL4,
+	SPR2_DRL5,
+	SPR2_DRL6,
+	SPR2_DRL7,
+	SPR2_DRL8,
+	SPR2_DRL9,
+	SPR2_DRLA,
+	SPR2_DRLB,
+	SPR2_DRLC,
+
+	SPR2_FIRSTFREESLOT,
+	SPR2_LASTFREESLOT = SPR2_FIRSTFREESLOT + NUMSPRITEFREESLOTS - 1,
 	NUMPLAYERSPRITES
 };
 
@@ -645,20 +696,22 @@ typedef enum state
 	S_PLAY_WAIT,
 	S_PLAY_WALK,
 	S_PLAY_RUN,
+	S_PLAY_PEEL,
 	S_PLAY_PAIN,
 	S_PLAY_DEAD,
 	S_PLAY_DRWN,
 	S_PLAY_SPIN,
 	S_PLAY_DASH,
 	S_PLAY_GASP,
-	S_PLAY_JUMP, // spin jump (todo: make jump separate from spring up for non-spin chars too?)
+	S_PLAY_JUMP, // spin jump
 	S_PLAY_SPRING,
 	S_PLAY_FALL,
 	S_PLAY_EDGE,
 	S_PLAY_RIDE,
 
-	// CA_FLY
+	// CA_FLY/SWIM
 	S_PLAY_FLY,
+	S_PLAY_SWIM,
 	S_PLAY_FLY_TIRED,
 
 	// CA_GLIDEANDCLIMB
@@ -666,10 +719,18 @@ typedef enum state
 	S_PLAY_CLING,
 	S_PLAY_CLIMB,
 
+	// CA_TWINSPIN
+	S_PLAY_TWINSPIN,
+
+	// CA2_MELEE
+	S_PLAY_MELEE,
+	S_PLAY_MELEE_FINISH,
+
 	// SF_SUPERANIMS
 	S_PLAY_SUPER_STND,
 	S_PLAY_SUPER_WALK,
 	S_PLAY_SUPER_RUN,
+	S_PLAY_SUPER_PEEL,
 	S_PLAY_SUPER_PAIN,
 	S_PLAY_SUPER_STUN,
 	S_PLAY_SUPER_DEAD,
@@ -706,6 +767,50 @@ typedef enum state
 
 	// Level end sign overlay (uses player sprite)
 	S_PLAY_SIGN,
+
+	// NiGHTS character (uses player sprite)
+	S_PLAY_NIGHTS_TRANS,
+	S_PLAY_NIGHTS_TRANS2,
+	S_PLAY_NIGHTS_TRANS3,
+	S_PLAY_NIGHTS_TRANS4,
+	S_PLAY_NIGHTS_TRANS5,
+	S_PLAY_NIGHTS_TRANS6,
+	S_PLAY_NIGHTS_TRANS7,
+	S_PLAY_NIGHTS_TRANS8,
+	S_PLAY_NIGHTS_TRANS9,
+
+	S_PLAY_NIGHTS_STAND,
+	S_PLAY_NIGHTS_FLOAT,
+	S_PLAY_NIGHTS_PAIN,
+	S_PLAY_NIGHTS_PULL,
+	S_PLAY_NIGHTS_ATTACK,
+
+	S_PLAY_NIGHTS_FLY0,
+	S_PLAY_NIGHTS_DRILL0,
+	S_PLAY_NIGHTS_FLY1,
+	S_PLAY_NIGHTS_DRILL1,
+	S_PLAY_NIGHTS_FLY2,
+	S_PLAY_NIGHTS_DRILL2,
+	S_PLAY_NIGHTS_FLY3,
+	S_PLAY_NIGHTS_DRILL3,
+	S_PLAY_NIGHTS_FLY4,
+	S_PLAY_NIGHTS_DRILL4,
+	S_PLAY_NIGHTS_FLY5,
+	S_PLAY_NIGHTS_DRILL5,
+	S_PLAY_NIGHTS_FLY6,
+	S_PLAY_NIGHTS_DRILL6,
+	S_PLAY_NIGHTS_FLY7,
+	S_PLAY_NIGHTS_DRILL7,
+	S_PLAY_NIGHTS_FLY8,
+	S_PLAY_NIGHTS_DRILL8,
+	S_PLAY_NIGHTS_FLY9,
+	S_PLAY_NIGHTS_DRILL9,
+	S_PLAY_NIGHTS_FLYA,
+	S_PLAY_NIGHTS_DRILLA,
+	S_PLAY_NIGHTS_FLYB,
+	S_PLAY_NIGHTS_DRILLB,
+	S_PLAY_NIGHTS_FLYC,
+	S_PLAY_NIGHTS_DRILLC,
 
 	// Blue Crawla
 	S_POSS_STND,
@@ -1557,6 +1662,8 @@ typedef enum state
 	// Bubble Source
 	S_BUBBLES1,
 	S_BUBBLES2,
+	S_BUBBLES3,
+	S_BUBBLES4,
 
 	// Level End Sign
 	S_SIGN1,
@@ -1671,170 +1778,116 @@ typedef enum state
 	S_CANNONLAUNCHER2,
 	S_CANNONLAUNCHER3,
 
-	// Super Ring Box
-	S_SUPERRINGBOX,
-	S_SUPERRINGBOX1,
-	S_SUPERRINGBOX2,
-	S_SUPERRINGBOX3,
-	S_SUPERRINGBOX4,
-	S_SUPERRINGBOX5,
-	S_SUPERRINGBOX6,
+	// Monitor Miscellany
+	S_BOXSPARKLE1,
+	S_BOXSPARKLE2,
+	S_BOXSPARKLE3,
 
-	// Red Team Ring Box
-	S_REDRINGBOX,
-	S_REDRINGBOX1,
+	S_BOX_FLICKER,
+	S_BOX_POP1,
+	S_BOX_POP2,
 
-	// Blue Team Ring Box
-	S_BLUERINGBOX,
-	S_BLUERINGBOX1,
+	S_GOLDBOX_FLICKER,
+	S_GOLDBOX_OFF1,
+	S_GOLDBOX_OFF2,
+	S_GOLDBOX_OFF3,
+	S_GOLDBOX_OFF4,
+	S_GOLDBOX_OFF5,
+	S_GOLDBOX_OFF6,
+	S_GOLDBOX_OFF7,
 
-	// Super Sneakers Box
-	S_SHTV,
-	S_SHTV1,
-	S_SHTV2,
-	S_SHTV3,
-	S_SHTV4,
-	S_SHTV5,
-	S_SHTV6,
+	// Monitor States (one per box)
+	S_MYSTERY_BOX,
+	S_RING_BOX,
+	S_PITY_BOX,
+	S_ATTRACT_BOX,
+	S_FORCE_BOX,
+	S_ARMAGEDDON_BOX,
+	S_WHIRLWIND_BOX,
+	S_ELEMENTAL_BOX,
+	S_SNEAKERS_BOX,
+	S_INVULN_BOX,
+	S_1UP_BOX,
+	S_EGGMAN_BOX,
+	S_MIXUP_BOX,
+	S_GRAVITY_BOX,
+	S_RECYCLER_BOX,
+	S_SCORE1K_BOX,
+	S_SCORE10K_BOX,
 
-	// Invincibility Box
-	S_PINV,
-	S_PINV1,
-	S_PINV2,
-	S_PINV3,
-	S_PINV4,
-	S_PINV5,
-	S_PINV6,
+	// Gold Repeat Monitor States (one per box)
+	S_PITY_GOLDBOX,
+	S_ATTRACT_GOLDBOX,
+	S_FORCE_GOLDBOX,
+	S_ARMAGEDDON_GOLDBOX,
+	S_WHIRLWIND_GOLDBOX,
+	S_ELEMENTAL_GOLDBOX,
+	S_SNEAKERS_GOLDBOX,
+	S_INVULN_GOLDBOX,
+	S_EGGMAN_GOLDBOX,
+	S_GRAVITY_GOLDBOX,
 
-	// 1up Box
-	S_PRUP,
-	S_PRUP1,
-	S_PRUP2,
-	S_PRUP3,
-	S_PRUP4,
-	S_PRUP5,
-	S_PRUP6,
+	// Team Ring Boxes (these are special)
+	S_RING_REDBOX1,
+	S_RING_REDBOX2,
+	S_REDBOX_POP1,
+	S_REDBOX_POP2,
 
-	// Ring Shield Box
-	S_YLTV,
-	S_YLTV1,
-	S_YLTV2,
-	S_YLTV3,
-	S_YLTV4,
-	S_YLTV5,
-	S_YLTV6,
+	S_RING_BLUEBOX1,
+	S_RING_BLUEBOX2,
+	S_BLUEBOX_POP1,
+	S_BLUEBOX_POP2,
 
-	// Force Shield Box
-	S_BLTV1,
-	S_BLTV2,
-	S_BLTV3,
-	S_BLTV4,
-	S_BLTV5,
-	S_BLTV6,
-	S_BLTV7,
+	// Box Icons -- 2 states each, animation and action
+	S_RING_ICON1,
+	S_RING_ICON2,
 
-	// Bomb Shield Box
-	S_BKTV1,
-	S_BKTV2,
-	S_BKTV3,
-	S_BKTV4,
-	S_BKTV5,
-	S_BKTV6,
-	S_BKTV7,
+	S_PITY_ICON1,
+	S_PITY_ICON2,
 
-	// Jump Shield Box
-	S_WHTV1,
-	S_WHTV2,
-	S_WHTV3,
-	S_WHTV4,
-	S_WHTV5,
-	S_WHTV6,
-	S_WHTV7,
+	S_ATTRACT_ICON1,
+	S_ATTRACT_ICON2,
 
-	// Water Shield Box
-	S_GRTV,
-	S_GRTV1,
-	S_GRTV2,
-	S_GRTV3,
-	S_GRTV4,
-	S_GRTV5,
-	S_GRTV6,
+	S_FORCE_ICON1,
+	S_FORCE_ICON2,
 
-	// Pity Shield Box
-	S_PITV1,
-	S_PITV2,
-	S_PITV3,
-	S_PITV4,
-	S_PITV5,
-	S_PITV6,
-	S_PITV7,
+	S_ARMAGEDDON_ICON1,
+	S_ARMAGEDDON_ICON2,
 
-	// Eggman Box
-	S_EGGTV1,
-	S_EGGTV2,
-	S_EGGTV3,
-	S_EGGTV4,
-	S_EGGTV5,
-	S_EGGTV6,
-	S_EGGTV7,
+	S_WHIRLWIND_ICON1,
+	S_WHIRLWIND_ICON2,
 
-	// Teleport Box
-	S_MIXUPBOX1,
-	S_MIXUPBOX2,
-	S_MIXUPBOX3,
-	S_MIXUPBOX4,
-	S_MIXUPBOX5,
-	S_MIXUPBOX6,
-	S_MIXUPBOX7,
+	S_ELEMENTAL_ICON1,
+	S_ELEMENTAL_ICON2,
 
-	// Recycler Box
-	S_RECYCLETV1,
-	S_RECYCLETV2,
-	S_RECYCLETV3,
-	S_RECYCLETV4,
-	S_RECYCLETV5,
-	S_RECYCLETV6,
-	S_RECYCLETV7,
+	S_SNEAKERS_ICON1,
+	S_SNEAKERS_ICON2,
 
-	// Question Box
-	S_RANDOMBOX1,
-	S_RANDOMBOX2,
-	S_RANDOMBOX3,
+	S_INVULN_ICON1,
+	S_INVULN_ICON2,
 
-	// Gravity Boots Box
-	S_GBTV1,
-	S_GBTV2,
-	S_GBTV3,
-	S_GBTV4,
-	S_GBTV5,
-	S_GBTV6,
-	S_GBTV7,
+	S_1UP_ICON1,
+	S_1UP_ICON2,
 
-	// Score boxes
-	S_SCORETVA1,
-	S_SCORETVA2,
-	S_SCORETVA3,
-	S_SCORETVA4,
-	S_SCORETVA5,
-	S_SCORETVA6,
-	S_SCORETVA7,
-	S_SCORETVB1,
-	S_SCORETVB2,
-	S_SCORETVB3,
-	S_SCORETVB4,
-	S_SCORETVB5,
-	S_SCORETVB6,
-	S_SCORETVB7,
+	S_EGGMAN_ICON1,
+	S_EGGMAN_ICON2,
 
-	// Monitor Explosion
-	S_MONITOREXPLOSION1,
-	S_MONITOREXPLOSION2,
+	S_MIXUP_ICON1,
+	S_MIXUP_ICON2,
 
-	S_REDMONITOREXPLOSION1,
-	S_REDMONITOREXPLOSION2,
+	S_GRAVITY_ICON1,
+	S_GRAVITY_ICON2,
 
-	S_BLUEMONITOREXPLOSION1,
-	S_BLUEMONITOREXPLOSION2,
+	S_RECYCLER_ICON1,
+	S_RECYCLER_ICON2,
+
+	S_SCORE1K_ICON1,
+	S_SCORE1K_ICON2,
+
+	S_SCORE10K_ICON1,
+	S_SCORE10K_ICON2,
+
+	// ---
 
 	S_ROCKET,
 
@@ -2348,6 +2401,36 @@ typedef enum state
 	S_RDIAG7,
 	S_RDIAG8,
 
+	// Yellow Side Spring
+	S_YHORIZ1,
+	S_YHORIZ2,
+	S_YHORIZ3,
+	S_YHORIZ4,
+	S_YHORIZ5,
+	S_YHORIZ6,
+	S_YHORIZ7,
+	S_YHORIZ8,
+
+	// Red Side Spring
+	S_RHORIZ1,
+	S_RHORIZ2,
+	S_RHORIZ3,
+	S_RHORIZ4,
+	S_RHORIZ5,
+	S_RHORIZ6,
+	S_RHORIZ7,
+	S_RHORIZ8,
+
+	// Blue Side Spring
+	S_BHORIZ1,
+	S_BHORIZ2,
+	S_BHORIZ3,
+	S_BHORIZ4,
+	S_BHORIZ5,
+	S_BHORIZ6,
+	S_BHORIZ7,
+	S_BHORIZ8,
+
 	// Rain
 	S_RAIN1,
 	S_RAINRETURN,
@@ -2382,13 +2465,14 @@ typedef enum state
 
 	// Bubbles
 	S_SMALLBUBBLE,
-	S_SMALLBUBBLE1,
 	S_MEDIUMBUBBLE,
-	S_MEDIUMBUBBLE1,
-	S_LARGEBUBBLE,
+	S_LARGEBUBBLE1,
+	S_LARGEBUBBLE2,
 	S_EXTRALARGEBUBBLE, // breathable
 
 	S_POP1, // Extra Large bubble goes POP!
+
+	S_WATERZAP,
 
 	S_FOG1,
 	S_FOG2,
@@ -2430,6 +2514,13 @@ typedef enum state
 	S_THREE1,
 	S_FOUR1,
 	S_FIVE1,
+
+	S_ZERO2,
+	S_ONE2,
+	S_TWO2,
+	S_THREE2,
+	S_FOUR2,
+	S_FIVE2,
 
 	// Tag Sign
 	S_TTAG1,
@@ -2663,93 +2754,6 @@ typedef enum state
 	S_NIGHTSGOAL3,
 	S_NIGHTSGOAL4,
 
-	S_NIGHTSFLY1A,
-	S_NIGHTSFLY1B,
-	S_NIGHTSDRILL1A,
-	S_NIGHTSDRILL1B,
-	S_NIGHTSDRILL1C,
-	S_NIGHTSDRILL1D,
-	S_NIGHTSFLY2A,
-	S_NIGHTSFLY2B,
-	S_NIGHTSDRILL2A,
-	S_NIGHTSDRILL2B,
-	S_NIGHTSDRILL2C,
-	S_NIGHTSDRILL2D,
-	S_NIGHTSFLY3A,
-	S_NIGHTSFLY3B,
-	S_NIGHTSDRILL3A,
-	S_NIGHTSDRILL3B,
-	S_NIGHTSDRILL3C,
-	S_NIGHTSDRILL3D,
-	S_NIGHTSFLY4A,
-	S_NIGHTSFLY4B,
-	S_NIGHTSDRILL4A,
-	S_NIGHTSDRILL4B,
-	S_NIGHTSDRILL4C,
-	S_NIGHTSDRILL4D,
-	S_NIGHTSFLY5A,
-	S_NIGHTSFLY5B,
-	S_NIGHTSDRILL5A,
-	S_NIGHTSDRILL5B,
-	S_NIGHTSDRILL5C,
-	S_NIGHTSDRILL5D,
-	S_NIGHTSFLY6A,
-	S_NIGHTSFLY6B,
-	S_NIGHTSDRILL6A,
-	S_NIGHTSDRILL6B,
-	S_NIGHTSDRILL6C,
-	S_NIGHTSDRILL6D,
-	S_NIGHTSFLY7A,
-	S_NIGHTSFLY7B,
-	S_NIGHTSDRILL7A,
-	S_NIGHTSDRILL7B,
-	S_NIGHTSDRILL7C,
-	S_NIGHTSDRILL7D,
-	S_NIGHTSFLY8A,
-	S_NIGHTSFLY8B,
-	S_NIGHTSDRILL8A,
-	S_NIGHTSDRILL8B,
-	S_NIGHTSDRILL8C,
-	S_NIGHTSDRILL8D,
-	S_NIGHTSFLY9A,
-	S_NIGHTSFLY9B,
-	S_NIGHTSDRILL9A,
-	S_NIGHTSDRILL9B,
-	S_NIGHTSDRILL9C,
-	S_NIGHTSDRILL9D,
-	S_NIGHTSHURT1,
-	S_NIGHTSHURT2,
-	S_NIGHTSHURT3,
-	S_NIGHTSHURT4,
-	S_NIGHTSHURT5,
-	S_NIGHTSHURT6,
-	S_NIGHTSHURT7,
-	S_NIGHTSHURT8,
-	S_NIGHTSHURT9,
-	S_NIGHTSHURT10,
-	S_NIGHTSHURT11,
-	S_NIGHTSHURT12,
-	S_NIGHTSHURT13,
-	S_NIGHTSHURT14,
-	S_NIGHTSHURT15,
-	S_NIGHTSHURT16,
-	S_NIGHTSHURT17,
-	S_NIGHTSHURT18,
-	S_NIGHTSHURT19,
-	S_NIGHTSHURT20,
-	S_NIGHTSHURT21,
-	S_NIGHTSHURT22,
-	S_NIGHTSHURT23,
-	S_NIGHTSHURT24,
-	S_NIGHTSHURT25,
-	S_NIGHTSHURT26,
-	S_NIGHTSHURT27,
-	S_NIGHTSHURT28,
-	S_NIGHTSHURT29,
-	S_NIGHTSHURT30,
-	S_NIGHTSHURT31,
-	S_NIGHTSHURT32,
-
 	S_NIGHTSPARKLE1,
 	S_NIGHTSPARKLE2,
 	S_NIGHTSPARKLE3,
@@ -2845,16 +2849,6 @@ typedef enum state
 
 	S_CRUMBLE1,
 	S_CRUMBLE2,
-
-	S_SUPERTRANS1,
-	S_SUPERTRANS2,
-	S_SUPERTRANS3,
-	S_SUPERTRANS4,
-	S_SUPERTRANS5,
-	S_SUPERTRANS6,
-	S_SUPERTRANS7,
-	S_SUPERTRANS8,
-	S_SUPERTRANS9,
 
 	// Spark
 	S_SPRK1,
@@ -2993,8 +2987,9 @@ typedef struct
 
 extern state_t states[NUMSTATES];
 extern char sprnames[NUMSPRITES + 1][5];
-char spr2names[NUMPLAYERSPRITES][5];
+extern char spr2names[NUMPLAYERSPRITES][5];
 extern state_t *astate;
+extern enum playersprite free_spr2;
 
 typedef enum mobj_type
 {
@@ -3123,6 +3118,9 @@ typedef enum mobj_type
 	MT_REDSPRING,
 	MT_YELLOWDIAG, // Yellow Diagonal Spring
 	MT_REDDIAG, // Red Diagonal Spring
+	MT_YELLOWHORIZ, // Yellow Side Spring
+	MT_REDHORIZ, // Red Side Spring
+	MT_BLUEHORIZ, // Blue Side Spring
 
 	// Interactive Objects
 	MT_BUBBLES, // Bubble source
@@ -3136,47 +3134,61 @@ typedef enum mobj_type
 	MT_BIGAIRMINE,
 	MT_CANNONLAUNCHER,
 
-	// Monitor Boxes
-	MT_SUPERRINGBOX,
-	MT_REDRINGBOX,
-	MT_BLUERINGBOX,
-	MT_SNEAKERTV,
-	MT_INV,
-	MT_PRUP, // 1up Box
-	MT_YELLOWTV,
-	MT_BLUETV,
-	MT_BLACKTV, // Bomb shield TV
-	MT_WHITETV, // Jump shield TV
-	MT_GREENTV,
-	MT_PITYTV, // Pity Shield TV
-	MT_EGGMANBOX,
-	MT_MIXUPBOX,
-	MT_RECYCLETV,
-	MT_RECYCLEICO,
-	MT_QUESTIONBOX,
-	MT_GRAVITYBOX,
-	MT_SCORETVSMALL,
-	MT_SCORETVLARGE,
-
 	// Monitor miscellany
-	MT_MONITOREXPLOSION,
-	MT_REDMONITOREXPLOSION,
-	MT_BLUEMONITOREXPLOSION,
-	MT_RINGICO,
-	MT_SHOESICO,
-	MT_INVCICO,
-	MT_1UPICO,
-	MT_YSHIELDICO,
-	MT_BSHIELDICO,
-	MT_KSHIELDICO,
-	MT_WSHIELDICO,
-	MT_GSHIELDICO,
-	MT_PITYSHIELDICO,
-	MT_EGGMANICO,
-	MT_MIXUPICO,
-	MT_GRAVITYICO,
-	MT_SCOREICOSMALL,
-	MT_SCOREICOLARGE,
+	MT_BOXSPARKLE,
+
+	// Monitor boxes -- regular
+	MT_RING_BOX,
+	MT_PITY_BOX,
+	MT_ATTRACT_BOX,
+	MT_FORCE_BOX,
+	MT_ARMAGEDDON_BOX,
+	MT_WHIRLWIND_BOX,
+	MT_ELEMENTAL_BOX,
+	MT_SNEAKERS_BOX,
+	MT_INVULN_BOX,
+	MT_1UP_BOX,
+	MT_EGGMAN_BOX,
+	MT_MIXUP_BOX,
+	MT_MYSTERY_BOX,
+	MT_GRAVITY_BOX,
+	MT_RECYCLER_BOX,
+	MT_SCORE1K_BOX,
+	MT_SCORE10K_BOX,
+
+	// Monitor boxes -- repeating (big) boxes
+	MT_PITY_GOLDBOX,
+	MT_ATTRACT_GOLDBOX,
+	MT_FORCE_GOLDBOX,
+	MT_ARMAGEDDON_GOLDBOX,
+	MT_WHIRLWIND_GOLDBOX,
+	MT_ELEMENTAL_GOLDBOX,
+	MT_SNEAKERS_GOLDBOX,
+	MT_INVULN_GOLDBOX,
+	MT_EGGMAN_GOLDBOX,
+	MT_GRAVITY_GOLDBOX,
+
+	// Monitor boxes -- special
+	MT_RING_REDBOX,
+	MT_RING_BLUEBOX,
+
+	// Monitor icons
+	MT_RING_ICON,
+	MT_PITY_ICON,
+	MT_ATTRACT_ICON,
+	MT_FORCE_ICON,
+	MT_ARMAGEDDON_ICON,
+	MT_WHIRLWIND_ICON,
+	MT_ELEMENTAL_ICON,
+	MT_SNEAKERS_ICON,
+	MT_INVULN_ICON,
+	MT_1UP_ICON,
+	MT_EGGMAN_ICON,
+	MT_MIXUP_ICON,
+	MT_GRAVITY_ICON,
+	MT_RECYCLER_ICON,
+	MT_SCORE1K_ICON,
+	MT_SCORE10K_ICON,
 
 	// Projectiles
 	MT_ROCKET,
@@ -3354,6 +3366,7 @@ typedef enum mobj_type
 	MT_SMALLBUBBLE, // small bubble
 	MT_MEDIUMBUBBLE, // medium bubble
 	MT_EXTRALARGEBUBBLE, // extra large bubble
+	MT_WATERZAP,
 	MT_TFOG,
 	MT_SEED,
 	MT_PARTICLE,
@@ -3426,7 +3439,6 @@ typedef enum mobj_type
 	MT_AXISTRANSFERLINE,
 	MT_NIGHTSDRONE,
 	MT_NIGHTSGOAL,
-	MT_NIGHTSCHAR,
 	MT_NIGHTSPARKLE,
 	MT_NIGHTSLOOPHELPER,
 	MT_NIGHTSBUMPER, // NiGHTS Bumper

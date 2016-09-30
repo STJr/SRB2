@@ -87,7 +87,7 @@ extern lighttable_t **planezlight;
 extern fixed_t *yslope;
 extern fixed_t distscale[MAXVIDWIDTH];
 
-void R_InitPlanes(void);
+FUNCMATH void R_InitPlanes(void);
 void R_PortalStoreClipValues(INT32 start, INT32 end, INT16 *ceil, INT16 *floor, fixed_t *scale);
 void R_PortalRestoreClipValues(INT32 start, INT32 end, INT16 *ceil, INT16 *floor, fixed_t *scale);
 void R_ClearPlanes(void);

@@ -62,6 +62,9 @@
 #define mariomode (maptol & TOL_MARIO)
 #define twodlevel (maptol & TOL_2D)
 
+#define P_GetPlayerHeight(player) FixedMul(player->height, player->mo->scale)
+#define P_GetPlayerSpinHeight(player) FixedMul(player->spinheight, player->mo->scale)
+
 //
 // P_TICK
 //
@@ -119,8 +122,6 @@ extern consvar_t cv_cam2_speed, cv_cam2_rotate, cv_cam2_rotspeed;
 extern fixed_t t_cam_dist, t_cam_height, t_cam_rotate;
 extern fixed_t t_cam2_dist, t_cam2_height, t_cam2_rotate;
 
-fixed_t P_GetPlayerHeight(player_t *player);
-fixed_t P_GetPlayerSpinHeight(player_t *player);
 INT32 P_GetPlayerControlDirection(player_t *player);
 void P_AddPlayerScore(player_t *player, UINT32 amount);
 void P_ResetCamera(player_t *player, camera_t *thiscam);
@@ -240,6 +241,8 @@ boolean P_InsideANonSolidFFloor(mobj_t *mobj, ffloor_t *rover);
 boolean P_CheckDeathPitCollide(mobj_t *mo);
 boolean P_CheckSolidLava(mobj_t *mo, ffloor_t *rover);
 
+mobj_t *P_SpawnMobjFromMobj(mobj_t *mobj, fixed_t xofs, fixed_t yofs, fixed_t zofs, mobjtype_t type);
+
 mobj_t *P_SpawnMissile(mobj_t *source, mobj_t *dest, mobjtype_t type);
 mobj_t *P_SpawnXYZMissile(mobj_t *source, mobj_t *dest, mobjtype_t type, fixed_t x, fixed_t y, fixed_t z);
 mobj_t *P_SpawnPointMissile(mobj_t *source, fixed_t xa, fixed_t ya, fixed_t za, mobjtype_t type, fixed_t x, fixed_t y, fixed_t z);
@@ -251,7 +254,8 @@ mobj_t *P_SPMAngle(mobj_t *source, mobjtype_t type, angle_t angle, UINT8 aimtype
 #endif
 void P_ColorTeamMissile(mobj_t *missile, player_t *source);
 SINT8 P_MobjFlip(mobj_t *mobj);
-boolean P_WeaponOrPanel(mobjtype_t type);
+fixed_t P_GetMobjGravity(mobj_t *mo);
+FUNCMATH boolean P_WeaponOrPanel(mobjtype_t type);
 
 boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled);
 

@@ -66,9 +66,9 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing);
 #endif
 
 #ifdef SORTING
-void HWR_AddTransparentFloor(lumpnum_t lumpnum, extrasubsector_t *xsub, fixed_t fixedheight,
+void HWR_AddTransparentFloor(lumpnum_t lumpnum, extrasubsector_t *xsub, boolean isceiling, fixed_t fixedheight,
                              INT32 lightlevel, INT32 alpha, sector_t *FOFSector, FBITFIELD blend, boolean fogplane, extracolormap_t *planecolormap);
-void HWR_AddTransparentPolyobjectFloor(lumpnum_t lumpnum, polyobj_t *polysector, fixed_t fixedheight,
+void HWR_AddTransparentPolyobjectFloor(lumpnum_t lumpnum, polyobj_t *polysector, boolean isceiling, fixed_t fixedheight,
                              INT32 lightlevel, INT32 alpha, sector_t *FOFSector, FBITFIELD blend, extracolormap_t *planecolormap);
 #else
 static void HWR_Add3DWater(lumpnum_t lumpnum, extrasubsector_t *xsub, fixed_t fixedheight,
@@ -521,7 +521,7 @@ static UINT8 HWR_FogBlockAlpha(INT32 light, UINT32 color, UINT32 fadecolor) // L
 // -----------------+
 // HWR_RenderPlane  : Render a floor or ceiling convex polygon
 // -----------------+
-static void HWR_RenderPlane(sector_t *sector, extrasubsector_t *xsub, fixed_t fixedheight,
+static void HWR_RenderPlane(sector_t *sector, extrasubsector_t *xsub, boolean isceiling, fixed_t fixedheight,
                            FBITFIELD PolyFlags, INT32 lightlevel, lumpnum_t lumpnum, sector_t *FOFsector, UINT8 alpha, boolean fogplane, extracolormap_t *planecolormap)
 {
 	polyvertex_t *  pv;
@@ -554,17 +554,16 @@ static void HWR_RenderPlane(sector_t *sector, extrasubsector_t *xsub, fixed_t fi
 	// Get the slope pointer to simplify future code
 	if (FOFsector)
 	{
-		if (FOFsector->f_slope && FOFsector->floorheight == fixedheight)
+		if (FOFsector->f_slope && !isceiling)
 			slope = FOFsector->f_slope;
-		else if (FOFsector->c_slope && FOFsector->ceilingheight == fixedheight)
+		else if (FOFsector->c_slope && isceiling)
 			slope = FOFsector->c_slope;
 	}
 	else
 	{
-		// Use fixedheight to determine whether to check floor or ceiling because I hate my life
-		if (gr_frontsector->f_slope && gr_frontsector->floorheight == fixedheight)
+		if (gr_frontsector->f_slope && !isceiling)
 			slope = gr_frontsector->f_slope;
-		else if (gr_frontsector->c_slope && gr_frontsector->ceilingheight == fixedheight)
+		else if (gr_frontsector->c_slope && isceiling)
 			slope = gr_frontsector->c_slope;
 	}
 
@@ -638,12 +637,7 @@ static void HWR_RenderPlane(sector_t *sector, extrasubsector_t *xsub, fixed_t fi
 
 	if (FOFsector != NULL)
 	{
-#ifdef ESLOPE
-		if ((slope && slope == FOFsector->f_slope)
-			|| fixedheight == FOFsector->floorheight) // it's a floor
-#else
-		if (fixedheight == FOFsector->floorheight) // it's a floor
-#endif
+		if (!isceiling) // it's a floor
 		{
 			scrollx = FIXED_TO_FLOAT(FOFsector->floor_xoffs)/fflatsize;
 			scrolly = FIXED_TO_FLOAT(FOFsector->floor_yoffs)/fflatsize;
@@ -658,12 +652,7 @@ static void HWR_RenderPlane(sector_t *sector, extrasubsector_t *xsub, fixed_t fi
 	}
 	else if (gr_frontsector)
 	{
-#ifdef ESLOPE
-		if ((slope && slope == gr_frontsector->f_slope)
-			|| fixedheight == gr_frontsector->floorheight) // it's a floor
-#else
-		if (fixedheight < dup_viewz) // it's a floor
-#endif
+		if (!isceiling) // it's a floor
 		{
 			scrollx = FIXED_TO_FLOAT(gr_frontsector->floor_xoffs)/fflatsize;
 			scrolly = FIXED_TO_FLOAT(gr_frontsector->floor_yoffs)/fflatsize;
@@ -3111,7 +3100,7 @@ static inline void HWR_AddPolyObjectSegs(void)
 }
 
 #ifdef POLYOBJECTS_PLANES
-static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, fixed_t fixedheight,
+static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, fixed_t fixedheight,
 									FBITFIELD blendmode, UINT8 lightlevel, lumpnum_t lumpnum, sector_t *FOFsector,
 									UINT8 alpha, extracolormap_t *planecolormap)
 {
@@ -3195,7 +3184,7 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, fixed_t fixedheight
 
 	if (FOFsector != NULL)
 	{
-		if (fixedheight == FOFsector->floorheight) // it's a floor
+		if (!isceiling) // it's a floor
 		{
 			scrollx = FIXED_TO_FLOAT(FOFsector->floor_xoffs)/fflatsize;
 			scrolly = FIXED_TO_FLOAT(FOFsector->floor_yoffs)/fflatsize;
@@ -3210,7 +3199,7 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, fixed_t fixedheight
 	}
 	else if (gr_frontsector)
 	{
-		if (fixedheight < dup_viewz) // it's a floor
+		if (!isceiling) // it's a floor
 		{
 			scrollx = FIXED_TO_FLOAT(gr_frontsector->floor_xoffs)/fflatsize;
 			scrolly = FIXED_TO_FLOAT(gr_frontsector->floor_yoffs)/fflatsize;
@@ -3303,13 +3292,13 @@ static void HWR_AddPolyObjectPlanes(void)
 			{
 				FSurfaceInfo Surf;
 				FBITFIELD blendmode = HWR_TranstableToAlpha(po_ptrs[i]->translucency, &Surf);
-				HWR_AddTransparentPolyobjectFloor(levelflats[polyobjsector->floorpic].lumpnum, po_ptrs[i], polyobjsector->floorheight,
+				HWR_AddTransparentPolyobjectFloor(levelflats[polyobjsector->floorpic].lumpnum, po_ptrs[i], false, polyobjsector->floorheight,
 													polyobjsector->lightlevel, Surf.FlatColor.s.alpha, polyobjsector, blendmode, NULL);
 			}
 			else
 			{
 				HWR_GetFlat(levelflats[polyobjsector->floorpic].lumpnum);
-				HWR_RenderPolyObjectPlane(po_ptrs[i], polyobjsector->floorheight, PF_Occlude,
+				HWR_RenderPolyObjectPlane(po_ptrs[i], false, polyobjsector->floorheight, PF_Occlude,
 										polyobjsector->lightlevel, levelflats[polyobjsector->floorpic].lumpnum,
 										polyobjsector, 255, NULL);
 			}
@@ -3325,13 +3314,13 @@ static void HWR_AddPolyObjectPlanes(void)
 				FBITFIELD blendmode;
 				memset(&Surf, 0x00, sizeof(Surf));
 				blendmode = HWR_TranstableToAlpha(po_ptrs[i]->translucency, &Surf);
-				HWR_AddTransparentPolyobjectFloor(levelflats[polyobjsector->ceilingpic].lumpnum, po_ptrs[i], polyobjsector->ceilingheight,
+				HWR_AddTransparentPolyobjectFloor(levelflats[polyobjsector->ceilingpic].lumpnum, po_ptrs[i], true, polyobjsector->ceilingheight,
 				                                  polyobjsector->lightlevel, Surf.FlatColor.s.alpha, polyobjsector, blendmode, NULL);
 			}
 			else
 			{
 				HWR_GetFlat(levelflats[polyobjsector->ceilingpic].lumpnum);
-				HWR_RenderPolyObjectPlane(po_ptrs[i], polyobjsector->ceilingheight, PF_Occlude,
+				HWR_RenderPolyObjectPlane(po_ptrs[i], true, polyobjsector->ceilingheight, PF_Occlude,
 				                          polyobjsector->lightlevel, levelflats[polyobjsector->floorpic].lumpnum,
 				                          polyobjsector, 255, NULL);
 			}
@@ -3485,7 +3474,7 @@ static void HWR_Subsector(size_t num)
 			if (sub->validcount != validcount)
 			{
 				HWR_GetFlat(levelflats[gr_frontsector->floorpic].lumpnum);
-				HWR_RenderPlane(gr_frontsector, &extrasubsectors[num],
+				HWR_RenderPlane(gr_frontsector, &extrasubsectors[num], false,
 					// Hack to make things continue to work around slopes.
 					locFloorHeight == cullFloorHeight ? locFloorHeight : gr_frontsector->floorheight,
 					// We now return you to your regularly scheduled rendering.
@@ -3507,7 +3496,7 @@ static void HWR_Subsector(size_t num)
 			if (sub->validcount != validcount)
 			{
 				HWR_GetFlat(levelflats[gr_frontsector->ceilingpic].lumpnum);
-				HWR_RenderPlane(NULL, &extrasubsectors[num],
+				HWR_RenderPlane(NULL, &extrasubsectors[num], true,
 					// Hack to make things continue to work around slopes.
 					locCeilingHeight == cullCeilingHeight ? locCeilingHeight : gr_frontsector->ceilingheight,
 					// We now return you to your regularly scheduled rendering.
@@ -3576,6 +3565,7 @@ static void HWR_Subsector(size_t num)
 
 					HWR_AddTransparentFloor(0,
 					                       &extrasubsectors[num],
+										   false,
 					                       *rover->bottomheight,
 					                       *gr_frontsector->lightlist[light].lightlevel,
 					                       alpha, rover->master->frontsector, PF_Translucent|PF_NoTexture,
@@ -3593,6 +3583,7 @@ static void HWR_Subsector(size_t num)
 #else
 					HWR_AddTransparentFloor(levelflats[*rover->bottompic].lumpnum,
 					                       &extrasubsectors[num],
+										   false,
 					                       *rover->bottomheight,
 					                       *gr_frontsector->lightlist[light].lightlevel,
 					                       rover->alpha-1 > 255 ? 255 : rover->alpha-1, rover->master->frontsector, PF_Translucent,
@@ -3603,7 +3594,7 @@ static void HWR_Subsector(size_t num)
 				{
 					HWR_GetFlat(levelflats[*rover->bottompic].lumpnum);
 					light = R_GetPlaneLight(gr_frontsector, centerHeight, dup_viewz < cullHeight ? true : false);
-					HWR_RenderPlane(NULL, &extrasubsectors[num], *rover->bottomheight, PF_Occlude, *gr_frontsector->lightlist[light].lightlevel, levelflats[*rover->bottompic].lumpnum,
+					HWR_RenderPlane(NULL, &extrasubsectors[num], false, *rover->bottomheight, PF_Occlude, *gr_frontsector->lightlist[light].lightlevel, levelflats[*rover->bottompic].lumpnum,
 					                rover->master->frontsector, 255, false, gr_frontsector->lightlist[light].extra_colormap);
 				}
 			}
@@ -3637,6 +3628,7 @@ static void HWR_Subsector(size_t num)
 
 					HWR_AddTransparentFloor(0,
 					                       &extrasubsectors[num],
+										   true,
 					                       *rover->topheight,
 					                       *gr_frontsector->lightlist[light].lightlevel,
 					                       alpha, rover->master->frontsector, PF_Translucent|PF_NoTexture,
@@ -3654,6 +3646,7 @@ static void HWR_Subsector(size_t num)
 #else
 					HWR_AddTransparentFloor(levelflats[*rover->toppic].lumpnum,
 					                        &extrasubsectors[num],
+											true,
 					                        *rover->topheight,
 					                        *gr_frontsector->lightlist[light].lightlevel,
 					                        rover->alpha-1 > 255 ? 255 : rover->alpha-1, rover->master->frontsector, PF_Translucent,
@@ -3665,7 +3658,7 @@ static void HWR_Subsector(size_t num)
 				{
 					HWR_GetFlat(levelflats[*rover->toppic].lumpnum);
 					light = R_GetPlaneLight(gr_frontsector, centerHeight, dup_viewz < cullHeight ? true : false);
-					HWR_RenderPlane(NULL, &extrasubsectors[num], *rover->topheight, PF_Occlude, *gr_frontsector->lightlist[light].lightlevel, levelflats[*rover->toppic].lumpnum,
+					HWR_RenderPlane(NULL, &extrasubsectors[num], true, *rover->topheight, PF_Occlude, *gr_frontsector->lightlist[light].lightlevel, levelflats[*rover->toppic].lumpnum,
 					                  rover->master->frontsector, 255, false, gr_frontsector->lightlist[light].extra_colormap);
 				}
 			}
@@ -4529,7 +4522,8 @@ static void HWR_SortVisSprites(void)
 	// Fix first and last. ds still points to the last one after the loop
 	dsfirst->prev = &unsorted;
 	unsorted.next = dsfirst;
-	ds->next = &unsorted;
+	if (ds)
+		ds->next = &unsorted;
 	unsorted.prev = ds;
 
 	// pull the vissprites out by scale
@@ -4552,10 +4546,13 @@ static void HWR_SortVisSprites(void)
 				best = ds;
 			}
 		}
-		best->next->prev = best->prev;
-		best->prev->next = best->next;
-		best->next = &gr_vsprsortedhead;
-		best->prev = gr_vsprsortedhead.prev;
+		if (best)
+		{
+			best->next->prev = best->prev;
+			best->prev->next = best->next;
+			best->next = &gr_vsprsortedhead;
+			best->prev = gr_vsprsortedhead.prev;
+		}
 		gr_vsprsortedhead.prev->next = best;
 		gr_vsprsortedhead.prev = best;
 	}
@@ -4588,6 +4585,7 @@ static void HWR_RenderWall(wallVert3D   *wallVerts, FSurfaceInfo *pSurf, FBITFIE
 typedef struct
 {
 	extrasubsector_t *xsub;
+	boolean isceiling;
 	fixed_t fixedheight;
 	INT32 lightlevel;
 	lumpnum_t lumpnum;
@@ -4605,6 +4603,7 @@ static planeinfo_t *planeinfo = NULL;
 typedef struct
 {
 	polyobj_t *polysector;
+	boolean isceiling;
 	fixed_t fixedheight;
 	INT32 lightlevel;
 	lumpnum_t lumpnum;
@@ -4640,7 +4639,7 @@ static INT32 drawcount = 0;
 #define MAX_TRANSPARENTFLOOR 512
 
 // This will likely turn into a copy of HWR_Add3DWater and replace it.
-void HWR_AddTransparentFloor(lumpnum_t lumpnum, extrasubsector_t *xsub,
+void HWR_AddTransparentFloor(lumpnum_t lumpnum, extrasubsector_t *xsub, boolean isceiling,
 	fixed_t fixedheight, INT32 lightlevel, INT32 alpha, sector_t *FOFSector, FBITFIELD blend, boolean fogplane, extracolormap_t *planecolormap)
 {
 	static size_t allocedplanes = 0;
@@ -4655,6 +4654,7 @@ void HWR_AddTransparentFloor(lumpnum_t lumpnum, extrasubsector_t *xsub,
 		Z_Realloc(planeinfo, allocedplanes * sizeof (*planeinfo), PU_LEVEL, &planeinfo);
 	}
 
+	planeinfo[numplanes].isceiling = isceiling;
 	planeinfo[numplanes].fixedheight = fixedheight;
 	planeinfo[numplanes].lightlevel = lightlevel;
 	planeinfo[numplanes].lumpnum = lumpnum;
@@ -4665,12 +4665,13 @@ void HWR_AddTransparentFloor(lumpnum_t lumpnum, extrasubsector_t *xsub,
 	planeinfo[numplanes].fogplane = fogplane;
 	planeinfo[numplanes].planecolormap = planecolormap;
 	planeinfo[numplanes].drawcount = drawcount++;
+
 	numplanes++;
 }
 
 // Adding this for now until I can create extrasubsector info for polyobjects
 // When that happens it'll just be done through HWR_AddTransparentFloor and HWR_RenderPlane
-void HWR_AddTransparentPolyobjectFloor(lumpnum_t lumpnum, polyobj_t *polysector,
+void HWR_AddTransparentPolyobjectFloor(lumpnum_t lumpnum, polyobj_t *polysector, boolean isceiling,
 	fixed_t fixedheight, INT32 lightlevel, INT32 alpha, sector_t *FOFSector, FBITFIELD blend, extracolormap_t *planecolormap)
 {
 	static size_t allocedpolyplanes = 0;
@@ -4685,6 +4686,7 @@ void HWR_AddTransparentPolyobjectFloor(lumpnum_t lumpnum, polyobj_t *polysector,
 		Z_Realloc(polyplaneinfo, allocedpolyplanes * sizeof (*polyplaneinfo), PU_LEVEL, &polyplaneinfo);
 	}
 
+	polyplaneinfo[numpolyplanes].isceiling = isceiling;
 	polyplaneinfo[numpolyplanes].fixedheight = fixedheight;
 	polyplaneinfo[numpolyplanes].lightlevel = lightlevel;
 	polyplaneinfo[numpolyplanes].lumpnum = lumpnum;
@@ -4850,7 +4852,7 @@ static void HWR_CreateDrawNodes(void)
 
 			if (!(sortnode[sortindex[i]].plane->blend & PF_NoTexture))
 				HWR_GetFlat(sortnode[sortindex[i]].plane->lumpnum);
-			HWR_RenderPlane(NULL, sortnode[sortindex[i]].plane->xsub, sortnode[sortindex[i]].plane->fixedheight, sortnode[sortindex[i]].plane->blend, sortnode[sortindex[i]].plane->lightlevel,
+			HWR_RenderPlane(NULL, sortnode[sortindex[i]].plane->xsub, sortnode[sortindex[i]].plane->isceiling, sortnode[sortindex[i]].plane->fixedheight, sortnode[sortindex[i]].plane->blend, sortnode[sortindex[i]].plane->lightlevel,
 				sortnode[sortindex[i]].plane->lumpnum, sortnode[sortindex[i]].plane->FOFSector, sortnode[sortindex[i]].plane->alpha, sortnode[sortindex[i]].plane->fogplane, sortnode[sortindex[i]].plane->planecolormap);
 		}
 		else if (sortnode[sortindex[i]].polyplane)
@@ -4860,7 +4862,7 @@ static void HWR_CreateDrawNodes(void)
 
 			if (!(sortnode[sortindex[i]].polyplane->blend & PF_NoTexture))
 				HWR_GetFlat(sortnode[sortindex[i]].polyplane->lumpnum);
-			HWR_RenderPolyObjectPlane(sortnode[sortindex[i]].polyplane->polysector, sortnode[sortindex[i]].polyplane->fixedheight, sortnode[sortindex[i]].polyplane->blend, sortnode[sortindex[i]].polyplane->lightlevel,
+			HWR_RenderPolyObjectPlane(sortnode[sortindex[i]].polyplane->polysector, sortnode[sortindex[i]].polyplane->isceiling, sortnode[sortindex[i]].polyplane->fixedheight, sortnode[sortindex[i]].polyplane->blend, sortnode[sortindex[i]].polyplane->lightlevel,
 				sortnode[sortindex[i]].polyplane->lumpnum, sortnode[sortindex[i]].polyplane->FOFSector, sortnode[sortindex[i]].polyplane->alpha, sortnode[sortindex[i]].polyplane->planecolormap);
 		}
 		else if (sortnode[sortindex[i]].wall)
@@ -5092,21 +5094,28 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		I_Error("sprframes NULL for sprite %d\n", thing->sprite);
 #endif
 
-	if (sprframe->rotate)
-	{
-		// choose a different rotation based on player view
-		ang = R_PointToAngle(thing->x, thing->y); // uses viewx,viewy
-		rot = (ang-thing->angle+ANGLE_202h)>>29;
-		//Fab: lumpid is the index for spritewidth,spriteoffset... tables
-		lumpoff = sprframe->lumpid[rot];
-		flip = sprframe->flip & (1<<rot);
-	}
-	else
+	if (sprframe->rotate == SRF_SINGLE)
 	{
 		// use single rotation for all views
 		rot = 0;                        //Fab: for vis->patch below
 		lumpoff = sprframe->lumpid[0];     //Fab: see note above
 		flip = sprframe->flip; // Will only be 0x00 or 0xFF
+	}
+	else
+	{
+		// choose a different rotation based on player view
+		ang = R_PointToAngle (thing->x, thing->y) - thing->angle;
+
+		if ((sprframe->rotate & SRF_RIGHT) && (ang < ANGLE_180)) // See from right
+			rot = 6; // F7 slot
+		else if ((sprframe->rotate & SRF_LEFT) && (ang >= ANGLE_180)) // See from left
+			rot = 2; // F3 slot
+		else // Normal behaviour
+			rot = (ang+ANGLE_202h)>>29;
+
+		//Fab: lumpid is the index for spritewidth,spriteoffset... tables
+		lumpoff = sprframe->lumpid[rot];
+		flip = sprframe->flip & (1<<rot);
 	}
 
 	if (thing->skin && ((skin_t *)thing->skin)->flags & SF_HIRES)
@@ -5321,7 +5330,7 @@ static void HWR_DrawSkyBackground(player_t *player)
 //  0--1
 
 	(void)player;
-	HWR_GetTexture(skytexture);
+	HWR_GetTexture(texturetranslation[skytexture]);
 
 	//Hurdler: the sky is the only texture who need 4.0f instead of 1.0
 	//         because it's called just after clearing the screen
@@ -5341,7 +5350,7 @@ static void HWR_DrawSkyBackground(player_t *player)
 
 	angle = (dup_viewangle + gr_xtoviewangle[0]);
 
-	dimensionmultiply = ((float)textures[skytexture]->width/256.0f);
+	dimensionmultiply = ((float)textures[texturetranslation[skytexture]]->width/256.0f);
 
 	v[0].sow = v[3].sow = ((float) angle / ((ANGLE_90-1)*dimensionmultiply));
 	v[2].sow = v[1].sow = (-1.0f/dimensionmultiply)+((float) angle / ((ANGLE_90-1)*dimensionmultiply));
@@ -5350,7 +5359,7 @@ static void HWR_DrawSkyBackground(player_t *player)
 	angle = aimingangle;
 
 	aspectratio = (float)vid.width/(float)vid.height;
-	dimensionmultiply = ((float)textures[skytexture]->height/(128.0f*aspectratio));
+	dimensionmultiply = ((float)textures[texturetranslation[skytexture]]->height/(128.0f*aspectratio));
 	angleturn = (((float)ANGLE_45-1.0f)*aspectratio)*dimensionmultiply;
 
 	// Middle of the sky should always be at angle 0
@@ -6157,7 +6166,7 @@ static void HWR_Render3DWater(void)
 	for (i = 0; i < numfloors; i++)
 	{
 		HWR_GetFlat(planeinfo[i].lumpnum);
-		HWR_RenderPlane(NULL, planeinfo[i].xsub, planeinfo[i].fixedheight, PF_Translucent, planeinfo[i].lightlevel, planeinfo[i].lumpnum,
+		HWR_RenderPlane(NULL, planeinfo[i].xsub, planeinfo[i].isceiling, planeinfo[i].fixedheight, PF_Translucent, planeinfo[i].lightlevel, planeinfo[i].lumpnum,
 			planeinfo[i].FOFSector, planeinfo[i].alpha, planeinfo[i].fogplane, planeinfo[i].planecolormap);
 	}
 	numfloors = 0;
