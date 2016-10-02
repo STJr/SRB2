@@ -8627,7 +8627,7 @@ void P_DoPityCheck(player_t *player)
 	if ((player->pity >= 3 || player->pity < 0) && player->powers[pw_shield] == SH_NONE)
 	{
 		if (player->pity > 0)
-			S_StartSound(player->mo, mobjinfo[MT_PITYSHIELDICO].seesound);
+			S_StartSound(player->mo, mobjinfo[MT_PITY_ICON].seesound);
 
 		player->pity = 0;
 		player->powers[pw_shield] = SH_PITY;

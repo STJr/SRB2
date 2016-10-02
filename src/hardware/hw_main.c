@@ -5329,7 +5329,7 @@ static void HWR_DrawSkyBackground(player_t *player)
 //  0--1
 
 	(void)player;
-	HWR_GetTexture(skytexture);
+	HWR_GetTexture(texturetranslation[skytexture]);
 
 	//Hurdler: the sky is the only texture who need 4.0f instead of 1.0
 	//         because it's called just after clearing the screen
@@ -5349,7 +5349,7 @@ static void HWR_DrawSkyBackground(player_t *player)
 
 	angle = (dup_viewangle + gr_xtoviewangle[0]);
 
-	dimensionmultiply = ((float)textures[skytexture]->width/256.0f);
+	dimensionmultiply = ((float)textures[texturetranslation[skytexture]]->width/256.0f);
 
 	v[0].sow = v[3].sow = ((float) angle / ((ANGLE_90-1)*dimensionmultiply));
 	v[2].sow = v[1].sow = (-1.0f/dimensionmultiply)+((float) angle / ((ANGLE_90-1)*dimensionmultiply));
@@ -5358,7 +5358,7 @@ static void HWR_DrawSkyBackground(player_t *player)
 	angle = aimingangle;
 
 	aspectratio = (float)vid.width/(float)vid.height;
-	dimensionmultiply = ((float)textures[skytexture]->height/(128.0f*aspectratio));
+	dimensionmultiply = ((float)textures[texturetranslation[skytexture]]->height/(128.0f*aspectratio));
 	angleturn = (((float)ANGLE_45-1.0f)*aspectratio)*dimensionmultiply;
 
 	// Middle of the sky should always be at angle 0
