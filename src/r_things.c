@@ -1319,8 +1319,9 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	if ((thing->flags2 & MF2_LINKDRAW) && thing->tracer) // toast 16/09/16 (SYMMETRY)
 	{
-		mobj_t *link, *link2;
 		fixed_t linkscale;
+#if 0 // support for chains of linkdraw - probably not network safe to modify mobjs during rendering
+		mobj_t *link, *link2;
 
 		for (link = thing->tracer; (link->tracer && (link->flags2 & MF2_LINKDRAW)); link = link->tracer)
 			link->flags2 &= ~MF2_LINKDRAW; // to prevent infinite loops, otherwise would just be a ;
@@ -1333,6 +1334,10 @@ static void R_ProjectSprite(mobj_t *thing)
 
 		tr_x = link->x - viewx;
 		tr_y = link->y - viewy;
+#else
+		tr_x = thing->tracer->x - viewx;
+		tr_y = thing->tracer->y - viewy;
+#endif
 		gxt = FixedMul(tr_x, viewcos);
 		gyt = -FixedMul(tr_y, viewsin);
 		tz = gxt-gyt;
