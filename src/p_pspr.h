@@ -37,6 +37,10 @@
 
 /// \brief Frame flags: only the frame number - 0 to 511 (Frames from 0 to 63, Sprite2 number uses full range)
 #define FF_FRAMEMASK 0x1ff
+/// \brief Frame flags: Flip sprite vertically (relative to what it should be for its gravity)
+#define FF_VERTICALFLIP 0x400
+/// \brief Frame flags: Thin, paper-like sprite (for collision equivalent, see MF_PAPERCOLLISION)
+#define FF_PAPERSPRITE 0x800
 /// \brief Frame flags: A change of state at the end of Sprite2 animation
 #define FF_SPR2ENDSTATE 0x1000
 /// \brief Frame flags: 50% of starting in middle of animation (Sprite2 and FF_ANIMATE)
