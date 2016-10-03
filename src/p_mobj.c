@@ -7596,7 +7596,7 @@ void P_MobjThinker(mobj_t *mobj)
 			{
 				// Special case for ALL monitors.
 				// If a box's speed is nonzero, it's allowed to respawn as a WRM/SRM.
-				if (mobj->info->speed != 0 && (mobj->flags2 & MF2_AMBUSH|MF2_STRONGBOX))
+				if (mobj->info->speed != 0 && (mobj->flags2 & (MF2_AMBUSH|MF2_STRONGBOX)))
 				{
 					mobjtype_t spawnchance[64];
 					INT32 numchoices = 0, i = 0;
