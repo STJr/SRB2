@@ -1336,7 +1336,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		case MT_SMALLMACECHAIN:
 		case MT_BIGMACECHAIN:
 			// Is this the last link in the chain?
-			if (toucher->momz > 0 || !(special->flags & MF_AMBUSH)
+			if (toucher->momz > 0 || !(special->flags2 & MF2_AMBUSH)
 				|| (player->powers[pw_carry]))
 				return;
 
