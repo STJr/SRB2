@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2012-2014 by John "JTE" Muniz.
-// Copyright (C) 2012-2014 by Sonic Team Junior.
+// Copyright (C) 2012-2016 by John "JTE" Muniz.
+// Copyright (C) 2012-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -105,7 +105,7 @@ static int lib_getSpr2name(lua_State *L)
 	if (lua_isnumber(L, 1))
 	{
 		i = lua_tonumber(L, 1);
-		if (i > NUMPLAYERSPRITES)
+		if (i >= free_spr2)
 			return 0;
 		lua_pushlstring(L, spr2names[i], 4);
 		return 1;
@@ -113,7 +113,7 @@ static int lib_getSpr2name(lua_State *L)
 	else if (lua_isstring(L, 1))
 	{
 		const char *name = lua_tostring(L, 1);
-		for (i = 0; i < NUMPLAYERSPRITES; i++)
+		for (i = 0; i < free_spr2; i++)
 			if (fastcmp(name, spr2names[i]))
 			{
 				lua_pushinteger(L, i);
@@ -125,7 +125,7 @@ static int lib_getSpr2name(lua_State *L)
 
 static int lib_spr2namelen(lua_State *L)
 {
-	lua_pushinteger(L, NUMPLAYERSPRITES);
+	lua_pushinteger(L, free_spr2);
 	return 1;
 }
 
@@ -184,6 +184,8 @@ static int lib_getState(lua_State *L)
 	lua_remove(L, 1);
 
 	i = luaL_checkinteger(L, 1);
+	if (i >= NUMSTATES)
+		return luaL_error(L, "states[] index %d out of range (0 - %d)", i, NUMSTATES-1);
 	LUA_PushUserdata(L, &states[i], META_STATE);
 	return 1;
 }
@@ -193,7 +195,12 @@ static int lib_setState(lua_State *L)
 {
 	state_t *state;
 	lua_remove(L, 1); // don't care about states[] userdata.
-	state = &states[luaL_checkinteger(L, 1)]; // get the state to assign to.
+	{
+		UINT32 i = luaL_checkinteger(L, 1);
+		if (i >= NUMSTATES)
+			return luaL_error(L, "states[] index %d out of range (0 - %d)", i, NUMSTATES-1);
+		state = &states[i]; // get the state to assign to.
+	}
 	luaL_checktype(L, 2, LUA_TTABLE); // check that we've been passed a table.
 	lua_remove(L, 1); // pop state num, don't need it any more.
 	lua_settop(L, 1); // cut the stack here. the only thing left now is the table of data we're assigning to the state.
@@ -474,6 +481,8 @@ static int lib_getMobjInfo(lua_State *L)
 	lua_remove(L, 1);
 
 	i = luaL_checkinteger(L, 1);
+	if (i >= NUMMOBJTYPES)
+		return luaL_error(L, "mobjinfo[] index %d out of range (0 - %d)", i, NUMMOBJTYPES-1);
 	LUA_PushUserdata(L, &mobjinfo[i], META_MOBJINFO);
 	return 1;
 }
@@ -483,7 +492,12 @@ static int lib_setMobjInfo(lua_State *L)
 {
 	mobjinfo_t *info;
 	lua_remove(L, 1); // don't care about mobjinfo[] userdata.
-	info = &mobjinfo[luaL_checkinteger(L, 1)]; // get the mobjinfo to assign to.
+	{
+		UINT32 i = luaL_checkinteger(L, 1);
+		if (i >= NUMMOBJTYPES)
+			return luaL_error(L, "mobjinfo[] index %d out of range (0 - %d)", i, NUMMOBJTYPES-1);
+		info = &mobjinfo[i]; // get the mobjinfo to assign to.
+	}
 	luaL_checktype(L, 2, LUA_TTABLE); // check that we've been passed a table.
 	lua_remove(L, 1); // pop mobjtype num, don't need it any more.
 	lua_settop(L, 1); // cut the stack here. the only thing left now is the table of data we're assigning to the mobjinfo.
@@ -755,6 +769,8 @@ static int lib_getSfxInfo(lua_State *L)
 	lua_remove(L, 1);
 
 	i = luaL_checkinteger(L, 1);
+	if (i >= NUMSFX)
+		return luaL_error(L, "sfxinfo[] index %d out of range (0 - %d)", i, NUMSFX-1);
 	LUA_PushUserdata(L, &S_sfx[i], META_SFXINFO);
 	return 1;
 }
@@ -765,7 +781,12 @@ static int lib_setSfxInfo(lua_State *L)
 	sfxinfo_t *info;
 
 	lua_remove(L, 1);
-	info = &S_sfx[luaL_checkinteger(L, 1)]; // get the mobjinfo to assign to.
+	{
+		UINT32 i = luaL_checkinteger(L, 1);
+		if (i >= NUMSFX)
+			return luaL_error(L, "sfxinfo[] index %d out of range (0 - %d)", i, NUMSFX-1);
+		info = &S_sfx[i]; // get the mobjinfo to assign to.
+	}
 	luaL_checktype(L, 2, LUA_TTABLE); // check that we've been passed a table.
 	lua_remove(L, 1); // pop mobjtype num, don't need it any more.
 	lua_settop(L, 1); // cut the stack here. the only thing left now is the table of data we're assigning to the mobjinfo.

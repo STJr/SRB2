@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -325,9 +325,12 @@ boolean P_CheckSight(mobj_t *t1, mobj_t *t2)
 	s2 = t2->subsector->sector;
 	pnum = (s1-sectors)*numsectors + (s2-sectors);
 
-	// Check in REJECT table.
-	if (rejectmatrix[pnum>>3] & (1 << (pnum&7))) // can't possibly be connected
-		return false;
+	if (rejectmatrix != NULL)
+	{
+		// Check in REJECT table.
+		if (rejectmatrix[pnum>>3] & (1 << (pnum&7))) // can't possibly be connected
+			return false;
+	}
 
 	// killough 11/98: shortcut for melee situations
 	// same subsector? obviously visible

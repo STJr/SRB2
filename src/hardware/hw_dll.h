@@ -54,7 +54,7 @@
  #endif
 #endif
 
-typedef void (*I_Error_t) (const char *error, ...);
+typedef void (*I_Error_t) (const char *error, ...) FUNCIERROR;
 
 // ==========================================================================
 //                                                                      MATHS

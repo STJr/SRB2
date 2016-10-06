@@ -406,191 +406,6 @@ static md2_model_t *md2_readModel(const char *filename)
 	return model;
 }
 
-/*
- * center model
- */
-static inline void md2_getBoundingBox (md2_model_t *model, float *minmax)
-{
-	size_t i;
-	float minx, maxx;
-	float miny, maxy;
-	float minz, maxz;
-
-	minx = miny = minz = 999999.0f;
-	maxx = maxy = maxz = -999999.0f;
-
-	/* get bounding box */
-	for (i = 0; i < model->header.numVertices; i++)
-	{
-		md2_triangleVertex_t *v = &model->frames[0].vertices[i];
-
-		if (v->vertex[0] < minx)
-			minx = v->vertex[0];
-		else if (v->vertex[0] > maxx)
-			maxx = v->vertex[0];
-
-		if (v->vertex[1] < miny)
-			miny = v->vertex[1];
-		else if (v->vertex[1] > maxy)
-			maxy = v->vertex[1];
-
-		if (v->vertex[2] < minz)
-			minz = v->vertex[2];
-		else if (v->vertex[2] > maxz)
-			maxz = v->vertex[2];
-	}
-
-	minmax[0] = minx;
-	minmax[1] = maxx;
-	minmax[2] = miny;
-	minmax[3] = maxy;
-	minmax[4] = minz;
-	minmax[5] = maxz;
-}
-
-static inline INT32 md2_getAnimationCount(md2_model_t *model)
-{
-	size_t i, pos;
-	INT32 j = 0, count;
-	char name[16], last[16];
-
-	strcpy(last, model->frames[0].name);
-	pos = strlen(last) - 1;
-	while (last[pos] >= '0' && last[pos] <= '9' && j < 2)
-	{
-		pos--;
-		j++;
-	}
-	last[pos + 1] = '\0';
-
-	count = 0;
-
-	for (i = 0; i <= model->header.numFrames; i++)
-	{
-		if (i == model->header.numFrames)
-			strcpy(name, ""); // some kind of a sentinel
-		else
-			strcpy(name, model->frames[i].name);
-		pos = strlen(name) - 1;
-		j = 0;
-		while (name[pos] >= '0' && name[pos] <= '9' && j < 2)
-		{
-			pos--;
-			j++;
-		}
-		name[pos + 1] = '\0';
-
-		if (strcmp(last, name))
-		{
-			strcpy(last, name);
-			count++;
-		}
-	}
-
-	return count;
-}
-
-static inline const char * md2_getAnimationName (md2_model_t *model, INT32 animation)
-{
-	size_t i, pos;
-	INT32 j = 0, count;
-	static char last[32];
-	char name[32];
-
-	strcpy(last, model->frames[0].name);
-	pos = strlen(last) - 1;
-	while (last[pos] >= '0' && last[pos] <= '9' && j < 2)
-	{
-		pos--;
-		j++;
-	}
-	last[pos + 1] = '\0';
-
-	count = 0;
-
-	for (i = 0; i <= model->header.numFrames; i++)
-	{
-		if (i == model->header.numFrames)
-			strcpy(name, ""); // some kind of a sentinel
-		else
-			strcpy(name, model->frames[i].name);
-		pos = strlen(name) - 1;
-		j = 0;
-		while (name[pos] >= '0' && name[pos] <= '9' && j < 2)
-		{
-			pos--;
-			j++;
-		}
-		name[pos + 1] = '\0';
-
-		if (strcmp(last, name))
-		{
-			if (count == animation)
-				return last;
-
-			strcpy(last, name);
-			count++;
-		}
-	}
-
-	return 0;
-}
-
-static inline void md2_getAnimationFrames(md2_model_t *model,
-	INT32 animation, INT32 *startFrame, INT32 *endFrame)
-{
-	size_t i, pos;
-	INT32 j = 0, count, numFrames, frameCount;
-	char name[16], last[16];
-
-	strcpy(last, model->frames[0].name);
-	pos = strlen(last) - 1;
-	while (last[pos] >= '0' && last[pos] <= '9' && j < 2)
-	{
-		pos--;
-		j++;
-	}
-	last[pos + 1] = '\0';
-
-	count = 0;
-	numFrames = 0;
-	frameCount = 0;
-
-	for (i = 0; i <= model->header.numFrames; i++)
-	{
-		if (i == model->header.numFrames)
-			strcpy(name, ""); // some kind of a sentinel
-		else
-			strcpy(name, model->frames[i].name);
-		pos = strlen(name) - 1;
-		j = 0;
-		while (name[pos] >= '0' && name[pos] <= '9' && j < 2)
-		{
-			pos--;
-			j++;
-		}
-		name[pos + 1] = '\0';
-
-		if (strcmp(last, name))
-		{
-			strcpy(last, name);
-
-			if (count == animation)
-			{
-				*startFrame = frameCount - numFrames;
-				*endFrame = frameCount - 1;
-				return;
-			}
-
-			count++;
-			numFrames = 0;
-		}
-		frameCount++;
-		numFrames++;
-	}
-	*startFrame = *endFrame = 0;
-}
-
 static inline void md2_printModelInfo (md2_model_t *model)
 {
 #if 0
@@ -1220,32 +1035,151 @@ static void HWR_CreateBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, 
 		case SKINCOLOR_ROSY:
 			blendcolor = V_GetColor(202);
 			break;
-		case SKINCOLOR_SUPER1:
+
+		case SKINCOLOR_SUPERSILVER1: // Super silver
+			blendcolor = V_GetColor(0);
+			break;
+		case SKINCOLOR_SUPERSILVER2:
+			blendcolor = V_GetColor(2);
+			break;
+		case SKINCOLOR_SUPERSILVER3:
+			blendcolor = V_GetColor(4);
+			break;
+		case SKINCOLOR_SUPERSILVER4:
+			blendcolor = V_GetColor(7);
+			break;
+		case SKINCOLOR_SUPERSILVER5:
+			blendcolor = V_GetColor(10);
+			break;
+
+		case SKINCOLOR_SUPERRED1: // Super red
+			blendcolor = V_GetColor(208);
+			break;
+		case SKINCOLOR_SUPERRED2:
+			blendcolor = V_GetColor(210);
+			break;
+		case SKINCOLOR_SUPERRED3:
+			blendcolor = V_GetColor(32);
+			break;
+		case SKINCOLOR_SUPERRED4:
+			blendcolor = V_GetColor(33);
+			break;
+		case SKINCOLOR_SUPERRED5:
+			blendcolor = V_GetColor(35);
+			break;
+
+		case SKINCOLOR_SUPERORANGE1: // Super orange
+			blendcolor = V_GetColor(208);
+			break;
+		case SKINCOLOR_SUPERORANGE2:
+			blendcolor = V_GetColor(48);
+			break;
+		case SKINCOLOR_SUPERORANGE3:
+			blendcolor = V_GetColor(50);
+			break;
+		case SKINCOLOR_SUPERORANGE4:
+			blendcolor = V_GetColor(54);
+			break;
+		case SKINCOLOR_SUPERORANGE5:
+			blendcolor = V_GetColor(58);
+			break;
+
+		case SKINCOLOR_SUPERGOLD1: // Super gold
 			blendcolor = V_GetColor(80);
 			break;
-		case SKINCOLOR_SUPER2:
+		case SKINCOLOR_SUPERGOLD2:
 			blendcolor = V_GetColor(83);
 			break;
-		case SKINCOLOR_SUPER3:
+		case SKINCOLOR_SUPERGOLD3:
 			blendcolor = V_GetColor(73);
 			break;
-		case SKINCOLOR_SUPER4:
+		case SKINCOLOR_SUPERGOLD4:
 			blendcolor = V_GetColor(64);
 			break;
-		case SKINCOLOR_SUPER5:
+		case SKINCOLOR_SUPERGOLD5:
 			blendcolor = V_GetColor(67);
 			break;
 
-		case SKINCOLOR_TSUPER1:
-		case SKINCOLOR_TSUPER2:
-		case SKINCOLOR_TSUPER3:
-		case SKINCOLOR_TSUPER4:
-		case SKINCOLOR_TSUPER5:
-		case SKINCOLOR_KSUPER1:
-		case SKINCOLOR_KSUPER2:
-		case SKINCOLOR_KSUPER3:
-		case SKINCOLOR_KSUPER4:
-		case SKINCOLOR_KSUPER5:
+		case SKINCOLOR_SUPERPERIDOT1: // Super peridot
+			blendcolor = V_GetColor(88);
+			break;
+		case SKINCOLOR_SUPERPERIDOT2:
+			blendcolor = V_GetColor(188);
+			break;
+		case SKINCOLOR_SUPERPERIDOT3:
+			blendcolor = V_GetColor(189);
+			break;
+		case SKINCOLOR_SUPERPERIDOT4:
+			blendcolor = V_GetColor(190);
+			break;
+		case SKINCOLOR_SUPERPERIDOT5:
+			blendcolor = V_GetColor(191);
+			break;
+
+		case SKINCOLOR_SUPERCYAN1: // Super cyan
+			blendcolor = V_GetColor(128);
+			break;
+		case SKINCOLOR_SUPERCYAN2:
+			blendcolor = V_GetColor(131);
+			break;
+		case SKINCOLOR_SUPERCYAN3:
+			blendcolor = V_GetColor(133);
+			break;
+		case SKINCOLOR_SUPERCYAN4:
+			blendcolor = V_GetColor(134);
+			break;
+		case SKINCOLOR_SUPERCYAN5:
+			blendcolor = V_GetColor(136);
+			break;
+
+		case SKINCOLOR_SUPERPURPLE1: // Super purple
+			blendcolor = V_GetColor(144);
+			break;
+		case SKINCOLOR_SUPERPURPLE2:
+			blendcolor = V_GetColor(162);
+			break;
+		case SKINCOLOR_SUPERPURPLE3:
+			blendcolor = V_GetColor(164);
+			break;
+		case SKINCOLOR_SUPERPURPLE4:
+			blendcolor = V_GetColor(166);
+			break;
+		case SKINCOLOR_SUPERPURPLE5:
+			blendcolor = V_GetColor(168);
+			break;
+
+		case SKINCOLOR_SUPERRUST1: // Super rust
+			blendcolor = V_GetColor(51);
+			break;
+		case SKINCOLOR_SUPERRUST2:
+			blendcolor = V_GetColor(54);
+			break;
+		case SKINCOLOR_SUPERRUST3:
+			blendcolor = V_GetColor(68);
+			break;
+		case SKINCOLOR_SUPERRUST4:
+			blendcolor = V_GetColor(70);
+			break;
+		case SKINCOLOR_SUPERRUST5:
+			blendcolor = V_GetColor(234);
+			break;
+
+		case SKINCOLOR_SUPERTAN1: // Super tan
+			blendcolor = V_GetColor(80);
+			break;
+		case SKINCOLOR_SUPERTAN2:
+			blendcolor = V_GetColor(82);
+			break;
+		case SKINCOLOR_SUPERTAN3:
+			blendcolor = V_GetColor(84);
+			break;
+		case SKINCOLOR_SUPERTAN4:
+			blendcolor = V_GetColor(87);
+			break;
+		case SKINCOLOR_SUPERTAN5:
+			blendcolor = V_GetColor(247);
+			break;
+
 		default:
 			blendcolor = V_GetColor(255);
 			break;
@@ -1415,7 +1349,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		UINT32 durs = spr->mobj->state->tics;
 		UINT32 tics = spr->mobj->tics;
 		md2_frame_t *curr, *next = NULL;
-		const UINT8 flip = (UINT8)((spr->mobj->eflags & MFE_VERTICALFLIP) == MFE_VERTICALFLIP);
+		const UINT8 flip = (UINT8)(!(spr->mobj->eflags & MFE_VERTICALFLIP) != !(spr->mobj->frame & FF_VERTICALFLIP));
 		spritedef_t *sprdef;
 		spriteframe_t *sprframe;
 		float finalscale;
@@ -1530,7 +1464,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		p.x = FIXED_TO_FLOAT(spr->mobj->x);
 		p.y = FIXED_TO_FLOAT(spr->mobj->y)+md2->offset;
 
-		if (spr->mobj->eflags & MFE_VERTICALFLIP)
+		if (flip)
 			p.z = FIXED_TO_FLOAT(spr->mobj->z + spr->mobj->height);
 		else
 			p.z = FIXED_TO_FLOAT(spr->mobj->z);
@@ -1562,10 +1496,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		// SRB2CBTODO: MD2 scaling support
 		finalscale *= FIXED_TO_FLOAT(spr->mobj->scale);
 
-		if (postimgtype == postimg_flip)
-			p.flip = true;
-		else
-			p.flip = false;
+		p.flip = atransform.flip;
 
 		HWD.pfnDrawMD2i(buff, curr, durs, tics, next, &p, finalscale, flip, color);
 	}

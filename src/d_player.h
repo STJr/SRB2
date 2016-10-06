@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -39,6 +39,12 @@ typedef enum
 	SF_NOSKID           = 1<<4, // No skid particles etc
 	SF_NOSPEEDADJUST    = 1<<5, // Skin-specific version of disablespeedadjust
 	SF_RUNONWATER       = 1<<6, // Run on top of water FOFs?
+	SF_NOJUMPSPIN       = 1<<7, // SPR2_JUMP defaults to SPR2_SPRG instead of SPR2_SPIN, falling states used, and player height is full when jumping?
+	SF_NOJUMPDAMAGE     = 1<<8, // Don't damage enemies, etc whilst jumping?
+	SF_STOMPDAMAGE      = 1<<9, // Always damage enemies, etc by landing on them, no matter your vunerability?
+	SF_MARIODAMAGE      = SF_NOJUMPDAMAGE|SF_STOMPDAMAGE, // The Mario method of being able to damage enemies, etc.
+	SF_MACHINE          = 1<<10, // Beep boop. Are you a robot?
+	// free up to and including 1<<31
 } skinflags_t;
 
 //Primary and secondary skin abilities
@@ -57,7 +63,9 @@ typedef enum
 	CA_FALLSWITCH,
 	CA_JUMPBOOST,
 	CA_AIRDRILL,
-	CA_JUMPTHOK
+	CA_JUMPTHOK,
+	CA_DASHMODE,
+	CA_TWINSPIN
 } charability_t;
 
 //Secondary skin abilities
@@ -65,7 +73,8 @@ typedef enum
 {
 	CA2_NONE=0,
 	CA2_SPINDASH,
-	CA2_MULTIABILITY
+	CA2_MULTIABILITY,
+	CA2_MELEE
 } charability2_t;
 
 //
@@ -120,40 +129,31 @@ typedef enum
 	// Are you gliding?
 	PF_GLIDING   = 1<<16,
 
-	// Tails pickup!
-	PF_CARRIED   = 1<<17,
-
 	// Sliding (usually in water) like Labyrinth/Oil Ocean
-	PF_SLIDING   = 1<<18,
-
-	// Hanging on a rope
-	PF_ROPEHANG = 1<<19,
-
-	// Hanging on an item of some kind - zipline, chain, etc. (->tracer)
-	PF_ITEMHANG = 1<<20,
-
-	// On the mace chain spinning around (->tracer)
-	PF_MACESPIN = 1<<21,
+	PF_SLIDING   = 1<<17,
 
 	/*** NIGHTS STUFF ***/
 	// Is the player in NiGHTS mode?
-	PF_NIGHTSMODE        = 1<<22,
-	PF_TRANSFERTOCLOSEST = 1<<23,
+	PF_NIGHTSMODE        = 1<<18,
+	PF_TRANSFERTOCLOSEST = 1<<19,
 
 	// Spill rings after falling
-	PF_NIGHTSFALL        = 1<<24,
-	PF_DRILLING          = 1<<25,
-	PF_SKIDDOWN          = 1<<26,
+	PF_NIGHTSFALL        = 1<<20,
+	PF_DRILLING          = 1<<21,
+	PF_SKIDDOWN          = 1<<22,
 
 	/*** TAG STUFF ***/
-	PF_TAGGED            = 1<<27, // Player has been tagged and awaits the next round in hide and seek.
-	PF_TAGIT             = 1<<28, // The player is it! For Tag Mode
+	PF_TAGGED            = 1<<23, // Player has been tagged and awaits the next round in hide and seek.
+	PF_TAGIT             = 1<<24, // The player is it! For Tag Mode
 
 	/*** misc ***/
-	PF_FORCESTRAFE       = 1<<29, // Turning inputs are translated into strafing inputs
-	PF_ANALOGMODE        = 1<<30, // Analog mode?
+	PF_FORCESTRAFE       = 1<<25, // Turning inputs are translated into strafing inputs
+	PF_ANALOGMODE        = 1<<26, // Analog mode?
 
-	// free: 1<<30 and 1<<31
+	// Can carry another player?
+	PF_CANCARRY          = 1<<27
+
+	// free up to and including 1<<31
 } pflags_t;
 
 typedef enum
@@ -164,11 +164,14 @@ typedef enum
 	PA_EDGE,
 	PA_WALK,
 	PA_RUN,
+	PA_PEEL,
 	PA_PAIN,
 	PA_ROLL,
+	PA_JUMP,
 	PA_SPRING,
 	PA_FALL,
 	PA_ABILITY,
+	PA_ABILITY2,
 	PA_RIDE
 } panim_t;
 
@@ -193,7 +196,20 @@ typedef enum
 
 	SH_STACK = SH_FIREFLOWER,
 	SH_NOSTACK = ~SH_STACK
-} shieldtype_t;
+} shieldtype_t; // pw_shield
+
+typedef enum
+{
+	CR_NONE = 0,
+	// The generic case is suitable for most objects.
+	CR_GENERIC,
+	// Tails carry.
+	CR_PLAYER,
+	// Specific level gimmicks.
+	CR_ZOOMTUBE,
+	CR_ROPEHANG,
+	CR_MACESPIN
+} carrytype_t; // pw_carry
 
 // Player powers. (don't edit this comment)
 typedef enum
@@ -202,6 +218,7 @@ typedef enum
 	pw_sneakers,
 	pw_flashing,
 	pw_shield,
+	pw_carry,
 	pw_tailsfly, // tails flying
 	pw_underwater, // underwater timer
 	pw_spacetime, // In space, no one can hear you spin!
@@ -265,6 +282,8 @@ typedef struct player_s
 	playerstate_t playerstate;
 
 	// Determine POV, including viewpoint bobbing during movement.
+	fixed_t camerascale;
+	fixed_t shieldscale;
 	// Focal origin above r.z
 	fixed_t viewz;
 	// Base height above floor for viewz.
@@ -308,7 +327,6 @@ typedef struct player_s
 
 	UINT32 score; // player score
 	fixed_t dashspeed; // dashing speed
-	INT32 dashtime; // tics dashing, used for rev sound
 
 	fixed_t normalspeed; // Normal ground
 	fixed_t runspeed; // Speed you break into the run animation
@@ -333,6 +351,9 @@ typedef struct player_s
 
 	fixed_t jumpfactor; // How high can the player jump?
 
+	fixed_t height; // Bounding box changes.
+	fixed_t spinheight;
+
 	SINT8 lives;
 	SINT8 continues; // continues that player has acquired
 
@@ -351,6 +372,7 @@ typedef struct player_s
 	tic_t exiting; // Exitlevel timer
 
 	UINT8 homing; // Are you homing?
+	tic_t dashmode; // counter for dashmode ability
 
 	tic_t skidtime; // Skid timer
 

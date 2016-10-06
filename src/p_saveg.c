@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -108,7 +108,7 @@ static inline void P_UnArchivePlayer(void)
 //
 // P_NetArchivePlayers
 //
-static inline void P_NetArchivePlayers(void)
+static void P_NetArchivePlayers(void)
 {
 	INT32 i, j;
 	UINT16 flags;
@@ -147,7 +147,6 @@ static inline void P_NetArchivePlayers(void)
 
 		WRITEUINT32(save_p, players[i].score);
 		WRITEFIXED(save_p, players[i].dashspeed);
-		WRITEINT32(save_p, players[i].dashtime);
 		WRITESINT8(save_p, players[i].lives);
 		WRITESINT8(save_p, players[i].continues);
 		WRITESINT8(save_p, players[i].xtralife);
@@ -162,6 +161,7 @@ static inline void P_NetArchivePlayers(void)
 		WRITEINT32(save_p, players[i].deadtimer);
 		WRITEUINT32(save_p, players[i].exiting);
 		WRITEUINT8(save_p, players[i].homing);
+		WRITEUINT32(save_p, players[i].dashmode);
 		WRITEUINT32(save_p, players[i].skidtime);
 
 		////////////////////////////
@@ -259,6 +259,9 @@ static inline void P_NetArchivePlayers(void)
 		if (flags & AWAYVIEW)
 			WRITEUINT32(save_p, players[i].awayviewmobj->mobjnum);
 
+		WRITEFIXED(save_p, players[i].camerascale);
+		WRITEFIXED(save_p, players[i].shieldscale);
+
 		WRITEUINT8(save_p, players[i].charability);
 		WRITEUINT8(save_p, players[i].charability2);
 		WRITEUINT32(save_p, players[i].charflags);
@@ -274,13 +277,15 @@ static inline void P_NetArchivePlayers(void)
 		WRITEUINT8(save_p, players[i].accelstart);
 		WRITEUINT8(save_p, players[i].acceleration);
 		WRITEFIXED(save_p, players[i].jumpfactor);
+		WRITEFIXED(save_p, players[i].height);
+		WRITEFIXED(save_p, players[i].spinheight);
 	}
 }
 
 //
 // P_NetUnArchivePlayers
 //
-static inline void P_NetUnArchivePlayers(void)
+static void P_NetUnArchivePlayers(void)
 {
 	INT32 i, j;
 	UINT16 flags;
@@ -322,7 +327,6 @@ static inline void P_NetUnArchivePlayers(void)
 
 		players[i].score = READUINT32(save_p);
 		players[i].dashspeed = READFIXED(save_p); // dashing speed
-		players[i].dashtime = READINT32(save_p); // dashing speed
 		players[i].lives = READSINT8(save_p);
 		players[i].continues = READSINT8(save_p); // continues that player has acquired
 		players[i].xtralife = READSINT8(save_p); // Ring Extra Life counter
@@ -337,6 +341,7 @@ static inline void P_NetUnArchivePlayers(void)
 		players[i].deadtimer = READINT32(save_p); // End game if game over lasts too long
 		players[i].exiting = READUINT32(save_p); // Exitlevel timer
 		players[i].homing = READUINT8(save_p); // Are you homing?
+		players[i].dashmode = READUINT32(save_p); // counter for dashmode ability
 		players[i].skidtime = READUINT32(save_p); // Skid timer
 
 		////////////////////////////
@@ -424,6 +429,9 @@ static inline void P_NetUnArchivePlayers(void)
 
 		players[i].viewheight = cv_viewheight.value<<FRACBITS;
 
+		players[i].camerascale = READFIXED(save_p);
+		players[i].shieldscale = READFIXED(save_p);
+
 		//SetPlayerSkinByNum(i, players[i].skin);
 		players[i].charability = READUINT8(save_p);
 		players[i].charability2 = READUINT8(save_p);
@@ -440,6 +448,8 @@ static inline void P_NetUnArchivePlayers(void)
 		players[i].accelstart = READUINT8(save_p);
 		players[i].acceleration = READUINT8(save_p);
 		players[i].jumpfactor = READFIXED(save_p);
+		players[i].height = READFIXED(save_p);
+		players[i].spinheight = READFIXED(save_p);
 	}
 }
 
@@ -613,7 +623,7 @@ static void P_NetArchiveWorld(void)
 						WRITEUINT16(put, j); // save ffloor "number"
 						WRITEUINT8(put, fflr_diff);
 						if (fflr_diff & 1)
-							WRITEUINT16(put, rover->flags);
+							WRITEUINT32(put, rover->flags);
 						if (fflr_diff & 2)
 							WRITEINT16(put, rover->alpha);
 					}
@@ -815,7 +825,7 @@ static void P_NetUnArchiveWorld(void)
 				fflr_diff = READUINT8(get);
 
 				if (fflr_diff & 1)
-					rover->flags = READUINT16(get);
+					rover->flags = READUINT32(get);
 				if (fflr_diff & 2)
 					rover->alpha = READINT16(get);
 
@@ -924,8 +934,12 @@ typedef enum
 	MD2_EXTVAL1     = 1<<5,
 	MD2_EXTVAL2     = 1<<6,
 	MD2_HNEXT       = 1<<7,
+#ifdef ESLOPE
 	MD2_HPREV       = 1<<8,
 	MD2_SLOPE       = 1<<9
+#else
+	MD2_HPREV       = 1<<8
+#endif
 } mobj_diff2_t;
 
 typedef enum
@@ -1117,8 +1131,10 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		diff2 |= MD2_HNEXT;
 	if (mobj->hprev)
 		diff2 |= MD2_HPREV;
+#ifdef ESLOPE
 	if (mobj->standingslope)
 		diff2 |= MD2_SLOPE;
+#endif
 	if (diff2 != 0)
 		diff |= MD_MORE;
 
@@ -1237,8 +1253,10 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		WRITEUINT32(save_p, mobj->hnext->mobjnum);
 	if (diff2 & MD2_HPREV)
 		WRITEUINT32(save_p, mobj->hprev->mobjnum);
+#ifdef ESLOPE
 	if (diff2 & MD2_SLOPE)
 		WRITEUINT16(save_p, mobj->standingslope->id);
+#endif
 
 	WRITEUINT32(save_p, mobj->mobjnum);
 }
@@ -2098,8 +2116,10 @@ static void LoadMobjThinker(actionf_p1 thinker)
 		mobj->hnext = (mobj_t *)(size_t)READUINT32(save_p);
 	if (diff2 & MD2_HPREV)
 		mobj->hprev = (mobj_t *)(size_t)READUINT32(save_p);
+#ifdef ESLOPE
 	if (diff2 & MD2_SLOPE)
 		mobj->standingslope = P_SlopeById(READUINT16(save_p));
+#endif
 
 
 	if (diff & MD_REDFLAG)

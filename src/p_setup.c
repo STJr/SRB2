@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1214,7 +1214,7 @@ static void P_LoadLineDefs2(void)
 		case 443: // Calls a named Lua function
 			if (sides[ld->sidenum[0]].text)
 			{
-				UINT8 len = strlen(sides[ld->sidenum[0]].text)+1;
+				size_t len = strlen(sides[ld->sidenum[0]].text)+1;
 				if (ld->sidenum[1] != 0xffff && sides[ld->sidenum[1]].text)
 					len += strlen(sides[ld->sidenum[1]].text);
 				ld->text = Z_Malloc(len, PU_LEVEL, NULL);
@@ -1888,7 +1888,7 @@ static boolean P_LoadBlockMap(lumpnum_t lumpnum)
 //
 static void P_GroupLines(void)
 {
-	size_t i, j, total = 0;
+	size_t i, j;
 	line_t *li;
 	sector_t *sector;
 	subsector_t *ss = subsectors;
@@ -1922,23 +1922,27 @@ static void P_GroupLines(void)
 	// count number of lines in each sector
 	for (i = 0, li = lines; i < numlines; i++, li++)
 	{
-		total++;
 		li->frontsector->linecount++;
 
 		if (li->backsector && li->backsector != li->frontsector)
-		{
 			li->backsector->linecount++;
-			total++;
-		}
 	}
 
 	// allocate linebuffers for each sector
 	for (i = 0, sector = sectors; i < numsectors; i++, sector++)
 	{
-		sector->lines = Z_Calloc(sector->linecount * sizeof(line_t*), PU_LEVEL, NULL);
+		if (sector->linecount == 0) // no lines found?
+		{
+			sector->lines = NULL;
+			CONS_Debug(DBG_SETUP, "P_GroupLines: sector %s has no lines\n", sizeu1(i));
+		}
+		else
+		{
+			sector->lines = Z_Calloc(sector->linecount * sizeof(line_t*), PU_LEVEL, NULL);
 
-		// zero the count, since we'll later use this to track how many we've recorded
-		sector->linecount = 0;
+			// zero the count, since we'll later use this to track how many we've recorded
+			sector->linecount = 0;
+		}
 	}
 
 	// iterate through lines, assigning them to sectors' linebuffers,
@@ -1956,11 +1960,14 @@ static void P_GroupLines(void)
 	{
 		M_ClearBox(bbox);
 
-		for (j = 0; j < sector->linecount; j++)
+		if (sector->linecount != 0)
 		{
-			li = sector->lines[j];
-			M_AddToBox(bbox, li->v1->x, li->v1->y);
-			M_AddToBox(bbox, li->v2->x, li->v2->y);
+			for (j = 0; j < sector->linecount; j++)
+			{
+				li = sector->lines[j];
+				M_AddToBox(bbox, li->v1->x, li->v1->y);
+				M_AddToBox(bbox, li->v2->x, li->v2->y);
+			}
 		}
 
 		// set the degenmobj_t to the middle of the bounding box
@@ -1968,6 +1975,35 @@ static void P_GroupLines(void)
 		sector->soundorg.y = (((bbox[BOXTOP]>>FRACBITS) + (bbox[BOXBOTTOM]>>FRACBITS))/2)<<FRACBITS;
 		sector->soundorg.z = sector->floorheight; // default to sector's floor height
 	}
+}
+
+//
+// P_LoadReject
+//
+// Detect if the REJECT lump is valid,
+// if not, rejectmatrix will be NULL
+static void P_LoadReject(lumpnum_t lumpnum)
+{
+	size_t count;
+	const char *lumpname = W_CheckNameForNum(lumpnum);
+
+	// Check if the lump exists, and if it's named "REJECT"
+	if (!lumpname || memcmp(lumpname, "REJECT\0\0", 8) != 0)
+	{
+		rejectmatrix = NULL;
+		CONS_Debug(DBG_SETUP, "P_LoadReject: No valid REJECT lump found\n");
+		return;
+	}
+
+	count = W_LumpLength(lumpnum);
+
+	if (!count) // zero length, someone probably used ZDBSP
+	{
+		rejectmatrix = NULL;
+		CONS_Debug(DBG_SETUP, "P_LoadReject: REJECT lump has size 0, will not be loaded\n");
+	}
+	else
+		rejectmatrix = W_CacheLumpNum(lumpnum, PU_LEVEL);
 }
 
 #if 0
@@ -2578,7 +2614,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	P_LoadSubsectors(lastloadedmaplumpnum + ML_SSECTORS);
 	P_LoadNodes(lastloadedmaplumpnum + ML_NODES);
 	P_LoadSegs(lastloadedmaplumpnum + ML_SEGS);
-	rejectmatrix = W_CacheLumpNum(lastloadedmaplumpnum + ML_REJECT, PU_LEVEL);
+	P_LoadReject(lastloadedmaplumpnum + ML_REJECT);
 	P_GroupLines();
 
 	numdmstarts = numredctfstarts = numbluectfstarts = 0;
@@ -2842,7 +2878,7 @@ boolean P_SetupLevel(boolean skipprecip)
 		savedata.lives = 0;
 	}
 
-	skyVisible = true; // assume the skybox is visible on level load.
+	skyVisible = skyVisible1 = skyVisible2 = true; // assume the skybox is visible on level load.
 	if (loadprecip) // uglier hack
 	{ // to make a newly loaded level start on the second frame.
 		INT32 buf = gametic % BACKUPTICS;

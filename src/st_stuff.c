@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -565,7 +565,7 @@ static void ST_drawDebugInfo(void)
 	{
 		V_DrawRightAlignedString(320, height - 104, V_MONOSPACE, va("SHIELD: %5x", stplyr->powers[pw_shield]));
 		V_DrawRightAlignedString(320, height - 96,  V_MONOSPACE, va("SCALE: %5d%%", (stplyr->mo->scale*100)/FRACUNIT));
-		V_DrawRightAlignedString(320, height - 88,  V_MONOSPACE, va("DASH: %3d/%3d", stplyr->dashspeed>>FRACBITS, FixedMul(stplyr->maxdash,stplyr->mo->scale)>>FRACBITS));
+		V_DrawRightAlignedString(320, height - 88,  V_MONOSPACE, va("DASH: %3d/%3d", stplyr->dashspeed>>FRACBITS, stplyr->maxdash>>FRACBITS));
 		V_DrawRightAlignedString(320, height - 80,  V_MONOSPACE, va("AIR: %4d, %3d", stplyr->powers[pw_underwater], stplyr->powers[pw_spacetime]));
 
 		// Flags
@@ -592,9 +592,13 @@ static void ST_drawDebugInfo(void)
 
 	if (cv_debug & DBG_RANDOMIZER) // randomizer testing
 	{
+		fixed_t peekres = P_RandomPeek();
+		peekres *= 10000;     // Change from fixed point
+		peekres >>= FRACBITS; // to displayable decimal
+
 		V_DrawRightAlignedString(320, height - 16, V_MONOSPACE, va("Init: %08x", P_GetInitSeed()));
 		V_DrawRightAlignedString(320, height - 8,  V_MONOSPACE, va("Seed: %08x", P_GetRandSeed()));
-		V_DrawRightAlignedString(320, height,      V_MONOSPACE, va("==  : %8d", P_RandomPeek()));
+		V_DrawRightAlignedString(320, height,      V_MONOSPACE, va("==  :    .%04d", peekres));
 
 		height -= 32;
 	}
@@ -886,11 +890,19 @@ static void ST_drawFirstPersonHUD(void)
 			V_NOSCALESTART|V_OFFSET|V_TRANSLUCENT, p);
 }
 
-// [21:42] <+Rob> Beige - Lavender - Steel Blue - Peach - Orange - Purple - Silver - Yellow - Pink - Red - Blue - Green - Cyan - Gold
-static skincolors_t linkColor[14] =
+// 2.0-1: [21:42] <+Rob> Beige - Lavender - Steel Blue - Peach - Orange - Purple - Silver - Yellow - Pink - Red - Blue - Green - Cyan - Gold
+/*#define NUMLINKCOLORS 14
+static skincolors_t linkColor[NUMLINKCOLORS] =
 {SKINCOLOR_BEIGE,  SKINCOLOR_LAVENDER, SKINCOLOR_AZURE, SKINCOLOR_PEACH, SKINCOLOR_ORANGE,
- SKINCOLOR_MAGENTA, SKINCOLOR_SILVER,   SKINCOLOR_SUPER4,    SKINCOLOR_PINK,  SKINCOLOR_RED,
- SKINCOLOR_BLUE,   SKINCOLOR_GREEN,    SKINCOLOR_CYAN,      SKINCOLOR_GOLD};
+ SKINCOLOR_MAGENTA, SKINCOLOR_SILVER,   SKINCOLOR_SUPERGOLD4,    SKINCOLOR_PINK,  SKINCOLOR_RED,
+ SKINCOLOR_BLUE,   SKINCOLOR_GREEN,    SKINCOLOR_CYAN,      SKINCOLOR_GOLD};*/
+
+// 2.2+: (unix time 1470866042) <Rob> Emerald, Aqua, Cyan, Blue, Pastel, Purple, Magenta, Rosy, Red, Orange, Gold, Yellow, Peridot
+#define NUMLINKCOLORS 13
+static skincolors_t linkColor[NUMLINKCOLORS] =
+{SKINCOLOR_EMERALD,  SKINCOLOR_AQUA, SKINCOLOR_CYAN, SKINCOLOR_BLUE, SKINCOLOR_PASTEL,
+ SKINCOLOR_PURPLE, SKINCOLOR_MAGENTA,   SKINCOLOR_ROSY,    SKINCOLOR_RED,  SKINCOLOR_ORANGE,
+ SKINCOLOR_GOLD,   SKINCOLOR_YELLOW,    SKINCOLOR_PERIDOT};
 
 static void ST_drawNightsRecords(void)
 {
@@ -970,7 +982,7 @@ static void ST_drawNiGHTSHUD(void)
 	if (cv_debug & DBG_NIGHTSBASIC)
 		minlink = 0;
 
-	// Cheap hack: don't display when the score is showing
+	// Cheap hack: don't display when the score is showing (it popping up for a split second when exiting a map is intentional)
 	if (stplyr->texttimer && stplyr->textvar == 4)
 		minlink = INT32_MAX;
 
@@ -990,7 +1002,7 @@ static void ST_drawNiGHTSHUD(void)
 #endif
 	stplyr->linkcount > minlink)
 	{
-		skincolors_t colornum = linkColor[((stplyr->linkcount-1) / 5) % (sizeof(linkColor) / sizeof(skincolors_t))];
+		skincolors_t colornum = linkColor[((stplyr->linkcount-1) / 5) % NUMLINKCOLORS];
 		if (stplyr->powers[pw_nights_linkfreeze])
 			colornum = SKINCOLOR_WHITE;
 
@@ -1295,7 +1307,7 @@ static void ST_drawNiGHTSHUD(void)
 				nightsnum, SKINCOLOR_RED);
 		else
 			ST_DrawNightsOverlayNum(160 + numbersize, STRINGY(12), SPLITFLAGS(V_SNAPTOTOP), realnightstime,
-				nightsnum, SKINCOLOR_SUPER4);
+				nightsnum, SKINCOLOR_SUPERGOLD4);
 
 		// Show exact time in debug
 		if (cv_debug & DBG_NIGHTSBASIC)
@@ -1381,6 +1393,10 @@ static void ST_drawMatchHUD(void)
 	if (G_TagGametype() && !(stplyr->pflags & PF_TAGIT))
 		return;
 
+#ifdef HAVE_BLUA
+	if (LUA_HudEnabled(hud_weaponrings)) {
+#endif
+
 	if (stplyr->powers[pw_infinityring])
 		ST_drawWeaponRing(pw_infinityring, 0, 0, offset, infinityring);
 	else if (stplyr->health > 1)
@@ -1403,6 +1419,12 @@ static void ST_drawMatchHUD(void)
 	ST_drawWeaponRing(pw_explosionring, RW_EXPLODE, WEP_EXPLODE, offset, explosionring);
 	offset += 20;
 	ST_drawWeaponRing(pw_railring, RW_RAIL, WEP_RAIL, offset, railring);
+
+#ifdef HAVE_BLUA
+	}
+
+	if (LUA_HudEnabled(hud_powerstones)) {
+#endif
 
 	// Power Stones collected
 	offset = 136; // Used for Y now
@@ -1435,6 +1457,10 @@ static void ST_drawMatchHUD(void)
 
 	if (stplyr->powers[pw_emeralds] & EMERALD7)
 		V_DrawScaledPatch(28, STRINGY(offset), V_SNAPTOLEFT, tinyemeraldpics[6]);
+
+#ifdef HAVE_BLUA
+	}
+#endif
 }
 
 static inline void ST_drawRaceHUD(void)
@@ -1889,7 +1915,7 @@ static void ST_overlayDrawer(void)
 	ST_drawDebugInfo();
 }
 
-void ST_Drawer(boolean refresh)
+void ST_Drawer(void)
 {
 #ifdef SEENAMES
 	if (cv_seenames.value && cv_allowseenames.value && displayplayer == consoleplayer && seenplayer && seenplayer->mo)
@@ -1906,8 +1932,11 @@ void ST_Drawer(boolean refresh)
 	}
 #endif
 
+	// Doom's status bar only updated if necessary.
+	// However, ours updates every frame regardless, so the "refresh" param was removed
+	//(void)refresh;
+
 	// force a set of the palette by using doPaletteStuff()
-	(void)refresh; //?
 	if (vid.recalc)
 		st_palette = -1;
 

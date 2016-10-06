@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -26,6 +26,7 @@ side_t *sidedef;
 line_t *linedef;
 sector_t *frontsector;
 sector_t *backsector;
+boolean portalline; // is curline a portal seg?
 
 // very ugly realloc() of drawsegs at run-time, I upped it to 512
 // instead of 256.. and someone managed to send me a level with
@@ -378,6 +379,7 @@ static void R_AddLine(seg_t *line)
 		return;
 
 	curline = line;
+	portalline = false;
 
 	// OPTIMIZE: quickly reject orthogonal back sides.
 	angle1 = R_PointToAngle(line->v1->x, line->v1->y);
@@ -431,7 +433,7 @@ static void R_AddLine(seg_t *line)
 	backsector = line->backsector;
 
 	// Portal line
-	if (line->linedef->special == 40 && P_PointOnLineSide(viewx, viewy, line->linedef) == 0)
+	if (line->linedef->special == 40 && line->side == 0)
 	{
 		if (portalrender < cv_maxportals.value)
 		{
@@ -460,26 +462,64 @@ static void R_AddLine(seg_t *line)
 
 	// Closed door.
 #ifdef ESLOPE
-	// Just don't bother checking this if one side is sloped. This is probably inefficient, but it's better than
-	// random renderer stopping around slopes...
-	if (!(frontsector->f_slope || frontsector->c_slope || backsector->f_slope || backsector->c_slope))
-#endif
-	if (backsector->ceilingheight <= frontsector->floorheight
-		|| backsector->floorheight >= frontsector->ceilingheight)
+	if (frontsector->f_slope || frontsector->c_slope || backsector->f_slope || backsector->c_slope)
 	{
-		goto clipsolid;
+		fixed_t frontf1,frontf2, frontc1, frontc2; // front floor/ceiling ends
+		fixed_t backf1, backf2, backc1, backc2; // back floor ceiling ends
+#define SLOPEPARAMS(slope, end1, end2, normalheight) \
+		if (slope) { \
+			end1 = P_GetZAt(slope, line->v1->x, line->v1->y); \
+			end2 = P_GetZAt(slope, line->v2->x, line->v2->y); \
+		} else \
+			end1 = end2 = normalheight;
+
+		SLOPEPARAMS(frontsector->f_slope, frontf1, frontf2, frontsector->floorheight)
+		SLOPEPARAMS(frontsector->c_slope, frontc1, frontc2, frontsector->ceilingheight)
+		SLOPEPARAMS( backsector->f_slope, backf1,  backf2,  backsector->floorheight)
+		SLOPEPARAMS( backsector->c_slope, backc1,  backc2,  backsector->ceilingheight)
+#undef SLOPEPARAMS
+		if ((backc1 <= frontf1 && backc2 <= frontf2)
+			|| (backf1 >= frontc1 && backf2 >= frontc2))
+		{
+			goto clipsolid;
+		}
+
+		// Check for automap fix. Store in doorclosed for r_segs.c
+		doorclosed = (backc1 <= backf1 && backc2 <= backf2
+		&& ((backc1 >= frontc1 && backc2 >= frontc2) || curline->sidedef->toptexture)
+		&& ((backf1 <= frontf1 && backf2 >= frontf2) || curline->sidedef->bottomtexture)
+		&& (backsector->ceilingpic != skyflatnum || frontsector->ceilingpic != skyflatnum));
+
+		if (doorclosed)
+			goto clipsolid;
+
+		// Window.
+		if (backc1 != frontc1 || backc2 != frontc2
+			|| backf1 != frontf1 || backf2 != frontf2)
+		{
+			goto clippass;
+		}
 	}
-
-	// Check for automap fix. Store in doorclosed for r_segs.c
-	doorclosed = R_DoorClosed();
-	if (doorclosed)
-		goto clipsolid;
-
-	// Window.
-	if (backsector->ceilingheight != frontsector->ceilingheight
-		|| backsector->floorheight != frontsector->floorheight)
+	else
+#endif
 	{
-		goto clippass;
+		if (backsector->ceilingheight <= frontsector->floorheight
+			|| backsector->floorheight >= frontsector->ceilingheight)
+		{
+			goto clipsolid;
+		}
+
+		// Check for automap fix. Store in doorclosed for r_segs.c
+		doorclosed = R_DoorClosed();
+		if (doorclosed)
+			goto clipsolid;
+
+		// Window.
+		if (backsector->ceilingheight != frontsector->ceilingheight
+			|| backsector->floorheight != frontsector->floorheight)
+		{
+			goto clippass;
+		}
 	}
 
 	// Reject empty lines used for triggers and special events.
@@ -964,7 +1004,7 @@ static void R_Subsector(size_t num)
 				|| (viewz > heightcheck && (rover->flags & FF_BOTHPLANES))))
 			{
 				light = R_GetPlaneLight(frontsector, planecenterz,
-					viewz < *rover->bottomheight);
+					viewz < heightcheck);
 
 				ffloor[numffloors].plane = R_FindPlane(*rover->bottomheight, *rover->bottompic,
 					*frontsector->lightlist[light].lightlevel, *rover->bottomxoffs,
@@ -982,12 +1022,7 @@ static void R_Subsector(size_t num)
 					frontsector->hasslope = true;
 #endif
 
-				ffloor[numffloors].height =
-#ifdef ESLOPE
-				*rover->b_slope ? P_GetZAt(*rover->b_slope, viewx, viewy) :
-#endif
-				*rover->bottomheight;
-
+				ffloor[numffloors].height = heightcheck;
 				ffloor[numffloors].ffloor = rover;
 				numffloors++;
 			}
@@ -1012,7 +1047,7 @@ static void R_Subsector(size_t num)
 				&& ((viewz > heightcheck && !(rover->flags & FF_INVERTPLANES))
 				|| (viewz < heightcheck && (rover->flags & FF_BOTHPLANES))))
 			{
-				light = R_GetPlaneLight(frontsector, planecenterz, viewz < *rover->topheight);
+				light = R_GetPlaneLight(frontsector, planecenterz, viewz < heightcheck);
 
 				ffloor[numffloors].plane = R_FindPlane(*rover->topheight, *rover->toppic,
 					*frontsector->lightlist[light].lightlevel, *rover->topxoffs, *rover->topyoffs, *rover->topangle,
@@ -1030,12 +1065,7 @@ static void R_Subsector(size_t num)
 					frontsector->hasslope = true;
 #endif
 
-				ffloor[numffloors].height =
-#ifdef ESLOPE
-				*rover->t_slope ? P_GetZAt(*rover->t_slope, viewx, viewy) :
-#endif
-				*rover->topheight;
-
+				ffloor[numffloors].height = heightcheck;
 				ffloor[numffloors].ffloor = rover;
 				numffloors++;
 			}
@@ -1202,7 +1232,7 @@ void R_Prep3DFloors(sector_t *sector)
 	INT32 count, i, mapnum;
 	sector_t *sec;
 #ifdef ESLOPE
-	pslope_t *bestslope;
+	pslope_t *bestslope = NULL;
 	fixed_t heighttest; // I think it's better to check the Z height at the sector's center
 	                    // than assume unsloped heights are accurate indicators of order in sloped sectors. -Red
 #endif

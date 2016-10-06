@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1010,6 +1010,7 @@ static const char *credits[] = {
 	"\1Texture Artists",
 	"Ryan \"Blaze Hedgehog\" Bloom",
 	"Buddy \"KinkaJoy\" Fischer",
+	"Vivian \"toaster\" Grannell",
 	"Kepa \"Nev3r\" Iceta",
 	"Jarrett \"JEV3\" Voight",
 	"",
@@ -1726,6 +1727,7 @@ static void F_AdvanceToNextScene(void)
 
 void F_EndCutScene(void)
 {
+	cutsceneover = true; // do this first, just in case Y_EndGame or something wants to turn it back false later
 	if (runningprecutscene)
 	{
 		if (server)
@@ -1742,7 +1744,6 @@ void F_EndCutScene(void)
 		else
 			Y_EndGame();
 	}
-	cutsceneover = true;
 }
 
 void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean resetplayer)

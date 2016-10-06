@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -31,6 +31,7 @@
 
 #include "v_video.h"
 #include "z_zone.h"
+#include "p_slopes.h"
 
 #include "lua_script.h"
 #include "lua_hook.h"
@@ -194,26 +195,6 @@ static UINT8 cht_CheckCheat(cheatseq_t *cht, char key)
 	}
 
 	return rc;
-}
-
-static inline void cht_GetParam(cheatseq_t *cht, char *buffer)
-{
-	UINT8 *p;
-	UINT8 c;
-
-	p = cht->sequence;
-	while (*(p++) != 1)
-		;
-
-	do
-	{
-		c = *p;
-		*(buffer++) = c;
-		*(p++) = 0;
-	} while (c && *p != 0xff);
-
-	if (*p == 0xff)
-		*buffer = 0;
 }
 
 boolean cht_Responder(event_t *ev)
@@ -618,9 +599,9 @@ void Command_CauseCfail_f(void)
 	}
 
 	P_UnsetThingPosition(players[consoleplayer].mo);
-	P_Random();
-	P_Random();
-	P_Random();
+	P_RandomFixed();
+	P_RandomByte();
+	P_RandomFixed();
 	players[consoleplayer].mo->x = 0;
 	players[consoleplayer].mo->y = 123311; //cfail cansuled kthxbye
 	players[consoleplayer].mo->z = 123311;
@@ -857,9 +838,19 @@ static void OP_CycleThings(INT32 amt)
 
 static boolean OP_HeightOkay(player_t *player, UINT8 ceiling)
 {
+	sector_t *sec = player->mo->subsector->sector;
+
 	if (ceiling)
 	{
-		if (((player->mo->subsector->sector->ceilingheight - player->mo->z - player->mo->height)>>FRACBITS) >= (1 << (16-ZSHIFT)))
+#ifdef ESLOPE
+		// Truncate position to match where mapthing would be when spawned
+		// (this applies to every further P_GetZAt call as well)
+		fixed_t cheight = sec->c_slope ? P_GetZAt(sec->c_slope, player->mo->x & 0xFFFF0000, player->mo->y & 0xFFFF0000) : sec->ceilingheight;
+#else
+		fixed_t cheight = sec->ceilingheight;
+#endif
+
+		if (((cheight - player->mo->z - player->mo->height)>>FRACBITS) >= (1 << (16-ZSHIFT)))
 		{
 			CONS_Printf(M_GetText("Sorry, you're too %s to place this object (max: %d %s).\n"), M_GetText("low"),
 				(1 << (16-ZSHIFT)), M_GetText("below top ceiling"));
@@ -868,7 +859,12 @@ static boolean OP_HeightOkay(player_t *player, UINT8 ceiling)
 	}
 	else
 	{
-		if (((player->mo->z - player->mo->subsector->sector->floorheight)>>FRACBITS) >= (1 << (16-ZSHIFT)))
+#ifdef ESLOPE
+		fixed_t fheight = sec->f_slope ? P_GetZAt(sec->f_slope, player->mo->x & 0xFFFF0000, player->mo->y & 0xFFFF0000) : sec->floorheight;
+#else
+		fixed_t fheight = sec->floorheight;
+#endif
+		if (((player->mo->z - fheight)>>FRACBITS) >= (1 << (16-ZSHIFT)))
 		{
 			CONS_Printf(M_GetText("Sorry, you're too %s to place this object (max: %d %s).\n"), M_GetText("high"),
 				(1 << (16-ZSHIFT)), M_GetText("above bottom floor"));
@@ -881,6 +877,7 @@ static boolean OP_HeightOkay(player_t *player, UINT8 ceiling)
 static mapthing_t *OP_CreateNewMapThing(player_t *player, UINT16 type, boolean ceiling)
 {
 	mapthing_t *mt = mapthings;
+	sector_t *sec = player->mo->subsector->sector;
 
 #ifdef HAVE_BLUA
 	LUA_InvalidateMapthings();
@@ -913,9 +910,23 @@ static mapthing_t *OP_CreateNewMapThing(player_t *player, UINT16 type, boolean c
 	mt->x = (INT16)(player->mo->x>>FRACBITS);
 	mt->y = (INT16)(player->mo->y>>FRACBITS);
 	if (ceiling)
-		mt->options = (UINT16)((player->mo->subsector->sector->ceilingheight - player->mo->z - player->mo->height)>>FRACBITS);
+	{
+#ifdef ESLOPE
+		fixed_t cheight = sec->c_slope ? P_GetZAt(sec->c_slope, mt->x << FRACBITS, mt->y << FRACBITS) : sec->ceilingheight;
+#else
+		fixed_t cheight = sec->ceilingheight;
+#endif
+		mt->options = (UINT16)((cheight - player->mo->z - player->mo->height)>>FRACBITS);
+	}
 	else
-		mt->options = (UINT16)((player->mo->z - player->mo->subsector->sector->floorheight)>>FRACBITS);
+	{
+#ifdef ESLOPE
+		fixed_t fheight = sec->f_slope ? P_GetZAt(sec->f_slope, mt->x << FRACBITS, mt->y << FRACBITS) : sec->floorheight;
+#else
+		fixed_t fheight = sec->floorheight;
+#endif
+		mt->options = (UINT16)((player->mo->z - fheight)>>FRACBITS);
+	}
 	mt->options <<= ZSHIFT;
 	mt->angle = (INT16)(FixedInt(AngleFixed(player->mo->angle)));
 
@@ -969,6 +980,13 @@ void OP_NightsObjectplace(player_t *player)
 	{
 		UINT16 angle = (UINT16)(player->anotherflyangle % 360);
 		INT16 temp = (INT16)FixedInt(AngleFixed(player->mo->angle)); // Traditional 2D Angle
+		sector_t *sec = player->mo->subsector->sector;
+#ifdef ESLOPE
+		fixed_t fheight = sec->f_slope ? P_GetZAt(sec->f_slope, player->mo->x & 0xFFFF0000, player->mo->y & 0xFFFF0000) : sec->floorheight;
+#else
+		fixed_t fheight = sec->floorheight;
+#endif
+
 
 		player->pflags |= PF_ATTACKDOWN;
 
@@ -983,7 +1001,7 @@ void OP_NightsObjectplace(player_t *player)
 			temp += 90;
 		temp %= 360;
 
-		mt->options = (UINT16)((player->mo->z - player->mo->subsector->sector->floorheight)>>FRACBITS);
+		mt->options = (UINT16)((player->mo->z - fheight)>>FRACBITS);
 		mt->angle = (INT16)(mt->angle+(INT16)((FixedInt(FixedDiv(temp*FRACUNIT, 360*(FRACUNIT/256))))<<8));
 
 		P_SpawnHoopsAndRings(mt);
@@ -1036,7 +1054,7 @@ void OP_NightsObjectplace(player_t *player)
 		if (!OP_HeightOkay(player, false))
 			return;
 
-		if (player->mo->target->flags & MF_AMBUSH)
+		if (player->mo->target->flags2 & MF2_AMBUSH)
 			angle = (UINT16)player->anotherflyangle;
 		else
 		{
@@ -1117,6 +1135,33 @@ void OP_ObjectplaceMovement(player_t *player)
 	else
 		player->viewz = player->mo->z + player->viewheight;
 
+	// Display flag information
+	// Moved up so it always updates.
+	{
+		sector_t *sec = player->mo->subsector->sector;
+
+		if (!!(mobjinfo[op_currentthing].flags & MF_SPAWNCEILING) ^ !!(cv_opflags.value & MTF_OBJECTFLIP))
+		{
+#ifdef ESLOPE
+			fixed_t cheight = sec->c_slope ? P_GetZAt(sec->c_slope, player->mo->x & 0xFFFF0000, player->mo->y & 0xFFFF0000) : sec->ceilingheight;
+#else
+			fixed_t cheight = sec->ceilingheight;
+#endif
+			op_displayflags = (UINT16)((cheight - player->mo->z - mobjinfo[op_currentthing].height)>>FRACBITS);
+		}
+		else
+		{
+#ifdef ESLOPE
+			fixed_t fheight = sec->f_slope ? P_GetZAt(sec->f_slope, player->mo->x & 0xFFFF0000, player->mo->y & 0xFFFF0000) : sec->floorheight;
+#else
+			fixed_t fheight = sec->floorheight;
+#endif
+			op_displayflags = (UINT16)((player->mo->z - fheight)>>FRACBITS);
+		}
+		op_displayflags <<= ZSHIFT;
+		op_displayflags |= (UINT16)cv_opflags.value;
+	}
+
 	if (player->pflags & PF_ATTACKDOWN)
 	{
 		// Are ANY objectplace buttons pressed?  If no, remove flag.
@@ -1181,16 +1226,6 @@ void OP_ObjectplaceMovement(player_t *player)
 			P_SpawnMapThing(mt);
 
 		CONS_Printf(M_GetText("Placed object type %d at %d, %d, %d, %d\n"), mt->type, mt->x, mt->y, mt->options>>ZSHIFT, mt->angle);
-	}
-
-	// Display flag information
-	{
-		if (!!(mobjinfo[op_currentthing].flags & MF_SPAWNCEILING) ^ !!(cv_opflags.value & MTF_OBJECTFLIP))
-			op_displayflags = (UINT16)((player->mo->subsector->sector->ceilingheight - player->mo->z - mobjinfo[op_currentthing].height)>>FRACBITS);
-		else
-			op_displayflags = (UINT16)((player->mo->z - player->mo->subsector->sector->floorheight)>>FRACBITS);
-		op_displayflags <<= ZSHIFT;
-		op_displayflags |= (UINT16)cv_opflags.value;
 	}
 }
 

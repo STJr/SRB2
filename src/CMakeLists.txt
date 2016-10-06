@@ -22,6 +22,7 @@ set(SRB2_CORE_SOURCES
 	i_tcp.c
 	info.c
 	lzf.c
+	m_aatree.c
 	m_anigif.c
 	m_argv.c
 	m_bbox.c
@@ -83,6 +84,7 @@ set(SRB2_CORE_HEADERS
 	info.h
 	keys.h
 	lzf.h
+	m_aatree.h
 	m_anigif.h
 	m_argv.h
 	m_bbox.h
@@ -139,7 +141,6 @@ set(SRB2_CORE_RENDER_SOURCES
 set(SRB2_CORE_GAME_SOURCES
 	p_ceilng.c
 	p_enemy.c
-	p_fab.c
 	p_floor.c
 	p_inter.c
 	p_lights.c
@@ -316,6 +317,7 @@ if(${SRB2_CONFIG_HAVE_GME})
 	find_package(GME)
 	if(${GME_FOUND})
 		set(SRB2_HAVE_GME ON)
+		add_definitions(-DHAVE_LIBGME)
 	else()
 		message(WARNING "You have specified that GME is available but it was not found.")
 	endif()

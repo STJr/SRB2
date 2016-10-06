@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -475,11 +475,11 @@ UINT16 W_LoadWadFile(const char *filename)
 	//
 	CONS_Printf(M_GetText("Added file %s (%u lumps)\n"), filename, numlumps);
 	wadfiles[numwadfiles] = wadfile;
-	W_LoadDehackedLumps(numwadfiles);
+	numwadfiles++; // must come BEFORE W_LoadDehackedLumps, so any addfile called by COM_BufInsertText called by Lua doesn't overwrite what we just loaded
+	W_LoadDehackedLumps(numwadfiles-1);
 
 	W_InvalidateLumpnumCache();
 
-	numwadfiles++;
 	return wadfile->numlumps;
 }
 

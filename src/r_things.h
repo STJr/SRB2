@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -17,6 +17,10 @@
 #include "sounds.h"
 #include "r_plane.h"
 
+// "Left" and "Right" character symbols for additional rotation functionality
+#define ROT_L ('L' - '0')
+#define ROT_R ('R' - '0')
+
 // number of sprite lumps for spritewidth,offset,topoffset lookup tables
 // Fab: this is a hack : should allocate the lookup tables per sprite
 #define MAXVISSPRITES 2048 // added 2-2-98 was 128
@@ -24,6 +28,8 @@
 #define VISSPRITECHUNKBITS 6	// 2^6 = 64 sprites per chunk
 #define VISSPRITESPERCHUNK (1 << VISSPRITECHUNKBITS)
 #define VISSPRITEINDEXMASK (VISSPRITESPERCHUNK - 1)
+
+#define DEFAULTNIGHTSSKIN 0
 
 // Constant arrays used for psprite clipping
 //  and initializing clipping.
@@ -93,15 +99,27 @@ typedef struct
 
 	fixed_t jumpfactor; // multiple of standard jump height
 
+	fixed_t radius; // Bounding box changes.
+	fixed_t height;
+	fixed_t spinheight;
+
+	fixed_t shieldscale; // no change to bounding box, but helps set the shield's sprite size
+	fixed_t camerascale;
+
 	// Definable color translation table
 	UINT8 starttranscolor;
 	UINT8 prefcolor;
+	UINT8 supercolor;
+	UINT8 prefoppositecolor; // if 0 use tables instead
+
 	fixed_t highresscale; // scale of highres, default is 0.5
 
 	// specific sounds per skin
 	sfxenum_t soundsid[NUMSKINSOUNDS]; // sound # in S_sfx table
 
 	spritedef_t sprites[NUMPLAYERSPRITES];
+
+	UINT8 availability; // lock?
 } skin_t;
 
 // -----------
@@ -131,7 +149,8 @@ typedef struct vissprite_s
 	fixed_t pz, pzt; // physical bottom/top for sorting with 3D floors
 
 	fixed_t startfrac; // horizontal position of x1
-	fixed_t scale;
+	fixed_t scale, sortscale; // sortscale only differs from scale for paper sprites and MF2_LINKDRAW
+	fixed_t scalestep; // only for paper sprites, 0 otherwise
 	fixed_t xiscale; // negative if flipped
 
 	fixed_t texturemid;
@@ -184,6 +203,7 @@ extern skin_t skins[MAXSKINS + 1];
 
 void SetPlayerSkin(INT32 playernum,const char *skinname);
 void SetPlayerSkinByNum(INT32 playernum,INT32 skinnum); // Tails 03-16-2002
+boolean R_SkinUnlock(INT32 skinnum);
 INT32 R_SkinAvailable(const char *name);
 void R_AddSkins(UINT16 wadnum);
 
@@ -228,6 +248,11 @@ FUNCMATH FUNCINLINE static ATTRINLINE UINT8 R_Char2Frame(char cn)
 	if (cn == '@') return 63;
 	return 255;
 #endif
+}
+
+FUNCMATH FUNCINLINE static ATTRINLINE boolean R_ValidSpriteAngle(UINT8 rotation)
+{
+	return ((rotation <= 8) || (rotation == ROT_L) || (rotation == ROT_R));
 }
 
 #endif //__R_THINGS__

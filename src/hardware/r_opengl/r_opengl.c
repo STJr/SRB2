@@ -1470,6 +1470,26 @@ EXPORT void HWRAPI(SetTexture) (FTextureInfo *pTexInfo)
 			else
 				pglTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE_ALPHA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, ptex);
 		}
+		else if (pTexInfo->grInfo.format == GR_TEXFMT_ALPHA_8)
+		{
+			//pglTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, ptex);
+			if (MipMap)
+			{
+				pgluBuild2DMipmaps(GL_TEXTURE_2D, GL_ALPHA, w, h, GL_RGBA, GL_UNSIGNED_BYTE, ptex);
+#ifdef GL_TEXTURE_MIN_LOD
+				pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_LOD, 0);
+#endif
+#ifdef GL_TEXTURE_MAX_LOD
+				if (pTexInfo->flags & TF_TRANSPARENT)
+					pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 0); // No mippmaps on transparent stuff
+				else
+					pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 4);
+#endif
+				//pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_LINEAR_MIPMAP_LINEAR);
+			}
+			else
+				pglTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, ptex);
+		}
 		else
 		{
 			if (MipMap)
@@ -1816,10 +1836,7 @@ EXPORT void HWRAPI(SetSpecialState) (hwdspecialstate_t IdState, INT32 Value)
 	}
 }
 
-// -----------------+
-// HWRAPI DrawMD2   : Draw an MD2 model with glcommands
-// -----------------+
-EXPORT void HWRAPI(DrawMD2i) (INT32 *gl_cmd_buffer, md2_frame_t *frame, UINT32 duration, UINT32 tics, md2_frame_t *nextframe, FTransform *pos, float scale, UINT8 flipped, UINT8 *color)
+static inline void DrawMD2Ex(INT32 *gl_cmd_buffer, md2_frame_t *frame, UINT32 duration, UINT32 tics, md2_frame_t *nextframe, FTransform *pos, float scale, UINT8 flipped, UINT8 *color)
 {
 	INT32     val, count, pindex;
 	GLfloat s, t;
@@ -1911,7 +1928,7 @@ EXPORT void HWRAPI(DrawMD2i) (INT32 *gl_cmd_buffer, md2_frame_t *frame, UINT32 d
 	//pglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // alpha = level of transparency
 
 	// Remove depth mask when the model is transparent so it doesn't cut thorugh sprites // SRB2CBTODO: For all stuff too?!
-	if (color[3] < 255)
+	if (color && color[3] < 255)
 	{
 		pglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // alpha = level of transparency
 		pglDepthMask(GL_FALSE);
@@ -1987,10 +2004,19 @@ EXPORT void HWRAPI(DrawMD2i) (INT32 *gl_cmd_buffer, md2_frame_t *frame, UINT32 d
 	pglDisable(GL_CULL_FACE);
 }
 
+// -----------------+
+// HWRAPI DrawMD2   : Draw an MD2 model with glcommands
+// -----------------+
+EXPORT void HWRAPI(DrawMD2i) (INT32 *gl_cmd_buffer, md2_frame_t *frame, UINT32 duration, UINT32 tics, md2_frame_t *nextframe, FTransform *pos, float scale, UINT8 flipped, UINT8 *color)
+{
+	DrawMD2Ex(gl_cmd_buffer, frame, duration, tics,  nextframe, pos, scale, flipped, color);
+}
+
 EXPORT void HWRAPI(DrawMD2) (INT32 *gl_cmd_buffer, md2_frame_t *frame, FTransform *pos, float scale)
 {
-	DrawMD2i(gl_cmd_buffer, frame, 0, 0,  NULL, pos, scale, false, NULL);
+	DrawMD2Ex(gl_cmd_buffer, frame, 0, 0,  NULL, pos, scale, false, NULL);
 }
+
 
 // -----------------+
 // SetTransform     :
@@ -2150,7 +2176,7 @@ EXPORT void HWRAPI(StartScreenWipe) (void)
 	Clamp2D(GL_TEXTURE_WRAP_S);
 	Clamp2D(GL_TEXTURE_WRAP_T);
 #ifndef KOS_GL_COMPATIBILITY
-	pglCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 0, 0, texsize, texsize, 0);
+	pglCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0, texsize, texsize, 0);
 #endif
 
 	tex_downloaded = 0; // 0 so it knows it doesn't have any of the cached patches downloaded right now
@@ -2179,7 +2205,7 @@ EXPORT void HWRAPI(EndScreenWipe)(void)
 	Clamp2D(GL_TEXTURE_WRAP_S);
 	Clamp2D(GL_TEXTURE_WRAP_T);
 #ifndef KOS_GL_COMPATIBILITY
-	pglCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 0, 0, texsize, texsize, 0);
+	pglCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0, texsize, texsize, 0);
 #endif
 
 	tex_downloaded = 0; // 0 so it knows it doesn't have any of the cached patches downloaded right now
@@ -2294,22 +2320,22 @@ EXPORT void HWRAPI(DoScreenWipe)(float alpha)
 
 			// Bottom left
 			pglMultiTexCoord2f(GL_TEXTURE0, 0.0f, 0.0f);
-			pglMultiTexCoord2f(GL_TEXTURE1, 0.0f, 0.0f);
+			pglMultiTexCoord2f(GL_TEXTURE1, 0.0f, 1.0f);
 			pglVertex3f(-1.0f, -1.0f, 1.0f);
 
 			// Top left
 			pglMultiTexCoord2f(GL_TEXTURE0, 0.0f, yfix);
-			pglMultiTexCoord2f(GL_TEXTURE1, 0.0f, 1.0f);
+			pglMultiTexCoord2f(GL_TEXTURE1, 0.0f, 0.0f);
 			pglVertex3f(-1.0f, 1.0f, 1.0f);
 
 			// Top right
 			pglMultiTexCoord2f(GL_TEXTURE0, xfix, yfix);
-			pglMultiTexCoord2f(GL_TEXTURE1, 1.0f, 1.0f);
+			pglMultiTexCoord2f(GL_TEXTURE1, 1.0f, 0.0f);
 			pglVertex3f(1.0f, 1.0f, 1.0f);
 
 			// Bottom right
 			pglMultiTexCoord2f(GL_TEXTURE0, xfix, 0.0f);
-			pglMultiTexCoord2f(GL_TEXTURE1, 1.0f, 0.0f);
+			pglMultiTexCoord2f(GL_TEXTURE1, 1.0f, 1.0f);
 			pglVertex3f(1.0f, -1.0f, 1.0f);
 		pglEnd();
 

@@ -1,31 +1,14 @@
-// Emacs style mode select   -*- C++ -*-
+// SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
+// Copyright (C) 2004      by Stephen McGranahan
+// Copyright (C) 2015-2016 by Sonic Team Junior.
 //
-// Copyright(C) 2004 Stephen McGranahan
-//
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-//
-//--------------------------------------------------------------------------
-//
-// DESCRIPTION:
-//      Slopes
-//      SoM created 05/10/09
-//      ZDoom + Eternity Engine Slopes, ported and enhanced by Kalaron
-//
+// This program is free software distributed under the
+// terms of the GNU General Public License, version 2.
+// See the 'LICENSE' file for more details.
 //-----------------------------------------------------------------------------
-
+/// \file  p_slopes.c
+/// \brief ZDoom + Eternity Engine Slopes, ported and enhanced by Kalaron
 
 #include "doomdef.h"
 #include "r_defs.h"
@@ -107,7 +90,7 @@ static void P_ReconfigureVertexSlope(pslope_t *slope)
 
 		// Get angles
 		slope->xydirection = R_PointToAngle2(0, 0, slope->d.x, slope->d.y)+ANGLE_180;
-		slope->zangle = -R_PointToAngle2(0, 0, FRACUNIT, slope->zdelta);
+		slope->zangle = InvAngle(R_PointToAngle2(0, 0, FRACUNIT, slope->zdelta));
 	}
 }
 
@@ -216,7 +199,6 @@ static fixed_t P_GetExtent(sector_t *sector, line_t *line)
 
 	// Find furthest vertex from the reference line. It, along with the two ends
 	// of the line, will define the plane.
-	// SRB2CBTODO: Use a formula to get the slope to slide objects depending on how steep
 	for(i = 0; i < sector->linecount; i++)
 	{
 		line_t *li = sector->lines[i];
@@ -248,7 +230,6 @@ static fixed_t P_GetExtent(sector_t *sector, line_t *line)
 //
 // Creates one or more slopes based on the given line type and front/back
 // sectors.
-// Kalaron: Check if dynamic slopes need recalculation
 //
 void P_SpawnSlope_Line(int linenum)
 {
@@ -293,7 +274,6 @@ void P_SpawnSlope_Line(int linenum)
 		ny = -FixedDiv(line->dx, len);
 	}
 
-	// SRB2CBTODO: Transform origin relative to the bounds of an individual FOF
 	origin.x = line->v1->x + (line->v2->x - line->v1->x)/2;
 	origin.y = line->v1->y + (line->v2->y - line->v1->y)/2;
 
@@ -344,7 +324,7 @@ void P_SpawnSlope_Line(int linenum)
 			// fslope->normal is a 3D line perpendicular to the 3D vector
 
 			// Sync the linedata of the line that started this slope
-			// SRB2CBTODO: Anything special for remote(control sector)-based slopes later?
+			// TODO: Anything special for control sector based slopes later?
 			fslope->sourceline = line;
 
 			// To find the real highz/lowz of a slope, you need to check all the vertexes
@@ -396,7 +376,7 @@ void P_SpawnSlope_Line(int linenum)
             cslope->refpos = 2;
 
 			// Sync the linedata of the line that started this slope
-			// SRB2CBTODO: Anything special for remote(control sector)-based slopes later?
+			// TODO: Anything special for control sector based slopes later?
 			cslope->sourceline = line;
 
 			// Remember the way the slope is formed
@@ -462,7 +442,7 @@ void P_SpawnSlope_Line(int linenum)
             fslope->refpos = 3;
 
 			// Sync the linedata of the line that started this slope
-			// SRB2CBTODO: Anything special for remote(control sector)-based slopes later?
+			// TODO: Anything special for control sector based slopes later?
 			fslope->sourceline = line;
 
 			// Remember the way the slope is formed
@@ -505,7 +485,7 @@ void P_SpawnSlope_Line(int linenum)
             cslope->refpos = 4;
 
 			// Sync the linedata of the line that started this slope
-			// SRB2CBTODO: Anything special for remote(control sector)-based slopes later?
+			// TODO: Anything special for control sector based slopes later?
 			cslope->sourceline = line;
 
 			// Remember the way the slope is formed
@@ -571,16 +551,11 @@ static pslope_t *P_NewVertexSlope(INT16 tag1, INT16 tag2, INT16 tag3, UINT8 flag
 			ret->vertices[2] = mt;
 	}
 
-	if (!ret->vertices[0])
-		CONS_Printf("PANIC 0\n");
-	if (!ret->vertices[1])
-		CONS_Printf("PANIC 1\n");
-	if (!ret->vertices[2])
-		CONS_Printf("PANIC 2\n");
-
 	// Now set heights for each vertex, because they haven't been set yet
 	for (i = 0; i < 3; i++) {
 		mt = ret->vertices[i];
+		if (!mt) // If a vertex wasn't found, it's game over. There's nothing you can do to recover (except maybe try and kill the slope instead - TODO?)
+			I_Error("P_NewVertexSlope: Slope vertex %s (for linedef tag %d) not found!", sizeu1(i), tag1);
 		if (mt->extrainfo)
 			mt->z = mt->options;
 		else
@@ -640,265 +615,10 @@ pslope_t *P_SlopeById(UINT16 id)
 	return ret;
 }
 
-#ifdef SPRINGCLEAN
-#include "byteptr.h"
-
-#include "p_setup.h"
-#include "p_local.h"
-
-//==========================================================================
-//
-//	P_SetSlopesFromVertexHeights
-//
-//==========================================================================
-void P_SetSlopesFromVertexHeights(lumpnum_t lumpnum)
-{
-	mapthing_t *mt;
-	boolean vt_found = false;
-	size_t i, j, k, l, q;
-
-	//size_t i;
-	//mapthing_t *mt;
-	char *data;
-	char *datastart;
-
-	// SRB2CBTODO: WHAT IS (5 * sizeof (short))?! It = 10
-	// anything else seems to make a map not load properly,
-	// but this hard-coded value MUST have some reason for being what it is
-	size_t snummapthings = W_LumpLength(lumpnum) / (5 * sizeof (short));
-	mapthing_t *smapthings = Z_Calloc(snummapthings * sizeof (*smapthings), PU_LEVEL, NULL);
-	fixed_t x, y;
-	sector_t *sector;
-	// Spawn axis points first so they are
-	// at the front of the list for fast searching.
-	data = datastart = W_CacheLumpNum(lumpnum, PU_LEVEL);
-	mt = smapthings;
-	for (i = 0; i < snummapthings; i++, mt++)
-	{
-		mt->x = READINT16(data);
-		mt->y = READINT16(data);
-		mt->angle = READINT16(data);
-		mt->type = READINT16(data);
-		mt->options = READINT16(data);
-		// mt->z hasn't been set yet!
-		//mt->extrainfo = (byte)(mt->type >> 12); // slope things are special, they have a bigger range of types
-
-		//mt->type &= 4095; // SRB2CBTODO: WHAT IS THIS???? Mobj type limits?!!!!
-		x = mt->x*FRACUNIT;
-		y = mt->y*FRACUNIT;
-		sector = R_PointInSubsector(x, y)->sector;
-		// Z for objects
-#ifdef ESLOPE
-		if (sector->f_slope)
-			mt->z = (short)(P_GetZAt(sector->f_slope, x, y)>>FRACBITS);
-		else
-#endif
-			mt->z = (short)(sector->floorheight>>FRACBITS);
-
-		mt->z = mt->z + (mt->options >> ZSHIFT);
-
-		if (mt->type == THING_VertexFloorZ || mt->type == THING_VertexCeilingZ) // THING_VertexFloorZ
-		{
-			for(l = 0; l < numvertexes; l++)
-			{
-				if (vertexes[l].x == mt->x*FRACUNIT && vertexes[l].y == mt->y*FRACUNIT)
-				{
-					if (mt->type == THING_VertexFloorZ)
-					{
-						vertexes[l].z = mt->z*FRACUNIT;
-						//I_Error("Z value: %i", vertexes[l].z/FRACUNIT);
-
-					}
-					else
-					{
-						vertexes[l].z = mt->z*FRACUNIT; // celing floor
-					}
-					vt_found = true;
-				}
-			}
-			//mt->type = 0; // VPHYSICS: Dynamic slopes
-
-
-
-
-
-
-			if (vt_found)
-			{
-				for (k = 0; k < numsectors; k++)
-				{
-					sector_t *sec = &sectors[k];
-					if (sec->linecount != 3) continue;	// only works with triangular sectors
-
-					v3float_t vt1, vt2, vt3; // cross = ret->normalf
-					v3float_t vec1, vec2;
-
-					int vi1, vi2, vi3;
-
-					vi1 = (int)(sec->lines[0]->v1 - vertexes);
-					vi2 = (int)(sec->lines[0]->v2 - vertexes);
-					vi3 = (sec->lines[1]->v1 == sec->lines[0]->v1 || sec->lines[1]->v1 == sec->lines[0]->v2)?
-					(int)(sec->lines[1]->v2 - vertexes) : (int)(sec->lines[1]->v1 - vertexes);
-
-					//if (vertexes[vi1].z)
-					//	I_Error("OSNAP %i", vertexes[vi1].z/FRACUNIT);
-					//if (vertexes[vi2].z)
-					//	I_Error("OSNAP %i", vertexes[vi2].z/FRACUNIT);
-					//if (vertexes[vi3].z)
-					//	I_Error("OSNAP %i", vertexes[vi3].z/FRACUNIT);
-
-					//I_Error("%i, %i", mt->z*FRACUNIT, vertexes[vi1].z);
-
-					//I_Error("%i, %i, %i", mt->x, mt->y, mt->z);
-					//P_SpawnMobj(mt->x*FRACUNIT, mt->y*FRACUNIT, mt->z*FRACUNIT, MT_RING);
-
-					// TODO: Make sure not to spawn in the same place 2x! (we need an object in every vertex of the
-					// triangle sector to setup the real vertex slopes
-					// Check for the vertexes of all sectors
-					for(q = 0; q < numvertexes; q++)
-					{
-						if (vertexes[q].x == mt->x*FRACUNIT && vertexes[q].y == mt->y*FRACUNIT)
-						{
-							//I_Error("yeah %i", vertexes[q].z);
-							P_SpawnMobj(vertexes[q].x, vertexes[q].y, vertexes[q].z, MT_RING);
-#if 0
-					if ((mt->y*FRACUNIT == vertexes[vi1].y && mt->x*FRACUNIT == vertexes[vi1].x && mt->z*FRACUNIT == vertexes[vi1].z)
-						&& !(mt->y*FRACUNIT == vertexes[vi2].y && mt->x*FRACUNIT == vertexes[vi2].x && mt->z*FRACUNIT == vertexes[vi2].z)
-						&& !(mt->y*FRACUNIT == vertexes[vi3].y && mt->x*FRACUNIT == vertexes[vi3].x && mt->z*FRACUNIT == vertexes[vi3].z))
-						P_SpawnMobj(vertexes[vi1].x, vertexes[vi1].y, vertexes[vi1].z, MT_RING);
-					else if ((mt->y*FRACUNIT == vertexes[vi2].y && mt->x*FRACUNIT == vertexes[vi2].x && mt->z*FRACUNIT == vertexes[vi2].z)
-						&& !(mt->y*FRACUNIT == vertexes[vi1].y && mt->x*FRACUNIT == vertexes[vi1].x && mt->z*FRACUNIT == vertexes[vi1].z)
-						&& !(mt->y*FRACUNIT == vertexes[vi3].y && mt->x*FRACUNIT == vertexes[vi3].x && mt->z*FRACUNIT == vertexes[vi3].z))
-						P_SpawnMobj(vertexes[vi2].x, vertexes[vi2].y, vertexes[vi2].z, MT_BOUNCETV);
-					else if ((mt->y*FRACUNIT == vertexes[vi3].y && mt->x*FRACUNIT == vertexes[vi3].x && mt->z*FRACUNIT == vertexes[vi3].z)
-						&& !(mt->y*FRACUNIT == vertexes[vi2].y && mt->x*FRACUNIT == vertexes[vi2].x && mt->z*FRACUNIT == vertexes[vi2].z)
-						&& !(mt->y*FRACUNIT == vertexes[vi1].y && mt->x*FRACUNIT == vertexes[vi1].x && mt->z*FRACUNIT == vertexes[vi1].z))
-						P_SpawnMobj(vertexes[vi3].x, vertexes[vi3].y, vertexes[vi3].z, MT_GFZFLOWER1);
-					else
-#endif
-						continue;
-						}
-					}
-
-					vt1.x = FIXED_TO_FLOAT(vertexes[vi1].x);
-					vt1.y = FIXED_TO_FLOAT(vertexes[vi1].y);
-					vt2.x = FIXED_TO_FLOAT(vertexes[vi2].x);
-					vt2.y = FIXED_TO_FLOAT(vertexes[vi2].y);
-					vt3.x = FIXED_TO_FLOAT(vertexes[vi3].x);
-					vt3.y = FIXED_TO_FLOAT(vertexes[vi3].y);
-
-					for(j = 0; j < 2; j++)
-					{
-
-						fixed_t z3;
-						//I_Error("Lo hicimos");
-
-						vt1.z = mt->z;//FIXED_TO_FLOAT(j==0 ? sec->floorheight : sec->ceilingheight);
-						vt2.z = mt->z;//FIXED_TO_FLOAT(j==0? sec->floorheight : sec->ceilingheight);
-						z3 = mt->z;//j==0? sec->floorheight : sec->ceilingheight; // Destination height
-						vt3.z = FIXED_TO_FLOAT(z3);
-
-						if (P_PointOnLineSide(vertexes[vi3].x, vertexes[vi3].y, sec->lines[0]) == 0)
-						{
-							vec1.x = vt2.x - vt3.x;
-							vec1.y = vt2.y - vt3.y;
-							vec1.z = vt2.z - vt3.z;
-
-							vec2.x = vt1.x - vt3.x;
-							vec2.y = vt1.y - vt3.y;
-							vec2.z = vt1.z - vt3.z;
-						}
-						else
-						{
-							vec1.x = vt1.x - vt3.x;
-							vec1.y = vt1.y - vt3.y;
-							vec1.z = vt1.z - vt3.z;
-
-							vec2.x = vt2.x - vt3.x;
-							vec2.y = vt2.y - vt3.y;
-							vec2.z = vt2.z - vt3.z;
-						}
-
-
-						pslope_t *ret = Z_Malloc(sizeof(pslope_t), PU_LEVEL, NULL);
-						memset(ret, 0, sizeof(*ret));
-
-						{
-							M_CrossProduct3f(&ret->normalf, &vec1, &vec2);
-
-							// Cross product length
-							float len = (float)sqrt(ret->normalf.x * ret->normalf.x +
-													ret->normalf.y * ret->normalf.y +
-													ret->normalf.z * ret->normalf.z);
-
-							if (len == 0)
-							{
-								// Only happens when all vertices in this sector are on the same line.
-								// Let's just ignore this case.
-								//CONS_Printf("Slope thing at (%d,%d) lies directly on its target line.\n", (int)(x>>16), (int)(y>>16));
-								return;
-							}
-							// cross/len
-							ret->normalf.x /= len;
-							ret->normalf.y /= len;
-							ret->normalf.z /= len;
-
-							// ZDoom cross = ret->normalf
-							// Fix backward normals
-							if ((ret->normalf.z < 0 && j == 0) || (ret->normalf.z > 0 && j == 1))
-							{
-								// cross = -cross
-								ret->normalf.x = -ret->normalf.x;
-								ret->normalf.y = -ret->normalf.x;
-								ret->normalf.z = -ret->normalf.x;
-							}
-						}
-
-						secplane_t *srcplane = Z_Calloc(sizeof(*srcplane), PU_LEVEL, NULL);
-
-						srcplane->a = FLOAT_TO_FIXED (ret->normalf.x);
-						srcplane->b = FLOAT_TO_FIXED (ret->normalf.y);
-						srcplane->c = FLOAT_TO_FIXED (ret->normalf.z);
-						//srcplane->ic = FixedDiv(FRACUNIT, srcplane->c);
-						srcplane->d = -TMulScale16 (srcplane->a, vertexes[vi3].x,
-													srcplane->b, vertexes[vi3].y,
-													srcplane->c, z3);
-
-						if (j == 0)
-						{
-							sec->f_slope = ret;
-							sec->f_slope->secplane = *srcplane;
-						}
-						else if (j == 1)
-						{
-							sec->c_slope = ret;
-							sec->c_slope->secplane = *srcplane;
-						}
-					}
-				}
-			}
-
-
-
-
-
-
-
-
-		}
-	}
-	Z_Free(datastart);
-
-
-
-
-}
-#endif
-
 // Reset the dynamic slopes pointer, and read all of the fancy schmancy slopes
 void P_ResetDynamicSlopes(void) {
 	size_t i;
-#if 1 // Rewrite old specials to new ones, and give a console warning
+#ifdef ESLOPE_TYPESHIM // Rewrite old specials to new ones, and give a console warning
 	boolean warned = false;
 #endif
 
@@ -911,7 +631,7 @@ void P_ResetDynamicSlopes(void) {
 	{
 		switch (lines[i].special)
 		{
-#if 1 // Rewrite old specials to new ones, and give a console warning
+#ifdef ESLOPE_TYPESHIM // Rewrite old specials to new ones, and give a console warning
 #define WARNME if (!warned) {warned = true; CONS_Alert(CONS_WARNING, "This level uses old slope specials.\nA conversion will be needed before 2.2's release.\n");}
 			case 386:
 			case 387:
@@ -1035,7 +755,11 @@ fixed_t P_GetZAt(pslope_t *slope, fixed_t x, fixed_t y)
 // When given a vector, rotates it and aligns it to a slope
 void P_QuantizeMomentumToSlope(vector3_t *momentum, pslope_t *slope)
 {
-	vector3_t axis;
+	vector3_t axis; // Fuck you, C90.
+
+	if (slope->flags & SL_NOPHYSICS)
+		return; // No physics, no quantizing.
+
 	axis.x = -slope->d.y;
 	axis.y = slope->d.x;
 	axis.z = 0;
@@ -1044,23 +768,37 @@ void P_QuantizeMomentumToSlope(vector3_t *momentum, pslope_t *slope)
 }
 
 //
+// P_ReverseQuantizeMomentumToSlope
+//
+// When given a vector, rotates and aligns it to a flat surface (from being relative to a given slope)
+void P_ReverseQuantizeMomentumToSlope(vector3_t *momentum, pslope_t *slope)
+{
+	slope->zangle = InvAngle(slope->zangle);
+	P_QuantizeMomentumToSlope(momentum, slope);
+	slope->zangle = InvAngle(slope->zangle);
+}
+
+//
 // P_SlopeLaunch
 //
 // Handles slope ejection for objects
 void P_SlopeLaunch(mobj_t *mo)
 {
-	// Double the pre-rotation Z, then halve the post-rotation Z. This reduces the
-	// vertical launch given from slopes while increasing the horizontal launch
-	// given. Good for SRB2's gravity and horizontal speeds.
-	vector3_t slopemom;
-	slopemom.x = mo->momx;
-	slopemom.y = mo->momy;
-	slopemom.z = mo->momz*2;
-	P_QuantizeMomentumToSlope(&slopemom, mo->standingslope);
+	if (!(mo->standingslope->flags & SL_NOPHYSICS)) // If there's physics, time for launching.
+	{
+		// Double the pre-rotation Z, then halve the post-rotation Z. This reduces the
+		// vertical launch given from slopes while increasing the horizontal launch
+		// given. Good for SRB2's gravity and horizontal speeds.
+		vector3_t slopemom;
+		slopemom.x = mo->momx;
+		slopemom.y = mo->momy;
+		slopemom.z = mo->momz*2;
+		P_QuantizeMomentumToSlope(&slopemom, mo->standingslope);
 
-	mo->momx = slopemom.x;
-	mo->momy = slopemom.y;
-	mo->momz = slopemom.z/2;
+		mo->momx = slopemom.x;
+		mo->momy = slopemom.y;
+		mo->momz = slopemom.z/2;
+	}
 
 	//CONS_Printf("Launched off of slope.\n");
 	mo->standingslope = NULL;
@@ -1069,17 +807,21 @@ void P_SlopeLaunch(mobj_t *mo)
 // Function to help handle landing on slopes
 void P_HandleSlopeLanding(mobj_t *thing, pslope_t *slope)
 {
-	vector3_t mom;
+	vector3_t mom; // Ditto.
+
+	if (slope->flags & SL_NOPHYSICS) { // No physics, no need to make anything complicated.
+		if (P_MobjFlip(thing)*(thing->momz) < 0) { // falling, land on slope
+			thing->momz = -P_MobjFlip(thing);
+			thing->standingslope = slope;
+		}
+		return;
+	}
+
 	mom.x = thing->momx;
 	mom.y = thing->momy;
 	mom.z = thing->momz*2;
 
-	//CONS_Printf("langing on slope\n");
-
-	// Reverse quantizing might could use its own function later
-	slope->zangle = ANGLE_MAX-slope->zangle;
-	P_QuantizeMomentumToSlope(&mom, slope);
-	slope->zangle = ANGLE_MAX-slope->zangle;
+	P_ReverseQuantizeMomentumToSlope(&mom, slope);
 
 	if (P_MobjFlip(thing)*mom.z < 0) { // falling, land on slope
 		thing->momx = mom.x;
@@ -1098,6 +840,12 @@ void P_ButteredSlope(mobj_t *mo)
 
 	if (!mo->standingslope)
 		return;
+
+	if (mo->standingslope->flags & SL_NOPHYSICS)
+		return; // No physics, no butter.
+
+	if (mo->flags & (MF_NOCLIPHEIGHT|MF_NOGRAVITY))
+		return; // don't slide down slopes if you can't touch them or you're not affected by gravity
 
 	if (mo->player) {
 		if (abs(mo->standingslope->zdelta) < FRACUNIT/4 && !(mo->player->pflags & PF_SPINNING))
@@ -1120,8 +868,6 @@ void P_ButteredSlope(mobj_t *mo)
 			mult = FINECOSINE(angle >> ANGLETOFINESHIFT);
 		}
 
-		//CONS_Printf("%d\n", mult);
-
 		thrust = FixedMul(thrust, FRACUNIT*2/3 + mult/8);
 	}
 
@@ -1129,8 +875,11 @@ void P_ButteredSlope(mobj_t *mo)
 		thrust = FixedMul(thrust, FRACUNIT+P_AproxDistance(mo->momx, mo->momy)/16);
 	// This makes it harder to zigzag up steep slopes, as well as allows greater top speed when rolling down
 
-	// Multiply by gravity
-	thrust = FixedMul(thrust, FRACUNIT/2); // TODO actually get this
+	// Let's get the gravity strength for the object...
+	thrust = FixedMul(thrust, abs(P_GetMobjGravity(mo)));
+
+	// ... and its friction against the ground for good measure (divided by original friction to keep behaviour for normal slopes the same).
+	thrust = FixedMul(thrust, FixedDiv(mo->friction, ORIG_FRICTION));
 
 	P_Thrust(mo, mo->standingslope->xydirection, thrust);
 }

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2014 by Sonic Team Junior.
+// Copyright (C) 1999-2016 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -159,6 +159,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"lvpass", false,  96,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"mindig", false,   8, 64, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"mixup",   true, 127,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
+  {"monton", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"pogo" ,  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"pop"  ,  false,  78,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"rail1",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
