@@ -709,6 +709,7 @@ void R_DrawPlanes(void)
 					if (dc_yl <= dc_yh)
 					{
 						angle = (pl->viewangle + xtoviewangle[x])>>ANGLETOSKYSHIFT;
+						dc_iscale = FixedMul(skyscale, FINECOSINE(xtoviewangle[x]>>ANGLETOFINESHIFT));
 						dc_x = x;
 						dc_source =
 							R_GetColumn(texturetranslation[skytexture],
