@@ -1885,7 +1885,7 @@ static void P_XYFriction(mobj_t *mo, fixed_t oldx, fixed_t oldy)
 			mo->momx = player->cmomx;
 			mo->momy = player->cmomy;
 		}
-		else
+		else if (!(mo->eflags & MFE_SPRUNG))
 		{
 			if (oldx == mo->x && oldy == mo->y) // didn't go anywhere
 			{
