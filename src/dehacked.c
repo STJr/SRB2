@@ -6594,7 +6594,7 @@ static const char *const MOBJFLAG_LIST[] = {
 	"SHOOTABLE",
 	"NOSECTOR",
 	"NOBLOCKMAP",
-	"AMBUSH",
+	"PAPERCOLLISION",
 	"PUSHABLE",
 	"BOSS",
 	"SPAWNCEILING",
@@ -6651,6 +6651,8 @@ static const char *const MOBJFLAG2_LIST[] = {
 	"BOSSNOTRAP",	// No Egg Trap after boss
 	"BOSSFLEE",		// Boss is fleeing!
 	"BOSSDEAD",		// Boss is dead! (Not necessarily fleeing, if a fleeing point doesn't exist.)
+	"AMBUSH",       // Alternate behaviour typically set by MTF_AMBUSH
+	"LINKDRAW",     // Draw vissprite of mobj immediately before/after tracer's vissprite (dependent on dispoffset and position)
 	NULL
 };
 
@@ -6973,9 +6975,13 @@ struct {
 
 	// Frame settings
 	{"FF_FRAMEMASK",FF_FRAMEMASK},
+	{"FF_VERTICALFLIP",FF_VERTICALFLIP},
+	{"FF_PAPERSPRITE",FF_PAPERSPRITE},
 	{"FF_SPR2ENDSTATE",FF_SPR2ENDSTATE},
-	{"FF_MIDDLESTARTCHANCE",FF_MIDDLESTARTCHANCE},
+	{"FF_SPR2MIDSTART",FF_SPR2MIDSTART},
 	{"FF_ANIMATE",FF_ANIMATE},
+	{"FF_RANDOMANIM",FF_RANDOMANIM},
+	{"FF_GLOBALANIM",FF_GLOBALANIM},
 	{"FF_FULLBRIGHT",FF_FULLBRIGHT},
 	{"FF_TRANSMASK",FF_TRANSMASK},
 	{"FF_TRANSSHIFT",FF_TRANSSHIFT},

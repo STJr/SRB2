@@ -37,14 +37,12 @@
 
 /// \brief Frame flags: only the frame number - 0 to 511 (Frames from 0 to 63, Sprite2 number uses full range)
 #define FF_FRAMEMASK 0x1ff
-/// \brief Frame flags: A change of state at the end of Sprite2 animation
+
+/// \brief Frame flags - SPR2: A change of state at the end of Sprite2 animation
 #define FF_SPR2ENDSTATE 0x1000
-/// \brief Frame flags: 50% of starting in middle of animation (Sprite2 and FF_ANIMATE)
-#define FF_MIDDLESTARTCHANCE 0x2000
-/// \brief Frame flags: Simple stateless animation
-#define FF_ANIMATE 0x4000
-/// \brief Frame flags: frame always appears full bright
-#define FF_FULLBRIGHT 0x8000
+/// \brief Frame flags - SPR2: 50% of starting in middle of Sprite2 animation
+#define FF_SPR2MIDSTART 0x2000
+
 /// \brief Frame flags: 0 = no trans(opaque), 1-15 = transl. table
 #define FF_TRANSMASK 0xf0000
 /// \brief shift for FF_TRANSMASK
@@ -59,6 +57,20 @@
 #define FF_TRANS70 (tr_trans70<<FF_TRANSSHIFT)
 #define FF_TRANS80 (tr_trans80<<FF_TRANSSHIFT)
 #define FF_TRANS90 (tr_trans90<<FF_TRANSSHIFT)
+
+/// \brief Frame flags: frame always appears full bright
+#define FF_FULLBRIGHT 0x00100000
+/// \brief Frame flags: Flip sprite vertically (relative to what it should be for its gravity)
+#define FF_VERTICALFLIP 0x00200000
+/// \brief Frame flags: Thin, paper-like sprite (for collision equivalent, see MF_PAPERCOLLISION)
+#define FF_PAPERSPRITE 0x00400000
+
+/// \brief Frame flags - Animate: Simple stateless animation
+#define FF_ANIMATE 0x01000000
+/// \brief Frame flags - Animate: Start at a random place in the animation (mutually exclusive with below)
+#define FF_RANDOMANIM 0x02000000
+/// \brief Frame flags - Animate: Sync animation to global timer (mutually exclusive with above)
+#define FF_GLOBALANIM 0x04000000
 
 /**	\brief translucency tables
 
