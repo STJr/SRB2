@@ -625,7 +625,7 @@ static void P_DeNightserizePlayer(player_t *player)
 		if (!(mo2->type == MT_NIGHTSDRONE))
 			continue;
 
-		if (mo2->flags & MF_AMBUSH)
+		if (mo2->flags2 & MF2_AMBUSH)
 			P_DamageMobj(player->mo, NULL, NULL, 1, DMG_INSTAKILL);
 
 		break;
@@ -4982,7 +4982,7 @@ static void P_NightsTransferPoints(player_t *player, fixed_t xspeed, fixed_t rad
 		boolean transfer1last = false;
 		boolean transfer2last = false;
 		vertex_t vertices[4];
-		fixed_t truexspeed = xspeed*(!(player->pflags & PF_TRANSFERTOCLOSEST) && player->mo->target->flags & MF_AMBUSH ? -1 : 1);
+		fixed_t truexspeed = xspeed*(!(player->pflags & PF_TRANSFERTOCLOSEST) && player->mo->target->flags2 & MF2_AMBUSH ? -1 : 1);
 
 		// Find next waypoint
 		for (th = thinkercap.next; th != &thinkercap; th = th->next)
@@ -5656,7 +5656,7 @@ static void P_NiGHTSMovement(player_t *player)
 
 	// The 'ambush' flag says you should rotate
 	// the other way around the axis.
-	if (player->mo->target->flags & MF_AMBUSH)
+	if (player->mo->target->flags2 & MF2_AMBUSH)
 		backwardaxis = true;
 
 	player->angle_pos = R_PointToAngle2(player->mo->target->x, player->mo->target->y, player->mo->x, player->mo->y);
@@ -7942,7 +7942,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		}
 		else if (player->mo->target)
 		{
-			if (player->mo->target->flags & MF_AMBUSH)
+			if (player->mo->target->flags2 & MF2_AMBUSH)
 				angle = R_PointToAngle2(player->mo->target->x, player->mo->target->y, player->mo->x, player->mo->y);
 			else
 				angle = R_PointToAngle2(player->mo->x, player->mo->y, player->mo->target->x, player->mo->target->y);
