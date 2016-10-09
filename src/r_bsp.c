@@ -925,6 +925,9 @@ static void R_Subsector(size_t num)
 	{
 		floorplane = R_FindPlane(frontsector->floorheight, frontsector->floorpic, floorlightlevel,
 			frontsector->floor_xoffs, frontsector->floor_yoffs, frontsector->floorpic_angle, floorcolormap, NULL
+#ifdef POLYOBJECTS_PLANES
+			, NULL
+#endif
 #ifdef ESLOPE
 			, frontsector->f_slope
 #endif
@@ -944,6 +947,9 @@ static void R_Subsector(size_t num)
 		ceilingplane = R_FindPlane(frontsector->ceilingheight, frontsector->ceilingpic,
 			ceilinglightlevel, frontsector->ceiling_xoffs, frontsector->ceiling_yoffs, frontsector->ceilingpic_angle,
 			ceilingcolormap, NULL
+#ifdef POLYOBJECTS_PLANES
+			, NULL
+#endif
 #ifdef ESLOPE
 			, frontsector->c_slope
 #endif
@@ -1002,6 +1008,9 @@ static void R_Subsector(size_t num)
 				ffloor[numffloors].plane = R_FindPlane(*rover->bottomheight, *rover->bottompic,
 					*frontsector->lightlist[light].lightlevel, *rover->bottomxoffs,
 					*rover->bottomyoffs, *rover->bottomangle, frontsector->lightlist[light].extra_colormap, rover
+#ifdef POLYOBJECTS_PLANES
+					, NULL
+#endif
 #ifdef ESLOPE
 					, *rover->b_slope
 #endif
@@ -1045,6 +1054,9 @@ static void R_Subsector(size_t num)
 				ffloor[numffloors].plane = R_FindPlane(*rover->topheight, *rover->toppic,
 					*frontsector->lightlist[light].lightlevel, *rover->topxoffs, *rover->topyoffs, *rover->topangle,
 					frontsector->lightlist[light].extra_colormap, rover
+#ifdef POLYOBJECTS_PLANES
+					, NULL
+#endif
 #ifdef ESLOPE
 					, *rover->t_slope
 #endif
@@ -1111,11 +1123,13 @@ static void R_Subsector(size_t num)
 						polysec->floorpic_angle-po->angle,
 						NULL,
 						NULL
+#ifdef POLYOBJECTS_PLANES
+					, po
+#endif
 #ifdef ESLOPE
 					, NULL // will ffloors be slopable eventually?
 #endif
 					);
-				//ffloor[numffloors].plane->polyobj = po;
 
 				ffloor[numffloors].height = polysec->floorheight;
 				ffloor[numffloors].polyobj = po;
@@ -1155,11 +1169,13 @@ static void R_Subsector(size_t num)
 				ffloor[numffloors].plane = R_FindPlane(polysec->ceilingheight, polysec->ceilingpic,
 					polysec->lightlevel, xoff, yoff, polysec->ceilingpic_angle-po->angle,
 					NULL, NULL
+#ifdef POLYOBJECTS_PLANES
+					, po
+#endif
 #ifdef ESLOPE
 					, NULL // will ffloors be slopable eventually?
 #endif
 					);
-				//ffloor[numffloors].plane->polyobj = po;
 
 				ffloor[numffloors].polyobj = po;
 				ffloor[numffloors].height = polysec->ceilingheight;
