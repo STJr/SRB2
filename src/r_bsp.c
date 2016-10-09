@@ -859,6 +859,7 @@ static void R_Subsector(size_t num)
 	static sector_t tempsec; // Deep water hack
 	extracolormap_t *floorcolormap;
 	extracolormap_t *ceilingcolormap;
+	fixed_t floorcenterz, ceilingcenterz;
 
 #ifdef RANGECHECK
 	if (num >= numsubsectors)
@@ -879,6 +880,18 @@ static void R_Subsector(size_t num)
 
 	floorcolormap = ceilingcolormap = frontsector->extra_colormap;
 
+	floorcenterz =
+#ifdef ESLOPE
+		frontsector->f_slope ? P_GetZAt(frontsector->f_slope, frontsector->soundorg.x, frontsector->soundorg.y) :
+#endif
+		frontsector->floorheight;
+
+	ceilingcenterz =
+#ifdef ESLOPE
+		frontsector->c_slope ? P_GetZAt(frontsector->c_slope, frontsector->soundorg.x, frontsector->soundorg.y) :
+#endif
+		frontsector->ceilingheight;
+
 	// Check and prep all 3D floors. Set the sector floor/ceiling light levels and colormaps.
 	if (frontsector->ffloors)
 	{
@@ -891,19 +904,11 @@ static void R_Subsector(size_t num)
 			sub->sector->moved = frontsector->moved = false;
 		}
 
-		light = R_GetPlaneLight(frontsector,
-#ifdef ESLOPE
-								frontsector->f_slope ? P_GetZAt(frontsector->f_slope, frontsector->soundorg.x, frontsector->soundorg.y) :
-#endif
-								frontsector->floorheight, false);
+		light = R_GetPlaneLight(frontsector, floorcenterz, false);
 		if (frontsector->floorlightsec == -1)
 			floorlightlevel = *frontsector->lightlist[light].lightlevel;
 		floorcolormap = frontsector->lightlist[light].extra_colormap;
-		light = R_GetPlaneLight(frontsector,
-#ifdef ESLOPE
-								frontsector->c_slope ? P_GetZAt(frontsector->c_slope, frontsector->soundorg.x, frontsector->soundorg.y) :
-#endif
-								frontsector->ceilingheight, false);
+		light = R_GetPlaneLight(frontsector, ceilingcenterz, false);
 		if (frontsector->ceilinglightsec == -1)
 			ceilinglightlevel = *frontsector->lightlist[light].lightlevel;
 		ceilingcolormap = frontsector->lightlist[light].extra_colormap;
@@ -956,7 +961,7 @@ static void R_Subsector(size_t num)
 	if (frontsector->ffloors)
 	{
 		ffloor_t *rover;
-		fixed_t heightcheck, planecenterz, floorcenterz, ceilingcenterz;
+		fixed_t heightcheck, planecenterz;
 
 		for (rover = frontsector->ffloors; rover && numffloors < MAXFFLOORS; rover = rover->next)
 		{
@@ -974,18 +979,6 @@ static void R_Subsector(size_t num)
 
 			ffloor[numffloors].plane = NULL;
 			ffloor[numffloors].polyobj = NULL;
-
-			floorcenterz =
-#ifdef ESLOPE
-				frontsector->f_slope ? P_GetZAt(frontsector->f_slope, frontsector->soundorg.x, frontsector->soundorg.y) :
-#endif
-				frontsector->floorheight;
-
-			ceilingcenterz =
-#ifdef ESLOPE
-				frontsector->c_slope ? P_GetZAt(frontsector->c_slope, frontsector->soundorg.x, frontsector->soundorg.y) :
-#endif
-				frontsector->ceilingheight;
 
 			heightcheck =
 #ifdef ESLOPE
@@ -1093,8 +1086,8 @@ static void R_Subsector(size_t num)
 			polysec = po->lines[0]->backsector;
 			ffloor[numffloors].plane = NULL;
 
-			if (polysec->floorheight <= frontsector->ceilingheight
-				&& polysec->floorheight >= frontsector->floorheight
+			if (polysec->floorheight <= ceilingcenterz
+				&& polysec->floorheight >= floorcenterz
 				&& (viewz < polysec->floorheight))
 			{
 				fixed_t xoff, yoff;
@@ -1139,8 +1132,8 @@ static void R_Subsector(size_t num)
 
 			ffloor[numffloors].plane = NULL;
 
-			if (polysec->ceilingheight >= frontsector->floorheight
-				&& polysec->ceilingheight <= frontsector->ceilingheight
+			if (polysec->ceilingheight >= floorcenterz
+				&& polysec->ceilingheight <= ceilingcenterz
 				&& (viewz > polysec->ceilingheight))
 			{
 				fixed_t xoff, yoff;
