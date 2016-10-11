@@ -3058,9 +3058,9 @@ void A_JumpShield(mobj_t *actor)
 
 	player = actor->target->player;
 
-	P_SwitchShield(player, SH_JUMP);
-
 	S_StartSound(player->mo, actor->info->seesound);
+
+	P_SwitchShield(player, SH_JUMP);
 }
 
 // Function: A_RingShield
@@ -3086,9 +3086,9 @@ void A_RingShield(mobj_t *actor)
 
 	player = actor->target->player;
 
-	P_SwitchShield(player, SH_ATTRACT);
-
 	S_StartSound(player->mo, actor->info->seesound);
+
+	P_SwitchShield(player, SH_ATTRACT);
 }
 
 // Function: A_RingBox
@@ -3287,10 +3287,10 @@ void A_BombShield(mobj_t *actor)
 	if ((player->powers[pw_shield] & SH_NOSTACK) == SH_BOMB)
 		P_BlackOw(player);
 
+	S_StartSound(player->mo, actor->info->seesound);
+
 	// Now we know for certain that we don't have a bomb shield, so add one. :3
 	P_SwitchShield(player, SH_BOMB);
-
-	S_StartSound(player->mo, actor->info->seesound);
 }
 
 // Function: A_WaterShield
@@ -3316,6 +3316,8 @@ void A_WaterShield(mobj_t *actor)
 
 	player = actor->target->player;
 
+	S_StartSound(player->mo, actor->info->seesound);
+
 	P_SwitchShield(player, SH_ELEMENTAL);
 
 	if (player->powers[pw_underwater] && player->powers[pw_underwater] <= 12*TICRATE + 1)
@@ -3328,7 +3330,6 @@ void A_WaterShield(mobj_t *actor)
 		player->powers[pw_spacetime] = 0;
 		P_RestoreMusic(player);
 	}
-	S_StartSound(player->mo, actor->info->seesound);
 }
 
 // Function: A_ForceShield
@@ -3354,6 +3355,8 @@ void A_ForceShield(mobj_t *actor)
 
 	player = actor->target->player;
 
+	S_StartSound(player->mo, actor->info->seesound);
+
 	//can't use P_SwitchShield(player, SH_FORCE) - special case
 
 	if (!(player->powers[pw_shield] & SH_FORCE))
@@ -3370,8 +3373,6 @@ void A_ForceShield(mobj_t *actor)
 	}
 	else
 		player->powers[pw_shield] = SH_FORCE|(player->powers[pw_shield] & SH_STACK)|0x01;
-
-	S_StartSound(player->mo, actor->info->seesound);
 }
 
 // Function: A_PityShield
@@ -3401,9 +3402,11 @@ void A_PityShield(mobj_t *actor)
 
 	player = actor->target->player;
 
-	P_SwitchShield(player, SH_PITY);
-
 	S_StartSound(player->mo, actor->info->seesound);
+
+	if (player->powers[pw_shield] && mariomode) return;
+
+	P_SwitchShield(player, SH_PITY);
 }
 
 
@@ -3429,9 +3432,10 @@ void A_GravityBox(mobj_t *actor)
 	}
 
 	player = actor->target->player;
-	player->powers[pw_gravityboots] = (UINT16)(actor->info->reactiontime + 1);
 
 	S_StartSound(player, actor->info->activesound);
+
+	player->powers[pw_gravityboots] = (UINT16)(actor->info->reactiontime + 1);
 }
 
 // Function: A_ScoreRise

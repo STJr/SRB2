@@ -2735,9 +2735,10 @@ static inline void P_SuperDamage(player_t *player, mobj_t *inflictor, mobj_t *so
 
 void P_RemoveShield(player_t *player)
 {
+	boolean willbetallmario = (mariomode && ((player->powers[pw_shield] & SH_NOSTACK) != SH_PITY));
 	if (player->powers[pw_shield] & SH_FORCE)
 	{ // Multi-hit
-		if ((player->powers[pw_shield] & 0xFF) == 0)
+		if ((player->powers[pw_shield] & SH_FORCEHP) == 0)
 			player->powers[pw_shield] &= ~SH_FORCE;
 		else
 			player->powers[pw_shield]--;
@@ -2759,6 +2760,8 @@ void P_RemoveShield(player_t *player)
 	}
 	else
 		player->powers[pw_shield] = player->powers[pw_shield] & SH_STACK;
+	if (willbetallmario && !player->powers[pw_shield])
+		player->powers[pw_shield] |= SH_PITY;
 }
 
 static void P_ShieldDamage(player_t *player, mobj_t *inflictor, mobj_t *source, INT32 damage)

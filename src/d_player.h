@@ -192,12 +192,12 @@ typedef enum
 	SH_FLAMEAURA,
 	// Pity shield: the world's most basic shield ever, given to players who suck at Match
 	SH_PITY,
-	// The fireflower is special, it combines with other shields.
-	SH_FIREFLOWER = 0x100,
-	// The force shield uses the lower 8 bits to count how many hits are left.
-	SH_FORCE = 0x200,
+	// The force shield uses the lower 8 bits to count how many extra hits are left.
+	SH_FORCE = 0x100,
 	SH_FORCEHP = 0xFF, // to be used as a bitmask only
-
+	// The fireflower is special...
+	SH_FIREFLOWER = 0x200,
+	// ...it can combine with other shields.
 	SH_STACK = SH_FIREFLOWER,
 	SH_NOSTACK = ~SH_STACK
 } shieldtype_t; // pw_shield

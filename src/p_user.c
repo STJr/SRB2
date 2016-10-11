@@ -1367,6 +1367,8 @@ void P_SpawnShieldOrb(player_t *player)
 			P_RemoveMobj(shieldobj); //kill the old one(s)
 	}
 
+	if (orbtype == MT_PITYORB && mariomode) return;
+
 	shieldobj = P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z, orbtype);
 	P_SetTarget(&shieldobj->target, player->mo);
 	shieldobj->color = (UINT8)shieldobj->info->painchance;
@@ -8102,7 +8104,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		camstill = cv_cam_still.value;
 		camrotate = cv_cam_rotate.value;
 		camdist = FixedMul(cv_cam_dist.value, FixedMul(player->camerascale, mo->scale));
-		camheight = FixedMul(cv_cam_height.value, FixedMul(player->camerascale, mo->scale));
+		camheight = FixedMul(cv_cam_height.value, FixedMul(player->camerascale >> shortmario(player), mo->scale));
 	}
 	else // Camera 2
 	{
@@ -8110,7 +8112,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		camstill = cv_cam2_still.value;
 		camrotate = cv_cam2_rotate.value;
 		camdist = FixedMul(cv_cam2_dist.value, FixedMul(player->camerascale, mo->scale));
-		camheight = FixedMul(cv_cam2_height.value, FixedMul(player->camerascale, mo->scale));
+		camheight = FixedMul(cv_cam2_height.value, FixedMul(player->camerascale >> shortmario(player), mo->scale));
 	}
 
 	if (player->powers[pw_shield] & SH_FORCE && player->pflags & PF_SHIELDABILITY)

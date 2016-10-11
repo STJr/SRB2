@@ -1128,6 +1128,8 @@ static void R_ProjectSprite(mobj_t *thing)
 	fixed_t offset, offset2;
 	boolean papersprite = !!(thing->frame & FF_PAPERSPRITE);
 
+	fixed_t shortmarioshift = shortmario(thing->player);
+
 	INT32 dispoffset = thing->info->dispoffset;
 
 	//SoM: 3/17/2000
@@ -1317,6 +1319,12 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	xscale = FixedMul(xscale, ang_scale);
 
+	if (shortmarioshift)
+	{
+		yscale >>= shortmarioshift;
+		this_scale /= 2;
+	}
+
 	if ((thing->flags2 & MF2_LINKDRAW) && thing->tracer) // toast 16/09/16 (SYMMETRY)
 	{
 		fixed_t linkscale;
@@ -1376,6 +1384,9 @@ static void R_ProjectSprite(mobj_t *thing)
 		gzt = thing->z + FixedMul(spritecachedinfo[lump].topoffset, this_scale);
 		gz = gzt - FixedMul(spritecachedinfo[lump].height, this_scale);
 	}
+
+	if (shortmarioshift)
+		this_scale *= 2;
 
 	if (thing->subsector->sector->cullheight)
 	{
@@ -1442,7 +1453,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	vis->thingheight = thing->height;
 	vis->pz = thing->z;
 	vis->pzt = vis->pz + vis->thingheight;
-	vis->texturemid = vis->gzt - viewz;
+	vis->texturemid = (vis->gzt - viewz) << shortmarioshift;
 	vis->scalestep = scalestep;
 
 	vis->mobj = thing; // Easy access! Tails 06-07-2002
