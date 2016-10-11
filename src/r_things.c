@@ -1699,21 +1699,25 @@ static void R_CreateDrawNodes(void)
 				entry->ffloor = ds->thicksides[i];
 			}
 		}
+#ifdef POLYOBJECTS_PLANES
+		// Check for a polyobject plane, but only if this is a front line
+		if (ds->curline->polyseg && ds->curline->polyseg->visplane && !ds->curline->side) {
+			plane = ds->curline->polyseg->visplane;
+			R_PlaneBounds(plane);
+
+			if (plane->low < con_clipviewtop || plane->high > vid.height || plane->high > plane->low)
+				;
+			else {
+				// Put it in!
+				entry = R_CreateDrawNode(&nodehead);
+				entry->plane = plane;
+				entry->seg = ds;
+			}
+			ds->curline->polyseg->visplane = NULL;
+		}
+#endif
 		if (ds->maskedtexturecol)
 		{
-#ifdef POLYOBJECTS_PLANES
-			// Check for a polyobject plane, but only if this is a front line
-			if (ds->curline->polyseg && ds->curline->polyseg->visplane && !ds->curline->side) {
-				// Put it in!
-
-				entry = R_CreateDrawNode(&nodehead);
-				entry->plane = ds->curline->polyseg->visplane;
-				entry->seg = ds;
-				ds->curline->polyseg->visplane->polyobj = ds->curline->polyseg;
-				ds->curline->polyseg->visplane = NULL;
-			}
-#endif
-
 			entry = R_CreateDrawNode(&nodehead);
 			entry->seg = ds;
 		}
