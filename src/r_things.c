@@ -1322,7 +1322,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (shortmarioshift)
 	{
 		yscale >>= shortmarioshift;
-		this_scale /= 2;
+		this_scale >>= shortmarioshift;
 	}
 
 	if ((thing->flags2 & MF2_LINKDRAW) && thing->tracer) // toast 16/09/16 (SYMMETRY)
@@ -1386,7 +1386,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	}
 
 	if (shortmarioshift)
-		this_scale *= 2;
+		this_scale <<= shortmarioshift;
 
 	if (thing->subsector->sector->cullheight)
 	{
