@@ -4066,7 +4066,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 		if (!mobj->player->powers[pw_nocontrol]++)
 			mobj->player->powers[pw_nocontrol]++;
 
-		if (!((--mobj->player->powers[pw_marioflashing] - 1) % 5))
+		if (!(--mobj->player->powers[pw_marioflashing] % 4))
 		{
 			UINT16 shieldswitch = mobj->player->powers[pw_shield];
 			mobj->player->powers[pw_shield] = mobj->movecount;

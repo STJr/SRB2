@@ -64,7 +64,7 @@
 #define mariomode (maptol & TOL_MARIO)
 #define shortmario(player) ((player && mariomode && !player->powers[pw_shield] && !objectplacing) ? 1 : 0)
 
-#define MARIOFLASHINGTICS 21
+#define MARIOFLASHINGTICS TICRATE/2
 
 #define P_GetPlayerHeight(player) (FixedMul(player->height, player->mo->scale) >> shortmario(player))
 #define P_GetPlayerSpinHeight(player) (FixedMul(player->spinheight, player->mo->scale) >> shortmario(player))
