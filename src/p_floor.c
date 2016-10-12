@@ -1782,8 +1782,8 @@ static mobj_t *SearchMarioNode(msecnode_t *node)
 			break;
 		}
 		// Ignore popped monitors, too.
-		if (node->m_thing->flags & MF_MONITOR
-		&& node->m_thing->threshold == 68)
+		if (node->m_thing->health == 0 // this only really applies for monitors
+		|| (!(node->m_thing->flags & MF_MONITOR) && (mobjinfo[node->m_thing->type].flags & MF_MONITOR))) // gold monitor support
 			continue;
 		// Okay, we found something valid.
 		if (!thing // take either the first thing
@@ -3156,15 +3156,15 @@ INT32 EV_MarioBlock(sector_t *sec, sector_t *roversector, fixed_t topheight, mob
 			S_StartSound(puncher, sfx_mario9); // Puncher is "close enough"
 		}
 
-		if (itsamonitor)
+		if (itsamonitor && thing)
 		{
-			P_UnsetThingPosition(tmthing);
-			tmthing->x = oldx;
-			tmthing->y = oldy;
-			tmthing->z = oldz;
-			tmthing->momx = 1;
-			tmthing->momy = 1;
-			P_SetThingPosition(tmthing);
+			P_UnsetThingPosition(thing);
+			thing->x = oldx;
+			thing->y = oldy;
+			thing->z = oldz;
+			thing->momx = 1;
+			thing->momy = 1;
+			P_SetThingPosition(thing);
 		}
 	}
 	else
