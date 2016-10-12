@@ -142,7 +142,7 @@ boolean P_CanPickupItem(player_t *player, boolean weapon)
 	if (player->bot && weapon)
 		return false;
 
-	if (player->powers[pw_flashing] > (flashingtics/4)*3 && player->powers[pw_flashing] <= flashingtics)
+	if (player->powers[pw_flashing] > (flashingtics/4)*3 && player->powers[pw_flashing] < UINT16_MAX)
 		return false;
 
 	return true;
@@ -1138,6 +1138,13 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		case MT_FIREFLOWER:
 			if (player->bot)
 				return;
+			if (mariomode)
+			{
+				toucher->movecount = player->powers[pw_shield];
+				player->powers[pw_marioflashing] = MARIOFLASHINGTICS;
+				if ((player->powers[pw_shield] & SH_NOSTACK) == SH_PITY)
+					player->powers[pw_shield] &= SH_NOSTACK;
+			}
 			player->powers[pw_shield] |= SH_FIREFLOWER;
 			toucher->color = SKINCOLOR_WHITE;
 			G_GhostAddColor(GHC_FIREFLOWER);
@@ -1203,6 +1210,15 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			}
 
 			S_StartSound(toucher, special->info->painsound);
+
+			if (mariomode && !player->powers[pw_shield])
+			{
+				S_StartSound(toucher, sfx_mario3);
+				player->mo->movecount = player->powers[pw_shield];
+				player->powers[pw_marioflashing] = MARIOFLASHINGTICS;
+				player->powers[pw_shield] = SH_PITY;
+				P_SpawnShieldOrb(player);
+			}
 
 			if (!(netgame && circuitmap && player != &players[consoleplayer]))
 				P_SetMobjState(special, special->info->painstate);
@@ -1997,6 +2013,9 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 		}
 
 		target->flags2 &= ~MF2_DONTDRAW;
+
+		if (mariomode)
+			target->player->powers[pw_marioflashing] = MARIOFLASHINGTICS;
 	}
 
 	// if killed by a player
@@ -2773,7 +2792,9 @@ static void P_ShieldDamage(player_t *player, mobj_t *inflictor, mobj_t *source, 
 
 	P_ForceFeed(player, 40, 10, TICRATE, 40 + min(damage, 100)*2);
 
-	if (source && (source->type == MT_SPIKE || (source->type == MT_NULL && source->threshold == 43))) // spikes
+	if (mariomode)
+		S_StartSound(player->mo, sfx_mario8);
+	else if (source && (source->type == MT_SPIKE || (source->type == MT_NULL && source->threshold == 43))) // spikes
 		S_StartSound(player->mo, sfx_spkdth);
 	else
 		S_StartSound (player->mo, sfx_shldls); // Ba-Dum! Shield loss.
@@ -3134,7 +3155,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 		else
 		{
 			player->health -= damage; // mirror mobj health here
-			target->player->powers[pw_flashing] = flashingtics;
+			//target->player->powers[pw_flashing] = flashingtics;
 			if (damage > 0) // don't spill emeralds/ammo/panels for shield damage
 				P_PlayerRingBurst(player, damage);
 		}

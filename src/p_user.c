@@ -790,58 +790,64 @@ boolean P_PlayerInPain(player_t *player)
 //
 void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor)
 {
-	angle_t ang;
-	fixed_t fallbackspeed;
-
-	if (player->mo->eflags & MFE_VERTICALFLIP)
-		player->mo->z--;
-	else
-		player->mo->z++;
-
-	if (player->mo->eflags & MFE_UNDERWATER)
-		P_SetObjectMomZ(player->mo, FixedDiv(10511*FRACUNIT,2600*FRACUNIT), false);
-	else
-		P_SetObjectMomZ(player->mo, FixedDiv(69*FRACUNIT,10*FRACUNIT), false);
-
-	if (inflictor)
-	{
-		ang = R_PointToAngle2(inflictor->x-inflictor->momx, inflictor->y - inflictor->momy, player->mo->x - player->mo->momx, player->mo->y - player->mo->momy);
-
-		// explosion and rail rings send you farther back, making it more difficult
-		// to recover
-		if ((inflictor->flags2 & MF2_SCATTER) && source)
-		{
-			fixed_t dist = P_AproxDistance(P_AproxDistance(source->x-player->mo->x, source->y-player->mo->y), source->z-player->mo->z);
-
-			dist = FixedMul(128*FRACUNIT, inflictor->scale) - dist/4;
-
-			if (dist < FixedMul(4*FRACUNIT, inflictor->scale))
-				dist = FixedMul(4*FRACUNIT, inflictor->scale);
-
-			fallbackspeed = dist;
-		}
-		else if (inflictor->flags2 & MF2_EXPLOSION)
-		{
-			if (inflictor->flags2 & MF2_RAILRING)
-				fallbackspeed = FixedMul(38*FRACUNIT, inflictor->scale); // 7x
-			else
-				fallbackspeed = FixedMul(30*FRACUNIT, inflictor->scale); // 5x
-		}
-		else if (inflictor->flags2 & MF2_RAILRING)
-			fallbackspeed = FixedMul(45*FRACUNIT, inflictor->scale); // 4x
-		else
-			fallbackspeed = FixedMul(4*FRACUNIT, inflictor->scale); // the usual amount of force
-	}
-	else
-	{
-		ang = R_PointToAngle2(player->mo->momx, player->mo->momy, 0, 0);
-		fallbackspeed = FixedMul(4*FRACUNIT, player->mo->scale);
-	}
-
-	P_InstaThrust(player->mo, ang, fallbackspeed);
-
 	if (player->powers[pw_carry] == CR_ROPEHANG)
 		P_SetTarget(&player->mo->tracer, NULL);
+
+	if (!mariomode)
+	{
+		angle_t ang;
+		fixed_t fallbackspeed;
+
+		P_ResetPlayer(player);
+		P_SetPlayerMobjState(player->mo, player->mo->info->painstate);
+
+		if (player->mo->eflags & MFE_VERTICALFLIP)
+			player->mo->z--;
+		else
+			player->mo->z++;
+
+		if (player->mo->eflags & MFE_UNDERWATER)
+			P_SetObjectMomZ(player->mo, FixedDiv(10511*FRACUNIT,2600*FRACUNIT), false);
+		else
+			P_SetObjectMomZ(player->mo, FixedDiv(69*FRACUNIT,10*FRACUNIT), false);
+
+		if (inflictor)
+		{
+			ang = R_PointToAngle2(inflictor->x-inflictor->momx, inflictor->y - inflictor->momy, player->mo->x - player->mo->momx, player->mo->y - player->mo->momy);
+
+			// explosion and rail rings send you farther back, making it more difficult
+			// to recover
+			if ((inflictor->flags2 & MF2_SCATTER) && source)
+			{
+				fixed_t dist = P_AproxDistance(P_AproxDistance(source->x-player->mo->x, source->y-player->mo->y), source->z-player->mo->z);
+
+				dist = FixedMul(128*FRACUNIT, inflictor->scale) - dist/4;
+
+				if (dist < FixedMul(4*FRACUNIT, inflictor->scale))
+					dist = FixedMul(4*FRACUNIT, inflictor->scale);
+
+				fallbackspeed = dist;
+			}
+			else if (inflictor->flags2 & MF2_EXPLOSION)
+			{
+				if (inflictor->flags2 & MF2_RAILRING)
+					fallbackspeed = FixedMul(38*FRACUNIT, inflictor->scale); // 7x
+				else
+					fallbackspeed = FixedMul(30*FRACUNIT, inflictor->scale); // 5x
+			}
+			else if (inflictor->flags2 & MF2_RAILRING)
+				fallbackspeed = FixedMul(45*FRACUNIT, inflictor->scale); // 4x
+			else
+				fallbackspeed = FixedMul(4*FRACUNIT, inflictor->scale); // the usual amount of force
+		}
+		else
+		{
+			ang = R_PointToAngle2(player->mo->momx, player->mo->momy, 0, 0);
+			fallbackspeed = FixedMul(4*FRACUNIT, player->mo->scale);
+		}
+
+		P_InstaThrust(player->mo, ang, fallbackspeed);
+	}
 
 	// Point penalty for hitting a hazard during tag.
 	// Discourages players from intentionally hurting themselves to avoid being tagged.
@@ -853,9 +859,13 @@ void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor)
 			player->score = 0;
 	}
 
-	P_ResetPlayer(player);
-	P_SetPlayerMobjState(player->mo, player->mo->info->painstate);
 	player->powers[pw_flashing] = flashingtics;
+	if (mariomode)
+	{
+		player->powers[pw_marioflashing] = MARIOFLASHINGTICS;
+		player->powers[pw_flashing] += MARIOFLASHINGTICS;
+		player->mo->movecount = player->powers[pw_shield];
+	}
 
 	if (player->timeshit != UINT8_MAX)
 		++player->timeshit;
@@ -1416,6 +1426,12 @@ void P_SpawnShieldOrb(player_t *player)
 //
 void P_SwitchShield(player_t *player, UINT16 shieldtype)
 {
+	if (mariomode && player->mo)
+	{
+		player->mo->movecount = player->powers[pw_shield];
+		player->powers[pw_marioflashing] = MARIOFLASHINGTICS;
+		player->powers[pw_nocontrol] += MARIOFLASHINGTICS;
+	}
 	if ((player->powers[pw_shield] & SH_NOSTACK) != shieldtype)
 	{
 		// Just in case.
@@ -8104,7 +8120,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		camstill = cv_cam_still.value;
 		camrotate = cv_cam_rotate.value;
 		camdist = FixedMul(cv_cam_dist.value, FixedMul(player->camerascale, mo->scale));
-		camheight = FixedMul(cv_cam_height.value, FixedMul(player->camerascale >> shortmario(player), mo->scale));
+		camheight = FixedMul(cv_cam_height.value, FixedMul(player->camerascale, mo->scale));
 	}
 	else // Camera 2
 	{
@@ -8112,7 +8128,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		camstill = cv_cam2_still.value;
 		camrotate = cv_cam2_rotate.value;
 		camdist = FixedMul(cv_cam2_dist.value, FixedMul(player->camerascale, mo->scale));
-		camheight = FixedMul(cv_cam2_height.value, FixedMul(player->camerascale >> shortmario(player), mo->scale));
+		camheight = FixedMul(cv_cam2_height.value, FixedMul(player->camerascale, mo->scale));
 	}
 
 	if (player->powers[pw_shield] & SH_FORCE && player->pflags & PF_SHIELDABILITY)
@@ -8532,9 +8548,9 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	dist = FixedHypot(f1, f2);
 
 	if (mo->eflags & MFE_VERTICALFLIP)
-		angle = R_PointToAngle2(0, thiscam->z + thiscam->height, dist, mo->z + mo->height - P_GetPlayerHeight(player));
+		angle = R_PointToAngle2(0, thiscam->z + thiscam->height, dist, mo->z + mo->height - (P_GetPlayerHeight(player) << shortmario(player)));
 	else
-		angle = R_PointToAngle2(0, thiscam->z, dist, mo->z + P_GetPlayerHeight(player));
+		angle = R_PointToAngle2(0, thiscam->z, dist, mo->z + (P_GetPlayerHeight(player) << shortmario(player)));
 	if (player->playerstate != PST_DEAD)
 		angle += (focusaiming < ANGLE_180 ? focusaiming/2 : InvAngle(InvAngle(focusaiming)/2)); // overcomplicated version of '((signed)focusaiming)/2;'
 
@@ -9268,7 +9284,7 @@ void P_PlayerThink(player_t *player)
 		player->losstime--;
 
 	// Flash player after being hit.
-	if (player->powers[pw_flashing] > 0 && player->powers[pw_flashing] < flashingtics && (leveltime & 1))
+	if (player->powers[pw_flashing] > 0 && player->powers[pw_flashing] < flashingtics && (leveltime & 1) && !player->powers[pw_marioflashing])
 		player->mo->flags2 |= MF2_DONTDRAW;
 	else
 		player->mo->flags2 &= ~MF2_DONTDRAW;

@@ -3359,6 +3359,12 @@ void A_ForceShield(mobj_t *actor)
 
 	//can't use P_SwitchShield(player, SH_FORCE) - special case
 
+	if (mariomode && player->mo)
+	{
+		player->mo->movecount = player->powers[pw_shield];
+		player->powers[pw_marioflashing] = MARIOFLASHINGTICS;
+	}
+
 	if (!(player->powers[pw_shield] & SH_FORCE))
 	{
 		// Just in case.

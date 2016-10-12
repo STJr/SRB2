@@ -4061,6 +4061,40 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 	I_Assert(mobj->player != NULL);
 	I_Assert(!P_MobjWasRemoved(mobj));
 
+	if (mobj->player->powers[pw_marioflashing])
+	{
+		if (!mobj->player->powers[pw_nocontrol]++)
+			mobj->player->powers[pw_nocontrol]++;
+
+		if (!(mobj->player->powers[pw_marioflashing] % 4))
+		{
+			UINT16 shieldswitch = mobj->player->powers[pw_shield];
+			mobj->player->powers[pw_shield] = mobj->movecount;
+			mobj->movecount = shieldswitch;
+			if ((mobj->player->powers[pw_shield] & SH_FIREFLOWER) != (mobj->movecount & SH_FIREFLOWER))
+			{
+				if (mobj->player->powers[pw_shield] & SH_FIREFLOWER)
+				{
+					mobj->color = SKINCOLOR_WHITE;
+					G_GhostAddColor(GHC_FIREFLOWER);
+				}
+				else
+				{
+					mobj->color = mobj->player->skincolor;
+					G_GhostAddColor(GHC_NORMAL);
+				}
+			}
+			if (mobj->player->powers[pw_shield] & SH_NOSTACK && (mobj->player->powers[pw_shield] & SH_NOSTACK) != (mobj->movecount & SH_NOSTACK))
+				P_SpawnShieldOrb(mobj->player);
+		}
+
+		mobj->player->powers[pw_marioflashing]--;
+		if (mobj->player->powers[pw_flashing] && mobj->player->powers[pw_flashing] < UINT16_MAX && mobj->player->powers[pw_flashing] > flashingtics)
+			if (--(mobj->player->powers[pw_flashing]) == flashingtics)
+				mobj->player->powers[pw_flashing]--;
+		return;
+	}
+
 	P_MobjCheckWater(mobj);
 
 #ifdef ESLOPE
@@ -6380,9 +6414,9 @@ static boolean P_ShieldLook(mobj_t *thing, shieldtype_t shield)
 	thing->x = thing->target->x;
 	thing->y = thing->target->y;
 	if (thing->eflags & MFE_VERTICALFLIP)
-		thing->z = thing->target->z + thing->target->height - thing->height + FixedDiv(P_GetPlayerHeight(thing->target->player) - thing->target->height, 3*FRACUNIT) - FixedMul(2*FRACUNIT, thing->target->scale);
+		thing->z = thing->target->z + ((thing->target->height - thing->height + FixedDiv(P_GetPlayerHeight(thing->target->player) - thing->target->height, 3*FRACUNIT)) << shortmario(thing->target->player)) - FixedMul(2*FRACUNIT, thing->target->scale);
 	else
-		thing->z = thing->target->z - FixedDiv(P_GetPlayerHeight(thing->target->player) - thing->target->height, 3*FRACUNIT) + FixedMul(2*FRACUNIT, thing->target->scale);
+		thing->z = thing->target->z - ((FixedDiv(P_GetPlayerHeight(thing->target->player) - thing->target->height, 3*FRACUNIT)) << shortmario(thing->target->player)) + FixedMul(2*FRACUNIT, thing->target->scale);
 	P_SetThingPosition(thing);
 	P_CheckPosition(thing, thing->x, thing->y);
 
@@ -7091,6 +7125,11 @@ void P_MobjThinker(mobj_t *mobj)
 			break;
 		case MT_PLAYER:
 			/// \todo Have the player's dead body completely finish its animation even if they've already respawned.
+			if (mobj->player && mobj->player->powers[pw_marioflashing])
+			{
+				mobj->player->powers[pw_marioflashing]--;
+				return; // don't do any momz
+			}
 			if (!(mobj->flags2 & MF2_DONTDRAW))
 			{
 				if (!mobj->fuse)

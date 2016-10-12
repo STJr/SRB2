@@ -1319,12 +1319,6 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	xscale = FixedMul(xscale, ang_scale);
 
-	if (shortmarioshift)
-	{
-		yscale >>= shortmarioshift;
-		this_scale >>= shortmarioshift;
-	}
-
 	if ((thing->flags2 & MF2_LINKDRAW) && thing->tracer) // toast 16/09/16 (SYMMETRY)
 	{
 		fixed_t linkscale;
@@ -1370,6 +1364,12 @@ static void R_ProjectSprite(mobj_t *thing)
 			return;
 	}
 
+	if (shortmarioshift) // squish mario
+	{
+		yscale >>= shortmarioshift;
+		this_scale >>= shortmarioshift;
+	}
+
 	//SoM: 3/17/2000: Disregard sprites that are out of view..
 	if (vflip)
 	{
@@ -1385,7 +1385,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		gz = gzt - FixedMul(spritecachedinfo[lump].height, this_scale);
 	}
 
-	if (shortmarioshift)
+	if (shortmarioshift) // unsquish the x component
 		this_scale <<= shortmarioshift;
 
 	if (thing->subsector->sector->cullheight)
