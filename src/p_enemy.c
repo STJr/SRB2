@@ -3058,9 +3058,10 @@ void A_JumpShield(mobj_t *actor)
 
 	player = actor->target->player;
 
-	S_StartSound(player->mo, actor->info->seesound);
-
-	P_SwitchShield(player, SH_JUMP);
+	if (P_SwitchShield(player, SH_JUMP))
+		S_StartSound(player->mo, actor->info->seesound);
+	else if (mariomode)
+		S_StartSound(player->mo, sfx_itemup);
 }
 
 // Function: A_RingShield
@@ -3086,9 +3087,10 @@ void A_RingShield(mobj_t *actor)
 
 	player = actor->target->player;
 
-	S_StartSound(player->mo, actor->info->seesound);
-
-	P_SwitchShield(player, SH_ATTRACT);
+	if (P_SwitchShield(player, SH_ATTRACT))
+		S_StartSound(player->mo, actor->info->seesound);
+	else if (mariomode)
+		S_StartSound(player->mo, sfx_itemup);
 }
 
 // Function: A_RingBox
@@ -3287,10 +3289,9 @@ void A_BombShield(mobj_t *actor)
 	if ((player->powers[pw_shield] & SH_NOSTACK) == SH_BOMB)
 		P_BlackOw(player);
 
-	S_StartSound(player->mo, actor->info->seesound);
-
 	// Now we know for certain that we don't have a bomb shield, so add one. :3
-	P_SwitchShield(player, SH_BOMB);
+	P_SwitchShield(player, SH_BOMB); // will never return false, so no need for sound test
+	S_StartSound(player->mo, actor->info->seesound);
 }
 
 // Function: A_WaterShield
@@ -3316,9 +3317,10 @@ void A_WaterShield(mobj_t *actor)
 
 	player = actor->target->player;
 
-	S_StartSound(player->mo, actor->info->seesound);
-
-	P_SwitchShield(player, SH_ELEMENTAL);
+	if (P_SwitchShield(player, SH_ELEMENTAL))
+		S_StartSound(player->mo, actor->info->seesound);
+	else if (mariomode)
+		S_StartSound(player->mo, sfx_itemup);
 
 	if (player->powers[pw_underwater] && player->powers[pw_underwater] <= 12*TICRATE + 1)
 		P_RestoreMusic(player);
@@ -3355,18 +3357,23 @@ void A_ForceShield(mobj_t *actor)
 
 	player = actor->target->player;
 
-	S_StartSound(player->mo, actor->info->seesound);
-
 	//can't use P_SwitchShield(player, SH_FORCE) - special case
 
-	if (mariomode && player->mo)
+	if (mariomode)
 	{
-		player->mo->movecount = player->powers[pw_shield];
-		player->powers[pw_marioflashing] = MARIOFLASHINGTICS;
+		mobj_t *scoremobj = P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z + (player->mo->height / 2), MT_SCORE);
+		P_SetMobjState(scoremobj, mobjinfo[MT_SCORE].spawnstate+3); // 1000
+		P_AddPlayerScore(player, 1000);
 	}
 
 	if (!(player->powers[pw_shield] & SH_FORCE))
 	{
+		if (mariomode)
+		{
+			player->mo->movecount = player->powers[pw_shield];
+			player->powers[pw_marioflashing] = MARIOFLASHINGTICS;
+		}
+
 		// Just in case.
 		if (player->pflags & PF_SHIELDABILITY)
 		{
@@ -3376,9 +3383,14 @@ void A_ForceShield(mobj_t *actor)
 
 		player->powers[pw_shield] = SH_FORCE|(player->powers[pw_shield] & SH_STACK)|0x01;
 		P_SpawnShieldOrb(player);
+		S_StartSound(player->mo, actor->info->seesound);
 	}
 	else
+	{
 		player->powers[pw_shield] = SH_FORCE|(player->powers[pw_shield] & SH_STACK)|0x01;
+		if (mariomode)
+			S_StartSound(player->mo, sfx_itemup);
+	}
 }
 
 // Function: A_PityShield
@@ -3408,11 +3420,14 @@ void A_PityShield(mobj_t *actor)
 
 	player = actor->target->player;
 
-	S_StartSound(player->mo, actor->info->seesound);
-
-	if (player->powers[pw_shield] && mariomode) return;
+	if (player->powers[pw_shield] && mariomode)
+	{
+		S_StartSound(player->mo, sfx_itemup);
+		return;
+	}
 
 	P_SwitchShield(player, SH_PITY);
+	S_StartSound(player->mo, actor->info->seesound);
 }
 
 

@@ -12236,7 +12236,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // missilestate
 		S_NULL,         // deathstate
 		S_NULL,         // xdeathstate
-		sfx_mario3,     // deathsound
+		sfx_None,       // deathsound
 		0,              // speed
 		16*FRACUNIT,    // radius
 		32*FRACUNIT,    // height

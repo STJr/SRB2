@@ -1424,16 +1424,23 @@ void P_SpawnShieldOrb(player_t *player)
 //
 // Not for use if shieldtype would be SH_FORCE.
 //
-void P_SwitchShield(player_t *player, UINT16 shieldtype)
+boolean P_SwitchShield(player_t *player, UINT16 shieldtype)
 {
-	if (mariomode && player->mo)
+	if (mariomode)
 	{
-		player->mo->movecount = player->powers[pw_shield];
-		player->powers[pw_marioflashing] = MARIOFLASHINGTICS;
-		player->powers[pw_nocontrol] += MARIOFLASHINGTICS;
+		mobj_t *scoremobj = P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z + (player->mo->height / 2), MT_SCORE);
+		P_SetMobjState(scoremobj, mobjinfo[MT_SCORE].spawnstate+3); // 1000
+		P_AddPlayerScore(player, 1000);
 	}
+
 	if ((player->powers[pw_shield] & SH_NOSTACK) != shieldtype)
 	{
+		if (mariomode)
+		{
+			player->mo->movecount = player->powers[pw_shield];
+			player->powers[pw_marioflashing] = MARIOFLASHINGTICS;
+		}
+
 		// Just in case.
 		if (player->pflags & PF_SHIELDABILITY)
 		{
@@ -1451,7 +1458,9 @@ void P_SwitchShield(player_t *player, UINT16 shieldtype)
 
 		player->powers[pw_shield] = shieldtype|(player->powers[pw_shield] & SH_STACK);
 		P_SpawnShieldOrb(player);
+		return true;
 	}
+	return false;
 }
 
 //
@@ -6232,6 +6241,8 @@ void P_BlackOw(player_t *player)
 
 	P_NukeEnemies(player->mo, player->mo, 1536*FRACUNIT); // Search for all nearby enemies and nuke their pants off!
 	player->powers[pw_shield] = player->powers[pw_shield] & SH_STACK;
+	if (mariomode && !player->powers[pw_shield])
+		player->powers[pw_shield] = SH_PITY;
 }
 
 void P_ElementalFire(player_t *player, boolean cropcircle)

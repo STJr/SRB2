@@ -1138,6 +1138,20 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		case MT_FIREFLOWER:
 			if (player->bot)
 				return;
+			{
+				mobj_t *scoremobj = P_SpawnMobj(toucher->x, toucher->y, toucher->z + (toucher->height / 2), MT_SCORE);
+				P_SetMobjState(scoremobj, mobjinfo[MT_SCORE].spawnstate+3); // 1000
+				P_AddPlayerScore(player, 1000);
+			}
+
+			if ((player->powers[pw_shield] & SH_NOSTACK) == SH_FIREFLOWER)
+			{
+				S_StartSound(toucher, sfx_itemup);
+				break;
+			}
+			else
+				S_StartSound(toucher, sfx_mario3);
+
 			if (mariomode)
 			{
 				toucher->movecount = player->powers[pw_shield];
@@ -1145,9 +1159,10 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				if ((player->powers[pw_shield] & SH_NOSTACK) == SH_PITY)
 					player->powers[pw_shield] &= SH_NOSTACK;
 			}
-			player->powers[pw_shield] |= SH_FIREFLOWER;
+			player->powers[pw_shield] |= SH_FIREFLOWER; //= (player->powers[pw_shield] & SH_NOSTACK)|SH_FIREFLOWER; -- perfect implementation, not worth it whilst we only have one stack power
 			toucher->color = SKINCOLOR_WHITE;
 			G_GhostAddColor(GHC_FIREFLOWER);
+
 			break;
 
 // *************** //
@@ -1211,13 +1226,18 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 			S_StartSound(toucher, special->info->painsound);
 
-			if (mariomode && !player->powers[pw_shield])
+			if (mariomode)
 			{
-				S_StartSound(toucher, sfx_mario3);
-				player->mo->movecount = player->powers[pw_shield];
-				player->powers[pw_marioflashing] = MARIOFLASHINGTICS;
-				player->powers[pw_shield] = SH_PITY;
-				P_SpawnShieldOrb(player);
+				mobj_t *scoremobj = P_SpawnMobj(toucher->x, toucher->y, toucher->z + (toucher->height / 2), MT_SCORE);
+				P_SetMobjState(scoremobj, mobjinfo[MT_SCORE].spawnstate+7); // 2000
+				P_AddPlayerScore(player, 2000);
+				if (!player->powers[pw_shield])
+				{
+					S_StartSound(toucher, sfx_mario3);
+					player->mo->movecount = player->powers[pw_shield];
+					player->powers[pw_shield] = SH_PITY;
+					P_SpawnShieldOrb(player);
+				}
 			}
 
 			if (!(netgame && circuitmap && player != &players[consoleplayer]))
@@ -2013,9 +2033,6 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 		}
 
 		target->flags2 &= ~MF2_DONTDRAW;
-
-		if (mariomode)
-			target->player->powers[pw_marioflashing] = MARIOFLASHINGTICS;
 	}
 
 	// if killed by a player
@@ -2281,24 +2298,32 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			break;
 
 		case MT_PLAYER:
-			target->fuse = TICRATE*3; // timer before mobj disappears from view (even if not an actual player)
-			target->momx = target->momy = target->momz = 0;
-			if (damagetype == DMG_DROWNED) // drowned
 			{
-				target->movedir = damagetype; // we're MOVING the Damage Into anotheR function... Okay, this is a bit of a hack.
-				if (target->player->charflags & SF_MACHINE)
-					S_StartSound(target, sfx_fizzle);
+				boolean mariodeathpit = (mariomode && damagetype == DMG_DEATHPIT);
+				target->fuse = TICRATE*3; // timer before mobj disappears from view (even if not an actual player)
+				if (!mariodeathpit)
+				{
+					target->player->powers[pw_marioflashing] = MARIOFLASHINGTICS;
+					target->momx = target->momy = target->momz = 0;
+				}
+				if (damagetype == DMG_DROWNED) // drowned
+				{
+					target->movedir = damagetype; // we're MOVING the Damage Into anotheR function... Okay, this is a bit of a hack.
+					if (target->player->charflags & SF_MACHINE)
+						S_StartSound(target, sfx_fizzle);
+					else
+						S_StartSound(target, sfx_drown);
+					// Don't jump up when drowning
+				}
 				else
-					S_StartSound(target, sfx_drown);
-				// Don't jump up when drowning
-			}
-			else
-			{
-				P_SetObjectMomZ(target, 14*FRACUNIT, false);
-				if ((source && source->type == MT_SPIKE) || damagetype == DMG_SPIKE) // Spikes
-					S_StartSound(target, sfx_spkdth);
-				else
-					P_PlayDeathSound(target);
+				{
+					if (!mariodeathpit)
+						P_SetObjectMomZ(target, 14*FRACUNIT, false);
+					if ((source && source->type == MT_SPIKE) || damagetype == DMG_SPIKE) // Spikes
+						S_StartSound(target, sfx_spkdth);
+					else
+						P_PlayDeathSound(target);
+				}
 			}
 			break;
 		default:
@@ -2656,9 +2681,11 @@ static void P_KillPlayer(player_t *player, mobj_t *source, INT32 damage)
 		P_PlayerEmeraldBurst(player, false);
 	}
 
-	// Get rid of shield
-	player->powers[pw_shield] = SH_NONE;
-	player->mo->color = player->skincolor;
+	if (!mariomode) // Get rid of shield
+	{
+		player->powers[pw_shield] = SH_NONE;
+		player->mo->color = player->skincolor;
+	}
 
 	// Get rid of emeralds
 	player->powers[pw_emeralds] = 0;

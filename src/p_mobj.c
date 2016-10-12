@@ -3102,7 +3102,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 
 		if (P_MobjFlip(mo)*mo->momz < 0) // falling
 		{
-			boolean clipmomz = true;
+			boolean clipmomz = !(P_CheckDeathPitCollide(mo));
 
 			mo->pmomz = 0; // We're on a new floor, don't keep doing platform movement.
 
