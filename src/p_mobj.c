@@ -4066,7 +4066,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 		if (!mobj->player->powers[pw_nocontrol]++)
 			mobj->player->powers[pw_nocontrol]++;
 
-		if (!(mobj->player->powers[pw_marioflashing] % 4))
+		if (!((--mobj->player->powers[pw_marioflashing] - 1) % 5))
 		{
 			UINT16 shieldswitch = mobj->player->powers[pw_shield];
 			mobj->player->powers[pw_shield] = mobj->movecount;
@@ -4088,7 +4088,6 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 				P_SpawnShieldOrb(mobj->player);
 		}
 
-		mobj->player->powers[pw_marioflashing]--;
 		if (mobj->player->powers[pw_flashing] && mobj->player->powers[pw_flashing] < UINT16_MAX && mobj->player->powers[pw_flashing] > flashingtics)
 			if (--(mobj->player->powers[pw_flashing]) == flashingtics)
 				mobj->player->powers[pw_flashing]--;
