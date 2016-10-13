@@ -3368,12 +3368,6 @@ void A_ForceShield(mobj_t *actor)
 
 	if (!(player->powers[pw_shield] & SH_FORCE))
 	{
-		if (mariomode)
-		{
-			player->mo->movecount = player->powers[pw_shield];
-			player->powers[pw_marioflashing] = MARIOFLASHINGTICS;
-		}
-
 		// Just in case.
 		if (player->pflags & PF_SHIELDABILITY)
 		{
@@ -3388,16 +3382,22 @@ void A_ForceShield(mobj_t *actor)
 			G_GhostAddColor(GHC_NORMAL);
 		}
 
-		player->powers[pw_shield] = SH_FORCE|(player->powers[pw_shield] & SH_STACK)|0x01;
-		P_SpawnShieldOrb(player);
 		S_StartSound(player->mo, actor->info->seesound);
 	}
-	else
+	else if (mariomode)
+		S_StartSound(player->mo, sfx_itemup);
+
+	if ((player->powers[pw_shield] & SH_FORCE) && (player->powers[pw_shield] & SH_FORCEHP))
+		return; // if you have a force shield with at least 2hp already, let's not go any further.
+
+	if (mariomode)
 	{
-		player->powers[pw_shield] = SH_FORCE|(player->powers[pw_shield] & SH_STACK)|0x01;
-		if (mariomode)
-			S_StartSound(player->mo, sfx_itemup);
+		player->mo->movecount = player->powers[pw_shield];
+		player->powers[pw_marioflashing] = MARIOFLASHINGTICS;
 	}
+
+	player->powers[pw_shield] = SH_FORCE|(mariomode ? SH_MUSHROOM : player->powers[pw_shield] & SH_STACK)|0x01;
+	P_SpawnShieldOrb(player);
 }
 
 // Function: A_PityShield
