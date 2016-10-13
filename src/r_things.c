@@ -1128,7 +1128,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	fixed_t offset, offset2;
 	boolean papersprite = !!(thing->frame & FF_PAPERSPRITE);
 
-	fixed_t shortmarioshift = shortmario(thing->player);
+	fixed_t shortmarioshift = (objectplacing ? 0 : shortmario(thing->player));
 
 	INT32 dispoffset = thing->info->dispoffset;
 

@@ -1156,12 +1156,9 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			{
 				toucher->movecount = player->powers[pw_shield];
 				player->powers[pw_marioflashing] = MARIOFLASHINGTICS;
-				if ((player->powers[pw_shield] & SH_NOSTACK) == SH_PITY)
-					player->powers[pw_shield] &= SH_NOSTACK;
 			}
-			player->powers[pw_shield] |= SH_FIREFLOWER; //= (player->powers[pw_shield] & SH_NOSTACK)|SH_FIREFLOWER; -- perfect implementation, not worth it whilst we only have one stack power
-			toucher->color = SKINCOLOR_WHITE;
-			G_GhostAddColor(GHC_FIREFLOWER);
+			player->powers[pw_shield] = (player->powers[pw_shield] & SH_STACK)|SH_FIREFLOWER;
+			P_SpawnShieldOrb(player);
 
 			break;
 
@@ -1235,6 +1232,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				{
 					S_StartSound(toucher, sfx_mario3);
 					player->mo->movecount = player->powers[pw_shield];
+					player->powers[pw_marioflashing] = MARIOFLASHINGTICS;
 					player->powers[pw_shield] = SH_PITY;
 					P_SpawnShieldOrb(player);
 				}
@@ -2782,6 +2780,7 @@ static inline void P_SuperDamage(player_t *player, mobj_t *inflictor, mobj_t *so
 void P_RemoveShield(player_t *player)
 {
 	boolean willbetallmario = (mariomode && ((player->powers[pw_shield] & SH_NOSTACK) != SH_PITY));
+	boolean fireflower = ((player->powers[pw_shield] & SH_NOSTACK) == SH_FIREFLOWER);
 	if (player->powers[pw_shield] & SH_FORCE)
 	{ // Multi-hit
 		if ((player->powers[pw_shield] & SH_FORCEHP) == 0)
@@ -2792,12 +2791,6 @@ void P_RemoveShield(player_t *player)
 	else if ((player->powers[pw_shield] & SH_NOSTACK) == SH_NONE)
 	{ // Second layer shields
 		player->powers[pw_shield] = SH_NONE;
-		// Reset fireflower
-		if (!player->powers[pw_super])
-		{
-			player->mo->color = player->skincolor;
-			G_GhostAddColor(GHC_NORMAL);
-		}
 	}
 	else if ((player->powers[pw_shield] & SH_NOSTACK) == SH_BOMB) // Give them what's coming to them!
 	{
@@ -2808,6 +2801,11 @@ void P_RemoveShield(player_t *player)
 		player->powers[pw_shield] = player->powers[pw_shield] & SH_STACK;
 	if (willbetallmario && !player->powers[pw_shield])
 		player->powers[pw_shield] |= SH_PITY;
+	if (fireflower && !(player->powers[pw_super] || (mariomode && player->powers[pw_invulnerability])))
+	{
+		player->mo->color = player->skincolor;
+		G_GhostAddColor(GHC_NORMAL);
+	}
 }
 
 static void P_ShieldDamage(player_t *player, mobj_t *inflictor, mobj_t *source, INT32 damage)

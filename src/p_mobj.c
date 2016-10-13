@@ -4071,21 +4071,14 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 			UINT16 shieldswitch = mobj->player->powers[pw_shield];
 			mobj->player->powers[pw_shield] = mobj->movecount;
 			mobj->movecount = shieldswitch;
-			if ((mobj->player->powers[pw_shield] & SH_FIREFLOWER) != (mobj->movecount & SH_FIREFLOWER))
-			{
-				if (mobj->player->powers[pw_shield] & SH_FIREFLOWER)
-				{
-					mobj->color = SKINCOLOR_WHITE;
-					G_GhostAddColor(GHC_FIREFLOWER);
-				}
-				else
-				{
-					mobj->color = mobj->player->skincolor;
-					G_GhostAddColor(GHC_NORMAL);
-				}
-			}
 			if (mobj->player->powers[pw_shield] & SH_NOSTACK && (mobj->player->powers[pw_shield] & SH_NOSTACK) != (mobj->movecount & SH_NOSTACK))
 				P_SpawnShieldOrb(mobj->player);
+			if ((mobj->player->powers[pw_shield] & SH_NOSTACK) != SH_FIREFLOWER && (mobj->movecount & SH_NOSTACK) == SH_FIREFLOWER
+			&& !(mobj->player->powers[pw_super] || (mariomode && mobj->player->powers[pw_invulnerability])))
+			{
+				mobj->color = mobj->player->skincolor;
+				G_GhostAddColor(GHC_NORMAL);
+			}
 		}
 
 		if (mobj->player->powers[pw_flashing] && mobj->player->powers[pw_flashing] < UINT16_MAX && mobj->player->powers[pw_flashing] > flashingtics)

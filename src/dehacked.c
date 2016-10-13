@@ -7092,8 +7092,8 @@ struct {
 	{"SH_THUNDERCOIN",SH_THUNDERCOIN},
 	{"SH_FLAMEAURA",SH_FLAMEAURA},
 	{"SH_PITY",SH_PITY},
+	{"SH_FIREFLOWER",SH_FIREFLOWER},
 	// These ones are special and use the upper bits
-	{"SH_FIREFLOWER",SH_FIREFLOWER}, // Lower bits are a normal shield stacked on top of the fire flower
 	{"SH_FORCE",SH_FORCE}, // Lower bits are how many hits left, 0 is the last hit
 	// Stack masks
 	{"SH_STACK",SH_STACK},

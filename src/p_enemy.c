@@ -3381,6 +3381,13 @@ void A_ForceShield(mobj_t *actor)
 			player->homing = 0;
 		}
 
+		if ((player->powers[pw_shield] & SH_NOSTACK) == SH_FIREFLOWER
+		&& !(player->powers[pw_super] || (mariomode && player->powers[pw_invulnerability])))
+		{
+			player->mo->color = player->skincolor;
+			G_GhostAddColor(GHC_NORMAL);
+		}
+
 		player->powers[pw_shield] = SH_FORCE|(player->powers[pw_shield] & SH_STACK)|0x01;
 		P_SpawnShieldOrb(player);
 		S_StartSound(player->mo, actor->info->seesound);
