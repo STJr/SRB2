@@ -3304,8 +3304,6 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 	for (i = 0; i < num_rings; i++)
 	{
 		INT32 objType = mobjinfo[MT_RING].reactiontime;
-		if (mariomode)
-			objType = mobjinfo[MT_COIN].reactiontime;
 
 		z = player->mo->z;
 		if (player->mo->eflags & MFE_VERTICALFLIP)
