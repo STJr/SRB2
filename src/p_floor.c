@@ -1751,8 +1751,8 @@ static mobj_t *SearchMarioNode(msecnode_t *node)
 		case MT_ELEMENTAL_ORB:
 		case MT_ATTRACT_ORB:
 		case MT_FORCE_ORB:
-		case MT_BOMB_ORB:
-		case MT_JUMP_ORB:
+		case MT_ARMAGEDDON_ORB:
+		case MT_WHIRLWIND_ORB:
 		case MT_PITY_ORB:
 		case MT_FLAMEAURA_ORB:
 		case MT_BUBBLEWRAP_ORB:

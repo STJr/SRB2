@@ -3250,14 +3250,6 @@ static void P_PlayerZMovement(mobj_t *mo)
 							P_SetPlayerMobjState(mo, S_PLAY_FALL);
 							clipmomz = false;
 						}
-						else if (mo->player->powers[pw_shield] & SH_FORCE) // Force shield's dodge dash.
-						{
-							P_SetPlayerMobjState(mo, S_PLAY_WALK);
-							mo->flags &= ~MF_NOGRAVITY;
-							mo->player->pflags &= ~(PF_FULLSTASIS|PF_SPINNING);
-							mo->momx >>= 3;
-							mo->momy >>= 3;
-						}
 					}
 					mo->player->pflags &= ~(PF_THOKKED|PF_CANCARRY|PF_SHIELDABILITY/*|PF_GLIDING*/);
 					mo->player->jumping = 0;
@@ -3619,7 +3611,7 @@ void P_MobjCheckWater(mobj_t *mobj)
 	{
 		if (!((p->powers[pw_super]) || (p->powers[pw_invulnerability])))
 		{
-			if (p->powers[pw_shield] & SH_PROTECTELECTRICITY)
+			if (p->powers[pw_shield] & SH_PROTECTELECTRIC)
 			{ // Water removes electric shields...
 				p->powers[pw_shield] = p->powers[pw_shield] & SH_STACK;
 				P_FlashPal(p, PAL_WHITE, 1);
@@ -6774,14 +6766,25 @@ void P_MobjThinker(mobj_t *mobj)
 					&& (mobj->target->target->player)
 					&& ((mobj->target->target->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL)
 					&& (mobj->target->target->player->pflags & PF_SHIELDABILITY)
-					&& (mobj->state->nextstate < mobj->target->info->painstate)) // Special casing for elemental shield piercing attack.
+					&& (mobj->state->nextstate < mobj->target->info->raisestate)) // Special casing for elemental shield piercing attack.
 					{
-						P_SetMobjState(mobj, mobj->target->info->painstate);
+						P_SetMobjState(mobj, mobj->target->info->raisestate);
+						mobj->tics++;
+					}
+				else if ((mobj->target->type == MT_THUNDERCOIN_ORB)
+					&& (mobj->target->target)
+					&& (mobj->target->target->player)
+					&& ((mobj->target->target->player->powers[pw_shield] & SH_NOSTACK) == SH_THUNDERCOIN)
+					&& (mobj->target->target->player->pflags & PF_SHIELDABILITY)) // Special casing for thundercoin shield jump..
+					{
+						P_SetMobjState(mobj, mobj->target->info->raisestate);
+						P_SetMobjState(mobj->target, mobj->target->info->painstate);
+						mobj->target->target->player->pflags &= ~PF_SHIELDABILITY;
 						mobj->tics++;
 					}
 				break;
-			case MT_BOMB_ORB:
-			case MT_JUMP_ORB:
+			case MT_ARMAGEDDON_ORB:
+			case MT_WHIRLWIND_ORB:
 			case MT_ELEMENTAL_ORB:
 			case MT_FORCE_ORB:
 			case MT_PITY_ORB:

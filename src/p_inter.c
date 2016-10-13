@@ -1582,7 +1582,7 @@ static void P_HitDeathMessages(player_t *player, mobj_t *inflictor, mobj_t *sour
 			else switch (inflictor->type)
 			{
 				case MT_PLAYER:
-					if ((inflictor->player->powers[pw_shield] & SH_NOSTACK) == SH_BOMB)
+					if ((inflictor->player->powers[pw_shield] & SH_NOSTACK) == SH_ARMAGEDDON)
 						str = M_GetText("%s%s's armageddon blast %s %s.\n");
 					else if (inflictor->player->powers[pw_invulnerability])
 						str = M_GetText("%s%s's invincibility aura %s %s.\n");
@@ -2791,7 +2791,7 @@ void P_RemoveShield(player_t *player)
 	{ // Second layer shields
 		player->powers[pw_shield] = SH_NONE;
 	}
-	else if ((player->powers[pw_shield] & SH_NOSTACK) == SH_BOMB) // Give them what's coming to them!
+	else if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ARMAGEDDON) // Give them what's coming to them!
 	{
 		P_BlackOw(player); // BAM!
 		player->pflags |= PF_JUMPDOWN;
@@ -3033,7 +3033,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 						return false; // Invincible to fire damage
 					break;
 				case DMG_ELECTRIC:
-					if (player->powers[pw_shield] & SH_PROTECTELECTRICITY)
+					if (player->powers[pw_shield] & SH_PROTECTELECTRIC)
 						return false; // Invincible to electric damage
 					break;
 				default:

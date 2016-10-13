@@ -811,9 +811,9 @@ static void ST_drawFirstPersonHUD(void)
 	}
 	else switch (player->powers[pw_shield] & SH_NOSTACK)
 	{
-	case SH_JUMP:        p = jumpshield;    break;
+	case SH_WHIRLWIND:   p = jumpshield;    break;
 	case SH_ELEMENTAL:   p = watershield;   break;
-	case SH_BOMB:        p = bombshield;    break;
+	case SH_ARMAGEDDON:  p = bombshield;    break;
 	case SH_ATTRACT:     p = ringshield;    break;
 	case SH_PITY:        p = pityshield;    break;
 	case SH_FLAMEAURA:   p = flameshield;   break;

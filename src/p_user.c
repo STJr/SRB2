@@ -877,15 +877,6 @@ void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor)
 // Useful when you want to kill everything the player is doing.
 void P_ResetPlayer(player_t *player)
 {
-	if (player->mo
-	&& player->powers[pw_shield] & SH_FORCE // Dash.
-	&& player->pflags & PF_SHIELDABILITY)
-	{
-		P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
-		player->mo->flags &= ~MF_NOGRAVITY;
-		player->pflags &= ~PF_FULLSTASIS;
-	}
-
 	player->pflags &= ~(PF_SPINNING|PF_STARTDASH|PF_JUMPED|PF_GLIDING|PF_THOKKED|PF_CANCARRY|PF_SHIELDABILITY);
 	player->powers[pw_carry] = CR_NONE;
 	player->jumping = 0;
@@ -1351,8 +1342,8 @@ void P_SpawnShieldOrb(player_t *player)
 		orbtype = MT_FORCE_ORB;
 	else switch (player->powers[pw_shield] & SH_NOSTACK)
 	{
-	case SH_JUMP:
-		orbtype = MT_JUMP_ORB;
+	case SH_WHIRLWIND:
+		orbtype = MT_WHIRLWIND_ORB;
 		break;
 	case SH_ATTRACT:
 		orbtype = MT_ATTRACT_ORB;
@@ -1360,8 +1351,8 @@ void P_SpawnShieldOrb(player_t *player)
 	case SH_ELEMENTAL:
 		orbtype = MT_ELEMENTAL_ORB;
 		break;
-	case SH_BOMB:
-		orbtype = MT_BOMB_ORB;
+	case SH_ARMAGEDDON:
+		orbtype = MT_ARMAGEDDON_ORB;
 		break;
 	case SH_PITY:
 		orbtype = MT_PITY_ORB;
@@ -1473,14 +1464,6 @@ boolean P_SwitchShield(player_t *player, UINT16 shieldtype)
 		{
 			player->pflags &= ~(PF_SPINNING|PF_SHIELDABILITY); // They'll still have PF_THOKKED...
 			player->homing = 0;
-			if (player->powers[pw_shield] & SH_FORCE) // Dash.
-			{
-				P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
-				player->mo->flags &= ~MF_NOGRAVITY;
-				player->pflags &= ~PF_FULLSTASIS;
-				player->mo->momx >>= 3;
-				player->mo->momy >>= 3;
-			}
 		}
 
 		if ((player->powers[pw_shield] & SH_NOSTACK) == SH_FIREFLOWER // it's implicit that the new shield isn't a fireflower
@@ -3944,18 +3927,27 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 //
 void P_DoJumpShield(player_t *player)
 {
+	boolean electric = ((player->powers[pw_shield] & SH_PROTECTELECTRIC) == SH_PROTECTELECTRIC);
+
 	if (player->pflags & PF_THOKKED)
 		return;
 
 	player->pflags &= ~PF_JUMPED;
 	P_DoJump(player, false);
-	player->pflags &= ~PF_JUMPED;
-	player->secondjump = 0;
 	player->jumping = 0;
+	player->secondjump = 0;
 	player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
 	player->pflags &= ~PF_SPINNING;
-	P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
-	S_StartSound(player->mo, sfx_wdjump);
+	if (electric)
+	{
+		S_StartSound(player->mo, sfx_s3k45);
+	}
+	else
+	{
+		player->pflags &= ~PF_JUMPED;
+		P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
+		S_StartSound(player->mo, sfx_wdjump);
+	}
 }
 
 //
@@ -4026,7 +4018,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 		{}
 		else if (onground || player->climbing || (player->mo->tracer && player->powers[pw_carry]))
 		{}
-		else if ((player->powers[pw_shield] & SH_NOSTACK) == SH_JUMP
+		else if ((player->powers[pw_shield] & SH_NOSTACK) == SH_WHIRLWIND
 		&& !(player->pflags & PF_JUMPED)
 		&& !(player->pflags & PF_USEDOWN))
 			P_DoJumpShield(player);
@@ -4307,7 +4299,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					break;
 			}
 		}
-		else if ((player->powers[pw_shield] & SH_NOSTACK) == SH_JUMP && !player->powers[pw_super])
+		else if ((player->powers[pw_shield] & SH_NOSTACK) == SH_WHIRLWIND && !player->powers[pw_super])
 			P_DoJumpShield(player);
 	}
 
@@ -6993,79 +6985,58 @@ static void P_MovePlayer(player_t *player)
 	{
 		if (player->pflags & PF_JUMPED) // If the player is jumping
 		{
-			if (!(player->pflags & PF_USEDOWN)) // If the player is not holding down BT_USE
+			pflags_t check = (PF_USEDOWN|PF_GLIDING|PF_SLIDING|PF_THOKKED);
+			if (!(player->pflags & check)) // If the player is not holding down BT_USE, or having used an ability previously
 			{
-				// Jump shield activation
-				if (!P_PlayerInPain(player) // If the player is not in pain
-				&& !player->climbing // If the player is not climbing
-				&& !(player->pflags & (PF_GLIDING|PF_SLIDING|PF_THOKKED)) // If the player is not gliding or sliding and hasn't used their ability
-				&& !onground) // If the player isn't on the ground
-				{
-					if ((player->powers[pw_shield] & SH_NOSTACK) == SH_JUMP && !player->powers[pw_super])
-						P_DoJumpShield(player);
-					else if (player->powers[pw_super] && ALL7EMERALDS(player->powers[pw_emeralds]) && player->charability == CA_FLY)
-					{
-						P_DoJumpShield(player);
-						player->mo->momz *= 2;
-					}
-				}
-				// Bomb shield activation
-				if ((player->powers[pw_shield] & SH_NOSTACK) == SH_BOMB)
-				{
-					// Don't let Super Sonic or invincibility use it
-					if (!(player->powers[pw_super] || player->powers[pw_invulnerability]))
-						P_BlackOw(player);
-				}
-				// Attract shield activation
-				if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT)
-				{
-					if (!(player->pflags & PF_THOKKED))
-					{
-						player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
-						player->homing = 2;
-						if (P_LookForEnemies(player, false) && player->mo->tracer)
-						{
-							S_StartSound(player->mo, sfx_s3k40);
-							player->homing = 3*TICRATE;
-						}
-						else
-							S_StartSound(player->mo, sfx_s3k41);
-					}
-				}
-				// Elemental shield activation
-				if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL)
-				{
-					if (!(player->pflags & PF_THOKKED))
-					{
-						player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
-						S_StartSound(player->mo, sfx_s3k43);
-						player->mo->momx = player->mo->momy = 0;
-						P_SetObjectMomZ(player->mo, -24*FRACUNIT, false);
-					}
-				}
 				// Force shield activation
 				if (player->powers[pw_shield] & SH_FORCE)
+					; // TODO
+				else
 				{
-					if (!(player->pflags & PF_THOKKED))
+					switch (player->powers[pw_shield] & SH_NOSTACK)
 					{
-						angle_t dashangle = player->mo->angle;
-#if 1 // shadow.wad style redirection - hold down directional keys to set your path, go backwards by default
-						if (!(player->pflags & PF_ANALOGMODE) && (player->cmd.forwardmove || player->cmd.sidemove))
-							dashangle += R_PointToAngle2(0, 0, player->cmd.forwardmove<<FRACBITS, -player->cmd.sidemove<<FRACBITS);
-						else
-#else // go backwards from your current momentum direction
-						if (player->mo->momx || player->mo->momy)
-							dashangle = R_PointToAngle2(0, 0, player->mo->momx, player->mo->momy);
-#endif
-						dashangle += ANGLE_180;
-						P_ResetPlayer(player);
-						player->homing = 2 + (player->powers[pw_shield] & SH_FORCEHP); // might get ridiculous with 256 hitpoints, don't you think?
-						S_StartSound(player->mo, sfx_s3k47);
-						P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
-						player->pflags |= PF_SPINNING|PF_THOKKED|PF_SHIELDABILITY;
-						player->mo->flags |= MF_NOGRAVITY;
-						P_InstaThrust(player->mo, dashangle, 64*FRACUNIT);
-						player->mo->momz = 0;
+						// Whirlwind/Thundercoin shield activation
+						case SH_WHIRLWIND:
+						case SH_THUNDERCOIN:
+							if (!player->powers[pw_super])
+								P_DoJumpShield(player);
+							break;
+						// Armageddon shield activation
+						case SH_ARMAGEDDON:
+							// Don't let Super Sonic or invincibility use it
+							if (!(player->powers[pw_super] || player->powers[pw_invulnerability]))
+								P_BlackOw(player);
+							break;
+						// Attract shield activation
+						case SH_ATTRACT:
+							player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
+							player->homing = 2;
+							if (P_LookForEnemies(player, false) && player->mo->tracer)
+							{
+								S_StartSound(player->mo, sfx_s3k40);
+								player->homing = 3*TICRATE;
+							}
+							else
+								S_StartSound(player->mo, sfx_s3k45);
+							break;
+						// Elemental/Bubblewrap shield activation
+						case SH_ELEMENTAL:
+						case SH_BUBBLEWRAP:
+							player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
+							player->mo->momx = player->mo->momy = 0;
+							P_SetObjectMomZ(player->mo, -24*FRACUNIT, false);
+							S_StartSound(player->mo,
+								((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL)
+								? sfx_s3k43
+								: sfx_s3k44);
+							break;
+						// Flame shield activation
+						case SH_FLAMEAURA:
+							player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
+							P_Thrust(player->mo, player->mo->angle, 30*player->mo->scale - FixedMul(FixedSqrt(player->speed), FixedSqrt(player->mo->scale)));
+							S_StartSound(player->mo, sfx_s3k43);
+						default:
+							break;
 					}
 				}
 			}
@@ -7084,26 +7055,7 @@ static void P_MovePlayer(player_t *player)
 	}
 
 	// HOMING option.
-	if (player->powers[pw_shield] & SH_FORCE // Dash.
-	&& player->pflags & PF_SHIELDABILITY)
-	{
-		if (player->homing)
-		{
-			player->pflags |= PF_FULLSTASIS;
-			player->mo->momz = 0;
-			if (!(player->pflags & PF_SPINNING))
-				player->homing = 0;
-		}
-
-		if (player->homing == 0)
-		{
-			P_ResetPlayer(player);
-			player->pflags |= PF_THOKKED; // silly silly
-			player->mo->momx >>= 3;
-			player->mo->momy >>= 3;
-		}
-	}
-	else if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT // Sonic 3D Blast.
+	if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT // Sonic 3D Blast.
 	&& player->pflags & PF_SHIELDABILITY)
 	{
 		if (player->homing && player->mo->tracer)

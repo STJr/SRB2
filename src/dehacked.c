@@ -5459,6 +5459,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	"S_BUBSB1",
 	"S_BUBSB2",
+	"S_BUBSB3",
+	"S_BUBSB4",
 
 	"S_ZAPS1",
 	"S_ZAPS2",
@@ -6509,8 +6511,8 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_ELEMENTAL_ORB", // Elemental shield mobj
 	"MT_ATTRACT_ORB", // Attract shield mobj
 	"MT_FORCE_ORB", // Force shield mobj
-	"MT_BOMB_ORB", // Armageddon shield mobj
-	"MT_JUMP_ORB", // Whirlwind shield mobj
+	"MT_ARMAGEDDON_ORB", // Armageddon shield mobj
+	"MT_WHIRLWIND_ORB", // Whirlwind shield mobj
 	"MT_PITY_ORB", // Pity shield mobj
 	"MT_FLAMEAURA_ORB", // Flame shield mobj
 	"MT_BUBBLEWRAP_ORB", // Bubble shield mobj
@@ -7178,11 +7180,11 @@ struct {
 	// Shield flags
 	{"SH_PROTECTFIRE",SH_PROTECTFIRE},
 	{"SH_PROTECTWATER",SH_PROTECTWATER},
-	{"SH_PROTECTELECTRICITY",SH_PROTECTELECTRICITY},
+	{"SH_PROTECTELECTRIC",SH_PROTECTELECTRIC},
 	// Indivisible shields
 	{"SH_PITY",SH_PITY},
-	{"SH_JUMP",SH_JUMP},
-	{"SH_BOMB",SH_BOMB},
+	{"SH_WHIRLWIND",SH_WHIRLWIND},
+	{"SH_ARMAGEDDON",SH_ARMAGEDDON},
 	{"SH_FIREFLOWER",SH_FIREFLOWER},
 	// normal shields that use flags
 	{"SH_ATTRACT",SH_ATTRACT},

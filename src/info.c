@@ -2175,18 +2175,20 @@ state_t states[NUMSTATES] =
 	{SPR_FIRS, FF_FULLBRIGHT|FF_TRANS40|16, 2, {NULL}, 0, 0, S_FIRSB9}, // S_FIRSB8
 	{SPR_FIRS, FF_FULLBRIGHT|FF_TRANS40|17, 2, {NULL}, 0, 0, S_FIRSB1}, // S_FIRSB9
 
-	{SPR_BUBS, FF_TRANS30| 2, 2, {NULL}, 0, 0, S_BUBS2}, // S_BUBS1
-	{SPR_BUBS, FF_TRANS30| 3, 2, {NULL}, 0, 0, S_BUBS3}, // S_BUBS2
-	{SPR_BUBS, FF_TRANS30| 4, 2, {NULL}, 0, 0, S_BUBS4}, // S_BUBS3
-	{SPR_BUBS, FF_TRANS30| 5, 2, {NULL}, 0, 0, S_BUBS5}, // S_BUBS4
-	{SPR_BUBS, FF_TRANS30| 6, 2, {NULL}, 0, 0, S_BUBS6}, // S_BUBS5
-	{SPR_BUBS, FF_TRANS30| 7, 2, {NULL}, 0, 0, S_BUBS7}, // S_BUBS6
-	{SPR_BUBS, FF_TRANS30| 8, 2, {NULL}, 0, 0, S_BUBS8}, // S_BUBS7
-	{SPR_BUBS, FF_TRANS30| 9, 2, {NULL}, 0, 0, S_BUBS9}, // S_BUBS8
-	{SPR_BUBS, FF_TRANS30|10, 2, {NULL}, 0, 0, S_BUBS1}, // S_BUBS9
+	{SPR_BUBS, FF_TRANS30  , 2, {NULL}, 0, 0, S_BUBS2}, // S_BUBS1
+	{SPR_BUBS, FF_TRANS30|1, 2, {NULL}, 0, 0, S_BUBS3}, // S_BUBS2
+	{SPR_BUBS, FF_TRANS30|2, 2, {NULL}, 0, 0, S_BUBS4}, // S_BUBS3
+	{SPR_BUBS, FF_TRANS30|3, 2, {NULL}, 0, 0, S_BUBS5}, // S_BUBS4
+	{SPR_BUBS, FF_TRANS30|4, 2, {NULL}, 0, 0, S_BUBS6}, // S_BUBS5
+	{SPR_BUBS, FF_TRANS30|5, 2, {NULL}, 0, 0, S_BUBS7}, // S_BUBS6
+	{SPR_BUBS, FF_TRANS30|6, 2, {NULL}, 0, 0, S_BUBS8}, // S_BUBS7
+	{SPR_BUBS, FF_TRANS30|7, 2, {NULL}, 0, 0, S_BUBS9}, // S_BUBS8
+	{SPR_BUBS, FF_TRANS30|8, 2, {NULL}, 0, 0, S_BUBS1}, // S_BUBS9
 
-	{SPR_BUBS, FF_TRANS30  , 2, {NULL}, 0, 0, S_BUBSB2}, // S_BUBSB1
-	{SPR_BUBS, FF_TRANS30|1, 2, {NULL}, 0, 0, S_BUBSB1}, // S_BUBSB2
+	{SPR_BUBS, FF_TRANS30| 9, 2, {NULL}, 0, 0, S_BUBSB2}, // S_BUBSB1
+	{SPR_BUBS, FF_TRANS30|10, 2, {NULL}, 0, 0, S_BUBSB3}, // S_BUBSB2
+	{SPR_BUBS, FF_TRANS30|11, 2, {NULL}, 0, 0, S_BUBSB4}, // S_BUBSB3
+	{SPR_BUBS, FF_TRANS30|10, 2, {NULL}, 0, 0, S_BUBSB1}, // S_BUBSB4
 
 	{SPR_ZAPS, FF_FULLBRIGHT|FF_TRANS20   ,   2, {NULL}, 0, 0, S_ZAPS2 }, // S_ZAPS1
 	{SPR_ZAPS, FF_FULLBRIGHT|FF_TRANS20| 1,   2, {NULL}, 0, 0, S_ZAPS3 }, // S_ZAPS2
@@ -7057,7 +7059,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_ATTRACT_ICON1, // spawnstate
 		1,              // spawnhealth
 		S_NULL,         // seestate
-		sfx_shield,     // seesound
+		sfx_s3k41,      // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
@@ -7111,7 +7113,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_ARMAGEDDON_ICON1, // spawnstate
 		1,              // spawnhealth
 		S_NULL,         // seestate
-		sfx_shield,     // seesound
+		sfx_s3k3e,      // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
@@ -7165,7 +7167,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_ELEMENTAL_ICON1, // spawnstate
 		1,              // spawnhealth
 		S_NULL,         // seestate
-		sfx_shield,     // seesound
+		sfx_s3k3f,      // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
@@ -7435,7 +7437,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_FLAMEAURA_ICON1, // spawnstate
 		1,              // spawnhealth
 		S_NULL,         // seestate
-		sfx_shield,     // seesound
+		sfx_s3k3e,      // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
@@ -7462,7 +7464,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_BUBBLEWRAP_ICON1, // spawnstate
 		1,              // spawnhealth
 		S_NULL,         // seestate
-		sfx_shield,     // seesound
+		sfx_s3k3f,      // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
@@ -7489,7 +7491,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_THUNDERCOIN_ICON1, // spawnstate
 		1,              // spawnhealth
 		S_NULL,         // seestate
-		sfx_shield,     // seesound
+		sfx_s3k41,      // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
@@ -10762,7 +10764,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // seesound
 		0,              // reactiontime
 		sfx_None,       // attacksound
-		S_ELEMF9,       // painstate
+		S_NULL,         // painstate
 		SKINCOLOR_NONE, // painchance
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
@@ -10778,7 +10780,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_None,       // activesound
 		MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_SCENERY, // flags
-		S_NULL          // raisestate
+		S_ELEMF9        // raisestate
 	},
 
 	{           // MT_ATTRACT_ORB
@@ -10835,7 +10837,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
-	{           // MT_BOMB_ORB
+	{           // MT_ARMAGEDDON_ORB
 		-1,             // doomednum
 		S_ARMA1,        // spawnstate
 		1000,           // spawnhealth
@@ -10851,7 +10853,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // deathstate
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
-		SH_BOMB,        // speed
+		SH_ARMAGEDDON,        // speed
 		64*FRACUNIT,    // radius
 		64*FRACUNIT,    // height
 		2,              // display offset
@@ -10862,7 +10864,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
-	{           // MT_JUMP_ORB
+	{           // MT_WHIRLWIND_ORB
 		-1,             // doomednum
 		S_WIND1,        // spawnstate
 		1000,           // spawnhealth
@@ -10878,7 +10880,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // deathstate
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
-		SH_JUMP,        // speed
+		SH_WHIRLWIND,        // speed
 		64*FRACUNIT,    // radius
 		64*FRACUNIT,    // height
 		2,              // display offset
@@ -10978,7 +10980,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
-		S_NULL,         // painstate
+		S_ZAPSB11,      // painstate
 		SKINCOLOR_NONE, // painchance
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
@@ -10994,7 +10996,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_None,       // activesound
 		MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_SCENERY, // flags
-		S_NULL          // raisestate
+		S_ZAPS14        // raisestate
 	},
 
 	{           // MT_IVSP

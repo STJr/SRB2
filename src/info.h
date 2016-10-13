@@ -2373,6 +2373,8 @@ typedef enum state
 
 	S_BUBSB1,
 	S_BUBSB2,
+	S_BUBSB3,
+	S_BUBSB4,
 
 	S_ZAPS1,
 	S_ZAPS2,
@@ -3442,8 +3444,8 @@ typedef enum mobj_type
 	MT_ELEMENTAL_ORB, // Elemental shield mobj
 	MT_ATTRACT_ORB, // Attract shield mobj
 	MT_FORCE_ORB, // Force shield mobj
-	MT_BOMB_ORB, // Armageddon shield mobj
-	MT_JUMP_ORB, // Whirlwind shield mobj
+	MT_ARMAGEDDON_ORB, // Armageddon shield mobj
+	MT_WHIRLWIND_ORB, // Whirlwind shield mobj
 	MT_PITY_ORB, // Pity shield mobj
 	MT_FLAMEAURA_ORB, // Flame shield mobj
 	MT_BUBBLEWRAP_ORB, // Bubble shield mobj

@@ -1052,6 +1052,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		else if (thing->z - FixedMul(FRACUNIT, thing->scale) <= tmthing->z + tmthing->height
 			&& thing->z + thing->height + FixedMul(FRACUNIT, thing->scale) >= tmthing->z)
 		{
+			boolean elementalpierce = (((tmthing->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL)
+				&& (tmthing->player->pflags & PF_SHIELDABILITY));
 			if (thing->flags & MF_MONITOR
 				&& (tmthing->player->pflags & (PF_SPINNING|PF_GLIDING)
 				|| ((tmthing->player->pflags & PF_JUMPED)
@@ -1059,11 +1061,12 @@ static boolean PIT_CheckThing(mobj_t *thing)
 					&& !(tmthing->player->charability == CA_TWINSPIN && tmthing->player->panim == PA_ABILITY)))
 				|| (tmthing->player->charability2 == CA2_MELEE && tmthing->player->panim == PA_ABILITY2)
 				|| ((tmthing->player->charflags & SF_STOMPDAMAGE)
-					&& (P_MobjFlip(tmthing)*(tmthing->z - (thing->z + thing->height/2)) > 0) && (P_MobjFlip(tmthing)*tmthing->momz < 0))))
+					&& (P_MobjFlip(tmthing)*(tmthing->z - (thing->z + thing->height/2)) > 0) && (P_MobjFlip(tmthing)*tmthing->momz < 0))
+				|| elementalpierce))
 			{
 				SINT8 flipval = P_MobjFlip(thing); // Save this value in case monitor gets removed.
 				fixed_t *momz = &tmthing->momz; // tmthing gets changed by P_DamageMobj, so we need a new pointer?! X_x;;
-				boolean elementalpierce = (((tmthing->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL) && (tmthing->player->pflags & PF_SHIELDABILITY));
+				fixed_t *z = &tmthing->z; // aau.
 				P_DamageMobj(thing, tmthing, tmthing, 1, 0); // break the monitor
 				// Going down? Then bounce back up.
 				if ((P_MobjWasRemoved(thing) // Monitor was removed
@@ -1071,7 +1074,10 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				&& (flipval*(*momz) < 0) // monitor is on the floor and you're going down, or on the ceiling and you're going up
 				&& !elementalpierce) // you're not piercing through the monitor...
 					*momz = -*momz; // Therefore, you should be thrust in the opposite direction, vertically.
-				return false;
+				if (!(elementalpierce && thing->flags & MF_GRENADEBOUNCE)) // prevent gold monitor clipthrough.
+					return false;
+				else
+					*z -= *momz; // to ensure proper collision.
 			}
 		}
 	}
