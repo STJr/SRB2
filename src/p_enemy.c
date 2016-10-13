@@ -3324,29 +3324,19 @@ void A_WaterShield(mobj_t *actor)
 		S_StartSound(player->mo, actor->info->seesound);
 	else
 		S_StartSound(player->mo, sfx_itemup);
-
-	if (player->powers[pw_underwater] && player->powers[pw_underwater] <= 12*TICRATE + 1)
-		P_RestoreMusic(player);
-
-	player->powers[pw_underwater] = 0;
-
-	if (player->powers[pw_spacetime] > 1)
-	{
-		player->powers[pw_spacetime] = 0;
-		P_RestoreMusic(player);
-	}
 }
 
 // Function: A_ForceShield
 //
 // Description: Awards the player a force shield.
 //
-// var1 = unused
+// var1 = Number of additional hitpoints to give
 // var2 = unused
 //
 void A_ForceShield(mobj_t *actor)
 {
 	player_t *player;
+	INT32 locvar1 = var1;
 
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_ForceShield", actor))
@@ -3358,51 +3348,18 @@ void A_ForceShield(mobj_t *actor)
 		return;
 	}
 
+	if (locvar1 < 0 || locvar1 > SH_FORCEHP)
+	{
+		CONS_Debug(DBG_GAMELOGIC, "Invalid number of additional hitpoints.\n");
+		return;
+	}
+
 	player = actor->target->player;
 
-	//can't use P_SwitchShield(player, SH_FORCE) - special case
-
-	if (mariomode)
-	{
-		mobj_t *scoremobj = P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z + (player->mo->height / 2), MT_SCORE);
-		P_SetMobjState(scoremobj, mobjinfo[MT_SCORE].spawnstate+3); // 1000
-		P_AddPlayerScore(player, 1000);
-	}
-
-	if (!(player->powers[pw_shield] & SH_FORCE))
-	{
-		// Just in case.
-		if (player->pflags & PF_SHIELDABILITY)
-		{
-			player->pflags &= ~PF_SHIELDABILITY;
-			player->homing = 0;
-		}
-
-		if ((player->powers[pw_shield] & SH_NOSTACK) == SH_FIREFLOWER
-		&& !(player->powers[pw_super] || (mariomode && player->powers[pw_invulnerability])))
-		{
-			player->mo->color = player->skincolor;
-			G_GhostAddColor(GHC_NORMAL);
-		}
-
-		S_StartSound(player->mo, actor->info->seesound);
-	}
-	else if (!mariomode)
+	if (P_SwitchShield(player, SH_FORCE|locvar1))
 		S_StartSound(player->mo, actor->info->seesound);
 	else
 		S_StartSound(player->mo, sfx_itemup);
-
-	if ((player->powers[pw_shield] & SH_FORCE) && (player->powers[pw_shield] & SH_FORCEHP))
-		return; // if you have a force shield with at least 2hp already, let's not go any further.
-
-	if (mariomode)
-	{
-		player->mo->movecount = player->powers[pw_shield];
-		player->powers[pw_marioflashing] = MARIOFLASHINGTICS;
-	}
-
-	player->powers[pw_shield] = SH_FORCE|(mariomode ? SH_MUSHROOM : player->powers[pw_shield] & SH_STACK)|0x01;
-	P_SpawnShieldOrb(player);
 }
 
 // Function: A_PityShield

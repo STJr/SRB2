@@ -1443,10 +1443,16 @@ void P_SpawnShieldOrb(player_t *player)
 //
 // Returns whether to play a normal sound or an itemup.
 //
-// Not for use if shieldtype would be SH_FORCE.
-//
 boolean P_SwitchShield(player_t *player, UINT16 shieldtype)
 {
+	boolean donthavealready = (shieldtype & SH_FORCE)
+	? (!(player->powers[pw_shield] & SH_FORCE) || (player->powers[pw_shield] & SH_FORCEHP) < (shieldtype & ~SH_FORCE))
+	: ((player->powers[pw_shield] & SH_NOSTACK) != shieldtype);
+
+	boolean stopshieldability = (shieldtype & SH_FORCE)
+	? (!(player->powers[pw_shield] & SH_FORCE))
+	: true;
+
 	if (mariomode)
 	{
 		mobj_t *scoremobj = P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z + (player->mo->height / 2), MT_SCORE);
@@ -1454,7 +1460,7 @@ boolean P_SwitchShield(player_t *player, UINT16 shieldtype)
 		P_AddPlayerScore(player, 1000);
 	}
 
-	if ((player->powers[pw_shield] & SH_NOSTACK) != shieldtype)
+	if (donthavealready)
 	{
 		if (mariomode)
 		{
@@ -1463,9 +1469,9 @@ boolean P_SwitchShield(player_t *player, UINT16 shieldtype)
 		}
 
 		// Just in case.
-		if (player->pflags & PF_SHIELDABILITY)
+		if (stopshieldability && player->pflags & PF_SHIELDABILITY)
 		{
-			player->pflags &= ~PF_SPINNING|PF_SHIELDABILITY; // They'll still have PF_THOKKED...
+			player->pflags &= ~(PF_SPINNING|PF_SHIELDABILITY); // They'll still have PF_THOKKED...
 			player->homing = 0;
 			if (player->powers[pw_shield] & SH_FORCE) // Dash.
 			{
@@ -1486,6 +1492,20 @@ boolean P_SwitchShield(player_t *player, UINT16 shieldtype)
 
 		player->powers[pw_shield] = shieldtype|(mariomode ? SH_MUSHROOM : player->powers[pw_shield] & SH_STACK);
 		P_SpawnShieldOrb(player);
+
+		if (shieldtype & SH_PROTECTWATER)
+		{
+			if (player->powers[pw_underwater] && player->powers[pw_underwater] <= 12*TICRATE + 1)
+				P_RestoreMusic(player);
+
+			player->powers[pw_underwater] = 0;
+
+			if (player->powers[pw_spacetime] > 1)
+			{
+				player->powers[pw_spacetime] = 0;
+				P_RestoreMusic(player);
+			}
+		}
 		return true;
 	}
 	return (!mariomode);
