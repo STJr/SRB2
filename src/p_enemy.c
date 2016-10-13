@@ -3060,7 +3060,7 @@ void A_JumpShield(mobj_t *actor)
 
 	if (P_SwitchShield(player, SH_JUMP))
 		S_StartSound(player->mo, actor->info->seesound);
-	else if (mariomode)
+	else
 		S_StartSound(player->mo, sfx_itemup);
 }
 
@@ -3089,7 +3089,7 @@ void A_RingShield(mobj_t *actor)
 
 	if (P_SwitchShield(player, SH_ATTRACT))
 		S_StartSound(player->mo, actor->info->seesound);
-	else if (mariomode)
+	else
 		S_StartSound(player->mo, sfx_itemup);
 }
 
@@ -3319,7 +3319,7 @@ void A_WaterShield(mobj_t *actor)
 
 	if (P_SwitchShield(player, SH_ELEMENTAL))
 		S_StartSound(player->mo, actor->info->seesound);
-	else if (mariomode)
+	else
 		S_StartSound(player->mo, sfx_itemup);
 
 	if (player->powers[pw_underwater] && player->powers[pw_underwater] <= 12*TICRATE + 1)
@@ -3384,7 +3384,9 @@ void A_ForceShield(mobj_t *actor)
 
 		S_StartSound(player->mo, actor->info->seesound);
 	}
-	else if (mariomode)
+	else if (!mariomode)
+		S_StartSound(player->mo, actor->info->seesound);
+	else
 		S_StartSound(player->mo, sfx_itemup);
 
 	if ((player->powers[pw_shield] & SH_FORCE) && (player->powers[pw_shield] & SH_FORCEHP))
@@ -3429,7 +3431,7 @@ void A_PityShield(mobj_t *actor)
 
 	if (P_SwitchShield(player, SH_PITY))
 		S_StartSound(player->mo, actor->info->seesound);
-	else if (mariomode)
+	else
 		S_StartSound(player->mo, sfx_itemup);
 }
 

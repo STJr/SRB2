@@ -1428,9 +1428,11 @@ void P_SpawnShieldOrb(player_t *player)
 //
 // P_SwitchShield
 //
-// Handles the possibility of switching
-// between shields thoroughly, then
-// adds the desired one.
+// Handles the possibility of switching between
+// the non-stack layer of shields thoroughly,
+// then adds the desired one.
+//
+// Returns whether to play a normal sound or an itemup.
 //
 // Not for use if shieldtype would be SH_FORCE.
 //
@@ -1477,7 +1479,7 @@ boolean P_SwitchShield(player_t *player, UINT16 shieldtype)
 		P_SpawnShieldOrb(player);
 		return true;
 	}
-	return false;
+	return (!mariomode);
 }
 
 //
