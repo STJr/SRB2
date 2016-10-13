@@ -2304,7 +2304,8 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 				target->fuse = TICRATE*3; // timer before mobj disappears from view (even if not an actual player)
 				if (!mariodeathpit)
 				{
-					target->player->powers[pw_marioflashing] = MARIOFLASHINGTICS;
+					if (mariomode)
+						target->player->powers[pw_marioflashing] = MARIOFLASHINGTICS;
 					target->momx = target->momy = target->momz = 0;
 				}
 				if (damagetype == DMG_DROWNED) // drowned
