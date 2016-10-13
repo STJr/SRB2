@@ -186,12 +186,12 @@ typedef enum
 	SH_ATTRACT,
 	SH_ELEMENTAL,
 	SH_BOMB,
-	// Stupid useless unimplimented Sonic 3 shields
-	SH_BUBBLEWRAP,
-	SH_THUNDERCOIN,
-	SH_FLAMEAURA,
 	// Pity shield: the world's most basic shield ever, given to players who suck at Match
 	SH_PITY,
+	// Sonic 3 shields
+	SH_FLAMEAURA,
+	SH_BUBBLEWRAP,
+	SH_THUNDERCOIN,
 	// The fireflower used to be stackable with other shields. Not anymore.
 	SH_FIREFLOWER,
 	// The force shield uses the lower 8 bits to count how many extra hits are left.

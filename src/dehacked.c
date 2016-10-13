@@ -1687,6 +1687,9 @@ static actionpointer_t actionpointers[] =
 	{{A_WaterShield},          "A_WATERSHIELD"},
 	{{A_ForceShield},          "A_FORCESHIELD"},
 	{{A_PityShield},           "A_PITYSHIELD"},
+	{{A_FlameShield},          "A_FLAMESHIELD"},
+	{{A_BubbleShield},         "A_BUBBLESHIELD"},
+	{{A_ThunderShield},        "A_THUNDERSHIELD"},
 	{{A_GravityBox},           "A_GRAVITYBOX"},
 	{{A_ScoreRise},            "A_SCORERISE"},
 	{{A_ParticleSpawn},        "A_PARTICLESPAWN"},
@@ -4908,6 +4911,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_RECYCLER_BOX",
 	"S_SCORE1K_BOX",
 	"S_SCORE10K_BOX",
+	"S_FLAMEAURA_BOX",
+	"S_BUBBLEWRAP_BOX",
+	"S_THUNDERCOIN_BOX",
 
 	// Gold Repeat Monitor States (one per box)
 	"S_PITY_GOLDBOX",
@@ -4920,6 +4926,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_INVULN_GOLDBOX",
 	"S_EGGMAN_GOLDBOX",
 	"S_GRAVITY_GOLDBOX",
+	"S_FLAMEAURA_GOLDBOX",
+	"S_BUBBLEWRAP_GOLDBOX",
+	"S_THUNDERCOIN_GOLDBOX",
 
 	// Team Ring Boxes (these are special)
 	"S_RING_REDBOX1",
@@ -4980,6 +4989,15 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	"S_SCORE10K_ICON1",
 	"S_SCORE10K_ICON2",
+
+	"S_FLAMEAURA_ICON1",
+	"S_FLAMEAURA_ICON2",
+
+	"S_BUBBLEWRAP_ICON1",
+	"S_BUBBLEWRAP_ICON2",
+
+	"S_THUNDERCOIN_ICON1",
+	"S_THUNDERCOIN_ICON2",
 
 	"S_ROCKET",
 
@@ -5408,6 +5426,68 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PITY8",
 	"S_PITY9",
 	"S_PITY10",
+
+	"S_FIRS1",
+	"S_FIRS2",
+	"S_FIRS3",
+	"S_FIRS4",
+	"S_FIRS5",
+	"S_FIRS6",
+	"S_FIRS7",
+	"S_FIRS8",
+	"S_FIRS9",
+
+	"S_FIRSB1",
+	"S_FIRSB2",
+	"S_FIRSB3",
+	"S_FIRSB4",
+	"S_FIRSB5",
+	"S_FIRSB6",
+	"S_FIRSB7",
+	"S_FIRSB8",
+	"S_FIRSB9",
+
+	"S_BUBS1",
+	"S_BUBS2",
+	"S_BUBS3",
+	"S_BUBS4",
+	"S_BUBS5",
+	"S_BUBS6",
+	"S_BUBS7",
+	"S_BUBS8",
+	"S_BUBS9",
+
+	"S_BUBSB1",
+	"S_BUBSB2",
+
+	"S_ZAPS1",
+	"S_ZAPS2",
+	"S_ZAPS3",
+	"S_ZAPS4",
+	"S_ZAPS5",
+	"S_ZAPS6",
+	"S_ZAPS7",
+	"S_ZAPS8",
+	"S_ZAPS9",
+	"S_ZAPS10",
+	"S_ZAPS11",
+	"S_ZAPS12",
+	"S_ZAPS13", // blank frame
+	"S_ZAPS14",
+	"S_ZAPS15",
+	"S_ZAPS16",
+
+	"S_ZAPSB1", // blank frame
+	"S_ZAPSB2",
+	"S_ZAPSB3",
+	"S_ZAPSB4",
+	"S_ZAPSB5",
+	"S_ZAPSB6",
+	"S_ZAPSB7",
+	"S_ZAPSB8",
+	"S_ZAPSB9",
+	"S_ZAPSB10",
+	"S_ZAPSB11", // blank frame
 
 	// Invincibility Sparkles
 	"S_IVSP",
@@ -6231,6 +6311,9 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_RECYCLER_BOX",
 	"MT_SCORE1K_BOX",
 	"MT_SCORE10K_BOX",
+	"MT_FLAMEAURA_BOX",
+	"MT_BUBBLEWRAP_BOX",
+	"MT_THUNDERCOIN_BOX",
 
 	// Monitor boxes -- repeating (big) boxes
 	"MT_PITY_GOLDBOX",
@@ -6243,6 +6326,9 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_INVULN_GOLDBOX",
 	"MT_EGGMAN_GOLDBOX",
 	"MT_GRAVITY_GOLDBOX",
+	"MT_FLAMEAURA_GOLDBOX",
+	"MT_BUBBLEWRAP_GOLDBOX",
+	"MT_THUNDERCOIN_GOLDBOX",
 
 	// Monitor boxes -- special
 	"MT_RING_REDBOX",
@@ -6265,6 +6351,9 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_RECYCLER_ICON",
 	"MT_SCORE1K_ICON",
 	"MT_SCORE10K_ICON",
+	"MT_FLAMEAURA_ICON",
+	"MT_BUBBLEWRAP_ICON",
+	"MT_THUNDERCOIN_ICON",
 
 	// Projectiles
 	"MT_ROCKET",
@@ -6417,12 +6506,15 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_EGGSTATUE2",
 
 	// Powerup Indicators
-	"MT_GREENORB", // Elemental shield mobj
-	"MT_YELLOWORB", // Attract shield mobj
-	"MT_BLUEORB", // Force shield mobj
-	"MT_BLACKORB", // Armageddon shield mobj
-	"MT_WHITEORB", // Whirlwind shield mobj
-	"MT_PITYORB", // Pity shield mobj
+	"MT_ELEMENTAL_ORB", // Elemental shield mobj
+	"MT_ATTRACT_ORB", // Attract shield mobj
+	"MT_FORCE_ORB", // Force shield mobj
+	"MT_BOMB_ORB", // Armageddon shield mobj
+	"MT_JUMP_ORB", // Whirlwind shield mobj
+	"MT_PITY_ORB", // Pity shield mobj
+	"MT_FLAMEAURA_ORB", // Flame shield mobj
+	"MT_BUBBLEWRAP_ORB", // Bubble shield mobj
+	"MT_THUNDERCOIN_ORB", // Thunder shield mobj
 	"MT_IVSP", // invincibility sparkles
 	"MT_SUPERSPARK", // Super Sonic Spark
 

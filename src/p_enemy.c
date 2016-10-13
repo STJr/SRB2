@@ -104,6 +104,9 @@ void A_BombShield(mobj_t *actor);
 void A_WaterShield(mobj_t *actor);
 void A_ForceShield(mobj_t *actor);
 void A_PityShield(mobj_t *actor);
+void A_FlameShield(mobj_t *actor);
+void A_BubbleShield(mobj_t *actor);
+void A_ThunderShield(mobj_t *actor);
 void A_GravityBox(mobj_t *actor);
 void A_ScoreRise(mobj_t *actor);
 void A_ParticleSpawn(mobj_t *actor);
@@ -3430,6 +3433,93 @@ void A_PityShield(mobj_t *actor)
 	player = actor->target->player;
 
 	if (P_SwitchShield(player, SH_PITY))
+		S_StartSound(player->mo, actor->info->seesound);
+	else
+		S_StartSound(player->mo, sfx_itemup);
+}
+
+// Function: A_FlameShield
+//
+// Description: Awards the player a flame shield.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_FlameShield(mobj_t *actor)
+{
+	player_t *player;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FlameShield", actor))
+		return;
+#endif
+	if (!actor->target || !actor->target->player)
+	{
+		CONS_Debug(DBG_GAMELOGIC, "Powerup has no target.\n");
+		return;
+	}
+
+	player = actor->target->player;
+
+	if (P_SwitchShield(player, SH_FLAMEAURA))
+		S_StartSound(player->mo, actor->info->seesound);
+	else
+		S_StartSound(player->mo, sfx_itemup);
+}
+
+// Function: A_BubbleShield
+//
+// Description: Awards the player a bubble shield.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_BubbleShield(mobj_t *actor)
+{
+	player_t *player;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_BubbleShield", actor))
+		return;
+#endif
+	if (!actor->target || !actor->target->player)
+	{
+		CONS_Debug(DBG_GAMELOGIC, "Powerup has no target.\n");
+		return;
+	}
+
+	player = actor->target->player;
+
+	if (P_SwitchShield(player, SH_BUBBLEWRAP))
+		S_StartSound(player->mo, actor->info->seesound);
+	else
+		S_StartSound(player->mo, sfx_itemup);
+}
+
+// Function: A_ThunderShield
+//
+// Description: Awards the player a thunder shield.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_ThunderShield(mobj_t *actor)
+{
+	player_t *player;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_ThunderShield", actor))
+		return;
+#endif
+	if (!actor->target || !actor->target->player)
+	{
+		CONS_Debug(DBG_GAMELOGIC, "Powerup has no target.\n");
+		return;
+	}
+
+	player = actor->target->player;
+
+	if (P_SwitchShield(player, SH_THUNDERCOIN))
 		S_StartSound(player->mo, actor->info->seesound);
 	else
 		S_StartSound(player->mo, sfx_itemup);

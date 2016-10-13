@@ -271,6 +271,9 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_TVRC
 	&lspr[NOLIGHT],     // SPR_TV1K
 	&lspr[NOLIGHT],     // SPR_TVTK
+	&lspr[NOLIGHT],     // SPR_TVFL
+	&lspr[NOLIGHT],     // SPR_TVBB
+	&lspr[NOLIGHT],     // SPR_TVZP
 
 	// Projectiles
 	&lspr[NOLIGHT],     // SPR_MISL
@@ -359,6 +362,9 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_ELEM
 	&lspr[NOLIGHT],     // SPR_FORC
 	&lspr[NOLIGHT],     // SPR_PITY
+	&lspr[NOLIGHT],     // SPR_FIRS
+	&lspr[NOLIGHT],     // SPR_BUBS
+	&lspr[NOLIGHT],     // SPR_ZAPS
 	&lspr[INVINCIBLE_L],     // SPR_IVSP
 	&lspr[SUPERSPARK_L],     // SPR_SSPK
 

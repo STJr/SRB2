@@ -1348,23 +1348,32 @@ void P_SpawnShieldOrb(player_t *player)
 #endif
 
 	if (player->powers[pw_shield] & SH_FORCE)
-		orbtype = MT_BLUEORB;
+		orbtype = MT_FORCE_ORB;
 	else switch (player->powers[pw_shield] & SH_NOSTACK)
 	{
 	case SH_JUMP:
-		orbtype = MT_WHITEORB;
+		orbtype = MT_JUMP_ORB;
 		break;
 	case SH_ATTRACT:
-		orbtype = MT_YELLOWORB;
+		orbtype = MT_ATTRACT_ORB;
 		break;
 	case SH_ELEMENTAL:
-		orbtype = MT_GREENORB;
+		orbtype = MT_ELEMENTAL_ORB;
 		break;
 	case SH_BOMB:
-		orbtype = MT_BLACKORB;
+		orbtype = MT_BOMB_ORB;
 		break;
 	case SH_PITY:
-		orbtype = MT_PITYORB;
+		orbtype = MT_PITY_ORB;
+		break;
+	case SH_FLAMEAURA:
+		orbtype = MT_FLAMEAURA_ORB;
+		break;
+	case SH_BUBBLEWRAP:
+		orbtype = MT_BUBBLEWRAP_ORB;
+		break;
+	case SH_THUNDERCOIN:
+		orbtype = MT_THUNDERCOIN_ORB;
 		break;
 	case SH_FIREFLOWER:
 		if (!(player->powers[pw_super] || (mariomode && player->powers[pw_invulnerability])))

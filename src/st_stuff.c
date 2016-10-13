@@ -99,6 +99,9 @@ static patch_t *ringshield;
 static patch_t *watershield;
 static patch_t *bombshield;
 static patch_t *pityshield;
+static patch_t *flameshield;
+static patch_t *bubbleshield;
+static patch_t *thundershield;
 static patch_t *invincibility;
 static patch_t *sneakers;
 static patch_t *gravboots;
@@ -288,15 +291,18 @@ void ST_LoadGraphics(void)
 	scatterring = W_CachePatchName("SCATIND", PU_HUDGFX);
 	grenadering = W_CachePatchName("GRENIND", PU_HUDGFX);
 	railring = W_CachePatchName("RAILIND", PU_HUDGFX);
-	jumpshield = W_CachePatchName("WHTVB0", PU_HUDGFX);
-	forceshield = W_CachePatchName("BLTVB0", PU_HUDGFX);
-	ringshield = W_CachePatchName("YLTVB0", PU_HUDGFX);
-	watershield = W_CachePatchName("ELTVB0", PU_HUDGFX);
-	bombshield = W_CachePatchName("BKTVB0", PU_HUDGFX);
-	pityshield = W_CachePatchName("GRTVB0", PU_HUDGFX);
-	invincibility = W_CachePatchName("PINVB0", PU_HUDGFX);
-	sneakers = W_CachePatchName("SHTVB0", PU_HUDGFX);
-	gravboots = W_CachePatchName("GBTVB0", PU_HUDGFX);
+	jumpshield = W_CachePatchName("TVWWC0", PU_HUDGFX);
+	forceshield = W_CachePatchName("TVFOC0", PU_HUDGFX);
+	ringshield = W_CachePatchName("TVATC0", PU_HUDGFX);
+	watershield = W_CachePatchName("TVELC0", PU_HUDGFX);
+	bombshield = W_CachePatchName("TVARC0", PU_HUDGFX);
+	pityshield = W_CachePatchName("TVPIC0", PU_HUDGFX);
+	flameshield = W_CachePatchName("TVFLC0", PU_HUDGFX);
+	bubbleshield = W_CachePatchName("TVBBC0", PU_HUDGFX);
+	thundershield = W_CachePatchName("TVZPC0", PU_HUDGFX);
+	invincibility = W_CachePatchName("TVIVC0", PU_HUDGFX);
+	sneakers = W_CachePatchName("TVSSC0", PU_HUDGFX);
+	gravboots = W_CachePatchName("TVGVC0", PU_HUDGFX);
 
 	tagico = W_CachePatchName("TAGICO", PU_HUDGFX);
 	rflagico = W_CachePatchName("RFLAGICO", PU_HUDGFX);
@@ -805,11 +811,14 @@ static void ST_drawFirstPersonHUD(void)
 	}
 	else switch (player->powers[pw_shield] & SH_NOSTACK)
 	{
-	case SH_JUMP:      p = jumpshield;  break;
-	case SH_ELEMENTAL: p = watershield; break;
-	case SH_BOMB:      p = bombshield;  break;
-	case SH_ATTRACT:   p = ringshield;  break;
-	case SH_PITY:      p = pityshield;  break;
+	case SH_JUMP:        p = jumpshield;    break;
+	case SH_ELEMENTAL:   p = watershield;   break;
+	case SH_BOMB:        p = bombshield;    break;
+	case SH_ATTRACT:     p = ringshield;    break;
+	case SH_PITY:        p = pityshield;    break;
+	case SH_FLAMEAURA:   p = flameshield;   break;
+	case SH_BUBBLEWRAP:  p = bubbleshield;  break;
+	case SH_THUNDERCOIN: p = thundershield; break;
 	default: break;
 	}
 

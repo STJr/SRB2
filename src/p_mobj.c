@@ -6764,7 +6764,7 @@ void P_MobjThinker(mobj_t *mobj)
 				}
 				else
 					P_AddOverlay(mobj);
-				if ((mobj->target->type == MT_GREENORB)
+				if ((mobj->target->type == MT_ELEMENTAL_ORB)
 					&& (mobj->target->target)
 					&& (mobj->target->target->player)
 					&& ((mobj->target->target->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL)
@@ -6775,15 +6775,18 @@ void P_MobjThinker(mobj_t *mobj)
 						mobj->tics++;
 					}
 				break;
-			case MT_BLACKORB:
-			case MT_WHITEORB:
-			case MT_GREENORB:
-			case MT_BLUEORB:
-			case MT_PITYORB:
+			case MT_BOMB_ORB:
+			case MT_JUMP_ORB:
+			case MT_ELEMENTAL_ORB:
+			case MT_FORCE_ORB:
+			case MT_PITY_ORB:
+			case MT_FLAMEAURA_ORB:
+			case MT_BUBBLEWRAP_ORB:
+			case MT_THUNDERCOIN_ORB:
 				if (!P_AddShield(mobj))
 					return;
 				break;
-			case MT_YELLOWORB:
+			case MT_ATTRACT_ORB:
 				if (!P_AddShield(mobj))
 					return;
 				if ((mobj->target)

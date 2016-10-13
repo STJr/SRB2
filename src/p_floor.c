@@ -1748,12 +1748,15 @@ static mobj_t *SearchMarioNode(msecnode_t *node)
 		case MT_GHOST:
 		case MT_OVERLAY:
 		case MT_EMERALDSPAWN:
-		case MT_GREENORB:
-		case MT_YELLOWORB:
-		case MT_BLUEORB:
-		case MT_BLACKORB:
-		case MT_WHITEORB:
-		case MT_PITYORB:
+		case MT_ELEMENTAL_ORB:
+		case MT_ATTRACT_ORB:
+		case MT_FORCE_ORB:
+		case MT_BOMB_ORB:
+		case MT_JUMP_ORB:
+		case MT_PITY_ORB:
+		case MT_FLAMEAURA_ORB:
+		case MT_BUBBLEWRAP_ORB:
+		case MT_THUNDERCOIN_ORB:
 		case MT_IVSP:
 		case MT_SUPERSPARK:
 		case MT_RAIN:
