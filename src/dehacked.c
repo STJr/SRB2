@@ -7095,6 +7095,7 @@ struct {
 	{"SH_FIREFLOWER",SH_FIREFLOWER},
 	// These ones are special and use the upper bits
 	{"SH_FORCE",SH_FORCE}, // Lower bits are how many hits left, 0 is the last hit
+	{"SH_MUSHROOM", SH_MUSHROOM}, // Can stack with other shields
 	// Stack masks
 	{"SH_STACK",SH_STACK},
 	{"SH_NOSTACK",SH_NOSTACK},

@@ -1388,8 +1388,6 @@ void P_SpawnShieldOrb(player_t *player)
 			P_RemoveMobj(shieldobj); //kill the old one(s)
 	}
 
-	if (orbtype == MT_PITYORB && mariomode) return;
-
 	shieldobj = P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z, orbtype);
 	P_SetTarget(&shieldobj->target, player->mo);
 	shieldobj->color = (UINT8)shieldobj->info->painchance;
@@ -1474,7 +1472,7 @@ boolean P_SwitchShield(player_t *player, UINT16 shieldtype)
 			G_GhostAddColor(GHC_NORMAL);
 		}
 
-		player->powers[pw_shield] = shieldtype|(player->powers[pw_shield] & SH_STACK);
+		player->powers[pw_shield] = shieldtype|(mariomode ? SH_MUSHROOM : player->powers[pw_shield] & SH_STACK);
 		P_SpawnShieldOrb(player);
 		return true;
 	}
@@ -6259,8 +6257,6 @@ void P_BlackOw(player_t *player)
 
 	P_NukeEnemies(player->mo, player->mo, 1536*FRACUNIT); // Search for all nearby enemies and nuke their pants off!
 	player->powers[pw_shield] = player->powers[pw_shield] & SH_STACK;
-	if (mariomode && !player->powers[pw_shield])
-		player->powers[pw_shield] = SH_PITY;
 }
 
 void P_ElementalFire(player_t *player, boolean cropcircle)

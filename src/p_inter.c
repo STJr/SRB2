@@ -1160,7 +1160,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				toucher->movecount = player->powers[pw_shield];
 				player->powers[pw_marioflashing] = MARIOFLASHINGTICS;
 			}
-			player->powers[pw_shield] = (player->powers[pw_shield] & SH_STACK)|SH_FIREFLOWER;
+			player->powers[pw_shield] = (mariomode ? SH_MUSHROOM : player->powers[pw_shield] & SH_STACK)|SH_FIREFLOWER;
 			P_SpawnShieldOrb(player);
 
 			break;
@@ -1236,7 +1236,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					S_StartSound(toucher, sfx_mario3);
 					player->mo->movecount = player->powers[pw_shield];
 					player->powers[pw_marioflashing] = MARIOFLASHINGTICS;
-					player->powers[pw_shield] = SH_PITY;
+					player->powers[pw_shield] = SH_MUSHROOM;
 					P_SpawnShieldOrb(player);
 				}
 			}
@@ -2782,7 +2782,6 @@ static inline void P_SuperDamage(player_t *player, mobj_t *inflictor, mobj_t *so
 
 void P_RemoveShield(player_t *player)
 {
-	boolean willbetallmario = (mariomode && ((player->powers[pw_shield] & SH_NOSTACK) != SH_PITY));
 	boolean fireflower = ((player->powers[pw_shield] & SH_NOSTACK) == SH_FIREFLOWER);
 	if (player->powers[pw_shield] & SH_FORCE)
 	{ // Multi-hit
@@ -2802,8 +2801,6 @@ void P_RemoveShield(player_t *player)
 	}
 	else
 		player->powers[pw_shield] = player->powers[pw_shield] & SH_STACK;
-	if (willbetallmario && !player->powers[pw_shield])
-		player->powers[pw_shield] |= SH_PITY;
 	if (fireflower && !(player->powers[pw_super] || (mariomode && player->powers[pw_invulnerability])))
 	{
 		player->mo->color = player->skincolor;

@@ -3427,14 +3427,10 @@ void A_PityShield(mobj_t *actor)
 
 	player = actor->target->player;
 
-	if (player->powers[pw_shield] && mariomode)
-	{
+	if (P_SwitchShield(player, SH_PITY))
+		S_StartSound(player->mo, actor->info->seesound);
+	else if (mariomode)
 		S_StartSound(player->mo, sfx_itemup);
-		return;
-	}
-
-	P_SwitchShield(player, SH_PITY);
-	S_StartSound(player->mo, actor->info->seesound);
 }
 
 

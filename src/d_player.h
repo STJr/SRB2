@@ -197,7 +197,9 @@ typedef enum
 	// The force shield uses the lower 8 bits to count how many extra hits are left.
 	SH_FORCE = 0x100,
 	SH_FORCEHP = 0xFF, // to be used as a bitmask only
-	SH_STACK = 0, //SH_FIREFLOWER,
+	// The mushroom CAN stack with other shields.
+	SH_MUSHROOM = 0x200,
+	SH_STACK = SH_MUSHROOM, //|SH_FIREFLOWER,
 	SH_NOSTACK = ~SH_STACK
 } shieldtype_t; // pw_shield
 

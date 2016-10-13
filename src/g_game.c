@@ -2197,7 +2197,7 @@ void G_PlayerReborn(INT32 player)
 	p->panim = PA_IDLE; // standing animation
 
 	if (mariomode)
-		p->powers[pw_shield] = SH_PITY; // start big
+		p->powers[pw_shield] = SH_MUSHROOM; // start big
 
 	if ((netgame || multiplayer) && !p->spectator)
 		p->powers[pw_flashing] = flashingtics-1; // Babysitting deterrent
