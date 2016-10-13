@@ -1459,7 +1459,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			return;
 
 		case MT_EXTRALARGEBUBBLE:
-			if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL)
+			if (player->powers[pw_shield] & SH_PROTECTWATER)
 				return;
 			if (maptol & TOL_NIGHTS)
 				return;
@@ -3022,28 +3022,23 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			if (!(target->player->pflags & (PF_NIGHTSMODE|PF_NIGHTSFALL)) && (maptol & TOL_NIGHTS))
 				return false;
 
-#define shieldtype (player->powers[pw_shield] & SH_NOSTACK)
 			switch (damagetype)
 			{
 				case DMG_WATER:
-					if (shieldtype == SH_BUBBLEWRAP
-					|| shieldtype == SH_ELEMENTAL)
+					if (player->powers[pw_shield] & SH_PROTECTWATER)
 						return false; // Invincible to water damage
 					break;
 				case DMG_FIRE:
-					if (shieldtype == SH_FLAMEAURA
-					|| shieldtype == SH_ELEMENTAL)
+					if (player->powers[pw_shield] & SH_PROTECTFIRE)
 						return false; // Invincible to fire damage
 					break;
 				case DMG_ELECTRIC:
-					if (shieldtype == SH_ATTRACT
-					|| shieldtype == SH_THUNDERCOIN)
+					if (player->powers[pw_shield] & SH_PROTECTELECTRICITY)
 						return false; // Invincible to electric damage
 					break;
 				default:
 					break;
 			}
-#undef shieldtype
 		}
 
 		if (player->pflags & PF_NIGHTSMODE) // NiGHTS damage handling
@@ -3067,7 +3062,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 
 		if (!force && inflictor && inflictor->flags & MF_FIRE)
 		{
-			if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL)
+			if (player->powers[pw_shield] & SH_PROTECTFIRE)
 				return false; // Invincible to fire objects
 
 			if (G_PlatformGametype() && inflictor && source && source->player)

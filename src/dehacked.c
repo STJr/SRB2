@@ -7174,21 +7174,28 @@ struct {
 	{"PRECIP_STORM_NOSTRIKES",PRECIP_STORM_NOSTRIKES},
 
 	// Shields
-	// These ones use the lower 8 bits
 	{"SH_NONE",SH_NONE},
+	// Shield flags
+	{"SH_PROTECTFIRE",SH_PROTECTFIRE},
+	{"SH_PROTECTWATER",SH_PROTECTWATER},
+	{"SH_PROTECTELECTRICITY",SH_PROTECTELECTRICITY},
+	// Indivisible shields
+	{"SH_PITY",SH_PITY},
 	{"SH_JUMP",SH_JUMP},
+	{"SH_BOMB",SH_BOMB},
+	{"SH_FIREFLOWER",SH_FIREFLOWER},
+	// normal shields that use flags
 	{"SH_ATTRACT",SH_ATTRACT},
 	{"SH_ELEMENTAL",SH_ELEMENTAL},
-	{"SH_BOMB",SH_BOMB},
+	// Sonic 3 shields
+	{"SH_FLAMEAURA",SH_FLAMEAURA},
 	{"SH_BUBBLEWRAP",SH_BUBBLEWRAP},
 	{"SH_THUNDERCOIN",SH_THUNDERCOIN},
-	{"SH_FLAMEAURA",SH_FLAMEAURA},
-	{"SH_PITY",SH_PITY},
-	{"SH_FIREFLOWER",SH_FIREFLOWER},
-	// These ones are special and use the upper bits
-	{"SH_FORCE",SH_FORCE}, // Lower bits are how many hits left, 0 is the last hit
-	{"SH_MUSHROOM", SH_MUSHROOM}, // Can stack with other shields
-	// Stack masks
+	// The force shield uses the lower 8 bits to count how many extra hits are left.
+	{"SH_FORCE",SH_FORCE},
+	{"SH_FORCEHP",SH_FORCEHP}, // to be used as a bitmask only
+	// Mostly for use with Mario mode.
+	{"SH_MUSHROOM", SH_MUSHROOM},
 	{"SH_STACK",SH_STACK},
 	{"SH_NOSTACK",SH_NOSTACK},
 

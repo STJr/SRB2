@@ -2229,7 +2229,7 @@ static void P_DoBubbleBreath(player_t *player)
 	fixed_t z = player->mo->z;
 	mobj_t *bubble = NULL;
 
-	if (!(player->mo->eflags & MFE_UNDERWATER) || ((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL && !(player->pflags & PF_NIGHTSMODE)) || player->spectator)
+	if (!(player->mo->eflags & MFE_UNDERWATER) || ((player->powers[pw_shield] & SH_PROTECTWATER) && !(player->pflags & PF_NIGHTSMODE)) || player->spectator)
 		return;
 
 	if (player->charflags & SF_MACHINE)
@@ -9242,7 +9242,7 @@ void P_PlayerThink(player_t *player)
 	if (player->powers[pw_tailsfly] && player->powers[pw_tailsfly] < UINT16_MAX && player->charability != CA_SWIM && !(player->powers[pw_super] && ALL7EMERALDS(player->powers[pw_emeralds]))) // tails fly counter
 		player->powers[pw_tailsfly]--;
 
-	if (player->powers[pw_underwater] && (player->pflags & PF_GODMODE || (player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL))
+	if (player->powers[pw_underwater] && (player->pflags & PF_GODMODE || (player->powers[pw_shield] & SH_PROTECTWATER)))
 	{
 		if (player->powers[pw_underwater] <= 12*TICRATE+1)
 			P_RestoreMusic(player); //incase they were about to drown
@@ -9252,7 +9252,7 @@ void P_PlayerThink(player_t *player)
 	else if (player->powers[pw_underwater] && !(maptol & TOL_NIGHTS) && !((netgame || multiplayer) && player->spectator)) // underwater timer
 		player->powers[pw_underwater]--;
 
-	if (player->powers[pw_spacetime] && (player->pflags & PF_GODMODE || (player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL))
+	if (player->powers[pw_spacetime] && (player->pflags & PF_GODMODE || (player->powers[pw_shield] & SH_PROTECTWATER)))
 		player->powers[pw_spacetime] = 0;
 	else if (player->powers[pw_spacetime] && !(maptol & TOL_NIGHTS) && !((netgame || multiplayer) && player->spectator)) // underwater timer
 		player->powers[pw_spacetime]--;

@@ -3562,7 +3562,7 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 				P_PlayerFlagBurst(player, false);
 			break;
 		case 12: // Space Countdown
-			if ((player->powers[pw_shield] & SH_NOSTACK) != SH_ELEMENTAL && !player->powers[pw_spacetime])
+			if (!(player->powers[pw_shield] & SH_PROTECTWATER) && !player->powers[pw_spacetime])
 				player->powers[pw_spacetime] = spacetimetics + 1;
 			break;
 		case 13: // Ramp Sector (Increase step-up/down)

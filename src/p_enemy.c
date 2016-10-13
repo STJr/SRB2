@@ -741,7 +741,7 @@ static boolean P_LookForShield(mobj_t *actor)
 			(actor->type == MT_BLUETEAMRING && player->ctfteam != 2))
 			continue;
 
-		if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT
+		if ((player->powers[pw_shield] & SH_PROTECTELECTRICITY)
 			&& (P_AproxDistance(P_AproxDistance(actor->x-player->mo->x, actor->y-player->mo->y), actor->z-player->mo->z) < FixedMul(RING_DIST, player->mo->scale)))
 		{
 			P_SetTarget(&actor->tracer, player->mo);
@@ -3817,7 +3817,7 @@ void A_AttractChase(mobj_t *actor)
 
 	// Turn flingrings back into regular rings if attracted.
 	if (actor->tracer && actor->tracer->player
-		&& (actor->tracer->player->powers[pw_shield] & SH_NOSTACK) != SH_ATTRACT && actor->info->reactiontime && actor->type != (mobjtype_t)actor->info->reactiontime)
+		&& !(actor->tracer->player->powers[pw_shield] & SH_PROTECTELECTRICITY) && actor->info->reactiontime && actor->type != (mobjtype_t)actor->info->reactiontime)
 	{
 		mobj_t *newring;
 		newring = P_SpawnMobj(actor->x, actor->y, actor->z, actor->info->reactiontime);
@@ -4022,7 +4022,7 @@ void A_ThrownRing(mobj_t *actor)
 		// A non-homing ring getting attracted by a
 		// magnetic player. If he gets too far away, make
 		// sure to stop the attraction!
-		if ((!actor->tracer->health) || (actor->tracer->player && (actor->tracer->player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT
+		if ((!actor->tracer->health) || (actor->tracer->player && (actor->tracer->player->powers[pw_shield] & SH_PROTECTELECTRICITY)
 		    && P_AproxDistance(P_AproxDistance(actor->tracer->x-actor->x,
 		    actor->tracer->y-actor->y), actor->tracer->z-actor->z) > FixedMul(RING_DIST/4, actor->tracer->scale)))
 		{
@@ -4030,7 +4030,7 @@ void A_ThrownRing(mobj_t *actor)
 		}
 
 		if (actor->tracer && (actor->tracer->health)
-			&& (actor->tracer->player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT)// Already found someone to follow.
+			&& (actor->tracer->player->powers[pw_shield] & SH_PROTECTELECTRICITY))// Already found someone to follow.
 		{
 			const INT32 temp = actor->threshold;
 			actor->threshold = 32000;
@@ -4098,7 +4098,7 @@ void A_ThrownRing(mobj_t *actor)
 		if (!P_CheckSight(actor, player->mo))
 			continue; // out of sight
 
-		if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT
+		if ((player->powers[pw_shield] & SH_PROTECTELECTRICITY)
 			&& dist < FixedMul(RING_DIST/4, player->mo->scale))
 			P_SetTarget(&actor->tracer, player->mo);
 		return;

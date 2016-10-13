@@ -181,25 +181,35 @@ typedef enum
 typedef enum
 {
 	SH_NONE = 0,
-	// Standard shields
+
+	// Shield flags
+	SH_PROTECTFIRE = 0x400,
+	SH_PROTECTWATER = 0x800,
+	SH_PROTECTELECTRICITY = 0x1000,
+
+	// Indivisible shields
+	SH_PITY = 1,
 	SH_JUMP,
-	SH_ATTRACT,
-	SH_ELEMENTAL,
 	SH_BOMB,
-	// Pity shield: the world's most basic shield ever, given to players who suck at Match
-	SH_PITY,
-	// Sonic 3 shields
-	SH_FLAMEAURA,
-	SH_BUBBLEWRAP,
-	SH_THUNDERCOIN,
-	// The fireflower used to be stackable with other shields. Not anymore.
 	SH_FIREFLOWER,
+
+	// normal shields that use flags
+	SH_ATTRACT = SH_PROTECTELECTRICITY,
+	SH_ELEMENTAL = SH_PROTECTFIRE|SH_PROTECTWATER,
+
+	// Sonic 3 shields
+	SH_FLAMEAURA = SH_PROTECTFIRE,
+	SH_BUBBLEWRAP = SH_PROTECTWATER,
+	SH_THUNDERCOIN = SH_JUMP|SH_PROTECTELECTRICITY,
+
 	// The force shield uses the lower 8 bits to count how many extra hits are left.
 	SH_FORCE = 0x100,
 	SH_FORCEHP = 0xFF, // to be used as a bitmask only
-	// The mushroom CAN stack with other shields.
+
+	// Mostly for use with Mario mode.
 	SH_MUSHROOM = 0x200,
-	SH_STACK = SH_MUSHROOM, //|SH_FIREFLOWER,
+
+	SH_STACK = SH_MUSHROOM, // second-layer shields
 	SH_NOSTACK = ~SH_STACK
 } shieldtype_t; // pw_shield
 

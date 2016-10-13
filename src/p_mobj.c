@@ -3619,15 +3619,20 @@ void P_MobjCheckWater(mobj_t *mobj)
 	{
 		if (!((p->powers[pw_super]) || (p->powers[pw_invulnerability])))
 		{
-			if ((p->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT)
-			{ // Water removes attract shield.
+			if (p->powers[pw_shield] & SH_PROTECTELECTRICITY)
+			{ // Water removes electric shields...
 				p->powers[pw_shield] = p->powers[pw_shield] & SH_STACK;
 				P_FlashPal(p, PAL_WHITE, 1);
+			}
+			else if ((p->powers[pw_shield] & SH_PROTECTFIRE) && !(p->powers[pw_shield] & SH_PROTECTWATER))
+			{ // ...and fire-only shields.
+				p->powers[pw_shield] = p->powers[pw_shield] & SH_STACK;
+				P_FlashPal(p, PAL_NUKE, 1);
 			}
 		}
 
 		// Drown timer setting
-		if ((p->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL // Has elemental
+		if ((p->powers[pw_shield] & SH_PROTECTWATER) // Has water protection
 		 || (p->exiting) // Or exiting
 		 || (maptol & TOL_NIGHTS) // Or in NiGHTS mode
 		 || (mariomode)) // Or in Mario mode...
