@@ -2677,10 +2677,7 @@ static void P_KillPlayer(player_t *player, mobj_t *source, INT32 damage)
 
 	// Burst weapons and emeralds in Match/CTF only
 	if (source && (gametype == GT_MATCH || gametype == GT_TEAMMATCH || gametype == GT_CTF))
-	{
 		P_PlayerRingBurst(player, player->health - 1);
-		P_PlayerEmeraldBurst(player, false);
-	}
 
 	if (!mariomode) // Get rid of shield
 	{
@@ -2818,7 +2815,12 @@ static void P_ShieldDamage(player_t *player, mobj_t *inflictor, mobj_t *source, 
 	P_ForceFeed(player, 40, 10, TICRATE, 40 + min(damage, 100)*2);
 
 	if (mariomode)
+	{
 		S_StartSound(player->mo, sfx_mario8);
+		// Burst weapons and emeralds in Match/CTF only
+		if (!player->powers[pw_shield] && (gametype == GT_MATCH || gametype == GT_TEAMMATCH || gametype == GT_CTF))
+			P_PlayerRingBurst(player, 0);
+	}
 	else if (source && (source->type == MT_SPIKE || (source->type == MT_NULL && source->threshold == 43))) // spikes
 		S_StartSound(player->mo, sfx_spkdth);
 	else
