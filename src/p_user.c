@@ -950,10 +950,11 @@ void P_GivePlayerRings(player_t *player, INT32 num_rings)
 		}
 	}
 
-	if (mariomode && player->health > 100)
+	if (mariomode && player->health > 100 && !G_RingSlingerGametype() && !G_TagGametype())
 	{
-		player->mo->health = 1;
-		player->health = 1;
+		player->mo->health = 1 + (player->health - 1) % 100;
+		player->health = player->mo->health;
+		player->xtralife = 0;
 	}
 }
 
