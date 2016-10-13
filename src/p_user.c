@@ -937,7 +937,7 @@ void P_GivePlayerRings(player_t *player, INT32 num_rings)
 	{
 		INT32 gainlives = 0;
 
-		while (player->xtralife < maxXtraLife && player->health > 100 * (player->xtralife+1))
+		while ((mariomode || player->xtralife < maxXtraLife) && player->health > 100 * (player->xtralife+1))
 		{
 			++gainlives;
 			++player->xtralife;
@@ -948,6 +948,12 @@ void P_GivePlayerRings(player_t *player, INT32 num_rings)
 			P_GivePlayerLives(player, gainlives);
 			P_PlayLivesJingle(player);
 		}
+	}
+
+	if (mariomode && player->health > 100)
+	{
+		player->mo->health = 1;
+		player->health = 1;
 	}
 }
 

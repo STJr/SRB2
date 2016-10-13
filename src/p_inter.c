@@ -145,6 +145,9 @@ boolean P_CanPickupItem(player_t *player, boolean weapon)
 	if (player->powers[pw_flashing] > (flashingtics/4)*3 && player->powers[pw_flashing] < UINT16_MAX)
 		return false;
 
+	if (player->mo && player->mo->health <= 0)
+		return false;
+
 	return true;
 }
 
@@ -3135,7 +3138,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			P_ShieldDamage(player, inflictor, source, damage);
 			damage = 0;
 		}
-		else if (player->mo->health > 1) // No shield but have rings.
+		else if (!mariomode && player->mo->health > 1) // No shield but have rings.
 		{
 			damage = player->mo->health - 1;
 			P_RingDamage(player, inflictor, source, damage, damagetype);
@@ -3296,6 +3299,8 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 
 	// Spill the ammo
 	P_PlayerWeaponAmmoBurst(player);
+
+	if (mariomode) return;
 
 	for (i = 0; i < num_rings; i++)
 	{
