@@ -3246,7 +3246,11 @@ static void P_PlayerZMovement(mobj_t *mo)
 								S_StartSound(mo, sfx_s3k47);
 								P_ElementalFire(mo->player, true);
 							}
-							P_SetObjectMomZ(mo, 5*FRACUNIT/2, false);
+							P_SetObjectMomZ(mo,
+							(mo->eflags & MFE_UNDERWATER)
+							? 6*FRACUNIT/5
+							: 5*FRACUNIT/2,
+							false);
 							P_SetPlayerMobjState(mo, S_PLAY_FALL);
 							clipmomz = false;
 						}
@@ -3637,6 +3641,9 @@ void P_MobjCheckWater(mobj_t *mobj)
 			// Then we'll set it!
 			p->powers[pw_underwater] = underwatertics + 1;
 		}
+
+		if ((mobj->eflags & MFE_GOOWATER) && (p->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL && (p->pflags & PF_SHIELDABILITY))
+			p->pflags &= ~PF_SHIELDABILITY;
 	}
 
 	// The rest of this code only executes on a water state change.

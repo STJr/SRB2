@@ -7017,7 +7017,7 @@ static void P_MovePlayer(player_t *player)
 								player->homing = 3*TICRATE;
 							}
 							else
-								S_StartSound(player->mo, sfx_s3k45);
+								S_StartSound(player->mo, sfx_s3ka6);
 							break;
 						// Elemental/Bubblewrap shield activation
 						case SH_ELEMENTAL:
