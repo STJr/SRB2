@@ -165,8 +165,12 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"rail1",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"rail2",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"rlaunc", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
-  {"shield", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
-  {"shldls", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
+  {"shield", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR}, // generic GET!
+  {"wirlsg", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR}, // Whirlwind GET!
+  {"forcsg", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR}, // Force GET!
+  {"elemsg", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR}, // Elemental GET!
+  {"armasg", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR}, // Armaggeddon GET!
+  {"shldls", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR}, // You LOSE!
   {"spdpad", false, 127,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"spkdth", false, 127,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"spring", false, 112,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
@@ -183,6 +187,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"wdjump", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"mswarp", false,  60, 16, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"mspogo", false,  60,  8, -1, NULL, 0,        -1,  -1, LUMPERROR},
+  {"boingf", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
 
   // Menu, interface
   {"chchng", false, 120,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},

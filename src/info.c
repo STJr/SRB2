@@ -7086,7 +7086,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_FORCE_ICON1,  // spawnstate
 		1,              // spawnhealth
 		S_NULL,         // seestate
-		sfx_shield,     // seesound
+		sfx_forcsg,     // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
@@ -7113,7 +7113,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_ARMAGEDDON_ICON1, // spawnstate
 		1,              // spawnhealth
 		S_NULL,         // seestate
-		sfx_s3k3e,      // seesound
+		sfx_armasg,     // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
@@ -7140,7 +7140,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_WHIRLWIND_ICON1, // spawnstate
 		1,              // spawnhealth
 		S_NULL,         // seestate
-		sfx_shield,     // seesound
+		sfx_wirlsg,     // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
@@ -7167,7 +7167,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_ELEMENTAL_ICON1, // spawnstate
 		1,              // spawnhealth
 		S_NULL,         // seestate
-		sfx_s3k3f,      // seesound
+		sfx_elemsg,      // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
@@ -10853,7 +10853,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // deathstate
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
-		SH_ARMAGEDDON,        // speed
+		SH_ARMAGEDDON,  // speed
 		64*FRACUNIT,    // radius
 		64*FRACUNIT,    // height
 		2,              // display offset
