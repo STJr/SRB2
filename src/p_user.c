@@ -3941,6 +3941,20 @@ void P_DoJumpShield(player_t *player)
 	player->pflags &= ~PF_SPINNING;
 	if (electric)
 	{
+		mobj_t *spark;
+		INT32 i;
+#define numangles 6
+#define limitangle (360/numangles)
+		angle_t travelangle = player->mo->angle + P_RandomRange(-limitangle, limitangle)*ANG1;
+		for (i = 0; i < numangles; i++)
+		{
+			spark = P_SpawnMobjFromMobj(player->mo, 0, 0, 0, MT_THUNDERCOIN_SPARK);
+			P_InstaThrust(spark, travelangle + i*(ANGLE_MAX/numangles), FixedMul(4*FRACUNIT, spark->scale));
+			if (i % 2)
+				P_SetObjectMomZ(spark, -4*FRACUNIT, false);
+		}
+#undef limitangle
+#undef numangles
 		S_StartSound(player->mo, sfx_s3k45);
 	}
 	else
@@ -6304,8 +6318,9 @@ void P_ElementalFire(player_t *player, boolean cropcircle)
 
 	if (cropcircle)
 	{
-		travelangle = player->mo->angle + P_RandomRange(-ANGLE_45, ANGLE_45);
 #define numangles 8
+#define limitangle (180/numangles)
+		travelangle = player->mo->angle + P_RandomRange(-limitangle, limitangle)*ANG1;
 		for (i = 0; i < numangles; i++)
 		{
 			flame = P_SpawnMobj(player->mo->x, player->mo->y, ground, MT_SPINFIRE);
@@ -6319,6 +6334,7 @@ void P_ElementalFire(player_t *player, boolean cropcircle)
 			P_InstaThrust(flame, flame->angle, FixedMul(3*FRACUNIT, flame->scale));
 			P_SetObjectMomZ(flame, 3*FRACUNIT, false);
 		}
+#undef limitangle
 #undef numangles
 	}
 	else

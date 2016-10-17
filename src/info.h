@@ -2411,6 +2411,9 @@ typedef enum state
 	S_ZAPSB10,
 	S_ZAPSB11, // blank frame
 
+	//Thunder spark
+	S_THUNDERCOIN_SPARK,
+
 	// Invincibility Sparkles
 	S_IVSP,
 
@@ -3456,7 +3459,8 @@ typedef enum mobj_type
 	MT_FLAMEAURA_ORB, // Flame shield mobj
 	MT_BUBBLEWRAP_ORB, // Bubble shield mobj
 	MT_THUNDERCOIN_ORB, // Thunder shield mobj
-	MT_IVSP, // invincibility sparkles
+	MT_THUNDERCOIN_SPARK, // Thunder spark
+	MT_IVSP, // Invincibility sparkles
 	MT_SUPERSPARK, // Super Sonic Spark
 
 	// Freed Animals
