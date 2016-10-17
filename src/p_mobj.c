@@ -3252,6 +3252,14 @@ static void P_PlayerZMovement(mobj_t *mo)
 							: 5*FRACUNIT/2,
 							false);
 							P_SetPlayerMobjState(mo, S_PLAY_FALL);
+							mo->momx = mo->momy = 0;
+							clipmomz = false;
+						}
+						else if ((mo->player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP) // Bubble shield's bounce attack.
+						{
+							S_StartSound(mo, sfx_s3k44);
+							P_DoJump(mo->player, false);
+							mo->momz = FixedMul(mo->momz, 5*FRACUNIT/4);
 							clipmomz = false;
 						}
 					}
@@ -3642,7 +3650,7 @@ void P_MobjCheckWater(mobj_t *mobj)
 			p->powers[pw_underwater] = underwatertics + 1;
 		}
 
-		if ((mobj->eflags & MFE_GOOWATER) && (p->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL && (p->pflags & PF_SHIELDABILITY))
+		if ((mobj->eflags & MFE_GOOWATER) && ((p->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL || (p->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP) && (p->pflags & PF_SHIELDABILITY))
 			p->pflags &= ~PF_SHIELDABILITY;
 	}
 

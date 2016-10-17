@@ -295,7 +295,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		return;
 #endif
 
-	elementalpierce = (((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL) && (player->pflags & PF_SHIELDABILITY));
+	elementalpierce = (((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL || (player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP) && (player->pflags & PF_SHIELDABILITY));
 
 	if (special->flags & MF_BOSS)
 	{

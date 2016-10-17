@@ -7033,7 +7033,7 @@ static void P_MovePlayer(player_t *player)
 						// Flame shield activation
 						case SH_FLAMEAURA:
 							player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
-							P_Thrust(player->mo, player->mo->angle, 30*player->mo->scale - FixedMul(FixedSqrt(player->speed), FixedSqrt(player->mo->scale)));
+							P_Thrust(player->mo, player->mo->angle, FixedMul(30*FRACUNIT - FixedSqrt(FixedDiv(player->speed, player->mo->scale)), player->mo->scale));
 							S_StartSound(player->mo, sfx_s3k43);
 						default:
 							break;

@@ -1052,7 +1052,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		else if (thing->z - FixedMul(FRACUNIT, thing->scale) <= tmthing->z + tmthing->height
 			&& thing->z + thing->height + FixedMul(FRACUNIT, thing->scale) >= tmthing->z)
 		{
-			boolean elementalpierce = (((tmthing->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL)
+			boolean elementalpierce = (((tmthing->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL
+			|| (tmthing->player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP)
 				&& (tmthing->player->pflags & PF_SHIELDABILITY));
 			if (thing->flags & MF_MONITOR
 				&& (tmthing->player->pflags & (PF_SPINNING|PF_GLIDING)
