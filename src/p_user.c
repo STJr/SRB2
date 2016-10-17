@@ -1398,6 +1398,7 @@ void P_SpawnShieldOrb(player_t *player)
 		ov = P_SpawnMobj(shieldobj->x, shieldobj->y, shieldobj->z, MT_OVERLAY);
 		P_SetTarget(&ov->target, shieldobj);
 		P_SetMobjState(ov, shieldobj->info->seestate);
+		P_SetTarget(&shieldobj->tracer, ov);
 	}
 	if (shieldobj->info->meleestate)
 	{

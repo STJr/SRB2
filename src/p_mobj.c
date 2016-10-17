@@ -6776,48 +6776,55 @@ void P_MobjThinker(mobj_t *mobj)
 				}
 				else
 					P_AddOverlay(mobj);
-				if ((mobj->target->type == MT_ELEMENTAL_ORB)
-					&& (mobj->target->target)
-					&& (mobj->target->target->player)
-					&& ((mobj->target->target->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL)
-					&& (mobj->target->target->player->pflags & PF_SHIELDABILITY)
-					&& (mobj->state->nextstate < mobj->target->info->raisestate)) // Special casing for elemental shield piercing attack.
-					{
-						P_SetMobjState(mobj, mobj->target->info->raisestate);
-						mobj->tics++;
-					}
-				else if ((mobj->target->type == MT_THUNDERCOIN_ORB)
-					&& (mobj->target->target)
-					&& (mobj->target->target->player)
-					&& ((mobj->target->target->player->powers[pw_shield] & SH_NOSTACK) == SH_THUNDERCOIN)
-					&& (mobj->target->target->player->pflags & PF_SHIELDABILITY)) // Special casing for thundercoin shield jump..
-					{
-						P_SetMobjState(mobj, mobj->target->info->raisestate);
-						P_SetMobjState(mobj->target, mobj->target->info->painstate);
-						mobj->target->target->player->pflags &= ~PF_SHIELDABILITY;
-						mobj->tics++;
-					}
 				break;
-			case MT_ARMAGEDDON_ORB:
-			case MT_WHIRLWIND_ORB:
-			case MT_ELEMENTAL_ORB:
-			case MT_FORCE_ORB:
 			case MT_PITY_ORB:
+			case MT_WHIRLWIND_ORB:
+			case MT_ARMAGEDDON_ORB:
+			case MT_FORCE_ORB:
 			case MT_FLAMEAURA_ORB:
 			case MT_BUBBLEWRAP_ORB:
-			case MT_THUNDERCOIN_ORB:
 				if (!P_AddShield(mobj))
 					return;
 				break;
 			case MT_ATTRACT_ORB:
 				if (!P_AddShield(mobj))
 					return;
-				if ((mobj->target)
+				if (/*(mobj->target) -- the following is implicit by P_AddShield
 				&& (mobj->target->player)
-				&& (mobj->target->player->homing))
+				&&*/ (mobj->target->player->homing))
 				{
 					P_SetMobjState(mobj, mobj->info->painstate);
 					mobj->tics++;
+				}
+				break;
+			case MT_ELEMENTAL_ORB:
+				if (!P_AddShield(mobj))
+					return;
+				if (mobj->tracer
+				/* && mobj->target -- the following is implicit by P_AddShield
+				&& mobj->target->player
+				&& (mobj->target->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL*/
+				&& (mobj->target->player->pflags & PF_SHIELDABILITY)
+				&& (mobj->tracer->state->nextstate < mobj->info->raisestate))
+				{
+					P_SetMobjState(mobj->tracer, mobj->info->raisestate);
+					mobj->tracer->tics++;
+				}
+				break;
+			case MT_THUNDERCOIN_ORB:
+				if (!P_AddShield(mobj))
+					return;
+				if (mobj->tracer
+				/* && mobj->target -- the following is implicit by P_AddShield
+				&& mobj->target->player
+				&& (mobj->target->player->powers[pw_shield] & SH_NOSTACK) == SH_THUNDERCOIN*/
+				&& (mobj->target->player->pflags & PF_SHIELDABILITY))
+				{
+					P_SetMobjState(mobj, mobj->info->painstate);
+					mobj->tics++;
+					P_SetMobjState(mobj->tracer, mobj->info->raisestate);
+					mobj->tracer->tics++;
+					mobj->target->player->pflags &= ~PF_SHIELDABILITY; // prevent eternal spark
 				}
 				break;
 			case MT_WATERDROP:
