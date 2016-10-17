@@ -2096,6 +2096,7 @@ state_t states[NUMSTATES] =
 	{SPR_MAGN, FF_FULLBRIGHT|FF_TRANS40| 9, 2, {NULL}, 0, 0, S_MAGN11}, // S_MAGN10
 	{SPR_MAGN, FF_FULLBRIGHT|FF_TRANS40|10, 2, {NULL}, 0, 0, S_MAGN12}, // S_MAGN11
 	{SPR_MAGN, FF_FULLBRIGHT|FF_TRANS40|11, 2, {NULL}, 0, 0, S_MAGN1 }, // S_MAGN12
+
 	{SPR_MAGN, FF_FULLBRIGHT|FF_TRANS10|12, 2, {NULL}, 0, 0, S_MAGN1 }, // S_MAGN13
 
 	{SPR_FORC, FF_TRANS50  , 3, {NULL}, 0, 0, S_FORC2 }, // S_FORC1
@@ -2141,6 +2142,7 @@ state_t states[NUMSTATES] =
 	{SPR_ELEM, FF_FULLBRIGHT|17, 3, {NULL}, 0, 0, S_ELEMF7 }, // S_ELEMF6
 	{SPR_ELEM, FF_FULLBRIGHT|18, 3, {NULL}, 0, 0, S_ELEMF8 }, // S_ELEMF7
 	{SPR_ELEM, FF_FULLBRIGHT|19, 3, {NULL}, 0, 0, S_ELEMF1 }, // S_ELEMF8
+
 	{SPR_ELEM, FF_FULLBRIGHT|20, 1, {NULL}, 0, 0, S_ELEMF10}, // S_ELEMF9
 	{SPR_NULL, 0,                1, {NULL}, 0, 0, S_ELEMF1 }, // S_ELEMF10
 
@@ -2185,10 +2187,16 @@ state_t states[NUMSTATES] =
 	{SPR_BUBS, FF_TRANS30|7, 3, {NULL}, 0, 0, S_BUBS9}, // S_BUBS8
 	{SPR_BUBS, FF_TRANS30|8, 3, {NULL}, 0, 0, S_BUBS1}, // S_BUBS9
 
-	{SPR_BUBS, FF_TRANS30| 9, 2, {NULL}, 0, 0, S_BUBSB2}, // S_BUBSB1
-	{SPR_BUBS, FF_TRANS30|10, 2, {NULL}, 0, 0, S_BUBSB3}, // S_BUBSB2
-	{SPR_BUBS, FF_TRANS30|11, 2, {NULL}, 0, 0, S_BUBSB4}, // S_BUBSB3
-	{SPR_BUBS, FF_TRANS30|10, 2, {NULL}, 0, 0, S_BUBSB1}, // S_BUBSB4
+	{SPR_NULL, 0,   3, {NULL}, 0, 0, S_BUBS1}, // S_BUBS10
+	{SPR_NULL, 0, 4*3, {NULL}, 0, 0, S_BUBS1}, // S_BUBS11
+
+	{SPR_BUBS, FF_TRANS30| 9, 3, {NULL}, 0, 0, S_BUBSB2}, // S_BUBSB1
+	{SPR_BUBS, FF_TRANS30|10, 3, {NULL}, 0, 0, S_BUBSB3}, // S_BUBSB2
+	{SPR_BUBS, FF_TRANS30|11, 3, {NULL}, 0, 0, S_BUBSB4}, // S_BUBSB3
+	{SPR_BUBS, FF_TRANS30|10, 3, {NULL}, 0, 0, S_BUBSB1}, // S_BUBSB4
+
+	{SPR_BUBS, FF_TRANS30|12, 3, {NULL}, 0, 0, S_BUBSB3}, // S_BUBSB5
+	{SPR_BUBS, FF_TRANS30|13, 3, {NULL}, 0, 0, S_BUBSB5}, // S_BUBSB6
 
 	{SPR_ZAPS, FF_FULLBRIGHT|FF_TRANS20   ,   2, {NULL}, 0, 0, S_ZAPS2 }, // S_ZAPS1
 	{SPR_ZAPS, FF_FULLBRIGHT|FF_TRANS20| 1,   2, {NULL}, 0, 0, S_ZAPS3 }, // S_ZAPS2
@@ -10953,7 +10961,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
-		S_NULL,         // painstate
+		S_BUBSB5,       // painstate
 		SKINCOLOR_NONE, // painchance
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
@@ -10964,12 +10972,12 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		SH_BUBBLEWRAP,  // speed
 		64*FRACUNIT,    // radius
 		64*FRACUNIT,    // height
-		-2,             // display offset
+		2,              // display offset
 		16,             // mass
 		0,              // damage
 		sfx_None,       // activesound
 		MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_SCENERY, // flags
-		S_NULL          // raisestate
+		S_BUBS10        // raisestate
 	},
 
 	{           // MT_THUNDERCOIN_ORB

@@ -6782,7 +6782,6 @@ void P_MobjThinker(mobj_t *mobj)
 			case MT_ARMAGEDDON_ORB:
 			case MT_FORCE_ORB:
 			case MT_FLAMEAURA_ORB:
-			case MT_BUBBLEWRAP_ORB:
 				if (!P_AddShield(mobj))
 					return;
 				break;
@@ -6791,7 +6790,7 @@ void P_MobjThinker(mobj_t *mobj)
 					return;
 				if (/*(mobj->target) -- the following is implicit by P_AddShield
 				&& (mobj->target->player)
-				&&*/ (mobj->target->player->homing))
+				&& */ (mobj->target->player->homing))
 				{
 					P_SetMobjState(mobj, mobj->info->painstate);
 					mobj->tics++;
@@ -6803,12 +6802,41 @@ void P_MobjThinker(mobj_t *mobj)
 				if (mobj->tracer
 				/* && mobj->target -- the following is implicit by P_AddShield
 				&& mobj->target->player
-				&& (mobj->target->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL*/
-				&& (mobj->target->player->pflags & PF_SHIELDABILITY)
-				&& (mobj->tracer->state->nextstate < mobj->info->raisestate))
+				&& (mobj->target->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL */
+				&& mobj->target->player->pflags & PF_SHIELDABILITY
+				&& ((statenum_t)(mobj->tracer->state-states) < mobj->info->raisestate
+					|| (mobj->tracer->state->nextstate < mobj->info->raisestate && mobj->tracer->tics == 1)))
 				{
 					P_SetMobjState(mobj->tracer, mobj->info->raisestate);
 					mobj->tracer->tics++;
+				}
+				break;
+			case MT_BUBBLEWRAP_ORB:
+				if (!P_AddShield(mobj))
+					return;
+				if (mobj->tracer
+				/* && mobj->target -- the following is implicit by P_AddShield
+				&& mobj->target->player
+				&& (mobj->target->player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP */
+				)
+				{
+					if (mobj->target->player->pflags & PF_SHIELDABILITY
+					&& ((statenum_t)(mobj->state-states) < mobj->info->painstate
+						|| (mobj->state->nextstate < mobj->info->painstate && mobj->tics == 1)))
+					{
+						P_SetMobjState(mobj, mobj->info->painstate);
+						mobj->tics++;
+						P_SetMobjState(mobj->tracer, mobj->info->raisestate);
+						mobj->tracer->tics++;
+					}
+					else if (mobj->target->eflags & MFE_JUSTHITFLOOR
+					&& (statenum_t)(mobj->state-states) == mobj->info->painstate)
+					{
+						P_SetMobjState(mobj, mobj->info->painstate+1);
+						mobj->tics++;
+						P_SetMobjState(mobj->tracer, mobj->info->raisestate+1);
+						mobj->tracer->tics++;
+					}
 				}
 				break;
 			case MT_THUNDERCOIN_ORB:
@@ -6817,7 +6845,7 @@ void P_MobjThinker(mobj_t *mobj)
 				if (mobj->tracer
 				/* && mobj->target -- the following is implicit by P_AddShield
 				&& mobj->target->player
-				&& (mobj->target->player->powers[pw_shield] & SH_NOSTACK) == SH_THUNDERCOIN*/
+				&& (mobj->target->player->powers[pw_shield] & SH_NOSTACK) == SH_THUNDERCOIN */
 				&& (mobj->target->player->pflags & PF_SHIELDABILITY))
 				{
 					P_SetMobjState(mobj, mobj->info->painstate);
