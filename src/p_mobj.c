@@ -6499,6 +6499,13 @@ void P_RunOverlays(void)
 
 		if (!mo->target)
 			continue;
+
+		if (P_MobjWasRemoved(mo->target))
+		{
+			P_RemoveMobj(mo);
+			continue;
+		}
+
 		if (!splitscreen /*&& rendermode != render_soft*/)
 		{
 			angle_t viewingangle;
