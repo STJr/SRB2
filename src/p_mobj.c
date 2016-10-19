@@ -3235,8 +3235,16 @@ static void P_PlayerZMovement(mobj_t *mo)
 					if (!(mo->player->pflags & PF_GLIDING))
 						mo->player->pflags &= ~PF_JUMPED;
 
+					mo->player->pflags &= ~(PF_THOKKED|PF_CANCARRY/*|PF_GLIDING*/);
+					mo->player->secondjump = 0;
+					mo->player->glidetime = 0;
+					mo->player->climbing = 0;
+					mo->player->powers[pw_tailsfly] = 0;
+
 					if (mo->player->pflags & PF_SHIELDABILITY)
 					{
+						mo->player->pflags &= ~PF_SHIELDABILITY;
+
 						if ((mo->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL) // Elemental shield's stomp attack.
 						{
 							if (mo->eflags & (MFE_UNDERWATER|MFE_TOUCHWATER)) // play a blunt sound
@@ -3259,16 +3267,14 @@ static void P_PlayerZMovement(mobj_t *mo)
 						{
 							S_StartSound(mo, sfx_s3k44);
 							P_DoJump(mo->player, false);
+							mo->player->pflags |= PF_THOKKED;
+							mo->player->secondjump = UINT8_MAX;
 							mo->momz = FixedMul(mo->momz, 5*FRACUNIT/4);
 							clipmomz = false;
 						}
 					}
-					mo->player->pflags &= ~(PF_THOKKED|PF_CANCARRY|PF_SHIELDABILITY/*|PF_GLIDING*/);
-					mo->player->jumping = 0;
-					mo->player->secondjump = 0;
-					mo->player->glidetime = 0;
-					mo->player->climbing = 0;
-					mo->player->powers[pw_tailsfly] = 0;
+
+					mo->player->jumping = 0; // done down here because of bubblewrap
 				}
 			}
 			if (!(mo->player->pflags & PF_SPINNING))
@@ -3623,15 +3629,19 @@ void P_MobjCheckWater(mobj_t *mobj)
 	{
 		if (!((p->powers[pw_super]) || (p->powers[pw_invulnerability])))
 		{
-			if (p->powers[pw_shield] & SH_PROTECTELECTRIC)
-			{ // Water removes electric shields...
+			boolean electric = !!(p->powers[pw_shield] & SH_PROTECTELECTRIC);
+#define SH_OP (SH_PROTECTFIRE|SH_PROTECTWATER|SH_PROTECTELECTRIC)
+			if ((p->powers[pw_shield] & SH_OP) == SH_OP) // No.
+				P_KillMobj(mobj, NULL, NULL, DMG_INSTAKILL);
+#undef SH_OP
+			else if (electric || ((p->powers[pw_shield] & SH_PROTECTFIRE) && !(p->powers[pw_shield] & SH_PROTECTWATER)))
+			{ // Water removes electric and non-water fire shields...
+				P_FlashPal(p,
+				electric
+				? PAL_WHITE
+				: PAL_NUKE,
+				1);
 				p->powers[pw_shield] = p->powers[pw_shield] & SH_STACK;
-				P_FlashPal(p, PAL_WHITE, 1);
-			}
-			else if ((p->powers[pw_shield] & SH_PROTECTFIRE) && !(p->powers[pw_shield] & SH_PROTECTWATER))
-			{ // ...and fire-only shields.
-				p->powers[pw_shield] = p->powers[pw_shield] & SH_STACK;
-				P_FlashPal(p, PAL_NUKE, 1);
 			}
 		}
 
@@ -3651,7 +3661,10 @@ void P_MobjCheckWater(mobj_t *mobj)
 		}
 
 		if ((mobj->eflags & MFE_GOOWATER) && ((p->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL || (p->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP) && (p->pflags & PF_SHIELDABILITY))
+		{
 			p->pflags &= ~PF_SHIELDABILITY;
+			mobj->momz >>= 1;
+		}
 	}
 
 	// The rest of this code only executes on a water state change.
@@ -6683,7 +6696,7 @@ void P_MobjThinker(mobj_t *mobj)
 		fixed_t oldheight = mobj->height;
 		UINT8 correctionType = 0; // Don't correct Z position, just gain height
 
-		if (mobj->z > mobj->floorz && mobj->z + mobj->height < mobj->ceilingz
+		if ((mobj->flags & MF_NOCLIPHEIGHT || (mobj->z > mobj->floorz && mobj->z + mobj->height < mobj->ceilingz))
 		&& mobj->type != MT_EGGMOBILE_FIRE)
 			correctionType = 1; // Correct Z position by centering
 		else if (mobj->eflags & MFE_VERTICALFLIP)
@@ -6787,7 +6800,6 @@ void P_MobjThinker(mobj_t *mobj)
 			case MT_PITY_ORB:
 			case MT_WHIRLWIND_ORB:
 			case MT_ARMAGEDDON_ORB:
-			case MT_FORCE_ORB:
 			case MT_FLAMEAURA_ORB:
 				if (!P_AddShield(mobj))
 					return;
@@ -6818,6 +6830,25 @@ void P_MobjThinker(mobj_t *mobj)
 					mobj->tracer->tics++;
 				}
 				break;
+			case MT_FORCE_ORB:
+				if (!P_AddShield(mobj))
+					return;
+				if (/*
+				&& mobj->target -- the following is implicit by P_AddShield
+				&& mobj->target->player
+				&& (mobj->target->player->powers[pw_shield] & SH_FORCE)
+				&& */ (mobj->target->player->pflags & PF_SHIELDABILITY))
+				{
+					mobj_t *whoosh = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_GHOST);
+					whoosh->sprite = SPR_FORC;
+					whoosh->frame = 20|(tr_trans50<<FF_TRANSSHIFT); // U at 50% transparency
+					whoosh->destscale = whoosh->scale<<1;
+					whoosh->fuse = 10;
+					whoosh->tics = -1;
+					whoosh->flags |= MF_NOCLIPHEIGHT;
+					whoosh->height = 42*FRACUNIT;
+					mobj->target->player->pflags &= ~PF_SHIELDABILITY; // prevent eternal whoosh
+				}
 			case MT_BUBBLEWRAP_ORB:
 				if (!P_AddShield(mobj))
 					return;

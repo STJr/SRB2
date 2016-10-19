@@ -3348,7 +3348,7 @@ void A_ForceShield(mobj_t *actor)
 		return;
 	}
 
-	if (locvar1 < 0 || locvar1 > SH_FORCEHP)
+	if (locvar1 & ~SH_FORCEHP)
 	{
 		CONS_Debug(DBG_GAMELOGIC, "Invalid number of additional hitpoints.\n");
 		return;

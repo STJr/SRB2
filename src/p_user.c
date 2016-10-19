@@ -7002,12 +7002,22 @@ static void P_MovePlayer(player_t *player)
 	{
 		if (player->pflags & PF_JUMPED) // If the player is jumping
 		{
-			pflags_t check = (PF_USEDOWN|PF_GLIDING|PF_SLIDING|PF_THOKKED);
-			if (!(player->pflags & check)) // If the player is not holding down BT_USE, or having used an ability previously
+			if (!(player->pflags & (PF_USEDOWN|PF_GLIDING|PF_SLIDING|PF_SHIELDABILITY)) // If the player is not holding down BT_USE, or having used an ability previously
+				&& (!(player->pflags & PF_THOKKED) || ((player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP && player->secondjump == UINT8_MAX))) // thokked is optional if you're bubblewrapped
 			{
 				// Force shield activation
 				if (player->powers[pw_shield] & SH_FORCE)
-					; // TODO
+				{
+//#define PERFECTFORCESTOP
+					player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
+					player->mo->momx = player->mo->momy = 0;
+#if 1 // almost imperceptible hop for the purposes of aligning with the aura for as long as possible
+					P_SetObjectMomZ(player->mo, -4*P_GetMobjGravity(player->mo), false);
+#else
+					player->mo->momz = 0;
+#endif
+					S_StartSound(player->mo, sfx_ngskid);
+				}
 				else
 				{
 					switch (player->powers[pw_shield] & SH_NOSTACK)
@@ -7040,6 +7050,7 @@ static void P_MovePlayer(player_t *player)
 						case SH_ELEMENTAL:
 						case SH_BUBBLEWRAP:
 							player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
+							player->secondjump = 0;
 							player->mo->momx = player->mo->momy = 0;
 							P_SetObjectMomZ(player->mo, -24*FRACUNIT, false);
 							S_StartSound(player->mo,

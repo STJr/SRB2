@@ -188,7 +188,7 @@ typedef enum
 	SH_PROTECTELECTRIC = 0x1000,
 
 	// Indivisible shields
-	SH_PITY = 1,
+	SH_PITY = 1, // the world's most basic shield ever, given to players who suck at Match
 	SH_WHIRLWIND,
 	SH_ARMAGEDDON,
 	SH_FIREFLOWER,
@@ -377,8 +377,8 @@ typedef struct player_s
 	UINT8 gotcontinue; // Got continue from this stage?
 
 	fixed_t speed; // Player's speed (distance formula of MOMX and MOMY values)
-	UINT8 jumping; // Jump counter
-	UINT8 secondjump;
+	UINT8 jumping; // Holding down jump button
+	UINT8 secondjump; // Jump counter
 
 	UINT8 fly1; // Tails flying
 	UINT8 scoreadd; // Used for multiple enemy attack bonus

@@ -2784,7 +2784,7 @@ void P_RemoveShield(player_t *player)
 	if (player->powers[pw_shield] & SH_FORCE)
 	{ // Multi-hit
 		if ((player->powers[pw_shield] & SH_FORCEHP) == 0)
-			player->powers[pw_shield] &= ~SH_FORCE;
+			player->powers[pw_shield] &= SH_STACK;
 		else
 			player->powers[pw_shield]--;
 	}
