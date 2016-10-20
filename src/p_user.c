@@ -7008,14 +7008,13 @@ static void P_MovePlayer(player_t *player)
 				// Force shield activation
 				if (player->powers[pw_shield] & SH_FORCE)
 				{
-//#define PERFECTFORCESTOP
 					player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
-					player->mo->momx = player->mo->momy = 0;
 #if 1 // almost imperceptible hop for the purposes of aligning with the aura for as long as possible
 					P_SetObjectMomZ(player->mo, -4*P_GetMobjGravity(player->mo), false);
 #else
-					player->mo->momz = 0;
+					player->mo->momz = // intentionally carries to post-endif line as multiple-assignment
 #endif
+					player->mo->momx = player->mo->momy = 0;
 					S_StartSound(player->mo, sfx_ngskid);
 				}
 				else

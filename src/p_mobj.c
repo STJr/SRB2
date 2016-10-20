@@ -6839,12 +6839,10 @@ void P_MobjThinker(mobj_t *mobj)
 				&& (mobj->target->player->powers[pw_shield] & SH_FORCE)
 				&& */ (mobj->target->player->pflags & PF_SHIELDABILITY))
 				{
-					mobj_t *whoosh = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_GHOST);
-					whoosh->sprite = SPR_FORC;
-					whoosh->frame = 20|(tr_trans50<<FF_TRANSSHIFT); // U at 50% transparency
+					mobj_t *whoosh = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_GHOST); // done here so the offset is correct
+					P_SetMobjState(whoosh, mobj->info->raisestate);
 					whoosh->destscale = whoosh->scale<<1;
 					whoosh->fuse = 10;
-					whoosh->tics = -1;
 					whoosh->flags |= MF_NOCLIPHEIGHT;
 					whoosh->height = 42*FRACUNIT;
 					mobj->target->player->pflags &= ~PF_SHIELDABILITY; // prevent eternal whoosh
