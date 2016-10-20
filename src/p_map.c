@@ -1058,8 +1058,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			if (thing->flags & MF_MONITOR
 				&& (tmthing->player->pflags & (PF_SPINNING|PF_GLIDING)
 				|| ((tmthing->player->pflags & PF_JUMPED)
-					&& !(tmthing->player->charflags & SF_NOJUMPDAMAGE
-					&& !(tmthing->player->charability == CA_TWINSPIN && tmthing->player->panim == PA_ABILITY)))
+					&& (tmthing->player->pflags & PF_JUMPDAMAGE
+					|| (tmthing->player->charability == CA_TWINSPIN && tmthing->player->panim == PA_ABILITY)))
 				|| (tmthing->player->charability2 == CA2_MELEE && tmthing->player->panim == PA_ABILITY2)
 				|| ((tmthing->player->charflags & SF_STOMPDAMAGE)
 					&& (P_MobjFlip(tmthing)*(tmthing->z - (thing->z + thing->height/2)) > 0) && (P_MobjFlip(tmthing)*tmthing->momz < 0))
@@ -1093,8 +1093,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	else if (thing->flags & MF_MONITOR && tmthing->player
 	&& (tmthing->player->pflags & (PF_SPINNING|PF_GLIDING)
 		|| ((tmthing->player->pflags & PF_JUMPED)
-			&& !(tmthing->player->charflags & SF_NOJUMPDAMAGE
-			&& !(tmthing->player->charability == CA_TWINSPIN && tmthing->player->panim == PA_ABILITY)))
+			&& (tmthing->player->pflags & PF_JUMPDAMAGE
+			|| (tmthing->player->charability == CA_TWINSPIN && tmthing->player->panim == PA_ABILITY)))
 		|| (tmthing->player->charability2 == CA2_MELEE && tmthing->player->panim == PA_ABILITY2)
 		|| ((tmthing->player->charflags & SF_STOMPDAMAGE)
 			&& (P_MobjFlip(tmthing)*(tmthing->z - (thing->z + thing->height/2)) > 0) && (P_MobjFlip(tmthing)*tmthing->momz < 0)))

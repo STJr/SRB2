@@ -154,7 +154,10 @@ typedef enum
 	PF_CANCARRY          = 1<<27,
 
 	// Used shield ability
-	PF_SHIELDABILITY     = 1<<28
+	PF_SHIELDABILITY     = 1<<28,
+
+	// Do jump damage?
+	PF_JUMPDAMAGE        = 1<<29
 
 	// free up to and including 1<<31
 } pflags_t;

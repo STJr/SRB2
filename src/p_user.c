@@ -877,7 +877,7 @@ void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor)
 // Useful when you want to kill everything the player is doing.
 void P_ResetPlayer(player_t *player)
 {
-	player->pflags &= ~(PF_SPINNING|PF_STARTDASH|PF_JUMPED|PF_GLIDING|PF_THOKKED|PF_CANCARRY|PF_SHIELDABILITY);
+	player->pflags &= ~(PF_SPINNING|PF_STARTDASH|PF_JUMPED|PF_JUMPDAMAGE|PF_GLIDING|PF_THOKKED|PF_CANCARRY|PF_SHIELDABILITY);
 	player->powers[pw_carry] = CR_NONE;
 	player->jumping = 0;
 	player->secondjump = 0;
@@ -1336,6 +1336,11 @@ void P_SpawnShieldOrb(player_t *player)
 #ifdef PARANOIA
 	if (!player->mo)
 		I_Error("P_SpawnShieldOrb: player->mo is NULL!\n");
+#endif
+
+#ifdef HAVE_BLUA
+	if (LUAh_ShieldSpawn(player))
+		return;
 #endif
 
 	if (player->powers[pw_shield] & SH_FORCE)
@@ -3761,6 +3766,8 @@ void P_DoJump(player_t *player, boolean soundandstate)
 	player->mo->eflags &= ~MFE_APPLYPMOMZ;
 
 	player->pflags |= PF_JUMPED;
+	if (!(player->charflags & SF_NOJUMPDAMAGE))
+		player->pflags |= PF_JUMPDAMAGE;
 
 	if (soundandstate)
 	{
@@ -7039,6 +7046,8 @@ static void P_MovePlayer(player_t *player)
 							player->homing = 2;
 							if (P_LookForEnemies(player, false) && player->mo->tracer)
 							{
+								player->pflags |= PF_JUMPDAMAGE;
+								P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
 								S_StartSound(player->mo, sfx_s3k40);
 								player->homing = 3*TICRATE;
 							}
@@ -7048,7 +7057,8 @@ static void P_MovePlayer(player_t *player)
 						// Elemental/Bubblewrap shield activation
 						case SH_ELEMENTAL:
 						case SH_BUBBLEWRAP:
-							player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
+							player->pflags |= PF_JUMPDAMAGE|PF_THOKKED|PF_SHIELDABILITY;
+							P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
 							player->secondjump = 0;
 							player->mo->momx = player->mo->momy = 0;
 							P_SetObjectMomZ(player->mo, -24*FRACUNIT, false);

@@ -3233,7 +3233,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 						mo->player->pflags &= ~PF_SPINNING;
 
 					if (!(mo->player->pflags & PF_GLIDING))
-						mo->player->pflags &= ~PF_JUMPED;
+						mo->player->pflags &= ~(PF_JUMPED|PF_JUMPDAMAGE);
 
 					mo->player->pflags &= ~(PF_THOKKED|PF_CANCARRY/*|PF_GLIDING*/);
 					mo->player->secondjump = 0;
@@ -3267,6 +3267,8 @@ static void P_PlayerZMovement(mobj_t *mo)
 						{
 							S_StartSound(mo, sfx_s3k44);
 							P_DoJump(mo->player, false);
+							if (mo->player->charflags & SF_NOJUMPSPIN)
+								P_SetPlayerMobjState(mo, S_PLAY_FALL);
 							mo->player->pflags |= PF_THOKKED;
 							mo->player->secondjump = UINT8_MAX;
 							mo->momz = FixedMul(mo->momz, 5*FRACUNIT/4);
