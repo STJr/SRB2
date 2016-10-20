@@ -7013,7 +7013,7 @@ static void P_MovePlayer(player_t *player)
 				&& (!(player->pflags & PF_THOKKED) || ((player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP && player->secondjump == UINT8_MAX))) // thokked is optional if you're bubblewrapped
 			{
 				// Force shield activation
-				if ((player->powers[pw_shield] & SH_NOSTACK) == SH_FORCE)
+				if ((player->powers[pw_shield] & ~(SH_FORCEHP|SH_STACK)) == SH_FORCE)
 				{
 					player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
 #if 1 // almost imperceptible hop for the purposes of aligning with the aura for as long as possible
