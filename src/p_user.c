@@ -1446,10 +1446,6 @@ boolean P_SwitchShield(player_t *player, UINT16 shieldtype)
 	? (!(player->powers[pw_shield] & SH_FORCE) || (player->powers[pw_shield] & SH_FORCEHP) < (shieldtype & ~SH_FORCE))
 	: ((player->powers[pw_shield] & SH_NOSTACK) != shieldtype);
 
-	boolean stopshieldability = (shieldtype & SH_FORCE)
-	? (!(player->powers[pw_shield] & SH_FORCE))
-	: true;
-
 	if (mariomode)
 	{
 		mobj_t *scoremobj = P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z + (player->mo->height / 2), MT_SCORE);
@@ -1459,6 +1455,10 @@ boolean P_SwitchShield(player_t *player, UINT16 shieldtype)
 
 	if (donthavealready)
 	{
+		boolean stopshieldability = (shieldtype & SH_FORCE)
+		? (!(player->powers[pw_shield] & SH_FORCE))
+		: true;
+
 		if (mariomode)
 		{
 			player->mo->movecount = player->powers[pw_shield];
@@ -7013,7 +7013,7 @@ static void P_MovePlayer(player_t *player)
 				&& (!(player->pflags & PF_THOKKED) || ((player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP && player->secondjump == UINT8_MAX))) // thokked is optional if you're bubblewrapped
 			{
 				// Force shield activation
-				if (player->powers[pw_shield] & SH_FORCE)
+				if ((player->powers[pw_shield] & SH_NOSTACK) == SH_FORCE)
 				{
 					player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
 #if 1 // almost imperceptible hop for the purposes of aligning with the aura for as long as possible
@@ -8176,9 +8176,6 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		camdist = FixedMul(cv_cam2_dist.value, FixedMul(player->camerascale, mo->scale));
 		camheight = FixedMul(cv_cam2_height.value, FixedMul(player->camerascale, mo->scale));
 	}
-
-	if (player->powers[pw_shield] & SH_FORCE && player->pflags & PF_SHIELDABILITY)
-		camspeed <<= 1;
 
 #ifdef REDSANALOG
 	if (P_AnalogMove(player) && (player->cmd.buttons & (BT_CAMLEFT|BT_CAMRIGHT)) == (BT_CAMLEFT|BT_CAMRIGHT)) {
