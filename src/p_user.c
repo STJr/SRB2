@@ -7080,7 +7080,7 @@ static void P_MovePlayer(player_t *player)
 
 		if ((cmd->buttons & BT_JUMP) && (player->pflags & PF_THOKKED) && !player->homing) // Super Sonic move
 		{
-			if (player->skin == 0 && player->powers[pw_super] && player->speed > FixedMul(5<<FRACBITS, player->mo->scale)
+			if ((player->charability == CA_THOK) && player->powers[pw_super] && player->speed > FixedMul(5<<FRACBITS, player->mo->scale)
 			&& P_MobjFlip(player->mo)*player->mo->momz <= 0)
 			{
 				if (player->mo->state-states == S_PLAY_PAIN || player->panim == PA_JUMP || player->panim == PA_FALL
