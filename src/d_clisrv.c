@@ -2208,7 +2208,7 @@ void CL_ClearPlayer(INT32 playernum)
 //
 // Removes a player from the current game
 //
-static void CL_RemovePlayer(INT32 playernum)
+static void CL_RemovePlayer(INT32 playernum, INT32 reason)
 {
 	// Sanity check: exceptional cases (i.e. c-fails) can cause multiple
 	// kick commands to be issued for the same player.
@@ -2262,6 +2262,10 @@ static void CL_RemovePlayer(INT32 playernum)
 			}
 		}
 	}
+	
+#ifdef HAVE_BLUA
+	LUAh_PlayerQuit(&players[playernum], reason); // Lua hook for player quitting
+#endif
 
 	// Reset player data
 	CL_ClearPlayer(playernum);
@@ -2513,6 +2517,7 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 	INT32 pnum, msg;
 	XBOXSTATIC char buf[3 + MAX_REASONLENGTH];
 	char *reason = buf;
+	INT32 kickreason = 1;
 
 	pnum = READUINT8(*p);
 	msg = READUINT8(*p);
@@ -2593,14 +2598,17 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 	{
 		case KICK_MSG_GO_AWAY:
 			CONS_Printf(M_GetText("has been kicked (Go away)\n"));
+			kickreason = 1;
 			break;
 #ifdef NEWPING
 		case KICK_MSG_PING_HIGH:
 			CONS_Printf(M_GetText("left the game (Broke ping limit)\n"));
+			kickreason = 2;
 			break;
 #endif
 		case KICK_MSG_CON_FAIL:
 			CONS_Printf(M_GetText("left the game (Synch failure)\n"));
+			kickreason = 3;
 
 			if (M_CheckParm("-consisdump")) // Helps debugging some problems
 			{
@@ -2637,21 +2645,26 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 			break;
 		case KICK_MSG_TIMEOUT:
 			CONS_Printf(M_GetText("left the game (Connection timeout)\n"));
+			kickreason = 4;
 			break;
 		case KICK_MSG_PLAYER_QUIT:
 			if (netgame) // not splitscreen/bots
 				CONS_Printf(M_GetText("left the game\n"));
+				kickreason = 6;
 			break;
 		case KICK_MSG_BANNED:
 			CONS_Printf(M_GetText("has been banned (Don't come back)\n"));
+			kickreason = 5;
 			break;
 		case KICK_MSG_CUSTOM_KICK:
 			READSTRINGN(*p, reason, MAX_REASONLENGTH+1);
 			CONS_Printf(M_GetText("has been kicked (%s)\n"), reason);
+			kickreason = 1;
 			break;
 		case KICK_MSG_CUSTOM_BAN:
 			READSTRINGN(*p, reason, MAX_REASONLENGTH+1);
 			CONS_Printf(M_GetText("has been banned (%s)\n"), reason);
+			kickreason = 5;
 			break;
 	}
 
@@ -2679,7 +2692,7 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 			M_StartMessage(M_GetText("You have been kicked by the server\n\nPress ESC\n"), NULL, MM_NOTHING);
 	}
 	else
-		CL_RemovePlayer(pnum);
+		CL_RemovePlayer(pnum, kickreason);
 }
 
 consvar_t cv_allownewplayer = {"allowjoin", "On", CV_NETVAR, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL	};
