@@ -7078,7 +7078,7 @@ static void P_MovePlayer(player_t *player)
 			}
 		}
 
-		if ((cmd->buttons & BT_JUMP) && (player->pflags & PF_THOKKED)) // Super Sonic move
+		if ((cmd->buttons & BT_JUMP) && (player->pflags & PF_THOKKED) && !player->homing) // Super Sonic move
 		{
 			if (player->skin == 0 && player->powers[pw_super] && player->speed > FixedMul(5<<FRACBITS, player->mo->scale)
 			&& P_MobjFlip(player->mo)*player->mo->momz <= 0)
@@ -7088,7 +7088,7 @@ static void P_MovePlayer(player_t *player)
 					P_SetPlayerMobjState(player->mo, S_PLAY_SUPER_FLOAT);
 
 				player->mo->momz = 0;
-				player->pflags &= ~PF_SPINNING;
+				player->pflags &= ~(PF_SPINNING|PF_SHIELDABILITY);
 				player->jumping = 0; // don't cut jump height after bouncing off something
 			}
 		}
