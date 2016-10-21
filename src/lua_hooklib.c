@@ -799,12 +799,12 @@ void LUAh_NetArchiveHook(lua_CFunction archFunc)
 	// stack: tables
 }
 
-boolean LUAh_PlayerQuit(player_t *plr, int reason)
+void LUAh_PlayerQuit(player_t *plr, int reason)
 {
 	hook_p hookp;
 	boolean hooked = false;
 	if (!gL || !(hooksAvailable[hook_PlayerQuit/8] & (1<<(hook_PlayerQuit%8))))
-		return false;
+		return;
 
 	lua_settop(gL, 0);
 
