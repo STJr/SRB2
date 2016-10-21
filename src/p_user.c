@@ -7077,12 +7077,13 @@ static void P_MovePlayer(player_t *player)
 				}
 			}
 		}
-		else if ((cmd->buttons & BT_JUMP) && (player->pflags & PF_THOKKED)) // Super Sonic move
+
+		if ((cmd->buttons & BT_JUMP) && (player->pflags & PF_THOKKED)) // Super Sonic move
 		{
 			if (player->skin == 0 && player->powers[pw_super] && player->speed > FixedMul(5<<FRACBITS, player->mo->scale)
 			&& P_MobjFlip(player->mo)*player->mo->momz <= 0)
 			{
-				if (player->panim == PA_ROLL || player->panim == PA_JUMP || player->mo->state-states == S_PLAY_PAIN || player->panim == PA_WALK)
+				if (player->panim == PA_JUMP || player->panim == PA_FALL)
 					P_SetPlayerMobjState(player->mo, S_PLAY_SUPER_FLOAT);
 
 				player->mo->momz = 0;
