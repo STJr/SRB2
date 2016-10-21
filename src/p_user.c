@@ -7083,7 +7083,8 @@ static void P_MovePlayer(player_t *player)
 			if (player->skin == 0 && player->powers[pw_super] && player->speed > FixedMul(5<<FRACBITS, player->mo->scale)
 			&& P_MobjFlip(player->mo)*player->mo->momz <= 0)
 			{
-				if (player->panim == PA_JUMP || player->panim == PA_FALL)
+				if (player->mo->state-states == S_PLAY_PAIN || player->panim == PA_JUMP || player->panim == PA_FALL
+					|| (player->panim == PA_WALK && player->mo->state-states != S_PLAY_SUPER_FLOAT))
 					P_SetPlayerMobjState(player->mo, S_PLAY_SUPER_FLOAT);
 
 				player->mo->momz = 0;
