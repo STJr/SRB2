@@ -436,6 +436,17 @@ extern consvar_t cv_playbackspeed;
 #define KICK_MSG_CUSTOM_KICK 7
 #define KICK_MSG_CUSTOM_BAN  8
 
+typedef enum
+{
+	KR_KICK          = 1, //Kicked by server
+	KR_PINGLIMIT     = 2, //Broke Ping Limit
+	KR_SYNCH         = 3, //Synch Failure
+	KR_TIMEOUT       = 4, //Connection Timeout 
+	KR_BAN           = 5, //Banned by server
+	KR_LEAVE         = 6, //Quit the game
+	
+} kickreason_t;
+
 extern boolean server;
 extern boolean dedicated; // for dedicated server
 extern UINT16 software_MAXPACKETLENGTH;
