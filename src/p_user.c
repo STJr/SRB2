@@ -4361,10 +4361,10 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 			player->secondjump = 2;
 
 
-		// If letting go of the jump button while still on ascent, cut the jump height.
-		if (player->pflags & PF_JUMPED && P_MobjFlip(player->mo)*player->mo->momz > 0 && player->jumping == 1)
+		if (player->pflags & PF_JUMPED && player->jumping == 1)
 		{
-			player->mo->momz >>= 1;
+			if (P_MobjFlip(player->mo)*player->mo->momz > 0)
+				player->mo->momz >>= 1; // If letting go of the jump button while still on ascent, cut the jump height.
 			player->jumping = 0;
 		}
 	}
@@ -7005,9 +7005,9 @@ static void P_MovePlayer(player_t *player)
 	//STUFF!                 //
 	///////////////////////////
 
-	if (cmd->buttons & BT_USE) // Spin button effects
+	if (player->pflags & PF_JUMPED)
 	{
-		if (player->pflags & PF_JUMPED) // If the player is jumping
+		if (cmd->buttons & BT_USE) // Spin button effects
 		{
 			if (!(player->pflags & (PF_USEDOWN|PF_GLIDING|PF_SLIDING|PF_SHIELDABILITY)) // If the player is not holding down BT_USE, or having used an ability previously
 				&& (!(player->pflags & PF_THOKKED) || ((player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP && player->secondjump == UINT8_MAX))) // thokked is optional if you're bubblewrapped
@@ -7031,8 +7031,7 @@ static void P_MovePlayer(player_t *player)
 						// Whirlwind/Thundercoin shield activation
 						case SH_WHIRLWIND:
 						case SH_THUNDERCOIN:
-							if (!player->powers[pw_super])
-								P_DoJumpShield(player);
+							P_DoJumpShield(player);
 							break;
 						// Armageddon shield activation
 						case SH_ARMAGEDDON:
@@ -7077,7 +7076,9 @@ static void P_MovePlayer(player_t *player)
 					}
 				}
 			}
-			// Super Sonic move
+		}
+		else if (cmd->buttons & BT_JUMP && !player->jumping) // Super Sonic move
+		{
 			if (player->skin == 0 && player->powers[pw_super] && player->speed > FixedMul(5<<FRACBITS, player->mo->scale)
 			&& P_MobjFlip(player->mo)*player->mo->momz <= 0)
 			{
