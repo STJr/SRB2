@@ -4361,10 +4361,10 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 			player->secondjump = 2;
 
 
-		if (player->pflags & PF_JUMPED && player->jumping == 1)
+		// If letting go of the jump button while still on ascent, cut the jump height.
+		if (player->pflags & PF_JUMPED && P_MobjFlip(player->mo)*player->mo->momz > 0 && player->jumping == 1)
 		{
-			if (P_MobjFlip(player->mo)*player->mo->momz > 0)
-				player->mo->momz >>= 1; // If letting go of the jump button while still on ascent, cut the jump height.
+			player->mo->momz >>= 1;
 			player->jumping = 0;
 		}
 	}
@@ -7077,7 +7077,7 @@ static void P_MovePlayer(player_t *player)
 				}
 			}
 		}
-		else if (cmd->buttons & BT_JUMP && !player->jumping) // Super Sonic move
+		else if ((cmd->buttons & BT_JUMP) && (player->pflags & PF_THOKKED)) // Super Sonic move
 		{
 			if (player->skin == 0 && player->powers[pw_super] && player->speed > FixedMul(5<<FRACBITS, player->mo->scale)
 			&& P_MobjFlip(player->mo)*player->mo->momz <= 0)
