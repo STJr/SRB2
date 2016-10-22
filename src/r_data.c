@@ -502,6 +502,7 @@ static texpatch_t *R_ParsePatch(boolean actuallyLoadPatch)
 	char *patchName = NULL;
 	INT16 patchXPos;
 	INT16 patchYPos;
+	UINT8 flip = 0;
 	texpatch_t *resultPatch = NULL;
 	lumpnum_t patchLumpNum;
 
@@ -598,6 +599,47 @@ static texpatch_t *R_ParsePatch(boolean actuallyLoadPatch)
 	}
 	Z_Free(texturesToken);
 
+	// Patch parameters block (OPTIONAL)
+	// added by Monster Iestyn (22/10/16)
+
+	// Left Curly Brace
+	texturesToken = M_GetToken(NULL);
+	if (texturesToken == NULL)
+		; // move on and ignore, R_ParseTextures will deal with this
+	else
+	{
+		if (strcmp(texturesToken,"{")==0)
+		{
+			Z_Free(texturesToken);
+			texturesToken = M_GetToken(NULL);
+			if (texturesToken == NULL)
+			{
+				I_Error("Error parsing TEXTURES lump: Unexpected end of file where patch \"%s\"'s parameters should be",patchName);
+			}
+			while (strcmp(texturesToken,"}")!=0)
+			{
+				if (stricmp(texturesToken, "FLIPX")==0)
+					flip |= 1;
+				else if (stricmp(texturesToken, "FLIPY")==0)
+					flip |= 2;
+				Z_Free(texturesToken);
+
+				texturesToken = M_GetToken(NULL);
+				if (texturesToken == NULL)
+				{
+					I_Error("Error parsing TEXTURES lump: Unexpected end of file where patch \"%s\"'s parameters or right curly brace should be",patchName);
+				}
+			}
+		}
+		else
+		{
+			 // this is not what we wanted...
+			 // undo last read so R_ParseTextures can re-get the token for its own purposes
+			M_UnGetToken();
+		}
+		Z_Free(texturesToken);
+	}
+
 	if (actuallyLoadPatch == true)
 	{
 		// Check lump exists
@@ -608,6 +650,7 @@ static texpatch_t *R_ParsePatch(boolean actuallyLoadPatch)
 		resultPatch->originy = patchYPos;
 		resultPatch->lump = patchLumpNum & 65535;
 		resultPatch->wad = patchLumpNum>>16;
+		resultPatch->flip = flip;
 		// Clean up a little after ourselves
 		Z_Free(patchName);
 		// Then return it
