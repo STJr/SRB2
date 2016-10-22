@@ -509,7 +509,7 @@ void P_ParseAnimationDefintion(SINT8 istexture, INT32 *i)
 	animdefsToken = M_GetToken(NULL);
 	if (animdefsToken == NULL)
 	{
-		I_Error("Error parsing TEXTURES lump: Unexpected end of file where \"%s\"'s animation speed should be", animdefs[*i].startname);
+		I_Error("Error parsing ANIMDEFS lump: Unexpected end of file where \"%s\"'s animation speed should be", animdefs[*i].startname);
 	}
 	endPos = NULL;
 #ifndef AVOID_ERRNO
@@ -523,7 +523,7 @@ void P_ParseAnimationDefintion(SINT8 istexture, INT32 *i)
 #endif
 		|| animSpeed < 0) // Number is not positive
 	{
-		I_Error("Error parsing TEXTURES lump: Expected a positive integer for \"%s\"'s animation speed, got \"%s\"", animdefs[*i].startname, animdefsToken);
+		I_Error("Error parsing ANIMDEFS lump: Expected a positive integer for \"%s\"'s animation speed, got \"%s\"", animdefs[*i].startname, animdefsToken);
 	}
 	animdefs[*i].speed = animSpeed;
 	Z_Free(animdefsToken);
@@ -6762,31 +6762,6 @@ static void Add_Scroller(INT32 type, fixed_t dx, fixed_t dy, INT32 control, INT3
 	P_AddThinker(&s->thinker);
 }
 
-/** Adds a wall scroller.
-  * Scroll amount is rotated with respect to wall's linedef first, so that
-  * scrolling towards the wall in a perpendicular direction is translated into
-  * vertical motion, while scrolling along the wall in a parallel direction is
-  * translated into horizontal motion.
-  *
-  * \param dx      x speed of scrolling or its acceleration.
-  * \param dy      y speed of scrolling or its acceleration.
-  * \param l       Line whose front side will scroll.
-  * \param control Sector whose heights control this scroller's effect
-  *                remotely, or -1 if there is no control sector.
-  * \param accel   Nonzero for an accelerative effect.
-  * \sa Add_Scroller, P_SpawnScrollers
-  */
-static void Add_WallScroller(fixed_t dx, fixed_t dy, const line_t *l, INT32 control, INT32 accel)
-{
-	fixed_t x = abs(l->dx), y = abs(l->dy), d;
-	if (y > x)
-		d = x, x = y, y = d;
-	d = FixedDiv(x, FINESINE((tantoangle[FixedDiv(y, x) >> DBITS] + ANGLE_90) >> ANGLETOFINESHIFT));
-	x = -FixedDiv(FixedMul(dy, l->dy) + FixedMul(dx, l->dx), d);
-	y = -FixedDiv(FixedMul(dx, l->dy) - FixedMul(dy, l->dx), d);
-	Add_Scroller(sc_side, x, y, control, *l->sidenum, accel, 0);
-}
-
 /** Initializes the scrollers.
   *
   * \todo Get rid of all the magic numbers.
@@ -6869,7 +6844,7 @@ static void P_SpawnScrollers(void)
 			case 502:
 				for (s = -1; (s = P_FindLineFromLineTag(l, s)) >= 0 ;)
 					if (s != (INT32)i)
-						Add_WallScroller(dx, dy, lines+s, control, accel);
+						Add_Scroller(sc_side, dx, dy, control, lines[s].sidenum[0], accel, 0);
 				break;
 
 			case 505:
@@ -7472,7 +7447,7 @@ void T_Pusher(pusher_t *p)
 			}
 			else
 			{
-				if (top < thing->z || referrer->floorheight > (thing->z + (thing->height >> 1)))
+				if (top < thing->z || bottom > (thing->z + (thing->height >> 1)))
 					continue;
 				if (thing->z + thing->height > top)
 					touching = true;
