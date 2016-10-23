@@ -7508,11 +7508,7 @@ void T_Pusher(pusher_t *p)
 				P_ResetPlayer (thing->player);
 
 				if (jumped)
-				{
 					thing->player->pflags |= PF_JUMPED;
-					if (!(thing->player->charflags & SF_NOJUMPDAMAGE))
-						thing->player->pflags |= PF_JUMPDAMAGE;
-				}
 
 				thing->player->pflags |= PF_SLIDING;
 				P_SetPlayerMobjState (thing, thing->info->painstate); // Whee!

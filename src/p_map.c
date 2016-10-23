@@ -203,7 +203,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 			}
 		}
 
-		pflags = object->player->pflags & (PF_JUMPED|PF_JUMPDAMAGE|PF_SPINNING|PF_THOKKED|PF_SHIELDABILITY); // I still need these.
+		pflags = object->player->pflags & (PF_JUMPED|PF_SPINNING|PF_THOKKED|PF_SHIELDABILITY); // I still need these.
 		jumping = object->player->jumping;
 		secondjump = object->player->secondjump;
 		P_ResetPlayer(object->player);
@@ -211,8 +211,6 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 		if (spring->info->painchance)
 		{
 			object->player->pflags |= PF_JUMPED;
-			if (!(object->player->charflags & SF_NOJUMPDAMAGE))
-				object->player->pflags |= PF_JUMPDAMAGE;
 			P_SetPlayerMobjState(object, S_PLAY_JUMP);
 		}
 		else if (P_MobjFlip(object)*vertispeed > 0)

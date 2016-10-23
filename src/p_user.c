@@ -577,7 +577,7 @@ static void P_DeNightserizePlayer(player_t *player)
 	player->pflags &= ~PF_NIGHTSMODE;
 
 	player->powers[pw_underwater] = 0;
-	player->pflags &= ~(PF_USEDOWN|PF_JUMPDOWN|PF_ATTACKDOWN|PF_STARTDASH|PF_GLIDING|PF_JUMPED|PF_JUMPDAMAGE|PF_THOKKED|PF_SPINNING|PF_DRILLING|PF_TRANSFERTOCLOSEST);
+	player->pflags &= ~(PF_USEDOWN|PF_JUMPDOWN|PF_ATTACKDOWN|PF_STARTDASH|PF_GLIDING|PF_JUMPED|PF_THOKKED|PF_SPINNING|PF_DRILLING|PF_TRANSFERTOCLOSEST);
 	player->secondjump = 0;
 	player->jumping = 0;
 	player->homing = 0;
@@ -650,7 +650,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 	if (!(player->pflags & PF_NIGHTSMODE))
 		player->mo->height = P_GetPlayerHeight(player); // Just to make sure jumping into the drone doesn't result in a squashed hitbox.
 
-	player->pflags &= ~(PF_USEDOWN|PF_JUMPDOWN|PF_ATTACKDOWN|PF_STARTDASH|PF_GLIDING|PF_JUMPED|PF_JUMPDAMAGE|PF_THOKKED|PF_SHIELDABILITY|PF_SPINNING|PF_DRILLING);
+	player->pflags &= ~(PF_USEDOWN|PF_JUMPDOWN|PF_ATTACKDOWN|PF_STARTDASH|PF_GLIDING|PF_JUMPED|PF_THOKKED|PF_SHIELDABILITY|PF_SPINNING|PF_DRILLING);
 	player->homing = 0;
 	player->mo->fuse = 0;
 	player->speed = 0;
@@ -1677,8 +1677,6 @@ void P_DoPlayerExit(player_t *player)
 	{
 		player->climbing = 0;
 		player->pflags |= PF_JUMPED;
-		if (!(player->charflags & SF_NOJUMPDAMAGE))
-			player->pflags |= PF_JUMPDAMAGE;
 		P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 	}
 	player->powers[pw_underwater] = 0;
@@ -1999,8 +1997,6 @@ static void P_CheckBouncySectors(player_t *player)
 						{
 							player->pflags &= ~PF_SPINNING;
 							player->pflags |= PF_JUMPED;
-							if (!(player->charflags & SF_NOJUMPDAMAGE))
-								player->pflags |= PF_JUMPDAMAGE;
 							player->pflags |= PF_THOKKED;
 						}
 					}
@@ -2012,9 +2008,8 @@ static void P_CheckBouncySectors(player_t *player)
 						if (player->pflags & PF_SPINNING)
 						{
 							player->pflags &= ~PF_SPINNING;
-							player->pflags |= (PF_JUMPED|PF_THOKKED);
-							if (!(player->charflags & SF_NOJUMPDAMAGE))
-								player->pflags |= PF_JUMPDAMAGE;
+							player->pflags |= PF_JUMPED;
+							player->pflags |= PF_THOKKED;
 						}
 					}
 
@@ -2022,8 +2017,6 @@ static void P_CheckBouncySectors(player_t *player)
 					{
 						player->pflags &= ~PF_SPINNING;
 						player->pflags |= PF_JUMPED;
-						if (!(player->charflags & SF_NOJUMPDAMAGE))
-							player->pflags |= PF_JUMPDAMAGE;
 					}
 
 					goto bouncydone;
@@ -2767,8 +2760,6 @@ static void P_DoClimbing(player_t *player)
 
 			player->climbing = 0;
 			player->pflags |= PF_JUMPED;
-			if (!(player->charflags & SF_NOJUMPDAMAGE))
-				player->pflags |= PF_JUMPDAMAGE;
 			P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 		}
 
@@ -2776,8 +2767,6 @@ static void P_DoClimbing(player_t *player)
 		{
 			player->climbing = 0;
 			player->pflags |= PF_JUMPED;
-			if (!(player->charflags & SF_NOJUMPDAMAGE))
-				player->pflags |= PF_JUMPDAMAGE;
 			P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 		}
 	}
@@ -2785,8 +2774,6 @@ static void P_DoClimbing(player_t *player)
 	{
 		player->climbing = 0;
 		player->pflags |= PF_JUMPED;
-		if (!(player->charflags & SF_NOJUMPDAMAGE))
-			player->pflags |= PF_JUMPDAMAGE;
 		P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 	}
 
@@ -2805,8 +2792,6 @@ static void P_DoClimbing(player_t *player)
 	{
 		player->climbing = 0;
 		player->pflags |= PF_JUMPED;
-		if (!(player->charflags & SF_NOJUMPDAMAGE))
-			player->pflags |= PF_JUMPDAMAGE;
 		P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 		P_SetObjectMomZ(player->mo, 4*FRACUNIT, false);
 		P_InstaThrust(player->mo, player->mo->angle, FixedMul(-4*FRACUNIT, player->mo->scale));
@@ -6727,8 +6712,6 @@ static void P_MovePlayer(player_t *player)
 		else
 		{
 			player->pflags |= PF_JUMPED;
-			if (!(player->charflags & SF_NOJUMPDAMAGE))
-				player->pflags |= PF_JUMPDAMAGE;
 			P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 		}
 		player->pflags &= ~PF_GLIDING;
@@ -6786,8 +6769,6 @@ static void P_MovePlayer(player_t *player)
 				|| (player->powers[pw_super] && ALL7EMERALDS(player->powers[pw_emeralds]) && player->charability == CA_GLIDEANDCLIMB))
 			{
 				player->pflags |= PF_JUMPED;
-				if (!(player->charflags & SF_NOJUMPDAMAGE))
-					player->pflags |= PF_JUMPDAMAGE;
 				P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 			}
 			else
@@ -6858,8 +6839,6 @@ static void P_MovePlayer(player_t *player)
 			else
 			{
 				player->pflags |= PF_JUMPED;
-				if (!(player->charflags & SF_NOJUMPDAMAGE))
-					player->pflags |= PF_JUMPDAMAGE;
 				P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 			}
 		}
@@ -7509,8 +7488,6 @@ static void P_DoRopeHang(player_t *player)
 		P_SetTarget(&player->mo->tracer, NULL);
 
 		player->pflags |= PF_JUMPED;
-		if (!(player->charflags & SF_NOJUMPDAMAGE))
-			player->pflags |= PF_JUMPDAMAGE;
 		player->powers[pw_carry] = CR_NONE;
 
 		if (!(player->pflags & PF_SLIDING) && (player->pflags & PF_JUMPED)
@@ -7609,8 +7586,6 @@ static void P_DoRopeHang(player_t *player)
 			if (player->mo->tracer->flags & MF_SLIDEME)
 			{
 				player->pflags |= PF_JUMPED;
-				if (!(player->charflags & SF_NOJUMPDAMAGE))
-					player->pflags |= PF_JUMPDAMAGE;
 
 				if (!(player->pflags & PF_SLIDING) && (player->pflags & PF_JUMPED)
 				&& !(player->panim == PA_JUMP))
@@ -9706,8 +9681,6 @@ void P_PlayerAfterThink(player_t *player)
 		player->mo->momz = (player->mo->tracer->z - (player->mo->height-player->mo->tracer->height/2) - player->mo->z)*2;
 		P_TeleportMove(player->mo, player->mo->tracer->x, player->mo->tracer->y, player->mo->tracer->z - (player->mo->height-player->mo->tracer->height/2));
 		player->pflags |= PF_JUMPED;
-		if (!(player->charflags & SF_NOJUMPDAMAGE))
-			player->pflags |= PF_JUMPDAMAGE;
 		player->secondjump = 0;
 		player->pflags &= ~PF_THOKKED;
 
