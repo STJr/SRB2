@@ -9678,7 +9678,7 @@ void P_PlayerAfterThink(player_t *player)
 		player->mo->momy = (player->mo->tracer->y - player->mo->y)*2;
 		player->mo->momz = (player->mo->tracer->z - (player->mo->height-player->mo->tracer->height/2) - player->mo->z)*2;
 		P_TeleportMove(player->mo, player->mo->tracer->x, player->mo->tracer->y, player->mo->tracer->z - (player->mo->height-player->mo->tracer->height/2));
-		player->pflags |= PF_JUMPED;
+		player->pflags |= PF_JUMPED|PF_FORCEJUMPDAMAGE;
 		player->secondjump = 0;
 		player->pflags &= ~PF_THOKKED;
 
