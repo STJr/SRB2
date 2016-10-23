@@ -1265,10 +1265,10 @@ void Command_ObjectPlace_f(void)
 			HU_DoCEcho(va(M_GetText(
 				"\\\\\\\\\\\\\\\\\\\\\\\\\x82"
 				"   Objectplace Controls:   \x80\\\\"
-				"Weapon L/R: Cycle mapthings\\"
-				"      Jump: Float up       \\"
-				"      Spin: Float down     \\"
-				" Fire Ring: Place object   \\")));
+				"Weapon Next/Prev: Cycle mapthings\\"
+				"            Jump: Float up       \\"
+				"            Spin: Float down     \\"
+				"       Fire Ring: Place object   \\")));
 		}
 
 		// Save all the player's data.
