@@ -975,7 +975,7 @@ void P_DoSuperTransformation(player_t *player, boolean giverings)
 	if (!(mapheaderinfo[gamemap-1]->levelflags & LF_NOSSMUSIC) && P_IsLocalPlayer(player))
 	{
 		S_StopMusic();
-		S_ChangeMusicInternal("supers", true);
+		S_ChangeMusicInternal("_super", true);
 	}
 
 	S_StartSound(NULL, sfx_supert); //let all players hear it -mattw_cfi
@@ -1111,7 +1111,7 @@ void P_PlayLivesJingle(player_t *player)
 		if (player)
 			player->powers[pw_extralife] = extralifetics + 1;
 		S_StopMusic(); // otherwise it won't restart if this is done twice in a row
-		S_ChangeMusicInternal("xtlife", false);
+		S_ChangeMusicInternal("_1up", false);
 	}
 }
 
@@ -1129,9 +1129,9 @@ void P_RestoreMusic(player_t *player)
 		return;
 	S_SpeedMusic(1.0f);
 	if (player->powers[pw_super] && !(mapheaderinfo[gamemap-1]->levelflags & LF_NOSSMUSIC))
-		S_ChangeMusicInternal("supers", true);
+		S_ChangeMusicInternal("_super", true);
 	else if (player->powers[pw_invulnerability] > 1)
-		S_ChangeMusicInternal((mariomode) ? "minvnc" : "invinc", false);
+		S_ChangeMusicInternal((mariomode) ? "_minv" : "_inv", false);
 	else if (player->powers[pw_sneakers] > 1 && !player->powers[pw_super])
 	{
 		if (mapheaderinfo[gamemap-1]->levelflags & LF_SPEEDMUSIC)
@@ -1140,7 +1140,7 @@ void P_RestoreMusic(player_t *player)
 			S_ChangeMusic(mapmusname, mapmusflags, true);
 		}
 		else
-			S_ChangeMusicInternal("shoes", true);
+			S_ChangeMusicInternal("_shoes", true);
 	}
 	else
 		S_ChangeMusic(mapmusname, mapmusflags, true);
@@ -2169,7 +2169,7 @@ static void P_CheckUnderwaterAndSpaceTimer(player_t *player)
 		&& player == &players[consoleplayer])
 		{
 			S_StopMusic();
-			S_ChangeMusicInternal("drown", false);
+			S_ChangeMusicInternal("_drown", false);
 		}
 	}
 
@@ -5773,7 +5773,7 @@ static void P_NiGHTSMovement(player_t *player)
 	}
 	else if (P_IsLocalPlayer(player) && player->nightstime == 10*TICRATE)
 //		S_StartSound(NULL, sfx_timeup); // that creepy "out of time" music from NiGHTS. Dummied out, as some on the dev team thought it wasn't Sonic-y enough (Mystic, notably). Uncomment to restore. -SH
-		S_ChangeMusicInternal("drown",false);
+		S_ChangeMusicInternal("_drown",false);
 
 
 	if (player->mo->z < player->mo->floorz)
@@ -9004,7 +9004,7 @@ void P_PlayerThink(player_t *player)
 		if (countdown == 11*TICRATE - 1)
 		{
 			if (P_IsLocalPlayer(player))
-				S_ChangeMusicInternal("drown", false);
+				S_ChangeMusicInternal("_drown", false);
 		}
 
 		// If you've hit the countdown and you haven't made

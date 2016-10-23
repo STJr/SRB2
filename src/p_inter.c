@@ -2145,7 +2145,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 				if (P_IsLocalPlayer(target->player)/* && target->player == &players[consoleplayer] */)
 				{
 					S_StopMusic(); // Stop the Music! Tails 03-14-2000
-					S_ChangeMusicInternal("gmover", false); // Yousa dead now, Okieday? Tails 03-14-2000
+					S_ChangeMusicInternal("_gover", false); // Yousa dead now, Okieday? Tails 03-14-2000
 				}
 			}
 		}
@@ -2543,7 +2543,7 @@ static inline void P_NiGHTSDamage(mobj_t *target, mobj_t *source)
 			&& player->nightstime < 10*TICRATE)
 		{
 			//S_StartSound(NULL, sfx_timeup); // that creepy "out of time" music from NiGHTS. Dummied out, as some on the dev team thought it wasn't Sonic-y enough (Mystic, notably). Uncomment to restore. -SH
-			S_ChangeMusicInternal("drown",false);
+			S_ChangeMusicInternal("_drown",false);
 		}
 	}
 }

@@ -482,23 +482,6 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_GWLG
 	&lspr[NOLIGHT],     // SPR_GWLR
 
-	// SRB1 Sprites
-	&lspr[NOLIGHT],     // SPR_SRBA
-	&lspr[NOLIGHT],     // SPR_SRBB
-	&lspr[NOLIGHT],     // SPR_SRBC
-	&lspr[NOLIGHT],     // SPR_SRBD
-	&lspr[NOLIGHT],     // SPR_SRBE
-	&lspr[NOLIGHT],     // SPR_SRBF
-	&lspr[NOLIGHT],     // SPR_SRBG
-	&lspr[NOLIGHT],     // SPR_SRBH
-	&lspr[NOLIGHT],     // SPR_SRBI
-	&lspr[NOLIGHT],     // SPR_SRBJ
-	&lspr[NOLIGHT],     // SPR_SRBK
-	&lspr[NOLIGHT],     // SPR_SRBL
-	&lspr[NOLIGHT],     // SPR_SRBM
-	&lspr[NOLIGHT],     // SPR_SRBN
-	&lspr[NOLIGHT],     // SPR_SRBO
-
 	// Free slots
 	&lspr[NOLIGHT],
 	&lspr[NOLIGHT],
