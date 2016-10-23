@@ -2304,6 +2304,9 @@ typedef enum state
 	S_ELEM11,
 	S_ELEM12,
 
+	S_ELEM13,
+	S_ELEM14,
+
 	S_ELEMF1,
 	S_ELEMF2,
 	S_ELEMF3,
@@ -2336,6 +2339,9 @@ typedef enum state
 	S_FIRS8,
 	S_FIRS9,
 
+	S_FIRS10,
+	S_FIRS11,
+
 	S_FIRSB1,
 	S_FIRSB2,
 	S_FIRSB3,
@@ -2345,6 +2351,8 @@ typedef enum state
 	S_FIRSB7,
 	S_FIRSB8,
 	S_FIRSB9,
+
+	S_FIRSB10,
 
 	S_BUBS1,
 	S_BUBS2,

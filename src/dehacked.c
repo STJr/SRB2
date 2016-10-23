@@ -5407,6 +5407,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_ELEM11",
 	"S_ELEM12",
 
+	"S_ELEM13",
+	"S_ELEM14",
+
 	"S_ELEMF1",
 	"S_ELEMF2",
 	"S_ELEMF3",
@@ -5439,6 +5442,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FIRS8",
 	"S_FIRS9",
 
+	"S_FIRS10",
+	"S_FIRS11",
+
 	"S_FIRSB1",
 	"S_FIRSB2",
 	"S_FIRSB3",
@@ -5448,6 +5454,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FIRSB7",
 	"S_FIRSB8",
 	"S_FIRSB9",
+
+	"S_FIRSB10",
 
 	"S_BUBS1",
 	"S_BUBS2",
@@ -6653,35 +6661,36 @@ static const char *const MOBJFLAG_LIST[] = {
 
 // \tMF2_(\S+).*// (.+) --> \t"\1", // \2
 static const char *const MOBJFLAG2_LIST[] = {
-	"AXIS",			// It's a NiGHTS axis! (For faster checking)
-	"TWOD",			// Moves like it's in a 2D level
-	"DONTRESPAWN",	// Don't respawn this object!
-	"DONTDRAW",		// Don't generate a vissprite
-	"AUTOMATIC",	// Thrown ring has automatic properties
-	"RAILRING",		// Thrown ring has rail properties
-	"BOUNCERING",	// Thrown ring has bounce properties
-	"EXPLOSION",	// Thrown ring has explosive properties
-	"SCATTER",		// Thrown ring has scatter properties
-	"BEYONDTHEGRAVE",// Source of this missile has died and has since respawned.
-	"SLIDEPUSH",	// MF_PUSHABLE that pushes continuously.
-	"CLASSICPUSH",	// Drops straight down when object has negative Z.
-	"STANDONME",	// While not pushable, stand on me anyway.
-	"INFLOAT",		// Floating to a height for a move, don't auto float to target's height.
-	"DEBRIS",		// Splash ring from explosion ring
-	"NIGHTSPULL",	// Attracted from a paraloop
-	"JUSTATTACKED",	// can be pushed by other moving mobjs
-	"FIRING",		// turret fire
-	"SUPERFIRE",	// Firing something with Super Sonic-stopping properties. Or, if mobj has MF_MISSILE, this is the actual fire from it.
-	"SHADOW",		// Fuzzy draw, makes targeting harder.
-	"STRONGBOX",	// Flag used for "strong" random monitors.
-	"OBJECTFLIP",	// Flag for objects that always have flipped gravity.
-	"SKULLFLY",		// Special handling: skull in flight.
-	"FRET",			// Flashing from a previous hit
-	"BOSSNOTRAP",	// No Egg Trap after boss
-	"BOSSFLEE",		// Boss is fleeing!
-	"BOSSDEAD",		// Boss is dead! (Not necessarily fleeing, if a fleeing point doesn't exist.)
-	"AMBUSH",       // Alternate behaviour typically set by MTF_AMBUSH
-	"LINKDRAW",     // Draw vissprite of mobj immediately before/after tracer's vissprite (dependent on dispoffset and position)
+	"AXIS",			  // It's a NiGHTS axis! (For faster checking)
+	"TWOD",			  // Moves like it's in a 2D level
+	"DONTRESPAWN",	  // Don't respawn this object!
+	"DONTDRAW",		  // Don't generate a vissprite
+	"AUTOMATIC",	  // Thrown ring has automatic properties
+	"RAILRING",		  // Thrown ring has rail properties
+	"BOUNCERING",	  // Thrown ring has bounce properties
+	"EXPLOSION",	  // Thrown ring has explosive properties
+	"SCATTER",		  // Thrown ring has scatter properties
+	"BEYONDTHEGRAVE", // Source of this missile has died and has since respawned.
+	"SLIDEPUSH",	  // MF_PUSHABLE that pushes continuously.
+	"CLASSICPUSH",	  // Drops straight down when object has negative Z.
+	"STANDONME",	  // While not pushable, stand on me anyway.
+	"INFLOAT",		  // Floating to a height for a move, don't auto float to target's height.
+	"DEBRIS",		  // Splash ring from explosion ring
+	"NIGHTSPULL",	  // Attracted from a paraloop
+	"JUSTATTACKED",	  // can be pushed by other moving mobjs
+	"FIRING",		  // turret fire
+	"SUPERFIRE",	  // Firing something with Super Sonic-stopping properties. Or, if mobj has MF_MISSILE, this is the actual fire from it.
+	"SHADOW",		  // Fuzzy draw, makes targeting harder.
+	"STRONGBOX",	  // Flag used for "strong" random monitors.
+	"OBJECTFLIP",	  // Flag for objects that always have flipped gravity.
+	"SKULLFLY",		  // Special handling: skull in flight.
+	"FRET",			  // Flashing from a previous hit
+	"BOSSNOTRAP",	  // No Egg Trap after boss
+	"BOSSFLEE",		  // Boss is fleeing!
+	"BOSSDEAD",		  // Boss is dead! (Not necessarily fleeing, if a fleeing point doesn't exist.)
+	"AMBUSH",         // Alternate behaviour typically set by MTF_AMBUSH
+	"LINKDRAW",       // Draw vissprite of mobj immediately before/after tracer's vissprite (dependent on dispoffset and position)
+	"SHIELD",         // Thinker calls P_AddShield/P_ShieldLook (must be partnered with MF_SCENERY to use)
 	NULL
 };
 

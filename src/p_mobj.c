@@ -6392,7 +6392,7 @@ static boolean P_ShieldLook(mobj_t *thing, shieldtype_t shield)
 
 	// TODO: Make an MT_SHIELDORB which changes color/states to always match the appropriate shield,
 	// instead of having completely seperate mobjtypes.
-	if (shield != SH_FORCE)
+	if (!(shield & SH_FORCE))
 	{ // Regular shields check for themselves only
 		if ((shieldtype_t)(thing->target->player->powers[pw_shield] & SH_NOSTACK) != shield)
 		{
@@ -6406,7 +6406,7 @@ static boolean P_ShieldLook(mobj_t *thing, shieldtype_t shield)
 		return false;
 	}
 
-	if (shield == SH_FORCE && thing->movecount != (thing->target->player->powers[pw_shield] & SH_FORCEHP))
+	if (shield & SH_FORCE && thing->movecount != (thing->target->player->powers[pw_shield] & SH_FORCEHP))
 	{
 		thing->movecount = (thing->target->player->powers[pw_shield] & SH_FORCEHP);
 		if (thing->movecount < 1)
@@ -6458,7 +6458,7 @@ void P_RunShields(void)
 	// run shields
 	for (i = 0; i < numshields; i++)
 	{
-		P_ShieldLook(shields[i], shields[i]->info->speed);
+		P_ShieldLook(shields[i], shields[i]->threshold);
 		P_SetTarget(&shields[i], NULL);
 	}
 	numshields = 0;
@@ -6466,7 +6466,7 @@ void P_RunShields(void)
 
 static boolean P_AddShield(mobj_t *thing)
 {
-	shieldtype_t shield = thing->info->speed;
+	shieldtype_t shield = thing->threshold;
 
 	if (!thing->target || thing->target->health <= 0 || !thing->target->player
 		|| (thing->target->player->powers[pw_shield] & SH_NOSTACK) == SH_NONE || thing->target->player->powers[pw_super]
@@ -6476,7 +6476,7 @@ static boolean P_AddShield(mobj_t *thing)
 		return false;
 	}
 
-	if (shield != SH_FORCE)
+	if (!(shield & SH_FORCE))
 	{ // Regular shields check for themselves only
 		if ((shieldtype_t)(thing->target->player->powers[pw_shield] & SH_NOSTACK) != shield)
 		{
@@ -6743,6 +6743,11 @@ void P_MobjThinker(mobj_t *mobj)
 		if (P_MobjWasRemoved(mobj))
 			return;
 #endif
+
+		if (mobj->flags2 & MF2_SHIELD)
+			if (!P_AddShield(mobj))
+				return;
+
 		switch (mobj->type)
 		{
 			case MT_HOOP:
@@ -6802,12 +6807,11 @@ void P_MobjThinker(mobj_t *mobj)
 			case MT_PITY_ORB:
 			case MT_WHIRLWIND_ORB:
 			case MT_ARMAGEDDON_ORB:
-			case MT_FLAMEAURA_ORB:
-				if (!P_AddShield(mobj))
+				if (!(mobj->flags2 & MF2_SHIELD))
 					return;
 				break;
 			case MT_ATTRACT_ORB:
-				if (!P_AddShield(mobj))
+				if (!(mobj->flags2 & MF2_SHIELD))
 					return;
 				if (/*(mobj->target) -- the following is implicit by P_AddShield
 				&& (mobj->target->player)
@@ -6818,7 +6822,7 @@ void P_MobjThinker(mobj_t *mobj)
 				}
 				break;
 			case MT_ELEMENTAL_ORB:
-				if (!P_AddShield(mobj))
+				if (!(mobj->flags2 & MF2_SHIELD))
 					return;
 				if (mobj->tracer
 				/* && mobj->target -- the following is implicit by P_AddShield
@@ -6828,12 +6832,14 @@ void P_MobjThinker(mobj_t *mobj)
 				&& ((statenum_t)(mobj->tracer->state-states) < mobj->info->raisestate
 					|| (mobj->tracer->state->nextstate < mobj->info->raisestate && mobj->tracer->tics == 1)))
 				{
+					P_SetMobjState(mobj, mobj->info->painstate);
+					mobj->tics++;
 					P_SetMobjState(mobj->tracer, mobj->info->raisestate);
 					mobj->tracer->tics++;
 				}
 				break;
 			case MT_FORCE_ORB:
-				if (!P_AddShield(mobj))
+				if (!(mobj->flags2 & MF2_SHIELD))
 					return;
 				if (/*
 				&& mobj->target -- the following is implicit by P_AddShield
@@ -6849,8 +6855,26 @@ void P_MobjThinker(mobj_t *mobj)
 					whoosh->height = 42*FRACUNIT;
 					mobj->target->player->pflags &= ~PF_SHIELDABILITY; // prevent eternal whoosh
 				}
+			case MT_FLAMEAURA_ORB:
+				if (!(mobj->flags2 & MF2_SHIELD))
+					return;
+				mobj->angle = mobj->target->angle; // implicitly okay because of P_AddShield
+				if (mobj->tracer
+				/* && mobj->target -- the following is implicit by P_AddShield
+				&& mobj->target->player
+				&& (mobj->target->player->powers[pw_shield] & SH_NOSTACK) == SH_FLAMEAURA */
+				&& mobj->target->player->pflags & PF_SHIELDABILITY
+				&& ((statenum_t)(mobj->tracer->state-states) < mobj->info->raisestate
+					|| (mobj->tracer->state->nextstate < mobj->info->raisestate && mobj->tracer->tics == 1)))
+				{
+					P_SetMobjState(mobj, mobj->info->painstate);
+					mobj->tics++;
+					P_SetMobjState(mobj->tracer, mobj->info->raisestate);
+					mobj->tracer->tics++;
+				}
+				break;
 			case MT_BUBBLEWRAP_ORB:
-				if (!P_AddShield(mobj))
+				if (!(mobj->flags2 & MF2_SHIELD))
 					return;
 				if (mobj->tracer
 				/* && mobj->target -- the following is implicit by P_AddShield
@@ -6878,7 +6902,7 @@ void P_MobjThinker(mobj_t *mobj)
 				}
 				break;
 			case MT_THUNDERCOIN_ORB:
-				if (!P_AddShield(mobj))
+				if (!(mobj->flags2 & MF2_SHIELD))
 					return;
 				if (mobj->tracer
 				/* && mobj->target -- the following is implicit by P_AddShield
