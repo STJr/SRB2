@@ -6673,7 +6673,7 @@ static void P_MovePlayer(player_t *player)
 			P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
 	}
 
-	// If Springing (or nojumpspinning), but travelling DOWNWARD, change back! (nojumpspin also turns to fall once PF_THOKKED is added.)
+	// If Springing (or nojumpspinning), but travelling DOWNWARD, change back!
 	if ((player->panim == PA_SPRING && P_MobjFlip(player->mo)*player->mo->momz < 0)
 		|| ((((player->charflags & SF_NOJUMPSPIN) && (player->pflags & PF_JUMPED) && player->panim == PA_JUMP))
 			&& (P_MobjFlip(player->mo)*player->mo->momz < 0)))
@@ -8929,8 +8929,13 @@ void P_PlayerThink(player_t *player)
 		if (player->panim != PA_ABILITY)
 			P_SetPlayerMobjState(player->mo, S_PLAY_GLIDE);
 	}
-	else if ((player->pflags & PF_JUMPED) && !player->powers[pw_super] && player->panim != PA_JUMP && !(player->charflags & SF_NOJUMPSPIN))
-		P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
+	else if ((player->pflags & PF_JUMPED) && !player->powers[pw_super] && ((player->charflags & SF_NOJUMPSPIN && player->pflags & PF_FORCEJUMPDAMAGE && player->panim != PA_ROLL) || (!(player->charflags & SF_NOJUMPSPIN) && player->panim != PA_JUMP)))
+	{
+		if (!(player->charflags & SF_NOJUMPSPIN))
+			P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
+		else if (player->pflags & PF_FORCEJUMPDAMAGE)
+			P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
+	}
 
 	if (player->flashcount)
 		player->flashcount--;
