@@ -552,19 +552,26 @@ static void ST_DrawNightsOverlayNum(INT32 x /* right border */, INT32 y, INT32 a
 static void ST_drawDebugInfo(void)
 {
 	INT32 height = 192;
+	INT32 dist = 8;
 
-	if (!stplyr->mo)
+	if (!(stplyr->mo && cv_debug))
 		return;
+
+	if (cv_ticrate.value)
+	{
+		height -= 12;
+		dist >>= 1;
+	}
 
 	if (cv_debug & DBG_BASIC)
 	{
 		const fixed_t d = AngleFixed(stplyr->mo->angle);
-		V_DrawRightAlignedString(320, 168, V_MONOSPACE, va("X: %6d", stplyr->mo->x>>FRACBITS));
-		V_DrawRightAlignedString(320, 176, V_MONOSPACE, va("Y: %6d", stplyr->mo->y>>FRACBITS));
-		V_DrawRightAlignedString(320, 184, V_MONOSPACE, va("Z: %6d", stplyr->mo->z>>FRACBITS));
-		V_DrawRightAlignedString(320, 192, V_MONOSPACE, va("A: %6d", FixedInt(d)));
+		V_DrawRightAlignedString(320, height - 24, V_MONOSPACE, va("X: %6d", stplyr->mo->x>>FRACBITS));
+		V_DrawRightAlignedString(320, height - 16, V_MONOSPACE, va("Y: %6d", stplyr->mo->y>>FRACBITS));
+		V_DrawRightAlignedString(320, height - 8,  V_MONOSPACE, va("Z: %6d", stplyr->mo->z>>FRACBITS));
+		V_DrawRightAlignedString(320, height,      V_MONOSPACE, va("A: %6d", FixedInt(d)));
 
-		height = 152;
+		height -= (32+dist);
 	}
 
 	if (cv_debug & DBG_DETAILED)
@@ -575,11 +582,12 @@ static void ST_drawDebugInfo(void)
 		V_DrawRightAlignedString(320, height - 80,  V_MONOSPACE, va("AIR: %4d, %3d", stplyr->powers[pw_underwater], stplyr->powers[pw_spacetime]));
 
 		// Flags
-		V_DrawRightAlignedString(304-64, height - 72, V_MONOSPACE, "Flags:");
-		V_DrawString(304-60,             height - 72, (stplyr->jumping) ? V_GREENMAP : V_REDMAP, "JM");
-		V_DrawString(304-40,             height - 72, (stplyr->pflags & PF_JUMPED) ? V_GREENMAP : V_REDMAP, "JD");
-		V_DrawString(304-20,             height - 72, (stplyr->pflags & PF_SPINNING) ? V_GREENMAP : V_REDMAP, "SP");
-		V_DrawString(304,                height - 72, (stplyr->pflags & PF_STARTDASH) ? V_GREENMAP : V_REDMAP, "ST");
+		V_DrawRightAlignedString(304-74, height - 72, V_MONOSPACE, "PF:");
+		V_DrawString(304-72,             height - 72, (stplyr->jumping) ? V_GREENMAP : V_REDMAP, "JM");
+		V_DrawString(304-54,             height - 72, (stplyr->pflags & PF_JUMPED) ? V_GREENMAP : V_REDMAP, "JD");
+		V_DrawString(304-36,             height - 72, (stplyr->pflags & PF_SPINNING) ? V_GREENMAP : V_REDMAP, "SP");
+		V_DrawString(304-18,             height - 72, (stplyr->pflags & PF_STARTDASH) ? V_GREENMAP : V_REDMAP, "ST");
+		V_DrawString(304,                height - 72, (stplyr->pflags & PF_THOKKED) ? V_GREENMAP : V_REDMAP, "TH");
 
 		V_DrawRightAlignedString(320, height - 64, V_MONOSPACE, va("CEILZ: %6d", stplyr->mo->ceilingz>>FRACBITS));
 		V_DrawRightAlignedString(320, height - 56, V_MONOSPACE, va("FLOORZ: %6d", stplyr->mo->floorz>>FRACBITS));
@@ -593,7 +601,7 @@ static void ST_drawDebugInfo(void)
 		V_DrawRightAlignedString(320, height - 8,  V_MONOSPACE, va("MOMZ: %6d", stplyr->mo->momz>>FRACBITS));
 		V_DrawRightAlignedString(320, height,      V_MONOSPACE, va("SPEED: %6d", stplyr->speed>>FRACBITS));
 
-		height -= 120;
+		height -= (112+dist);
 	}
 
 	if (cv_debug & DBG_RANDOMIZER) // randomizer testing
@@ -606,12 +614,12 @@ static void ST_drawDebugInfo(void)
 		V_DrawRightAlignedString(320, height - 8,  V_MONOSPACE, va("Seed: %08x", P_GetRandSeed()));
 		V_DrawRightAlignedString(320, height,      V_MONOSPACE, va("==  :    .%04d", peekres));
 
-		height -= 32;
+		height -= (24+dist);
 	}
 
 	if (cv_debug & DBG_MEMORY)
 	{
-		V_DrawRightAlignedString(320, height,     V_MONOSPACE, va("Heap used: %7sKB", sizeu1(Z_TagsUsage(0, INT32_MAX)>>10)));
+		V_DrawRightAlignedString(320, height,     V_MONOSPACE, va("Heap: %7sKB", sizeu1(Z_TagsUsage(0, INT32_MAX)>>10)));
 	}
 }
 
