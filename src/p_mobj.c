@@ -3233,7 +3233,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 						mo->player->pflags &= ~PF_SPINNING;
 
 					if (!(mo->player->pflags & PF_GLIDING))
-						mo->player->pflags &= ~(PF_JUMPED|PF_JUMPDAMAGE);
+						mo->player->pflags &= ~(PF_JUMPED|PF_FORCEJUMPDAMAGE);
 
 					mo->player->pflags &= ~(PF_THOKKED|PF_CANCARRY/*|PF_GLIDING*/);
 					mo->player->secondjump = 0;
