@@ -27,6 +27,8 @@
 
 #define NOHUD if (hud_running) return luaL_error(L, "HUD rendering code should not call this function!");
 
+// uncomment if you want to test
+// #define LUA_BLOCKMAP
 
 boolean luaL_checkboolean(lua_State *L, int narg) {
 	luaL_checktype(L, narg, LUA_TBOOLEAN);
@@ -214,6 +216,103 @@ static int lib_pPointOnLineSide(lua_State *L)
 	lua_pushinteger(L, P_PointOnLineSide(x, y, line));
 	return 1;
 }
+
+#ifdef LUA_BLOCKMAP
+// auxillary function for lib_pSearchBlockmap_Objects
+static boolean lib_pSearchBlockmap_Objects_aux(lua_State *L, INT32 x, INT32 y, mobj_t *thing, int funcarg)
+{
+	mobj_t *mobj, *bnext = NULL;
+
+	if (x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight)
+		return true;
+
+	// Check interaction with the objects in the blockmap.
+	for (mobj = blocklinks[y*bmapwidth + x]; mobj; mobj = bnext)
+	{
+		P_SetTarget(&bnext, mobj->bnext); // We want to note our reference to bnext here incase it is MF_NOTHINK and gets removed!
+		lua_pushvalue(L, funcarg);
+		LUA_PushUserdata(L, thing, META_MOBJ);
+		LUA_PushUserdata(L, mobj, META_MOBJ);
+		if (lua_pcall(gL, 2, 1, 0)) {
+			if (cv_debug & DBG_LUA)
+				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+			lua_pop(gL, 1);
+			return false;
+		}
+		if (!lua_isnil(gL, -1))
+		{ // if nil, continue
+			if (lua_toboolean(gL, -1))
+				return false;
+		}
+		if (P_MobjWasRemoved(thing) // func just popped our thing, cannot continue.
+		|| (bnext && P_MobjWasRemoved(bnext))) // func just broke blockmap chain, cannot continue.
+		{
+			P_SetTarget(&bnext, NULL);
+			return true;
+		}
+	}
+	return true;
+}
+
+// P_SearchBlockmap_Objects
+// Lua-exclusive, but it kind of needs to be for best results
+static int lib_pSearchBlockmap_Objects(lua_State *L)
+{
+	int n = lua_gettop(L);
+	mobj_t *mobj;
+	INT32 xl, xh, yl, yh, bx, by;
+	fixed_t x1, x2, y1, y2;
+	int funcarg;
+
+	// the mobj we are searching around
+	mobj_t *mobj = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	if (!mobj)
+		return LUA_ErrInvalid(L, "mobj_t");
+
+	if (n > 2) // specific x/y ranges have been supplied
+	{
+		if (n < 6)
+			return luaL_error(L, "arguments 2 to 5 not all given (expected 4 fixed-point integers)");
+
+		x1 = luaL_checkfixed(L, 2);
+		x2 = luaL_checkfixed(L, 3);
+		y1 = luaL_checkfixed(L, 4);
+		y2 = luaL_checkfixed(L, 5);
+		funcarg = 6;
+	}
+	else // mobj and function only - search around mobj's radius by default
+	{
+		x1 = mobj->x - mobj->radius;
+		x2 = mobj->x + mobj->radius;
+		y1 = mobj->y - mobj->radius;
+		y2 = mobj->y + mobj->radius;
+		funcarg = 2;
+	}
+	luaL_checktype(L, funcarg, LUA_TFUNCTION);
+
+	xl = (unsigned)(x1 - bmaporgx - MAXRADIUS)>>MAPBLOCKSHIFT;
+	xh = (unsigned)(x2 - bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
+	yl = (unsigned)(y1 - bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
+	yh = (unsigned)(y2 - bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
+
+	BMBOUNDFIX(xl, xh, yl, yh);
+
+	for (bx = xl; bx <= xh; bx++)
+		for (by = yl; by <= yh; by++)
+		{
+			if (!lib_pSearchBlockmap_Objects_aux(L, bx, by, mobj, funcarg)){
+				lua_pushboolean(L, false);
+					return 1;
+			}
+			if (P_MobjWasRemoved(mobj)){
+				lua_pushboolean(L, false);
+					return 1;
+			}	
+		}
+	lua_pushboolean(L, true);
+	return 1;
+}
+#endif
 
 // P_ENEMY
 /////////////
@@ -2002,6 +2101,9 @@ static luaL_Reg lib[] = {
 	{"P_AproxDistance",lib_pAproxDistance},
 	{"P_ClosestPointOnLine",lib_pClosestPointOnLine},
 	{"P_PointOnLineSide",lib_pPointOnLineSide},
+#ifdef LUA_BLOCKMAP
+	{"P_SearchBlockmap_Objects",lib_pSearchBlockmap_Objects},
+#endif
 
 	// p_enemy
 	{"P_CheckMeleeRange", lib_pCheckMeleeRange},
