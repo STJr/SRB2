@@ -859,6 +859,18 @@ static void IdentifyVersion(void)
 			I_Error("File %s has been modified with non-music lumps",musicfile);
 	}
 #endif
+
+#if 1 // This section can be deleted when music_new is merged with music.dta
+	{
+		const char *musicfile = "music_new.dta";
+		const char *musicpath = va(pandf,srb2waddir,musicfile);
+		int ms = W_VerifyNMUSlumps(musicpath); // Don't forget the music!
+		if (ms == 1)
+			D_AddFile(musicpath);
+		else if (ms == 0)
+			I_Error("File %s has been modified with non-music lumps",musicfile);
+	}
+#endif
 }
 
 /* ======================================================================== */
