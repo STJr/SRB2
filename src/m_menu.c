@@ -4836,7 +4836,7 @@ static void M_SetupChoosePlayer(INT32 choice)
 	if (Playing() == false)
 	{
 		S_StopMusic();
-		S_ChangeMusicInternal("chrsel", true);
+		S_ChangeMusicInternal("_chsel", true);
 	}
 
 	SP_PlayerDef.prevMenu = currentMenu;
@@ -5271,7 +5271,7 @@ void M_DrawTimeAttackMenu(void)
 	lumpnum_t lumpnum;
 	char beststr[40];
 
-	S_ChangeMusicInternal("racent", true); // Eww, but needed for when user hits escape during demo playback
+	S_ChangeMusicInternal("_inter", true); // Eww, but needed for when user hits escape during demo playback
 
 	V_DrawPatchFill(W_CachePatchName("SRB2BACK", PU_CACHE));
 
@@ -5434,7 +5434,7 @@ static void M_TimeAttack(INT32 choice)
 	itemOn = tastart; // "Start" is selected.
 
 	G_SetGamestate(GS_TIMEATTACK);
-	S_ChangeMusicInternal("racent", true);
+	S_ChangeMusicInternal("_inter", true);
 }
 
 // Drawing function for Nights Attack
@@ -5444,7 +5444,7 @@ void M_DrawNightsAttackMenu(void)
 	lumpnum_t lumpnum;
 	char beststr[40];
 
-	S_ChangeMusicInternal("racent", true); // Eww, but needed for when user hits escape during demo playback
+	S_ChangeMusicInternal("_inter", true); // Eww, but needed for when user hits escape during demo playback
 
 	V_DrawPatchFill(W_CachePatchName("SRB2BACK", PU_CACHE));
 
@@ -5567,7 +5567,7 @@ static void M_NightsAttack(INT32 choice)
 	itemOn = nastart; // "Start" is selected.
 
 	G_SetGamestate(GS_TIMEATTACK);
-	S_ChangeMusicInternal("racent", true);
+	S_ChangeMusicInternal("_inter", true);
 }
 
 // Player has selected the "START" from the nights attack screen
@@ -5801,7 +5801,7 @@ static void M_ModeAttackEndGame(INT32 choice)
 	itemOn = currentMenu->lastOn;
 	G_SetGamestate(GS_TIMEATTACK);
 	modeattacking = ATTACKING_NONE;
-	S_ChangeMusicInternal("racent", true);
+	S_ChangeMusicInternal("_inter", true);
 	// Update replay availability.
 	CV_AddValue(&cv_nextmap, 1);
 	CV_AddValue(&cv_nextmap, -1);
@@ -7016,7 +7016,7 @@ static void M_ToggleDigital(void)
 		if (nodigimusic) return;
 		S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
 		S_StopMusic();
-		S_ChangeMusicInternal("lclear", false);
+		S_ChangeMusicInternal("_clear", false);
 		M_StartMessage(M_GetText("Digital Music Enabled\n"), NULL, MM_NOTHING);
 	}
 	else
@@ -7043,7 +7043,7 @@ static void M_ToggleMIDI(void)
 		I_InitMIDIMusic();
 		if (nomidimusic) return;
 		S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
-		S_ChangeMusicInternal("lclear", false);
+		S_ChangeMusicInternal("_clear", false);
 		M_StartMessage(M_GetText("MIDI Music Enabled\n"), NULL, MM_NOTHING);
 	}
 	else

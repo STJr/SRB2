@@ -565,7 +565,7 @@ extraemblem_t extraemblems[MAXEXTRAEMBLEMS] =
 	{"Game Complete",  "Complete 1P Mode",                    10, 'X', SKINCOLOR_BLUE, 0},
 	{"All Emeralds",   "Complete 1P Mode with all Emeralds",  11, 'V', SKINCOLOR_GREY, 0},
 	{"Perfect Bonus",  "Perfect Bonus on a non-secret stage", 30, 'P', SKINCOLOR_GOLD, 0},
-	{"SRB1 Remake",    "Complete SRB1 Remake",                21, 'O', SKINCOLOR_RUST, 0},
+	{"PLACEHOLDER", "PLACEHOLDER", 0, 'O', SKINCOLOR_RUST, 0},
 	{"NiGHTS Mastery", "Show your mastery of NiGHTS!",        22, 'W', SKINCOLOR_TEAL, 0},
 };
 
@@ -586,9 +586,9 @@ unlockable_t unlockables[MAXUNLOCKABLES] =
 
 	/* 08 */ {"BONUS LEVELS", "", 100, 0, SECRET_HEADER, 0, true, true, 0},
 
-	/* 09 */ {"SRB1 Remake",       "Collect 20 Emblems",   130, 40, SECRET_WARP,        101, false, false, 0},
+	/* 09 */ {"PLACEHOLDER", "PLACEHOLDER", 0, 0, SECRET_NONE, 0, true, true, 0},
 	/* 10 */ {"Mario Koopa Blast", "Collect 60 Emblems",   110, 42, SECRET_WARP,         30, false, false, 0},
-	/* 11 */ {"SRB1 Level Select", "Complete SRB1 Remake", 140, 21, SECRET_LEVELSELECT,   2, false,  true, 0},
+	/* 11 */ {"PLACEHOLDER", "PLACEHOLDER", 0, 0, SECRET_NONE, 0, true, true, 0},
 
 	/* 12 */ {"Spring Hill Zone", "Collect 100 Emblems",          0, 44, SECRET_NONE, 0, false, false, 0},
 	/* 13 */ {"Black Hole",       "A Rank in all Special Stages", 0, 50, SECRET_NONE, 0, false, true, 0},
@@ -623,9 +623,6 @@ void M_SetupDefaultConditionSets(void)
 
 	// --  20: Beat AGZ
 	M_AddRawCondition(20, 1, UC_MAPBEATEN, 40, 0, 0);
-
-	// --  21: Beat SRB1 Remake
-	M_AddRawCondition(21, 1, UC_MAPBEATEN, 132, 0, 0);
 
 	// --  22: Beat Black Hole
 	M_AddRawCondition(22, 1, UC_MAPBEATEN, 57, 0, 0);
