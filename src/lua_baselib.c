@@ -28,7 +28,7 @@
 #define NOHUD if (hud_running) return luaL_error(L, "HUD rendering code should not call this function!");
 
 // uncomment if you want to test
-// #define LUA_BLOCKMAP
+ #define LUA_BLOCKMAP
 
 boolean luaL_checkboolean(lua_State *L, int narg) {
 	luaL_checktype(L, narg, LUA_TBOOLEAN);
@@ -218,6 +218,7 @@ static int lib_pPointOnLineSide(lua_State *L)
 }
 
 #ifdef LUA_BLOCKMAP
+static boolean blockfuncerror = false;
 // auxillary function for lib_pSearchBlockmap_Objects
 static boolean lib_pSearchBlockmap_Objects_aux(lua_State *L, INT32 x, INT32 y, mobj_t *thing, int funcarg)
 {
@@ -234,10 +235,11 @@ static boolean lib_pSearchBlockmap_Objects_aux(lua_State *L, INT32 x, INT32 y, m
 		LUA_PushUserdata(L, thing, META_MOBJ);
 		LUA_PushUserdata(L, mobj, META_MOBJ);
 		if (lua_pcall(gL, 2, 1, 0)) {
-			if (cv_debug & DBG_LUA)
+			if (!blockfuncerror || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
-			return false;
+			blockfuncerror = true;
+			return true;
 		}
 		if (!lua_isnil(gL, -1))
 		{ // if nil, continue
@@ -263,9 +265,10 @@ static int lib_pSearchBlockmap_Objects(lua_State *L)
 	INT32 xl, xh, yl, yh, bx, by;
 	fixed_t x1, x2, y1, y2;
 	int funcarg;
+	boolean retval = true;
 
 	// the mobj we are searching around
-	mobj_t *mobj = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	mobj = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
 	if (!mobj)
 		return LUA_ErrInvalid(L, "mobj_t");
 
@@ -297,19 +300,18 @@ static int lib_pSearchBlockmap_Objects(lua_State *L)
 
 	BMBOUNDFIX(xl, xh, yl, yh);
 
+	blockfuncerror = false; // reset
 	for (bx = xl; bx <= xh; bx++)
 		for (by = yl; by <= yh; by++)
 		{
-			if (!lib_pSearchBlockmap_Objects_aux(L, bx, by, mobj, funcarg)){
-				lua_pushboolean(L, false);
-					return 1;
-			}
+			if (!lib_pSearchBlockmap_Objects_aux(L, bx, by, mobj, funcarg))
+				retval = false;
 			if (P_MobjWasRemoved(mobj)){
 				lua_pushboolean(L, false);
-					return 1;
+				return 1;
 			}	
 		}
-	lua_pushboolean(L, true);
+	lua_pushboolean(L, retval);
 	return 1;
 }
 #endif
