@@ -3135,7 +3135,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 		else
 		{
 			player->health -= damage; // mirror mobj health here
-			//target->player->powers[pw_flashing] = flashingtics;
+
 			if (damage > 0) // don't spill emeralds/ammo/panels for shield damage
 				P_PlayerRingBurst(player, damage);
 		}
