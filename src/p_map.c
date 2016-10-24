@@ -1052,9 +1052,10 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		else if (thing->z - FixedMul(FRACUNIT, thing->scale) <= tmthing->z + tmthing->height
 			&& thing->z + thing->height + FixedMul(FRACUNIT, thing->scale) >= tmthing->z)
 		{
-			boolean elementalpierce = (((tmthing->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL
-			|| (tmthing->player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP)
-				&& (tmthing->player->pflags & PF_SHIELDABILITY));
+			// 0 = none, 1 = elemental pierce, 2 = bubble bounce
+			UINT8 elementalpierce = (((tmthing->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL || (tmthing->player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP) && (tmthing->player->pflags & PF_SHIELDABILITY)
+			? (((tmthing->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL) ? 1 : 2)
+			: 0);
 			if (thing->flags & MF_MONITOR
 				&& (tmthing->player->pflags & (PF_SPINNING|PF_GLIDING)
 				|| ((tmthing->player->pflags & PF_JUMPED)
@@ -1066,6 +1067,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 					&& (P_MobjFlip(tmthing)*(tmthing->z - (thing->z + thing->height/2)) > 0) && (P_MobjFlip(tmthing)*tmthing->momz < 0))
 				|| elementalpierce))
 			{
+				player_t *player = tmthing->player;
 				SINT8 flipval = P_MobjFlip(thing); // Save this value in case monitor gets removed.
 				fixed_t *momz = &tmthing->momz; // tmthing gets changed by P_DamageMobj, so we need a new pointer?! X_x;;
 				fixed_t *z = &tmthing->z; // aau.
@@ -1074,9 +1076,14 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				if ((P_MobjWasRemoved(thing) // Monitor was removed
 					|| !thing->health) // or otherwise popped
 				&& (flipval*(*momz) < 0) // monitor is on the floor and you're going down, or on the ceiling and you're going up
-				&& !elementalpierce) // you're not piercing through the monitor...
-					*momz = -*momz; // Therefore, you should be thrust in the opposite direction, vertically.
-				if (!(elementalpierce && thing->flags & MF_GRENADEBOUNCE)) // prevent gold monitor clipthrough.
+				&& (elementalpierce != 1)) // you're not piercing through the monitor...
+				{
+					if (elementalpierce == 2)
+						P_DoBubbleBounce(player);
+					else
+						*momz = -*momz; // Therefore, you should be thrust in the opposite direction, vertically.
+				}
+				if (!(elementalpierce == 1 && thing->flags & MF_GRENADEBOUNCE)) // prevent gold monitor clipthrough.
 					return false;
 				else
 					*z -= *momz; // to ensure proper collision.

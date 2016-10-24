@@ -777,6 +777,16 @@ static int lib_pDoJumpShield(lua_State *L)
 	return 0;
 }
 
+static int lib_pDoBubbleBounce(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	NOHUD
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	P_DoBubbleBounce(player);
+	return 0;
+}
+
 static int lib_pBlackOw(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
@@ -2048,6 +2058,7 @@ static luaL_Reg lib[] = {
 	{"P_GivePlayerLives",lib_pGivePlayerLives},
 	{"P_ResetScore",lib_pResetScore},
 	{"P_DoJumpShield",lib_pDoJumpShield},
+	{"P_DoBubbleBounce",lib_pDoBubbleBounce},
 	{"P_BlackOw",lib_pBlackOw},
 	{"P_ElementalFire",lib_pElementalFire},
 	{"P_DoPlayerExit",lib_pDoPlayerExit},

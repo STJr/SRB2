@@ -3236,6 +3236,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 						mo->player->pflags &= ~(PF_JUMPED|PF_FORCEJUMPDAMAGE);
 
 					mo->player->pflags &= ~(PF_THOKKED|PF_CANCARRY/*|PF_GLIDING*/);
+					mo->player->jumping = 0;
 					mo->player->secondjump = 0;
 					mo->player->glidetime = 0;
 					mo->player->climbing = 0;
@@ -3265,18 +3266,10 @@ static void P_PlayerZMovement(mobj_t *mo)
 						}
 						else if ((mo->player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP) // Bubble shield's bounce attack.
 						{
-							S_StartSound(mo, sfx_s3k44);
-							P_DoJump(mo->player, false);
-							if (mo->player->charflags & SF_NOJUMPSPIN)
-								P_SetPlayerMobjState(mo, S_PLAY_FALL);
-							mo->player->pflags |= PF_THOKKED;
-							mo->player->secondjump = UINT8_MAX;
-							mo->momz = FixedMul(mo->momz, 5*FRACUNIT/4);
+							P_DoBubbleBounce(mo->player);
 							clipmomz = false;
 						}
 					}
-
-					mo->player->jumping = 0; // done down here because of bubblewrap
 				}
 			}
 			if (!(mo->player->pflags & PF_SPINNING))

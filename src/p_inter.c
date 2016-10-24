@@ -240,7 +240,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 {
 	player_t *player;
 	INT32 i;
-	boolean elementalpierce;
+	UINT8 elementalpierce;
 
 	if (objectplacing)
 		return;
@@ -295,7 +295,10 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		return;
 #endif
 
-	elementalpierce = (((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL || (player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP) && (player->pflags & PF_SHIELDABILITY));
+	// 0 = none, 1 = elemental pierce, 2 = bubble bounce
+	elementalpierce = (((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL || (player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP) && (player->pflags & PF_SHIELDABILITY)
+	? (((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL) ? 1 : 2)
+	: 0);
 
 	if (special->flags & MF_BOSS)
 	{
@@ -313,8 +316,13 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		|| player->powers[pw_invulnerability] || player->powers[pw_super]
 		|| elementalpierce) // Do you possess the ability to subdue the object?
 		{
-			if ((P_MobjFlip(toucher)*toucher->momz < 0) && !elementalpierce)
-				toucher->momz = -toucher->momz;
+			if ((P_MobjFlip(toucher)*toucher->momz < 0) && (elementalpierce != 1))
+			{
+				if (elementalpierce == 2)
+					P_DoBubbleBounce(player);
+				else
+					toucher->momz = -toucher->momz;
+			}
 			toucher->momx = -toucher->momx;
 			toucher->momy = -toucher->momy;
 			P_DamageMobj(special, toucher, toucher, 1, 0);
@@ -359,8 +367,13 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		|| ((player->charflags & SF_STOMPDAMAGE) && (P_MobjFlip(toucher)*(toucher->z - (special->z + special->height/2)) > 0) && (P_MobjFlip(toucher)*toucher->momz < 0))
 		|| player->powers[pw_invulnerability] || player->powers[pw_super]) // Do you possess the ability to subdue the object?
 		{
-			if ((P_MobjFlip(toucher)*toucher->momz < 0) && !elementalpierce)
-				toucher->momz = -toucher->momz;
+			if ((P_MobjFlip(toucher)*toucher->momz < 0) && (elementalpierce != 1))
+			{
+				if (elementalpierce == 2)
+					P_DoBubbleBounce(player);
+				else
+					toucher->momz = -toucher->momz;
+			}
 
 			P_DamageMobj(special, toucher, toucher, 1, 0);
 		}

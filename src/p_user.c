@@ -3928,6 +3928,24 @@ void P_DoJumpShield(player_t *player)
 }
 
 //
+// P_DoBubbleBounce
+//
+// Bubblewrap shield landing handling
+//
+void P_DoBubbleBounce(player_t *player)
+{
+	player->pflags &= ~(PF_JUMPED|PF_SHIELDABILITY);
+	S_StartSound(player->mo, sfx_s3k44);
+	P_DoJump(player, false);
+	if (player->charflags & SF_NOJUMPSPIN)
+		P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
+	player->pflags |= PF_THOKKED;
+	player->jumping = 0;
+	player->secondjump = UINT8_MAX;
+	player->mo->momz = FixedMul(player->mo->momz, 5*FRACUNIT/4);
+}
+
+//
 // P_Telekinesis
 //
 // Morph's fancy stuff-moving character ability
