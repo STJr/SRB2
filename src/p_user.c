@@ -6994,7 +6994,7 @@ static void P_MovePlayer(player_t *player)
 				{
 					player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
 #if 1 // almost imperceptible hop for the purposes of aligning with the aura for as long as possible
-					P_SetObjectMomZ(player->mo, -4*P_GetMobjGravity(player->mo), false);
+					P_SetObjectMomZ(player->mo, FixedDiv(-4*P_GetMobjGravity(player->mo), player->mo->scale), false);
 #else
 					player->mo->momz = // intentionally carries to post-endif line as multiple-assignment
 #endif

@@ -6819,7 +6819,6 @@ void P_MobjThinker(mobj_t *mobj)
 					whoosh->destscale = whoosh->scale<<1;
 					whoosh->fuse = 10;
 					whoosh->flags |= MF_NOCLIPHEIGHT;
-					whoosh->height = 42*FRACUNIT;
 					mobj->target->player->pflags &= ~PF_SHIELDABILITY; // prevent eternal whoosh
 				}
 			case MT_FLAMEAURA_ORB:
