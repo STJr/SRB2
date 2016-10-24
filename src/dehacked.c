@@ -6772,7 +6772,9 @@ static const char *const PLAYERFLAG_LIST[] = {
 	/*** misc ***/
 	"FORCESTRAFE", // Translate turn inputs into strafe inputs
 	"ANALOGMODE", // Analog mode?
+	"CANCARRY", // Can carry?
 	"SHIELDABILITY", // Thokked with shield ability
+	"FORCEJUMPDAMAGE", // Force jump damage
 
 	NULL // stop loop here.
 };
