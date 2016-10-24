@@ -6978,10 +6978,14 @@ static void P_MovePlayer(player_t *player)
 	//STUFF!                 //
 	///////////////////////////
 
-	if (player->pflags & PF_JUMPED)
+	if (player->pflags & PF_JUMPED && !player->exiting && player->mo->health)
 	{
 		if (cmd->buttons & BT_USE) // Spin button effects
 		{
+#ifdef HAVE_BLUA
+			if (LUAh_ShieldSpecial(player))
+				return;
+#endif
 			if (!(player->pflags & (PF_USEDOWN|PF_GLIDING|PF_SLIDING|PF_SHIELDABILITY)) // If the player is not holding down BT_USE, or having used an ability previously
 				&& (!(player->pflags & PF_THOKKED) || ((player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP && player->secondjump == UINT8_MAX))) // thokked is optional if you're bubblewrapped
 			{

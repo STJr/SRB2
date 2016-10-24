@@ -44,6 +44,7 @@ enum hook {
 	hook_HurtMsg,
 	hook_PlayerSpawn,
 	hook_ShieldSpawn,
+	hook_ShieldSpecial,
 
 	hook_MAX // last hook
 };
@@ -79,5 +80,6 @@ boolean LUAh_PlayerMsg(int source, int target, int flags, char *msg); // Hook fo
 boolean LUAh_HurtMsg(player_t *player, mobj_t *inflictor, mobj_t *source); // Hook for hurt messages
 #define LUAh_PlayerSpawn(player) LUAh_PlayerHook(player, hook_PlayerSpawn) // Hook for G_SpawnPlayer
 #define LUAh_ShieldSpawn(player) LUAh_PlayerHook(player, hook_ShieldSpawn) // Hook for P_SpawnShieldOrb
+#define LUAh_ShieldSpecial(player) LUAh_PlayerHook(player, hook_ShieldSpecial) // Hook for shield abilities
 
 #endif
