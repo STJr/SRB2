@@ -7428,7 +7428,7 @@ void T_Pusher(pusher_t *p)
 			}
 			else
 			{
-				if (top < thing->z || referrer->floorheight > (thing->z + (thing->height >> 1)))
+				if (top < thing->z || bottom > (thing->z + (thing->height >> 1)))
 					continue;
 				if (thing->z + thing->height > top)
 					touching = true;
