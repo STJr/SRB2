@@ -812,7 +812,7 @@ static void ST_drawFirstPersonHUD(void)
 		return;
 
 	// Graue 06-18-2004: no V_NOSCALESTART, no SCX, no SCY, snap to right
-	if (player->powers[pw_shield] & SH_FORCE)
+	if ((player->powers[pw_shield] & SH_NOSTACK & ~SH_FORCEHP) == SH_FORCE)
 	{
 		if ((player->powers[pw_shield] & SH_FORCEHP) > 0 || leveltime & 1)
 			p = forceshield;
