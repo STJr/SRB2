@@ -6396,6 +6396,7 @@ static boolean P_ShieldLook(mobj_t *thing, shieldtype_t shield)
 	thing->eflags = (thing->eflags & ~MFE_VERTICALFLIP)|(thing->target->eflags & MFE_VERTICALFLIP);
 
 	P_SetScale(thing, FixedMul(thing->target->scale, thing->target->player->shieldscale));
+	thing->destscale = thing->scale;
 	P_UnsetThingPosition(thing);
 	thing->x = thing->target->x;
 	thing->y = thing->target->y;
@@ -6817,6 +6818,8 @@ void P_MobjThinker(mobj_t *mobj)
 					mobj_t *whoosh = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_GHOST); // done here so the offset is correct
 					P_SetMobjState(whoosh, mobj->info->raisestate);
 					whoosh->destscale = whoosh->scale<<1;
+					whoosh->scalespeed = FixedMul(whoosh->scalespeed, whoosh->scale);
+					whoosh->height = 38*whoosh->scale;
 					whoosh->fuse = 10;
 					whoosh->flags |= MF_NOCLIPHEIGHT;
 					mobj->target->player->pflags &= ~PF_SHIELDABILITY; // prevent eternal whoosh
