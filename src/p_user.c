@@ -793,7 +793,6 @@ void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor)
 	if (player->powers[pw_carry] == CR_ROPEHANG)
 		P_SetTarget(&player->mo->tracer, NULL);
 
-	if (!mariomode)
 	{
 		angle_t ang;
 		fixed_t fallbackspeed;
@@ -860,12 +859,6 @@ void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor)
 	}
 
 	player->powers[pw_flashing] = flashingtics;
-	if (mariomode)
-	{
-		player->powers[pw_marioflashing] = MARIOFLASHINGTICS;
-		player->powers[pw_flashing] += MARIOFLASHINGTICS;
-		player->mo->movecount = player->powers[pw_shield];
-	}
 
 	if (player->timeshit != UINT8_MAX)
 		++player->timeshit;
@@ -928,7 +921,7 @@ void P_GivePlayerRings(player_t *player, INT32 num_rings)
 	{
 		INT32 gainlives = 0;
 
-		while ((mariomode || player->xtralife < maxXtraLife) && player->health > 100 * (player->xtralife+1))
+		while (player->xtralife < maxXtraLife && player->health > 100 * (player->xtralife+1))
 		{
 			++gainlives;
 			++player->xtralife;
@@ -939,13 +932,6 @@ void P_GivePlayerRings(player_t *player, INT32 num_rings)
 			P_GivePlayerLives(player, gainlives);
 			P_PlayLivesJingle(player);
 		}
-	}
-
-	if (mariomode && player->health > 100 && !G_RingSlingerGametype() && !G_TagGametype())
-	{
-		player->mo->health = 1 + (player->health - 1) % 100;
-		player->health = player->mo->health;
-		player->xtralife = 0;
 	}
 }
 
@@ -1371,13 +1357,6 @@ void P_SpawnShieldOrb(player_t *player)
 	case SH_THUNDERCOIN:
 		orbtype = MT_THUNDERCOIN_ORB;
 		break;
-	case SH_FIREFLOWER:
-		if (!(player->powers[pw_super] || (mariomode && player->powers[pw_invulnerability])))
-		{
-			player->mo->color = SKINCOLOR_WHITE;
-			G_GhostAddColor(GHC_FIREFLOWER);
-		}
-		return;
 	default:
 		return;
 	}
@@ -1440,32 +1419,17 @@ void P_SpawnShieldOrb(player_t *player)
 // the non-stack layer of shields thoroughly,
 // then adds the desired one.
 //
-// Returns whether to play a normal sound or an itemup.
-//
-boolean P_SwitchShield(player_t *player, UINT16 shieldtype)
+void P_SwitchShield(player_t *player, UINT16 shieldtype)
 {
 	boolean donthavealready = (shieldtype & SH_FORCE)
 	? (!(player->powers[pw_shield] & SH_FORCE) || (player->powers[pw_shield] & SH_FORCEHP) < (shieldtype & ~SH_FORCE))
 	: ((player->powers[pw_shield] & SH_NOSTACK) != shieldtype);
-
-	if (mariomode)
-	{
-		mobj_t *scoremobj = P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z + (player->mo->height / 2), MT_SCORE);
-		P_SetMobjState(scoremobj, mobjinfo[MT_SCORE].spawnstate+3); // 1000
-		P_AddPlayerScore(player, 1000);
-	}
 
 	if (donthavealready)
 	{
 		boolean stopshieldability = (shieldtype & SH_FORCE)
 		? (!(player->powers[pw_shield] & SH_FORCE))
 		: true;
-
-		if (mariomode)
-		{
-			player->mo->movecount = player->powers[pw_shield];
-			player->powers[pw_marioflashing] = MARIOFLASHINGTICS;
-		}
 
 		// Just in case.
 		if (stopshieldability && player->pflags & PF_SHIELDABILITY)
@@ -1474,14 +1438,7 @@ boolean P_SwitchShield(player_t *player, UINT16 shieldtype)
 			player->homing = 0;
 		}
 
-		if ((player->powers[pw_shield] & SH_NOSTACK) == SH_FIREFLOWER // it's implicit that the new shield isn't a fireflower
-		&& !(player->powers[pw_super] || (mariomode && player->powers[pw_invulnerability])))
-		{
-			player->mo->color = player->skincolor;
-			G_GhostAddColor(GHC_NORMAL);
-		}
-
-		player->powers[pw_shield] = shieldtype|(mariomode ? SH_MUSHROOM : player->powers[pw_shield] & SH_STACK);
+		player->powers[pw_shield] = shieldtype|(player->powers[pw_shield] & SH_STACK);
 		P_SpawnShieldOrb(player);
 
 		if (shieldtype & SH_PROTECTWATER)
@@ -1497,9 +1454,7 @@ boolean P_SwitchShield(player_t *player, UINT16 shieldtype)
 				P_RestoreMusic(player);
 			}
 		}
-		return true;
 	}
-	return (!mariomode);
 }
 
 //
@@ -2203,7 +2158,7 @@ static void P_CheckInvincibilityTimer(player_t *player)
 		{
 			if (mariomode)
 			{
-				if ((player->powers[pw_shield] & SH_NOSTACK) == SH_FIREFLOWER)
+				if ((player->powers[pw_shield] & SH_STACK) == SH_FIREFLOWER)
 				{
 					player->mo->color = SKINCOLOR_WHITE;
 					G_GhostAddColor(GHC_FIREFLOWER);
@@ -3227,7 +3182,7 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 
 	if (cmd->buttons & BT_ATTACK || cmd->buttons & BT_FIRENORMAL)
 	{
-		if (!(player->pflags & PF_ATTACKDOWN) && (player->powers[pw_shield] & SH_NOSTACK) == SH_FIREFLOWER && !player->climbing)
+		if (!(player->pflags & PF_ATTACKDOWN) && (player->powers[pw_shield] & SH_STACK) == SH_FIREFLOWER && !player->climbing)
 		{
 			player->pflags |= PF_ATTACKDOWN;
 			P_SpawnPlayerMissile(player->mo, MT_FIREBALL, 0);
@@ -8594,9 +8549,9 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	dist = FixedHypot(f1, f2);
 
 	if (mo->eflags & MFE_VERTICALFLIP)
-		angle = R_PointToAngle2(0, thiscam->z + thiscam->height, dist, mo->z + mo->height - (P_GetPlayerHeight(player) << shortmario(player)));
+		angle = R_PointToAngle2(0, thiscam->z + thiscam->height, dist, mo->z + mo->height - P_GetPlayerHeight(player));
 	else
-		angle = R_PointToAngle2(0, thiscam->z, dist, mo->z + (P_GetPlayerHeight(player) << shortmario(player)));
+		angle = R_PointToAngle2(0, thiscam->z, dist, mo->z + P_GetPlayerHeight(player));
 	if (player->playerstate != PST_DEAD)
 		angle += (focusaiming < ANGLE_180 ? focusaiming/2 : InvAngle(InvAngle(focusaiming)/2)); // overcomplicated version of '((signed)focusaiming)/2;'
 
@@ -9335,7 +9290,7 @@ void P_PlayerThink(player_t *player)
 		player->losstime--;
 
 	// Flash player after being hit.
-	if (player->powers[pw_flashing] > 0 && player->powers[pw_flashing] < flashingtics && (leveltime & 1) && !player->powers[pw_marioflashing])
+	if (player->powers[pw_flashing] > 0 && player->powers[pw_flashing] < flashingtics && (leveltime & 1))
 		player->mo->flags2 |= MF2_DONTDRAW;
 	else
 		player->mo->flags2 &= ~MF2_DONTDRAW;

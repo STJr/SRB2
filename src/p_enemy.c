@@ -3061,10 +3061,9 @@ void A_JumpShield(mobj_t *actor)
 
 	player = actor->target->player;
 
-	if (P_SwitchShield(player, SH_WHIRLWIND))
-		S_StartSound(player->mo, actor->info->seesound);
-	else
-		S_StartSound(player->mo, sfx_itemup);
+	P_SwitchShield(player, SH_WHIRLWIND);
+
+	S_StartSound(player->mo, actor->info->seesound);
 }
 
 // Function: A_RingShield
@@ -3090,10 +3089,9 @@ void A_RingShield(mobj_t *actor)
 
 	player = actor->target->player;
 
-	if (P_SwitchShield(player, SH_ATTRACT))
-		S_StartSound(player->mo, actor->info->seesound);
-	else
-		S_StartSound(player->mo, sfx_itemup);
+	P_SwitchShield(player, SH_ATTRACT);
+
+	S_StartSound(player->mo, actor->info->seesound);
 }
 
 // Function: A_RingBox
@@ -3293,7 +3291,8 @@ void A_BombShield(mobj_t *actor)
 		P_BlackOw(player);
 
 	// Now we know for certain that we don't have a bomb shield, so add one. :3
-	P_SwitchShield(player, SH_ARMAGEDDON); // will never return false, so no need for sound test
+	P_SwitchShield(player, SH_ARMAGEDDON);
+
 	S_StartSound(player->mo, actor->info->seesound);
 }
 
@@ -3320,10 +3319,9 @@ void A_WaterShield(mobj_t *actor)
 
 	player = actor->target->player;
 
-	if (P_SwitchShield(player, SH_ELEMENTAL))
-		S_StartSound(player->mo, actor->info->seesound);
-	else
-		S_StartSound(player->mo, sfx_itemup);
+	P_SwitchShield(player, SH_ELEMENTAL);
+
+	S_StartSound(player->mo, actor->info->seesound);
 }
 
 // Function: A_ForceShield
@@ -3356,10 +3354,9 @@ void A_ForceShield(mobj_t *actor)
 
 	player = actor->target->player;
 
-	if (P_SwitchShield(player, SH_FORCE|locvar1))
-		S_StartSound(player->mo, actor->info->seesound);
-	else
-		S_StartSound(player->mo, sfx_itemup);
+	P_SwitchShield(player, SH_FORCE|locvar1);
+
+	S_StartSound(player->mo, actor->info->seesound);
 }
 
 // Function: A_PityShield
@@ -3389,10 +3386,9 @@ void A_PityShield(mobj_t *actor)
 
 	player = actor->target->player;
 
-	if (P_SwitchShield(player, SH_PITY))
-		S_StartSound(player->mo, actor->info->seesound);
-	else
-		S_StartSound(player->mo, sfx_itemup);
+	P_SwitchShield(player, SH_PITY);
+
+	S_StartSound(player->mo, actor->info->seesound);
 }
 
 // Function: A_FlameShield
@@ -3418,10 +3414,9 @@ void A_FlameShield(mobj_t *actor)
 
 	player = actor->target->player;
 
-	if (P_SwitchShield(player, SH_FLAMEAURA))
-		S_StartSound(player->mo, actor->info->seesound);
-	else
-		S_StartSound(player->mo, sfx_itemup);
+	P_SwitchShield(player, SH_FLAMEAURA);
+
+	S_StartSound(player->mo, actor->info->seesound);
 }
 
 // Function: A_BubbleShield
@@ -3447,10 +3442,9 @@ void A_BubbleShield(mobj_t *actor)
 
 	player = actor->target->player;
 
-	if (P_SwitchShield(player, SH_BUBBLEWRAP))
-		S_StartSound(player->mo, actor->info->seesound);
-	else
-		S_StartSound(player->mo, sfx_itemup);
+	P_SwitchShield(player, SH_BUBBLEWRAP);
+
+	S_StartSound(player->mo, actor->info->seesound);
 }
 
 // Function: A_ThunderShield
@@ -3476,10 +3470,9 @@ void A_ThunderShield(mobj_t *actor)
 
 	player = actor->target->player;
 
-	if (P_SwitchShield(player, SH_THUNDERCOIN))
-		S_StartSound(player->mo, actor->info->seesound);
-	else
-		S_StartSound(player->mo, sfx_itemup);
+	P_SwitchShield(player, SH_THUNDERCOIN);
+
+	S_StartSound(player->mo, actor->info->seesound);
 }
 
 

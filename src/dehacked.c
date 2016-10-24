@@ -7126,7 +7126,6 @@ struct {
 	{"SH_PITY",SH_PITY},
 	{"SH_WHIRLWIND",SH_WHIRLWIND},
 	{"SH_ARMAGEDDON",SH_ARMAGEDDON},
-	{"SH_FIREFLOWER",SH_FIREFLOWER},
 	// normal shields that use flags
 	{"SH_ATTRACT",SH_ATTRACT},
 	{"SH_ELEMENTAL",SH_ELEMENTAL},
@@ -7138,7 +7137,7 @@ struct {
 	{"SH_FORCE",SH_FORCE},
 	{"SH_FORCEHP",SH_FORCEHP}, // to be used as a bitmask only
 	// Mostly for use with Mario mode.
-	{"SH_MUSHROOM", SH_MUSHROOM},
+	{"SH_FIREFLOWER", SH_FIREFLOWER},
 	{"SH_STACK",SH_STACK},
 	{"SH_NOSTACK",SH_NOSTACK},
 

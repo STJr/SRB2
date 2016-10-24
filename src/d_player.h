@@ -194,7 +194,6 @@ typedef enum
 	SH_PITY = 1, // the world's most basic shield ever, given to players who suck at Match
 	SH_WHIRLWIND,
 	SH_ARMAGEDDON,
-	SH_FIREFLOWER,
 
 	// normal shields that use flags
 	SH_ATTRACT = SH_PROTECTELECTRIC,
@@ -210,9 +209,9 @@ typedef enum
 	SH_FORCEHP = 0xFF, // to be used as a bitmask only
 
 	// Mostly for use with Mario mode.
-	SH_MUSHROOM = 0x200,
+	SH_FIREFLOWER = 0x200,
 
-	SH_STACK = SH_MUSHROOM, // second-layer shields
+	SH_STACK = SH_FIREFLOWER, // second-layer shields
 	SH_NOSTACK = ~SH_STACK
 } shieldtype_t; // pw_shield
 
@@ -241,7 +240,6 @@ typedef enum
 	pw_underwater, // underwater timer
 	pw_spacetime, // In space, no one can hear you spin!
 	pw_extralife, // Extra Life timer
-	pw_marioflashing, // Getting/losing powerup
 
 	pw_super, // Are you super?
 	pw_gravityboots, // gravity boots

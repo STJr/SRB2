@@ -1141,27 +1141,16 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		case MT_FIREFLOWER:
 			if (player->bot)
 				return;
-			{
-				mobj_t *scoremobj = P_SpawnMobj(toucher->x, toucher->y, toucher->z + (toucher->height / 2), MT_SCORE);
-				P_SetMobjState(scoremobj, mobjinfo[MT_SCORE].spawnstate+3); // 1000
-				P_AddPlayerScore(player, 1000);
-			}
 
-			if ((player->powers[pw_shield] & SH_NOSTACK) == SH_FIREFLOWER)
-			{
-				S_StartSound(toucher, sfx_itemup);
-				break;
-			}
-			else
-				S_StartSound(toucher, sfx_mario3);
+			S_StartSound(toucher, sfx_mario3);
 
-			if (mariomode)
+			player->powers[pw_shield] = (player->powers[pw_shield] & SH_NOSTACK)|SH_FIREFLOWER;
+
+			if (!(player->powers[pw_super] || (mariomode && player->powers[pw_invulnerability])))
 			{
-				toucher->movecount = player->powers[pw_shield];
-				player->powers[pw_marioflashing] = MARIOFLASHINGTICS;
+				player->mo->color = SKINCOLOR_WHITE;
+				G_GhostAddColor(GHC_FIREFLOWER);
 			}
-			player->powers[pw_shield] = (mariomode ? SH_MUSHROOM : player->powers[pw_shield] & SH_STACK)|SH_FIREFLOWER;
-			P_SpawnShieldOrb(player);
 
 			break;
 
@@ -1225,21 +1214,6 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			}
 
 			S_StartSound(toucher, special->info->painsound);
-
-			if (mariomode)
-			{
-				mobj_t *scoremobj = P_SpawnMobj(toucher->x, toucher->y, toucher->z + (toucher->height / 2), MT_SCORE);
-				P_SetMobjState(scoremobj, mobjinfo[MT_SCORE].spawnstate+7); // 2000
-				P_AddPlayerScore(player, 2000);
-				if (!player->powers[pw_shield])
-				{
-					S_StartSound(toucher, sfx_mario3);
-					player->mo->movecount = player->powers[pw_shield];
-					player->powers[pw_marioflashing] = MARIOFLASHINGTICS;
-					player->powers[pw_shield] = SH_MUSHROOM;
-					P_SpawnShieldOrb(player);
-				}
-			}
 
 			if (!(netgame && circuitmap && player != &players[consoleplayer]))
 				P_SetMobjState(special, special->info->painstate);
@@ -2300,14 +2274,9 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 
 		case MT_PLAYER:
 			{
-				boolean mariodeathpit = (mariomode && damagetype == DMG_DEATHPIT);
 				target->fuse = TICRATE*3; // timer before mobj disappears from view (even if not an actual player)
-				if (!mariodeathpit)
-				{
-					if (mariomode)
-						target->player->powers[pw_marioflashing] = MARIOFLASHINGTICS;
-					target->momx = target->momy = target->momz = 0;
-				}
+				target->momx = target->momy = target->momz = 0;
+
 				if (damagetype == DMG_DROWNED) // drowned
 				{
 					target->movedir = damagetype; // we're MOVING the Damage Into anotheR function... Okay, this is a bit of a hack.
@@ -2319,8 +2288,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 				}
 				else
 				{
-					if (!mariodeathpit)
-						P_SetObjectMomZ(target, 14*FRACUNIT, false);
+					P_SetObjectMomZ(target, 14*FRACUNIT, false);
 					if ((source && source->type == MT_SPIKE) || damagetype == DMG_SPIKE) // Spikes
 						S_StartSound(target, sfx_spkdth);
 					else
@@ -2680,11 +2648,8 @@ static void P_KillPlayer(player_t *player, mobj_t *source, INT32 damage)
 	if (source && (gametype == GT_MATCH || gametype == GT_TEAMMATCH || gametype == GT_CTF))
 		P_PlayerRingBurst(player, player->health - 1);
 
-	if (!mariomode) // Get rid of shield
-	{
-		player->powers[pw_shield] = SH_NONE;
-		player->mo->color = player->skincolor;
-	}
+	player->powers[pw_shield] = SH_NONE;
+	player->mo->color = player->skincolor;
 
 	// Get rid of emeralds
 	player->powers[pw_emeralds] = 0;
@@ -2780,16 +2745,20 @@ static inline void P_SuperDamage(player_t *player, mobj_t *inflictor, mobj_t *so
 
 void P_RemoveShield(player_t *player)
 {
-	boolean fireflower = ((player->powers[pw_shield] & SH_NOSTACK) == SH_FIREFLOWER);
 	if (player->powers[pw_shield] & SH_FORCE)
 	{ // Multi-hit
-		if ((player->powers[pw_shield] & SH_FORCEHP) == 0)
-			player->powers[pw_shield] &= SH_STACK;
-		else
+		if (player->powers[pw_shield] & SH_FORCEHP)
 			player->powers[pw_shield]--;
+		else
+			player->powers[pw_shield] &= SH_STACK;
 	}
 	else if ((player->powers[pw_shield] & SH_NOSTACK) == SH_NONE)
 	{ // Second layer shields
+		if (((player->powers[pw_shield] & SH_STACK) == SH_FIREFLOWER) && !(player->powers[pw_super] || (mariomode && player->powers[pw_invulnerability])))
+		{
+			player->mo->color = player->skincolor;
+			G_GhostAddColor(GHC_NORMAL);
+		}
 		player->powers[pw_shield] = SH_NONE;
 	}
 	else if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ARMAGEDDON) // Give them what's coming to them!
@@ -2799,11 +2768,6 @@ void P_RemoveShield(player_t *player)
 	}
 	else
 		player->powers[pw_shield] = player->powers[pw_shield] & SH_STACK;
-	if (fireflower && !(player->powers[pw_super] || (mariomode && player->powers[pw_invulnerability])))
-	{
-		player->mo->color = player->skincolor;
-		G_GhostAddColor(GHC_NORMAL);
-	}
 }
 
 static void P_ShieldDamage(player_t *player, mobj_t *inflictor, mobj_t *source, INT32 damage)
@@ -2815,14 +2779,7 @@ static void P_ShieldDamage(player_t *player, mobj_t *inflictor, mobj_t *source, 
 
 	P_ForceFeed(player, 40, 10, TICRATE, 40 + min(damage, 100)*2);
 
-	if (mariomode)
-	{
-		S_StartSound(player->mo, sfx_mario8);
-		// Burst weapons and emeralds in Match/CTF only
-		if (!player->powers[pw_shield] && (gametype == GT_MATCH || gametype == GT_TEAMMATCH || gametype == GT_CTF))
-			P_PlayerRingBurst(player, 0);
-	}
-	else if (source && (source->type == MT_SPIKE || (source->type == MT_NULL && source->threshold == 43))) // spikes
+	if (source && (source->type == MT_SPIKE || (source->type == MT_NULL && source->threshold == 43))) // spikes
 		S_StartSound(player->mo, sfx_spkdth);
 	else
 		S_StartSound (player->mo, sfx_shldls); // Ba-Dum! Shield loss.
@@ -3133,7 +3090,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			P_ShieldDamage(player, inflictor, source, damage);
 			damage = 0;
 		}
-		else if (!mariomode && player->mo->health > 1) // No shield but have rings.
+		else if (player->mo->health > 1) // No shield but have rings.
 		{
 			damage = player->mo->health - 1;
 			P_RingDamage(player, inflictor, source, damage, damagetype);
@@ -3295,11 +3252,11 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 	// Spill the ammo
 	P_PlayerWeaponAmmoBurst(player);
 
-	if (mariomode) return;
-
 	for (i = 0; i < num_rings; i++)
 	{
 		INT32 objType = mobjinfo[MT_RING].reactiontime;
+		if (mariomode)
+			objType = mobjinfo[MT_COIN].reactiontime;
 
 		z = player->mo->z;
 		if (player->mo->eflags & MFE_VERTICALFLIP)

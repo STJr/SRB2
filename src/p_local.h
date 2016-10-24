@@ -62,12 +62,9 @@
 #define twodlevel (maptol & TOL_2D)
 
 #define mariomode (maptol & TOL_MARIO)
-#define shortmario(player) ((player && mariomode && !player->powers[pw_shield]) ? 1 : 0)
 
-#define MARIOFLASHINGTICS 21
-
-#define P_GetPlayerHeight(player) (FixedMul(player->height, player->mo->scale) >> shortmario(player))
-#define P_GetPlayerSpinHeight(player) (FixedMul(player->spinheight, player->mo->scale) >> shortmario(player))
+#define P_GetPlayerHeight(player) FixedMul(player->height, player->mo->scale)
+#define P_GetPlayerSpinHeight(player) FixedMul(player->spinheight, player->mo->scale)
 
 //
 // P_TICK
@@ -146,7 +143,7 @@ boolean P_InQuicksand(mobj_t *mo);
 void P_SetObjectMomZ(mobj_t *mo, fixed_t value, boolean relative);
 void P_RestoreMusic(player_t *player);
 void P_SpawnShieldOrb(player_t *player);
-boolean P_SwitchShield(player_t *player, UINT16 shieldtype);
+void P_SwitchShield(player_t *player, UINT16 shieldtype);
 mobj_t *P_SpawnGhostMobj(mobj_t *mobj);
 void P_GivePlayerRings(player_t *player, INT32 num_rings);
 void P_GivePlayerLives(player_t *player, INT32 numlives);
