@@ -4753,7 +4753,7 @@ static inline ffloor_t *P_GetFFloorBySec(sector_t *sec, sector_t *sec2)
 /** Gets a 3Dfloor by ID number.
   *
   * \param sec Target sector.
-  * \param id  ID of 3Dfloor in target sector. Can be a number from 0 to sec->numattached-1.
+  * \param id  ID of 3Dfloor in target sector. Note that the first FOF's ID is 0.
   * \return Pointer to found 3Dfloor, or NULL.
   * \sa P_GetFFloorBySec
   */
@@ -4764,8 +4764,6 @@ ffloor_t *P_GetFFloorByID(sector_t *sec, UINT16 id)
 
 	if (!sec->ffloors)
 		return NULL;
-	if (id >= sec->numattached)
-		return NULL; // ID out of range
 	for (rover = sec->ffloors; rover; rover = rover->next)
 		if (i++ == id)
 			return rover;
