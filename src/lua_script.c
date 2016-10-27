@@ -48,6 +48,7 @@ static lua_CFunction liblist[] = {
 	LUA_SkinLib, // skin_t, skins[]
 	LUA_ThinkerLib, // thinker_t
 	LUA_MapLib, // line_t, side_t, sector_t, subsector_t
+	LUA_BlockmapLib, // blockmap stuff
 	LUA_HudLib, // HUD stuff
 	NULL
 };

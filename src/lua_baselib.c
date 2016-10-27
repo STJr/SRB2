@@ -28,7 +28,8 @@
 #define NOHUD if (hud_running) return luaL_error(L, "HUD rendering code should not call this function!");
 
 // uncomment if you want to test
- #define LUA_BLOCKMAP
+// note: now outdated
+//#define LUA_BLOCKMAP
 
 boolean luaL_checkboolean(lua_State *L, int narg) {
 	luaL_checktype(L, narg, LUA_TBOOLEAN);

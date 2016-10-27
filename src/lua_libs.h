@@ -70,6 +70,7 @@ int LUA_PlayerLib(lua_State *L);
 int LUA_SkinLib(lua_State *L);
 int LUA_ThinkerLib(lua_State *L);
 int LUA_MapLib(lua_State *L);
+int LUA_BlockmapLib(lua_State *L);
 int LUA_HudLib(lua_State *L);
 
 #endif
