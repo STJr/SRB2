@@ -1499,6 +1499,9 @@ void R_InitData(void)
 	CONS_Printf("R_LoadTextures()...\n");
 	R_LoadTextures();
 
+	CONS_Printf("P_InitPicAnims()...\n");
+	P_InitPicAnims();
+
 	CONS_Printf("R_InitSprites()...\n");
 	R_InitSpriteLumps();
 	R_InitSprites();
