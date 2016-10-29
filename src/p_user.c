@@ -2280,14 +2280,13 @@ static void P_DoClimbing(player_t *player)
 	fixed_t platy;
 	subsector_t *glidesector;
 	boolean climb = true;
-	boolean onesided = ((player->lastsidehit != -1 && player->lastlinehit != -1) && !(lines[player->lastlinehit].backsector));
 
 	platx = P_ReturnThrustX(player->mo, player->mo->angle, player->mo->radius + FixedMul(8*FRACUNIT, player->mo->scale));
 	platy = P_ReturnThrustY(player->mo, player->mo->angle, player->mo->radius + FixedMul(8*FRACUNIT, player->mo->scale));
 
-	glidesector = R_PointInSubsector(player->mo->x + platx, player->mo->y + platy);
+	glidesector = R_IsPointInSubsector(player->mo->x + platx, player->mo->y + platy);
 
-	if (onesided || glidesector->sector != player->mo->subsector->sector)
+	if (!glidesector || glidesector->sector != player->mo->subsector->sector)
 	{
 		boolean floorclimb = false;
 		boolean thrust = false;
@@ -2295,7 +2294,7 @@ static void P_DoClimbing(player_t *player)
 		boolean skyclimber = false;
 		fixed_t floorheight, ceilingheight; // ESLOPE
 
-		if (onesided)
+		if (!glidesector)
 			floorclimb = true;
 		else
 		{
