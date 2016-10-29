@@ -2587,10 +2587,6 @@ boolean P_SetupLevel(boolean skipprecip)
 	R_ReInitColormaps(mapheaderinfo[gamemap-1]->palette);
 	CON_ReSetupBackColormap(mapheaderinfo[gamemap-1]->palette);
 
-	// now part of level loading since in future each level may have
-	// its own anim texture sequences, switches etc.
-	P_InitPicAnims();
-
 	// SRB2 determines the sky texture to be used depending on the map header.
 	P_SetupLevelSky(mapheaderinfo[gamemap-1]->skynum, true);
 
@@ -3000,6 +2996,9 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 		R_LoadTextures(); // numtexture changes
 	else
 		R_FlushTextureCache(); // just reload it from file
+
+	// Reload ANIMATED / ANIMDEFS
+	P_InitPicAnims();
 
 	// Flush and reload HUD graphics
 	ST_UnloadGraphics();
