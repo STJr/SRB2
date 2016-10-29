@@ -6450,6 +6450,8 @@ void P_RunOverlays(void)
 		P_UnsetThingPosition(mo);
 		mo->x = destx;
 		mo->y = desty;
+		mo->radius = mo->target->radius;
+		mo->height = mo->target->height;
 		if (mo->eflags & MFE_VERTICALFLIP)
 			mo->z = (mo->target->z + mo->target->height - mo->height) - zoffs;
 		else
