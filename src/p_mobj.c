@@ -5930,8 +5930,6 @@ static boolean P_ShieldLook(mobj_t *thing, shieldtype_t shield)
 	P_UnsetThingPosition(thing);
 	thing->x = thing->target->x;
 	thing->y = thing->target->y;
-	thing->radius = thing->target->radius;
-	thing->height = thing->target->height;
 	if (thing->eflags & MFE_VERTICALFLIP)
 		thing->z = thing->target->z + thing->target->height - thing->height + FixedDiv(P_GetPlayerHeight(thing->target->player) - thing->target->height, 3*FRACUNIT) - FixedMul(2*FRACUNIT, thing->target->scale);
 	else
