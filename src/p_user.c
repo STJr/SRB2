@@ -6992,11 +6992,7 @@ static void P_MovePlayer(player_t *player)
 				if ((player->powers[pw_shield] & ~(SH_FORCEHP|SH_STACK)) == SH_FORCE)
 				{
 					player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
-					player->mo->momz = // would intentionally carry to post-endif line as multiple-assignment
-#if 1 // almost imperceptible hop for the purposes of aligning with the aura for as long as possible
-					-4*P_GetMobjGravity(player->mo);
-#endif
-					player->mo->momx = player->mo->momy = 0;
+					player->mo->momx = player->mo->momy = player->mo->momz = 0;
 					S_StartSound(player->mo, sfx_ngskid);
 				}
 				else
