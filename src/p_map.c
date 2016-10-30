@@ -1142,6 +1142,9 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			if (tmthing->player && tmthing->z + tmthing->height > topz
 				&& tmthing->z + tmthing->height < tmthing->ceilingz)
 			{
+				if (thing->flags & MF_GRENADEBOUNCE && (thing->flags & MF_MONITOR || thing->flags2 & MF2_STANDONME)) // Gold monitor hack...
+					return false;
+
 				tmfloorz = tmceilingz = INT32_MIN; // block while in air
 #ifdef ESLOPE
 				tmceilingslope = NULL;
@@ -1185,6 +1188,9 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			if (tmthing->player && tmthing->z < topz
 				&& tmthing->z > tmthing->floorz)
 			{
+				if (thing->flags & MF_GRENADEBOUNCE && (thing->flags & MF_MONITOR || thing->flags2 & MF2_STANDONME)) // Gold monitor hack...
+					return false;
+
 				tmfloorz = tmceilingz = INT32_MAX; // block while in air
 #ifdef ESLOPE
 				tmfloorslope = NULL;
