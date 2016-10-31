@@ -560,12 +560,15 @@ static int lib_pCheckSolidLava(lua_State *L)
 {
 	mobj_t *mo = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
 	ffloor_t *rover = *((ffloor_t **)luaL_checkudata(L, 2, META_FFLOOR));
+	sector_t *bound = *((sector_t **)luaL_checkudata(L, 3, META_SECTOR));
 	//HUDSAFE
 	if (!mo)
 		return LUA_ErrInvalid(L, "mobj_t");
 	if (!rover)
 		return LUA_ErrInvalid(L, "ffloor_t");
-	lua_pushboolean(L, P_CheckSolidLava(mo, rover));
+	if (!bound)
+		return LUA_ErrInvalid(L, "sector_t");
+	lua_pushboolean(L, P_CheckSolidLava(mo, rover, bound));
 	return 1;
 }
 

@@ -1983,7 +1983,7 @@ static void P_AdjustMobjFloorZ_FFloors(mobj_t *mo, sector_t *sector, UINT8 motyp
 		topheight = P_GetFOFTopZ(mo, sector, rover, mo->x, mo->y, NULL);
 		bottomheight = P_GetFOFBottomZ(mo, sector, rover, mo->x, mo->y, NULL);
 
-		if (mo->player && (P_CheckSolidLava(mo, rover) || P_CanRunOnWater(mo->player, rover))) // only the player should be affected
+		if (mo->player && (P_CheckSolidLava(mo, rover, sector) || P_CanRunOnWater(mo->player, rover))) // only the player should be affected
 			;
 		else if (motype != 0 && rover->flags & FF_SWIMMABLE) // "scenery" only
 			continue;
@@ -2133,14 +2133,14 @@ boolean P_CheckDeathPitCollide(mobj_t *mo)
 	return false;
 }
 
-boolean P_CheckSolidLava(mobj_t *mo, ffloor_t *rover)
+boolean P_CheckSolidLava(mobj_t *mo, ffloor_t *rover, sector_t *bound)
 {
 	I_Assert(mo != NULL);
 	I_Assert(!P_MobjWasRemoved(mo));
 
 	if (rover->flags & FF_SWIMMABLE && GETSECSPECIAL(rover->master->frontsector->special, 1) == 3
 		&& !(rover->master->flags & ML_BLOCKMONSTERS)
-		&& ((rover->master->flags & ML_EFFECT3) || mo->z-mo->momz > *rover->topheight - FixedMul(16*FRACUNIT, mo->scale)))
+		&& ((rover->master->flags & ML_EFFECT3) || mo->z-mo->momz > P_GetSpecialTopZ(mo, rover->master->frontsector, bound) - FixedMul(16*FRACUNIT, mo->scale)))
 			return true;
 
 	return false;
