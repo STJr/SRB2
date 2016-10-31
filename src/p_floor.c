@@ -2151,6 +2151,8 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 						if (!insector)
 							continue;
 					}
+					else
+						continue;
 
 					topheight = P_GetSpecialTopZ(players[j].mo, sec, targetsec);
 					bottomheight = P_GetSpecialBottomZ(players[j].mo, sec, targetsec);
@@ -2215,6 +2217,8 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 					if (!insector)
 						continue;
 				}
+				else
+					continue;
 
 				if (!(players[i].mo->subsector->sector == sec
 					|| P_PlayerTouchingSectorSpecial(&players[i], 2, (GETSECSPECIAL(sec->special, 2))) == sec))
