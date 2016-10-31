@@ -8779,6 +8779,7 @@ void P_PlayerThink(player_t *player)
 	// check water content, set stuff in mobj
 	P_MobjCheckWater(player->mo);
 
+#ifndef SECTORSPECIALSAFTERTHINK
 #ifdef POLYOBJECTS
 	if (player->onconveyor != 1 || !P_IsObjectOnGround(player->mo))
 #endif
@@ -8787,6 +8788,7 @@ void P_PlayerThink(player_t *player)
 
 	if (!player->spectator)
 		P_PlayerInSpecialSector(player);
+#endif
 
 	if (player->playerstate == PST_DEAD)
 	{
@@ -9147,6 +9149,17 @@ void P_PlayerAfterThink(player_t *player)
 #endif
 
 	cmd = &player->cmd;
+
+#ifdef SECTORSPECIALSAFTERTHINK
+#ifdef POLYOBJECTS
+	if (player->onconveyor != 1 || !P_IsObjectOnGround(player->mo))
+#endif
+	player->onconveyor = 0;
+	// check special sectors : damage & secrets
+
+	if (!player->spectator)
+		P_PlayerInSpecialSector(player);
+#endif
 
 	if (splitscreen && player == &players[secondarydisplayplayer])
 		thiscam = &camera2;
