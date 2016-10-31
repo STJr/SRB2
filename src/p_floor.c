@@ -2201,14 +2201,14 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 				if ((netgame || multiplayer) && players[i].spectator)
 					continue;
 
-				if (players[i].mo->subsector->sector == targetsec)
+				if (players[i].mo->subsector->sector == sec)
 					;
 				else if (sec->flags & SF_TRIGGERSPECIAL_TOUCH)
 				{
 					boolean insector = false;
 					for (node = players[i].mo->touching_sectorlist; node; node = node->m_sectorlist_next)
 					{
-						if (node->m_sector == targetsec)
+						if (node->m_sector == sec)
 						{
 							insector = true;
 							break;

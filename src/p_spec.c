@@ -3606,16 +3606,49 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 				{
 					if (roversector)
 					{
-						if (!(players[i].mo->subsector->sector == roversector
-							|| sector->flags & SF_TRIGGERSPECIAL_TOUCH))
+						if (players[i].mo->subsector->sector == roversector)
+							;
+						else if (sector->flags & SF_TRIGGERSPECIAL_TOUCH)
+						{
+							boolean insector = false;
+							msecnode_t *node;
+							for (node = players[i].mo->touching_sectorlist; node; node = node->m_sectorlist_next)
+							{
+								if (node->m_sector == roversector)
+								{
+									insector = true;
+									break;
+								}
+							}
+							if (!insector)
+								goto DoneSection2;
+						}
+						else
 							goto DoneSection2;
+
 						if (!P_ThingIsOnThe3DFloor(players[i].mo, sector, roversector))
 							goto DoneSection2;
 					}
 					else
 					{
-						if (!(players[i].mo->subsector->sector == sector
-							|| sector->flags & SF_TRIGGERSPECIAL_TOUCH))
+						if (players[i].mo->subsector->sector == sector)
+							;
+						else if (sector->flags & SF_TRIGGERSPECIAL_TOUCH)
+						{
+							boolean insector = false;
+							msecnode_t *node;
+							for (node = players[i].mo->touching_sectorlist; node; node = node->m_sectorlist_next)
+							{
+								if (node->m_sector == sector)
+								{
+									insector = true;
+									break;
+								}
+							}
+							if (!insector)
+								goto DoneSection2;
+						}
+						else
 							goto DoneSection2;
 
 						if (special == 3 && !P_MobjReadyToTrigger(players[i].mo, sector))
@@ -4429,8 +4462,9 @@ sector_t *P_ThingOnSpecial3DFloor(mobj_t *mo)
   * \param player Player to check.
   * \sa P_ThingOnSpecial3DFloor, P_PlayerInSpecialSector
   */
-static void P_PlayerOnSpecial3DFloor(player_t *player, sector_t *sector, sector_t *originalsector)
+static void P_PlayerOnSpecial3DFloor(player_t *player, sector_t *sector)
 {
+	sector_t *originalsector = player->mo->subsector->sector;
 	ffloor_t *rover;
 	fixed_t topheight, bottomheight;
 
@@ -4683,7 +4717,7 @@ void P_PlayerInSpecialSector(player_t *player)
 
 	originalsector = player->mo->subsector->sector;
 
-	P_PlayerOnSpecial3DFloor(player, originalsector, originalsector); // Handle FOFs first.
+	P_PlayerOnSpecial3DFloor(player, originalsector); // Handle FOFs first.
 	if TELEPORTED return;
 
 	P_RunSpecialSectorCheck(player, originalsector);
@@ -4698,7 +4732,7 @@ void P_PlayerInSpecialSector(player_t *player)
 			continue;
 
 		// Check 3D floors...
-		P_PlayerOnSpecial3DFloor(player, loopsector, originalsector);
+		P_PlayerOnSpecial3DFloor(player, loopsector);
 		if TELEPORTED return;
 
 		if (!(loopsector->flags & SF_TRIGGERSPECIAL_TOUCH))
