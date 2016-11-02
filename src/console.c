@@ -628,8 +628,8 @@ static void CON_DeleteSelectedText(void)
 {
 	UINT32 i, j;
 	char *line = inputlines[inputline];
-	size_t selstart = min(input_cx, input_selection);
-	size_t selend = max(input_cx, input_selection);
+	size_t selstart = min(input_cx, (size_t)input_selection);
+	size_t selend = max(input_cx, (size_t)input_selection);
 
 	for (i = selstart, j = selend; line[j]; ++i, ++j)
 		line[i] = line[j];
@@ -879,7 +879,7 @@ boolean CON_Responder(event_t *ev)
 		else
 			input_cx = 1;
 
-		if (input_cx == input_selection)
+		if ((INT32)input_cx == input_selection)
 			input_selection = -1;
 
 		return true;
@@ -899,7 +899,7 @@ boolean CON_Responder(event_t *ev)
 		else
 			input_cx = strlen(inputlines[inputline]);
 
-		if (input_cx == input_selection)
+		if ((INT32)input_cx == input_selection)
 			input_selection = -1;
 
 		return true;
@@ -991,7 +991,7 @@ boolean CON_Responder(event_t *ev)
 		else if (input_cx > 1)
 			input_cx--;
 
-		if (input_cx == input_selection)
+		if ((INT32)input_cx == input_selection)
 			input_selection = -1;
 
 		return true;
@@ -1021,7 +1021,7 @@ boolean CON_Responder(event_t *ev)
 		else if (inputlines[inputline][input_cx])
 			input_cx++;
 
-		if (input_cx == input_selection)
+		if ((INT32)input_cx == input_selection)
 			input_selection = -1;
 
 		return true;
@@ -1414,8 +1414,8 @@ static void CON_DrawInput(void)
 	}
 	else
 	{
-		size_t selstart = min(input_cx, input_selection);
-		size_t selend = max(input_cx, input_selection);
+		size_t selstart = min(input_cx, (size_t)input_selection);
+		size_t selend = max(input_cx, (size_t)input_selection);
 
 		for (c = 0, x = charwidth; c < selstart && c < con_width-11; c++, x += charwidth)
 			V_DrawCharacter(x, y, p[c] | f, !cv_allcaps.value);

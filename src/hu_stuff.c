@@ -631,8 +631,8 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 static void HU_DeleteSelectedText(void)
 {
 	UINT32 i, j;
-	size_t selstart = min(chat_pos, chat_selection);
-	size_t selend = max(chat_pos, chat_selection);
+	size_t selstart = min(chat_pos, (size_t)chat_selection);
+	size_t selend = max(chat_pos, (size_t)chat_selection);
 
 	for (i = selstart, j = selend; w_chat[j]; ++i, ++j)
 		w_chat[i] = w_chat[j];
@@ -645,7 +645,7 @@ static void HU_DeleteSelectedText(void)
 
 // Handles key input and string input
 //
-static inline void HU_keyInChatString(char *s, UINT32 key, boolean shiftdown, boolean ctrldown)
+static void HU_keyInChatString(UINT32 key, boolean shiftdown, boolean ctrldown)
 {
 	switch (key)
 	{
@@ -735,7 +735,7 @@ static inline void HU_keyInChatString(char *s, UINT32 key, boolean shiftdown, bo
 			chat_pos = strlen(w_chat);
 		}
 
-		if (chat_pos == chat_selection)
+		if ((INT32)chat_pos == chat_selection)
 			chat_selection = -1;
 		break;
 	// backspace or delete selected text
@@ -883,7 +883,7 @@ boolean HU_Responder(event_t *ev)
 	}
 	else // if chat_on
 	{
-		HU_keyInChatString(w_chat, key, shiftdown, ctrldown);
+		HU_keyInChatString(key, shiftdown, ctrldown);
 		return true;
 	}
 	return false;
@@ -963,8 +963,8 @@ static void HU_DrawChat(void)
 	}
 	else
 	{
-		size_t selstart = min(chat_pos, chat_selection);
-		size_t selend = max(chat_pos, chat_selection);
+		size_t selstart = min(chat_pos, (size_t)chat_selection);
+		size_t selend = max(chat_pos, (size_t)chat_selection);
 
 		while (i < selstart)
 		{
