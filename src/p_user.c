@@ -2951,7 +2951,7 @@ static void P_DoTeeter(player_t *player)
 				bottomheight = *rover->bottomheight;
 #endif
 
-				if (P_CheckSolidLava(player->mo, rover, sec))
+				if (P_CheckSolidLava(player->mo, rover))
 					;
 				else if (!(rover->flags & FF_BLOCKPLAYER || rover->flags & FF_QUICKSAND))
 					continue; // intangible 3d floor
