@@ -619,9 +619,7 @@ void CON_Ticker(void)
 //
 boolean CON_Responder(event_t *ev)
 {
-	static boolean consdown;
-	static boolean shiftdown;
-	static boolean ctrldown;
+	static UINT8 consdown = false; // console is treated differently due to rare usage
 
 	// sequential completions a la 4dos
 	static char completion[80];
@@ -636,13 +634,8 @@ boolean CON_Responder(event_t *ev)
 	// let go keyup events, don't eat them
 	if (ev->type != ev_keydown && ev->type != ev_console)
 	{
-		if (ev->data1 == KEY_LSHIFT || ev->data1 == KEY_RSHIFT)
-			shiftdown = false;
-		else if (ev->data1 == KEY_LCTRL || ev->data1 == KEY_RCTRL)
-			ctrldown = false;
-		else if (ev->data1 == gamecontrol[gc_console][0] || ev->data1 == gamecontrol[gc_console][1])
+		if (ev->data1 == gamecontrol[gc_console][0] || ev->data1 == gamecontrol[gc_console][1])
 			consdown = false;
-
 		return false;
 	}
 
@@ -682,20 +675,6 @@ boolean CON_Responder(event_t *ev)
 			return true;
 		}
 
-	}
-
-	// eat shift only if console active
-	if (key == KEY_LSHIFT || key == KEY_RSHIFT)
-	{
-		shiftdown = true;
-		return true;
-	}
-
-	// same for ctrl
-	if (key == KEY_LCTRL || key == KEY_RCTRL)
-	{
-		ctrldown = true;
-		return true;
 	}
 
 	// command completion forward (tab) and backward (shift-tab)

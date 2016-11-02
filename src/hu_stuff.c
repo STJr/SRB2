@@ -757,14 +757,7 @@ void HU_clearChatChars(void)
 //
 boolean HU_Responder(event_t *ev)
 {
-	static boolean shiftdown = false;
 	UINT8 c;
-
-	if (ev->data1 == KEY_LSHIFT || ev->data1 == KEY_RSHIFT)
-	{
-		shiftdown = (ev->type == ev_keydown);
-		return chat_on;
-	}
 
 	if (ev->type != ev_keydown)
 		return false;
