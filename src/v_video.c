@@ -968,45 +968,38 @@ void V_DrawFadeScreen(void)
 }
 
 // Simple translucency with one color, over a set number of lines starting from the top.
-void V_DrawFadeConsBack(INT32 plines, INT32 pcolor)
+void V_DrawFadeConsBack(INT32 plines)
 {
-	UINT8 *deststop, *colormap, *buf;
+	UINT8 *deststop, *buf;
 
 #ifdef HWRENDER // not win32 only 19990829 by Kin
 	if (rendermode != render_soft && rendermode != render_none)
 	{
 		UINT32 hwcolor;
-		switch (pcolor)
+		switch (cons_backcolor.value)
 		{
-			case 0:		hwcolor = 0xffffff00;	break;	//white
-			case 1:		hwcolor = 0xff800000;	break;	//orange
-			case 2:		hwcolor = 0x0000ff00;	break;	//blue
-			case 3:		hwcolor = 0x00800000;	break;	//green
-			case 4:		hwcolor = 0x80808000;	break;	//gray
-			case 5:		hwcolor = 0xff000000;	break;	//red
-			default:	hwcolor = 0x00800000;	break;	//green
+			case 0:		hwcolor = 0xffffff00;	break; // White
+			case 1:		hwcolor = 0x80808000;	break; // Gray
+			case 2:		hwcolor = 0x40201000;	break; // Brown
+			case 3:		hwcolor = 0xff000000;	break; // Red
+			case 4:		hwcolor = 0xff800000;	break; // Orange
+			case 5:		hwcolor = 0x80800000;	break; // Yellow
+			case 6:		hwcolor = 0x00800000;	break; // Green
+			case 7:		hwcolor = 0x0000ff00;	break; // Blue
+			case 8:		hwcolor = 0x4080ff00;	break; // Cyan
+			// Default green
+			default:	hwcolor = 0x00800000;	break;
 		}
 		HWR_DrawConsoleBack(hwcolor, plines);
 		return;
 	}
 #endif
 
-	switch (pcolor)
-	{
-		case 0:		colormap = cwhitemap; 	break;
-		case 1:		colormap = corangemap;	break;
-		case 2:		colormap = cbluemap;	break;
-		case 3:		colormap = cgreenmap;	break;
-		case 4:		colormap = cgraymap;	break;
-		case 5:		colormap = credmap;		break;
-		default:	colormap = cgreenmap;	break;
-	}
-
 	// heavily simplified -- we don't need to know x or y position,
 	// just the stop position
 	deststop = screens[0] + vid.rowbytes * min(plines, vid.height);
 	for (buf = screens[0]; buf < deststop; ++buf)
-		*buf = colormap[*buf];
+		*buf = consolebgmap[*buf];
 }
 
 // Gets string colormap, used for 0x80 color codes

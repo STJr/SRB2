@@ -2585,7 +2585,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	lastloadedmaplumpnum = W_GetNumForName(maplumpname = G_BuildMapName(gamemap));
 
 	R_ReInitColormaps(mapheaderinfo[gamemap-1]->palette);
-	CON_ReSetupBackColormap(mapheaderinfo[gamemap-1]->palette);
+	CON_SetupBackColormap();
 
 	// now part of level loading since in future each level may have
 	// its own anim texture sequences, switches etc.

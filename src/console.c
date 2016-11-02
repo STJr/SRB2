@@ -97,6 +97,7 @@ static void CON_InputInit(void);
 static void CON_RecalcSize(void);
 
 static void CONS_hudlines_Change(void);
+static void CONS_backcolor_Change(void);
 static void CON_DrawBackpic(patch_t *pic, INT32 startx, INT32 destwidth);
 //static void CON_DrawBackpic2(pic_t *pic, INT32 startx, INT32 destwidth);
 
@@ -129,10 +130,11 @@ static CV_PossibleValue_t backpic_cons_t[] = {{0, "translucent"}, {1, "picture"}
 // whether to use console background picture, or translucent mode
 static consvar_t cons_backpic = {"con_backpic", "translucent", CV_SAVE, backpic_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
-static CV_PossibleValue_t backcolor_cons_t[] = {{0, "White"}, {1, "Orange"},
-												{2, "Blue"}, {3, "Green"}, {4, "Gray"},
-												{5, "Red"}, {0, NULL}};
-consvar_t cons_backcolor = {"con_backcolor", "3", CV_SAVE, backcolor_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+static CV_PossibleValue_t backcolor_cons_t[] = {{0, "White"}, 	{1, "Gray"},	{2, "Brown"},
+												{3, "Red"},		{4, "Orange"},	{5, "Yellow"},
+												{6, "Green"},	{7, "Blue"},	{8,	"Cyan"},
+												{0, NULL}};
+consvar_t cons_backcolor = {"con_backcolor", "Green", CV_CALL|CV_SAVE, backcolor_cons_t, CONS_backcolor_Change, 0, NULL, NULL, 0, 0, NULL};
 
 static void CON_Print(char *msg);
 
@@ -219,8 +221,9 @@ static void CONS_Bind_f(void)
 //                          CONSOLE SETUP
 //======================================================================
 
-// Prepare a colormap for GREEN ONLY translucency over background
-//
+// Font colormap colors
+// TODO: This could probably be improved somehow...
+// These colormaps are 99% identical, with just a few changed bytes
 UINT8 *yellowmap;
 UINT8 *purplemap;
 UINT8 *lgreenmap;
@@ -229,44 +232,49 @@ UINT8 *graymap;
 UINT8 *redmap;
 UINT8 *orangemap;
 
-// Console BG colors
-UINT8 *cwhitemap;
-UINT8 *corangemap;
-UINT8 *cbluemap;
-UINT8 *cgreenmap;
-UINT8 *cgraymap;
-UINT8 *credmap;
+// Console BG color
+UINT8 *consolebgmap = NULL;
 
-void CON_ReSetupBackColormap(UINT16 num)
+void CON_SetupBackColormap(void)
 {
-	UINT16 i, j;
-	UINT8 k;
-	UINT8 *pal = W_CacheLumpName(R_GetPalname(num), PU_CACHE);
+	UINT16 i, palsum;
+	UINT8 j, palindex;
+	UINT8 *pal = W_CacheLumpName(GetPalette(), PU_CACHE);
 
-	// setup the green translucent background colormaps
-	for (i = 0, k = 0; i < 768; i += 3, k++)
+	if (!consolebgmap)
+		consolebgmap = (UINT8 *)Z_Malloc(256, PU_STATIC, NULL);
+
+	switch (cons_backcolor.value)
 	{
-		j = pal[i] + pal[i+1] + pal[i+2];
-		cwhitemap[k] = (UINT8)(15 - (j>>6));
-		corangemap[k] = (UINT8)(95 - (j>>6));
-		cbluemap[k] = (UINT8)(239 - (j>>6));
-		cgreenmap[k] = (UINT8)(175 - (j>>6));
-		cgraymap[k] = (UINT8)(31 - (j>>6));
-		credmap[k] = (UINT8)(143 - (j>>6));
+		case 0:		palindex = 15; 	break; // White
+		case 1:		palindex = 31;	break; // Gray
+		case 2:		palindex = 63;	break; // Brown
+		case 3:		palindex = 143;	break; // Red
+		case 4:		palindex = 95;	break; // Orange
+		case 5:		palindex = 111;	break; // Yellow
+		case 6:		palindex = 175;	break; // Green
+		case 7:		palindex = 239;	break; // Blue
+		case 8:		palindex = 219;	break; // Cyan
+		// Default green
+		default:	palindex = 175; break;
+}
+
+	// setup background colormap
+	for (i = 0, j = 0; i < 768; i += 3, j++)
+	{
+		palsum = (pal[i] + pal[i+1] + pal[i+2]) >> 6;
+		consolebgmap[j] = (UINT8)(palindex - palsum);
 	}
 }
 
-static void CON_SetupBackColormap(void)
+static void CONS_backcolor_Change(void)
 {
-	INT32 i, j, k;
-	UINT8 *pal;
+	CON_SetupBackColormap();
+}
 
-	cwhitemap   = (UINT8 *)Z_Malloc(256, PU_STATIC, NULL);
-	corangemap  = (UINT8 *)Z_Malloc(256, PU_STATIC, NULL);
-	cbluemap    = (UINT8 *)Z_Malloc(256, PU_STATIC, NULL);
-	cgreenmap   = (UINT8 *)Z_Malloc(256, PU_STATIC, NULL);
-	cgraymap    = (UINT8 *)Z_Malloc(256, PU_STATIC, NULL);
-	credmap     = (UINT8 *)Z_Malloc(256, PU_STATIC, NULL);
+static void CON_SetupColormaps(void)
+{
+	INT32 i;
 
 	yellowmap = (UINT8 *)Z_Malloc(256, PU_STATIC, NULL);
 	graymap   = (UINT8 *)Z_Malloc(256, PU_STATIC, NULL);
@@ -275,20 +283,6 @@ static void CON_SetupBackColormap(void)
 	bluemap   = (UINT8 *)Z_Malloc(256, PU_STATIC, NULL);
 	redmap    = (UINT8 *)Z_Malloc(256, PU_STATIC, NULL);
 	orangemap = (UINT8 *)Z_Malloc(256, PU_STATIC, NULL);
-
-	pal = W_CacheLumpName("PLAYPAL", PU_CACHE);
-
-	// setup the green translucent background colormaps
-	for (i = 0, k = 0; i < 768; i += 3, k++)
-	{
-		j = pal[i] + pal[i+1] + pal[i+2];
-		cwhitemap[k] = (UINT8)(15 - (j>>6));
-		corangemap[k] = (UINT8)(95 - (j>>6));
-		cbluemap[k] = (UINT8)(239 - (j>>6));
-		cgreenmap[k] = (UINT8)(175 - (j>>6));
-		cgraymap[k] = (UINT8)(31 - (j>>6));
-		credmap[k] = (UINT8)(143 - (j>>6));
-	}
 
 	// setup the other colormaps, for console text
 
@@ -320,6 +314,9 @@ static void CON_SetupBackColormap(void)
 	redmap[9]    = (UINT8)127;
 	orangemap[3] = (UINT8)85;
 	orangemap[9] = (UINT8)90;
+
+	// Init back colormap
+	CON_SetupBackColormap();
 }
 
 // Setup the console text buffer
@@ -343,7 +340,7 @@ void CON_Init(void)
 	con_width = 0;
 	CON_RecalcSize();
 
-	CON_SetupBackColormap();
+	CON_SetupColormaps();
 
 	//note: CON_Ticker should always execute at least once before D_Display()
 	con_clipviewtop = -1; // -1 does not clip
@@ -1417,7 +1414,7 @@ static void CON_DrawConsole(void)
 	{
 		// inu: no more width (was always 0 and vid.width)
 		if (rendermode != render_none)
-			V_DrawFadeConsBack(con_curlines, cons_backcolor.value); // translucent background
+			V_DrawFadeConsBack(con_curlines); // translucent background
 	}
 
 	// draw console text lines from top to bottom
