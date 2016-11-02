@@ -93,7 +93,6 @@ boolean HU_Responder(event_t *ev);
 
 void HU_Ticker(void);
 void HU_Drawer(void);
-char HU_dequeueChatChar(void);
 void HU_Erase(void);
 void HU_clearChatChars(void);
 void HU_DrawTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, INT32 whiteplayer);
