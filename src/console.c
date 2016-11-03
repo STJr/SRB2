@@ -641,6 +641,12 @@ boolean CON_Responder(event_t *ev)
 
 	key = ev->data1;
 
+	// Always eat ctrl/shift/alt, so the menu doesn't get ideas
+	if (key == KEY_LSHIFT || key == KEY_RSHIFT
+	 || key == KEY_LCTRL || key == KEY_RCTRL
+	 || key == KEY_LALT || key == KEY_RALT)
+		return true;
+
 	// check for console toggle key
 	if (ev->type != ev_console)
 	{
@@ -677,67 +683,70 @@ boolean CON_Responder(event_t *ev)
 
 	}
 
-	// command completion forward (tab) and backward (shift-tab)
-	if (key == KEY_TAB)
+	// ctrl modifier -- changes behavior, adds shortcuts
+	if (ctrldown)
 	{
 		// show all cvars/commands that match what we have inputted
-		if (ctrldown)
+		if (key == KEY_TAB)
 		{
-			UINT32 i;
-			size_t stop = input_cx - 1;
-			char nameremainder[255];
+			size_t i, len = strlen(inputlines[inputline]+1);
 
-			if (input_cx < 2 || strlen(inputlines[inputline]+1) >= 80)
+			if (input_cx < 2 || len >= 80 || strchr(inputlines[inputline]+1, ' '))
 				return true;
 
 			strcpy(completion, inputlines[inputline]+1);
 
-			// trimming: stop at the first newline
-			for (i = 0; i < input_cx - 1; ++i)
-			{
-				if (completion[i] == ' ')
-				{
-					completion[i] = '\0';
-					stop = i;
-					break;
-				}
-			}
-
-			i = 0;
-
 			//first check commands
 			CONS_Printf("\nCommands:\n");
-
-			for (cmd = COM_CompleteCommand(completion, i); cmd; cmd = COM_CompleteCommand(completion, i))
-			{
-				strncpy(nameremainder, cmd+(stop), strlen(cmd)-(stop));
-				nameremainder[strlen(cmd)-(stop)] = '\0';
-
-				CONS_Printf("  \x83" "%s" "\x80" "%s\n", completion, nameremainder);
-				++i;
-			}
-			if (i == 0)
-				CONS_Printf("  (none)\n");
-
-			i = 0;
+			for (i = 0, cmd = COM_CompleteCommand(completion, i); cmd; cmd = COM_CompleteCommand(completion, ++i))
+				CONS_Printf("  \x83" "%s" "\x80" "%s\n", completion, cmd+len);
+			if (i == 0) CONS_Printf("  (none)\n");
 
 			//now we move on to CVARs
 			CONS_Printf("Variables:\n");
-
-			for (cmd = CV_CompleteVar(completion, i); cmd; cmd = CV_CompleteVar(completion, i))
-			{
-				strncpy(nameremainder, cmd+(stop), strlen(cmd)-(stop));
-				nameremainder[strlen(cmd)-(stop)] = '\0';
-
-				CONS_Printf("  \x83" "%s" "\x80" "%s\n", completion, nameremainder);
-				++i;
-			}
-			if (i == 0)
-				CONS_Printf("  (none)\n");
+			for (i = 0, cmd = CV_CompleteVar(completion, i); cmd; cmd = CV_CompleteVar(completion, ++i))
+				CONS_Printf("  \x83" "%s" "\x80" "%s\n", completion, cmd+len);
+			if (i == 0) CONS_Printf("  (none)\n");
 
 			return true;
 		}
+		// ---
 
+		if (key == KEY_HOME) // oldest text in buffer
+		{
+			con_scrollup = (con_totallines-((con_curlines-16)>>3));
+			return true;
+		}
+		else if (key == KEY_END) // most recent text in buffer
+		{
+			con_scrollup = 0;
+			return true;
+		}
+
+		if (key == 'x' || key == 'X')
+		{
+			CONS_Printf("Cut\n");
+			return true;
+		}
+		else if (key == 'c' || key == 'C')
+		{
+			CONS_Printf("Copy\n");
+			I_ClipboardCopy(inputlines[inputline]+1, strlen(inputlines[inputline]+1));
+			return true;
+		}
+		else if (key == 'v' || key == 'V')
+		{
+			CONS_Printf("Paste: %s\n", I_ClipboardPaste());
+			return true;
+		}
+
+		// don't eat the key
+		return false;
+	}
+
+	// command completion forward (tab) and backward (shift-tab)
+	if (key == KEY_TAB)
+	{
 		// sequential command completion forward and backward
 
 		// remember typing for several completions (a-la-4dos)
@@ -815,16 +824,7 @@ boolean CON_Responder(event_t *ev)
 		return true;
 	}
 
-	if (key == KEY_HOME) // oldest text in buffer
-	{
-		con_scrollup = (con_totallines-((con_curlines-16)>>3));
-		return true;
-	}
-	else if (key == KEY_END) // most recent text in buffer
-	{
-		con_scrollup = 0;
-		return true;
-	}
+
 
 	// command enter
 	if (key == KEY_ENTER)

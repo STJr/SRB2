@@ -296,6 +296,14 @@ char *I_GetEnv(const char *name);
 
 INT32 I_PutEnv(char *variable);
 
+/** \brief Put data in system clipboard
+*/
+INT32 I_ClipboardCopy(const char *data, size_t size);
+
+/** \brief Retrieve data from system clipboard
+*/
+const char *I_ClipboardPaste(void);
+
 void I_RegisterSysCommands(void);
 
 #endif
