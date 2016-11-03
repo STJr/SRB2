@@ -308,6 +308,23 @@ static md2_model_t *md2_readModel(const char *filename)
 
 	model->header.numSkins = 1;
 
+#define MD2LIMITCHECK(field, max, msgname) \
+	if (field >= max) \
+	{ \
+		CONS_Alert(CONS_ERROR, "md2_readModel: %s has too many " msgname " (# found: %d, maximum: %d)\n", filename, field, max); \
+		md2_freeModel (model); \
+		return 0; \
+	}
+
+	// Uncomment if these are actually needed
+//	MD2LIMITCHECK(model->header.numSkins,     MD2_MAX_SKINS,     "skins")
+//	MD2LIMITCHECK(model->header.numTexCoords, MD2_MAX_TEXCOORDS, "texture coordinates")
+//	MD2LIMITCHECK(model->header.numTriangles, MD2_MAX_TRIANGLES, "triangles")
+//	MD2LIMITCHECK(model->header.numFrames,    MD2_MAX_FRAMES,    "frames")
+	MD2LIMITCHECK(model->header.numVertices,  MD2_MAX_VERTICES,  "vertices")
+
+#undef MD2LIMITCHECK
+
 	// read skins
 	fseek(file, model->header.offsetSkins, SEEK_SET);
 	if (model->header.numSkins > 0)
@@ -319,8 +336,6 @@ static md2_model_t *md2_readModel(const char *filename)
 			md2_freeModel (model);
 			return 0;
 		}
-
-		;
 	}
 
 	// read texture coordinates
@@ -334,8 +349,6 @@ static md2_model_t *md2_readModel(const char *filename)
 			md2_freeModel (model);
 			return 0;
 		}
-
-
 	}
 
 	// read triangles
