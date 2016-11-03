@@ -260,18 +260,6 @@ static char returnWadPath[256];
 #include "../byteptr.h"
 #endif
 
-// FAKE_CLIPBOARD simulates system clipboard, but is just local to our app
-#ifndef FAKE_CLIPBOARD
-#include "SDL_syswm.h"
-
-#if defined (_WIN32) && !defined (_XBOX)
-#include <winuser.h>
-#endif
-
-// TODO: clipboard support for other OSes
-
-#endif
-
 /**	\brief	The JoyReset function
 
 	\param	JoySet	Joystick info to reset
@@ -2659,107 +2647,20 @@ INT32 I_PutEnv(char *variable)
 #endif
 }
 
-#ifdef FAKE_CLIPBOARD
-static char __clipboard[512] = "";
-#endif
 
 INT32 I_ClipboardCopy(const char *data, size_t size)
 {
-#ifdef FAKE_CLIPBOARD
-	if (size >= 512) size = 511;
-	memcpy(__clipboard, data, size);
-	__clipboard[size] = 0;
-	return 0;
-#else // !FAKE_CLIPBOARD
-
-#if defined(_WIN32) && !defined(_XBOX)
-	SDL_SysWMinfo syswm;
-	HGLOBAL *storage_ptr;
-	char *storage_raw;
-
-	SDL_VERSION(&syswm.version);
-
-	// Get window (HWND) information, use that to open the clipboard
-	if (!SDL_GetWindowWMInfo(window, &syswm) || !(OpenClipboard(syswm.info.win.window)))
-		return -1;
-
-	// Erase clipboard contents -- if we have nothing to copy, just leave them blank
-	EmptyClipboard();
-	if (size == 0)
-		goto clipboardend;
-
-	// Allocate movable global memory to store our text.
-	if (!(storage_ptr = GlobalAlloc(GMEM_MOVEABLE, size+1))
-	 || !(storage_raw = (char *)GlobalLock(storage_ptr))) // Lock our pointer (gives us access to its data)
-		goto clipboardfail;
-	memcpy(storage_raw, data, size);
-	storage_raw[size] = 0;
-	GlobalUnlock(storage_ptr); // Unlock it before sending it off
-	if (!SetClipboardData(CF_TEXT, storage_ptr)) // NOTE: this removes our permissions from the pointer
-		goto clipboardfail;
-
-clipboardend:
-	CloseClipboard();
-	return 0; //OpenClipboard();
-clipboardfail:
-	CloseClipboard(); // Don't leave me hanging
-	return -1;
-#else
-	(void)data;
 	(void)size;
+	if (SDL_SetClipboardText(data) == 0)
+		return 0;
 	return -1;
-#endif
-
-#endif // FAKE_CLIPBOARD
 }
 
 const char *I_ClipboardPaste(void)
 {
-#ifdef FAKE_CLIPBOARD
-	return (const char *)&__clipboard;
-#else // !FAKE_CLIPBOARD
-
-#if defined(_WIN32) && !defined(_XBOX)
-	HGLOBAL *clipboard_ptr;
-	const char *clipboard_raw;
-	static char clipboard_contents[512];
-	char *i = clipboard_contents;
-
-	if (!IsClipboardFormatAvailable(CF_TEXT))
-		return NULL; // Data either unavailable, or in wrong format
-	OpenClipboard(NULL); // NOTE: Don't need window pointer to get, only to set
-	if (!(clipboard_ptr = GetClipboardData(CF_TEXT))) // Get global pointer
-		return NULL;
-	if (!(clipboard_raw = (const char *)GlobalLock(clipboard_ptr))) // Lock access -- gives us direct ptr to data
-	{
-		CloseClipboard(); // Don't leave me hanging if we fail
-		return NULL;
-	}
-	memcpy(clipboard_contents, clipboard_raw, 511);
-	GlobalUnlock(clipboard_ptr); // Unlock for other apps
-	CloseClipboard(); // And make sure to close the clipboard for other apps too
-	clipboard_contents[511] = 0; // Done after unlock to cause as little interference as possible
-
-	while (*i)
-	{
-		if (*i == '\n' || *i == '\r')
-		{ // End on newline
-			*i = 0;
-			break;
-		}
-		else if (*i == '\t')
-			*i = ' '; // Tabs become spaces
-		else if (*i < 32 || (unsigned)*i > 127)
-			*i = '?'; // Nonprintable chars become question marks
-		++i;
-	}
-
-	return (const char *)&clipboard_contents;
-#else
+	if (SDL_HasClipboardText())
+		return SDL_GetClipboardText();
 	return NULL;
-#endif
-
-#endif // FAKE_CLIPBOARD
 }
 
 /**	\brief	The isWadPathOk function
