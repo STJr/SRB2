@@ -73,9 +73,6 @@ patch_t *cred_font[CRED_FONTSIZE];
 static player_t *plr;
 boolean chat_on; // entering a chat message?
 static char w_chat[HU_MAXMSGLEN];
-static size_t chat_pos; // position of the cursor in the chat
-static INT32 chat_selection; // selection border in current input line, -1 if no selection
-static boolean teamtalk = false;
 static boolean headsupactive = false;
 boolean hu_showscores; // draw rankings
 static char hu_tick;
@@ -109,7 +106,6 @@ static patch_t *crosshair[HU_CROSSHAIRS]; // 3 precached crosshair graphics
 static void HU_DrawRankings(void);
 static void HU_DrawCoopOverlay(void);
 static void HU_DrawNetplayCoopOverlay(void);
-static void HU_DeleteSelectedText(void);
 
 //======================================================================
 //                 KEYBOARD LAYOUTS FOR ENTERING TEXT
@@ -625,183 +621,36 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 }
 #endif
 
-// Deletes selected text, assuming there is, and resets selection.
-// Also sets the cursor to the correct position.
-//
-static void HU_DeleteSelectedText(void)
-{
-	UINT32 i, j;
-	size_t selstart = min(chat_pos, (size_t)chat_selection);
-	size_t selend = max(chat_pos, (size_t)chat_selection);
-
-	for (i = selstart, j = selend; w_chat[j]; ++i, ++j)
-		w_chat[i] = w_chat[j];
-	while (w_chat[i])
-		w_chat[i++] = 0;
-
-	chat_pos = selstart;
-	chat_selection = -1;
-}
-
 // Handles key input and string input
 //
-static void HU_keyInChatString(UINT32 key, boolean shiftdown, boolean ctrldown)
+static inline boolean HU_keyInChatString(char *s, char ch)
 {
-	switch (key)
+	size_t l;
+
+	if ((ch >= HU_FONTSTART && ch <= HU_FONTEND && hu_font[ch-HU_FONTSTART])
+	  || ch == ' ') // Allow spaces, of course
 	{
-	case KEY_ESCAPE:
-		chat_on = false;
-		break;
-	case KEY_ENTER:
+		l = strlen(s);
+		if (l < HU_MAXMSGLEN - 1)
+		{
+			s[l++] = ch;
+			s[l]=0;
+			return true;
+		}
+		return false;
+	}
+	else if (ch == KEY_BACKSPACE)
 	{
-		// send automatically the message (no more chat char)
-		char buf[2+256];
-		size_t ci = 2;
-		char *cp = w_chat;
-
-		while (*cp)
-		{
-			if (*cp >= ' ' && !(*cp & 0x80))
-				buf[ci++] = *cp;
-			cp++;
-		}
-		buf[ci] = 0;
-
-		// last minute mute check
-		if (cv_mute.value && !(server || adminplayer == consoleplayer))
-		{
-			CONS_Alert(CONS_NOTICE, M_GetText("The chat is muted. You can't say anything at the moment.\n"));
-			return;
-		}
-
-		if (ci > 2) // don't send target+flags+empty message.
-		{
-			if (teamtalk)
-				buf[0] = -1; // target
-			else
-				buf[0] = 0; // target
-			buf[1] = 0; // flags
-			SendNetXCmd(XD_SAY, buf, 2 + strlen(&buf[2]) + 1);
-		}
-
-		chat_on = false;
-		break;
+		l = strlen(s);
+		if (l)
+			s[--l] = 0;
+		else
+			return false;
 	}
-	// cursor moving
-	case KEY_LEFTARROW:
-	case KEY_RIGHTARROW:
-	case KEY_HOME:
-	case KEY_END:
-		if (shiftdown)
-		{
-			if (chat_selection == -1)
-				chat_selection = chat_pos;
-		}
-		else
-			chat_selection = -1;
+	else if (ch != KEY_ENTER)
+		return false; // did not eat key
 
-		switch (key)
-		{
-		case KEY_LEFTARROW:
-			// move cursor to previous word
-			if (ctrldown)
-			{
-				while (chat_pos > 0 && w_chat[chat_pos - 1] == ' ')
-					chat_pos--;
-				while (chat_pos > 0 && w_chat[chat_pos - 1] != ' ')
-					chat_pos--;
-			}
-			// move cursor left
-			else if (chat_pos > 0)
-				chat_pos--;
-			break;
-		case KEY_RIGHTARROW:
-			// move cursor to next word
-			if (ctrldown)
-			{
-				while (w_chat[chat_pos] && w_chat[chat_pos] != ' ')
-					chat_pos++;
-				while (w_chat[chat_pos] && w_chat[chat_pos] == ' ')
-					chat_pos++;
-			}
-			// move cursor right
-			else if (w_chat[chat_pos])
-				chat_pos++;
-			break;
-		case KEY_HOME:
-			chat_pos = 0;
-			break;
-		case KEY_END:
-			chat_pos = strlen(w_chat);
-		}
-
-		if ((INT32)chat_pos == chat_selection)
-			chat_selection = -1;
-		break;
-	// backspace or delete selected text
-	case KEY_BACKSPACE:
-		if (chat_selection == -1)
-		{
-			if (chat_pos > 0)
-			{
-				UINT32 i, j;
-				for (i = chat_pos - 1, j = chat_pos; w_chat[j]; ++i, ++j)
-					w_chat[i] = w_chat[j];
-				w_chat[i] = 0;
-				chat_pos--;
-			}
-		}
-		else
-			HU_DeleteSelectedText();
-		break;
-	// delete character under cursor
-	case KEY_DEL:
-		if (chat_selection == -1)
-		{
-			UINT32 i, j;
-
-			for (i = chat_pos, j = chat_pos + 1; w_chat[j]; ++i, ++j)
-				w_chat[i] = w_chat[j];
-			w_chat[i] = 0;
-		}
-		else
-			HU_DeleteSelectedText();
-		break;
-	default:
-		// allow people to use keypad in chat
-		if (key >= KEY_KEYPAD7 && key <= KEY_KPADDEL)
-		{
-			XBOXSTATIC char keypad_translation[] = {'7','8','9','-',
-													'4','5','6','+',
-													'1','2','3',
-													'0','.'};
-
-			key = keypad_translation[key - KEY_KEYPAD7];
-		}
-		else if (key == KEY_KPADSLASH)
-			key = '/';
-
-		// use console translations
-		if (shiftdown)
-			key = shiftxform[key];
-
-		if ((key >= HU_FONTSTART && key <= HU_FONTEND && hu_font[key-HU_FONTSTART])
-		  || key == ' ') // Allow spaces, of course
-		{
-			if (strlen(w_chat) < HU_MAXMSGLEN - 1)
-			{
-				UINT32 i, j;
-
-				if (chat_selection != -1)
-					HU_DeleteSelectedText();
-
-				for (i = strlen(w_chat), j = i + 1; j > chat_pos; --i, --j)
-					w_chat[j] = w_chat[i];
-				w_chat[chat_pos] = (char)key;
-				chat_pos++;
-			}
-		}
-	}
+	return true; // ate the key
 }
 
 //
@@ -820,9 +669,86 @@ void HU_Ticker(void)
 		hu_showscores = false;
 }
 
-// REMOVE? Now this has become pretty useless IMO
+#define QUEUESIZE 256
+
+static boolean teamtalk = false;
+static char chatchars[QUEUESIZE];
+static INT32 head = 0, tail = 0;
+
+//
+// HU_dequeueChatChar
+//
+char HU_dequeueChatChar(void)
+{
+	char c;
+
+	if (head != tail)
+	{
+		c = chatchars[tail];
+		tail = (tail + 1) & (QUEUESIZE-1);
+	}
+	else
+		c = 0;
+
+	return c;
+}
+
+//
+//
+static void HU_queueChatChar(char c)
+{
+	// send automaticly the message (no more chat char)
+	if (c == KEY_ENTER)
+	{
+		char buf[2+256];
+		size_t ci = 2;
+
+		do {
+			c = HU_dequeueChatChar();
+			if (!c || (c >= ' ' && !(c & 0x80))) // copy printable characters and terminating '\0' only.
+				buf[ci++]=c;
+		} while (c);
+
+		// last minute mute check
+		if (cv_mute.value && !(server || adminplayer == consoleplayer))
+		{
+			CONS_Alert(CONS_NOTICE, M_GetText("The chat is muted. You can't say anything at the moment.\n"));
+			return;
+		}
+
+		if (ci > 3) // don't send target+flags+empty message.
+		{
+			if (teamtalk)
+				buf[0] = -1; // target
+			else
+				buf[0] = 0; // target
+			buf[1] = 0; // flags
+			SendNetXCmd(XD_SAY, buf, 2 + strlen(&buf[2]) + 1);
+		}
+		return;
+	}
+
+	if (((head + 1) & (QUEUESIZE-1)) == tail)
+		CONS_Printf(M_GetText("[Message unsent]\n")); // message not sent
+	else
+	{
+		if (c == KEY_BACKSPACE)
+		{
+			if (tail != head)
+				head = (head - 1) & (QUEUESIZE-1);
+		}
+		else
+		{
+			chatchars[head] = c;
+			head = (head + 1) & (QUEUESIZE-1);
+		}
+	}
+}
+
 void HU_clearChatChars(void)
 {
+	while (tail != head)
+		HU_queueChatChar(KEY_BACKSPACE);
 	chat_on = false;
 }
 
@@ -832,17 +758,11 @@ void HU_clearChatChars(void)
 boolean HU_Responder(event_t *ev)
 {
 	static boolean shiftdown = false;
-	static boolean ctrldown = false;
-	INT32 key = ev->data1; // only valid if ev->type is a key event
+	UINT8 c;
 
-	if (key == KEY_LSHIFT || key == KEY_RSHIFT)
+	if (ev->data1 == KEY_LSHIFT || ev->data1 == KEY_RSHIFT)
 	{
 		shiftdown = (ev->type == ev_keydown);
-		return chat_on;
-	}
-	else if (key == KEY_LCTRL || key == KEY_RCTRL)
-	{
-		ctrldown = (ev->type == ev_keydown);
 		return chat_on;
 	}
 
@@ -854,36 +774,42 @@ boolean HU_Responder(event_t *ev)
 	if (!chat_on)
 	{
 		// enter chat mode
-		if ((key == gamecontrol[gc_talkkey][0] || key == gamecontrol[gc_talkkey][1])
+		if ((ev->data1 == gamecontrol[gc_talkkey][0] || ev->data1 == gamecontrol[gc_talkkey][1])
 			&& netgame && (!cv_mute.value || server || (adminplayer == consoleplayer)))
 		{
-			// we already checked for this two lines before...
-			//if (cv_mute.value && !(server || adminplayer == consoleplayer))
-				//return false;
+			if (cv_mute.value && !(server || adminplayer == consoleplayer))
+				return false;
 			chat_on = true;
 			w_chat[0] = 0;
-			chat_pos = 0;
-			chat_selection = -1;
 			teamtalk = false;
 			return true;
 		}
-		if ((key == gamecontrol[gc_teamkey][0] || key == gamecontrol[gc_teamkey][1])
+		if ((ev->data1 == gamecontrol[gc_teamkey][0] || ev->data1 == gamecontrol[gc_teamkey][1])
 			&& netgame && (!cv_mute.value || server || (adminplayer == consoleplayer)))
 		{
-			// we already checked for this two lines before...
-			//if (cv_mute.value && !(server || adminplayer == consoleplayer))
-				//return false;
+			if (cv_mute.value && !(server || adminplayer == consoleplayer))
+				return false;
 			chat_on = true;
 			w_chat[0] = 0;
-			chat_pos = 0;
-			chat_selection = -1;
 			teamtalk = true;
 			return true;
 		}
 	}
 	else // if chat_on
 	{
-		HU_keyInChatString(key, shiftdown, ctrldown);
+		c = (UINT8)ev->data1;
+
+		// use console translations
+		if (shiftdown)
+			c = shiftxform[c];
+
+		if (HU_keyInChatString(w_chat,c))
+			HU_queueChatChar(c);
+		if (c == KEY_ENTER)
+			chat_on = false;
+		else if (c == KEY_ESCAPE)
+			chat_on = false;
+
 		return true;
 	}
 	return false;
@@ -900,7 +826,7 @@ boolean HU_Responder(event_t *ev)
 //
 static void HU_DrawChat(void)
 {
-	INT32 t = 0, f = 0, c = 0, y = HU_INPUTY;
+	INT32 t = 0, c = 0, y = HU_INPUTY;
 	size_t i = 0;
 	const char *ntalk = "Say: ", *ttalk = "Say-Team: ";
 	const char *talk = ntalk;
@@ -918,8 +844,6 @@ static void HU_DrawChat(void)
 #endif
 	}
 
-	f = cv_constextsize.value | V_NOSCALESTART;
-
 	while (talk[i])
 	{
 		if (talk[i] < HU_FONTSTART)
@@ -930,123 +854,36 @@ static void HU_DrawChat(void)
 		else
 		{
 			//charwidth = SHORT(hu_font[talk[i]-HU_FONTSTART]->width) * con_scalefactor;
-			V_DrawCharacter(HU_INPUTX + c, y, talk[i++] | f, !cv_allcaps.value);
+			V_DrawCharacter(HU_INPUTX + c, y, talk[i++] | cv_constextsize.value | V_NOSCALESTART, !cv_allcaps.value);
 		}
 		c += charwidth;
 	}
 
-	f |= t;
 	i = 0;
-	if (chat_selection == -1)
+	while (w_chat[i])
 	{
-		while (w_chat[i])
+		//Hurdler: isn't it better like that?
+		if (w_chat[i] < HU_FONTSTART)
 		{
-			//Hurdler: isn't it better like that?
-			if (w_chat[i] < HU_FONTSTART)
-			{
-				++i;
-				//charwidth = 4 * con_scalefactor;
-			}
-			else
-			{
-				//charwidth = SHORT(hu_font[w_chat[i]-HU_FONTSTART]->width) * con_scalefactor;
-				V_DrawCharacter(HU_INPUTX + c, y, w_chat[i++] | f, !cv_allcaps.value);
-			}
-
-			c += charwidth;
-			if (c >= vid.width)
-			{
-				c = 0;
-				y += charheight;
-			}
+			++i;
+			//charwidth = 4 * con_scalefactor;
 		}
-	}
-	else
-	{
-		size_t selstart = min(chat_pos, (size_t)chat_selection);
-		size_t selend = max(chat_pos, (size_t)chat_selection);
-
-		while (i < selstart)
+		else
 		{
-			//Hurdler: isn't it better like that?
-			if (w_chat[i] < HU_FONTSTART)
-			{
-				++i;
-				//charwidth = 4 * con_scalefactor;
-			}
-			else
-			{
-				//charwidth = SHORT(hu_font[w_chat[i]-HU_FONTSTART]->width) * con_scalefactor;
-				V_DrawCharacter(HU_INPUTX + c, y, w_chat[i++] | f, !cv_allcaps.value);
-			}
-
-			c += charwidth;
-			if (c >= vid.width)
-			{
-				c = 0;
-				y += charheight;
-			}
+			//charwidth = SHORT(hu_font[w_chat[i]-HU_FONTSTART]->width) * con_scalefactor;
+			V_DrawCharacter(HU_INPUTX + c, y, w_chat[i++] | cv_constextsize.value | V_NOSCALESTART | t, !cv_allcaps.value);
 		}
 
-		f &= ~t;
-		f |= V_YELLOWMAP;
-		while (i < selend)
+		c += charwidth;
+		if (c >= vid.width)
 		{
-			//Hurdler: isn't it better like that?
-			if (w_chat[i] < HU_FONTSTART)
-			{
-				++i;
-				//charwidth = 4 * con_scalefactor;
-			}
-			else
-			{
-				//charwidth = SHORT(hu_font[w_chat[i]-HU_FONTSTART]->width) * con_scalefactor;
-				V_DrawCharacter(HU_INPUTX + c, y, w_chat[i++] | f, !cv_allcaps.value);
-			}
-
-			c += charwidth;
-			if (c >= vid.width)
-			{
-				c = 0;
-				y += charheight;
-			}
-		}
-		f &= ~V_YELLOWMAP;
-		f |= t;
-
-		while (w_chat[i])
-		{
-			//Hurdler: isn't it better like that?
-			if (w_chat[i] < HU_FONTSTART)
-			{
-				++i;
-				//charwidth = 4 * con_scalefactor;
-			}
-			else
-			{
-				//charwidth = SHORT(hu_font[w_chat[i]-HU_FONTSTART]->width) * con_scalefactor;
-				V_DrawCharacter(HU_INPUTX + c, y, w_chat[i++] | f, !cv_allcaps.value);
-			}
-
-			c += charwidth;
-			if (c >= vid.width)
-			{
-				c = 0;
-				y += charheight;
-			}
+			c = 0;
+			y += charheight;
 		}
 	}
 
 	if (hu_tick < 4)
-	{
-		if (w_chat[chat_pos])
-		{
-			i = (strlen(talk) + chat_pos) * charwidth;
-			c = i % vid.width;
-			y = HU_INPUTY + i / vid.width * charheight + 2 * con_scalefactor;
-		}
-		V_DrawCharacter(HU_INPUTX + c, y, '_' | f, !cv_allcaps.value);
-	}
+		V_DrawCharacter(HU_INPUTX + c, y, '_' | cv_constextsize.value |V_NOSCALESTART|t, !cv_allcaps.value);
 }
 
 

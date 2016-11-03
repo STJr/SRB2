@@ -91,13 +91,11 @@ static char inputlines[32][CON_MAXPROMPTCHARS]; // hold last 32 prompt lines
 static INT32 inputline;    // current input line number
 static INT32 inputhist;    // line number of history input line to restore
 static size_t input_cx;  // position in current input line
-static INT32 input_selection; // selection border in current input line, -1 if no selection
 
 // protos.
 static void CON_InputInit(void);
 static void CON_RecalcSize(void);
 
-static void CON_DeleteSelectedText(void);
 static void CONS_hudlines_Change(void);
 static void CON_DrawBackpic(patch_t *pic, INT32 startx, INT32 destwidth);
 //static void CON_DrawBackpic2(pic_t *pic, INT32 startx, INT32 destwidth);
@@ -396,7 +394,6 @@ static void CON_InputInit(void)
 		inputlines[i][0] = CON_PROMPTCHAR;
 	inputline = 0;
 	input_cx = 1;
-	input_selection = -1;
 }
 
 //======================================================================
@@ -621,25 +618,6 @@ void CON_Ticker(void)
 	}
 }
 
-// Deletes selected text, assuming there is, and resets selection.
-// Also sets the cursor to the correct position.
-//
-static void CON_DeleteSelectedText(void)
-{
-	UINT32 i, j;
-	char *line = inputlines[inputline];
-	size_t selstart = min(input_cx, (size_t)input_selection);
-	size_t selend = max(input_cx, (size_t)input_selection);
-
-	for (i = selstart, j = selend; line[j]; ++i, ++j)
-		line[i] = line[j];
-	while (line[i])
-		line[i++] = 0;
-
-	input_cx = selstart;
-	input_selection = -1;
-}
-
 // Handles console key input
 //
 boolean CON_Responder(event_t *ev)
@@ -726,9 +704,6 @@ boolean CON_Responder(event_t *ev)
 	// command completion forward (tab) and backward (shift-tab)
 	if (key == KEY_TAB)
 	{
-		input_cx = strlen(inputlines[inputline]); // make sure the cursor is at the end of the string, in case we were inserting
-		input_selection = -1; // make sure there is no text selected, it would look odd
-
 		// show all cvars/commands that match what we have inputted
 		if (ctrldown)
 		{
@@ -864,51 +839,21 @@ boolean CON_Responder(event_t *ev)
 		return true;
 	}
 
-	if (key == KEY_HOME)
+	if (key == KEY_HOME) // oldest text in buffer
 	{
-		if (shiftdown)
-		{
-			if (input_selection == -1)
-				input_selection = input_cx;
-		}
-		else
-			input_selection = -1;
-
-		if (ctrldown)
-			con_scrollup = (con_totallines-((con_curlines-16)>>3)); // oldest text in buffer
-		else
-			input_cx = 1;
-
-		if ((INT32)input_cx == input_selection)
-			input_selection = -1;
-
+		con_scrollup = (con_totallines-((con_curlines-16)>>3));
 		return true;
 	}
-	else if (key == KEY_END)
+	else if (key == KEY_END) // most recent text in buffer
 	{
-		if (shiftdown)
-		{
-			if (input_selection == -1)
-				input_selection = input_cx;
-		}
-		else
-			input_selection = -1;
-
-		if (ctrldown)
-			con_scrollup = 0; // most recent text in buffer
-		else
-			input_cx = strlen(inputlines[inputline]);
-
-		if ((INT32)input_cx == input_selection)
-			input_selection = -1;
-
+		con_scrollup = 0;
 		return true;
 	}
 
 	// command enter
 	if (key == KEY_ENTER)
 	{
-		if (strlen(inputlines[inputline]) < 2)
+		if (input_cx < 2)
 			return true;
 
 		// push the command
@@ -923,107 +868,18 @@ boolean CON_Responder(event_t *ev)
 		memset(inputlines[inputline], 0, CON_MAXPROMPTCHARS);
 		inputlines[inputline][0] = CON_PROMPTCHAR;
 		input_cx = 1;
-		input_selection = -1;
 
 		return true;
 	}
 
-	// backspace command prompt or delete selected text
+	// backspace command prompt
 	if (key == KEY_BACKSPACE)
 	{
-		if (input_selection == -1)
+		if (input_cx > 1)
 		{
-			if (input_cx > 1)
-			{
-				UINT32 i, j;
-				char *line = inputlines[inputline];
-
-				for (i = input_cx - 1, j = input_cx; line[j]; ++i, ++j)
-					line[i] = line[j];
-				line[i] = 0;
-				input_cx--;
-			}
-		}
-		else
-			CON_DeleteSelectedText();
-		return true;
-	}
-
-	// delete character under cursor or selected text
-	if (key == KEY_DEL)
-	{
-		if (input_selection == -1)
-		{
-			UINT32 i, j;
-			char *line = inputlines[inputline];
-
-			for (i = input_cx, j = input_cx + 1; line[j]; ++i, ++j)
-				line[i] = line[j];
-			line[i] = 0;
-		}
-		else
-			CON_DeleteSelectedText();
-
-		return true;
-	}
-
-	if (key == KEY_LEFTARROW)
-	{
-		if (shiftdown)
-		{
-			if (input_selection == -1)
-				input_selection = input_cx;
-		}
-		else
-			input_selection = -1;
-
-		// move cursor to previous word
-		if (ctrldown)
-		{
-			char *line = inputlines[inputline];
-
-			while (input_cx > 1 && line[input_cx - 1] == ' ')
-				input_cx--;
-			while (input_cx > 1 && line[input_cx - 1] != ' ')
-				input_cx--;
-		}
-		// move cursor left
-		else if (input_cx > 1)
 			input_cx--;
-
-		if ((INT32)input_cx == input_selection)
-			input_selection = -1;
-
-		return true;
-	}
-
-	if (key == KEY_RIGHTARROW)
-	{
-		if (shiftdown)
-		{
-			if (input_selection == -1)
-				input_selection = input_cx;
+			inputlines[inputline][input_cx] = 0;
 		}
-		else
-			input_selection = -1;
-
-		// move cursor to next word
-		if (ctrldown)
-		{
-			char *line = inputlines[inputline];
-
-			while (line[input_cx] && line[input_cx] != ' ')
-				input_cx++;
-			while (line[input_cx] && line[input_cx] == ' ')
-				input_cx++;
-		}
-		// move cursor right
-		else if (inputlines[inputline][input_cx])
-			input_cx++;
-
-		if ((INT32)input_cx == input_selection)
-			input_selection = -1;
-
 		return true;
 	}
 
@@ -1094,21 +950,13 @@ boolean CON_Responder(event_t *ev)
 		return false;
 
 	// add key to cmd line here
-	if (strlen(inputlines[inputline]) < CON_MAXPROMPTCHARS - 1)
+	if (input_cx < CON_MAXPROMPTCHARS)
 	{
-		INT32 i, j;
-		char *line = inputlines[inputline];
-
 		if (key >= 'A' && key <= 'Z' && !shiftdown) //this is only really necessary for dedicated servers
 			key = key + 'a' - 'A';
 
-		if (input_selection != -1)
-			CON_DeleteSelectedText();
-
-		for (i = strlen(line), j = i + 1; j > (INT32)input_cx; --i, --j)
-			line[j] = line[i];
-
-		line[input_cx] = (char)key;
+		inputlines[inputline][input_cx] = (char)key;
+		inputlines[inputline][input_cx + 1] = 0;
 		input_cx++;
 	}
 
@@ -1398,7 +1246,6 @@ static void CON_DrawInput(void)
 	size_t c;
 	INT32 x, y;
 	INT32 charwidth = (INT32)con_scalefactor << 3;
-	INT32 f = cv_constextsize.value | V_NOSCALESTART;
 
 	// input line scrolls left if it gets too long
 	p = inputlines[inputline];
@@ -1407,44 +1254,14 @@ static void CON_DrawInput(void)
 
 	y = con_curlines - 12 * con_scalefactor;
 
-	if (input_selection == -1)
-	{
-		for (c = 0, x = charwidth; c < con_width-11; c++, x += charwidth)
-			V_DrawCharacter(x, y, p[c] | f, !cv_allcaps.value);
-	}
-	else
-	{
-		size_t selstart = min(input_cx, (size_t)input_selection);
-		size_t selend = max(input_cx, (size_t)input_selection);
-
-		for (c = 0, x = charwidth; c < selstart && c < con_width-11; c++, x += charwidth)
-			V_DrawCharacter(x, y, p[c] | f, !cv_allcaps.value);
-
-		f |= V_YELLOWMAP;
-		for (; c < selend && c < con_width-11; c++, x += charwidth)
-			V_DrawCharacter(x, y, p[c] | f, !cv_allcaps.value);
-		f &= ~V_YELLOWMAP;
-
-		for (; c < con_width-11; c++, x += charwidth)
-			V_DrawCharacter(x, y, p[c] | f, !cv_allcaps.value);
-	}
-	//for (c = 0, x = charwidth; c < con_width-11; c++, x += charwidth)
-		//V_DrawCharacter(x, y, p[c] | cv_constextsize.value | V_NOSCALESTART, !cv_allcaps.value);
+	for (c = 0, x = charwidth; c < con_width-11; c++, x += charwidth)
+		V_DrawCharacter(x, y, p[c] | cv_constextsize.value | V_NOSCALESTART, !cv_allcaps.value);
 
 	// draw the blinking cursor
 	//
 	x = ((input_cx >= con_width-11) ? (INT32)(con_width-11) : (INT32)((input_cx + 1)) * charwidth);
 	if (con_tick < 4)
-	{
-		if (inputlines[inputline][input_cx])
-			//V_DrawCharacter(x - 2 * con_scalefactor, y, '|' | f, !cv_allcaps.value);
-			V_DrawCharacter(x, y + 2 * con_scalefactor, '_' | f, !cv_allcaps.value);
-		else
-			V_DrawCharacter(x, y, '_' | f, !cv_allcaps.value);
-	}
-	/*x = ((input_cx >= con_width-11) ? (INT32)(con_width-11) : (INT32)((input_cx + 1)) * charwidth);
-	if (con_tick < 4)
-		V_DrawCharacter(x, y, '_' | cv_constextsize.value | V_NOSCALESTART, !cv_allcaps.value);*/
+		V_DrawCharacter(x, y, '_' | cv_constextsize.value | V_NOSCALESTART, !cv_allcaps.value);
 }
 
 // draw the last lines of console text to the top of the screen
