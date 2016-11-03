@@ -319,8 +319,8 @@ static md2_model_t *md2_readModel(const char *filename)
 	// Uncomment if these are actually needed
 //	MD2LIMITCHECK(model->header.numSkins,     MD2_MAX_SKINS,     "skins")
 //	MD2LIMITCHECK(model->header.numTexCoords, MD2_MAX_TEXCOORDS, "texture coordinates")
-//	MD2LIMITCHECK(model->header.numTriangles, MD2_MAX_TRIANGLES, "triangles")
-//	MD2LIMITCHECK(model->header.numFrames,    MD2_MAX_FRAMES,    "frames")
+	MD2LIMITCHECK(model->header.numTriangles, MD2_MAX_TRIANGLES, "triangles")
+	MD2LIMITCHECK(model->header.numFrames,    MD2_MAX_FRAMES,    "frames")
 	MD2LIMITCHECK(model->header.numVertices,  MD2_MAX_VERTICES,  "vertices")
 
 #undef MD2LIMITCHECK
