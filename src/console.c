@@ -621,20 +621,20 @@ void CON_Ticker(void)
 // Necessary due to moving cursor
 //
 
-static inline void CON_InputClear(void)
+static void CON_InputClear(void)
 {
 	memset(inputlines[inputline], 0, CON_MAXPROMPTCHARS);
 	input_cur = input_sel = input_len = 0;
 }
 
-static inline void CON_InputSetString(const char *c)
+static void CON_InputSetString(const char *c)
 {
 	memset(inputlines[inputline], 0, CON_MAXPROMPTCHARS);
 	strcpy(inputlines[inputline], c);
 	input_cur = input_sel = input_len = strlen(c);
 }
 
-static inline void CON_InputAddString(const char *c)
+static void CON_InputAddString(const char *c)
 {
 	size_t csize = strlen(c);
 	if (input_len + csize > CON_MAXPROMPTCHARS-1)
@@ -646,7 +646,7 @@ static inline void CON_InputAddString(const char *c)
 	input_sel = (input_cur += csize);
 }
 
-static inline void CON_InputDelSelection(void)
+static void CON_InputDelSelection(void)
 {
 	size_t start, end, len;
 	if (input_cur > input_sel)
@@ -669,7 +669,7 @@ static inline void CON_InputDelSelection(void)
 	input_sel = input_cur = start;
 }
 
-static inline void CON_InputAddChar(char c)
+static void CON_InputAddChar(char c)
 {
 	if (input_len >= CON_MAXPROMPTCHARS-1)
 		return;
@@ -680,7 +680,7 @@ static inline void CON_InputAddChar(char c)
 	input_sel = input_cur;
 }
 
-static inline void CON_InputDelChar(void)
+static void CON_InputDelChar(void)
 {
 	if (!input_cur)
 		return;
