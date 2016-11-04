@@ -74,12 +74,21 @@ typedef struct hook_s* hook_p;
 
 #define FMT_HOOKID "hook_%d"
 
+// For each mobj type, a linked list to its thinker and collision hooks.
+// That way, we don't have to iterate through all the hooks.
+// We could do that with all other mobj hooks, but it would probably just be
+// a waste of memory since they are only called occasionally. Probably...
+static hook_p mobjthinkerhooks[NUMMOBJTYPES];
+static hook_p mobjcollidehooks[NUMMOBJTYPES];
+
+// For other hooks, a unique linked list
 hook_p roothook;
 
 // Takes hook, function, and additional arguments (mobj type to act on, etc.)
 static int lib_addHook(lua_State *L)
 {
 	static struct hook_s hook = {NULL, 0, 0, {0}, false};
+	static UINT32 nextid;
 	hook_p hookp, *lastp;
 
 	hook.type = luaL_checkoption(L, 1, NULL, hookNames);
@@ -109,6 +118,7 @@ static int lib_addHook(lua_State *L)
 		hook.s.mt = MT_NULL;
 		if (lua_isnumber(L, 2))
 			hook.s.mt = lua_tonumber(L, 2);
+		luaL_argcheck(L, hook.s.mt < NUMMOBJTYPES, 2, "invalid mobjtype_t");
 		break;
 	case hook_BotAI:
 		hook.s.skinname = NULL;
@@ -141,18 +151,21 @@ static int lib_addHook(lua_State *L)
 
 	hooksAvailable[hook.type/8] |= 1<<(hook.type%8);
 
-	// iterate the hook metadata structs
 	// set hook.id to the highest id + 1
-	// set lastp to the last hook struct's "next" pointer.
-	lastp = &roothook;
-	hook.id = 0;
-	for (hookp = roothook; hookp; hookp = hookp->next)
-	{
-		if (hookp->id >= hook.id)
-			hook.id = hookp->id+1;
-		lastp = &hookp->next;
-	}
+	hook.id = nextid++;
 
+	// Special cases for mobj thinker and collision hooks (see the comments above mobjthinkerhooks declaration)
+	if (hook.type == hook_MobjThinker)
+		lastp = &mobjthinkerhooks[hook.s.mt];
+	else if (hook.type == hook_MobjCollide || hook.type == hook_MobjMoveCollide)
+		lastp = &mobjcollidehooks[hook.s.mt];
+	else
+		lastp = &roothook;
+
+	// iterate the hook metadata structs
+	// set lastp to the last hook struct's "next" pointer.
+	for (hookp = *lastp; hookp; hookp = hookp->next)
+		lastp = &hookp->next;
 	// allocate a permanent memory struct to stuff hook.
 	hookp = ZZ_Alloc(sizeof(struct hook_s));
 	memcpy(hookp, &hook, sizeof(struct hook_s));
@@ -183,9 +196,9 @@ boolean LUAh_MobjHook(mobj_t *mo, enum hook which)
 
 	lua_settop(gL, 0);
 
-	for (hookp = roothook; hookp; hookp = hookp->next)
-		if (hookp->type == which
-		&& (hookp->s.mt == MT_NULL || hookp->s.mt == mo->type))
+	if (which == hook_MobjThinker) // Alternate list for mobj thinkers
+	{
+		for (hookp = mobjthinkerhooks[mo->type]; hookp; hookp = hookp->next)
 		{
 			if (lua_gettop(gL) == 0)
 				LUA_PushUserdata(gL, mo, META_MOBJ);
@@ -203,6 +216,50 @@ boolean LUAh_MobjHook(mobj_t *mo, enum hook which)
 				hooked = true;
 			lua_pop(gL, 1);
 		}
+
+		// Look for all generic mobj thinker hooks
+		for (hookp = mobjthinkerhooks[MT_NULL]; hookp; hookp = hookp->next)
+		{
+			if (lua_gettop(gL) == 0)
+				LUA_PushUserdata(gL, mo, META_MOBJ);
+			lua_pushfstring(gL, FMT_HOOKID, hookp->id);
+			lua_gettable(gL, LUA_REGISTRYINDEX);
+			lua_pushvalue(gL, -2);
+			if (lua_pcall(gL, 1, 1, 0)) {
+				if (!hookp->error || cv_debug & DBG_LUA)
+					CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+				lua_pop(gL, 1);
+				hookp->error = true;
+				continue;
+			}
+			if (lua_toboolean(gL, -1))
+				hooked = true;
+			lua_pop(gL, 1);
+		}
+	}
+	else
+	{
+		for (hookp = roothook; hookp; hookp = hookp->next)
+			if (hookp->type == which
+			&& (hookp->s.mt == MT_NULL || hookp->s.mt == mo->type))
+			{
+				if (lua_gettop(gL) == 0)
+					LUA_PushUserdata(gL, mo, META_MOBJ);
+				lua_pushfstring(gL, FMT_HOOKID, hookp->id);
+				lua_gettable(gL, LUA_REGISTRYINDEX);
+				lua_pushvalue(gL, -2);
+				if (lua_pcall(gL, 1, 1, 0)) {
+					if (!hookp->error || cv_debug & DBG_LUA)
+						CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+					lua_pop(gL, 1);
+					hookp->error = true;
+					continue;
+				}
+				if (lua_toboolean(gL, -1))
+					hooked = true;
+				lua_pop(gL, 1);
+			}
+	}
 
 	lua_settop(gL, 0);
 	return hooked;
@@ -338,9 +395,38 @@ UINT8 LUAh_MobjCollideHook(mobj_t *thing1, mobj_t *thing2, enum hook which)
 
 	lua_settop(gL, 0);
 
-	for (hookp = roothook; hookp; hookp = hookp->next)
-		if (hookp->type == which
-		&& (hookp->s.mt == MT_NULL || hookp->s.mt == thing1->type))
+	for (hookp = mobjcollidehooks[thing1->type]; hookp; hookp = hookp->next)
+		if (hookp->type == which)
+		{
+			if (lua_gettop(gL) == 0)
+			{
+				LUA_PushUserdata(gL, thing1, META_MOBJ);
+				LUA_PushUserdata(gL, thing2, META_MOBJ);
+			}
+			lua_pushfstring(gL, FMT_HOOKID, hookp->id);
+			lua_gettable(gL, LUA_REGISTRYINDEX);
+			lua_pushvalue(gL, -3);
+			lua_pushvalue(gL, -3);
+			if (lua_pcall(gL, 2, 1, 0)) {
+				if (!hookp->error || cv_debug & DBG_LUA)
+					CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+				lua_pop(gL, 1);
+				hookp->error = true;
+				continue;
+			}
+			if (!lua_isnil(gL, -1))
+			{ // if nil, leave shouldCollide = 0.
+				if (lua_toboolean(gL, -1))
+					shouldCollide = 1; // Force yes
+				else
+					shouldCollide = 2; // Force no
+			}
+			lua_pop(gL, 1);
+		}
+
+	// Look for all generic mobj collision hooks
+	for (hookp = mobjcollidehooks[MT_NULL]; hookp; hookp = hookp->next)
+		if (hookp->type == which)
 		{
 			if (lua_gettop(gL) == 0)
 			{
