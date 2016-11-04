@@ -84,13 +84,16 @@ UINT32 con_scalefactor;            // text size scale factor
 
 // hold 32 last lines of input for history
 #define CON_MAXPROMPTCHARS 256
-#define CON_PROMPTCHAR '>'
+#define CON_PROMPTCHAR '$'
 
 static char inputlines[32][CON_MAXPROMPTCHARS]; // hold last 32 prompt lines
 
 static INT32 inputline;    // current input line number
 static INT32 inputhist;    // line number of history input line to restore
-static size_t input_cx;  // position in current input line
+static size_t input_cur; // position of cursor in line
+static size_t input_sel; // position of selection marker (I.E.: anything between this and input_cur is "selected")
+static size_t input_len; // length of current line, used to bound cursor and such
+// notice: input does NOT include the "$" at the start of the line. - 11/3/16
 
 // protos.
 static void CON_InputInit(void);
@@ -383,14 +386,10 @@ void CON_Init(void)
 //
 static void CON_InputInit(void)
 {
-	INT32 i;
-
 	// prepare the first prompt line
 	memset(inputlines, 0, sizeof (inputlines));
-	for (i = 0; i < 32; i++)
-		inputlines[i][0] = CON_PROMPTCHAR;
 	inputline = 0;
-	input_cx = 1;
+	input_cur = input_sel = input_len = 0;
 }
 
 //======================================================================
@@ -615,6 +614,86 @@ void CON_Ticker(void)
 	}
 }
 
+//
+// ----
+//
+// Shortcuts for adding and deleting characters, strings, and sections
+// Necessary due to moving cursor
+//
+
+static inline void CON_InputClear(void)
+{
+	memset(inputlines[inputline], 0, CON_MAXPROMPTCHARS);
+	input_cur = input_sel = input_len = 0;
+}
+
+static inline void CON_InputSetString(const char *c)
+{
+	memset(inputlines[inputline], 0, CON_MAXPROMPTCHARS);
+	strcpy(inputlines[inputline], c);
+	input_cur = input_sel = input_len = strlen(c);
+}
+
+static inline void CON_InputAddString(const char *c)
+{
+	size_t csize = strlen(c);
+	if (input_len + csize > CON_MAXPROMPTCHARS-1)
+		return;
+	if (input_cur != input_len)
+		memmove(&inputlines[inputline][input_cur+csize], &inputlines[inputline][input_cur], input_len-input_cur);
+	memcpy(&inputlines[inputline][input_cur], c, csize);
+	input_len += csize;
+	input_sel = (input_cur += csize);
+}
+
+static inline void CON_InputDelSelection(void)
+{
+	size_t start, end, len;
+	if (input_cur > input_sel)
+	{
+		start = input_sel;
+		end = input_cur;
+	}
+	else
+	{
+		start = input_cur;
+		end = input_sel;
+	}
+	len = (end - start);
+
+	if (end != input_len)
+		memmove(&inputlines[inputline][start], &inputlines[inputline][end], input_len-input_cur);
+	memset(&inputlines[inputline][input_len - len], 0, len);
+
+	input_len -= len;
+	input_sel = input_cur = start;
+}
+
+static inline void CON_InputAddChar(char c)
+{
+	if (input_len >= CON_MAXPROMPTCHARS-1)
+		return;
+	if (input_cur != input_len)
+		memmove(&inputlines[inputline][input_cur+1], &inputlines[inputline][input_cur], input_len-input_cur);
+	inputlines[inputline][input_cur++] = c;
+	inputlines[inputline][++input_len] = 0;
+	input_sel = input_cur;
+}
+
+static inline void CON_InputDelChar(void)
+{
+	if (!input_cur)
+		return;
+	if (input_cur != input_len)
+		memmove(&inputlines[inputline][input_cur-1], &inputlines[inputline][input_cur], input_len-input_cur);
+	inputlines[inputline][--input_len] = 0;
+	input_sel = --input_cur;
+}
+
+//
+// ----
+//
+
 // Handles console key input
 //
 boolean CON_Responder(event_t *ev)
@@ -689,12 +768,16 @@ boolean CON_Responder(event_t *ev)
 		// show all cvars/commands that match what we have inputted
 		if (key == KEY_TAB)
 		{
-			size_t i, len = strlen(inputlines[inputline]+1);
+			size_t i, len;
 
-			if (input_cx < 2 || len >= 80 || strchr(inputlines[inputline]+1, ' '))
-				return true;
-
-			strcpy(completion, inputlines[inputline]+1);
+			if (!completion[0])
+			{
+				if (!input_len || input_len >= 40 || strchr(inputlines[inputline], ' '))
+					return true;
+				strcpy(completion, inputlines[inputline]);
+				comskips = varskips = 0;
+			}
+			len = strlen(completion);
 
 			//first check commands
 			CONS_Printf("\nCommands:\n");
@@ -725,18 +808,38 @@ boolean CON_Responder(event_t *ev)
 
 		if (key == 'x' || key == 'X')
 		{
-			CONS_Printf("Cut\n");
+			if (input_sel > input_cur)
+				I_ClipboardCopy(&inputlines[inputline][input_cur], input_sel-input_cur);
+			else
+				I_ClipboardCopy(&inputlines[inputline][input_sel], input_cur-input_sel);
+			CON_InputDelSelection();
+			completion[0] = 0;
 			return true;
 		}
 		else if (key == 'c' || key == 'C')
 		{
-			CONS_Printf("Copy\n");
-			I_ClipboardCopy(inputlines[inputline]+1, strlen(inputlines[inputline]+1));
+			if (input_sel > input_cur)
+				I_ClipboardCopy(&inputlines[inputline][input_cur], input_sel-input_cur);
+			else
+				I_ClipboardCopy(&inputlines[inputline][input_sel], input_cur-input_sel);
 			return true;
 		}
 		else if (key == 'v' || key == 'V')
 		{
-			CONS_Printf("Paste: %s\n", I_ClipboardPaste());
+			const char *paste = I_ClipboardPaste();
+			if (input_sel != input_cur)
+				CON_InputDelSelection();
+			if (paste != NULL)
+				CON_InputAddString(paste);
+			completion[0] = 0;
+			return true;
+		}
+
+		// Select all
+		if (key == 'a' || key == 'A')
+		{
+			input_sel = 0;
+			input_cur = input_len;
 			return true;
 		}
 
@@ -750,13 +853,11 @@ boolean CON_Responder(event_t *ev)
 		// sequential command completion forward and backward
 
 		// remember typing for several completions (a-la-4dos)
-		if (inputlines[inputline][input_cx-1] != ' ')
+		if (!completion[0])
 		{
-			if (strlen(inputlines[inputline]+1) < 80)
-				strcpy(completion, inputlines[inputline]+1);
-			else
-				completion[0] = 0;
-
+			if (!input_len || input_len >= 40 || strchr(inputlines[inputline], ' '))
+				return true;
+			strcpy(completion, inputlines[inputline]);
 			comskips = varskips = 0;
 		}
 		else
@@ -768,37 +869,26 @@ boolean CON_Responder(event_t *ev)
 					if (--varskips < 0)
 						comskips = -comskips - 2;
 				}
-				else if (comskips > 0)
-					comskips--;
+				else if (comskips > 0) comskips--;
 			}
 			else
 			{
-				if (comskips < 0)
-					varskips++;
-				else
-					comskips++;
+				if (comskips < 0) varskips++;
+				else              comskips++;
 			}
 		}
 
 		if (comskips >= 0)
 		{
 			cmd = COM_CompleteCommand(completion, comskips);
-			if (!cmd)
-				// dirty: make sure if comskips is zero, to have a neg value
+			if (!cmd) // dirty: make sure if comskips is zero, to have a neg value
 				comskips = -comskips - 1;
 		}
 		if (comskips < 0)
 			cmd = CV_CompleteVar(completion, varskips);
 
 		if (cmd)
-		{
-			memset(inputlines[inputline]+1, 0, CON_MAXPROMPTCHARS-1);
-			strcpy(inputlines[inputline]+1, cmd);
-			input_cx = strlen(cmd) + 1;
-			inputlines[inputline][input_cx] = ' ';
-			input_cx++;
-			inputlines[inputline][input_cx] = 0;
-		}
+			CON_InputSetString(va("%s ", cmd));
 		else
 		{
 			if (comskips > 0)
@@ -824,38 +914,80 @@ boolean CON_Responder(event_t *ev)
 		return true;
 	}
 
+	if (key == KEY_LEFTARROW)
+	{
+		if (input_cur != 0)
+			--input_cur;
+		if (!shiftdown)
+			input_sel = input_cur;
+		return true;
+	}
+	else if (key == KEY_RIGHTARROW)
+	{
+		if (input_cur < input_len)
+			++input_cur;
+		if (!shiftdown)
+			input_sel = input_cur;
+		return true;
+	}
+	else if (key == KEY_HOME)
+	{
+		input_cur = 0;
+		if (!shiftdown)
+			input_sel = input_cur;
+		return true;
+	}
+	else if (key == KEY_END)
+	{
+		input_cur = input_len;
+		if (!shiftdown)
+			input_sel = input_cur;
+		return true;
+	}
 
+	// At this point we're messing with input
+	// Clear completion
+	completion[0] = 0;
 
 	// command enter
 	if (key == KEY_ENTER)
 	{
-		if (input_cx < 2)
+		if (!input_len)
 			return true;
 
 		// push the command
-		COM_BufAddText(inputlines[inputline]+1);
+		COM_BufAddText(inputlines[inputline]);
 		COM_BufAddText("\n");
 
-		CONS_Printf("%s\n", inputlines[inputline]);
+		CONS_Printf("\x86""%c""\x80""%s\n", CON_PROMPTCHAR, inputlines[inputline]);
 
 		inputline = (inputline+1) & 31;
 		inputhist = inputline;
-
-		memset(inputlines[inputline], 0, CON_MAXPROMPTCHARS);
-		inputlines[inputline][0] = CON_PROMPTCHAR;
-		input_cx = 1;
+		CON_InputClear();
 
 		return true;
 	}
 
-	// backspace command prompt
-	if (key == KEY_BACKSPACE)
+	// backspace and delete command prompt
+	if (input_sel != input_cur)
 	{
-		if (input_cx > 1)
+		if (key == KEY_BACKSPACE || key == KEY_DEL)
 		{
-			input_cx--;
-			inputlines[inputline][input_cx] = 0;
+			CON_InputDelSelection();
+			return true;
 		}
+	}
+	else if (key == KEY_BACKSPACE)
+	{
+		CON_InputDelChar();
+		return true;
+	}
+	else if (key == KEY_DEL)
+	{
+		if (input_cur == input_len)
+			return true;
+		++input_cur;
+		CON_InputDelChar();
 		return true;
 	}
 
@@ -864,18 +996,15 @@ boolean CON_Responder(event_t *ev)
 	{
 		// copy one of the previous inputlines to the current
 		do
-		{
 			inputhist = (inputhist - 1) & 31; // cycle back
-		} while (inputhist != inputline && !inputlines[inputhist][1]);
+		while (inputhist != inputline && !inputlines[inputhist][0]);
 
 		// stop at the last history input line, which is the
 		// current line + 1 because we cycle through the 32 input lines
 		if (inputhist == inputline)
 			inputhist = (inputline + 1) & 31;
 
-		M_Memcpy(inputlines[inputline], inputlines[inputhist], CON_MAXPROMPTCHARS);
-		input_cx = strlen(inputlines[inputline]);
-
+		CON_InputSetString(inputlines[inputhist]);
 		return true;
 	}
 
@@ -885,23 +1014,14 @@ boolean CON_Responder(event_t *ev)
 		if (inputhist == inputline)
 			return true;
 		do
-		{
 			inputhist = (inputhist + 1) & 31;
-		} while (inputhist != inputline && !inputlines[inputhist][1]);
-
-		memset(inputlines[inputline], 0, CON_MAXPROMPTCHARS);
+		while (inputhist != inputline && !inputlines[inputhist][0]);
 
 		// back to currentline
 		if (inputhist == inputline)
-		{
-			inputlines[inputline][0] = CON_PROMPTCHAR;
-			input_cx = 1;
-		}
+			CON_InputClear();
 		else
-		{
-			strcpy(inputlines[inputline], inputlines[inputhist]);
-			input_cx = strlen(inputlines[inputline]);
-		}
+			CON_InputSetString(inputlines[inputhist]);
 		return true;
 	}
 
@@ -926,15 +1046,12 @@ boolean CON_Responder(event_t *ev)
 		return false;
 
 	// add key to cmd line here
-	if (input_cx < CON_MAXPROMPTCHARS)
-	{
-		if (key >= 'A' && key <= 'Z' && !shiftdown) //this is only really necessary for dedicated servers
-			key = key + 'a' - 'A';
+	if (key >= 'A' && key <= 'Z' && !shiftdown) //this is only really necessary for dedicated servers
+		key = key + 'a' - 'A';
 
-		inputlines[inputline][input_cx] = (char)key;
-		inputlines[inputline][input_cx + 1] = 0;
-		input_cx++;
-	}
+	if (input_sel != input_cur)
+		CON_InputDelSelection();
+	CON_InputAddChar(key);
 
 	return true;
 }
@@ -1218,26 +1335,84 @@ void CONS_Error(const char *msg)
 //
 static void CON_DrawInput(void)
 {
-	char *p;
-	size_t c;
-	INT32 x, y;
 	INT32 charwidth = (INT32)con_scalefactor << 3;
-
-	// input line scrolls left if it gets too long
-	p = inputlines[inputline];
-	if (input_cx >= con_width-11)
-		p += input_cx - (con_width-11) + 1;
+	const char *p = inputlines[inputline];
+	size_t c, clen, cend;
+	UINT8 lellip = 0, rellip = 0;
+	INT32 x, y, i;
 
 	y = con_curlines - 12 * con_scalefactor;
+	x = charwidth*2;
 
-	for (c = 0, x = charwidth; c < con_width-11; c++, x += charwidth)
-		V_DrawCharacter(x, y, p[c] | cv_constextsize.value | V_NOSCALESTART, !cv_allcaps.value);
+	clen = con_width-12;
 
-	// draw the blinking cursor
-	//
-	x = ((input_cx >= con_width-11) ? (INT32)(con_width-11) : (INT32)((input_cx + 1)) * charwidth);
-	if (con_tick < 4)
-		V_DrawCharacter(x, y, '_' | cv_constextsize.value | V_NOSCALESTART, !cv_allcaps.value);
+	if (input_len <= clen)
+	{
+		c = 0;
+		clen = input_len;
+	}
+	else // input line scrolls left if it gets too long
+	{
+		clen -= 2; // There will always be some extra truncation -- but where is what we'll find out
+
+		if (input_cur <= clen/2)
+		{
+			// Close enough to right edge to show all
+			c = 0;
+			// Always will truncate right side from this position, so always draw right ellipsis
+			rellip = 1;
+		}
+		else
+		{
+			// Cursor in the middle (or right side) of input
+			// Move over for the ellipsis
+			c = input_cur - (clen/2) + 2;
+			x += charwidth*2;
+			lellip = 1;
+
+			if (c + clen >= input_len)
+			{
+				// Cursor in the right side of input
+				// We were too far over, so move back
+				c = input_len - clen;
+			}
+			else
+			{
+				// Cursor in the middle -- ellipses on both sides
+				clen -= 2;
+				rellip = 1;
+			}
+		}
+	}
+
+	if (lellip)
+	{
+		for (i = 0, x -= charwidth*3; i < 3; ++i, x += charwidth)
+			V_DrawCharacter(x, y, '.' | cv_constextsize.value | V_GRAYMAP | V_NOSCALESTART, !cv_allcaps.value);
+	}
+	else
+		V_DrawCharacter(x-charwidth, y, CON_PROMPTCHAR | cv_constextsize.value | V_GRAYMAP | V_NOSCALESTART, !cv_allcaps.value);
+
+	for (cend = c + clen; c < cend; ++c, x += charwidth)
+	{
+		if ((input_sel > c && input_cur <= c) || (input_sel <= c && input_cur > c))
+		{
+			V_DrawFill(x, y, charwidth, (10 * con_scalefactor), 107 | V_NOSCALESTART);
+			V_DrawCharacter(x, y, p[c] | cv_constextsize.value | V_YELLOWMAP | V_NOSCALESTART, !cv_allcaps.value);
+		}
+		else
+			V_DrawCharacter(x, y, p[c] | cv_constextsize.value | V_NOSCALESTART, !cv_allcaps.value);
+
+		if (c == input_cur && con_tick >= 4)
+			V_DrawCharacter(x, y + (con_scalefactor*2), '_' | cv_constextsize.value | V_NOSCALESTART, !cv_allcaps.value);
+	}
+	if (cend == input_cur && con_tick >= 4)
+		V_DrawCharacter(x, y + (con_scalefactor*2), '_' | cv_constextsize.value | V_NOSCALESTART, !cv_allcaps.value);
+	if (rellip)
+	{
+		for (i = 0; i < 3; ++i, x += charwidth)
+			V_DrawCharacter(x, y, '.' | cv_constextsize.value | V_GRAYMAP | V_NOSCALESTART, !cv_allcaps.value);
+	}
 }
 
 // draw the last lines of console text to the top of the screen

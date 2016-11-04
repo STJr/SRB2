@@ -774,43 +774,51 @@ void V_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 	if (!screens[0])
 		return;
 
-	if (x == 0 && y == 0 && w == BASEVIDWIDTH && h == BASEVIDHEIGHT)
-	{ // Clear the entire screen, from dest to deststop. Yes, this really works.
-		memset(screens[0], (UINT8)(c&255), vid.width * vid.height * vid.bpp);
-		return;
-	}
-
-	dest = screens[0] + y*dupy*vid.width + x*dupx;
-	deststop = screens[0] + vid.rowbytes * vid.height;
-
-	if (w == BASEVIDWIDTH)
-		w = vid.width;
-	else
-		w *= dupx;
-	if (h == BASEVIDHEIGHT)
-		h = vid.height;
-	else
-		h *= dupy;
-
-	if (x && y && x + w < vid.width && y + h < vid.height)
+	if (c & V_NOSCALESTART)
 	{
-		// Center it if necessary
-		if (vid.width != BASEVIDWIDTH * dupx)
-		{
-			// dupx adjustments pretend that screen width is BASEVIDWIDTH * dupx,
-			// so center this imaginary screen
-			if (c & V_SNAPTORIGHT)
-				dest += (vid.width - (BASEVIDWIDTH * dupx));
-			else if (!(c & V_SNAPTOLEFT))
-				dest += (vid.width - (BASEVIDWIDTH * dupx)) / 2;
+		dest = screens[0] + y*vid.width + x;
+		deststop = screens[0] + vid.rowbytes * vid.height;
+	}
+	else
+	{
+		if (x == 0 && y == 0 && w == BASEVIDWIDTH && h == BASEVIDHEIGHT)
+		{ // Clear the entire screen, from dest to deststop. Yes, this really works.
+			memset(screens[0], (UINT8)(c&255), vid.width * vid.height * vid.bpp);
+			return;
 		}
-		if (vid.height != BASEVIDHEIGHT * dupy)
+
+		dest = screens[0] + y*dupy*vid.width + x*dupx;
+		deststop = screens[0] + vid.rowbytes * vid.height;
+
+		if (w == BASEVIDWIDTH)
+			w = vid.width;
+		else
+			w *= dupx;
+		if (h == BASEVIDHEIGHT)
+			h = vid.height;
+		else
+			h *= dupy;
+
+		if (x && y && x + w < vid.width && y + h < vid.height)
 		{
-			// same thing here
-			if (c & V_SNAPTOBOTTOM)
-				dest += (vid.height - (BASEVIDHEIGHT * dupy)) * vid.width;
-			else if (!(c & V_SNAPTOTOP))
-				dest += (vid.height - (BASEVIDHEIGHT * dupy)) * vid.width / 2;
+			// Center it if necessary
+			if (vid.width != BASEVIDWIDTH * dupx)
+			{
+				// dupx adjustments pretend that screen width is BASEVIDWIDTH * dupx,
+				// so center this imaginary screen
+				if (c & V_SNAPTORIGHT)
+					dest += (vid.width - (BASEVIDWIDTH * dupx));
+				else if (!(c & V_SNAPTOLEFT))
+					dest += (vid.width - (BASEVIDWIDTH * dupx)) / 2;
+			}
+			if (vid.height != BASEVIDHEIGHT * dupy)
+			{
+				// same thing here
+				if (c & V_SNAPTOBOTTOM)
+					dest += (vid.height - (BASEVIDHEIGHT * dupy)) * vid.width;
+				else if (!(c & V_SNAPTOTOP))
+					dest += (vid.height - (BASEVIDHEIGHT * dupy)) * vid.width / 2;
+			}
 		}
 	}
 
