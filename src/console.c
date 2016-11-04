@@ -662,7 +662,7 @@ static inline void CON_InputDelSelection(void)
 	len = (end - start);
 
 	if (end != input_len)
-		memmove(&inputlines[inputline][start], &inputlines[inputline][end], input_len-input_cur);
+		memmove(&inputlines[inputline][start], &inputlines[inputline][end], input_len-end);
 	memset(&inputlines[inputline][input_len - len], 0, len);
 
 	input_len -= len;
@@ -720,12 +720,6 @@ boolean CON_Responder(event_t *ev)
 
 	key = ev->data1;
 
-	// Always eat ctrl/shift/alt, so the menu doesn't get ideas
-	if (key == KEY_LSHIFT || key == KEY_RSHIFT
-	 || key == KEY_LCTRL || key == KEY_RCTRL
-	 || key == KEY_LALT || key == KEY_RALT)
-		return true;
-
 	// check for console toggle key
 	if (ev->type != ev_console)
 	{
@@ -759,8 +753,13 @@ boolean CON_Responder(event_t *ev)
 			consoletoggle = true;
 			return true;
 		}
-
 	}
+
+	// Always eat ctrl/shift/alt if console open, so the menu doesn't get ideas
+	if (key == KEY_LSHIFT || key == KEY_RSHIFT
+	 || key == KEY_LCTRL || key == KEY_RCTRL
+	 || key == KEY_LALT || key == KEY_RALT)
+		return true;
 
 	// ctrl modifier -- changes behavior, adds shortcuts
 	if (ctrldown)
@@ -1344,7 +1343,7 @@ static void CON_DrawInput(void)
 	y = con_curlines - 12 * con_scalefactor;
 	x = charwidth*2;
 
-	clen = con_width-12;
+	clen = con_width-13;
 
 	if (input_len <= clen)
 	{
@@ -1387,7 +1386,10 @@ static void CON_DrawInput(void)
 
 	if (lellip)
 	{
-		for (i = 0, x -= charwidth*3; i < 3; ++i, x += charwidth)
+		x -= charwidth*3;
+		if (input_sel < c)
+			V_DrawFill(x, y, charwidth*3, (10 * con_scalefactor), 107 | V_NOSCALESTART);
+		for (i = 0; i < 3; ++i, x += charwidth)
 			V_DrawCharacter(x, y, '.' | cv_constextsize.value | V_GRAYMAP | V_NOSCALESTART, !cv_allcaps.value);
 	}
 	else
@@ -1410,6 +1412,8 @@ static void CON_DrawInput(void)
 		V_DrawCharacter(x, y + (con_scalefactor*2), '_' | cv_constextsize.value | V_NOSCALESTART, !cv_allcaps.value);
 	if (rellip)
 	{
+		if (input_sel > cend)
+			V_DrawFill(x, y, charwidth*3, (10 * con_scalefactor), 107 | V_NOSCALESTART);
 		for (i = 0; i < 3; ++i, x += charwidth)
 			V_DrawCharacter(x, y, '.' | cv_constextsize.value | V_GRAYMAP | V_NOSCALESTART, !cv_allcaps.value);
 	}
