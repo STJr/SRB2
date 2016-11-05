@@ -298,8 +298,8 @@ static md2_model_t *md2_readModel(const char *filename)
 	// initialize model and read header
 
 	if (fread(&model->header, sizeof (model->header), 1, file) != 1
-		|| model->header.magic !=
-		(INT32)(('2' << 24) + ('P' << 16) + ('D' << 8) + 'I'))
+		|| model->header.magic != MD2_IDENT
+		|| model->header.version != MD2_VERSION)
 	{
 		fclose(file);
 		free(model);
