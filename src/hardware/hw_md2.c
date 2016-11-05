@@ -309,7 +309,7 @@ static md2_model_t *md2_readModel(const char *filename)
 	model->header.numSkins = 1;
 
 #define MD2LIMITCHECK(field, max, msgname) \
-	if (field >= max) \
+	if (field > max) \
 	{ \
 		CONS_Alert(CONS_ERROR, "md2_readModel: %s has too many " msgname " (# found: %d, maximum: %d)\n", filename, field, max); \
 		md2_freeModel (model); \
