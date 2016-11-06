@@ -11006,4 +11006,3 @@ mobj_t *P_SpawnMobjFromMobj(mobj_t *mobj, fixed_t xofs, fixed_t yofs, fixed_t zo
 	P_SetScale(newmobj, mobj->scale);
 	return newmobj;
 }
-
