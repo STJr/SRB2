@@ -798,7 +798,7 @@ void HWR_InitMD2(void)
 		md2_models[i].grpatch = NULL;
 		md2_models[i].skin = -1;
 		md2_models[i].notfound = true;
-		md2_models[s].error = false;
+		md2_models[i].error = false;
 	}
 
 	// read the md2.dat file
