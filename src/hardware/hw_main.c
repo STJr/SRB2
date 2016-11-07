@@ -858,11 +858,11 @@ static void HWR_DrawSegsSplats(FSurfaceInfo * pSurf)
 
 	M_ClearBox(segbbox);
 	M_AddToBox(segbbox,
-		FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->v1)->x),
-		FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->v1)->y));
+		FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->pv1)->x),
+		FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->pv1)->y));
 	M_AddToBox(segbbox,
-		FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->v2)->x),
-		FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->v2)->y));
+		FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->pv2)->x),
+		FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->pv2)->y));
 
 	splat = (wallsplat_t *)gr_curline->linedef->splats;
 	for (; splat; splat = splat->next)
@@ -1468,10 +1468,10 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 	gr_sidedef = gr_curline->sidedef;
 	gr_linedef = gr_curline->linedef;
 
-	vs.x = ((polyvertex_t *)gr_curline->v1)->x;
-	vs.y = ((polyvertex_t *)gr_curline->v1)->y;
-	ve.x = ((polyvertex_t *)gr_curline->v2)->x;
-	ve.y = ((polyvertex_t *)gr_curline->v2)->y;
+	vs.x = ((polyvertex_t *)gr_curline->pv1)->x;
+	vs.y = ((polyvertex_t *)gr_curline->pv1)->y;
+	ve.x = ((polyvertex_t *)gr_curline->pv2)->x;
+	ve.y = ((polyvertex_t *)gr_curline->pv2)->y;
 
 #ifdef ESLOPE
 	v1x = FLOAT_TO_FIXED(vs.x);
@@ -2555,7 +2555,7 @@ static void HWR_ClipSolidWallSegment(INT32 first, INT32 last)
 		}
 		else
 		{
-			highfrac = HWR_ClipViewSegment(start->first+1, (polyvertex_t *)gr_curline->v1, (polyvertex_t *)gr_curline->v2);
+			highfrac = HWR_ClipViewSegment(start->first+1, (polyvertex_t *)gr_curline->pv1, (polyvertex_t *)gr_curline->pv2);
 			HWR_StoreWallRange(0, highfrac);
 		}
 		// Now adjust the clip size.
@@ -2579,8 +2579,8 @@ static void HWR_ClipSolidWallSegment(INT32 first, INT32 last)
 		}
 		else
 		{
-			lowfrac  = HWR_ClipViewSegment(next->last-1, (polyvertex_t *)gr_curline->v1, (polyvertex_t *)gr_curline->v2);
-			highfrac = HWR_ClipViewSegment((next+1)->first+1, (polyvertex_t *)gr_curline->v1, (polyvertex_t *)gr_curline->v2);
+			lowfrac  = HWR_ClipViewSegment(next->last-1, (polyvertex_t *)gr_curline->pv1, (polyvertex_t *)gr_curline->pv2);
+			highfrac = HWR_ClipViewSegment((next+1)->first+1, (polyvertex_t *)gr_curline->pv1, (polyvertex_t *)gr_curline->pv2);
 			HWR_StoreWallRange(lowfrac, highfrac);
 		}
 		next++;
@@ -2614,7 +2614,7 @@ static void HWR_ClipSolidWallSegment(INT32 first, INT32 last)
 		}
 		else
 		{
-			lowfrac  = HWR_ClipViewSegment(next->last-1, (polyvertex_t *)gr_curline->v1, (polyvertex_t *)gr_curline->v2);
+			lowfrac  = HWR_ClipViewSegment(next->last-1, (polyvertex_t *)gr_curline->pv1, (polyvertex_t *)gr_curline->pv2);
 			HWR_StoreWallRange(lowfrac, 1);
 		}
 	}
@@ -2677,8 +2677,8 @@ static void HWR_ClipPassWallSegment(INT32 first, INT32 last)
 		else
 		{
 			highfrac = HWR_ClipViewSegment(min(start->first + 1,
-				start->last), (polyvertex_t *)gr_curline->v1,
-				(polyvertex_t *)gr_curline->v2);
+				start->last), (polyvertex_t *)gr_curline->pv1,
+				(polyvertex_t *)gr_curline->pv2);
 			HWR_StoreWallRange(0, highfrac);
 		}
 	}
@@ -2697,8 +2697,8 @@ static void HWR_ClipPassWallSegment(INT32 first, INT32 last)
 		}
 		else
 		{
-			lowfrac  = HWR_ClipViewSegment(max(start->last-1,start->first), (polyvertex_t *)gr_curline->v1, (polyvertex_t *)gr_curline->v2);
-			highfrac = HWR_ClipViewSegment(min((start+1)->first+1,(start+1)->last), (polyvertex_t *)gr_curline->v1, (polyvertex_t *)gr_curline->v2);
+			lowfrac  = HWR_ClipViewSegment(max(start->last-1,start->first), (polyvertex_t *)gr_curline->pv1, (polyvertex_t *)gr_curline->pv2);
+			highfrac = HWR_ClipViewSegment(min((start+1)->first+1,(start+1)->last), (polyvertex_t *)gr_curline->pv1, (polyvertex_t *)gr_curline->pv2);
 			HWR_StoreWallRange(lowfrac, highfrac);
 		}
 		start++;
@@ -2728,8 +2728,8 @@ static void HWR_ClipPassWallSegment(INT32 first, INT32 last)
 		else
 		{
 			lowfrac = HWR_ClipViewSegment(max(start->last - 1,
-				start->first), (polyvertex_t *)gr_curline->v1,
-				(polyvertex_t *)gr_curline->v2);
+				start->first), (polyvertex_t *)gr_curline->pv1,
+				(polyvertex_t *)gr_curline->pv2);
 			HWR_StoreWallRange(lowfrac, 1);
 		}
 	}
@@ -2790,10 +2790,10 @@ static void HWR_AddLine(seg_t * line)
 	gr_curline = line;
 
 	// OPTIMIZE: quickly reject orthogonal back sides.
-	angle1 = R_PointToAngle(FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->v1)->x),
-	                        FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->v1)->y));
-	angle2 = R_PointToAngle(FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->v2)->x),
-	                        FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->v2)->y));
+	angle1 = R_PointToAngle(FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->pv1)->x),
+	                        FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->pv1)->y));
+	angle2 = R_PointToAngle(FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->pv2)->x),
+	                        FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->pv2)->y));
 
 	// Clip to view edges.
 	span = angle1 - angle2;
@@ -2835,8 +2835,8 @@ static void HWR_AddLine(seg_t * line)
 		float fx1,fx2,fy1,fy2;
 		//BP: test with a better projection than viewangletox[R_PointToAngle(angle)]
 		// do not enable this at release 4 mul and 2 div
-		fx1 = ((polyvertex_t *)(line->v1))->x-gr_viewx;
-		fy1 = ((polyvertex_t *)(line->v1))->y-gr_viewy;
+		fx1 = ((polyvertex_t *)(line->pv1))->x-gr_viewx;
+		fy1 = ((polyvertex_t *)(line->pv1))->y-gr_viewy;
 		fy2 = (fx1 * gr_viewcos + fy1 * gr_viewsin);
 		if (fy2 < 0)
 			// the point is back
@@ -2844,8 +2844,8 @@ static void HWR_AddLine(seg_t * line)
 		else
 			fx1 = gr_windowcenterx + (fx1 * gr_viewsin - fy1 * gr_viewcos) * gr_centerx / fy2;
 
-		fx2 = ((polyvertex_t *)(line->v2))->x-gr_viewx;
-		fy2 = ((polyvertex_t *)(line->v2))->y-gr_viewy;
+		fx2 = ((polyvertex_t *)(line->pv2))->x-gr_viewx;
+		fy2 = ((polyvertex_t *)(line->pv2))->y-gr_viewy;
 		fy1 = (fx2 * gr_viewcos + fy2 * gr_viewsin);
 		if (fy1 < 0)
 			// the point is back
@@ -2888,10 +2888,10 @@ static void HWR_AddLine(seg_t * line)
 		fixed_t frontf1,frontf2, frontc1, frontc2; // front floor/ceiling ends
 		fixed_t backf1, backf2, backc1, backc2; // back floor ceiling ends
 
-		v1x = FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->v1)->x);
-		v1y = FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->v1)->y);
-		v2x = FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->v2)->x);
-		v2y = FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->v2)->y);
+		v1x = FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->pv1)->x);
+		v1y = FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->pv1)->y);
+		v2x = FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->pv2)->x);
+		v2y = FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->pv2)->y);
 #define SLOPEPARAMS(slope, end1, end2, normalheight) \
 		if (slope) { \
 			end1 = P_GetZAt(slope, v1x, v1y); \
@@ -3086,8 +3086,8 @@ static inline void HWR_AddPolyObjectSegs(void)
 			pv2->x = FIXED_TO_FLOAT(gr_fakeline->v2->x);
 			pv2->y = FIXED_TO_FLOAT(gr_fakeline->v2->y);
 
-			gr_fakeline->v1 = (vertex_t *)pv1;
-			gr_fakeline->v2 = (vertex_t *)pv2;
+			gr_fakeline->pv1 = pv1;
+			gr_fakeline->pv2 = pv2;
 
 			HWR_AddLine(gr_fakeline);
 		}

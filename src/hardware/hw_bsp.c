@@ -916,7 +916,7 @@ static void AdjustSegs(void)
 			}
 			if (nearv1 <= NEARDIST*NEARDIST)
 				// share vertice with segs
-				lseg->v1 = (vertex_t *)&(p->pts[v1found]);
+				lseg->pv1 = &(p->pts[v1found]);
 			else
 			{
 				// BP: here we can do better, using PointInSeg and compute
@@ -927,24 +927,24 @@ static void AdjustSegs(void)
 				polyvertex_t *pv = HWR_AllocVertex();
 				pv->x = FIXED_TO_FLOAT(lseg->v1->x);
 				pv->y = FIXED_TO_FLOAT(lseg->v1->y);
-				lseg->v1 = (vertex_t *)pv;
+				lseg->pv1 = pv;
 			}
 			if (nearv2 <= NEARDIST*NEARDIST)
-				lseg->v2 = (vertex_t *)&(p->pts[v2found]);
+				lseg->pv2 = &(p->pts[v2found]);
 			else
 			{
 				polyvertex_t *pv = HWR_AllocVertex();
 				pv->x = FIXED_TO_FLOAT(lseg->v2->x);
 				pv->y = FIXED_TO_FLOAT(lseg->v2->y);
-				lseg->v2 = (vertex_t *)pv;
+				lseg->pv2 = pv;
 			}
 
 			// recompute length
 			{
 				float x,y;
-				x = ((polyvertex_t *)lseg->v2)->x - ((polyvertex_t *)lseg->v1)->x
+				x = ((polyvertex_t *)lseg->pv2)->x - ((polyvertex_t *)lseg->pv1)->x
 					+ FIXED_TO_FLOAT(FRACUNIT/2);
-				y = ((polyvertex_t *)lseg->v2)->y - ((polyvertex_t *)lseg->v1)->y
+				y = ((polyvertex_t *)lseg->pv2)->y - ((polyvertex_t *)lseg->pv1)->y
 					+ FIXED_TO_FLOAT(FRACUNIT/2);
 				lseg->flength = (float)hypot(x, y);
 				// BP: debug see this kind of segs
