@@ -86,9 +86,14 @@ void P_AddCachedAction(mobj_t *mobj, INT32 statenum)
 //
 FUNCINLINE static ATTRINLINE void P_SetupStateAnimation(mobj_t *mobj, state_t *st)
 {
+	INT32 animlength = (mobj->skin && mobj->sprite == SPR_PLAY)
+		? (INT32)(((skin_t *)mobj->skin)->sprites[mobj->sprite2].numframes) - 1
+		: st->var1;
+
 	if (!(st->frame & FF_ANIMATE))
 		return;
-	if (st->var1 == 0 || st->var2 == 0)
+
+	if (animlength <= 0 || st->var2 == 0)
 	{
 		mobj->frame &= ~FF_ANIMATE;
 		return; // Crash/stupidity prevention
@@ -102,11 +107,11 @@ FUNCINLINE static ATTRINLINE void P_SetupStateAnimation(mobj_t *mobj, state_t *s
 		if (!leveltime) return;
 
 		mobj->anim_duration -= (leveltime + 2) % st->var2;            // Duration synced to timer
-		mobj->frame += ((leveltime + 2) / st->var2) % (st->var1 + 1); // Frame synced to timer (duration taken into account)
+		mobj->frame += ((leveltime + 2) / st->var2) % (animlength + 1); // Frame synced to timer (duration taken into account)
 	}
 	else if (st->frame & FF_RANDOMANIM)
 	{
-		mobj->frame += P_RandomKey(st->var1 + 1);     // Random starting frame
+		mobj->frame += P_RandomKey(animlength + 1);     // Random starting frame
 		mobj->anim_duration -= P_RandomKey(st->var2); // Random duration for first frame
 	}
 }
@@ -119,7 +124,15 @@ FUNCINLINE static ATTRINLINE void P_CycleStateAnimation(mobj_t *mobj)
 	// var2 determines delay between animation frames
 	if (!(mobj->frame & FF_ANIMATE) || --mobj->anim_duration != 0)
 		return;
+
 	mobj->anim_duration = (UINT16)mobj->state->var2;
+
+	if (mobj->sprite == SPR_PLAY)
+	{
+		if (mobj->skin && (((++mobj->frame) & FF_FRAMEMASK) >= (UINT32)(((skin_t *)mobj->skin)->sprites[mobj->sprite2].numframes)))
+			mobj->frame &= ~FF_FRAMEMASK;
+		return;
+	}
 
 	// compare the current sprite frame to the one we started from
 	// if more than var1 away from it, swap back to the original
@@ -181,7 +194,10 @@ static UINT8 P_GetMobjSprite2(mobj_t *mobj, UINT8 spr2)
 	boolean noalt = false;
 	UINT8 numframes;
 
-	while (skin && ((numframes = skin->sprites[spr2].numframes) <= 0)
+	if (!skin)
+		return 0;
+
+	while (((numframes = skin->sprites[spr2].numframes) <= 0)
 		&& spr2 != SPR2_STND)
 	{
 		switch(spr2)
@@ -613,8 +629,6 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 			}
 		}
 
-		mobj->anim_duration = (UINT16)st->var2; // only used if FF_ANIMATE is set
-
 		// Player animations
 		if (st->sprite == SPR_PLAY)
 		{
@@ -672,8 +686,9 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		{
 			mobj->sprite = st->sprite;
 			mobj->frame = st->frame;
-			P_SetupStateAnimation(mobj, st);
 		}
+
+		P_SetupStateAnimation(mobj, st);
 
 		// Modified handling.
 		// Call action functions when the state is set
@@ -786,8 +801,9 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 		{
 			mobj->sprite = st->sprite;
 			mobj->frame = st->frame;
-			P_SetupStateAnimation(mobj, st);
 		}
+
+		P_SetupStateAnimation(mobj, st);
 
 		// Modified handling.
 		// Call action functions when the state is set
@@ -4178,17 +4194,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 	}
 
 animonly:
-	// cycle through states,
-	// calling action functions at transitions
-	if (mobj->tics != -1)
-	{
-		mobj->tics--;
-
-		// you can cycle through multiple states in a tic
-		if (!mobj->tics)
-			if (!P_SetPlayerMobjState(mobj, mobj->state->nextstate))
-				return; // freed itself
-	}
+	P_CyclePlayerMobjState(mobj);
 }
 
 static void CalculatePrecipFloor(precipmobj_t *mobj)
@@ -8842,6 +8848,7 @@ void P_SpawnPlayer(INT32 playernum)
 	// (usefulness: when body mobj is detached from player (who respawns),
 	// the dead body mobj retains the skin through the 'spritedef' override).
 	mobj->skin = &skins[p->skin];
+	P_SetupStateAnimation(mobj, mobj->state);
 
 	mobj->health = p->health;
 	p->playerstate = PST_LIVE;
