@@ -7537,6 +7537,11 @@ void P_MobjThinker(mobj_t *mobj)
 				mobj->tracer->y, mobj->tracer->floorz, SPLATDRAWMODE_SHADE);
 #endif
 			break;
+		case MT_SPINDUST: // Spindash dust
+				mobj->momx = FixedMul(mobj->momx, (3*FRACUNIT)/4); // originally 50000
+				mobj->momy = FixedMul(mobj->momy, (3*FRACUNIT)/4); // same
+				//mobj->momz = mobj->momz+P_MobjFlip(mobj)/3; // no meaningful change in value to be frank
+			break;
 		case MT_SPINFIRE:
 			if (mobj->eflags & MFE_VERTICALFLIP)
 				mobj->z = mobj->ceilingz - mobj->height;

@@ -5566,6 +5566,12 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	"S_WATERZAP",
 
+	// Spindash dust
+	"S_SPINDUST1",
+	"S_SPINDUST2",
+	"S_SPINDUST3",
+	"S_SPINDUST4",
+
 	"S_FOG1",
 	"S_FOG2",
 	"S_FOG3",
@@ -6376,6 +6382,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_MEDIUMBUBBLE", // medium bubble
 	"MT_EXTRALARGEBUBBLE", // extra large bubble
 	"MT_WATERZAP",
+	"MT_SPINDUST", // Spindash dust
 	"MT_TFOG",
 	"MT_SEED",
 	"MT_PARTICLE",
