@@ -171,6 +171,223 @@ static void P_CyclePlayerMobjState(mobj_t *mobj)
 }
 
 //
+// P_GetMobjSprite2
+//
+
+static UINT8 P_GetMobjSprite2(mobj_t *mobj, UINT8 spr2)
+{
+	player_t *player = mobj->player;
+	skin_t *skin = ((skin_t *)mobj->skin);
+	boolean noalt = false;
+	UINT8 numframes;
+
+	while (skin && ((numframes = skin->sprites[spr2].numframes) <= 0)
+		&& spr2 != SPR2_STND)
+	{
+		switch(spr2)
+		{
+		case SPR2_PEEL:
+			spr2 = SPR2_RUN;
+			break;
+		case SPR2_RUN:
+			spr2 = SPR2_WALK;
+			break;
+		case SPR2_DRWN:
+			spr2 = SPR2_DEAD;
+			break;
+		case SPR2_DASH:
+			spr2 = SPR2_SPIN;
+			break;
+		case SPR2_GASP:
+			spr2 = SPR2_SPNG;
+			break;
+		case SPR2_JUMP:
+			spr2 = ((player
+					? player->charflags
+					: skin->flags)
+					& SF_NOJUMPSPIN) ? SPR2_SPNG : SPR2_SPIN;
+			break;
+		case SPR2_SPNG: // spring
+			spr2 = SPR2_FALL;
+			break;
+		case SPR2_FALL:
+			spr2 = SPR2_WALK;
+			break;
+		case SPR2_RIDE:
+			spr2 = SPR2_FALL;
+			break;
+
+		case SPR2_FLY:
+			spr2 = SPR2_SPNG;
+			break;
+		case SPR2_SWIM:
+			spr2 = SPR2_FLY;
+			break;
+		case SPR2_TIRE:
+			spr2 = (player && player->charability == CA_SWIM) ? SPR2_SWIM : SPR2_FLY;
+			break;
+
+		case SPR2_GLID:
+			spr2 = SPR2_FLY;
+			break;
+		case SPR2_CLMB:
+			spr2 = SPR2_SPIN;
+			break;
+		case SPR2_CLNG:
+			spr2 = SPR2_CLMB;
+			break;
+
+		case SPR2_TWIN:
+			spr2 = SPR2_SPIN;
+			break;
+
+		case SPR2_MLEE:
+			spr2 = SPR2_TWIN;
+			break;
+
+		// Super sprites fallback to regular sprites
+		case SPR2_SWLK:
+			spr2 = SPR2_WALK;
+			break;
+		case SPR2_SRUN:
+			spr2 = SPR2_RUN;
+			break;
+		case SPR2_SPEE:
+			spr2 = SPR2_PEEL;
+			break;
+		case SPR2_SPAN:
+			spr2 = SPR2_PAIN;
+			break;
+		case SPR2_SSTN:
+			spr2 = SPR2_SPAN;
+			break;
+		case SPR2_SDTH:
+			spr2 = SPR2_DEAD;
+			break;
+		case SPR2_SDRN:
+			spr2 = SPR2_DRWN;
+			break;
+		case SPR2_SSPN:
+			spr2 = SPR2_SPIN;
+			break;
+		case SPR2_SGSP:
+			spr2 = SPR2_GASP;
+			break;
+		case SPR2_SJMP:
+			spr2 = ((player
+					? player->charflags
+					: skin->flags)
+					& SF_NOJUMPSPIN) ? SPR2_SSPG : SPR2_SSPN;
+			break;
+		case SPR2_SSPG:
+			spr2 = SPR2_SPNG;
+			break;
+		case SPR2_SFAL:
+			spr2 = SPR2_FALL;
+			break;
+		case SPR2_SEDG:
+			spr2 = SPR2_EDGE;
+			break;
+		case SPR2_SRID:
+			spr2 = SPR2_RIDE;
+			break;
+		case SPR2_SFLT:
+			spr2 = SPR2_SWLK;
+			break;
+
+		// NiGHTS sprites.
+		case SPR2_NTRN:
+			spr2 = SPR2_TRNS;
+			break;
+		case SPR2_NSTD:
+			spr2 = SPR2_SSTD;
+			break;
+		case SPR2_NFLT:
+			spr2 = (skin->flags & SF_SUPERANIMS) ? SPR2_SFLT : SPR2_FALL; // This is skin-exclusive so the default NiGHTS skin changing system plays nice.
+			break;
+		case SPR2_NPUL:
+			spr2 = SPR2_NFLT;
+			break;
+		case SPR2_NPAN:
+			spr2 = SPR2_NPUL;
+			break;
+		case SPR2_NATK:
+			spr2 = SPR2_SSPN;
+			break;
+		/*case SPR2_NGT0:
+			spr2 = SPR2_STND;
+			break;*/
+		case SPR2_NGT1:
+		case SPR2_NGT7:
+		case SPR2_DRL0:
+			spr2 = SPR2_NGT0;
+			break;
+		case SPR2_NGT2:
+		case SPR2_DRL1:
+			spr2 = SPR2_NGT1;
+			break;
+		case SPR2_NGT3:
+		case SPR2_DRL2:
+			spr2 = SPR2_NGT2;
+			break;
+		case SPR2_NGT4:
+		case SPR2_DRL3:
+			spr2 = SPR2_NGT3;
+			break;
+		case SPR2_NGT5:
+		case SPR2_DRL4:
+			spr2 = SPR2_NGT4;
+			break;
+		case SPR2_NGT6:
+		case SPR2_DRL5:
+			spr2 = SPR2_NGT5;
+			break;
+		case SPR2_DRL6:
+			spr2 = SPR2_NGT6;
+			break;
+		case SPR2_NGT8:
+		case SPR2_DRL7:
+			spr2 = SPR2_NGT7;
+			break;
+		case SPR2_NGT9:
+		case SPR2_DRL8:
+			spr2 = SPR2_NGT8;
+			break;
+		case SPR2_NGTA:
+		case SPR2_DRL9:
+			spr2 = SPR2_NGT9;
+			break;
+		case SPR2_NGTB:
+		case SPR2_DRLA:
+			spr2 = SPR2_NGTA;
+			break;
+		case SPR2_NGTC:
+		case SPR2_DRLB:
+			spr2 = SPR2_NGTB;
+			break;
+		case SPR2_DRLC:
+			spr2 = SPR2_NGTC;
+			break;
+
+
+		// Sprites for non-player objects? There's nothing we can do.
+		case SPR2_SIGN:
+		case SPR2_LIFE:
+			noalt = true;
+			break;
+
+		// Dunno? Just go to standing then.
+		default:
+			spr2 = SPR2_STND;
+			break;
+		}
+		if (noalt)
+			break;
+	}
+	return spr2;
+}
+
+//
 // P_SetPlayerMobjState
 // Returns true if the mobj is still present.
 //
@@ -402,210 +619,14 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		if (st->sprite == SPR_PLAY)
 		{
 			skin_t *skin = ((skin_t *)mobj->skin);
-			boolean noalt = false;
-			UINT8 spr2 = st->frame & FF_FRAMEMASK;
 			UINT16 frame = (mobj->frame & FF_FRAMEMASK)+1;
 			UINT8 numframes;
 
-			while (skin && ((numframes = skin->sprites[spr2].numframes) <= 0)
-				&& spr2 != SPR2_STND)
-			{
-				switch(spr2)
-				{
-				case SPR2_PEEL:
-					spr2 = SPR2_RUN;
-					break;
-				case SPR2_RUN:
-					spr2 = SPR2_WALK;
-					break;
-				case SPR2_DRWN:
-					spr2 = SPR2_DEAD;
-					break;
-				case SPR2_DASH:
-					spr2 = SPR2_SPIN;
-					break;
-				case SPR2_GASP:
-					spr2 = SPR2_SPNG;
-					break;
-				case SPR2_JUMP:
-					spr2 = (player->charflags & SF_NOJUMPSPIN) ? SPR2_SPNG : SPR2_SPIN;
-					break;
-				case SPR2_SPNG: // spring
-					spr2 = SPR2_FALL;
-					break;
-				case SPR2_FALL:
-					spr2 = SPR2_WALK;
-					break;
-				case SPR2_RIDE:
-					spr2 = SPR2_FALL;
-					break;
+			UINT8 spr2 = P_GetMobjSprite2(mobj, st->frame & FF_FRAMEMASK);
 
-				case SPR2_FLY:
-					spr2 = SPR2_SPNG;
-					break;
-				case SPR2_SWIM:
-					spr2 = SPR2_FLY;
-					break;
-				case SPR2_TIRE:
-					spr2 = (player->charability == CA_FLY) ? SPR2_FLY : SPR2_SWIM;
-					break;
-
-				case SPR2_GLID:
-					spr2 = SPR2_FLY;
-					break;
-				case SPR2_CLMB:
-					spr2 = SPR2_SPIN;
-					break;
-				case SPR2_CLNG:
-					spr2 = SPR2_CLMB;
-					break;
-
-				case SPR2_TWIN:
-					spr2 = SPR2_SPIN;
-					break;
-
-				case SPR2_MLEE:
-					spr2 = SPR2_TWIN;
-					break;
-
-				// Super sprites fallback to regular sprites
-				case SPR2_SWLK:
-					spr2 = SPR2_WALK;
-					break;
-				case SPR2_SRUN:
-					spr2 = SPR2_RUN;
-					break;
-				case SPR2_SPEE:
-					spr2 = SPR2_PEEL;
-					break;
-				case SPR2_SPAN:
-					spr2 = SPR2_PAIN;
-					break;
-				case SPR2_SSTN:
-					spr2 = SPR2_SPAN;
-					break;
-				case SPR2_SDTH:
-					spr2 = SPR2_DEAD;
-					break;
-				case SPR2_SDRN:
-					spr2 = SPR2_DRWN;
-					break;
-				case SPR2_SSPN:
-					spr2 = SPR2_SPIN;
-					break;
-				case SPR2_SGSP:
-					spr2 = SPR2_GASP;
-					break;
-				case SPR2_SJMP:
-					spr2 = (player->charflags & SF_NOJUMPSPIN) ? SPR2_SSPG : SPR2_SSPN;
-					break;
-				case SPR2_SSPG:
-					spr2 = SPR2_SPNG;
-					break;
-				case SPR2_SFAL:
-					spr2 = SPR2_FALL;
-					break;
-				case SPR2_SEDG:
-					spr2 = SPR2_EDGE;
-					break;
-				case SPR2_SRID:
-					spr2 = SPR2_RIDE;
-					break;
-				case SPR2_SFLT:
-					spr2 = SPR2_SWLK;
-					break;
-
-				// NiGHTS sprites.
-				case SPR2_NTRN:
-					spr2 = SPR2_TRNS;
-					break;
-				case SPR2_NSTD:
-					spr2 = SPR2_SSTD;
-					break;
-				case SPR2_NFLT:
-					spr2 = (skin->flags & SF_SUPERANIMS) ? SPR2_SFLT : SPR2_FALL; // This is skin-exclusive so the default NiGHTS skin changing system plays nice.
-					break;
-				case SPR2_NPUL:
-					spr2 = SPR2_NFLT;
-					break;
-				case SPR2_NPAN:
-					spr2 = SPR2_NPUL;
-					break;
-				case SPR2_NATK:
-					spr2 = SPR2_SSPN;
-					break;
-				/*case SPR2_NGT0:
-					spr2 = SPR2_STND;
-					break;*/
-				case SPR2_NGT1:
-				case SPR2_NGT7:
-				case SPR2_DRL0:
-					spr2 = SPR2_NGT0;
-					break;
-				case SPR2_NGT2:
-				case SPR2_DRL1:
-					spr2 = SPR2_NGT1;
-					break;
-				case SPR2_NGT3:
-				case SPR2_DRL2:
-					spr2 = SPR2_NGT2;
-					break;
-				case SPR2_NGT4:
-				case SPR2_DRL3:
-					spr2 = SPR2_NGT3;
-					break;
-				case SPR2_NGT5:
-				case SPR2_DRL4:
-					spr2 = SPR2_NGT4;
-					break;
-				case SPR2_NGT6:
-				case SPR2_DRL5:
-					spr2 = SPR2_NGT5;
-					break;
-				case SPR2_DRL6:
-					spr2 = SPR2_NGT6;
-					break;
-				case SPR2_NGT8:
-				case SPR2_DRL7:
-					spr2 = SPR2_NGT7;
-					break;
-				case SPR2_NGT9:
-				case SPR2_DRL8:
-					spr2 = SPR2_NGT8;
-					break;
-				case SPR2_NGTA:
-				case SPR2_DRL9:
-					spr2 = SPR2_NGT9;
-					break;
-				case SPR2_NGTB:
-				case SPR2_DRLA:
-					spr2 = SPR2_NGTA;
-					break;
-				case SPR2_NGTC:
-				case SPR2_DRLB:
-					spr2 = SPR2_NGTB;
-					break;
-				case SPR2_DRLC:
-					spr2 = SPR2_NGTC;
-					break;
-
-
-				// Sprites for non-player objects? There's nothing we can do.
-				case SPR2_SIGN:
-				case SPR2_LIFE:
-					noalt = true;
-					break;
-
-				// Dunno? Just go to standing then.
-				default:
-					spr2 = SPR2_STND;
-					break;
-				}
-				if (noalt)
-					break;
-			}
-
-			if (!skin)
+			if (skin)
+				numframes = skin->sprites[spr2].numframes;
+			else
 			{
 				frame = 0;
 				numframes = 0;
@@ -723,9 +744,10 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 		if (st->sprite == SPR_PLAY)
 		{
 			skin_t *skin = ((skin_t *)mobj->skin);
-			UINT8 spr2 = st->frame & FF_FRAMEMASK;
 			UINT16 frame = (mobj->frame & FF_FRAMEMASK)+1;
 			UINT8 numframes;
+
+			UINT8 spr2 = P_GetMobjSprite2(mobj, st->frame & FF_FRAMEMASK);
 
 			if (skin)
 				numframes = skin->sprites[spr2].numframes;
