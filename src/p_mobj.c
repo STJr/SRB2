@@ -7541,6 +7541,13 @@ void P_MobjThinker(mobj_t *mobj)
 				mobj->momx = FixedMul(mobj->momx, (3*FRACUNIT)/4); // originally 50000
 				mobj->momy = FixedMul(mobj->momy, (3*FRACUNIT)/4); // same
 				//mobj->momz = mobj->momz+P_MobjFlip(mobj)/3; // no meaningful change in value to be frank
+				if (mobj->state >= &states[S_SPINDUST_BUBBLE1] && mobj->state <= &states[S_SPINDUST_BUBBLE4]) // bubble dust!
+				{
+					P_MobjCheckWater(mobj);
+					if (mobj->watertop != mobj->subsector->sector->floorheight - 1000*FRACUNIT
+						&& mobj->z+mobj->height >= mobj->watertop - 5*FRACUNIT)
+						mobj->flags2 |= MF2_DONTDRAW;
+				}
 			break;
 		case MT_SPINFIRE:
 			if (mobj->eflags & MFE_VERTICALFLIP)

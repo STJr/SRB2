@@ -5571,6 +5571,10 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SPINDUST2",
 	"S_SPINDUST3",
 	"S_SPINDUST4",
+	"S_SPINDUST_BUBBLE1",
+	"S_SPINDUST_BUBBLE2",
+	"S_SPINDUST_BUBBLE3",
+	"S_SPINDUST_BUBBLE4",
 
 	"S_FOG1",
 	"S_FOG2",
