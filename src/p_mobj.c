@@ -127,18 +127,20 @@ FUNCINLINE static ATTRINLINE void P_CycleStateAnimation(mobj_t *mobj)
 
 	mobj->anim_duration = (UINT16)mobj->state->var2;
 
-	if (mobj->sprite == SPR_PLAY)
+	if (mobj->sprite != SPR_PLAY)
 	{
-		if (mobj->skin && (((++mobj->frame) & FF_FRAMEMASK) >= (UINT32)(((skin_t *)mobj->skin)->sprites[mobj->sprite2].numframes)))
-			mobj->frame &= ~FF_FRAMEMASK;
+		// compare the current sprite frame to the one we started from
+		// if more than var1 away from it, swap back to the original
+		// else just advance by one
+		if (((++mobj->frame) & FF_FRAMEMASK) - (mobj->state->frame & FF_FRAMEMASK) > (UINT32)mobj->state->var1)
+			mobj->frame = (mobj->state->frame & FF_FRAMEMASK) | (mobj->frame & ~FF_FRAMEMASK);
+
 		return;
 	}
 
-	// compare the current sprite frame to the one we started from
-	// if more than var1 away from it, swap back to the original
-	// else just advance by one
-	if (((++mobj->frame) & FF_FRAMEMASK) - (mobj->state->frame & FF_FRAMEMASK) > (UINT32)mobj->state->var1)
-		mobj->frame = (mobj->state->frame & FF_FRAMEMASK) | (mobj->frame & ~FF_FRAMEMASK);
+	// sprite2 version of above
+	if (mobj->skin && (((++mobj->frame) & FF_FRAMEMASK) >= (UINT32)(((skin_t *)mobj->skin)->sprites[mobj->sprite2].numframes)))
+		mobj->frame &= ~FF_FRAMEMASK;
 }
 
 //
