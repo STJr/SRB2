@@ -84,19 +84,23 @@ UINT32 con_scalefactor;            // text size scale factor
 
 // hold 32 last lines of input for history
 #define CON_MAXPROMPTCHARS 256
-#define CON_PROMPTCHAR '>'
+#define CON_PROMPTCHAR '$'
 
 static char inputlines[32][CON_MAXPROMPTCHARS]; // hold last 32 prompt lines
 
 static INT32 inputline;    // current input line number
 static INT32 inputhist;    // line number of history input line to restore
-static size_t input_cx;  // position in current input line
+static size_t input_cur; // position of cursor in line
+static size_t input_sel; // position of selection marker (I.E.: anything between this and input_cur is "selected")
+static size_t input_len; // length of current line, used to bound cursor and such
+// notice: input does NOT include the "$" at the start of the line. - 11/3/16
 
 // protos.
 static void CON_InputInit(void);
 static void CON_RecalcSize(void);
 
 static void CONS_hudlines_Change(void);
+static void CONS_backcolor_Change(void);
 static void CON_DrawBackpic(patch_t *pic, INT32 startx, INT32 destwidth);
 //static void CON_DrawBackpic2(pic_t *pic, INT32 startx, INT32 destwidth);
 
@@ -129,10 +133,11 @@ static CV_PossibleValue_t backpic_cons_t[] = {{0, "translucent"}, {1, "picture"}
 // whether to use console background picture, or translucent mode
 static consvar_t cons_backpic = {"con_backpic", "translucent", CV_SAVE, backpic_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
-static CV_PossibleValue_t backcolor_cons_t[] = {{0, "White"}, {1, "Orange"},
-												{2, "Blue"}, {3, "Green"}, {4, "Gray"},
-												{5, "Red"}, {0, NULL}};
-consvar_t cons_backcolor = {"con_backcolor", "3", CV_SAVE, backcolor_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+static CV_PossibleValue_t backcolor_cons_t[] = {{0, "White"}, 	{1, "Gray"},	{2, "Brown"},
+												{3, "Red"},		{4, "Orange"},	{5, "Yellow"},
+												{6, "Green"},	{7, "Blue"},	{8,	"Cyan"},
+												{0, NULL}};
+consvar_t cons_backcolor = {"con_backcolor", "Green", CV_CALL|CV_SAVE, backcolor_cons_t, CONS_backcolor_Change, 0, NULL, NULL, 0, 0, NULL};
 
 static void CON_Print(char *msg);
 
@@ -219,8 +224,9 @@ static void CONS_Bind_f(void)
 //                          CONSOLE SETUP
 //======================================================================
 
-// Prepare a colormap for GREEN ONLY translucency over background
-//
+// Font colormap colors
+// TODO: This could probably be improved somehow...
+// These colormaps are 99% identical, with just a few changed bytes
 UINT8 *yellowmap;
 UINT8 *purplemap;
 UINT8 *lgreenmap;
@@ -229,44 +235,49 @@ UINT8 *graymap;
 UINT8 *redmap;
 UINT8 *orangemap;
 
-// Console BG colors
-UINT8 *cwhitemap;
-UINT8 *corangemap;
-UINT8 *cbluemap;
-UINT8 *cgreenmap;
-UINT8 *cgraymap;
-UINT8 *credmap;
+// Console BG color
+UINT8 *consolebgmap = NULL;
 
-void CON_ReSetupBackColormap(UINT16 num)
+void CON_SetupBackColormap(void)
 {
-	UINT16 i, j;
-	UINT8 k;
-	UINT8 *pal = W_CacheLumpName(R_GetPalname(num), PU_CACHE);
+	UINT16 i, palsum;
+	UINT8 j, palindex;
+	UINT8 *pal = W_CacheLumpName(GetPalette(), PU_CACHE);
 
-	// setup the green translucent background colormaps
-	for (i = 0, k = 0; i < 768; i += 3, k++)
+	if (!consolebgmap)
+		consolebgmap = (UINT8 *)Z_Malloc(256, PU_STATIC, NULL);
+
+	switch (cons_backcolor.value)
 	{
-		j = pal[i] + pal[i+1] + pal[i+2];
-		cwhitemap[k] = (UINT8)(15 - (j>>6));
-		corangemap[k] = (UINT8)(63 - (j>>6));
-		cbluemap[k] = (UINT8)(159 - (j>>6));
-		cgreenmap[k] = (UINT8)(111 - (j>>6));
-		cgraymap[k] = (UINT8)(31 - (j>>6));
-		credmap[k] = (UINT8)(47 - (j>>6));
+		case 0:		palindex = 15; 	break; // White
+		case 1:		palindex = 31;	break; // Gray
+		case 2:		palindex = 63;	break; // Brown
+		case 3:		palindex = 143;	break; // Red
+		case 4:		palindex = 95;	break; // Orange
+		case 5:		palindex = 111;	break; // Yellow
+		case 6:		palindex = 175;	break; // Green
+		case 7:		palindex = 239;	break; // Blue
+		case 8:		palindex = 219;	break; // Cyan
+		// Default green
+		default:	palindex = 175; break;
+}
+
+	// setup background colormap
+	for (i = 0, j = 0; i < 768; i += 3, j++)
+	{
+		palsum = (pal[i] + pal[i+1] + pal[i+2]) >> 6;
+		consolebgmap[j] = (UINT8)(palindex - palsum);
 	}
 }
 
-static void CON_SetupBackColormap(void)
+static void CONS_backcolor_Change(void)
 {
-	INT32 i, j, k;
-	UINT8 *pal;
+	CON_SetupBackColormap();
+}
 
-	cwhitemap   = (UINT8 *)Z_Malloc(256, PU_STATIC, NULL);
-	corangemap  = (UINT8 *)Z_Malloc(256, PU_STATIC, NULL);
-	cbluemap    = (UINT8 *)Z_Malloc(256, PU_STATIC, NULL);
-	cgreenmap   = (UINT8 *)Z_Malloc(256, PU_STATIC, NULL);
-	cgraymap    = (UINT8 *)Z_Malloc(256, PU_STATIC, NULL);
-	credmap     = (UINT8 *)Z_Malloc(256, PU_STATIC, NULL);
+static void CON_SetupColormaps(void)
+{
+	INT32 i;
 
 	yellowmap = (UINT8 *)Z_Malloc(256, PU_STATIC, NULL);
 	graymap   = (UINT8 *)Z_Malloc(256, PU_STATIC, NULL);
@@ -275,20 +286,6 @@ static void CON_SetupBackColormap(void)
 	bluemap   = (UINT8 *)Z_Malloc(256, PU_STATIC, NULL);
 	redmap    = (UINT8 *)Z_Malloc(256, PU_STATIC, NULL);
 	orangemap = (UINT8 *)Z_Malloc(256, PU_STATIC, NULL);
-
-	pal = W_CacheLumpName("PLAYPAL", PU_CACHE);
-
-	// setup the green translucent background colormaps
-	for (i = 0, k = 0; i < 768; i += 3, k++)
-	{
-		j = pal[i] + pal[i+1] + pal[i+2];
-		cwhitemap[k] = (UINT8)(15 - (j>>6));
-		corangemap[k] = (UINT8)(63 - (j>>6));
-		cbluemap[k] = (UINT8)(159 - (j>>6));
-		cgreenmap[k] = (UINT8)(111 - (j>>6));
-		cgraymap[k] = (UINT8)(31 - (j>>6));
-		credmap[k] = (UINT8)(47 - (j>>6));
-	}
 
 	// setup the other colormaps, for console text
 
@@ -320,6 +317,9 @@ static void CON_SetupBackColormap(void)
 	redmap[9]    = (UINT8)32;
 	orangemap[3] = (UINT8)52;
 	orangemap[9] = (UINT8)57;
+
+	// Init back colormap
+	CON_SetupBackColormap();
 }
 
 // Setup the console text buffer
@@ -343,7 +343,7 @@ void CON_Init(void)
 	con_width = 0;
 	CON_RecalcSize();
 
-	CON_SetupBackColormap();
+	CON_SetupColormaps();
 
 	//note: CON_Ticker should always execute at least once before D_Display()
 	con_clipviewtop = -1; // -1 does not clip
@@ -386,14 +386,10 @@ void CON_Init(void)
 //
 static void CON_InputInit(void)
 {
-	INT32 i;
-
 	// prepare the first prompt line
 	memset(inputlines, 0, sizeof (inputlines));
-	for (i = 0; i < 32; i++)
-		inputlines[i][0] = CON_PROMPTCHAR;
 	inputline = 0;
-	input_cx = 1;
+	input_cur = input_sel = input_len = 0;
 }
 
 //======================================================================
@@ -618,13 +614,91 @@ void CON_Ticker(void)
 	}
 }
 
+//
+// ----
+//
+// Shortcuts for adding and deleting characters, strings, and sections
+// Necessary due to moving cursor
+//
+
+static void CON_InputClear(void)
+{
+	memset(inputlines[inputline], 0, CON_MAXPROMPTCHARS);
+	input_cur = input_sel = input_len = 0;
+}
+
+static void CON_InputSetString(const char *c)
+{
+	memset(inputlines[inputline], 0, CON_MAXPROMPTCHARS);
+	strcpy(inputlines[inputline], c);
+	input_cur = input_sel = input_len = strlen(c);
+}
+
+static void CON_InputAddString(const char *c)
+{
+	size_t csize = strlen(c);
+	if (input_len + csize > CON_MAXPROMPTCHARS-1)
+		return;
+	if (input_cur != input_len)
+		memmove(&inputlines[inputline][input_cur+csize], &inputlines[inputline][input_cur], input_len-input_cur);
+	memcpy(&inputlines[inputline][input_cur], c, csize);
+	input_len += csize;
+	input_sel = (input_cur += csize);
+}
+
+static void CON_InputDelSelection(void)
+{
+	size_t start, end, len;
+	if (input_cur > input_sel)
+	{
+		start = input_sel;
+		end = input_cur;
+	}
+	else
+	{
+		start = input_cur;
+		end = input_sel;
+	}
+	len = (end - start);
+
+	if (end != input_len)
+		memmove(&inputlines[inputline][start], &inputlines[inputline][end], input_len-end);
+	memset(&inputlines[inputline][input_len - len], 0, len);
+
+	input_len -= len;
+	input_sel = input_cur = start;
+}
+
+static void CON_InputAddChar(char c)
+{
+	if (input_len >= CON_MAXPROMPTCHARS-1)
+		return;
+	if (input_cur != input_len)
+		memmove(&inputlines[inputline][input_cur+1], &inputlines[inputline][input_cur], input_len-input_cur);
+	inputlines[inputline][input_cur++] = c;
+	inputlines[inputline][++input_len] = 0;
+	input_sel = input_cur;
+}
+
+static void CON_InputDelChar(void)
+{
+	if (!input_cur)
+		return;
+	if (input_cur != input_len)
+		memmove(&inputlines[inputline][input_cur-1], &inputlines[inputline][input_cur], input_len-input_cur);
+	inputlines[inputline][--input_len] = 0;
+	input_sel = --input_cur;
+}
+
+//
+// ----
+//
+
 // Handles console key input
 //
 boolean CON_Responder(event_t *ev)
 {
-	static boolean consdown;
-	static boolean shiftdown;
-	static boolean ctrldown;
+	static UINT8 consdown = false; // console is treated differently due to rare usage
 
 	// sequential completions a la 4dos
 	static char completion[80];
@@ -639,13 +713,8 @@ boolean CON_Responder(event_t *ev)
 	// let go keyup events, don't eat them
 	if (ev->type != ev_keydown && ev->type != ev_console)
 	{
-		if (ev->data1 == KEY_LSHIFT || ev->data1 == KEY_RSHIFT)
-			shiftdown = false;
-		else if (ev->data1 == KEY_LCTRL || ev->data1 == KEY_RCTRL)
-			ctrldown = false;
-		else if (ev->data1 == gamecontrol[gc_console][0] || ev->data1 == gamecontrol[gc_console][1])
+		if (ev->data1 == gamecontrol[gc_console][0] || ev->data1 == gamecontrol[gc_console][1])
 			consdown = false;
-
 		return false;
 	}
 
@@ -684,94 +753,110 @@ boolean CON_Responder(event_t *ev)
 			consoletoggle = true;
 			return true;
 		}
-
 	}
 
-	// eat shift only if console active
-	if (key == KEY_LSHIFT || key == KEY_RSHIFT)
-	{
-		shiftdown = true;
+	// Always eat ctrl/shift/alt if console open, so the menu doesn't get ideas
+	if (key == KEY_LSHIFT || key == KEY_RSHIFT
+	 || key == KEY_LCTRL || key == KEY_RCTRL
+	 || key == KEY_LALT || key == KEY_RALT)
 		return true;
-	}
 
-	// same for ctrl
-	if (key == KEY_LCTRL || key == KEY_RCTRL)
+	// ctrl modifier -- changes behavior, adds shortcuts
+	if (ctrldown)
 	{
-		ctrldown = true;
-		return true;
+		// show all cvars/commands that match what we have inputted
+		if (key == KEY_TAB)
+		{
+			size_t i, len;
+
+			if (!completion[0])
+			{
+				if (!input_len || input_len >= 40 || strchr(inputlines[inputline], ' '))
+					return true;
+				strcpy(completion, inputlines[inputline]);
+				comskips = varskips = 0;
+			}
+			len = strlen(completion);
+
+			//first check commands
+			CONS_Printf("\nCommands:\n");
+			for (i = 0, cmd = COM_CompleteCommand(completion, i); cmd; cmd = COM_CompleteCommand(completion, ++i))
+				CONS_Printf("  \x83" "%s" "\x80" "%s\n", completion, cmd+len);
+			if (i == 0) CONS_Printf("  (none)\n");
+
+			//now we move on to CVARs
+			CONS_Printf("Variables:\n");
+			for (i = 0, cmd = CV_CompleteVar(completion, i); cmd; cmd = CV_CompleteVar(completion, ++i))
+				CONS_Printf("  \x83" "%s" "\x80" "%s\n", completion, cmd+len);
+			if (i == 0) CONS_Printf("  (none)\n");
+
+			return true;
+		}
+		// ---
+
+		if (key == KEY_HOME) // oldest text in buffer
+		{
+			con_scrollup = (con_totallines-((con_curlines-16)>>3));
+			return true;
+		}
+		else if (key == KEY_END) // most recent text in buffer
+		{
+			con_scrollup = 0;
+			return true;
+		}
+
+		if (key == 'x' || key == 'X')
+		{
+			if (input_sel > input_cur)
+				I_ClipboardCopy(&inputlines[inputline][input_cur], input_sel-input_cur);
+			else
+				I_ClipboardCopy(&inputlines[inputline][input_sel], input_cur-input_sel);
+			CON_InputDelSelection();
+			completion[0] = 0;
+			return true;
+		}
+		else if (key == 'c' || key == 'C')
+		{
+			if (input_sel > input_cur)
+				I_ClipboardCopy(&inputlines[inputline][input_cur], input_sel-input_cur);
+			else
+				I_ClipboardCopy(&inputlines[inputline][input_sel], input_cur-input_sel);
+			return true;
+		}
+		else if (key == 'v' || key == 'V')
+		{
+			const char *paste = I_ClipboardPaste();
+			if (input_sel != input_cur)
+				CON_InputDelSelection();
+			if (paste != NULL)
+				CON_InputAddString(paste);
+			completion[0] = 0;
+			return true;
+		}
+
+		// Select all
+		if (key == 'a' || key == 'A')
+		{
+			input_sel = 0;
+			input_cur = input_len;
+			return true;
+		}
+
+		// don't eat the key
+		return false;
 	}
 
 	// command completion forward (tab) and backward (shift-tab)
 	if (key == KEY_TAB)
 	{
-		// show all cvars/commands that match what we have inputted
-		if (ctrldown)
-		{
-			UINT32 i;
-			size_t stop = input_cx - 1;
-			char nameremainder[255];
-
-			if (input_cx < 2 || strlen(inputlines[inputline]+1) >= 80)
-				return true;
-
-			strcpy(completion, inputlines[inputline]+1);
-
-			// trimming: stop at the first newline
-			for (i = 0; i < input_cx - 1; ++i)
-			{
-				if (completion[i] == ' ')
-				{
-					completion[i] = '\0';
-					stop = i;
-					break;
-				}
-			}
-
-			i = 0;
-
-			//first check commands
-			CONS_Printf("\nCommands:\n");
-
-			for (cmd = COM_CompleteCommand(completion, i); cmd; cmd = COM_CompleteCommand(completion, i))
-			{
-				strncpy(nameremainder, cmd+(stop), strlen(cmd)-(stop));
-				nameremainder[strlen(cmd)-(stop)] = '\0';
-
-				CONS_Printf("  \x83" "%s" "\x80" "%s\n", completion, nameremainder);
-				++i;
-			}
-			if (i == 0)
-				CONS_Printf("  (none)\n");
-
-			i = 0;
-
-			//now we move on to CVARs
-			CONS_Printf("Variables:\n");
-
-			for (cmd = CV_CompleteVar(completion, i); cmd; cmd = CV_CompleteVar(completion, i))
-			{
-				strncpy(nameremainder, cmd+(stop), strlen(cmd)-(stop));
-				nameremainder[strlen(cmd)-(stop)] = '\0';
-
-				CONS_Printf("  \x83" "%s" "\x80" "%s\n", completion, nameremainder);
-				++i;
-			}
-			if (i == 0)
-				CONS_Printf("  (none)\n");
-
-			return true;
-		}
-
 		// sequential command completion forward and backward
 
 		// remember typing for several completions (a-la-4dos)
-		if (inputlines[inputline][input_cx-1] != ' ')
+		if (!completion[0])
 		{
-			if (strlen(inputlines[inputline]+1) < 80)
-				strcpy(completion, inputlines[inputline]+1);
-			else
-				completion[0] = 0;
-
+			if (!input_len || input_len >= 40 || strchr(inputlines[inputline], ' '))
+				return true;
+			strcpy(completion, inputlines[inputline]);
 			comskips = varskips = 0;
 		}
 		else
@@ -783,37 +868,26 @@ boolean CON_Responder(event_t *ev)
 					if (--varskips < 0)
 						comskips = -comskips - 2;
 				}
-				else if (comskips > 0)
-					comskips--;
+				else if (comskips > 0) comskips--;
 			}
 			else
 			{
-				if (comskips < 0)
-					varskips++;
-				else
-					comskips++;
+				if (comskips < 0) varskips++;
+				else              comskips++;
 			}
 		}
 
 		if (comskips >= 0)
 		{
 			cmd = COM_CompleteCommand(completion, comskips);
-			if (!cmd)
-				// dirty: make sure if comskips is zero, to have a neg value
+			if (!cmd) // dirty: make sure if comskips is zero, to have a neg value
 				comskips = -comskips - 1;
 		}
 		if (comskips < 0)
 			cmd = CV_CompleteVar(completion, varskips);
 
 		if (cmd)
-		{
-			memset(inputlines[inputline]+1, 0, CON_MAXPROMPTCHARS-1);
-			strcpy(inputlines[inputline]+1, cmd);
-			input_cx = strlen(cmd) + 1;
-			inputlines[inputline][input_cx] = ' ';
-			input_cx++;
-			inputlines[inputline][input_cx] = 0;
-		}
+			CON_InputSetString(va("%s ", cmd));
 		else
 		{
 			if (comskips > 0)
@@ -839,47 +913,80 @@ boolean CON_Responder(event_t *ev)
 		return true;
 	}
 
-	if (key == KEY_HOME) // oldest text in buffer
+	if (key == KEY_LEFTARROW)
 	{
-		con_scrollup = (con_totallines-((con_curlines-16)>>3));
+		if (input_cur != 0)
+			--input_cur;
+		if (!shiftdown)
+			input_sel = input_cur;
 		return true;
 	}
-	else if (key == KEY_END) // most recent text in buffer
+	else if (key == KEY_RIGHTARROW)
 	{
-		con_scrollup = 0;
+		if (input_cur < input_len)
+			++input_cur;
+		if (!shiftdown)
+			input_sel = input_cur;
 		return true;
 	}
+	else if (key == KEY_HOME)
+	{
+		input_cur = 0;
+		if (!shiftdown)
+			input_sel = input_cur;
+		return true;
+	}
+	else if (key == KEY_END)
+	{
+		input_cur = input_len;
+		if (!shiftdown)
+			input_sel = input_cur;
+		return true;
+	}
+
+	// At this point we're messing with input
+	// Clear completion
+	completion[0] = 0;
 
 	// command enter
 	if (key == KEY_ENTER)
 	{
-		if (input_cx < 2)
+		if (!input_len)
 			return true;
 
 		// push the command
-		COM_BufAddText(inputlines[inputline]+1);
+		COM_BufAddText(inputlines[inputline]);
 		COM_BufAddText("\n");
 
-		CONS_Printf("%s\n", inputlines[inputline]);
+		CONS_Printf("\x86""%c""\x80""%s\n", CON_PROMPTCHAR, inputlines[inputline]);
 
 		inputline = (inputline+1) & 31;
 		inputhist = inputline;
-
-		memset(inputlines[inputline], 0, CON_MAXPROMPTCHARS);
-		inputlines[inputline][0] = CON_PROMPTCHAR;
-		input_cx = 1;
+		CON_InputClear();
 
 		return true;
 	}
 
-	// backspace command prompt
-	if (key == KEY_BACKSPACE)
+	// backspace and delete command prompt
+	if (input_sel != input_cur)
 	{
-		if (input_cx > 1)
+		if (key == KEY_BACKSPACE || key == KEY_DEL)
 		{
-			input_cx--;
-			inputlines[inputline][input_cx] = 0;
+			CON_InputDelSelection();
+			return true;
 		}
+	}
+	else if (key == KEY_BACKSPACE)
+	{
+		CON_InputDelChar();
+		return true;
+	}
+	else if (key == KEY_DEL)
+	{
+		if (input_cur == input_len)
+			return true;
+		++input_cur;
+		CON_InputDelChar();
 		return true;
 	}
 
@@ -888,18 +995,15 @@ boolean CON_Responder(event_t *ev)
 	{
 		// copy one of the previous inputlines to the current
 		do
-		{
 			inputhist = (inputhist - 1) & 31; // cycle back
-		} while (inputhist != inputline && !inputlines[inputhist][1]);
+		while (inputhist != inputline && !inputlines[inputhist][0]);
 
 		// stop at the last history input line, which is the
 		// current line + 1 because we cycle through the 32 input lines
 		if (inputhist == inputline)
 			inputhist = (inputline + 1) & 31;
 
-		M_Memcpy(inputlines[inputline], inputlines[inputhist], CON_MAXPROMPTCHARS);
-		input_cx = strlen(inputlines[inputline]);
-
+		CON_InputSetString(inputlines[inputhist]);
 		return true;
 	}
 
@@ -909,23 +1013,14 @@ boolean CON_Responder(event_t *ev)
 		if (inputhist == inputline)
 			return true;
 		do
-		{
 			inputhist = (inputhist + 1) & 31;
-		} while (inputhist != inputline && !inputlines[inputhist][1]);
-
-		memset(inputlines[inputline], 0, CON_MAXPROMPTCHARS);
+		while (inputhist != inputline && !inputlines[inputhist][0]);
 
 		// back to currentline
 		if (inputhist == inputline)
-		{
-			inputlines[inputline][0] = CON_PROMPTCHAR;
-			input_cx = 1;
-		}
+			CON_InputClear();
 		else
-		{
-			strcpy(inputlines[inputline], inputlines[inputhist]);
-			input_cx = strlen(inputlines[inputline]);
-		}
+			CON_InputSetString(inputlines[inputhist]);
 		return true;
 	}
 
@@ -950,15 +1045,12 @@ boolean CON_Responder(event_t *ev)
 		return false;
 
 	// add key to cmd line here
-	if (input_cx < CON_MAXPROMPTCHARS)
-	{
-		if (key >= 'A' && key <= 'Z' && !shiftdown) //this is only really necessary for dedicated servers
-			key = key + 'a' - 'A';
+	if (key >= 'A' && key <= 'Z' && !shiftdown) //this is only really necessary for dedicated servers
+		key = key + 'a' - 'A';
 
-		inputlines[inputline][input_cx] = (char)key;
-		inputlines[inputline][input_cx + 1] = 0;
-		input_cx++;
-	}
+	if (input_sel != input_cur)
+		CON_InputDelSelection();
+	CON_InputAddChar(key);
 
 	return true;
 }
@@ -1242,26 +1334,89 @@ void CONS_Error(const char *msg)
 //
 static void CON_DrawInput(void)
 {
-	char *p;
-	size_t c;
-	INT32 x, y;
 	INT32 charwidth = (INT32)con_scalefactor << 3;
-
-	// input line scrolls left if it gets too long
-	p = inputlines[inputline];
-	if (input_cx >= con_width-11)
-		p += input_cx - (con_width-11) + 1;
+	const char *p = inputlines[inputline];
+	size_t c, clen, cend;
+	UINT8 lellip = 0, rellip = 0;
+	INT32 x, y, i;
 
 	y = con_curlines - 12 * con_scalefactor;
+	x = charwidth*2;
 
-	for (c = 0, x = charwidth; c < con_width-11; c++, x += charwidth)
-		V_DrawCharacter(x, y, p[c] | cv_constextsize.value | V_NOSCALESTART, !cv_allcaps.value);
+	clen = con_width-13;
 
-	// draw the blinking cursor
-	//
-	x = ((input_cx >= con_width-11) ? (INT32)(con_width-11) : (INT32)((input_cx + 1)) * charwidth);
-	if (con_tick < 4)
-		V_DrawCharacter(x, y, '_' | cv_constextsize.value | V_NOSCALESTART, !cv_allcaps.value);
+	if (input_len <= clen)
+	{
+		c = 0;
+		clen = input_len;
+	}
+	else // input line scrolls left if it gets too long
+	{
+		clen -= 2; // There will always be some extra truncation -- but where is what we'll find out
+
+		if (input_cur <= clen/2)
+		{
+			// Close enough to right edge to show all
+			c = 0;
+			// Always will truncate right side from this position, so always draw right ellipsis
+			rellip = 1;
+		}
+		else
+		{
+			// Cursor in the middle (or right side) of input
+			// Move over for the ellipsis
+			c = input_cur - (clen/2) + 2;
+			x += charwidth*2;
+			lellip = 1;
+
+			if (c + clen >= input_len)
+			{
+				// Cursor in the right side of input
+				// We were too far over, so move back
+				c = input_len - clen;
+			}
+			else
+			{
+				// Cursor in the middle -- ellipses on both sides
+				clen -= 2;
+				rellip = 1;
+			}
+		}
+	}
+
+	if (lellip)
+	{
+		x -= charwidth*3;
+		if (input_sel < c)
+			V_DrawFill(x, y, charwidth*3, (10 * con_scalefactor), 107 | V_NOSCALESTART);
+		for (i = 0; i < 3; ++i, x += charwidth)
+			V_DrawCharacter(x, y, '.' | cv_constextsize.value | V_GRAYMAP | V_NOSCALESTART, !cv_allcaps.value);
+	}
+	else
+		V_DrawCharacter(x-charwidth, y, CON_PROMPTCHAR | cv_constextsize.value | V_GRAYMAP | V_NOSCALESTART, !cv_allcaps.value);
+
+	for (cend = c + clen; c < cend; ++c, x += charwidth)
+	{
+		if ((input_sel > c && input_cur <= c) || (input_sel <= c && input_cur > c))
+		{
+			V_DrawFill(x, y, charwidth, (10 * con_scalefactor), 107 | V_NOSCALESTART);
+			V_DrawCharacter(x, y, p[c] | cv_constextsize.value | V_YELLOWMAP | V_NOSCALESTART, !cv_allcaps.value);
+		}
+		else
+			V_DrawCharacter(x, y, p[c] | cv_constextsize.value | V_NOSCALESTART, !cv_allcaps.value);
+
+		if (c == input_cur && con_tick >= 4)
+			V_DrawCharacter(x, y + (con_scalefactor*2), '_' | cv_constextsize.value | V_NOSCALESTART, !cv_allcaps.value);
+	}
+	if (cend == input_cur && con_tick >= 4)
+		V_DrawCharacter(x, y + (con_scalefactor*2), '_' | cv_constextsize.value | V_NOSCALESTART, !cv_allcaps.value);
+	if (rellip)
+	{
+		if (input_sel > cend)
+			V_DrawFill(x, y, charwidth*3, (10 * con_scalefactor), 107 | V_NOSCALESTART);
+		for (i = 0; i < 3; ++i, x += charwidth)
+			V_DrawCharacter(x, y, '.' | cv_constextsize.value | V_GRAYMAP | V_NOSCALESTART, !cv_allcaps.value);
+	}
 }
 
 // draw the last lines of console text to the top of the screen
@@ -1417,7 +1572,7 @@ static void CON_DrawConsole(void)
 	{
 		// inu: no more width (was always 0 and vid.width)
 		if (rendermode != render_none)
-			V_DrawFadeConsBack(con_curlines, cons_backcolor.value); // translucent background
+			V_DrawFadeConsBack(con_curlines); // translucent background
 	}
 
 	// draw console text lines from top to bottom
