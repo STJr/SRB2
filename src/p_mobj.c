@@ -189,17 +189,16 @@ static void P_CyclePlayerMobjState(mobj_t *mobj)
 // P_GetMobjSprite2
 //
 
-static UINT8 P_GetMobjSprite2(mobj_t *mobj, UINT8 spr2)
+UINT8 P_GetMobjSprite2(mobj_t *mobj, UINT8 spr2)
 {
 	player_t *player = mobj->player;
 	skin_t *skin = ((skin_t *)mobj->skin);
 	boolean noalt = false;
-	UINT8 numframes;
 
 	if (!skin)
 		return 0;
 
-	while (((numframes = skin->sprites[spr2].numframes) <= 0)
+	while ((skin->sprites[spr2].numframes <= 0)
 		&& spr2 != SPR2_STND)
 	{
 		switch(spr2)
