@@ -135,7 +135,8 @@ static consvar_t cons_backpic = {"con_backpic", "translucent", CV_SAVE, backpic_
 
 static CV_PossibleValue_t backcolor_cons_t[] = {{0, "White"}, 	{1, "Gray"},	{2, "Brown"},
 												{3, "Red"},		{4, "Orange"},	{5, "Yellow"},
-												{6, "Green"},	{7, "Blue"},	{8,	"Cyan"},
+												{6, "Green"},	{7, "Blue"},	{8, "Purple"},
+												{9, "Magenta"},	{10, "Aqua"},
 												{0, NULL}};
 consvar_t cons_backcolor = {"con_backcolor", "Green", CV_CALL|CV_SAVE, backcolor_cons_t, CONS_backcolor_Change, 0, NULL, NULL, 0, 0, NULL};
 
@@ -241,23 +242,26 @@ UINT8 *consolebgmap = NULL;
 void CON_SetupBackColormap(void)
 {
 	UINT16 i, palsum;
-	UINT8 j, palindex;
+	UINT8 j, palindex, shift;
 	UINT8 *pal = W_CacheLumpName(GetPalette(), PU_CACHE);
 
 	if (!consolebgmap)
 		consolebgmap = (UINT8 *)Z_Malloc(256, PU_STATIC, NULL);
 
+	shift = 6; // 12 colors -- shift of 7 means 6 colors
 	switch (cons_backcolor.value)
 	{
 		case 0:		palindex = 15; 	break; // White
 		case 1:		palindex = 31;	break; // Gray
-		case 2:		palindex = 63;	break; // Brown
-		case 3:		palindex = 143;	break; // Red
-		case 4:		palindex = 95;	break; // Orange
-		case 5:		palindex = 111;	break; // Yellow
-		case 6:		palindex = 175;	break; // Green
-		case 7:		palindex = 239;	break; // Blue
-		case 8:		palindex = 219;	break; // Cyan
+		case 2:		palindex = 239;	break; // Brown
+		case 3:		palindex = 47;	break; // Red
+		case 4:		palindex = 63;	break; // Orange
+		case 5:		palindex = 79;	shift = 7;	break; // Yellow
+		case 6:		palindex = 111;	break; // Green
+		case 7:		palindex = 159;	break; // Blue
+		case 8:		palindex = 199;	shift = 7; break; // Purple
+		case 9:		palindex = 187;	break; // Magenta
+		case 10:	palindex = 139;	break; // Aqua
 		// Default green
 		default:	palindex = 175; break;
 }
@@ -265,7 +269,7 @@ void CON_SetupBackColormap(void)
 	// setup background colormap
 	for (i = 0, j = 0; i < 768; i += 3, j++)
 	{
-		palsum = (pal[i] + pal[i+1] + pal[i+2]) >> 6;
+		palsum = (pal[i] + pal[i+1] + pal[i+2]) >> shift;
 		consolebgmap[j] = (UINT8)(palindex - palsum);
 	}
 }
@@ -1388,7 +1392,7 @@ static void CON_DrawInput(void)
 	{
 		x -= charwidth*3;
 		if (input_sel < c)
-			V_DrawFill(x, y, charwidth*3, (10 * con_scalefactor), 107 | V_NOSCALESTART);
+			V_DrawFill(x, y, charwidth*3, (10 * con_scalefactor), 77 | V_NOSCALESTART);
 		for (i = 0; i < 3; ++i, x += charwidth)
 			V_DrawCharacter(x, y, '.' | cv_constextsize.value | V_GRAYMAP | V_NOSCALESTART, !cv_allcaps.value);
 	}
@@ -1399,7 +1403,7 @@ static void CON_DrawInput(void)
 	{
 		if ((input_sel > c && input_cur <= c) || (input_sel <= c && input_cur > c))
 		{
-			V_DrawFill(x, y, charwidth, (10 * con_scalefactor), 107 | V_NOSCALESTART);
+			V_DrawFill(x, y, charwidth, (10 * con_scalefactor), 77 | V_NOSCALESTART);
 			V_DrawCharacter(x, y, p[c] | cv_constextsize.value | V_YELLOWMAP | V_NOSCALESTART, !cv_allcaps.value);
 		}
 		else
@@ -1413,7 +1417,7 @@ static void CON_DrawInput(void)
 	if (rellip)
 	{
 		if (input_sel > cend)
-			V_DrawFill(x, y, charwidth*3, (10 * con_scalefactor), 107 | V_NOSCALESTART);
+			V_DrawFill(x, y, charwidth*3, (10 * con_scalefactor), 77 | V_NOSCALESTART);
 		for (i = 0; i < 3; ++i, x += charwidth)
 			V_DrawCharacter(x, y, '.' | cv_constextsize.value | V_GRAYMAP | V_NOSCALESTART, !cv_allcaps.value);
 	}
