@@ -2907,14 +2907,14 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 
 	if (!force)
 	{
-		if (!(target->flags & MF_SHOOTABLE))
+		if (!(target->flags & (MF_SHOOTABLE|MF_MONITOR)))
 			return false; // shouldn't happen...
 
 		if (target->type == MT_BLACKEGGMAN)
 			return false;
 
 		// Make sure that boxes cannot be popped by enemies, red rings, etc.
-		if (target->flags & MF_MONITOR && ((!source || !source->player || source->player->bot) || (inflictor && !inflictor->player)))
+		if (!(target->flags & MF_SHOOTABLE) && ((!source || !source->player || source->player->bot) || (inflictor && !inflictor->player)))
 			return false;
 	}
 

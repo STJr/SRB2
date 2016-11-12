@@ -3357,9 +3357,6 @@ static boolean PIT_RadiusAttack(mobj_t *thing)
 	if (thing->flags & MF_BOSS)
 		return true;
 
-	if (thing->flags & MF_MONITOR)
-		return true;
-
 	dx = abs(thing->x - bombspot->x);
 	dy = abs(thing->y - bombspot->y);
 	dz = abs(thing->z + (thing->height>>1) - bombspot->z);
