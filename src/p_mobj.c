@@ -664,7 +664,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 			{
 				if (st->frame & FF_SPR2ENDSTATE) // no frame advancement
 				{
-					if (st->var1 == S_NULL)
+					if (st->var1 == mobj->state-states)
 						frame--;
 					else
 					{
@@ -788,8 +788,17 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 
 			if (frame >= numframes)
 			{
-				if (st->frame & FF_SPR2ENDSTATE)
-					return P_SetPlayerMobjState(mobj, st->var1); // Differs from P_SetPlayerMobjState - allows object to be removed via S_NULL
+				if (st->frame & FF_SPR2ENDSTATE) // no frame advancement
+				{
+					if (st->var1 == mobj->state-states)
+						frame--;
+					else
+					{
+						if (mobj->frame & FF_FRAMEMASK)
+							mobj->frame--;
+						return P_SetMobjState(mobj, st->var1);
+					}
+				}
 				else
 					frame = 0;
 			}
