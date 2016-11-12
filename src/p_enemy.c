@@ -2744,7 +2744,7 @@ void A_GoldMonitorRestore(mobj_t *actor)
 		return;
 #endif
 
-	actor->flags |= MF_MONITOR|(mobjinfo[actor->type].flags & MF_SHOOTABLE);
+	actor->flags |= MF_MONITOR|MF_SHOOTABLE;
 	actor->flags2 &= ~MF2_STANDONME;
 	actor->health = 1; // Just in case.
 }
