@@ -193,7 +193,6 @@ UINT8 P_GetMobjSprite2(mobj_t *mobj, UINT8 spr2)
 {
 	player_t *player = mobj->player;
 	skin_t *skin = ((skin_t *)mobj->skin);
-	boolean noalt = false;
 
 	if (!skin)
 		return 0;
@@ -386,20 +385,11 @@ UINT8 P_GetMobjSprite2(mobj_t *mobj, UINT8 spr2)
 			spr2 = SPR2_NGTC;
 			break;
 
-
-		// Sprites for non-player objects? There's nothing we can do.
-		case SPR2_SIGN:
-		case SPR2_LIFE:
-			noalt = true;
-			break;
-
 		// Dunno? Just go to standing then.
 		default:
 			spr2 = SPR2_STND;
 			break;
 		}
-		if (noalt)
-			break;
 	}
 	return spr2;
 }

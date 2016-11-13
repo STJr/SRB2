@@ -2553,6 +2553,7 @@ void A_1upThinker(mobj_t *actor)
 	{
 		P_SetTarget(&actor->tracer, P_SpawnMobj(actor->x, actor->y, actor->z, MT_OVERLAY));
 		P_SetTarget(&actor->tracer->target, actor);
+		actor->tracer->skin = &skins[players[closestplayer].skin]; // required here to prevent spr2 default showing stand for a single frame
 		P_SetMobjState(actor->tracer, actor->info->seestate);
 
 		// The overlay is going to be one tic early turning off and on
