@@ -3846,7 +3846,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 		if (player->mo->state-states != S_PLAY_DASH)
 			P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
 		// Spawn spin dash dust
-		if (!(player->mo->eflags & MFE_GOOWATER))
+		if (!(player->charflags & SF_NOSPINDASHDUST) && !(player->mo->eflags & MFE_GOOWATER))
 			P_DoSpinDashDust(player);
 	}
 	else if (onground && player->pflags & PF_SPINNING && !(player->panim == PA_ROLL))

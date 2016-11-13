@@ -44,6 +44,7 @@ typedef enum
 	SF_STOMPDAMAGE      = 1<<9, // Always damage enemies, etc by landing on them, no matter your vunerability?
 	SF_MARIODAMAGE      = SF_NOJUMPDAMAGE|SF_STOMPDAMAGE, // The Mario method of being able to damage enemies, etc.
 	SF_MACHINE          = 1<<10, // Beep boop. Are you a robot?
+	SF_NOSPINDASHDUST   = 1<<11, // Don't spawn dust particles when charging a spindash
 	// free up to and including 1<<31
 } skinflags_t;
 
