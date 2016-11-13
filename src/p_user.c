@@ -3675,11 +3675,11 @@ static void P_DoSpinDashDust(player_t *player)
 	for (i = 0; i <= (leveltime%7)/2; i++) { // 1, 2, 3 or 4 particles
 		particle = P_SpawnMobjFromMobj(player->mo, 0, 0, 0, MT_SPINDUST);
 
-		/*if (player->powers[pw_shield] == SH_ELEMENTAL && !(player->mo->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER))) {
-			P_SetMobjState(particle, S_SPINDUST_FIRE;
-		} else */if (player->mo->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER)) {
+		if (player->mo->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER)) // overrides fire version
 			P_SetMobjState(particle, S_SPINDUST_BUBBLE1);
-		}
+		else if (player->powers[pw_shield] == SH_ELEMENTAL)
+			P_SetMobjState(particle, S_SPINDUST_FIRE1);
+
 		P_SetTarget(&particle->target, player->mo);
 		particle->destscale = (2*player->mo->scale)/3;
 		P_SetScale(particle, particle->destscale);

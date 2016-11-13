@@ -275,6 +275,7 @@ char sprnames[NUMSPRITES + 1][5] =
 	"BUBL", // Bubble
 	"WZAP",
 	"DUST", // Spindash dust
+	"FPRT", // Spindash dust (flame)
 	"TFOG", // Teleport Fog
 	"SEED", // Sonic CD flower seed
 	"PRTL", // Particle (for fans, etc.)
@@ -2289,6 +2290,11 @@ state_t states[NUMSTATES] =
 	{SPR_BUBL,            0, 6, {NULL}, 0, 0, S_SPINDUST_BUBBLE3}, // S_SPINDUST_BUBBLE2
 	{SPR_BUBL, FF_TRANS30|0, 4, {NULL}, 0, 0, S_SPINDUST_BUBBLE4}, // S_SPINDUST_BUBBLE3
 	{SPR_BUBL, FF_TRANS60|0, 3, {NULL}, 0, 0, S_NULL}, // S_SPINDUST_BUBBLE4
+	{SPR_FPRT,            0, 7, {NULL}, 0, 0, S_SPINDUST_FIRE2}, // S_SPINDUST_FIRE1
+	{SPR_FPRT,            0, 6, {NULL}, 0, 0, S_SPINDUST_FIRE3}, // S_SPINDUST_FIRE2
+	{SPR_FPRT, FF_TRANS30|0, 4, {NULL}, 0, 0, S_SPINDUST_FIRE4}, // S_SPINDUST_FIRE3
+	{SPR_FPRT, FF_TRANS60|0, 3, {NULL}, 0, 0, S_NULL}, // S_SPINDUST_FIRE4
+
 
 	{SPR_TFOG, FF_FULLBRIGHT|FF_TRANS50,    2, {NULL}, 0, 0, S_FOG2},  // S_FOG1
 	{SPR_TFOG, FF_FULLBRIGHT|FF_TRANS50|1,  2, {NULL}, 0, 0, S_FOG3},  // S_FOG2

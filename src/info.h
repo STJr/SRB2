@@ -467,6 +467,7 @@ typedef enum sprite
 	SPR_BUBL, // Bubble
 	SPR_WZAP,
 	SPR_DUST, // Spindash dust
+	SPR_FPRT, // Spindash dust (flame)
 	SPR_TFOG, // Teleport Fog
 	SPR_SEED, // Sonic CD flower seed
 	SPR_PRTL, // Particle (for fans, etc.)
@@ -2467,6 +2468,10 @@ typedef enum state
 	S_SPINDUST_BUBBLE2,
 	S_SPINDUST_BUBBLE3,
 	S_SPINDUST_BUBBLE4,
+	S_SPINDUST_FIRE1,
+	S_SPINDUST_FIRE2,
+	S_SPINDUST_FIRE3,
+	S_SPINDUST_FIRE4,
 
 	S_FOG1,
 	S_FOG2,
