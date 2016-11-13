@@ -309,6 +309,19 @@ static int lib_pRemoveMobj(lua_State *L)
 	return 0;
 }
 
+// P_IsValidSprite2 technically doesn't exist, and probably never should... but too much would need to be exposed to allow this to be checked by other methods.
+
+static int lib_pIsValidSprite2(lua_State *L)
+{
+	mobj_t *mobj = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	UINT8 spr2 = (UINT8)luaL_checkinteger(L, 2);
+	//HUDSAFE
+	if (!mobj)
+		return LUA_ErrInvalid(L, "mobj_t");
+	lua_pushboolean(L, (mobj->skin && (((skin_t *)mobj->skin)->sprites[spr2].numframes > 0)));
+	return 1;
+}
+
 static int lib_pSpawnMissile(lua_State *L)
 {
 	mobj_t *source = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
@@ -2036,6 +2049,7 @@ static luaL_Reg lib[] = {
 	// don't add P_SetMobjState or P_SetPlayerMobjState, use "mobj.state = S_NEWSTATE" instead.
 	{"P_SpawnMobj",lib_pSpawnMobj},
 	{"P_RemoveMobj",lib_pRemoveMobj},
+	{"P_IsValidSprite2", lib_pIsValidSprite2},
 	{"P_SpawnMissile",lib_pSpawnMissile},
 	{"P_SpawnXYZMissile",lib_pSpawnXYZMissile},
 	{"P_SpawnPointMissile",lib_pSpawnPointMissile},
