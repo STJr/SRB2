@@ -697,7 +697,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		{
 			for (i = 0; i < MAXPLAYERS; i++)
 				if (playeringame[i]/* && players[i].pflags & PF_NIGHTSMODE*/)
-					total_rings += players[i].health-1;
+					total_rings += players[i].rings;
 		}
 
 		for (i = 0; i < MAXPLAYERS; i++)
@@ -715,8 +715,8 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 			}
 			else
 			{
-				players[i].finishedrings = (INT16)(players[i].health - 1);
-				P_AddPlayerScore(&players[i], (players[i].health - 1) * 50);
+				players[i].finishedrings = (INT16)(players[i].rings);
+				P_AddPlayerScore(&players[i], (players[i].rings) * 50);
 			}
 
 			// Add score to leaderboards now
@@ -727,7 +727,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 			players[i].lastmarescore = players[i].marescore;
 			players[i].marescore = 0;
 
-			players[i].mo->health = players[i].health = 1;
+			players[i].rings = 0;
 			P_DoPlayerExit(&players[i]);
 		}
 	}
@@ -735,12 +735,12 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 	{
 		/// \todo Handle multi-mare special stages.
 		// Ring bonus
-		P_AddPlayerScore(player, (player->health - 1) * 50);
+		P_AddPlayerScore(player, (player->rings) * 50);
 
 		player->lastmare = (UINT8)oldmare;
 		player->texttimer = 4*TICRATE;
 		player->textvar = 4; // Score and grades
-		player->finishedrings = (INT16)(player->health - 1);
+		player->finishedrings = (INT16)(player->rings);
 
 		// Add score to temp leaderboards
 		if (!(netgame||multiplayer) && P_IsLocalPlayer(player))
@@ -751,7 +751,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		player->marescore = 0;
 		player->marebegunat = leveltime;
 
-		player->mo->health = player->health = 1;
+		player->rings = 0;
 	}
 	else
 	{
@@ -895,30 +895,23 @@ void P_GivePlayerRings(player_t *player, INT32 num_rings)
 	if (!player->mo)
 		return;
 
-	player->mo->health += num_rings;
-	player->health += num_rings;
+	player->rings += num_rings;
 
 	if (!G_IsSpecialStage(gamemap) || !useNightsSS)
 		player->totalring += num_rings;
 
 	// Can only get up to 9999 rings, sorry!
-	if (player->mo->health > 10000)
-	{
-		player->mo->health = 10000;
-		player->health = 10000;
-	}
-	else if (player->mo->health < 1)
-	{
-		player->mo->health = 1;
-		player->health = 1;
-	}
+	if (player->rings > 9999)
+		player->rings = 9999;
+	else if (player->rings < 0)
+		player->rings = 0;
 
 	// Now extra life bonuses are handled here instead of in P_MovePlayer, since why not?
 	if (!ultimatemode && !modeattacking && !G_IsSpecialStage(gamemap) && G_GametypeUsesLives())
 	{
 		INT32 gainlives = 0;
 
-		while (player->xtralife < maxXtraLife && player->health > 100 * (player->xtralife+1))
+		while (player->xtralife < maxXtraLife && player->rings >= 100 * (player->xtralife+1))
 		{
 			++gainlives;
 			++player->xtralife;
@@ -969,10 +962,7 @@ void P_DoSuperTransformation(player_t *player, boolean giverings)
 	player->mo->momx = player->mo->momy = player->mo->momz = 0;
 
 	if (giverings)
-	{
-		player->mo->health = 51;
-		player->health = player->mo->health;
-	}
+		player->rings = 50;
 
 	// Just in case.
 	if (!(mapheaderinfo[gamemap-1]->levelflags & LF_NOSSMUSIC))
@@ -991,6 +981,7 @@ void P_DoSuperTransformation(player_t *player, boolean giverings)
 
 	P_PlayerFlagBurst(player, false);
 }
+
 // Adds to the player's score
 void P_AddPlayerScore(player_t *player, UINT32 amount)
 {
@@ -1074,6 +1065,42 @@ void P_AddPlayerScore(player_t *player, UINT32 amount)
 			redscore += amount;
 		else if (player->ctfteam == 2)
 			bluescore += amount;
+	}
+}
+
+// Steals from every enemy's score.
+void P_StealPlayerScore(player_t *player, UINT32 amount)
+{
+	boolean teams = G_GametypeHasTeams();
+	UINT32 stolen = 0;
+	int i;
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (&players[i] == player
+		|| (teams && players[i].ctfteam == player->ctfteam))
+			continue;
+		if (players[i].score >= amount)
+		{
+			stolen += amount;
+			players[i].score -= amount;
+		}
+		else
+		{
+			stolen += players[i].score;
+			players[i].score = 0;
+		}
+	}
+	if (stolen > 0)
+	{
+		// In team match, all stolen points are removed from the enemy team's running score.
+		if (gametype == GT_TEAMMATCH)
+		{
+			if (player->ctfteam == 1)
+				bluescore -= amount;
+			else if (player->ctfteam == 2)
+				redscore -= amount;
+		}
+		P_AddPlayerScore(player, stolen);
 	}
 }
 
@@ -3129,72 +3156,61 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 			mobj_t *mo = NULL;
 			player->pflags |= PF_ATTACKDOWN;
 
+			#define TAKE_AMMO(player, power) \
+			player->powers[power]--; \
+			if (player->rings < 1) \
+			{ \
+				if (player->powers[power] > 0) \
+					player->powers[power]--; \
+			} \
+			else \
+				player->rings--;
+
 			if (cmd->buttons & BT_FIRENORMAL) // No powers, just a regular ring.
 				goto firenormal; //code repetition sucks.
 			// Bounce ring
 			else if (player->currentweapon == WEP_BOUNCE && player->powers[pw_bouncering])
 			{
-				if (player->health <= 1)
-					return;
+				TAKE_AMMO(player, pw_bouncering);
 				P_SetWeaponDelay(player, TICRATE/4);
 
 				mo = P_SpawnPlayerMissile(player->mo, MT_THROWNBOUNCE, MF2_BOUNCERING);
 
 				if (mo)
 					mo->fuse = 3*TICRATE; // Bounce Ring time
-
-				player->powers[pw_bouncering]--;
-				player->mo->health--;
-				player->health--;
 			}
 			// Rail ring
 			else if (player->currentweapon == WEP_RAIL && player->powers[pw_railring])
 			{
-				if (player->health <= 1)
-					return;
+				TAKE_AMMO(player, pw_railring);
 				P_SetWeaponDelay(player, (3*TICRATE)/2);
 
 				mo = P_SpawnPlayerMissile(player->mo, MT_REDRING, MF2_RAILRING|MF2_DONTDRAW);
 
 				// Rail has no unique thrown object, therefore its sound plays here.
 				S_StartSound(player->mo, sfx_rail1);
-
-				player->powers[pw_railring]--;
-				player->mo->health--;
-				player->health--;
 			}
 			// Automatic
 			else if (player->currentweapon == WEP_AUTO && player->powers[pw_automaticring])
 			{
-				if (player->health <= 1)
-					return;
+				TAKE_AMMO(player, pw_automaticring);
 				player->pflags &= ~PF_ATTACKDOWN;
 				P_SetWeaponDelay(player, 2);
 
 				mo = P_SpawnPlayerMissile(player->mo, MT_THROWNAUTOMATIC, MF2_AUTOMATIC);
-
-				player->powers[pw_automaticring]--;
-				player->mo->health--;
-				player->health--;
 			}
 			// Explosion
 			else if (player->currentweapon == WEP_EXPLODE && player->powers[pw_explosionring])
 			{
-				if (player->health <= 1)
-					return;
+				TAKE_AMMO(player, pw_explosionring);
 				P_SetWeaponDelay(player, (3*TICRATE)/2);
 
 				mo = P_SpawnPlayerMissile(player->mo, MT_THROWNEXPLOSION, MF2_EXPLOSION);
-
-				player->powers[pw_explosionring]--;
-				player->mo->health--;
-				player->health--;
 			}
 			// Grenade
 			else if (player->currentweapon == WEP_GRENADE && player->powers[pw_grenadering])
 			{
-				if (player->health <= 1)
-					return;
+				TAKE_AMMO(player, pw_grenadering);
 				P_SetWeaponDelay(player, TICRATE/3);
 
 				mo = P_SpawnPlayerMissile(player->mo, MT_THROWNGRENADE, MF2_EXPLOSION);
@@ -3204,10 +3220,6 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 					//P_InstaThrust(mo, player->mo->angle, FixedMul(mo->info->speed, player->mo->scale));
 					mo->fuse = mo->info->mass;
 				}
-
-				player->powers[pw_grenadering]--;
-				player->mo->health--;
-				player->health--;
 			}
 			// Scatter
 			// Note: Ignores MF2_RAILRING
@@ -3217,8 +3229,7 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 				angle_t shotangle = player->mo->angle;
 				angle_t oldaiming = player->aiming;
 
-				if (player->health <= 1)
-					return;
+				TAKE_AMMO(player, pw_scatterring);
 				P_SetWeaponDelay(player, (2*TICRATE)/3);
 
 				// Center
@@ -3244,10 +3255,6 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 
 				player->mo->z = oldz;
 				player->aiming = oldaiming;
-
-				player->powers[pw_scatterring]--;
-				player->mo->health--;
-				player->health--;
 				return;
 			}
 			// No powers, just a regular ring.
@@ -3271,7 +3278,7 @@ firenormal:
 				// Red Ring
 				else
 				{
-					if (player->health <= 1)
+					if (player->rings <= 0)
 						return;
 					P_SetWeaponDelay(player, TICRATE/4);
 
@@ -3280,10 +3287,11 @@ firenormal:
 					if (mo)
 						P_ColorTeamMissile(mo, player);
 
-					player->mo->health--;
-					player->health--;
+					player->rings--;
 				}
 			}
+
+			#undef TAKE_AMMO
 
 			if (mo)
 			{
@@ -3335,7 +3343,7 @@ static void P_DoSuperStuff(player_t *player)
 		return; // NiGHTS Super doesn't mix with normal super
 
 	// Does player have all emeralds? If so, flag the "Ready For Super!"
-	if ((ALL7EMERALDS(emeralds) || ALL7EMERALDS(player->powers[pw_emeralds])) && player->health > 50)
+	if (ALL7EMERALDS(emeralds) && player->rings >= 50)
 		player->pflags |= PF_SUPERREADY;
 	else
 		player->pflags &= ~PF_SUPERREADY;
@@ -3343,7 +3351,7 @@ static void P_DoSuperStuff(player_t *player)
 	if (player->powers[pw_super])
 	{
 		// If you're super and not Sonic, de-superize!
-		if (!((ALL7EMERALDS(emeralds)) && (player->charflags & SF_SUPER)) && !(ALL7EMERALDS(player->powers[pw_emeralds])))
+		if (!(ALL7EMERALDS(emeralds) && player->charflags & SF_SUPER))
 		{
 			player->powers[pw_super] = 0;
 			P_SetPlayerMobjState(player->mo, S_PLAY_STND);
@@ -3373,10 +3381,7 @@ static void P_DoSuperStuff(player_t *player)
 
 		// Deplete one ring every second while super
 		if ((leveltime % TICRATE == 0) && !(player->exiting))
-		{
-			player->health--;
-			player->mo->health--;
-		}
+			player->rings--;
 
 		player->mo->color = (player->pflags & PF_GODMODE && cv_debug == 0)
 		? (SKINCOLOR_SUPERSILVER1 + 5*((leveltime >> 1) % 7)) // A wholesome easter egg.
@@ -3393,7 +3398,7 @@ static void P_DoSuperStuff(player_t *player)
 		G_GhostAddColor(GHC_SUPER);
 
 		// Ran out of rings while super!
-		if (player->health <= 1 || player->exiting)
+		if (player->rings <= 0 || player->exiting)
 		{
 			player->powers[pw_emeralds] = 0; // lost the power stones
 			P_SpawnGhostMobj(player->mo);
@@ -3450,12 +3455,6 @@ static void P_DoSuperStuff(player_t *player)
 					P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
 					break;
 				}
-
-				if (!player->exiting)
-				{
-					player->health = 1;
-					player->mo->health = 1;
-				}
 			}
 
 			// Inform the netgame that the champion has fallen in the heat of battle.
@@ -3483,12 +3482,12 @@ static void P_DoSuperStuff(player_t *player)
 //
 boolean P_SuperReady(player_t *player)
 {
-	if ((player->pflags & PF_SUPERREADY) && !player->powers[pw_super] && !player->powers[pw_tailsfly]
+	if (player->pflags & PF_SUPERREADY && !player->powers[pw_super] && !player->powers[pw_tailsfly]
 	&& !(player->powers[pw_shield] & SH_NOSTACK)
 	&& !player->powers[pw_invulnerability]
 	&& !(maptol & TOL_NIGHTS) // don't turn 'regular super' in nights levels
 	&& player->pflags & PF_JUMPED
-	&& ((player->charflags & SF_SUPER) || ALL7EMERALDS(player->powers[pw_emeralds])))
+	&& player->charflags & SF_SUPER)
 		return true;
 
 	return false;
@@ -4085,13 +4084,6 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						player->pflags |= PF_GLIDING|PF_THOKKED;
 						player->glidetime = 0;
 
-						if (player->powers[pw_super] && ALL7EMERALDS(player->powers[pw_emeralds]))
-						{
-							// Glide at double speed while super.
-							glidespeed *= 2;
-							player->pflags &= ~PF_THOKKED;
-						}
-
 						P_SetPlayerMobjState(player->mo, S_PLAY_GLIDE);
 						P_InstaThrust(player->mo, player->mo->angle, FixedMul(glidespeed, player->mo->scale));
 						player->pflags &= ~(PF_SPINNING|PF_STARTDASH);
@@ -4216,8 +4208,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 		player->pflags &= ~PF_JUMPDOWN;
 
 		// Repeat abilities, but not double jump!
-		if ((player->charability2 == CA2_MULTIABILITY && player->charability != CA_DOUBLEJUMP)
-			|| (player->powers[pw_super] && ALL7EMERALDS(player->powers[pw_emeralds])))
+		if (player->charability2 == CA2_MULTIABILITY && player->charability != CA_DOUBLEJUMP)
 			player->secondjump = 0;
 		else if (player->charability == CA_FLOAT && player->secondjump == 1)
 			player->secondjump = 2;
@@ -4461,9 +4452,6 @@ static void P_2dMovement(player_t *player)
 		if (cmd->forwardmove != 0)
 			P_SetObjectMomZ(player->mo, FixedDiv(cmd->forwardmove*FRACUNIT,10*FRACUNIT), false);
 
-		if (player->powers[pw_super] && ALL7EMERALDS(player->powers[pw_emeralds]))
-			player->mo->momz *= 2;
-
 		player->mo->momx = 0;
 	}
 	else if (cmd->sidemove != 0 && !(player->pflags & PF_GLIDING || player->exiting
@@ -4661,11 +4649,7 @@ static void P_3dMovement(player_t *player)
 	if (player->climbing)
 	{
 		if (cmd->forwardmove)
-		{
 			P_SetObjectMomZ(player->mo, FixedDiv(cmd->forwardmove*FRACUNIT, 10*FRACUNIT), false);
-			if (player->powers[pw_super] && ALL7EMERALDS(player->powers[pw_emeralds]))
-				player->mo->momz *= 2;
-		}
 	}
 	else if (!analogmove
 		&& cmd->forwardmove != 0 && !(player->pflags & PF_GLIDING || player->exiting
@@ -4699,12 +4683,7 @@ static void P_3dMovement(player_t *player)
 	}
 	// Sideways movement
 	if (player->climbing)
-	{
-		if (player->powers[pw_super] && ALL7EMERALDS(player->powers[pw_emeralds]))
-			P_InstaThrust(player->mo, player->mo->angle-ANGLE_90, FixedMul(FixedDiv(cmd->sidemove*FRACUNIT, 5*FRACUNIT), player->mo->scale));
-		else
-			P_InstaThrust(player->mo, player->mo->angle-ANGLE_90, FixedMul(FixedDiv(cmd->sidemove*FRACUNIT, 10*FRACUNIT), player->mo->scale));
-	}
+		P_InstaThrust(player->mo, player->mo->angle-ANGLE_90, FixedMul(FixedDiv(cmd->sidemove*FRACUNIT, 10*FRACUNIT), player->mo->scale));
 	// Analog movement control
 	else if (analogmove)
 	{
@@ -5433,12 +5412,10 @@ static void P_DoNiGHTSCapsule(player_t *player)
 	if (G_IsSpecialStage(gamemap))
 	{ // In special stages, share rings. Everyone gives up theirs to the capsule player always, because we can't have any individualism here!
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] && (&players[i] != player) && players[i].mo->health > 1)
+			if (playeringame[i] && (&players[i] != player) && players[i].rings > 0)
 			{
-				player->mo->health += players[i].mo->health-1;
-				player->health = player->mo->health;
-				players[i].mo->health = 1;
-				players[i].health = players[i].mo->health;
+				player->rings += players[i].rings;
+				players[i].rings = 0;
 			}
 	}
 
@@ -5447,10 +5424,9 @@ static void P_DoNiGHTSCapsule(player_t *player)
 		&& player->mo->y == player->capsule->y
 		&& player->mo->z == player->capsule->z+(player->capsule->height/3))
 	{
-		if (player->mo->health > 1)
+		if (player->rings > 0)
 		{
-			player->mo->health--;
-			player->health--;
+			player->rings--;
 			player->capsule->health--;
 			player->capsule->extravalue1++;
 
@@ -6142,7 +6118,7 @@ static void P_PlayerDropWeapon(player_t *player)
 
 	if (mo)
 	{
-		player->mo->health--;
+		player->rings--;
 		P_InstaThrust(mo, player->mo->angle-ANGLE_180, 8*FRACUNIT);
 		P_SetObjectMomZ(mo, 4*FRACUNIT, false);
 		mo->flags2 |= MF2_DONTRESPAWN;
@@ -6445,7 +6421,7 @@ static void P_MovePlayer(player_t *player)
 					if (playeringame[i])
 						players[i].exiting = (14*TICRATE)/5 + 1;
 			}
-			else if (player->health > 1)
+			else if (player->rings > 0)
 				P_DamageMobj(player->mo, NULL, NULL, 1, 0);
 			player->pflags &= ~PF_NIGHTSFALL;
 		}
@@ -6602,8 +6578,8 @@ static void P_MovePlayer(player_t *player)
 			P_ResetPlayer(player); // down, stop gliding.
 			if (onground)
 				P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
-			else if ((player->charability2 == CA2_MULTIABILITY)
-				|| (player->powers[pw_super] && ALL7EMERALDS(player->powers[pw_emeralds]) && player->charability == CA_GLIDEANDCLIMB))
+			else if (player->charability2 == CA2_MULTIABILITY
+				&& player->charability == CA_GLIDEANDCLIMB)
 			{
 				player->pflags |= PF_JUMPED;
 				P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
@@ -6856,11 +6832,6 @@ static void P_MovePlayer(player_t *player)
 				{
 					if ((player->powers[pw_shield] & SH_NOSTACK) == SH_JUMP && !player->powers[pw_super])
 						P_DoJumpShield(player);
-					else if (player->powers[pw_super] && ALL7EMERALDS(player->powers[pw_emeralds]) && player->charability == CA_FLY)
-					{
-						P_DoJumpShield(player);
-						player->mo->momz *= 2;
-					}
 				}
 				// Bomb shield activation
 				if ((player->powers[pw_shield] & SH_NOSTACK) == SH_BOMB)
@@ -7457,12 +7428,12 @@ void P_NukeEnemies(mobj_t *inflictor, mobj_t *source, fixed_t radius)
 			mo->flags |= MF_SPECIAL|MF_SHOOTABLE;
 
 		if (mo->type == MT_EGGGUARD && mo->tracer) //nuke Egg Guard's shield!
-			P_KillMobj(mo->tracer, inflictor, source, 0);
+			P_KillMobj(mo->tracer, inflictor, source, DMG_NUKE);
 
 		if (mo->flags & MF_BOSS || mo->type == MT_PLAYER) //don't OHKO bosses nor players!
-			P_DamageMobj(mo, inflictor, source, 1, 0);
+			P_DamageMobj(mo, inflictor, source, 1, DMG_NUKE);
 		else
-			P_DamageMobj(mo, inflictor, source, 1000, 0);
+			P_DamageMobj(mo, inflictor, source, 1000, DMG_NUKE);
 	}
 }
 
@@ -8651,7 +8622,7 @@ void P_PlayerThink(player_t *player)
 #endif
 
 	// todo: Figure out what is actually causing these problems in the first place...
-	if ((player->health <= 0 || player->mo->health <= 0) && player->playerstate == PST_LIVE) //you should be DEAD!
+	if (player->mo->health <= 0 && player->playerstate == PST_LIVE) //you should be DEAD!
 	{
 		CONS_Debug(DBG_GAMELOGIC, "P_PlayerThink: Player %s in PST_LIVE with 0 health. (\"Zombie bug\")\n", sizeu1(playeri));
 		player->playerstate = PST_DEAD;
@@ -8751,7 +8722,7 @@ void P_PlayerThink(player_t *player)
 		//  it to the exit, you're a goner!
 		else if (countdown == 1 && !player->exiting && player->lives > 0)
 		{
-			if (netgame && player->health > 0)
+			if (netgame && player->mo->health > 0)
 				CONS_Printf(M_GetText("%s ran out of time.\n"), player_names[player-players]);
 
 			player->pflags |= PF_TIMEOVER;
@@ -8840,7 +8811,7 @@ void P_PlayerThink(player_t *player)
 	{
 		player->score = 0;
 		player->mo->health = 1;
-		player->health = 1;
+		player->rings = 0;
 	}
 
 	if ((netgame || multiplayer) && player->lives <= 0)
@@ -9013,7 +8984,7 @@ void P_PlayerThink(player_t *player)
 	if (player->powers[pw_flashing] && player->powers[pw_flashing] < UINT16_MAX && ((player->pflags & PF_NIGHTSMODE) || player->powers[pw_flashing] < flashingtics))
 		player->powers[pw_flashing]--;
 
-	if (player->powers[pw_tailsfly] && player->powers[pw_tailsfly] < UINT16_MAX && player->charability != CA_SWIM && !(player->powers[pw_super] && ALL7EMERALDS(player->powers[pw_emeralds]))) // tails fly counter
+	if (player->powers[pw_tailsfly] && player->powers[pw_tailsfly] < UINT16_MAX && player->charability != CA_SWIM) // tails fly counter
 		player->powers[pw_tailsfly]--;
 
 	if (player->powers[pw_underwater] && (player->pflags & PF_GODMODE || (player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL))
@@ -9327,10 +9298,6 @@ void P_PlayerAfterThink(player_t *player)
 	if (player->currentweapon == WEP_EXPLODE && (!(player->ringweapons & RW_EXPLODE) || !player->powers[pw_explosionring]))
 		player->currentweapon++;
 	if (player->currentweapon == WEP_RAIL && (!(player->ringweapons & RW_RAIL) || !player->powers[pw_railring]))
-		player->currentweapon = 0;
-
-	// If you're out of rings, but have Infinity Rings left, switch to that.
-	if (player->currentweapon != 0 && player->health <= 1 && player->powers[pw_infinityring])
 		player->currentweapon = 0;
 
 	if (P_IsLocalPlayer(player) && (player->pflags & PF_WPNDOWN) && player->currentweapon != oldweapon)

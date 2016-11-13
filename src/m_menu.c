@@ -3819,7 +3819,7 @@ static void M_HandleImageDef(INT32 choice)
 static void M_PandorasBox(INT32 choice)
 {
 	(void)choice;
-	CV_StealthSetValue(&cv_dummyrings, max(players[consoleplayer].health - 1, 0));
+	CV_StealthSetValue(&cv_dummyrings, max(players[consoleplayer].rings, 0));
 	CV_StealthSetValue(&cv_dummylives, players[consoleplayer].lives);
 	CV_StealthSetValue(&cv_dummycontinues, players[consoleplayer].continues);
 	M_SetupNextMenu(&SR_PandoraDef);
@@ -3827,7 +3827,7 @@ static void M_PandorasBox(INT32 choice)
 
 static boolean M_ExitPandorasBox(void)
 {
-	if (cv_dummyrings.value != max(players[consoleplayer].health - 1, 0))
+	if (cv_dummyrings.value != max(players[consoleplayer].rings, 0))
 		COM_ImmedExecute(va("setrings %d", cv_dummyrings.value));
 	if (cv_dummylives.value != players[consoleplayer].lives)
 		COM_ImmedExecute(va("setlives %d", cv_dummylives.value));

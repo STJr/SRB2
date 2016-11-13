@@ -1046,14 +1046,12 @@ void P_EmeraldManager(void)
 			else
 				break;
 
-			if (leveltime < TICRATE) // Start of map
-				spawnpoints[j]->threshold = 60*TICRATE + P_RandomByte() * (TICRATE/5);
-			else
-				spawnpoints[j]->threshold = P_RandomByte() * (TICRATE/5);
-
+			spawnpoints[j]->threshold = emeraldspawndelay + P_RandomByte() * (TICRATE/5);
 			break;
 		}
 	}
+
+	emeraldspawndelay = 0;
 }
 
 //
@@ -4337,14 +4335,14 @@ boolean P_BossTargetPlayer(mobj_t *actor, boolean closest)
 
 		player = &players[actor->lastlook];
 
-		if (player->health <= 0)
-			continue; // dead
-
 		if (player->pflags & PF_INVIS || player->bot || player->spectator)
 			continue; // ignore notarget
 
 		if (!player->mo || P_MobjWasRemoved(player->mo))
 			continue;
+
+		if (player->mo->health <= 0)
+			continue; //dead
 
 		if (!P_CheckSight(actor, player->mo))
 			continue; // out of sight
@@ -4375,14 +4373,14 @@ boolean P_SupermanLook4Players(mobj_t *actor)
 	{
 		if (playeringame[c])
 		{
-			if (players[c].health <= 0)
-				continue; // dead
-
 			if (players[c].pflags & PF_INVIS)
 				continue; // ignore notarget
 
 			if (!players[c].mo || players[c].bot)
 				continue;
+
+			if (players[c].mo->health <= 0)
+				continue; // dead
 
 			playersinthegame[stop] = &players[c];
 			stop++;
@@ -7156,7 +7154,7 @@ void P_MobjThinker(mobj_t *mobj)
 				P_SetTarget(&mobj->target, NULL);
 				for (i = 0; i < MAXPLAYERS; i++)
 					if (playeringame[i] && players[i].mo
-					&& players[i].mare == mobj->threshold && players[i].health > 1)
+					&& players[i].mare == mobj->threshold && players[i].rings > 0)
 					{
 						fixed_t dist = P_AproxDistance(players[i].mo->x - mobj->x, players[i].mo->y - mobj->y);
 						if (dist < shortest)
@@ -8821,7 +8819,8 @@ void P_SpawnPlayer(INT32 playernum)
 	// the dead body mobj retains the skin through the 'spritedef' override).
 	mobj->skin = &skins[p->skin];
 
-	mobj->health = p->health;
+	mobj->health = 1;
+	p->rings = 0;
 	p->playerstate = PST_LIVE;
 
 	p->bonustime = false;
@@ -10721,7 +10720,7 @@ mobj_t *P_SPMAngle(mobj_t *source, mobjtype_t type, angle_t angle, UINT8 allowai
 {
 	mobj_t *th;
 	angle_t an;
-	fixed_t x, y, z, slope = 0;
+	fixed_t x, y, z, slope = 0, speed;
 
 	// angle at which you fire, is player angle
 	an = angle;
@@ -10753,9 +10752,13 @@ mobj_t *P_SPMAngle(mobj_t *source, mobjtype_t type, angle_t angle, UINT8 allowai
 
 	P_SetTarget(&th->target, source);
 
+	speed = th->info->speed;
+	if (source->player && source->player->charability == CA_FLY)
+		speed = FixedMul(speed, 3*FRACUNIT/2);
+
 	th->angle = an;
-	th->momx = FixedMul(th->info->speed, FINECOSINE(an>>ANGLETOFINESHIFT));
-	th->momy = FixedMul(th->info->speed, FINESINE(an>>ANGLETOFINESHIFT));
+	th->momx = FixedMul(speed, FINECOSINE(an>>ANGLETOFINESHIFT));
+	th->momy = FixedMul(speed, FINESINE(an>>ANGLETOFINESHIFT));
 
 	if (allowaim)
 	{
@@ -10763,7 +10766,7 @@ mobj_t *P_SPMAngle(mobj_t *source, mobjtype_t type, angle_t angle, UINT8 allowai
 		th->momy = FixedMul(th->momy,FINECOSINE(source->player->aiming>>ANGLETOFINESHIFT));
 	}
 
-	th->momz = FixedMul(th->info->speed, slope);
+	th->momz = FixedMul(speed, slope);
 
 	//scaling done here so it doesn't clutter up the code above
 	th->momx = FixedMul(th->momx, th->scale);
