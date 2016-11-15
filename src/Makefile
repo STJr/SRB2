@@ -383,7 +383,10 @@ else
 	WINDRESFLAGS = -DNDEBUG
 	CFLAGS+=-O3
 endif
-	CFLAGS+=-g $(OPTS) $(M5) $(WINDRESFLAGS)
+ifndef NODEBUG
+	CFLAGS+=-g
+endif
+	CFLAGS+=$(OPTS) $(M5) $(WINDRESFLAGS)
 
 ifdef YASM
 ifdef STABS
