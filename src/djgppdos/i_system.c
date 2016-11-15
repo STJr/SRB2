@@ -171,11 +171,11 @@ ticcmd_t *      I_BaseTiccmd2(void)
 	return &emptycmd2;
 }
 
+#ifndef NOMUMBLE
 void I_SetupMumble(void)
 {
 }
 
-#ifndef NOMUMBLE
 void I_UpdateMumble(const mobj_t *mobj, const listener_t listener)
 {
 	(void)mobj;
@@ -1728,7 +1728,7 @@ INT32 I_ClipboardCopy(const char *data, size_t size)
 	return -1;
 }
 
-char *I_ClipboardPaste(void)
+const char *I_ClipboardPaste(void)
 {
 	return NULL;
 }

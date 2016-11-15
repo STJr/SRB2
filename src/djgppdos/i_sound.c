@@ -132,7 +132,7 @@ FUNCINLINE static ATTRINLINE int Volset(int vol)
 }
 
 
-void I_SetSfxVolume(INT32 volume)
+void I_SetSfxVolume(UINT8 volume)
 {
 	if (nosound)
 		return;
@@ -140,7 +140,7 @@ void I_SetSfxVolume(INT32 volume)
 	set_volume (Volset(volume),-1);
 }
 
-void I_SetMIDIMusicVolume(INT32 volume)
+void I_SetMIDIMusicVolume(UINT8 volume)
 {
 	if (nomidimusic)
 		return;
@@ -162,10 +162,10 @@ void I_SetMIDIMusicVolume(INT32 volume)
 //  is set, but currently not used by mixing.
 //
 INT32 I_StartSound ( sfxenum_t     id,
-                   INT32         vol,
-                   INT32         sep,
-                   INT32         pitch,
-                   INT32         priority )
+                   UINT8         vol,
+                   UINT8         sep,
+                   UINT8         pitch,
+                   UINT8         priority )
 {
 	int voice;
 
@@ -197,7 +197,7 @@ void I_StopSound (INT32 handle)
 		deallocate_voice(voice);
 }
 
-INT32 I_SoundIsPlaying(INT32 handle)
+boolean I_SoundIsPlaying(INT32 handle)
 {
 	if (nosound)
 		return FALSE;
@@ -218,9 +218,9 @@ static inline int absolute_freq(int freq, SAMPLE *spl)
 }
 
 void I_UpdateSoundParams( INT32 handle,
-                          INT32 vol,
-                          INT32 sep,
-                          INT32 pitch)
+                          UINT8 vol,
+                          UINT8 sep,
+                          UINT8 pitch)
 {
 	// I fail too see that this is used.
 	// Would be using the handle to identify
@@ -432,7 +432,7 @@ void I_ShutdownMusic(void)
 	I_ShutdownDigMusic();
 }
 
-boolean I_PlaySong(INT32 handle, INT32 looping)
+boolean I_PlaySong(INT32 handle, boolean looping)
 {
 	handle = 0;
 	if (nomidimusic)
@@ -521,7 +521,7 @@ INT32 I_RegisterSong(void *data, size_t len)
 }
 
 /// \todo Add OGG/MP3 support for dos
-boolean I_StartDigSong(const char *musicname, INT32 looping)
+boolean I_StartDigSong(const char *musicname, boolean looping)
 {
 	musicname = NULL;
 	looping = 0;
@@ -534,7 +534,7 @@ void I_StopDigSong(void)
 //	CONS_Printf("I_StopDigSong: Not yet supported under DOS.\n");
 }
 
-void I_SetDigMusicVolume(INT32 volume)
+void I_SetDigMusicVolume(UINT8 volume)
 {
 	volume = 0;
 	if (nodigimusic)
@@ -547,5 +547,13 @@ void I_SetDigMusicVolume(INT32 volume)
 boolean I_SetSongSpeed(float speed)
 {
 	(void)speed;
+	return false;
+}
+
+void I_UpdateSound(void){};
+
+boolean I_SetSongTrack(INT32 track)
+{
+	(void)track;
 	return false;
 }
