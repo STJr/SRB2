@@ -172,9 +172,11 @@ ticcmd_t *      I_BaseTiccmd2(void)
 }
 
 #ifndef NOMUMBLE
+#if 0
 void I_SetupMumble(void)
 {
 }
+#endif
 
 void I_UpdateMumble(const mobj_t *mobj, const listener_t listener)
 {
