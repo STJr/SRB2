@@ -15,7 +15,9 @@
 #define INT32 __int32
 #else
 #include <stdint.h>
+#ifndef INT32
 #define INT32 int32_t
+#endif
 #endif
 
 
