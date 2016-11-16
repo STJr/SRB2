@@ -656,6 +656,7 @@ void HWR_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color)
 {
 	FOutVector v[4];
 	FSurfaceInfo Surf;
+	float sdupx, sdupy;
 
 	if (w < 0 || h < 0)
 		return; // consistency w/ software
@@ -664,10 +665,16 @@ void HWR_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color)
 //  | /|
 //  |/ |
 //  0--1
-	v[0].x = v[3].x = (x - 160.0f)/160.0f;
-	v[2].x = v[1].x = ((x+w) - 160.0f)/160.0f;
-	v[0].y = v[1].y = -(y - 100.0f)/100.0f;
-	v[2].y = v[3].y = -((y+h) - 100.0f)/100.0f;
+	sdupx = FIXED_TO_FLOAT(vid.fdupx)*2.0f;
+	sdupy = FIXED_TO_FLOAT(vid.fdupy)*2.0f;
+
+	if (color & V_NOSCALESTART)
+		sdupx = sdupy = 2.0f;
+
+	v[0].x = v[3].x = (x*sdupx)/vid.width - 1;
+	v[2].x = v[1].x = (x*sdupx + w*sdupx)/vid.width - 1;
+	v[0].y = v[1].y = 1-(y*sdupy)/vid.height;
+	v[2].y = v[3].y = 1-(y*sdupy + h*sdupy)/vid.height;
 
 	//Hurdler: do we still use this argb color? if not, we should remove it
 	v[0].argb = v[1].argb = v[2].argb = v[3].argb = 0xff00ff00; //;
