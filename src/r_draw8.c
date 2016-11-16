@@ -203,6 +203,103 @@ void R_Draw2sMultiPatchColumn_8(void)
 	}
 }
 
+void R_Draw2sMultiPatchTranslucentColumn_8(void)
+{
+	INT32 count;
+	register UINT8 *dest;
+	register fixed_t frac;
+	fixed_t fracstep;
+
+	count = dc_yh - dc_yl;
+
+	if (count < 0) // Zero length, column does not exceed a pixel.
+		return;
+
+#ifdef RANGECHECK
+	if ((unsigned)dc_x >= (unsigned)vid.width || dc_yl < 0 || dc_yh >= vid.height)
+		return;
+#endif
+
+	// Framebuffer destination address.
+	// Use ylookup LUT to avoid multiply with ScreenWidth.
+	// Use columnofs LUT for subwindows?
+
+	//dest = ylookup[dc_yl] + columnofs[dc_x];
+	dest = &topleft[dc_yl*vid.width + dc_x];
+
+	count++;
+
+	// Determine scaling, which is the only mapping to be done.
+	fracstep = dc_iscale;
+	//frac = dc_texturemid + (dc_yl - centery)*fracstep;
+	frac = (dc_texturemid + FixedMul((dc_yl << FRACBITS) - centeryfrac, fracstep))*(!dc_hires);
+
+	// Inner loop that does the actual texture mapping, e.g. a DDA-like scaling.
+	// This is as fast as it gets.
+	{
+		register const UINT8 *source = dc_source;
+		register const UINT8 *transmap = dc_transmap;
+		register const lighttable_t *colormap = dc_colormap;
+		register INT32 heightmask = dc_texheight-1;
+		register UINT8 val;
+		if (dc_texheight & heightmask)   // not a power of 2 -- killough
+		{
+			heightmask++;
+			heightmask <<= FRACBITS;
+
+			if (frac < 0)
+				while ((frac += heightmask) <  0);
+			else
+				while (frac >= heightmask)
+					frac -= heightmask;
+
+			do
+			{
+				// Re-map color indices from wall texture column
+				//  using a lighting/special effects LUT.
+				// heightmask is the Tutti-Frutti fix
+				val = source[frac>>FRACBITS];
+
+				if (val != TRANSPARENTPIXEL)
+					*dest = colormap[*(transmap + (val<<8) + (*dest))];
+
+				dest += vid.width;
+
+				// Avoid overflow.
+				if (fracstep > 0x7FFFFFFF - frac)
+					frac += fracstep - heightmask;
+				else
+					frac += fracstep;
+
+				while (frac >= heightmask)
+					frac -= heightmask;
+			} while (--count);
+		}
+		else
+		{
+			while ((count -= 2) >= 0) // texture height is a power of 2
+			{
+				val = source[(frac>>FRACBITS) & heightmask];
+				if (val != TRANSPARENTPIXEL)
+					*dest = colormap[*(transmap + (val<<8) + (*dest))];
+				dest += vid.width;
+				frac += fracstep;
+				val = source[(frac>>FRACBITS) & heightmask];
+				if (val != TRANSPARENTPIXEL)
+					*dest = colormap[*(transmap + (val<<8) + (*dest))];
+				dest += vid.width;
+				frac += fracstep;
+			}
+			if (count & 1)
+			{
+				val = source[(frac>>FRACBITS) & heightmask];
+				if (val != TRANSPARENTPIXEL)
+					*dest = colormap[*(transmap + (val<<8) + (*dest))];
+			}
+		}
+	}
+}
+
 /**	\brief The R_DrawShadeColumn_8 function
 	Experiment to make software go faster. Taken from the Boom source
 */
