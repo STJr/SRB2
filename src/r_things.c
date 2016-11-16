@@ -1760,6 +1760,29 @@ static void R_CreateDrawNodes(void)
 		}
 	}
 
+#ifdef POLYOBJECTS_PLANES
+	// find all the remaining polyobject planes and add them on the end of the list
+	// probably this is a terrible idea if we wanted them to be sorted properly
+	// but it works getting them in for now
+	for (i = 0; i < numPolyObjects; i++)
+	{
+		if (!PolyObjects[i].visplane)
+			continue;
+		plane = PolyObjects[i].visplane;
+		R_PlaneBounds(plane);
+
+		if (plane->low < con_clipviewtop || plane->high > vid.height || plane->high > plane->low)
+		{
+			PolyObjects[i].visplane = NULL;
+			continue;
+		}
+		entry = R_CreateDrawNode(&nodehead);
+		entry->plane = plane;
+		// note: no seg is set, for what should be obvious reasons
+		PolyObjects[i].visplane = NULL;
+	}
+#endif
+
 	if (visspritecount == 0)
 		return;
 
@@ -1816,13 +1839,16 @@ static void R_CreateDrawNodes(void)
 				if (x1 < r2->plane->minx) x1 = r2->plane->minx;
 				if (x2 > r2->plane->maxx) x2 = r2->plane->maxx;
 
-				for (i = x1; i <= x2; i++)
+				if (r2->seg) // if no seg set, assume the whole thing is in front or something stupid
 				{
-					if (r2->seg->frontscale[i] > rover->scale)
-						break;
+					for (i = x1; i <= x2; i++)
+					{
+						if (r2->seg->frontscale[i] > rover->scale)
+							break;
+					}
+					if (i > x2)
+						continue;
 				}
-				if (i > x2)
-					continue;
 
 				entry = R_CreateDrawNode(NULL);
 				(entry->prev = r2->prev)->next = entry;
