@@ -574,6 +574,7 @@ void D_RegisterClientCommands(void)
 
 	COM_AddCommand("setcontrol", Command_Setcontrol_f);
 	COM_AddCommand("setcontrol2", Command_Setcontrol2_f);
+	COM_AddCommand("setcontrolmenu", Command_SetcontrolMenu_f);
 
 	COM_AddCommand("screenshot", M_ScreenShot);
 	COM_AddCommand("startmovie", Command_StartMovie_f);
