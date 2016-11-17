@@ -1240,16 +1240,8 @@ void G_Controldefault(void)
 	gamecontrol[gc_console    ][0] = KEY_CONSOLE;
 	gamecontrol[gc_pause      ][0] = KEY_PAUSE;
 
-	gamecontrolmenu[mc_up      ][0] = KEY_HAT1+0; // Joystick Up
-	gamecontrolmenu[mc_down    ][0] = KEY_HAT1+1; // Joystick Down
-	gamecontrolmenu[mc_previous][0] = KEY_HAT1+2; // Joystick Left
-	gamecontrolmenu[mc_next    ][0] = KEY_HAT1+3; // Joystick Right
-	gamecontrolmenu[mc_confirm ][0] = KEY_JOY1+0; // X-Input Gamepad A
-	gamecontrolmenu[mc_cancel  ][0] = KEY_JOY1+1; // X-Input Gamepad B
-	gamecontrolmenu[mc_clear   ][0] = KEY_JOY1+3; // X-Input Gamepad Y
-	gamecontrolmenu[mc_openmenu][0] = KEY_JOY1+7; // X-Input Gamepad Start
-	gamecontrolmenu[mc_confirm ][1] = KEY_MOUSE1+0; // Mouse Left-Click
-	gamecontrolmenu[mc_cancel  ][1] = KEY_MOUSE1+1; // Mouse Right-Click
+	gamecontrolmenu[mc_confirm][0] = KEY_MOUSE1+0; // Mouse Left-Click
+	gamecontrolmenu[mc_cancel ][0] = KEY_MOUSE1+1; // Mouse Right-Click
 #ifdef WMINPUT
 	gamecontrol[gc_forward    ][0] = KEY_JOY1+02; //UP
 	gamecontrol[gc_backward   ][0] = KEY_JOY1+03; //DOWN
