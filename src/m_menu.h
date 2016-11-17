@@ -284,6 +284,18 @@ void Screenshot_option_Onchange(void);
 	NULL\
 }
 
+#define MENUCONTROLMENUSTYLE(source, prev)\
+{\
+	"M_CONTRO",\
+	sizeof (source)/sizeof (menuitem_t),\
+	prev,\
+	source,\
+	M_DrawMenuControl,\
+	24, 40,\
+	0,\
+	NULL\
+}
+
 #define IMAGEDEF(source)\
 {\
 	NULL,\
