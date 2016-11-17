@@ -1746,6 +1746,7 @@ boolean G_Responder(event_t *ev)
 	{
 		if (ev->type == ev_keydown && ev->data1 != 301)
 		{
+			S_StartSound(NULL, sfx_menu1);
 			M_StartControlPanel();
 			return true;
 		}
