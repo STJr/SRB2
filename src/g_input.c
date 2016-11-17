@@ -43,8 +43,9 @@ INT32 joyxmove[JOYAXISSET], joyymove[JOYAXISSET], joy2xmove[JOYAXISSET], joy2ymo
 UINT8 gamekeydown[NUMINPUTS];
 
 // two key codes (or virtual key) per game control
-INT32 gamecontrol[num_gamecontrols][2];
-INT32 gamecontrolbis[num_gamecontrols][2]; // secondary splitscreen player
+INT32 gamecontrol[num_gamecontrols][2]; // Primary player
+INT32 gamecontrolbis[num_gamecontrols][2]; // Secondary player (Singleplayer bot/Splitscreen)
+INT32 gamecontrolmenu[num_menucontrols][2]; // Menu navigation
 
 typedef struct
 {
@@ -953,7 +954,7 @@ static keyname_t keynames[] =
 
 static const char *gamecontrolname[num_gamecontrols] =
 {
-	"nothing", // a key/button mapped to gc_null has no effect
+	"nothing", // A key/button mapped to gc_null has no effect
 	"forward",
 	"backward",
 	"strafeleft",
@@ -993,6 +994,19 @@ static const char *gamecontrolname[num_gamecontrols] =
 	"custom1",
 	"custom2",
 	"custom3",
+};
+
+static const char *menucontrolname[num_menucontrols] =
+{
+	"nothing", // A key/button mapped to mc_null has no effect
+	"up",
+	"down",
+	"previous",
+	"next",
+	"confirm",
+	"cancel",
+	"clear",
+	"openmenu",
 };
 
 #define NUMKEYNAMES (sizeof (keynames)/sizeof (keyname_t))
@@ -1088,7 +1102,7 @@ void G_Controldefault(void)
 	gamecontrol[gc_jump       ][1] = '/';
 	gamecontrol[gc_console    ][0] = KEY_CONSOLE;
 	gamecontrol[gc_console    ][1] = KEY_F5;
-	//gamecontrolbis
+
 	gamecontrolbis[gc_forward   ][0] = KEY_2HAT1+0;
 	gamecontrolbis[gc_forward   ][1] = 'w';
 	gamecontrolbis[gc_backward  ][0] = KEY_2HAT1+1;
@@ -1105,6 +1119,15 @@ void G_Controldefault(void)
 	gamecontrolbis[gc_jump      ][0] = KEY_2JOY1+2; //A
 	//gamecontrolbis[gc_straferight][0] = 'x';
 	//gamecontrolbis[gc_strafeleft ][0] = 'z';
+
+	gamecontrolmenu[mc_up      ][0] = KEY_HAT1+0; //Up
+	gamecontrolmenu[mc_down    ][0] = KEY_HAT1+1; //Down
+	gamecontrolmenu[mc_previous][0] = KEY_HAT1+2; //Left
+	gamecontrolmenu[mc_next    ][0] = KEY_HAT1+3; //Right
+	gamecontrolmenu[mc_confirm ][0] = KEY_JOY1+2; //A
+	gamecontrolmenu[mc_cancel  ][0] = KEY_JOY1+1; //B
+	gamecontrolmenu[mc_clear   ][0] = KEY_JOY1+5; //Y
+	gamecontrolmenu[mc_openmenu][0] = KEY_JOY1+3; //Start
 }
 #elif defined (_PSP)
 void G_Controldefault(void)
@@ -1120,8 +1143,17 @@ void G_Controldefault(void)
 	gamecontrol[gc_camtoggle  ][0] = KEY_JOY1+6; // Select
 	gamecontrol[gc_camreset   ][0] = KEY_JOY1+3; // Square
 	gamecontrol[gc_centerview ][0] = KEY_JOY1+9; // Hold
-	gamecontrol[gc_pause      ][0] = KEY_JOY1+8; // Start
+	//gamecontrol[gc_pause      ][0] = KEY_JOY1+8; // Start
 	gamecontrol[gc_jump       ][0] = KEY_JOY1+2; // Cross
+
+	gamecontrolmenu[mc_up      ][0] = KEY_HAT1+0; // Up
+	gamecontrolmenu[mc_down    ][0] = KEY_HAT1+1; // Down
+	gamecontrolmenu[mc_previous][0] = KEY_HAT1+2; // Left
+	gamecontrolmenu[mc_next    ][0] = KEY_HAT1+3; // Right
+	gamecontrolmenu[mc_confirm ][0] = KEY_JOY1+2; // Cross
+	gamecontrolmenu[mc_cancel  ][0] = KEY_JOY1+1; // Circle
+	gamecontrolmenu[mc_clear   ][0] = KEY_JOY1+0; // Triangle
+	gamecontrolmenu[mc_openmenu][0] = KEY_JOY1+8; // Start
 }
 #elif defined (GP2X)
 void G_Controldefault(void)
@@ -1134,7 +1166,16 @@ void G_Controldefault(void)
 	gamecontrol[gc_straferight][0] = KEY_JOY1+5; //R
 	gamecontrol[gc_lookup     ][0] = KEY_JOY1+6; //U
 	gamecontrol[gc_lookdown   ][0] = KEY_JOY1+7; //D
-	gamecontrol[gc_pause      ][0] = KEY_JOY1+8; //S
+	//gamecontrol[gc_pause      ][0] = KEY_JOY1+8; //S
+
+	gamecontrolmenu[mc_up      ][0] = KEY_JOY1+6; //U
+	gamecontrolmenu[mc_down    ][0] = KEY_JOY1+7; //D
+	gamecontrolmenu[mc_previous][0] = KEY_JOY1+4; //L
+	gamecontrolmenu[mc_next    ][0] = KEY_JOY1+5; //R
+	gamecontrolmenu[mc_confirm ][0] = KEY_JOY1+2; //B
+	gamecontrolmenu[mc_cancel  ][0] = KEY_JOY1+3; //X
+	gamecontrolmenu[mc_clear   ][0] = KEY_JOY1+1; //Y
+	gamecontrolmenu[mc_openmenu][0] = KEY_JOY1+8; //S
 }
 #elif defined (_NDS)
 void G_Controldefault(void)
@@ -1148,8 +1189,13 @@ void G_Controldefault(void)
 	gamecontrol[gc_straferight][0] = KEY_JOY1+5; //R
 	gamecontrol[gc_turnleft   ][0] = KEY_LEFTARROW;
 	gamecontrol[gc_turnright  ][0] = KEY_RIGHTARROW;
-	gamecontrol[gc_pause      ][0] = KEY_JOY1+6; //Start
+	//gamecontrol[gc_pause      ][0] = KEY_JOY1+6; //Start
 	gamecontrol[gc_weaponnext ][0] = KEY_JOY1+7; //Select
+
+	gamecontrolmenu[mc_confirm ][0] = KEY_JOY1+0; //A
+	gamecontrolmenu[mc_cancel  ][0] = KEY_JOY1+1; //B
+	gamecontrolmenu[mc_clear   ][0] = KEY_JOY1+0; //X
+	gamecontrolmenu[mc_openmenu][0] = KEY_JOY1+8; //Start
 }
 #else
 void G_Controldefault(void)
@@ -1193,6 +1239,17 @@ void G_Controldefault(void)
 	gamecontrol[gc_jump       ][1] = KEY_MOUSE1+1;
 	gamecontrol[gc_console    ][0] = KEY_CONSOLE;
 	gamecontrol[gc_pause      ][0] = KEY_PAUSE;
+
+	gamecontrolmenu[mc_up      ][0] = KEY_HAT1+0; // Joystick Up
+	gamecontrolmenu[mc_down    ][0] = KEY_HAT1+1; // Joystick Down
+	gamecontrolmenu[mc_previous][0] = KEY_HAT1+2; // Joystick Left
+	gamecontrolmenu[mc_next    ][0] = KEY_HAT1+3; // Joystick Right
+	gamecontrolmenu[mc_confirm ][0] = KEY_JOY1+0; // X-Input Gamepad A
+	gamecontrolmenu[mc_cancel  ][0] = KEY_JOY1+1; // X-Input Gamepad B
+	gamecontrolmenu[mc_clear   ][0] = KEY_JOY1+3; // X-Input Gamepad Y
+	gamecontrolmenu[mc_openmenu][0] = KEY_JOY1+7; // X-Input Gamepad Start
+	gamecontrolmenu[mc_confirm ][1] = KEY_MOUSE1+0; // Mouse Left-Click
+	gamecontrolmenu[mc_cancel  ][1] = KEY_MOUSE1+1; // Mouse Right-Click
 #ifdef WMINPUT
 	gamecontrol[gc_forward    ][0] = KEY_JOY1+02; //UP
 	gamecontrol[gc_backward   ][0] = KEY_JOY1+03; //DOWN
@@ -1207,6 +1264,7 @@ void G_Controldefault(void)
 	gamecontrol[gc_jump       ][0] = KEY_JOY1+01; //A
 	gamecontrol[gc_jump       ][1] = KEY_JOY1+06; //a
 	gamecontrol[gc_pause      ][0] = KEY_JOY1+18; //Home
+
 	gamecontrolbis[gc_forward    ][0] = KEY_2JOY1+02; //UP
 	gamecontrolbis[gc_backward   ][0] = KEY_2JOY1+03; //DOWN
 	gamecontrolbis[gc_turnleft   ][0] = KEY_2JOY1+04; //LEFT
@@ -1220,50 +1278,81 @@ void G_Controldefault(void)
 	gamecontrolbis[gc_jump       ][0] = KEY_2JOY1+01; //A
 	gamecontrolbis[gc_jump       ][1] = KEY_2JOY1+06; //a
 	gamecontrolbis[gc_pause      ][0] = KEY_2JOY1+18; //Home
+
+	gamecontrolmenu[mc_up      ][0] = KEY_JOY1+2; //Up
+	gamecontrolmenu[mc_down    ][0] = KEY_JOY1+3; //Down
+	gamecontrolmenu[mc_previous][0] = KEY_JOY1+4; //Left
+	gamecontrolmenu[mc_next    ][0] = KEY_JOY1+5; //Right
+	gamecontrolmenu[mc_clear   ][0] = KEY_JOY1+19; //Minus
+	gamecontrolmenu[mc_openmenu][0] = KEY_JOY1+20; //Plus
+	gamecontrolmenu[mc_confirm ][0] = KEY_JOY1+1; //A (Wii Remote)
+	gamecontrolmenu[mc_cancel  ][0] = KEY_JOY1+0; //B (Wii Remote)
+	gamecontrolmenu[mc_confirm ][1] = KEY_JOY1+6; //a (Classic Controller)
+	gamecontrolmenu[mc_cancel  ][1] = KEY_JOY1+7; //b (Classic Controller)
+	gamecontrolmenu[mc_clear   ][1] = KEY_JOY1+9; //x (Classic Controller)
 #endif
 #ifdef _WII
-	gamecontrol[gc_forward    ][1] = KEY_HAT1+00; //UP
-	gamecontrol[gc_backward   ][1] = KEY_HAT1+01; //DOWN
-	gamecontrol[gc_straferight][1] = KEY_JOY1+16; //ZR
-	gamecontrol[gc_strafeleft ][1] = KEY_JOY1+15; //ZL
-	gamecontrol[gc_turnleft   ][1] = KEY_HAT1+02; //LEFT
-	gamecontrol[gc_turnright  ][1] = KEY_HAT1+03; //RIGHT
-	gamecontrol[gc_weaponnext ][1] = KEY_JOY1+11; //x
-	gamecontrol[gc_fire       ][0] = KEY_JOY1+12; //y
+	// Wii Remote (+ Nunchuck)
 	gamecontrol[gc_fire       ][1] = KEY_JOY1+01; //B
-	gamecontrol[gc_firenormal ][0] = KEY_JOY1+13; //L
 	gamecontrol[gc_firenormal ][1] = KEY_JOY1+00; //A
-	gamecontrol[gc_tossflag   ][1] = KEY_JOY1+17; //Plus CC
-	gamecontrol[gc_use        ][0] = KEY_JOY1+9;  //a
 	gamecontrol[gc_use        ][1] = KEY_JOY1+02; //1
-	gamecontrol[gc_centerview ][1] = KEY_JOY1+14; //R
-	gamecontrol[gc_scores     ][0] = KEY_JOY1+04; //Minus
-	gamecontrol[gc_scores     ][1] = KEY_JOY1+18; //Minus
-	gamecontrol[gc_jump       ][0] = KEY_JOY1+10; //b
+	gamecontrol[gc_scores     ][1] = KEY_JOY1+04; //Minus
 	gamecontrol[gc_jump       ][1] = KEY_JOY1+3;  //2
-	gamecontrol[gc_pause      ][0] = KEY_JOY1+06; //Home
-	gamecontrol[gc_pause      ][1] = KEY_JOY1+19; //Home
-	gamecontrolbis[gc_forward    ][1] = KEY_2HAT1+00; //UP
-	gamecontrolbis[gc_backward   ][1] = KEY_2HAT1+01; //DOWN
-	gamecontrolbis[gc_straferight][1] = KEY_2JOY1+16; //ZR
-	gamecontrolbis[gc_strafeleft ][1] = KEY_2JOY1+15; //ZL
-	gamecontrolbis[gc_turnleft   ][1] = KEY_2HAT1+02; //LEFT
-	gamecontrolbis[gc_turnright  ][1] = KEY_2HAT1+03; //RIGHT
-	gamecontrolbis[gc_weaponnext ][1] = KEY_2JOY1+11; //x
-	gamecontrolbis[gc_fire       ][0] = KEY_2JOY1+12; //y
+	gamecontrol[gc_pause      ][1] = KEY_JOY1+06; //Home
+
 	gamecontrolbis[gc_fire       ][1] = KEY_2JOY1+01; //B
-	gamecontrolbis[gc_firenormal ][0] = KEY_2JOY1+13; //L
 	gamecontrolbis[gc_firenormal ][1] = KEY_2JOY1+00; //A
-	gamecontrolbis[gc_tossflag   ][1] = KEY_2JOY1+17; //Plus CC
-	gamecontrolbis[gc_use        ][0] = KEY_2JOY1+9;  //a
 	gamecontrolbis[gc_use        ][1] = KEY_2JOY1+02; //1
-	gamecontrolbis[gc_centerview ][1] = KEY_2JOY1+14; //R
-	gamecontrolbis[gc_scores     ][0] = KEY_2JOY1+04; //Minus
-	gamecontrolbis[gc_scores     ][1] = KEY_2JOY1+18; //Minus
-	gamecontrolbis[gc_jump       ][0] = KEY_2JOY1+10; //b
+	gamecontrolbis[gc_scores     ][1] = KEY_2JOY1+04; //Minus
 	gamecontrolbis[gc_jump       ][1] = KEY_2JOY1+3;  //2
-	gamecontrolbis[gc_pause      ][0] = KEY_2JOY1+06; //Home
+	gamecontrolbis[gc_pause      ][1] = KEY_2JOY1+06; //Home
+
+	gamecontrolmenu[mc_confirm ][1] = KEY_JOY1+3; //2
+	gamecontrolmenu[mc_cancel  ][1] = KEY_JOY1+2; //1
+	gamecontrolmenu[mc_clear   ][1] = KEY_JOY1+4; //Minus
+	gamecontrolmenu[mc_openmenu][1] = KEY_JOY1+5; //Plus
+
+	// Classic Controller
+	gamecontrol[gc_forward    ][0] = KEY_HAT1+00; //UP
+	gamecontrol[gc_backward   ][0] = KEY_HAT1+01; //DOWN
+	gamecontrol[gc_straferight][0] = KEY_JOY1+16; //ZR
+	gamecontrol[gc_strafeleft ][0] = KEY_JOY1+15; //ZL
+	gamecontrol[gc_turnleft   ][0] = KEY_HAT1+02; //LEFT
+	gamecontrol[gc_turnright  ][0] = KEY_HAT1+03; //RIGHT
+	gamecontrol[gc_weaponnext ][0] = KEY_JOY1+11; //x
+	gamecontrol[gc_fire       ][0] = KEY_JOY1+12; //y
+	gamecontrol[gc_firenormal ][0] = KEY_JOY1+13; //L
+	gamecontrol[gc_centerview ][0] = KEY_JOY1+14; //R
+	//gamecontrol[gc_tossflag   ][0] = KEY_JOY1+17; //Plus CC
+	gamecontrol[gc_use        ][0] = KEY_JOY1+9;  //a
+	gamecontrol[gc_scores     ][0] = KEY_JOY1+18; //Minus
+	gamecontrol[gc_jump       ][0] = KEY_JOY1+10; //b
+	gamecontrol[gc_pause      ][0] = KEY_JOY1+19; //Home
+
+	gamecontrolbis[gc_forward    ][0] = KEY_2HAT1+00; //UP
+	gamecontrolbis[gc_backward   ][0] = KEY_2HAT1+01; //DOWN
+	gamecontrolbis[gc_straferight][0] = KEY_2JOY1+16; //ZR
+	gamecontrolbis[gc_strafeleft ][0] = KEY_2JOY1+15; //ZL
+	gamecontrolbis[gc_turnleft   ][0] = KEY_2HAT1+02; //LEFT
+	gamecontrolbis[gc_turnright  ][0] = KEY_2HAT1+03; //RIGHT
+	gamecontrolbis[gc_weaponnext ][0] = KEY_2JOY1+11; //x
+	gamecontrolbis[gc_fire       ][0] = KEY_2JOY1+12; //y
+	gamecontrolbis[gc_firenormal ][0] = KEY_2JOY1+13; //L
+	gamecontrolbis[gc_centerview ][0] = KEY_2JOY1+14; //R
+	//gamecontrolbis[gc_tossflag   ][0] = KEY_2JOY1+17; //Plus CC
+	gamecontrolbis[gc_use        ][0] = KEY_2JOY1+9;  //a
+	gamecontrolbis[gc_scores     ][0] = KEY_2JOY1+18; //Minus
+	gamecontrolbis[gc_jump       ][0] = KEY_2JOY1+10; //b
 	gamecontrolbis[gc_pause      ][1] = KEY_2JOY1+19; //Home
+
+	gamecontrolmenu[mc_up      ][0] = KEY_HAT1+0; //Up
+	gamecontrolmenu[mc_down    ][0] = KEY_HAT1+1; //Down
+	gamecontrolmenu[mc_previous][0] = KEY_HAT1+2; //Left
+	gamecontrolmenu[mc_next    ][0] = KEY_HAT1+3; //Right
+	gamecontrolmenu[mc_confirm ][0] = KEY_JOY1+9; //a
+	gamecontrolmenu[mc_cancel  ][0] = KEY_JOY1+1; //b
+	gamecontrolmenu[mc_clear   ][0] = KEY_JOY1+0; //x
+	gamecontrolmenu[mc_openmenu][0] = KEY_JOY1+8; //Plus
 #endif
 }
 #endif
@@ -1293,6 +1382,17 @@ void G_SaveKeySetting(FILE *f)
 		else
 			fprintf(f, "\n");
 	}
+
+	for (i = 1; i < num_menucontrols; i++)
+	{
+		fprintf(f, "setcontrolmenu \"%s\" \"%s\"", menucontrolname[i],
+			G_KeynumToString(gamecontrolmenu[i][0]));
+
+		if (gamecontrolmenu[i][1])
+			fprintf(f, " \"%s\"\n", G_KeynumToString(gamecontrolmenu[i][1]));
+		else
+			fprintf(f, "\n");
+	}
 }
 
 void G_CheckDoubleUsage(INT32 keynum)
@@ -1310,6 +1410,39 @@ void G_CheckDoubleUsage(INT32 keynum)
 				gamecontrolbis[i][0] = KEY_NULL;
 			if (gamecontrolbis[i][1] == keynum)
 				gamecontrolbis[i][1] = KEY_NULL;
+		}
+	}
+	if (gamecontrolmenu[mc_openmenu][0] == keynum)
+		gamecontrolmenu[mc_openmenu][0] = KEY_NULL;
+	if (gamecontrolmenu[mc_openmenu][1] == keynum)
+		gamecontrolmenu[mc_openmenu][1] = KEY_NULL;
+}
+
+void G_CheckDoubleUsageMenu(INT32 keynum, INT32 control) // The Open Menu key should never be the same as a game control key,
+{ // and the other menu keys should never be the same as another menu key, though both of those things can be bypassed by the console
+	INT32 i;
+	if (control == mc_openmenu)
+	{
+		for (i = 0; i < num_gamecontrols; i++)
+		{
+			if (gamecontrol[i][0] == keynum)
+				gamecontrol[i][0] = KEY_NULL;
+			if (gamecontrol[i][1] == keynum)
+				gamecontrol[i][1] = KEY_NULL;
+			if (gamecontrolbis[i][0] == keynum)
+				gamecontrolbis[i][0] = KEY_NULL;
+			if (gamecontrolbis[i][1] == keynum)
+				gamecontrolbis[i][1] = KEY_NULL;
+		}
+	}
+	else
+	{
+		for (i = 0; i < num_menucontrols; i++)
+		{
+			if (gamecontrolmenu[i][0] == keynum)
+				gamecontrolmenu[i][0] = KEY_NULL;
+			if (gamecontrolmenu[i][1] == keynum)
+				gamecontrolmenu[i][1] = KEY_NULL;
 		}
 	}
 }
@@ -1337,6 +1470,31 @@ static void setcontrol(INT32 (*gc)[2], INT32 na)
 		gc[numctrl][1] = G_KeyStringtoNum(COM_Argv(3));
 	else
 		gc[numctrl][1] = 0;
+}
+
+static void setcontrolmenu(INT32 (*mc)[2], INT32 na)
+{
+	INT32 numctrl;
+	const char *namectrl;
+	INT32 keynum;
+
+	namectrl = COM_Argv(1);
+	for (numctrl = 0; numctrl < num_menucontrols && stricmp(namectrl, menucontrolname[numctrl]);
+		numctrl++)
+		;
+	if (numctrl == num_menucontrols)
+	{
+		CONS_Printf(M_GetText("Control '%s' unknown\n"), namectrl);
+		return;
+	}
+	keynum = G_KeyStringtoNum(COM_Argv(2));
+	G_CheckDoubleUsageMenu(keynum, numctrl);
+	mc[numctrl][0] = keynum;
+
+	if (na == 4)
+		mc[numctrl][1] = G_KeyStringtoNum(COM_Argv(3));
+	else
+		mc[numctrl][1] = 0;
 }
 
 void Command_Setcontrol_f(void)
@@ -1367,4 +1525,19 @@ void Command_Setcontrol2_f(void)
 	}
 
 	setcontrol(gamecontrolbis, na);
+}
+
+void Command_SetcontrolMenu_f(void)
+{
+	INT32 na;
+
+	na = (INT32)COM_Argc();
+
+	if (na != 3 && na != 4)
+	{
+		CONS_Printf(M_GetText("setcontrolmenu <controlname> <keyname> [<2nd keyname>]: set controls for menu navigation\n"));
+		return;
+	}
+
+	setcontrolmenu(gamecontrolmenu, na);
 }
