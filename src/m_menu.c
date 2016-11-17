@@ -271,8 +271,8 @@ static void M_SetupMultiPlayer2(INT32 choice);
 // Controls
 menu_t OP_ControlsDef, OP_ControlListDef, OP_MoveControlsDef;
 menu_t OP_MPControlsDef, OP_CameraControlsDef, OP_MiscControlsDef;
-menu_t OP_P1ControlsDef, OP_P2ControlsDef, OP_MouseOptionsDef;
-menu_t OP_Mouse2OptionsDef, OP_Joystick1Def, OP_Joystick2Def;
+menu_t OP_MenuControlsDef, OP_P1ControlsDef, OP_P2ControlsDef;
+menu_t OP_MouseOptionsDef, OP_Mouse2OptionsDef, OP_Joystick1Def, OP_Joystick2Def;
 static void M_VideoModeMenu(INT32 choice);
 static void M_Setup1PControlsMenu(INT32 choice);
 static void M_Setup2PControlsMenu(INT32 choice);
@@ -280,6 +280,7 @@ static void M_Setup1PJoystickMenu(INT32 choice);
 static void M_Setup2PJoystickMenu(INT32 choice);
 static void M_AssignJoystick(INT32 choice);
 static void M_ChangeControl(INT32 choice);
+static void M_ChangeMenuControl(INT32 choice);
 
 // Video & Sound
 menu_t OP_VideoOptionsDef, OP_VideoModeDef;
@@ -316,6 +317,7 @@ static void M_DrawTimeAttackMenu(void);
 static void M_DrawNightsAttackMenu(void);
 static void M_DrawSetupChoosePlayerMenu(void);
 static void M_DrawControl(void);
+static void M_DrawMenuControl(void);
 static void M_DrawVideoMode(void);
 static void M_DrawMonitorToggles(void);
 #ifdef HWRENDER
@@ -1022,10 +1024,11 @@ static menuitem_t OP_P2ControlsMenu[] =
 
 static menuitem_t OP_ControlListMenu[] =
 {
-	{IT_SUBMENU | IT_STRING, NULL, "Movement Controls...",      &OP_MoveControlsDef,   10},
-	{IT_SUBMENU | IT_STRING, NULL, "Multiplayer Controls...",   &OP_MPControlsDef,     20},
-	{IT_SUBMENU | IT_STRING, NULL, "Camera Controls...",        &OP_CameraControlsDef, 30},
-	{IT_SUBMENU | IT_STRING, NULL, "Miscellaneous Controls...", &OP_MiscControlsDef,   40},
+	{IT_SUBMENU | IT_STRING, NULL, "Movement Controls...",        &OP_MoveControlsDef,   10},
+	{IT_SUBMENU | IT_STRING, NULL, "Multiplayer Controls...",     &OP_MPControlsDef,     20},
+	{IT_SUBMENU | IT_STRING, NULL, "Camera Controls...",          &OP_CameraControlsDef, 30},
+	{IT_SUBMENU | IT_STRING, NULL, "Miscellaneous Controls...",   &OP_MiscControlsDef,   40},
+	{IT_SUBMENU | IT_STRING, NULL, "Menu Navigation Controls...", &OP_MenuControlsDef,   50},
 };
 
 static menuitem_t OP_MoveControlsMenu[] =
@@ -1047,7 +1050,7 @@ static menuitem_t OP_MPControlsMenu[] =
 	{IT_CALL | IT_STRING2, NULL, "Rankings/Scores",  M_ChangeControl, gc_scores       },
 	{IT_CALL | IT_STRING2, NULL, "Toss Flag",        M_ChangeControl, gc_tossflag     },
 	{IT_CALL | IT_STRING2, NULL, "Next Weapon",      M_ChangeControl, gc_weaponnext   },
-	{IT_CALL | IT_STRING2, NULL, "Prev Weapon",      M_ChangeControl, gc_weaponprev   },
+	{IT_CALL | IT_STRING2, NULL, "Prev. Weapon",     M_ChangeControl, gc_weaponprev   },
 	{IT_CALL | IT_STRING2, NULL, "Weapon Slot 1",    M_ChangeControl, gc_wepslot1     },
 	{IT_CALL | IT_STRING2, NULL, "Weapon Slot 2",    M_ChangeControl, gc_wepslot2     },
 	{IT_CALL | IT_STRING2, NULL, "Weapon Slot 3",    M_ChangeControl, gc_wepslot3     },
@@ -1079,6 +1082,18 @@ static menuitem_t OP_MiscControlsMenu[] =
 
 	{IT_CALL | IT_STRING2, NULL, "Pause",            M_ChangeControl, gc_pause        },
 	{IT_CALL | IT_STRING2, NULL, "Console",          M_ChangeControl, gc_console      },
+};
+
+static menuitem_t OP_MenuControlsMenu[] =
+{
+	{IT_CALL | IT_STRING2, NULL, "Move Cursor Up",   M_ChangeMenuControl, mc_up      },
+	{IT_CALL | IT_STRING2, NULL, "Move Cursor Down", M_ChangeMenuControl, mc_down    },
+	{IT_CALL | IT_STRING2, NULL, "Prev./Decrease",   M_ChangeMenuControl, mc_previous},
+	{IT_CALL | IT_STRING2, NULL, "Next/Increase",    M_ChangeMenuControl, mc_next    },
+	{IT_CALL | IT_STRING2, NULL, "Confirm/Toggle",   M_ChangeMenuControl, mc_confirm },
+	{IT_CALL | IT_STRING2, NULL, "Cancel/Go Back",   M_ChangeMenuControl, mc_cancel  },
+	{IT_CALL | IT_STRING2, NULL, "Clear/Delete",     M_ChangeMenuControl, mc_clear   },
+	{IT_CALL | IT_STRING2, NULL, "Open Pause Menu",  M_ChangeMenuControl, mc_openmenu},
 };
 
 static menuitem_t OP_Joystick1Menu[] =
@@ -1661,6 +1676,7 @@ menu_t OP_MoveControlsDef = CONTROLMENUSTYLE(OP_MoveControlsMenu, &OP_ControlLis
 menu_t OP_MPControlsDef = CONTROLMENUSTYLE(OP_MPControlsMenu, &OP_ControlListDef);
 menu_t OP_CameraControlsDef = CONTROLMENUSTYLE(OP_CameraControlsMenu, &OP_ControlListDef);
 menu_t OP_MiscControlsDef = CONTROLMENUSTYLE(OP_MiscControlsMenu, &OP_ControlListDef);
+menu_t OP_MenuControlsDef = MENUCONTROLMENUSTYLE(OP_MenuControlsMenu, &OP_ControlListDef);
 menu_t OP_P1ControlsDef = DEFAULTMENUSTYLE("M_CONTRO", OP_P1ControlsMenu, &OP_ControlsDef, 60, 30);
 menu_t OP_P2ControlsDef = DEFAULTMENUSTYLE("M_CONTRO", OP_P2ControlsMenu, &OP_ControlsDef, 60, 30);
 menu_t OP_MouseOptionsDef = DEFAULTMENUSTYLE("M_CONTRO", OP_MouseOptionsMenu, &OP_P1ControlsDef, 60, 30);
@@ -2007,6 +2023,7 @@ static boolean M_ChangeStringCvar(INT32 choice)
 			len = strlen(cv->string);
 			if (len > 0)
 			{
+				S_StartSound(NULL, sfx_menu1);
 				M_Memcpy(buf, cv->string, len);
 				buf[len-1] = 0;
 				CV_Set(cv, buf);
@@ -2018,6 +2035,7 @@ static boolean M_ChangeStringCvar(INT32 choice)
 				len = strlen(cv->string);
 				if (len < MAXSTRINGLENGTH - 1)
 				{
+					S_StartSound(NULL, sfx_menu1);
 					M_Memcpy(buf, cv->string, len);
 					buf[len++] = (char)choice;
 					buf[len] = 0;
@@ -2087,34 +2105,26 @@ boolean M_Responder(event_t *ev)
 	{
 		ch = ev->data1;
 
-		// added 5-2-98 remap virtual keys (mouse & joystick buttons)
-		switch (ch)
-		{
-			case KEY_MOUSE1:
-			case KEY_JOY1:
-			case KEY_JOY1 + 2:
-				ch = KEY_ENTER;
-				break;
-			case KEY_JOY1 + 3:
-				ch = 'n';
-				break;
-			case KEY_MOUSE1 + 1:
-			case KEY_JOY1 + 1:
-				ch = KEY_BACKSPACE;
-				break;
-			case KEY_HAT1:
-				ch = KEY_UPARROW;
-				break;
-			case KEY_HAT1 + 1:
-				ch = KEY_DOWNARROW;
-				break;
-			case KEY_HAT1 + 2:
-				ch = KEY_LEFTARROW;
-				break;
-			case KEY_HAT1 + 3:
-				ch = KEY_RIGHTARROW;
-				break;
-		}
+		// R.I.P. "remap virtual keys" for joysticks 5/2/1998 - Some day in November/2016
+		// But hey, we got user-customizable controls instead, which supports joysticks too!
+
+		if (ch==gamecontrolmenu[mc_up][0] || ch==gamecontrolmenu[mc_up][1])
+			ch = KEY_UPARROW;
+		else if (ch==gamecontrolmenu[mc_down][0] || ch==gamecontrolmenu[mc_down][1])
+			ch = KEY_DOWNARROW;
+		else if (ch==gamecontrolmenu[mc_previous][0] || ch==gamecontrolmenu[mc_previous][1])
+			ch = KEY_LEFTARROW;
+		else if (ch==gamecontrolmenu[mc_next][0] || ch==gamecontrolmenu[mc_next][1])
+			ch = KEY_RIGHTARROW;
+		else if (ch==gamecontrolmenu[mc_confirm][0] || ch==gamecontrolmenu[mc_confirm][1])
+			ch = KEY_ENTER;
+		else if (ch==gamecontrolmenu[mc_cancel][0] || ch==gamecontrolmenu[mc_cancel][1])
+			ch = KEY_ESCAPE;
+		// Backspace is done on a case-by-case basis
+	//	else if (ch==gamecontrolmenu[mc_clear][0] || ch==gamecontrolmenu[mc_clear][1])
+	//		ch = KEY_BACKSPACE;
+
+		// The "Open Menu" key is only handled once, so it's done in the same way as backspace
 	}
 	else if (menuactive)
 	{
@@ -2181,11 +2191,38 @@ boolean M_Responder(event_t *ev)
 	if (!menuactive)
 	{
 		noFurtherInput = true;
+
+
+		// Open the pause menu or close the chat, hardcoded to Escape. This isn't an F-Key, but...
+		if (ev->data1 == KEY_ESCAPE && ev->type == ev_keydown)
+		{
+			if (chat_on)
+			{
+				HU_clearChatChars();
+				chat_on = false;
+			}
+			else
+			{
+				S_StartSound(NULL, sfx_menu1);
+				M_StartControlPanel();
+			}
+			return true;
+		}
+		// Open the pause menu, unless the chat is open or the key is used by the console, customizable
+		else if ((ch == gamecontrolmenu[mc_openmenu][0] || ch == gamecontrolmenu[mc_openmenu][1]) && (!CON_Ready() || ch >= NUMKEYS) && !chat_on)
+		{
+			S_StartSound(NULL, sfx_menu1);
+			M_StartControlPanel();
+			return true;
+		}
+
+		// Or if we don't open the menu, continue on with the F-Keys
 		switch (ch)
 		{
 			case KEY_F1: // Help key
 				if (modeattacking)
 					return true;
+				S_StartSound(NULL, sfx_menu1);
 				M_StartControlPanel();
 				currentMenu = &MISC_HelpDef;
 				itemOn = 0;
@@ -2201,6 +2238,7 @@ boolean M_Responder(event_t *ev)
 			case KEY_F4: // Sound Volume
 				if (modeattacking)
 					return true;
+				S_StartSound(NULL, sfx_menu1);
 				M_StartControlPanel();
 				M_Options(0);
 				currentMenu = &OP_SoundOptionsDef;
@@ -2211,6 +2249,7 @@ boolean M_Responder(event_t *ev)
 			case KEY_F5: // Video Mode
 				if (modeattacking)
 					return true;
+				S_StartSound(NULL, sfx_menu1);
 				M_StartControlPanel();
 				M_Options(0);
 				M_VideoModeMenu(0);
@@ -2223,6 +2262,7 @@ boolean M_Responder(event_t *ev)
 			case KEY_F7: // Options
 				if (modeattacking)
 					return true;
+				S_StartSound(NULL, sfx_menu1);
 				M_StartControlPanel();
 				M_Options(0);
 				M_SetupNextMenu(&OP_MainDef);
@@ -2240,17 +2280,8 @@ boolean M_Responder(event_t *ev)
 				return true;
 
 			// Spymode on F12 handled in game logic
-
-			case KEY_ESCAPE: // Pop up menu
-				if (chat_on)
-				{
-					HU_clearChatChars();
-					chat_on = false;
-				}
-				else
-					M_StartControlPanel();
-				return true;
 		}
+
 		noFurtherInput = false; // turns out we didn't care
 		return false;
 	}
@@ -2272,6 +2303,7 @@ boolean M_Responder(event_t *ev)
 		{
 			if (ch == ' ' || ch == 'n' || ch == 'y' || ch == KEY_ESCAPE || ch == KEY_ENTER)
 			{
+				S_StartSound(NULL, sfx_menu1);
 				if (routine)
 					routine(ch);
 				M_StopMessage(0);
@@ -2389,6 +2421,7 @@ boolean M_Responder(event_t *ev)
 			return true;
 
 		case KEY_ESCAPE:
+			S_StartSound(NULL, sfx_menu1);
 			noFurtherInput = true;
 			currentMenu->lastOn = itemOn;
 			if (currentMenu->prevMenu)
@@ -2413,24 +2446,34 @@ boolean M_Responder(event_t *ev)
 			}
 			else
 				M_ClearMenus(true);
-
 			return true;
-
-		case KEY_BACKSPACE:
-			if ((currentMenu->menuitems[itemOn].status) == IT_CONTROL)
-			{
-				// detach any keys associated with the game control
-				G_ClearControlKeys(setupcontrols, currentMenu->menuitems[itemOn].alphaKey);
-				return true;
-			}
-			// Why _does_ backspace go back anyway?
-			//currentMenu->lastOn = itemOn;
-			//if (currentMenu->prevMenu)
-			//	M_SetupNextMenu(currentMenu->prevMenu);
-			return false;
 
 		default:
 			break;
+	}
+
+	if (ch == KEY_BACKSPACE || ch == gamecontrolmenu[mc_clear][0] || ch == gamecontrolmenu[mc_clear][1])
+	// Detach any keys associated with the control
+	{
+		if (currentMenu == &OP_MenuControlsDef)
+		{
+			if (gamecontrolmenu[currentMenu->menuitems[itemOn].alphaKey][0] != mc_null || gamecontrolmenu[currentMenu->menuitems[itemOn].alphaKey][1] != mc_null)
+			{
+				S_StartSound(NULL, sfx_menu1);
+				G_ClearControlKeys(gamecontrolmenu, currentMenu->menuitems[itemOn].alphaKey);
+			}
+			return true;
+		}
+		else if ((currentMenu->menuitems[itemOn].status) == IT_CONTROL)
+		{
+			if (setupcontrols[currentMenu->menuitems[itemOn].alphaKey][0] != gc_null || setupcontrols[currentMenu->menuitems[itemOn].alphaKey][1] != gc_null)
+			{
+				S_StartSound(NULL, sfx_menu1);
+				G_ClearControlKeys(setupcontrols, currentMenu->menuitems[itemOn].alphaKey);
+			}
+			return true;
+		}
+		return false;
 	}
 
 	return true;
@@ -3804,6 +3847,7 @@ static void M_HandleImageDef(INT32 choice)
 
 		case KEY_ESCAPE:
 		case KEY_ENTER:
+			S_StartSound(NULL, sfx_menu1);
 			M_ClearMenus(true);
 			break;
 	}
@@ -3842,6 +3886,7 @@ static void M_ChangeLevel(INT32 choice)
 	strlwr(mapname);
 	mapname[5] = '\0';
 
+	S_StartSound(NULL, sfx_menu1);
 	M_ClearMenus(true);
 	COM_BufAddText(va("map %s -gametype \"%s\"\n", mapname, cv_newgametype.string));
 }
@@ -3849,6 +3894,7 @@ static void M_ChangeLevel(INT32 choice)
 static void M_ConfirmSpectate(INT32 choice)
 {
 	(void)choice;
+	S_StartSound(NULL, sfx_menu1);
 	M_ClearMenus(true);
 	COM_ImmedExecute("changeteam spectator");
 }
@@ -3856,6 +3902,7 @@ static void M_ConfirmSpectate(INT32 choice)
 static void M_ConfirmEnterGame(INT32 choice)
 {
 	(void)choice;
+	S_StartSound(NULL, sfx_menu1);
 	M_ClearMenus(true);
 	COM_ImmedExecute("changeteam playing");
 }
@@ -3863,6 +3910,7 @@ static void M_ConfirmEnterGame(INT32 choice)
 static void M_ConfirmTeamScramble(INT32 choice)
 {
 	(void)choice;
+	S_StartSound(NULL, sfx_menu1);
 	M_ClearMenus(true);
 
 	switch (cv_dummyscramble.value)
@@ -3885,6 +3933,7 @@ static void M_ConfirmTeamChange(INT32 choice)
 		return;
 	}
 
+	S_StartSound(NULL, sfx_menu1);
 	M_ClearMenus(true);
 
 	switch (cv_dummyteam.value)
@@ -3923,6 +3972,7 @@ static void M_RetryResponse(INT32 ch)
 	if (!&players[consoleplayer] || netgame || multiplayer) // Should never happen!
 		return;
 
+	S_StartSound(NULL, sfx_menu1);
 	M_ClearMenus(true);
 	G_SetRetryFlag();
 }
@@ -3936,6 +3986,7 @@ static void M_Retry(INT32 choice)
 static void M_SelectableClearMenus(INT32 choice)
 {
 	(void)choice;
+	S_StartSound(NULL, sfx_menu1);
 	M_ClearMenus(true);
 }
 
@@ -4127,8 +4178,6 @@ static void M_DrawSkyRoom(void)
 
 static void M_HandleSoundTest(INT32 choice)
 {
-	boolean exitmenu = false; // exit to previous menu
-
 	switch (choice)
 	{
 		case KEY_DOWNARROW:
@@ -4139,11 +4188,6 @@ static void M_HandleSoundTest(INT32 choice)
 			M_PrevOpt();
 			S_StartSound(NULL, sfx_menu1);
 			break;
-		case KEY_BACKSPACE:
-		case KEY_ESCAPE:
-			exitmenu = true;
-			break;
-
 		case KEY_RIGHTARROW:
 			CV_AddValue(&cv_soundtest, 1);
 			break;
@@ -4154,16 +4198,16 @@ static void M_HandleSoundTest(INT32 choice)
 			S_StopSounds();
 			S_StartSound(NULL, cv_soundtest.value);
 			break;
+		case KEY_ESCAPE:
+			S_StartSound(NULL, sfx_menu1);
+			if (currentMenu->prevMenu)
+				M_SetupNextMenu(currentMenu->prevMenu);
+			else
+				M_ClearMenus(true);
+			break;
 
 		default:
 			break;
-	}
-	if (exitmenu)
-	{
-		if (currentMenu->prevMenu)
-			M_SetupNextMenu(currentMenu->prevMenu);
-		else
-			M_ClearMenus(true);
 	}
 }
 
@@ -4680,8 +4724,6 @@ static void M_SaveGameDeleteResponse(INT32 ch)
 
 static void M_HandleLoadSave(INT32 choice)
 {
-	boolean exitmenu = false; // exit to previous menu
-
 	switch (choice)
 	{
 		case KEY_DOWNARROW:
@@ -4707,23 +4749,22 @@ static void M_HandleLoadSave(INT32 choice)
 			break;
 
 		case KEY_ESCAPE:
-			exitmenu = true;
-			break;
-
-		case KEY_BACKSPACE:
 			S_StartSound(NULL, sfx_menu1);
-			// Don't allow people to 'delete' "Play without Saving."
-			// Nor allow people to 'delete' slots with no saves in them.
-			if (saveSlotSelected != NOSAVESLOT && savegameinfo[saveSlotSelected].lives != -42)
-				M_StartMessage(M_GetText("Are you sure you want to delete\nthis save game?\n\n(Press 'Y' to confirm)\n"),M_SaveGameDeleteResponse,MM_YESNO);
+			if (currentMenu->prevMenu)
+				M_SetupNextMenu(currentMenu->prevMenu);
+			else
+				M_ClearMenus(true);
 			break;
 	}
-	if (exitmenu)
+	if (choice == KEY_BACKSPACE || choice == gamecontrolmenu[mc_clear][0] || choice == gamecontrolmenu[mc_clear][1])
 	{
-		if (currentMenu->prevMenu)
-			M_SetupNextMenu(currentMenu->prevMenu);
-		else
-			M_ClearMenus(true);
+		// Don't allow people to 'delete' "Play without Saving."
+		// Nor allow people to 'delete' slots with no saves in them.
+		if (saveSlotSelected != NOSAVESLOT && savegameinfo[saveSlotSelected].lives != -42)
+		{
+			S_StartSound(NULL, sfx_menu1);
+			M_StartMessage(M_GetText("Are you sure you want to delete\nthis save game?\n\n(Press 'Y' to confirm)\n"),M_SaveGameDeleteResponse,MM_YESNO);
+		}
 	}
 }
 
@@ -5070,8 +5111,6 @@ static void M_DrawLevelStats(void)
 // Handle statistics.
 static void M_HandleLevelStats(INT32 choice)
 {
-	boolean exitmenu = false; // exit to previous menu
-
 	switch (choice)
 	{
 		case KEY_DOWNARROW:
@@ -5096,21 +5135,18 @@ static void M_HandleLevelStats(INT32 choice)
 			statsLocation -= (statsLocation < 15) ? statsLocation : 15;
 			break;
 
-		case KEY_ESCAPE:
-			exitmenu = true;
-			break;
-
 		case KEY_ENTER:
 			S_StartSound(NULL, sfx_menu1);
 			M_SetupNextMenu(&SP_GameStatsDef);
 			break;
-	}
-	if (exitmenu)
-	{
-		if (currentMenu->prevMenu)
-			M_SetupNextMenu(currentMenu->prevMenu);
-		else
-			M_ClearMenus(true);
+
+		case KEY_ESCAPE:
+			S_StartSound(NULL, sfx_menu1);
+			if (currentMenu->prevMenu)
+				M_SetupNextMenu(currentMenu->prevMenu);
+			else
+				M_ClearMenus(true);
+			break;
 	}
 }
 
@@ -5188,25 +5224,20 @@ static void M_DrawGameStats(void)
 
 static void M_HandleGameStats(INT32 choice)
 {
-	boolean exitmenu = false; // exit to previous menu
-
 	switch (choice)
 	{
 		case KEY_ESCAPE:
-			exitmenu = true;
+			S_StartSound(NULL, sfx_menu1);
+			if (currentMenu->prevMenu)
+				M_SetupNextMenu(currentMenu->prevMenu);
+			else
+				M_ClearMenus(true);
 			break;
 
 		case KEY_ENTER:
 			S_StartSound(NULL, sfx_menu1);
 			M_SetupNextMenu(&SP_LevelStatsDef);
 			break;
-	}
-	if (exitmenu)
-	{
-		if (currentMenu->prevMenu)
-			M_SetupNextMenu(currentMenu->prevMenu);
-		else
-			M_ClearMenus(true);
 	}
 }
 
@@ -5528,6 +5559,7 @@ static void M_ChooseNightsAttack(INT32 choice)
 	char nameofdemo[256];
 	(void)choice;
 	emeralds = 0;
+	S_StartSound(NULL, sfx_menu1);
 	M_ClearMenus(true);
 	modeattacking = ATTACKING_NIGHTS;
 
@@ -5552,6 +5584,7 @@ static void M_ChooseTimeAttack(INT32 choice)
 	char nameofdemo[256];
 	(void)choice;
 	emeralds = 0;
+	S_StartSound(NULL, sfx_menu1);
 	M_ClearMenus(true);
 	modeattacking = ATTACKING_RECORD;
 
@@ -5576,6 +5609,7 @@ static void M_ChooseTimeAttack(INT32 choice)
 static void M_ReplayTimeAttack(INT32 choice)
 {
 	const char *which;
+	S_StartSound(NULL, sfx_menu1);
 	M_ClearMenus(true);
 	modeattacking = ATTACKING_RECORD; // set modeattacking before G_DoPlayDemo so the map loader knows
 
@@ -5769,6 +5803,7 @@ static void M_ExitGameResponse(INT32 ch)
 		return;
 
 	//Command_ExitGame_f();
+	S_StartSound(NULL, sfx_menu1);
 	G_SetExitGameFlag();
 	M_ClearMenus(true);
 }
@@ -5799,8 +5834,6 @@ static UINT32 localservercount;
 
 static void M_HandleServerPage(INT32 choice)
 {
-	boolean exitmenu = false; // exit to previous menu
-
 	switch (choice)
 	{
 		case KEY_DOWNARROW:
@@ -5810,10 +5843,6 @@ static void M_HandleServerPage(INT32 choice)
 		case KEY_UPARROW:
 			M_PrevOpt();
 			S_StartSound(NULL, sfx_menu1);
-			break;
-		case KEY_BACKSPACE:
-		case KEY_ESCAPE:
-			exitmenu = true;
 			break;
 
 		case KEY_ENTER:
@@ -5827,21 +5856,22 @@ static void M_HandleServerPage(INT32 choice)
 			if (serverlistpage > 0)
 				serverlistpage--;
 			break;
+		case KEY_ESCAPE:
+			S_StartSound(NULL, sfx_menu1);
+			if (currentMenu->prevMenu)
+				M_SetupNextMenu(currentMenu->prevMenu);
+			else
+				M_ClearMenus(true);
+			break;
 
 		default:
 			break;
-	}
-	if (exitmenu)
-	{
-		if (currentMenu->prevMenu)
-			M_SetupNextMenu(currentMenu->prevMenu);
-		else
-			M_ClearMenus(true);
 	}
 }
 
 static void M_Connect(INT32 choice)
 {
+	S_StartSound(NULL, sfx_menu1);
 	// do not call menuexitfunc
 	M_ClearMenus(false);
 
@@ -6182,6 +6212,7 @@ static void M_StartServer(INT32 choice)
 		D_MapChange(cv_nextmap.value, cv_newgametype.value, false, 1, 1, false, false);
 	}
 
+	S_StartSound(NULL, sfx_menu1);
 	M_ClearMenus(true);
 }
 
@@ -6299,24 +6330,27 @@ static void M_ConnectIP(INT32 choice)
 static void M_HandleConnectIP(INT32 choice)
 {
 	size_t   l;
-	boolean  exitmenu = false;  // exit to previous menu and send name change
 
 	switch (choice)
 	{
 		case KEY_ENTER:
-			S_StartSound(NULL,sfx_menu1); // Tails
+			S_StartSound(NULL, sfx_menu1); // Tails
 			M_ClearMenus(true);
 			M_ConnectIP(1);
 			break;
 
 		case KEY_ESCAPE:
-			exitmenu = true;
+			S_StartSound(NULL, sfx_menu1);
+			if (currentMenu->prevMenu)
+				M_SetupNextMenu (currentMenu->prevMenu);
+			else
+				M_ClearMenus(true);
 			break;
 
 		case KEY_BACKSPACE:
 			if ((l = strlen(setupm_ip))!=0 && itemOn == 0)
 			{
-				S_StartSound(NULL,sfx_menu1); // Tails
+				S_StartSound(NULL, sfx_menu1); // Tails
 				setupm_ip[l-1] =0;
 			}
 			break;
@@ -6325,7 +6359,7 @@ static void M_HandleConnectIP(INT32 choice)
 			l = strlen(setupm_ip);
 			if (l < 16-1 && (choice == 46 || (choice >= 48 && choice <= 57))) // Rudimentary number and period enforcing
 			{
-				S_StartSound(NULL,sfx_menu1); // Tails
+				S_StartSound(NULL, sfx_menu1); // Tails
 				setupm_ip[l] =(char)choice;
 				setupm_ip[l+1] =0;
 			}
@@ -6333,19 +6367,11 @@ static void M_HandleConnectIP(INT32 choice)
 			{
 				XBOXSTATIC char keypad_translation[] = {'7','8','9','-','4','5','6','+','1','2','3','0','.'};
 				choice = keypad_translation[choice - 199];
-				S_StartSound(NULL,sfx_menu1); // Tails
+				S_StartSound(NULL, sfx_menu1); // Tails
 				setupm_ip[l] =(char)choice;
 				setupm_ip[l+1] =0;
 			}
 			break;
-	}
-
-	if (exitmenu)
-	{
-		if (currentMenu->prevMenu)
-			M_SetupNextMenu (currentMenu->prevMenu);
-		else
-			M_ClearMenus(true);
 	}
 }
 #endif //!NONET
@@ -6469,29 +6495,28 @@ static void M_DrawSetupMultiPlayerMenu(void)
 static void M_HandleSetupMultiPlayer(INT32 choice)
 {
 	size_t   l;
-	boolean  exitmenu = false;  // exit to previous menu and send name change
 
 	switch (choice)
 	{
 		case KEY_DOWNARROW:
 			M_NextOpt();
-			S_StartSound(NULL,sfx_menu1); // Tails
+			S_StartSound(NULL, sfx_menu1); // Tails
 			break;
 
 		case KEY_UPARROW:
 			M_PrevOpt();
-			S_StartSound(NULL,sfx_menu1); // Tails
+			S_StartSound(NULL, sfx_menu1); // Tails
 			break;
 
 		case KEY_LEFTARROW:
 			if (itemOn == 2)       //player skin
 			{
-				S_StartSound(NULL,sfx_menu1); // Tails
+				S_StartSound(NULL, sfx_menu1); // Tails
 				setupm_fakeskin--;
 			}
 			else if (itemOn == 1) // player color
 			{
-				S_StartSound(NULL,sfx_menu1); // Tails
+				S_StartSound(NULL, sfx_menu1); // Tails
 				setupm_fakecolor--;
 			}
 			break;
@@ -6499,24 +6524,28 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 		case KEY_RIGHTARROW:
 			if (itemOn == 2)       //player skin
 			{
-				S_StartSound(NULL,sfx_menu1); // Tails
+				S_StartSound(NULL, sfx_menu1); // Tails
 				setupm_fakeskin++;
 			}
 			else if (itemOn == 1) // player color
 			{
-				S_StartSound(NULL,sfx_menu1); // Tails
+				S_StartSound(NULL, sfx_menu1); // Tails
 				setupm_fakecolor++;
 			}
 			break;
 
 		case KEY_ESCAPE:
-			exitmenu = true;
+			S_StartSound(NULL, sfx_menu1);
+			if (currentMenu->prevMenu)
+				M_SetupNextMenu (currentMenu->prevMenu);
+			else
+				M_ClearMenus(true);
 			break;
 
 		case KEY_BACKSPACE:
 			if ((l = strlen(setupm_name))!=0 && itemOn == 0)
 			{
-				S_StartSound(NULL,sfx_menu1); // Tails
+				S_StartSound(NULL, sfx_menu1); // Tails
 				setupm_name[l-1] =0;
 			}
 			break;
@@ -6527,7 +6556,7 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 			l = strlen(setupm_name);
 			if (l < MAXPLAYERNAME-1)
 			{
-				S_StartSound(NULL,sfx_menu1); // Tails
+				S_StartSound(NULL, sfx_menu1); // Tails
 				setupm_name[l] =(char)choice;
 				setupm_name[l+1] =0;
 			}
@@ -6545,14 +6574,6 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 		setupm_fakecolor = MAXSKINCOLORS-1;
 	if (setupm_fakecolor > MAXSKINCOLORS-1)
 		setupm_fakecolor = 1;
-
-	if (exitmenu)
-	{
-		if (currentMenu->prevMenu)
-			M_SetupNextMenu (currentMenu->prevMenu);
-		else
-			M_ClearMenus(true);
-	}
 }
 
 // start the multiplayer setup menu
@@ -6769,9 +6790,11 @@ static void M_Setup1PControlsMenu(INT32 choice)
 	OP_MPControlsMenu[0].status = IT_CALL|IT_STRING2;
 	OP_MPControlsMenu[1].status = IT_CALL|IT_STRING2;
 	OP_MPControlsMenu[2].status = IT_CALL|IT_STRING2;
-	// Unide the pause/console controls too
+	// Unhide the pause/console controls too
 	OP_MiscControlsMenu[3].status = IT_CALL|IT_STRING2;
 	OP_MiscControlsMenu[4].status = IT_CALL|IT_STRING2;
+	// Lastly, unhide the menu controls as well
+	OP_ControlListMenu[4].status = IT_SUBMENU|IT_STRING;
 
 	OP_ControlListDef.prevMenu = &OP_P1ControlsDef;
 	M_SetupNextMenu(&OP_ControlListDef);
@@ -6791,26 +6814,29 @@ static void M_Setup2PControlsMenu(INT32 choice)
 	// Hide the pause/console controls too
 	OP_MiscControlsMenu[3].status = IT_GRAYEDOUT2;
 	OP_MiscControlsMenu[4].status = IT_GRAYEDOUT2;
+	// And also hide the menu controls, for obvious reasons
+	OP_ControlListMenu[4].status = IT_GRAYEDOUT;
 
 	OP_ControlListDef.prevMenu = &OP_P2ControlsDef;
 	M_SetupNextMenu(&OP_ControlListDef);
 }
 
-// Draws the Customise Controls menu
+// Draws the Customize Controls menu
 static void M_DrawControl(void)
 {
-	char     tmp[50];
+	char     usersetcontrols[50]; // For the 'user-set controls' string
+	boolean  toolong = false; // Should the 'user-set controls' string be thinned?
 	INT32    i;
 	INT32    keys[2];
 
-	// draw title, strings and submenu
+	// Draw the menu title, strings and submenu
 	M_DrawGenericMenu();
 
 	M_CentreText(30,
-		 (setupcontrols_secondaryplayer ? "SET CONTROLS FOR SECONDARY PLAYER" :
+		 (setupcontrols_secondaryplayer ? "SET UP CONTROLS FOR THE SECONDARY PLAYER" :
 		                                  "PRESS ENTER TO CHANGE, BACKSPACE TO CLEAR"));
 
-	for (i = 0;i < currentMenu->numitems;i++)
+	for (i = 0; i < currentMenu->numitems; i++)
 	{
 		if (currentMenu->menuitems[i].status != IT_CONTROL)
 			continue;
@@ -6818,25 +6844,122 @@ static void M_DrawControl(void)
 		keys[0] = setupcontrols[currentMenu->menuitems[i].alphaKey][0];
 		keys[1] = setupcontrols[currentMenu->menuitems[i].alphaKey][1];
 
-		tmp[0] ='\0';
+		usersetcontrols[0] = '\0';
 		if (keys[0] == KEY_NULL && keys[1] == KEY_NULL)
 		{
-			strcpy(tmp, "---");
+			strcpy(usersetcontrols, "---");
 		}
 		else
 		{
 			if (keys[0] != KEY_NULL)
-				strcat (tmp, G_KeynumToString (keys[0]));
+				strcat(usersetcontrols, G_KeynumToString(keys[0]));
 
 			if (keys[0] != KEY_NULL && keys[1] != KEY_NULL)
-				strcat(tmp," or ");
+				strcat(usersetcontrols, " or ");
 
 			if (keys[1] != KEY_NULL)
-				strcat (tmp, G_KeynumToString (keys[1]));
-
-
+				strcat(usersetcontrols, G_KeynumToString(keys[1]));
 		}
-		V_DrawRightAlignedString(BASEVIDWIDTH-currentMenu->x, currentMenu->y + i*8, V_YELLOWMAP, tmp);
+
+		// Let's check if the 'user-set controls' string + the control name string is over 320-48-10 (262) pixels wide
+		// Why 320? That's the base width
+		// Why 48? That's the blank area on the left and right added together
+		// Why 10? That's equal to 2.5 spaces or 1.25 letters, which has a nice distance from the control's name
+		toolong = (V_StringWidth(usersetcontrols,0) + V_StringWidth(currentMenu->menuitems[i].text,0) > BASEVIDWIDTH - (currentMenu->x * 2) - 10);
+
+		// Now depending on whether it's too long or not, either draw the 'user-set controls' string with the thin or the normal font
+		( (toolong) ? (V_DrawRightAlignedThinString) : (V_DrawRightAlignedString) )
+		(BASEVIDWIDTH - currentMenu->x, currentMenu->y + i*8, V_YELLOWMAP, usersetcontrols);
+	}
+}
+
+// Draws the same menu, but for menu navigation controls
+static void M_DrawMenuControl(void)
+{
+	char     usersetcontrols[50]; // For the 'user-set controls' string
+	char     hardcodedcontrols[20]; // For the 'hardcoded controls' string
+	boolean  waytoolong = false; // Should the 'user-set controls' string be thinned?
+	boolean  abittoolong = false; // Should the 'hardcoded controls' string be thinned?
+	INT32    i;
+	INT32    keys[2];
+
+	// Draw the menu title, strings and submenu
+	M_DrawGenericMenu();
+
+	M_CentreText(30, "SET UP CONTROLS FOR MENU NAVIGATION");
+
+	for (i = 0; i < currentMenu->numitems; i++)
+	{
+		if (currentMenu->menuitems[i].status != IT_CONTROL)
+			continue;
+
+		keys[0] = gamecontrolmenu[currentMenu->menuitems[i].alphaKey][0];
+		keys[1] = gamecontrolmenu[currentMenu->menuitems[i].alphaKey][1];
+
+		usersetcontrols[0] ='\0';
+		hardcodedcontrols[0] ='\0';
+		switch (i)
+		{
+			case mc_up - 1:
+				strcpy(hardcodedcontrols, "UP ARROW");
+				break;
+			case mc_down - 1:
+				strcpy(hardcodedcontrols, "DOWN ARROW");
+				break;
+			case mc_previous - 1:
+				strcpy(hardcodedcontrols, "LEFT ARROW");
+				break;
+			case mc_next - 1:
+				strcpy(hardcodedcontrols, "RIGHT ARROW");
+				break;
+			case mc_confirm - 1:
+				strcpy(hardcodedcontrols, "ENTER");
+				break;
+			case mc_cancel - 1:
+			case mc_openmenu - 1:
+				strcpy(hardcodedcontrols, "ESCAPE");
+				break;
+			case mc_clear - 1:
+				strcpy(hardcodedcontrols, "BACKSPACE");
+				break;
+			default:
+				strcpy(hardcodedcontrols, "!ERROR!");
+				break;
+		}
+		if (keys[0] != KEY_NULL && keys[1] != KEY_NULL)
+		{
+			strcat(hardcodedcontrols, ", ");
+
+			strcpy(usersetcontrols, G_KeynumToString(keys[0]));
+			strcat(usersetcontrols, " or ");
+			strcat(usersetcontrols, G_KeynumToString(keys[1]));
+		}
+		else if (keys[0] != KEY_NULL)
+		{
+			strcat(hardcodedcontrols, " or ");
+			strcpy(usersetcontrols, G_KeynumToString(keys[0]));
+		}
+		else if (keys[1] != KEY_NULL)
+		{
+			strcat(hardcodedcontrols, " or ");
+			strcpy(usersetcontrols, G_KeynumToString(keys[1]));
+		}
+
+		// As in the above "Customize Controls" drawer, let's check if the strings are too long. This time, though, we check it twice:
+		// Once for if it's too wide with both the 'user-set controls' and 'hardcoded controls' strings at the normal font width,
+		// and again for if it's too wide with the 'user-set controls' string at the normal width and the 'hardcoded controls' string at the thin width
+		abittoolong = (V_StringWidth(usersetcontrols,0) + V_StringWidth(hardcodedcontrols,0) + V_StringWidth(currentMenu->menuitems[i].text,0) > BASEVIDWIDTH - (currentMenu->x * 2) - 10);
+		waytoolong = (V_StringWidth(usersetcontrols,0) + V_ThinStringWidth(hardcodedcontrols,0) + V_StringWidth(currentMenu->menuitems[i].text,0) > BASEVIDWIDTH - (currentMenu->x * 2) - 10);
+
+		// Now depending on whether it's "a bit too long" or not, draw the 'hardcoded controls' string with the thin or the normal font
+		( (abittoolong) ? (V_DrawRightAlignedThinString) : (V_DrawRightAlignedString) )
+		// Quick check for how long the 'user-set controls' string is
+		(BASEVIDWIDTH - currentMenu->x - ( (waytoolong) ? (V_ThinStringWidth) : (V_StringWidth) ) (usersetcontrols, 0),
+		currentMenu->y + i*8, V_40TRANS, hardcodedcontrols);
+
+		// And also draw the 'user-set controls' string with the thin or the normal font, depending on how long it is
+		( (waytoolong) ? (V_DrawRightAlignedThinString) : (V_DrawRightAlignedString) )
+		(BASEVIDWIDTH - currentMenu->x, currentMenu->y + i*8, V_YELLOWMAP, usersetcontrols);
 	}
 }
 
@@ -6844,12 +6967,20 @@ static INT32 controltochange;
 
 static void M_ChangecontrolResponse(event_t *ev)
 {
-	INT32        control;
-	INT32        found;
-	INT32        ch = ev->data1;
+	INT32    found; // To check if the key/button is already used by the control
+	INT32    ch = ev->data1; // What key/button to set the control to
+	INT32    (*arraytochange)[2]; // Which control array to change (game control or menu navigation)
 
-	// ESCAPE cancels
-	if (ch != KEY_ESCAPE)
+
+	// Escape cancels, and for menu controls only, so do Enter/Backspace/arrow keys/Y/N
+	// (However, you can still use all those keys through console commands)
+	// (Just consider that a feature for curious people, not a bug, will you?)
+	// Also sets whether to change the game control array or the menu navigation control array
+
+	arraytochange = ((currentMenu->prevMenu == &OP_MenuControlsDef) ? (gamecontrolmenu) : (setupcontrols));
+
+	if ((currentMenu->prevMenu == &OP_MenuControlsDef) ? (ch != KEY_ESCAPE && ch != KEY_ENTER && ch != KEY_BACKSPACE && ch != KEY_UPARROW
+	&& ch != KEY_DOWNARROW && ch != KEY_LEFTARROW && ch != KEY_RIGHTARROW && ch != 'y' && ch != 'n') : (ch != KEY_ESCAPE))
 	{
 
 		switch (ev->type)
@@ -6872,54 +7003,64 @@ static void M_ChangecontrolResponse(event_t *ev)
 			break;
 		}
 
-		control = controltochange;
-
 		// check if we already entered this key
 		found = -1;
-		if (setupcontrols[control][0] ==ch)
+		if (arraytochange[controltochange][0] == ch)
 			found = 0;
-		else if (setupcontrols[control][1] ==ch)
+		else if (arraytochange[controltochange][1] == ch)
 			found = 1;
 		if (found >= 0)
 		{
 			// replace mouse and joy clicks by double clicks
 			if (ch >= KEY_MOUSE1 && ch <= KEY_MOUSE1+MOUSEBUTTONS)
-				setupcontrols[control][found] = ch-KEY_MOUSE1+KEY_DBLMOUSE1;
+				arraytochange[controltochange][found] = ch-KEY_MOUSE1+KEY_DBLMOUSE1;
 			else if (ch >= KEY_JOY1 && ch <= KEY_JOY1+JOYBUTTONS)
-				setupcontrols[control][found] = ch-KEY_JOY1+KEY_DBLJOY1;
+				arraytochange[controltochange][found] = ch-KEY_JOY1+KEY_DBLJOY1;
 			else if (ch >= KEY_2MOUSE1 && ch <= KEY_2MOUSE1+MOUSEBUTTONS)
-				setupcontrols[control][found] = ch-KEY_2MOUSE1+KEY_DBL2MOUSE1;
+				arraytochange[controltochange][found] = ch-KEY_2MOUSE1+KEY_DBL2MOUSE1;
 			else if (ch >= KEY_2JOY1 && ch <= KEY_2JOY1+JOYBUTTONS)
-				setupcontrols[control][found] = ch-KEY_2JOY1+KEY_DBL2JOY1;
+				arraytochange[controltochange][found] = ch-KEY_2JOY1+KEY_DBL2JOY1;
 		}
 		else
 		{
 			// check if change key1 or key2, or replace the two by the new
 			found = 0;
-			if (setupcontrols[control][0] == KEY_NULL)
+			if (arraytochange[controltochange][0] == KEY_NULL)
 				found++;
-			if (setupcontrols[control][1] == KEY_NULL)
+			if (arraytochange[controltochange][1] == KEY_NULL)
 				found++;
 			if (found == 2)
 			{
 				found = 0;
-				setupcontrols[control][1] = KEY_NULL;  //replace key 1,clear key2
+				arraytochange[controltochange][1] = KEY_NULL;  //replace key 1,clear key2
 			}
-			G_CheckDoubleUsage(ch);
-			setupcontrols[control][found] = ch;
+			(currentMenu->prevMenu == &OP_MenuControlsDef) ? (G_CheckDoubleUsageMenu(ch, controltochange)) : (G_CheckDoubleUsage(ch));
+			arraytochange[controltochange][found] = ch;
 		}
 
 	}
 
+	S_StartSound(NULL, sfx_menu1);
 	M_StopMessage(0);
 }
 
 static void M_ChangeControl(INT32 choice)
 {
-	static char tmp[55];
+	static char tmp[60];
 
 	controltochange = currentMenu->menuitems[choice].alphaKey;
-	sprintf(tmp, M_GetText("Hit the new key for\n%s\nESC for Cancel"),
+	sprintf(tmp, M_GetText("Hit the new key for\n%s\nPress ESC to Cancel"),
+		currentMenu->menuitems[choice].text);
+
+	M_StartMessage(tmp, M_ChangecontrolResponse, MM_EVENTHANDLER);
+}
+
+static void M_ChangeMenuControl(INT32 choice)
+{
+	static char tmp[120];
+
+	controltochange = currentMenu->menuitems[choice].alphaKey;
+	sprintf(tmp, M_GetText("Hit the new key for\n%s\nPress ESC to Cancel\n\nEnter, Backspace, Y, N, and\nthe arrow keys can't be used"),
 		currentMenu->menuitems[choice].text);
 
 	M_StartMessage(tmp, M_ChangecontrolResponse, MM_EVENTHANDLER);
@@ -7180,6 +7321,7 @@ static void M_HandleVideoMode(INT32 ch)
 	{
 		// change back to the previous mode quickly
 		case KEY_ESCAPE:
+			S_StartSound(NULL, sfx_menu1);
 			setmodeneeded = vidm_previousmode + 1;
 			vidm_testingmode = 0;
 			break;
@@ -7235,6 +7377,7 @@ static void M_HandleVideoMode(INT32 ch)
 			break;
 
 		case KEY_ESCAPE: // this one same as M_Responder
+			S_StartSound(NULL, sfx_menu1);
 			if (currentMenu->prevMenu)
 				M_SetupNextMenu(currentMenu->prevMenu);
 			else
@@ -7318,7 +7461,11 @@ void M_QuitResponse(INT32 ch)
 	if (!(netgame || cv_debug))
 	{
 		mrand = M_RandomKey(sizeof(quitsounds)/sizeof(INT32));
-		if (quitsounds[mrand]) S_StartSound(NULL, quitsounds[mrand]);
+		if (quitsounds[mrand])
+		{
+			S_StopSoundByNum(sfx_menu1); // We don't want the normal menu ding to play over the quit sound
+			S_StartSound(NULL, quitsounds[mrand]);
+		}
 
 		//added : 12-02-98: do that instead of I_WaitVbl which does not work
 		ptime = I_GetTime() + NEWTICRATE*2; // Shortened the quit time, used to be 2 seconds Tails 03-26-2001
@@ -7385,7 +7532,6 @@ static void M_HandleFogColor(INT32 choice)
 {
 	size_t i, l;
 	char temp[8];
-	boolean exitmenu = false; // exit to previous menu and send name change
 
 	switch (choice)
 	{
@@ -7401,7 +7547,10 @@ static void M_HandleFogColor(INT32 choice)
 
 		case KEY_ESCAPE:
 			S_StartSound(NULL, sfx_menu1);
-			exitmenu = true;
+			if (currentMenu->prevMenu)
+				M_SetupNextMenu(currentMenu->prevMenu);
+			else
+				M_ClearMenus(true);
 			break;
 
 		case KEY_BACKSPACE:
@@ -7426,13 +7575,6 @@ static void M_HandleFogColor(INT32 choice)
 				cv_grfogcolor.zstring[5] = (char)choice;
 			}
 			break;
-	}
-	if (exitmenu)
-	{
-		if (currentMenu->prevMenu)
-			M_SetupNextMenu(currentMenu->prevMenu);
-		else
-			M_ClearMenus(true);
 	}
 }
 #endif
