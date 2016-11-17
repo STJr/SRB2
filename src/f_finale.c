@@ -908,43 +908,17 @@ boolean F_IntroResponder(event_t *event)
 {
 	INT32 key = event->data1;
 
-	// remap virtual keys (mouse & joystick buttons)
-	switch (key)
-	{
-		case KEY_MOUSE1:
-			key = KEY_ENTER;
-			break;
-		case KEY_MOUSE1 + 1:
-			key = KEY_BACKSPACE;
-			break;
-		case KEY_JOY1:
-		case KEY_JOY1 + 2:
-			key = KEY_ENTER;
-			break;
-		case KEY_JOY1 + 3:
-			key = 'n';
-			break;
-		case KEY_JOY1 + 1:
-			key = KEY_BACKSPACE;
-			break;
-		case KEY_HAT1:
-			key = KEY_UPARROW;
-			break;
-		case KEY_HAT1 + 1:
-			key = KEY_DOWNARROW;
-			break;
-		case KEY_HAT1 + 2:
-			key = KEY_LEFTARROW;
-			break;
-		case KEY_HAT1 + 3:
-			key = KEY_RIGHTARROW;
-			break;
-	}
-
 	if (event->type != ev_keydown && key != 301)
 		return false;
 
-	if (key != 27 && key != KEY_ENTER && key != KEY_SPACE && key != KEY_BACKSPACE)
+	// The keys that can skip the intro
+	// This is often the jump/confirm and "start"/pause buttons, some times the cancel button too, so the same goes for SRB2
+	if (key != KEY_ENTER && key != KEY_ESCAPE
+	 && key != gamecontrolmenu[mc_confirm][0] && key != gamecontrolmenu[mc_confirm][0]
+	 && key != gamecontrolmenu[mc_cancel][0] && key != gamecontrolmenu[mc_cancel][0]
+	 && key != gamecontrolmenu[mc_openmenu][0] && key != gamecontrolmenu[mc_openmenu][0] // "Start button", expected when using controllers
+	 && key != gamecontrol[gc_pause][0] && key != gamecontrol[gc_pause][1] // "Start button" again
+	 && key != gamecontrol[gc_jump][0] && key != gamecontrol[gc_jump][1])
 		return false;
 
 	if (keypressed)
@@ -998,7 +972,7 @@ static const char *credits[] = {
 	"",
 	"\1Sprite Artists",
 	"Odi \"Iceman404\" Atunzu",
-	"Victor \"VAdaPEGA\" Ara\x1Fjo", // Araújo -- sorry for our limited font! D:
+	"Victor \"VAdaPEGA\" Ara\x1Fjo", // AraÃºjo -- sorry for our limited font! D:
 	"Jim \"MotorRoach\" DeMello",
 	"Desmond \"Blade\" DesJardins",
 	"Sherman \"CoatRack\" DesJardins",
@@ -1191,46 +1165,18 @@ boolean F_CreditResponder(event_t *event)
 {
 	INT32 key = event->data1;
 
-	// remap virtual keys (mouse & joystick buttons)
-	switch (key)
-	{
-		case KEY_MOUSE1:
-			key = KEY_ENTER;
-			break;
-		case KEY_MOUSE1 + 1:
-			key = KEY_BACKSPACE;
-			break;
-		case KEY_JOY1:
-		case KEY_JOY1 + 2:
-			key = KEY_ENTER;
-			break;
-		case KEY_JOY1 + 3:
-			key = 'n';
-			break;
-		case KEY_JOY1 + 1:
-			key = KEY_BACKSPACE;
-			break;
-		case KEY_HAT1:
-			key = KEY_UPARROW;
-			break;
-		case KEY_HAT1 + 1:
-			key = KEY_DOWNARROW;
-			break;
-		case KEY_HAT1 + 2:
-			key = KEY_LEFTARROW;
-			break;
-		case KEY_HAT1 + 3:
-			key = KEY_RIGHTARROW;
-			break;
-	}
-
 	if (!(timesBeaten) && !(netgame || multiplayer))
 		return false;
 
 	if (event->type != ev_keydown)
 		return false;
 
-	if (key != KEY_ESCAPE && key != KEY_ENTER && key != KEY_SPACE && key != KEY_BACKSPACE)
+	// The keys that can skip the credits
+	// The jump/confirm and cancel buttons are left out here purposefully, as a lot of games (though not all)
+	// generally skip the credits with the "start"/pause button, but not the jump/confirm/cancel buttons
+	if (key != KEY_ENTER && key != KEY_ESCAPE
+	 && key != gamecontrolmenu[mc_openmenu][0] && key != gamecontrolmenu[mc_openmenu][0] // "Start button", expected when using controllers
+	 && key != gamecontrol[gc_pause][0] && key != gamecontrol[gc_pause][1]) // "Start button" again
 		return false;
 
 	if (keypressed)
@@ -1659,18 +1605,14 @@ boolean F_ContinueResponder(event_t *event)
 	if (event->type != ev_keydown)
 		return false;
 
-	// remap virtual keys (mouse & joystick buttons)
-	switch (key)
-	{
-		case KEY_ENTER:
-		case KEY_SPACE:
-		case KEY_MOUSE1:
-		case KEY_JOY1:
-		case KEY_JOY1 + 2:
-			break;
-		default:
-			return false;
-	}
+	// The keys that accept the "game over, but do you want to continue?" screen
+	// In Sonic games, this goes for the jump/confirm and "start"/pause buttons, so the same goes for SRB2
+	if (key != KEY_ENTER
+	 && key != gamecontrolmenu[mc_confirm][0] && key != gamecontrolmenu[mc_confirm][0]
+	 && key != gamecontrolmenu[mc_openmenu][0] && key != gamecontrolmenu[mc_openmenu][0] // "Start button", expected when using controllers
+	 && key != gamecontrol[gc_pause][0] && key != gamecontrol[gc_pause][1] // "Start button" again
+	 && key != gamecontrol[gc_jump][0] && key != gamecontrol[gc_jump][1])
+		return false;
 
 	keypressed = true;
 	imcontinuing = true;
