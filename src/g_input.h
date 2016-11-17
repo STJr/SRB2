@@ -81,7 +81,7 @@ typedef enum
 
 typedef enum
 {
-	gc_null = 0, // a key/button mapped to gc_null has no effect
+	gc_null = 0, // A key/button mapped to gc_null has no effect
 	gc_forward,
 	gc_backward,
 	gc_strafeleft,
@@ -111,7 +111,7 @@ typedef enum
 	gc_lookup,
 	gc_lookdown,
 	gc_centerview,
-	gc_mouseaiming, // mouse aiming is momentary (toggleable in the menu)
+	gc_mouseaiming, // Mouse aiming is momentary (toggleable in the menu)
 	gc_talkkey,
 	gc_teamkey,
 	gc_scores,
@@ -123,6 +123,20 @@ typedef enum
 	gc_custom3, // Lua scriptable
 	num_gamecontrols
 } gamecontrols_e;
+
+typedef enum
+{
+	mc_null = 0, // A key/button mapped to mc_null has no effect
+	mc_up,
+	mc_down,
+	mc_previous,
+	mc_next,
+	mc_confirm,
+	mc_cancel,
+	mc_clear,
+	mc_openmenu,
+	num_menucontrols
+} menucontrols_e;
 
 // mouse values are used once
 extern consvar_t cv_mousesens, cv_mouseysens;
@@ -137,8 +151,9 @@ extern INT32 joyxmove[JOYAXISSET], joyymove[JOYAXISSET], joy2xmove[JOYAXISSET], 
 extern UINT8 gamekeydown[NUMINPUTS];
 
 // two key codes (or virtual key) per game control
-extern INT32 gamecontrol[num_gamecontrols][2];
-extern INT32 gamecontrolbis[num_gamecontrols][2]; // secondary splitscreen player
+extern INT32 gamecontrol[num_gamecontrols][2]; // Primary player
+extern INT32 gamecontrolbis[num_gamecontrols][2]; // Secondary player (Singleplayer bot/Splitscreen)
+extern INT32 gamecontrolmenu[num_menucontrols][2]; // Menu navigation
 #define PLAYER1INPUTDOWN(gc) (gamekeydown[gamecontrol[gc][0]] || gamekeydown[gamecontrol[gc][1]])
 #define PLAYER2INPUTDOWN(gc) (gamekeydown[gamecontrolbis[gc][0]] || gamekeydown[gamecontrolbis[gc][1]])
 
@@ -156,8 +171,10 @@ INT32 G_KeyStringtoNum(const char *keystr);
 void G_ClearControlKeys(INT32 (*setupcontrols)[2], INT32 control);
 void Command_Setcontrol_f(void);
 void Command_Setcontrol2_f(void);
+void Command_SetcontrolMenu_f(void);
 void G_Controldefault(void);
 void G_SaveKeySetting(FILE *f);
 void G_CheckDoubleUsage(INT32 keynum);
+void G_CheckDoubleUsageMenu(INT32 keynum, INT32 control);
 
 #endif
