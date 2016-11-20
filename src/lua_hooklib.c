@@ -414,7 +414,7 @@ boolean LUAh_TouchSpecial(mobj_t *special, mobj_t *toucher)
 }
 
 // Hook for P_DamageMobj by mobj type (Should mobj take damage?)
-UINT8 LUAh_ShouldDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage)
+UINT8 LUAh_ShouldDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype)
 {
 	hook_p hookp;
 	UINT8 shouldDamage = 0; // 0 = default, 1 = force yes, 2 = force no.
@@ -433,14 +433,16 @@ UINT8 LUAh_ShouldDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32
 				LUA_PushUserdata(gL, inflictor, META_MOBJ);
 				LUA_PushUserdata(gL, source, META_MOBJ);
 				lua_pushinteger(gL, damage);
+				lua_pushinteger(gL, damagetype);
 			}
 			lua_pushfstring(gL, FMT_HOOKID, hookp->id);
 			lua_gettable(gL, LUA_REGISTRYINDEX);
-			lua_pushvalue(gL, -5);
-			lua_pushvalue(gL, -5);
-			lua_pushvalue(gL, -5);
-			lua_pushvalue(gL, -5);
-			if (lua_pcall(gL, 4, 1, 0)) {
+			lua_pushvalue(gL, -6);
+			lua_pushvalue(gL, -6);
+			lua_pushvalue(gL, -6);
+			lua_pushvalue(gL, -6);
+			lua_pushvalue(gL, -6);
+			if (lua_pcall(gL, 5, 1, 0)) {
 				if (!hookp->error || cv_debug & DBG_LUA)
 					CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 				lua_pop(gL, 1);
@@ -462,7 +464,7 @@ UINT8 LUAh_ShouldDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32
 }
 
 // Hook for P_DamageMobj by mobj type (Mobj actually takes damage!)
-boolean LUAh_MobjDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage)
+boolean LUAh_MobjDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype)
 {
 	hook_p hookp;
 	boolean hooked = false;
@@ -481,14 +483,16 @@ boolean LUAh_MobjDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32
 				LUA_PushUserdata(gL, inflictor, META_MOBJ);
 				LUA_PushUserdata(gL, source, META_MOBJ);
 				lua_pushinteger(gL, damage);
+				lua_pushinteger(gL, damagetype);
 			}
 			lua_pushfstring(gL, FMT_HOOKID, hookp->id);
 			lua_gettable(gL, LUA_REGISTRYINDEX);
-			lua_pushvalue(gL, -5);
-			lua_pushvalue(gL, -5);
-			lua_pushvalue(gL, -5);
-			lua_pushvalue(gL, -5);
-			if (lua_pcall(gL, 4, 1, 0)) {
+			lua_pushvalue(gL, -6);
+			lua_pushvalue(gL, -6);
+			lua_pushvalue(gL, -6);
+			lua_pushvalue(gL, -6);
+			lua_pushvalue(gL, -6);
+			if (lua_pcall(gL, 5, 1, 0)) {
 				if (!hookp->error || cv_debug & DBG_LUA)
 					CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 				lua_pop(gL, 1);
@@ -505,7 +509,7 @@ boolean LUAh_MobjDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32
 }
 
 // Hook for P_KillMobj by mobj type
-boolean LUAh_MobjDeath(mobj_t *target, mobj_t *inflictor, mobj_t *source)
+boolean LUAh_MobjDeath(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damagetype)
 {
 	hook_p hookp;
 	boolean hooked = false;
@@ -523,13 +527,15 @@ boolean LUAh_MobjDeath(mobj_t *target, mobj_t *inflictor, mobj_t *source)
 				LUA_PushUserdata(gL, target, META_MOBJ);
 				LUA_PushUserdata(gL, inflictor, META_MOBJ);
 				LUA_PushUserdata(gL, source, META_MOBJ);
+				lua_pushinteger(gL, damagetype);
 			}
 			lua_pushfstring(gL, FMT_HOOKID, hookp->id);
 			lua_gettable(gL, LUA_REGISTRYINDEX);
-			lua_pushvalue(gL, -4);
-			lua_pushvalue(gL, -4);
-			lua_pushvalue(gL, -4);
-			if (lua_pcall(gL, 3, 1, 0)) {
+			lua_pushvalue(gL, -5);
+			lua_pushvalue(gL, -5);
+			lua_pushvalue(gL, -5);
+			lua_pushvalue(gL, -5);
+			if (lua_pcall(gL, 4, 1, 0)) {
 				if (!hookp->error || cv_debug & DBG_LUA)
 					CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 				lua_pop(gL, 1);
@@ -731,7 +737,7 @@ boolean LUAh_PlayerMsg(int source, int target, int flags, char *msg)
 }
 
 // Hook for hurt messages
-boolean LUAh_HurtMsg(player_t *player, mobj_t *inflictor, mobj_t *source)
+boolean LUAh_HurtMsg(player_t *player, mobj_t *inflictor, mobj_t *source, UINT8 damagetype)
 {
 	hook_p hookp;
 	boolean hooked = false;
@@ -749,13 +755,15 @@ boolean LUAh_HurtMsg(player_t *player, mobj_t *inflictor, mobj_t *source)
 				LUA_PushUserdata(gL, player, META_PLAYER);
 				LUA_PushUserdata(gL, inflictor, META_MOBJ);
 				LUA_PushUserdata(gL, source, META_MOBJ);
+				lua_pushinteger(gL, damagetype);
 			}
 			lua_pushfstring(gL, FMT_HOOKID, hookp->id);
 			lua_gettable(gL, LUA_REGISTRYINDEX);
-			lua_pushvalue(gL, -4);
-			lua_pushvalue(gL, -4);
-			lua_pushvalue(gL, -4);
-			if (lua_pcall(gL, 3, 1, 0)) {
+			lua_pushvalue(gL, -5);
+			lua_pushvalue(gL, -5);
+			lua_pushvalue(gL, -5);
+			lua_pushvalue(gL, -5);
+			if (lua_pcall(gL, 4, 1, 0)) {
 				if (!hookp->error || cv_debug & DBG_LUA)
 					CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 				lua_pop(gL, 1);

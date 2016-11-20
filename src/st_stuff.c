@@ -679,9 +679,9 @@ static void ST_drawTime(void)
 
 static inline void ST_drawRings(void)
 {
-	INT32 ringnum = max(stplyr->health-1, 0);
+	INT32 ringnum = max(stplyr->rings, 0);
 
-	ST_DrawPatchFromHudWS(HUD_RINGS, ((stplyr->health <= 1 && leveltime/5 & 1) ? rrings : sborings));
+	ST_DrawPatchFromHudWS(HUD_RINGS, ((stplyr->rings <= 0 && leveltime/5 & 1) ? rrings : sborings));
 
 	if (objectplacing)
 		ringnum = op_currentdoomednum;
@@ -690,8 +690,8 @@ static inline void ST_drawRings(void)
 		INT32 i;
 		ringnum = 0;
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] && players[i].mo && players[i].mo->health > 1)
-				ringnum += players[i].mo->health - 1;
+			if (playeringame[i] && players[i].mo && players[i].rings > 0)
+				ringnum += players[i].rings;
 	}
 
 	ST_DrawNumFromHudWS(HUD_RINGSNUM, ringnum);
@@ -1163,11 +1163,11 @@ static void ST_drawNiGHTSHUD(void)
 		INT32 i;
 		total_ringcount = 0;
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] /*&& players[i].pflags & PF_NIGHTSMODE*/ && players[i].health)
-				total_ringcount += players[i].health - 1;
+			if (playeringame[i] /*&& players[i].pflags & PF_NIGHTSMODE*/ && players[i].rings)
+				total_ringcount += players[i].rings;
 	}
 	else
-		total_ringcount = stplyr->health-1;
+		total_ringcount = stplyr->rings;
 
 	if (stplyr->capsule)
 	{
@@ -1379,7 +1379,7 @@ static void ST_drawWeaponRing(powertype_t weapon, INT32 rwflag, INT32 wepflag, I
 			txtflags |= V_YELLOWMAP;
 
 		if (weapon == pw_infinityring
-		|| (stplyr->ringweapons & rwflag && stplyr->health > 1))
+		|| (stplyr->ringweapons & rwflag))
 			txtflags |= V_20TRANS;
 		else
 		{
@@ -1417,7 +1417,7 @@ static void ST_drawMatchHUD(void)
 
 	if (stplyr->powers[pw_infinityring])
 		ST_drawWeaponRing(pw_infinityring, 0, 0, offset, infinityring);
-	else if (stplyr->health > 1)
+	else if (stplyr->rings > 0)
 		V_DrawScaledPatch(8 + offset, STRINGY(162), V_SNAPTOLEFT, normring);
 	else
 		V_DrawTranslucentPatch(8 + offset, STRINGY(162), V_SNAPTOLEFT|V_80TRANS, normring);
