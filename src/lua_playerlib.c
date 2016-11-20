@@ -122,8 +122,8 @@ static int player_get(lua_State *L)
 		lua_pushfixed(L, plr->bob);
 	else if (fastcmp(field,"aiming"))
 		lua_pushangle(L, plr->aiming);
-	else if (fastcmp(field,"health"))
-		lua_pushinteger(L, plr->health);
+	else if (fastcmp(field,"rings"))
+		lua_pushinteger(L, plr->rings);
 	else if (fastcmp(field,"pity"))
 		lua_pushinteger(L, plr->pity);
 	else if (fastcmp(field,"currentweapon"))
@@ -382,8 +382,8 @@ static int player_set(lua_State *L)
 		else if (plr == &players[secondarydisplayplayer])
 			localaiming2 = plr->aiming;
 	}
-	else if (fastcmp(field,"health"))
-		plr->health = (INT32)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"rings"))
+		plr->rings = (INT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"pity"))
 		plr->pity = (SINT8)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"currentweapon"))

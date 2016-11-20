@@ -115,6 +115,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 	fixed_t offx, offy;
 	fixed_t vertispeed = spring->info->mass;
 	fixed_t horizspeed = spring->info->damage;
+	UINT8 jumping, secondjump;
 
 	if (object->eflags & MFE_SPRUNG) // Object was already sprung this tic
 		return false;
@@ -203,24 +204,29 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 		}
 
 		pflags = object->player->pflags & (PF_JUMPED|PF_SPINNING|PF_THOKKED); // I still need these.
+		jumping = object->player->jumping;
+		secondjump = object->player->secondjump;
 		P_ResetPlayer(object->player);
 
-		if (P_MobjFlip(object)*vertispeed > 0)
+		if (spring->info->painchance)
+		{
+			object->player->pflags |= PF_JUMPED;
+			P_SetPlayerMobjState(object, S_PLAY_JUMP);
+		}
+		else if (P_MobjFlip(object)*vertispeed > 0)
 			P_SetPlayerMobjState(object, S_PLAY_SPRING);
 		else if (P_MobjFlip(object)*vertispeed < 0)
 			P_SetPlayerMobjState(object, S_PLAY_FALL);
 		else // horizontal spring
 		{
 			if (pflags & (PF_JUMPED|PF_SPINNING) && (object->player->panim == PA_ROLL || object->player->panim == PA_JUMP || object->player->panim == PA_FALL))
-				object->player->pflags = pflags;
+			{
+				object->player->pflags |= pflags;
+				object->player->jumping = jumping;
+				object->player->secondjump = secondjump;
+			}
 			else
 				P_SetPlayerMobjState(object, S_PLAY_WALK);
-		}
-
-		if (spring->info->painchance)
-		{
-			object->player->pflags |= PF_JUMPED;
-			P_SetPlayerMobjState(object, S_PLAY_JUMP);
 		}
 	}
 	return true;
@@ -500,6 +506,74 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 	if (abs(thing->x - tmx) >= blockdist || abs(thing->y - tmy) >= blockdist)
 		return true; // didn't hit it
+
+	if (thing->flags & MF_PAPERCOLLISION) // CAUTION! Very easy to get stuck inside MF_SOLID objects. Giving the player MF_PAPERCOLLISION is a bad idea unless you know what you're doing.
+	{
+		fixed_t cosradius, sinradius;
+		vertex_t v1, v2; // fake vertexes
+		line_t junk; // fake linedef
+
+		cosradius = FixedMul(thing->radius, FINECOSINE(thing->angle>>ANGLETOFINESHIFT));
+		sinradius = FixedMul(thing->radius, FINESINE(thing->angle>>ANGLETOFINESHIFT));
+
+		v1.x = thing->x - cosradius;
+		v1.y = thing->y - sinradius;
+		v2.x = thing->x + cosradius;
+		v2.y = thing->y + sinradius;
+
+		junk.v1 = &v1;
+		junk.v2 = &v2;
+		junk.dx = v2.x - v1.x;
+		junk.dy = v2.y - v1.y;
+
+		if (tmthing->flags & MF_PAPERCOLLISION) // more strenuous checking to prevent clipping issues
+		{
+			INT32 check1, check2, check3, check4;
+			cosradius = FixedMul(tmthing->radius, FINECOSINE(tmthing->angle>>ANGLETOFINESHIFT));
+			sinradius = FixedMul(tmthing->radius, FINESINE(tmthing->angle>>ANGLETOFINESHIFT));
+			check1 = P_PointOnLineSide(tmx - cosradius, tmy - sinradius, &junk);
+			check2 = P_PointOnLineSide(tmx + cosradius, tmy + sinradius, &junk);
+			check3 = P_PointOnLineSide(tmx + tmthing->momx - cosradius, tmy + tmthing->momy - sinradius, &junk);
+			check4 = P_PointOnLineSide(tmx + tmthing->momx + cosradius, tmy + tmthing->momy + sinradius, &junk);
+			if ((check1 == check2) && (check2 == check3) && (check3 == check4))
+				return true; // the line doesn't cross between collider's start or end
+		}
+		else
+		{
+			if ((P_PointOnLineSide(tmx - tmthing->radius, tmy - tmthing->radius, &junk)
+			== P_PointOnLineSide(tmx + tmthing->radius, tmy + tmthing->radius, &junk))
+			&& (P_PointOnLineSide(tmx + tmthing->radius, tmy - tmthing->radius, &junk)
+			== P_PointOnLineSide(tmx - tmthing->radius, tmy + tmthing->radius, &junk)))
+				return true; // the line doesn't cross between either pair of opposite corners
+		}
+	}
+	else if (tmthing->flags & MF_PAPERCOLLISION)
+	{
+		fixed_t cosradius, sinradius;
+		vertex_t v1, v2; // fake vertexes
+		line_t junk; // fake linedef
+
+		cosradius = FixedMul(tmthing->radius, FINECOSINE(tmthing->angle>>ANGLETOFINESHIFT));
+		sinradius = FixedMul(tmthing->radius, FINESINE(tmthing->angle>>ANGLETOFINESHIFT));
+
+		v1.x = tmx - cosradius;
+		v1.y = tmy - sinradius;
+		v2.x = tmx + cosradius;
+		v2.y = tmy + sinradius;
+
+		junk.v1 = &v1;
+		junk.v2 = &v2;
+		junk.dx = v2.x - v1.x;
+		junk.dy = v2.y - v1.y;
+
+		// no need to check whether thing has MF_PAPERCOLLISION, since checked above
+
+		if ((P_PointOnLineSide(thing->x - thing->radius, thing->y - thing->radius, &junk)
+		== P_PointOnLineSide(thing->x + thing->radius, thing->y + thing->radius, &junk))
+		&& (P_PointOnLineSide(thing->x + thing->radius, thing->y - thing->radius, &junk)
+		== P_PointOnLineSide(thing->x - thing->radius, thing->y + thing->radius, &junk)))
+			return true; // the line doesn't cross between either pair of opposite corners
+	}
 
 #ifdef HAVE_BLUA
 	{
@@ -1015,7 +1089,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		|| (tmthing->player->charability2 == CA2_MELEE && tmthing->player->panim == PA_ABILITY2)
 		|| ((tmthing->player->charflags & SF_STOMPDAMAGE)
 			&& (P_MobjFlip(tmthing)*(tmthing->z - (thing->z + thing->height/2)) > 0) && (P_MobjFlip(tmthing)*tmthing->momz < 0)))
-	&& !((thing->type == MT_REDRINGBOX && tmthing->player->ctfteam != 1) || (thing->type == MT_BLUERINGBOX && tmthing->player->ctfteam != 2)))
+	&& !((thing->type == MT_RING_REDBOX && tmthing->player->ctfteam != 1) || (thing->type == MT_RING_BLUEBOX && tmthing->player->ctfteam != 2)))
 		;
 	// z checking at last
 	// Treat noclip things as non-solid!
@@ -1041,18 +1115,24 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				return true;
 			}
 
-			topz = thing->z - FixedMul(FRACUNIT, thing->scale);
+			topz = thing->z - thing->scale; // FixedMul(FRACUNIT, thing->scale), but thing->scale == FRACUNIT in base scale anyways
 
 			// block only when jumping not high enough,
 			// (dont climb max. 24units while already in air)
-			// if not in air, let P_TryMove() decide if it's not too high
+			// since return false doesn't handle momentum properly,
+			// we lie to P_TryMove() so it's always too high
 			if (tmthing->player && tmthing->z + tmthing->height > topz
 				&& tmthing->z + tmthing->height < tmthing->ceilingz)
-				return false; // block while in air
-
-			if (thing->flags & MF_SPRING)
+			{
+				tmfloorz = tmceilingz = INT32_MIN; // block while in air
+#ifdef ESLOPE
+				tmceilingslope = NULL;
+#endif
+				tmfloorthing = thing; // needed for side collision
+			}
+			else if (thing->flags & MF_SPRING)
 				;
-			else if (topz < tmceilingz && tmthing->z+tmthing->height <= thing->z+thing->height)
+			else if (topz < tmceilingz && tmthing->z <= thing->z+thing->height)
 			{
 				tmceilingz = topz;
 #ifdef ESLOPE
@@ -1078,17 +1158,24 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				return true;
 			}
 
-			topz = thing->z + thing->height + FixedMul(FRACUNIT, thing->scale);
+			topz = thing->z + thing->height + thing->scale; // FixedMul(FRACUNIT, thing->scale), but thing->scale == FRACUNIT in base scale anyways
 
 			// block only when jumping not high enough,
 			// (dont climb max. 24units while already in air)
-			// if not in air, let P_TryMove() decide if it's not too high
-			if (tmthing->player && tmthing->z < topz && tmthing->z > tmthing->floorz)
-				return false; // block while in air
-
-			if (thing->flags & MF_SPRING)
+			// since return false doesn't handle momentum properly,
+			// we lie to P_TryMove() so it's always too high
+			if (tmthing->player && tmthing->z < topz
+				&& tmthing->z > tmthing->floorz)
+			{
+				tmfloorz = tmceilingz = INT32_MAX; // block while in air
+#ifdef ESLOPE
+				tmfloorslope = NULL;
+#endif
+				tmfloorthing = thing; // needed for side collision
+			}
+			else if (thing->flags & MF_SPRING)
 				;
-			else if (topz > tmfloorz && tmthing->z >= thing->z)
+			else if (topz > tmfloorz && tmthing->z+tmthing->height >= thing->z)
 			{
 				tmfloorz = topz;
 #ifdef ESLOPE
@@ -1178,6 +1265,32 @@ static boolean PIT_CheckLine(line_t *ld)
 
 	if (P_BoxOnLineSide(tmbbox, ld) != -1)
 		return true;
+
+	if (tmthing->flags & MF_PAPERCOLLISION) // Caution! Turning whilst up against a wall will get you stuck. You probably shouldn't give the player this flag.
+	{
+		fixed_t cosradius, sinradius;
+		cosradius = FixedMul(tmthing->radius, FINECOSINE(tmthing->angle>>ANGLETOFINESHIFT));
+		sinradius = FixedMul(tmthing->radius, FINESINE(tmthing->angle>>ANGLETOFINESHIFT));
+		if (P_PointOnLineSide(tmx - cosradius, tmy - sinradius, ld)
+		== P_PointOnLineSide(tmx + cosradius, tmy + sinradius, ld))
+			return true; // the line doesn't cross between collider's start or end
+#ifdef PAPER_COLLISIONCORRECTION
+		{
+			fixed_t dist;
+			vertex_t result;
+			angle_t langle;
+			P_ClosestPointOnLine(tmx, tmy, ld, &result);
+			langle = R_PointToAngle2(ld->v1->x, ld->v1->y, ld->v2->x, ld->v2->y);
+			langle += ANGLE_90*(P_PointOnLineSide(tmx, tmy, ld) ? -1 : 1);
+			dist = abs(FixedMul(tmthing->radius, FINECOSINE((tmthing->angle - langle)>>ANGLETOFINESHIFT)));
+			cosradius = FixedMul(dist, FINECOSINE(langle>>ANGLETOFINESHIFT));
+			sinradius = FixedMul(dist, FINESINE(langle>>ANGLETOFINESHIFT));
+			tmthing->flags |= MF_NOCLIP;
+			P_TeleportMove(tmthing, result.x + cosradius - tmthing->momx, result.y + sinradius - tmthing->momy, tmthing->z);
+			tmthing->flags &= ~MF_NOCLIP;
+		}
+#endif
+	}
 
 	// A line has been hit
 

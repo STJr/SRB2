@@ -2574,7 +2574,7 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 	if (players[playernum].spectator)
 	{
 		players[playernum].score = 0;
-		players[playernum].health = 1;
+		players[playernum].rings = 0;
 		if (players[playernum].mo)
 			players[playernum].mo->health = 1;
 	}

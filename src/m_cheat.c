@@ -452,7 +452,7 @@ void Command_RTeleport_f(void)
 	else
 		inty = 0;
 
-	ss = R_PointInSubsector(p->mo->x + intx*FRACUNIT, p->mo->y + inty*FRACUNIT);
+	ss = R_IsPointInSubsector(p->mo->x + intx*FRACUNIT, p->mo->y + inty*FRACUNIT);
 	if (!ss || ss->sector->ceilingheight - ss->sector->floorheight < p->mo->height)
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("Not a valid location.\n"));
@@ -606,7 +606,7 @@ void Command_CauseCfail_f(void)
 	players[consoleplayer].mo->y = 123311; //cfail cansuled kthxbye
 	players[consoleplayer].mo->z = 123311;
 	players[consoleplayer].score = 1337;
-	players[consoleplayer].health = 1337;
+	players[consoleplayer].rings = 1337;
 	players[consoleplayer].mo->destscale = 25;
 	P_SetThingPosition(players[consoleplayer].mo);
 
@@ -720,7 +720,7 @@ void Command_Setrings_f(void)
 	if (COM_Argc() > 1)
 	{
 		// P_GivePlayerRings does value clamping
-		players[consoleplayer].health = players[consoleplayer].mo->health = 1;
+		players[consoleplayer].rings = 0;
 		P_GivePlayerRings(&players[consoleplayer], atoi(COM_Argv(1)));
 		if (!G_IsSpecialStage(gamemap) || !useNightsSS)
 			players[consoleplayer].totalring -= atoi(COM_Argv(1)); //undo totalring addition done in P_GivePlayerRings
@@ -1054,7 +1054,7 @@ void OP_NightsObjectplace(player_t *player)
 		if (!OP_HeightOkay(player, false))
 			return;
 
-		if (player->mo->target->flags & MF_AMBUSH)
+		if (player->mo->target->flags2 & MF2_AMBUSH)
 			angle = (UINT16)player->anotherflyangle;
 		else
 		{
@@ -1165,19 +1165,20 @@ void OP_ObjectplaceMovement(player_t *player)
 	if (player->pflags & PF_ATTACKDOWN)
 	{
 		// Are ANY objectplace buttons pressed?  If no, remove flag.
-		if (!(cmd->buttons & (BT_ATTACK|BT_TOSSFLAG|BT_CAMRIGHT|BT_CAMLEFT)))
+		if (!(cmd->buttons & (BT_ATTACK|BT_TOSSFLAG|BT_WEAPONNEXT|BT_WEAPONPREV)))
 			player->pflags &= ~PF_ATTACKDOWN;
 
 		// Do nothing.
 		return;
 	}
 
-	if (cmd->buttons & BT_CAMLEFT)
+	if (cmd->buttons & BT_WEAPONPREV)
 	{
 		OP_CycleThings(-1);
 		player->pflags |= PF_ATTACKDOWN;
 	}
-	else if (cmd->buttons & BT_CAMRIGHT)
+
+	if (cmd->buttons & BT_WEAPONNEXT)
 	{
 		OP_CycleThings(1);
 		player->pflags |= PF_ATTACKDOWN;
@@ -1264,10 +1265,10 @@ void Command_ObjectPlace_f(void)
 			HU_DoCEcho(va(M_GetText(
 				"\\\\\\\\\\\\\\\\\\\\\\\\\x82"
 				"   Objectplace Controls:   \x80\\\\"
-				"Camera L/R: Cycle mapthings\\"
-				"      Jump: Float up       \\"
-				"      Spin: Float down     \\"
-				" Fire Ring: Place object   \\")));
+				"Weapon Next/Prev: Cycle mapthings\\"
+				"            Jump: Float up       \\"
+				"            Spin: Float down     \\"
+				"       Fire Ring: Place object   \\")));
 		}
 
 		// Save all the player's data.
@@ -1297,7 +1298,7 @@ void Command_ObjectPlace_f(void)
 		// Like the classics, recover from death by entering objectplace
 		if (players[0].mo->health <= 0)
 		{
-			players[0].mo->health = players[0].health = 1;
+			players[0].mo->health = 1;
 			players[0].deadtimer = 0;
 			op_oldflags1 = mobjinfo[MT_PLAYER].flags;
 			++players[0].lives;

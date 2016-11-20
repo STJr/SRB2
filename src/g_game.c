@@ -88,6 +88,7 @@ UINT8 modeattacking = ATTACKING_NONE;
 boolean disableSpeedAdjust = false;
 boolean imcontinuing = false;
 boolean runemeraldmanager = false;
+UINT16 emeraldspawndelay = 60*TICRATE;
 
 // menu demo things
 UINT8  numDemos      = 3;
@@ -2193,7 +2194,7 @@ void G_PlayerReborn(INT32 player)
 	p->pflags |= PF_JUMPDOWN;
 
 	p->playerstate = PST_LIVE;
-	p->health = 1; // 0 rings
+	p->rings = 0; // 0 rings
 	p->panim = PA_IDLE; // standing animation
 
 	if ((netgame || multiplayer) && !p->spectator)
@@ -5621,7 +5622,7 @@ boolean G_CheckDemoStatus(void)
 		WRITEUINT8(demo_p, DEMOMARKER); // add the demo end marker
 		md5_buffer((char *)p+16, demo_p - (p+16), p); // make a checksum of everything after the checksum in the file.
 #endif
-		saved = FIL_WriteFile(demoname, demobuffer, demo_p - demobuffer); // finally output the file.
+		saved = FIL_WriteFile(va(pandf, srb2home, demoname), demobuffer, demo_p - demobuffer); // finally output the file.
 		free(demobuffer);
 		demorecording = false;
 

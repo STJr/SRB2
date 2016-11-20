@@ -82,6 +82,41 @@ void P_AddCachedAction(mobj_t *mobj, INT32 statenum)
 }
 
 //
+// P_SetupStateAnimation
+//
+FUNCINLINE static ATTRINLINE void P_SetupStateAnimation(mobj_t *mobj, state_t *st)
+{
+	INT32 animlength = (mobj->skin && mobj->sprite == SPR_PLAY)
+		? (INT32)(((skin_t *)mobj->skin)->sprites[mobj->sprite2].numframes) - 1
+		: st->var1;
+
+	if (!(st->frame & FF_ANIMATE))
+		return;
+
+	if (animlength <= 0 || st->var2 == 0)
+	{
+		mobj->frame &= ~FF_ANIMATE;
+		return; // Crash/stupidity prevention
+	}
+
+	mobj->anim_duration = (UINT16)st->var2;
+
+	if (st->frame & FF_GLOBALANIM)
+	{
+		// Attempt to account for the pre-ticker for objects spawned on load
+		if (!leveltime) return;
+
+		mobj->anim_duration -= (leveltime + 2) % st->var2;            // Duration synced to timer
+		mobj->frame += ((leveltime + 2) / st->var2) % (animlength + 1); // Frame synced to timer (duration taken into account)
+	}
+	else if (st->frame & FF_RANDOMANIM)
+	{
+		mobj->frame += P_RandomKey(animlength + 1);     // Random starting frame
+		mobj->anim_duration -= P_RandomKey(st->var2); // Random duration for first frame
+	}
+}
+
+//
 // P_CycleStateAnimation
 //
 FUNCINLINE static ATTRINLINE void P_CycleStateAnimation(mobj_t *mobj)
@@ -89,13 +124,23 @@ FUNCINLINE static ATTRINLINE void P_CycleStateAnimation(mobj_t *mobj)
 	// var2 determines delay between animation frames
 	if (!(mobj->frame & FF_ANIMATE) || --mobj->anim_duration != 0)
 		return;
+
 	mobj->anim_duration = (UINT16)mobj->state->var2;
 
-	// compare the current sprite frame to the one we started from
-	// if more than var1 away from it, swap back to the original
-	// else just advance by one
-	if (((++mobj->frame) & FF_FRAMEMASK) - (mobj->state->frame & FF_FRAMEMASK) > (UINT32)mobj->state->var1)
-		mobj->frame = (mobj->state->frame & FF_FRAMEMASK) | (mobj->frame & ~FF_FRAMEMASK);
+	if (mobj->sprite != SPR_PLAY)
+	{
+		// compare the current sprite frame to the one we started from
+		// if more than var1 away from it, swap back to the original
+		// else just advance by one
+		if (((++mobj->frame) & FF_FRAMEMASK) - (mobj->state->frame & FF_FRAMEMASK) > (UINT32)mobj->state->var1)
+			mobj->frame = (mobj->state->frame & FF_FRAMEMASK) | (mobj->frame & ~FF_FRAMEMASK);
+
+		return;
+	}
+
+	// sprite2 version of above
+	if (mobj->skin && (((++mobj->frame) & FF_FRAMEMASK) >= (UINT32)(((skin_t *)mobj->skin)->sprites[mobj->sprite2].numframes)))
+		mobj->frame &= ~FF_FRAMEMASK;
 }
 
 //
@@ -138,6 +183,215 @@ static void P_CyclePlayerMobjState(mobj_t *mobj)
 			if (!P_SetPlayerMobjState(mobj, mobj->state->nextstate))
 				return; // freed itself
 	}
+}
+
+//
+// P_GetMobjSprite2
+//
+
+UINT8 P_GetMobjSprite2(mobj_t *mobj, UINT8 spr2)
+{
+	player_t *player = mobj->player;
+	skin_t *skin = ((skin_t *)mobj->skin);
+
+	if (!skin)
+		return 0;
+
+	while ((skin->sprites[spr2].numframes <= 0)
+		&& spr2 != SPR2_STND)
+	{
+		switch(spr2)
+		{
+		case SPR2_PEEL:
+			spr2 = SPR2_RUN;
+			break;
+		case SPR2_RUN:
+			spr2 = SPR2_WALK;
+			break;
+		case SPR2_DRWN:
+			spr2 = SPR2_DEAD;
+			break;
+		case SPR2_DASH:
+			spr2 = SPR2_SPIN;
+			break;
+		case SPR2_GASP:
+			spr2 = SPR2_SPNG;
+			break;
+		case SPR2_JUMP:
+			spr2 = ((player
+					? player->charflags
+					: skin->flags)
+					& SF_NOJUMPSPIN) ? SPR2_SPNG : SPR2_SPIN;
+			break;
+		case SPR2_SPNG: // spring
+			spr2 = SPR2_FALL;
+			break;
+		case SPR2_FALL:
+			spr2 = SPR2_WALK;
+			break;
+		case SPR2_RIDE:
+			spr2 = SPR2_FALL;
+			break;
+
+		case SPR2_FLY:
+			spr2 = SPR2_SPNG;
+			break;
+		case SPR2_SWIM:
+			spr2 = SPR2_FLY;
+			break;
+		case SPR2_TIRE:
+			spr2 = (player && player->charability == CA_SWIM) ? SPR2_SWIM : SPR2_FLY;
+			break;
+
+		case SPR2_GLID:
+			spr2 = SPR2_FLY;
+			break;
+		case SPR2_CLMB:
+			spr2 = SPR2_SPIN;
+			break;
+		case SPR2_CLNG:
+			spr2 = SPR2_CLMB;
+			break;
+
+		case SPR2_TWIN:
+			spr2 = SPR2_SPIN;
+			break;
+
+		case SPR2_MLEE:
+			spr2 = SPR2_TWIN;
+			break;
+
+		// Super sprites fallback to regular sprites
+		case SPR2_SWLK:
+			spr2 = SPR2_WALK;
+			break;
+		case SPR2_SRUN:
+			spr2 = SPR2_RUN;
+			break;
+		case SPR2_SPEE:
+			spr2 = SPR2_PEEL;
+			break;
+		case SPR2_SPAN:
+			spr2 = SPR2_PAIN;
+			break;
+		case SPR2_SSTN:
+			spr2 = SPR2_SPAN;
+			break;
+		case SPR2_SDTH:
+			spr2 = SPR2_DEAD;
+			break;
+		case SPR2_SDRN:
+			spr2 = SPR2_DRWN;
+			break;
+		case SPR2_SSPN:
+			spr2 = SPR2_SPIN;
+			break;
+		case SPR2_SGSP:
+			spr2 = SPR2_GASP;
+			break;
+		case SPR2_SJMP:
+			spr2 = ((player
+					? player->charflags
+					: skin->flags)
+					& SF_NOJUMPSPIN) ? SPR2_SSPG : SPR2_SSPN;
+			break;
+		case SPR2_SSPG:
+			spr2 = SPR2_SPNG;
+			break;
+		case SPR2_SFAL:
+			spr2 = SPR2_FALL;
+			break;
+		case SPR2_SEDG:
+			spr2 = SPR2_EDGE;
+			break;
+		case SPR2_SRID:
+			spr2 = SPR2_RIDE;
+			break;
+		case SPR2_SFLT:
+			spr2 = SPR2_SWLK;
+			break;
+
+		// NiGHTS sprites.
+		case SPR2_NTRN:
+			spr2 = SPR2_TRNS;
+			break;
+		case SPR2_NSTD:
+			spr2 = SPR2_SSTD;
+			break;
+		case SPR2_NFLT:
+			spr2 = (skin->flags & SF_SUPERANIMS) ? SPR2_SFLT : SPR2_FALL; // This is skin-exclusive so the default NiGHTS skin changing system plays nice.
+			break;
+		case SPR2_NPUL:
+			spr2 = SPR2_NFLT;
+			break;
+		case SPR2_NPAN:
+			spr2 = SPR2_NPUL;
+			break;
+		case SPR2_NATK:
+			spr2 = SPR2_SSPN;
+			break;
+		/*case SPR2_NGT0:
+			spr2 = SPR2_STND;
+			break;*/
+		case SPR2_NGT1:
+		case SPR2_NGT7:
+		case SPR2_DRL0:
+			spr2 = SPR2_NGT0;
+			break;
+		case SPR2_NGT2:
+		case SPR2_DRL1:
+			spr2 = SPR2_NGT1;
+			break;
+		case SPR2_NGT3:
+		case SPR2_DRL2:
+			spr2 = SPR2_NGT2;
+			break;
+		case SPR2_NGT4:
+		case SPR2_DRL3:
+			spr2 = SPR2_NGT3;
+			break;
+		case SPR2_NGT5:
+		case SPR2_DRL4:
+			spr2 = SPR2_NGT4;
+			break;
+		case SPR2_NGT6:
+		case SPR2_DRL5:
+			spr2 = SPR2_NGT5;
+			break;
+		case SPR2_DRL6:
+			spr2 = SPR2_NGT6;
+			break;
+		case SPR2_NGT8:
+		case SPR2_DRL7:
+			spr2 = SPR2_NGT7;
+			break;
+		case SPR2_NGT9:
+		case SPR2_DRL8:
+			spr2 = SPR2_NGT8;
+			break;
+		case SPR2_NGTA:
+		case SPR2_DRL9:
+			spr2 = SPR2_NGT9;
+			break;
+		case SPR2_NGTB:
+		case SPR2_DRLA:
+			spr2 = SPR2_NGTA;
+			break;
+		case SPR2_NGTC:
+		case SPR2_DRLB:
+			spr2 = SPR2_NGTB;
+			break;
+		case SPR2_DRLC:
+			spr2 = SPR2_NGTC;
+			break;
+
+		// Dunno? Just go to standing then.
+		default:
+			spr2 = SPR2_STND;
+			break;
+		}
+	}
+	return spr2;
 }
 
 //
@@ -366,216 +620,18 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 			}
 		}
 
-		mobj->anim_duration = (UINT16)st->var2; // only used if FF_ANIMATE is set
-
 		// Player animations
 		if (st->sprite == SPR_PLAY)
 		{
 			skin_t *skin = ((skin_t *)mobj->skin);
-			boolean noalt = false;
-			UINT8 spr2 = st->frame & FF_FRAMEMASK;
 			UINT16 frame = (mobj->frame & FF_FRAMEMASK)+1;
 			UINT8 numframes;
 
-			while (skin && ((numframes = skin->sprites[spr2].numframes) <= 0)
-				&& spr2 != SPR2_STND)
-			{
-				switch(spr2)
-				{
-				case SPR2_PEEL:
-					spr2 = SPR2_RUN;
-					break;
-				case SPR2_RUN:
-					spr2 = SPR2_WALK;
-					break;
-				case SPR2_DRWN:
-					spr2 = SPR2_DEAD;
-					break;
-				case SPR2_DASH:
-					spr2 = SPR2_SPIN;
-					break;
-				case SPR2_GASP:
-					spr2 = SPR2_SPNG;
-					break;
-				case SPR2_JUMP:
-					spr2 = (player->charflags & SF_NOJUMPSPIN) ? SPR2_SPNG : SPR2_SPIN;
-					break;
-				case SPR2_SPNG: // spring
-					spr2 = SPR2_FALL;
-					break;
-				case SPR2_FALL:
-					spr2 = SPR2_WALK;
-					break;
-				case SPR2_RIDE:
-					spr2 = SPR2_FALL;
-					break;
+			UINT8 spr2 = P_GetMobjSprite2(mobj, st->frame & FF_FRAMEMASK);
 
-				case SPR2_FLY:
-					spr2 = SPR2_SPNG;
-					break;
-				case SPR2_SWIM:
-					spr2 = SPR2_FLY;
-					break;
-				case SPR2_TIRE:
-					spr2 = (player->charability == CA_FLY) ? SPR2_FLY : SPR2_SWIM;
-					break;
-
-				case SPR2_GLID:
-					spr2 = SPR2_FLY;
-					break;
-				case SPR2_CLMB:
-					spr2 = SPR2_SPIN;
-					break;
-				case SPR2_CLNG:
-					spr2 = SPR2_CLMB;
-					break;
-
-				case SPR2_TWIN:
-					spr2 = SPR2_SPIN;
-					break;
-
-				case SPR2_MLEE:
-					spr2 = SPR2_TWIN;
-					break;
-
-				// Super sprites fallback to regular sprites
-				case SPR2_SWLK:
-					spr2 = SPR2_WALK;
-					break;
-				case SPR2_SRUN:
-					spr2 = SPR2_RUN;
-					break;
-				case SPR2_SPEE:
-					spr2 = SPR2_PEEL;
-					break;
-				case SPR2_SPAN:
-					spr2 = SPR2_PAIN;
-					break;
-				case SPR2_SSTN:
-					spr2 = SPR2_SPAN;
-					break;
-				case SPR2_SDTH:
-					spr2 = SPR2_DEAD;
-					break;
-				case SPR2_SDRN:
-					spr2 = SPR2_DRWN;
-					break;
-				case SPR2_SSPN:
-					spr2 = SPR2_SPIN;
-					break;
-				case SPR2_SGSP:
-					spr2 = SPR2_GASP;
-					break;
-				case SPR2_SJMP:
-					spr2 = (player->charflags & SF_NOJUMPSPIN) ? SPR2_SSPG : SPR2_SSPN;
-					break;
-				case SPR2_SSPG:
-					spr2 = SPR2_SPNG;
-					break;
-				case SPR2_SFAL:
-					spr2 = SPR2_FALL;
-					break;
-				case SPR2_SEDG:
-					spr2 = SPR2_EDGE;
-					break;
-				case SPR2_SRID:
-					spr2 = SPR2_RIDE;
-					break;
-				case SPR2_SFLT:
-					spr2 = SPR2_SWLK;
-					break;
-
-				// NiGHTS sprites.
-				case SPR2_NTRN:
-					spr2 = SPR2_TRNS;
-					break;
-				case SPR2_NSTD:
-					spr2 = SPR2_SSTD;
-					break;
-				case SPR2_NFLT:
-					spr2 = (skin->flags & SF_SUPERANIMS) ? SPR2_SFLT : SPR2_FALL; // This is skin-exclusive so the default NiGHTS skin changing system plays nice.
-					break;
-				case SPR2_NPUL:
-					spr2 = SPR2_NFLT;
-					break;
-				case SPR2_NPAN:
-					spr2 = SPR2_NPUL;
-					break;
-				case SPR2_NATK:
-					spr2 = SPR2_SSPN;
-					break;
-				/*case SPR2_NGT0:
-					spr2 = SPR2_STND;
-					break;*/
-				case SPR2_NGT1:
-				case SPR2_NGT7:
-				case SPR2_DRL0:
-					spr2 = SPR2_NGT0;
-					break;
-				case SPR2_NGT2:
-				case SPR2_DRL1:
-					spr2 = SPR2_NGT1;
-					break;
-				case SPR2_NGT3:
-				case SPR2_DRL2:
-					spr2 = SPR2_NGT2;
-					break;
-				case SPR2_NGT4:
-				case SPR2_DRL3:
-					spr2 = SPR2_NGT3;
-					break;
-				case SPR2_NGT5:
-				case SPR2_DRL4:
-					spr2 = SPR2_NGT4;
-					break;
-				case SPR2_NGT6:
-				case SPR2_DRL5:
-					spr2 = SPR2_NGT5;
-					break;
-				case SPR2_DRL6:
-					spr2 = SPR2_NGT6;
-					break;
-				case SPR2_NGT8:
-				case SPR2_DRL7:
-					spr2 = SPR2_NGT7;
-					break;
-				case SPR2_NGT9:
-				case SPR2_DRL8:
-					spr2 = SPR2_NGT8;
-					break;
-				case SPR2_NGTA:
-				case SPR2_DRL9:
-					spr2 = SPR2_NGT9;
-					break;
-				case SPR2_NGTB:
-				case SPR2_DRLA:
-					spr2 = SPR2_NGTA;
-					break;
-				case SPR2_NGTC:
-				case SPR2_DRLB:
-					spr2 = SPR2_NGTB;
-					break;
-				case SPR2_DRLC:
-					spr2 = SPR2_NGTC;
-					break;
-
-
-				// Sprites for non-player objects? There's nothing we can do.
-				case SPR2_SIGN:
-				case SPR2_LIFE:
-					noalt = true;
-					break;
-
-				// Dunno? Just go to standing then.
-				default:
-					spr2 = SPR2_STND;
-					break;
-				}
-				if (noalt)
-					break;
-			}
-
-			if (!skin)
+			if (skin)
+				numframes = skin->sprites[spr2].numframes;
+			else
 			{
 				frame = 0;
 				numframes = 0;
@@ -588,7 +644,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 			}
 			else if (mobj->sprite2 != spr2)
 			{
-				if ((st->frame & FF_MIDDLESTARTCHANCE) && numframes && P_RandomChance(FRACUNIT/2))
+				if ((st->frame & FF_SPR2MIDSTART) && numframes && P_RandomChance(FRACUNIT/2))
 					frame = numframes/2;
 				else
 					frame = 0;
@@ -598,7 +654,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 			{
 				if (st->frame & FF_SPR2ENDSTATE) // no frame advancement
 				{
-					if (st->var1 == S_NULL)
+					if (st->var1 == mobj->state-states)
 						frame--;
 					else
 					{
@@ -621,9 +677,9 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		{
 			mobj->sprite = st->sprite;
 			mobj->frame = st->frame;
-			if ((st->frame & (FF_ANIMATE|FF_MIDDLESTARTCHANCE)) == (FF_ANIMATE|FF_MIDDLESTARTCHANCE))
-				mobj->frame += P_RandomKey(st->var1+1);
 		}
+
+		P_SetupStateAnimation(mobj, st);
 
 		// Modified handling.
 		// Call action functions when the state is set
@@ -689,15 +745,15 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 		st = &states[state];
 		mobj->state = st;
 		mobj->tics = st->tics;
-		mobj->anim_duration = (UINT16)st->var2; // only used if FF_ANIMATE is set
 
 		// Player animations
 		if (st->sprite == SPR_PLAY)
 		{
 			skin_t *skin = ((skin_t *)mobj->skin);
-			UINT8 spr2 = st->frame & FF_FRAMEMASK;
 			UINT16 frame = (mobj->frame & FF_FRAMEMASK)+1;
 			UINT8 numframes;
+
+			UINT8 spr2 = P_GetMobjSprite2(mobj, st->frame & FF_FRAMEMASK);
 
 			if (skin)
 				numframes = skin->sprites[spr2].numframes;
@@ -714,7 +770,7 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 			}
 			else if (mobj->sprite2 != spr2)
 			{
-				if ((st->frame & FF_MIDDLESTARTCHANCE) && numframes && P_RandomChance(FRACUNIT/2))
+				if ((st->frame & FF_SPR2MIDSTART) && numframes && P_RandomChance(FRACUNIT/2))
 					frame = numframes/2;
 				else
 					frame = 0;
@@ -722,8 +778,17 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 
 			if (frame >= numframes)
 			{
-				if (st->frame & FF_SPR2ENDSTATE)
-					return P_SetPlayerMobjState(mobj, st->var1); // Differs from P_SetPlayerMobjState - allows object to be removed via S_NULL
+				if (st->frame & FF_SPR2ENDSTATE) // no frame advancement
+				{
+					if (st->var1 == mobj->state-states)
+						frame--;
+					else
+					{
+						if (mobj->frame & FF_FRAMEMASK)
+							mobj->frame--;
+						return P_SetMobjState(mobj, st->var1);
+					}
+				}
 				else
 					frame = 0;
 			}
@@ -736,9 +801,9 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 		{
 			mobj->sprite = st->sprite;
 			mobj->frame = st->frame;
-			if ((st->frame & (FF_ANIMATE|FF_MIDDLESTARTCHANCE)) == (FF_ANIMATE|FF_MIDDLESTARTCHANCE))
-				mobj->frame += P_RandomKey(st->var1+1);
 		}
+
+		P_SetupStateAnimation(mobj, st);
 
 		// Modified handling.
 		// Call action functions when the state is set
@@ -792,7 +857,7 @@ boolean P_SetMobjStateNF(mobj_t *mobj, statenum_t state)
 	mobj->tics = st->tics;
 	mobj->sprite = st->sprite;
 	mobj->frame = st->frame;
-	mobj->anim_duration = (UINT16)st->var2; // only used if FF_ANIMATE is set
+	P_SetupStateAnimation(mobj, st);
 
 	return true;
 }
@@ -811,7 +876,7 @@ static boolean P_SetPrecipMobjState(precipmobj_t *mobj, statenum_t state)
 	mobj->tics = st->tics;
 	mobj->sprite = st->sprite;
 	mobj->frame = st->frame;
-	mobj->anim_duration = (UINT16)st->var2; // only used if FF_ANIMATE is set
+	P_SetupStateAnimation((mobj_t*)mobj, st);
 
 	return true;
 }
@@ -1019,14 +1084,12 @@ void P_EmeraldManager(void)
 			else
 				break;
 
-			if (leveltime < TICRATE) // Start of map
-				spawnpoints[j]->threshold = 60*TICRATE + P_RandomByte() * (TICRATE/5);
-			else
-				spawnpoints[j]->threshold = P_RandomByte() * (TICRATE/5);
-
+			spawnpoints[j]->threshold = emeraldspawndelay + P_RandomByte() * (TICRATE/5);
 			break;
 		}
 	}
+
+	emeraldspawndelay = 0;
 }
 
 //
@@ -1856,7 +1919,7 @@ static void P_XYFriction(mobj_t *mo, fixed_t oldx, fixed_t oldy)
 			mo->momx = player->cmomx;
 			mo->momy = player->cmomy;
 		}
-		else
+		else if (!(mo->eflags & MFE_SPRUNG))
 		{
 			if (oldx == mo->x && oldy == mo->y) // didn't go anywhere
 			{
@@ -2385,13 +2448,13 @@ static void P_AdjustMobjFloorZ_FFloors(mobj_t *mo, sector_t *sector, UINT8 motyp
 		if (topheight > mo->floorz && abs(delta1) < abs(delta2)
 			&& (rover->flags & FF_SOLID) // Non-FF_SOLID Mario blocks are only solid from bottom
 			&& !(rover->flags & FF_REVERSEPLATFORM)
-			&& ((P_MobjFlip(mo)*mo->momz > 0) || (!(rover->flags & FF_PLATFORM)))) // In reverse gravity, only clip for FOFs that are intangible from their bottom (the "top" you're falling through) if you're coming from above ("below" in your frame of reference)
+			&& ((P_MobjFlip(mo)*mo->momz >= 0) || (!(rover->flags & FF_PLATFORM)))) // In reverse gravity, only clip for FOFs that are intangible from their bottom (the "top" you're falling through) if you're coming from above ("below" in your frame of reference)
 		{
 			mo->floorz = topheight;
 		}
 		if (bottomheight < mo->ceilingz && abs(delta1) >= abs(delta2)
 			&& !(rover->flags & FF_PLATFORM)
-			&& ((P_MobjFlip(mo)*mo->momz > 0) || ((rover->flags & FF_SOLID) && !(rover->flags & FF_REVERSEPLATFORM)))) // In normal gravity, only clip for FOFs that are intangible from the top if you're coming from below
+			&& ((P_MobjFlip(mo)*mo->momz >= 0) || ((rover->flags & FF_SOLID) && !(rover->flags & FF_REVERSEPLATFORM)))) // In normal gravity, only clip for FOFs that are intangible from the top if you're coming from below
 		{
 			mo->ceilingz = bottomheight;
 		}
@@ -2828,7 +2891,7 @@ static boolean P_ZMovement(mobj_t *mo)
 						&& abs(mom.y) < FixedMul(STOPSPEED, mo->scale)
 						&& abs(mom.z) < FixedMul(STOPSPEED*3, mo->scale))
 					{
-						if (mo->flags & MF_AMBUSH)
+						if (mo->flags2 & MF2_AMBUSH)
 						{
 							// If deafed, give the tumbleweed another random kick if it runs out of steam.
 							mom.z += P_MobjFlip(mo)*FixedMul(6*FRACUNIT, mo->scale);
@@ -4135,17 +4198,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 	}
 
 animonly:
-	// cycle through states,
-	// calling action functions at transitions
-	if (mobj->tics != -1)
-	{
-		mobj->tics--;
-
-		// you can cycle through multiple states in a tic
-		if (!mobj->tics)
-			if (!P_SetPlayerMobjState(mobj, mobj->state->nextstate))
-				return; // freed itself
-	}
+	P_CyclePlayerMobjState(mobj);
 }
 
 static void CalculatePrecipFloor(precipmobj_t *mobj)
@@ -4316,14 +4369,14 @@ boolean P_BossTargetPlayer(mobj_t *actor, boolean closest)
 
 		player = &players[actor->lastlook];
 
-		if (player->health <= 0)
-			continue; // dead
-
 		if (player->pflags & PF_INVIS || player->bot || player->spectator)
 			continue; // ignore notarget
 
 		if (!player->mo || P_MobjWasRemoved(player->mo))
 			continue;
+
+		if (player->mo->health <= 0)
+			continue; //dead
 
 		if (!P_CheckSight(actor, player->mo))
 			continue; // out of sight
@@ -4354,14 +4407,14 @@ boolean P_SupermanLook4Players(mobj_t *actor)
 	{
 		if (playeringame[c])
 		{
-			if (players[c].health <= 0)
-				continue; // dead
-
 			if (players[c].pflags & PF_INVIS)
 				continue; // ignore notarget
 
 			if (!players[c].mo || players[c].bot)
 				continue;
+
+			if (players[c].mo->health <= 0)
+				continue; // dead
 
 			playersinthegame[stop] = &players[c];
 			stop++;
@@ -6429,6 +6482,8 @@ void P_RunOverlays(void)
 		P_UnsetThingPosition(mo);
 		mo->x = destx;
 		mo->y = desty;
+		mo->radius = mo->target->radius;
+		mo->height = mo->target->height;
 		if (mo->eflags & MFE_VERTICALFLIP)
 			mo->z = (mo->target->z + mo->target->height - mo->height) - zoffs;
 		else
@@ -6766,7 +6821,7 @@ void P_MobjThinker(mobj_t *mobj)
 
 					flame->angle = mobj->angle;
 
-					if (mobj->flags & MF_AMBUSH) // Wave up and down instead of side-to-side
+					if (mobj->flags2 & MF2_AMBUSH) // Wave up and down instead of side-to-side
 						flame->momz = mobj->fuse << (FRACBITS-2);
 					else
 						flame->angle += FixedAngle(mobj->fuse*FRACUNIT);
@@ -6801,7 +6856,7 @@ void P_MobjThinker(mobj_t *mobj)
 					strength -= ((20*FRACUNIT)/16)*mobj->movedir;
 
 					// If deaf'd, the object spawns on the ceiling.
-					if (mobj->flags & MF_AMBUSH)
+					if (mobj->flags2 & MF2_AMBUSH)
 					{
 						mobj->z = mobj->ceilingz-mobj->height;
 						flame->momz = -strength;
@@ -7133,7 +7188,7 @@ void P_MobjThinker(mobj_t *mobj)
 				P_SetTarget(&mobj->target, NULL);
 				for (i = 0; i < MAXPLAYERS; i++)
 					if (playeringame[i] && players[i].mo
-					&& players[i].mare == mobj->threshold && players[i].health > 1)
+					&& players[i].mare == mobj->threshold && players[i].rings > 0)
 					{
 						fixed_t dist = P_AproxDistance(players[i].mo->x - mobj->x, players[i].mo->y - mobj->y);
 						if (dist < shortest)
@@ -7594,9 +7649,51 @@ void P_MobjThinker(mobj_t *mobj)
 			mobj_t *flagmo, *newmobj;
 
 #ifdef HAVE_BLUA
-			if (!LUAh_MobjFuse(mobj) && !P_MobjWasRemoved(mobj))
+			if (LUAh_MobjFuse(mobj) || P_MobjWasRemoved(mobj))
+				;
+			else
 #endif
-			switch (mobj->type)
+			if (mobj->info->flags & MF_MONITOR)
+			{
+				// Special case for ALL monitors.
+				// If a box's speed is nonzero, it's allowed to respawn as a WRM/SRM.
+				if (mobj->info->speed != 0 && (mobj->flags2 & (MF2_AMBUSH|MF2_STRONGBOX)))
+				{
+					mobjtype_t spawnchance[64];
+					INT32 numchoices = 0, i = 0;
+
+// This define should make it a lot easier to organize and change monitor weights
+#define SETMONITORCHANCES(type, strongboxamt, weakboxamt) \
+for (i = ((mobj->flags2 & MF2_STRONGBOX) ? strongboxamt : weakboxamt); i; --i) spawnchance[numchoices++] = type
+
+					//                Type             SRM WRM
+					SETMONITORCHANCES(MT_SNEAKERS_BOX,   0, 10); // Super Sneakers
+					SETMONITORCHANCES(MT_INVULN_BOX,     2,  0); // Invincibility
+					SETMONITORCHANCES(MT_WHIRLWIND_BOX,  3,  8); // Whirlwind Shield
+					SETMONITORCHANCES(MT_ELEMENTAL_BOX,  3,  8); // Elemental Shield
+					SETMONITORCHANCES(MT_ATTRACT_BOX,    2,  0); // Attraction Shield
+					SETMONITORCHANCES(MT_FORCE_BOX,      3,  3); // Force Shield
+					SETMONITORCHANCES(MT_ARMAGEDDON_BOX, 2,  0); // Armageddon Shield
+					SETMONITORCHANCES(MT_MIXUP_BOX,      0,  1); // Teleporters
+					SETMONITORCHANCES(MT_RECYCLER_BOX,   0,  1); // Recycler
+					SETMONITORCHANCES(MT_1UP_BOX,        1,  1); // 1-Up
+					// =======================================
+					//                Total             16  32
+
+#undef SETMONITORCHANCES
+
+					i = P_RandomKey(numchoices); // Gotta love those random numbers!
+					newmobj = P_SpawnMobj(mobj->x, mobj->y, mobj->z, spawnchance[i]);
+				}
+				else
+					newmobj = P_SpawnMobj(mobj->x, mobj->y, mobj->z, mobj->type);
+
+				// Transfer flags2 (ambush, strongbox, objectflip)
+				newmobj->flags2 = mobj->flags2;
+				P_RemoveMobj(mobj); // make sure they disappear
+				return;
+			}
+			else switch (mobj->type)
 			{
 				// gargoyle and snowman handled in P_PushableThinker, not here
 				case MT_THROWNGRENADE:
@@ -7655,68 +7752,6 @@ void P_MobjThinker(mobj_t *mobj)
 					}
 					P_RemoveMobj(mobj);
 					return;
-				case MT_YELLOWTV: // Ring shield box
-				case MT_BLUETV: // Force shield box
-				case MT_GREENTV: // Water shield box
-				case MT_BLACKTV: // Bomb shield box
-				case MT_WHITETV: // Jump shield box
-				case MT_SNEAKERTV: // Super Sneaker box
-				case MT_SUPERRINGBOX: // 10-Ring box
-				case MT_REDRINGBOX: // Red Team 10-Ring box
-				case MT_BLUERINGBOX: // Blue Team 10-Ring box
-				case MT_INV: // Invincibility box
-				case MT_MIXUPBOX: // Teleporter Mixup box
-				case MT_RECYCLETV: // Recycler box
-				case MT_SCORETVSMALL:
-				case MT_SCORETVLARGE:
-				case MT_PRUP: // 1up!
-				case MT_EGGMANBOX: // Eggman box
-				case MT_GRAVITYBOX: // Gravity box
-				case MT_QUESTIONBOX:
-					if ((mobj->flags & MF_AMBUSH || mobj->flags2 & MF2_STRONGBOX) && mobj->type != MT_QUESTIONBOX)
-					{
-						mobjtype_t spawnchance[64];
-						INT32 numchoices = 0, i = 0;
-
-// This define should make it a lot easier to organize and change monitor weights
-#define SETMONITORCHANCES(type, strongboxamt, weakboxamt) \
-for (i = ((mobj->flags2 & MF2_STRONGBOX) ? strongboxamt : weakboxamt); i; --i) spawnchance[numchoices++] = type
-
-						//                Type            SRM WRM
-						SETMONITORCHANCES(MT_SNEAKERTV,     0, 10); // Super Sneakers
-						SETMONITORCHANCES(MT_INV,           2,  0); // Invincibility
-						SETMONITORCHANCES(MT_WHITETV,       3,  8); // Whirlwind Shield
-						SETMONITORCHANCES(MT_GREENTV,       3,  8); // Elemental Shield
-						SETMONITORCHANCES(MT_YELLOWTV,      2,  0); // Attraction Shield
-						SETMONITORCHANCES(MT_BLUETV,        3,  3); // Force Shield
-						SETMONITORCHANCES(MT_BLACKTV,       2,  0); // Armageddon Shield
-						SETMONITORCHANCES(MT_MIXUPBOX,      0,  1); // Teleporters
-						SETMONITORCHANCES(MT_RECYCLETV,     0,  1); // Recycler
-						SETMONITORCHANCES(MT_PRUP,          1,  1); // 1-Up
-						// ======================================
-						//                Total            16  32
-
-#undef SETMONITORCHANCES
-
-						i = P_RandomKey(numchoices); // Gotta love those random numbers!
-						newmobj = P_SpawnMobj(mobj->x, mobj->y, mobj->z, spawnchance[i]);
-
-						// If the monitor respawns randomly, transfer the flag.
-						if (mobj->flags & MF_AMBUSH)
-							newmobj->flags |= MF_AMBUSH;
-
-						// Transfer flags2 (strongbox, objectflip)
-						newmobj->flags2 = mobj->flags2;
-					}
-					else
-					{
-						newmobj = P_SpawnMobj(mobj->x, mobj->y, mobj->z, mobj->type);
-
-						// Transfer flags2 (strongbox, objectflip)
-						newmobj->flags2 = mobj->flags2;
-					}
-					P_RemoveMobj(mobj); // make sure they disappear
-					return;
 				case MT_METALSONIC_BATTLE:
 					break; // don't remove
 				case MT_SPIKE:
@@ -7733,6 +7768,7 @@ for (i = ((mobj->flags2 & MF2_STRONGBOX) ? strongboxamt : weakboxamt); i; --i) s
 				default:
 					P_SetMobjState(mobj, mobj->info->xdeathstate); // will remove the mobj if S_NULL.
 					break;
+				// Looking for monitors? They moved to a special condition above.
 			}
 			if (P_MobjWasRemoved(mobj))
 				return;
@@ -8025,7 +8061,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 	mobj->tics = st->tics;
 	mobj->sprite = st->sprite;
 	mobj->frame = st->frame; // FF_FRAMEMASK for frame, and other bits..
-	mobj->anim_duration = (UINT16)st->var2; // only used if FF_ANIMATE is set
+	P_SetupStateAnimation(mobj, st);
 
 	mobj->friction = ORIG_FRICTION;
 
@@ -8251,7 +8287,7 @@ static precipmobj_t *P_SpawnPrecipMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype
 	mobj->tics = st->tics;
 	mobj->sprite = st->sprite;
 	mobj->frame = st->frame; // FF_FRAMEMASK for frame, and other bits..
-	mobj->anim_duration = (UINT16)st->var2; // only used if FF_ANIMATE is set
+	P_SetupStateAnimation((mobj_t*)mobj, st);
 
 	// set subsector and/or block links
 	P_SetPrecipitationThingPosition(mobj);
@@ -8816,8 +8852,10 @@ void P_SpawnPlayer(INT32 playernum)
 	// (usefulness: when body mobj is detached from player (who respawns),
 	// the dead body mobj retains the skin through the 'spritedef' override).
 	mobj->skin = &skins[p->skin];
+	P_SetupStateAnimation(mobj, mobj->state);
 
-	mobj->health = p->health;
+	mobj->health = 1;
+	p->rings = 0;
 	p->playerstate = PST_LIVE;
 
 	p->bonustime = false;
@@ -9183,36 +9221,37 @@ void P_SpawnMapThing(mapthing_t *mthing)
 		if ((mobjinfo[i].flags & MF_ENEMY) || (mobjinfo[i].flags & MF_BOSS))
 			return;
 
-	// Set powerup boxes to user settings for competition.
-	if (gametype == GT_COMPETITION)
+	// Altering monitor spawns via cvars
+	// If MF_GRENADEBOUNCE is set in the monitor's info,
+	// skip this step. (Used for gold monitors)
+	// Yeah, this is a dirty hack.
+	if ((mobjinfo[i].flags & (MF_MONITOR|MF_GRENADEBOUNCE)) == MF_MONITOR)
 	{
-		if ((mobjinfo[i].flags & MF_MONITOR) && cv_competitionboxes.value) // not Normal
+		if (gametype == GT_COMPETITION)
 		{
+			// Set powerup boxes to user settings for competition.
 			if (cv_competitionboxes.value == 1) // Random
-				i = MT_QUESTIONBOX;
+				i = MT_MYSTERY_BOX;
 			else if (cv_competitionboxes.value == 2) // Teleports
-				i = MT_MIXUPBOX;
+				i = MT_MIXUP_BOX;
 			else if (cv_competitionboxes.value == 3) // None
 				return; // Don't spawn!
+			// default case: normal
 		}
-	}
-
-	// Set powerup boxes to user settings for other netplay modes
-	else if (gametype != GT_COOP)
-	{
-		if ((mobjinfo[i].flags & MF_MONITOR) && cv_matchboxes.value) // not Normal
+		// Set powerup boxes to user settings for other netplay modes
+		else if (gametype != GT_COOP)
 		{
 			if (cv_matchboxes.value == 1) // Random
-				i = MT_QUESTIONBOX;
-			else if (cv_matchboxes.value == 3) // Don't spawn
-				return;
-			else // cv_matchboxes.value == 2, Non-Random
+				i = MT_MYSTERY_BOX;
+			else if (cv_matchboxes.value == 2) // Non-Random
 			{
-				if (i == MT_QUESTIONBOX)
+				if (i == MT_MYSTERY_BOX)
 					return; // don't spawn in Non-Random
-
 				mthing->options &= ~(MTF_AMBUSH|MTF_OBJECTSPECIAL); // no random respawning!
 			}
+			else if (cv_matchboxes.value == 3) // Don't spawn
+				return;
+			// default case: normal
 		}
 	}
 
@@ -9220,8 +9259,8 @@ void P_SpawnMapThing(mapthing_t *mthing)
 	{
 		if (i == MT_BLUETEAMRING || i == MT_REDTEAMRING)
 			i = MT_RING;
-		else if (i == MT_BLUERINGBOX || i == MT_REDRINGBOX)
-			i = MT_SUPERRINGBOX;
+		else if (i == MT_RING_BLUEBOX || i == MT_RING_REDBOX)
+			i = MT_RING_BOX;
 		else if (i == MT_BLUEFLAG || i == MT_REDFLAG)
 			return; // No flags in non-CTF modes!
 	}
@@ -9248,23 +9287,27 @@ void P_SpawnMapThing(mapthing_t *mthing)
 			return; /// \todo
 
 		// 1UPs -->> Score TVs
-		else if (i == MT_PRUP) // 1UP
+		else if (i == MT_1UP_BOX) // 1UP
 		{
 			// Either or, doesn't matter which.
 			if (mthing->options & (MTF_AMBUSH|MTF_OBJECTSPECIAL))
-				i = MT_SCORETVLARGE; // 10,000
+				i = MT_SCORE10K_BOX; // 10,000
 			else
-				i = MT_SCORETVSMALL; // 1,000
+				i = MT_SCORE1K_BOX; // 1,000
 		}
 	}
 
 	if (ultimatemode)
 	{
-		if (i == MT_PITYTV || i == MT_GREENTV || i == MT_YELLOWTV || i == MT_BLUETV || i == MT_BLACKTV || i == MT_WHITETV)
+		if (i == MT_PITY_BOX || i == MT_ELEMENTAL_BOX || i == MT_ATTRACT_BOX
+		 || i == MT_FORCE_BOX || i == MT_ARMAGEDDON_BOX || i == MT_WHIRLWIND_BOX)
 			return; // No shields in Ultimate mode
 
-		if (i == MT_SUPERRINGBOX && !G_IsSpecialStage(gamemap))
+		if (i == MT_RING_BOX && !G_IsSpecialStage(gamemap))
 			return; // No rings in Ultimate mode (except special stages)
+
+		// Don't include the gold repeating boxes here please.
+		// They're likely facets of the level's design and therefore required to progress.
 	}
 
 	if (i == MT_EMMY && (gametype != GT_COOP || ultimatemode || tokenbits == 30 || tokenlist & (1 << tokenbits++)))
@@ -9526,7 +9569,7 @@ ML_NOCLIMB : Direction not controllable
 			if (firsttime)
 			{
 				// This is the outermost link in the chain
-				spawnee->flags |= MF_AMBUSH;
+				spawnee->flags2 |= MF2_AMBUSH;
 				firsttime = false;
 			}
 
@@ -9677,7 +9720,7 @@ ML_NOCLIMB : Direction not controllable
 		{
 			// Inverted if uppermost bit is set
 			if (mthing->angle & 16384)
-				mobj->flags |= MF_AMBUSH;
+				mobj->flags2 |= MF2_AMBUSH;
 
 			if (mthing->angle > 0)
 				mobj->radius = (mthing->angle & 16383)*FRACUNIT;
@@ -9766,7 +9809,7 @@ ML_NOCLIMB : Direction not controllable
 	}
 
 	//count 10 ring boxes into the number of rings equation too.
-	if (i == MT_SUPERRINGBOX)
+	if (i == MT_RING_BOX)
 		nummaprings += 10;
 
 	if (i == MT_BIGTUMBLEWEED || i == MT_LITTLETUMBLEWEED)
@@ -9845,16 +9888,11 @@ ML_NOCLIMB : Direction not controllable
 				mobj->flags2 |= MF2_STANDONME;
 			}
 
-			if (mobj->flags & MF_MONITOR)
+			if ((mobj->flags & MF_MONITOR) && mobj->info->speed != 0)
 			{
 				// flag for strong/weak random boxes
-				if (mthing->type == mobjinfo[MT_SUPERRINGBOX].doomednum || mthing->type == mobjinfo[MT_PRUP].doomednum ||
-					mthing->type == mobjinfo[MT_SNEAKERTV].doomednum || mthing->type == mobjinfo[MT_INV].doomednum ||
-					mthing->type == mobjinfo[MT_WHITETV].doomednum || mthing->type == mobjinfo[MT_GREENTV].doomednum ||
-					mthing->type == mobjinfo[MT_YELLOWTV].doomednum || mthing->type == mobjinfo[MT_BLUETV].doomednum ||
-					mthing->type == mobjinfo[MT_BLACKTV].doomednum || mthing->type == mobjinfo[MT_PITYTV].doomednum ||
-					mthing->type == mobjinfo[MT_RECYCLETV].doomednum || mthing->type == mobjinfo[MT_MIXUPBOX].doomednum)
-						mobj->flags |= MF_AMBUSH;
+				// any monitor with nonzero speed is allowed to respawn like this
+				mobj->flags2 |= MF2_AMBUSH;
 			}
 
 			else if (mthing->type != mobjinfo[MT_AXIS].doomednum &&
@@ -9862,19 +9900,17 @@ ML_NOCLIMB : Direction not controllable
 				mthing->type != mobjinfo[MT_AXISTRANSFERLINE].doomednum &&
 				mthing->type != mobjinfo[MT_NIGHTSBUMPER].doomednum &&
 				mthing->type != mobjinfo[MT_STARPOST].doomednum)
-				mobj->flags |= MF_AMBUSH;
+				mobj->flags2 |= MF2_AMBUSH;
 		}
 
 		if (mthing->options & MTF_OBJECTSPECIAL)
 		{
-			// flag for strong/weak random boxes
-			if (mthing->type == mobjinfo[MT_SUPERRINGBOX].doomednum || mthing->type == mobjinfo[MT_PRUP].doomednum ||
-				mthing->type == mobjinfo[MT_SNEAKERTV].doomednum || mthing->type == mobjinfo[MT_INV].doomednum ||
-				mthing->type == mobjinfo[MT_WHITETV].doomednum || mthing->type == mobjinfo[MT_GREENTV].doomednum ||
-				mthing->type == mobjinfo[MT_YELLOWTV].doomednum || mthing->type == mobjinfo[MT_BLUETV].doomednum ||
-				mthing->type == mobjinfo[MT_BLACKTV].doomednum || mthing->type == mobjinfo[MT_PITYTV].doomednum ||
-				mthing->type == mobjinfo[MT_RECYCLETV].doomednum || mthing->type == mobjinfo[MT_MIXUPBOX].doomednum)
-					mobj->flags2 |= MF2_STRONGBOX;
+			if ((mobj->flags & MF_MONITOR) && mobj->info->speed != 0)
+			{
+				// flag for strong/weak random boxes
+				// any monitor with nonzero speed is allowed to respawn like this
+				mobj->flags2 |= MF2_STRONGBOX;
+			}
 
 			// Requires you to be in bonus time to activate
 			if (mobj->flags & MF_NIGHTSITEM)
@@ -10201,7 +10237,7 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 			P_SetMobjState(mobj, mobj->info->seestate);
 
 		mobj->angle = FixedAngle(mthing->angle*FRACUNIT);
-		mobj->flags |= MF_AMBUSH;
+		mobj->flags2 |= MF2_AMBUSH;
 		mthing->mobj = mobj;
 	}
 	// All manners of rings and coins
@@ -10275,7 +10311,7 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 		}
 
 		mobj->angle = FixedAngle(mthing->angle*FRACUNIT);
-		mobj->flags |= MF_AMBUSH;
+		mobj->flags2 |= MF2_AMBUSH;
 		mthing->mobj = mobj;
 	}
 	// ***
@@ -10331,7 +10367,7 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 
 			mobj->angle = FixedAngle(mthing->angle*FRACUNIT);
 			if (mthing->options & MTF_AMBUSH)
-				mobj->flags |= MF_AMBUSH;
+				mobj->flags2 |= MF2_AMBUSH;
 		}
 	}
 	// Diagonal rings (handles both types)
@@ -10389,7 +10425,7 @@ void P_SpawnHoopsAndRings(mapthing_t *mthing)
 
 			mobj->angle = FixedAngle(mthing->angle*FRACUNIT);
 			if (mthing->options & MTF_AMBUSH)
-				mobj->flags |= MF_AMBUSH;
+				mobj->flags2 |= MF2_AMBUSH;
 		}
 	}
 	// Rings of items (all six of them)
@@ -10798,7 +10834,7 @@ mobj_t *P_SPMAngle(mobj_t *source, mobjtype_t type, angle_t angle, UINT8 allowai
 {
 	mobj_t *th;
 	angle_t an;
-	fixed_t x, y, z, slope = 0;
+	fixed_t x, y, z, slope = 0, speed;
 
 	// angle at which you fire, is player angle
 	an = angle;
@@ -10830,9 +10866,13 @@ mobj_t *P_SPMAngle(mobj_t *source, mobjtype_t type, angle_t angle, UINT8 allowai
 
 	P_SetTarget(&th->target, source);
 
+	speed = th->info->speed;
+	if (source->player && source->player->charability == CA_FLY)
+		speed = FixedMul(speed, 3*FRACUNIT/2);
+
 	th->angle = an;
-	th->momx = FixedMul(th->info->speed, FINECOSINE(an>>ANGLETOFINESHIFT));
-	th->momy = FixedMul(th->info->speed, FINESINE(an>>ANGLETOFINESHIFT));
+	th->momx = FixedMul(speed, FINECOSINE(an>>ANGLETOFINESHIFT));
+	th->momy = FixedMul(speed, FINESINE(an>>ANGLETOFINESHIFT));
 
 	if (allowaim)
 	{
@@ -10840,7 +10880,7 @@ mobj_t *P_SPMAngle(mobj_t *source, mobjtype_t type, angle_t angle, UINT8 allowai
 		th->momy = FixedMul(th->momy,FINECOSINE(source->player->aiming>>ANGLETOFINESHIFT));
 	}
 
-	th->momz = FixedMul(th->info->speed, slope);
+	th->momz = FixedMul(speed, slope);
 
 	//scaling done here so it doesn't clutter up the code above
 	th->momx = FixedMul(th->momx, th->scale);
@@ -10862,4 +10902,35 @@ void P_FlashPal(player_t *pl, UINT16 type, UINT16 duration)
 		return;
 	pl->flashcount = duration;
 	pl->flashpal = type;
+}
+
+//
+// P_SpawnMobjFromMobj
+// Spawns an object with offsets relative to the position of another object.
+// Scale, gravity flip, etc. is taken into account automatically.
+//
+mobj_t *P_SpawnMobjFromMobj(mobj_t *mobj, fixed_t xofs, fixed_t yofs, fixed_t zofs, mobjtype_t type)
+{
+	mobj_t *newmobj;
+
+	xofs = FixedMul(xofs, mobj->scale);
+	yofs = FixedMul(yofs, mobj->scale);
+	zofs = FixedMul(zofs, mobj->scale);
+
+	newmobj = P_SpawnMobj(mobj->x + xofs, mobj->y + yofs, mobj->z + zofs, type);
+	if (!newmobj)
+		return NULL;
+
+	if (mobj->eflags & MFE_VERTICALFLIP)
+	{
+		fixed_t elementheight = FixedMul(newmobj->info->height, mobj->scale);
+
+		newmobj->eflags |= MFE_VERTICALFLIP;
+		newmobj->flags2 |= MF2_OBJECTFLIP;
+		newmobj->z = mobj->z + mobj->height - zofs - elementheight;
+	}
+
+	newmobj->destscale = mobj->destscale;
+	P_SetScale(newmobj, mobj->scale);
+	return newmobj;
 }

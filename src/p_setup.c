@@ -2090,6 +2090,7 @@ static void P_LevelInitStuff(void)
 	// special stage tokens, emeralds, and ring total
 	tokenbits = 0;
 	runemeraldmanager = false;
+	emeraldspawndelay = 60*TICRATE;
 	nummaprings = 0;
 
 	// emerald hunt
@@ -2132,7 +2133,7 @@ static void P_LevelInitStuff(void)
 		players[i].gotcontinue = false;
 
 		players[i].xtralife = players[i].deadtimer = players[i].numboxes = players[i].totalring = players[i].laps = 0;
-		players[i].health = 1;
+		players[i].rings = 0;
 		players[i].aiming = 0;
 		players[i].pflags &= ~PF_TIMEOVER;
 
@@ -2589,11 +2590,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	lastloadedmaplumpnum = W_GetNumForName(maplumpname = G_BuildMapName(gamemap));
 
 	R_ReInitColormaps(mapheaderinfo[gamemap-1]->palette);
-	CON_ReSetupBackColormap(mapheaderinfo[gamemap-1]->palette);
-
-	// now part of level loading since in future each level may have
-	// its own anim texture sequences, switches etc.
-	P_InitPicAnims();
+	CON_SetupBackColormap();
 
 	// SRB2 determines the sky texture to be used depending on the map header.
 	P_SetupLevelSky(mapheaderinfo[gamemap-1]->skynum, true);
@@ -3004,6 +3001,9 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 		R_LoadTextures(); // numtexture changes
 	else
 		R_FlushTextureCache(); // just reload it from file
+
+	// Reload ANIMATED / ANIMDEFS
+	P_InitPicAnims();
 
 	// Flush and reload HUD graphics
 	ST_UnloadGraphics();

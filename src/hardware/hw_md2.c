@@ -308,6 +308,23 @@ static md2_model_t *md2_readModel(const char *filename)
 
 	model->header.numSkins = 1;
 
+#define MD2LIMITCHECK(field, max, msgname) \
+	if (field > max) \
+	{ \
+		CONS_Alert(CONS_ERROR, "md2_readModel: %s has too many " msgname " (# found: %d, maximum: %d)\n", filename, field, max); \
+		md2_freeModel (model); \
+		return 0; \
+	}
+
+	// Uncomment if these are actually needed
+//	MD2LIMITCHECK(model->header.numSkins,     MD2_MAX_SKINS,     "skins")
+//	MD2LIMITCHECK(model->header.numTexCoords, MD2_MAX_TEXCOORDS, "texture coordinates")
+	MD2LIMITCHECK(model->header.numTriangles, MD2_MAX_TRIANGLES, "triangles")
+	MD2LIMITCHECK(model->header.numFrames,    MD2_MAX_FRAMES,    "frames")
+	MD2LIMITCHECK(model->header.numVertices,  MD2_MAX_VERTICES,  "vertices")
+
+#undef MD2LIMITCHECK
+
 	// read skins
 	fseek(file, model->header.offsetSkins, SEEK_SET);
 	if (model->header.numSkins > 0)
@@ -319,8 +336,6 @@ static md2_model_t *md2_readModel(const char *filename)
 			md2_freeModel (model);
 			return 0;
 		}
-
-		;
 	}
 
 	// read texture coordinates
@@ -334,8 +349,6 @@ static md2_model_t *md2_readModel(const char *filename)
 			md2_freeModel (model);
 			return 0;
 		}
-
-
 	}
 
 	// read triangles
@@ -769,6 +782,7 @@ void HWR_InitMD2(void)
 		md2_playermodels[s].grpatch = NULL;
 		md2_playermodels[s].skin = -1;
 		md2_playermodels[s].notfound = true;
+		md2_playermodels[s].error = false;
 	}
 	for (i = 0; i < NUMSPRITES; i++)
 	{
@@ -777,6 +791,7 @@ void HWR_InitMD2(void)
 		md2_models[i].grpatch = NULL;
 		md2_models[i].skin = -1;
 		md2_models[i].notfound = true;
+		md2_models[i].error = false;
 	}
 
 	// read the md2.dat file
@@ -1349,7 +1364,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		UINT32 durs = spr->mobj->state->tics;
 		UINT32 tics = spr->mobj->tics;
 		md2_frame_t *curr, *next = NULL;
-		const UINT8 flip = (UINT8)((spr->mobj->eflags & MFE_VERTICALFLIP) == MFE_VERTICALFLIP);
+		const UINT8 flip = (UINT8)(!(spr->mobj->eflags & MFE_VERTICALFLIP) != !(spr->mobj->frame & FF_VERTICALFLIP));
 		spritedef_t *sprdef;
 		spriteframe_t *sprframe;
 		float finalscale;
@@ -1378,6 +1393,8 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		else
 			md2 = &md2_models[spr->mobj->sprite];
 
+		if (md2->error)
+			return; // we already failed loading this before :(
 		if (!md2->model)
 		{
 			//CONS_Debug(DBG_RENDER, "Loading MD2... (%s)", sprnames[spr->mobj->sprite]);
@@ -1391,6 +1408,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 			else
 			{
 				//CONS_Debug(DBG_RENDER, " FAILED\n");
+				md2->error = true; // prevent endless fail
 				return;
 			}
 		}
@@ -1464,7 +1482,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		p.x = FIXED_TO_FLOAT(spr->mobj->x);
 		p.y = FIXED_TO_FLOAT(spr->mobj->y)+md2->offset;
 
-		if (spr->mobj->eflags & MFE_VERTICALFLIP)
+		if (flip)
 			p.z = FIXED_TO_FLOAT(spr->mobj->z + spr->mobj->height);
 		else
 			p.z = FIXED_TO_FLOAT(spr->mobj->z);
