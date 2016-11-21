@@ -1620,7 +1620,7 @@ static void Impl_SetWindowIcon(void)
 	{
 		return;
 	}
-	SDL2STUB();
+	//SDL2STUB(); // Monster Iestyn: why is this stubbed?
 	SDL_SetWindowIcon(window, icoSurface);
 }
 
