@@ -189,14 +189,14 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 			wasfullscreen = SDL_TRUE;
 			SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
 		}
-		else if (!fullscreen && wasfullscreen)
+		else if (wasfullscreen)
 		{
 			wasfullscreen = SDL_FALSE;
 			SDL_SetWindowFullscreen(window, 0);
 			SDL_SetWindowSize(window, width, height);
 			SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED_DISPLAY(1), SDL_WINDOWPOS_CENTERED_DISPLAY(1));
 		}
-		else if (!wasfullscreen)
+		else
 		{
 			// Reposition window only in windowed mode
 			SDL_SetWindowSize(window, width, height);
@@ -1550,6 +1550,12 @@ INT32 VID_SetMode(INT32 modeNum)
 static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 {
 	int flags = 0;
+
+	if (rendermode == render_none) // dedicated
+	{
+		return SDL_TRUE; // Monster Iestyn -- not sure if it really matters what we return here tbh
+	}
+
 	if (window != NULL)
 	{
 		return SDL_FALSE;
@@ -1568,38 +1574,43 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
 	{
-		window = SDL_CreateWindow("SRB2 "VERSIONSTRING, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-				realwidth, realheight, flags | SDL_WINDOW_OPENGL);
-		if (window != NULL)
-		{
-			sdlglcontext = SDL_GL_CreateContext(window);
-			if (sdlglcontext == NULL)
-			{
-				SDL_DestroyWindow(window);
-				I_Error("Failed to create a GL context: %s\n", SDL_GetError());
-			}
-			else
-			{
-				SDL_GL_MakeCurrent(window, sdlglcontext);
-			}
-		}
-		else return SDL_FALSE;
+		flags |= SDL_WINDOW_OPENGL;
 	}
+#endif
+
+	// Create a window
+	window = SDL_CreateWindow("SRB2 "VERSIONSTRING, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+			realwidth, realheight, flags);
+
+	if (window == NULL)
+	{
+		CONS_Printf(M_GetText("Couldn't create window: %s\n"), SDL_GetError());
+		return SDL_FALSE;
+	}
+
+	// Renderer-specific stuff
+#ifdef HWRENDER
+	if (rendermode == render_opengl)
+	{
+		sdlglcontext = SDL_GL_CreateContext(window);
+		if (sdlglcontext == NULL)
+		{
+			SDL_DestroyWindow(window);
+			I_Error("Failed to create a GL context: %s\n", SDL_GetError());
+		}
+		SDL_GL_MakeCurrent(window, sdlglcontext);
+	}
+	else
 #endif
 	if (rendermode == render_soft)
 	{
-		window = SDL_CreateWindow("SRB2 "VERSIONSTRING, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-				realwidth, realheight, flags);
-		if (window != NULL)
+		renderer = SDL_CreateRenderer(window, -1, (usesdl2soft ? SDL_RENDERER_SOFTWARE : 0) | (cv_vidwait.value && !usesdl2soft ? SDL_RENDERER_PRESENTVSYNC : 0));
+		if (renderer == NULL)
 		{
-			renderer = SDL_CreateRenderer(window, -1, (usesdl2soft ? SDL_RENDERER_SOFTWARE : 0) | (cv_vidwait.value && !usesdl2soft ? SDL_RENDERER_PRESENTVSYNC : 0));
-			if (renderer != NULL)
-			{
-				SDL_RenderSetLogicalSize(renderer, BASEVIDWIDTH, BASEVIDHEIGHT);
-			}
-			else return SDL_FALSE;
+			CONS_Printf(M_GetText("Couldn't create rendering context: %s\n"), SDL_GetError());
+			return SDL_FALSE;
 		}
-		else return SDL_FALSE;
+		SDL_RenderSetLogicalSize(renderer, BASEVIDWIDTH, BASEVIDHEIGHT);
 	}
 
 	return SDL_TRUE;
