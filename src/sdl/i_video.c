@@ -1494,10 +1494,12 @@ void VID_PrepareModeList(void)
 #endif
 }
 
+#if 0
 static inline void SDLESSet(void)
 {
 	SDL2STUB();
 }
+#endif
 
 INT32 VID_SetMode(INT32 modeNum)
 {
@@ -1718,7 +1720,7 @@ void I_StartupGraphics(void)
 	borderlesswindow = M_CheckParm("-borderless");
 
 	//SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY>>1,SDL_DEFAULT_REPEAT_INTERVAL<<2);
-	SDLESSet();
+	//SDLESSet(); // unused
 	VID_Command_ModeList_f();
 #ifdef HWRENDER
 	if (M_CheckParm("-opengl") || rendermode == render_opengl)
