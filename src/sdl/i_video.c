@@ -434,13 +434,8 @@ static void VID_Command_NumModes_f (void)
 
 static void SurfaceInfo(const SDL_Surface *infoSurface, const char *SurfaceText)
 {
-#if 1
-	(void)infoSurface;
-	(void)SurfaceText;
-	SDL2STUB();
-#else
 	INT32 vfBPP;
-	const SDL_Surface *VidSur = SDL_GetVideoSurface();
+	//const SDL_Surface *VidSur = SDL_GetVideoSurface(); // SDL2 doesn't have this
 
 	if (!infoSurface)
 		return;
@@ -453,15 +448,16 @@ static void SurfaceInfo(const SDL_Surface *infoSurface, const char *SurfaceText)
 	CONS_Printf("\x82" "%s\n", SurfaceText);
 	CONS_Printf(M_GetText(" %ix%i at %i bit color\n"), infoSurface->w, infoSurface->h, vfBPP);
 
+	/*
 	if (infoSurface->flags&SDL_HWSURFACE)
 		CONS_Printf("%s", M_GetText(" Stored in video memory\n"));
 	else if (infoSurface->flags&SDL_OPENGL)
 		CONS_Printf("%s", M_GetText(" Stored in an OpenGL context\n"));
-	else if (infoSurface->flags&SDL_PREALLOC)
+	else */if (infoSurface->flags&SDL_PREALLOC)
 		CONS_Printf("%s", M_GetText(" Uses preallocated memory\n"));
 	else
 		CONS_Printf("%s", M_GetText(" Stored in system memory\n"));
-
+/*
 	if (infoSurface->flags&SDL_ASYNCBLIT)
 		CONS_Printf("%s", M_GetText(" Uses asynchronous blits if possible\n"));
 	else
@@ -491,11 +487,13 @@ static void SurfaceInfo(const SDL_Surface *infoSurface, const char *SurfaceText)
 		CONS_Printf("%s", M_GetText(" Uses hardware acceleration blit\n"));
 	if (infoSurface->flags&SDL_SRCCOLORKEY)
 		CONS_Printf("%s", M_GetText(" Use colorkey blitting\n"));
+*/
 	if (infoSurface->flags&SDL_RLEACCEL)
 		CONS_Printf("%s", M_GetText(" Colorkey RLE acceleration blit\n"));
+/*
 	if (infoSurface->flags&SDL_SRCALPHA)
 		CONS_Printf("%s", M_GetText(" Use alpha blending acceleration blit\n"));
-#endif
+*/
 }
 
 static void VID_Command_Info_f (void)
