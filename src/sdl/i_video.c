@@ -33,14 +33,6 @@
 #pragma warning(default : 4214 4244)
 #endif
 
-#if SDL_VERSION_ATLEAST(1,3,0)
-#define SDLK_EQUALS SDLK_KP_EQUALSAS400
-#define SDLK_LMETA SDLK_LGUI
-#define SDLK_RMETA SDLK_RGUI
-#else
-#define HAVE_SDLMETAKEYS
-#endif
-
 #ifdef HAVE_TTF
 #include "i_ttf.h"
 #endif
