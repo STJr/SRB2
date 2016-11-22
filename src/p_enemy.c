@@ -3477,29 +3477,32 @@ void A_ParticleSpawn(mobj_t *actor)
 	if (!actor->health)
 		return;
 
-	if ((actor->lastlook) && (actor->threshold))
-	{
-		for (i = 0; i < actor->lastlook; i++)
-		{
-			spawn = P_SpawnMobj(
-				actor->x + FixedMul(FixedMul(actor->friction, actor->scale), FINECOSINE(actor->angle>>ANGLETOFINESHIFT)),
-				actor->y + FixedMul(FixedMul(actor->friction, actor->scale), FINESINE(actor->angle>>ANGLETOFINESHIFT)),
-				actor->z,
-				(mobjtype_t)actor->threshold);
-			P_SetScale(spawn, actor->scale);
-			spawn->momz = FixedMul(actor->movefactor, spawn->scale);
-			spawn->destscale = spawn->scale/100;
-			spawn->scalespeed = spawn->scale/actor->health;
-			spawn->tics = (tic_t)actor->health;
-			spawn->flags2 |= (actor->flags2 & MF2_OBJECTFLIP);
-			spawn->angle += P_RandomKey(36)*ANG10; // irrelevant for default objects but might make sense for some custom ones
-			if (spawn->frame & FF_ANIMATE)
-				spawn->frame += P_RandomKey(spawn->state->var1);
+	if (!actor->lastlook)
+		return;
 
-			actor->angle += actor->movedir;
-		}
-		actor->angle += (angle_t)actor->movecount;
+	if (!actor->threshold)
+		return;
+
+	for (i = 0; i < actor->lastlook; i++)
+	{
+		spawn = P_SpawnMobj(
+			actor->x + FixedMul(FixedMul(actor->friction, actor->scale), FINECOSINE(actor->angle>>ANGLETOFINESHIFT)),
+			actor->y + FixedMul(FixedMul(actor->friction, actor->scale), FINESINE(actor->angle>>ANGLETOFINESHIFT)),
+			actor->z,
+			(mobjtype_t)actor->threshold);
+		P_SetScale(spawn, actor->scale);
+		spawn->momz = FixedMul(actor->movefactor, spawn->scale);
+		spawn->destscale = spawn->scale/100;
+		spawn->scalespeed = spawn->scale/actor->health;
+		spawn->tics = (tic_t)actor->health;
+		spawn->flags2 |= (actor->flags2 & MF2_OBJECTFLIP);
+		spawn->angle += P_RandomKey(36)*ANG10; // irrelevant for default objects but might make sense for some custom ones
+		if (spawn->frame & FF_ANIMATE)
+			spawn->frame += P_RandomKey(spawn->state->var1);
+
+		actor->angle += actor->movedir;
 	}
+	actor->angle += (angle_t)actor->movecount;
 }
 
 // Function: A_BunnyHop

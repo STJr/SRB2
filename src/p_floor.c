@@ -1135,10 +1135,7 @@ void T_MarioBlock(levelspecthink_t *block)
 	);
 
 	if (block->sector->ceilingheight >= block->ceilingwasheight + 32*FRACUNIT) // Go back down now..
-	{
 		block->direction = -block->direction;
-		block->sector->floorspeed = 0;
-	}
 	else if (block->sector->ceilingheight <= block->ceilingwasheight)
 	{
 		block->sector->ceilingheight = block->ceilingwasheight;
@@ -1146,6 +1143,9 @@ void T_MarioBlock(levelspecthink_t *block)
 		P_RemoveThinker(&block->thinker);
 		block->sector->floordata = NULL;
 		block->sector->ceilingdata = NULL;
+		block->sector->floorspeed = 0;
+		block->sector->ceilspeed = 0;
+		block->direction = 0;
 	}
 
 	for (i = -1; (i = P_FindSectorFromTag((INT16)block->vars[0], i)) >= 0 ;)
@@ -1802,7 +1802,7 @@ static mobj_t *SearchMarioNode(msecnode_t *node)
 void T_MarioBlockChecker(levelspecthink_t *block)
 {
 	line_t *masterline = block->sourceline;
-	if (block->sector->floorspeed) // Don't update the textures when the block's being bumped upwards.
+	if (block->vars[2] == 1) // Don't update the textures when the block's being bumped upwards.
 		return;
 	if (SearchMarioNode(block->sector->touching_thinglist))
 	{
@@ -3181,7 +3181,6 @@ INT32 EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher)
 		block->thinker.function.acp1 = (actionf_p1)T_MarioBlock;
 
 		// Set up the fields
-		roversec->floorspeed = 1; // Flag to prevent side changing.
 		block->sector = roversec;
 		block->vars[0] = sector->tag; // actionsector
 		block->vars[1] = 4*FRACUNIT; // speed

@@ -4989,7 +4989,7 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 
 	if ((flags & FF_MARIO))
 	{
-		if (!(master->flags & ML_NOCLIMB)) // Don't change the textures of a brick block, just a question block
+		if (!(flags & FF_SHATTERBOTTOM)) // Don't change the textures of a brick block, just a question block
 			P_AddBlockThinker(sec2, master);
 		CheckForMarioBlocks = true;
 	}
@@ -5348,12 +5348,12 @@ void T_LaserFlash(laserthink_t *flash)
 	if (!ffloor || !(ffloor->flags & FF_EXISTS))
 		return;
 
-	if (leveltime & 1)
+	if (leveltime & 2)
 		//ffloor->flags |= FF_RENDERALL;
-		ffloor->alpha = 0xC0;
+		ffloor->alpha = 0xB0;
 	else
 		//ffloor->flags &= ~FF_RENDERALL;
-		ffloor->alpha = 0x60;
+		ffloor->alpha = 0x90;
 
 	sourcesec = ffloor->master->frontsector; // Less to type!
 
