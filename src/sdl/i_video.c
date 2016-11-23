@@ -424,10 +424,10 @@ static void VID_Command_NumModes_f (void)
 	CONS_Printf(M_GetText("%d video mode(s) available(s)\n"), VID_NumModes());
 }
 
+// SDL2 doesn't have SDL_GetVideoSurface or a lot of the SDL_Surface flags that SDL 1.2 had
 static void SurfaceInfo(const SDL_Surface *infoSurface, const char *SurfaceText)
 {
 	INT32 vfBPP;
-	//const SDL_Surface *VidSur = SDL_GetVideoSurface(); // SDL2 doesn't have this
 
 	if (!infoSurface)
 		return;
@@ -440,52 +440,12 @@ static void SurfaceInfo(const SDL_Surface *infoSurface, const char *SurfaceText)
 	CONS_Printf("\x82" "%s\n", SurfaceText);
 	CONS_Printf(M_GetText(" %ix%i at %i bit color\n"), infoSurface->w, infoSurface->h, vfBPP);
 
-	/*
-	if (infoSurface->flags&SDL_HWSURFACE)
-		CONS_Printf("%s", M_GetText(" Stored in video memory\n"));
-	else if (infoSurface->flags&SDL_OPENGL)
-		CONS_Printf("%s", M_GetText(" Stored in an OpenGL context\n"));
-	else */if (infoSurface->flags&SDL_PREALLOC)
+	if (infoSurface->flags&SDL_PREALLOC)
 		CONS_Printf("%s", M_GetText(" Uses preallocated memory\n"));
 	else
 		CONS_Printf("%s", M_GetText(" Stored in system memory\n"));
-/*
-	if (infoSurface->flags&SDL_ASYNCBLIT)
-		CONS_Printf("%s", M_GetText(" Uses asynchronous blits if possible\n"));
-	else
-		CONS_Printf("%s", M_GetText(" Uses synchronous blits if possible\n"));
-
-	if (infoSurface->flags&SDL_ANYFORMAT)
-		CONS_Printf("%s", M_GetText(" Allows any pixel-format\n"));
-
-	if (infoSurface->flags&SDL_HWPALETTE)
-		CONS_Printf("%s", M_GetText(" Has exclusive palette access\n"));
-	else if (VidSur == infoSurface)
-		CONS_Printf("%s", M_GetText(" Has nonexclusive palette access\n"));
-
-	if (infoSurface->flags&SDL_DOUBLEBUF)
-		CONS_Printf("%s", M_GetText(" Double buffered\n"));
-	else if (VidSur == infoSurface)
-		CONS_Printf("%s", M_GetText(" No hardware flipping\n"));
-
-	if (infoSurface->flags&SDL_FULLSCREEN)
-		CONS_Printf("%s", M_GetText(" Full screen\n"));
-	else if (infoSurface->flags&SDL_RESIZABLE)
-		CONS_Printf("%s", M_GetText(" Resizable window\n"));
-	else if (VidSur == infoSurface)
-		CONS_Printf("%s", M_GetText(" Nonresizable window\n"));
-
-	if (infoSurface->flags&SDL_HWACCEL)
-		CONS_Printf("%s", M_GetText(" Uses hardware acceleration blit\n"));
-	if (infoSurface->flags&SDL_SRCCOLORKEY)
-		CONS_Printf("%s", M_GetText(" Use colorkey blitting\n"));
-*/
 	if (infoSurface->flags&SDL_RLEACCEL)
 		CONS_Printf("%s", M_GetText(" Colorkey RLE acceleration blit\n"));
-/*
-	if (infoSurface->flags&SDL_SRCALPHA)
-		CONS_Printf("%s", M_GetText(" Use alpha blending acceleration blit\n"));
-*/
 }
 
 static void VID_Command_Info_f (void)
@@ -568,23 +528,6 @@ static void VID_Command_Mode_f (void)
 	else
 		setmodeneeded = modenum+1; // request vid mode change
 }
-
-#if 0
-#if defined(RPC_NO_WINDOWS_H)
-static VOID MainWndproc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-	UNREFERENCED_PARAMETER(hWnd);
-	UNREFERENCED_PARAMETER(message);
-	UNREFERENCED_PARAMETER(wParam);
-	switch (message)
-	{
-		case WM_SETTEXT:
-			COM_BufAddText((LPCSTR)lParam);
-			break;
-	}
-}
-#endif
-#endif
 
 static inline void SDLJoyRemap(event_t *event)
 {
@@ -944,218 +887,6 @@ void I_GetEvent(void)
 	// In order to make wheels act like buttons, we have to set their state to Up.
 	// This is because wheel messages don't have an up/down state.
 	gamekeydown[KEY_MOUSEWHEELDOWN] = gamekeydown[KEY_MOUSEWHEELUP] = 0;
-
-#if 0
-	SDL_Event inputEvent;
-	static SDL_bool sdlquit = SDL_FALSE; //Alam: once, just once
-	event_t event;
-
-	if (!graphics_started)
-		return;
-
-	memset(&inputEvent, 0x00, sizeof(inputEvent));
-	while (SDL_PollEvent(&inputEvent))
-	{
-		memset(&event,0x00,sizeof (event_t));
-		switch (inputEvent.type)
-		{
-			case SDL_ACTIVEEVENT:
-				if (inputEvent.active.state  & (SDL_APPACTIVE|SDL_APPINPUTFOCUS))
-				{
-					// pause music when alt-tab
-					if (inputEvent.active.gain /*&& !paused */)
-					{
-						static SDL_bool firsttimeonmouse = SDL_TRUE;
-						if (!firsttimeonmouse)
-						{
-							if (cv_usemouse.value) I_StartupMouse();
-						}
-						else firsttimeonmouse = SDL_FALSE;
-						//if (!netgame && !con_destlines) paused = false;
-						if (gamestate == GS_LEVEL)
-							if (!paused) I_ResumeSong(0); //resume it
-					}
-					else /*if (!paused)*/
-					{
-						if (!disable_mouse)
-							SDLforceUngrabMouse();
-						if (!netgame && gamestate == GS_LEVEL) paused = true;
-						memset(gamekeydown, 0, NUMKEYS);
-						//S_PauseSound();
-						if (gamestate == GS_LEVEL)
-							I_PauseSong(0); //pause it
-					}
-				}
-				if (MOUSE_MENU)
-				{
-					SDLdoUngrabMouse();
-					break;
-				}
-				if ((SDL_APPMOUSEFOCUS&inputEvent.active.state) && USE_MOUSEINPUT && inputEvent.active.gain)
-					HalfWarpMouse(realwidth, realheight);
-				break;
-			case SDL_KEYDOWN:
-			case SDL_KEYUP:
-				/// \todo inputEvent.key.which?
-				if (inputEvent.type == SDL_KEYUP)
-					event.type = ev_keyup;
-				else if (inputEvent.type == SDL_KEYDOWN)
-					event.type = ev_keydown;
-				else break;
-				event.data1 = SDLatekey(inputEvent.key.keysym.sym);
-				if (event.data1) D_PostEvent(&event);
-				break;
-			case SDL_MOUSEMOTION:
-				/// \todo inputEvent.motion.which
-				if (MOUSE_MENU)
-				{
-					SDLdoUngrabMouse();
-					break;
-				}
-				//if (USE_MOUSEINPUT) TODO SDL2 stub
-				{
-					// If the event is from warping the pointer back to middle
-					// of the screen then ignore it.
-					if ((inputEvent.motion.x == realwidth/2) &&
-					    (inputEvent.motion.y == realheight/2))
-					{
-						break;
-					}
-					else
-					{
-						event.data2 = +inputEvent.motion.xrel;
-						event.data3 = -inputEvent.motion.yrel;
-					}
-					event.type = ev_mouse;
-					D_PostEvent(&event);
-					// Warp the pointer back to the middle of the window
-					//  or we cannot move any further if it's at a border.
-					if ((inputEvent.motion.x < (realwidth/2 )-(realwidth/4 )) ||
-					    (inputEvent.motion.y < (realheight/2)-(realheight/4)) ||
-					    (inputEvent.motion.x > (realwidth/2 )+(realwidth/4 )) ||
-					    (inputEvent.motion.y > (realheight/2)+(realheight/4) ) )
-					{
-						//if (SDL_GRAB_ON == SDL_WM_GrabInput(SDL_GRAB_QUERY) || !mousegrabok)
-							HalfWarpMouse(realwidth, realheight);
-					}
-				}
-				break;
-			case SDL_MOUSEBUTTONDOWN:
-			case SDL_MOUSEBUTTONUP:
-				/// \todo inputEvent.button.which
-				if (USE_MOUSEINPUT)
-				{
-					if (inputEvent.type == SDL_MOUSEBUTTONUP)
-						event.type = ev_keyup;
-					else if (inputEvent.type == SDL_MOUSEBUTTONDOWN)
-						event.type = ev_keydown;
-					else break;
-					if (inputEvent.button.button==SDL_BUTTON_WHEELUP || inputEvent.button.button==SDL_BUTTON_WHEELDOWN)
-					{
-						if (inputEvent.type == SDL_MOUSEBUTTONUP)
-							event.data1 = 0; //Alam: dumb! this could be a real button with some mice
-						else
-							event.data1 = KEY_MOUSEWHEELUP + inputEvent.button.button - SDL_BUTTON_WHEELUP;
-					}
-					else if (inputEvent.button.button == SDL_BUTTON_MIDDLE)
-						event.data1 = KEY_MOUSE1+2;
-					else if (inputEvent.button.button == SDL_BUTTON_RIGHT)
-						event.data1 = KEY_MOUSE1+1;
-					else if (inputEvent.button.button <= MOUSEBUTTONS)
-						event.data1 = KEY_MOUSE1 + inputEvent.button.button - SDL_BUTTON_LEFT;
-					if (event.data1) D_PostEvent(&event);
-				}
-				break;
-			case SDL_JOYAXISMOTION:
-				inputEvent.jaxis.which++;
-				inputEvent.jaxis.axis++;
-				event.data1 = event.data2 = event.data3 = INT32_MAX;
-				if (cv_usejoystick.value == inputEvent.jaxis.which)
-				{
-					event.type = ev_joystick;
-				}
-				else if (cv_usejoystick.value == inputEvent.jaxis.which)
-				{
-					event.type = ev_joystick2;
-				}
-				else break;
-				//axis
-				if (inputEvent.jaxis.axis > JOYAXISSET*2)
-					break;
-				//vaule
-				if (inputEvent.jaxis.axis%2)
-				{
-					event.data1 = inputEvent.jaxis.axis / 2;
-					event.data2 = SDLJoyAxis(inputEvent.jaxis.value, event.type);
-				}
-				else
-				{
-					inputEvent.jaxis.axis--;
-					event.data1 = inputEvent.jaxis.axis / 2;
-					event.data3 = SDLJoyAxis(inputEvent.jaxis.value, event.type);
-				}
-				D_PostEvent(&event);
-				break;
-			case SDL_JOYBALLMOTION:
-			case SDL_JOYHATMOTION:
-				break; //NONE
-			case SDL_JOYBUTTONDOWN:
-			case SDL_JOYBUTTONUP:
-				inputEvent.jbutton.which++;
-				if (cv_usejoystick.value == inputEvent.jbutton.which)
-					event.data1 = KEY_JOY1;
-				else if (cv_usejoystick.value == inputEvent.jbutton.which)
-					event.data1 = KEY_2JOY1;
-				else break;
-				if (inputEvent.type == SDL_JOYBUTTONUP)
-					event.type = ev_keyup;
-				else if (inputEvent.type == SDL_JOYBUTTONDOWN)
-					event.type = ev_keydown;
-				else break;
-				if (inputEvent.jbutton.button < JOYBUTTONS)
-					event.data1 += inputEvent.jbutton.button;
-				else
-					break;
-				SDLJoyRemap(&event);
-				if (event.type != ev_console) D_PostEvent(&event);
-				break;
-			case SDL_QUIT:
-				if (!sdlquit)
-				{
-					sdlquit = SDL_TRUE;
-					M_QuitResponse('y');
-				}
-				break;
-#if defined(RPC_NO_WINDOWS_H)
-			case SDL_SYSWMEVENT:
-				MainWndproc(inputEvent.syswm.msg->hwnd,
-					inputEvent.syswm.msg->msg,
-					inputEvent.syswm.msg->wParam,
-					inputEvent.syswm.msg->lParam);
-				break;
-#endif
-			case SDL_VIDEORESIZE:
-				if (gamestate == GS_LEVEL || gamestate == GS_TITLESCREEN || gamestate == GS_EVALUATION)
-				    setmodeneeded = VID_GetModeForSize(inputEvent.resize.w,inputEvent.resize.h)+1;
-				if (render_soft == rendermode)
-				{
-					SDLSetMode(realwidth, realheight, vid.bpp*8, surfaceFlagsW);
-					if (vidSurface) SDL_SetColors(vidSurface, localPalette, 0, 256);
-				}
-				else
-					SDLSetMode(realwidth, realheight, vid.bpp*8, surfaceFlagsW);
-				if (!vidSurface)
-					I_Error("Could not reset vidmode: %s\n",SDL_GetError());
-				break;
-			case SDL_VIDEOEXPOSE:
-				exposevideo = SDL_TRUE;
-				break;
-			default:
-				break;
-		}
-	}
-	//reset wheel like in win32, I don't understand it but works
-#endif
 }
 
 void I_StartupMouse(void)
@@ -1484,13 +1215,6 @@ void VID_PrepareModeList(void)
 #endif
 }
 
-#if 0
-static inline void SDLESSet(void)
-{
-	SDL2STUB();
-}
-#endif
-
 INT32 VID_SetMode(INT32 modeNum)
 {
 	SDLdoUngrabMouse();
@@ -1721,7 +1445,6 @@ void I_StartupGraphics(void)
 	borderlesswindow = M_CheckParm("-borderless");
 
 	//SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY>>1,SDL_DEFAULT_REPEAT_INTERVAL<<2);
-	//SDLESSet(); // unused
 	VID_Command_ModeList_f();
 #ifdef HWRENDER
 	if (M_CheckParm("-opengl") || rendermode == render_opengl)
