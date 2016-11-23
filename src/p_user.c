@@ -6982,12 +6982,8 @@ static void P_MovePlayer(player_t *player)
 							break;
 						// Armageddon shield activation
 						case SH_ARMAGEDDON:
-							// Don't let Super Sonic or invincibility use it
-							if (!(player->powers[pw_super] || player->powers[pw_invulnerability]))
-							{
-								player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
-								P_BlackOw(player);
-							}
+							player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
+							P_BlackOw(player);
 							break;
 						// Attract shield activation
 						case SH_ATTRACT:
