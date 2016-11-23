@@ -274,129 +274,70 @@ static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Scancode code)
 	}
 	switch (code)
 	{
-		case SDL_SCANCODE_F11: // F11 and F12 are
-			return KEY_F11;    // separated from the
-		case SDL_SCANCODE_F12: // rest of the function
-			return KEY_F12;    // keys
+		// F11 and F12 are separated from the rest of the function keys
+		case SDL_SCANCODE_F11: return KEY_F11;
+		case SDL_SCANCODE_F12: return KEY_F12;
 
-		case SDL_SCANCODE_KP_0:
-			return KEY_KEYPAD0;
-		case SDL_SCANCODE_KP_1:
-			return KEY_KEYPAD1;
-		case SDL_SCANCODE_KP_2:
-			return KEY_KEYPAD2;
-		case SDL_SCANCODE_KP_3:
-			return KEY_KEYPAD3;
-		case SDL_SCANCODE_KP_4:
-			return KEY_KEYPAD4;
-		case SDL_SCANCODE_KP_5:
-			return KEY_KEYPAD5;
-		case SDL_SCANCODE_KP_6:
-			return KEY_KEYPAD6;
-		case SDL_SCANCODE_KP_7:
-			return KEY_KEYPAD7;
-		case SDL_SCANCODE_KP_8:
-			return KEY_KEYPAD8;
-		case SDL_SCANCODE_KP_9:
-			return KEY_KEYPAD9;
+		case SDL_SCANCODE_KP_0: return KEY_KEYPAD0;
+		case SDL_SCANCODE_KP_1: return KEY_KEYPAD1;
+		case SDL_SCANCODE_KP_2: return KEY_KEYPAD2;
+		case SDL_SCANCODE_KP_3: return KEY_KEYPAD3;
+		case SDL_SCANCODE_KP_4: return KEY_KEYPAD4;
+		case SDL_SCANCODE_KP_5: return KEY_KEYPAD5;
+		case SDL_SCANCODE_KP_6: return KEY_KEYPAD6;
+		case SDL_SCANCODE_KP_7: return KEY_KEYPAD7;
+		case SDL_SCANCODE_KP_8: return KEY_KEYPAD8;
+		case SDL_SCANCODE_KP_9: return KEY_KEYPAD9;
 
-		case SDL_SCANCODE_RETURN:
-			return KEY_ENTER;
-		case SDL_SCANCODE_ESCAPE:
-			return KEY_ESCAPE;
-		case SDL_SCANCODE_BACKSPACE:
-			return KEY_BACKSPACE;
-		case SDL_SCANCODE_TAB:
-			return KEY_TAB;
-		case SDL_SCANCODE_SPACE:
-			return KEY_SPACE;
-		case SDL_SCANCODE_MINUS:
-			return KEY_MINUS;
-		case SDL_SCANCODE_EQUALS:
-			return KEY_EQUALS;
-		case SDL_SCANCODE_LEFTBRACKET:
-			return '[';
-		case SDL_SCANCODE_RIGHTBRACKET:
-			return ']';
-		case SDL_SCANCODE_BACKSLASH:
-			return '\\';
-		case SDL_SCANCODE_NONUSHASH:
-			return '#';
-		case SDL_SCANCODE_SEMICOLON:
-			return ';';
-		case SDL_SCANCODE_APOSTROPHE:
-			return '\'';
-		case SDL_SCANCODE_GRAVE:
-			return '`';
-		case SDL_SCANCODE_COMMA:
-			return ',';
-		case SDL_SCANCODE_PERIOD:
-			return '.';
-		case SDL_SCANCODE_SLASH:
-			return '/';
-		case SDL_SCANCODE_CAPSLOCK:
-			return KEY_CAPSLOCK;
-		case SDL_SCANCODE_PRINTSCREEN:
-			return 0; // undefined?
-		case SDL_SCANCODE_SCROLLLOCK:
-			return KEY_SCROLLLOCK;
-		case SDL_SCANCODE_PAUSE:
-			return KEY_PAUSE;
-		case SDL_SCANCODE_INSERT:
-			return KEY_INS;
-		case SDL_SCANCODE_HOME:
-			return KEY_HOME;
-		case SDL_SCANCODE_PAGEUP:
-			return KEY_PGUP;
-		case SDL_SCANCODE_DELETE:
-			return KEY_DEL;
-		case SDL_SCANCODE_END:
-			return KEY_END;
-		case SDL_SCANCODE_PAGEDOWN:
-			return KEY_PGDN;
-		case SDL_SCANCODE_RIGHT:
-			return KEY_RIGHTARROW;
-		case SDL_SCANCODE_LEFT:
-			return KEY_LEFTARROW;
-		case SDL_SCANCODE_DOWN:
-			return KEY_DOWNARROW;
-		case SDL_SCANCODE_UP:
-			return KEY_UPARROW;
-		case SDL_SCANCODE_NUMLOCKCLEAR:
-			return KEY_NUMLOCK;
-		case SDL_SCANCODE_KP_DIVIDE:
-			return KEY_KPADSLASH;
-		case SDL_SCANCODE_KP_MULTIPLY:
-			return '*'; // undefined?
-		case SDL_SCANCODE_KP_MINUS:
-			return KEY_MINUSPAD;
-		case SDL_SCANCODE_KP_PLUS:
-			return KEY_PLUSPAD;
-		case SDL_SCANCODE_KP_ENTER:
-			return KEY_ENTER;
-		case SDL_SCANCODE_KP_PERIOD:
-			return KEY_KPADDEL;
-		case SDL_SCANCODE_NONUSBACKSLASH:
-			return '\\';
+		case SDL_SCANCODE_RETURN:         return KEY_ENTER;
+		case SDL_SCANCODE_ESCAPE:         return KEY_ESCAPE;
+		case SDL_SCANCODE_BACKSPACE:      return KEY_BACKSPACE;
+		case SDL_SCANCODE_TAB:            return KEY_TAB;
+		case SDL_SCANCODE_SPACE:          return KEY_SPACE;
+		case SDL_SCANCODE_MINUS:          return KEY_MINUS;
+		case SDL_SCANCODE_EQUALS:         return KEY_EQUALS;
+		case SDL_SCANCODE_LEFTBRACKET:    return '[';
+		case SDL_SCANCODE_RIGHTBRACKET:   return ']';
+		case SDL_SCANCODE_BACKSLASH:      return '\\';
+		case SDL_SCANCODE_NONUSHASH:      return '#';
+		case SDL_SCANCODE_SEMICOLON:      return ';';
+		case SDL_SCANCODE_APOSTROPHE:     return '\'';
+		case SDL_SCANCODE_GRAVE:          return '`';
+		case SDL_SCANCODE_COMMA:          return ',';
+		case SDL_SCANCODE_PERIOD:         return '.';
+		case SDL_SCANCODE_SLASH:          return '/';
+		case SDL_SCANCODE_CAPSLOCK:       return KEY_CAPSLOCK;
+		case SDL_SCANCODE_PRINTSCREEN:    return 0; // undefined?
+		case SDL_SCANCODE_SCROLLLOCK:     return KEY_SCROLLLOCK;
+		case SDL_SCANCODE_PAUSE:          return KEY_PAUSE;
+		case SDL_SCANCODE_INSERT:         return KEY_INS;
+		case SDL_SCANCODE_HOME:           return KEY_HOME;
+		case SDL_SCANCODE_PAGEUP:         return KEY_PGUP;
+		case SDL_SCANCODE_DELETE:         return KEY_DEL;
+		case SDL_SCANCODE_END:            return KEY_END;
+		case SDL_SCANCODE_PAGEDOWN:       return KEY_PGDN;
+		case SDL_SCANCODE_RIGHT:          return KEY_RIGHTARROW;
+		case SDL_SCANCODE_LEFT:           return KEY_LEFTARROW;
+		case SDL_SCANCODE_DOWN:           return KEY_DOWNARROW;
+		case SDL_SCANCODE_UP:             return KEY_UPARROW;
+		case SDL_SCANCODE_NUMLOCKCLEAR:   return KEY_NUMLOCK;
+		case SDL_SCANCODE_KP_DIVIDE:      return KEY_KPADSLASH;
+		case SDL_SCANCODE_KP_MULTIPLY:    return '*'; // undefined?
+		case SDL_SCANCODE_KP_MINUS:       return KEY_MINUSPAD;
+		case SDL_SCANCODE_KP_PLUS:        return KEY_PLUSPAD;
+		case SDL_SCANCODE_KP_ENTER:       return KEY_ENTER;
+		case SDL_SCANCODE_KP_PERIOD:      return KEY_KPADDEL;
+		case SDL_SCANCODE_NONUSBACKSLASH: return '\\';
 
-		case SDL_SCANCODE_LSHIFT:
-			return KEY_LSHIFT;
-		case SDL_SCANCODE_RSHIFT:
-			return KEY_RSHIFT;
-		case SDL_SCANCODE_LCTRL:
-			return KEY_LCTRL;
-		case SDL_SCANCODE_RCTRL:
-			return KEY_RCTRL;
-		case SDL_SCANCODE_LALT:
-			return KEY_LALT;
-		case SDL_SCANCODE_RALT:
-			return KEY_RALT;
-		case SDL_SCANCODE_LGUI:
-			return KEY_LEFTWIN;
-		case SDL_SCANCODE_RGUI:
-			return KEY_RIGHTWIN;
-		default:
-			break;
+		case SDL_SCANCODE_LSHIFT: return KEY_LSHIFT;
+		case SDL_SCANCODE_RSHIFT: return KEY_RSHIFT;
+		case SDL_SCANCODE_LCTRL:  return KEY_LCTRL;
+		case SDL_SCANCODE_RCTRL:  return KEY_RCTRL;
+		case SDL_SCANCODE_LALT:   return KEY_LALT;
+		case SDL_SCANCODE_RALT:   return KEY_RALT;
+		case SDL_SCANCODE_LGUI:   return KEY_LEFTWIN;
+		case SDL_SCANCODE_RGUI:   return KEY_RIGHTWIN;
+		default:                  break;
 	}
 #ifdef HWRENDER
 	DBG_Printf("Unknown incoming scancode: %d, represented %c\n",
