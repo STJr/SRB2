@@ -1349,7 +1349,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		if (sortscale < linkscale)
 			dispoffset *= -1; // if it's physically behind, make sure it's ordered behind (if dispoffset > 0)
 
-		sortscale = linkscale; // now make sure it's linked 
+		sortscale = linkscale; // now make sure it's linked
 	}
 
 	// PORTAL SPRITE CLIPPING
