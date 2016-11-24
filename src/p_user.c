@@ -6947,95 +6947,96 @@ static void P_MovePlayer(player_t *player)
 			localangle2 = player->mo->angle;
 	}
 
-	///////////////////////////
-	//BOMB SHIELD ACTIVATION,//
-	//HOMING, AND OTHER COOL //
-	//STUFF!                 //
-	///////////////////////////
+	//////////////////
+	//SHIELD ACTIVES//
+	//& SUPER FLOAT!//
+	//////////////////
 
 	if (player->pflags & PF_JUMPED && !player->exiting && player->mo->health)
 	{
 		if (cmd->buttons & BT_USE) // Spin button effects
 		{
-#ifdef HAVE_BLUA
-			if (LUAh_ShieldSpecial(player))
-				return;
-#endif
-			if (!(player->pflags & (PF_USEDOWN|PF_GLIDING|PF_SLIDING|PF_SHIELDABILITY)) // If the player is not holding down BT_USE, or having used an ability previously
-				&& (!(player->pflags & PF_THOKKED) || ((player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP && player->secondjump == UINT8_MAX))) // thokked is optional if you're bubblewrapped
+			if (player->powers[pw_super]) // Super can't use shield actives, only passives
 			{
-				// Force shield activation
-				if ((player->powers[pw_shield] & ~(SH_FORCEHP|SH_STACK)) == SH_FORCE)
+				if ((player->charability == CA_THOK) // Super Sonic float
+				&& (player->speed > 5*player->mo->scale) // FixedMul(5<<FRACBITS, player->mo->scale), but scale is FRACUNIT-based
+				&& (P_MobjFlip(player->mo)*player->mo->momz <= 0))
 				{
-					player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
-					player->mo->momx = player->mo->momy = player->mo->momz = 0;
-					S_StartSound(player->mo, sfx_ngskid);
-				}
-				else
-				{
-					switch (player->powers[pw_shield] & SH_NOSTACK)
-					{
-						// Whirlwind/Thundercoin shield activation
-						case SH_WHIRLWIND:
-						case SH_THUNDERCOIN:
-							P_DoJumpShield(player);
-							break;
-						// Armageddon shield activation
-						case SH_ARMAGEDDON:
-							player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
-							P_BlackOw(player);
-							break;
-						// Attract shield activation
-						case SH_ATTRACT:
-							player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
-							player->homing = 2;
-							if (P_LookForEnemies(player, false) && player->mo->tracer)
-							{
-								player->pflags |= PF_FORCEJUMPDAMAGE;
-								P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
-								S_StartSound(player->mo, sfx_s3k40);
-								player->homing = 3*TICRATE;
-							}
-							else
-								S_StartSound(player->mo, sfx_s3ka6);
-							break;
-						// Elemental/Bubblewrap shield activation
-						case SH_ELEMENTAL:
-						case SH_BUBBLEWRAP:
-							player->pflags |= PF_FORCEJUMPDAMAGE|PF_THOKKED|PF_SHIELDABILITY;
-							P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
-							player->secondjump = 0;
-							player->mo->momx = player->mo->momy = 0;
-							P_SetObjectMomZ(player->mo, -24*FRACUNIT, false);
-							S_StartSound(player->mo,
-								((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL)
-								? sfx_s3k43
-								: sfx_s3k44);
-							break;
-						// Flame shield activation
-						case SH_FLAMEAURA:
-							player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
-							P_Thrust(player->mo, player->mo->angle, FixedMul(30*FRACUNIT - FixedSqrt(FixedDiv(player->speed, player->mo->scale)), player->mo->scale));
-							S_StartSound(player->mo, sfx_s3k43);
-						default:
-							break;
-					}
+					if (player->panim == PA_PAIN || player->panim == PA_JUMP || player->panim == PA_FALL
+					|| (player->panim == PA_WALK && player->mo->state-states != S_PLAY_SUPER_FLOAT))
+						P_SetPlayerMobjState(player->mo, S_PLAY_SUPER_FLOAT);
+
+					player->mo->momz = 0;
+					player->pflags &= ~PF_SPINNING;
+					player->jumping = 0; // don't cut jump height after bouncing off something
 				}
 			}
-		}
-
-		if ((cmd->buttons & BT_JUMP) && (player->pflags & PF_THOKKED) && !player->homing) // Super Sonic move
-		{
-			if ((player->charability == CA_THOK) && player->powers[pw_super] && player->speed > FixedMul(5<<FRACBITS, player->mo->scale)
-			&& P_MobjFlip(player->mo)*player->mo->momz <= 0)
+			else
+#ifdef HAVE_BLUA
+			if (!LUAh_ShieldSpecial(player))
+#endif
 			{
-				if (player->mo->state-states == S_PLAY_PAIN || player->panim == PA_JUMP || player->panim == PA_FALL
-					|| (player->panim == PA_WALK && player->mo->state-states != S_PLAY_SUPER_FLOAT))
-					P_SetPlayerMobjState(player->mo, S_PLAY_SUPER_FLOAT);
-
-				player->mo->momz = 0;
-				player->pflags &= ~(PF_SPINNING|PF_SHIELDABILITY);
-				player->jumping = 0; // don't cut jump height after bouncing off something
+				if (!(player->pflags & (PF_USEDOWN|PF_GLIDING|PF_SLIDING|PF_SHIELDABILITY)) // If the player is not holding down BT_USE, or having used an ability previously
+					&& (!(player->pflags & PF_THOKKED) || ((player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP && player->secondjump == UINT8_MAX))) // thokked is optional if you're bubblewrapped
+				{
+					// Force shield activation
+					if ((player->powers[pw_shield] & ~(SH_FORCEHP|SH_STACK)) == SH_FORCE)
+					{
+						player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
+						player->mo->momx = player->mo->momy = player->mo->momz = 0;
+						S_StartSound(player->mo, sfx_ngskid);
+					}
+					else
+					{
+						switch (player->powers[pw_shield] & SH_NOSTACK)
+						{
+							// Whirlwind/Thundercoin shield activation
+							case SH_WHIRLWIND:
+							case SH_THUNDERCOIN:
+								P_DoJumpShield(player);
+								break;
+							// Armageddon shield activation
+							case SH_ARMAGEDDON:
+								player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
+								P_BlackOw(player);
+								break;
+							// Attract shield activation
+							case SH_ATTRACT:
+								player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
+								player->homing = 2;
+								if (P_LookForEnemies(player, false) && player->mo->tracer)
+								{
+									player->pflags |= PF_FORCEJUMPDAMAGE;
+									P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
+									S_StartSound(player->mo, sfx_s3k40);
+									player->homing = 3*TICRATE;
+								}
+								else
+									S_StartSound(player->mo, sfx_s3ka6);
+								break;
+							// Elemental/Bubblewrap shield activation
+							case SH_ELEMENTAL:
+							case SH_BUBBLEWRAP:
+								player->pflags |= PF_FORCEJUMPDAMAGE|PF_THOKKED|PF_SHIELDABILITY;
+								P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
+								player->secondjump = 0;
+								player->mo->momx = player->mo->momy = 0;
+								P_SetObjectMomZ(player->mo, -24*FRACUNIT, false);
+								S_StartSound(player->mo,
+									((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL)
+									? sfx_s3k43
+									: sfx_s3k44);
+								break;
+							// Flame shield activation
+							case SH_FLAMEAURA:
+								player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
+								P_Thrust(player->mo, player->mo->angle, FixedMul(30*FRACUNIT - FixedSqrt(FixedDiv(player->speed, player->mo->scale)), player->mo->scale));
+								S_StartSound(player->mo, sfx_s3k43);
+							default:
+								break;
+						}
+					}
+				}
 			}
 		}
 	}
