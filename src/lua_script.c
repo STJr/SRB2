@@ -426,6 +426,7 @@ void LUA_InvalidateLevel(void)
 		LUA_InvalidateUserdata(&sides[i]);
 	for (i = 0; i < numvertexes; i++)
 		LUA_InvalidateUserdata(&vertexes[i]);
+#ifdef HAVE_LUA_SEGS
 	for (i = 0; i < numsegs; i++)
 		LUA_InvalidateUserdata(&segs[i]);
 	for (i = 0; i < numnodes; i++)
@@ -434,6 +435,7 @@ void LUA_InvalidateLevel(void)
 		LUA_InvalidateUserdata(nodes[i].bbox);
 		LUA_InvalidateUserdata(nodes[i].children);
 	}
+#endif
 }
 
 void LUA_InvalidateMapthings(void)
@@ -473,8 +475,10 @@ enum
 	ARCH_SIDE,
 	ARCH_SUBSECTOR,
 	ARCH_SECTOR,
+#ifdef HAVE_LUA_SEGS
 	ARCH_SEG,
 	ARCH_NODE,
+#endif
 	ARCH_FFLOOR,
 	ARCH_MAPHEADER,
 
@@ -495,8 +499,10 @@ static const struct {
 	{META_SIDE,     ARCH_SIDE},
 	{META_SUBSECTOR,ARCH_SUBSECTOR},
 	{META_SECTOR,   ARCH_SECTOR},
+#ifdef HAVE_LUA_SEGS
 	{META_SEG,      ARCH_SEG},
 	{META_NODE,     ARCH_NODE},
+#endif
 	{META_FFLOOR,	ARCH_FFLOOR},
 	{META_MAPHEADER,   ARCH_MAPHEADER},
 	{NULL,          ARCH_NULL}
@@ -688,6 +694,7 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 			}
 			break;
 		}
+#ifdef HAVE_LUA_SEGS
 		case ARCH_SEG:
 		{
 			seg_t *seg = *((seg_t **)lua_touserdata(gL, myindex));
@@ -710,6 +717,7 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 			}
 			break;
 		}
+#endif
 		case ARCH_FFLOOR:
 		{
 			ffloor_t *rover = *((ffloor_t **)lua_touserdata(gL, myindex));
@@ -914,12 +922,14 @@ static UINT8 UnArchiveValue(int TABLESINDEX)
 	case ARCH_SECTOR:
 		LUA_PushUserdata(gL, &sectors[READUINT16(save_p)], META_SECTOR);
 		break;
+#ifdef HAVE_LUA_SEGS
 	case ARCH_SEG:
 		LUA_PushUserdata(gL, &segs[READUINT16(save_p)], META_SEG);
 		break;
 	case ARCH_NODE:
 		LUA_PushUserdata(gL, &nodes[READUINT16(save_p)], META_NODE);
 		break;
+#endif
 	case ARCH_FFLOOR:
 	{
 		sector_t *sector = &sectors[READUINT16(save_p)];

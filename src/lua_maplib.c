@@ -185,6 +185,7 @@ static const char *const ffloor_opt[] = {
 	"alpha",
 	NULL};
 
+#ifdef HAVE_LUA_SEGS
 enum seg_e {
 	seg_valid = 0,
 	seg_v1,
@@ -242,6 +243,7 @@ static const char *const nodechild_opt[] = {
 	"right",
 	"left",
 	NULL};
+#endif
 
 enum bbox_e {
 	bbox_valid = 0,
@@ -892,6 +894,7 @@ static int vertex_num(lua_State *L)
 	return 1;
 }
 
+#ifdef HAVE_LUA_SEGS
 static int seg_get(lua_State *L)
 {
 	seg_t *seg = *((seg_t **)luaL_checkudata(L, 1, META_SEG));
@@ -1108,6 +1111,7 @@ static int nodechildren_get(lua_State *L)
 	lua_pushinteger(L, children[i]);
 	return 1;
 }
+#endif
 
 // bounding box (aka fixed_t array with four elements)
 // NOTE: may be useful for polyobjects or other things later
@@ -1376,6 +1380,7 @@ static int lib_numvertexes(lua_State *L)
 	return 1;
 }
 
+#ifdef HAVE_LUA_SEGS
 static int lib_iterateSegs(lua_State *L)
 {
 	size_t i = 0;
@@ -1467,6 +1472,7 @@ static int lib_numnodes(lua_State *L)
 	lua_pushinteger(L, numnodes);
 	return 1;
 }
+#endif
 
 static int ffloor_get(lua_State *L)
 {
@@ -1787,6 +1793,7 @@ int LUA_MapLib(lua_State *L)
 		lua_setfield(L, -2, "__newindex");
 	lua_pop(L, 1);
 
+#ifdef HAVE_LUA_SEGS
 	luaL_newmetatable(L, META_SEG);
 		lua_pushcfunction(L, seg_get);
 		lua_setfield(L, -2, "__index");
@@ -1814,6 +1821,7 @@ int LUA_MapLib(lua_State *L)
 		lua_pushcfunction(L, nodechildren_get);
 		lua_setfield(L, -2, "__index");
 	lua_pop(L, 1);
+#endif
 
 	luaL_newmetatable(L, META_BBOX);
 		lua_pushcfunction(L, bbox_get);
@@ -1878,6 +1886,7 @@ int LUA_MapLib(lua_State *L)
 		lua_setmetatable(L, -2);
 	lua_setglobal(L, "vertexes");
 
+#ifdef HAVE_LUA_SEGS
 	lua_newuserdata(L, 0);
 		lua_createtable(L, 0, 2);
 			lua_pushcfunction(L, lib_getSeg);
@@ -1897,6 +1906,7 @@ int LUA_MapLib(lua_State *L)
 			lua_setfield(L, -2, "__len");
 		lua_setmetatable(L, -2);
 	lua_setglobal(L, "nodes");
+#endif
 
 	lua_newuserdata(L, 0);
 		lua_createtable(L, 0, 2);
