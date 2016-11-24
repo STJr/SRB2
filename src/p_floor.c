@@ -2985,7 +2985,7 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 					if (flags & ML_EFFECT1)
 					{
 						P_InstaThrust(spawned, R_PointToAngle2(sec->soundorg.x, sec->soundorg.y, a, b), FixedDiv(P_AproxDistance(a - sec->soundorg.x, b - sec->soundorg.y), widthfactor));
-						P_SetObjectMomZ(spawned, FixedDiv((c - *rover->bottomheight), heightfactor), false);
+						P_SetObjectMomZ(spawned, FixedDiv((c - bottomz), heightfactor), false);
 					}
 
 					spawned->fuse = lifetime;
