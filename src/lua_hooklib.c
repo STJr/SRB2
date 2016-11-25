@@ -810,7 +810,11 @@ void LUAh_PlayerQuit(player_t *plr, int reason)
 	for (hookp = roothook; hookp; hookp = hookp->next)
 		if (hookp->type == hook_PlayerQuit)
 		{
-			LUA_PushUserdata(gL, plr, META_PLAYER); // Player that quit
+		    if (lua_gettop(gL) == 0)
+		    {
+		        LUA_PushUserdata(gL, plr, META_PLAYER); // Player that quit
+		        lua_pushinteger(gL, reason); // Reason for quitting
+		    }
 			lua_pushinteger(gL, reason); // Reason for quitting
 			lua_pushfstring(gL, FMT_HOOKID, hookp->id);
 			lua_gettable(gL, LUA_REGISTRYINDEX);
