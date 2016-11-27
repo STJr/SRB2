@@ -263,7 +263,7 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	texturememory += blocksize;
 	block = Z_Malloc(blocksize+1, PU_STATIC, &texturecache[texnum]);
 
-	memset(block, 0xF7, blocksize+1); // Transparency hack
+	memset(block, 0xFF, blocksize+1); // Transparency hack
 
 	// columns lookup table
 	colofs = (UINT32 *)(void *)block;
@@ -1541,6 +1541,9 @@ void R_InitData(void)
 
 	CONS_Printf("R_LoadTextures()...\n");
 	R_LoadTextures();
+
+	CONS_Printf("P_InitPicAnims()...\n");
+	P_InitPicAnims();
 
 	CONS_Printf("R_InitSprites()...\n");
 	R_InitSpriteLumps();

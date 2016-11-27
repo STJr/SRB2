@@ -45,7 +45,7 @@
 #include "hw_md2.h"
 
 #define R_FAKEFLOORS
-//#define HWPRECIP
+#define HWPRECIP
 #define SORTING
 //#define POLYSKY
 
@@ -4401,7 +4401,6 @@ static inline void HWR_DrawPrecipitationSprite(gr_vissprite_t *spr)
 	FOutVector *wv;
 	GLPatch_t *gpatch; // sprite patch converted to hardware
 	FSurfaceInfo Surf;
-	sector_t *sector;
 
 	if (!spr->mobj)
 		return;
@@ -4455,19 +4454,38 @@ static inline void HWR_DrawPrecipitationSprite(gr_vissprite_t *spr)
 	//Hurdler: 25/04/2000: now support colormap in hardware mode
 	HWR_GetMappedPatch(gpatch, spr->colormap);
 
-	sector = spr->mobj->subsector->sector;
-
-	if (sector->ffloors)
+	// colormap test
 	{
-		ffloor_t *caster = sector->lightlist[R_GetPlaneLight(sector, spr->mobj->z, false)].caster;
-		sector = caster ? &sectors[caster->secnum] : sector;
-	}
+		sector_t *sector = spr->mobj->subsector->sector;
+		UINT8 lightlevel = 255;
+		extracolormap_t *colormap = sector->extra_colormap;
 
-	// sprite lighting by modulating the RGB components
-	if (sector->extra_colormap)
-			Surf.FlatColor.rgba = HWR_Lighting(spr->sectorlight,sector->extra_colormap->rgba,sector->extra_colormap->fadergba, false, false);
+		if (sector->numlights)
+		{
+			INT32 light;
+
+			light = R_GetPlaneLight(sector, spr->mobj->z + spr->mobj->height, false); // Always use the light at the top instead of whatever I was doing before
+
+			if (!(spr->mobj->frame & FF_FULLBRIGHT))
+				lightlevel = *sector->lightlist[light].lightlevel;
+
+			if (sector->lightlist[light].extra_colormap)
+				colormap = sector->lightlist[light].extra_colormap;
+		}
 		else
-			Surf.FlatColor.rgba = HWR_Lighting(spr->sectorlight,NORMALFOG,FADEFOG, false, false);
+		{
+			if (!(spr->mobj->frame & FF_FULLBRIGHT))
+				lightlevel = sector->lightlevel;
+
+			if (sector->extra_colormap)
+				colormap = sector->extra_colormap;
+		}
+
+		if (colormap)
+			Surf.FlatColor.rgba = HWR_Lighting(lightlevel, colormap->rgba, colormap->fadergba, false, false);
+		else
+			Surf.FlatColor.rgba = HWR_Lighting(lightlevel, NORMALFOG, FADEFOG, false, false);
+	}
 
 	if (spr->mobj->flags2 & MF2_SHADOW)
 	{
@@ -5295,6 +5313,11 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 	//
 	vis = HWR_NewVisSprite();
 	vis->x1 = x1;
+#if 0
+	vis->x2 = x2;
+#else
+	(void)x2;
+#endif
 	vis->x2 = tx;
 	vis->tz = tz;
 	vis->dispoffset = 0; // Monster Iestyn: 23/11/15: HARDWARE SUPPORT AT LAST
@@ -5307,7 +5330,6 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 	// set top/bottom coords
 	vis->ty = FIXED_TO_FLOAT(thing->z + spritecachedinfo[lumpoff].topoffset) - gr_viewz;
 
-	vis->sectorlight = 0xff;
 	vis->precip = true;
 }
 #endif

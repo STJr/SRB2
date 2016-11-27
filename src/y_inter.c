@@ -679,7 +679,7 @@ void Y_Ticker(void)
 		boolean anybonuses = false;
 
 		if (!intertic) // first time only
-			S_ChangeMusicInternal("lclear", false); // don't loop it
+			S_ChangeMusicInternal("_clear", false); // don't loop it
 
 		if (intertic < TICRATE) // one second pause before tally begins
 			return;
@@ -740,7 +740,7 @@ void Y_Ticker(void)
 
 		if (!intertic) // first time only
 		{
-			S_ChangeMusicInternal("lclear", false); // don't loop it
+			S_ChangeMusicInternal("_clear", false); // don't loop it
 			tallydonetic = 0;
 		}
 
@@ -801,7 +801,7 @@ void Y_Ticker(void)
 	else if (intertype == int_match || intertype == int_ctf || intertype == int_teammatch) // match
 	{
 		if (!intertic) // first time only
-			S_ChangeMusicInternal("racent", true); // loop it
+			S_ChangeMusicInternal("_inter", true); // loop it
 
 		// If a player has left or joined, recalculate scores.
 		if (data.match.numplayers != D_NumPlayers())
@@ -810,7 +810,7 @@ void Y_Ticker(void)
 	else if (intertype == int_race || intertype == int_classicrace) // race
 	{
 		if (!intertic) // first time only
-			S_ChangeMusicInternal("racent", true); // loop it
+			S_ChangeMusicInternal("_inter", true); // loop it
 
 		// Don't bother recalcing for race. It doesn't make as much sense.
 	}
@@ -839,13 +839,13 @@ static void Y_UpdateRecordReplays(void)
 	if ((mainrecords[gamemap-1]->time == 0) || (players[consoleplayer].realtime < mainrecords[gamemap-1]->time))
 		mainrecords[gamemap-1]->time = players[consoleplayer].realtime;
 
-	if ((UINT16)(players[consoleplayer].health - 1) > mainrecords[gamemap-1]->rings)
-		mainrecords[gamemap-1]->rings = (UINT16)(players[consoleplayer].health - 1);
+	if ((UINT16)(players[consoleplayer].rings) > mainrecords[gamemap-1]->rings)
+		mainrecords[gamemap-1]->rings = (UINT16)(players[consoleplayer].rings);
 
 	// Save demo!
 	bestdemo[255] = '\0';
 	lastdemo[255] = '\0';
-	G_SetDemoTime(players[consoleplayer].realtime, players[consoleplayer].score, (UINT16)(players[consoleplayer].health-1));
+	G_SetDemoTime(players[consoleplayer].realtime, players[consoleplayer].score, (UINT16)(players[consoleplayer].rings));
 	G_CheckDemoStatus();
 
 	I_mkdir(va("%s"PATHSEP"replay", srb2home), 0755);
@@ -1435,7 +1435,7 @@ static void Y_CalculateCompetitionWinners(void)
 			bestat[j] = true;
 
 		times[i]    = players[i].realtime;
-		rings[i]    = (UINT32)max(players[i].health-1, 0);
+		rings[i]    = (UINT32)max(players[i].rings, 0);
 		maxrings[i] = (UINT32)players[i].totalring;
 		monitors[i] = (UINT32)players[i].numboxes;
 		scores[i]   = (UINT32)min(players[i].score, 99999990);
@@ -1450,7 +1450,7 @@ static void Y_CalculateCompetitionWinners(void)
 			else
 				bestat[0] = false;
 
-			if (max(players[i].health-1, 0) >= max(players[j].health-1, 0))
+			if (max(players[i].rings, 0) >= max(players[j].rings, 0))
 				points[i]++;
 			else
 				bestat[1] = false;
@@ -1573,7 +1573,7 @@ static void Y_SetRingBonus(player_t *player, y_bonus_t *bstruct)
 {
 	strncpy(bstruct->patch, "YB_RING", sizeof(bstruct->patch));
 	bstruct->display = true;
-	bstruct->points = max(0, (player->health-1) * 100);
+	bstruct->points = max(0, (player->rings) * 100);
 }
 
 //
@@ -1621,7 +1621,7 @@ static void Y_SetPerfectBonus(player_t *player, y_bonus_t *bstruct)
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
 			if (!playeringame[i]) continue;
-			sharedringtotal += players[i].health - 1;
+			sharedringtotal += players[i].rings;
 		}
 		if (!sharedringtotal || sharedringtotal < nummaprings)
 			data.coop.gotperfbonus = 0;

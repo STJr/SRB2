@@ -288,15 +288,15 @@ void ST_LoadGraphics(void)
 	scatterring = W_CachePatchName("SCATIND", PU_HUDGFX);
 	grenadering = W_CachePatchName("GRENIND", PU_HUDGFX);
 	railring = W_CachePatchName("RAILIND", PU_HUDGFX);
-	jumpshield = W_CachePatchName("WHTVB0", PU_HUDGFX);
-	forceshield = W_CachePatchName("BLTVB0", PU_HUDGFX);
-	ringshield = W_CachePatchName("YLTVB0", PU_HUDGFX);
-	watershield = W_CachePatchName("ELTVB0", PU_HUDGFX);
-	bombshield = W_CachePatchName("BKTVB0", PU_HUDGFX);
-	pityshield = W_CachePatchName("GRTVB0", PU_HUDGFX);
-	invincibility = W_CachePatchName("PINVB0", PU_HUDGFX);
-	sneakers = W_CachePatchName("SHTVB0", PU_HUDGFX);
-	gravboots = W_CachePatchName("GBTVB0", PU_HUDGFX);
+	jumpshield = W_CachePatchName("TVWWC0", PU_HUDGFX);
+	forceshield = W_CachePatchName("TVFOC0", PU_HUDGFX);
+	ringshield = W_CachePatchName("TVATC0", PU_HUDGFX);
+	watershield = W_CachePatchName("TVELC0", PU_HUDGFX);
+	bombshield = W_CachePatchName("TVARC0", PU_HUDGFX);
+	pityshield = W_CachePatchName("TVPIC0", PU_HUDGFX);
+	invincibility = W_CachePatchName("TVIVC0", PU_HUDGFX);
+	sneakers = W_CachePatchName("TVSSC0", PU_HUDGFX);
+	gravboots = W_CachePatchName("TVGVC0", PU_HUDGFX);
 
 	tagico = W_CachePatchName("TAGICO", PU_HUDGFX);
 	rflagico = W_CachePatchName("RFLAGICO", PU_HUDGFX);
@@ -546,19 +546,26 @@ static void ST_DrawNightsOverlayNum(INT32 x /* right border */, INT32 y, INT32 a
 static void ST_drawDebugInfo(void)
 {
 	INT32 height = 192;
+	INT32 dist = 8;
 
-	if (!stplyr->mo)
+	if (!(stplyr->mo && cv_debug))
 		return;
+
+	if (cv_ticrate.value)
+	{
+		height -= 12;
+		dist >>= 1;
+	}
 
 	if (cv_debug & DBG_BASIC)
 	{
 		const fixed_t d = AngleFixed(stplyr->mo->angle);
-		V_DrawRightAlignedString(320, 168, V_MONOSPACE, va("X: %6d", stplyr->mo->x>>FRACBITS));
-		V_DrawRightAlignedString(320, 176, V_MONOSPACE, va("Y: %6d", stplyr->mo->y>>FRACBITS));
-		V_DrawRightAlignedString(320, 184, V_MONOSPACE, va("Z: %6d", stplyr->mo->z>>FRACBITS));
-		V_DrawRightAlignedString(320, 192, V_MONOSPACE, va("A: %6d", FixedInt(d)));
+		V_DrawRightAlignedString(320, height - 24, V_MONOSPACE, va("X: %6d", stplyr->mo->x>>FRACBITS));
+		V_DrawRightAlignedString(320, height - 16, V_MONOSPACE, va("Y: %6d", stplyr->mo->y>>FRACBITS));
+		V_DrawRightAlignedString(320, height - 8,  V_MONOSPACE, va("Z: %6d", stplyr->mo->z>>FRACBITS));
+		V_DrawRightAlignedString(320, height,      V_MONOSPACE, va("A: %6d", FixedInt(d)));
 
-		height = 152;
+		height -= (32+dist);
 	}
 
 	if (cv_debug & DBG_DETAILED)
@@ -569,11 +576,12 @@ static void ST_drawDebugInfo(void)
 		V_DrawRightAlignedString(320, height - 80,  V_MONOSPACE, va("AIR: %4d, %3d", stplyr->powers[pw_underwater], stplyr->powers[pw_spacetime]));
 
 		// Flags
-		V_DrawRightAlignedString(304-64, height - 72, V_MONOSPACE, "Flags:");
-		V_DrawString(304-60,             height - 72, (stplyr->jumping) ? V_GREENMAP : V_REDMAP, "JM");
-		V_DrawString(304-40,             height - 72, (stplyr->pflags & PF_JUMPED) ? V_GREENMAP : V_REDMAP, "JD");
-		V_DrawString(304-20,             height - 72, (stplyr->pflags & PF_SPINNING) ? V_GREENMAP : V_REDMAP, "SP");
-		V_DrawString(304,                height - 72, (stplyr->pflags & PF_STARTDASH) ? V_GREENMAP : V_REDMAP, "ST");
+		V_DrawRightAlignedString(304-74, height - 72, V_MONOSPACE, "PF:");
+		V_DrawString(304-72,             height - 72, (stplyr->jumping) ? V_GREENMAP : V_REDMAP, "JM");
+		V_DrawString(304-54,             height - 72, (stplyr->pflags & PF_JUMPED) ? V_GREENMAP : V_REDMAP, "JD");
+		V_DrawString(304-36,             height - 72, (stplyr->pflags & PF_SPINNING) ? V_GREENMAP : V_REDMAP, "SP");
+		V_DrawString(304-18,             height - 72, (stplyr->pflags & PF_STARTDASH) ? V_GREENMAP : V_REDMAP, "ST");
+		V_DrawString(304,                height - 72, (stplyr->pflags & PF_THOKKED) ? V_GREENMAP : V_REDMAP, "TH");
 
 		V_DrawRightAlignedString(320, height - 64, V_MONOSPACE, va("CEILZ: %6d", stplyr->mo->ceilingz>>FRACBITS));
 		V_DrawRightAlignedString(320, height - 56, V_MONOSPACE, va("FLOORZ: %6d", stplyr->mo->floorz>>FRACBITS));
@@ -587,7 +595,7 @@ static void ST_drawDebugInfo(void)
 		V_DrawRightAlignedString(320, height - 8,  V_MONOSPACE, va("MOMZ: %6d", stplyr->mo->momz>>FRACBITS));
 		V_DrawRightAlignedString(320, height,      V_MONOSPACE, va("SPEED: %6d", stplyr->speed>>FRACBITS));
 
-		height -= 120;
+		height -= (112+dist);
 	}
 
 	if (cv_debug & DBG_RANDOMIZER) // randomizer testing
@@ -600,12 +608,12 @@ static void ST_drawDebugInfo(void)
 		V_DrawRightAlignedString(320, height - 8,  V_MONOSPACE, va("Seed: %08x", P_GetRandSeed()));
 		V_DrawRightAlignedString(320, height,      V_MONOSPACE, va("==  :    .%04d", peekres));
 
-		height -= 32;
+		height -= (24+dist);
 	}
 
 	if (cv_debug & DBG_MEMORY)
 	{
-		V_DrawRightAlignedString(320, height,     V_MONOSPACE, va("Heap used: %7sKB", sizeu1(Z_TagsUsage(0, INT32_MAX)>>10)));
+		V_DrawRightAlignedString(320, height,     V_MONOSPACE, va("Heap: %7sKB", sizeu1(Z_TagsUsage(0, INT32_MAX)>>10)));
 	}
 }
 
@@ -664,9 +672,9 @@ static void ST_drawTime(void)
 
 static inline void ST_drawRings(void)
 {
-	INT32 ringnum = max(stplyr->health-1, 0);
+	INT32 ringnum = max(stplyr->rings, 0);
 
-	ST_DrawPatchFromHudWS(HUD_RINGS, ((stplyr->health <= 1 && leveltime/5 & 1) ? rrings : sborings));
+	ST_DrawPatchFromHudWS(HUD_RINGS, ((stplyr->rings <= 0 && leveltime/5 & 1) ? rrings : sborings));
 
 	if (objectplacing)
 		ringnum = op_currentdoomednum;
@@ -675,8 +683,8 @@ static inline void ST_drawRings(void)
 		INT32 i;
 		ringnum = 0;
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] && players[i].mo && players[i].mo->health > 1)
-				ringnum += players[i].mo->health - 1;
+			if (playeringame[i] && players[i].mo && players[i].rings > 0)
+				ringnum += players[i].rings;
 	}
 
 	ST_DrawNumFromHudWS(HUD_RINGSNUM, ringnum);
@@ -1145,11 +1153,11 @@ static void ST_drawNiGHTSHUD(void)
 		INT32 i;
 		total_ringcount = 0;
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] /*&& players[i].pflags & PF_NIGHTSMODE*/ && players[i].health)
-				total_ringcount += players[i].health - 1;
+			if (playeringame[i] /*&& players[i].pflags & PF_NIGHTSMODE*/ && players[i].rings)
+				total_ringcount += players[i].rings;
 	}
 	else
-		total_ringcount = stplyr->health-1;
+		total_ringcount = stplyr->rings;
 
 	if (stplyr->capsule)
 	{
@@ -1361,7 +1369,7 @@ static void ST_drawWeaponRing(powertype_t weapon, INT32 rwflag, INT32 wepflag, I
 			txtflags |= V_YELLOWMAP;
 
 		if (weapon == pw_infinityring
-		|| (stplyr->ringweapons & rwflag && stplyr->health > 1))
+		|| (stplyr->ringweapons & rwflag))
 			txtflags |= V_20TRANS;
 		else
 		{
@@ -1399,7 +1407,7 @@ static void ST_drawMatchHUD(void)
 
 	if (stplyr->powers[pw_infinityring])
 		ST_drawWeaponRing(pw_infinityring, 0, 0, offset, infinityring);
-	else if (stplyr->health > 1)
+	else if (stplyr->rings > 0)
 		V_DrawScaledPatch(8 + offset, STRINGY(162), V_SNAPTOLEFT, normring);
 	else
 		V_DrawTranslucentPatch(8 + offset, STRINGY(162), V_SNAPTOLEFT|V_80TRANS, normring);
