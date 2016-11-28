@@ -46,6 +46,7 @@ extern fixed_t windowtop;
 extern fixed_t windowbottom;
 
 void R_DrawMaskedColumn(column_t *column);
+void R_DrawFlippedMaskedColumn(column_t *column, INT32 texheight);
 void R_SortVisSprites(void);
 
 //faB: find sprites in wadfile, replace existing, add new ones

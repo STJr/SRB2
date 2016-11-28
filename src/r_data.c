@@ -173,6 +173,43 @@ static inline void R_DrawColumnInCache(column_t *patch, UINT8 *cache, INT32 orig
 	}
 }
 
+static inline void R_DrawFlippedColumnInCache(column_t *patch, UINT8 *cache, INT32 originy, INT32 cacheheight, INT32 patchheight)
+{
+	INT32 count, position;
+	UINT8 *source, *dest;
+	INT32 topdelta, prevdelta = -1;
+
+	while (patch->topdelta != 0xff)
+	{
+		topdelta = patch->topdelta;
+		if (topdelta <= prevdelta)
+			topdelta += prevdelta;
+		prevdelta = topdelta;
+		topdelta = patchheight-patch->length-topdelta;
+		source = (UINT8 *)patch + 2 + patch->length; // patch + 3 + (patch->length-1)
+		count = patch->length;
+		position = originy + topdelta;
+
+		if (position < 0)
+		{
+			count += position;
+			position = 0;
+		}
+
+		if (position + count > cacheheight)
+			count = cacheheight - position;
+
+		dest = cache + position;
+		if (count > 0)
+		{
+			for (; dest < cache + position + count; --source)
+				*dest++ = *source;
+		}
+
+		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
+	}
+}
+
 //
 // R_GenerateTexture
 //
@@ -191,7 +228,7 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	texture_t *texture;
 	texpatch_t *patch;
 	patch_t *realpatch;
-	int x, x1, x2, i;
+	int x, x1, x2, i, width, height;
 	size_t blocksize;
 	column_t *patchcol;
 	UINT32 *colofs;
@@ -239,6 +276,7 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 		if (holey)
 		{
 			texture->holes = true;
+			texture->flip = patch->flip;
 			blocksize = W_LumpLengthPwad(patch->wad, patch->lump);
 			block = Z_Calloc(blocksize, PU_STATIC, // will change tag at end of this function
 				&texturecache[texnum]);
@@ -259,6 +297,7 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 
 	// multi-patch textures (or 'composite')
 	texture->holes = false;
+	texture->flip = 0;
 	blocksize = (texture->width * 4) + (texture->width * texture->height);
 	texturememory += blocksize;
 	block = Z_Malloc(blocksize+1, PU_STATIC, &texturecache[texnum]);
@@ -277,7 +316,9 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	{
 		realpatch = W_CacheLumpNumPwad(patch->wad, patch->lump, PU_CACHE);
 		x1 = patch->originx;
-		x2 = x1 + SHORT(realpatch->width);
+		width = SHORT(realpatch->width);
+		height = SHORT(realpatch->height);
+		x2 = x1 + width;
 
 		if (x1 < 0)
 			x = 0;
@@ -289,11 +330,17 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 
 		for (; x < x2; x++)
 		{
-			patchcol = (column_t *)((UINT8 *)realpatch + LONG(realpatch->columnofs[x-x1]));
+			if (patch->flip & 1)
+				patchcol = (column_t *)((UINT8 *)realpatch + LONG(realpatch->columnofs[(x1+width-1)-x]));
+			else
+				patchcol = (column_t *)((UINT8 *)realpatch + LONG(realpatch->columnofs[x-x1]));
 
 			// generate column ofset lookup
 			colofs[x] = LONG((x * texture->height) + (texture->width*4));
-			R_DrawColumnInCache(patchcol, block + LONG(colofs[x]), patch->originy, texture->height);
+			if (patch->flip & 2)
+				R_DrawFlippedColumnInCache(patchcol, block + LONG(colofs[x]), patch->originy, texture->height, height);
+			else
+				R_DrawColumnInCache(patchcol, block + LONG(colofs[x]), patch->originy, texture->height);
 		}
 	}
 
@@ -469,6 +516,7 @@ void R_LoadTextures(void)
 				texture->height = SHORT(patchlump->height)*patchcount;
 				texture->patchcount = patchcount;
 				texture->holes = false;
+				texture->flip = 0;
 
 				// Allocate information for the texture's patches.
 				for (k = 0; k < patchcount; k++)
@@ -479,6 +527,7 @@ void R_LoadTextures(void)
 					patch->originy = (INT16)(k*patchlump->height);
 					patch->wad = (UINT16)w;
 					patch->lump = texstart + j;
+					patch->flip = 0;
 				}
 
 				Z_Unlock(patchlump);
