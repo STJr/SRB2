@@ -527,7 +527,7 @@ static INT32 SDLJoyAxis(const Sint16 axis, evtype_t which)
 
 static void Impl_HandleWindowEvent(SDL_WindowEvent evt)
 {
-	//static SDL_bool firsttimeonmouse = SDL_TRUE;
+	static SDL_bool firsttimeonmouse = SDL_TRUE;
 	static SDL_bool mousefocus = SDL_TRUE;
 	static SDL_bool kbfocus = SDL_TRUE;
 
@@ -535,21 +535,17 @@ static void Impl_HandleWindowEvent(SDL_WindowEvent evt)
 	{
 		case SDL_WINDOWEVENT_ENTER:
 			mousefocus = SDL_TRUE;
-			//CONS_Printf("Window gained mouse focus!\n");
 			break;
 		case SDL_WINDOWEVENT_LEAVE:
 			mousefocus = SDL_FALSE;
-			//CONS_Printf("Window lost mouse focus!\n");
 			break;
 		case SDL_WINDOWEVENT_FOCUS_GAINED:
 			kbfocus = SDL_TRUE;
 			mousefocus = SDL_TRUE;
-			//CONS_Printf("Window gained keyboard focus!\n");
 			break;
 		case SDL_WINDOWEVENT_FOCUS_LOST:
 			kbfocus = SDL_FALSE;
 			mousefocus = SDL_FALSE;
-			//CONS_Printf("Window lost keyboard focus!\n");
 			break;
 		case SDL_WINDOWEVENT_MAXIMIZED:
 			break;
@@ -562,14 +558,11 @@ static void Impl_HandleWindowEvent(SDL_WindowEvent evt)
 		if (!paused)
 			I_ResumeSong(0); //resume it
 
-		/*if (!firsttimeonmouse)
+		if (!firsttimeonmouse)
 		{
 			if (cv_usemouse.value) I_StartupMouse();
 		}
 		//else firsttimeonmouse = SDL_FALSE;
-
-		if (!disable_mouse && cv_usemouse.value)
-			SDL_SetRelativeMouseMode(SDL_TRUE);*/
 	}
 	else if (!mousefocus && !kbfocus)
 	{
@@ -577,34 +570,15 @@ static void Impl_HandleWindowEvent(SDL_WindowEvent evt)
 		window_notinfocus = true;
 		I_PauseSong(0);
 
-		/*if (!disable_mouse)
+		if (!disable_mouse)
 		{
 			SDLforceUngrabMouse();
-			SDL_SetRelativeMouseMode(SDL_FALSE);
-			HalfWarpMouse(realwidth, realheight); // warp to center
-		}*/
+		}
 		memset(gamekeydown, 0, NUMKEYS); // TODO this is a scary memset
 
-		/*if (MOUSE_MENU)
+		if (MOUSE_MENU)
 		{
 			SDLdoUngrabMouse();
-		}*/
-	}
-
-	if (!disable_mouse)
-	{
-		if (mousefocus)
-		{
-			//if (cv_usemouse.value)
-				//SDL_SetRelativeMouseMode(SDL_TRUE);
-		}
-		else
-		{
-			if (SDL_GetRelativeMouseMode() == SDL_TRUE)
-			{
-				SDL_SetRelativeMouseMode(SDL_FALSE);
-				HalfWarpMouse(realwidth, realheight); // warp to center
-			}
 		}
 	}
 
@@ -640,15 +614,15 @@ static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
 
 		if ((SDL_GetMouseFocus() != window && SDL_GetKeyboardFocus() != window))
 		{
-			//SDLdoUngrabMouse();
+			SDLdoUngrabMouse();
 			return;
 		}
 
-		/*if ((evt.x == realwidth/2) && (evt.y == realheight/2))
+		if ((evt.x == realwidth/2) && (evt.y == realheight/2))
 		{
 			return;
 		}
-		else*/
+		else
 		{
 			event.data2 = (INT32)lround((evt.xrel) * ((float)wwidth / (float)realwidth));
 			event.data3 = (INT32)lround(-evt.yrel * ((float)wheight / (float)realheight));
@@ -658,13 +632,9 @@ static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
 
 		if (SDL_GetMouseFocus() == window && SDL_GetKeyboardFocus() == window)
 		{
-			if (SDL_GetRelativeMouseMode() == SDL_FALSE)
-				SDL_SetRelativeMouseMode(SDL_TRUE);
-			else
-				D_PostEvent(&event);
-			//SDL_SetRelativeMouseMode(SDL_TRUE);
-			//SDL_SetWindowGrab(window, SDL_TRUE);
-			//HalfWarpMouse(wwidth, wheight);
+			D_PostEvent(&event);
+			SDL_SetWindowGrab(window, SDL_TRUE);
+			HalfWarpMouse(wwidth, wheight);
 		}
 	}
 }
@@ -862,18 +832,11 @@ void I_GetEvent(void)
 
 void I_StartupMouse(void)
 {
-	//static SDL_bool firsttimeonmouse = SDL_TRUE;
+	static SDL_bool firsttimeonmouse = SDL_TRUE;
 
 	if (disable_mouse)
 		return;
-	if (cv_usemouse.value)
-		SDL_SetRelativeMouseMode(SDL_TRUE);
-	else if (SDL_GetRelativeMouseMode() == SDL_TRUE) {
-		SDLdoUngrabMouse();
-		SDL_SetRelativeMouseMode(SDL_FALSE);
-		HalfWarpMouse(realwidth, realheight); // warp to center
-	}
-/*
+
 	if (!firsttimeonmouse)
 		HalfWarpMouse(realwidth, realheight); // warp to center
 	else
@@ -882,7 +845,6 @@ void I_StartupMouse(void)
 		return;
 	else
 		SDLdoUngrabMouse();
-*/
 }
 
 //
@@ -1508,7 +1470,7 @@ void I_StartupGraphics(void)
 	realheight = (Uint16)vid.height;
 
 	VID_Command_Info_f();
-	if (!disable_mouse) SDL_SetRelativeMouseMode(SDL_TRUE);
+	if (!disable_mouse) SDL_ShowCursor(SDL_DISABLE);
 	SDLdoUngrabMouse();
 
 	graphics_started = true;
