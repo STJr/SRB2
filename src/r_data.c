@@ -160,6 +160,7 @@ static inline void R_DrawColumnInCache(column_t *patch, UINT8 *cache, INT32 orig
 		if (position < 0)
 		{
 			count += position;
+			source -= position; // start further down the column
 			position = 0;
 		}
 
@@ -193,6 +194,7 @@ static inline void R_DrawFlippedColumnInCache(column_t *patch, UINT8 *cache, INT
 		if (position < 0)
 		{
 			count += position;
+			source += position; // start further UP the column
 			position = 0;
 		}
 
