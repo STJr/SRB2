@@ -2666,6 +2666,18 @@ INT32 I_PutEnv(char *variable)
 #endif
 }
 
+INT32 I_ClipboardCopy(const char *data, size_t size)
+{
+	(void)data;
+	(void)size;
+	return -1;
+}
+
+char *I_ClipboardPaste(void)
+{
+	return NULL;
+}
+
 /**	\brief	The isWadPathOk function
 
 	\param	path	string path to check
