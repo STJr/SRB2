@@ -289,6 +289,14 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 			colofs = (UINT32 *)(void *)(block + 8);
 			texturecolumnofs[texnum] = colofs;
 			blocktex = block;
+			if (patch->flip & 1) // flip the patch horizontally
+			{
+				UINT32 *realcolofs = (UINT32 *)realpatch->columnofs;
+				for (x = 0; x < texture->width; x++)
+					colofs[x] = realcolofs[texture->width-1-x]; // swap with the offset of the other side of the texture
+			}
+			// we can't as easily flip the patch vertically sadly though,
+			//  we have wait until the texture itself is drawn to do that
 			for (x = 0; x < texture->width; x++)
 				colofs[x] = LONG(LONG(colofs[x]) + 3);
 			goto done;
