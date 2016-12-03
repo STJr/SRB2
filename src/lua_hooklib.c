@@ -815,7 +815,6 @@ void LUAh_PlayerQuit(player_t *plr, int reason)
 		        LUA_PushUserdata(gL, plr, META_PLAYER); // Player that quit
 		        lua_pushinteger(gL, reason); // Reason for quitting
 		    }
-			lua_pushinteger(gL, reason); // Reason for quitting
 			lua_pushfstring(gL, FMT_HOOKID, hookp->id);
 			lua_gettable(gL, LUA_REGISTRYINDEX);
 			lua_pushvalue(gL, -3);
