@@ -500,6 +500,6 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 
 /// Handle touching sector specials in P_PlayerAfterThink instead of P_PlayerThink.
 /// \note   Required for proper collision with moving sloped surfaces that have sector specials on them.
-#define SECTORSPECIALSAFTERTHINK
+//#define SECTORSPECIALSAFTERTHINK
 
 #endif // __DOOMDEF__

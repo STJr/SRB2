@@ -281,7 +281,6 @@ void P_SpawnSlope_Line(int linenum)
 	if(frontfloor || frontceil)
 	{
 		line->frontsector->hasslope = true; // Tell the software renderer that we're sloped
-		line->frontsector->flags |= SF_TRIGGERSPECIAL_TOUCH; // you're gonna want to get specials on contact
 
 		origin.z = line->backsector->floorheight;
 		direction.x = nx;
@@ -408,7 +407,6 @@ void P_SpawnSlope_Line(int linenum)
 	if(backfloor || backceil)
 	{
 		line->backsector->hasslope = true; // Tell the software renderer that we're sloped
-		line->backsector->flags |= SF_TRIGGERSPECIAL_TOUCH; // you're gonna want to get specials on contact
 
 		origin.z = line->frontsector->floorheight;
 		// Backsector
@@ -601,7 +599,6 @@ void P_CopySectorSlope(line_t *line)
    }
 
    fsec->hasslope = true;
-   fsec->flags |= SF_TRIGGERSPECIAL_TOUCH; // you're gonna want to get specials on contact
 
    line->special = 0; // Linedef was use to set slopes, it finished its job, so now make it a normal linedef
 }
@@ -721,7 +718,6 @@ void P_ResetDynamicSlopes(void) {
 						*slopetoset = P_NewVertexSlope(lines[i].tag, lines[i].tag, lines[i].tag, flags);
 
 					sides[lines[i].sidenum[which]].sector->hasslope = true;
-					sides[lines[i].sidenum[which]].sector->flags |= SF_TRIGGERSPECIAL_TOUCH; // you're gonna want to get specials on contact
 				}
 				break;
 
