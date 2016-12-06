@@ -914,9 +914,9 @@ boolean F_IntroResponder(event_t *event)
 	// The keys that can skip the intro
 	// This is often the jump/confirm and "start"/pause buttons, some times the cancel button too, so the same goes for SRB2
 	if (key != KEY_ENTER && key != KEY_ESCAPE
-	 && key != gamecontrolmenu[mc_confirm][0] && key != gamecontrolmenu[mc_confirm][0]
-	 && key != gamecontrolmenu[mc_cancel][0] && key != gamecontrolmenu[mc_cancel][0]
-	 && key != gamecontrolmenu[mc_openmenu][0] && key != gamecontrolmenu[mc_openmenu][0] // "Start button", expected when using controllers
+	 && key != gamecontrolmenu[mc_confirm][0] && key != gamecontrolmenu[mc_confirm][1]
+	 && key != gamecontrolmenu[mc_cancel][0] && key != gamecontrolmenu[mc_cancel][1]
+	 && key != gamecontrolmenu[mc_openmenu][0] && key != gamecontrolmenu[mc_openmenu][1] // "Start button", expected when using controllers
 	 && key != gamecontrol[gc_pause][0] && key != gamecontrol[gc_pause][1] // "Start button" again
 	 && key != gamecontrol[gc_jump][0] && key != gamecontrol[gc_jump][1])
 		return false;
@@ -1175,7 +1175,7 @@ boolean F_CreditResponder(event_t *event)
 	// The jump/confirm and cancel buttons are left out here purposefully, as a lot of games (though not all)
 	// generally skip the credits with the "start"/pause button, but not the jump/confirm/cancel buttons
 	if (key != KEY_ENTER && key != KEY_ESCAPE
-	 && key != gamecontrolmenu[mc_openmenu][0] && key != gamecontrolmenu[mc_openmenu][0] // "Start button", expected when using controllers
+	 && key != gamecontrolmenu[mc_openmenu][0] && key != gamecontrolmenu[mc_openmenu][1] // "Start button", expected when using controllers
 	 && key != gamecontrol[gc_pause][0] && key != gamecontrol[gc_pause][1]) // "Start button" again
 		return false;
 
@@ -1608,8 +1608,8 @@ boolean F_ContinueResponder(event_t *event)
 	// The keys that accept the "game over, but do you want to continue?" screen
 	// In Sonic games, this goes for the jump/confirm and "start"/pause buttons, so the same goes for SRB2
 	if (key != KEY_ENTER
-	 && key != gamecontrolmenu[mc_confirm][0] && key != gamecontrolmenu[mc_confirm][0]
-	 && key != gamecontrolmenu[mc_openmenu][0] && key != gamecontrolmenu[mc_openmenu][0] // "Start button", expected when using controllers
+	 && key != gamecontrolmenu[mc_confirm][0] && key != gamecontrolmenu[mc_confirm][1]
+	 && key != gamecontrolmenu[mc_openmenu][0] && key != gamecontrolmenu[mc_openmenu][1] // "Start button", expected when using controllers
 	 && key != gamecontrol[gc_pause][0] && key != gamecontrol[gc_pause][1] // "Start button" again
 	 && key != gamecontrol[gc_jump][0] && key != gamecontrol[gc_jump][1])
 		return false;
