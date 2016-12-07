@@ -712,7 +712,7 @@ void R_DrawMaskedColumn(column_t *column)
 	dc_texturemid = basetexturemid;
 }
 
-static void R_DrawFlippedMaskedColumn(column_t *column, INT32 texheight)
+void R_DrawFlippedMaskedColumn(column_t *column, INT32 texheight)
 {
 	INT32 topscreen;
 	INT32 bottomscreen;

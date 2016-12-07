@@ -276,6 +276,13 @@ static void R_Render2sidedMultiPatchColumn(column_t *column)
 	}
 }
 
+// quick wrapper for R_DrawFlippedMaskedColumn so it can be set as a colfunc_2s value
+// uses column2s_length for texture->height as above
+static void R_DrawFlippedMaskedSegColumn(column_t *column)
+{
+	R_DrawFlippedMaskedColumn(column, column2s_length);
+}
+
 void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 {
 	size_t pindex;
@@ -347,7 +354,15 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	// handle case where multipatch texture is drawn on a 2sided wall, multi-patch textures
 	// are not stored per-column with post info in SRB2
 	if (textures[texnum]->holes)
-		colfunc_2s = R_DrawMaskedColumn; // render the usual 2sided single-patch packed texture
+	{
+		if (textures[texnum]->flip & 2) // vertically flipped?
+		{
+			colfunc_2s = R_DrawFlippedMaskedSegColumn;
+			column2s_length = textures[texnum]->height;
+		}
+		else
+			colfunc_2s = R_DrawMaskedColumn; // render the usual 2sided single-patch packed texture
+	}
 	else
 	{
 		colfunc_2s = R_Render2sidedMultiPatchColumn; // render multipatch with no holes (no post_t info)
@@ -700,6 +715,14 @@ static void R_DrawRepeatMaskedColumn(column_t *col)
 	} while (sprtopscreen < sprbotscreen);
 }
 
+static void R_DrawRepeatFlippedMaskedColumn(column_t *col)
+{
+	do {
+		R_DrawFlippedMaskedColumn(col, column2s_length);
+		sprtopscreen += dc_texheight*spryscale;
+	} while (sprtopscreen < sprbotscreen);
+}
+
 //
 // R_RenderThickSideRange
 // Renders all the thick sides in the given range.
@@ -1027,7 +1050,15 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	//faB: handle case where multipatch texture is drawn on a 2sided wall, multi-patch textures
 	//     are not stored per-column with post info anymore in Doom Legacy
 	if (textures[texnum]->holes)
-		colfunc_2s = R_DrawRepeatMaskedColumn;                    //render the usual 2sided single-patch packed texture
+	{
+		if (textures[texnum]->flip & 2) // vertically flipped?
+		{
+			colfunc_2s = R_DrawRepeatFlippedMaskedColumn;
+			column2s_length = textures[texnum]->height;
+		}
+		else
+			colfunc_2s = R_DrawRepeatMaskedColumn; // render the usual 2sided single-patch packed texture
+	}
 	else
 	{
 		colfunc_2s = R_Render2sidedMultiPatchColumn;        //render multipatch with no holes (no post_t info)

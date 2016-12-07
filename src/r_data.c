@@ -160,6 +160,7 @@ static inline void R_DrawColumnInCache(column_t *patch, UINT8 *cache, INT32 orig
 		if (position < 0)
 		{
 			count += position;
+			source -= position; // start further down the column
 			position = 0;
 		}
 
@@ -168,6 +169,44 @@ static inline void R_DrawColumnInCache(column_t *patch, UINT8 *cache, INT32 orig
 
 		if (count > 0)
 			M_Memcpy(cache + position, source, count);
+
+		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
+	}
+}
+
+static inline void R_DrawFlippedColumnInCache(column_t *patch, UINT8 *cache, INT32 originy, INT32 cacheheight, INT32 patchheight)
+{
+	INT32 count, position;
+	UINT8 *source, *dest;
+	INT32 topdelta, prevdelta = -1;
+
+	while (patch->topdelta != 0xff)
+	{
+		topdelta = patch->topdelta;
+		if (topdelta <= prevdelta)
+			topdelta += prevdelta;
+		prevdelta = topdelta;
+		topdelta = patchheight-patch->length-topdelta;
+		source = (UINT8 *)patch + 2 + patch->length; // patch + 3 + (patch->length-1)
+		count = patch->length;
+		position = originy + topdelta;
+
+		if (position < 0)
+		{
+			count += position;
+			source += position; // start further UP the column
+			position = 0;
+		}
+
+		if (position + count > cacheheight)
+			count = cacheheight - position;
+
+		dest = cache + position;
+		if (count > 0)
+		{
+			for (; dest < cache + position + count; --source)
+				*dest++ = *source;
+		}
 
 		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
 	}
@@ -191,7 +230,7 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	texture_t *texture;
 	texpatch_t *patch;
 	patch_t *realpatch;
-	int x, x1, x2, i;
+	int x, x1, x2, i, width, height;
 	size_t blocksize;
 	column_t *patchcol;
 	UINT32 *colofs;
@@ -239,6 +278,7 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 		if (holey)
 		{
 			texture->holes = true;
+			texture->flip = patch->flip;
 			blocksize = W_LumpLengthPwad(patch->wad, patch->lump);
 			block = Z_Calloc(blocksize, PU_STATIC, // will change tag at end of this function
 				&texturecache[texnum]);
@@ -249,6 +289,14 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 			colofs = (UINT32 *)(void *)(block + 8);
 			texturecolumnofs[texnum] = colofs;
 			blocktex = block;
+			if (patch->flip & 1) // flip the patch horizontally
+			{
+				UINT32 *realcolofs = (UINT32 *)realpatch->columnofs;
+				for (x = 0; x < texture->width; x++)
+					colofs[x] = realcolofs[texture->width-1-x]; // swap with the offset of the other side of the texture
+			}
+			// we can't as easily flip the patch vertically sadly though,
+			//  we have wait until the texture itself is drawn to do that
 			for (x = 0; x < texture->width; x++)
 				colofs[x] = LONG(LONG(colofs[x]) + 3);
 			goto done;
@@ -259,6 +307,7 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 
 	// multi-patch textures (or 'composite')
 	texture->holes = false;
+	texture->flip = 0;
 	blocksize = (texture->width * 4) + (texture->width * texture->height);
 	texturememory += blocksize;
 	block = Z_Malloc(blocksize+1, PU_STATIC, &texturecache[texnum]);
@@ -277,7 +326,9 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	{
 		realpatch = W_CacheLumpNumPwad(patch->wad, patch->lump, PU_CACHE);
 		x1 = patch->originx;
-		x2 = x1 + SHORT(realpatch->width);
+		width = SHORT(realpatch->width);
+		height = SHORT(realpatch->height);
+		x2 = x1 + width;
 
 		if (x1 < 0)
 			x = 0;
@@ -289,11 +340,17 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 
 		for (; x < x2; x++)
 		{
-			patchcol = (column_t *)((UINT8 *)realpatch + LONG(realpatch->columnofs[x-x1]));
+			if (patch->flip & 1)
+				patchcol = (column_t *)((UINT8 *)realpatch + LONG(realpatch->columnofs[(x1+width-1)-x]));
+			else
+				patchcol = (column_t *)((UINT8 *)realpatch + LONG(realpatch->columnofs[x-x1]));
 
 			// generate column ofset lookup
 			colofs[x] = LONG((x * texture->height) + (texture->width*4));
-			R_DrawColumnInCache(patchcol, block + LONG(colofs[x]), patch->originy, texture->height);
+			if (patch->flip & 2)
+				R_DrawFlippedColumnInCache(patchcol, block + LONG(colofs[x]), patch->originy, texture->height, height);
+			else
+				R_DrawColumnInCache(patchcol, block + LONG(colofs[x]), patch->originy, texture->height);
 		}
 	}
 
@@ -469,6 +526,7 @@ void R_LoadTextures(void)
 				texture->height = SHORT(patchlump->height)*patchcount;
 				texture->patchcount = patchcount;
 				texture->holes = false;
+				texture->flip = 0;
 
 				// Allocate information for the texture's patches.
 				for (k = 0; k < patchcount; k++)
@@ -479,6 +537,7 @@ void R_LoadTextures(void)
 					patch->originy = (INT16)(k*patchlump->height);
 					patch->wad = (UINT16)w;
 					patch->lump = texstart + j;
+					patch->flip = 0;
 				}
 
 				Z_Unlock(patchlump);
@@ -502,6 +561,7 @@ static texpatch_t *R_ParsePatch(boolean actuallyLoadPatch)
 	char *patchName = NULL;
 	INT16 patchXPos;
 	INT16 patchYPos;
+	UINT8 flip = 0;
 	texpatch_t *resultPatch = NULL;
 	lumpnum_t patchLumpNum;
 
@@ -598,6 +658,47 @@ static texpatch_t *R_ParsePatch(boolean actuallyLoadPatch)
 	}
 	Z_Free(texturesToken);
 
+	// Patch parameters block (OPTIONAL)
+	// added by Monster Iestyn (22/10/16)
+
+	// Left Curly Brace
+	texturesToken = M_GetToken(NULL);
+	if (texturesToken == NULL)
+		; // move on and ignore, R_ParseTextures will deal with this
+	else
+	{
+		if (strcmp(texturesToken,"{")==0)
+		{
+			Z_Free(texturesToken);
+			texturesToken = M_GetToken(NULL);
+			if (texturesToken == NULL)
+			{
+				I_Error("Error parsing TEXTURES lump: Unexpected end of file where patch \"%s\"'s parameters should be",patchName);
+			}
+			while (strcmp(texturesToken,"}")!=0)
+			{
+				if (stricmp(texturesToken, "FLIPX")==0)
+					flip |= 1;
+				else if (stricmp(texturesToken, "FLIPY")==0)
+					flip |= 2;
+				Z_Free(texturesToken);
+
+				texturesToken = M_GetToken(NULL);
+				if (texturesToken == NULL)
+				{
+					I_Error("Error parsing TEXTURES lump: Unexpected end of file where patch \"%s\"'s parameters or right curly brace should be",patchName);
+				}
+			}
+		}
+		else
+		{
+			 // this is not what we wanted...
+			 // undo last read so R_ParseTextures can re-get the token for its own purposes
+			M_UnGetToken();
+		}
+		Z_Free(texturesToken);
+	}
+
 	if (actuallyLoadPatch == true)
 	{
 		// Check lump exists
@@ -608,6 +709,7 @@ static texpatch_t *R_ParsePatch(boolean actuallyLoadPatch)
 		resultPatch->originy = patchYPos;
 		resultPatch->lump = patchLumpNum & 65535;
 		resultPatch->wad = patchLumpNum>>16;
+		resultPatch->flip = flip;
 		// Clean up a little after ourselves
 		Z_Free(patchName);
 		// Then return it

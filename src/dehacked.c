@@ -2778,7 +2778,7 @@ static void readpatch(MYFILE *f, const char *name, UINT16 wad)
 	char *word2;
 	char *tmp;
 	INT32 i = 0, j = 0, value;
-	texpatch_t patch = {0, 0, UINT16_MAX, UINT16_MAX};
+	texpatch_t patch = {0, 0, UINT16_MAX, UINT16_MAX, 0};
 
 	// Jump to the texture this patch belongs to, which,
 	// coincidentally, is always the last one on the buffer cache.
