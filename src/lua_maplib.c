@@ -400,46 +400,6 @@ static int sector_get(lua_State *L)
 	return 0;
 }
 
-// help function for P_LoadSectors, find a flat in the active wad files,
-// allocate an id for it, and set the levelflat (to speedup search)
-//
-static INT32 P_AddLevelFlatRuntime(const char *flatname)
-{
-	size_t i;
-	levelflat_t *levelflat = levelflats;
-
-	//
-	//  first scan through the already found flats
-	//
-	for (i = 0; i < numlevelflats; i++, levelflat++)
-		if (strnicmp(levelflat->name,flatname,8)==0)
-			break;
-
-	// that flat was already found in the level, return the id
-	if (i == numlevelflats)
-	{
-		// allocate new flat memory
-		levelflats = Z_Realloc(levelflats, (numlevelflats + 1) * sizeof(*levelflats), PU_LEVEL, NULL);
-		levelflat = levelflats+i;
-
-		// store the name
-		strlcpy(levelflat->name, flatname, sizeof (levelflat->name));
-		strupr(levelflat->name);
-
-		// store the flat lump number
-		levelflat->lumpnum = R_GetFlatNumForName(flatname);
-
-#ifndef ZDEBUG
-		CONS_Debug(DBG_SETUP, "flat #%03d: %s\n", atoi(sizeu1(numlevelflats)), levelflat->name);
-#endif
-
-		numlevelflats++;
-	}
-
-	// level flat id
-	return (INT32)i;
-}
-
 static int sector_set(lua_State *L)
 {
 	sector_t *sector = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
