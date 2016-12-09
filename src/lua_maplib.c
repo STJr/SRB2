@@ -348,22 +348,12 @@ static int sector_get(lua_State *L)
 	case sector_ceilingheight:
 		lua_pushfixed(L, sector->ceilingheight);
 		return 1;
-	case sector_floorpic: { // floorpic
-		levelflat_t *levelflat;
-		INT16 i;
-		for (i = 0, levelflat = levelflats; i != sector->floorpic; i++, levelflat++)
-			;
-		lua_pushlstring(L, levelflat->name, 8);
+	case sector_floorpic: // floorpic
+		lua_pushlstring(L, levelflats[sector->floorpic].name, 8);
 		return 1;
-	}
-	case sector_ceilingpic: { // ceilingpic
-		levelflat_t *levelflat;
-		INT16 i;
-		for (i = 0, levelflat = levelflats; i != sector->ceilingpic; i++, levelflat++)
-			;
-		lua_pushlstring(L, levelflat->name, 8);
+	case sector_ceilingpic: // ceilingpic
+		lua_pushlstring(L, levelflats[sector->ceilingpic].name, 8);
 		return 1;
-	}
 	case sector_lightlevel:
 		lua_pushinteger(L, sector->lightlevel);
 		return 1;
