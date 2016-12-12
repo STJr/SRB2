@@ -162,6 +162,7 @@ void R_DrawSplat_8(void);
 void R_DrawTranslucentSplat_8(void);
 void R_DrawTranslucentSpan_8(void);
 void R_Draw2sMultiPatchColumn_8(void);
+void R_Draw2sMultiPatchTranslucentColumn_8(void);
 void R_DrawFogSpan_8(void);
 void R_DrawFogColumn_8(void);
 void R_DrawColumnShadowed_8(void);
