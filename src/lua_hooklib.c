@@ -54,6 +54,8 @@ const char *const hookNames[hook_MAX+1] = {
 	"PlayerMsg",
 	"HurtMsg",
 	"PlayerSpawn",
+	"ShieldSpawn",
+	"ShieldSpecial",
 	NULL
 };
 

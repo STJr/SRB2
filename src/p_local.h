@@ -59,8 +59,9 @@
 
 #define AIMINGTOSLOPE(aiming) FINESINE((aiming>>ANGLETOFINESHIFT) & FINEMASK)
 
-#define mariomode (maptol & TOL_MARIO)
 #define twodlevel (maptol & TOL_2D)
+
+#define mariomode (maptol & TOL_MARIO)
 
 #define P_GetPlayerHeight(player) FixedMul(player->height, player->mo->scale)
 #define P_GetPlayerSpinHeight(player) FixedMul(player->spinheight, player->mo->scale)
@@ -143,6 +144,7 @@ boolean P_InQuicksand(mobj_t *mo);
 void P_SetObjectMomZ(mobj_t *mo, fixed_t value, boolean relative);
 void P_RestoreMusic(player_t *player);
 void P_SpawnShieldOrb(player_t *player);
+void P_SwitchShield(player_t *player, UINT16 shieldtype);
 mobj_t *P_SpawnGhostMobj(mobj_t *mobj);
 void P_GivePlayerRings(player_t *player, INT32 num_rings);
 void P_GivePlayerLives(player_t *player, INT32 numlives);
@@ -152,8 +154,9 @@ void P_ResetScore(player_t *player);
 boolean P_AutoPause(void);
 
 void P_DoJumpShield(player_t *player);
+void P_DoBubbleBounce(player_t *player);
 void P_BlackOw(player_t *player);
-void P_ElementalFireTrail(player_t *player);
+void P_ElementalFire(player_t *player, boolean cropcircle);
 
 void P_DoPityCheck(player_t *player);
 void P_PlayerThink(player_t *player);
@@ -166,7 +169,7 @@ fixed_t P_ReturnThrustX(mobj_t *mo, angle_t angle, fixed_t move);
 fixed_t P_ReturnThrustY(mobj_t *mo, angle_t angle, fixed_t move);
 void P_InstaThrustEvenIn2D(mobj_t *mo, angle_t angle, fixed_t move);
 
-boolean P_LookForEnemies(player_t *player);
+boolean P_LookForEnemies(player_t *player, boolean nonenemies);
 void P_NukeEnemies(mobj_t *inflictor, mobj_t *source, fixed_t radius);
 void P_HomingAttack(mobj_t *source, mobj_t *enemy); /// \todo doesn't belong in p_user
 boolean P_SuperReady(player_t *player);

@@ -2636,6 +2636,23 @@ static boolean P_ZMovement(mobj_t *mo)
 				mo->flags |= MF_NOGRAVITY;
 			}
 			break;
+		case MT_SPINFIRE:
+			if (P_CheckDeathPitCollide(mo))
+			{
+				P_RemoveMobj(mo);
+				return false;
+			}
+			if (mo->momz
+			&& !(mo->flags & MF_NOGRAVITY)
+			&& ((!(mo->eflags & MFE_VERTICALFLIP) && mo->z <= mo->floorz)
+			|| ((mo->eflags & MFE_VERTICALFLIP) && mo->z+mo->height >= mo->ceilingz)))
+			{
+				mo->flags |= MF_NOGRAVITY;
+				mo->momx = 8; // this is a hack which is used to ensure it still behaves as a missile and can damage others
+				mo->momy = mo->momz = 0;
+				mo->z = ((mo->eflags & MFE_VERTICALFLIP) ? mo->ceilingz-mo->height : mo->floorz);
+			}
+			break;
 		case MT_GOOP:
 			if (P_CheckDeathPitCollide(mo))
 			{
@@ -3121,6 +3138,8 @@ static void P_PlayerZMovement(mobj_t *mo)
 
 		if (P_MobjFlip(mo)*mo->momz < 0) // falling
 		{
+			boolean clipmomz = !(P_CheckDeathPitCollide(mo));
+
 			mo->pmomz = 0; // We're on a new floor, don't keep doing platform movement.
 
 			// Squat down. Decrease viewheight for a moment after hitting the ground (hard),
@@ -3250,23 +3269,56 @@ static void P_PlayerZMovement(mobj_t *mo)
 						mo->player->pflags &= ~PF_SPINNING;
 
 					if (!(mo->player->pflags & PF_GLIDING))
-						mo->player->pflags &= ~PF_JUMPED;
+						mo->player->pflags &= ~(PF_JUMPED|PF_FORCEJUMPDAMAGE);
+
 					mo->player->pflags &= ~(PF_THOKKED|PF_CANCARRY/*|PF_GLIDING*/);
 					mo->player->jumping = 0;
 					mo->player->secondjump = 0;
 					mo->player->glidetime = 0;
 					mo->player->climbing = 0;
 					mo->player->powers[pw_tailsfly] = 0;
+
+					if (mo->player->pflags & PF_SHIELDABILITY)
+					{
+						mo->player->pflags &= ~PF_SHIELDABILITY;
+
+						if ((mo->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL) // Elemental shield's stomp attack.
+						{
+							if (mo->eflags & (MFE_UNDERWATER|MFE_TOUCHWATER)) // play a blunt sound
+								S_StartSound(mo, sfx_s3k4c);
+							else // create a fire pattern on the ground
+							{
+								S_StartSound(mo, sfx_s3k47);
+								P_ElementalFire(mo->player, true);
+							}
+							P_SetObjectMomZ(mo,
+							(mo->eflags & MFE_UNDERWATER)
+							? 6*FRACUNIT/5
+							: 5*FRACUNIT/2,
+							false);
+							P_SetPlayerMobjState(mo, S_PLAY_FALL);
+							mo->momx = mo->momy = 0;
+							clipmomz = false;
+						}
+						else if ((mo->player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP) // Bubble shield's bounce attack.
+						{
+							P_DoBubbleBounce(mo->player);
+							clipmomz = false;
+						}
+					}
 				}
 			}
 			if (!(mo->player->pflags & PF_SPINNING))
 				mo->player->pflags &= ~PF_STARTDASH;
 
-			if (tmfloorthing && (tmfloorthing->flags & (MF_PUSHABLE|MF_MONITOR)
-			|| tmfloorthing->flags2 & MF2_STANDONME || tmfloorthing->type == MT_PLAYER))
-				mo->momz = tmfloorthing->momz;
-			else if (!tmfloorthing)
-				mo->momz = 0;
+			if (clipmomz)
+			{
+				if (tmfloorthing && (tmfloorthing->flags & (MF_PUSHABLE|MF_MONITOR)
+				|| tmfloorthing->flags2 & MF2_STANDONME || tmfloorthing->type == MT_PLAYER))
+					mo->momz = tmfloorthing->momz;
+				else if (!tmfloorthing)
+					mo->momz = 0;
+			}
 		}
 		else if (tmfloorthing && (tmfloorthing->flags & (MF_PUSHABLE|MF_MONITOR)
 		|| tmfloorthing->flags2 & MF2_STANDONME || tmfloorthing->type == MT_PLAYER))
@@ -3538,6 +3590,7 @@ void P_MobjCheckWater(mobj_t *mobj)
 	ffloor_t *rover;
 	player_t *p = mobj->player; // Will just be null if not a player.
 	fixed_t height = (p ? P_GetPlayerHeight(p) : mobj->height); // for players, calculation height does not necessarily match actual height for gameplay reasons (spin, etc)
+	boolean wasgroundpounding = (p && (mobj->eflags & MFE_GOOWATER) && ((p->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL || (p->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP) && (p->pflags & PF_SHIELDABILITY));
 
 	// Default if no water exists.
 	mobj->watertop = mobj->waterbottom = mobj->z - 1000*FRACUNIT;
@@ -3608,15 +3661,24 @@ void P_MobjCheckWater(mobj_t *mobj)
 	{
 		if (!((p->powers[pw_super]) || (p->powers[pw_invulnerability])))
 		{
-			if ((p->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT)
-			{ // Water removes attract shield.
+			boolean electric = !!(p->powers[pw_shield] & SH_PROTECTELECTRIC);
+#define SH_OP (SH_PROTECTFIRE|SH_PROTECTWATER|SH_PROTECTELECTRIC)
+			if ((p->powers[pw_shield] & SH_OP) == SH_OP) // No.
+				P_KillMobj(mobj, NULL, NULL, DMG_INSTAKILL);
+#undef SH_OP
+			else if (electric || ((p->powers[pw_shield] & SH_PROTECTFIRE) && !(p->powers[pw_shield] & SH_PROTECTWATER)))
+			{ // Water removes electric and non-water fire shields...
+				P_FlashPal(p,
+				electric
+				? PAL_WHITE
+				: PAL_NUKE,
+				1);
 				p->powers[pw_shield] = p->powers[pw_shield] & SH_STACK;
-				P_FlashPal(p, PAL_WHITE, 1);
 			}
 		}
 
 		// Drown timer setting
-		if ((p->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL // Has elemental
+		if ((p->powers[pw_shield] & SH_PROTECTWATER) // Has water protection
 		 || (p->exiting) // Or exiting
 		 || (maptol & TOL_NIGHTS) // Or in NiGHTS mode
 		 || (mariomode)) // Or in Mario mode...
@@ -3628,6 +3690,12 @@ void P_MobjCheckWater(mobj_t *mobj)
 		{
 			// Then we'll set it!
 			p->powers[pw_underwater] = underwatertics + 1;
+		}
+
+		if (wasgroundpounding)
+		{
+			p->pflags &= ~PF_SHIELDABILITY;
+			mobj->momz >>= 1;
 		}
 	}
 
@@ -3646,7 +3714,7 @@ void P_MobjCheckWater(mobj_t *mobj)
 			|| ((mobj->eflags & MFE_VERTICALFLIP) && mobj->ceilingz-mobj->waterbottom <= height>>1))
 			return;
 
-		if ((mobj->eflags & MFE_GOOWATER || wasingoo)) { // Decide what happens to your momentum when you enter/leave goopy water.
+		if (!wasgroundpounding && (mobj->eflags & MFE_GOOWATER || wasingoo)) { // Decide what happens to your momentum when you enter/leave goopy water.
 			if (P_MobjFlip(mobj)*mobj->momz < 0) // You are entering the goo?
 				mobj->momz = FixedMul(mobj->momz, FixedDiv(2*FRACUNIT, 5*FRACUNIT)); // kill momentum significantly, to make the goo feel thick.
 		}
@@ -6318,7 +6386,7 @@ static boolean P_ShieldLook(mobj_t *thing, shieldtype_t shield)
 
 	// TODO: Make an MT_SHIELDORB which changes color/states to always match the appropriate shield,
 	// instead of having completely seperate mobjtypes.
-	if (shield != SH_FORCE)
+	if (!(shield & SH_FORCE))
 	{ // Regular shields check for themselves only
 		if ((shieldtype_t)(thing->target->player->powers[pw_shield] & SH_NOSTACK) != shield)
 		{
@@ -6332,9 +6400,9 @@ static boolean P_ShieldLook(mobj_t *thing, shieldtype_t shield)
 		return false;
 	}
 
-	if (shield == SH_FORCE && thing->movecount != (thing->target->player->powers[pw_shield] & 0xFF))
+	if (shield & SH_FORCE && thing->movecount != (thing->target->player->powers[pw_shield] & SH_FORCEHP))
 	{
-		thing->movecount = (thing->target->player->powers[pw_shield] & 0xFF);
+		thing->movecount = (thing->target->player->powers[pw_shield] & SH_FORCEHP);
 		if (thing->movecount < 1)
 		{
 			if (thing->info->painstate)
@@ -6355,13 +6423,14 @@ static boolean P_ShieldLook(mobj_t *thing, shieldtype_t shield)
 	thing->eflags = (thing->eflags & ~MFE_VERTICALFLIP)|(thing->target->eflags & MFE_VERTICALFLIP);
 
 	P_SetScale(thing, FixedMul(thing->target->scale, thing->target->player->shieldscale));
+	thing->destscale = thing->scale;
 	P_UnsetThingPosition(thing);
 	thing->x = thing->target->x;
 	thing->y = thing->target->y;
 	if (thing->eflags & MFE_VERTICALFLIP)
-		thing->z = thing->target->z + thing->target->height - thing->height + FixedDiv(P_GetPlayerHeight(thing->target->player) - thing->target->height, 3*FRACUNIT) - FixedMul(2*FRACUNIT, thing->target->scale);
+		thing->z = thing->target->z + (thing->target->height - thing->height + FixedDiv(P_GetPlayerHeight(thing->target->player) - thing->target->height, 3*FRACUNIT)) - FixedMul(2*FRACUNIT, thing->target->scale);
 	else
-		thing->z = thing->target->z - FixedDiv(P_GetPlayerHeight(thing->target->player) - thing->target->height, 3*FRACUNIT) + FixedMul(2*FRACUNIT, thing->target->scale);
+		thing->z = thing->target->z - (FixedDiv(P_GetPlayerHeight(thing->target->player) - thing->target->height, 3*FRACUNIT)) + FixedMul(2*FRACUNIT, thing->target->scale);
 	P_SetThingPosition(thing);
 	P_CheckPosition(thing, thing->x, thing->y);
 
@@ -6384,7 +6453,7 @@ void P_RunShields(void)
 	// run shields
 	for (i = 0; i < numshields; i++)
 	{
-		P_ShieldLook(shields[i], shields[i]->info->speed);
+		P_ShieldLook(shields[i], shields[i]->threshold);
 		P_SetTarget(&shields[i], NULL);
 	}
 	numshields = 0;
@@ -6392,7 +6461,7 @@ void P_RunShields(void)
 
 static boolean P_AddShield(mobj_t *thing)
 {
-	shieldtype_t shield = thing->info->speed;
+	shieldtype_t shield = thing->threshold;
 
 	if (!thing->target || thing->target->health <= 0 || !thing->target->player
 		|| (thing->target->player->powers[pw_shield] & SH_NOSTACK) == SH_NONE || thing->target->player->powers[pw_super]
@@ -6402,7 +6471,7 @@ static boolean P_AddShield(mobj_t *thing)
 		return false;
 	}
 
-	if (shield != SH_FORCE)
+	if (!(shield & SH_FORCE))
 	{ // Regular shields check for themselves only
 		if ((shieldtype_t)(thing->target->player->powers[pw_shield] & SH_NOSTACK) != shield)
 		{
@@ -6440,6 +6509,13 @@ void P_RunOverlays(void)
 
 		if (!mo->target)
 			continue;
+
+		if (P_MobjWasRemoved(mo->target))
+		{
+			P_RemoveMobj(mo);
+			continue;
+		}
+
 		if (!splitscreen /*&& rendermode != render_soft*/)
 		{
 			angle_t viewingangle;
@@ -6619,7 +6695,7 @@ void P_MobjThinker(mobj_t *mobj)
 		fixed_t oldheight = mobj->height;
 		UINT8 correctionType = 0; // Don't correct Z position, just gain height
 
-		if (mobj->z > mobj->floorz && mobj->z + mobj->height < mobj->ceilingz
+		if ((mobj->flags & MF_NOCLIPHEIGHT || (mobj->z > mobj->floorz && mobj->z + mobj->height < mobj->ceilingz))
 		&& mobj->type != MT_EGGMOBILE_FIRE)
 			correctionType = 1; // Correct Z position by centering
 		else if (mobj->eflags & MFE_VERTICALFLIP)
@@ -6664,6 +6740,11 @@ void P_MobjThinker(mobj_t *mobj)
 		if (P_MobjWasRemoved(mobj))
 			return;
 #endif
+
+		if (mobj->flags2 & MF2_SHIELD)
+			if (!P_AddShield(mobj))
+				return;
+
 		switch (mobj->type)
 		{
 			case MT_HOOP:
@@ -6720,14 +6801,120 @@ void P_MobjThinker(mobj_t *mobj)
 				else
 					P_AddOverlay(mobj);
 				break;
-			case MT_BLACKORB:
-			case MT_WHITEORB:
-			case MT_GREENORB:
-			case MT_YELLOWORB:
-			case MT_BLUEORB:
-			case MT_PITYORB:
-				if (!P_AddShield(mobj))
+			case MT_PITY_ORB:
+			case MT_WHIRLWIND_ORB:
+			case MT_ARMAGEDDON_ORB:
+				if (!(mobj->flags2 & MF2_SHIELD))
 					return;
+				break;
+			case MT_ATTRACT_ORB:
+				if (!(mobj->flags2 & MF2_SHIELD))
+					return;
+				if (/*(mobj->target) -- the following is implicit by P_AddShield
+				&& (mobj->target->player)
+				&& */ (mobj->target->player->homing))
+				{
+					P_SetMobjState(mobj, mobj->info->painstate);
+					mobj->tics++;
+				}
+				break;
+			case MT_ELEMENTAL_ORB:
+				if (!(mobj->flags2 & MF2_SHIELD))
+					return;
+				if (mobj->tracer
+				/* && mobj->target -- the following is implicit by P_AddShield
+				&& mobj->target->player
+				&& (mobj->target->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL */
+				&& mobj->target->player->pflags & PF_SHIELDABILITY
+				&& ((statenum_t)(mobj->tracer->state-states) < mobj->info->raisestate
+					|| (mobj->tracer->state->nextstate < mobj->info->raisestate && mobj->tracer->tics == 1)))
+				{
+					P_SetMobjState(mobj, mobj->info->painstate);
+					mobj->tics++;
+					P_SetMobjState(mobj->tracer, mobj->info->raisestate);
+					mobj->tracer->tics++;
+				}
+				break;
+			case MT_FORCE_ORB:
+				if (!(mobj->flags2 & MF2_SHIELD))
+					return;
+				if (/*
+				&& mobj->target -- the following is implicit by P_AddShield
+				&& mobj->target->player
+				&& (mobj->target->player->powers[pw_shield] & SH_FORCE)
+				&& */ (mobj->target->player->pflags & PF_SHIELDABILITY))
+				{
+					mobj_t *whoosh = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_GHOST); // done here so the offset is correct
+					P_SetMobjState(whoosh, mobj->info->raisestate);
+					whoosh->destscale = whoosh->scale<<1;
+					whoosh->scalespeed = FixedMul(whoosh->scalespeed, whoosh->scale);
+					whoosh->height = 38*whoosh->scale;
+					whoosh->fuse = 10;
+					whoosh->flags |= MF_NOCLIPHEIGHT;
+					whoosh->momz = mobj->target->momz; // Stay reasonably centered for a few frames
+					mobj->target->player->pflags &= ~PF_SHIELDABILITY; // prevent eternal whoosh
+				}
+			case MT_FLAMEAURA_ORB:
+				if (!(mobj->flags2 & MF2_SHIELD))
+					return;
+				mobj->angle = mobj->target->angle; // implicitly okay because of P_AddShield
+				if (mobj->tracer
+				/* && mobj->target -- the following is implicit by P_AddShield
+				&& mobj->target->player
+				&& (mobj->target->player->powers[pw_shield] & SH_NOSTACK) == SH_FLAMEAURA */
+				&& mobj->target->player->pflags & PF_SHIELDABILITY
+				&& ((statenum_t)(mobj->tracer->state-states) < mobj->info->raisestate
+					|| (mobj->tracer->state->nextstate < mobj->info->raisestate && mobj->tracer->tics == 1)))
+				{
+					P_SetMobjState(mobj, mobj->info->painstate);
+					mobj->tics++;
+					P_SetMobjState(mobj->tracer, mobj->info->raisestate);
+					mobj->tracer->tics++;
+				}
+				break;
+			case MT_BUBBLEWRAP_ORB:
+				if (!(mobj->flags2 & MF2_SHIELD))
+					return;
+				if (mobj->tracer
+				/* && mobj->target -- the following is implicit by P_AddShield
+				&& mobj->target->player
+				&& (mobj->target->player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP */
+				)
+				{
+					if (mobj->target->player->pflags & PF_SHIELDABILITY
+					&& ((statenum_t)(mobj->state-states) < mobj->info->painstate
+						|| (mobj->state->nextstate < mobj->info->painstate && mobj->tics == 1)))
+					{
+						P_SetMobjState(mobj, mobj->info->painstate);
+						mobj->tics++;
+						P_SetMobjState(mobj->tracer, mobj->info->raisestate);
+						mobj->tracer->tics++;
+					}
+					else if (mobj->target->eflags & MFE_JUSTHITFLOOR
+					&& (statenum_t)(mobj->state-states) == mobj->info->painstate)
+					{
+						P_SetMobjState(mobj, mobj->info->painstate+1);
+						mobj->tics++;
+						P_SetMobjState(mobj->tracer, mobj->info->raisestate+1);
+						mobj->tracer->tics++;
+					}
+				}
+				break;
+			case MT_THUNDERCOIN_ORB:
+				if (!(mobj->flags2 & MF2_SHIELD))
+					return;
+				if (mobj->tracer
+				/* && mobj->target -- the following is implicit by P_AddShield
+				&& mobj->target->player
+				&& (mobj->target->player->powers[pw_shield] & SH_NOSTACK) == SH_THUNDERCOIN */
+				&& (mobj->target->player->pflags & PF_SHIELDABILITY))
+				{
+					P_SetMobjState(mobj, mobj->info->painstate);
+					mobj->tics++;
+					P_SetMobjState(mobj->tracer, mobj->info->raisestate);
+					mobj->tracer->tics++;
+					mobj->target->player->pflags &= ~PF_SHIELDABILITY; // prevent eternal spark
+				}
 				break;
 			case MT_WATERDROP:
 				P_SceneryCheckWater(mobj);
@@ -7576,10 +7763,13 @@ void P_MobjThinker(mobj_t *mobj)
 				}
 			break;
 		case MT_SPINFIRE:
-			if (mobj->eflags & MFE_VERTICALFLIP)
-				mobj->z = mobj->ceilingz - mobj->height;
-			else
-				mobj->z = mobj->floorz;
+			if (mobj->flags & MF_NOGRAVITY)
+			{
+				if (mobj->eflags & MFE_VERTICALFLIP)
+					mobj->z = mobj->ceilingz - mobj->height;
+				else
+					mobj->z = mobj->floorz;
+			}
 			// THERE IS NO BREAK HERE ON PURPOSE
 		default:
 			// check mobj against possible water content, before movement code

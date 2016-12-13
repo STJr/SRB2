@@ -142,7 +142,10 @@ boolean P_CanPickupItem(player_t *player, boolean weapon)
 	if (player->bot && weapon)
 		return false;
 
-	if (player->powers[pw_flashing] > (flashingtics/4)*3 && player->powers[pw_flashing] <= flashingtics)
+	if (player->powers[pw_flashing] > (flashingtics/4)*3 && player->powers[pw_flashing] < UINT16_MAX)
+		return false;
+
+	if (player->mo && player->mo->health <= 0)
 		return false;
 
 	return true;
@@ -296,6 +299,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 {
 	player_t *player;
 	INT32 i;
+	UINT8 elementalpierce;
 
 	if (objectplacing)
 		return;
@@ -350,6 +354,11 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		return;
 #endif
 
+	// 0 = none, 1 = elemental pierce, 2 = bubble bounce
+	elementalpierce = (((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL || (player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP) && (player->pflags & PF_SHIELDABILITY)
+	? (((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL) ? 1 : 2)
+	: 0);
+
 	if (special->flags & MF_BOSS)
 	{
 		if (special->type == MT_BLACKEGGMAN)
@@ -359,14 +368,20 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		}
 
 		if (((player->pflags & PF_NIGHTSMODE) && (player->pflags & PF_DRILLING))
-		|| ((player->pflags & PF_JUMPED) && !(player->charflags & SF_NOJUMPDAMAGE && !(player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)))
+		|| ((player->pflags & PF_JUMPED) && (player->pflags & PF_FORCEJUMPDAMAGE || !(player->charflags & SF_NOJUMPSPIN) || (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)))
 		|| (player->pflags & (PF_SPINNING|PF_GLIDING))
 		|| (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2)
 		|| ((player->charflags & SF_STOMPDAMAGE) && (P_MobjFlip(toucher)*(toucher->z - (special->z + special->height/2)) > 0) && (P_MobjFlip(toucher)*toucher->momz < 0))
-		|| player->powers[pw_invulnerability] || player->powers[pw_super]) // Do you possess the ability to subdue the object?
+		|| player->powers[pw_invulnerability] || player->powers[pw_super]
+		|| elementalpierce) // Do you possess the ability to subdue the object?
 		{
-			if (P_MobjFlip(toucher)*toucher->momz < 0)
-				toucher->momz = -toucher->momz;
+			if ((P_MobjFlip(toucher)*toucher->momz < 0) && (elementalpierce != 1))
+			{
+				if (elementalpierce == 2)
+					P_DoBubbleBounce(player);
+				else
+					toucher->momz = -toucher->momz;
+			}
 			toucher->momx = -toucher->momx;
 			toucher->momy = -toucher->momy;
 			P_DamageMobj(special, toucher, toucher, 1, 0);
@@ -392,7 +407,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		/////ENEMIES!!//////////////////////////////////////////
 		////////////////////////////////////////////////////////
 		if (special->type == MT_GSNAPPER && !(((player->pflags & PF_NIGHTSMODE) && (player->pflags & PF_DRILLING))
-		|| player->powers[pw_invulnerability] || player->powers[pw_super])
+		|| player->powers[pw_invulnerability] || player->powers[pw_super] || elementalpierce)
 		&& toucher->z < special->z + special->height && toucher->z + toucher->height > special->z)
 		{
 			// Can only hit snapper from above
@@ -405,14 +420,19 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			P_DamageMobj(toucher, special, special, 1, 0);
 		}
 		else if (((player->pflags & PF_NIGHTSMODE) && (player->pflags & PF_DRILLING))
-		|| ((player->pflags & PF_JUMPED) && !(player->charflags & SF_NOJUMPDAMAGE && !(player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)))
+		|| ((player->pflags & PF_JUMPED) && (player->pflags & PF_FORCEJUMPDAMAGE || !(player->charflags & SF_NOJUMPSPIN) || (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)))
 		|| (player->pflags & (PF_SPINNING|PF_GLIDING))
 		|| (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2)
 		|| ((player->charflags & SF_STOMPDAMAGE) && (P_MobjFlip(toucher)*(toucher->z - (special->z + special->height/2)) > 0) && (P_MobjFlip(toucher)*toucher->momz < 0))
 		|| player->powers[pw_invulnerability] || player->powers[pw_super]) // Do you possess the ability to subdue the object?
 		{
-			if (P_MobjFlip(toucher)*toucher->momz < 0)
-				toucher->momz = -toucher->momz;
+			if ((P_MobjFlip(toucher)*toucher->momz < 0) && (elementalpierce != 1))
+			{
+				if (elementalpierce == 2)
+					P_DoBubbleBounce(player);
+				else
+					toucher->momz = -toucher->momz;
+			}
 
 			P_DamageMobj(special, toucher, toucher, 1, 0);
 		}
@@ -1195,9 +1215,17 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		case MT_FIREFLOWER:
 			if (player->bot)
 				return;
-			player->powers[pw_shield] |= SH_FIREFLOWER;
-			toucher->color = SKINCOLOR_WHITE;
-			G_GhostAddColor(GHC_FIREFLOWER);
+
+			S_StartSound(toucher, sfx_mario3);
+
+			player->powers[pw_shield] = (player->powers[pw_shield] & SH_NOSTACK)|SH_FIREFLOWER;
+
+			if (!(player->powers[pw_super] || (mariomode && player->powers[pw_invulnerability])))
+			{
+				player->mo->color = SKINCOLOR_WHITE;
+				G_GhostAddColor(GHC_FIREFLOWER);
+			}
+
 			break;
 
 // *************** //
@@ -1366,7 +1394,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					return;
 				}
 				else if (((player->pflags & PF_NIGHTSMODE) && (player->pflags & PF_DRILLING))
-						|| ((player->pflags & PF_JUMPED) && !(player->charflags & SF_NOJUMPDAMAGE))
+						|| ((player->pflags & PF_JUMPED) && (player->pflags & PF_FORCEJUMPDAMAGE || !(player->charflags & SF_NOJUMPSPIN) || (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)))
 						|| ((player->charflags & SF_STOMPDAMAGE) && (P_MobjFlip(toucher)*(toucher->z - (special->z + special->height/2)) > 0) && (P_MobjFlip(toucher)*toucher->momz < 0))
 						|| (player->pflags & (PF_SPINNING|PF_GLIDING))
 						|| player->powers[pw_invulnerability] || player->powers[pw_super]) // Do you possess the ability to subdue the object?
@@ -1478,7 +1506,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			return;
 
 		case MT_EXTRALARGEBUBBLE:
-			if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL)
+			if (player->powers[pw_shield] & SH_PROTECTWATER)
 				return;
 			if (maptol & TOL_NIGHTS)
 				return;
@@ -1604,8 +1632,10 @@ static void P_HitDeathMessages(player_t *player, mobj_t *inflictor, mobj_t *sour
 			else switch (inflictor->type)
 			{
 				case MT_PLAYER:
-					if (damagetype == DMG_NUKE) // SH_BOMB, armageddon shield
+					if (damagetype == DMG_NUKE) // SH_ARMAGEDDON, armageddon shield
 						str = M_GetText("%s%s's armageddon blast %s %s.\n");
+					else if ((inflictor->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL && (inflictor->player->pflags & PF_SHIELDABILITY))
+						str = M_GetText("%s%s's flame stomp %s %s.\n");
 					else if (inflictor->player->powers[pw_invulnerability])
 						str = M_GetText("%s%s's invincibility aura %s %s.\n");
 					else if (inflictor->player->powers[pw_super])
@@ -2321,24 +2351,27 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			break;
 
 		case MT_PLAYER:
-			target->fuse = TICRATE*3; // timer before mobj disappears from view (even if not an actual player)
-			target->momx = target->momy = target->momz = 0;
-			if (damagetype == DMG_DROWNED) // drowned
 			{
-				target->movedir = damagetype; // we're MOVING the Damage Into anotheR function... Okay, this is a bit of a hack.
-				if (target->player->charflags & SF_MACHINE)
-					S_StartSound(target, sfx_fizzle);
+				target->fuse = TICRATE*3; // timer before mobj disappears from view (even if not an actual player)
+				target->momx = target->momy = target->momz = 0;
+
+				if (damagetype == DMG_DROWNED) // drowned
+				{
+					target->movedir = damagetype; // we're MOVING the Damage Into anotheR function... Okay, this is a bit of a hack.
+					if (target->player->charflags & SF_MACHINE)
+						S_StartSound(target, sfx_fizzle);
+					else
+						S_StartSound(target, sfx_drown);
+					// Don't jump up when drowning
+				}
 				else
-					S_StartSound(target, sfx_drown);
-				// Don't jump up when drowning
-			}
-			else
-			{
-				P_SetObjectMomZ(target, 14*FRACUNIT, false);
-				if ((source && source->type == MT_SPIKE) || damagetype == DMG_SPIKE) // Spikes
-					S_StartSound(target, sfx_spkdth);
-				else
-					P_PlayDeathSound(target);
+				{
+					P_SetObjectMomZ(target, 14*FRACUNIT, false);
+					if ((source && source->type == MT_SPIKE) || damagetype == DMG_SPIKE) // Spikes
+						S_StartSound(target, sfx_spkdth);
+					else
+						P_PlayDeathSound(target);
+				}
 			}
 			break;
 		default:
@@ -2786,22 +2819,21 @@ void P_RemoveShield(player_t *player)
 {
 	if (player->powers[pw_shield] & SH_FORCE)
 	{ // Multi-hit
-		if ((player->powers[pw_shield] & 0xFF) == 0)
-			player->powers[pw_shield] &= ~SH_FORCE;
-		else
+		if (player->powers[pw_shield] & SH_FORCEHP)
 			player->powers[pw_shield]--;
+		else
+			player->powers[pw_shield] &= SH_STACK;
 	}
 	else if ((player->powers[pw_shield] & SH_NOSTACK) == SH_NONE)
 	{ // Second layer shields
-		player->powers[pw_shield] = SH_NONE;
-		// Reset fireflower
-		if (!player->powers[pw_super])
+		if (((player->powers[pw_shield] & SH_STACK) == SH_FIREFLOWER) && !(player->powers[pw_super] || (mariomode && player->powers[pw_invulnerability])))
 		{
 			player->mo->color = player->skincolor;
 			G_GhostAddColor(GHC_NORMAL);
 		}
+		player->powers[pw_shield] = SH_NONE;
 	}
-	else if ((player->powers[pw_shield] & SH_NOSTACK) == SH_BOMB) // Give them what's coming to them!
+	else if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ARMAGEDDON) // Give them what's coming to them!
 	{
 		P_BlackOw(player); // BAM!
 		player->pflags |= PF_JUMPDOWN;
@@ -3027,12 +3059,15 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			switch (damagetype)
 			{
 				case DMG_WATER:
+					if (player->powers[pw_shield] & SH_PROTECTWATER)
+						return false; // Invincible to water damage
+					break;
 				case DMG_FIRE:
-					if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL)
-						return false; // Invincible to water/fire damage
+					if (player->powers[pw_shield] & SH_PROTECTFIRE)
+						return false; // Invincible to fire damage
 					break;
 				case DMG_ELECTRIC:
-					if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT)
+					if (player->powers[pw_shield] & SH_PROTECTELECTRIC)
 						return false; // Invincible to electric damage
 					break;
 				default:
@@ -3061,7 +3096,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 
 		if (!force && inflictor && inflictor->flags & MF_FIRE)
 		{
-			if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL)
+			if (player->powers[pw_shield] & SH_PROTECTFIRE)
 				return false; // Invincible to fire objects
 
 			if (G_PlatformGametype() && inflictor && source && source->player)
