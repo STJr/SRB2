@@ -4276,26 +4276,6 @@ static void HWR_DrawSprite(gr_vissprite_t *spr)
 	// transform
 	wv = wallVerts;
 
-	/*if (spr->mobj->frame & FF_PAPERSPRITE)
-	{
-		float mobjanglecos, mobjanglesin;
-		mobjanglesin = FIXED_TO_FLOAT(FINESINE((spr->mobj->angle-dup_viewangle+ANGLE_90)>>ANGLETOFINESHIFT));
-		mobjanglecos = FIXED_TO_FLOAT(FINECOSINE((spr->mobj->angle-dup_viewangle+ANGLE_90)>>ANGLETOFINESHIFT));
-		for (i = 0; i < 4; i++,wv++)
-		{
-			// x = (x * anglecos) + (z * anglesin)
-			// z = (x * anglesin) - (z * anglecos)
-			// instead of doing the z part we just add spr->tz afterwards because they are all the same
-			// value right now
-			tr_x = wv->x-spr->x2+(spr->x2-spr->x1)/2;
-            //wv->x = (tr_x * mobjanglecos) + (0) + (spr->x1+(spr->x2-spr->x1)/2);
-            wv->z = (tr_x * mobjanglesin) - (0) + (spr->tz);
-		}
-	}*/
-
-	// transform
-	wv = wallVerts;
-
 	for (i = 0; i < 4; i++,wv++)
 	{
 		//look up/down ----TOTAL SUCKS!!!--- do the 2 in one!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
