@@ -448,6 +448,26 @@ void T_Disappear(disappear_t *d);
 void T_Pusher(pusher_t *p);
 mobj_t *P_GetPushThing(UINT32 s);
 
+// Plane displacement
+typedef struct
+{
+	thinker_t thinker;   ///< Thinker structure for plane displacement effect.
+	INT32 affectee;      ///< Number of affected sector.
+	INT32 control;       ///< Control sector used to control plane positions.
+	fixed_t last_height; ///< Last known height of control sector.
+	fixed_t speed;       ///< Plane movement speed.
+	/** Types of plane displacement effects.
+	*/
+	enum
+	{
+		pd_floor,        ///< Displace floor.
+		pd_ceiling,      ///< Displace ceiling.
+		pd_both,         ///< Displace both floor AND ceiling.
+	} type;
+} planedisplace_t;
+
+void T_PlaneDisplace(planedisplace_t *pd);
+
 void P_CalcHeight(player_t *player);
 
 sector_t *P_ThingOnSpecial3DFloor(mobj_t *mo);
