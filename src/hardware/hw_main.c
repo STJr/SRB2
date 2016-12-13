@@ -5192,7 +5192,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		z2 = z1 + offset * ang_scalez;
 		tx += offset * ang_scale;
 	}
-	if (papersprite && max(z1, z1) < ZCLIP_PLANE)
+	if (papersprite && max(z1, z2) < ZCLIP_PLANE)
 		return;
 
 	x2 = gr_windowcenterx + (tx * gr_centerx / tz);
