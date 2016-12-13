@@ -712,7 +712,7 @@ void R_DrawMaskedColumn(column_t *column)
 	dc_texturemid = basetexturemid;
 }
 
-static void R_DrawFlippedMaskedColumn(column_t *column, INT32 texheight)
+void R_DrawFlippedMaskedColumn(column_t *column, INT32 texheight)
 {
 	INT32 topscreen;
 	INT32 bottomscreen;
@@ -2880,6 +2880,7 @@ void R_AddSkins(UINT16 wadnum)
 			GETFLAG(STOMPDAMAGE)
 			GETFLAG(MARIODAMAGE)
 			GETFLAG(MACHINE)
+			GETFLAG(NOSPINDASHDUST)
 #undef GETFLAG
 
 			else // let's check if it's a sound, otherwise error out
