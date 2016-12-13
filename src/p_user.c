@@ -3666,6 +3666,35 @@ void P_DoJump(player_t *player, boolean soundandstate)
 	}
 }
 
+static void P_DoSpinDashDust(player_t *player)
+{
+	UINT32 i;
+	mobj_t *particle;
+	INT32 prandom[3];
+	for (i = 0; i <= (leveltime%7)/2; i++) { // 1, 2, 3 or 4 particles
+		particle = P_SpawnMobjFromMobj(player->mo, 0, 0, 0, MT_SPINDUST);
+
+		if (player->mo->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER)) // overrides fire version
+			P_SetMobjState(particle, S_SPINDUST_BUBBLE1);
+		else if (player->powers[pw_shield] == SH_ELEMENTAL)
+			P_SetMobjState(particle, S_SPINDUST_FIRE1);
+
+		P_SetTarget(&particle->target, player->mo);
+		particle->destscale = (2*player->mo->scale)/3;
+		P_SetScale(particle, particle->destscale);
+		if (player->mo->eflags & MFE_VERTICALFLIP) // readjust z position if needed
+			particle->z = player->mo->z + player->mo->height - particle->height;
+		prandom[0] = P_RandomFixed()<<2; // P_RandomByte()<<10
+		prandom[1] = P_RandomRange(-30, 30); // P_RandomRange(-ANG30/FRACUNIT, ANG30/FRACUNIT)*FRACUNIT
+		prandom[2] = P_RandomFixed()<<3; // P_RandomByte()<<11
+		P_SetObjectMomZ(particle, player->dashspeed/50 + prandom[0], false);
+		P_InstaThrust(particle,
+				player->mo->angle + (prandom[1]*ANG1),
+				-FixedMul(player->dashspeed/12 + FRACUNIT + prandom[2], player->mo->scale));
+		P_TryMove(particle, particle->x+particle->momx, particle->y+particle->momy, true);
+	}
+}
+
 //
 // P_DoSpinAbility
 //
@@ -3673,6 +3702,7 @@ void P_DoJump(player_t *player, boolean soundandstate)
 //
 static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 {
+	boolean canstand = true; // can we stand on the ground? (mostly relevant for slopes)
 	if (player->pflags & PF_STASIS)
 		return;
 
@@ -3684,69 +3714,92 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 	}
 #endif
 
-	// Spinning and Spindashing
-	if ((player->charability2 == CA2_SPINDASH) && !(player->pflags & PF_SLIDING) && !player->exiting
-		&& !P_PlayerInPain(player)) // subsequent revs
-	{
-		if ((cmd->buttons & BT_USE) && player->speed < FixedMul(5<<FRACBITS, player->mo->scale) && !player->mo->momz && onground && !(player->pflags & PF_USEDOWN) && !(player->pflags & PF_SPINNING)
 #ifdef ESLOPE
-			&& (!player->mo->standingslope || (player->mo->standingslope->flags & SL_NOPHYSICS) || abs(player->mo->standingslope->zdelta) < FRACUNIT/2)
+	canstand = (!player->mo->standingslope || (player->mo->standingslope->flags & SL_NOPHYSICS) || abs(player->mo->standingslope->zdelta) < FRACUNIT/2);
 #endif
-			)
-		{
-			player->mo->momx = player->cmomx;
-			player->mo->momy = player->cmomy;
-			player->pflags |= PF_STARTDASH|PF_SPINNING;
-			player->dashspeed = player->mindash;
-			P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
-			player->pflags |= PF_USEDOWN;
-			if (!player->spectator)
-				S_StartSound(player->mo, sfx_s3kab); // Make the rev sound! Previously sfx_spndsh.
-		}
-		else if ((cmd->buttons & BT_USE) && (player->pflags & PF_STARTDASH))
-		{
-			if (player->dashspeed < player->maxdash)
-			{
-#define chargecalculation (6*(player->dashspeed - player->mindash))/(player->maxdash - player->mindash)
-				fixed_t soundcalculation = chargecalculation;
-				player->dashspeed += FRACUNIT;
-				if (!player->spectator && soundcalculation != chargecalculation)
-					S_StartSound(player->mo, sfx_s3kab); // Make the rev sound! Previously sfx_spndsh.
-#undef chargecalculation
-			}
-			if (player->revitem && !(leveltime % 5)) // Now spawn the color thok circle.
-			{
-				P_SpawnSpinMobj(player, player->revitem);
-				if (demorecording)
-					G_GhostAddRev();
-			}
-		}
 
-		// If not moving up or down, and travelling faster than a speed of four while not holding
-		// down the spin button and not spinning.
-		// AKA Just go into a spin on the ground, you idiot. ;)
-		else if ((cmd->buttons & BT_USE || ((twodlevel || (player->mo->flags2 & MF2_TWOD)) && cmd->forwardmove < -20))
-			&& !player->climbing && !player->mo->momz && onground && (player->speed > FixedMul(5<<FRACBITS, player->mo->scale)
-#ifdef ESLOPE
-			|| (player->mo->standingslope && (!(player->mo->standingslope->flags & SL_NOPHYSICS)) && abs(player->mo->standingslope->zdelta) >= FRACUNIT/2)
-#endif
-			) && !(player->pflags & PF_USEDOWN) && !(player->pflags & PF_SPINNING))
+	///////////////////////////////
+	// ability-specific behavior //
+	///////////////////////////////
+	if (!(player->pflags & PF_SLIDING) && !player->exiting && !P_PlayerInPain(player))
+	{
+		switch (player->charability2)
 		{
-			player->pflags |= PF_SPINNING;
-			P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
-			if (!player->spectator)
-				S_StartSound(player->mo, sfx_spin);
-			player->pflags |= PF_USEDOWN;
+			case CA2_SPINDASH: // Spinning and Spindashing
+				 // Start revving
+				if ((cmd->buttons & BT_USE) && player->speed < FixedMul(5<<FRACBITS, player->mo->scale)
+					&& !player->mo->momz && onground && !(player->pflags & (PF_USEDOWN|PF_SPINNING))
+						&& canstand)
+				{
+					player->mo->momx = player->cmomx;
+					player->mo->momy = player->cmomy;
+					player->pflags |= PF_STARTDASH|PF_SPINNING;
+					player->dashspeed = player->mindash;
+					P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
+					player->pflags |= PF_USEDOWN;
+					if (!player->spectator)
+						S_StartSound(player->mo, sfx_s3kab); // Make the rev sound! Previously sfx_spndsh.
+				}
+				 // Revving
+				else if ((cmd->buttons & BT_USE) && (player->pflags & PF_STARTDASH))
+				{
+					if (player->dashspeed < player->maxdash)
+					{
+#define chargecalculation (6*(player->dashspeed - player->mindash))/(player->maxdash - player->mindash)
+						fixed_t soundcalculation = chargecalculation;
+						player->dashspeed += FRACUNIT;
+						if (!player->spectator && soundcalculation != chargecalculation)
+							S_StartSound(player->mo, sfx_s3kab); // Make the rev sound! Previously sfx_spndsh.
+#undef chargecalculation
+					}
+					if (player->revitem && !(leveltime % 5)) // Now spawn the color thok circle.
+					{
+						P_SpawnSpinMobj(player, player->revitem);
+						if (demorecording)
+							G_GhostAddRev();
+					}
+				}
+
+				// If not moving up or down, and travelling faster than a speed of four while not holding
+				// down the spin button and not spinning.
+				// AKA Just go into a spin on the ground, you idiot. ;)
+				else if ((cmd->buttons & BT_USE || ((twodlevel || (player->mo->flags2 & MF2_TWOD)) && cmd->forwardmove < -20))
+					&& !player->climbing && !player->mo->momz && onground && (player->speed > FixedMul(5<<FRACBITS, player->mo->scale)
+						|| !canstand) && !(player->pflags & (PF_USEDOWN|PF_SPINNING)))
+				{
+					player->pflags |= PF_SPINNING;
+					P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
+					if (!player->spectator)
+						S_StartSound(player->mo, sfx_spin);
+					player->pflags |= PF_USEDOWN;
+				}
+				break;
+			case CA2_MELEE: // Melee attack
+				if (!(player->panim == PA_ABILITY2) && (cmd->buttons & BT_USE) && player->speed < FixedMul(10<<FRACBITS, player->mo->scale)
+				&& !player->mo->momz && onground && !(player->pflags & PF_USEDOWN)
+				&& canstand)
+				{
+					P_ResetPlayer(player);
+					player->mo->z += P_MobjFlip(player->mo);
+					player->mo->momx = player->cmomx = 0;
+					player->mo->momy = player->cmomy = 0;
+					P_SetObjectMomZ(player->mo, player->mindash, false);
+					P_InstaThrust(player->mo, player->mo->angle, FixedMul(player->maxdash, player->mo->scale));
+					P_SetPlayerMobjState(player->mo, S_PLAY_MELEE);
+					player->pflags |= PF_USEDOWN;
+					S_StartSound(player->mo, sfx_s3k8b);
+				}
+				break;
 		}
 	}
 
+	///////////////////////////////
+	// general spinning behavior //
+	///////////////////////////////
+
 	// Rolling normally
 	if (onground && player->pflags & PF_SPINNING && !(player->pflags & PF_STARTDASH)
-		&& player->speed < FixedMul(5*FRACUNIT,player->mo->scale)
-#ifdef ESLOPE
-			&& (!player->mo->standingslope || (player->mo->standingslope->flags & SL_NOPHYSICS) || abs(player->mo->standingslope->zdelta) < FRACUNIT/2)
-#endif
-			)
+		&& player->speed < FixedMul(5*FRACUNIT,player->mo->scale) && canstand)
 	{
 		if (GETSECSPECIAL(player->mo->subsector->sector->special, 4) == 7 || (player->mo->ceilingz - player->mo->floorz < P_GetPlayerHeight(player)))
 			P_InstaThrust(player->mo, player->mo->angle, FixedMul(10*FRACUNIT, player->mo->scale));
@@ -3791,29 +3844,12 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 	{
 		if (player->mo->state-states != S_PLAY_DASH)
 			P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
+		// Spawn spin dash dust
+		if (!(player->charflags & SF_NOSPINDASHDUST) && !(player->mo->eflags & MFE_GOOWATER))
+			P_DoSpinDashDust(player);
 	}
 	else if (onground && player->pflags & PF_SPINNING && !(player->panim == PA_ROLL))
 		P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
-
-	// Melee attack
-	if ((player->charability2 == CA2_MELEE) && !(player->panim == PA_ABILITY2) && !player->exiting
-		&& !P_PlayerInPain(player) && (cmd->buttons & BT_USE) && player->speed < FixedMul(10<<FRACBITS, player->mo->scale)
-		&& !player->mo->momz && onground && !(player->pflags & PF_USEDOWN)
-#ifdef ESLOPE
-		&& (!player->mo->standingslope || (player->mo->standingslope->flags & SL_NOPHYSICS) || abs(player->mo->standingslope->zdelta) < FRACUNIT/2)
-#endif
-		)
-	{
-		P_ResetPlayer(player);
-		player->mo->z += P_MobjFlip(player->mo);
-		player->mo->momx = player->cmomx = 0;
-		player->mo->momy = player->cmomy = 0;
-		P_SetObjectMomZ(player->mo, player->mindash, false);
-		P_InstaThrust(player->mo, player->mo->angle, FixedMul(player->maxdash, player->mo->scale));
-		P_SetPlayerMobjState(player->mo, S_PLAY_MELEE);
-		player->pflags |= PF_USEDOWN;
-		S_StartSound(player->mo, sfx_s3k8b);
-	}
 }
 
 //

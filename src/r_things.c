@@ -2880,6 +2880,7 @@ void R_AddSkins(UINT16 wadnum)
 			GETFLAG(STOMPDAMAGE)
 			GETFLAG(MARIODAMAGE)
 			GETFLAG(MACHINE)
+			GETFLAG(NOSPINDASHDUST)
 #undef GETFLAG
 
 			else // let's check if it's a sound, otherwise error out
