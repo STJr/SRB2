@@ -106,6 +106,7 @@ endif
 
 ifdef HAIKU
 SDL=1
+NOGME=1
 endif
 
 ifdef NDS
@@ -158,6 +159,7 @@ ifdef WII
 NONX86=1
 NOHW=1
 NOPOSTPROCESSING=1
+NOGME=1
 endif
 
 ifdef PS3N
@@ -167,6 +169,7 @@ endif
 
 ifdef DJGPPDOS
 include djgppdos/Makefile.cfg
+NOGME=1
 endif
 
 ifdef MINGW
@@ -315,12 +318,16 @@ LIBS+=$(PNG_LDFLAGS)
 CFLAGS+=$(PNG_CFLAGS)
 endif
 
-ifdef HAVE_LIBGME
+ifndef NOGME
 OPTS+=-DHAVE_LIBGME
 
 LIBGME_PKGCONFIG?=libgme
-LIBGME_CFLAGS?=$(shell $(PKG_CONFIG) $(LIBGME_PKGCONFIG) --cflags)
-LIBGME_LDFLAGS?=$(shell $(PKG_CONFIG) $(LIBGME_PKGCONFIG) --libs)
+LIBGME_CFLAGS?=$(shell $(PKG_CONFIG) $(LIBGME_PKGCONFIG) $(ZLIB_PKGCONFIG) --cflags)
+LIBGME_LDFLAGS?=$(shell $(PKG_CONFIG) $(LIBGME_PKGCONFIG) $(ZLIB_PKGCONFIG) --libs)
+
+ZLIB_PKGCONFIG?=zlib
+ZLIB_CFLAGS?=$(shell $(PKG_CONFIG) $(ZLIB_PKGCONFIG) --cflags)
+ZLIB_LDFLAGS?=$(shell $(PKG_CONFIG) $(ZLIB_PKGCONFIG) --libs)
 
 LIBS+=$(LIBGME_LDFLAGS)
 CFLAGS+=$(LIBGME_CFLAGS)
@@ -503,6 +510,7 @@ endif
 
 ifdef DJGPPDOS
 all:	 pre-build $(BIN)/$(EXENAME)
+NOGME=1
 endif
 
 ifdef XBOX
@@ -511,14 +519,17 @@ endif
 
 ifdef PS3N
 all:	 pre-build $(BIN)/$(PKGNAME)
+NOGME=1
 endif
 
 ifdef WII
 all:	pre-build $(BIN)/$(DOLNAME)
+NOGME=1
 endif
 
 ifdef PANDORA
 all:	pre-build $(BIN)/$(PNDNAME)
+NOGME=1
 endif
 
 ifdef PSP
@@ -527,6 +538,7 @@ endif
 
 ifdef DC
 all:	 pre-build $(BIN)/$(BINNAME) post-build
+NOGME=1
 endif
 
 ifndef DC
