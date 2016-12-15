@@ -81,6 +81,15 @@ typedef struct hook_s* hook_p;
 static hook_p mobjthinkerhooks[NUMMOBJTYPES];
 static hook_p mobjcollidehooks[NUMMOBJTYPES];
 
+// For each mobj type, a linked list for other mobj hooks
+static hook_p mobjhooks[NUMMOBJTYPES];
+
+// A linked list for player hooks
+static hook_p playerhooks;
+
+// A linked list for linedef executor hooks
+static hook_p linedefexecutorhooks;
+
 // For other hooks, a unique linked list
 hook_p roothook;
 
@@ -154,13 +163,41 @@ static int lib_addHook(lua_State *L)
 	// set hook.id to the highest id + 1
 	hook.id = nextid++;
 
-	// Special cases for mobj thinker and collision hooks (see the comments above mobjthinkerhooks declaration)
-	if (hook.type == hook_MobjThinker)
+	// Special cases for some hook types (see the comments above mobjthinkerhooks declaration)
+	switch(hook.type)
+	{
+	case hook_MobjThinker:
 		lastp = &mobjthinkerhooks[hook.s.mt];
-	else if (hook.type == hook_MobjCollide || hook.type == hook_MobjMoveCollide)
+		break;
+	case hook_MobjCollide:
+	case hook_MobjMoveCollide:
 		lastp = &mobjcollidehooks[hook.s.mt];
-	else
+		break;
+	case hook_MobjSpawn:
+	case hook_TouchSpecial:
+	case hook_MobjFuse:
+	case hook_BossThinker:
+	case hook_ShouldDamage:
+	case hook_MobjDamage:
+	case hook_MobjDeath:
+	case hook_BossDeath:
+	case hook_MobjRemoved:
+		lastp = &mobjhooks[hook.s.mt];
+		break;
+	case hook_JumpSpecial:
+	case hook_AbilitySpecial:
+	case hook_SpinSpecial:
+	case hook_JumpSpinSpecial:
+	case hook_PlayerSpawn:
+		lastp = &playerhooks;
+		break;
+	case hook_LinedefExecute:
+		lastp = &linedefexecutorhooks;
+		break;
+	default:
 		lastp = &roothook;
+		break;
+	}
 
 	// iterate the hook metadata structs
 	// set lastp to the last hook struct's "next" pointer.
@@ -196,9 +233,9 @@ boolean LUAh_MobjHook(mobj_t *mo, enum hook which)
 
 	lua_settop(gL, 0);
 
-	if (which == hook_MobjThinker) // Alternate list for mobj thinkers
-	{
-		for (hookp = mobjthinkerhooks[mo->type]; hookp; hookp = hookp->next)
+	// Look for all generic mobj hooks
+	for (hookp = mobjhooks[MT_NULL]; hookp; hookp = hookp->next)
+		if (hookp->type == which)
 		{
 			if (lua_gettop(gL) == 0)
 				LUA_PushUserdata(gL, mo, META_MOBJ);
@@ -217,8 +254,8 @@ boolean LUAh_MobjHook(mobj_t *mo, enum hook which)
 			lua_pop(gL, 1);
 		}
 
-		// Look for all generic mobj thinker hooks
-		for (hookp = mobjthinkerhooks[MT_NULL]; hookp; hookp = hookp->next)
+	for (hookp = mobjhooks[mo->type]; hookp; hookp = hookp->next)
+		if (hookp->type == which)
 		{
 			if (lua_gettop(gL) == 0)
 				LUA_PushUserdata(gL, mo, META_MOBJ);
@@ -236,30 +273,6 @@ boolean LUAh_MobjHook(mobj_t *mo, enum hook which)
 				hooked = true;
 			lua_pop(gL, 1);
 		}
-	}
-	else
-	{
-		for (hookp = roothook; hookp; hookp = hookp->next)
-			if (hookp->type == which
-			&& (hookp->s.mt == MT_NULL || hookp->s.mt == mo->type))
-			{
-				if (lua_gettop(gL) == 0)
-					LUA_PushUserdata(gL, mo, META_MOBJ);
-				lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-				lua_gettable(gL, LUA_REGISTRYINDEX);
-				lua_pushvalue(gL, -2);
-				if (lua_pcall(gL, 1, 1, 0)) {
-					if (!hookp->error || cv_debug & DBG_LUA)
-						CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
-					lua_pop(gL, 1);
-					hookp->error = true;
-					continue;
-				}
-				if (lua_toboolean(gL, -1))
-					hooked = true;
-				lua_pop(gL, 1);
-			}
-	}
 
 	lua_settop(gL, 0);
 	return hooked;
@@ -274,7 +287,7 @@ boolean LUAh_PlayerHook(player_t *plr, enum hook which)
 
 	lua_settop(gL, 0);
 
-	for (hookp = roothook; hookp; hookp = hookp->next)
+	for (hookp = playerhooks; hookp; hookp = hookp->next)
 		if (hookp->type == which)
 		{
 			if (lua_gettop(gL) == 0)
@@ -395,7 +408,8 @@ UINT8 LUAh_MobjCollideHook(mobj_t *thing1, mobj_t *thing2, enum hook which)
 
 	lua_settop(gL, 0);
 
-	for (hookp = mobjcollidehooks[thing1->type]; hookp; hookp = hookp->next)
+	// Look for all generic mobj collision hooks
+	for (hookp = mobjcollidehooks[MT_NULL]; hookp; hookp = hookp->next)
 		if (hookp->type == which)
 		{
 			if (lua_gettop(gL) == 0)
@@ -424,8 +438,7 @@ UINT8 LUAh_MobjCollideHook(mobj_t *thing1, mobj_t *thing2, enum hook which)
 			lua_pop(gL, 1);
 		}
 
-	// Look for all generic mobj collision hooks
-	for (hookp = mobjcollidehooks[MT_NULL]; hookp; hookp = hookp->next)
+	for (hookp = mobjcollidehooks[thing1->type]; hookp; hookp = hookp->next)
 		if (hookp->type == which)
 		{
 			if (lua_gettop(gL) == 0)
@@ -458,6 +471,59 @@ UINT8 LUAh_MobjCollideHook(mobj_t *thing1, mobj_t *thing2, enum hook which)
 	return shouldCollide;
 }
 
+// Hook for mobj thinkers
+boolean LUAh_MobjThinker(mobj_t *mo)
+{
+	hook_p hookp;
+	boolean hooked = false;
+	if (!gL || !(hooksAvailable[hook_MobjThinker/8] & (1<<(hook_MobjThinker%8))))
+		return false;
+
+	lua_settop(gL, 0);
+
+	// Look for all generic mobj thinker hooks
+	for (hookp = mobjthinkerhooks[MT_NULL]; hookp; hookp = hookp->next)
+	{
+		if (lua_gettop(gL) == 0)
+			LUA_PushUserdata(gL, mo, META_MOBJ);
+		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
+		lua_gettable(gL, LUA_REGISTRYINDEX);
+		lua_pushvalue(gL, -2);
+		if (lua_pcall(gL, 1, 1, 0)) {
+			if (!hookp->error || cv_debug & DBG_LUA)
+				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+			lua_pop(gL, 1);
+			hookp->error = true;
+			continue;
+		}
+		if (lua_toboolean(gL, -1))
+			hooked = true;
+		lua_pop(gL, 1);
+	}
+
+	for (hookp = mobjthinkerhooks[mo->type]; hookp; hookp = hookp->next)
+	{
+		if (lua_gettop(gL) == 0)
+			LUA_PushUserdata(gL, mo, META_MOBJ);
+		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
+		lua_gettable(gL, LUA_REGISTRYINDEX);
+		lua_pushvalue(gL, -2);
+		if (lua_pcall(gL, 1, 1, 0)) {
+			if (!hookp->error || cv_debug & DBG_LUA)
+				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+			lua_pop(gL, 1);
+			hookp->error = true;
+			continue;
+		}
+		if (lua_toboolean(gL, -1))
+			hooked = true;
+		lua_pop(gL, 1);
+	}
+
+	lua_settop(gL, 0);
+	return hooked;
+}
+
 // Hook for P_TouchSpecialThing by mobj type
 boolean LUAh_TouchSpecial(mobj_t *special, mobj_t *toucher)
 {
@@ -468,9 +534,33 @@ boolean LUAh_TouchSpecial(mobj_t *special, mobj_t *toucher)
 
 	lua_settop(gL, 0);
 
-	for (hookp = roothook; hookp; hookp = hookp->next)
-		if (hookp->type == hook_TouchSpecial
-		&& (hookp->s.mt == MT_NULL || hookp->s.mt == special->type))
+	// Look for all generic touch special hooks
+	for (hookp = mobjhooks[MT_NULL]; hookp; hookp = hookp->next)
+		if (hookp->type == hook_TouchSpecial)
+		{
+			if (lua_gettop(gL) == 0)
+			{
+				LUA_PushUserdata(gL, special, META_MOBJ);
+				LUA_PushUserdata(gL, toucher, META_MOBJ);
+			}
+			lua_pushfstring(gL, FMT_HOOKID, hookp->id);
+			lua_gettable(gL, LUA_REGISTRYINDEX);
+			lua_pushvalue(gL, -3);
+			lua_pushvalue(gL, -3);
+			if (lua_pcall(gL, 2, 1, 0)) {
+				if (!hookp->error || cv_debug & DBG_LUA)
+					CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+				lua_pop(gL, 1);
+				hookp->error = true;
+				continue;
+			}
+			if (lua_toboolean(gL, -1))
+				hooked = true;
+			lua_pop(gL, 1);
+		}
+
+	for (hookp = mobjhooks[special->type]; hookp; hookp = hookp->next)
+		if (hookp->type == hook_TouchSpecial)
 		{
 			if (lua_gettop(gL) == 0)
 			{
@@ -507,9 +597,42 @@ UINT8 LUAh_ShouldDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32
 
 	lua_settop(gL, 0);
 
-	for (hookp = roothook; hookp; hookp = hookp->next)
-		if (hookp->type == hook_ShouldDamage
-		&& (hookp->s.mt == MT_NULL || hookp->s.mt == target->type))
+	// Look for all generic should damage hooks
+	for (hookp = mobjhooks[MT_NULL]; hookp; hookp = hookp->next)
+		if (hookp->type == hook_ShouldDamage)
+		{
+			if (lua_gettop(gL) == 0)
+			{
+				LUA_PushUserdata(gL, target, META_MOBJ);
+				LUA_PushUserdata(gL, inflictor, META_MOBJ);
+				LUA_PushUserdata(gL, source, META_MOBJ);
+				lua_pushinteger(gL, damage);
+			}
+			lua_pushfstring(gL, FMT_HOOKID, hookp->id);
+			lua_gettable(gL, LUA_REGISTRYINDEX);
+			lua_pushvalue(gL, -5);
+			lua_pushvalue(gL, -5);
+			lua_pushvalue(gL, -5);
+			lua_pushvalue(gL, -5);
+			if (lua_pcall(gL, 4, 1, 0)) {
+				if (!hookp->error || cv_debug & DBG_LUA)
+					CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+				lua_pop(gL, 1);
+				hookp->error = true;
+				continue;
+			}
+			if (!lua_isnil(gL, -1))
+			{
+				if (lua_toboolean(gL, -1))
+					shouldDamage = 1; // Force yes
+				else
+					shouldDamage = 2; // Force no
+			}
+			lua_pop(gL, 1);
+		}
+
+	for (hookp = mobjhooks[target->type]; hookp; hookp = hookp->next)
+		if (hookp->type == hook_ShouldDamage)
 		{
 			if (lua_gettop(gL) == 0)
 			{
@@ -555,9 +678,37 @@ boolean LUAh_MobjDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32
 
 	lua_settop(gL, 0);
 
-	for (hookp = roothook; hookp; hookp = hookp->next)
-		if (hookp->type == hook_MobjDamage
-		&& (hookp->s.mt == MT_NULL || hookp->s.mt == target->type))
+	// Look for all generic mobj damage hooks
+	for (hookp = mobjhooks[MT_NULL]; hookp; hookp = hookp->next)
+		if (hookp->type == hook_MobjDamage)
+		{
+			if (lua_gettop(gL) == 0)
+			{
+				LUA_PushUserdata(gL, target, META_MOBJ);
+				LUA_PushUserdata(gL, inflictor, META_MOBJ);
+				LUA_PushUserdata(gL, source, META_MOBJ);
+				lua_pushinteger(gL, damage);
+			}
+			lua_pushfstring(gL, FMT_HOOKID, hookp->id);
+			lua_gettable(gL, LUA_REGISTRYINDEX);
+			lua_pushvalue(gL, -5);
+			lua_pushvalue(gL, -5);
+			lua_pushvalue(gL, -5);
+			lua_pushvalue(gL, -5);
+			if (lua_pcall(gL, 4, 1, 0)) {
+				if (!hookp->error || cv_debug & DBG_LUA)
+					CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+				lua_pop(gL, 1);
+				hookp->error = true;
+				continue;
+			}
+			if (lua_toboolean(gL, -1))
+				hooked = true;
+			lua_pop(gL, 1);
+		}
+
+	for (hookp = mobjhooks[target->type]; hookp; hookp = hookp->next)
+		if (hookp->type == hook_MobjDamage)
 		{
 			if (lua_gettop(gL) == 0)
 			{
@@ -598,9 +749,35 @@ boolean LUAh_MobjDeath(mobj_t *target, mobj_t *inflictor, mobj_t *source)
 
 	lua_settop(gL, 0);
 
-	for (hookp = roothook; hookp; hookp = hookp->next)
-		if (hookp->type == hook_MobjDeath
-		&& (hookp->s.mt == MT_NULL || hookp->s.mt == target->type))
+	// Look for all generic mobj death hooks
+	for (hookp = mobjhooks[MT_NULL]; hookp; hookp = hookp->next)
+		if (hookp->type == hook_MobjDeath)
+		{
+			if (lua_gettop(gL) == 0)
+			{
+				LUA_PushUserdata(gL, target, META_MOBJ);
+				LUA_PushUserdata(gL, inflictor, META_MOBJ);
+				LUA_PushUserdata(gL, source, META_MOBJ);
+			}
+			lua_pushfstring(gL, FMT_HOOKID, hookp->id);
+			lua_gettable(gL, LUA_REGISTRYINDEX);
+			lua_pushvalue(gL, -4);
+			lua_pushvalue(gL, -4);
+			lua_pushvalue(gL, -4);
+			if (lua_pcall(gL, 3, 1, 0)) {
+				if (!hookp->error || cv_debug & DBG_LUA)
+					CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+				lua_pop(gL, 1);
+				hookp->error = true;
+				continue;
+			}
+			if (lua_toboolean(gL, -1))
+				hooked = true;
+			lua_pop(gL, 1);
+		}
+
+	for (hookp = mobjhooks[target->type]; hookp; hookp = hookp->next)
+		if (hookp->type == hook_MobjDeath)
 		{
 			if (lua_gettop(gL) == 0)
 			{
@@ -738,9 +915,8 @@ boolean LUAh_LinedefExecute(line_t *line, mobj_t *mo, sector_t *sector)
 
 	lua_settop(gL, 0);
 
-	for (hookp = roothook; hookp; hookp = hookp->next)
-		if (hookp->type == hook_LinedefExecute
-		&& !strcmp(hookp->s.funcname, line->text))
+	for (hookp = linedefexecutorhooks; hookp; hookp = hookp->next)
+		if (!strcmp(hookp->s.funcname, line->text))
 		{
 			if (lua_gettop(gL) == 0)
 			{
