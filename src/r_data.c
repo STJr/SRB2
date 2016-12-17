@@ -318,6 +318,18 @@ INT32 R_GetTextureNum(INT32 texnum)
 }
 
 //
+// R_CheckTextureCache
+//
+// Use this if you need to make sure the texture is cached before R_GetColumn calls
+// e.g.: midtextures and FOF walls
+//
+void R_CheckTextureCache(INT32 tex)
+{
+	if (!texturecache[tex])
+		R_GenerateTexture(tex);
+}
+
+//
 // R_GetColumn
 //
 UINT8 *R_GetColumn(fixed_t tex, INT32 col)
