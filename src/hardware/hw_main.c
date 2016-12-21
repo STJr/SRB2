@@ -2784,16 +2784,21 @@ static void HWR_AddLine(seg_t * line)
 	// SoM: Backsector needs to be run through R_FakeFlat
 	sector_t tempsec;
 
+	fixed_t v1x, v1y, v2x, v2y; // the seg's vertexes as fixed_t
+
 	if (line->polyseg && !(line->polyseg->flags & POF_RENDERSIDES))
 		return;
 
 	gr_curline = line;
 
+	v1x = FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->pv1)->x);
+	v1y = FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->pv1)->y);
+	v2x = FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->pv2)->x);
+	v2y = FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->pv2)->y);
+
 	// OPTIMIZE: quickly reject orthogonal back sides.
-	angle1 = R_PointToAngle(FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->pv1)->x),
-	                        FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->pv1)->y));
-	angle2 = R_PointToAngle(FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->pv2)->x),
-	                        FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->pv2)->y));
+	angle1 = R_PointToAngle(v1x, v1y);
+	angle2 = R_PointToAngle(v2x, v2y);
 
 	// Clip to view edges.
 	span = angle1 - angle2;
@@ -2884,14 +2889,9 @@ static void HWR_AddLine(seg_t * line)
 #ifdef ESLOPE
 	if (gr_frontsector->f_slope || gr_frontsector->c_slope || gr_backsector->f_slope || gr_backsector->c_slope)
 	{
-		fixed_t v1x, v1y, v2x, v2y; // the seg's vertexes as fixed_t
 		fixed_t frontf1,frontf2, frontc1, frontc2; // front floor/ceiling ends
 		fixed_t backf1, backf2, backc1, backc2; // back floor ceiling ends
 
-		v1x = FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->pv1)->x);
-		v1y = FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->pv1)->y);
-		v2x = FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->pv2)->x);
-		v2y = FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->pv2)->y);
 #define SLOPEPARAMS(slope, end1, end2, normalheight) \
 		if (slope) { \
 			end1 = P_GetZAt(slope, v1x, v1y); \
@@ -2912,6 +2912,13 @@ static void HWR_AddLine(seg_t * line)
 			goto clipsolid;
 		}
 
+		// Check for automap fix.
+		if (backc1 <= backf1 && backc2 <= backf2
+		&& ((backc1 >= frontc1 && backc2 >= frontc2) || gr_curline->sidedef->toptexture)
+		&& ((backf1 <= frontf1 && backf2 >= frontf2) || gr_curline->sidedef->bottomtexture)
+		&& (gr_backsector->ceilingpic != skyflatnum || gr_frontsector->ceilingpic != skyflatnum))
+			goto clipsolid;
+
 		// Window.
 		if (backc1 != frontc1 || backc2 != frontc2
 			|| backf1 != frontf1 || backf2 != frontf2)
@@ -2925,6 +2932,13 @@ static void HWR_AddLine(seg_t * line)
 		// Closed door.
 		if (gr_backsector->ceilingheight <= gr_frontsector->floorheight ||
 			gr_backsector->floorheight >= gr_frontsector->ceilingheight)
+			goto clipsolid;
+
+		// Check for automap fix.
+		if (gr_backsector->ceilingheight <= gr_backsector->floorheight
+		&& ((gr_backsector->ceilingheight >= gr_frontsector->ceilingheight) || gr_curline->sidedef->toptexture)
+		&& ((gr_backsector->floorheight <= gr_backsector->floorheight) || gr_curline->sidedef->bottomtexture)
+		&& (gr_backsector->ceilingpic != skyflatnum || gr_frontsector->ceilingpic != skyflatnum))
 			goto clipsolid;
 
 		// Window.
@@ -2948,8 +2962,21 @@ static void HWR_AddLine(seg_t * line)
 		&& gr_backsector->c_slope == gr_frontsector->c_slope
 #endif
 	    && gr_backsector->lightlevel == gr_frontsector->lightlevel
-		&& gr_curline->sidedef->midtexture == 0
-		&& !gr_backsector->ffloors && !gr_frontsector->ffloors)
+		&& !gr_curline->sidedef->midtexture
+		// Check offsets too!
+		&& gr_backsector->floor_xoffs == gr_frontsector->floor_xoffs
+		&& gr_backsector->floor_yoffs == gr_frontsector->floor_yoffs
+		&& gr_backsector->floorpic_angle == gr_frontsector->floorpic_angle
+		&& gr_backsector->ceiling_xoffs == gr_frontsector->ceiling_xoffs
+		&& gr_backsector->ceiling_yoffs == gr_frontsector->ceiling_yoffs
+		&& gr_backsector->ceilingpic_angle == gr_frontsector->ceilingpic_angle
+		// Consider altered lighting.
+		&& gr_backsector->floorlightsec == gr_frontsector->floorlightsec
+		&& gr_backsector->ceilinglightsec == gr_frontsector->ceilinglightsec
+		// Consider colormaps
+		&& gr_backsector->extra_colormap == gr_frontsector->extra_colormap
+		&& ((!gr_frontsector->ffloors && !gr_backsector->ffloors)
+		|| gr_frontsector->tag == gr_backsector->tag))
 		// SoM: For 3D sides... Boris, would you like to take a
 		// crack at rendering 3D sides? You would need to add the
 		// above check and add code to HWR_StoreWallRange...
