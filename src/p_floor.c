@@ -1748,12 +1748,15 @@ static mobj_t *SearchMarioNode(msecnode_t *node)
 		case MT_GHOST:
 		case MT_OVERLAY:
 		case MT_EMERALDSPAWN:
-		case MT_GREENORB:
-		case MT_YELLOWORB:
-		case MT_BLUEORB:
-		case MT_BLACKORB:
-		case MT_WHITEORB:
-		case MT_PITYORB:
+		case MT_ELEMENTAL_ORB:
+		case MT_ATTRACT_ORB:
+		case MT_FORCE_ORB:
+		case MT_ARMAGEDDON_ORB:
+		case MT_WHIRLWIND_ORB:
+		case MT_PITY_ORB:
+		case MT_FLAMEAURA_ORB:
+		case MT_BUBBLEWRAP_ORB:
+		case MT_THUNDERCOIN_ORB:
 		case MT_IVSP:
 		case MT_SUPERSPARK:
 		case MT_RAIN:
@@ -1782,8 +1785,8 @@ static mobj_t *SearchMarioNode(msecnode_t *node)
 			break;
 		}
 		// Ignore popped monitors, too.
-		if (node->m_thing->flags & MF_MONITOR
-		&& node->m_thing->threshold == 68)
+		if (node->m_thing->health == 0 // this only really applies for monitors
+		|| (!(node->m_thing->flags & MF_MONITOR) && (mobjinfo[node->m_thing->type].flags & MF_MONITOR))) // gold monitor support
 			continue;
 		// Okay, we found something valid.
 		if (!thing // take either the first thing
@@ -3156,15 +3159,15 @@ INT32 EV_MarioBlock(sector_t *sec, sector_t *roversector, fixed_t topheight, mob
 			S_StartSound(puncher, sfx_mario9); // Puncher is "close enough"
 		}
 
-		if (itsamonitor)
+		if (itsamonitor && thing)
 		{
-			P_UnsetThingPosition(tmthing);
-			tmthing->x = oldx;
-			tmthing->y = oldy;
-			tmthing->z = oldz;
-			tmthing->momx = 1;
-			tmthing->momy = 1;
-			P_SetThingPosition(tmthing);
+			P_UnsetThingPosition(thing);
+			thing->x = oldx;
+			thing->y = oldy;
+			thing->z = oldz;
+			thing->momx = 1;
+			thing->momy = 1;
+			P_SetThingPosition(thing);
 		}
 	}
 	else

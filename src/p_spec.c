@@ -1621,10 +1621,10 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 				if (!playeringame[i] || players[i].spectator)
 					continue;
 
-				if (!players[i].mo || players[i].mo->health < 1)
+				if (!players[i].mo || players[i].rings <= 0)
 					continue;
 
-				rings += players[i].mo->health-1;
+				rings += players[i].rings;
 			}
 		}
 		else
@@ -1632,7 +1632,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			if (!(actor && actor->player))
 				return false; // no player to count rings from here, sorry
 
-			rings = actor->health-1;
+			rings = actor->player->rings;
 		}
 
 		if (triggerline->flags & ML_NOCLIMB)
@@ -3548,10 +3548,9 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 			break;
 		case 9: // Ring Drainer (Floor Touch)
 		case 10: // Ring Drainer (No Floor Touch)
-			if (leveltime % (TICRATE/2) == 0 && player->mo->health > 1)
+			if (leveltime % (TICRATE/2) == 0 && player->rings > 0)
 			{
-				player->mo->health--;
-				player->health--;
+				player->rings--;
 				S_StartSound(player->mo, sfx_itemup);
 			}
 			break;
@@ -3559,7 +3558,7 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 			if (player->powers[pw_invulnerability] || player->powers[pw_flashing] || player->powers[pw_super] || player->exiting || player->bot)
 				break;
 
-			if (!(player->powers[pw_shield] || player->mo->health > 1)) // Don't do anything if no shield or rings anyway
+			if (!(player->powers[pw_shield] || player->rings > 0)) // Don't do anything if no shield or rings anyway
 				break;
 
 			if (player->powers[pw_shield])
@@ -3567,14 +3566,13 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 				P_RemoveShield(player);
 				S_StartSound(player->mo, sfx_shldls); // Ba-Dum! Shield loss.
 			}
-			else if (player->mo->health > 1)
+			else if (player->rings > 0)
 			{
 				P_PlayRinglossSound(player->mo);
-				if (player->mo->health > 10)
-					player->mo->health -= 10;
+				if (player->rings >= 10)
+					player->rings -= 10;
 				else
-					player->mo->health = 1;
-				player->health = player->mo->health;
+					player->rings = 0;
 			}
 
 			P_DoPlayerPain(player, NULL, NULL); // this does basically everything that was here before
@@ -3583,7 +3581,7 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 				P_PlayerFlagBurst(player, false);
 			break;
 		case 12: // Space Countdown
-			if ((player->powers[pw_shield] & SH_NOSTACK) != SH_ELEMENTAL && !player->powers[pw_spacetime])
+			if (!(player->powers[pw_shield] & SH_PROTECTWATER) && !player->powers[pw_spacetime])
 				player->powers[pw_spacetime] = spacetimetics + 1;
 			break;
 		case 13: // Ramp Sector (Increase step-up/down)

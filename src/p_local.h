@@ -59,8 +59,9 @@
 
 #define AIMINGTOSLOPE(aiming) FINESINE((aiming>>ANGLETOFINESHIFT) & FINEMASK)
 
-#define mariomode (maptol & TOL_MARIO)
 #define twodlevel (maptol & TOL_2D)
+
+#define mariomode (maptol & TOL_MARIO)
 
 #define P_GetPlayerHeight(player) FixedMul(player->height, player->mo->scale)
 #define P_GetPlayerSpinHeight(player) FixedMul(player->spinheight, player->mo->scale)
@@ -124,6 +125,7 @@ extern fixed_t t_cam2_dist, t_cam2_height, t_cam2_rotate;
 
 INT32 P_GetPlayerControlDirection(player_t *player);
 void P_AddPlayerScore(player_t *player, UINT32 amount);
+void P_StealPlayerScore(player_t *player, UINT32 amount);
 void P_ResetCamera(player_t *player, camera_t *thiscam);
 boolean P_TryCameraMove(fixed_t x, fixed_t y, camera_t *thiscam);
 void P_SlideCameraMove(camera_t *thiscam);
@@ -142,6 +144,7 @@ boolean P_InQuicksand(mobj_t *mo);
 void P_SetObjectMomZ(mobj_t *mo, fixed_t value, boolean relative);
 void P_RestoreMusic(player_t *player);
 void P_SpawnShieldOrb(player_t *player);
+void P_SwitchShield(player_t *player, UINT16 shieldtype);
 mobj_t *P_SpawnGhostMobj(mobj_t *mobj);
 void P_GivePlayerRings(player_t *player, INT32 num_rings);
 void P_GivePlayerLives(player_t *player, INT32 numlives);
@@ -151,8 +154,9 @@ void P_ResetScore(player_t *player);
 boolean P_AutoPause(void);
 
 void P_DoJumpShield(player_t *player);
+void P_DoBubbleBounce(player_t *player);
 void P_BlackOw(player_t *player);
-void P_ElementalFireTrail(player_t *player);
+void P_ElementalFire(player_t *player, boolean cropcircle);
 
 void P_DoPityCheck(player_t *player);
 void P_PlayerThink(player_t *player);
@@ -165,7 +169,7 @@ fixed_t P_ReturnThrustX(mobj_t *mo, angle_t angle, fixed_t move);
 fixed_t P_ReturnThrustY(mobj_t *mo, angle_t angle, fixed_t move);
 void P_InstaThrustEvenIn2D(mobj_t *mo, angle_t angle, fixed_t move);
 
-boolean P_LookForEnemies(player_t *player);
+boolean P_LookForEnemies(player_t *player, boolean nonenemies);
 void P_NukeEnemies(mobj_t *inflictor, mobj_t *source, fixed_t radius);
 void P_HomingAttack(mobj_t *source, mobj_t *enemy); /// \todo doesn't belong in p_user
 boolean P_SuperReady(player_t *player);
@@ -211,6 +215,7 @@ void P_PrecipitationEffects(void);
 void P_RemoveMobj(mobj_t *th);
 boolean P_MobjWasRemoved(mobj_t *th);
 void P_RemoveSavegameMobj(mobj_t *th);
+UINT8 P_GetMobjSprite2(mobj_t *mobj, UINT8 spr2);
 boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state);
 boolean P_SetMobjState(mobj_t *mobj, statenum_t state);
 void P_RunShields(void);
@@ -380,7 +385,8 @@ typedef struct BasicFF_s
 #define DMG_FIRE      2
 #define DMG_ELECTRIC  3
 #define DMG_SPIKE     4
-//#define DMG_SPECIALSTAGE 5
+#define DMG_NUKE      5 // bomb shield
+//#define DMG_SPECIALSTAGE 6
 //// Death types - cannot be combined with damage types
 #define DMG_INSTAKILL  0x80
 #define DMG_DROWNED    0x80+1
@@ -399,6 +405,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 void P_PlayerRingBurst(player_t *player, INT32 num_rings); /// \todo better fit in p_user.c
 void P_PlayerWeaponPanelBurst(player_t *player);
 void P_PlayerWeaponAmmoBurst(player_t *player);
+void P_PlayerWeaponPanelOrAmmoBurst(player_t *player);
 void P_PlayerEmeraldBurst(player_t *player, boolean toss);
 
 void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck);
@@ -413,6 +420,7 @@ void P_ResetStarposts(void);
 
 boolean P_CanPickupItem(player_t *player, boolean weapon);
 void P_DoNightsScore(player_t *player);
+void P_DoMatchSuper(player_t *player);
 
 //
 // P_SPEC

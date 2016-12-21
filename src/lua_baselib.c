@@ -309,6 +309,19 @@ static int lib_pRemoveMobj(lua_State *L)
 	return 0;
 }
 
+// P_IsValidSprite2 technically doesn't exist, and probably never should... but too much would need to be exposed to allow this to be checked by other methods.
+
+static int lib_pIsValidSprite2(lua_State *L)
+{
+	mobj_t *mobj = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	UINT8 spr2 = (UINT8)luaL_checkinteger(L, 2);
+	//HUDSAFE
+	if (!mobj)
+		return LUA_ErrInvalid(L, "mobj_t");
+	lua_pushboolean(L, (mobj->skin && (((skin_t *)mobj->skin)->sprites[spr2].numframes > 0)));
+	return 1;
+}
+
 static int lib_pSpawnMissile(lua_State *L)
 {
 	mobj_t *source = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
@@ -618,6 +631,17 @@ static int lib_pAddPlayerScore(lua_State *L)
 	return 0;
 }
 
+static int lib_pStealPlayerScore(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	UINT32 amount = (UINT32)luaL_checkinteger(L, 2);
+	NOHUD
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	P_StealPlayerScore(player, amount);
+	return 0;
+}
+
 static int lib_pPlayerInPain(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
@@ -777,6 +801,16 @@ static int lib_pDoJumpShield(lua_State *L)
 	return 0;
 }
 
+static int lib_pDoBubbleBounce(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	NOHUD
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	P_DoBubbleBounce(player);
+	return 0;
+}
+
 static int lib_pBlackOw(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
@@ -787,13 +821,14 @@ static int lib_pBlackOw(lua_State *L)
 	return 0;
 }
 
-static int lib_pElementalFireTrail(lua_State *L)
+static int lib_pElementalFire(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	boolean cropcircle = lua_optboolean(L, 2);
 	NOHUD
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
-	P_ElementalFireTrail(player);
+	P_ElementalFire(player, cropcircle);
 	return 0;
 }
 
@@ -848,10 +883,11 @@ static int lib_pReturnThrustY(lua_State *L)
 static int lib_pLookForEnemies(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	boolean nonenemies = lua_opttrueboolean(L, 2);
 	NOHUD
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
-	lua_pushboolean(L, P_LookForEnemies(player));
+	lua_pushboolean(L, P_LookForEnemies(player, nonenemies));
 	return 1;
 }
 
@@ -1132,7 +1168,7 @@ static int lib_pPlayerRingBurst(lua_State *L)
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
 	if (num_rings == -1)
-		num_rings = player->health - 1;
+		num_rings = player->rings;
 	P_PlayerRingBurst(player, num_rings);
 	return 0;
 }
@@ -1154,6 +1190,16 @@ static int lib_pPlayerWeaponAmmoBurst(lua_State *L)
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
 	P_PlayerWeaponAmmoBurst(player);
+	return 0;
+}
+
+static int lib_pPlayerWeaponPanelOrAmmoBurst(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	NOHUD
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	P_PlayerWeaponPanelOrAmmoBurst(player);
 	return 0;
 }
 
@@ -1261,6 +1307,16 @@ static int lib_pDoNightsScore(lua_State *L)
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
 	P_DoNightsScore(player);
+	return 0;
+}
+
+static int lib_pDoMatchSuper(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	NOHUD
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	P_DoMatchSuper(player);
 	return 0;
 }
 
@@ -2005,6 +2061,7 @@ static luaL_Reg lib[] = {
 	// don't add P_SetMobjState or P_SetPlayerMobjState, use "mobj.state = S_NEWSTATE" instead.
 	{"P_SpawnMobj",lib_pSpawnMobj},
 	{"P_RemoveMobj",lib_pRemoveMobj},
+	{"P_IsValidSprite2", lib_pIsValidSprite2},
 	{"P_SpawnMissile",lib_pSpawnMissile},
 	{"P_SpawnXYZMissile",lib_pSpawnXYZMissile},
 	{"P_SpawnPointMissile",lib_pSpawnPointMissile},
@@ -2031,6 +2088,7 @@ static luaL_Reg lib[] = {
 	{"P_GetPlayerSpinHeight",lib_pGetPlayerSpinHeight},
 	{"P_GetPlayerControlDirection",lib_pGetPlayerControlDirection},
 	{"P_AddPlayerScore",lib_pAddPlayerScore},
+	{"P_StealPlayerScore",lib_pStealPlayerScore},
 	{"P_PlayerInPain",lib_pPlayerInPain},
 	{"P_DoPlayerPain",lib_pDoPlayerPain},
 	{"P_ResetPlayer",lib_pResetPlayer},
@@ -2046,8 +2104,9 @@ static luaL_Reg lib[] = {
 	{"P_GivePlayerLives",lib_pGivePlayerLives},
 	{"P_ResetScore",lib_pResetScore},
 	{"P_DoJumpShield",lib_pDoJumpShield},
+	{"P_DoBubbleBounce",lib_pDoBubbleBounce},
 	{"P_BlackOw",lib_pBlackOw},
-	{"P_ElementalFireTrail",lib_pElementalFireTrail},
+	{"P_ElementalFire",lib_pElementalFire},
 	{"P_DoPlayerExit",lib_pDoPlayerExit},
 	{"P_InstaThrust",lib_pInstaThrust},
 	{"P_ReturnThrustX",lib_pReturnThrustX},
@@ -2081,6 +2140,7 @@ static luaL_Reg lib[] = {
 	{"P_PlayerRingBurst",lib_pPlayerRingBurst},
 	{"P_PlayerWeaponPanelBurst",lib_pPlayerWeaponPanelBurst},
 	{"P_PlayerWeaponAmmoBurst",lib_pPlayerWeaponAmmoBurst},
+	{"P_PlayerWeaponPanelOrAmmoBurst", lib_pPlayerWeaponPanelOrAmmoBurst},
 	{"P_PlayerEmeraldBurst",lib_pPlayerEmeraldBurst},
 	{"P_PlayerFlagBurst",lib_pPlayerFlagBurst},
 	{"P_PlayRinglossSound",lib_pPlayRinglossSound},
@@ -2089,6 +2149,7 @@ static luaL_Reg lib[] = {
 	{"P_PlayLivesJingle",lib_pPlayLivesJingle},
 	{"P_CanPickupItem",lib_pCanPickupItem},
 	{"P_DoNightsScore",lib_pDoNightsScore},
+	{"P_DoMatchSuper",lib_pDoMatchSuper},
 
 	// p_spec
 	{"P_Thrust",lib_pThrust},

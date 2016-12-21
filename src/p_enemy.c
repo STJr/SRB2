@@ -104,6 +104,9 @@ void A_BombShield(mobj_t *actor);
 void A_WaterShield(mobj_t *actor);
 void A_ForceShield(mobj_t *actor);
 void A_PityShield(mobj_t *actor);
+void A_FlameShield(mobj_t *actor);
+void A_BubbleShield(mobj_t *actor);
+void A_ThunderShield(mobj_t *actor);
 void A_GravityBox(mobj_t *actor);
 void A_ScoreRise(mobj_t *actor);
 void A_ParticleSpawn(mobj_t *actor);
@@ -658,14 +661,14 @@ boolean P_LookForPlayers(mobj_t *actor, boolean allaround, boolean tracer, fixed
 		if ((netgame || multiplayer) && player->spectator)
 			continue;
 
-		if (player->health <= 0)
-			continue; // dead
-
 		if (player->pflags & PF_INVIS)
 			continue; // ignore notarget
 
 		if (!player->mo || P_MobjWasRemoved(player->mo))
 			continue;
+
+		if (player->mo->health <= 0)
+			continue; // dead
 
 		if (dist > 0
 			&& P_AproxDistance(P_AproxDistance(player->mo->x - actor->x, player->mo->y - actor->y), player->mo->z - actor->z) > dist)
@@ -730,7 +733,7 @@ static boolean P_LookForShield(mobj_t *actor)
 
 		player = &players[actor->lastlook];
 
-		if (player->health <= 0 || !player->mo)
+		if (!player->mo || player->mo->health <= 0)
 			continue; // dead
 
 		//When in CTF, don't pull rings that you cannot pick up.
@@ -738,7 +741,7 @@ static boolean P_LookForShield(mobj_t *actor)
 			(actor->type == MT_BLUETEAMRING && player->ctfteam != 2))
 			continue;
 
-		if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT
+		if ((player->powers[pw_shield] & SH_PROTECTELECTRIC)
 			&& (P_AproxDistance(P_AproxDistance(actor->x-player->mo->x, actor->y-player->mo->y), actor->z-player->mo->z) < FixedMul(RING_DIST, player->mo->scale)))
 		{
 			P_SetTarget(&actor->tracer, player->mo);
@@ -2553,6 +2556,7 @@ void A_1upThinker(mobj_t *actor)
 	{
 		P_SetTarget(&actor->tracer, P_SpawnMobj(actor->x, actor->y, actor->z, MT_OVERLAY));
 		P_SetTarget(&actor->tracer->target, actor);
+		actor->tracer->skin = &skins[players[closestplayer].skin]; // required here to prevent spr2 default showing stand for a single frame
 		P_SetMobjState(actor->tracer, actor->info->seestate);
 
 		// The overlay is going to be one tic early turning off and on
@@ -2813,7 +2817,7 @@ void A_BossDeath(mobj_t *mo)
 
 	// make sure there is a player alive for victory
 	for (i = 0; i < MAXPLAYERS; i++)
-		if (playeringame[i] && (players[i].health > 0
+		if (playeringame[i] && ((players[i].mo && players[i].mo->health > 0)
 			|| ((netgame || multiplayer) && (players[i].lives > 0 || players[i].continues > 0))))
 			break;
 
@@ -3058,11 +3062,7 @@ void A_JumpShield(mobj_t *actor)
 
 	player = actor->target->player;
 
-	if ((player->powers[pw_shield] & SH_NOSTACK) != SH_JUMP)
-	{
-		player->powers[pw_shield] = SH_JUMP|(player->powers[pw_shield] & SH_STACK);
-		P_SpawnShieldOrb(player);
-	}
+	P_SwitchShield(player, SH_WHIRLWIND);
 
 	S_StartSound(player->mo, actor->info->seesound);
 }
@@ -3090,11 +3090,7 @@ void A_RingShield(mobj_t *actor)
 
 	player = actor->target->player;
 
-	if ((player->powers[pw_shield] & SH_NOSTACK) != SH_ATTRACT)
-	{
-		player->powers[pw_shield] = SH_ATTRACT|(player->powers[pw_shield] & SH_STACK);
-		P_SpawnShieldOrb(player);
-	}
+	P_SwitchShield(player, SH_ATTRACT);
 
 	S_StartSound(player->mo, actor->info->seesound);
 }
@@ -3291,11 +3287,12 @@ void A_BombShield(mobj_t *actor)
 
 	player = actor->target->player;
 
-	if ((player->powers[pw_shield] & SH_NOSTACK) != SH_BOMB)
-	{
-		player->powers[pw_shield] = SH_BOMB|(player->powers[pw_shield] & SH_STACK);
-		P_SpawnShieldOrb(player);
-	}
+	// If you already have a bomb shield, use it!
+	if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ARMAGEDDON)
+		P_BlackOw(player);
+
+	// Now we know for certain that we don't have a bomb shield, so add one. :3
+	P_SwitchShield(player, SH_ARMAGEDDON);
 
 	S_StartSound(player->mo, actor->info->seesound);
 }
@@ -3323,22 +3320,8 @@ void A_WaterShield(mobj_t *actor)
 
 	player = actor->target->player;
 
-	if ((player->powers[pw_shield] & SH_NOSTACK) != SH_ELEMENTAL)
-	{
-		player->powers[pw_shield] = SH_ELEMENTAL|(player->powers[pw_shield] & SH_STACK);
-		P_SpawnShieldOrb(player);
-	}
+	P_SwitchShield(player, SH_ELEMENTAL);
 
-	if (player->powers[pw_underwater] && player->powers[pw_underwater] <= 12*TICRATE + 1)
-		P_RestoreMusic(player);
-
-	player->powers[pw_underwater] = 0;
-
-	if (player->powers[pw_spacetime] > 1)
-	{
-		player->powers[pw_spacetime] = 0;
-		P_RestoreMusic(player);
-	}
 	S_StartSound(player->mo, actor->info->seesound);
 }
 
@@ -3346,12 +3329,13 @@ void A_WaterShield(mobj_t *actor)
 //
 // Description: Awards the player a force shield.
 //
-// var1 = unused
+// var1 = Number of additional hitpoints to give
 // var2 = unused
 //
 void A_ForceShield(mobj_t *actor)
 {
 	player_t *player;
+	INT32 locvar1 = var1;
 
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_ForceShield", actor))
@@ -3363,15 +3347,15 @@ void A_ForceShield(mobj_t *actor)
 		return;
 	}
 
+	if (locvar1 & ~SH_FORCEHP)
+	{
+		CONS_Debug(DBG_GAMELOGIC, "Invalid number of additional hitpoints.\n");
+		return;
+	}
+
 	player = actor->target->player;
 
-	if (!(player->powers[pw_shield] & SH_FORCE))
-	{
-		player->powers[pw_shield] = SH_FORCE|(player->powers[pw_shield] & SH_STACK)|0x01;
-		P_SpawnShieldOrb(player);
-	}
-	else
-		player->powers[pw_shield] = SH_FORCE|(player->powers[pw_shield] & SH_STACK)|0x01;
+	P_SwitchShield(player, SH_FORCE|locvar1);
 
 	S_StartSound(player->mo, actor->info->seesound);
 }
@@ -3403,11 +3387,91 @@ void A_PityShield(mobj_t *actor)
 
 	player = actor->target->player;
 
-	if ((player->powers[pw_shield] & SH_NOSTACK) != SH_PITY)
+	P_SwitchShield(player, SH_PITY);
+
+	S_StartSound(player->mo, actor->info->seesound);
+}
+
+// Function: A_FlameShield
+//
+// Description: Awards the player a flame shield.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_FlameShield(mobj_t *actor)
+{
+	player_t *player;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FlameShield", actor))
+		return;
+#endif
+	if (!actor->target || !actor->target->player)
 	{
-		player->powers[pw_shield] = SH_PITY+(player->powers[pw_shield] & SH_STACK);
-		P_SpawnShieldOrb(player);
+		CONS_Debug(DBG_GAMELOGIC, "Powerup has no target.\n");
+		return;
 	}
+
+	player = actor->target->player;
+
+	P_SwitchShield(player, SH_FLAMEAURA);
+
+	S_StartSound(player->mo, actor->info->seesound);
+}
+
+// Function: A_BubbleShield
+//
+// Description: Awards the player a bubble shield.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_BubbleShield(mobj_t *actor)
+{
+	player_t *player;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_BubbleShield", actor))
+		return;
+#endif
+	if (!actor->target || !actor->target->player)
+	{
+		CONS_Debug(DBG_GAMELOGIC, "Powerup has no target.\n");
+		return;
+	}
+
+	player = actor->target->player;
+
+	P_SwitchShield(player, SH_BUBBLEWRAP);
+
+	S_StartSound(player->mo, actor->info->seesound);
+}
+
+// Function: A_ThunderShield
+//
+// Description: Awards the player a thunder shield.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_ThunderShield(mobj_t *actor)
+{
+	player_t *player;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_ThunderShield", actor))
+		return;
+#endif
+	if (!actor->target || !actor->target->player)
+	{
+		CONS_Debug(DBG_GAMELOGIC, "Powerup has no target.\n");
+		return;
+	}
+
+	player = actor->target->player;
+
+	P_SwitchShield(player, SH_THUNDERCOIN);
 
 	S_StartSound(player->mo, actor->info->seesound);
 }
@@ -3435,9 +3499,10 @@ void A_GravityBox(mobj_t *actor)
 	}
 
 	player = actor->target->player;
-	player->powers[pw_gravityboots] = (UINT16)(actor->info->reactiontime + 1);
 
 	S_StartSound(player, actor->info->activesound);
+
+	player->powers[pw_gravityboots] = (UINT16)(actor->info->reactiontime + 1);
 }
 
 // Function: A_ScoreRise
@@ -3703,7 +3768,7 @@ void A_AttractChase(mobj_t *actor)
 
 	// Turn flingrings back into regular rings if attracted.
 	if (actor->tracer && actor->tracer->player
-		&& (actor->tracer->player->powers[pw_shield] & SH_NOSTACK) != SH_ATTRACT && actor->info->reactiontime && actor->type != (mobjtype_t)actor->info->reactiontime)
+		&& !(actor->tracer->player->powers[pw_shield] & SH_PROTECTELECTRIC) && actor->info->reactiontime && actor->type != (mobjtype_t)actor->info->reactiontime)
 	{
 		mobj_t *newring;
 		newring = P_SpawnMobj(actor->x, actor->y, actor->z, actor->info->reactiontime);
@@ -3908,7 +3973,7 @@ void A_ThrownRing(mobj_t *actor)
 		// A non-homing ring getting attracted by a
 		// magnetic player. If he gets too far away, make
 		// sure to stop the attraction!
-		if ((!actor->tracer->health) || (actor->tracer->player && (actor->tracer->player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT
+		if ((!actor->tracer->health) || (actor->tracer->player && (actor->tracer->player->powers[pw_shield] & SH_PROTECTELECTRIC)
 		    && P_AproxDistance(P_AproxDistance(actor->tracer->x-actor->x,
 		    actor->tracer->y-actor->y), actor->tracer->z-actor->z) > FixedMul(RING_DIST/4, actor->tracer->scale)))
 		{
@@ -3916,7 +3981,7 @@ void A_ThrownRing(mobj_t *actor)
 		}
 
 		if (actor->tracer && (actor->tracer->health)
-			&& (actor->tracer->player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT)// Already found someone to follow.
+			&& (actor->tracer->player->powers[pw_shield] & SH_PROTECTELECTRIC))// Already found someone to follow.
 		{
 			const INT32 temp = actor->threshold;
 			actor->threshold = 32000;
@@ -3984,7 +4049,7 @@ void A_ThrownRing(mobj_t *actor)
 		if (!P_CheckSight(actor, player->mo))
 			continue; // out of sight
 
-		if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT
+		if ((player->powers[pw_shield] & SH_PROTECTELECTRIC)
 			&& dist < FixedMul(RING_DIST/4, player->mo->scale))
 			P_SetTarget(&actor->tracer, player->mo);
 		return;
@@ -8379,7 +8444,7 @@ void A_RingDrain(mobj_t *actor)
 	}
 
 	player = actor->target->player;
-	P_GivePlayerRings(player, -min(locvar1, player->mo->health-1));
+	P_GivePlayerRings(player, -min(locvar1, player->rings));
 }
 
 // Function: A_SplitShot
@@ -8687,7 +8752,7 @@ void A_CheckTargetRings(mobj_t *actor)
 	if (!(actor->target) || !(actor->target->player))
 	   return;
 
-	if (actor->target->player->health >= locvar1)
+	if (actor->target->player->rings >= locvar1)
 		P_SetMobjState(actor, locvar2);
 }
 
@@ -8709,7 +8774,7 @@ void A_CheckRings(mobj_t *actor)
 #endif
 
 	for (i = 0; i < MAXPLAYERS; i++)
-		cntr += players[i].health-1;
+		cntr += players[i].rings;
 
 	if (cntr >= locvar1)
 		P_SetMobjState(actor, locvar2);
@@ -9281,7 +9346,7 @@ void A_ForceWin(mobj_t *actor)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (playeringame[i] && (players[i].health > 0
+		if (playeringame[i] && ((players[i].mo && players[i].mo->health > 0)
 		    || ((netgame || multiplayer) && (players[i].lives > 0 || players[i].continues > 0))))
 			break;
 	}

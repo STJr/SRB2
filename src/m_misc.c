@@ -1617,6 +1617,11 @@ INT32 axtoi(const char *hexStg)
 	return intValue;
 }
 
+// Token parser variables
+
+static UINT32 oldendPos = 0; // old value of endPos, used by M_UnGetToken
+static UINT32 endPos = 0; // now external to M_GetToken, but still static
+
 /** Token parser for TEXTURES, ANIMDEFS, and potentially other lumps later down the line.
   * Was originally R_GetTexturesToken when I was coding up the TEXTURES parser, until I realized I needed it for ANIMDEFS too.
   * Parses up to the next whitespace character or comma. When finding the start of the next token, whitespace is skipped.
@@ -1631,7 +1636,7 @@ char *M_GetToken(const char *inputString)
 {
 	static const char *stringToUse = NULL; // Populated if inputString != NULL; used otherwise
 	static UINT32 startPos = 0;
-	static UINT32 endPos = 0;
+//	static UINT32 endPos = 0;
 	static UINT32 stringLength = 0;
 	static UINT8 inComment = 0; // 0 = not in comment, 1 = // Single-line, 2 = /* Multi-line */
 	char *texturesToken = NULL;
@@ -1641,12 +1646,12 @@ char *M_GetToken(const char *inputString)
 	{
 		stringToUse = inputString;
 		startPos = 0;
-		endPos = 0;
+		oldendPos = endPos = 0;
 		stringLength = strlen(inputString);
 	}
 	else
 	{
-		startPos = endPos;
+		startPos = oldendPos = endPos;
 	}
 	if (stringToUse == NULL)
 		return NULL;
@@ -1775,6 +1780,16 @@ char *M_GetToken(const char *inputString)
 	// Make the final character NUL.
 	texturesToken[texturesTokenLength] = '\0';
 	return texturesToken;
+}
+
+/** Undoes the last M_GetToken call
+  * The current position along the string being parsed is reset to the last saved position.
+  * This exists mostly because of R_ParseTexture/R_ParsePatch honestly, but could be useful elsewhere?
+  * -Monster Iestyn (22/10/16)
+ */
+void M_UnGetToken(void)
+{
+	endPos = oldendPos;
 }
 
 /** Count bits in a number.

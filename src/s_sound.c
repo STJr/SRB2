@@ -607,6 +607,13 @@ void S_StartSound(const void *origin, sfxenum_t sfx_id)
 				sfx_id = sfx_mario6;
 				break;
 			case sfx_shield:
+			case sfx_wirlsg:
+			case sfx_forcsg:
+			case sfx_elemsg:
+			case sfx_armasg:
+			case sfx_s3k3e:
+			case sfx_s3k3f:
+			case sfx_s3k41:
 				sfx_id = sfx_mario3;
 				break;
 			case sfx_itemup:

@@ -1687,6 +1687,9 @@ static actionpointer_t actionpointers[] =
 	{{A_WaterShield},          "A_WATERSHIELD"},
 	{{A_ForceShield},          "A_FORCESHIELD"},
 	{{A_PityShield},           "A_PITYSHIELD"},
+	{{A_FlameShield},          "A_FLAMESHIELD"},
+	{{A_BubbleShield},         "A_BUBBLESHIELD"},
+	{{A_ThunderShield},        "A_THUNDERSHIELD"},
 	{{A_GravityBox},           "A_GRAVITYBOX"},
 	{{A_ScoreRise},            "A_SCORERISE"},
 	{{A_ParticleSpawn},        "A_PARTICLESPAWN"},
@@ -2778,7 +2781,7 @@ static void readpatch(MYFILE *f, const char *name, UINT16 wad)
 	char *word2;
 	char *tmp;
 	INT32 i = 0, j = 0, value;
-	texpatch_t patch = {0, 0, UINT16_MAX, UINT16_MAX};
+	texpatch_t patch = {0, 0, UINT16_MAX, UINT16_MAX, 0};
 
 	// Jump to the texture this patch belongs to, which,
 	// coincidentally, is always the last one on the buffer cache.
@@ -4834,7 +4837,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SPIKEBALL7",
 	"S_SPIKEBALL8",
 
-	// Fire Shield's Spawn
+	// Elemental Shield's Spawn
 	"S_SPINFIRE1",
 	"S_SPINFIRE2",
 	"S_SPINFIRE3",
@@ -4908,6 +4911,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_RECYCLER_BOX",
 	"S_SCORE1K_BOX",
 	"S_SCORE10K_BOX",
+	"S_FLAMEAURA_BOX",
+	"S_BUBBLEWRAP_BOX",
+	"S_THUNDERCOIN_BOX",
 
 	// Gold Repeat Monitor States (one per box)
 	"S_PITY_GOLDBOX",
@@ -4920,6 +4926,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_INVULN_GOLDBOX",
 	"S_EGGMAN_GOLDBOX",
 	"S_GRAVITY_GOLDBOX",
+	"S_FLAMEAURA_GOLDBOX",
+	"S_BUBBLEWRAP_GOLDBOX",
+	"S_THUNDERCOIN_GOLDBOX",
 
 	// Team Ring Boxes (these are special)
 	"S_RING_REDBOX1",
@@ -4980,6 +4989,15 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	"S_SCORE10K_ICON1",
 	"S_SCORE10K_ICON2",
+
+	"S_FLAMEAURA_ICON1",
+	"S_FLAMEAURA_ICON2",
+
+	"S_BUBBLEWRAP_ICON1",
+	"S_BUBBLEWRAP_ICON2",
+
+	"S_THUNDERCOIN_ICON1",
+	"S_THUNDERCOIN_ICON2",
 
 	"S_ROCKET",
 
@@ -5350,6 +5368,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_MAGN10",
 	"S_MAGN11",
 	"S_MAGN12",
+	"S_MAGN13",
 
 	"S_FORC1",
 	"S_FORC2",
@@ -5373,6 +5392,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FORC19",
 	"S_FORC20",
 
+	"S_FORC21",
+
 	"S_ELEM1",
 	"S_ELEM2",
 	"S_ELEM3",
@@ -5386,6 +5407,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_ELEM11",
 	"S_ELEM12",
 
+	"S_ELEM13",
+	"S_ELEM14",
+
 	"S_ELEMF1",
 	"S_ELEMF2",
 	"S_ELEMF3",
@@ -5394,6 +5418,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_ELEMF6",
 	"S_ELEMF7",
 	"S_ELEMF8",
+	"S_ELEMF9",
+	"S_ELEMF10",
 
 	"S_PITY1",
 	"S_PITY2",
@@ -5405,6 +5431,84 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PITY8",
 	"S_PITY9",
 	"S_PITY10",
+
+	"S_FIRS1",
+	"S_FIRS2",
+	"S_FIRS3",
+	"S_FIRS4",
+	"S_FIRS5",
+	"S_FIRS6",
+	"S_FIRS7",
+	"S_FIRS8",
+	"S_FIRS9",
+
+	"S_FIRS10",
+	"S_FIRS11",
+
+	"S_FIRSB1",
+	"S_FIRSB2",
+	"S_FIRSB3",
+	"S_FIRSB4",
+	"S_FIRSB5",
+	"S_FIRSB6",
+	"S_FIRSB7",
+	"S_FIRSB8",
+	"S_FIRSB9",
+
+	"S_FIRSB10",
+
+	"S_BUBS1",
+	"S_BUBS2",
+	"S_BUBS3",
+	"S_BUBS4",
+	"S_BUBS5",
+	"S_BUBS6",
+	"S_BUBS7",
+	"S_BUBS8",
+	"S_BUBS9",
+
+	"S_BUBS10",
+	"S_BUBS11",
+
+	"S_BUBSB1",
+	"S_BUBSB2",
+	"S_BUBSB3",
+	"S_BUBSB4",
+
+	"S_BUBSB5",
+	"S_BUBSB6",
+
+	"S_ZAPS1",
+	"S_ZAPS2",
+	"S_ZAPS3",
+	"S_ZAPS4",
+	"S_ZAPS5",
+	"S_ZAPS6",
+	"S_ZAPS7",
+	"S_ZAPS8",
+	"S_ZAPS9",
+	"S_ZAPS10",
+	"S_ZAPS11",
+	"S_ZAPS12",
+	"S_ZAPS13", // blank frame
+	"S_ZAPS14",
+	"S_ZAPS15",
+	"S_ZAPS16",
+
+	"S_ZAPSB1", // blank frame
+	"S_ZAPSB2",
+	"S_ZAPSB3",
+	"S_ZAPSB4",
+	"S_ZAPSB5",
+	"S_ZAPSB6",
+	"S_ZAPSB7",
+	"S_ZAPSB8",
+	"S_ZAPSB9",
+	"S_ZAPSB10",
+	"S_ZAPSB11", // blank frame
+
+	// Thunder spark
+	"S_THUNDERCOIN_SPARK",
 
 	// Invincibility Sparkles
 	"S_IVSP",
@@ -5565,6 +5669,20 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_POP1", // Extra Large bubble goes POP!
 
 	"S_WATERZAP",
+
+	// Spindash dust
+	"S_SPINDUST1",
+	"S_SPINDUST2",
+	"S_SPINDUST3",
+	"S_SPINDUST4",
+	"S_SPINDUST_BUBBLE1",
+	"S_SPINDUST_BUBBLE2",
+	"S_SPINDUST_BUBBLE3",
+	"S_SPINDUST_BUBBLE4",
+	"S_SPINDUST_FIRE1",
+	"S_SPINDUST_FIRE2",
+	"S_SPINDUST_FIRE3",
+	"S_SPINDUST_FIRE4",
 
 	"S_FOG1",
 	"S_FOG2",
@@ -6164,6 +6282,9 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_RECYCLER_BOX",
 	"MT_SCORE1K_BOX",
 	"MT_SCORE10K_BOX",
+	"MT_FLAMEAURA_BOX",
+	"MT_BUBBLEWRAP_BOX",
+	"MT_THUNDERCOIN_BOX",
 
 	// Monitor boxes -- repeating (big) boxes
 	"MT_PITY_GOLDBOX",
@@ -6176,6 +6297,9 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_INVULN_GOLDBOX",
 	"MT_EGGMAN_GOLDBOX",
 	"MT_GRAVITY_GOLDBOX",
+	"MT_FLAMEAURA_GOLDBOX",
+	"MT_BUBBLEWRAP_GOLDBOX",
+	"MT_THUNDERCOIN_GOLDBOX",
 
 	// Monitor boxes -- special
 	"MT_RING_REDBOX",
@@ -6198,6 +6322,9 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_RECYCLER_ICON",
 	"MT_SCORE1K_ICON",
 	"MT_SCORE10K_ICON",
+	"MT_FLAMEAURA_ICON",
+	"MT_BUBBLEWRAP_ICON",
+	"MT_THUNDERCOIN_ICON",
 
 	// Projectiles
 	"MT_ROCKET",
@@ -6350,13 +6477,17 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_EGGSTATUE2",
 
 	// Powerup Indicators
-	"MT_GREENORB", // Elemental shield mobj
-	"MT_YELLOWORB", // Attract shield mobj
-	"MT_BLUEORB", // Force shield mobj
-	"MT_BLACKORB", // Armageddon shield mobj
-	"MT_WHITEORB", // Whirlwind shield mobj
-	"MT_PITYORB", // Pity shield mobj
-	"MT_IVSP", // invincibility sparkles
+	"MT_ELEMENTAL_ORB", // Elemental shield mobj
+	"MT_ATTRACT_ORB", // Attract shield mobj
+	"MT_FORCE_ORB", // Force shield mobj
+	"MT_ARMAGEDDON_ORB", // Armageddon shield mobj
+	"MT_WHIRLWIND_ORB", // Whirlwind shield mobj
+	"MT_PITY_ORB", // Pity shield mobj
+	"MT_FLAMEAURA_ORB", // Flame shield mobj
+	"MT_BUBBLEWRAP_ORB", // Bubble shield mobj
+	"MT_THUNDERCOIN_ORB", // Thunder shield mobj
+	"MT_THUNDERCOIN_SPARK", // Thunder spark
+	"MT_IVSP", // Invincibility sparkles
 	"MT_SUPERSPARK", // Super Sonic Spark
 
 	// Freed Animals
@@ -6376,6 +6507,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_MEDIUMBUBBLE", // medium bubble
 	"MT_EXTRALARGEBUBBLE", // extra large bubble
 	"MT_WATERZAP",
+	"MT_SPINDUST", // Spindash dust
 	"MT_TFOG",
 	"MT_SEED",
 	"MT_PARTICLE",
@@ -6544,35 +6676,36 @@ static const char *const MOBJFLAG_LIST[] = {
 
 // \tMF2_(\S+).*// (.+) --> \t"\1", // \2
 static const char *const MOBJFLAG2_LIST[] = {
-	"AXIS",			// It's a NiGHTS axis! (For faster checking)
-	"TWOD",			// Moves like it's in a 2D level
-	"DONTRESPAWN",	// Don't respawn this object!
-	"DONTDRAW",		// Don't generate a vissprite
-	"AUTOMATIC",	// Thrown ring has automatic properties
-	"RAILRING",		// Thrown ring has rail properties
-	"BOUNCERING",	// Thrown ring has bounce properties
-	"EXPLOSION",	// Thrown ring has explosive properties
-	"SCATTER",		// Thrown ring has scatter properties
-	"BEYONDTHEGRAVE",// Source of this missile has died and has since respawned.
-	"SLIDEPUSH",	// MF_PUSHABLE that pushes continuously.
-	"CLASSICPUSH",	// Drops straight down when object has negative Z.
-	"STANDONME",	// While not pushable, stand on me anyway.
-	"INFLOAT",		// Floating to a height for a move, don't auto float to target's height.
-	"DEBRIS",		// Splash ring from explosion ring
-	"NIGHTSPULL",	// Attracted from a paraloop
-	"JUSTATTACKED",	// can be pushed by other moving mobjs
-	"FIRING",		// turret fire
-	"SUPERFIRE",	// Firing something with Super Sonic-stopping properties. Or, if mobj has MF_MISSILE, this is the actual fire from it.
-	"SHADOW",		// Fuzzy draw, makes targeting harder.
-	"STRONGBOX",	// Flag used for "strong" random monitors.
-	"OBJECTFLIP",	// Flag for objects that always have flipped gravity.
-	"SKULLFLY",		// Special handling: skull in flight.
-	"FRET",			// Flashing from a previous hit
-	"BOSSNOTRAP",	// No Egg Trap after boss
-	"BOSSFLEE",		// Boss is fleeing!
-	"BOSSDEAD",		// Boss is dead! (Not necessarily fleeing, if a fleeing point doesn't exist.)
-	"AMBUSH",       // Alternate behaviour typically set by MTF_AMBUSH
-	"LINKDRAW",     // Draw vissprite of mobj immediately before/after tracer's vissprite (dependent on dispoffset and position)
+	"AXIS",			  // It's a NiGHTS axis! (For faster checking)
+	"TWOD",			  // Moves like it's in a 2D level
+	"DONTRESPAWN",	  // Don't respawn this object!
+	"DONTDRAW",		  // Don't generate a vissprite
+	"AUTOMATIC",	  // Thrown ring has automatic properties
+	"RAILRING",		  // Thrown ring has rail properties
+	"BOUNCERING",	  // Thrown ring has bounce properties
+	"EXPLOSION",	  // Thrown ring has explosive properties
+	"SCATTER",		  // Thrown ring has scatter properties
+	"BEYONDTHEGRAVE", // Source of this missile has died and has since respawned.
+	"SLIDEPUSH",	  // MF_PUSHABLE that pushes continuously.
+	"CLASSICPUSH",	  // Drops straight down when object has negative Z.
+	"STANDONME",	  // While not pushable, stand on me anyway.
+	"INFLOAT",		  // Floating to a height for a move, don't auto float to target's height.
+	"DEBRIS",		  // Splash ring from explosion ring
+	"NIGHTSPULL",	  // Attracted from a paraloop
+	"JUSTATTACKED",	  // can be pushed by other moving mobjs
+	"FIRING",		  // turret fire
+	"SUPERFIRE",	  // Firing something with Super Sonic-stopping properties. Or, if mobj has MF_MISSILE, this is the actual fire from it.
+	"SHADOW",		  // Fuzzy draw, makes targeting harder.
+	"STRONGBOX",	  // Flag used for "strong" random monitors.
+	"OBJECTFLIP",	  // Flag for objects that always have flipped gravity.
+	"SKULLFLY",		  // Special handling: skull in flight.
+	"FRET",			  // Flashing from a previous hit
+	"BOSSNOTRAP",	  // No Egg Trap after boss
+	"BOSSFLEE",		  // Boss is fleeing!
+	"BOSSDEAD",		  // Boss is dead! (Not necessarily fleeing, if a fleeing point doesn't exist.)
+	"AMBUSH",         // Alternate behaviour typically set by MTF_AMBUSH
+	"LINKDRAW",       // Draw vissprite of mobj immediately before/after tracer's vissprite (dependent on dispoffset and position)
+	"SHIELD",         // Thinker calls P_AddShield/P_ShieldLook (must be partnered with MF_SCENERY to use)
 	NULL
 };
 
@@ -6654,6 +6787,9 @@ static const char *const PLAYERFLAG_LIST[] = {
 	/*** misc ***/
 	"FORCESTRAFE", // Translate turn inputs into strafe inputs
 	"ANALOGMODE", // Analog mode?
+	"CANCARRY", // Can carry?
+	"SHIELDABILITY", // Thokked with shield ability
+	"FORCEJUMPDAMAGE", // Force jump damage
 
 	NULL // stop loop here.
 };
@@ -6998,20 +7134,27 @@ struct {
 	{"PRECIP_STORM_NOSTRIKES",PRECIP_STORM_NOSTRIKES},
 
 	// Shields
-	// These ones use the lower 8 bits
 	{"SH_NONE",SH_NONE},
-	{"SH_JUMP",SH_JUMP},
+	// Shield flags
+	{"SH_PROTECTFIRE",SH_PROTECTFIRE},
+	{"SH_PROTECTWATER",SH_PROTECTWATER},
+	{"SH_PROTECTELECTRIC",SH_PROTECTELECTRIC},
+	// Indivisible shields
+	{"SH_PITY",SH_PITY},
+	{"SH_WHIRLWIND",SH_WHIRLWIND},
+	{"SH_ARMAGEDDON",SH_ARMAGEDDON},
+	// normal shields that use flags
 	{"SH_ATTRACT",SH_ATTRACT},
 	{"SH_ELEMENTAL",SH_ELEMENTAL},
-	{"SH_BOMB",SH_BOMB},
+	// Sonic 3 shields
+	{"SH_FLAMEAURA",SH_FLAMEAURA},
 	{"SH_BUBBLEWRAP",SH_BUBBLEWRAP},
 	{"SH_THUNDERCOIN",SH_THUNDERCOIN},
-	{"SH_FLAMEAURA",SH_FLAMEAURA},
-	{"SH_PITY",SH_PITY},
-	// These ones are special and use the upper bits
-	{"SH_FIREFLOWER",SH_FIREFLOWER}, // Lower bits are a normal shield stacked on top of the fire flower
-	{"SH_FORCE",SH_FORCE}, // Lower bits are how many hits left, 0 is the last hit
-	// Stack masks
+	// The force shield uses the lower 8 bits to count how many extra hits are left.
+	{"SH_FORCE",SH_FORCE},
+	{"SH_FORCEHP",SH_FORCEHP}, // to be used as a bitmask only
+	// Mostly for use with Mario mode.
+	{"SH_FIREFLOWER", SH_FIREFLOWER},
 	{"SH_STACK",SH_STACK},
 	{"SH_NOSTACK",SH_NOSTACK},
 
@@ -7045,6 +7188,7 @@ struct {
 	{"SF_STOMPDAMAGE",SF_STOMPDAMAGE},
 	{"SF_MARIODAMAGE",SF_MARIODAMAGE},
 	{"SF_MACHINE",SF_MACHINE},
+	{"SF_NOSPINDASHDUST",SF_NOSPINDASHDUST},
 
 	// Character abilities!
 	// Primary
@@ -7093,6 +7237,22 @@ struct {
 	{"PAL_MIXUP",PAL_MIXUP},
 	{"PAL_RECYCLE",PAL_RECYCLE},
 	{"PAL_NUKE",PAL_NUKE},
+	// for P_DamageMobj
+	//// Damage types
+	{"DMG_WATER",DMG_WATER},
+	{"DMG_FIRE",DMG_FIRE},
+	{"DMG_ELECTRIC",DMG_ELECTRIC},
+	{"DMG_SPIKE",DMG_SPIKE},
+	{"DMG_NUKE",DMG_NUKE},
+	//// Death types
+	{"DMG_INSTAKILL",DMG_INSTAKILL},
+	{"DMG_DROWNED",DMG_DROWNED},
+	{"DMG_SPACEDROWN",DMG_SPACEDROWN},
+	{"DMG_DEATHPIT",DMG_DEATHPIT},
+	{"DMG_CRUSHED",DMG_CRUSHED},
+	{"DMG_SPECTATOR",DMG_SPECTATOR},
+	//// Masks
+	{"DMG_DEATHMASK",DMG_DEATHMASK},
 
 	// Gametypes, for use with global var "gametype"
 	{"GT_COOP",GT_COOP},

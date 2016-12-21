@@ -44,6 +44,7 @@ typedef enum
 	SF_STOMPDAMAGE      = 1<<9, // Always damage enemies, etc by landing on them, no matter your vunerability?
 	SF_MARIODAMAGE      = SF_NOJUMPDAMAGE|SF_STOMPDAMAGE, // The Mario method of being able to damage enemies, etc.
 	SF_MACHINE          = 1<<10, // Beep boop. Are you a robot?
+	SF_NOSPINDASHDUST   = 1<<11, // Don't spawn dust particles when charging a spindash
 	// free up to and including 1<<31
 } skinflags_t;
 
@@ -151,7 +152,13 @@ typedef enum
 	PF_ANALOGMODE        = 1<<26, // Analog mode?
 
 	// Can carry another player?
-	PF_CANCARRY          = 1<<27
+	PF_CANCARRY          = 1<<27,
+
+	// Used shield ability
+	PF_SHIELDABILITY     = 1<<28,
+
+	// Force jump damage?
+	PF_FORCEJUMPDAMAGE        = 1<<29
 
 	// free up to and including 1<<31
 } pflags_t;
@@ -178,23 +185,34 @@ typedef enum
 typedef enum
 {
 	SH_NONE = 0,
-	// Standard shields
-	SH_JUMP,
-	SH_ATTRACT,
-	SH_ELEMENTAL,
-	SH_BOMB,
-	// Stupid useless unimplimented Sonic 3 shields
-	SH_BUBBLEWRAP,
-	SH_THUNDERCOIN,
-	SH_FLAMEAURA,
-	// Pity shield: the world's most basic shield ever, given to players who suck at Match
-	SH_PITY,
-	// The fireflower is special, it combines with other shields.
-	SH_FIREFLOWER = 0x100,
-	// The force shield uses the lower 8 bits to count how many hits are left.
-	SH_FORCE = 0x200,
 
-	SH_STACK = SH_FIREFLOWER,
+	// Shield flags
+	SH_PROTECTFIRE = 0x400,
+	SH_PROTECTWATER = 0x800,
+	SH_PROTECTELECTRIC = 0x1000,
+
+	// Indivisible shields
+	SH_PITY = 1, // the world's most basic shield ever, given to players who suck at Match
+	SH_WHIRLWIND,
+	SH_ARMAGEDDON,
+
+	// normal shields that use flags
+	SH_ATTRACT = SH_PROTECTELECTRIC,
+	SH_ELEMENTAL = SH_PROTECTFIRE|SH_PROTECTWATER,
+
+	// Sonic 3 shields
+	SH_FLAMEAURA = SH_PROTECTFIRE,
+	SH_BUBBLEWRAP = SH_PROTECTWATER,
+	SH_THUNDERCOIN = SH_WHIRLWIND|SH_PROTECTELECTRIC,
+
+	// The force shield uses the lower 8 bits to count how many extra hits are left.
+	SH_FORCE = 0x100,
+	SH_FORCEHP = 0xFF, // to be used as a bitmask only
+
+	// Mostly for use with Mario mode.
+	SH_FIREFLOWER = 0x200,
+
+	SH_STACK = SH_FIREFLOWER, // second-layer shields
 	SH_NOSTACK = ~SH_STACK
 } shieldtype_t; // pw_shield
 
@@ -297,10 +315,8 @@ typedef struct player_s
 	// It is updated with cmd->aiming.
 	angle_t aiming;
 
-	// This is only used between levels,
-	// mo->health is used during levels.
-	/// \todo Remove this.  We don't need a second health definition for players.
-	INT32 health;
+	// player's ring count
+	INT32 rings;
 
 	SINT8 pity; // i pity the fool.
 	INT32 currentweapon; // current weapon selected.
@@ -361,8 +377,8 @@ typedef struct player_s
 	UINT8 gotcontinue; // Got continue from this stage?
 
 	fixed_t speed; // Player's speed (distance formula of MOMX and MOMY values)
-	UINT8 jumping; // Jump counter
-	UINT8 secondjump;
+	UINT8 jumping; // Holding down jump button
+	UINT8 secondjump; // Jump counter
 
 	UINT8 fly1; // Tails flying
 	UINT8 scoreadd; // Used for multiple enemy attack bonus

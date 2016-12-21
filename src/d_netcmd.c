@@ -2574,7 +2574,7 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 	if (players[playernum].spectator)
 	{
 		players[playernum].score = 0;
-		players[playernum].health = 1;
+		players[playernum].rings = 0;
 		if (players[playernum].mo)
 			players[playernum].mo->health = 1;
 	}
@@ -4055,8 +4055,7 @@ static void Skin_OnChange(void)
 	if (!Playing())
 		return; // do whatever you want
 
-	if (!(cv_debug || devparm) && !(multiplayer || netgame) // In single player.
-		&& (gamestate == GS_LEVEL || gamestate == GS_INTERMISSION || gamestate == GS_CONTINUING))
+	if (!(cv_debug || devparm) && !(multiplayer || netgame)) // In single player.
 	{
 		CV_StealthSet(&cv_skin, skins[players[consoleplayer].skin].name);
 		return;

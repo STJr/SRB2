@@ -407,6 +407,7 @@ void M_StartupLocale(void);
 extern void *(*M_Memcpy)(void* dest, const void* src, size_t n) FUNCNONNULL;
 char *va(const char *format, ...) FUNCPRINTF;
 char *M_GetToken(const char *inputString);
+void M_UnGetToken(void);
 char *sizeu1(size_t num);
 char *sizeu2(size_t num);
 char *sizeu3(size_t num);
@@ -434,6 +435,9 @@ extern INT32 cv_debug;
 // =======================
 // Misc stuff for later...
 // =======================
+
+// Modifier key variables, accessible anywhere
+extern UINT8 shiftdown, ctrldown, altdown;
 
 // if we ever make our alloc stuff...
 #define ZZ_Alloc(x) Z_Malloc(x, PU_STATIC, NULL)
