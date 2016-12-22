@@ -4157,7 +4157,7 @@ HW3SOUND for 3D hardware sound  support
 			<Option target="Debug Mingw64/DirectX" />
 			<Option target="Release Mingw64/DirectX" />
 		</Unit>
-		<Unit filename="src/sdl2/IMG_xpm.c">
+		<Unit filename="src/sdl/IMG_xpm.c">
 			<Option compilerVar="CC" />
 			<Option target="Debug Native/SDL" />
 			<Option target="Release Native/SDL" />
@@ -4166,7 +4166,7 @@ HW3SOUND for 3D hardware sound  support
 			<Option target="Debug Mingw/SDL" />
 			<Option target="Release Mingw/SDL" />
 		</Unit>
-		<Unit filename="src/sdl2/SDL_icon.xpm">
+		<Unit filename="src/sdl/SDL_icon.xpm">
 			<Option target="Debug Native/SDL" />
 			<Option target="Release Native/SDL" />
 			<Option target="Debug Linux/SDL" />
@@ -4174,7 +4174,7 @@ HW3SOUND for 3D hardware sound  support
 			<Option target="Debug Mingw/SDL" />
 			<Option target="Release Mingw/SDL" />
 		</Unit>
-		<Unit filename="src/sdl2/dosstr.c">
+		<Unit filename="src/sdl/dosstr.c">
 			<Option compilerVar="CC" />
 			<Option target="Debug Native/SDL" />
 			<Option target="Release Native/SDL" />
@@ -4183,7 +4183,7 @@ HW3SOUND for 3D hardware sound  support
 			<Option target="Debug Mingw/SDL" />
 			<Option target="Release Mingw/SDL" />
 		</Unit>
-		<Unit filename="src/sdl2/endtxt.c">
+		<Unit filename="src/sdl/endtxt.c">
 			<Option compilerVar="CC" />
 			<Option target="Debug Native/SDL" />
 			<Option target="Release Native/SDL" />
@@ -4192,7 +4192,7 @@ HW3SOUND for 3D hardware sound  support
 			<Option target="Debug Mingw/SDL" />
 			<Option target="Release Mingw/SDL" />
 		</Unit>
-		<Unit filename="src/sdl2/endtxt.h">
+		<Unit filename="src/sdl/endtxt.h">
 			<Option target="Debug Native/SDL" />
 			<Option target="Release Native/SDL" />
 			<Option target="Debug Linux/SDL" />
@@ -4200,7 +4200,7 @@ HW3SOUND for 3D hardware sound  support
 			<Option target="Debug Mingw/SDL" />
 			<Option target="Release Mingw/SDL" />
 		</Unit>
-		<Unit filename="src/sdl2/hwsym_sdl.c">
+		<Unit filename="src/sdl/hwsym_sdl.c">
 			<Option compilerVar="CC" />
 			<Option target="Debug Native/SDL" />
 			<Option target="Release Native/SDL" />
@@ -4209,7 +4209,7 @@ HW3SOUND for 3D hardware sound  support
 			<Option target="Debug Mingw/SDL" />
 			<Option target="Release Mingw/SDL" />
 		</Unit>
-		<Unit filename="src/sdl2/hwsym_sdl.h">
+		<Unit filename="src/sdl/hwsym_sdl.h">
 			<Option target="Debug Native/SDL" />
 			<Option target="Release Native/SDL" />
 			<Option target="Debug Linux/SDL" />
@@ -4217,7 +4217,7 @@ HW3SOUND for 3D hardware sound  support
 			<Option target="Debug Mingw/SDL" />
 			<Option target="Release Mingw/SDL" />
 		</Unit>
-		<Unit filename="src/sdl2/i_cdmus.c">
+		<Unit filename="src/sdl/i_cdmus.c">
 			<Option compilerVar="CC" />
 			<Option target="Debug Native/SDL" />
 			<Option target="Release Native/SDL" />
@@ -4226,7 +4226,7 @@ HW3SOUND for 3D hardware sound  support
 			<Option target="Debug Mingw/SDL" />
 			<Option target="Release Mingw/SDL" />
 		</Unit>
-		<Unit filename="src/sdl2/i_main.c">
+		<Unit filename="src/sdl/i_main.c">
 			<Option compilerVar="CC" />
 			<Option target="Debug Native/SDL" />
 			<Option target="Release Native/SDL" />
@@ -4235,7 +4235,7 @@ HW3SOUND for 3D hardware sound  support
 			<Option target="Debug Mingw/SDL" />
 			<Option target="Release Mingw/SDL" />
 		</Unit>
-		<Unit filename="src/sdl2/i_net.c">
+		<Unit filename="src/sdl/i_net.c">
 			<Option compilerVar="CC" />
 			<Option target="Debug Native/SDL" />
 			<Option target="Release Native/SDL" />
@@ -4244,7 +4244,7 @@ HW3SOUND for 3D hardware sound  support
 			<Option target="Debug Mingw/SDL" />
 			<Option target="Release Mingw/SDL" />
 		</Unit>
-		<Unit filename="src/sdl2/i_system.c">
+		<Unit filename="src/sdl/i_system.c">
 			<Option compilerVar="CC" />
 			<Option target="Debug Native/SDL" />
 			<Option target="Release Native/SDL" />
@@ -4253,7 +4253,7 @@ HW3SOUND for 3D hardware sound  support
 			<Option target="Debug Mingw/SDL" />
 			<Option target="Release Mingw/SDL" />
 		</Unit>
-		<Unit filename="src/sdl2/i_ttf.c">
+		<Unit filename="src/sdl/i_ttf.c">
 			<Option compilerVar="CC" />
 			<Option target="Debug Native/SDL" />
 			<Option target="Release Native/SDL" />
@@ -4262,7 +4262,7 @@ HW3SOUND for 3D hardware sound  support
 			<Option target="Debug Mingw/SDL" />
 			<Option target="Release Mingw/SDL" />
 		</Unit>
-		<Unit filename="src/sdl2/i_ttf.h">
+		<Unit filename="src/sdl/i_ttf.h">
 			<Option target="Debug Native/SDL" />
 			<Option target="Release Native/SDL" />
 			<Option target="Debug Linux/SDL" />
@@ -4270,7 +4270,7 @@ HW3SOUND for 3D hardware sound  support
 			<Option target="Debug Mingw/SDL" />
 			<Option target="Release Mingw/SDL" />
 		</Unit>
-		<Unit filename="src/sdl2/i_video.c">
+		<Unit filename="src/sdl/i_video.c">
 			<Option compilerVar="CC" />
 			<Option target="Debug Native/SDL" />
 			<Option target="Release Native/SDL" />
@@ -4279,7 +4279,7 @@ HW3SOUND for 3D hardware sound  support
 			<Option target="Debug Mingw/SDL" />
 			<Option target="Release Mingw/SDL" />
 		</Unit>
-		<Unit filename="src/sdl2/mixer_sound.c">
+		<Unit filename="src/sdl/mixer_sound.c">
 			<Option compilerVar="CC" />
 			<Option target="Debug Native/SDL" />
 			<Option target="Release Native/SDL" />
@@ -4288,7 +4288,7 @@ HW3SOUND for 3D hardware sound  support
 			<Option target="Debug Mingw/SDL" />
 			<Option target="Release Mingw/SDL" />
 		</Unit>
-		<Unit filename="src/sdl2/ogl_sdl.c">
+		<Unit filename="src/sdl/ogl_sdl.c">
 			<Option compilerVar="CC" />
 			<Option target="Debug Native/SDL" />
 			<Option target="Release Native/SDL" />
@@ -4297,7 +4297,7 @@ HW3SOUND for 3D hardware sound  support
 			<Option target="Debug Mingw/SDL" />
 			<Option target="Release Mingw/SDL" />
 		</Unit>
-		<Unit filename="src/sdl2/ogl_sdl.h">
+		<Unit filename="src/sdl/ogl_sdl.h">
 			<Option target="Debug Native/SDL" />
 			<Option target="Release Native/SDL" />
 			<Option target="Debug Linux/SDL" />
@@ -4305,7 +4305,7 @@ HW3SOUND for 3D hardware sound  support
 			<Option target="Debug Mingw/SDL" />
 			<Option target="Release Mingw/SDL" />
 		</Unit>
-		<Unit filename="src/sdl2/sdl_sound.c">
+		<Unit filename="src/sdl/sdl_sound.c">
 			<Option compilerVar="CC" />
 			<Option target="Debug Native/SDL" />
 			<Option target="Release Native/SDL" />
@@ -4314,7 +4314,7 @@ HW3SOUND for 3D hardware sound  support
 			<Option target="Debug Mingw/SDL" />
 			<Option target="Release Mingw/SDL" />
 		</Unit>
-		<Unit filename="src/sdl2/sdlmain.h">
+		<Unit filename="src/sdl/sdlmain.h">
 			<Option target="Debug Native/SDL" />
 			<Option target="Release Native/SDL" />
 			<Option target="Debug Linux/SDL" />
