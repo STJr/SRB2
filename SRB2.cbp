@@ -4159,6 +4159,8 @@ HW3SOUND for 3D hardware sound  support
 		</Unit>
 		<Unit filename="src/sdl/IMG_xpm.c">
 			<Option compilerVar="CC" />
+			<Option compile="0" />
+			<Option link="0" />
 			<Option target="Debug Native/SDL" />
 			<Option target="Release Native/SDL" />
 			<Option target="Debug Linux/SDL" />
