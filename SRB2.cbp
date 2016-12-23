@@ -152,6 +152,8 @@ HW3SOUND for 3D hardware sound  support
 					<Add directory="libs/libpng-src" />
 					<Add directory="libs/zlib" />
 					<Add directory="libs/gme/include" />
+					<Add directory="libs/SDL2/include" />
+					<Add directory="libs/SDL2_mixer/include" />
 				</Compiler>
 				<Linker>
 					<Add library="SDL2" />
@@ -167,6 +169,8 @@ HW3SOUND for 3D hardware sound  support
 					<Add directory="libs/zlib/win32" />
 					<Add directory="libs/libpng-src/projects" />
 					<Add directory="libs/gme/win32" />
+					<Add directory="libs/SDL2/lib/x86" />
+					<Add directory="libs/SDL2_mixer/lib/x86" />
 				</Linker>
 			</Target>
 			<Target title="Release Mingw/SDL">
@@ -198,6 +202,8 @@ HW3SOUND for 3D hardware sound  support
 					<Add directory="libs/libpng-src" />
 					<Add directory="libs/zlib" />
 					<Add directory="libs/gme/include" />
+					<Add directory="libs/SDL2/include" />
+					<Add directory="libs/SDL2_mixer/include" />
 				</Compiler>
 				<Linker>
 					<Add library="SDL2" />
@@ -213,6 +219,8 @@ HW3SOUND for 3D hardware sound  support
 					<Add directory="libs/zlib/win32" />
 					<Add directory="libs/libpng-src/projects" />
 					<Add directory="libs/gme/win32" />
+					<Add directory="libs/SDL2/lib/x86" />
+					<Add directory="libs/SDL2_mixer/lib/x86" />
 				</Linker>
 			</Target>
 			<Target title="Debug Mingw/DirectX">
@@ -1487,6 +1495,8 @@ HW3SOUND for 3D hardware sound  support
 		<Unit filename="src/hu_stuff.h" />
 		<Unit filename="src/i_addrinfo.c">
 			<Option compilerVar="CC" />
+			<Option compile="0" />
+			<Option link="0" />
 		</Unit>
 		<Unit filename="src/i_addrinfo.h" />
 		<Unit filename="src/i_joy.h" />
