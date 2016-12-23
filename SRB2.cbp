@@ -31,7 +31,7 @@ HW3SOUND for 3D hardware sound  support
 				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-g" />
-					<Add option="`sdl-config --cflags`" />
+					<Add option="`sdl2-config --cflags`" />
 					<Add option="-DDIRECTFULLSCREEN" />
 					<Add option="-DHAVE_SDL" />
 					<Add option="-DPARANOIA" />
@@ -41,7 +41,7 @@ HW3SOUND for 3D hardware sound  support
 					<Add option="-DHAVE_BLUA" />
 				</Compiler>
 				<Linker>
-					<Add option="`sdl-config --libs`" />
+					<Add option="`sdl2-config --libs`" />
 					<Add library="SDL_mixer" />
 				</Linker>
 			</Target>
@@ -54,7 +54,7 @@ HW3SOUND for 3D hardware sound  support
 				<Compiler>
 					<Add option="-O2" />
 					<Add option="-g" />
-					<Add option="`sdl-config --cflags`" />
+					<Add option="`sdl2-config --cflags`" />
 					<Add option="-DDIRECTFULLSCREEN" />
 					<Add option="-DHAVE_SDL" />
 					<Add option="-DNDEBUG" />
@@ -62,7 +62,7 @@ HW3SOUND for 3D hardware sound  support
 					<Add option="-DHAVE_BLUA" />
 				</Compiler>
 				<Linker>
-					<Add option="`sdl-config --libs`" />
+					<Add option="`sdl2-config --libs`" />
 					<Add library="SDL_mixer" />
 				</Linker>
 			</Target>
@@ -74,7 +74,7 @@ HW3SOUND for 3D hardware sound  support
 				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-g" />
-					<Add option="`sdl-config --cflags`" />
+					<Add option="`sdl2-config --cflags`" />
 					<Add option="`libpng-config --cflags`" />
 					<Add option="-DDIRECTFULLSCREEN" />
 					<Add option="-DHAVE_SDL" />
@@ -89,7 +89,7 @@ HW3SOUND for 3D hardware sound  support
 					<Add option="-DHAVE_BLUA" />
 				</Compiler>
 				<Linker>
-					<Add option="`sdl-config --libs`" />
+					<Add option="`sdl2-config --libs`" />
 					<Add option="`libpng-config --libs`" />
 					<Add library="SDL_mixer" />
 					<Add library="rt" />
@@ -104,7 +104,7 @@ HW3SOUND for 3D hardware sound  support
 				<Compiler>
 					<Add option="-O2" />
 					<Add option="-g" />
-					<Add option="`sdl-config --cflags`" />
+					<Add option="`sdl2-config --cflags`" />
 					<Add option="`libpng-config --cflags`" />
 					<Add option="-DDIRECTFULLSCREEN" />
 					<Add option="-DHAVE_SDL" />
@@ -117,7 +117,7 @@ HW3SOUND for 3D hardware sound  support
 					<Add option="-DHAVE_BLUA" />
 				</Compiler>
 				<Linker>
-					<Add option="`sdl-config --libs`" />
+					<Add option="`sdl2-config --libs`" />
 					<Add option="`libpng-config --libs`" />
 					<Add library="SDL_mixer" />
 					<Add library="rt" />
