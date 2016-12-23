@@ -3316,7 +3316,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 						}
 					}
 
-					if (mo->player->pflags & PF_BOUNCING)
+					if (mo->player->pflags & PF_BOUNCING && !P_CheckDeathPitCollide(mo))
 					{
 						fixed_t prevmomz = P_MobjFlip(mo)*abs(mo->momz);
 						if (mo->eflags & MFE_UNDERWATER)
@@ -3326,7 +3326,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 						S_StartSound(mo, sfx_boingf);
 						P_DoJump(mo->player, false);
 						P_SetPlayerMobjState(mo, S_PLAY_BOUNCE_LANDING);
-						mo->player->pflags |= PF_BOUNCING;
+						mo->player->pflags |= PF_BOUNCING|PF_THOKKED;
 						mo->player->jumping = 0;
 						mo->momz = (FixedMul(mo->momz, 3*FRACUNIT/2) + prevmomz)/2;
 						clipmomz = false;
@@ -4153,7 +4153,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 	mobj->eflags &= ~MFE_JUSTSTEPPEDDOWN;
 
 	if (mobj->state-states == S_PLAY_BOUNCE_LANDING)
-		goto animonly;
+		goto animonly; // no need for checkposition - doesn't move at ALL
 
 	// Zoom tube
 	if (mobj->tracer)

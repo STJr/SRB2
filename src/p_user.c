@@ -4283,9 +4283,10 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					{
 						P_SetPlayerMobjState(player->mo, S_PLAY_BOUNCE);
 						player->pflags &= ~PF_JUMPED;
-						player->pflags |= PF_BOUNCING;
+						player->pflags |= PF_THOKKED|PF_BOUNCING;
 						player->mo->momx >>= 1;
 						player->mo->momy >>= 1;
+						player->mo->momz >>= 1;
 					}
 					break;
 				case CA_TWINSPIN:
@@ -6746,9 +6747,9 @@ static void P_MovePlayer(player_t *player)
 			}
 			else
 			{
-				player->pflags |= PF_THOKKED;
 				player->mo->momx >>= 1;
 				player->mo->momy >>= 1;
+				player->mo->momz >>= 1;
 				P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
 			}
 		}
