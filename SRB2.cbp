@@ -14,7 +14,7 @@ If you are compiling for Windows, use Mingw targets
 Interface Defines:
 _WINDOWS for DirectX Interface
 SDL for SDL Interface
-HAVE_MIXER for SDL_Mixer
+HAVE_MIXER for SDL2_mixer
 
 HAVE_PNG for PNG support (for APNG support. compile libs/libpng-src)
 HWRENDER for hardware render support
@@ -42,7 +42,7 @@ HW3SOUND for 3D hardware sound  support
 				</Compiler>
 				<Linker>
 					<Add option="`sdl2-config --libs`" />
-					<Add library="SDL_mixer" />
+					<Add library="SDL2_mixer" />
 				</Linker>
 			</Target>
 			<Target title="Release Native/SDL">
@@ -63,7 +63,7 @@ HW3SOUND for 3D hardware sound  support
 				</Compiler>
 				<Linker>
 					<Add option="`sdl2-config --libs`" />
-					<Add library="SDL_mixer" />
+					<Add library="SDL2_mixer" />
 				</Linker>
 			</Target>
 			<Target title="Debug Linux/SDL">
@@ -91,7 +91,7 @@ HW3SOUND for 3D hardware sound  support
 				<Linker>
 					<Add option="`sdl2-config --libs`" />
 					<Add option="`libpng-config --libs`" />
-					<Add library="SDL_mixer" />
+					<Add library="SDL2_mixer" />
 					<Add library="rt" />
 				</Linker>
 			</Target>
@@ -119,7 +119,7 @@ HW3SOUND for 3D hardware sound  support
 				<Linker>
 					<Add option="`sdl2-config --libs`" />
 					<Add option="`libpng-config --libs`" />
-					<Add library="SDL_mixer" />
+					<Add library="SDL2_mixer" />
 					<Add library="rt" />
 				</Linker>
 			</Target>
@@ -567,7 +567,7 @@ HW3SOUND for 3D hardware sound  support
 				<Linker>
 					<Add option="-g" />
 					<Add library="SDL" />
-					<Add library="SDL_mixer" />
+					<Add library="SDL2_mixer" />
 					<Add library="advapi32" />
 					<Add library="kernel32" />
 					<Add library="msvcrt" />
@@ -606,7 +606,7 @@ HW3SOUND for 3D hardware sound  support
 				<Linker>
 					<Add option="-g" />
 					<Add library="SDL" />
-					<Add library="SDL_mixer" />
+					<Add library="SDL2_mixer" />
 					<Add library="advapi32" />
 					<Add library="kernel32" />
 					<Add library="msvcrt" />
