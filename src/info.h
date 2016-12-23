@@ -604,6 +604,9 @@ enum playersprite
 	SPR2_CLNG, // cling
 	SPR2_CLMB, // climb
 
+	SPR2_BNCE, // bounce
+	SPR2_BLND, // bounce landing
+
 	SPR2_TWIN, // twinspin
 
 	SPR2_MLEE, // melee
@@ -712,6 +715,10 @@ typedef enum state
 	S_PLAY_GLIDE,
 	S_PLAY_CLING,
 	S_PLAY_CLIMB,
+
+	// CA_BOUNCE
+	S_PLAY_BOUNCE,
+	S_PLAY_BOUNCE_LANDING,
 
 	// CA_TWINSPIN
 	S_PLAY_TWINSPIN,

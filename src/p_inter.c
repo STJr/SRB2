@@ -371,7 +371,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		|| ((player->pflags & PF_JUMPED) && (player->pflags & PF_FORCEJUMPDAMAGE || !(player->charflags & SF_NOJUMPSPIN) || (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)))
 		|| (player->pflags & (PF_SPINNING|PF_GLIDING))
 		|| (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2)
-		|| ((player->charflags & SF_STOMPDAMAGE) && (P_MobjFlip(toucher)*(toucher->z - (special->z + special->height/2)) > 0) && (P_MobjFlip(toucher)*toucher->momz < 0))
+		|| ((player->charflags & SF_STOMPDAMAGE || player->pflags & PF_BOUNCING) && (P_MobjFlip(toucher)*(toucher->z - (special->z + special->height/2)) > 0) && (P_MobjFlip(toucher)*toucher->momz < 0))
 		|| player->powers[pw_invulnerability] || player->powers[pw_super]
 		|| elementalpierce) // Do you possess the ability to subdue the object?
 		{
@@ -423,7 +423,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		|| ((player->pflags & PF_JUMPED) && (player->pflags & PF_FORCEJUMPDAMAGE || !(player->charflags & SF_NOJUMPSPIN) || (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)))
 		|| (player->pflags & (PF_SPINNING|PF_GLIDING))
 		|| (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2)
-		|| ((player->charflags & SF_STOMPDAMAGE) && (P_MobjFlip(toucher)*(toucher->z - (special->z + special->height/2)) > 0) && (P_MobjFlip(toucher)*toucher->momz < 0))
+		|| ((player->charflags & SF_STOMPDAMAGE || player->pflags & PF_BOUNCING) && (P_MobjFlip(toucher)*(toucher->z - (special->z + special->height/2)) > 0) && (P_MobjFlip(toucher)*toucher->momz < 0))
 		|| player->powers[pw_invulnerability] || player->powers[pw_super]) // Do you possess the ability to subdue the object?
 		{
 			if ((P_MobjFlip(toucher)*toucher->momz < 0) && (elementalpierce != 1))
@@ -1395,7 +1395,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				}
 				else if (((player->pflags & PF_NIGHTSMODE) && (player->pflags & PF_DRILLING))
 						|| ((player->pflags & PF_JUMPED) && (player->pflags & PF_FORCEJUMPDAMAGE || !(player->charflags & SF_NOJUMPSPIN) || (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)))
-						|| ((player->charflags & SF_STOMPDAMAGE) && (P_MobjFlip(toucher)*(toucher->z - (special->z + special->height/2)) > 0) && (P_MobjFlip(toucher)*toucher->momz < 0))
+						|| ((player->charflags & SF_STOMPDAMAGE || player->pflags & PF_BOUNCING) && (P_MobjFlip(toucher)*(toucher->z - (special->z + special->height/2)) > 0) && (P_MobjFlip(toucher)*toucher->momz < 0))
 						|| (player->pflags & (PF_SPINNING|PF_GLIDING))
 						|| player->powers[pw_invulnerability] || player->powers[pw_super]) // Do you possess the ability to subdue the object?
 				{

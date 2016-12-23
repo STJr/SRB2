@@ -253,6 +253,13 @@ UINT8 P_GetMobjSprite2(mobj_t *mobj, UINT8 spr2)
 			spr2 = SPR2_CLMB;
 			break;
 
+		case SPR2_BNCE:
+			spr2 = SPR2_FALL;
+			break;
+		case SPR2_BLND:
+			spr2 = SPR2_SPIN;
+			break;
+
 		case SPR2_TWIN:
 			spr2 = SPR2_SPIN;
 			break;
@@ -526,6 +533,8 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 	case S_PLAY_FLY:
 	case S_PLAY_SWIM:
 	case S_PLAY_GLIDE:
+	case S_PLAY_BOUNCE:
+	case S_PLAY_BOUNCE_LANDING:
 	case S_PLAY_TWINSPIN:
 		player->panim = PA_ABILITY;
 		break;
@@ -3306,6 +3315,22 @@ static void P_PlayerZMovement(mobj_t *mo)
 							clipmomz = false;
 						}
 					}
+
+					if (mo->player->pflags & PF_BOUNCING)
+					{
+						fixed_t prevmomz = P_MobjFlip(mo)*abs(mo->momz);
+						if (mo->eflags & MFE_UNDERWATER)
+						{
+							prevmomz /= 2;
+						}
+						S_StartSound(mo, sfx_boingf);
+						P_DoJump(mo->player, false);
+						P_SetPlayerMobjState(mo, S_PLAY_BOUNCE_LANDING);
+						mo->player->pflags |= PF_BOUNCING;
+						mo->player->jumping = 0;
+						mo->momz = (FixedMul(mo->momz, 3*FRACUNIT/2) + prevmomz)/2;
+						clipmomz = false;
+					}
 				}
 			}
 			if (!(mo->player->pflags & PF_SPINNING))
@@ -4126,6 +4151,9 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 
 	// momentum movement
 	mobj->eflags &= ~MFE_JUSTSTEPPEDDOWN;
+
+	if (mobj->state-states == S_PLAY_BOUNCE_LANDING)
+		goto animonly;
 
 	// Zoom tube
 	if (mobj->tracer)

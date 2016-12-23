@@ -3816,6 +3816,10 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PLAY_CLING",
 	"S_PLAY_CLIMB",
 
+	// CA_BOUNCE
+	"S_PLAY_BOUNCE",
+	"S_PLAY_BOUNCE_LANDING",
+
 	// CA_TWINSPIN
 	"S_PLAY_TWINSPIN",
 
@@ -6790,6 +6794,7 @@ static const char *const PLAYERFLAG_LIST[] = {
 	"CANCARRY", // Can carry?
 	"SHIELDABILITY", // Thokked with shield ability
 	"FORCEJUMPDAMAGE", // Force jump damage
+	"BOUNCING",
 
 	NULL // stop loop here.
 };
@@ -7207,6 +7212,7 @@ struct {
 	{"CA_AIRDRILL",CA_AIRDRILL},
 	{"CA_JUMPTHOK",CA_JUMPTHOK},
 	{"CA_DASHMODE",CA_DASHMODE},
+	{"CA_BOUNCE",CA_BOUNCE},
 	{"CA_TWINSPIN",CA_TWINSPIN},
 	// Secondary
 	{"CA2_NONE",CA2_NONE}, // now slot 0!

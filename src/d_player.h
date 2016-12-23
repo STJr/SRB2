@@ -66,6 +66,7 @@ typedef enum
 	CA_AIRDRILL,
 	CA_JUMPTHOK,
 	CA_DASHMODE,
+	CA_BOUNCE,
 	CA_TWINSPIN
 } charability_t;
 
@@ -158,9 +159,12 @@ typedef enum
 	PF_SHIELDABILITY     = 1<<28,
 
 	// Force jump damage?
-	PF_FORCEJUMPDAMAGE        = 1<<29
+	PF_FORCEJUMPDAMAGE   = 1<<29,
 
-	// free up to and including 1<<31
+	// Bouncing
+	PF_BOUNCING          = 1<<30
+
+	// 1<<31 is free
 } pflags_t;
 
 typedef enum

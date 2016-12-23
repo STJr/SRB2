@@ -870,7 +870,7 @@ void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor)
 // Useful when you want to kill everything the player is doing.
 void P_ResetPlayer(player_t *player)
 {
-	player->pflags &= ~(PF_SPINNING|PF_STARTDASH|PF_JUMPED|PF_FORCEJUMPDAMAGE|PF_GLIDING|PF_THOKKED|PF_CANCARRY|PF_SHIELDABILITY);
+	player->pflags &= ~(PF_SPINNING|PF_STARTDASH|PF_JUMPED|PF_FORCEJUMPDAMAGE|PF_GLIDING|PF_THOKKED|PF_CANCARRY|PF_SHIELDABILITY|PF_BOUNCING);
 	player->powers[pw_carry] = CR_NONE;
 	player->jumping = 0;
 	player->secondjump = 0;
@@ -3934,7 +3934,7 @@ void P_DoJumpShield(player_t *player)
 	player->jumping = 0;
 	player->secondjump = 0;
 	player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
-	player->pflags &= ~PF_SPINNING;
+	player->pflags &= ~(PF_SPINNING|PF_BOUNCING);
 	if (electric)
 	{
 		mobj_t *spark;
@@ -4276,6 +4276,16 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						player->flyangle = 56 + (60-(player->actionspd>>FRACBITS))/3;
 						player->pflags |= PF_THOKKED;
 						S_StartSound(player->mo, sfx_spndsh);
+					}
+					break;
+				case CA_BOUNCE:
+					if (!(player->pflags & PF_THOKKED) || player->charability2 == CA2_MULTIABILITY)
+					{
+						P_SetPlayerMobjState(player->mo, S_PLAY_BOUNCE);
+						player->pflags &= ~PF_JUMPED;
+						player->pflags |= PF_BOUNCING;
+						player->mo->momx >>= 1;
+						player->mo->momy >>= 1;
 					}
 					break;
 				case CA_TWINSPIN:
@@ -4785,9 +4795,14 @@ static void P_3dMovement(player_t *player)
 	}
 
 	// Better maneuverability while flying
-	if(player->powers[pw_tailsfly])
+	if (player->powers[pw_tailsfly])
 	{
 		thrustfactor = player->thrustfactor*2;
+		acceleration = player->accelstart + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * player->acceleration;
+	}
+	else if (player->pflags & PF_BOUNCING)
+	{
+		thrustfactor = player->thrustfactor/2;
 		acceleration = player->accelstart + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * player->acceleration;
 	}
 
@@ -6703,9 +6718,44 @@ static void P_MovePlayer(player_t *player)
 		player->climbing = 0;
 	}
 
+	if ((!(player->charability == CA_BOUNCE) || player->gotflag) // If you can't bounce, then why the heck would you be bouncing?
+		&& (player->pflags & PF_BOUNCING))
+	{
+		if (onground)
+			P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
+		else
+		{
+			player->pflags |= PF_JUMPED;
+			P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
+		}
+		player->pflags &= ~PF_BOUNCING;
+	}
+
+	// Bouncing...
+	if (player->pflags & PF_BOUNCING)
+	{
+		if (!(player->pflags & PF_JUMPDOWN)) // If not holding the jump button
+		{
+			P_ResetPlayer(player); // down, stop bouncing.
+			if (onground)
+				P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
+			else if (player->charability2 == CA2_MULTIABILITY)
+			{
+				player->pflags |= PF_JUMPED;
+				P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
+			}
+			else
+			{
+				player->pflags |= PF_THOKKED;
+				player->mo->momx >>= 1;
+				player->mo->momy >>= 1;
+				P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
+			}
+		}
+	}
 	// Glide MOMZ
 	// AKA my own gravity. =)
-	if (player->pflags & PF_GLIDING)
+	else if (player->pflags & PF_GLIDING)
 	{
 		fixed_t leeway;
 		fixed_t glidespeed = player->actionspd;
@@ -6749,8 +6799,7 @@ static void P_MovePlayer(player_t *player)
 			P_ResetPlayer(player); // down, stop gliding.
 			if (onground)
 				P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
-			else if (player->charability2 == CA2_MULTIABILITY
-				&& player->charability == CA_GLIDEANDCLIMB)
+			else if (player->charability2 == CA2_MULTIABILITY)
 			{
 				player->pflags |= PF_JUMPED;
 				P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
@@ -9330,7 +9379,7 @@ void P_PlayerThink(player_t *player)
 	player->pflags &= ~PF_SLIDING;
 
 #define dashmode player->dashmode
-	// Dash mode ability for Metal Sonic
+	// Dash mode ability
 	if ((player->charability == CA_DASHMODE) && !(player->gotflag) && !(maptol & TOL_NIGHTS)) // woo, dashmode! no nights tho.
 	{
 		if (player->speed >= FixedMul(player->runspeed, player->mo->scale) || (player->pflags & PF_STARTDASH))
