@@ -1508,7 +1508,7 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 			else if (thing->type == MT_SKIM && (rover->flags & FF_SWIMMABLE))
 				;
 			else if (!((rover->flags & FF_BLOCKPLAYER && thing->player)
-				|| (rover->flags & FF_BLOCKOTHERS && !thing->player)
+			    || (rover->flags & FF_BLOCKOTHERS && !thing->player)
 				|| rover->flags & FF_QUICKSAND))
 				continue;
 
@@ -1533,7 +1533,8 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 				+ ((topheight - bottomheight)/2));
 
 			if (topheight > tmfloorz && abs(delta1) < abs(delta2)
-				&& !(rover->flags & FF_REVERSEPLATFORM))
+				&& !(rover->flags & FF_REVERSEPLATFORM)
+				&& ((P_MobjFlip(tmthing)*tmthing->momz >= 0) || (!(rover->flags & FF_PLATFORM))))
 			{
 				tmfloorz = tmdropoffz = topheight;
 #ifdef ESLOPE
@@ -1542,6 +1543,7 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 			}
 			if (bottomheight < tmceilingz && abs(delta1) >= abs(delta2)
 				&& !(rover->flags & FF_PLATFORM)
+				&& ((P_MobjFlip(tmthing)*tmthing->momz >= 0) || (!(rover->flags & FF_REVERSEPLATFORM)))
 				&& !(thing->type == MT_SKIM && (rover->flags & FF_SWIMMABLE)))
 			{
 				tmceilingz = tmdrpoffceilz = bottomheight;

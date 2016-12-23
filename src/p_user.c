@@ -1746,10 +1746,13 @@ static void P_CheckBustableBlocks(player_t *player)
 	oldx = player->mo->x;
 	oldy = player->mo->y;
 
-	P_UnsetThingPosition(player->mo);
-	player->mo->x += player->mo->momx;
-	player->mo->y += player->mo->momy;
-	P_SetThingPosition(player->mo);
+	if (!(player->pflags & PF_BOUNCING)) // Bouncers only get to break downwards, not sideways
+	{
+		P_UnsetThingPosition(player->mo);
+		player->mo->x += player->mo->momx;
+		player->mo->y += player->mo->momy;
+		P_SetThingPosition(player->mo);
+	}
 
 	for (node = player->mo->touching_sectorlist; node; node = node->m_sectorlist_next)
 	{
@@ -1769,7 +1772,7 @@ static void P_CheckBustableBlocks(player_t *player)
 				{
 					// If it's an FF_SPINBUST, you have to either be jumping, or coming down
 					// onto the top from a spin.
-					if (rover->flags & FF_SPINBUST && ((!(player->pflags & PF_JUMPED) && !(player->pflags & PF_SPINNING)) || (player->pflags & PF_STARTDASH)))
+					if (rover->flags & FF_SPINBUST && ((!(player->pflags & PF_JUMPED) && !(player->pflags & PF_SPINNING) && !(player->pflags & PF_BOUNCING)) || (player->pflags & PF_STARTDASH)))
 						continue;
 
 					// if it's not an FF_SHATTER, you must be spinning (and not jumping)
@@ -1784,6 +1787,7 @@ static void P_CheckBustableBlocks(player_t *player)
 						&& !((player->pflags & PF_SPINNING) && !(player->pflags & PF_JUMPED))
 						&& !(player->powers[pw_super])
 						&& !(player->charability == CA_GLIDEANDCLIMB)
+						&& !(player->pflags & PF_BOUNCING)
 						&& !((player->charability == CA_DASHMODE) && (player->dashmode >= 3*TICRATE))
 						&& !((player->charability == CA_TWINSPIN) && (player->panim == PA_ABILITY))
 						&& !(player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2)
@@ -1794,12 +1798,31 @@ static void P_CheckBustableBlocks(player_t *player)
 					// Only players with CA_GLIDEANDCLIMB, or CA_TWINSPIN/CA2_MELEE users can break this rock...
 					if (!(rover->flags & FF_SHATTER) && (rover->flags & FF_ONLYKNUX)
 						&& !(player->charability == CA_GLIDEANDCLIMB
+						|| (player->pflags & PF_BOUNCING)
 						|| ((player->charability == CA_TWINSPIN) && (player->panim == PA_ABILITY))
 						|| (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2)))
 						continue;
 
 					topheight = P_GetFOFTopZ(player->mo, node->m_sector, rover, player->mo->x, player->mo->y, NULL);
 					bottomheight = P_GetFOFBottomZ(player->mo, node->m_sector, rover, player->mo->x, player->mo->y, NULL);
+
+					if (player->pflags & PF_BOUNCING)
+					{
+						if (player->mo->eflags & MFE_VERTICALFLIP)
+						{
+							if (player->mo->momz <= 0)
+								continue;
+							topheight += player->mo->momz;
+							bottomheight += player->mo->momz;
+						}
+						else
+						{
+							if (player->mo->momz >= 0)
+								continue;
+							topheight -= player->mo->momz;
+							bottomheight -= player->mo->momz;
+						}
+					}
 
 					// Height checks
 					if (rover->flags & FF_SHATTERBOTTOM)
@@ -1859,10 +1882,13 @@ static void P_CheckBustableBlocks(player_t *player)
 		}
 	}
 bustupdone:
-	P_UnsetThingPosition(player->mo);
-	player->mo->x = oldx;
-	player->mo->y = oldy;
-	P_SetThingPosition(player->mo);
+	if (!(player->pflags & PF_BOUNCING))
+	{
+		P_UnsetThingPosition(player->mo);
+		player->mo->x = oldx;
+		player->mo->y = oldy;
+		P_SetThingPosition(player->mo);
+	}
 }
 
 static void P_CheckBouncySectors(player_t *player)
@@ -6735,7 +6761,7 @@ static void P_MovePlayer(player_t *player)
 	// Bouncing...
 	if (player->pflags & PF_BOUNCING)
 	{
-		if (!(player->pflags & PF_JUMPDOWN)) // If not holding the jump button
+		if (!(player->pflags & PF_JUMPDOWN) || onground) // If not holding the jump button
 		{
 			P_ResetPlayer(player); // down, stop bouncing.
 			if (onground)
