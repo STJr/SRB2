@@ -4144,7 +4144,15 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 	mobj->eflags &= ~MFE_JUSTSTEPPEDDOWN;
 
 	if (mobj->state-states == S_PLAY_BOUNCE_LANDING)
+	{
+		angle_t dashangle = mobj->angle;
+		if (mobj->player->cmd.forwardmove || mobj->player->cmd.sidemove)
+		{
+			dashangle += R_PointToAngle2(0, 0, mobj->player->cmd.forwardmove<<FRACBITS, -mobj->player->cmd.sidemove<<FRACBITS);
+		}
+		P_InstaThrust(mobj, dashangle, mobj->player->speed);
 		goto animonly; // no need for checkposition - doesn't move at ALL
+	}
 
 	// Zoom tube
 	if (mobj->tracer)
