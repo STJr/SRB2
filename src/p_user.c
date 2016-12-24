@@ -4381,13 +4381,15 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 		{
 			if (player->secondjump == 1)
 			{
-				if (player->charability == CA_FLOAT)
-					player->mo->momz = 0;
-				else if (player->charability == CA_SLOWFALL)
-				{
-					if (P_MobjFlip(player->mo)*player->mo->momz < -gravity*4)
-						player->mo->momz = P_MobjFlip(player->mo)*-gravity*4;
-				}
+				fixed_t potentialmomz;
+				if (player->charability == CA_SLOWFALL)
+					potentialmomz = -gravity*4;
+				else
+					potentialmomz = ((player->speed < 10*player->mo->scale)
+					? (player->speed - 10*player->mo->scale)/5
+					: 0);
+				if (P_MobjFlip(player->mo)*player->mo->momz < potentialmomz)
+					player->mo->momz = P_MobjFlip(player->mo)*potentialmomz;
 				player->pflags &= ~PF_SPINNING;
 			}
 		}
