@@ -604,6 +604,9 @@ enum playersprite
 	SPR2_CLNG, // cling
 	SPR2_CLMB, // climb
 
+	SPR2_FLT , // float
+	SPR2_FRUN, // float run
+
 	SPR2_BNCE, // bounce
 	SPR2_BLND, // bounce landing
 
@@ -628,6 +631,7 @@ enum playersprite
 	SPR2_SEDG, // super edge
 	SPR2_SRID, // super ride
 	SPR2_SFLT, // super float
+	SPR2_SFRN, // super float run
 
 	SPR2_NTRN, // NiGHTS transformation
 	SPR2_NSTD, // NiGHTS stand
@@ -700,7 +704,7 @@ typedef enum state
 	S_PLAY_SPIN,
 	S_PLAY_DASH,
 	S_PLAY_GASP,
-	S_PLAY_JUMP, // spin jump
+	S_PLAY_JUMP,
 	S_PLAY_SPRING,
 	S_PLAY_FALL,
 	S_PLAY_EDGE,
@@ -715,6 +719,10 @@ typedef enum state
 	S_PLAY_GLIDE,
 	S_PLAY_CLING,
 	S_PLAY_CLIMB,
+
+	// CA_FLOAT/CA_SLOWFALL
+	S_PLAY_FLOAT,
+	S_PLAY_FLOAT_RUN,
 
 	// CA_BOUNCE
 	S_PLAY_BOUNCE,
@@ -738,12 +746,13 @@ typedef enum state
 	S_PLAY_SUPER_DRWN,
 	S_PLAY_SUPER_SPIN,
 	S_PLAY_SUPER_GASP,
-	S_PLAY_SUPER_JUMP, // see note above
+	S_PLAY_SUPER_JUMP,
 	S_PLAY_SUPER_SPRING,
 	S_PLAY_SUPER_FALL,
 	S_PLAY_SUPER_EDGE,
 	S_PLAY_SUPER_RIDE,
 	S_PLAY_SUPER_FLOAT,
+	S_PLAY_SUPER_FLOAT_RUN,
 
 	// SF_SUPER
 	S_PLAY_SUPER_TRANS,

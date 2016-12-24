@@ -460,9 +460,9 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		return true;
 	}
 
-	// CA_DASHMODE users destroy spikes and monitors, CA_TWINSPIN users and CA2_MELEE users destroy spikes.
+	// SF_DASHMODE users destroy spikes and monitors, CA_TWINSPIN users and CA2_MELEE users destroy spikes.
 	if ((tmthing->player)
-		&& (((tmthing->player->charability == CA_DASHMODE) && (tmthing->player->dashmode >= 3*TICRATE)
+		&& (((tmthing->player->charflags & SF_DASHMODE) && (tmthing->player->dashmode >= 3*TICRATE)
 		&& (thing->flags & (MF_MONITOR) || thing->type == MT_SPIKE))
 	|| ((((tmthing->player->charability == CA_TWINSPIN) && (tmthing->player->panim == PA_ABILITY))
 	|| (tmthing->player->charability2 == CA2_MELEE && tmthing->player->panim == PA_ABILITY2))
@@ -1086,7 +1086,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				if (!(elementalpierce == 1 && thing->flags & MF_GRENADEBOUNCE)) // prevent gold monitor clipthrough.
 				{
 					if (player->pflags & PF_BOUNCING)
-						P_DoAbilityBounce(player);
+						P_DoAbilityBounce(player, false);
 					return false;
 				}
 				else

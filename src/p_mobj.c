@@ -233,11 +233,11 @@ UINT8 P_GetMobjSprite2(mobj_t *mobj, UINT8 spr2)
 			spr2 = SPR2_FALL;
 			break;
 
-		case SPR2_FLY:
+		case SPR2_FLY :
 			spr2 = SPR2_SPNG;
 			break;
 		case SPR2_SWIM:
-			spr2 = SPR2_FLY;
+			spr2 = SPR2_FLY ;
 			break;
 		case SPR2_TIRE:
 			spr2 = (player && player->charability == CA_SWIM) ? SPR2_SWIM : SPR2_FLY;
@@ -251,6 +251,13 @@ UINT8 P_GetMobjSprite2(mobj_t *mobj, UINT8 spr2)
 			break;
 		case SPR2_CLNG:
 			spr2 = SPR2_CLMB;
+			break;
+
+		case SPR2_FLT :
+			spr2 = SPR2_WALK;
+			break;
+		case SPR2_FRUN:
+			spr2 = SPR2_RUN ;
 			break;
 
 		case SPR2_BNCE:
@@ -316,6 +323,9 @@ UINT8 P_GetMobjSprite2(mobj_t *mobj, UINT8 spr2)
 			break;
 		case SPR2_SFLT:
 			spr2 = SPR2_SWLK;
+			break;
+		case SPR2_SFRN:
+			spr2 = SPR2_SRUN;
 			break;
 
 		// NiGHTS sprites.
@@ -470,6 +480,10 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_FALL);
 		case S_PLAY_EDGE:
 			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_EDGE);
+		case S_PLAY_FLOAT:
+			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_FLOAT);
+		case S_PLAY_FLOAT_RUN:
+			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_FLOAT_RUN);
 		default:
 			break;
 		}
@@ -496,12 +510,15 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		player->panim = PA_EDGE;
 		break;
 	case S_PLAY_WALK:
+	case S_PLAY_FLOAT:
 	case S_PLAY_SUPER_WALK:
 	case S_PLAY_SUPER_FLOAT:
 		player->panim = PA_WALK;
 		break;
 	case S_PLAY_RUN:
+	case S_PLAY_FLOAT_RUN:
 	case S_PLAY_SUPER_RUN:
+	case S_PLAY_SUPER_FLOAT_RUN:
 		player->panim = PA_RUN;
 		break;
 	case S_PLAY_PEEL:
@@ -607,7 +624,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 					else
 						mobj->tics = 2;
 				}
-				else if (P_IsObjectOnGround(mobj) || player->powers[pw_super]) // Only if on the ground or superflying.
+				else if (P_IsObjectOnGround(mobj) || ((player->charability == CA_FLOAT || player->charability == CA_SLOWFALL) && player->secondjump == 1) || player->powers[pw_super]) // Only if on the ground or superflying.
 				{
 					if (player->panim == PA_WALK)
 					{
@@ -3250,22 +3267,26 @@ static void P_PlayerZMovement(mobj_t *mo)
 					{
 						if (mo->player->cmomx || mo->player->cmomy)
 						{
-							if (mo->player->charability == CA_DASHMODE && mo->player->dashmode >= 3*TICRATE && mo->player->panim != PA_PEEL)
+							if (mo->player->charflags & SF_DASHMODE && mo->player->dashmode >= 3*TICRATE && mo->player->panim != PA_PEEL)
 								P_SetPlayerMobjState(mo, S_PLAY_PEEL);
-							else if (mo->player->speed >= FixedMul(mo->player->runspeed, mo->scale) && mo->player->panim != PA_RUN)
+							else if (mo->player->speed >= FixedMul(mo->player->runspeed, mo->scale)
+							&& (mo->player->panim != PA_RUN || mo->state-states == S_PLAY_FLOAT_RUN || mo->state-states == S_PLAY_SUPER_FLOAT_RUN))
 								P_SetPlayerMobjState(mo, S_PLAY_RUN);
-							else if ((mo->player->rmomx || mo->player->rmomy) && (mo->player->panim != PA_WALK || mo->state-states == S_PLAY_SUPER_FLOAT))
+							else if ((mo->player->rmomx || mo->player->rmomy)
+							&& (mo->player->panim != PA_WALK || mo->state-states == S_PLAY_FLOAT || mo->state-states == S_PLAY_SUPER_FLOAT))
 								P_SetPlayerMobjState(mo, S_PLAY_WALK);
 							else if (!mo->player->rmomx && !mo->player->rmomy && mo->player->panim != PA_IDLE)
 								P_SetPlayerMobjState(mo, S_PLAY_STND);
 						}
 						else
 						{
-							if (mo->player->charability == CA_DASHMODE && mo->player->dashmode >= 3*TICRATE && mo->player->panim != PA_PEEL)
+							if (mo->player->charflags & SF_DASHMODE && mo->player->dashmode >= 3*TICRATE && mo->player->panim != PA_PEEL)
 								P_SetPlayerMobjState(mo, S_PLAY_PEEL);
-							if (mo->player->speed >= FixedMul(mo->player->runspeed, mo->scale) && mo->player->panim != PA_RUN)
+							else if (mo->player->speed >= FixedMul(mo->player->runspeed, mo->scale)
+							&& (mo->player->panim != PA_RUN || mo->state-states == S_PLAY_FLOAT_RUN || mo->state-states == S_PLAY_SUPER_FLOAT_RUN))
 								P_SetPlayerMobjState(mo, S_PLAY_RUN);
-							else if ((mo->momx || mo->momy) && (mo->player->panim != PA_WALK || mo->state-states == S_PLAY_SUPER_FLOAT))
+							else if ((mo->momx || mo->momy)
+							&& (mo->player->panim != PA_WALK || mo->state-states == S_PLAY_FLOAT || mo->state-states == S_PLAY_SUPER_FLOAT))
 								P_SetPlayerMobjState(mo, S_PLAY_WALK);
 							else if (!mo->momx && !mo->momy && mo->player->panim != PA_IDLE)
 								P_SetPlayerMobjState(mo, S_PLAY_STND);
@@ -3582,7 +3603,7 @@ static boolean P_SceneryZMovement(mobj_t *mo)
 boolean P_CanRunOnWater(player_t *player, ffloor_t *rover)
 {
 	if (!(player->pflags & PF_NIGHTSMODE) && !player->homing
-		&& ((player->powers[pw_super] || player->charflags & SF_RUNONWATER) && player->mo->ceilingz-*rover->topheight >= player->mo->height)
+		&& ((player->powers[pw_super] || player->charflags & SF_RUNONWATER || player->dashmode >= 3*TICRATE) && player->mo->ceilingz-*rover->topheight >= player->mo->height)
 		&& (rover->flags & FF_SWIMMABLE) && !(player->pflags & PF_SPINNING) && player->speed > FixedMul(player->runspeed, player->mo->scale)
 		&& !(player->pflags & PF_SLIDING)
 		&& abs(player->mo->z - *rover->topheight) < FixedMul(30*FRACUNIT, player->mo->scale))
@@ -4148,7 +4169,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 		if (mobj->player->cmd.forwardmove || mobj->player->cmd.sidemove)
 			P_InstaThrust(
 			mobj,
-			R_PointToAngle(mobj->x, mobj->y) + R_PointToAngle2(0, 0, mobj->player->cmd.forwardmove<<FRACBITS, -mobj->player->cmd.sidemove<<FRACBITS),
+			mobj->angle + R_PointToAngle2(0, 0, mobj->player->cmd.forwardmove<<FRACBITS, -mobj->player->cmd.sidemove<<FRACBITS),
 			mobj->player->speed);
 		goto animonly; // no need for checkposition - doesn't move at ALL
 	}

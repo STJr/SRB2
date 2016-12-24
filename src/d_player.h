@@ -45,6 +45,7 @@ typedef enum
 	SF_MARIODAMAGE      = SF_NOJUMPDAMAGE|SF_STOMPDAMAGE, // The Mario method of being able to damage enemies, etc.
 	SF_MACHINE          = 1<<10, // Beep boop. Are you a robot?
 	SF_NOSPINDASHDUST   = 1<<11, // Don't spawn dust particles when charging a spindash
+	SF_DASHMODE         = 1<<12, // Sonic Advance 2 style top speed increase?
 	// free up to and including 1<<31
 } skinflags_t;
 
@@ -65,7 +66,6 @@ typedef enum
 	CA_JUMPBOOST,
 	CA_AIRDRILL,
 	CA_JUMPTHOK,
-	CA_DASHMODE,
 	CA_BOUNCE,
 	CA_TWINSPIN
 } charability_t;

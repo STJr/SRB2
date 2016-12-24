@@ -402,6 +402,9 @@ char spr2names[NUMPLAYERSPRITES][5] =
 	"CLNG",
 	"CLMB",
 
+	"FLT_",
+	"FRUN",
+
 	"BNCE",
 	"BLND",
 
@@ -426,6 +429,7 @@ char spr2names[NUMPLAYERSPRITES][5] =
 	"SEDG",
 	"SRID",
 	"SFLT",
+	"SFRN",
 
 	"NTRN",
 	"NSTD",
@@ -517,8 +521,12 @@ state_t states[NUMSTATES] =
 	{SPR_PLAY, SPR2_CLNG|FF_ANIMATE,     -1, {NULL}, 0,  4, S_NULL},       // S_PLAY_CLING
 	{SPR_PLAY, SPR2_CLMB,                 5, {NULL}, 0,  0, S_PLAY_CLIMB}, // S_PLAY_CLIMB
 
+	// CA_FLOAT/CA_SLOWFALL
+	{SPR_PLAY, SPR2_FLT ,                 7, {NULL}, 0,  0, S_PLAY_FLOAT}, // S_PLAY_FLOAT
+	{SPR_PLAY, SPR2_FRUN,                 7, {NULL}, 0,  0, S_PLAY_FLOAT_RUN},  // S_PLAY_FLOAT_RUN
+
 	// CA_BOUNCE
-	{SPR_PLAY, SPR2_BNCE|FF_ANIMATE,     -1, {NULL}, 0,  0, S_NULL},                            // S_PLAY_BOUNCE
+	{SPR_PLAY, SPR2_BNCE|FF_ANIMATE,     -1, {NULL},             0,  0, S_NULL},                // S_PLAY_BOUNCE
 	{SPR_PLAY, SPR2_BLND|FF_SPR2ENDSTATE, 2, {NULL}, S_PLAY_BOUNCE,  4, S_PLAY_BOUNCE_LANDING}, // S_PLAY_BOUNCE_LANDING
 
 	// CA_TWINSPIN
@@ -545,6 +553,7 @@ state_t states[NUMSTATES] =
 	{SPR_PLAY, SPR2_SEDG|FF_ANIMATE,     -1, {NULL}, 0, 12, S_NULL},            // S_PLAY_SUPER_EDGE
 	{SPR_PLAY, SPR2_SRID,                 4, {NULL}, 0,  0, S_PLAY_SUPER_RIDE}, // S_PLAY_SUPER_RIDE
 	{SPR_PLAY, SPR2_SFLT,                 7, {NULL}, 0,  0, S_PLAY_SUPER_FLOAT}, // S_PLAY_SUPER_FLOAT
+	{SPR_PLAY, SPR2_SFRN,                 7, {NULL}, 0,  0, S_PLAY_SUPER_FLOAT_RUN},  // S_PLAY_SUPER_FLOAT_RUN
 
 	// SF_SUPER
 	{SPR_PLAY, SPR2_TRNS,                 4, {NULL}, 0, 0, S_PLAY_SUPER_TRANS2}, // S_PLAY_SUPER_TRANS

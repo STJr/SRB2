@@ -3816,6 +3816,10 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PLAY_CLING",
 	"S_PLAY_CLIMB",
 
+	// CA_FLOAT/CA_SLOWFALL
+	"S_PLAY_FLOAT",
+	"S_PLAY_FLOAT_RUN",
+
 	// CA_BOUNCE
 	"S_PLAY_BOUNCE",
 	"S_PLAY_BOUNCE_LANDING",
@@ -3844,6 +3848,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PLAY_SUPER_EDGE",
 	"S_PLAY_SUPER_RIDE",
 	"S_PLAY_SUPER_FLOAT",
+	"S_PLAY_SUPER_FLOAT_RUN",
 
 	// SF_SUPER
 	"S_PLAY_SUPERTRANS1",
@@ -7194,6 +7199,7 @@ struct {
 	{"SF_MARIODAMAGE",SF_MARIODAMAGE},
 	{"SF_MACHINE",SF_MACHINE},
 	{"SF_NOSPINDASHDUST",SF_NOSPINDASHDUST},
+	{"SF_DASHMODE",SF_DASHMODE},
 
 	// Character abilities!
 	// Primary
@@ -7211,7 +7217,6 @@ struct {
 	{"CA_JUMPBOOST",CA_JUMPBOOST},
 	{"CA_AIRDRILL",CA_AIRDRILL},
 	{"CA_JUMPTHOK",CA_JUMPTHOK},
-	{"CA_DASHMODE",CA_DASHMODE},
 	{"CA_BOUNCE",CA_BOUNCE},
 	{"CA_TWINSPIN",CA_TWINSPIN},
 	// Secondary

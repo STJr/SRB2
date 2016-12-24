@@ -1778,7 +1778,7 @@ static void P_CheckBustableBlocks(player_t *player)
 					// if it's not an FF_SHATTER, you must be spinning (and not jumping)
 					// or be super
 					// or have CA_GLIDEANDCLIMB
-					// or be in dashmode with CA_DASHMODE
+					// or be in dashmode with SF_DASHMODE
 					// or be using CA_TWINSPIN
 					// or be using CA2_MELEE
 					// or are drilling in NiGHTS
@@ -1788,7 +1788,7 @@ static void P_CheckBustableBlocks(player_t *player)
 						&& !(player->powers[pw_super])
 						&& !(player->charability == CA_GLIDEANDCLIMB)
 						&& !(player->pflags & PF_BOUNCING)
-						&& !((player->charability == CA_DASHMODE) && (player->dashmode >= 3*TICRATE))
+						&& !((player->charflags & SF_DASHMODE) && (player->dashmode >= 3*TICRATE))
 						&& !((player->charability == CA_TWINSPIN) && (player->panim == PA_ABILITY))
 						&& !(player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2)
 						&& !(player->pflags & PF_DRILLING)
@@ -3673,30 +3673,16 @@ void P_DoJump(player_t *player, boolean soundandstate)
 			player->mo->momz = 24*FRACUNIT;
 		else if (player->powers[pw_super])
 		{
-			if (player->charability == CA_FLOAT)
-				player->mo->momz = 28*FRACUNIT; //Obscene jump height anyone?
-			else if (player->charability == CA_SLOWFALL)
-				player->mo->momz = 37*(FRACUNIT/2); //Less obscene because during super, floating propells oneself upward.
-			else // Default super jump momentum.
-				player->mo->momz = 13*FRACUNIT;
+			player->mo->momz = 13*FRACUNIT;
 
 			// Add a boost for super characters with float/slowfall and multiability.
-			if (player->charability2 == CA2_MULTIABILITY &&
-				(player->charability == CA_FLOAT || player->charability == CA_SLOWFALL))
-				player->mo->momz += 2*FRACUNIT;
-			else if (player->charability == CA_JUMPBOOST)
+			if (player->charability == CA_JUMPBOOST)
 			{
 				if (player->charability2 == CA2_MULTIABILITY)
 					player->mo->momz += FixedMul(FRACUNIT/4, dist6);
 				else
 					player->mo->momz += FixedMul(FRACUNIT/8, dist6);
 			}
-		}
-		else if (player->charability2 == CA2_MULTIABILITY &&
-			(player->charability == CA_FLOAT || player->charability == CA_SLOWFALL))
-		{
-			// Multiability exceptions, since some abilities cannot effectively use it and need a boost.
-			player->mo->momz = 12*FRACUNIT; // Increased jump height due to ineffective repeat.
 		}
 		else
 		{
@@ -4205,7 +4191,6 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 				case CA_THOK:
 				case CA_HOMINGTHOK:
 				case CA_JUMPTHOK: // Credit goes to CZ64 and Sryder13 for the original
-				case CA_DASHMODE: // Credit goes to Iceman404
 					// Now it's Sonic's abilities turn!
 					// THOK!
 					if (!(player->pflags & PF_THOKKED) || (player->charability2 == CA2_MULTIABILITY))
@@ -4213,7 +4198,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						// Catapult the player
 						fixed_t actionspd = player->actionspd;
 
-						if (player->charability == CA_DASHMODE)
+						if (player->charflags & SF_DASHMODE)
 							actionspd = max(player->normalspeed, FixedDiv(player->speed, player->mo->scale));
 
 						if (player->mo->eflags & MFE_UNDERWATER)
@@ -4290,12 +4275,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 				case CA_DOUBLEJUMP: // Double-Jump
 					if (!(player->pflags & PF_THOKKED) || ((player->charability2 == CA2_MULTIABILITY) && (player->secondjump < (player->actionspd >> FRACBITS))))
 					{
-						// Allow infinite double jumping if super.
-						if (!player->powers[pw_super])
-							player->pflags |= PF_THOKKED;
-						else
-							player->secondjump = 0;
-
+						player->pflags |= PF_THOKKED;
 						player->pflags &= ~PF_JUMPED;
 						P_DoJump(player, true);
 						player->secondjump++;
@@ -4303,8 +4283,13 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					break;
 				case CA_FLOAT: // Float
 				case CA_SLOWFALL: // Slow descent hover
-					if (!player->secondjump)
+					if (!(player->pflags & PF_THOKKED) || player->charability2 == CA2_MULTIABILITY)
+					{
+						P_SetPlayerMobjState(player->mo, S_PLAY_FLOAT);
+						player->pflags |= PF_THOKKED;
+						player->pflags &= ~(PF_JUMPED|PF_SPINNING);
 						player->secondjump = 1;
+					}
 					break;
 				case CA_TELEKINESIS:
 					if (!(player->pflags & PF_THOKKED) || player->charability2 == CA2_MULTIABILITY)
@@ -4400,12 +4385,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					player->mo->momz = 0;
 				else if (player->charability == CA_SLOWFALL)
 				{
-					if (player->powers[pw_super])
-					{
-						if (P_MobjFlip(player->mo)*player->mo->momz < gravity*16)
-						player->mo->momz = P_MobjFlip(player->mo)*gravity*16; //Float upward 4x as fast while super.
-					}
-					else if (P_MobjFlip(player->mo)*player->mo->momz < -gravity*4)
+					if (P_MobjFlip(player->mo)*player->mo->momz < -gravity*4)
 						player->mo->momz = P_MobjFlip(player->mo)*-gravity*4;
 				}
 				player->pflags &= ~PF_SPINNING;
@@ -4417,11 +4397,20 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 		player->pflags &= ~PF_JUMPDOWN;
 
 		// Repeat abilities, but not double jump!
-		if (player->charability2 == CA2_MULTIABILITY && player->charability != CA_DOUBLEJUMP)
-			player->secondjump = 0;
-		else if (player->charability == CA_FLOAT && player->secondjump == 1)
-			player->secondjump = 2;
-
+		if (player->secondjump == 1 && player->charability != CA_DOUBLEJUMP)
+		{
+			if (player->charability2 == CA2_MULTIABILITY)
+			{
+				player->pflags |= PF_JUMPED;
+				P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
+				player->secondjump = 0;
+			}
+			else
+			{
+				P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
+				player->secondjump = 2;
+			}
+		}
 
 		// If letting go of the jump button while still on ascent, cut the jump height.
 		if (player->pflags & PF_JUMPED && P_MobjFlip(player->mo)*player->mo->momz > 0 && player->jumping == 1)
@@ -6696,16 +6685,22 @@ static void P_MovePlayer(player_t *player)
 	if ((cmd->forwardmove != 0 || cmd->sidemove != 0) || (player->powers[pw_super] && !onground))
 	{
 		// If the player is in dashmode, here's their peelout.
-		if (player->charability == CA_DASHMODE && player->dashmode >= 3*TICRATE && player->panim == PA_RUN && !player->skidtime && (onground || player->powers[pw_super]))
+		if (player->charflags & SF_DASHMODE && player->dashmode >= 3*TICRATE && player->panim == PA_RUN && !player->skidtime && (onground || player->powers[pw_super]))
 			P_SetPlayerMobjState (player->mo, S_PLAY_PEEL);
 		// If the player is moving fast enough,
 		// break into a run!
-		else if (player->speed >= runspd && player->panim == PA_WALK && !player->skidtime && (onground || player->powers[pw_super]))
-			P_SetPlayerMobjState (player->mo, S_PLAY_RUN);
+		else if (player->speed >= runspd && player->panim == PA_WALK && !player->skidtime
+		&& (onground || ((player->charability == CA_FLOAT || player->charability == CA_SLOWFALL) && player->secondjump == 1) || player->powers[pw_super]))
+		{
+			if (!onground)
+				P_SetPlayerMobjState(player->mo, S_PLAY_FLOAT_RUN);
+			else
+				P_SetPlayerMobjState(player->mo, S_PLAY_RUN);
+		}
 
-		// Super floating at slow speeds has its own special animation.
-		else if (player->powers[pw_super] && player->panim == PA_IDLE && !onground)
-			P_SetPlayerMobjState (player->mo, S_PLAY_SUPER_FLOAT);
+		// Floating at slow speeds has its own special animation.
+		else if ((((player->charability == CA_FLOAT || player->charability == CA_SLOWFALL) && player->secondjump == 1) || player->powers[pw_super]) && player->panim == PA_IDLE && !onground)
+			P_SetPlayerMobjState (player->mo, S_PLAY_FLOAT);
 
 		// Otherwise, just walk.
 		else if ((player->rmomx || player->rmomy) && player->panim == PA_IDLE)
@@ -6714,15 +6709,15 @@ static void P_MovePlayer(player_t *player)
 
 	// If your peelout animation is playing, and you're
 	// going too slow, switch back to the run.
-	if (player->charability == CA_DASHMODE && player->panim == PA_PEEL && player->dashmode < 3*TICRATE)
+	if (player->charflags & SF_DASHMODE && player->panim == PA_PEEL && player->dashmode < 3*TICRATE)
 		P_SetPlayerMobjState(player->mo, S_PLAY_RUN);
 
 	// If your running animation is playing, and you're
 	// going too slow, switch back to the walking frames.
 	if (player->panim == PA_RUN && player->speed < runspd)
 	{
-		if (!onground && player->powers[pw_super])
-			P_SetPlayerMobjState(player->mo, S_PLAY_SUPER_FLOAT);
+		if (onground || ((player->charability == CA_FLOAT || player->charability == CA_SLOWFALL) && player->secondjump == 1) || player->powers[pw_super])
+			P_SetPlayerMobjState(player->mo, S_PLAY_FLOAT);
 		else
 			P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
 	}
@@ -6790,6 +6785,7 @@ static void P_MovePlayer(player_t *player)
 		if (!(player->pflags & PF_JUMPDOWN) || (onground && P_MobjFlip(player->mo)*player->mo->momz <= 0)) // If not holding the jump button OR on flat ground
 		{
 			P_ResetPlayer(player); // down, stop bouncing.
+			player->pflags |= PF_THOKKED;
 			if (onground)
 				P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
 			else if (player->charability2 == CA2_MULTIABILITY)
@@ -9432,12 +9428,13 @@ void P_PlayerThink(player_t *player)
 	player->pflags &= ~PF_SLIDING;
 
 #define dashmode player->dashmode
-	// Dash mode ability
-	if ((player->charability == CA_DASHMODE) && !(player->gotflag) && !(maptol & TOL_NIGHTS)) // woo, dashmode! no nights tho.
+	// Dash mode - thanks be to Iceman404
+	if ((player->charflags & SF_DASHMODE) && !(player->gotflag) && !(maptol & TOL_NIGHTS)) // woo, dashmode! no nights tho.
 	{
-		if (player->speed >= FixedMul(player->runspeed, player->mo->scale) || (player->pflags & PF_STARTDASH))
+		if (player->secondjump != 1 && (player->speed >= FixedMul(player->runspeed, player->mo->scale) || (player->pflags & PF_STARTDASH)))
 		{
-			dashmode++; // Counter. Adds 1 to dash mode per tic in top speed.
+			if (dashmode < 3*TICRATE + 3)
+				dashmode++; // Counter. Adds 1 to dash mode per tic in top speed.
 			if (dashmode == 3*TICRATE) // This isn't in the ">=" equation because it'd cause the sound to play infinitely.
 				S_StartSound(player->mo, sfx_s3ka2); // If the player enters dashmode, play this sound on the the tic it starts.
 		}
@@ -9456,16 +9453,14 @@ void P_PlayerThink(player_t *player)
 		}
 		else if (P_IsObjectOnGround(player->mo)) // Activate dash mode if we're on the ground.
 		{
-			if (player->normalspeed < skins[player->skin].actionspd) // If the player normalspeed is not currently at actionspd in dash mode, add speed each tic
-				player->normalspeed = player->normalspeed + 1*FRACUNIT/5; // Enter Dash Mode smoothly.
+			if (player->normalspeed < skins[player->skin].normalspeed*2) // If the player normalspeed is not currently at normalspeed*2 in dash mode, add speed each tic
+				player->normalspeed += FRACUNIT/5; // Enter Dash Mode smoothly.
 
 			if (player->jumpfactor < FixedMul(skins[player->skin].jumpfactor, 5*FRACUNIT/4)) // Boost jump height.
-				player->jumpfactor = player->jumpfactor + 1*FRACUNIT/300;
+				player->jumpfactor += FRACUNIT/300;
 		}
 
-		dashmode = min(dashmode, 3*TICRATE + 3);
-
-		if (player->normalspeed >= skins[player->skin].actionspd)
+		if (player->normalspeed >= skins[player->skin].normalspeed*2)
 		{
 			mobj_t *ghost = P_SpawnGhostMobj(player->mo); // Spawns afterimages
 			ghost->fuse = 2; // Makes the images fade quickly
