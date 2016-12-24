@@ -2111,8 +2111,8 @@ static void P_CheckUnderwaterAndSpaceTimer(player_t *player)
 	 || (timeleft ==  1*TICRATE + 1) // 0
 	) {
 		fixed_t height = (player->mo->eflags & MFE_VERTICALFLIP)
-		? player->mo->z - FixedMul(8*FRACUNIT - mobjinfo[MT_DROWNNUMBERS].height, player->mo->scale)
-		: player->mo->z + player->mo->height + FixedMul(8*FRACUNIT, player->mo->scale);
+		? player->mo->z - FixedMul(8*FRACUNIT + mobjinfo[MT_DROWNNUMBERS].height, FixedMul(player->mo->scale, player->shieldscale))
+		: player->mo->z + player->mo->height + FixedMul(8*FRACUNIT, FixedMul(player->mo->scale, player->shieldscale));
 
 		mobj_t *numbermobj = P_SpawnMobj(player->mo->x, player->mo->y, height, MT_DROWNNUMBERS);
 
@@ -6787,7 +6787,7 @@ static void P_MovePlayer(player_t *player)
 	// Bouncing...
 	if (player->pflags & PF_BOUNCING)
 	{
-		if (!(player->pflags & PF_JUMPDOWN) || onground) // If not holding the jump button
+		if (!(player->pflags & PF_JUMPDOWN) || (onground && P_MobjFlip(player->mo)*player->mo->momz <= 0)) // If not holding the jump button OR on flat ground
 		{
 			P_ResetPlayer(player); // down, stop bouncing.
 			if (onground)

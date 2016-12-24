@@ -4145,12 +4145,11 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 
 	if (mobj->state-states == S_PLAY_BOUNCE_LANDING)
 	{
-		angle_t dashangle = mobj->angle;
 		if (mobj->player->cmd.forwardmove || mobj->player->cmd.sidemove)
-		{
-			dashangle += R_PointToAngle2(0, 0, mobj->player->cmd.forwardmove<<FRACBITS, -mobj->player->cmd.sidemove<<FRACBITS);
-		}
-		P_InstaThrust(mobj, dashangle, mobj->player->speed);
+			P_InstaThrust(
+			mobj,
+			R_PointToAngle(mobj->x, mobj->y) + R_PointToAngle2(0, 0, mobj->player->cmd.forwardmove<<FRACBITS, -mobj->player->cmd.sidemove<<FRACBITS),
+			mobj->player->speed);
 		goto animonly; // no need for checkposition - doesn't move at ALL
 	}
 
