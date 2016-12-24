@@ -155,6 +155,7 @@ boolean P_AutoPause(void);
 
 void P_DoJumpShield(player_t *player);
 void P_DoBubbleBounce(player_t *player);
+void P_DoAbilityBounce(player_t *player, boolean changemomz);
 void P_BlackOw(player_t *player);
 void P_ElementalFire(player_t *player, boolean cropcircle);
 

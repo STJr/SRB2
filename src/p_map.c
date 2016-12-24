@@ -1084,7 +1084,11 @@ static boolean PIT_CheckThing(mobj_t *thing)
 						*momz = -*momz; // Therefore, you should be thrust in the opposite direction, vertically.
 				}
 				if (!(elementalpierce == 1 && thing->flags & MF_GRENADEBOUNCE)) // prevent gold monitor clipthrough.
+				{
+					if (player->pflags & PF_BOUNCING)
+						P_DoAbilityBounce(player);
 					return false;
+				}
 				else
 					*z -= *momz; // to ensure proper collision.
 			}

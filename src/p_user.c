@@ -4006,6 +4006,32 @@ void P_DoBubbleBounce(player_t *player)
 }
 
 //
+// P_DoAbilityBounce
+//
+// CA_BOUNCE landing handling
+//
+void P_DoAbilityBounce(player_t *player, boolean changemomz)
+{
+	fixed_t prevmomz;
+	if (player->mo->state-states == S_PLAY_BOUNCE_LANDING)
+		return;
+	if (changemomz)
+	{
+		prevmomz = P_MobjFlip(player->mo)*player->mo->momz;
+		if (prevmomz < 0)
+			prevmomz = 0;
+		else if (player->mo->eflags & MFE_UNDERWATER)
+			prevmomz /= 2;
+		P_DoJump(player, false);
+		player->jumping = 0;
+		player->mo->momz = (FixedMul(player->mo->momz, 3*FRACUNIT/2) + prevmomz)/2;
+	}
+	S_StartSound(player->mo, sfx_boingf);
+	P_SetPlayerMobjState(player->mo, S_PLAY_BOUNCE_LANDING);
+	player->pflags |= PF_BOUNCING|PF_THOKKED;
+}
+
+//
 // P_Telekinesis
 //
 // Morph's fancy stuff-moving character ability

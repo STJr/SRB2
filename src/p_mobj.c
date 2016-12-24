@@ -3318,17 +3318,8 @@ static void P_PlayerZMovement(mobj_t *mo)
 
 					if (mo->player->pflags & PF_BOUNCING && !P_CheckDeathPitCollide(mo))
 					{
-						fixed_t prevmomz = P_MobjFlip(mo)*abs(mo->momz);
-						if (mo->eflags & MFE_UNDERWATER)
-						{
-							prevmomz /= 2;
-						}
-						S_StartSound(mo, sfx_boingf);
-						P_DoJump(mo->player, false);
-						P_SetPlayerMobjState(mo, S_PLAY_BOUNCE_LANDING);
-						mo->player->pflags |= PF_BOUNCING|PF_THOKKED;
-						mo->player->jumping = 0;
-						mo->momz = (FixedMul(mo->momz, 3*FRACUNIT/2) + prevmomz)/2;
+						mo->momz *= -1;
+						P_DoAbilityBounce(mo->player, true);
 						clipmomz = false;
 					}
 				}

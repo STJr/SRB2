@@ -382,6 +382,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				else
 					toucher->momz = -toucher->momz;
 			}
+			if (player->pflags & PF_BOUNCING)
+				P_DoAbilityBounce(player, false);
 			toucher->momx = -toucher->momx;
 			toucher->momy = -toucher->momy;
 			P_DamageMobj(special, toucher, toucher, 1, 0);
@@ -416,8 +418,13 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		else if (special->type == MT_SHARP
 		&& ((special->state == &states[special->info->xdeathstate]) || (toucher->z > special->z + special->height/2)))
 		{
-			// Cannot hit sharp from above or when red and angry
-			P_DamageMobj(toucher, special, special, 1, 0);
+			if (player->pflags & PF_BOUNCING)
+			{
+				toucher->momz = -toucher->momz;
+				P_DoAbilityBounce(player, false);
+			}
+			else // Cannot hit sharp from above or when red and angry
+				P_DamageMobj(toucher, special, special, 1, 0);
 		}
 		else if (((player->pflags & PF_NIGHTSMODE) && (player->pflags & PF_DRILLING))
 		|| ((player->pflags & PF_JUMPED) && (player->pflags & PF_FORCEJUMPDAMAGE || !(player->charflags & SF_NOJUMPSPIN) || (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)))
@@ -433,6 +440,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				else
 					toucher->momz = -toucher->momz;
 			}
+			if (player->pflags & PF_BOUNCING)
+				P_DoAbilityBounce(player, false);
 
 			P_DamageMobj(special, toucher, toucher, 1, 0);
 		}
