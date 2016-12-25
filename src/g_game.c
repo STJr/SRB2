@@ -3920,12 +3920,8 @@ void G_WriteGhostTic(mobj_t *ghost)
 	if (!(demoflags & DF_GHOST))
 		return; // No ghost data to write.
 
-	if (ghost->player && ghost->player->pflags & PF_NIGHTSMODE && ghost->tracer)
-	{
-		// We're talking about the NiGHTS thing, not the normal platforming thing!
+	if (ghost->player && ghost->player->pflags & PF_NIGHTSMODE) // We're talking about the NiGHTS thing, not the normal platforming thing!
 		ziptic |= GZT_NIGHTS;
-		ghost = ghost->tracer;
-	}
 
 	ziptic_p = demo_p++; // the ziptic, written at the end of this function
 
@@ -4107,11 +4103,9 @@ void G_ConsGhostTic(void)
 		demo_p++;
 	if (ziptic & GZT_SPR2)
 		demo_p++;
-	if(ziptic & GZT_NIGHTS) {
-		if (!testmo->player || !(testmo->player->pflags & PF_NIGHTSMODE) || !testmo->tracer)
+	if (ziptic & GZT_NIGHTS) {
+		if (!testmo->player || !(testmo->player->pflags & PF_NIGHTSMODE))
 			nightsfail = true;
-		else
-			testmo = testmo->tracer;
 	}
 
 	if (ziptic & GZT_EXTRA)

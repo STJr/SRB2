@@ -2200,12 +2200,7 @@ static void ResetNode(INT32 node);
 void CL_ClearPlayer(INT32 playernum)
 {
 	if (players[playernum].mo)
-	{
-		// Don't leave a NiGHTS ghost!
-		if ((players[playernum].pflags & PF_NIGHTSMODE) && players[playernum].mo->tracer)
-			P_RemoveMobj(players[playernum].mo->tracer);
 		P_RemoveMobj(players[playernum].mo);
-	}
 	players[playernum].mo = NULL;
 	memset(&players[playernum], 0, sizeof (player_t));
 }
