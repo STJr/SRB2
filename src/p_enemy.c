@@ -4149,12 +4149,15 @@ void A_SignPlayer(mobj_t *actor)
 		actor->frame += Color_Opposite[actor->target->player->skincolor*2+1];
 	}
 
-	// spawn an overlay of the player's face.
-	ov = P_SpawnMobj(actor->x, actor->y, actor->z, MT_OVERLAY);
-	P_SetTarget(&ov->target, actor);
-	ov->color = actor->target->player->skincolor;
-	ov->skin = skin;
-	P_SetMobjState(ov, actor->info->seestate); // S_PLAY_SIGN
+	if (skin->sprites[SPR2_SIGN].numframes)
+	{
+		// spawn an overlay of the player's face.
+		ov = P_SpawnMobj(actor->x, actor->y, actor->z, MT_OVERLAY);
+		P_SetTarget(&ov->target, actor);
+		ov->color = actor->target->player->skincolor;
+		ov->skin = skin;
+		P_SetMobjState(ov, actor->info->seestate); // S_PLAY_SIGN
+	}
 }
 
 // Function: A_OverlayThink
