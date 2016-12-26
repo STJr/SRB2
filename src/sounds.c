@@ -170,6 +170,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"forcsg", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR}, // Force GET!
   {"elemsg", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR}, // Elemental GET!
   {"armasg", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR}, // Armaggeddon GET!
+  {"attrsg", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR}, // Attract GET!
   {"shldls", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR}, // You LOSE!
   {"spdpad", false, 127,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"spkdth", false, 127,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},

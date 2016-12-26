@@ -7033,7 +7033,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_ATTRACT_ICON1, // spawnstate
 		1,              // spawnhealth
 		S_NULL,         // seestate
-		sfx_s3k41,      // seesound
+		sfx_attrsg,     // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate

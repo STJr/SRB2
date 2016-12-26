@@ -233,6 +233,7 @@ typedef enum
 	sfx_forcsg,
 	sfx_elemsg,
 	sfx_armasg,
+	sfx_attrsg,
 	sfx_shldls,
 	sfx_spdpad,
 	sfx_spkdth,
