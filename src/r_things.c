@@ -2627,16 +2627,16 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 				player->mo->color = newcolor;
 			P_SetScale(player->mo, player->mo->scale);
 			player->mo->radius = FixedMul(skin->radius, player->mo->scale);
+
+			P_SetPlayerMobjState(player->mo, player->mo->state-states); // Prevent visual errors when switching between skins with differing number of frames
 		}
 		return;
 	}
-	else if (skinnum >= 0 && skinnum < numskins)
-		skinnum = 255; // Cheeky emulation.
 
 	if (P_IsLocalPlayer(player))
-		CONS_Alert(CONS_WARNING, M_GetText("Skin %d not found\n"), skinnum);
+		CONS_Alert(CONS_WARNING, M_GetText("Requested skin not found\n"));
 	else if(server || adminplayer == consoleplayer)
-		CONS_Alert(CONS_WARNING, "Player %d (%s) skin %d not found\n", playernum, player_names[playernum], skinnum);
+		CONS_Alert(CONS_WARNING, "Player %d (%s) skin not found\n", playernum, player_names[playernum]);
 	SetPlayerSkinByNum(playernum, 0); // not found put the sonic skin
 }
 
