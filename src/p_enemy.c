@@ -242,6 +242,7 @@ void A_BrakFireShot(mobj_t *actor);
 void A_BrakLobShot(mobj_t *actor);
 void A_NapalmScatter(mobj_t *actor);
 void A_SpawnFreshCopy(mobj_t *actor);
+void A_FlickySpawn(mobj_t *actor);
 
 //
 // ENEMY THINKING
@@ -10335,4 +10336,57 @@ void A_SpawnFreshCopy(mobj_t *actor)
 
 	if (newObject->info->seesound)
 		S_StartSound(newObject, newObject->info->seesound);
+}
+
+// Function: A_FlickySpawn
+//
+// Description: Flicky spawning function.
+//
+// var1:
+//		lower 16 bits: if 0, spawns random flicky based on level header. Else, spawns the designated thing type.
+//		upper 16 bits: if 0, no sound is played. Else, A_Scream is called.
+// var2 = upwards thrust for spawned flicky
+//
+void A_FlickySpawn(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	mobj_t *flicky;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FlickySpawn", actor))
+		return;
+#endif
+	if (mariomode) // No animals in Mario mode
+		return;
+
+	if (locvar1 >> 16) {
+		A_Scream(actor);
+		locvar1 &= 65535;
+	}
+	if (cv_soniccd.value)
+		locvar1 = MT_SEED;
+	else if (!locvar1) {
+		if (!mapheaderinfo[gamemap-1]->numAnimals)
+			return;
+		else {
+			INT32 prandom = P_RandomKey(mapheaderinfo[gamemap-1]->numAnimals);
+			locvar1 = mapheaderinfo[gamemap-1]->animals[prandom];
+		}
+	}
+
+	if (locvar1 == MT_SEED)
+	{
+		flicky = P_SpawnMobj(actor->x, actor->y, actor->z + (actor->height / 2) - FixedMul(mobjinfo[locvar1].height / 2, actor->scale), locvar1);
+		flicky->destscale = actor->scale;
+		P_SetScale(flicky,flicky->destscale);
+		return;
+	}
+	flicky = P_SpawnMobjFromMobj(actor, 0, 0, 0, locvar1);
+	flicky->angle = actor->angle;
+
+	P_SetObjectMomZ(flicky, (locvar2) ? locvar2 : 8*FRACUNIT, false);
+	P_LookForPlayers(flicky, true, false, 0);
+
+	flicky->movedir = P_RandomChance(FRACUNIT/2) ?  -1 : 1;
+	flicky->fuse = P_RandomRange(595, 700);	// originally 300, 350
 }

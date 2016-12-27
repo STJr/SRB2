@@ -990,6 +990,31 @@ static const struct {
 	{NULL, 0}
 };
 
+static const struct {
+	const char *name;
+	const mobjtype_t type;
+} ANIMALTYPES[] = {
+	{"BLUEBIRD", MT_BIRD}, //MT_FLICKY_A},
+	{"RABBIT",   MT_BUNNY}, //MT_FLICKY_B},
+	{"CHICKEN",  MT_CHICKEN}, //MT_FLICKY_C},
+	//{"SEAL",     MT_FLICKY_D},
+	//{"PIG",      MT_FLICKY_E},
+	//{"CHIPMUNK", MT_FLICKY_F},
+	//{"PENGUIN",  MT_FLICKY_G},
+	//{"FISH",     MT_FLICKY_H},
+	//{"RAM",      MT_FLICKY_I},
+	//{"PUFFIN",   MT_FLICKY_J},
+	{"COW",      MT_COW}, //MT_FLICKY_K},
+	{"RAT",      MT_MOUSE}, //MT_FLICKY_L},
+	//{"BEAR",     MT_FLICKY_M},
+	//{"DOVE",     MT_FLICKY_N},
+	//{"CAT",      MT_FLICKY_O},
+	//{"CANARY",   MT_FLICKY_P},
+	//{"FLICKER",  MT_FLICKER},
+	//{"SEED",     MT_CDSEED},
+	{NULL, 0}
+}
+
 static void readlevelheader(MYFILE *f, INT32 num)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
@@ -1088,6 +1113,48 @@ static void readlevelheader(MYFILE *f, INT32 num)
 			// Now go to uppercase
 			strupr(word2);
 
+			// List of animals that are be freed in this level
+			if (fastcmp(word, "ANIMALLIST") || fastcmp(word, "FLICKYLIST"))
+			{
+				if (fastcmp(word2, "NONE"))
+				{
+					if (mapheaderinfo[num-1]->animals)
+						Z_Free(mapheaderinfo[num-1]->animals);
+					mapheaderinfo[num-1]->animals = NULL;
+					mapheaderinfo[num-1]->numAnimals = 0;
+				}
+				else
+				{
+					mapheaderinfo[num-1]->numAnimals = 0;
+					tmp = strtok(word2,",");
+					// count how many animals there are first
+					do {
+						for (i = 0; ANIMALTYPES[i].name; i++)
+							if (fastcmp(tmp, ANIMALTYPES[i].name))
+								break;
+						if (!TYPEOFLEVEL[i].name)
+							deh_warning("Level header %d: unknown animal type %s\n", num, tmp);
+						else
+							mapheaderinfo[num-1]->numAnimals++;
+					} while((tmp = strtok(NULL,",")) != NULL);
+
+					if (!mapheaderinfo[num-1]->numAnimals)
+						deh_warning("Level header %d: no valid animal types found\n", num);
+					else
+					{
+						mapheaderinfo[num-1]->animals = Z_Realloc(mapheaderinfo[num-1]->animals, sizeof(mobjtype_t) * mapheaderinfo[num-1]->numAnimals, PU_STATIC, NULL);
+						mapheaderinfo[num-1]->numAnimals = 0; // reset count
+						// now we add them to the list!
+						do {
+							for (i = 0; ANIMALTYPES[i].name; i++)
+								if (fastcmp(tmp, ANIMALTYPES[i].name))
+									break;
+							if (TYPEOFLEVEL[i].name)
+								mapheaderinfo[num-1]->animals[mapheaderinfo[num-1]->numAnimals++] = ANIMALTYPES[i].type;
+						} while((tmp = strtok(NULL,",")) != NULL);
+					}
+				}
+			}
 			// NiGHTS grades
 			if (fastncmp(word, "GRADES", 6))
 			{
@@ -1845,6 +1912,7 @@ static actionpointer_t actionpointers[] =
 	{{A_BrakLobShot},          "A_BRAKLOBSHOT"},
 	{{A_NapalmScatter},        "A_NAPALMSCATTER"},
 	{{A_SpawnFreshCopy},       "A_SPAWNFRESHCOPY"},
+	{{A_FlickySpawn},          "A_FLICKYSPAWN"},
 
 	{{NULL},                   "NONE"},
 
