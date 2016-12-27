@@ -790,6 +790,14 @@ boolean HU_Responder(event_t *ev)
 	}
 	else // if chat_on
 	{
+		// Ignore modifier keys
+		// Note that we do this here so users can still set
+		// their chat keys to one of these, if they so desire.
+		if (ev->data1 == KEY_LSHIFT || ev->data1 == KEY_RSHIFT
+		 || ev->data1 == KEY_LCTRL || ev->data1 == KEY_RCTRL
+		 || ev->data1 == KEY_LALT || ev->data1 == KEY_RALT)
+			return true;
+
 		c = (UINT8)ev->data1;
 
 		// use console translations
