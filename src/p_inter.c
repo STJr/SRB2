@@ -2043,7 +2043,6 @@ boolean P_CheckRacers(void)
   */
 void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damagetype)
 {
-	mobjtype_t item;
 	mobj_t *mo;
 
 	if (inflictor && (inflictor->type == MT_SHELL || inflictor->type == MT_FIREBALL))
@@ -2259,12 +2258,14 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 	if (source && target && target->player && source->player)
 		P_PlayVictorySound(source); // Killer laughs at you. LAUGHS! BWAHAHAHA!
 
+#ifdef OLDANIMALSPAWNING
 	// Drop stuff.
 	// This determines the kind of object spawned
 	// during the death frame of a thing.
-	/*if (!mariomode // Don't show birds, etc. in Mario Mode Tails 12-23-2001
+	if (!mariomode // Don't show birds, etc. in Mario Mode Tails 12-23-2001
 	&& target->flags & MF_ENEMY)
 	{
+		mobjtype_t item;
 		if (cv_soniccd.value)
 			item = MT_SEED;
 		else
@@ -2332,8 +2333,10 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 		mo->destscale = target->scale;
 		P_SetScale(mo, mo->destscale);
 	}
+	else
+#endif
 	// Other death animation effects
-	else */switch(target->type)
+	switch(target->type)
 	{
 		case MT_BOUNCEPICKUP:
 		case MT_RAILPICKUP:

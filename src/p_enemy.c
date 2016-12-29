@@ -10356,25 +10356,28 @@ void A_FlickySpawn(mobj_t *actor)
 	if (LUA_CallAction("A_FlickySpawn", actor))
 		return;
 #endif
-	if (mariomode) // No animals in Mario mode
+	if (!mapheaderinfo[gamemap-1]) // No mapheader, no shoes, no service.
+		return;
+
+	if (mariomode) // No flickies in Mario mode
 		return;
 
 	if (locvar1 >> 16) {
-		A_Scream(actor);
+		A_Scream(actor); // A shortcut for the truly lazy.
 		locvar1 &= 65535;
 	}
 	if (cv_soniccd.value)
-		locvar1 = MT_SEED;
+		locvar1 = MT_SEED; // MT_CDSEED
 	else if (!locvar1) {
-		if (!mapheaderinfo[gamemap-1]->numAnimals)
+		if (!mapheaderinfo[gamemap-1]->numFlickies)
 			return;
 		else {
-			INT32 prandom = P_RandomKey(mapheaderinfo[gamemap-1]->numAnimals);
-			locvar1 = mapheaderinfo[gamemap-1]->animals[prandom];
+			INT32 prandom = P_RandomKey(mapheaderinfo[gamemap-1]->numFlickies);
+			locvar1 = mapheaderinfo[gamemap-1]->flickies[prandom];
 		}
 	}
 
-	if (locvar1 == MT_SEED)
+	if (locvar1 == MT_SEED) // MT_CDSEED
 	{
 		flicky = P_SpawnMobj(actor->x, actor->y, actor->z + (actor->height / 2) - FixedMul(mobjinfo[locvar1].height / 2, actor->scale), locvar1);
 		flicky->destscale = actor->scale;

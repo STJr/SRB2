@@ -2979,6 +2979,7 @@ typedef enum state
 	S_SPRK16,
 
 	// Robot Explosion
+	S_XPLD_FLICKY,
 	S_XPLD1,
 	S_XPLD2,
 	S_XPLD3,

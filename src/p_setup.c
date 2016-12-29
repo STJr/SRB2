@@ -223,11 +223,11 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->levelflags = 0;
 	DEH_WriteUndoline("MENUFLAGS", va("%d", mapheaderinfo[num]->menuflags), UNDO_NONE);
 	mapheaderinfo[num]->menuflags = 0;
-	// Animals. Nope, no delfile support here either
-	if (mapheaderinfo[i]->animals)
-		Z_Free(mapheaderinfo[i]->animals);
-	mapheaderinfo[num]->animals = NULL;
-	mapheaderinfo[num]->numAnimals = 0;
+	// Flickies. Nope, no delfile support here either
+	if (mapheaderinfo[num]->flickies)
+		Z_Free(mapheaderinfo[i]->flickies);
+	mapheaderinfo[num]->flickies = NULL;
+	mapheaderinfo[num]->numFlickies = 0;
 	// TODO grades support for delfile (pfft yeah right)
 	P_DeleteGrades(num);
 	// an even further impossibility, delfile custom opts support
@@ -246,6 +246,7 @@ void P_AllocMapHeader(INT16 i)
 	if (!mapheaderinfo[i])
 	{
 		mapheaderinfo[i] = Z_Malloc(sizeof(mapheader_t), PU_STATIC, NULL);
+		mapheaderinfo[i]->flickies = NULL;
 		mapheaderinfo[i]->grades = NULL;
 	}
 	P_ClearSingleMapHeaderInfo(i + 1);

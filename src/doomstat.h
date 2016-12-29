@@ -242,8 +242,8 @@ typedef struct
 	UINT8 menuflags;      ///< LF2_flags: options that affect record attack / nights mode menus
 
 	// Freed animals stuff.
-	UINT8 numAnimals;     ///< Internal. For freed animal support.
-	mobjtype_t *animals;  ///< List of freeable animals in this level. Allocated dynamically for space reasons. Be careful.
+	UINT8 numFlickies;     ///< Internal. For freed flicky support.
+	mobjtype_t *flickies;  ///< List of freeable flickies in this level. Allocated dynamically for space reasons. Be careful.
 
 	// NiGHTS stuff.
 	UINT8 numGradedMares;   ///< Internal. For grade support.

@@ -371,7 +371,10 @@ static void clear_levels(void)
 		// (no need to set num to 0, we're freeing the entire header shortly)
 		Z_Free(mapheaderinfo[i]->customopts);
 
+		if (mapheaderinfo[i]->flickies)
+			Z_Free(mapheaderinfo[i]->flickies);
 		P_DeleteGrades(i);
+
 		Z_Free(mapheaderinfo[i]);
 		mapheaderinfo[i] = NULL;
 	}
@@ -993,7 +996,7 @@ static const struct {
 static const struct {
 	const char *name;
 	const mobjtype_t type;
-} ANIMALTYPES[] = {
+} FLICKYTYPES[] = {
 	{"BLUEBIRD", MT_BIRD}, //MT_FLICKY_A},
 	{"RABBIT",   MT_BUNNY}, //MT_FLICKY_B},
 	{"CHICKEN",  MT_CHICKEN}, //MT_FLICKY_C},
@@ -1013,7 +1016,7 @@ static const struct {
 	//{"FLICKER",  MT_FLICKER},
 	//{"SEED",     MT_CDSEED},
 	{NULL, 0}
-}
+};
 
 static void readlevelheader(MYFILE *f, INT32 num)
 {
@@ -1113,50 +1116,71 @@ static void readlevelheader(MYFILE *f, INT32 num)
 			// Now go to uppercase
 			strupr(word2);
 
-			// List of animals that are be freed in this level
-			if (fastcmp(word, "ANIMALLIST") || fastcmp(word, "FLICKYLIST"))
+			// List of flickies that are be freed in this map
+			if (fastcmp(word, "FLICKYLIST") || fastcmp(word, "ANIMALLIST"))
 			{
 				if (fastcmp(word2, "NONE"))
 				{
-					if (mapheaderinfo[num-1]->animals)
-						Z_Free(mapheaderinfo[num-1]->animals);
-					mapheaderinfo[num-1]->animals = NULL;
-					mapheaderinfo[num-1]->numAnimals = 0;
+					if (mapheaderinfo[num-1]->flickies)
+						Z_Free(mapheaderinfo[num-1]->flickies);
+					mapheaderinfo[num-1]->flickies = NULL;
+					mapheaderinfo[num-1]->numFlickies = 0;
 				}
 				else
 				{
-					mapheaderinfo[num-1]->numAnimals = 0;
+#define MAXFLICKIES 64
+					mobjtype_t tmpflickies[MAXFLICKIES];
+					mapheaderinfo[num-1]->numFlickies = 0;
 					tmp = strtok(word2,",");
-					// count how many animals there are first
+					// get up to the first MAXFLICKIES flickies, then run the rest of the tokens out.
 					do {
-						for (i = 0; ANIMALTYPES[i].name; i++)
-							if (fastcmp(tmp, ANIMALTYPES[i].name))
-								break;
-						if (!TYPEOFLEVEL[i].name)
-							deh_warning("Level header %d: unknown animal type %s\n", num, tmp);
-						else
-							mapheaderinfo[num-1]->numAnimals++;
-					} while((tmp = strtok(NULL,",")) != NULL);
+						if (mapheaderinfo[num-1]->numFlickies == MAXFLICKIES) // never going to get above that number
+						{
+							deh_warning("Level header %d: too many flickies\n", num);
+							continue;
+						}
 
-					if (!mapheaderinfo[num-1]->numAnimals)
-						deh_warning("Level header %d: no valid animal types found\n", num);
-					else
-					{
-						mapheaderinfo[num-1]->animals = Z_Realloc(mapheaderinfo[num-1]->animals, sizeof(mobjtype_t) * mapheaderinfo[num-1]->numAnimals, PU_STATIC, NULL);
-						mapheaderinfo[num-1]->numAnimals = 0; // reset count
-						// now we add them to the list!
-						do {
-							for (i = 0; ANIMALTYPES[i].name; i++)
-								if (fastcmp(tmp, ANIMALTYPES[i].name))
+						if (fastncmp(tmp, "MT_", 3)) // support for specified mobjtypes...
+						{
+							i = get_mobjtype(tmp);
+							if (!i)
+							{
+								//deh_warning("Level header %d: unknown flicky mobj type %s\n", num, tmp); -- no need for this line as get_mobjtype complains too
+								continue;
+							}
+							tmpflickies[mapheaderinfo[num-1]->numFlickies] = i;
+						}
+						else // ...or a quick, limited selection of default flickies!
+						{
+							for (i = 0; FLICKYTYPES[i].name; i++)
+								if (fastcmp(tmp, FLICKYTYPES[i].name))
 									break;
-							if (TYPEOFLEVEL[i].name)
-								mapheaderinfo[num-1]->animals[mapheaderinfo[num-1]->numAnimals++] = ANIMALTYPES[i].type;
-						} while((tmp = strtok(NULL,",")) != NULL);
+
+							if (!FLICKYTYPES[i].name)
+							{
+								deh_warning("Level header %d: unknown flicky selection %s\n", num, tmp);
+								continue;
+							}
+							tmpflickies[mapheaderinfo[num-1]->numFlickies] = FLICKYTYPES[i].type;
+						}
+						mapheaderinfo[num-1]->numFlickies++;
+					} while ((tmp = strtok(NULL,",")) != NULL);
+
+					if (mapheaderinfo[num-1]->numFlickies) // now let's do it again - except this time we add them to the list!
+					{
+						size_t newsize = sizeof(mobjtype_t) * mapheaderinfo[num-1]->numFlickies;
+						mapheaderinfo[num-1]->flickies = Z_Realloc(mapheaderinfo[num-1]->flickies, newsize, PU_STATIC, NULL);
+						// now we add them to the list!
+						M_Memcpy(mapheaderinfo[num-1]->flickies, tmpflickies, newsize);
 					}
+					else
+						deh_warning("Level header %d: no valid flicky types found\n", num);
+#undef MAXFLICKIES
 				}
 			}
+
 			// NiGHTS grades
-			if (fastncmp(word, "GRADES", 6))
+			else if (fastncmp(word, "GRADES", 6))
 			{
 				UINT8 mare = (UINT8)atoi(word + 6);
 
@@ -3449,11 +3473,11 @@ static void DEH_LoadDehackedFile(MYFILE *f, UINT16 wad)
 				{
 					if (i == 0 && word2[0] != '0') // If word2 isn't a number
 						i = get_mobjtype(word2); // find a thing by name
-					if (i < NUMMOBJTYPES && i >= 0)
+					if (i < NUMMOBJTYPES && i > 0)
 						readthing(f, i);
 					else
 					{
-						deh_warning("Thing %d out of range (0 - %d)", i, NUMMOBJTYPES-1);
+						deh_warning("Thing %d out of range (1 - %d)", i, NUMMOBJTYPES-1);
 						ignorelines(f);
 					}
 					DEH_WriteUndoline(word, word2, UNDO_HEADER);
@@ -6147,6 +6171,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SPRK16",
 
 	// Robot Explosion
+	"S_XPLD_FLICKY",
 	"S_XPLD1",
 	"S_XPLD2",
 	"S_XPLD3",
@@ -7574,7 +7599,7 @@ static mobjtype_t get_mobjtype(const char *word)
 		if (fastcmp(word, MOBJTYPE_LIST[i]+3))
 			return i;
 	deh_warning("Couldn't find mobjtype named 'MT_%s'",word);
-	return MT_BLUECRAWLA;
+	return MT_NULL;
 }
 
 static statenum_t get_state(const char *word)
