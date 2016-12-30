@@ -7198,14 +7198,14 @@ void P_MobjThinker(mobj_t *mobj)
 			if (mobj->fuse > 0 && mobj->fuse < 2*TICRATE-(TICRATE/7)
 				&& (mobj->fuse & 3))
 			{
-				INT32 i,j;
+				INT32 i;
 				fixed_t x,y,z;
 				fixed_t ns;
 				mobj_t *mo2;
+				mobj_t *flicky;
 
-				i = P_RandomByte();
 				z = mobj->subsector->sector->floorheight + ((P_RandomByte()&63)*FRACUNIT);
-				for (j = 0; j < 2; j++)
+				for (i = 0; i < 2; i++)
 				{
 					const angle_t fa = (P_RandomByte()*FINEANGLES/16) & FINEMASK;
 					ns = 64 * FRACUNIT;
@@ -7213,25 +7213,21 @@ void P_MobjThinker(mobj_t *mobj)
 					y = mobj->y + FixedMul(FINECOSINE(fa),ns);
 
 					mo2 = P_SpawnMobj(x, y, z, MT_EXPLODE);
+					P_SetMobjStateNF(mo2, S_XPLD_EGGTRAP);
 					ns = 4 * FRACUNIT;
 					mo2->momx = FixedMul(FINESINE(fa),ns);
 					mo2->momy = FixedMul(FINECOSINE(fa),ns);
 
-					i = P_RandomByte();
-
-					if (i % 5 == 0)
-						P_SpawnMobj(x, y, z, MT_CHICKEN);
-					else if (i % 4 == 0)
-						P_SpawnMobj(x, y, z, MT_COW);
-					else if (i % 3 == 0)
-					{
-						P_SpawnMobj(x, y, z, MT_BIRD);
+					if (P_RandomChance(FRACUNIT/4)) // I filled a spreadsheet trying to get the equivalent chance to the original P_RandomByte hack!
 						S_StartSound(mo2, mobj->info->deathsound);
-					}
-					else if ((i & 1) == 0)
-						P_SpawnMobj(x, y, z, MT_BUNNY);
-					else
-						P_SpawnMobj(x, y, z, MT_MOUSE);
+
+					flicky = P_InternalFlickySpawn(mo2, 0, 8*FRACUNIT, false);
+					if (!flicky)
+						break;
+
+					P_SetTarget(&flicky->target, mo2);
+					flicky->momx = mo2->momx;
+					flicky->momy = mo2->momy;
 				}
 
 				mobj->fuse--;

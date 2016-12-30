@@ -2847,11 +2847,11 @@ state_t states[NUMSTATES] =
 	{SPR_SPRK, FF_TRANS90|3, 1, {NULL}, 0, 0, S_NULL},   // S_SPRK16
 
 	// Robot Explosion
-	{SPR_BOM1, 0, 0, {A_FlickySpawn}, 0, 0, S_XPLD1}, // S_XPLD_FLICKY
-	{SPR_BOM1, 0, 1, {A_Scream},      0, 0, S_XPLD2}, // S_XPLD1
-	{SPR_BOM1, 1, 5, {NULL},          0, 0, S_XPLD3}, // S_XPLD2
-	{SPR_BOM1, 2, 5, {NULL},          0, 0, S_XPLD4}, // S_XPLD3
-	{SPR_BOM1, 3, 5, {NULL},          0, 0, S_NULL},  // S_XPLD4
+	{SPR_BOM1, 0,             0, {A_FlickySpawn}, 0, 0, S_XPLD1}, // S_XPLD_FLICKY
+	{SPR_BOM1, 0,             1, {A_Scream},      0, 0, S_XPLD2}, // S_XPLD1
+	{SPR_BOM1, FF_ANIMATE|1, 15, {NULL},          2, 5, S_NULL},  // S_XPLD2
+
+	{SPR_BOM1, FF_ANIMATE,   20, {NULL},          3, 5, S_INVISIBLE}, // S_XPLD_EGGTRAP
 
 	// Underwater Explosion
 	{SPR_BOM4, 0, 3, {A_Scream}, 0, 0, S_WPLD2}, // S_WPLD1

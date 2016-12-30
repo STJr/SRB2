@@ -1166,7 +1166,7 @@ static void readlevelheader(MYFILE *f, INT32 num)
 						mapheaderinfo[num-1]->numFlickies++;
 					} while ((tmp = strtok(NULL,",")) != NULL);
 
-					if (mapheaderinfo[num-1]->numFlickies) // now let's do it again - except this time we add them to the list!
+					if (mapheaderinfo[num-1]->numFlickies)
 					{
 						size_t newsize = sizeof(mobjtype_t) * mapheaderinfo[num-1]->numFlickies;
 						mapheaderinfo[num-1]->flickies = Z_Realloc(mapheaderinfo[num-1]->flickies, newsize, PU_STATIC, NULL);
@@ -6174,8 +6174,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_XPLD_FLICKY",
 	"S_XPLD1",
 	"S_XPLD2",
-	"S_XPLD3",
-	"S_XPLD4",
+	"S_XPLD_EGGTRAP",
 
 	// Underwater Explosion
 	"S_WPLD1",

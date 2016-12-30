@@ -295,6 +295,8 @@ boolean P_CheckMissileRange(mobj_t *actor);
 void P_NewChaseDir(mobj_t *actor);
 boolean P_LookForPlayers(mobj_t *actor, boolean allaround, boolean tracer, fixed_t dist);
 
+mobj_t *P_InternalFlickySpawn(mobj_t *actor, mobjtype_t flickytype, fixed_t momz, boolean lookforplayers);
+
 //
 // P_MAP
 //

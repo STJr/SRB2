@@ -2982,8 +2982,7 @@ typedef enum state
 	S_XPLD_FLICKY,
 	S_XPLD1,
 	S_XPLD2,
-	S_XPLD3,
-	S_XPLD4,
+	S_XPLD_EGGTRAP,
 
 	// Underwater Explosion
 	S_WPLD1,

@@ -10338,6 +10338,49 @@ void A_SpawnFreshCopy(mobj_t *actor)
 		S_StartSound(newObject, newObject->info->seesound);
 }
 
+// Internal Flicky spawning function.
+
+mobj_t *P_InternalFlickySpawn(mobj_t *actor, mobjtype_t flickytype, fixed_t momz, boolean lookforplayers)
+{
+	mobj_t *flicky;
+
+	if (mariomode) // No flickies in Mario mode
+		return NULL;
+
+	if (cv_soniccd.value)
+		flickytype = MT_SEED; // MT_CDSEED
+	else if (!flickytype)
+	{
+		if (!mapheaderinfo[gamemap-1] || !mapheaderinfo[gamemap-1]->numFlickies) // No mapheader, no shoes, no service.
+			return NULL;
+		else
+		{
+			INT32 prandom = P_RandomKey(mapheaderinfo[gamemap-1]->numFlickies);
+			flickytype = mapheaderinfo[gamemap-1]->flickies[prandom];
+		}
+	}
+
+	if (flickytype == MT_SEED) // MT_CDSEED
+	{
+		flicky = P_SpawnMobj(actor->x, actor->y, actor->z + (actor->height / 2) - FixedMul(mobjinfo[flickytype].height / 2, actor->scale), flickytype);
+		flicky->destscale = actor->scale;
+		P_SetScale(flicky, flicky->destscale);
+		return flicky;
+	}
+
+	flicky = P_SpawnMobjFromMobj(actor, 0, 0, 0, flickytype);
+	flicky->angle = actor->angle;
+
+	P_SetObjectMomZ(flicky, momz, false);
+	flicky->movedir = P_RandomChance(FRACUNIT/2) ?  -1 : 1;
+	flicky->fuse = P_RandomRange(595, 700);	// originally 300, 350
+
+	if (lookforplayers)
+		P_LookForPlayers(flicky, true, false, 0);
+
+	return flicky;
+}
+
 // Function: A_FlickySpawn
 //
 // Description: Flicky spawning function.
@@ -10345,51 +10388,21 @@ void A_SpawnFreshCopy(mobj_t *actor)
 // var1:
 //		lower 16 bits: if 0, spawns random flicky based on level header. Else, spawns the designated thing type.
 //		upper 16 bits: if 0, no sound is played. Else, A_Scream is called.
-// var2 = upwards thrust for spawned flicky
+// var2 = upwards thrust for spawned flicky. If zero, default value is provided.
 //
 void A_FlickySpawn(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
-	mobj_t *flicky;
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_FlickySpawn", actor))
 		return;
 #endif
-	if (!mapheaderinfo[gamemap-1]) // No mapheader, no shoes, no service.
-		return;
-
-	if (mariomode) // No flickies in Mario mode
-		return;
 
 	if (locvar1 >> 16) {
 		A_Scream(actor); // A shortcut for the truly lazy.
 		locvar1 &= 65535;
 	}
-	if (cv_soniccd.value)
-		locvar1 = MT_SEED; // MT_CDSEED
-	else if (!locvar1) {
-		if (!mapheaderinfo[gamemap-1]->numFlickies)
-			return;
-		else {
-			INT32 prandom = P_RandomKey(mapheaderinfo[gamemap-1]->numFlickies);
-			locvar1 = mapheaderinfo[gamemap-1]->flickies[prandom];
-		}
-	}
 
-	if (locvar1 == MT_SEED) // MT_CDSEED
-	{
-		flicky = P_SpawnMobj(actor->x, actor->y, actor->z + (actor->height / 2) - FixedMul(mobjinfo[locvar1].height / 2, actor->scale), locvar1);
-		flicky->destscale = actor->scale;
-		P_SetScale(flicky,flicky->destscale);
-		return;
-	}
-	flicky = P_SpawnMobjFromMobj(actor, 0, 0, 0, locvar1);
-	flicky->angle = actor->angle;
-
-	P_SetObjectMomZ(flicky, (locvar2) ? locvar2 : 8*FRACUNIT, false);
-	P_LookForPlayers(flicky, true, false, 0);
-
-	flicky->movedir = P_RandomChance(FRACUNIT/2) ?  -1 : 1;
-	flicky->fuse = P_RandomRange(595, 700);	// originally 300, 350
+	P_InternalFlickySpawn(actor, locvar1, ((locvar2) ? locvar2 : 8*FRACUNIT), true);
 }
