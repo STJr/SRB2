@@ -215,6 +215,15 @@ void A_BrakLobShot();
 void A_NapalmScatter();
 void A_SpawnFreshCopy();
 void A_FlickySpawn();
+void A_FlickyAim();
+void A_FlickyFly();
+void A_FlickySoar();
+void A_FlickyCoast();
+void A_FlickyHop();
+void A_FlickyFlounder();
+void A_FlickyCheck();
+void A_FlickyHeightCheck();
+void A_FlickyFlutter();
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
 #define NUMMOBJFREESLOTS 256

@@ -7213,10 +7213,11 @@ void P_MobjThinker(mobj_t *mobj)
 					y = mobj->y + FixedMul(FINECOSINE(fa),ns);
 
 					mo2 = P_SpawnMobj(x, y, z, MT_EXPLODE);
-					P_SetMobjStateNF(mo2, S_XPLD_EGGTRAP);
+					P_SetMobjStateNF(mo2, S_XPLD_EGGTRAP); // so the flickies don't lose their target if they spawn
 					ns = 4 * FRACUNIT;
 					mo2->momx = FixedMul(FINESINE(fa),ns);
 					mo2->momy = FixedMul(FINECOSINE(fa),ns);
+					mo2->angle = fa << ANGLETOFINESHIFT;
 
 					if (P_RandomChance(FRACUNIT/4)) // I filled a spreadsheet trying to get the equivalent chance to the original P_RandomByte hack!
 						S_StartSound(mo2, mobj->info->deathsound);
