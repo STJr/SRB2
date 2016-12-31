@@ -394,6 +394,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 			rlight->height = (centeryfrac) - FixedMul((light->height - viewz), spryscale);
 			rlight->heightstep = -FixedMul(rw_scalestep, (light->height - viewz));
 #endif
+			rlight->startheight = rlight->height; // keep starting value here to reset for each repeat
 			rlight->lightlevel = *light->lightlevel;
 			rlight->extra_colormap = light->extra_colormap;
 			rlight->flags = light->flags;
@@ -487,6 +488,14 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 		{
 			rw_scalestep = ds->scalestep;
 			spryscale = ds->scale1 + (x1 - ds->x1)*rw_scalestep;
+			if (dc_numlights)
+			{ // reset all lights to their starting heights
+				for (i = 0; i < dc_numlights; i++)
+				{
+					rlight = &dc_lightlist[i];
+					rlight->height = rlight->startheight;
+				}
+			}
 		}
 
 #ifndef ESLOPE
