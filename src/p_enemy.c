@@ -10527,7 +10527,7 @@ void P_InternalFlickyFly(mobj_t *actor, fixed_t flyspeed, fixed_t targetdist, fi
 	if (!targetdist)
 		targetdist = 16*FRACUNIT; //Default!
 
-	if (abs(chasez - actor->z) > targetdist)
+	if (actor->target && abs(chasez - actor->z) > targetdist)
 		targetdist = P_AproxDistance(actor->target->x - actor->x, actor->target->y - actor->y);
 
 	vertangle = (R_PointToAngle2(0, actor->z, targetdist, chasez) >> ANGLETOFINESHIFT) & FINEMASK;
@@ -10576,7 +10576,7 @@ void A_FlickySoar(mobj_t *actor)
 	2*(FRACUNIT/2 - abs(FINECOSINE((((actor->fuse % 144) * 5*ANG1/2) >> ANGLETOFINESHIFT) & FINEMASK)))
 	);
 
-	if (P_MobjFlip(actor)*actor->momz > 0 && actor->frame == 1 && actor->sprite == SPR_NULL)//SPR_FLKJ)
+	if (P_MobjFlip(actor)*actor->momz > 0 && actor->frame == 1 && actor->sprite == SPR_FL10)
 		actor->frame = 3;
 }
 

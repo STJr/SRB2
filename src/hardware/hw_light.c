@@ -370,13 +370,24 @@ light_t *t_lspr[NUMSPRITES] =
 
 	&lspr[NOLIGHT],     // SPR_GOAL
 
-	// Freed Animals
-	&lspr[NOLIGHT],     // SPR_BIRD
-	&lspr[NOLIGHT],     // SPR_BUNY
-	&lspr[NOLIGHT],     // SPR_MOUS
-	&lspr[NOLIGHT],     // SPR_CHIC
-	&lspr[NOLIGHT],     // SPR_COWZ
-	&lspr[NOLIGHT],     // SPR_RBRD
+	// Flickies
+	&lspr[NOLIGHT],     // SPR_FBUB
+	&lspr[NOLIGHT],     // SPR_FL01
+	&lspr[NOLIGHT],     // SPR_FL02
+	&lspr[NOLIGHT],     // SPR_FL03
+	&lspr[NOLIGHT],     // SPR_FL04
+	&lspr[NOLIGHT],     // SPR_FL05
+	&lspr[NOLIGHT],     // SPR_FL06
+	&lspr[NOLIGHT],     // SPR_FL07
+	&lspr[NOLIGHT],     // SPR_FL08
+	&lspr[NOLIGHT],     // SPR_FL09
+	&lspr[NOLIGHT],     // SPR_FL10
+	&lspr[NOLIGHT],     // SPR_FL11
+	&lspr[NOLIGHT],     // SPR_FL12
+	&lspr[NOLIGHT],     // SPR_FL13
+	&lspr[NOLIGHT],     // SPR_FL14
+	&lspr[NOLIGHT],     // SPR_FL15
+	&lspr[NOLIGHT],     // SPR_FL16
 
 	// Springs
 	&lspr[NOLIGHT],     // SPR_SPRY

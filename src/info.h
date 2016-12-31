@@ -459,13 +459,24 @@ typedef enum sprite
 
 	SPR_GOAL, // Special Stage goal (here because lol NiGHTS)
 
-	// Freed Animals
-	SPR_BIRD, // Birdie freed!
-	SPR_BUNY, // Bunny freed!
-	SPR_MOUS, // Mouse
-	SPR_CHIC, // Chicken
-	SPR_COWZ, // Cow
-	SPR_RBRD, // Red Birdie in Bubble
+	// Flickies
+	SPR_FBUB, // Flicky-sized bubble
+	SPR_FL01, // Bluebird
+	SPR_FL02, // Rabbit
+	SPR_FL03, // Chicken
+	SPR_FL04, // Seal
+	SPR_FL05, // Pig
+	SPR_FL06, // Chipmunk
+	SPR_FL07, // Penguin
+	SPR_FL08, // Fish
+	SPR_FL09, // Ram
+	SPR_FL10, // Puffin
+	SPR_FL11, // Cow
+	SPR_FL12, // Rat
+	SPR_FL13, // Bear
+	SPR_FL14, // Dove
+	SPR_FL15, // Cat
+	SPR_FL16, // Canary
 
 	// Springs
 	SPR_SPRY, // yellow spring
@@ -2429,43 +2440,133 @@ typedef enum state
 	S_SSPK4,
 	S_SSPK5,
 
-	// Freed Birdie
-	S_BIRD1,
-	S_BIRD2,
-	S_BIRD3,
+	// Flicky-sized bubble
+	S_FLICKY_BUBBLE,
 
-	// Freed Bunny
-	S_BUNNY1,
-	S_BUNNY2,
-	S_BUNNY3,
-	S_BUNNY4,
-	S_BUNNY5,
-	S_BUNNY6,
-	S_BUNNY7,
-	S_BUNNY8,
-	S_BUNNY9,
-	S_BUNNY10,
+	// Bluebird
+	S_FLICKY_01_OUT,
+	S_FLICKY_01_FLAP1,
+	S_FLICKY_01_FLAP2,
+	S_FLICKY_01_FLAP3,
 
-	// Freed Mouse
-	S_MOUSE1,
-	S_MOUSE2,
+	// Rabbit
+	S_FLICKY_02_OUT,
+	S_FLICKY_02_AIM,
+	S_FLICKY_02_HOP,
+	S_FLICKY_02_UP,
+	S_FLICKY_02_DOWN,
 
-	// Freed Chicken
-	S_CHICKEN1,
-	S_CHICKENHOP,
-	S_CHICKENFLY1,
-	S_CHICKENFLY2,
+	// Chicken
+	S_FLICKY_03_OUT,
+	S_FLICKY_03_AIM,
+	S_FLICKY_03_HOP,
+	S_FLICKY_03_UP,
+	S_FLICKY_03_FLAP1,
+	S_FLICKY_03_FLAP2,
 
-	// Freed Cow
-	S_COW1,
-	S_COW2,
-	S_COW3,
-	S_COW4,
+	// Seal
+	S_FLICKY_04_OUT,
+	S_FLICKY_04_AIM,
+	S_FLICKY_04_HOP,
+	S_FLICKY_04_UP,
+	S_FLICKY_04_DOWN,
+	S_FLICKY_04_SWIM1,
+	S_FLICKY_04_SWIM2,
+	S_FLICKY_04_SWIM3,
+	S_FLICKY_04_SWIM4,
 
-	// Red Birdie in Bubble
-	S_RBIRD1,
-	S_RBIRD2,
-	S_RBIRD3,
+	// Pig
+	S_FLICKY_05_OUT,
+	S_FLICKY_05_AIM,
+	S_FLICKY_05_HOP,
+	S_FLICKY_05_UP,
+	S_FLICKY_05_DOWN,
+
+	// Chipmunk
+	S_FLICKY_06_OUT,
+	S_FLICKY_06_AIM,
+	S_FLICKY_06_HOP,
+	S_FLICKY_06_UP,
+	S_FLICKY_06_DOWN,
+
+	// Penguin
+	S_FLICKY_07_OUT,
+	S_FLICKY_07_AIML,
+	S_FLICKY_07_HOPL,
+	S_FLICKY_07_UPL,
+	S_FLICKY_07_DOWNL,
+	S_FLICKY_07_AIMR,
+	S_FLICKY_07_HOPR,
+	S_FLICKY_07_UPR,
+	S_FLICKY_07_DOWNR,
+	S_FLICKY_07_SWIM1,
+	S_FLICKY_07_SWIM2,
+	S_FLICKY_07_SWIM3,
+
+	// Fish
+	S_FLICKY_08_OUT,
+	S_FLICKY_08_AIM,
+	S_FLICKY_08_HOP,
+	S_FLICKY_08_FLAP1,
+	S_FLICKY_08_FLAP2,
+	S_FLICKY_08_FLAP3,
+	S_FLICKY_08_FLAP4,
+	S_FLICKY_08_SWIM1,
+	S_FLICKY_08_SWIM2,
+	S_FLICKY_08_SWIM3,
+	S_FLICKY_08_SWIM4,
+
+	// Ram
+	S_FLICKY_09_OUT,
+	S_FLICKY_09_AIM,
+	S_FLICKY_09_HOP,
+	S_FLICKY_09_UP,
+	S_FLICKY_09_DOWN,
+
+	// Puffin
+	S_FLICKY_10_OUT,
+	S_FLICKY_10_FLAP1,
+	S_FLICKY_10_FLAP2,
+
+	// Cow
+	S_FLICKY_11_OUT,
+	S_FLICKY_11_AIM,
+	S_FLICKY_11_RUN1,
+	S_FLICKY_11_RUN2,
+	S_FLICKY_11_RUN3,
+
+	// Rat
+	S_FLICKY_12_OUT,
+	S_FLICKY_12_AIM,
+	S_FLICKY_12_RUN1,
+	S_FLICKY_12_RUN2,
+	S_FLICKY_12_RUN3,
+
+	// Bear
+	S_FLICKY_13_OUT,
+	S_FLICKY_13_AIM,
+	S_FLICKY_13_HOP,
+	S_FLICKY_13_UP,
+	S_FLICKY_13_DOWN,
+
+	// Dove
+	S_FLICKY_14_OUT,
+	S_FLICKY_14_FLAP1,
+	S_FLICKY_14_FLAP2,
+	S_FLICKY_14_FLAP3,
+
+	// Cat
+	S_FLICKY_15_OUT,
+	S_FLICKY_15_AIM,
+	S_FLICKY_15_HOP,
+	S_FLICKY_15_UP,
+	S_FLICKY_15_DOWN,
+
+	// Canary
+	S_FLICKY_16_OUT,
+	S_FLICKY_16_FLAP1,
+	S_FLICKY_16_FLAP2,
+	S_FLICKY_16_FLAP3,
 
 	S_YELLOWSPRING,
 	S_YELLOWSPRING2,
@@ -2965,6 +3066,7 @@ typedef enum state
 	S_NIGHTOPIANHELPER6,
 	S_NIGHTOPIANHELPER7,
 	S_NIGHTOPIANHELPER8,
+	S_NIGHTOPIANHELPER9,
 
 	S_CRUMBLE1,
 	S_CRUMBLE2,
@@ -3418,13 +3520,23 @@ typedef enum mobj_type
 	MT_IVSP, // Invincibility sparkles
 	MT_SUPERSPARK, // Super Sonic Spark
 
-	// Freed Animals
-	MT_BIRD, // Birdie freed!
-	MT_BUNNY, // Bunny freed!
-	MT_MOUSE, // Mouse
-	MT_CHICKEN, // Chicken
-	MT_COW, // Cow
-	MT_REDBIRD, // Red Birdie in Bubble
+	// Flickies
+	MT_FLICKY_01, // Bluebird
+	MT_FLICKY_02, // Rabbit
+	MT_FLICKY_03, // Chicken
+	MT_FLICKY_04, // Seal
+	MT_FLICKY_05, // Pig
+	MT_FLICKY_06, // Chipmunk
+	MT_FLICKY_07, // Penguin
+	MT_FLICKY_08, // Fish
+	MT_FLICKY_09, // Ram
+	MT_FLICKY_10, // Puffin
+	MT_FLICKY_11, // Cow
+	MT_FLICKY_12, // Rat
+	MT_FLICKY_13, // Bear
+	MT_FLICKY_14, // Dove
+	MT_FLICKY_15, // Cat
+	MT_FLICKY_16, // Canary
 
 	// Environmental Effects
 	MT_RAIN, // Rain
