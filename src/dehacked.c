@@ -1013,10 +1013,13 @@ static const struct {
 	{"DOVE",     MT_FLICKY_14},
 	{"CAT",      MT_FLICKY_15},
 	{"CANARY",   MT_FLICKY_16},
+	{"a", 0}, // End of normal flickies - a lower case character so will never fastcmp valid with uppercase tmp
 	//{"FLICKER",  MT_FLICKER},
-	{"SEED",     MT_SEED},//MT_CDSEED},
+	{"SEED",          MT_SEED},//MT_CDSEED},
 	{NULL, 0}
 };
+
+#define MAXFLICKIES 64
 
 static void readlevelheader(MYFILE *f, INT32 num)
 {
@@ -1126,9 +1129,24 @@ static void readlevelheader(MYFILE *f, INT32 num)
 					mapheaderinfo[num-1]->flickies = NULL;
 					mapheaderinfo[num-1]->numFlickies = 0;
 				}
+				else if (fastcmp(word2, "ALL"))
+				{
+                    mobjtype_t tmpflickies[MAXFLICKIES];
+
+					for (mapheaderinfo[num-1]->numFlickies = 0;
+					((mapheaderinfo[num-1]->numFlickies < MAXFLICKIES) && FLICKYTYPES[mapheaderinfo[num-1]->numFlickies].type);
+					mapheaderinfo[num-1]->numFlickies++)
+						tmpflickies[mapheaderinfo[num-1]->numFlickies] = FLICKYTYPES[mapheaderinfo[num-1]->numFlickies].type;
+
+					if (mapheaderinfo[num-1]->numFlickies)
+					{
+						size_t newsize = sizeof(mobjtype_t) * mapheaderinfo[num-1]->numFlickies;
+						mapheaderinfo[num-1]->flickies = Z_Realloc(mapheaderinfo[num-1]->flickies, newsize, PU_STATIC, NULL);
+						M_Memcpy(mapheaderinfo[num-1]->flickies, tmpflickies, newsize);
+					}
+				}
 				else
 				{
-#define MAXFLICKIES 64
 					mobjtype_t tmpflickies[MAXFLICKIES];
 					mapheaderinfo[num-1]->numFlickies = 0;
 					tmp = strtok(word2,",");
@@ -1137,7 +1155,7 @@ static void readlevelheader(MYFILE *f, INT32 num)
 						if (mapheaderinfo[num-1]->numFlickies == MAXFLICKIES) // never going to get above that number
 						{
 							deh_warning("Level header %d: too many flickies\n", num);
-							continue;
+							break;
 						}
 
 						if (fastncmp(tmp, "MT_", 3)) // support for specified mobjtypes...
@@ -1175,7 +1193,6 @@ static void readlevelheader(MYFILE *f, INT32 num)
 					}
 					else
 						deh_warning("Level header %d: no valid flicky types found\n", num);
-#undef MAXFLICKIES
 				}
 			}
 
@@ -1412,6 +1429,8 @@ static void readlevelheader(MYFILE *f, INT32 num)
 
 	Z_Free(s);
 }
+
+#undef MAXFLICKIES
 
 static void readcutscenescene(MYFILE *f, INT32 num, INT32 scenenum)
 {
