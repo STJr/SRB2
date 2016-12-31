@@ -162,6 +162,8 @@ typedef enum
 	MAXNETXCMD
 } netxcmd_t;
 
+extern const char *netxcmdnames[MAXNETXCMD - 1];
+
 #if defined(_MSC_VER)
 #pragma pack(1)
 #endif

@@ -365,6 +365,35 @@ boolean splitscreen = false;
 boolean circuitmap = false;
 INT32 adminplayer = -1;
 
+/// \warning Keep this up-to-date if you add/remove/rename net text commands
+const char *netxcmdnames[MAXNETXCMD - 1] =
+{
+	"NAMEANDCOLOR",
+	"WEAPONPREF",
+	"KICK",
+	"NETVAR",
+	"SAY",
+	"MAP",
+	"EXITLEVEL",
+	"ADDFILE",
+	"PAUSE",
+	"ADDPLAYER",
+	"TEAMCHANGE",
+	"CLEARSCORES",
+	"LOGIN",
+	"VERIFIED",
+	"RANDOMSEED",
+	"RUNSOC",
+	"REQADDFILE",
+	"DELFILE",
+	"SETMOTD",
+	"SUICIDE",
+#ifdef HAVE_BLUA
+	"LUACMD",
+	"LUAVAR"
+#endif
+};
+
 // =========================================================================
 //                           SERVER STARTUP
 // =========================================================================
