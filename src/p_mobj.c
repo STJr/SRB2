@@ -3482,17 +3482,14 @@ static boolean P_SceneryZMovement(mobj_t *mo)
 			if ((!(mo->eflags & MFE_VERTICALFLIP) && mo->z <= mo->floorz)
 			|| (mo->eflags & MFE_VERTICALFLIP && mo->z+mo->height >= mo->ceilingz))
 			{
-				// DO NOT use random numbers here.
-				// SonicCD mode is console togglable and
-				// affects demos.
-				UINT8 rltime = (leveltime & 4);
-
-				if (!rltime)
-					P_SpawnMobj(mo->x, mo->y, mo->floorz, MT_GFZFLOWER3);
-				else if (rltime == 2)
-					P_SpawnMobj(mo->x, mo->y, mo->floorz, MT_GFZFLOWER2);
-				else
-					P_SpawnMobj(mo->x, mo->y, mo->floorz, MT_GFZFLOWER1);
+				mobjtype_t flowertype = ((P_RandomChance(FRACUNIT/2)) ? MT_GFZFLOWER1 : MT_GFZFLOWER3);
+				mobj_t *flower = P_SpawnMobjFromMobj(mo, 0, 0, 0, flowertype);
+				if (flower)
+				{
+					P_SetScale(flower, mo->scale/16);
+					flower->destscale = mo->scale;
+					flower->scalespeed = mo->scale/8;
+				}
 
 				P_RemoveMobj(mo);
 				return false;
@@ -7049,7 +7046,8 @@ void P_MobjThinker(mobj_t *mobj)
 				}
 				break;
 			case MT_SEED:
-				mobj->momz = mobj->info->speed;
+				if (P_MobjFlip(mobj)*mobj->momz < mobj->info->speed)
+					mobj->momz = P_MobjFlip(mobj)*mobj->info->speed;
 				break;
 			case MT_ROCKCRUMBLE1:
 			case MT_ROCKCRUMBLE2:

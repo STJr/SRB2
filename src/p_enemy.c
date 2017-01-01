@@ -10352,9 +10352,7 @@ mobj_t *P_InternalFlickySpawn(mobj_t *actor, mobjtype_t flickytype, fixed_t momz
 {
 	mobj_t *flicky;
 
-	if (cv_soniccd.value)
-		flickytype = MT_SEED; // MT_CDSEED
-	else if (!flickytype)
+	if (!flickytype)
 	{
 		if (!mapheaderinfo[gamemap-1] || !mapheaderinfo[gamemap-1]->numFlickies) // No mapheader, no shoes, no service.
 			return NULL;
@@ -10365,16 +10363,11 @@ mobj_t *P_InternalFlickySpawn(mobj_t *actor, mobjtype_t flickytype, fixed_t momz
 		}
 	}
 
-	if (flickytype == MT_SEED) // MT_CDSEED
-	{
-		flicky = P_SpawnMobj(actor->x, actor->y, actor->z + (actor->height / 2) - FixedMul(mobjinfo[flickytype].height / 2, actor->scale), flickytype);
-		flicky->destscale = actor->scale;
-		P_SetScale(flicky, flicky->destscale);
-		return flicky;
-	}
-
 	flicky = P_SpawnMobjFromMobj(actor, 0, 0, 0, flickytype);
 	flicky->angle = actor->angle;
+
+	if (flickytype == MT_SEED)
+		flicky->z += (actor->height - flicky->height)/2;
 
 	if (actor->eflags & MFE_UNDERWATER)
 		momz = FixedDiv(momz, FixedSqrt(3*FRACUNIT));

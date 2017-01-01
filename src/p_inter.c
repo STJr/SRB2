@@ -2266,67 +2266,62 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 	&& target->flags & MF_ENEMY)
 	{
 		mobjtype_t item;
-		if (cv_soniccd.value)
-			item = MT_SEED;
-		else
+		INT32 prandom;
+
+		switch (target->type)
 		{
-			INT32 prandom;
+			case MT_REDCRAWLA:
+			case MT_GOLDBUZZ:
+			case MT_SKIM:
+			case MT_UNIDUS:
+				item = MT_FLICKY_02/*MT_BUNNY*/;
+				break;
 
-			switch (target->type)
-			{
-				case MT_REDCRAWLA:
-				case MT_GOLDBUZZ:
-				case MT_SKIM:
-				case MT_UNIDUS:
-					item = MT_FLICKY_02/*MT_BUNNY*/;
-					break;
+			case MT_BLUECRAWLA:
+			case MT_JETTBOMBER:
+			case MT_GFZFISH:
+				item = MT_FLICKY_01/*MT_BIRD*/;
+				break;
 
-				case MT_BLUECRAWLA:
-				case MT_JETTBOMBER:
-				case MT_GFZFISH:
-					item = MT_FLICKY_01/*MT_BIRD*/;
-					break;
+			case MT_JETTGUNNER:
+			case MT_CRAWLACOMMANDER:
+			case MT_REDBUZZ:
+			case MT_DETON:
+				item = MT_FLICKY_12/*MT_MOUSE*/;
+				break;
 
-				case MT_JETTGUNNER:
-				case MT_CRAWLACOMMANDER:
-				case MT_REDBUZZ:
-				case MT_DETON:
-					item = MT_FLICKY_12/*MT_MOUSE*/;
-					break;
+			case MT_GSNAPPER:
+			case MT_EGGGUARD:
+			case MT_SPRINGSHELL:
+				item = MT_FLICKY_11/*MT_COW*/;
+				break;
 
-				case MT_GSNAPPER:
-				case MT_EGGGUARD:
-				case MT_SPRINGSHELL:
-					item = MT_FLICKY_11/*MT_COW*/;
-					break;
+			case MT_MINUS:
+			case MT_VULTURE:
+			case MT_POINTY:
+			case MT_YELLOWSHELL:
+				item = MT_FLICKY_03/*MT_CHICKEN*/;
+				break;
 
-				case MT_MINUS:
-				case MT_VULTURE:
-				case MT_POINTY:
-				case MT_YELLOWSHELL:
-					item = MT_FLICKY_03/*MT_CHICKEN*/;
-					break;
+			case MT_AQUABUZZ:
+				item = MT_FLICKY_01/*MT_REDBIRD*/;
+				break;
 
-				case MT_AQUABUZZ:
-					item = MT_FLICKY_01/*MT_REDBIRD*/;
-					break;
+			default:
+				if (target->info->doomednum)
+					prandom = target->info->doomednum%5; // "Random" animal for new enemies.
+				else
+					prandom = P_RandomKey(5); // No placable object, just use a random number.
 
-				default:
-					if (target->info->doomednum)
-						prandom = target->info->doomednum%5; // "Random" animal for new enemies.
-					else
-						prandom = P_RandomKey(5); // No placable object, just use a random number.
-
-					switch(prandom)
-					{
-						default: item = MT_FLICKY_02/*MT_BUNNY*/; break;
-						case 1: item = MT_FLICKY_01/*MT_BIRD*/; break;
-						case 2: item = MT_FLICKY_12/*MT_MOUSE*/; break;
-						case 3: item = MT_FLICKY_11/*MT_COW*/; break;
-						case 4: item = MT_FLICKY_03/*MT_CHICKEN*/; break;
-					}
-					break;
-			}
+				switch(prandom)
+				{
+					default: item = MT_FLICKY_02/*MT_BUNNY*/; break;
+					case 1: item = MT_FLICKY_01/*MT_BIRD*/; break;
+					case 2: item = MT_FLICKY_12/*MT_MOUSE*/; break;
+					case 3: item = MT_FLICKY_11/*MT_COW*/; break;
+					case 4: item = MT_FLICKY_03/*MT_CHICKEN*/; break;
+				}
+				break;
 		}
 
 		mo = P_SpawnMobj(target->x, target->y, target->z + (target->height / 2) - FixedMul(mobjinfo[item].height / 2, target->scale), item);

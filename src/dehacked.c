@@ -1014,7 +1014,7 @@ static const struct {
 	{"CANARY",   MT_FLICKY_16},
 	{"a", 0}, // End of normal flickies - a lower case character so will never fastcmp valid with uppercase tmp
 	//{"FLICKER",  MT_FLICKER},
-	{"SEED",          MT_SEED},//MT_CDSEED},
+	{"SEED",          MT_SEED},
 	{NULL, 0}
 };
 

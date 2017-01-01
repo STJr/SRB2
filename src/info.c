@@ -2522,7 +2522,7 @@ state_t states[NUMSTATES] =
 	{SPR_TFOG, FF_FULLBRIGHT|FF_TRANS50|13, 2, {NULL}, 0, 0, S_NULL},  // S_FOG14
 
 	// Flower Seed
-	{SPR_SEED, FF_FULLBRIGHT, -1, {NULL}, 0, 0, S_NULL}, // S_SEED
+	{SPR_SEED, FF_FULLBRIGHT|FF_ANIMATE, -1, {NULL}, 2, 2, S_NULL}, // S_SEED
 
 	// Particle sprite
 	{SPR_PRTL, FF_FULLBRIGHT|FF_TRANS70, 2*TICRATE, {NULL}, 0, 0, S_NULL}, // S_PARTICLE
@@ -11867,7 +11867,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		4,              // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_NOBLOCKMAP|MF_NOGRAVITY|MF_SCENERY, // flags
+		MF_NOBLOCKMAP|MF_SCENERY, // flags
 		S_NULL          // raisestate
 	},
 
