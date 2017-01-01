@@ -10352,9 +10352,6 @@ mobj_t *P_InternalFlickySpawn(mobj_t *actor, mobjtype_t flickytype, fixed_t momz
 {
 	mobj_t *flicky;
 
-	if (mariomode) // No flickies in Mario mode
-		return NULL;
-
 	if (cv_soniccd.value)
 		flickytype = MT_SEED; // MT_CDSEED
 	else if (!flickytype)
