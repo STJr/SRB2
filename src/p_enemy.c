@@ -10367,7 +10367,7 @@ mobj_t *P_InternalFlickySpawn(mobj_t *actor, mobjtype_t flickytype, fixed_t momz
 	flicky->angle = actor->angle;
 
 	if (flickytype == MT_SEED)
-		flicky->z += (actor->height - flicky->height)/2;
+		flicky->z += P_MobjFlip(actor)*(actor->height - flicky->height)/2;
 
 	if (actor->eflags & MFE_UNDERWATER)
 		momz = FixedDiv(momz, FixedSqrt(3*FRACUNIT));
