@@ -76,8 +76,6 @@ typedef enum
 	NUMPACKETTYPE
 } packettype_t;
 
-#define PACKETDROP
-
 #ifdef PACKETDROP
 void Command_Drop(void);
 void Command_Droprate(void);

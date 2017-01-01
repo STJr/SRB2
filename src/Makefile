@@ -366,6 +366,14 @@ endif
 
 	OPTS:=-fno-exceptions $(OPTS)
 
+ifdef MOBJCONSISTANCY
+	OPTS+=-DMOBJCONSISTANCY
+endif
+
+ifdef PACKETDROP
+	OPTS+=-DPACKETDROP
+endif
+
 ifdef DEBUGMODE
 
 	# build with debugging information
@@ -375,7 +383,7 @@ ifdef GCC48
 else
 	CFLAGS+=-O0
 endif
-	CFLAGS+= -Wall -DPARANOIA -DRANGECHECK
+	CFLAGS+= -Wall -DPARANOIA -DRANGECHECK -DPACKETDROP -DMOBJCONSISTANCY
 else
 
 

@@ -2781,7 +2781,6 @@ void D_ClientServerInit(void)
 	COM_AddCommand("reloadbans", Command_ReloadBan);
 	COM_AddCommand("connect", Command_connect);
 	COM_AddCommand("nodes", Command_Nodes);
-#define PACKETDROP
 #ifdef PACKETDROP
 	COM_AddCommand("drop", Command_Drop);
 	COM_AddCommand("droprate", Command_Droprate);
@@ -3911,8 +3910,10 @@ static INT16 Consistancy(void)
 {
 	INT32 i;
 	UINT32 ret = 0;
+#ifdef MOBJCONSISTANCY
 	thinker_t *th;
 	mobj_t *mo;
+#endif
 
 	DEBFILE(va("TIC %u ", gametic));
 
@@ -3934,8 +3935,8 @@ static INT16 Consistancy(void)
 	if (!G_PlatformGametype())
 		ret += P_GetRandSeed();
 
-	// !!!
-	/*if (!thinkercap.next)
+#ifdef MOBJCONSISTANCY
+	if (!thinkercap.next)
 		return ret;
 	for (th = thinkercap.next; th != &thinkercap; th = th->next)
 	{
@@ -4002,7 +4003,8 @@ static INT16 Consistancy(void)
 			ret -= mo->sprite;
 			ret += mo->frame;
 		}
-	}*/
+	}
+#endif
 
 	return (INT16)(ret & 0xFFFF);
 }

@@ -878,8 +878,6 @@ static void DebugPrintpacket(const char *header)
 }
 #endif
 
-#define PACKETDROP
-
 #ifdef PACKETDROP
 static INT32 packetdropquantity[NUMPACKETTYPE] = {0};
 static INT32 packetdroprate = 0;
