@@ -446,7 +446,7 @@ void CL_LoadServerFiles(void)
 		}
 		else if (fileneeded[i].important)
 		{
-			char *s;
+			const char *s;
 			switch(fileneeded[i].status)
 			{
 			case FS_NOTFOUND:

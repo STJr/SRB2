@@ -3499,7 +3499,7 @@ static void HandlePacketFromAwayNode(SINT8 node)
   * \sa GetPackets
   *
   */
-void HandlePacketFromPlayer(SINT8 node)
+static void HandlePacketFromPlayer(SINT8 node)
 {FILESTAMP
 	XBOXSTATIC INT32 netconsole;
 	XBOXSTATIC tic_t realend, realstart;
