@@ -10419,8 +10419,6 @@ void A_FlickySpawn(mobj_t *actor)
 	P_InternalFlickySpawn(actor, locvar1, ((locvar2) ? locvar2 : 8*FRACUNIT), true);
 }
 
-#define FLICKYHITWALL if (actor->momx == actor->momy && actor->momy == 0) actor->threshold = 1;
-
 // Internal Flicky bubbling function.
 void P_InternalFlickyBubble(mobj_t *actor)
 {
@@ -10456,10 +10454,16 @@ void A_FlickyAim(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
+	boolean flickyhitwall = false;
+
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_FlickyAim", actor))
 		return;
 #endif
+
+	if (actor->momx == actor->momy && actor->momy == 0)
+		flickyhitwall = true;
+
 	P_InternalFlickyBubble(actor);
 	P_InstaThrust(actor, 0, 0);
 
@@ -10475,11 +10479,8 @@ void A_FlickyAim(mobj_t *actor)
 		angle_t posvar;
 		fixed_t chasevar, chasex, chasey;
 		
-		if (actor->threshold)
-		{
+		if (flickyhitwall)
 			actor->movedir *= -1;
-			actor->threshold = 0;
-		}
 
 		posvar = ((R_PointToAngle2(actor->target->x, actor->target->y, actor->x, actor->y) + actor->movedir*locvar1) >> ANGLETOFINESHIFT) & FINEMASK;
 		chasevar = FixedSqrt(max(FRACUNIT, P_AproxDistance(actor->target->x - actor->x, actor->target->y - actor->y) - locvar2)) + locvar2;
@@ -10490,7 +10491,7 @@ void A_FlickyAim(mobj_t *actor)
 		if (P_AproxDistance(chasex - actor->x, chasey - actor->y))
 			actor->angle = R_PointToAngle2(actor->x, actor->y, chasex, chasey);
 	}
-	else if (actor->threshold)
+	else if (flickyhitwall)
 	{
 		actor->angle += ANGLE_180;
 		actor->threshold = 0;
@@ -10504,8 +10505,6 @@ void P_InternalFlickyFly(mobj_t *actor, fixed_t flyspeed, fixed_t targetdist, fi
 
 	flyspeed = FixedMul(flyspeed, actor->scale);
 	actor->flags |= MF_NOGRAVITY;
-
-	FLICKYHITWALL
 
 	var1 = ANG30;
 	var2 = 32*FRACUNIT;
@@ -10598,8 +10597,6 @@ void A_FlickyCoast(mobj_t *actor)
 #endif
 	if (actor->eflags & MFE_UNDERWATER)
 	{
-		FLICKYHITWALL
-
 		actor->momx = (11*actor->momx)/12;
 		actor->momy = (11*actor->momy)/12;
 		actor->momz = (11*actor->momz)/12;
@@ -10687,9 +10684,6 @@ void A_FlickyCheck(mobj_t *actor)
 	if (LUA_CallAction("A_FlickyCheck", actor))
 		return;
 #endif
-
-	FLICKYHITWALL
-
 	if (locvar2 && P_MobjFlip(actor)*actor->momz < 1)
 		P_SetMobjState(actor, locvar2);
 	else if (locvar1 && ((!(actor->eflags & MFE_VERTICALFLIP) && actor->z <= actor->floorz)
@@ -10715,9 +10709,6 @@ void A_FlickyHeightCheck(mobj_t *actor)
 	if (LUA_CallAction("A_FlickyHeightCheck", actor))
 		return;
 #endif
-
-	FLICKYHITWALL
-
 	if (locvar1 && actor->target && P_MobjFlip(actor)*actor->momz < 1
 	&& ((P_MobjFlip(actor)*((actor->z + actor->height/2) - (actor->target->z + actor->target->height/2)) < locvar2)
 	|| (actor->z - actor->height < actor->floorz) || (actor->z + 2*actor->height > actor->ceilingz)))
