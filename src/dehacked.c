@@ -1131,7 +1131,7 @@ static void readlevelheader(MYFILE *f, INT32 num)
 				}
 				else if (fastcmp(word2, "ALL"))
 				{
-                    mobjtype_t tmpflickies[MAXFLICKIES];
+					mobjtype_t tmpflickies[MAXFLICKIES];
 
 					for (mapheaderinfo[num-1]->numFlickies = 0;
 					((mapheaderinfo[num-1]->numFlickies < MAXFLICKIES) && FLICKYTYPES[mapheaderinfo[num-1]->numFlickies].type);
@@ -1150,7 +1150,7 @@ static void readlevelheader(MYFILE *f, INT32 num)
 					mobjtype_t tmpflickies[MAXFLICKIES];
 					mapheaderinfo[num-1]->numFlickies = 0;
 					tmp = strtok(word2,",");
-					// get up to the first MAXFLICKIES flickies, then run the rest of the tokens out.
+					// get up to the first MAXFLICKIES flickies
 					do {
 						if (mapheaderinfo[num-1]->numFlickies == MAXFLICKIES) // never going to get above that number
 						{
