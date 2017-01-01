@@ -1705,7 +1705,9 @@ void CL_UpdateServerList(boolean internetsearch, INT32 room)
   */
 static boolean CL_ServerConnectionSearchTicker(boolean viams, tic_t *asksent)
 {
+#ifndef NONET
 	INT32 i;
+#endif
 
 #ifndef NONET
 	// serverlist is updated by GetPacket function
@@ -1796,6 +1798,7 @@ static boolean CL_ServerConnectionSearchTicker(boolean viams, tic_t *asksent)
 	}
 #else
 	(void)viams;
+	(void)asksent;
 	// No netgames, so we skip this state.
 	cl_mode = CL_ASKJOIN;
 #endif // ifndef NONET/else
@@ -1818,6 +1821,10 @@ static boolean CL_ServerConnectionTicker(boolean viams, const char *tmpsave, tic
 {
 	boolean waitmore;
 	INT32 i;
+
+#ifdef NONET
+	(void)tmpsave;
+#endif
 
 	switch (cl_mode)
 	{
@@ -2002,7 +2009,11 @@ static void CL_ConnectToServer(boolean viams)
 	do
 	{
 		// If the connection was aborted for some reason, leave
+#ifndef NONET
 		if (!CL_ServerConnectionTicker(viams, tmpsave, &oldtic, &asksent))
+#else
+		if (!CL_ServerConnectionTicker(viams, (char*)NULL, &oldtic, (tic_t *)NULL))
+#endif
 			return;
 
 		if (server)

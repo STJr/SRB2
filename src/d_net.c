@@ -571,6 +571,7 @@ void Net_UnAcknowledgePacket(INT32 node)
 #endif
 }
 
+#ifndef NONET
 /** Checks if all acks have been received
   *
   * \return True if all acks have been received
@@ -578,16 +579,15 @@ void Net_UnAcknowledgePacket(INT32 node)
   */
 static boolean Net_AllAcksReceived(void)
 {
-#ifndef NONET
 	INT32 i;
 
 	for (i = 0; i < MAXACKPACKETS; i++)
 		if (ackpak[i].acknum)
 			return false;
-#endif
 
 	return true;
 }
+#endif
 
 /** Waits for all ackreturns
   *
