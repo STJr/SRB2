@@ -371,8 +371,7 @@ static void clear_levels(void)
 		// (no need to set num to 0, we're freeing the entire header shortly)
 		Z_Free(mapheaderinfo[i]->customopts);
 
-		if (mapheaderinfo[i]->flickies)
-			Z_Free(mapheaderinfo[i]->flickies);
+		P_DeleteFlickies(i);
 		P_DeleteGrades(i);
 
 		Z_Free(mapheaderinfo[i]);
@@ -1123,12 +1122,9 @@ static void readlevelheader(MYFILE *f, INT32 num)
 			if (fastcmp(word, "FLICKYLIST") || fastcmp(word, "ANIMALLIST"))
 			{
 				if (fastcmp(word2, "NONE"))
-				{
-					if (mapheaderinfo[num-1]->flickies)
-						Z_Free(mapheaderinfo[num-1]->flickies);
-					mapheaderinfo[num-1]->flickies = NULL;
-					mapheaderinfo[num-1]->numFlickies = 0;
-				}
+					P_DeleteFlickies(num-1);
+				else if (fastcmp(word2, "DEMO"))
+					P_SetDemoFlickies(num-1);
 				else if (fastcmp(word2, "ALL"))
 				{
 					mobjtype_t tmpflickies[MAXFLICKIES];
@@ -1138,7 +1134,7 @@ static void readlevelheader(MYFILE *f, INT32 num)
 					mapheaderinfo[num-1]->numFlickies++)
 						tmpflickies[mapheaderinfo[num-1]->numFlickies] = FLICKYTYPES[mapheaderinfo[num-1]->numFlickies].type;
 
-					if (mapheaderinfo[num-1]->numFlickies)
+					if (mapheaderinfo[num-1]->numFlickies) // just in case...
 					{
 						size_t newsize = sizeof(mobjtype_t) * mapheaderinfo[num-1]->numFlickies;
 						mapheaderinfo[num-1]->flickies = Z_Realloc(mapheaderinfo[num-1]->flickies, newsize, PU_STATIC, NULL);

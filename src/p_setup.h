@@ -66,6 +66,9 @@ void P_WriteThings(lumpnum_t lump);
 size_t P_PrecacheLevelFlats(void);
 void P_AllocMapHeader(INT16 i);
 
+void P_SetDemoFlickies(INT16 i);
+void P_DeleteFlickies(INT16 i);
+
 // Needed for NiGHTS
 void P_ReloadRings(void);
 void P_DeleteGrades(INT16 i);
