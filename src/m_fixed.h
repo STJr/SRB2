@@ -46,41 +46,6 @@ typedef INT32 fixed_t;
 #define FLOAT_TO_FIXED(f) (fixed_t)((f) * ((float)FRACUNIT))
 
 
-/**	\brief	The TMulScale16 function
-
-	\param	a	a parameter of type fixed_t
-	\param	b	a parameter of type fixed_t
-	\param	c	a parameter of type fixed_t
-	\param	d	a parameter of type fixed_t
-	\param	e	a parameter of type fixed_t
-	\param	f	a parameter of type fixed_t
-
-	\return	fixed_t
-
-
-*/
-FUNCMATH FUNCINLINE static ATTRINLINE fixed_t TMulScale16(fixed_t a, fixed_t b, fixed_t c, fixed_t d, fixed_t e, fixed_t f) \
-{ \
-	return (fixed_t)((((INT64)a * (INT64)b) + ((INT64)c * (INT64)d) \
-		+ ((INT64)e * (INT64)f)) >> 16); \
-}
-
-/**	\brief	The DMulScale16 function
-
-	\param	a	a parameter of type fixed_t
-	\param	b	a parameter of type fixed_t
-	\param	c	a parameter of type fixed_t
-	\param	d	a parameter of type fixed_t
-
-	\return	fixed_t
-
-
-*/
-FUNCMATH FUNCINLINE static ATTRINLINE fixed_t DMulScale16(fixed_t a, fixed_t b, fixed_t c, fixed_t d) \
-{ \
-	return (fixed_t)((((INT64)a * (INT64)b) + ((INT64)c * (INT64)d)) >> 16); \
-}
-
 #if defined (__WATCOMC__) && FRACBITS == 16
 	#pragma aux FixedMul =  \
 		"imul ebx",         \

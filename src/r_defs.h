@@ -224,15 +224,6 @@ typedef struct linechain_s
 
 
 
-// ZDoom C++ to Legacy C conversion Tails 04-29-2002 (for slopes)
-typedef struct secplane_t
-{
-	// the plane is defined as a*x + b*y + c*z + d = 0
-	// ic is 1/c, for faster Z calculations
-
-	fixed_t a, b, c, d, ic;
-} secplane_t;
-
 // Slopes
 #ifdef ESLOPE
 typedef enum {
