@@ -4641,7 +4641,7 @@ static void P_Boss4Thinker(mobj_t *mobj)
 	// Pinch phase!
 	case 4:
 	{
-		if (mobj->z < mobj->watertop+(512+128*(mobj->info->damage-mobj->health))<<FRACBITS)
+		if (mobj->z < (mobj->watertop + ((512+128*(mobj->info->damage-mobj->health))<<FRACBITS)))
 			mobj->momz = 8*FRACUNIT;
 		else
 			mobj->momz = 0;
