@@ -151,12 +151,6 @@ static consvar_t cv_showjoinaddress = {"showjoinaddress", "On", 0, CV_OnOff, NUL
 static CV_PossibleValue_t playbackspeed_cons_t[] = {{1, "MIN"}, {10, "MAX"}, {0, NULL}};
 consvar_t cv_playbackspeed = {"playbackspeed", "1", 0, playbackspeed_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
-void D_ResetTiccmds(void)
-{
-	memset(&localcmds, 0, sizeof(ticcmd_t));
-	memset(&localcmds2, 0, sizeof(ticcmd_t));
-}
-
 static inline void *G_DcpyTiccmd(void* dest, const ticcmd_t* src, const size_t n)
 {
 	const size_t d = n / sizeof(ticcmd_t);
@@ -406,6 +400,12 @@ static void ExtraDataTicker(void)
 				}
 			}
 		}
+
+	// If you are a client, you can safely forget the net commands for this tic
+	// If you are the server, you need to remember them until every client has been aknowledged,
+	// because if you need to resend a PT_SERVERTICS packet, you need to put the commands in it
+	if (!server)
+		D_FreeTextcmd(gametic);
 }
 
 static void D_Clearticcmd(tic_t tic)
@@ -418,6 +418,19 @@ static void D_Clearticcmd(tic_t tic)
 		netcmds[tic%BACKUPTICS][i].angleturn = 0;
 
 	DEBFILE(va("clear tic %5u (%2u)\n", tic, tic%BACKUPTICS));
+}
+
+void D_ResetTiccmds(void)
+{
+	INT32 i;
+
+	memset(&localcmds, 0, sizeof(ticcmd_t));
+	memset(&localcmds2, 0, sizeof(ticcmd_t));
+
+	// Reset the net command list
+	for (i = 0; i < TEXTCMD_HASH_SIZE; i++)
+		while (textcmds[i])
+			D_Clearticcmd(textcmds[i]->tic);
 }
 
 // -----------------------------------------------------------------

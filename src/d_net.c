@@ -1364,4 +1364,6 @@ void D_CloseConnection(void)
 		netgame = false;
 		addedtogame = false;
 	}
+
+	D_ResetTiccmds();
 }
