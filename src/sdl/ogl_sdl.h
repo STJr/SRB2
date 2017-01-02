@@ -24,7 +24,6 @@ boolean OglSdlSurface(INT32 w, INT32 h);
 
 void OglSdlFinishUpdate(boolean vidwait);
 
-extern SDL_Window *window;
 extern SDL_Renderer *renderer;
 extern SDL_GLContext sdlglcontext;
 extern Uint16      realwidth;
