@@ -614,6 +614,7 @@ static void P_LoadSectors(lumpnum_t lumpnum)
 		ss->special = SHORT(ms->special);
 		ss->tag = SHORT(ms->tag);
 		ss->nexttag = ss->firsttag = -1;
+		ss->spawn_nexttag = ss->spawn_firsttag = -1;
 
 		memset(&ss->soundorg, 0, sizeof(ss->soundorg));
 		ss->validcount = 0;
