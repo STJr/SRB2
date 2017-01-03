@@ -895,7 +895,6 @@ static inline void resynch_write_others(resynchend_pak *rst)
 
 	// endian safeness
 	rst->ingame = (UINT32)LONG(rst->ingame);
-	rst->ctfteam = (UINT32)LONG(rst->ctfteam);
 }
 
 static inline void resynch_read_others(resynchend_pak *p)
