@@ -2607,6 +2607,7 @@ static void P_NetUnArchiveThinkers(void)
 	thinker_t *next;
 	UINT8 tclass;
 	UINT8 restoreNum = false;
+	UINT32 i;
 
 	if (READUINT32(save_p) != ARCHIVEBLOCK_THINKERS)
 		I_Error("Bad $$$.sav at archive block Thinkers");
@@ -2626,6 +2627,12 @@ static void P_NetUnArchiveThinkers(void)
 	// we don't want the removed mobjs to come back
 	iquetail = iquehead = 0;
 	P_InitThinkers();
+
+	// clear sector thinker pointers so they don't point to non-existant thinkers for all of eternity
+	for (i = 0; i < numsectors; i++)
+	{
+		sectors[i].floordata = sectors[i].ceilingdata = sectors[i].lightingdata = NULL;
+	}
 
 	// read in saved thinkers
 	for (;;)
