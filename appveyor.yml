@@ -14,6 +14,8 @@ environment:
  CCACHE_URL: http://alam.srb2.org/ccache.exe
  CCACHE_COMPRESS: true
  CCACHE_DIR: C:\Users\appveyor\.ccache
+ MINGW_LZMA: gcc-core-4.8.1-4-mingw32-bin.tar.lzma
+ MINGW_URL: http://downloads.sourceforge.net/project/mingw/MinGW/Base/gcc/Version4/gcc-4.8.1-4/gcc-core-4.8.1-4-mingw32-bin.tar.lzma
 
 cache:
 - nasm-2.12.01.zip
@@ -33,6 +35,10 @@ install:
 - if not exist "%CCACHE_EXE%" appveyor DownloadFile "%CCACHE_URL%" -FileName "%CCACHE_EXE%"
 - ccache -M 99M
 - xcopy /Y /V /I ccache.exe %MINGW_SDK%\bin
+
+- if not exist "%MINGW_LZMA%" appveyor DownloadFile "MINGW_URL%" -FileName "%MINGW_LZMA%"
+- 7z x -y "%MINGW_LZMA%" -o%TMP% >null
+- robocopy /S /xx /ns /nc /nfl /ndl /np /njh /njs %TMP%\bin %MINGW_SDK%\bin || exit 0
 
 configuration:
 - SDL
