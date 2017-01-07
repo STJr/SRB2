@@ -40,11 +40,10 @@ extern consvar_t cons_backcolor;
 
 extern UINT8 *yellowmap, *purplemap, *lgreenmap, *bluemap, *graymap, *redmap, *orangemap;
 
-// Console bg colors:
-extern UINT8 *cwhitemap, *corangemap, *cbluemap, *cgreenmap, *cgraymap,
-	*credmap;
+// Console bg color (auto updated to match)
+extern UINT8 *consolebgmap;
 
-void CON_ReSetupBackColormap(UINT16 num);
+void CON_SetupBackColormap(void);
 void CON_ClearHUD(void); // clear heads up messages
 
 void CON_Ticker(void);
