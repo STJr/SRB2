@@ -5342,6 +5342,10 @@ void T_LaserFlash(laserthink_t *flash)
 			&& thing->flags & MF_BOSS)
 			continue; // Don't hurt bosses
 
+		// Don't endlessly kill egg guard shields (or anything else for that matter)
+		if (thing->health <= 0)
+			continue;
+
 		top = P_GetSpecialTopZ(thing, sourcesec, sector);
 		bottom = P_GetSpecialBottomZ(thing, sourcesec, sector);
 
