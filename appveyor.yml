@@ -45,9 +45,9 @@ install:
 - 7z x -y "%MINGW_DLL_TAR%.lzma" -o%TMP% >null
 - 7z x -y "%TMP%\%MINGW_DLL_TAR%" -o%TMP% >null
 
-- if not exist "%MINGW_EXE_TAR%.lzma" appveyor DownloadFile "%MINGW_EXE_URL%" -FileName "%MINGW_EXE_TAR%.lzma"
-- 7z x -y "%MINGW_EXE_TAR%.lzma" -o%TMP% >null
-- 7z x -y "%TMP%\%MINGW_EXE_TAR%" -o%TMP% >null
+- if not exist "%MINGW_BIN_TAR%.lzma" appveyor DownloadFile "%MINGW_BIN_URL%" -FileName "%MINGW_BIN_TAR%.lzma"
+- 7z x -y "%MINGW_BIN_TAR%.lzma" -o%TMP% >null
+- 7z x -y "%TMP%\%MINGW_BIN_TAR%" -o%TMP% >null
 - robocopy /S /xx /ns /nc /nfl /ndl /np /njh /njs %TMP%\bin C:\Mingw\bin || exit 0
 
 configuration:
