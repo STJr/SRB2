@@ -203,6 +203,7 @@ typedef struct r_lightlist_s
 	fixed_t heightstep;
 	fixed_t botheight;
 	fixed_t botheightstep;
+	fixed_t startheight; // for repeating midtextures
 	INT16 lightlevel;
 	extracolormap_t *extra_colormap;
 	lighttable_t *rcolormap;
