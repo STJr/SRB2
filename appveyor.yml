@@ -21,6 +21,7 @@ cache:
 - nasm-2.12.01.zip
 - upx391w.zip
 - ccache.exe
+- gcc-core-4.8.1-4-mingw32-bin.tar.lzma
 - C:\Users\appveyor\.ccache
 
 install:
@@ -38,7 +39,7 @@ install:
 
 - if not exist "%MINGW_TAR%.lzma" appveyor DownloadFile "%MINGW_URL%" -FileName "%MINGW_TAR%.lzma"
 - 7z x -y "%MINGW_TAR%.lzma" -o%TMP% >null
-- 7z x -y "%TMP%\%MINGW_TAR%" -o %TMP% >null
+- 7z x -y "%TMP%\%MINGW_TAR%" -o%TMP% >null
 - robocopy /S /xx /ns /nc /nfl /ndl /np /njh /njs %TMP%\bin %MINGW_SDK%\bin || exit 0
 
 configuration:
