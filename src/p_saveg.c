@@ -519,10 +519,9 @@ static void P_NetArchiveWorld(void)
 		//
 		// flats
 		//
-		// P_AddLevelFlat should not add but just return the number
-		if (ss->floorpic != P_AddLevelFlat(ms->floorpic, levelflats))
+		if (ss->floorpic != P_CheckLevelFlat(ms->floorpic))
 			diff |= SD_FLOORPIC;
-		if (ss->ceilingpic != P_AddLevelFlat(ms->ceilingpic, levelflats))
+		if (ss->ceilingpic != P_CheckLevelFlat(ms->ceilingpic))
 			diff |= SD_CEILPIC;
 
 		if (ss->lightlevel != SHORT(ms->lightlevel))
@@ -762,12 +761,12 @@ static void P_NetUnArchiveWorld(void)
 			sectors[i].ceilingheight = READFIXED(get);
 		if (diff & SD_FLOORPIC)
 		{
-			sectors[i].floorpic = P_AddLevelFlat((char *)get, levelflats);
+			sectors[i].floorpic = P_AddLevelFlatRuntime((char *)get);
 			get += 8;
 		}
 		if (diff & SD_CEILPIC)
 		{
-			sectors[i].ceilingpic = P_AddLevelFlat((char *)get, levelflats);
+			sectors[i].ceilingpic = P_AddLevelFlatRuntime((char *)get);
 			get += 8;
 		}
 		if (diff & SD_LIGHT)
@@ -3306,7 +3305,7 @@ void P_SaveNetGame(void)
 {
 	thinker_t *th;
 	mobj_t *mobj;
-	INT32 i = 0;
+	INT32 i = 1; // don't start from 0, it'd be confused with a blank pointer otherwise
 
 	CV_SaveNetVars(&save_p);
 	P_NetArchiveMisc();
