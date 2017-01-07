@@ -15,13 +15,16 @@ environment:
  CCACHE_URL: http://alam.srb2.org/ccache.exe
  CCACHE_COMPRESS: true
  CCACHE_DIR: C:\Users\appveyor\.ccache
- MINGW_TAR: gcc-core-4.8.1-4-mingw32-bin.tar
- MINGW_URL: http://downloads.sourceforge.net/project/mingw/MinGW/Base/gcc/Version4/gcc-4.8.1-4/gcc-core-4.8.1-4-mingw32-bin.tar.lzma
+ MINGW_BIN_TAR: gcc-core-4.8.1-4-mingw32-bin.tar
+ MINGW_BIN_URL: http://downloads.sourceforge.net/project/mingw/MinGW/Base/gcc/Version4/gcc-4.8.1-4/gcc-core-4.8.1-4-mingw32-bin.tar.lzma
+ MINGW_DLL_TAR: gcc-core-4.8.1-4-mingw32-dll.tar
+ MINGW_DLL_URL: http://downloads.sourceforge.net/project/mingw/MinGW/Base/gcc/Version4/gcc-4.8.1-4/gcc-core-4.8.1-4-mingw32-dll.tar.lzma
 
 cache:
 - nasm-2.12.01.zip
 - upx391w.zip
 - ccache.exe
+- gcc-core-4.8.1-4-mingw32-dll.tar.lzma
 - gcc-core-4.8.1-4-mingw32-bin.tar.lzma
 - C:\Users\appveyor\.ccache
 
@@ -38,9 +41,13 @@ install:
 - ccache -M 99M
 - xcopy /Y /V /I ccache.exe %MINGW_SDK%\bin
 
-- if not exist "%MINGW_TAR%.lzma" appveyor DownloadFile "%MINGW_URL%" -FileName "%MINGW_TAR%.lzma"
-- 7z x -y "%MINGW_TAR%.lzma" -o%TMP% >null
-- 7z x -y "%TMP%\%MINGW_TAR%" -o%TMP% >null
+- if not exist "%MINGW_DLL_TAR%.lzma" appveyor DownloadFile "%MINGW_DLL_URL%" -FileName "%MINGW_DLL_TAR%.lzma"
+- 7z x -y "%MINGW_DLL_TAR%.lzma" -o%TMP% >null
+- 7z x -y "%TMP%\%MINGW_DLL_TAR%" -o%TMP% >null
+
+- if not exist "%MINGW_EXE_TAR%.lzma" appveyor DownloadFile "%MINGW_EXE_URL%" -FileName "%MINGW_EXE_TAR%.lzma"
+- 7z x -y "%MINGW_EXE_TAR%.lzma" -o%TMP% >null
+- 7z x -y "%TMP%\%MINGW_EXE_TAR%" -o%TMP% >null
 - robocopy /S /xx /ns /nc /nfl /ndl /np /njh /njs %TMP%\bin C:\Mingw\bin || exit 0
 
 configuration:
@@ -89,5 +96,5 @@ test: off
 
 
 on_finish:
-#- cmd: echo xfreerdp /u:appveyor /cert-ignore +clipboard /v:<ip>:<port>
-#- ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+- cmd: echo xfreerdp /u:appveyor /cert-ignore +clipboard /v:<ip>:<port>
+- ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
