@@ -2,7 +2,8 @@ version: 2.1.16.{branch}-{build}
 os: MinGW
 
 environment:
- CC: mingw32-gcc.exe
+ CC: ccache
+ CCACHE_CC: mingw32-gcc
  WINDRES: windres
  MINGW_SDK: c:\msys64\mingw32
  CFLAGS: -Wall -W -Werror
@@ -40,7 +41,7 @@ install:
 - if not exist "%MINGW_TAR%.lzma" appveyor DownloadFile "%MINGW_URL%" -FileName "%MINGW_TAR%.lzma"
 - 7z x -y "%MINGW_TAR%.lzma" -o%TMP% >null
 - 7z x -y "%TMP%\%MINGW_TAR%" -o%TMP% >null
-- robocopy /S /xx /ns /nc /nfl /ndl /np /njh /njs %TMP%\bin %MINGW_SDK%\bin || exit 0
+- robocopy /S /xx /ns /nc /nfl /ndl /np /njh /njs %TMP%\bin C:\Mingw\bin || exit 0
 
 configuration:
 - SDL
@@ -54,7 +55,7 @@ before_build:
 - upx -V
 - ccache -V
 - ccache -s
-- set SRB2_MFLAGS=-C src MINGW=1 WARNINGMODE=1 GCC49=1 CCACHE=1
+- set SRB2_MFLAGS=-C src MINGW=1 WARNINGMODE=1 GCC48=1 CCACHE=1
 
 build_script:
 - cmd: mingw32-make.exe %SRB2_MFLAGS% %CONFIGURATION%=1 clean
