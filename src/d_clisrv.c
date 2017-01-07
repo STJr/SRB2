@@ -868,12 +868,13 @@ static inline void resynch_write_others(resynchend_pak *rst)
 {
 	UINT8 i;
 
-	rst->ingame = rst->ctfteam = 0;
+	rst->ingame = 0;
 
 	for (i = 0; i < MAXPLAYERS; ++i)
 	{
 		if (!playeringame[i])
 		{
+			rst->ctfteam[i] = 0;
 			rst->score[i] = 0;
 			rst->numboxes[i] = 0;
 			rst->totalring[i] = 0;
@@ -883,11 +884,8 @@ static inline void resynch_write_others(resynchend_pak *rst)
 		}
 
 		if (!players[i].spectator)
-		{
 			rst->ingame |= (1<<i);
-			if (players[i].ctfteam > 1)
-				rst->ctfteam |= (1<<i);
-		}
+		rst->ctfteam[i] = (INT32)LONG(players[i].ctfteam);
 		rst->score[i] = (UINT32)LONG(players[i].score);
 		rst->numboxes[i] = SHORT(players[i].numboxes);
 		rst->totalring[i] = SHORT(players[i].totalring);
@@ -897,28 +895,18 @@ static inline void resynch_write_others(resynchend_pak *rst)
 
 	// endian safeness
 	rst->ingame = (UINT32)LONG(rst->ingame);
-	rst->ctfteam = (UINT32)LONG(rst->ctfteam);
 }
 
 static inline void resynch_read_others(resynchend_pak *p)
 {
 	UINT8 i;
 	UINT32 loc_ingame = (UINT32)LONG(p->ingame);
-	UINT32 loc_ctfteam = (UINT32)LONG(p->ctfteam);
 
 	for (i = 0; i < MAXPLAYERS; ++i)
 	{
 		// We don't care if they're in the game or not, just write all the data.
-		if (loc_ingame & (1<<i))
-		{
-			players[i].spectator = false;
-			players[i].ctfteam = (loc_ctfteam & (1<<i)) ? 2 : 1;
-		}
-		else
-		{
-			players[i].spectator = true;
-			players[i].ctfteam = 0;
-		}
+		players[i].spectator = !(loc_ingame & i<<i);
+		players[i].ctfteam = (INT32)LONG(p->ctfteam[i]); // no, 0 does not mean spectator, at least not in Match
 		players[i].score = (UINT32)LONG(p->score[i]);
 		players[i].numboxes = SHORT(p->numboxes[i]);
 		players[i].totalring = SHORT(p->totalring[i]);

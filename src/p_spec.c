@@ -1519,6 +1519,8 @@ static inline void P_InitTagLists(void)
 		size_t j = (unsigned)sectors[i].tag % numsectors;
 		sectors[i].nexttag = sectors[j].firsttag;
 		sectors[j].firsttag = (INT32)i;
+		sectors[i].spawn_nexttag = sectors[i].nexttag;
+		sectors[j].spawn_firsttag = sectors[j].firsttag;
 	}
 
 	for (i = numlines - 1; i != (size_t)-1; i--)
