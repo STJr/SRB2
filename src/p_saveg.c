@@ -460,6 +460,7 @@ static void P_NetUnArchivePlayers(void)
 #define SD_TAG       0x10
 #define SD_FLOORANG  0x20
 #define SD_CEILANG   0x40
+#define SD_TAGLIST   0x80
 
 #define LD_FLAG     0x01
 #define LD_SPECIAL  0x02
@@ -534,6 +535,8 @@ static void P_NetArchiveWorld(void)
 
 		if (ss->tag != SHORT(ms->tag))
 			diff2 |= SD_TAG;
+		if (ss->nexttag != ss->spawn_nexttag || ss->firsttag != ss->spawn_firsttag)
+			diff2 |= SD_TAGLIST;
 
 		// Check if any of the sector's FOFs differ from how they spawned
 		if (ss->ffloors)
@@ -581,16 +584,17 @@ static void P_NetArchiveWorld(void)
 				WRITEFIXED(put, ss->ceiling_xoffs);
 			if (diff2 & SD_CYOFFS)
 				WRITEFIXED(put, ss->ceiling_yoffs);
-			if (diff2 & SD_TAG)
-			{
+			if (diff2 & SD_TAG) // save only the tag
 				WRITEINT16(put, ss->tag);
-				WRITEINT32(put, ss->firsttag);
-				WRITEINT32(put, ss->nexttag);
-			}
 			if (diff2 & SD_FLOORANG)
 				WRITEANGLE(put, ss->floorpic_angle);
 			if (diff2 & SD_CEILANG)
 				WRITEANGLE(put, ss->ceilingpic_angle);
+			if (diff2 & SD_TAGLIST) // save both firsttag and nexttag
+			{ // either of these could be changed even if tag isn't
+				WRITEINT32(put, ss->firsttag);
+				WRITEINT32(put, ss->nexttag);
+			}
 
 			// Special case: save the stats of all modified ffloors along with their ffloor "number"s
 			// we don't bother with ffloors that haven't changed, that would just add to savegame even more than is really needed
@@ -773,12 +777,11 @@ static void P_NetUnArchiveWorld(void)
 		if (diff2 & SD_CYOFFS)
 			sectors[i].ceiling_yoffs = READFIXED(get);
 		if (diff2 & SD_TAG)
+			sectors[i].tag = READINT16(get); // DON'T use P_ChangeSectorTag
+		if (diff2 & SD_TAGLIST)
 		{
-			INT16 tag;
-			tag = READINT16(get);
 			sectors[i].firsttag = READINT32(get);
 			sectors[i].nexttag = READINT32(get);
-			P_ChangeSectorTag(i, tag);
 		}
 		if (diff2 & SD_FLOORANG)
 			sectors[i].floorpic_angle  = READANGLE(get);
@@ -2606,6 +2609,7 @@ static void P_NetUnArchiveThinkers(void)
 	thinker_t *next;
 	UINT8 tclass;
 	UINT8 restoreNum = false;
+	UINT32 i;
 
 	if (READUINT32(save_p) != ARCHIVEBLOCK_THINKERS)
 		I_Error("Bad $$$.sav at archive block Thinkers");
@@ -2625,6 +2629,12 @@ static void P_NetUnArchiveThinkers(void)
 	// we don't want the removed mobjs to come back
 	iquetail = iquehead = 0;
 	P_InitThinkers();
+
+	// clear sector thinker pointers so they don't point to non-existant thinkers for all of eternity
+	for (i = 0; i < numsectors; i++)
+	{
+		sectors[i].floordata = sectors[i].ceilingdata = sectors[i].lightingdata = NULL;
+	}
 
 	// read in saved thinkers
 	for (;;)
