@@ -4501,8 +4501,8 @@ static void HWR_SortVisSprites(void)
 	gr_vissprite_t *ds, *dsprev, *dsnext, *dsfirst;
 	gr_vissprite_t *best = NULL;
 	gr_vissprite_t unsorted;
-	float bestdist;
-	INT32 bestdispoffset;
+	float bestdist = 0.0f;
+	INT32 bestdispoffset = 0;
 
 	if (!gr_visspritecount)
 		return;
