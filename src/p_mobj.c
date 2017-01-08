@@ -3482,17 +3482,14 @@ static boolean P_SceneryZMovement(mobj_t *mo)
 			if ((!(mo->eflags & MFE_VERTICALFLIP) && mo->z <= mo->floorz)
 			|| (mo->eflags & MFE_VERTICALFLIP && mo->z+mo->height >= mo->ceilingz))
 			{
-				// DO NOT use random numbers here.
-				// SonicCD mode is console togglable and
-				// affects demos.
-				UINT8 rltime = (leveltime & 4);
-
-				if (!rltime)
-					P_SpawnMobj(mo->x, mo->y, mo->floorz, MT_GFZFLOWER3);
-				else if (rltime == 2)
-					P_SpawnMobj(mo->x, mo->y, mo->floorz, MT_GFZFLOWER2);
-				else
-					P_SpawnMobj(mo->x, mo->y, mo->floorz, MT_GFZFLOWER1);
+				mobjtype_t flowertype = ((P_RandomChance(FRACUNIT/2)) ? MT_GFZFLOWER1 : MT_GFZFLOWER3);
+				mobj_t *flower = P_SpawnMobjFromMobj(mo, 0, 0, 0, flowertype);
+				if (flower)
+				{
+					P_SetScale(flower, mo->scale/16);
+					flower->destscale = mo->scale;
+					flower->scalespeed = mo->scale/8;
+				}
 
 				P_RemoveMobj(mo);
 				return false;
@@ -7049,7 +7046,8 @@ void P_MobjThinker(mobj_t *mobj)
 				}
 				break;
 			case MT_SEED:
-				mobj->momz = mobj->info->speed;
+				if (P_MobjFlip(mobj)*mobj->momz < mobj->info->speed)
+					mobj->momz = P_MobjFlip(mobj)*mobj->info->speed;
 				break;
 			case MT_ROCKCRUMBLE1:
 			case MT_ROCKCRUMBLE2:
@@ -7198,14 +7196,14 @@ void P_MobjThinker(mobj_t *mobj)
 			if (mobj->fuse > 0 && mobj->fuse < 2*TICRATE-(TICRATE/7)
 				&& (mobj->fuse & 3))
 			{
-				INT32 i,j;
+				INT32 i;
 				fixed_t x,y,z;
 				fixed_t ns;
 				mobj_t *mo2;
+				mobj_t *flicky;
 
-				i = P_RandomByte();
 				z = mobj->subsector->sector->floorheight + ((P_RandomByte()&63)*FRACUNIT);
-				for (j = 0; j < 2; j++)
+				for (i = 0; i < 2; i++)
 				{
 					const angle_t fa = (P_RandomByte()*FINEANGLES/16) & FINEMASK;
 					ns = 64 * FRACUNIT;
@@ -7213,25 +7211,22 @@ void P_MobjThinker(mobj_t *mobj)
 					y = mobj->y + FixedMul(FINECOSINE(fa),ns);
 
 					mo2 = P_SpawnMobj(x, y, z, MT_EXPLODE);
+					P_SetMobjStateNF(mo2, S_XPLD_EGGTRAP); // so the flickies don't lose their target if they spawn
 					ns = 4 * FRACUNIT;
 					mo2->momx = FixedMul(FINESINE(fa),ns);
 					mo2->momy = FixedMul(FINECOSINE(fa),ns);
+					mo2->angle = fa << ANGLETOFINESHIFT;
 
-					i = P_RandomByte();
-
-					if (i % 5 == 0)
-						P_SpawnMobj(x, y, z, MT_CHICKEN);
-					else if (i % 4 == 0)
-						P_SpawnMobj(x, y, z, MT_COW);
-					else if (i % 3 == 0)
-					{
-						P_SpawnMobj(x, y, z, MT_BIRD);
+					if (P_RandomChance(FRACUNIT/4)) // I filled a spreadsheet trying to get the equivalent chance to the original P_RandomByte hack!
 						S_StartSound(mo2, mobj->info->deathsound);
-					}
-					else if ((i & 1) == 0)
-						P_SpawnMobj(x, y, z, MT_BUNNY);
-					else
-						P_SpawnMobj(x, y, z, MT_MOUSE);
+
+					flicky = P_InternalFlickySpawn(mo2, 0, 8*FRACUNIT, false);
+					if (!flicky)
+						break;
+
+					P_SetTarget(&flicky->target, mo2);
+					flicky->momx = mo2->momx;
+					flicky->momy = mo2->momy;
 				}
 
 				mobj->fuse--;
@@ -7292,6 +7287,8 @@ void P_MobjThinker(mobj_t *mobj)
 			}
 			break;
 		case MT_AQUABUZZ:
+			P_MobjCheckWater(mobj); // solely for MFE_UNDERWATER for A_FlickySpawn
+			// no break here on purpose
 		case MT_BIGAIRMINE:
 			{
 				if (mobj->tracer && mobj->tracer->player && mobj->tracer->health > 0
@@ -8402,13 +8399,8 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			// Special condition for the 2nd boss.
 			mobj->watertop = mobj->info->speed;
 			break;
-		case MT_BIRD:
-		case MT_BUNNY:
-		case MT_MOUSE:
-		case MT_CHICKEN:
-		case MT_COW:
-		case MT_REDBIRD:
-			mobj->fuse = P_RandomRange(300, 350);
+		case MT_FLICKY_08:
+			mobj->color = (P_RandomChance(FRACUNIT/2) ? SKINCOLOR_RED : SKINCOLOR_AQUA);
 			break;
 		case MT_REDRING: // Make MT_REDRING red by default
 			mobj->color = skincolor_redring;

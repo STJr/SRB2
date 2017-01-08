@@ -101,7 +101,6 @@ extern consvar_t cv_recycler;
 extern consvar_t cv_itemfinder;
 
 extern consvar_t cv_inttime, cv_advancemap, cv_playersforexit;
-extern consvar_t cv_soniccd;
 extern consvar_t cv_match_scoring;
 extern consvar_t cv_overtime;
 extern consvar_t cv_startinglives;

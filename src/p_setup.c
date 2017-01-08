@@ -160,6 +160,33 @@ FUNCNORETURN static ATTRNORETURN void CorruptMapError(const char *msg)
 	I_Error("Invalid or corrupt map.\nLook in log file or text console for technical details.");
 }
 
+/** Sets a header's flickies to be equivalent to the original Freed Animals
+  *
+  * \param i The header to set flickies for
+  */
+void P_SetDemoFlickies(INT16 i)
+{
+	mapheaderinfo[i]->numFlickies = 5;
+	mapheaderinfo[i]->flickies = Z_Realloc(mapheaderinfo[i]->flickies, 5*sizeof(mobjtype_t), PU_STATIC, NULL);
+	mapheaderinfo[i]->flickies[0] = MT_FLICKY_02/*MT_BUNNY*/;
+	mapheaderinfo[i]->flickies[1] = MT_FLICKY_01/*MT_BIRD*/;
+	mapheaderinfo[i]->flickies[2] = MT_FLICKY_12/*MT_MOUSE*/;
+	mapheaderinfo[i]->flickies[3] = MT_FLICKY_11/*MT_COW*/;
+	mapheaderinfo[i]->flickies[4] = MT_FLICKY_03/*MT_CHICKEN*/;
+}
+
+/** Clears a header's flickies
+  *
+  * \param i The header to clear flickies for
+  */
+void P_DeleteFlickies(INT16 i)
+{
+	if (mapheaderinfo[i]->flickies)
+		Z_Free(mapheaderinfo[i]->flickies);
+	mapheaderinfo[i]->flickies = NULL;
+	mapheaderinfo[i]->numFlickies = 0;
+}
+
 #define NUMLAPS_DEFAULT 4
 
 /** Clears the data from a single map header.
@@ -223,6 +250,12 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->levelflags = 0;
 	DEH_WriteUndoline("MENUFLAGS", va("%d", mapheaderinfo[num]->menuflags), UNDO_NONE);
 	mapheaderinfo[num]->menuflags = 0;
+	// Flickies. Nope, no delfile support here either
+#if 1 // equivalent to "FlickyList = DEMO"
+	P_SetDemoFlickies(num);
+#else // equivalent to "FlickyList = NONE"
+	P_DeleteFlickies(num);
+#endif
 	// TODO grades support for delfile (pfft yeah right)
 	P_DeleteGrades(num);
 	// an even further impossibility, delfile custom opts support
@@ -241,6 +274,7 @@ void P_AllocMapHeader(INT16 i)
 	if (!mapheaderinfo[i])
 	{
 		mapheaderinfo[i] = Z_Malloc(sizeof(mapheader_t), PU_STATIC, NULL);
+		mapheaderinfo[i]->flickies = NULL;
 		mapheaderinfo[i]->grades = NULL;
 	}
 	P_ClearSingleMapHeaderInfo(i + 1);

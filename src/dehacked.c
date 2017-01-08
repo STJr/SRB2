@@ -371,7 +371,9 @@ static void clear_levels(void)
 		// (no need to set num to 0, we're freeing the entire header shortly)
 		Z_Free(mapheaderinfo[i]->customopts);
 
+		P_DeleteFlickies(i);
 		P_DeleteGrades(i);
+
 		Z_Free(mapheaderinfo[i]);
 		mapheaderinfo[i] = NULL;
 	}
@@ -990,6 +992,34 @@ static const struct {
 	{NULL, 0}
 };
 
+static const struct {
+	const char *name;
+	const mobjtype_t type;
+} FLICKYTYPES[] = {
+	{"BLUEBIRD", MT_FLICKY_01},
+	{"RABBIT",   MT_FLICKY_02},
+	{"CHICKEN",  MT_FLICKY_03},
+	{"SEAL",     MT_FLICKY_04},
+	{"PIG",      MT_FLICKY_05},
+	{"CHIPMUNK", MT_FLICKY_06},
+	{"PENGUIN",  MT_FLICKY_07},
+	{"FISH",     MT_FLICKY_08},
+	{"RAM",      MT_FLICKY_09},
+	{"PUFFIN",   MT_FLICKY_10},
+	{"COW",      MT_FLICKY_11},
+	{"RAT",      MT_FLICKY_12},
+	{"BEAR",     MT_FLICKY_13},
+	{"DOVE",     MT_FLICKY_14},
+	{"CAT",      MT_FLICKY_15},
+	{"CANARY",   MT_FLICKY_16},
+	{"a", 0}, // End of normal flickies - a lower case character so will never fastcmp valid with uppercase tmp
+	//{"FLICKER",  MT_FLICKER},
+	{"SEED",          MT_SEED},
+	{NULL, 0}
+};
+
+#define MAXFLICKIES 64
+
 static void readlevelheader(MYFILE *f, INT32 num)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
@@ -1088,8 +1118,82 @@ static void readlevelheader(MYFILE *f, INT32 num)
 			// Now go to uppercase
 			strupr(word2);
 
+			// List of flickies that are be freed in this map
+			if (fastcmp(word, "FLICKYLIST") || fastcmp(word, "ANIMALLIST"))
+			{
+				if (fastcmp(word2, "NONE"))
+					P_DeleteFlickies(num-1);
+				else if (fastcmp(word2, "DEMO"))
+					P_SetDemoFlickies(num-1);
+				else if (fastcmp(word2, "ALL"))
+				{
+					mobjtype_t tmpflickies[MAXFLICKIES];
+
+					for (mapheaderinfo[num-1]->numFlickies = 0;
+					((mapheaderinfo[num-1]->numFlickies < MAXFLICKIES) && FLICKYTYPES[mapheaderinfo[num-1]->numFlickies].type);
+					mapheaderinfo[num-1]->numFlickies++)
+						tmpflickies[mapheaderinfo[num-1]->numFlickies] = FLICKYTYPES[mapheaderinfo[num-1]->numFlickies].type;
+
+					if (mapheaderinfo[num-1]->numFlickies) // just in case...
+					{
+						size_t newsize = sizeof(mobjtype_t) * mapheaderinfo[num-1]->numFlickies;
+						mapheaderinfo[num-1]->flickies = Z_Realloc(mapheaderinfo[num-1]->flickies, newsize, PU_STATIC, NULL);
+						M_Memcpy(mapheaderinfo[num-1]->flickies, tmpflickies, newsize);
+					}
+				}
+				else
+				{
+					mobjtype_t tmpflickies[MAXFLICKIES];
+					mapheaderinfo[num-1]->numFlickies = 0;
+					tmp = strtok(word2,",");
+					// get up to the first MAXFLICKIES flickies
+					do {
+						if (mapheaderinfo[num-1]->numFlickies == MAXFLICKIES) // never going to get above that number
+						{
+							deh_warning("Level header %d: too many flickies\n", num);
+							break;
+						}
+
+						if (fastncmp(tmp, "MT_", 3)) // support for specified mobjtypes...
+						{
+							i = get_mobjtype(tmp);
+							if (!i)
+							{
+								//deh_warning("Level header %d: unknown flicky mobj type %s\n", num, tmp); -- no need for this line as get_mobjtype complains too
+								continue;
+							}
+							tmpflickies[mapheaderinfo[num-1]->numFlickies] = i;
+						}
+						else // ...or a quick, limited selection of default flickies!
+						{
+							for (i = 0; FLICKYTYPES[i].name; i++)
+								if (fastcmp(tmp, FLICKYTYPES[i].name))
+									break;
+
+							if (!FLICKYTYPES[i].name)
+							{
+								deh_warning("Level header %d: unknown flicky selection %s\n", num, tmp);
+								continue;
+							}
+							tmpflickies[mapheaderinfo[num-1]->numFlickies] = FLICKYTYPES[i].type;
+						}
+						mapheaderinfo[num-1]->numFlickies++;
+					} while ((tmp = strtok(NULL,",")) != NULL);
+
+					if (mapheaderinfo[num-1]->numFlickies)
+					{
+						size_t newsize = sizeof(mobjtype_t) * mapheaderinfo[num-1]->numFlickies;
+						mapheaderinfo[num-1]->flickies = Z_Realloc(mapheaderinfo[num-1]->flickies, newsize, PU_STATIC, NULL);
+						// now we add them to the list!
+						M_Memcpy(mapheaderinfo[num-1]->flickies, tmpflickies, newsize);
+					}
+					else
+						deh_warning("Level header %d: no valid flicky types found\n", num);
+				}
+			}
+
 			// NiGHTS grades
-			if (fastncmp(word, "GRADES", 6))
+			else if (fastncmp(word, "GRADES", 6))
 			{
 				UINT8 mare = (UINT8)atoi(word + 6);
 
@@ -1321,6 +1425,8 @@ static void readlevelheader(MYFILE *f, INT32 num)
 
 	Z_Free(s);
 }
+
+#undef MAXFLICKIES
 
 static void readcutscenescene(MYFILE *f, INT32 num, INT32 scenenum)
 {
@@ -1845,6 +1951,16 @@ static actionpointer_t actionpointers[] =
 	{{A_BrakLobShot},          "A_BRAKLOBSHOT"},
 	{{A_NapalmScatter},        "A_NAPALMSCATTER"},
 	{{A_SpawnFreshCopy},       "A_SPAWNFRESHCOPY"},
+	{{A_FlickySpawn},          "A_FLICKYSPAWN"},
+	{{A_FlickyAim},            "A_FLICKYAIM"},
+	{{A_FlickyFly},            "A_FLICKYFLY"},
+	{{A_FlickySoar},           "A_FLICKYSOAR"},
+	{{A_FlickyCoast},          "A_FLICKYCOAST"},
+	{{A_FlickyHop},            "A_FLICKYHOP"},
+	{{A_FlickyFlounder},       "A_FLICKYFLOUNDER"},
+	{{A_FlickyCheck},          "A_FLICKYCHECK"},
+	{{A_FlickyHeightCheck},    "A_FLICKYHEIGHTCHECK"},
+	{{A_FlickyFlutter},        "A_FLICKYFLUTTER"},
 
 	{{NULL},                   "NONE"},
 
@@ -3381,11 +3497,11 @@ static void DEH_LoadDehackedFile(MYFILE *f, UINT16 wad)
 				{
 					if (i == 0 && word2[0] != '0') // If word2 isn't a number
 						i = get_mobjtype(word2); // find a thing by name
-					if (i < NUMMOBJTYPES && i >= 0)
+					if (i < NUMMOBJTYPES && i > 0)
 						readthing(f, i);
 					else
 					{
-						deh_warning("Thing %d out of range (0 - %d)", i, NUMMOBJTYPES-1);
+						deh_warning("Thing %d out of range (1 - %d)", i, NUMMOBJTYPES-1);
 						ignorelines(f);
 					}
 					DEH_WriteUndoline(word, word2, UNDO_HEADER);
@@ -5520,43 +5636,133 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SSPK4",
 	"S_SSPK5",
 
-	// Freed Birdie
-	"S_BIRD1",
-	"S_BIRD2",
-	"S_BIRD3",
+	// Flicky-sized bubble
+	"S_FLICKY_BUBBLE",
 
-	// Freed Bunny
-	"S_BUNNY1",
-	"S_BUNNY2",
-	"S_BUNNY3",
-	"S_BUNNY4",
-	"S_BUNNY5",
-	"S_BUNNY6",
-	"S_BUNNY7",
-	"S_BUNNY8",
-	"S_BUNNY9",
-	"S_BUNNY10",
+	// Bluebird
+	"S_FLICKY_01_OUT",
+	"S_FLICKY_01_FLAP1",
+	"S_FLICKY_01_FLAP2",
+	"S_FLICKY_01_FLAP3",
 
-	// Freed Mouse
-	"S_MOUSE1",
-	"S_MOUSE2",
+	// Rabbit
+	"S_FLICKY_02_OUT",
+	"S_FLICKY_02_AIM",
+	"S_FLICKY_02_HOP",
+	"S_FLICKY_02_UP",
+	"S_FLICKY_02_DOWN",
 
-	// Freed Chicken
-	"S_CHICKEN1",
-	"S_CHICKENHOP",
-	"S_CHICKENFLY1",
-	"S_CHICKENFLY2",
+	// Chicken
+	"S_FLICKY_03_OUT",
+	"S_FLICKY_03_AIM",
+	"S_FLICKY_03_HOP",
+	"S_FLICKY_03_UP",
+	"S_FLICKY_03_FLAP1",
+	"S_FLICKY_03_FLAP2",
 
-	// Freed Cow
-	"S_COW1",
-	"S_COW2",
-	"S_COW3",
-	"S_COW4",
+	// Seal
+	"S_FLICKY_04_OUT",
+	"S_FLICKY_04_AIM",
+	"S_FLICKY_04_HOP",
+	"S_FLICKY_04_UP",
+	"S_FLICKY_04_DOWN",
+	"S_FLICKY_04_SWIM1",
+	"S_FLICKY_04_SWIM2",
+	"S_FLICKY_04_SWIM3",
+	"S_FLICKY_04_SWIM4",
 
-	// Red Birdie in Bubble
-	"S_RBIRD1",
-	"S_RBIRD2",
-	"S_RBIRD3",
+	// Pig
+	"S_FLICKY_05_OUT",
+	"S_FLICKY_05_AIM",
+	"S_FLICKY_05_HOP",
+	"S_FLICKY_05_UP",
+	"S_FLICKY_05_DOWN",
+
+	// Chipmunk
+	"S_FLICKY_06_OUT",
+	"S_FLICKY_06_AIM",
+	"S_FLICKY_06_HOP",
+	"S_FLICKY_06_UP",
+	"S_FLICKY_06_DOWN",
+
+	// Penguin
+	"S_FLICKY_07_OUT",
+	"S_FLICKY_07_AIML",
+	"S_FLICKY_07_HOPL",
+	"S_FLICKY_07_UPL",
+	"S_FLICKY_07_DOWNL",
+	"S_FLICKY_07_AIMR",
+	"S_FLICKY_07_HOPR",
+	"S_FLICKY_07_UPR",
+	"S_FLICKY_07_DOWNR",
+	"S_FLICKY_07_SWIM1",
+	"S_FLICKY_07_SWIM2",
+	"S_FLICKY_07_SWIM3",
+
+	// Fish
+	"S_FLICKY_08_OUT",
+	"S_FLICKY_08_AIM",
+	"S_FLICKY_08_HOP",
+	"S_FLICKY_08_FLAP1",
+	"S_FLICKY_08_FLAP2",
+	"S_FLICKY_08_FLAP3",
+	"S_FLICKY_08_FLAP4",
+	"S_FLICKY_08_SWIM1",
+	"S_FLICKY_08_SWIM2",
+	"S_FLICKY_08_SWIM3",
+	"S_FLICKY_08_SWIM4",
+
+	// Ram
+	"S_FLICKY_09_OUT",
+	"S_FLICKY_09_AIM",
+	"S_FLICKY_09_HOP",
+	"S_FLICKY_09_UP",
+	"S_FLICKY_09_DOWN",
+
+	// Puffin
+	"S_FLICKY_10_OUT",
+	"S_FLICKY_10_FLAP1",
+	"S_FLICKY_10_FLAP2",
+
+	// Cow
+	"S_FLICKY_11_OUT",
+	"S_FLICKY_11_AIM",
+	"S_FLICKY_11_RUN1",
+	"S_FLICKY_11_RUN2",
+	"S_FLICKY_11_RUN3",
+
+	// Rat
+	"S_FLICKY_12_OUT",
+	"S_FLICKY_12_AIM",
+	"S_FLICKY_12_RUN1",
+	"S_FLICKY_12_RUN2",
+	"S_FLICKY_12_RUN3",
+
+	// Bear
+	"S_FLICKY_13_OUT",
+	"S_FLICKY_13_AIM",
+	"S_FLICKY_13_HOP",
+	"S_FLICKY_13_UP",
+	"S_FLICKY_13_DOWN",
+
+	// Dove
+	"S_FLICKY_14_OUT",
+	"S_FLICKY_14_FLAP1",
+	"S_FLICKY_14_FLAP2",
+	"S_FLICKY_14_FLAP3",
+
+	// Cat
+	"S_FLICKY_15_OUT",
+	"S_FLICKY_15_AIM",
+	"S_FLICKY_15_HOP",
+	"S_FLICKY_15_UP",
+	"S_FLICKY_15_DOWN",
+
+	// Canary
+	"S_FLICKY_16_OUT",
+	"S_FLICKY_16_FLAP1",
+	"S_FLICKY_16_FLAP2",
+	"S_FLICKY_16_FLAP3",
 
 	"S_YELLOWSPRING",
 	"S_YELLOWSPRING2",
@@ -6056,6 +6262,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_NIGHTOPIANHELPER6",
 	"S_NIGHTOPIANHELPER7",
 	"S_NIGHTOPIANHELPER8",
+	"S_NIGHTOPIANHELPER9",
 
 	"S_CRUMBLE1",
 	"S_CRUMBLE2",
@@ -6079,10 +6286,10 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SPRK16",
 
 	// Robot Explosion
+	"S_XPLD_FLICKY",
 	"S_XPLD1",
 	"S_XPLD2",
-	"S_XPLD3",
-	"S_XPLD4",
+	"S_XPLD_EGGTRAP",
 
 	// Underwater Explosion
 	"S_WPLD1",
@@ -6490,13 +6697,23 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_IVSP", // Invincibility sparkles
 	"MT_SUPERSPARK", // Super Sonic Spark
 
-	// Freed Animals
-	"MT_BIRD", // Birdie freed!
-	"MT_BUNNY", // Bunny freed!
-	"MT_MOUSE", // Mouse
-	"MT_CHICKEN", // Chicken
-	"MT_COW", // Cow
-	"MT_REDBIRD", // Red Birdie in Bubble
+	// Flickies
+	"MT_FLICKY_01", // Bluebird
+	"MT_FLICKY_02", // Rabbit
+	"MT_FLICKY_03", // Chicken
+	"MT_FLICKY_04", // Seal
+	"MT_FLICKY_05", // Pig
+	"MT_FLICKY_06", // Chipmunk
+	"MT_FLICKY_07", // Penguin
+	"MT_FLICKY_08", // Fish
+	"MT_FLICKY_09", // Ram
+	"MT_FLICKY_10", // Puffin
+	"MT_FLICKY_11", // Cow
+	"MT_FLICKY_12", // Rat
+	"MT_FLICKY_13", // Bear
+	"MT_FLICKY_14", // Dove
+	"MT_FLICKY_15", // Cat
+	"MT_FLICKY_16", // Canary
 
 	// Environmental Effects
 	"MT_RAIN", // Rain
@@ -7506,7 +7723,7 @@ static mobjtype_t get_mobjtype(const char *word)
 		if (fastcmp(word, MOBJTYPE_LIST[i]+3))
 			return i;
 	deh_warning("Couldn't find mobjtype named 'MT_%s'",word);
-	return MT_BLUECRAWLA;
+	return MT_NULL;
 }
 
 static statenum_t get_state(const char *word)
