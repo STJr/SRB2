@@ -7828,7 +7828,7 @@ void A_SetObjectFlags(mobj_t *actor)
 	else if (locvar2 == 1)
 		locvar1 = actor->flags & ~locvar1;
 
-	if ((locvar1 & (MF_NOBLOCKMAP|MF_NOSECTOR)) != (actor->flags & (MF_NOBLOCKMAP|MF_NOSECTOR))) // Blockmap/sector status has changed, so reset the links
+	if ((UINT32)(locvar1 & (MF_NOBLOCKMAP|MF_NOSECTOR)) != (actor->flags & (MF_NOBLOCKMAP|MF_NOSECTOR))) // Blockmap/sector status has changed, so reset the links
 		unlinkthings = true;
 
 	if (unlinkthings) {

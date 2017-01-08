@@ -133,7 +133,7 @@ typedef struct
 	fixed_t flagz[2];
 
 	UINT32 ingame;  // Spectator bit for each player
-	UINT32 ctfteam; // If not spectator, then which team?
+	INT32 ctfteam[MAXPLAYERS]; // Which team? (can't be 1 bit, since in regular Match there are no teams)
 
 	// Resynch game scores and the like all at once
 	UINT32 score[MAXPLAYERS]; // Everyone's score
