@@ -5699,11 +5699,13 @@ static void P_DoNiGHTSCapsule(player_t *player)
 				}
 				else
 				{
-					fixed_t z;
-
-					z = player->capsule->z + player->capsule->height/2;
 					for (i = 0; i < 16; i++)
-						P_SpawnMobj(player->capsule->x, player->capsule->y, z, MT_BIRD);
+					{
+						mobj_t *flicky = P_InternalFlickySpawn(player->capsule, 0, ((i%4) + 1)*2*FRACUNIT, true);
+						flicky->z += player->capsule->height/2;
+						flicky->angle = (i*(ANGLE_MAX/16));
+						P_InstaThrust(flicky, flicky->angle, 8*FRACUNIT);
+					}
 				}
 				for (i = 0; i < MAXPLAYERS; i++)
 					if (playeringame[i] && players[i].mare == player->mare)
