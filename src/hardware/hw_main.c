@@ -1558,6 +1558,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 
 	if (gr_backsector)
 	{
+		INT32 gr_toptexture, gr_bottomtexture;
 		// two sided line
 		if (gr_backsector->heightsec != -1)
 		{
@@ -1608,19 +1609,22 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 #endif
 		}
 
+		gr_toptexture = R_GetTextureNum(gr_sidedef->toptexture);
+		gr_bottomtexture = R_GetTextureNum(gr_sidedef->bottomtexture);
+
 		// check TOP TEXTURE
 		if ((
 #ifdef ESLOPE
 			worldhighslope < worldtopslope ||
 #endif
             worldhigh < worldtop
-            ) && texturetranslation[gr_sidedef->toptexture])
+            ) && gr_toptexture)
 		{
 			if (drawtextured)
 			{
 				fixed_t texturevpegtop; // top
 
-				grTex = HWR_GetTexture(texturetranslation[gr_sidedef->toptexture]);
+				grTex = HWR_GetTexture(gr_toptexture);
 
 				// PEGGING
 				if (gr_linedef->flags & ML_DONTPEGTOP)
@@ -1638,7 +1642,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				texturevpegtop += gr_sidedef->rowoffset;
 
 				// This is so that it doesn't overflow and screw up the wall, it doesn't need to go higher than the texture's height anyway
-				texturevpegtop %= SHORT(textures[texturetranslation[gr_sidedef->toptexture]]->height)<<FRACBITS;
+				texturevpegtop %= SHORT(textures[gr_toptexture]->height)<<FRACBITS;
 
 				wallVerts[3].t = wallVerts[2].t = texturevpegtop * grTex->scaleY;
 				wallVerts[0].t = wallVerts[1].t = (texturevpegtop + gr_frontsector->ceilingheight - gr_backsector->ceilingheight) * grTex->scaleY;
@@ -1683,9 +1687,9 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 #endif
 
 			if (gr_frontsector->numlights)
-				HWR_SplitWall(gr_frontsector, wallVerts, texturetranslation[gr_sidedef->toptexture], &Surf, FF_CUTSOLIDS);
+				HWR_SplitWall(gr_frontsector, wallVerts, gr_toptexture, &Surf, FF_CUTSOLIDS);
 			else if (grTex->mipmap.flags & TF_TRANSPARENT)
-				HWR_AddTransparentWall(wallVerts, &Surf, texturetranslation[gr_sidedef->toptexture], PF_Environment, false, lightnum, colormap);
+				HWR_AddTransparentWall(wallVerts, &Surf, gr_toptexture, PF_Environment, false, lightnum, colormap);
 			else
 				HWR_ProjectWall(wallVerts, &Surf, PF_Masked, lightnum, colormap);
 		}
@@ -1695,13 +1699,13 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 #ifdef ESLOPE
 			worldlowslope > worldbottomslope ||
 #endif
-            worldlow > worldbottom) && texturetranslation[gr_sidedef->bottomtexture]) //only if VISIBLE!!!
+            worldlow > worldbottom) && gr_bottomtexture) //only if VISIBLE!!!
 		{
 			if (drawtextured)
 			{
 				fixed_t texturevpegbottom = 0; // bottom
 
-				grTex = HWR_GetTexture(texturetranslation[gr_sidedef->bottomtexture]);
+				grTex = HWR_GetTexture(gr_bottomtexture);
 
 				// PEGGING
 #ifdef ESLOPE
@@ -1721,7 +1725,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				texturevpegbottom += gr_sidedef->rowoffset;
 
 				// This is so that it doesn't overflow and screw up the wall, it doesn't need to go higher than the texture's height anyway
-				texturevpegbottom %= SHORT(textures[texturetranslation[gr_sidedef->bottomtexture]]->height)<<FRACBITS;
+				texturevpegbottom %= SHORT(textures[gr_bottomtexture]->height)<<FRACBITS;
 
 				wallVerts[3].t = wallVerts[2].t = texturevpegbottom * grTex->scaleY;
 				wallVerts[0].t = wallVerts[1].t = (texturevpegbottom + gr_backsector->floorheight - gr_frontsector->floorheight) * grTex->scaleY;
@@ -1766,13 +1770,13 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 #endif
 
 			if (gr_frontsector->numlights)
-				HWR_SplitWall(gr_frontsector, wallVerts, texturetranslation[gr_sidedef->bottomtexture], &Surf, FF_CUTSOLIDS);
+				HWR_SplitWall(gr_frontsector, wallVerts, gr_bottomtexture, &Surf, FF_CUTSOLIDS);
 			else if (grTex->mipmap.flags & TF_TRANSPARENT)
-				HWR_AddTransparentWall(wallVerts, &Surf, texturetranslation[gr_sidedef->bottomtexture], PF_Environment, false, lightnum, colormap);
+				HWR_AddTransparentWall(wallVerts, &Surf, gr_bottomtexture, PF_Environment, false, lightnum, colormap);
 			else
 				HWR_ProjectWall(wallVerts, &Surf, PF_Masked, lightnum, colormap);
 		}
-		gr_midtexture = texturetranslation[gr_sidedef->midtexture];
+		gr_midtexture = R_GetTextureNum(gr_sidedef->midtexture);
 		if (gr_midtexture)
 		{
 			FBITFIELD blendmode;
@@ -2134,7 +2138,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 	else
 	{
 		// Single sided line... Deal only with the middletexture (if one exists)
-		gr_midtexture = texturetranslation[gr_sidedef->midtexture];
+		gr_midtexture = R_GetTextureNum(gr_sidedef->midtexture);
 		if (gr_midtexture)
 		{
 			if (drawtextured)
@@ -2232,13 +2236,13 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				if (*rover->topheight < lowcut || *rover->bottomheight > highcut)
 					continue;
 
-				texnum = texturetranslation[sides[rover->master->sidenum[0]].midtexture];
+				texnum = R_GetTextureNum(sides[rover->master->sidenum[0]].midtexture);
 
 				if (rover->master->flags & ML_TFERLINE)
 				{
 					size_t linenum = gr_curline->linedef-gr_backsector->lines[0];
 					newline = rover->master->frontsector->lines[0] + linenum;
-					texnum = texturetranslation[sides[newline->sidenum[0]].midtexture];
+					texnum = R_GetTextureNum(sides[newline->sidenum[0]].midtexture);
 				}
 
 #ifdef ESLOPE
@@ -2366,13 +2370,13 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				if (*rover->topheight < lowcut || *rover->bottomheight > highcut)
 					continue;
 
-				texnum = texturetranslation[sides[rover->master->sidenum[0]].midtexture];
+				texnum = R_GetTextureNum(sides[rover->master->sidenum[0]].midtexture);
 
 				if (rover->master->flags & ML_TFERLINE)
 				{
 					size_t linenum = gr_curline->linedef-gr_backsector->lines[0];
 					newline = rover->master->frontsector->lines[0] + linenum;
-					texnum = texturetranslation[sides[newline->sidenum[0]].midtexture];
+					texnum = R_GetTextureNum(sides[newline->sidenum[0]].midtexture);
 				}
 #ifdef ESLOPE //backsides
 				h  = *rover->t_slope ? P_GetZAt(*rover->t_slope, v1x, v1y) : *rover->topheight;
@@ -4546,8 +4550,8 @@ static void HWR_SortVisSprites(void)
 	gr_vissprite_t *ds, *dsprev, *dsnext, *dsfirst;
 	gr_vissprite_t *best = NULL;
 	gr_vissprite_t unsorted;
-	float bestdist;
-	INT32 bestdispoffset;
+	float bestdist = 0.0f;
+	INT32 bestdispoffset = 0;
 
 	if (!gr_visspritecount)
 		return;

@@ -179,6 +179,9 @@ endif
 
 ifdef LINUX
 UNIXCOMMON=1
+ifndef NOGME
+HAVE_LIBGME=1
+endif
 endif
 
 ifdef SOLARIS
@@ -315,6 +318,13 @@ LIBS+=$(PNG_LDFLAGS)
 CFLAGS+=$(PNG_CFLAGS)
 endif
 
+ZLIB_PKGCONFIG?=zlib
+ZLIB_CFLAGS?=$(shell $(PKG_CONFIG) $(ZLIB_PKGCONFIG) --cflags)
+ZLIB_LDFLAGS?=$(shell $(PKG_CONFIG) $(ZLIB_PKGCONFIG) --libs)
+
+LIBS+=$(ZLIB_LDFLAGS)
+CFLAGS+=$(ZLIB_CFLAGS)
+
 ifdef HAVE_LIBGME
 OPTS+=-DHAVE_LIBGME
 
@@ -366,6 +376,14 @@ endif
 
 	OPTS:=-fno-exceptions $(OPTS)
 
+ifdef MOBJCONSISTANCY
+	OPTS+=-DMOBJCONSISTANCY
+endif
+
+ifdef PACKETDROP
+	OPTS+=-DPACKETDROP
+endif
+
 ifdef DEBUGMODE
 
 	# build with debugging information
@@ -375,7 +393,7 @@ ifdef GCC48
 else
 	CFLAGS+=-O0
 endif
-	CFLAGS+= -Wall -DPARANOIA -DRANGECHECK
+	CFLAGS+= -Wall -DPARANOIA -DRANGECHECK -DPACKETDROP -DMOBJCONSISTANCY
 else
 
 
