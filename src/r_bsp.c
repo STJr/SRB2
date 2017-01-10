@@ -210,7 +210,7 @@ void R_PortalClearClipSegs(INT32 start, INT32 end)
 //
 // It assumes that Doom has already ruled out a door being closed because
 // of front-back closure (e.g. front floor is taller than back ceiling).
-static inline INT32 R_DoorClosed(void)
+static INT32 R_DoorClosed(void)
 {
 	return
 
@@ -363,6 +363,36 @@ sector_t *R_FakeFlat(sector_t *sec, sector_t *tempsec, INT32 *floorlightlevel,
 		sec->extra_colormap = NULL;
 
 	return sec;
+}
+
+boolean R_IsEmptyLine(seg_t *line, sector_t *front, sector_t *back)
+{
+	return (
+#ifdef POLYOBJECTS
+		!line->polyseg &&
+#endif
+		back->ceilingpic == front->ceilingpic
+		&& back->floorpic == front->floorpic
+#ifdef ESLOPE
+		&& back->f_slope == front->f_slope
+		&& back->c_slope == front->c_slope
+#endif
+		&& back->lightlevel == front->lightlevel
+		&& !line->sidedef->midtexture
+		// Check offsets too!
+		&& back->floor_xoffs == front->floor_xoffs
+		&& back->floor_yoffs == front->floor_yoffs
+		&& back->floorpic_angle == front->floorpic_angle
+		&& back->ceiling_xoffs == front->ceiling_xoffs
+		&& back->ceiling_yoffs == front->ceiling_yoffs
+		&& back->ceilingpic_angle == front->ceilingpic_angle
+		// Consider altered lighting.
+		&& back->floorlightsec == front->floorlightsec
+		&& back->ceilinglightsec == front->ceilinglightsec
+		// Consider colormaps
+		&& back->extra_colormap == front->extra_colormap
+		&& ((!front->ffloors && !back->ffloors)
+		|| front->tag == back->tag));
 }
 
 //
@@ -526,36 +556,8 @@ static void R_AddLine(seg_t *line)
 	// Identical floor and ceiling on both sides, identical light levels on both sides,
 	// and no middle texture.
 
-	if (
-#ifdef POLYOBJECTS
-		!line->polyseg &&
-#endif
-		backsector->ceilingpic == frontsector->ceilingpic
-		&& backsector->floorpic == frontsector->floorpic
-#ifdef ESLOPE
-		&& backsector->f_slope == frontsector->f_slope
-		&& backsector->c_slope == frontsector->c_slope
-#endif
-		&& backsector->lightlevel == frontsector->lightlevel
-		&& !curline->sidedef->midtexture
-		// Check offsets too!
-		&& backsector->floor_xoffs == frontsector->floor_xoffs
-		&& backsector->floor_yoffs == frontsector->floor_yoffs
-		&& backsector->floorpic_angle == frontsector->floorpic_angle
-		&& backsector->ceiling_xoffs == frontsector->ceiling_xoffs
-		&& backsector->ceiling_yoffs == frontsector->ceiling_yoffs
-		&& backsector->ceilingpic_angle == frontsector->ceilingpic_angle
-		// Consider altered lighting.
-		&& backsector->floorlightsec == frontsector->floorlightsec
-		&& backsector->ceilinglightsec == frontsector->ceilinglightsec
-		// Consider colormaps
-		&& backsector->extra_colormap == frontsector->extra_colormap
-		&& ((!frontsector->ffloors && !backsector->ffloors)
-		|| frontsector->tag == backsector->tag))
-	{
+	if (R_IsEmptyLine(line, frontsector, backsector))
 		return;
-	}
-
 
 clippass:
 	R_ClipPassWallSegment(x1, x2 - 1);

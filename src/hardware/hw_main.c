@@ -2510,6 +2510,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 // e6y: Check whether the player can look beyond this line
 //
 #ifdef NEWCLIP
+boolean checkforemptylines = true;
 // Don't modify anything here, just check
 // Kalaron: Modified for sloped linedefs
 static boolean CheckClip(seg_t * seg, sector_t * afrontsector, sector_t * abacksector)
@@ -2552,6 +2553,7 @@ static boolean CheckClip(seg_t * seg, sector_t * afrontsector, sector_t * abacks
 	// now check for closed sectors!
 	if (backc1 <= frontf1 && backc2 <= frontf2)
 	{
+		checkforemptylines = false;
 		if (!seg->sidedef->toptexture)
 			return false;
 
@@ -2563,6 +2565,7 @@ static boolean CheckClip(seg_t * seg, sector_t * afrontsector, sector_t * abacks
 
 	if (backf1 >= frontc1 && backf2 >= frontc2)
 	{
+		checkforemptylines = false;
 		if (!seg->sidedef->bottomtexture)
 			return false;
 
@@ -2575,6 +2578,7 @@ static boolean CheckClip(seg_t * seg, sector_t * afrontsector, sector_t * abacks
 
 	if (backc1 <= backf1 && backc2 <= backf2)
 	{
+		checkforemptylines = false;
 		// preserve a kind of transparent door/lift special effect:
 		if (backc1 < frontc1 || backc2 < frontc2)
 		{
@@ -2595,41 +2599,12 @@ static boolean CheckClip(seg_t * seg, sector_t * afrontsector, sector_t * abacks
 		return true;
 	}
 
-
-	// Reject empty lines used for triggers and special events.
-	// Identical floor and ceiling on both sides,
-	//  identical light levels on both sides,
-	//  and no middle texture.
-	if (
-#ifdef POLYOBJECTS
-		!seg->polyseg &&
-#endif
-		gr_backsector->ceilingpic == gr_frontsector->ceilingpic
-		&& gr_backsector->floorpic == gr_frontsector->floorpic
-#ifdef ESLOPE
-		&& gr_backsector->f_slope == gr_frontsector->f_slope
-		&& gr_backsector->c_slope == gr_frontsector->c_slope
-#endif
-	    && gr_backsector->lightlevel == gr_frontsector->lightlevel
-		&& !gr_curline->sidedef->midtexture
-		// Check offsets too!
-		&& gr_backsector->floor_xoffs == gr_frontsector->floor_xoffs
-		&& gr_backsector->floor_yoffs == gr_frontsector->floor_yoffs
-		&& gr_backsector->floorpic_angle == gr_frontsector->floorpic_angle
-		&& gr_backsector->ceiling_xoffs == gr_frontsector->ceiling_xoffs
-		&& gr_backsector->ceiling_yoffs == gr_frontsector->ceiling_yoffs
-		&& gr_backsector->ceilingpic_angle == gr_frontsector->ceilingpic_angle
-		// Consider altered lighting.
-		&& gr_backsector->floorlightsec == gr_frontsector->floorlightsec
-		&& gr_backsector->ceilinglightsec == gr_frontsector->ceilinglightsec
-		// Consider colormaps
-		&& gr_backsector->extra_colormap == gr_frontsector->extra_colormap
-		&& ((!gr_frontsector->ffloors && !gr_backsector->ffloors)
-		|| gr_frontsector->tag == gr_backsector->tag))
-	{
-		return false;
-	}
-
+	if (backc1 != frontc1 || backc2 != frontc2
+		|| backf1 != frontf1 || backf2 != frontf2)
+		{
+			checkforemptylines = false;
+			return false;
+		}
 
 	return false;
 }
@@ -2965,6 +2940,8 @@ static void HWR_AddLine(seg_t * line)
     {
 		return;
     }
+
+	checkforemptylines = true;
 #else
 	// Clip to view edges.
 	span = angle1 - angle2;
@@ -3056,18 +3033,17 @@ static void HWR_AddLine(seg_t * line)
     else
     {
 		gr_backsector = R_FakeFlat(gr_backsector, &tempsec, NULL, NULL, true);
-		if (line->frontsector == line->backsector)
-		{
-			if (!line->sidedef->midtexture)
-			{
-				//e6y: nothing to do here!
-				//return;
-			}
-		}
 		if (CheckClip(line, gr_frontsector, gr_backsector))
 		{
 			gld_clipper_SafeAddClipRange(angle2, angle1);
+			checkforemptylines = false;
 		}
+		// Reject empty lines used for triggers and special events.
+		// Identical floor and ceiling on both sides,
+		//  identical light levels on both sides,
+		//  and no middle texture.
+		if (checkforemptylines && R_IsEmptyLine(line, gr_frontsector, gr_backsector))
+			return;
     }
 
 	HWR_ProcessSeg(); // Doesn't need arguments because they're defined globally :D
@@ -3144,38 +3120,8 @@ static void HWR_AddLine(seg_t * line)
 	// Identical floor and ceiling on both sides,
 	//  identical light levels on both sides,
 	//  and no middle texture.
-	if (
-#ifdef POLYOBJECTS
-		!line->polyseg &&
-#endif
-		gr_backsector->ceilingpic == gr_frontsector->ceilingpic
-		&& gr_backsector->floorpic == gr_frontsector->floorpic
-#ifdef ESLOPE
-		&& gr_backsector->f_slope == gr_frontsector->f_slope
-		&& gr_backsector->c_slope == gr_frontsector->c_slope
-#endif
-	    && gr_backsector->lightlevel == gr_frontsector->lightlevel
-		&& !gr_curline->sidedef->midtexture
-		// Check offsets too!
-		&& gr_backsector->floor_xoffs == gr_frontsector->floor_xoffs
-		&& gr_backsector->floor_yoffs == gr_frontsector->floor_yoffs
-		&& gr_backsector->floorpic_angle == gr_frontsector->floorpic_angle
-		&& gr_backsector->ceiling_xoffs == gr_frontsector->ceiling_xoffs
-		&& gr_backsector->ceiling_yoffs == gr_frontsector->ceiling_yoffs
-		&& gr_backsector->ceilingpic_angle == gr_frontsector->ceilingpic_angle
-		// Consider altered lighting.
-		&& gr_backsector->floorlightsec == gr_frontsector->floorlightsec
-		&& gr_backsector->ceilinglightsec == gr_frontsector->ceilinglightsec
-		// Consider colormaps
-		&& gr_backsector->extra_colormap == gr_frontsector->extra_colormap
-		&& ((!gr_frontsector->ffloors && !gr_backsector->ffloors)
-		|| gr_frontsector->tag == gr_backsector->tag))
-		// SoM: For 3D sides... Boris, would you like to take a
-		// crack at rendering 3D sides? You would need to add the
-		// above check and add code to HWR_StoreWallRange...
-	{
+	if (R_IsEmptyLine(curline, frontsector, backsector))
 		return;
-	}
 
 clippass:
 	if (x1 == x2)
