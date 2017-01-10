@@ -92,14 +92,14 @@ clipnode_t *freelist;
 clipnode_t *clipnodes;
 clipnode_t *cliphead;
 
-static clipnode_t * HWR_clipnode_GetNew(void);
-static clipnode_t * HWR_clipnode_NewRange(angle_t start, angle_t end);
-static boolean HWR_clipper_IsRangeVisible(angle_t startAngle, angle_t endAngle);
-static void HWR_clipper_AddClipRange(angle_t start, angle_t end);
-static void HWR_clipper_RemoveRange(clipnode_t * range);
-static void HWR_clipnode_Free(clipnode_t *node);
+static clipnode_t * gld_clipnode_GetNew(void);
+static clipnode_t * gld_clipnode_NewRange(angle_t start, angle_t end);
+static boolean gld_clipper_IsRangeVisible(angle_t startAngle, angle_t endAngle);
+static void gld_clipper_AddClipRange(angle_t start, angle_t end);
+static void gld_clipper_RemoveRange(clipnode_t * range);
+static void gld_clipnode_Free(clipnode_t *node);
 
-static clipnode_t * HWR_clipnode_GetNew(void)
+static clipnode_t * gld_clipnode_GetNew(void)
 {
 	if (freelist)
 	{
@@ -113,26 +113,26 @@ static clipnode_t * HWR_clipnode_GetNew(void)
 	}
 }
 
-static clipnode_t * HWR_clipnode_NewRange(angle_t start, angle_t end)
+static clipnode_t * gld_clipnode_NewRange(angle_t start, angle_t end)
 {
-	clipnode_t * c = HWR_clipnode_GetNew();
+	clipnode_t * c = gld_clipnode_GetNew();
 	c->start = start;
 	c->end = end;
 	c->next = c->prev=NULL;
 	return c;
 }
 
-boolean HWR_clipper_SafeCheckRange(angle_t startAngle, angle_t endAngle)
+boolean gld_clipper_SafeCheckRange(angle_t startAngle, angle_t endAngle)
 {
 	if(startAngle > endAngle)
 	{
-		return (HWR_clipper_IsRangeVisible(startAngle, ANGLE_MAX) || HWR_clipper_IsRangeVisible(0, endAngle));
+		return (gld_clipper_IsRangeVisible(startAngle, ANGLE_MAX) || gld_clipper_IsRangeVisible(0, endAngle));
 	}
 
-	return HWR_clipper_IsRangeVisible(startAngle, endAngle);
+	return gld_clipper_IsRangeVisible(startAngle, endAngle);
 }
 
-static boolean HWR_clipper_IsRangeVisible(angle_t startAngle, angle_t endAngle)
+static boolean gld_clipper_IsRangeVisible(angle_t startAngle, angle_t endAngle)
 {
 	clipnode_t *ci;
 	ci = cliphead;
@@ -152,13 +152,13 @@ static boolean HWR_clipper_IsRangeVisible(angle_t startAngle, angle_t endAngle)
 	return true;
 }
 
-static void HWR_clipnode_Free(clipnode_t *node)
+static void gld_clipnode_Free(clipnode_t *node)
 {
 	node->next = freelist;
 	freelist = node;
 }
 
-static void HWR_clipper_RemoveRange(clipnode_t *range)
+static void gld_clipper_RemoveRange(clipnode_t *range)
 {
 	if (range == cliphead)
 	{
@@ -176,25 +176,25 @@ static void HWR_clipper_RemoveRange(clipnode_t *range)
 		}
 	}
 
-	HWR_clipnode_Free(range);
+	gld_clipnode_Free(range);
 }
 
-void HWR_clipper_SafeAddClipRange(angle_t startangle, angle_t endangle)
+void gld_clipper_SafeAddClipRange(angle_t startangle, angle_t endangle)
 {
 	if(startangle > endangle)
 	{
 		// The range has to added in two parts.
-		HWR_clipper_AddClipRange(startangle, ANGLE_MAX);
-		HWR_clipper_AddClipRange(0, endangle);
+		gld_clipper_AddClipRange(startangle, ANGLE_MAX);
+		gld_clipper_AddClipRange(0, endangle);
 	}
 	else
 	{
 		// Add the range as usual.
-		HWR_clipper_AddClipRange(startangle, endangle);
+		gld_clipper_AddClipRange(startangle, endangle);
 	}
 }
 
-static void HWR_clipper_AddClipRange(angle_t start, angle_t end)
+static void gld_clipper_AddClipRange(angle_t start, angle_t end)
 {
 	clipnode_t *node, *temp, *prevNode, *node2, *delnode;
 
@@ -208,7 +208,7 @@ static void HWR_clipper_AddClipRange(angle_t start, angle_t end)
 			{
 				temp = node;
 				node = node->next;
-				HWR_clipper_RemoveRange(temp);
+				gld_clipper_RemoveRange(temp);
 			}
 			else
 			{
@@ -250,7 +250,7 @@ static void HWR_clipper_AddClipRange(angle_t start, angle_t end)
 
 					delnode = node2;
 					node2 = node2->next;
-					HWR_clipper_RemoveRange(delnode);
+					gld_clipper_RemoveRange(delnode);
 				}
 				return;
 			}
@@ -260,7 +260,7 @@ static void HWR_clipper_AddClipRange(angle_t start, angle_t end)
 		//just add range
 		node = cliphead;
 		prevNode = NULL;
-		temp = HWR_clipnode_NewRange(start, end);
+		temp = gld_clipnode_NewRange(start, end);
 		while (node != NULL && node->start < end)
 		{
 			prevNode = node;
@@ -296,13 +296,13 @@ static void HWR_clipper_AddClipRange(angle_t start, angle_t end)
 	}
 	else
 	{
-		temp = HWR_clipnode_NewRange(start, end);
+		temp = gld_clipnode_NewRange(start, end);
 		cliphead = temp;
 		return;
 	}
 }
 
-void HWR_clipper_Clear(void)
+void gld_clipper_Clear(void)
 {
 	clipnode_t *node = cliphead;
 	clipnode_t *temp;
@@ -311,7 +311,7 @@ void HWR_clipper_Clear(void)
 	{
 		temp = node;
 		node = node->next;
-		HWR_clipnode_Free(temp);
+		gld_clipnode_Free(temp);
 	}
 
 	cliphead = NULL;
@@ -319,7 +319,7 @@ void HWR_clipper_Clear(void)
 
 #define RMUL (1.6f/1.333333f)
 
-angle_t HWR_FrustumAngle(void)
+angle_t gld_FrustumAngle(void)
 {
 	double floatangle;
 	angle_t a1;
@@ -356,7 +356,7 @@ angle_t HWR_FrustumAngle(void)
 // btw to renable define HAVE_SPHEREFRUSTRUM in hw_clip.h
 #ifdef HAVE_SPHEREFRUSTRUM
 //
-// HWR_FrustrumSetup
+// gld_FrustrumSetup
 //
 
 #define CALCMATRIX(a, b, c, d, e, f, g, h)\
@@ -375,7 +375,7 @@ frustum[i][1] /= t; \
 frustum[i][2] /= t; \
 frustum[i][3] /= t
 
-void HWR_FrustrumSetup(void)
+void gld_FrustrumSetup(void)
 {
 	float t;
 	float clip[16];
@@ -446,7 +446,7 @@ void HWR_FrustrumSetup(void)
 	NORMALIZE_PLANE(5);
 }
 
-boolean HWR_SphereInFrustum(float x, float y, float z, float radius)
+boolean gld_SphereInFrustum(float x, float y, float z, float radius)
 {
 	int p;
 

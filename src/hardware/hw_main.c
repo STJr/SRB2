@@ -44,6 +44,10 @@
 #endif
 #include "hw_md2.h"
 
+#ifdef NEWCLIP
+#include "hw_clip.h"
+#endif
+
 #define R_FAKEFLOORS
 #define HWPRECIP
 #define SORTING
@@ -99,8 +103,9 @@ CV_PossibleValue_t granisotropicmode_cons_t[] = {{1, "MIN"}, {16, "MAX"}, {0, NU
 boolean drawsky = true;
 
 // needs fix: walls are incorrectly clipped one column less
+#ifndef NEWCLIP
 static consvar_t cv_grclipwalls = {"gr_clipwalls", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-
+#endif
 //development variables for diverse uses
 static consvar_t cv_gralpha = {"gr_alpha", "160", 0, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
 static consvar_t cv_grbeta = {"gr_beta", "0", 0, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -1035,6 +1040,7 @@ static void HWR_ProjectWall(wallVert3D   * wallVerts,
 // (in fact a clipping plane that has a constant, so can clip with simple 2d)
 // with the wall segment
 //
+#ifndef NEWCLIP
 static float HWR_ClipViewSegment(INT32 x, polyvertex_t *v1, polyvertex_t *v2)
 {
 	float num, den;
@@ -1063,6 +1069,7 @@ static float HWR_ClipViewSegment(INT32 x, polyvertex_t *v1, polyvertex_t *v2)
 
 	return num / den;
 }
+#endif
 
 //
 // HWR_SplitWall
@@ -1437,7 +1444,11 @@ static void HWR_DrawSkyWall(wallVert3D *wallVerts, FSurfaceInfo *Surf, fixed_t b
 // Anything between means the wall segment has been clipped with solidsegs,
 //  reducing wall overdraw to a minimum
 //
+#ifdef NEWCLIP
+static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
+#else
 static void HWR_StoreWallRange(double startfrac, double endfrac)
+#endif
 {
 	wallVert3D wallVerts[4];
 	v2d_t vs, ve; // start, end vertices of 2d line (view from above)
@@ -1462,8 +1473,10 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 	extracolormap_t *colormap;
 	FSurfaceInfo Surf;
 
+#ifndef NEWCLIP
 	if (startfrac > endfrac)
 		return;
+#endif
 
 	gr_sidedef = gr_curline->sidedef;
 	gr_linedef = gr_curline->linedef;
@@ -1536,15 +1549,19 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 		// x offset the texture
 		fixed_t texturehpeg = gr_sidedef->textureoffset + gr_curline->offset;
 
+#ifndef NEWCLIP
 		// clip texture s start/end coords with solidsegs
 		if (startfrac > 0.0f && startfrac < 1.0f)
 			cliplow = (float)(texturehpeg + (gr_curline->flength*FRACUNIT) * startfrac);
 		else
+#endif
 			cliplow = (float)texturehpeg;
 
+#ifndef NEWCLIP
 		if (endfrac > 0.0f && endfrac < 1.0f)
 			cliphigh = (float)(texturehpeg + (gr_curline->flength*FRACUNIT) * endfrac);
 		else
+#endif
 			cliphigh = (float)(texturehpeg + (gr_curline->flength*FRACUNIT));
 	}
 
@@ -2488,6 +2505,135 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 //Hurdler: end of 3d-floors test
 }
 
+// From PrBoom:
+//
+// e6y: Check whether the player can look beyond this line
+//
+#ifdef NEWCLIP
+// Don't modify anything here, just check
+// Kalaron: Modified for sloped linedefs
+static boolean CheckClip(seg_t * seg, sector_t * afrontsector, sector_t * abacksector)
+{
+	fixed_t frontf1,frontf2, frontc1, frontc2; // front floor/ceiling ends
+	fixed_t backf1, backf2, backc1, backc2; // back floor ceiling ends
+
+	// GZDoom method of sloped line clipping
+
+#ifdef ESLOPE
+	if (afrontsector->f_slope || afrontsector->c_slope || abacksector->f_slope || abacksector->c_slope)
+	{
+		fixed_t v1x, v1y, v2x, v2y; // the seg's vertexes as fixed_t
+		v1x = FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->pv1)->x);
+		v1y = FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->pv1)->y);
+		v2x = FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->pv2)->x);
+		v2y = FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->pv2)->y);
+#define SLOPEPARAMS(slope, end1, end2, normalheight) \
+		if (slope) { \
+			end1 = P_GetZAt(slope, v1x, v1y); \
+			end2 = P_GetZAt(slope, v2x, v2y); \
+		} else \
+			end1 = end2 = normalheight;
+
+		SLOPEPARAMS(afrontsector->f_slope, frontf1, frontf2, afrontsector->floorheight)
+		SLOPEPARAMS(afrontsector->c_slope, frontc1, frontc2, afrontsector->ceilingheight)
+		SLOPEPARAMS( abacksector->f_slope, backf1,  backf2,  abacksector->floorheight)
+		SLOPEPARAMS( abacksector->c_slope, backc1,  backc2,  abacksector->ceilingheight)
+#undef SLOPEPARAMS
+	}
+	else
+#endif
+	{
+		frontf1 = frontf2 = afrontsector->floorheight;
+		frontc1 = frontc2 = afrontsector->ceilingheight;
+		backf1 = backf2 = abacksector->floorheight;
+		backc1 = backc2 = abacksector->ceilingheight;
+	}
+
+	// now check for closed sectors!
+	if (backc1 <= frontf1 && backc2 <= frontf2)
+	{
+		if (!seg->sidedef->toptexture)
+			return false;
+
+		if (abacksector->ceilingpic == skyflatnum && afrontsector->ceilingpic == skyflatnum)
+			return false;
+
+		return true;
+	}
+
+	if (backf1 >= frontc1 && backf2 >= frontc2)
+	{
+		if (!seg->sidedef->bottomtexture)
+			return false;
+
+		// properly render skies (consider door "open" if both floors are sky):
+		if (abacksector->ceilingpic == skyflatnum && afrontsector->ceilingpic == skyflatnum)
+			return false;
+
+		return true;
+	}
+
+	if (backc1 <= backf1 && backc2 <= backf2)
+	{
+		// preserve a kind of transparent door/lift special effect:
+		if (backc1 < frontc1 || backc2 < frontc2)
+		{
+			if (!seg->sidedef->toptexture)
+				return false;
+		}
+		if (backf1 > frontf1 || backf2 > frontf2)
+		{
+			if (!seg->sidedef->bottomtexture)
+				return false;
+		}
+		if (abacksector->ceilingpic == skyflatnum && afrontsector->ceilingpic == skyflatnum)
+			return false;
+
+		if (abacksector->floorpic == skyflatnum && afrontsector->floorpic == skyflatnum)
+			return false;
+
+		return true;
+	}
+
+
+	// Reject empty lines used for triggers and special events.
+	// Identical floor and ceiling on both sides,
+	//  identical light levels on both sides,
+	//  and no middle texture.
+	if (
+#ifdef POLYOBJECTS
+		!seg->polyseg &&
+#endif
+		gr_backsector->ceilingpic == gr_frontsector->ceilingpic
+		&& gr_backsector->floorpic == gr_frontsector->floorpic
+#ifdef ESLOPE
+		&& gr_backsector->f_slope == gr_frontsector->f_slope
+		&& gr_backsector->c_slope == gr_frontsector->c_slope
+#endif
+	    && gr_backsector->lightlevel == gr_frontsector->lightlevel
+		&& !gr_curline->sidedef->midtexture
+		// Check offsets too!
+		&& gr_backsector->floor_xoffs == gr_frontsector->floor_xoffs
+		&& gr_backsector->floor_yoffs == gr_frontsector->floor_yoffs
+		&& gr_backsector->floorpic_angle == gr_frontsector->floorpic_angle
+		&& gr_backsector->ceiling_xoffs == gr_frontsector->ceiling_xoffs
+		&& gr_backsector->ceiling_yoffs == gr_frontsector->ceiling_yoffs
+		&& gr_backsector->ceilingpic_angle == gr_frontsector->ceilingpic_angle
+		// Consider altered lighting.
+		&& gr_backsector->floorlightsec == gr_frontsector->floorlightsec
+		&& gr_backsector->ceilinglightsec == gr_frontsector->ceilinglightsec
+		// Consider colormaps
+		&& gr_backsector->extra_colormap == gr_frontsector->extra_colormap
+		&& ((!gr_frontsector->ffloors && !gr_backsector->ffloors)
+		|| gr_frontsector->tag == gr_backsector->tag))
+	{
+		return false;
+	}
+
+
+	return false;
+}
+#else
 //Hurdler: just like in r_bsp.c
 #if 1
 #define MAXSEGS         MAXVIDWIDTH/2+1
@@ -2773,6 +2919,7 @@ static void HWR_ClearClipSegs(void)
 	gr_solidsegs[1].last = 0x7fffffff;
 	hw_newend = gr_solidsegs+2;
 }
+#endif // NEWCLIP
 
 // -----------------+
 // HWR_AddLine      : Clips the given segment and adds any visible pieces to the line list.
@@ -2781,17 +2928,20 @@ static void HWR_ClearClipSegs(void)
 // -----------------+
 static void HWR_AddLine(seg_t * line)
 {
-	INT32 x1, x2;
 	angle_t angle1, angle2;
+#ifndef NEWCLIP
+	INT32 x1, x2;
 	angle_t span, tspan;
+#endif
 
 	// SoM: Backsector needs to be run through R_FakeFlat
 	sector_t tempsec;
 
 	fixed_t v1x, v1y, v2x, v2y; // the seg's vertexes as fixed_t
-
+#ifdef POLYOBJECTS
 	if (line->polyseg && !(line->polyseg->flags & POF_RENDERSIDES))
 		return;
+#endif
 
 	gr_curline = line;
 
@@ -2804,6 +2954,18 @@ static void HWR_AddLine(seg_t * line)
 	angle1 = R_PointToAngle(v1x, v1y);
 	angle2 = R_PointToAngle(v2x, v2y);
 
+#ifdef NEWCLIP
+	 // PrBoom: Back side, i.e. backface culling - read: endAngle >= startAngle!
+	if (angle2 - angle1 < ANGLE_180)
+		return;
+
+	// PrBoom: use REAL clipping math YAYYYYYYY!!!
+
+	if (!gld_clipper_SafeCheckRange(angle2, angle1))
+    {
+		return;
+    }
+#else
 	// Clip to view edges.
 	span = angle1 - angle2;
 
@@ -2882,8 +3044,35 @@ static void HWR_AddLine(seg_t * line)
 		return;
 	}
 */
+#endif
+
 	gr_backsector = line->backsector;
 
+#ifdef NEWCLIP
+	if (!line->backsector)
+    {
+		gld_clipper_SafeAddClipRange(angle2, angle1);
+    }
+    else
+    {
+		gr_backsector = R_FakeFlat(gr_backsector, &tempsec, NULL, NULL, true);
+		if (line->frontsector == line->backsector)
+		{
+			if (!line->sidedef->midtexture)
+			{
+				//e6y: nothing to do here!
+				//return;
+			}
+		}
+		if (CheckClip(line, gr_frontsector, gr_backsector))
+		{
+			gld_clipper_SafeAddClipRange(angle2, angle1);
+		}
+    }
+
+	HWR_ProcessSeg(); // Doesn't need arguments because they're defined globally :D
+	return;
+#else
 	// Single sided line?
 	if (!gr_backsector)
 		goto clipsolid;
@@ -2998,6 +3187,7 @@ clipsolid:
 	if (x1 == x2)
 		goto clippass;
 	HWR_ClipSolidWallSegment(x1, x2-1);
+#endif
 }
 
 // HWR_CheckBBox
@@ -3009,9 +3199,13 @@ clipsolid:
 
 static boolean HWR_CheckBBox(fixed_t *bspcoord)
 {
-	INT32 boxpos, sx1, sx2;
+	INT32 boxpos;
 	fixed_t px1, py1, px2, py2;
-	angle_t angle1, angle2, span, tspan;
+	angle_t angle1, angle2;
+#ifndef NEWCLIP
+	INT32 sx1, sx2;
+	angle_t span, tspan;
+#endif
 
 	// Find the corners of the box
 	// that define the edges from current viewpoint.
@@ -3037,6 +3231,11 @@ static boolean HWR_CheckBBox(fixed_t *bspcoord)
 	px2 = bspcoord[checkcoord[boxpos][2]];
 	py2 = bspcoord[checkcoord[boxpos][3]];
 
+#ifdef NEWCLIP
+	angle1 = R_PointToAngle(px1, py1);
+	angle2 = R_PointToAngle(px2, py2);
+	return gld_clipper_SafeCheckRange(angle2, angle1);
+#else
 	// check clip list for an open space
 	angle1 = R_PointToAngle(px1, py1) - dup_viewangle;
 	angle2 = R_PointToAngle(px2, py2) - dup_viewangle;
@@ -3084,6 +3283,7 @@ static boolean HWR_CheckBBox(fixed_t *bspcoord)
 		return false;
 
 	return HWR_ClipToSolidSegs(sx1, sx2 - 1);
+#endif
 }
 
 #ifdef POLYOBJECTS
@@ -5624,7 +5824,19 @@ if (0)
 #ifdef SORTING
 	drawcount = 0;
 #endif
+#ifdef NEWCLIP
+	if (rendermode == render_opengl)
+	{
+		angle_t a1 = gld_FrustumAngle();
+		gld_clipper_Clear();
+		gld_clipper_SafeAddClipRange(viewangle + a1, viewangle - a1);
+#ifdef HAVE_SPHEREFRUSTRUM
+		gld_FrustrumSetup();
+#endif
+	}
+#else
 	HWR_ClearClipSegs();
+#endif
 
 	//04/01/2000: Hurdler: added for T&L
 	//                     Actually it only works on Walls and Planes
@@ -5634,6 +5846,7 @@ if (0)
 
 	HWR_RenderBSPNode((INT32)numnodes-1);
 
+#ifndef NEWCLIP
 	// Make a viewangle int so we can render things based on mouselook
 	if (player == &players[consoleplayer])
 		viewangle = localaiming;
@@ -5660,6 +5873,7 @@ if (0)
 
 		dup_viewangle += ANGLE_90;
 	}
+#endif
 
 	// Check for new console commands.
 	NetUpdate();
@@ -5854,7 +6068,19 @@ if (0)
 #ifdef SORTING
 	drawcount = 0;
 #endif
+#ifdef NEWCLIP
+	if (rendermode == render_opengl)
+	{
+		angle_t a1 = gld_FrustumAngle();
+		gld_clipper_Clear();
+		gld_clipper_SafeAddClipRange(viewangle + a1, viewangle - a1);
+#ifdef HAVE_SPHEREFRUSTRUM
+		gld_FrustrumSetup();
+#endif
+	}
+#else
 	HWR_ClearClipSegs();
+#endif
 
 	//04/01/2000: Hurdler: added for T&L
 	//                     Actually it only works on Walls and Planes
@@ -5864,6 +6090,7 @@ if (0)
 
 	HWR_RenderBSPNode((INT32)numnodes-1);
 
+#ifndef NEWCLIP
 	// Make a viewangle int so we can render things based on mouselook
 	if (player == &players[consoleplayer])
 		viewangle = localaiming;
@@ -5890,6 +6117,7 @@ if (0)
 
 		dup_viewangle += ANGLE_90;
 	}
+#endif
 
 	// Check for new console commands.
 	NetUpdate();
@@ -6035,7 +6263,9 @@ static inline void HWR_AddEngineCommands(void)
 {
 	// engine state variables
 	//CV_RegisterVar(&cv_grzbuffer);
+#ifndef NEWCLIP
 	CV_RegisterVar(&cv_grclipwalls);
+#endif
 
 	// engine development mode variables
 	// - usage may vary from version to version..
