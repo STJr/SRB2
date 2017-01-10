@@ -104,6 +104,9 @@ void A_BombShield(mobj_t *actor);
 void A_WaterShield(mobj_t *actor);
 void A_ForceShield(mobj_t *actor);
 void A_PityShield(mobj_t *actor);
+void A_FlameShield(mobj_t *actor);
+void A_BubbleShield(mobj_t *actor);
+void A_ThunderShield(mobj_t *actor);
 void A_GravityBox(mobj_t *actor);
 void A_ScoreRise(mobj_t *actor);
 void A_ParticleSpawn(mobj_t *actor);
@@ -239,6 +242,16 @@ void A_BrakFireShot(mobj_t *actor);
 void A_BrakLobShot(mobj_t *actor);
 void A_NapalmScatter(mobj_t *actor);
 void A_SpawnFreshCopy(mobj_t *actor);
+void A_FlickySpawn(mobj_t *actor);
+void A_FlickyAim(mobj_t *actor);
+void A_FlickyFly(mobj_t *actor);
+void A_FlickySoar(mobj_t *actor);
+void A_FlickyCoast(mobj_t *actor);
+void A_FlickyHop(mobj_t *actor);
+void A_FlickyFlounder(mobj_t *actor);
+void A_FlickyCheck(mobj_t *actor);
+void A_FlickyHeightCheck(mobj_t *actor);
+void A_FlickyFlutter(mobj_t *actor);
 
 //
 // ENEMY THINKING
@@ -738,7 +751,7 @@ static boolean P_LookForShield(mobj_t *actor)
 			(actor->type == MT_BLUETEAMRING && player->ctfteam != 2))
 			continue;
 
-		if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT
+		if ((player->powers[pw_shield] & SH_PROTECTELECTRIC)
 			&& (P_AproxDistance(P_AproxDistance(actor->x-player->mo->x, actor->y-player->mo->y), actor->z-player->mo->z) < FixedMul(RING_DIST, player->mo->scale)))
 		{
 			P_SetTarget(&actor->tracer, player->mo);
@@ -3059,11 +3072,7 @@ void A_JumpShield(mobj_t *actor)
 
 	player = actor->target->player;
 
-	if ((player->powers[pw_shield] & SH_NOSTACK) != SH_JUMP)
-	{
-		player->powers[pw_shield] = SH_JUMP|(player->powers[pw_shield] & SH_STACK);
-		P_SpawnShieldOrb(player);
-	}
+	P_SwitchShield(player, SH_WHIRLWIND);
 
 	S_StartSound(player->mo, actor->info->seesound);
 }
@@ -3091,11 +3100,7 @@ void A_RingShield(mobj_t *actor)
 
 	player = actor->target->player;
 
-	if ((player->powers[pw_shield] & SH_NOSTACK) != SH_ATTRACT)
-	{
-		player->powers[pw_shield] = SH_ATTRACT|(player->powers[pw_shield] & SH_STACK);
-		P_SpawnShieldOrb(player);
-	}
+	P_SwitchShield(player, SH_ATTRACT);
 
 	S_StartSound(player->mo, actor->info->seesound);
 }
@@ -3292,11 +3297,12 @@ void A_BombShield(mobj_t *actor)
 
 	player = actor->target->player;
 
-	if ((player->powers[pw_shield] & SH_NOSTACK) != SH_BOMB)
-	{
-		player->powers[pw_shield] = SH_BOMB|(player->powers[pw_shield] & SH_STACK);
-		P_SpawnShieldOrb(player);
-	}
+	// If you already have a bomb shield, use it!
+	if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ARMAGEDDON)
+		P_BlackOw(player);
+
+	// Now we know for certain that we don't have a bomb shield, so add one. :3
+	P_SwitchShield(player, SH_ARMAGEDDON);
 
 	S_StartSound(player->mo, actor->info->seesound);
 }
@@ -3324,22 +3330,8 @@ void A_WaterShield(mobj_t *actor)
 
 	player = actor->target->player;
 
-	if ((player->powers[pw_shield] & SH_NOSTACK) != SH_ELEMENTAL)
-	{
-		player->powers[pw_shield] = SH_ELEMENTAL|(player->powers[pw_shield] & SH_STACK);
-		P_SpawnShieldOrb(player);
-	}
+	P_SwitchShield(player, SH_ELEMENTAL);
 
-	if (player->powers[pw_underwater] && player->powers[pw_underwater] <= 12*TICRATE + 1)
-		P_RestoreMusic(player);
-
-	player->powers[pw_underwater] = 0;
-
-	if (player->powers[pw_spacetime] > 1)
-	{
-		player->powers[pw_spacetime] = 0;
-		P_RestoreMusic(player);
-	}
 	S_StartSound(player->mo, actor->info->seesound);
 }
 
@@ -3347,12 +3339,13 @@ void A_WaterShield(mobj_t *actor)
 //
 // Description: Awards the player a force shield.
 //
-// var1 = unused
+// var1 = Number of additional hitpoints to give
 // var2 = unused
 //
 void A_ForceShield(mobj_t *actor)
 {
 	player_t *player;
+	INT32 locvar1 = var1;
 
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_ForceShield", actor))
@@ -3364,15 +3357,15 @@ void A_ForceShield(mobj_t *actor)
 		return;
 	}
 
+	if (locvar1 & ~SH_FORCEHP)
+	{
+		CONS_Debug(DBG_GAMELOGIC, "Invalid number of additional hitpoints.\n");
+		return;
+	}
+
 	player = actor->target->player;
 
-	if (!(player->powers[pw_shield] & SH_FORCE))
-	{
-		player->powers[pw_shield] = SH_FORCE|(player->powers[pw_shield] & SH_STACK)|0x01;
-		P_SpawnShieldOrb(player);
-	}
-	else
-		player->powers[pw_shield] = SH_FORCE|(player->powers[pw_shield] & SH_STACK)|0x01;
+	P_SwitchShield(player, SH_FORCE|locvar1);
 
 	S_StartSound(player->mo, actor->info->seesound);
 }
@@ -3404,11 +3397,91 @@ void A_PityShield(mobj_t *actor)
 
 	player = actor->target->player;
 
-	if ((player->powers[pw_shield] & SH_NOSTACK) != SH_PITY)
+	P_SwitchShield(player, SH_PITY);
+
+	S_StartSound(player->mo, actor->info->seesound);
+}
+
+// Function: A_FlameShield
+//
+// Description: Awards the player a flame shield.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_FlameShield(mobj_t *actor)
+{
+	player_t *player;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FlameShield", actor))
+		return;
+#endif
+	if (!actor->target || !actor->target->player)
 	{
-		player->powers[pw_shield] = SH_PITY+(player->powers[pw_shield] & SH_STACK);
-		P_SpawnShieldOrb(player);
+		CONS_Debug(DBG_GAMELOGIC, "Powerup has no target.\n");
+		return;
 	}
+
+	player = actor->target->player;
+
+	P_SwitchShield(player, SH_FLAMEAURA);
+
+	S_StartSound(player->mo, actor->info->seesound);
+}
+
+// Function: A_BubbleShield
+//
+// Description: Awards the player a bubble shield.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_BubbleShield(mobj_t *actor)
+{
+	player_t *player;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_BubbleShield", actor))
+		return;
+#endif
+	if (!actor->target || !actor->target->player)
+	{
+		CONS_Debug(DBG_GAMELOGIC, "Powerup has no target.\n");
+		return;
+	}
+
+	player = actor->target->player;
+
+	P_SwitchShield(player, SH_BUBBLEWRAP);
+
+	S_StartSound(player->mo, actor->info->seesound);
+}
+
+// Function: A_ThunderShield
+//
+// Description: Awards the player a thunder shield.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_ThunderShield(mobj_t *actor)
+{
+	player_t *player;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_ThunderShield", actor))
+		return;
+#endif
+	if (!actor->target || !actor->target->player)
+	{
+		CONS_Debug(DBG_GAMELOGIC, "Powerup has no target.\n");
+		return;
+	}
+
+	player = actor->target->player;
+
+	P_SwitchShield(player, SH_THUNDERCOIN);
 
 	S_StartSound(player->mo, actor->info->seesound);
 }
@@ -3436,9 +3509,10 @@ void A_GravityBox(mobj_t *actor)
 	}
 
 	player = actor->target->player;
-	player->powers[pw_gravityboots] = (UINT16)(actor->info->reactiontime + 1);
 
 	S_StartSound(player, actor->info->activesound);
+
+	player->powers[pw_gravityboots] = (UINT16)(actor->info->reactiontime + 1);
 }
 
 // Function: A_ScoreRise
@@ -3704,7 +3778,7 @@ void A_AttractChase(mobj_t *actor)
 
 	// Turn flingrings back into regular rings if attracted.
 	if (actor->tracer && actor->tracer->player
-		&& (actor->tracer->player->powers[pw_shield] & SH_NOSTACK) != SH_ATTRACT && actor->info->reactiontime && actor->type != (mobjtype_t)actor->info->reactiontime)
+		&& !(actor->tracer->player->powers[pw_shield] & SH_PROTECTELECTRIC) && actor->info->reactiontime && actor->type != (mobjtype_t)actor->info->reactiontime)
 	{
 		mobj_t *newring;
 		newring = P_SpawnMobj(actor->x, actor->y, actor->z, actor->info->reactiontime);
@@ -3909,7 +3983,7 @@ void A_ThrownRing(mobj_t *actor)
 		// A non-homing ring getting attracted by a
 		// magnetic player. If he gets too far away, make
 		// sure to stop the attraction!
-		if ((!actor->tracer->health) || (actor->tracer->player && (actor->tracer->player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT
+		if ((!actor->tracer->health) || (actor->tracer->player && (actor->tracer->player->powers[pw_shield] & SH_PROTECTELECTRIC)
 		    && P_AproxDistance(P_AproxDistance(actor->tracer->x-actor->x,
 		    actor->tracer->y-actor->y), actor->tracer->z-actor->z) > FixedMul(RING_DIST/4, actor->tracer->scale)))
 		{
@@ -3917,7 +3991,7 @@ void A_ThrownRing(mobj_t *actor)
 		}
 
 		if (actor->tracer && (actor->tracer->health)
-			&& (actor->tracer->player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT)// Already found someone to follow.
+			&& (actor->tracer->player->powers[pw_shield] & SH_PROTECTELECTRIC))// Already found someone to follow.
 		{
 			const INT32 temp = actor->threshold;
 			actor->threshold = 32000;
@@ -3985,7 +4059,7 @@ void A_ThrownRing(mobj_t *actor)
 		if (!P_CheckSight(actor, player->mo))
 			continue; // out of sight
 
-		if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT
+		if ((player->powers[pw_shield] & SH_PROTECTELECTRIC)
 			&& dist < FixedMul(RING_DIST/4, player->mo->scale))
 			P_SetTarget(&actor->tracer, player->mo);
 		return;
@@ -7764,7 +7838,7 @@ void A_SetObjectFlags(mobj_t *actor)
 	else if (locvar2 == 1)
 		locvar1 = actor->flags & ~locvar1;
 
-	if ((locvar1 & (MF_NOBLOCKMAP|MF_NOSECTOR)) != (actor->flags & (MF_NOBLOCKMAP|MF_NOSECTOR))) // Blockmap/sector status has changed, so reset the links
+	if ((UINT32)(locvar1 & (MF_NOBLOCKMAP|MF_NOSECTOR)) != (actor->flags & (MF_NOBLOCKMAP|MF_NOSECTOR))) // Blockmap/sector status has changed, so reset the links
 		unlinkthings = true;
 
 	if (unlinkthings) {
@@ -10272,3 +10346,392 @@ void A_SpawnFreshCopy(mobj_t *actor)
 	if (newObject->info->seesound)
 		S_StartSound(newObject, newObject->info->seesound);
 }
+
+// Internal Flicky spawning function.
+mobj_t *P_InternalFlickySpawn(mobj_t *actor, mobjtype_t flickytype, fixed_t momz, boolean lookforplayers)
+{
+	mobj_t *flicky;
+
+	if (!flickytype)
+	{
+		if (!mapheaderinfo[gamemap-1] || !mapheaderinfo[gamemap-1]->numFlickies) // No mapheader, no shoes, no service.
+			return NULL;
+		else
+		{
+			INT32 prandom = P_RandomKey(mapheaderinfo[gamemap-1]->numFlickies);
+			flickytype = mapheaderinfo[gamemap-1]->flickies[prandom];
+		}
+	}
+
+	flicky = P_SpawnMobjFromMobj(actor, 0, 0, 0, flickytype);
+	flicky->angle = actor->angle;
+
+	if (flickytype == MT_SEED)
+		flicky->z += P_MobjFlip(actor)*(actor->height - flicky->height)/2;
+
+	if (actor->eflags & MFE_UNDERWATER)
+		momz = FixedDiv(momz, FixedSqrt(3*FRACUNIT));
+
+	P_SetObjectMomZ(flicky, momz, false);
+	flicky->movedir = (P_RandomChance(FRACUNIT/2) ?  -1 : 1);
+	flicky->fuse = P_RandomRange(595, 700);	// originally 300, 350
+	flicky->threshold = 0;
+
+	if (lookforplayers)
+		P_LookForPlayers(flicky, true, false, 0);
+
+	return flicky;
+}
+
+// Function: A_FlickySpawn
+//
+// Description: Flicky spawning function.
+//
+// var1:
+//		lower 16 bits: if 0, spawns random flicky based on level header. Else, spawns the designated thing type.
+//		upper 16 bits: if 0, no sound is played. Else, A_Scream is called.
+// var2 = upwards thrust for spawned flicky. If zero, default value is provided.
+//
+void A_FlickySpawn(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FlickySpawn", actor))
+		return;
+#endif
+
+	if (locvar1 >> 16) {
+		A_Scream(actor); // A shortcut for the truly lazy.
+		locvar1 &= 65535;
+	}
+
+	P_InternalFlickySpawn(actor, locvar1, ((locvar2) ? locvar2 : 8*FRACUNIT), true);
+}
+
+// Internal Flicky bubbling function.
+void P_InternalFlickyBubble(mobj_t *actor)
+{
+	if (actor->eflags & MFE_UNDERWATER)
+	{
+		mobj_t *overlay;
+
+		if (!((actor->z + 3*actor->height/2) < actor->watertop) || !mobjinfo[actor->type].raisestate || actor->tracer)
+			return;
+
+		overlay = P_SpawnMobj(actor->x, actor->y, actor->z, MT_OVERLAY);
+		P_SetMobjStateNF(overlay, mobjinfo[actor->type].raisestate);
+		P_SetTarget(&actor->tracer, overlay);
+		P_SetTarget(&overlay->target, actor);
+		return;
+	}
+
+	if (!actor->tracer || P_MobjWasRemoved(actor->tracer))
+		return;
+
+	P_RemoveMobj(actor->tracer);
+	P_SetTarget(&actor->tracer, NULL);
+}
+
+// Function: A_FlickyAim
+//
+// Description: Flicky aiming function.
+//
+// var1 = how far around the target (in angle constants) the flicky should look
+// var2 = distance from target to aim for
+//
+void A_FlickyAim(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	boolean flickyhitwall = false;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FlickyAim", actor))
+		return;
+#endif
+
+	if (actor->momx == actor->momy && actor->momy == 0)
+		flickyhitwall = true;
+
+	P_InternalFlickyBubble(actor);
+	P_InstaThrust(actor, 0, 0);
+
+	if (!actor->target)
+	{
+		P_LookForPlayers(actor, true, false, 0);
+		actor->angle = P_RandomKey(36)*ANG10;
+		return;
+	}
+
+	if (actor->fuse > 2*TICRATE)
+	{
+		angle_t posvar;
+		fixed_t chasevar, chasex, chasey;
+		
+		if (flickyhitwall)
+			actor->movedir *= -1;
+
+		posvar = ((R_PointToAngle2(actor->target->x, actor->target->y, actor->x, actor->y) + actor->movedir*locvar1) >> ANGLETOFINESHIFT) & FINEMASK;
+		chasevar = FixedSqrt(max(FRACUNIT, P_AproxDistance(actor->target->x - actor->x, actor->target->y - actor->y) - locvar2)) + locvar2;
+
+		chasex = actor->target->x + FixedMul(FINECOSINE(posvar), chasevar);
+		chasey = actor->target->y + FixedMul(FINESINE(posvar), chasevar);
+
+		if (P_AproxDistance(chasex - actor->x, chasey - actor->y))
+			actor->angle = R_PointToAngle2(actor->x, actor->y, chasex, chasey);
+	}
+	else if (flickyhitwall)
+	{
+		actor->angle += ANGLE_180;
+		actor->threshold = 0;
+	}
+}
+
+//Internal Flicky flying function. Also usuable as an underwater swim thrust.
+void P_InternalFlickyFly(mobj_t *actor, fixed_t flyspeed, fixed_t targetdist, fixed_t chasez)
+{
+	angle_t vertangle;
+
+	flyspeed = FixedMul(flyspeed, actor->scale);
+	actor->flags |= MF_NOGRAVITY;
+
+	var1 = ANG30;
+	var2 = 32*FRACUNIT;
+	A_FlickyAim(actor);
+
+	chasez *= 8;
+	if (!actor->target || !(actor->fuse > 2*TICRATE))
+		chasez += ((actor->eflags & MFE_VERTICALFLIP) ? actor->ceilingz - 24*FRACUNIT : actor->floorz + 24*FRACUNIT);
+	else
+	{
+		fixed_t add = actor->target->z + (actor->target->height - actor->height)/2;
+		if (add > (actor->ceilingz - 24*actor->scale - actor->height))
+			add = actor->ceilingz - 24*actor->scale - actor->height;
+		else if (add < (actor->floorz + 24*actor->scale))
+			add = actor->floorz + 24*actor->scale;
+		chasez += add;
+	}
+
+	if (!targetdist)
+		targetdist = 16*FRACUNIT; //Default!
+
+	if (actor->target && abs(chasez - actor->z) > targetdist)
+		targetdist = P_AproxDistance(actor->target->x - actor->x, actor->target->y - actor->y);
+
+	vertangle = (R_PointToAngle2(0, actor->z, targetdist, chasez) >> ANGLETOFINESHIFT) & FINEMASK;
+	P_InstaThrust(actor, actor->angle, FixedMul(FINECOSINE(vertangle), flyspeed));
+	actor->momz = FixedMul(FINESINE(vertangle), flyspeed);
+}
+
+// Function: A_FlickyFly
+//
+// Description: Flicky flying function.
+//
+// var1 = how fast to fly
+// var2 = how far ahead the target should be considered
+//
+void A_FlickyFly(mobj_t *actor)
+{
+	// We're not setting up locvars here - it passes var1 and var2 through to P_InternalFlickyFly instead.
+	//INT32 locvar1 = var1;
+	//INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FlickyFly", actor))
+		return;
+#endif
+	P_InternalFlickyFly(actor, var1, var2,
+	FINECOSINE((((actor->fuse % 36) * ANG10) >> ANGLETOFINESHIFT) & FINEMASK)
+	);
+}
+
+// Function: A_FlickySoar
+//
+// Description: Flicky soaring function - specific to puffin.
+//
+// var1 = how fast to fly
+// var2 = how far ahead the target should be considered
+//
+void A_FlickySoar(mobj_t *actor)
+{
+	// We're not setting up locvars here - it passes var1 and var2 through to P_InternalFlickyFly instead.
+	//INT32 locvar1 = var1;
+	//INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FlickySoar", actor))
+		return;
+#endif
+	P_InternalFlickyFly(actor, var1, var2,
+	2*(FRACUNIT/2 - abs(FINECOSINE((((actor->fuse % 144) * 5*ANG1/2) >> ANGLETOFINESHIFT) & FINEMASK)))
+	);
+
+	if (P_MobjFlip(actor)*actor->momz > 0 && actor->frame == 1 && actor->sprite == SPR_FL10)
+		actor->frame = 3;
+}
+
+//Function: A_FlickyCoast
+//
+// Description: Flicky swim-coasting function.
+//
+// var1 = speed to change state upon reaching
+// var2 = state to change to upon slowing down
+// the spawnstate of the mobj = state to change to when above water
+//
+void A_FlickyCoast(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FlickyCoast", actor))
+		return;
+#endif
+	if (actor->eflags & MFE_UNDERWATER)
+	{
+		actor->momx = (11*actor->momx)/12;
+		actor->momy = (11*actor->momy)/12;
+		actor->momz = (11*actor->momz)/12;
+
+		if (P_AproxDistance(P_AproxDistance(actor->momx, actor->momy), actor->momz) < locvar1)
+			P_SetMobjState(actor, locvar2);
+
+		return;
+	}
+
+	actor->flags &= ~MF_NOGRAVITY;
+	P_SetMobjState(actor, mobjinfo[actor->type].spawnstate);
+}
+
+// Internal Flicky hopping function.
+void P_InternalFlickyHop(mobj_t *actor, fixed_t momz, fixed_t momh, angle_t angle)
+{
+	if (((!(actor->eflags & MFE_VERTICALFLIP) && actor->z <= actor->floorz)
+	|| ((actor->eflags & MFE_VERTICALFLIP) && actor->z + actor->height >= actor->ceilingz)))
+	{
+		if (momz)
+		{
+			if (actor->eflags & MFE_UNDERWATER)
+				momz = FixedDiv(momz, FixedSqrt(3*FRACUNIT));
+			P_SetObjectMomZ(actor, momz, false);
+		}
+		P_InstaThrust(actor, angle, FixedMul(momh, actor->scale));
+	}
+}
+
+// Function: A_FlickyHop
+//
+// Description: Flicky hopping function.
+//
+// var1 = vertical thrust
+// var2 = horizontal thrust
+//
+void A_FlickyHop(mobj_t *actor)
+{
+	// We're not setting up locvars here - it passes var1 and var2 through to P_InternalFlickyHop instead.
+	//INT32 locvar1 = var1;
+	//INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FlickyHop", actor))
+		return;
+#endif
+	P_InternalFlickyHop(actor, var1, var2, actor->angle);
+}
+
+// Function: A_FlickyFlounder
+//
+// Description: Flicky floundering function.
+//
+// var1 = intended vertical thrust
+// var2 = intended horizontal thrust
+//
+void A_FlickyFlounder(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	angle_t hopangle;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FlickyFlounder", actor))
+		return;
+#endif
+	locvar1 *= (P_RandomKey(2) + 1);
+	locvar2 *= (P_RandomKey(2) + 1);
+	hopangle = (actor->angle + (P_RandomKey(9) - 4)*ANG2);
+	P_InternalFlickyHop(actor, locvar1, locvar2, hopangle);
+}
+
+// Function: A_FlickyCheck
+//
+// Description: Flicky airtime check function.
+//
+// var1 = state to change to upon touching the floor
+// var2 = state to change to upon falling
+// the meleestate of the mobj = state to change to when underwater
+//
+void A_FlickyCheck(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FlickyCheck", actor))
+		return;
+#endif
+	if (locvar2 && P_MobjFlip(actor)*actor->momz < 1)
+		P_SetMobjState(actor, locvar2);
+	else if (locvar1 && ((!(actor->eflags & MFE_VERTICALFLIP) && actor->z <= actor->floorz)
+	|| ((actor->eflags & MFE_VERTICALFLIP) && actor->z + actor->height >= actor->ceilingz)))
+		P_SetMobjState(actor, locvar1);
+	else if (mobjinfo[actor->type].meleestate && (actor->eflags & MFE_UNDERWATER))
+		P_SetMobjState(actor, mobjinfo[actor->type].meleestate);
+	P_InternalFlickyBubble(actor);
+}
+
+// Function: A_FlickyHeightCheck
+//
+// Description: Flicky height check function.
+//
+// var1 = state to change to when falling below height relative to target
+// var2 = height relative to target to change state at
+//
+void A_FlickyHeightCheck(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FlickyHeightCheck", actor))
+		return;
+#endif
+	if (locvar1 && actor->target && P_MobjFlip(actor)*actor->momz < 1
+	&& ((P_MobjFlip(actor)*((actor->z + actor->height/2) - (actor->target->z + actor->target->height/2)) < locvar2)
+	|| (actor->z - actor->height < actor->floorz) || (actor->z + 2*actor->height > actor->ceilingz)))
+		P_SetMobjState(actor, locvar1);
+	P_InternalFlickyBubble(actor);
+}
+
+// Function: A_FlickyFlutter
+//
+// Description: Flicky fluttering function - specific to chicken.
+//
+// var1 = state to change to upon touching the floor
+// var2 = state to change to upon falling
+// the meleestate of the mobj = state to change to when underwater
+//
+void A_FlickyFlutter(mobj_t *actor)
+{
+	// We're not setting up locvars here - it passes var1 and var2 through to A_FlickyCheck instead.
+	//INT32 locvar1 = var1;
+	//INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FlickyFlutter", actor))
+		return;
+#endif
+	A_FlickyCheck(actor);
+
+	var1 = ANG30;
+	var2 = 32*FRACUNIT;
+	A_FlickyAim(actor);
+
+	P_InstaThrust(actor, actor->angle, 2*actor->scale);
+	if (P_MobjFlip(actor)*actor->momz < -FRACUNIT/2)
+		actor->momz = -P_MobjFlip(actor)*actor->scale/2;
+}
+
+#undef FLICKYHITWALL
