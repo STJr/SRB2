@@ -391,21 +391,17 @@ endif()
 
 if(${SRB2_CONFIG_USEASM})
 	#SRB2_ASM_FLAGS can be used to pass flags to either nasm or yasm.
-	if(NOT DEFINED SRB2_ASM_FLAGS)
-		set(SRB2_ASM_FLAGS "")
-	endif()
-
 	if(${CMAKE_SYSTEM} MATCHES "Linux")
 		set(SRB2_ASM_FLAGS "-DLINUX ${SRB2_ASM_FLAGS}")
 	endif()
 
 	if(${SRB2_CONFIG_YASM})
 		set(CMAKE_ASM_YASM_SOURCE_FILE_EXTENSIONS ${CMAKE_ASM_YASM_SOURCE_FILE_EXTENSIONS} nas)
-		set(CMAKE_ASM_YASM_FLAGS "${SRB2_ASM_FLAGS}" CACHE STRING "")
+		set(CMAKE_ASM_YASM_FLAGS "${SRB2_ASM_FLAGS}" CACHE STRING "Flags used by the assembler during all build types.")
 		enable_language(ASM_YASM)
 	else()
 		set(CMAKE_ASM_NASM_SOURCE_FILE_EXTENSIONS ${CMAKE_ASM_NASM_SOURCE_FILE_EXTENSIONS} nas)
-		set(CMAKE_ASM_NASM_FLAGS "${SRB2_ASM_FLAGS}" CACHE STRING "")
+		set(CMAKE_ASM_NASM_FLAGS "${SRB2_ASM_FLAGS}" CACHE STRING "Flags used by the assembler during all build types.")
 		enable_language(ASM_NASM)
 	endif()
 	set(SRB2_USEASM ON)
