@@ -401,7 +401,7 @@ if(${SRB2_CONFIG_USEASM})
 	add_definitions(-DUSEASM)
 else()
 	set(SRB2_USEASM OFF)
-	add_definitions(-DNOASM -DNONX86)
+	add_definitions(-DNONX86 -DNORUSEASM)
 endif()
 
 # Targets
