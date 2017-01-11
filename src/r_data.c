@@ -304,6 +304,32 @@ done:
 }
 
 //
+// R_GetTextureNum
+//
+// Returns the actual texture id that we should use.
+// This can either be texnum, the current frame for texnum's anim (if animated),
+// or 0 if not valid.
+//
+INT32 R_GetTextureNum(INT32 texnum)
+{
+	if (texnum < 0 || texnum >= numtextures)
+		return 0;
+	return texturetranslation[texnum];
+}
+
+//
+// R_CheckTextureCache
+//
+// Use this if you need to make sure the texture is cached before R_GetColumn calls
+// e.g.: midtextures and FOF walls
+//
+void R_CheckTextureCache(INT32 tex)
+{
+	if (!texturecache[tex])
+		R_GenerateTexture(tex);
+}
+
+//
 // R_GetColumn
 //
 UINT8 *R_GetColumn(fixed_t tex, INT32 col)
@@ -1498,6 +1524,9 @@ void R_InitData(void)
 
 	CONS_Printf("R_LoadTextures()...\n");
 	R_LoadTextures();
+
+	CONS_Printf("P_InitPicAnims()...\n");
+	P_InitPicAnims();
 
 	CONS_Printf("R_InitSprites()...\n");
 	R_InitSpriteLumps();

@@ -3989,7 +3989,7 @@ static void Command_Archivetest_f(void)
 	}
 
 	// assign mobjnum
-	i = 0;
+	i = 1;
 	for (th = thinkercap.next; th != &thinkercap; th = th->next)
 		if (th->function.acp1 == (actionf_p1)P_MobjThinker)
 			((mobj_t *)th)->mobjnum = i++;
@@ -4091,8 +4091,7 @@ static void Skin_OnChange(void)
 	if (!Playing())
 		return; // do whatever you want
 
-	if (!(cv_debug || devparm) && !(multiplayer || netgame) // In single player.
-		&& (gamestate == GS_LEVEL || gamestate == GS_INTERMISSION || gamestate == GS_CONTINUING))
+	if (!(cv_debug || devparm) && !(multiplayer || netgame)) // In single player.
 	{
 		CV_StealthSet(&cv_skin, skins[players[consoleplayer].skin].name);
 		return;

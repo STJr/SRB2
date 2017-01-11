@@ -248,9 +248,16 @@ FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FixedFloor(fixed_t x)
 {
 	const fixed_t a = abs(x); //absolute of x
 	const fixed_t i = (a>>FRACBITS)<<FRACBITS; // cut out the fractional part
-	const fixed_t f = i-a; // cut out the integral part
+	const fixed_t f = a-i; // cut out the integral part
+	if (f == 0)
+		return x;
 	if (x != INT32_MIN)
-		return x-f; // return largest integral value not greater than argument
+	{ // return rounded down to nearest whole number
+		if (x > 0)
+			return x-f;
+		else
+			return x-(FRACUNIT-f);
+	}
 	return INT32_MIN;
 }
 
@@ -266,7 +273,7 @@ FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FixedTrunc(fixed_t x)
 {
 	const fixed_t a = abs(x); //absolute of x
 	const fixed_t i = (a>>FRACBITS)<<FRACBITS; // cut out the fractional part
-	const fixed_t f = i-a; // cut out the integral part
+	const fixed_t f = a-i; // cut out the integral part
 	if (x != INT32_MIN)
 	{ // return rounded to nearest whole number, towards zero
 		if (x > 0)
@@ -289,11 +296,18 @@ FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FixedCeil(fixed_t x)
 {
 	const fixed_t a = abs(x); //absolute of x
 	const fixed_t i = (a>>FRACBITS)<<FRACBITS; // cut out the fractional part
-	const fixed_t f = i-a; // cut out the integral part
+	const fixed_t f = a-i; // cut out the integral part
+	if (f == 0)
+		return x;
 	if (x == INT32_MIN)
 		return INT32_MIN;
 	else if (x < FixedFloor(INT32_MAX))
-		return x+(FRACUNIT-f); // return smallest integral value not less than argument
+	{ // return rounded up to nearest whole number
+		if (x > 0)
+			return x+(FRACUNIT-f);
+		else
+			return x+f;
+	}
 	return INT32_MAX;
 }
 
@@ -309,7 +323,9 @@ FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FixedRound(fixed_t x)
 {
 	const fixed_t a = abs(x); //absolute of x
 	const fixed_t i = (a>>FRACBITS)<<FRACBITS; // cut out the fractional part
-	const fixed_t f = i-a; // cut out the integral part
+	const fixed_t f = a-i; // cut out the integral part
+	if (f == 0)
+		return x;
 	if (x == INT32_MIN)
 		return INT32_MIN;
 	else if (x < FixedFloor(INT32_MAX))

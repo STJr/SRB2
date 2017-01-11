@@ -203,6 +203,7 @@ typedef struct r_lightlist_s
 	fixed_t heightstep;
 	fixed_t botheight;
 	fixed_t botheightstep;
+	fixed_t startheight; // for repeating midtextures
 	INT16 lightlevel;
 	extracolormap_t *extra_colormap;
 	lighttable_t *rcolormap;
@@ -383,6 +384,7 @@ typedef struct sector_s
 #endif
 
 	// these are saved for netgames, so do not let Lua touch these!
+	INT32 spawn_nexttag, spawn_firsttag; // the actual nexttag/firsttag values may differ if the sector's tag was changed
 
 	// offsets sector spawned with (via linedef type 7)
 	fixed_t spawn_flr_xoffs, spawn_flr_yoffs;
