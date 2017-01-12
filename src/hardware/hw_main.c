@@ -323,9 +323,6 @@ static angle_t gr_xtoviewangle[MAXVIDWIDTH+1];
 // test change fov when looking up/down but bsp projection messup :(
 //#define NOCRAPPYMLOOK
 
-/// \note crappy
-#define drawtextured true
-
 // base values set at SetViewSize
 static float gr_basecentery;
 
@@ -1378,44 +1375,21 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 	v2x = FLOAT_TO_FIXED(ve.x);
 	v2y = FLOAT_TO_FIXED(ve.y);
 #endif
-
-	if (gr_frontsector->heightsec != -1)
-	{
 #ifdef ESLOPE
-		worldtop = worldtopslope = sectors[gr_frontsector->heightsec].ceilingheight;
-		worldbottom = worldbottomslope = sectors[gr_frontsector->heightsec].floorheight;
-#else
-		worldtop = sectors[gr_frontsector->heightsec].ceilingheight;
-		worldbottom = sectors[gr_frontsector->heightsec].floorheight;
-#endif
-	}
-	else
-	{
-#ifdef ESLOPE
-		if (gr_frontsector->c_slope)
-		{
-			worldtop      = P_GetZAt(gr_frontsector->c_slope, v1x, v1y);
-			worldtopslope = P_GetZAt(gr_frontsector->c_slope, v2x, v2y);
-		}
-		else
-		{
-			worldtop = worldtopslope = gr_frontsector->ceilingheight;
-		}
 
-		if (gr_frontsector->f_slope)
-		{
-			worldbottom      = P_GetZAt(gr_frontsector->f_slope, v1x, v1y);
-			worldbottomslope = P_GetZAt(gr_frontsector->f_slope, v2x, v2y);
-		}
-		else
-		{
-			worldbottom = worldbottomslope = gr_frontsector->floorheight;
-		}
+#define SLOPEPARAMS(slope, end1, end2, normalheight) \
+	if (slope) { \
+		end1 = P_GetZAt(slope, v1x, v1y); \
+		end2 = P_GetZAt(slope, v2x, v2y); \
+	} else \
+		end1 = end2 = normalheight;
+
+	SLOPEPARAMS(gr_frontsector->c_slope, worldtop,    worldtopslope,    gr_frontsector->ceilingheight)
+	SLOPEPARAMS(gr_frontsector->f_slope, worldbottom, worldbottomslope, gr_frontsector->floorheight)
 #else
-		worldtop    = gr_frontsector->ceilingheight;
-		worldbottom = gr_frontsector->floorheight;
+	worldtop    = gr_frontsector->ceilingheight;
+	worldbottom = gr_frontsector->floorheight;
 #endif
-	}
 
 	// remember vertices ordering
 	//  3--2
@@ -1430,7 +1404,6 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 	wallVerts[2].z = wallVerts[1].z = ve.y;
 	wallVerts[0].w = wallVerts[1].w = wallVerts[2].w = wallVerts[3].w = 1.0f;
 
-	if (drawtextured)
 	{
 		// x offset the texture
 		fixed_t texturehpeg = gr_sidedef->textureoffset + gr_curline->offset;
@@ -1459,43 +1432,15 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 	{
 		INT32 gr_toptexture, gr_bottomtexture;
 		// two sided line
-		if (gr_backsector->heightsec != -1)
-		{
-#ifdef ESLOPE
-			worldhigh = worldhighslope = sectors[gr_backsector->heightsec].ceilingheight;
-			worldlow = worldlowslope = sectors[gr_backsector->heightsec].floorheight;
-#else
-			worldhigh = sectors[gr_backsector->heightsec].ceilingheight;
-			worldlow = sectors[gr_backsector->heightsec].floorheight;
-#endif
-		}
-		else
-		{
-#ifdef ESLOPE
-			if (gr_backsector->c_slope)
-			{
-				worldhigh      = P_GetZAt(gr_backsector->c_slope, v1x, v1y);
-				worldhighslope = P_GetZAt(gr_backsector->c_slope, v2x, v2y);
-			}
-			else
-			{
-				worldhigh = worldhighslope = gr_backsector->ceilingheight;
-			}
 
-			if (gr_backsector->f_slope)
-			{
-				worldlow      = P_GetZAt(gr_backsector->f_slope, v1x, v1y);
-				worldlowslope = P_GetZAt(gr_backsector->f_slope, v2x, v2y);
-			}
-			else
-			{
-				worldlow = worldlowslope = gr_backsector->floorheight;
-			}
+#ifdef ESLOPE
+		SLOPEPARAMS(gr_backsector->c_slope, worldhigh, worldhighslope, gr_backsector->ceilingheight)
+		SLOPEPARAMS(gr_backsector->f_slope, worldlow,  worldlowslope,  gr_backsector->floorheight)
+#undef SLOPEPARAMS
 #else
-			worldhigh = gr_backsector->ceilingheight;
-			worldlow  = gr_backsector->floorheight;
+		worldhigh = gr_backsector->ceilingheight;
+		worldlow  = gr_backsector->floorheight;
 #endif
-		}
 
 		// hack to allow height changes in outdoor areas
 		// This is what gets rid of the upper textures if there should be sky
@@ -1519,7 +1464,6 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
             worldhigh < worldtop
             ) && gr_toptexture)
 		{
-			if (drawtextured)
 			{
 				fixed_t texturevpegtop; // top
 
@@ -1600,7 +1544,6 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 #endif
             worldlow > worldbottom) && gr_bottomtexture) //only if VISIBLE!!!
 		{
-			if (drawtextured)
 			{
 				fixed_t texturevpegbottom = 0; // bottom
 
@@ -1792,7 +1735,6 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 			h = min(highcut, polytop);
 			l = max(polybottom, lowcut);
 
-			if (drawtextured)
 			{
 				// PEGGING
 #ifdef ESLOPE
@@ -1848,7 +1790,6 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				h = min(highcut, polytop);
 				l = max(polybottom, lowcut);
 
-				if (drawtextured)
 				{
 					// PEGGING
 					if (!!(gr_linedef->flags & ML_DONTPEGBOTTOM) ^ !!(gr_linedef->flags & ML_EFFECT3))
@@ -2039,7 +1980,6 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 		gr_midtexture = R_GetTextureNum(gr_sidedef->midtexture);
 		if (gr_midtexture)
 		{
-			if (drawtextured)
 			{
 				fixed_t     texturevpeg;
 				// PEGGING
@@ -2180,7 +2120,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 					wallVerts[0].s = wallVerts[3].s = 0;
 					wallVerts[2].s = wallVerts[1].s = 0;
 				}
-				else if (drawtextured)
+				else
 				{
 					fixed_t texturevpeg;
 
@@ -2316,7 +2256,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 					wallVerts[0].s = wallVerts[3].s = 0;
 					wallVerts[2].s = wallVerts[1].s = 0;
 				}
-				else if (drawtextured)
+				else
 				{
 					grTex = HWR_GetTexture(texnum);
 
