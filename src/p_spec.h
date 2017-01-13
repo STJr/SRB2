@@ -64,6 +64,8 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 void P_LinedefExecute(INT16 tag, mobj_t *actor, sector_t *caller);
 void P_ChangeSectorTag(UINT32 sector, INT16 newtag);
 
+ffloor_t *P_GetFFloorByID(sector_t *sec, UINT16 id);
+
 //
 // P_LIGHTS
 //
