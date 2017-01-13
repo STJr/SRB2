@@ -83,7 +83,6 @@ void Command_Droprate(void);
 #ifdef DEBUGMODE
 void Command_Numnodes(void);
 #endif
-boolean NodeClosing(INT32 node);
 
 #if defined(_MSC_VER)
 #pragma pack(1)
