@@ -1104,7 +1104,7 @@ void HU_Drawer(void)
 	{
 		static UINT32 resynch_ticker = 0;
 		char resynch_text[14];
-		INT32 i;
+		UINT32 i;
 
 		// Animate the dots
 		resynch_ticker++;
