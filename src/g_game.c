@@ -4728,7 +4728,7 @@ void G_BeginRecording(void)
 	// Don't do it.
 	WRITEFIXED(demo_p, player->jumpfactor);
 
-	// Save netvar data (SONICCD, etc)
+	// Save netvar data
 	CV_SaveNetVars(&demo_p);
 
 	memset(&oldcmd,0,sizeof(oldcmd));

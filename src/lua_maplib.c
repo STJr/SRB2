@@ -424,22 +424,12 @@ static int sector_get(lua_State *L)
 	case sector_ceilingheight:
 		lua_pushfixed(L, sector->ceilingheight);
 		return 1;
-	case sector_floorpic: { // floorpic
-		levelflat_t *levelflat;
-		INT16 i;
-		for (i = 0, levelflat = levelflats; i != sector->floorpic; i++, levelflat++)
-			;
-		lua_pushlstring(L, levelflat->name, 8);
+	case sector_floorpic: // floorpic
+		lua_pushlstring(L, levelflats[sector->floorpic].name, 8);
 		return 1;
-	}
-	case sector_ceilingpic: { // ceilingpic
-		levelflat_t *levelflat;
-		INT16 i;
-		for (i = 0, levelflat = levelflats; i != sector->ceilingpic; i++, levelflat++)
-			;
-		lua_pushlstring(L, levelflat->name, 8);
+	case sector_ceilingpic: // ceilingpic
+		lua_pushlstring(L, levelflats[sector->ceilingpic].name, 8);
 		return 1;
-	}
 	case sector_lightlevel:
 		lua_pushinteger(L, sector->lightlevel);
 		return 1;
@@ -474,46 +464,6 @@ static int sector_get(lua_State *L)
 		return 1;
 	}
 	return 0;
-}
-
-// help function for P_LoadSectors, find a flat in the active wad files,
-// allocate an id for it, and set the levelflat (to speedup search)
-//
-static INT32 P_AddLevelFlatRuntime(const char *flatname)
-{
-	size_t i;
-	levelflat_t *levelflat = levelflats;
-
-	//
-	//  first scan through the already found flats
-	//
-	for (i = 0; i < numlevelflats; i++, levelflat++)
-		if (strnicmp(levelflat->name,flatname,8)==0)
-			break;
-
-	// that flat was already found in the level, return the id
-	if (i == numlevelflats)
-	{
-		// allocate new flat memory
-		levelflats = Z_Realloc(levelflats, (numlevelflats + 1) * sizeof(*levelflats), PU_LEVEL, NULL);
-		levelflat = levelflats+i;
-
-		// store the name
-		strlcpy(levelflat->name, flatname, sizeof (levelflat->name));
-		strupr(levelflat->name);
-
-		// store the flat lump number
-		levelflat->lumpnum = R_GetFlatNumForName(flatname);
-
-#ifndef ZDEBUG
-		CONS_Debug(DBG_SETUP, "flat #%03d: %s\n", atoi(sizeu1(numlevelflats)), levelflat->name);
-#endif
-
-		numlevelflats++;
-	}
-
-	// level flat id
-	return (INT32)i;
 }
 
 static int sector_set(lua_State *L)

@@ -365,6 +365,35 @@ boolean splitscreen = false;
 boolean circuitmap = false;
 INT32 adminplayer = -1;
 
+/// \warning Keep this up-to-date if you add/remove/rename net text commands
+const char *netxcmdnames[MAXNETXCMD - 1] =
+{
+	"NAMEANDCOLOR",
+	"WEAPONPREF",
+	"KICK",
+	"NETVAR",
+	"SAY",
+	"MAP",
+	"EXITLEVEL",
+	"ADDFILE",
+	"PAUSE",
+	"ADDPLAYER",
+	"TEAMCHANGE",
+	"CLEARSCORES",
+	"LOGIN",
+	"VERIFIED",
+	"RANDOMSEED",
+	"RUNSOC",
+	"REQADDFILE",
+	"DELFILE",
+	"SETMOTD",
+	"SUICIDE",
+#ifdef HAVE_BLUA
+	"LUACMD",
+	"LUAVAR"
+#endif
+};
+
 // =========================================================================
 //                           SERVER STARTUP
 // =========================================================================
@@ -3960,7 +3989,7 @@ static void Command_Archivetest_f(void)
 	}
 
 	// assign mobjnum
-	i = 0;
+	i = 1;
 	for (th = thinkercap.next; th != &thinkercap; th = th->next)
 		if (th->function.acp1 == (actionf_p1)P_MobjThinker)
 			((mobj_t *)th)->mobjnum = i++;
@@ -4055,8 +4084,7 @@ static void Skin_OnChange(void)
 	if (!Playing())
 		return; // do whatever you want
 
-	if (!(cv_debug || devparm) && !(multiplayer || netgame) // In single player.
-		&& (gamestate == GS_LEVEL || gamestate == GS_INTERMISSION || gamestate == GS_CONTINUING))
+	if (!(cv_debug || devparm) && !(multiplayer || netgame)) // In single player.
 	{
 		CV_StealthSet(&cv_skin, skins[players[consoleplayer].skin].name);
 		return;

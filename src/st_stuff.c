@@ -99,6 +99,9 @@ static patch_t *ringshield;
 static patch_t *watershield;
 static patch_t *bombshield;
 static patch_t *pityshield;
+static patch_t *flameshield;
+static patch_t *bubbleshield;
+static patch_t *thundershield;
 static patch_t *invincibility;
 static patch_t *sneakers;
 static patch_t *gravboots;
@@ -294,6 +297,9 @@ void ST_LoadGraphics(void)
 	watershield = W_CachePatchName("TVELC0", PU_HUDGFX);
 	bombshield = W_CachePatchName("TVARC0", PU_HUDGFX);
 	pityshield = W_CachePatchName("TVPIC0", PU_HUDGFX);
+	flameshield = W_CachePatchName("TVFLC0", PU_HUDGFX);
+	bubbleshield = W_CachePatchName("TVBBC0", PU_HUDGFX);
+	thundershield = W_CachePatchName("TVZPC0", PU_HUDGFX);
 	invincibility = W_CachePatchName("TVIVC0", PU_HUDGFX);
 	sneakers = W_CachePatchName("TVSSC0", PU_HUDGFX);
 	gravboots = W_CachePatchName("TVGVC0", PU_HUDGFX);
@@ -576,12 +582,13 @@ static void ST_drawDebugInfo(void)
 		V_DrawRightAlignedString(320, height - 80,  V_MONOSPACE, va("AIR: %4d, %3d", stplyr->powers[pw_underwater], stplyr->powers[pw_spacetime]));
 
 		// Flags
-		V_DrawRightAlignedString(304-74, height - 72, V_MONOSPACE, "PF:");
-		V_DrawString(304-72,             height - 72, (stplyr->jumping) ? V_GREENMAP : V_REDMAP, "JM");
-		V_DrawString(304-54,             height - 72, (stplyr->pflags & PF_JUMPED) ? V_GREENMAP : V_REDMAP, "JD");
-		V_DrawString(304-36,             height - 72, (stplyr->pflags & PF_SPINNING) ? V_GREENMAP : V_REDMAP, "SP");
-		V_DrawString(304-18,             height - 72, (stplyr->pflags & PF_STARTDASH) ? V_GREENMAP : V_REDMAP, "ST");
-		V_DrawString(304,                height - 72, (stplyr->pflags & PF_THOKKED) ? V_GREENMAP : V_REDMAP, "TH");
+		V_DrawRightAlignedString(304-92, height - 72, V_MONOSPACE, "PF:");
+		V_DrawString(304-90,             height - 72, (stplyr->jumping) ? V_GREENMAP : V_REDMAP, "JM");
+		V_DrawString(304-72,             height - 72, (stplyr->pflags & PF_JUMPED) ? V_GREENMAP : V_REDMAP, "JD");
+		V_DrawString(304-54,             height - 72, (stplyr->pflags & PF_SPINNING) ? V_GREENMAP : V_REDMAP, "SP");
+		V_DrawString(304-36,             height - 72, (stplyr->pflags & PF_STARTDASH) ? V_GREENMAP : V_REDMAP, "ST");
+		V_DrawString(304-18,                height - 72, (stplyr->pflags & PF_THOKKED) ? V_GREENMAP : V_REDMAP, "TH");
+		V_DrawString(304,                height - 72, (stplyr->pflags & PF_SHIELDABILITY) ? V_GREENMAP : V_REDMAP, "SH");
 
 		V_DrawRightAlignedString(320, height - 64, V_MONOSPACE, va("CEILZ: %6d", stplyr->mo->ceilingz>>FRACBITS));
 		V_DrawRightAlignedString(320, height - 56, V_MONOSPACE, va("FLOORZ: %6d", stplyr->mo->floorz>>FRACBITS));
@@ -806,18 +813,21 @@ static void ST_drawFirstPersonHUD(void)
 		return;
 
 	// Graue 06-18-2004: no V_NOSCALESTART, no SCX, no SCY, snap to right
-	if (player->powers[pw_shield] & SH_FORCE)
+	if ((player->powers[pw_shield] & SH_NOSTACK & ~SH_FORCEHP) == SH_FORCE)
 	{
-		if ((player->powers[pw_shield] & 0xFF) > 0 || leveltime & 1)
+		if ((player->powers[pw_shield] & SH_FORCEHP) > 0 || leveltime & 1)
 			p = forceshield;
 	}
 	else switch (player->powers[pw_shield] & SH_NOSTACK)
 	{
-	case SH_JUMP:      p = jumpshield;  break;
-	case SH_ELEMENTAL: p = watershield; break;
-	case SH_BOMB:      p = bombshield;  break;
-	case SH_ATTRACT:   p = ringshield;  break;
-	case SH_PITY:      p = pityshield;  break;
+	case SH_WHIRLWIND:   p = jumpshield;    break;
+	case SH_ELEMENTAL:   p = watershield;   break;
+	case SH_ARMAGEDDON:  p = bombshield;    break;
+	case SH_ATTRACT:     p = ringshield;    break;
+	case SH_PITY:        p = pityshield;    break;
+	case SH_FLAMEAURA:   p = flameshield;   break;
+	case SH_BUBBLEWRAP:  p = bubbleshield;  break;
+	case SH_THUNDERCOIN: p = thundershield; break;
 	default: break;
 	}
 
