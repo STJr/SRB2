@@ -662,7 +662,11 @@ void SV_FileSendTicker(void)
 	{
 		packetsent = cv_downloadspeed.value;
 		// Don't send more packets than we have free acks
+#ifndef NONET
 		maxpacketsent = Net_GetFreeAcks(false) - 5; // Let 5 extra acks just in case
+#else
+		maxpacketsent = 1;
+#endif
 		if (packetsent > maxpacketsent && maxpacketsent > 0) // Send at least one packet
 			packetsent = maxpacketsent;
 	}

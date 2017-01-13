@@ -274,7 +274,6 @@ static boolean GetFreeAcknum(UINT8 *freeack, boolean lowtimer)
 		I_Error("Connection lost\n");
 	return false;
 }
-#endif
 
 /** Counts how many acks are free
   *
@@ -308,7 +307,6 @@ INT32 Net_GetFreeAcks(boolean urgent)
 	return n;
 }
 
-#ifndef NONET
 // Get a ack to send in the queue of this node
 static UINT8 GetAcktosend(INT32 node)
 {
