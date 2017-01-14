@@ -2847,7 +2847,7 @@ void D_ClientServerInit(void)
 	COM_AddCommand("drop", Command_Drop);
 	COM_AddCommand("droprate", Command_Droprate);
 #endif
-#ifdef DEBUGMODE
+#ifdef _DEBUG
 	COM_AddCommand("numnodes", Command_Numnodes);
 #endif
 #endif

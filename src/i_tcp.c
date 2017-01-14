@@ -529,7 +529,7 @@ static SINT8 getfreenode(void)
 	return -1;
 }
 
-#ifdef DEBUGMODE
+#ifdef _DEBUG
 void Command_Numnodes(void)
 {
 	INT32 connected = 0;

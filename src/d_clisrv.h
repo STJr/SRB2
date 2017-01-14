@@ -80,7 +80,7 @@ typedef enum
 void Command_Drop(void);
 void Command_Droprate(void);
 #endif
-#ifdef DEBUGMODE
+#ifdef _DEBUG
 void Command_Numnodes(void);
 #endif
 
