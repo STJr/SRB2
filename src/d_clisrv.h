@@ -80,6 +80,9 @@ typedef enum
 void Command_Drop(void);
 void Command_Droprate(void);
 #endif
+#ifdef _DEBUG
+void Command_Numnodes(void);
+#endif
 
 #if defined(_MSC_VER)
 #pragma pack(1)
@@ -442,6 +445,7 @@ extern consvar_t cv_playbackspeed;
 #define KICK_MSG_CUSTOM_BAN  8
 
 extern boolean server;
+#define client (!server)
 extern boolean dedicated; // For dedicated server
 extern UINT16 software_MAXPACKETLENGTH;
 extern boolean acceptnewnode;
@@ -449,13 +453,14 @@ extern SINT8 servernode;
 
 void Command_Ping_f(void);
 extern tic_t connectiontimeout;
+extern tic_t jointimeout;
 #ifdef NEWPING
 extern UINT16 pingmeasurecount;
 extern UINT32 realpingtable[MAXPLAYERS];
 extern UINT32 playerpingtable[MAXPLAYERS];
 #endif
 
-extern consvar_t cv_joinnextround, cv_allownewplayer, cv_maxplayers, cv_resynchattempts, cv_blamecfail, cv_maxsend;
+extern consvar_t cv_joinnextround, cv_allownewplayer, cv_maxplayers, cv_resynchattempts, cv_blamecfail, cv_maxsend, cv_noticedownload, cv_downloadspeed;
 
 // Used in d_net, the only dependence
 tic_t ExpandTics(INT32 low);

@@ -470,7 +470,7 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 	boolean action = false;
 	char *ptr;
 
-	CONS_Debug(DBG_NETPLAY,"Recieved SAY cmd from Player %d (%s)\n", playernum+1, player_names[playernum]);
+	CONS_Debug(DBG_NETPLAY,"Received SAY cmd from Player %d (%s)\n", playernum+1, player_names[playernum]);
 
 	target = READSINT8(*p);
 	flags = READUINT8(*p);
@@ -1102,7 +1102,19 @@ void HU_Drawer(void)
 
 	// draw desynch text
 	if (hu_resynching)
-		V_DrawCenteredString(BASEVIDWIDTH/2, 180, V_YELLOWMAP, "Resynching...");
+	{
+		static UINT32 resynch_ticker = 0;
+		char resynch_text[14];
+		UINT32 i;
+
+		// Animate the dots
+		resynch_ticker++;
+		strcpy(resynch_text, "Resynching");
+		for (i = 0; i < (resynch_ticker / 16) % 4; i++)
+			strcat(resynch_text, ".");
+
+		V_DrawCenteredString(BASEVIDWIDTH/2, 180, V_YELLOWMAP | V_ALLOWLOWERCASE, resynch_text);
+	}
 }
 
 //======================================================================
