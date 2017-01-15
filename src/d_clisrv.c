@@ -912,7 +912,7 @@ static inline void resynch_read_others(resynchend_pak *p)
 	for (i = 0; i < MAXPLAYERS; ++i)
 	{
 		// We don't care if they're in the game or not, just write all the data.
-		players[i].spectator = !(loc_ingame & i<<i);
+		players[i].spectator = !(loc_ingame & (i<<i));
 		players[i].ctfteam = (INT32)LONG(p->ctfteam[i]); // no, 0 does not mean spectator, at least not in Match
 		players[i].score = (UINT32)LONG(p->score[i]);
 		players[i].numboxes = SHORT(p->numboxes[i]);
