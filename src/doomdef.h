@@ -150,9 +150,9 @@ extern FILE *logstream;
 // we use comprevision and compbranch instead.
 #else
 #define VERSION    201 // Game version
-#define SUBVERSION 16  // more precise version number
-#define VERSIONSTRING "v2.1.16"
-#define VERSIONSTRINGW L"v2.1.16"
+#define SUBVERSION 17  // more precise version number
+#define VERSIONSTRING "v2.1.17"
+#define VERSIONSTRINGW L"v2.1.17"
 // Hey! If you change this, add 1 to the MODVERSION below!
 // Otherwise we can't force updates!
 #endif
