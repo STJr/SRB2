@@ -1810,17 +1810,17 @@ void T_MarioBlockChecker(levelspecthink_t *block)
 	if (SearchMarioNode(block->sector->touching_thinglist))
 	{
 		sides[masterline->sidenum[0]].midtexture = sides[masterline->sidenum[0]].bottomtexture; // Update textures
-		if (masterline->sidenum[1])
+		if (masterline->backsector)
 		{
-			sides[masterline->sidenum[0]].sector->ceilingpic = sides[masterline->sidenum[0]].sector->floorpic = sides[masterline->sidenum[1]].sector->ceilingpic; // Update flats to be backside's ceiling if there's a back sector, otherwise leave them alone
+			block->sector->ceilingpic = block->sector->floorpic = masterline->backsector->ceilingpic; // Update flats to be backside's ceiling
 		}
 	}
 	else
 	{
 		sides[masterline->sidenum[0]].midtexture = sides[masterline->sidenum[0]].toptexture;
-		if (masterline->sidenum[1])
+		if (masterline->backsector)
 		{
-			sides[masterline->sidenum[0]].sector->ceilingpic = sides[masterline->sidenum[0]].sector->floorpic = sides[masterline->sidenum[1]].sector->floorpic; // Update flats to be backside's floor if there's a back sector, otherwise leave them alone
+			block->sector->ceilingpic = block->sector->floorpic = masterline->backsector->floorpic; // Update flats to be backside's floor
 		}
 	}
 }
