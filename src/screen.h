@@ -136,6 +136,7 @@ extern void (*basespanfunc)(void);
 extern void (*splatfunc)(void);
 extern void (*transtransfunc)(void);
 extern void (*twosmultipatchfunc)(void);
+extern void (*twosmultipatchtransfunc)(void);
 
 // -----
 // CPUID

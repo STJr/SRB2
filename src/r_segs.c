@@ -271,9 +271,18 @@ static void R_Render2sidedMultiPatchColumn(column_t *column)
 
 		if (colfunc == wallcolfunc)
 			twosmultipatchfunc();
+		else if (colfunc == fuzzcolfunc)
+			twosmultipatchtransfunc();
 		else
 			colfunc();
 	}
+}
+
+// quick wrapper for R_DrawFlippedMaskedColumn so it can be set as a colfunc_2s value
+// uses column2s_length for texture->height as above
+static void R_DrawFlippedMaskedSegColumn(column_t *column)
+{
+	R_DrawFlippedMaskedColumn(column, column2s_length);
 }
 
 void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
@@ -300,7 +309,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	curline = ds->curline;
 	frontsector = curline->frontsector;
 	backsector = curline->backsector;
-	texnum = texturetranslation[curline->sidedef->midtexture];
+	texnum = R_GetTextureNum(curline->sidedef->midtexture);
 	windowbottom = windowtop = sprbotscreen = INT32_MAX;
 
 	// hack translucent linedef types (900-909 for transtables 1-9)
@@ -344,10 +353,21 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	rw_scalestep = ds->scalestep;
 	spryscale = ds->scale1 + (x1 - ds->x1)*rw_scalestep;
 
+	// Texture must be cached before setting colfunc_2s,
+	// otherwise texture[texnum]->holes may be false when it shouldn't be
+	R_CheckTextureCache(texnum);
 	// handle case where multipatch texture is drawn on a 2sided wall, multi-patch textures
 	// are not stored per-column with post info in SRB2
 	if (textures[texnum]->holes)
-		colfunc_2s = R_DrawMaskedColumn; // render the usual 2sided single-patch packed texture
+	{
+		if (textures[texnum]->flip & 2) // vertically flipped?
+		{
+			colfunc_2s = R_DrawFlippedMaskedSegColumn;
+			column2s_length = textures[texnum]->height;
+		}
+		else
+			colfunc_2s = R_DrawMaskedColumn; // render the usual 2sided single-patch packed texture
+	}
 	else
 	{
 		colfunc_2s = R_Render2sidedMultiPatchColumn; // render multipatch with no holes (no post_t info)
@@ -391,6 +411,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 			rlight->height = (centeryfrac) - FixedMul((light->height - viewz), spryscale);
 			rlight->heightstep = -FixedMul(rw_scalestep, (light->height - viewz));
 #endif
+			rlight->startheight = rlight->height; // keep starting value here to reset for each repeat
 			rlight->lightlevel = *light->lightlevel;
 			rlight->extra_colormap = light->extra_colormap;
 			rlight->flags = light->flags;
@@ -484,6 +505,14 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 		{
 			rw_scalestep = ds->scalestep;
 			spryscale = ds->scale1 + (x1 - ds->x1)*rw_scalestep;
+			if (dc_numlights)
+			{ // reset all lights to their starting heights
+				for (i = 0; i < dc_numlights; i++)
+				{
+					rlight = &dc_lightlist[i];
+					rlight->height = rlight->startheight;
+				}
+			}
 		}
 
 #ifndef ESLOPE
@@ -700,6 +729,14 @@ static void R_DrawRepeatMaskedColumn(column_t *col)
 	} while (sprtopscreen < sprbotscreen);
 }
 
+static void R_DrawRepeatFlippedMaskedColumn(column_t *col)
+{
+	do {
+		R_DrawFlippedMaskedColumn(col, column2s_length);
+		sprtopscreen += dc_texheight*spryscale;
+	} while (sprtopscreen < sprbotscreen);
+}
+
 //
 // R_RenderThickSideRange
 // Renders all the thick sides in the given range.
@@ -746,7 +783,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	curline = ds->curline;
 	backsector = pfloor->target;
 	frontsector = curline->frontsector == pfloor->target ? curline->backsector : curline->frontsector;
-	texnum = texturetranslation[sides[pfloor->master->sidenum[0]].midtexture];
+	texnum = R_GetTextureNum(sides[pfloor->master->sidenum[0]].midtexture);
 
 	colfunc = wallcolfunc;
 
@@ -754,7 +791,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	{
 		size_t linenum = curline->linedef-backsector->lines[0];
 		newline = pfloor->master->frontsector->lines[0] + linenum;
-		texnum = texturetranslation[sides[newline->sidenum[0]].midtexture];
+		texnum = R_GetTextureNum(sides[newline->sidenum[0]].midtexture);
 	}
 
 	if (pfloor->flags & FF_TRANSLUCENT)
@@ -1024,10 +1061,21 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 
 	dc_texturemid += offsetvalue;
 
+	// Texture must be cached before setting colfunc_2s,
+	// otherwise texture[texnum]->holes may be false when it shouldn't be
+	R_CheckTextureCache(texnum);
 	//faB: handle case where multipatch texture is drawn on a 2sided wall, multi-patch textures
 	//     are not stored per-column with post info anymore in Doom Legacy
 	if (textures[texnum]->holes)
-		colfunc_2s = R_DrawRepeatMaskedColumn;                    //render the usual 2sided single-patch packed texture
+	{
+		if (textures[texnum]->flip & 2) // vertically flipped?
+		{
+			colfunc_2s = R_DrawRepeatFlippedMaskedColumn;
+			column2s_length = textures[texnum]->height;
+		}
+		else
+			colfunc_2s = R_DrawRepeatMaskedColumn; // render the usual 2sided single-patch packed texture
+	}
 	else
 	{
 		colfunc_2s = R_Render2sidedMultiPatchColumn;        //render multipatch with no holes (no post_t info)
@@ -1936,14 +1984,16 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 	if (!backsector)
 	{
+		fixed_t texheight;
 		// single sided line
-		midtexture = texturetranslation[sidedef->midtexture];
+		midtexture = R_GetTextureNum(sidedef->midtexture);
+		texheight = textureheight[midtexture];
 		// a single sided line is terminal, so it must mark ends
 		markfloor = markceiling = true;
 #ifdef ESLOPE
 		if (linedef->flags & ML_EFFECT2) {
 			if (linedef->flags & ML_DONTPEGBOTTOM)
-				rw_midtexturemid = frontsector->floorheight + textureheight[sidedef->midtexture] - viewz;
+				rw_midtexturemid = frontsector->floorheight + texheight - viewz;
 			else
 				rw_midtexturemid = frontsector->ceilingheight - viewz;
 		}
@@ -1952,10 +2002,10 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		if (linedef->flags & ML_DONTPEGBOTTOM)
 		{
 #ifdef ESLOPE
-			rw_midtexturemid = worldbottom + textureheight[sidedef->midtexture];
+			rw_midtexturemid = worldbottom + texheight;
 			rw_midtextureslide = floorfrontslide;
 #else
-			vtop = frontsector->floorheight + textureheight[sidedef->midtexture];
+			vtop = frontsector->floorheight + texheight;
 			// bottom of texture at bottom
 			rw_midtexturemid = vtop - viewz;
 #endif
@@ -2187,76 +2237,50 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 #endif
 			)
 		{
+			fixed_t texheight;
 			// top texture
 			if ((linedef->flags & (ML_DONTPEGTOP) && (linedef->flags & ML_DONTPEGBOTTOM))
 				&& linedef->sidenum[1] != 0xffff)
 			{
 				// Special case... use offsets from 2nd side but only if it has a texture.
 				side_t *def = &sides[linedef->sidenum[1]];
-				toptexture = texturetranslation[def->toptexture];
+				toptexture = R_GetTextureNum(def->toptexture);
 
 				if (!toptexture) //Second side has no texture, use the first side's instead.
-					toptexture = texturetranslation[sidedef->toptexture];
-
-#ifdef ESLOPE
-				if (!(linedef->flags & ML_EFFECT1)) { // Ignore slopes for lower/upper textures unless flag is checked
-					if (linedef->flags & ML_DONTPEGTOP)
-						rw_toptexturemid = frontsector->ceilingheight - viewz;
-					else
-						rw_toptexturemid = backsector->ceilingheight - viewz;
-				} else
-#endif
-				if (linedef->flags & ML_DONTPEGTOP)
-				{
-					// top of texture at top
-					rw_toptexturemid = worldtop;
-#ifdef ESLOPE
-					rw_toptextureslide = ceilingfrontslide;
-#endif
-				}
-				else
-				{
-#ifdef ESLOPE
-					rw_toptexturemid = worldhigh + textureheight[def->toptexture];
-					rw_toptextureslide = ceilingbackslide;
-#else
-					vtop = backsector->ceilingheight + textureheight[def->toptexture];
-					// bottom of texture
-					rw_toptexturemid = vtop - viewz;
-#endif
-				}
+					toptexture = R_GetTextureNum(sidedef->toptexture);
+				texheight = textureheight[toptexture];
 			}
 			else
 			{
-				toptexture = texturetranslation[sidedef->toptexture];
-
+				toptexture = R_GetTextureNum(sidedef->toptexture);
+				texheight = textureheight[toptexture];
+			}
 #ifdef ESLOPE
-				if (!(linedef->flags & ML_EFFECT1)) { // Ignore slopes for lower/upper textures unless flag is checked
-					if (linedef->flags & ML_DONTPEGTOP)
-						rw_toptexturemid = frontsector->ceilingheight - viewz;
-					else
-						rw_toptexturemid = backsector->ceilingheight - viewz;
-				} else
-#endif
+			if (!(linedef->flags & ML_EFFECT1)) { // Ignore slopes for lower/upper textures unless flag is checked
 				if (linedef->flags & ML_DONTPEGTOP)
-				{
-					// top of texture at top
-					rw_toptexturemid = worldtop;
-#ifdef ESLOPE
-					rw_toptextureslide = ceilingfrontslide;
-#endif
-				}
+					rw_toptexturemid = frontsector->ceilingheight - viewz;
 				else
-				{
-#ifdef ESLOPE
-					rw_toptexturemid = worldhigh + textureheight[sidedef->toptexture];
-					rw_toptextureslide = ceilingbackslide;
-#else
-					vtop = backsector->ceilingheight + textureheight[sidedef->toptexture];
-					// bottom of texture
-					rw_toptexturemid = vtop - viewz;
+					rw_toptexturemid = backsector->ceilingheight - viewz;
+			} else
 #endif
-				}
+			if (linedef->flags & ML_DONTPEGTOP)
+			{
+				// top of texture at top
+				rw_toptexturemid = worldtop;
+#ifdef ESLOPE
+				rw_toptextureslide = ceilingfrontslide;
+#endif
+			}
+			else
+			{
+#ifdef ESLOPE
+				rw_toptexturemid = worldhigh + texheight;
+				rw_toptextureslide = ceilingbackslide;
+#else
+				vtop = backsector->ceilingheight + texheight;
+				// bottom of texture
+				rw_toptexturemid = vtop - viewz;
+#endif
 			}
 		}
 		// check BOTTOM TEXTURE
@@ -2267,7 +2291,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			)     //seulement si VISIBLE!!!
 		{
 			// bottom texture
-			bottomtexture = texturetranslation[sidedef->bottomtexture];
+			bottomtexture = R_GetTextureNum(sidedef->bottomtexture);
 
 #ifdef ESLOPE
 			if (!(linedef->flags & ML_EFFECT1)) { // Ignore slopes for lower/upper textures unless flag is checked
@@ -2552,7 +2576,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 			ds_p->numthicksides = numthicksides = i;
 		}
-		if (sidedef->midtexture)
+		if (sidedef->midtexture > 0 && sidedef->midtexture < numtextures)
 		{
 			// masked midtexture
 			if (!ds_p->thicksidecol)
@@ -3164,12 +3188,12 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	if (maskedtexture && !(ds_p->silhouette & SIL_TOP))
 	{
 		ds_p->silhouette |= SIL_TOP;
-		ds_p->tsilheight = sidedef->midtexture ? INT32_MIN: INT32_MAX;
+		ds_p->tsilheight = (sidedef->midtexture > 0 && sidedef->midtexture < numtextures) ? INT32_MIN: INT32_MAX;
 	}
 	if (maskedtexture && !(ds_p->silhouette & SIL_BOTTOM))
 	{
 		ds_p->silhouette |= SIL_BOTTOM;
-		ds_p->bsilheight = sidedef->midtexture ? INT32_MAX: INT32_MIN;
+		ds_p->bsilheight = (sidedef->midtexture > 0 && sidedef->midtexture < numtextures) ? INT32_MAX: INT32_MIN;
 	}
 	ds_p++;
 }

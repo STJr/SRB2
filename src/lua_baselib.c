@@ -27,7 +27,6 @@
 
 #define NOHUD if (hud_running) return luaL_error(L, "HUD rendering code should not call this function!");
 
-
 boolean luaL_checkboolean(lua_State *L, int narg) {
 	luaL_checktype(L, narg, LUA_TBOOLEAN);
 	return lua_toboolean(L, narg);
@@ -203,6 +202,41 @@ static int lib_pClosestPointOnLine(lua_State *L)
 	lua_pushfixed(L, result.x);
 	lua_pushfixed(L, result.y);
 	return 2;
+}
+
+static int lib_pPointOnLineSide(lua_State *L)
+{
+	int n = lua_gettop(L);
+	fixed_t x = luaL_checkfixed(L, 1);
+	fixed_t y = luaL_checkfixed(L, 2);
+	//HUDSAFE
+	if (lua_isuserdata(L, 3)) // use a real linedef to get our points
+	{
+		line_t *line = *((line_t **)luaL_checkudata(L, 3, META_LINE));
+		if (!line)
+			return LUA_ErrInvalid(L, "line_t");
+		lua_pushinteger(L, P_PointOnLineSide(x, y, line));
+	}
+	else // use custom coordinates of our own!
+	{
+		vertex_t v1, v2; // fake vertexes
+		line_t junk; // fake linedef
+
+		if (n < 6)
+			return luaL_error(L, "arguments 3 to 6 not all given (expected 4 fixed-point integers)");
+
+		v1.x = luaL_checkfixed(L, 3);
+		v1.y = luaL_checkfixed(L, 4);
+		v2.x = luaL_checkfixed(L, 5);
+		v2.y = luaL_checkfixed(L, 6);
+
+		junk.v1 = &v1;
+		junk.v2 = &v2;
+		junk.dx = v2.x - v1.x;
+		junk.dy = v2.y - v1.y;
+		lua_pushinteger(L, P_PointOnLineSide(x, y, &junk));
+	}
+	return 1;
 }
 
 // P_ENEMY
@@ -801,6 +835,16 @@ static int lib_pDoJumpShield(lua_State *L)
 	return 0;
 }
 
+static int lib_pDoBubbleBounce(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	NOHUD
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	P_DoBubbleBounce(player);
+	return 0;
+}
+
 static int lib_pBlackOw(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
@@ -811,13 +855,14 @@ static int lib_pBlackOw(lua_State *L)
 	return 0;
 }
 
-static int lib_pElementalFireTrail(lua_State *L)
+static int lib_pElementalFire(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	boolean cropcircle = lua_optboolean(L, 2);
 	NOHUD
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
-	P_ElementalFireTrail(player);
+	P_ElementalFire(player, cropcircle);
 	return 0;
 }
 
@@ -872,10 +917,11 @@ static int lib_pReturnThrustY(lua_State *L)
 static int lib_pLookForEnemies(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	boolean nonenemies = lua_opttrueboolean(L, 2);
 	NOHUD
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
-	lua_pushboolean(L, P_LookForEnemies(player));
+	lua_pushboolean(L, P_LookForEnemies(player, nonenemies));
 	return 1;
 }
 
@@ -2035,6 +2081,7 @@ static luaL_Reg lib[] = {
 	// p_maputil
 	{"P_AproxDistance",lib_pAproxDistance},
 	{"P_ClosestPointOnLine",lib_pClosestPointOnLine},
+	{"P_PointOnLineSide",lib_pPointOnLineSide},
 
 	// p_enemy
 	{"P_CheckMeleeRange", lib_pCheckMeleeRange},
@@ -2092,8 +2139,9 @@ static luaL_Reg lib[] = {
 	{"P_GivePlayerLives",lib_pGivePlayerLives},
 	{"P_ResetScore",lib_pResetScore},
 	{"P_DoJumpShield",lib_pDoJumpShield},
+	{"P_DoBubbleBounce",lib_pDoBubbleBounce},
 	{"P_BlackOw",lib_pBlackOw},
-	{"P_ElementalFireTrail",lib_pElementalFireTrail},
+	{"P_ElementalFire",lib_pElementalFire},
 	{"P_DoPlayerExit",lib_pDoPlayerExit},
 	{"P_InstaThrust",lib_pInstaThrust},
 	{"P_ReturnThrustX",lib_pReturnThrustX},

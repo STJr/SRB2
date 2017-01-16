@@ -371,7 +371,9 @@ static void clear_levels(void)
 		// (no need to set num to 0, we're freeing the entire header shortly)
 		Z_Free(mapheaderinfo[i]->customopts);
 
+		P_DeleteFlickies(i);
 		P_DeleteGrades(i);
+
 		Z_Free(mapheaderinfo[i]);
 		mapheaderinfo[i] = NULL;
 	}
@@ -990,6 +992,34 @@ static const struct {
 	{NULL, 0}
 };
 
+static const struct {
+	const char *name;
+	const mobjtype_t type;
+} FLICKYTYPES[] = {
+	{"BLUEBIRD", MT_FLICKY_01},
+	{"RABBIT",   MT_FLICKY_02},
+	{"CHICKEN",  MT_FLICKY_03},
+	{"SEAL",     MT_FLICKY_04},
+	{"PIG",      MT_FLICKY_05},
+	{"CHIPMUNK", MT_FLICKY_06},
+	{"PENGUIN",  MT_FLICKY_07},
+	{"FISH",     MT_FLICKY_08},
+	{"RAM",      MT_FLICKY_09},
+	{"PUFFIN",   MT_FLICKY_10},
+	{"COW",      MT_FLICKY_11},
+	{"RAT",      MT_FLICKY_12},
+	{"BEAR",     MT_FLICKY_13},
+	{"DOVE",     MT_FLICKY_14},
+	{"CAT",      MT_FLICKY_15},
+	{"CANARY",   MT_FLICKY_16},
+	{"a", 0}, // End of normal flickies - a lower case character so will never fastcmp valid with uppercase tmp
+	//{"FLICKER",  MT_FLICKER},
+	{"SEED",          MT_SEED},
+	{NULL, 0}
+};
+
+#define MAXFLICKIES 64
+
 static void readlevelheader(MYFILE *f, INT32 num)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
@@ -1088,8 +1118,82 @@ static void readlevelheader(MYFILE *f, INT32 num)
 			// Now go to uppercase
 			strupr(word2);
 
+			// List of flickies that are be freed in this map
+			if (fastcmp(word, "FLICKYLIST") || fastcmp(word, "ANIMALLIST"))
+			{
+				if (fastcmp(word2, "NONE"))
+					P_DeleteFlickies(num-1);
+				else if (fastcmp(word2, "DEMO"))
+					P_SetDemoFlickies(num-1);
+				else if (fastcmp(word2, "ALL"))
+				{
+					mobjtype_t tmpflickies[MAXFLICKIES];
+
+					for (mapheaderinfo[num-1]->numFlickies = 0;
+					((mapheaderinfo[num-1]->numFlickies < MAXFLICKIES) && FLICKYTYPES[mapheaderinfo[num-1]->numFlickies].type);
+					mapheaderinfo[num-1]->numFlickies++)
+						tmpflickies[mapheaderinfo[num-1]->numFlickies] = FLICKYTYPES[mapheaderinfo[num-1]->numFlickies].type;
+
+					if (mapheaderinfo[num-1]->numFlickies) // just in case...
+					{
+						size_t newsize = sizeof(mobjtype_t) * mapheaderinfo[num-1]->numFlickies;
+						mapheaderinfo[num-1]->flickies = Z_Realloc(mapheaderinfo[num-1]->flickies, newsize, PU_STATIC, NULL);
+						M_Memcpy(mapheaderinfo[num-1]->flickies, tmpflickies, newsize);
+					}
+				}
+				else
+				{
+					mobjtype_t tmpflickies[MAXFLICKIES];
+					mapheaderinfo[num-1]->numFlickies = 0;
+					tmp = strtok(word2,",");
+					// get up to the first MAXFLICKIES flickies
+					do {
+						if (mapheaderinfo[num-1]->numFlickies == MAXFLICKIES) // never going to get above that number
+						{
+							deh_warning("Level header %d: too many flickies\n", num);
+							break;
+						}
+
+						if (fastncmp(tmp, "MT_", 3)) // support for specified mobjtypes...
+						{
+							i = get_mobjtype(tmp);
+							if (!i)
+							{
+								//deh_warning("Level header %d: unknown flicky mobj type %s\n", num, tmp); -- no need for this line as get_mobjtype complains too
+								continue;
+							}
+							tmpflickies[mapheaderinfo[num-1]->numFlickies] = i;
+						}
+						else // ...or a quick, limited selection of default flickies!
+						{
+							for (i = 0; FLICKYTYPES[i].name; i++)
+								if (fastcmp(tmp, FLICKYTYPES[i].name))
+									break;
+
+							if (!FLICKYTYPES[i].name)
+							{
+								deh_warning("Level header %d: unknown flicky selection %s\n", num, tmp);
+								continue;
+							}
+							tmpflickies[mapheaderinfo[num-1]->numFlickies] = FLICKYTYPES[i].type;
+						}
+						mapheaderinfo[num-1]->numFlickies++;
+					} while ((tmp = strtok(NULL,",")) != NULL);
+
+					if (mapheaderinfo[num-1]->numFlickies)
+					{
+						size_t newsize = sizeof(mobjtype_t) * mapheaderinfo[num-1]->numFlickies;
+						mapheaderinfo[num-1]->flickies = Z_Realloc(mapheaderinfo[num-1]->flickies, newsize, PU_STATIC, NULL);
+						// now we add them to the list!
+						M_Memcpy(mapheaderinfo[num-1]->flickies, tmpflickies, newsize);
+					}
+					else
+						deh_warning("Level header %d: no valid flicky types found\n", num);
+				}
+			}
+
 			// NiGHTS grades
-			if (fastncmp(word, "GRADES", 6))
+			else if (fastncmp(word, "GRADES", 6))
 			{
 				UINT8 mare = (UINT8)atoi(word + 6);
 
@@ -1321,6 +1425,8 @@ static void readlevelheader(MYFILE *f, INT32 num)
 
 	Z_Free(s);
 }
+
+#undef MAXFLICKIES
 
 static void readcutscenescene(MYFILE *f, INT32 num, INT32 scenenum)
 {
@@ -1687,6 +1793,9 @@ static actionpointer_t actionpointers[] =
 	{{A_WaterShield},          "A_WATERSHIELD"},
 	{{A_ForceShield},          "A_FORCESHIELD"},
 	{{A_PityShield},           "A_PITYSHIELD"},
+	{{A_FlameShield},          "A_FLAMESHIELD"},
+	{{A_BubbleShield},         "A_BUBBLESHIELD"},
+	{{A_ThunderShield},        "A_THUNDERSHIELD"},
 	{{A_GravityBox},           "A_GRAVITYBOX"},
 	{{A_ScoreRise},            "A_SCORERISE"},
 	{{A_ParticleSpawn},        "A_PARTICLESPAWN"},
@@ -1842,6 +1951,16 @@ static actionpointer_t actionpointers[] =
 	{{A_BrakLobShot},          "A_BRAKLOBSHOT"},
 	{{A_NapalmScatter},        "A_NAPALMSCATTER"},
 	{{A_SpawnFreshCopy},       "A_SPAWNFRESHCOPY"},
+	{{A_FlickySpawn},          "A_FLICKYSPAWN"},
+	{{A_FlickyAim},            "A_FLICKYAIM"},
+	{{A_FlickyFly},            "A_FLICKYFLY"},
+	{{A_FlickySoar},           "A_FLICKYSOAR"},
+	{{A_FlickyCoast},          "A_FLICKYCOAST"},
+	{{A_FlickyHop},            "A_FLICKYHOP"},
+	{{A_FlickyFlounder},       "A_FLICKYFLOUNDER"},
+	{{A_FlickyCheck},          "A_FLICKYCHECK"},
+	{{A_FlickyHeightCheck},    "A_FLICKYHEIGHTCHECK"},
+	{{A_FlickyFlutter},        "A_FLICKYFLUTTER"},
 
 	{{NULL},                   "NONE"},
 
@@ -2778,7 +2897,7 @@ static void readpatch(MYFILE *f, const char *name, UINT16 wad)
 	char *word2;
 	char *tmp;
 	INT32 i = 0, j = 0, value;
-	texpatch_t patch = {0, 0, UINT16_MAX, UINT16_MAX};
+	texpatch_t patch = {0, 0, UINT16_MAX, UINT16_MAX, 0};
 
 	// Jump to the texture this patch belongs to, which,
 	// coincidentally, is always the last one on the buffer cache.
@@ -3378,11 +3497,11 @@ static void DEH_LoadDehackedFile(MYFILE *f, UINT16 wad)
 				{
 					if (i == 0 && word2[0] != '0') // If word2 isn't a number
 						i = get_mobjtype(word2); // find a thing by name
-					if (i < NUMMOBJTYPES && i >= 0)
+					if (i < NUMMOBJTYPES && i > 0)
 						readthing(f, i);
 					else
 					{
-						deh_warning("Thing %d out of range (0 - %d)", i, NUMMOBJTYPES-1);
+						deh_warning("Thing %d out of range (1 - %d)", i, NUMMOBJTYPES-1);
 						ignorelines(f);
 					}
 					DEH_WriteUndoline(word, word2, UNDO_HEADER);
@@ -4834,7 +4953,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SPIKEBALL7",
 	"S_SPIKEBALL8",
 
-	// Fire Shield's Spawn
+	// Elemental Shield's Spawn
 	"S_SPINFIRE1",
 	"S_SPINFIRE2",
 	"S_SPINFIRE3",
@@ -4908,6 +5027,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_RECYCLER_BOX",
 	"S_SCORE1K_BOX",
 	"S_SCORE10K_BOX",
+	"S_FLAMEAURA_BOX",
+	"S_BUBBLEWRAP_BOX",
+	"S_THUNDERCOIN_BOX",
 
 	// Gold Repeat Monitor States (one per box)
 	"S_PITY_GOLDBOX",
@@ -4920,6 +5042,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_INVULN_GOLDBOX",
 	"S_EGGMAN_GOLDBOX",
 	"S_GRAVITY_GOLDBOX",
+	"S_FLAMEAURA_GOLDBOX",
+	"S_BUBBLEWRAP_GOLDBOX",
+	"S_THUNDERCOIN_GOLDBOX",
 
 	// Team Ring Boxes (these are special)
 	"S_RING_REDBOX1",
@@ -4980,6 +5105,15 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	"S_SCORE10K_ICON1",
 	"S_SCORE10K_ICON2",
+
+	"S_FLAMEAURA_ICON1",
+	"S_FLAMEAURA_ICON2",
+
+	"S_BUBBLEWRAP_ICON1",
+	"S_BUBBLEWRAP_ICON2",
+
+	"S_THUNDERCOIN_ICON1",
+	"S_THUNDERCOIN_ICON2",
 
 	"S_ROCKET",
 
@@ -5350,6 +5484,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_MAGN10",
 	"S_MAGN11",
 	"S_MAGN12",
+	"S_MAGN13",
 
 	"S_FORC1",
 	"S_FORC2",
@@ -5373,6 +5508,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FORC19",
 	"S_FORC20",
 
+	"S_FORC21",
+
 	"S_ELEM1",
 	"S_ELEM2",
 	"S_ELEM3",
@@ -5386,6 +5523,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_ELEM11",
 	"S_ELEM12",
 
+	"S_ELEM13",
+	"S_ELEM14",
+
 	"S_ELEMF1",
 	"S_ELEMF2",
 	"S_ELEMF3",
@@ -5394,6 +5534,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_ELEMF6",
 	"S_ELEMF7",
 	"S_ELEMF8",
+	"S_ELEMF9",
+	"S_ELEMF10",
 
 	"S_PITY1",
 	"S_PITY2",
@@ -5406,6 +5548,84 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PITY9",
 	"S_PITY10",
 
+	"S_FIRS1",
+	"S_FIRS2",
+	"S_FIRS3",
+	"S_FIRS4",
+	"S_FIRS5",
+	"S_FIRS6",
+	"S_FIRS7",
+	"S_FIRS8",
+	"S_FIRS9",
+
+	"S_FIRS10",
+	"S_FIRS11",
+
+	"S_FIRSB1",
+	"S_FIRSB2",
+	"S_FIRSB3",
+	"S_FIRSB4",
+	"S_FIRSB5",
+	"S_FIRSB6",
+	"S_FIRSB7",
+	"S_FIRSB8",
+	"S_FIRSB9",
+
+	"S_FIRSB10",
+
+	"S_BUBS1",
+	"S_BUBS2",
+	"S_BUBS3",
+	"S_BUBS4",
+	"S_BUBS5",
+	"S_BUBS6",
+	"S_BUBS7",
+	"S_BUBS8",
+	"S_BUBS9",
+
+	"S_BUBS10",
+	"S_BUBS11",
+
+	"S_BUBSB1",
+	"S_BUBSB2",
+	"S_BUBSB3",
+	"S_BUBSB4",
+
+	"S_BUBSB5",
+	"S_BUBSB6",
+
+	"S_ZAPS1",
+	"S_ZAPS2",
+	"S_ZAPS3",
+	"S_ZAPS4",
+	"S_ZAPS5",
+	"S_ZAPS6",
+	"S_ZAPS7",
+	"S_ZAPS8",
+	"S_ZAPS9",
+	"S_ZAPS10",
+	"S_ZAPS11",
+	"S_ZAPS12",
+	"S_ZAPS13", // blank frame
+	"S_ZAPS14",
+	"S_ZAPS15",
+	"S_ZAPS16",
+
+	"S_ZAPSB1", // blank frame
+	"S_ZAPSB2",
+	"S_ZAPSB3",
+	"S_ZAPSB4",
+	"S_ZAPSB5",
+	"S_ZAPSB6",
+	"S_ZAPSB7",
+	"S_ZAPSB8",
+	"S_ZAPSB9",
+	"S_ZAPSB10",
+	"S_ZAPSB11", // blank frame
+
+	// Thunder spark
+	"S_THUNDERCOIN_SPARK",
+
 	// Invincibility Sparkles
 	"S_IVSP",
 
@@ -5416,43 +5636,133 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SSPK4",
 	"S_SSPK5",
 
-	// Freed Birdie
-	"S_BIRD1",
-	"S_BIRD2",
-	"S_BIRD3",
+	// Flicky-sized bubble
+	"S_FLICKY_BUBBLE",
 
-	// Freed Bunny
-	"S_BUNNY1",
-	"S_BUNNY2",
-	"S_BUNNY3",
-	"S_BUNNY4",
-	"S_BUNNY5",
-	"S_BUNNY6",
-	"S_BUNNY7",
-	"S_BUNNY8",
-	"S_BUNNY9",
-	"S_BUNNY10",
+	// Bluebird
+	"S_FLICKY_01_OUT",
+	"S_FLICKY_01_FLAP1",
+	"S_FLICKY_01_FLAP2",
+	"S_FLICKY_01_FLAP3",
 
-	// Freed Mouse
-	"S_MOUSE1",
-	"S_MOUSE2",
+	// Rabbit
+	"S_FLICKY_02_OUT",
+	"S_FLICKY_02_AIM",
+	"S_FLICKY_02_HOP",
+	"S_FLICKY_02_UP",
+	"S_FLICKY_02_DOWN",
 
-	// Freed Chicken
-	"S_CHICKEN1",
-	"S_CHICKENHOP",
-	"S_CHICKENFLY1",
-	"S_CHICKENFLY2",
+	// Chicken
+	"S_FLICKY_03_OUT",
+	"S_FLICKY_03_AIM",
+	"S_FLICKY_03_HOP",
+	"S_FLICKY_03_UP",
+	"S_FLICKY_03_FLAP1",
+	"S_FLICKY_03_FLAP2",
 
-	// Freed Cow
-	"S_COW1",
-	"S_COW2",
-	"S_COW3",
-	"S_COW4",
+	// Seal
+	"S_FLICKY_04_OUT",
+	"S_FLICKY_04_AIM",
+	"S_FLICKY_04_HOP",
+	"S_FLICKY_04_UP",
+	"S_FLICKY_04_DOWN",
+	"S_FLICKY_04_SWIM1",
+	"S_FLICKY_04_SWIM2",
+	"S_FLICKY_04_SWIM3",
+	"S_FLICKY_04_SWIM4",
 
-	// Red Birdie in Bubble
-	"S_RBIRD1",
-	"S_RBIRD2",
-	"S_RBIRD3",
+	// Pig
+	"S_FLICKY_05_OUT",
+	"S_FLICKY_05_AIM",
+	"S_FLICKY_05_HOP",
+	"S_FLICKY_05_UP",
+	"S_FLICKY_05_DOWN",
+
+	// Chipmunk
+	"S_FLICKY_06_OUT",
+	"S_FLICKY_06_AIM",
+	"S_FLICKY_06_HOP",
+	"S_FLICKY_06_UP",
+	"S_FLICKY_06_DOWN",
+
+	// Penguin
+	"S_FLICKY_07_OUT",
+	"S_FLICKY_07_AIML",
+	"S_FLICKY_07_HOPL",
+	"S_FLICKY_07_UPL",
+	"S_FLICKY_07_DOWNL",
+	"S_FLICKY_07_AIMR",
+	"S_FLICKY_07_HOPR",
+	"S_FLICKY_07_UPR",
+	"S_FLICKY_07_DOWNR",
+	"S_FLICKY_07_SWIM1",
+	"S_FLICKY_07_SWIM2",
+	"S_FLICKY_07_SWIM3",
+
+	// Fish
+	"S_FLICKY_08_OUT",
+	"S_FLICKY_08_AIM",
+	"S_FLICKY_08_HOP",
+	"S_FLICKY_08_FLAP1",
+	"S_FLICKY_08_FLAP2",
+	"S_FLICKY_08_FLAP3",
+	"S_FLICKY_08_FLAP4",
+	"S_FLICKY_08_SWIM1",
+	"S_FLICKY_08_SWIM2",
+	"S_FLICKY_08_SWIM3",
+	"S_FLICKY_08_SWIM4",
+
+	// Ram
+	"S_FLICKY_09_OUT",
+	"S_FLICKY_09_AIM",
+	"S_FLICKY_09_HOP",
+	"S_FLICKY_09_UP",
+	"S_FLICKY_09_DOWN",
+
+	// Puffin
+	"S_FLICKY_10_OUT",
+	"S_FLICKY_10_FLAP1",
+	"S_FLICKY_10_FLAP2",
+
+	// Cow
+	"S_FLICKY_11_OUT",
+	"S_FLICKY_11_AIM",
+	"S_FLICKY_11_RUN1",
+	"S_FLICKY_11_RUN2",
+	"S_FLICKY_11_RUN3",
+
+	// Rat
+	"S_FLICKY_12_OUT",
+	"S_FLICKY_12_AIM",
+	"S_FLICKY_12_RUN1",
+	"S_FLICKY_12_RUN2",
+	"S_FLICKY_12_RUN3",
+
+	// Bear
+	"S_FLICKY_13_OUT",
+	"S_FLICKY_13_AIM",
+	"S_FLICKY_13_HOP",
+	"S_FLICKY_13_UP",
+	"S_FLICKY_13_DOWN",
+
+	// Dove
+	"S_FLICKY_14_OUT",
+	"S_FLICKY_14_FLAP1",
+	"S_FLICKY_14_FLAP2",
+	"S_FLICKY_14_FLAP3",
+
+	// Cat
+	"S_FLICKY_15_OUT",
+	"S_FLICKY_15_AIM",
+	"S_FLICKY_15_HOP",
+	"S_FLICKY_15_UP",
+	"S_FLICKY_15_DOWN",
+
+	// Canary
+	"S_FLICKY_16_OUT",
+	"S_FLICKY_16_FLAP1",
+	"S_FLICKY_16_FLAP2",
+	"S_FLICKY_16_FLAP3",
 
 	"S_YELLOWSPRING",
 	"S_YELLOWSPRING2",
@@ -5565,6 +5875,20 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_POP1", // Extra Large bubble goes POP!
 
 	"S_WATERZAP",
+
+	// Spindash dust
+	"S_SPINDUST1",
+	"S_SPINDUST2",
+	"S_SPINDUST3",
+	"S_SPINDUST4",
+	"S_SPINDUST_BUBBLE1",
+	"S_SPINDUST_BUBBLE2",
+	"S_SPINDUST_BUBBLE3",
+	"S_SPINDUST_BUBBLE4",
+	"S_SPINDUST_FIRE1",
+	"S_SPINDUST_FIRE2",
+	"S_SPINDUST_FIRE3",
+	"S_SPINDUST_FIRE4",
 
 	"S_FOG1",
 	"S_FOG2",
@@ -5938,6 +6262,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_NIGHTOPIANHELPER6",
 	"S_NIGHTOPIANHELPER7",
 	"S_NIGHTOPIANHELPER8",
+	"S_NIGHTOPIANHELPER9",
 
 	"S_CRUMBLE1",
 	"S_CRUMBLE2",
@@ -5961,10 +6286,10 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SPRK16",
 
 	// Robot Explosion
+	"S_XPLD_FLICKY",
 	"S_XPLD1",
 	"S_XPLD2",
-	"S_XPLD3",
-	"S_XPLD4",
+	"S_XPLD_EGGTRAP",
 
 	// Underwater Explosion
 	"S_WPLD1",
@@ -6164,6 +6489,9 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_RECYCLER_BOX",
 	"MT_SCORE1K_BOX",
 	"MT_SCORE10K_BOX",
+	"MT_FLAMEAURA_BOX",
+	"MT_BUBBLEWRAP_BOX",
+	"MT_THUNDERCOIN_BOX",
 
 	// Monitor boxes -- repeating (big) boxes
 	"MT_PITY_GOLDBOX",
@@ -6176,6 +6504,9 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_INVULN_GOLDBOX",
 	"MT_EGGMAN_GOLDBOX",
 	"MT_GRAVITY_GOLDBOX",
+	"MT_FLAMEAURA_GOLDBOX",
+	"MT_BUBBLEWRAP_GOLDBOX",
+	"MT_THUNDERCOIN_GOLDBOX",
 
 	// Monitor boxes -- special
 	"MT_RING_REDBOX",
@@ -6198,6 +6529,9 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_RECYCLER_ICON",
 	"MT_SCORE1K_ICON",
 	"MT_SCORE10K_ICON",
+	"MT_FLAMEAURA_ICON",
+	"MT_BUBBLEWRAP_ICON",
+	"MT_THUNDERCOIN_ICON",
 
 	// Projectiles
 	"MT_ROCKET",
@@ -6350,22 +6684,36 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_EGGSTATUE2",
 
 	// Powerup Indicators
-	"MT_GREENORB", // Elemental shield mobj
-	"MT_YELLOWORB", // Attract shield mobj
-	"MT_BLUEORB", // Force shield mobj
-	"MT_BLACKORB", // Armageddon shield mobj
-	"MT_WHITEORB", // Whirlwind shield mobj
-	"MT_PITYORB", // Pity shield mobj
-	"MT_IVSP", // invincibility sparkles
+	"MT_ELEMENTAL_ORB", // Elemental shield mobj
+	"MT_ATTRACT_ORB", // Attract shield mobj
+	"MT_FORCE_ORB", // Force shield mobj
+	"MT_ARMAGEDDON_ORB", // Armageddon shield mobj
+	"MT_WHIRLWIND_ORB", // Whirlwind shield mobj
+	"MT_PITY_ORB", // Pity shield mobj
+	"MT_FLAMEAURA_ORB", // Flame shield mobj
+	"MT_BUBBLEWRAP_ORB", // Bubble shield mobj
+	"MT_THUNDERCOIN_ORB", // Thunder shield mobj
+	"MT_THUNDERCOIN_SPARK", // Thunder spark
+	"MT_IVSP", // Invincibility sparkles
 	"MT_SUPERSPARK", // Super Sonic Spark
 
-	// Freed Animals
-	"MT_BIRD", // Birdie freed!
-	"MT_BUNNY", // Bunny freed!
-	"MT_MOUSE", // Mouse
-	"MT_CHICKEN", // Chicken
-	"MT_COW", // Cow
-	"MT_REDBIRD", // Red Birdie in Bubble
+	// Flickies
+	"MT_FLICKY_01", // Bluebird
+	"MT_FLICKY_02", // Rabbit
+	"MT_FLICKY_03", // Chicken
+	"MT_FLICKY_04", // Seal
+	"MT_FLICKY_05", // Pig
+	"MT_FLICKY_06", // Chipmunk
+	"MT_FLICKY_07", // Penguin
+	"MT_FLICKY_08", // Fish
+	"MT_FLICKY_09", // Ram
+	"MT_FLICKY_10", // Puffin
+	"MT_FLICKY_11", // Cow
+	"MT_FLICKY_12", // Rat
+	"MT_FLICKY_13", // Bear
+	"MT_FLICKY_14", // Dove
+	"MT_FLICKY_15", // Cat
+	"MT_FLICKY_16", // Canary
 
 	// Environmental Effects
 	"MT_RAIN", // Rain
@@ -6376,6 +6724,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_MEDIUMBUBBLE", // medium bubble
 	"MT_EXTRALARGEBUBBLE", // extra large bubble
 	"MT_WATERZAP",
+	"MT_SPINDUST", // Spindash dust
 	"MT_TFOG",
 	"MT_SEED",
 	"MT_PARTICLE",
@@ -6544,35 +6893,36 @@ static const char *const MOBJFLAG_LIST[] = {
 
 // \tMF2_(\S+).*// (.+) --> \t"\1", // \2
 static const char *const MOBJFLAG2_LIST[] = {
-	"AXIS",			// It's a NiGHTS axis! (For faster checking)
-	"TWOD",			// Moves like it's in a 2D level
-	"DONTRESPAWN",	// Don't respawn this object!
-	"DONTDRAW",		// Don't generate a vissprite
-	"AUTOMATIC",	// Thrown ring has automatic properties
-	"RAILRING",		// Thrown ring has rail properties
-	"BOUNCERING",	// Thrown ring has bounce properties
-	"EXPLOSION",	// Thrown ring has explosive properties
-	"SCATTER",		// Thrown ring has scatter properties
-	"BEYONDTHEGRAVE",// Source of this missile has died and has since respawned.
-	"SLIDEPUSH",	// MF_PUSHABLE that pushes continuously.
-	"CLASSICPUSH",	// Drops straight down when object has negative Z.
-	"STANDONME",	// While not pushable, stand on me anyway.
-	"INFLOAT",		// Floating to a height for a move, don't auto float to target's height.
-	"DEBRIS",		// Splash ring from explosion ring
-	"NIGHTSPULL",	// Attracted from a paraloop
-	"JUSTATTACKED",	// can be pushed by other moving mobjs
-	"FIRING",		// turret fire
-	"SUPERFIRE",	// Firing something with Super Sonic-stopping properties. Or, if mobj has MF_MISSILE, this is the actual fire from it.
-	"SHADOW",		// Fuzzy draw, makes targeting harder.
-	"STRONGBOX",	// Flag used for "strong" random monitors.
-	"OBJECTFLIP",	// Flag for objects that always have flipped gravity.
-	"SKULLFLY",		// Special handling: skull in flight.
-	"FRET",			// Flashing from a previous hit
-	"BOSSNOTRAP",	// No Egg Trap after boss
-	"BOSSFLEE",		// Boss is fleeing!
-	"BOSSDEAD",		// Boss is dead! (Not necessarily fleeing, if a fleeing point doesn't exist.)
-	"AMBUSH",       // Alternate behaviour typically set by MTF_AMBUSH
-	"LINKDRAW",     // Draw vissprite of mobj immediately before/after tracer's vissprite (dependent on dispoffset and position)
+	"AXIS",			  // It's a NiGHTS axis! (For faster checking)
+	"TWOD",			  // Moves like it's in a 2D level
+	"DONTRESPAWN",	  // Don't respawn this object!
+	"DONTDRAW",		  // Don't generate a vissprite
+	"AUTOMATIC",	  // Thrown ring has automatic properties
+	"RAILRING",		  // Thrown ring has rail properties
+	"BOUNCERING",	  // Thrown ring has bounce properties
+	"EXPLOSION",	  // Thrown ring has explosive properties
+	"SCATTER",		  // Thrown ring has scatter properties
+	"BEYONDTHEGRAVE", // Source of this missile has died and has since respawned.
+	"SLIDEPUSH",	  // MF_PUSHABLE that pushes continuously.
+	"CLASSICPUSH",	  // Drops straight down when object has negative Z.
+	"STANDONME",	  // While not pushable, stand on me anyway.
+	"INFLOAT",		  // Floating to a height for a move, don't auto float to target's height.
+	"DEBRIS",		  // Splash ring from explosion ring
+	"NIGHTSPULL",	  // Attracted from a paraloop
+	"JUSTATTACKED",	  // can be pushed by other moving mobjs
+	"FIRING",		  // turret fire
+	"SUPERFIRE",	  // Firing something with Super Sonic-stopping properties. Or, if mobj has MF_MISSILE, this is the actual fire from it.
+	"SHADOW",		  // Fuzzy draw, makes targeting harder.
+	"STRONGBOX",	  // Flag used for "strong" random monitors.
+	"OBJECTFLIP",	  // Flag for objects that always have flipped gravity.
+	"SKULLFLY",		  // Special handling: skull in flight.
+	"FRET",			  // Flashing from a previous hit
+	"BOSSNOTRAP",	  // No Egg Trap after boss
+	"BOSSFLEE",		  // Boss is fleeing!
+	"BOSSDEAD",		  // Boss is dead! (Not necessarily fleeing, if a fleeing point doesn't exist.)
+	"AMBUSH",         // Alternate behaviour typically set by MTF_AMBUSH
+	"LINKDRAW",       // Draw vissprite of mobj immediately before/after tracer's vissprite (dependent on dispoffset and position)
+	"SHIELD",         // Thinker calls P_AddShield/P_ShieldLook (must be partnered with MF_SCENERY to use)
 	NULL
 };
 
@@ -6654,6 +7004,9 @@ static const char *const PLAYERFLAG_LIST[] = {
 	/*** misc ***/
 	"FORCESTRAFE", // Translate turn inputs into strafe inputs
 	"ANALOGMODE", // Analog mode?
+	"CANCARRY", // Can carry?
+	"SHIELDABILITY", // Thokked with shield ability
+	"FORCEJUMPDAMAGE", // Force jump damage
 
 	NULL // stop loop here.
 };
@@ -6998,20 +7351,27 @@ struct {
 	{"PRECIP_STORM_NOSTRIKES",PRECIP_STORM_NOSTRIKES},
 
 	// Shields
-	// These ones use the lower 8 bits
 	{"SH_NONE",SH_NONE},
-	{"SH_JUMP",SH_JUMP},
+	// Shield flags
+	{"SH_PROTECTFIRE",SH_PROTECTFIRE},
+	{"SH_PROTECTWATER",SH_PROTECTWATER},
+	{"SH_PROTECTELECTRIC",SH_PROTECTELECTRIC},
+	// Indivisible shields
+	{"SH_PITY",SH_PITY},
+	{"SH_WHIRLWIND",SH_WHIRLWIND},
+	{"SH_ARMAGEDDON",SH_ARMAGEDDON},
+	// normal shields that use flags
 	{"SH_ATTRACT",SH_ATTRACT},
 	{"SH_ELEMENTAL",SH_ELEMENTAL},
-	{"SH_BOMB",SH_BOMB},
+	// Sonic 3 shields
+	{"SH_FLAMEAURA",SH_FLAMEAURA},
 	{"SH_BUBBLEWRAP",SH_BUBBLEWRAP},
 	{"SH_THUNDERCOIN",SH_THUNDERCOIN},
-	{"SH_FLAMEAURA",SH_FLAMEAURA},
-	{"SH_PITY",SH_PITY},
-	// These ones are special and use the upper bits
-	{"SH_FIREFLOWER",SH_FIREFLOWER}, // Lower bits are a normal shield stacked on top of the fire flower
-	{"SH_FORCE",SH_FORCE}, // Lower bits are how many hits left, 0 is the last hit
-	// Stack masks
+	// The force shield uses the lower 8 bits to count how many extra hits are left.
+	{"SH_FORCE",SH_FORCE},
+	{"SH_FORCEHP",SH_FORCEHP}, // to be used as a bitmask only
+	// Mostly for use with Mario mode.
+	{"SH_FIREFLOWER", SH_FIREFLOWER},
 	{"SH_STACK",SH_STACK},
 	{"SH_NOSTACK",SH_NOSTACK},
 
@@ -7045,6 +7405,7 @@ struct {
 	{"SF_STOMPDAMAGE",SF_STOMPDAMAGE},
 	{"SF_MARIODAMAGE",SF_MARIODAMAGE},
 	{"SF_MACHINE",SF_MACHINE},
+	{"SF_NOSPINDASHDUST",SF_NOSPINDASHDUST},
 
 	// Character abilities!
 	// Primary
@@ -7217,6 +7578,11 @@ struct {
 	{"FF_COLORMAPONLY",FF_COLORMAPONLY},       ///< Only copy the colormap, not the lightlevel
 	{"FF_GOOWATER",FF_GOOWATER},               ///< Used with ::FF_SWIMMABLE. Makes thick bouncey goop.
 
+#ifdef HAVE_LUA_SEGS
+	// Node flags
+	{"NF_SUBSECTOR",NF_SUBSECTOR}, // Indicate a leaf.
+#endif
+
 	// Angles
 	{"ANG1",ANG1},
 	{"ANG2",ANG2},
@@ -7362,7 +7728,7 @@ static mobjtype_t get_mobjtype(const char *word)
 		if (fastcmp(word, MOBJTYPE_LIST[i]+3))
 			return i;
 	deh_warning("Couldn't find mobjtype named 'MT_%s'",word);
-	return MT_BLUECRAWLA;
+	return MT_NULL;
 }
 
 static statenum_t get_state(const char *word)

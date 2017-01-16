@@ -160,6 +160,33 @@ FUNCNORETURN static ATTRNORETURN void CorruptMapError(const char *msg)
 	I_Error("Invalid or corrupt map.\nLook in log file or text console for technical details.");
 }
 
+/** Sets a header's flickies to be equivalent to the original Freed Animals
+  *
+  * \param i The header to set flickies for
+  */
+void P_SetDemoFlickies(INT16 i)
+{
+	mapheaderinfo[i]->numFlickies = 5;
+	mapheaderinfo[i]->flickies = Z_Realloc(mapheaderinfo[i]->flickies, 5*sizeof(mobjtype_t), PU_STATIC, NULL);
+	mapheaderinfo[i]->flickies[0] = MT_FLICKY_02/*MT_BUNNY*/;
+	mapheaderinfo[i]->flickies[1] = MT_FLICKY_01/*MT_BIRD*/;
+	mapheaderinfo[i]->flickies[2] = MT_FLICKY_12/*MT_MOUSE*/;
+	mapheaderinfo[i]->flickies[3] = MT_FLICKY_11/*MT_COW*/;
+	mapheaderinfo[i]->flickies[4] = MT_FLICKY_03/*MT_CHICKEN*/;
+}
+
+/** Clears a header's flickies
+  *
+  * \param i The header to clear flickies for
+  */
+void P_DeleteFlickies(INT16 i)
+{
+	if (mapheaderinfo[i]->flickies)
+		Z_Free(mapheaderinfo[i]->flickies);
+	mapheaderinfo[i]->flickies = NULL;
+	mapheaderinfo[i]->numFlickies = 0;
+}
+
 #define NUMLAPS_DEFAULT 4
 
 /** Clears the data from a single map header.
@@ -223,6 +250,12 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->levelflags = 0;
 	DEH_WriteUndoline("MENUFLAGS", va("%d", mapheaderinfo[num]->menuflags), UNDO_NONE);
 	mapheaderinfo[num]->menuflags = 0;
+	// Flickies. Nope, no delfile support here either
+#if 1 // equivalent to "FlickyList = DEMO"
+	P_SetDemoFlickies(num);
+#else // equivalent to "FlickyList = NONE"
+	P_DeleteFlickies(num);
+#endif
 	// TODO grades support for delfile (pfft yeah right)
 	P_DeleteGrades(num);
 	// an even further impossibility, delfile custom opts support
@@ -241,6 +274,7 @@ void P_AllocMapHeader(INT16 i)
 	if (!mapheaderinfo[i])
 	{
 		mapheaderinfo[i] = Z_Malloc(sizeof(mapheader_t), PU_STATIC, NULL);
+		mapheaderinfo[i]->flickies = NULL;
 		mapheaderinfo[i]->grades = NULL;
 	}
 	P_ClearSingleMapHeaderInfo(i + 1);
@@ -574,6 +608,69 @@ INT32 P_AddLevelFlat(const char *flatname, levelflat_t *levelflat)
 	return (INT32)i;
 }
 
+// help function for Lua and $$$.sav reading
+// same as P_AddLevelFlat, except this is not setup so we must realloc levelflats to fit in the new flat
+// no longer a static func in lua_maplib.c because p_saveg.c also needs it
+//
+INT32 P_AddLevelFlatRuntime(const char *flatname)
+{
+	size_t i;
+	levelflat_t *levelflat = levelflats;
+
+	//
+	//  first scan through the already found flats
+	//
+	for (i = 0; i < numlevelflats; i++, levelflat++)
+		if (strnicmp(levelflat->name,flatname,8)==0)
+			break;
+
+	// that flat was already found in the level, return the id
+	if (i == numlevelflats)
+	{
+		// allocate new flat memory
+		levelflats = Z_Realloc(levelflats, (numlevelflats + 1) * sizeof(*levelflats), PU_LEVEL, NULL);
+		levelflat = levelflats+i;
+
+		// store the name
+		strlcpy(levelflat->name, flatname, sizeof (levelflat->name));
+		strupr(levelflat->name);
+
+		// store the flat lump number
+		levelflat->lumpnum = R_GetFlatNumForName(flatname);
+
+#ifndef ZDEBUG
+		CONS_Debug(DBG_SETUP, "flat #%03d: %s\n", atoi(sizeu1(numlevelflats)), levelflat->name);
+#endif
+
+		numlevelflats++;
+	}
+
+	// level flat id
+	return (INT32)i;
+}
+
+// help function for $$$.sav checking
+// this simply returns the flat # for the name given
+//
+INT32 P_CheckLevelFlat(const char *flatname)
+{
+	size_t i;
+	levelflat_t *levelflat = levelflats;
+
+	//
+	//  scan through the already found flats
+	//
+	for (i = 0; i < numlevelflats; i++, levelflat++)
+		if (strnicmp(levelflat->name,flatname,8)==0)
+			break;
+
+	if (i == numlevelflats)
+		return 0; // ??? flat was not found, this should not happen!
+
+	// level flat id
+	return (INT32)i;
+}
+
 static void P_LoadSectors(lumpnum_t lumpnum)
 {
 	UINT8 *data;
@@ -614,6 +711,7 @@ static void P_LoadSectors(lumpnum_t lumpnum)
 		ss->special = SHORT(ms->special);
 		ss->tag = SHORT(ms->tag);
 		ss->nexttag = ss->firsttag = -1;
+		ss->spawn_nexttag = ss->spawn_firsttag = -1;
 
 		memset(&ss->soundorg, 0, sizeof(ss->soundorg));
 		ss->validcount = 0;
