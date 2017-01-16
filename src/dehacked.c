@@ -7589,6 +7589,11 @@ struct {
 	{"FF_COLORMAPONLY",FF_COLORMAPONLY},       ///< Only copy the colormap, not the lightlevel
 	{"FF_GOOWATER",FF_GOOWATER},               ///< Used with ::FF_SWIMMABLE. Makes thick bouncey goop.
 
+#ifdef HAVE_LUA_SEGS
+	// Node flags
+	{"NF_SUBSECTOR",NF_SUBSECTOR}, // Indicate a leaf.
+#endif
+
 	// Angles
 	{"ANG1",ANG1},
 	{"ANG2",ANG2},

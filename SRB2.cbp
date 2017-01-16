@@ -1516,6 +1516,9 @@ HW3SOUND for 3D hardware sound  support
 		<Unit filename="src/lua_baselib.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="src/lua_blockmaplib.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="src/lua_consolelib.c">
 			<Option compilerVar="CC" />
 		</Unit>
