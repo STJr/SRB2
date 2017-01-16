@@ -4752,6 +4752,13 @@ void P_UpdateSpecials(void)
 	}
 }
 
+/** Gets a 3Dfloor by control sector.
+  *
+  * \param sec  Target sector.
+  * \param sec2 Control sector.
+  * \return Pointer to found 3Dfloor, or NULL.
+  * \sa P_GetFFloorByID
+  */
 static inline ffloor_t *P_GetFFloorBySec(sector_t *sec, sector_t *sec2)
 {
 	ffloor_t *rover;
@@ -4760,6 +4767,26 @@ static inline ffloor_t *P_GetFFloorBySec(sector_t *sec, sector_t *sec2)
 		return NULL;
 	for (rover = sec->ffloors; rover; rover = rover->next)
 		if (rover->secnum == (size_t)(sec2 - sectors))
+			return rover;
+	return NULL;
+}
+
+/** Gets a 3Dfloor by ID number.
+  *
+  * \param sec Target sector.
+  * \param id  ID of 3Dfloor in target sector. Note that the first FOF's ID is 0.
+  * \return Pointer to found 3Dfloor, or NULL.
+  * \sa P_GetFFloorBySec
+  */
+ffloor_t *P_GetFFloorByID(sector_t *sec, UINT16 id)
+{
+	ffloor_t *rover;
+	UINT16 i = 0;
+
+	if (!sec->ffloors)
+		return NULL;
+	for (rover = sec->ffloors; rover; rover = rover->next)
+		if (i++ == id)
 			return rover;
 	return NULL;
 }

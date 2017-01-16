@@ -231,6 +231,7 @@ if(${SRB2_CONFIG_HAVE_BLUA})
 	add_definitions(-DHAVE_BLUA)
 	set(SRB2_LUA_SOURCES
 		lua_baselib.c
+		lua_blockmaplib.c
 		lua_consolelib.c
 		lua_hooklib.c
 		lua_hudlib.c
