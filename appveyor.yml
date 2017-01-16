@@ -15,6 +15,7 @@ environment:
  CCACHE_URL: http://alam.srb2.org/ccache.exe
  CCACHE_COMPRESS: true
  CCACHE_DIR: C:\Users\appveyor\.ccache
+ CFLAGS: -ggdb
 
 cache:
 - nasm-2.12.01.zip
