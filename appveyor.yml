@@ -3,7 +3,7 @@ os: MinGW
 
 environment:
  CC: ccache
- CCACHE_CC: i686-w64-mingw32-gcc
+ CCACHE_CC: mingw32-gcc
  WINDRES: windres
  MINGW_SDK: c:\msys64\mingw32
  CFLAGS: -Wall -W -Werror
@@ -15,11 +15,17 @@ environment:
  CCACHE_URL: http://alam.srb2.org/ccache.exe
  CCACHE_COMPRESS: true
  CCACHE_DIR: C:\Users\appveyor\.ccache
+ MINGW_BIN_TAR: gcc-core-4.8.1-4-mingw32-bin.tar
+ MINGW_BIN_URL: http://downloads.sourceforge.net/project/mingw/MinGW/Base/gcc/Version4/gcc-4.8.1-4/gcc-core-4.8.1-4-mingw32-bin.tar.lzma
+ MINGW_DLL_TAR: gcc-core-4.8.1-4-mingw32-dll.tar
+ MINGW_DLL_URL: http://downloads.sourceforge.net/project/mingw/MinGW/Base/gcc/Version4/gcc-4.8.1-4/gcc-core-4.8.1-4-mingw32-dll.tar.lzma
 
 cache:
 - nasm-2.12.01.zip
 - upx391w.zip
 - ccache.exe
+- gcc-core-4.8.1-4-mingw32-dll.tar.lzma
+- gcc-core-4.8.1-4-mingw32-bin.tar.lzma
 - C:\Users\appveyor\.ccache
 
 install:
@@ -35,19 +41,28 @@ install:
 - ccache -M 99M
 - xcopy /Y /V /I ccache.exe %MINGW_SDK%\bin
 
+- if not exist "%MINGW_DLL_TAR%.lzma" appveyor DownloadFile "%MINGW_DLL_URL%" -FileName "%MINGW_DLL_TAR%.lzma"
+- 7z x -y "%MINGW_DLL_TAR%.lzma" -o%TMP% >null
+- 7z x -y "%TMP%\%MINGW_DLL_TAR%" -o%TMP% >null
+
+- if not exist "%MINGW_BIN_TAR%.lzma" appveyor DownloadFile "%MINGW_BIN_URL%" -FileName "%MINGW_BIN_TAR%.lzma"
+- 7z x -y "%MINGW_BIN_TAR%.lzma" -o%TMP% >null
+- 7z x -y "%TMP%\%MINGW_BIN_TAR%" -o%TMP% >null
+- robocopy /S /xx /ns /nc /nfl /ndl /np /njh /njs %TMP%\bin C:\Mingw\bin || exit 0
+
 configuration:
 - SDL
 - DD
 
 before_build:
-- set Path=%MINGW_SDK%\bin;%Path%
-- i686-w64-mingw32-gcc --version
+- set PATH=%MINGW_SDK%\bin;C:\Mingw\bin;%PATH%
+- mingw32-gcc.exe --version
 - mingw32-make --version
 - nasm -v
 - upx -V
 - ccache -V
 - ccache -s
-- set SRB2_MFLAGS=-C src MINGW=1 WARNINGMODE=1 GCC53=1 CCACHE=1
+- set SRB2_MFLAGS=-C src MINGW=1 WARNINGMODE=1 GCC48=1 CCACHE=1
 
 build_script:
 - cmd: mingw32-make.exe %SRB2_MFLAGS% %CONFIGURATION%=1 clean
@@ -63,21 +78,21 @@ after_build:
 
 test: off
 
-deploy:
-  - provider: FTP
-    protocol: ftps
-    host: 
-      secure: NsLJEPIBvmwCOj8Tg8RoRQ==
-    username:
-      secure: ejxi5mvk7oLYu7QtbYojajEPigMy0mokaKhuEVuDZcA=
-    password:
-      secure: Hbn6Uy3lT0YZ88yFJ3aW4w==
-    folder: appveyor
-    application:
-    active_mode: false
-    on:
-      branch: master
-      appveyor_repo_tag: true
+#deploy:
+#  - provider: FTP
+#    protocol: ftps
+#    host: 
+#      secure: NsLJEPIBvmwCOj8Tg8RoRQ==
+#    username:
+#      secure: ejxi5mvk7oLYu7QtbYojajEPigMy0mokaKhuEVuDZcA=
+#    password:
+#      secure: Hbn6Uy3lT0YZ88yFJ3aW4w==
+#    folder: appveyor
+#    application:
+#    active_mode: false
+#    on:
+#      branch: master
+#      appveyor_repo_tag: true
 
 
 on_finish:
