@@ -483,10 +483,6 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 #define ESLOPE_TYPESHIM
 #endif
 
-///	Delete file while the game is running.
-///	\note	EXTREMELY buggy, tends to crash game.
-//#define DELFILE
-
 ///	Allows the use of devmode in multiplayer. AKA "fishcake"
 //#define NETGAME_DEVMODE
 

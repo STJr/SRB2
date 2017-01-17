@@ -53,10 +53,6 @@ void R_SortVisSprites(void);
 //     (only sprites from namelist are added or replaced)
 void R_AddSpriteDefs(UINT16 wadnum);
 
-#ifdef DELFILE
-void R_DelSpriteDefs(UINT16 wadnum);
-#endif
-
 //SoM: 6/5/2000: Light sprites correctly!
 void R_AddSprites(sector_t *sec, INT32 lightlevel);
 void R_InitSprites(void);
@@ -206,11 +202,9 @@ void SetPlayerSkin(INT32 playernum,const char *skinname);
 void SetPlayerSkinByNum(INT32 playernum,INT32 skinnum); // Tails 03-16-2002
 boolean R_SkinUnlock(INT32 skinnum);
 INT32 R_SkinAvailable(const char *name);
+void R_LoadSkinSprites(UINT16 wadnum, UINT16 lump, skin_t *skin);
+void R_PatchSkins(UINT16 wadnum);
 void R_AddSkins(UINT16 wadnum);
-
-#ifdef DELFILE
-void R_DelSkins(UINT16 wadnum);
-#endif
 
 void R_InitDrawNodes(void);
 
