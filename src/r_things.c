@@ -2928,6 +2928,10 @@ void R_PatchSkins(UINT16 wadnum)
 	size_t size;
 	skin_t *skin;
 	boolean noskincomplain;
+	UINT8 parsemode; // the types are not enums because they should be irrelevant outside this function
+#define PATCHPARSE_GET_NAME 0
+#define PATCHPARSE_MODIFY_PROPERTY 1
+#define PATCHPARSE_REMOVE_SPR2 2
 
 	//
 	// search for all skin patch markers in pwad
@@ -2936,6 +2940,7 @@ void R_PatchSkins(UINT16 wadnum)
 	while ((lump = W_CheckForPatchSkinMarkerInPwad(wadnum, lastlump)) != INT16_MAX)
 	{
 		INT32 skinnum = 0;
+
 		// advance by default
 		lastlump = lump + 1;
 
@@ -2952,49 +2957,14 @@ void R_PatchSkins(UINT16 wadnum)
 		skin = NULL;
 		noskincomplain = false;
 
-		// Parse initial comments and name parameter. Don't look at anything else until that's done!
-		stoken = strtok (buf2, "\r\n= ");
-		while (stoken)
-		{
-			if ((stoken[0] == '/' && stoken[1] == '/')
-				|| (stoken[0] == '#'))// skip comments
-			{
-				stoken = strtok(NULL, "\r\n"); // skip end of line
-				stoken = strtok(NULL, "\r\n= "); // find the real next token
-				continue;
-			}
+		/*
+		Parse. Has more phases than the parser in R_AddSkins because-
+		- it needs to have the patching name first (no default skin name is acceptible for patching, unlike skin creation)
+		- it needs the sprite2 reset list last.
+		*/
 
-			value = strtok(NULL, "\r\n= ");
-
-			if (!value)
-				I_Error("R_PatchSkins: syntax error looking for name in P_SKIN lump# %d(%s) in WAD %s\n", lump, W_CheckNameForNumPwad(wadnum,lump), wadfiles[wadnum]->filename);
-
-			if (!stricmp(stoken, "name"))
-			{
-				strlwr(value);
-				skinnum = R_SkinAvailable(value);
-				if (skinnum != -1)
-					skin = &skins[skinnum];
-				else
-				{
-					CONS_Debug(DBG_SETUP, "R_PatchSkins: unknown skin name in P_SKIN lump# %d(%s) in WAD %s\n", lump, W_CheckNameForNumPwad(wadnum,lump), wadfiles[wadnum]->filename);
-					noskincomplain = true;
-				}
-			}
-
-			break; // Intentionally unconditional.
-		}
-
-		if (!skin) // Didn't include a name parameter? What a waste.
-		{
-			if (!noskincomplain)
-				CONS_Debug(DBG_SETUP, "R_PatchSkins: no skin name given in P_SKIN lump #%d (WAD %s)\n", lump, wadfiles[wadnum]->filename);
-			continue;
-		}
-
-		// Parse SPR2 reset info and additional comments.
-		// If support is to be added for modifying additional skin properties, it should be done here, seperately from the strtok section above. This is to enforce that the skin must be properly selected before attempting to change properties.
-		stoken = strtok(NULL, "\r\n= ");
+		parsemode = 0;
+		stoken = strtok(buf2, "\r\n= ");
 		while (stoken)
 		{
 			if ((stoken[0] == '/' && stoken[1] == '/')
@@ -3006,66 +2976,117 @@ void R_PatchSkins(UINT16 wadnum)
 
 			value = strtok(NULL, "\r\n= ");
 
-			if (!value)
-				I_Error("R_PatchSkins: syntax error looking for properties in P_SKIN lump# %d(%s) in WAD %s\n", lump, W_CheckNameForNumPwad(wadnum,lump), wadfiles[wadnum]->filename);
-
-			if (!stricmp(stoken, "reset"))
+			switch (parsemode)  // This is where additional keyword-only tokens may be considered.
 			{
-				strupr(value);
-				if (strncmp(value, "spr2_", 5))
-				{
-					UINT8 i;
-					for (i = 0; i < (UINT8)free_spr2; i++)
+				case PATCHPARSE_GET_NAME: // No keyword-only properties.
+					break;
+				case PATCHPARSE_MODIFY_PROPERTY: // Only one property type supported right now.
+					if (!stricmp(stoken, "reset"))
 					{
-						if (!spr2names[i][4])
+						parsemode = PATCHPARSE_REMOVE_SPR2;
+						goto next_token; // get next token
+					}
+					break;
+				case PATCHPARSE_REMOVE_SPR2: // Following a "reset" command.
+					{
+						strupr(stoken);
+						if (strncmp(stoken, "spr2_", 5))
 						{
-							// special 3-char cases, e.g. SPR2_RUN
-							// the spr2names entry will have "_" on the end, as in "RUN_"
-							if (spr2names[i][3] == '_' && !value[3]) {
-								if (fastncmp(value+5,spr2names[i],3)) {
-									break;
+							UINT8 i;
+							for (i = 0; i < (UINT8)free_spr2; i++)
+							{
+								if (!spr2names[i][4])
+								{
+									// special 3-char cases, e.g. SPR2_RUN
+									// the spr2names entry will have "_" on the end, as in "RUN_"
+									if (spr2names[i][3] == '_' && !stoken[3]) {
+										if (fastncmp(stoken+5,spr2names[i],3)) {
+											break;
+										}
+									}
+									else if (fastncmp(stoken+5,spr2names[i],4)) {
+										break;
+									}
 								}
 							}
-							else if (fastncmp(value+5,spr2names[i],4)) {
-								break;
+							if (i == free_spr2)
+							{
+								CONS_Debug(DBG_SETUP, "R_PatchSkins: unknown sprite2 %s given to reset in P_SKIN lump #%d (WAD %s)\n", stoken, lump, wadfiles[wadnum]->filename);
+							}
+							else if (i == SPR2_STND) // Not permitted to completely clear the spr2 every other one defaults to when not present...
+							{
+								if (skin->sprites[i].numframes && skin->sprites[i].numframes > 1) // Preserve number one only.
+								{
+									memset(sprtemp,0xFF, sizeof (spriteframe_t));
+									M_Memcpy(sprtemp, skin->sprites[i].spriteframes, sizeof (spriteframe_t));
+									Z_Free(skin->sprites[i].spriteframes);
+									skin->sprites[i].spriteframes = NULL;
+									M_Memcpy(skin->sprites[i].spriteframes, sprtemp, sizeof (spriteframe_t));
+									skin->sprites[i].numframes = 1;
+								}
+							}
+							else // Clear 'em all out!
+							{
+								if (skin->sprites[i].numframes) // has been allocated?
+								{
+									CONS_Debug(DBG_SETUP, "R_PatchSkins: Getting rid of %d frames in sprite2 %s...\n", skin->sprites[i].numframes, stoken);
+									Z_Free(skin->sprites[i].spriteframes);
+									skin->sprites[i].spriteframes = NULL;
+									skin->sprites[i].numframes = 0;
+								}
 							}
 						}
+						else
+							CONS_Debug(DBG_SETUP, "R_PatchSkins: malformed sprite2 %s given to reset in P_SKIN lump #%d (WAD %s)\n", stoken, lump, wadfiles[wadnum]->filename);
 					}
-					if (i == free_spr2)
-					{
-						CONS_Debug(DBG_SETUP, "R_PatchSkins: unknown sprite2 %s given to reset in P_SKIN lump #%d (WAD %s)\n", value, lump, wadfiles[wadnum]->filename);
-					}
-					else if (i == SPR2_STND) // Not permitted to completely clear the spr2 every other one defaults to when not present...
-					{
-						if (skin->sprites[i].numframes && skin->sprites[i].numframes > 1) // Preserve number one only.
-						{
-							memset(sprtemp,0xFF, sizeof (spriteframe_t));
-							M_Memcpy(sprtemp, skin->sprites[i].spriteframes, sizeof (spriteframe_t));
-							Z_Free(skin->sprites[i].spriteframes);
-							skin->sprites[i].spriteframes = NULL;
-							M_Memcpy(skin->sprites[i].spriteframes, sprtemp, sizeof (spriteframe_t));
-							skin->sprites[i].numframes = 1;
-						}
-					}
-					else // Clear 'em all out!
-					{
-						if (skin->sprites[i].numframes) // has been allocated?
-						{
-							CONS_Debug(DBG_SETUP, "R_PatchSkins: Getting rid of %d frames in sprite2 %s...\n", skin->sprites[i].numframes, value);
-							Z_Free(skin->sprites[i].spriteframes);
-							skin->sprites[i].spriteframes = NULL;
-							skin->sprites[i].numframes = 0;
-						}
-					}
-				}
-				else
-					CONS_Debug(DBG_SETUP, "R_PatchSkins: malformed sprite2 %s given to reset in P_SKIN lump #%d (WAD %s)\n", value, lump, wadfiles[wadnum]->filename);
+					goto next_token; // get next token unconditionally in this state
+				default: // ???
+					break;
 			}
+
+			if (!value)
+				I_Error("R_PatchSkins: syntax error in P_SKIN lump# %d(%s) in WAD %s\n", lump, W_CheckNameForNumPwad(wadnum,lump), wadfiles[wadnum]->filename);
+
+			switch (parsemode) // This is where additional tokens with values may be considered.
+			{
+				case PATCHPARSE_GET_NAME:
+					if (!stricmp(stoken, "name"))
+					{
+						strlwr(value);
+						skinnum = R_SkinAvailable(value);
+						if (skinnum != -1)
+						{
+							skin = &skins[skinnum];
+							parsemode = PATCHPARSE_MODIFY_PROPERTY; // We have a skin now, so we can modify its properties.
+						}
+						else
+						{
+							CONS_Debug(DBG_SETUP, "R_PatchSkins: unknown skin name in P_SKIN lump# %d(%s) in WAD %s\n", lump, W_CheckNameForNumPwad(wadnum,lump), wadfiles[wadnum]->filename);
+							noskincomplain = true;
+						}
+					}
+				case PATCHPARSE_MODIFY_PROPERTY: // No value-requiring properties available for modification yet.
+					break;
+				case PATCHPARSE_REMOVE_SPR2: // Sprite2 reset should probably not include property unless you have a REALLY good idea.
+					break;
+				default: // ???
+					break;
+			}
+
+			if (!skin)
+				break;
 
 next_token:
 			stoken = strtok(NULL, "\r\n= ");
 		}
 		free(buf2);
+
+		if (!skin) // Didn't include a name parameter? What a waste.
+		{
+			if (!noskincomplain)
+				CONS_Debug(DBG_SETUP, "R_PatchSkins: no skin name given in P_SKIN lump #%d (WAD %s)\n", lump, wadfiles[wadnum]->filename);
+			continue;
+		}
 
 		// Patch sprites
 		R_LoadSkinSprites(wadnum, ++lump, skin);
