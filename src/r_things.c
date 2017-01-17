@@ -2974,8 +2974,6 @@ void R_PatchSkins(UINT16 wadnum)
 				goto next_token;              // find the real next token
 			}
 
-			value = strtok(NULL, "\r\n= ");
-
 			switch (parsemode)  // This is where additional keyword-only tokens may be considered.
 			{
 				case PATCHPARSE_GET_NAME: // No keyword-only properties.
@@ -2990,7 +2988,7 @@ void R_PatchSkins(UINT16 wadnum)
 				case PATCHPARSE_REMOVE_SPR2: // Following a "reset" command.
 					{
 						strupr(stoken);
-						if (strncmp(stoken, "spr2_", 5))
+						if (!strncmp(stoken, "SPR2_", 5))
 						{
 							UINT8 i;
 							for (i = 0; i < (UINT8)free_spr2; i++)
@@ -3044,6 +3042,8 @@ void R_PatchSkins(UINT16 wadnum)
 					break;
 			}
 
+			value = strtok(NULL, "\r\n= ");
+
 			if (!value)
 				I_Error("R_PatchSkins: syntax error in P_SKIN lump# %d(%s) in WAD %s\n", lump, W_CheckNameForNumPwad(wadnum,lump), wadfiles[wadnum]->filename);
 
@@ -3067,7 +3067,7 @@ void R_PatchSkins(UINT16 wadnum)
 					}
 				case PATCHPARSE_MODIFY_PROPERTY: // No value-requiring properties available for modification yet.
 					break;
-				case PATCHPARSE_REMOVE_SPR2: // Sprite2 reset should probably not include property unless you have a REALLY good idea.
+				case PATCHPARSE_REMOVE_SPR2: // Sprite2 reset should probably not include property.
 					break;
 				default: // ???
 					break;
