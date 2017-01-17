@@ -231,7 +231,7 @@ static Mix_Chunk *ds2chunk(void *stream)
 		break;
 	default: // convert arbitrary hz to 44100.
 		step = 0;
-		frac = ((UINT32)freq << FRACBITS) / 44100;
+		frac = ((UINT32)freq << FRACBITS) / 44100 + 1; //Add 1 to counter truncation.
 		while (i < samples)
 		{
 			o = (INT16)(*s+0x80)<<8; // changed signedness and shift up to 16 bits

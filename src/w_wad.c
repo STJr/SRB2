@@ -1238,6 +1238,7 @@ int W_VerifyNMUSlumps(const char *filename)
 		{"COLORMAP", 8},
 		{"PAL", 3},
 		{"CLM", 3},
+		{"TRANS", 5},
 		{NULL, 0},
 	};
 	return W_VerifyFile(filename, NMUSlist, false);

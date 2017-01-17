@@ -366,69 +366,6 @@ fixed_t R_PointToDist(fixed_t x, fixed_t y)
 	return R_PointToDist2(viewx, viewy, x, y);
 }
 
-/***************************************
-*** Zdoom C++ to Legacy C conversion ***
-****************************************/
-
-// Utility to find the Z height at an XY location in a sector (for slopes)
-fixed_t R_SecplaneZatPoint(secplane_t *secplane, fixed_t x, fixed_t y)
-{
-	return FixedMul(secplane->ic, -secplane->d - DMulScale16(secplane->a, x, secplane->b, y));
-}
-
-// Returns the value of z at (x,y) if d is equal to dist
-fixed_t R_SecplaneZatPointDist (secplane_t *secplane, fixed_t x, fixed_t y, fixed_t dist)
-{
-	return FixedMul(secplane->ic, -dist - DMulScale16(secplane->a, x, secplane->b, y));
-}
-
-// Flips the plane's vertical orientiation, so that if it pointed up,
-// it will point down, and vice versa.
-void R_SecplaneFlipVert(secplane_t *secplane)
-{
-	secplane->a = -secplane->a;
-	secplane->b = -secplane->b;
-	secplane->c = -secplane->c;
-	secplane->d = -secplane->d;
-	secplane->ic = -secplane->ic;
-}
-
-// Returns true if 2 planes are the same
-boolean R_ArePlanesSame(secplane_t *original, secplane_t *other)
-{
-	return original->a == other->a && original->b == other->b
-		&& original->c == other->c && original->d == other->d;
-}
-
-// Returns true if 2 planes are different
-boolean R_ArePlanesDifferent(secplane_t *original, secplane_t *other)
-{
-	return original->a != other->a || original->b != other->b
-		|| original->c != other->c || original->d != other->d;
-}
-
-// Moves a plane up/down by hdiff units
-void R_SecplaneChangeHeight(secplane_t *secplane, fixed_t hdiff)
-{
-	secplane->d = secplane->d - FixedMul(hdiff, secplane->c);
-}
-
-// Returns how much this plane's height would change if d were set to oldd
-fixed_t R_SecplaneHeightDiff(secplane_t *secplane, fixed_t oldd)
-{
-	return FixedMul(oldd - secplane->d, secplane->ic);
-}
-
-fixed_t R_SecplanePointToDist(secplane_t *secplane, fixed_t x, fixed_t y, fixed_t z)
-{
-	return -TMulScale16(secplane->a, x, y, secplane->b, z, secplane->c);
-}
-
-fixed_t R_SecplanePointToDist2(secplane_t *secplane, fixed_t x, fixed_t y, fixed_t z)
-{
-	return -TMulScale16(secplane->a, x, secplane->b, y, z, secplane->c);
-}
-
 //
 // R_ScaleFromGlobalAngle
 // Returns the texture mapping scale for the current line (horizontal span)
@@ -771,7 +708,7 @@ subsector_t *R_PointInSubsector(fixed_t x, fixed_t y)
 }
 
 //
-// R_IsPointInSubsector, same as above but returns 0 if not in subsector - this does not work in opengl because of polyvertex_t
+// R_IsPointInSubsector, same as above but returns 0 if not in subsector
 //
 subsector_t *R_IsPointInSubsector(fixed_t x, fixed_t y)
 {
@@ -795,7 +732,8 @@ subsector_t *R_IsPointInSubsector(fixed_t x, fixed_t y)
 
 	ret = &subsectors[nodenum & ~NF_SUBSECTOR];
 	for (i = 0; i < ret->numlines; i++)
-		if (R_PointOnSegSide(x, y, &segs[ret->firstline + i]))
+		//if (R_PointOnSegSide(x, y, &segs[ret->firstline + i])) -- breaks in ogl because polyvertex_t cast over vertex pointers
+		if (P_PointOnLineSide(x, y, segs[ret->firstline + i].linedef) != segs[ret->firstline + i].side)
 			return 0;
 
 	return ret;
