@@ -6,7 +6,7 @@ environment:
  CCACHE_CC: i686-w64-mingw32-gcc
  WINDRES: windres
  MINGW_SDK: c:\msys64\mingw32
- CFLAGS: -Wall -W -Werror -gdwarf-2
+ CFLAGS: -Wall -W -Werror -gstabs
  NASM_ZIP: nasm-2.12.01
  NASM_URL: http://www.nasm.us/pub/nasm/releasebuilds/2.12.01/win64/nasm-2.12.01-win64.zip
  UPX_ZIP: upx391w
