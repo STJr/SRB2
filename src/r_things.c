@@ -2587,11 +2587,11 @@ static UINT16 W_CheckForSkinMarkerInPwad(UINT16 wadid, UINT16 startlump)
 }
 
 //
-// Add skins from a pwad, each skin preceded by 'S_SKIN' marker
+// Patch skins from a pwad, each skin preceded by 'P_SKIN' marker
 //
 
 // Does the same is in w_wad, but check only for
-// the first 6 characters (this is so we can have S_SKIN1, S_SKIN2..
+// the first 6 characters (this is so we can have P_SKIN1, P_SKIN2..
 // for wad editors that don't like multiple resources of the same name)
 //
 static UINT16 W_CheckForPatchSkinMarkerInPwad(UINT16 wadid, UINT16 startlump)
