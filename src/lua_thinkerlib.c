@@ -29,6 +29,9 @@ static int lib_iterateThinkers(lua_State *L)
 	actionf_p1 searchFunc;
 	const char *searchMeta;
 
+	if (gamestate != GS_LEVEL)
+		return luaL_error(L, "This function can only be used in a level!");
+
 	lua_settop(L, 2);
 	lua_remove(L, 1); // remove state now.
 
@@ -84,6 +87,8 @@ static int lib_iterateThinkers(lua_State *L)
 
 static int lib_startIterate(lua_State *L)
 {
+	if (gamestate != GS_LEVEL)
+		return luaL_error(L, "This function can only be used in a level!");
 	luaL_checkoption(L, 1, iter_opt[0], iter_opt);
 	lua_pushcfunction(L, lib_iterateThinkers);
 	lua_pushvalue(L, 1);
