@@ -1145,7 +1145,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				if (thing->flags & MF_GRENADEBOUNCE && (thing->flags & MF_MONITOR || thing->flags2 & MF2_STANDONME)) // Gold monitor hack...
 					return false;
 
-				tmfloorz = tmceilingz = INT32_MIN; // block while in air
+				tmfloorz = tmceilingz = topz; // block while in air
 #ifdef ESLOPE
 				tmceilingslope = NULL;
 #endif
@@ -1191,7 +1191,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				if (thing->flags & MF_GRENADEBOUNCE && (thing->flags & MF_MONITOR || thing->flags2 & MF2_STANDONME)) // Gold monitor hack...
 					return false;
 
-				tmfloorz = tmceilingz = INT32_MAX; // block while in air
+				tmfloorz = tmceilingz = topz; // block while in air
 #ifdef ESLOPE
 				tmfloorslope = NULL;
 #endif

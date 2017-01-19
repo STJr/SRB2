@@ -65,6 +65,7 @@ void SV_SendRam(INT32 node, void *data, size_t size, freemethod_t freemethod,
 
 void SV_FileSendTicker(void);
 void Got_Filetxpak(void);
+boolean SV_SendingFile(INT32 node);
 
 boolean CL_CheckDownloadable(void);
 boolean CL_SendRequestFile(void);
