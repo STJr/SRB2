@@ -97,7 +97,7 @@ char downloaddir[256] = "DOWNLOAD";
 
 #ifdef CLIENT_LOADINGSCREEN
 // for cl loading screen
-INT32 lastfilenum = 0;
+INT32 lastfilenum = -1;
 #endif
 
 /** Fills a serverinfo packet with information about wad files loaded.
@@ -487,6 +487,9 @@ static void SV_SendFile(INT32 node, const char *filename, UINT8 fileid)
 	INT32 i;
 	char wadfilename[MAX_WADPATH];
 
+	if (cv_noticedownload.value)
+		CONS_Printf("Sending file \"%s\" to node %d\n", filename, node);
+
 	// Find the last file in the list and set a pointer to its "next" field
 	q = &transfer[node].txlist;
 	while (*q)
@@ -609,6 +612,8 @@ static void SV_EndFileSend(INT32 node)
 	switch (p->ram)
 	{
 		case SF_FILE: // It's a file, close it and free its filename
+			if (cv_noticedownload.value)
+				CONS_Printf("Ending file transfer for node %d\n", node);
 			if (transfer[node].currentfile)
 				fclose(transfer[node].currentfile);
 			free(p->id.filename);
@@ -636,6 +641,9 @@ static void SV_EndFileSend(INT32 node)
 
 /** Handles file transmission
   *
+  * \todo Use an acknowledging method more adapted to file transmission
+  *       The current download speed suffers from lack of ack packets,
+  *       especially when the one downloading has high latency
   *
   */
 void SV_FileSendTicker(void)
@@ -644,17 +652,38 @@ void SV_FileSendTicker(void)
 	filetx_pak *p;
 	size_t size;
 	filetx_t *f;
-	INT32 packetsent = PACKETPERTIC, ram, i;
+	INT32 packetsent, ram, i, j;
+	INT32 maxpacketsent;
 
-	if (!filestosend)
+	if (!filestosend) // No file to send
 		return;
-	if (!packetsent)
-		packetsent++;
+
+	if (cv_downloadspeed.value) // New (and experimental) behavior
+	{
+		packetsent = cv_downloadspeed.value;
+		// Don't send more packets than we have free acks
+#ifndef NONET
+		maxpacketsent = Net_GetFreeAcks(false) - 5; // Let 5 extra acks just in case
+#else
+		maxpacketsent = 1;
+#endif
+		if (packetsent > maxpacketsent && maxpacketsent > 0) // Send at least one packet
+			packetsent = maxpacketsent;
+	}
+	else // Old behavior
+	{
+		packetsent = PACKETPERTIC;
+		if (!packetsent)
+			packetsent = 1;
+	}
+
+	netbuffer->packettype = PT_FILEFRAGMENT;
+
 	// (((sendbytes-nowsentbyte)*TICRATE)/(I_GetTime()-starttime)<(UINT32)net_bandwidth)
 	while (packetsent-- && filestosend != 0)
 	{
-		for (i = currentnode, ram = 0; ram < MAXNETNODES;
-			i = (i+1) % MAXNETNODES, ram++)
+		for (i = currentnode, j = 0; j < MAXNETNODES;
+			i = (i+1) % MAXNETNODES, j++)
 		{
 			if (transfer[i].txlist)
 				goto found;
@@ -713,7 +742,6 @@ void SV_FileSendTicker(void)
 			p->position |= LONG(0x80000000);
 		p->fileid = f->fileid;
 		p->size = SHORT((UINT16)size);
-		netbuffer->packettype = PT_FILEFRAGMENT;
 
 		// Send the packet
 		if (HSendPacket(i, true, 0, FILETXHEADER + size)) // Reliable SEND
@@ -735,27 +763,40 @@ void SV_FileSendTicker(void)
 void Got_Filetxpak(void)
 {
 	INT32 filenum = netbuffer->u.filetxpak.fileid;
+	fileneeded_t *file = &fileneeded[filenum];
+	char *filename = file->filename;
 	static INT32 filetime = 0;
+
+	if (!(strcmp(filename, "srb2.srb")
+		&& strcmp(filename, "srb2.wad")
+		&& strcmp(filename, "zones.dta")
+		&& strcmp(filename, "player.dta")
+		&& strcmp(filename, "rings.dta")
+		&& strcmp(filename, "patch.dta")
+		&& strcmp(filename, "music.dta")
+		))
+		I_Error("Tried to download \"%s\"", filename);
 
 	if (filenum >= fileneedednum)
 	{
 		DEBFILE(va("fileframent not needed %d>%d\n", filenum, fileneedednum));
+		//I_Error("Received an unneeded file fragment (file id received: %d, file id needed: %d)\n", filenum, fileneedednum);
 		return;
 	}
 
-	if (fileneeded[filenum].status == FS_REQUESTED)
+	if (file->status == FS_REQUESTED)
 	{
-		if (fileneeded[filenum].file)
+		if (file->file)
 			I_Error("Got_Filetxpak: already open file\n");
-		fileneeded[filenum].file = fopen(fileneeded[filenum].filename, "wb");
-		if (!fileneeded[filenum].file)
-			I_Error("Can't create file %s: %s", fileneeded[filenum].filename, strerror(errno));
-		CONS_Printf("\r%s...\n",fileneeded[filenum].filename);
-		fileneeded[filenum].currentsize = 0;
-		fileneeded[filenum].status = FS_DOWNLOADING;
+		file->file = fopen(filename, "wb");
+		if (!file->file)
+			I_Error("Can't create file %s: %s", filename, strerror(errno));
+		CONS_Printf("\r%s...\n",filename);
+		file->currentsize = 0;
+		file->status = FS_DOWNLOADING;
 	}
 
-	if (fileneeded[filenum].status == FS_DOWNLOADING)
+	if (file->status == FS_DOWNLOADING)
 	{
 		UINT32 pos = LONG(netbuffer->u.filetxpak.position);
 		UINT16 size = SHORT(netbuffer->u.filetxpak.size);
@@ -764,27 +805,47 @@ void Got_Filetxpak(void)
 		if (pos & 0x80000000)
 		{
 			pos &= ~0x80000000;
-			fileneeded[filenum].totalsize = pos + size;
+			file->totalsize = pos + size;
 		}
 		// We can receive packet in the wrong order, anyway all os support gaped file
-		fseek(fileneeded[filenum].file, pos, SEEK_SET);
-		if (fwrite(netbuffer->u.filetxpak.data,size,1,fileneeded[filenum].file) != 1)
-			I_Error("Can't write to %s: %s\n",fileneeded[filenum].filename, strerror(ferror(fileneeded[filenum].file)));
-		fileneeded[filenum].currentsize += size;
+		fseek(file->file, pos, SEEK_SET);
+		if (fwrite(netbuffer->u.filetxpak.data,size,1,file->file) != 1)
+			I_Error("Can't write to %s: %s\n",filename, strerror(ferror(file->file)));
+		file->currentsize += size;
 
 		// Finished?
-		if (fileneeded[filenum].currentsize == fileneeded[filenum].totalsize)
+		if (file->currentsize == file->totalsize)
 		{
-			fclose(fileneeded[filenum].file);
-			fileneeded[filenum].file = NULL;
-			fileneeded[filenum].status = FS_FOUND;
+			fclose(file->file);
+			file->file = NULL;
+			file->status = FS_FOUND;
 			CONS_Printf(M_GetText("Downloading %s...(done)\n"),
-				fileneeded[filenum].filename);
+				filename);
 		}
 	}
 	else
-		I_Error("Received a file not requested\n");
-
+	{
+		const char *s;
+		switch(file->status)
+		{
+		case FS_NOTFOUND:
+			s = "FS_NOTFOUND";
+			break;
+		case FS_FOUND:
+			s = "FS_FOUND";
+			break;
+		case FS_OPEN:
+			s = "FS_OPEN";
+			break;
+		case FS_MD5SUMBAD:
+			s = "FS_MD5SUMBAD";
+			break;
+		default:
+			s = "unknown";
+			break;
+		}
+		I_Error("Received a file not requested (file id: %d, file status: %s)\n", filenum, s);
+	}
 	// Send ack back quickly
 	if (++filetime == 3)
 	{
@@ -797,12 +858,23 @@ void Got_Filetxpak(void)
 #endif
 }
 
-/** Cancels all file requests for a node
+/** \brief Checks if a node is downloading a file
  *
- * \param node The destination
- * \sa SV_EndFileSend
+ * \param node The node to check for
+ * \return True if the node is downloading a file
  *
  */
+boolean SV_SendingFile(INT32 node)
+{
+	return transfer[node].txlist != NULL;
+}
+
+/** Cancels all file requests for a node
+  *
+  * \param node The destination
+  * \sa SV_EndFileSend
+  *
+  */
 void SV_AbortSendFiles(INT32 node)
 {
 	while (transfer[node].txlist)

@@ -30,7 +30,7 @@
 #include "f_finale.h"
 
 
-#if defined (USEASM) //&& (!defined (_MSC_VER) || (_MSC_VER <= 1200))
+#if defined (USEASM) && !defined (NORUSEASM)//&& (!defined (_MSC_VER) || (_MSC_VER <= 1200))
 #define RUSEASM //MSC.NET can't patch itself
 #endif
 
