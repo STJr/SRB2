@@ -87,6 +87,171 @@ static int lib_print(lua_State *L)
 	return 0;
 }
 
+enum
+{
+	UTYPE_NULL=0,
+	UTYPE_STATE,
+	UTYPE_MOBJINFO,
+	UTYPE_SFXINFO,
+
+	UTYPE_MOBJ,
+	UTYPE_MAPTHING,
+
+	UTYPE_PLAYER,
+	UTYPE_TICCMD,
+	UTYPE_SKIN,
+	UTYPE_POWERS,
+	UTYPE_SOUNDSID,
+
+	UTYPE_VERTEX,
+	UTYPE_LINE,
+	UTYPE_SIDE,
+	UTYPE_SUBSECTOR,
+	UTYPE_SECTOR,
+	UTYPE_FFLOOR,
+#ifdef HAVE_LUA_SEGS
+	UTYPE_SEG,
+	UTYPE_NODE,
+#endif
+	UTYPE_MAPHEADER,
+
+	UTYPE_CVAR,
+
+	UTYPE_SECTORLINES,
+	UTYPE_SIDENUM,
+#ifdef HAVE_LUA_SEGS
+	UTYPE_NODEBBOX,
+	UTYPE_NODECHILDREN,
+#endif
+
+	UTYPE_BBOX,
+
+	UTYPE_HUDINFO,
+	UTYPE_PATCH,
+	UTYPE_COLORMAP,
+	UTYPE_CAMERA,
+};
+
+#define META_UTYPE(name) {META_##name, UTYPE_##name}
+static const struct {
+	const char *meta;
+	UINT8 utype;
+} meta2utype[] = {
+	META_UTYPE(STATE),
+	META_UTYPE(MOBJINFO),
+	META_UTYPE(SFXINFO),
+
+	META_UTYPE(MOBJ),
+	META_UTYPE(MAPTHING),
+
+	META_UTYPE(PLAYER),
+	META_UTYPE(TICCMD),
+	META_UTYPE(SKIN),
+	META_UTYPE(POWERS),
+	META_UTYPE(SOUNDSID),
+
+	META_UTYPE(VERTEX),
+	META_UTYPE(LINE),
+	META_UTYPE(SIDE),
+	META_UTYPE(SUBSECTOR),
+	META_UTYPE(SECTOR),
+	META_UTYPE(FFLOOR),
+#ifdef HAVE_LUA_SEGS
+	META_UTYPE(SEG),
+	META_UTYPE(NODE),
+#endif
+	META_UTYPE(MAPHEADER),
+
+	META_UTYPE(CVAR),
+
+	META_UTYPE(SECTORLINES),
+	META_UTYPE(SIDENUM),
+#ifdef HAVE_LUA_SEGS
+	META_UTYPE(NODEBBOX),
+	META_UTYPE(NODECHILDREN),
+#endif
+
+	META_UTYPE(BBOX),
+
+	META_UTYPE(HUDINFO),
+	META_UTYPE(PATCH),
+	META_UTYPE(COLORMAP),
+	META_UTYPE(CAMERA),
+	{NULL,          UTYPE_NULL}
+};
+#undef META_UTYPE
+
+static UINT8 GetUserdataUType(lua_State *L)
+{
+	UINT8 i;
+	lua_getmetatable(L, -1);
+
+	for (i = 0; meta2utype[i].meta; i++)
+	{
+		luaL_getmetatable(L, meta2utype[i].meta);
+		if (lua_rawequal(L, -1, -2))
+		{
+			lua_pop(L, 2);
+			return meta2utype[i].utype;
+		}
+		lua_pop(L, 1);
+	}
+
+	lua_pop(L, 1);
+	return UTYPE_NULL;
+}
+
+static int lib_userdataType(lua_State *L)
+{
+	lua_settop(L, 1); // pop everything except arg 1 (in case somebody decided to add more)
+	luaL_checktype(L, 1, LUA_TUSERDATA);
+	switch (GetUserdataUType(L))
+	{
+	case UTYPE_STATE:        lua_pushliteral(L, "state_t"); break;
+	case UTYPE_MOBJINFO:     lua_pushliteral(L, "mobjinfo_t"); break;
+	case UTYPE_SFXINFO:      lua_pushliteral(L, "sfxinfo_t"); break;
+
+	case UTYPE_MOBJ:         lua_pushliteral(L, "mobj_t"); break;
+	case UTYPE_MAPTHING:     lua_pushliteral(L, "mapthing_t"); break;
+
+	case UTYPE_PLAYER:       lua_pushliteral(L, "player_t"); break;
+	case UTYPE_TICCMD:       lua_pushliteral(L, "ticcmd_t"); break;
+	case UTYPE_SKIN:         lua_pushliteral(L, "skin_t"); break;
+	case UTYPE_POWERS:       lua_pushliteral(L, "player_t.powers"); break;
+	case UTYPE_SOUNDSID:     lua_pushliteral(L, "skin_t.soundsid"); break;
+
+	case UTYPE_VERTEX:       lua_pushliteral(L, "vertex_t"); break;
+	case UTYPE_LINE:         lua_pushliteral(L, "line_t"); break;
+	case UTYPE_SIDE:         lua_pushliteral(L, "side_t"); break;
+	case UTYPE_SUBSECTOR:    lua_pushliteral(L, "subsector_t"); break;
+	case UTYPE_SECTOR:       lua_pushliteral(L, "sector_t"); break;
+	case UTYPE_FFLOOR:       lua_pushliteral(L, "ffloor_t"); break;
+#ifdef HAVE_LUA_SEGS
+	case UTYPE_SEG:          lua_pushliteral(L, "seg_t"); break;
+	case UTYPE_NODE:         lua_pushliteral(L, "node_t"); break;
+#endif
+	case UTYPE_MAPHEADER:    lua_pushliteral(L, "mapheader_t"); break;
+
+	case UTYPE_CVAR:         lua_pushliteral(L, "cvar_t"); break;
+
+	case UTYPE_SECTORLINES:  lua_pushliteral(L, "sector_t.lines"); break;
+	case UTYPE_SIDENUM:      lua_pushliteral(L, "line_t.sidenum"); break;
+#ifdef HAVE_LUA_SEGS
+	case UTYPE_NODEBBOX:     lua_pushliteral(L, "node_t.bbox"); break;
+	case UTYPE_NODECHILDREN: lua_pushliteral(L, "node_t.children"); break;
+#endif
+
+	case UTYPE_BBOX:         lua_pushliteral(L, "bbox"); break;
+
+	case UTYPE_HUDINFO:      lua_pushliteral(L, "hudinfo_t"); break;
+	case UTYPE_PATCH:        lua_pushliteral(L, "patch_t"); break;
+	case UTYPE_COLORMAP:     lua_pushliteral(L, "colormap"); break;
+	case UTYPE_CAMERA:       lua_pushliteral(L, "camera_t"); break;
+	default: return luaL_error(L, "Unknown userdata type");
+	}
+	return 1;
+}
+
 // M_RANDOM
 //////////////
 
@@ -2190,6 +2355,7 @@ static int lib_gTicsToMilliseconds(lua_State *L)
 
 static luaL_Reg lib[] = {
 	{"print", lib_print},
+	{"userdataType", lib_userdataType},
 
 	// m_random
 	{"P_RandomFixed",lib_pRandomFixed},
