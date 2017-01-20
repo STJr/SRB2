@@ -572,51 +572,54 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 			side_t *side = &sides[linedef->sidenum[0]];
 			fixed_t textop, texbottom, texheight;
 			fixed_t texmid, delta1, delta2;
+			INT32 texnum = R_GetTextureNum(side->midtexture); // make sure the texture is actually valid
 
-			// Get the midtexture's height
-			texheight = textures[texturetranslation[side->midtexture]]->height << FRACBITS;
+			if (texnum) {
+				// Get the midtexture's height
+				texheight = textures[texnum]->height << FRACBITS;
 
-			// Set texbottom and textop to the Z coordinates of the texture's boundaries
+				// Set texbottom and textop to the Z coordinates of the texture's boundaries
 #if 0 // #ifdef POLYOBJECTS
-			// don't remove this code unless solid midtextures
-			// on non-solid polyobjects should NEVER happen in the future
-			if (linedef->polyobj && (linedef->polyobj->flags & POF_TESTHEIGHT)) {
-				if (linedef->flags & ML_EFFECT5 && !side->repeatcnt) { // "infinite" repeat
-					texbottom = back->floorheight + side->rowoffset;
-					textop = back->ceilingheight + side->rowoffset;
-				} else if (!!(linedef->flags & ML_DONTPEGBOTTOM) ^ !!(linedef->flags & ML_EFFECT3)) {
-					texbottom = back->floorheight + side->rowoffset;
-					textop = texbottom + texheight*(side->repeatcnt+1);
-				} else {
-					textop = back->ceilingheight + side->rowoffset;
-					texbottom = textop - texheight*(side->repeatcnt+1);
-				}
-			} else
+				// don't remove this code unless solid midtextures
+				// on non-solid polyobjects should NEVER happen in the future
+				if (linedef->polyobj && (linedef->polyobj->flags & POF_TESTHEIGHT)) {
+					if (linedef->flags & ML_EFFECT5 && !side->repeatcnt) { // "infinite" repeat
+						texbottom = back->floorheight + side->rowoffset;
+						textop = back->ceilingheight + side->rowoffset;
+					} else if (!!(linedef->flags & ML_DONTPEGBOTTOM) ^ !!(linedef->flags & ML_EFFECT3)) {
+						texbottom = back->floorheight + side->rowoffset;
+						textop = texbottom + texheight*(side->repeatcnt+1);
+					} else {
+						textop = back->ceilingheight + side->rowoffset;
+						texbottom = textop - texheight*(side->repeatcnt+1);
+					}
+				} else
 #endif
-			{
-				if (linedef->flags & ML_EFFECT5 && !side->repeatcnt) { // "infinite" repeat
-					texbottom = openbottom + side->rowoffset;
-					textop = opentop + side->rowoffset;
-				} else if (!!(linedef->flags & ML_DONTPEGBOTTOM) ^ !!(linedef->flags & ML_EFFECT3)) {
-					texbottom = openbottom + side->rowoffset;
-					textop = texbottom + texheight*(side->repeatcnt+1);
-				} else {
-					textop = opentop + side->rowoffset;
-					texbottom = textop - texheight*(side->repeatcnt+1);
+				{
+					if (linedef->flags & ML_EFFECT5 && !side->repeatcnt) { // "infinite" repeat
+						texbottom = openbottom + side->rowoffset;
+						textop = opentop + side->rowoffset;
+					} else if (!!(linedef->flags & ML_DONTPEGBOTTOM) ^ !!(linedef->flags & ML_EFFECT3)) {
+						texbottom = openbottom + side->rowoffset;
+						textop = texbottom + texheight*(side->repeatcnt+1);
+					} else {
+						textop = opentop + side->rowoffset;
+						texbottom = textop - texheight*(side->repeatcnt+1);
+					}
 				}
-			}
 
-			texmid = texbottom+(textop-texbottom)/2;
+				texmid = texbottom+(textop-texbottom)/2;
 
-			delta1 = abs(mobj->z - texmid);
-			delta2 = abs(thingtop - texmid);
+				delta1 = abs(mobj->z - texmid);
+				delta2 = abs(thingtop - texmid);
 
-			if (delta1 > delta2) { // Below
-				if (opentop > texbottom)
-					opentop = texbottom;
-			} else { // Above
-				if (openbottom < textop)
-					openbottom = textop;
+				if (delta1 > delta2) { // Below
+					if (opentop > texbottom)
+						opentop = texbottom;
+				} else { // Above
+					if (openbottom < textop)
+						openbottom = textop;
+				}
 			}
 		}
 

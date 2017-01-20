@@ -221,8 +221,8 @@ static animdef_t harddefs[] =
 static animdef_t *animdefs = NULL;
 
 // A prototype; here instead of p_spec.h, so they're "private"
-void P_ParseANIMDEFSLump(INT32 wadNum, UINT16 lumpnum, INT32 *i);
-void P_ParseAnimationDefintion(SINT8 istexture, INT32 *i);
+void P_ParseANIMDEFSLump(INT32 wadNum, UINT16 lumpnum);
+void P_ParseAnimationDefintion(SINT8 istexture);
 
 /** Sets up texture and flat animations.
   *
@@ -232,24 +232,21 @@ void P_ParseAnimationDefintion(SINT8 istexture, INT32 *i);
   * Issues an error if any animation cycles are invalid.
   *
   * \sa P_FindAnimatedFlat, P_SetupLevelFlatAnims
-  * \author Steven McGranahan (original), Shadow Hog (had to rewrite it to handle multiple WADs)
+  * \author Steven McGranahan (original), Shadow Hog (had to rewrite it to handle multiple WADs), JTE (had to rewrite it to handle multiple WADs _correctly_)
   */
 void P_InitPicAnims(void)
 {
 	// Init animation
-	INT32 i; // Position in the animdefs array
 	INT32 w; // WAD
-	UINT8 *wadAnimdefs; // not to be confused with animdefs, the combined total of every ANIMATED lump in every WAD, or ANIMDEFS, the ZDoom lump I intend to implement later
+	UINT8 *animatedLump;
 	UINT8 *currentPos;
+	size_t i;
+
+	I_Assert(animdefs == NULL);
 
 	if (W_CheckNumForName("ANIMATED") != LUMPERROR || W_CheckNumForName("ANIMDEFS") != LUMPERROR)
 	{
-		if (animdefs)
-		{
-			Z_Free(animdefs);
-			animdefs = NULL;
-		}
-		for (w = 0, i = 0, maxanims = 0; w < numwadfiles; w++)
+		for (w = numwadfiles-1, maxanims = 0; w >= 0; w--)
 		{
 			UINT16 animatedLumpNum;
 			UINT16 animdefsLumpNum;
@@ -258,20 +255,20 @@ void P_InitPicAnims(void)
 			animatedLumpNum = W_CheckNumForNamePwad("ANIMATED", w, 0);
 			if (animatedLumpNum != INT16_MAX)
 			{
-				wadAnimdefs = (UINT8 *)W_CacheLumpNumPwad(w, animatedLumpNum, PU_STATIC);
+				animatedLump = (UINT8 *)W_CacheLumpNumPwad(w, animatedLumpNum, PU_STATIC);
 
 				// Get the number of animations in the file
-				for (currentPos = wadAnimdefs; *currentPos != UINT8_MAX; maxanims++, currentPos+=23);
+				i = maxanims;
+				for (currentPos = animatedLump; *currentPos != UINT8_MAX; maxanims++, currentPos+=23);
 
 				// Resize animdefs (or if it hasn't been created, create it)
 				animdefs = (animdef_t *)Z_Realloc(animdefs, sizeof(animdef_t)*(maxanims + 1), PU_STATIC, NULL);
 				// Sanity check it
-				if (!animdefs) {
+				if (!animdefs)
 					I_Error("Not enough free memory for ANIMATED data");
-				}
 
 				// Populate the new array
-				for (currentPos = wadAnimdefs; *currentPos != UINT8_MAX; i++, currentPos+=23)
+				for (currentPos = animatedLump; *currentPos != UINT8_MAX; i++, currentPos+=23)
 				{
 					M_Memcpy(&(animdefs[i].istexture), currentPos, 1); // istexture, 1 byte
 					M_Memcpy(animdefs[i].endname, (currentPos + 1), 9); // endname, 9 bytes
@@ -279,15 +276,13 @@ void P_InitPicAnims(void)
 					M_Memcpy(&(animdefs[i].speed), (currentPos + 19), 4); // speed, 4 bytes
 				}
 
-				Z_Free(wadAnimdefs);
+				Z_Free(animatedLump);
 			}
 
 			// Now find ANIMDEFS
 			animdefsLumpNum = W_CheckNumForNamePwad("ANIMDEFS", w, 0);
 			if (animdefsLumpNum != INT16_MAX)
-			{
-				P_ParseANIMDEFSLump(w, animdefsLumpNum, &i);
-			}
+				P_ParseANIMDEFSLump(w, animdefsLumpNum);
 		}
 		// Define the last one
 		animdefs[maxanims].istexture = -1;
@@ -347,16 +342,20 @@ void P_InitPicAnims(void)
 	lastanim->istexture = -1;
 	R_ClearTextureNumCache(false);
 
+	// Clear animdefs now that we're done with it.
+	// We'll only be using anims from now on.
 	if (animdefs != harddefs)
-		Z_ChangeTag(animdefs, PU_CACHE);
+		Z_Free(animdefs);
+	animdefs = NULL;
 }
 
-void P_ParseANIMDEFSLump(INT32 wadNum, UINT16 lumpnum, INT32 *i)
+void P_ParseANIMDEFSLump(INT32 wadNum, UINT16 lumpnum)
 {
 	char *animdefsLump;
 	size_t animdefsLumpLength;
 	char *animdefsText;
 	char *animdefsToken;
+	char *p;
 
 	// Since lumps AREN'T \0-terminated like I'd assumed they should be, I'll
 	// need to make a space of memory where I can ensure that it will terminate
@@ -376,18 +375,19 @@ void P_ParseANIMDEFSLump(INT32 wadNum, UINT16 lumpnum, INT32 *i)
 	Z_Free(animdefsLump);
 
 	// Now, let's start parsing this thing
-	animdefsToken = M_GetToken(animdefsText);
+	p = animdefsText;
+	animdefsToken = M_GetToken(p);
 	while (animdefsToken != NULL)
 	{
 		if (stricmp(animdefsToken, "TEXTURE") == 0)
 		{
 			Z_Free(animdefsToken);
-			P_ParseAnimationDefintion(1, i);
+			P_ParseAnimationDefintion(1);
 		}
 		else if (stricmp(animdefsToken, "FLAT") == 0)
 		{
 			Z_Free(animdefsToken);
-			P_ParseAnimationDefintion(0, i);
+			P_ParseAnimationDefintion(0);
 		}
 		else if (stricmp(animdefsToken, "OSCILLATE") == 0)
 		{
@@ -398,23 +398,22 @@ void P_ParseANIMDEFSLump(INT32 wadNum, UINT16 lumpnum, INT32 *i)
 		{
 			I_Error("Error parsing ANIMDEFS lump: Expected \"TEXTURE\" or \"FLAT\", got \"%s\"",animdefsToken);
 		}
-		animdefsToken = M_GetToken(NULL);
+		// parse next line
+		while (*p != '\0' && *p != '\n') ++p;
+		if (*p == '\n') ++p;
+		animdefsToken = M_GetToken(p);
 	}
 	Z_Free(animdefsToken);
 	Z_Free((void *)animdefsText);
 }
 
-void P_ParseAnimationDefintion(SINT8 istexture, INT32 *i)
+void P_ParseAnimationDefintion(SINT8 istexture)
 {
 	char *animdefsToken;
 	size_t animdefsTokenLength;
 	char *endPos;
 	INT32 animSpeed;
-
-	// Increase the size to make room for the new animation definition
-	maxanims++;
-	animdefs = (animdef_t *)Z_Realloc(animdefs, sizeof(animdef_t)*(maxanims + 1), PU_STATIC, NULL);
-	animdefs[*i].istexture = istexture;
+	size_t i;
 
 	// Startname
 	animdefsToken = M_GetToken(NULL);
@@ -448,14 +447,39 @@ void P_ParseAnimationDefintion(SINT8 istexture, INT32 *i)
 	{
 		I_Error("Error parsing ANIMDEFS lump: lump name \"%s\" exceeds 8 characters", animdefsToken);
 	}
-	strncpy(animdefs[*i].startname, animdefsToken, 9);
+
+	// Search for existing animdef
+	for (i = 0; i < maxanims; i++)
+		if (stricmp(animdefsToken, animdefs[i].startname) == 0)
+		{
+			//CONS_Alert(CONS_NOTICE, "Duplicate animation: %s\n", animdefsToken);
+
+			// If we weren't parsing in reverse order, we would `break` here and parse the new data into the existing slot we found.
+			// Instead, we're just going to skip parsing the rest of this line entirely.
+			Z_Free(animdefsToken);
+			return;
+		}
+
+	// Not found
+	if (i == maxanims)
+	{
+		// Increase the size to make room for the new animation definition
+		maxanims++;
+		animdefs = (animdef_t *)Z_Realloc(animdefs, sizeof(animdef_t)*(maxanims + 1), PU_STATIC, NULL);
+		strncpy(animdefs[i].startname, animdefsToken, 9);
+	}
+
+	// animdefs[i].startname is now set to animdefsToken either way.
 	Z_Free(animdefsToken);
+
+	// set texture type
+	animdefs[i].istexture = istexture;
 
 	// "RANGE"
 	animdefsToken = M_GetToken(NULL);
 	if (animdefsToken == NULL)
 	{
-		I_Error("Error parsing ANIMDEFS lump: Unexpected end of file where \"RANGE\" after \"%s\"'s startname should be", animdefs[*i].startname);
+		I_Error("Error parsing ANIMDEFS lump: Unexpected end of file where \"RANGE\" after \"%s\"'s startname should be", animdefs[i].startname);
 	}
 	if (stricmp(animdefsToken, "ALLOWDECALS") == 0)
 	{
@@ -470,7 +494,7 @@ void P_ParseAnimationDefintion(SINT8 istexture, INT32 *i)
 	}
 	if (stricmp(animdefsToken, "RANGE") != 0)
 	{
-		I_Error("Error parsing ANIMDEFS lump: Expected \"RANGE\" after \"%s\"'s startname, got \"%s\"", animdefs[*i].startname, animdefsToken);
+		I_Error("Error parsing ANIMDEFS lump: Expected \"RANGE\" after \"%s\"'s startname, got \"%s\"", animdefs[i].startname, animdefsToken);
 	}
 	Z_Free(animdefsToken);
 
@@ -478,21 +502,21 @@ void P_ParseAnimationDefintion(SINT8 istexture, INT32 *i)
 	animdefsToken = M_GetToken(NULL);
 	if (animdefsToken == NULL)
 	{
-		I_Error("Error parsing ANIMDEFS lump: Unexpected end of file where \"%s\"'s end texture/flat name should be", animdefs[*i].startname);
+		I_Error("Error parsing ANIMDEFS lump: Unexpected end of file where \"%s\"'s end texture/flat name should be", animdefs[i].startname);
 	}
 	animdefsTokenLength = strlen(animdefsToken);
 	if (animdefsTokenLength>8)
 	{
 		I_Error("Error parsing ANIMDEFS lump: lump name \"%s\" exceeds 8 characters", animdefsToken);
 	}
-	strncpy(animdefs[*i].endname, animdefsToken, 9);
+	strncpy(animdefs[i].endname, animdefsToken, 9);
 	Z_Free(animdefsToken);
 
 	// "TICS"
 	animdefsToken = M_GetToken(NULL);
 	if (animdefsToken == NULL)
 	{
-		I_Error("Error parsing ANIMDEFS lump: Unexpected end of file where \"%s\"'s \"TICS\" should be", animdefs[*i].startname);
+		I_Error("Error parsing ANIMDEFS lump: Unexpected end of file where \"%s\"'s \"TICS\" should be", animdefs[i].startname);
 	}
 	if (stricmp(animdefsToken, "RAND") == 0)
 	{
@@ -501,7 +525,7 @@ void P_ParseAnimationDefintion(SINT8 istexture, INT32 *i)
 	}
 	if (stricmp(animdefsToken, "TICS") != 0)
 	{
-		I_Error("Error parsing ANIMDEFS lump: Expected \"TICS\" in animation definition for \"%s\", got \"%s\"", animdefs[*i].startname, animdefsToken);
+		I_Error("Error parsing ANIMDEFS lump: Expected \"TICS\" in animation definition for \"%s\", got \"%s\"", animdefs[i].startname, animdefsToken);
 	}
 	Z_Free(animdefsToken);
 
@@ -509,7 +533,7 @@ void P_ParseAnimationDefintion(SINT8 istexture, INT32 *i)
 	animdefsToken = M_GetToken(NULL);
 	if (animdefsToken == NULL)
 	{
-		I_Error("Error parsing TEXTURES lump: Unexpected end of file where \"%s\"'s animation speed should be", animdefs[*i].startname);
+		I_Error("Error parsing ANIMDEFS lump: Unexpected end of file where \"%s\"'s animation speed should be", animdefs[i].startname);
 	}
 	endPos = NULL;
 #ifndef AVOID_ERRNO
@@ -523,13 +547,10 @@ void P_ParseAnimationDefintion(SINT8 istexture, INT32 *i)
 #endif
 		|| animSpeed < 0) // Number is not positive
 	{
-		I_Error("Error parsing TEXTURES lump: Expected a positive integer for \"%s\"'s animation speed, got \"%s\"", animdefs[*i].startname, animdefsToken);
+		I_Error("Error parsing ANIMDEFS lump: Expected a positive integer for \"%s\"'s animation speed, got \"%s\"", animdefs[i].startname, animdefsToken);
 	}
-	animdefs[*i].speed = animSpeed;
+	animdefs[i].speed = animSpeed;
 	Z_Free(animdefsToken);
-
-	// Increment i before we go, so this doesn't cause issues later
-	(*i)++;
 }
 
 
@@ -1498,6 +1519,8 @@ static inline void P_InitTagLists(void)
 		size_t j = (unsigned)sectors[i].tag % numsectors;
 		sectors[i].nexttag = sectors[j].firsttag;
 		sectors[j].firsttag = (INT32)i;
+		sectors[i].spawn_nexttag = sectors[i].nexttag;
+		sectors[j].spawn_firsttag = sectors[j].firsttag;
 	}
 
 	for (i = numlines - 1; i != (size_t)-1; i--)
@@ -5429,6 +5452,10 @@ void T_LaserFlash(laserthink_t *flash)
 			&& thing->flags & MF_BOSS)
 			continue; // Don't hurt bosses
 
+		// Don't endlessly kill egg guard shields (or anything else for that matter)
+		if (thing->health <= 0)
+			continue;
+
 		top = P_GetSpecialTopZ(thing, sourcesec, sector);
 		bottom = P_GetSpecialBottomZ(thing, sourcesec, sector);
 
@@ -7536,7 +7563,7 @@ void T_Pusher(pusher_t *p)
 			}
 			else
 			{
-				if (top < thing->z || referrer->floorheight > (thing->z + (thing->height >> 1)))
+				if (top < thing->z || bottom > (thing->z + (thing->height >> 1)))
 					continue;
 				if (thing->z + thing->height > top)
 					touching = true;

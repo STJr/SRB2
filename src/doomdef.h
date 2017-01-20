@@ -151,7 +151,7 @@ extern FILE *logstream;
 #else
 #define VERSION    100 // Game version
 #define SUBVERSION 0  // more precise version number
-#define VERSIONSTRING "TD v1.0.0" // Originally v2.1.14. Keep this updated.
+#define VERSIONSTRING "TD v1.0.0" // Originally v2.1.17. Keep this updated.
 #define VERSIONSTRINGW L"TD v1.0.0"
 // Hey! If you change this, add 1 to the MODVERSION below!
 // Otherwise we can't force updates!
@@ -394,6 +394,9 @@ extern INT32 cv_debug;
 // =======================
 // Misc stuff for later...
 // =======================
+
+// Modifier key variables, accessible anywhere
+extern UINT8 shiftdown, ctrldown, altdown;
 
 // if we ever make our alloc stuff...
 #define ZZ_Alloc(x) Z_Malloc(x, PU_STATIC, NULL)

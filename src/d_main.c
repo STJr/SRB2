@@ -73,6 +73,7 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 #include "dehacked.h" // Dehacked list test
 #include "m_cond.h" // condition initialization
 #include "fastcmp.h"
+#include "keys.h"
 
 #ifdef CMAKECONFIG
 #include "config.h"
@@ -176,6 +177,38 @@ void D_PostEvent(const event_t *ev)
 void D_PostEvent_end(void) {};
 #endif
 
+// modifier keys
+UINT8 shiftdown = 0; // 0x1 left, 0x2 right
+UINT8 ctrldown = 0; // 0x1 left, 0x2 right
+UINT8 altdown = 0; // 0x1 left, 0x2 right
+//
+// D_ModifierKeyResponder
+// Sets global shift/ctrl/alt variables, never actually eats events
+//
+static inline void D_ModifierKeyResponder(event_t *ev)
+{
+	if (ev->type == ev_keydown) switch (ev->data1)
+	{
+		case KEY_LSHIFT: shiftdown |= 0x1; return;
+		case KEY_RSHIFT: shiftdown |= 0x2; return;
+		case KEY_LCTRL: ctrldown |= 0x1; return;
+		case KEY_RCTRL: ctrldown |= 0x2; return;
+		case KEY_LALT: altdown |= 0x1; return;
+		case KEY_RALT: altdown |= 0x2; return;
+		default: return;
+	}
+	else if (ev->type == ev_keyup) switch (ev->data1)
+	{
+		case KEY_LSHIFT: shiftdown &= ~0x1; return;
+		case KEY_RSHIFT: shiftdown &= ~0x2; return;
+		case KEY_LCTRL: ctrldown &= ~0x1; return;
+		case KEY_RCTRL: ctrldown &= ~0x2; return;
+		case KEY_LALT: altdown &= ~0x1; return;
+		case KEY_RALT: altdown &= ~0x2; return;
+		default: return;
+	}
+}
+
 //
 // D_ProcessEvents
 // Send all the events of the given timestamp down the responder chain
@@ -187,6 +220,9 @@ void D_ProcessEvents(void)
 	for (; eventtail != eventhead; eventtail = (eventtail+1) & (MAXEVENTS-1))
 	{
 		ev = &events[eventtail];
+
+		// Set global shift/ctrl/alt down variables
+		D_ModifierKeyResponder(ev); // never eats events
 
 		// Screenshots over everything so that they can be taken anywhere.
 		if (M_ScreenshotResponder(ev))
