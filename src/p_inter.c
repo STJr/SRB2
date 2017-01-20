@@ -2214,9 +2214,8 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source)
 
 			if ((mobj->flags & MF_MISSILE || mobj->flags & MF_PAIN) || mobj->type == MT_HELPER)
 				P_SetMobjState(mobj, mobj->info->deathstate);
-
-			S_StartSound(NULL, sfx_toudie);
 		}
+		S_StartSound(NULL, sfx_toudie);
 	}
 
 	// Let EVERYONE know what happened to a player! 01-29-2002 Tails
