@@ -85,7 +85,7 @@ extern doomcom_t *doomcom;
 
 /**	\brief return packet in doomcom struct
 */
-extern void (*I_NetGet)(void);
+extern boolean (*I_NetGet)(void);
 
 /**	\brief ask to driver if there is data waiting
 */

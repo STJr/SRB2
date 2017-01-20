@@ -179,6 +179,7 @@ static UINT8 UPNP_support = TRUE;
 #include "i_system.h"
 #include "i_net.h"
 #include "d_net.h"
+#include "d_netfil.h"
 #include "i_tcp.h"
 #include "m_argv.h"
 
@@ -482,21 +483,12 @@ static boolean SOCK_cmpaddr(mysockaddr_t *a, mysockaddr_t *b, UINT8 mask)
 		return false;
 }
 
-static SINT8 getfreenode(void)
-{
-	SINT8 j;
-
-	for (j = 0; j < MAXNETNODES; j++)
-		if (!nodeconnected[j])
-		{
-			nodeconnected[j] = true;
-			return j;
-		}
-	return -1;
-}
-
 // This is a hack. For some reason, nodes aren't being freed properly.
 // This goes through and cleans up what nodes were supposed to be freed.
+/** \warning This function causes the file downloading to stop if someone joins.
+  *          How? Because it removes nodes that are connected but not in game,
+  *          which is exactly what clients downloading a file are.
+  */
 static void cleanupnodes(void)
 {
 	SINT8 j;
@@ -506,13 +498,81 @@ static void cleanupnodes(void)
 
 	// Why can't I start at zero?
 	for (j = 1; j < MAXNETNODES; j++)
+		//if (!(nodeingame[j] || SV_SendingFile(j)))
 		if (!nodeingame[j])
 			nodeconnected[j] = false;
 }
+
+static SINT8 getfreenode(void)
+{
+	SINT8 j;
+
+	cleanupnodes();
+
+	for (j = 0; j < MAXNETNODES; j++)
+		if (!nodeconnected[j])
+		{
+			nodeconnected[j] = true;
+			return j;
+		}
+
+	/** \warning No free node? Just in case a node might not have been freed properly,
+	  *          look if there are connected nodes that aren't in game, and forget them.
+	  *          It's dirty, and might result in a poor guy having to restart
+	  *          downloading a needed wad, but it's better than not letting anyone join...
+	  */
+	/*I_Error("No more free nodes!!1!11!11!!1111\n");
+	for (j = 1; j < MAXNETNODES; j++)
+		if (!nodeingame[j])
+			return j;*/
+
+	return -1;
+}
+
+#ifdef _DEBUG
+void Command_Numnodes(void)
+{
+	INT32 connected = 0;
+	INT32 ingame = 0;
+	INT32 i;
+
+	for (i = 1; i < MAXNETNODES; i++)
+	{
+		if (!(nodeconnected[i] || nodeingame[i]))
+			continue;
+
+		if (nodeconnected[i])
+			connected++;
+		if (nodeingame[i])
+			ingame++;
+
+		CONS_Printf("%2d - ", i);
+		if (nodetoplayer[i] != -1)
+			CONS_Printf("player %.2d", nodetoplayer[i]);
+		else
+			CONS_Printf("         ");
+		if (nodeconnected[i])
+			CONS_Printf(" - connected");
+		else
+			CONS_Printf(" -          ");
+		if (nodeingame[i])
+			CONS_Printf(" - ingame");
+		else
+			CONS_Printf(" -       ");
+		CONS_Printf(" - %s\n", I_GetNodeAddress(i));
+	}
+
+	CONS_Printf("\n"
+				"Connected: %d\n"
+				"Ingame:    %d\n",
+				connected, ingame);
+}
+#endif
 #endif
 
 #ifndef NONET
-static void SOCK_Get(void)
+// Returns true if a packet was received from a new node, false in all other cases
+static boolean SOCK_Get(void)
 {
 	size_t i, n;
 	int j;
@@ -535,13 +595,12 @@ static void SOCK_Get(void)
 					doomcom->remotenode = (INT16)j; // good packet from a game player
 					doomcom->datalength = (INT16)c;
 					nodesocket[j] = mysockets[n];
-					return;
+					return false;
 				}
 			}
 			// not found
 
 			// find a free slot
-			cleanupnodes();
 			j = getfreenode();
 			if (j > 0)
 			{
@@ -564,14 +623,15 @@ static void SOCK_Get(void)
 				}
 				if (i == numbans)
 					SOCK_bannednode[j] = false;
-				return;
+				return true;
 			}
 			else
 				DEBFILE("New node detected: No more free slots\n");
-
 		}
 	}
+
 	doomcom->remotenode = -1; // no packet
+	return false;
 }
 #endif
 
@@ -1256,7 +1316,6 @@ static SINT8 SOCK_NetMakeNodewPort(const char *address, const char *port)
 	gaie = I_getaddrinfo(address, port, &hints, &ai);
 	if (gaie == 0)
 	{
-		cleanupnodes();
 		newnode = getfreenode();
 	}
 	if (newnode == -1)
