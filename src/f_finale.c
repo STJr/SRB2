@@ -472,7 +472,6 @@ static const char *credits[] = {
 	"\"Charybdizs\"", // Drew the Krackobot sprites
 	"\"Jeck Jims\"", // Extra hub icons
 	"\"MotorRoach\"", // Sky Islands fireballs
-	"\"EmaBuns\"", // Title screen coloring
 	"",
 	"\1Texture Artists",
 	"\"Charybdizs\"",
