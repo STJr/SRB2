@@ -293,6 +293,7 @@ typedef struct
 	SINT8 adminplayer; // Needs to be signed
 
 	SINT8 sharedlives;
+	char server_context[8]; // unique context id, generated at server startup.
 	UINT8 varlengthinputs[0]; // Playernames and netvars
 } ATTRPACK serverconfig_pak;
 
