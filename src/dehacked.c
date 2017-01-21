@@ -1961,6 +1961,7 @@ static actionpointer_t actionpointers[] =
 	{{A_FlickyCheck},          "A_FLICKYCHECK"},
 	{{A_FlickyHeightCheck},    "A_FLICKYHEIGHTCHECK"},
 	{{A_FlickyFlutter},        "A_FLICKYFLUTTER"},
+	{{A_FlameParticle},        "A_FLAMEPARTICLE"},
 
 	{{NULL},                   "NONE"},
 
@@ -5212,6 +5213,11 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLAME2",
 	"S_FLAME3",
 	"S_FLAME4",
+	"S_FLAME5",
+	"S_FLAME6",
+	"S_FLAMEPARTICLE",
+
+	"S_FLAMEREST",
 
 	// Eggman Statue
 	"S_EGGSTATUE1",
@@ -6550,6 +6556,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	// Castle Eggman Scenery
 	"MT_CHAIN", // CEZ Chain
 	"MT_FLAME", // Flame (has corona)
+	"MT_FLAMEPARTICLE",
 	"MT_EGGSTATUE", // Eggman Statue
 	"MT_MACEPOINT", // Mace rotation point
 	"MT_SWINGMACEPOINT", // Mace swinging point

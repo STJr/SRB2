@@ -252,6 +252,7 @@ void A_FlickyFlounder(mobj_t *actor);
 void A_FlickyCheck(mobj_t *actor);
 void A_FlickyHeightCheck(mobj_t *actor);
 void A_FlickyFlutter(mobj_t *actor);
+void A_FlameParticle(mobj_t *actor);
 
 //
 // ENEMY THINKING
@@ -10759,3 +10760,32 @@ void A_FlickyFlutter(mobj_t *actor)
 }
 
 #undef FLICKYHITWALL
+
+// Function: A_FlameParticle
+//
+// Description: Creates the mobj's painchance at a random position around the object's radius.
+//
+// var1 = momz of particle.
+//
+void A_FlameParticle(mobj_t *actor)
+{
+	mobjtype_t type = (mobjtype_t)(mobjinfo[actor->type].painchance);
+	INT32 locvar1 = var1;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FlameParticle", actor))
+		return;
+#endif
+
+	if (type)
+	{
+		fixed_t rad = 2*actor->radius>>FRACBITS;
+		fixed_t hei = actor->height>>FRACBITS;
+		mobj_t *particle = P_SpawnMobjFromMobj(actor,
+			P_RandomRange(rad, -rad)<<FRACBITS,
+			P_RandomRange(rad, -rad)<<FRACBITS,
+			P_RandomRange(hei/2, hei)<<FRACBITS,
+			type);
+		P_SetObjectMomZ(particle, locvar1<<FRACBITS, false);
+	}
+}

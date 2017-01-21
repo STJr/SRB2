@@ -224,6 +224,7 @@ void A_FlickyFlounder();
 void A_FlickyCheck();
 void A_FlickyHeightCheck();
 void A_FlickyFlutter();
+void A_FlameParticle();
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
 #define NUMMOBJFREESLOTS 256
@@ -2017,6 +2018,11 @@ typedef enum state
 	S_FLAME2,
 	S_FLAME3,
 	S_FLAME4,
+	S_FLAME5,
+	S_FLAME6,
+	S_FLAMEPARTICLE,
+
+	S_FLAMEREST,
 
 	// Eggman Statue
 	S_EGGSTATUE1,
@@ -3374,6 +3380,7 @@ typedef enum mobj_type
 	// Castle Eggman Scenery
 	MT_CHAIN, // CEZ Chain
 	MT_FLAME, // Flame (has corona)
+	MT_FLAMEPARTICLE,
 	MT_EGGSTATUE, // Eggman Statue
 	MT_MACEPOINT, // Mace rotation point
 	MT_SWINGMACEPOINT, // Mace swinging point
