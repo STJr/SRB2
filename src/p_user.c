@@ -1624,6 +1624,12 @@ void P_SpawnSpinMobj(player_t *player, mobjtype_t type)
 		// scale
 		P_SetScale(mobj, player->mo->scale);
 		mobj->destscale = player->mo->scale;
+
+		if (type == MT_THOK) // spintrail-specific modification for MT_THOK
+		{
+			mobj->frame = FF_TRANS70;
+			mobj->fuse = mobj->tics;
+		}
 	}
 
 	P_SetTarget(&mobj->target, player->mo); // the one thing P_SpawnGhostMobj doesn't do

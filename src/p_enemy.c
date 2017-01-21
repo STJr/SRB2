@@ -3882,10 +3882,17 @@ void A_DropMine(mobj_t *actor)
 void A_FishJump(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_FishJump", actor))
 		return;
 #endif
+
+	if (locvar2)
+	{
+		fixed_t rad = actor->radius>>FRACBITS;
+		P_SpawnMobjFromMobj(actor, P_RandomRange(rad, -rad)<<FRACBITS, P_RandomRange(rad, -rad)<<FRACBITS, 0, (mobjtype_t)locvar2);
+	}
 
 	if ((actor->z <= actor->floorz) || (actor->z <= actor->watertop - FixedMul((64 << FRACBITS), actor->scale)))
 	{
@@ -9660,8 +9667,9 @@ void A_TrapShot(mobj_t *actor)
 
 	if (actor->eflags & MFE_VERTICALFLIP)
 		missile->flags2 |= MF2_OBJECTFLIP;
-	missile->destscale = actor->destscale;
-	P_SetScale(missile, missile->destscale);
+
+	missile->destscale = actor->scale;
+	P_SetScale(missile, actor->scale);
 
 	if (missile->info->seesound)
 		S_StartSound(actor, missile->info->seesound);
@@ -9674,6 +9682,8 @@ void A_TrapShot(mobj_t *actor)
 	missile->momx = FixedMul(FINECOSINE(vertang>>ANGLETOFINESHIFT), FixedMul(FINECOSINE(missile->angle>>ANGLETOFINESHIFT), speed));
 	missile->momy = FixedMul(FINECOSINE(vertang>>ANGLETOFINESHIFT), FixedMul(FINESINE(missile->angle>>ANGLETOFINESHIFT), speed));
 	missile->momz = FixedMul(FINESINE(vertang>>ANGLETOFINESHIFT), speed);
+
+	P_CheckMissileSpawn(missile);
 }
 
 // Function: A_VileTarget
