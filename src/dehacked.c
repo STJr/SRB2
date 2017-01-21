@@ -5280,9 +5280,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLAMEJETFLAMEB1",
 	"S_FLAMEJETFLAMEB2",
 	"S_FLAMEJETFLAMEB3",
-	"S_FLAMEJETFLAMEB4",
-	"S_FLAMEJETFLAMEB5",
-	"S_FLAMEJETFLAMEB6",
 
 	// Trapgoyles
 	"S_TRAPGOYLE",
