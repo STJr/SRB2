@@ -2122,17 +2122,31 @@ void P_XYMovement(mobj_t *mo)
 	if (CheckForBustableBlocks && mo->flags & MF_PUSHABLE)
 		P_PushableCheckBustables(mo);
 
-	if (!P_TryMove(mo, mo->x + xmove, mo->y + ymove, true) && !(mo->eflags & MFE_SPRUNG))
-	{
-		// blocked move
-		moved = false;
+	moved = P_TryMove(mo, mo->x + xmove, mo->y + ymove, true); // Move!
 
+	if (P_MobjWasRemoved(mo)) // mobj was removed during P_TryMove? don't continue
+		return;
+	if (mo->eflags & MFE_SPRUNG) // touching a spring counts as moved
+		moved = true;
+
+	if (!moved) // blocked move
+	{
 		if (player) {
 			if (player->bot)
 				B_MoveBlocked(player);
 		}
 
-		if (mo->flags & MF_BOUNCE)
+#ifdef HAVE_BLUA
+		if (LUAh_MobjMoveBlocked(mo))
+		{
+			if (P_MobjWasRemoved(mo))
+				return;
+		}
+		else
+#endif
+		if (P_MobjWasRemoved(mo))
+			return;
+		else if (mo->flags & MF_BOUNCE)
 		{
 			P_BounceMove(mo);
 			xmove = ymove = 0;
@@ -2232,8 +2246,6 @@ void P_XYMovement(mobj_t *mo)
 		else
 			mo->momx = mo->momy = 0;
 	}
-	else
-		moved = true;
 
 	if (P_MobjWasRemoved(mo)) // MF_SPECIAL touched a player! O_o;;
 		return;
