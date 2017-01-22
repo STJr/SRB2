@@ -804,6 +804,30 @@ void P_SlopeLaunch(mobj_t *mo)
 	mo->standingslope = NULL;
 }
 
+//
+// P_SlopeToWallTransfer
+//
+// Handles slope-to-wall transfer for objects.
+void P_SlopeToWallTransfer(mobj_t *mo)
+{
+	if (!(mo->standingslope->flags & SL_NOPHYSICS)) // If there's physics, time for launching.
+	{
+		// Doesn't kill the vertical momentum as much as P_SlopeLaunch does.
+		vector3_t slopemom;
+		slopemom.x = mo->momx;
+		slopemom.y = mo->momy;
+		slopemom.z = 3*(mo->momz/2);
+		P_QuantizeMomentumToSlope(&slopemom, mo->standingslope);
+
+		mo->momx = slopemom.x;
+		mo->momy = slopemom.y;
+		mo->momz = 2*(slopemom.z/3);
+	}
+
+	//CONS_Printf("Transferred off of slope.\n");
+	mo->standingslope = NULL;
+}
+
 // Function to help handle landing on slopes
 void P_HandleSlopeLanding(mobj_t *thing, pslope_t *slope)
 {

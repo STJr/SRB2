@@ -2124,6 +2124,11 @@ void P_XYMovement(mobj_t *mo)
 		// blocked move
 		moved = false;
 
+#ifdef ESLOPE
+		if (oldslope && predictedz > mo->z) // Only for moving up, otherwise there's a failed launch when going down slopes and hitting walls
+			P_SlopeToWallTransfer(mo);
+#endif
+
 		if (player) {
 			if (player->bot)
 				B_MoveBlocked(player);
