@@ -59,7 +59,7 @@ emblem_t emblemlocations[MAXEMBLEMS] =
 	{ET_RINGS, 0,0,0,  8, 'U', SKINCOLOR_NONE,          200, "", 0},
 
 	// WEATHER FACTORY 1
-	{ET_GLOBAL,   2967,   9370,   538, 11, 'U', SKINCOLOR_NONE, 0, "", 0},
+	{ET_GLOBAL,   2967,   -9370,   538, 11, 'U', SKINCOLOR_NONE, 0, "", 0},
 	{ET_GLOBAL,   6481,  -9606,   534, 11, 'U', SKINCOLOR_NONE, 0, "", 0},
 	{ET_GLOBAL,   8387,  -6214,  1536, 11, 'U', SKINCOLOR_NONE, 0, "", 0},
 	{ET_GLOBAL,  14081, -14851,  1093, 11, 'U', SKINCOLOR_NONE, 0, "", 0},
