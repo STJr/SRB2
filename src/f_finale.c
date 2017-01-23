@@ -494,7 +494,7 @@ static const char *credits[] = {
 	"Spiral Knights - SEGA", // Sky Islands and some scrapped maps
 	"Chain Algorithm", // Weather Factory
 	"Super Mario 3D World - Nintendo",
-	"Ape Escape - Sony", // Hub music
+	"Zinger & Bacter - SoundShock", // Hub and title screen music
 	"LaTale - Actoz Soft", // Mainframe Metropolis
 	"Sonic Team Junior", // So we're crediting STJr, even though they have a whole section of credits directly below? lol
 	"Karl Breuggemann", // Scrapped hub
@@ -1071,7 +1071,7 @@ void F_TitleScreenDrawer(void)
 			V_DrawScaledPatch(100,3, 0,ttswave2);
 	}
 
-	V_DrawScaledPatch(48, 142, 0,ttbanner);
+	V_DrawFixedPatch((34)<<FRACBITS, (13)<<FRACBITS, (FRACUNIT*7)/10, 0,ttbanner, NULL);
 }
 
 // (no longer) De-Demo'd Title Screen

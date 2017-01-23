@@ -104,7 +104,7 @@ unlockable_t unlockables[MAXUNLOCKABLES] =
 
 	/* 04 */ {"EXTRA LEVELS", "", 70, 0, SECRET_HEADER, 0, true, true, 0},
 
-	/* 05 */ {"Stormy Streets",     "Collect 5 Chaos Coins",    80, 40, SECRET_WARP,         23, false, false, 0},
+	/* 05 */ {"Stormy Streets",     "Collect 10 Chaos Coins",    80, 43, SECRET_WARP,         23, false, false, 0},
 	/* 06 */ {"Sky Islands",        "Collect 20 Chaos Coins",    90, 47, SECRET_WARP,         25, false, false, 0},
 
 	/* 07 */ {"BONUS LEVELS", "", 110, 0, SECRET_HEADER, 0, true, true, 0},
@@ -153,9 +153,6 @@ void M_SetupDefaultConditionSets(void)
 	M_AddRawCondition(30, 4,  UC_MAPPERFECT, 11, 0, 0);
 	M_AddRawCondition(30, 5,  UC_MAPPERFECT, 23, 0, 0);
 	M_AddRawCondition(30, 6,  UC_MAPPERFECT, 25, 0, 0);
-
-	// --  40: Find 5 emblems
-	M_AddRawCondition(40, 1, UC_TOTALEMBLEMS,  5, 0, 0);
 
 	// --  41: Find 7 emblems
 	M_AddRawCondition(41, 1, UC_TOTALEMBLEMS,  7, 0, 0);

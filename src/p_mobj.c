@@ -1317,7 +1317,7 @@ fixed_t P_GetMobjGravity(mobj_t *mo)
 	if (mo->player)
 	{
 		if ((mo->player->pflags & PF_GLIDING)
-		|| (mo->player->charability == CA_FLY && (mo->player->powers[pw_tailsfly]
+		|| (mo->player->charability == CA_FLY && ((mo->player->powers[pw_tailsfly] && !(mo->player->pflags & PF_JUMPED))
 			|| (mo->state >= &states[S_PLAY_SPC1] && mo->state <= &states[S_PLAY_SPC4]))))
 			gravityadd = gravityadd/3; // less gravity while flying/gliding
 		if (mo->player->climbing || (mo->player->pflags & PF_NIGHTSMODE))
