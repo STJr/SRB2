@@ -2185,7 +2185,8 @@ void P_XYMovement(mobj_t *mo)
 			if (oldslope && (P_MobjFlip(mo)*(predictedz - mo->z) > 0)) // Only for moving up (relative to gravity), otherwise there's a failed launch when going down slopes and hitting walls
 			{
 				transferslope = ((mo->standingslope) ? mo->standingslope : oldslope);
-				transfermomz = P_GetWallTransferMomZ(mo, transferslope);
+				if (((transferslope->zangle < ANGLE_180) ? transferslope->zangle : InvAngle(transferslope->zangle)) >= ANGLE_45) // Prevent some weird stuff going on on shallow slopes.
+					transfermomz = P_GetWallTransferMomZ(mo, transferslope);
 			}
 #endif
 
