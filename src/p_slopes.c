@@ -808,24 +808,31 @@ void P_SlopeLaunch(mobj_t *mo)
 // P_SlopeToWallTransfer
 //
 // Handles slope-to-wall transfer for objects.
-void P_SlopeToWallTransfer(mobj_t *mo)
+fixed_t P_PrepareSlopeToWallTransfer(mobj_t *mo, pslope_t *slope)
 {
-	if (!(mo->standingslope->flags & SL_NOPHYSICS)) // If there's physics, time for launching.
-	{
-		// Doesn't kill the vertical momentum as much as P_SlopeLaunch does.
-		vector3_t slopemom;
-		slopemom.x = mo->momx;
-		slopemom.y = mo->momy;
-		slopemom.z = 3*(mo->momz/2);
-		P_QuantizeMomentumToSlope(&slopemom, mo->standingslope);
+	vector3_t slopemom, axis;
+	angle_t ang;
 
-		mo->momx = slopemom.x;
-		mo->momy = slopemom.y;
-		mo->momz = 2*(slopemom.z/3);
-	}
+	if (mo->standingslope->flags & SL_NOPHYSICS)
+		return 0;
 
-	//CONS_Printf("Transferred off of slope.\n");
-	mo->standingslope = NULL;
+	// If there's physics, time for launching.
+	// Doesn't kill the vertical momentum as much as P_SlopeLaunch does.
+	ang = slope->zangle + ANG15*((slope->zangle > 0) ? 1 : -1);
+	if (ang > ANGLE_90 && ang < ANGLE_180)
+		ang = ((slope->zangle > 0) ? ANGLE_90 : InvAngle(ANGLE_90)); // hard cap of directly upwards
+
+	slopemom.x = mo->momx;
+	slopemom.y = mo->momy;
+	slopemom.z = 3*(mo->momz/2);
+
+	axis.x = -slope->d.y;
+	axis.y = slope->d.x;
+	axis.z = 0;
+
+	FV3_Rotate(&slopemom, &axis, ang >> ANGLETOFINESHIFT);
+
+	return 2*(slopemom.z/3);
 }
 
 // Function to help handle landing on slopes

@@ -2121,13 +2121,18 @@ void P_XYMovement(mobj_t *mo)
 
 	if (!P_TryMove(mo, mo->x + xmove, mo->y + ymove, true) && !(mo->eflags & MFE_SPRUNG))
 	{
+#ifdef ESLOPE
+		pslope_t *transferslope = NULL;
+		fixed_t transfermomz = 0;
+		if (oldslope && (P_MobjFlip(mo)*(predictedz - mo->z) > 0)) // Only for moving up (relative to gravity), otherwise there's a failed launch when going down slopes and hitting walls
+		{
+			transferslope = ((mo->standingslope) ? mo->standingslope : oldslope);
+			transfermomz = P_PrepareSlopeToWallTransfer(mo, transferslope); // This isn't the end of it; momz will be scaled based upon the angle of movement after collision, and then it'll be applied.
+		}
+#endif
+
 		// blocked move
 		moved = false;
-
-#ifdef ESLOPE
-		if (oldslope && predictedz > mo->z) // Only for moving up, otherwise there's a failed launch when going down slopes and hitting walls
-			P_SlopeToWallTransfer(mo);
-#endif
 
 		if (player) {
 			if (player->bot)
@@ -2185,6 +2190,19 @@ void P_XYMovement(mobj_t *mo)
 		{ // try to slide along it
 			P_SlideMove(mo);
 			xmove = ymove = 0;
+#ifdef ESLOPE
+			if (transfermomz && transferslope) // Scale transfer momentum based on how head-on it is to the slope.
+			{
+				angle_t relation = (transferslope->xydirection - R_PointToAngle2(0, 0, mo->momx, mo->momy));
+				fixed_t scalefactor = abs(FINESINE((relation >> ANGLETOFINESHIFT) & FINEMASK));
+				transfermomz = FixedMul(transfermomz, scalefactor);
+				if ((P_MobjFlip(mo)*(transfermomz - mo->momz)) > 2*FRACUNIT) // Do the actual launch!
+				{
+					mo->standingslope = NULL;
+					mo->momz = transfermomz;
+				}
+			}
+#endif
 		}
 		else if (mo->type == MT_SPINFIRE)
 		{
