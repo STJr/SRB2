@@ -2121,16 +2121,6 @@ void P_XYMovement(mobj_t *mo)
 
 	if (!P_TryMove(mo, mo->x + xmove, mo->y + ymove, true) && !(mo->eflags & MFE_SPRUNG))
 	{
-#ifdef ESLOPE
-		pslope_t *transferslope = NULL;
-		fixed_t transfermomz = 0;
-		if (oldslope && (P_MobjFlip(mo)*(predictedz - mo->z) > 0)) // Only for moving up (relative to gravity), otherwise there's a failed launch when going down slopes and hitting walls
-		{
-			transferslope = ((mo->standingslope) ? mo->standingslope : oldslope);
-			transfermomz = P_PrepareSlopeToWallTransfer(mo, transferslope); // This isn't the end of it; momz will be scaled based upon the angle of movement after collision, and then it'll be applied.
-		}
-#endif
-
 		// blocked move
 		moved = false;
 
@@ -2188,18 +2178,35 @@ void P_XYMovement(mobj_t *mo)
 		}
 		else if (player || mo->flags & (MF_SLIDEME|MF_PUSHABLE))
 		{ // try to slide along it
+#ifdef ESLOPE
+			// Wall transfer part 1.
+			pslope_t *transferslope = NULL;
+			fixed_t transfermomz = 0;
+			if (oldslope && (P_MobjFlip(mo)*(predictedz - mo->z) > 0)) // Only for moving up (relative to gravity), otherwise there's a failed launch when going down slopes and hitting walls
+			{
+				transferslope = ((mo->standingslope) ? mo->standingslope : oldslope);
+				transfermomz = P_GetWallTransferMomZ(mo, transferslope);
+			}
+#endif
+
 			P_SlideMove(mo);
 			xmove = ymove = 0;
+
 #ifdef ESLOPE
-			if (transfermomz && transferslope) // Scale transfer momentum based on how head-on it is to the slope.
+			// Wall transfer part 2.
+			if (transfermomz && transferslope) // Are we "transferring onto the wall" (really just a disguised vertical launch)?
 			{
-				angle_t relation = (transferslope->xydirection - R_PointToAngle2(0, 0, mo->momx, mo->momy));
-				fixed_t scalefactor = abs(FINESINE((relation >> ANGLETOFINESHIFT) & FINEMASK));
-				transfermomz = FixedMul(transfermomz, scalefactor);
-				if ((P_MobjFlip(mo)*(transfermomz - mo->momz)) > 2*FRACUNIT) // Do the actual launch!
+				angle_t relation; // Scale transfer momentum based on how head-on it is to the slope.
+				if (mo->momx || mo->momy) // "Guess" the angle of the wall you hit using new momentum
+					relation = transferslope->xydirection - R_PointToAngle2(0, 0, mo->momx, mo->momy);
+				else // Give it for free, I guess.
+					relation = ANGLE_90;
+				transfermomz = FixedMul(transfermomz,
+					abs(FINESINE((relation >> ANGLETOFINESHIFT) & FINEMASK)));
+				if (P_MobjFlip(mo)*(transfermomz - mo->momz) > 2*FRACUNIT) // Do the actual launch!
 				{
-					mo->standingslope = NULL;
 					mo->momz = transfermomz;
+					mo->standingslope = NULL;
 				}
 			}
 #endif

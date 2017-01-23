@@ -805,10 +805,12 @@ void P_SlopeLaunch(mobj_t *mo)
 }
 
 //
-// P_SlopeToWallTransfer
+// P_GetWallTransferMomZ
 //
-// Handles slope-to-wall transfer for objects.
-fixed_t P_PrepareSlopeToWallTransfer(mobj_t *mo, pslope_t *slope)
+// It would be nice to have a single function that does everything necessary for slope-to-wall transfer.
+// However, it needs to be seperated out in P_XYMovement to take into account momentum before and after hitting the wall.
+// This just performs the necessary calculations for getting the base vertical momentum; the horizontal is already reasonably calculated by P_SlideMove.
+fixed_t P_GetWallTransferMomZ(mobj_t *mo, pslope_t *slope)
 {
 	vector3_t slopemom, axis;
 	angle_t ang;
