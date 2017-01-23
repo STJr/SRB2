@@ -2142,7 +2142,12 @@ static void Y_SetPerfectBonus(player_t *player, y_bonus_t *bstruct)
 		if (!sharedringtotal || sharedringtotal < nummaprings)
 			data.coop.gotperfbonus = 0;
 		else
+		{
 			data.coop.gotperfbonus = 1;
+			if (!mainrecords[gamemap-1])
+				G_AllocMainRecordData(gamemap-1);
+			mainrecords[gamemap-1]->rings = (UINT16)sharedringtotal; // Set a new record for Record Attack (shh, i know we're in MP)
+		}
 	}
 	if (!data.coop.gotperfbonus)
 		return;
