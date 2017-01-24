@@ -2523,6 +2523,29 @@ void T_CameraScanner(elevator_t *elevator)
 	}
 }
 
+void T_PlaneDisplace(planedisplace_t *pd)
+{
+	sector_t *control, *target;
+	INT32 direction;
+	fixed_t diff;
+
+	control = &sectors[pd->control];
+	target = &sectors[pd->affectee];
+
+	if (control->floorheight == pd->last_height)
+		return; // no change, no movement
+
+	direction = (control->floorheight > pd->last_height) ? 1 : -1;
+	diff = FixedMul(control->floorheight-pd->last_height, pd->speed);
+
+	if (pd->type == pd_floor || pd->type == pd_both)
+		T_MovePlane(target, INT32_MAX/2, target->floorheight+diff, 0, 0, direction); // move floor
+	if (pd->type == pd_ceiling || pd->type == pd_both)
+		T_MovePlane(target, INT32_MAX/2, target->ceilingheight+diff, 0, 1, direction); // move ceiling
+
+	pd->last_height = control->floorheight;
+}
+
 //
 // EV_DoFloor
 //
