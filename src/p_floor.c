@@ -13,7 +13,11 @@
 
 #include "doomdef.h"
 #include "doomstat.h"
+#include "m_random.h"
 #include "p_local.h"
+#ifdef ESLOPE
+#include "p_slopes.h"
+#endif
 #include "r_state.h"
 #include "s_sound.h"
 #include "z_zone.h"
@@ -1141,6 +1145,7 @@ void T_MarioBlock(levelspecthink_t *block)
 		block->sector->ceilingdata = NULL;
 		block->sector->floorspeed = 0;
 		block->sector->ceilspeed = 0;
+		block->direction = 0;
 	}
 
 	for (i = -1; (i = P_FindSectorFromTag((INT16)block->vars[0], i)) >= 0 ;)
@@ -1800,10 +1805,24 @@ static mobj_t *SearchMarioNode(msecnode_t *node)
 void T_MarioBlockChecker(levelspecthink_t *block)
 {
 	line_t *masterline = block->sourceline;
+	if (block->vars[2] == 1) // Don't update the textures when the block's being bumped upwards.
+		return;
 	if (SearchMarioNode(block->sector->touching_thinglist))
-		sides[masterline->sidenum[0]].midtexture = sides[masterline->sidenum[0]].bottomtexture;
+	{
+		sides[masterline->sidenum[0]].midtexture = sides[masterline->sidenum[0]].bottomtexture; // Update textures
+		if (masterline->backsector)
+		{
+			block->sector->ceilingpic = block->sector->floorpic = masterline->backsector->ceilingpic; // Update flats to be backside's ceiling
+		}
+	}
 	else
+	{
 		sides[masterline->sidenum[0]].midtexture = sides[masterline->sidenum[0]].toptexture;
+		if (masterline->backsector)
+		{
+			block->sector->ceilingpic = block->sector->floorpic = masterline->backsector->floorpic; // Update flats to be backside's floor
+		}
+	}
 }
 
 // This is the Thwomp's 'brain'. It looks around for players nearby, and if
@@ -2903,18 +2922,41 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 	size_t topmostvertex = 0, bottommostvertex = 0;
 	fixed_t leftx, rightx;
 	fixed_t topy, bottomy;
-	fixed_t topz;
+	fixed_t topz, bottomz;
+	fixed_t widthfactor, heightfactor;
 	fixed_t a, b, c;
 	mobjtype_t type = MT_ROCKCRUMBLE1;
+	fixed_t spacing = (32<<FRACBITS);
+	tic_t lifetime = 3*TICRATE;
+	INT16 flags = 0;
 
-	// If the control sector has a special
-	// of Section3:7-15, use the custom debris.
-	if (GETSECSPECIAL(rover->master->frontsector->special, 3) >= 8)
-		type = MT_ROCKCRUMBLE1+(GETSECSPECIAL(rover->master->frontsector->special, 3)-7);
+#define controlsec rover->master->frontsector
+
+	if (controlsec->tag != 0)
+	{
+		INT32 tagline = P_FindSpecialLineFromTag(14, controlsec->tag, -1);
+		if (tagline != -1)
+		{
+			if (sides[lines[tagline].sidenum[0]].toptexture)
+				type = (mobjtype_t)sides[lines[tagline].sidenum[0]].toptexture; // Set as object type in p_setup.c...
+			if (sides[lines[tagline].sidenum[0]].textureoffset)
+				spacing = sides[lines[tagline].sidenum[0]].textureoffset;
+			if (sides[lines[tagline].sidenum[0]].rowoffset)
+			{
+				if (sides[lines[tagline].sidenum[0]].rowoffset>>FRACBITS != -1)
+					lifetime = (sides[lines[tagline].sidenum[0]].rowoffset>>FRACBITS);
+				else
+					lifetime = 0;
+			}
+			flags = lines[tagline].flags;
+		}
+	}
+
+#undef controlsec
 
 	// soundorg z height never gets set normally, so MEH.
 	sec->soundorg.z = sec->floorheight;
-	S_StartSound(&sec->soundorg, sfx_crumbl);
+	S_StartSound(&sec->soundorg, mobjinfo[type].activesound);
 
 	// Find the outermost vertexes in the subsector
 	for (i = 0; i < sec->linecount; i++)
@@ -2933,23 +2975,46 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 			bottommostvertex = i;
 	}
 
-	leftx = sec->lines[leftmostvertex]->v1->x+(16<<FRACBITS);
+	leftx = sec->lines[leftmostvertex]->v1->x+(spacing>>1);
 	rightx = sec->lines[rightmostvertex]->v1->x;
-	topy = sec->lines[topmostvertex]->v1->y-(16<<FRACBITS);
+	topy = sec->lines[topmostvertex]->v1->y-(spacing>>1);
 	bottomy = sec->lines[bottommostvertex]->v1->y;
-	topz = *rover->topheight-(16<<FRACBITS);
 
-	for (a = leftx; a < rightx; a += (32<<FRACBITS))
+	topz = *rover->topheight-(spacing>>1);
+	bottomz = *rover->bottomheight;
+
+	if (flags & ML_EFFECT1)
 	{
-		for (b = topy; b > bottomy; b -= (32<<FRACBITS))
+		widthfactor = (rightx + topy - leftx - bottomy)>>3;
+		heightfactor = (topz - *rover->bottomheight)>>2;
+	}
+
+	for (a = leftx; a < rightx; a += spacing)
+	{
+		for (b = topy; b > bottomy; b -= spacing)
 		{
 			if (R_PointInSubsector(a, b)->sector == sec)
 			{
 				mobj_t *spawned = NULL;
-				for (c = topz; c > *rover->bottomheight; c -= (32<<FRACBITS))
+#ifdef ESLOPE
+				if (*rover->t_slope)
+					topz = P_GetZAt(*rover->t_slope, a, b) - (spacing>>1);
+				if (*rover->b_slope)
+					bottomz = P_GetZAt(*rover->b_slope, a, b);
+#endif
+
+				for (c = topz; c > bottomz; c -= spacing)
 				{
 					spawned = P_SpawnMobj(a, b, c, type);
-					spawned->fuse = 3*TICRATE;
+					spawned->angle += P_RandomKey(36)*ANG10; // irrelevant for default objects but might make sense for some custom ones
+
+					if (flags & ML_EFFECT1)
+					{
+						P_InstaThrust(spawned, R_PointToAngle2(sec->soundorg.x, sec->soundorg.y, a, b), FixedDiv(P_AproxDistance(a - sec->soundorg.x, b - sec->soundorg.y), widthfactor));
+						P_SetObjectMomZ(spawned, FixedDiv((c - bottomz), heightfactor), false);
+					}
+
+					spawned->fuse = lifetime;
 				}
 			}
 		}
@@ -3109,8 +3174,10 @@ INT32 EV_StartCrumble(sector_t *sec, ffloor_t *rover, boolean floating,
 	return 1;
 }
 
-INT32 EV_MarioBlock(sector_t *sec, sector_t *roversector, fixed_t topheight, mobj_t *puncher)
+INT32 EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher)
 {
+	sector_t *roversec = rover->master->frontsector;
+	fixed_t topheight = *rover->topheight;
 	levelspecthink_t *block;
 	mobj_t *thing;
 	fixed_t oldx = 0, oldy = 0, oldz = 0;
@@ -3118,11 +3185,14 @@ INT32 EV_MarioBlock(sector_t *sec, sector_t *roversector, fixed_t topheight, mob
 	I_Assert(puncher != NULL);
 	I_Assert(puncher->player != NULL);
 
-	if (sec->floordata || sec->ceilingdata)
+	if (roversec->floordata || roversec->ceilingdata)
 		return 0;
 
+	if (!(rover->flags & FF_SOLID))
+		rover->flags |= (FF_SOLID|FF_RENDERALL|FF_CUTLEVEL);
+
 	// Find an item to pop out!
-	thing = SearchMarioNode(sec->touching_thinglist);
+	thing = SearchMarioNode(roversec->touching_thinglist);
 
 	// Found something!
 	if (thing)
@@ -3132,13 +3202,13 @@ INT32 EV_MarioBlock(sector_t *sec, sector_t *roversector, fixed_t topheight, mob
 
 		block = Z_Calloc(sizeof (*block), PU_LEVSPEC, NULL);
 		P_AddThinker(&block->thinker);
-		sec->floordata = block;
-		sec->ceilingdata = block;
+		roversec->floordata = block;
+		roversec->ceilingdata = block;
 		block->thinker.function.acp1 = (actionf_p1)T_MarioBlock;
 
 		// Set up the fields
-		block->sector = sec;
-		block->vars[0] = roversector->tag; // actionsector
+		block->sector = roversec;
+		block->vars[0] = sector->tag; // actionsector
 		block->vars[1] = 4*FRACUNIT; // speed
 		block->vars[2] = 1; // Up // direction
 		block->vars[3] = block->sector->floorheight; // floorwasheight
@@ -3154,8 +3224,8 @@ INT32 EV_MarioBlock(sector_t *sec, sector_t *roversector, fixed_t topheight, mob
 		}
 
 		P_UnsetThingPosition(thing);
-		thing->x = roversector->soundorg.x;
-		thing->y = roversector->soundorg.y;
+		thing->x = sector->soundorg.x;
+		thing->y = sector->soundorg.y;
 		thing->z = topheight;
 		thing->momz = FixedMul(6*FRACUNIT, thing->scale);
 		P_SetThingPosition(thing);
@@ -3172,7 +3242,7 @@ INT32 EV_MarioBlock(sector_t *sec, sector_t *roversector, fixed_t topheight, mob
 		{
 			if (thing->type == MT_EMMY && thing->spawnpoint && (thing->spawnpoint->options & MTF_OBJECTSPECIAL))
 			{
-				mobj_t *tokenobj = P_SpawnMobj(roversector->soundorg.x, roversector->soundorg.y, topheight, MT_TOKEN);
+				mobj_t *tokenobj = P_SpawnMobj(sector->soundorg.x, sector->soundorg.y, topheight, MT_TOKEN);
 				P_SetTarget(&thing->tracer, tokenobj);
 				P_SetTarget(&tokenobj->target, thing);
 				P_SetMobjState(tokenobj, mobjinfo[MT_TOKEN].seestate);

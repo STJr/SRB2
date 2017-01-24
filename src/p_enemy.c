@@ -3541,41 +3541,49 @@ void A_ScoreRise(mobj_t *actor)
 
 // Function: A_ParticleSpawn
 //
-// Description: Spawns a particle at a specified interval
+// Description: Hyper-specialised function for spawning a particle for MT_PARTICLEGEN.
 //
-// var1 = type (if 0, defaults to MT_PARTICLE)
+// var1 = unused
 // var2 = unused
 //
 void A_ParticleSpawn(mobj_t *actor)
 {
-	INT32 locvar1 = var1;
-	fixed_t speed;
-	mobjtype_t type;
+	INT32 i = 0;
 	mobj_t *spawn;
 
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_ParticleSpawn", actor))
 		return;
 #endif
-	if (!actor->spawnpoint)
-	{
-		P_RemoveMobj(actor);
+	if (!actor->health)
 		return;
+
+	if (!actor->lastlook)
+		return;
+
+	if (!actor->threshold)
+		return;
+
+	for (i = 0; i < actor->lastlook; i++)
+	{
+		spawn = P_SpawnMobj(
+			actor->x + FixedMul(FixedMul(actor->friction, actor->scale), FINECOSINE(actor->angle>>ANGLETOFINESHIFT)),
+			actor->y + FixedMul(FixedMul(actor->friction, actor->scale), FINESINE(actor->angle>>ANGLETOFINESHIFT)),
+			actor->z,
+			(mobjtype_t)actor->threshold);
+		P_SetScale(spawn, actor->scale);
+		spawn->momz = FixedMul(actor->movefactor, spawn->scale);
+		spawn->destscale = spawn->scale/100;
+		spawn->scalespeed = spawn->scale/actor->health;
+		spawn->tics = (tic_t)actor->health;
+		spawn->flags2 |= (actor->flags2 & MF2_OBJECTFLIP);
+		spawn->angle += P_RandomKey(36)*ANG10; // irrelevant for default objects but might make sense for some custom ones
+		if (spawn->frame & FF_ANIMATE)
+			spawn->frame += P_RandomKey(spawn->state->var1);
+
+		actor->angle += actor->movedir;
 	}
-
-	if (locvar1)
-		type = (mobjtype_t)locvar1;
-	else
-		type = MT_PARTICLE;
-
-	speed = FixedMul((actor->spawnpoint->angle >> 12)<<FRACBITS, actor->scale);
-
-	spawn = P_SpawnMobj(actor->x, actor->y, actor->z, type);
-	P_SetScale(spawn, actor->scale);
-	spawn->momz = speed;
-	spawn->destscale = FixedDiv(spawn->scale<<FRACBITS, 100<<FRACBITS);
-	spawn->scalespeed = FixedDiv(((actor->spawnpoint->angle >> 8) & 63) << FRACBITS, 100<<FRACBITS);
-	actor->tics = actor->spawnpoint->extrainfo + 1;
+	actor->angle += (angle_t)actor->movecount;
 }
 
 // Function: A_BunnyHop

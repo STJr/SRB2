@@ -325,7 +325,7 @@ INT32 EV_StartCrumble(sector_t *sector, ffloor_t *rover,
 
 INT32 EV_DoContinuousFall(sector_t *sec, sector_t *pbacksector, fixed_t spd, boolean backwards);
 
-INT32 EV_MarioBlock(sector_t *sector, sector_t *roversector, fixed_t topheight, mobj_t *puncher);
+INT32 EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher);
 
 void T_MoveFloor(floormove_t *movefloor);
 
@@ -388,7 +388,7 @@ typedef struct
 {
 	thinker_t thinker;   ///< Thinker structure for friction.
 	INT32 friction;      ///< Friction value, 0xe800 = normal.
-	INT32 movefactor;    ///< Inertia factor when adding to momentum.
+	INT32 movefactor;    ///< Inertia factor when adding to momentum, FRACUNIT = normal.
 	INT32 affectee;      ///< Number of affected sector.
 	INT32 referrer;      ///< If roverfriction == true, then this will contain the sector # of the control sector where the effect was applied.
 	UINT8 roverfriction;  ///< flag for whether friction originated from a FOF or not
