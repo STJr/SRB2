@@ -2742,11 +2742,7 @@ state_t states[NUMSTATES] =
 	{SPR_FBLL, FF_FULLBRIGHT|6, 3, {NULL}, 0, 0, S_NULL},         // S_FIREBALLEXP3
 
 	// Turtle Shell
-	{SPR_SHLL, 0, -1, {NULL}, 0, 0, S_NULL},   // S_SHELL
-	{SPR_SHLL, 0, 2,  {NULL}, 0, 0, S_SHELL2}, // S_SHELL1
-	{SPR_SHLL, 1, 2,  {NULL}, 0, 0, S_SHELL3}, // S_SHELL2
-	{SPR_SHLL, 2, 2,  {NULL}, 0, 0, S_SHELL4}, // S_SHELL3
-	{SPR_SHLL, 3, 2,  {NULL}, 0, 0, S_SHELL1}, // S_SHELL4
+	{SPR_SHLL, 0, -1, {NULL}, 0, 0, S_NULL}, // S_SHELL
 
 	// Puma (Mario fireball)
 	{SPR_PUMA, FF_FULLBRIGHT  , 2, {A_FishJump}, 0, MT_PUMATRAIL, S_PUMA_UP2},   // S_PUMA_UP1
@@ -13148,9 +13144,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // deathstate
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
-		20*FRACUNIT,    // speed
-		8*FRACUNIT,     // radius
-		16*FRACUNIT,    // height
+		16,             // speed
+		16*FRACUNIT,    // radius
+		20*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		1,              // damage
