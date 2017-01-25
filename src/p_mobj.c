@@ -6744,7 +6744,7 @@ static void P_TDInstaLaser(mobj_t *actor, mobj_t *target, mobjtype_t lasertype, 
 
 	x = actor->x;
 	y = actor->y;
-	z = actor->z + actor->height/2;
+	z = actor->z + 10*FRACUNIT; // laser comes from bottom of CHROME
 
 	angle = R_PointToAngle2(z + (mobjinfo[lasertype].height>>1), 0, target->z, R_PointToDist2(x, y, target->x, target->y));
 
