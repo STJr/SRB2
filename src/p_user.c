@@ -1624,6 +1624,12 @@ void P_SpawnSpinMobj(player_t *player, mobjtype_t type)
 		// scale
 		P_SetScale(mobj, player->mo->scale);
 		mobj->destscale = player->mo->scale;
+
+		if (type == MT_THOK) // spintrail-specific modification for MT_THOK
+		{
+			mobj->frame = FF_TRANS70;
+			mobj->fuse = mobj->tics;
+		}
 	}
 
 	P_SetTarget(&mobj->target, player->mo); // the one thing P_SpawnGhostMobj doesn't do
@@ -4791,6 +4797,9 @@ static void P_3dMovement(player_t *player)
 		acceleration = player->accelstart + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * player->acceleration;
 	}
 
+	if (player->mo->movefactor != FRACUNIT) // Friction-scaled acceleration...
+		acceleration = FixedMul(acceleration<<FRACBITS, player->mo->movefactor)>>FRACBITS;
+
 	// Forward movement
 	if (player->climbing)
 	{
@@ -6447,7 +6456,7 @@ static void P_SkidStuff(player_t *player)
 			// If your push angle is more than this close to a full 180 degrees, trigger a skid.
 			if (dang > ANGLE_157h)
 			{
-				player->skidtime = TICRATE/2;
+				player->skidtime = (player->mo->movefactor == FRACUNIT) ? TICRATE/2 : (FixedDiv(35<<(FRACBITS-1), FixedSqrt(player->mo->movefactor)))>>FRACBITS;
 				S_StartSound(player->mo, sfx_skid);
 				if (player->panim != PA_WALK)
 					P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
@@ -6483,6 +6492,9 @@ static void P_MovePlayer(player_t *player)
 
 	cmd = &player->cmd;
 	runspd = FixedMul(player->runspeed, player->mo->scale);
+
+	// Let's have some movement speed fun on low-friction surfaces, JUST for players... (high friction surfaces shouldn't have any adjustment, since the acceleration in this game is super high and that ends up cheesing high-friction surfaces.)
+	runspd = FixedMul(runspd, player->mo->movefactor);
 
 	// Control relinquishing stuff!
 	if (player->powers[pw_ingoop])
@@ -6674,6 +6686,7 @@ static void P_MovePlayer(player_t *player)
 	if (!player->mo->momx && !player->mo->momy && !player->mo->momz && player->panim == PA_WALK)
 		P_SetPlayerMobjState(player->mo, S_PLAY_STND);
 
+	player->mo->movefactor = FRACUNIT; // We're not going to do any more with this, so let's change it back for the next frame.
 
 //////////////////
 //GAMEPLAY STUFF//
@@ -6895,7 +6908,7 @@ static void P_MovePlayer(player_t *player)
 		P_ResetScore(player);
 
 	// Show the "THOK!" graphic when spinning quickly across the ground. (even applies to non-spinners, in the case of zoom tubes)
-	if (player->pflags & PF_SPINNING && player->speed > FixedMul(15<<FRACBITS, player->mo->scale) && !(player->pflags & PF_JUMPED))
+	if (player->pflags & PF_SPINNING && P_AproxDistance(player->speed, player->mo->momz) > FixedMul(15<<FRACBITS, player->mo->scale) && !(player->pflags & PF_JUMPED))
 	{
 		P_SpawnSpinMobj(player, player->spinitem);
 		if (demorecording)

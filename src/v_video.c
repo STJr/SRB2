@@ -267,7 +267,7 @@ static void CV_Gammaxxx_ONChange(void)
 #endif
 
 
-#if defined (__GNUC__) && defined (__i386__) && !defined (NOASM) && !defined (__APPLE__)
+#if defined (__GNUC__) && defined (__i386__) && !defined (NOASM) && !defined (__APPLE__) && !defined (NORUSEASM)
 void VID_BlitLinearScreen_ASM(const UINT8 *srcptr, UINT8 *destptr, INT32 width, INT32 height, size_t srcrowbytes,
 	size_t destrowbytes);
 #define HAVE_VIDCOPY
