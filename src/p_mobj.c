@@ -2176,8 +2176,39 @@ void P_XYMovement(mobj_t *mo)
 		}
 		else if (player || mo->flags & (MF_SLIDEME|MF_PUSHABLE))
 		{ // try to slide along it
+#ifdef ESLOPE
+			// Wall transfer part 1.
+			pslope_t *transferslope = NULL;
+			fixed_t transfermomz = 0;
+			if (oldslope && (P_MobjFlip(mo)*(predictedz - mo->z) > 0)) // Only for moving up (relative to gravity), otherwise there's a failed launch when going down slopes and hitting walls
+			{
+				transferslope = ((mo->standingslope) ? mo->standingslope : oldslope);
+				if (((transferslope->zangle < ANGLE_180) ? transferslope->zangle : InvAngle(transferslope->zangle)) >= ANGLE_45) // Prevent some weird stuff going on on shallow slopes.
+					transfermomz = P_GetWallTransferMomZ(mo, transferslope);
+			}
+#endif
+
 			P_SlideMove(mo);
 			xmove = ymove = 0;
+
+#ifdef ESLOPE
+			// Wall transfer part 2.
+			if (transfermomz && transferslope) // Are we "transferring onto the wall" (really just a disguised vertical launch)?
+			{
+				angle_t relation; // Scale transfer momentum based on how head-on it is to the slope.
+				if (mo->momx || mo->momy) // "Guess" the angle of the wall you hit using new momentum
+					relation = transferslope->xydirection - R_PointToAngle2(0, 0, mo->momx, mo->momy);
+				else // Give it for free, I guess.
+					relation = ANGLE_90;
+				transfermomz = FixedMul(transfermomz,
+					abs(FINESINE((relation >> ANGLETOFINESHIFT) & FINEMASK)));
+				if (P_MobjFlip(mo)*(transfermomz - mo->momz) > 2*FRACUNIT) // Do the actual launch!
+				{
+					mo->momz = transfermomz;
+					mo->standingslope = NULL;
+				}
+			}
+#endif
 		}
 		else if (mo->type == MT_SPINFIRE)
 		{
