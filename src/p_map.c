@@ -390,6 +390,55 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 	}
 }
 
+// Starts the CHROME Insta-laser
+static void P_TDStartInstaLaser(mobj_t *actor, mobj_t *target, sfxenum_t sound)
+{
+	thinker_t * th;
+	mobj_t *mo2;
+	mobj_t *point;
+
+	// Go through and make sure this object is not already being targeted
+	for (th = thinkercap.next; th != &thinkercap; th = th->next)
+	{
+		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
+			continue;
+
+		mo2 = (mobj_t *)th;
+
+		if (mo2->type != MT_CHROME_TARGET)
+			continue;
+
+		if (!mo2->target || !mo2->tracer)
+			continue;
+
+		if (mo2->target == target && mo2->tracer == actor) // the object is already being targeted by this CHROME
+			return;
+	}
+
+	// The object is not already being targeted, so let's target them
+	point = P_SpawnMobj(target->x, target->y, target->z + target->height/2, MT_CHROME_TARGET);
+	P_SetTarget(&point->target, target);
+	P_SetTarget(&point->tracer, actor);
+
+	if (sound)
+		S_StartSound(actor, sound);
+
+	return;
+}
+
+// When the CHROME is directly above a player it shoots them
+static void P_DoCHROMECollide(mobj_t *chrome, mobj_t *playermo)
+{
+	if (!playermo->player || playermo->health <=0 || playermo->player->playerstate != PST_LIVE)
+	{
+		return;
+	}
+	if (playermo->z + playermo->height < chrome->z)
+	{
+		P_TDStartInstaLaser(chrome, playermo, mobjinfo[MT_CHROME_LASER].seesound);
+	}
+}
+
 //
 // PIT_CheckThing
 //
@@ -536,6 +585,15 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				return false; // they did collide
 			}
 		}
+	}
+
+	if (thing->type == MT_CHROME || thing->type == MT_MOVINGCHROME)
+	{
+		P_DoCHROMECollide(thing, tmthing);
+	}
+	if (tmthing->type == MT_CHROME || tmthing->type == MT_MOVINGCHROME)
+	{
+		P_DoCHROMECollide(tmthing, thing);
 	}
 
 	// When solid spikes move, assume they just popped up and teleport things on top of them to hurt.

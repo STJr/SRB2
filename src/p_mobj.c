@@ -6730,42 +6730,6 @@ static void P_KoopaThinker(mobj_t *koopa)
 	}
 }
 
-// Starts the CHROME Insta-laser
-static void P_TDStartInstaLaser(mobj_t *actor, mobj_t *target, sfxenum_t sound)
-{
-	thinker_t * th;
-	mobj_t *mo2;
-	mobj_t *point;
-
-	// Go through and make sure this object is not already being targeted
-	for (th = thinkercap.next; th != &thinkercap; th = th->next)
-	{
-		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
-			continue;
-
-		mo2 = (mobj_t *)th;
-
-		if (mo2->type != MT_CHROME_TARGET)
-			continue;
-
-		if (!mo2->target || !mo2->tracer)
-			continue;
-
-		if (mo2->target == target && mo2->tracer == actor) // the object is already being targeted by this CHROME
-			return;
-	}
-
-	// The object is not already being targeted, so let's target them
-	point = P_SpawnMobj(target->x, target->y, target->z + target->height/2, MT_CHROME_TARGET);
-	P_SetTarget(&point->target, target);
-	P_SetTarget(&point->tracer, actor);
-
-	if (sound)
-		S_StartSound(actor, sound);
-
-	return;
-}
-
 // Performs the CHROME Insta-laser
 static void P_TDInstaLaser(mobj_t *actor, mobj_t *target, mobjtype_t lasertype, mobjtype_t firetype)
 {
@@ -8262,38 +8226,15 @@ void P_MobjThinker(mobj_t *mobj)
 				P_SetObjectMomZ(particle, FRACUNIT, false);
 			}
 			break;
-		case MT_CHROME:
 		case MT_MOVINGCHROME:
 			{
-				INT32 i;
-				for (i = 0; i < MAXPLAYERS; i++)
+				if (!mobj->momx && !mobj->momy)
 				{
-					if (!playeringame[i] || players[i].spectator)
-						continue;
-
-					if (!players[i].mo)
-						continue;
-
-					if (players[i].mo->health <= 0)
-						continue;
-
-					if (players[i].playerstate != PST_LIVE)
-						continue;
-
-					if (P_AproxDistance(players[i].mo->x - mobj->x, players[i].mo->y - mobj->y) < mobj->radius && players[i].mo->z + players[i].mo->height < mobj->z + mobj->height/2)
-						P_TDStartInstaLaser(mobj, players[i].mo, mobjinfo[MT_CHROME_LASER].seesound);
+					P_KillMobj(mobj, NULL, NULL);
+					return;
 				}
 
-				if (mobj->type == MT_MOVINGCHROME)
-				{
-					if (!mobj->momx && !mobj->momy)
-					{
-						P_KillMobj(mobj, NULL, NULL);
-						return;
-					}
-
-					P_InstaThrust(mobj, mobj->angle, mobj->info->speed);
-				}
+				P_InstaThrust(mobj, mobj->angle, mobj->info->speed);
 			}
 			break;
 		case MT_CHROME_TARGET:
