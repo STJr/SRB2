@@ -1187,8 +1187,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 						special->threshold = TICRATE - 1;
 						toucher->momz = -toucher->momz;
 					}
-					else // source can't be given as otherwise P_PlayerHitsPlayer will fail
-						P_DamageMobj(toucher, special, NULL/*special->target*/, 1, 0);
+					else // can't handle in PIT_CheckThing because of landing-on causing it to stop
+						P_DamageMobj(toucher, special, special->target, 1, 0);
 				}
 				else if (special->threshold == 0)
 				{
