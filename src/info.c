@@ -1984,10 +1984,10 @@ state_t states[NUMSTATES] =
 	{SPR_BSZ7, 5, -1, {NULL}, 0, 0, S_NULL}, // S_BSZVINE_ORANGE
 	{SPR_BSZ8, 0, -1, {NULL}, 0, 0, S_NULL}, // S_BSZSHRUB
 	{SPR_BSZ8, 1, -1, {NULL}, 0, 0, S_NULL}, // S_BSZCLOVER
-	{SPR_BSZ8, 2, -1, {NULL}, 0, 0, S_NULL}, // S_ALOLAN_EGGSECUTOR_NECK
-	{SPR_BSZ8, 3, -1, {NULL}, 0, 0, S_NULL}, // S_ALOLAN_EGGSECUTOR_HEAD
-	{SPR_BSZ8, 4, -1, {NULL}, 0, 0, S_NULL}, // S_EGGSECUTOR_NECK
-	{SPR_BSZ8, 5, -1, {NULL}, 0, 0, S_NULL}, // S_EGGSECUTOR_HEAD
+	{SPR_BSZ8, 2, -1, {NULL}, 0, 0, S_NULL}, // S_BIG_PALMTREE_TRUNK
+	{SPR_BSZ8, 3, -1, {NULL}, 0, 0, S_NULL}, // S_BIG_PALMTREE_TOP
+	{SPR_BSZ8, 4, -1, {NULL}, 0, 0, S_NULL}, // S_PALMTREE_TRUNK
+	{SPR_BSZ8, 5, -1, {NULL}, 0, 0, S_NULL}, // S_PALMTREE_TOP
 
 	// Disco ball
 	{SPR_DBAL, FF_FULLBRIGHT,   5, {NULL}, 0, 0, S_DBALL2}, // S_DBALL1
@@ -10716,9 +10716,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
-	{           // MT_ALOLAN_EGGSECUTOR_NECK
+	{           // MT_BIG_PALMTREE_TRUNK
 		1472,           // doomednum
-		S_ALOLAN_EGGSECUTOR_NECK, // spawnstate
+		S_BIG_PALMTREE_TRUNK, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -10743,9 +10743,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
-	{           // MT_ALOLAN_EGGSECUTOR_HEAD
+	{           // MT_BIG_PALMTREE_TOP
 		1473,           // doomednum
-		S_ALOLAN_EGGSECUTOR_HEAD, // spawnstate
+		S_BIG_PALMTREE_TOP, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -10770,9 +10770,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
-	{           // MT_EGGSECUTOR_NECK
+	{           // MT_PALMTREE_TRUNK
 		1474,           // doomednum
-		S_EGGSECUTOR_NECK, // spawnstate
+		S_PALMTREE_TRUNK, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -10797,9 +10797,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
-	{           // MT_EGGSECUTOR_HEAD
+	{           // MT_PALMTREE_TOP
 		1475,           // doomednum
-		S_EGGSECUTOR_HEAD, // spawnstate
+		S_PALMTREE_TOP, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
