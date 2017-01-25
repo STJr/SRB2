@@ -768,8 +768,6 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			}
 		}
 
-		if (tmthing->type == MT_SHELL && tmthing->threshold > TICRATE)
-			return true;
 		// damage / explode
 		if (tmthing->flags & MF_ENEMY) // An actual ENEMY! (Like the deton, for example)
 			P_DamageMobj(thing, tmthing, tmthing, 1, 0);
@@ -810,7 +808,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			tmthing->y = thing->y;
 			P_SetThingPosition(tmthing);
 		}
-		else
+		else if (!(tmthing->type == MT_SHELL && thing->player)) // player collision handled in touchspecial
 			P_DamageMobj(thing, tmthing, tmthing->target, 1, 0);
 
 		// don't traverse any more
@@ -1145,7 +1143,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				if (thing->flags & MF_GRENADEBOUNCE && (thing->flags & MF_MONITOR || thing->flags2 & MF2_STANDONME)) // Gold monitor hack...
 					return false;
 
-				tmfloorz = tmceilingz = INT32_MIN; // block while in air
+				tmfloorz = tmceilingz = topz; // block while in air
 #ifdef ESLOPE
 				tmceilingslope = NULL;
 #endif
@@ -1191,7 +1189,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				if (thing->flags & MF_GRENADEBOUNCE && (thing->flags & MF_MONITOR || thing->flags2 & MF2_STANDONME)) // Gold monitor hack...
 					return false;
 
-				tmfloorz = tmceilingz = INT32_MAX; // block while in air
+				tmfloorz = tmceilingz = topz; // block while in air
 #ifdef ESLOPE
 				tmfloorslope = NULL;
 #endif

@@ -974,7 +974,7 @@ static const char *credits[] = {
 	"Scott \"Graue\" Feeney",
 	"Nathan \"Jazz\" Giroux",
 	"Thomas \"Shadow Hog\" Igoe",
-	"\"Monster\" Iestyn Jealous",
+	"Iestyn \"Monster Iestyn\" Jealous",
 	"Ronald \"Furyhunter\" Kinard", // The SDL2 port
 	"John \"JTE\" Muniz",
 	"Ehab \"Wolfy\" Saeed",
@@ -986,6 +986,7 @@ static const char *credits[] = {
 	"\"chi.miru\"", // Red's secret weapon, the REAL reason slopes exist (also helped port drawing code from ZDoom)
 	"Andrew \"orospakr\" Clunis",
 	"Gregor \"Oogaland\" Dick",
+	"Louis-Antoine \"LJSonic\" de Moulins", // for fixing 2.1's netcode (de Rochefort doesn't quite fit on the screen sorry lol)
 	"Vivian \"toaster\" Grannell",
 	"Julio \"Chaos Zero 64\" Guir",
 	"\"Kalaron\"", // Coded some of Sryder13's collection of OpenGL fixes, especially fog
@@ -1021,7 +1022,7 @@ static const char *credits[] = {
 	"Paul \"Boinciel\" Clempson",
 	"Cyan Helkaraxe",
 	"Kepa \"Nev3r\" Iceta",
-	"\"Monster\" Iestyn Jealous",
+	"Iestyn \"Monster Iestyn\" Jealous",
 	"Jarel \"Arrow\" Jones",
 	"Stefan \"Stuf\" Rimalia",
 	"Shane Mychal Sexton",
