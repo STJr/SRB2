@@ -296,6 +296,7 @@ light_t *t_lspr[NUMSPRITES] =
 
 	// Techno Hill Scenery
 	&lspr[NOLIGHT],     // SPR_THZP
+	&lspr[NOLIGHT],     // SPR_FWR5
 	&lspr[REDBALL_L],     // SPR_ALRM
 
 	// Deep Sea Scenery

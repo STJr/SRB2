@@ -6734,7 +6734,7 @@ void P_MobjThinker(mobj_t *mobj)
 			}
 	}
 
-	if (mobj->type == MT_GHOST && mobj->fuse > 0 // Not guaranteed to be MF_SCENERY or not MF_SCENERY!
+	if ((mobj->type == MT_GHOST || mobj->type == MT_THOK) && mobj->fuse > 0 // Not guaranteed to be MF_SCENERY or not MF_SCENERY!
 	&& (signed)(mobj->frame >> FF_TRANSSHIFT) < (NUMTRANSMAPS-1) - mobj->fuse / 2)
 		// fade out when nearing the end of fuse...
 		mobj->frame = (mobj->frame & ~FF_TRANSMASK) | (((NUMTRANSMAPS-1) - mobj->fuse / 2) << FF_TRANSSHIFT);
@@ -7691,13 +7691,13 @@ void P_MobjThinker(mobj_t *mobj)
 				P_NightsItemChase(mobj);
 			break;
 		case MT_SHELL:
-			if (mobj->threshold > TICRATE)
+			if (mobj->threshold && mobj->threshold != TICRATE)
 				mobj->threshold--;
 
-			if (mobj->state != &states[S_SHELL])
+			if (mobj->threshold >= TICRATE)
 			{
-				mobj->angle = R_PointToAngle2(0, 0, mobj->momx, mobj->momy);
-				P_InstaThrust(mobj, mobj->angle, FixedMul(mobj->info->speed, mobj->scale));
+				mobj->angle += ((mobj->movedir == 1) ? ANGLE_22h : ANGLE_337h);
+				P_InstaThrust(mobj, R_PointToAngle2(0, 0, mobj->momx, mobj->momy), (mobj->info->speed*mobj->scale));
 			}
 			break;
 		case MT_TURRET:
