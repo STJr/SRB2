@@ -2745,6 +2745,8 @@ state_t states[NUMSTATES] =
 	{SPR_SHLL, 0, -1, {NULL}, 0, 0, S_NULL}, // S_SHELL
 
 	// Puma (Mario fireball)
+	{SPR_PUMA, FF_FULLBRIGHT|2, 1, {A_FishJump}, 0, MT_PUMATRAIL, S_PUMA_START2},   // S_PUMA_START1
+	{SPR_PUMA, FF_FULLBRIGHT|2, 1, {A_PlaySound}, sfx_s3k70, 1, S_PUMA_UP1},   // S_PUMA_START2
 	{SPR_PUMA, FF_FULLBRIGHT  , 2, {A_FishJump}, 0, MT_PUMATRAIL, S_PUMA_UP2},   // S_PUMA_UP1
 	{SPR_PUMA, FF_FULLBRIGHT|1, 2, {A_FishJump}, 0, MT_PUMATRAIL, S_PUMA_UP3},   // S_PUMA_UP2
 	{SPR_PUMA, FF_FULLBRIGHT|2, 2, {A_FishJump}, 0, MT_PUMATRAIL, S_PUMA_UP1},   // S_PUMA_UP3
@@ -13157,9 +13159,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_PUMA
 		1805,           // doomednum
-		S_PUMA_UP1,     // spawnstate
+		S_PUMA_START1,  // spawnstate
 		1000,           // spawnhealth
-		S_PUMA_UP1,     // seestate
+		S_PUMA_START1,  // seestate
 		sfx_None,       // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
