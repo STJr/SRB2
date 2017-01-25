@@ -128,7 +128,7 @@ static void P_NetArchivePlayers(void)
 		WRITEANGLE(save_p, players[i].aiming);
 		WRITEANGLE(save_p, players[i].awayviewaiming);
 		WRITEINT32(save_p, players[i].awayviewtics);
-		WRITEINT32(save_p, players[i].health);
+		WRITEINT32(save_p, players[i].rings);
 
 		WRITESINT8(save_p, players[i].pity);
 		WRITEINT32(save_p, players[i].currentweapon);
@@ -308,7 +308,7 @@ static void P_NetUnArchivePlayers(void)
 		players[i].aiming = READANGLE(save_p);
 		players[i].awayviewaiming = READANGLE(save_p);
 		players[i].awayviewtics = READINT32(save_p);
-		players[i].health = READINT32(save_p);
+		players[i].rings = READINT32(save_p);
 
 		players[i].pity = READSINT8(save_p);
 		players[i].currentweapon = READINT32(save_p);
@@ -470,6 +470,7 @@ static void P_NetUnArchivePlayers(void)
 #define SD_TAG       0x10
 #define SD_FLOORANG  0x20
 #define SD_CEILANG   0x40
+#define SD_TAGLIST   0x80
 
 #define LD_FLAG     0x01
 #define LD_SPECIAL  0x02
@@ -519,10 +520,9 @@ static void P_NetArchiveWorld(void)
 		//
 		// flats
 		//
-		// P_AddLevelFlat should not add but just return the number
-		if (ss->floorpic != P_AddLevelFlat(ms->floorpic, levelflats))
+		if (ss->floorpic != P_CheckLevelFlat(ms->floorpic))
 			diff |= SD_FLOORPIC;
-		if (ss->ceilingpic != P_AddLevelFlat(ms->ceilingpic, levelflats))
+		if (ss->ceilingpic != P_CheckLevelFlat(ms->ceilingpic))
 			diff |= SD_CEILPIC;
 
 		if (ss->lightlevel != SHORT(ms->lightlevel))
@@ -545,6 +545,8 @@ static void P_NetArchiveWorld(void)
 
 		if (ss->tag != SHORT(ms->tag))
 			diff2 |= SD_TAG;
+		if (ss->nexttag != ss->spawn_nexttag || ss->firsttag != ss->spawn_firsttag)
+			diff2 |= SD_TAGLIST;
 
 		// Check if any of the sector's FOFs differ from how they spawned
 		if (ss->ffloors)
@@ -592,16 +594,17 @@ static void P_NetArchiveWorld(void)
 				WRITEFIXED(put, ss->ceiling_xoffs);
 			if (diff2 & SD_CYOFFS)
 				WRITEFIXED(put, ss->ceiling_yoffs);
-			if (diff2 & SD_TAG)
-			{
+			if (diff2 & SD_TAG) // save only the tag
 				WRITEINT16(put, ss->tag);
-				WRITEINT32(put, ss->firsttag);
-				WRITEINT32(put, ss->nexttag);
-			}
 			if (diff2 & SD_FLOORANG)
 				WRITEANGLE(put, ss->floorpic_angle);
 			if (diff2 & SD_CEILANG)
 				WRITEANGLE(put, ss->ceilingpic_angle);
+			if (diff2 & SD_TAGLIST) // save both firsttag and nexttag
+			{ // either of these could be changed even if tag isn't
+				WRITEINT32(put, ss->firsttag);
+				WRITEINT32(put, ss->nexttag);
+			}
 
 			// Special case: save the stats of all modified ffloors along with their ffloor "number"s
 			// we don't bother with ffloors that haven't changed, that would just add to savegame even more than is really needed
@@ -762,12 +765,12 @@ static void P_NetUnArchiveWorld(void)
 			sectors[i].ceilingheight = READFIXED(get);
 		if (diff & SD_FLOORPIC)
 		{
-			sectors[i].floorpic = P_AddLevelFlat((char *)get, levelflats);
+			sectors[i].floorpic = P_AddLevelFlatRuntime((char *)get);
 			get += 8;
 		}
 		if (diff & SD_CEILPIC)
 		{
-			sectors[i].ceilingpic = P_AddLevelFlat((char *)get, levelflats);
+			sectors[i].ceilingpic = P_AddLevelFlatRuntime((char *)get);
 			get += 8;
 		}
 		if (diff & SD_LIGHT)
@@ -784,12 +787,11 @@ static void P_NetUnArchiveWorld(void)
 		if (diff2 & SD_CYOFFS)
 			sectors[i].ceiling_yoffs = READFIXED(get);
 		if (diff2 & SD_TAG)
+			sectors[i].tag = READINT16(get); // DON'T use P_ChangeSectorTag
+		if (diff2 & SD_TAGLIST)
 		{
-			INT16 tag;
-			tag = READINT16(get);
 			sectors[i].firsttag = READINT32(get);
 			sectors[i].nexttag = READINT32(get);
-			P_ChangeSectorTag(i, tag);
 		}
 		if (diff2 & SD_FLOORANG)
 			sectors[i].floorpic_angle  = READANGLE(get);
@@ -972,6 +974,7 @@ typedef enum
 	tc_noenemies,
 	tc_eachtime,
 	tc_disappear,
+	tc_planedisplace,
 #ifdef POLYOBJECTS
 	tc_polyrotate, // haleyjd 03/26/06: polyobjects
 	tc_polymove,
@@ -1095,7 +1098,7 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		diff |= MD_TRACER;
 	if (mobj->friction != ORIG_FRICTION)
 		diff |= MD_FRICTION;
-	if (mobj->movefactor != ORIG_FRICTION_FACTOR)
+	if (mobj->movefactor != FRACUNIT)
 		diff |= MD_MOVEFACTOR;
 	if (mobj->fuse)
 		diff |= MD_FUSE;
@@ -1535,6 +1538,21 @@ static void SaveDisappearThinker(const thinker_t *th, const UINT8 type)
 	WRITEINT32(save_p, ht->exists);
 }
 
+//
+// SavePlaneDisplaceThinker
+//
+// Saves a planedisplace_t thinker
+//
+static void SavePlaneDisplaceThinker(const thinker_t *th, const UINT8 type)
+{
+	const planedisplace_t *ht = (const void *)th;
+	WRITEUINT8(save_p, type);
+	WRITEINT32(save_p, ht->affectee);
+	WRITEINT32(save_p, ht->control);
+	WRITEFIXED(save_p, ht->last_height);
+	WRITEFIXED(save_p, ht->speed);
+	WRITEUINT8(save_p, ht->type);
+}
 #ifdef POLYOBJECTS
 
 //
@@ -1816,6 +1834,12 @@ static void P_NetArchiveThinkers(void)
 			SaveDisappearThinker(th, tc_disappear);
 			continue;
 		}
+
+		else if (th->function.acp1 == (actionf_p1)T_PlaneDisplace)
+		{
+			SavePlaneDisplaceThinker(th, tc_planedisplace);
+			continue;
+		}
 #ifdef POLYOBJECTS
 		else if (th->function.acp1 == (actionf_p1)T_PolyObjRotate)
 		{
@@ -2081,7 +2105,7 @@ static void LoadMobjThinker(actionf_p1 thinker)
 	if (diff & MD_MOVEFACTOR)
 		mobj->movefactor = READFIXED(save_p);
 	else
-		mobj->movefactor = ORIG_FRICTION_FACTOR;
+		mobj->movefactor = FRACUNIT;
 	if (diff & MD_FUSE)
 		mobj->fuse = READINT32(save_p);
 	if (diff & MD_WATERTOP)
@@ -2484,6 +2508,23 @@ static inline void LoadDisappearThinker(actionf_p1 thinker)
 	P_AddThinker(&ht->thinker);
 }
 
+//
+// LoadPlaneDisplaceThinker
+//
+// Loads a planedisplace_t thinker
+//
+static inline void LoadPlaneDisplaceThinker(actionf_p1 thinker)
+{
+	planedisplace_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
+	ht->thinker.function.acp1 = thinker;
+	ht->affectee = READINT32(save_p);
+	ht->control = READINT32(save_p);
+	ht->last_height = READFIXED(save_p);
+	ht->speed = READFIXED(save_p);
+	ht->type = READUINT8(save_p);
+	P_AddThinker(&ht->thinker);
+}
+
 #ifdef POLYOBJECTS
 
 //
@@ -2628,6 +2669,7 @@ static void P_NetUnArchiveThinkers(void)
 	thinker_t *next;
 	UINT8 tclass;
 	UINT8 restoreNum = false;
+	UINT32 i;
 
 	if (READUINT32(save_p) != ARCHIVEBLOCK_THINKERS)
 		I_Error("Bad $$$.sav at archive block Thinkers");
@@ -2647,6 +2689,12 @@ static void P_NetUnArchiveThinkers(void)
 	// we don't want the removed mobjs to come back
 	iquetail = iquehead = 0;
 	P_InitThinkers();
+
+	// clear sector thinker pointers so they don't point to non-existant thinkers for all of eternity
+	for (i = 0; i < numsectors; i++)
+	{
+		sectors[i].floordata = sectors[i].ceilingdata = sectors[i].lightingdata = NULL;
+	}
 
 	// read in saved thinkers
 	for (;;)
@@ -2759,6 +2807,10 @@ static void P_NetUnArchiveThinkers(void)
 
 			case tc_disappear:
 				LoadDisappearThinker((actionf_p1)T_Disappear);
+				break;
+
+			case tc_planedisplace:
+				LoadPlaneDisplaceThinker((actionf_p1)T_PlaneDisplace);
 				break;
 #ifdef POLYOBJECTS
 			case tc_polyrotate:
@@ -3306,7 +3358,7 @@ void P_SaveNetGame(void)
 {
 	thinker_t *th;
 	mobj_t *mobj;
-	INT32 i = 0;
+	INT32 i = 1; // don't start from 0, it'd be confused with a blank pointer otherwise
 
 	CV_SaveNetVars(&save_p);
 	P_NetArchiveMisc();

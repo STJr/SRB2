@@ -88,6 +88,7 @@ UINT8 modeattacking = ATTACKING_NONE;
 boolean disableSpeedAdjust = false;
 boolean imcontinuing = false;
 boolean runemeraldmanager = false;
+UINT16 emeraldspawndelay = 60*TICRATE;
 
 // menu demo things
 UINT8  numDemos      = 3;
@@ -2193,7 +2194,7 @@ void G_PlayerReborn(INT32 player)
 	p->pflags |= PF_JUMPDOWN;
 
 	p->playerstate = PST_LIVE;
-	p->health = 1; // 0 rings
+	p->rings = 0; // 0 rings
 	p->panim = PA_IDLE; // standing animation
 
 	if ((netgame || multiplayer) && !p->spectator)
@@ -4727,7 +4728,7 @@ void G_BeginRecording(void)
 	// Don't do it.
 	WRITEFIXED(demo_p, player->jumpfactor);
 
-	// Save netvar data (SONICCD, etc)
+	// Save netvar data
 	CV_SaveNetVars(&demo_p);
 
 	memset(&oldcmd,0,sizeof(oldcmd));

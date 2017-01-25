@@ -203,7 +203,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 			}
 		}
 
-		pflags = object->player->pflags & (PF_JUMPED|PF_SPINNING|PF_THOKKED); // I still need these.
+		pflags = object->player->pflags & (PF_JUMPED|PF_SPINNING|PF_THOKKED|PF_SHIELDABILITY); // I still need these.
 		jumping = object->player->jumping;
 		secondjump = object->player->secondjump;
 		P_ResetPlayer(object->player);
@@ -768,8 +768,6 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			}
 		}
 
-		if (tmthing->type == MT_SHELL && tmthing->threshold > TICRATE)
-			return true;
 		// damage / explode
 		if (tmthing->flags & MF_ENEMY) // An actual ENEMY! (Like the deton, for example)
 			P_DamageMobj(thing, tmthing, tmthing, 1, 0);
@@ -810,7 +808,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			tmthing->y = thing->y;
 			P_SetThingPosition(tmthing);
 		}
-		else
+		else if (!(tmthing->type == MT_SHELL && thing->player)) // player collision handled in touchspecial
 			P_DamageMobj(thing, tmthing, tmthing->target, 1, 0);
 
 		// don't traverse any more
@@ -969,10 +967,10 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	{
 		if (G_RingSlingerGametype() && (!G_GametypeHasTeams() || tmthing->player->ctfteam != thing->player->ctfteam))
 		{
-			if ((tmthing->player->powers[pw_invulnerability] || tmthing->player->powers[pw_super])
+			if ((tmthing->player->powers[pw_invulnerability] || tmthing->player->powers[pw_super] || (((tmthing->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL) && (tmthing->player->pflags & PF_SHIELDABILITY)))
 				&& !thing->player->powers[pw_super])
 				P_DamageMobj(thing, tmthing, tmthing, 1, 0);
-			else if ((thing->player->powers[pw_invulnerability] || thing->player->powers[pw_super])
+			else if ((thing->player->powers[pw_invulnerability] || thing->player->powers[pw_super] || (((thing->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL) && (thing->player->pflags & PF_SHIELDABILITY)))
 				&& !tmthing->player->powers[pw_super])
 				P_DamageMobj(tmthing, thing, thing, 1, 0);
 		}
@@ -1052,24 +1050,41 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		else if (thing->z - FixedMul(FRACUNIT, thing->scale) <= tmthing->z + tmthing->height
 			&& thing->z + thing->height + FixedMul(FRACUNIT, thing->scale) >= tmthing->z)
 		{
+			// 0 = none, 1 = elemental pierce, 2 = bubble bounce
+			UINT8 elementalpierce = (((tmthing->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL || (tmthing->player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP) && (tmthing->player->pflags & PF_SHIELDABILITY)
+			? (((tmthing->player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL) ? 1 : 2)
+			: 0);
 			if (thing->flags & MF_MONITOR
 				&& (tmthing->player->pflags & (PF_SPINNING|PF_GLIDING)
 				|| ((tmthing->player->pflags & PF_JUMPED)
-					&& !(tmthing->player->charflags & SF_NOJUMPDAMAGE
-					&& !(tmthing->player->charability == CA_TWINSPIN && tmthing->player->panim == PA_ABILITY)))
+					&& (tmthing->player->pflags & PF_FORCEJUMPDAMAGE
+					|| !(tmthing->player->charflags & SF_NOJUMPSPIN)
+					|| (tmthing->player->charability == CA_TWINSPIN && tmthing->player->panim == PA_ABILITY)))
 				|| (tmthing->player->charability2 == CA2_MELEE && tmthing->player->panim == PA_ABILITY2)
 				|| ((tmthing->player->charflags & SF_STOMPDAMAGE)
-					&& (P_MobjFlip(tmthing)*(tmthing->z - (thing->z + thing->height/2)) > 0) && (P_MobjFlip(tmthing)*tmthing->momz < 0))))
+					&& (P_MobjFlip(tmthing)*(tmthing->z - (thing->z + thing->height/2)) > 0) && (P_MobjFlip(tmthing)*tmthing->momz < 0))
+				|| elementalpierce))
 			{
+				player_t *player = tmthing->player;
 				SINT8 flipval = P_MobjFlip(thing); // Save this value in case monitor gets removed.
 				fixed_t *momz = &tmthing->momz; // tmthing gets changed by P_DamageMobj, so we need a new pointer?! X_x;;
+				fixed_t *z = &tmthing->z; // aau.
 				P_DamageMobj(thing, tmthing, tmthing, 1, 0); // break the monitor
 				// Going down? Then bounce back up.
 				if ((P_MobjWasRemoved(thing) // Monitor was removed
 					|| !thing->health) // or otherwise popped
-				&& (flipval*(*momz) < 0)) // monitor is on the floor and you're going down, or on the ceiling and you're going up
-					*momz = -*momz; // Therefore, you should be thrust in the opposite direction, vertically.
-				return false;
+				&& (flipval*(*momz) < 0) // monitor is on the floor and you're going down, or on the ceiling and you're going up
+				&& (elementalpierce != 1)) // you're not piercing through the monitor...
+				{
+					if (elementalpierce == 2)
+						P_DoBubbleBounce(player);
+					else
+						*momz = -*momz; // Therefore, you should be thrust in the opposite direction, vertically.
+				}
+				if (!(elementalpierce == 1 && thing->flags & MF_GRENADEBOUNCE)) // prevent gold monitor clipthrough.
+					return false;
+				else
+					*z -= *momz; // to ensure proper collision.
 			}
 		}
 	}
@@ -1084,8 +1099,9 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	else if (thing->flags & MF_MONITOR && tmthing->player
 	&& (tmthing->player->pflags & (PF_SPINNING|PF_GLIDING)
 		|| ((tmthing->player->pflags & PF_JUMPED)
-			&& !(tmthing->player->charflags & SF_NOJUMPDAMAGE
-			&& !(tmthing->player->charability == CA_TWINSPIN && tmthing->player->panim == PA_ABILITY)))
+			&& (tmthing->player->pflags & PF_FORCEJUMPDAMAGE
+			|| !(tmthing->player->charflags & SF_NOJUMPSPIN)
+			|| (tmthing->player->charability == CA_TWINSPIN && tmthing->player->panim == PA_ABILITY)))
 		|| (tmthing->player->charability2 == CA2_MELEE && tmthing->player->panim == PA_ABILITY2)
 		|| ((tmthing->player->charflags & SF_STOMPDAMAGE)
 			&& (P_MobjFlip(tmthing)*(tmthing->z - (thing->z + thing->height/2)) > 0) && (P_MobjFlip(tmthing)*tmthing->momz < 0)))
@@ -1124,7 +1140,10 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			if (tmthing->player && tmthing->z + tmthing->height > topz
 				&& tmthing->z + tmthing->height < tmthing->ceilingz)
 			{
-				tmfloorz = tmceilingz = INT32_MIN; // block while in air
+				if (thing->flags & MF_GRENADEBOUNCE && (thing->flags & MF_MONITOR || thing->flags2 & MF2_STANDONME)) // Gold monitor hack...
+					return false;
+
+				tmfloorz = tmceilingz = topz; // block while in air
 #ifdef ESLOPE
 				tmceilingslope = NULL;
 #endif
@@ -1167,7 +1186,10 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			if (tmthing->player && tmthing->z < topz
 				&& tmthing->z > tmthing->floorz)
 			{
-				tmfloorz = tmceilingz = INT32_MAX; // block while in air
+				if (thing->flags & MF_GRENADEBOUNCE && (thing->flags & MF_MONITOR || thing->flags2 & MF2_STANDONME)) // Gold monitor hack...
+					return false;
+
+				tmfloorz = tmceilingz = topz; // block while in air
 #ifdef ESLOPE
 				tmfloorslope = NULL;
 #endif

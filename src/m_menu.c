@@ -183,9 +183,6 @@ static INT32 vidm_selected = 0;
 static INT32 vidm_nummodes;
 static INT32 vidm_column_size;
 
-// what a headache.
-static boolean shiftdown = false;
-
 //
 // PROTOTYPES
 //
@@ -2083,11 +2080,6 @@ boolean M_Responder(event_t *ev)
 	|| gamestate == GS_CREDITS || gamestate == GS_EVALUATION)
 		return false;
 
-	if (ev->type == ev_keyup && (ev->data1 == KEY_LSHIFT || ev->data1 == KEY_RSHIFT))
-	{
-		shiftdown = false;
-		return false;
-	}
 	if (noFurtherInput)
 	{
 		// Ignore input after enter/escape/other buttons
@@ -2101,10 +2093,6 @@ boolean M_Responder(event_t *ev)
 		// added 5-2-98 remap virtual keys (mouse & joystick buttons)
 		switch (ch)
 		{
-			case KEY_LSHIFT:
-			case KEY_RSHIFT:
-				shiftdown = true;
-				break; //return false;
 			case KEY_MOUSE1:
 			case KEY_JOY1:
 			case KEY_JOY1 + 2:
@@ -3831,7 +3819,7 @@ static void M_HandleImageDef(INT32 choice)
 static void M_PandorasBox(INT32 choice)
 {
 	(void)choice;
-	CV_StealthSetValue(&cv_dummyrings, max(players[consoleplayer].health - 1, 0));
+	CV_StealthSetValue(&cv_dummyrings, max(players[consoleplayer].rings, 0));
 	CV_StealthSetValue(&cv_dummylives, players[consoleplayer].lives);
 	CV_StealthSetValue(&cv_dummycontinues, players[consoleplayer].continues);
 	M_SetupNextMenu(&SR_PandoraDef);
@@ -3839,7 +3827,7 @@ static void M_PandorasBox(INT32 choice)
 
 static boolean M_ExitPandorasBox(void)
 {
-	if (cv_dummyrings.value != max(players[consoleplayer].health - 1, 0))
+	if (cv_dummyrings.value != max(players[consoleplayer].rings, 0))
 		COM_ImmedExecute(va("setrings %d", cv_dummyrings.value));
 	if (cv_dummylives.value != players[consoleplayer].lives)
 		COM_ImmedExecute(va("setlives %d", cv_dummylives.value));

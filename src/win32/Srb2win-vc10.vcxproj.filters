@@ -225,6 +225,9 @@
     <ClCompile Include="..\lua_baselib.c">
       <Filter>LUA</Filter>
     </ClCompile>
+    <ClCompile Include="..\lua_blockmaplib.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
     <ClCompile Include="..\lua_consolelib.c">
       <Filter>LUA</Filter>
     </ClCompile>

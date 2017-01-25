@@ -69,7 +69,7 @@ static HCURSOR windowCursor = NULL; // main window cursor
 
 static LPCSTR wClassName = "SRB2WC";
 
-boolean appActive = false; // app window is active
+INT appActive = false; // app window is active
 
 #ifdef LOGMESSAGES
 FILE *logstream;

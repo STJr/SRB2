@@ -99,6 +99,9 @@ static patch_t *ringshield;
 static patch_t *watershield;
 static patch_t *bombshield;
 static patch_t *pityshield;
+static patch_t *flameshield;
+static patch_t *bubbleshield;
+static patch_t *thundershield;
 static patch_t *invincibility;
 static patch_t *sneakers;
 static patch_t *gravboots;
@@ -288,15 +291,18 @@ void ST_LoadGraphics(void)
 	scatterring = W_CachePatchName("SCATIND", PU_HUDGFX);
 	grenadering = W_CachePatchName("GRENIND", PU_HUDGFX);
 	railring = W_CachePatchName("RAILIND", PU_HUDGFX);
-	jumpshield = W_CachePatchName("WHTVB0", PU_HUDGFX);
-	forceshield = W_CachePatchName("BLTVB0", PU_HUDGFX);
-	ringshield = W_CachePatchName("YLTVB0", PU_HUDGFX);
-	watershield = W_CachePatchName("ELTVB0", PU_HUDGFX);
-	bombshield = W_CachePatchName("BKTVB0", PU_HUDGFX);
-	pityshield = W_CachePatchName("GRTVB0", PU_HUDGFX);
-	invincibility = W_CachePatchName("PINVB0", PU_HUDGFX);
-	sneakers = W_CachePatchName("SHTVB0", PU_HUDGFX);
-	gravboots = W_CachePatchName("GBTVB0", PU_HUDGFX);
+	jumpshield = W_CachePatchName("TVWWC0", PU_HUDGFX);
+	forceshield = W_CachePatchName("TVFOC0", PU_HUDGFX);
+	ringshield = W_CachePatchName("TVATC0", PU_HUDGFX);
+	watershield = W_CachePatchName("TVELC0", PU_HUDGFX);
+	bombshield = W_CachePatchName("TVARC0", PU_HUDGFX);
+	pityshield = W_CachePatchName("TVPIC0", PU_HUDGFX);
+	flameshield = W_CachePatchName("TVFLC0", PU_HUDGFX);
+	bubbleshield = W_CachePatchName("TVBBC0", PU_HUDGFX);
+	thundershield = W_CachePatchName("TVZPC0", PU_HUDGFX);
+	invincibility = W_CachePatchName("TVIVC0", PU_HUDGFX);
+	sneakers = W_CachePatchName("TVSSC0", PU_HUDGFX);
+	gravboots = W_CachePatchName("TVGVC0", PU_HUDGFX);
 
 	tagico = W_CachePatchName("TAGICO", PU_HUDGFX);
 	rflagico = W_CachePatchName("RFLAGICO", PU_HUDGFX);
@@ -576,12 +582,13 @@ static void ST_drawDebugInfo(void)
 		V_DrawRightAlignedString(320, height - 80,  V_MONOSPACE, va("AIR: %4d, %3d", stplyr->powers[pw_underwater], stplyr->powers[pw_spacetime]));
 
 		// Flags
-		V_DrawRightAlignedString(304-74, height - 72, V_MONOSPACE, "PF:");
-		V_DrawString(304-72,             height - 72, (stplyr->jumping) ? V_GREENMAP : V_REDMAP, "JM");
-		V_DrawString(304-54,             height - 72, (stplyr->pflags & PF_JUMPED) ? V_GREENMAP : V_REDMAP, "JD");
-		V_DrawString(304-36,             height - 72, (stplyr->pflags & PF_SPINNING) ? V_GREENMAP : V_REDMAP, "SP");
-		V_DrawString(304-18,             height - 72, (stplyr->pflags & PF_STARTDASH) ? V_GREENMAP : V_REDMAP, "ST");
-		V_DrawString(304,                height - 72, (stplyr->pflags & PF_THOKKED) ? V_GREENMAP : V_REDMAP, "TH");
+		V_DrawRightAlignedString(304-92, height - 72, V_MONOSPACE, "PF:");
+		V_DrawString(304-90,             height - 72, (stplyr->jumping) ? V_GREENMAP : V_REDMAP, "JM");
+		V_DrawString(304-72,             height - 72, (stplyr->pflags & PF_JUMPED) ? V_GREENMAP : V_REDMAP, "JD");
+		V_DrawString(304-54,             height - 72, (stplyr->pflags & PF_SPINNING) ? V_GREENMAP : V_REDMAP, "SP");
+		V_DrawString(304-36,             height - 72, (stplyr->pflags & PF_STARTDASH) ? V_GREENMAP : V_REDMAP, "ST");
+		V_DrawString(304-18,                height - 72, (stplyr->pflags & PF_THOKKED) ? V_GREENMAP : V_REDMAP, "TH");
+		V_DrawString(304,                height - 72, (stplyr->pflags & PF_SHIELDABILITY) ? V_GREENMAP : V_REDMAP, "SH");
 
 		V_DrawRightAlignedString(320, height - 64, V_MONOSPACE, va("CEILZ: %6d", stplyr->mo->ceilingz>>FRACBITS));
 		V_DrawRightAlignedString(320, height - 56, V_MONOSPACE, va("FLOORZ: %6d", stplyr->mo->floorz>>FRACBITS));
@@ -672,9 +679,9 @@ static void ST_drawTime(void)
 
 static inline void ST_drawRings(void)
 {
-	INT32 ringnum = max(stplyr->health-1, 0);
+	INT32 ringnum = max(stplyr->rings, 0);
 
-	ST_DrawPatchFromHudWS(HUD_RINGS, ((stplyr->health <= 1 && leveltime/5 & 1) ? rrings : sborings));
+	ST_DrawPatchFromHudWS(HUD_RINGS, ((stplyr->rings <= 0 && leveltime/5 & 1) ? rrings : sborings));
 
 	if (objectplacing)
 		ringnum = op_currentdoomednum;
@@ -683,8 +690,8 @@ static inline void ST_drawRings(void)
 		INT32 i;
 		ringnum = 0;
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] && players[i].mo && players[i].mo->health > 1)
-				ringnum += players[i].mo->health - 1;
+			if (playeringame[i] && players[i].mo && players[i].rings > 0)
+				ringnum += players[i].rings;
 	}
 
 	ST_DrawNumFromHudWS(HUD_RINGSNUM, ringnum);
@@ -806,18 +813,21 @@ static void ST_drawFirstPersonHUD(void)
 		return;
 
 	// Graue 06-18-2004: no V_NOSCALESTART, no SCX, no SCY, snap to right
-	if (player->powers[pw_shield] & SH_FORCE)
+	if ((player->powers[pw_shield] & SH_NOSTACK & ~SH_FORCEHP) == SH_FORCE)
 	{
-		if ((player->powers[pw_shield] & 0xFF) > 0 || leveltime & 1)
+		if ((player->powers[pw_shield] & SH_FORCEHP) > 0 || leveltime & 1)
 			p = forceshield;
 	}
 	else switch (player->powers[pw_shield] & SH_NOSTACK)
 	{
-	case SH_JUMP:      p = jumpshield;  break;
-	case SH_ELEMENTAL: p = watershield; break;
-	case SH_BOMB:      p = bombshield;  break;
-	case SH_ATTRACT:   p = ringshield;  break;
-	case SH_PITY:      p = pityshield;  break;
+	case SH_WHIRLWIND:   p = jumpshield;    break;
+	case SH_ELEMENTAL:   p = watershield;   break;
+	case SH_ARMAGEDDON:  p = bombshield;    break;
+	case SH_ATTRACT:     p = ringshield;    break;
+	case SH_PITY:        p = pityshield;    break;
+	case SH_FLAMEAURA:   p = flameshield;   break;
+	case SH_BUBBLEWRAP:  p = bubbleshield;  break;
+	case SH_THUNDERCOIN: p = thundershield; break;
 	default: break;
 	}
 
@@ -1153,11 +1163,11 @@ static void ST_drawNiGHTSHUD(void)
 		INT32 i;
 		total_ringcount = 0;
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] /*&& players[i].pflags & PF_NIGHTSMODE*/ && players[i].health)
-				total_ringcount += players[i].health - 1;
+			if (playeringame[i] /*&& players[i].pflags & PF_NIGHTSMODE*/ && players[i].rings)
+				total_ringcount += players[i].rings;
 	}
 	else
-		total_ringcount = stplyr->health-1;
+		total_ringcount = stplyr->rings;
 
 	if (stplyr->capsule)
 	{
@@ -1369,7 +1379,7 @@ static void ST_drawWeaponRing(powertype_t weapon, INT32 rwflag, INT32 wepflag, I
 			txtflags |= V_YELLOWMAP;
 
 		if (weapon == pw_infinityring
-		|| (stplyr->ringweapons & rwflag && stplyr->health > 1))
+		|| (stplyr->ringweapons & rwflag))
 			txtflags |= V_20TRANS;
 		else
 		{
@@ -1407,7 +1417,7 @@ static void ST_drawMatchHUD(void)
 
 	if (stplyr->powers[pw_infinityring])
 		ST_drawWeaponRing(pw_infinityring, 0, 0, offset, infinityring);
-	else if (stplyr->health > 1)
+	else if (stplyr->rings > 0)
 		V_DrawScaledPatch(8 + offset, STRINGY(162), V_SNAPTOLEFT, normring);
 	else
 		V_DrawTranslucentPatch(8 + offset, STRINGY(162), V_SNAPTOLEFT|V_80TRANS, normring);
