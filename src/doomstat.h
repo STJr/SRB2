@@ -241,6 +241,8 @@ typedef struct
 	UINT8 levelflags;     ///< LF_flags:  merged eight booleans into one UINT8 for space, see below
 	UINT8 menuflags;      ///< LF2_flags: options that affect record attack / nights mode menus
 
+	char selectheading[22+5]; ///< Level select heading. Allows for controllable grouping.
+
 	// Freed animals stuff.
 	UINT8 numFlickies;     ///< Internal. For freed flicky support.
 	mobjtype_t *flickies;  ///< List of freeable flickies in this level. Allocated dynamically for space reasons. Be careful.

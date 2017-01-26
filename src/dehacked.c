@@ -1211,6 +1211,12 @@ static void readlevelheader(MYFILE *f, INT32 num)
 			{
 				deh_strlcpy(mapheaderinfo[num-1]->lvlttl, word2,
 					sizeof(mapheaderinfo[num-1]->lvlttl), va("Level header %d: levelname", num));
+				strlcpy(mapheaderinfo[num-1]->selectheading, word2, sizeof(mapheaderinfo[num-1]->selectheading)); // not deh_ so only complains once
+			}
+			else if (fastcmp(word, "SELECTHEADING"))
+			{
+				deh_strlcpy(mapheaderinfo[num-1]->selectheading, word2,
+					sizeof(mapheaderinfo[num-1]->selectheading), va("Level header %d: selectheading", num));
 			}
 			else if (fastcmp(word, "SCRIPTNAME"))
 			{
