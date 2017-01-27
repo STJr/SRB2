@@ -3443,10 +3443,49 @@ static void M_PatchSkinNameTable(void)
 
 // Handle Level Select
 static levelselect_t levelselect = {0, NULL};
-static UINT8 levelselectselect[2];
+static UINT8 levelselectselect[3];
+static patch_t *levselp[4];
+static INT32 lsoffs[2];
 
 #define lsrow levelselectselect[0]
 #define lscol levelselectselect[1]
+#define lstic levelselectselect[2]
+
+#define hseperation 101
+#define vseperation 82
+
+static boolean M_LevelUnlockedInNewList(INT32 mapnum)
+{
+	if (M_MapLocked(mapnum+1))
+		return false; // not unlocked
+
+	switch (levellistmode)
+	{
+		case LLM_CREATESERVER:
+			return true;
+
+		case LLM_LEVELSELECT:
+			return true;
+
+		case LLM_RECORDATTACK:
+			if (mapheaderinfo[mapnum]->menuflags & LF2_NOVISITNEEDED)
+				return true;
+
+			if (!mapvisited[mapnum])
+				return false;
+
+			return true;
+		case LLM_NIGHTSATTACK:
+			if (mapheaderinfo[mapnum]->menuflags & LF2_NOVISITNEEDED)
+				return true;
+
+			if (!mapvisited[mapnum])
+				return false;
+
+			return true;
+	}
+	return true;
+}
 
 //
 // M_CanShowLevelInNewList
@@ -3464,15 +3503,15 @@ boolean M_CanShowLevelInNewList(INT32 mapnum, INT32 gt)
 	if (!mapheaderinfo[mapnum]->lvlttl[0])
 		return false;
 
+	/*if (M_MapLocked(mapnum+1))
+		return false; // not unlocked*/
+
 	switch (levellistmode)
 	{
 		case LLM_CREATESERVER:
 			// Should the map be hidden?
 			if (mapheaderinfo[mapnum]->menuflags & LF2_HIDEINMENU)
 				return false;
-
-			/*if (M_MapLocked(mapnum+1))
-				return false; // not unlocked*/
 
 			if (gt == GT_COOP && (mapheaderinfo[mapnum]->typeoflevel & TOL_COOP))
 				return true;
@@ -3498,21 +3537,15 @@ boolean M_CanShowLevelInNewList(INT32 mapnum, INT32 gt)
 			if (mapheaderinfo[mapnum]->levelselect != maplistoption)
 				return false;
 
-			/*if (M_MapLocked(mapnum+1))
-				return false; // not unlocked*/
-
 			return true;
 		case LLM_RECORDATTACK:
 			if (!(mapheaderinfo[mapnum]->menuflags & LF2_RECORDATTACK))
 				return false;
 
-			/*if (M_MapLocked(mapnum+1))
-				return false; // not unlocked*/
-
-			if (mapheaderinfo[mapnum]->menuflags & LF2_NOVISITNEEDED)
+			/*if (mapheaderinfo[mapnum]->menuflags & LF2_NOVISITNEEDED)
 				return true;
 
-			/*if (!mapvisited[mapnum])
+			if (!mapvisited[mapnum])
 				return false;*/
 
 			return true;
@@ -3520,13 +3553,10 @@ boolean M_CanShowLevelInNewList(INT32 mapnum, INT32 gt)
 			if (!(mapheaderinfo[mapnum]->menuflags & LF2_NIGHTSATTACK))
 				return false;
 
-			/*if (M_MapLocked(mapnum+1))
-				return false; // not unlocked*/
-
-			if (mapheaderinfo[mapnum]->menuflags & LF2_NOVISITNEEDED)
+			/*if (mapheaderinfo[mapnum]->menuflags & LF2_NOVISITNEEDED)
 				return true;
 
-			/*if (!mapvisited[mapnum])
+			if (!mapvisited[mapnum])
 				return false;*/
 
 			return true;
@@ -3612,8 +3642,7 @@ static boolean M_PrepareNewLevelSelect(INT32 gt)
 			}
 
 			levelselect.rows[row].maplist[col] = mapnum+1; // putting the map on the platter
-			levelselect.rows[row].mapavailable[col] = true; /*(!M_MapLocked(mapnum+1)
-				&& (mapvisited[mapnum] || mapheaderinfo[mapnum]->menuflags & LF2_NOVISITNEEDED));*/
+			levelselect.rows[row].mapavailable[col] = M_LevelUnlockedInNewList(mapnum);
 
 			// individual map name
 			if (!levelselect.rows[row].mapavailable[col])
@@ -3642,7 +3671,20 @@ static boolean M_PrepareNewLevelSelect(INT32 gt)
 		}
 	}
 
-	lsrow = lscol = 0;
+	lsrow = lscol = lstic = lsoffs[0] = lsoffs[1] = 0;
+
+	if (levselp[0]) // never going to have some provided but not all, saves individually checking
+	{
+		W_UnlockCachedPatch(levselp[0]);
+		W_UnlockCachedPatch(levselp[1]);
+		W_UnlockCachedPatch(levselp[2]);
+		W_UnlockCachedPatch(levselp[3]);
+	}
+
+	levselp[0] = W_CachePatchName("SLCT1LVL", PU_STATIC);
+	levselp[1] = W_CachePatchName("SLCT2LVL", PU_STATIC);
+	levselp[2] = W_CachePatchName("BLANKLVL", PU_STATIC);
+	levselp[3] = W_CachePatchName("STATCLVL", PU_STATIC);
 
 	return true;
 }
@@ -3658,6 +3700,7 @@ static void M_HandleNewLevelSelect(INT32 choice)
 			lsrow++;
 			if (lsrow == levelselect.numrows)
 				lsrow = 0;
+			lsoffs[0] = vseperation;
 			S_StartSound(NULL,sfx_s3kb7);
 			break;
 
@@ -3665,6 +3708,7 @@ static void M_HandleNewLevelSelect(INT32 choice)
 			lsrow--;
 			if (lsrow == UINT8_MAX)
 				lsrow = levelselect.numrows-1;
+			lsoffs[0] = -vseperation;
 			S_StartSound(NULL,sfx_s3kb7);
 			break;
 
@@ -3672,6 +3716,7 @@ static void M_HandleNewLevelSelect(INT32 choice)
 			if (lscol > 0)
 			{
 				lscol--;
+				lsoffs[1] = hseperation;
 				S_StartSound(NULL,sfx_s3kb7);
 			}
 			break;
@@ -3680,6 +3725,7 @@ static void M_HandleNewLevelSelect(INT32 choice)
 			if (lscol < 2)
 			{
 				lscol++;
+				lsoffs[1] = -hseperation;
 				S_StartSound(NULL,sfx_s3kb7);
 			}
 			break;
@@ -3690,10 +3736,13 @@ static void M_HandleNewLevelSelect(INT32 choice)
 			{
 				CV_SetValue(&cv_nextmap, selectval);
 				M_LevelSelectWarp(0);
-				S_StartSound(NULL,sfx_s3kb7);
+				S_StartSound(NULL,sfx_menu1);
 			}
 			else
+			{
+				lsoffs[0] = -8;
 				S_StartSound(NULL,sfx_s3kb2);
+			}
 			break;
 
 		case KEY_ESCAPE:
@@ -3712,6 +3761,81 @@ static void M_HandleNewLevelSelect(INT32 choice)
 			M_ClearMenus(true);
 	}
 }
+
+static void M_DrawLevelSelectRow(UINT8 row, INT32 y)
+{
+	UINT8 col;
+	const boolean highlight = (row == lsrow);
+	y -= 16;
+	if (levelselect.rows[row].header[0])
+	{
+		V_DrawString(19, y-4, (highlight ? V_YELLOWMAP : 0), levelselect.rows[row].header);
+		if ((y > 0) && (y < 200))
+		{
+			V_DrawFill(19, y+5, 282, 2, 26);
+			V_DrawFill(19, y+5, 281, 1, (highlight ? yellowmap[3] : 3));
+		}
+	}
+	y += 8;
+	for (col = 0; col < 3; col++)
+	{
+		INT32 x = 19+(col*hseperation);
+		patch_t *patch;
+
+		INT32 map = levelselect.rows[row].maplist[col];
+		if (!map)
+			continue;
+
+		//  A 160x100 image of the level as entry MAPxxP
+		if (!(levelselect.rows[row].mapavailable[col]))
+			patch = ((lstic & 1) ? levselp[2] : levselp[3]); // static - make secret maps look ENTICING
+		else if (W_CheckNumForName(va("%sP", G_BuildMapName(map))) != LUMPERROR)
+			patch = W_CachePatchName(va("%sP", G_BuildMapName(map)), PU_CACHE);
+		else
+			patch = levselp[2]; // don't flash to indicate that it's just a normal level
+
+		V_DrawSmallScaledPatch(x, y, 0, patch);
+		W_UnlockCachedPatch(patch);
+
+		if (strlen(levelselect.rows[row].mapnames[col]) > 6) // "EGG ROCK CORE"
+			V_DrawThinString(x, y+50, ((highlight && col == lscol) ? V_YELLOWMAP : 0), levelselect.rows[row].mapnames[col]);
+		else // "ACT 19"
+			V_DrawString(x, y+50, ((highlight && col == lscol) ? V_YELLOWMAP : 0), levelselect.rows[row].mapnames[col]);
+	}
+}
+
+static void M_DrawLevelSelectMenu(void)
+{
+	UINT8 prev = ((lsrow == 0) ? levelselect.numrows-1 : lsrow-1);
+	UINT8 next = ((lsrow == levelselect.numrows-1) ? 0 : lsrow+1);
+
+	if (++lstic == 32)
+		lstic = 0;
+
+	M_DrawLevelSelectRow(prev, lsoffs[0]);
+	M_DrawLevelSelectRow(lsrow, vseperation + lsoffs[0]);
+	M_DrawLevelSelectRow(next, 2*vseperation + lsoffs[0]);
+
+	if (lsoffs[0] > vseperation/3)
+		M_DrawLevelSelectRow( ((prev == 0) ? levelselect.numrows-1 : prev-1), -vseperation + lsoffs[0]);
+	else if (lsoffs[0] < -vseperation/3)
+		M_DrawLevelSelectRow( ((next == levelselect.numrows-1) ? 0 : next+1), 3*vseperation + lsoffs[0]);
+
+	if (abs(lsoffs[0]) > 1)
+		lsoffs[0] = 2*lsoffs[0]/3;
+	else
+		lsoffs[0] = 0;
+
+	if (abs(lsoffs[1]) > 1)
+		lsoffs[1] >>= 2;
+	else
+		lsoffs[1] = 0;
+
+	V_DrawSmallScaledPatch(19+(lscol*hseperation) + lsoffs[1], vseperation-8, 0, ((lstic & 8) ? levselp[0] : levselp[1]));
+}
+
+#undef hseperation
+#undef vseperation
 
 #undef lsrow
 #undef lscol
@@ -4361,36 +4485,6 @@ static void M_DrawEmblemHints(void)
 		V_DrawCenteredString(160, 48, V_YELLOWMAP, "No hidden emblems on this map.");
 
 	M_DrawGenericMenu();
-}
-
-static void M_DrawLevelSelectMenu(void)
-{
-	M_DrawGenericMenu();
-
-	V_DrawCenteredString(160, 40, V_YELLOWMAP, levelselect.rows[levelselectselect[0]].header);
-	V_DrawCenteredString(160, 48,           0, levelselect.rows[levelselectselect[0]].mapnames[levelselectselect[1]]);
-
-	/*if (levelselect.rows[levelselectselect[0]].maplist[levelselectselect[1]])
-		V_DrawCenteredString(160, 48, V_YELLOWMAP,
-		va("%s\n", G_BuildMapTitle(levelselect.rows[levelselectselect[0]].maplist[levelselectselect[1]])));
-	else
-		V_DrawCenteredString(160, 48, V_YELLOWMAP,
-		va("none\n"));*/
-	/*if (cv_nextmap.value)
-	{
-		lumpnum_t lumpnum;
-		patch_t *PictureOfLevel;
-
-		//  A 160x100 image of the level as entry MAPxxP
-		lumpnum = W_CheckNumForName(va("%sP", G_BuildMapName(cv_nextmap.value)));
-
-		if (lumpnum != LUMPERROR)
-			PictureOfLevel = W_CachePatchName(va("%sP", G_BuildMapName(cv_nextmap.value)), PU_CACHE);
-		else
-			PictureOfLevel = W_CachePatchName("BLANKLVL", PU_CACHE);
-
-		V_DrawSmallScaledPatch(200, 110, 0, PictureOfLevel);
-	}*/
 }
 
 static void M_DrawSkyRoom(void)
