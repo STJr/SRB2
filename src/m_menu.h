@@ -66,9 +66,8 @@ void M_StartMessage(const char *string, void *routine, menumessagetype_t itemtyp
 // Called by linux_x/i_video_xshm.c
 void M_QuitResponse(INT32 ch);
 
-// Determines whether to show a level in the list
+// Determines whether to show a level in the list (platter version does not need to be exposed)
 boolean M_CanShowLevelInList(INT32 mapnum, INT32 gt);
-boolean M_CanShowLevelInNewList(INT32 mapnum, INT32 gt);
 
 
 // flags for items in the menu
