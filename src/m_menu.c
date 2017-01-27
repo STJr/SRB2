@@ -645,9 +645,6 @@ static menuitem_t SR_MainMenu[] =
 static menuitem_t SR_LevelSelectMenu[] =
 {
 	{IT_KEYHANDLER | IT_NOTHING, NULL, "", M_HandleLevelPlatter, '\0'},     // dummy menuitem for the control func
-/*	{IT_STRING|IT_CVAR,              NULL, "Level",                 &cv_nextmap,        60},
-
-	{IT_WHITESTRING|IT_CALL,         NULL, "Start",                 M_LevelSelectWarp,     120},*/
 };
 
 static menuitem_t SR_UnlockChecklistMenu[] =
@@ -692,9 +689,7 @@ static menuitem_t SP_LoadGameMenu[] =
 // Single Player Level Select
 static menuitem_t SP_LevelSelectMenu[] =
 {
-	{IT_STRING|IT_CVAR,              NULL, "Level",                 &cv_nextmap,        60},
-
-	{IT_WHITESTRING|IT_CALL,         NULL, "Start",                 M_LevelSelectWarp,     120},
+	{IT_KEYHANDLER | IT_NOTHING, NULL, "", M_HandleLevelPlatter, '\0'},     // dummy menuitem for the control func
 };
 
 // Single Player Time Attack
@@ -1433,12 +1428,12 @@ menu_t SR_MainDef =
 };
 menu_t SR_LevelSelectDef =
 {
-	0,
+	NULL,
 	sizeof (SR_LevelSelectMenu)/sizeof (menuitem_t),
 	&SR_MainDef,
 	SR_LevelSelectMenu,
 	M_DrawLevelPlatterMenu,
-	40, 40,
+	0, 0,
 	0,
 	NULL
 };
@@ -1478,7 +1473,18 @@ menu_t SP_LoadDef =
 	0,
 	NULL
 };
-menu_t SP_LevelSelectDef = MAPICONMENUSTYLE(NULL, SP_LevelSelectMenu, &SP_LoadDef);
+
+menu_t SP_LevelSelectDef =
+{
+	NULL,
+	sizeof (SP_LevelSelectMenu)/sizeof (menuitem_t),
+	&SP_LoadDef,
+	SP_LevelSelectMenu,
+	M_DrawLevelPlatterMenu,
+	0, 0,
+	0,
+	NULL
+};
 
 menu_t SP_GameStatsDef =
 {
@@ -3556,22 +3562,24 @@ static boolean M_CanShowLevelOnPlatter(INT32 mapnum, INT32 gt)
 	return false;
 }
 
-/*static INT32 M_CountLevelsToShowOnPlatter(INT32 gt)
+#if 0
+static INT32 M_CountLevelsToShowOnPlatter(INT32 gt)
 {
 	INT32 mapnum, count = 0;
 
 	for (mapnum = 0; mapnum < NUMMAPS; mapnum++)
-		if (M_CanShowLevelInPlatter(mapnum, gt))
+		if (M_CanShowLevelOnPlatter(mapnum, gt))
 			count++;
 
 	return count;
-}*/
+}
+#endif
 
 static INT32 M_CountRowsToShowOnPlatter(INT32 gt)
 {
-	INT32 mapnum, prevmapnum, col = 0, rows = 0;
+	INT32 mapnum = 0, prevmapnum = 0, col = 0, rows = 0;
 
-	for (mapnum = 0; mapnum < NUMMAPS; mapnum++)
+	while (mapnum < NUMMAPS)
 	{
 		if (M_CanShowLevelOnPlatter(mapnum, gt))
 		{
@@ -3590,6 +3598,7 @@ static INT32 M_CountRowsToShowOnPlatter(INT32 gt)
 			}
 			prevmapnum = mapnum;
 		}
+		mapnum++;
 	}
 
 	return rows;
@@ -3598,7 +3607,7 @@ static INT32 M_CountRowsToShowOnPlatter(INT32 gt)
 static boolean M_PrepareLevelPlatter(INT32 gt)
 {
 	INT32 numrows = M_CountRowsToShowOnPlatter(gt);
-	INT32 mapnum, col = 0, row = 0;
+	INT32 mapnum, desiredmap, col = 0, row = 0;
 
 	if (!numrows)
 		return false;
@@ -3614,6 +3623,8 @@ static boolean M_PrepareLevelPlatter(INT32 gt)
 
 	// done here so lsrow and lscol can be set if cv_nextmap is on the platter
 	lsrow = lscol = lstic = lshli = lsoffs[0] = lsoffs[1] = 0;
+
+	desiredmap = ((Playing()) ? gamemap: cv_nextmap.value);
 
 	for (mapnum = 0; mapnum < NUMMAPS; mapnum++)
 	{
@@ -3638,21 +3649,32 @@ static boolean M_PrepareLevelPlatter(INT32 gt)
 			levelselect.rows[row].maplist[col] = mapnum+1; // putting the map on the platter
 			levelselect.rows[row].mapavailable[col] = M_LevelAvailableOnPlatter(mapnum);
 
-			if (cv_nextmap.value == mapnum+1) // A little quality of life improvement.
+			if (desiredmap == mapnum+1) // A little quality of life improvement.
 			{
 				lsrow = row;
 				lscol = col;
 			}
 
 			// individual map name
-			if (!levelselect.rows[row].mapavailable[col])
-				sprintf(levelselect.rows[row].mapnames[col], "???");
-			else if (actnum)
-				sprintf(levelselect.rows[row].mapnames[col], "ACT %d", actnum);
-			else if (headingisname)
-				sprintf(levelselect.rows[row].mapnames[col], "THE ACT", actnum);
+			if (levelselect.rows[row].mapavailable[col])
+			{
+				if (headingisname)
+				{
+					if (actnum)
+						sprintf(levelselect.rows[row].mapnames[col], "ACT %d", actnum);
+					else
+						sprintf(levelselect.rows[row].mapnames[col], "THE ACT");
+				}
+				else
+				{
+					if (actnum)
+						sprintf(levelselect.rows[row].mapnames[col], "%s %d", mapheaderinfo[mapnum]->lvlttl, actnum);
+					else
+						sprintf(levelselect.rows[row].mapnames[col], "%s", mapheaderinfo[mapnum]->lvlttl);
+				}
+			}
 			else
-				sprintf(levelselect.rows[row].mapnames[col], "%s", mapheaderinfo[mapnum]->lvlttl);
+				sprintf(levelselect.rows[row].mapnames[col], "???");
 
 			// creating header text
 			if (!col && (!row || !(fastcmp(mapheaderinfo[mapnum]->selectheading, mapheaderinfo[levelselect.rows[row-1].maplist[0]-1]->selectheading))))
@@ -4650,6 +4672,7 @@ static void M_CustomLevelSelect(INT32 choice)
 	SR_LevelSelectDef.prevMenu = currentMenu;
 	levellistmode = LLM_LEVELSELECT;
 	maplistoption = (UINT8)(unlockables[ul].variable);
+
 	if (!M_PrepareLevelPlatter(-1))
 	{
 		M_StartMessage(M_GetText("No selectable levels found.\n"),NULL,MM_NOTHING);
@@ -4677,17 +4700,17 @@ static void M_SinglePlayerMenu(INT32 choice)
 static void M_LoadGameLevelSelect(INT32 choice)
 {
 	(void)choice;
+
+	SP_LevelSelectDef.prevMenu = currentMenu;
 	levellistmode = LLM_LEVELSELECT;
 	maplistoption = 1;
-	if (M_CountLevelsToShowInList() == 0)
+
+	if (!M_PrepareLevelPlatter(-1))
 	{
 		M_StartMessage(M_GetText("No selectable levels found.\n"),NULL,MM_NOTHING);
 		return;
 	}
 
-	SP_LevelSelectDef.prevMenu = currentMenu;
-
-	M_PrepareLevelSelect();
 	M_SetupNextMenu(&SP_LevelSelectDef);
 }
 
