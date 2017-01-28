@@ -1174,10 +1174,10 @@ void D_SRB2Main(void)
 	W_VerifyFileMD5(3, ASSET_HASH_RINGS_DTA); // rings.dta
 
 	// Top Down file MD5s
-	//W_VerifyFileMD5(1, "b32517aa75cfcd3154037340a835ee99"); // zones.td
-	W_VerifyFileMD5(2, "e6d142d9fdaee3251b497358a53fb424"); // player.td
-	W_VerifyFileMD5(4, "bfffe2fec3ad2b0d189ac5fa7573ce7a"); // assetpack.td
-	W_VerifyFileMD5(5, "3f273fb9e5b74904ac62c73037599d89"); // tddata.td
+	W_VerifyFileMD5(1, "587f2bde4ea2db432accb3cd9ff1f6e7"); // zones.td
+	W_VerifyFileMD5(2, "55bbb2e63edcd2c2ef1712ff8b2010cc"); // player.td
+	W_VerifyFileMD5(4, "16a0bccb4c4619576f0c689f80637e89"); // assetpack.td
+	W_VerifyFileMD5(5, "9457439f920779a7cc994a5b28070e92"); // tddata.td
 #ifdef USE_PATCH_DTA
 	W_VerifyFileMD5(6, ASSET_HASH_PATCH_DTA); // patch.dta
 #endif

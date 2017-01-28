@@ -456,10 +456,10 @@ static const char *credits[] = {
 	"\1Programming",
 	"\"Sryder13\"", // He's the reason this mod got this far, I swear
 	"\"Wolfy\"", // Oh, he did nothing special. Certainly not typing up credits strings or anything like that.
+	"\"JTE\"", // Advice regarding SRB2's source, MP emblems
 	"",
 	"\1Programming",
 	"\1Assistance",
-	"\"JTE\"", // Advice regarding SRB2's source
 	"\"Zipper\"", // Most reliable on the team! Was always available and created tons of scripts. Even the scrapped ones helped.
 	"\"Badz\" / \"Badnik\"", // Also very reliable, did lots more than Wolfy~
 	"",
@@ -474,10 +474,11 @@ static const char *credits[] = {
 	"\"MotorRoach\"", // Sky Islands fireballs
 	"",
 	"\1Texture Artists",
-	"\"Charybdizs\"",
 	"\"CoatRack\"",
-	"\"Spherallic\"",
 	"\"Iceman404\"",
+	"\"Charybdizs\"",
+	"\"Nev3r\"",
+	"\"Spherallic\"",
 	"\"Blade\"",
 	"",
 	"\1Level Design",
@@ -493,7 +494,7 @@ static const char *credits[] = {
 	"Sonic Riders: Zero Gravity - SEGA", // This game was better, same with the music.
 	"Spiral Knights - SEGA", // Sky Islands and some scrapped maps
 	"Chain Algorithm", // Weather Factory
-	"Super Mario 3D World - Nintendo",
+	"Super Mario 3D World - Nintendo", // Checker Mountain
 	"Zinger & Bacter - SoundShock", // Hub and title screen music
 	"LaTale - Actoz Soft", // Mainframe Metropolis
 	"Sonic Team Junior", // So we're crediting STJr, even though they have a whole section of credits directly below? lol
@@ -502,8 +503,8 @@ static const char *credits[] = {
 	"Drift City - NPluto", // Credits music!
 	"",
 	"\1Testing",
+	"\"Jeck Jims\"", // 100% save file, this man is a legend
 	"\"ChaoticChao\"", // Hosted lots of test netgames
-	"\"Jeck Jims\"",
 	"\"CyberIF\"", // Was almost always around for quick testing
 	"\"Fooruman\"", // Found lots of bugs!
 	"\"katsy\"", // She found bugs too, but she actually went ahead and fixed them as well.
@@ -523,6 +524,7 @@ static const char *credits[] = {
 	"\"Monster Iestyn\" - Hood Ornament", // No, not THAT hood, you fool
 	"\"Prime 2.0\" - Meaningful Ornament", // Well, meaningful ELSEWHERE
 	"\"Flame\" - +b Ornament", // *	ChanServ has kicked Flame from #srb2riders (You are not authorized to be on this channel)
+	"\"Boinciel\" - What's left? Ornament", // I have to say, the only reason why we actually made it to release was because Boin kept pestering us about it.
 	"\"toaster\" - Last Minute Ornament", // Wow, you almost missed being included here!
 	"",
 	"\1Special Thanks",
