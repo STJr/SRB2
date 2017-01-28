@@ -3841,6 +3841,7 @@ static void M_DrawLevelPlatterRow(UINT8 row, INT32 y)
 		}
 		y += 2;
 	}
+
 	for (col = 0; col < 3; col++)
 	{
 		INT32 x = 19+(col*hseperation);
@@ -3860,6 +3861,21 @@ static void M_DrawLevelPlatterRow(UINT8 row, INT32 y)
 
 		V_DrawSmallScaledPatch(x, y, 0, patch);
 
+		if ((y+50) < 200)
+		{
+			INT32 topy = (y+50), h = 8;
+
+			if (topy < 0)
+			{
+				h += topy;
+				topy = 0;
+			}
+			else if (topy + h >= 200)
+				h = 200 - y;
+			if (h > 0)
+				V_DrawFill(x, topy, 80, h, 159);
+		}
+
 		if (strlen(levelselect.rows[row].mapnames[col]) > 6) // "AERIAL GARDEN" vs "ACT 18" - "THE ACT" intentionally compressed
 			V_DrawThinString(x, y+50, ((rowhighlight && col == lscol) ? V_YELLOWMAP : 0), levelselect.rows[row].mapnames[col]);
 		else
@@ -3873,6 +3889,7 @@ static void M_DrawLevelPlatterMenu(void)
 {
 	UINT8 iter = lsrow;
 	INT32 y = basey + lsoffs[0] - getheadingoffset(lsrow);
+	const UINT32 cursorx = 19+(lscol*hseperation);
 
 	if (++lstic == 32)
 		lstic = 0;
@@ -3892,6 +3909,12 @@ static void M_DrawLevelPlatterMenu(void)
 		iter = ((iter == levelselect.numrows-1) ? 0 : iter+1);
 	}
 
+	// draw cursor box
+	V_DrawSmallScaledPatch(cursorx + lsoffs[1], basey, 0, ((lstic & 8) ? levselp[0] : levselp[1]));
+
+	if (levelselect.rows[lsrow].maplist[lscol])
+		V_DrawScaledPatch(cursorx-17, basey+50+lsoffs[0], 0, W_CachePatchName("M_CURSOR", PU_CACHE));
+
 	// handle movement of cursor box
 	if (abs(lsoffs[0]) > 1)
 		lsoffs[0] = 2*lsoffs[0]/3;
@@ -3902,9 +3925,6 @@ static void M_DrawLevelPlatterMenu(void)
 		lsoffs[1] = 2*lsoffs[1]/3;
 	else
 		lsoffs[1] = 0;
-
-	// draw cursor box
-	V_DrawSmallScaledPatch(19+(lscol*hseperation) + lsoffs[1], basey, 0, ((lstic & 8) ? levselp[0] : levselp[1]));
 }
 
 #undef basey
