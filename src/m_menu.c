@@ -3604,6 +3604,12 @@ static INT32 M_CountRowsToShowOnPlatter(INT32 gt)
 	return rows;
 }
 
+//
+// M_PrepareLevelPlatter
+//
+// Prepares a tasty dish of zones and acts!
+// Call before any attempt to access a level platter.
+//
 static boolean M_PrepareLevelPlatter(INT32 gt)
 {
 	INT32 numrows = M_CountRowsToShowOnPlatter(gt);
@@ -3716,6 +3722,11 @@ static boolean M_PrepareLevelPlatter(INT32 gt)
 
 #define selectvalnextmap(column) selectvalnextmapnobrace(column)}
 
+//
+// M_HandleLevelPlatter
+//
+// Reacts to your key inputs. Basically a mini menu thinker.
+//
 static void M_HandleLevelPlatter(INT32 choice)
 {
 	boolean exitmenu = false;  // exit to previous menu
@@ -3772,6 +3783,11 @@ static void M_HandleLevelPlatter(INT32 choice)
 
 				selectvalnextmap(lscol) else selectvalnextmap(0)
 			}
+			else if (!lsoffs[1]) //  prevent sound spam
+			{
+				lsoffs[1] = -8;
+				S_StartSound(NULL,sfx_s3kb7);
+			}
 			break;
 
 		case KEY_RIGHTARROW:
@@ -3783,6 +3799,11 @@ static void M_HandleLevelPlatter(INT32 choice)
 				S_StartSound(NULL,sfx_s3kb7);
 
 				selectvalnextmap(lscol) else selectvalnextmap(0)
+			}
+			else if (!lsoffs[1]) //  prevent sound spam
+			{
+				lsoffs[1] = 8;
+				S_StartSound(NULL,sfx_s3kb7);
 			}
 			break;
 
@@ -3873,7 +3894,9 @@ static void M_DrawLevelPlatterRow(UINT8 row, INT32 y)
 			else if (topy + h >= 200)
 				h = 200 - y;
 			if (h > 0)
-				V_DrawFill(x, topy, 80, h, 159);
+				V_DrawFill(x, topy, 80, h,
+				((mapheaderinfo[map-1]->unlockrequired < 0)
+				? 159 : 63));
 		}
 
 		if (strlen(levelselect.rows[row].mapnames[col]) > 6) // "AERIAL GARDEN" vs "ACT 18" - "THE ACT" intentionally compressed
@@ -3940,7 +3963,7 @@ static void M_DrawLevelPlatterMenu(void)
 #undef getheadingoffset
 #undef vseperation
 
-// Call before showing any level-select menus
+// Call before showing any level-select menus (Not necessary for platter-based ones)
 static void M_PrepareLevelSelect(void)
 {
 	if (levellistmode != LLM_CREATESERVER)
