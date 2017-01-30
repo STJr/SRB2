@@ -5839,7 +5839,7 @@ void M_DrawTimeAttackMenu(void)
 
 		V_DrawSmallScaledPatch(208, 32+lsheadingheight, 0, PictureOfLevel);
 
-		V_DrawCenteredString(104, 32+lsheadingheight/2, 0, "* LEVEL RECORDS *");
+		V_DrawString(104 - 72, 32+lsheadingheight/2, 0, "* LEVEL RECORDS *");
 
 		if (!mainrecords[cv_nextmap.value-1] || !mainrecords[cv_nextmap.value-1]->score)
 			sprintf(beststr, "(none)");
@@ -6035,16 +6035,16 @@ void M_DrawNightsAttackMenu(void)
 
 		V_DrawSmallScaledPatch(208, 32+lsheadingheight, 0, PictureOfLevel);
 
-		V_DrawCenteredString(104, 32+lsheadingheight/2, 0, "* LEVEL RECORDS *");
+		V_DrawString(104 - 72, 32+lsheadingheight/2, 0, "* LEVEL RECORDS *");
 
 		if (P_HasGrades(cv_nextmap.value, 0))
 			V_DrawScaledPatch(235, 135, 0, ngradeletters[bestoverall]);
 
 		if (P_HasGrades(cv_nextmap.value, cv_dummymares.value))
-			{
+			{//make bigger again
 			V_DrawString(104 - 72, 48+lsheadingheight/2, V_YELLOWMAP, "BEST GRADE:");
-			V_DrawTinyScaledPatch(104 + 72 - (ngradeletters[bestgrade]->width/4) - 1,
-				48+lsheadingheight/2 - 1,
+			V_DrawSmallScaledPatch(104 + 72 - (ngradeletters[bestgrade]->width/2),
+				48+lsheadingheight/2 + 8 - (ngradeletters[bestgrade]->height/2),
 				0, ngradeletters[bestgrade]);
 		}
 
