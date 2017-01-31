@@ -706,10 +706,10 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 // Loop through R_DrawMaskedColumn calls
 static void R_DrawRepeatMaskedColumn(column_t *col)
 {
-	do {
+	while (sprtopscreen < sprbotscreen) {
 		R_DrawMaskedColumn(col);
 		sprtopscreen += dc_texheight*spryscale;
-	} while (sprtopscreen < sprbotscreen);
+	}
 }
 
 //
