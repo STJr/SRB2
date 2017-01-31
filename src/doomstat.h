@@ -313,7 +313,7 @@ enum GameType
 
 	NUMGAMETYPES
 };
-// If you alter this list, update gametype_cons_t in m_menu.c
+// If you alter this list, update dehacked.c, and gametype_cons_t and MISC_ChangeGameTypeMenu in m_menu.c
 
 extern tic_t totalplaytime;
 

@@ -242,6 +242,7 @@ static void M_Options(INT32 choice);
 static void M_SelectableClearMenus(INT32 choice);
 static void M_Retry(INT32 choice);
 static void M_EndGame(INT32 choice);
+static void M_GameTypeChange(INT32 choice);
 static void M_MapChange(INT32 choice);
 static void M_ChangeLevel(INT32 choice);
 static void M_ConfirmSpectate(INT32 choice);
@@ -328,6 +329,7 @@ static void M_DrawSkyRoom(void);
 static void M_DrawChecklist(void);
 static void M_DrawEmblemHints(void);
 static void M_DrawPauseMenu(void);
+static void M_DrawGameTypeMenu(void);
 static void M_DrawServerMenu(void);
 static void M_DrawLevelPlatterMenu(void);
 static void M_DrawImageDef(void);
@@ -392,7 +394,7 @@ static CV_PossibleValue_t skins_cons_t[MAXSKINS+1] = {{1, DEFAULTSKIN}};
 consvar_t cv_chooseskin = {"chooseskin", DEFAULTSKIN, CV_HIDEN|CV_CALL, skins_cons_t, Nextmap_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 // This gametype list is integral for many different reasons.
-// When you add gametypes here, don't forget to update them in CV_AddValue!
+// When you add gametypes here, don't forget to update them in dehacked.c and doomstat.h!
 CV_PossibleValue_t gametype_cons_t[] =
 {
 	{GT_COOP, "Co-op"},
@@ -505,7 +507,7 @@ typedef enum
 static menuitem_t MPauseMenu[] =
 {
 	{IT_STRING  | IT_SUBMENU, NULL, "Scramble Teams...", &MISC_ScrambleTeamDef, 16},
-	{IT_STRING  | IT_CALL,    NULL, "Switch Map..."    , M_MapChange,           24},
+	{IT_STRING  | IT_CALL,    NULL, "Switch Map..."    , M_GameTypeChange,           24},
 
 	{IT_CALL | IT_STRING,    NULL, "Continue",             M_SelectableClearMenus,40},
 	{IT_CALL | IT_STRING,    NULL, "Player 1 Setup",       M_SetupMultiPlayer,    48}, // splitscreen
@@ -586,11 +588,25 @@ static menuitem_t MISC_ChangeTeamMenu[] =
 	{IT_WHITESTRING|IT_CALL,         NULL, "Confirm",           M_ConfirmTeamChange,    90},
 };
 
+static menuitem_t MISC_ChangeGameTypeMenu[] =
+{
+	{IT_STRING|IT_CALL,              NULL, "Co-op",            M_MapChange,  0},
+
+	{IT_STRING|IT_CALL,              NULL, "Competition",      M_MapChange, 12},
+	{IT_STRING|IT_CALL,              NULL, "Race",             M_MapChange, 20},
+
+	{IT_STRING|IT_CALL,              NULL, "Match",            M_MapChange, 32},
+	{IT_STRING|IT_CALL,              NULL, "Team Match",       M_MapChange, 40},
+
+	{IT_STRING|IT_CALL,              NULL, "Tag",              M_MapChange, 52},
+	{IT_STRING|IT_CALL,              NULL, "Hide and Seek",    M_MapChange, 60},
+
+	{IT_STRING|IT_CALL,              NULL, "Capture the Flag", M_MapChange, 72},
+};
+
 static menuitem_t MISC_ChangeLevelMenu[] =
 {
-	{IT_STRING|IT_CVAR,              NULL, "Game Type",             &cv_newgametype,    30},
-	{IT_STRING|IT_CVAR,              NULL, "Level",                 &cv_nextmap,        60},
-	{IT_WHITESTRING|IT_CALL,         NULL, "Change Level",          M_ChangeLevel,     120},
+	{IT_KEYHANDLER | IT_NOTHING, NULL, "", M_HandleLevelPlatter, 0},     // dummy menuitem for the control func
 };
 
 static menuitem_t MISC_HelpMenu[] =
@@ -664,7 +680,7 @@ static menuitem_t SR_MainMenu[] =
 
 static menuitem_t SR_LevelSelectMenu[] =
 {
-	{IT_KEYHANDLER | IT_NOTHING, NULL, "", M_HandleLevelPlatter, '\0'},     // dummy menuitem for the control func
+	{IT_KEYHANDLER | IT_NOTHING, NULL, "", M_HandleLevelPlatter, 0},     // dummy menuitem for the control func
 };
 
 static menuitem_t SR_UnlockChecklistMenu[] =
@@ -703,19 +719,19 @@ enum
 // Single Player Load Game
 static menuitem_t SP_LoadGameMenu[] =
 {
-	{IT_KEYHANDLER | IT_NOTHING, NULL, "", M_HandleLoadSave, '\0'},     // dummy menuitem for the control func
+	{IT_KEYHANDLER | IT_NOTHING, NULL, "", M_HandleLoadSave, 0},     // dummy menuitem for the control func
 };
 
 // Single Player Level Select
 static menuitem_t SP_LevelSelectMenu[] =
 {
-	{IT_KEYHANDLER | IT_NOTHING, NULL, "", M_HandleLevelPlatter, '\0'},     // dummy menuitem for the control func
+	{IT_KEYHANDLER | IT_NOTHING, NULL, "", M_HandleLevelPlatter, 0},     // dummy menuitem for the control func
 };
 
 // Single Player Time Attack Level Select
 static menuitem_t SP_TimeAttackLevelSelectMenu[] =
 {
-	{IT_KEYHANDLER | IT_NOTHING, NULL, "", M_HandleLevelPlatter, '\0'},     // dummy menuitem for the control func
+	{IT_KEYHANDLER | IT_NOTHING, NULL, "", M_HandleLevelPlatter, 0},     // dummy menuitem for the control func
 };
 
 // Single Player Time Attack
@@ -813,7 +829,7 @@ static menuitem_t SP_NightsGhostMenu[] =
 // Single Player Nights Attack Level Select
 static menuitem_t SP_NightsAttackLevelSelectMenu[] =
 {
-	{IT_KEYHANDLER | IT_NOTHING, NULL, "", M_HandleLevelPlatter, '\0'},     // dummy menuitem for the control func
+	{IT_KEYHANDLER | IT_NOTHING, NULL, "", M_HandleLevelPlatter, 0},     // dummy menuitem for the control func
 };
 
 // Single Player Nights Attack
@@ -842,12 +858,12 @@ enum
 // Statistics
 static menuitem_t SP_GameStatsMenu[] =
 {
-	{IT_KEYHANDLER | IT_NOTHING, NULL, "", M_HandleGameStats, '\0'},     // dummy menuitem for the control func
+	{IT_KEYHANDLER | IT_NOTHING, NULL, "", M_HandleGameStats, 0},     // dummy menuitem for the control func
 };
 
 static menuitem_t SP_LevelStatsMenu[] =
 {
-	{IT_KEYHANDLER | IT_NOTHING, NULL, "", M_HandleLevelStats, '\0'},     // dummy menuitem for the control func
+	{IT_KEYHANDLER | IT_NOTHING, NULL, "", M_HandleLevelStats, 0},     // dummy menuitem for the control func
 };
 
 // A rare case.
@@ -1199,7 +1215,7 @@ static menuitem_t OP_VideoOptionsMenu[] =
 
 static menuitem_t OP_VideoModeMenu[] =
 {
-	{IT_KEYHANDLER | IT_NOTHING, NULL, "", M_HandleVideoMode, '\0'},     // dummy menuitem for the control func
+	{IT_KEYHANDLER | IT_NOTHING, NULL, "", M_HandleVideoMode, 0},     // dummy menuitem for the control func
 };
 
 #ifdef HWRENDER
@@ -1432,7 +1448,31 @@ menu_t MPauseDef = PAUSEMENUSTYLE(MPauseMenu, 40, 72);
 // Misc Main Menu
 menu_t MISC_ScrambleTeamDef = DEFAULTMENUSTYLE(NULL, MISC_ScrambleTeamMenu, &MPauseDef, 27, 40);
 menu_t MISC_ChangeTeamDef = DEFAULTMENUSTYLE(NULL, MISC_ChangeTeamMenu, &MPauseDef, 27, 40);
-menu_t MISC_ChangeLevelDef = MAPICONMENUSTYLE(NULL, MISC_ChangeLevelMenu, &MPauseDef);
+
+// MP Gametype and map change menu
+menu_t MISC_ChangeGameTypeDef =
+{
+	NULL,
+	sizeof (MISC_ChangeGameTypeMenu)/sizeof (menuitem_t),
+	&MainDef,  // Doesn't matter.
+	MISC_ChangeGameTypeMenu,
+	M_DrawGameTypeMenu,
+	30, 104 - ((80 - lsheadingheight/2)/2), // vertically centering
+	0,
+	NULL
+};
+menu_t MISC_ChangeLevelDef =
+{
+	NULL,
+	sizeof (MISC_ChangeLevelMenu)/sizeof (menuitem_t),
+	&MISC_ChangeGameTypeDef,
+	MISC_ChangeLevelMenu,
+	M_DrawLevelPlatterMenu,
+	0, 0,
+	0,
+	NULL
+};
+
 menu_t MISC_HelpDef = IMAGEDEF(MISC_HelpMenu);
 
 // Sky Room
@@ -3885,6 +3925,8 @@ static void M_HandleLevelPlatter(INT32 choice)
 					else
 						M_NightsAttack(-1);
 				}
+				else if (currentMenu == &MISC_ChangeLevelDef)
+					M_ChangeLevel(0);
 				else
 					M_LevelSelectWarp(0);
 			}
@@ -6845,16 +6887,35 @@ static void M_DrawServerMenu(void)
 	V_DrawSmallScaledPatch((BASEVIDWIDTH*3/4)-(SHORT(PictureOfLevel->width)/4), ((BASEVIDHEIGHT*3/4)-(SHORT(PictureOfLevel->height)/4)+10), 0, PictureOfLevel);
 }
 
-static void M_MapChange(INT32 choice)
+static void M_GameTypeChange(INT32 choice)
 {
 	(void)choice;
 
+	MISC_ChangeGameTypeDef.prevMenu = currentMenu;
+	M_SetupNextMenu(&MISC_ChangeGameTypeDef);
+	itemOn = gametype;
+}
+
+// Drawing function for Nights Attack
+void M_DrawGameTypeMenu(void)
+{
+	M_DrawGenericMenu();
+	M_DrawLevelPlatterHeader(currentMenu->y - lsheadingheight, "SELECT GAMETYPE", true);
+}
+
+static void M_MapChange(INT32 choice)
+{
+	MISC_ChangeLevelDef.prevMenu = currentMenu;
 	levellistmode = LLM_CREATESERVER;
 
-	CV_SetValue(&cv_newgametype, gametype);
-	CV_SetValue(&cv_nextmap, gamemap);
+	CV_SetValue(&cv_newgametype, choice);
 
-	M_PrepareLevelSelect();
+	if (!M_PrepareLevelPlatter(choice))
+	{
+		M_StartMessage(M_GetText("No selectable levels found.\n"),NULL,MM_NOTHING);
+		return;
+	}
+
 	M_SetupNextMenu(&MISC_ChangeLevelDef);
 }
 
