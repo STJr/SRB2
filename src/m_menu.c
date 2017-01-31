@@ -406,7 +406,7 @@ CV_PossibleValue_t gametype_cons_t[] =
 	{GT_TEAMMATCH, "Team Match"},
 
 	{GT_TAG, "Tag"},
-	{GT_HIDEANDSEEK, "Hide and Seek"},
+	{GT_HIDEANDSEEK, "Hide & Seek"},
 
 	{GT_CTF, "CTF"},
 	{0, NULL}
@@ -506,21 +506,21 @@ typedef enum
 // ---------------------
 static menuitem_t MPauseMenu[] =
 {
-	{IT_STRING  | IT_SUBMENU, NULL, "Scramble Teams...", &MISC_ScrambleTeamDef, 16},
-	{IT_STRING  | IT_CALL,    NULL, "Switch Map..."    , M_GameTypeChange,           24},
+	{IT_STRING  | IT_SUBMENU, NULL, "Scramble Teams...",        &MISC_ScrambleTeamDef, 16},
+	{IT_STRING  | IT_CALL,    NULL, "Switch Gametype/Level...", M_GameTypeChange,      24},
 
-	{IT_CALL | IT_STRING,    NULL, "Continue",             M_SelectableClearMenus,40},
-	{IT_CALL | IT_STRING,    NULL, "Player 1 Setup",       M_SetupMultiPlayer,    48}, // splitscreen
-	{IT_CALL | IT_STRING,    NULL, "Player 2 Setup",       M_SetupMultiPlayer2,   56}, // splitscreen
+	{IT_CALL | IT_STRING,    NULL, "Continue",                  M_SelectableClearMenus,40},
+	{IT_CALL | IT_STRING,    NULL, "Player 1 Setup",            M_SetupMultiPlayer,    48}, // splitscreen
+	{IT_CALL | IT_STRING,    NULL, "Player 2 Setup",            M_SetupMultiPlayer2,   56}, // splitscreen
 
-	{IT_STRING | IT_CALL,    NULL, "Spectate",             M_ConfirmSpectate,     48},
-	{IT_STRING | IT_CALL,    NULL, "Enter Game",           M_ConfirmEnterGame,    48},
-	{IT_STRING | IT_SUBMENU, NULL, "Switch Team...",       &MISC_ChangeTeamDef,   48},
-	{IT_CALL | IT_STRING,    NULL, "Player Setup",         M_SetupMultiPlayer,    56}, // alone
-	{IT_CALL | IT_STRING,    NULL, "Options",              M_Options,             64},
+	{IT_STRING | IT_CALL,    NULL, "Spectate",                  M_ConfirmSpectate,     48},
+	{IT_STRING | IT_CALL,    NULL, "Enter Game",                M_ConfirmEnterGame,    48},
+	{IT_STRING | IT_SUBMENU, NULL, "Switch Team...",            &MISC_ChangeTeamDef,   48},
+	{IT_CALL | IT_STRING,    NULL, "Player Setup",              M_SetupMultiPlayer,    56}, // alone
+	{IT_CALL | IT_STRING,    NULL, "Options",                   M_Options,             64},
 
-	{IT_CALL | IT_STRING,    NULL, "Return to Title",      M_EndGame,            80},
-	{IT_CALL | IT_STRING,    NULL, "Quit Game",            M_QuitSRB2,           88},
+	{IT_CALL | IT_STRING,    NULL, "Return to Title",           M_EndGame,             80},
+	{IT_CALL | IT_STRING,    NULL, "Quit Game",                 M_QuitSRB2,            88},
 };
 
 typedef enum
@@ -599,7 +599,7 @@ static menuitem_t MISC_ChangeGameTypeMenu[] =
 	{IT_STRING|IT_CALL,              NULL, "Team Match",       M_MapChange, 40},
 
 	{IT_STRING|IT_CALL,              NULL, "Tag",              M_MapChange, 52},
-	{IT_STRING|IT_CALL,              NULL, "Hide and Seek",    M_MapChange, 60},
+	{IT_STRING|IT_CALL,              NULL, "Hide & Seek",      M_MapChange, 60},
 
 	{IT_STRING|IT_CALL,              NULL, "Capture the Flag", M_MapChange, 72},
 };
@@ -924,26 +924,31 @@ static menuitem_t MP_MainMenu[] =
 
 static menuitem_t MP_ServerMenu[] =
 {
-	{IT_STRING|IT_CVAR,              NULL, "Game Type",             &cv_newgametype,    10},
+	{IT_DISABLED|IT_NOTHING, NULL, "", NULL, 0},
 #ifndef NONET
-	{IT_STRING|IT_CALL,              NULL, "Room...",               M_RoomMenu,         20},
-	{IT_STRING|IT_CVAR|IT_CV_STRING, NULL, "Server Name",           &cv_servername,     30},
+	{IT_STRING|IT_CALL,              NULL, "Room...",                   M_RoomMenu,         10},
+	{IT_STRING|IT_CVAR|IT_CV_STRING, NULL, "Server Name",               &cv_servername,     20},
 #endif
-
-	{IT_STRING|IT_CVAR,              NULL, "Level",                 &cv_nextmap,        80},
-
-	{IT_WHITESTRING|IT_CALL,         NULL, "Start",                 M_StartServer,     130},
+	{IT_STRING|IT_CALL,              NULL, "Select Gametype/Level", M_GameTypeChange,   90},
+	{IT_WHITESTRING|IT_CALL,         NULL, "Start",                     M_StartServer,     130},
 };
 
 enum
 {
-	mp_server_gametype = 0,
+	mp_server_dummy = 0, // exists solely so numbering is consistent between NONET and not NONET
 #ifndef NONET
 	mp_server_room,
 	mp_server_name,
 #endif
-	mp_server_level,
+	mp_server_levelgt,
 	mp_server_start
+};
+
+// Separated splitscreen and normal servers.
+static menuitem_t MP_SplitServerMenu[] =
+{
+	{IT_STRING|IT_CALL,              NULL, "Select Gametype/Level", M_GameTypeChange,   90},
+	{IT_WHITESTRING|IT_CALL,         NULL, "Start",                     M_StartServer,     130},
 };
 
 #ifndef NONET
@@ -1003,14 +1008,6 @@ static menuitem_t MP_ConnectIPMenu[] =
 	{IT_KEYHANDLER | IT_STRING, NULL, "  IP Address:", M_HandleConnectIP, 0},
 };
 #endif
-
-// Separated splitscreen and normal servers.
-static menuitem_t MP_SplitServerMenu[] =
-{
-	{IT_STRING|IT_CVAR,              NULL, "Game Type",             &cv_newgametype,    10},
-	{IT_STRING|IT_CVAR,              NULL, "Level",                 &cv_nextmap,        80},
-	{IT_WHITESTRING|IT_CALL,         NULL, "Start",                 M_StartServer,     130},
-};
 
 static menuitem_t MP_PlayerSetupMenu[] =
 {
@@ -1708,7 +1705,31 @@ menu_t SP_PlayerDef =
 
 // Multiplayer
 menu_t MP_MainDef = DEFAULTMENUSTYLE("M_MULTI", MP_MainMenu, &MainDef, 60, 40);
-menu_t MP_ServerDef = MAPICONMENUSTYLE("M_MULTI", MP_ServerMenu, &MP_MainDef);
+
+menu_t MP_ServerDef =
+{
+	"M_MULTI",
+	sizeof (MP_ServerMenu)/sizeof (menuitem_t),
+	&MP_MainDef,
+	MP_ServerMenu,
+	M_DrawServerMenu,
+	27, 40,
+	0,
+	NULL
+};
+
+menu_t MP_SplitServerDef =
+{
+	"M_MULTI",
+	sizeof (MP_SplitServerMenu)/sizeof (menuitem_t),
+	&MP_MainDef,
+	MP_SplitServerMenu,
+	M_DrawServerMenu,
+	27, 40,
+	0,
+	NULL
+};
+
 #ifndef NONET
 menu_t MP_ConnectDef =
 {
@@ -1744,7 +1765,7 @@ menu_t MP_RoomDef =
 	NULL
 };
 #endif
-menu_t MP_SplitServerDef = MAPICONMENUSTYLE("M_MULTI", MP_SplitServerMenu, &MP_MainDef);
+
 menu_t MP_PlayerSetupDef =
 {
 	"M_SPLAYR",
@@ -3926,7 +3947,12 @@ static void M_HandleLevelPlatter(INT32 choice)
 						M_NightsAttack(-1);
 				}
 				else if (currentMenu == &MISC_ChangeLevelDef)
-					M_ChangeLevel(0);
+				{
+					if (currentMenu->prevMenu && currentMenu->prevMenu->prevMenu != &MPauseDef)
+						M_SetupNextMenu(currentMenu->prevMenu->prevMenu);
+					else
+						M_ChangeLevel(0);
+				}
 				else
 					M_LevelSelectWarp(0);
 			}
@@ -3956,7 +3982,7 @@ static void M_HandleLevelPlatter(INT32 choice)
 				D_StartTitle();
 			}
 			else
-				M_SetupNextMenu (currentMenu->prevMenu);
+				M_SetupNextMenu(currentMenu->prevMenu);
 		}
 		else
 			M_ClearMenus(true);
@@ -6858,10 +6884,9 @@ static void M_StartServer(INT32 choice)
 
 static void M_DrawServerMenu(void)
 {
-	lumpnum_t lumpnum;
-	patch_t *PictureOfLevel;
-
 	M_DrawGenericMenu();
+
+	M_DrawLevelPlatterHeader(currentMenu->y - lsheadingheight/2, "Server settings", true);
 
 #ifndef NONET
 	// Room name
@@ -6876,15 +6901,26 @@ static void M_DrawServerMenu(void)
 	}
 #endif
 
-	//  A 160x100 image of the level as entry MAPxxP
-	lumpnum = W_CheckNumForName(va("%sP", G_BuildMapName(cv_nextmap.value)));
+	if (cv_nextmap.value)
+	{
+		patch_t *PictureOfLevel;
+		lumpnum_t lumpnum;
+		char headerstr[40];
 
-	if (lumpnum != LUMPERROR)
-		PictureOfLevel = W_CachePatchName(va("%sP", G_BuildMapName(cv_nextmap.value)), PU_CACHE);
-	else
-		PictureOfLevel = W_CachePatchName("BLANKLVL", PU_CACHE);
+		sprintf(headerstr, "%s - %s", cv_newgametype.string, cv_nextmap.string);
 
-	V_DrawSmallScaledPatch((BASEVIDWIDTH*3/4)-(SHORT(PictureOfLevel->width)/4), ((BASEVIDHEIGHT*3/4)-(SHORT(PictureOfLevel->height)/4)+10), 0, PictureOfLevel);
+		M_DrawLevelPlatterHeader(currentMenu->y + 80 - lsheadingheight/2, (const char *)headerstr, true);
+
+		//  A 160x100 image of the level as entry MAPxxP
+		lumpnum = W_CheckNumForName(va("%sP", G_BuildMapName(cv_nextmap.value)));
+
+		if (lumpnum != LUMPERROR)
+			PictureOfLevel = W_CachePatchName(va("%sP", G_BuildMapName(cv_nextmap.value)), PU_CACHE);
+		else
+			PictureOfLevel = W_CachePatchName("BLANKLVL", PU_CACHE);
+
+		V_DrawSmallScaledPatch(319 - (currentMenu->x + (SHORT(PictureOfLevel->width)/2)), currentMenu->y + 90, 0, PictureOfLevel);
+	}
 }
 
 static void M_GameTypeChange(INT32 choice)
@@ -6893,14 +6929,14 @@ static void M_GameTypeChange(INT32 choice)
 
 	MISC_ChangeGameTypeDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&MISC_ChangeGameTypeDef);
-	itemOn = gametype;
+	if (Playing())
+		itemOn = gametype;
 }
 
-// Drawing function for Nights Attack
 void M_DrawGameTypeMenu(void)
 {
 	M_DrawGenericMenu();
-	M_DrawLevelPlatterHeader(currentMenu->y - lsheadingheight, "SELECT GAMETYPE", true);
+	M_DrawLevelPlatterHeader(currentMenu->y - lsheadingheight, "Select Gametype", true);
 }
 
 static void M_MapChange(INT32 choice)
@@ -6923,7 +6959,7 @@ static void M_StartSplitServerMenu(INT32 choice)
 {
 	(void)choice;
 	levellistmode = LLM_CREATESERVER;
-	M_PrepareLevelSelect();
+	Newgametype_OnChange();
 	M_SetupNextMenu(&MP_SplitServerDef);
 }
 
@@ -6931,10 +6967,11 @@ static void M_StartSplitServerMenu(INT32 choice)
 static void M_StartServerMenu(INT32 choice)
 {
 	(void)choice;
-	levellistmode = LLM_CREATESERVER;
-	M_PrepareLevelSelect();
 	ms_RoomId = -1;
+	levellistmode = LLM_CREATESERVER;
+	Newgametype_OnChange();
 	M_SetupNextMenu(&MP_ServerDef);
+	itemOn = 1;
 
 }
 
