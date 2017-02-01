@@ -89,7 +89,7 @@ void G_ChangePlayerReferences(mobj_t *oldmo, mobj_t *newmo);
 void G_DoReborn(INT32 playernum);
 void G_PlayerReborn(INT32 player);
 void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer,
-	boolean skipprecutscene);
+	boolean skipprecutscene, boolean FLS);
 char *G_BuildMapTitle(INT32 mapnum);
 
 // XMOD spawning
