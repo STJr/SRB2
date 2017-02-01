@@ -6991,7 +6991,6 @@ static void M_StartServerMenu(INT32 choice)
 	Newgametype_OnChange();
 	M_SetupNextMenu(&MP_ServerDef);
 	itemOn = 1;
-
 }
 
 // ==============
