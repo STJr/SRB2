@@ -1721,7 +1721,11 @@ menu_t MP_ServerDef =
 	&MP_MainDef,
 	MP_ServerMenu,
 	M_DrawServerMenu,
-	27, 30,
+	27, 30
+#ifdef NONET
+	- 50
+#endif
+	,
 	0,
 	NULL
 };
@@ -1733,7 +1737,7 @@ menu_t MP_SplitServerDef =
 	&MP_MainDef,
 	MP_SplitServerMenu,
 	M_DrawServerMenu,
-	27, 30,
+	27, 30 - 50,
 	0,
 	NULL
 };
@@ -6894,12 +6898,11 @@ static void M_DrawServerMenu(void)
 {
 	M_DrawGenericMenu();
 
-	M_DrawLevelPlatterHeader(currentMenu->y - lsheadingheight/2, "Server settings", true);
-
 #ifndef NONET
 	// Room name
 	if (currentMenu == &MP_ServerDef)
 	{
+		M_DrawLevelPlatterHeader(currentMenu->y - lsheadingheight/2, "Server settings", true);
 		if (ms_RoomId < 0)
 			V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, currentMenu->y + MP_ServerMenu[mp_server_room].alphaKey,
 			                         V_YELLOWMAP, (itemOn == mp_server_room) ? "<Select to change>" : "<Offline Mode>");
