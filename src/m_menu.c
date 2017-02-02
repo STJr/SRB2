@@ -3809,10 +3809,17 @@ static boolean M_PrepareLevelPlatter(INT32 gt)
 				}
 				else
 				{
+					char mapname[22+3]; // lvlttl[22] + " 19"
+
 					if (actnum)
-						sprintf(levelselect.rows[row].mapnames[col], "%s %d", mapheaderinfo[mapnum]->lvlttl, actnum);
+						sprintf(mapname, "%s %d", mapheaderinfo[mapnum]->lvlttl, actnum);
 					else
-						sprintf(levelselect.rows[row].mapnames[col], "%s", mapheaderinfo[mapnum]->lvlttl);
+						sprintf(mapname, "%s", mapheaderinfo[mapnum]->lvlttl);
+
+					if (strlen(mapname) >= 17)
+						sprintf(mapname+17-3, "...");
+
+					strcpy(levelselect.rows[row].mapnames[col], (const char *)mapname);
 				}
 			}
 			else

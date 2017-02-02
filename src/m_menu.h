@@ -187,7 +187,7 @@ typedef struct
 {
 	char header[22+5]; // mapheader_t lvltttl max length + " ZONE"
 	INT32 maplist[3];
-	char mapnames[3][22];
+	char mapnames[3][17+1];
 	boolean mapavailable[3];
 } levelselectrow_t;
 
