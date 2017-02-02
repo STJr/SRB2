@@ -1503,17 +1503,9 @@ menu_t SR_MainDef =
 	0,
 	NULL
 };
-menu_t SR_LevelSelectDef =
-{
-	NULL,
-	sizeof (SR_LevelSelectMenu)/sizeof (menuitem_t),
-	&SR_MainDef,
-	SR_LevelSelectMenu,
-	M_DrawLevelPlatterMenu,
-	0, 0,
-	0,
-	NULL
-};
+
+menu_t SR_LevelSelectDef = MAPPLATTERMENUSTYLE(NULL, SR_LevelSelectMenu);
+
 menu_t SR_UnlockChecklistDef =
 {
 	NULL,
@@ -1551,17 +1543,7 @@ menu_t SP_LoadDef =
 	NULL
 };
 
-menu_t SP_LevelSelectDef =
-{
-	NULL,
-	sizeof (SP_LevelSelectMenu)/sizeof (menuitem_t),
-	&MainDef,  // Doesn't matter.
-	SP_LevelSelectMenu,
-	M_DrawLevelPlatterMenu,
-	0, 0,
-	0,
-	NULL
-};
+menu_t SP_LevelSelectDef = MAPPLATTERMENUSTYLE(NULL, SP_LevelSelectMenu);
 
 menu_t SP_GameStatsDef =
 {
@@ -1586,17 +1568,8 @@ menu_t SP_LevelStatsDef =
 	NULL
 };
 
-menu_t SP_TimeAttackLevelSelectDef =
-{
-	"M_ATTACK",
-	sizeof (SP_TimeAttackLevelSelectMenu)/sizeof (menuitem_t),
-	&MainDef,  // Doesn't matter.
-	SP_TimeAttackLevelSelectMenu,
-	M_DrawLevelPlatterMenu,
-	0, 0,
-	0,
-	NULL
-};
+menu_t SP_TimeAttackLevelSelectDef = MAPPLATTERMENUSTYLE("M_ATTACK", SP_TimeAttackLevelSelectMenu);
+
 static menu_t SP_TimeAttackDef =
 {
 	"M_ATTACK",
@@ -1642,17 +1615,8 @@ static menu_t SP_GhostDef =
 	NULL
 };
 
-menu_t SP_NightsAttackLevelSelectDef =
-{
-	"M_NIGHTS", // HAMALAYAN
-	sizeof (SP_NightsAttackLevelSelectMenu)/sizeof (menuitem_t),
-	&MainDef,  // Doesn't matter.
-	SP_NightsAttackLevelSelectMenu,
-	M_DrawLevelPlatterMenu,
-	0, 0,
-	0,
-	NULL
-};
+menu_t SP_NightsAttackLevelSelectDef = MAPPLATTERMENUSTYLE("M_NIGHTS", SP_NightsAttackLevelSelectMenu);
+
 static menu_t SP_NightsAttackDef =
 {
 	"M_NIGHTS",

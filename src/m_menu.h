@@ -279,14 +279,14 @@ void Screenshot_option_Onchange(void);
 	NULL\
 }
 
-#define MAPICONMENUSTYLE(header, source, prev)\
+#define MAPPLATTERMENUSTYLE(header, source)\
 {\
 	header,\
 	sizeof (source)/sizeof (menuitem_t),\
-	prev,\
+	&MainDef,\
 	source,\
-	M_DrawServerMenu,\
-	27,40,\
+	M_DrawLevelPlatterMenu,\
+	0,0,\
 	0,\
 	NULL\
 }
