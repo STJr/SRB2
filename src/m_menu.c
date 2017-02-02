@@ -738,8 +738,8 @@ static menuitem_t SP_TimeAttackLevelSelectMenu[] =
 // Single Player Time Attack
 static menuitem_t SP_TimeAttackMenu[] =
 {
-	{IT_STRING|IT_CALL,        NULL, "Back to Level Select", &M_GoBack,      52},
-	{IT_STRING|IT_CVAR,        NULL, "Character",       &cv_chooseskin,      62},
+	{IT_STRING|IT_CALL,        NULL, "Back to Level Select...", &M_GoBack,   52},
+	{IT_STRING|IT_CVAR,        NULL, "Character",          &cv_chooseskin,   62},
 
 	{IT_DISABLED,              NULL, "Guest Option...", &SP_GuestReplayDef, 100},
 	{IT_DISABLED,              NULL, "Replay...",       &SP_ReplayDef,      110},
@@ -836,8 +836,8 @@ static menuitem_t SP_NightsAttackLevelSelectMenu[] =
 // Single Player Nights Attack
 static menuitem_t SP_NightsAttackMenu[] =
 {
-	{IT_STRING|IT_CALL,        NULL, "Back to Level Select",  &M_GoBack,              52},
-	{IT_STRING|IT_CVAR,        NULL, "Show Records For", &cv_dummymares,              62},
+	{IT_STRING|IT_CALL,        NULL, "Back to Level Select...",  &M_GoBack,           52},
+	{IT_STRING|IT_CVAR,        NULL, "Show Records For",    &cv_dummymares,           62},
 
 	{IT_DISABLED,              NULL, "Guest Option...",  &SP_NightsGuestReplayDef,   100},
 	{IT_DISABLED,              NULL, "Replay...",        &SP_NightsReplayDef,        110},
@@ -927,14 +927,14 @@ static menuitem_t MP_ServerMenu[] =
 {
 	{IT_DISABLED|IT_NOTHING, NULL, "", NULL, 0},
 #ifndef NONET
-	{IT_STRING|IT_CALL,              NULL, "Room...",               M_RoomMenu,        10},
-	{IT_STRING|IT_CVAR|IT_CV_STRING, NULL, "Server Name",           &cv_servername,    20},
-	{IT_STRING|IT_CVAR,              NULL, "Max Players",           &cv_maxplayers,    46},
-	{IT_STRING|IT_CVAR,              NULL, "Allow WAD Downloading", &cv_downloading,   56},
+	{IT_STRING|IT_CALL,              NULL, "Room...",                  M_RoomMenu,        10},
+	{IT_STRING|IT_CVAR|IT_CV_STRING, NULL, "Server Name",              &cv_servername,    20},
+	{IT_STRING|IT_CVAR,              NULL, "Max Players",              &cv_maxplayers,    46},
+	{IT_STRING|IT_CVAR,              NULL, "Allow WAD Downloading",    &cv_downloading,   56},
 #endif
-	{IT_STRING|IT_CALL,              NULL, "Select Gametype/Level", M_GameTypeChange, 100},
-	{IT_STRING|IT_CALL,              NULL, "More Options...",       M_ServerOptions,  130},
-	{IT_WHITESTRING|IT_CALL,         NULL, "Start",                 M_StartServer,    140},
+	{IT_STRING|IT_CALL,              NULL, "Select Gametype/Level...", M_GameTypeChange, 100},
+	{IT_STRING|IT_CALL,              NULL, "More Options...",          M_ServerOptions,  130},
+	{IT_WHITESTRING|IT_CALL,         NULL, "Start",                    M_StartServer,    140},
 };
 
 enum
@@ -954,9 +954,9 @@ enum
 // Separated splitscreen and normal servers.
 static menuitem_t MP_SplitServerMenu[] =
 {
-	{IT_STRING|IT_CALL,              NULL, "Select Gametype/Level", M_GameTypeChange, 100},
-	{IT_STRING|IT_CALL,              NULL, "More Options...",       M_ServerOptions,  130},
-	{IT_WHITESTRING|IT_CALL,         NULL, "Start",                 M_StartServer,    140},
+	{IT_STRING|IT_CALL,              NULL, "Select Gametype/Level...", M_GameTypeChange, 100},
+	{IT_STRING|IT_CALL,              NULL, "More Options...",          M_ServerOptions,  130},
+	{IT_WHITESTRING|IT_CALL,         NULL, "Start",                    M_StartServer,    140},
 };
 
 #ifndef NONET
