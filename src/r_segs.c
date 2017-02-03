@@ -708,7 +708,10 @@ static void R_DrawRepeatMaskedColumn(column_t *col)
 {
 	while (sprtopscreen < sprbotscreen) {
 		R_DrawMaskedColumn(col);
-		sprtopscreen += dc_texheight*spryscale;
+		if ((INT64)sprtopscreen + dc_texheight*spryscale > (INT64)INT32_MAX) // prevent overflow
+			sprtopscreen = INT32_MAX;
+		else
+			sprtopscreen += dc_texheight*spryscale;
 	}
 }
 
