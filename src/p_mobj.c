@@ -6651,8 +6651,9 @@ void P_MobjThinker(mobj_t *mobj)
 		case MT_FALLINGROCK:
 			// Despawn rocks here in case zmovement code can't do so (blame slopes)
 			if (!mobj->momx && !mobj->momy && !mobj->momz
-			&& ((mobj->z <= mobj->floorz && !(mobj->eflags & MFE_VERTICALFLIP))
-				|| (mobj->z + mobj->height >= mobj->ceilingz && mobj->eflags & MFE_VERTICALFLIP)))
+			&& ((mobj->eflags & MFE_VERTICALFLIP) ?
+				  mobj->z + mobj->height >= mobj->ceilingz
+				: mobj->z <= mobj->floorz))
 			{
 				P_RemoveMobj(mobj);
 				return;
