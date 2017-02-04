@@ -124,6 +124,9 @@ extern INT16 spstage_start;
 extern INT16 sstage_start;
 extern INT16 sstage_end;
 
+extern INT16 bootmap; // rei/miru: bootmap for loading a map on startup (skips intro+title)
+//extern INT16 returnTobootmap; // rei/miru: return to bootmap when attempting to go to the REAL title?
+
 extern boolean looptitle;
 extern boolean useNightsSS;
 
