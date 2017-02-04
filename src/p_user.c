@@ -3843,7 +3843,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 					}
 				}
 
-				// If not moving up or down, and travelling faster than a speed of four while not holding
+				// If not moving up or down, and travelling faster than a speed of five while not holding
 				// down the spin button and not spinning.
 				// AKA Just go into a spin on the ground, you idiot. ;)
 				else if ((cmd->buttons & BT_USE || ((twodlevel || (player->mo->flags2 & MF2_TWOD)) && cmd->forwardmove < -20))

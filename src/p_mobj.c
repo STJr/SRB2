@@ -3322,9 +3322,13 @@ static void P_PlayerZMovement(mobj_t *mo)
 						}
 					}
 
-					if (mo->player->pflags & PF_JUMPED)
-						mo->player->pflags &= ~PF_SPINNING;
-					else if (!(mo->player->pflags & PF_USEDOWN))
+					if ((mo->player->charability2 == CA2_SPINDASH) && !(mo->player->pflags & PF_THOKKED) && (mo->player->cmd.buttons & BT_USE) && (FixedHypot(mo->momx, mo->momy) > (5*mo->scale)))
+					{
+						mo->player->pflags |= PF_SPINNING;
+						P_SetPlayerMobjState(mo, S_PLAY_SPIN);
+						S_StartSound(mo, sfx_spin);
+					}
+					else
 						mo->player->pflags &= ~PF_SPINNING;
 
 					if (!(mo->player->pflags & PF_GLIDING))
