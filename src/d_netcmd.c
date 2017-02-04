@@ -82,6 +82,7 @@ static void AutoBalance_OnChange(void);
 static void TeamScramble_OnChange(void);
 
 static void NetTimeout_OnChange(void);
+static void JoinTimeout_OnChange(void);
 
 static void Ringslinger_OnChange(void);
 static void Gravity_OnChange(void);
@@ -340,7 +341,9 @@ consvar_t cv_killingdead = {"killingdead", "Off", CV_NETVAR, CV_OnOff, NULL, 0, 
 
 consvar_t cv_netstat = {"netstat", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL}; // show bandwidth statistics
 static CV_PossibleValue_t nettimeout_cons_t[] = {{TICRATE/7, "MIN"}, {60*TICRATE, "MAX"}, {0, NULL}};
-consvar_t cv_nettimeout = {"nettimeout", "525", CV_CALL|CV_SAVE, nettimeout_cons_t, NetTimeout_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_nettimeout = {"nettimeout", "350", CV_CALL|CV_SAVE, nettimeout_cons_t, NetTimeout_OnChange, 0, NULL, NULL, 0, 0, NULL};
+static CV_PossibleValue_t jointimeout_cons_t[] = {{5*TICRATE, "MIN"}, {60*TICRATE, "MAX"}, {0, NULL}};
+consvar_t cv_jointimeout = {"jointimeout", "350", CV_CALL|CV_SAVE, jointimeout_cons_t, JoinTimeout_OnChange, 0, NULL, NULL, 0, 0, NULL};
 #ifdef NEWPING
 consvar_t cv_maxping = {"maxping", "0", CV_SAVE, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
 #endif
@@ -546,9 +549,12 @@ void D_RegisterServerCommands(void)
 	// d_clisrv
 	CV_RegisterVar(&cv_maxplayers);
 	CV_RegisterVar(&cv_maxsend);
+	CV_RegisterVar(&cv_noticedownload);
+	CV_RegisterVar(&cv_downloadspeed);
 
 	COM_AddCommand("ping", Command_Ping_f);
 	CV_RegisterVar(&cv_nettimeout);
+	CV_RegisterVar(&cv_jointimeout);
 
 	CV_RegisterVar(&cv_skipmapcheck);
 	CV_RegisterVar(&cv_sleep);
@@ -1005,7 +1011,7 @@ UINT8 CanChangeSkin(INT32 playernum)
 		return true;
 
 	// Force skin in effect.
-	if (!server && (cv_forceskin.value != -1) && !(adminplayer == playernum && serverplayer == -1))
+	if (client && (cv_forceskin.value != -1) && !(adminplayer == playernum && serverplayer == -1))
 		return false;
 
 	// Can change skin in intermission and whatnot.
@@ -1616,7 +1622,7 @@ static void Command_Map_f(void)
 		return;
 	}
 
-	if (!server && !(adminplayer == consoleplayer))
+	if (client && !(adminplayer == consoleplayer))
 	{
 		CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
 		return;
@@ -1943,7 +1949,7 @@ static void Got_Suicide(UINT8 **cp, INT32 playernum)
 	// You can't suicide someone else.  Nice try, there.
 	if (suicideplayer != playernum || (!G_PlatformGametype()))
 	{
-		CONS_Alert(CONS_WARNING, M_GetText("Illegal suicide command recieved from %s\n"), player_names[playernum]);
+		CONS_Alert(CONS_WARNING, M_GetText("Illegal suicide command received from %s\n"), player_names[playernum]);
 		if (server)
 		{
 			XBOXSTATIC UINT8 buf[2];
@@ -2658,7 +2664,7 @@ static void Command_Changepassword_f(void)
 	// If we have no MD5 support then completely disable XD_LOGIN responses for security.
 	CONS_Alert(CONS_NOTICE, "Remote administration commands are not supported in this build.\n");
 #else
-	if (!server) // cannot change remotely
+	if (client) // cannot change remotely
 	{
 		CONS_Printf(M_GetText("Only the server can use this.\n"));
 		return;
@@ -2717,7 +2723,7 @@ static void Got_Login(UINT8 **cp, INT32 playernum)
 
 	READMEM(*cp, sentmd5, 16);
 
-	if (!server)
+	if (client)
 		return;
 
 	// Do the final pass to compare with the sent md5
@@ -2739,7 +2745,7 @@ static void Command_Verify_f(void)
 	char *temp;
 	INT32 playernum;
 
-	if (!server)
+	if (client)
 	{
 		CONS_Printf(M_GetText("Only the server can use this.\n"));
 		return;
@@ -2823,7 +2829,7 @@ static void Command_MotD_f(void)
 			return;
 		}
 
-	if ((netgame || multiplayer) && !server)
+	if ((netgame || multiplayer) && client)
 		SendNetXCmd(XD_SETMOTD, mymotd, sizeof(motd));
 	else
 	{
@@ -3080,7 +3086,7 @@ static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum)
 	READMEM(*cp, md5sum, 16);
 
 	// Only the server processes this message.
-	if (!server)
+	if (client)
 		return;
 
 	// Disallow non-printing characters and semicolons.
@@ -3345,6 +3351,11 @@ static void NumLaps_OnChange(void)
 static void NetTimeout_OnChange(void)
 {
 	connectiontimeout = (tic_t)cv_nettimeout.value;
+}
+
+static void JoinTimeout_OnChange(void)
+{
+	jointimeout = (tic_t)cv_jointimeout.value;
 }
 
 UINT32 timelimitintics = 0;

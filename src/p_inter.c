@@ -1183,15 +1183,33 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 // Mario //
 // ***** //
 		case MT_SHELL:
-			if (special->state == &states[S_SHELL]) // Resting anim
 			{
-				// Kick that sucker around!
-				special->angle = toucher->angle;
-				P_InstaThrust(special, special->angle, FixedMul(special->info->speed, special->scale));
-				S_StartSound(toucher, sfx_mario2);
-				P_SetMobjState(special, S_SHELL1);
-				P_SetTarget(&special->target, toucher);
-				special->threshold = (3*TICRATE)/2;
+				boolean bounceon = ((P_MobjFlip(toucher)*(toucher->z - (special->z + special->height/2)) > 0) && (P_MobjFlip(toucher)*toucher->momz < 0));
+				if (special->threshold == TICRATE) // it's moving
+				{
+					if (bounceon)
+					{
+						// Stop it!
+						special->momx = special->momy = 0;
+						S_StartSound(toucher, sfx_mario2);
+						P_SetTarget(&special->target, NULL);
+						special->threshold = TICRATE - 1;
+						toucher->momz = -toucher->momz;
+					}
+					else // can't handle in PIT_CheckThing because of landing-on causing it to stop
+						P_DamageMobj(toucher, special, special->target, 1, 0);
+				}
+				else if (special->threshold == 0)
+				{
+					// Kick that sucker around!
+					special->movedir = ((special->movedir == 1) ? -1 : 1);
+					P_InstaThrust(special, toucher->angle, (special->info->speed*special->scale));
+					S_StartSound(toucher, sfx_mario2);
+					P_SetTarget(&special->target, toucher);
+					special->threshold = (3*TICRATE)/2;
+					if (bounceon)
+						toucher->momz = -toucher->momz;
+				}
 			}
 			return;
 		case MT_AXE:
@@ -1801,7 +1819,7 @@ void P_CheckTimeLimit(void)
 		return;
 
 	//Tagmode round end but only on the tic before the
-	//XD_EXITLEVEL packet is recieved by all players.
+	//XD_EXITLEVEL packet is received by all players.
 	if (G_TagGametype())
 	{
 		if (leveltime == (timelimitintics + 1))
@@ -1812,7 +1830,7 @@ void P_CheckTimeLimit(void)
 				 || (players[i].pflags & PF_TAGGED) || (players[i].pflags & PF_TAGIT))
 					continue;
 
-				CONS_Printf(M_GetText("%s recieved double points for surviving the round.\n"), player_names[i]);
+				CONS_Printf(M_GetText("%s received double points for surviving the round.\n"), player_names[i]);
 				P_AddPlayerScore(&players[i], players[i].score);
 			}
 		}

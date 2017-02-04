@@ -974,6 +974,7 @@ typedef enum
 	tc_noenemies,
 	tc_eachtime,
 	tc_disappear,
+	tc_planedisplace,
 #ifdef POLYOBJECTS
 	tc_polyrotate, // haleyjd 03/26/06: polyobjects
 	tc_polymove,
@@ -1097,7 +1098,7 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		diff |= MD_TRACER;
 	if (mobj->friction != ORIG_FRICTION)
 		diff |= MD_FRICTION;
-	if (mobj->movefactor != ORIG_FRICTION_FACTOR)
+	if (mobj->movefactor != FRACUNIT)
 		diff |= MD_MOVEFACTOR;
 	if (mobj->fuse)
 		diff |= MD_FUSE;
@@ -1537,6 +1538,21 @@ static void SaveDisappearThinker(const thinker_t *th, const UINT8 type)
 	WRITEINT32(save_p, ht->exists);
 }
 
+//
+// SavePlaneDisplaceThinker
+//
+// Saves a planedisplace_t thinker
+//
+static void SavePlaneDisplaceThinker(const thinker_t *th, const UINT8 type)
+{
+	const planedisplace_t *ht = (const void *)th;
+	WRITEUINT8(save_p, type);
+	WRITEINT32(save_p, ht->affectee);
+	WRITEINT32(save_p, ht->control);
+	WRITEFIXED(save_p, ht->last_height);
+	WRITEFIXED(save_p, ht->speed);
+	WRITEUINT8(save_p, ht->type);
+}
 #ifdef POLYOBJECTS
 
 //
@@ -1818,6 +1834,12 @@ static void P_NetArchiveThinkers(void)
 			SaveDisappearThinker(th, tc_disappear);
 			continue;
 		}
+
+		else if (th->function.acp1 == (actionf_p1)T_PlaneDisplace)
+		{
+			SavePlaneDisplaceThinker(th, tc_planedisplace);
+			continue;
+		}
 #ifdef POLYOBJECTS
 		else if (th->function.acp1 == (actionf_p1)T_PolyObjRotate)
 		{
@@ -2083,7 +2105,7 @@ static void LoadMobjThinker(actionf_p1 thinker)
 	if (diff & MD_MOVEFACTOR)
 		mobj->movefactor = READFIXED(save_p);
 	else
-		mobj->movefactor = ORIG_FRICTION_FACTOR;
+		mobj->movefactor = FRACUNIT;
 	if (diff & MD_FUSE)
 		mobj->fuse = READINT32(save_p);
 	if (diff & MD_WATERTOP)
@@ -2486,6 +2508,23 @@ static inline void LoadDisappearThinker(actionf_p1 thinker)
 	P_AddThinker(&ht->thinker);
 }
 
+//
+// LoadPlaneDisplaceThinker
+//
+// Loads a planedisplace_t thinker
+//
+static inline void LoadPlaneDisplaceThinker(actionf_p1 thinker)
+{
+	planedisplace_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
+	ht->thinker.function.acp1 = thinker;
+	ht->affectee = READINT32(save_p);
+	ht->control = READINT32(save_p);
+	ht->last_height = READFIXED(save_p);
+	ht->speed = READFIXED(save_p);
+	ht->type = READUINT8(save_p);
+	P_AddThinker(&ht->thinker);
+}
+
 #ifdef POLYOBJECTS
 
 //
@@ -2768,6 +2807,10 @@ static void P_NetUnArchiveThinkers(void)
 
 			case tc_disappear:
 				LoadDisappearThinker((actionf_p1)T_Disappear);
+				break;
+
+			case tc_planedisplace:
+				LoadPlaneDisplaceThinker((actionf_p1)T_PlaneDisplace);
 				break;
 #ifdef POLYOBJECTS
 			case tc_polyrotate:

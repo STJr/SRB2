@@ -523,23 +523,27 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 		junk.v1 = &v1;
 		junk.v2 = &v2;
-		junk.dx = v2.x - v1.x;
-		junk.dy = v2.y - v1.y;
+		junk.dx = 2*cosradius; // v2.x - v1.x;
+		junk.dy = 2*sinradius; // v2.y - v1.y;
 
 		if (tmthing->flags & MF_PAPERCOLLISION) // more strenuous checking to prevent clipping issues
 		{
 			INT32 check1, check2, check3, check4;
-			cosradius = FixedMul(tmthing->radius, FINECOSINE(tmthing->angle>>ANGLETOFINESHIFT));
-			sinradius = FixedMul(tmthing->radius, FINESINE(tmthing->angle>>ANGLETOFINESHIFT));
-			check1 = P_PointOnLineSide(tmx - cosradius, tmy - sinradius, &junk);
-			check2 = P_PointOnLineSide(tmx + cosradius, tmy + sinradius, &junk);
-			check3 = P_PointOnLineSide(tmx + tmthing->momx - cosradius, tmy + tmthing->momy - sinradius, &junk);
-			check4 = P_PointOnLineSide(tmx + tmthing->momx + cosradius, tmy + tmthing->momy + sinradius, &junk);
+			fixed_t tmcosradius = FixedMul(tmthing->radius, FINECOSINE(tmthing->angle>>ANGLETOFINESHIFT));
+			fixed_t tmsinradius = FixedMul(tmthing->radius, FINESINE(tmthing->angle>>ANGLETOFINESHIFT));
+			if (abs(thing->x - tmx) >= (abs(tmcosradius) + abs(cosradius)) || abs(thing->y - tmy) >= (abs(tmsinradius) + abs(sinradius)))
+				return true; // didn't hit it
+			check1 = P_PointOnLineSide(tmx - tmcosradius, tmy - tmsinradius, &junk);
+			check2 = P_PointOnLineSide(tmx + tmcosradius, tmy + tmsinradius, &junk);
+			check3 = P_PointOnLineSide(tmx + tmthing->momx - tmcosradius, tmy + tmthing->momy - tmsinradius, &junk);
+			check4 = P_PointOnLineSide(tmx + tmthing->momx + tmcosradius, tmy + tmthing->momy + tmsinradius, &junk);
 			if ((check1 == check2) && (check2 == check3) && (check3 == check4))
 				return true; // the line doesn't cross between collider's start or end
 		}
 		else
 		{
+			if (abs(thing->x - tmx) >= (tmthing->radius + abs(cosradius)) || abs(thing->y - tmy) >= (tmthing->radius + abs(sinradius)))
+				return true; // didn't hit it
 			if ((P_PointOnLineSide(tmx - tmthing->radius, tmy - tmthing->radius, &junk)
 			== P_PointOnLineSide(tmx + tmthing->radius, tmy + tmthing->radius, &junk))
 			&& (P_PointOnLineSide(tmx + tmthing->radius, tmy - tmthing->radius, &junk)
@@ -549,25 +553,27 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	}
 	else if (tmthing->flags & MF_PAPERCOLLISION)
 	{
-		fixed_t cosradius, sinradius;
+		fixed_t tmcosradius, tmsinradius;
 		vertex_t v1, v2; // fake vertexes
 		line_t junk; // fake linedef
 
-		cosradius = FixedMul(tmthing->radius, FINECOSINE(tmthing->angle>>ANGLETOFINESHIFT));
-		sinradius = FixedMul(tmthing->radius, FINESINE(tmthing->angle>>ANGLETOFINESHIFT));
+		tmcosradius = FixedMul(tmthing->radius, FINECOSINE(tmthing->angle>>ANGLETOFINESHIFT));
+		tmsinradius = FixedMul(tmthing->radius, FINESINE(tmthing->angle>>ANGLETOFINESHIFT));
 
-		v1.x = tmx - cosradius;
-		v1.y = tmy - sinradius;
-		v2.x = tmx + cosradius;
-		v2.y = tmy + sinradius;
+		if (abs(thing->x - tmx) >= (thing->radius + abs(tmcosradius)) || abs(thing->y - tmy) >= (thing->radius + abs(tmsinradius)))
+			return true; // didn't hit it
+
+		v1.x = tmx - tmcosradius;
+		v1.y = tmy - tmsinradius;
+		v2.x = tmx + tmcosradius;
+		v2.y = tmy + tmsinradius;
 
 		junk.v1 = &v1;
 		junk.v2 = &v2;
-		junk.dx = v2.x - v1.x;
-		junk.dy = v2.y - v1.y;
+		junk.dx = 2*tmcosradius; // v2.x - v1.x;
+		junk.dy = 2*tmsinradius; // v2.y - v1.y;
 
-		// no need to check whether thing has MF_PAPERCOLLISION, since checked above
-
+		// no need to check whether other thing has MF_PAPERCOLLISION, since would fall under other condition
 		if ((P_PointOnLineSide(thing->x - thing->radius, thing->y - thing->radius, &junk)
 		== P_PointOnLineSide(thing->x + thing->radius, thing->y + thing->radius, &junk))
 		&& (P_PointOnLineSide(thing->x + thing->radius, thing->y - thing->radius, &junk)
@@ -768,8 +774,6 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			}
 		}
 
-		if (tmthing->type == MT_SHELL && tmthing->threshold > TICRATE)
-			return true;
 		// damage / explode
 		if (tmthing->flags & MF_ENEMY) // An actual ENEMY! (Like the deton, for example)
 			P_DamageMobj(thing, tmthing, tmthing, 1, 0);
@@ -810,7 +814,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			tmthing->y = thing->y;
 			P_SetThingPosition(tmthing);
 		}
-		else
+		else if (!(tmthing->type == MT_SHELL && thing->player)) // player collision handled in touchspecial
 			P_DamageMobj(thing, tmthing, tmthing->target, 1, 0);
 
 		// don't traverse any more
@@ -1149,7 +1153,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				if (thing->flags & MF_GRENADEBOUNCE && (thing->flags & MF_MONITOR || thing->flags2 & MF2_STANDONME)) // Gold monitor hack...
 					return false;
 
-				tmfloorz = tmceilingz = INT32_MIN; // block while in air
+				tmfloorz = tmceilingz = topz; // block while in air
 #ifdef ESLOPE
 				tmceilingslope = NULL;
 #endif
@@ -1195,7 +1199,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				if (thing->flags & MF_GRENADEBOUNCE && (thing->flags & MF_MONITOR || thing->flags2 & MF2_STANDONME)) // Gold monitor hack...
 					return false;
 
-				tmfloorz = tmceilingz = INT32_MAX; // block while in air
+				tmfloorz = tmceilingz = topz; // block while in air
 #ifdef ESLOPE
 				tmfloorslope = NULL;
 #endif

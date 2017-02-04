@@ -252,6 +252,7 @@ void A_FlickyFlounder(mobj_t *actor);
 void A_FlickyCheck(mobj_t *actor);
 void A_FlickyHeightCheck(mobj_t *actor);
 void A_FlickyFlutter(mobj_t *actor);
+void A_FlameParticle(mobj_t *actor);
 
 //
 // ENEMY THINKING
@@ -2134,13 +2135,15 @@ void A_Boss1Laser(mobj_t *actor)
 		if (!(actor->spawnpoint && actor->spawnpoint->options & MTF_AMBUSH))
 		{
 			point = P_SpawnMobj(x + P_ReturnThrustX(actor, actor->angle, actor->radius), y + P_ReturnThrustY(actor, actor->angle, actor->radius), actor->z - actor->height / 2, MT_EGGMOBILE_TARGET);
+			point->angle = actor->angle;
 			point->fuse = actor->tics+1;
 			P_SetTarget(&point->target, actor->target);
 			P_SetTarget(&actor->target, point);
 		}
 	}
+	/* -- the following was relevant when the MT_EGGMOBILE_TARGET was allowed to move left and right from its path
 	else if (actor->target && !(actor->spawnpoint && actor->spawnpoint->options & MTF_AMBUSH))
-		actor->angle = R_PointToAngle2(x, y, actor->target->x, actor->target->y);
+		actor->angle = R_PointToAngle2(x, y, actor->target->x, actor->target->y);*/
 
 	if (actor->spawnpoint && actor->spawnpoint->options & MTF_AMBUSH)
 		angle = FixedAngle(FixedDiv(actor->tics*160*FRACUNIT, actor->state->tics*FRACUNIT) + 10*FRACUNIT);
@@ -2190,11 +2193,16 @@ void A_Boss1Laser(mobj_t *actor)
 // var1:
 //		0 - accelerative focus with friction
 //		1 - steady focus with fixed movement speed
-// var2 = unused
+//      anything else - don't move
+// var2:
+//		0 - don't trace target, just move forwards
+//      & 1 - change horizontal angle
+//      & 2 - change vertical angle
 //
 void A_FocusTarget(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_FocusTarget", actor))
 		return;
@@ -2203,9 +2211,9 @@ void A_FocusTarget(mobj_t *actor)
 	if (actor->target)
 	{
 		fixed_t speed = FixedMul(actor->info->speed, actor->scale);
-		fixed_t dist = R_PointToDist2(actor->x, actor->y, actor->target->x, actor->target->y);
-		angle_t vangle = R_PointToAngle2(actor->z , 0, actor->target->z + (actor->target->height>>1), dist);
-		angle_t hangle = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y);
+		fixed_t dist = (locvar2 ? R_PointToDist2(actor->x, actor->y, actor->target->x, actor->target->y) : speed+1);
+		angle_t hangle = ((locvar2 & 1) ? R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y) : actor->angle);
+		angle_t vangle = ((locvar2 & 2) ? R_PointToAngle2(actor->z , 0, actor->target->z + (actor->target->height>>1), dist) : ANGLE_90);
 		switch(locvar1)
 		{
 		case 0:
@@ -3534,41 +3542,49 @@ void A_ScoreRise(mobj_t *actor)
 
 // Function: A_ParticleSpawn
 //
-// Description: Spawns a particle at a specified interval
+// Description: Hyper-specialised function for spawning a particle for MT_PARTICLEGEN.
 //
-// var1 = type (if 0, defaults to MT_PARTICLE)
+// var1 = unused
 // var2 = unused
 //
 void A_ParticleSpawn(mobj_t *actor)
 {
-	INT32 locvar1 = var1;
-	fixed_t speed;
-	mobjtype_t type;
+	INT32 i = 0;
 	mobj_t *spawn;
 
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_ParticleSpawn", actor))
 		return;
 #endif
-	if (!actor->spawnpoint)
-	{
-		P_RemoveMobj(actor);
+	if (!actor->health)
 		return;
+
+	if (!actor->lastlook)
+		return;
+
+	if (!actor->threshold)
+		return;
+
+	for (i = 0; i < actor->lastlook; i++)
+	{
+		spawn = P_SpawnMobj(
+			actor->x + FixedMul(FixedMul(actor->friction, actor->scale), FINECOSINE(actor->angle>>ANGLETOFINESHIFT)),
+			actor->y + FixedMul(FixedMul(actor->friction, actor->scale), FINESINE(actor->angle>>ANGLETOFINESHIFT)),
+			actor->z,
+			(mobjtype_t)actor->threshold);
+		P_SetScale(spawn, actor->scale);
+		spawn->momz = FixedMul(actor->movefactor, spawn->scale);
+		spawn->destscale = spawn->scale/100;
+		spawn->scalespeed = spawn->scale/actor->health;
+		spawn->tics = (tic_t)actor->health;
+		spawn->flags2 |= (actor->flags2 & MF2_OBJECTFLIP);
+		spawn->angle += P_RandomKey(36)*ANG10; // irrelevant for default objects but might make sense for some custom ones
+		if (spawn->frame & FF_ANIMATE)
+			spawn->frame += P_RandomKey(spawn->state->var1);
+
+		actor->angle += actor->movedir;
 	}
-
-	if (locvar1)
-		type = (mobjtype_t)locvar1;
-	else
-		type = MT_PARTICLE;
-
-	speed = FixedMul((actor->spawnpoint->angle >> 12)<<FRACBITS, actor->scale);
-
-	spawn = P_SpawnMobj(actor->x, actor->y, actor->z, type);
-	P_SetScale(spawn, actor->scale);
-	spawn->momz = speed;
-	spawn->destscale = FixedDiv(spawn->scale<<FRACBITS, 100<<FRACBITS);
-	spawn->scalespeed = FixedDiv(((actor->spawnpoint->angle >> 8) & 63) << FRACBITS, 100<<FRACBITS);
-	actor->tics = actor->spawnpoint->extrainfo + 1;
+	actor->angle += (angle_t)actor->movecount;
 }
 
 // Function: A_BunnyHop
@@ -3882,10 +3898,17 @@ void A_DropMine(mobj_t *actor)
 void A_FishJump(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_FishJump", actor))
 		return;
 #endif
+
+	if (locvar2)
+	{
+		fixed_t rad = actor->radius>>FRACBITS;
+		P_SpawnMobjFromMobj(actor, P_RandomRange(rad, -rad)<<FRACBITS, P_RandomRange(rad, -rad)<<FRACBITS, 0, (mobjtype_t)locvar2);
+	}
 
 	if ((actor->z <= actor->floorz) || (actor->z <= actor->watertop - FixedMul((64 << FRACBITS), actor->scale)))
 	{
@@ -9626,14 +9649,19 @@ void A_HomingChase(mobj_t *actor)
 //        lower 16 bits = object # to fire
 //        upper 16 bits = front offset
 // var2:
-//        lower 16 bits = vertical angle
+//        lower 15 bits = vertical angle variable
+//        16th bit:
+//			- 0: use vertical angle variable as vertical angle in degrees
+//			- 1: mimic P_SpawnXYZMissile
+//				use z of actor minus z of missile as vertical distance to cover during momz calculation
+//				use vertical angle variable as horizontal distance to cover during momz calculation
 //        upper 16 bits = height offset
 //
 void A_TrapShot(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
-	angle_t vertang = FixedAngle(((INT16)(locvar2 & 65535))*FRACUNIT);
+	boolean oldstyle = (locvar2 & 32768) ? true : false;
 	mobjtype_t type = (mobjtype_t)(locvar1 & 65535);
 	mobj_t *missile;
 	INT16 frontoff = (INT16)(locvar1 >> 16);
@@ -9649,10 +9677,7 @@ void A_TrapShot(mobj_t *actor)
 	y = actor->y + P_ReturnThrustY(actor, actor->angle, FixedMul(frontoff*FRACUNIT, actor->scale));
 
 	if (actor->eflags & MFE_VERTICALFLIP)
-	{
 		z = actor->z + actor->height - FixedMul(vertoff*FRACUNIT, actor->scale) - FixedMul(mobjinfo[type].height, actor->scale);
-		vertang = InvAngle(vertang); // flip firing angle
-	}
 	else
 		z = actor->z + FixedMul(vertoff*FRACUNIT, actor->scale);
 
@@ -9663,20 +9688,35 @@ void A_TrapShot(mobj_t *actor)
 
 	if (actor->eflags & MFE_VERTICALFLIP)
 		missile->flags2 |= MF2_OBJECTFLIP;
-	missile->destscale = actor->destscale;
-	P_SetScale(missile, missile->destscale);
+
+	missile->destscale = actor->scale;
+	P_SetScale(missile, actor->scale);
 
 	if (missile->info->seesound)
-		S_StartSound(actor, missile->info->seesound);
+		S_StartSound(missile, missile->info->seesound);
 
 	P_SetTarget(&missile->target, actor);
 	missile->angle = actor->angle;
 
 	speed = FixedMul(missile->info->speed, missile->scale);
 
-	missile->momx = FixedMul(FINECOSINE(vertang>>ANGLETOFINESHIFT), FixedMul(FINECOSINE(missile->angle>>ANGLETOFINESHIFT), speed));
-	missile->momy = FixedMul(FINECOSINE(vertang>>ANGLETOFINESHIFT), FixedMul(FINESINE(missile->angle>>ANGLETOFINESHIFT), speed));
-	missile->momz = FixedMul(FINESINE(vertang>>ANGLETOFINESHIFT), speed);
+	if (oldstyle)
+	{
+		missile->momx = FixedMul(FINECOSINE(missile->angle>>ANGLETOFINESHIFT), speed);
+		missile->momy = FixedMul(FINESINE(missile->angle>>ANGLETOFINESHIFT), speed);
+		// The below line basically mimics P_SpawnXYZMissile's momz calculation.
+		missile->momz = (actor->z + ((actor->eflags & MFE_VERTICALFLIP) ? actor->height : 0) - z) / ((fixed_t)(locvar2 & 32767)*FRACUNIT / speed);
+		P_CheckMissileSpawn(missile);
+	}
+	else
+	{
+		angle_t vertang = FixedAngle(((INT16)(locvar2 & 32767))*FRACUNIT);
+		if (actor->eflags & MFE_VERTICALFLIP)
+				vertang = InvAngle(vertang); // flip firing angle
+		missile->momx = FixedMul(FINECOSINE(vertang>>ANGLETOFINESHIFT), FixedMul(FINECOSINE(missile->angle>>ANGLETOFINESHIFT), speed));
+		missile->momy = FixedMul(FINECOSINE(vertang>>ANGLETOFINESHIFT), FixedMul(FINESINE(missile->angle>>ANGLETOFINESHIFT), speed));
+		missile->momz = FixedMul(FINESINE(vertang>>ANGLETOFINESHIFT), speed);
+	}
 }
 
 // Function: A_VileTarget
@@ -10738,3 +10778,32 @@ void A_FlickyFlutter(mobj_t *actor)
 }
 
 #undef FLICKYHITWALL
+
+// Function: A_FlameParticle
+//
+// Description: Creates the mobj's painchance at a random position around the object's radius.
+//
+// var1 = momz of particle.
+//
+void A_FlameParticle(mobj_t *actor)
+{
+	mobjtype_t type = (mobjtype_t)(mobjinfo[actor->type].painchance);
+	INT32 locvar1 = var1;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FlameParticle", actor))
+		return;
+#endif
+
+	if (type)
+	{
+		fixed_t rad = 2*actor->radius>>FRACBITS;
+		fixed_t hei = actor->height>>FRACBITS;
+		mobj_t *particle = P_SpawnMobjFromMobj(actor,
+			P_RandomRange(rad, -rad)<<FRACBITS,
+			P_RandomRange(rad, -rad)<<FRACBITS,
+			P_RandomRange(hei/2, hei)<<FRACBITS,
+			type);
+		P_SetObjectMomZ(particle, locvar1<<FRACBITS, false);
+	}
+}

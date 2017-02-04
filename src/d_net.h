@@ -39,6 +39,7 @@ extern SINT8 nodetoplayer2[MAXNETNODES]; // Say the numplayer for this node if a
 extern UINT8 playerpernode[MAXNETNODES]; // Used specially for splitscreen
 extern boolean nodeingame[MAXNETNODES]; // Set false as nodes leave game
 
+INT32 Net_GetFreeAcks(boolean urgent);
 void Net_AckTicker(void);
 
 // If reliable return true if packet sent, 0 else
@@ -53,6 +54,7 @@ boolean D_CheckNetGame(void);
 void D_CloseConnection(void);
 void Net_UnAcknowledgePacket(INT32 node);
 void Net_CloseConnection(INT32 node);
+void Net_ConnectionTimeout(INT32 node);
 void Net_AbortPacketType(UINT8 packettype);
 void Net_SendAcks(INT32 node);
 void Net_WaitAllAckReceived(UINT32 timeout);
