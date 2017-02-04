@@ -1812,22 +1812,11 @@ static void P_CheckBustableBlocks(player_t *player)
 					topheight = P_GetFOFTopZ(player->mo, node->m_sector, rover, player->mo->x, player->mo->y, NULL);
 					bottomheight = P_GetFOFBottomZ(player->mo, node->m_sector, rover, player->mo->x, player->mo->y, NULL);
 
-					if (player->pflags & PF_BOUNCING)
+					if (((player->charability == CA_TWINSPIN) && (player->panim == PA_ABILITY))
+					|| ((P_MobjFlip(player->mo)*player->mo->momz < 0) && (player->pflags & PF_BOUNCING || ((player->charability2 == CA2_MELEE) && (player->panim == PA_ABILITY2)))))
 					{
-						if (player->mo->eflags & MFE_VERTICALFLIP)
-						{
-							if (player->mo->momz <= 0)
-								continue;
-							topheight += player->mo->momz;
-							bottomheight += player->mo->momz;
-						}
-						else
-						{
-							if (player->mo->momz >= 0)
-								continue;
-							topheight -= player->mo->momz;
-							bottomheight -= player->mo->momz;
-						}
+						topheight -= player->mo->momz;
+						bottomheight -= player->mo->momz;
 					}
 
 					// Height checks
@@ -4850,14 +4839,25 @@ static void P_3dMovement(player_t *player)
 		thrustfactor = player->thrustfactor*2;
 		acceleration = player->accelstart + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * player->acceleration;
 	}
-	else if (player->pflags & PF_BOUNCING)
+	else
 	{
-		thrustfactor = player->thrustfactor/2;
-		acceleration = player->accelstart + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * player->acceleration;
-	}
+		if (player->pflags & PF_BOUNCING)
+		{
+			if (player->mo->state-states == S_PLAY_BOUNCE_LANDING)
+			{
+				thrustfactor = player->thrustfactor/2;
+				acceleration = player->accelstart + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * player->acceleration;
+			}
+			else
+			{
+				thrustfactor = player->thrustfactor*2;
+				acceleration = player->accelstart/2 + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * player->acceleration/2;
+			}
+		}
 
-	if (player->mo->movefactor != FRACUNIT) // Friction-scaled acceleration...
-		acceleration = FixedMul(acceleration<<FRACBITS, player->mo->movefactor)>>FRACBITS;
+		if (player->mo->movefactor != FRACUNIT) // Friction-scaled acceleration...
+			acceleration = FixedMul(acceleration<<FRACBITS, player->mo->movefactor)>>FRACBITS;
+	}
 
 	// Forward movement
 	if (player->climbing)
