@@ -4845,13 +4845,13 @@ static void P_3dMovement(player_t *player)
 		{
 			if (player->mo->state-states == S_PLAY_BOUNCE_LANDING)
 			{
-				thrustfactor = player->thrustfactor/2;
-				acceleration = player->accelstart + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * player->acceleration;
+				thrustfactor = player->thrustfactor*8;
+				acceleration = player->accelstart/8 + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * player->acceleration/8;
 			}
 			else
 			{
-				thrustfactor = player->thrustfactor*2;
-				acceleration = player->accelstart/2 + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * player->acceleration/2;
+				thrustfactor = (3*player->thrustfactor)/4;
+				acceleration = player->accelstart + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * player->acceleration;
 			}
 		}
 
