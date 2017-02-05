@@ -238,6 +238,9 @@ void M_ForceSaveSlotSelected(INT32 sslot);
 
 void M_CheatActivationResponder(INT32 ch);
 
+// Level select updating
+void Nextmap_OnChange(void);
+
 // Screenshot menu updating
 void Moviemode_mode_Onchange(void);
 void Screenshot_option_Onchange(void);

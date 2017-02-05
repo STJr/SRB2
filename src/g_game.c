@@ -697,8 +697,7 @@ void G_SetNightsRecords(void)
 	free(gpath);
 
 	// If the mare count changed, this will update the score display
-	CV_AddValue(&cv_nextmap, 1);
-	CV_AddValue(&cv_nextmap, -1);
+	Nextmap_OnChange();
 }
 
 // for consistency among messages: this modifies the game and removes savemoddata.

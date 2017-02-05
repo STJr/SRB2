@@ -1532,7 +1532,8 @@ void D_MapChange(INT32 mapnum, INT32 newgametype, boolean pultmode, boolean rese
 	// The supplied data are assumed to be good.
 	I_Assert(delay >= 0 && delay <= 2);
 
-	CV_SetValue(&cv_nextmap, mapnum);
+	if (mapnum != -1)
+		CV_SetValue(&cv_nextmap, mapnum);
 
 	CONS_Debug(DBG_GAMELOGIC, "Map change: mapnum=%d gametype=%d ultmode=%d resetplayers=%d delay=%d skipprecutscene=%d\n",
 	           mapnum, newgametype, pultmode, resetplayers, delay, skipprecutscene);
