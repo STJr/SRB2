@@ -315,6 +315,9 @@ typedef struct player_s
 	// It is updated with cmd->aiming.
 	angle_t aiming;
 
+	// fun thing for player sprite
+	angle_t drawangle;
+
 	// player's ring count
 	INT32 rings;
 

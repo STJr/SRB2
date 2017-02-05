@@ -9194,6 +9194,19 @@ void P_PlayerThink(player_t *player)
 	if (!player->mo)
 		return; // P_MovePlayer removed player->mo.
 
+	if (player->climbing // stuff where the direction is forced at all times
+	|| G_RingSlingerGametype()) // no firing rings in directions your player isn't aiming
+		player->drawangle = player->mo->angle;
+	else if (P_PlayerInPain(player) && (player->mo->momx || player->mo->momy))
+		player->drawangle = R_PointToAngle2(player->mo->momx, player->mo->momy, 0, 0);
+	else if (cmd->forwardmove || cmd->sidemove || cmd->buttons) // only when you're pressing buttons
+	{
+		if (player->mo->momx || player->mo->momy) // only when you're moing
+			player->drawangle = R_PointToAngle2(0, 0, player->mo->momx, player->mo->momy);
+		else
+			player->drawangle = player->mo->angle; // spindash, etc
+	}
+
 	// Unset statis flags after moving.
 	// In other words, if you manually set stasis via code,
 	// it lasts for one tic.

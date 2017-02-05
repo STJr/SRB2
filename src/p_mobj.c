@@ -9140,6 +9140,7 @@ void P_AfterPlayerSpawn(INT32 playernum)
 	}
 
 	SV_SpawnPlayer(playernum, mobj->x, mobj->y, mobj->angle);
+	p->drawangle = mobj->angle;
 
 	if (camera.chase)
 	{

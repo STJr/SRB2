@@ -126,6 +126,7 @@ static void P_NetArchivePlayers(void)
 		// no longer send ticcmds, player name, skin, or color
 
 		WRITEANGLE(save_p, players[i].aiming);
+		WRITEANGLE(save_p, players[i].drawangle);
 		WRITEANGLE(save_p, players[i].awayviewaiming);
 		WRITEINT32(save_p, players[i].awayviewtics);
 		WRITEINT32(save_p, players[i].rings);
@@ -306,6 +307,7 @@ static void P_NetUnArchivePlayers(void)
 		// (that data is handled in the server config now)
 
 		players[i].aiming = READANGLE(save_p);
+		players[i].drawangle = READANGLE(save_p);
 		players[i].awayviewaiming = READANGLE(save_p);
 		players[i].awayviewtics = READINT32(save_p);
 		players[i].rings = READINT32(save_p);
