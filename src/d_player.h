@@ -241,6 +241,7 @@ typedef enum
 	pw_underwater, // underwater timer
 	pw_spacetime, // In space, no one can hear you spin!
 	pw_extralife, // Extra Life timer
+	pw_pushing,
 
 	pw_super, // Are you super?
 	pw_gravityboots, // gravity boots

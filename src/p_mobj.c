@@ -2190,7 +2190,7 @@ void P_XYMovement(mobj_t *mo)
 
 			P_SlideMove(mo);
 			if (player)
-				mo->flags |= MF_SLIDEME;
+				player->powers[pw_pushing] = 3;
 			xmove = ymove = 0;
 
 #ifdef ESLOPE

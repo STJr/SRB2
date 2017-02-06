@@ -9229,7 +9229,7 @@ void P_PlayerThink(player_t *player)
 	else if (cmd->forwardmove || cmd->sidemove) // only when you're pressing movement keys
 	{
 		if ((player->mo->movefactor < FRACUNIT) // hilarious absence of traction!
-		|| (player->mo->flags & MF_SLIDEME)
+		|| (player->powers[pw_pushing])
 		|| !(player->rmomx || player->rmomy)) // adjust to new angle
 			player->drawangle = player->mo->angle + R_PointToAngle2(0, 0, cmd->forwardmove<<FRACBITS, -cmd->sidemove<<FRACBITS);
 		else
@@ -9237,7 +9237,8 @@ void P_PlayerThink(player_t *player)
 	}
 
 
-	player->mo->flags &= ~MF_SLIDEME;
+	if (player->powers[pw_pushing])
+		player->powers[pw_pushing]--;
 	player->mo->movefactor = FRACUNIT; // We're not going to do any more with this, so let's change it back for the next frame.
 
 	// Unset statis flags after moving.

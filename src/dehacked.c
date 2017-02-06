@@ -7118,6 +7118,7 @@ static const char *const POWERS_LIST[] = {
 	"UNDERWATER", // underwater timer
 	"SPACETIME", // In space, no one can hear you spin!
 	"EXTRALIFE", // Extra Life timer
+	"PUSHING",
 
 	"SUPER", // Are you super?
 	"GRAVITYBOOTS", // gravity boots
