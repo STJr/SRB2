@@ -6687,8 +6687,6 @@ static void P_MovePlayer(player_t *player)
 	if (!player->mo->momx && !player->mo->momy && !player->mo->momz && player->panim == PA_WALK)
 		P_SetPlayerMobjState(player->mo, S_PLAY_STND);
 
-	player->mo->movefactor = FRACUNIT; // We're not going to do any more with this, so let's change it back for the next frame.
-
 //////////////////
 //GAMEPLAY STUFF//
 //////////////////
@@ -9227,11 +9225,15 @@ void P_PlayerThink(player_t *player)
 	}
 	else if (cmd->forwardmove || cmd->sidemove || cmd->buttons) // only when you're pressing buttons
 	{
-		if (player->rmomx || player->rmomy) // only when you're moing
+		if (player->mo->movefactor < FRACUNIT) // hilarious absence of traction!
+			player->drawangle = player->mo->angle + R_PointToAngle2(0, 0, cmd->forwardmove<<FRACBITS, -cmd->sidemove<<FRACBITS);
+		else if (player->rmomx || player->rmomy) // only when you're moing
 			player->drawangle = R_PointToAngle2(0, 0, player->rmomx, player->rmomy);
 		else
 			player->drawangle = player->mo->angle; // spindash, etc
 	}
+
+	player->mo->movefactor = FRACUNIT; // We're not going to do any more with this, so let's change it back for the next frame.
 
 	// Unset statis flags after moving.
 	// In other words, if you manually set stasis via code,
