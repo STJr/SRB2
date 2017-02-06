@@ -3857,6 +3857,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 					player->mo->momy = player->cmomy = 0;
 					P_SetObjectMomZ(player->mo, player->mindash, false);
 					P_InstaThrust(player->mo, player->mo->angle, FixedMul(player->maxdash, player->mo->scale));
+					player->drawangle = player->mo->angle;
 					P_SetPlayerMobjState(player->mo, S_PLAY_MELEE);
 					player->pflags |= PF_USEDOWN;
 					S_StartSound(player->mo, sfx_s3k8b);
@@ -9228,8 +9229,16 @@ void P_PlayerThink(player_t *player)
 	}
 	else if (cmd->forwardmove || cmd->sidemove) // only when you're pressing movement keys
 	{
+#if 1
+		if (!((player->pflags & PF_SPINNING)
+			|| ((player->pflags & PF_THOKKED)
+			&& (player->charability == CA_THOK
+				|| player->charability == CA_HOMINGTHOK
+				|| player->charability == CA_JUMPTHOK)))
+#else
 		if ((player->mo->movefactor < FRACUNIT) // hilarious absence of traction!
 		|| (player->powers[pw_pushing])
+#endif
 		|| !(player->rmomx || player->rmomy)) // adjust to new angle
 			player->drawangle = player->mo->angle + R_PointToAngle2(0, 0, cmd->forwardmove<<FRACBITS, -cmd->sidemove<<FRACBITS);
 		else
