@@ -4108,6 +4108,8 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					P_InstaThrust(player->mo, player->mo->angle, FixedMul(player->normalspeed, player->mo->scale)*(80-player->flyangle - (player->actionspd>>FRACBITS)/2)/80);
 				else
 					P_InstaThrust(player->mo, player->mo->angle, ((FixedMul(player->normalspeed - player->actionspd/4, player->mo->scale))*2)/3);
+
+				player->drawangle = player->mo->angle;
 			}
 		}
 	}
@@ -4181,6 +4183,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						}
 
 						P_InstaThrust(player->mo, player->mo->angle, FixedMul(actionspd, player->mo->scale));
+						player->drawangle = player->mo->angle;
 
 						if (maptol & TOL_2D)
 						{
@@ -9199,7 +9202,7 @@ void P_PlayerThink(player_t *player)
 		return; // P_MovePlayer removed player->mo.
 
 	if ((player->climbing // stuff where the direction is forced at all times
-	|| (player->pflags & (/*PF_JUMPED|*/PF_SLIDING|PF_NIGHTSMODE)))
+	|| (player->pflags & (/*PF_JUMPED|*/PF_STARTDASH|PF_GLIDING|PF_SLIDING|PF_NIGHTSMODE)))
 	|| P_AnalogMove(player) // keep things synchronised up there, since the camera IS seperate from player motion when that happens
 	|| G_RingSlingerGametype()) // no firing rings in directions your player isn't aiming
 		player->drawangle = player->mo->angle;
@@ -9223,16 +9226,18 @@ void P_PlayerThink(player_t *player)
 				break;
 		}
 	}
-	else if (cmd->forwardmove || cmd->sidemove || cmd->buttons) // only when you're pressing buttons
+	else if (cmd->forwardmove || cmd->sidemove) // only when you're pressing movement keys
 	{
-		if (player->mo->movefactor < FRACUNIT) // hilarious absence of traction!
+		if ((player->mo->movefactor < FRACUNIT) // hilarious absence of traction!
+		|| (player->mo->flags & MF_SLIDEME)
+		|| !(player->rmomx || player->rmomy)) // adjust to new angle
 			player->drawangle = player->mo->angle + R_PointToAngle2(0, 0, cmd->forwardmove<<FRACBITS, -cmd->sidemove<<FRACBITS);
-		else if (player->rmomx || player->rmomy) // only when you're moing
-			player->drawangle = R_PointToAngle2(0, 0, player->rmomx, player->rmomy);
 		else
-			player->drawangle = player->mo->angle; // spindash, etc
+			player->drawangle = R_PointToAngle2(0, 0, player->rmomx, player->rmomy);
 	}
 
+
+	player->mo->flags &= ~MF_SLIDEME;
 	player->mo->movefactor = FRACUNIT; // We're not going to do any more with this, so let's change it back for the next frame.
 
 	// Unset statis flags after moving.

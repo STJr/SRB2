@@ -2189,6 +2189,8 @@ void P_XYMovement(mobj_t *mo)
 #endif
 
 			P_SlideMove(mo);
+			if (player)
+				mo->flags |= MF_SLIDEME;
 			xmove = ymove = 0;
 
 #ifdef ESLOPE
