@@ -845,6 +845,7 @@ void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor)
 			fallbackspeed = FixedMul(4*FRACUNIT, player->mo->scale);
 		}
 
+		player->drawangle = ang + ANGLE_180;
 		P_InstaThrust(player->mo, ang, fallbackspeed);
 	}
 
@@ -7082,6 +7083,7 @@ static void P_MovePlayer(player_t *player)
 							case SH_FLAMEAURA:
 								player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
 								P_Thrust(player->mo, player->mo->angle, FixedMul(30*FRACUNIT - FixedSqrt(FixedDiv(player->speed, player->mo->scale)), player->mo->scale));
+								player->drawangle = player->mo->angle;
 								S_StartSound(player->mo, sfx_s3k43);
 							default:
 								break;
@@ -7789,12 +7791,16 @@ void P_HomingAttack(mobj_t *source, mobj_t *enemy) // Home in on your target
 
 	// change angle
 	source->angle = R_PointToAngle2(source->x, source->y, enemy->x, enemy->y);
-	if (source->player && (!demoplayback || P_AnalogMove(source->player)))
+	if (source->player)
 	{
-		if (source->player == &players[consoleplayer])
-			localangle = source->angle;
-		else if (source->player == &players[secondarydisplayplayer])
-			localangle2 = source->angle;
+		source->player->drawangle = source->angle;
+		if (!demoplayback || P_AnalogMove(source->player))
+		{
+			if (source->player == &players[consoleplayer])
+				localangle = source->angle;
+			else if (source->player == &players[secondarydisplayplayer])
+				localangle2 = source->angle;
+		}
 	}
 
 	// change slope
@@ -9194,15 +9200,35 @@ void P_PlayerThink(player_t *player)
 	if (!player->mo)
 		return; // P_MovePlayer removed player->mo.
 
-	if (player->climbing // stuff where the direction is forced at all times
+	if ((player->climbing // stuff where the direction is forced at all times
+	|| (player->pflags & (/*PF_JUMPED|*/PF_SLIDING|PF_NIGHTSMODE)))
+	|| P_AnalogMove(player) // keep things synchronised up there, since the camera IS seperate from player motion when that happens
 	|| G_RingSlingerGametype()) // no firing rings in directions your player isn't aiming
 		player->drawangle = player->mo->angle;
-	else if (P_PlayerInPain(player) && (player->mo->momx || player->mo->momy))
-		player->drawangle = R_PointToAngle2(player->mo->momx, player->mo->momy, 0, 0);
+	else if (P_PlayerInPain(player))
+		;
+	else if (player->powers[pw_carry] && player->mo->tracer)
+	{
+		switch (player->powers[pw_carry])
+		{
+			case CR_PLAYER:
+				player->drawangle = (player->mo->tracer->player ? player->mo->tracer->player->drawangle : player->mo->tracer->angle);
+				break;
+			/* -- in case we wanted to have the camera freely movable during zoom tube style stuff
+			case CR_ZOOMTUBE:
+			case CR_ROPEHANG:
+				player->drawangle = R_PointToAngle2(0, 0, player->mo->momx, player->mo->momy);
+				break;
+			*/
+			default:
+				player->drawangle = player->mo->angle;
+				break;
+		}
+	}
 	else if (cmd->forwardmove || cmd->sidemove || cmd->buttons) // only when you're pressing buttons
 	{
-		if (player->mo->momx || player->mo->momy) // only when you're moing
-			player->drawangle = R_PointToAngle2(0, 0, player->mo->momx, player->mo->momy);
+		if (player->rmomx || player->rmomy) // only when you're moing
+			player->drawangle = R_PointToAngle2(0, 0, player->rmomx, player->rmomy);
 		else
 			player->drawangle = player->mo->angle; // spindash, etc
 	}
