@@ -9230,11 +9230,7 @@ void P_PlayerThink(player_t *player)
 	else if (cmd->forwardmove || cmd->sidemove) // only when you're pressing movement keys
 	{
 #if 1
-		if (!((player->pflags & PF_SPINNING)
-			|| ((player->pflags & PF_THOKKED)
-			&& (player->charability == CA_THOK
-				|| player->charability == CA_HOMINGTHOK
-				|| player->charability == CA_JUMPTHOK)))
+		if (!(player->pflags & (PF_JUMPED|PF_SPINNING))
 #else
 		if ((player->mo->movefactor < FRACUNIT) // hilarious absence of traction!
 		|| (player->powers[pw_pushing])
