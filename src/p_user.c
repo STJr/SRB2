@@ -4280,7 +4280,12 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 				case CA_SLOWFALL: // Slow descent hover
 					if (!(player->pflags & PF_THOKKED) || player->charability2 == CA2_MULTIABILITY)
 					{
-						P_SetPlayerMobjState(player->mo, S_PLAY_FLOAT);
+						if (player->charflags & SF_DASHMODE && player->dashmode >= 3*TICRATE)
+							P_SetPlayerMobjState(player->mo, S_PLAY_PEEL);
+						else if (player->speed >= FixedMul(player->runspeed, player->mo->scale))
+							P_SetPlayerMobjState(player->mo, S_PLAY_FLOAT_RUN);
+						else
+							P_SetPlayerMobjState(player->mo, S_PLAY_FLOAT);
 						player->pflags |= PF_THOKKED;
 						player->pflags &= ~(PF_JUMPED|PF_SPINNING);
 						player->secondjump = 1;
@@ -6701,7 +6706,7 @@ static void P_MovePlayer(player_t *player)
 	if ((cmd->forwardmove != 0 || cmd->sidemove != 0) || (player->powers[pw_super] && !onground))
 	{
 		// If the player is in dashmode, here's their peelout.
-		if (player->charflags & SF_DASHMODE && player->dashmode >= 3*TICRATE && player->panim == PA_RUN && !player->skidtime && (onground || player->powers[pw_super]))
+		if (player->charflags & SF_DASHMODE && player->dashmode >= 3*TICRATE && player->panim == PA_RUN && !player->skidtime && (onground || ((player->charability == CA_FLOAT || player->charability == CA_SLOWFALL) && player->secondjump == 1) || player->powers[pw_super]))
 			P_SetPlayerMobjState (player->mo, S_PLAY_PEEL);
 		// If the player is moving fast enough,
 		// break into a run!
@@ -9448,14 +9453,17 @@ void P_PlayerThink(player_t *player)
 	// Dash mode - thanks be to Iceman404
 	if ((player->charflags & SF_DASHMODE) && !(player->gotflag) && !(maptol & TOL_NIGHTS)) // woo, dashmode! no nights tho.
 	{
-		if (player->secondjump != 1 && (player->speed >= FixedMul(player->runspeed, player->mo->scale) || (player->pflags & PF_STARTDASH)))
+		boolean totallyradical = player->speed >= FixedMul(player->runspeed, player->mo->scale);
+		boolean floating = (player->secondjump == 1);
+
+		if ((totallyradical && !floating) || (player->pflags & PF_STARTDASH))
 		{
 			if (dashmode < 3*TICRATE + 3)
 				dashmode++; // Counter. Adds 1 to dash mode per tic in top speed.
 			if (dashmode == 3*TICRATE) // This isn't in the ">=" equation because it'd cause the sound to play infinitely.
 				S_StartSound(player->mo, sfx_s3ka2); // If the player enters dashmode, play this sound on the the tic it starts.
 		}
-		else if (!(player->pflags & PF_SPINNING))
+		else if ((!totallyradical || !floating) && !(player->pflags & PF_SPINNING))
 		{
 			if (dashmode > 3)
 				dashmode -= 3; // Rather than lose it all, it gently counts back down!
@@ -9483,8 +9491,15 @@ void P_PlayerThink(player_t *player)
 			ghost->fuse = 2; // Makes the images fade quickly
 		}
 	}
-	else
+	else if (dashmode)
+	{
+		if (dashmode >= 3*TICRATE) // catch getting the flag!
+		{
+			player->normalspeed = skins[player->skin].normalspeed;
+			player->jumpfactor = skins[player->skin].jumpfactor;
+		}
 		dashmode = 0;
+	}
 #undef dashmode
 /*
 //	Colormap verification
