@@ -3761,7 +3761,7 @@ static void P_DoSpinDashDust(player_t *player)
 		prandom[2] = P_RandomFixed()<<3; // P_RandomByte()<<11
 		P_SetObjectMomZ(particle, player->dashspeed/50 + prandom[0], false);
 		P_InstaThrust(particle,
-				player->mo->angle + (prandom[1]*ANG1),
+				player->drawangle + (prandom[1]*ANG1),
 				-FixedMul(player->dashspeed/12 + FRACUNIT + prandom[2], player->mo->scale));
 		P_TryMove(particle, particle->x+particle->momx, particle->y+particle->momy, true);
 	}
@@ -9203,10 +9203,19 @@ void P_PlayerThink(player_t *player)
 		return; // P_MovePlayer removed player->mo.
 
 	if ((player->climbing // stuff where the direction is forced at all times
-	|| (player->pflags & (/*PF_JUMPED|*/PF_STARTDASH|PF_GLIDING|PF_SLIDING|PF_NIGHTSMODE)))
+	|| (player->pflags & (PF_GLIDING|PF_SLIDING|PF_NIGHTSMODE)))
 	|| P_AnalogMove(player) // keep things synchronised up there, since the camera IS seperate from player motion when that happens
 	|| G_RingSlingerGametype()) // no firing rings in directions your player isn't aiming
 		player->drawangle = player->mo->angle;
+	else if (player->pflags & PF_STARTDASH) // fun spindash experiment
+	{
+		angle_t diff = (player->mo->angle - player->drawangle);
+		if (diff > ANGLE_180)
+			diff = InvAngle(InvAngle(diff)/4);
+		else
+			diff /= 4;
+		player->drawangle += diff;
+	}
 	else if (P_PlayerInPain(player))
 		;
 	else if (player->powers[pw_carry] && player->mo->tracer) // carry
