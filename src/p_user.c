@@ -1507,7 +1507,7 @@ mobj_t *P_SpawnGhostMobj(mobj_t *mobj)
 
 	ghost->color = mobj->color;
 
-	ghost->angle = mobj->angle;
+	ghost->angle = (mobj->player ? mobj->player->drawangle : mobj->angle);
 	ghost->sprite = mobj->sprite;
 	ghost->sprite2 = mobj->sprite2;
 	ghost->frame = mobj->frame;
@@ -1557,7 +1557,7 @@ void P_SpawnThokMobj(player_t *player)
 		mobj = P_SpawnMobj(player->mo->x, player->mo->y, zheight, type);
 
 		// set to player's angle, just in case
-		mobj->angle = player->mo->angle;
+		mobj->angle = player->drawangle;
 
 		// color and skin
 		mobj->color = player->mo->color;
@@ -1611,7 +1611,7 @@ void P_SpawnSpinMobj(player_t *player, mobjtype_t type)
 		mobj = P_SpawnMobj(player->mo->x, player->mo->y, zheight, type);
 
 		// set to player's angle, just in case
-		mobj->angle = player->mo->angle;
+		mobj->angle = player->drawangle;
 
 		// color and skin
 		mobj->color = player->mo->color;
