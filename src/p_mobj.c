@@ -3374,6 +3374,8 @@ static void P_PlayerZMovement(mobj_t *mo)
 					{
 						mo->momz *= -1;
 						P_DoAbilityBounce(mo->player, true);
+						if (mo->player->scoreadd)
+							mo->player->scoreadd--;
 						clipmomz = false;
 					}
 				}
