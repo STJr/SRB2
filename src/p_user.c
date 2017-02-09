@@ -1185,7 +1185,7 @@ boolean P_IsObjectInGoop(mobj_t *mo)
 //
 boolean P_IsObjectOnGround(mobj_t *mo)
 {
-	if (P_IsObjectInGoop(mo))
+	if (P_IsObjectInGoop(mo) && !(mo->player && mo->player->pflags & PF_BOUNCING))
 	{
 /*
 		// It's a crazy hack that checking if you're on the ground
@@ -3998,8 +3998,8 @@ void P_DoAbilityBounce(player_t *player, boolean changemomz)
 		return;
 	if (changemomz)
 	{
-		prevmomz = P_MobjFlip(player->mo)*player->mo->momz;
-		if (prevmomz < 0)
+		prevmomz = player->mo->momz;
+		if (P_MobjFlip(player->mo)*prevmomz < 0)
 			prevmomz = 0;
 		else if (player->mo->eflags & MFE_UNDERWATER)
 			prevmomz /= 2;
@@ -4532,6 +4532,8 @@ static void P_2dMovement(player_t *player)
 				player->skidtime = 0;
 			}
 		}
+		if (player->pflags & PF_BOUNCING)
+			player->pflags &= ~PF_BOUNCING;
 		if (player->pflags & PF_SPINNING && !player->exiting)
 		{
 			player->pflags &= ~PF_SPINNING;
@@ -4691,6 +4693,7 @@ static void P_3dMovement(player_t *player)
 	angle_t dangle; // replaces old quadrants bits
 	fixed_t normalspd = FixedMul(player->normalspeed, player->mo->scale);
 	boolean analogmove = false;
+	boolean spin = (player->pflags & PF_SPINNING && (player->rmomx || player->rmomy) && !(player->pflags & PF_STARTDASH));
 	fixed_t oldMagnitude, newMagnitude;
 #ifdef ESLOPE
 	vector3_t totalthrust;
@@ -4720,6 +4723,8 @@ static void P_3dMovement(player_t *player)
 				player->skidtime = 0;
 			}
 		}
+		if (player->pflags & PF_BOUNCING)
+			player->pflags &= ~PF_BOUNCING;
 		if (player->pflags & PF_SPINNING && !player->exiting)
 		{
 			player->pflags &= ~PF_SPINNING;
@@ -4836,6 +4841,15 @@ static void P_3dMovement(player_t *player)
 		}
 		else
 			topspeed = normalspd;
+	}
+
+	if (spin) // Prevent gaining speed whilst rolling!
+	{
+		const fixed_t ns = FixedDiv(549*ORIG_FRICTION,500*FRACUNIT); // P_XYFriction
+		if (onground)
+			topspeed = FixedMul(oldMagnitude, ns);
+		else
+			topspeed = oldMagnitude;
 	}
 
 	// Better maneuverability while flying
@@ -5015,7 +5029,7 @@ static void P_3dMovement(player_t *player)
 	if (newMagnitude > topspeed)
 	{
 		fixed_t tempmomx, tempmomy;
-		if (oldMagnitude > topspeed)
+		if (oldMagnitude > topspeed && !spin)
 		{
 			if (newMagnitude > oldMagnitude)
 			{

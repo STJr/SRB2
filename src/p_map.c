@@ -203,7 +203,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 			}
 		}
 
-		pflags = object->player->pflags & (PF_JUMPED|PF_SPINNING|PF_THOKKED|PF_SHIELDABILITY); // I still need these.
+		pflags = object->player->pflags & (PF_JUMPED|PF_SPINNING|PF_THOKKED|PF_SHIELDABILITY|PF_BOUNCING); // I still need these.
 		jumping = object->player->jumping;
 		secondjump = object->player->secondjump;
 		P_ResetPlayer(object->player);
@@ -213,13 +213,10 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 			object->player->pflags |= PF_JUMPED;
 			P_SetPlayerMobjState(object, S_PLAY_JUMP);
 		}
-		else if (P_MobjFlip(object)*vertispeed > 0)
-			P_SetPlayerMobjState(object, S_PLAY_SPRING);
-		else if (P_MobjFlip(object)*vertispeed < 0)
-			P_SetPlayerMobjState(object, S_PLAY_FALL);
-		else // horizontal spring
+		else if (!vertispeed || (pflags & PF_BOUNCING)) // horizontal spring or bouncing
 		{
-			if (pflags & (PF_JUMPED|PF_SPINNING) && (object->player->panim == PA_ROLL || object->player->panim == PA_JUMP || object->player->panim == PA_FALL))
+			if ((pflags & PF_BOUNCING)
+			|| (pflags & (PF_JUMPED|PF_SPINNING) && (object->player->panim == PA_ROLL || object->player->panim == PA_JUMP || object->player->panim == PA_FALL)))
 			{
 				object->player->pflags |= pflags;
 				object->player->jumping = jumping;
@@ -228,6 +225,10 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 			else
 				P_SetPlayerMobjState(object, S_PLAY_WALK);
 		}
+		else if (P_MobjFlip(object)*vertispeed > 0)
+			P_SetPlayerMobjState(object, S_PLAY_SPRING);
+		else
+			P_SetPlayerMobjState(object, S_PLAY_FALL);
 	}
 	return true;
 }
