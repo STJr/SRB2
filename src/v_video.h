@@ -90,6 +90,7 @@ extern RGBA_t *pLocalPalette;
 #define V_70TRANS            0x00070000
 #define V_80TRANS            0x00080000 // used to be V_8020TRANS
 #define V_90TRANS            0x00090000
+#define V_STATIC             0x000C0000 // ogl unsupported kthnxbai
 #define V_HUDTRANSHALF       0x000D0000
 #define V_HUDTRANS           0x000E0000 // draw the hud translucent
 #define V_HUDTRANSDOUBLE     0x000F0000

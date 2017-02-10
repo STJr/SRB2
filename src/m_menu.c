@@ -209,7 +209,7 @@ menu_t SPauseDef;
 // Level Select
 static levelselect_t levelselect = {0, NULL};
 static UINT8 levelselectselect[4];
-static patch_t *levselp[4];
+static patch_t *levselp[3];
 static INT32 lsoffs[2];
 
 #define lsrow levelselectselect[0]
@@ -3803,13 +3803,11 @@ static boolean M_PrepareLevelPlatter(INT32 gt)
 		W_UnlockCachedPatch(levselp[0]);
 		W_UnlockCachedPatch(levselp[1]);
 		W_UnlockCachedPatch(levselp[2]);
-		W_UnlockCachedPatch(levselp[3]);
 	}
 
 	levselp[0] = W_CachePatchName("SLCT1LVL", PU_STATIC);
 	levselp[1] = W_CachePatchName("SLCT2LVL", PU_STATIC);
 	levselp[2] = W_CachePatchName("BLANKLVL", PU_STATIC);
-	levselp[3] = W_CachePatchName("STATCLVL", PU_STATIC);
 
 	return true;
 }
@@ -3979,13 +3977,16 @@ static void M_DrawLevelPlatterMap(UINT8 row, UINT8 col, INT32 x, INT32 y, boolea
 
 	//  A 160x100 image of the level as entry MAPxxP
 	if (!(levelselect.rows[row].mapavailable[col]))
-		patch = ((lstic & 1) ? levselp[2] : levselp[3]); // static - make secret maps look ENTICING
-	else if (W_CheckNumForName(va("%sP", G_BuildMapName(map))) != LUMPERROR)
-		patch = W_CachePatchName(va("%sP", G_BuildMapName(map)), PU_CACHE);
+		V_DrawSmallScaledPatch(x, y, V_STATIC, levselp[2]); // static - make secret maps look ENTICING
 	else
-		patch = levselp[2]; // don't flash to indicate that it's just a normal level
+	{
+		if (W_CheckNumForName(va("%sP", G_BuildMapName(map))) != LUMPERROR)
+			patch = W_CachePatchName(va("%sP", G_BuildMapName(map)), PU_CACHE);
+		else
+			patch = levselp[2]; // don't flash to indicate that it's just a normal level
 
-	V_DrawSmallScaledPatch(x, y, 0, patch);
+		V_DrawSmallScaledPatch(x, y, 0, patch);
+	}
 
 	if ((y+50) < 200)
 	{
