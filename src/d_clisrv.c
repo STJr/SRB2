@@ -2696,7 +2696,7 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 
 	// If a verified admin banned someone, the server needs to know about it.
 	// If the playernum isn't zero (the server) then the server needs to record the ban.
-	if (server && playernum && msg == KICK_MSG_BANNED)
+	if (server && playernum && (msg == KICK_MSG_BANNED || msg == KICK_MSG_CUSTOM_BAN))
 	{
 		if (I_Ban && !I_Ban(playernode[(INT32)pnum]))
 		{
