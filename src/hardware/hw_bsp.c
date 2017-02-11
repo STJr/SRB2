@@ -564,8 +564,6 @@ static inline void HWR_SubsecPoly(INT32 num, poly_t *poly)
 	subsector_t *sub;
 	seg_t *lseg;
 
-	sscount++;
-
 	sub = &subsectors[num];
 	count = sub->numlines;
 	lseg = &segs[sub->firstline];
