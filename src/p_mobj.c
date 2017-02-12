@@ -5641,6 +5641,15 @@ static void P_Boss7Thinker(mobj_t *mobj)
 
 }
 
+#define vectorise mobj->movedir = ANGLE_11hh - FixedAngle(FixedMul(AngleFixed(ANGLE_11hh), FixedDiv((mobj->info->spawnhealth - mobj->health)<<FRACBITS, (mobj->info->spawnhealth-1)<<FRACBITS)));\
+				if (P_RandomChance(FRACUNIT/2))\
+					mobj->movedir = InvAngle(mobj->movedir);\
+				mobj->threshold = 6 + (FixedMul(24<<FRACBITS, FixedDiv((mobj->info->spawnhealth - mobj->health)<<FRACBITS, (mobj->info->spawnhealth-1)<<FRACBITS))>>FRACBITS);\
+				if (mobj->info->activesound)\
+					S_StartSound(mobj, mobj->info->activesound);\
+				if (mobj->info->painchance)\
+					P_SetMobjState(mobj, mobj->info->painchance)
+
 // Metal Sonic battle boss
 // You CAN put multiple Metal Sonics in a single map
 // because I am a totally competent programmer who can do shit right.
@@ -5745,7 +5754,8 @@ static void P_Boss9Thinker(mobj_t *mobj)
 			}
 			if (spawner) {
 				mobj_t *missile = P_SpawnMissile(spawner, mobj, MT_MSGATHER);
-				missile->momz = FixedDiv(missile->momz, 7*FRACUNIT/4);
+				if (mobj->health > mobj->info->damage)
+					missile->momz = FixedDiv(missile->momz, 7*FRACUNIT/5);
 				if (dist == 0)
 					missile->fuse = 0;
 				else
@@ -5757,16 +5767,22 @@ static void P_Boss9Thinker(mobj_t *mobj)
 
 		// Pre-threshold reactiontime stuff for attack phases
 		if (mobj->reactiontime && mobj->movecount == 3) {
+			mobj->reactiontime--;
+
 			if (mobj->movedir == 0 || mobj->movedir == 2) { // Pausing between bounces in the pinball phase
 				if (mobj->target->player->powers[pw_tailsfly]) // Trying to escape, eh?
 					mobj->watertop = mobj->target->z + mobj->target->momz*6; // Readjust your aim. >:3
 				else
 					mobj->watertop = mobj->target->floorz + 16*FRACUNIT;
-				if (!(mobj->threshold%4))
+
+				if (!(mobj->threshold%4)) {
 					mobj->angle = R_PointToAngle2(mobj->x, mobj->y, mobj->target->x + mobj->target->momx*4, mobj->target->y + mobj->target->momy*4);
+					if (!mobj->reactiontime)
+						S_StartSound(mobj, sfx_zoom); // zoom!
+				}
 			}
-			// Pausing between energy ball shots
-			mobj->reactiontime--;
+			// else -- Pausing between energy ball shots
+
 			return;
 		}
 
@@ -5838,20 +5854,28 @@ static void P_Boss9Thinker(mobj_t *mobj)
 					P_InstaThrust(mobj, mobj->angle, 30*FRACUNIT);
 				if (!P_TryMove(mobj, mobj->x+mobj->momx, mobj->y+mobj->momy, true)) { // Hit a wall? Find a direction to bounce
 					mobj->threshold--;
-					if (mobj->threshold) {
-						P_SetMobjState(mobj, mobj->state->nextstate);
-						if (mobj->info->mass)
-							S_StartSound(mobj, mobj->info->mass);
-						if (!(mobj->threshold%4)) { // We've decided to lock onto the player this bounce.
-							mobj->angle = R_PointToAngle2(mobj->x, mobj->y, mobj->target->x + mobj->target->momx*4, mobj->target->y + mobj->target->momy*4);
-							mobj->reactiontime = TICRATE; // targetting time
-						} else { // No homing, just use P_BounceMove
-							P_BounceMove(mobj);
-							mobj->angle = R_PointToAngle2(0,0,mobj->momx,mobj->momy);
-							mobj->reactiontime = TICRATE/4; // just a pause before you bounce away
-						}
-						mobj->momx = mobj->momy = 0;
+					P_SetMobjState(mobj, mobj->state->nextstate);
+					if (!mobj->threshold) { // failed bounce!
+						S_StartSound(mobj, sfx_mspogo);
+						P_BounceMove(mobj);
+						mobj->angle = R_PointToAngle2(0,0,mobj->momx, mobj->momy);
+						P_TryMove(mobj, mobj->x+mobj->momx, mobj->y+mobj->momy, true);
+						mobj->watertop = mobj->target->floorz + 32*FRACUNIT;
+						mobj->flags &= ~MF_PAIN;
+						mobj->fuse = 10*TICRATE;
+						mobj->movecount = 0;
+						vectorise;
+					} else if (!(mobj->threshold%4)) { // We've decided to lock onto the player this bounce.
+						S_StartSound(mobj, sfx_s3k5a);
+						mobj->angle = R_PointToAngle2(mobj->x, mobj->y, mobj->target->x + mobj->target->momx*4, mobj->target->y + mobj->target->momy*4);
+						mobj->reactiontime = TICRATE - 5*(mobj->info->damage - mobj->health); // targetting time
+					} else { // No homing, just use P_BounceMove
+						S_StartSound(mobj, sfx_s3kaa); // make the bounces distinct...
+						P_BounceMove(mobj);
+						mobj->angle = R_PointToAngle2(0,0,mobj->momx,mobj->momy);
+						mobj->reactiontime = 1; // TICRATE/4; // just a pause before you bounce away
 					}
+					mobj->momx = mobj->momy = 0;
 				}
 				return;
 			}
@@ -5978,9 +6002,9 @@ static void P_Boss9Thinker(mobj_t *mobj)
 						S_StartSound(mobj, mobj->info->seesound);
 					P_SetMobjState(mobj, mobj->info->seestate);
 					if (mobj->movedir == 2)
-						mobj->threshold = 16; // bounce 16 times
+						mobj->threshold = 12; // bounce 12 times
 					else
-						mobj->threshold = 32; // bounce 32 times
+						mobj->threshold = 24; // bounce 24 times
 					mobj->watertop = mobj->target->floorz + 16*FRACUNIT;
 					P_LinedefExecute(LE_PINCHPHASE, mobj, NULL);
 				} else {
@@ -6063,14 +6087,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 			if (danger) {
 				// An incoming attack is detected! What should we do?!
 				// Go into vector form!
-				mobj->movedir = ANGLE_11hh - FixedAngle(FixedMul(AngleFixed(ANGLE_11hh), FixedDiv((mobj->info->spawnhealth - mobj->health)<<FRACBITS, (mobj->info->spawnhealth-1)<<FRACBITS)));
-				if (P_RandomChance(FRACUNIT/2))
-					mobj->movedir = InvAngle(mobj->movedir);
-				mobj->threshold = 6 + (FixedMul(24<<FRACBITS, FixedDiv((mobj->info->spawnhealth - mobj->health)<<FRACBITS, (mobj->info->spawnhealth-1)<<FRACBITS))>>FRACBITS);
-				if (mobj->info->activesound)
-					S_StartSound(mobj, mobj->info->activesound);
-				if (mobj->info->painchance)
-					P_SetMobjState(mobj, mobj->info->painchance);
+				vectorise;
 				return;
 			}
 
@@ -6085,6 +6102,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 		}
 	}
 }
+#undef vectorise
 
 //
 // P_GetClosestAxis
