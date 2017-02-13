@@ -5880,6 +5880,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 						mobj->flags &= ~MF_PAIN;
 						mobj->fuse = 10*TICRATE;
 						mobj->movecount = 0;
+						P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_CYBRAKDEMON_VILE_EXPLOSION);
 						P_SetMobjState(mobj, mobj->info->meleestate);
 					} else if (!(mobj->threshold%4)) { // We've decided to lock onto the player this bounce.
 						S_StartSound(mobj, sfx_s3k5a);
