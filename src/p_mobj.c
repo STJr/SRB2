@@ -5694,6 +5694,19 @@ static void P_Boss9Thinker(mobj_t *mobj)
 	if (mobj->health <= 0)
 		return;
 
+	if ((statenum_t)(mobj->state-states) == mobj->info->meleestate)
+	{
+		P_InstaThrust(mobj, mobj->angle, -4*FRACUNIT);
+		P_TryMove(mobj, mobj->x+mobj->momx, mobj->y+mobj->momy, true);
+		mobj->momz -= gravity;
+		if (mobj->z < mobj->watertop)
+		{
+			mobj->watertop = mobj->target->floorz + 32*FRACUNIT;
+			P_SetMobjState(mobj, mobj->info->spawnstate);
+		}
+		return;
+	}
+
 	if ((!mobj->target || !(mobj->target->flags & MF_SHOOTABLE)))
 	{
 		P_BossTargetPlayer(mobj, false);
@@ -5711,6 +5724,10 @@ static void P_Boss9Thinker(mobj_t *mobj)
 		}
 		else if (!mobj->fuse)
 			mobj->fuse = 10*TICRATE;
+
+		// reset to flying so everything gets properly re-initialised
+		mobj->threshold = 0;
+		mobj->movecount = 0;
 	}
 
 	// AI goes here.
@@ -5859,11 +5876,11 @@ static void P_Boss9Thinker(mobj_t *mobj)
 						S_StartSound(mobj, sfx_mspogo);
 						P_BounceMove(mobj);
 						mobj->angle = R_PointToAngle2(mobj->momx, mobj->momy,0,0);
-						mobj->watertop = mobj->target->floorz + 32*FRACUNIT;
+						mobj->momz = 4*FRACUNIT;
 						mobj->flags &= ~MF_PAIN;
-						mobj->fuse = 0;
+						mobj->fuse = 10*TICRATE;
 						mobj->movecount = 0;
-						vectorise;
+						P_SetMobjState(mobj, mobj->info->meleestate);
 					} else if (!(mobj->threshold%4)) { // We've decided to lock onto the player this bounce.
 						S_StartSound(mobj, sfx_s3k5a);
 						mobj->angle = R_PointToAngle2(mobj->x, mobj->y, mobj->target->x + mobj->target->momx*4, mobj->target->y + mobj->target->momy*4);
