@@ -5709,25 +5709,30 @@ static void P_Boss9Thinker(mobj_t *mobj)
 
 	if ((!mobj->target || !(mobj->target->flags & MF_SHOOTABLE)))
 	{
+		if (mobj->tracer)
+			P_RemoveMobj(mobj->tracer);
 		P_BossTargetPlayer(mobj, false);
 		if (mobj->target && (!P_IsObjectOnGround(mobj->target) || mobj->target->player->pflags & PF_SPINNING))
 			P_SetTarget(&mobj->target, NULL); // Wait for them to hit the ground first
 		if (!mobj->target) // Still no target, aww.
 		{
 			// Reset the boss.
+			if (mobj->tracer)
+				P_RemoveMobj(mobj->tracer);
 			P_SetMobjState(mobj, mobj->info->spawnstate);
 			mobj->fuse = 0;
 			mobj->momx = FixedDiv(mobj->momx, FRACUNIT + (FRACUNIT>>2));
 			mobj->momy = FixedDiv(mobj->momy, FRACUNIT + (FRACUNIT>>2));
 			mobj->momz = FixedDiv(mobj->momz, FRACUNIT + (FRACUNIT>>2));
+			mobj->watertop = mobj->floorz + 32*FRACUNIT;
+			mobj->momz = (mobj->watertop - mobj->z)>>3;
+			mobj->threshold = 0;
+			mobj->movecount = 0;
+			mobj->flags = mobj->info->flags;
 			return;
 		}
 		else if (!mobj->fuse)
 			mobj->fuse = 10*TICRATE;
-
-		// reset to flying so everything gets properly re-initialised
-		mobj->threshold = 0;
-		mobj->movecount = 0;
 	}
 
 	// AI goes here.
