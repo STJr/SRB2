@@ -209,7 +209,7 @@ menu_t SPauseDef;
 // Level Select
 static levelselect_t levelselect = {0, NULL};
 static UINT8 levelselectselect[4];
-static patch_t *levselp[3];
+static patch_t *levselp[2][3];
 static INT32 lsoffs[2];
 
 #define lsrow levelselectselect[0]
@@ -222,6 +222,10 @@ static INT32 lsoffs[2];
 #define lsheadingheight 16
 #define getheadingoffset(row) (levelselect.rows[row].header[0] ? lsheadingheight : 0)
 #define lsvseperation(row) lsbasevseperation + getheadingoffset(row)
+#define lswide(row) levelselect.rows[row].mapavailable[3]
+
+#define lsbasex 19
+#define lsbasey 59+lsheadingheight
 
 // Sky Room
 static void M_CustomLevelSelect(INT32 choice);
@@ -3646,35 +3650,6 @@ static INT32 M_CountLevelsToShowOnPlatter(INT32 gt)
 }
 #endif
 
-static INT32 M_CountRowsToShowOnPlatter(INT32 gt)
-{
-	INT32 mapnum = 0, prevmapnum = 0, col = 0, rows = 0;
-
-	while (mapnum < NUMMAPS)
-	{
-		if (M_CanShowLevelOnPlatter(mapnum, gt))
-		{
-			if (rows == 0)
-				rows++;
-			else
-			{
-				if (col == 2
-					|| !(fastcmp(mapheaderinfo[mapnum]->selectheading, mapheaderinfo[prevmapnum]->selectheading)))
-				{
-					col = 0;
-					rows++;
-				}
-				else
-					col++;
-			}
-			prevmapnum = mapnum;
-		}
-		mapnum++;
-	}
-
-	return rows;
-}
-
 #if 0
 static boolean M_SetNextMapOnPlatter(void)
 {
@@ -3698,6 +3673,37 @@ static boolean M_SetNextMapOnPlatter(void)
 }
 #endif
 
+static INT32 M_CountRowsToShowOnPlatter(INT32 gt)
+{
+	INT32 mapnum = 0, prevmapnum = 0, col = 0, rows = 0;
+
+	while (mapnum < NUMMAPS)
+	{
+		if (M_CanShowLevelOnPlatter(mapnum, gt))
+		{
+			if (rows == 0)
+				rows++;
+			else
+			{
+				if (col == 2
+				|| (mapheaderinfo[prevmapnum]->menuflags & LF2_WIDEICON)
+				|| (mapheaderinfo[mapnum]->menuflags & LF2_WIDEICON)
+				|| !(fastcmp(mapheaderinfo[mapnum]->selectheading, mapheaderinfo[prevmapnum]->selectheading)))
+				{
+					col = 0;
+					rows++;
+				}
+				else
+					col++;
+			}
+			prevmapnum = mapnum;
+		}
+		mapnum++;
+	}
+
+	return rows;
+}
+
 //
 // M_PrepareLevelPlatter
 //
@@ -3707,7 +3713,7 @@ static boolean M_SetNextMapOnPlatter(void)
 static boolean M_PrepareLevelPlatter(INT32 gt)
 {
 	INT32 numrows = M_CountRowsToShowOnPlatter(gt);
-	INT32 mapnum, col = 0, row = 0;
+	INT32 mapnum = 0, prevmapnum = 0, col = 0, row = 0;
 
 	if (!numrows)
 		return false;
@@ -3724,18 +3730,21 @@ static boolean M_PrepareLevelPlatter(INT32 gt)
 	// done here so lsrow and lscol can be set if cv_nextmap is on the platter
 	lsrow = lscol = lstic = lshli = lsoffs[0] = lsoffs[1] = 0;
 
-	for (mapnum = 0; mapnum < NUMMAPS; mapnum++)
+	while (mapnum < NUMMAPS)
 	{
 		if (M_CanShowLevelOnPlatter(mapnum, gt))
 		{
 			const INT32 actnum = mapheaderinfo[mapnum]->actnum;
 			const boolean headingisname = (fastcmp(mapheaderinfo[mapnum]->selectheading, mapheaderinfo[mapnum]->lvlttl));
+			const boolean wide = (mapheaderinfo[mapnum]->menuflags & LF2_WIDEICON);
 
 			// preparing next position to drop mapnum into
 			if (levelselect.rows[0].maplist[0])
 			{
 				if (col == 2 // no more space on the row?
-					|| (levelselect.rows[row].maplist[0] && !(fastcmp(mapheaderinfo[mapnum]->selectheading, mapheaderinfo[levelselect.rows[row].maplist[0]-1]->selectheading)))) // a new heading is starting?
+				|| wide
+				|| (mapheaderinfo[prevmapnum]->menuflags & LF2_WIDEICON)
+				|| !(fastcmp(mapheaderinfo[mapnum]->selectheading, mapheaderinfo[prevmapnum]->selectheading))) // a new heading is starting?
 				{
 					col = 0;
 					row++;
@@ -3746,6 +3755,12 @@ static boolean M_PrepareLevelPlatter(INT32 gt)
 
 			levelselect.rows[row].maplist[col] = mapnum+1; // putting the map on the platter
 			levelselect.rows[row].mapavailable[col] = M_LevelAvailableOnPlatter(mapnum);
+
+			if ((levelselect.rows[row].mapavailable[3] = wide))
+			{
+				levelselect.rows[row].maplist[2] = levelselect.rows[row].maplist[1] = levelselect.rows[row].maplist[0];
+				levelselect.rows[row].mapavailable[2] = levelselect.rows[row].mapavailable[1] = levelselect.rows[row].mapavailable[0];
+			}
 
 			if (cv_nextmap.value == mapnum+1) // A little quality of life improvement.
 			{
@@ -3763,9 +3778,16 @@ static boolean M_PrepareLevelPlatter(INT32 gt)
 					else
 						sprintf(levelselect.rows[row].mapnames[col], "THE ACT");
 				}
+				else if (wide)
+				{
+					// Yes, with LF2_WIDEICON it'll continue on over into the next 17+1 char block. That's alright; col is always zero, the string is contiguous, and the maximum length is lvlttl[22] + ' ' + ZONE + ' ' + INT32, which is about 39 or so - barely crossing into the third column.
+					char* mapname = G_BuildMapTitle(mapnum+1);
+					strcpy(levelselect.rows[row].mapnames[col], (const char *)mapname);
+					Z_Free(mapname);
+				}
 				else
 				{
-					char mapname[22+3]; // lvlttl[22] + " 19"
+					char mapname[22+1+11]; // lvlttl[22] + ' ' + INT32
 
 					if (actnum)
 						sprintf(mapname, "%s %d", mapheaderinfo[mapnum]->lvlttl, actnum);
@@ -3795,19 +3817,31 @@ static boolean M_PrepareLevelPlatter(INT32 gt)
 					}
 				}
 			}
+
+			prevmapnum = mapnum;
 		}
+
+		mapnum++;
 	}
 
 	if (levselp[0]) // never going to have some provided but not all, saves individually checking
 	{
-		W_UnlockCachedPatch(levselp[0]);
-		W_UnlockCachedPatch(levselp[1]);
-		W_UnlockCachedPatch(levselp[2]);
+		W_UnlockCachedPatch(levselp[0][0]);
+		W_UnlockCachedPatch(levselp[0][1]);
+		W_UnlockCachedPatch(levselp[0][2]);
+
+		W_UnlockCachedPatch(levselp[1][0]);
+		W_UnlockCachedPatch(levselp[1][1]);
+		W_UnlockCachedPatch(levselp[1][2]);
 	}
 
-	levselp[0] = W_CachePatchName("SLCT1LVL", PU_STATIC);
-	levselp[1] = W_CachePatchName("SLCT2LVL", PU_STATIC);
-	levselp[2] = W_CachePatchName("BLANKLVL", PU_STATIC);
+	levselp[0][0] = W_CachePatchName("SLCT1LVL", PU_STATIC);
+	levselp[0][1] = W_CachePatchName("SLCT2LVL", PU_STATIC);
+	levselp[0][2] = W_CachePatchName("BLANKLVL", PU_STATIC);
+
+	levselp[1][0] = W_CachePatchName("SLCT1LVW", PU_STATIC);
+	levselp[1][1] = W_CachePatchName("SLCT2LVW", PU_STATIC);
+	levselp[1][2] = W_CachePatchName("BLANKLVW", PU_STATIC);
 
 	return true;
 }
@@ -3875,7 +3909,7 @@ static void M_HandleLevelPlatter(INT32 choice)
 			{
 				lscol--;
 
-				lsoffs[1] = lshseperation;
+				lsoffs[1] = (lswide(lsrow) ? -8 : lshseperation);
 				S_StartSound(NULL,sfx_s3kb7);
 
 				selectvalnextmap(lscol) else selectvalnextmap(0)
@@ -3892,7 +3926,7 @@ static void M_HandleLevelPlatter(INT32 choice)
 			{
 				lscol++;
 
-				lsoffs[1] = -lshseperation;
+				lsoffs[1] = (lswide(lsrow) ? 8 : -lshseperation);
 				S_StartSound(NULL,sfx_s3kb7);
 
 				selectvalnextmap(lscol) else selectvalnextmap(0)
@@ -3967,6 +4001,47 @@ static void M_DrawLevelPlatterHeader(INT32 y, const char *header, boolean header
 	y += 2;
 }
 
+static void M_DrawLevelPlatterWideMap(UINT8 row, UINT8 col, INT32 x, INT32 y, boolean highlight)
+{
+	patch_t *patch;
+
+	INT32 map = levelselect.rows[row].maplist[col];
+	if (!map)
+		return;
+
+	//  A 160x100 image of the level as entry MAPxxP
+	if (!(levelselect.rows[row].mapavailable[col]))
+		V_DrawSmallScaledPatch(x, y, V_STATIC, levselp[1][2]); // static - make secret maps look ENTICING
+	else
+	{
+		if (W_CheckNumForName(va("%sW", G_BuildMapName(map))) != LUMPERROR)
+			patch = W_CachePatchName(va("%sW", G_BuildMapName(map)), PU_CACHE);
+		else
+			patch = levselp[1][2]; // don't static to indicate that it's just a normal level
+
+		V_DrawSmallScaledPatch(x, y, 0, patch);
+	}
+
+	if ((y+50) < 200)
+	{
+		INT32 topy = (y+50), h = 8;
+
+		if (topy < 0)
+		{
+			h += topy;
+			topy = 0;
+		}
+		else if (topy + h >= 200)
+			h = 200 - y;
+		if (h > 0)
+			V_DrawFill(x, topy, 282, h,
+			((mapheaderinfo[map-1]->unlockrequired < 0)
+			? 159 : 63));
+	}
+
+	V_DrawString(x, y+50, (highlight ? V_YELLOWMAP : 0), levelselect.rows[row].mapnames[col]);
+}
+
 static void M_DrawLevelPlatterMap(UINT8 row, UINT8 col, INT32 x, INT32 y, boolean highlight)
 {
 	patch_t *patch;
@@ -3977,13 +4052,13 @@ static void M_DrawLevelPlatterMap(UINT8 row, UINT8 col, INT32 x, INT32 y, boolea
 
 	//  A 160x100 image of the level as entry MAPxxP
 	if (!(levelselect.rows[row].mapavailable[col]))
-		V_DrawSmallScaledPatch(x, y, V_STATIC, levselp[2]); // static - make secret maps look ENTICING
+		V_DrawSmallScaledPatch(x, y, V_STATIC, levselp[0][2]); // static - make secret maps look ENTICING
 	else
 	{
 		if (W_CheckNumForName(va("%sP", G_BuildMapName(map))) != LUMPERROR)
 			patch = W_CachePatchName(va("%sP", G_BuildMapName(map)), PU_CACHE);
 		else
-			patch = levselp[2]; // don't flash to indicate that it's just a normal level
+			patch = levselp[0][2]; // don't static to indicate that it's just a normal level
 
 		V_DrawSmallScaledPatch(x, y, 0, patch);
 	}
@@ -4021,17 +4096,20 @@ static void M_DrawLevelPlatterRow(UINT8 row, INT32 y)
 		y += lsheadingheight;
 	}
 
-	for (col = 0; col < 3; col++)
-		M_DrawLevelPlatterMap(row, col, 19+(col*lshseperation), y, (rowhighlight && col == lscol));
+	if (lswide(row))
+		M_DrawLevelPlatterWideMap(row, 0, lsbasex, y, rowhighlight);
+	else
+	{
+		for (col = 0; col < 3; col++)
+			M_DrawLevelPlatterMap(row, col, lsbasex+(col*lshseperation), y, (rowhighlight && (col == lscol)));
+	}
 }
-
-#define lsbasey 59+lsheadingheight
 
 static void M_DrawLevelPlatterMenu(void)
 {
-	UINT8 iter = lsrow;
+	UINT8 iter = lsrow, sizeselect = (lswide(lsrow) ? 1 : 0);
 	INT32 y = lsbasey + lsoffs[0] - getheadingoffset(lsrow);
-	const UINT32 cursorx = 19+(lscol*lshseperation);
+	const INT32 cursorx = (sizeselect ? 0 : (lscol*lshseperation));
 
 	if (++lstic == 32)
 		lstic = 0;
@@ -4055,10 +4133,10 @@ static void M_DrawLevelPlatterMenu(void)
 	}
 
 	// draw cursor box
-	V_DrawSmallScaledPatch(cursorx + lsoffs[1], lsbasey, 0, ((lstic & 8) ? levselp[0] : levselp[1]));
+	V_DrawSmallScaledPatch(lsbasex + cursorx + lsoffs[1], lsbasey, 0, ((lstic & 8) ? levselp[sizeselect][0] : levselp[sizeselect][1]));
 
 	if (levelselect.rows[lsrow].maplist[lscol])
-		V_DrawScaledPatch(cursorx-17, lsbasey+50+lsoffs[0], 0, W_CachePatchName("M_CURSOR", PU_CACHE));
+		V_DrawScaledPatch(lsbasex + cursorx-17, lsbasey+50+lsoffs[0], 0, W_CachePatchName("M_CURSOR", PU_CACHE));
 
 	// handle movement of cursor box
 	if (abs(lsoffs[0]) > 1)
@@ -4073,8 +4151,6 @@ static void M_DrawLevelPlatterMenu(void)
 
 	M_DrawMenuTitle();
 }
-
-#undef lsbasey
 
 //
 // M_CanShowLevelInList
