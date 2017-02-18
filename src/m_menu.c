@@ -3756,7 +3756,7 @@ static boolean M_PrepareLevelPlatter(INT32 gt)
 			levelselect.rows[row].maplist[col] = mapnum+1; // putting the map on the platter
 			levelselect.rows[row].mapavailable[col] = M_LevelAvailableOnPlatter(mapnum);
 
-			if ((levelselect.rows[row].mapavailable[3] = wide))
+			if ((lswide(row) = wide)) // intentionally assignment
 			{
 				levelselect.rows[row].maplist[2] = levelselect.rows[row].maplist[1] = levelselect.rows[row].maplist[0];
 				levelselect.rows[row].mapavailable[2] = levelselect.rows[row].mapavailable[1] = levelselect.rows[row].mapavailable[0];
@@ -3824,7 +3824,7 @@ static boolean M_PrepareLevelPlatter(INT32 gt)
 		mapnum++;
 	}
 
-	if (levselp[0]) // never going to have some provided but not all, saves individually checking
+	if (levselp[0][0]) // never going to have some provided but not all, saves individually checking
 	{
 		W_UnlockCachedPatch(levselp[0][0]);
 		W_UnlockCachedPatch(levselp[0][1]);
