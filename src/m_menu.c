@@ -608,6 +608,18 @@ static menuitem_t MISC_ChangeGameTypeMenu[] =
 	{IT_STRING|IT_CALL,              NULL, "Capture the Flag", M_MapChange, 72},
 };
 
+static const gtdesc_t gametypedesc[] =
+{
+	{"Play through the single-player campaign with your friends, teaming up to beat Dr Eggman's nefarious challenges!"},
+	{"Speed your way through the main acts, competing to get as much stuff as possible in the fastest time to see who's the best."},
+	{"There's not much to it - zoom through the level faster than everyone else."},
+	{"Sling rings at your foes in a free-for-all battle. Use the special weapon rings to your advantage!"},
+	{"Sling rings at your foes in a color-coded battle. Use the special weapon rings to your advantage!"},
+	{"Whoever's IT has to hunt down everyone else. If you get caught, you have to turn on your former friends!"},
+	{"Try and find a good hiding place in these maps - we dare you."},
+	{"Steal the flag from the enemy's base and bring it back to your own, but watch out - they could just as easily steal yours!"},
+};
+
 static menuitem_t MISC_ChangeLevelMenu[] =
 {
 	{IT_KEYHANDLER | IT_NOTHING, NULL, "", M_HandleLevelPlatter, 0},     // dummy menuitem for the control func
@@ -1465,7 +1477,7 @@ menu_t MISC_ChangeGameTypeDef =
 	&MainDef,  // Doesn't matter.
 	MISC_ChangeGameTypeMenu,
 	M_DrawGameTypeMenu,
-	30, 104 - ((80 - lsheadingheight/2)/2), // vertically centering
+	30, (200 - (72+8))/2, // vertically centering
 	0,
 	NULL
 };
@@ -2444,7 +2456,8 @@ boolean M_Responder(event_t *ev)
 		case KEY_DOWNARROW:
 			M_NextOpt();
 			S_StartSound(NULL, sfx_menu1);
-			if (currentMenu == &SP_PlayerDef)
+			if (currentMenu == &SP_PlayerDef
+			|| currentMenu == &MISC_ChangeGameTypeDef)
 			{
 				Z_Free(char_notes);
 				char_notes = NULL;
@@ -2454,7 +2467,8 @@ boolean M_Responder(event_t *ev)
 		case KEY_UPARROW:
 			M_PrevOpt();
 			S_StartSound(NULL, sfx_menu1);
-			if (currentMenu == &SP_PlayerDef)
+			if (currentMenu == &SP_PlayerDef
+			|| currentMenu == &MISC_ChangeGameTypeDef)
 			{
 				Z_Free(char_notes);
 				char_notes = NULL;
@@ -6887,12 +6901,21 @@ static void M_GameTypeChange(INT32 choice)
 	M_SetupNextMenu(&MISC_ChangeGameTypeDef);
 	if (Playing())
 		itemOn = gametype;
+
+	Z_Free(char_notes);
+	char_notes = NULL;
 }
 
 void M_DrawGameTypeMenu(void)
 {
 	M_DrawGenericMenu();
 	M_DrawLevelPlatterHeader(currentMenu->y - lsheadingheight, "Select Gametype", true);
+
+	if (!char_notes)
+		char_notes = V_WordWrap(0, (160 - 30) - 8, V_ALLOWLOWERCASE, gametypedesc[itemOn].notes);
+
+	V_DrawFill(160, currentMenu->y, (160 - 30), 72 + 8, 159);
+	V_DrawString(164, currentMenu->y + 4, V_RETURN8|V_ALLOWLOWERCASE, char_notes);
 }
 
 static void M_MapChange(INT32 choice)
