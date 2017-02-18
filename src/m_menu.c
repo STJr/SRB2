@@ -611,7 +611,7 @@ static menuitem_t MISC_ChangeGameTypeMenu[] =
 static const gtdesc_t gametypedesc[] =
 {
 	{"Play through the single-player campaign with your friends, teaming up to beat Dr Eggman's nefarious challenges!"},
-	{"Speed your way through the main acts, competing to get as much stuff as possible in the fastest time to see who's the best."},
+	{"Speed your way through the main acts, competing in several different categories to see who's the best."},
 	{"There's not much to it - zoom through the level faster than everyone else."},
 	{"Sling rings at your foes in a free-for-all battle. Use the special weapon rings to your advantage!"},
 	{"Sling rings at your foes in a color-coded battle. Use the special weapon rings to your advantage!"},
