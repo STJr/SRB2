@@ -2701,8 +2701,10 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 	{
 		if (I_Ban && !I_Ban(playernode[(INT32)pnum]))
 			CONS_Alert(CONS_WARNING, M_GetText("Too many bans! Geez, that's a lot of people you're excluding...\n"));
+#ifndef NONET
 		else
 			Ban_Add(reason);
+#endif
 	}
 
 	switch (msg)
