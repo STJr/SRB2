@@ -2531,7 +2531,7 @@ static void Command_Ban(void)
 			return;
 		else
 			WRITEUINT8(p, pn);
-		if (I_Ban && !I_Ban(node))
+		if (server && I_Ban && !I_Ban(node)) // only the server is allowed to do this right now
 		{
 			CONS_Alert(CONS_WARNING, M_GetText("Too many bans! Geez, that's a lot of people you're excluding...\n"));
 			WRITEUINT8(p, KICK_MSG_GO_AWAY);
@@ -2539,7 +2539,8 @@ static void Command_Ban(void)
 		}
 		else
 		{
-			Ban_Add(COM_Argv(2));
+			if (server) // only the server is allowed to do this right now
+				Ban_Add(COM_Argv(2));
 
 			if (COM_Argc() == 2)
 			{
@@ -2699,9 +2700,9 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 	if (server && playernum && (msg == KICK_MSG_BANNED || msg == KICK_MSG_CUSTOM_BAN))
 	{
 		if (I_Ban && !I_Ban(playernode[(INT32)pnum]))
-		{
 			CONS_Alert(CONS_WARNING, M_GetText("Too many bans! Geez, that's a lot of people you're excluding...\n"));
-		}
+		else
+			Ban_Add(reason);
 	}
 
 	switch (msg)
