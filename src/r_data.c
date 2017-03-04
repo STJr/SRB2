@@ -211,11 +211,12 @@ static inline void R_DrawFlippedColumnInCache(column_t *patch, UINT8 *cache, INT
 		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
 	}
 }
-R_DrawTranslucentColumn_8()
-static inline void R_DrawTransColumnInCache(column_t *patch, UINT8 *cache, INT32 originy, INT32 cacheheight)
+
+static inline void R_DrawTransColumnInCache(column_t *patch, UINT8 *cache, INT32 originy, INT32 cacheheight, UINT8 alpha)
 {
 	INT32 count, position;
-	UINT8 *source;
+	UINT8 *source, *dest;
+	UINT8 *mytransmap = transtables + ((8*alpha/255) << FF_TRANSSHIFT);
 	INT32 topdelta, prevdelta = -1;
 
 	while (patch->topdelta != 0xff)
@@ -238,8 +239,14 @@ static inline void R_DrawTransColumnInCache(column_t *patch, UINT8 *cache, INT32
 		if (position + count > cacheheight)
 			count = cacheheight - position;
 
+        dest = cache + position;
 		if (count > 0)
-			M_Memcpy(cache + position, source, count);
+        {
+			for (; dest < cache + position + count; ++source)
+				//*dest++ = transtables[(*source)<<8 + *dest];
+				*dest++ = *(mytransmap + ((*source)<<8) + (*dest));
+				//*dest++ = *source;
+        }
 
 		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
 	}
@@ -382,7 +389,9 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 
 			// generate column ofset lookup
 			colofs[x] = LONG((x * texture->height) + (texture->width*4));
-			if (patch->flip & 2)
+			if (patch->style == AST_TRANSLUCENT)
+                R_DrawTransColumnInCache(patchcol, block + LONG(colofs[x]), patch->originy, texture->height, patch->alpha);
+			else if (patch->flip & 2)
 				R_DrawFlippedColumnInCache(patchcol, block + LONG(colofs[x]), patch->originy, texture->height, height);
 			else
 				R_DrawColumnInCache(patchcol, block + LONG(colofs[x]), patch->originy, texture->height);
@@ -745,6 +754,13 @@ static texpatch_t *R_ParsePatch(boolean actuallyLoadPatch)
                     Z_Free(texturesToken);
                     texturesToken = M_GetToken(NULL);
                     alpha = 255*strtof(texturesToken, NULL);
+                }
+                else if (stricmp(texturesToken, "STYLE")==0)
+                {
+                    Z_Free(texturesToken);
+                    texturesToken = M_GetToken(NULL);
+                    if(stricmp(texturesToken, "TRANSLUCENT")==0)
+                        style = AST_TRANSLUCENT;
                 }
 				else if (stricmp(texturesToken, "FLIPX")==0)
 					flip |= 1;
