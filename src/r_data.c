@@ -211,6 +211,41 @@ static inline void R_DrawFlippedColumnInCache(column_t *patch, UINT8 *cache, INT
 		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
 	}
 }
+R_DrawTranslucentColumn_8()
+static inline void R_DrawTransColumnInCache(column_t *patch, UINT8 *cache, INT32 originy, INT32 cacheheight)
+{
+	INT32 count, position;
+	UINT8 *source;
+	INT32 topdelta, prevdelta = -1;
+
+	while (patch->topdelta != 0xff)
+	{
+		topdelta = patch->topdelta;
+		if (topdelta <= prevdelta)
+			topdelta += prevdelta;
+		prevdelta = topdelta;
+		source = (UINT8 *)patch + 3;
+		count = patch->length;
+		position = originy + topdelta;
+
+		if (position < 0)
+		{
+			count += position;
+			source -= position; // start further down the column
+			position = 0;
+		}
+
+		if (position + count > cacheheight)
+			count = cacheheight - position;
+
+		if (count > 0)
+			M_Memcpy(cache + position, source, count);
+
+		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
+	}
+}
+
+
 
 //
 // R_GenerateTexture
@@ -588,6 +623,8 @@ static texpatch_t *R_ParsePatch(boolean actuallyLoadPatch)
 	INT16 patchXPos;
 	INT16 patchYPos;
 	UINT8 flip = 0;
+	UINT8 alpha = 255;
+	enum patchalphastyle style = AST_COPY;
 	texpatch_t *resultPatch = NULL;
 	lumpnum_t patchLumpNum;
 
@@ -703,7 +740,13 @@ static texpatch_t *R_ParsePatch(boolean actuallyLoadPatch)
 			}
 			while (strcmp(texturesToken,"}")!=0)
 			{
-				if (stricmp(texturesToken, "FLIPX")==0)
+                if (stricmp(texturesToken, "ALPHA")==0)
+                {
+                    Z_Free(texturesToken);
+                    texturesToken = M_GetToken(NULL);
+                    alpha = 255*strtof(texturesToken, NULL);
+                }
+				else if (stricmp(texturesToken, "FLIPX")==0)
 					flip |= 1;
 				else if (stricmp(texturesToken, "FLIPY")==0)
 					flip |= 2;
@@ -736,6 +779,8 @@ static texpatch_t *R_ParsePatch(boolean actuallyLoadPatch)
 		resultPatch->lump = patchLumpNum & 65535;
 		resultPatch->wad = patchLumpNum>>16;
 		resultPatch->flip = flip;
+		resultPatch->alpha = alpha;
+		resultPatch->style = style;
 		// Clean up a little after ourselves
 		Z_Free(patchName);
 		// Then return it
