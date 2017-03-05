@@ -141,11 +141,13 @@ static INT32 tidcachelen = 0;
 // R_DrawColumnInCache
 // Clip and draw a column from a patch into a cached post.
 //
-static inline void R_DrawColumnInCache(column_t *patch, UINT8 *cache, INT32 originy, INT32 cacheheight)
+
+static inline void R_DrawColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
 {
 	INT32 count, position;
 	UINT8 *source;
 	INT32 topdelta, prevdelta = -1;
+    INT32 originy = originPatch->originy;
 
 	while (patch->topdelta != 0xff)
 	{
@@ -174,11 +176,12 @@ static inline void R_DrawColumnInCache(column_t *patch, UINT8 *cache, INT32 orig
 	}
 }
 
-static inline void R_DrawFlippedColumnInCache(column_t *patch, UINT8 *cache, INT32 originy, INT32 cacheheight, INT32 patchheight)
+static inline void R_DrawFlippedColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
 {
 	INT32 count, position;
 	UINT8 *source, *dest;
 	INT32 topdelta, prevdelta = -1;
+    INT32 originy = originPatch->originy;
 
 	while (patch->topdelta != 0xff)
 	{
@@ -212,12 +215,13 @@ static inline void R_DrawFlippedColumnInCache(column_t *patch, UINT8 *cache, INT
 	}
 }
 
-static inline void R_DrawTransColumnInCache(column_t *patch, UINT8 *cache, INT32 originy, INT32 cacheheight, UINT8 alpha)
+static inline void R_DrawTransColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
 {
 	INT32 count, position;
 	UINT8 *source, *dest;
-	UINT8 *mytransmap = transtables + ((8*alpha/255) << FF_TRANSSHIFT);
+	UINT8 *mytransmap = transtables + ((8*(originPatch->alpha)/255) << FF_TRANSSHIFT);
 	INT32 topdelta, prevdelta = -1;
+    INT32 originy = originPatch->originy;
 
 	while (patch->topdelta != 0xff)
 	{
@@ -366,6 +370,23 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	// Composite the columns together.
 	for (i = 0, patch = texture->patches; i < texture->patchcount; i++, patch++)
 	{
+	    static void (*ColumnDrawerPointer)(column_t *, UINT8 *, texpatch_t *, INT32, INT32); // Column drawing function pointer.
+	    if (patch->style == AST_TRANSLUCENT)
+        {
+            if (patch->flip & 2)
+                ColumnDrawerPointer = &R_DrawTransColumnInCache;
+            else
+                ColumnDrawerPointer = &R_DrawTransColumnInCache;
+        }
+        else
+        {
+            if (patch->flip & 2)
+                ColumnDrawerPointer = &R_DrawFlippedColumnInCache;
+            else
+                ColumnDrawerPointer = &R_DrawColumnInCache;
+        }
+
+
 		realpatch = W_CacheLumpNumPwad(patch->wad, patch->lump, PU_CACHE);
 		x1 = patch->originx;
 		width = SHORT(realpatch->width);
@@ -389,12 +410,7 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 
 			// generate column ofset lookup
 			colofs[x] = LONG((x * texture->height) + (texture->width*4));
-			if (patch->style == AST_TRANSLUCENT)
-                R_DrawTransColumnInCache(patchcol, block + LONG(colofs[x]), patch->originy, texture->height, patch->alpha);
-			else if (patch->flip & 2)
-				R_DrawFlippedColumnInCache(patchcol, block + LONG(colofs[x]), patch->originy, texture->height, height);
-			else
-				R_DrawColumnInCache(patchcol, block + LONG(colofs[x]), patch->originy, texture->height);
+			(*ColumnDrawerPointer)(patchcol, block + LONG(colofs[x]), patch, texture->height, height);
 		}
 	}
 
