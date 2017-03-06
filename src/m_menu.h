@@ -182,7 +182,7 @@ typedef struct
 	UINT8 next;
 } description_t;
 
-// experimental level select -- remember to use M_HandleSetupMultiPlayer
+// level select platter
 typedef struct
 {
 	char header[22+5]; // mapheader_t lvltttl max length + " ZONE"

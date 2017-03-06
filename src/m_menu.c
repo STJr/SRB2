@@ -4023,7 +4023,7 @@ static void M_DrawLevelPlatterWideMap(UINT8 row, UINT8 col, INT32 x, INT32 y, bo
 	if (!map)
 		return;
 
-	//  A 160x100 image of the level as entry MAPxxP
+	//  A 564x100 image of the level as entry MAPxxW
 	if (!(levelselect.rows[row].mapavailable[col]))
 		V_DrawSmallScaledPatch(x, y, V_STATIC, levselp[1][2]); // static - make secret maps look ENTICING
 	else
