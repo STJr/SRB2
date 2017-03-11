@@ -643,7 +643,7 @@ enum playersprite
 	SPR2_NPUL, // NiGHTS pull
 	SPR2_NATK, // NiGHTS attack
 
-	// NiGHTS flight. bitwise | with FF_SPR2SUPER for drilling
+	// NiGHTS flight
 	SPR2_NGT0,
 	SPR2_NGT1,
 	SPR2_NGT2,
@@ -657,6 +657,21 @@ enum playersprite
 	SPR2_NGTA,
 	SPR2_NGTB,
 	SPR2_NGTC,
+
+	// NiGHTS drill
+	SPR2_DRL0,
+	SPR2_DRL1,
+	SPR2_DRL2,
+	SPR2_DRL3,
+	SPR2_DRL4,
+	SPR2_DRL5,
+	SPR2_DRL6,
+	SPR2_DRL7,
+	SPR2_DRL8,
+	SPR2_DRL9,
+	SPR2_DRLA,
+	SPR2_DRLB,
+	SPR2_DRLC,
 
 	SPR2_SIGN, // end sign head
 	SPR2_LIFE, // life monitor icon

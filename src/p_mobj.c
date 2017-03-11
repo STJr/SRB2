@@ -294,11 +294,11 @@ UINT8 P_GetMobjSprite2(mobj_t *mobj, UINT8 spr2)
 		case SPR2_NFLT:
 			spr2 = FF_SPR2SUPER|SPR2_FLT ;
 			break;
-		case SPR2_NPUL:
+		case SPR2_NSTN:
 			spr2 = SPR2_STUN;
 			break;
-		case SPR2_NSTN:
-			spr2 = SPR2_NPUL;
+		case SPR2_NPUL:
+			spr2 = SPR2_NSTN;
 			break;
 		case SPR2_NATK:
 			spr2 = FF_SPR2SUPER|SPR2_ROLL;
@@ -307,21 +307,55 @@ UINT8 P_GetMobjSprite2(mobj_t *mobj, UINT8 spr2)
 			spr2 = SPR2_NFLT;
 			break;*/
 		case SPR2_NGT1:
-		case SPR2_NGT2:
-		case SPR2_NGT3:
-		case SPR2_NGT4:
-		case SPR2_NGT5:
-		case SPR2_NGT6:
-		// case SPR2_NGT7:
-		case SPR2_NGT8:
-		case SPR2_NGT9:
-		case SPR2_NGTA:
-		case SPR2_NGTB:
-		case SPR2_NGTC:
-			spr2--; // take an angle step towards horizontal
-			break;
 		case SPR2_NGT7:
-			spr2 = SPR2_NGT0; // needs to explicitly go directly to horizontal
+		case SPR2_DRL0:
+			spr2 = SPR2_NGT0;
+			break;
+		case SPR2_NGT2:
+		case SPR2_DRL1:
+			spr2 = SPR2_NGT1;
+			break;
+		case SPR2_NGT3:
+		case SPR2_DRL2:
+			spr2 = SPR2_NGT2;
+			break;
+		case SPR2_NGT4:
+		case SPR2_DRL3:
+			spr2 = SPR2_NGT3;
+			break;
+		case SPR2_NGT5:
+		case SPR2_DRL4:
+			spr2 = SPR2_NGT4;
+			break;
+		case SPR2_NGT6:
+		case SPR2_DRL5:
+			spr2 = SPR2_NGT5;
+			break;
+		case SPR2_DRL6:
+			spr2 = SPR2_NGT6;
+			break;
+		case SPR2_NGT8:
+		case SPR2_DRL7:
+			spr2 = SPR2_NGT7;
+			break;
+		case SPR2_NGT9:
+		case SPR2_DRL8:
+			spr2 = SPR2_NGT8;
+			break;
+		case SPR2_NGTA:
+		case SPR2_DRL9:
+			spr2 = SPR2_NGT9;
+			break;
+		case SPR2_NGTB:
+		case SPR2_DRLA:
+			spr2 = SPR2_NGTA;
+			break;
+		case SPR2_NGTC:
+		case SPR2_DRLB:
+			spr2 = SPR2_NGTB;
+			break;
+		case SPR2_DRLC:
+			spr2 = SPR2_NGTC;
 			break;
 
 		// Dunno? Just go to standing then.
