@@ -643,7 +643,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 {
 	INT32 oldmare;
 
-	// Bots can't be super, silly!1 :P
+	// Bots can't be NiGHTSerized, silly!1 :P
 	if (player->bot)
 		return;
 
@@ -658,6 +658,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 	player->secondjump = 0;
 
 	player->powers[pw_shield] = SH_NONE;
+	player->powers[pw_super] = 0;
 
 	player->mo->flags |= MF_NOGRAVITY;
 
@@ -3422,7 +3423,9 @@ static void P_DoSuperStuff(player_t *player)
 {
 	mobj_t *spark;
 	ticcmd_t *cmd = &player->cmd;
-	if (player->mo->state >= &states[S_PLAY_SUPER_TRANS] && player->mo->state <= &states[S_PLAY_SUPER_TRANS9])
+	if (player->mo->state >= &states[S_PLAY_SUPER_TRANS]
+	&& (player->mo->state < &states[S_PLAY_SUPER_TRANS9]
+	|| (player->mo->state == &states[S_PLAY_SUPER_TRANS9] && player->mo->tics > 1))) // needed to prevent one-frame old colour...
 		return; // don't do anything right now, we're in the middle of transforming!
 
 	if (player->pflags & PF_NIGHTSMODE)
@@ -6717,10 +6720,19 @@ static void P_MovePlayer(player_t *player)
 	// going too slow, switch back to the walking frames.
 	if (player->panim == PA_RUN && player->speed < runspd)
 	{
-		if (onground || ((player->charability == CA_FLOAT || player->charability == CA_SLOWFALL) && player->secondjump == 1) || player->powers[pw_super])
+		if (!onground && (((player->charability == CA_FLOAT || player->charability == CA_SLOWFALL) && player->secondjump == 1) || player->powers[pw_super]))
 			P_SetPlayerMobjState(player->mo, S_PLAY_FLOAT);
 		else
 			P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
+	}
+
+	// Correct floating when ending up on the ground.
+	if (onground)
+	{
+		if (player->mo->state-states == S_PLAY_FLOAT)
+			P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
+		else if (player->mo->state-states == S_PLAY_FLOAT_RUN)
+			P_SetPlayerMobjState(player->mo, S_PLAY_RUN);
 	}
 
 	// If Springing (or nojumpspinning), but travelling DOWNWARD, change back!

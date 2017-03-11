@@ -195,15 +195,10 @@ UINT8 P_GetMobjSprite2(mobj_t *mobj, UINT8 spr2)
 {
 	player_t *player = mobj->player;
 	skin_t *skin = ((skin_t *)mobj->skin);
-	boolean super = false;
+	UINT8 super = (spr2 & FF_SPR2SUPER);
 
 	if (!skin)
 		return 0;
-
-	if ((super = (player // only manipulate output if player...
-	&& (player->powers[pw_super] // and (if they're super...
-	|| ((player->pflags & PF_NIGHTSMODE) && (skin->flags & SF_SUPER)))))) // or if they're in nights and are a skin that CAN go super...)
-		spr2 |= FF_SPR2SUPER;
 
 	while (!(skin->sprites[spr2].numframes)
 		&& spr2 != SPR2_STND)
@@ -293,77 +288,40 @@ UINT8 P_GetMobjSprite2(mobj_t *mobj, UINT8 spr2)
 			break;
 
 		// NiGHTS sprites.
-		case SPR2_NTRN:
-			spr2 = SPR2_TRNS;
-			break;
 		case SPR2_NSTD:
-			spr2 = SPR2_STND;
+			spr2 = FF_SPR2SUPER|SPR2_STND;
 			break;
 		case SPR2_NFLT:
-			spr2 = SPR2_FLT ;
+			spr2 = FF_SPR2SUPER|SPR2_FLT ;
 			break;
 		case SPR2_NPUL:
-			spr2 = SPR2_NFLT;
+			spr2 = SPR2_STUN;
 			break;
-		case SPR2_NPAN:
+		case SPR2_NSTN:
 			spr2 = SPR2_NPUL;
 			break;
 		case SPR2_NATK:
-			spr2 = SPR2_ROLL;
+			spr2 = FF_SPR2SUPER|SPR2_ROLL;
 			break;
 		/*case SPR2_NGT0:
 			spr2 = SPR2_NFLT;
 			break;*/
 		case SPR2_NGT1:
-		case SPR2_NGT7:
-		case SPR2_DRL0:
-			spr2 = SPR2_NGT0;
-			break;
 		case SPR2_NGT2:
-		case SPR2_DRL1:
-			spr2 = SPR2_NGT1;
-			break;
 		case SPR2_NGT3:
-		case SPR2_DRL2:
-			spr2 = SPR2_NGT2;
-			break;
 		case SPR2_NGT4:
-		case SPR2_DRL3:
-			spr2 = SPR2_NGT3;
-			break;
 		case SPR2_NGT5:
-		case SPR2_DRL4:
-			spr2 = SPR2_NGT4;
-			break;
 		case SPR2_NGT6:
-		case SPR2_DRL5:
-			spr2 = SPR2_NGT5;
-			break;
-		case SPR2_DRL6:
-			spr2 = SPR2_NGT6;
-			break;
+		// case SPR2_NGT7:
 		case SPR2_NGT8:
-		case SPR2_DRL7:
-			spr2 = SPR2_NGT7;
-			break;
 		case SPR2_NGT9:
-		case SPR2_DRL8:
-			spr2 = SPR2_NGT8;
-			break;
 		case SPR2_NGTA:
-		case SPR2_DRL9:
-			spr2 = SPR2_NGT9;
-			break;
 		case SPR2_NGTB:
-		case SPR2_DRLA:
-			spr2 = SPR2_NGTA;
-			break;
 		case SPR2_NGTC:
-		case SPR2_DRLB:
-			spr2 = SPR2_NGTB;
+			spr2--; // take an angle step towards horizontal
 			break;
-		case SPR2_DRLC:
-			spr2 = SPR2_NGTC;
+		case SPR2_NGT7:
+			spr2 = SPR2_NGT0; // needs to explicitly go directly to horizontal
 			break;
 
 		// Dunno? Just go to standing then.
@@ -372,8 +330,7 @@ UINT8 P_GetMobjSprite2(mobj_t *mobj, UINT8 spr2)
 			break;
 		}
 
-		if (super)
-			spr2 |= FF_SPR2SUPER;
+		spr2 |= super;
 	}
 
 	return spr2;
@@ -571,7 +528,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 			UINT16 frame = (mobj->frame & FF_FRAMEMASK)+1;
 			UINT8 numframes;
 
-			UINT8 spr2 = P_GetMobjSprite2(mobj, st->frame & FF_FRAMEMASK);
+			UINT8 spr2 = P_GetMobjSprite2(mobj, (((player->powers[pw_super]) ? FF_SPR2SUPER : 0)|st->frame) & FF_FRAMEMASK);
 
 			if (skin)
 				numframes = skin->sprites[spr2].numframes;
@@ -3220,10 +3177,10 @@ static void P_PlayerZMovement(mobj_t *mo)
 							if (mo->player->charflags & SF_DASHMODE && mo->player->dashmode >= 3*TICRATE && mo->player->panim != PA_DASH)
 								P_SetPlayerMobjState(mo, S_PLAY_DASH);
 							else if (mo->player->speed >= FixedMul(mo->player->runspeed, mo->scale)
-							&& (mo->player->panim != PA_RUN || mo->state-states == S_PLAY_FLOAT_RUN || mo->sprite2 & FF_SPR2SUPER))
+							&& (mo->player->panim != PA_RUN || mo->state-states == S_PLAY_FLOAT_RUN))
 								P_SetPlayerMobjState(mo, S_PLAY_RUN);
 							else if ((mo->player->rmomx || mo->player->rmomy)
-							&& (mo->player->panim != PA_WALK || mo->state-states == S_PLAY_FLOAT || mo->sprite2 & FF_SPR2SUPER))
+							&& (mo->player->panim != PA_WALK || mo->state-states == S_PLAY_FLOAT))
 								P_SetPlayerMobjState(mo, S_PLAY_WALK);
 							else if (!mo->player->rmomx && !mo->player->rmomy && mo->player->panim != PA_IDLE)
 								P_SetPlayerMobjState(mo, S_PLAY_STND);
@@ -3233,10 +3190,10 @@ static void P_PlayerZMovement(mobj_t *mo)
 							if (mo->player->charflags & SF_DASHMODE && mo->player->dashmode >= 3*TICRATE && mo->player->panim != PA_DASH)
 								P_SetPlayerMobjState(mo, S_PLAY_DASH);
 							else if (mo->player->speed >= FixedMul(mo->player->runspeed, mo->scale)
-							&& (mo->player->panim != PA_RUN || mo->state-states == S_PLAY_FLOAT_RUN || mo->sprite2 & FF_SPR2SUPER))
+							&& (mo->player->panim != PA_RUN || mo->state-states == S_PLAY_FLOAT_RUN))
 								P_SetPlayerMobjState(mo, S_PLAY_RUN);
 							else if ((mo->momx || mo->momy)
-							&& (mo->player->panim != PA_WALK || mo->state-states == S_PLAY_FLOAT || mo->sprite2 & FF_SPR2SUPER))
+							&& (mo->player->panim != PA_WALK || mo->state-states == S_PLAY_FLOAT))
 								P_SetPlayerMobjState(mo, S_PLAY_WALK);
 							else if (!mo->momx && !mo->momy && mo->player->panim != PA_IDLE)
 								P_SetPlayerMobjState(mo, S_PLAY_STND);
