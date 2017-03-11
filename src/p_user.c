@@ -7110,8 +7110,13 @@ static void P_MovePlayer(player_t *player)
 				&& (player->speed > 5*player->mo->scale) // FixedMul(5<<FRACBITS, player->mo->scale), but scale is FRACUNIT-based
 				&& (P_MobjFlip(player->mo)*player->mo->momz <= 0))
 				{
-					if (player->panim != PA_RUN && player->mo->state-states != S_PLAY_FLOAT)
-						P_SetPlayerMobjState(player->mo, S_PLAY_FLOAT);
+					if (player->panim != PA_RUN && player->panim != PA_WALK)
+					{
+						if (player->speed >= FixedMul(player->runspeed, player->mo->scale))
+							P_SetPlayerMobjState(player->mo, S_PLAY_FLOAT_RUN);
+						else
+							P_SetPlayerMobjState(player->mo, S_PLAY_FLOAT);
+					}
 
 					player->mo->momz = 0;
 					player->pflags &= ~PF_SPINNING;
