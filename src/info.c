@@ -390,21 +390,19 @@ char spr2names[NUMPLAYERSPRITES][5] =
 	"WAIT",
 	"WALK",
 	"RUN_",
-	"PEEL",
+	"DASH",
 	"PAIN",
+	"STUN",
 	"DEAD",
 	"DRWN",
+	"ROLL",
 	"SPIN",
-	"DASH",
 	"GASP",
 	"JUMP",
 	"SPNG",
 	"FALL",
 	"EDGE",
 	"RIDE",
-
-	"SIGN",
-	"LIFE",
 
 	"FLY_",
 	"SWIM",
@@ -425,23 +423,6 @@ char spr2names[NUMPLAYERSPRITES][5] =
 	"MLEE",
 
 	"TRNS",
-	"SSTD",
-	"SWLK",
-	"SRUN",
-	"SPEE",
-	"SPAN",
-	"SSTN",
-	"SDTH",
-	"SDRN",
-	"SSPN",
-	"SGSP",
-	"SJMP",
-	"SSPG",
-	"SFAL",
-	"SEDG",
-	"SRID",
-	"SFLT",
-	"SFRN",
 
 	"NTRN",
 	"NSTD",
@@ -476,7 +457,10 @@ char spr2names[NUMPLAYERSPRITES][5] =
 	"DRL9",
 	"DRLA",
 	"DRLB",
-	"DRLC"
+	"DRLC",
+
+	"SIGN",
+	"LIFE"
 };
 enum playersprite free_spr2 = SPR2_FIRSTFREESLOT;
 
@@ -510,12 +494,13 @@ state_t states[NUMSTATES] =
 	{SPR_PLAY, SPR2_WAIT|FF_ANIMATE,     -1, {NULL}, 0, 16, S_NULL},      // S_PLAY_WAIT
 	{SPR_PLAY, SPR2_WALK,                 4, {NULL}, 0,  0, S_PLAY_WALK}, // S_PLAY_WALK
 	{SPR_PLAY, SPR2_RUN ,                 2, {NULL}, 0,  0, S_PLAY_RUN},  // S_PLAY_RUN
-	{SPR_PLAY, SPR2_PEEL,                 2, {NULL}, 0,  0, S_PLAY_PEEL}, // S_PLAY_PEEL
+	{SPR_PLAY, SPR2_DASH,                 2, {NULL}, 0,  0, S_PLAY_DASH}, // S_PLAY_DASH
 	{SPR_PLAY, SPR2_PAIN|FF_ANIMATE,    350, {NULL}, 0,  4, S_PLAY_FALL}, // S_PLAY_PAIN
+	{SPR_PLAY, SPR2_STUN|FF_ANIMATE,    350, {NULL}, 0,  4, S_PLAY_FALL}, // S_PLAY_STUN
 	{SPR_PLAY, SPR2_DEAD|FF_ANIMATE,     -1, {NULL}, 0,  4, S_NULL},      // S_PLAY_DEAD
 	{SPR_PLAY, SPR2_DRWN|FF_ANIMATE,     -1, {NULL}, 0,  4, S_NULL},      // S_PLAY_DRWN
-	{SPR_PLAY, SPR2_SPIN,                 1, {NULL}, 0,  0, S_PLAY_SPIN}, // S_PLAY_SPIN
-	{SPR_PLAY, SPR2_DASH,                 2, {NULL}, 0,  0, S_PLAY_DASH}, // S_PLAY_DASH
+	{SPR_PLAY, SPR2_ROLL,                 1, {NULL}, 0,  0, S_PLAY_ROLL}, // S_PLAY_ROLL
+	{SPR_PLAY, SPR2_SPIN,                 2, {NULL}, 0,  0, S_PLAY_SPINDASH}, // S_PLAY_SPINDASH
 	{SPR_PLAY, SPR2_GASP|FF_ANIMATE,     14, {NULL}, 0,  4, S_PLAY_WALK}, // S_PLAY_GASP
 	{SPR_PLAY, SPR2_JUMP,                 1, {NULL}, 0,  0, S_PLAY_JUMP}, // S_PLAY_JUMP
 	{SPR_PLAY, SPR2_SPNG,                 2, {NULL}, 0,  0, S_PLAY_SPRING}, // S_PLAY_SPRING
@@ -547,25 +532,6 @@ state_t states[NUMSTATES] =
 	// CA2_MELEE
 	{SPR_PLAY, SPR2_MLEE|FF_SPR2ENDSTATE, 1, {NULL}, S_PLAY_MELEE_FINISH, 0, S_PLAY_MELEE}, // S_PLAY_MELEE
 	{SPR_PLAY, SPR2_MLEE,                20, {NULL},                   0, 0, S_PLAY_FALL}, // S_PLAY_MELEE_FINISH
-
-	// SF_SUPERANIMS
-	{SPR_PLAY, SPR2_SSTD|FF_ANIMATE,     -1, {NULL}, 0,  7, S_NULL},            // S_PLAY_SUPER_STND
-	{SPR_PLAY, SPR2_SWLK,                 7, {NULL}, 0,  0, S_PLAY_SUPER_WALK}, // S_PLAY_SUPER_WALK
-	{SPR_PLAY, SPR2_SRUN,                 7, {NULL}, 0,  0, S_PLAY_SUPER_RUN},  // S_PLAY_SUPER_RUN
-	{SPR_PLAY, SPR2_SPEE,                 7, {NULL}, 0,  0, S_PLAY_SUPER_PEEL}, // S_PLAY_SUPER_PEEL
-	{SPR_PLAY, SPR2_SPAN|FF_ANIMATE,    350, {NULL}, 0,  4, S_PLAY_SUPER_FALL}, // S_PLAY_SUPER_PAIN
-	{SPR_PLAY, SPR2_SSTN|FF_ANIMATE,    350, {NULL}, 0,  4, S_PLAY_SUPER_FALL}, // S_PLAY_SUPER_STUN
-	{SPR_PLAY, SPR2_SDTH|FF_ANIMATE,     -1, {NULL}, 0,  4, S_NULL},            // S_PLAY_SUPER_DEAD
-	{SPR_PLAY, SPR2_SDRN|FF_ANIMATE,     -1, {NULL}, 0,  4, S_NULL},            // S_PLAY_SUPER_DRWN
-	{SPR_PLAY, SPR2_SSPN,                 1, {NULL}, 0,  0, S_PLAY_SUPER_SPIN}, // S_PLAY_SUPER_SPIN
-	{SPR_PLAY, SPR2_SGSP|FF_ANIMATE,     14, {NULL}, 0,  4, S_PLAY_SUPER_WALK}, // S_PLAY_SUPER_GASP
-	{SPR_PLAY, SPR2_SJMP,                 1, {NULL}, 0,  0, S_PLAY_SUPER_JUMP}, // S_PLAY_SUPER_JUMP
-	{SPR_PLAY, SPR2_SSPG,                 2, {NULL}, 0,  0, S_PLAY_SUPER_SPRING}, // S_PLAY_SUPER_SPRING
-	{SPR_PLAY, SPR2_SFAL,                 2, {NULL}, 0,  0, S_PLAY_SUPER_FALL}, // S_PLAY_SUPER_FALL
-	{SPR_PLAY, SPR2_SEDG|FF_ANIMATE,     -1, {NULL}, 0, 12, S_NULL},            // S_PLAY_SUPER_EDGE
-	{SPR_PLAY, SPR2_SRID,                 4, {NULL}, 0,  0, S_PLAY_SUPER_RIDE}, // S_PLAY_SUPER_RIDE
-	{SPR_PLAY, SPR2_SFLT,                 7, {NULL}, 0,  0, S_PLAY_SUPER_FLOAT}, // S_PLAY_SUPER_FLOAT
-	{SPR_PLAY, SPR2_SFRN,                 7, {NULL}, 0,  0, S_PLAY_SUPER_FLOAT_RUN},  // S_PLAY_SUPER_FLOAT_RUN
 
 	// SF_SUPER
 	{SPR_PLAY, SPR2_TRNS,                 4, {NULL}, 0, 0, S_PLAY_SUPER_TRANS2}, // S_PLAY_SUPER_TRANS
@@ -3078,7 +3044,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		MT_THOK,        // painchance
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
-		S_PLAY_SPIN,    // missilestate
+		S_PLAY_ROLL,    // missilestate
 		S_PLAY_DEAD,    // deathstate
 		S_PLAY_DRWN,    // xdeathstate
 		sfx_None,       // deathsound

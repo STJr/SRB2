@@ -352,7 +352,7 @@ static int lib_pIsValidSprite2(lua_State *L)
 	//HUDSAFE
 	if (!mobj)
 		return LUA_ErrInvalid(L, "mobj_t");
-	lua_pushboolean(L, (mobj->skin && (((skin_t *)mobj->skin)->sprites[spr2].numframes > 0)));
+	lua_pushboolean(L, (mobj->skin && (((skin_t *)mobj->skin)->sprites[spr2].numframes)));
 	return 1;
 }
 

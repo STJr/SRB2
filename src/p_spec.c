@@ -3747,7 +3747,7 @@ DoneSection2:
 					if (!(player->pflags & PF_SPINNING))
 						player->pflags |= PF_SPINNING;
 
-					P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
+					P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 				}
 
 				player->powers[pw_flashing] = TICRATE/3;
@@ -3908,7 +3908,7 @@ DoneSection2:
 			if (!(player->pflags & PF_SPINNING) && P_IsObjectOnGround(player->mo) && (player->charability2 == CA2_SPINDASH))
 			{
 				player->pflags |= PF_SPINNING;
-				P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
+				P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 				S_StartAttackSound(player->mo, sfx_spin);
 
 				if (abs(player->rmomx) < FixedMul(5*FRACUNIT, player->mo->scale)
@@ -3988,9 +3988,9 @@ DoneSection2:
 				player->pflags &= ~(PF_JUMPED|PF_GLIDING|PF_SLIDING|PF_CANCARRY);
 				player->climbing = 0;
 
-				if (player->mo->state-states != S_PLAY_SPIN)
+				if (player->mo->state-states != S_PLAY_ROLL)
 				{
-					P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
+					P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 					S_StartSound(player->mo, sfx_spin);
 				}
 			}
@@ -4068,9 +4068,9 @@ DoneSection2:
 				player->pflags &= ~(PF_JUMPED|PF_GLIDING|PF_SLIDING|PF_CANCARRY);
 				player->climbing = 0;
 
-				if (player->mo->state-states != S_PLAY_SPIN)
+				if (player->mo->state-states != S_PLAY_ROLL)
 				{
-					P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
+					P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 					S_StartSound(player->mo, sfx_spin);
 				}
 			}

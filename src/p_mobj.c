@@ -187,32 +187,49 @@ static void P_CyclePlayerMobjState(mobj_t *mobj)
 
 //
 // P_GetMobjSprite2
+// For non-super players, tries each sprite2's immediate predecessor until it finds one with a number of frames or ends up at standing.
+// For super players, does the same as above - but tries the super equivalent for each sprite2 before the non-super version.
 //
 
 UINT8 P_GetMobjSprite2(mobj_t *mobj, UINT8 spr2)
 {
 	player_t *player = mobj->player;
 	skin_t *skin = ((skin_t *)mobj->skin);
+	boolean super = false;
 
 	if (!skin)
 		return 0;
 
-	while ((skin->sprites[spr2].numframes <= 0)
+	if ((super = (player // only manipulate output if player...
+	&& (player->powers[pw_super] // and (if they're super...
+	|| ((player->pflags & PF_NIGHTSMODE) && (skin->flags & SF_SUPER)))))) // or if they're in nights and are a skin that CAN go super...)
+		spr2 |= FF_SPR2SUPER;
+
+	while (!(skin->sprites[spr2].numframes)
 		&& spr2 != SPR2_STND)
 	{
+		if (spr2 & FF_SPR2SUPER)
+		{
+			spr2 &= ~FF_SPR2SUPER;
+			continue;
+		}
+
 		switch(spr2)
 		{
-		case SPR2_PEEL:
-			spr2 = SPR2_RUN;
+		case SPR2_DASH:
+			spr2 = SPR2_RUN ;
 			break;
 		case SPR2_RUN:
 			spr2 = SPR2_WALK;
 			break;
+		case SPR2_STUN:
+			spr2 = SPR2_PAIN;
+			break;
 		case SPR2_DRWN:
 			spr2 = SPR2_DEAD;
 			break;
-		case SPR2_DASH:
-			spr2 = SPR2_SPIN;
+		case SPR2_SPIN:
+			spr2 = SPR2_ROLL;
 			break;
 		case SPR2_GASP:
 			spr2 = SPR2_SPNG;
@@ -221,7 +238,7 @@ UINT8 P_GetMobjSprite2(mobj_t *mobj, UINT8 spr2)
 			spr2 = ((player
 					? player->charflags
 					: skin->flags)
-					& SF_NOJUMPSPIN) ? SPR2_SPNG : SPR2_SPIN;
+					& SF_NOJUMPSPIN) ? SPR2_SPNG : SPR2_ROLL;
 			break;
 		case SPR2_SPNG: // spring
 			spr2 = SPR2_FALL;
@@ -247,7 +264,7 @@ UINT8 P_GetMobjSprite2(mobj_t *mobj, UINT8 spr2)
 			spr2 = SPR2_FLY;
 			break;
 		case SPR2_CLMB:
-			spr2 = SPR2_SPIN;
+			spr2 = SPR2_ROLL;
 			break;
 		case SPR2_CLNG:
 			spr2 = SPR2_CLMB;
@@ -264,68 +281,15 @@ UINT8 P_GetMobjSprite2(mobj_t *mobj, UINT8 spr2)
 			spr2 = SPR2_FALL;
 			break;
 		case SPR2_BLND:
-			spr2 = SPR2_SPIN;
+			spr2 = SPR2_ROLL;
 			break;
 
 		case SPR2_TWIN:
-			spr2 = SPR2_SPIN;
+			spr2 = SPR2_ROLL;
 			break;
 
 		case SPR2_MLEE:
 			spr2 = SPR2_TWIN;
-			break;
-
-		// Super sprites fallback to regular sprites
-		case SPR2_SWLK:
-			spr2 = SPR2_WALK;
-			break;
-		case SPR2_SRUN:
-			spr2 = SPR2_RUN;
-			break;
-		case SPR2_SPEE:
-			spr2 = SPR2_PEEL;
-			break;
-		case SPR2_SPAN:
-			spr2 = SPR2_PAIN;
-			break;
-		case SPR2_SSTN:
-			spr2 = SPR2_SPAN;
-			break;
-		case SPR2_SDTH:
-			spr2 = SPR2_DEAD;
-			break;
-		case SPR2_SDRN:
-			spr2 = SPR2_DRWN;
-			break;
-		case SPR2_SSPN:
-			spr2 = SPR2_SPIN;
-			break;
-		case SPR2_SGSP:
-			spr2 = SPR2_GASP;
-			break;
-		case SPR2_SJMP:
-			spr2 = ((player
-					? player->charflags
-					: skin->flags)
-					& SF_NOJUMPSPIN) ? SPR2_SSPG : SPR2_SSPN;
-			break;
-		case SPR2_SSPG:
-			spr2 = SPR2_SPNG;
-			break;
-		case SPR2_SFAL:
-			spr2 = SPR2_FALL;
-			break;
-		case SPR2_SEDG:
-			spr2 = SPR2_EDGE;
-			break;
-		case SPR2_SRID:
-			spr2 = SPR2_RIDE;
-			break;
-		case SPR2_SFLT:
-			spr2 = SPR2_SWLK;
-			break;
-		case SPR2_SFRN:
-			spr2 = SPR2_SRUN;
 			break;
 
 		// NiGHTS sprites.
@@ -333,10 +297,10 @@ UINT8 P_GetMobjSprite2(mobj_t *mobj, UINT8 spr2)
 			spr2 = SPR2_TRNS;
 			break;
 		case SPR2_NSTD:
-			spr2 = SPR2_SSTD;
+			spr2 = SPR2_STND;
 			break;
 		case SPR2_NFLT:
-			spr2 = (skin->flags & SF_SUPERANIMS) ? SPR2_SFLT : SPR2_FALL; // This is skin-exclusive so the default NiGHTS skin changing system plays nice.
+			spr2 = SPR2_FLT ;
 			break;
 		case SPR2_NPUL:
 			spr2 = SPR2_NFLT;
@@ -345,10 +309,10 @@ UINT8 P_GetMobjSprite2(mobj_t *mobj, UINT8 spr2)
 			spr2 = SPR2_NPUL;
 			break;
 		case SPR2_NATK:
-			spr2 = SPR2_SSPN;
+			spr2 = SPR2_ROLL;
 			break;
 		/*case SPR2_NGT0:
-			spr2 = SPR2_STND;
+			spr2 = SPR2_NFLT;
 			break;*/
 		case SPR2_NGT1:
 		case SPR2_NGT7:
@@ -407,7 +371,11 @@ UINT8 P_GetMobjSprite2(mobj_t *mobj, UINT8 spr2)
 			spr2 = SPR2_STND;
 			break;
 		}
+
+		if (super)
+			spr2 |= FF_SPR2SUPER;
 	}
+
 	return spr2;
 }
 
@@ -444,49 +412,12 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 	else if (state == S_PLAY_SWIM && !(player->mo->eflags & MFE_UNDERWATER))
 		return P_SetPlayerMobjState(player->mo, S_PLAY_FLY);
 
-	// Catch state changes for Super Sonic
-	if (player->powers[pw_super] && (player->charflags & SF_SUPERANIMS))
+	// Catch SF_NOSUPERSPIN jumps for Supers
+	if (player->powers[pw_super])
 	{
-		switch (state)
-		{
-		case S_PLAY_STND:
-		case S_PLAY_WAIT:
-			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_STND);
-		case S_PLAY_WALK:
-			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_WALK);
-		case S_PLAY_RUN:
-			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_RUN);
-		case S_PLAY_PEEL:
-			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_PEEL);
-		case S_PLAY_PAIN:
-			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_PAIN);
-		case S_PLAY_DEAD:
-			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_DEAD);
-		case S_PLAY_DRWN:
-			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_DRWN);
-		case S_PLAY_SPIN:
-			if (!(player->charflags & SF_SUPERSPIN))
-				return true;
-			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_SPIN);
-		case S_PLAY_GASP:
-			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_GASP);
-		case S_PLAY_JUMP:
-			if (!(player->charflags & SF_SUPERSPIN))
-				return true;
-			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_JUMP);
-		case S_PLAY_SPRING:
-			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_SPRING);
-		case S_PLAY_FALL:
-			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_FALL);
-		case S_PLAY_EDGE:
-			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_EDGE);
-		case S_PLAY_FLOAT:
-			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_FLOAT);
-		case S_PLAY_FLOAT_RUN:
-			return P_SetPlayerMobjState(mobj, S_PLAY_SUPER_FLOAT_RUN);
-		default:
-			break;
-		}
+		if ((player->charflags & SF_NOSUPERSPIN)
+		&& (state == S_PLAY_ROLL || state == S_PLAY_JUMP))
+			return true;
 	}
 	// You were in pain state after taking a hit, and you're moving out of pain state now?
 	else if (mobj->state == &states[mobj->info->painstate] && player->powers[pw_flashing] == flashingtics && state != mobj->info->painstate)
@@ -502,49 +433,37 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 	{
 	case S_PLAY_STND:
 	case S_PLAY_WAIT:
-	case S_PLAY_SUPER_STND:
 		player->panim = PA_IDLE;
 		break;
 	case S_PLAY_EDGE:
-	case S_PLAY_SUPER_EDGE:
 		player->panim = PA_EDGE;
 		break;
 	case S_PLAY_WALK:
 	case S_PLAY_FLOAT:
-	case S_PLAY_SUPER_WALK:
-	case S_PLAY_SUPER_FLOAT:
 		player->panim = PA_WALK;
 		break;
 	case S_PLAY_RUN:
 	case S_PLAY_FLOAT_RUN:
-	case S_PLAY_SUPER_RUN:
-	case S_PLAY_SUPER_FLOAT_RUN:
 		player->panim = PA_RUN;
 		break;
-	case S_PLAY_PEEL:
-	case S_PLAY_SUPER_PEEL:
-		player->panim = PA_PEEL;
+	case S_PLAY_DASH:
+		player->panim = PA_DASH;
 		break;
 	case S_PLAY_PAIN:
-	case S_PLAY_SUPER_PAIN:
-	case S_PLAY_SUPER_STUN:
+	case S_PLAY_STUN:
 		player->panim = PA_PAIN;
 		break;
-	case S_PLAY_SPIN:
-	//case S_PLAY_DASH: -- everyone can ROLL thanks to zoom tubes...
-	case S_PLAY_SUPER_SPIN:
+	case S_PLAY_ROLL:
+	//case S_PLAY_SPINDASH: -- everyone can ROLL thanks to zoom tubes...
 		player->panim = PA_ROLL;
 		break;
 	case S_PLAY_JUMP:
-	case S_PLAY_SUPER_JUMP:
 		player->panim = PA_JUMP;
 		break;
 	case S_PLAY_SPRING:
-	case S_PLAY_SUPER_SPRING:
 		player->panim = PA_SPRING;
 		break;
 	case S_PLAY_FALL:
-	case S_PLAY_SUPER_FALL:
 		player->panim = PA_FALL;
 		break;
 	case S_PLAY_FLY:
@@ -555,13 +474,12 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 	case S_PLAY_TWINSPIN:
 		player->panim = PA_ABILITY;
 		break;
-	case S_PLAY_DASH: // ...but the act of SPINDASHING is charability2 specific.
+	case S_PLAY_SPINDASH: // ...but the act of SPINDASHING is charability2 specific.
 	case S_PLAY_MELEE:
 	case S_PLAY_MELEE_FINISH:
 		player->panim = PA_ABILITY2;
 		break;
 	case S_PLAY_RIDE:
-	case S_PLAY_SUPER_RIDE:
 		player->panim = PA_RIDE;
 		break;
 	default:
@@ -635,7 +553,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 						else
 							mobj->tics = 4;
 					}
-					else if ((player->panim == PA_RUN) || (player->panim == PA_PEEL))
+					else if ((player->panim == PA_RUN) || (player->panim == PA_DASH))
 					{
 						if (speed > 52<<FRACBITS)
 							mobj->tics = 1;
@@ -3299,26 +3217,26 @@ static void P_PlayerZMovement(mobj_t *mo)
 					{
 						if (mo->player->cmomx || mo->player->cmomy)
 						{
-							if (mo->player->charflags & SF_DASHMODE && mo->player->dashmode >= 3*TICRATE && mo->player->panim != PA_PEEL)
-								P_SetPlayerMobjState(mo, S_PLAY_PEEL);
+							if (mo->player->charflags & SF_DASHMODE && mo->player->dashmode >= 3*TICRATE && mo->player->panim != PA_DASH)
+								P_SetPlayerMobjState(mo, S_PLAY_DASH);
 							else if (mo->player->speed >= FixedMul(mo->player->runspeed, mo->scale)
-							&& (mo->player->panim != PA_RUN || mo->state-states == S_PLAY_FLOAT_RUN || mo->state-states == S_PLAY_SUPER_FLOAT_RUN))
+							&& (mo->player->panim != PA_RUN || mo->state-states == S_PLAY_FLOAT_RUN || mo->sprite2 & FF_SPR2SUPER))
 								P_SetPlayerMobjState(mo, S_PLAY_RUN);
 							else if ((mo->player->rmomx || mo->player->rmomy)
-							&& (mo->player->panim != PA_WALK || mo->state-states == S_PLAY_FLOAT || mo->state-states == S_PLAY_SUPER_FLOAT))
+							&& (mo->player->panim != PA_WALK || mo->state-states == S_PLAY_FLOAT || mo->sprite2 & FF_SPR2SUPER))
 								P_SetPlayerMobjState(mo, S_PLAY_WALK);
 							else if (!mo->player->rmomx && !mo->player->rmomy && mo->player->panim != PA_IDLE)
 								P_SetPlayerMobjState(mo, S_PLAY_STND);
 						}
 						else
 						{
-							if (mo->player->charflags & SF_DASHMODE && mo->player->dashmode >= 3*TICRATE && mo->player->panim != PA_PEEL)
-								P_SetPlayerMobjState(mo, S_PLAY_PEEL);
+							if (mo->player->charflags & SF_DASHMODE && mo->player->dashmode >= 3*TICRATE && mo->player->panim != PA_DASH)
+								P_SetPlayerMobjState(mo, S_PLAY_DASH);
 							else if (mo->player->speed >= FixedMul(mo->player->runspeed, mo->scale)
-							&& (mo->player->panim != PA_RUN || mo->state-states == S_PLAY_FLOAT_RUN || mo->state-states == S_PLAY_SUPER_FLOAT_RUN))
+							&& (mo->player->panim != PA_RUN || mo->state-states == S_PLAY_FLOAT_RUN || mo->sprite2 & FF_SPR2SUPER))
 								P_SetPlayerMobjState(mo, S_PLAY_RUN);
 							else if ((mo->momx || mo->momy)
-							&& (mo->player->panim != PA_WALK || mo->state-states == S_PLAY_FLOAT || mo->state-states == S_PLAY_SUPER_FLOAT))
+							&& (mo->player->panim != PA_WALK || mo->state-states == S_PLAY_FLOAT || mo->sprite2 & FF_SPR2SUPER))
 								P_SetPlayerMobjState(mo, S_PLAY_WALK);
 							else if (!mo->momx && !mo->momy && mo->player->panim != PA_IDLE)
 								P_SetPlayerMobjState(mo, S_PLAY_STND);
@@ -3328,7 +3246,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 					if ((mo->player->charability2 == CA2_SPINDASH) && !(mo->player->pflags & PF_THOKKED) && (mo->player->cmd.buttons & BT_USE) && (FixedHypot(mo->momx, mo->momy) > (5*mo->scale)))
 					{
 						mo->player->pflags |= PF_SPINNING;
-						P_SetPlayerMobjState(mo, S_PLAY_SPIN);
+						P_SetPlayerMobjState(mo, S_PLAY_ROLL);
 						S_StartSound(mo, sfx_spin);
 					}
 					else

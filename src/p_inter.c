@@ -1472,7 +1472,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			{
 				player->powers[pw_carry] = CR_MACESPIN;
 				S_StartSound(toucher, sfx_spin);
-				P_SetPlayerMobjState(toucher, S_PLAY_SPIN);
+				P_SetPlayerMobjState(toucher, S_PLAY_ROLL);
 			}
 			else
 				player->powers[pw_carry] = CR_GENERIC;
@@ -2829,10 +2829,7 @@ static inline void P_SuperDamage(player_t *player, mobj_t *inflictor, mobj_t *so
 
 	P_InstaThrust(player->mo, ang, fallbackspeed);
 
-	if (player->charflags & SF_SUPERANIMS)
-		P_SetPlayerMobjState(player->mo, S_PLAY_SUPER_STUN);
-	else
-		P_SetPlayerMobjState(player->mo, player->mo->info->painstate);
+	P_SetPlayerMobjState(player->mo, S_PLAY_STUN);
 
 	P_ResetPlayer(player);
 

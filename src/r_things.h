@@ -118,7 +118,7 @@ typedef struct
 	// specific sounds per skin
 	sfxenum_t soundsid[NUMSKINSOUNDS]; // sound # in S_sfx table
 
-	spritedef_t sprites[NUMPLAYERSPRITES];
+	spritedef_t sprites[NUMPLAYERSPRITES*2]; // contains super versions too
 
 	UINT8 availability; // lock?
 } skin_t;

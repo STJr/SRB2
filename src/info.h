@@ -594,8 +594,8 @@ typedef enum sprite
 	NUMSPRITES
 } spritenum_t;
 
-// Make sure to be conscious of FF_FRAMEMASK whenever you change this table.
-// Currently, FF_FRAMEMASK is 0x1ff, or 511 - and NUMSPRITEFREESLOTS is 256.
+// Make sure to be conscious of FF_FRAMEMASK and the fact sprite2 is stored as a UINT8 whenever you change this table.
+// Currently, FF_FRAMEMASK is 0x7f, or 127 - and the limitation of sprite2 storage is 255, so the second half is used by FF_SPR2SUPER.
 // Since this is zero-based, there can be at most 256 different SPR2_'s without changing that.
 enum playersprite
 {
@@ -603,21 +603,19 @@ enum playersprite
 	SPR2_WAIT,
 	SPR2_WALK,
 	SPR2_RUN ,
-	SPR2_PEEL,
+	SPR2_DASH,
 	SPR2_PAIN,
+	SPR2_STUN,
 	SPR2_DEAD,
 	SPR2_DRWN, // drown
-	SPR2_SPIN,
-	SPR2_DASH, // spindash charge
+	SPR2_ROLL,
+	SPR2_SPIN, // spindash charge
 	SPR2_GASP,
 	SPR2_JUMP,
 	SPR2_SPNG, // spring
 	SPR2_FALL,
 	SPR2_EDGE,
 	SPR2_RIDE,
-
-	SPR2_SIGN, // end sign head
-	SPR2_LIFE, // life monitor icon
 
 	SPR2_FLY ,
 	SPR2_SWIM,
@@ -638,23 +636,6 @@ enum playersprite
 	SPR2_MLEE, // melee
 
 	SPR2_TRNS, // super transformation
-	SPR2_SSTD, // super stand
-	SPR2_SWLK, // super walk
-	SPR2_SRUN, // super run
-	SPR2_SPEE, // super peelout
-	SPR2_SPAN, // super pain
-	SPR2_SSTN, // super stun
-	SPR2_SDTH, // super death
-	SPR2_SDRN, // super drown
-	SPR2_SSPN, // super spin
-	SPR2_SGSP, // super gasp
-	SPR2_SJMP, // super jump
-	SPR2_SSPG, // super spring
-	SPR2_SFAL, // super fall
-	SPR2_SEDG, // super edge
-	SPR2_SRID, // super ride
-	SPR2_SFLT, // super float
-	SPR2_SFRN, // super float run
 
 	SPR2_NTRN, // NiGHTS transformation
 	SPR2_NSTD, // NiGHTS stand
@@ -693,8 +674,11 @@ enum playersprite
 	SPR2_DRLB,
 	SPR2_DRLC,
 
+	SPR2_SIGN, // end sign head
+	SPR2_LIFE, // life monitor icon
+
 	SPR2_FIRSTFREESLOT,
-	SPR2_LASTFREESLOT = SPR2_FIRSTFREESLOT + NUMSPRITEFREESLOTS - 1,
+	SPR2_LASTFREESLOT = 0x7f,
 	NUMPLAYERSPRITES
 };
 
@@ -720,12 +704,13 @@ typedef enum state
 	S_PLAY_WAIT,
 	S_PLAY_WALK,
 	S_PLAY_RUN,
-	S_PLAY_PEEL,
+	S_PLAY_DASH,
 	S_PLAY_PAIN,
+	S_PLAY_STUN,
 	S_PLAY_DEAD,
 	S_PLAY_DRWN,
-	S_PLAY_SPIN,
-	S_PLAY_DASH,
+	S_PLAY_ROLL,
+	S_PLAY_SPINDASH,
 	S_PLAY_GASP,
 	S_PLAY_JUMP,
 	S_PLAY_SPRING,
@@ -757,25 +742,6 @@ typedef enum state
 	// CA2_MELEE
 	S_PLAY_MELEE,
 	S_PLAY_MELEE_FINISH,
-
-	// SF_SUPERANIMS
-	S_PLAY_SUPER_STND,
-	S_PLAY_SUPER_WALK,
-	S_PLAY_SUPER_RUN,
-	S_PLAY_SUPER_PEEL,
-	S_PLAY_SUPER_PAIN,
-	S_PLAY_SUPER_STUN,
-	S_PLAY_SUPER_DEAD,
-	S_PLAY_SUPER_DRWN,
-	S_PLAY_SUPER_SPIN,
-	S_PLAY_SUPER_GASP,
-	S_PLAY_SUPER_JUMP,
-	S_PLAY_SUPER_SPRING,
-	S_PLAY_SUPER_FALL,
-	S_PLAY_SUPER_EDGE,
-	S_PLAY_SUPER_RIDE,
-	S_PLAY_SUPER_FLOAT,
-	S_PLAY_SUPER_FLOAT_RUN,
 
 	// SF_SUPER
 	S_PLAY_SUPER_TRANS,

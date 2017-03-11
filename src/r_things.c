@@ -2899,8 +2899,8 @@ void R_AddSkins(UINT16 wadnum)
 			// these are uppercase so they can be concatenated with SF_
 			// 1, true, yes are all valid values
 			GETFLAG(SUPER)
-			GETFLAG(SUPERANIMS)
-			GETFLAG(SUPERSPIN)
+			GETFLAG(NOSUPERSPIN)
+			GETFLAG(NOSPINDASHDUST)
 			GETFLAG(HIRES)
 			GETFLAG(NOSKID)
 			GETFLAG(NOSPEEDADJUST)
@@ -2910,7 +2910,7 @@ void R_AddSkins(UINT16 wadnum)
 			GETFLAG(STOMPDAMAGE)
 			GETFLAG(MARIODAMAGE)
 			GETFLAG(MACHINE)
-			GETFLAG(NOSPINDASHDUST)
+			GETFLAG(DASHMODE)
 #undef GETFLAG
 
 			else // let's check if it's a sound, otherwise error out
@@ -2956,20 +2956,35 @@ next_token:
 
 		// Add sprites
 		{
-			UINT16 z;
+			UINT16 newlastlump;
 			UINT8 sprite2;
 
 			lump++; // start after S_SKIN
 			lastlump = W_CheckNumForNamePwad("S_END",wadnum,lump); // stop at S_END
-			// old wadding practices die hard -- stop at S_SKIN or S_START if they come before S_END.
-			z = W_CheckNumForNamePwad("S_SKIN",wadnum,lump);
-			if (z < lastlump) lastlump = z;
-			z = W_CheckNumForNamePwad("S_START",wadnum,lump);
-			if (z < lastlump) lastlump = z;
 
-			// load all sprite sets we are aware of.
+			// old wadding practices die hard -- stop at S_SKIN or S_START if they come before S_END.
+			newlastlump = W_CheckNumForNamePwad("S_SKIN",wadnum,lump);
+			if (newlastlump < lastlump) lastlump = newlastlump;
+			newlastlump = W_CheckNumForNamePwad("S_START",wadnum,lump);
+			if (newlastlump < lastlump) lastlump = newlastlump;
+
+			// ...and let's handle super, too
+			newlastlump = W_CheckNumForNamePwad("S_SUPER",wadnum,lump);
+			if (newlastlump < lastlump)
+			{
+				newlastlump++;
+				// load all sprite sets we are aware of... for super!
+				for (sprite2 = 0; sprite2 < free_spr2; sprite2++)
+					R_AddSingleSpriteDef(spr2names[sprite2], &skin->sprites[FF_SPR2SUPER|sprite2], wadnum, newlastlump, lastlump);
+
+				newlastlump--;
+				lastlump = newlastlump; // okay, make the normal sprite set loading end there
+			}
+
+			// load all sprite sets we are aware of... for normal stuff.
 			for (sprite2 = 0; sprite2 < free_spr2; sprite2++)
 				R_AddSingleSpriteDef(spr2names[sprite2], &skin->sprites[sprite2], wadnum, lump, lastlump);
+
 		}
 
 		R_FlushTranslationColormapCache();

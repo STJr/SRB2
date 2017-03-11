@@ -32,20 +32,19 @@
 // Extra abilities/settings for skins (combinable stuff)
 typedef enum
 {
-	SF_SUPER            = 1, // Can turn super in singleplayer/co-op mode.
-	SF_SUPERANIMS       = 1<<1, // If super, use the super sonic animations
-	SF_SUPERSPIN        = 1<<2, // Should spin frames be played while super?
-	SF_HIRES            = 1<<3, // Draw the sprite 2x as small?
+	SF_SUPER            = 1,    // Can turn super in singleplayer/co-op mode?
+	SF_NOSUPERSPIN      = 1<<1, // Should spin frames be played while super?
+	SF_NOSPINDASHDUST   = 1<<2, // Spawn dust particles when charging a spindash?
+	SF_HIRES            = 1<<3, // Draw the sprite at different size?
 	SF_NOSKID           = 1<<4, // No skid particles etc
 	SF_NOSPEEDADJUST    = 1<<5, // Skin-specific version of disablespeedadjust
 	SF_RUNONWATER       = 1<<6, // Run on top of water FOFs?
-	SF_NOJUMPSPIN       = 1<<7, // SPR2_JUMP defaults to SPR2_SPRG instead of SPR2_SPIN, falling states used, and player height is full when jumping?
+	SF_NOJUMPSPIN       = 1<<7, // SPR2_JUMP defaults to SPR2_SPRG instead of SPR2_ROLL, falling states used, and player height is full when jumping?
 	SF_NOJUMPDAMAGE     = 1<<8, // Don't damage enemies, etc whilst jumping?
 	SF_STOMPDAMAGE      = 1<<9, // Always damage enemies, etc by landing on them, no matter your vunerability?
 	SF_MARIODAMAGE      = SF_NOJUMPDAMAGE|SF_STOMPDAMAGE, // The Mario method of being able to damage enemies, etc.
 	SF_MACHINE          = 1<<10, // Beep boop. Are you a robot?
-	SF_NOSPINDASHDUST   = 1<<11, // Don't spawn dust particles when charging a spindash
-	SF_DASHMODE         = 1<<12, // Sonic Advance 2 style top speed increase?
+	SF_DASHMODE         = 1<<11, // Sonic Advance 2 style top speed increase?
 	// free up to and including 1<<31
 } skinflags_t;
 
@@ -175,7 +174,7 @@ typedef enum
 	PA_EDGE,
 	PA_WALK,
 	PA_RUN,
-	PA_PEEL,
+	PA_DASH,
 	PA_PAIN,
 	PA_ROLL,
 	PA_JUMP,

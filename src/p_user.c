@@ -3506,42 +3506,8 @@ static void P_DoSuperStuff(player_t *player)
 			if (gametype != GT_COOP)
 				player->powers[pw_flashing] = flashingtics-1;
 
-			if (player->mo->health > 0)
-			{
-				if (player->pflags & PF_JUMPED)
-					P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
-				else if (player->pflags & PF_SPINNING && player->mo->state-states != S_PLAY_DASH)
-					P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
-				else switch (player->mo->state-states)
-				{
-				default:
-					P_SetPlayerMobjState(player->mo, S_PLAY_STND);
-					break;
-				case S_PLAY_DASH:
-					break;
-				case S_PLAY_SUPER_WALK:
-					P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
-					break;
-				case S_PLAY_SUPER_RUN:
-					P_SetPlayerMobjState(player->mo, S_PLAY_RUN);
-					break;
-				case S_PLAY_SUPER_PEEL:
-					P_SetPlayerMobjState(player->mo, S_PLAY_PEEL);
-					break;
-				case S_PLAY_SUPER_PAIN:
-					P_SetPlayerMobjState(player->mo, S_PLAY_PAIN);
-					break;
-				case S_PLAY_SUPER_SPRING:
-					P_SetPlayerMobjState(player->mo, S_PLAY_SPRING);
-					break;
-				case S_PLAY_SUPER_FALL:
-					P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
-					break;
-				case S_PLAY_SUPER_RIDE:
-					P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
-					break;
-				}
-			}
+			if ((player->mo->health > 0) && (player->mo->sprite2 & FF_SPR2SUPER))
+				P_SetPlayerMobjState(player->mo, player->mo->state-states);
 
 			// Inform the netgame that the champion has fallen in the heat of battle.
 			if (gametype != GT_COOP)
@@ -3807,7 +3773,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 					player->mo->momy = player->cmomy;
 					player->pflags |= PF_STARTDASH|PF_SPINNING;
 					player->dashspeed = player->mindash;
-					P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
+					P_SetPlayerMobjState(player->mo, S_PLAY_SPINDASH);
 					player->pflags |= PF_USEDOWN;
 					if (!player->spectator)
 						S_StartSound(player->mo, sfx_s3kab); // Make the rev sound! Previously sfx_spndsh.
@@ -3840,7 +3806,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 						|| !canstand) && !(player->pflags & (PF_USEDOWN|PF_SPINNING)))
 				{
 					player->pflags |= PF_SPINNING;
-					P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
+					P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 					if (!player->spectator)
 						S_StartSound(player->mo, sfx_spin);
 					player->pflags |= PF_USEDOWN;
@@ -3896,7 +3862,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 		{
 			if (player->dashspeed)
 			{
-				P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
+				P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 				P_InstaThrust(player->mo, player->mo->angle, FixedMul(player->dashspeed, player->mo->scale)); // catapult forward ho!!
 			}
 			else
@@ -3914,14 +3880,14 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 
 	if (onground && player->pflags & PF_STARTDASH)
 	{
-		if (player->mo->state-states != S_PLAY_DASH)
-			P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
+		if (player->mo->state-states != S_PLAY_SPINDASH)
+			P_SetPlayerMobjState(player->mo, S_PLAY_SPINDASH);
 		// Spawn spin dash dust
 		if (!(player->charflags & SF_NOSPINDASHDUST) && !(player->mo->eflags & MFE_GOOWATER))
 			P_DoSpinDashDust(player);
 	}
 	else if (onground && player->pflags & PF_SPINNING && !(player->panim == PA_ROLL))
-		P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
+		P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 }
 
 //
@@ -4281,7 +4247,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					if (!(player->pflags & PF_THOKKED) || player->charability2 == CA2_MULTIABILITY)
 					{
 						if (player->charflags & SF_DASHMODE && player->dashmode >= 3*TICRATE)
-							P_SetPlayerMobjState(player->mo, S_PLAY_PEEL);
+							P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
 						else if (player->speed >= FixedMul(player->runspeed, player->mo->scale))
 							P_SetPlayerMobjState(player->mo, S_PLAY_FLOAT_RUN);
 						else
@@ -6721,7 +6687,7 @@ static void P_MovePlayer(player_t *player)
 	{
 		// If the player is in dashmode, here's their peelout.
 		if (player->charflags & SF_DASHMODE && player->dashmode >= 3*TICRATE && player->panim == PA_RUN && !player->skidtime && (onground || ((player->charability == CA_FLOAT || player->charability == CA_SLOWFALL) && player->secondjump == 1) || player->powers[pw_super]))
-			P_SetPlayerMobjState (player->mo, S_PLAY_PEEL);
+			P_SetPlayerMobjState (player->mo, S_PLAY_DASH);
 		// If the player is moving fast enough,
 		// break into a run!
 		else if (player->speed >= runspd && player->panim == PA_WALK && !player->skidtime
@@ -6744,7 +6710,7 @@ static void P_MovePlayer(player_t *player)
 
 	// If your peelout animation is playing, and you're
 	// going too slow, switch back to the run.
-	if (player->charflags & SF_DASHMODE && player->panim == PA_PEEL && player->dashmode < 3*TICRATE)
+	if (player->charflags & SF_DASHMODE && player->panim == PA_DASH && player->dashmode < 3*TICRATE)
 		P_SetPlayerMobjState(player->mo, S_PLAY_RUN);
 
 	// If your running animation is playing, and you're
@@ -7106,7 +7072,7 @@ static void P_MovePlayer(player_t *player)
 #endif
 		}
 		// Otherwise, face the direction you're travelling.
-		else if (player->panim == PA_WALK || player->panim == PA_RUN || player->panim == PA_PEEL || player->panim == PA_ROLL || player->panim == PA_JUMP
+		else if (player->panim == PA_WALK || player->panim == PA_RUN || player->panim == PA_DASH || player->panim == PA_ROLL || player->panim == PA_JUMP
 		|| (player->panim == PA_ABILITY && player->mo->state-states == S_PLAY_GLIDE))
 			player->mo->angle = R_PointToAngle2(0, 0, player->rmomx, player->rmomy);
 
@@ -7132,9 +7098,8 @@ static void P_MovePlayer(player_t *player)
 				&& (player->speed > 5*player->mo->scale) // FixedMul(5<<FRACBITS, player->mo->scale), but scale is FRACUNIT-based
 				&& (P_MobjFlip(player->mo)*player->mo->momz <= 0))
 				{
-					if (player->panim == PA_PAIN || player->panim == PA_JUMP || player->panim == PA_FALL
-					|| (player->panim == PA_WALK && player->mo->state-states != S_PLAY_SUPER_FLOAT))
-						P_SetPlayerMobjState(player->mo, S_PLAY_SUPER_FLOAT);
+					if (player->panim != PA_RUN && player->mo->state-states != S_PLAY_FLOAT)
+						P_SetPlayerMobjState(player->mo, S_PLAY_FLOAT);
 
 					player->mo->momz = 0;
 					player->pflags &= ~PF_SPINNING;
@@ -7177,7 +7142,7 @@ static void P_MovePlayer(player_t *player)
 								if (P_LookForEnemies(player, false) && player->mo->tracer)
 								{
 									player->pflags |= PF_FORCEJUMPDAMAGE;
-									P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
+									P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 									S_StartSound(player->mo, sfx_s3k40);
 									player->homing = 3*TICRATE;
 								}
@@ -7188,7 +7153,7 @@ static void P_MovePlayer(player_t *player)
 							case SH_ELEMENTAL:
 							case SH_BUBBLEWRAP:
 								player->pflags |= PF_FORCEJUMPDAMAGE|PF_THOKKED|PF_SHIELDABILITY;
-								P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
+								P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 								player->secondjump = 0;
 								player->mo->momx = player->mo->momy = 0;
 								P_SetObjectMomZ(player->mo, -24*FRACUNIT, false);
@@ -7306,7 +7271,7 @@ static void P_MovePlayer(player_t *player)
 		fixed_t oldheight = player->mo->height;
 
 		// Less height while spinning. Good for spinning under things...?
-		if ((player->mo->state == &states[player->mo->info->painstate] || player->mo->state == &states[S_PLAY_SUPER_PAIN])
+		if ((player->mo->state == &states[player->mo->info->painstate])
 		|| (!(player->charflags & SF_NOJUMPSPIN) && (player->pflags & PF_JUMPED))
 		|| (player->pflags & PF_SPINNING)
 		|| player->powers[pw_tailsfly] || player->pflags & PF_GLIDING
@@ -7326,7 +7291,7 @@ static void P_MovePlayer(player_t *player)
 		if ((player->charability2 == CA2_SPINDASH) && !(player->pflags & PF_SPINNING))
 		{
 			player->pflags |= PF_SPINNING;
-			P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
+			P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 		}
 		else if (player->mo->ceilingz - player->mo->floorz < player->mo->height)
 		{
@@ -9057,7 +9022,7 @@ void P_PlayerThink(player_t *player)
 		if (!(player->charflags & SF_NOJUMPSPIN))
 			P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 		else if (player->pflags & PF_FORCEJUMPDAMAGE)
-			P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
+			P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 	}
 
 	if (player->flashcount)
@@ -9302,7 +9267,7 @@ void P_PlayerThink(player_t *player)
 		{
 			P_DoZoomTube(player);
 			if (!(player->panim == PA_ROLL))
-				P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
+				P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 		}
 		player->rmomx = player->rmomy = 0; // no actual momentum from your controls
 		P_ResetScore(player);
