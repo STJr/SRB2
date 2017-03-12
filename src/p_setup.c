@@ -2602,30 +2602,23 @@ boolean P_SetupLevel(boolean skipprecip)
 	// But only if we didn't do the special stage wipe
 	if (rendermode != render_none && !ranspecialwipe)
 	{
-	    // miru: we could add the option to render different wipes here
-
-	    // if the map header doesn't even call the option
-	    // then don't bother turning off
-		if (!mapheaderinfo[gamemap-1]->levelwipe)
+		// miru: we could add the option to render different wipes here
+		if (mapheaderinfo[gamemap-1]->levelwipe && mapheaderinfo[gamemap-1]->levelwipe < 100)
 		{
-            F_WipeStartScreen();
-            V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+			F_WipeStartScreen();
+			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, mapheaderinfo[gamemap-1]->wipecolor);
 
-            F_WipeEndScreen();
-            F_RunWipe(wipedefs[wipe_level_toblack], false);
+			F_WipeEndScreen();
+			F_RunWipe(mapheaderinfo[gamemap-1]->levelwipe, false);
 		}
-		// if it does then we can load custom fades from the fadingmask
 		else
-        {
-            if (mapheaderinfo[gamemap-1]->levelwipe < 100)
-            {
-                F_WipeStartScreen();
-                V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, mapheaderinfo[gamemap-1]->wipecolor);
+		{
+			F_WipeStartScreen();
+			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 
-                F_WipeEndScreen();
-                F_RunWipe(mapheaderinfo[gamemap-1]->levelwipe, false);
-            }
-        }
+			F_WipeEndScreen();
+			F_RunWipe(wipedefs[wipe_level_toblack], false);
+		}
 	}
 
 	// Print "SPEEDING OFF TO [ZONE] [ACT 1]..."
