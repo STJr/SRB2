@@ -146,7 +146,7 @@ static inline void R_DrawColumnInCache(column_t *patch, UINT8 *cache, texpatch_t
 	INT32 count, position;
 	UINT8 *source;
 	INT32 topdelta, prevdelta = -1;
-    INT32 originy = originPatch->originy;
+	INT32 originy = originPatch->originy;
 
 	while (patch->topdelta != 0xff)
 	{
@@ -184,7 +184,7 @@ static inline void R_DrawFlippedColumnInCache(column_t *patch, UINT8 *cache, tex
 	INT32 count, position;
 	UINT8 *source, *dest;
 	INT32 topdelta, prevdelta = -1;
-    INT32 originy = originPatch->originy;
+	INT32 originy = originPatch->originy;
 
 	while (patch->topdelta != 0xff)
 	{
@@ -228,7 +228,7 @@ static inline void R_DrawTransColumnInCache(column_t *patch, UINT8 *cache, texpa
 	UINT8 *source, *dest;
 	UINT8 *mytransmap = transtables + ((8*(originPatch->alpha) + 255/8)/(255 - 255/11) << FF_TRANSSHIFT); // The equation's not exact but it works as intended. I'll call it a day for now.
 	INT32 topdelta, prevdelta = -1;
-    INT32 originy = originPatch->originy;
+	INT32 originy = originPatch->originy;
 
 	while (patch->topdelta != 0xff)
 	{
@@ -250,12 +250,12 @@ static inline void R_DrawTransColumnInCache(column_t *patch, UINT8 *cache, texpa
 		if (position + count > cacheheight)
 			count = cacheheight - position;
 
-        dest = cache + position;
+		dest = cache + position;
 		if (count > 0)
-        {
+		{
 			for (; dest < cache + position + count; source++, dest++)
 				*dest = *dest == 0xFF ? *dest : *(mytransmap + ((*dest)<<8) + (*source));
-        }
+		}
 
 		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
 	}
@@ -271,7 +271,7 @@ static inline void R_DrawTransFlippedColumnInCache(column_t *patch, UINT8 *cache
 	UINT8 *source, *dest;
 	UINT8 *mytransmap = transtables + ((8*(originPatch->alpha) + 255/8)/(255 - 255/11) << FF_TRANSSHIFT); // The equation's not exact but it works as intended. I'll call it a day for now.
 	INT32 topdelta, prevdelta = -1;
-    INT32 originy = originPatch->originy;
+	INT32 originy = originPatch->originy;
 
 	while (patch->topdelta != 0xff)
 	{
@@ -417,23 +417,23 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	// Composite the columns together.
 	for (i = 0, patch = texture->patches; i < texture->patchcount; i++, patch++)
 	{
-	    static void (*ColumnDrawerPointer)(column_t *, UINT8 *, texpatch_t *, INT32, INT32); // Column drawing function pointer.
-	    if ((patch->style == AST_TRANSLUCENT) && (patch->alpha <= (10*255/11))) // Alpha style set to translucent? Is the alpha small enough for translucency?
-        {
-            if (patch->alpha < 255/11) // Is the patch way too translucent? Don't render then.
-                continue;
-            if (patch->flip & 2)
-                ColumnDrawerPointer = &R_DrawTransFlippedColumnInCache;
-            else
-                ColumnDrawerPointer = &R_DrawTransColumnInCache;
-        }
-        else
-        {
-            if (patch->flip & 2)
-                ColumnDrawerPointer = &R_DrawFlippedColumnInCache;
-            else
-                ColumnDrawerPointer = &R_DrawColumnInCache;
-        }
+		static void (*ColumnDrawerPointer)(column_t *, UINT8 *, texpatch_t *, INT32, INT32); // Column drawing function pointer.
+		if ((patch->style == AST_TRANSLUCENT) && (patch->alpha <= (10*255/11))) // Alpha style set to translucent? Is the alpha small enough for translucency?
+		{
+			if (patch->alpha < 255/11) // Is the patch way too translucent? Don't render then.
+				continue;
+			if (patch->flip & 2)
+				ColumnDrawerPointer = &R_DrawTransFlippedColumnInCache;
+			else
+				ColumnDrawerPointer = &R_DrawTransColumnInCache;
+		}
+		else
+		{
+			if (patch->flip & 2)
+				ColumnDrawerPointer = &R_DrawFlippedColumnInCache;
+			else
+				ColumnDrawerPointer = &R_DrawColumnInCache;
+		}
 
 
 		realpatch = W_CacheLumpNumPwad(patch->wad, patch->lump, PU_CACHE);
@@ -599,11 +599,11 @@ void R_LoadTextures(void)
 	// Allocate texture column offset table.
 	texturecolumnofs = (void *)((UINT8 *)textures + (numtextures * sizeof(void *)));
 	// Allocate texture referencing cache.
-	texturecache     = (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 2));
+	texturecache	 = (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 2));
 	// Allocate texture width mask table.
 	texturewidthmask = (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 3));
 	// Allocate texture height mask table.
-	textureheight    = (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 4));
+	textureheight	= (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 4));
 	// Create translation table for global animation.
 	texturetranslation = Z_Malloc((numtextures + 1) * sizeof(*texturetranslation), PU_STATIC, NULL);
 
@@ -814,19 +814,19 @@ static texpatch_t *R_ParsePatch(boolean actuallyLoadPatch)
 			}
 			while (strcmp(texturesToken,"}")!=0)
 			{
-                if (stricmp(texturesToken, "ALPHA")==0)
-                {
-                    Z_Free(texturesToken);
-                    texturesToken = M_GetToken(NULL);
-                    alpha = 255*strtof(texturesToken, NULL);
-                }
-                else if (stricmp(texturesToken, "STYLE")==0)
-                {
-                    Z_Free(texturesToken);
-                    texturesToken = M_GetToken(NULL);
-                    if(stricmp(texturesToken, "TRANSLUCENT")==0)
-                        style = AST_TRANSLUCENT;
-                }
+				if (stricmp(texturesToken, "ALPHA")==0)
+				{
+					Z_Free(texturesToken);
+					texturesToken = M_GetToken(NULL);
+					alpha = 255*strtof(texturesToken, NULL);
+				}
+				else if (stricmp(texturesToken, "STYLE")==0)
+				{
+					Z_Free(texturesToken);
+					texturesToken = M_GetToken(NULL);
+					if(stricmp(texturesToken, "TRANSLUCENT")==0)
+						style = AST_TRANSLUCENT;
+				}
 				else if (stricmp(texturesToken, "FLIPX")==0)
 					flip |= 1;
 				else if (stricmp(texturesToken, "FLIPY")==0)
