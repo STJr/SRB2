@@ -141,7 +141,6 @@ static INT32 tidcachelen = 0;
 // R_DrawColumnInCache
 // Clip and draw a column from a patch into a cached post.
 //
-
 static inline void R_DrawColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
 {
 	INT32 count, position;
@@ -176,6 +175,10 @@ static inline void R_DrawColumnInCache(column_t *patch, UINT8 *cache, texpatch_t
 	}
 }
 
+//
+// R_DrawFlippedColumnInCache
+// Similar to R_DrawColumnInCache; it draws the column inverted, however.
+//
 static inline void R_DrawFlippedColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
 {
 	INT32 count, position;
@@ -215,6 +218,10 @@ static inline void R_DrawFlippedColumnInCache(column_t *patch, UINT8 *cache, tex
 	}
 }
 
+//
+// R_DrawTransColumnInCache
+// Draws a translucent column into the cache, applying a half-cooked equation to get a proper translucency value (Needs code in R_GenerateTexture()).
+//
 static inline void R_DrawTransColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
 {
 	INT32 count, position;
@@ -247,13 +254,17 @@ static inline void R_DrawTransColumnInCache(column_t *patch, UINT8 *cache, texpa
 		if (count > 0)
         {
 			for (; dest < cache + position + count; source++, dest++)
-				*dest = *(mytransmap + ((*dest)<<8) + (*source));
+				*dest = *dest == 0xFF ? *dest : *(mytransmap + ((*dest)<<8) + (*source));
         }
 
 		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
 	}
 }
 
+//
+// R_DrawTransColumnInCache
+// Similar to the one above except that the column is inverted.
+//
 static inline void R_DrawTransFlippedColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
 {
 	INT32 count, position;
@@ -287,7 +298,7 @@ static inline void R_DrawTransFlippedColumnInCache(column_t *patch, UINT8 *cache
 		if (count > 0)
 		{
 			for (; dest < cache + position + count; --source, dest++)
-				*dest = *(mytransmap + ((*dest)<<8) + (*source));
+				*dest = *dest == 0xFF ? *dest : *(mytransmap + ((*dest)<<8) + (*source));
 		}
 
 		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
