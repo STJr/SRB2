@@ -483,20 +483,17 @@ static void D_Display(void)
 		if (rendermode != render_none)
 		{
 			// miru: we can use the mapheaderinfo to change the forced wipe the instant the map loads
-			if (!mapheaderinfo[gamemap-1]->postlevelwipe)
+			if (mapheaderinfo[gamemap-1]->postlevelwipe && mapheaderinfo[gamemap-1]->postlevelwipe < 100)
 			{
+				F_WipeStartScreen();
+				V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, mapheaderinfo[gamemap-1]->wipecolor);
 				F_WipeEndScreen();
-				F_RunWipe(wipedefs[wipedefindex], gamestate != GS_TIMEATTACK);
+				F_RunWipe(mapheaderinfo[gamemap-1]->postlevelwipe,  gamestate != GS_TIMEATTACK);
 			}
 			else
 			{
-				if (mapheaderinfo[gamemap-1]->postlevelwipe < 100)
-				{
-					F_WipeStartScreen();
-					V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, mapheaderinfo[gamemap-1]->wipecolor);
-					F_WipeEndScreen();
-					F_RunWipe(mapheaderinfo[gamemap-1]->postlevelwipe,  gamestate != GS_TIMEATTACK);
-				}
+				F_WipeEndScreen();
+				F_RunWipe(wipedefs[wipedefindex], gamestate != GS_TIMEATTACK);
 			}
 		}
 	}
