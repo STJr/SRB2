@@ -229,7 +229,7 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->levelwipe = 0;
 	DEH_WriteUndoline("POSTLEVELWIPE", va("%d", mapheaderinfo[num]->postlevelwipe), UNDO_NONE);
 	mapheaderinfo[num]->postlevelwipe = 0;
-    DEH_WriteUndoline("WIPECOLOR", va("%d", mapheaderinfo[num]->wipecolor), UNDO_NONE);
+	DEH_WriteUndoline("WIPECOLOR", va("%d", mapheaderinfo[num]->wipecolor), UNDO_NONE);
 	mapheaderinfo[num]->wipecolor = 31;
 
 	// TODO grades support for delfile (pfft yeah right)
