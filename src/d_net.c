@@ -991,11 +991,13 @@ void Command_Droprate(void)
 	packetdroprate = droprate;
 }
 
+#ifndef NONET
 static boolean ShouldDropPacket(void)
 {
 	return (packetdropquantity[netbuffer->packettype])
 		|| (packetdroprate != 0 && rand() < (RAND_MAX * (packetdroprate / 100.f))) || packetdroprate == 100;
 }
+#endif
 #endif
 
 //

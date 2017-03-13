@@ -891,11 +891,17 @@ static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 #endif
 	fixed_t frac;
 	patch_t *patch;
+	INT64 overflow_test;
 
 	//Fab : R_InitSprites now sets a wad lump number
 	patch = W_CacheLumpNum(vis->patch, PU_CACHE);
 	if (!patch)
 		return;
+
+	// Check for overflow
+	overflow_test = (INT64)centeryfrac - (((INT64)vis->texturemid*vis->scale)>>FRACBITS);
+	if (overflow_test < 0) overflow_test = -overflow_test;
+	if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) return; // fixed point mult would overflow
 
 	if (vis->transmap)
 	{
