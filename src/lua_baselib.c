@@ -1821,6 +1821,33 @@ static int lib_evCrumbleChain(lua_State *L)
 	return 0;
 }
 
+static int lib_evStartCrumble(lua_State *L)
+{
+	sector_t *sec = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
+	ffloor_t *rover = *((ffloor_t **)luaL_checkudata(L, 2, META_FFLOOR));
+	boolean floating = lua_optboolean(L, 3);
+	player_t *player = NULL;
+	fixed_t origalpha;
+	boolean crumblereturn = lua_optboolean(L, 6);
+	NOHUD
+	if (!sec)
+		return LUA_ErrInvalid(L, "sector_t");
+	if (!rover)
+		return LUA_ErrInvalid(L, "ffloor_t");
+	if (!lua_isnone(L, 4) && lua_isuserdata(L, 4))
+	{
+		player = *((player_t **)luaL_checkudata(L, 4, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (!lua_isnone(L,5))
+		origalpha = luaL_checkfixed(L, 5);
+	else
+		origalpha = rover->alpha;
+	lua_pushboolean(L, EV_StartCrumble(sec, rover, floating, player, origalpha, crumblereturn) != 0);
+	return 0;
+}
+
 // R_DEFS
 ////////////
 
@@ -2406,6 +2433,7 @@ static luaL_Reg lib[] = {
 	{"P_SetSkyboxMobj",lib_pSetSkyboxMobj},
 	{"P_StartQuake",lib_pStartQuake},
 	{"EV_CrumbleChain",lib_evCrumbleChain},
+	{"EV_StartCrumble",lib_evStartCrumble},
 
 	// r_defs
 	{"R_PointToAngle",lib_rPointToAngle},
