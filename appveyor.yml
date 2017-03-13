@@ -51,7 +51,7 @@ before_build:
 
 build_script:
 - cmd: mingw32-make.exe %SRB2_MFLAGS% %CONFIGURATION%=1 clean
-- cmd: mingw32-make.exe %SRB2_MFLAGS% %CONFIGURATION%=1 ERRORMODE=1 -k
+- cmd: mingw32-make.exe %SRB2_MFLAGS% %CONFIGURATION%=1 ERRORMODE=1 -k ECHO=1
 
 after_build:
 - ccache -s
