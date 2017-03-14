@@ -6948,8 +6948,7 @@ static const char *const PLAYERFLAG_LIST[] = {
 	// Did you get a time-over?
 	"TIMEOVER",
 
-	// Ready for Super?
-	"SUPERREADY",
+	"TEMPSLOT1",
 
 	// Character action status
 	"JUMPED",
@@ -6963,12 +6962,10 @@ static const char *const PLAYERFLAG_LIST[] = {
 	// Sliding (usually in water) like Labyrinth/Oil Ocean
 	"SLIDING",
 
-	/*** NIGHTS STUFF ***/
-	// Is the player in NiGHTS mode?
-	"NIGHTSMODE",
-	"TRANSFERTOCLOSEST",
+	"TEMPSLOT2",
 
-	// Spill rings after falling
+	/*** NIGHTS STUFF ***/
+	"TRANSFERTOCLOSEST",
 	"NIGHTSFALL",
 	"DRILLING",
 	"SKIDDOWN",
@@ -7357,6 +7354,7 @@ struct {
 	{"CR_NONE",CR_NONE},
 	{"CR_GENERIC",CR_GENERIC},
 	{"CR_PLAYER",CR_PLAYER},
+	{"CR_NIGHTSMODE",CR_NIGHTSMODE},
 	{"CR_ZOOMTUBE",CR_ZOOMTUBE},
 	{"CR_ROPEHANG",CR_ROPEHANG},
 	{"CR_MACESPIN",CR_MACESPIN},

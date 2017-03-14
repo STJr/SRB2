@@ -124,7 +124,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 	if (object->player && object->player->spectator)
 		return false;
 
-	if (object->player && (object->player->pflags & PF_NIGHTSMODE))
+	if (object->player && (object->player->powers[pw_carry] == CR_NIGHTSMODE))
 	{
 		/*Someone want to make these work like bumpers?*/
 		return false;
@@ -325,9 +325,6 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 	if (tails->bot == 1)
 		return;
 
-	if (sonic->pflags & PF_NIGHTSMODE)
-		return;
-
 	if ((sonic->mo->eflags & MFE_VERTICALFLIP) != (tails->mo->eflags & MFE_VERTICALFLIP))
 		return; // Both should be in same gravity
 
@@ -378,6 +375,7 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 	else {
 		if (sonic-players == consoleplayer && botingame)
 			CV_SetValue(&cv_analog2, true);
+		P_SetTarget(&sonic->mo->tracer, NULL);
 		sonic->powers[pw_carry] = CR_NONE;
 	}
 }
@@ -500,7 +498,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 	// Don't collide with your buddies while NiGHTS-flying.
 	if (tmthing->player && thing->player && (maptol & TOL_NIGHTS)
-		&& ((tmthing->player->pflags & PF_NIGHTSMODE) || (thing->player->pflags & PF_NIGHTSMODE)))
+		&& ((tmthing->player->powers[pw_carry] == CR_NIGHTSMODE) || (thing->player->powers[pw_carry] == CR_NIGHTSMODE)))
 		return true;
 
 	blockdist = thing->radius + tmthing->radius;
@@ -897,7 +895,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		// must be flying in the SAME DIRECTION as the last time you came through.
 		// not (your direction) xor (stored direction)
 		// In other words, you can't u-turn and respawn rings near the drone.
-		if (pl->bonustime && (pl->pflags & PF_NIGHTSMODE) && (INT32)leveltime > droneobj->extravalue2 && (
+		if (pl->bonustime && (pl->powers[pw_carry] == CR_NIGHTSMODE) && (INT32)leveltime > droneobj->extravalue2 && (
 		   !(pl->anotherflyangle >= 90 &&   pl->anotherflyangle <= 270)
 		^ (droneobj->extravalue1 >= 90 && droneobj->extravalue1 <= 270)
 		))
@@ -1006,7 +1004,10 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		if (thing->player-players == consoleplayer && botingame)
 			CV_SetValue(&cv_analog2, true);
 		if (thing->player->powers[pw_carry] == CR_PLAYER)
+		{
+			P_SetTarget(&thing->tracer, NULL);
 			thing->player->powers[pw_carry] = CR_NONE;
+		}
 	}
 
 	if (thing->player)

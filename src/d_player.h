@@ -118,8 +118,7 @@ typedef enum
 	// Did you get a time-over?
 	PF_TIMEOVER = 1<<10,
 
-	// Ready for Super?
-	PF_SUPERREADY = 1<<11,
+	PF_TEMPSLOT1 = 1<<11,
 
 	// Character action status
 	PF_JUMPED    = 1<<12,
@@ -133,12 +132,10 @@ typedef enum
 	// Sliding (usually in water) like Labyrinth/Oil Ocean
 	PF_SLIDING   = 1<<17,
 
-	/*** NIGHTS STUFF ***/
-	// Is the player in NiGHTS mode?
-	PF_NIGHTSMODE        = 1<<18,
-	PF_TRANSFERTOCLOSEST = 1<<19,
+	PF_TEMPSLOT2         = 1<<18,
 
-	// Spill rings after falling
+	/*** NIGHTS STUFF ***/
+	PF_TRANSFERTOCLOSEST = 1<<19,
 	PF_NIGHTSFALL        = 1<<20,
 	PF_DRILLING          = 1<<21,
 	PF_SKIDDOWN          = 1<<22,
@@ -226,6 +223,8 @@ typedef enum
 	CR_GENERIC,
 	// Tails carry.
 	CR_PLAYER,
+	// NiGHTS mode. Not technically a CARRYING, but doesn't stack with any of the others, so might as well go here.
+	CR_NIGHTSMODE,
 	// Specific level gimmicks.
 	CR_ZOOMTUBE,
 	CR_ROPEHANG,

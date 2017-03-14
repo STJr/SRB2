@@ -2774,8 +2774,6 @@ boolean P_SetupLevel(boolean skipprecip)
 	for (i = 0; i < MAXPLAYERS; i++)
 		if (playeringame[i])
 		{
-			players[i].pflags &= ~PF_NIGHTSMODE;
-
 			// Start players with pity shields if possible
 			players[i].pity = -1;
 

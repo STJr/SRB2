@@ -1015,9 +1015,8 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	if (cv_analog.value || twodlevel
 		|| (player->mo && (player->mo->flags2 & MF2_TWOD))
 		|| (!demoplayback && (player->climbing
-		|| (player->pflags & PF_NIGHTSMODE)
-		|| (player->pflags & PF_SLIDING)
-		|| (player->pflags & PF_FORCESTRAFE)))) // Analog
+		|| (player->powers[pw_carry] == CR_NIGHTSMODE)
+		|| (player->pflags & (PF_SLIDING|PF_FORCESTRAFE))))) // Analog
 			forcestrafe = true;
 	if (forcestrafe) // Analog
 	{
@@ -1120,7 +1119,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 		cmd->buttons |= BT_USE;
 
 	// Camera Controls
-	if (cv_debug || cv_analog.value || demoplayback || objectplacing || player->pflags & PF_NIGHTSMODE)
+	if (cv_debug || cv_analog.value || demoplayback || objectplacing || player->powers[pw_carry] == CR_NIGHTSMODE)
 	{
 		if (PLAYER1INPUTDOWN(gc_camleft))
 			cmd->buttons |= BT_CAMLEFT;
@@ -1306,9 +1305,8 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 	if (cv_analog2.value || twodlevel
 		|| (player->mo && (player->mo->flags2 & MF2_TWOD))
 		|| player->climbing
-		|| (player->pflags & PF_NIGHTSMODE)
-		|| (player->pflags & PF_SLIDING)
-		|| (player->pflags & PF_FORCESTRAFE)) // Analog
+		|| (player->powers[pw_carry] == CR_NIGHTSMODE)
+		|| (player->pflags & (PF_SLIDING|PF_FORCESTRAFE))) // Analog
 			forcestrafe = true;
 	if (forcestrafe) // Analog
 	{
@@ -1408,7 +1406,7 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 		cmd->buttons |= BT_USE;
 
 	// Camera Controls
-	if (cv_debug || cv_analog2.value || player->pflags & PF_NIGHTSMODE)
+	if (cv_debug || cv_analog2.value || player->powers[pw_carry] == CR_NIGHTSMODE)
 	{
 		if (PLAYER2INPUTDOWN(gc_camleft))
 			cmd->buttons |= BT_CAMLEFT;
@@ -3920,7 +3918,7 @@ void G_WriteGhostTic(mobj_t *ghost)
 	if (!(demoflags & DF_GHOST))
 		return; // No ghost data to write.
 
-	if (ghost->player && ghost->player->pflags & PF_NIGHTSMODE) // We're talking about the NiGHTS thing, not the normal platforming thing!
+	if (ghost->player && ghost->player->powers[pw_carry] == CR_NIGHTSMODE) // We're talking about the NiGHTS thing, not the normal platforming thing!
 		ziptic |= GZT_NIGHTS;
 
 	ziptic_p = demo_p++; // the ziptic, written at the end of this function
@@ -4104,7 +4102,7 @@ void G_ConsGhostTic(void)
 	if (ziptic & GZT_SPR2)
 		demo_p++;
 	if (ziptic & GZT_NIGHTS) {
-		if (!testmo->player || !(testmo->player->pflags & PF_NIGHTSMODE))
+		if (!testmo->player || !(testmo->player->powers[pw_carry] == CR_NIGHTSMODE))
 			nightsfail = true;
 	}
 

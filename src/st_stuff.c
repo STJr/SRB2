@@ -714,7 +714,7 @@ static void ST_drawLives(void)
 		// skincolor face/super
 		UINT8 *colormap = R_GetTranslationColormap(stplyr->skin, stplyr->mo->color, GTC_CACHE);
 		patch_t *face = faceprefix[stplyr->skin];
-		if ((stplyr->powers[pw_super] && (stplyr->mo->state < &states[S_PLAY_SUPER_TRANS] || stplyr->mo->state > &states[S_PLAY_SUPER_TRANS9])) || stplyr->pflags & PF_NIGHTSMODE)
+		if ((stplyr->powers[pw_super] && (stplyr->mo->state < &states[S_PLAY_SUPER_TRANS] || stplyr->mo->state > &states[S_PLAY_SUPER_TRANS9])) || (stplyr->powers[pw_carry] == CR_NIGHTSMODE && skins[stplyr->skin].flags & SF_SUPER))
 			face = superprefix[stplyr->skin];
 		V_DrawSmallMappedPatch(hudinfo[HUD_LIVESPIC].x, hudinfo[HUD_LIVESPIC].y + (v_splitflag ? -12 : 0),
 			V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS|v_splitflag,face, colormap);
@@ -1077,7 +1077,7 @@ static void ST_drawNiGHTSHUD(void)
 #ifdef HAVE_BLUA
 	LUA_HudEnabled(hud_nightsdrill) &&
 #endif
-	stplyr->pflags & PF_NIGHTSMODE)
+	stplyr->powers[pw_carry] == CR_NIGHTSMODE)
 	{
 		INT32 locx, locy;
 		INT32 dfill;
@@ -1163,7 +1163,7 @@ static void ST_drawNiGHTSHUD(void)
 		INT32 i;
 		total_ringcount = 0;
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] /*&& players[i].pflags & PF_NIGHTSMODE*/ && players[i].rings)
+			if (playeringame[i] /*&& players[i].powers[pw_carry] == CR_NIGHTSMODE*/ && players[i].rings)
 				total_ringcount += players[i].rings;
 	}
 	else
@@ -1296,7 +1296,7 @@ static void ST_drawNiGHTSHUD(void)
 			tic_t lowest_time = stplyr->nightstime;
 			INT32 i;
 			for (i = 0; i < MAXPLAYERS; i++)
-				if (playeringame[i] && players[i].pflags & PF_NIGHTSMODE && players[i].nightstime < lowest_time)
+				if (playeringame[i] && players[i].powers[pw_carry] == CR_NIGHTSMODE && players[i].nightstime < lowest_time)
 					lowest_time = players[i].nightstime;
 			realnightstime = lowest_time/TICRATE;
 		}

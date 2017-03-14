@@ -1581,11 +1581,8 @@ static void P_PlayerFlip(mobj_t *mo)
 	G_GhostAddFlip();
 	// Flip aiming to match!
 
-	if (mo->player->pflags & PF_NIGHTSMODE) // NiGHTS doesn't use flipcam
-	{
-		if (mo->tracer)
-			mo->tracer->eflags ^= MFE_VERTICALFLIP;
-	}
+	if (mo->player->powers[pw_carry] == CR_NIGHTSMODE) // NiGHTS doesn't use flipcam
+		;
 	else if (mo->player->pflags & PF_FLIPCAM)
 	{
 		mo->player->aiming = InvAngle(mo->player->aiming);
@@ -1681,7 +1678,7 @@ fixed_t P_GetMobjGravity(mobj_t *mo)
 		|| (mo->player->charability == CA_FLY && (mo->player->powers[pw_tailsfly]
 			|| mo->state-states == S_PLAY_FLY_TIRED)))
 			gravityadd = gravityadd/3; // less gravity while flying/gliding
-		if (mo->player->climbing || (mo->player->pflags & PF_NIGHTSMODE))
+		if (mo->player->climbing || (mo->player->powers[pw_carry] == CR_NIGHTSMODE))
 			gravityadd = 0;
 
 		if (!(mo->flags2 & MF2_OBJECTFLIP) != !(mo->player->powers[pw_gravityboots])) // negated to turn numeric into bool - would be double negated, but not needed if both would be
@@ -2253,7 +2250,7 @@ void P_XYMovement(mobj_t *mo)
 	// Check the gravity status.
 	P_CheckGravity(mo, false);
 
-	if (player && !moved && player->pflags & PF_NIGHTSMODE && mo->target)
+	if (player && !moved && player->powers[pw_carry] == CR_NIGHTSMODE && mo->target)
 	{
 		angle_t fa;
 
@@ -2296,7 +2293,7 @@ void P_XYMovement(mobj_t *mo)
 	if (player && player->homing) // no friction for homing
 		return;
 
-	if (player && player->pflags & PF_NIGHTSMODE)
+	if (player && player->powers[pw_carry] == CR_NIGHTSMODE)
 		return; // no friction for NiGHTS players
 
 #ifdef ESLOPE
@@ -3078,7 +3075,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 		else
 			mo->z = mo->floorz;
 
-		if (mo->player->pflags & PF_NIGHTSMODE)
+		if (mo->player->powers[pw_carry] == CR_NIGHTSMODE)
 		{
 			// bounce off floor if you were flying towards it
 			if ((mo->eflags & MFE_VERTICALFLIP && mo->player->flyangle > 0 && mo->player->flyangle < 180)
@@ -3338,7 +3335,7 @@ nightsdone:
 		else
 			mo->z = mo->ceilingz - mo->height;
 
-		if (mo->player->pflags & PF_NIGHTSMODE)
+		if (mo->player->powers[pw_carry] == CR_NIGHTSMODE)
 		{
 			// bounce off ceiling if you were flying towards it
 			if ((mo->eflags & MFE_VERTICALFLIP && mo->player->flyangle > 180 && mo->player->flyangle <= 359)
@@ -3551,7 +3548,7 @@ static boolean P_SceneryZMovement(mobj_t *mo)
 //
 boolean P_CanRunOnWater(player_t *player, ffloor_t *rover)
 {
-	if (!(player->pflags & PF_NIGHTSMODE) && !player->homing
+	if (!player->powers[pw_carry] && !player->homing
 		&& ((player->powers[pw_super] || player->charflags & SF_RUNONWATER || player->dashmode >= 3*TICRATE) && player->mo->ceilingz-*rover->topheight >= player->mo->height)
 		&& (rover->flags & FF_SWIMMABLE) && !(player->pflags & PF_SPINNING) && player->speed > FixedMul(player->runspeed, player->mo->scale)
 		&& !(player->pflags & PF_SLIDING)
@@ -3980,7 +3977,7 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 		|| (thiscam == &camera2 && players[secondarydisplayplayer].mo && (players[secondarydisplayplayer].mo->flags2 & MF2_TWOD)))
 		itsatwodlevel = true;
 
-	if (player->pflags & PF_FLIPCAM && !(player->pflags & PF_NIGHTSMODE) && player->mo->eflags & MFE_VERTICALFLIP)
+	if (player->pflags & PF_FLIPCAM && !(player->powers[pw_carry] == CR_NIGHTSMODE) && player->mo->eflags & MFE_VERTICALFLIP)
 		postimg = postimg_flip;
 	else if (player->awayviewtics)
 	{
@@ -4236,7 +4233,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 	}
 	else
 	{
-		if (!(mobj->player->pflags & PF_NIGHTSMODE)) // "jumping" is used for drilling
+		if (!(mobj->player->powers[pw_carry] == CR_NIGHTSMODE)) // "jumping" is used for drilling
 			mobj->player->jumping = 0;
 		mobj->player->pflags &= ~PF_JUMPED;
 		if (mobj->player->secondjump || mobj->player->powers[pw_tailsfly])
@@ -7558,7 +7555,7 @@ void P_MobjThinker(mobj_t *mobj)
 				}
 				else if (mobj->tracer && mobj->tracer->player)
 				{
-					if (!(mobj->tracer->player->pflags & PF_NIGHTSMODE))
+					if (!(mobj->tracer->player->powers[pw_carry] == CR_NIGHTSMODE))
 					{
 						mobj->flags &= ~MF_NOGRAVITY;
 						mobj->flags2 &= ~MF2_DONTDRAW;
@@ -7610,7 +7607,7 @@ void P_MobjThinker(mobj_t *mobj)
 						P_SetTarget(&mobj->target, NULL);
 					}
 
-					if (mobj->tracer->player->pflags & PF_NIGHTSMODE)
+					if (mobj->tracer->player->powers[pw_carry] == CR_NIGHTSMODE)
 					{
 						if (mobj->tracer->player->bonustime)
 						{

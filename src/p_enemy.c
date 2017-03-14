@@ -5611,7 +5611,7 @@ void A_MixUp(mobj_t *actor)
 	// and grab their xyz coords
 	for (i = 0; i < MAXPLAYERS; i++)
 		if (playeringame[i] && players[i].mo && players[i].mo->health > 0 && players[i].playerstate == PST_LIVE
-			&& !players[i].exiting && !players[i].powers[pw_super])
+			&& !players[i].exiting && !players[i].powers[pw_super] && players[i].powers[pw_carry] != CR_NIGHTSMODE)
 		{
 			if ((netgame || multiplayer) && players[i].spectator) // Ignore spectators
 				continue;
@@ -5730,7 +5730,7 @@ void A_MixUp(mobj_t *actor)
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
 			if (playeringame[i] && players[i].playerstate == PST_LIVE
-				&& players[i].mo && players[i].mo->health > 0 && !players[i].exiting && !players[i].powers[pw_super])
+				&& players[i].mo && players[i].mo->health > 0 && !players[i].exiting && !players[i].powers[pw_super] && players[i].powers[pw_carry] != CR_NIGHTSMODE)
 			{
 				if ((netgame || multiplayer) && players[i].spectator)// Ignore spectators
 					continue;
@@ -5780,7 +5780,7 @@ void A_MixUp(mobj_t *actor)
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
 			if (playeringame[i] && players[i].playerstate == PST_LIVE
-				&& players[i].mo && players[i].mo->health > 0 && !players[i].exiting && !players[i].powers[pw_super])
+				&& players[i].mo && players[i].mo->health > 0 && !players[i].exiting && !players[i].powers[pw_super] && players[i].powers[pw_carry] != CR_NIGHTSMODE)
 			{
 				if ((netgame || multiplayer) && players[i].spectator)// Ignore spectators
 					continue;
@@ -5810,7 +5810,7 @@ void A_MixUp(mobj_t *actor)
 		if (teleported[i])
 		{
 			if (playeringame[i] && players[i].playerstate == PST_LIVE
-				&& players[i].mo && players[i].mo->health > 0 && !players[i].exiting && !players[i].powers[pw_super])
+				&& players[i].mo && players[i].mo->health > 0 && !players[i].exiting && !players[i].powers[pw_super] && players[i].powers[pw_carry] != CR_NIGHTSMODE)
 			{
 				if ((netgame || multiplayer) && players[i].spectator)// Ignore spectators
 					continue;
@@ -8238,7 +8238,7 @@ void A_OrbitNights(mobj_t* actor)
 #endif
 
 	if (!actor->target || !actor->target->player ||
-	    !(actor->target->player->pflags & PF_NIGHTSMODE) || !actor->target->player->nightstime
+	    !(actor->target->player->powers[pw_carry] == CR_NIGHTSMODE) || !actor->target->player->nightstime
 	    // Also remove this object if they no longer have a NiGHTS helper
 		|| (ishelper && !actor->target->player->powers[pw_nights_helper]))
 	{

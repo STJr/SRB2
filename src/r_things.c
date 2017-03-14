@@ -2647,7 +2647,7 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 
 		if (player->mo)
 		{
-			if ((player->pflags & PF_NIGHTSMODE) && (skin->sprites[SPR2_NGT0].numframes == 0)) // If you don't have a sprite for flying horizontally, use the default NiGHTS skin.
+			if ((player->powers[pw_carry] == CR_NIGHTSMODE) && (skin->sprites[SPR2_NGT0].numframes == 0)) // If you don't have a sprite for flying horizontally, use the default NiGHTS skin.
 			{
 				skin = &skins[DEFAULTNIGHTSSKIN];
 				newcolor = ((skin->flags & SF_SUPER) ? skin->supercolor : skin->prefcolor);

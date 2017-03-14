@@ -574,7 +574,7 @@ static void P_DeNightserizePlayer(player_t *player)
 	thinker_t *th;
 	mobj_t *mo2;
 
-	player->pflags &= ~PF_NIGHTSMODE;
+	player->powers[pw_carry] = CR_NONE;
 
 	player->powers[pw_underwater] = 0;
 	player->pflags &= ~(PF_USEDOWN|PF_JUMPDOWN|PF_ATTACKDOWN|PF_STARTDASH|PF_GLIDING|PF_JUMPED|PF_THOKKED|PF_SPINNING|PF_DRILLING|PF_TRANSFERTOCLOSEST);
@@ -609,7 +609,7 @@ static void P_DeNightserizePlayer(player_t *player)
 	{
 		INT32 i;
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] && players[i].pflags & PF_NIGHTSMODE)
+			if (playeringame[i] && players[i].powers[pw_carry] == CR_NIGHTSMODE)
 				players[i].nightstime = 1; // force everyone else to fall too.
 		player->exiting = 3*TICRATE;
 		stagefailed = true; // NIGHT OVER
@@ -647,7 +647,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 	if (player->bot)
 		return;
 
-	if (!(player->pflags & PF_NIGHTSMODE))
+	if (player->powers[pw_carry] != CR_NIGHTSMODE)
 		player->mo->height = P_GetPlayerHeight(player); // Just to make sure jumping into the drone doesn't result in a squashed hitbox.
 
 	player->pflags &= ~(PF_USEDOWN|PF_JUMPDOWN|PF_ATTACKDOWN|PF_STARTDASH|PF_GLIDING|PF_JUMPED|PF_THOKKED|PF_SHIELDABILITY|PF_SPINNING|PF_DRILLING);
@@ -697,7 +697,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		if (G_IsSpecialStage(gamemap))
 		{
 			for (i = 0; i < MAXPLAYERS; i++)
-				if (playeringame[i]/* && players[i].pflags & PF_NIGHTSMODE*/)
+				if (playeringame[i]/* && players[i].powers[pw_carry] == CR_NIGHTSMODE*/)
 					total_rings += players[i].rings;
 		}
 
@@ -765,7 +765,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 			player->texttimer = (UINT8)(110 - timeinmap);
 	}
 
-	player->pflags |= PF_NIGHTSMODE;
+	player->powers[pw_carry] = CR_NIGHTSMODE;
 }
 
 //
@@ -872,7 +872,10 @@ void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor)
 void P_ResetPlayer(player_t *player)
 {
 	player->pflags &= ~(PF_SPINNING|PF_STARTDASH|PF_JUMPED|PF_FORCEJUMPDAMAGE|PF_GLIDING|PF_THOKKED|PF_CANCARRY|PF_SHIELDABILITY|PF_BOUNCING);
-	player->powers[pw_carry] = CR_NONE;
+
+	if (player->powers[pw_carry] != CR_NIGHTSMODE)
+		player->powers[pw_carry] = CR_NONE;
+
 	player->jumping = 0;
 	player->secondjump = 0;
 	player->glidetime = 0;
@@ -1001,7 +1004,7 @@ void P_AddPlayerScore(player_t *player, UINT32 amount)
 		{ // Pseudo-shared score for multiplayer special stages.
 			INT32 i;
 			for (i = 0; i < MAXPLAYERS; i++)
-				if (playeringame[i] && players[i].pflags & PF_NIGHTSMODE)
+				if (playeringame[i] && players[i].powers[pw_carry] == CR_NIGHTSMODE)
 				{
 					oldscore = players[i].marescore;
 
@@ -2244,7 +2247,7 @@ static void P_DoBubbleBreath(player_t *player)
 	fixed_t z = player->mo->z;
 	mobj_t *bubble = NULL;
 
-	if (!(player->mo->eflags & MFE_UNDERWATER) || ((player->powers[pw_shield] & SH_PROTECTWATER) && !(player->pflags & PF_NIGHTSMODE)) || player->spectator)
+	if (!(player->mo->eflags & MFE_UNDERWATER) || ((player->powers[pw_shield] & SH_PROTECTWATER) && !(player->powers[pw_carry] == CR_NIGHTSMODE)) || player->spectator)
 		return;
 
 	if (player->charflags & SF_MACHINE)
@@ -2279,7 +2282,7 @@ static void P_DoBubbleBreath(player_t *player)
 		P_SetScale(bubble, bubble->destscale);
 	}
 
-	if (player->pflags & PF_NIGHTSMODE) // NiGHTS Super doesn't spawn flight bubbles
+	if (player->powers[pw_carry] == CR_NIGHTSMODE) // NiGHTS Super doesn't spawn flight bubbles
 		return;
 
 	// Tails stirs up the water while flying in it
@@ -3428,14 +3431,8 @@ static void P_DoSuperStuff(player_t *player)
 	|| (player->mo->state == &states[S_PLAY_SUPER_TRANS9] && player->mo->tics > 1))) // needed to prevent one-frame old colour...
 		return; // don't do anything right now, we're in the middle of transforming!
 
-	if (player->pflags & PF_NIGHTSMODE)
+	if (player->powers[pw_carry] == CR_NIGHTSMODE)
 		return; // NiGHTS Super doesn't mix with normal super
-
-	// Does player have all emeralds? If so, flag the "Ready For Super!"
-	if (ALL7EMERALDS(emeralds) && player->rings >= 50)
-		player->pflags |= PF_SUPERREADY;
-	else
-		player->pflags &= ~PF_SUPERREADY;
 
 	if (player->powers[pw_super])
 	{
@@ -3537,10 +3534,10 @@ static void P_DoSuperStuff(player_t *player)
 //
 boolean P_SuperReady(player_t *player)
 {
-	if (player->pflags & PF_SUPERREADY && !player->powers[pw_super] && !player->powers[pw_tailsfly]
+	if ((ALL7EMERALDS(emeralds) && player->rings >= 50) && !player->powers[pw_super] && !player->powers[pw_tailsfly]
 	&& !(player->powers[pw_shield] & SH_NOSTACK)
 	&& !player->powers[pw_invulnerability]
-	&& !(maptol & TOL_NIGHTS) // don't turn 'regular super' in nights levels
+	&& !(maptol & TOL_NIGHTS || (player->powers[pw_carry] == CR_NIGHTSMODE)) // don't turn 'regular super' in nights levels
 	&& player->pflags & PF_JUMPED
 	&& player->charflags & SF_SUPER)
 		return true;
@@ -3608,6 +3605,7 @@ void P_DoJump(player_t *player, boolean soundandstate)
 		{
 			player->mo->momz = 9*FRACUNIT;
 			player->powers[pw_carry] = CR_NONE;
+			P_SetTarget(&player->mo->tracer, NULL);
 			if (player-players == consoleplayer && botingame)
 				CV_SetValue(&cv_analog2, true);
 		}
@@ -3615,6 +3613,7 @@ void P_DoJump(player_t *player, boolean soundandstate)
 		{
 			player->mo->momz = 9*FRACUNIT;
 			player->powers[pw_carry] = CR_NONE;
+			P_SetTarget(&player->mo->tracer, NULL);
 		}
 		else if (player->powers[pw_carry] == CR_ROPEHANG)
 		{
@@ -4127,6 +4126,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 		else if (player->powers[pw_carry] == CR_MACESPIN && player->mo->tracer)
 		{
 			player->powers[pw_carry] = CR_NONE;
+			P_SetTarget(&player->mo->tracer, NULL);
 			player->powers[pw_flashing] = TICRATE/4;
 		}
 		else
@@ -5597,7 +5597,7 @@ static void P_DoNiGHTSCapsule(player_t *player)
 	else if (player->mo->z < player->capsule->z+(player->capsule->height/3))
 		player->mo->momz = 2*FRACUNIT;
 
-	if (player->pflags & PF_NIGHTSMODE)
+	if (player->powers[pw_carry] == CR_NIGHTSMODE)
 	{
 		if (player->mo->momx || player->mo->momy || player->mo->momz)
 		{
@@ -5675,7 +5675,7 @@ static void P_DoNiGHTSCapsule(player_t *player)
 						P_SetMobjState(emmo, mobjinfo[MT_GOTEMERALD].meleestate + em);
 					}*/
 
-					if (player->pflags & PF_NIGHTSMODE)
+					if (player->powers[pw_carry] == CR_NIGHTSMODE)
 					{
 						// Only give it to ONE person, and THAT player has to get to the goal!
 						emmo = P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z + player->mo->info->height, MT_GOTEMERALD);
@@ -5689,7 +5689,7 @@ static void P_DoNiGHTSCapsule(player_t *player)
 					// Find the player with the lowest time remaining and award points based on that time instead.
 					lowest_time = player->finishedtime;
 					for (i = 0; i < MAXPLAYERS; i++)
-						if (playeringame[i] && players[i].pflags & PF_NIGHTSMODE)
+						if (playeringame[i] && players[i].powers[pw_carry] == CR_NIGHTSMODE)
 							if (players[i].finishedtime < lowest_time)
 								lowest_time = players[i].finishedtime;
 					P_AddPlayerScore(player, (lowest_time/TICRATE) * 100);
@@ -5762,7 +5762,7 @@ static void P_NiGHTSMovement(player_t *player)
 			player->drillmeter = TICRATE/10;
 	}
 
-	if (!(player->pflags & PF_NIGHTSMODE))
+	if (!(player->powers[pw_carry] == CR_NIGHTSMODE))
 	{
 		P_DeNightserizePlayer(player);
 		return;
@@ -5773,7 +5773,7 @@ static void P_NiGHTSMovement(player_t *player)
 		boolean capsule = false;
 		// NiGHTS special stages have a pseudo-shared timer, so check if ANYONE is feeding the capsule.
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] /*&& players[i].pflags & PF_NIGHTSMODE*/
+			if (playeringame[i] /*&& players[i].powers[pw_carry] == CR_NIGHTSMODE*/
 			&& (players[i].capsule && players[i].capsule->reactiontime))
 				capsule = true;
 		if (!capsule
@@ -6597,7 +6597,7 @@ static void P_MovePlayer(player_t *player)
 	// Locate the capsule for this mare.
 	else if (maptol & TOL_NIGHTS)
 	{
-		if ((player->pflags & PF_NIGHTSMODE)
+		if ((player->powers[pw_carry] == CR_NIGHTSMODE)
 		&& !(player->mo->state >= &states[S_PLAY_NIGHTS_TRANS]
 		&& player->mo->state <= &states[S_PLAY_NIGHTS_TRANS6] // NOT 9 - it's 6 when the player turns their supercolor.
 		&& !(player->exiting)))
@@ -6630,7 +6630,7 @@ static void P_MovePlayer(player_t *player)
 		}
 
 		// Test revamped NiGHTS movement.
-		if (player->pflags & PF_NIGHTSMODE)
+		if (player->powers[pw_carry] == CR_NIGHTSMODE)
 		{
 			P_NiGHTSMovement(player);
 			// No more goto blockchecking, let's just do all that here =D
@@ -8193,9 +8193,9 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	subsector_t *newsubsec;
 	fixed_t f1, f2;
 
-	cameranoclip = (player->pflags & (PF_NOCLIP|PF_NIGHTSMODE)) || (player->mo->flags & (MF_NOCLIP|MF_NOCLIPHEIGHT)); // Noclipping player camera noclips too!!
+	cameranoclip = (player->powers[pw_carry] == CR_NIGHTSMODE || player->pflags & PF_NOCLIP) || (player->mo->flags & (MF_NOCLIP|MF_NOCLIPHEIGHT)); // Noclipping player camera noclips too!!
 
-	if (!(player->climbing || (player->pflags & PF_NIGHTSMODE) || player->playerstate == PST_DEAD))
+	if (!(player->climbing || (player->powers[pw_carry] == CR_NIGHTSMODE) || player->playerstate == PST_DEAD))
 	{
 		if (player->spectator) // force cam off for spectators
 			return true;
@@ -8242,7 +8242,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 //	if (leveltime > 0 && timeinmap <= 0)
 //		return true;
 
-	if (player->pflags & PF_NIGHTSMODE)
+	if (player->powers[pw_carry] == CR_NIGHTSMODE)
 	{
 		focusangle = player->mo->angle;
 		focusaiming = 0;
@@ -8299,7 +8299,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		angle = ANGLE_90;
 	else if (camstill || resetcalled || player->playerstate == PST_DEAD)
 		angle = thiscam->angle;
-	else if (player->pflags & PF_NIGHTSMODE) // NiGHTS Level
+	else if (player->powers[pw_carry] == CR_NIGHTSMODE) // NiGHTS Level
 	{
 		if ((player->pflags & PF_TRANSFERTOCLOSEST) && player->axis1 && player->axis2)
 		{
@@ -8338,7 +8338,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		thiscam->angle = angle;
 	}
 
-	if (!objectplacing && !(twodlevel || (mo->flags2 & MF2_TWOD)) && !(player->pflags & PF_NIGHTSMODE) && displayplayer == consoleplayer)
+	if (!objectplacing && !(twodlevel || (mo->flags2 & MF2_TWOD)) && (player->powers[pw_carry] != CR_NIGHTSMODE) && displayplayer == consoleplayer)
 	{
 #ifdef REDSANALOG
 		if ((player->cmd.buttons & (BT_CAMLEFT|BT_CAMRIGHT)) == (BT_CAMLEFT|BT_CAMRIGHT)); else
@@ -8384,13 +8384,13 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	// sets ideal cam pos
 	if (twodlevel || (mo->flags2 & MF2_TWOD))
 		dist = 480<<FRACBITS;
-	else if (player->pflags & PF_NIGHTSMODE)
+	else if (player->powers[pw_carry] == CR_NIGHTSMODE)
 		dist = 320<<FRACBITS;
 	else
 	{
 		dist = camdist;
 
-		if (player->climbing || player->exiting || player->playerstate == PST_DEAD || (player->powers[pw_carry] && player->powers[pw_carry] != CR_PLAYER))
+		if (player->climbing || player->exiting || player->playerstate == PST_DEAD || (player->powers[pw_carry] == CR_ROPEHANG || player->powers[pw_carry] == CR_GENERIC || player->powers[pw_carry] == CR_MACESPIN))
 			dist <<= 1;
 	}
 
@@ -8732,7 +8732,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	else
 		player->mo->flags2 &= ~MF2_SHADOW;
 
-/*	if (!resetcalled && (player->pflags & PF_NIGHTSMODE && player->exiting))
+/*	if (!resetcalled && (player->powers[pw_carry] == CR_NIGHTSMODE && player->exiting))
 	{
 		// Don't let the camera match your movement.
 		thiscam->momz = 0;
@@ -9099,7 +9099,7 @@ void P_PlayerThink(player_t *player)
 
 			player->pflags |= PF_TIMEOVER;
 
-			if (player->pflags & PF_NIGHTSMODE)
+			if (player->powers[pw_carry] == CR_NIGHTSMODE)
 			{
 				P_DeNightserizePlayer(player);
 				S_StartScreamSound(player->mo, sfx_s3k66);
@@ -9225,7 +9225,7 @@ void P_PlayerThink(player_t *player)
 
 	// Even if not NiGHTS, pull in nearby objects when walking around as John Q. Elliot.
 	if (!objectplacing && !((netgame || multiplayer) && player->spectator)
-	&& maptol & TOL_NIGHTS && (!(player->pflags & PF_NIGHTSMODE) || player->powers[pw_nights_helper]))
+	&& maptol & TOL_NIGHTS && (player->powers[pw_carry] != CR_NIGHTSMODE || player->powers[pw_nights_helper]))
 	{
 		thinker_t *th;
 		mobj_t *mo2;
@@ -9335,7 +9335,7 @@ void P_PlayerThink(player_t *player)
 #endif
 
 	// check for use
-	if (!(player->pflags & PF_NIGHTSMODE))
+	if (player->powers[pw_carry] != CR_NIGHTSMODE)
 	{
 		if (cmd->buttons & BT_USE)
 			player->pflags |= PF_USEDOWN;
@@ -9353,7 +9353,7 @@ void P_PlayerThink(player_t *player)
 	if (player->powers[pw_invulnerability] && player->powers[pw_invulnerability] < UINT16_MAX)
 		player->powers[pw_invulnerability]--;
 
-	if (player->powers[pw_flashing] && player->powers[pw_flashing] < UINT16_MAX && ((player->pflags & PF_NIGHTSMODE) || player->powers[pw_flashing] < flashingtics))
+	if (player->powers[pw_flashing] && player->powers[pw_flashing] < UINT16_MAX && ((player->powers[pw_carry] == CR_NIGHTSMODE) || player->powers[pw_flashing] < flashingtics))
 		player->powers[pw_flashing]--;
 
 	if (player->powers[pw_tailsfly] && player->powers[pw_tailsfly] < UINT16_MAX && player->charability != CA_SWIM) // tails fly counter
@@ -9571,7 +9571,7 @@ void P_PlayerAfterThink(player_t *player)
 		return;
 	}
 
-	if (player->pflags & PF_NIGHTSMODE)
+	if (player->powers[pw_carry] == CR_NIGHTSMODE)
 	{
 		player->powers[pw_gravityboots] = 0;
 		//player->mo->eflags &= ~MFE_VERTICALFLIP;
@@ -9702,7 +9702,10 @@ void P_PlayerAfterThink(player_t *player)
 		player->mo->height = FixedDiv(P_GetPlayerHeight(player), FixedDiv(14*FRACUNIT,10*FRACUNIT));
 
 		if (player->mo->tracer->player && !(player->mo->tracer->player->pflags & PF_CANCARRY))
-				player->powers[pw_carry] = CR_NONE;
+		{
+			player->powers[pw_carry] = CR_NONE;
+			P_SetTarget(&player->mo->tracer, NULL);
+		}
 
 		if (player->mo->eflags & MFE_VERTICALFLIP)
 		{
@@ -9710,7 +9713,10 @@ void P_PlayerAfterThink(player_t *player)
 				&& (player->mo->tracer->eflags & MFE_VERTICALFLIP)) // Reverse gravity check for the carrier - Flame
 				player->mo->z = player->mo->tracer->z + player->mo->tracer->height + FixedMul(FRACUNIT, player->mo->scale);
 			else
+			{
 				player->powers[pw_carry] = CR_NONE;
+				P_SetTarget(&player->mo->tracer, NULL);
+			}
 		}
 		else
 		{
@@ -9718,7 +9724,10 @@ void P_PlayerAfterThink(player_t *player)
 				&& !(player->mo->tracer->eflags & MFE_VERTICALFLIP)) // Correct gravity check for the carrier - Flame
 				player->mo->z = player->mo->tracer->z - player->mo->height - FixedMul(FRACUNIT, player->mo->scale);
 			else
+			{
 				player->powers[pw_carry] = CR_NONE;
+				P_SetTarget(&player->mo->tracer, NULL);
+			}
 		}
 
 		if (player->mo->tracer->health <= 0)
@@ -9745,7 +9754,10 @@ void P_PlayerAfterThink(player_t *player)
 		}
 
 		if (P_AproxDistance(player->mo->x - player->mo->tracer->x, player->mo->y - player->mo->tracer->y) > player->mo->radius)
+		{
 			player->powers[pw_carry] = CR_NONE;
+			P_SetTarget(&player->mo->tracer, NULL);
+		}
 
 		P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
 

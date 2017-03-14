@@ -3530,7 +3530,7 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 				P_DamageMobj(player->mo, NULL, NULL, 1, 0);
 			break;
 		case 2: // Damage (Water)
-			if ((roversector || P_MobjReadyToTrigger(player->mo, sector)) && (player->powers[pw_underwater] || player->pflags & PF_NIGHTSMODE))
+			if ((roversector || P_MobjReadyToTrigger(player->mo, sector)) && (player->powers[pw_underwater] || player->powers[pw_carry] == CR_NIGHTSMODE))
 				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_WATER);
 			break;
 		case 3: // Damage (Fire)
@@ -4083,7 +4083,7 @@ DoneSection2:
 				{
 					player->laps++;
 
-					if (player->pflags & PF_NIGHTSMODE)
+					if (player->powers[pw_carry] == CR_NIGHTSMODE)
 						player->drillmeter += 48*20;
 
 					if (player->laps >= (UINT8)cv_numlaps.value)
@@ -7256,7 +7256,7 @@ static inline boolean PIT_PushThing(mobj_t *thing)
 		return false;
 
 	// Allow this to affect pushable objects at some point?
-	if (thing->player && (!(thing->flags & (MF_NOGRAVITY | MF_NOCLIP)) || thing->player->pflags & PF_NIGHTSMODE))
+	if (thing->player && (!(thing->flags & (MF_NOGRAVITY | MF_NOCLIP)) || thing->player->powers[pw_carry] == CR_NIGHTSMODE))
 	{
 		INT32 dist;
 		INT32 speed;
@@ -7287,7 +7287,7 @@ static inline boolean PIT_PushThing(mobj_t *thing)
 		// Written with bits and pieces of P_HomingAttack
 		if ((speed > 0) && (P_CheckSight(thing, tmpusher->source)))
 		{
-			if (!(thing->player->pflags & PF_NIGHTSMODE))
+			if (thing->player->powers[pw_carry] != CR_NIGHTSMODE)
 			{
 				// only push wrt Z if health & 1 (mapthing has ambush flag)
 				if (tmpusher->source->health & 1)

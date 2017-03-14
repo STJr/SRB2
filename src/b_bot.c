@@ -212,7 +212,7 @@ boolean B_CheckRespawn(player_t *player)
 
 	// Check if Sonic is busy first.
 	// If he's doing any of these things, he probably doesn't want to see us.
-	if (sonic->player->pflags & (PF_GLIDING|PF_SLIDING|PF_BOUNCING|PF_NIGHTSMODE)
+	if (sonic->player->pflags & (PF_GLIDING|PF_SLIDING|PF_BOUNCING)
 	|| (sonic->player->panim != PA_IDLE && sonic->player->panim != PA_WALK)
 	|| (sonic->player->powers[pw_carry]))
 		return false;
