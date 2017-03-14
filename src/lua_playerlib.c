@@ -25,6 +25,8 @@
 static int lib_iteratePlayers(lua_State *L)
 {
 	INT32 i = -1;
+	if (gamestate != GS_LEVEL)
+		return luaL_error(L, "This function can only be used in a level!");
 	if (lua_gettop(L) < 2)
 	{
 		//return luaL_error(L, "Don't call players.iterate() directly, use it as 'for player in players.iterate do <block> end'.");
@@ -51,6 +53,8 @@ static int lib_getPlayer(lua_State *L)
 {
 	const char *field;
 	// i -> players[i]
+	if (gamestate != GS_LEVEL)
+		return luaL_error(L, "You cannot access this outside of a level!");
 	if (lua_type(L, 2) == LUA_TNUMBER)
 	{
 		lua_Integer i = luaL_checkinteger(L, 2);

@@ -56,6 +56,7 @@ const char *const hookNames[hook_MAX+1] = {
 	"PlayerSpawn",
 	"ShieldSpawn",
 	"ShieldSpecial",
+	"MobjMoveBlocked",
 	NULL
 };
 
@@ -126,6 +127,7 @@ static int lib_addHook(lua_State *L)
 	case hook_BossDeath:
 	case hook_MobjRemoved:
 	case hook_HurtMsg:
+	case hook_MobjMoveBlocked:
 		hook.s.mt = MT_NULL;
 		if (lua_isnumber(L, 2))
 			hook.s.mt = lua_tonumber(L, 2);
@@ -184,6 +186,7 @@ static int lib_addHook(lua_State *L)
 	case hook_MobjDeath:
 	case hook_BossDeath:
 	case hook_MobjRemoved:
+	case hook_MobjMoveBlocked:
 		lastp = &mobjhooks[hook.s.mt];
 		break;
 	case hook_JumpSpecial:

@@ -186,6 +186,9 @@ static int lib_searchBlockmap(lua_State *L)
 	UINT8 funcret = 0;
 	blockmap_func searchFunc;
 
+	if (gamestate != GS_LEVEL)
+		return luaL_error(L, "This function can only be used in a level!");
+
 	lua_remove(L, 1); // remove searchtype, stack is now function, mobj, [x1, x2, y1, y2]
 	luaL_checktype(L, 1, LUA_TFUNCTION);
 
