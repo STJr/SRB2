@@ -5446,10 +5446,10 @@ static void P_Boss7Thinker(mobj_t *mobj)
 			if (players[i].mo->health <= 0)
 				continue;
 
-			if (players[i].powers[pw_ingoop])
+			if (players[i].powers[pw_carry] == CR_BRAKGOOP)
 			{
 				closestNum = -1;
-				closestdist = 16384*FRACUNIT; // Just in case...
+				closestdist = INT32_MAX; // Just in case...
 
 				// Find waypoint he is closest to
 				for (th = thinkercap.next; th != &thinkercap; th = th->next)

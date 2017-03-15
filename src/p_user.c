@@ -873,7 +873,7 @@ void P_ResetPlayer(player_t *player)
 {
 	player->pflags &= ~(PF_SPINNING|PF_STARTDASH|PF_JUMPED|PF_FORCEJUMPDAMAGE|PF_GLIDING|PF_THOKKED|PF_CANCARRY|PF_SHIELDABILITY|PF_BOUNCING);
 
-	if (player->powers[pw_carry] != CR_NIGHTSMODE)
+	if (!(player->powers[pw_carry] == CR_NIGHTSMODE || player->powers[pw_carry] == CR_BRAKGOOP))
 		player->powers[pw_carry] = CR_NONE;
 
 	player->jumping = 0;
@@ -3857,7 +3857,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 	if (onground && !(player->pflags & PF_USEDOWN) && (player->pflags & PF_STARTDASH) && (player->pflags & PF_SPINNING))
 	{
 		player->pflags &= ~PF_STARTDASH;
-		if (player->powers[pw_ingoop])
+		if (player->powers[pw_carry] == CR_BRAKGOOP)
 			player->dashspeed = 0;
 
 		if (!((gametype == GT_RACE || gametype == GT_COMPETITION) && leveltime < 4*TICRATE))
@@ -6544,7 +6544,7 @@ static void P_MovePlayer(player_t *player)
 	runspd = FixedMul(runspd, player->mo->movefactor);
 
 	// Control relinquishing stuff!
-	if (player->powers[pw_ingoop])
+	if (player->powers[pw_carry] == CR_BRAKGOOP)
 		player->pflags |= PF_FULLSTASIS;
 	else if (player->pflags & PF_GLIDING && player->skidtime)
 		player->pflags |= PF_FULLSTASIS;
@@ -9398,12 +9398,20 @@ void P_PlayerThink(player_t *player)
 	if (player->powers[pw_super])
 		player->powers[pw_super]++;
 
-	if (player->powers[pw_ingoop])
+	if (player->powers[pw_carry] == CR_BRAKGOOP)
 	{
-		if (player->mo->state == &states[S_PLAY_STND])
-			player->mo->tics = 2;
+		if (!player->powers[pw_flashing])
+		{
+			if (player->mo->state != &states[S_PLAY_STND])
+				P_SetPlayerMobjState(player->mo, S_PLAY_STND);
+			else
+				player->mo->tics = 2;
+		}
+		else
+			P_SetTarget(&player->mo->tracer, NULL);
 
-		player->powers[pw_ingoop]--;
+		if (!player->mo->tracer)
+			player->powers[pw_carry] = CR_NONE;
 	}
 
 	if (player->bumpertime)
@@ -9697,6 +9705,9 @@ void P_PlayerAfterThink(player_t *player)
 	&& !(player->charflags & SF_NOJUMPSPIN))
 		P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 
+	/* if (player->powers[pw_carry] == CR_NONE && player->mo->tracer && !player->homing)
+		P_SetTarget(&player->mo->tracer, NULL);
+	else */
 	if (player->powers[pw_carry] == CR_PLAYER && player->mo->tracer)
 	{
 		player->mo->height = FixedDiv(P_GetPlayerHeight(player), FixedDiv(14*FRACUNIT,10*FRACUNIT));

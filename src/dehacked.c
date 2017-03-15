@@ -7129,8 +7129,7 @@ static const char *const POWERS_LIST[] = {
 	"NIGHTS_LINKFREEZE",
 
 	//for linedef exec 427
-	"NOCONTROL",
-	"INGOOP" // In goop
+	"NOCONTROL"
 };
 
 static const char *const HUDITEMS_LIST[] = {
@@ -7355,6 +7354,7 @@ struct {
 	{"CR_GENERIC",CR_GENERIC},
 	{"CR_PLAYER",CR_PLAYER},
 	{"CR_NIGHTSMODE",CR_NIGHTSMODE},
+	{"CR_BRAKGOOP",CR_BRAKGOOP},
 	{"CR_ZOOMTUBE",CR_ZOOMTUBE},
 	{"CR_ROPEHANG",CR_ROPEHANG},
 	{"CR_MACESPIN",CR_MACESPIN},

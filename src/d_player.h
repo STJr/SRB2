@@ -225,6 +225,8 @@ typedef enum
 	CR_PLAYER,
 	// NiGHTS mode. Not technically a CARRYING, but doesn't stack with any of the others, so might as well go here.
 	CR_NIGHTSMODE,
+	// Old Brak sucks hard, but this gimmick could be used for something better, so we might as well continue supporting it.
+	CR_BRAKGOOP,
 	// Specific level gimmicks.
 	CR_ZOOMTUBE,
 	CR_ROPEHANG,
@@ -264,9 +266,7 @@ typedef enum
 	pw_nights_helper,
 	pw_nights_linkfreeze,
 
-	//for linedef exec 427
-	pw_nocontrol,
-	pw_ingoop, // In goop
+	pw_nocontrol, //for linedef exec 427
 
 	NUMPOWERS
 } powertype_t;

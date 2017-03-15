@@ -1355,7 +1355,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			return;
 
 		case MT_BLACKEGGMAN_GOOPFIRE:
-			if (toucher->state != &states[S_PLAY_PAIN] && !player->powers[pw_flashing])
+			if (!player->powers[pw_flashing])
 			{
 				toucher->momx = 0;
 				toucher->momy = 0;
@@ -1363,13 +1363,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				if (toucher->momz != 0)
 					special->momz = toucher->momz;
 
-				player->powers[pw_ingoop] = 2;
-
-				if (player->powers[pw_carry] == CR_GENERIC)
-				{
-					P_SetTarget(&toucher->tracer, NULL);
-					player->powers[pw_carry] = CR_NONE;
-				}
+				player->powers[pw_carry] = CR_BRAKGOOP;
+				P_SetTarget(&toucher->tracer, special);
 
 				P_ResetPlayer(player);
 
@@ -1382,7 +1377,10 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				}
 			}
 			else
-				player->powers[pw_ingoop] = 0;
+			{
+				player->powers[pw_carry] = CR_NONE;
+				P_SetTarget(&toucher->tracer, NULL);
+			}
 			return;
 		case MT_EGGSHIELD:
 			{
