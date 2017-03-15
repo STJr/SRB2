@@ -254,7 +254,7 @@ static inline void R_DrawTransColumnInCache(column_t *patch, UINT8 *cache, texpa
 		if (count > 0)
 		{
 			for (; dest < cache + position + count; source++, dest++)
-				*dest = *dest == 0xFF ? *dest : *(mytransmap + ((*dest)<<8) + (*source));
+				if (*dest != 0xFF) *dest = *(mytransmap + ((*dest)<<8) + (*source));
 		}
 
 		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
@@ -298,7 +298,7 @@ static inline void R_DrawTransFlippedColumnInCache(column_t *patch, UINT8 *cache
 		if (count > 0)
 		{
 			for (; dest < cache + position + count; --source, dest++)
-				*dest = *dest == 0xFF ? *dest : *(mytransmap + ((*dest)<<8) + (*source));
+				if (*dest != 0xFF) *dest = *(mytransmap + ((*dest)<<8) + (*source));
 		}
 
 		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
@@ -422,19 +422,12 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 		{
 			if (patch->alpha < 255/11) // Is the patch way too translucent? Don't render then.
 				continue;
-			if (patch->flip & 2)
-				ColumnDrawerPointer = &R_DrawTransFlippedColumnInCache;
-			else
-				ColumnDrawerPointer = &R_DrawTransColumnInCache;
+			ColumnDrawerPointer = (patch->flip & 2) ? &R_DrawTransFlippedColumnInCache : &R_DrawTransColumnInCache;
 		}
 		else
 		{
-			if (patch->flip & 2)
-				ColumnDrawerPointer = &R_DrawFlippedColumnInCache;
-			else
-				ColumnDrawerPointer = &R_DrawColumnInCache;
+			ColumnDrawerPointer = (patch->flip & 2) ? &R_DrawFlippedColumnInCache : &R_DrawColumnInCache;
 		}
-
 
 		realpatch = W_CacheLumpNumPwad(patch->wad, patch->lump, PU_CACHE);
 		x1 = patch->originx;
