@@ -5952,7 +5952,7 @@ void A_RecyclePowers(mobj_t *actor)
 
 		for (j = 0; j < NUMPOWERS; j++)
 		{
-			if (j == pw_flashing || j == pw_underwater || j == pw_spacetime
+			if (j == pw_flashing || j == pw_underwater || j == pw_spacetime || j == pw_carry
 			    || j == pw_tailsfly || j == pw_extralife || j == pw_nocontrol || j == pw_super)
 				continue;
 			players[recv_pl].powers[j] = powers[send_pl][j];
