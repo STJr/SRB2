@@ -3526,17 +3526,17 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 		dummycam.y = player->awayviewmobj->y;
 		dummycam.z = player->awayviewmobj->z;
 		dummycam.height = 40*FRACUNIT; // alt view height is 20*FRACUNIT
-		// Are we in water?
-		if (P_CameraCheckWater(&dummycam))
-			postimg = postimg_water;
-		else if (P_CameraCheckHeat(&dummycam))
-			postimg = postimg_heat;
-		// miru: assign new postimg on displays
-		else if (P_CheckViewRoll(player))
+		// miru: assign viewroll (awayview)
+		if (P_CheckViewRoll(player))
 		{
 			postimg = postimg_roll;
 			postimgparam = player->viewrollangle;
-        }
+		}
+		// Are we in water?
+		else if (P_CameraCheckWater(&dummycam))
+			postimg = postimg_water;
+		else if (P_CameraCheckHeat(&dummycam))
+			postimg = postimg_heat;
         else if (P_CheckMotionBlur())
 		{
 		    postimg = postimg_motion;
@@ -3548,16 +3548,17 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 	}
 	else
 	{
-		// Are we in water?
-		if (P_CameraCheckWater(thiscam))
-			postimg = postimg_water;
-		else if (P_CameraCheckHeat(thiscam))
-			postimg = postimg_heat;
-		else if (P_CheckViewRoll(player))
+		// miru: assign viewroll
+		if (P_CheckViewRoll(player))
 		{
 			postimg = postimg_roll;
 			postimgparam = player->viewrollangle;
 		}
+		// Are we in water?
+		else if (P_CameraCheckWater(thiscam))
+			postimg = postimg_water;
+		else if (P_CameraCheckHeat(thiscam))
+			postimg = postimg_heat;
 		else if (P_CheckMotionBlur())
 		{
 		    postimg = postimg_motion;
