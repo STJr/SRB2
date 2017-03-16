@@ -3542,8 +3542,8 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 			postimg = postimg_motion;
 			if (!forward_postimgparam)
 				forward_postimgparam = 1;
-				postimgparam = forward_postimgparam;
 			else
+				postimgparam = forward_postimgparam;
 		}
 	}
 	else
