@@ -308,8 +308,8 @@ static int player_get(lua_State *L)
 		lua_pushinteger(L, plr->awayviewtics);
 	else if (fastcmp(field,"awayviewaiming"))
 		lua_pushangle(L, plr->awayviewaiming);
-    // miru: expose and "get" new player struct vars from Lua
-    else if (fastcmp(field,"viewrollangle"))
+	// miru: expose and "get" new player struct vars from Lua
+	else if (fastcmp(field,"viewrollangle"))
 		lua_pushangle(L, plr->viewrollangle);
 	else if (fastcmp(field,"spectator"))
 		lua_pushboolean(L, plr->spectator);
@@ -582,7 +582,7 @@ static int player_set(lua_State *L)
 	}
 	else if (fastcmp(field,"awayviewaiming"))
 		plr->awayviewaiming = luaL_checkangle(L, 3);
-    else if (fastcmp(field,"viewrollangle"))
+	else if (fastcmp(field,"viewrollangle"))
 		plr->viewrollangle = luaL_checkangle(L, 3);
 	else if (fastcmp(field,"spectator"))
 		plr->spectator = lua_toboolean(L, 3);

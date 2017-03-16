@@ -3499,7 +3499,7 @@ boolean P_CheckMotionBlur(void)
 static boolean P_CheckViewRoll(player_t *player)
 {
 	if (player->viewrollangle != 0)
-	    return true;
+		return true;
 
 	return false;
 }
@@ -3531,11 +3531,11 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 			postimg = postimg_water;
 		else if (P_CameraCheckHeat(&dummycam))
 			postimg = postimg_heat;
-        // miru: assign new postimg on displays
-        else if (P_CheckViewRoll(player))
-        {
-            postimg = postimg_roll;
-            postimgparam = player->viewrollangle;
+		// miru: assign new postimg on displays
+		else if (P_CheckViewRoll(player))
+		{
+			postimg = postimg_roll;
+			postimgparam = player->viewrollangle;
         }
         else if (P_CheckMotionBlur())
 		{
@@ -3553,12 +3553,12 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 			postimg = postimg_water;
 		else if (P_CameraCheckHeat(thiscam))
 			postimg = postimg_heat;
-        else if (P_CheckViewRoll(player))
-        {
-            postimg = postimg_roll;
-            postimgparam = player->viewrollangle;
-        }
-        else if (P_CheckMotionBlur())
+		else if (P_CheckViewRoll(player))
+		{
+			postimg = postimg_roll;
+			postimgparam = player->viewrollangle;
+		}
+		else if (P_CheckMotionBlur())
 		{
 		    postimg = postimg_motion;
 			if (!forward_postimgparam)
