@@ -2080,6 +2080,7 @@ void G_PlayerReborn(INT32 player)
 	UINT8 mare;
 	UINT8 skincolor;
 	INT32 skin;
+	UINT32 availabilities;
 	tic_t jointime;
 	boolean spectator;
 	INT16 bot;
@@ -2104,6 +2105,7 @@ void G_PlayerReborn(INT32 player)
 
 	skincolor = players[player].skincolor;
 	skin = players[player].skin;
+	availabilities = players[player].availabilities;
 	camerascale = players[player].camerascale;
 	shieldscale = players[player].shieldscale;
 	charability = players[player].charability;
@@ -2149,6 +2151,7 @@ void G_PlayerReborn(INT32 player)
 	// save player config truth reborn
 	p->skincolor = skincolor;
 	p->skin = skin;
+	p->availabilities = availabilities;
 	p->camerascale = camerascale;
 	p->shieldscale = shieldscale;
 	p->charability = charability;

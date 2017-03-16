@@ -528,6 +528,7 @@ static inline void resynch_write_player(resynch_pak *rsp, const size_t i)
 
 	rsp->skincolor = players[i].skincolor;
 	rsp->skin = LONG(players[i].skin);
+	rsp->availabilities = players[i].availabilities;
 	// Just in case Lua does something like
 	// modify these at runtime
 	rsp->camerascale = (fixed_t)LONG(players[i].camerascale);
@@ -657,6 +658,7 @@ static void resynch_read_player(resynch_pak *rsp)
 
 	players[i].skincolor = rsp->skincolor;
 	players[i].skin = LONG(rsp->skin);
+	players[i].availabilities = rsp->availabilities;
 	// Just in case Lua does something like
 	// modify these at runtime
 	players[i].camerascale = (fixed_t)LONG(rsp->camerascale);

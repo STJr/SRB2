@@ -3417,7 +3417,7 @@ static void M_PatchSkinNameTable(void)
 
 	for (j = 0; j < MAXSKINS; j++)
 	{
-		if (skins[j].name[0] != '\0' && R_SkinUnlock(j))
+		if (skins[j].name[0] != '\0' && R_SkinUnlock(-1, j))
 		{
 			skins_cons_t[j].strvalue = skins[j].realname;
 			skins_cons_t[j].value = j+1;
@@ -4780,7 +4780,7 @@ static void M_SetupChoosePlayer(INT32 choice)
 		{
 			name = strtok(Z_StrDup(description[i].skinname), "&");
 			skinnum = R_SkinAvailable(name);
-			if ((skinnum != -1) && (R_SkinUnlock(skinnum)))
+			if ((skinnum != -1) && (R_SkinUnlock(-1, skinnum)))
 			{
 				// Handling order.
 				if (firstvalid == 255)
@@ -6525,7 +6525,7 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 					if (setupm_fakeskin < 0)
 						setupm_fakeskin = numskins-1;
 				}
-				while ((prev_setupm_fakeskin != setupm_fakeskin) && !(R_SkinUnlock(setupm_fakeskin)));
+				while ((prev_setupm_fakeskin != setupm_fakeskin) && !(R_SkinUnlock(-1, setupm_fakeskin)));
 			}
 			else if (itemOn == 1) // player color
 			{
@@ -6545,7 +6545,7 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 					if (setupm_fakeskin > numskins-1)
 						setupm_fakeskin = 0;
 				}
-				while ((prev_setupm_fakeskin != setupm_fakeskin) && !(R_SkinUnlock(setupm_fakeskin)));
+				while ((prev_setupm_fakeskin != setupm_fakeskin) && !(R_SkinUnlock(-1, setupm_fakeskin)));
 			}
 			else if (itemOn == 1) // player color
 			{

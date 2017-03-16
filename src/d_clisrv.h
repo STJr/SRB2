@@ -172,6 +172,7 @@ typedef struct
 
 	UINT8 skincolor;
 	INT32 skin;
+	UINT32 availabilities;
 	// Just in case Lua does something like
 	// modify these at runtime
 	fixed_t camerascale;

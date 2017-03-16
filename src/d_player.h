@@ -342,6 +342,7 @@ typedef struct player_s
 	UINT8 skincolor;
 
 	INT32 skin;
+	UINT32 availabilities;
 
 	UINT32 score; // player score
 	fixed_t dashspeed; // dashing speed

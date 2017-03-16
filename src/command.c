@@ -1165,7 +1165,7 @@ found:
 		if (var == &cv_forceskin)
 		{
 			var->value = R_SkinAvailable(var->string);
-			if (!R_SkinUnlock(var->value))
+			if (!R_SkinUnlock(-1, var->value))
 				var->value = -1;
 		}
 		else
@@ -1478,7 +1478,7 @@ void CV_AddValue(consvar_t *var, INT32 increment)
 			else if (newvalue >= numskins)
 				newvalue = -1;
 		} while ((oldvalue != newvalue)
-				&& !(R_SkinUnlock(newvalue)));
+				&& !(R_SkinUnlock(-1, newvalue)));
 	}
 	else
 		newvalue = var->value + increment;

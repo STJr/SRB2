@@ -2554,13 +2554,26 @@ void R_InitSkins(void)
 	numskins = 0;
 }
 
+UINT32 R_GetSkinAvailabilities(void)
+{
+	INT32 s;
+	UINT32 response = 0;
+
+	for (s = 0; s < MAXSKINS; s++)
+	{
+		if (!skins[s].availability || unlockables[skins[s].availability - 1].unlocked)
+			response |= (1 << s);
+	}
+	return response;
+}
+
 // returns true if available in circumstances, otherwise nope
 // warning don't use with an invalid skinnum other than -1 which always returns true
-boolean R_SkinUnlock(INT32 skinnum)
+boolean R_SkinUnlock(INT32 playernum, INT32 skinnum)
 {
 	return ((skinnum == -1) // Simplifies things elsewhere, since there's already plenty of checks for less-than-0...
 		|| (!skins[skinnum].availability)
-		|| (unlockables[skins[skinnum].availability - 1].unlocked)
+		|| ((playernum != -1) ? (players[playernum].availabilities & (1 << skinnum)) : (unlockables[skins[skinnum].availability - 1].unlocked))
 		|| (modeattacking) // If you have someone else's run you might as well take a look
 		|| (Playing() && (R_SkinAvailable(mapheaderinfo[gamemap-1]->forcecharacter) == skinnum)) // Force 1.
 		|| (netgame && !(server || adminplayer == consoleplayer) && (cv_forceskin.value == skinnum)) // Force 2.
@@ -2588,7 +2601,7 @@ void SetPlayerSkin(INT32 playernum, const char *skinname)
 	INT32 i = R_SkinAvailable(skinname);
 	player_t *player = &players[playernum];
 
-	if ((i != -1) && (!P_IsLocalPlayer(player) || R_SkinUnlock(i)))
+	if ((i != -1) && R_SkinUnlock(playernum, i))
 	{
 		SetPlayerSkinByNum(playernum, i);
 		return;
@@ -2610,8 +2623,7 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 	skin_t *skin = &skins[skinnum];
 	UINT8 newcolor = 0;
 
-	if ((skinnum >= 0 && skinnum < numskins) // Make sure it exists!
-	&& (!P_IsLocalPlayer(player) || R_SkinUnlock(skinnum))) // ...but is it allowed? We must always allow external players to change skin. The server should vet that...
+	if (skinnum >= 0 && skinnum < numskins && R_SkinUnlock(playernum, skinnum)) // Make sure it exists!
 	{
 		player->skin = skinnum;
 
