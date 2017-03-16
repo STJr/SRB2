@@ -1376,11 +1376,6 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 						P_SetMobjState(special->target, special->target->info->raisestate);
 				}
 			}
-			else
-			{
-				player->powers[pw_carry] = CR_NONE;
-				P_SetTarget(&toucher->tracer, NULL);
-			}
 			return;
 		case MT_EGGSHIELD:
 			{
