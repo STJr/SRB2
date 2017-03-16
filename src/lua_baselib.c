@@ -1798,10 +1798,10 @@ static int lib_sSetMusicPosition(lua_State *L)
 
 static int lib_sGetMusicPosition(lua_State *L)
 {
-    float fpos = S_GetMusicPosition();
+	float fpos = S_GetMusicPosition();
 	lua_pushnumber(L, (lua_Number)(fpos*1000));
-    //CONS_Printf("GetMusicPosition: %05f\n\n\n",fpos);
-    return 1;
+	//CONS_Printf("GetMusicPosition: %05f\n\n\n",fpos);
+	return 1;
 }
 
 static int lib_sFadeOutMusic(lua_State *L)
@@ -1839,7 +1839,7 @@ static int lib_pSetActiveMotionBlur(lua_State *L)
 
 static int lib_gSetDisplayPlayer(lua_State *L)
 {
-    // set args 1 2 & 3
+	// set args 1 2 & 3
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
 	INT32 dispnum = luaL_checkint(L, 2);
 	boolean alldisps = luaL_checkboolean(L, 3);
@@ -2233,12 +2233,12 @@ static luaL_Reg lib[] = {
 	{"G_TicsToCentiseconds",lib_gTicsToCentiseconds},
 	{"G_TicsToMilliseconds",lib_gTicsToMilliseconds},
 
-    //miru: Put everything added here, categorizing right now isn't something I want to wander through
+	//miru: Put everything added here, categorizing right now isn't something I want to wander through
 	{"S_SetMusicPosition",lib_sSetMusicPosition},
 	{"S_GetMusicPosition",lib_sGetMusicPosition},
 	{"S_FadeOutMusic",lib_sFadeOutMusic},
 	{"P_SetActiveMotionBlur",lib_pSetActiveMotionBlur},
-    {"G_SetDisplayPlayer",lib_gSetDisplayPlayer},
+	{"G_SetDisplayPlayer",lib_gSetDisplayPlayer},
 
 	{NULL, NULL}
 };

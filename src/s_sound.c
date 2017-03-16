@@ -1278,12 +1278,12 @@ void S_SetMusicPosition(float position)
 
 float S_GetMusicPosition(void)
 {
-    return I_GetMusicPosition();
+	return I_GetMusicPosition();
 }
 
 void S_FadeOutMusic(int ms)
 {
-    I_FadeOutMusic(ms);
+	I_FadeOutMusic(ms);
 }
 
 boolean S_SpeedMusic(float speed)

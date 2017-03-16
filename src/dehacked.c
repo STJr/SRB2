@@ -3099,7 +3099,7 @@ static void readmaincfg(MYFILE *f)
 			}
 			else if (fastcmp(word, "BOOTMAP"))
 			{
-			    // rei/miru: bootmap definition for maincfg
+				// rei/miru: bootmap definition for maincfg
 
 				// Support using the actual map name,
 				// i.e., Level AB, Level FZ, etc.

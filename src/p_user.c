@@ -8553,8 +8553,8 @@ static void P_CalcPostImg(player_t *player)
 		*param = (player->viewrollangle);
 	}
 
-    //miru: Motion blur won't work without this i guess, either way its enabled
-    //TODO: Opengl motion blur
+	//miru: Motion blur won't work without this i guess, either way its enabled
+	//TODO: Opengl motion blur
 	// Motion blur
 	if (player->mo && P_CheckMotionBlur())
 	{
