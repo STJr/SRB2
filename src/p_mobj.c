@@ -3965,7 +3965,7 @@ void P_DestroyRobots(void)
 			continue; // not a mobj thinker
 
 		mo = (mobj_t *)think;
-		if (mo->health <= 0 || !(mo->flags & MF_ENEMY || mo->flags & MF_BOSS))
+		if (mo->health <= 0 || !(mo->flags & (MF_ENEMY|MF_BOSS)))
 			continue; // not a valid enemy
 
 		if (mo->type == MT_PLAYER) // Don't chase after other players!
