@@ -1366,6 +1366,8 @@ static boolean SV_SendServerConfig(INT32 node)
 	// which is nice and easy for us to detect
 	memset(netbuffer->u.servercfg.playerskins, 0xFF, sizeof(netbuffer->u.servercfg.playerskins));
 	memset(netbuffer->u.servercfg.playercolor, 0xFF, sizeof(netbuffer->u.servercfg.playercolor));
+	// ...except for availabilities, where 00 is nonexistent
+	memset(netbuffer->u.servercfg.playeravailabilities, 0x00, sizeof(netbuffer->u.servercfg.playeravailabilities));
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
@@ -1373,6 +1375,7 @@ static boolean SV_SendServerConfig(INT32 node)
 			continue;
 		netbuffer->u.servercfg.playerskins[i] = (UINT8)players[i].skin;
 		netbuffer->u.servercfg.playercolor[i] = (UINT8)players[i].skincolor;
+		netbuffer->u.servercfg.playeravailabilities[i] = (UINT32)players[i].availabilities;
 	}
 
 	memcpy(netbuffer->u.servercfg.server_context, server_context, 8);
@@ -3494,10 +3497,12 @@ static void HandlePacketFromAwayNode(SINT8 node)
 			for (j = 0; j < MAXPLAYERS; j++)
 			{
 				if (netbuffer->u.servercfg.playerskins[j] == 0xFF
-				 && netbuffer->u.servercfg.playercolor[j] == 0xFF)
+				 && netbuffer->u.servercfg.playercolor[j] == 0xFF
+				 && netbuffer->u.servercfg.playeravailabilities[j] == 0x00)
 					continue; // not in game
 
 				playeringame[j] = true;
+				players[j].availabilities = netbuffer->u.servercfg.playeravailabilities[j];
 				SetPlayerSkinByNum(j, (INT32)netbuffer->u.servercfg.playerskins[j]);
 				players[j].skincolor = netbuffer->u.servercfg.playercolor[j];
 			}

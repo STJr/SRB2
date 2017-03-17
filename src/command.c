@@ -1407,8 +1407,12 @@ static void CV_SetValueMaybeStealth(consvar_t *var, INT32 value, boolean stealth
 
 	if (var == &cv_forceskin) // Special handling.
 	{
-		if ((value < 0) || (value >= numskins))
+		if ((server || adminplayer == consoleplayer) && ((value < 0) || (value >= numskins) || !(R_SkinUnlock(-1, cv_forceskin.value))))
+		{
+			CONS_Printf("Please provide a valid skin name (\"None\" disables).\n");
 			sprintf(val, "None");
+			value = -1;
+		}
 		else
 			sprintf(val, "%s", skins[value].name);
 	}

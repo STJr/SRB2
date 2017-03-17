@@ -2576,7 +2576,7 @@ boolean R_SkinUnlock(INT32 playernum, INT32 skinnum)
 		|| ((playernum != -1) ? (players[playernum].availabilities & (1 << skinnum)) : (unlockables[skins[skinnum].availability - 1].unlocked))
 		|| (modeattacking) // If you have someone else's run you might as well take a look
 		|| (Playing() && (R_SkinAvailable(mapheaderinfo[gamemap-1]->forcecharacter) == skinnum)) // Force 1.
-		|| (netgame && !(server || adminplayer == consoleplayer) && (cv_forceskin.value == skinnum)) // Force 2.
+		|| (netgame && (cv_forceskin.value == skinnum)) // Force 2.
 		);
 }
 
@@ -2622,6 +2622,7 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 	player_t *player = &players[playernum];
 	skin_t *skin = &skins[skinnum];
 	UINT8 newcolor = 0;
+	CONS_Printf("%d - %d\n", playernum, player->availabilities);
 
 	if (skinnum >= 0 && skinnum < numskins && R_SkinUnlock(playernum, skinnum)) // Make sure it exists!
 	{

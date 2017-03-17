@@ -4048,13 +4048,6 @@ static void Command_Archivetest_f(void)
   */
 static void ForceSkin_OnChange(void)
 {
-	if ((server || adminplayer == consoleplayer) && ((cv_forceskin.value == -1 && stricmp(cv_forceskin.string, "None")) || !(R_SkinUnlock(-1, cv_forceskin.value))))
-	{
-		CONS_Printf("Please provide a valid skin name (\"None\" disables).\n");
-		CV_SetValue(&cv_forceskin, -1);
-		return;
-	}
-
 	// NOT in SP, silly!
 	if (!(netgame || multiplayer))
 		return;
