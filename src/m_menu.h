@@ -149,8 +149,6 @@ typedef struct menuitem_s
 	UINT8 alphaKey;
 } menuitem_t;
 
-extern menuitem_t PlayerMenu[32];
-
 typedef struct menu_s
 {
 	const char    *menutitlepic;
@@ -174,10 +172,10 @@ extern menu_t SP_LoadDef;
 // Stuff for customizing the player select screen
 typedef struct
 {
+	boolean used;
 	char notes[441];
 	char picname[8];
 	char skinname[SKINNAMESIZE*2+2]; // skin&skin\0
-	UINT16 wadnum; // for duplicate characters
 	UINT8 prev;
 	UINT8 next;
 } description_t;

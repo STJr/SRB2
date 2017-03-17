@@ -432,22 +432,20 @@ static void readAnimTex(MYFILE *f, INT32 num)
 }
 */
 
-static boolean findFreeSlot(INT32 *num, UINT16 wadnum)
+static boolean findFreeSlot(INT32 *num)
 {
 	// Send the character select entry to a free slot.
-	while (*num < 32 && (!(PlayerMenu[*num].status & IT_DISABLED) || description[*num].wadnum == wadnum)) // Will kill hidden characters from other files, but that's okay.
+	while (*num < 32 && (description[*num].used))
 		*num = *num+1;
 
 	// No more free slots. :(
 	if (*num >= 32)
 		return false;
 
-	PlayerMenu[*num].status = IT_CALL;
-	description[*num].wadnum = wadnum;
 	description[*num].picname[0] = '\0'; // Redesign your logo. (See M_DrawSetupChoosePlayerMenu in m_menu.c...)
 
 	// Found one! ^_^
-	return true;
+	return (description[*num].used = true);
 }
 
 // Reads a player.
@@ -479,7 +477,7 @@ static void readPlayer(MYFILE *f, INT32 num)
 			{
 				char *playertext = NULL;
 
-				if (!slotfound && (slotfound = findFreeSlot(&num, f->wad)) == false)
+				if (!slotfound && (slotfound = findFreeSlot(&num)) == false)
 					goto done;
 
 				for (i = 0; i < MAXLINELEN-3; i++)
@@ -528,7 +526,7 @@ static void readPlayer(MYFILE *f, INT32 num)
 
 			if (fastcmp(word, "PICNAME"))
 			{
-				if (!slotfound && (slotfound = findFreeSlot(&num, f->wad)) == false)
+				if (!slotfound && (slotfound = findFreeSlot(&num)) == false)
 					goto done;
 				DEH_WriteUndoline(word, &description[num].picname[0], UNDO_NONE);
 
@@ -536,12 +534,6 @@ static void readPlayer(MYFILE *f, INT32 num)
 			}
 			else if (fastcmp(word, "STATUS"))
 			{
-				// Limit the status to only IT_DISABLED and IT_CALL
-				if (i)
-					i = IT_CALL;
-				else
-					i = IT_DISABLED;
-
 				/*
 					You MAY disable previous entries if you so desire...
 					But try to enable something that's already enabled and you will be sent to a free slot.
@@ -549,15 +541,15 @@ static void readPlayer(MYFILE *f, INT32 num)
 					Because of this, you are allowed to edit any previous entries you like, but only if you
 					signal that you are purposely doing so by disabling and then reenabling the slot.
 				*/
-				if (i != IT_DISABLED && !slotfound && (slotfound = findFreeSlot(&num, f->wad)) == false)
+				if (i && !slotfound && (slotfound = findFreeSlot(&num)) == false)
 					goto done;
-				DEH_WriteUndoline(word, va("%d", PlayerMenu[num].status), UNDO_NONE);
-				PlayerMenu[num].status = (INT16)i;
+				DEH_WriteUndoline(word, va("%d", description[num].used), UNDO_NONE);
+				description[num].used = (!!i);
 			}
 			else if (fastcmp(word, "SKINNAME"))
 			{
 				// Send to free slot.
-				if (!slotfound && (slotfound = findFreeSlot(&num, f->wad)) == false)
+				if (!slotfound && (slotfound = findFreeSlot(&num)) == false)
 					goto done;
 				DEH_WriteUndoline(word, description[num].skinname, UNDO_NONE);
 
