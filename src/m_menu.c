@@ -825,7 +825,7 @@ static menuitem_t SP_LevelStatsMenu[] =
 };
 
 // Player menu dummy
-static menuitem_t SP_PlayerMenu[32] =
+static menuitem_t SP_PlayerMenu[] =
 {
 	{IT_NOTHING | IT_KEYHANDLER, NULL, "", M_HandleChoosePlayerMenu, 0},     // dummy menuitem for the control func
 };
@@ -4952,7 +4952,7 @@ static void M_ChoosePlayer(INT32 choice)
 	boolean ultmode = (ultimate_selectable && SP_PlayerDef.prevMenu == &SP_LoadDef && saveSlotSelected == NOSAVESLOT);
 
 	// skip this if forcecharacter or no characters available
-	if (!(SP_PlayerMenu[choice].status & IT_DYBIGSPACE))
+	if (!(SP_PlayerMenu[0].status & IT_DYBIGSPACE))
 	{
 		// M_SetupChoosePlayer didn't call us directly, that means we've been properly set up.
 		char_scroll = 0; // finish scrolling the menu
