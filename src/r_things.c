@@ -3014,6 +3014,17 @@ next_token:
 		skin_cons_t[numskins].strvalue = skin->name;
 #endif
 
+#ifdef SKINNAMEPADDING
+		if ((size = strlen(skin->hudname)) < 5)
+		{
+			size_t offset = 5 - size;
+			for (size++; size--;)
+				skin->hudname[size+offset] = skin->hudname[size];
+			while (offset--)
+				skin->hudname[offset] = ' ';
+		}
+#endif
+
 		// add face graphics
 		ST_LoadFaceGraphics(skin->face, skin->superface, numskins);
 
