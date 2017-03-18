@@ -1361,6 +1361,16 @@ static void CV_SetCVar(consvar_t *var, const char *value, boolean stealth)
 			return;
 		}
 
+		if (var == &cv_forceskin)
+		{
+			INT32 skin = R_SkinAvailable(value);
+			if ((stricmp(value, "None")) && ((skin == -1) || !R_SkinUnlock(-1, skin)))
+			{
+				CONS_Printf("Please provide a valid skin name (\"None\" disables).\n");
+				return;
+			}
+		}
+
 		// Only add to netcmd buffer if in a netgame, otherwise, just change it.
 		if (netgame || multiplayer)
 		{
@@ -1407,12 +1417,8 @@ static void CV_SetValueMaybeStealth(consvar_t *var, INT32 value, boolean stealth
 
 	if (var == &cv_forceskin) // Special handling.
 	{
-		if ((server || adminplayer == consoleplayer) && ((value < 0) || (value >= numskins) || !(R_SkinUnlock(-1, cv_forceskin.value))))
-		{
-			CONS_Printf("Please provide a valid skin name (\"None\" disables).\n");
+		if ((value < 0) || (value >= numskins))
 			sprintf(val, "None");
-			value = -1;
-		}
 		else
 			sprintf(val, "%s", skins[value].name);
 	}

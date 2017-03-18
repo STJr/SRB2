@@ -4056,7 +4056,7 @@ static void ForceSkin_OnChange(void)
 		CONS_Printf("The server has lifted the forced skin restrictions.\n");
 	else
 	{
-		CONS_Printf("The server is restricting all players to skin \"%s\".\n",skins[cv_forceskin.value].realname);
+		CONS_Printf("The server is restricting all players to skin \"%s\".\n",skins[cv_forceskin.value].name);
 		ForceAllSkins(cv_forceskin.value);
 	}
 }
