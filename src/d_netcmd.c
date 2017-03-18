@@ -1129,7 +1129,7 @@ static void SendNameAndColor(void)
 			SetPlayerSkinByNum(consoleplayer, 0);
 			CV_StealthSet(&cv_skin, skins[0].name);
 		}
-		else if ((foundskin = R_SkinAvailable(cv_skin.string)) != -1 && R_SkinUnlock(consoleplayer, foundskin))
+		else if ((foundskin = R_SkinAvailable(cv_skin.string)) != -1 && R_SkinUsable(consoleplayer, foundskin))
 		{
 			boolean notsame;
 
@@ -1176,7 +1176,7 @@ static void SendNameAndColor(void)
 	// check if player has the skin loaded (cv_skin may have
 	// the name of a skin that was available in the previous game)
 	cv_skin.value = R_SkinAvailable(cv_skin.string);
-	if ((cv_skin.value < 0) || !R_SkinUnlock(consoleplayer, cv_skin.value))
+	if ((cv_skin.value < 0) || !R_SkinUsable(consoleplayer, cv_skin.value))
 	{
 		CV_StealthSet(&cv_skin, DEFAULTSKIN);
 		cv_skin.value = 0;
@@ -1257,7 +1257,7 @@ static void SendNameAndColor2(void)
 			SetPlayerSkinByNum(secondplaya, forcedskin);
 			CV_StealthSet(&cv_skin2, skins[forcedskin].name);
 		}
-		else if ((foundskin = R_SkinAvailable(cv_skin2.string)) != -1 && R_SkinUnlock(secondplaya, foundskin))
+		else if ((foundskin = R_SkinAvailable(cv_skin2.string)) != -1 && R_SkinUsable(secondplaya, foundskin))
 		{
 			boolean notsame;
 

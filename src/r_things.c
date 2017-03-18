@@ -2569,7 +2569,7 @@ UINT32 R_GetSkinAvailabilities(void)
 
 // returns true if available in circumstances, otherwise nope
 // warning don't use with an invalid skinnum other than -1 which always returns true
-boolean R_SkinUnlock(INT32 playernum, INT32 skinnum)
+boolean R_SkinUsable(INT32 playernum, INT32 skinnum)
 {
 	return ((skinnum == -1) // Simplifies things elsewhere, since there's already plenty of checks for less-than-0...
 		|| (!skins[skinnum].availability)
@@ -2601,7 +2601,7 @@ void SetPlayerSkin(INT32 playernum, const char *skinname)
 	INT32 i = R_SkinAvailable(skinname);
 	player_t *player = &players[playernum];
 
-	if ((i != -1) && R_SkinUnlock(playernum, i))
+	if ((i != -1) && R_SkinUsable(playernum, i))
 	{
 		SetPlayerSkinByNum(playernum, i);
 		return;
@@ -2623,7 +2623,7 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 	skin_t *skin = &skins[skinnum];
 	UINT8 newcolor = 0;
 
-	if (skinnum >= 0 && skinnum < numskins && R_SkinUnlock(playernum, skinnum)) // Make sure it exists!
+	if (skinnum >= 0 && skinnum < numskins && R_SkinUsable(playernum, skinnum)) // Make sure it exists!
 	{
 		player->skin = skinnum;
 

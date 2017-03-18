@@ -203,7 +203,7 @@ extern skin_t skins[MAXSKINS + 1];
 
 void SetPlayerSkin(INT32 playernum,const char *skinname);
 void SetPlayerSkinByNum(INT32 playernum,INT32 skinnum); // Tails 03-16-2002
-boolean R_SkinUnlock(INT32 playernum, INT32 skinnum);
+boolean R_SkinUsable(INT32 playernum, INT32 skinnum);
 UINT32 R_GetSkinAvailabilities(void);
 INT32 R_SkinAvailable(const char *name);
 void R_AddSkins(UINT16 wadnum);
