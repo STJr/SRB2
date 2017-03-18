@@ -6971,7 +6971,7 @@ static const char *const PLAYERFLAG_LIST[] = {
 	"ANALOGMODE", // Analog mode?
 	"CANCARRY", // Can carry?
 	"SHIELDABILITY", // Thokked with shield ability
-	"FORCEJUMPDAMAGE", // Force jump damage
+	"NOJUMPDAMAGE", // No jump damage
 	"BOUNCING",
 
 	NULL // stop loop here.

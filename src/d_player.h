@@ -154,8 +154,8 @@ typedef enum
 	// Used shield ability
 	PF_SHIELDABILITY     = 1<<28,
 
-	// Force jump damage?
-	PF_FORCEJUMPDAMAGE   = 1<<29,
+	// Jump damage?
+	PF_NOJUMPDAMAGE   = 1<<29,
 
 	// Bouncing
 	PF_BOUNCING          = 1<<30

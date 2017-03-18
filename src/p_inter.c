@@ -368,7 +368,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		}
 
 		if (((player->powers[pw_carry] == CR_NIGHTSMODE) && (player->pflags & PF_DRILLING))
-		|| ((player->pflags & PF_JUMPED) && (player->pflags & PF_FORCEJUMPDAMAGE || !(player->charflags & SF_NOJUMPSPIN) || (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)))
+		|| ((player->pflags & PF_JUMPED) && (!(player->pflags & PF_NOJUMPDAMAGE) || (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)))
 		|| (player->pflags & (PF_SPINNING|PF_GLIDING))
 		|| (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2)
 		|| ((player->charflags & SF_STOMPDAMAGE || player->pflags & PF_BOUNCING) && (P_MobjFlip(toucher)*(toucher->z - (special->z + special->height/2)) > 0) && (P_MobjFlip(toucher)*toucher->momz < 0))
@@ -427,7 +427,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				P_DamageMobj(toucher, special, special, 1, 0);
 		}
 		else if (((player->powers[pw_carry] == CR_NIGHTSMODE) && (player->pflags & PF_DRILLING))
-		|| ((player->pflags & PF_JUMPED) && (player->pflags & PF_FORCEJUMPDAMAGE || !(player->charflags & SF_NOJUMPSPIN) || (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)))
+		|| ((player->pflags & PF_JUMPED) && (!(player->pflags & PF_NOJUMPDAMAGE) || (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)))
 		|| (player->pflags & (PF_SPINNING|PF_GLIDING))
 		|| (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2)
 		|| ((player->charflags & SF_STOMPDAMAGE || player->pflags & PF_BOUNCING) && (P_MobjFlip(toucher)*(toucher->z - (special->z + special->height/2)) > 0) && (P_MobjFlip(toucher)*toucher->momz < 0))
@@ -1345,7 +1345,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				toucher->momz = -toucher->momz;
 				if (player->pflags & PF_GLIDING)
 				{
-					player->pflags &= ~(PF_GLIDING|PF_JUMPED);
+					player->pflags &= ~(PF_GLIDING|PF_JUMPED|PF_NOJUMPDAMAGE);
 					P_SetPlayerMobjState(toucher, S_PLAY_FALL);
 				}
 
@@ -1405,7 +1405,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					toucher->momz = -toucher->momz;
 					if (player->pflags & PF_GLIDING)
 					{
-						player->pflags &= ~(PF_GLIDING|PF_JUMPED);
+						player->pflags &= ~(PF_GLIDING|PF_JUMPED|PF_NOJUMPDAMAGE);
 						P_SetPlayerMobjState(toucher, S_PLAY_FALL);
 					}
 
@@ -1414,7 +1414,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					return;
 				}
 				else if (((player->powers[pw_carry] == CR_NIGHTSMODE) && (player->pflags & PF_DRILLING))
-						|| ((player->pflags & PF_JUMPED) && (player->pflags & PF_FORCEJUMPDAMAGE || !(player->charflags & SF_NOJUMPSPIN) || (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)))
+						|| ((player->pflags & PF_JUMPED) && (!(player->pflags & PF_NOJUMPDAMAGE) || (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)))
 						|| ((player->charflags & SF_STOMPDAMAGE || player->pflags & PF_BOUNCING) && (P_MobjFlip(toucher)*(toucher->z - (special->z + special->height/2)) > 0) && (P_MobjFlip(toucher)*toucher->momz < 0))
 						|| (player->pflags & (PF_SPINNING|PF_GLIDING))
 						|| player->powers[pw_invulnerability] || player->powers[pw_super]) // Do you possess the ability to subdue the object?

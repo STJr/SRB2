@@ -3252,7 +3252,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 						mo->player->pflags &= ~PF_SPINNING;
 
 					if (!(mo->player->pflags & PF_GLIDING))
-						mo->player->pflags &= ~(PF_JUMPED|PF_FORCEJUMPDAMAGE);
+						mo->player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE);
 
 					mo->player->pflags &= ~(PF_THOKKED|PF_CANCARRY/*|PF_GLIDING*/);
 					mo->player->jumping = 0;
@@ -4246,7 +4246,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 	{
 		if (!(mobj->player->powers[pw_carry] == CR_NIGHTSMODE)) // "jumping" is used for drilling
 			mobj->player->jumping = 0;
-		mobj->player->pflags &= ~PF_JUMPED;
+		mobj->player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE);
 		if (mobj->player->secondjump || mobj->player->powers[pw_tailsfly])
 		{
 			mobj->player->secondjump = 0;

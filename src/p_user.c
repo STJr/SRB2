@@ -577,7 +577,7 @@ static void P_DeNightserizePlayer(player_t *player)
 	player->powers[pw_carry] = CR_NONE;
 
 	player->powers[pw_underwater] = 0;
-	player->pflags &= ~(PF_USEDOWN|PF_JUMPDOWN|PF_ATTACKDOWN|PF_STARTDASH|PF_GLIDING|PF_JUMPED|PF_THOKKED|PF_SPINNING|PF_DRILLING|PF_TRANSFERTOCLOSEST);
+	player->pflags &= ~(PF_USEDOWN|PF_JUMPDOWN|PF_ATTACKDOWN|PF_STARTDASH|PF_GLIDING|PF_JUMPED|PF_NOJUMPDAMAGE|PF_THOKKED|PF_SPINNING|PF_DRILLING|PF_TRANSFERTOCLOSEST);
 	player->secondjump = 0;
 	player->jumping = 0;
 	player->homing = 0;
@@ -650,7 +650,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 	if (player->powers[pw_carry] != CR_NIGHTSMODE)
 		player->mo->height = P_GetPlayerHeight(player); // Just to make sure jumping into the drone doesn't result in a squashed hitbox.
 
-	player->pflags &= ~(PF_USEDOWN|PF_JUMPDOWN|PF_ATTACKDOWN|PF_STARTDASH|PF_GLIDING|PF_JUMPED|PF_THOKKED|PF_SHIELDABILITY|PF_SPINNING|PF_DRILLING);
+	player->pflags &= ~(PF_USEDOWN|PF_JUMPDOWN|PF_ATTACKDOWN|PF_STARTDASH|PF_GLIDING|PF_JUMPED|PF_NOJUMPDAMAGE|PF_THOKKED|PF_SHIELDABILITY|PF_SPINNING|PF_DRILLING);
 	player->homing = 0;
 	player->mo->fuse = 0;
 	player->speed = 0;
@@ -871,7 +871,7 @@ void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor)
 // Useful when you want to kill everything the player is doing.
 void P_ResetPlayer(player_t *player)
 {
-	player->pflags &= ~(PF_SPINNING|PF_STARTDASH|PF_JUMPED|PF_FORCEJUMPDAMAGE|PF_GLIDING|PF_THOKKED|PF_CANCARRY|PF_SHIELDABILITY|PF_BOUNCING);
+	player->pflags &= ~(PF_SPINNING|PF_STARTDASH|PF_JUMPED|PF_NOJUMPDAMAGE|PF_GLIDING|PF_THOKKED|PF_CANCARRY|PF_SHIELDABILITY|PF_BOUNCING);
 
 	if (!(player->powers[pw_carry] == CR_NIGHTSMODE || player->powers[pw_carry] == CR_BRAKGOOP))
 		player->powers[pw_carry] = CR_NONE;
@@ -1670,7 +1670,7 @@ void P_DoPlayerExit(player_t *player)
 	if (player->climbing)
 	{
 		player->climbing = 0;
-		player->pflags |= PF_JUMPED;
+		player->pflags |= (PF_JUMPED|((player->charflags & SF_NOJUMPDAMAGE) ? PF_NOJUMPDAMAGE : 0));
 		P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 	}
 	player->powers[pw_underwater] = 0;
@@ -2005,7 +2005,7 @@ static void P_CheckBouncySectors(player_t *player)
 						if (player->pflags & PF_SPINNING)
 						{
 							player->pflags &= ~PF_SPINNING;
-							player->pflags |= PF_JUMPED;
+							player->pflags |= (PF_JUMPED|((player->charflags & SF_NOJUMPDAMAGE) ? PF_NOJUMPDAMAGE : 0));
 							player->pflags |= PF_THOKKED;
 						}
 					}
@@ -2017,7 +2017,7 @@ static void P_CheckBouncySectors(player_t *player)
 						if (player->pflags & PF_SPINNING)
 						{
 							player->pflags &= ~PF_SPINNING;
-							player->pflags |= PF_JUMPED;
+							player->pflags |= (PF_JUMPED|((player->charflags & SF_NOJUMPDAMAGE) ? PF_NOJUMPDAMAGE : 0));
 							player->pflags |= PF_THOKKED;
 						}
 					}
@@ -2025,7 +2025,7 @@ static void P_CheckBouncySectors(player_t *player)
 					if ((player->pflags & PF_SPINNING) && player->speed < FixedMul(1<<FRACBITS, player->mo->scale) && player->mo->momz)
 					{
 						player->pflags &= ~PF_SPINNING;
-						player->pflags |= PF_JUMPED;
+						player->pflags |= (PF_JUMPED|((player->charflags & SF_NOJUMPDAMAGE) ? PF_NOJUMPDAMAGE : 0));
 					}
 
 					goto bouncydone;
@@ -2767,21 +2767,21 @@ static void P_DoClimbing(player_t *player)
 				P_InstaThrust(player->mo, player->mo->angle, FixedMul(4*FRACUNIT, player->mo->scale)); // Lil' boost up.
 
 			player->climbing = 0;
-			player->pflags |= PF_JUMPED;
+			player->pflags |= (PF_JUMPED|((player->charflags & SF_NOJUMPDAMAGE) ? PF_NOJUMPDAMAGE : 0));
 			P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 		}
 
 		if (skyclimber)
 		{
 			player->climbing = 0;
-			player->pflags |= PF_JUMPED;
+			player->pflags |= (PF_JUMPED|((player->charflags & SF_NOJUMPDAMAGE) ? PF_NOJUMPDAMAGE : 0));
 			P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 		}
 	}
 	else
 	{
 		player->climbing = 0;
-		player->pflags |= PF_JUMPED;
+		player->pflags |= (PF_JUMPED|((player->charflags & SF_NOJUMPDAMAGE) ? PF_NOJUMPDAMAGE : 0));
 		P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 	}
 
@@ -2799,7 +2799,7 @@ static void P_DoClimbing(player_t *player)
 	if (cmd->buttons & BT_USE && !(player->pflags & PF_JUMPSTASIS))
 	{
 		player->climbing = 0;
-		player->pflags |= PF_JUMPED;
+		player->pflags |= (PF_JUMPED|((player->charflags & SF_NOJUMPDAMAGE) ? PF_NOJUMPDAMAGE : 0));
 		P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 		P_SetObjectMomZ(player->mo, 4*FRACUNIT, false);
 		P_InstaThrust(player->mo, player->mo->angle, FixedMul(-4*FRACUNIT, player->mo->scale));
@@ -3595,7 +3595,7 @@ void P_DoJump(player_t *player, boolean soundandstate)
 		else if (player->mo->momz < 0) // still descending?
 			player->mo->momz = (39*(FRACUNIT/4))>>1; // just default to the jump height.
 	}
-	else if (!(player->pflags & PF_JUMPED)) // Spin Attack
+	else if (!(player->pflags & PF_JUMPED)) // Jump
 	{
 		if (player->mo->ceilingz-player->mo->floorz <= player->mo->height-1)
 			return;
@@ -3695,7 +3695,7 @@ void P_DoJump(player_t *player, boolean soundandstate)
 	}
 	player->mo->eflags &= ~MFE_APPLYPMOMZ;
 
-	player->pflags |= PF_JUMPED;
+	player->pflags |= (PF_JUMPED|((player->charflags & SF_NOJUMPDAMAGE) ? PF_NOJUMPDAMAGE : 0));;
 
 	if (soundandstate)
 	{
@@ -3930,7 +3930,7 @@ void P_DoJumpShield(player_t *player)
 	}
 	else
 	{
-		player->pflags &= ~PF_JUMPED;
+		player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE);
 		P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
 		S_StartSound(player->mo, sfx_wdjump);
 	}
@@ -3943,7 +3943,7 @@ void P_DoJumpShield(player_t *player)
 //
 void P_DoBubbleBounce(player_t *player)
 {
-	player->pflags &= ~(PF_JUMPED|PF_SHIELDABILITY);
+	player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE|PF_SHIELDABILITY);
 	S_StartSound(player->mo, sfx_s3k44);
 	P_DoJump(player, false);
 	if (player->charflags & SF_NOJUMPSPIN)
@@ -4218,7 +4218,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 
 						player->powers[pw_tailsfly] = tailsflytics + 1; // Set the fly timer
 
-						player->pflags &= ~(PF_JUMPED|PF_SPINNING|PF_STARTDASH);
+						player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE|PF_SPINNING|PF_STARTDASH);
 						player->pflags |= (PF_THOKKED|PF_CANCARRY);
 					}
 					break;
@@ -4256,7 +4256,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						else
 							P_SetPlayerMobjState(player->mo, S_PLAY_FLOAT);
 						player->pflags |= PF_THOKKED;
-						player->pflags &= ~(PF_JUMPED|PF_SPINNING);
+						player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE|PF_SPINNING);
 						player->secondjump = 1;
 					}
 					break;
@@ -4288,7 +4288,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					if (!(player->pflags & PF_THOKKED) || player->charability2 == CA2_MULTIABILITY)
 					{
 						P_SetPlayerMobjState(player->mo, S_PLAY_BOUNCE);
-						player->pflags &= ~PF_JUMPED;
+						player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE);
 						player->pflags |= PF_THOKKED|PF_BOUNCING;
 						player->mo->momx >>= 1;
 						player->mo->momy >>= 1;
@@ -4372,7 +4372,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 		{
 			if (player->charability2 == CA2_MULTIABILITY)
 			{
-				player->pflags |= PF_JUMPED;
+				player->pflags |= (PF_JUMPED|((player->charflags & SF_NOJUMPDAMAGE) ? PF_NOJUMPDAMAGE : 0));
 				P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 				player->secondjump = 0;
 			}
@@ -6439,7 +6439,7 @@ static void P_SkidStuff(player_t *player)
 		if (!onground)
 		{
 			player->skidtime = 0;
-			player->pflags &= ~(PF_GLIDING|PF_JUMPED);
+			player->pflags &= ~(PF_GLIDING|PF_JUMPED|PF_NOJUMPDAMAGE);
 			P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
 		}
 		// Get up and brush yourself off, idiot.
@@ -6758,10 +6758,9 @@ static void P_MovePlayer(player_t *player)
 	if (onground && player->pflags & PF_JUMPED && !(player->pflags & PF_GLIDING)
 	&& P_MobjFlip(player->mo)*player->mo->momz < 0)
 	{
-		player->pflags &= ~PF_JUMPED;
+		player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE|PF_THOKKED|PF_SHIELDABILITY);
 		player->jumping = 0;
 		player->secondjump = 0;
-		player->pflags &= ~PF_THOKKED;
 		P_SetPlayerMobjState(player->mo, S_PLAY_STND);
 	}
 
@@ -6772,7 +6771,7 @@ static void P_MovePlayer(player_t *player)
 			P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
 		else
 		{
-			player->pflags |= PF_JUMPED;
+			player->pflags |= (PF_JUMPED|((player->charflags & SF_NOJUMPDAMAGE) ? PF_NOJUMPDAMAGE : 0));
 			P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 		}
 		player->pflags &= ~PF_GLIDING;
@@ -6787,38 +6786,15 @@ static void P_MovePlayer(player_t *player)
 			P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
 		else
 		{
-			player->pflags |= PF_JUMPED;
+			player->pflags |= (PF_JUMPED|((player->charflags & SF_NOJUMPDAMAGE) ? PF_NOJUMPDAMAGE : 0));
 			P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 		}
 		player->pflags &= ~PF_BOUNCING;
 	}
 
-	// Bouncing...
-	if (player->pflags & PF_BOUNCING)
-	{
-		if (!(player->pflags & PF_JUMPDOWN) || (onground && P_MobjFlip(player->mo)*player->mo->momz <= 0)) // If not holding the jump button OR on flat ground
-		{
-			P_ResetPlayer(player); // down, stop bouncing.
-			player->pflags |= PF_THOKKED;
-			if (onground)
-				P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
-			else if (player->charability2 == CA2_MULTIABILITY)
-			{
-				player->pflags |= PF_JUMPED;
-				P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
-			}
-			else
-			{
-				player->mo->momx >>= 1;
-				player->mo->momy >>= 1;
-				player->mo->momz >>= 1;
-				P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
-			}
-		}
-	}
 	// Glide MOMZ
 	// AKA my own gravity. =)
-	else if (player->pflags & PF_GLIDING)
+	if (player->pflags & PF_GLIDING)
 	{
 		fixed_t leeway;
 		fixed_t glidespeed = player->actionspd;
@@ -6864,7 +6840,7 @@ static void P_MovePlayer(player_t *player)
 				P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
 			else if (player->charability2 == CA2_MULTIABILITY)
 			{
-				player->pflags |= PF_JUMPED;
+				player->pflags |= (PF_JUMPED|((player->charflags & SF_NOJUMPDAMAGE) ? PF_NOJUMPDAMAGE : 0));
 				P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 			}
 			else
@@ -6891,6 +6867,30 @@ static void P_MovePlayer(player_t *player)
 				player->mo->momz = 0;
 		}
 	}
+	else if (player->pflags & PF_BOUNCING)
+	{
+		if (!(player->pflags & PF_JUMPDOWN) || (onground && P_MobjFlip(player->mo)*player->mo->momz <= 0)) // If not holding the jump button OR on flat ground
+		{
+			P_ResetPlayer(player); // down, stop bouncing.
+			player->pflags |= PF_THOKKED;
+			if (onground)
+				P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
+			else if (player->charability2 == CA2_MULTIABILITY)
+			{
+				player->pflags |= (PF_JUMPED|((player->charflags & SF_NOJUMPDAMAGE) ? PF_NOJUMPDAMAGE : 0));
+				P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
+			}
+			else
+			{
+				player->mo->momx >>= 1;
+				player->mo->momy >>= 1;
+				player->mo->momz >>= 1;
+				P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
+			}
+		}
+	}
+	else if (player->mo->state-states == S_PLAY_BOUNCE)
+		P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
 
 	// If you're running fast enough, you can create splashes as you run in shallow water.
 	if (!player->climbing
@@ -6934,7 +6934,7 @@ static void P_MovePlayer(player_t *player)
 				P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
 			else
 			{
-				player->pflags |= PF_JUMPED;
+				player->pflags |= (PF_JUMPED|((player->charflags & SF_NOJUMPDAMAGE) ? PF_NOJUMPDAMAGE : 0));
 				P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 			}
 		}
@@ -7158,7 +7158,7 @@ static void P_MovePlayer(player_t *player)
 								player->homing = 2;
 								if (P_LookForEnemies(player, false) && player->mo->tracer)
 								{
-									player->pflags |= PF_FORCEJUMPDAMAGE;
+									player->pflags &= ~PF_NOJUMPDAMAGE;
 									P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 									S_StartSound(player->mo, sfx_s3k40);
 									player->homing = 3*TICRATE;
@@ -7169,7 +7169,8 @@ static void P_MovePlayer(player_t *player)
 							// Elemental/Bubblewrap shield activation
 							case SH_ELEMENTAL:
 							case SH_BUBBLEWRAP:
-								player->pflags |= PF_FORCEJUMPDAMAGE|PF_THOKKED|PF_SHIELDABILITY;
+								player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
+								player->pflags &= ~PF_NOJUMPDAMAGE;
 								P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 								player->secondjump = 0;
 								player->mo->momx = player->mo->momy = 0;
@@ -7590,7 +7591,7 @@ static void P_DoRopeHang(player_t *player)
 	{
 		P_SetTarget(&player->mo->tracer, NULL);
 
-		player->pflags |= PF_JUMPED;
+		player->pflags |= (PF_JUMPED|((player->charflags & SF_NOJUMPDAMAGE) ? PF_NOJUMPDAMAGE : 0));
 		player->powers[pw_carry] = CR_NONE;
 
 		if (!(player->pflags & PF_SLIDING) && (player->pflags & PF_JUMPED)
@@ -7688,7 +7689,7 @@ static void P_DoRopeHang(player_t *player)
 		{
 			if (player->mo->tracer->flags & MF_SLIDEME)
 			{
-				player->pflags |= PF_JUMPED;
+				player->pflags |= (PF_JUMPED|((player->charflags & SF_NOJUMPDAMAGE) ? PF_NOJUMPDAMAGE : 0));
 
 				if (!(player->pflags & PF_SLIDING) && (player->pflags & PF_JUMPED)
 				&& !(player->panim == PA_JUMP))
@@ -9034,11 +9035,11 @@ void P_PlayerThink(player_t *player)
 		if (player->panim != PA_ABILITY)
 			P_SetPlayerMobjState(player->mo, S_PLAY_GLIDE);
 	}
-	else if ((player->pflags & PF_JUMPED) && !player->powers[pw_super] && ((player->charflags & SF_NOJUMPSPIN && player->pflags & PF_FORCEJUMPDAMAGE && player->panim != PA_ROLL) || (!(player->charflags & SF_NOJUMPSPIN) && player->panim != PA_JUMP)))
+	else if ((player->pflags & PF_JUMPED) && !player->powers[pw_super] && ((player->charflags & SF_NOJUMPSPIN && player->pflags & PF_NOJUMPDAMAGE && player->panim != PA_ROLL) || (!(player->charflags & SF_NOJUMPSPIN) && player->panim != PA_JUMP)))
 	{
 		if (!(player->charflags & SF_NOJUMPSPIN))
 			P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
-		else if (player->pflags & PF_FORCEJUMPDAMAGE)
+		else if (!(player->pflags & PF_NOJUMPDAMAGE))
 			P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 	}
 
@@ -9816,7 +9817,8 @@ void P_PlayerAfterThink(player_t *player)
 		player->mo->momy = (player->mo->tracer->y - player->mo->y)*2;
 		player->mo->momz = (player->mo->tracer->z - (player->mo->height-player->mo->tracer->height/2) - player->mo->z)*2;
 		P_TeleportMove(player->mo, player->mo->tracer->x, player->mo->tracer->y, player->mo->tracer->z - (player->mo->height-player->mo->tracer->height/2));
-		player->pflags |= PF_JUMPED|PF_FORCEJUMPDAMAGE;
+		player->pflags |= PF_JUMPED;
+		player->pflags &= ~PF_NOJUMPDAMAGE;
 		player->secondjump = 0;
 		player->pflags &= ~PF_THOKKED;
 

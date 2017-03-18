@@ -203,14 +203,14 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 			}
 		}
 
-		pflags = object->player->pflags & (PF_JUMPED|PF_SPINNING|PF_THOKKED|PF_SHIELDABILITY|PF_BOUNCING); // I still need these.
+		pflags = object->player->pflags & (PF_JUMPED|PF_NOJUMPDAMAGE|PF_SPINNING|PF_THOKKED|PF_SHIELDABILITY|PF_BOUNCING); // I still need these.
 		jumping = object->player->jumping;
 		secondjump = object->player->secondjump;
 		P_ResetPlayer(object->player);
 
 		if (spring->info->painchance)
 		{
-			object->player->pflags |= PF_JUMPED;
+			object->player->pflags |= (PF_JUMPED|((object->player->charflags & SF_NOJUMPDAMAGE) ? PF_NOJUMPDAMAGE : 0));
 			P_SetPlayerMobjState(object, S_PLAY_JUMP);
 		}
 		else if (!vertispeed || (pflags & PF_BOUNCING)) // horizontal spring or bouncing
@@ -784,7 +784,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		{
 			// Hop on the missile for a ride!
 			thing->player->powers[pw_carry] = CR_GENERIC;
-			thing->player->pflags &= ~PF_JUMPED;
+			thing->player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE);
 			P_SetTarget(&thing->tracer, tmthing);
 			P_SetTarget(&tmthing->target, thing); // Set owner to the player
 			P_SetTarget(&tmthing->tracer, NULL); // Disable homing-ness
@@ -1065,8 +1065,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			if (thing->flags & MF_MONITOR
 				&& (tmthing->player->pflags & (PF_SPINNING|PF_GLIDING)
 				|| ((tmthing->player->pflags & PF_JUMPED)
-					&& (tmthing->player->pflags & PF_FORCEJUMPDAMAGE
-					|| !(tmthing->player->charflags & SF_NOJUMPSPIN)
+					&& (!(tmthing->player->pflags & PF_NOJUMPDAMAGE)
 					|| (tmthing->player->charability == CA_TWINSPIN && tmthing->player->panim == PA_ABILITY)))
 				|| (tmthing->player->charability2 == CA2_MELEE && tmthing->player->panim == PA_ABILITY2)
 				|| ((tmthing->player->charflags & SF_STOMPDAMAGE || tmthing->player->pflags & PF_BOUNCING)
@@ -1111,8 +1110,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	else if (thing->flags & MF_MONITOR && tmthing->player
 	&& (tmthing->player->pflags & (PF_SPINNING|PF_GLIDING)
 		|| ((tmthing->player->pflags & PF_JUMPED)
-			&& (tmthing->player->pflags & PF_FORCEJUMPDAMAGE
-			|| !(tmthing->player->charflags & SF_NOJUMPSPIN)
+			&& (!(tmthing->player->pflags & PF_NOJUMPDAMAGE)
 			|| (tmthing->player->charability == CA_TWINSPIN && tmthing->player->panim == PA_ABILITY)))
 		|| (tmthing->player->charability2 == CA2_MELEE && tmthing->player->panim == PA_ABILITY2)
 		|| ((tmthing->player->charflags & SF_STOMPDAMAGE || tmthing->player->pflags & PF_BOUNCING)
@@ -2896,7 +2894,7 @@ isblocking:
 					slidemo->player->climbing = 5;
 				}
 
-				slidemo->player->pflags &= ~(PF_GLIDING|PF_SPINNING|PF_JUMPED|PF_THOKKED);
+				slidemo->player->pflags &= ~(PF_GLIDING|PF_SPINNING|PF_JUMPED|PF_NOJUMPDAMAGE|PF_THOKKED);
 				slidemo->player->glidetime = 0;
 				slidemo->player->secondjump = 0;
 
