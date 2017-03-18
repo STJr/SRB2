@@ -1375,7 +1375,7 @@ static boolean SV_SendServerConfig(INT32 node)
 			continue;
 		netbuffer->u.servercfg.playerskins[i] = (UINT8)players[i].skin;
 		netbuffer->u.servercfg.playercolor[i] = (UINT8)players[i].skincolor;
-		netbuffer->u.servercfg.playeravailabilities[i] = (UINT32)players[i].availabilities;
+		netbuffer->u.servercfg.playeravailabilities[i] = (UINT32)LONG(players[i].availabilities);
 	}
 
 	memcpy(netbuffer->u.servercfg.server_context, server_context, 8);
@@ -3502,7 +3502,7 @@ static void HandlePacketFromAwayNode(SINT8 node)
 					continue; // not in game
 
 				playeringame[j] = true;
-				players[j].availabilities = netbuffer->u.servercfg.playeravailabilities[j];
+				players[j].availabilities = (UINT32)LONG(netbuffer->u.servercfg.playeravailabilities[j]);
 				SetPlayerSkinByNum(j, (INT32)netbuffer->u.servercfg.playerskins[j]);
 				players[j].skincolor = netbuffer->u.servercfg.playercolor[j];
 			}
