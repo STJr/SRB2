@@ -149,10 +149,10 @@ extern FILE *logstream;
 // most interface strings are ignored in development mode.
 // we use comprevision and compbranch instead.
 #else
-#define VERSION    201 // Game version
-#define SUBVERSION 17  // more precise version number
-#define VERSIONSTRING "v2.1.17"
-#define VERSIONSTRINGW L"v2.1.17"
+#define VERSION    100 // Game version
+#define SUBVERSION 0  // more precise version number
+#define VERSIONSTRING "PlusC v1.0"
+#define VERSIONSTRINGW L"PlusC v1.0"
 // Hey! If you change this, add 1 to the MODVERSION below!
 // Otherwise we can't force updates!
 #endif
@@ -208,13 +208,13 @@ extern FILE *logstream;
 // The Modification ID; must be obtained from Inuyasha ( http://mb.srb2.org/private.php?do=newpm&u=2604 ).
 // DO NOT try to set this otherwise, or your modification will be unplayable through the Master Server.
 // "12" is the default mod ID for version 2.1
-#define MODID 12
+#define MODID 15
 
 // The Modification Version, starting from 1. Do not follow your version string for this,
 // it's only for detection of the version the player is using so the MS can alert them of an update.
 // Only set it higher, not lower, obviously.
 // Note that we use this to help keep internal testing in check; this is why v2.1.0 is not version "1".
-#define MODVERSION 22
+#define MODVERSION 1
 
 // =========================================================================
 
