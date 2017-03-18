@@ -5694,7 +5694,7 @@ void G_SetDisplayPlayer(player_t *player, INT32 displayNumber, boolean setAllDis
 		else
 		{
 			// the player has to exist or you just get a bleeding display
-			if (playeringame[displayNumber] || players[displayplayer].spectator && player == &players[displayplayer])
+			if (playeringame[displayNumber] || (players[displayplayer].spectator && player == &players[displayplayer]))
 			{
 				// switch the display number locally
 				if (P_IsLocalPlayer(player) && displayplayer == consoleplayer)
