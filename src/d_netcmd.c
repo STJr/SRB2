@@ -1329,6 +1329,7 @@ static void Got_NameAndColor(UINT8 **cp, INT32 playernum)
 	if (server && (p != &players[consoleplayer] && p != &players[secondarydisplayplayer]))
 	{
 		boolean kick = false;
+		INT32 s;
 
 		// team colors
 		if (G_GametypeHasTeams())
@@ -1342,6 +1343,16 @@ static void Got_NameAndColor(UINT8 **cp, INT32 playernum)
 		// don't allow color "none"
 		if (!p->skincolor)
 			kick = true;
+
+		// availabilities
+		for (s = 0; s < MAXSKINS; s++)
+		{
+			if (!skins[s].availability && (p->availabilities & (1 << s)))
+			{
+				kick = true;
+				break;
+			}
+		}
 
 		if (kick)
 		{

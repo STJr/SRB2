@@ -2561,7 +2561,7 @@ UINT32 R_GetSkinAvailabilities(void)
 
 	for (s = 0; s < MAXSKINS; s++)
 	{
-		if (!skins[s].availability || unlockables[skins[s].availability - 1].unlocked)
+		if (skins[s].availability && unlockables[skins[s].availability - 1].unlocked)
 			response |= (1 << s);
 	}
 	return response;
