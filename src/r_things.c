@@ -2720,7 +2720,7 @@ static UINT16 W_CheckForSkinMarkerInPwad(UINT16 wadid, UINT16 startlump)
 #ifdef SKINNAMEPADDING
 #define HUDNAMEWRITE(value) snprintf(skin->hudname, sizeof(skin->hudname), "%5s", value)
 #else
-#define HUDNAMEWRITE(value) STRBUFCPY(skin->hudname, skin->name)
+#define HUDNAMEWRITE(value) STRBUFCPY(skin->hudname, value)
 #endif
 
 //
