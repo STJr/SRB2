@@ -3824,7 +3824,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 					{
 						P_DoJump(player, false);
 						player->jumping = 0;
-						player->mo->momz = FixedMul(player->mo->momz, 3*FRACUNIT/2);
+						player->mo->momz = FixedMul(player->mo->momz, 3*FRACUNIT/2); // NOT 1.5 times the jump height, but 2.25 times.
 						player->pflags |= PF_THOKKED;
 						P_SetPlayerMobjState(player->mo, S_PLAY_TWINSPIN);
 						S_StartSound(player->mo, sfx_s3k8b);
@@ -3834,6 +3834,8 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 						player->powers[pw_nocontrol] = TICRATE;
 						player->mo->z += P_MobjFlip(player->mo);
 						P_SetObjectMomZ(player->mo, player->mindash, false);
+						if (player->mo->eflags & MFE_UNDERWATER)
+							player->mo->momz >>= 1;
 						if (FixedMul(player->speed, FINECOSINE(((player->mo->angle - R_PointToAngle2(0, 0, player->rmomx, player->rmomy)) >> ANGLETOFINESHIFT) & FINEMASK)) < FixedMul(player->maxdash, player->mo->scale))
 							P_InstaThrust(player->mo, player->mo->angle, FixedMul(player->maxdash, player->mo->scale));
 						player->mo->momx += player->cmomx;
