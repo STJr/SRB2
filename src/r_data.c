@@ -148,6 +148,8 @@ static inline void R_DrawColumnInCache(column_t *patch, UINT8 *cache, texpatch_t
 	INT32 topdelta, prevdelta = -1;
 	INT32 originy = originPatch->originy;
 
+	(void)patchheight; // This parameter is unused
+
 	while (patch->topdelta != 0xff)
 	{
 		topdelta = patch->topdelta;
@@ -229,6 +231,8 @@ static inline void R_DrawTransColumnInCache(column_t *patch, UINT8 *cache, texpa
 	UINT8 *mytransmap = transtables + ((8*(originPatch->alpha) + 255/8)/(255 - 255/11) << FF_TRANSSHIFT); // The equation's not exact but it works as intended. I'll call it a day for now.
 	INT32 topdelta, prevdelta = -1;
 	INT32 originy = originPatch->originy;
+
+	(void)patchheight; // This parameter is unused
 
 	while (patch->topdelta != 0xff)
 	{
