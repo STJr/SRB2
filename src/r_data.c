@@ -426,11 +426,11 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 		{
 			if (patch->alpha < 255/11) // Is the patch way too translucent? Don't render then.
 				continue;
-			ColumnDrawerPointer = (patch->flip & 2) ? &R_DrawTransFlippedColumnInCache : &R_DrawTransColumnInCache;
+			ColumnDrawerPointer = (patch->flip & 2) ? R_DrawTransFlippedColumnInCache : R_DrawTransColumnInCache;
 		}
 		else
 		{
-			ColumnDrawerPointer = (patch->flip & 2) ? &R_DrawFlippedColumnInCache : &R_DrawColumnInCache;
+			ColumnDrawerPointer = (patch->flip & 2) ? R_DrawFlippedColumnInCache : R_DrawColumnInCache;
 		}
 
 		realpatch = W_CacheLumpNumPwad(patch->wad, patch->lump, PU_CACHE);
@@ -456,7 +456,7 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 
 			// generate column ofset lookup
 			colofs[x] = LONG((x * texture->height) + (texture->width*4));
-			(*ColumnDrawerPointer)(patchcol, block + LONG(colofs[x]), patch, texture->height, height);
+			ColumnDrawerPointer(patchcol, block + LONG(colofs[x]), patch, texture->height, height);
 		}
 	}
 
