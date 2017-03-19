@@ -1011,7 +1011,7 @@ UINT8 CanChangeSkin(INT32 playernum)
 		return true;
 
 	// Force skin in effect.
-	if (client && (cv_forceskin.value != -1) && !(adminplayer == playernum && serverplayer == -1))
+	if (client && ((cv_forceskin.value != -1) || (mapheaderinfo[gamemap-1] && mapheaderinfo[gamemap-1]->forcecharacter[0] != '\0')) && !(adminplayer == playernum && serverplayer == -1))
 		return false;
 
 	// Can change skin in intermission and whatnot.
