@@ -379,7 +379,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			{
 				if (elementalpierce == 2)
 					P_DoBubbleBounce(player);
-				else
+				else if (!(player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2))
 					toucher->momz = -toucher->momz;
 			}
 			if (player->pflags & PF_BOUNCING)
@@ -437,7 +437,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			{
 				if (elementalpierce == 2)
 					P_DoBubbleBounce(player);
-				else
+				else if (!(player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2))
 					toucher->momz = -toucher->momz;
 			}
 			if (player->pflags & PF_BOUNCING)

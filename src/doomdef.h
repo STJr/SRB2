@@ -543,4 +543,7 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 /// Experimental attempts at preventing MF_PAPERCOLLISION objects from getting stuck in walls.
 //#define PAPER_COLLISIONCORRECTION
 
+/// Hudname padding.
+#define SKINNAMEPADDING
+
 #endif // __DOOMDEF__

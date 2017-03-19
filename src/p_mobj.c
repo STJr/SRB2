@@ -468,6 +468,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 	case S_PLAY_SPINDASH: // ...but the act of SPINDASHING is charability2 specific.
 	case S_PLAY_MELEE:
 	case S_PLAY_MELEE_FINISH:
+	case S_PLAY_MELEE_LANDING:
 		player->panim = PA_ABILITY2;
 		break;
 	case S_PLAY_RIDE:
@@ -3194,8 +3195,8 @@ static void P_PlayerZMovement(mobj_t *mo)
 					// aren't pressing any controls.
 					if (!(mo->player->cmd.forwardmove || mo->player->cmd.sidemove) && !mo->player->cmomx && !mo->player->cmomy && !(mo->player->pflags & PF_SPINNING))
 					{
-						mo->momx = mo->momx/2;
-						mo->momy = mo->momy/2;
+						mo->momx >>= 1;
+						mo->momy >>= 1;
 					}
 				}
 
@@ -3206,10 +3207,11 @@ static void P_PlayerZMovement(mobj_t *mo)
 						mo->player->skidtime = TICRATE;
 						mo->tics = -1;
 					}
-					else if (mo->player->charability2 == CA2_MELEE && mo->player->panim == PA_ABILITY2)
+					else if (mo->player->charability2 == CA2_MELEE && ((mo->player->charability == CA_TWINSPIN && mo->player->panim == PA_ABILITY) || (mo->player->panim == PA_ABILITY2)))
 					{
-						P_InstaThrust(mo, mo->angle, 0);
-						P_SetPlayerMobjState(mo, S_PLAY_STND);
+						P_SetPlayerMobjState(mo, S_PLAY_MELEE_LANDING);
+						mo->tics = mo->player->powers[pw_nocontrol] = (mo->movefactor == FRACUNIT) ? TICRATE/2 : (FixedDiv(35<<(FRACBITS-1), FixedSqrt(mo->movefactor)))>>FRACBITS;
+						S_StartSound(mo, sfx_s3k8b);
 					}
 					else if (mo->player->pflags & PF_JUMPED || (mo->player->pflags & (PF_SPINNING|PF_USEDOWN)) != (PF_SPINNING|PF_USEDOWN)
 					|| mo->player->powers[pw_tailsfly] || mo->state-states == S_PLAY_FLY_TIRED)

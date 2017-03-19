@@ -421,6 +421,7 @@ char spr2names[NUMPLAYERSPRITES][5] =
 	"TWIN",
 
 	"MLEE",
+	"MLEL",
 
 	"TRNS",
 
@@ -530,7 +531,8 @@ state_t states[NUMSTATES] =
 
 	// CA2_MELEE
 	{SPR_PLAY, SPR2_MLEE|FF_SPR2ENDSTATE, 1, {NULL}, S_PLAY_MELEE_FINISH, 0, S_PLAY_MELEE}, // S_PLAY_MELEE
-	{SPR_PLAY, SPR2_MLEE,                20, {NULL},                   0, 0, S_PLAY_FALL}, // S_PLAY_MELEE_FINISH
+	{SPR_PLAY, SPR2_MLEE,                20, {NULL},                   0, 0, S_PLAY_FALL},  // S_PLAY_MELEE_FINISH
+	{SPR_PLAY, SPR2_MLEL,                35, {NULL},                   0, 0, S_PLAY_WALK},  // S_PLAY_MELEE_LANDING
 
 	// SF_SUPER
 	{SPR_PLAY, SPR2_TRNS|FF_SPR2SUPER,                4, {NULL}, 0, 0, S_PLAY_SUPER_TRANS2}, // S_PLAY_SUPER_TRANS

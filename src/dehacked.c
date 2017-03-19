@@ -3940,6 +3940,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	// CA2_MELEE
 	"S_PLAY_MELEE",
 	"S_PLAY_MELEE_FINISH",
+	"S_PLAY_MELEE_LANDING",
 
 	// SF_SUPER
 	"S_PLAY_SUPERTRANS1",

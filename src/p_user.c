@@ -3815,19 +3815,33 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 				}
 				break;
 			case CA2_MELEE: // Melee attack
-				if (!(player->panim == PA_ABILITY2) && (cmd->buttons & BT_USE) && player->speed < FixedMul(10<<FRACBITS, player->mo->scale)
+				if (!(player->panim == PA_ABILITY2) && (cmd->buttons & BT_USE)
 				&& !player->mo->momz && onground && !(player->pflags & PF_USEDOWN)
 				&& canstand)
 				{
 					P_ResetPlayer(player);
-					player->mo->z += P_MobjFlip(player->mo);
-					player->mo->momx = player->cmomx = 0;
-					player->mo->momy = player->cmomy = 0;
-					P_SetObjectMomZ(player->mo, player->mindash, false);
-					P_InstaThrust(player->mo, player->mo->angle, FixedMul(player->maxdash, player->mo->scale));
-					P_SetPlayerMobjState(player->mo, S_PLAY_MELEE);
+					if ((player->charability == CA_TWINSPIN) && (player->speed > FixedMul(player->runspeed, player->mo->scale)))
+					{
+						P_DoJump(player, false);
+						player->jumping = 0;
+						player->mo->momz = FixedMul(player->mo->momz, 3*FRACUNIT/2);
+						player->pflags |= PF_THOKKED;
+						P_SetPlayerMobjState(player->mo, S_PLAY_TWINSPIN);
+						S_StartSound(player->mo, sfx_s3k8b);
+					}
+					else
+					{
+						player->powers[pw_nocontrol] = TICRATE;
+						player->mo->z += P_MobjFlip(player->mo);
+						P_SetObjectMomZ(player->mo, player->mindash, false);
+						if (FixedMul(player->speed, FINECOSINE(((player->mo->angle - R_PointToAngle2(0, 0, player->rmomx, player->rmomy)) >> ANGLETOFINESHIFT) & FINEMASK)) < FixedMul(player->maxdash, player->mo->scale))
+							P_InstaThrust(player->mo, player->mo->angle, FixedMul(player->maxdash, player->mo->scale));
+						player->mo->momx += player->cmomx;
+						player->mo->momy += player->cmomy;
+						P_SetPlayerMobjState(player->mo, S_PLAY_MELEE);
+						S_StartSound(player->mo, sfx_s3k42);
+					}
 					player->pflags |= PF_USEDOWN;
-					S_StartSound(player->mo, sfx_s3k8b);
 				}
 				break;
 		}
@@ -6503,11 +6517,10 @@ static void P_SkidStuff(player_t *player)
 			// If your push angle is more than this close to a full 180 degrees, trigger a skid.
 			if (dang > ANGLE_157h)
 			{
-				player->skidtime = (player->mo->movefactor == FRACUNIT) ? TICRATE/2 : (FixedDiv(35<<(FRACBITS-1), FixedSqrt(player->mo->movefactor)))>>FRACBITS;
-				S_StartSound(player->mo, sfx_skid);
 				if (player->panim != PA_WALK)
 					P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
-				player->mo->tics = player->skidtime;
+				player->mo->tics = player->skidtime = (player->mo->movefactor == FRACUNIT) ? TICRATE/2 : (FixedDiv(35<<(FRACBITS-1), FixedSqrt(player->mo->movefactor)))>>FRACBITS;
+				S_StartSound(player->mo, sfx_skid);
 			}
 		}
 	}

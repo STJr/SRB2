@@ -1085,7 +1085,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				{
 					if (elementalpierce == 2)
 						P_DoBubbleBounce(player);
-					else
+					else if (!(player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2))
 						*momz = -*momz; // Therefore, you should be thrust in the opposite direction, vertically.
 				}
 				if (!(elementalpierce == 1 && thing->flags & MF_GRENADEBOUNCE)) // prevent gold monitor clipthrough.

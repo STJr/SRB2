@@ -634,6 +634,7 @@ enum playersprite
 	SPR2_TWIN, // twinspin
 
 	SPR2_MLEE, // melee
+	SPR2_MLEL, // melee land
 
 	SPR2_TRNS, // transformation
 
@@ -741,6 +742,7 @@ typedef enum state
 	// CA2_MELEE
 	S_PLAY_MELEE,
 	S_PLAY_MELEE_FINISH,
+	S_PLAY_MELEE_LANDING,
 
 	// SF_SUPER
 	S_PLAY_SUPER_TRANS,
