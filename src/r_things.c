@@ -2492,7 +2492,11 @@ static void Sk_SetDefaultValue(skin_t *skin)
 	skin->flags = 0;
 
 	strcpy(skin->realname, "Someone");
+#ifdef SKINNAMEPADDING
+	strcpy(skin->hudname, "  ???");
+#else
 	strcpy(skin->hudname, "???");
+#endif
 	strncpy(skin->charsel, "CHRSONIC", 8);
 	strncpy(skin->face, "MISSING", 8);
 	strncpy(skin->superface, "MISSING", 8);
@@ -2713,6 +2717,12 @@ static UINT16 W_CheckForSkinMarkerInPwad(UINT16 wadid, UINT16 startlump)
 	return INT16_MAX; // not found
 }
 
+#ifdef SKINNAMEPADDING
+#define HUDNAMEWRITE(value) snprintf(skin->hudname, sizeof(skin->hudname), "%5s", value)
+#else
+#define HUDNAMEWRITE(value) STRBUFCPY(skin->hudname, skin->name)
+#endif
+
 //
 // Find skin sprites, sounds & optional status bar face, & add them
 //
@@ -2805,7 +2815,7 @@ void R_AddSkins(UINT16 wadnum)
 				}
 				if (!hudname)
 				{
-					STRBUFCPY(skin->hudname, skin->name);
+					HUDNAMEWRITE(skin->name);
 					strupr(skin->hudname);
 					for (value = skin->hudname; *value; value++)
 						if (*value == '_') *value = ' '; // turn _ into spaces.
@@ -2818,12 +2828,12 @@ void R_AddSkins(UINT16 wadnum)
 				for (value = skin->realname; *value; value++)
 					if (*value == '_') *value = ' '; // turn _ into spaces.
 				if (!hudname)
-					STRBUFCPY(skin->hudname, skin->realname);
+					HUDNAMEWRITE(skin->realname);
 			}
 			else if (!stricmp(stoken, "hudname"))
 			{ // Life icon name (eg. "K.T.E")
 				hudname = true;
-				STRBUFCPY(skin->hudname, value);
+				HUDNAMEWRITE(value);
 				for (value = skin->hudname; *value; value++)
 					if (*value == '_') *value = ' '; // turn _ into spaces.
 				if (!realname)
@@ -3014,17 +3024,6 @@ next_token:
 		skin_cons_t[numskins].strvalue = skin->name;
 #endif
 
-#ifdef SKINNAMEPADDING
-		if ((size = strlen(skin->hudname)) < 5)
-		{
-			size_t offset = 5 - size;
-			for (size++; size--;)
-				skin->hudname[size+offset] = skin->hudname[size];
-			while (offset--)
-				skin->hudname[offset] = ' ';
-		}
-#endif
-
 		// add face graphics
 		ST_LoadFaceGraphics(skin->face, skin->superface, numskins);
 
@@ -3037,6 +3036,8 @@ next_token:
 	}
 	return;
 }
+
+#undef HUDNAMEWRITE
 
 #ifdef DELFILE
 void R_DelSkins(UINT16 wadnum)
