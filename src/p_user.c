@@ -325,6 +325,7 @@ void P_GiveEmerald(boolean spawnObj)
 	}
 }
 
+#if 0
 //
 // P_ResetScore
 //
@@ -335,6 +336,7 @@ void P_ResetScore(player_t *player)
 
 	player->scoreadd = 0;
 }
+#endif
 
 //
 // P_FindLowestMare
@@ -3932,7 +3934,7 @@ void P_DoJumpShield(player_t *player)
 		INT32 i;
 #define numangles 6
 #define limitangle (360/numangles)
-		angle_t travelangle = player->mo->angle + P_RandomRange(-limitangle, limitangle)*ANG1;
+		const angle_t travelangle = player->mo->angle + P_RandomRange(-limitangle, limitangle)*ANG1;
 		for (i = 0; i < numangles; i++)
 		{
 			spark = P_SpawnMobjFromMobj(player->mo, 0, 0, 0, MT_THUNDERCOIN_SPARK);
@@ -4364,7 +4366,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 
 		if ((gametype != GT_CTF || !player->gotflag) && !player->exiting)
 		{
-			if (player->secondjump == 1)
+			if (player->secondjump == 1 && player->charability != CA_DOUBLEJUMP)
 			{
 				fixed_t potentialmomz;
 				if (player->charability == CA_SLOWFALL)
@@ -4408,10 +4410,12 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 	}
 }
 
+#if 0
 boolean P_AnalogMove(player_t *player)
 {
 	return player->pflags & PF_ANALOGMODE;
 }
+#endif
 
 //
 // P_GetPlayerControlDirection
@@ -5164,28 +5168,20 @@ static void P_NightsTransferPoints(player_t *player, fixed_t xspeed, fixed_t rad
 	if (player->exiting)
 		return;
 
-	/*
-	In some ways worse, in some ways better.
-	I did the following this way because the player object has to deal with touchspecials too, not just solids.
-	There were all sorts of fun bugs when the player got to touch the goal a frame earlier than it should've.
-	Technically, we lose out on being blocked by MF_SOLID objects, but official stages don't use them on the track.
-	I know we probably could've kept around MT_NIGHTSCHAR in some fashion, having an invisible hitbox following the
-	player around... but I'd already removed all its references, restructured the way the chaos emerald follows
-	the player around to fill the player->mo->tracer gap left behind, and NiGHTS is a lag magnet (lagnet?)
-	enough as it is... so whatever.
-	~toast
-	*/
 	{
-		fixed_t prevx = player->mo->x;
-		fixed_t prevy = player->mo->y;
 		boolean notallowed;
-		player->mo->flags |= MF_NOCLIPTHING; // player = NULL; // YIKES
-		notallowed = (!(P_TryMove(player->mo, player->mo->x+player->mo->momx, player->mo->y+player->mo->momy, true)));
-		P_TeleportMove(player->mo, prevx, prevy, player->mo->z);
-		player->mo->flags &= ~MF_NOCLIPTHING; // player = player; // unyikes
+		mobj_t *hack = P_SpawnMobjFromMobj(player->mo, 0, 0, 0, MT_NULL);
+		hack->flags = MF_NOGRAVITY;
+		hack->radius = player->mo->radius;
+		hack->height = player->mo->height;
+		hack->z = player->mo->z;
+		P_SetThingPosition(hack);
+		notallowed = (!(P_TryMove(hack, player->mo->x+player->mo->momx, player->mo->y+player->mo->momy, true)));
+		P_RemoveMobj(hack);
 		if (notallowed)
 			return;
 	}
+#endif
 
 	{
 		const INT32 sequence = player->mo->target->threshold;
@@ -7825,6 +7821,7 @@ boolean P_LookForEnemies(player_t *player, boolean nonenemies)
 	thinker_t *think;
 	mobj_t *closestmo = NULL;
 	angle_t an;
+	const UINT32 targetmask = (MF_ENEMY|MF_BOSS|(nonenemies ? (MF_MONITOR|MF_SPRING) : 0));
 
 	for (think = thinkercap.next; think != &thinkercap; think = think->next)
 	{
@@ -7832,9 +7829,8 @@ boolean P_LookForEnemies(player_t *player, boolean nonenemies)
 			continue; // not a mobj thinker
 
 		mo = (mobj_t *)think;
-		if ((nonenemies && !(mo->flags & (MF_ENEMY|MF_BOSS|MF_MONITOR|MF_SPRING)))
-		|| (!nonenemies && !(mo->flags & (MF_ENEMY|MF_BOSS))))
-			continue; // not a valid enemy
+		if (!(mo->flags & targetmask))
+			continue; // not a valid target
 
 		if (mo->health <= 0) // dead
 			continue;

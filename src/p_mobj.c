@@ -211,9 +211,6 @@ UINT8 P_GetMobjSprite2(mobj_t *mobj, UINT8 spr2)
 
 		switch(spr2)
 		{
-		case SPR2_DASH:
-			spr2 = SPR2_RUN ;
-			break;
 		case SPR2_RUN:
 			spr2 = SPR2_WALK;
 			break;
@@ -272,6 +269,10 @@ UINT8 P_GetMobjSprite2(mobj_t *mobj, UINT8 spr2)
 			spr2 = SPR2_RUN ;
 			break;
 
+		case SPR2_DASH:
+			spr2 = SPR2_FRUN;
+			break;
+
 		case SPR2_BNCE:
 			spr2 = SPR2_FALL;
 			break;
@@ -289,10 +290,12 @@ UINT8 P_GetMobjSprite2(mobj_t *mobj, UINT8 spr2)
 
 		// NiGHTS sprites.
 		case SPR2_NSTD:
-			spr2 = FF_SPR2SUPER|SPR2_STND;
+			spr2 = SPR2_STND;
+			super = FF_SPR2SUPER;
 			break;
 		case SPR2_NFLT:
-			spr2 = FF_SPR2SUPER|SPR2_FLT ;
+			spr2 = SPR2_FLT ;
+			super = FF_SPR2SUPER;
 			break;
 		case SPR2_NSTN:
 			spr2 = SPR2_STUN;
@@ -301,7 +304,8 @@ UINT8 P_GetMobjSprite2(mobj_t *mobj, UINT8 spr2)
 			spr2 = SPR2_NSTN;
 			break;
 		case SPR2_NATK:
-			spr2 = FF_SPR2SUPER|SPR2_ROLL;
+			spr2 = SPR2_ROLL;
+			super = FF_SPR2SUPER;
 			break;
 		/*case SPR2_NGT0:
 			spr2 = SPR2_NFLT;
