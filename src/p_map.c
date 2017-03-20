@@ -134,6 +134,17 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 	object->standingslope = NULL; // Okay, now we can't return - no launching off at silly angles for you.
 #endif
 
+	if (object->player
+	&& ((object->player->charability == CA_TWINSPIN && object->player->panim == PA_ABILITY)
+	|| (object->player->charability2 == CA2_MELEE && object->player->panim == PA_ABILITY2)))
+	{
+		S_StartSound(object, sfx_s3k8b);
+#define scalefactor ((4*FRACUNIT)/3)
+		horizspeed = FixedMul(horizspeed, scalefactor);
+		vertispeed = FixedMul(vertispeed, FixedSqrt(scalefactor));
+#undef scalefactor
+	}
+
 	object->eflags |= MFE_SPRUNG; // apply this flag asap!
 	spring->flags &= ~(MF_SOLID|MF_SPECIAL); // De-solidify
 

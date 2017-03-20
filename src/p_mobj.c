@@ -3211,10 +3211,10 @@ static void P_PlayerZMovement(mobj_t *mo)
 						mo->player->skidtime = TICRATE;
 						mo->tics = -1;
 					}
-					else if (mo->player->charability2 == CA2_MELEE && ((mo->player->charability == CA_TWINSPIN && mo->player->panim == PA_ABILITY) || (mo->player->panim == PA_ABILITY2)))
+					else if (mo->player->charability2 == CA2_MELEE && ((mo->player->charability == CA_TWINSPIN && mo->player->panim == PA_ABILITY) || (mo->player->panim == PA_ABILITY2 && mo->state-states != S_PLAY_MELEE_LANDING)))
 					{
 						P_SetPlayerMobjState(mo, S_PLAY_MELEE_LANDING);
-						mo->tics = mo->player->powers[pw_nocontrol] = (mo->movefactor == FRACUNIT) ? TICRATE/2 : (FixedDiv(35<<(FRACBITS-1), FixedSqrt(mo->movefactor)))>>FRACBITS;
+						mo->tics = (mo->movefactor == FRACUNIT) ? TICRATE/2 : (FixedDiv(35<<(FRACBITS-1), FixedSqrt(mo->movefactor)))>>FRACBITS;
 						S_StartSound(mo, sfx_s3k8b);
 					}
 					else if (mo->player->pflags & PF_JUMPED || (mo->player->pflags & (PF_SPINNING|PF_USEDOWN)) != (PF_SPINNING|PF_USEDOWN)

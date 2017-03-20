@@ -3833,7 +3833,6 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 					}
 					else
 					{
-						player->powers[pw_nocontrol] = TICRATE;
 						player->mo->z += P_MobjFlip(player->mo);
 						P_SetObjectMomZ(player->mo, player->mindash, false);
 						if (player->mo->eflags & MFE_UNDERWATER)
@@ -5181,7 +5180,6 @@ static void P_NightsTransferPoints(player_t *player, fixed_t xspeed, fixed_t rad
 		if (notallowed)
 			return;
 	}
-#endif
 
 	{
 		const INT32 sequence = player->mo->target->threshold;
@@ -6555,9 +6553,9 @@ static void P_MovePlayer(player_t *player)
 	runspd = FixedMul(runspd, player->mo->movefactor);
 
 	// Control relinquishing stuff!
-	if (player->powers[pw_carry] == CR_BRAKGOOP)
-		player->pflags |= PF_FULLSTASIS;
-	else if (player->pflags & PF_GLIDING && player->skidtime)
+	if ((player->powers[pw_carry] == CR_BRAKGOOP)
+	|| (player->pflags & PF_GLIDING && player->skidtime)
+	|| (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2))
 		player->pflags |= PF_FULLSTASIS;
 	else if (player->powers[pw_nocontrol])
 	{
