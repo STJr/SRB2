@@ -3813,7 +3813,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 					if (!player->spectator)
 						S_StartSound(player->mo, sfx_spin);
 				}
-				else 
+				else
 				// Catapult the player from a spindash rev!
 				if (onground && !(player->pflags & PF_USEDOWN) && (player->pflags & PF_STARTDASH) && (player->pflags & PF_SPINNING))
 				{
@@ -3826,7 +3826,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 						if (player->dashspeed)
 						{
 							P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
-							P_InstaThrust(player->mo, player->mo->angle, FixedMul(player->dashspeed, player->mo->scale)); // catapult forward ho!!
+							P_InstaThrust(player->mo, player->mo->angle, (player->speed = FixedMul(player->dashspeed, player->mo->scale))); // catapult forward ho!!
 						}
 						else
 						{
