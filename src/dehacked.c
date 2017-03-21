@@ -3937,8 +3937,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PLAY_BOUNCE_LANDING",
 
 	// CA2_GUNSLINGER
-	"S_PLAY_CHARGE",
 	"S_PLAY_FIRE",
+	"S_PLAY_FIRE_FINISH",
 
 	// CA_TWINSPIN
 	"S_PLAY_TWINSPIN",

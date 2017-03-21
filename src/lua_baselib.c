@@ -1055,12 +1055,12 @@ static int lib_pLookForEnemies(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
 	boolean nonenemies = lua_opttrueboolean(L, 2);
-	boolean abovehorizontal = lua_opttrueboolean(L, 3);
+	boolean bullet = lua_opttrueboolean(L, 3);
 	NOHUD
 	INLEVEL
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
-	lua_pushboolean(L, P_LookForEnemies(player, nonenemies, abovehorizontal));
+	lua_pushboolean(L, P_LookForEnemies(player, nonenemies, bullet));
 	return 1;
 }
 

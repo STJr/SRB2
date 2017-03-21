@@ -1576,6 +1576,12 @@ void P_SpawnThokMobj(player_t *player)
 		// scale
 		P_SetScale(mobj, player->mo->scale);
 		mobj->destscale = player->mo->scale;
+
+		if (type == MT_THOK) // spintrail-specific modification for MT_THOK
+		{
+			mobj->frame = FF_TRANS70;
+			mobj->fuse = mobj->tics;
+		}
 	}
 
 	P_SetTarget(&mobj->target, player->mo); // the one thing P_SpawnGhostMobj doesn't do
@@ -3842,59 +3848,43 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 				}
 				break;
 			case CA2_GUNSLINGER:
-				if ((cmd->buttons & BT_USE)
-					&& !player->mo->momz && onground
+				if ((cmd->buttons & BT_USE) && !(player->pflags & PF_USEDOWN)
+					&& !player->mo->momz && onground // && !player->weapondelay
 						&& canstand)
 				{
-					if (!player->dashspeed)
-					{
-						player->mo->momx = player->cmomx;
-						player->mo->momy = player->cmomy;
-						player->pflags |= PF_USEDOWN;
-						player->dashspeed = player->mindash;
-						P_SetPlayerMobjState(player->mo, S_PLAY_CHARGE);
-						if (!player->spectator)
-							S_StartSound(player->mo, sfx_s3k5a); // Make the rev sound! Previously sfx_spndsh.
-					}
-					else if (player->dashspeed < player->maxdash)
-						player->dashspeed += FRACUNIT;
-					else if (player->mo->tics != -1)
-					{
-						player->mo->tics = -1;
-						player->mo->frame = 0;
-					}
-				}
-				else if (player->dashspeed && (player->pflags & PF_USEDOWN))
-				{
-					mobj_t *cork;
-					const boolean maxspeed = (player->dashspeed >= player->maxdash);
+					mobj_t *bullet;
 
 					P_SetPlayerMobjState(player->mo, S_PLAY_FIRE);
 
-					if (maxspeed && P_LookForEnemies(player, false, true) && player->mo->tracer)
+#define zpos(posmo) (posmo->z + (posmo->height - mobjinfo[player->spinitem].height)/2)
+					if (P_LookForEnemies(player, false, true) && player->mo->tracer)
 					{
-						player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, player->mo->target->x, player->mo->target->y);
-						cork = P_SpawnMissile(player->mo, player->mo->tracer, player->spinitem);
+						bullet = P_SpawnPointMissile(player->mo, player->mo->tracer->x, player->mo->tracer->y, zpos(player->mo->tracer), player->spinitem, player->mo->x, player->mo->y, zpos(player->mo));
+						if (!demoplayback || P_AnalogMove(player))
+						{
+							if (player == &players[consoleplayer])
+								localangle = player->mo->angle;
+							else if (player == &players[secondarydisplayplayer])
+								localangle2 = player->mo->angle;
+						}
 					}
 					else
 					{
-						fixed_t z = (player->mo->z + player->mo->height/2);
-						if ((cork = P_SpawnPointMissile(player->mo, player->mo->x + P_ReturnThrustX(NULL, player->mo->angle, FRACUNIT), player->mo->y + P_ReturnThrustY(NULL, player->mo->angle, FRACUNIT), z, player->spinitem, player->mo->x, player->mo->y, z)))
+						bullet = P_SpawnPointMissile(player->mo, player->mo->x + P_ReturnThrustX(NULL, player->mo->angle, FRACUNIT), player->mo->y + P_ReturnThrustY(NULL, player->mo->angle, FRACUNIT), zpos(player->mo), player->spinitem, player->mo->x, player->mo->y, zpos(player->mo));
+						if (bullet)
 						{
-							cork->flags &= ~MF_NOGRAVITY;
-							if (!maxspeed)
-								cork->flags |= MF_NOCLIPTHING;
+							bullet->flags &= ~MF_NOGRAVITY;
+							bullet->momx >>= 1;
+							bullet->momy >>= 1;
 						}
 					}
-					if (cork)
-					{
-						cork->momx = FixedDiv(FixedMul(cork->momx, player->dashspeed), mobjinfo[player->spinitem].speed);
-						cork->momy = FixedDiv(FixedMul(cork->momy, player->dashspeed), mobjinfo[player->spinitem].speed);
-						if (player->mo->tracer)
-							cork->momz = ((player->mo->tracer->z - player->mo->z) / (P_AproxDistance(player->mo->tracer->x - player->mo->x, player->mo->tracer->y - player->mo->y) / player->dashspeed));
-					}
+#undef zpos
+
 					P_SetTarget(&player->mo->tracer, NULL);
-					player->dashspeed = 0;
+					player->mo->momx >>= 1;
+					player->mo->momy >>= 1;
+					player->pflags |= PF_USEDOWN;
+					// player->weapondelay = TICRATE/2;
 				}
 				break;
 			case CA2_MELEE: // Melee attack
@@ -3903,16 +3893,18 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 				&& canstand)
 				{
 					P_ResetPlayer(player);
+					player->pflags |= PF_THOKKED;
+#if 0
 					if ((player->charability == CA_TWINSPIN) && (player->speed > FixedMul(player->runspeed, player->mo->scale)))
 					{
 						P_DoJump(player, false);
 						player->jumping = 0;
 						player->mo->momz = FixedMul(player->mo->momz, 3*FRACUNIT/2); // NOT 1.5 times the jump height, but 2.25 times.
-						player->pflags |= PF_THOKKED;
 						P_SetPlayerMobjState(player->mo, S_PLAY_TWINSPIN);
 						S_StartSound(player->mo, sfx_s3k8b);
 					}
 					else
+#endif
 					{
 						player->mo->z += P_MobjFlip(player->mo);
 						P_SetObjectMomZ(player->mo, player->mindash, false);
@@ -4265,10 +4257,13 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 
 						if (player->charability == CA_HOMINGTHOK && !player->homing)
 						{
-							if (P_LookForEnemies(player, true, false))
+							player->pflags &= ~PF_NOJUMPDAMAGE;
+							if (P_LookForEnemies(player, true, false) && player->mo->tracer)
+								player->homing = 3*TICRATE;
+							else
 							{
-								if (player->mo->tracer)
-									player->homing = 3*TICRATE;
+								P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
+								player->pflags &= ~PF_JUMPED;
 							}
 						}
 
@@ -4945,8 +4940,6 @@ static void P_3dMovement(player_t *player)
 			else
 				movepushforward = FixedDiv(movepushforward, 16*FRACUNIT);
 		}
-		else if (player->charability2 == CA2_GUNSLINGER && player->panim == PA_ABILITY2)
-			movepushforward = 0;
 
 		movepushforward = FixedMul(movepushforward, player->mo->scale);
 
@@ -4989,8 +4982,6 @@ static void P_3dMovement(player_t *player)
 				else
 					movepushforward = FixedDiv(movepushforward, 16*FRACUNIT);
 			}
-			else if (player->charability2 == CA2_GUNSLINGER && player->panim == PA_ABILITY2)
-				movepushforward = 0;
 
 			movepushsideangle = controldirection;
 
@@ -5025,8 +5016,6 @@ static void P_3dMovement(player_t *player)
 			else
 				movepushside = FixedDiv(movepushside,16*FRACUNIT);
 		}
-		else if (player->charability2 == CA2_GUNSLINGER && player->panim == PA_ABILITY2)
-			movepushside = 0;
 
 		// Finally move the player now that his speed/direction has been decided.
 		movepushside = FixedMul(movepushside, player->mo->scale);
@@ -6613,8 +6602,8 @@ static void P_MovePlayer(player_t *player)
 	// Control relinquishing stuff!
 	if ((player->powers[pw_carry] == CR_BRAKGOOP)
 	|| (player->pflags & PF_GLIDING && player->skidtime)
-	|| (player->charability2 == CA2_GUNSLINGER && player->mo->state-states == S_PLAY_FIRE)
-	|| (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2))
+	|| (player->charability2 == CA2_GUNSLINGER && player->panim == PA_ABILITY2)
+	|| (player->charability2 == CA2_MELEE && player->mo->state-states == S_PLAY_MELEE_LANDING))
 		player->pflags |= PF_FULLSTASIS;
 	else if (player->powers[pw_nocontrol])
 	{
@@ -7871,15 +7860,18 @@ void P_NukeEnemies(mobj_t *inflictor, mobj_t *source, fixed_t radius)
 // P_LookForEnemies
 // Looks for something you can hit - Used for homing attack
 // If nonenemies is true, includes monitors and springs!
-// If abovehorizontal is true, you can look up, but your total vertical range is limited to compensate.
+// If bullet is true, you can look up and the distance is further,
+// but your total angle span you can look is limited to compensate.
 //
-boolean P_LookForEnemies(player_t *player, boolean nonenemies, boolean abovehorizontal)
+boolean P_LookForEnemies(player_t *player, boolean nonenemies, boolean bullet)
 {
 	mobj_t *mo;
 	thinker_t *think;
 	mobj_t *closestmo = NULL;
-	angle_t an;
 	const UINT32 targetmask = (MF_ENEMY|MF_BOSS|(nonenemies ? (MF_MONITOR|MF_SPRING) : 0));
+	const fixed_t maxdist = FixedMul((bullet ? RING_DIST*2 : RING_DIST), player->mo->scale);
+	const angle_t span = (bullet ? ANG30 : ANGLE_90);
+	fixed_t dist, closestdist = 0;
 
 	for (think = thinkercap.next; think != &thinkercap; think = think->next)
 	{
@@ -7906,11 +7898,11 @@ boolean P_LookForEnemies(player_t *player, boolean nonenemies, boolean abovehori
 			continue;
 
 		{
-			fixed_t dist = P_AproxDistance(player->mo->x-mo->x, player->mo->y-mo->y);
-
-			if (abovehorizontal)
+			fixed_t zdist = (player->mo->z + player->mo->height/2) - (mo->z + mo->height/2);
+			dist = P_AproxDistance(player->mo->x-mo->x, player->mo->y-mo->y);
+			if (bullet)
 			{
-				angle_t ang = R_PointToAngle2(0, player->mo->z, dist, mo->z) + ANGLE_45;
+				angle_t ang = R_PointToAngle2(0, 0, dist, zdist) + ANGLE_45;
 				if (ang > ANGLE_90)
 					continue; // Don't home outside of desired angle!
 			}
@@ -7918,15 +7910,15 @@ boolean P_LookForEnemies(player_t *player, boolean nonenemies, boolean abovehori
 			{
 				if (player->mo->eflags & MFE_VERTICALFLIP)
 				{
-					if (mo->z > player->mo->z+FixedMul(MAXSTEPMOVE, player->mo->scale))
-						continue;
+					if (mo->z+mo->height < player->mo->z+player->mo->height-FixedMul(MAXSTEPMOVE, player->mo->scale))
+							continue;
 				}
-				else if (mo->z+mo->height < player->mo->z+player->mo->height-FixedMul(MAXSTEPMOVE, player->mo->scale))
+				else if (mo->z > player->mo->z+FixedMul(MAXSTEPMOVE, player->mo->scale))
 					continue;
 			}
 
-			if (P_AproxDistance(dist,
-				player->mo->z-mo->z) > FixedMul(RING_DIST, player->mo->scale))
+			dist = P_AproxDistance(dist, zdist);
+			if (dist > maxdist)
 				continue; // out of range
 		}
 
@@ -7937,20 +7929,17 @@ boolean P_LookForEnemies(player_t *player, boolean nonenemies, boolean abovehori
 		if (mo->type == MT_PLAYER) // Don't chase after other players!
 			continue;
 
-		if (closestmo && P_AproxDistance(P_AproxDistance(player->mo->x-mo->x, player->mo->y-mo->y),
-			player->mo->z-mo->z) > P_AproxDistance(P_AproxDistance(player->mo->x-closestmo->x,
-			player->mo->y-closestmo->y), player->mo->z-closestmo->z))
+		if (closestmo && dist > closestdist)
 			continue;
 
-		an = R_PointToAngle2(player->mo->x, player->mo->y, mo->x, mo->y) - player->mo->angle;
-
-		if (an > ANGLE_90 && an < ANGLE_270)
+		if ((R_PointToAngle2(player->mo->x, player->mo->y, mo->x, mo->y) - player->mo->angle + span) > span*2)
 			continue; // behind back
 
 		if (!P_CheckSight(player->mo, mo))
 			continue; // out of sight
 
 		closestmo = mo;
+		closestdist = dist;
 	}
 
 	if (closestmo)
@@ -7966,6 +7955,7 @@ boolean P_LookForEnemies(player_t *player, boolean nonenemies, boolean abovehori
 
 void P_HomingAttack(mobj_t *source, mobj_t *enemy) // Home in on your target
 {
+	fixed_t zdist;
 	fixed_t dist;
 	fixed_t ns = 0;
 
@@ -7986,8 +7976,8 @@ void P_HomingAttack(mobj_t *source, mobj_t *enemy) // Home in on your target
 	}
 
 	// change slope
-	dist = P_AproxDistance(P_AproxDistance(enemy->x - source->x, enemy->y - source->y),
-		enemy->z - source->z);
+	zdist = (P_MobjFlip(source) ? (enemy->z + enemy->height) - (source->z + source->height) : (enemy->z - source->z));
+	dist = P_AproxDistance(P_AproxDistance(enemy->x - source->x, enemy->y - source->y), zdist);
 
 	if (dist < 1)
 		dist = 1;
@@ -8011,7 +8001,7 @@ void P_HomingAttack(mobj_t *source, mobj_t *enemy) // Home in on your target
 
 	source->momx = FixedMul(FixedDiv(enemy->x - source->x, dist), ns);
 	source->momy = FixedMul(FixedDiv(enemy->y - source->y, dist), ns);
-	source->momz = FixedMul(FixedDiv(enemy->z - source->z, dist), ns);
+	source->momz = FixedMul(FixedDiv(zdist, dist), ns);
 }
 
 // Search for emeralds
@@ -9121,7 +9111,9 @@ void P_PlayerThink(player_t *player)
 		if (player->panim != PA_ABILITY)
 			P_SetPlayerMobjState(player->mo, S_PLAY_GLIDE);
 	}
-	else if ((player->pflags & PF_JUMPED) && !player->powers[pw_super] && ((player->charflags & SF_NOJUMPSPIN && player->pflags & PF_NOJUMPDAMAGE && player->panim != PA_ROLL) || (!(player->charflags & SF_NOJUMPSPIN) && player->panim != PA_JUMP)))
+	else if ((player->pflags & PF_JUMPED)
+	&& ((player->charflags & SF_NOJUMPSPIN && !(player->pflags & PF_NOJUMPDAMAGE) && player->panim != PA_ROLL)
+	|| (!(player->charflags & SF_NOJUMPSPIN) && player->panim != PA_JUMP)))
 	{
 		if (!(player->charflags & SF_NOJUMPSPIN))
 			P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);

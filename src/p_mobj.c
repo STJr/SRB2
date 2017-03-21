@@ -280,10 +280,6 @@ UINT8 P_GetMobjSprite2(mobj_t *mobj, UINT8 spr2)
 			spr2 = SPR2_ROLL;
 			break;
 
-		case SPR2_FIRE:
-			spr2 = SPR2_CHRG;
-			break;
-
 		case SPR2_TWIN:
 			spr2 = SPR2_ROLL;
 			break;
@@ -474,8 +470,8 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		player->panim = PA_ABILITY;
 		break;
 	case S_PLAY_SPINDASH: // ...but the act of SPINDASHING is charability2 specific.
-	case S_PLAY_CHARGE:
 	case S_PLAY_FIRE:
+	case S_PLAY_FIRE_FINISH:
 	case S_PLAY_MELEE:
 	case S_PLAY_MELEE_FINISH:
 	case S_PLAY_MELEE_LANDING:
@@ -523,7 +519,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 				else
 					mobj->tics = 1;
 			}
-			else if (player->panim == PA_ABILITY2 && (player->charability2 == CA2_SPINDASH || state == S_PLAY_CHARGE))
+			else if (player->panim == PA_ABILITY2 && player->charability2 == CA2_SPINDASH)
 			{
 				fixed_t step = (player->maxdash - player->mindash)/4;
 				speed = (player->dashspeed - player->mindash);
@@ -3210,18 +3206,19 @@ static void P_PlayerZMovement(mobj_t *mo)
 					}
 				}
 
-				if (mo->health)
+				if (mo->health && !P_CheckDeathPitCollide(mo))
 				{
 					if (mo->player->pflags & PF_GLIDING) // ground gliding
 					{
 						mo->player->skidtime = TICRATE;
 						mo->tics = -1;
 					}
-					else if (mo->player->charability2 == CA2_MELEE && ((mo->player->charability == CA_TWINSPIN && mo->player->panim == PA_ABILITY) || (mo->player->panim == PA_ABILITY2 && mo->state-states != S_PLAY_MELEE_LANDING)))
+					else if (mo->player->charability2 == CA2_MELEE && (mo->player->panim == PA_ABILITY2 && mo->state-states != S_PLAY_MELEE_LANDING))
 					{
 						P_SetPlayerMobjState(mo, S_PLAY_MELEE_LANDING);
 						mo->tics = (mo->movefactor == FRACUNIT) ? TICRATE/2 : (FixedDiv(35<<(FRACBITS-1), FixedSqrt(mo->movefactor)))>>FRACBITS;
 						S_StartSound(mo, sfx_s3k8b);
+						mo->player->pflags |= PF_FULLSTASIS;
 					}
 					else if (mo->player->pflags & PF_JUMPED || (mo->player->pflags & (PF_SPINNING|PF_USEDOWN)) != (PF_SPINNING|PF_USEDOWN)
 					|| mo->player->powers[pw_tailsfly] || mo->state-states == S_PLAY_FLY_TIRED)
@@ -3302,7 +3299,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 						}
 					}
 
-					if (mo->player->pflags & PF_BOUNCING && !P_CheckDeathPitCollide(mo))
+					if (mo->player->pflags & PF_BOUNCING)
 					{
 						mo->momz *= -1;
 						P_DoAbilityBounce(mo->player, true);
@@ -7276,7 +7273,6 @@ void P_MobjThinker(mobj_t *mobj)
 					ns = 4 * FRACUNIT;
 					mo2->momx = FixedMul(FINESINE(fa),ns);
 					mo2->momy = FixedMul(FINECOSINE(fa),ns);
-					mo2->angle = fa << ANGLETOFINESHIFT;
 
 					if (P_RandomChance(FRACUNIT/4)) // I filled a spreadsheet trying to get the equivalent chance to the original P_RandomByte hack!
 						S_StartSound(mo2, mobj->info->deathsound);
@@ -7288,6 +7284,7 @@ void P_MobjThinker(mobj_t *mobj)
 					P_SetTarget(&flicky->target, mo2);
 					flicky->momx = mo2->momx;
 					flicky->momy = mo2->momy;
+					flicky->angle = fa << ANGLETOFINESHIFT;
 				}
 
 				mobj->fuse--;

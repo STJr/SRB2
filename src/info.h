@@ -632,7 +632,6 @@ enum playersprite
 	SPR2_BNCE, // bounce
 	SPR2_BLND, // bounce landing
 
-	SPR2_CHRG, // charge
 	SPR2_FIRE, // fire
 
 	SPR2_TWIN, // twinspin
@@ -743,8 +742,8 @@ typedef enum state
 	S_PLAY_BOUNCE_LANDING,
 
 	// CA2_GUNSLINGER
-	S_PLAY_CHARGE,
 	S_PLAY_FIRE,
+	S_PLAY_FIRE_FINISH,
 
 	// CA_TWINSPIN
 	S_PLAY_TWINSPIN,
