@@ -21,6 +21,9 @@
 #pragma interface
 #endif
 
+// Possible alpha types for a patch.
+enum patchalphastyle {AST_COPY, AST_TRANSLUCENT}; // , AST_ADD, AST_SUBTRACT, AST_REVERSESUBTRACT, AST_MODULATE, AST_OVERLAY};
+
 // moved here for r_sky.c (texpatch_t is used)
 
 // A single patch from a texture definition,
@@ -32,6 +35,8 @@ typedef struct
 	INT16 originx, originy;
 	UINT16 wad, lump;
 	UINT8 flip; // 1 = flipx, 2 = flipy, 3 = both
+	UINT8 alpha; // Translucency value
+	enum patchalphastyle style;
 } texpatch_t;
 
 // A maptexturedef_t describes a rectangular texture,
