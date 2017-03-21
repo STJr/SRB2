@@ -1486,14 +1486,30 @@ static void ST_drawMatchHUD(void)
 
 static inline void ST_drawRaceHUD(void)
 {
-	if (leveltime > TICRATE && leveltime <= 2*TICRATE)
-		V_DrawScaledPatch(SCX((BASEVIDWIDTH - SHORT(race3->width))/2), (INT32)(SCY(BASEVIDHEIGHT/2)), V_NOSCALESTART, race3);
-	else if (leveltime > 2*TICRATE && leveltime <= 3*TICRATE)
-		V_DrawScaledPatch(SCX((BASEVIDWIDTH - SHORT(race2->width))/2), (INT32)(SCY(BASEVIDHEIGHT/2)), V_NOSCALESTART, race2);
-	else if (leveltime > 3*TICRATE && leveltime <= 4*TICRATE)
-		V_DrawScaledPatch(SCX((BASEVIDWIDTH - SHORT(race1->width))/2), (INT32)(SCY(BASEVIDHEIGHT/2)), V_NOSCALESTART, race1);
-	else if (leveltime > 4*TICRATE && leveltime <= 5*TICRATE)
-		V_DrawScaledPatch(SCX((BASEVIDWIDTH - SHORT(racego->width))/2), (INT32)(SCY(BASEVIDHEIGHT/2)), V_NOSCALESTART, racego);
+	if (leveltime >= TICRATE && leveltime < 5*TICRATE)
+	{
+		INT32 height = (BASEVIDHEIGHT/2);
+		INT32 bounce = (leveltime % TICRATE);
+		patch_t **racenum;
+		switch (leveltime/TICRATE)
+		{
+			case 1:
+				racenum = &race3;
+				break;
+			case 2:
+				racenum = &race2;
+				break;
+			case 3:
+				racenum = &race1;
+				break;
+			default:
+				racenum = &racego;
+				break;
+		}
+		if (bounce < 3)
+			height -= (2 - bounce);
+		V_DrawScaledPatch(SCX((BASEVIDWIDTH - SHORT((*racenum)->width))/2), (INT32)(SCY(height)), V_NOSCALESTART, *racenum);
+	}
 
 	if (circuitmap)
 	{
