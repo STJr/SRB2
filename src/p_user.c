@@ -969,6 +969,7 @@ void P_DoSuperTransformation(player_t *player, boolean giverings)
 	P_SetPlayerMobjState(player->mo, S_PLAY_SUPER_TRANS);
 
 	player->mo->momx = player->mo->momy = player->mo->momz = 0;
+	player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE);
 
 	if (giverings)
 		player->rings = 50;
@@ -3849,17 +3850,17 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 				break;
 			case CA2_GUNSLINGER:
 				if ((cmd->buttons & BT_USE) && !(player->pflags & PF_USEDOWN)
-					&& !player->mo->momz && onground // && !player->weapondelay
+					&& !player->mo->momz && onground && !player->weapondelay
 						&& canstand)
 				{
 					mobj_t *bullet;
 
 					P_SetPlayerMobjState(player->mo, S_PLAY_FIRE);
 
-#define zpos(posmo) (posmo->z + (posmo->height - mobjinfo[player->spinitem].height)/2)
+#define zpos(posmo) (posmo->z + (posmo->height - mobjinfo[player->revitem].height)/2)
 					if (P_LookForEnemies(player, false, true) && player->mo->tracer)
 					{
-						bullet = P_SpawnPointMissile(player->mo, player->mo->tracer->x, player->mo->tracer->y, zpos(player->mo->tracer), player->spinitem, player->mo->x, player->mo->y, zpos(player->mo));
+						bullet = P_SpawnPointMissile(player->mo, player->mo->tracer->x, player->mo->tracer->y, zpos(player->mo->tracer), player->revitem, player->mo->x, player->mo->y, zpos(player->mo));
 						if (!demoplayback || P_AnalogMove(player))
 						{
 							if (player == &players[consoleplayer])
@@ -3870,7 +3871,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 					}
 					else
 					{
-						bullet = P_SpawnPointMissile(player->mo, player->mo->x + P_ReturnThrustX(NULL, player->mo->angle, FRACUNIT), player->mo->y + P_ReturnThrustY(NULL, player->mo->angle, FRACUNIT), zpos(player->mo), player->spinitem, player->mo->x, player->mo->y, zpos(player->mo));
+						bullet = P_SpawnPointMissile(player->mo, player->mo->x + P_ReturnThrustX(NULL, player->mo->angle, FRACUNIT), player->mo->y + P_ReturnThrustY(NULL, player->mo->angle, FRACUNIT), zpos(player->mo), player->revitem, player->mo->x, player->mo->y, zpos(player->mo));
 						if (bullet)
 						{
 							bullet->flags &= ~MF_NOGRAVITY;
@@ -3884,7 +3885,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 					player->mo->momx >>= 1;
 					player->mo->momy >>= 1;
 					player->pflags |= PF_USEDOWN;
-					// player->weapondelay = TICRATE/2;
+					P_SetWeaponDelay(player, TICRATE/2);
 				}
 				break;
 			case CA2_MELEE: // Melee attack
@@ -7894,7 +7895,7 @@ boolean P_LookForEnemies(player_t *player, boolean nonenemies, boolean bullet)
 		if ((mo->flags & (MF_ENEMY|MF_BOSS)) && !(mo->flags & MF_SHOOTABLE)) // don't aim at something you can't shoot at anyway (see Egg Guard or Minus)
 			continue;
 
-		if (mo->type == MT_DETON) // Don't be STUPID, Sonic!
+		if (!bullet && mo->type == MT_DETON) // Don't be STUPID, Sonic!
 			continue;
 
 		{
@@ -7902,8 +7903,7 @@ boolean P_LookForEnemies(player_t *player, boolean nonenemies, boolean bullet)
 			dist = P_AproxDistance(player->mo->x-mo->x, player->mo->y-mo->y);
 			if (bullet)
 			{
-				angle_t ang = R_PointToAngle2(0, 0, dist, zdist) + ANGLE_45;
-				if (ang > ANGLE_90)
+				if ((R_PointToAngle2(0, 0, dist, zdist) + ANGLE_45) > ANGLE_90)
 					continue; // Don't home outside of desired angle!
 			}
 			else // Don't home upwards!
