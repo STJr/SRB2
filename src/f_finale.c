@@ -31,6 +31,7 @@
 #include "m_random.h"
 #include "y_inter.h"
 #include "m_cond.h"
+#include "p_local.h"
 
 // Stage of animation:
 // 0 = text, 1 = art screen
@@ -1421,13 +1422,16 @@ void F_StartTitleScreen(void)
 		finalecount = 0;
 	else
 		wipegamestate = GS_TITLESCREEN;
+
+	gamemap = 533; titlescrollspeed = (int32_t)ANG1; //@TODO don't hardcode bich
+	G_DoLoadLevel(true);
 	G_SetGamestate(GS_TITLESCREEN);
-	CON_ClearHUD();
+	players[displayplayer].playerstate = PST_DEAD; // Don't spawn the player in dummy (I'm still a filthy cheater)
+	//CON_ClearHUD();
 
 	// IWAD dependent stuff.
 
 	S_ChangeMusicInternal("titles", looptitle);
-
 	animtimer = 0;
 
 	demoDelayLeft = demoDelayTime;
@@ -1457,7 +1461,9 @@ void F_TitleScreenDrawer(void)
 		return; // We likely came here from retrying. Don't do a damn thing.
 
 	// Draw that sky!
-	F_SkyScroll(titlescrollspeed);
+	if (!gamemap) {
+		F_SkyScroll(titlescrollspeed);
+	}
 
 	// Don't draw outside of the title screewn, or if the patch isn't there.
 	if (!ttwing || (gamestate != GS_TITLESCREEN && gamestate != GS_WAITINGPLAYERS))
@@ -1510,6 +1516,13 @@ void F_TitleScreenTicker(boolean run)
 	// don't trigger if doing anything besides idling on title
 	if (gameaction != ga_nothing || gamestate != GS_TITLESCREEN)
 		return;
+
+	// Do a lil' camera spin if a title map is loaded.
+	if (gamemap) {
+		camera.x = camera.y = camera.height = camera.aiming = 0;
+		camera.z = 128*FRACUNIT;
+		camera.angle += titlescrollspeed;
+	}
 
 	// no demos to play? or, are they disabled?
 	if (!cv_rollingdemos.value || !numDemos)
