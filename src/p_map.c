@@ -938,11 +938,13 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		if (tmthing->eflags & MFE_VERTICALFLIP)
 		{
 			if (thing->z + thing->height <= tmthing->z + FixedMul(FRACUNIT, tmthing->scale)
-			&& thing->z + thing->height + thing->momz  >= tmthing->z + FixedMul(FRACUNIT, tmthing->scale) + tmthing->momz)
+			&& thing->z + thing->height + thing->momz  >= tmthing->z + FixedMul(FRACUNIT, tmthing->scale) + tmthing->momz
+			&& !(thing->player->charability == CA_BOUNCE && thing->player->panim == PA_ABILITY && thing->eflags & MFE_VERTICALFLIP))
 				P_DamageMobj(thing, tmthing, tmthing, 1, 0);
 		}
 		else if (thing->z >= tmthing->z + tmthing->height - FixedMul(FRACUNIT, tmthing->scale)
-		&& thing->z + thing->momz <= tmthing->z + tmthing->height - FixedMul(FRACUNIT, tmthing->scale) + tmthing->momz)
+		&& thing->z + thing->momz <= tmthing->z + tmthing->height - FixedMul(FRACUNIT, tmthing->scale) + tmthing->momz
+		&& !(thing->player->charability == CA_BOUNCE && thing->player->panim == PA_ABILITY && !(thing->eflags & MFE_VERTICALFLIP)))
 			P_DamageMobj(thing, tmthing, tmthing, 1, 0);
 	}
 	else if (thing->type == MT_SPIKE && thing->flags & MF_SOLID && tmthing->player) // unfortunate player falls into spike?!
@@ -950,11 +952,13 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		if (thing->eflags & MFE_VERTICALFLIP)
 		{
 			if (tmthing->z + tmthing->height <= thing->z - FixedMul(FRACUNIT, thing->scale)
-			&& tmthing->z + tmthing->height + tmthing->momz >= thing->z - FixedMul(FRACUNIT, thing->scale))
+			&& tmthing->z + tmthing->height + tmthing->momz >= thing->z - FixedMul(FRACUNIT, thing->scale)
+			&& !(tmthing->player->charability == CA_BOUNCE && tmthing->player->panim == PA_ABILITY && tmthing->eflags & MFE_VERTICALFLIP))
 				P_DamageMobj(tmthing, thing, thing, 1, 0);
 		}
 		else if (tmthing->z >= thing->z + thing->height + FixedMul(FRACUNIT, thing->scale)
-		&& tmthing->z + tmthing->momz <= thing->z + thing->height + FixedMul(FRACUNIT, thing->scale))
+		&& tmthing->z + tmthing->momz <= thing->z + thing->height + FixedMul(FRACUNIT, thing->scale)
+		&& !(tmthing->player->charability == CA_BOUNCE && tmthing->player->panim == PA_ABILITY && !(tmthing->eflags & MFE_VERTICALFLIP)))
 			P_DamageMobj(tmthing, thing, thing, 1, 0);
 	}
 

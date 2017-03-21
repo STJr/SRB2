@@ -280,6 +280,10 @@ UINT8 P_GetMobjSprite2(mobj_t *mobj, UINT8 spr2)
 			spr2 = SPR2_ROLL;
 			break;
 
+		case SPR2_FIRE:
+			spr2 = SPR2_CHRG;
+			break;
+
 		case SPR2_TWIN:
 			spr2 = SPR2_ROLL;
 			break;
@@ -470,6 +474,8 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		player->panim = PA_ABILITY;
 		break;
 	case S_PLAY_SPINDASH: // ...but the act of SPINDASHING is charability2 specific.
+	case S_PLAY_CHARGE:
+	case S_PLAY_FIRE:
 	case S_PLAY_MELEE:
 	case S_PLAY_MELEE_FINISH:
 	case S_PLAY_MELEE_LANDING:
@@ -517,7 +523,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 				else
 					mobj->tics = 1;
 			}
-			else if (player->panim == PA_ABILITY2 && player->charability2 == CA2_SPINDASH)
+			else if (player->panim == PA_ABILITY2 && (player->charability2 == CA2_SPINDASH || state == S_PLAY_CHARGE))
 			{
 				fixed_t step = (player->maxdash - player->mindash)/4;
 				speed = (player->dashspeed - player->mindash);

@@ -75,6 +75,7 @@ typedef enum
 	CA2_NONE=0,
 	CA2_SPINDASH,
 	CA2_MULTIABILITY,
+	CA2_GUNSLINGER,
 	CA2_MELEE
 } charability2_t;
 

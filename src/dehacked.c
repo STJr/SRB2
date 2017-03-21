@@ -3908,13 +3908,15 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PLAY_DEAD",
 	"S_PLAY_DRWN",
 	"S_PLAY_ROLL",
-	"S_PLAY_SPINDASH",
 	"S_PLAY_GASP",
 	"S_PLAY_JUMP",
 	"S_PLAY_SPRING",
 	"S_PLAY_FALL",
 	"S_PLAY_EDGE",
 	"S_PLAY_RIDE",
+
+	// CA2_SPINDASH
+	"S_PLAY_SPINDASH",
 
 	// CA_FLY/SWIM
 	"S_PLAY_FLY",
@@ -3933,6 +3935,10 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	// CA_BOUNCE
 	"S_PLAY_BOUNCE",
 	"S_PLAY_BOUNCE_LANDING",
+
+	// CA2_GUNSLINGER
+	"S_PLAY_CHARGE",
+	"S_PLAY_FIRE",
 
 	// CA_TWINSPIN
 	"S_PLAY_TWINSPIN",
@@ -7398,6 +7404,7 @@ struct {
 	{"CA2_NONE",CA2_NONE}, // now slot 0!
 	{"CA2_SPINDASH",CA2_SPINDASH},
 	{"CA2_MULTIABILITY",CA2_MULTIABILITY},
+	{"CA2_GUNSLINGER",CA2_GUNSLINGER},
 	{"CA2_MELEE",CA2_MELEE},
 
 	// Sound flags

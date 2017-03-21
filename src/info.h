@@ -609,13 +609,14 @@ enum playersprite
 	SPR2_DEAD,
 	SPR2_DRWN, // drown
 	SPR2_ROLL,
-	SPR2_SPIN, // spindash charge
 	SPR2_GASP,
 	SPR2_JUMP,
 	SPR2_SPNG, // spring
 	SPR2_FALL,
 	SPR2_EDGE,
 	SPR2_RIDE,
+
+	SPR2_SPIN, // spindash
 
 	SPR2_FLY ,
 	SPR2_SWIM,
@@ -630,6 +631,9 @@ enum playersprite
 
 	SPR2_BNCE, // bounce
 	SPR2_BLND, // bounce landing
+
+	SPR2_CHRG, // charge
+	SPR2_FIRE, // fire
 
 	SPR2_TWIN, // twinspin
 
@@ -710,13 +714,15 @@ typedef enum state
 	S_PLAY_DEAD,
 	S_PLAY_DRWN,
 	S_PLAY_ROLL,
-	S_PLAY_SPINDASH,
 	S_PLAY_GASP,
 	S_PLAY_JUMP,
 	S_PLAY_SPRING,
 	S_PLAY_FALL,
 	S_PLAY_EDGE,
 	S_PLAY_RIDE,
+
+	// CA2_SPINDASH
+	S_PLAY_SPINDASH,
 
 	// CA_FLY/SWIM
 	S_PLAY_FLY,
@@ -735,6 +741,10 @@ typedef enum state
 	// CA_BOUNCE
 	S_PLAY_BOUNCE,
 	S_PLAY_BOUNCE_LANDING,
+
+	// CA2_GUNSLINGER
+	S_PLAY_CHARGE,
+	S_PLAY_FIRE,
 
 	// CA_TWINSPIN
 	S_PLAY_TWINSPIN,

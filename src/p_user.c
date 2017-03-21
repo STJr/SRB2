@@ -3775,10 +3775,9 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 				{
 					player->mo->momx = player->cmomx;
 					player->mo->momy = player->cmomy;
-					player->pflags |= PF_STARTDASH|PF_SPINNING;
+					player->pflags |= (PF_USEDOWN|PF_STARTDASH|PF_SPINNING);
 					player->dashspeed = player->mindash;
 					P_SetPlayerMobjState(player->mo, S_PLAY_SPINDASH);
-					player->pflags |= PF_USEDOWN;
 					if (!player->spectator)
 						S_StartSound(player->mo, sfx_s3kab); // Make the rev sound! Previously sfx_spndsh.
 				}
@@ -3809,15 +3808,97 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 					&& !player->climbing && !player->mo->momz && onground && (player->speed > FixedMul(5<<FRACBITS, player->mo->scale)
 						|| !canstand) && !(player->pflags & (PF_USEDOWN|PF_SPINNING)))
 				{
-					player->pflags |= PF_SPINNING;
+					player->pflags |= (PF_USEDOWN|PF_SPINNING);
 					P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 					if (!player->spectator)
 						S_StartSound(player->mo, sfx_spin);
-					player->pflags |= PF_USEDOWN;
+				}
+				else 
+				// Catapult the player from a spindash rev!
+				if (onground && !(player->pflags & PF_USEDOWN) && (player->pflags & PF_STARTDASH) && (player->pflags & PF_SPINNING))
+				{
+					player->pflags &= ~PF_STARTDASH;
+					if (player->powers[pw_carry] == CR_BRAKGOOP)
+						player->dashspeed = 0;
+
+					if (!((gametype == GT_RACE || gametype == GT_COMPETITION) && leveltime < 4*TICRATE))
+					{
+						if (player->dashspeed)
+						{
+							P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
+							P_InstaThrust(player->mo, player->mo->angle, FixedMul(player->dashspeed, player->mo->scale)); // catapult forward ho!!
+						}
+						else
+						{
+							P_SetPlayerMobjState(player->mo, S_PLAY_STND);
+							player->pflags &= ~PF_SPINNING;
+						}
+
+						if (!player->spectator)
+							S_StartSound(player->mo, sfx_zoom);
+					}
+
+					player->dashspeed = 0;
+				}
+				break;
+			case CA2_GUNSLINGER:
+				if ((cmd->buttons & BT_USE)
+					&& !player->mo->momz && onground
+						&& canstand)
+				{
+					if (!player->dashspeed)
+					{
+						player->mo->momx = player->cmomx;
+						player->mo->momy = player->cmomy;
+						player->pflags |= PF_USEDOWN;
+						player->dashspeed = player->mindash;
+						P_SetPlayerMobjState(player->mo, S_PLAY_CHARGE);
+						if (!player->spectator)
+							S_StartSound(player->mo, sfx_s3k5a); // Make the rev sound! Previously sfx_spndsh.
+					}
+					else if (player->dashspeed < player->maxdash)
+						player->dashspeed += FRACUNIT;
+					else if (player->mo->tics != -1)
+					{
+						player->mo->tics = -1;
+						player->mo->frame = 0;
+					}
+				}
+				else if (player->dashspeed && (player->pflags & PF_USEDOWN))
+				{
+					mobj_t *cork;
+					const boolean maxspeed = (player->dashspeed >= player->maxdash);
+
+					P_SetPlayerMobjState(player->mo, S_PLAY_FIRE);
+
+					if (maxspeed && P_LookForEnemies(player, false, true) && player->mo->tracer)
+					{
+						player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, player->mo->target->x, player->mo->target->y);
+						cork = P_SpawnMissile(player->mo, player->mo->tracer, player->spinitem);
+					}
+					else
+					{
+						fixed_t z = (player->mo->z + player->mo->height/2);
+						if ((cork = P_SpawnPointMissile(player->mo, player->mo->x + P_ReturnThrustX(NULL, player->mo->angle, FRACUNIT), player->mo->y + P_ReturnThrustY(NULL, player->mo->angle, FRACUNIT), z, player->spinitem, player->mo->x, player->mo->y, z)))
+						{
+							cork->flags &= ~MF_NOGRAVITY;
+							if (!maxspeed)
+								cork->flags |= MF_NOCLIPTHING;
+						}
+					}
+					if (cork)
+					{
+						cork->momx = FixedDiv(FixedMul(cork->momx, player->dashspeed), mobjinfo[player->spinitem].speed);
+						cork->momy = FixedDiv(FixedMul(cork->momy, player->dashspeed), mobjinfo[player->spinitem].speed);
+						if (player->mo->tracer)
+							cork->momz = ((player->mo->tracer->z - player->mo->z) / (P_AproxDistance(player->mo->tracer->x - player->mo->x, player->mo->tracer->y - player->mo->y) / player->dashspeed));
+					}
+					P_SetTarget(&player->mo->tracer, NULL);
+					player->dashspeed = 0;
 				}
 				break;
 			case CA2_MELEE: // Melee attack
-				if (!(player->panim == PA_ABILITY2) && (cmd->buttons & BT_USE)
+				if (player->panim != PA_ABILITY2 && (cmd->buttons & BT_USE)
 				&& !player->mo->momz && onground && !(player->pflags & PF_USEDOWN)
 				&& canstand)
 				{
@@ -3868,33 +3949,6 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 			player->mo->momx = player->cmomx;
 			player->mo->momy = player->cmomy;
 		}
-	}
-
-	// Catapult the player from a spindash rev!
-	if (onground && !(player->pflags & PF_USEDOWN) && (player->pflags & PF_STARTDASH) && (player->pflags & PF_SPINNING))
-	{
-		player->pflags &= ~PF_STARTDASH;
-		if (player->powers[pw_carry] == CR_BRAKGOOP)
-			player->dashspeed = 0;
-
-		if (!((gametype == GT_RACE || gametype == GT_COMPETITION) && leveltime < 4*TICRATE))
-		{
-			if (player->dashspeed)
-			{
-				P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
-				P_InstaThrust(player->mo, player->mo->angle, FixedMul(player->dashspeed, player->mo->scale)); // catapult forward ho!!
-			}
-			else
-			{
-				P_SetPlayerMobjState(player->mo, S_PLAY_STND);
-				player->pflags &= ~PF_SPINNING;
-			}
-
-			if (!player->spectator)
-				S_StartSound(player->mo, sfx_zoom);
-		}
-
-		player->dashspeed = 0;
 	}
 
 	if (onground && player->pflags & PF_STARTDASH)
@@ -4211,7 +4265,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 
 						if (player->charability == CA_HOMINGTHOK && !player->homing)
 						{
-							if (P_LookForEnemies(player, true))
+							if (P_LookForEnemies(player, true, false))
 							{
 								if (player->mo->tracer)
 									player->homing = 3*TICRATE;
@@ -4885,13 +4939,14 @@ static void P_3dMovement(player_t *player)
 		// Allow a bit of movement while spinning
 		if (player->pflags & PF_SPINNING)
 		{
-			if ((mforward && cmd->forwardmove > 0) || (mbackward && cmd->forwardmove < 0))
+			if ((mforward && cmd->forwardmove > 0) || (mbackward && cmd->forwardmove < 0)
+			|| (player->pflags & PF_STARTDASH))
 				movepushforward = 0;
-			else if (!(player->pflags & PF_STARTDASH))
-				movepushforward = FixedDiv(movepushforward, 16*FRACUNIT);
 			else
-				movepushforward = 0;
+				movepushforward = FixedDiv(movepushforward, 16*FRACUNIT);
 		}
+		else if (player->charability2 == CA2_GUNSLINGER && player->panim == PA_ABILITY2)
+			movepushforward = 0;
 
 		movepushforward = FixedMul(movepushforward, player->mo->scale);
 
@@ -4928,13 +4983,14 @@ static void P_3dMovement(player_t *player)
 			{
 				// Stupid little movement prohibitor hack
 				// that REALLY shouldn't belong in analog code.
-				if ((mforward && cmd->forwardmove > 0) || (mbackward && cmd->forwardmove < 0))
+				if ((mforward && cmd->forwardmove > 0) || (mbackward && cmd->forwardmove < 0)
+				|| (player->pflags & PF_STARTDASH))
 					movepushforward = 0;
-				else if (!(player->pflags & PF_STARTDASH))
-					movepushforward = FixedDiv(movepushforward, 16*FRACUNIT);
 				else
-					movepushforward = 0;
+					movepushforward = FixedDiv(movepushforward, 16*FRACUNIT);
 			}
+			else if (player->charability2 == CA2_GUNSLINGER && player->panim == PA_ABILITY2)
+				movepushforward = 0;
 
 			movepushsideangle = controldirection;
 
@@ -4964,11 +5020,13 @@ static void P_3dMovement(player_t *player)
 		// Allow a bit of movement while spinning
 		if (player->pflags & PF_SPINNING)
 		{
-			if (!(player->pflags & PF_STARTDASH))
-				movepushside = FixedDiv(movepushside,16*FRACUNIT);
-			else
+			if ((player->pflags & PF_STARTDASH))
 				movepushside = 0;
+			else
+				movepushside = FixedDiv(movepushside,16*FRACUNIT);
 		}
+		else if (player->charability2 == CA2_GUNSLINGER && player->panim == PA_ABILITY2)
+			movepushside = 0;
 
 		// Finally move the player now that his speed/direction has been decided.
 		movepushside = FixedMul(movepushside, player->mo->scale);
@@ -6555,6 +6613,7 @@ static void P_MovePlayer(player_t *player)
 	// Control relinquishing stuff!
 	if ((player->powers[pw_carry] == CR_BRAKGOOP)
 	|| (player->pflags & PF_GLIDING && player->skidtime)
+	|| (player->charability2 == CA2_GUNSLINGER && player->mo->state-states == S_PLAY_FIRE)
 	|| (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2))
 		player->pflags |= PF_FULLSTASIS;
 	else if (player->powers[pw_nocontrol])
@@ -7165,7 +7224,7 @@ static void P_MovePlayer(player_t *player)
 							case SH_ATTRACT:
 								player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
 								player->homing = 2;
-								if (P_LookForEnemies(player, false) && player->mo->tracer)
+								if (P_LookForEnemies(player, false, false) && player->mo->tracer)
 								{
 									player->pflags &= ~PF_NOJUMPDAMAGE;
 									P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
@@ -7812,8 +7871,9 @@ void P_NukeEnemies(mobj_t *inflictor, mobj_t *source, fixed_t radius)
 // P_LookForEnemies
 // Looks for something you can hit - Used for homing attack
 // If nonenemies is true, includes monitors and springs!
+// If abovehorizontal is true, you can look up, but your total vertical range is limited to compensate.
 //
-boolean P_LookForEnemies(player_t *player, boolean nonenemies)
+boolean P_LookForEnemies(player_t *player, boolean nonenemies, boolean abovehorizontal)
 {
 	mobj_t *mo;
 	thinker_t *think;
@@ -7845,13 +7905,30 @@ boolean P_LookForEnemies(player_t *player, boolean nonenemies)
 		if (mo->type == MT_DETON) // Don't be STUPID, Sonic!
 			continue;
 
-		if (((mo->z > player->mo->z+FixedMul(MAXSTEPMOVE, player->mo->scale)) && !(player->mo->eflags & MFE_VERTICALFLIP))
-		|| ((mo->z+mo->height < player->mo->z+player->mo->height-FixedMul(MAXSTEPMOVE, player->mo->scale)) && (player->mo->eflags & MFE_VERTICALFLIP))) // Reverse gravity check - Flame.
-			continue; // Don't home upwards!
+		{
+			fixed_t dist = P_AproxDistance(player->mo->x-mo->x, player->mo->y-mo->y);
 
-		if (P_AproxDistance(P_AproxDistance(player->mo->x-mo->x, player->mo->y-mo->y),
-			player->mo->z-mo->z) > FixedMul(RING_DIST, player->mo->scale))
-			continue; // out of range
+			if (abovehorizontal)
+			{
+				angle_t ang = R_PointToAngle2(0, player->mo->z, dist, mo->z) + ANGLE_45;
+				if (ang > ANGLE_90)
+					continue; // Don't home outside of desired angle!
+			}
+			else // Don't home upwards!
+			{
+				if (player->mo->eflags & MFE_VERTICALFLIP)
+				{
+					if (mo->z > player->mo->z+FixedMul(MAXSTEPMOVE, player->mo->scale))
+						continue;
+				}
+				else if (mo->z+mo->height < player->mo->z+player->mo->height-FixedMul(MAXSTEPMOVE, player->mo->scale))
+					continue;
+			}
+
+			if (P_AproxDistance(dist,
+				player->mo->z-mo->z) > FixedMul(RING_DIST, player->mo->scale))
+				continue; // out of range
+		}
 
 		if ((twodlevel || player->mo->flags2 & MF2_TWOD)
 		&& abs(player->mo->y-mo->y) > player->mo->radius)
