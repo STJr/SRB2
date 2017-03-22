@@ -174,7 +174,7 @@ fixed_t P_ReturnThrustX(mobj_t *mo, angle_t angle, fixed_t move);
 fixed_t P_ReturnThrustY(mobj_t *mo, angle_t angle, fixed_t move);
 void P_InstaThrustEvenIn2D(mobj_t *mo, angle_t angle, fixed_t move);
 
-boolean P_LookForEnemies(player_t *player, boolean nonenemies, boolean bullet);
+mobj_t *P_LookForEnemies(player_t *player, boolean nonenemies, boolean bullet);
 void P_NukeEnemies(mobj_t *inflictor, mobj_t *source, fixed_t radius);
 void P_HomingAttack(mobj_t *source, mobj_t *enemy); /// \todo doesn't belong in p_user
 boolean P_SuperReady(player_t *player);

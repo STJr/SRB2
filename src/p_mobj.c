@@ -504,7 +504,9 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		mobj->tics = st->tics;
 
 		// Adjust the player's animation speed to match their velocity.
-		if (!(disableSpeedAdjust || player->charflags & SF_NOSPEEDADJUST))
+		if (player->panim == PA_EDGE && (player->charflags & SF_FASTEDGE))
+			mobj->tics = 2;
+		else if (!(disableSpeedAdjust || player->charflags & SF_NOSPEEDADJUST))
 		{
 			fixed_t speed;// = FixedDiv(player->speed, FixedMul(mobj->scale, player->mo->movefactor));
 			if (player->panim == PA_FALL)
@@ -3263,8 +3265,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 					if (!(mo->player->pflags & PF_GLIDING))
 						mo->player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE);
 
-					mo->player->pflags &= ~(PF_THOKKED|PF_CANCARRY/*|PF_GLIDING*/);
-					mo->player->jumping = 0;
+					mo->player->pflags &= ~(PF_STARTJUMP|PF_THOKKED|PF_CANCARRY/*|PF_GLIDING*/);
 					mo->player->secondjump = 0;
 					mo->player->glidetime = 0;
 					mo->player->climbing = 0;
@@ -4253,8 +4254,8 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 	}
 	else
 	{
-		if (!(mobj->player->powers[pw_carry] == CR_NIGHTSMODE)) // "jumping" is used for drilling
-			mobj->player->jumping = 0;
+		if (!(mobj->player->powers[pw_carry] == CR_NIGHTSMODE)) // used for drilling
+			mobj->player->pflags &= ~PF_STARTJUMP;
 		mobj->player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE);
 		if (mobj->player->secondjump || mobj->player->powers[pw_tailsfly])
 		{
@@ -7001,6 +7002,23 @@ void P_MobjThinker(mobj_t *mobj)
 					P_RemoveMobj(mobj);
 					return;
 				}
+				break;
+			case MT_LOCKON:
+				if (!mobj->target)
+				{
+					P_RemoveMobj(mobj);
+					return;
+				}
+				mobj->x = mobj->target->x;
+				mobj->y = mobj->target->y;
+
+				mobj->destscale = mobj->target->destscale;
+				P_SetScale(mobj, mobj->target->scale);
+
+				if (!(mobj->target->eflags & MFE_VERTICALFLIP))
+					mobj->z = mobj->target->z + mobj->target->height + FixedMul(16*FRACUNIT, mobj->target->scale);
+				else
+					mobj->z = mobj->target->z - FixedMul(16*FRACUNIT, mobj->target->scale) - mobj->height;
 				break;
 			case MT_DROWNNUMBERS:
 				if (!mobj->target)

@@ -196,7 +196,6 @@ typedef struct
 	fixed_t playerspinheight;
 
 	fixed_t speed;
-	UINT8 jumping;
 	UINT8 secondjump;
 	UINT8 fly1;
 	tic_t glidetime;

@@ -579,9 +579,8 @@ static void P_DeNightserizePlayer(player_t *player)
 	player->powers[pw_carry] = CR_NONE;
 
 	player->powers[pw_underwater] = 0;
-	player->pflags &= ~(PF_USEDOWN|PF_JUMPDOWN|PF_ATTACKDOWN|PF_STARTDASH|PF_GLIDING|PF_JUMPED|PF_NOJUMPDAMAGE|PF_THOKKED|PF_SPINNING|PF_DRILLING|PF_TRANSFERTOCLOSEST);
+	player->pflags &= ~(PF_USEDOWN|PF_JUMPDOWN|PF_ATTACKDOWN|PF_STARTDASH|PF_GLIDING|PF_STARTJUMP|PF_JUMPED|PF_NOJUMPDAMAGE|PF_THOKKED|PF_SPINNING|PF_DRILLING|PF_TRANSFERTOCLOSEST);
 	player->secondjump = 0;
-	player->jumping = 0;
 	player->homing = 0;
 	player->climbing = 0;
 	player->mo->fuse = 0;
@@ -873,12 +872,11 @@ void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor)
 // Useful when you want to kill everything the player is doing.
 void P_ResetPlayer(player_t *player)
 {
-	player->pflags &= ~(PF_SPINNING|PF_STARTDASH|PF_JUMPED|PF_NOJUMPDAMAGE|PF_GLIDING|PF_THOKKED|PF_CANCARRY|PF_SHIELDABILITY|PF_BOUNCING);
+	player->pflags &= ~(PF_SPINNING|PF_STARTDASH|PF_STARTJUMP|PF_JUMPED|PF_NOJUMPDAMAGE|PF_GLIDING|PF_THOKKED|PF_CANCARRY|PF_SHIELDABILITY|PF_BOUNCING);
 
 	if (!(player->powers[pw_carry] == CR_NIGHTSMODE || player->powers[pw_carry] == CR_BRAKGOOP))
 		player->powers[pw_carry] = CR_NONE;
 
-	player->jumping = 0;
 	player->secondjump = 0;
 	player->glidetime = 0;
 	player->homing = 0;
@@ -2345,33 +2343,18 @@ static void P_DoPlayerHeadSigns(player_t *player)
 			}
 		}
 	}
-	else if (gametype == GT_CTF)
+	else if (gametype == GT_CTF && (player->gotflag & (GF_REDFLAG|GF_BLUEFLAG))) // If you have the flag (duh).
 	{
-		if (player->gotflag & (GF_REDFLAG|GF_BLUEFLAG)) // If you have the flag (duh).
+		// Spawn a got-flag message over the head of the player that
+		// has it (but not on your own screen if you have the flag).
+		if (splitscreen || player != &players[consoleplayer])
 		{
-			// Spawn a got-flag message over the head of the player that
-			// has it (but not on your own screen if you have the flag).
-			if (splitscreen || player != &players[consoleplayer])
-			{
-				if (player->gotflag & GF_REDFLAG)
-				{
-					if (!(player->mo->eflags & MFE_VERTICALFLIP))
-						P_SpawnMobj(player->mo->x+player->mo->momx, player->mo->y+player->mo->momy,
-							player->mo->z+P_GetPlayerHeight(player)+FixedMul(16*FRACUNIT, player->mo->scale)+player->mo->momz, MT_GOTFLAG);
-					else
-						P_SpawnMobj(player->mo->x+player->mo->momx, player->mo->y+player->mo->momy,
-							player->mo->z+player->mo->height-P_GetPlayerHeight(player)-mobjinfo[MT_GOTFLAG].height-FixedMul(16*FRACUNIT, player->mo->scale)+player->mo->momz, MT_GOTFLAG)->eflags |= MFE_VERTICALFLIP;
-				}
-				if (player->gotflag & GF_BLUEFLAG)
-				{
-					if (!(player->mo->eflags & MFE_VERTICALFLIP))
-						P_SpawnMobj(player->mo->x+player->mo->momx, player->mo->y+player->mo->momy,
-							player->mo->z+P_GetPlayerHeight(player)+FixedMul(16*FRACUNIT, player->mo->scale)+player->mo->momz, MT_GOTFLAG2);
-					else
-						P_SpawnMobj(player->mo->x+player->mo->momx, player->mo->y+player->mo->momy,
-							player->mo->z+player->mo->height-P_GetPlayerHeight(player)-mobjinfo[MT_GOTFLAG2].height-FixedMul(16*FRACUNIT, player->mo->scale)+player->mo->momz, MT_GOTFLAG2)->eflags |= MFE_VERTICALFLIP;
-				}
-			}
+			if (!(player->mo->eflags & MFE_VERTICALFLIP))
+				P_SpawnMobj(player->mo->x+player->mo->momx, player->mo->y+player->mo->momy,
+					player->mo->z+P_GetPlayerHeight(player)+FixedMul(16*FRACUNIT, player->mo->scale)+player->mo->momz, ((player->gotflag & GF_REDFLAG) ? MT_GOTREDFLAG : MT_GOTBLUEFLAG));
+			else
+				P_SpawnMobj(player->mo->x+player->mo->momx, player->mo->y+player->mo->momy,
+					player->mo->z+player->mo->height-P_GetPlayerHeight(player)-mobjinfo[MT_GOTREDFLAG].height-FixedMul(16*FRACUNIT, player->mo->scale)+player->mo->momz, ((player->gotflag & GF_REDFLAG) ? MT_GOTREDFLAG : MT_GOTBLUEFLAG))->eflags |= MFE_VERTICALFLIP; // yes, MT_GOTREDFLAG's height is used for both of them. Doesn't really matter - they should both always be the same height.
 		}
 	}
 }
@@ -3672,7 +3655,7 @@ void P_DoJump(player_t *player, boolean soundandstate)
 		if (player->mo->eflags & MFE_UNDERWATER)
 			player->mo->momz = FixedMul(player->mo->momz, FixedDiv(117*FRACUNIT, 200*FRACUNIT));
 
-		player->jumping = 1;
+		player->pflags |= PF_STARTJUMP;
 	}
 
 	factor = player->jumpfactor;
@@ -3849,43 +3832,60 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 				}
 				break;
 			case CA2_GUNSLINGER:
-				if ((cmd->buttons & BT_USE) && !(player->pflags & PF_USEDOWN)
-					&& !player->mo->momz && onground && !player->weapondelay
-						&& canstand)
+				if (!player->mo->momz && onground && !player->weapondelay && canstand)
 				{
-					mobj_t *bullet;
-
-					P_SetPlayerMobjState(player->mo, S_PLAY_FIRE);
-
-#define zpos(posmo) (posmo->z + (posmo->height - mobjinfo[player->revitem].height)/2)
-					if (P_LookForEnemies(player, false, true) && player->mo->tracer)
-					{
-						bullet = P_SpawnPointMissile(player->mo, player->mo->tracer->x, player->mo->tracer->y, zpos(player->mo->tracer), player->revitem, player->mo->x, player->mo->y, zpos(player->mo));
-						if (!demoplayback || P_AnalogMove(player))
-						{
-							if (player == &players[consoleplayer])
-								localangle = player->mo->angle;
-							else if (player == &players[secondarydisplayplayer])
-								localangle2 = player->mo->angle;
-						}
-					}
+					if (player->speed > FixedMul(10<<FRACBITS, player->mo->scale))
+					{}
 					else
 					{
-						bullet = P_SpawnPointMissile(player->mo, player->mo->x + P_ReturnThrustX(NULL, player->mo->angle, FRACUNIT), player->mo->y + P_ReturnThrustY(NULL, player->mo->angle, FRACUNIT), zpos(player->mo), player->revitem, player->mo->x, player->mo->y, zpos(player->mo));
-						if (bullet)
+						mobj_t *lockon = P_LookForEnemies(player, false, true);
+						if (lockon)
 						{
-							bullet->flags &= ~MF_NOGRAVITY;
-							bullet->momx >>= 1;
-							bullet->momy >>= 1;
+							if (player == &players[consoleplayer] || player == &players[secondarydisplayplayer] || player == &players[displayplayer]) // Only display it on your own view.
+							{
+								mobj_t *visual = P_SpawnMobj(lockon->x, lockon->y, lockon->z, MT_LOCKON);
+								visual->eflags |= (lockon->eflags & MFE_VERTICALFLIP);
+								visual->target = lockon;
+							}
 						}
-					}
+						if ((cmd->buttons & BT_USE) && !(player->pflags & PF_USEDOWN))
+						{
+							mobj_t *bullet;
+
+							P_SetPlayerMobjState(player->mo, S_PLAY_FIRE);
+
+#define zpos(posmo) (posmo->z + (posmo->height - mobjinfo[player->revitem].height)/2)
+							if (lockon)
+							{
+								player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, lockon->x, lockon->y);
+								bullet = P_SpawnPointMissile(player->mo, lockon->x, lockon->y, zpos(lockon), player->revitem, player->mo->x, player->mo->y, zpos(player->mo));
+								if (!demoplayback || P_AnalogMove(player))
+								{
+									if (player == &players[consoleplayer])
+										localangle = player->mo->angle;
+									else if (player == &players[secondarydisplayplayer])
+										localangle2 = player->mo->angle;
+								}
+							}
+							else
+							{
+								bullet = P_SpawnPointMissile(player->mo, player->mo->x + P_ReturnThrustX(NULL, player->mo->angle, FRACUNIT), player->mo->y + P_ReturnThrustY(NULL, player->mo->angle, FRACUNIT), zpos(player->mo), player->revitem, player->mo->x, player->mo->y, zpos(player->mo));
+								if (bullet)
+								{
+									bullet->flags &= ~MF_NOGRAVITY;
+									bullet->momx >>= 1;
+									bullet->momy >>= 1;
+								}
+							}
 #undef zpos
 
-					P_SetTarget(&player->mo->tracer, NULL);
-					player->mo->momx >>= 1;
-					player->mo->momy >>= 1;
-					player->pflags |= PF_USEDOWN;
-					P_SetWeaponDelay(player, TICRATE/2);
+							P_SetTarget(&player->mo->tracer, NULL);
+							player->mo->momx >>= 1;
+							player->mo->momy >>= 1;
+							player->pflags |= PF_USEDOWN;
+							P_SetWeaponDelay(player, TICRATE/2);
+						}
+					}
 				}
 				break;
 			case CA2_MELEE: // Melee attack
@@ -3899,7 +3899,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 					if ((player->charability == CA_TWINSPIN) && (player->speed > FixedMul(player->runspeed, player->mo->scale)))
 					{
 						P_DoJump(player, false);
-						player->jumping = 0;
+						player->pflags &= ~PF_STARTJUMP;
 						player->mo->momz = FixedMul(player->mo->momz, 3*FRACUNIT/2); // NOT 1.5 times the jump height, but 2.25 times.
 						P_SetPlayerMobjState(player->mo, S_PLAY_TWINSPIN);
 						S_StartSound(player->mo, sfx_s3k8b);
@@ -3970,10 +3970,9 @@ void P_DoJumpShield(player_t *player)
 
 	player->pflags &= ~PF_JUMPED;
 	P_DoJump(player, false);
-	player->jumping = 0;
 	player->secondjump = 0;
 	player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
-	player->pflags &= ~(PF_SPINNING|PF_BOUNCING);
+	player->pflags &= ~(PF_STARTJUMP|PF_SPINNING|PF_BOUNCING);
 	if (electric)
 	{
 		mobj_t *spark;
@@ -4013,7 +4012,7 @@ void P_DoBubbleBounce(player_t *player)
 	if (player->charflags & SF_NOJUMPSPIN)
 		P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
 	player->pflags |= PF_THOKKED;
-	player->jumping = 0;
+	player->pflags &= ~PF_STARTJUMP;
 	player->secondjump = UINT8_MAX;
 	player->mo->momz = FixedMul(player->mo->momz, 5*FRACUNIT/4);
 }
@@ -4036,7 +4035,7 @@ void P_DoAbilityBounce(player_t *player, boolean changemomz)
 		else if (player->mo->eflags & MFE_UNDERWATER)
 			prevmomz /= 2;
 		P_DoJump(player, false);
-		player->jumping = 0;
+		player->pflags &= ~(PF_STARTJUMP|PF_JUMPED);
 		player->mo->momz = (FixedMul(player->mo->momz, 3*FRACUNIT/2) + prevmomz)/2;
 	}
 	S_StartSound(player->mo, sfx_boingf);
@@ -4258,14 +4257,19 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 
 						if (player->charability == CA_HOMINGTHOK && !player->homing)
 						{
-							player->pflags &= ~PF_NOJUMPDAMAGE;
-							if (P_LookForEnemies(player, true, false) && player->mo->tracer)
+							mobj_t *lockon = P_LookForEnemies(player, true, false);
+							if (lockon)
+							{
+								P_SetTarget(&player->mo->target, P_SetTarget(&player->mo->tracer, lockon));
+								player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, lockon->x, lockon->y);
 								player->homing = 3*TICRATE;
+							}
 							else
 							{
 								P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
 								player->pflags &= ~PF_JUMPED;
 							}
+							player->pflags &= ~PF_NOJUMPDAMAGE;
 						}
 
 						player->pflags &= ~(PF_SPINNING|PF_STARTDASH);
@@ -4451,10 +4455,10 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 		}
 
 		// If letting go of the jump button while still on ascent, cut the jump height.
-		if (player->pflags & PF_JUMPED && P_MobjFlip(player->mo)*player->mo->momz > 0 && player->jumping == 1)
+		if (((player->pflags & (PF_JUMPED|PF_STARTJUMP)) == (PF_JUMPED|PF_STARTJUMP)) && (P_MobjFlip(player->mo)*player->mo->momz > 0))
 		{
 			player->mo->momz >>= 1;
-			player->jumping = 0;
+			player->pflags &= ~PF_STARTJUMP;
 		}
 	}
 }
@@ -6042,21 +6046,19 @@ static void P_NiGHTSMovement(player_t *player)
 
 	if (player->bumpertime)
 	{
-		player->jumping = 1;
-		player->pflags |= PF_DRILLING;
+		player->pflags |= (PF_STARTJUMP|PF_DRILLING);
 		newangle = (INT16)player->flyangle;
 	}
 	else if (cmd->buttons & BT_JUMP && player->drillmeter && player->drilldelay == 0)
 	{
-		if (!player->jumping)
+		if (!(player->pflags & PF_STARTJUMP))
 			firstdrill = true;
 
-		player->jumping = 1;
-		player->pflags |= PF_DRILLING;
+		player->pflags |= (PF_STARTJUMP|PF_DRILLING);
 	}
 	else
 	{
-		player->jumping = 0;
+		player->pflags &= ~PF_STARTJUMP;
 
 		if (cmd->sidemove != 0)
 			moved = true;
@@ -6816,8 +6818,7 @@ static void P_MovePlayer(player_t *player)
 	if (onground && player->pflags & PF_JUMPED && !(player->pflags & PF_GLIDING)
 	&& P_MobjFlip(player->mo)*player->mo->momz < 0)
 	{
-		player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE|PF_THOKKED|PF_SHIELDABILITY);
-		player->jumping = 0;
+		player->pflags &= ~(PF_STARTJUMP|PF_JUMPED|PF_NOJUMPDAMAGE|PF_THOKKED|PF_SHIELDABILITY);
 		player->secondjump = 0;
 		P_SetPlayerMobjState(player->mo, S_PLAY_STND);
 	}
@@ -7177,8 +7178,7 @@ static void P_MovePlayer(player_t *player)
 					}
 
 					player->mo->momz = 0;
-					player->pflags &= ~PF_SPINNING;
-					player->jumping = 0; // don't cut jump height after bouncing off something
+					player->pflags &= ~(PF_STARTJUMP|PF_SPINNING);
 				}
 			}
 			else
@@ -7214,15 +7214,20 @@ static void P_MovePlayer(player_t *player)
 							case SH_ATTRACT:
 								player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
 								player->homing = 2;
-								if (P_LookForEnemies(player, false, false) && player->mo->tracer)
 								{
-									player->pflags &= ~PF_NOJUMPDAMAGE;
-									P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
-									S_StartSound(player->mo, sfx_s3k40);
-									player->homing = 3*TICRATE;
+									mobj_t *lockon = P_LookForEnemies(player, false, false);
+									if (lockon)
+									{
+										P_SetTarget(&player->mo->target, P_SetTarget(&player->mo->tracer, lockon));
+										player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, lockon->x, lockon->y);
+										player->pflags &= ~PF_NOJUMPDAMAGE;
+										P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
+										S_StartSound(player->mo, sfx_s3k40);
+										player->homing = 3*TICRATE;
+									}
+									else
+										S_StartSound(player->mo, sfx_s3ka6);
 								}
-								else
-									S_StartSound(player->mo, sfx_s3ka6);
 								break;
 							// Elemental/Bubblewrap shield activation
 							case SH_ELEMENTAL:
@@ -7864,7 +7869,7 @@ void P_NukeEnemies(mobj_t *inflictor, mobj_t *source, fixed_t radius)
 // If bullet is true, you can look up and the distance is further,
 // but your total angle span you can look is limited to compensate.
 //
-boolean P_LookForEnemies(player_t *player, boolean nonenemies, boolean bullet)
+mobj_t *P_LookForEnemies(player_t *player, boolean nonenemies, boolean bullet)
 {
 	mobj_t *mo;
 	thinker_t *think;
@@ -7880,7 +7885,8 @@ boolean P_LookForEnemies(player_t *player, boolean nonenemies, boolean bullet)
 			continue; // not a mobj thinker
 
 		mo = (mobj_t *)think;
-		if (!(mo->flags & targetmask))
+		if (!(mo->flags & targetmask
+		|| mo->type == MT_FAKEMOBILE)) // hehehehe
 			continue; // not a valid target
 
 		if (mo->health <= 0) // dead
@@ -7903,7 +7909,7 @@ boolean P_LookForEnemies(player_t *player, boolean nonenemies, boolean bullet)
 			dist = P_AproxDistance(player->mo->x-mo->x, player->mo->y-mo->y);
 			if (bullet)
 			{
-				if ((R_PointToAngle2(0, 0, dist, zdist) + ANGLE_45) > ANGLE_90)
+				if ((R_PointToAngle2(0, 0, dist, zdist) + span) > span*2)
 					continue; // Don't home outside of desired angle!
 			}
 			else // Don't home upwards!
@@ -7942,15 +7948,7 @@ boolean P_LookForEnemies(player_t *player, boolean nonenemies, boolean bullet)
 		closestdist = dist;
 	}
 
-	if (closestmo)
-	{
-		// Found a target monster
-		P_SetTarget(&player->mo->target, P_SetTarget(&player->mo->tracer, closestmo));
-		player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, closestmo->x, closestmo->y);
-		return true;
-	}
-
-	return false;
+	return closestmo;
 }
 
 void P_HomingAttack(mobj_t *source, mobj_t *enemy) // Home in on your target

@@ -1060,7 +1060,7 @@ static int lib_pLookForEnemies(lua_State *L)
 	INLEVEL
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
-	lua_pushboolean(L, P_LookForEnemies(player, nonenemies, bullet));
+	LUA_PushUserdata(L, P_LookForEnemies(player, nonenemies, bullet), META_MOBJ);
 	return 1;
 }
 

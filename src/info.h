@@ -450,7 +450,7 @@ typedef enum sprite
 	SPR_ARMB, // Armageddon Shield Ring, Back
 	SPR_WIND, // Whirlwind Shield Orb
 	SPR_MAGN, // Attract Shield Orb
-	SPR_ELEM, // Elemental Shield Orb and Fire
+	SPR_ELEM, // Elemental Shield Orb
 	SPR_FORC, // Force Shield Orb
 	SPR_PITY, // Pity Shield Orb
 	SPR_FIRS, // Flame Shield Orb
@@ -507,8 +507,11 @@ typedef enum sprite
 	// Game Indicators
 	SPR_SCOR, // Score logo
 	SPR_DRWN, // Drowning Timer
+	SPR_LCKN, // Target
 	SPR_TTAG, // Tag Sign
 	SPR_GFLG, // Got Flag sign
+
+	SPR_CORK,
 
 	// Ring Weapons
 	SPR_RRNG, // Red Ring
@@ -2717,14 +2720,18 @@ typedef enum state
 	S_FOUR2,
 	S_FIVE2,
 
+	S_LOCKON,
+
 	// Tag Sign
-	S_TTAG1,
+	S_TTAG,
 
 	// Got Flag Sign
-	S_GOTFLAG1,
-	S_GOTFLAG2,
-	S_GOTFLAG3,
-	S_GOTFLAG4,
+	S_GOTREDFLAG1,
+	S_GOTREDFLAG2,
+	S_GOTBLUEFLAG1,
+	S_GOTBLUEFLAG2,
+
+	S_CORK,
 
 	// Red Ring
 	S_RRNG1,
@@ -3534,9 +3541,10 @@ typedef enum mobj_type
 	MT_SCORE, // score logo
 	MT_DROWNNUMBERS, // Drowning Timer
 	MT_GOTEMERALD, // Chaos Emerald (intangible)
+	MT_LOCKON, // Target
 	MT_TAG, // Tag Sign
-	MT_GOTFLAG, // Got Flag sign
-	MT_GOTFLAG2, // Got Flag sign
+	MT_GOTREDFLAG, // Got Flag sign
+	MT_GOTBLUEFLAG, // Got Flag sign
 
 	// Ambient Sounds
 	MT_AWATERA, // Ambient Water Sound 1
@@ -3549,6 +3557,8 @@ typedef enum mobj_type
 	MT_AWATERH, // Ambient Water Sound 8
 	MT_RANDOMAMBIENT,
 	MT_RANDOMAMBIENT2,
+
+	MT_CORK,
 
 	// Ring Weapons
 	MT_REDRING,

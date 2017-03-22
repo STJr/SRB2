@@ -45,6 +45,7 @@ typedef enum
 	SF_MARIODAMAGE      = SF_NOJUMPDAMAGE|SF_STOMPDAMAGE, // The Mario method of being able to damage enemies, etc.
 	SF_MACHINE          = 1<<10, // Beep boop. Are you a robot?
 	SF_DASHMODE         = 1<<11, // Sonic Advance 2 style top speed increase?
+	SF_FASTEDGE         = 1<<12, // Faster edge teeter?
 	// free up to and including 1<<31
 } skinflags_t;
 
@@ -119,9 +120,8 @@ typedef enum
 	// Did you get a time-over?
 	PF_TIMEOVER = 1<<10,
 
-	PF_TEMPSLOT1 = 1<<11,
-
 	// Character action status
+	PF_STARTJUMP = 1<<11,
 	PF_JUMPED    = 1<<12,
 	PF_SPINNING  = 1<<13,
 	PF_STARTDASH = 1<<14,
@@ -133,7 +133,8 @@ typedef enum
 	// Sliding (usually in water) like Labyrinth/Oil Ocean
 	PF_SLIDING   = 1<<17,
 
-	PF_TEMPSLOT2         = 1<<18,
+	// Bouncing
+	PF_BOUNCING  = 1<<18,
 
 	/*** NIGHTS STUFF ***/
 	PF_TRANSFERTOCLOSEST = 1<<19,
@@ -158,10 +159,7 @@ typedef enum
 	// Jump damage?
 	PF_NOJUMPDAMAGE   = 1<<29,
 
-	// Bouncing
-	PF_BOUNCING          = 1<<30
-
-	// 1<<31 is free
+	// up to 1<<31 is free
 } pflags_t;
 
 typedef enum
@@ -381,7 +379,6 @@ typedef struct player_s
 	UINT8 gotcontinue; // Got continue from this stage?
 
 	fixed_t speed; // Player's speed (distance formula of MOMX and MOMY values)
-	UINT8 jumping; // Holding down jump button
 	UINT8 secondjump; // Jump counter
 
 	UINT8 fly1; // Tails flying

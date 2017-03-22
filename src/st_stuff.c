@@ -586,7 +586,7 @@ static void ST_drawDebugInfo(void)
 
 		// Flags
 		V_DrawRightAlignedString(304-92, height - 72, V_MONOSPACE, "PF:");
-		V_DrawString(304-90,             height - 72, (stplyr->jumping) ? V_GREENMAP : V_REDMAP, "JM");
+		V_DrawString(304-90,             height - 72, (stplyr->pflags & PF_STARTJUMP) ? V_GREENMAP : V_REDMAP, "SJ");
 		V_DrawString(304-72,             height - 72, (stplyr->pflags & PF_JUMPED) ? V_GREENMAP : V_REDMAP, "JD");
 		V_DrawString(304-54,             height - 72, (stplyr->pflags & PF_SPINNING) ? V_GREENMAP : V_REDMAP, "SP");
 		V_DrawString(304-36,             height - 72, (stplyr->pflags & PF_STARTDASH) ? V_GREENMAP : V_REDMAP, "ST");

@@ -5910,14 +5910,18 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FOUR2",
 	"S_FIVE2",
 
+	"S_LOCKON",
+
 	// Tag Sign
-	"S_TTAG1",
+	"S_TTAG",
 
 	// Got Flag Sign
-	"S_GOTFLAG1",
-	"S_GOTFLAG2",
-	"S_GOTFLAG3",
-	"S_GOTFLAG4",
+	"S_GOTREDFLAG1",
+	"S_GOTREDFLAG2",
+	"S_GOTBLUEFLAG1",
+	"S_GOTBLUEFLAG2",
+
+	"S_CORK",
 
 	// Red Ring
 	"S_RRNG1",
@@ -6708,9 +6712,10 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_SCORE", // score logo
 	"MT_DROWNNUMBERS", // Drowning Timer
 	"MT_GOTEMERALD", // Chaos Emerald (intangible)
+	"MT_LOCKON", // Target
 	"MT_TAG", // Tag Sign
-	"MT_GOTFLAG", // Got Flag sign
-	"MT_GOTFLAG2", // Got Flag sign
+	"MT_GOTREDFLAG", // Got Flag sign
+	"MT_GOTBLUEFLAG", // Got Flag sign
 
 	// Ambient Sounds
 	"MT_AWATERA", // Ambient Water Sound 1
@@ -6723,6 +6728,8 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_AWATERH", // Ambient Water Sound 8
 	"MT_RANDOMAMBIENT",
 	"MT_RANDOMAMBIENT2",
+
+	"MT_CORK",
 
 	// Ring Weapons
 	"MT_REDRING",
@@ -6947,9 +6954,8 @@ static const char *const PLAYERFLAG_LIST[] = {
 	// Did you get a time-over?
 	"TIMEOVER",
 
-	"TEMPSLOT1",
-
 	// Character action status
+	"STARTJUMP",
 	"JUMPED",
 	"SPINNING",
 	"STARTDASH",
@@ -6961,7 +6967,8 @@ static const char *const PLAYERFLAG_LIST[] = {
 	// Sliding (usually in water) like Labyrinth/Oil Ocean
 	"SLIDING",
 
-	"TEMPSLOT2",
+	// Bouncing
+	"BOUNCING",
 
 	/*** NIGHTS STUFF ***/
 	"TRANSFERTOCLOSEST",
@@ -6979,7 +6986,6 @@ static const char *const PLAYERFLAG_LIST[] = {
 	"CANCARRY", // Can carry?
 	"SHIELDABILITY", // Thokked with shield ability
 	"NOJUMPDAMAGE", // No jump damage
-	"BOUNCING",
 
 	NULL // stop loop here.
 };
@@ -7381,6 +7387,7 @@ struct {
 	{"SF_MARIODAMAGE",SF_MARIODAMAGE},
 	{"SF_MACHINE",SF_MACHINE},
 	{"SF_DASHMODE",SF_DASHMODE},
+	{"SF_FASTEDGE",SF_FASTEDGE},
 
 	// Character abilities!
 	// Primary

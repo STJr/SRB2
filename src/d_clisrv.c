@@ -552,7 +552,6 @@ static inline void resynch_write_player(resynch_pak *rsp, const size_t i)
 	rsp->playerspinheight = (fixed_t)LONG(players[i].spinheight);
 
 	rsp->speed = (fixed_t)LONG(players[i].speed);
-	rsp->jumping = players[i].jumping;
 	rsp->secondjump = players[i].secondjump;
 	rsp->fly1 = players[i].fly1;
 	rsp->glidetime = (tic_t)LONG(players[i].glidetime);
@@ -682,7 +681,6 @@ static void resynch_read_player(resynch_pak *rsp)
 	players[i].spinheight = (fixed_t)LONG(rsp->playerspinheight);
 
 	players[i].speed = (fixed_t)LONG(rsp->speed);
-	players[i].jumping = rsp->jumping;
 	players[i].secondjump = rsp->secondjump;
 	players[i].fly1 = rsp->fly1;
 	players[i].glidetime = (tic_t)LONG(rsp->glidetime);
