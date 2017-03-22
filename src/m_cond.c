@@ -929,7 +929,7 @@ UINT8 M_CheckLevelEmblems(void)
 	// Update Score, Time, Rings emblems
 	for (i = 0; i < numemblems; ++i)
 	{
-		if (emblemlocations[i].type <= ET_SKIN || emblemlocations[i].collected)
+		if (emblemlocations[i].type <= ET_SKIN || emblemlocations[i].type == ET_MAP || emblemlocations[i].collected)
 			continue;
 
 		levelnum = emblemlocations[i].level;
@@ -954,6 +954,45 @@ UINT8 M_CheckLevelEmblems(void)
 				break;
 			default: // unreachable but shuts the compiler up.
 				continue;
+		}
+
+		emblemlocations[i].collected = res;
+		if (res)
+			++somethingUnlocked;
+	}
+	return somethingUnlocked;
+}
+
+UINT8 M_CompletionEmblems(void) // Bah! Duplication! :/
+{
+	INT32 i;
+	INT32 embtype;
+	INT16 levelnum;
+	UINT8 res;
+	UINT8 somethingUnlocked = 0;
+
+	for (i = 0; i < numemblems; ++i)
+	{
+		if (emblemlocations[i].type != ET_MAP || emblemlocations[i].collected)
+			continue;
+
+		levelnum = emblemlocations[i].level;
+		embtype = emblemlocations[i].var;
+
+		switch (embtype)
+		{
+			case 1: // Requires map to be beaten with all emeralds
+				res = ((mapvisited[levelnum - 1] & MV_ALLEMERALDS) == MV_ALLEMERALDS);
+				break;
+			case 2: // Requires map to be beaten in Ultimate mode
+				res = ((mapvisited[levelnum - 1] & MV_ULTIMATE) == MV_ULTIMATE);
+				break;
+			case 3: // Requires map to be beaten with a perfect bonus
+				res = ((mapvisited[levelnum - 1] & MV_PERFECT) == MV_PERFECT);
+				break;
+			default: // Requires map to be beaten, no special requirements
+				res = ((mapvisited[levelnum - 1] & MV_BEATEN) == MV_BEATEN);
+				break;
 		}
 
 		emblemlocations[i].collected = res;

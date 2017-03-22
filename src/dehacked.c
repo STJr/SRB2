@@ -2277,6 +2277,8 @@ static void reademblemdata(MYFILE *f, INT32 num)
 					emblemlocations[num-1].type = ET_NGRADE;
 				else if (fastcmp(word2, "NTIME"))
 					emblemlocations[num-1].type = ET_NTIME;
+				else if (fastcmp(word2, "MAP"))
+					emblemlocations[num-1].type = ET_MAP;
 				else
 					emblemlocations[num-1].type = (UINT8)value;
 			}

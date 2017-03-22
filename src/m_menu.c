@@ -2940,6 +2940,8 @@ static void M_DrawMapEmblems(INT32 mapnum, INT32 x, INT32 y)
 				curtype = 1; break;
 			case ET_NGRADE: case ET_NTIME:
 				curtype = 2; break;
+			case ET_MAP:
+				curtype = 3; break;
 			default:
 				curtype = 0; break;
 		}
