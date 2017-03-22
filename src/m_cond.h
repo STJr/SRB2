@@ -75,6 +75,11 @@ typedef struct
 #define ET_NTIME  6
 #define ET_MAP    7
 
+// Map emblem flags
+#define ME_ALLEMERALDS 1
+#define ME_ULTIMATE    2
+#define ME_PERFECT     4
+
 typedef struct
 {
 	UINT8 type;      ///< Emblem type

@@ -963,7 +963,7 @@ UINT8 M_CheckLevelEmblems(void)
 	return somethingUnlocked;
 }
 
-UINT8 M_CompletionEmblems(void) // Bah! Duplication! :/
+UINT8 M_CompletionEmblems(void) // Bah! Duplication sucks, but it's for a separate print when awarding emblems and it's sorta different enough.
 {
 	INT32 i;
 	INT32 embtype;
@@ -978,23 +978,20 @@ UINT8 M_CompletionEmblems(void) // Bah! Duplication! :/
 
 		levelnum = emblemlocations[i].level;
 		embtype = emblemlocations[i].var;
-
-		switch (embtype)
-		{
-			case 1: // Requires map to be beaten with all emeralds
-				res = ((mapvisited[levelnum - 1] & MV_ALLEMERALDS) == MV_ALLEMERALDS);
-				break;
-			case 2: // Requires map to be beaten in Ultimate mode
-				res = ((mapvisited[levelnum - 1] & MV_ULTIMATE) == MV_ULTIMATE);
-				break;
-			case 3: // Requires map to be beaten with a perfect bonus
-				res = ((mapvisited[levelnum - 1] & MV_PERFECT) == MV_PERFECT);
-				break;
-			default: // Requires map to be beaten, no special requirements
-				res = ((mapvisited[levelnum - 1] & MV_BEATEN) == MV_BEATEN);
-				break;
-		}
-
+		
+		UINT8 flags = MV_BEATEN;
+		
+		if (embtype & ME_ALLEMERALDS)
+			flags |= MV_ALLEMERALDS;
+		
+		if (embtype & ME_ULTIMATE)
+			flags |= MV_ULTIMATE;
+		
+		if (embtype & ME_PERFECT)
+			flags |= MV_PERFECT;
+		
+		res = ((mapvisited[levelnum - 1] & flags) == flags);
+		
 		emblemlocations[i].collected = res;
 		if (res)
 			++somethingUnlocked;
