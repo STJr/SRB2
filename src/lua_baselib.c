@@ -449,6 +449,28 @@ static int lib_pIsValidSprite2(lua_State *L)
 	return 1;
 }
 
+// P_SpawnLockOn doesn't exist either, but we want to expose making a local mobj without encouraging hacks.
+
+static int lib_pSpawnLockOn(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	mobj_t *lockon = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
+	statenum_t state = luaL_checkinteger(L, 3);
+	NOHUD
+	INLEVEL
+	if (!lockon)
+		return LUA_ErrInvalid(L, "mobj_t");
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	if (player == &players[consoleplayer] || player == &players[secondarydisplayplayer] || player == &players[displayplayer]) // Only display it on your own view.
+	{
+		mobj_t *visual = P_SpawnMobj(lockon->x, lockon->y, lockon->z, MT_LOCKON); // positioning, flip handled in P_SceneryThinker
+		visual->target = lockon;
+		P_SetMobjStateNF(visual, state);
+	}
+	return 0;
+}
+
 static int lib_pSpawnMissile(lua_State *L)
 {
 	mobj_t *source = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
@@ -2328,6 +2350,7 @@ static luaL_Reg lib[] = {
 	{"P_SpawnMobj",lib_pSpawnMobj},
 	{"P_RemoveMobj",lib_pRemoveMobj},
 	{"P_IsValidSprite2", lib_pIsValidSprite2},
+	{"P_SpawnLockOn", lib_pSpawnLockOn},
 	{"P_SpawnMissile",lib_pSpawnMissile},
 	{"P_SpawnXYZMissile",lib_pSpawnXYZMissile},
 	{"P_SpawnPointMissile",lib_pSpawnPointMissile},

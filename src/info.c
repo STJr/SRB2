@@ -2530,15 +2530,15 @@ state_t states[NUMSTATES] =
 	{SPR_DRWN, 10, 40, {NULL}, 0, 0, S_NULL}, // S_FOUR2
 	{SPR_DRWN, 11, 40, {NULL}, 0, 0, S_NULL}, // S_FIVE2
 
-	{SPR_LCKN, FF_FULLBRIGHT, 2, {NULL}, 0, 0, S_NULL}, // S_LOCKON
+	{SPR_LCKN,   FF_FULLBRIGHT, 2, {NULL}, 0, 0, S_NULL}, // S_LOCKON1
+	{SPR_LCKN, 1|FF_FULLBRIGHT, 2, {NULL}, 0, 0, S_NULL}, // S_LOCKON2
 
 	{SPR_TTAG, FF_FULLBRIGHT, 2, {NULL}, 0, 0, S_NULL}, // S_TTAG
 
 	// CTF Sign
-	{SPR_GFLG, 0, 1, {NULL}, 0, 0, S_GOTREDFLAG2}, // S_GOTREDFLAG1
-	{SPR_GFLG, 1, 1, {NULL}, 0, 0, S_NULL},     // S_GOTREDFLAG2
-	{SPR_GFLG, 0, 1, {NULL}, 0, 0, S_GOTBLUEFLAG2}, // S_GOTBLUEFLAG1
-	{SPR_GFLG, 2, 1, {NULL}, 0, 0, S_NULL},     // S_GOTBLUEFLAG2
+	{SPR_GFLG,   FF_FULLBRIGHT, 2, {NULL}, 0, 0, S_NULL}, // S_GOTFLAG
+	{SPR_GFLG, 1|FF_FULLBRIGHT, 2, {NULL}, 0, 0, S_NULL}, // S_GOTREDFLAG
+	{SPR_GFLG, 2|FF_FULLBRIGHT, 2, {NULL}, 0, 0, S_NULL}, // S_GOTBLUEFLAG
 
 	{SPR_CORK, 0, -1, {NULL}, 0, 0, S_NULL}, // S_CORK
 
@@ -12068,7 +12068,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_LOCKON
 		-1,             // doomednum
-		S_LOCKON,       // spawnstate
+		S_LOCKON1,       // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -12089,7 +12089,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		16,             // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_NOBLOCKMAP|MF_NOCLIP|MF_NOGRAVITY|MF_SCENERY, // flags
+		MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_SCENERY, // flags
 		S_NULL          // raisestate
 	},
 
@@ -12120,36 +12120,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
-	{           // MT_GOTREDFLAG
+	{           // MT_GOTFLAG
 		-1,             // doomednum
-		S_GOTREDFLAG1,  // spawnstate
-		1000,           // spawnhealth
-		S_NULL,         // seestate
-		sfx_None,       // seesound
-		8,              // reactiontime
-		sfx_None,       // attacksound
-		S_NULL,         // painstate
-		0,              // painchance
-		sfx_None,       // painsound
-		S_NULL,         // meleestate
-		S_NULL,         // missilestate
-		S_NULL,         // deathstate
-		S_NULL,         // xdeathstate
-		sfx_None,       // deathsound
-		8,              // speed
-		64*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
-		111,            // display offset
-		16,             // mass
-		0,              // damage
-		sfx_None,       // activesound
-		MF_NOBLOCKMAP|MF_NOCLIP|MF_NOGRAVITY|MF_SCENERY, // flags
-		S_NULL          // raisestate
-	},
-
-	{           // MT_GOTBLUEFLAG2
-		-1,             // doomednum
-		S_GOTBLUEFLAG1, // spawnstate
+		S_GOTFLAG,      // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -12457,7 +12430,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_CORK,         // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
-		sfx_itemup,     // seesound
+		sfx_corkp,      // seesound
 		0,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
@@ -12467,7 +12440,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // missilestate
 		S_SMOKE1,       // deathstate
 		S_NULL,         // xdeathstate
-		sfx_itemup,     // deathsound
+		sfx_corkh,      // deathsound
 		60*FRACUNIT,    // speed
 		16*FRACUNIT,    // radius
 		16*FRACUNIT,    // height

@@ -2349,12 +2349,17 @@ static void P_DoPlayerHeadSigns(player_t *player)
 		// has it (but not on your own screen if you have the flag).
 		if (splitscreen || player != &players[consoleplayer])
 		{
-			if (!(player->mo->eflags & MFE_VERTICALFLIP))
-				P_SpawnMobj(player->mo->x+player->mo->momx, player->mo->y+player->mo->momy,
-					player->mo->z+P_GetPlayerHeight(player)+FixedMul(16*FRACUNIT, player->mo->scale)+player->mo->momz, ((player->gotflag & GF_REDFLAG) ? MT_GOTREDFLAG : MT_GOTBLUEFLAG));
+			mobj_t *sign = P_SpawnMobj(player->mo->x+player->mo->momx, player->mo->y+player->mo->momy,
+					player->mo->z+player->mo->momz, MT_GOTFLAG);
+			if (player->mo->eflags & MFE_VERTICALFLIP)
+			{
+				sign->z += player->mo->height-P_GetPlayerHeight(player)-mobjinfo[MT_GOTFLAG].height-FixedMul(16*FRACUNIT, player->mo->scale);
+				sign->eflags |= MFE_VERTICALFLIP;
+			}
 			else
-				P_SpawnMobj(player->mo->x+player->mo->momx, player->mo->y+player->mo->momy,
-					player->mo->z+player->mo->height-P_GetPlayerHeight(player)-mobjinfo[MT_GOTREDFLAG].height-FixedMul(16*FRACUNIT, player->mo->scale)+player->mo->momz, ((player->gotflag & GF_REDFLAG) ? MT_GOTREDFLAG : MT_GOTBLUEFLAG))->eflags |= MFE_VERTICALFLIP; // yes, MT_GOTREDFLAG's height is used for both of them. Doesn't really matter - they should both always be the same height.
+				sign->z += P_GetPlayerHeight(player)+FixedMul(16*FRACUNIT, player->mo->scale);
+			if (leveltime & 1)
+				P_SetMobjStateNF(sign, (player->gotflag & GF_REDFLAG) ? S_GOTREDFLAG : S_GOTBLUEFLAG);
 		}
 	}
 }
@@ -3843,8 +3848,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 						{
 							if (player == &players[consoleplayer] || player == &players[secondarydisplayplayer] || player == &players[displayplayer]) // Only display it on your own view.
 							{
-								mobj_t *visual = P_SpawnMobj(lockon->x, lockon->y, lockon->z, MT_LOCKON);
-								visual->eflags |= (lockon->eflags & MFE_VERTICALFLIP);
+								mobj_t *visual = P_SpawnMobj(lockon->x, lockon->y, lockon->z, MT_LOCKON); // positioning, flip handled in P_SceneryThinker
 								visual->target = lockon;
 							}
 						}
@@ -4102,8 +4106,19 @@ void P_Telekinesis(player_t *player, fixed_t thrust, fixed_t range)
 //
 static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 {
+	mobj_t *lockon = NULL;
+
 	if (player->pflags & PF_JUMPSTASIS)
 		return;
+
+	if ((player->charability == CA_HOMINGTHOK) && !player->homing && (player->pflags & PF_JUMPED) && (!(player->pflags & PF_THOKKED) || (player->charability2 == CA2_MULTIABILITY)) && (lockon = P_LookForEnemies(player, true, false)) && !((leveltime & 1) && (lockon->flags & (MF_ENEMY|MF_BOSS)) && player->powers[pw_shield] == SH_ATTRACT))
+	{
+		if (player == &players[consoleplayer] || player == &players[secondarydisplayplayer] || player == &players[displayplayer]) // Only display it on your own view.
+		{
+			mobj_t *visual = P_SpawnMobj(lockon->x, lockon->y, lockon->z, MT_LOCKON); // positioning, flip handled in P_SceneryThinker
+			visual->target = lockon;
+		}
+	}
 
 	if (cmd->buttons & BT_USE && !(player->pflags & PF_JUMPDOWN) && !player->exiting && !P_PlayerInPain(player))
 	{
@@ -4255,9 +4270,8 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 
 						P_SpawnThokMobj(player);
 
-						if (player->charability == CA_HOMINGTHOK && !player->homing)
+						if (player->charability == CA_HOMINGTHOK)
 						{
-							mobj_t *lockon = P_LookForEnemies(player, true, false);
 							if (lockon)
 							{
 								P_SetTarget(&player->mo->target, P_SetTarget(&player->mo->tracer, lockon));
@@ -7161,6 +7175,19 @@ static void P_MovePlayer(player_t *player)
 
 	if (player->pflags & PF_JUMPED && !player->exiting && player->mo->health)
 	{
+		mobj_t *lockon = NULL;
+		if (!player->powers[pw_super] && player->powers[pw_shield] == SH_ATTRACT && !(player->pflags & PF_THOKKED))
+		{
+			if ((lockon = P_LookForEnemies(player, false, false)) && !(!(leveltime & 1) && player->charability == CA_HOMINGTHOK))
+			{
+				if (player == &players[consoleplayer] || player == &players[secondarydisplayplayer] || player == &players[displayplayer]) // Only display it on your own view.
+				{
+					mobj_t *visual = P_SpawnMobj(lockon->x, lockon->y, lockon->z, MT_LOCKON); // positioning, flip handled in P_SceneryThinker
+					visual->target = lockon;
+					P_SetMobjStateNF(visual, visual->info->spawnstate+1);
+				}
+			}
+		}
 		if (cmd->buttons & BT_USE) // Spin button effects
 		{
 			if (player->powers[pw_super]) // Super can't use shield actives, only passives
@@ -7214,20 +7241,16 @@ static void P_MovePlayer(player_t *player)
 							case SH_ATTRACT:
 								player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
 								player->homing = 2;
+								if (lockon)
 								{
-									mobj_t *lockon = P_LookForEnemies(player, false, false);
-									if (lockon)
-									{
-										P_SetTarget(&player->mo->target, P_SetTarget(&player->mo->tracer, lockon));
-										player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, lockon->x, lockon->y);
-										player->pflags &= ~PF_NOJUMPDAMAGE;
-										P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
-										S_StartSound(player->mo, sfx_s3k40);
-										player->homing = 3*TICRATE;
-									}
-									else
-										S_StartSound(player->mo, sfx_s3ka6);
+									P_SetTarget(&player->mo->target, P_SetTarget(&player->mo->tracer, lockon));
+									player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, lockon->x, lockon->y);
+									player->pflags &= ~PF_NOJUMPDAMAGE;
+									S_StartSound(player->mo, sfx_s3k40);
+									player->homing = 3*TICRATE;
 								}
+								else
+									S_StartSound(player->mo, sfx_s3ka6);
 								break;
 							// Elemental/Bubblewrap shield activation
 							case SH_ELEMENTAL:
@@ -7886,7 +7909,8 @@ mobj_t *P_LookForEnemies(player_t *player, boolean nonenemies, boolean bullet)
 
 		mo = (mobj_t *)think;
 		if (!(mo->flags & targetmask
-		|| mo->type == MT_FAKEMOBILE)) // hehehehe
+		|| mo->type == MT_FAKEMOBILE // hehehehe
+		|| mo->type == MT_EGGSHIELD))
 			continue; // not a valid target
 
 		if (mo->health <= 0) // dead
@@ -7974,7 +7998,7 @@ void P_HomingAttack(mobj_t *source, mobj_t *enemy) // Home in on your target
 	}
 
 	// change slope
-	zdist = (P_MobjFlip(source) ? (enemy->z + enemy->height) - (source->z + source->height) : (enemy->z - source->z));
+	zdist = ((P_MobjFlip(source) == -1) ? (enemy->z + enemy->height) - (source->z + source->height) : (enemy->z - source->z));
 	dist = P_AproxDistance(P_AproxDistance(enemy->x - source->x, enemy->y - source->y), zdist);
 
 	if (dist < 1)

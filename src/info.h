@@ -2720,16 +2720,16 @@ typedef enum state
 	S_FOUR2,
 	S_FIVE2,
 
-	S_LOCKON,
+	S_LOCKON1,
+	S_LOCKON2,
 
 	// Tag Sign
 	S_TTAG,
 
 	// Got Flag Sign
-	S_GOTREDFLAG1,
-	S_GOTREDFLAG2,
-	S_GOTBLUEFLAG1,
-	S_GOTBLUEFLAG2,
+	S_GOTFLAG,
+	S_GOTREDFLAG,
+	S_GOTBLUEFLAG,
 
 	S_CORK,
 
@@ -3543,8 +3543,7 @@ typedef enum mobj_type
 	MT_GOTEMERALD, // Chaos Emerald (intangible)
 	MT_LOCKON, // Target
 	MT_TAG, // Tag Sign
-	MT_GOTREDFLAG, // Got Flag sign
-	MT_GOTBLUEFLAG, // Got Flag sign
+	MT_GOTFLAG, // Got Flag sign
 
 	// Ambient Sounds
 	MT_AWATERA, // Ambient Water Sound 1

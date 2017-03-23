@@ -189,6 +189,8 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"mswarp", false,  60, 16, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"mspogo", false,  60,  8, -1, NULL, 0,        -1,  -1, LUMPERROR},
   {"boingf", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
+  {"corkp",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
+  {"corkh",  false,  32,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},
 
   // Menu, interface
   {"chchng", false, 120,  0, -1, NULL, 0,        -1,  -1, LUMPERROR},

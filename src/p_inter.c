@@ -1348,6 +1348,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					player->pflags &= ~(PF_GLIDING|PF_JUMPED|PF_NOJUMPDAMAGE);
 					P_SetPlayerMobjState(toucher, S_PLAY_FALL);
 				}
+				player->homing = 0;
 
 				// Play a bounce sound?
 				S_StartSound(toucher, special->info->painsound);
@@ -1408,6 +1409,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 						player->pflags &= ~(PF_GLIDING|PF_JUMPED|PF_NOJUMPDAMAGE);
 						P_SetPlayerMobjState(toucher, S_PLAY_FALL);
 					}
+					player->homing = 0;
 
 					// Play a bounce sound?
 					S_StartSound(toucher, special->info->painsound);

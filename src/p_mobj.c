@@ -6868,7 +6868,7 @@ void P_MobjThinker(mobj_t *mobj)
 					return;
 				if (/*(mobj->target) -- the following is implicit by P_AddShield
 				&& (mobj->target->player)
-				&& */ (mobj->target->player->homing))
+				&& */ (mobj->target->player->homing) && (mobj->target->player->pflags & PF_SHIELDABILITY))
 				{
 					P_SetMobjState(mobj, mobj->info->painstate);
 					mobj->tics++;
@@ -7012,13 +7012,15 @@ void P_MobjThinker(mobj_t *mobj)
 				mobj->x = mobj->target->x;
 				mobj->y = mobj->target->y;
 
+				mobj->eflags |= (mobj->target->eflags & MFE_VERTICALFLIP);
+
 				mobj->destscale = mobj->target->destscale;
 				P_SetScale(mobj, mobj->target->scale);
 
-				if (!(mobj->target->eflags & MFE_VERTICALFLIP))
-					mobj->z = mobj->target->z + mobj->target->height + FixedMul(16*FRACUNIT, mobj->target->scale);
+				if (!(mobj->eflags & MFE_VERTICALFLIP))
+					mobj->z = mobj->target->z + mobj->target->height + FixedMul((16 + abs((leveltime % TICRATE) - TICRATE/2))*FRACUNIT, mobj->target->scale);
 				else
-					mobj->z = mobj->target->z - FixedMul(16*FRACUNIT, mobj->target->scale) - mobj->height;
+					mobj->z = mobj->target->z - FixedMul((16 + abs((leveltime % TICRATE) - TICRATE/2))*FRACUNIT, mobj->target->scale) - mobj->height;
 				break;
 			case MT_DROWNNUMBERS:
 				if (!mobj->target)
