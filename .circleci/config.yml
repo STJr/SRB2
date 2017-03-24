@@ -7,10 +7,11 @@ jobs:
         environment:
           CC: ccache gcc -m32
           PKG_CONFIG_LIBDIR: /usr/lib/i386-linux-gnu/pkgconfig
-          LIBGME_CFLAGS: -I/usr/include/
+          LIBGME_CFLAGS: -I/usr/include
           LIBGME_LDFLAGS: -lgme
           CCACHE_COMPRESS: true
           WFLAGS: -Wno-unsuffixed-float-constants
+          GCC49: true
     steps:
       - run:
           name: Add i386 arch
@@ -43,7 +44,7 @@ jobs:
       #    command: wget --verbose --server-response -c http://rosenthalcastle.org/srb2/SRB2-v2115-assets-2.7z -O /root/srb2_cache/SRB2-v2115-assets-2.7z
       - run:
           name: Compile
-          command: make -C src LINUX=1 GCC49=1 ERRORMODE=1 -k
+          command: make -C src LINUX=1 ERRORMODE=1 -k
       - store_artifacts:
           path: /root/SRB2/bin/Linux/Release/
           destination: bin
