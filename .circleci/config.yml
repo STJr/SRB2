@@ -12,6 +12,15 @@ jobs:
           CCACHE_COMPRESS: true
           WFLAGS: -Wno-unsuffixed-float-constants
           GCC49: true
+      - image: ubuntu:trusty
+        environment:
+          CC: ccache gcc -m32
+          PKG_CONFIG_LIBDIR: /usr/lib/i386-linux-gnu/pkgconfig
+          LIBGME_CFLAGS: -I/usr/include
+          LIBGME_LDFLAGS: -lgme
+          CCACHE_COMPRESS: true
+          WFLAGS: -Wno-unsuffixed-float-constants
+          GCC48: true
     steps:
       - run:
           name: Add i386 arch
