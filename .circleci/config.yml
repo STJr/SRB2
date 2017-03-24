@@ -1,0 +1,57 @@
+version: 2
+jobs:
+  build:
+    working_directory: /root/SRB2
+    docker:
+      - image: debian:jessie
+        environment:
+          CC: ccache gcc -m32
+          PKG_CONFIG_LIBDIR: /usr/lib/i386-linux-gnu/pkgconfig
+          LIBGME_CFLAGS: -I/usr/include/
+          LIBGME_LDFLAGS: -lgme
+          CCACHE_COMPRESS: true
+          WFLAGS: -Wno-unsuffixed-float-constants
+    steps:
+      - run:
+          name: Add i386 arch
+          command: dpkg --add-architecture i386
+      - run:
+          name: Update APT listing
+          command: apt-get -qq update
+      - run:
+          name: Support S3 upload
+          command: apt-get -qq -y install ca-certificates
+      - restore_cache:
+          keys:
+            - v1-SRB2-APT
+      - run:
+          name: Install SDK
+          command: apt-get -qq -y install git build-essential nasm libpng12-dev:i386 libsdl2-mixer-dev:i386 libgme-dev:i386 gettext ccache wget gcc-multilib
+      - save_cache:
+          key: v1-SRB2-APT
+          paths:
+            - /var/cache/apt/archives
+      - checkout
+      - restore_cache:
+          keys:
+            - v1-SRB2-{{ .Branch }}
+      - run:
+          name: Setup cache
+          command: mkdir -p /root/srb2_cache
+      #- run:
+      #    name: Download SRB2 Resources
+      #    command: wget --verbose --server-response -c http://rosenthalcastle.org/srb2/SRB2-v2115-assets-2.7z -O /root/srb2_cache/SRB2-v2115-assets-2.7z
+      - run:
+          name: Compile
+          command: make -C src LINUX=1 GCC49=1 ERRORMODE=1 -k
+      - store_artifacts:
+          path: /root/SRB2/bin/Linux/Release/
+          destination: bin
+      - save_cache:
+          key: v1-SRB2-{{ .Branch }}
+          paths:
+            - /root/.ccache
+            - /root/srb2_cache
+
+
+
