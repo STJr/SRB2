@@ -10,6 +10,7 @@ jobs:
           LIBGME_CFLAGS: -I/usr/include/
           LIBGME_LDFLAGS: -lgme
           CCACHE_COMPRESS: true
+          WFLAGS: -Wno-unsuffixed-float-constants
     steps:
       - run:
           name: Add i386 arch
