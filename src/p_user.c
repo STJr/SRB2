@@ -2358,8 +2358,13 @@ static void P_DoPlayerHeadSigns(player_t *player)
 			}
 			else
 				sign->z += P_GetPlayerHeight(player)+FixedMul(16*FRACUNIT, player->mo->scale);
-			if (leveltime & 1)
-				P_SetMobjStateNF(sign, (player->gotflag & GF_REDFLAG) ? S_GOTREDFLAG : S_GOTBLUEFLAG);
+			if (leveltime & 4)
+			{
+				if (player->gotflag & GF_REDFLAG)
+					P_SetMobjStateNF(sign, S_GOTREDFLAG);
+			}
+			else if (player->gotflag & GF_BLUEFLAG)
+				P_SetMobjStateNF(sign, S_GOTBLUEFLAG);
 		}
 	}
 }
@@ -4111,7 +4116,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 	if (player->pflags & PF_JUMPSTASIS)
 		return;
 
-	if ((player->charability == CA_HOMINGTHOK) && !player->homing && (player->pflags & PF_JUMPED) && (!(player->pflags & PF_THOKKED) || (player->charability2 == CA2_MULTIABILITY)) && (lockon = P_LookForEnemies(player, true, false)) && !((leveltime & 1) && (lockon->flags & (MF_ENEMY|MF_BOSS)) && player->powers[pw_shield] == SH_ATTRACT))
+	if ((player->charability == CA_HOMINGTHOK) && !player->homing && (player->pflags & PF_JUMPED) && (!(player->pflags & PF_THOKKED) || (player->charability2 == CA2_MULTIABILITY)) && (lockon = P_LookForEnemies(player, true, false)) && !((leveltime & 4) && (lockon->flags & (MF_ENEMY|MF_BOSS)) && player->powers[pw_shield] == SH_ATTRACT))
 	{
 		if (player == &players[consoleplayer] || player == &players[secondarydisplayplayer] || player == &players[displayplayer]) // Only display it on your own view.
 		{
@@ -4272,9 +4277,9 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 
 						if (player->charability == CA_HOMINGTHOK)
 						{
+							P_SetTarget(&player->mo->target, P_SetTarget(&player->mo->tracer, lockon));
 							if (lockon)
 							{
-								P_SetTarget(&player->mo->target, P_SetTarget(&player->mo->tracer, lockon));
 								player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, lockon->x, lockon->y);
 								player->homing = 3*TICRATE;
 							}
@@ -7178,7 +7183,7 @@ static void P_MovePlayer(player_t *player)
 		mobj_t *lockon = NULL;
 		if (!player->powers[pw_super] && player->powers[pw_shield] == SH_ATTRACT && !(player->pflags & PF_THOKKED))
 		{
-			if ((lockon = P_LookForEnemies(player, false, false)) && !(!(leveltime & 1) && player->charability == CA_HOMINGTHOK))
+			if ((lockon = P_LookForEnemies(player, false, false)) && !(!(leveltime & 4) && player->charability == CA_HOMINGTHOK))
 			{
 				if (player == &players[consoleplayer] || player == &players[secondarydisplayplayer] || player == &players[displayplayer]) // Only display it on your own view.
 				{
@@ -7241,9 +7246,9 @@ static void P_MovePlayer(player_t *player)
 							case SH_ATTRACT:
 								player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
 								player->homing = 2;
+								P_SetTarget(&player->mo->target, P_SetTarget(&player->mo->tracer, lockon));
 								if (lockon)
 								{
-									P_SetTarget(&player->mo->target, P_SetTarget(&player->mo->tracer, lockon));
 									player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, lockon->x, lockon->y);
 									player->pflags &= ~PF_NOJUMPDAMAGE;
 									S_StartSound(player->mo, sfx_s3k40);
@@ -7376,7 +7381,7 @@ static void P_MovePlayer(player_t *player)
 
 		// Less height while spinning. Good for spinning under things...?
 		if ((player->mo->state == &states[player->mo->info->painstate])
-		|| (!(player->charflags & SF_NOJUMPSPIN) && (player->pflags & PF_JUMPED))
+		|| ((player->pflags & PF_JUMPED) && !(player->pflags & PF_NOJUMPDAMAGE && player->charflags & SF_NOJUMPSPIN))
 		|| (player->pflags & PF_SPINNING)
 		|| player->powers[pw_tailsfly] || player->pflags & PF_GLIDING
 		|| (player->charability == CA_FLY && player->mo->state-states == S_PLAY_FLY_TIRED))
