@@ -15,23 +15,26 @@ jobs:
       - run:
           name: Add i386 arch
           command: dpkg --add-architecture i386
-      #- restore_cache:
-      #    keys:
-      #      - v1-SRB2-APT
       - run:
           name: Update APT listing
           command: apt-get -qq update
       - run:
+          name: Support S3 upload
+          command: apt-get -qq -y install ca-certificates
+      - restore_cache:
+          keys:
+            - v1-SRB2-APT
+      - run:
           name: Install SDK
-          command: apt-get -qq -y install git build-essential nasm libpng12-dev:i386 libsdl2-mixer-dev:i386 libgme-dev:i386 gettext ccache wget gcc-multilib ca-certificates
-      #- save_cache:
-      #    key: v1-SRB2-APT
-      #    paths:
-      #      - /var/cache/apt/
+          command: apt-get -qq -y install git build-essential nasm libpng12-dev:i386 libsdl2-mixer-dev:i386 libgme-dev:i386 gettext ccache wget gcc-multilib
+      - save_cache:
+          key: v1-SRB2-APT
+          paths:
+            - /var/cache/apt/archives
       - checkout
-      #- restore_cache:
-      #    keys:
-      #      - v1-SRB2-{{ .Branch }}
+      - restore_cache:
+          keys:
+            - v1-SRB2-{{ .Branch }}
       - run:
           name: Setup cache
           command: mkdir -p /root/srb2_cache
@@ -44,11 +47,11 @@ jobs:
       - store_artifacts:
           path: /root/SRB2/bin/Linux/Release/
           destination: bin
-      #- save_cache:
-      #    key: v1-SRB2-{{ .Branch }}
-      #    paths:
-      #      - /root/.ccache
-      #      - /root/srb2_cache
+      - save_cache:
+          key: v1-SRB2-{{ .Branch }}
+          paths:
+            - /root/.ccache
+            - /root/srb2_cache
 
 
 
