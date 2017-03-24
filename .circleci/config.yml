@@ -42,15 +42,12 @@ jobs:
           paths:
             - /var/cache/apt/archives
       - checkout
+      - run:
+          name: Clean build
+          command: make -C src LINUX=1 clean
       - restore_cache:
           keys:
-            - v1-SRB2-{{ .Branch }}
-      - run:
-          name: Setup cache
-          command: mkdir -p /root/srb2_cache
-      #- run:
-      #    name: Download SRB2 Resources
-      #    command: wget --verbose --server-response -c http://rosenthalcastle.org/srb2/SRB2-v2115-assets-2.7z -O /root/srb2_cache/SRB2-v2115-assets-2.7z
+            - v1-SRB2-{{ .Branch }}-{{ checksum "objs/Linux/SDL/Release/depend.dep" }}
       - run:
           name: Compile
           command: make -C src LINUX=1 ERRORMODE=1 -k
@@ -58,10 +55,9 @@ jobs:
           path: /root/SRB2/bin/Linux/Release/
           destination: bin
       - save_cache:
-          key: v1-SRB2-{{ .Branch }}
+          key: v1-SRB2-{{ .Branch }}-{{ checksum "objs/Linux/SDL/Release/depend.dep" }}
           paths:
             - /root/.ccache
-            - /root/srb2_cache
 
 
 
