@@ -40,7 +40,7 @@ jobs:
       #    command: wget --verbose --server-response -c http://rosenthalcastle.org/srb2/SRB2-v2115-assets-2.7z -O /root/srb2_cache/SRB2-v2115-assets-2.7z
       - run:
           name: Compile
-          command: make -C src LINUX=1 GCC49=1 WARNINGMODE=1 -k
+          command: make -C src LINUX=1 GCC49=1 ERRORMODE=1 -k
       - store_artifacts:
           path: /root/SRB2/bin/Linux/Release/
           destination: bin
