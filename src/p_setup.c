@@ -2583,8 +2583,8 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	if (!dedicated)
 	{
-		if (!cv_cam_speed.changed)
-			CV_Set(&cv_cam_speed, cv_cam_speed.defaultvalue);
+		//if (!cv_cam_speed.changed)
+			//CV_Set(&cv_cam_speed, cv_cam_speed.defaultvalue);
 
 		if (!cv_chasecam.changed)
 			CV_SetValue(&cv_chasecam, chase);
@@ -2880,8 +2880,9 @@ boolean P_SetupLevel(boolean skipprecip)
 				camera.angle = FixedAngle((fixed_t)thing->angle << FRACBITS);
 			}
 		}
-
-		if (!cv_cam_height.changed)
+		
+		// Salt: I don't understand *why* it does this, but this overwrites the player's setting, even though it looks like it shouldn't do that unless if it's already the default
+		/*if (!cv_cam_height.changed)
 			CV_Set(&cv_cam_height, cv_cam_height.defaultvalue);
 
 		if (!cv_cam_dist.changed)
@@ -2897,7 +2898,7 @@ boolean P_SetupLevel(boolean skipprecip)
 			CV_Set(&cv_cam2_dist, cv_cam2_dist.defaultvalue);
 
 		if (!cv_cam2_rotate.changed)
-			CV_Set(&cv_cam2_rotate, cv_cam2_rotate.defaultvalue);
+			CV_Set(&cv_cam2_rotate, cv_cam2_rotate.defaultvalue);*/
 
 		if (!cv_analog.changed)
 			CV_SetValue(&cv_analog, 0);

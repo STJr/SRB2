@@ -1565,11 +1565,12 @@ static void Analog_OnChange(void)
 		return;
 
 	// cameras are not initialized at this point
+	// Salt: Grooooaaan... I know that cameras aren't initalized yet and that analog needs a farther camera, but directly overwriting someone's settings should not be the way to do it!
 
-	if (leveltime > 1)
+	/*if (leveltime > 1)
 		CV_SetValue(&cv_cam_dist, 128);
 	if (cv_analog.value || demoplayback)
-		CV_SetValue(&cv_cam_dist, 192);
+		CV_SetValue(&cv_cam_dist, 192);*/
 
 	if (!cv_chasecam.value && cv_analog.value) {
 		CV_SetValue(&cv_analog, 0);
@@ -1590,11 +1591,12 @@ static void Analog2_OnChange(void)
 		return;
 
 	// cameras are not initialized at this point
-
-	if (leveltime > 1)
+	// Salt: Grooooaaan... I know that cameras aren't initalized yet and that analog needs a farther camera, but directly overwriting someone's settings should not be the way to do it!
+	
+	/*if (leveltime > 1)
 		CV_SetValue(&cv_cam2_dist, 128);
 	if (cv_analog2.value)
-		CV_SetValue(&cv_cam2_dist, 192);
+		CV_SetValue(&cv_cam2_dist, 192);*/
 
 	if (!cv_chasecam2.value && cv_analog2.value) {
 		CV_SetValue(&cv_analog2, 0);
