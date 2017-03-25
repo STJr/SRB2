@@ -3302,6 +3302,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 
 					if (mo->player->pflags & PF_BOUNCING)
 					{
+						P_MobjCheckWater(mo);
 						mo->momz *= -1;
 						P_DoAbilityBounce(mo->player, true);
 						if (mo->player->scoreadd)

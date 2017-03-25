@@ -4017,6 +4017,7 @@ void P_DoBubbleBounce(player_t *player)
 {
 	player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE|PF_SHIELDABILITY);
 	S_StartSound(player->mo, sfx_s3k44);
+	P_MobjCheckWater(player->mo);
 	P_DoJump(player, false);
 	if (player->charflags & SF_NOJUMPSPIN)
 		P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
