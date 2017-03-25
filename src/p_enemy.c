@@ -4520,7 +4520,7 @@ void A_MinusDigging(mobj_t *actor)
 
 	// If we're close enough to our target, pop out of the ground
 	if (P_AproxDistance(actor->target->x-actor->x, actor->target->y-actor->y) < actor->radius
-		&& abs(actor->target->z - actor->z) < actor->height)
+		&& abs(actor->target->z - actor->z) < 2*actor->height)
 		P_SetMobjState(actor, actor->info->missilestate);
 
 	// Snap to ground
