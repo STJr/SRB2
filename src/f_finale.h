@@ -60,9 +60,8 @@ void F_StartContinue(void);
 void F_ContinueTicker(void);
 void F_ContinueDrawer(void);
 
-extern INT16 titlemap;
-extern boolean hidetitlepics;
 extern INT32 titlescrollspeed;
+extern boolean titlemapinaction;
 
 //
 // WIPE
