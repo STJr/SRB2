@@ -7182,7 +7182,7 @@ static void P_MovePlayer(player_t *player)
 		mobj_t *lockon = NULL;
 		if (!player->powers[pw_super] && player->powers[pw_shield] == SH_ATTRACT && !(player->pflags & PF_THOKKED))
 		{
-			if ((lockon = P_LookForEnemies(player, false, false)) && !(!(leveltime & 4) && player->charability == CA_HOMINGTHOK))
+			if ((lockon = P_LookForEnemies(player, false, false)))
 			{
 				if (player == &players[consoleplayer] || player == &players[secondarydisplayplayer] || player == &players[displayplayer]) // Only display it on your own view.
 				{
