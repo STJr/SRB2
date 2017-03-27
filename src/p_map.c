@@ -130,19 +130,13 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 		return false;
 	}
 
-#ifdef ESLOPE
-	object->standingslope = NULL; // Okay, now we can't return - no launching off at silly angles for you.
-#endif
-
 	if (object->player
 	&& ((object->player->charability == CA_TWINSPIN && object->player->panim == PA_ABILITY)
 	|| (object->player->charability2 == CA2_MELEE && object->player->panim == PA_ABILITY2)))
 	{
 		S_StartSound(object, sfx_s3k8b);
-#define scalefactor ((4*FRACUNIT)/3)
-		horizspeed = FixedMul(horizspeed, scalefactor);
-		vertispeed = FixedMul(vertispeed, FixedSqrt(scalefactor));
-#undef scalefactor
+		horizspeed = FixedMul(horizspeed, (4*FRACUNIT)/3);
+		vertispeed = FixedMul(vertispeed, (6*FRACUNIT)/5); // aprox square root of above
 	}
 
 	object->eflags |= MFE_SPRUNG; // apply this flag asap!
@@ -239,6 +233,11 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 		else
 			P_SetPlayerMobjState(object, S_PLAY_FALL);
 	}
+
+#ifdef ESLOPE
+	object->standingslope = NULL; // Okay, now we know it's not going to be relevant - no launching off at silly angles for you.
+#endif
+
 	return true;
 }
 
