@@ -408,10 +408,15 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		return P_SetPlayerMobjState(player->mo, S_PLAY_FLY);
 
 	// Catch SF_NOSUPERSPIN jumps for Supers
-	if (player->powers[pw_super])
+	if (player->powers[pw_super] && (player->charflags & SF_NOSUPERSPIN))
 	{
-		if ((player->charflags & SF_NOSUPERSPIN)
-		&& (state == S_PLAY_ROLL || state == S_PLAY_JUMP))
+		if (state == S_PLAY_JUMP)
+		{
+			if (player->mo->state-states == S_PLAY_WALK)
+				return P_SetPlayerMobjState(mobj, S_PLAY_FLOAT);
+			return true;
+		}
+		else if (player->mo->state-states == S_PLAY_FLOAT && state == S_PLAY_STND)
 			return true;
 	}
 	// You were in pain state after taking a hit, and you're moving out of pain state now?
