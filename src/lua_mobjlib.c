@@ -751,6 +751,8 @@ static int mapthing_set(lua_State *L)
 static int lib_iterateMapthings(lua_State *L)
 {
 	size_t i = 0;
+	if (gamestate != GS_LEVEL)
+		return luaL_error(L, "This function can only be used in a level!");
 	if (lua_gettop(L) < 2)
 		return luaL_error(L, "Don't call mapthings.iterate() directly, use it as 'for mapthing in mapthings.iterate do <block> end'.");
 	lua_settop(L, 2);
@@ -768,6 +770,8 @@ static int lib_iterateMapthings(lua_State *L)
 static int lib_getMapthing(lua_State *L)
 {
 	int field;
+	if (gamestate != GS_LEVEL)
+		return luaL_error(L, "You cannot access this outside of a level!");
 	lua_settop(L, 2);
 	lua_remove(L, 1); // dummy userdata table is unused.
 	if (lua_isnumber(L, 1))

@@ -1802,6 +1802,7 @@ static actionpointer_t actionpointers[] =
 	{{A_FlickyCheck},          "A_FLICKYCHECK"},
 	{{A_FlickyHeightCheck},    "A_FLICKYHEIGHTCHECK"},
 	{{A_FlickyFlutter},        "A_FLICKYFLUTTER"},
+	{{A_FlameParticle},        "A_FLAMEPARTICLE"},
 
 	{{NULL},                   "NONE"},
 
@@ -2691,7 +2692,7 @@ static void readpatch(MYFILE *f, const char *name, UINT16 wad)
 	char *word2;
 	char *tmp;
 	INT32 i = 0, j = 0, value;
-	texpatch_t patch = {0, 0, UINT16_MAX, UINT16_MAX, 0};
+	texpatch_t patch = {0, 0, UINT16_MAX, UINT16_MAX, 0, 255, AST_COPY};
 
 	// Jump to the texture this patch belongs to, which,
 	// coincidentally, is always the last one on the buffer cache.
@@ -4078,6 +4079,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_GOOP1",
 	"S_GOOP2",
 	"S_GOOP3",
+	"S_GOOPTRAIL",
 
 	// Boss 3
 	"S_EGGMOBILE3_STND",
@@ -4450,11 +4452,11 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_METALSONIC_FLOAT",
 	"S_METALSONIC_VECTOR",
 	"S_METALSONIC_STUN",
-	"S_METALSONIC_BLOCK",
 	"S_METALSONIC_RAISE",
 	"S_METALSONIC_GATHER",
 	"S_METALSONIC_DASH",
 	"S_METALSONIC_BOUNCE",
+	"S_METALSONIC_BADBOUNCE",
 	"S_METALSONIC_SHOOT",
 	"S_METALSONIC_PAIN",
 	"S_METALSONIC_DEATH",
@@ -4654,7 +4656,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	// Starpost
 	"S_STARPOST_IDLE",
 	"S_STARPOST_FLASH",
+	"S_STARPOST_STARTSPIN",
 	"S_STARPOST_SPIN",
+	"S_STARPOST_ENDSPIN",
 
 	// Big floating mine
 	"S_BIGMINE1",
@@ -4836,21 +4840,15 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_DEMONFIRE6",
 
 	"S_GFZFLOWERA",
-	"S_GFZFLOWERA2",
-
-	"S_GFZFLOWERB1",
-	"S_GFZFLOWERB2",
-
-	"S_GFZFLOWERC1",
+	"S_GFZFLOWERB",
+	"S_GFZFLOWERC",
 
 	"S_BERRYBUSH",
 	"S_BUSH",
 
 	// THZ Plant
-	"S_THZPLANT1",
-	"S_THZPLANT2",
-	"S_THZPLANT3",
-	"S_THZPLANT4",
+	"S_THZFLOWERA",
+	"S_THZFLOWERB",
 
 	// THZ Alarm
 	"S_ALARM1",
@@ -4895,6 +4893,11 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FLAME2",
 	"S_FLAME3",
 	"S_FLAME4",
+	"S_FLAME5",
+	"S_FLAME6",
+	"S_FLAMEPARTICLE",
+
+	"S_FLAMEREST",
 
 	// Eggman Statue
 	"S_EGGSTATUE1",
@@ -4956,36 +4959,13 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	// Spinning flame jets
 	"S_FJSPINAXISA1", // Counter-clockwise
 	"S_FJSPINAXISA2",
-	"S_FJSPINAXISA3",
-	"S_FJSPINAXISA4",
-	"S_FJSPINAXISA5",
-	"S_FJSPINAXISA6",
-	"S_FJSPINAXISA7",
-	"S_FJSPINAXISA8",
-	"S_FJSPINAXISA9",
-	"S_FJSPINHELPERA1",
-	"S_FJSPINHELPERA2",
-	"S_FJSPINHELPERA3",
 	"S_FJSPINAXISB1", // Clockwise
 	"S_FJSPINAXISB2",
-	"S_FJSPINAXISB3",
-	"S_FJSPINAXISB4",
-	"S_FJSPINAXISB5",
-	"S_FJSPINAXISB6",
-	"S_FJSPINAXISB7",
-	"S_FJSPINAXISB8",
-	"S_FJSPINAXISB9",
-	"S_FJSPINHELPERB1",
-	"S_FJSPINHELPERB2",
-	"S_FJSPINHELPERB3",
 
 	// Blade's flame
 	"S_FLAMEJETFLAMEB1",
 	"S_FLAMEJETFLAMEB2",
 	"S_FLAMEJETFLAMEB3",
-	"S_FLAMEJETFLAMEB4",
-	"S_FLAMEJETFLAMEB5",
-	"S_FLAMEJETFLAMEB6",
 
 	// Trapgoyles
 	"S_TRAPGOYLE",
@@ -5080,8 +5060,10 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_BSZVINE_ORANGE",
 	"S_BSZSHRUB",
 	"S_BSZCLOVER",
-	"S_BSZFISH",
-	"S_BSZSUNFLOWER",
+	"S_BIG_PALMTREE_TRUNK",
+	"S_BIG_PALMTREE_TOP",
+	"S_PALMTREE_TRUNK",
+	"S_PALMTREE_TOP",
 
 	"S_DBALL1",
 	"S_DBALL2",
@@ -5800,20 +5782,19 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FIREBALLEXP2",
 	"S_FIREBALLEXP3",
 	"S_SHELL",
-	"S_SHELL1",
-	"S_SHELL2",
-	"S_SHELL3",
-	"S_SHELL4",
-	"S_PUMA1",
-	"S_PUMA2",
-	"S_PUMA3",
-	"S_PUMA4",
-	"S_PUMA5",
-	"S_PUMA6",
-	"S_HAMMER1",
-	"S_HAMMER2",
-	"S_HAMMER3",
-	"S_HAMMER4",
+	"S_PUMA_START1",
+	"S_PUMA_START2",
+	"S_PUMA_UP1",
+	"S_PUMA_UP2",
+	"S_PUMA_UP3",
+	"S_PUMA_DOWN1",
+	"S_PUMA_DOWN2",
+	"S_PUMA_DOWN3",
+	"S_PUMATRAIL1",
+	"S_PUMATRAIL2",
+	"S_PUMATRAIL3",
+	"S_PUMATRAIL4",
+	"S_HAMMER",
 	"S_KOOPA1",
 	"S_KOOPA2",
 	"S_KOOPAFLAME1",
@@ -6066,6 +6047,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_BOSSTANK2",
 	"MT_BOSSSPIGOT",
 	"MT_GOOP",
+	"MT_GOOPTRAIL",
 
 	// Boss 3
 	"MT_EGGMOBILE3",
@@ -6235,7 +6217,8 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_BUSH",
 
 	// Techno Hill Scenery
-	"MT_THZPLANT", // THZ Plant
+	"MT_THZFLOWER1",
+	"MT_THZFLOWER2",
 	"MT_ALARM",
 
 	// Deep Sea Scenery
@@ -6251,6 +6234,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	// Castle Eggman Scenery
 	"MT_CHAIN", // CEZ Chain
 	"MT_FLAME", // Flame (has corona)
+	"MT_FLAMEPARTICLE",
 	"MT_EGGSTATUE", // Eggman Statue
 	"MT_MACEPOINT", // Mace rotation point
 	"MT_SWINGMACEPOINT", // Mace swinging point
@@ -6277,9 +6261,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_FLAMEJETFLAME",
 
 	"MT_FJSPINAXISA", // Counter-clockwise
-	"MT_FJSPINHELPERA",
 	"MT_FJSPINAXISB", // Clockwise
-	"MT_FJSPINHELPERB",
 
 	"MT_FLAMEJETFLAMEB", // Blade's flame
 
@@ -6356,8 +6338,10 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_BSZVINE_ORANGE",
 	"MT_BSZSHRUB",
 	"MT_BSZCLOVER",
-	"MT_BSZFISH",
-	"MT_BSZSUNFLOWER",
+	"MT_BIG_PALMTREE_TRUNK",
+	"MT_BIG_PALMTREE_TOP",
+	"MT_PALMTREE_TRUNK",
+	"MT_PALMTREE_TOP",
 
 	// Misc scenery
 	"MT_DBALL",
@@ -6463,6 +6447,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_FIREBALL",
 	"MT_SHELL",
 	"MT_PUMA",
+	"MT_PUMATRAIL",
 	"MT_HAMMER",
 	"MT_KOOPA",
 	"MT_KOOPAFLAME",

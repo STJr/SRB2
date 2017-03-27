@@ -67,7 +67,7 @@ static patch_t *sborings;
 static patch_t *sboover;
 static patch_t *timeover;
 static patch_t *stlivex;
-static patch_t *rrings;
+static patch_t *sboredrings;
 static patch_t *getall; // Special Stage HUD
 static patch_t *timeup; // Special Stage HUD
 static patch_t *hunthoming[6];
@@ -143,7 +143,7 @@ hudinfo_t hudinfo[NUMHUDITEMS] =
 	{  16,  10}, // HUD_SCORE
 	{ 128,  10}, // HUD_SCORENUM
 
-	{  17,  26}, // HUD_TIME
+	{  16,  26}, // HUD_TIME
 	{ 136,  10}, // HUD_TIMESPLIT
 	{  88,  26}, // HUD_MINUTES
 	{ 188,  10}, // HUD_MINUTESSPLIT
@@ -251,16 +251,19 @@ void ST_LoadGraphics(void)
 	//                   but load them in R_AddSkins, that gets called
 	//                   first anyway
 	// cache the status bar overlay icons (fullscreen mode)
-	sborings = W_CachePatchName("SBORINGS", PU_HUDGFX);
-	sboscore = W_CachePatchName("SBOSCORE", PU_HUDGFX);
+
+	// Prefix "STT" is whitelisted (doesn't trigger ISGAMEMODIFIED), btw
+	sborings = W_CachePatchName("STTRINGS", PU_HUDGFX);
+	sboredrings = W_CachePatchName("STTRRING", PU_HUDGFX);
+	sboscore = W_CachePatchName("STTSCORE", PU_HUDGFX);
+	sbotime = W_CachePatchName("STTTIME", PU_HUDGFX); // Time logo
+	sbocolon = W_CachePatchName("STTCOLON", PU_HUDGFX); // Colon for time
+	sboperiod = W_CachePatchName("STTPERIO", PU_HUDGFX); // Period for time centiseconds
+
 	sboover = W_CachePatchName("SBOOVER", PU_HUDGFX);
 	timeover = W_CachePatchName("TIMEOVER", PU_HUDGFX);
 	stlivex = W_CachePatchName("STLIVEX", PU_HUDGFX);
 	livesback = W_CachePatchName("STLIVEBK", PU_HUDGFX);
-	rrings = W_CachePatchName("RRINGS", PU_HUDGFX);
-	sbotime = W_CachePatchName("SBOTIME", PU_HUDGFX); // Time logo
-	sbocolon = W_CachePatchName("SBOCOLON", PU_HUDGFX); // Colon for time
-	sboperiod = W_CachePatchName("SBOPERIO", PU_HUDGFX); // Period for time centiseconds
 	nrec_timer = W_CachePatchName("NGRTIMER", PU_HUDGFX); // Timer for NiGHTS
 	getall = W_CachePatchName("GETALL", PU_HUDGFX); // Special Stage HUD
 	timeup = W_CachePatchName("TIMEUP", PU_HUDGFX); // Special Stage HUD
@@ -672,7 +675,7 @@ static inline void ST_drawRings(void)
 {
 	INT32 ringnum = max(stplyr->rings, 0);
 
-	ST_DrawPatchFromHudWS(HUD_RINGS, ((stplyr->rings <= 0 && leveltime/5 & 1) ? rrings : sborings));
+	ST_DrawPatchFromHudWS(HUD_RINGS, ((stplyr->rings <= 0 && leveltime/5 & 1) ? sboredrings : sborings));
 
 	if (objectplacing)
 		ringnum = op_currentdoomednum;
