@@ -3018,6 +3018,25 @@ static void readmaincfg(MYFILE *f)
 				DEH_WriteUndoline(word, va("%d", looptitle), UNDO_NONE);
 				looptitle = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
 			}
+			else if (fastcmp(word, "TITLEMAP"))
+			{
+				// Support using the actual map name,
+				// i.e., Level AB, Level FZ, etc.
+
+				// Convert to map number
+				if (word2[0] >= 'A' && word2[0] <= 'Z')
+					value = M_MapNumber(word2[0], word2[1]);
+				else
+					value = get_number(word2);
+
+				DEH_WriteUndoline(word, va("%d", titlemap), UNDO_NONE);
+				titlemap = (INT16)value;
+			}
+			else if (fastcmp(word, "HIDETITLEPICS"))
+			{
+				DEH_WriteUndoline(word, va("%d", hidetitlepics), UNDO_NONE);
+				hidetitlepics = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
+			}
 			else if (fastcmp(word, "TITLESCROLLSPEED"))
 			{
 				DEH_WriteUndoline(word, va("%d", titlescrollspeed), UNDO_NONE);

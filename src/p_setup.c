@@ -2603,7 +2603,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	if (rendermode != render_none && !ranspecialwipe)
 	{
 		// miru: we could add the option to render different wipes here
-		if (mapheaderinfo[gamemap-1]->levelwipe && mapheaderinfo[gamemap-1]->levelwipe < 100)
+		if (mapheaderinfo[gamemap-1] && mapheaderinfo[gamemap-1]->levelwipe && mapheaderinfo[gamemap-1]->levelwipe < 100)
 		{
 			F_WipeStartScreen();
 			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, mapheaderinfo[gamemap-1]->wipecolor);

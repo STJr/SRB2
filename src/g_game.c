@@ -122,6 +122,9 @@ INT16 sstage_end;
 INT16 bootmap; // rei/miru: bootmap for loading a map on startup (skips intro+title)
 //INT16 returnTobootmap; // rei/miru: return to bootmap when attempting to go to the REAL title?
 
+INT16 titlemap;
+boolean hidetitlepics = false;
+
 boolean looptitle = false;
 boolean useNightsSS = false;
 

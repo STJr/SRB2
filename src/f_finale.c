@@ -1423,11 +1423,28 @@ void F_StartTitleScreen(void)
 	else
 		wipegamestate = GS_TITLESCREEN;
 
-	gamemap = 533; titlescrollspeed = (int32_t)ANG1; //@TODO don't hardcode bich
-	G_DoLoadLevel(true);
-	G_SetGamestate(GS_TITLESCREEN);
-	players[displayplayer].playerstate = PST_DEAD; // Don't spawn the player in dummy (I'm still a filthy cheater)
-	//CON_ClearHUD();
+	if (titlemap)
+	{
+		gamemap = titlemap;
+
+		if (!mapheaderinfo[gamemap-1])
+			P_AllocMapHeader(gamemap-1);
+
+		G_DoLoadLevel(true);
+		G_SetGamestate(GS_TITLESCREEN);
+		players[displayplayer].playerstate = PST_DEAD; // Don't spawn the player in dummy (I'm still a filthy cheater)
+		//CON_ClearHUD();
+	}
+	else
+	{
+		gamemap = 0;
+
+		if (!mapheaderinfo[gamemap-1])
+			P_AllocMapHeader(gamemap-1);
+
+		G_SetGamestate(GS_TITLESCREEN);
+		CON_ClearHUD();
+	}
 
 	// IWAD dependent stuff.
 
@@ -1469,42 +1486,51 @@ void F_TitleScreenDrawer(void)
 	if (!ttwing || (gamestate != GS_TITLESCREEN && gamestate != GS_WAITINGPLAYERS))
 		return;
 
-	V_DrawScaledPatch(30, 14, 0, ttwing);
-
-	if (finalecount < 57)
+	// rei|miru: use title pics?
+	if (hidetitlepics)
 	{
-		if (finalecount == 35)
-			V_DrawScaledPatch(115, 15, 0, ttspop1);
-		else if (finalecount == 36)
-			V_DrawScaledPatch(114, 15, 0,ttspop2);
-		else if (finalecount == 37)
-			V_DrawScaledPatch(113, 15, 0,ttspop3);
-		else if (finalecount == 38)
-			V_DrawScaledPatch(112, 15, 0,ttspop4);
-		else if (finalecount == 39)
-			V_DrawScaledPatch(111, 15, 0,ttspop5);
-		else if (finalecount == 40)
-			V_DrawScaledPatch(110, 15, 0, ttspop6);
-		else if (finalecount >= 41 && finalecount <= 44)
-			V_DrawScaledPatch(109, 15, 0, ttspop7);
-		else if (finalecount >= 45 && finalecount <= 48)
-			V_DrawScaledPatch(108, 12, 0, ttsprep1);
-		else if (finalecount >= 49 && finalecount <= 52)
-			V_DrawScaledPatch(107, 9, 0, ttsprep2);
-		else if (finalecount >= 53 && finalecount <= 56)
-			V_DrawScaledPatch(106, 6, 0, ttswip1);
-		V_DrawScaledPatch(93, 106, 0, ttsonic);
+		return;
 	}
 	else
 	{
-		V_DrawScaledPatch(93, 106, 0,ttsonic);
-		if (finalecount/5 & 1)
-			V_DrawScaledPatch(100, 3, 0,ttswave1);
-		else
-			V_DrawScaledPatch(100,3, 0,ttswave2);
-	}
+		V_DrawScaledPatch(30, 14, 0, ttwing);
 
-	V_DrawScaledPatch(48, 142, 0,ttbanner);
+		if (finalecount < 57)
+		{
+			if (finalecount == 35)
+				V_DrawScaledPatch(115, 15, 0, ttspop1);
+			else if (finalecount == 36)
+				V_DrawScaledPatch(114, 15, 0,ttspop2);
+			else if (finalecount == 37)
+				V_DrawScaledPatch(113, 15, 0,ttspop3);
+			else if (finalecount == 38)
+				V_DrawScaledPatch(112, 15, 0,ttspop4);
+			else if (finalecount == 39)
+				V_DrawScaledPatch(111, 15, 0,ttspop5);
+			else if (finalecount == 40)
+				V_DrawScaledPatch(110, 15, 0, ttspop6);
+			else if (finalecount >= 41 && finalecount <= 44)
+				V_DrawScaledPatch(109, 15, 0, ttspop7);
+			else if (finalecount >= 45 && finalecount <= 48)
+				V_DrawScaledPatch(108, 12, 0, ttsprep1);
+			else if (finalecount >= 49 && finalecount <= 52)
+				V_DrawScaledPatch(107, 9, 0, ttsprep2);
+			else if (finalecount >= 53 && finalecount <= 56)
+				V_DrawScaledPatch(106, 6, 0, ttswip1);
+			V_DrawScaledPatch(93, 106, 0, ttsonic);
+		}
+		else
+		{
+			V_DrawScaledPatch(93, 106, 0,ttsonic);
+			if (finalecount/5 & 1)
+				V_DrawScaledPatch(100, 3, 0,ttswave1);
+			else
+				V_DrawScaledPatch(100,3, 0,ttswave2);
+		}
+
+		V_DrawScaledPatch(48, 142, 0,ttbanner);
+
+	}
 }
 
 // (no longer) De-Demo'd Title Screen
