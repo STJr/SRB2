@@ -46,6 +46,7 @@ typedef enum
 	SF_MACHINE          = 1<<10, // Beep boop. Are you a robot?
 	SF_DASHMODE         = 1<<11, // Sonic Advance 2 style top speed increase?
 	SF_FASTEDGE         = 1<<12, // Faster edge teeter?
+	SF_MULTIABILITY     = 1<<13, // Revenge of Final Demo.
 	// free up to and including 1<<31
 } skinflags_t;
 
@@ -75,7 +76,6 @@ typedef enum
 {
 	CA2_NONE=0,
 	CA2_SPINDASH,
-	CA2_MULTIABILITY,
 	CA2_GUNSLINGER,
 	CA2_MELEE
 } charability2_t;

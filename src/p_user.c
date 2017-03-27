@@ -3628,7 +3628,7 @@ void P_DoJump(player_t *player, boolean soundandstate)
 			player->mo->momz = 7*FRACUNIT;
 			if (player->charability == CA_JUMPBOOST && onground)
 			{
-				if (player->charability2 == CA2_MULTIABILITY)
+				if (player->charflags & SF_MULTIABILITY)
 					player->mo->momz += FixedMul(FRACUNIT/4, dist6);
 				else
 					player->mo->momz += FixedMul(FRACUNIT/8, dist6);
@@ -3643,7 +3643,7 @@ void P_DoJump(player_t *player, boolean soundandstate)
 			// Add a boost for super characters with float/slowfall and multiability.
 			if (player->charability == CA_JUMPBOOST)
 			{
-				if (player->charability2 == CA2_MULTIABILITY)
+				if (player->charflags & SF_MULTIABILITY)
 					player->mo->momz += FixedMul(FRACUNIT/4, dist6);
 				else
 					player->mo->momz += FixedMul(FRACUNIT/8, dist6);
@@ -3654,7 +3654,7 @@ void P_DoJump(player_t *player, boolean soundandstate)
 			player->mo->momz = 39*(FRACUNIT/4); // Default jump momentum.
 			if (player->charability == CA_JUMPBOOST && onground)
 			{
-				if (player->charability2 == CA2_MULTIABILITY)
+				if (player->charflags & SF_MULTIABILITY)
 					player->mo->momz += FixedMul(FRACUNIT/4, dist6);
 				else
 					player->mo->momz += FixedMul(FRACUNIT/8, dist6);
@@ -3673,7 +3673,7 @@ void P_DoJump(player_t *player, boolean soundandstate)
 	if (twodlevel || (player->mo->flags2 & MF2_TWOD))
 		factor += player->jumpfactor / 10;
 
-	if (player->charability2 == CA2_MULTIABILITY && player->charability == CA_DOUBLEJUMP)
+	if (player->charflags & SF_MULTIABILITY && player->charability == CA_DOUBLEJUMP)
 		factor -= max(0, player->secondjump * player->jumpfactor / ((player->actionspd >> FRACBITS) + 1)); // Reduce the jump height each time
 
 	P_SetObjectMomZ(player->mo, FixedMul(factor, player->mo->momz), false); // Custom height
@@ -4117,7 +4117,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 	if (player->pflags & PF_JUMPSTASIS)
 		return;
 
-	if ((player->charability == CA_HOMINGTHOK) && !player->homing && (player->pflags & PF_JUMPED) && (!(player->pflags & PF_THOKKED) || (player->charability2 == CA2_MULTIABILITY)) && (lockon = P_LookForEnemies(player, true, false)) && !((leveltime & 4) && (lockon->flags & (MF_ENEMY|MF_BOSS)) && player->powers[pw_shield] == SH_ATTRACT))
+	if ((player->charability == CA_HOMINGTHOK) && !player->homing && (player->pflags & PF_JUMPED) && (!(player->pflags & PF_THOKKED) || (player->charflags & SF_MULTIABILITY)) && (lockon = P_LookForEnemies(player, true, false)))
 	{
 		if (player == &players[consoleplayer] || player == &players[secondarydisplayplayer] || player == &players[displayplayer]) // Only display it on your own view.
 		{
@@ -4146,7 +4146,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 				case CA_TELEKINESIS:
 					if (player->pflags & PF_JUMPED)
 					{
-						if (!(player->pflags & PF_THOKKED) || (player->charability2 == CA2_MULTIABILITY))
+						if (!(player->pflags & PF_THOKKED) || (player->charflags & SF_MULTIABILITY))
 						{
 							P_Telekinesis(player,
 								-FixedMul(player->actionspd, player->mo->scale), // -ve thrust (pulling towards player)
@@ -4241,7 +4241,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 				case CA_JUMPTHOK: // Credit goes to CZ64 and Sryder13 for the original
 					// Now it's Sonic's abilities turn!
 					// THOK!
-					if (!(player->pflags & PF_THOKKED) || (player->charability2 == CA2_MULTIABILITY))
+					if (!(player->pflags & PF_THOKKED) || (player->charflags & SF_MULTIABILITY))
 					{
 						// Catapult the player
 						fixed_t actionspd = player->actionspd;
@@ -4315,7 +4315,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					break;
 				case CA_GLIDEANDCLIMB:
 					// Now Knuckles-type abilities are checked.
-					if (!(player->pflags & PF_THOKKED) || player->charability2 == CA2_MULTIABILITY)
+					if (!(player->pflags & PF_THOKKED) || player->charflags & SF_MULTIABILITY)
 					{
 						INT32 glidespeed = player->actionspd;
 
@@ -4328,7 +4328,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					}
 					break;
 				case CA_DOUBLEJUMP: // Double-Jump
-					if (!(player->pflags & PF_THOKKED) || ((player->charability2 == CA2_MULTIABILITY) && (player->secondjump < (player->actionspd >> FRACBITS))))
+					if (!(player->pflags & PF_THOKKED) || ((player->charflags & SF_MULTIABILITY) && (player->secondjump < (player->actionspd >> FRACBITS))))
 					{
 						player->pflags |= PF_THOKKED;
 						player->pflags &= ~PF_JUMPED;
@@ -4338,7 +4338,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					break;
 				case CA_FLOAT: // Float
 				case CA_SLOWFALL: // Slow descent hover
-					if (!(player->pflags & PF_THOKKED) || player->charability2 == CA2_MULTIABILITY)
+					if (!(player->pflags & PF_THOKKED) || player->charflags & SF_MULTIABILITY)
 					{
 						if (player->charflags & SF_DASHMODE && player->dashmode >= 3*TICRATE)
 							P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
@@ -4352,7 +4352,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					}
 					break;
 				case CA_TELEKINESIS:
-					if (!(player->pflags & PF_THOKKED) || player->charability2 == CA2_MULTIABILITY)
+					if (!(player->pflags & PF_THOKKED) || player->charflags & SF_MULTIABILITY)
 					{
 						P_Telekinesis(player,
 							FixedMul(player->actionspd, player->mo->scale), // +ve thrust (pushing away from player)
@@ -4360,7 +4360,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					}
 					break;
 				case CA_FALLSWITCH:
-					if (!(player->pflags & PF_THOKKED) || player->charability2 == CA2_MULTIABILITY)
+					if (!(player->pflags & PF_THOKKED) || player->charflags & SF_MULTIABILITY)
 					{
 						player->mo->momz = -player->mo->momz;
 						P_SpawnThokMobj(player);
@@ -4368,7 +4368,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					}
 					break;
 				case CA_AIRDRILL:
-					if (!(player->pflags & PF_THOKKED) || player->charability2 == CA2_MULTIABILITY)
+					if (!(player->pflags & PF_THOKKED) || player->charflags & SF_MULTIABILITY)
 					{
 						player->flyangle = 56 + (60-(player->actionspd>>FRACBITS))/3;
 						player->pflags |= PF_THOKKED;
@@ -4376,7 +4376,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					}
 					break;
 				case CA_BOUNCE:
-					if (!(player->pflags & PF_THOKKED) || player->charability2 == CA2_MULTIABILITY)
+					if (!(player->pflags & PF_THOKKED) || player->charflags & SF_MULTIABILITY)
 					{
 						P_SetPlayerMobjState(player->mo, S_PLAY_BOUNCE);
 						player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE);
@@ -4387,7 +4387,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					}
 					break;
 				case CA_TWINSPIN:
-					if (!(player->pflags & PF_THOKKED) || player->charability2 == CA2_MULTIABILITY)
+					if (!(player->pflags & PF_THOKKED) || player->charflags & SF_MULTIABILITY)
 					{
 						player->pflags |= PF_THOKKED;
 						S_StartSound(player->mo, sfx_s3k42);
@@ -4461,17 +4461,15 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 		// Repeat abilities, but not double jump!
 		if (player->secondjump == 1 && player->charability != CA_DOUBLEJUMP)
 		{
-			if (player->charability2 == CA2_MULTIABILITY)
+			if (player->charflags & SF_MULTIABILITY)
 			{
-				player->pflags |= (PF_JUMPED|((player->charflags & SF_NOJUMPDAMAGE) ? PF_NOJUMPDAMAGE : 0));
-				P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
+				player->pflags |= (PF_JUMPED|PF_NOJUMPDAMAGE);
 				player->secondjump = 0;
 			}
 			else
-			{
-				P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
 				player->secondjump = 2;
-			}
+
+			P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
 		}
 
 		// If letting go of the jump button while still on ascent, cut the jump height.
@@ -6917,7 +6915,7 @@ static void P_MovePlayer(player_t *player)
 			P_ResetPlayer(player); // down, stop gliding.
 			if (onground)
 				P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
-			else if (player->charability2 == CA2_MULTIABILITY)
+			else if (player->charflags & SF_MULTIABILITY)
 			{
 				player->pflags |= (PF_JUMPED|((player->charflags & SF_NOJUMPDAMAGE) ? PF_NOJUMPDAMAGE : 0));
 				P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
@@ -6954,7 +6952,7 @@ static void P_MovePlayer(player_t *player)
 			player->pflags |= PF_THOKKED;
 			if (onground)
 				P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
-			else if (player->charability2 == CA2_MULTIABILITY)
+			else if (player->charflags & SF_MULTIABILITY)
 			{
 				player->pflags |= (PF_JUMPED|((player->charflags & SF_NOJUMPDAMAGE) ? PF_NOJUMPDAMAGE : 0));
 				P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
@@ -7034,7 +7032,7 @@ static void P_MovePlayer(player_t *player)
 		{
 			const fixed_t actionspd = player->actionspd/100;
 
-			if (player->charability2 == CA2_MULTIABILITY)
+			if (player->charflags & SF_MULTIABILITY)
 			{
 				// Adventure-style flying by just holding the button down
 				if (cmd->buttons & BT_JUMP && !(player->pflags & PF_STASIS) && !player->exiting)
@@ -9139,8 +9137,8 @@ void P_PlayerThink(player_t *player)
 		if (player->panim != PA_ABILITY)
 			P_SetPlayerMobjState(player->mo, S_PLAY_GLIDE);
 	}
-	else if ((player->pflags & PF_JUMPED)
-	&& ((player->charflags & SF_NOJUMPSPIN && !(player->pflags & PF_NOJUMPDAMAGE) && player->panim != PA_ROLL)
+	else if ((player->pflags & PF_JUMPED && !(player->pflags & PF_NOJUMPDAMAGE))
+	&& ((player->charflags & SF_NOJUMPSPIN && player->panim != PA_ROLL)
 	|| (!(player->charflags & SF_NOJUMPSPIN) && player->panim != PA_JUMP)))
 	{
 		if (!(player->charflags & SF_NOJUMPSPIN))
@@ -9806,11 +9804,6 @@ void P_PlayerAfterThink(player_t *player)
 	}
 	else if (player->pflags & PF_SLIDING)
 		P_SetPlayerMobjState(player->mo, player->mo->info->painstate);
-	else if (player->pflags & PF_JUMPED
-	&& ((!player->powers[pw_super] && player->panim != PA_JUMP)
-	|| player->mo->state == &states[player->mo->info->painstate])
-	&& !(player->charflags & SF_NOJUMPSPIN))
-		P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 
 	/* if (player->powers[pw_carry] == CR_NONE && player->mo->tracer && !player->homing)
 		P_SetTarget(&player->mo->tracer, NULL);
