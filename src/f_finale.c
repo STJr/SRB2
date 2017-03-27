@@ -32,11 +32,13 @@
 #include "y_inter.h"
 #include "m_cond.h"
 #include "p_local.h"
+#include "p_setup.h"
 
 // Stage of animation:
 // 0 = text, 1 = art screen
 static INT32 finalecount;
 INT32 titlescrollspeed = 80;
+boolean titlemapinaction = false;
 
 static INT32 timetonext; // Delay between screen changes
 static INT32 continuetime; // Short delay when continuing
@@ -1425,26 +1427,25 @@ void F_StartTitleScreen(void)
 
 	if (titlemap)
 	{
+		titlemapinaction = true;
 		gamemap = titlemap;
 
 		if (!mapheaderinfo[gamemap-1])
 			P_AllocMapHeader(gamemap-1);
 
 		G_DoLoadLevel(true);
-		G_SetGamestate(GS_TITLESCREEN);
 		players[displayplayer].playerstate = PST_DEAD; // Don't spawn the player in dummy (I'm still a filthy cheater)
+		camera.subsector = NULL; // toast is filthy too
 		//CON_ClearHUD();
 	}
 	else
 	{
-		gamemap = 0;
-
-		if (!mapheaderinfo[gamemap-1])
-			P_AllocMapHeader(gamemap-1);
-
-		G_SetGamestate(GS_TITLESCREEN);
+		titlemapinaction = false;
+		gamemap = 1; // g_game.c
 		CON_ClearHUD();
 	}
+
+	G_SetGamestate(GS_TITLESCREEN);
 
 	// IWAD dependent stuff.
 
@@ -1478,9 +1479,8 @@ void F_TitleScreenDrawer(void)
 		return; // We likely came here from retrying. Don't do a damn thing.
 
 	// Draw that sky!
-	if (!gamemap) {
+	if (!titlemapinaction)
 		F_SkyScroll(titlescrollspeed);
-	}
 
 	// Don't draw outside of the title screewn, or if the patch isn't there.
 	if (!ttwing || (gamestate != GS_TITLESCREEN && gamestate != GS_WAITINGPLAYERS))
@@ -1488,49 +1488,44 @@ void F_TitleScreenDrawer(void)
 
 	// rei|miru: use title pics?
 	if (hidetitlepics)
-	{
 		return;
+
+	V_DrawScaledPatch(30, 14, 0, ttwing);
+
+	if (finalecount < 57)
+	{
+		if (finalecount == 35)
+			V_DrawScaledPatch(115, 15, 0, ttspop1);
+		else if (finalecount == 36)
+			V_DrawScaledPatch(114, 15, 0,ttspop2);
+		else if (finalecount == 37)
+			V_DrawScaledPatch(113, 15, 0,ttspop3);
+		else if (finalecount == 38)
+			V_DrawScaledPatch(112, 15, 0,ttspop4);
+		else if (finalecount == 39)
+			V_DrawScaledPatch(111, 15, 0,ttspop5);
+		else if (finalecount == 40)
+			V_DrawScaledPatch(110, 15, 0, ttspop6);
+		else if (finalecount >= 41 && finalecount <= 44)
+			V_DrawScaledPatch(109, 15, 0, ttspop7);
+		else if (finalecount >= 45 && finalecount <= 48)
+			V_DrawScaledPatch(108, 12, 0, ttsprep1);
+		else if (finalecount >= 49 && finalecount <= 52)
+			V_DrawScaledPatch(107, 9, 0, ttsprep2);
+		else if (finalecount >= 53 && finalecount <= 56)
+			V_DrawScaledPatch(106, 6, 0, ttswip1);
+		V_DrawScaledPatch(93, 106, 0, ttsonic);
 	}
 	else
 	{
-		V_DrawScaledPatch(30, 14, 0, ttwing);
-
-		if (finalecount < 57)
-		{
-			if (finalecount == 35)
-				V_DrawScaledPatch(115, 15, 0, ttspop1);
-			else if (finalecount == 36)
-				V_DrawScaledPatch(114, 15, 0,ttspop2);
-			else if (finalecount == 37)
-				V_DrawScaledPatch(113, 15, 0,ttspop3);
-			else if (finalecount == 38)
-				V_DrawScaledPatch(112, 15, 0,ttspop4);
-			else if (finalecount == 39)
-				V_DrawScaledPatch(111, 15, 0,ttspop5);
-			else if (finalecount == 40)
-				V_DrawScaledPatch(110, 15, 0, ttspop6);
-			else if (finalecount >= 41 && finalecount <= 44)
-				V_DrawScaledPatch(109, 15, 0, ttspop7);
-			else if (finalecount >= 45 && finalecount <= 48)
-				V_DrawScaledPatch(108, 12, 0, ttsprep1);
-			else if (finalecount >= 49 && finalecount <= 52)
-				V_DrawScaledPatch(107, 9, 0, ttsprep2);
-			else if (finalecount >= 53 && finalecount <= 56)
-				V_DrawScaledPatch(106, 6, 0, ttswip1);
-			V_DrawScaledPatch(93, 106, 0, ttsonic);
-		}
+		V_DrawScaledPatch(93, 106, 0,ttsonic);
+		if (finalecount/5 & 1)
+			V_DrawScaledPatch(100, 3, 0,ttswave1);
 		else
-		{
-			V_DrawScaledPatch(93, 106, 0,ttsonic);
-			if (finalecount/5 & 1)
-				V_DrawScaledPatch(100, 3, 0,ttswave1);
-			else
-				V_DrawScaledPatch(100,3, 0,ttswave2);
-		}
-
-		V_DrawScaledPatch(48, 142, 0,ttbanner);
-
+			V_DrawScaledPatch(100,3, 0,ttswave2);
 	}
+
+	V_DrawScaledPatch(48, 142, 0,ttbanner);
 }
 
 // (no longer) De-Demo'd Title Screen
@@ -1544,7 +1539,7 @@ void F_TitleScreenTicker(boolean run)
 		return;
 
 	// Do a lil' camera spin if a title map is loaded.
-	if (gamemap) {
+	if (titlemapinaction) {
 		camera.x = camera.y = camera.height = camera.aiming = 0;
 		camera.z = 128*FRACUNIT;
 		camera.angle += titlescrollspeed;
