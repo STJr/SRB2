@@ -2937,7 +2937,6 @@ void R_PatchSkins(UINT16 wadnum)
 	UINT8 parsemode; // the types are not enums because they should be irrelevant outside this function
 #define PATCHPARSE_GET_NAME 0
 #define PATCHPARSE_MODIFY_PROPERTY 1
-#define PATCHPARSE_REMOVE_SPR2 2
 
 	//
 	// search for all skin patch markers in pwad
@@ -2964,9 +2963,7 @@ void R_PatchSkins(UINT16 wadnum)
 		noskincomplain = false;
 
 		/*
-		Parse. Has more phases than the parser in R_AddSkins because-
-		- it needs to have the patching name first (no default skin name is acceptible for patching, unlike skin creation)
-		- it needs the sprite2 reset list last.
+		Parse. Has more phases than the parser in R_AddSkins because it needs to have the patching name first (no default skin name is acceptible for patching, unlike skin creation)
 		*/
 
 		parsemode = 0;
@@ -2978,74 +2975,6 @@ void R_PatchSkins(UINT16 wadnum)
 			{
 				stoken = strtok(NULL, "\r\n"); // skip end of line
 				goto next_token;              // find the real next token
-			}
-
-			switch (parsemode)  // This is where additional keyword-only tokens may be considered.
-			{
-				case PATCHPARSE_GET_NAME: // No keyword-only properties.
-					break;
-				case PATCHPARSE_MODIFY_PROPERTY: // Only one property type supported right now.
-					if (!stricmp(stoken, "reset"))
-					{
-						parsemode = PATCHPARSE_REMOVE_SPR2;
-						goto next_token; // get next token
-					}
-					break;
-				case PATCHPARSE_REMOVE_SPR2: // Following a "reset" command.
-					{
-						strupr(stoken);
-						if (!strncmp(stoken, "SPR2_", 5))
-						{
-							UINT8 i;
-							for (i = 0; i < (UINT8)free_spr2; i++)
-							{
-								if (!spr2names[i][4])
-								{
-									// special 3-char cases, e.g. SPR2_RUN
-									// the spr2names entry will have "_" on the end, as in "RUN_"
-									if (spr2names[i][3] == '_' && !stoken[3]) {
-										if (fastncmp(stoken+5,spr2names[i],3)) {
-											break;
-										}
-									}
-									else if (fastncmp(stoken+5,spr2names[i],4)) {
-										break;
-									}
-								}
-							}
-							if (i == free_spr2)
-							{
-								CONS_Debug(DBG_SETUP, "R_PatchSkins: unknown sprite2 %s given to reset in P_SKIN lump #%d (WAD %s)\n", stoken, lump, wadfiles[wadnum]->filename);
-							}
-							else if (i == SPR2_STND) // Not permitted to completely clear the spr2 every other one defaults to when not present...
-							{
-								if (skin->sprites[i].numframes && skin->sprites[i].numframes > 1) // Preserve number one only.
-								{
-									memset(sprtemp,0xFF, sizeof (spriteframe_t));
-									M_Memcpy(sprtemp, skin->sprites[i].spriteframes, sizeof (spriteframe_t));
-									Z_Free(skin->sprites[i].spriteframes);
-									skin->sprites[i].spriteframes = NULL;
-									M_Memcpy(skin->sprites[i].spriteframes, sprtemp, sizeof (spriteframe_t));
-									skin->sprites[i].numframes = 1;
-								}
-							}
-							else // Clear 'em all out!
-							{
-								if (skin->sprites[i].numframes) // has been allocated?
-								{
-									CONS_Debug(DBG_SETUP, "R_PatchSkins: Getting rid of %d frames in sprite2 %s...\n", skin->sprites[i].numframes, stoken);
-									Z_Free(skin->sprites[i].spriteframes);
-									skin->sprites[i].spriteframes = NULL;
-									skin->sprites[i].numframes = 0;
-								}
-							}
-						}
-						else
-							CONS_Debug(DBG_SETUP, "R_PatchSkins: malformed sprite2 %s given to reset in P_SKIN lump #%d (WAD %s)\n", stoken, lump, wadfiles[wadnum]->filename);
-					}
-					goto next_token; // get next token unconditionally in this state
-				default: // ???
-					break;
 			}
 
 			value = strtok(NULL, "\r\n= ");
@@ -3072,8 +3001,6 @@ void R_PatchSkins(UINT16 wadnum)
 						}
 					}
 				case PATCHPARSE_MODIFY_PROPERTY: // No value-requiring properties available for modification yet.
-					break;
-				case PATCHPARSE_REMOVE_SPR2: // Sprite2 reset should probably not include property.
 					break;
 				default: // ???
 					break;
