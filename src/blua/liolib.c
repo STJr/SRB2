@@ -447,7 +447,7 @@ static int io_readline (lua_State *L) {
 static int g_write (lua_State *L, FILE *f, int arg) {
   int nargs = lua_gettop(L) - 1;
   int status = 1;
-  size_t count;
+  size_t count = 0;
   for (; nargs--; arg++) {
     if (lua_type(L, arg) == LUA_TNUMBER) {
       /* optimization: could be done exactly as for strings */
