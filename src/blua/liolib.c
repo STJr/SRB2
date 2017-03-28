@@ -171,6 +171,10 @@ static int io_open (lua_State *L) {
 	int pass = 0;
 	size_t i;
 	int length = strlen(filename) - 1;
+	char *splitter, *splitter2;
+	char* destFilename;
+	const char *mode;
+	FILE **pf;
 	for (i = 0; i < (sizeof (whitelist) / sizeof(const char *)); i++)
 	{
 		if (!stricmp(&filename[length - (strlen(whitelist[i]) - 1)], whitelist[i]))
@@ -186,7 +190,7 @@ static int io_open (lua_State *L) {
 		return pushresult(L,0,filename);
 	}
 	I_mkdir("luafiles", 0755);
-	char *splitter = filename; 
+	splitter = strdup(filename);
 	while ((splitter = strchr(splitter, '/')))
 	{
 		*splitter = 0;
@@ -194,7 +198,7 @@ static int io_open (lua_State *L) {
 		*splitter = '/'; 
 		splitter++;
 	}
-	char *splitter2 = filename;
+	splitter2 = strdup(filename);
 	while ((splitter2 = strchr(splitter2, '\\')))
 	{
 		*splitter2 = 0;
@@ -202,11 +206,13 @@ static int io_open (lua_State *L) {
 		*splitter2 = '\\'; 
 		splitter2++;
 	}
-	char* destFilename = va("luafiles"PATHSEP"%s", filename);
+	destFilename = va("luafiles"PATHSEP"%s", filename);
 	filename = destFilename;
-	const char *mode = luaL_optstring(L, 2, "r");
-	FILE **pf = newfile(L);
+	mode = luaL_optstring(L, 2, "r");
+	pf = newfile(L);
 	*pf = fopen(filename, mode);
+	free(splitter);
+	free(splitter2);
 	return (*pf == NULL) ? pushresult(L, 0, filename) : 1;
 }
 
