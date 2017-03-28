@@ -1429,6 +1429,7 @@ void F_StartTitleScreen(void)
 
 	if (titlemap)
 	{
+		gamestate_t prevwipegamestate = wipegamestate;
 		titlemapinaction = true;
 		gamemap = titlemap;
 
@@ -1439,6 +1440,8 @@ void F_StartTitleScreen(void)
 		players[displayplayer].playerstate = PST_DEAD; // Don't spawn the player in dummy (I'm still a filthy cheater)
 		camera.subsector = NULL; // toast is filthy too
 		//CON_ClearHUD();
+
+		wipegamestate = prevwipegamestate;
 	}
 	else
 	{
