@@ -970,6 +970,7 @@ UINT8 M_CompletionEmblems(void) // Bah! Duplication sucks, but it's for a separa
 	INT16 levelnum;
 	UINT8 res;
 	UINT8 somethingUnlocked = 0;
+	UINT8 flags;
 
 	for (i = 0; i < numemblems; ++i)
 	{
@@ -978,8 +979,7 @@ UINT8 M_CompletionEmblems(void) // Bah! Duplication sucks, but it's for a separa
 
 		levelnum = emblemlocations[i].level;
 		embtype = emblemlocations[i].var;
-		
-		UINT8 flags = MV_BEATEN;
+		flags = MV_BEATEN;
 		
 		if (embtype & ME_ALLEMERALDS)
 			flags |= MV_ALLEMERALDS;
