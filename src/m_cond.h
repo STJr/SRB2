@@ -73,6 +73,12 @@ typedef struct
 #define ET_RINGS  4
 #define ET_NGRADE 5
 #define ET_NTIME  6
+#define ET_MAP    7
+
+// Map emblem flags
+#define ME_ALLEMERALDS 1
+#define ME_ULTIMATE    2
+#define ME_PERFECT     4
 
 typedef struct
 {
@@ -153,6 +159,7 @@ void M_CheckUnlockConditions(void);
 UINT8 M_UpdateUnlockablesAndExtraEmblems(void);
 void M_SilentUpdateUnlockablesAndEmblems(void);
 UINT8 M_CheckLevelEmblems(void);
+UINT8 M_CompletionEmblems(void);
 
 // Checking unlockable status
 UINT8 M_AnySecretUnlocked(void);
