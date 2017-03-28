@@ -1002,7 +1002,7 @@ static const char *credits[] = {
 	"",
 	"\1Sprite Artists",
 	"Odi \"Iceman404\" Atunzu",
-	"Victor \"VAdaPEGA\" Ara\x1Fjo", // Arajo -- sorry for our limited font! D:
+	"Victor \"VAdaPEGA\" Ara\x1Fjo", // Araújo -- sorry for our limited font! D:
 	"Jim \"MotorRoach\" DeMello",
 	"Desmond \"Blade\" DesJardins",
 	"Sherman \"CoatRack\" DesJardins",
@@ -1427,7 +1427,6 @@ void F_StartTitleScreen(void)
 
 	if (titlemap)
 	{
-		titlemapinaction = true;
 		titlemapinaction = true;
 		gamemap = titlemap;
 
