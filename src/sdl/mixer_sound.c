@@ -472,6 +472,8 @@ static void mixmusic_callback(void *udata, Uint8 *stream, int len)
 		music_pos += len/4;
 		music_pos_time = SDL_GetTicks();
 	}
+	(void)udata;
+	(void)stream;
 	//I_OutputMsg("MusicPos: %.3f", music_pos);
 	//HU_DoCEcho(va("MusicPos: %.3f\\Stream: %d\\Length: %i", music_pos,stream,len));
 }

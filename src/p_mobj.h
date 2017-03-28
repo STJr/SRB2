@@ -457,5 +457,5 @@ extern INT32 numstarposts;
 
 boolean camera_motionblur;
 INT32 forward_postimgparam;
-boolean P_CheckMotionBlur();
+boolean P_CheckMotionBlur(void);
 void P_SetActiveMotionBlur(boolean active, INT32 param);

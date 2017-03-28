@@ -23,7 +23,7 @@
 #ifdef CMAKECONFIG
 #include "config.h"
 #else
-#include "config.h.in"
+#include "../config.h.in"
 #endif
 
 #ifndef _WIN32_WCE

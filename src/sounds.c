@@ -478,7 +478,6 @@ void S_InitRuntimeSounds (void)
 	sfxenum_t i;
 	INT32 value;
 	char soundname[7];
-	char musicname[7];
 
 	for (i = sfx_freeslot0; i <= sfx_lastskinsoundslot; i++)
 	{

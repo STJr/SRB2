@@ -166,8 +166,10 @@ static int StartsWith(const char *a, const char *b) // this is wolfs being lazy 
 
 
 static int io_open (lua_State *L) {
-	const char *filename = luaL_checkstring(L, 1);
-	int pass = 0; int i;
+	const char *Cfilename = luaL_checkstring(L, 1);
+	char *filename = strdup(Cfilename);
+	int pass = 0;
+	size_t i;
 	int length = strlen(filename) - 1;
 	for (i = 0; i < (sizeof (whitelist) / sizeof(const char *)); i++)
 	{

@@ -2294,11 +2294,13 @@ static void Command_connect(void)
 			}
 		}
 
-		if (gametype == INT32_MAX)
+#if 0 // gametype will never equal INT32_MAX
+	if (gametype == INT32_MAX)
         {
             CONS_Alert(CONS_ERROR, M_GetText("Invalid gametype %s\n"), COM_Argv(3));
             return;
         }
+#endif
 
         // Goodbye, we're off to host a server
         CV_SetValue(&cv_nextmap, newmapnum);
