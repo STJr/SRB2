@@ -210,7 +210,7 @@ void R_PortalClearClipSegs(INT32 start, INT32 end)
 //
 // It assumes that Doom has already ruled out a door being closed because
 // of front-back closure (e.g. front floor is taller than back ceiling).
-static inline INT32 R_DoorClosed(void)
+static INT32 R_DoorClosed(void)
 {
 	return
 
