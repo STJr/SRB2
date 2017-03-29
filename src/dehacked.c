@@ -1339,7 +1339,19 @@ static void readlevelheader(MYFILE *f, INT32 num)
 				else
 					deh_warning("Level header %d: invalid bonus type number %d", num, i);
 			}
+			
+			else if (fastcmp(word, "SAVEMODE"))
+			{
+				if (fastcmp(word2, "DEFAULT"))     i = 0;
+				else if (fastcmp(word2, "ALWAYS")) i = 1;
+				else if (fastcmp(word2, "NEVER"))  i = 2;
 
+				if (i >= 0 && i <= 2)
+					mapheaderinfo[num-1]->savemode = (UINT8)i;
+				else
+					deh_warning("Level header %d: invalid save mode number %d", num, i);
+			}
+			
 			else if (fastcmp(word, "LEVELFLAGS"))
 				mapheaderinfo[num-1]->levelflags = (UINT8)i;
 			else if (fastcmp(word, "MENUFLAGS"))

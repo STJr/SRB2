@@ -246,6 +246,8 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->levelselect = 0;
 	DEH_WriteUndoline("BONUSTYPE", va("%d", mapheaderinfo[num]->bonustype), UNDO_NONE);
 	mapheaderinfo[num]->bonustype = 0;
+	DEH_WriteUndoline("SAVEMODE", va("%d", mapheaderinfo[num]->savemode), UNDO_NONE);
+	mapheaderinfo[num]->savemode = 0;
 	DEH_WriteUndoline("LEVELFLAGS", va("%d", mapheaderinfo[num]->levelflags), UNDO_NONE);
 	mapheaderinfo[num]->levelflags = 0;
 	DEH_WriteUndoline("MENUFLAGS", va("%d", mapheaderinfo[num]->menuflags), UNDO_NONE);
@@ -2960,9 +2962,8 @@ boolean P_SetupLevel(boolean skipprecip)
 	P_RunCachedActions();
 
 	if (!(netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking || players[consoleplayer].lives <= 0)
-		&& (!modifiedgame || savemoddata) && cursaveslot >= 0 && !ultimatemode
-		&& !(mapheaderinfo[gamemap-1]->menuflags & LF2_HIDEINMENU)
-		&& (!G_IsSpecialStage(gamemap)) && gamemap != lastmapsaved && (mapheaderinfo[gamemap-1]->actnum < 2 || gamecomplete))
+		&& (!modifiedgame || savemoddata) && cursaveslot >= 0 && !ultimatemode && !(G_IsSpecialStage(gamemap)) && !(mapheaderinfo[gamemap-1]->savemode == 2)
+		&& ((mapheaderinfo[gamemap-1]->savemode == 1) || (!(mapheaderinfo[gamemap-1]->menuflags & LF2_HIDEINMENU) && gamemap != lastmapsaved && (mapheaderinfo[gamemap-1]->actnum < 2 || gamecomplete))))
 		G_SaveGame((UINT32)cursaveslot);
 
 	if (savedata.lives > 0)
