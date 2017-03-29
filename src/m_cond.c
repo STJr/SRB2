@@ -929,7 +929,7 @@ UINT8 M_CheckLevelEmblems(void)
 	// Update Score, Time, Rings emblems
 	for (i = 0; i < numemblems; ++i)
 	{
-		if (emblemlocations[i].type <= ET_SKIN || emblemlocations[i].collected)
+		if (emblemlocations[i].type <= ET_SKIN || emblemlocations[i].type == ET_MAP || emblemlocations[i].collected)
 			continue;
 
 		levelnum = emblemlocations[i].level;
@@ -956,6 +956,42 @@ UINT8 M_CheckLevelEmblems(void)
 				continue;
 		}
 
+		emblemlocations[i].collected = res;
+		if (res)
+			++somethingUnlocked;
+	}
+	return somethingUnlocked;
+}
+
+UINT8 M_CompletionEmblems(void) // Bah! Duplication sucks, but it's for a separate print when awarding emblems and it's sorta different enough.
+{
+	INT32 i;
+	INT32 embtype;
+	INT16 levelnum;
+	UINT8 res;
+	UINT8 somethingUnlocked = 0;
+	UINT8 flags;
+
+	for (i = 0; i < numemblems; ++i)
+	{
+		if (emblemlocations[i].type != ET_MAP || emblemlocations[i].collected)
+			continue;
+
+		levelnum = emblemlocations[i].level;
+		embtype = emblemlocations[i].var;
+		flags = MV_BEATEN;
+		
+		if (embtype & ME_ALLEMERALDS)
+			flags |= MV_ALLEMERALDS;
+		
+		if (embtype & ME_ULTIMATE)
+			flags |= MV_ULTIMATE;
+		
+		if (embtype & ME_PERFECT)
+			flags |= MV_PERFECT;
+		
+		res = ((mapvisited[levelnum - 1] & flags) == flags);
+		
 		emblemlocations[i].collected = res;
 		if (res)
 			++somethingUnlocked;
