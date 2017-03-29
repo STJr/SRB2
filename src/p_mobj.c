@@ -2017,13 +2017,13 @@ static void P_AdjustMobjFloorZ_FFloors(mobj_t *mo, sector_t *sector, UINT8 motyp
 		delta2 = thingtop - (bottomheight + ((topheight - bottomheight)/2));
 		if (topheight > mo->floorz && abs(delta1) < abs(delta2)
 			&& !(rover->flags & FF_REVERSEPLATFORM)
-			&& ((P_MobjFlip(mo)*mo->momz > 0) || (!(rover->flags & FF_PLATFORM)))) // In reverse gravity, only clip for FOFs that are intangible from their bottom (the "top" you're falling through) if you're coming from above ("below" in your frame of reference)
+			&& ((P_MobjFlip(mo)*mo->momz >= 0) || (!(rover->flags & FF_PLATFORM)))) // In reverse gravity, only clip for FOFs that are intangible from their bottom (the "top" you're falling through) if you're coming from above ("below" in your frame of reference)
 		{
 			mo->floorz = topheight;
 		}
 		if (bottomheight < mo->ceilingz && abs(delta1) >= abs(delta2)
 			&& !(rover->flags & FF_PLATFORM)
-			&& ((P_MobjFlip(mo)*mo->momz > 0) || (!(rover->flags & FF_REVERSEPLATFORM)))) // In normal gravity, only clip for FOFs that are intangible from the top if you're coming from below
+			&& ((P_MobjFlip(mo)*mo->momz >= 0) || (!(rover->flags & FF_REVERSEPLATFORM)))) // In normal gravity, only clip for FOFs that are intangible from the top if you're coming from below
 		{
 			mo->ceilingz = bottomheight;
 		}
@@ -4436,7 +4436,7 @@ static void P_Boss4MoveSpikeballs(mobj_t *mobj, angle_t angle, fixed_t fz)
 {
 	INT32 s;
 	mobj_t *base = mobj, *seg;
-	fixed_t dist, bz = (mobj->spawnpoint->z+16)<<FRACBITS;
+	fixed_t dist, bz = mobj->watertop+(16<<FRACBITS);
 	while ((base = base->tracer))
 	{
 		for (seg = base, dist = 172*FRACUNIT, s = 9; seg; seg = seg->hnext, dist += 124*FRACUNIT, --s)
@@ -4450,7 +4450,7 @@ static void P_Boss4PinchSpikeballs(mobj_t *mobj, angle_t angle, fixed_t fz)
 {
 	INT32 s;
 	mobj_t *base = mobj, *seg;
-	fixed_t dist, bz = (mobj->spawnpoint->z+16)<<FRACBITS;
+	fixed_t dist, bz = mobj->watertop+(16<<FRACBITS);
 	while ((base = base->tracer))
 	{
 		for (seg = base, dist = 112*FRACUNIT, s = 9; seg; seg = seg->hnext, dist += 132*FRACUNIT, --s)
@@ -4566,7 +4566,7 @@ static void P_Boss4Thinker(mobj_t *mobj)
 			INT32 i, arm;
 			mobj_t *seg, *base = mobj;
 			// First frame init, spawn all the things.
-			mobj->spawnpoint->z = mobj->z>>FRACBITS;
+			mobj->watertop = mobj->z;
 			z = mobj->z + mobj->height/2 - mobjinfo[MT_EGGMOBILE4_MACE].height/2;
 			for (arm = 0; arm <3 ; arm++)
 			{
@@ -4622,7 +4622,7 @@ static void P_Boss4Thinker(mobj_t *mobj)
 	case 3:
 	{
 		fixed_t z;
-		if (mobj->z < (mobj->spawnpoint->z+512)<<FRACBITS)
+		if (mobj->z < mobj->watertop+(512<<FRACBITS))
 			mobj->momz = 8*FRACUNIT;
 		else
 		{
@@ -4631,7 +4631,7 @@ static void P_Boss4Thinker(mobj_t *mobj)
 		}
 		mobj->movecount += 400<<(FRACBITS>>1);
 		mobj->movecount %= 360*FRACUNIT;
-		z = mobj->z - (mobj->spawnpoint->z<<FRACBITS) - mobjinfo[MT_EGGMOBILE4_MACE].height - mobj->height/2;
+		z = mobj->z - mobj->watertop - mobjinfo[MT_EGGMOBILE4_MACE].height - mobj->height/2;
 		if (z < 0) // We haven't risen high enough to pull the spikeballs along yet
 			P_Boss4MoveSpikeballs(mobj, FixedAngle(mobj->movecount), 0); // So don't pull the spikeballs along yet.
 		else
@@ -4641,13 +4641,13 @@ static void P_Boss4Thinker(mobj_t *mobj)
 	// Pinch phase!
 	case 4:
 	{
-		if (mobj->z < (mobj->spawnpoint->z+512+128*(mobj->info->damage-mobj->health))<<FRACBITS)
+		if (mobj->z < (mobj->watertop + ((512+128*(mobj->info->damage-mobj->health))<<FRACBITS)))
 			mobj->momz = 8*FRACUNIT;
 		else
 			mobj->momz = 0;
 		mobj->movecount += (800+800*(mobj->info->damage-mobj->health))<<(FRACBITS>>1);
 		mobj->movecount %= 360*FRACUNIT;
-		P_Boss4PinchSpikeballs(mobj, FixedAngle(mobj->movecount), mobj->z - (mobj->spawnpoint->z<<FRACBITS) - mobjinfo[MT_EGGMOBILE4_MACE].height - mobj->height/2);
+		P_Boss4PinchSpikeballs(mobj, FixedAngle(mobj->movecount), mobj->z - mobj->watertop - mobjinfo[MT_EGGMOBILE4_MACE].height - mobj->height/2);
 
 		if (!mobj->target || !mobj->target->health)
 			P_SupermanLook4Players(mobj);
@@ -6048,6 +6048,8 @@ void P_RunOverlays(void)
 		P_UnsetThingPosition(mo);
 		mo->x = destx;
 		mo->y = desty;
+		mo->radius = mo->target->radius;
+		mo->height = mo->target->height;
 		if (mo->eflags & MFE_VERTICALFLIP)
 			mo->z = (mo->target->z + mo->target->height - mo->height) - zoffs;
 		else
@@ -7683,6 +7685,10 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 
 		if (mobj->type == MT_UNIDUS)
 			mobj->z -= FixedMul(mobj->info->mass, mobj->scale);
+
+		// defaults onground
+		if (mobj->z + mobj->height == mobj->ceilingz)
+			mobj->eflags |= MFE_ONGROUND;
 	}
 	else
 		mobj->z = z;

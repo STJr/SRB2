@@ -708,7 +708,7 @@ subsector_t *R_PointInSubsector(fixed_t x, fixed_t y)
 }
 
 //
-// R_IsPointInSubsector, same as above but returns 0 if not in subsector - this does not work in opengl because of polyvertex_t
+// R_IsPointInSubsector, same as above but returns 0 if not in subsector
 //
 subsector_t *R_IsPointInSubsector(fixed_t x, fixed_t y)
 {
@@ -732,7 +732,8 @@ subsector_t *R_IsPointInSubsector(fixed_t x, fixed_t y)
 
 	ret = &subsectors[nodenum & ~NF_SUBSECTOR];
 	for (i = 0; i < ret->numlines; i++)
-		if (R_PointOnSegSide(x, y, &segs[ret->firstline + i]))
+		//if (R_PointOnSegSide(x, y, &segs[ret->firstline + i])) -- breaks in ogl because polyvertex_t cast over vertex pointers
+		if (P_PointOnLineSide(x, y, segs[ret->firstline + i].linedef) != segs[ret->firstline + i].side)
 			return 0;
 
 	return ret;
