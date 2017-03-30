@@ -5763,10 +5763,8 @@ void P_SpawnSpecials(INT32 fromnetsave)
 					}
 					else // Otherwise, set calculated offsets such that line's v1 is the apparent origin
 					{
-						fixed_t cosinecomponent = FINECOSINE(flatangle>>ANGLETOFINESHIFT);
-						fixed_t sinecomponent = FINESINE(flatangle>>ANGLETOFINESHIFT);
-						xoffs = (-FixedMul(lines[i].v1->x, cosinecomponent) % MAXFLATSIZE) + (FixedMul(lines[i].v1->y, sinecomponent) % MAXFLATSIZE); // No danger of overflow thanks to the strategically placed modulo operations.
-						yoffs = (FixedMul(lines[i].v1->x, sinecomponent) % MAXFLATSIZE) + (FixedMul(lines[i].v1->y, cosinecomponent) % MAXFLATSIZE); // Ditto.
+						xoffs = -lines[i].v1->x;
+						yoffs = -lines[i].v1->y;
 					}
 
 					for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
