@@ -959,13 +959,42 @@ void R_DrawSinglePlane(visplane_t *pl)
 		// Okay, look, don't ask me why this works, but without this setup there's a disgusting-looking misalignment with the textures. -Red
 		const float fudge = ((1<<nflatshiftup)+1.0f)/(1<<nflatshiftup);
 
+		angle_t hack = (pl->plangle & (ANGLE_90-1));
+
 		yoffs *= 1;
 
-		xoffs &= ((1 << (32-nflatshiftup))-1);
-		yoffs &= ((1 << (32-nflatshiftup))-1);
+#define incorporateorigin(originx, originy) xoffs &= ((1 << (32-nflatshiftup))-1);\
+yoffs &= ((1 << (32-nflatshiftup))-1);\
+xoffs -= (originx + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1);\
+yoffs += (originy + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1)
 
-		xoffs -= (pl->slope->o.x + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1);
-		yoffs += (pl->slope->o.y + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1);
+		if (hack != 0)
+		{
+			if (hack >= ANGLE_45)
+				hack = InvAngle(hack);
+			{
+				const fixed_t cosinecomponent = FINECOSINE(hack>>ANGLETOFINESHIFT);
+				const fixed_t sinecomponent = FINESINE(hack>>ANGLETOFINESHIFT);
+
+				const fixed_t ox = FixedMul(pl->slope->o.x,cosinecomponent)+FixedMul(pl->slope->o.y,sinecomponent);
+				const fixed_t oy = -FixedMul(pl->slope->o.x,sinecomponent)+FixedMul(pl->slope->o.y,cosinecomponent);
+
+				fixed_t oldxoffs = xoffs;
+				xoffs = FixedMul(xoffs,cosinecomponent)+FixedMul(yoffs,sinecomponent);
+				yoffs = -FixedMul(oldxoffs,sinecomponent)+FixedMul(yoffs,cosinecomponent);
+
+				incorporateorigin(ox, oy);
+
+				oldxoffs = xoffs;
+				xoffs = FixedMul(xoffs,cosinecomponent)+FixedMul(yoffs,-sinecomponent); // negative sine for opposite direction
+				yoffs = -FixedMul(oldxoffs,-sinecomponent)+FixedMul(yoffs,cosinecomponent); // ditto
+			}
+		}
+		else
+		{
+			incorporateorigin(pl->slope->o.x, pl->slope->o.y);
+		}
+#undef incorporateorigin
 
 		xoffs = (fixed_t)(xoffs*fudge);
 		yoffs = (fixed_t)(yoffs/fudge);
