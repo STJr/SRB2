@@ -959,6 +959,8 @@ void R_DrawSinglePlane(visplane_t *pl)
 		// Okay, look, don't ask me why this works, but without this setup there's a disgusting-looking misalignment with the textures. -Red
 		const float fudge = ((1<<nflatshiftup)+1.0f)/(1<<nflatshiftup);
 
+		yoffs *= 1;
+
 		xoffs &= ((1 << (32-nflatshiftup))-1);
 		yoffs &= ((1 << (32-nflatshiftup))-1);
 

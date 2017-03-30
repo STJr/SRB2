@@ -687,7 +687,7 @@ static void HWR_RenderPlane(sector_t *sector, extrasubsector_t *xsub, boolean is
 	{
 		// Hurdler: add scrolling texture on floor/ceiling
 		v3d->sow = (float)((pv->x / fflatsize) - flatxref + scrollx);
-		v3d->tow = (float)(-(pv->y / fflatsize) + flatyref - scrolly);
+		v3d->tow = (float)(-(pv->y / fflatsize) + flatyref + scrolly);
 
 		//v3d->sow = (float)(pv->x / fflatsize);
 		//v3d->tow = (float)(pv->y / fflatsize);

@@ -5759,12 +5759,12 @@ void P_SpawnSpecials(INT32 fromnetsave)
 					if (lines[i].flags & ML_NOKNUX) // Set offset through x and y texture offsets if NOKNUX flag is set
 					{
 						xoffs = sides[lines[i].sidenum[0]].textureoffset;
-						yoffs = sides[lines[i].sidenum[0]].rowoffset;
+						yoffs = -sides[lines[i].sidenum[0]].rowoffset;
 					}
 					else // Otherwise, set calculated offsets such that line's v1 is the apparent origin
 					{
 						xoffs = -lines[i].v1->x;
-						yoffs = -lines[i].v1->y;
+						yoffs = lines[i].v1->y;
 					}
 
 					for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
