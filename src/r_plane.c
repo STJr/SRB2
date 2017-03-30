@@ -445,20 +445,18 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 #ifdef ESLOPE
 	if (slope); else // Don't mess with this right now if a slope is involved
 #endif
-	if (plangle != 0)
-	{
-		// Add the view offset, rotated by the plane angle.
-		fixed_t cosinecomponent = FINECOSINE(plangle>>ANGLETOFINESHIFT);
-		fixed_t sinecomponent = FINESINE(plangle>>ANGLETOFINESHIFT);
-		fixed_t interxoff = xoff + viewx;
-		fixed_t interyoff = yoff + viewy;
-		xoff = FixedMul(interxoff,cosinecomponent)-FixedMul(interyoff,sinecomponent);
-		yoff = -FixedMul(interxoff,sinecomponent)-FixedMul(interyoff,cosinecomponent);
-	}
-	else
 	{
 		xoff += viewx;
 		yoff -= viewy;
+		if (plangle != 0)
+		{
+			// Add the view offset, rotated by the plane angle.
+			fixed_t cosinecomponent = FINECOSINE(plangle>>ANGLETOFINESHIFT);
+			fixed_t sinecomponent = FINESINE(plangle>>ANGLETOFINESHIFT);
+			fixed_t oldxoff = xoff;
+			xoff = FixedMul(xoff,cosinecomponent)+FixedMul(yoff,sinecomponent);
+			yoff = -FixedMul(oldxoff,sinecomponent)+FixedMul(yoff,cosinecomponent);
+		}
 	}
 
 	// This appears to fix the Nimbus Ruins sky bug.
