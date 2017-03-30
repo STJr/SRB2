@@ -979,15 +979,15 @@ yoffs += (originy + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1)
 				const fixed_t ox = FixedMul(pl->slope->o.x,cosinecomponent)+FixedMul(pl->slope->o.y,sinecomponent);
 				const fixed_t oy = -FixedMul(pl->slope->o.x,sinecomponent)+FixedMul(pl->slope->o.y,cosinecomponent);
 
-				fixed_t oldxoffs = xoffs;
+				temp = xoffs;
 				xoffs = FixedMul(xoffs,cosinecomponent)+FixedMul(yoffs,sinecomponent);
-				yoffs = -FixedMul(oldxoffs,sinecomponent)+FixedMul(yoffs,cosinecomponent);
+				yoffs = -FixedMul(temp,sinecomponent)+FixedMul(yoffs,cosinecomponent);
 
 				incorporateorigin(ox, oy);
 
-				oldxoffs = xoffs;
+				temp = xoffs;
 				xoffs = FixedMul(xoffs,cosinecomponent)+FixedMul(yoffs,-sinecomponent); // negative sine for opposite direction
-				yoffs = -FixedMul(oldxoffs,-sinecomponent)+FixedMul(yoffs,cosinecomponent); // ditto
+				yoffs = -FixedMul(temp,-sinecomponent)+FixedMul(yoffs,cosinecomponent); // ditto
 			}
 		}
 		else
