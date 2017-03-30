@@ -486,6 +486,7 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 			&& !pfloor && !check->ffloor
 			&& check->viewx == viewx && check->viewy == viewy && check->viewz == viewz
 			&& check->viewangle == viewangle
+			&& check->plangle == plangle
 #ifdef ESLOPE
 			&& check->slope == slope
 #endif
@@ -954,19 +955,17 @@ void R_DrawSinglePlane(visplane_t *pl)
 		floatv3_t p, m, n;
 		float ang;
 		float vx, vy, vz;
-		float fudge;
 		// compiler complains when P_GetZAt is used in FLOAT_TO_FIXED directly
 		// use this as a temp var to store P_GetZAt's return value each time
 		fixed_t temp;
+		// Okay, look, don't ask me why this works, but without this setup there's a disgusting-looking misalignment with the textures. -Red
+		const float fudge = ((1<<nflatshiftup)+1.0f)/(1<<nflatshiftup);
 
 		xoffs &= ((1 << (32-nflatshiftup))-1);
 		yoffs &= ((1 << (32-nflatshiftup))-1);
 
 		xoffs -= (pl->slope->o.x + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1);
 		yoffs += (pl->slope->o.y + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1);
-
-		// Okay, look, don't ask me why this works, but without this setup there's a disgusting-looking misalignment with the textures. -Red
-		fudge = ((1<<nflatshiftup)+1.0f)/(1<<nflatshiftup);
 
 		xoffs = (fixed_t)(xoffs*fudge);
 		yoffs = (fixed_t)(yoffs/fudge);
