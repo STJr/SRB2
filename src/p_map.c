@@ -142,7 +142,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 	object->eflags |= MFE_SPRUNG; // apply this flag asap!
 	spring->flags &= ~(MF_SOLID|MF_SPECIAL); // De-solidify
 
-	if (horizspeed && vertispeed) // Mimic SA
+	if ((horizspeed && vertispeed) || (object->player && object->player->homing)) // Mimic SA
 	{
 		object->momx = object->momy = 0;
 		P_TryMove(object, spring->x, spring->y, true);
@@ -214,7 +214,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 
 		if (spring->info->painchance)
 		{
-			object->player->pflags |= (PF_JUMPED|((object->player->charflags & SF_NOJUMPDAMAGE) ? PF_NOJUMPDAMAGE : 0));
+			object->player->pflags |= P_GetJumpFlags(object->player);
 			P_SetPlayerMobjState(object, S_PLAY_JUMP);
 		}
 		else if (!vertispeed || (pflags & PF_BOUNCING)) // horizontal spring or bouncing

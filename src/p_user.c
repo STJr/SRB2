@@ -769,6 +769,13 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 	player->powers[pw_carry] = CR_NIGHTSMODE;
 }
 
+pflags_t P_GetJumpFlags(player_t *player)
+{
+	if (player->charflags & SF_NOJUMPDAMAGE)
+		return (PF_JUMPED|PF_NOJUMPDAMAGE);
+	return PF_JUMPED;
+}
+
 //
 // P_PlayerInPain
 //
@@ -1677,7 +1684,7 @@ void P_DoPlayerExit(player_t *player)
 	if (player->climbing)
 	{
 		player->climbing = 0;
-		player->pflags |= (PF_JUMPED|((player->charflags & SF_NOJUMPDAMAGE) ? PF_NOJUMPDAMAGE : 0));
+		player->pflags |= P_GetJumpFlags(player);
 		P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 	}
 	player->powers[pw_underwater] = 0;
@@ -2012,7 +2019,7 @@ static void P_CheckBouncySectors(player_t *player)
 						if (player->pflags & PF_SPINNING)
 						{
 							player->pflags &= ~PF_SPINNING;
-							player->pflags |= (PF_JUMPED|((player->charflags & SF_NOJUMPDAMAGE) ? PF_NOJUMPDAMAGE : 0));
+							player->pflags |= P_GetJumpFlags(player);
 							player->pflags |= PF_THOKKED;
 						}
 					}
@@ -2024,7 +2031,7 @@ static void P_CheckBouncySectors(player_t *player)
 						if (player->pflags & PF_SPINNING)
 						{
 							player->pflags &= ~PF_SPINNING;
-							player->pflags |= (PF_JUMPED|((player->charflags & SF_NOJUMPDAMAGE) ? PF_NOJUMPDAMAGE : 0));
+							player->pflags |= P_GetJumpFlags(player);
 							player->pflags |= PF_THOKKED;
 						}
 					}
@@ -2032,7 +2039,7 @@ static void P_CheckBouncySectors(player_t *player)
 					if ((player->pflags & PF_SPINNING) && player->speed < FixedMul(1<<FRACBITS, player->mo->scale) && player->mo->momz)
 					{
 						player->pflags &= ~PF_SPINNING;
-						player->pflags |= (PF_JUMPED|((player->charflags & SF_NOJUMPDAMAGE) ? PF_NOJUMPDAMAGE : 0));
+						player->pflags |= P_GetJumpFlags(player);
 					}
 
 					goto bouncydone;
@@ -2769,21 +2776,21 @@ static void P_DoClimbing(player_t *player)
 				P_InstaThrust(player->mo, player->mo->angle, FixedMul(4*FRACUNIT, player->mo->scale)); // Lil' boost up.
 
 			player->climbing = 0;
-			player->pflags |= (PF_JUMPED|((player->charflags & SF_NOJUMPDAMAGE) ? PF_NOJUMPDAMAGE : 0));
+			player->pflags |= P_GetJumpFlags(player);
 			P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 		}
 
 		if (skyclimber)
 		{
 			player->climbing = 0;
-			player->pflags |= (PF_JUMPED|((player->charflags & SF_NOJUMPDAMAGE) ? PF_NOJUMPDAMAGE : 0));
+			player->pflags |= P_GetJumpFlags(player);
 			P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 		}
 	}
 	else
 	{
 		player->climbing = 0;
-		player->pflags |= (PF_JUMPED|((player->charflags & SF_NOJUMPDAMAGE) ? PF_NOJUMPDAMAGE : 0));
+		player->pflags |= P_GetJumpFlags(player);
 		P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 	}
 
@@ -2801,7 +2808,7 @@ static void P_DoClimbing(player_t *player)
 	if (cmd->buttons & BT_USE && !(player->pflags & PF_JUMPSTASIS))
 	{
 		player->climbing = 0;
-		player->pflags |= (PF_JUMPED|((player->charflags & SF_NOJUMPDAMAGE) ? PF_NOJUMPDAMAGE : 0));
+		player->pflags |= P_GetJumpFlags(player);
 		P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 		P_SetObjectMomZ(player->mo, 4*FRACUNIT, false);
 		P_InstaThrust(player->mo, player->mo->angle, FixedMul(-4*FRACUNIT, player->mo->scale));
@@ -3697,7 +3704,7 @@ void P_DoJump(player_t *player, boolean soundandstate)
 	}
 	player->mo->eflags &= ~MFE_APPLYPMOMZ;
 
-	player->pflags |= (PF_JUMPED|((player->charflags & SF_NOJUMPDAMAGE) ? PF_NOJUMPDAMAGE : 0));;
+	player->pflags |= P_GetJumpFlags(player);;
 
 	if (soundandstate)
 	{
@@ -6848,7 +6855,7 @@ static void P_MovePlayer(player_t *player)
 			P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
 		else
 		{
-			player->pflags |= (PF_JUMPED|((player->charflags & SF_NOJUMPDAMAGE) ? PF_NOJUMPDAMAGE : 0));
+			player->pflags |= P_GetJumpFlags(player);
 			P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 		}
 		player->pflags &= ~PF_GLIDING;
@@ -6863,7 +6870,7 @@ static void P_MovePlayer(player_t *player)
 			P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
 		else
 		{
-			player->pflags |= (PF_JUMPED|((player->charflags & SF_NOJUMPDAMAGE) ? PF_NOJUMPDAMAGE : 0));
+			player->pflags |= P_GetJumpFlags(player);
 			P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 		}
 		player->pflags &= ~PF_BOUNCING;
@@ -6917,7 +6924,7 @@ static void P_MovePlayer(player_t *player)
 				P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
 			else if (player->charflags & SF_MULTIABILITY)
 			{
-				player->pflags |= (PF_JUMPED|((player->charflags & SF_NOJUMPDAMAGE) ? PF_NOJUMPDAMAGE : 0));
+				player->pflags |= P_GetJumpFlags(player);
 				P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 			}
 			else
@@ -6954,7 +6961,7 @@ static void P_MovePlayer(player_t *player)
 				P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
 			else if (player->charflags & SF_MULTIABILITY)
 			{
-				player->pflags |= (PF_JUMPED|((player->charflags & SF_NOJUMPDAMAGE) ? PF_NOJUMPDAMAGE : 0));
+				player->pflags |= P_GetJumpFlags(player);
 				P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 			}
 			else
@@ -7011,7 +7018,7 @@ static void P_MovePlayer(player_t *player)
 				P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
 			else
 			{
-				player->pflags |= (PF_JUMPED|((player->charflags & SF_NOJUMPDAMAGE) ? PF_NOJUMPDAMAGE : 0));
+				player->pflags |= P_GetJumpFlags(player);
 				P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 			}
 		}
@@ -7681,7 +7688,7 @@ static void P_DoRopeHang(player_t *player)
 	{
 		P_SetTarget(&player->mo->tracer, NULL);
 
-		player->pflags |= (PF_JUMPED|((player->charflags & SF_NOJUMPDAMAGE) ? PF_NOJUMPDAMAGE : 0));
+		player->pflags |= P_GetJumpFlags(player);
 		player->powers[pw_carry] = CR_NONE;
 
 		if (!(player->pflags & PF_SLIDING) && (player->pflags & PF_JUMPED)
@@ -7779,7 +7786,7 @@ static void P_DoRopeHang(player_t *player)
 		{
 			if (player->mo->tracer->flags & MF_SLIDEME)
 			{
-				player->pflags |= (PF_JUMPED|((player->charflags & SF_NOJUMPDAMAGE) ? PF_NOJUMPDAMAGE : 0));
+				player->pflags |= P_GetJumpFlags(player);
 
 				if (!(player->pflags & PF_SLIDING) && (player->pflags & PF_JUMPED)
 				&& !(player->panim == PA_JUMP))
@@ -9134,7 +9141,9 @@ void P_PlayerThink(player_t *player)
 		}
 	}
 #endif
-	if (player->pflags & PF_GLIDING)
+	if (!player->mo->health)
+		;
+	else if (player->pflags & PF_GLIDING)
 	{
 		if (player->panim != PA_ABILITY)
 			P_SetPlayerMobjState(player->mo, S_PLAY_GLIDE);
@@ -9918,28 +9927,31 @@ void P_PlayerAfterThink(player_t *player)
 		player->mo->momy = (player->mo->tracer->y - player->mo->y)*2;
 		player->mo->momz = (player->mo->tracer->z - (player->mo->height-player->mo->tracer->height/2) - player->mo->z)*2;
 		P_TeleportMove(player->mo, player->mo->tracer->x, player->mo->tracer->y, player->mo->tracer->z - (player->mo->height-player->mo->tracer->height/2));
-		player->pflags |= PF_JUMPED;
-		player->pflags &= ~PF_NOJUMPDAMAGE;
-		player->secondjump = 0;
-		player->pflags &= ~PF_THOKKED;
-
-		if (cmd->forwardmove > 0)
-			player->mo->tracer->target->lastlook += 2;
-		else if (cmd->forwardmove < 0 && player->mo->tracer->target->lastlook > player->mo->tracer->target->movecount)
-			player->mo->tracer->target->lastlook -= 2;
-
-		if (!(player->mo->tracer->target->flags & MF_SLIDEME) // Noclimb on chain parameters gives this
-		&& !(twodlevel || player->mo->flags2 & MF2_TWOD)) // why on earth would you want to turn them in 2D mode?
+		if (!player->powers[pw_flashing]) // handle getting hurt
 		{
-			player->mo->tracer->target->health += cmd->sidemove;
-			player->mo->angle += cmd->sidemove<<ANGLETOFINESHIFT; // 2048 --> ANGLE_MAX
+			player->pflags |= PF_JUMPED;
+			player->pflags &= ~PF_NOJUMPDAMAGE;
+			player->secondjump = 0;
+			player->pflags &= ~PF_THOKKED;
 
-			if (!demoplayback || P_AnalogMove(player))
+			if (cmd->forwardmove > 0)
+				player->mo->tracer->target->lastlook += 2;
+			else if (cmd->forwardmove < 0 && player->mo->tracer->target->lastlook > player->mo->tracer->target->movecount)
+				player->mo->tracer->target->lastlook -= 2;
+
+			if (!(player->mo->tracer->target->flags & MF_SLIDEME) // Noclimb on chain parameters gives this
+			&& !(twodlevel || player->mo->flags2 & MF2_TWOD)) // why on earth would you want to turn them in 2D mode?
 			{
-				if (player == &players[consoleplayer])
-					localangle = player->mo->angle; // Adjust the local control angle.
-				else if (player == &players[secondarydisplayplayer])
-					localangle2 = player->mo->angle;
+				player->mo->tracer->target->health += cmd->sidemove;
+				player->mo->angle += cmd->sidemove<<ANGLETOFINESHIFT; // 2048 --> ANGLE_MAX
+
+				if (!demoplayback || P_AnalogMove(player))
+				{
+					if (player == &players[consoleplayer])
+						localangle = player->mo->angle; // Adjust the local control angle.
+					else if (player == &players[secondarydisplayplayer])
+						localangle2 = player->mo->angle;
+				}
 			}
 		}
 	}

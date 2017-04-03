@@ -815,6 +815,17 @@ static int lib_pStealPlayerScore(lua_State *L)
 	return 0;
 }
 
+static int lib_pGetJumpFlags(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	NOHUD
+	INLEVEL
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	lua_pushinteger(L, P_GetJumpFlags(player));
+	return 1;
+}
+
 static int lib_pPlayerInPain(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
@@ -2378,6 +2389,7 @@ static luaL_Reg lib[] = {
 	{"P_GetPlayerControlDirection",lib_pGetPlayerControlDirection},
 	{"P_AddPlayerScore",lib_pAddPlayerScore},
 	{"P_StealPlayerScore",lib_pStealPlayerScore},
+	{"P_GetJumpFlags",lib_pGetJumpFlags},
 	{"P_PlayerInPain",lib_pPlayerInPain},
 	{"P_DoPlayerPain",lib_pDoPlayerPain},
 	{"P_ResetPlayer",lib_pResetPlayer},
