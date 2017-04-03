@@ -6541,16 +6541,18 @@ static void P_SkidStuff(player_t *player)
 		// Spawn a particle every 3 tics.
 		else if (!(player->skidtime % 3))
 		{
-			mobj_t *particle = P_SpawnMobj(player->mo->x + P_RandomRange(-player->mo->radius, player->mo->radius), player->mo->y + P_RandomRange(-player->mo->radius, player->mo->radius),
-				player->mo->z + (player->mo->eflags & MFE_VERTICALFLIP ? player->mo->height - mobjinfo[MT_PARTICLE].height : 0),
-				MT_PARTICLE);
+			mobj_t *particle = P_SpawnMobjFromMobj(player->mo, P_RandomRange(-player->mo->radius, player->mo->radius), P_RandomRange(-player->mo->radius, player->mo->radius), 0, MT_SPINDUST);
 			particle->tics = 10;
 
-			particle->eflags |= player->mo->eflags & MFE_VERTICALFLIP;
-			P_SetScale(particle, player->mo->scale >> 2);
-			particle->destscale = player->mo->scale << 2;
-			particle->scalespeed = FixedMul(particle->scalespeed, player->mo->scale); // scale the scaling speed!
+			particle->destscale = (2*player->mo->scale)/3;
+			P_SetScale(particle, particle->destscale);
 			P_SetObjectMomZ(particle, FRACUNIT, false);
+
+			if (player->mo->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER)) // overrides fire version
+				P_SetMobjState(particle, S_SPINDUST_BUBBLE1);
+			else if (player->powers[pw_shield] == SH_ELEMENTAL)
+				P_SetMobjState(particle, S_SPINDUST_FIRE1);
+
 			S_StartSound(player->mo, sfx_s3k7e); // the proper "Knuckles eats dirt" sfx.
 		}
 	}
@@ -6562,16 +6564,17 @@ static void P_SkidStuff(player_t *player)
 			// Spawn a particle every 3 tics.
 			if (!(player->skidtime % 3))
 			{
-				mobj_t *particle = P_SpawnMobj(player->mo->x, player->mo->y,
-					player->mo->z + (player->mo->eflags & MFE_VERTICALFLIP ? player->mo->height - mobjinfo[MT_PARTICLE].height : 0),
-					MT_PARTICLE);
+				mobj_t *particle = P_SpawnMobjFromMobj(player->mo, 0, 0, 0, MT_SPINDUST);
 				particle->tics = 10;
 
-				particle->eflags |= player->mo->eflags & MFE_VERTICALFLIP;
-				P_SetScale(particle, player->mo->scale >> 2);
-				particle->destscale = player->mo->scale << 2;
-				particle->scalespeed = FixedMul(particle->scalespeed, player->mo->scale); // scale the scaling speed!
+				particle->destscale = (2*player->mo->scale)/3;
+				P_SetScale(particle, particle->destscale);
 				P_SetObjectMomZ(particle, FRACUNIT, false);
+
+				if (player->mo->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER)) // overrides fire version
+					P_SetMobjState(particle, S_SPINDUST_BUBBLE1);
+				else if (player->powers[pw_shield] == SH_ELEMENTAL)
+					P_SetMobjState(particle, S_SPINDUST_FIRE1);
 			}
 		}
 		else if (P_AproxDistance(pmx, pmy) >= FixedMul(player->runspeed/2, player->mo->scale) // if you were moving faster than half your run speed last frame
