@@ -2939,6 +2939,8 @@ void R_AddSkins(UINT16 wadnum)
 			GETFLAG(MARIODAMAGE)
 			GETFLAG(MACHINE)
 			GETFLAG(DASHMODE)
+			GETFLAG(FASTEDGE)
+			GETFLAG(MULTIABILITY)
 #undef GETFLAG
 
 			else // let's check if it's a sound, otherwise error out
