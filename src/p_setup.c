@@ -199,6 +199,8 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	const INT16 num = (INT16)(i-1);
 	DEH_WriteUndoline("LEVELNAME", mapheaderinfo[num]->lvlttl, UNDO_NONE);
 	mapheaderinfo[num]->lvlttl[0] = '\0';
+	DEH_WriteUndoline("SELECTHEADING", mapheaderinfo[num]->selectheading, UNDO_NONE);
+	mapheaderinfo[num]->selectheading[0] = '\0';
 	DEH_WriteUndoline("SUBTITLE", mapheaderinfo[num]->subttl, UNDO_NONE);
 	mapheaderinfo[num]->subttl[0] = '\0';
 	DEH_WriteUndoline("ACT", va("%d", mapheaderinfo[num]->actnum), UNDO_NONE);
