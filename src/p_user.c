@@ -9829,10 +9829,7 @@ void P_PlayerAfterThink(player_t *player)
 		player->mo->height = FixedDiv(P_GetPlayerHeight(player), FixedDiv(14*FRACUNIT,10*FRACUNIT));
 
 		if (player->mo->tracer->player && !(player->mo->tracer->player->pflags & PF_CANCARRY))
-		{
 			player->powers[pw_carry] = CR_NONE;
-			P_SetTarget(&player->mo->tracer, NULL);
-		}
 
 		if (player->mo->eflags & MFE_VERTICALFLIP)
 		{
@@ -9840,10 +9837,7 @@ void P_PlayerAfterThink(player_t *player)
 				&& (player->mo->tracer->eflags & MFE_VERTICALFLIP)) // Reverse gravity check for the carrier - Flame
 				player->mo->z = player->mo->tracer->z + player->mo->tracer->height + FixedMul(FRACUNIT, player->mo->scale);
 			else
-			{
 				player->powers[pw_carry] = CR_NONE;
-				P_SetTarget(&player->mo->tracer, NULL);
-			}
 		}
 		else
 		{
@@ -9851,10 +9845,7 @@ void P_PlayerAfterThink(player_t *player)
 				&& !(player->mo->tracer->eflags & MFE_VERTICALFLIP)) // Correct gravity check for the carrier - Flame
 				player->mo->z = player->mo->tracer->z - player->mo->height - FixedMul(FRACUNIT, player->mo->scale);
 			else
-			{
 				player->powers[pw_carry] = CR_NONE;
-				P_SetTarget(&player->mo->tracer, NULL);
-			}
 		}
 
 		if (player->mo->tracer->health <= 0)
@@ -9881,12 +9872,12 @@ void P_PlayerAfterThink(player_t *player)
 		}
 
 		if (P_AproxDistance(player->mo->x - player->mo->tracer->x, player->mo->y - player->mo->tracer->y) > player->mo->radius)
-		{
 			player->powers[pw_carry] = CR_NONE;
-			P_SetTarget(&player->mo->tracer, NULL);
-		}
 
-		P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
+		if (player->powers[pw_carry] != CR_NONE)
+			P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
+		else
+			P_SetTarget(&player->mo->tracer, NULL);
 
 		if (player-players == consoleplayer && botingame)
 			CV_SetValue(&cv_analog2, (player->powers[pw_carry] != CR_PLAYER));
