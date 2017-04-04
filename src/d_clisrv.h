@@ -172,6 +172,7 @@ typedef struct
 
 	UINT8 skincolor;
 	INT32 skin;
+	UINT32 availabilities;
 	// Just in case Lua does something like
 	// modify these at runtime
 	fixed_t camerascale;
@@ -195,7 +196,6 @@ typedef struct
 	fixed_t playerspinheight;
 
 	fixed_t speed;
-	UINT8 jumping;
 	UINT8 secondjump;
 	UINT8 fly1;
 	tic_t glidetime;
@@ -284,6 +284,7 @@ typedef struct
 	// 0xFF == not in game; else player skin num
 	UINT8 playerskins[MAXPLAYERS];
 	UINT8 playercolor[MAXPLAYERS];
+	UINT32 playeravailabilities[MAXPLAYERS];
 
 	UINT8 gametype;
 	UINT8 modifiedgame;

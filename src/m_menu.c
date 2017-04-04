@@ -109,41 +109,45 @@ typedef enum
 const char *quitmsg[NUM_QUITMESSAGES];
 
 // Stuff for customizing the player select screen Tails 09-22-2003
+// A rare case.
+// External files modify this menu, so we can't call it static.
+// And I'm too lazy to go through and rename it everywhere. ARRGH!
 description_t description[32] =
 {
-	{"???", "", "", 0, 0, 0},
-	{"???", "", "", 0, 0, 0},
-	{"???", "", "", 0, 0, 0},
-	{"???", "", "", 0, 0, 0},
-	{"???", "", "", 0, 0, 0},
-	{"???", "", "", 0, 0, 0},
-	{"???", "", "", 0, 0, 0},
-	{"???", "", "", 0, 0, 0},
-	{"???", "", "", 0, 0, 0},
-	{"???", "", "", 0, 0, 0},
-	{"???", "", "", 0, 0, 0},
-	{"???", "", "", 0, 0, 0},
-	{"???", "", "", 0, 0, 0},
-	{"???", "", "", 0, 0, 0},
-	{"???", "", "", 0, 0, 0},
-	{"???", "", "", 0, 0, 0},
-	{"???", "", "", 0, 0, 0},
-	{"???", "", "", 0, 0, 0},
-	{"???", "", "", 0, 0, 0},
-	{"???", "", "", 0, 0, 0},
-	{"???", "", "", 0, 0, 0},
-	{"???", "", "", 0, 0, 0},
-	{"???", "", "", 0, 0, 0},
-	{"???", "", "", 0, 0, 0},
-	{"???", "", "", 0, 0, 0},
-	{"???", "", "", 0, 0, 0},
-	{"???", "", "", 0, 0, 0},
-	{"???", "", "", 0, 0, 0},
-	{"???", "", "", 0, 0, 0},
-	{"???", "", "", 0, 0, 0},
-	{"???", "", "", 0, 0, 0},
-	{"???", "", "", 0, 0, 0}
+	{false, "???", "", "", 0, 0},
+	{false, "???", "", "", 0, 0},
+	{false, "???", "", "", 0, 0},
+	{false, "???", "", "", 0, 0},
+	{false, "???", "", "", 0, 0},
+	{false, "???", "", "", 0, 0},
+	{false, "???", "", "", 0, 0},
+	{false, "???", "", "", 0, 0},
+	{false, "???", "", "", 0, 0},
+	{false, "???", "", "", 0, 0},
+	{false, "???", "", "", 0, 0},
+	{false, "???", "", "", 0, 0},
+	{false, "???", "", "", 0, 0},
+	{false, "???", "", "", 0, 0},
+	{false, "???", "", "", 0, 0},
+	{false, "???", "", "", 0, 0},
+	{false, "???", "", "", 0, 0},
+	{false, "???", "", "", 0, 0},
+	{false, "???", "", "", 0, 0},
+	{false, "???", "", "", 0, 0},
+	{false, "???", "", "", 0, 0},
+	{false, "???", "", "", 0, 0},
+	{false, "???", "", "", 0, 0},
+	{false, "???", "", "", 0, 0},
+	{false, "???", "", "", 0, 0},
+	{false, "???", "", "", 0, 0},
+	{false, "???", "", "", 0, 0},
+	{false, "???", "", "", 0, 0},
+	{false, "???", "", "", 0, 0},
+	{false, "???", "", "", 0, 0},
+	{false, "???", "", "", 0, 0},
+	{false, "???", "", "", 0, 0}
 };
+static INT16 char_on = 0;
 static char *char_notes = NULL;
 static fixed_t char_scroll = 0;
 
@@ -171,7 +175,6 @@ static saveinfo_t savegameinfo[MAXSAVEGAMES]; // Extra info about the save games
 INT16 startmap; // Mario, NiGHTS, or just a plain old normal game?
 
 static INT16 itemOn = 1; // menu item skull is on, Hack by Tails 09-18-2002
-static boolean lastdirection = true; // toaster - Only You Can Prevent Hacks - true is for forward, false is for backwards
 static INT16 skullAnimCounter = 10; // skull animation counter
 
 static  boolean setupcontrols_secondaryplayer;
@@ -272,6 +275,7 @@ static void M_ChooseNightsAttack(INT32 choice);
 static void M_ModeAttackRetry(INT32 choice);
 static void M_ModeAttackEndGame(INT32 choice);
 static void M_SetGuestReplay(INT32 choice);
+static void M_HandleChoosePlayerMenu(INT32 choice);
 static void M_ChoosePlayer(INT32 choice);
 menu_t SP_GameStatsDef, SP_LevelStatsDef;
 static menu_t SP_TimeAttackDef, SP_ReplayDef, SP_GuestReplayDef, SP_GhostDef;
@@ -764,7 +768,7 @@ static menuitem_t SP_TimeAttackMenu[] =
 
 enum
 {
-	talevelback,
+	talevel,
 	taplayer,
 
 	taguest,
@@ -862,7 +866,7 @@ static menuitem_t SP_NightsAttackMenu[] =
 
 enum
 {
-	nalevelback,
+	nalevel,
 	narecords,
 
 	naguest,
@@ -882,43 +886,10 @@ static menuitem_t SP_LevelStatsMenu[] =
 	{IT_KEYHANDLER | IT_NOTHING, NULL, "", M_HandleLevelStats, 0},     // dummy menuitem for the control func
 };
 
-// A rare case.
-// External files modify this menu, so we can't call it static.
-// And I'm too lazy to go through and rename it everywhere. ARRGH!
-menuitem_t PlayerMenu[32] =
+// Player menu dummy
+static menuitem_t SP_PlayerMenu[] =
 {
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0},
-	{IT_DISABLED, NULL, NULL, M_ChoosePlayer, 0}
+	{IT_NOTHING | IT_KEYHANDLER, NULL, "", M_HandleChoosePlayerMenu, 0},     // dummy menuitem for the control func
 };
 
 // -----------------------------------
@@ -1681,9 +1652,9 @@ static menu_t SP_NightsGhostDef =
 menu_t SP_PlayerDef =
 {
 	"M_PICKP",
-	sizeof (PlayerMenu)/sizeof (menuitem_t),//player_end,
+	sizeof (SP_PlayerMenu)/sizeof (menuitem_t),
 	&SP_MainDef,
-	PlayerMenu,
+	SP_PlayerMenu,
 	M_DrawSetupChoosePlayerMenu,
 	24, 32,
 	0,
@@ -2170,8 +2141,6 @@ static boolean M_ChangeStringCvar(INT32 choice)
 static void M_NextOpt(void)
 {
 	INT16 oldItemOn = itemOn; // prevent infinite loop
-	lastdirection = true;
-
 	do
 	{
 		if (itemOn + 1 > currentMenu->numitems - 1)
@@ -2184,8 +2153,6 @@ static void M_NextOpt(void)
 static void M_PrevOpt(void)
 {
 	INT16 oldItemOn = itemOn; // prevent infinite loop
-	lastdirection = false;
-
 	do
 	{
 		if (!itemOn)
@@ -2456,8 +2423,7 @@ boolean M_Responder(event_t *ev)
 		case KEY_DOWNARROW:
 			M_NextOpt();
 			S_StartSound(NULL, sfx_menu1);
-			if (currentMenu == &SP_PlayerDef
-			|| currentMenu == &MISC_ChangeGameTypeDef)
+			if (currentMenu == &MISC_ChangeGameTypeDef)
 			{
 				Z_Free(char_notes);
 				char_notes = NULL;
@@ -2467,8 +2433,7 @@ boolean M_Responder(event_t *ev)
 		case KEY_UPARROW:
 			M_PrevOpt();
 			S_StartSound(NULL, sfx_menu1);
-			if (currentMenu == &SP_PlayerDef
-			|| currentMenu == &MISC_ChangeGameTypeDef)
+			if (currentMenu == &MISC_ChangeGameTypeDef)
 			{
 				Z_Free(char_notes);
 				char_notes = NULL;
@@ -3537,7 +3502,7 @@ static void M_PatchSkinNameTable(void)
 
 	for (j = 0; j < MAXSKINS; j++)
 	{
-		if (skins[j].name[0] != '\0' && R_SkinUnlock(j))
+		if (skins[j].name[0] != '\0' && R_SkinUsable(-1, j))
 		{
 			skins_cons_t[j].strvalue = skins[j].realname;
 			skins_cons_t[j].value = j+1;
@@ -5380,19 +5345,19 @@ static void M_SetupChoosePlayer(INT32 choice)
 	UINT8 i;
 	UINT8 firstvalid = 255;
 	UINT8 lastvalid = 0;
+	boolean allowed = false;
 	char *name;
 	(void)choice;
 
-	if (PlayerMenu[0].status & (IT_DYBIGSPACE)) // Correcting a hack that may be made below.
-		PlayerMenu[0].status = (IT_DISABLED|(PlayerMenu[0].status & IT_CENTER));
+	SP_PlayerMenu[0].status &= ~IT_DYBIGSPACE; // Correcting a hack that may be made below.
 
 	for (i = 0; i < 32; i++) // Handle charsels, availability, and unlocks.
 	{
-		if (PlayerMenu[i].status != IT_DISABLED) // If the character's disabled through SOC, there's nothing we can do for it.
+		if (description[i].used) // If the character's disabled through SOC, there's nothing we can do for it.
 		{
 			name = strtok(Z_StrDup(description[i].skinname), "&");
 			skinnum = R_SkinAvailable(name);
-			if ((skinnum != -1) && (R_SkinUnlock(skinnum)))
+			if ((skinnum != -1) && (R_SkinUsable(-1, skinnum)))
 			{
 				// Handling order.
 				if (firstvalid == 255)
@@ -5404,14 +5369,13 @@ static void M_SetupChoosePlayer(INT32 choice)
 				}
 				lastvalid = i;
 
-				// Handling visibility.
-				if (PlayerMenu[i].status & (IT_DISABLED|IT_CENTER))
-					PlayerMenu[i].status = IT_CALL;
+				if (i == char_on)
+					allowed = true;
+
 				if (description[i].picname[0] == '\0')
 					strncpy(description[i].picname, skins[skinnum].charsel, 8);
 			}
-			else // Technically, character select icons without corresponding skins get bundled away behind this too. Sucks to be them.
-				PlayerMenu[i].status = (IT_DISABLED|IT_CENTER);
+			// else -- Technically, character select icons without corresponding skins get bundled away behind this too. Sucks to be them.
 			Z_Free(name);
 		}
 	}
@@ -5427,7 +5391,7 @@ static void M_SetupChoosePlayer(INT32 choice)
 	}
 	else // We're being forced into a specific character, so might as well.
 	{
-		PlayerMenu[0].status = (IT_CALL|IT_DYBIGSPACE|(PlayerMenu[0].status & IT_CENTER)); // This is a hack to make a non-IT_CALL character in slot 0 not softlock the game. IT_DYBIGSPACE is a dummy flag, whilst IT_CENTER is preserved.
+		SP_PlayerMenu[0].status |= IT_DYBIGSPACE; // This is a dummy flag hack to make a non-IT_CALL character in slot 0 not softlock the game.
 		M_ChoosePlayer(0);
 		return;
 	}
@@ -5441,9 +5405,77 @@ static void M_SetupChoosePlayer(INT32 choice)
 
 	SP_PlayerDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&SP_PlayerDef);
-	char_scroll = itemOn*128*FRACUNIT; // finish scrolling the menu
+	if (!allowed)
+		char_on = firstvalid;
+	char_scroll = 0; // finish scrolling the menu
 	Z_Free(char_notes);
-	char_notes = NULL;
+	char_notes = V_WordWrap(0, 21*8, V_ALLOWLOWERCASE, description[char_on].notes);
+}
+
+//
+// M_HandleChoosePlayerMenu
+//
+// Reacts to your key inputs. Basically a mini menu thinker.
+//
+static void M_HandleChoosePlayerMenu(INT32 choice)
+{
+	boolean exitmenu = false;  // exit to previous menu
+	INT32 selectval;
+
+	switch (choice)
+	{
+		case KEY_DOWNARROW:
+			if ((selectval = description[char_on].next) != char_on)
+			{
+				S_StartSound(NULL,sfx_s3kb7);
+				char_on = selectval;
+				char_scroll = -128*FRACUNIT;
+				Z_Free(char_notes);
+				char_notes = V_WordWrap(0, 21*8, V_ALLOWLOWERCASE, description[char_on].notes);
+			}
+			else if (!char_scroll)
+			{
+				S_StartSound(NULL,sfx_s3kb7);
+				char_scroll = 16*FRACUNIT;
+			}
+			break;
+
+		case KEY_UPARROW:
+			if ((selectval = description[char_on].prev) != char_on)
+			{
+				S_StartSound(NULL,sfx_s3kb7);
+				char_on = selectval;
+				char_scroll = 128*FRACUNIT;
+				Z_Free(char_notes);
+				char_notes = V_WordWrap(0, 21*8, V_ALLOWLOWERCASE, description[char_on].notes);
+			}
+			else if (!char_scroll)
+			{
+				S_StartSound(NULL,sfx_s3kb7);
+				char_scroll = -16*FRACUNIT;
+			}
+			break;
+
+		case KEY_ENTER:
+			S_StartSound(NULL, sfx_menu1);
+			M_ChoosePlayer(char_on);
+			break;
+
+		case KEY_ESCAPE:
+			exitmenu = true;
+			break;
+
+		default:
+			break;
+	}
+
+	if (exitmenu)
+	{
+		if (currentMenu->prevMenu)
+			M_SetupNextMenu(currentMenu->prevMenu);
+		else
+			M_ClearMenus(true);
+	}
 }
 
 // Draw the choose player setup menu, had some fun with player anim
@@ -5453,7 +5485,6 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	patch_t *patch;
 	INT32 i, o;
 	UINT8 prev, next;
-	boolean loophack = false;
 
 	// Black BG
 	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
@@ -5462,37 +5493,20 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	// Character select profile images!1
 	M_DrawTextBox(0, my, 16, 20);
 
-	i = (itemOn*128 - (char_scroll / FRACUNIT));
-
-	if (!char_notes)
-	{
-		if (i) // turns out this and the preceding check is better then (abs(i) > 128)
-		{
-			o = (lastdirection) ? -1 : 1;
-			char_scroll = (itemOn + o)*128*FRACUNIT;
-			i = -o*128;
-		}
-		char_notes = V_WordWrap(0, 21*8, V_ALLOWLOWERCASE, description[itemOn].notes);
-	}
-
-	if (abs(i) > 1)
-		char_scroll += i*FRACUNIT>>2;
+	if (abs(char_scroll) > FRACUNIT)
+		char_scroll -= (char_scroll>>2);
 	else // close enough.
-		char_scroll = itemOn*128*FRACUNIT; // just be exact now.
+		char_scroll = 0; // just be exact now.
 
-	o = ((char_scroll / FRACUNIT) + 16);
+	o = (char_scroll >> FRACBITS) + 16;
 
-	if (o < 0) // This hack is to prevent visual glitches when looping from the last character to the 1st character.
-		loophack = true;
-
-	if (loophack)
+	if (o < 0) // A little hacky...
+	{
+		i = description[char_on].prev;
 		o += 128;
-
-	i = (o / 128);
-	o = (o % 128);
-
-	if (loophack)
-		i = description[i].prev;
+	}
+	else
+		i = char_on;
 
 	// Get prev character...
 	prev = description[i].prev;
@@ -5503,7 +5517,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 		next = description[i].next;
 
 		// Draw prev character if it's visible and its number isn't greater than the current one or there's more than two
-		if (o < 32) // (prev != i) was previously a part of this, but we don't need to check again after above.
+		if (o < 32)
 		{
 			patch = W_CachePatchName(description[prev].picname, PU_CACHE);
 			if (SHORT(patch->width) >= 256)
@@ -5523,31 +5537,24 @@ static void M_DrawSetupChoosePlayerMenu(void)
 				V_DrawCroppedPatch(8<<FRACBITS, (my + 168 - o)<<FRACBITS, FRACUNIT, 0, patch, 0, 0, SHORT(patch->width), o);
 			W_UnlockCachedPatch(patch);
 		}
-
-		// current character
-		if (PlayerMenu[i].status & IT_DISABLED) // Prevent flickering.
-			i = (lastdirection) ? prev : next; // This actually causes duplication at slow scroll speeds (<16FU per tic), but thankfully we always go quickly.
 	}
 
-	if (!(PlayerMenu[i].status & IT_DISABLED))
+	patch = W_CachePatchName(description[i].picname, PU_CACHE);
+	if (o >= 0 && o <= 32)
 	{
-		patch = W_CachePatchName(description[i].picname, PU_CACHE);
-		if (o >= 0 && o <= 32)
-		{
-			if (SHORT(patch->width) >= 256)
-				V_DrawSmallScaledPatch(8, my + 40 - o, 0, patch);
-			else
-				V_DrawScaledPatch(8, my + 40 - o, 0, patch);
-		}
+		if (SHORT(patch->width) >= 256)
+			V_DrawSmallScaledPatch(8, my + 40 - o, 0, patch);
 		else
-		{
-			if (SHORT(patch->width) >= 256)
-				V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT/2, 0, patch, 0, (o - 32)*2, SHORT(patch->width), SHORT(patch->height));
-			else
-				V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT, 0, patch, 0, o - 32, SHORT(patch->width), SHORT(patch->height));
-		}
-		W_UnlockCachedPatch(patch);
+			V_DrawScaledPatch(8, my + 40 - o, 0, patch);
 	}
+	else
+	{
+		if (SHORT(patch->width) >= 256)
+			V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT/2, 0, patch, 0, (o-32)*2, SHORT(patch->width), SHORT(patch->height));
+		else
+			V_DrawCroppedPatch(8<<FRACBITS, (my + 8)<<FRACBITS, FRACUNIT, 0, patch, 0, (o-32), SHORT(patch->width), SHORT(patch->height));
+	}
+	W_UnlockCachedPatch(patch);
 
 	// draw title (or big pic)
 	M_DrawMenuTitle();
@@ -5565,10 +5572,10 @@ static void M_ChoosePlayer(INT32 choice)
 	boolean ultmode = (ultimate_selectable && SP_PlayerDef.prevMenu == &SP_LoadDef && saveSlotSelected == NOSAVESLOT);
 
 	// skip this if forcecharacter or no characters available
-	if (!(PlayerMenu[choice].status & IT_DYBIGSPACE))
+	if (!(SP_PlayerMenu[0].status & IT_DYBIGSPACE))
 	{
 		// M_SetupChoosePlayer didn't call us directly, that means we've been properly set up.
-		char_scroll = itemOn*128*FRACUNIT; // finish scrolling the menu
+		char_scroll = 0; // finish scrolling the menu
 		M_DrawSetupChoosePlayerMenu(); // draw the finally selected character one last time for the fadeout
 	}
 	M_ClearMenus(true);
@@ -6002,7 +6009,7 @@ void M_DrawTimeAttackMenu(void)
 		x = SP_TimeAttackDef.x;
 		y = SP_TimeAttackDef.y;
 
-		V_DrawString(x, y + SP_TimeAttackMenu[talevelback].alphaKey, V_TRANSLUCENT, SP_TimeAttackMenu[talevelback].text);
+		V_DrawString(x, y + SP_TimeAttackMenu[talevel].alphaKey, V_TRANSLUCENT, SP_TimeAttackMenu[talevel].text);
 
 		ncv = (consvar_t *)SP_TimeAttackMenu[taplayer].itemaction;
 		V_DrawString(x, y + SP_TimeAttackMenu[taplayer].alphaKey, V_TRANSLUCENT, SP_TimeAttackMenu[taplayer].text);
@@ -6177,7 +6184,7 @@ void M_DrawNightsAttackMenu(void)
 
 	// ALWAYS DRAW level even when not on this menu!
 	if (currentMenu != &SP_NightsAttackDef)
-		V_DrawString(SP_NightsAttackDef.x, SP_NightsAttackDef.y + SP_TimeAttackMenu[nalevelback].alphaKey, V_TRANSLUCENT, SP_NightsAttackMenu[nalevelback].text);
+		V_DrawString(SP_NightsAttackDef.x, SP_NightsAttackDef.y + SP_TimeAttackMenu[nalevel].alphaKey, V_TRANSLUCENT, SP_NightsAttackMenu[nalevel].text);
 }
 
 static void M_NightsAttackLevelSelect(INT32 choice)
@@ -7207,7 +7214,7 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 					if (setupm_fakeskin < 0)
 						setupm_fakeskin = numskins-1;
 				}
-				while ((prev_setupm_fakeskin != setupm_fakeskin) && !(R_SkinUnlock(setupm_fakeskin)));
+				while ((prev_setupm_fakeskin != setupm_fakeskin) && !(R_SkinUsable(-1, setupm_fakeskin)));
 			}
 			else if (itemOn == 1) // player color
 			{
@@ -7227,7 +7234,7 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 					if (setupm_fakeskin > numskins-1)
 						setupm_fakeskin = 0;
 				}
-				while ((prev_setupm_fakeskin != setupm_fakeskin) && !(R_SkinUnlock(setupm_fakeskin)));
+				while ((prev_setupm_fakeskin != setupm_fakeskin) && !(R_SkinUsable(-1, setupm_fakeskin)));
 			}
 			else if (itemOn == 1) // player color
 			{

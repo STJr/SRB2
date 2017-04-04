@@ -222,7 +222,7 @@ extern FILE *logstream;
 // NOTE: it needs more than this to increase the number of players...
 
 #define MAXPLAYERS 32
-#define MAXSKINS MAXPLAYERS
+#define MAXSKINS 32
 #define PLAYERSMASK (MAXPLAYERS-1)
 #define MAXPLAYERNAME 21
 
@@ -542,5 +542,8 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 
 /// Experimental attempts at preventing MF_PAPERCOLLISION objects from getting stuck in walls.
 //#define PAPER_COLLISIONCORRECTION
+
+/// Hudname padding.
+#define SKINNAMEPADDING
 
 #endif // __DOOMDEF__

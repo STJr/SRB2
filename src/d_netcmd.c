@@ -1011,7 +1011,7 @@ UINT8 CanChangeSkin(INT32 playernum)
 		return true;
 
 	// Force skin in effect.
-	if (client && (cv_forceskin.value != -1) && !(adminplayer == playernum && serverplayer == -1))
+	if ((cv_forceskin.value != -1) || (mapheaderinfo[gamemap-1] && mapheaderinfo[gamemap-1]->forcecharacter[0] != '\0'))
 		return false;
 
 	// Can change skin in intermission and whatnot.
@@ -1109,6 +1109,8 @@ static void SendNameAndColor(void)
 	if (!Playing())
 		return;
 
+	players[consoleplayer].availabilities = R_GetSkinAvailabilities();
+
 	// If you're not in a netgame, merely update the skin, color, and name.
 	if (!netgame)
 	{
@@ -1127,7 +1129,7 @@ static void SendNameAndColor(void)
 			SetPlayerSkinByNum(consoleplayer, 0);
 			CV_StealthSet(&cv_skin, skins[0].name);
 		}
-		else if ((foundskin = R_SkinAvailable(cv_skin.string)) != -1 && R_SkinUnlock(foundskin))
+		else if ((foundskin = R_SkinAvailable(cv_skin.string)) != -1 && R_SkinUsable(consoleplayer, foundskin))
 		{
 			boolean notsame;
 
@@ -1174,7 +1176,7 @@ static void SendNameAndColor(void)
 	// check if player has the skin loaded (cv_skin may have
 	// the name of a skin that was available in the previous game)
 	cv_skin.value = R_SkinAvailable(cv_skin.string);
-	if ((cv_skin.value < 0) || !R_SkinUnlock(cv_skin.value))
+	if ((cv_skin.value < 0) || !R_SkinUsable(consoleplayer, cv_skin.value))
 	{
 		CV_StealthSet(&cv_skin, DEFAULTSKIN);
 		cv_skin.value = 0;
@@ -1182,6 +1184,7 @@ static void SendNameAndColor(void)
 
 	// Finally write out the complete packet and send it off.
 	WRITESTRINGN(p, cv_playername.zstring, MAXPLAYERNAME);
+	WRITEUINT32(p, (UINT32)players[consoleplayer].availabilities);
 	WRITEUINT8(p, (UINT8)cv_playercolor.value);
 	WRITEUINT8(p, (UINT8)cv_skin.value);
 	SendNetXCmd(XD_NAMEANDCOLOR, buf, p - buf);
@@ -1224,6 +1227,8 @@ static void SendNameAndColor2(void)
 	if (!Playing())
 		return;
 
+	players[secondplaya].availabilities = R_GetSkinAvailabilities();
+
 	// If you're not in a netgame, merely update the skin, color, and name.
 	if (botingame)
 	{
@@ -1252,7 +1257,7 @@ static void SendNameAndColor2(void)
 			SetPlayerSkinByNum(secondplaya, forcedskin);
 			CV_StealthSet(&cv_skin2, skins[forcedskin].name);
 		}
-		else if ((foundskin = R_SkinAvailable(cv_skin2.string)) != -1 && R_SkinUnlock(foundskin))
+		else if ((foundskin = R_SkinAvailable(cv_skin2.string)) != -1 && R_SkinUsable(secondplaya, foundskin))
 		{
 			boolean notsame;
 
@@ -1307,6 +1312,7 @@ static void Got_NameAndColor(UINT8 **cp, INT32 playernum)
 #endif
 
 	READSTRINGN(*cp, name, MAXPLAYERNAME);
+	p->availabilities = READUINT32(*cp);
 	color = READUINT8(*cp);
 	skin = READUINT8(*cp);
 
@@ -1323,6 +1329,7 @@ static void Got_NameAndColor(UINT8 **cp, INT32 playernum)
 	if (server && (p != &players[consoleplayer] && p != &players[secondarydisplayplayer]))
 	{
 		boolean kick = false;
+		INT32 s;
 
 		// team colors
 		if (G_GametypeHasTeams())
@@ -1336,6 +1343,16 @@ static void Got_NameAndColor(UINT8 **cp, INT32 playernum)
 		// don't allow color "none"
 		if (!p->skincolor)
 			kick = true;
+
+		// availabilities
+		for (s = 0; s < MAXSKINS; s++)
+		{
+			if (!skins[s].availability && (p->availabilities & (1 << s)))
+			{
+				kick = true;
+				break;
+			}
+		}
 
 		if (kick)
 		{
@@ -4043,13 +4060,6 @@ static void Command_Archivetest_f(void)
   */
 static void ForceSkin_OnChange(void)
 {
-	if ((server || adminplayer == consoleplayer) && ((cv_forceskin.value == -1 && stricmp(cv_forceskin.string, "None")) || !(R_SkinUnlock(cv_forceskin.value))))
-	{
-		CONS_Printf("Please provide a valid skin name (\"None\" disables).\n");
-		CV_SetValue(&cv_forceskin, -1);
-		return;
-	}
-
 	// NOT in SP, silly!
 	if (!(netgame || multiplayer))
 		return;
@@ -4058,7 +4068,7 @@ static void ForceSkin_OnChange(void)
 		CONS_Printf("The server has lifted the forced skin restrictions.\n");
 	else
 	{
-		CONS_Printf("The server is restricting all players to skin \"%s\".\n",skins[cv_forceskin.value].realname);
+		CONS_Printf("The server is restricting all players to skin \"%s\".\n",skins[cv_forceskin.value].name);
 		ForceAllSkins(cv_forceskin.value);
 	}
 }

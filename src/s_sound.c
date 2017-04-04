@@ -611,6 +611,7 @@ void S_StartSound(const void *origin, sfxenum_t sfx_id)
 			case sfx_forcsg:
 			case sfx_elemsg:
 			case sfx_armasg:
+			case sfx_attrsg:
 			case sfx_s3k3e:
 			case sfx_s3k3f:
 			case sfx_s3k41:

@@ -1165,7 +1165,7 @@ found:
 		if (var == &cv_forceskin)
 		{
 			var->value = R_SkinAvailable(var->string);
-			if (!R_SkinUnlock(var->value))
+			if (!R_SkinUsable(-1, var->value))
 				var->value = -1;
 		}
 		else
@@ -1361,6 +1361,16 @@ static void CV_SetCVar(consvar_t *var, const char *value, boolean stealth)
 			return;
 		}
 
+		if (var == &cv_forceskin)
+		{
+			INT32 skin = R_SkinAvailable(value);
+			if ((stricmp(value, "None")) && ((skin == -1) || !R_SkinUsable(-1, skin)))
+			{
+				CONS_Printf("Please provide a valid skin name (\"None\" disables).\n");
+				return;
+			}
+		}
+
 		// Only add to netcmd buffer if in a netgame, otherwise, just change it.
 		if (netgame || multiplayer)
 		{
@@ -1478,7 +1488,7 @@ void CV_AddValue(consvar_t *var, INT32 increment)
 			else if (newvalue >= numskins)
 				newvalue = -1;
 		} while ((oldvalue != newvalue)
-				&& !(R_SkinUnlock(newvalue)));
+				&& !(R_SkinUsable(-1, newvalue)));
 	}
 	else
 		newvalue = var->value + increment;
