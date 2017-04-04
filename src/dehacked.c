@@ -2269,6 +2269,8 @@ static void reademblemdata(MYFILE *f, INT32 num)
 					emblemlocations[num-1].type = ET_NGRADE;
 				else if (fastcmp(word2, "NTIME"))
 					emblemlocations[num-1].type = ET_NTIME;
+				else if (fastcmp(word2, "MAP"))
+					emblemlocations[num-1].type = ET_MAP;
 				else
 					emblemlocations[num-1].type = (UINT8)value;
 			}
@@ -7421,7 +7423,12 @@ struct {
 	{"SF_X8AWAYSOUND",SF_X8AWAYSOUND},
 	{"SF_NOINTERRUPT",SF_NOINTERRUPT},
 	{"SF_X2AWAYSOUND",SF_X2AWAYSOUND},
-
+	
+	// Map emblem var flags
+	{"ME_ALLEMERALDS",ME_ALLEMERALDS},
+	{"ME_ULTIMATE",ME_ULTIMATE},
+	{"ME_PERFECT",ME_PERFECT},
+	
 #ifdef HAVE_BLUA
 	// p_local.h constants
 	{"FLOATSPEED",FLOATSPEED},
