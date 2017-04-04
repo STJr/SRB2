@@ -66,7 +66,7 @@ void M_StartMessage(const char *string, void *routine, menumessagetype_t itemtyp
 // Called by linux_x/i_video_xshm.c
 void M_QuitResponse(INT32 ch);
 
-// Determines whether to show a level in the list
+// Determines whether to show a level in the list (platter version does not need to be exposed)
 boolean M_CanShowLevelInList(INT32 mapnum, INT32 gt);
 
 
@@ -182,6 +182,28 @@ typedef struct
 	UINT8 next;
 } description_t;
 
+// level select platter
+typedef struct
+{
+	char header[22+5]; // mapheader_t lvltttl max length + " ZONE"
+	INT32 maplist[3];
+	char mapnames[3][17+1];
+	boolean mapavailable[4]; // mapavailable[3] == wide or not
+} levelselectrow_t;
+
+typedef struct
+{
+	UINT8 numrows;
+	levelselectrow_t *rows;
+} levelselect_t;
+// experimental level select end
+
+// descriptions for gametype select screen
+typedef struct
+{
+	char notes[441];
+} gtdesc_t;
+
 // mode descriptions for video mode menu
 typedef struct
 {
@@ -221,6 +243,9 @@ extern INT32 ultimate_selectable;
 void M_ForceSaveSlotSelected(INT32 sslot);
 
 void M_CheatActivationResponder(INT32 ch);
+
+// Level select updating
+void Nextmap_OnChange(void);
 
 // Screenshot menu updating
 void Moviemode_mode_Onchange(void);
@@ -263,14 +288,14 @@ void Screenshot_option_Onchange(void);
 	NULL\
 }
 
-#define MAPICONMENUSTYLE(header, source, prev)\
+#define MAPPLATTERMENUSTYLE(header, source)\
 {\
 	header,\
 	sizeof (source)/sizeof (menuitem_t),\
-	prev,\
+	&MainDef,\
 	source,\
-	M_DrawServerMenu,\
-	27,40,\
+	M_DrawLevelPlatterMenu,\
+	0,0,\
 	0,\
 	NULL\
 }

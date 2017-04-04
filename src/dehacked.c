@@ -1211,6 +1211,12 @@ static void readlevelheader(MYFILE *f, INT32 num)
 			{
 				deh_strlcpy(mapheaderinfo[num-1]->lvlttl, word2,
 					sizeof(mapheaderinfo[num-1]->lvlttl), va("Level header %d: levelname", num));
+				strlcpy(mapheaderinfo[num-1]->selectheading, word2, sizeof(mapheaderinfo[num-1]->selectheading)); // not deh_ so only complains once
+			}
+			else if (fastcmp(word, "SELECTHEADING"))
+			{
+				deh_strlcpy(mapheaderinfo[num-1]->selectheading, word2,
+					sizeof(mapheaderinfo[num-1]->selectheading), va("Level header %d: selectheading", num));
 			}
 			else if (fastcmp(word, "SCRIPTNAME"))
 			{
@@ -1417,6 +1423,13 @@ static void readlevelheader(MYFILE *f, INT32 num)
 					mapheaderinfo[num-1]->menuflags |= LF2_NOVISITNEEDED;
 				else
 					mapheaderinfo[num-1]->menuflags &= ~LF2_NOVISITNEEDED;
+			}
+			else if (fastcmp(word, "WIDEICON"))
+			{
+				if (i || word2[0] == 'T' || word2[0] == 'Y')
+					mapheaderinfo[num-1]->menuflags |= LF2_WIDEICON;
+				else
+					mapheaderinfo[num-1]->menuflags &= ~LF2_WIDEICON;
 			}
 			else
 				deh_warning("Level header %d: unknown word '%s'", num, word);
@@ -7305,6 +7318,7 @@ struct {
 	{"LF2_RECORDATTACK",LF2_RECORDATTACK},
 	{"LF2_NIGHTSATTACK",LF2_NIGHTSATTACK},
 	{"LF2_NOVISITNEEDED",LF2_NOVISITNEEDED},
+	{"LF2_WIDEICON",LF2_WIDEICON},
 
 	// NiGHTS grades
 	{"GRADE_F",GRADE_F},
@@ -7673,6 +7687,7 @@ struct {
 	{"V_70TRANS",V_70TRANS},
 	{"V_80TRANS",V_80TRANS},
 	{"V_90TRANS",V_90TRANS},
+	{"V_STATIC",V_STATIC},
 	{"V_HUDTRANSHALF",V_HUDTRANSHALF},
 	{"V_HUDTRANS",V_HUDTRANS},
 	{"V_HUDTRANSDOUBLE",V_HUDTRANSDOUBLE},

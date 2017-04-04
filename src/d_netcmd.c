@@ -1532,10 +1532,13 @@ void D_MapChange(INT32 mapnum, INT32 newgametype, boolean pultmode, boolean rese
 	// The supplied data are assumed to be good.
 	I_Assert(delay >= 0 && delay <= 2);
 
+	if (mapnum != -1)
+		CV_SetValue(&cv_nextmap, mapnum);
+
 	CONS_Debug(DBG_GAMELOGIC, "Map change: mapnum=%d gametype=%d ultmode=%d resetplayers=%d delay=%d skipprecutscene=%d\n",
 	           mapnum, newgametype, pultmode, resetplayers, delay, skipprecutscene);
 
-	if (netgame || multiplayer)
+	if ((netgame || multiplayer) && !((gametype == newgametype) && (newgametype == GT_COOP)))
 		FLS = false;
 
 	if (delay != 2)
@@ -1701,9 +1704,19 @@ static void Command_Map_f(void)
 		}
 	}
 
+	// Prevent warping to locked levels
+	// ... unless you're in a dedicated server.  Yes, technically this means you can view any level by
+	// running a dedicated server and joining it yourself, but that's better than making dedicated server's
+	// lives hell.
+	if (!dedicated && M_MapLocked(newmapnum))
+	{
+		CONS_Alert(CONS_NOTICE, M_GetText("You need to unlock this level before you can warp to it!\n"));
+		return;
+	}
+
 	// don't use a gametype the map doesn't support
 	if (cv_debug || COM_CheckParm("-force") || cv_skipmapcheck.value)
-		; // The player wants us to trek on anyway.  Do so.
+		fromlevelselect = false; // The player wants us to trek on anyway.  Do so.
 	// G_TOLFlag handles both multiplayer gametype and ignores it for !multiplayer
 	// Alternatively, bail if the map header is completely missing anyway.
 	else if (!mapheaderinfo[newmapnum-1]
@@ -1722,19 +1735,10 @@ static void Command_Map_f(void)
 		CONS_Alert(CONS_WARNING, M_GetText("%s doesn't support %s mode!\n(Use -force to override)\n"), mapname, gametypestring);
 		return;
 	}
+	else
+		fromlevelselect = ((netgame || multiplayer) && ((gametype == newgametype) && (newgametype == GT_COOP)));
 
-	// Prevent warping to locked levels
-	// ... unless you're in a dedicated server.  Yes, technically this means you can view any level by
-	// running a dedicated server and joining it yourself, but that's better than making dedicated server's
-	// lives hell.
-	if (!dedicated && M_MapLocked(newmapnum))
-	{
-		CONS_Alert(CONS_NOTICE, M_GetText("You need to unlock this level before you can warp to it!\n"));
-		return;
-	}
-
-	fromlevelselect = false;
-	D_MapChange(newmapnum, newgametype, false, newresetplayers, 0, false, false);
+	D_MapChange(newmapnum, newgametype, false, newresetplayers, 0, false, fromlevelselect);
 }
 
 /** Receives a map command and changes the map.
@@ -1800,17 +1804,14 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	if (demoplayback && !timingdemo)
 		precache = false;
 
-	if (resetplayer)
-	{
-		if (!FLS || (netgame || multiplayer))
-			emeralds = 0;
-	}
+	if (resetplayer && !FLS)
+		emeralds = 0;
 
 #ifdef HAVE_BLUA
 	LUAh_MapChange();
 #endif
 
-	G_InitNew(ultimatemode, mapname, resetplayer, skipprecutscene);
+	G_InitNew(ultimatemode, mapname, resetplayer, skipprecutscene, FLS);
 	if (demoplayback && !timingdemo)
 		precache = true;
 	CON_ToggleOff();
