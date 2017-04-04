@@ -1436,9 +1436,42 @@ void F_StartTitleScreen(void)
 		if (!mapheaderinfo[gamemap-1])
 			P_AllocMapHeader(gamemap-1);
 
+		maptol = mapheaderinfo[gamemap-1]->typeoflevel;
+		globalweather = mapheaderinfo[gamemap-1]->weather;
+
 		G_DoLoadLevel(true);
 		players[displayplayer].playerstate = PST_DEAD; // Don't spawn the player in dummy (I'm still a filthy cheater)
-		camera.subsector = NULL; // toast is filthy too
+		//camera.subsector = NULL; // toast is filthy too
+
+		// Set Default Position
+		mapthing_t *startpos;
+		if (playerstarts[0])
+			startpos = playerstarts[0];
+		else if (deathmatchstarts[0])
+			startpos = deathmatchstarts[0];
+		else
+			startpos = NULL;
+
+		if (startpos)
+		{
+			camera.x = startpos->x << FRACBITS;
+			camera.y = startpos->y << FRACBITS;
+			camera.subsector = R_PointInSubsector(camera.x, camera.y);
+			camera.z = camera.subsector->sector->floorheight + ((startpos->options >> ZSHIFT) << FRACBITS);
+			camera.angle = (startpos->angle % 360)*ANG1;
+			camera.aiming = 0;
+		}
+		else
+		{
+			camera.x = camera.y = camera.z = camera.angle = camera.aiming = 0;
+			camera.subsector = NULL; // toast is filthy too
+		}
+		camera.chase = true;
+		camera.height = 0;
+
+		//camera.x = camera.y = camera.height = camera.aiming = 0;
+		//camera.z = 128*FRACUNIT;
+
 		//CON_ClearHUD();
 
 		wipegamestate = prevwipegamestate;
@@ -1545,8 +1578,7 @@ void F_TitleScreenTicker(boolean run)
 
 	// Do a lil' camera spin if a title map is loaded.
 	if (titlemapinaction) {
-		camera.x = camera.y = camera.height = camera.aiming = 0;
-		camera.z = 128*FRACUNIT;
+		// Default behavior
 		camera.angle += titlescrollspeed;
 	}
 
