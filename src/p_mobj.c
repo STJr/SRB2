@@ -2541,6 +2541,9 @@ boolean P_CheckDeathPitCollide(mobj_t *mo)
 	I_Assert(mo != NULL);
 	I_Assert(!P_MobjWasRemoved(mo));
 
+	if (mo->player && mo->player->pflags & PF_GODMODE)
+		return false;
+
 	if (((mo->z <= mo->subsector->sector->floorheight
 		&& !(mo->eflags & MFE_VERTICALFLIP) && (mo->subsector->sector->flags & SF_FLIPSPECIAL_FLOOR))
 	|| (mo->z + mo->height >= mo->subsector->sector->ceilingheight
