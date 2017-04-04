@@ -2424,14 +2424,20 @@ boolean M_Responder(event_t *ev)
 			M_NextOpt();
 			S_StartSound(NULL, sfx_menu1);
 			if (currentMenu == &MISC_ChangeGameTypeDef)
+			{
 				Z_Free(char_notes);
+				char_notes = NULL;
+			}
 			return true;
 
 		case KEY_UPARROW:
 			M_PrevOpt();
 			S_StartSound(NULL, sfx_menu1);
 			if (currentMenu == &MISC_ChangeGameTypeDef)
+			{
 				Z_Free(char_notes);
+				char_notes = NULL;
+			}
 			return true;
 
 		case KEY_LEFTARROW:
