@@ -4106,7 +4106,8 @@ static void Skin_OnChange(void)
 	if (!Playing())
 		return; // do whatever you want
 
-	if (!(cv_debug || devparm) && !(multiplayer || netgame)) // In single player.
+	if (!(cv_debug || devparm) && !(multiplayer || netgame) // In single player.
+		&& (gamestate != GS_WAITINGPLAYERS)) // allows command line -warp x +skin y
 	{
 		CV_StealthSet(&cv_skin, skins[players[consoleplayer].skin].name);
 		return;
@@ -4149,8 +4150,7 @@ static void Color_OnChange(void)
 	if (!Playing())
 		return; // do whatever you want
 
-	if (!(cv_debug || devparm) && !(multiplayer || netgame) // In single player.
-		&& (gamestate == GS_LEVEL || gamestate == GS_INTERMISSION || gamestate == GS_CONTINUING))
+	if (!(cv_debug || devparm) && !(multiplayer || netgame)) // In single player.
 	{
 		CV_StealthSet(&cv_skin, skins[players[consoleplayer].skin].name);
 		return;
