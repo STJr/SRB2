@@ -153,7 +153,6 @@ static void P_NetArchivePlayers(void)
 		WRITESINT8(save_p, players[i].xtralife);
 		WRITEUINT8(save_p, players[i].gotcontinue);
 		WRITEFIXED(save_p, players[i].speed);
-		WRITEUINT8(save_p, players[i].jumping);
 		WRITEUINT8(save_p, players[i].secondjump);
 		WRITEUINT8(save_p, players[i].fly1);
 		WRITEUINT8(save_p, players[i].scoreadd);
@@ -334,7 +333,6 @@ static void P_NetUnArchivePlayers(void)
 		players[i].xtralife = READSINT8(save_p); // Ring Extra Life counter
 		players[i].gotcontinue = READUINT8(save_p); // got continue from stage
 		players[i].speed = READFIXED(save_p); // Player's speed (distance formula of MOMX and MOMY values)
-		players[i].jumping = READUINT8(save_p); // Jump counter
 		players[i].secondjump = READUINT8(save_p);
 		players[i].fly1 = READUINT8(save_p); // Tails flying
 		players[i].scoreadd = READUINT8(save_p); // Used for multiple enemy attack bonus

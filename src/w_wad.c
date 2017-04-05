@@ -1215,15 +1215,25 @@ int W_VerifyNMUSlumps(const char *filename)
 	// ENDOOM text and palette lumps
 	lumpchecklist_t NMUSlist[] =
 	{
-		{"D_", 2},
-		{"O_", 2},
-		{"DS", 2},
-		{"ENDOOM", 6},
-		{"PLAYPAL", 7},
-		{"COLORMAP", 8},
-		{"PAL", 3},
-		{"CLM", 3},
-		{"TRANS", 5},
+		{"D_", 2}, // MIDI music
+		{"O_", 2}, // Digital music
+		{"DS", 2}, // Sound effects
+
+		{"ENDOOM", 6}, // ENDOOM text lump
+
+		{"PLAYPAL", 7}, // Palette changes
+		{"PAL", 3}, // Palette changes
+		{"COLORMAP", 8}, // Colormap changes
+		{"CLM", 3}, // Colormap changes
+		{"TRANS", 5}, // Translucency map changes
+
+		{"LTFNT", 5}, // Level title font changes
+		{"TTL", 3}, // Act number changes
+		{"STCFN", 5}, // Console font changes
+		{"TNYFN", 5}, // Tiny console font changes
+		{"STT", 3}, // Acceptable HUD changes (Score Time Rings)
+		{"YB_", 3}, // Intermission graphics, goes with the above
+
 		{NULL, 0},
 	};
 	return W_VerifyFile(filename, NMUSlist, false);

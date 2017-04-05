@@ -233,6 +233,7 @@ typedef enum
 	sfx_forcsg,
 	sfx_elemsg,
 	sfx_armasg,
+	sfx_attrsg,
 	sfx_shldls,
 	sfx_spdpad,
 	sfx_spkdth,
@@ -251,6 +252,8 @@ typedef enum
 	sfx_mswarp,
 	sfx_mspogo,
 	sfx_boingf,
+	sfx_corkp,
+	sfx_corkh,
 
 	// Menu, interface
 	sfx_chchng,
