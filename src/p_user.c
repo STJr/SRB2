@@ -9461,8 +9461,10 @@ void P_PlayerThink(player_t *player)
 				break;
 		}
 	}
-	else if ((player->pflags & PF_SPINNING) && (player->rmomx || player->rmomy)) // spin force
+	else if ((player->pflags & PF_SPINNING) && (abs(player->rmomx) > 5*player->mo->scale || abs(player->rmomy) > 5*player->mo->scale)) // spin force
 		player->drawangle = R_PointToAngle2(0, 0, player->rmomx, player->rmomy);
+	else if (player->skidtime)
+		;
 	else if (cmd->forwardmove || cmd->sidemove) // only when you're pressing movement keys
 	{
 		angle_t diff = ((player->mo->angle + R_PointToAngle2(0, 0, cmd->forwardmove<<FRACBITS, -cmd->sidemove<<FRACBITS)) - player->drawangle);
@@ -9471,17 +9473,6 @@ void P_PlayerThink(player_t *player)
 		else
 			diff /= 4;
 		player->drawangle += diff;
-/*#if 1
-		if (!((player->pflags & PF_JUMPED)
-		&& !(player->charflags & SF_NOJUMPSPIN))
-#else
-		if ((player->mo->movefactor < FRACUNIT) // hilarious absence of traction!
-		|| (player->powers[pw_pushing])
-#endif
-		|| !(player->rmomx || player->rmomy)) // prevent a flicker when just starting out
-			player->drawangle = player->mo->angle + R_PointToAngle2(0, 0, cmd->forwardmove<<FRACBITS, -cmd->sidemove<<FRACBITS);
-		else
-			player->drawangle = R_PointToAngle2(0, 0, player->rmomx, player->rmomy);*/
 	}
 
 
