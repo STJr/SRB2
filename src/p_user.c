@@ -3874,7 +3874,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 #define zpos(posmo) (posmo->z + (posmo->height - mobjinfo[player->revitem].height)/2)
 							if (lockon)
 							{
-								player->drawangle = player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, lockon->x, lockon->y);
+								player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, lockon->x, lockon->y);
 								bullet = P_SpawnPointMissile(player->mo, lockon->x, lockon->y, zpos(lockon), player->revitem, player->mo->x, player->mo->y, zpos(player->mo));
 								if (!demoplayback || P_AnalogMove(player))
 								{
@@ -3894,6 +3894,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 									bullet->momy >>= 1;
 								}
 							}
+							player->drawangle = player->mo->angle;
 #undef zpos
 
 							P_SetTarget(&player->mo->tracer, NULL);
@@ -9463,7 +9464,7 @@ void P_PlayerThink(player_t *player)
 	}
 	else if ((player->pflags & PF_SPINNING) && (abs(player->rmomx) > 5*player->mo->scale || abs(player->rmomy) > 5*player->mo->scale)) // spin force
 		player->drawangle = R_PointToAngle2(0, 0, player->rmomx, player->rmomy);
-	else if (player->skidtime)
+	else if (((player->charability2 == CA2_GUNSLINGER || player->charability2 == CA2_MELEE) && player->panim == PA_ABILITY2) || player->pflags & PF_STASIS || player->skidtime)
 		;
 	else if (cmd->forwardmove || cmd->sidemove) // only when you're pressing movement keys
 	{
