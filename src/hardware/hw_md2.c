@@ -1496,7 +1496,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 
 		if (sprframe->rotate)
 		{
-			const fixed_t anglef = AngleFixed(spr->mobj->angle);
+			const fixed_t anglef = AngleFixed((spr->mobj->player ? spr->mobj->player->drawangle : spr->mobj->angle));
 			p.angley = FIXED_TO_FLOAT(anglef);
 		}
 		else
