@@ -420,11 +420,11 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 			if (i <= 11)
 				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + (i >> 1));
 			else if (i == 12)
-				dest_colormap[starttranscolor + i] = 0x2c; // Darkest 4
-			else if (i == 13)
-				dest_colormap[starttranscolor + i] = 0xfe; // Darkest 3
+				dest_colormap[starttranscolor + i] = 0x2c;
+			else if (i <= 14)
+				dest_colormap[starttranscolor + i] = 0x2d;
 			else
-				dest_colormap[starttranscolor + i] = 0x2d + i - 14; // Darkest 2 and 1
+				dest_colormap[starttranscolor + i] = 0x48;
 		}
 		break;
 
@@ -530,7 +530,7 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
 		{
 			if (i == 15)
-				dest_colormap[starttranscolor + i] = 0x1F; //Darkest 1
+				dest_colormap[starttranscolor + i] = 0xfe; //Darkest 1
 			else if (i == 14)
 				dest_colormap[starttranscolor + i] = 0xfd; //Darkest 2
 			else
