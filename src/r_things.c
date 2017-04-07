@@ -2849,6 +2849,8 @@ void R_AddSkins(UINT16 wadnum)
 			if (!value)
 				I_Error("R_AddSkins: syntax error in S_SKIN lump# %d(%s) in WAD %s\n", lump, W_CheckNameForNumPwad(wadnum,lump), wadfiles[wadnum]->filename);
 
+			// Some of these can't go in R_ProcessPatchableFields because they have side effects for future lines.
+			// Others can't go in there because we don't want them to be patchable.
 			if (!stricmp(stoken, "name"))
 			{
 				INT32 skinnum = R_SkinAvailable(value);
@@ -3039,6 +3041,7 @@ void R_PatchSkins(UINT16 wadnum)
 			}
 			else // Get the properties!
 			{
+				// Some of these can't go in R_ProcessPatchableFields because they have side effects for future lines.
 				if (!stricmp(stoken, "realname"))
 				{ // Display name (eg. "Knuckles")
 					realname = true;
