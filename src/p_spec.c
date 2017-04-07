@@ -3044,7 +3044,10 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 		case 443: // Calls a named Lua function
 #ifdef HAVE_BLUA
-			LUAh_LinedefExecute(line, mo, callsec);
+			if (line->text)
+				LUAh_LinedefExecute(line, mo, callsec);
+			else
+				CONS_Alert(CONS_WARNING, "Linedef %s is missing the hook name of the Lua function to call! (This should be given in the front texture fields)\n", sizeu1(line-lines));
 #else
 			CONS_Alert(CONS_ERROR, "The map is trying to run a Lua script, but this exe was not compiled with Lua support!\n");
 #endif
@@ -3575,7 +3578,7 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 				P_DamageMobj(player->mo, NULL, NULL, 1, 0);
 			break;
 		case 2: // Damage (Water)
-			if ((roversector || P_MobjReadyToTrigger(player->mo, sector)) && (player->powers[pw_underwater] || player->pflags & PF_NIGHTSMODE))
+			if ((roversector || P_MobjReadyToTrigger(player->mo, sector)) && (player->powers[pw_underwater] || player->powers[pw_carry] == CR_NIGHTSMODE))
 				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_WATER);
 			break;
 		case 3: // Damage (Fire)
@@ -3792,7 +3795,7 @@ DoneSection2:
 					if (!(player->pflags & PF_SPINNING))
 						player->pflags |= PF_SPINNING;
 
-					P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
+					P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 				}
 
 				player->powers[pw_flashing] = TICRATE/3;
@@ -3953,7 +3956,7 @@ DoneSection2:
 			if (!(player->pflags & PF_SPINNING) && P_IsObjectOnGround(player->mo) && (player->charability2 == CA2_SPINDASH))
 			{
 				player->pflags |= PF_SPINNING;
-				P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
+				P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 				S_StartAttackSound(player->mo, sfx_spin);
 
 				if (abs(player->rmomx) < FixedMul(5*FRACUNIT, player->mo->scale)
@@ -4030,12 +4033,12 @@ DoneSection2:
 				player->powers[pw_carry] = CR_ZOOMTUBE;
 				player->speed = speed;
 				player->pflags |= PF_SPINNING;
-				player->pflags &= ~(PF_JUMPED|PF_GLIDING|PF_SLIDING|PF_CANCARRY);
+				player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE|PF_GLIDING|PF_SLIDING|PF_CANCARRY);
 				player->climbing = 0;
 
-				if (player->mo->state-states != S_PLAY_SPIN)
+				if (player->mo->state-states != S_PLAY_ROLL)
 				{
-					P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
+					P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 					S_StartSound(player->mo, sfx_spin);
 				}
 			}
@@ -4110,12 +4113,12 @@ DoneSection2:
 				player->powers[pw_carry] = CR_ZOOMTUBE;
 				player->speed = speed;
 				player->pflags |= PF_SPINNING;
-				player->pflags &= ~(PF_JUMPED|PF_GLIDING|PF_SLIDING|PF_CANCARRY);
+				player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE|PF_GLIDING|PF_SLIDING|PF_CANCARRY);
 				player->climbing = 0;
 
-				if (player->mo->state-states != S_PLAY_SPIN)
+				if (player->mo->state-states != S_PLAY_ROLL)
 				{
-					P_SetPlayerMobjState(player->mo, S_PLAY_SPIN);
+					P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 					S_StartSound(player->mo, sfx_spin);
 				}
 			}
@@ -4128,7 +4131,7 @@ DoneSection2:
 				{
 					player->laps++;
 
-					if (player->pflags & PF_NIGHTSMODE)
+					if (player->powers[pw_carry] == CR_NIGHTSMODE)
 						player->drillmeter += 48*20;
 
 					if (player->laps >= (UINT8)cv_numlaps.value)
@@ -4418,7 +4421,7 @@ DoneSection2:
 
 				S_StartSound(player->mo, sfx_s3k4a);
 
-				player->pflags &= ~(PF_JUMPED|PF_GLIDING|PF_SLIDING|PF_CANCARRY);
+				player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE|PF_GLIDING|PF_SLIDING|PF_CANCARRY);
 				player->climbing = 0;
 				P_SetThingPosition(player->mo);
 				P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
@@ -7301,7 +7304,7 @@ static inline boolean PIT_PushThing(mobj_t *thing)
 		return false;
 
 	// Allow this to affect pushable objects at some point?
-	if (thing->player && (!(thing->flags & (MF_NOGRAVITY | MF_NOCLIP)) || thing->player->pflags & PF_NIGHTSMODE))
+	if (thing->player && (!(thing->flags & (MF_NOGRAVITY | MF_NOCLIP)) || thing->player->powers[pw_carry] == CR_NIGHTSMODE))
 	{
 		INT32 dist;
 		INT32 speed;
@@ -7332,7 +7335,7 @@ static inline boolean PIT_PushThing(mobj_t *thing)
 		// Written with bits and pieces of P_HomingAttack
 		if ((speed > 0) && (P_CheckSight(thing, tmpusher->source)))
 		{
-			if (!(thing->player->pflags & PF_NIGHTSMODE))
+			if (thing->player->powers[pw_carry] != CR_NIGHTSMODE)
 			{
 				// only push wrt Z if health & 1 (mapthing has ambush flag)
 				if (tmpusher->source->health & 1)
@@ -7661,11 +7664,11 @@ void T_Pusher(pusher_t *p)
 		{
 			if (p->slider && thing->player)
 			{
-				boolean jumped = (thing->player->pflags & PF_JUMPED);
+				pflags_t jumped = (thing->player->pflags & (PF_JUMPED|PF_NOJUMPDAMAGE));
 				P_ResetPlayer (thing->player);
 
 				if (jumped)
-					thing->player->pflags |= PF_JUMPED;
+					thing->player->pflags |= jumped;
 
 				thing->player->pflags |= PF_SLIDING;
 				P_SetPlayerMobjState (thing, thing->info->painstate); // Whee!

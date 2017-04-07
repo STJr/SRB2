@@ -194,8 +194,6 @@ static int player_get(lua_State *L)
 		lua_pushinteger(L, plr->gotcontinue);
 	else if (fastcmp(field,"speed"))
 		lua_pushfixed(L, plr->speed);
-	else if (fastcmp(field,"jumping"))
-		lua_pushboolean(L, plr->jumping);
 	else if (fastcmp(field,"secondjump"))
 		lua_pushinteger(L, plr->secondjump);
 	else if (fastcmp(field,"fly1"))
@@ -459,8 +457,6 @@ static int player_set(lua_State *L)
 		plr->gotcontinue = (UINT8)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"speed"))
 		plr->speed = luaL_checkfixed(L, 3);
-	else if (fastcmp(field,"jumping"))
-		plr->jumping = luaL_checkboolean(L, 3);
 	else if (fastcmp(field,"secondjump"))
 		plr->secondjump = (UINT8)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"fly1"))

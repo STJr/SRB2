@@ -511,7 +511,8 @@ static int mobj_set(lua_State *L)
 		for (i = 0; i < numskins; i++)
 			if (fastcmp(skins[i].name, skin))
 			{
-				mo->skin = &skins[i];
+				if (!mo->player || R_SkinUsable(mo->player-players, i))
+					mo->skin = &skins[i];
 				return 0;
 			}
 		return luaL_error(L, "mobj.skin '%s' not found!", skin);

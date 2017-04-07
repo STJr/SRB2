@@ -1776,9 +1776,9 @@ static mobj_t *SearchMarioNode(msecnode_t *node)
 		case MT_SCORE:
 		case MT_DROWNNUMBERS:
 		case MT_GOTEMERALD:
+		case MT_LOCKON:
 		case MT_TAG:
 		case MT_GOTFLAG:
-		case MT_GOTFLAG2:
 		case MT_HOOP:
 		case MT_HOOPCOLLIDE:
 		case MT_NIGHTSCORE:
