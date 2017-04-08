@@ -199,6 +199,8 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	const INT16 num = (INT16)(i-1);
 	DEH_WriteUndoline("LEVELNAME", mapheaderinfo[num]->lvlttl, UNDO_NONE);
 	mapheaderinfo[num]->lvlttl[0] = '\0';
+	DEH_WriteUndoline("SELECTHEADING", mapheaderinfo[num]->selectheading, UNDO_NONE);
+	mapheaderinfo[num]->selectheading[0] = '\0';
 	DEH_WriteUndoline("SUBTITLE", mapheaderinfo[num]->subttl, UNDO_NONE);
 	mapheaderinfo[num]->subttl[0] = '\0';
 	DEH_WriteUndoline("ACT", va("%d", mapheaderinfo[num]->actnum), UNDO_NONE);
@@ -2583,8 +2585,9 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	if (!dedicated)
 	{
-		if (!cv_cam_speed.changed)
-			CV_Set(&cv_cam_speed, cv_cam_speed.defaultvalue);
+		// Salt: CV_ClearChangedFlags() messes with your settings :(
+		/*if (!cv_cam_speed.changed)
+			CV_Set(&cv_cam_speed, cv_cam_speed.defaultvalue);*/
 
 		if (!cv_chasecam.changed)
 			CV_SetValue(&cv_chasecam, chase);
@@ -2774,8 +2777,6 @@ boolean P_SetupLevel(boolean skipprecip)
 	for (i = 0; i < MAXPLAYERS; i++)
 		if (playeringame[i])
 		{
-			players[i].pflags &= ~PF_NIGHTSMODE;
-
 			// Start players with pity shields if possible
 			players[i].pity = -1;
 
@@ -2880,22 +2881,21 @@ boolean P_SetupLevel(boolean skipprecip)
 				camera.angle = FixedAngle((fixed_t)thing->angle << FRACBITS);
 			}
 		}
-
-		if (!cv_cam_height.changed)
+		
+		// Salt: CV_ClearChangedFlags() messes with your settings :(
+		/*if (!cv_cam_height.changed)
 			CV_Set(&cv_cam_height, cv_cam_height.defaultvalue);
-
-		if (!cv_cam_dist.changed)
-			CV_Set(&cv_cam_dist, cv_cam_dist.defaultvalue);
-
-		if (!cv_cam_rotate.changed)
-			CV_Set(&cv_cam_rotate, cv_cam_rotate.defaultvalue);
-
 		if (!cv_cam2_height.changed)
 			CV_Set(&cv_cam2_height, cv_cam2_height.defaultvalue);
 
+		if (!cv_cam_dist.changed)
+			CV_Set(&cv_cam_dist, cv_cam_dist.defaultvalue);
 		if (!cv_cam2_dist.changed)
-			CV_Set(&cv_cam2_dist, cv_cam2_dist.defaultvalue);
+			CV_Set(&cv_cam2_dist, cv_cam2_dist.defaultvalue);*/
 
+		// Though, I don't think anyone would care about cam_rotate being reset back to the only value that makes sense :P
+		if (!cv_cam_rotate.changed)
+			CV_Set(&cv_cam_rotate, cv_cam_rotate.defaultvalue);
 		if (!cv_cam2_rotate.changed)
 			CV_Set(&cv_cam2_rotate, cv_cam2_rotate.defaultvalue);
 

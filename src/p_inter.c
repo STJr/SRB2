@@ -367,11 +367,11 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			return;
 		}
 
-		if (((player->pflags & PF_NIGHTSMODE) && (player->pflags & PF_DRILLING))
-		|| ((player->pflags & PF_JUMPED) && (player->pflags & PF_FORCEJUMPDAMAGE || !(player->charflags & SF_NOJUMPSPIN) || (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)))
+		if (((player->powers[pw_carry] == CR_NIGHTSMODE) && (player->pflags & PF_DRILLING))
+		|| ((player->pflags & PF_JUMPED) && (!(player->pflags & PF_NOJUMPDAMAGE) || (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)))
 		|| (player->pflags & (PF_SPINNING|PF_GLIDING))
 		|| (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2)
-		|| ((player->charflags & SF_STOMPDAMAGE) && (P_MobjFlip(toucher)*(toucher->z - (special->z + special->height/2)) > 0) && (P_MobjFlip(toucher)*toucher->momz < 0))
+		|| ((player->charflags & SF_STOMPDAMAGE || player->pflags & PF_BOUNCING) && (P_MobjFlip(toucher)*(toucher->z - (special->z + special->height/2)) > 0) && (P_MobjFlip(toucher)*toucher->momz < 0))
 		|| player->powers[pw_invulnerability] || player->powers[pw_super]
 		|| elementalpierce) // Do you possess the ability to subdue the object?
 		{
@@ -379,9 +379,11 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			{
 				if (elementalpierce == 2)
 					P_DoBubbleBounce(player);
-				else
+				else if (!(player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2))
 					toucher->momz = -toucher->momz;
 			}
+			if (player->pflags & PF_BOUNCING)
+				P_DoAbilityBounce(player, false);
 			toucher->momx = -toucher->momx;
 			toucher->momy = -toucher->momy;
 			P_DamageMobj(special, toucher, toucher, 1, 0);
@@ -406,7 +408,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		////////////////////////////////////////////////////////
 		/////ENEMIES!!//////////////////////////////////////////
 		////////////////////////////////////////////////////////
-		if (special->type == MT_GSNAPPER && !(((player->pflags & PF_NIGHTSMODE) && (player->pflags & PF_DRILLING))
+		if (special->type == MT_GSNAPPER && !(((player->powers[pw_carry] == CR_NIGHTSMODE) && (player->pflags & PF_DRILLING))
 		|| player->powers[pw_invulnerability] || player->powers[pw_super] || elementalpierce)
 		&& toucher->z < special->z + special->height && toucher->z + toucher->height > special->z)
 		{
@@ -416,23 +418,30 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		else if (special->type == MT_SHARP
 		&& ((special->state == &states[special->info->xdeathstate]) || (toucher->z > special->z + special->height/2)))
 		{
-			// Cannot hit sharp from above or when red and angry
-			P_DamageMobj(toucher, special, special, 1, 0);
+			if (player->pflags & PF_BOUNCING)
+			{
+				toucher->momz = -toucher->momz;
+				P_DoAbilityBounce(player, false);
+			}
+			else // Cannot hit sharp from above or when red and angry
+				P_DamageMobj(toucher, special, special, 1, 0);
 		}
-		else if (((player->pflags & PF_NIGHTSMODE) && (player->pflags & PF_DRILLING))
-		|| ((player->pflags & PF_JUMPED) && (player->pflags & PF_FORCEJUMPDAMAGE || !(player->charflags & SF_NOJUMPSPIN) || (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)))
+		else if (((player->powers[pw_carry] == CR_NIGHTSMODE) && (player->pflags & PF_DRILLING))
+		|| ((player->pflags & PF_JUMPED) && (!(player->pflags & PF_NOJUMPDAMAGE) || (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)))
 		|| (player->pflags & (PF_SPINNING|PF_GLIDING))
 		|| (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2)
-		|| ((player->charflags & SF_STOMPDAMAGE) && (P_MobjFlip(toucher)*(toucher->z - (special->z + special->height/2)) > 0) && (P_MobjFlip(toucher)*toucher->momz < 0))
+		|| ((player->charflags & SF_STOMPDAMAGE || player->pflags & PF_BOUNCING) && (P_MobjFlip(toucher)*(toucher->z - (special->z + special->height/2)) > 0) && (P_MobjFlip(toucher)*toucher->momz < 0))
 		|| player->powers[pw_invulnerability] || player->powers[pw_super]) // Do you possess the ability to subdue the object?
 		{
 			if ((P_MobjFlip(toucher)*toucher->momz < 0) && (elementalpierce != 1))
 			{
 				if (elementalpierce == 2)
 					P_DoBubbleBounce(player);
-				else
+				else if (!(player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2))
 					toucher->momz = -toucher->momz;
 			}
+			if (player->pflags & PF_BOUNCING)
+				P_DoAbilityBounce(player, false);
 
 			P_DamageMobj(special, toucher, toucher, 1, 0);
 		}
@@ -756,12 +765,12 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			}
 			else //Initial transformation. Don't allow second chances in special stages!
 			{
-				if (player->pflags & PF_NIGHTSMODE)
+				if (player->powers[pw_carry] == CR_NIGHTSMODE)
 					return;
 
 				S_StartSound(toucher, sfx_supert);
 			}
-			if (!(netgame || multiplayer) && !(player->pflags & PF_NIGHTSMODE))
+			if (!(netgame || multiplayer) && !(player->powers[pw_carry] == CR_NIGHTSMODE))
 				P_SetTarget(&special->tracer, toucher);
 			P_NightserizePlayer(player, special->health); // Transform!
 			return;
@@ -885,7 +894,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				return;
 
 			// make sure everything is as it should be, THEN take rings from players in special stages
-			if (player->pflags & PF_NIGHTSMODE && !toucher->target)
+			if (player->powers[pw_carry] == CR_NIGHTSMODE && !toucher->target)
 				return;
 
 			if (player->mare != special->threshold) // wrong mare
@@ -923,7 +932,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if (player->bumpertime < TICRATE/4)
 			{
 				S_StartSound(toucher, special->info->seesound);
-				if (player->pflags & PF_NIGHTSMODE)
+				if (player->powers[pw_carry] == CR_NIGHTSMODE)
 				{
 					player->bumpertime = TICRATE/2;
 					if (special->threshold > 0)
@@ -979,14 +988,14 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			}
 			return;
 		case MT_NIGHTSSUPERLOOP:
-			if (player->bot || !(player->pflags & PF_NIGHTSMODE))
+			if (player->bot || !(player->powers[pw_carry] == CR_NIGHTSMODE))
 				return;
 			if (!G_IsSpecialStage(gamemap))
 				player->powers[pw_nights_superloop] = (UINT16)special->info->speed;
 			else
 			{
 				for (i = 0; i < MAXPLAYERS; i++)
-					if (playeringame[i] && players[i].pflags & PF_NIGHTSMODE)
+					if (playeringame[i] && players[i].powers[pw_carry] == CR_NIGHTSMODE)
 						players[i].powers[pw_nights_superloop] = (UINT16)special->info->speed;
 				if (special->info->deathsound != sfx_None)
 					S_StartSound(NULL, special->info->deathsound);
@@ -1001,14 +1010,14 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			}
 			break;
 		case MT_NIGHTSDRILLREFILL:
-			if (player->bot || !(player->pflags & PF_NIGHTSMODE))
+			if (player->bot || !(player->powers[pw_carry] == CR_NIGHTSMODE))
 				return;
 			if (!G_IsSpecialStage(gamemap))
 				player->drillmeter = special->info->speed;
 			else
 			{
 				for (i = 0; i < MAXPLAYERS; i++)
-					if (playeringame[i] && players[i].pflags & PF_NIGHTSMODE)
+					if (playeringame[i] && players[i].powers[pw_carry] == CR_NIGHTSMODE)
 						players[i].drillmeter = special->info->speed;
 				if (special->info->deathsound != sfx_None)
 					S_StartSound(NULL, special->info->deathsound);
@@ -1023,7 +1032,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			}
 			break;
 		case MT_NIGHTSHELPER:
-			if (player->bot || !(player->pflags & PF_NIGHTSMODE))
+			if (player->bot || !(player->powers[pw_carry] == CR_NIGHTSMODE))
 				return;
 			if (!G_IsSpecialStage(gamemap))
 			{
@@ -1037,7 +1046,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			{
 				mobj_t *flickyobj;
 				for (i = 0; i < MAXPLAYERS; i++)
-					if (playeringame[i] && players[i].mo && players[i].pflags & PF_NIGHTSMODE) {
+					if (playeringame[i] && players[i].mo && players[i].powers[pw_carry] == CR_NIGHTSMODE) {
 						players[i].powers[pw_nights_helper] = (UINT16)special->info->speed;
 						flickyobj = P_SpawnMobj(players[i].mo->x, players[i].mo->y, players[i].mo->z + players[i].mo->info->height, MT_NIGHTOPIANHELPER);
 						P_SetTarget(&flickyobj->target, players[i].mo);
@@ -1055,7 +1064,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			}
 			break;
 		case MT_NIGHTSEXTRATIME:
-			if (player->bot || !(player->pflags & PF_NIGHTSMODE))
+			if (player->bot || !(player->powers[pw_carry] == CR_NIGHTSMODE))
 				return;
 			if (!G_IsSpecialStage(gamemap))
 			{
@@ -1066,7 +1075,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			else
 			{
 				for (i = 0; i < MAXPLAYERS; i++)
-					if (playeringame[i] && players[i].pflags & PF_NIGHTSMODE)
+					if (playeringame[i] && players[i].powers[pw_carry] == CR_NIGHTSMODE)
 					{
 						players[i].nightstime += special->info->speed;
 						players[i].startedtime += special->info->speed;
@@ -1085,7 +1094,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			}
 			break;
 		case MT_NIGHTSLINKFREEZE:
-			if (player->bot || !(player->pflags & PF_NIGHTSMODE))
+			if (player->bot || !(player->powers[pw_carry] == CR_NIGHTSMODE))
 				return;
 			if (!G_IsSpecialStage(gamemap))
 			{
@@ -1095,7 +1104,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			else
 			{
 				for (i = 0; i < MAXPLAYERS; i++)
-					if (playeringame[i] && players[i].pflags & PF_NIGHTSMODE)
+					if (playeringame[i] && players[i].powers[pw_carry] == CR_NIGHTSMODE)
 					{
 						players[i].powers[pw_nights_linkfreeze] += (UINT16)special->info->speed;
 						players[i].linktimer = 2*TICRATE;
@@ -1153,7 +1162,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if (G_IsSpecialStage(gamemap))
 			{
 				for (i = 0; i < MAXPLAYERS; i++)
-					if (playeringame[i] && players[i].pflags & PF_NIGHTSMODE)
+					if (playeringame[i] && players[i].powers[pw_carry] == CR_NIGHTSMODE)
 						players[i].drillmeter += TICRATE/2;
 			}
 			else if (player->bot)
@@ -1336,9 +1345,10 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				toucher->momz = -toucher->momz;
 				if (player->pflags & PF_GLIDING)
 				{
-					player->pflags &= ~(PF_GLIDING|PF_JUMPED);
+					player->pflags &= ~(PF_GLIDING|PF_JUMPED|PF_NOJUMPDAMAGE);
 					P_SetPlayerMobjState(toucher, S_PLAY_FALL);
 				}
+				player->homing = 0;
 
 				// Play a bounce sound?
 				S_StartSound(toucher, special->info->painsound);
@@ -1346,7 +1356,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			return;
 
 		case MT_BLACKEGGMAN_GOOPFIRE:
-			if (toucher->state != &states[S_PLAY_PAIN] && !player->powers[pw_flashing])
+			if (!player->powers[pw_flashing])
 			{
 				toucher->momx = 0;
 				toucher->momy = 0;
@@ -1354,13 +1364,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				if (toucher->momz != 0)
 					special->momz = toucher->momz;
 
-				player->powers[pw_ingoop] = 2;
-
-				if (player->powers[pw_carry] == CR_GENERIC)
-				{
-					P_SetTarget(&toucher->tracer, NULL);
-					player->powers[pw_carry] = CR_NONE;
-				}
+				player->powers[pw_carry] = CR_BRAKGOOP;
+				P_SetTarget(&toucher->tracer, special);
 
 				P_ResetPlayer(player);
 
@@ -1372,8 +1377,6 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 						P_SetMobjState(special->target, special->target->info->raisestate);
 				}
 			}
-			else
-				player->powers[pw_ingoop] = 0;
 			return;
 		case MT_EGGSHIELD:
 			{
@@ -1403,17 +1406,18 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					toucher->momz = -toucher->momz;
 					if (player->pflags & PF_GLIDING)
 					{
-						player->pflags &= ~(PF_GLIDING|PF_JUMPED);
+						player->pflags &= ~(PF_GLIDING|PF_JUMPED|PF_NOJUMPDAMAGE);
 						P_SetPlayerMobjState(toucher, S_PLAY_FALL);
 					}
+					player->homing = 0;
 
 					// Play a bounce sound?
 					S_StartSound(toucher, special->info->painsound);
 					return;
 				}
-				else if (((player->pflags & PF_NIGHTSMODE) && (player->pflags & PF_DRILLING))
-						|| ((player->pflags & PF_JUMPED) && (player->pflags & PF_FORCEJUMPDAMAGE || !(player->charflags & SF_NOJUMPSPIN) || (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)))
-						|| ((player->charflags & SF_STOMPDAMAGE) && (P_MobjFlip(toucher)*(toucher->z - (special->z + special->height/2)) > 0) && (P_MobjFlip(toucher)*toucher->momz < 0))
+				else if (((player->powers[pw_carry] == CR_NIGHTSMODE) && (player->pflags & PF_DRILLING))
+						|| ((player->pflags & PF_JUMPED) && (!(player->pflags & PF_NOJUMPDAMAGE) || (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)))
+						|| ((player->charflags & SF_STOMPDAMAGE || player->pflags & PF_BOUNCING) && (P_MobjFlip(toucher)*(toucher->z - (special->z + special->height/2)) > 0) && (P_MobjFlip(toucher)*toucher->momz < 0))
 						|| (player->pflags & (PF_SPINNING|PF_GLIDING))
 						|| player->powers[pw_invulnerability] || player->powers[pw_super]) // Do you possess the ability to subdue the object?
 				{
@@ -1463,7 +1467,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			{
 				player->powers[pw_carry] = CR_MACESPIN;
 				S_StartSound(toucher, sfx_spin);
-				P_SetPlayerMobjState(toucher, S_PLAY_SPIN);
+				P_SetPlayerMobjState(toucher, S_PLAY_ROLL);
 			}
 			else
 				player->powers[pw_carry] = CR_GENERIC;
@@ -2597,7 +2601,7 @@ static inline void P_NiGHTSDamage(mobj_t *target, mobj_t *source)
 		}
 
 		player->powers[pw_flashing] = flashingtics;
-		P_SetPlayerMobjState(target, S_PLAY_NIGHTS_PAIN);
+		P_SetPlayerMobjState(target, S_PLAY_NIGHTS_STUN);
 		S_StartSound(target, sfx_nghurt);
 
 		if (oldnightstime > 10*TICRATE
@@ -2724,7 +2728,7 @@ static inline boolean P_PlayerHitsPlayer(mobj_t *target, mobj_t *inflictor, mobj
 
 static void P_KillPlayer(player_t *player, mobj_t *source, INT32 damage)
 {
-	player->pflags &= ~(PF_SLIDING|PF_NIGHTSMODE);
+	player->pflags &= ~PF_SLIDING;
 
 	player->powers[pw_carry] = CR_NONE;
 
@@ -2820,10 +2824,7 @@ static inline void P_SuperDamage(player_t *player, mobj_t *inflictor, mobj_t *so
 
 	P_InstaThrust(player->mo, ang, fallbackspeed);
 
-	if (player->charflags & SF_SUPERANIMS)
-		P_SetPlayerMobjState(player->mo, S_PLAY_SUPER_STUN);
-	else
-		P_SetPlayerMobjState(player->mo, player->mo->info->painstate);
+	P_SetPlayerMobjState(player->mo, S_PLAY_STUN);
 
 	P_ResetPlayer(player);
 
@@ -3069,7 +3070,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			if (player->pflags & PF_GODMODE)
 				return false;
 
-			if (!(target->player->pflags & (PF_NIGHTSMODE|PF_NIGHTSFALL)) && (maptol & TOL_NIGHTS))
+			if (!(target->player->powers[pw_carry] == CR_NIGHTSMODE || target->player->pflags & PF_NIGHTSFALL) && (maptol & TOL_NIGHTS))
 				return false;
 
 			switch (damagetype)
@@ -3091,7 +3092,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			}
 		}
 
-		if (player->pflags & PF_NIGHTSMODE) // NiGHTS damage handling
+		if (player->powers[pw_carry] == CR_NIGHTSMODE) // NiGHTS damage handling
 		{
 			if (!force)
 			{

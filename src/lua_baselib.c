@@ -445,8 +445,30 @@ static int lib_pIsValidSprite2(lua_State *L)
 	INLEVEL
 	if (!mobj)
 		return LUA_ErrInvalid(L, "mobj_t");
-	lua_pushboolean(L, (mobj->skin && (((skin_t *)mobj->skin)->sprites[spr2].numframes > 0)));
+	lua_pushboolean(L, (mobj->skin && (((skin_t *)mobj->skin)->sprites[spr2].numframes)));
 	return 1;
+}
+
+// P_SpawnLockOn doesn't exist either, but we want to expose making a local mobj without encouraging hacks.
+
+static int lib_pSpawnLockOn(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	mobj_t *lockon = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
+	statenum_t state = luaL_checkinteger(L, 3);
+	NOHUD
+	INLEVEL
+	if (!lockon)
+		return LUA_ErrInvalid(L, "mobj_t");
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	if (player == &players[consoleplayer] || player == &players[secondarydisplayplayer] || player == &players[displayplayer]) // Only display it on your own view.
+	{
+		mobj_t *visual = P_SpawnMobj(lockon->x, lockon->y, lockon->z, MT_LOCKON); // positioning, flip handled in P_SceneryThinker
+		visual->target = lockon;
+		P_SetMobjStateNF(visual, state);
+	}
+	return 0;
 }
 
 static int lib_pSpawnMissile(lua_State *L)
@@ -793,6 +815,17 @@ static int lib_pStealPlayerScore(lua_State *L)
 	return 0;
 }
 
+static int lib_pGetJumpFlags(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	NOHUD
+	INLEVEL
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	lua_pushinteger(L, P_GetJumpFlags(player));
+	return 1;
+}
+
 static int lib_pPlayerInPain(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
@@ -1055,11 +1088,12 @@ static int lib_pLookForEnemies(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
 	boolean nonenemies = lua_opttrueboolean(L, 2);
+	boolean bullet = lua_optboolean(L, 3);
 	NOHUD
 	INLEVEL
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
-	lua_pushboolean(L, P_LookForEnemies(player, nonenemies));
+	LUA_PushUserdata(L, P_LookForEnemies(player, nonenemies, bullet), META_MOBJ);
 	return 1;
 }
 
@@ -2327,6 +2361,7 @@ static luaL_Reg lib[] = {
 	{"P_SpawnMobj",lib_pSpawnMobj},
 	{"P_RemoveMobj",lib_pRemoveMobj},
 	{"P_IsValidSprite2", lib_pIsValidSprite2},
+	{"P_SpawnLockOn", lib_pSpawnLockOn},
 	{"P_SpawnMissile",lib_pSpawnMissile},
 	{"P_SpawnXYZMissile",lib_pSpawnXYZMissile},
 	{"P_SpawnPointMissile",lib_pSpawnPointMissile},
@@ -2354,6 +2389,7 @@ static luaL_Reg lib[] = {
 	{"P_GetPlayerControlDirection",lib_pGetPlayerControlDirection},
 	{"P_AddPlayerScore",lib_pAddPlayerScore},
 	{"P_StealPlayerScore",lib_pStealPlayerScore},
+	{"P_GetJumpFlags",lib_pGetJumpFlags},
 	{"P_PlayerInPain",lib_pPlayerInPain},
 	{"P_DoPlayerPain",lib_pDoPlayerPain},
 	{"P_ResetPlayer",lib_pResetPlayer},
