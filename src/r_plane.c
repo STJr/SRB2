@@ -963,6 +963,8 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 		yoffs *= 1;
 
+#define ANG2RAD(angle) ((float)((angle)*M_PI)/ANGLE_180)
+
 #define incorporateorigin(originx, originy) xoffs &= ((1 << (32-nflatshiftup))-1);\
 yoffs &= ((1 << (32-nflatshiftup))-1);\
 xoffs -= (originx + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1);\
@@ -970,6 +972,37 @@ yoffs += (originy + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1)
 
 		if (hack != 0)
 		{
+			/*ang = ANG2RAD(hack);
+			{
+				double mod, oxf, oyf, tempf, xoffsf, yoffsf;
+
+				mod = FIXED_TO_FLOAT((1 << (32-nflatshiftup)));
+
+				tempf = FIXED_TO_FLOAT(pl->slope->o.x);
+				oyf = FIXED_TO_FLOAT(pl->slope->o.y);
+				oxf = tempf * cos(ang) + oyf * sin(ang) + mod/2;
+				oyf = -(tempf * sin(ang)) + oyf * cos(ang) + mod/2;
+
+				oxf -= fmod(oxf, mod);
+				oyf -= fmod(oyf, mod);
+
+				tempf = FIXED_TO_FLOAT(xoffs);
+				yoffsf = FIXED_TO_FLOAT(yoffs);
+				xoffsf = tempf * cos(ang) + yoffsf * sin(ang);
+				yoffsf = -(tempf * sin(ang)) + yoffsf * cos(ang);
+
+				xoffsf = fmod(xoffsf, mod);
+				yoffsf = fmod(yoffsf, mod);
+
+				xoffsf -= oxf;
+				yoffsf += oyf;
+
+				oxf = xoffsf * cos(ang) - yoffsf * sin(ang);
+				oyf = xoffsf * sin(ang) + yoffsf * cos(ang);
+
+				xoffs = FLOAT_TO_FIXED(oxf);
+				yoffs = FLOAT_TO_FIXED(oyf);
+			}*/
 			if (hack >= ANGLE_45)
 				hack = InvAngle(hack);
 			{
@@ -1005,8 +1038,6 @@ yoffs += (originy + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1)
 
 		temp = P_GetZAt(pl->slope, pl->viewx, pl->viewy);
 		zeroheight = FIXED_TO_FLOAT(temp);
-
-#define ANG2RAD(angle) ((float)((angle)*M_PI)/ANGLE_180)
 
 		// p is the texture origin in view space
 		// Don't add in the offsets at this stage, because doing so can result in
