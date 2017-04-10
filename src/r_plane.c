@@ -965,6 +965,13 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 		if (hack)
 		{
+			/*
+			Essentially: We can't & the components along the regular axes when the plane is rotated.
+			This is because the distance on each regular axis in order to loop is different.
+			We rotate them, & the components, add them together, & them again, and then rotate them back.
+			These three seperate & operations are done per axis in order to prevent overflows.
+			toast 10/04/17
+			*/
 			const fixed_t cosinecomponent = FINECOSINE(hack>>ANGLETOFINESHIFT);
 			const fixed_t sinecomponent = FINESINE(hack>>ANGLETOFINESHIFT);
 
