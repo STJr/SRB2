@@ -963,32 +963,32 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 		yoffs *= 1;
 
-		if (hack != 0)
+		if (hack)
 		{
 			const fixed_t cosinecomponent = FINECOSINE(hack>>ANGLETOFINESHIFT);
 			const fixed_t sinecomponent = FINESINE(hack>>ANGLETOFINESHIFT);
 
-			const fixed_t mod = ((1 << (32-nflatshiftup)) - 1);
+			const fixed_t modmask = ((1 << (32-nflatshiftup)) - 1);
 
-			fixed_t ox = (FixedMul(pl->slope->o.x,cosinecomponent) & mod) + (FixedMul(pl->slope->o.y,sinecomponent) & mod) + (1 << (31-nflatshiftup));
-			fixed_t oy = (-FixedMul(pl->slope->o.x,sinecomponent) & mod) + (FixedMul(pl->slope->o.y,cosinecomponent) & mod) + (1 << (31-nflatshiftup));
+			fixed_t ox = (FixedMul(pl->slope->o.x,cosinecomponent) & modmask) - (FixedMul(pl->slope->o.y,sinecomponent) & modmask);
+			fixed_t oy = (-FixedMul(pl->slope->o.x,sinecomponent) & modmask) - (FixedMul(pl->slope->o.y,cosinecomponent) & modmask);
 
-			temp = ox & mod;
-			oy &= mod;
+			temp = ox & modmask;
+			oy &= modmask;
 			ox = FixedMul(temp,cosinecomponent)+FixedMul(oy,-sinecomponent); // negative sine for opposite direction
 			oy = -FixedMul(temp,-sinecomponent)+FixedMul(oy,cosinecomponent);
 
 			temp = xoffs;
-			xoffs = (FixedMul(xoffs,cosinecomponent) & mod) + (FixedMul(yoffs,sinecomponent) & mod);
-			yoffs = (-FixedMul(temp,sinecomponent) & mod) + (FixedMul(yoffs,cosinecomponent) & mod);
+			xoffs = (FixedMul(temp,cosinecomponent) & modmask) + (FixedMul(yoffs,sinecomponent) & modmask);
+			yoffs = (-FixedMul(temp,sinecomponent) & modmask) + (FixedMul(yoffs,cosinecomponent) & modmask);
 
-			temp = xoffs & mod;
-			yoffs &= mod;
+			temp = xoffs & modmask;
+			yoffs &= modmask;
 			xoffs = FixedMul(temp,cosinecomponent)+FixedMul(yoffs,-sinecomponent); // ditto
 			yoffs = -FixedMul(temp,-sinecomponent)+FixedMul(yoffs,cosinecomponent);
 
 			xoffs -= (pl->slope->o.x - ox);
-			yoffs += (pl->slope->o.y - oy);
+			yoffs += (pl->slope->o.y + oy);
 		}
 		else
 		{
