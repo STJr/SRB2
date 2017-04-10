@@ -963,71 +963,40 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 		yoffs *= 1;
 
-#define ANG2RAD(angle) ((float)((angle)*M_PI)/ANGLE_180)
-
-#define incorporateorigin(originx, originy) xoffs &= ((1 << (32-nflatshiftup))-1);\
-yoffs &= ((1 << (32-nflatshiftup))-1);\
-xoffs -= (originx + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1);\
-yoffs += (originy + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1)
-
 		if (hack != 0)
 		{
-			/*ang = ANG2RAD(hack);
-			{
-				double mod, oxf, oyf, tempf, xoffsf, yoffsf;
+			const fixed_t cosinecomponent = FINECOSINE(hack>>ANGLETOFINESHIFT);
+			const fixed_t sinecomponent = FINESINE(hack>>ANGLETOFINESHIFT);
 
-				mod = FIXED_TO_FLOAT((1 << (32-nflatshiftup)));
+			const fixed_t mod = ((1 << (32-nflatshiftup)) - 1);
 
-				tempf = FIXED_TO_FLOAT(pl->slope->o.x);
-				oyf = FIXED_TO_FLOAT(pl->slope->o.y);
-				oxf = tempf * cos(ang) + oyf * sin(ang) + mod/2;
-				oyf = -(tempf * sin(ang)) + oyf * cos(ang) + mod/2;
+			fixed_t ox = (FixedMul(pl->slope->o.x,cosinecomponent) & mod) + (FixedMul(pl->slope->o.y,sinecomponent) & mod) + (1 << (31-nflatshiftup));
+			fixed_t oy = (-FixedMul(pl->slope->o.x,sinecomponent) & mod) + (FixedMul(pl->slope->o.y,cosinecomponent) & mod) + (1 << (31-nflatshiftup));
 
-				oxf -= fmod(oxf, mod);
-				oyf -= fmod(oyf, mod);
+			temp = ox & mod;
+			oy &= mod;
+			ox = FixedMul(temp,cosinecomponent)+FixedMul(oy,-sinecomponent); // negative sine for opposite direction
+			oy = -FixedMul(temp,-sinecomponent)+FixedMul(oy,cosinecomponent);
 
-				tempf = FIXED_TO_FLOAT(xoffs);
-				yoffsf = FIXED_TO_FLOAT(yoffs);
-				xoffsf = tempf * cos(ang) + yoffsf * sin(ang);
-				yoffsf = -(tempf * sin(ang)) + yoffsf * cos(ang);
+			temp = xoffs;
+			xoffs = (FixedMul(xoffs,cosinecomponent) & mod) + (FixedMul(yoffs,sinecomponent) & mod);
+			yoffs = (-FixedMul(temp,sinecomponent) & mod) + (FixedMul(yoffs,cosinecomponent) & mod);
 
-				xoffsf = fmod(xoffsf, mod);
-				yoffsf = fmod(yoffsf, mod);
+			temp = xoffs & mod;
+			yoffs &= mod;
+			xoffs = FixedMul(temp,cosinecomponent)+FixedMul(yoffs,-sinecomponent); // ditto
+			yoffs = -FixedMul(temp,-sinecomponent)+FixedMul(yoffs,cosinecomponent);
 
-				xoffsf -= oxf;
-				yoffsf += oyf;
-
-				oxf = xoffsf * cos(ang) - yoffsf * sin(ang);
-				oyf = xoffsf * sin(ang) + yoffsf * cos(ang);
-
-				xoffs = FLOAT_TO_FIXED(oxf);
-				yoffs = FLOAT_TO_FIXED(oyf);
-			}*/
-			if (hack >= ANGLE_45)
-				hack = InvAngle(hack);
-			{
-				const fixed_t cosinecomponent = FINECOSINE(hack>>ANGLETOFINESHIFT);
-				const fixed_t sinecomponent = FINESINE(hack>>ANGLETOFINESHIFT);
-
-				const fixed_t ox = FixedMul(pl->slope->o.x,cosinecomponent)+FixedMul(pl->slope->o.y,sinecomponent);
-				const fixed_t oy = -FixedMul(pl->slope->o.x,sinecomponent)+FixedMul(pl->slope->o.y,cosinecomponent);
-
-				temp = xoffs;
-				xoffs = FixedMul(xoffs,cosinecomponent)+FixedMul(yoffs,sinecomponent);
-				yoffs = -FixedMul(temp,sinecomponent)+FixedMul(yoffs,cosinecomponent);
-
-				incorporateorigin(ox, oy);
-
-				temp = xoffs;
-				xoffs = FixedMul(xoffs,cosinecomponent)+FixedMul(yoffs,-sinecomponent); // negative sine for opposite direction
-				yoffs = -FixedMul(temp,-sinecomponent)+FixedMul(yoffs,cosinecomponent); // ditto
-			}
+			xoffs -= (pl->slope->o.x - ox);
+			yoffs += (pl->slope->o.y - oy);
 		}
 		else
 		{
-			incorporateorigin(pl->slope->o.x, pl->slope->o.y);
+			xoffs &= ((1 << (32-nflatshiftup))-1);
+			yoffs &= ((1 << (32-nflatshiftup))-1);
+			xoffs -= (pl->slope->o.x + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1);
+			yoffs += (pl->slope->o.y + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1);
 		}
-#undef incorporateorigin
 
 		xoffs = (fixed_t)(xoffs*fudge);
 		yoffs = (fixed_t)(yoffs/fudge);
@@ -1038,6 +1007,8 @@ yoffs += (originy + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1)
 
 		temp = P_GetZAt(pl->slope, pl->viewx, pl->viewy);
 		zeroheight = FIXED_TO_FLOAT(temp);
+
+#define ANG2RAD(angle) ((float)((angle)*M_PI)/ANGLE_180)
 
 		// p is the texture origin in view space
 		// Don't add in the offsets at this stage, because doing so can result in
