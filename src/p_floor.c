@@ -2557,6 +2557,12 @@ void T_PlaneDisplace(planedisplace_t *pd)
 	direction = (control->floorheight > pd->last_height) ? 1 : -1;
 	diff = FixedMul(control->floorheight-pd->last_height, pd->speed);
 
+	if (pd->reverse) // reverse direction?
+	{
+		direction *= -1;
+		diff *= -1;
+	}
+
 	if (pd->type == pd_floor || pd->type == pd_both)
 		T_MovePlane(target, INT32_MAX/2, target->floorheight+diff, 0, 0, direction); // move floor
 	if (pd->type == pd_ceiling || pd->type == pd_both)
