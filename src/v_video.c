@@ -827,18 +827,34 @@ void V_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 
 	c &= 255;
 
-	for (v = 0; v < h; v++, dest += vid.width)
+	// don't draw parts that are off-screen
+	// if completely off-screen don't bother at all!
+	if (x + w < 0 || x >= vid.width)
+		return;
+	if (y + h < 0 || y >= vid.height)
+		return;
+
+	if (x < 0) // partly off left edge
+	{
+		dest -= x;
+		w += x;
+		x = 0;
+	}
+	if (x + w >= vid.width) // partly off right edge
+		w = (vid.width-1)-x;
+	if (y < 0 && dest < screens[0]) // partly off top edge
+	{ // note: non-green resolutions can make -ve y offsets be actually on-screen, which is why we consider dest too
+		dest -= y*vid.width;
+		h += y;
+		y = 0;
+	}
+	if (y + h >= vid.height) // partly off bottom edge
+		h = (vid.height-1)-y;
+
+	// do the actual drawing now!
+	for (v = 0; v < h && dest < deststop; v++, dest += vid.width)
 		for (u = 0; u < w; u++)
-		{
-			if (dest > deststop)
-				return;
-			if (x + u < 0) // don't draw off the left of the screen (WRAP PREVENTION)
-				continue;
-			if (x + u >= vid.width) // don't draw off the right of the screen (WRAP PREVENTION)
-				break;
-			if (dest >= screens[0]) // don't draw off the top of the screen (CRASH PREVENTION)
-				dest[u] = (UINT8)c;
-		}
+			dest[u] = (UINT8)c;
 }
 
 //
