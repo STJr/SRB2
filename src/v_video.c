@@ -787,7 +787,10 @@ void V_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 			return;
 		}
 
-		dest = screens[0] + y*dupy*vid.width + x*dupx;
+		x *= dupx;
+		y *= dupy;
+
+		dest = screens[0] + y*vid.width + x;
 		deststop = screens[0] + vid.rowbytes * vid.height;
 
 		if (w == BASEVIDWIDTH)
@@ -829,7 +832,12 @@ void V_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 		{
 			if (dest > deststop)
 				return;
-			dest[u] = (UINT8)c;
+			if (x + u < 0) // don't draw off the left of the screen (WRAP PREVENTION)
+				continue;
+			if (x + u >= vid.width) // don't draw off the right of the screen (WRAP PREVENTION)
+				break;
+			if (dest >= screens[0]) // don't draw off the top of the screen (CRASH PREVENTION)
+				dest[u] = (UINT8)c;
 		}
 }
 
