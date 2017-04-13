@@ -111,7 +111,7 @@ static void P_AddFakeFloorsByLine(size_t line, ffloortype_e ffloorflags, thinker
 static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec);
 static void Add_Friction(INT32 friction, INT32 movefactor, INT32 affectee, INT32 referrer);
 static void P_AddSpikeThinker(sector_t *sec, INT32 referrer);
-static void P_AddPlaneDisplaceThinker(INT32 type, fixed_t speed, INT32 control, INT32 affectee);
+static void P_AddPlaneDisplaceThinker(INT32 type, fixed_t speed, INT32 control, INT32 affectee, UINT8 reverse);
 
 
 //SoM: 3/7/2000: New sturcture without limits.
@@ -5176,10 +5176,11 @@ static inline void P_AddBridgeThinker(line_t *sourceline, sector_t *sec)
   * \param speed            Rate of movement relative to control sector
   * \param control          Control sector.
   * \param affectee         Target sector.
+  * \param reverse          Reverse direction?
   * \sa P_SpawnSpecials, T_PlaneDisplace
   * \author Monster Iestyn
   */
-static void P_AddPlaneDisplaceThinker(INT32 type, fixed_t speed, INT32 control, INT32 affectee)
+static void P_AddPlaneDisplaceThinker(INT32 type, fixed_t speed, INT32 control, INT32 affectee, UINT8 reverse)
 {
 	planedisplace_t *displace;
 
@@ -5193,6 +5194,7 @@ static void P_AddPlaneDisplaceThinker(INT32 type, fixed_t speed, INT32 control, 
 	displace->last_height = sectors[control].floorheight;
 	displace->speed = speed;
 	displace->type = type;
+	displace->reverse = reverse;
 }
 
 /** Adds a Mario block thinker, which changes the block's texture between blank
@@ -5912,15 +5914,15 @@ void P_SpawnSpecials(INT32 fromnetsave)
 
 			case 66: // Displace floor by front sector
 				for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
-					P_AddPlaneDisplaceThinker(pd_floor, P_AproxDistance(lines[i].dx, lines[i].dy)>>8, sides[lines[i].sidenum[0]].sector-sectors, s);
+					P_AddPlaneDisplaceThinker(pd_floor, P_AproxDistance(lines[i].dx, lines[i].dy)>>8, sides[lines[i].sidenum[0]].sector-sectors, s, !!(lines[i].flags & ML_NOCLIMB));
 				break;
 			case 67: // Displace ceiling by front sector
 				for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
-					P_AddPlaneDisplaceThinker(pd_ceiling, P_AproxDistance(lines[i].dx, lines[i].dy)>>8, sides[lines[i].sidenum[0]].sector-sectors, s);
+					P_AddPlaneDisplaceThinker(pd_ceiling, P_AproxDistance(lines[i].dx, lines[i].dy)>>8, sides[lines[i].sidenum[0]].sector-sectors, s, !!(lines[i].flags & ML_NOCLIMB));
 				break;
 			case 68: // Displace both floor AND ceiling by front sector
 				for (s = -1; (s = P_FindSectorFromLineTag(lines + i, s)) >= 0 ;)
-					P_AddPlaneDisplaceThinker(pd_both, P_AproxDistance(lines[i].dx, lines[i].dy)>>8, sides[lines[i].sidenum[0]].sector-sectors, s);
+					P_AddPlaneDisplaceThinker(pd_both, P_AproxDistance(lines[i].dx, lines[i].dy)>>8, sides[lines[i].sidenum[0]].sector-sectors, s, !!(lines[i].flags & ML_NOCLIMB));
 				break;
 
 			case 100: // FOF (solid, opaque, shadows)
