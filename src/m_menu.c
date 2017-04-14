@@ -1371,7 +1371,6 @@ static menuitem_t OP_NetgameOptionsMenu[] =
 	{IT_STRING | IT_CVAR, NULL, "Item Respawn",          &cv_itemrespawn,      66},
 	{IT_STRING | IT_CVAR, NULL, "Item Respawn time",     &cv_itemrespawntime,  74},
 
-	{IT_STRING | IT_CVAR, NULL, "Sudden Death",          &cv_suddendeath,      90},
 	{IT_STRING | IT_CVAR, NULL, "Player respawn delay",  &cv_respawntime,      98},
 
 	{IT_STRING | IT_CVAR, NULL, "Force Skin",            &cv_forceskin,          114},

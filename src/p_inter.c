@@ -3120,14 +3120,6 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 				return false; // Don't get hurt by fire generated from friends.
 		}
 
-		// Sudden-Death mode
-		if (source && source->type == MT_PLAYER)
-		{
-			if ((gametype == GT_MATCH || gametype == GT_TEAMMATCH || gametype == GT_CTF) && cv_suddendeath.value
-				&& !player->powers[pw_flashing] && !player->powers[pw_invulnerability])
-				damagetype = DMG_INSTAKILL;
-		}
-
 		// Player hits another player
 		if (!force && source && source->player)
 		{

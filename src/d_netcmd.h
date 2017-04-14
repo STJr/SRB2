@@ -51,7 +51,6 @@ extern consvar_t cv_itemrespawntime;
 extern consvar_t cv_itemrespawn;
 
 extern consvar_t cv_flagtime;
-extern consvar_t cv_suddendeath;
 
 extern consvar_t cv_skin;
 
