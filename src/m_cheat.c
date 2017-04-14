@@ -968,7 +968,7 @@ void OP_NightsObjectplace(player_t *player)
 	if (player->pflags & PF_ATTACKDOWN)
 	{
 		// Are ANY objectplace buttons pressed?  If no, remove flag.
-		if (!(cmd->buttons & (BT_ATTACK|BT_TOSSFLAG|BT_USE|BT_CAMRIGHT|BT_CAMLEFT)))
+		if (!(cmd->buttons & (BT_ATTACK|BT_TOSSFLAG|BT_USE|BT_WEAPONNEXT|BT_WEAPONPREV)))
 			player->pflags &= ~PF_ATTACKDOWN;
 
 		// Do nothing.
@@ -1019,7 +1019,7 @@ void OP_NightsObjectplace(player_t *player)
 	}
 
 	// This places a ring!
-	if (cmd->buttons & BT_CAMRIGHT)
+	if (cmd->buttons & BT_WEAPONNEXT)
 	{
 		player->pflags |= PF_ATTACKDOWN;
 		if (!OP_HeightOkay(player, false))
@@ -1030,7 +1030,7 @@ void OP_NightsObjectplace(player_t *player)
 	}
 
 	// This places a wing item!
-	if (cmd->buttons & BT_CAMLEFT)
+	if (cmd->buttons & BT_WEAPONPREV)
 	{
 		player->pflags |= PF_ATTACKDOWN;
 		if (!OP_HeightOkay(player, false))

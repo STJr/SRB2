@@ -1011,13 +1011,13 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 		if (turnleft)
 			cmd->angleturn = (INT16)(cmd->angleturn + angleturn[tspeed]);
 	}
-	if (cv_analog.value || twodlevel
+	if (twodlevel
 		|| (player->mo && (player->mo->flags2 & MF2_TWOD))
 		|| (!demoplayback && (player->climbing
 		|| (player->powers[pw_carry] == CR_NIGHTSMODE)
 		|| (player->pflags & (PF_SLIDING|PF_FORCESTRAFE))))) // Analog
 			forcestrafe = true;
-	if (forcestrafe) // Analog
+	if (forcestrafe)
 	{
 		if (turnright)
 			side += sidemove[speed];
@@ -1029,6 +1029,13 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 			// JOYAXISRANGE is supposed to be 1023 (divide by 1024)
 			side += ((axis * sidemove[1]) >> 10);
 		}
+	}
+	else if (cv_analog.value) // Analog
+	{
+		if (turnright)
+			cmd->buttons |= BT_CAMRIGHT;
+		if (turnleft)
+			cmd->buttons |= BT_CAMLEFT;
 	}
 	else
 	{
@@ -1116,15 +1123,6 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	// use with any button/key
 	if (PLAYER1INPUTDOWN(gc_use))
 		cmd->buttons |= BT_USE;
-
-	// Camera Controls
-	if (cv_debug || cv_analog.value || demoplayback || objectplacing || player->powers[pw_carry] == CR_NIGHTSMODE)
-	{
-		if (PLAYER1INPUTDOWN(gc_camleft))
-			cmd->buttons |= BT_CAMLEFT;
-		if (PLAYER1INPUTDOWN(gc_camright))
-			cmd->buttons |= BT_CAMRIGHT;
-	}
 
 	if (PLAYER1INPUTDOWN(gc_camreset))
 	{
@@ -1225,9 +1223,10 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	cmd->sidemove = (SINT8)(cmd->sidemove + side);
 
 	if (cv_analog.value) {
-		cmd->angleturn = (INT16)(thiscam->angle >> 16);
 		if (player->awayviewtics)
 			cmd->angleturn = (INT16)(player->awayviewmobj->angle >> 16);
+		else
+			cmd->angleturn = (INT16)(thiscam->angle >> 16);
 	}
 	else
 	{
@@ -1301,7 +1300,7 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 		if (turnleft)
 			cmd->angleturn = (INT16)(cmd->angleturn + angleturn[tspeed]);
 	}
-	if (cv_analog2.value || twodlevel
+	if (twodlevel
 		|| (player->mo && (player->mo->flags2 & MF2_TWOD))
 		|| player->climbing
 		|| (player->powers[pw_carry] == CR_NIGHTSMODE)
@@ -1319,6 +1318,13 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 			// JOYAXISRANGE is supposed to be 1023 (divide by 1024)
 			side += ((axis * sidemove[1]) >> 10);
 		}
+	}
+	else if (cv_analog2.value) // Analog
+	{
+		if (turnright)
+			cmd->buttons |= BT_CAMRIGHT;
+		if (turnleft)
+			cmd->buttons |= BT_CAMLEFT;
 	}
 	else
 	{
@@ -1403,15 +1409,6 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 	// use with any button/key
 	if (PLAYER2INPUTDOWN(gc_use))
 		cmd->buttons |= BT_USE;
-
-	// Camera Controls
-	if (cv_debug || cv_analog2.value || player->powers[pw_carry] == CR_NIGHTSMODE)
-	{
-		if (PLAYER2INPUTDOWN(gc_camleft))
-			cmd->buttons |= BT_CAMLEFT;
-		if (PLAYER2INPUTDOWN(gc_camright))
-			cmd->buttons |= BT_CAMRIGHT;
-	}
 
 	if (PLAYER2INPUTDOWN(gc_camreset))
 	{
@@ -1524,9 +1521,10 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 	}
 
 	if (cv_analog2.value) {
-		cmd->angleturn = (INT16)(thiscam->angle >> 16);
 		if (player->awayviewtics)
 			cmd->angleturn = (INT16)(player->awayviewmobj->angle >> 16);
+		else
+			cmd->angleturn = (INT16)(thiscam->angle >> 16);
 	}
 	else
 	{
