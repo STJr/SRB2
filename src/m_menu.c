@@ -1333,9 +1333,8 @@ static menuitem_t OP_GameOptionsMenu[] =
 
 	{IT_STRING | IT_CVAR, NULL, "Console Back Color",     &cons_backcolor, 100},
 	{IT_STRING | IT_CVAR, NULL, "Console Text Size",      &cv_constextsize,110},
-	{IT_STRING | IT_CVAR, NULL, "Uppercase Console",      &cv_allcaps,     120},
 
-	{IT_STRING | IT_CVAR, NULL, "Title Screen Demos",     &cv_rollingdemos, 140},
+	{IT_STRING | IT_CVAR, NULL, "Title Screen Demos",     &cv_rollingdemos, 130},
 };
 
 static menuitem_t OP_ServerOptionsMenu[] =
@@ -2826,9 +2825,6 @@ void M_Init(void)
 #ifndef NONET
 	CV_RegisterVar(&cv_serversort);
 #endif
-
-	//todo put this somewhere better...
-	CV_RegisterVar(&cv_allcaps);
 }
 
 // ==========================================================================
