@@ -71,9 +71,6 @@ extern consvar_t cv_autobalance;
 extern consvar_t cv_teamscramble;
 extern consvar_t cv_scrambleonchange;
 
-extern consvar_t cv_useranalog, cv_useranalog2;
-extern consvar_t cv_analog, cv_analog2;
-
 extern consvar_t cv_netstat;
 #ifdef WALLSPLATS
 extern consvar_t cv_splats;
