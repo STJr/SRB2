@@ -2097,7 +2097,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 	{
 		if (metalrecording) // Ack! Metal Sonic shouldn't die! Cut the tape, end recording!
 			G_StopMetalRecording();
-		if (gametype == GT_MATCH && cv_match_scoring.value == 0 // note, no team match suicide penalty
+		if (gametype == GT_MATCH // note, no team match suicide penalty
 			&& ((target == source) || (source == NULL && inflictor == NULL) || (source && !source->player)))
 		{ // Suicide penalty
 			if (target->player->score >= 50)
@@ -2887,7 +2887,7 @@ static void P_ShieldDamage(player_t *player, mobj_t *inflictor, mobj_t *source, 
 	{
 		// Award no points when players shoot each other when cv_friendlyfire is on.
 		if (!G_GametypeHasTeams() || !(source->player->ctfteam == player->ctfteam && source != player->mo))
-			P_AddPlayerScore(source->player, cv_match_scoring.value == 1 ? 25 : 50);
+			P_AddPlayerScore(source->player, 50);
 	}
 }
 

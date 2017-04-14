@@ -1394,14 +1394,11 @@ static menuitem_t OP_GametypeOptionsMenu[] =
 	{IT_STRING | IT_CVAR, NULL, "Number of Laps",        &cv_numlaps,          74},
 	{IT_STRING | IT_CVAR, NULL, "Use Map Lap Counts",    &cv_usemapnumlaps,    82},
 
-	{IT_HEADER,           NULL, "MATCH",                 NULL,                 98},
-	{IT_STRING | IT_CVAR, NULL, "Scoring Type",          &cv_match_scoring,   106},
+	{IT_HEADER,           NULL, "TAG",                   NULL,                98},
+	{IT_STRING | IT_CVAR, NULL, "Hide Time",             &cv_hidetime,        106},
 
-	{IT_HEADER,           NULL, "TAG",                   NULL,                122},
-	{IT_STRING | IT_CVAR, NULL, "Hide Time",             &cv_hidetime,        130},
-
-	{IT_HEADER,           NULL, "CTF",                   NULL,                146},
-	{IT_STRING | IT_CVAR, NULL, "Flag Respawn Time",     &cv_flagtime,        154},
+	{IT_HEADER,           NULL, "CTF",                   NULL,                122},
+	{IT_STRING | IT_CVAR, NULL, "Flag Respawn Time",     &cv_flagtime,        130},
 };
 
 static menuitem_t OP_MonitorToggleMenu[] =
