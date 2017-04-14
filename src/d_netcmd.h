@@ -40,11 +40,6 @@ extern consvar_t cv_usemouse2;
 #if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON)
 extern consvar_t cv_mouse2opt;
 #endif
-extern consvar_t cv_invertmouse2;
-extern consvar_t cv_alwaysfreelook2;
-extern consvar_t cv_mousemove2;
-extern consvar_t cv_mousesens2;
-extern consvar_t cv_mouseysens2;
 
 // normally in p_mobj but the .h is not read
 extern consvar_t cv_itemrespawntime;
