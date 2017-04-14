@@ -1185,10 +1185,19 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	if (!mouseaiming && cv_mousemove.value)
 		forward += mousey;
 
-	if (cv_analog.value ||
-		(!demoplayback && (player->climbing
+	if ((!demoplayback && (player->climbing
 		|| (player->pflags & PF_SLIDING)))) // Analog for mouse
 		side += mousex*2;
+	else if (cv_analog.value)
+	{
+		if (mousex)
+		{
+			if (mousex > 0)
+				cmd->buttons |= BT_CAMRIGHT;
+			else
+				cmd->buttons |= BT_CAMLEFT;
+		}
+	}
 	else
 		cmd->angleturn = (INT16)(cmd->angleturn - (mousex*8));
 
@@ -1471,9 +1480,19 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 	if (!mouseaiming && cv_mousemove2.value)
 		forward += mouse2y;
 
-	if (cv_analog2.value || player->climbing
+	if (player->climbing
 		|| (player->pflags & PF_SLIDING)) // Analog for mouse
 		side += mouse2x*2;
+	else if (cv_analog2.value)
+	{
+		if (mouse2x)
+		{
+			if (mouse2x > 0)
+				cmd->buttons |= BT_CAMRIGHT;
+			else
+				cmd->buttons |= BT_CAMLEFT;
+		}
+	}
 	else
 		cmd->angleturn = (INT16)(cmd->angleturn - (mouse2x*8));
 
