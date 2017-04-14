@@ -32,7 +32,6 @@ extern consvar_t cv_joyport2;
 #endif
 extern consvar_t cv_joyscale;
 extern consvar_t cv_joyscale2;
-extern consvar_t cv_controlperkey;
 
 // splitscreen with second mouse
 extern consvar_t cv_mouse2port;
