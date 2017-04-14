@@ -863,7 +863,7 @@ static void ST_drawFirstPersonHUD(void)
 		if (!airtime)
 			return; // No air timers are active, nothing would be drawn anyway
 
-		airtime -= 1; // The original code was all n*TICRATE + 1, so let's remove 1 tic for simplicity
+		airtime--; // The original code was all n*TICRATE + 1, so let's remove 1 tic for simplicity
 
 		if (airtime > 11*TICRATE)
 			return; // Not time to draw any drown numbers yet
