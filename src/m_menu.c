@@ -326,13 +326,15 @@ static void M_ToggleMIDI(void);
 //Misc
 menu_t OP_DataOptionsDef, OP_ScreenshotOptionsDef, OP_EraseDataDef;
 menu_t OP_GameOptionsDef, OP_ServerOptionsDef;
-menu_t OP_NetgameOptionsDef, OP_GametypeOptionsDef;
 menu_t OP_MonitorToggleDef;
 static void M_ScreenshotOptions(INT32 choice);
 static void M_EraseData(INT32 choice);
 
+static void M_DrawLevelPlatterHeader(INT32 y, const char *header, boolean headerhighlight);
+
 // Drawing functions
 static void M_DrawGenericMenu(void);
+static void M_DrawGenericScrollMenu(void);
 static void M_DrawCenteredMenu(void);
 static void M_DrawSkyRoom(void);
 static void M_DrawChecklist(void);
@@ -1036,7 +1038,7 @@ static menuitem_t OP_P1ControlsMenu[] =
 	{IT_SUBMENU | IT_STRING, NULL, "Mouse Options...", &OP_MouseOptionsDef, 20},
 	{IT_SUBMENU | IT_STRING, NULL, "Joystick Options...", &OP_Joystick1Def  ,  30},
 
-	{IT_STRING  | IT_CVAR, NULL, "Camera"  , &cv_chasecam , 50},
+	{IT_STRING  | IT_CVAR, NULL, "Third-person Camera"  , &cv_chasecam , 50},
 	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam , 60},
 	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair, 70},
 
@@ -1049,7 +1051,7 @@ static menuitem_t OP_P2ControlsMenu[] =
 	{IT_SUBMENU | IT_STRING, NULL, "Second Mouse Options...", &OP_Mouse2OptionsDef, 20},
 	{IT_SUBMENU | IT_STRING, NULL, "Second Joystick Options...", &OP_Joystick2Def  ,  30},
 
-	{IT_STRING  | IT_CVAR, NULL, "Camera"  , &cv_chasecam2 , 50},
+	{IT_STRING  | IT_CVAR, NULL, "Third-person Camera"  , &cv_chasecam2 , 50},
 	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam2 , 60},
 	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair2, 70},
 
@@ -1319,66 +1321,45 @@ static menuitem_t OP_GameOptionsMenu[] =
 
 static menuitem_t OP_ServerOptionsMenu[] =
 {
-	{IT_STRING | IT_SUBMENU, NULL, "General netgame options...",  &OP_NetgameOptionsDef,  10},
-	{IT_STRING | IT_SUBMENU, NULL, "Gametype options...",         &OP_GametypeOptionsDef, 20},
-	{IT_STRING | IT_SUBMENU, NULL, "Random Monitor Toggles...",   &OP_MonitorToggleDef,   30},
-
+	{IT_HEADER, NULL, "General", NULL, 0},
 #ifndef NONET
 	{IT_STRING | IT_CVAR | IT_CV_STRING,
-	                         NULL, "Server name",                 &cv_servername,         50},
+	                         NULL, "Server name",                  &cv_servername,          7},
+
+	{IT_STRING | IT_CVAR,    NULL, "Max Players",                  &cv_maxplayers,          22},
+	{IT_STRING | IT_CVAR,    NULL, "Allow players to join",        &cv_allownewplayer,      27},
+	{IT_STRING | IT_CVAR,    NULL, "Allow WAD Downloading",        &cv_downloading,         32},
+	{IT_STRING | IT_CVAR,    NULL, "Attempts to Resynch",          &cv_resynchattempts,     37},
 #endif
+	{IT_STRING | IT_CVAR,    NULL, "Intermission Timer",           &cv_inttime,             42},
 
-	{IT_STRING | IT_CVAR,    NULL, "Intermission Timer",          &cv_inttime,            80},
-	{IT_STRING | IT_CVAR,    NULL, "Advance to next map",         &cv_advancemap,         90},
+	{IT_STRING | IT_CVAR,    NULL, "Force character",              &cv_forceskin,           52},
+	{IT_STRING | IT_CVAR,    NULL, "Restrict character changes",   &cv_restrictskinchange,  57},
 
-#ifndef NONET
-	{IT_STRING | IT_CVAR,    NULL, "Max Players",                 &cv_maxplayers,        110},
-	{IT_STRING | IT_CVAR,    NULL, "Allow players to join",       &cv_allownewplayer,    120},
-	{IT_STRING | IT_CVAR,    NULL, "Allow WAD Downloading",       &cv_downloading,       130},
-	{IT_STRING | IT_CVAR,    NULL, "Attempts to Resynch",         &cv_resynchattempts,   140},
-#endif
-};
+	{IT_STRING | IT_CVAR,    NULL, "Time Limit",                   &cv_timelimit,           67},
+	{IT_STRING | IT_CVAR,    NULL, "Score Limit",                  &cv_pointlimit,          72},
+	{IT_STRING | IT_CVAR,    NULL, "Map progression",              &cv_advancemap,          77},
+	{IT_STRING | IT_CVAR,    NULL, "Player respawn delay",         &cv_respawntime,         82},
 
-static menuitem_t OP_NetgameOptionsMenu[] =
-{
-	{IT_STRING | IT_CVAR, NULL, "Time Limit",            &cv_timelimit,        10},
-	{IT_STRING | IT_CVAR, NULL, "Point Limit",           &cv_pointlimit,       18},
-	{IT_STRING | IT_CVAR, NULL, "Overtime Tie-Breaker",  &cv_overtime,         26},
+	{IT_HEADER, NULL, "Cooperative, Race, Competition", NULL, 90},
+	{IT_STRING | IT_CVAR,    NULL, "Players required for exit",     &cv_playersforexit,      97},
+	{IT_STRING | IT_CVAR,    NULL, "Level completion countdown",   &cv_countdowntime,      102},
+	{IT_STRING | IT_CVAR,    NULL, "Item Boxes",                   &cv_competitionboxes,   107},
 
-	{IT_STRING | IT_CVAR, NULL, "Special Ring Weapons",  &cv_specialrings,     42},
-	{IT_STRING | IT_CVAR, NULL, "Emeralds",              &cv_powerstones,      50},
-	{IT_STRING | IT_CVAR, NULL, "Item Boxes",            &cv_matchboxes,       58},
-	{IT_STRING | IT_CVAR, NULL, "Item Respawn",          &cv_itemrespawn,      66},
-	{IT_STRING | IT_CVAR, NULL, "Item Respawn time",     &cv_itemrespawntime,  74},
+	{IT_HEADER, NULL, "Ringslinger (Match, CTF, Tag)", NULL, 115},
+	{IT_STRING | IT_CVAR,    NULL, "Weapon Rings",                 &cv_specialrings,       122},
+	{IT_STRING | IT_CVAR,    NULL, "Power Stones",                 &cv_powerstones,        127},
+	{IT_STRING | IT_CVAR,    NULL, "Overtime on Tie",              &cv_overtime,           132},
 
-	{IT_STRING | IT_CVAR, NULL, "Player respawn delay",  &cv_respawntime,      98},
+	{IT_STRING | IT_CVAR,    NULL, "Item Boxes",                   &cv_matchboxes,         142},
+	{IT_STRING | IT_SUBMENU, NULL, "Random Item Box Toggles...",   &OP_MonitorToggleDef,   147},
 
-	{IT_STRING | IT_CVAR, NULL, "Force Skin",            &cv_forceskin,          114},
-	{IT_STRING | IT_CVAR, NULL, "Restrict skin changes", &cv_restrictskinchange, 122},
+	{IT_STRING | IT_CVAR,    NULL, "Item Respawn",                 &cv_itemrespawn,        157},
+	{IT_STRING | IT_CVAR,    NULL, "Item Respawn time",            &cv_itemrespawntime,    162},
+	{IT_STRING | IT_CVAR,    NULL, "Flag Respawn Time",            &cv_flagtime,           167},
 
-	{IT_STRING | IT_CVAR, NULL, "Autobalance Teams",            &cv_autobalance,      138},
-	{IT_STRING | IT_CVAR, NULL, "Scramble Teams on Map Change", &cv_scrambleonchange, 146},
-};
-
-static menuitem_t OP_GametypeOptionsMenu[] =
-{
-	{IT_HEADER,           NULL, "CO-OP",                 NULL,                  2},
-	{IT_STRING | IT_CVAR, NULL, "Players for exit",      &cv_playersforexit,   10},
-	{IT_STRING | IT_CVAR, NULL, "Starting Lives",        &cv_startinglives,    18},
-
-	{IT_HEADER,           NULL, "COMPETITION",           NULL,                 34},
-	{IT_STRING | IT_CVAR, NULL, "Item Boxes",            &cv_competitionboxes, 42},
-	{IT_STRING | IT_CVAR, NULL, "Countdown Time",        &cv_countdowntime,    50},
-
-	{IT_HEADER,           NULL, "RACE",                  NULL,                 66},
-	{IT_STRING | IT_CVAR, NULL, "Number of Laps",        &cv_numlaps,          74},
-	{IT_STRING | IT_CVAR, NULL, "Use Map Lap Counts",    &cv_usemapnumlaps,    82},
-
-	{IT_HEADER,           NULL, "TAG",                   NULL,                98},
-	{IT_STRING | IT_CVAR, NULL, "Hide Time",             &cv_hidetime,        106},
-
-	{IT_HEADER,           NULL, "CTF",                   NULL,                122},
-	{IT_STRING | IT_CVAR, NULL, "Flag Respawn Time",     &cv_flagtime,        130},
+	{IT_STRING | IT_CVAR,    NULL, "Autobalance Teams",            &cv_autobalance,        177},
+	{IT_STRING | IT_CVAR,    NULL, "Scramble Teams on Map Change", &cv_scrambleonchange,   182},
 };
 
 static menuitem_t OP_MonitorToggleMenu[] =
@@ -1748,10 +1729,19 @@ menu_t OP_VideoModeDef =
 };
 menu_t OP_SoundOptionsDef = DEFAULTMENUSTYLE("M_SOUND", OP_SoundOptionsMenu, &OP_MainDef, 60, 30);
 menu_t OP_GameOptionsDef = DEFAULTMENUSTYLE("M_GAME", OP_GameOptionsMenu, &OP_MainDef, 30, 30);
-menu_t OP_ServerOptionsDef = DEFAULTMENUSTYLE("M_SERVER", OP_ServerOptionsMenu, &OP_MainDef, 30, 30);
 
-menu_t OP_NetgameOptionsDef = DEFAULTMENUSTYLE("M_SERVER", OP_NetgameOptionsMenu, &OP_ServerOptionsDef, 30, 30);
-menu_t OP_GametypeOptionsDef = DEFAULTMENUSTYLE("M_SERVER", OP_GametypeOptionsMenu, &OP_ServerOptionsDef, 30, 30);
+menu_t OP_ServerOptionsDef =
+{
+	"M_SERVER",
+	sizeof (OP_ServerOptionsMenu)/sizeof (menuitem_t),
+	&OP_MainDef,
+	OP_ServerOptionsMenu,
+	M_DrawGenericScrollMenu,
+	30, 30,
+	0,
+	NULL
+};
+
 menu_t OP_MonitorToggleDef =
 {
 	"M_SERVER",
@@ -3174,6 +3164,117 @@ static void M_DrawGenericMenu(void)
 	}
 }
 
+#define scrollareaheight 72
+
+// note that alphakey is multiplied by 2 for scrolling menus to allow greater usage in UINT8 range.
+static void M_DrawGenericScrollMenu(void)
+{
+	INT32 x, y, i, max, tempcentery, cursory = 0;
+
+	// DRAW MENU
+	x = currentMenu->x;
+	y = currentMenu->y;
+
+	if ((currentMenu->menuitems[itemOn].alphaKey*2 - currentMenu->menuitems[0].alphaKey*2) <= scrollareaheight)
+		tempcentery = currentMenu->y - currentMenu->menuitems[0].alphaKey*2;
+	else if ((currentMenu->menuitems[currentMenu->numitems-1].alphaKey*2 - currentMenu->menuitems[itemOn].alphaKey*2) <= scrollareaheight)
+		tempcentery = currentMenu->y - currentMenu->menuitems[currentMenu->numitems-1].alphaKey*2 + 2*scrollareaheight;
+	else
+		tempcentery = currentMenu->y - currentMenu->menuitems[itemOn].alphaKey*2 + scrollareaheight;
+
+	for (i = 0; i < currentMenu->numitems; i++)
+	{
+		if (currentMenu->menuitems[i].alphaKey*2 + tempcentery >= currentMenu->y)
+			break;
+	}
+
+	for (max = currentMenu->numitems; max > 0; max--)
+	{
+		if (currentMenu->menuitems[max-1].alphaKey*2 + tempcentery <= (currentMenu->y + 2*scrollareaheight))
+			break;
+	}
+
+	if (i)
+		V_DrawString(currentMenu->x - 20, currentMenu->y, V_YELLOWMAP, "\x1A"); // up arrow
+	if (max != currentMenu->numitems)
+		V_DrawString(currentMenu->x - 20, currentMenu->y + 2*scrollareaheight, V_YELLOWMAP, "\x1B"); // down arrow
+
+	// draw title (or big pic)
+	M_DrawMenuTitle();
+
+	for (; i < max; i++)
+	{
+		y = currentMenu->menuitems[i].alphaKey*2 + tempcentery;
+		if (i == itemOn)
+			cursory = y;
+		switch (currentMenu->menuitems[i].status & IT_DISPLAY)
+		{
+			case IT_PATCH:
+			case IT_DYBIGSPACE:
+			case IT_BIGSLIDER:
+			case IT_STRING2:
+			case IT_DYLITLSPACE:
+			case IT_GRAYPATCH:
+			case IT_TRANSTEXT2:
+				// unsupported
+				break;
+			case IT_NOTHING:
+				break;
+			case IT_STRING:
+			case IT_WHITESTRING:
+				if (i == itemOn || (currentMenu->menuitems[i].status & IT_DISPLAY)==IT_STRING)
+					V_DrawString(x, y, 0, currentMenu->menuitems[i].text);
+				else
+					V_DrawString(x, y, V_YELLOWMAP, currentMenu->menuitems[i].text);
+
+				// Cvar specific handling
+				switch (currentMenu->menuitems[i].status & IT_TYPE)
+					case IT_CVAR:
+					{
+						consvar_t *cv = (consvar_t *)currentMenu->menuitems[i].itemaction;
+						switch (currentMenu->menuitems[i].status & IT_CVARTYPE)
+						{
+							case IT_CV_SLIDER:
+								M_DrawSlider(x, y, cv);
+							case IT_CV_NOPRINT: // color use this
+							case IT_CV_INVISSLIDER: // monitor toggles use this
+								break;
+							case IT_CV_STRING:
+								M_DrawTextBox(x, y + 4, MAXSTRINGLENGTH, 1);
+								V_DrawString(x + 8, y + 12, V_ALLOWLOWERCASE, cv->string);
+								if (skullAnimCounter < 4 && i == itemOn)
+									V_DrawCharacter(x + 8 + V_StringWidth(cv->string, 0), y + 12,
+										'_' | 0x80, false);
+								y += 16;
+								break;
+							default:
+								V_DrawString(BASEVIDWIDTH - x - V_StringWidth(cv->string, 0), y,
+									((cv->flags & CV_CHEAT) && !CV_IsSetToDefault(cv) ? V_REDMAP : V_YELLOWMAP), cv->string);
+								break;
+						}
+						break;
+					}
+					break;
+			case IT_TRANSTEXT:
+				V_DrawString(x, y, V_TRANSLUCENT, currentMenu->menuitems[i].text);
+				break;
+			case IT_QUESTIONMARKS:
+				V_DrawString(x, y, V_TRANSLUCENT|V_OLDSPACING, M_CreateSecretMenuOption(currentMenu->menuitems[i].text));
+				break;
+			case IT_HEADERTEXT: // draws 16 pixels to the left, in yellow text
+				//V_DrawString(x-16, y, V_YELLOWMAP, currentMenu->menuitems[i].text);
+				M_DrawLevelPlatterHeader(y - (lsheadingheight - 12),currentMenu->menuitems[i].text, true);
+				break;
+		}
+	}
+
+	// DRAW THE SKULL CURSOR
+	V_DrawScaledPatch(currentMenu->x - 24, cursory, 0,
+		W_CachePatchName("M_CURSOR", PU_CACHE));
+}
+
+#undef scrollareaheight
+
 static void M_DrawPauseMenu(void)
 {
 	if (!netgame && !multiplayer && (gamestate == GS_LEVEL || gamestate == GS_INTERMISSION))
@@ -3929,7 +4030,7 @@ static void M_HandleLevelPlatter(INT32 choice)
 	}
 }
 
-static void M_DrawLevelPlatterHeader(INT32 y, const char *header, boolean headerhighlight)
+void M_DrawLevelPlatterHeader(INT32 y, const char *header, boolean headerhighlight)
 {
 	y += lsheadingheight - 12;
 	V_DrawString(19, y, (headerhighlight ? V_YELLOWMAP : 0), header);
@@ -7534,16 +7635,9 @@ static void M_DrawControl(void)
 		                                  "PRESS ENTER TO CHANGE, BACKSPACE TO CLEAR"));
 
 	if (i)
-	{
-		i++;
-		V_DrawCenteredString(BASEVIDWIDTH/2, y, V_YELLOWMAP, "\x1A"); // up arrow
-		y += SMALLLINEHEIGHT;
-	}
+		V_DrawString(currentMenu->x - 16, y, V_YELLOWMAP, "\x1A"); // up arrow
 	if (max != currentMenu->numitems)
-	{
-		max--;
-		V_DrawCenteredString(BASEVIDWIDTH/2, y+(SMALLLINEHEIGHT*(max-i)), V_YELLOWMAP, "\x1B"); // down arrow
-	}
+		V_DrawString(currentMenu->x - 16, y+(SMALLLINEHEIGHT*(max-i-1)), V_YELLOWMAP, "\x1B"); // down arrow
 
 	for (; i < max; i++)
 	{
@@ -7582,7 +7676,7 @@ static void M_DrawControl(void)
 		y += SMALLLINEHEIGHT;
 	}
 	
-	V_DrawScaledPatch(currentMenu->x - 24, cursory, 0,
+	V_DrawScaledPatch(currentMenu->x - 20, cursory, 0,
 		W_CachePatchName("M_CURSOR", PU_CACHE));
 }
 
