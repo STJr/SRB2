@@ -1060,13 +1060,16 @@ static menuitem_t OP_P2ControlsMenu[] =
 
 static menuitem_t OP_ChangeControlsMenu[] =
 {
+	{IT_HEADER, NULL, "Movement", NULL, 0},
+	{IT_SPACE, NULL, NULL, NULL, 0}, // padding
 	{IT_CALL | IT_STRING2, NULL, "Move Forward",     M_ChangeControl, gc_forward     },
 	{IT_CALL | IT_STRING2, NULL, "Move Backward",    M_ChangeControl, gc_backward    },
 	{IT_CALL | IT_STRING2, NULL, "Move Left",        M_ChangeControl, gc_strafeleft  },
 	{IT_CALL | IT_STRING2, NULL, "Move Right",       M_ChangeControl, gc_straferight },
 	{IT_CALL | IT_STRING2, NULL, "Jump / Main Action", M_ChangeControl, gc_jump      },
 	{IT_CALL | IT_STRING2, NULL, "Spin / Shield Action", M_ChangeControl, gc_use     },
-	{IT_DISABLED, NULL, "", NULL, 0},
+	{IT_HEADER, NULL, "Camera", NULL, 0},
+	{IT_SPACE, NULL, NULL, NULL, 0}, // padding
 	{IT_CALL | IT_STRING2, NULL, "Camera Up",        M_ChangeControl, gc_lookup      },
 	{IT_CALL | IT_STRING2, NULL, "Camera Down",      M_ChangeControl, gc_lookdown    },
 	{IT_CALL | IT_STRING2, NULL, "Camera Left",      M_ChangeControl, gc_turnleft    },
@@ -1075,30 +1078,35 @@ static menuitem_t OP_ChangeControlsMenu[] =
 	{IT_CALL | IT_STRING2, NULL, "Toggle Mouselook", M_ChangeControl, gc_mouseaiming },
 	{IT_CALL | IT_STRING2, NULL, "Toggle Third-Person", M_ChangeControl, gc_camtoggle},
 	{IT_CALL | IT_STRING2, NULL, "Reset Camera",     M_ChangeControl, gc_camreset    },
-	{IT_DISABLED, NULL, "", NULL, 0},
-	{IT_CALL | IT_STRING2, NULL, "Game Status",      M_ChangeControl, gc_scores      },
+	{IT_HEADER, NULL, "Meta", NULL, 0},
+	{IT_SPACE, NULL, NULL, NULL, 0}, // padding
+	{IT_CALL | IT_STRING2, NULL, "Game Status",
+    M_ChangeControl, gc_scores      },
+	{IT_CALL | IT_STRING2, NULL, "Pause",            M_ChangeControl, gc_pause       },
+	{IT_CALL | IT_STRING2, NULL, "Console",          M_ChangeControl, gc_console     },
+	{IT_HEADER, NULL, "Multiplayer", NULL, 0},
+	{IT_SPACE, NULL, NULL, NULL, 0}, // padding
 	{IT_CALL | IT_STRING2, NULL, "Talk",             M_ChangeControl, gc_talkkey     },
 	{IT_CALL | IT_STRING2, NULL, "Talk (Team only)", M_ChangeControl, gc_teamkey     },
-	{IT_DISABLED, NULL, "", NULL, 0},
+	{IT_HEADER, NULL, "Ringslinger (Match, CTF, Tag, H&S)", NULL, 0},
+	{IT_SPACE, NULL, NULL, NULL, 0}, // padding
 	{IT_CALL | IT_STRING2, NULL, "Fire",             M_ChangeControl, gc_fire        },
 	{IT_CALL | IT_STRING2, NULL, "Fire Normal",      M_ChangeControl, gc_firenormal  },
 	{IT_CALL | IT_STRING2, NULL, "Toss Flag",        M_ChangeControl, gc_tossflag    },
 	{IT_CALL | IT_STRING2, NULL, "Next Weapon",      M_ChangeControl, gc_weaponnext  },
 	{IT_CALL | IT_STRING2, NULL, "Prev Weapon",      M_ChangeControl, gc_weaponprev  },
-	{IT_CALL | IT_STRING2, NULL, "Red / Infinity",   M_ChangeControl, gc_wepslot1    },
+	{IT_CALL | IT_STRING2, NULL, "Normal / Infinity",   M_ChangeControl, gc_wepslot1    },
 	{IT_CALL | IT_STRING2, NULL, "Automatic",        M_ChangeControl, gc_wepslot2    },
 	{IT_CALL | IT_STRING2, NULL, "Bounce",           M_ChangeControl, gc_wepslot3    },
 	{IT_CALL | IT_STRING2, NULL, "Scatter",          M_ChangeControl, gc_wepslot4    },
 	{IT_CALL | IT_STRING2, NULL, "Grenade",          M_ChangeControl, gc_wepslot5    },
 	{IT_CALL | IT_STRING2, NULL, "Explosion",        M_ChangeControl, gc_wepslot6    },
 	{IT_CALL | IT_STRING2, NULL, "Rail",             M_ChangeControl, gc_wepslot7    },
-	{IT_DISABLED, NULL, "", NULL, 0},
+	{IT_HEADER, NULL, "Modifications", NULL, 0},
+	{IT_SPACE, NULL, NULL, NULL, 0}, // padding
 	{IT_CALL | IT_STRING2, NULL, "Custom Action 1",  M_ChangeControl, gc_custom1     },
 	{IT_CALL | IT_STRING2, NULL, "Custom Action 2",  M_ChangeControl, gc_custom2     },
 	{IT_CALL | IT_STRING2, NULL, "Custom Action 3",  M_ChangeControl, gc_custom3     },
-	{IT_DISABLED, NULL, "", NULL, 0},
-	{IT_CALL | IT_STRING2, NULL, "Pause",            M_ChangeControl, gc_pause       },
-	{IT_CALL | IT_STRING2, NULL, "Console",          M_ChangeControl, gc_console     },
 };
 
 static menuitem_t OP_Joystick1Menu[] =
@@ -7588,14 +7596,16 @@ static void M_Setup1PControlsMenu(INT32 choice)
 	currentMenu->lastOn = itemOn;
 
 	// Unhide the three non-P2 controls
-	OP_ChangeControlsMenu[15].status = IT_DISABLED;
-	OP_ChangeControlsMenu[15+1].status = IT_CALL|IT_STRING2;
-	OP_ChangeControlsMenu[15+2].status = IT_CALL|IT_STRING2;
-	OP_ChangeControlsMenu[15+3].status = IT_CALL|IT_STRING2;
-	// Unide the pause/console controls too
-	OP_ChangeControlsMenu[36].status = IT_DISABLED;
-	OP_ChangeControlsMenu[36+1].status = IT_CALL|IT_STRING2;
-	OP_ChangeControlsMenu[36+2].status = IT_CALL|IT_STRING2;
+	//OP_ChangeControlsMenu[18+0].status = IT_HEADER;
+	//OP_ChangeControlsMenu[18+1].status = IT_SPACE;
+	OP_ChangeControlsMenu[18+2].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[18+3].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[18+4].status = IT_CALL|IT_STRING2;
+	// Unhide the pause/console controls too
+	//OP_ChangeControlsMenu[23+0].status = IT_HEADER;
+	//OP_ChangeControlsMenu[23+1].status = IT_SPACE;
+	OP_ChangeControlsMenu[23+2].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[23+3].status = IT_CALL|IT_STRING2;
 
 	OP_ChangeControlsDef.prevMenu = &OP_P1ControlsDef;
 	M_SetupNextMenu(&OP_ChangeControlsDef);
@@ -7609,14 +7619,16 @@ static void M_Setup2PControlsMenu(INT32 choice)
 	currentMenu->lastOn = itemOn;
 
 	// Hide the three non-P2 controls
-	OP_ChangeControlsMenu[15].status = IT_DISABLED;
-	OP_ChangeControlsMenu[15+1].status = IT_GRAYEDOUT2;
-	OP_ChangeControlsMenu[15+2].status = IT_GRAYEDOUT2;
-	OP_ChangeControlsMenu[15+3].status = IT_GRAYEDOUT2;
+	//OP_ChangeControlsMenu[18+0].status = IT_DISABLED;
+	//OP_ChangeControlsMenu[18+1].status = IT_DISABLED;
+	OP_ChangeControlsMenu[18+2].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[18+3].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[18+4].status = IT_GRAYEDOUT2;
 	// Hide the pause/console controls too
-	OP_ChangeControlsMenu[36].status = IT_DISABLED;
-	OP_ChangeControlsMenu[36+1].status = IT_GRAYEDOUT2;
-	OP_ChangeControlsMenu[36+2].status = IT_GRAYEDOUT2;
+	//OP_ChangeControlsMenu[23+0].status = IT_DISABLED;
+	//OP_ChangeControlsMenu[23+1].status = IT_DISABLED;
+	OP_ChangeControlsMenu[23+2].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[23+3].status = IT_GRAYEDOUT2;
 
 	OP_ChangeControlsDef.prevMenu = &OP_P2ControlsDef;
 	M_SetupNextMenu(&OP_ChangeControlsDef);
@@ -7691,8 +7703,10 @@ static void M_DrawControl(void)
 			}
 			V_DrawRightAlignedString(BASEVIDWIDTH-currentMenu->x, y, V_YELLOWMAP, tmp);
 		}
-		else if (currentMenu->menuitems[i].text)
+		else if (currentMenu->menuitems[i].status == IT_GRAYEDOUT2)
 			V_DrawString(x, y, V_TRANSLUCENT, currentMenu->menuitems[i].text);
+		else if (currentMenu->menuitems[i].status == IT_HEADER)
+			M_DrawLevelPlatterHeader(y, currentMenu->menuitems[i].text, true);
 
 		y += SMALLLINEHEIGHT;
 	}
