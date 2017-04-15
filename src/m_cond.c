@@ -579,12 +579,12 @@ unlockable_t unlockables[MAXUNLOCKABLES] =
 	/* 03 */ {"Play Credits",      "Complete 1P Mode", 30, 10, SECRET_CREDITS,   0,  true,  true, 0},
 	/* 04 */ {"Sound Test",        "Complete 1P Mode", 40, 10, SECRET_SOUNDTEST, 0, false, false, 0},
 
-	/* 05 */ {"EXTRA LEVELS", "", 60, 0, SECRET_HEADER, 0, true, true, 0},
+	/* 05 */ {"EXTRA LEVELS", "", 58, 0, SECRET_HEADER, 0, true, true, 0},
 
 	/* 06 */ {"Aerial Garden Zone", "Complete 1P Mode w/ all emeralds", 70, 11, SECRET_WARP, 40, false, false, 0},
 	/* 07 */ {"Azure Temple Zone",  "Complete Aerial Garden Zone",      80, 20, SECRET_WARP, 41, false, false, 0},
 
-	/* 08 */ {"BONUS LEVELS", "", 100, 0, SECRET_HEADER, 0, true, true, 0},
+	/* 08 */ {"BONUS LEVELS", "", 98, 0, SECRET_HEADER, 0, true, true, 0},
 
 	/* 09 */ {"PLACEHOLDER", "PLACEHOLDER", 0, 0, SECRET_NONE, 0, true, true, 0},
 	/* 10 */ {"Mario Koopa Blast", "Collect 60 Emblems",   110, 42, SECRET_WARP,         30, false, false, 0},

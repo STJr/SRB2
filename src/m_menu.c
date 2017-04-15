@@ -325,7 +325,7 @@ static void M_ToggleMIDI(INT32 choice);
 
 //Misc
 menu_t OP_DataOptionsDef, OP_ScreenshotOptionsDef, OP_EraseDataDef;
-menu_t OP_GameOptionsDef, OP_ServerOptionsDef;
+menu_t OP_ServerOptionsDef;
 menu_t OP_MonitorToggleDef;
 static void M_ScreenshotOptions(INT32 choice);
 static void M_EraseData(INT32 choice);
@@ -1030,8 +1030,6 @@ static menuitem_t OP_MainMenu[] =
 	{IT_CALL | IT_STRING,    NULL, "Server Options...", M_ServerOptions,       80},
 
 	{IT_SUBMENU | IT_STRING, NULL, "Data Options...", &OP_DataOptionsDef,     100},
-
-	{IT_SUBMENU | IT_STRING, NULL, "Game Options...", &OP_GameOptionsDef,     120},
 };
 
 static menuitem_t OP_P1ControlsMenu[] =
@@ -1075,7 +1073,7 @@ static menuitem_t OP_ChangeControlsMenu[] =
 	{IT_CALL | IT_STRING2, NULL, "Camera Right",     M_ChangeControl, gc_turnright   },
 	{IT_CALL | IT_STRING2, NULL, "Center View",      M_ChangeControl, gc_centerview  },
 	{IT_CALL | IT_STRING2, NULL, "Toggle Mouselook", M_ChangeControl, gc_mouseaiming },
-	{IT_CALL | IT_STRING2, NULL, "Toggle Chasecam",  M_ChangeControl, gc_camtoggle   },
+	{IT_CALL | IT_STRING2, NULL, "Toggle Third-Person", M_ChangeControl, gc_camtoggle},
 	{IT_CALL | IT_STRING2, NULL, "Reset Camera",     M_ChangeControl, gc_camreset    },
 	{IT_DISABLED, NULL, "", NULL, 0},
 	{IT_CALL | IT_STRING2, NULL, "Game Status",      M_ChangeControl, gc_scores      },
@@ -1160,14 +1158,6 @@ static menuitem_t OP_Mouse2OptionsMenu[] =
 	                      NULL, "Mouse X Sensitivity",    &cv_mousesens2,       60},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
 	                      NULL, "Mouse Y Sensitivity",    &cv_mouseysens2,      70},
-};
-
-static menuitem_t OP_GameOptionsMenu[] =
-{
-#ifndef NONET
-	{IT_STRING | IT_CVAR | IT_CV_STRING,
-	                      NULL, "Master server",          &cv_masterserver,     10},
-#endif
 };
 
 static menuitem_t OP_VideoOptionsMenu[] =
@@ -1270,7 +1260,11 @@ static menuitem_t OP_DataOptionsMenu[] =
 {
 	{IT_STRING | IT_CALL, NULL, "Screenshot Options...", M_ScreenshotOptions, 10},
 
-	{IT_STRING | IT_SUBMENU, NULL, "Erase Data...", &OP_EraseDataDef, 30},
+	{IT_STRING | IT_SUBMENU, NULL, "\x85" "Erase Data...", &OP_EraseDataDef, 20},
+
+#ifndef NONET
+	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "Master server", &cv_masterserver, 40},
+#endif
 };
 
 static menuitem_t OP_ScreenshotOptionsMenu[] =
@@ -1278,13 +1272,13 @@ static menuitem_t OP_ScreenshotOptionsMenu[] =
 	{IT_STRING|IT_CVAR, NULL, "Storage Location", &cv_screenshot_option, 10},
 	{IT_STRING|IT_CVAR|IT_CV_STRING, NULL, "Custom Folder", &cv_screenshot_folder, 20},
 
-	{IT_HEADER, NULL, "Screenshots (F8)", NULL, 50},
+	{IT_HEADER, NULL, "Screenshots (F8)", NULL, 48},
 	{IT_STRING|IT_CVAR, NULL, "Memory Level",      &cv_zlib_memory,      60},
 	{IT_STRING|IT_CVAR, NULL, "Compression Level", &cv_zlib_level,       70},
 	{IT_STRING|IT_CVAR, NULL, "Strategy",          &cv_zlib_strategy,    80},
 	{IT_STRING|IT_CVAR, NULL, "Window Size",       &cv_zlib_window_bits, 90},
 
-	{IT_HEADER, NULL, "Movie Mode (F9)", NULL, 105},
+	{IT_HEADER, NULL, "Movie Mode (F9)", NULL, 103},
 	{IT_STRING|IT_CVAR, NULL, "Capture Mode", &cv_moviemode, 115},
 
 	{IT_STRING|IT_CVAR, NULL, "Region Optimizing", &cv_gif_optimize,  125},
@@ -1743,7 +1737,6 @@ menu_t OP_SoundOptionsDef =
 	0,
 	NULL
 };
-menu_t OP_GameOptionsDef = DEFAULTMENUSTYLE("M_GAME", OP_GameOptionsMenu, &OP_MainDef, 30, 30);
 
 menu_t OP_ServerOptionsDef =
 {
@@ -1797,7 +1790,7 @@ menu_t OP_OpenGLColorDef =
 	NULL
 };
 #endif
-menu_t OP_DataOptionsDef = DEFAULTMENUSTYLE("M_DATA", OP_DataOptionsMenu, &OP_MainDef, 60, 30);
+menu_t OP_DataOptionsDef = DEFAULTMENUSTYLE("M_DATA", OP_DataOptionsMenu, &OP_MainDef, 30, 30);
 menu_t OP_ScreenshotOptionsDef = DEFAULTMENUSTYLE("M_DATA", OP_ScreenshotOptionsMenu, &OP_DataOptionsDef, 30, 30);
 menu_t OP_EraseDataDef = DEFAULTMENUSTYLE("M_DATA", OP_EraseDataMenu, &OP_DataOptionsDef, 60, 30);
 
@@ -2480,6 +2473,7 @@ boolean M_Responder(event_t *ev)
 			{
 				// detach any keys associated with the game control
 				G_ClearControlKeys(setupcontrols, currentMenu->menuitems[itemOn].alphaKey);
+				S_StartSound(NULL, sfx_shldls);
 				return true;
 			}
 			// Why _does_ backspace go back anyway?
@@ -3158,7 +3152,8 @@ static void M_DrawGenericMenu(void)
 				if (currentMenu->menuitems[i].alphaKey)
 					y = currentMenu->y+currentMenu->menuitems[i].alphaKey;
 
-				V_DrawString(x-16, y, V_YELLOWMAP, currentMenu->menuitems[i].text);
+				//V_DrawString(x-16, y, V_YELLOWMAP, currentMenu->menuitems[i].text);
+				M_DrawLevelPlatterHeader(y - (lsheadingheight - 12), currentMenu->menuitems[i].text, true);
 				y += SMALLLINEHEIGHT;
 				break;
 		}
@@ -3276,9 +3271,9 @@ static void M_DrawGenericScrollMenu(void)
 			case IT_QUESTIONMARKS:
 				V_DrawString(x, y, V_TRANSLUCENT|V_OLDSPACING, M_CreateSecretMenuOption(currentMenu->menuitems[i].text));
 				break;
-			case IT_HEADERTEXT: // draws 16 pixels to the left, in yellow text
+			case IT_HEADERTEXT:
 				//V_DrawString(x-16, y, V_YELLOWMAP, currentMenu->menuitems[i].text);
-				M_DrawLevelPlatterHeader(y - (lsheadingheight - 12),currentMenu->menuitems[i].text, true);
+				M_DrawLevelPlatterHeader(y - (lsheadingheight - 12), currentMenu->menuitems[i].text, true);
 				break;
 		}
 	}
@@ -5735,9 +5730,13 @@ static void M_DrawStatsMaps(int location)
 	INT32 y = 76, i = -1;
 	INT16 mnum;
 	extraemblem_t *exemblem;
+	boolean dobottomarrow = (location < statsMax);
 
 	V_DrawString(20,  y-12, 0, "LEVEL NAME");
 	V_DrawString(248, y-12, 0, "EMBLEMS");
+
+	if (location)
+		V_DrawString(10, y, V_YELLOWMAP, "\x1A");
 
 	while (statsMapList[++i] != -1)
 	{
@@ -5758,7 +5757,7 @@ static void M_DrawStatsMaps(int location)
 		y += 8;
 
 		if (y >= BASEVIDHEIGHT-8)
-			return;
+			goto bottomarrow;
 	}
 
 	// Extra Emblems
@@ -5788,14 +5787,17 @@ static void M_DrawStatsMaps(int location)
 		y += 8;
 
 		if (y >= BASEVIDHEIGHT-8)
-			return;
+			goto bottomarrow;
 	}
+bottomarrow:
+	if (dobottomarrow)
+		V_DrawString(10, y-8, V_YELLOWMAP, "\x1B");
 }
 
 static void M_DrawLevelStats(void)
 {
 	M_DrawMenuTitle();
-	V_DrawCenteredString(BASEVIDWIDTH/2, 24, V_YELLOWMAP, "PAGE 2 OF 2");
+	V_DrawCenteredString(BASEVIDWIDTH/2, 24, V_YELLOWMAP, "\x1C PAGE 2 OF 2 \x1D");
 
 	V_DrawString(72, 48, 0, va("x %d/%d", M_CountEmblems(), numemblems+numextraemblems));
 	V_DrawScaledPatch(40, 48-4, 0, W_CachePatchName("EMBLICON", PU_STATIC));
@@ -5822,12 +5824,12 @@ static void M_HandleLevelStats(INT32 choice)
 				--statsLocation;
 			break;
 
-		case KEY_RIGHTARROW:
+		case KEY_PGUP:
 			S_StartSound(NULL, sfx_menu1);
 			statsLocation += (statsLocation+15 >= statsMax) ? statsMax-statsLocation : 15;
 			break;
 
-		case KEY_LEFTARROW:
+		case KEY_PGDN:
 			S_StartSound(NULL, sfx_menu1);
 			statsLocation -= (statsLocation < 15) ? statsLocation : 15;
 			break;
@@ -5836,6 +5838,8 @@ static void M_HandleLevelStats(INT32 choice)
 			exitmenu = true;
 			break;
 
+		case KEY_LEFTARROW:
+		case KEY_RIGHTARROW:
 		case KEY_ENTER:
 			S_StartSound(NULL, sfx_menu1);
 			M_SetupNextMenu(&SP_GameStatsDef);
@@ -5863,7 +5867,7 @@ static void M_DrawGameStats(void)
 	INT32 mapsunfinished[3] = {0, 0, 0};
 
 	M_DrawMenuTitle();
-	V_DrawCenteredString(BASEVIDWIDTH/2, 24, V_YELLOWMAP, "PAGE 1 OF 2");
+	V_DrawCenteredString(BASEVIDWIDTH/2, 24, V_YELLOWMAP, "\x1C PAGE 1 OF 2 \x1D");
 
 	V_DrawString(32, 60, V_YELLOWMAP, "Total Play Time:");
 	V_DrawRightAlignedString(BASEVIDWIDTH-32, 70, 0, va("%i hours, %i minutes, %i seconds",
@@ -5932,6 +5936,8 @@ static void M_HandleGameStats(INT32 choice)
 			exitmenu = true;
 			break;
 
+		case KEY_LEFTARROW:
+		case KEY_RIGHTARROW:
 		case KEY_ENTER:
 			S_StartSound(NULL, sfx_menu1);
 			M_SetupNextMenu(&SP_LevelStatsDef);
@@ -7765,8 +7771,10 @@ static void M_ChangecontrolResponse(event_t *ev)
 			G_CheckDoubleUsage(ch);
 			setupcontrols[control][found] = ch;
 		}
-
+		S_StartSound(NULL, sfx_strpst);
 	}
+	else
+		S_StartSound(NULL, sfx_skid);
 
 	M_StopMessage(0);
 }
