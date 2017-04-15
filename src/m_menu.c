@@ -1313,42 +1313,42 @@ static menuitem_t OP_ServerOptionsMenu[] =
 	{IT_HEADER, NULL, "General", NULL, 0},
 #ifndef NONET
 	{IT_STRING | IT_CVAR | IT_CV_STRING,
-	                         NULL, "Server name",                  &cv_servername,          7},
-
-	{IT_STRING | IT_CVAR,    NULL, "Max Players",                  &cv_maxplayers,          21},
-	{IT_STRING | IT_CVAR,    NULL, "Allow players to join",        &cv_allownewplayer,      26},
-	{IT_STRING | IT_CVAR,    NULL, "Allow WAD Downloading",        &cv_downloading,         31},
-	{IT_STRING | IT_CVAR,    NULL, "Attempts to Resynch",          &cv_resynchattempts,     36},
+	                         NULL, "Server name",                   &cv_servername,          7},
+	{IT_STRING | IT_CVAR,    NULL, "Allow players to join",         &cv_allownewplayer,      21},
+	{IT_STRING | IT_CVAR,    NULL, "Max Players",                   &cv_maxplayers,          26},
+	{IT_STRING | IT_CVAR,    NULL, "Allow WAD Downloading",         &cv_downloading,         31},
 #endif
-	{IT_STRING | IT_CVAR,    NULL, "Intermission Timer",           &cv_inttime,             41},
 
-	{IT_STRING | IT_CVAR,    NULL, "Force character",              &cv_forceskin,           51},
-	{IT_STRING | IT_CVAR,    NULL, "Restrict character changes",   &cv_restrictskinchange,  56},
+	{IT_STRING | IT_CVAR,    NULL, "Force character",               &cv_forceskin,           41},
+	{IT_STRING | IT_CVAR,    NULL, "Restrict character changes",    &cv_restrictskinchange,  46},
+	{IT_STRING | IT_CVAR,    NULL, "Map progression",               &cv_advancemap,          51},
+	{IT_STRING | IT_CVAR,    NULL, "Intermission Timer",            &cv_inttime,             56},
 
-	{IT_STRING | IT_CVAR,    NULL, "Time Limit",                   &cv_timelimit,           66},
-	{IT_STRING | IT_CVAR,    NULL, "Score Limit",                  &cv_pointlimit,          71},
-	{IT_STRING | IT_CVAR,    NULL, "Map progression",              &cv_advancemap,          76},
-	{IT_STRING | IT_CVAR,    NULL, "Player respawn delay",         &cv_respawntime,         81},
+	{IT_HEADER, NULL, "Platform (Coop, Race, Competition)", NULL, 65},
+	{IT_STRING | IT_CVAR,    NULL, "Players required for exit",     &cv_playersforexit,      71},
+	{IT_STRING | IT_CVAR,    NULL, "Level completion countdown",    &cv_countdowntime,       76},
+	{IT_STRING | IT_CVAR,    NULL, "Item Boxes",                    &cv_competitionboxes,    81},
 
-	{IT_HEADER, NULL, "Cooperative, Race, Competition", NULL, 90},
-	{IT_STRING | IT_CVAR,    NULL, "Players required for exit",     &cv_playersforexit,      96},
-	{IT_STRING | IT_CVAR,    NULL, "Level completion countdown",   &cv_countdowntime,      101},
-	{IT_STRING | IT_CVAR,    NULL, "Item Boxes",                   &cv_competitionboxes,   106},
+	{IT_HEADER, NULL, "Ringslinger (Match, CTF, Tag, H&S)", NULL, 90},
+	{IT_STRING | IT_CVAR,    NULL, "Time Limit",                    &cv_timelimit,           96},
+	{IT_STRING | IT_CVAR,    NULL, "Score Limit",                   &cv_pointlimit,         101},
+	{IT_STRING | IT_CVAR,    NULL, "Player respawn delay",          &cv_respawntime,        106},
 
-	{IT_HEADER, NULL, "Ringslinger (Match, CTF, Tag)", NULL, 115},
-	{IT_STRING | IT_CVAR,    NULL, "Weapon Rings",                 &cv_specialrings,       121},
-	{IT_STRING | IT_CVAR,    NULL, "Power Stones",                 &cv_powerstones,        126},
-	{IT_STRING | IT_CVAR,    NULL, "Overtime on Tie",              &cv_overtime,           131},
+	{IT_STRING | IT_CVAR,    NULL, "Weapon Rings",                  &cv_specialrings,       116},
+	{IT_STRING | IT_CVAR,    NULL, "Power Stones",                  &cv_powerstones,        121},
+	{IT_STRING | IT_CVAR,    NULL, "Overtime on Tie",               &cv_overtime,           126},
 
-	{IT_STRING | IT_CVAR,    NULL, "Item Boxes",                   &cv_matchboxes,         141},
-	{IT_STRING | IT_SUBMENU, NULL, "Random Item Box Toggles...",   &OP_MonitorToggleDef,   146},
+	{IT_STRING | IT_CVAR,    NULL, "Item Boxes",                    &cv_matchboxes,         136},
+	{IT_STRING | IT_SUBMENU, NULL, "Random Item Box Toggles...",    &OP_MonitorToggleDef,   141},
 
-	{IT_STRING | IT_CVAR,    NULL, "Item Respawn",                 &cv_itemrespawn,        156},
-	{IT_STRING | IT_CVAR,    NULL, "Item Respawn time",            &cv_itemrespawntime,    161},
-	{IT_STRING | IT_CVAR,    NULL, "Flag Respawn Time",            &cv_flagtime,           166},
+	{IT_STRING | IT_CVAR,    NULL, "Item respawn",                  &cv_itemrespawn,        151},
+	{IT_STRING | IT_CVAR,    NULL, "Item respawn time",             &cv_itemrespawntime,    156},
 
-	{IT_STRING | IT_CVAR,    NULL, "Autobalance Teams",            &cv_autobalance,        176},
-	{IT_STRING | IT_CVAR,    NULL, "Scramble Teams on Map Change", &cv_scrambleonchange,   181},
+	{IT_STRING | IT_CVAR,    NULL, "Flag respawn time",             &cv_flagtime,           166},
+	{IT_STRING | IT_CVAR,    NULL, "Hiding time",                   &cv_hidetime,           171},
+
+	{IT_STRING | IT_CVAR,    NULL, "Autobalance Teams",             &cv_autobalance,        181},
+	{IT_STRING | IT_CVAR,    NULL, "Scramble Teams on Map Change",  &cv_scrambleonchange,   186},
 };
 
 static menuitem_t OP_MonitorToggleMenu[] =
