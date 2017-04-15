@@ -1160,28 +1160,48 @@ static menuitem_t OP_Mouse2OptionsMenu[] =
 	                      NULL, "Mouse Y Sensitivity",    &cv_mouseysens2,      70},
 };
 
+static menuitem_t OP_GameOptionsMenu[] =
+{
+#ifndef NONET
+	{IT_STRING | IT_CVAR | IT_CV_STRING,
+	                      NULL, "Master server",          &cv_masterserver,     10},
+#endif
+};
+
 static menuitem_t OP_VideoOptionsMenu[] =
 {
-	{IT_STRING | IT_CALL,  NULL,   "Video Modes...",      M_VideoModeMenu,     10},
+	{IT_STRING | IT_CALL,  NULL, "Set Resolution...", M_VideoModeMenu,        0},
 
 #ifdef HWRENDER
-	{IT_SUBMENU|IT_STRING, NULL,   "3D Card Options...",  &OP_OpenGLOptionsDef,    20},
+	{IT_SUBMENU|IT_STRING, NULL, "3D Card Options...", &OP_OpenGLOptionsDef,  5},
 #endif
 
 #if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
-	{IT_STRING|IT_CVAR,      NULL, "Fullscreen",          &cv_fullscreen,    30},
+	{IT_STRING|IT_CVAR,      NULL, "Fullscreen",       &cv_fullscreen,       10},
 #endif
 
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
-	                         NULL, "Brightness",          &cv_usegamma,      50},
-	{IT_STRING | IT_CVAR,    NULL, "Draw Distance",       &cv_drawdist, 60},
-	{IT_STRING | IT_CVAR,    NULL, "NiGHTS Draw Dist",    &cv_drawdist_nights, 70},
-	{IT_STRING | IT_CVAR,    NULL, "Precip Draw Dist",    &cv_drawdist_precip, 80},
-	{IT_STRING | IT_CVAR,    NULL, "Precip Density",      &cv_precipdensity, 90},
+	                         NULL, "Brightness",      &cv_usegamma,          15},
 
-	{IT_STRING | IT_CVAR,    NULL, "Show FPS",            &cv_ticrate,    110},
-	{IT_STRING | IT_CVAR,    NULL, "Clear Before Redraw", &cv_homremoval, 120},
-	{IT_STRING | IT_CVAR,    NULL, "Vertical Sync",       &cv_vidwait,    130},
+	{IT_STRING | IT_CVAR, NULL, "Display HUD",        &cv_showhud,           25},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
+	                      NULL, "HUD Transparency",   &cv_translucenthud,    30},
+	{IT_STRING | IT_CVAR, NULL, "Time Display",       &cv_timetic,           35},
+#ifdef SEENAMES
+	{IT_STRING | IT_CVAR, NULL, "Show HUD player names",  &cv_seenames,      40},
+#endif
+
+	{IT_STRING | IT_CVAR, NULL, "Console Background", &cons_backcolor,       50},
+	{IT_STRING | IT_CVAR, NULL, "Console Text Size",  &cv_constextsize,      55},
+
+	{IT_STRING | IT_CVAR, NULL, "Draw Distance",      &cv_drawdist,          65},
+	{IT_STRING | IT_CVAR, NULL, "NiGHTS Draw Dist.",  &cv_drawdist_nights,   70},
+	{IT_STRING | IT_CVAR, NULL, "Weather Draw Dist.", &cv_drawdist_precip,   75},
+	{IT_STRING | IT_CVAR, NULL, "Weather Density",    &cv_precipdensity,     80},
+
+	{IT_STRING | IT_CVAR, NULL, "Show FPS",           &cv_ticrate,           90},
+	{IT_STRING | IT_CVAR, NULL, "Clear Before Redraw",&cv_homremoval,        95},
+	{IT_STRING | IT_CVAR, NULL, "Vertical Sync",      &cv_vidwait,          100},
 };
 
 static menuitem_t OP_VideoModeMenu[] =
@@ -1296,27 +1316,6 @@ static menuitem_t OP_EraseDataMenu[] =
 	{IT_STRING | IT_CALL, NULL, "Erase Secrets Data", M_EraseData, 20},
 
 	{IT_STRING | IT_CALL, NULL, "\x85" "Erase ALL Data", M_EraseData, 40},
-};
-
-static menuitem_t OP_GameOptionsMenu[] =
-{
-#ifndef NONET
-	{IT_STRING | IT_CVAR | IT_CV_STRING,
-	                      NULL, "Master server",          &cv_masterserver,     10},
-#endif
-	{IT_STRING | IT_CVAR, NULL, "Show HUD",               &cv_showhud,     40},
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
-	                      NULL, "HUD Visibility",         &cv_translucenthud, 50},
-	{IT_STRING | IT_CVAR, NULL, "Timer Display",          &cv_timetic,     60},
-#ifdef SEENAMES
-	{IT_STRING | IT_CVAR, NULL, "HUD Player Names",       &cv_seenames,    80},
-#endif
-	{IT_STRING | IT_CVAR, NULL, "Log Hazard Damage",      &cv_hazardlog,   90},
-
-	{IT_STRING | IT_CVAR, NULL, "Console Back Color",     &cons_backcolor, 100},
-	{IT_STRING | IT_CVAR, NULL, "Console Text Size",      &cv_constextsize,110},
-
-	{IT_STRING | IT_CVAR, NULL, "Title Screen Demos",     &cv_rollingdemos, 130},
 };
 
 static menuitem_t OP_ServerOptionsMenu[] =
@@ -1715,7 +1714,17 @@ menu_t OP_JoystickSetDef =
 	NULL
 };
 
-menu_t OP_VideoOptionsDef = DEFAULTMENUSTYLE("M_VIDEO", OP_VideoOptionsMenu, &OP_MainDef, 60, 30);
+menu_t OP_VideoOptionsDef =
+{
+	"M_VIDEO",
+	sizeof (OP_VideoOptionsMenu)/sizeof (menuitem_t),
+	&OP_MainDef,
+	OP_VideoOptionsMenu,
+	M_DrawGenericScrollMenu,
+	30, 30,
+	0,
+	NULL
+};
 menu_t OP_VideoModeDef =
 {
 	"M_VIDEO",
@@ -3222,7 +3231,7 @@ static void M_DrawGenericScrollMenu(void)
 				break;
 			case IT_STRING:
 			case IT_WHITESTRING:
-				if (i == itemOn || (currentMenu->menuitems[i].status & IT_DISPLAY)==IT_STRING)
+				if (i != itemOn && (currentMenu->menuitems[i].status & IT_DISPLAY)==IT_STRING)
 					V_DrawString(x, y, 0, currentMenu->menuitems[i].text);
 				else
 					V_DrawString(x, y, V_YELLOWMAP, currentMenu->menuitems[i].text);
