@@ -1036,10 +1036,11 @@ static menuitem_t OP_P1ControlsMenu[] =
 	{IT_SUBMENU | IT_STRING, NULL, "Mouse Options...", &OP_MouseOptionsDef, 20},
 	{IT_SUBMENU | IT_STRING, NULL, "Joystick Options...", &OP_Joystick1Def  ,  30},
 
-	{IT_STRING  | IT_CVAR, NULL, "Camera"  , &cv_chasecam  ,  50},
-	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair , 60},
+	{IT_STRING  | IT_CVAR, NULL, "Camera"  , &cv_chasecam , 50},
+	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam , 60},
+	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair, 70},
 
-	{IT_STRING  | IT_CVAR, NULL, "Analog Control", &cv_useranalog,  80},
+	{IT_STRING  | IT_CVAR, NULL, "Analog Control", &cv_useranalog,  90},
 };
 
 static menuitem_t OP_P2ControlsMenu[] =
@@ -1049,9 +1050,10 @@ static menuitem_t OP_P2ControlsMenu[] =
 	{IT_SUBMENU | IT_STRING, NULL, "Second Joystick Options...", &OP_Joystick2Def  ,  30},
 
 	{IT_STRING  | IT_CVAR, NULL, "Camera"  , &cv_chasecam2 , 50},
-	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair2, 60},
+	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam2 , 60},
+	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair2, 70},
 
-	{IT_STRING  | IT_CVAR, NULL, "Analog Control", &cv_useranalog2,  80},
+	{IT_STRING  | IT_CVAR, NULL, "Analog Control", &cv_useranalog2,  90},
 };
 
 static menuitem_t OP_ChangeControlsMenu[] =
@@ -1100,23 +1102,23 @@ static menuitem_t OP_ChangeControlsMenu[] =
 static menuitem_t OP_Joystick1Menu[] =
 {
 	{IT_STRING | IT_CALL,  NULL, "Select Joystick...", M_Setup1PJoystickMenu,  10},
-	{IT_STRING | IT_CVAR,  NULL, "Axis For Turning"  , &cv_turnaxis         ,  30},
-	{IT_STRING | IT_CVAR,  NULL, "Axis For Moving"   , &cv_moveaxis         ,  40},
-	{IT_STRING | IT_CVAR,  NULL, "Axis For Strafe"   , &cv_sideaxis         ,  50},
-	{IT_STRING | IT_CVAR,  NULL, "Axis For Looking"  , &cv_lookaxis         ,  60},
-	{IT_STRING | IT_CVAR,  NULL, "Axis For Firing"   , &cv_fireaxis         ,  70},
-	{IT_STRING | IT_CVAR,  NULL, "Axis For NFiring"  , &cv_firenaxis        ,  80},
+	{IT_STRING | IT_CVAR,  NULL, "Move \x1A \x1B Axis"    , &cv_moveaxis         , 30},
+	{IT_STRING | IT_CVAR,  NULL, "Move \x1C \x1D Axis"    , &cv_sideaxis         , 40},
+	{IT_STRING | IT_CVAR,  NULL, "Camera \x1A \x1B Axis"  , &cv_lookaxis         , 50},
+	{IT_STRING | IT_CVAR,  NULL, "Camera \x1C \x1D Axis"  , &cv_turnaxis         , 60},
+	{IT_STRING | IT_CVAR,  NULL, "Fire Axis"              , &cv_fireaxis         , 70},
+	{IT_STRING | IT_CVAR,  NULL, "Fire Normal Axis"       , &cv_firenaxis        , 80},
 };
 
 static menuitem_t OP_Joystick2Menu[] =
 {
 	{IT_STRING | IT_CALL,  NULL, "Select Joystick...", M_Setup2PJoystickMenu, 10},
-	{IT_STRING | IT_CVAR,  NULL, "Axis For Turning"  , &cv_turnaxis2        , 30},
-	{IT_STRING | IT_CVAR,  NULL, "Axis For Moving"   , &cv_moveaxis2        , 40},
-	{IT_STRING | IT_CVAR,  NULL, "Axis For Strafe"   , &cv_sideaxis2        , 50},
-	{IT_STRING | IT_CVAR,  NULL, "Axis For Looking"  , &cv_lookaxis2        , 60},
-	{IT_STRING | IT_CVAR,  NULL, "Axis For Firing"   , &cv_fireaxis2        , 70},
-	{IT_STRING | IT_CVAR,  NULL, "Axis For NFiring"  , &cv_firenaxis2       , 80},
+	{IT_STRING | IT_CVAR,  NULL, "Move \x1A \x1B Axis"    , &cv_moveaxis2        , 30},
+	{IT_STRING | IT_CVAR,  NULL, "Move \x1C \x1D Axis"    , &cv_sideaxis2        , 40},
+	{IT_STRING | IT_CVAR,  NULL, "Camera \x1A \x1B Axis"  , &cv_lookaxis2        , 50},
+	{IT_STRING | IT_CVAR,  NULL, "Camera \x1C \x1D Axis"  , &cv_turnaxis2        , 60},
+	{IT_STRING | IT_CVAR,  NULL, "Fire Axis"              , &cv_fireaxis2        , 70},
+	{IT_STRING | IT_CVAR,  NULL, "Fire Normal Axis"       , &cv_firenaxis2       , 80},
 };
 
 static menuitem_t OP_JoystickSetMenu[] =
@@ -1126,8 +1128,6 @@ static menuitem_t OP_JoystickSetMenu[] =
 	{IT_CALL | IT_NOTHING, "", NULL, M_AssignJoystick, '2'},
 	{IT_CALL | IT_NOTHING, "", NULL, M_AssignJoystick, '3'},
 	{IT_CALL | IT_NOTHING, "", NULL, M_AssignJoystick, '4'},
-	{IT_CALL | IT_NOTHING, "", NULL, M_AssignJoystick, '5'},
-	{IT_CALL | IT_NOTHING, "", NULL, M_AssignJoystick, '6'},
 };
 
 static menuitem_t OP_MouseOptionsMenu[] =
@@ -1135,13 +1135,13 @@ static menuitem_t OP_MouseOptionsMenu[] =
 	{IT_STRING | IT_CVAR, NULL, "Use Mouse",        &cv_usemouse,         10},
 
 
-	{IT_STRING | IT_CVAR, NULL, "Always MouseLook", &cv_alwaysfreelook,   30},
+	{IT_STRING | IT_CVAR, NULL, "Always Mouselook", &cv_alwaysfreelook,   30},
 	{IT_STRING | IT_CVAR, NULL, "Mouse Move",       &cv_mousemove,        40},
-	{IT_STRING | IT_CVAR, NULL, "Invert Mouse",     &cv_invertmouse,      50},
+	{IT_STRING | IT_CVAR, NULL, "Invert Y Axis",     &cv_invertmouse,      50},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
-	                      NULL, "Mouse X Speed",    &cv_mousesens,        60},
+	                      NULL, "Mouse X Sensitivity",    &cv_mousesens,        60},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
-	                      NULL, "Mouse Y Speed",    &cv_mouseysens,        70},
+	                      NULL, "Mouse Y Sensitivity",    &cv_mouseysens,        70},
 };
 
 static menuitem_t OP_Mouse2OptionsMenu[] =
@@ -1149,13 +1149,13 @@ static menuitem_t OP_Mouse2OptionsMenu[] =
 	{IT_STRING | IT_CVAR, NULL, "Use Mouse 2",      &cv_usemouse2,        10},
 	{IT_STRING | IT_CVAR, NULL, "Second Mouse Serial Port",
 	                                                &cv_mouse2port,       20},
-	{IT_STRING | IT_CVAR, NULL, "Always MouseLook", &cv_alwaysfreelook2,  30},
+	{IT_STRING | IT_CVAR, NULL, "Always Mouselook", &cv_alwaysfreelook2,  30},
 	{IT_STRING | IT_CVAR, NULL, "Mouse Move",       &cv_mousemove2,       40},
-	{IT_STRING | IT_CVAR, NULL, "Invert Mouse",     &cv_invertmouse2,     50},
+	{IT_STRING | IT_CVAR, NULL, "Invert Y Axis",     &cv_invertmouse2,     50},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
-	                      NULL, "Mouse X Speed",    &cv_mousesens2,       60},
+	                      NULL, "Mouse X Sensitivity",    &cv_mousesens2,       60},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
-	                      NULL, "Mouse Y Speed",    &cv_mouseysens2,      70},
+	                      NULL, "Mouse Y Sensitivity",    &cv_mouseysens2,      70},
 };
 
 static menuitem_t OP_VideoOptionsMenu[] =
@@ -1716,10 +1716,10 @@ menu_t MP_PlayerSetupDef =
 // Options
 menu_t OP_MainDef = DEFAULTMENUSTYLE("M_OPTTTL", OP_MainMenu, &MainDef, 60, 30);
 menu_t OP_ChangeControlsDef = CONTROLMENUSTYLE(OP_ChangeControlsMenu, &OP_MainDef);
-menu_t OP_P1ControlsDef = DEFAULTMENUSTYLE("M_CONTRO", OP_P1ControlsMenu, &OP_MainDef, 60, 30);
-menu_t OP_P2ControlsDef = DEFAULTMENUSTYLE("M_CONTRO", OP_P2ControlsMenu, &OP_MainDef, 60, 30);
-menu_t OP_MouseOptionsDef = DEFAULTMENUSTYLE("M_CONTRO", OP_MouseOptionsMenu, &OP_P1ControlsDef, 60, 30);
-menu_t OP_Mouse2OptionsDef = DEFAULTMENUSTYLE("M_CONTRO", OP_Mouse2OptionsMenu, &OP_P2ControlsDef, 60, 30);
+menu_t OP_P1ControlsDef = DEFAULTMENUSTYLE("M_CONTRO", OP_P1ControlsMenu, &OP_MainDef, 50, 30);
+menu_t OP_P2ControlsDef = DEFAULTMENUSTYLE("M_CONTRO", OP_P2ControlsMenu, &OP_MainDef, 50, 30);
+menu_t OP_MouseOptionsDef = DEFAULTMENUSTYLE("M_CONTRO", OP_MouseOptionsMenu, &OP_P1ControlsDef, 35, 30);
+menu_t OP_Mouse2OptionsDef = DEFAULTMENUSTYLE("M_CONTRO", OP_Mouse2OptionsMenu, &OP_P2ControlsDef, 35, 30);
 menu_t OP_Joystick1Def = DEFAULTMENUSTYLE("M_CONTRO", OP_Joystick1Menu, &OP_P1ControlsDef, 60, 30);
 menu_t OP_Joystick2Def = DEFAULTMENUSTYLE("M_CONTRO", OP_Joystick2Menu, &OP_P2ControlsDef, 60, 30);
 menu_t OP_JoystickSetDef =
@@ -1729,7 +1729,7 @@ menu_t OP_JoystickSetDef =
 	&OP_Joystick1Def,
 	OP_JoystickSetMenu,
 	M_DrawJoystick,
-	50, 40,
+	60, 40,
 	0,
 	NULL
 };
@@ -7387,17 +7387,24 @@ static void M_DrawJoystick(void)
 {
 	INT32 i;
 
-	M_DrawGenericMenu();
+	// draw title (or big pic)
+	M_DrawMenuTitle();
 
-	for (i = 0;i < 8; i++)
+	for (i = 0; i <= 4; i++) // See MAX_JOYSTICKS
 	{
-		M_DrawSaveLoadBorder(OP_JoystickSetDef.x, OP_JoystickSetDef.y+LINEHEIGHT*i);
+		M_DrawSaveLoadBorder(OP_JoystickSetDef.x+4, OP_JoystickSetDef.y+1+LINEHEIGHT*i);
 
 		if ((setupcontrols_secondaryplayer && (i == cv_usejoystick2.value))
 			|| (!setupcontrols_secondaryplayer && (i == cv_usejoystick.value)))
 			V_DrawString(OP_JoystickSetDef.x, OP_JoystickSetDef.y+LINEHEIGHT*i,V_GREENMAP,joystickInfo[i]);
 		else
 			V_DrawString(OP_JoystickSetDef.x, OP_JoystickSetDef.y+LINEHEIGHT*i,0,joystickInfo[i]);
+
+		if (i == itemOn)
+		{
+			V_DrawScaledPatch(currentMenu->x - 24, OP_JoystickSetDef.y+LINEHEIGHT*i, 0,
+				W_CachePatchName("M_CURSOR", PU_CACHE));
+		}
 	}
 }
 
