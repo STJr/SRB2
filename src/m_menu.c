@@ -72,8 +72,8 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 #define STRINGHEIGHT 8
 #define FONTBHEIGHT 20
 #define SMALLLINEHEIGHT 8
-#define SLIDER_RANGE 10
-#define SLIDER_WIDTH (8*SLIDER_RANGE+6)
+#define SLIDER_RANGE 9
+#define SLIDER_WIDTH 78
 #define MAXSTRINGLENGTH 32
 #define SERVERS_PER_PAGE 11
 
@@ -319,9 +319,9 @@ menu_t OP_VideoOptionsDef, OP_VideoModeDef;
 menu_t OP_OpenGLOptionsDef, OP_OpenGLFogDef, OP_OpenGLColorDef;
 #endif
 menu_t OP_SoundOptionsDef;
-static void M_ToggleSFX(void);
-static void M_ToggleDigital(void);
-static void M_ToggleMIDI(void);
+static void M_ToggleSFX(INT32 choice);
+static void M_ToggleDigital(INT32 choice);
+static void M_ToggleMIDI(INT32 choice);
 
 //Misc
 menu_t OP_DataOptionsDef, OP_ScreenshotOptionsDef, OP_EraseDataDef;
@@ -351,7 +351,9 @@ static void M_DrawTimeAttackMenu(void);
 static void M_DrawNightsAttackMenu(void);
 static void M_DrawSetupChoosePlayerMenu(void);
 static void M_DrawControl(void);
+static void M_DrawMainVideoMenu(void);
 static void M_DrawVideoMode(void);
+static void M_DrawSoundMenu(void);
 static void M_DrawMonitorToggles(void);
 #ifdef HWRENDER
 static void M_OGL_DrawFogMenu(void);
@@ -1254,20 +1256,14 @@ static menuitem_t OP_OpenGLColorMenu[] =
 
 static menuitem_t OP_SoundOptionsMenu[] =
 {
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
-                              NULL, "Sound Volume" , &cv_soundvolume,     10},
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
-                              NULL, "Music Volume" , &cv_digmusicvolume,  20},
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
-                              NULL, "MIDI Volume"  , &cv_midimusicvolume, 30},
-#ifdef PC_DOS
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
-                              NULL, "CD Volume"    , &cd_volume,          40},
-#endif
+	{IT_STRING | IT_KEYHANDLER,  NULL,  "Sound Effects", M_ToggleSFX, 10},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Sound Volume", &cv_soundvolume, 20},
 
-	{IT_STRING    | IT_CALL,  NULL,  "Toggle SFX"   , M_ToggleSFX,        50},
-	{IT_STRING    | IT_CALL,  NULL,  "Toggle Digital Music", M_ToggleDigital,     60},
-	{IT_STRING    | IT_CALL,  NULL,  "Toggle MIDI Music", M_ToggleMIDI,        70},
+	{IT_STRING | IT_KEYHANDLER,  NULL,  "Digital Music", M_ToggleDigital, 40},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Digital Music Volume", &cv_digmusicvolume,  50},
+
+	{IT_STRING | IT_KEYHANDLER,  NULL,  "MIDI Music", M_ToggleMIDI, 70},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "MIDI Music Volume", &cv_midimusicvolume, 80},
 };
 
 static menuitem_t OP_DataOptionsMenu[] =
@@ -1720,7 +1716,7 @@ menu_t OP_VideoOptionsDef =
 	sizeof (OP_VideoOptionsMenu)/sizeof (menuitem_t),
 	&OP_MainDef,
 	OP_VideoOptionsMenu,
-	M_DrawGenericScrollMenu,
+	M_DrawMainVideoMenu,
 	30, 30,
 	0,
 	NULL
@@ -1736,7 +1732,17 @@ menu_t OP_VideoModeDef =
 	0,
 	NULL
 };
-menu_t OP_SoundOptionsDef = DEFAULTMENUSTYLE("M_SOUND", OP_SoundOptionsMenu, &OP_MainDef, 60, 30);
+menu_t OP_SoundOptionsDef =
+{
+	"M_SOUND",
+	sizeof (OP_SoundOptionsMenu)/sizeof (menuitem_t),
+	&OP_MainDef,
+	OP_SoundOptionsMenu,
+	M_DrawSoundMenu,
+	30, 30,
+	0,
+	NULL
+};
 menu_t OP_GameOptionsDef = DEFAULTMENUSTYLE("M_GAME", OP_GameOptionsMenu, &OP_MainDef, 30, 30);
 
 menu_t OP_ServerOptionsDef =
@@ -2871,18 +2877,18 @@ static void M_DrawSlider(INT32 x, INT32 y, const consvar_t *cv)
 
 	x = BASEVIDWIDTH - x - SLIDER_WIDTH;
 
-	V_DrawScaledPatch(x - 8, y, 0, W_CachePatchName("M_SLIDEL", PU_CACHE));
+	V_DrawScaledPatch(x, y, 0, W_CachePatchName("M_SLIDEL", PU_CACHE));
 
 	p =  W_CachePatchName("M_SLIDEM", PU_CACHE);
-	for (i = 0; i < SLIDER_RANGE; i++)
+	for (i = 1; i < SLIDER_RANGE; i++)
 		V_DrawScaledPatch (x+i*8, y, 0,p);
 
 	p = W_CachePatchName("M_SLIDER", PU_CACHE);
-	V_DrawScaledPatch(x+SLIDER_RANGE*8, y, 0, p);
+	V_DrawScaledPatch(x+i*8, y, 0, p);
 
 	// draw the slider cursor
 	p = W_CachePatchName("M_SLIDEC", PU_CACHE);
-	V_DrawMappedPatch(x + ((SLIDER_RANGE-1)*8*range)/100, y, 0, p, yellowmap);
+	V_DrawMappedPatch(x + 2 + (SLIDER_RANGE*8*range)/100, y, 0, p, yellowmap);
 }
 
 //
@@ -3115,7 +3121,7 @@ static void M_DrawGenericMenu(void)
 								y += 16;
 								break;
 							default:
-								V_DrawString(BASEVIDWIDTH - x - V_StringWidth(cv->string, 0), y,
+								V_DrawRightAlignedString(BASEVIDWIDTH - x, y,
 									((cv->flags & CV_CHEAT) && !CV_IsSetToDefault(cv) ? V_REDMAP : V_YELLOWMAP), cv->string);
 								break;
 						}
@@ -3257,7 +3263,7 @@ static void M_DrawGenericScrollMenu(void)
 								y += 16;
 								break;
 							default:
-								V_DrawString(BASEVIDWIDTH - x - V_StringWidth(cv->string, 0), y,
+								V_DrawRightAlignedString(BASEVIDWIDTH - x, y,
 									((cv->flags & CV_CHEAT) && !CV_IsSetToDefault(cv) ? V_REDMAP : V_YELLOWMAP), cv->string);
 								break;
 						}
@@ -7780,35 +7786,105 @@ static void M_ChangeControl(INT32 choice)
 // SOUND
 // =====
 
-// Toggles sound systems in-game.
-static void M_ToggleSFX(void)
+void M_DrawSoundMenu(void)
 {
+	const char* onstring = "ON";
+	const char* offstring = "OFF";
+	M_DrawGenericMenu();
+
+	V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x,
+		currentMenu->y+currentMenu->menuitems[0].alphaKey,
+		(nosound ? V_REDMAP : V_YELLOWMAP),
+		((nosound || sound_disabled) ? offstring : onstring));
+
+	V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x,
+		currentMenu->y+currentMenu->menuitems[2].alphaKey,
+		(nodigimusic ? V_REDMAP : V_YELLOWMAP),
+		((nodigimusic || digital_disabled) ? offstring : onstring));
+
+	V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x,
+		currentMenu->y+currentMenu->menuitems[4].alphaKey,
+		(nomidimusic ? V_REDMAP : V_YELLOWMAP),
+		((nomidimusic || music_disabled) ? offstring : onstring));
+}
+
+// Toggles sound systems in-game.
+static void M_ToggleSFX(INT32 choice)
+{
+	switch (choice)
+	{
+		case KEY_DOWNARROW:
+			S_StartSound(NULL, sfx_menu1);
+			itemOn++;
+			return;
+
+		case KEY_UPARROW:
+			S_StartSound(NULL, sfx_menu1);
+			itemOn--;
+			return;
+
+		case KEY_ESCAPE:
+			S_StartSound(NULL, sfx_menu1);
+			if (currentMenu->prevMenu)
+				M_SetupNextMenu(currentMenu->prevMenu);
+			else
+				M_ClearMenus(true);
+			return;
+		default:
+			break;
+	}
+
 	if (nosound)
 	{
 		nosound = false;
 		I_StartupSound();
 		if (nosound) return;
 		S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
-		M_StartMessage(M_GetText("SFX Enabled\n"), NULL, MM_NOTHING);
+		S_StartSound(NULL, sfx_strpst);
+		//M_StartMessage(M_GetText("SFX Enabled\n"), NULL, MM_NOTHING);
 	}
 	else
 	{
 		if (sound_disabled)
 		{
 			sound_disabled = false;
-			M_StartMessage(M_GetText("SFX Enabled\n"), NULL, MM_NOTHING);
+			S_StartSound(NULL, sfx_strpst);
+			//M_StartMessage(M_GetText("SFX Enabled\n"), NULL, MM_NOTHING);
 		}
 		else
 		{
 			sound_disabled = true;
 			S_StopSounds();
-			M_StartMessage(M_GetText("SFX Disabled\n"), NULL, MM_NOTHING);
+			//M_StartMessage(M_GetText("SFX Disabled\n"), NULL, MM_NOTHING);
 		}
 	}
 }
 
-static void M_ToggleDigital(void)
+static void M_ToggleDigital(INT32 choice)
 {
+	switch (choice)
+	{
+		case KEY_DOWNARROW:
+			S_StartSound(NULL, sfx_menu1);
+			itemOn++;
+			return;
+
+		case KEY_UPARROW:
+			S_StartSound(NULL, sfx_menu1);
+			itemOn--;
+			return;
+
+		case KEY_ESCAPE:
+			S_StartSound(NULL, sfx_menu1);
+			if (currentMenu->prevMenu)
+				M_SetupNextMenu(currentMenu->prevMenu);
+			else
+				M_ClearMenus(true);
+			return;
+		default:
+			break;
+	}
+
 	if (nodigimusic)
 	{
 		nodigimusic = false;
@@ -7817,26 +7893,50 @@ static void M_ToggleDigital(void)
 		S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
 		S_StopMusic();
 		S_ChangeMusicInternal("_clear", false);
-		M_StartMessage(M_GetText("Digital Music Enabled\n"), NULL, MM_NOTHING);
+		//M_StartMessage(M_GetText("Digital Music Enabled\n"), NULL, MM_NOTHING);
 	}
 	else
 	{
 		if (digital_disabled)
 		{
 			digital_disabled = false;
-			M_StartMessage(M_GetText("Digital Music Enabled\n"), NULL, MM_NOTHING);
+			S_ChangeMusicInternal("_clear", false);
+			//M_StartMessage(M_GetText("Digital Music Enabled\n"), NULL, MM_NOTHING);
 		}
 		else
 		{
 			digital_disabled = true;
 			S_StopMusic();
-			M_StartMessage(M_GetText("Digital Music Disabled\n"), NULL, MM_NOTHING);
+			//M_StartMessage(M_GetText("Digital Music Disabled\n"), NULL, MM_NOTHING);
 		}
 	}
 }
 
-static void M_ToggleMIDI(void)
+static void M_ToggleMIDI(INT32 choice)
 {
+	switch (choice)
+	{
+		case KEY_DOWNARROW:
+			S_StartSound(NULL, sfx_menu1);
+			itemOn++;
+			return;
+
+		case KEY_UPARROW:
+			S_StartSound(NULL, sfx_menu1);
+			itemOn--;
+			return;
+
+		case KEY_ESCAPE:
+			S_StartSound(NULL, sfx_menu1);
+			if (currentMenu->prevMenu)
+				M_SetupNextMenu(currentMenu->prevMenu);
+			else
+				M_ClearMenus(true);
+			return;
+		default:
+			break;
+	}
+
 	if (nomidimusic)
 	{
 		nomidimusic = false;
@@ -7844,20 +7944,21 @@ static void M_ToggleMIDI(void)
 		if (nomidimusic) return;
 		S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
 		S_ChangeMusicInternal("_clear", false);
-		M_StartMessage(M_GetText("MIDI Music Enabled\n"), NULL, MM_NOTHING);
+		//M_StartMessage(M_GetText("MIDI Music Enabled\n"), NULL, MM_NOTHING);
 	}
 	else
 	{
 		if (music_disabled)
 		{
 			music_disabled = false;
-			M_StartMessage(M_GetText("MIDI Music Enabled\n"), NULL, MM_NOTHING);
+			S_ChangeMusicInternal("_clear", false);
+			//M_StartMessage(M_GetText("MIDI Music Enabled\n"), NULL, MM_NOTHING);
 		}
 		else
 		{
 			music_disabled = true;
 			S_StopMusic();
-			M_StartMessage(M_GetText("MIDI Music Disabled\n"), NULL, MM_NOTHING);
+			//M_StartMessage(M_GetText("MIDI Music Disabled\n"), NULL, MM_NOTHING);
 		}
 	}
 }
@@ -7950,6 +8051,15 @@ static void M_VideoModeMenu(INT32 choice)
 	vidm_column_size = (vidm_nummodes+2) / 3;
 
 	M_SetupNextMenu(&OP_VideoModeDef);
+}
+
+static void M_DrawMainVideoMenu(void)
+{
+	M_DrawGenericScrollMenu();
+	if (itemOn < 7) // where it starts to go offscreen; change this number if you change the layout of the video menu
+		V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, currentMenu->y+currentMenu->menuitems[0].alphaKey,
+		(SCR_IsAspectCorrect(vid.width, vid.height) ? V_GREENMAP : V_YELLOWMAP),
+			va("%dx%d", vid.width, vid.height));
 }
 
 // Draw the video modes list, a-la-Quake
