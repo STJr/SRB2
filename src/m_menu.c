@@ -1262,10 +1262,6 @@ static menuitem_t OP_DataOptionsMenu[] =
 	{IT_STRING | IT_CALL, NULL, "Screenshot Options...", M_ScreenshotOptions, 10},
 
 	{IT_STRING | IT_SUBMENU, NULL, "\x85" "Erase Data...", &OP_EraseDataDef, 20},
-
-#ifndef NONET
-	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "Master server", &cv_masterserver, 40},
-#endif
 };
 
 static menuitem_t OP_ScreenshotOptionsMenu[] =
@@ -1314,42 +1310,46 @@ static menuitem_t OP_ServerOptionsMenu[] =
 	{IT_HEADER, NULL, "General", NULL, 0},
 #ifndef NONET
 	{IT_STRING | IT_CVAR | IT_CV_STRING,
-	                         NULL, "Server name",                   &cv_servername,          7},
-	{IT_STRING | IT_CVAR,    NULL, "Allow players to join",         &cv_allownewplayer,      21},
-	{IT_STRING | IT_CVAR,    NULL, "Max Players",                   &cv_maxplayers,          26},
-	{IT_STRING | IT_CVAR,    NULL, "Allow WAD Downloading",         &cv_downloading,         31},
+	                         NULL, "Server name",                      &cv_servername,          7},
+	{IT_STRING | IT_CVAR,    NULL, "Max Players",                      &cv_maxplayers,          21},
+	{IT_STRING | IT_CVAR,    NULL, "Allow WAD Downloading",            &cv_downloading,         26},
+	{IT_STRING | IT_CVAR,    NULL, "Allow players to join",            &cv_allownewplayer,      31},
 #endif
 
-	{IT_STRING | IT_CVAR,    NULL, "Force character",               &cv_forceskin,           41},
-	{IT_STRING | IT_CVAR,    NULL, "Restrict character changes",    &cv_restrictskinchange,  46},
-	{IT_STRING | IT_CVAR,    NULL, "Map progression",               &cv_advancemap,          51},
-	{IT_STRING | IT_CVAR,    NULL, "Intermission Timer",            &cv_inttime,             56},
+	{IT_STRING | IT_CVAR,    NULL, "Force character",                  &cv_forceskin,           41},
+	{IT_STRING | IT_CVAR,    NULL, "Restrict character changes",       &cv_restrictskinchange,  46},
+	{IT_STRING | IT_CVAR,    NULL, "Map progression",                  &cv_advancemap,          51},
+	{IT_STRING | IT_CVAR,    NULL, "Intermission Timer",               &cv_inttime,             56},
 
 	{IT_HEADER, NULL, "Platform (Coop, Race, Competition)", NULL, 65},
-	{IT_STRING | IT_CVAR,    NULL, "Players required for exit",     &cv_playersforexit,      71},
-	{IT_STRING | IT_CVAR,    NULL, "Level completion countdown",    &cv_countdowntime,       76},
-	{IT_STRING | IT_CVAR,    NULL, "Item Boxes",                    &cv_competitionboxes,    81},
+	{IT_STRING | IT_CVAR,    NULL, "Players required for exit",        &cv_playersforexit,      71},
+	{IT_STRING | IT_CVAR,    NULL, "Level completion countdown",       &cv_countdowntime,       76},
+	{IT_STRING | IT_CVAR,    NULL, "Item Boxes",                       &cv_competitionboxes,    81},
 
 	{IT_HEADER, NULL, "Ringslinger (Match, CTF, Tag, H&S)", NULL, 90},
-	{IT_STRING | IT_CVAR,    NULL, "Time Limit",                    &cv_timelimit,           96},
-	{IT_STRING | IT_CVAR,    NULL, "Score Limit",                   &cv_pointlimit,         101},
-	{IT_STRING | IT_CVAR,    NULL, "Player respawn delay",          &cv_respawntime,        106},
+	{IT_STRING | IT_CVAR,    NULL, "Time Limit",                       &cv_timelimit,           96},
+	{IT_STRING | IT_CVAR,    NULL, "Score Limit",                      &cv_pointlimit,         101},
+	{IT_STRING | IT_CVAR,    NULL, "Overtime on Tie",                  &cv_overtime,           106},
+	{IT_STRING | IT_CVAR,    NULL, "Player respawn delay",             &cv_respawntime,        111},
 
-	{IT_STRING | IT_CVAR,    NULL, "Weapon Rings",                  &cv_specialrings,       116},
-	{IT_STRING | IT_CVAR,    NULL, "Power Stones",                  &cv_powerstones,        121},
-	{IT_STRING | IT_CVAR,    NULL, "Overtime on Tie",               &cv_overtime,           126},
+	{IT_STRING | IT_CVAR,    NULL, "Weapon Rings",                     &cv_specialrings,       121},
+	{IT_STRING | IT_CVAR,    NULL, "Power Stones",                     &cv_powerstones,        126},
 
-	{IT_STRING | IT_CVAR,    NULL, "Item Boxes",                    &cv_matchboxes,         136},
-	{IT_STRING | IT_SUBMENU, NULL, "Random Item Box Toggles...",    &OP_MonitorToggleDef,   141},
+	{IT_STRING | IT_CVAR,    NULL, "Item Boxes",                       &cv_matchboxes,         136},
+	{IT_STRING | IT_CVAR,    NULL, "Item respawn delay",               &cv_itemrespawntime,    141},
+	{IT_STRING | IT_SUBMENU, NULL, "Random Item Box Toggles...",       &OP_MonitorToggleDef,   146},
 
-	{IT_STRING | IT_CVAR,    NULL, "Item respawn",                  &cv_itemrespawn,        151},
-	{IT_STRING | IT_CVAR,    NULL, "Item respawn time",             &cv_itemrespawntime,    156},
+	{IT_STRING | IT_CVAR,    NULL, "Flag respawn delay",               &cv_flagtime,           156},
+	{IT_STRING | IT_CVAR,    NULL, "Hiding time",                      &cv_hidetime,           161},
 
-	{IT_STRING | IT_CVAR,    NULL, "Flag respawn time",             &cv_flagtime,           166},
-	{IT_STRING | IT_CVAR,    NULL, "Hiding time",                   &cv_hidetime,           171},
+	{IT_STRING | IT_CVAR,    NULL, "Autobalance Teams",                &cv_autobalance,        171},
+	{IT_STRING | IT_CVAR,    NULL, "Scramble Teams on Map Change",     &cv_scrambleonchange,   176},
 
-	{IT_STRING | IT_CVAR,    NULL, "Autobalance Teams",             &cv_autobalance,        181},
-	{IT_STRING | IT_CVAR,    NULL, "Scramble Teams on Map Change",  &cv_scrambleonchange,   186},
+#ifndef NONET
+	{IT_HEADER, NULL, "Advanced", NULL, 185},
+	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "Master server",        &cv_masterserver,        191},
+	{IT_STRING | IT_CVAR,    NULL, "Attempts to resynchronise",        &cv_resynchattempts,     205},
+#endif
 };
 
 static menuitem_t OP_MonitorToggleMenu[] =
@@ -3240,6 +3240,8 @@ static void M_DrawGenericScrollMenu(void)
 							case IT_CV_INVISSLIDER: // monitor toggles use this
 								break;
 							case IT_CV_STRING:
+								if (y + 12 > (currentMenu->y + 2*scrollareaheight))
+									break;
 								M_DrawTextBox(x, y + 4, MAXSTRINGLENGTH, 1);
 								V_DrawString(x + 8, y + 12, V_ALLOWLOWERCASE, cv->string);
 								if (skullAnimCounter < 4 && i == itemOn)
