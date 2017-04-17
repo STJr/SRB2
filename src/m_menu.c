@@ -7470,6 +7470,7 @@ static void M_EraseDataResponse(INT32 ch)
 		totalplaytime = 0;
 		F_StartIntro();
 	}
+	S_StartSound(NULL, sfx_bewar1+M_RandomKey(3));
 	M_ClearMenus(true);
 }
 
