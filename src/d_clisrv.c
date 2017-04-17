@@ -1563,8 +1563,6 @@ static void CL_LoadReceivedSavegame(void)
 	automapactive = false;
 
 	// load a base level
-	playerdeadview = false;
-
 	if (P_LoadNetGame())
 	{
 		const INT32 actnum = mapheaderinfo[gamemap-1]->actnum;

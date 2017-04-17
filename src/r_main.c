@@ -60,7 +60,6 @@ fixed_t projectiony; // aspect ratio
 // just for profiling purposes
 size_t framecount;
 
-size_t sscount;
 size_t loopcount;
 
 fixed_t viewx, viewy, viewz;
@@ -491,9 +490,6 @@ static void R_InitTextureMapping(void)
 	// Take out the fencepost cases from viewangletox.
 	for (i = 0; i < FINEANGLES/2; i++)
 	{
-		t = FixedMul(FINETANGENT(i), focallength);
-		t = centerx - t;
-
 		if (viewangletox[i] == -1)
 			viewangletox[i] = 0;
 		else if (viewangletox[i] == viewwidth+1)
@@ -885,8 +881,6 @@ void R_SkyboxFrame(player_t *player)
 	viewsin = FINESINE(viewangle>>ANGLETOFINESHIFT);
 	viewcos = FINECOSINE(viewangle>>ANGLETOFINESHIFT);
 
-	sscount = 0;
-
 	// recalc necessary stuff for mouseaiming
 	// slopes are already calculated for the full possible view (which is 4*viewheight).
 
@@ -1009,8 +1003,6 @@ void R_SetupFrame(player_t *player, boolean skybox)
 
 	viewsin = FINESINE(viewangle>>ANGLETOFINESHIFT);
 	viewcos = FINECOSINE(viewangle>>ANGLETOFINESHIFT);
-
-	sscount = 0;
 
 	// recalc necessary stuff for mouseaiming
 	// slopes are already calculated for the full possible view (which is 4*viewheight).

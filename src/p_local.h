@@ -72,7 +72,6 @@
 
 // both the head and tail of the thinker list
 extern thinker_t thinkercap;
-extern INT32 runcount;
 
 void P_InitThinkers(void);
 void P_AddThinker(thinker_t *thinker);
