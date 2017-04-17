@@ -12457,7 +12457,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_RRNG1,        // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
-		sfx_thok,       // seesound
+		sfx_wepfir,     // seesound
 		0,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
@@ -12864,7 +12864,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_THROWNINFINITY1, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
-		sfx_thok,       // seesound
+		sfx_wepfir,     // seesound
 		0,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
@@ -12891,7 +12891,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_THROWNAUTOMATIC1, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
-		sfx_thok,       // seesound
+		sfx_wepfir,     // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
@@ -12972,7 +12972,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_THROWNGRENADE1, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
-		sfx_thok,       // seesound
+		sfx_wepfir,     // seesound
 		8,              // reactiontime
 		sfx_gbeep,      // attacksound
 		S_NULL,         // painstate
@@ -13759,7 +13759,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
 		0,              // painchance
-		sfx_itemup,     // painsound
+		sfx_s3k33,      // painsound
 		S_RING,         // meleestate
 		S_NULL,         // missilestate
 		S_SPRK1,        // deathstate

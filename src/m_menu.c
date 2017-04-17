@@ -306,6 +306,7 @@ menu_t OP_MPControlsDef, OP_CameraControlsDef, OP_MiscControlsDef;
 menu_t OP_P1ControlsDef, OP_P2ControlsDef, OP_MouseOptionsDef;
 menu_t OP_Mouse2OptionsDef, OP_Joystick1Def, OP_Joystick2Def;
 static void M_VideoModeMenu(INT32 choice);
+static void M_SoundMenu(INT32 choice);
 static void M_Setup1PControlsMenu(INT32 choice);
 static void M_Setup2PControlsMenu(INT32 choice);
 static void M_Setup1PJoystickMenu(INT32 choice);
@@ -1013,16 +1014,16 @@ static menuitem_t MP_PlayerSetupMenu[] =
 // Prefix: OP_
 static menuitem_t OP_MainMenu[] =
 {
-	{IT_SUBMENU | IT_STRING, NULL, "Player 1 Controls...", &OP_P1ControlsDef,  10},
-	{IT_SUBMENU | IT_STRING, NULL, "Player 2 Controls...", &OP_P2ControlsDef,  20},
-	{IT_STRING  | IT_CVAR,   NULL, "Controls per key", &cv_controlperkey,      30},
+	{IT_SUBMENU | IT_STRING, NULL, "Player 1 Controls...", &OP_P1ControlsDef,   10},
+	{IT_SUBMENU | IT_STRING, NULL, "Player 2 Controls...", &OP_P2ControlsDef,   20},
+	{IT_CVAR    | IT_STRING, NULL, "Controls per key",     &cv_controlperkey,   30},
 
-	{IT_SUBMENU | IT_STRING, NULL, "Video Options...", &OP_VideoOptionsDef,    50},
-	{IT_SUBMENU | IT_STRING, NULL, "Sound Options...", &OP_SoundOptionsDef,    60},
+	{IT_SUBMENU | IT_STRING, NULL, "Video Options...",     &OP_VideoOptionsDef, 50},
+	{IT_CALL    | IT_STRING, NULL, "Sound Options...",     M_SoundMenu,         60},
 
-	{IT_CALL | IT_STRING,    NULL, "Server Options...", M_ServerOptions,       80},
+	{IT_CALL    | IT_STRING, NULL, "Server Options...",    M_ServerOptions,     80},
 
-	{IT_SUBMENU | IT_STRING, NULL, "Data Options...", &OP_DataOptionsDef,     100},
+	{IT_SUBMENU | IT_STRING, NULL, "Data Options...",      &OP_DataOptionsDef, 100},
 };
 
 static menuitem_t OP_P1ControlsMenu[] =
@@ -1255,6 +1256,8 @@ static menuitem_t OP_SoundOptionsMenu[] =
 
 	{IT_STRING | IT_KEYHANDLER,  NULL,  "MIDI Music", M_ToggleMIDI, 70},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "MIDI Music Volume", &cv_midimusicvolume, 80},
+
+	{IT_STRING | IT_CVAR, NULL, "Closed Captioning", &cv_closedcaptioning, 100},
 };
 
 static menuitem_t OP_DataOptionsMenu[] =
@@ -7797,6 +7800,14 @@ static void M_ChangeControl(INT32 choice)
 // SOUND
 // =====
 
+static void M_SoundMenu(INT32 choice)
+{
+	(void)choice;
+
+	OP_SoundOptionsMenu[6].status = ((nosound || sound_disabled) ? IT_GRAYEDOUT : (IT_STRING | IT_CVAR));
+	M_SetupNextMenu(&OP_SoundOptionsDef);
+}
+
 void M_DrawSoundMenu(void)
 {
 	const char* onstring = "ON";
@@ -7852,6 +7863,7 @@ static void M_ToggleSFX(INT32 choice)
 		if (nosound) return;
 		S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
 		S_StartSound(NULL, sfx_strpst);
+		OP_SoundOptionsMenu[6].status = IT_STRING | IT_CVAR;
 		//M_StartMessage(M_GetText("SFX Enabled\n"), NULL, MM_NOTHING);
 	}
 	else
@@ -7860,12 +7872,15 @@ static void M_ToggleSFX(INT32 choice)
 		{
 			sound_disabled = false;
 			S_StartSound(NULL, sfx_strpst);
+			OP_SoundOptionsMenu[6].status = IT_STRING | IT_CVAR;
 			//M_StartMessage(M_GetText("SFX Enabled\n"), NULL, MM_NOTHING);
 		}
 		else
 		{
 			sound_disabled = true;
 			S_StopSounds();
+			OP_SoundOptionsMenu[6].status = IT_GRAYEDOUT;
+			ResetCaptions();
 			//M_StartMessage(M_GetText("SFX Disabled\n"), NULL, MM_NOTHING);
 		}
 	}

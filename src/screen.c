@@ -28,6 +28,9 @@
 #include "d_main.h"
 #include "d_clisrv.h"
 #include "f_finale.h"
+#include "i_sound.h" // closed captions
+#include "s_sound.h" // ditto
+#include "g_game.h" // ditto
 
 
 #if defined (USEASM) && !defined (NORUSEASM)//&& (!defined (_MSC_VER) || (_MSC_VER <= 1200))
@@ -433,4 +436,59 @@ void SCR_DisplayTicRate(void)
 		ticcntcolor|V_NOSCALESTART, va("%02d/%02u", totaltics, TICRATE));
 
 	lasttic = ontic;
+}
+
+void SCR_ClosedCaptions(void)
+{
+	UINT8 i;
+
+	for (i = 0; i < 8; i++)
+	{
+		boolean cond = (closedcaptions[i].c && I_SoundIsPlaying(closedcaptions[i].c->handle));
+
+		if (closedcaptions[i].t <= TICRATE)
+			closedcaptions[i].t--;
+		if (cond || (closedcaptions[i].s && closedcaptions[i].t))
+		{
+			if (!cond)
+				closedcaptions[i].c = NULL;
+		}
+
+		if (!closedcaptions[i].t)
+		{
+			closedcaptions[i].c = NULL;
+			closedcaptions[i].s = NULL;
+			closedcaptions[i].t = 0;
+		}
+	}
+
+	for (i = 0; i < 8; i++)
+	{
+		if (closedcaptions[i].s)
+		{
+			INT32 flags = V_NOSCALESTART|V_ALLOWLOWERCASE;
+			INT32 y = vid.height-((i + 2)*10*vid.dupy);
+			char dir = ' ';
+			if (closedcaptions[i].t < 20)
+				flags |= (((20-closedcaptions[i].t)/2)*V_10TRANS);
+			else if (closedcaptions[i].t > TICRATE)
+				y -= (closedcaptions[i].t-- - TICRATE)*vid.dupy;
+			if (closedcaptions[i].c)
+			{
+				const mobj_t *o = (const mobj_t *)closedcaptions[i].c->origin;
+				if (o)
+				{
+					angle_t angle = R_PointToAngle(o->x, o->y) - localangle;
+					if (angle > ANGLE_45 && angle < ANGLE_135)
+						dir = '\x1C';
+					else if (angle > ANGLE_225 && angle < ANGLE_315)
+						dir = '\x1D';
+					else
+						dir = '\x1E';
+				}
+			}
+			V_DrawRightAlignedString(vid.width-(20*vid.dupx), y,
+			flags, va("%c %s", dir, (closedcaptions[i].s->caption[0] ? closedcaptions[i].s->caption : closedcaptions[i].s->name)));
+		}
+	}
 }

@@ -79,6 +79,7 @@ static consvar_t precachesound = {"precachesound", "Off", CV_SAVE, CV_OnOff, NUL
 
 // actual general (maximum) sound & music volume, saved into the config
 consvar_t cv_soundvolume = {"soundvolume", "31", CV_SAVE, soundvolume_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_closedcaptioning = {"closedcaptioning", "Off", CV_SAVE|CV_CALL, CV_OnOff, ResetCaptions, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_digmusicvolume = {"digmusicvolume", "18", CV_SAVE, soundvolume_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_midimusicvolume = {"midimusicvolume", "18", CV_SAVE, soundvolume_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 // number of channels available
@@ -124,22 +125,31 @@ static consvar_t surround = {"surround", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL
 // percent attenuation from front to back
 #define S_IFRACVOL 30
 
-typedef struct
-{
-	// sound information (if null, channel avail.)
-	sfxinfo_t *sfxinfo;
-
-	// origin of sound
-	const void *origin;
-
-	// handle of the sound being played
-	INT32 handle;
-
-} channel_t;
-
 // the set of channels available
 static channel_t *channels = NULL;
 static INT32 numofchannels = 0;
+
+caption_t closedcaptions[8] = {
+	{NULL, NULL, 0},
+	{NULL, NULL, 0},
+	{NULL, NULL, 0},
+	{NULL, NULL, 0},
+	{NULL, NULL, 0},
+	{NULL, NULL, 0},
+	{NULL, NULL, 0},
+	{NULL, NULL, 0}
+};
+
+void ResetCaptions(void)
+{
+	UINT8 i;
+	for (i = 0; i < 8; i++)
+	{
+		closedcaptions[i].c = NULL;
+		closedcaptions[i].s = NULL;
+		closedcaptions[i].t = 0;
+	}
+}
 
 //
 // Internals.
@@ -297,6 +307,8 @@ static void SetChannelsNum(void)
 	// Free all channels for use
 	for (i = 0; i < numofchannels; i++)
 		channels[i].sfxinfo = 0;
+
+	ResetCaptions();
 }
 
 
@@ -577,6 +589,37 @@ dontplay:
 		sep = (~sep) & 255;
 #endif
 
+	// Handle closed caption input.
+	if (cv_closedcaptioning.value && sfx->caption[0] != '/')
+	{
+		UINT8 i, set = 7;
+
+		for (i = 0; i < set; i++)
+		{
+			if ((sfx == closedcaptions[i].s)
+			|| !(closedcaptions[i].c || closedcaptions[i].s) || (sfx->priority >= closedcaptions[i].s->priority))
+			{
+				set = i;
+				break;
+			}
+		}
+		if (sfx != closedcaptions[set].s)
+		{
+			for (i = 7; i > set; i--)
+			{
+				if (sfx == closedcaptions[i].s)
+				{
+					closedcaptions[i].c = NULL;
+					closedcaptions[i].s = NULL;
+					closedcaptions[i].t = 0;
+				}
+			}
+		}
+		closedcaptions[set].c = &channels[cnum];
+		closedcaptions[set].s = sfx;
+		closedcaptions[set].t = TICRATE+2;
+	}
+
 	// Assigns the handle to one of the channels in the
 	// mix/output buffer.
 	channels[cnum].handle = I_StartSound(sfx_id, volume, sep, pitch, priority);
@@ -598,6 +641,7 @@ void S_StartSound(const void *origin, sfxenum_t sfx_id)
 //				sfx_id = sfx_mario8;
 //				break;
 			case sfx_thok:
+			case sfx_wepfir:
 				sfx_id = sfx_mario7;
 				break;
 			case sfx_pop:

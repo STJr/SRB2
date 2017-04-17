@@ -84,6 +84,9 @@ struct sfxinfo_struct
 
 	// lump number of sfx
 	lumpnum_t lumpnum;
+
+	// closed caption info/wiki table bait
+	char caption[32];
 };
 
 // the complete set of sound effects
@@ -210,7 +213,7 @@ typedef enum
 	sfx_drown,
 	sfx_fizzle,
 	sfx_gbeep,
-	sfx_gclose,
+	sfx_wepfir,
 	sfx_ghit,
 	sfx_gloop,
 	sfx_gspray,

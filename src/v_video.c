@@ -1781,6 +1781,9 @@ INT32 V_StringWidth(const char *string, INT32 option)
 			w += (charwidth ? charwidth : SHORT(hu_font[c]->width));
 	}
 
+	if (option & V_NOSCALESTART)
+	w *= vid.dupx;
+
 	return w;
 }
 
