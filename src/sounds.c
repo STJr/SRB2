@@ -393,7 +393,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3ka7",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Countdown beep"},
   {"s3ka8",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Energy"},
   {"s3ka9",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Aquaphobia"},
-  {"s3kaa",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Bumper bounce"},
+  {"s3kaa",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Bumper"},
   {"s3kab",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Spindash charge"},
   {"s3kac",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Got Continue"},
   {"s3kad",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "GO!"},
