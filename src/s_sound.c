@@ -36,6 +36,7 @@ extern INT32 msg_id;
 #include "d_main.h"
 #include "r_sky.h" // skyflatnum
 #include "p_local.h" // camera info
+#include "fastcmp.h"
 
 #ifdef HW3SOUND
 // 3D Sound Interface
@@ -592,17 +593,21 @@ dontplay:
 	// Handle closed caption input.
 	if (cv_closedcaptioning.value && sfx->caption[0] != '/')
 	{
-		UINT8 i, set = 7;
+		UINT8 i, set = 7, moveup = 255;
 
 		for (i = 0; i < set; i++)
 		{
-			if ((sfx == closedcaptions[i].s)
+			boolean same = ((sfx == closedcaptions[i].s) || (closedcaptions[i].s && fastcmp(sfx->caption, closedcaptions[i].s->caption)));
+			if (same
 			|| !(closedcaptions[i].c || closedcaptions[i].s) || (sfx->priority >= closedcaptions[i].s->priority))
 			{
 				set = i;
+				if (closedcaptions[i].s && !same && (sfx->priority >= closedcaptions[i].s->priority))
+					moveup = i;
 				break;
 			}
 		}
+
 		if (sfx != closedcaptions[set].s)
 		{
 			for (i = 7; i > set; i--)
@@ -615,6 +620,22 @@ dontplay:
 				}
 			}
 		}
+
+		if (moveup != 255)
+		{
+			for (i = moveup; i < 7; i++)
+			{
+				if (!(closedcaptions[i].c || closedcaptions[i].s))
+					break;
+			}
+			for (; i > set; i--)
+			{
+				closedcaptions[i].c = closedcaptions[i-1].c;
+				closedcaptions[i].s = closedcaptions[i-1].s;
+				closedcaptions[i].t = closedcaptions[i-1].t;
+			}
+		}
+
 		closedcaptions[set].c = &channels[cnum];
 		closedcaptions[set].s = sfx;
 		closedcaptions[set].t = TICRATE+2;
