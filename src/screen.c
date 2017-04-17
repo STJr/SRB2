@@ -478,11 +478,16 @@ void SCR_ClosedCaptions(void)
 				const mobj_t *o = (const mobj_t *)closedcaptions[i].c->origin;
 				if (o)
 				{
-					angle_t angle = R_PointToAngle(o->x, o->y) - localangle;
-					if (angle > ANGLE_45 && angle < ANGLE_135)
-						dir = '\x1C';
-					else if (angle > ANGLE_225 && angle < ANGLE_315)
-						dir = '\x1D';
+					if (!splitscreen)
+					{
+						angle_t angle = R_PointToAngle(o->x, o->y) - localangle;
+						if (angle > ANGLE_45 && angle < ANGLE_135)
+							dir = '\x1C';
+						else if (angle > ANGLE_225 && angle < ANGLE_315)
+							dir = '\x1D';
+						else
+							dir = '\x1E';
+					}
 					else
 						dir = '\x1E';
 				}

@@ -531,6 +531,64 @@ void S_StartSoundAtVolume(const void *origin_p, sfxenum_t sfx_id, INT32 volume)
 			sep = (~sep) & 255;
 #endif
 
+		// Handle closed caption input.
+		if (cv_closedcaptioning.value && sfx->caption[0] != '/')
+		{
+			UINT8 i, set = NUMCAPTIONS-1, moveup = 255;
+			boolean same = false;
+			for (i = 0; i < set; i++)
+			{
+				same = ((sfx == closedcaptions[i].s) || (closedcaptions[i].s && fastcmp(sfx->caption, closedcaptions[i].s->caption)));
+				if (same)
+				{
+					set = i;
+					break;
+				}
+			}
+
+			if (!same)
+			{
+				for (i = 0; i < set; i++)
+				{
+					if (!(closedcaptions[i].c || closedcaptions[i].s) || (sfx->priority >= closedcaptions[i].s->priority))
+					{
+						set = i;
+						if (closedcaptions[i].s && (sfx->priority >= closedcaptions[i].s->priority))
+							moveup = i;
+						break;
+					}
+				}
+				for (i = NUMCAPTIONS-1; i > set; i--)
+				{
+					if (sfx == closedcaptions[i].s)
+					{
+						closedcaptions[i].c = NULL;
+						closedcaptions[i].s = NULL;
+						closedcaptions[i].t = 0;
+					}
+				}
+			}
+
+			if (moveup != 255)
+			{
+				for (i = moveup; i < NUMCAPTIONS-1; i++)
+				{
+					if (!(closedcaptions[i].c || closedcaptions[i].s))
+						break;
+				}
+				for (; i > set; i--)
+				{
+					closedcaptions[i].c = closedcaptions[i-1].c;
+					closedcaptions[i].s = closedcaptions[i-1].s;
+					closedcaptions[i].t = closedcaptions[i-1].t;
+				}
+			}
+
+			closedcaptions[set].c = &channels[cnum];
+			closedcaptions[set].s = sfx;
+			closedcaptions[set].t = TICRATE+2;
+		}
+
 		// Assigns the handle to one of the channels in the
 		// mix/output buffer.
 		channels[cnum].handle = I_StartSound(sfx_id, volume, sep, pitch, priority);
