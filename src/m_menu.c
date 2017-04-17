@@ -903,8 +903,8 @@ static menuitem_t MP_MainMenu[] =
 #endif
 	{IT_CALL | IT_STRING, NULL, "TWO PLAYER GAME",        M_StartSplitServerMenu, 60},
 
-	{IT_CALL | IT_STRING, NULL, "SETUP PLAYER 1",         M_SetupMultiPlayer,     80},
-	{IT_CALL | IT_STRING, NULL, "SETUP PLAYER 2",         M_SetupMultiPlayer2,    90},
+	{IT_CALL | IT_STRING, NULL, "PLAYER 1 SETUP",         M_SetupMultiPlayer,     80},
+	{IT_CALL | IT_STRING, NULL, "PLAYER 2 SETUP",         M_SetupMultiPlayer2,    90},
 };
 
 static menuitem_t MP_ServerMenu[] =
@@ -2630,10 +2630,14 @@ void M_StartControlPanel(void)
 		}
 
 		if (splitscreen)
+		{
 			MPauseMenu[mpause_psetupsplit].status = MPauseMenu[mpause_psetupsplit2].status = IT_STRING | IT_CALL;
+			MPauseMenu[mpause_psetup].text = "Player 1 Setup";
+		}
 		else
 		{
 			MPauseMenu[mpause_psetup].status = IT_STRING | IT_CALL;
+			MPauseMenu[mpause_psetup].text = "Player Setup";
 
 			if (G_GametypeHasTeams())
 				MPauseMenu[mpause_switchteam].status = IT_STRING | IT_SUBMENU;
