@@ -130,21 +130,12 @@ static consvar_t surround = {"surround", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL
 static channel_t *channels = NULL;
 static INT32 numofchannels = 0;
 
-caption_t closedcaptions[8] = {
-	{NULL, NULL, 0},
-	{NULL, NULL, 0},
-	{NULL, NULL, 0},
-	{NULL, NULL, 0},
-	{NULL, NULL, 0},
-	{NULL, NULL, 0},
-	{NULL, NULL, 0},
-	{NULL, NULL, 0}
-};
+caption_t closedcaptions[NUMCAPTIONS];
 
 void ResetCaptions(void)
 {
 	UINT8 i;
-	for (i = 0; i < 8; i++)
+	for (i = 0; i < NUMCAPTIONS; i++)
 	{
 		closedcaptions[i].c = NULL;
 		closedcaptions[i].s = NULL;
@@ -593,7 +584,7 @@ dontplay:
 	// Handle closed caption input.
 	if (cv_closedcaptioning.value && sfx->caption[0] != '/')
 	{
-		UINT8 i, set = 7, moveup = 255;
+		UINT8 i, set = NUMCAPTIONS-1, moveup = 255;
 		boolean same = false;
 		for (i = 0; i < set; i++)
 		{
@@ -617,7 +608,7 @@ dontplay:
 					break;
 				}
 			}
-			for (i = 7; i > set; i--)
+			for (i = NUMCAPTIONS-1; i > set; i--)
 			{
 				if (sfx == closedcaptions[i].s)
 				{
@@ -630,7 +621,7 @@ dontplay:
 
 		if (moveup != 255)
 		{
-			for (i = moveup; i < 7; i++)
+			for (i = moveup; i < NUMCAPTIONS-1; i++)
 			{
 				if (!(closedcaptions[i].c || closedcaptions[i].s))
 					break;

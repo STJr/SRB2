@@ -442,7 +442,7 @@ void SCR_ClosedCaptions(void)
 {
 	UINT8 i;
 
-	for (i = 0; i < 8; i++)
+	for (i = 0; i < NUMCAPTIONS; i++)
 	{
 		boolean cond = (closedcaptions[i].c && I_SoundIsPlaying(closedcaptions[i].c->handle));
 
@@ -462,7 +462,7 @@ void SCR_ClosedCaptions(void)
 		}
 	}
 
-	for (i = 0; i < 8; i++)
+	for (i = 0; i < NUMCAPTIONS; i++)
 	{
 		if (closedcaptions[i].s)
 		{

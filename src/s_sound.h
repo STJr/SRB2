@@ -85,7 +85,9 @@ typedef struct {
 	UINT8 t;
 } caption_t;
 
-extern caption_t closedcaptions[8];
+#define NUMCAPTIONS 8
+
+extern caption_t closedcaptions[NUMCAPTIONS];
 
 // register sound vars and commands at game startup
 void S_RegisterSoundStuff(void);
