@@ -488,7 +488,7 @@ void SCR_ClosedCaptions(void)
 				}
 			}
 			V_DrawRightAlignedString(vid.width-(20*vid.dupx), y,
-			flags, va("%c %s", dir, (closedcaptions[i].s->caption[0] ? closedcaptions[i].s->caption : closedcaptions[i].s->name)));
+			flags, va("%c [%s]", dir, (closedcaptions[i].s->caption[0] ? closedcaptions[i].s->caption : closedcaptions[i].s->name)));
 		}
 	}
 }

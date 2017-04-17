@@ -594,22 +594,29 @@ dontplay:
 	if (cv_closedcaptioning.value && sfx->caption[0] != '/')
 	{
 		UINT8 i, set = 7, moveup = 255;
-
+		boolean same = false;
 		for (i = 0; i < set; i++)
 		{
-			boolean same = ((sfx == closedcaptions[i].s) || (closedcaptions[i].s && fastcmp(sfx->caption, closedcaptions[i].s->caption)));
-			if (same
-			|| !(closedcaptions[i].c || closedcaptions[i].s) || (sfx->priority >= closedcaptions[i].s->priority))
+			same = ((sfx == closedcaptions[i].s) || (closedcaptions[i].s && fastcmp(sfx->caption, closedcaptions[i].s->caption)));
+			if (same)
 			{
 				set = i;
-				if (closedcaptions[i].s && !same && (sfx->priority >= closedcaptions[i].s->priority))
-					moveup = i;
 				break;
 			}
 		}
 
-		if (sfx != closedcaptions[set].s)
+		if (!same)
 		{
+			for (i = 0; i < set; i++)
+			{
+				if (!(closedcaptions[i].c || closedcaptions[i].s) || (sfx->priority >= closedcaptions[i].s->priority))
+				{
+					set = i;
+					if (closedcaptions[i].s && (sfx->priority >= closedcaptions[i].s->priority))
+						moveup = i;
+					break;
+				}
+			}
 			for (i = 7; i > set; i--)
 			{
 				if (sfx == closedcaptions[i].s)
