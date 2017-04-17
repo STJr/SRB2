@@ -7842,7 +7842,7 @@ static void M_ToggleSFX(INT32 choice)
 
 		case KEY_UPARROW:
 			S_StartSound(NULL, sfx_menu1);
-			itemOn--;
+			itemOn = currentMenu->numitems-1;
 			return;
 
 		case KEY_ESCAPE:
