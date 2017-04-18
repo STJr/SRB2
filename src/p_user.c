@@ -1030,7 +1030,7 @@ void P_AddPlayerScore(player_t *player, UINT32 amount)
 						players[i].continues += 1;
 						players[i].gotcontinue = true;
 						if (P_IsLocalPlayer(player))
-							S_StartSound(NULL, sfx_flgcap);
+							S_StartSound(NULL, sfx_s3kac);
 					} */
 				}
 		}
@@ -1050,7 +1050,7 @@ void P_AddPlayerScore(player_t *player, UINT32 amount)
 				player->continues += 1;
 				player->gotcontinue = true;
 				if (P_IsLocalPlayer(player))
-					S_StartSound(NULL, sfx_flgcap);
+					S_StartSound(NULL, sfx_s3kac);
 			}
 		}
 

@@ -756,7 +756,7 @@ void Y_Ticker(void)
 			if (intertic > tallydonetic)
 			{
 				endtic = intertic + 4*TICRATE; // 4 second pause after end of tally
-				S_StartSound(NULL, sfx_flgcap); // cha-ching!
+				S_StartSound(NULL, sfx_s3kac); // cha-ching!
 			}
 			return;
 		}

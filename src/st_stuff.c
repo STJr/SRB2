@@ -1495,15 +1495,23 @@ static inline void ST_drawRaceHUD(void)
 		{
 			case 1:
 				racenum = race3;
+				if (!bounce)
+					S_StartSound(0, sfx_s3ka7);
 				break;
 			case 2:
 				racenum = race2;
+				if (!bounce)
+					S_StartSound(0, sfx_s3ka7);
 				break;
 			case 3:
 				racenum = race1;
+				if (!bounce)
+					S_StartSound(0, sfx_s3ka7);
 				break;
 			default:
 				racenum = racego;
+				if (!bounce)
+					S_StartSound(0, sfx_s3kad);
 				break;
 		}
 		if (bounce < 3)

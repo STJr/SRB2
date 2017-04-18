@@ -64,7 +64,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"alarm",  false,  32,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Alarm"},
   {"buzz1",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Electric zap"},
   {"buzz2",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Electric zap"},
-  {"buzz3",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Electric zap"},
+  {"buzz3",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Wacky worksurface"},
   {"buzz4",  false,   8,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Buzz"},
   {"crumbl",  true, 127,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Crumbling"}, // Platform Crumble Tails 03-16-2001
   {"fire",   false,   8, 32, -1, NULL, 0,        -1,  -1, LUMPERROR, "Flamethrower"},
@@ -137,7 +137,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"appear", false, 127,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Appearing platform"},
   {"bkpoof", false,  70,  8, -1, NULL, 0,        -1,  -1, LUMPERROR, "Armageddon explosion"},
   {"bnce1",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Bounce"}, // Boing!
-  {"bnce2",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Ricochet"}, // Boing!
+  {"bnce2",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Scatter"}, // Boing!
   {"cannon", false,  64,  8, -1, NULL, 0,        -1,  -1, LUMPERROR, "Powerful shot"},
   {"cgot" ,   true, 120,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Got Chaos Emerald"}, // Got Emerald! Tails 09-02-2001
   {"cybdth", false,  32,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Explosion"},
@@ -196,7 +196,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"chchng", false, 120,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Score tally done"},
   {"dwnind", false, 212,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Thinking about air"},
   {"emfind", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Radar beep"},
-  {"flgcap", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Flag capture"},
+  {"flgcap", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Flag captured"},
   {"menu1",   true,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Menu beep"},
   {"oneup",   true, 192,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Extra life"},
   {"ptally",  true,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Score tally"}, // Point tally is identical to menu for now
@@ -223,7 +223,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"hoop2",  false, 192,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Hoop+"},
   {"hoop3",  false, 192,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Hoop++"},
   {"hidden", false, 204,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Discovery"},
-  {"prloop", false, 104,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Paraloop"},
+  {"prloop", false, 104,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Gust of wind"},
   {"timeup",  true, 256,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Ominous Countdown"},
 
   // Mario
