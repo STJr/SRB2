@@ -2325,10 +2325,6 @@ typedef enum state
 	S_PITY4,
 	S_PITY5,
 	S_PITY6,
-	S_PITY7,
-	S_PITY8,
-	S_PITY9,
-	S_PITY10,
 
 	S_FIRS1,
 	S_FIRS2,
