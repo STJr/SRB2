@@ -3360,6 +3360,9 @@ static void P_DoSuperStuff(player_t *player)
 
 	if (player->powers[pw_super])
 	{
+#ifdef HAVE_BLUA
+		if (!LUAh_SuperTick(player))
+#endif
 		// If you're super and not Sonic, de-superize!
 		if (!((ALL7EMERALDS(emeralds)) && (player->charflags & SF_SUPER)) && !(ALL7EMERALDS(player->powers[pw_emeralds])))
 		{
