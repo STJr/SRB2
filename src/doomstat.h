@@ -124,6 +124,9 @@ extern INT16 spstage_start;
 extern INT16 sstage_start;
 extern INT16 sstage_end;
 
+extern INT16 titlemap;
+extern boolean hidetitlepics;
+
 extern boolean looptitle;
 extern boolean useNightsSS;
 
