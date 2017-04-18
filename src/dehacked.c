@@ -5180,6 +5180,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Deep Sea Gargoyle
 	"S_GARGOYLE",
+	"S_BIGGARGOYLE",
 
 	// DSZ Seaweed
 	"S_SEAWEED1",
@@ -6555,6 +6556,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 
 	// Deep Sea Scenery
 	"MT_GARGOYLE", // Deep Sea Gargoyle
+	"MT_BIGGARGOYLE", // Deep Sea Gargoyle (Big)
 	"MT_SEAWEED", // DSZ Seaweed
 	"MT_WATERDRIP", // Dripping Water source
 	"MT_WATERDROP", // Water drop from dripping water

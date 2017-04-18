@@ -1769,6 +1769,7 @@ state_t states[NUMSTATES] =
 
 	// Deep Sea Gargoyle
 	{SPR_GARG, 0, -1, {NULL}, 0, 0, S_NULL},  // S_GARGOYLE
+	{SPR_GARG, 1, -1, {NULL}, 0, 0, S_NULL},  // S_BIGGARGOYLE
 
 	// DSZ Seaweed
 	{SPR_SEWE, 0, -1, {NULL}, 0, 0, S_SEAWEED2}, // S_SEAWEED1
@@ -8144,6 +8145,33 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		21*FRACUNIT,    // speed
 		16*FRACUNIT,    // radius
 		40*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		1,              // damage
+		sfx_statu2,     // activesound
+		MF_SLIDEME|MF_SOLID|MF_PUSHABLE, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_BIGGARGOYLE
+		1009,           // doomednum
+		S_BIGGARGOYLE,  // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		12*FRACUNIT,    // speed
+		32*FRACUNIT,    // radius
+		80*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		1,              // damage

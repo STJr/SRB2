@@ -1977,6 +1977,7 @@ typedef enum state
 
 	// Deep Sea Gargoyle
 	S_GARGOYLE,
+	S_BIGGARGOYLE,
 
 	// DSZ Seaweed
 	S_SEAWEED1,
@@ -3371,6 +3372,7 @@ typedef enum mobj_type
 
 	// Deep Sea Scenery
 	MT_GARGOYLE, // Deep Sea Gargoyle
+	MT_BIGGARGOYLE, // Deep Sea Gargoyle (Big)
 	MT_SEAWEED, // DSZ Seaweed
 	MT_WATERDRIP, // Dripping Water source
 	MT_WATERDROP, // Water drop from dripping water
