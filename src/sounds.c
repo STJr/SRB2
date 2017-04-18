@@ -164,7 +164,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"pop"  ,  false,  78,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Pop"},
   {"rail1",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Firing rail"},
   {"rail2",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Crashing rail"},
-  {"rlaunc", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Firing laser"},
+  {"rlaunc", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Firing"},
   {"shield", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Pity Shield"}, // generic GET!
   {"wirlsg", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Whirlwind Shield"}, // Whirlwind GET!
   {"forcsg", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Force Shield"}, // Force GET!
