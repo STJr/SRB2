@@ -1985,6 +1985,7 @@ void G_Ticker(boolean run)
 			break;
 
 		case GS_TITLESCREEN:
+			if (gamemap) P_Ticker(run); // then intentionally fall through
 		case GS_WAITINGPLAYERS:
 			F_TitleScreenTicker(run);
 			break;
