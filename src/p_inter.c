@@ -571,10 +571,17 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				return;
 			tokenlist += special->health;
 
+			P_AddPlayerScore(player, 1000);
+
 			if (ALL7EMERALDS(emeralds)) // Got all 7
 			{
-				P_GivePlayerRings(player, 50);
-				nummaprings += 50; // no cheating towards Perfect!
+				if (!(netgame || multiplayer))
+				{
+					player->continues += 1;
+					players->gotcontinue = true;
+					if (P_IsLocalPlayer(player))
+						S_StartSound(NULL, sfx_s3kac);
+				}
 			}
 			else
 				token++;
