@@ -8138,6 +8138,9 @@ static void M_DrawVideoMode(void)
 	}
 	else
 	{
+		V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y + 104,
+			V_YELLOWMAP, "Larger modes may have performance issues.");
+
 		M_CentreText(OP_VideoModeDef.y + 116,
 			va("Current mode is %c%dx%d",
 				(SCR_IsAspectCorrect(vid.width, vid.height)) ? 0x83 : 0x80,
