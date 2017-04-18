@@ -1556,8 +1556,7 @@ static void Y_SetTimeBonus(player_t *player, y_bonus_t *bstruct)
 
 	// calculate time bonus
 	secs = player->realtime / TICRATE;
-	if      (secs <  30) /*   :30 */ bonus = 100000;
-	else if (secs <  45) /*   :45 */ bonus = 50000;
+	if      (secs <  30) /*   :30 */ bonus = 50000;
 	else if (secs <  60) /*  1:00 */ bonus = 10000;
 	else if (secs <  90) /*  1:30 */ bonus = 5000;
 	else if (secs < 120) /*  2:00 */ bonus = 4000;
