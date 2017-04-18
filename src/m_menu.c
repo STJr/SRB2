@@ -2403,8 +2403,7 @@ boolean M_Responder(event_t *ev)
 			if (routine && ((currentMenu->menuitems[itemOn].status & IT_TYPE) == IT_ARROWS
 				|| (currentMenu->menuitems[itemOn].status & IT_TYPE) == IT_CVAR))
 			{
-				if (currentMenu != &OP_SoundOptionsDef)
-					S_StartSound(NULL, sfx_menu1);
+				S_StartSound(NULL, sfx_menu1);
 				routine(0);
 			}
 			return true;
@@ -2413,8 +2412,7 @@ boolean M_Responder(event_t *ev)
 			if (routine && ((currentMenu->menuitems[itemOn].status & IT_TYPE) == IT_ARROWS
 				|| (currentMenu->menuitems[itemOn].status & IT_TYPE) == IT_CVAR))
 			{
-				if (currentMenu != &OP_SoundOptionsDef)
-					S_StartSound(NULL, sfx_menu1);
+				S_StartSound(NULL, sfx_menu1);
 				routine(1);
 			}
 			return true;
@@ -7702,7 +7700,7 @@ static void M_DrawControl(void)
 		}
 		else if (currentMenu->menuitems[i].status == IT_GRAYEDOUT2)
 			V_DrawString(x, y, V_TRANSLUCENT, currentMenu->menuitems[i].text);
-		else if (currentMenu->menuitems[i].status == IT_HEADER)
+		else if ((currentMenu->menuitems[i].status == IT_HEADER) && (i != max-1))
 			M_DrawLevelPlatterHeader(y, currentMenu->menuitems[i].text, true);
 
 		y += SMALLLINEHEIGHT;
