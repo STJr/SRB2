@@ -266,6 +266,7 @@ if(${SRB2_CONFIG_HAVE_BLUA})
 		blua/lfunc.c
 		blua/lgc.c
 		blua/linit.c
+		blua/liolib.c
 		blua/llex.c
 		blua/lmem.c
 		blua/lobject.c
