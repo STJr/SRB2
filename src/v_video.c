@@ -109,7 +109,7 @@ static boolean InitCube(void)
 				{0.0, 0.0, 1.0}  // blue corner
 			},
 			{
-				{0.0, 1.0, 0.0}, // greem corner
+				{0.0, 1.0, 0.0}, // green corner
 				{0.0, 1.0, 1.0}  // cyan corner
 			}
 		},
