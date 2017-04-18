@@ -147,7 +147,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"drown",  false, 192,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Drowning"},
   {"fizzle", false, 127,  8, -1, NULL, 0,        -1,  -1, LUMPERROR, "Electric fizzle"},
   {"gbeep",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Ominous beeping"}, // Grenade beep
-  {"wepfir", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Weapon firing"}, // defaults to thok
+  {"wepfir", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Firing weapon"}, // defaults to thok
   {"ghit" ,  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Goop splash"},
   {"gloop",  false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Splash"},
   {"gspray", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Goop sling"},
@@ -162,9 +162,9 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"monton", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Golden Monitor activated"},
   {"pogo" ,  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Mechanical pogo"},
   {"pop"  ,  false,  78,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Pop"},
-  {"rail1",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Railgun fired"},
-  {"rail2",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Railgun crash"},
-  {"rlaunc", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Missile fired"},
+  {"rail1",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Firing rail"},
+  {"rail2",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Crashing rail"},
+  {"rlaunc", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Firing laser"},
   {"shield", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Pity Shield"}, // generic GET!
   {"wirlsg", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Whirlwind Shield"}, // Whirlwind GET!
   {"forcsg", false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Force Shield"}, // Force GET!
