@@ -670,6 +670,7 @@ void D_RegisterClientCommands(void)
 
 	// FIXME: not to be here.. but needs be done for config loading
 	CV_RegisterVar(&cv_usegamma);
+	CV_RegisterVar(&cv_usesaturation);
 
 	// m_menu.c
 	CV_RegisterVar(&cv_crosshair);

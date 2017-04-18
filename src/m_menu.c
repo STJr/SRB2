@@ -1166,36 +1166,38 @@ static menuitem_t OP_VideoOptionsMenu[] =
 {
 	{IT_STRING | IT_CALL,  NULL, "Set Resolution...", M_VideoModeMenu,        0},
 
-#ifdef HWRENDER
-	{IT_SUBMENU|IT_STRING, NULL, "3D Card Options...", &OP_OpenGLOptionsDef,  5},
+#if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
+	{IT_STRING|IT_CVAR,      NULL, "Fullscreen",       &cv_fullscreen,       5},
 #endif
 
-#if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
-	{IT_STRING|IT_CVAR,      NULL, "Fullscreen",       &cv_fullscreen,       10},
+#ifdef HWRENDER
+	{IT_SUBMENU|IT_STRING, NULL, "3D Card Options...", &OP_OpenGLOptionsDef,  10},
 #endif
 
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
 	                         NULL, "Brightness",      &cv_usegamma,          15},
-
-	{IT_STRING | IT_CVAR, NULL, "Display HUD",        &cv_showhud,           25},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
-	                      NULL, "HUD Transparency",   &cv_translucenthud,    30},
-	{IT_STRING | IT_CVAR, NULL, "Time Display",       &cv_timetic,           35},
+	                         NULL, "Saturation",      &cv_usesaturation,     20},
+
+	{IT_STRING | IT_CVAR, NULL, "Display HUD",        &cv_showhud,           30},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
+	                      NULL, "HUD Transparency",   &cv_translucenthud,    35},
+	{IT_STRING | IT_CVAR, NULL, "Time Display",       &cv_timetic,           40},
 #ifdef SEENAMES
-	{IT_STRING | IT_CVAR, NULL, "Show HUD player names",  &cv_seenames,      40},
+	{IT_STRING | IT_CVAR, NULL, "Show HUD player names",  &cv_seenames,      45},
 #endif
 
-	{IT_STRING | IT_CVAR, NULL, "Console Background", &cons_backcolor,       50},
-	{IT_STRING | IT_CVAR, NULL, "Console Text Size",  &cv_constextsize,      55},
+	{IT_STRING | IT_CVAR, NULL, "Console Background", &cons_backcolor,       55},
+	{IT_STRING | IT_CVAR, NULL, "Console Text Size",  &cv_constextsize,      60},
 
-	{IT_STRING | IT_CVAR, NULL, "Draw Distance",      &cv_drawdist,          65},
-	{IT_STRING | IT_CVAR, NULL, "NiGHTS Draw Dist.",  &cv_drawdist_nights,   70},
-	{IT_STRING | IT_CVAR, NULL, "Weather Draw Dist.", &cv_drawdist_precip,   75},
-	{IT_STRING | IT_CVAR, NULL, "Weather Density",    &cv_precipdensity,     80},
+	{IT_STRING | IT_CVAR, NULL, "Draw Distance",      &cv_drawdist,          70},
+	{IT_STRING | IT_CVAR, NULL, "NiGHTS Draw Dist.",  &cv_drawdist_nights,   75},
+	{IT_STRING | IT_CVAR, NULL, "Weather Draw Dist.", &cv_drawdist_precip,   80},
+	{IT_STRING | IT_CVAR, NULL, "Weather Density",    &cv_precipdensity,     85},
 
-	{IT_STRING | IT_CVAR, NULL, "Show FPS",           &cv_ticrate,           90},
-	{IT_STRING | IT_CVAR, NULL, "Clear Before Redraw",&cv_homremoval,        95},
-	{IT_STRING | IT_CVAR, NULL, "Vertical Sync",      &cv_vidwait,          100},
+	{IT_STRING | IT_CVAR, NULL, "Show FPS",           &cv_ticrate,           95},
+	{IT_STRING | IT_CVAR, NULL, "Clear Before Redraw",&cv_homremoval,       100},
+	{IT_STRING | IT_CVAR, NULL, "Vertical Sync",      &cv_vidwait,          105},
 };
 
 static menuitem_t OP_VideoModeMenu[] =
@@ -2784,7 +2786,7 @@ void M_Init(void)
 #ifdef HWRENDER
 	// Permanently hide some options based on render mode
 	if (rendermode == render_soft)
-		OP_VideoOptionsMenu[1].status = IT_DISABLED;
+		OP_VideoOptionsMenu[2].status = IT_DISABLED;
 #endif
 
 #ifndef NONET
@@ -2854,16 +2856,6 @@ static void M_DrawSlider(INT32 x, INT32 y, const consvar_t *cv)
 	INT32 range;
 	patch_t *p;
 
-	for (i = 0; cv->PossibleValue[i+1].strvalue; i++);
-
-	range = ((cv->value - cv->PossibleValue[0].value) * 100 /
-	 (cv->PossibleValue[i].value - cv->PossibleValue[0].value));
-
-	if (range < 0)
-		range = 0;
-	if (range > 100)
-		range = 100;
-
 	x = BASEVIDWIDTH - x - SLIDER_WIDTH;
 
 	V_DrawScaledPatch(x, y, 0, W_CachePatchName("M_SLIDEL", PU_CACHE));
@@ -2877,6 +2869,30 @@ static void M_DrawSlider(INT32 x, INT32 y, const consvar_t *cv)
 
 	// draw the slider cursor
 	p = W_CachePatchName("M_SLIDEC", PU_CACHE);
+
+	for (i = 0; cv->PossibleValue[i+1].strvalue; i++);
+
+	if ((range = atoi(cv->defaultvalue)) != cv->value)
+	{
+		range = ((range - cv->PossibleValue[0].value) * 100 /
+		 (cv->PossibleValue[i].value - cv->PossibleValue[0].value));
+
+		if (range < 0)
+			range = 0;
+		else if (range > 100)
+			range = 100;
+
+		V_DrawMappedPatch(x + 2 + (SLIDER_RANGE*8*range)/100, y, V_TRANSLUCENT, p, yellowmap);
+	}
+
+	range = ((cv->value - cv->PossibleValue[0].value) * 100 /
+	 (cv->PossibleValue[i].value - cv->PossibleValue[0].value));
+
+	if (range < 0)
+		range = 0;
+	else if (range > 100)
+		range = 100;
+
 	V_DrawMappedPatch(x + 2 + (SLIDER_RANGE*8*range)/100, y, 0, p, yellowmap);
 }
 
