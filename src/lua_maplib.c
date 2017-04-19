@@ -264,11 +264,18 @@ static const char *const bbox_opt[] = {
 static const char *const array_opt[] ={"iterate",NULL};
 static const char *const valid_opt[] ={"valid",NULL};
 
+///////////////////////////////////
+// sector list iterate functions //
+///////////////////////////////////
+
 // iterates through a sector's thinglist!
 static int lib_iterateSectorThinglist(lua_State *L)
 {
 	mobj_t *state = NULL;
 	mobj_t *thing = NULL;
+
+	if (gamestate != GS_LEVEL)
+		return luaL_error(L, "This function can only be used in a level!");
 
 	if (lua_gettop(L) < 2)
 		return luaL_error(L, "Don't call sector.thinglist() directly, use it as 'for rover in sector.thinglist do <block> end'.");
@@ -302,6 +309,9 @@ static int lib_iterateSectorFFloors(lua_State *L)
 {
 	ffloor_t *state = NULL;
 	ffloor_t *ffloor = NULL;
+
+	if (gamestate != GS_LEVEL)
+		return luaL_error(L, "This function can only be used in a level!");
 
 	if (lua_gettop(L) < 2)
 		return luaL_error(L, "Don't call sector.ffloors() directly, use it as 'for rover in sector.ffloors do <block> end'.");
@@ -337,6 +347,10 @@ static int sector_iterate(lua_State *L)
 	lua_pushnil(L); // initial value (unused)
 	return 3;
 }
+
+////////////////////
+// sector.lines[] //
+////////////////////
 
 // sector.lines, i -> sector.lines[i]
 // sector.lines.valid, for validity checking
@@ -398,6 +412,10 @@ static int sectorlines_num(lua_State *L)
 	lua_pushinteger(L, numoflines);
 	return 1;
 }
+
+//////////////
+// sector_t //
+//////////////
 
 static int sector_get(lua_State *L)
 {
@@ -540,6 +558,10 @@ static int sector_num(lua_State *L)
 	return 1;
 }
 
+/////////////////
+// subsector_t //
+/////////////////
+
 static int subsector_get(lua_State *L)
 {
 	subsector_t *subsector = *((subsector_t **)luaL_checkudata(L, 1, META_SUBSECTOR));
@@ -578,6 +600,10 @@ static int subsector_num(lua_State *L)
 	lua_pushinteger(L, subsector-subsectors);
 	return 1;
 }
+
+////////////
+// line_t //
+////////////
 
 static int line_get(lua_State *L)
 {
@@ -676,6 +702,10 @@ static int line_num(lua_State *L)
 	return 1;
 }
 
+////////////////////
+// line.sidenum[] //
+////////////////////
+
 static int sidenum_get(lua_State *L)
 {
 	UINT16 *sidenum = *((UINT16 **)luaL_checkudata(L, 1, META_SIDENUM));
@@ -703,6 +733,10 @@ static int sidenum_get(lua_State *L)
 	lua_pushinteger(L, sidenum[i]);
 	return 1;
 }
+
+////////////
+// side_t //
+////////////
 
 static int side_get(lua_State *L)
 {
@@ -805,6 +839,10 @@ static int side_num(lua_State *L)
 	return 1;
 }
 
+//////////////
+// vertex_t //
+//////////////
+
 static int vertex_get(lua_State *L)
 {
 	vertex_t *vertex = *((vertex_t **)luaL_checkudata(L, 1, META_VERTEX));
@@ -845,6 +883,11 @@ static int vertex_num(lua_State *L)
 }
 
 #ifdef HAVE_LUA_SEGS
+
+///////////
+// seg_t //
+///////////
+
 static int seg_get(lua_State *L)
 {
 	seg_t *seg = *((seg_t **)luaL_checkudata(L, 1, META_SEG));
@@ -902,6 +945,10 @@ static int seg_num(lua_State *L)
 	return 1;
 }
 
+////////////
+// node_t //
+////////////
+
 static int node_get(lua_State *L)
 {
 	node_t *node = *((node_t **)luaL_checkudata(L, 1, META_NODE));
@@ -949,6 +996,11 @@ static int node_num(lua_State *L)
 	lua_pushinteger(L, node-nodes);
 	return 1;
 }
+
+///////////////
+// node.bbox //
+///////////////
+
 /*
 // node.bbox[i][j]: i = 0 or 1, j = 0 1 2 or 3
 // NOTE: 2D arrays are NOT double pointers,
@@ -1028,6 +1080,10 @@ static int nodebbox_call(lua_State *L)
 	return 1;
 }
 
+/////////////////////
+// node.children[] //
+/////////////////////
+
 // node.children[i]: i = 0 or 1
 static int nodechildren_get(lua_State *L)
 {
@@ -1062,6 +1118,10 @@ static int nodechildren_get(lua_State *L)
 	return 1;
 }
 #endif
+
+//////////
+// bbox //
+//////////
 
 // bounding box (aka fixed_t array with four elements)
 // NOTE: may be useful for polyobjects or other things later
@@ -1100,9 +1160,15 @@ static int bbox_get(lua_State *L)
 	return 1;
 }
 
+///////////////
+// sectors[] //
+///////////////
+
 static int lib_iterateSectors(lua_State *L)
 {
 	size_t i = 0;
+	if (gamestate != GS_LEVEL)
+		return luaL_error(L, "This function can only be used in a level!");
 	if (lua_gettop(L) < 2)
 		return luaL_error(L, "Don't call sectors.iterate() directly, use it as 'for sector in sectors.iterate do <block> end'.");
 	lua_settop(L, 2);
@@ -1120,6 +1186,8 @@ static int lib_iterateSectors(lua_State *L)
 static int lib_getSector(lua_State *L)
 {
 	int field;
+	if (gamestate != GS_LEVEL)
+		return luaL_error(L, "You cannot access this outside of a level!");
 	lua_settop(L, 2);
 	lua_remove(L, 1); // dummy userdata table is unused.
 	if (lua_isnumber(L, 1))
@@ -1146,9 +1214,15 @@ static int lib_numsectors(lua_State *L)
 	return 1;
 }
 
+//////////////////
+// subsectors[] //
+//////////////////
+
 static int lib_iterateSubsectors(lua_State *L)
 {
 	size_t i = 0;
+	if (gamestate != GS_LEVEL)
+		return luaL_error(L, "This function can only be used in a level!");
 	if (lua_gettop(L) < 2)
 		return luaL_error(L, "Don't call subsectors.iterate() directly, use it as 'for subsector in subsectors.iterate do <block> end'.");
 	lua_settop(L, 2);
@@ -1166,6 +1240,8 @@ static int lib_iterateSubsectors(lua_State *L)
 static int lib_getSubsector(lua_State *L)
 {
 	int field;
+	if (gamestate != GS_LEVEL)
+		return luaL_error(L, "You cannot access this outside of a level!");
 	lua_settop(L, 2);
 	lua_remove(L, 1); // dummy userdata table is unused.
 	if (lua_isnumber(L, 1))
@@ -1192,9 +1268,15 @@ static int lib_numsubsectors(lua_State *L)
 	return 1;
 }
 
+/////////////
+// lines[] //
+/////////////
+
 static int lib_iterateLines(lua_State *L)
 {
 	size_t i = 0;
+	if (gamestate != GS_LEVEL)
+		return luaL_error(L, "This function can only be used in a level!");
 	if (lua_gettop(L) < 2)
 		return luaL_error(L, "Don't call lines.iterate() directly, use it as 'for line in lines.iterate do <block> end'.");
 	lua_settop(L, 2);
@@ -1212,6 +1294,8 @@ static int lib_iterateLines(lua_State *L)
 static int lib_getLine(lua_State *L)
 {
 	int field;
+	if (gamestate != GS_LEVEL)
+		return luaL_error(L, "You cannot access this outside of a level!");
 	lua_settop(L, 2);
 	lua_remove(L, 1); // dummy userdata table is unused.
 	if (lua_isnumber(L, 1))
@@ -1238,9 +1322,15 @@ static int lib_numlines(lua_State *L)
 	return 1;
 }
 
+/////////////
+// sides[] //
+/////////////
+
 static int lib_iterateSides(lua_State *L)
 {
 	size_t i = 0;
+	if (gamestate != GS_LEVEL)
+		return luaL_error(L, "This function can only be used in a level!");
 	if (lua_gettop(L) < 2)
 		return luaL_error(L, "Don't call sides.iterate() directly, use it as 'for side in sides.iterate do <block> end'.");
 	lua_settop(L, 2);
@@ -1258,6 +1348,8 @@ static int lib_iterateSides(lua_State *L)
 static int lib_getSide(lua_State *L)
 {
 	int field;
+	if (gamestate != GS_LEVEL)
+		return luaL_error(L, "You cannot access this outside of a level!");
 	lua_settop(L, 2);
 	lua_remove(L, 1); // dummy userdata table is unused.
 	if (lua_isnumber(L, 1))
@@ -1284,9 +1376,15 @@ static int lib_numsides(lua_State *L)
 	return 1;
 }
 
+////////////////
+// vertexes[] //
+////////////////
+
 static int lib_iterateVertexes(lua_State *L)
 {
 	size_t i = 0;
+	if (gamestate != GS_LEVEL)
+		return luaL_error(L, "This function can only be used in a level!");
 	if (lua_gettop(L) < 2)
 		return luaL_error(L, "Don't call vertexes.iterate() directly, use it as 'for vertex in vertexes.iterate do <block> end'.");
 	lua_settop(L, 2);
@@ -1304,6 +1402,8 @@ static int lib_iterateVertexes(lua_State *L)
 static int lib_getVertex(lua_State *L)
 {
 	int field;
+	if (gamestate != GS_LEVEL)
+		return luaL_error(L, "You cannot access this outside of a level!");
 	lua_settop(L, 2);
 	lua_remove(L, 1); // dummy userdata table is unused.
 	if (lua_isnumber(L, 1))
@@ -1331,9 +1431,16 @@ static int lib_numvertexes(lua_State *L)
 }
 
 #ifdef HAVE_LUA_SEGS
+
+////////////
+// segs[] //
+////////////
+
 static int lib_iterateSegs(lua_State *L)
 {
 	size_t i = 0;
+	if (gamestate != GS_LEVEL)
+		return luaL_error(L, "This function can only be used in a level!");
 	if (lua_gettop(L) < 2)
 		return luaL_error(L, "Don't call segs.iterate() directly, use it as 'for seg in segs.iterate do <block> end'.");
 	lua_settop(L, 2);
@@ -1351,6 +1458,8 @@ static int lib_iterateSegs(lua_State *L)
 static int lib_getSeg(lua_State *L)
 {
 	int field;
+	if (gamestate != GS_LEVEL)
+		return luaL_error(L, "You cannot access this outside of a level!");
 	lua_settop(L, 2);
 	lua_remove(L, 1); // dummy userdata table is unused.
 	if (lua_isnumber(L, 1))
@@ -1377,9 +1486,15 @@ static int lib_numsegs(lua_State *L)
 	return 1;
 }
 
+/////////////
+// nodes[] //
+/////////////
+
 static int lib_iterateNodes(lua_State *L)
 {
 	size_t i = 0;
+	if (gamestate != GS_LEVEL)
+		return luaL_error(L, "This function can only be used in a level!");
 	if (lua_gettop(L) < 2)
 		return luaL_error(L, "Don't call nodes.iterate() directly, use it as 'for node in nodes.iterate do <block> end'.");
 	lua_settop(L, 2);
@@ -1397,6 +1512,8 @@ static int lib_iterateNodes(lua_State *L)
 static int lib_getNode(lua_State *L)
 {
 	int field;
+	if (gamestate != GS_LEVEL)
+		return luaL_error(L, "You cannot access this outside of a level!");
 	lua_settop(L, 2);
 	lua_remove(L, 1); // dummy userdata table is unused.
 	if (lua_isnumber(L, 1))
@@ -1423,6 +1540,10 @@ static int lib_numnodes(lua_State *L)
 	return 1;
 }
 #endif
+
+//////////////
+// ffloor_t //
+//////////////
 
 static int ffloor_get(lua_State *L)
 {
@@ -1567,6 +1688,10 @@ static int ffloor_set(lua_State *L)
 	return 0;
 }
 
+/////////////////////
+// mapheaderinfo[] //
+/////////////////////
+
 static int lib_getMapheaderinfo(lua_State *L)
 {
 	// i -> mapheaderinfo[i-1]
@@ -1598,6 +1723,10 @@ static int lib_nummapheaders(lua_State *L)
 	lua_pushinteger(L, NUMMAPS);
 	return 1;
 }
+
+/////////////////
+// mapheader_t //
+/////////////////
 
 static int mapheaderinfo_get(lua_State *L)
 {

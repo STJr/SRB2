@@ -187,7 +187,7 @@ UINT8 altdown = 0; // 0x1 left, 0x2 right
 //
 static inline void D_ModifierKeyResponder(event_t *ev)
 {
-	if (ev->type == ev_keydown) switch (ev->data1)
+	if (ev->type == ev_keydown || ev->type == ev_console) switch (ev->data1)
 	{
 		case KEY_LSHIFT: shiftdown |= 0x1; return;
 		case KEY_RSHIFT: shiftdown |= 0x2; return;
@@ -723,7 +723,6 @@ void D_StartTitle(void)
 	maptol = 0;
 
 	gameaction = ga_nothing;
-	playerdeadview = false;
 	displayplayer = consoleplayer = 0;
 	//demosequence = -1;
 	gametype = GT_COOP;

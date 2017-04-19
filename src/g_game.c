@@ -697,8 +697,7 @@ void G_SetNightsRecords(void)
 	free(gpath);
 
 	// If the mare count changed, this will update the score display
-	CV_AddValue(&cv_nextmap, 1);
-	CV_AddValue(&cv_nextmap, -1);
+	Nextmap_OnChange();
 }
 
 // for consistency among messages: this modifies the game and removes savemoddata.
@@ -1015,9 +1014,8 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	if (cv_analog.value || twodlevel
 		|| (player->mo && (player->mo->flags2 & MF2_TWOD))
 		|| (!demoplayback && (player->climbing
-		|| (player->pflags & PF_NIGHTSMODE)
-		|| (player->pflags & PF_SLIDING)
-		|| (player->pflags & PF_FORCESTRAFE)))) // Analog
+		|| (player->powers[pw_carry] == CR_NIGHTSMODE)
+		|| (player->pflags & (PF_SLIDING|PF_FORCESTRAFE))))) // Analog
 			forcestrafe = true;
 	if (forcestrafe) // Analog
 	{
@@ -1120,7 +1118,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 		cmd->buttons |= BT_USE;
 
 	// Camera Controls
-	if (cv_debug || cv_analog.value || demoplayback || objectplacing || player->pflags & PF_NIGHTSMODE)
+	if (cv_debug || cv_analog.value || demoplayback || objectplacing || player->powers[pw_carry] == CR_NIGHTSMODE)
 	{
 		if (PLAYER1INPUTDOWN(gc_camleft))
 			cmd->buttons |= BT_CAMLEFT;
@@ -1306,9 +1304,8 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 	if (cv_analog2.value || twodlevel
 		|| (player->mo && (player->mo->flags2 & MF2_TWOD))
 		|| player->climbing
-		|| (player->pflags & PF_NIGHTSMODE)
-		|| (player->pflags & PF_SLIDING)
-		|| (player->pflags & PF_FORCESTRAFE)) // Analog
+		|| (player->powers[pw_carry] == CR_NIGHTSMODE)
+		|| (player->pflags & (PF_SLIDING|PF_FORCESTRAFE))) // Analog
 			forcestrafe = true;
 	if (forcestrafe) // Analog
 	{
@@ -1408,7 +1405,7 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 		cmd->buttons |= BT_USE;
 
 	// Camera Controls
-	if (cv_debug || cv_analog2.value || player->pflags & PF_NIGHTSMODE)
+	if (cv_debug || cv_analog2.value || player->powers[pw_carry] == CR_NIGHTSMODE)
 	{
 		if (PLAYER2INPUTDOWN(gc_camleft))
 			cmd->buttons |= BT_CAMLEFT;
@@ -1566,11 +1563,6 @@ static void Analog_OnChange(void)
 
 	// cameras are not initialized at this point
 
-	if (leveltime > 1)
-		CV_SetValue(&cv_cam_dist, 128);
-	if (cv_analog.value || demoplayback)
-		CV_SetValue(&cv_cam_dist, 192);
-
 	if (!cv_chasecam.value && cv_analog.value) {
 		CV_SetValue(&cv_analog, 0);
 		return;
@@ -1590,11 +1582,6 @@ static void Analog2_OnChange(void)
 		return;
 
 	// cameras are not initialized at this point
-
-	if (leveltime > 1)
-		CV_SetValue(&cv_cam2_dist, 128);
-	if (cv_analog2.value)
-		CV_SetValue(&cv_cam2_dist, 192);
 
 	if (!cv_chasecam2.value && cv_analog2.value) {
 		CV_SetValue(&cv_analog2, 0);
@@ -2082,6 +2069,7 @@ void G_PlayerReborn(INT32 player)
 	UINT8 mare;
 	UINT8 skincolor;
 	INT32 skin;
+	UINT32 availabilities;
 	tic_t jointime;
 	boolean spectator;
 	INT16 bot;
@@ -2106,6 +2094,7 @@ void G_PlayerReborn(INT32 player)
 
 	skincolor = players[player].skincolor;
 	skin = players[player].skin;
+	availabilities = players[player].availabilities;
 	camerascale = players[player].camerascale;
 	shieldscale = players[player].shieldscale;
 	charability = players[player].charability;
@@ -2151,6 +2140,7 @@ void G_PlayerReborn(INT32 player)
 	// save player config truth reborn
 	p->skincolor = skincolor;
 	p->skin = skin;
+	p->availabilities = availabilities;
 	p->camerascale = camerascale;
 	p->shieldscale = shieldscale;
 	p->charability = charability;
@@ -2901,7 +2891,7 @@ static void G_DoCompleted(void)
 	if (nextmap < NUMMAPS && !mapheaderinfo[nextmap])
 		P_AllocMapHeader(nextmap);
 
-	if (skipstats)
+	if (skipstats && !modeattacking) // Don't skip stats if we're in record attack
 		G_AfterIntermission();
 	else
 	{
@@ -3541,7 +3531,7 @@ void G_DeferedInitNew(boolean pultmode, const char *mapname, INT32 pickedchar, b
 // This is the map command interpretation something like Command_Map_f
 //
 // called at: map cmd execution, doloadgame, doplaydemo
-void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean skipprecutscene)
+void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean skipprecutscene, boolean FLS)
 {
 	INT32 i;
 
@@ -3571,7 +3561,8 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 
 			if (netgame || multiplayer)
 			{
-				players[i].lives = cv_startinglives.value;
+				if (!FLS || (players[i].lives < cv_startinglives.value))
+					players[i].lives = cv_startinglives.value;
 				players[i].continues = 0;
 			}
 			else if (pultmode)
@@ -3585,13 +3576,16 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 				players[i].continues = 1;
 			}
 
+			if (!((netgame || multiplayer) && (FLS)))
+				players[i].score = 0;
+
 			// The latter two should clear by themselves, but just in case
 			players[i].pflags &= ~(PF_TAGIT|PF_TAGGED|PF_FULLSTASIS);
 
 			// Clear cheatcodes too, just in case.
 			players[i].pflags &= ~(PF_GODMODE|PF_NOCLIP|PF_INVIS);
 
-			players[i].score = players[i].xtralife = 0;
+			players[i].xtralife = 0;
 		}
 
 		// Reset unlockable triggers
@@ -3625,7 +3619,6 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 	mapmusflags |= MUSIC_RELOADRESET;
 
 	ultimatemode = pultmode;
-	playerdeadview = false;
 	automapactive = false;
 	imcontinuing = false;
 
@@ -3920,12 +3913,8 @@ void G_WriteGhostTic(mobj_t *ghost)
 	if (!(demoflags & DF_GHOST))
 		return; // No ghost data to write.
 
-	if (ghost->player && ghost->player->pflags & PF_NIGHTSMODE && ghost->tracer)
-	{
-		// We're talking about the NiGHTS thing, not the normal platforming thing!
+	if (ghost->player && ghost->player->powers[pw_carry] == CR_NIGHTSMODE) // We're talking about the NiGHTS thing, not the normal platforming thing!
 		ziptic |= GZT_NIGHTS;
-		ghost = ghost->tracer;
-	}
 
 	ziptic_p = demo_p++; // the ziptic, written at the end of this function
 
@@ -4107,11 +4096,9 @@ void G_ConsGhostTic(void)
 		demo_p++;
 	if (ziptic & GZT_SPR2)
 		demo_p++;
-	if(ziptic & GZT_NIGHTS) {
-		if (!testmo->player || !(testmo->player->pflags & PF_NIGHTSMODE) || !testmo->tracer)
+	if (ziptic & GZT_NIGHTS) {
+		if (!testmo->player || !(testmo->player->powers[pw_carry] == CR_NIGHTSMODE))
 			nightsfail = true;
-		else
-			testmo = testmo->tracer;
 	}
 
 	if (ziptic & GZT_EXTRA)
@@ -5142,7 +5129,7 @@ void G_DoPlayDemo(char *defdemoname)
 	memset(playeringame,0,sizeof(playeringame));
 	playeringame[0] = true;
 	P_SetRandSeed(randseed);
-	G_InitNew(false, G_BuildMapName(gamemap), true, true);
+	G_InitNew(false, G_BuildMapName(gamemap), true, true, false);
 
 	// Set skin
 	SetPlayerSkin(0, skin);

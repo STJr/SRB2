@@ -957,11 +957,17 @@ static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 #endif
 	fixed_t frac;
 	patch_t *patch;
+	INT64 overflow_test;
 
 	//Fab : R_InitSprites now sets a wad lump number
 	patch = W_CacheLumpNum(vis->patch, PU_CACHE);
 	if (!patch)
 		return;
+
+	// Check for overflow
+	overflow_test = (INT64)centeryfrac - (((INT64)vis->texturemid*vis->scale)>>FRACBITS);
+	if (overflow_test < 0) overflow_test = -overflow_test;
+	if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) return; // fixed point mult would overflow
 
 	if (vis->transmap)
 	{
@@ -1176,7 +1182,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	{
 		sprdef = &((skin_t *)thing->skin)->sprites[thing->sprite2];
 		if (rot >= sprdef->numframes) {
-			CONS_Alert(CONS_ERROR, M_GetText("R_ProjectSprite: invalid skins[\"%s\"].sprites[SPR2_%s] frame %s\n"), ((skin_t *)thing->skin)->name, spr2names[thing->sprite2], sizeu5(rot));
+			CONS_Alert(CONS_ERROR, M_GetText("R_ProjectSprite: invalid skins[\"%s\"].sprites[%sSPR2_%s] frame %s\n"), ((skin_t *)thing->skin)->name, ((thing->sprite2 & FF_SPR2SUPER) ? "FF_SPR2SUPER|": ""), spr2names[(thing->sprite2 & ~FF_SPR2SUPER)], sizeu5(rot));
 			thing->sprite = states[S_UNKNOWN].sprite;
 			thing->frame = states[S_UNKNOWN].frame;
 			sprdef = &sprites[thing->sprite];
@@ -2486,7 +2492,11 @@ static void Sk_SetDefaultValue(skin_t *skin)
 	skin->flags = 0;
 
 	strcpy(skin->realname, "Someone");
+#ifdef SKINNAMEPADDING
+	strcpy(skin->hudname, "  ???");
+#else
 	strcpy(skin->hudname, "???");
+#endif
 	strncpy(skin->charsel, "CHRSONIC", 8);
 	strncpy(skin->face, "MISSING", 8);
 	strncpy(skin->superface, "MISSING", 8);
@@ -2548,16 +2558,29 @@ void R_InitSkins(void)
 	numskins = 0;
 }
 
+UINT32 R_GetSkinAvailabilities(void)
+{
+	INT32 s;
+	UINT32 response = 0;
+
+	for (s = 0; s < MAXSKINS; s++)
+	{
+		if (skins[s].availability && unlockables[skins[s].availability - 1].unlocked)
+			response |= (1 << s);
+	}
+	return response;
+}
+
 // returns true if available in circumstances, otherwise nope
 // warning don't use with an invalid skinnum other than -1 which always returns true
-boolean R_SkinUnlock(INT32 skinnum)
+boolean R_SkinUsable(INT32 playernum, INT32 skinnum)
 {
 	return ((skinnum == -1) // Simplifies things elsewhere, since there's already plenty of checks for less-than-0...
 		|| (!skins[skinnum].availability)
-		|| (unlockables[skins[skinnum].availability - 1].unlocked)
+		|| ((playernum != -1) ? (players[playernum].availabilities & (1 << skinnum)) : (unlockables[skins[skinnum].availability - 1].unlocked))
 		|| (modeattacking) // If you have someone else's run you might as well take a look
 		|| (Playing() && (R_SkinAvailable(mapheaderinfo[gamemap-1]->forcecharacter) == skinnum)) // Force 1.
-		|| (netgame && !(server || adminplayer == consoleplayer) && (cv_forceskin.value == skinnum)) // Force 2.
+		|| (netgame && (cv_forceskin.value == skinnum)) // Force 2.
 		);
 }
 
@@ -2582,7 +2605,7 @@ void SetPlayerSkin(INT32 playernum, const char *skinname)
 	INT32 i = R_SkinAvailable(skinname);
 	player_t *player = &players[playernum];
 
-	if ((i != -1) && (!P_IsLocalPlayer(player) || R_SkinUnlock(i)))
+	if ((i != -1) && R_SkinUsable(playernum, i))
 	{
 		SetPlayerSkinByNum(playernum, i);
 		return;
@@ -2604,8 +2627,7 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 	skin_t *skin = &skins[skinnum];
 	UINT8 newcolor = 0;
 
-	if ((skinnum >= 0 && skinnum < numskins) // Make sure it exists!
-	&& (!P_IsLocalPlayer(player) || R_SkinUnlock(skinnum))) // ...but is it allowed? We must always allow external players to change skin. The server should vet that...
+	if (skinnum >= 0 && skinnum < numskins && R_SkinUsable(playernum, skinnum)) // Make sure it exists!
 	{
 		player->skin = skinnum;
 
@@ -2647,7 +2669,7 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 
 		if (player->mo)
 		{
-			if ((player->pflags & PF_NIGHTSMODE) && (skin->sprites[SPR2_NGT0].numframes == 0)) // If you don't have a sprite for flying horizontally, use the default NiGHTS skin.
+			if ((player->powers[pw_carry] == CR_NIGHTSMODE) && (skin->sprites[SPR2_NGT0].numframes == 0)) // If you don't have a sprite for flying horizontally, use the default NiGHTS skin.
 			{
 				skin = &skins[DEFAULTNIGHTSSKIN];
 				newcolor = ((skin->flags & SF_SUPER) ? skin->supercolor : skin->prefcolor);
@@ -2657,16 +2679,16 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 				player->mo->color = newcolor;
 			P_SetScale(player->mo, player->mo->scale);
 			player->mo->radius = FixedMul(skin->radius, player->mo->scale);
+
+			P_SetPlayerMobjState(player->mo, player->mo->state-states); // Prevent visual errors when switching between skins with differing number of frames
 		}
 		return;
 	}
-	else if (skinnum >= 0 && skinnum < numskins)
-		skinnum = 255; // Cheeky emulation.
 
 	if (P_IsLocalPlayer(player))
-		CONS_Alert(CONS_WARNING, M_GetText("Skin %d not found\n"), skinnum);
+		CONS_Alert(CONS_WARNING, M_GetText("Requested skin not found\n"));
 	else if(server || adminplayer == consoleplayer)
-		CONS_Alert(CONS_WARNING, "Player %d (%s) skin %d not found\n", playernum, player_names[playernum], skinnum);
+		CONS_Alert(CONS_WARNING, "Player %d (%s) skin not found\n", playernum, player_names[playernum]);
 	SetPlayerSkinByNum(playernum, 0); // not found put the sonic skin
 }
 
@@ -2694,6 +2716,12 @@ static UINT16 W_CheckForSkinMarkerInPwad(UINT16 wadid, UINT16 startlump)
 	}
 	return INT16_MAX; // not found
 }
+
+#ifdef SKINNAMEPADDING
+#define HUDNAMEWRITE(value) snprintf(skin->hudname, sizeof(skin->hudname), "%5s", value)
+#else
+#define HUDNAMEWRITE(value) STRBUFCPY(skin->hudname, value)
+#endif
 
 //
 // Find skin sprites, sounds & optional status bar face, & add them
@@ -2787,7 +2815,7 @@ void R_AddSkins(UINT16 wadnum)
 				}
 				if (!hudname)
 				{
-					STRBUFCPY(skin->hudname, skin->name);
+					HUDNAMEWRITE(skin->name);
 					strupr(skin->hudname);
 					for (value = skin->hudname; *value; value++)
 						if (*value == '_') *value = ' '; // turn _ into spaces.
@@ -2800,12 +2828,12 @@ void R_AddSkins(UINT16 wadnum)
 				for (value = skin->realname; *value; value++)
 					if (*value == '_') *value = ' '; // turn _ into spaces.
 				if (!hudname)
-					STRBUFCPY(skin->hudname, skin->realname);
+					HUDNAMEWRITE(skin->realname);
 			}
 			else if (!stricmp(stoken, "hudname"))
 			{ // Life icon name (eg. "K.T.E")
 				hudname = true;
-				STRBUFCPY(skin->hudname, value);
+				HUDNAMEWRITE(value);
 				for (value = skin->hudname; *value; value++)
 					if (*value == '_') *value = ' '; // turn _ into spaces.
 				if (!realname)
@@ -2899,8 +2927,8 @@ void R_AddSkins(UINT16 wadnum)
 			// these are uppercase so they can be concatenated with SF_
 			// 1, true, yes are all valid values
 			GETFLAG(SUPER)
-			GETFLAG(SUPERANIMS)
-			GETFLAG(SUPERSPIN)
+			GETFLAG(NOSUPERSPIN)
+			GETFLAG(NOSPINDASHDUST)
 			GETFLAG(HIRES)
 			GETFLAG(NOSKID)
 			GETFLAG(NOSPEEDADJUST)
@@ -2910,7 +2938,9 @@ void R_AddSkins(UINT16 wadnum)
 			GETFLAG(STOMPDAMAGE)
 			GETFLAG(MARIODAMAGE)
 			GETFLAG(MACHINE)
-			GETFLAG(NOSPINDASHDUST)
+			GETFLAG(DASHMODE)
+			GETFLAG(FASTEDGE)
+			GETFLAG(MULTIABILITY)
 #undef GETFLAG
 
 			else // let's check if it's a sound, otherwise error out
@@ -2956,20 +2986,35 @@ next_token:
 
 		// Add sprites
 		{
-			UINT16 z;
+			UINT16 newlastlump;
 			UINT8 sprite2;
 
 			lump++; // start after S_SKIN
 			lastlump = W_CheckNumForNamePwad("S_END",wadnum,lump); // stop at S_END
-			// old wadding practices die hard -- stop at S_SKIN or S_START if they come before S_END.
-			z = W_CheckNumForNamePwad("S_SKIN",wadnum,lump);
-			if (z < lastlump) lastlump = z;
-			z = W_CheckNumForNamePwad("S_START",wadnum,lump);
-			if (z < lastlump) lastlump = z;
 
-			// load all sprite sets we are aware of.
+			// old wadding practices die hard -- stop at S_SKIN or S_START if they come before S_END.
+			newlastlump = W_CheckNumForNamePwad("S_SKIN",wadnum,lump);
+			if (newlastlump < lastlump) lastlump = newlastlump;
+			newlastlump = W_CheckNumForNamePwad("S_START",wadnum,lump);
+			if (newlastlump < lastlump) lastlump = newlastlump;
+
+			// ...and let's handle super, too
+			newlastlump = W_CheckNumForNamePwad("S_SUPER",wadnum,lump);
+			if (newlastlump < lastlump)
+			{
+				newlastlump++;
+				// load all sprite sets we are aware of... for super!
+				for (sprite2 = 0; sprite2 < free_spr2; sprite2++)
+					R_AddSingleSpriteDef(spr2names[sprite2], &skin->sprites[FF_SPR2SUPER|sprite2], wadnum, newlastlump, lastlump);
+
+				newlastlump--;
+				lastlump = newlastlump; // okay, make the normal sprite set loading end there
+			}
+
+			// load all sprite sets we are aware of... for normal stuff.
 			for (sprite2 = 0; sprite2 < free_spr2; sprite2++)
 				R_AddSingleSpriteDef(spr2names[sprite2], &skin->sprites[sprite2], wadnum, lump, lastlump);
+
 		}
 
 		R_FlushTranslationColormapCache();
@@ -2993,6 +3038,8 @@ next_token:
 	}
 	return;
 }
+
+#undef HUDNAMEWRITE
 
 #ifdef DELFILE
 void R_DelSkins(UINT16 wadnum)

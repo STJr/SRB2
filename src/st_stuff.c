@@ -67,7 +67,7 @@ static patch_t *sborings;
 static patch_t *sboover;
 static patch_t *timeover;
 static patch_t *stlivex;
-static patch_t *rrings;
+static patch_t *sboredrings;
 static patch_t *getall; // Special Stage HUD
 static patch_t *timeup; // Special Stage HUD
 static patch_t *hunthoming[6];
@@ -143,7 +143,7 @@ hudinfo_t hudinfo[NUMHUDITEMS] =
 	{  16,  10}, // HUD_SCORE
 	{ 128,  10}, // HUD_SCORENUM
 
-	{  17,  26}, // HUD_TIME
+	{  16,  26}, // HUD_TIME
 	{ 136,  10}, // HUD_TIMESPLIT
 	{  88,  26}, // HUD_MINUTES
 	{ 188,  10}, // HUD_MINUTESSPLIT
@@ -251,16 +251,19 @@ void ST_LoadGraphics(void)
 	//                   but load them in R_AddSkins, that gets called
 	//                   first anyway
 	// cache the status bar overlay icons (fullscreen mode)
-	sborings = W_CachePatchName("SBORINGS", PU_HUDGFX);
-	sboscore = W_CachePatchName("SBOSCORE", PU_HUDGFX);
+
+	// Prefix "STT" is whitelisted (doesn't trigger ISGAMEMODIFIED), btw
+	sborings = W_CachePatchName("STTRINGS", PU_HUDGFX);
+	sboredrings = W_CachePatchName("STTRRING", PU_HUDGFX);
+	sboscore = W_CachePatchName("STTSCORE", PU_HUDGFX);
+	sbotime = W_CachePatchName("STTTIME", PU_HUDGFX); // Time logo
+	sbocolon = W_CachePatchName("STTCOLON", PU_HUDGFX); // Colon for time
+	sboperiod = W_CachePatchName("STTPERIO", PU_HUDGFX); // Period for time centiseconds
+
 	sboover = W_CachePatchName("SBOOVER", PU_HUDGFX);
 	timeover = W_CachePatchName("TIMEOVER", PU_HUDGFX);
 	stlivex = W_CachePatchName("STLIVEX", PU_HUDGFX);
 	livesback = W_CachePatchName("STLIVEBK", PU_HUDGFX);
-	rrings = W_CachePatchName("RRINGS", PU_HUDGFX);
-	sbotime = W_CachePatchName("SBOTIME", PU_HUDGFX); // Time logo
-	sbocolon = W_CachePatchName("SBOCOLON", PU_HUDGFX); // Colon for time
-	sboperiod = W_CachePatchName("SBOPERIO", PU_HUDGFX); // Period for time centiseconds
 	nrec_timer = W_CachePatchName("NGRTIMER", PU_HUDGFX); // Timer for NiGHTS
 	getall = W_CachePatchName("GETALL", PU_HUDGFX); // Special Stage HUD
 	timeup = W_CachePatchName("TIMEUP", PU_HUDGFX); // Special Stage HUD
@@ -578,16 +581,16 @@ static void ST_drawDebugInfo(void)
 	{
 		V_DrawRightAlignedString(320, height - 104, V_MONOSPACE, va("SHIELD: %5x", stplyr->powers[pw_shield]));
 		V_DrawRightAlignedString(320, height - 96,  V_MONOSPACE, va("SCALE: %5d%%", (stplyr->mo->scale*100)/FRACUNIT));
-		V_DrawRightAlignedString(320, height - 88,  V_MONOSPACE, va("DASH: %3d/%3d", stplyr->dashspeed>>FRACBITS, stplyr->maxdash>>FRACBITS));
+		V_DrawRightAlignedString(320, height - 88,  V_MONOSPACE, va("CARRY: %5x", stplyr->powers[pw_carry]));
 		V_DrawRightAlignedString(320, height - 80,  V_MONOSPACE, va("AIR: %4d, %3d", stplyr->powers[pw_underwater], stplyr->powers[pw_spacetime]));
 
 		// Flags
 		V_DrawRightAlignedString(304-92, height - 72, V_MONOSPACE, "PF:");
-		V_DrawString(304-90,             height - 72, (stplyr->jumping) ? V_GREENMAP : V_REDMAP, "JM");
+		V_DrawString(304-90,             height - 72, (stplyr->pflags & PF_STARTJUMP) ? V_GREENMAP : V_REDMAP, "SJ");
 		V_DrawString(304-72,             height - 72, (stplyr->pflags & PF_JUMPED) ? V_GREENMAP : V_REDMAP, "JD");
 		V_DrawString(304-54,             height - 72, (stplyr->pflags & PF_SPINNING) ? V_GREENMAP : V_REDMAP, "SP");
 		V_DrawString(304-36,             height - 72, (stplyr->pflags & PF_STARTDASH) ? V_GREENMAP : V_REDMAP, "ST");
-		V_DrawString(304-18,                height - 72, (stplyr->pflags & PF_THOKKED) ? V_GREENMAP : V_REDMAP, "TH");
+		V_DrawString(304-18,             height - 72, (stplyr->pflags & PF_THOKKED) ? V_GREENMAP : V_REDMAP, "TH");
 		V_DrawString(304,                height - 72, (stplyr->pflags & PF_SHIELDABILITY) ? V_GREENMAP : V_REDMAP, "SH");
 
 		V_DrawRightAlignedString(320, height - 64, V_MONOSPACE, va("CEILZ: %6d", stplyr->mo->ceilingz>>FRACBITS));
@@ -681,7 +684,7 @@ static inline void ST_drawRings(void)
 {
 	INT32 ringnum = max(stplyr->rings, 0);
 
-	ST_DrawPatchFromHudWS(HUD_RINGS, ((stplyr->rings <= 0 && leveltime/5 & 1) ? rrings : sborings));
+	ST_DrawPatchFromHudWS(HUD_RINGS, ((stplyr->rings <= 0 && leveltime/5 & 1) ? sboredrings : sborings));
 
 	if (objectplacing)
 		ringnum = op_currentdoomednum;
@@ -714,7 +717,7 @@ static void ST_drawLives(void)
 		// skincolor face/super
 		UINT8 *colormap = R_GetTranslationColormap(stplyr->skin, stplyr->mo->color, GTC_CACHE);
 		patch_t *face = faceprefix[stplyr->skin];
-		if (stplyr->powers[pw_super] || stplyr->pflags & PF_NIGHTSMODE)
+		if ((stplyr->powers[pw_super] && (stplyr->mo->state < &states[S_PLAY_SUPER_TRANS] || stplyr->mo->state > &states[S_PLAY_SUPER_TRANS9])) || (stplyr->powers[pw_carry] == CR_NIGHTSMODE && skins[stplyr->skin].flags & SF_SUPER))
 			face = superprefix[stplyr->skin];
 		V_DrawSmallMappedPatch(hudinfo[HUD_LIVESPIC].x, hudinfo[HUD_LIVESPIC].y + (v_splitflag ? -12 : 0),
 			V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS|v_splitflag,face, colormap);
@@ -1077,7 +1080,7 @@ static void ST_drawNiGHTSHUD(void)
 #ifdef HAVE_BLUA
 	LUA_HudEnabled(hud_nightsdrill) &&
 #endif
-	stplyr->pflags & PF_NIGHTSMODE)
+	stplyr->powers[pw_carry] == CR_NIGHTSMODE)
 	{
 		INT32 locx, locy;
 		INT32 dfill;
@@ -1163,7 +1166,7 @@ static void ST_drawNiGHTSHUD(void)
 		INT32 i;
 		total_ringcount = 0;
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] /*&& players[i].pflags & PF_NIGHTSMODE*/ && players[i].rings)
+			if (playeringame[i] /*&& players[i].powers[pw_carry] == CR_NIGHTSMODE*/ && players[i].rings)
 				total_ringcount += players[i].rings;
 	}
 	else
@@ -1296,7 +1299,7 @@ static void ST_drawNiGHTSHUD(void)
 			tic_t lowest_time = stplyr->nightstime;
 			INT32 i;
 			for (i = 0; i < MAXPLAYERS; i++)
-				if (playeringame[i] && players[i].pflags & PF_NIGHTSMODE && players[i].nightstime < lowest_time)
+				if (playeringame[i] && players[i].powers[pw_carry] == CR_NIGHTSMODE && players[i].nightstime < lowest_time)
 					lowest_time = players[i].nightstime;
 			realnightstime = lowest_time/TICRATE;
 		}
@@ -1483,14 +1486,30 @@ static void ST_drawMatchHUD(void)
 
 static inline void ST_drawRaceHUD(void)
 {
-	if (leveltime > TICRATE && leveltime <= 2*TICRATE)
-		V_DrawScaledPatch(SCX((BASEVIDWIDTH - SHORT(race3->width))/2), (INT32)(SCY(BASEVIDHEIGHT/2)), V_NOSCALESTART, race3);
-	else if (leveltime > 2*TICRATE && leveltime <= 3*TICRATE)
-		V_DrawScaledPatch(SCX((BASEVIDWIDTH - SHORT(race2->width))/2), (INT32)(SCY(BASEVIDHEIGHT/2)), V_NOSCALESTART, race2);
-	else if (leveltime > 3*TICRATE && leveltime <= 4*TICRATE)
-		V_DrawScaledPatch(SCX((BASEVIDWIDTH - SHORT(race1->width))/2), (INT32)(SCY(BASEVIDHEIGHT/2)), V_NOSCALESTART, race1);
-	else if (leveltime > 4*TICRATE && leveltime <= 5*TICRATE)
-		V_DrawScaledPatch(SCX((BASEVIDWIDTH - SHORT(racego->width))/2), (INT32)(SCY(BASEVIDHEIGHT/2)), V_NOSCALESTART, racego);
+	if (leveltime >= TICRATE && leveltime < 5*TICRATE)
+	{
+		INT32 height = (BASEVIDHEIGHT/2);
+		INT32 bounce = (leveltime % TICRATE);
+		patch_t *racenum;
+		switch (leveltime/TICRATE)
+		{
+			case 1:
+				racenum = race3;
+				break;
+			case 2:
+				racenum = race2;
+				break;
+			case 3:
+				racenum = race1;
+				break;
+			default:
+				racenum = racego;
+				break;
+		}
+		if (bounce < 3)
+			height -= (2 - bounce);
+		V_DrawScaledPatch(SCX((BASEVIDWIDTH - SHORT(racenum->width))/2), (INT32)(SCY(height)), V_NOSCALESTART, racenum);
+	}
 
 	if (circuitmap)
 	{

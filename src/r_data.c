@@ -141,11 +141,14 @@ static INT32 tidcachelen = 0;
 // R_DrawColumnInCache
 // Clip and draw a column from a patch into a cached post.
 //
-static inline void R_DrawColumnInCache(column_t *patch, UINT8 *cache, INT32 originy, INT32 cacheheight)
+static inline void R_DrawColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
 {
 	INT32 count, position;
 	UINT8 *source;
 	INT32 topdelta, prevdelta = -1;
+	INT32 originy = originPatch->originy;
+
+	(void)patchheight; // This parameter is unused
 
 	while (patch->topdelta != 0xff)
 	{
@@ -174,11 +177,16 @@ static inline void R_DrawColumnInCache(column_t *patch, UINT8 *cache, INT32 orig
 	}
 }
 
-static inline void R_DrawFlippedColumnInCache(column_t *patch, UINT8 *cache, INT32 originy, INT32 cacheheight, INT32 patchheight)
+//
+// R_DrawFlippedColumnInCache
+// Similar to R_DrawColumnInCache; it draws the column inverted, however.
+//
+static inline void R_DrawFlippedColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
 {
 	INT32 count, position;
 	UINT8 *source, *dest;
 	INT32 topdelta, prevdelta = -1;
+	INT32 originy = originPatch->originy;
 
 	while (patch->topdelta != 0xff)
 	{
@@ -206,6 +214,95 @@ static inline void R_DrawFlippedColumnInCache(column_t *patch, UINT8 *cache, INT
 		{
 			for (; dest < cache + position + count; --source)
 				*dest++ = *source;
+		}
+
+		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
+	}
+}
+
+//
+// R_DrawTransColumnInCache
+// Draws a translucent column into the cache, applying a half-cooked equation to get a proper translucency value (Needs code in R_GenerateTexture()).
+//
+static inline void R_DrawTransColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
+{
+	INT32 count, position;
+	UINT8 *source, *dest;
+	UINT8 *mytransmap = transtables + ((8*(originPatch->alpha) + 255/8)/(255 - 255/11) << FF_TRANSSHIFT); // The equation's not exact but it works as intended. I'll call it a day for now.
+	INT32 topdelta, prevdelta = -1;
+	INT32 originy = originPatch->originy;
+
+	(void)patchheight; // This parameter is unused
+
+	while (patch->topdelta != 0xff)
+	{
+		topdelta = patch->topdelta;
+		if (topdelta <= prevdelta)
+			topdelta += prevdelta;
+		prevdelta = topdelta;
+		source = (UINT8 *)patch + 3;
+		count = patch->length;
+		position = originy + topdelta;
+
+		if (position < 0)
+		{
+			count += position;
+			source -= position; // start further down the column
+			position = 0;
+		}
+
+		if (position + count > cacheheight)
+			count = cacheheight - position;
+
+		dest = cache + position;
+		if (count > 0)
+		{
+			for (; dest < cache + position + count; source++, dest++)
+				if (*dest != 0xFF) *dest = *(mytransmap + ((*dest)<<8) + (*source));
+		}
+
+		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
+	}
+}
+
+//
+// R_DrawTransColumnInCache
+// Similar to the one above except that the column is inverted.
+//
+static inline void R_DrawTransFlippedColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
+{
+	INT32 count, position;
+	UINT8 *source, *dest;
+	UINT8 *mytransmap = transtables + ((8*(originPatch->alpha) + 255/8)/(255 - 255/11) << FF_TRANSSHIFT); // The equation's not exact but it works as intended. I'll call it a day for now.
+	INT32 topdelta, prevdelta = -1;
+	INT32 originy = originPatch->originy;
+
+	while (patch->topdelta != 0xff)
+	{
+		topdelta = patch->topdelta;
+		if (topdelta <= prevdelta)
+			topdelta += prevdelta;
+		prevdelta = topdelta;
+		topdelta = patchheight-patch->length-topdelta;
+		source = (UINT8 *)patch + 2 + patch->length; // patch + 3 + (patch->length-1)
+		count = patch->length;
+		position = originy + topdelta;
+
+		if (position < 0)
+		{
+			count += position;
+			source += position; // start further UP the column
+			position = 0;
+		}
+
+		if (position + count > cacheheight)
+			count = cacheheight - position;
+
+		dest = cache + position;
+		if (count > 0)
+		{
+			for (; dest < cache + position + count; --source, dest++)
+				if (*dest != 0xFF) *dest = *(mytransmap + ((*dest)<<8) + (*source));
 		}
 
 		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
@@ -324,6 +421,18 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	// Composite the columns together.
 	for (i = 0, patch = texture->patches; i < texture->patchcount; i++, patch++)
 	{
+		static void (*ColumnDrawerPointer)(column_t *, UINT8 *, texpatch_t *, INT32, INT32); // Column drawing function pointer.
+		if ((patch->style == AST_TRANSLUCENT) && (patch->alpha <= (10*255/11))) // Alpha style set to translucent? Is the alpha small enough for translucency?
+		{
+			if (patch->alpha < 255/11) // Is the patch way too translucent? Don't render then.
+				continue;
+			ColumnDrawerPointer = (patch->flip & 2) ? R_DrawTransFlippedColumnInCache : R_DrawTransColumnInCache;
+		}
+		else
+		{
+			ColumnDrawerPointer = (patch->flip & 2) ? R_DrawFlippedColumnInCache : R_DrawColumnInCache;
+		}
+
 		realpatch = W_CacheLumpNumPwad(patch->wad, patch->lump, PU_CACHE);
 		x1 = patch->originx;
 		width = SHORT(realpatch->width);
@@ -347,10 +456,7 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 
 			// generate column ofset lookup
 			colofs[x] = LONG((x * texture->height) + (texture->width*4));
-			if (patch->flip & 2)
-				R_DrawFlippedColumnInCache(patchcol, block + LONG(colofs[x]), patch->originy, texture->height, height);
-			else
-				R_DrawColumnInCache(patchcol, block + LONG(colofs[x]), patch->originy, texture->height);
+			ColumnDrawerPointer(patchcol, block + LONG(colofs[x]), patch, texture->height, height);
 		}
 	}
 
@@ -490,11 +596,11 @@ void R_LoadTextures(void)
 	// Allocate texture column offset table.
 	texturecolumnofs = (void *)((UINT8 *)textures + (numtextures * sizeof(void *)));
 	// Allocate texture referencing cache.
-	texturecache     = (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 2));
+	texturecache	 = (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 2));
 	// Allocate texture width mask table.
 	texturewidthmask = (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 3));
 	// Allocate texture height mask table.
-	textureheight    = (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 4));
+	textureheight	= (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 4));
 	// Create translation table for global animation.
 	texturetranslation = Z_Malloc((numtextures + 1) * sizeof(*texturetranslation), PU_STATIC, NULL);
 
@@ -588,6 +694,8 @@ static texpatch_t *R_ParsePatch(boolean actuallyLoadPatch)
 	INT16 patchXPos;
 	INT16 patchYPos;
 	UINT8 flip = 0;
+	UINT8 alpha = 255;
+	enum patchalphastyle style = AST_COPY;
 	texpatch_t *resultPatch = NULL;
 	lumpnum_t patchLumpNum;
 
@@ -703,7 +811,20 @@ static texpatch_t *R_ParsePatch(boolean actuallyLoadPatch)
 			}
 			while (strcmp(texturesToken,"}")!=0)
 			{
-				if (stricmp(texturesToken, "FLIPX")==0)
+				if (stricmp(texturesToken, "ALPHA")==0)
+				{
+					Z_Free(texturesToken);
+					texturesToken = M_GetToken(NULL);
+					alpha = 255*strtof(texturesToken, NULL);
+				}
+				else if (stricmp(texturesToken, "STYLE")==0)
+				{
+					Z_Free(texturesToken);
+					texturesToken = M_GetToken(NULL);
+					if(stricmp(texturesToken, "TRANSLUCENT")==0)
+						style = AST_TRANSLUCENT;
+				}
+				else if (stricmp(texturesToken, "FLIPX")==0)
 					flip |= 1;
 				else if (stricmp(texturesToken, "FLIPY")==0)
 					flip |= 2;
@@ -736,6 +857,8 @@ static texpatch_t *R_ParsePatch(boolean actuallyLoadPatch)
 		resultPatch->lump = patchLumpNum & 65535;
 		resultPatch->wad = patchLumpNum>>16;
 		resultPatch->flip = flip;
+		resultPatch->alpha = alpha;
+		resultPatch->style = style;
 		// Clean up a little after ourselves
 		Z_Free(patchName);
 		// Then return it

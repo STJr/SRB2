@@ -458,6 +458,7 @@ typedef struct
 	INT32 control;       ///< Control sector used to control plane positions.
 	fixed_t last_height; ///< Last known height of control sector.
 	fixed_t speed;       ///< Plane movement speed.
+	UINT8 reverse;       ///< Move in reverse direction to control sector?
 	/** Types of plane displacement effects.
 	*/
 	enum

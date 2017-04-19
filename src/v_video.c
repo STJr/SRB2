@@ -325,6 +325,13 @@ static inline UINT8 transmappedpdraw(const UINT8 *dest, const UINT8 *source, fix
 {
 	return *(v_translevel + (((*(v_colormap + source[ofs>>FRACBITS]))<<8)&0xff00) + (*dest&0xff));
 }
+static inline UINT8 staticpdraw(const UINT8 *dest, const UINT8 *source, fixed_t ofs)
+{
+	UINT8 val = source[ofs>>FRACBITS];
+	(void)dest;
+	if (val < 7) return val;
+	return M_RandomKey(7+1)+(val-7);//M_RandomByte();
+}
 
 // Draws a patch scaled to arbitrary size.
 void V_DrawFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t *patch, const UINT8 *colormap)
@@ -356,22 +363,30 @@ void V_DrawFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t 
 	patchdrawfunc = standardpdraw;
 
 	v_translevel = NULL;
-	if ((alphalevel = ((scrn & V_ALPHAMASK) >> V_ALPHASHIFT)))
+	if ((alphalevel = ((scrn & V_ALPHAMASK) >> V_ALPHASHIFT)) == 12) // static
 	{
-		if (alphalevel == 13)
-			alphalevel = hudminusalpha[cv_translucenthud.value];
-		else if (alphalevel == 14)
-			alphalevel = 10 - cv_translucenthud.value;
-		else if (alphalevel == 15)
-			alphalevel = hudplusalpha[cv_translucenthud.value];
-
-		if (alphalevel >= 10)
-			return; // invis
+		alphalevel = 0;
+		patchdrawfunc = staticpdraw;
 	}
-	if (alphalevel)
+	else
 	{
-		v_translevel = transtables + ((alphalevel-1)<<FF_TRANSSHIFT);
-		patchdrawfunc = translucentpdraw;
+		if (alphalevel)
+		{
+			if (alphalevel == 13)
+				alphalevel = hudminusalpha[cv_translucenthud.value];
+			else if (alphalevel == 14)
+				alphalevel = 10 - cv_translucenthud.value;
+			else if (alphalevel == 15)
+				alphalevel = hudplusalpha[cv_translucenthud.value];
+
+			if (alphalevel >= 10)
+				return; // invis
+		}
+		if (alphalevel)
+		{
+			v_translevel = transtables + ((alphalevel-1)<<FF_TRANSSHIFT);
+			patchdrawfunc = translucentpdraw;
+		}
 	}
 
 	v_colormap = NULL;

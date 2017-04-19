@@ -404,7 +404,7 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_SPLA
 	&lspr[NOLIGHT],     // SPR_SMOK
 	&lspr[NOLIGHT],     // SPR_BUBL
-	&lspr[SUPERSPARK_L], // SPR_WZAP
+	&lspr[RINGLIGHT_L], // SPR_WZAP
 	&lspr[SUPERSPARK_L], // SPR_TFOG
 	&lspr[NIGHTSLIGHT_L],     // SPR_SEED // Sonic CD flower seed
 	&lspr[NOLIGHT],     // SPR_PRTL
@@ -412,8 +412,11 @@ light_t *t_lspr[NUMSPRITES] =
 	// Game Indicators
 	&lspr[NOLIGHT],     // SPR_SCOR
 	&lspr[NOLIGHT],     // SPR_DRWN
+	&lspr[NOLIGHT],     // SPR_LCKN
 	&lspr[NOLIGHT],     // SPR_TTAG
 	&lspr[NOLIGHT],     // SPR_GFLG
+
+	&lspr[NOLIGHT],     // SPR_CORK
 
 	// Ring Weapons
 	&lspr[RINGLIGHT_L],     // SPR_RRNG

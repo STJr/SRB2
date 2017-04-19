@@ -194,10 +194,10 @@ const UINT8 Color_Opposite[MAXSKINCOLORS*2] =
 	SKINCOLOR_BROWN,8,   	// SKINCOLOR_PEACH - ditto
 	SKINCOLOR_PEACH,8,   	// SKINCOLOR_BROWN - ditto
 	SKINCOLOR_GREEN,5,  	// SKINCOLOR_RED
-	SKINCOLOR_CYAN,8,   	// SKINCOLOR_CRIMSON - ditto
-	SKINCOLOR_BLUE,12,  	// SKINCOLOR_ORANGE
+	SKINCOLOR_CYAN,8,  		// SKINCOLOR_CRIMSON - ditto
+	SKINCOLOR_BLUE,11,  	// SKINCOLOR_ORANGE
 	SKINCOLOR_TAN,8,   		// SKINCOLOR_RUST - ditto
-	SKINCOLOR_LAVENDER,8,   // SKINCOLOR_GOLD - ditto
+	SKINCOLOR_LAVENDER,8,	// SKINCOLOR_GOLD
 	SKINCOLOR_TEAL,8,   	// SKINCOLOR_YELLOW - ditto
 	SKINCOLOR_RUST,8,   	// SKINCOLOR_TAN - ditto
 	SKINCOLOR_MAGENTA,3, 	// SKINCOLOR_MOSS
@@ -206,15 +206,15 @@ const UINT8 Color_Opposite[MAXSKINCOLORS*2] =
 	SKINCOLOR_PASTEL,8,   	// SKINCOLOR_EMERALD - ditto
 	SKINCOLOR_ROSY,8,   	// SKINCOLOR_AQUA - ditto
 	SKINCOLOR_YELLOW,8,   	// SKINCOLOR_TEAL - ditto
-	SKINCOLOR_CRIMSON,8,   	// SKINCOLOR_CYAN - ditto
+	SKINCOLOR_CRIMSON,8,    // SKINCOLOR_CYAN - ditto
 	SKINCOLOR_ORANGE,9, 	// SKINCOLOR_BLUE
 	SKINCOLOR_PINK,8,   	// SKINCOLOR_AZURE - ditto
 	SKINCOLOR_EMERALD,8,   	// SKINCOLOR_PASTEL - ditto
-	SKINCOLOR_PERIDOT,10,   // SKINCOLOR_PURPLE - ditto
-	SKINCOLOR_GOLD,8,   	// SKINCOLOR_LAVENDER - ditto
+	SKINCOLOR_PERIDOT,10,   // SKINCOLOR_PURPLE
+	SKINCOLOR_GOLD,10,      // SKINCOLOR_LAVENDER
 	SKINCOLOR_MOSS,8,   	// SKINCOLOR_MAGENTA - ditto
 	SKINCOLOR_AZURE,8,   	// SKINCOLOR_PINK - ditto
-	SKINCOLOR_AQUA,14   	// SKINCOLOR_ROSY - ditto
+	SKINCOLOR_AQUA,14   	// SKINCOLOR_ROSY
 };
 
 CV_PossibleValue_t Color_cons_t[MAXSKINCOLORS+1];
@@ -420,11 +420,11 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 			if (i <= 11)
 				dest_colormap[starttranscolor + i] = (UINT8)(skinbasecolors[color - 1] + (i >> 1));
 			else if (i == 12)
-				dest_colormap[starttranscolor + i] = 0x2c; // Darkest 4
-			else if (i == 13)
-				dest_colormap[starttranscolor + i] = 0xfe; // Darkest 3
+				dest_colormap[starttranscolor + i] = 0x2c;
+			else if (i <= 14)
+				dest_colormap[starttranscolor + i] = 0x2d;
 			else
-				dest_colormap[starttranscolor + i] = 0x2d + i - 14; // Darkest 2 and 1
+				dest_colormap[starttranscolor + i] = 0x48;
 		}
 		break;
 
@@ -530,7 +530,7 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 		for (i = 0; i < SKIN_RAMP_LENGTH; i++)
 		{
 			if (i == 15)
-				dest_colormap[starttranscolor + i] = 0x1F; //Darkest 1
+				dest_colormap[starttranscolor + i] = 0xfe; //Darkest 1
 			else if (i == 14)
 				dest_colormap[starttranscolor + i] = 0xfd; //Darkest 2
 			else

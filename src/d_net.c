@@ -49,7 +49,9 @@ doomcom_t *doomcom = NULL;
 /// \brief network packet data, points inside doomcom
 doomdata_t *netbuffer = NULL;
 
+#ifdef DEBUGFILE
 FILE *debugfile = NULL; // put some net info in a file during the game
+#endif
 
 #define MAXREBOUND 8
 static doomdata_t reboundstore[MAXREBOUND];
@@ -991,11 +993,13 @@ void Command_Droprate(void)
 	packetdroprate = droprate;
 }
 
+#ifndef NONET
 static boolean ShouldDropPacket(void)
 {
 	return (packetdropquantity[netbuffer->packettype])
 		|| (packetdroprate != 0 && rand() < (RAND_MAX * (packetdroprate / 100.f))) || packetdroprate == 100;
 }
+#endif
 #endif
 
 //
