@@ -38,14 +38,39 @@ UINT8 *screens[5];
 // screens[3] = fade screen start
 // screens[4] = fade screen end, postimage tempoarary buffer
 
-static CV_PossibleValue_t gamma_cons_t[] = {{-5, "MIN"}, {5, "MAX"}, {0, NULL}};
-static void CV_usegamma_OnChange(void);
-
 consvar_t cv_ticrate = {"showfps", "No", 0, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_usegamma = {"gamma", "0", CV_SAVE|CV_CALL, gamma_cons_t, CV_usegamma_OnChange, 0, NULL, NULL, 0, 0, NULL};
+
+static void CV_palette_OnChange(void);
+
+static CV_PossibleValue_t gamma_cons_t[] = {{-15, "MIN"}, {5, "MAX"}, {0, NULL}};
+consvar_t cv_globalgamma = {"gamma", "0", CV_SAVE|CV_CALL, gamma_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 static CV_PossibleValue_t saturation_cons_t[] = {{0, "MIN"}, {10, "MAX"}, {0, NULL}};
-consvar_t cv_usesaturation = {"saturation", "10", CV_SAVE|CV_CALL, saturation_cons_t, CV_usegamma_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_globalsaturation = {"saturation", "10", CV_SAVE|CV_CALL, saturation_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
+
+#define huecoloursteps 4
+
+static CV_PossibleValue_t hue_cons_t[] = {{0, "MIN"}, {(huecoloursteps*6)-1, "MAX"}, {0, NULL}};
+consvar_t cv_rhue = {"rhue",  "0", CV_SAVE|CV_CALL, hue_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_yhue = {"yhue",  "4", CV_SAVE|CV_CALL, hue_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_ghue = {"ghue",  "8", CV_SAVE|CV_CALL, hue_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_chue = {"chue", "12", CV_SAVE|CV_CALL, hue_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_bhue = {"bhue", "16", CV_SAVE|CV_CALL, hue_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_mhue = {"mhue", "20", CV_SAVE|CV_CALL, hue_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
+
+consvar_t cv_rgamma = {"rgamma", "0", CV_SAVE|CV_CALL, gamma_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_ygamma = {"ygamma", "0", CV_SAVE|CV_CALL, gamma_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_ggamma = {"ggamma", "0", CV_SAVE|CV_CALL, gamma_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_cgamma = {"cgamma", "0", CV_SAVE|CV_CALL, gamma_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_bgamma = {"bgamma", "0", CV_SAVE|CV_CALL, gamma_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_mgamma = {"mgamma", "0", CV_SAVE|CV_CALL, gamma_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
+
+consvar_t cv_rsaturation = {"rsaturation", "10", CV_SAVE|CV_CALL, saturation_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_ysaturation = {"ysaturation", "10", CV_SAVE|CV_CALL, saturation_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_gsaturation = {"gsaturation", "10", CV_SAVE|CV_CALL, saturation_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_csaturation = {"csaturation", "10", CV_SAVE|CV_CALL, saturation_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_bsaturation = {"bsaturation", "10", CV_SAVE|CV_CALL, saturation_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_msaturation = {"msaturation", "10", CV_SAVE|CV_CALL, saturation_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 static CV_PossibleValue_t constextsize_cons_t[] = {
 	{V_NOSCALEPATCH, "Small"}, {V_SMALLSCALEPATCH, "Medium"}, {V_MEDSCALEPATCH, "Large"}, {0, "Huge"},
@@ -124,53 +149,135 @@ static boolean InitCube(void)
 			}
 		}
 	};
+	float desatur[3]; // grey
+	float globalgammamul, globalgammaoffs;
+	boolean doinggamma;
 
-	if (cv_usegamma.value)
-	{
+#define diffcons(cv) (cv.value != atoi(cv.defaultvalue))
+
+	doinggamma = diffcons(cv_globalgamma);
+
 #define gammascale 8
-		float gammamul = (255 - (gammascale*abs(cv_usegamma.value)))/255.0;
-		float gammaoffs = ((cv_usegamma.value > 0) ? ((gammascale*cv_usegamma.value)/255.0) : 0.0);
-#undef gammascale
+	globalgammamul = (cv_globalgamma.value ? ((255 - (gammascale*abs(cv_globalgamma.value)))/255.0) : 1.0);
+	globalgammaoffs = ((cv_globalgamma.value > 0) ? ((gammascale*cv_globalgamma.value)/255.0) : 0.0);
+	desatur[0] = desatur[1] = desatur[2] = globalgammaoffs + (0.33*globalgammamul);
 
-		apply = true;
-
-		#define dogamma(i, j, k, l) \
-			working[i][j][k][l]*= gammamul;\
-			working[i][j][k][l] += gammaoffs
-		for (q = 0; q < 3; q++)
-		{
-			dogamma(0, 0, 0, q);
-			dogamma(1, 0, 0, q);
-			dogamma(0, 1, 0, q);
-			dogamma(1, 1, 0, q);
-			dogamma(0, 0, 1, q);
-			dogamma(1, 0, 1, q);
-			dogamma(0, 1, 1, q);
-			dogamma(1, 1, 1, q);
-		}
-#undef dogamma
-	}
-
-	if (cv_usesaturation.value != 10)
+	if (doinggamma
+		|| diffcons(cv_rhue)
+		|| diffcons(cv_yhue)
+		|| diffcons(cv_ghue)
+		|| diffcons(cv_chue)
+		|| diffcons(cv_bhue)
+		|| diffcons(cv_mhue)
+		|| diffcons(cv_rgamma)
+		|| diffcons(cv_ygamma)
+		|| diffcons(cv_ggamma)
+		|| diffcons(cv_cgamma)
+		|| diffcons(cv_bgamma)
+		|| diffcons(cv_mgamma))
 	{
-		float desatur[3] = {0.33, 0.33, 0.33}; // grey
-		float work = (cv_usesaturation.value/10.0);
+		float mod, tempgammamul, tempgammaoffs;
 
 		apply = true;
+
+		working[0][0][0][0] = working[0][0][0][1] = working[0][0][0][2] = globalgammaoffs;
+		working[1][1][1][0] = working[1][1][1][1] = working[1][1][1][2] = globalgammaoffs+globalgammamul;
+
+#define dohue(hue, gamma, loc) \
+		tempgammamul = (gamma ? ((255 - (gammascale*abs(gamma)))/255.0)*globalgammamul : globalgammamul);\
+		tempgammaoffs = ((gamma > 0) ? ((gammascale*gamma)/255.0) + globalgammaoffs : globalgammaoffs);\
+		mod = ((hue % huecoloursteps)*(tempgammamul)/huecoloursteps);\
+		switch (hue/huecoloursteps)\
+		{\
+			case 0:\
+			default:\
+				loc[0] = tempgammaoffs+tempgammamul;\
+				loc[1] = tempgammaoffs+mod;\
+				loc[2] = tempgammaoffs;\
+				break;\
+			case 1:\
+				loc[0] = tempgammaoffs+tempgammamul-mod;\
+				loc[1] = tempgammaoffs+tempgammamul;\
+				loc[2] = tempgammaoffs;\
+				break;\
+			case 2:\
+				loc[0] = tempgammaoffs;\
+				loc[1] = tempgammaoffs+tempgammamul;\
+				loc[2] = tempgammaoffs+mod;\
+				break;\
+			case 3:\
+				loc[0] = tempgammaoffs;\
+				loc[1] = tempgammaoffs+tempgammamul-mod;\
+				loc[2] = tempgammaoffs+tempgammamul;\
+				break;\
+			case 4:\
+				loc[0] = tempgammaoffs+mod;\
+				loc[1] = tempgammaoffs;\
+				loc[2] = tempgammaoffs+tempgammamul;\
+				break;\
+			case 5:\
+				loc[0] = tempgammaoffs+tempgammamul;\
+				loc[1] = tempgammaoffs;\
+				loc[2] = tempgammaoffs+tempgammamul-mod;\
+				break;\
+		}
+		dohue(cv_rhue.value, cv_rgamma.value, working[1][0][0]);
+		dohue(cv_yhue.value, cv_ygamma.value, working[1][1][0]);
+		dohue(cv_ghue.value, cv_ggamma.value, working[0][1][0]);
+		dohue(cv_chue.value, cv_cgamma.value, working[0][1][1]);
+		dohue(cv_bhue.value, cv_bgamma.value, working[0][0][1]);
+		dohue(cv_mhue.value, cv_mgamma.value, working[1][0][1]);
+#undef dohue
+	}
 
 #define dosaturation(a, e) a = ((1 - work)*e + work*a)
+#define docvsat(cv_sat, hue, gamma, r, g, b) \
+	if diffcons(cv_sat)\
+	{\
+		float work, mod, tempgammamul, tempgammaoffs;\
+		apply = true;\
+		work = (cv_sat.value/10.0);\
+		mod = ((hue % huecoloursteps)*(1.0)/huecoloursteps);\
+		if (hue & huecoloursteps)\
+			mod = 2-mod;\
+		else\
+			mod += 1;\
+		tempgammamul = (gamma ? ((255 - (gammascale*abs(gamma)))/255.0)*globalgammamul : globalgammamul);\
+		tempgammaoffs = ((gamma > 0) ? ((gammascale*gamma)/255.0) + globalgammaoffs : globalgammaoffs);\
+		for (q = 0; q < 3; q++)\
+			dosaturation(working[r][g][b][q], (tempgammaoffs+(desatur[q]*mod*tempgammamul)));\
+	}
+
+	docvsat(cv_rsaturation, cv_rhue.value, cv_rgamma.value, 1, 0, 0);
+	docvsat(cv_ysaturation, cv_yhue.value, cv_ygamma.value, 1, 1, 0);
+	docvsat(cv_gsaturation, cv_ghue.value, cv_ggamma.value, 0, 1, 0);
+	docvsat(cv_csaturation, cv_chue.value, cv_cgamma.value, 0, 1, 1);
+	docvsat(cv_bsaturation, cv_bhue.value, cv_bgamma.value, 0, 0, 1);
+	docvsat(cv_msaturation, cv_mhue.value, cv_mgamma.value, 1, 0, 1);
+
+#undef gammascale
+
+	if diffcons(cv_globalsaturation)
+	{
+		float work = (cv_globalsaturation.value/10.0);
+
+		apply = true;
+
 		for (q = 0; q < 3; q++)
 		{
-			dosaturation(working[0][0][1][q], desatur[q]);
-			dosaturation(working[0][1][0][q], desatur[q]);
 			dosaturation(working[1][0][0][q], desatur[q]);
+			dosaturation(working[0][1][0][q], desatur[q]);
+			dosaturation(working[0][0][1][q], desatur[q]);
 
 			dosaturation(working[1][1][0][q], 2*desatur[q]);
-			dosaturation(working[1][0][1][q], 2*desatur[q]);
 			dosaturation(working[0][1][1][q], 2*desatur[q]);
+			dosaturation(working[1][0][1][q], 2*desatur[q]);
 		}
-#undef dosaturation
 	}
+
+#undef dosaturation
+
+#undef diffcons
 
 	if (!apply)
 		return false;
@@ -315,7 +422,7 @@ void V_SetPaletteLump(const char *pal)
 		I_SetPalette(pLocalPalette);
 }
 
-static void CV_usegamma_OnChange(void)
+static void CV_palette_OnChange(void)
 {
 	// reload palette
 	LoadMapPalette();
