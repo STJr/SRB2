@@ -20,6 +20,12 @@
 // console vars
 extern consvar_t cv_playername;
 extern consvar_t cv_playercolor;
+extern consvar_t cv_skin;
+// secondary splitscreen player
+extern consvar_t cv_playername2;
+extern consvar_t cv_playercolor2;
+extern consvar_t cv_skin2;
+
 #ifdef SEENAMES
 extern consvar_t cv_seenames, cv_allowseenames;
 #endif
@@ -32,7 +38,6 @@ extern consvar_t cv_joyport2;
 #endif
 extern consvar_t cv_joyscale;
 extern consvar_t cv_joyscale2;
-extern consvar_t cv_controlperkey;
 
 // splitscreen with second mouse
 extern consvar_t cv_mouse2port;
@@ -40,24 +45,12 @@ extern consvar_t cv_usemouse2;
 #if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON)
 extern consvar_t cv_mouse2opt;
 #endif
-extern consvar_t cv_invertmouse2;
-extern consvar_t cv_alwaysfreelook2;
-extern consvar_t cv_mousemove2;
-extern consvar_t cv_mousesens2;
-extern consvar_t cv_mouseysens2;
 
 // normally in p_mobj but the .h is not read
 extern consvar_t cv_itemrespawntime;
 extern consvar_t cv_itemrespawn;
 
 extern consvar_t cv_flagtime;
-
-extern consvar_t cv_skin;
-
-// secondary splitscreen player
-extern consvar_t cv_playername2;
-extern consvar_t cv_playercolor2;
-extern consvar_t cv_skin2;
 
 extern consvar_t cv_touchtag;
 extern consvar_t cv_hidetime;
@@ -75,9 +68,6 @@ extern consvar_t cv_hazardlog;
 extern consvar_t cv_autobalance;
 extern consvar_t cv_teamscramble;
 extern consvar_t cv_scrambleonchange;
-
-extern consvar_t cv_useranalog, cv_useranalog2;
-extern consvar_t cv_analog, cv_analog2;
 
 extern consvar_t cv_netstat;
 #ifdef WALLSPLATS
@@ -118,17 +108,7 @@ extern consvar_t cv_maxping;
 
 extern consvar_t cv_skipmapcheck;
 
-extern consvar_t cv_sleep, cv_screenshot_option, cv_screenshot_folder;
-
-extern consvar_t cv_moviemode;
-
-extern consvar_t cv_zlib_level, cv_zlib_memory, cv_zlib_strategy;
-
-extern consvar_t cv_zlib_window_bits, cv_zlib_levela, cv_zlib_memorya;
-
-extern consvar_t cv_zlib_strategya, cv_zlib_window_bitsa;
-
-extern consvar_t cv_apng_delay;
+extern consvar_t cv_sleep;
 
 typedef enum
 {
@@ -209,7 +189,6 @@ void Command_ExitGame_f(void);
 void Command_Retry_f(void);
 void D_GameTypeChanged(INT32 lastgametype); // not a real _OnChange function anymore
 void D_MapChange(INT32 pmapnum, INT32 pgametype, boolean pultmode, boolean presetplayers, INT32 pdelay, boolean pskipprecutscene, boolean pfromlevelselect);
-void ObjectPlace_OnChange(void);
 void ItemFinder_OnChange(void);
 void D_SetPassword(const char *pw);
 
