@@ -5180,6 +5180,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Deep Sea Gargoyle
 	"S_GARGOYLE",
+	"S_BIGGARGOYLE",
 
 	// DSZ Seaweed
 	"S_SEAWEED1",
@@ -5338,7 +5339,14 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	// Xmas-specific stuff
 	"S_XMASPOLE",
 	"S_CANDYCANE",
-	"S_SNOWMAN",
+	"S_SNOWMAN",    // normal
+	"S_SNOWMANHAT", // with hat + scarf
+	"S_LAMPPOST1",  // normal
+	"S_LAMPPOST2",  // with snow
+	"S_HANGSTAR",
+	// Xmas GFZ bushes
+	"S_XMASBERRYBUSH",
+	"S_XMASBUSH",
 
 	// Botanic Serenity's loads of scenery states
 	"S_BSZTALLFLOWER_RED",
@@ -5530,10 +5538,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PITY4",
 	"S_PITY5",
 	"S_PITY6",
-	"S_PITY7",
-	"S_PITY8",
-	"S_PITY9",
-	"S_PITY10",
 
 	"S_FIRS1",
 	"S_FIRS2",
@@ -6552,6 +6556,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 
 	// Deep Sea Scenery
 	"MT_GARGOYLE", // Deep Sea Gargoyle
+	"MT_BIGGARGOYLE", // Deep Sea Gargoyle (Big)
 	"MT_SEAWEED", // DSZ Seaweed
 	"MT_WATERDRIP", // Dripping Water source
 	"MT_WATERDROP", // Water drop from dripping water
@@ -6620,7 +6625,14 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	// Christmas Scenery
 	"MT_XMASPOLE",
 	"MT_CANDYCANE",
-	"MT_SNOWMAN",
+	"MT_SNOWMAN",    // normal
+	"MT_SNOWMANHAT", // with hat + scarf
+	"MT_LAMPPOST1",  // normal
+	"MT_LAMPPOST2",  // with snow
+	"MT_HANGSTAR",
+	// Xmas GFZ bushes
+	"MT_XMASBERRYBUSH",
+	"MT_XMASBUSH",
 
 	// Botanic Serenity
 	"MT_BSZTALLFLOWER_RED",
