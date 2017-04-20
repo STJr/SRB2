@@ -402,6 +402,15 @@ void R_ClearPlanes(void)
 	// scale will be unit scale at SCREENWIDTH/2 distance
 	basexscale = FixedDiv (FINECOSINE(angle),centerxfrac);
 	baseyscale = -FixedDiv (FINESINE(angle),centerxfrac);
+
+#ifdef POLYOBJECTS_PLANES
+	// clear all old visplanes pointers away, in case they're still there (fixes vid_copy.s crash)
+	if (numPolyObjects)
+	{
+		for (i = 0; i < numPolyObjects; i++)
+			PolyObjects[i].visplane = NULL;
+	}
+#endif
 }
 
 static visplane_t *new_visplane(unsigned hash)
