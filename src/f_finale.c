@@ -1590,16 +1590,14 @@ void F_TitleScreenTicker(boolean run)
 
 			mo2 = (mobj_t *)th;
 
+			 if (!mo2)
+				continue;
+
 			if (mo2->type != MT_ALTVIEWMAN)
 				continue;
 
-			if (mo2)
-			{
-				cameraref = mo2;
-				break;
-			}
-			else
-				break;
+			cameraref = mo2;
+			break;
 		}
 
 		if (cameraref)
@@ -1613,8 +1611,7 @@ void F_TitleScreenTicker(boolean run)
 		else
 		{
 			// Default behavior: Do a lil' camera spin if a title map is loaded;
-			// TODO: titlescrollspeed scrolls slow here because it is not an angle
-			//camera.angle += titlescrollspeed;
+			camera.angle += titlescrollspeed*ANG1/64;
 		}
 	}
 
