@@ -1167,39 +1167,45 @@ static menuitem_t OP_Mouse2OptionsMenu[] =
 
 static menuitem_t OP_VideoOptionsMenu[] =
 {
-	{IT_STRING | IT_CALL,  NULL, "Set Resolution...", M_VideoModeMenu,                0},
+	{IT_HEADER, NULL, "Screen", NULL, 0},
+	{IT_STRING | IT_CALL,  NULL, "Set Resolution...",       M_VideoModeMenu,          6},
 
 #if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
-	{IT_STRING|IT_CVAR,      NULL, "Fullscreen",       &cv_fullscreen,                5},
+	{IT_STRING|IT_CVAR,      NULL, "Fullscreen",             &cv_fullscreen,         11},
 #endif
+	{IT_STRING | IT_CVAR, NULL, "Vertical Sync",                &cv_vidwait,         16},
 
 #ifdef HWRENDER
-	{IT_SUBMENU|IT_STRING, NULL, "3D Card Options...", &OP_OpenGLOptionsDef,         10},
+	{IT_SUBMENU|IT_STRING, NULL, "3D Card Options...", &OP_OpenGLOptionsDef,         21},
 #endif
 
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Brightness",   &cv_globalgamma,      15},
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Saturation",   &cv_globalsaturation, 20},
-	{IT_SUBMENU|IT_STRING, NULL, "Advanced Color Settings...", &OP_ColorOptionsDef,  25},
+	{IT_HEADER, NULL, "Color Profile", NULL, 30},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Brightness", &cv_globalgamma,      36},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Saturation", &cv_globalsaturation, 41},
+	{IT_SUBMENU|IT_STRING, NULL, "Advanced Settings...",     &OP_ColorOptionsDef,  46},
 
-	{IT_STRING | IT_CVAR, NULL, "Display HUD",                 &cv_showhud,          35},
+	{IT_HEADER, NULL, "Heads Up Display", NULL, 55},
+	{IT_STRING | IT_CVAR, NULL, "Show HUD",                  &cv_showhud,          61},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
-	                      NULL, "HUD Transparency",            &cv_translucenthud,   40},
-	{IT_STRING | IT_CVAR, NULL, "Time Display",                &cv_timetic,          45},
+	                      NULL, "HUD Transparency",          &cv_translucenthud,   66},
+	{IT_STRING | IT_CVAR, NULL, "Time Display",              &cv_timetic,          71},
 #ifdef SEENAMES
-	{IT_STRING | IT_CVAR, NULL, "Show HUD player names",       &cv_seenames,         50},
+	{IT_STRING | IT_CVAR, NULL, "Show player names",         &cv_seenames,         76},
 #endif
 
-	{IT_STRING | IT_CVAR, NULL, "Console Background",          &cons_backcolor,      60},
-	{IT_STRING | IT_CVAR, NULL, "Console Text Size",           &cv_constextsize,     65},
+	{IT_HEADER, NULL, "Console", NULL, 85},
+	{IT_STRING | IT_CVAR, NULL, "Console Background",        &cons_backcolor,      91},
+	{IT_STRING | IT_CVAR, NULL, "Console Text Size",         &cv_constextsize,     96},
 
-	{IT_STRING | IT_CVAR, NULL, "Draw Distance",               &cv_drawdist,         75},
-	{IT_STRING | IT_CVAR, NULL, "NiGHTS Draw Dist.",           &cv_drawdist_nights,  80},
-	{IT_STRING | IT_CVAR, NULL, "Weather Draw Dist.",          &cv_drawdist_precip,  85},
-	{IT_STRING | IT_CVAR, NULL, "Weather Density",             &cv_precipdensity,    90},
+	{IT_HEADER, NULL, "Level", NULL, 105},
+	{IT_STRING | IT_CVAR, NULL, "Draw Distance",             &cv_drawdist,        111},
+	{IT_STRING | IT_CVAR, NULL, "NiGHTS Draw Dist.",         &cv_drawdist_nights, 116},
+	{IT_STRING | IT_CVAR, NULL, "Weather Draw Dist.",        &cv_drawdist_precip, 121},
+	{IT_STRING | IT_CVAR, NULL, "Weather Density",           &cv_precipdensity,   126},
 
-	{IT_STRING | IT_CVAR, NULL, "Show FPS",                    &cv_ticrate,         100},
-	{IT_STRING | IT_CVAR, NULL, "Clear Before Redraw",         &cv_homremoval,      105},
-	{IT_STRING | IT_CVAR, NULL, "Vertical Sync",               &cv_vidwait,         110},
+	{IT_HEADER, NULL, "Diagnostic", NULL, 135},
+	{IT_STRING | IT_CVAR, NULL, "Show FPS",                  &cv_ticrate,         141},
+	{IT_STRING | IT_CVAR, NULL, "Clear Before Redraw",       &cv_homremoval,      146},
 };
 
 static menuitem_t OP_VideoModeMenu[] =
@@ -1209,7 +1215,7 @@ static menuitem_t OP_VideoModeMenu[] =
 
 static menuitem_t OP_ColorOptionsMenu[] =
 {
-	{IT_STRING | IT_CALL, NULL, "Reset all", M_ResetCvars, 0},
+	{IT_STRING | IT_CALL, NULL, "Reset to defaults", M_ResetCvars, 0},
 
 	{IT_HEADER, NULL, "Red", NULL, 9},
 	{IT_DISABLED, NULL, NULL, NULL, 35},
@@ -1255,7 +1261,7 @@ static menuitem_t OP_OpenGLOptionsMenu[] =
 	{IT_STRING|IT_CVAR,         NULL, "Quality",         &cv_scr_depth,        20},
 	{IT_STRING|IT_CVAR,         NULL, "Texture Filter",  &cv_grfiltermode,     30},
 	{IT_STRING|IT_CVAR,         NULL, "Anisotropic",     &cv_granisotropicmode,40},
-#ifdef _WINDOWS
+#if defined (_WINDOWS) && (!((defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)))
 	{IT_STRING|IT_CVAR,         NULL, "Fullscreen",      &cv_fullscreen,       50},
 #endif
 #ifdef ALAM_LIGHTING
@@ -1404,7 +1410,7 @@ static menuitem_t OP_ServerOptionsMenu[] =
 static menuitem_t OP_MonitorToggleMenu[] =
 {
 	// Printing handled by drawing function
-	{IT_STRING|IT_CALL, NULL, "Reset all", M_ResetCvars, 15},
+	{IT_STRING|IT_CALL, NULL, "Reset to defaults", M_ResetCvars, 15},
 	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Recycler",          &cv_recycler,      30},
 	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Teleporters",       &cv_teleporters,   40},
 	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Super Ring",        &cv_superring,     50},
@@ -2867,7 +2873,7 @@ void M_Init(void)
 #ifdef HWRENDER
 	// Permanently hide some options based on render mode
 	if (rendermode == render_soft)
-		OP_VideoOptionsMenu[2].status = IT_DISABLED;
+		OP_VideoOptionsMenu[4].status = IT_DISABLED;
 #endif
 
 #ifndef NONET
@@ -8178,11 +8184,17 @@ static void M_VideoModeMenu(INT32 choice)
 
 static void M_DrawMainVideoMenu(void)
 {
+
 	M_DrawGenericScrollMenu();
-	if (itemOn < 7) // where it starts to go offscreen; change this number if you change the layout of the video menu
-		V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, currentMenu->y+currentMenu->menuitems[0].alphaKey,
+	if (itemOn < 8) // where it starts to go offscreen; change this number if you change the layout of the video menu
+	{
+		INT32 y = currentMenu->y+currentMenu->menuitems[1].alphaKey*2;
+		if (itemOn == 7)
+			y -= 10;
+		V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, y,
 		(SCR_IsAspectCorrect(vid.width, vid.height) ? V_GREENMAP : V_YELLOWMAP),
 			va("%dx%d", vid.width, vid.height));
+	}
 }
 
 // Draw the video modes list, a-la-Quake
