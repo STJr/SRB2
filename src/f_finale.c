@@ -1576,10 +1576,46 @@ void F_TitleScreenTicker(boolean run)
 	if (gameaction != ga_nothing || gamestate != GS_TITLESCREEN)
 		return;
 
-	// Do a lil' camera spin if a title map is loaded.
+	thinker_t *th;
+	mobj_t *mo2;
+	mobj_t *cameraref = NULL;
+
+	// Execute the titlemap camera settings
 	if (titlemapinaction) {
-		// Default behavior
-		camera.angle += titlescrollspeed;
+
+		for (th = thinkercap.next; th != &thinkercap; th = th->next)
+		{
+			if (th->function.acp1 != (actionf_p1)P_MobjThinker) // Not a mobj thinker
+				continue;
+
+			mo2 = (mobj_t *)th;
+
+			if (mo2->type != MT_ALTVIEWMAN)
+				continue;
+
+			if (mo2)
+			{
+				cameraref = mo2;
+				break;
+			}
+			else
+				break;
+		}
+
+		if (cameraref)
+		{
+			camera.x = cameraref->x;
+			camera.y = cameraref->y;
+			camera.z = cameraref->z;
+			camera.angle = cameraref->angle;
+			camera.aiming = cameraref->cusval;
+		}
+		else
+		{
+			// Default behavior: Do a lil' camera spin if a title map is loaded;
+			// TODO: titlescrollspeed scrolls slow here because it is not an angle
+			//camera.angle += titlescrollspeed;
+		}
 	}
 
 	// no demos to play? or, are they disabled?

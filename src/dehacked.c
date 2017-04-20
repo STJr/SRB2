@@ -8595,6 +8595,12 @@ static inline int lib_getenum(lua_State *L)
 	} else if (fastcmp(word,"paused")) {
 		lua_pushboolean(L, paused);
 		return 1;
+	} else if (fastcmp(word,"titlemap")) {
+		lua_pushinteger(L, titlemap);
+		return 1;
+	} else if (fastcmp(word,"titlemapinaction")) {
+		lua_pushboolean(L, titlemapinaction);
+		return 1;
 	} else if (fastcmp(word,"gametype")) {
 		lua_pushinteger(L, gametype);
 		return 1;
