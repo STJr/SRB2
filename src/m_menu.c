@@ -361,6 +361,7 @@ static void M_OGL_DrawFogMenu(void);
 static void M_OGL_DrawColorMenu(void);
 #endif
 #ifndef NONET
+static void M_DrawScreenshotMenu(void);
 static void M_DrawConnectMenu(void);
 static void M_DrawConnectIPMenu(void);
 static void M_DrawRoomMenu(void);
@@ -1176,15 +1177,15 @@ static menuitem_t OP_VideoOptionsMenu[] =
 	{IT_STRING | IT_CVAR, NULL, "Vertical Sync",                &cv_vidwait,         16},
 
 #ifdef HWRENDER
-	{IT_SUBMENU|IT_STRING, NULL, "3D Card Options...", &OP_OpenGLOptionsDef,         21},
+	{IT_SUBMENU|IT_STRING, NULL, "OpenGL Options...", &OP_OpenGLOptionsDef,          21},
 #endif
 
 	{IT_HEADER, NULL, "Color Profile", NULL, 30},
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Brightness", &cv_globalgamma,      36},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Brightness (F11)", &cv_globalgamma,      36},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Saturation", &cv_globalsaturation, 41},
 	{IT_SUBMENU|IT_STRING, NULL, "Advanced Settings...",     &OP_ColorOptionsDef,  46},
 
-	{IT_HEADER, NULL, "Heads Up Display", NULL, 55},
+	{IT_HEADER, NULL, "Heads-Up Display", NULL, 55},
 	{IT_STRING | IT_CVAR, NULL, "Show HUD",                  &cv_showhud,          61},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
 	                      NULL, "HUD Transparency",          &cv_translucenthud,   66},
@@ -1320,36 +1321,38 @@ static menuitem_t OP_DataOptionsMenu[] =
 
 static menuitem_t OP_ScreenshotOptionsMenu[] =
 {
-	{IT_STRING|IT_CVAR, NULL, "Use color profile", &cv_screenshot_colorprofile,     0},
-	{IT_STRING|IT_CVAR, NULL, "Storage Location",  &cv_screenshot_option,           5},
-	{IT_STRING|IT_CVAR|IT_CV_STRING, NULL, "Custom Folder", &cv_screenshot_folder, 10},
+	{IT_HEADER, NULL, "General", NULL, 0},
+	{IT_STRING|IT_CVAR, NULL, "Use color profile", &cv_screenshot_colorprofile,     6},
+	{IT_STRING|IT_CVAR, NULL, "Storage Location",  &cv_screenshot_option,          11},
+	{IT_STRING|IT_CVAR|IT_CV_STRING, NULL, "Custom Folder", &cv_screenshot_folder, 16},
 
-	{IT_HEADER, NULL, "Screenshots (F8)", NULL, 24},
-	{IT_STRING|IT_CVAR, NULL, "Memory Level",      &cv_zlib_memory,                30},
-	{IT_STRING|IT_CVAR, NULL, "Compression Level", &cv_zlib_level,                 35},
-	{IT_STRING|IT_CVAR, NULL, "Strategy",          &cv_zlib_strategy,              40},
-	{IT_STRING|IT_CVAR, NULL, "Window Size",       &cv_zlib_window_bits,           45},
+	{IT_HEADER, NULL, "Screenshots (F8)", NULL, 30},
+	{IT_STRING|IT_CVAR, NULL, "Memory Level",      &cv_zlib_memory,                36},
+	{IT_STRING|IT_CVAR, NULL, "Compression Level", &cv_zlib_level,                 41},
+	{IT_STRING|IT_CVAR, NULL, "Strategy",          &cv_zlib_strategy,              46},
+	{IT_STRING|IT_CVAR, NULL, "Window Size",       &cv_zlib_window_bits,           51},
 
-	{IT_HEADER, NULL, "Movie Mode (F9)", NULL, 54},
-	{IT_STRING|IT_CVAR, NULL, "Capture Mode",      &cv_moviemode,                  60},
+	{IT_HEADER, NULL, "Movie Mode (F9)", NULL, 60},
+	{IT_STRING|IT_CVAR, NULL, "Capture Mode",      &cv_moviemode,                  66},
 
-	{IT_STRING|IT_CVAR, NULL, "Region Optimizing", &cv_gif_optimize,               65},
-	{IT_STRING|IT_CVAR, NULL, "Downscaling",       &cv_gif_downscale,              70},
+	{IT_STRING|IT_CVAR, NULL, "Region Optimizing", &cv_gif_optimize,               71},
+	{IT_STRING|IT_CVAR, NULL, "Downscaling",       &cv_gif_downscale,              76},
 
-	{IT_STRING|IT_CVAR, NULL, "Memory Level",      &cv_zlib_memorya,               65},
-	{IT_STRING|IT_CVAR, NULL, "Compression Level", &cv_zlib_levela,                70},
-	{IT_STRING|IT_CVAR, NULL, "Strategy",          &cv_zlib_strategya,             75},
-	{IT_STRING|IT_CVAR, NULL, "Window Size",       &cv_zlib_window_bitsa,          80},
+	{IT_STRING|IT_CVAR, NULL, "Memory Level",      &cv_zlib_memorya,               71},
+	{IT_STRING|IT_CVAR, NULL, "Compression Level", &cv_zlib_levela,                76},
+	{IT_STRING|IT_CVAR, NULL, "Strategy",          &cv_zlib_strategya,             81},
+	{IT_STRING|IT_CVAR, NULL, "Window Size",       &cv_zlib_window_bitsa,          86},
 };
 
 enum
 {
-	op_screenshot_folder = 2,
-	op_screenshot_capture = 9,
-	op_screenshot_gif_start = 10,
-	op_screenshot_gif_end = 11,
-	op_screenshot_apng_start = 12,
-	op_screenshot_apng_end = 15,
+	op_screenshot_colorprofile = 1,
+	op_screenshot_folder = 3,
+	op_screenshot_capture = 10,
+	op_screenshot_gif_start = 11,
+	op_screenshot_gif_end = 12,
+	op_screenshot_apng_start = 13,
+	op_screenshot_apng_end = 16,
 };
 
 static menuitem_t OP_EraseDataMenu[] =
@@ -1855,7 +1858,7 @@ menu_t OP_ScreenshotOptionsDef =
 	sizeof (OP_ScreenshotOptionsMenu)/sizeof (menuitem_t),
 	&OP_DataOptionsDef,
 	OP_ScreenshotOptionsMenu,
-	M_DrawGenericScrollMenu,
+	M_DrawScreenshotMenu,
 	30, 30,
 	0,
 	NULL
@@ -2874,6 +2877,8 @@ void M_Init(void)
 	// Permanently hide some options based on render mode
 	if (rendermode == render_soft)
 		OP_VideoOptionsMenu[4].status = IT_DISABLED;
+	else if (rendermode == render_opengl)
+		OP_ScreenshotOptionsMenu[op_screenshot_colorprofile].status = IT_GRAYEDOUT;
 #endif
 
 #ifndef NONET
@@ -8454,6 +8459,21 @@ static void M_HandleVideoMode(INT32 ch)
 		default:
 			break;
 	}
+}
+
+static void M_DrawScreenshotMenu(void)
+{
+
+	M_DrawGenericScrollMenu();
+#ifdef HWRENDER
+	if ((rendermode == render_opengl) && (itemOn < 7)) // where it starts to go offscreen; change this number if you change the layout of the screenshot menu
+	{
+		INT32 y = currentMenu->y+currentMenu->menuitems[op_screenshot_colorprofile].alphaKey*2;
+		if (itemOn == 6)
+			y -= 10;
+		V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, y, V_REDMAP, "ON");
+	}
+#endif
 }
 
 // ===============
