@@ -100,6 +100,8 @@ static CV_PossibleValue_t screenshot_cons_t[] = {{0, "Default"}, {1, "HOME"}, {2
 consvar_t cv_screenshot_option = {"screenshot_option", "Default", CV_SAVE|CV_CALL, screenshot_cons_t, Screenshot_option_Onchange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_screenshot_folder = {"screenshot_folder", "", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
 
+consvar_t cv_screenshot_colorprofile = {"screenshot_colorprofile", "Yes", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+
 static CV_PossibleValue_t moviemode_cons_t[] = {{MM_GIF, "GIF"}, {MM_APNG, "aPNG"}, {MM_SCREENSHOT, "Screenshots"}, {0, NULL}};
 consvar_t cv_moviemode = {"moviemode_mode", "GIF", CV_SAVE|CV_CALL, moviemode_cons_t, Moviemode_mode_Onchange, 0, NULL, NULL, 0, 0, NULL};
 
@@ -617,11 +619,24 @@ static void M_PNGhdr(png_structp png_ptr, png_infop png_info_ptr, PNG_CONST png_
 	{
 		png_colorp png_PLTE = png_malloc(png_ptr, sizeof(png_color)*256); //palette
 		png_uint_16 i;
-		for (i = 0; i < 256; i++)
+		if (cv_screenshot_colorprofile.value)
 		{
-			png_PLTE[i].red   = pLocalPalette[i].s.red;
-			png_PLTE[i].green = pLocalPalette[i].s.green;
-			png_PLTE[i].blue  = pLocalPalette[i].s.blue;
+			for (i = 0; i < 256; i++)
+			{
+				png_PLTE[i].red   = pLocalPalette[i].s.red;
+				png_PLTE[i].green = pLocalPalette[i].s.green;
+				png_PLTE[i].blue  = pLocalPalette[i].s.blue;
+			}
+		}
+		else
+		{
+			const png_byte *pal = (png_byte *)W_CacheLumpName(GetPalette(), PU_CACHE);
+			for (i = 0; i < 256; i++)
+			{
+				png_PLTE[i].red   = *pal++;
+				png_PLTE[i].green = *pal++;
+				png_PLTE[i].blue  = *pal++;
+			}
 		}
 		png_set_IHDR(png_ptr, png_info_ptr, width, height, 8, PNG_COLOR_TYPE_PALETTE,
 		 png_interlace, PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);

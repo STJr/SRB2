@@ -18,6 +18,7 @@
 #include "z_zone.h"
 #include "v_video.h"
 #include "i_video.h"
+#include "m_misc.h"
 
 // GIFs are always little-endian
 #include "byteptr.h"
@@ -396,7 +397,6 @@ static void GIF_headwrite(void)
 {
 	UINT8 *gifhead = Z_Malloc(800, PU_STATIC, NULL);
 	UINT8 *p = gifhead;
-	RGBA_t *c;
 	INT32 i;
 	UINT16 rwidth, rheight;
 
@@ -427,12 +427,24 @@ static void GIF_headwrite(void)
 	WRITEUINT8(p, 0x00);
 
 	// write color table
-	for (i = 0; i < 256; ++i)
+	if (cv_screenshot_colorprofile.value)
 	{
-		c = &pLocalPalette[i];
-		WRITEUINT8(p, c->s.red);
-		WRITEUINT8(p, c->s.green);
-		WRITEUINT8(p, c->s.blue);
+		for (i = 0; i < 256; i++)
+		{
+			WRITEUINT8(p, pLocalPalette[i].s.red);
+			WRITEUINT8(p, pLocalPalette[i].s.green);
+			WRITEUINT8(p, pLocalPalette[i].s.blue);
+		}
+	}
+	else
+	{
+		const UINT8 *pal = (UINT8 *)W_CacheLumpName(GetPalette(), PU_CACHE);
+		for (i = 0; i < 256; i++)
+		{
+			WRITEUINT8(p, *pal); pal++;
+			WRITEUINT8(p, *pal); pal++;
+			WRITEUINT8(p, *pal); pal++;
+		}
 	}
 
 	// write extension block
