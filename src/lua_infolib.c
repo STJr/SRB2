@@ -31,6 +31,7 @@ enum sfxinfo_read {
 	sfxinfor_singular,
 	sfxinfor_priority,
 	sfxinfor_flags, // "pitch"
+	sfxinfor_caption,
 	sfxinfor_skinsound
 };
 const char *const sfxinfo_ropt[] = {
@@ -38,18 +39,21 @@ const char *const sfxinfo_ropt[] = {
 	"singular",
 	"priority",
 	"flags",
+	"caption",
 	"skinsound",
 	NULL};
 
 enum sfxinfo_write {
 	sfxinfow_singular = 0,
 	sfxinfow_priority,
-	sfxinfow_flags // "pitch"
+	sfxinfow_flags, // "pitch"
+	sfxinfow_caption
 };
 const char *const sfxinfo_wopt[] = {
 	"singular",
 	"priority",
 	"flags",
+	"caption",
 	NULL};
 
 //
@@ -814,6 +818,9 @@ static int lib_setSfxInfo(lua_State *L)
 		case sfxinfow_flags:
 			info->pitch = (INT32)luaL_checkinteger(L, 3);
 			break;
+		case sfxinfow_caption:
+			strlcpy(info->caption, luaL_checkstring(L, 3), sizeof(info->caption));
+			break;
 		default:
 			break;
 		}
@@ -851,11 +858,14 @@ static int sfxinfo_get(lua_State *L)
 	case sfxinfor_flags:
 		lua_pushinteger(L, sfx->pitch);
 		return 1;
+	case sfxinfor_caption:
+		lua_pushstring(L, sfx->caption);
+		return 1;
 	case sfxinfor_skinsound:
 		lua_pushinteger(L, sfx->skinsound);
 		return 1;
 	default:
-		return luaL_error(L, "impossible error");
+		return luaL_error(L, "Field does not exist in sfxinfo_t");
 	}
 	return 0;
 }
@@ -886,8 +896,11 @@ static int sfxinfo_set(lua_State *L)
 	case sfxinfow_flags:
 		sfx->pitch = luaL_checkinteger(L, 1);
 		break;
+	case sfxinfow_caption:
+		strlcpy(sfx->caption, luaL_checkstring(L, 1), sizeof(sfx->caption));
+		break;
 	default:
-		return luaL_error(L, "impossible error");
+		return luaL_error(L, "Field does not exist in sfxinfo_t");
 	}
 	return 0;
 }
