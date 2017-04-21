@@ -3663,6 +3663,9 @@ char *G_BuildMapTitle(INT32 mapnum)
 {
 	char *title = NULL;
 
+	if (!mapheaderinfo[mapnum-1])
+		P_AllocMapHeader(mapnum-1);
+
 	if (strcmp(mapheaderinfo[mapnum-1]->lvlttl, ""))
 	{
 		size_t len = 1;
