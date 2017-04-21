@@ -1342,7 +1342,7 @@ typedef struct
   * \param palette  Palette of image data
   */
 #if NUMSCREENS > 2
-static boolean WritePCXfile(const char *filename, const UINT8 *data, int width, int height, const UINT8 *palette)
+static boolean WritePCXfile(const char *filename, const UINT8 *data, int width, int height)
 {
 	int i;
 	size_t length;
@@ -1383,8 +1383,25 @@ static boolean WritePCXfile(const char *filename, const UINT8 *data, int width, 
 
 	// write the palette
 	*pack++ = 0x0c; // palette ID byte
-	for (i = 0; i < 768; i++)
-		*pack++ = *palette++;
+
+	// write color table
+	if (cv_screenshot_colorprofile.value)
+	{
+		for (i = 0; i < 256; i++)
+		{
+			*pack++ = pLocalPalette[i].s.red;
+			*pack++ = pLocalPalette[i].s.green;
+			*pack++ = pLocalPalette[i].s.blue;
+		}
+	}
+	else
+	{
+		const UINT8 *pal = (UINT8 *)W_CacheLumpName(GetPalette(), PU_CACHE);
+		for (i = 0; i < 256*3; i++)
+		{
+			*pack++ = *pal++;
+		}
+	}
 
 	// write output file
 	length = pack - (UINT8 *)pcx;
@@ -1460,8 +1477,7 @@ void M_DoScreenShot(void)
 #ifdef USE_PNG
 		ret = M_SavePNG(va(pandf,pathname,freename), linear, vid.width, vid.height, true);
 #else
-		ret = WritePCXfile(va(pandf,pathname,freename), linear, vid.width, vid.height,
-			W_CacheLumpName(GetPalette(), PU_CACHE));
+		ret = WritePCXfile(va(pandf,pathname,freename), linear, vid.width, vid.height);
 #endif
 	}
 

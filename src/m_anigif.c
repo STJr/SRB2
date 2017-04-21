@@ -439,10 +439,8 @@ static void GIF_headwrite(void)
 	else
 	{
 		const UINT8 *pal = (UINT8 *)W_CacheLumpName(GetPalette(), PU_CACHE);
-		for (i = 0; i < 256; i++)
+		for (i = 0; i < 256*3; i++)
 		{
-			WRITEUINT8(p, *pal); pal++;
-			WRITEUINT8(p, *pal); pal++;
 			WRITEUINT8(p, *pal); pal++;
 		}
 	}
