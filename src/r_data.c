@@ -635,42 +635,24 @@ void R_LoadTextures(void)
 			}
 			else
 			{
-				UINT16 patchcount = 1;
 				//CONS_Printf("\n\"%s\" is a single patch, dimensions %d x %d",W_CheckNameForNumPwad((UINT16)w,texstart+j),patchlump->width, patchlump->height);
-				if (SHORT(patchlump->width) == 64
-				&& SHORT(patchlump->height) == 64)
-				{ // 64x64 patch
-					const column_t *column;
-					for (k = 0; k < SHORT(patchlump->width); k++)
-					{ // Find use of transparency.
-						column = (const column_t *)((const UINT8 *)patchlump + LONG(patchlump->columnofs[k]));
-						if (column->length != SHORT(patchlump->height))
-							break;
-					}
-					if (k == SHORT(patchlump->width))
-						patchcount = 2; // No transparency? 64x128 texture.
-				}
-				texture = textures[i] = Z_Calloc(sizeof(texture_t) + (sizeof(texpatch_t) * patchcount), PU_STATIC, NULL);
+				texture = textures[i] = Z_Calloc(sizeof(texture_t) + sizeof(texpatch_t), PU_STATIC, NULL);
 
 				// Set texture properties.
 				M_Memcpy(texture->name, W_CheckNameForNumPwad((UINT16)w, texstart + j), sizeof(texture->name));
 				texture->width = SHORT(patchlump->width);
-				texture->height = SHORT(patchlump->height)*patchcount;
-				texture->patchcount = patchcount;
+				texture->height = SHORT(patchlump->height);
+				texture->patchcount = 1;
 				texture->holes = false;
 				texture->flip = 0;
 
 				// Allocate information for the texture's patches.
-				for (k = 0; k < patchcount; k++)
-				{
-					patch = &texture->patches[k];
+				patch = &texture->patches[0];
 
-					patch->originx = 0;
-					patch->originy = (INT16)(k*patchlump->height);
-					patch->wad = (UINT16)w;
-					patch->lump = texstart + j;
-					patch->flip = 0;
-				}
+				patch->originx = patch->originy = 0;
+				patch->wad = (UINT16)w;
+				patch->lump = texstart + j;
+				patch->flip = 0;
 
 				Z_Unlock(patchlump);
 
