@@ -4894,15 +4894,39 @@ static void M_DrawChecklist(void)
 
 						switch (cond[condnum].type)
 						{
+							case UC_MAPVISITED:
 							case UC_MAPBEATEN:
+							case UC_MAPALLEMERALDS:
+							case UC_MAPULTIMATE:
 							case UC_MAPPERFECT:
 								{
 									char *title = G_BuildMapTitle(cond[condnum].requirement);
+
 									if (title)
 									{
-										V_DrawString(currentMenu->x, y, V_ALLOWLOWERCASE, va("\x1E %s %s",
-										((cond[condnum].type == UC_MAPPERFECT) ? "Get every ring in" : "Complete"),
-										((M_MapLocked(cond[condnum].requirement) || !((mapheaderinfo[cond[condnum].requirement-1]->menuflags & LF2_NOVISITNEEDED) || mapvisited[cond[condnum].requirement-1])) ? M_CreateSecretMenuOption(title) : title)));
+										const char *beat = "!";
+										const char *level = ((M_MapLocked(cond[condnum].requirement) || !((mapheaderinfo[cond[condnum].requirement-1]->menuflags & LF2_NOVISITNEEDED) || mapvisited[cond[condnum].requirement-1])) ? M_CreateSecretMenuOption(title) : title);
+
+										switch (cond[condnum].type)
+										{
+											case UC_MAPVISITED:
+												beat = va("\x1E Visit %s", level);
+												break;
+											case UC_MAPALLEMERALDS:
+												beat = va("\x1E Complete %s with all emeralds", level);
+												break;
+											case UC_MAPULTIMATE:
+												beat = va("\x1E Complete %s in Ultimate mode", level);
+												break;
+											case UC_MAPPERFECT:
+												beat = va("\x1E Get all rings in %s", level);
+												break;
+											case UC_MAPBEATEN:
+											default:
+												beat = va("\x1E Complete %s", level);
+												break;
+										}
+										V_DrawString(currentMenu->x, y, V_ALLOWLOWERCASE, beat);
 										Z_Free(title);
 									}
 								}
@@ -4910,15 +4934,16 @@ static void M_DrawChecklist(void)
 							case UC_GAMECLEAR:
 							case UC_ALLEMERALDS:
 								{
+									const char *beat = "!";
 									const char *emeraldtext = ((cond[condnum].type == UC_ALLEMERALDS) ? " with all emeralds" : "");
 									if (cond[condnum].requirement != 1)
-										V_DrawString(currentMenu->x, y,
-										V_ALLOWLOWERCASE,va("\x1E Beat the game %d times%s",
-										cond[condnum].requirement, emeraldtext));
+										beat = va("\x1E Beat the game %d times%s",
+										cond[condnum].requirement, emeraldtext);
 									else
-										V_DrawString(currentMenu->x, y,
-										V_ALLOWLOWERCASE,
-										va("\x1E Beat the game%s", emeraldtext));
+										beat = va("\x1E Beat the game%s",
+										emeraldtext);
+
+									V_DrawString(currentMenu->x, y, V_ALLOWLOWERCASE, beat);
 								}
 								break;
 							case UC_TOTALEMBLEMS:
@@ -4928,17 +4953,20 @@ static void M_DrawChecklist(void)
 								break;
 							case UC_NIGHTSGRADE:
 								{
-									// No support for specific mare information yet.
 									char *title = G_BuildMapTitle(cond[condnum].extrainfo1);
-									char grade = ('F' - (char)cond[condnum].requirement);
-									if (grade < 'A')
-										grade = 'A';
 
 									if (title)
 									{
-										V_DrawString(currentMenu->x, y, V_ALLOWLOWERCASE, va("\x1E Get grade %c in %s",
-										grade,
-										((M_MapLocked(cond[condnum].extrainfo1) || !((mapheaderinfo[cond[condnum].extrainfo1-1]->menuflags & LF2_NOVISITNEEDED) || mapvisited[cond[condnum].extrainfo1-1])) ? M_CreateSecretMenuOption(title) : title)));
+										const char *beat = "!";
+										const char *level = ((M_MapLocked(cond[condnum].extrainfo1) || !((mapheaderinfo[cond[condnum].extrainfo1-1]->menuflags & LF2_NOVISITNEEDED) || mapvisited[cond[condnum].extrainfo1-1])) ? M_CreateSecretMenuOption(title) : title);
+										char grade = ('F' - (char)cond[condnum].requirement);
+										if (grade < 'A')
+											grade = 'A';
+										if (cond[condnum].extrainfo2)
+											beat = va("\x1E Get grade %c in %s on mare %d", grade, level, cond[condnum].extrainfo2);
+										else
+											beat = va("\x1E Get grade %c in %s", grade, level);
+										V_DrawString(currentMenu->x, y, V_ALLOWLOWERCASE, beat);
 										Z_Free(title);
 									}
 								}
