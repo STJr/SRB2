@@ -2469,6 +2469,7 @@ static void readunlockable(MYFILE *f, INT32 num)
 	DEH_WriteUndoline("VAR", va("%d", unlockables[num].variable), UNDO_NONE);
 
 	memset(&unlockables[num], 0, sizeof(unlockable_t));
+	unlockables[num].objective[0] = '/';
 
 	do
 	{

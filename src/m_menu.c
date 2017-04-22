@@ -241,7 +241,10 @@ static void M_LevelSelectWarp(INT32 choice);
 static void M_Credits(INT32 choice);
 static void M_PandorasBox(INT32 choice);
 static void M_EmblemHints(INT32 choice);
+static void M_HandleChecklist(INT32 choice);
 menu_t SR_MainDef, SR_UnlockChecklistDef;
+
+static UINT8 check_on;
 
 // Misc. Main Menu
 static void M_SinglePlayerMenu(INT32 choice);
@@ -712,7 +715,7 @@ static menuitem_t SR_LevelSelectMenu[] =
 
 static menuitem_t SR_UnlockChecklistMenu[] =
 {
-	{IT_SUBMENU | IT_STRING,         NULL, "NEXT", &SR_MainDef, 192},
+	{IT_KEYHANDLER | IT_STRING, NULL, "", M_HandleChecklist, 0},
 };
 
 static menuitem_t SR_EmblemHintMenu[] =
@@ -1497,7 +1500,7 @@ menu_t SR_LevelSelectDef = MAPPLATTERMENUSTYLE(NULL, SR_LevelSelectMenu);
 
 menu_t SR_UnlockChecklistDef =
 {
-	NULL,
+	"M_SECRET",
 	1,
 	&SR_MainDef,
 	SR_UnlockChecklistMenu,
@@ -4787,11 +4790,64 @@ static void M_LevelSelectWarp(INT32 choice)
 
 UINT8 skyRoomMenuTranslations[MAXUNLOCKABLES];
 
+static boolean checklist_cangodown; // uuuueeerggghhhh HACK
+
+static void M_HandleChecklist(INT32 choice)
+{
+	INT32 j;
+	switch (choice)
+	{
+		case KEY_DOWNARROW:
+			S_StartSound(NULL, sfx_menu1);
+			if (checklist_cangodown)
+			{
+				for (j = check_on+1; j < MAXUNLOCKABLES; j++)
+				{
+					if (!(unlockables[j].name[0] == 0 //|| unlockables[j].nochecklist
+					|| !unlockables[j].conditionset || unlockables[j].conditionset > MAXCONDITIONSETS))
+						break;
+				}
+				if (j != MAXUNLOCKABLES)
+					check_on = j;
+			}
+			return;
+
+		case KEY_UPARROW:
+			S_StartSound(NULL, sfx_menu1);
+			for (j = check_on-1; j > -1; j--)
+			{
+				if (!(unlockables[j].name[0] == 0 //|| unlockables[j].nochecklist
+				|| !unlockables[j].conditionset || unlockables[j].conditionset > MAXCONDITIONSETS))
+					break;
+			}
+			if (j != -1)
+				check_on = j;
+			return;
+
+		case KEY_ESCAPE:
+			if (currentMenu->prevMenu)
+				M_SetupNextMenu(currentMenu->prevMenu);
+			else
+				M_ClearMenus(true);
+			return;
+		default:
+			break;
+	}
+}
+
+#define addy(add) { y += add; if ((y - currentMenu->y) > (scrollareaheight*2)) goto finishchecklist; }
+
 static void M_DrawChecklist(void)
 {
-	INT32 i = 0, j = 0, y = currentMenu->y;
+	INT32 i = check_on, j = 0, y = currentMenu->y;
 	UINT32 condnum, previd, maxcond;
 	condition_t *cond;
+
+	// draw title (or big pic)
+	M_DrawMenuTitle();
+
+	if (check_on)
+		V_DrawString(10, y, V_YELLOWMAP, "\x1A");
 
 	while (i < MAXUNLOCKABLES)
 	{
@@ -4808,68 +4864,96 @@ static void M_DrawChecklist(void)
 				break;
 		}
 		if ((j != MAXUNLOCKABLES) && (unlockables[i].conditionset == unlockables[j].conditionset))
-			y += 8;
+			addy(8)
 		else
 		{
 			if ((maxcond = conditionSets[unlockables[i].conditionset-1].numconditions))
 			{
 				cond = conditionSets[unlockables[i].conditionset-1].condition;
 				previd = cond[0].id;
-				y += 2;
-				for (condnum = 0; condnum < maxcond; condnum++)
+				addy(2);
+
+				if (unlockables[i].objective[0] != '/')
 				{
-					if (cond[condnum].id != previd)
+					addy(8);
+					V_DrawString(currentMenu->x, y,
+						V_ALLOWLOWERCASE,
+						va("\x1E %s", unlockables[i].objective));
+				}
+				else
+				{
+					for (condnum = 0; condnum < maxcond; condnum++)
 					{
-						y += 8;
-						V_DrawString(currentMenu->x + 4, y, V_YELLOWMAP, "OR");
-					}
+						if (cond[condnum].id != previd)
+						{
+							addy(8);
+							V_DrawString(currentMenu->x + 4, y, V_YELLOWMAP, "OR");
+						}
 
-					y += 8;
+						addy(8);
 
-					switch (cond[condnum].type)
-					{
-						case UC_MAPBEATEN:
-						case UC_MAPPERFECT:
-							{
-								char *title = G_BuildMapTitle(cond[condnum].requirement);
-								if (title)
+						switch (cond[condnum].type)
+						{
+							case UC_MAPBEATEN:
+							case UC_MAPPERFECT:
 								{
-									V_DrawString(currentMenu->x, y, V_ALLOWLOWERCASE, va("\x1E %s %s",
-									((cond[condnum].type == UC_MAPPERFECT) ? "Get every ring in" : "Complete"),
-									((M_MapLocked(cond[condnum].requirement) || !((mapheaderinfo[cond[condnum].requirement-1]->menuflags & LF2_NOVISITNEEDED) || mapvisited[cond[condnum].requirement-1])) ? M_CreateSecretMenuOption(title) : title)));
-									Z_Free(title);
+									char *title = G_BuildMapTitle(cond[condnum].requirement);
+									if (title)
+									{
+										V_DrawString(currentMenu->x, y, V_ALLOWLOWERCASE, va("\x1E %s %s",
+										((cond[condnum].type == UC_MAPPERFECT) ? "Get every ring in" : "Complete"),
+										((M_MapLocked(cond[condnum].requirement) || !((mapheaderinfo[cond[condnum].requirement-1]->menuflags & LF2_NOVISITNEEDED) || mapvisited[cond[condnum].requirement-1])) ? M_CreateSecretMenuOption(title) : title)));
+										Z_Free(title);
+									}
 								}
-							}
-							break;
-						case UC_GAMECLEAR:
-						case UC_ALLEMERALDS:
-							{
-								const char *emeraldtext = ((cond[condnum].type == UC_ALLEMERALDS) ? " with all emeralds" : "");
-								if (cond[condnum].requirement != 1)
-									V_DrawString(currentMenu->x, y,
-									V_ALLOWLOWERCASE,va("\x1E Complete the game %d times%s",
-									cond[condnum].requirement, emeraldtext));
-								else
-									V_DrawString(currentMenu->x, y,
-									V_ALLOWLOWERCASE,
-									va("\x1E Complete the game%s", emeraldtext));
-							}
-							break;
-						case UC_TOTALEMBLEMS:
-							V_DrawString(currentMenu->x, y,
-							V_ALLOWLOWERCASE,
-							va("\x1E Collect %s%d emblems", ((M_CountEmblems() == cond[condnum].requirement) ? "all " : ""), cond[condnum].requirement));
-							break;
-						default:
-							V_DrawString(currentMenu->x, y,
-							V_ALLOWLOWERCASE,
-							va("\x1E id %d, type %d, req %d", cond[condnum].id, cond[condnum].type, cond[condnum].requirement));
-							break;
+								break;
+							case UC_GAMECLEAR:
+							case UC_ALLEMERALDS:
+								{
+									const char *emeraldtext = ((cond[condnum].type == UC_ALLEMERALDS) ? " with all emeralds" : "");
+									if (cond[condnum].requirement != 1)
+										V_DrawString(currentMenu->x, y,
+										V_ALLOWLOWERCASE,va("\x1E Beat the game %d times%s",
+										cond[condnum].requirement, emeraldtext));
+									else
+										V_DrawString(currentMenu->x, y,
+										V_ALLOWLOWERCASE,
+										va("\x1E Beat the game%s", emeraldtext));
+								}
+								break;
+							case UC_TOTALEMBLEMS:
+								V_DrawString(currentMenu->x, y,
+								V_ALLOWLOWERCASE,
+								va("\x1E Collect %s%d emblems", ((M_CountEmblems() == cond[condnum].requirement) ? "all " : ""), cond[condnum].requirement));
+								break;
+							case UC_NIGHTSGRADE:
+								{
+									// No support for specific mare information yet.
+									char *title = G_BuildMapTitle(cond[condnum].extrainfo1);
+									char grade = ('F' - (char)cond[condnum].requirement);
+									if (grade < 'A')
+										grade = 'A';
+
+									if (title)
+									{
+										V_DrawString(currentMenu->x, y, V_ALLOWLOWERCASE, va("\x1E Get grade %c in %s",
+										grade,
+										((M_MapLocked(cond[condnum].extrainfo1) || !((mapheaderinfo[cond[condnum].extrainfo1-1]->menuflags & LF2_NOVISITNEEDED) || mapvisited[cond[condnum].extrainfo1-1])) ? M_CreateSecretMenuOption(title) : title)));
+										Z_Free(title);
+									}
+								}
+								break;
+							default:
+								V_DrawString(currentMenu->x, y,
+								V_ALLOWLOWERCASE,
+								va("\x1E id %d, type %d, req %d", cond[condnum].id, cond[condnum].type, cond[condnum].requirement));
+								break;
+						}
+						previd = cond[condnum].id;
 					}
-					previd = cond[condnum].id;
 				}
 			}
-			y += 12;
+			addy(12);
 		}
 		i = j;
 
@@ -4879,6 +4963,12 @@ static void M_DrawChecklist(void)
 			V_DrawString(308, 8+(24*j), V_YELLOWMAP, "Y");
 		else
 			V_DrawString(308, 8+(24*j), V_YELLOWMAP, "N");*/
+	}
+
+finishchecklist:
+	if ((checklist_cangodown = ((y - currentMenu->y) > (scrollareaheight*2)))) // haaaaaaacks.
+	{
+		V_DrawString(10, currentMenu->y+(scrollareaheight*2), V_YELLOWMAP, "\x1B");
 	}
 }
 
@@ -8025,7 +8115,6 @@ static void M_ToggleSFX(INT32 choice)
 			return;
 
 		case KEY_ESCAPE:
-			S_StartSound(NULL, sfx_menu1);
 			if (currentMenu->prevMenu)
 				M_SetupNextMenu(currentMenu->prevMenu);
 			else
@@ -8080,7 +8169,6 @@ static void M_ToggleDigital(INT32 choice)
 			return;
 
 		case KEY_ESCAPE:
-			S_StartSound(NULL, sfx_menu1);
 			if (currentMenu->prevMenu)
 				M_SetupNextMenu(currentMenu->prevMenu);
 			else
@@ -8132,7 +8220,6 @@ static void M_ToggleMIDI(INT32 choice)
 			return;
 
 		case KEY_ESCAPE:
-			S_StartSound(NULL, sfx_menu1);
 			if (currentMenu->prevMenu)
 				M_SetupNextMenu(currentMenu->prevMenu);
 			else
@@ -8703,7 +8790,6 @@ static void M_HandleFogColor(INT32 choice)
 			break;
 
 		case KEY_ESCAPE:
-			S_StartSound(NULL, sfx_menu1);
 			exitmenu = true;
 			break;
 

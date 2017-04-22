@@ -573,31 +573,31 @@ extraemblem_t extraemblems[MAXEXTRAEMBLEMS] =
 unlockable_t unlockables[MAXUNLOCKABLES] =
 {
 	// Name, Objective, Menu Height, ConditionSet, Unlock Type, Variable, NoCecho, NoChecklist
-	/* 01 */ {"Record Attack",     "Complete Greenflower Zone, Act 1", 0, 1, SECRET_RECORDATTACK,  0,  true,  true, 0},
-	/* 02 */ {"NiGHTS Mode",       "Complete Floral Field",            0, 2, SECRET_NIGHTSMODE,    0,  true,  true, 0},
+	/* 01 */ {"Record Attack",     "/", 0, 1, SECRET_RECORDATTACK,  0,  true,  true, 0},
+	/* 02 */ {"NiGHTS Mode",       "/",            0, 2, SECRET_NIGHTSMODE,    0,  true,  true, 0},
 
-	/* 03 */ {"Play Credits",      "Complete 1P Mode", 30, 10, SECRET_CREDITS,   0,  true,  true, 0},
-	/* 04 */ {"Sound Test",        "Complete 1P Mode", 40, 10, SECRET_SOUNDTEST, 0, false, false, 0},
+	/* 03 */ {"Play Credits",      "/", 30, 10, SECRET_CREDITS,   0,  true,  true, 0},
+	/* 04 */ {"Sound Test",        "/", 40, 10, SECRET_SOUNDTEST, 0, false, false, 0},
 
-	/* 05 */ {"EXTRA LEVELS", "", 58, 0, SECRET_HEADER, 0, true, true, 0},
+	/* 05 */ {"EXTRA LEVELS", "/", 58, 0, SECRET_HEADER, 0, true, true, 0},
 
-	/* 06 */ {"Aerial Garden Zone", "Complete 1P Mode w/ all emeralds", 70, 11, SECRET_WARP, 40, false, false, 0},
-	/* 07 */ {"Azure Temple Zone",  "Complete Aerial Garden Zone",      80, 20, SECRET_WARP, 41, false, false, 0},
+	/* 06 */ {"Aerial Garden Zone", "/", 70, 11, SECRET_WARP, 40, false, false, 0},
+	/* 07 */ {"Azure Temple Zone",  "/",      80, 20, SECRET_WARP, 41, false, false, 0},
 
-	/* 08 */ {"BONUS LEVELS", "", 98, 0, SECRET_HEADER, 0, true, true, 0},
+	/* 08 */ {"BONUS LEVELS", "/", 98, 0, SECRET_HEADER, 0, true, true, 0},
 
-	/* 09 */ {"PLACEHOLDER", "PLACEHOLDER", 0, 0, SECRET_NONE, 0, true, true, 0},
-	/* 10 */ {"Mario Koopa Blast", "Collect 60 Emblems",   110, 42, SECRET_WARP,         30, false, false, 0},
-	/* 11 */ {"PLACEHOLDER", "PLACEHOLDER", 0, 0, SECRET_NONE, 0, true, true, 0},
+	/* 09 */ {"PLACEHOLDER", "/", 0, 0, SECRET_NONE, 0, true, true, 0},
+	/* 10 */ {"Mario Koopa Blast", "/",   110, 42, SECRET_WARP,         30, false, false, 0},
+	/* 11 */ {"PLACEHOLDER", "/", 0, 0, SECRET_NONE, 0, true, true, 0},
 
-	/* 12 */ {"Spring Hill Zone", "Collect 100 Emblems",          0, 44, SECRET_NONE, 0, false, false, 0},
-	/* 13 */ {"Black Hole",       "A Rank in all Special Stages", 0, 50, SECRET_NONE, 0, false, true, 0},
+	/* 12 */ {"Spring Hill Zone", "/",          0, 44, SECRET_NONE, 0, false, false, 0},
+	/* 13 */ {"Black Hole",       "Get grade A in all Special Stages", 0, 50, SECRET_NONE, 0, false, true, 0},
 
-	/* 14 */ {"Emblem Hints", "Collect 40 Emblems", 0, 41, SECRET_EMBLEMHINTS, 0, false,  true, 0},
-	/* 15 */ {"Emblem Radar", "Collect 80 Emblems", 0, 43, SECRET_ITEMFINDER,  0, false,  true, 0},
+	/* 14 */ {"Emblem Hints", "/", 0, 41, SECRET_EMBLEMHINTS, 0, false,  true, 0},
+	/* 15 */ {"Emblem Radar", "/", 0, 43, SECRET_ITEMFINDER,  0, false,  true, 0},
 
-	/* 16 */ {"Pandora's Box", "Collect All Emblems",  0, 45, SECRET_PANDORA,     0, false, false, 0},
-	/* 17 */ {"Level Select",  "Collect All Emblems", 20, 45, SECRET_LEVELSELECT, 1, false,  true, 0},
+	/* 16 */ {"Pandora's Box", "/",  0, 45, SECRET_PANDORA,     0, false, false, 0},
+	/* 17 */ {"Level Select",  "/", 20, 45, SECRET_LEVELSELECT, 1, false,  true, 0},
 };
 
 // Default number of emblems and extra emblems
