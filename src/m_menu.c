@@ -1502,7 +1502,7 @@ menu_t SR_UnlockChecklistDef =
 	&SR_MainDef,
 	SR_UnlockChecklistMenu,
 	M_DrawChecklist,
-	280, 185,
+	30, 30,
 	0,
 	NULL
 };
@@ -4787,27 +4787,98 @@ static void M_LevelSelectWarp(INT32 choice)
 
 UINT8 skyRoomMenuTranslations[MAXUNLOCKABLES];
 
-#define NUMCHECKLIST 8
 static void M_DrawChecklist(void)
 {
-	INT32 i, j = 0;
+	INT32 i, j = 0, y = currentMenu->y;
+	UINT32 condnum, previd, maxcond;
+	condition_t *cond;
 
-	for (i = 0; i < MAXUNLOCKABLES; i++)
+	for (i = 0; i < MAXUNLOCKABLES;)
 	{
-		if (unlockables[i].name[0] == 0 || unlockables[i].nochecklist
+		if (unlockables[i].name[0] == 0 //|| unlockables[i].nochecklist
 		|| !unlockables[i].conditionset || unlockables[i].conditionset > MAXCONDITIONSETS)
 			continue;
 
-		V_DrawString(8, 8+(24*j), V_RETURN8, unlockables[i].name);
-		V_DrawString(160, 8+(24*j), V_RETURN8, V_WordWrap(160, 292, 0, unlockables[i].objective));
+		V_DrawString(currentMenu->x, y, ((unlockables[i].unlocked) ? V_GREENMAP : V_TRANSLUCENT), ((unlockables[i].unlocked) ? unlockables[i].name : M_CreateSecretMenuOption(unlockables[i].name)));
+
+		for (j = i+1; j < MAXUNLOCKABLES; j++)
+		{
+			if (!(unlockables[j].name[0] == 0 //|| unlockables[j].nochecklist
+			|| !unlockables[j].conditionset || unlockables[j].conditionset > MAXCONDITIONSETS))
+				break;
+		}
+		if ((j != MAXUNLOCKABLES) && (unlockables[i].conditionset == unlockables[j].conditionset))
+			y += 8;
+		else
+		{
+			if ((maxcond = conditionSets[unlockables[i].conditionset-1].numconditions))
+			{
+				cond = conditionSets[unlockables[i].conditionset-1].condition;
+				previd = cond[0].id;
+				y += 2;
+				for (condnum = 0; condnum < maxcond; condnum++)
+				{
+					if (cond[condnum].id != previd)
+					{
+						y += 8;
+						V_DrawString(currentMenu->x + 4, y, V_YELLOWMAP, "OR");
+					}
+
+					y += 8;
+
+					switch (cond[condnum].type)
+					{
+						case UC_MAPBEATEN:
+						case UC_MAPPERFECT:
+							{
+								char *title = G_BuildMapTitle(cond[condnum].requirement);
+								if (title)
+								{
+									V_DrawString(currentMenu->x + 8, y, V_ALLOWLOWERCASE, va("%s %s",
+									((cond[condnum].type == UC_MAPPERFECT) ? "Get every ring in" : "Complete"),
+									((M_MapLocked(cond[condnum].requirement) || (!(mapheaderinfo[cond[condnum].requirement-1]->menuflags & LF2_NOVISITNEEDED) || mapvisited[cond[condnum].requirement-1])) ? M_CreateSecretMenuOption(title) : title)));
+									Z_Free(title);
+								}
+							}
+							break;
+						case UC_GAMECLEAR:
+						case UC_ALLEMERALDS:
+							{
+								const char *emeraldtext = ((cond[condnum].type == UC_ALLEMERALDS) ? " with all emeralds" : "");
+								if (cond[condnum].requirement != 1)
+									V_DrawString(currentMenu->x + 8, y,
+									V_ALLOWLOWERCASE,va("Complete the game %d times%s",
+									cond[condnum].requirement, emeraldtext));
+								else
+									V_DrawString(currentMenu->x + 8, y,
+									V_ALLOWLOWERCASE,
+									va("Complete the game%s", emeraldtext));
+							}
+							break;
+						case UC_TOTALEMBLEMS:
+							V_DrawString(currentMenu->x + 8, y,
+							V_ALLOWLOWERCASE,
+							va("Collect %s%d emblems", ((M_CountEmblems() == cond[condnum].requirement) ? "all " : ""), cond[condnum].requirement));
+							break;
+						default:
+							V_DrawString(currentMenu->x + 8, y,
+							V_ALLOWLOWERCASE,
+							va("id %d, type %d, req %d", cond[condnum].id, cond[condnum].type, cond[condnum].requirement));
+							break;
+					}
+					previd = cond[condnum].id;
+				}
+			}
+			y += 12;
+		}
+		i = j;
+
+		/*V_DrawString(160, 8+(24*j), V_RETURN8, V_WordWrap(160, 292, 0, unlockables[i].objective));
 
 		if (unlockables[i].unlocked)
 			V_DrawString(308, 8+(24*j), V_YELLOWMAP, "Y");
 		else
-			V_DrawString(308, 8+(24*j), V_YELLOWMAP, "N");
-
-		if (++j >= NUMCHECKLIST)
-			break;
+			V_DrawString(308, 8+(24*j), V_YELLOWMAP, "N");*/
 	}
 }
 
