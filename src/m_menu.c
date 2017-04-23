@@ -4884,6 +4884,8 @@ static void M_DrawChecklist(void)
 				{
 					for (condnum = 0; condnum < maxcond; condnum++)
 					{
+						const char *beat = "!";
+
 						if (cond[condnum].id != previd)
 						{
 							addy(8);
@@ -4894,6 +4896,32 @@ static void M_DrawChecklist(void)
 
 						switch (cond[condnum].type)
 						{
+							case UC_PLAYTIME:
+								{
+									UINT32 hours = G_TicsToHours(cond[condnum].requirement);
+									UINT32 minutes = G_TicsToMinutes(cond[condnum].requirement, false);
+									UINT32 seconds = G_TicsToSeconds(cond[condnum].requirement);
+
+#define getplural(field) ((field == 1) ? "" : "s")
+									if (hours)
+									{
+										if (minutes)
+											beat = va("Play the game for %d hour%s %d minute%s", hours, getplural(hours), minutes, getplural(minutes));
+										else
+											beat = va("Play the game for %d hour%s", hours, getplural(hours));
+									}
+									else
+									{
+										if (minutes && seconds)
+											beat = va("Play the game for %d minute%s %d second%s", minutes, getplural(minutes), seconds, getplural(seconds));
+										else if (minutes)
+											beat = va("Play the game for %d minute%s", minutes, getplural(minutes));
+										else
+											beat = va("Play the game for %d second%s", seconds, getplural(seconds));
+									}
+#undef getplural
+								}
+								break;
 							case UC_MAPVISITED:
 							case UC_MAPBEATEN:
 							case UC_MAPALLEMERALDS:
@@ -4904,78 +4932,160 @@ static void M_DrawChecklist(void)
 
 									if (title)
 									{
-										const char *beat = "!";
 										const char *level = ((M_MapLocked(cond[condnum].requirement) || !((mapheaderinfo[cond[condnum].requirement-1]->menuflags & LF2_NOVISITNEEDED) || mapvisited[cond[condnum].requirement-1])) ? M_CreateSecretMenuOption(title) : title);
 
 										switch (cond[condnum].type)
 										{
 											case UC_MAPVISITED:
-												beat = va("\x1E Visit %s", level);
+												beat = va("Visit %s", level);
 												break;
 											case UC_MAPALLEMERALDS:
-												beat = va("\x1E Complete %s with all emeralds", level);
+												beat = va("Beat %s with all emeralds", level);
 												break;
 											case UC_MAPULTIMATE:
-												beat = va("\x1E Complete %s in Ultimate mode", level);
+												beat = va("Beat %s in Ultimate mode", level);
 												break;
 											case UC_MAPPERFECT:
-												beat = va("\x1E Get all rings in %s", level);
+												beat = va("Get all rings in %s", level);
 												break;
 											case UC_MAPBEATEN:
 											default:
-												beat = va("\x1E Complete %s", level);
+												beat = va("Beat %s", level);
 												break;
 										}
-										V_DrawString(currentMenu->x, y, V_ALLOWLOWERCASE, beat);
 										Z_Free(title);
+									}
+								}
+								break;
+							case UC_MAPSCORE:
+							case UC_MAPTIME:
+							case UC_MAPRINGS:
+								{
+									char *title = G_BuildMapTitle(cond[condnum].extrainfo1);
+
+									if (title)
+									{
+										const char *level = ((M_MapLocked(cond[condnum].extrainfo1) || !((mapheaderinfo[cond[condnum].extrainfo1-1]->menuflags & LF2_NOVISITNEEDED) || mapvisited[cond[condnum].extrainfo1-1])) ? M_CreateSecretMenuOption(title) : title);
+
+										switch (cond[condnum].type)
+										{
+											case UC_MAPSCORE:
+												beat = va("Get %d points in %s", cond[condnum].requirement, level);
+												break;
+											case UC_MAPTIME:
+												beat = va("Beat %s in %d:%d.%d", level,
+												G_TicsToMinutes(cond[condnum].requirement, true),
+												G_TicsToSeconds(cond[condnum].requirement),
+												G_TicsToCentiseconds(cond[condnum].requirement));
+												break;
+											case UC_MAPRINGS:
+												beat = va("Get %d rings in %s", cond[condnum].requirement, level);
+												break;
+											default:
+												break;
+										}
+										Z_Free(title);
+									}
+								}
+								break;
+							case UC_OVERALLSCORE:
+							case UC_OVERALLTIME:
+							case UC_OVERALLRINGS:
+								{
+									switch (cond[condnum].type)
+									{
+										case UC_OVERALLSCORE:
+											beat = va("Get %d points over all maps", cond[condnum].requirement);
+											break;
+										case UC_OVERALLTIME:
+											beat = va("Get a total time of less than %d:%d.%d",
+											G_TicsToMinutes(cond[condnum].requirement, true),
+											G_TicsToSeconds(cond[condnum].requirement),
+											G_TicsToCentiseconds(cond[condnum].requirement));
+											break;
+										case UC_OVERALLRINGS:
+											beat = va("Get %d rings over all maps", cond[condnum].requirement);
+											break;
+										default:
+											break;
 									}
 								}
 								break;
 							case UC_GAMECLEAR:
 							case UC_ALLEMERALDS:
 								{
-									const char *beat = "!";
 									const char *emeraldtext = ((cond[condnum].type == UC_ALLEMERALDS) ? " with all emeralds" : "");
 									if (cond[condnum].requirement != 1)
-										beat = va("\x1E Beat the game %d times%s",
+										beat = va("Beat the game %d times%s",
 										cond[condnum].requirement, emeraldtext);
 									else
-										beat = va("\x1E Beat the game%s",
+										beat = va("Beat the game%s",
 										emeraldtext);
-
-									V_DrawString(currentMenu->x, y, V_ALLOWLOWERCASE, beat);
 								}
 								break;
 							case UC_TOTALEMBLEMS:
-								V_DrawString(currentMenu->x, y,
-								V_ALLOWLOWERCASE,
-								va("\x1E Collect %s%d emblems", ((M_CountEmblems() == cond[condnum].requirement) ? "all " : ""), cond[condnum].requirement));
+								beat = va("Collect %s%d emblems", ((numemblems+numextraemblems == cond[condnum].requirement) ? "all " : ""), cond[condnum].requirement);
 								break;
+							case UC_NIGHTSTIME:
+							case UC_NIGHTSSCORE:
 							case UC_NIGHTSGRADE:
 								{
 									char *title = G_BuildMapTitle(cond[condnum].extrainfo1);
 
 									if (title)
 									{
-										const char *beat = "!";
 										const char *level = ((M_MapLocked(cond[condnum].extrainfo1) || !((mapheaderinfo[cond[condnum].extrainfo1-1]->menuflags & LF2_NOVISITNEEDED) || mapvisited[cond[condnum].extrainfo1-1])) ? M_CreateSecretMenuOption(title) : title);
-										char grade = ('F' - (char)cond[condnum].requirement);
-										if (grade < 'A')
-											grade = 'A';
-										if (cond[condnum].extrainfo2)
-											beat = va("\x1E Get grade %c in %s on mare %d", grade, level, cond[condnum].extrainfo2);
-										else
-											beat = va("\x1E Get grade %c in %s", grade, level);
-										V_DrawString(currentMenu->x, y, V_ALLOWLOWERCASE, beat);
+
+										switch (cond[condnum].type)
+										{
+											case UC_NIGHTSSCORE:
+												if (cond[condnum].extrainfo2)
+													beat = va("Get %d points in %s, mare %d", cond[condnum].requirement, level, cond[condnum].extrainfo2);
+												else
+													beat = va("Get %d points in %s", cond[condnum].requirement, level);
+												break;
+											case UC_NIGHTSTIME:
+												if (cond[condnum].extrainfo2)
+													beat = va("Beat %s, mare %d in %d:%d.%d", level, cond[condnum].extrainfo2,
+													G_TicsToMinutes(cond[condnum].requirement, true),
+													G_TicsToSeconds(cond[condnum].requirement),
+													G_TicsToCentiseconds(cond[condnum].requirement));
+												else
+													beat = va("Beat %s in %d:%d.%d",
+													level,
+													G_TicsToMinutes(cond[condnum].requirement, true),
+													G_TicsToSeconds(cond[condnum].requirement),
+													G_TicsToCentiseconds(cond[condnum].requirement));
+												break;
+											case UC_NIGHTSGRADE:
+												{
+													char grade = ('F' - (char)cond[condnum].requirement);
+													if (grade < 'A')
+														grade = 'A';
+													if (cond[condnum].extrainfo2)
+														beat = va("Get grade %c in %s, mare %d", grade, level, cond[condnum].extrainfo2);
+													else
+														beat = va("Get grade %c in %s", grade, level);
+												}
+											break;
+											default:
+												break;
+										}
 										Z_Free(title);
 									}
 								}
 								break;
+							case UC_TRIGGER:
+							case UC_EMBLEM:
+							case UC_CONDITIONSET:
 							default:
-								V_DrawString(currentMenu->x, y,
-								V_ALLOWLOWERCASE,
-								va("\x1E id %d, type %d, req %d", cond[condnum].id, cond[condnum].type, cond[condnum].requirement));
+								y -= 8; // Nope, not showing this.
 								break;
+						}
+						if (beat[0] != '!')
+						{
+							V_DrawString(currentMenu->x, y, 0, "\x1E");
+							V_DrawString(currentMenu->x+12, y, V_ALLOWLOWERCASE, beat);
 						}
 						previd = cond[condnum].id;
 					}
