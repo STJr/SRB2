@@ -1198,8 +1198,8 @@ static menuitem_t OP_VideoOptionsMenu[] =
 #endif
 
 	{IT_HEADER, NULL, "Console", NULL, 85},
-	{IT_STRING | IT_CVAR, NULL, "Console Background",        &cons_backcolor,      91},
-	{IT_STRING | IT_CVAR, NULL, "Console Text Size",         &cv_constextsize,     96},
+	{IT_STRING | IT_CVAR, NULL, "Background color",          &cons_backcolor,      91},
+	{IT_STRING | IT_CVAR, NULL, "Text Size",                 &cv_constextsize,     96},
 
 	{IT_HEADER, NULL, "Level", NULL, 105},
 	{IT_STRING | IT_CVAR, NULL, "Draw Distance",             &cv_drawdist,        111},
@@ -7766,7 +7766,7 @@ static void M_EraseDataResponse(INT32 ch)
 		totalplaytime = 0;
 		F_StartIntro();
 	}
-	S_StartSound(NULL, sfx_bewar1+M_RandomKey(3));
+	S_StartSound(NULL, sfx_bewar1+M_RandomKey(4)); // Bweh heh he
 	M_ClearMenus(true);
 }
 
@@ -8435,9 +8435,6 @@ static void M_DrawVideoMode(void)
 	}
 	else
 	{
-		V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y + 104,
-			V_YELLOWMAP, "Larger modes may have performance issues.");
-
 		M_CentreText(OP_VideoModeDef.y + 116,
 			va("Current mode is %c%dx%d",
 				(SCR_IsAspectCorrect(vid.width, vid.height)) ? 0x83 : 0x80,
@@ -8449,10 +8446,10 @@ static void M_DrawVideoMode(void)
 
 		V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y + 138,
 			V_GREENMAP, "Green modes are recommended.");
-		V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y + 150,
+		V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y + 146,
 			V_YELLOWMAP, "Other modes may have visual errors.");
 		V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y + 158,
-			V_YELLOWMAP, "Use at own risk.");
+			V_YELLOWMAP, "Larger modes may have performance issues.");
 	}
 
 	// Draw the cursor for the VidMode menu
