@@ -2732,6 +2732,10 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	P_PrepareThings(lastloadedmaplumpnum + ML_THINGS);
 
+	// init gravity, tag lists,
+	// anything that P_ResetDynamicSlopes/P_LoadThings needs to know
+	P_InitSpecials();
+
 #ifdef ESLOPE
 	P_ResetDynamicSlopes();
 #endif
@@ -2749,8 +2753,6 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	if (loadprecip) //  ugly hack for P_NetUnArchiveMisc (and P_LoadNetGame)
 		P_SpawnPrecipitation();
-
-	globalweather = mapheaderinfo[gamemap-1]->weather;
 
 #ifdef HWRENDER // not win32 only 19990829 by Kin
 	if (rendermode != render_soft && rendermode != render_none)

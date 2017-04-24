@@ -5546,6 +5546,45 @@ static void P_RunLevelLoadExecutors(void)
 	}
 }
 
+/** Before things are loaded, initialises certain stuff in case they're needed
+  * by P_ResetDynamicSlopes or P_LoadThings. This was split off from
+  * P_SpawnSpecials, in case you couldn't tell.
+  *
+  * \sa P_SpawnSpecials, P_InitTagLists
+  * \author Monster Iestyn
+  */
+void P_InitSpecials(void)
+{
+	// Set the default gravity. Custom gravity overrides this setting.
+	gravity = FRACUNIT/2;
+
+	// Defaults in case levels don't have them set.
+	sstimer = 90*TICRATE + 6;
+	totalrings = 1;
+
+	CheckForBustableBlocks = CheckForBouncySector = CheckForQuicksand = CheckForMarioBlocks = CheckForFloatBob = CheckForReverseGravity = false;
+
+	// Set curWeather
+	switch (mapheaderinfo[gamemap-1]->weather)
+	{
+		case PRECIP_SNOW: // snow
+		case PRECIP_RAIN: // rain
+		case PRECIP_STORM: // storm
+		case PRECIP_STORM_NORAIN: // storm w/o rain
+		case PRECIP_STORM_NOSTRIKES: // storm w/o lightning
+			curWeather = mapheaderinfo[gamemap-1]->weather;
+			break;
+		default: // blank/none
+			curWeather = PRECIP_NONE:
+			break;
+	}
+
+	// Set globalweather
+	globalweather = mapheaderinfo[gamemap-1]->weather;
+
+	P_InitTagLists();   // Create xref tables for tags
+}
+
 /** After the map has loaded, scans for specials that spawn 3Dfloors and
   * thinkers.
   *
@@ -5566,15 +5605,6 @@ void P_SpawnSpecials(INT32 fromnetsave)
 	// This used to be used, and *should* be used in the future,
 	// but currently isn't.
 	(void)fromnetsave;
-
-	// Set the default gravity. Custom gravity overrides this setting.
-	gravity = FRACUNIT/2;
-
-	// Defaults in case levels don't have them set.
-	sstimer = 90*TICRATE + 6;
-	totalrings = 1;
-
-	CheckForBustableBlocks = CheckForBouncySector = CheckForQuicksand = CheckForMarioBlocks = CheckForFloatBob = CheckForReverseGravity = false;
 
 	// Init special SECTORs.
 	sector = sectors;
@@ -5624,20 +5654,6 @@ void P_SpawnSpecials(INT32 fromnetsave)
 		}
 	}
 
-	if (mapheaderinfo[gamemap-1]->weather == 2) // snow
-		curWeather = PRECIP_SNOW;
-	else if (mapheaderinfo[gamemap-1]->weather == 3) // rain
-		curWeather = PRECIP_RAIN;
-	else if (mapheaderinfo[gamemap-1]->weather == 1) // storm
-		curWeather = PRECIP_STORM;
-	else if (mapheaderinfo[gamemap-1]->weather == 5) // storm w/o rain
-		curWeather = PRECIP_STORM_NORAIN;
-	else if (mapheaderinfo[gamemap-1]->weather == 6) // storm w/o lightning
-		curWeather = PRECIP_STORM_NOSTRIKES;
-	else
-		curWeather = PRECIP_NONE;
-
-	P_InitTagLists();   // Create xref tables for tags
 	P_SearchForDisableLinedefs(); // Disable linedefs are now allowed to disable *any* line
 
 	P_SpawnScrollers(); // Add generalized scrollers
