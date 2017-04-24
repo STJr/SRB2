@@ -5575,7 +5575,7 @@ void P_InitSpecials(void)
 			curWeather = mapheaderinfo[gamemap-1]->weather;
 			break;
 		default: // blank/none
-			curWeather = PRECIP_NONE:
+			curWeather = PRECIP_NONE;
 			break;
 	}
 
