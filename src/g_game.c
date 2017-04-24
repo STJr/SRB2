@@ -156,6 +156,7 @@ UINT8 stagefailed; // Used for GEMS BONUS? Also to see if you beat the stage.
 UINT16 emeralds;
 UINT32 token; // Number of tokens collected in a level
 UINT32 tokenlist; // List of tokens collected
+boolean gottoken; // Did you get a token? Used for end of act
 INT32 tokenbits; // Used for setting token bits
 
 // Old Special Stage
@@ -2780,7 +2781,6 @@ static INT16 RandMap(INT16 tolflags, INT16 pprevmap)
 static void G_DoCompleted(void)
 {
 	INT32 i;
-	boolean gottoken = false;
 
 	tokenlist = 0; // Reset the list
 
@@ -2866,10 +2866,9 @@ static void G_DoCompleted(void)
 	if (nextmap >= 1100-1 && nextmap <= 1102-1 && (gametype == GT_RACE || gametype == GT_COMPETITION))
 		nextmap = (INT16)(spstage_start-1);
 
-	if (gametype == GT_COOP && token)
+	if ((gottoken = (gametype == GT_COOP && token)))
 	{
 		token--;
-		gottoken = true;
 
 		if (!(emeralds & EMERALD1))
 			nextmap = (INT16)(sstage_start - 1); // Special Stage 1

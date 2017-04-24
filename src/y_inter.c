@@ -147,6 +147,7 @@ static boolean useinterpic;
 static INT32 timer;
 
 static INT32 intertic;
+static INT32 tallydonetic = -1;
 static INT32 endtic = -1;
 
 intertype_t intertype = int_none;
@@ -158,6 +159,40 @@ static void Y_CalculateTimeRaceWinners(void);
 static void Y_CalculateMatchWinners(void);
 static void Y_FollowIntermission(void);
 static void Y_UnloadData(void);
+
+static void Y_IntermissionTokenDrawer(void)
+{
+	INT32 y;
+	INT32 offs = 0;
+	UINT32 tokencount;
+	INT32 lowy = BASEVIDHEIGHT - 32;
+	INT16 temp = SHORT(tokenicon->height)/2;
+	INT32 calc;
+
+	if (tallydonetic != -1)
+	{
+		offs = (intertic - tallydonetic)*2;
+		if (offs > 10)
+			offs = 8;
+	}
+
+	V_DrawFill(32, lowy-1, 16, 1, 31); // slot
+
+	y = (lowy + offs + 1) - (temp + (token + 1)*8);
+
+	for (tokencount = token; tokencount; tokencount--)
+	{
+		if (y >= -temp)
+			V_DrawSmallScaledPatch(32, y, 0, tokenicon);
+		y += 8;
+	}
+
+	y += (offs*(temp - 1)/8);
+	calc = (lowy - y)*2;
+
+	if (calc > 0)
+		V_DrawCroppedPatch(32<<FRACBITS, y<<FRACBITS, FRACUNIT/2, 0, tokenicon, 32*FRACUNIT, y<<FRACBITS, SHORT(tokenicon->width), calc);
+}
 
 //
 // Y_IntermissionDrawer
@@ -202,6 +237,9 @@ void Y_IntermissionDrawer(void)
 	if (intertype == int_coop)
 	{
 		INT32 bonusy;
+
+		if (gottoken) // first to be behind everything else
+			Y_IntermissionTokenDrawer();
 
 		// draw score
 		V_DrawScaledPatch(hudinfo[HUD_SCORE].x, hudinfo[HUD_SCORE].y, V_SNAPTOLEFT, sboscore);
@@ -260,6 +298,9 @@ void Y_IntermissionDrawer(void)
 		INT32 xoffset2 = 0; // Line 2 x offset
 		INT32 xoffset3 = 0; // Line 3 x offset
 		UINT8 drawsection = 0;
+
+		if (gottoken) // first to be behind everything else
+			Y_IntermissionTokenDrawer();
 
 		// draw the header
 		if (intertic <= TICRATE)
@@ -679,7 +720,10 @@ void Y_Ticker(void)
 		boolean anybonuses = false;
 
 		if (!intertic) // first time only
+		{
 			S_ChangeMusicInternal("_clear", false); // don't loop it
+			tallydonetic = -1;
+		}
 
 		if (intertic < TICRATE) // one second pause before tally begins
 			return;
@@ -709,6 +753,7 @@ void Y_Ticker(void)
 
 		if (!anybonuses)
 		{
+			tallydonetic = intertic;
 			endtic = intertic + 3*TICRATE; // 3 second pause after end of tally
 			S_StartSound(NULL, sfx_chchng); // cha-ching!
 
@@ -736,12 +781,11 @@ void Y_Ticker(void)
 		INT32 i;
 		UINT32 oldscore = data.spec.score;
 		boolean skip = false;
-		static INT32 tallydonetic = 0;
 
 		if (!intertic) // first time only
 		{
 			S_ChangeMusicInternal("_clear", false); // don't loop it
-			tallydonetic = 0;
+			tallydonetic = -1;
 		}
 
 		if (intertic < TICRATE) // one second pause before tally begins
@@ -751,9 +795,9 @@ void Y_Ticker(void)
 			if (playeringame[i] && (players[i].cmd.buttons & BT_USE))
 				skip = true;
 
-		if (tallydonetic != 0)
+		if ((data.spec.continues & 0x80) && tallydonetic != -1)
 		{
-			if (intertic > tallydonetic)
+			if ((intertic - tallydonetic) > (3*TICRATE)/2)
 			{
 				endtic = intertic + 4*TICRATE; // 4 second pause after end of tally
 				S_StartSound(NULL, sfx_s3kac); // cha-ching!
@@ -772,9 +816,8 @@ void Y_Ticker(void)
 
 		if (!data.spec.bonus.points)
 		{
-			if (data.spec.continues & 0x80) // don't set endtic yet!
-				tallydonetic = intertic + (3*TICRATE)/2;
-			else // okay we're good.
+			tallydonetic = intertic;
+			if (!(data.spec.continues & 0x80)) // don't set endtic yet!
 				endtic = intertic + 4*TICRATE; // 4 second pause after end of tally
 
 			S_StartSound(NULL, sfx_chchng); // cha-ching!

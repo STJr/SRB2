@@ -91,7 +91,7 @@ patch_t *tallminus;
 patch_t *emeraldpics[7];
 patch_t *tinyemeraldpics[7];
 static patch_t *emblemicon;
-static patch_t *tokenicon;
+patch_t *tokenicon;
 
 //-------------------------------------------
 //              misc vars
