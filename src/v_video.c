@@ -830,7 +830,7 @@ void V_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 
 	c &= 255;
 
-	for (;(--h >= 0) && dest <= deststop; dest += vid.width)
+	for (;(--h >= 0) && dest < deststop; dest += vid.width)
 		memset(dest, (UINT8)(c&255), w * vid.bpp);
 }
 
