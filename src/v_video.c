@@ -845,7 +845,7 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 			dest = desttop;
 			dest += FixedInt(FixedMul(topdelta<<FRACBITS,fdup))*vid.width;
 
-			for (ofs = sy<<FRACBITS; dest < deststop && (ofs>>FRACBITS) < column->length && (ofs>>FRACBITS) < h; ofs += rowfrac)
+			for (ofs = sy<<FRACBITS; dest < deststop && (ofs>>FRACBITS) < column->length && ((ofs>>FRACBITS) + topdelta) < h; ofs += rowfrac)
 			{
 				if (dest >= screens[scrn&V_PARAMMASK]) // don't draw off the top of the screen (CRASH PREVENTION)
 					*dest = source[ofs>>FRACBITS];
