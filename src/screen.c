@@ -473,25 +473,8 @@ void SCR_ClosedCaptions(void)
 				flags |= (((20-closedcaptions[i].t)/2)*V_10TRANS);
 			else if (closedcaptions[i].t > TICRATE)
 				y -= (closedcaptions[i].t-- - TICRATE)*vid.dupy;
-			if (closedcaptions[i].c)
-			{
-				const mobj_t *o = (const mobj_t *)closedcaptions[i].c->origin;
-				if (o)
-				{
-					if (!splitscreen)
-					{
-						angle_t angle = R_PointToAngle(o->x, o->y) - localangle;
-						if (angle > ANGLE_45 && angle < ANGLE_135)
-							dir = '\x1C';
-						else if (angle > ANGLE_225 && angle < ANGLE_315)
-							dir = '\x1D';
-						else
-							dir = '\x1E';
-					}
-					else
-						dir = '\x1E';
-				}
-			}
+			if (closedcaptions[i].c && closedcaptions[i].c->origin)
+				dir = '\x1E';
 			V_DrawRightAlignedString(vid.width-(20*vid.dupx), y,
 			flags, va("%c [%s]", dir, (closedcaptions[i].s->caption[0] ? closedcaptions[i].s->caption : closedcaptions[i].s->name)));
 		}
