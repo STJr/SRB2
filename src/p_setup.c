@@ -2574,8 +2574,7 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	postimgtype = postimgtype2 = postimg_none;
 
-	if (mapheaderinfo[gamemap-1]->forcecharacter[0] != '\0'
-	&& atoi(mapheaderinfo[gamemap-1]->forcecharacter) != 255)
+	if (mapheaderinfo[gamemap-1]->forcecharacter[0] != '\0')
 		P_ForceCharacter(mapheaderinfo[gamemap-1]->forcecharacter);
 
 	// chasecam on in chaos, race, coop
