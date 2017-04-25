@@ -22,8 +22,13 @@
 #include "lua_libs.h"
 #include "lua_hud.h" // hud_running errors
 
+// for functions not allowed in hud.add hooks
 #define NOHUD if (hud_running)\
 return luaL_error(L, "HUD rendering code should not call this function!");
+// for functions not allowed in hooks or coroutines (supercedes above)
+#define NOHOOK if (!lua_lumploading)\
+		return luaL_error(L, "This function cannot be called from within a hook or coroutine!");
+// for functions only allowed within a level
 #define INLEVEL if (gamestate != GS_LEVEL)\
 return luaL_error(L, "This function can only be used in a level!");
 
@@ -184,7 +189,7 @@ static int lib_comAddCommand(lua_State *L)
 	strlwr(name);
 
 	luaL_checktype(L, 2, LUA_TFUNCTION);
-	NOHUD
+	NOHOOK
 	if (lua_gettop(L) >= 3)
 	{ // For the third argument, only take a boolean or a number.
 		lua_settop(L, 3);
@@ -296,7 +301,7 @@ static int lib_cvRegisterVar(lua_State *L)
 	consvar_t *cvar;
 	luaL_checktype(L, 1, LUA_TTABLE);
 	lua_settop(L, 1); // Clear out all other possible arguments, leaving only the first one.
-	NOHUD
+	NOHOOK
 	cvar = lua_newuserdata(L, sizeof(consvar_t));
 	luaL_getmetatable(L, META_CVAR);
 	lua_setmetatable(L, -2);
