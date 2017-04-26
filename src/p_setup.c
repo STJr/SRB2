@@ -2276,6 +2276,17 @@ void P_LoadThingsOnly(void)
 	// Search through all the thinkers.
 	mobj_t *mo;
 	thinker_t *think;
+	INT32 i, viewid = -1, centerid = -1; // for skyboxes
+
+	// check if these are any of the normal viewpoint/centerpoint mobjs in the level or not
+	if (skyboxmo[0] || skyboxmo[1])
+		for (i = 0; i < 16; i++)
+		{
+			if (skyboxmo[0] && skyboxmo[0] == skyboxviewpnts[i])
+				viewid = i; // save id just in case
+			if (skyboxmo[1] && skyboxmo[1] == skyboxcenterpnts[i])
+				centerid = i; // save id just in case
+		}
 
 	for (think = thinkercap.next; think != &thinkercap; think = think->next)
 	{
@@ -2292,6 +2303,10 @@ void P_LoadThingsOnly(void)
 
 	P_PrepareThings(lastloadedmaplumpnum + ML_THINGS);
 	P_LoadThings();
+
+	// restore skybox viewpoint/centerpoint if necessary, set them to defaults if we can't do that
+	skyboxmo[0] = skyboxviewpnts[(viewid >= 0) ? viewid : 0];
+	skyboxmo[1] = skyboxcenterpnts[(centerid >= 0) ? centerid : 0];
 
 	P_SpawnSecretItems(true);
 }
