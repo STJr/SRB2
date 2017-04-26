@@ -2728,6 +2728,9 @@ boolean P_SetupLevel(boolean skipprecip)
 	for (i = 0; i < 2; i++)
 		skyboxmo[i] = NULL;
 
+	for (i = 0; i < 16; i++)
+		skyboxviewpnts[i] = skyboxcenterpnts[i] = NULL;
+
 	P_MapStart();
 
 	P_PrepareThings(lastloadedmaplumpnum + ML_THINGS);
@@ -2737,6 +2740,9 @@ boolean P_SetupLevel(boolean skipprecip)
 #endif
 
 	P_LoadThings();
+	// skybox mobj defaults
+	skyboxmo[0] = skyboxviewpnts[0];
+	skyboxmo[1] = skyboxcenterpnts[0];
 
 	P_SpawnSecretItems(loademblems);
 

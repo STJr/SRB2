@@ -9718,9 +9718,9 @@ void P_SpawnMapThing(mapthing_t *mthing)
 	{
 	case MT_SKYBOX:
 		if (mthing->options & MTF_OBJECTSPECIAL)
-			skyboxmo[1] = mobj;
+			skyboxcenterpnts[mthing->extrainfo] = mobj;
 		else
-			skyboxmo[0] = mobj;
+			skyboxviewpnts[mthing->extrainfo] = mobj;
 		break;
 	case MT_FAN:
 		if (mthing->options & MTF_OBJECTSPECIAL)
