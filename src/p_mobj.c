@@ -9717,7 +9717,6 @@ void P_SpawnMapThing(mapthing_t *mthing)
 	switch(mobj->type)
 	{
 	case MT_SKYBOX:
-		mobj->angle = 0;
 		if (mthing->options & MTF_OBJECTSPECIAL)
 			skyboxmo[1] = mobj;
 		else
