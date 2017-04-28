@@ -444,26 +444,6 @@ void SCR_ClosedCaptions(void)
 
 	for (i = 0; i < NUMCAPTIONS; i++)
 	{
-		boolean cond = (closedcaptions[i].c && I_SoundIsPlaying(closedcaptions[i].c->handle));
-
-		if (closedcaptions[i].t <= TICRATE)
-			closedcaptions[i].t--;
-		if (cond || (closedcaptions[i].s && closedcaptions[i].t))
-		{
-			if (!cond)
-				closedcaptions[i].c = NULL;
-		}
-
-		if (!closedcaptions[i].t)
-		{
-			closedcaptions[i].c = NULL;
-			closedcaptions[i].s = NULL;
-			closedcaptions[i].t = 0;
-		}
-	}
-
-	for (i = 0; i < NUMCAPTIONS; i++)
-	{
 		if (closedcaptions[i].s)
 		{
 			INT32 flags = V_NOSCALESTART|V_ALLOWLOWERCASE;

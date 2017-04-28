@@ -813,6 +813,7 @@ static INT32 actualmidimusicvolume;
 void S_UpdateSounds(void)
 {
 	INT32 audible, cnum, volume, sep, pitch;
+	UINT8 i;
 	channel_t *c;
 
 	listener_t listener;
@@ -840,9 +841,7 @@ void S_UpdateSounds(void)
 		I_UpdateMumble(NULL, listener);
 #endif
 
-		// Stop cutting FMOD out. WE'RE sick of it.
-		I_UpdateSound();
-		return;
+		goto notinlevel;
 	}
 
 	if (dedicated || nosound)
@@ -881,8 +880,7 @@ void S_UpdateSounds(void)
 	if (hws_mode != HWS_DEFAULT_MODE)
 	{
 		HW3S_UpdateSources();
-		I_UpdateSound();
-		return;
+		goto notinlevel;
 	}
 #endif
 
@@ -970,7 +968,28 @@ void S_UpdateSounds(void)
 		}
 	}
 
+notinlevel:
 	I_UpdateSound();
+
+	for (i = 0; i < NUMCAPTIONS; i++) // update captions
+	{
+		boolean cond = (closedcaptions[i].c && I_SoundIsPlaying(closedcaptions[i].c->handle));
+
+		if (closedcaptions[i].t <= TICRATE)
+			closedcaptions[i].t--;
+		if (cond || (closedcaptions[i].s && closedcaptions[i].t))
+		{
+			if (!cond)
+				closedcaptions[i].c = NULL;
+		}
+
+		if (!closedcaptions[i].t)
+		{
+			closedcaptions[i].c = NULL;
+			closedcaptions[i].s = NULL;
+			closedcaptions[i].t = 0;
+		}
+	}
 }
 
 void S_SetSfxVolume(INT32 volume)
