@@ -7456,7 +7456,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_SCORE1K_ICON1, // spawnstate
 		1,              // spawnhealth
 		S_NULL,         // seestate
-		sfx_token,      // seesound
+		sfx_chchng,     // seesound
 		1000,           // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
@@ -7483,7 +7483,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_SCORE10K_ICON1, // spawnstate
 		1,              // spawnhealth
 		S_NULL,         // seestate
-		sfx_token,      // seesound
+		sfx_chchng,     // seesound
 		10000,          // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate

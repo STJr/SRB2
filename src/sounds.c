@@ -193,13 +193,13 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"corkh",  false,  32,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Cork hit"},
 
   // Menu, interface
-  {"chchng", false, 120,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Score tally done"},
+  {"chchng", false, 120,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Score"},
   {"dwnind", false, 212,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Thinking about air"},
   {"emfind", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Radar beep"},
   {"flgcap", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Flag captured"},
   {"menu1",   true,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Menu beep"},
   {"oneup",   true, 192,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Extra life"},
-  {"ptally",  true,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Score tally"}, // Point tally is identical to menu for now
+  {"ptally",  true,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Tally"}, // Point tally is identical to menu for now
   {"radio",  false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Notification"},
   {"wepchg",  true,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Weapon change"}, // Weapon switch is identical to menu for now
   {"wtrdng",  true, 212,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Aquaphobia"}, // make sure you can hear the DING DING! Tails 03-08-2000
@@ -399,7 +399,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3kad",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "GO!"},
   {"s3kae",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Pinball flipper"},
   {"s3kaf",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "To Special Stage"},
-  {"s3kb0",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Score tally done"},
+  {"s3kb0",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Score"},
   {"s3kb1",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Spring"},
   {"s3kb2",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Failure"},
   {"s3kb3",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Warp"},
