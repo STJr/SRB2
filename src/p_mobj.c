@@ -9509,7 +9509,7 @@ void P_SpawnMapThing(mapthing_t *mthing)
 	// Yeah, this is a dirty hack.
 	if ((mobjinfo[i].flags & (MF_MONITOR|MF_GRENADEBOUNCE)) == MF_MONITOR)
 	{
-		if (gametype == GT_COMPETITION)
+		if (gametype == GT_COMPETITION || gametype == GT_RACE)
 		{
 			// Set powerup boxes to user settings for competition.
 			if (cv_competitionboxes.value == 1) // Random

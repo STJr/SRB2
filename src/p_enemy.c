@@ -5602,7 +5602,10 @@ void A_MixUp(mobj_t *actor)
 	// No mix-up monitors in hide and seek or time only race.
 	// The random factor is okay for other game modes, but in these, it is cripplingly unfair.
 	if (gametype == GT_HIDEANDSEEK || gametype == GT_RACE)
+	{
+		S_StartSound(actor, sfx_lose);
 		return;
+	}
 
 	numplayers = 0;
 	memset(teleported, 0, sizeof (teleported));

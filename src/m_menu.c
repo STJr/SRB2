@@ -1377,39 +1377,42 @@ static menuitem_t OP_ServerOptionsMenu[] =
 	{IT_STRING | IT_CVAR,    NULL, "Allow players to join",            &cv_allownewplayer,      31},
 #endif
 
-	{IT_STRING | IT_CVAR,    NULL, "Force character",                  &cv_forceskin,           41},
-	{IT_STRING | IT_CVAR,    NULL, "Restrict character changes",       &cv_restrictskinchange,  46},
-	{IT_STRING | IT_CVAR,    NULL, "Map progression",                  &cv_advancemap,          51},
-	{IT_STRING | IT_CVAR,    NULL, "Intermission Timer",               &cv_inttime,             56},
+	{IT_STRING | IT_CVAR,    NULL, "Map progression",                  &cv_advancemap,          41},
+	{IT_STRING | IT_CVAR,    NULL, "Intermission Timer",               &cv_inttime,             46},
 
-	{IT_HEADER, NULL, "Platform (Coop, Race, Competition)", NULL, 65},
-	{IT_STRING | IT_CVAR,    NULL, "Players required for exit",        &cv_playersforexit,      71},
-	{IT_STRING | IT_CVAR,    NULL, "Level completion countdown",       &cv_countdowntime,       76},
-	{IT_STRING | IT_CVAR,    NULL, "Item Boxes",                       &cv_competitionboxes,    81},
+	{IT_HEADER, NULL, "Characters", NULL, 55},
+	{IT_STRING | IT_CVAR,    NULL, "Force a character",                &cv_forceskin,           61},
+	{IT_STRING | IT_CVAR,    NULL, "Restrict character changes",       &cv_restrictskinchange,  66},
 
-	{IT_HEADER, NULL, "Ringslinger (Match, CTF, Tag, H&S)", NULL, 90},
-	{IT_STRING | IT_CVAR,    NULL, "Time Limit",                       &cv_timelimit,           96},
-	{IT_STRING | IT_CVAR,    NULL, "Score Limit",                      &cv_pointlimit,         101},
-	{IT_STRING | IT_CVAR,    NULL, "Overtime on Tie",                  &cv_overtime,           106},
-	{IT_STRING | IT_CVAR,    NULL, "Player respawn delay",             &cv_respawntime,        111},
+	{IT_HEADER, NULL, "Items", NULL, 75},
+	{IT_STRING | IT_CVAR,    NULL, "Item respawn delay",               &cv_itemrespawntime,     81},
+	{IT_STRING | IT_SUBMENU, NULL, "Random Item Box Toggles...",       &OP_MonitorToggleDef,    86},
 
-	{IT_STRING | IT_CVAR,    NULL, "Weapon Rings",                     &cv_specialrings,       121},
-	{IT_STRING | IT_CVAR,    NULL, "Power Stones",                     &cv_powerstones,        126},
+	{IT_HEADER, NULL, "Platform (Coop, Race, Competition)", NULL, 95},
+	{IT_STRING | IT_CVAR,    NULL, "Players required for exit",        &cv_playersforexit,     101},
+	{IT_STRING | IT_CVAR,    NULL, "Level completion countdown",       &cv_countdowntime,      106},
+	{IT_STRING | IT_CVAR,    NULL, "Item Boxes",                       &cv_competitionboxes,   111},
 
-	{IT_STRING | IT_CVAR,    NULL, "Item Boxes",                       &cv_matchboxes,         136},
-	{IT_STRING | IT_CVAR,    NULL, "Item respawn delay",               &cv_itemrespawntime,    141},
-	{IT_STRING | IT_SUBMENU, NULL, "Random Item Box Toggles...",       &OP_MonitorToggleDef,   146},
+	{IT_HEADER, NULL, "Ringslinger (Match, CTF, Tag, H&S)", NULL, 120},
+	{IT_STRING | IT_CVAR,    NULL, "Time Limit",                       &cv_timelimit,          126},
+	{IT_STRING | IT_CVAR,    NULL, "Score Limit",                      &cv_pointlimit,         131},
+	{IT_STRING | IT_CVAR,    NULL, "Overtime on Tie",                  &cv_overtime,           136},
+	{IT_STRING | IT_CVAR,    NULL, "Player respawn delay",             &cv_respawntime,        141},
 
-	{IT_STRING | IT_CVAR,    NULL, "Flag respawn delay",               &cv_flagtime,           156},
-	{IT_STRING | IT_CVAR,    NULL, "Hiding time",                      &cv_hidetime,           161},
+	{IT_STRING | IT_CVAR,    NULL, "Item Boxes",                       &cv_matchboxes,         151},
+	{IT_STRING | IT_CVAR,    NULL, "Weapon Rings",                     &cv_specialrings,       156},
+	{IT_STRING | IT_CVAR,    NULL, "Power Stones",                     &cv_powerstones,        161},
 
-	{IT_STRING | IT_CVAR,    NULL, "Autobalance Teams",                &cv_autobalance,        171},
-	{IT_STRING | IT_CVAR,    NULL, "Scramble Teams on Map Change",     &cv_scrambleonchange,   176},
+	{IT_STRING | IT_CVAR,    NULL, "Flag respawn delay",               &cv_flagtime,           171},
+	{IT_STRING | IT_CVAR,    NULL, "Hiding time",                      &cv_hidetime,           176},
+
+	{IT_STRING | IT_CVAR,    NULL, "Autobalance Teams",                &cv_autobalance,        186},
+	{IT_STRING | IT_CVAR,    NULL, "Scramble Teams on Map Change",     &cv_scrambleonchange,   191},
 
 #ifndef NONET
-	{IT_HEADER, NULL, "Advanced", NULL, 185},
-	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "Master server",        &cv_masterserver,        191},
-	{IT_STRING | IT_CVAR,    NULL, "Attempts to resynchronise",        &cv_resynchattempts,     205},
+	{IT_HEADER, NULL, "Advanced", NULL, 200},
+	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "Master server",        &cv_masterserver,        206},
+	{IT_STRING | IT_CVAR,    NULL, "Attempts to resynchronise",        &cv_resynchattempts,     220},
 #endif
 };
 
@@ -7434,8 +7437,8 @@ static void M_ServerOptions(INT32 choice)
 		OP_ServerOptionsMenu[ 2].status = IT_GRAYEDOUT; // Max players
 		OP_ServerOptionsMenu[ 3].status = IT_GRAYEDOUT; // Allow WAD downloading
 		OP_ServerOptionsMenu[ 4].status = IT_GRAYEDOUT; // Allow players to join
-		OP_ServerOptionsMenu[28].status = IT_GRAYEDOUT; // Master server
-		OP_ServerOptionsMenu[29].status = IT_GRAYEDOUT; // Attempts to resynchronise
+		OP_ServerOptionsMenu[30].status = IT_GRAYEDOUT; // Master server
+		OP_ServerOptionsMenu[31].status = IT_GRAYEDOUT; // Attempts to resynchronise
 	}
 	else
 	{
@@ -7444,10 +7447,10 @@ static void M_ServerOptions(INT32 choice)
 		OP_ServerOptionsMenu[ 3].status = IT_STRING | IT_CVAR;
 		OP_ServerOptionsMenu[ 4].status = IT_STRING | IT_CVAR;
 		if (netgame)
-			OP_ServerOptionsMenu[28].status = IT_GRAYEDOUT;
+			OP_ServerOptionsMenu[30].status = IT_GRAYEDOUT;
 		else
-			OP_ServerOptionsMenu[28].status = IT_STRING | IT_CVAR | IT_CV_STRING;
-		OP_ServerOptionsMenu[29].status = IT_STRING | IT_CVAR;
+			OP_ServerOptionsMenu[30].status = IT_STRING | IT_CVAR | IT_CV_STRING;
+		OP_ServerOptionsMenu[31].status = IT_STRING | IT_CVAR;
 	}
 #endif
 

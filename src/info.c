@@ -6453,7 +6453,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	},
 
 	{           // MT_MYSTERY_BOX
-		412,            // doomednum
+		-1, //412,      // doomednum
 		S_MYSTERY_BOX,  // spawnstate
 		1,              // spawnhealth
 		S_NULL,         // seestate
