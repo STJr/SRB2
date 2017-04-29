@@ -510,7 +510,11 @@ char exttable[NUM_EXT_TABLE][5] = {
 
 char filenamebuf[MAX_WADFILES][MAX_WADPATH];
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(_WINDOWS)
+#define CASEINSENSITIVE_FILESYSTEM
+#endif
+
+#ifdef CASEINSENSITIVE_FILESYSTEM
 static char *strsystemstr(char *haystack, char *needle)
 {
 	char uprhaystack[128];
@@ -560,7 +564,7 @@ boolean preparefilemenu(boolean samedepth)
 	if (menusearch[0])
 	{
 		strcpy(localmenusearch, menusearch+1);
-#ifdef _WIN32
+#ifdef CASEINSENSITIVE_FILESYSTEM
 		strupr(localmenusearch);
 #endif
 	}
