@@ -619,25 +619,18 @@ static void M_PNGhdr(png_structp png_ptr, png_infop png_info_ptr, PNG_CONST png_
 	{
 		png_colorp png_PLTE = png_malloc(png_ptr, sizeof(png_color)*256); //palette
 		png_uint_16 i;
-		if (cv_screenshot_colorprofile.value)
+
+		RGBA_t *pal = ((cv_screenshot_colorprofile.value)
+		? pLocalPalette
+		: pMasterPalette);
+
+		for (i = 0; i < 256; i++)
 		{
-			for (i = 0; i < 256; i++)
-			{
-				png_PLTE[i].red   = pLocalPalette[i].s.red;
-				png_PLTE[i].green = pLocalPalette[i].s.green;
-				png_PLTE[i].blue  = pLocalPalette[i].s.blue;
-			}
+			png_PLTE[i].red   = pal[i].s.red;
+			png_PLTE[i].green = pal[i].s.green;
+			png_PLTE[i].blue  = pal[i].s.blue;
 		}
-		else
-		{
-			const png_byte *pal = (png_byte *)W_CacheLumpName(GetPalette(), PU_CACHE);
-			for (i = 0; i < 256; i++)
-			{
-				png_PLTE[i].red   = *pal++;
-				png_PLTE[i].green = *pal++;
-				png_PLTE[i].blue  = *pal++;
-			}
-		}
+
 		png_set_IHDR(png_ptr, png_info_ptr, width, height, 8, PNG_COLOR_TYPE_PALETTE,
 		 png_interlace, PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
 		png_write_info_before_PLTE(png_ptr, png_info_ptr);
@@ -1385,21 +1378,16 @@ static boolean WritePCXfile(const char *filename, const UINT8 *data, int width, 
 	*pack++ = 0x0c; // palette ID byte
 
 	// write color table
-	if (cv_screenshot_colorprofile.value)
 	{
+		RGBA_t *pal = ((cv_screenshot_colorprofile.value)
+		? pLocalPalette
+		: pMasterPalette);
+
 		for (i = 0; i < 256; i++)
 		{
-			*pack++ = pLocalPalette[i].s.red;
-			*pack++ = pLocalPalette[i].s.green;
-			*pack++ = pLocalPalette[i].s.blue;
-		}
-	}
-	else
-	{
-		const UINT8 *pal = (UINT8 *)W_CacheLumpName(GetPalette(), PU_CACHE);
-		for (i = 0; i < 256*3; i++)
-		{
-			*pack++ = *pal++;
+			*pack++ = pal[i].s.red;
+			*pack++ = pal[i].s.green;
+			*pack++ = pal[i].s.blue;
 		}
 	}
 

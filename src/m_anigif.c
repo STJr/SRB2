@@ -427,21 +427,16 @@ static void GIF_headwrite(void)
 	WRITEUINT8(p, 0x00);
 
 	// write color table
-	if (cv_screenshot_colorprofile.value)
 	{
+		RGBA_t *pal = ((cv_screenshot_colorprofile.value)
+		? pLocalPalette
+		: pMasterPalette);
+
 		for (i = 0; i < 256; i++)
 		{
-			WRITEUINT8(p, pLocalPalette[i].s.red);
-			WRITEUINT8(p, pLocalPalette[i].s.green);
-			WRITEUINT8(p, pLocalPalette[i].s.blue);
-		}
-	}
-	else
-	{
-		const UINT8 *pal = (UINT8 *)W_CacheLumpName(GetPalette(), PU_CACHE);
-		for (i = 0; i < 256*3; i++)
-		{
-			WRITEUINT8(p, *pal); pal++;
+			WRITEUINT8(p, pal[i].s.red);
+			WRITEUINT8(p, pal[i].s.green);
+			WRITEUINT8(p, pal[i].s.blue);
 		}
 	}
 
