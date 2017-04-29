@@ -4599,10 +4599,14 @@ static void M_DrawAddons(void)
 	if (refreshdirmenu & M_AddonsRefresh())
 		return M_DrawMessageMenu();
 
-	x = FixedDiv((packetsizetally<<FRACBITS), ((MAXFILENEEDED*sizeof(UINT8)-(5+22))<<FRACBITS)); // 5+22 = (a.ext + checksum length) is minimum addition to packet size tally
-	if ((x > FRACUNIT) // happens because of how we're shrinkin' it a little
-	|| (numwadfiles >= MAX_WADFILES)) // difficult to happen with current limits, but still worth thinking of
+	if (numwadfiles >= MAX_WADFILES) // difficult to happen with current limits, but still worth thinking of
 		x = FRACUNIT;
+	else
+	{
+		x = FixedDiv(((packetsizetally-mainwadstally)<<FRACBITS), (((MAXFILENEEDED*sizeof(UINT8)-mainwadstally)-(5+22))<<FRACBITS)); // 5+22 = (a.ext + checksum length) is minimum addition to packet size tally
+		if (x > FRACUNIT) // happens because of how we're shrinkin' it a little
+			x = FRACUNIT;
+	}
 
 	V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-8, V_TRANSLUCENT, va("%d%%", (100*x)>>FRACBITS));
 	M_DrawTemperature(BASEVIDWIDTH - 12, x);

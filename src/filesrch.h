@@ -37,6 +37,7 @@ extern size_t dir_on[menudepth];
 extern UINT8 refreshdirmenu;
 
 extern size_t packetsizetally;
+extern size_t mainwadstally;
 
 typedef enum
 {
