@@ -4467,6 +4467,49 @@ static void M_Addons(INT32 choice)
 	M_SetupNextMenu(&MISC_AddonsDef);
 }
 
+#define padding 16
+#define h (BASEVIDHEIGHT-(2*padding))
+#define NUMCOLOURS 8 // when toast's coding it's british english hacker fucker
+static void M_DrawTemperature(INT32 x, fixed_t t)
+{
+	INT32 y;
+
+	// bounds check
+	if (t > FRACUNIT)
+		t = FRACUNIT;
+	/*else if (t < 0) -- not needed
+		t = 0;*/
+
+	// scale
+	t = (FixedMul(h<<FRACBITS, FRACUNIT - t)>>FRACBITS);
+
+	// border
+	V_DrawFill(x - 1, padding, 1, h, 3);
+	V_DrawFill(x + padding/4, padding, 1, h, 3);
+	V_DrawFill(x - 1, padding-1, padding/4+2, 1, 3);
+	V_DrawFill(x - 1, padding+h, padding/4+2, 1, 3);
+
+	// bar itself
+	for (y = h; y > 0; y--)
+	{
+		UINT8 colours[NUMCOLOURS] = {42, 40, 58, 222, 65, 90, 97, 98};
+		UINT8 c;
+		if (y < t) break;
+		if (y+padding > BASEVIDHEIGHT/2)
+			c = 113;
+		else
+			c = colours[(NUMCOLOURS*(y-1))/(h/2)];
+		V_DrawFill(x, y-1 + padding, padding/4, 1, c);
+	}
+
+	// fill the rest of the backing
+	if (y)
+		V_DrawFill(x, padding, padding/4, y, 27);
+}
+#undef padding
+#undef h
+#undef NUMCOLOURS
+
 static void M_DrawAddons(void)
 {
 	INT32 x, y;
@@ -4504,25 +4547,12 @@ static void M_DrawAddons(void)
 		S_StartSound(NULL, sfx_strpst);
 	}
 
-#define padding 16
-#define h (BASEVIDHEIGHT-(2*padding))
-	x = FixedDiv((packetsizetally<<FRACBITS), (MAXFILENEEDED*sizeof(UINT8)<<FRACBITS));
+	x = FixedDiv((packetsizetally<<FRACBITS), ((MAXFILENEEDED*sizeof(UINT8)-(5+22))<<FRACBITS)); // 5+22 = (a.ext + checksum length) is minimum addition to packet size tally
+	if (x > FRACUNIT)
+		x = FRACUNIT;
+
 	V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-8, V_TRANSLUCENT, va("%d%%", (100*x)>>FRACBITS));
-	x = padding + (FixedMul(h<<FRACBITS, FRACUNIT - x)>>FRACBITS);
-	V_DrawFill(BASEVIDWIDTH - 5*padding/4 - 1, padding, 1, h, 3);
-	V_DrawFill(BASEVIDWIDTH - padding, padding, 1, h, 3);
-	V_DrawFill(BASEVIDWIDTH - 5*padding/4 - 1, padding-1, padding/4+2, 1, 3);
-	V_DrawFill(BASEVIDWIDTH - 5*padding/4 - 1, padding+h, padding/4+2, 1, 3);
-	for (y = h; y > 0; y--)
-	{
-		UINT8 colours[8] = {42, 40, 58, 65, 90, 97, 98, 113}; // when toast's coding it's british english hacker fucker
-		if (y < x) break;
-		V_DrawFill(BASEVIDWIDTH - 5*padding/4, y-1 + padding, padding/4, 1, colours[(8*(y-1))/h]);
-	}
-	if (y)
-		V_DrawFill(BASEVIDWIDTH - 5*padding/4, padding, padding/4, y, 27);
-#undef padding
-#undef h
+	M_DrawTemperature(BASEVIDWIDTH - 20, x);
 
 	// DRAW MENU
 	x = currentMenu->x;
