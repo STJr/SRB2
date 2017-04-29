@@ -523,6 +523,7 @@ boolean preparefilemenu(boolean samedepth)
 	struct stat fsstat;
 	size_t pos = 0, folderpos = 0, numfolders = 0, rejected = 0;
 	char *tempname = NULL;
+	boolean noresults = false;
 
 	if (samedepth)
 	{
@@ -588,7 +589,7 @@ boolean preparefilemenu(boolean samedepth)
 		return false;
 	}
 
-	if ((menusearch[0] && !sizedirmenu)
+	if (((noresults = (menusearch[0] && !sizedirmenu)))
 		|| (!menusearch[0] && menudepthleft != menudepth-1)) // Make room for UP... or search entry
 	{
 		sizedirmenu++;
@@ -683,12 +684,9 @@ boolean preparefilemenu(boolean samedepth)
 		}
 	}
 
-	if (menusearch[0])
-	{
-		if (!pos && folderpos == 1)
-			dirmenu[0] = Z_StrDup(va("%c\13No results...", EXT_NORESULTS));
-	}
-	else if (menudepthleft != menudepth-1) // now for UP... entry
+	if (noresults) // no results
+		dirmenu[0] = Z_StrDup(va("%c\13No results...", EXT_NORESULTS));
+	else if (!menusearch[0] &&menudepthleft != menudepth-1) // now for UP... entry
 		dirmenu[0] = Z_StrDup(va("%c\5UP...", EXT_UP));
 
 	menupath[menupathindex[menudepthleft]] = 0;
