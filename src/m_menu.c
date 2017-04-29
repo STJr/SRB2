@@ -4854,7 +4854,7 @@ static void M_DrawAddons(void)
 	}
 
 	if (i != 0)
-		V_DrawCharacter(19, y+4, '\x1A', false);
+		V_DrawString(19, y+4, V_YELLOWMAP, "\x1A");
 
 	for (; i < max; i++)
 	{
@@ -4874,6 +4874,7 @@ static void M_DrawAddons(void)
 			{
 				tic_t flash = ((skullAnimCounter/4) ? 1 : 0);
 				V_DrawSmallScaledPatch(x-(16+4), y, 0, addonsp[NUM_EXT+flash]);
+				flags = V_ALLOWLOWERCASE|V_YELLOWMAP;
 			}
 
 #define charsonside 14
@@ -4887,7 +4888,7 @@ static void M_DrawAddons(void)
 	}
 
 	if (max != (ssize_t)sizedirmenu)
-		V_DrawCharacter(19, y-12, '\x1B', false);
+		V_DrawString(19, y-12, V_YELLOWMAP, "\x1B");
 
 	y = BASEVIDHEIGHT - currentMenu->y;
 
@@ -5603,9 +5604,7 @@ static void M_DrawChecklist(void)
 
 finishchecklist:
 	if ((checklist_cangodown = ((y - currentMenu->y) > (scrollareaheight*2)))) // haaaaaaacks.
-	{
 		V_DrawString(10, currentMenu->y+(scrollareaheight*2), V_YELLOWMAP, "\x1B");
-	}
 }
 
 #define NUMHINTS 5
