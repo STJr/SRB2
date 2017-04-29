@@ -51,7 +51,7 @@ typedef enum
 	EXT_TXT = EXT_START,
 	EXT_CFG,
 	EXT_MD5,
-	EXT_WAD = EXT_MD5,
+	EXT_WAD = EXT_LOADSTART,
 	EXT_SOC,
 	EXT_LUA, // allowed even if not HAVE_BLUA so that we can yell on load attempt
 	NUM_EXT,

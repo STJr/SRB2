@@ -665,7 +665,7 @@ boolean preparefilemenu(boolean samedepth)
 
 				searchdir;
 
-				if (ext >= EXT_MD5)
+				if (ext >= EXT_LOADSTART)
 				{
 					size_t i;
 					for (i = 0; i < numwadfiles; i++)
