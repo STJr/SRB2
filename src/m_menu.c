@@ -4134,6 +4134,8 @@ static void M_HandleLevelPlatter(INT32 choice)
 						M_SetupNextMenu(currentMenu->prevMenu->prevMenu);
 					else
 						M_ChangeLevel(0);
+					Z_Free(levelselect.rows);
+					levelselect.rows = NULL;
 				}
 				else
 					M_LevelSelectWarp(0);
@@ -4163,6 +4165,8 @@ static void M_HandleLevelPlatter(INT32 choice)
 		}
 		else
 			M_ClearMenus(true);
+		Z_Free(levelselect.rows);
+		levelselect.rows = NULL;
 	}
 }
 
@@ -6105,6 +6109,10 @@ static void M_ChoosePlayer(INT32 choice)
 
 	G_DeferedInitNew(ultmode, G_BuildMapName(startmap), (UINT8)skinnum, false, fromlevelselect);
 	COM_BufAddText("dummyconsvar 1\n"); // G_DeferedInitNew doesn't do this
+
+	if (levelselect.rows)
+		Z_Free(levelselect.rows);
+	levelselect.rows = NULL;
 }
 
 // ===============
