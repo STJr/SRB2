@@ -257,6 +257,28 @@ readdir (DIR * dirp)
 }
 
 /*
+ * rewinddir
+ *
+ * Makes the next readdir start from the beginning.
+ */
+int
+rewinddir (DIR * dirp)
+{
+  errno = 0;
+
+  /* Check for valid DIR struct. */
+  if (!dirp)
+    {
+      errno = EFAULT;
+      return -1;
+    }
+
+  dirp->dd_stat = 0;
+
+  return 0;
+}
+
+/*
  * closedir
  *
  * Frees up resources allocated by opendir.
@@ -537,12 +559,11 @@ boolean preparefilemenu(boolean samemenu)
 		}
 	}
 
-	closedir(dirhandle); // I don't know how to go back to the start of the folder without just opening and closing... if there's a way, it doesn't appear to be easily manipulatable
-
 	if (!sizedirmenu)
 	{
 		if (tempname)
 			Z_Free(tempname);
+		closedir(dirhandle);
 		return false;
 	}
 
@@ -554,9 +575,12 @@ boolean preparefilemenu(boolean samemenu)
 	}
 
 	if (!(dirmenu = Z_Realloc(dirmenu, sizedirmenu*sizeof(char *), PU_STATIC, NULL)))
+	{
+		closedir(dirhandle); // just in case
 		I_Error("Ran out of memory whilst preparing add-ons menu");
+	}
 
-	dirhandle = opendir(menupath);
+	rewinddir(dirhandle);
 
 	while ((pos+folderpos) < sizedirmenu)
 	{
@@ -635,7 +659,7 @@ boolean preparefilemenu(boolean samemenu)
 		dirmenu[0] = Z_StrDup("\1\5UP...");
 
 	menupath[menupathindex[menudepthleft]] = 0;
-	sizedirmenu = (numfolders+pos); // crash prevention if things change between openings somehow
+	sizedirmenu = (numfolders+pos); // just in case things shrink between opening and rewind
 
 	if (tempname)
 	{
