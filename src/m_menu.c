@@ -4444,7 +4444,7 @@ static void M_Addons(INT32 choice)
 	(void)choice;
 
 	strlcpy(menupath, srb2home, 1024);
-	menupathindex[(menudepthleft = 19)] = strlen(menupath) + 1;
+	menupathindex[(menudepthleft = menudepth-1)] = strlen(menupath) + 1;
 
 	if (menupath[menupathindex[menudepthleft]-2] != '/')
 	{
@@ -4475,15 +4475,24 @@ static void M_DrawAddons(void)
 	x = currentMenu->x;
 	y = currentMenu->y;
 
-	V_DrawString(x, y, 0, menupath);
+	V_DrawString(x, y, V_ALLOWLOWERCASE, menupath);
 	y += 2*SMALLLINEHEIGHT;
 
 	for (i = dir_on[menudepthleft]; i < sizedirmenu; i++)
 	{
 		if (y > BASEVIDHEIGHT) break;
-		V_DrawString(x, y, 0, dirmenu[i]+2);
+		V_DrawString(x, y, ((dirmenu[dir_on[menudepthleft]][0] == EXT_UP) ? 0 : V_ALLOWLOWERCASE), dirmenu[i]+2);
 		y += SMALLLINEHEIGHT;
 	}
+}
+
+static void M_AddonExec(INT32 ch)
+{
+	if (ch != 'y' && ch != KEY_ENTER)
+		return;
+
+	S_StartSound(NULL, sfx_strpst);
+	COM_BufAddText(va("exec %s%s", menupath, dirmenu[dir_on[menudepthleft]]+2));
 }
 
 static void M_HandleAddons(INT32 choice)
@@ -4503,48 +4512,71 @@ static void M_HandleAddons(INT32 choice)
 			S_StartSound(NULL, sfx_menu1);
 			break;
 		case KEY_ENTER:
-			if (dirmenu[dir_on[menudepthleft]][0] == 0) // folder
 			{
-				S_StartSound(NULL, sfx_strpst);
-				strcpy(&menupath[menupathindex[menudepthleft]],dirmenu[dir_on[menudepthleft]]+2);
-				menupathindex[--menudepthleft] = strlen(menupath);
-				menupath[menupathindex[menudepthleft]] = 0;
+				boolean refresh = true;
+				switch (dirmenu[dir_on[menudepthleft]][0])
+				{
+					case EXT_FOLDER:
+						if (menudepthleft)
+						{
+							strcpy(&menupath[menupathindex[menudepthleft]],dirmenu[dir_on[menudepthleft]]+2);
+							menupathindex[--menudepthleft] = strlen(menupath);
+							menupath[menupathindex[menudepthleft]] = 0;
 
-				if (!preparefilemenu())
-				{
-					M_StartMessage(M_GetText("Folder is empty.\n\n(Press a key)\n"),NULL,MM_NOTHING);
-					menupath[menupathindex[++menudepthleft]] = 0;
-					if (!preparefilemenu())
-					{
-						M_StartMessage(M_GetText("Folder no longer exists!\n\n(Press a key)\n"),NULL,MM_NOTHING);
-						M_SetupNextMenu(MISC_AddonsDef.prevMenu);
-						return;
-					}
+							if (!preparefilemenu())
+							{
+								S_StartSound(NULL, sfx_skid);
+								M_StartMessage(va("%s\nThis folder is empty.\n\n(Press a key)\n", menupath),NULL,MM_NOTHING);
+								menupath[menupathindex[++menudepthleft]] = 0;
+							}
+							else
+							{
+								S_StartSound(NULL, sfx_strpst);
+								dir_on[menudepthleft] = 0;
+								refresh =  false;
+							}
+						}
+						else
+						{
+							S_StartSound(NULL, sfx_lose);
+							M_StartMessage(va("%s%s\nThis folder is too deep to navigate to!\n\n(Press a key)\n", menupath, dirmenu[dir_on[menudepthleft]]+2),NULL,MM_NOTHING);
+						}
+						break;
+					case EXT_UP:
+						S_StartSound(NULL, sfx_skid);
+						menupath[menupathindex[++menudepthleft]] = 0;
+						break;
+					case EXT_TXT:
+						M_StartMessage(va("%s\nThis file may not be a console script.\nAttempt to run anyways? \n\n(Press 'Y' to confirm)\n", dirmenu[dir_on[menudepthleft]]+2),M_AddonExec,MM_YESNO);
+						break;
+					case EXT_CFG:
+						M_AddonExec(KEY_ENTER);
+						break;
+					case EXT_LUA:
+#ifdef HAVE_BLUA
+						S_StartSound(NULL, sfx_lose);
+						M_StartMessage(va("%s\nThis copy of SRB2 was compiled\nwithout support for .lua files.\n\n(Press a key)\n", dirmenu[dir_on[menudepthleft]]+2),NULL,MM_NOTHING);
+						break;
+#endif
+					// else intentional fallthrough
+					case EXT_WAD:
+					case EXT_SOC:
+						S_StartSound(NULL, sfx_strpst);
+						COM_BufAddText(va("addfile %s%s", menupath, dirmenu[dir_on[menudepthleft]]+2));
+						break;
+					default:
+						S_StartSound(NULL, sfx_lose);
 				}
-				else
-					dir_on[menudepthleft] = 0;
-			}
-			else if (dirmenu[dir_on[menudepthleft]][0] >= 3) // wad/soc/lua
-			{
-				S_StartSound(NULL, sfx_strpst);
-				COM_BufAddText(va("addfile %s%s", menupath, dirmenu[dir_on[menudepthleft]]+2));
-			}
-			else
-				S_StartSound(NULL, sfx_lose);
-			break;
-		case KEY_BACKSPACE:
-			if (menudepthleft < 19)
-			{
-				menupath[menupathindex[++menudepthleft]] = 0;
-				if (!preparefilemenu())
+				if (refresh && !preparefilemenu())
 				{
-					M_StartMessage(M_GetText("Folder no longer exists!\n\n(Press a key)\n"),NULL,MM_NOTHING);
+					S_StartSound(NULL, sfx_lose);
 					M_SetupNextMenu(MISC_AddonsDef.prevMenu);
+					M_StartMessage(va("%s\nThis folder no longer exists!\nAborting to main menu.\n\n(Press a key)\n", menupath),NULL,MM_NOTHING);
 					return;
 				}
-				break;
 			}
-			// intentional fallthrough
+			break;
+
 		case KEY_ESCAPE:
 			exitmenu = true;
 			break;

@@ -288,12 +288,12 @@ closedir (DIR * dirp)
 #endif
 
 char menupath[1024];
-size_t menupathindex[20];
-size_t menudepthleft = 20;
+size_t menupathindex[menudepth];
+size_t menudepthleft = menudepth;
 
 char **dirmenu;
 size_t sizedirmenu;
-size_t dir_on[20];
+size_t dir_on[menudepth];
 
 #if defined (_XBOX) && defined (_MSC_VER)
 filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *wantedmd5sum,
@@ -473,8 +473,7 @@ filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *want
 	return retval;
 }
 
-#define MAXEXT 5
-char ext[MAXEXT][5] = {
+char exttable[NUM_EXT_TABLE][5] = {
 	".txt", ".cfg", // exec
 	".wad", ".soc", ".lua"}; // addfile
 
@@ -518,10 +517,10 @@ boolean preparefilemenu(void)
 			if (!S_ISDIR(fsstat.st_mode))
 			{
 				size_t len = strlen(dent->d_name)+1;
-				UINT8 i;
-				for (i = 0; i < MAXEXT; i++)
-					if (!strcasecmp(ext[i], dent->d_name+len-5)) break;
-				if (i == MAXEXT) continue; // not an addfile-able (or exec-able) file
+				UINT8 ext;
+				for (ext = 0; ext < NUM_EXT_TABLE; ext++)
+					if (!strcasecmp(exttable[ext], dent->d_name+len-5)) break;
+				if (ext == NUM_EXT_TABLE) continue; // not an addfile-able (or exec-able) file
 			}
 			else
 				numfolders++;
@@ -533,6 +532,13 @@ boolean preparefilemenu(void)
 
 	if (!sizedirmenu)
 		return false;
+
+	if (menudepthleft != menudepth-1)
+	{
+		numfolders++;
+		sizedirmenu++;
+		folderpos++;
+	}
 
 	if (!(dirmenu = Z_Realloc(dirmenu, sizedirmenu*sizeof(char *), PU_STATIC, NULL)))
 		I_Error("Ran out of memory whilst preparing add-ons menu");
@@ -560,15 +566,15 @@ boolean preparefilemenu(void)
 		{
 			char *temp;
 			size_t len = strlen(dent->d_name)+1;
-			UINT8 i = 0;
+			UINT8 ext = EXT_FOLDER;
 			size_t folder;
 
 			if (!S_ISDIR(fsstat.st_mode)) // file
 			{
-				for (; i < MAXEXT; i++)
-					if (!strcasecmp(ext[i], dent->d_name+len-5)) break;
-				if (i == MAXEXT) continue; // not an addfile-able (or exec-able) file
-				i++; // i goes up so zero-index is directory instead of .txt
+				for (; ext < NUM_EXT_TABLE; ext++)
+					if (!strcasecmp(exttable[ext], dent->d_name+len-5)) break;
+				if (ext == NUM_EXT_TABLE) continue; // not an addfile-able (or exec-able) file
+				ext += EXT_START; // moving to be appropriate position
 				folder = 0;
 			}
 			else
@@ -579,7 +585,7 @@ boolean preparefilemenu(void)
 
 			if (!(temp = Z_Malloc((len+2+folder) * sizeof (char), PU_STATIC, NULL)))
 				I_Error("Ran out of memory whilst preparing add-ons menu");
-			temp[0] = i;
+			temp[0] = ext;
 			temp[1] = (UINT8)(len);
 			strlcpy(temp+2, dent->d_name, len);
 			if (folder)
@@ -592,8 +598,14 @@ boolean preparefilemenu(void)
 		}
 	}
 
+	if (menudepthleft != menudepth-1)
+		dirmenu[0] = Z_StrDup("\1\7\x1A UP...");
+
 	menupath[menupathindex[menudepthleft]] = 0;
 	sizedirmenu = (pos+folderpos); // crash prevention if things change between openings somehow
+
+	if (dir_on[menudepthleft] >= sizedirmenu)
+		dir_on[menudepthleft] = sizedirmenu;
 
 	closedir(dirhandle);
 	return true;

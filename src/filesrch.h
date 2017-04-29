@@ -25,13 +25,29 @@
 filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *wantedmd5sum,
 	boolean completepath, int maxsearchdepth);
 
+#define menudepth 20
+
 extern char menupath[1024];
-extern size_t menupathindex[20];
+extern size_t menupathindex[menudepth];
 extern size_t menudepthleft;
 
 extern char **dirmenu;
 extern size_t sizedirmenu;
-extern size_t dir_on[20];
+extern size_t dir_on[menudepth];
+
+typedef enum
+{
+	EXT_FOLDER = 0,
+	EXT_UP,
+	EXT_START,
+	EXT_TXT = EXT_START,
+	EXT_CFG,
+	EXT_WAD,
+	EXT_SOC,
+	EXT_LUA, // allowed even if not HAVE_BLUA so that we can yell on load attempt
+	NUM_EXT,
+	NUM_EXT_TABLE = NUM_EXT-EXT_START
+} ext_enum;
 
 boolean preparefilemenu(void);
 
