@@ -805,10 +805,7 @@ static void ST_drawFirstPersonHUD(void)
 
 	// Graue 06-18-2004: no V_NOSCALESTART, no SCX, no SCY, snap to right
 	if ((player->powers[pw_shield] & SH_NOSTACK & ~SH_FORCEHP) == SH_FORCE)
-	{
-		if ((player->powers[pw_shield] & SH_FORCEHP) > 0 || leveltime & 1)
-			p = forceshield;
-	}
+		p = forceshield;
 	else switch (player->powers[pw_shield] & SH_NOSTACK)
 	{
 	case SH_WHIRLWIND:   p = jumpshield;    break;
@@ -822,7 +819,19 @@ static void ST_drawFirstPersonHUD(void)
 	default: break;
 	}
 
-	if (p)
+	if (p == forceshield)
+	{
+		UINT8 i, max = (player->powers[pw_shield] & SH_FORCEHP);
+		for (i = 0; i <= max; i++)
+		{
+			INT32 flags = (V_SNAPTORIGHT|V_SNAPTOTOP)|((i == max) ? V_HUDTRANS : V_HUDTRANSHALF);
+			if (splitscreen)
+				V_DrawSmallScaledPatch(312-(3*i), STRINGY(24)+(3*i), flags, p);
+			else
+				V_DrawScaledPatch(304-(3*i), 24+(3*i), flags, p);
+		}
+	}
+	else if (p)
 	{
 		if (splitscreen)
 			V_DrawSmallScaledPatch(312, STRINGY(24), V_SNAPTORIGHT|V_SNAPTOTOP|V_HUDTRANS, p);
