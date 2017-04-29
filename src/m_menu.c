@@ -333,7 +333,9 @@ menu_t OP_NetgameOptionsDef, OP_GametypeOptionsDef;
 menu_t OP_MonitorToggleDef;
 static void M_ScreenshotOptions(INT32 choice);
 static void M_EraseData(INT32 choice);
+
 static void M_Addons(INT32 choice);
+static patch_t *addonsp[NUM_EXT+3];
 
 // Drawing functions
 static void M_DrawGenericMenu(void);
@@ -496,7 +498,7 @@ typedef enum
 	singleplr,
 	multiplr,
 	options,
-	addons,
+	//addons,
 	quitdoom
 } main_e;
 
@@ -1453,7 +1455,7 @@ menu_t MISC_AddonsDef =
 	&MainDef,
 	MISC_AddonsMenu,
 	M_DrawAddons,
-	0, 0,
+	48, 36,
 	0,
 	NULL
 };
@@ -4463,6 +4465,24 @@ static void M_Addons(INT32 choice)
 	else
 		dir_on[menudepthleft] = 0;
 
+	if (addonsp[0]) // never going to have some provided but not all, saves individually checking
+	{
+		size_t i;
+		for (i = 0; i < NUM_EXT+3; i++)
+			W_UnlockCachedPatch(addonsp[i]);
+	}
+
+	addonsp[EXT_FOLDER] = W_CachePatchName("M_FFLDR", PU_STATIC);
+	addonsp[EXT_UP] = W_CachePatchName("M_FBACK", PU_STATIC);
+	addonsp[EXT_TXT] = W_CachePatchName("M_FTXT", PU_STATIC);
+	addonsp[EXT_CFG] = W_CachePatchName("M_FCFG", PU_STATIC);
+	addonsp[EXT_WAD] = W_CachePatchName("M_FWAD", PU_STATIC);
+	addonsp[EXT_SOC] = W_CachePatchName("M_FSOC", PU_STATIC);
+	addonsp[EXT_LUA] = W_CachePatchName("M_FLUA", PU_STATIC);
+	addonsp[NUM_EXT] = W_CachePatchName("M_FLOAD", PU_STATIC);
+	addonsp[NUM_EXT+1] = W_CachePatchName("M_FSEL1", PU_STATIC);
+	addonsp[NUM_EXT+2] = W_CachePatchName("M_FSEL2", PU_STATIC);
+
 	MISC_AddonsDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&MISC_AddonsDef);
 }
@@ -4551,44 +4571,79 @@ static boolean M_AddonsRefresh(void)
 static void M_DrawAddons(void)
 {
 	INT32 x, y;
-	size_t i;
+	ssize_t i, max;
 
 	// hack - need to refresh at end of frame to handle addfile...
 	if (refreshdirmenu & M_AddonsRefresh())
 		return M_DrawMessageMenu();
 
 	x = FixedDiv((packetsizetally<<FRACBITS), ((MAXFILENEEDED*sizeof(UINT8)-(5+22))<<FRACBITS)); // 5+22 = (a.ext + checksum length) is minimum addition to packet size tally
-	if (x > FRACUNIT // happens because of how we're shrinkin' it a little
-	|| (numwadfiles >= MAX_WADFILES)) // shouldn't happen unless MAX_WADFILES gets set lower
+	if ((x > FRACUNIT) // happens because of how we're shrinkin' it a little
+	|| (numwadfiles >= MAX_WADFILES)) // difficult to happen with current limits, but still worth thinking of
 		x = FRACUNIT;
 
 	V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-8, V_TRANSLUCENT, va("%d%%", (100*x)>>FRACBITS));
-	M_DrawTemperature(BASEVIDWIDTH - 20, x);
+	M_DrawTemperature(BASEVIDWIDTH - 10, x);
 
 	// DRAW MENU
 	x = currentMenu->x;
 	y = currentMenu->y;
 
-	V_DrawString(x, y, V_ALLOWLOWERCASE, menupath);
-	y += 2*SMALLLINEHEIGHT;
+	M_DrawLevelPlatterHeader(y - 16, menupath, true);
 
-	for (i = dir_on[menudepthleft]; i < sizedirmenu; i++)
+	// get bottom...
+	max = dir_on[menudepthleft] + 5;
+	if (max > (ssize_t)sizedirmenu)
+		max = sizedirmenu;
+
+	// then top...
+	i = max - 9;
+
+	// then adjust!
+	if (i < 0)
+	{
+		if ((max -= i) > (ssize_t)sizedirmenu)
+			max = sizedirmenu;
+		i = 0;
+	}
+
+	if (i != 0)
+		V_DrawCharacter(19, y+4, '\x1A', false);
+
+	for (; i < max; i++)
 	{
 		UINT32 flags = 0;
 		if (y > BASEVIDHEIGHT) break;
-		if (!dirmenu[i]) continue; // crash prevention
+		if (dirmenu[i])
+		{
+			if ((UINT8)(dirmenu[i][DIR_TYPE]) != EXT_UP)
+				flags = V_ALLOWLOWERCASE;
+			if (dirmenu[i][DIR_TYPE] & EXT_LOADED)
+			flags |= V_TRANSLUCENT;
 
-		if ((dirmenu[i][DIR_TYPE] & ~EXT_LOADED) != EXT_UP)
-			flags = V_ALLOWLOWERCASE;
-		if (dirmenu[i][DIR_TYPE] & EXT_LOADED)
-		flags |= V_TRANSLUCENT;
+			V_DrawSmallScaledPatch(x-(16+4), y, (flags & V_TRANSLUCENT), addonsp[((UINT8)(dirmenu[i][DIR_TYPE]) & ~EXT_LOADED)]);
 
-		if (dirmenu[i][DIR_LEN] > 16)
-			V_DrawString(x, y, flags, va("%.13s...", dirmenu[i]+DIR_STRING));
-		else
-			V_DrawString(x, y, flags, dirmenu[i]+DIR_STRING);
-		y += SMALLLINEHEIGHT;
+			if (dirmenu[i][DIR_TYPE] & EXT_LOADED)
+				V_DrawSmallScaledPatch(x-(16+4), y, 0, addonsp[NUM_EXT]);
+
+			if ((size_t)i == dir_on[menudepthleft])
+			{
+				tic_t flash = ((skullAnimCounter & 4) ? 2 : 1);
+				V_DrawSmallScaledPatch(x-(16+4), y, 0, addonsp[NUM_EXT+flash]);
+			}
+
+#define charsonside 8
+			if (dirmenu[i][DIR_LEN] > (charsonside*2 + 3))
+				V_DrawString(x, y+4, flags, va("%.*s...%s", charsonside, dirmenu[i]+DIR_STRING, dirmenu[i]+DIR_STRING+dirmenu[i][DIR_LEN]-(charsonside+1)));
+#undef charsonside
+			else
+				V_DrawString(x, y+4, flags, dirmenu[i]+DIR_STRING);
+		}
+		y += 16;
 	}
+
+	if (max != (ssize_t)sizedirmenu)
+		V_DrawCharacter(19, y-12, '\x1B', false);
 }
 
 static void M_AddonExec(INT32 ch)
@@ -4637,13 +4692,21 @@ static void M_HandleAddons(INT32 choice)
 									S_StartSound(NULL, sfx_skid);
 									M_StartMessage(va("\x82%s\x80\nThis folder is empty.\n\n(Press a key)\n", menupath),NULL,MM_NOTHING);
 									menupath[menupathindex[++menudepthleft]] = 0;
+
+									if (!preparefilemenu(true))
+									{
+										S_StartSound(NULL, sfx_lose);
+										M_SetupNextMenu(MISC_AddonsDef.prevMenu);
+										M_StartMessage(va("\x82%s\x80\nThis folder no longer exists!\nAborting to main menu.\n\n(Press a key)\n", menupath),NULL,MM_NOTHING);
+										return;
+									}
 								}
 								else
 								{
 									S_StartSound(NULL, sfx_strpst);
 									dir_on[menudepthleft] = 0;
-									refresh = false;
 								}
+								refresh = false;
 							}
 							else
 							{
