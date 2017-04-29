@@ -4630,6 +4630,8 @@ static void M_DrawAddons(void)
 
 	M_DrawLevelPlatterHeader(y - 16, M_AddonsHeaderPath(), true);
 
+	V_DrawFill(x - 21, y - 1, MAXSTRINGLENGTH*8+6, (BASEVIDHEIGHT - currentMenu->y + 1) - (y - 1), 159);
+
 	// get bottom...
 	max = dir_on[menudepthleft] + numaddonsshown + 1;
 	if (max > (ssize_t)sizedirmenu)
@@ -4684,8 +4686,8 @@ static void M_DrawAddons(void)
 
 	y = BASEVIDHEIGHT - currentMenu->y;
 
-	V_DrawSmallScaledPatch(x-(26 + 16), y + 4, 0, addonsp[NUM_EXT+3]);
-	M_DrawTextBox(x - 26, y, MAXSTRINGLENGTH, 1);
+	V_DrawSmallScaledPatch(x-(21 + 5 + 16), y + 4, 0, addonsp[NUM_EXT+3]);
+	M_DrawTextBox(x - (21 + 5), y, MAXSTRINGLENGTH, 1);
 	if (menusearch[0])
 		V_DrawString(x - 18, y + 8, V_ALLOWLOWERCASE, menusearch+1);
 	else
