@@ -382,7 +382,7 @@ static void LoadPalette(const char *lumpname)
 				else if (working[0][q]  < 0.0)
 					working[0][q] = 0.0;
 			}
-#undef dowork
+#undef dolerp
 
 			pLocalPalette[i].s.red = (UINT8)(working[0][0]);
 			pLocalPalette[i].s.green = (UINT8)(working[0][1]);
