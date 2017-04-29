@@ -33,6 +33,7 @@
 #include "i_system.h"
 #include "d_main.h"
 #include "m_menu.h"
+#include "filesrch.h"
 
 #ifdef _WINDOWS
 #include "win32/win_main.h"
@@ -1275,12 +1276,15 @@ void CONS_Alert(alerttype_t level, const char *fmt, ...)
 	switch (level)
 	{
 		case CONS_NOTICE:
+			// no notice for notices, hehe
 			CONS_Printf("\x83" "%s" "\x80 ", M_GetText("NOTICE:"));
 			break;
 		case CONS_WARNING:
+			refreshdirmenu |= REFRESHDIR_WARNING;
 			CONS_Printf("\x82" "%s" "\x80 ", M_GetText("WARNING:"));
 			break;
 		case CONS_ERROR:
+			refreshdirmenu |= REFRESHDIR_ERROR;
 			CONS_Printf("\x85" "%s" "\x80 ", M_GetText("ERROR:"));
 			break;
 	}

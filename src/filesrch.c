@@ -294,6 +294,9 @@ size_t menudepthleft = menudepth;
 char **dirmenu;
 size_t sizedirmenu;
 size_t dir_on[menudepth];
+UINT8 refreshdirmenu = 0;
+
+size_t packetsizetally = 0;
 
 #if defined (_XBOX) && defined (_MSC_VER)
 filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *wantedmd5sum,
@@ -479,12 +482,16 @@ char exttable[NUM_EXT_TABLE][5] = {
 
 char filenamebuf[MAX_WADFILES][MAX_WADPATH];
 
-boolean preparefilemenu(void)
+boolean preparefilemenu(boolean samemenu)
 {
 	DIR *dirhandle;
 	struct dirent *dent;
 	struct stat fsstat;
 	size_t pos = 0, folderpos = 0, numfolders = 0;
+	char *tempname = NULL;
+
+	if (samemenu && dirmenu && dirmenu[dir_on[menudepthleft]])
+		tempname = Z_StrDup(dirmenu[dir_on[menudepthleft]]+DIR_STRING); // don't need to I_Error if can't make - not important, just QoL
 
 	for (; sizedirmenu > 0; sizedirmenu--)
 	{
@@ -516,7 +523,7 @@ boolean preparefilemenu(void)
 			; // was the file (re)moved? can't stat it
 		else // is a file or directory
 		{
-			if (!S_ISDIR(fsstat.st_mode))
+			if (!S_ISDIR(fsstat.st_mode)) // file
 			{
 				size_t len = strlen(dent->d_name)+1;
 				UINT8 ext;
@@ -524,7 +531,7 @@ boolean preparefilemenu(void)
 					if (!strcasecmp(exttable[ext], dent->d_name+len-5)) break;
 				if (ext == NUM_EXT_TABLE) continue; // not an addfile-able (or exec-able) file
 			}
-			else
+			else // directory
 				numfolders++;
 			sizedirmenu++;
 		}
@@ -533,7 +540,11 @@ boolean preparefilemenu(void)
 	closedir(dirhandle); // I don't know how to go back to the start of the folder without just opening and closing... if there's a way, it doesn't appear to be easily manipulatable
 
 	if (!sizedirmenu)
+	{
+		if (tempname)
+			Z_Free(tempname);
 		return false;
+	}
 
 	if (menudepthleft != menudepth-1)
 	{
@@ -573,6 +584,7 @@ boolean preparefilemenu(void)
 
 			if (!S_ISDIR(fsstat.st_mode)) // file
 			{
+				if (!((numfolders+pos) < sizedirmenu)) continue; // crash prevention
 				for (; ext < NUM_EXT_TABLE; ext++)
 					if (!strcasecmp(exttable[ext], dent->d_name+len-5)) break;
 				if (ext == NUM_EXT_TABLE) continue; // not an addfile-able (or exec-able) file
@@ -598,17 +610,17 @@ boolean preparefilemenu(void)
 
 				folder = 0;
 			}
-			else
+			else // directory
 				len += (folder = 1);
 
 			if (len > 255)
 				len = 255;
 
-			if (!(temp = Z_Malloc((len+2+folder) * sizeof (char), PU_STATIC, NULL)))
+			if (!(temp = Z_Malloc((len+DIR_STRING+folder) * sizeof (char), PU_STATIC, NULL)))
 				I_Error("Ran out of memory whilst preparing add-ons menu");
-			temp[0] = ext;
-			temp[1] = (UINT8)(len);
-			strlcpy(temp+2, dent->d_name, len);
+			temp[DIR_TYPE] = ext;
+			temp[DIR_LEN] = (UINT8)(len);
+			strlcpy(temp+DIR_STRING, dent->d_name, len);
 			if (folder)
 			{
 				strcpy(temp+len, "/");
@@ -620,15 +632,36 @@ boolean preparefilemenu(void)
 	}
 
 	if (menudepthleft != menudepth-1)
-		dirmenu[0] = Z_StrDup("\1\7\x1A UP...");
+		dirmenu[0] = Z_StrDup("\1\5UP...");
 
 	menupath[menupathindex[menudepthleft]] = 0;
-	sizedirmenu = (pos+folderpos); // crash prevention if things change between openings somehow
+	sizedirmenu = (numfolders+pos); // crash prevention if things change between openings somehow
+
+	if (tempname)
+	{
+		size_t i;
+		for (i = 0; i < sizedirmenu; i++)
+		{
+			if (!strcmp(dirmenu[i]+DIR_STRING, tempname))
+			{
+				dir_on[menudepthleft] = i;
+				break;
+			}
+		}
+		Z_Free(tempname);
+	}
 
 	if (dir_on[menudepthleft] >= sizedirmenu)
-		dir_on[menudepthleft] = sizedirmenu;
+		dir_on[menudepthleft] = sizedirmenu-1;
 
 	closedir(dirhandle);
+
+	if (!sizedirmenu)
+	{
+		Z_Free(dirmenu);
+		return false;
+	}
+
 	return true;
 }
 #endif

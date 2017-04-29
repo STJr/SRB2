@@ -482,11 +482,11 @@ static consvar_t cv_dummymares = {"dummymares", "Overall", CV_HIDEN|CV_CALL, dum
 // ---------
 static menuitem_t MainMenu[] =
 {
-	{IT_CALL   |IT_STRING, NULL, "Secrets",     M_SecretsMenu,      76},
-	{IT_CALL   |IT_STRING, NULL, "1  player",   M_SinglePlayerMenu, 84},
-	{IT_SUBMENU|IT_STRING, NULL, "multiplayer", &MP_MainDef,        92},
-	{IT_CALL   |IT_STRING, NULL, "options",     M_Options,         100},
-	{IT_CALL   |IT_STRING, NULL, "addons",      M_Addons,          108},
+	{IT_CALL   |IT_STRING, NULL, "Secrets",     M_SecretsMenu,      84},
+	{IT_CALL   |IT_STRING, NULL, "1  player",   M_SinglePlayerMenu, 92},
+	{IT_SUBMENU|IT_STRING, NULL, "multiplayer", &MP_MainDef,       100},
+	{IT_CALL   |IT_STRING, NULL, "options",     M_Options,         108},
+	//{IT_CALL   |IT_STRING, NULL, "addons",      M_Addons,          108},
 	{IT_CALL   |IT_STRING, NULL, "quit  game",  M_QuitSRB2,        116},
 };
 
@@ -1037,6 +1037,7 @@ static menuitem_t OP_MainMenu[] =
 
 	{IT_SUBMENU | IT_STRING, NULL, "Game Options...",   &OP_GameOptionsDef,   70},
 	{IT_CALL | IT_STRING,    NULL, "Server Options...", M_ServerOptions,      80},
+	{IT_CALL | IT_STRING, NULL, "Add-ons...", M_Addons, 90},
 };
 
 static menuitem_t OP_ControlsMenu[] =
@@ -4454,7 +4455,7 @@ static void M_Addons(INT32 choice)
 	else
 		--menupathindex[menudepthleft];
 
-	if (!preparefilemenu())
+	if (!preparefilemenu(false))
 	{
 		M_StartMessage(M_GetText("No files/folders found.\n\n(Press a key)\n"),NULL,MM_NOTHING);
 		return;
@@ -4471,6 +4472,58 @@ static void M_DrawAddons(void)
 	INT32 x, y;
 	size_t i;
 
+	// hack - need to refresh at end of frame to handle addfile...
+	if ((refreshdirmenu & REFRESHDIR_NORMAL) && !preparefilemenu(true))
+	{
+		S_StartSound(NULL, sfx_lose);
+		M_SetupNextMenu(MISC_AddonsDef.prevMenu);
+		M_StartMessage(va("\x82%s\x80\nThis folder no longer exists!\nAborting to main menu.\n\n(Press a key)\n", menupath),NULL,MM_NOTHING);
+		return M_DrawMessageMenu();
+	}
+	if (refreshdirmenu & REFRESHDIR_ADDFILE)
+	{
+		if (!(dirmenu[dir_on[menudepthleft]][DIR_TYPE] & EXT_LOADED))
+		{
+			char *message = NULL;
+			S_StartSound(NULL, sfx_lose);
+			if (refreshdirmenu & REFRESHDIR_MAX)
+				message = va("\x82%s\x80\nMaximum number of add-ons reached.\nThis file could not be loaded.\nIf you want to play with this add-on, restart the game to clear existing ones.\n\n(Press a key)\n", dirmenu[dir_on[menudepthleft]]+DIR_STRING);
+			else
+				message = va("\x82%s\x80\nThe file was not loaded.\nCheck the console log for more information.\n\n(Press a key)\n", dirmenu[dir_on[menudepthleft]]+DIR_STRING);
+			M_StartMessage(message,NULL,MM_NOTHING);
+			return M_DrawMessageMenu();
+		}
+
+		if (refreshdirmenu & (REFRESHDIR_WARNING|REFRESHDIR_ERROR))
+		{
+			S_StartSound(NULL, sfx_skid);
+			M_StartMessage(va("\x82%s\x80\nThe file was loaded with %s.\nCheck the console log for more information.\n\n(Press a key)\n", dirmenu[dir_on[menudepthleft]]+DIR_STRING, ((refreshdirmenu & REFRESHDIR_ERROR) ? "errors" : "warnings")),NULL,MM_NOTHING);
+			return M_DrawMessageMenu();
+		}
+
+		S_StartSound(NULL, sfx_strpst);
+	}
+
+#define padding 16
+#define h (BASEVIDHEIGHT-(2*padding))
+	x = FixedDiv((packetsizetally<<FRACBITS), (MAXFILENEEDED*sizeof(UINT8)<<FRACBITS));
+	V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-8, V_TRANSLUCENT, va("%d%%", (100*x)>>FRACBITS));
+	x = padding + (FixedMul(h<<FRACBITS, FRACUNIT - x)>>FRACBITS);
+	V_DrawFill(BASEVIDWIDTH - 5*padding/4 - 1, padding, 1, h, 3);
+	V_DrawFill(BASEVIDWIDTH - padding, padding, 1, h, 3);
+	V_DrawFill(BASEVIDWIDTH - 5*padding/4 - 1, padding-1, padding/4+2, 1, 3);
+	V_DrawFill(BASEVIDWIDTH - 5*padding/4 - 1, padding+h, padding/4+2, 1, 3);
+	for (y = h; y > 0; y--)
+	{
+		UINT8 colours[8] = {42, 40, 58, 65, 90, 97, 98, 113}; // when toast's coding it's british english hacker fucker
+		if (y < x) break;
+		V_DrawFill(BASEVIDWIDTH - 5*padding/4, y-1 + padding, padding/4, 1, colours[(8*(y-1))/h]);
+	}
+	if (y)
+		V_DrawFill(BASEVIDWIDTH - 5*padding/4, padding, padding/4, y, 27);
+#undef padding
+#undef h
+
 	// DRAW MENU
 	x = currentMenu->x;
 	y = currentMenu->y;
@@ -4482,13 +4535,17 @@ static void M_DrawAddons(void)
 	{
 		UINT32 flags = 0;
 		if (y > BASEVIDHEIGHT) break;
+		if (!dirmenu[i]) continue; // crash prevention
 
-		if ((dirmenu[i][0] & ~EXT_LOADED) != EXT_UP)
+		if ((dirmenu[i][DIR_TYPE] & ~EXT_LOADED) != EXT_UP)
 			flags = V_ALLOWLOWERCASE;
-		if (dirmenu[i][0] & EXT_LOADED)
+		if (dirmenu[i][DIR_TYPE] & EXT_LOADED)
 		flags |= V_TRANSLUCENT;
 
-		V_DrawString(x, y, flags, dirmenu[i]+2);
+		if (dirmenu[i][DIR_LEN] > 16)
+			V_DrawString(x, y, flags, va("%.13s...", dirmenu[i]+DIR_STRING));
+		else
+			V_DrawString(x, y, flags, dirmenu[i]+DIR_STRING);
 		y += SMALLLINEHEIGHT;
 	}
 }
@@ -4499,7 +4556,7 @@ static void M_AddonExec(INT32 ch)
 		return;
 
 	S_StartSound(NULL, sfx_strpst);
-	COM_ImmedExecute(va("exec %s%s", menupath, dirmenu[dir_on[menudepthleft]]+2));
+	COM_BufAddText(va("exec %s%s", menupath, dirmenu[dir_on[menudepthleft]]+DIR_STRING));
 }
 
 static void M_HandleAddons(INT32 choice)
@@ -4521,66 +4578,65 @@ static void M_HandleAddons(INT32 choice)
 		case KEY_ENTER:
 			{
 				boolean refresh = true;
-				switch (dirmenu[dir_on[menudepthleft]][0])
+				if (!dirmenu[dir_on[menudepthleft]])
+					S_StartSound(NULL, sfx_lose);
+				else
 				{
-					case EXT_FOLDER:
-						if (menudepthleft)
-						{
-							strcpy(&menupath[menupathindex[menudepthleft]],dirmenu[dir_on[menudepthleft]]+2);
-							menupathindex[--menudepthleft] = strlen(menupath);
-							menupath[menupathindex[menudepthleft]] = 0;
-
-							if (!preparefilemenu())
+					switch (dirmenu[dir_on[menudepthleft]][DIR_TYPE])
+					{
+						case EXT_FOLDER:
+							if (menudepthleft)
 							{
-								S_StartSound(NULL, sfx_skid);
-								M_StartMessage(va("%s\nThis folder is empty.\n\n(Press a key)\n", menupath),NULL,MM_NOTHING);
-								menupath[menupathindex[++menudepthleft]] = 0;
+								strcpy(&menupath[menupathindex[menudepthleft]],dirmenu[dir_on[menudepthleft]]+DIR_STRING);
+								menupathindex[--menudepthleft] = strlen(menupath);
+								menupath[menupathindex[menudepthleft]] = 0;
+
+								if (!preparefilemenu(false))
+								{
+									S_StartSound(NULL, sfx_skid);
+									M_StartMessage(va("\x82%s\x80\nThis folder is empty.\n\n(Press a key)\n", menupath),NULL,MM_NOTHING);
+									menupath[menupathindex[++menudepthleft]] = 0;
+								}
+								else
+								{
+									S_StartSound(NULL, sfx_strpst);
+									dir_on[menudepthleft] = 0;
+									refresh = false;
+								}
 							}
 							else
 							{
-								S_StartSound(NULL, sfx_strpst);
-								dir_on[menudepthleft] = 0;
-								refresh =  false;
+								S_StartSound(NULL, sfx_lose);
+								M_StartMessage(va("\x82%s%s\x80\nThis folder is too deep to navigate to!\n\n(Press a key)\n", menupath, dirmenu[dir_on[menudepthleft]]+DIR_STRING),NULL,MM_NOTHING);
 							}
-						}
-						else
-						{
+							break;
+						case EXT_UP:
+							S_StartSound(NULL, sfx_skid);
+							menupath[menupathindex[++menudepthleft]] = 0;
+							break;
+						case EXT_TXT:
+							M_StartMessage(va("\x82%s\x80\nThis file may not be a console script.\nAttempt to run anyways? \n\n(Press 'Y' to confirm)\n", dirmenu[dir_on[menudepthleft]]+DIR_STRING),M_AddonExec,MM_YESNO);
+							break;
+						case EXT_CFG:
+							M_AddonExec(KEY_ENTER);
+							break;
+						case EXT_LUA:
+#ifndef HAVE_BLUA
 							S_StartSound(NULL, sfx_lose);
-							M_StartMessage(va("%s%s\nThis folder is too deep to navigate to!\n\n(Press a key)\n", menupath, dirmenu[dir_on[menudepthleft]]+2),NULL,MM_NOTHING);
-						}
-						break;
-					case EXT_UP:
-						S_StartSound(NULL, sfx_skid);
-						menupath[menupathindex[++menudepthleft]] = 0;
-						break;
-					case EXT_TXT:
-						M_StartMessage(va("%s\nThis file may not be a console script.\nAttempt to run anyways? \n\n(Press 'Y' to confirm)\n", dirmenu[dir_on[menudepthleft]]+2),M_AddonExec,MM_YESNO);
-						break;
-					case EXT_CFG:
-						M_AddonExec(KEY_ENTER);
-						break;
-					case EXT_LUA:
-#ifdef HAVE_BLUA
-						S_StartSound(NULL, sfx_lose);
-						M_StartMessage(va("%s\nThis copy of SRB2 was compiled\nwithout support for .lua files.\n\n(Press a key)\n", dirmenu[dir_on[menudepthleft]]+2),NULL,MM_NOTHING);
-						break;
+							M_StartMessage(va("\x82%s\x80\nThis copy of SRB2 was compiled\nwithout support for .lua files.\n\n(Press a key)\n", dirmenu[dir_on[menudepthleft]]+DIR_STRING),NULL,MM_NOTHING);
+							break;
 #endif
-					// else intentional fallthrough
-					case EXT_WAD:
-					case EXT_SOC:
-						S_StartSound(NULL, sfx_strpst);
-						COM_ImmedExecute(va("addfile %s%s", menupath, dirmenu[dir_on[menudepthleft]]+2));
-						break;
-					default:
-						S_StartSound(NULL, sfx_lose);
+						// else intentional fallthrough
+						case EXT_SOC:
+						case EXT_WAD:
+							COM_BufAddText(va("addfile %s%s", menupath, dirmenu[dir_on[menudepthleft]]+DIR_STRING));
+							break;
+						default:
+							S_StartSound(NULL, sfx_lose);
+					}
 				}
-				if (refresh && !preparefilemenu())
-				{
-					S_StartSound(NULL, sfx_lose);
-					M_SetupNextMenu(MISC_AddonsDef.prevMenu);
-					M_StartMessage(va("%s\nThis folder no longer exists!\nAborting to main menu.\n\n(Press a key)\n", menupath),NULL,MM_NOTHING);
-					return;
-				}
+				if (refresh)
+					refreshdirmenu |= REFRESHDIR_NORMAL;
 			}
 			break;
 

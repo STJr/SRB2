@@ -34,6 +34,8 @@
 #include "z_zone.h"
 #include "fastcmp.h"
 
+#include "filesrch.h"
+
 #include "i_video.h" // rendermode
 #include "d_netfil.h"
 #include "dehacked.h"
@@ -294,12 +296,11 @@ UINT16 W_LoadWadFile(const char *filename)
 	UINT32 numlumps;
 	size_t i;
 	INT32 compressed = 0;
-	size_t packetsize = 0;
-	serverinfo_pak *dummycheck = NULL;
+	size_t packetsize;
 	UINT8 md5sum[16];
 
-	// Shut the compiler up.
-	(void)dummycheck;
+	if (!(refreshdirmenu & REFRESHDIR_ADDFILE))
+		refreshdirmenu = REFRESHDIR_NORMAL|REFRESHDIR_ADDFILE; // clean out cons_alerts that happened earlier
 
 	//CONS_Debug(DBG_SETUP, "Loading %s\n", filename);
 	//
@@ -308,6 +309,7 @@ UINT16 W_LoadWadFile(const char *filename)
 	if (numwadfiles >= MAX_WADFILES)
 	{
 		CONS_Alert(CONS_ERROR, M_GetText("Maximum wad files reached\n"));
+		refreshdirmenu |= REFRESHDIR_MAX;
 		return INT16_MAX;
 	}
 
@@ -317,22 +319,21 @@ UINT16 W_LoadWadFile(const char *filename)
 
 	// Check if wad files will overflow fileneededbuffer. Only the filename part
 	// is send in the packet; cf.
-	for (i = 0; i < numwadfiles; i++)
-	{
-		packetsize += nameonlylength(wadfiles[i]->filename);
-		packetsize += 22; // MD5, etc.
-	}
+	packetsize = packetsizetally;
 
 	packetsize += nameonlylength(filename);
 	packetsize += 22;
 
-	if (packetsize > sizeof(dummycheck->fileneeded))
+	if (packetsize > MAXFILENEEDED*sizeof(UINT8))
 	{
 		CONS_Alert(CONS_ERROR, M_GetText("Maximum wad files reached\n"));
+		refreshdirmenu |= REFRESHDIR_MAX;
 		if (handle)
 			fclose(handle);
 		return INT16_MAX;
 	}
+
+	packetsizetally = packetsize;
 
 	// detect dehacked file with the "soc" extension
 	if (!stricmp(&filename[strlen(filename) - 4], ".soc"))

@@ -34,6 +34,9 @@ extern size_t menudepthleft;
 extern char **dirmenu;
 extern size_t sizedirmenu;
 extern size_t dir_on[menudepth];
+extern UINT8 refreshdirmenu;
+
+extern size_t packetsizetally;
 
 typedef enum
 {
@@ -59,6 +62,22 @@ typedef enum
 	*/
 } ext_enum;
 
-boolean preparefilemenu(void);
+typedef enum
+{
+	DIR_TYPE = 0,
+	DIR_LEN,
+	DIR_STRING
+} dirname_enum;
+
+typedef enum
+{
+	REFRESHDIR_NORMAL = 1,
+	REFRESHDIR_ADDFILE = 2,
+	REFRESHDIR_WARNING = 4,
+	REFRESHDIR_ERROR = 8,
+	REFRESHDIR_MAX = 16
+} refreshdir_enum;
+
+boolean preparefilemenu(boolean samemenu);
 
 #endif // __FILESRCH_H__

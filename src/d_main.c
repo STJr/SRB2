@@ -74,6 +74,7 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 #include "m_cond.h" // condition initialization
 #include "fastcmp.h"
 #include "keys.h"
+#include "filesrch.h" // refreshdirmenu
 
 #ifdef CMAKECONFIG
 #include "config.h"
@@ -585,6 +586,8 @@ void D_SRB2Loop(void)
 		entertic = I_GetTime();
 		realtics = entertic - oldentertics;
 		oldentertics = entertic;
+
+		refreshdirmenu = 0; // not sure where to put this, here as good as any?
 
 #ifdef DEBUGFILE
 		if (!realtics)
