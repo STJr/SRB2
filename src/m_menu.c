@@ -4703,12 +4703,19 @@ static boolean M_ChangeStringAddons(INT32 choice)
 	switch (choice)
 	{
 		case KEY_DEL:
-			len = menusearch[1] = 0;
-			return true;
+			if (len)
+			{
+				len = menusearch[1] = 0;
+				return true;
+			}
+			break;
 		case KEY_BACKSPACE:
-			if (len > 0)
+			if (len)
+			{
 				menusearch[1+--len] = 0;
-			return true;
+				return true;
+			}
+			break;
 		default:
 			if (choice >= 32 && choice <= 127)
 			{
@@ -4716,8 +4723,8 @@ static boolean M_ChangeStringAddons(INT32 choice)
 				{
 					menusearch[1+len++] = (char)choice;
 					menusearch[1+len] = 0;
+					return true;
 				}
-				return true;
 			}
 			break;
 	}
