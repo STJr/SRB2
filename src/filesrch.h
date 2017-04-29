@@ -25,4 +25,14 @@
 filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *wantedmd5sum,
 	boolean completepath, int maxsearchdepth);
 
+extern char menupath[1024];
+extern size_t menupathindex[20];
+extern size_t menudepthleft;
+
+extern char **dirmenu;
+extern size_t sizedirmenu;
+extern size_t dir_on;
+
+boolean preparefilemenu(void);
+
 #endif // __FILESRCH_H__

@@ -31,6 +31,7 @@
 #include "filesrch.h"
 #include "d_netfil.h"
 #include "m_misc.h"
+#include "z_zone.h"
 
 #if (defined (_WIN32) && !defined (_WIN32_WCE)) && defined (_MSC_VER) && !defined (_XBOX)
 
@@ -39,7 +40,7 @@
 #include <tchar.h>
 
 #define SUFFIX	"*"
-#define	SLASH	"\\"
+#define	SLASH	PATHSEP
 #define	S_ISDIR(m)	(((m) & S_IFMT) == S_IFDIR)
 
 #ifndef INVALID_FILE_ATTRIBUTES
@@ -285,6 +286,15 @@ closedir (DIR * dirp)
   return rc;
 }
 #endif
+
+char menupath[1024];
+size_t menupathindex[20];
+size_t menudepthleft = 20;
+
+char **dirmenu;
+size_t sizedirmenu;
+size_t dir_on;
+
 #if defined (_XBOX) && defined (_MSC_VER)
 filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *wantedmd5sum,
 	boolean completepath, int maxsearchdepth)
@@ -296,6 +306,12 @@ filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *want
 	completepath = false;
 	return FS_NOTFOUND;
 }
+
+boolean preparefilemenu(void)
+{
+	return false;
+}
+
 #elif defined (_WIN32_WCE)
 filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *wantedmd5sum,
 	boolean completepath, int maxsearchdepth)
@@ -346,6 +362,11 @@ filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *want
 #endif
 	return FS_NOTFOUND;
 }
+
+boolean preparefilemenu(void)
+{
+	return false;
+}
 #else
 filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *wantedmd5sum, boolean completepath, int maxsearchdepth)
 {
@@ -387,25 +408,29 @@ filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *want
 	{
 		searchpath[searchpathindex[depthleft]]=0;
 		dent = readdir(dirhandle[depthleft]);
-		if (dent)
-			strcpy(&searchpath[searchpathindex[depthleft]],dent->d_name);
 
 		if (!dent)
+		{
 			closedir(dirhandle[depthleft++]);
-		else if (dent->d_name[0]=='.' &&
+			continue;
+		}
+
+		if (dent->d_name[0]=='.' &&
 				(dent->d_name[1]=='\0' ||
 					(dent->d_name[1]=='.' &&
 						dent->d_name[2]=='\0')))
 		{
 			// we don't want to scan uptree
+			continue;
 		}
-		else if (stat(searchpath,&fsstat) < 0) // do we want to follow symlinks? if not: change it to lstat
-		{
-			// was the file (re)moved? can't stat it
-		}
+
+		// okay, now we actually want searchpath to incorporate d_name
+		strcpy(&searchpath[searchpathindex[depthleft]],dent->d_name);
+
+		if (stat(searchpath,&fsstat) < 0) // do we want to follow symlinks? if not: change it to lstat
+			; // was the file (re)moved? can't stat it
 		else if (S_ISDIR(fsstat.st_mode) && depthleft)
 		{
-			strcpy(&searchpath[searchpathindex[depthleft]],dent->d_name);
 			searchpathindex[--depthleft] = strlen(searchpath) + 1;
 			dirhandle[depthleft] = opendir(searchpath);
 			if (!dirhandle[depthleft])
@@ -444,6 +469,135 @@ filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *want
 	free(searchname);
 	free(searchpathindex);
 	free(dirhandle);
+
 	return retval;
+}
+
+#define MAXEXT 5
+char ext[MAXEXT][5] = {
+	".txt", ".cfg", // exec
+	".wad", ".soc", ".lua"}; // addfile
+
+boolean preparefilemenu(void)
+{
+	DIR *dirhandle;
+	struct dirent *dent;
+	struct stat fsstat;
+	size_t pos, folderpos = 0, numfolders = 0;
+
+	for (pos = 0; pos < sizedirmenu; pos++)
+	{
+		Z_Free(dirmenu[pos]);
+		dirmenu[pos] = NULL;
+	}
+
+	sizedirmenu = dir_on = pos = 0;
+
+	dirhandle = opendir(menupath);
+
+	if (dirhandle == NULL)
+		return false;
+
+	while (true)
+	{
+		menupath[menupathindex[menudepthleft]] = 0;
+		dent = readdir(dirhandle);
+
+		if (!dent)
+			break;
+		else if (dent->d_name[0]=='.' &&
+				(dent->d_name[1]=='\0' ||
+					(dent->d_name[1]=='.' &&
+						dent->d_name[2]=='\0')))
+			continue; // we don't want to scan uptree
+
+		strcpy(&menupath[menupathindex[menudepthleft]],dent->d_name);
+
+		if (stat(menupath,&fsstat) < 0) // do we want to follow symlinks? if not: change it to lstat
+			; // was the file (re)moved? can't stat it
+		else // is a file or directory
+		{
+			if (!S_ISDIR(fsstat.st_mode))
+			{
+				size_t len = strlen(dent->d_name)+1;
+				UINT8 i;
+				for (i = 0; i < MAXEXT; i++)
+					if (!strcasecmp(ext[i], dent->d_name+len-5)) break;
+				if (i == MAXEXT) continue; // not an addfile-able (or exec-able) file
+			}
+			else
+				numfolders++;
+			sizedirmenu++;
+		}
+	}
+
+	closedir(dirhandle); // I don't know how to go back to the start of the folder without just opening and closing... if there's a way, it doesn't appear to be easily manipulatable
+
+	if (!sizedirmenu)
+		return false;
+
+	if (!(dirmenu = Z_Realloc(dirmenu, sizedirmenu*sizeof(char *), PU_STATIC, NULL)))
+		I_Error("Ran out of memory whilst preparing add-ons menu");
+
+	dirhandle = opendir(menupath);
+
+	while ((pos+folderpos) < sizedirmenu)
+	{
+		menupath[menupathindex[menudepthleft]] = 0;
+		dent = readdir(dirhandle);
+
+		if (!dent)
+			break;
+		else if (dent->d_name[0]=='.' &&
+				(dent->d_name[1]=='\0' ||
+					(dent->d_name[1]=='.' &&
+						dent->d_name[2]=='\0')))
+			continue; // we don't want to scan uptree
+
+		strcpy(&menupath[menupathindex[menudepthleft]],dent->d_name);
+
+		if (stat(menupath,&fsstat) < 0) // do we want to follow symlinks? if not: change it to lstat
+			; // was the file (re)moved? can't stat it
+		else // is a file or directory
+		{
+			char *temp;
+			size_t len = strlen(dent->d_name)+1;
+			UINT8 i = 0;
+			size_t folder;
+
+			if (!S_ISDIR(fsstat.st_mode)) // file
+			{
+				for (; i < MAXEXT; i++)
+					if (!strcasecmp(ext[i], dent->d_name+len-5)) break;
+				if (i == MAXEXT) continue; // not an addfile-able (or exec-able) file
+				i++; // i goes up so zero-index is directory instead of .txt
+				folder = 0;
+			}
+			else
+				len += (folder = 1);
+
+			if (len > 255)
+				len = 255;
+
+			if (!(temp = Z_Malloc((len+2+folder) * sizeof (char), PU_STATIC, NULL)))
+				I_Error("Ran out of memory whilst preparing add-ons menu");
+			temp[0] = i;
+			temp[1] = (UINT8)(len);
+			strlcpy(temp+2, dent->d_name, len);
+			if (folder)
+			{
+				strcpy(temp+len, "/");
+				dirmenu[folderpos++] = temp;
+			}
+			else
+				dirmenu[numfolders + pos++] = temp;
+		}
+	}
+
+	menupath[menupathindex[menudepthleft]] = 0;
+	sizedirmenu = (pos+folderpos); // crash prevention if things change between openings somehow
+
+	closedir(dirhandle);
+	return true;
 }
 #endif

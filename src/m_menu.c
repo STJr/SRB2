@@ -33,6 +33,9 @@
 #include "s_sound.h"
 #include "i_system.h"
 
+// Addfile
+#include "filesrch.h"
+
 #include "v_video.h"
 #include "i_video.h"
 #include "keys.h"
@@ -330,10 +333,12 @@ menu_t OP_NetgameOptionsDef, OP_GametypeOptionsDef;
 menu_t OP_MonitorToggleDef;
 static void M_ScreenshotOptions(INT32 choice);
 static void M_EraseData(INT32 choice);
+static void M_Addons(INT32 choice);
 
 // Drawing functions
 static void M_DrawGenericMenu(void);
 static void M_DrawCenteredMenu(void);
+static void M_DrawAddons(void);
 static void M_DrawSkyRoom(void);
 static void M_DrawChecklist(void);
 static void M_DrawEmblemHints(void);
@@ -369,6 +374,7 @@ static boolean M_CancelConnect(void);
 #endif
 static boolean M_ExitPandorasBox(void);
 static boolean M_QuitMultiPlayerMenu(void);
+static void M_HandleAddons(INT32 choice);
 static void M_HandleLevelPlatter(INT32 choice);
 static void M_HandleSoundTest(INT32 choice);
 static void M_HandleImageDef(INT32 choice);
@@ -476,10 +482,11 @@ static consvar_t cv_dummymares = {"dummymares", "Overall", CV_HIDEN|CV_CALL, dum
 // ---------
 static menuitem_t MainMenu[] =
 {
-	{IT_CALL   |IT_STRING, NULL, "Secrets",     M_SecretsMenu,      84},
-	{IT_CALL   |IT_STRING, NULL, "1  player",   M_SinglePlayerMenu, 92},
-	{IT_SUBMENU|IT_STRING, NULL, "multiplayer", &MP_MainDef,       100},
-	{IT_CALL   |IT_STRING, NULL, "options",     M_Options,         108},
+	{IT_CALL   |IT_STRING, NULL, "Secrets",     M_SecretsMenu,      76},
+	{IT_CALL   |IT_STRING, NULL, "1  player",   M_SinglePlayerMenu, 84},
+	{IT_SUBMENU|IT_STRING, NULL, "multiplayer", &MP_MainDef,        92},
+	{IT_CALL   |IT_STRING, NULL, "options",     M_Options,         100},
+	{IT_CALL   |IT_STRING, NULL, "addons",      M_Addons,          108},
 	{IT_CALL   |IT_STRING, NULL, "quit  game",  M_QuitSRB2,        116},
 };
 
@@ -489,8 +496,14 @@ typedef enum
 	singleplr,
 	multiplr,
 	options,
+	addons,
 	quitdoom
 } main_e;
+
+static menuitem_t MISC_AddonsMenu[] =
+{
+	{IT_KEYHANDLER | IT_NOTHING, NULL, "", M_HandleAddons, 0},     // dummy menuitem for the control func
+};
 
 // ---------------------------------
 // Pause Menu Mode Attacking Edition
@@ -1431,6 +1444,18 @@ static menuitem_t OP_MonitorToggleMenu[] =
 
 // Main Menu and related
 menu_t MainDef = CENTERMENUSTYLE(NULL, MainMenu, NULL, 72);
+
+menu_t MISC_AddonsDef =
+{
+	NULL,
+	sizeof (MISC_AddonsMenu)/sizeof (menuitem_t),
+	&MainDef,
+	MISC_AddonsMenu,
+	M_DrawAddons,
+	0, 0,
+	0,
+	NULL
+};
 
 menu_t MAPauseDef = PAUSEMENUSTYLE(MAPauseMenu, 40, 72);
 menu_t SPauseDef = PAUSEMENUSTYLE(SPauseMenu, 40, 72);
@@ -4413,6 +4438,123 @@ static void M_HandleImageDef(INT32 choice)
 // ======================
 // MISC MAIN MENU OPTIONS
 // ======================
+
+static void M_Addons(INT32 choice)
+{
+	(void)choice;
+
+	strlcpy(menupath, srb2home, 1024);
+	menupathindex[(menudepthleft = 19)] = strlen(menupath) + 1;
+
+	if (menupath[menupathindex[menudepthleft]-2] != '/')
+	{
+		menupath[menupathindex[menudepthleft]-1] = '/';
+		menupath[menupathindex[menudepthleft]] = 0;
+	}
+	else
+		--menupathindex[menudepthleft];
+
+	if (!preparefilemenu())
+	{
+		M_StartMessage(M_GetText("No files/folders found.\n\n(Press a key)\n"),NULL,MM_NOTHING);
+		return;
+	}
+
+	MISC_AddonsDef.prevMenu = currentMenu;
+	M_SetupNextMenu(&MISC_AddonsDef);
+}
+
+static void M_DrawAddons(void)
+{
+	INT32 x, y;
+	size_t i;
+
+	// DRAW MENU
+	x = currentMenu->x;
+	y = currentMenu->y;
+
+	V_DrawString(x, y, 0, menupath);
+	y += 2*SMALLLINEHEIGHT;
+
+	for (i = dir_on; i < sizedirmenu; i++)
+	{
+		if (y > BASEVIDHEIGHT) break;
+		V_DrawString(x, y, 0, dirmenu[i]+2);
+		y += SMALLLINEHEIGHT;
+	}
+}
+
+static void M_HandleAddons(INT32 choice)
+{
+	boolean exitmenu = false; // exit to previous menu
+
+	switch (choice)
+	{
+		case KEY_DOWNARROW:
+			if (dir_on < sizedirmenu-1)
+				dir_on++;
+			S_StartSound(NULL, sfx_menu1);
+			break;
+		case KEY_UPARROW:
+			if (dir_on)
+				dir_on--;
+			S_StartSound(NULL, sfx_menu1);
+			break;
+		case KEY_ENTER:
+			if (dirmenu[dir_on][0] == 0) // folder
+			{
+				S_StartSound(NULL, sfx_strpst);
+				strcpy(&menupath[menupathindex[menudepthleft--]],dirmenu[dir_on]+2);
+				menupathindex[menudepthleft] = strlen(menupath);
+				menupath[menupathindex[menudepthleft]] = 0;
+
+				if (!preparefilemenu())
+				{
+					M_StartMessage(M_GetText("Folder is empty.\n\n(Press a key)\n"),NULL,MM_NOTHING);
+					menupath[menupathindex[++menudepthleft]] = 0;
+					if (!preparefilemenu())
+					{
+						M_StartMessage(M_GetText("Folder no longer exists!\n\n(Press a key)\n"),NULL,MM_NOTHING);
+						M_SetupNextMenu(MISC_AddonsDef.prevMenu);
+						return;
+					}
+				}
+			}
+			else if (dirmenu[dir_on][0] >= 3) // wad/soc/lua
+			{
+				S_StartSound(NULL, sfx_strpst);
+				COM_BufAddText(va("addfile %s%s", menupath, dirmenu[dir_on]+2));
+			}
+			else
+				S_StartSound(NULL, sfx_lose);
+			break;
+		case KEY_BACKSPACE:
+			if (menudepthleft < 19)
+			{
+				menupath[menupathindex[++menudepthleft]] = 0;
+				if (!preparefilemenu())
+				{
+					M_StartMessage(M_GetText("Folder no longer exists!\n\n(Press a key)\n"),NULL,MM_NOTHING);
+					M_SetupNextMenu(MISC_AddonsDef.prevMenu);
+					return;
+				}
+				break;
+			}
+		case KEY_ESCAPE:
+			exitmenu = true;
+			break;
+
+		default:
+			break;
+	}
+	if (exitmenu)
+	{
+		if (currentMenu->prevMenu)
+			M_SetupNextMenu(currentMenu->prevMenu);
+		else
+			M_ClearMenus(true);
+	}
+}
 
 static void M_PandorasBox(INT32 choice)
 {
