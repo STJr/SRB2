@@ -293,7 +293,7 @@ size_t menudepthleft = 20;
 
 char **dirmenu;
 size_t sizedirmenu;
-size_t dir_on;
+size_t dir_on[20];
 
 #if defined (_XBOX) && defined (_MSC_VER)
 filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *wantedmd5sum,
@@ -483,15 +483,13 @@ boolean preparefilemenu(void)
 	DIR *dirhandle;
 	struct dirent *dent;
 	struct stat fsstat;
-	size_t pos, folderpos = 0, numfolders = 0;
+	size_t pos = 0, folderpos = 0, numfolders = 0;
 
-	for (pos = 0; pos < sizedirmenu; pos++)
+	for (; sizedirmenu > 0; sizedirmenu--)
 	{
-		Z_Free(dirmenu[pos]);
-		dirmenu[pos] = NULL;
+		Z_Free(dirmenu[sizedirmenu-1]);
+		dirmenu[sizedirmenu-1] = NULL;
 	}
-
-	sizedirmenu = dir_on = pos = 0;
 
 	dirhandle = opendir(menupath);
 

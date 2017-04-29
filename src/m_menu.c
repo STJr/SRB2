@@ -4459,6 +4459,8 @@ static void M_Addons(INT32 choice)
 		M_StartMessage(M_GetText("No files/folders found.\n\n(Press a key)\n"),NULL,MM_NOTHING);
 		return;
 	}
+	else
+		dir_on[menudepthleft] = 0;
 
 	MISC_AddonsDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&MISC_AddonsDef);
@@ -4476,7 +4478,7 @@ static void M_DrawAddons(void)
 	V_DrawString(x, y, 0, menupath);
 	y += 2*SMALLLINEHEIGHT;
 
-	for (i = dir_on; i < sizedirmenu; i++)
+	for (i = dir_on[menudepthleft]; i < sizedirmenu; i++)
 	{
 		if (y > BASEVIDHEIGHT) break;
 		V_DrawString(x, y, 0, dirmenu[i]+2);
@@ -4491,21 +4493,21 @@ static void M_HandleAddons(INT32 choice)
 	switch (choice)
 	{
 		case KEY_DOWNARROW:
-			if (dir_on < sizedirmenu-1)
-				dir_on++;
+			if (dir_on[menudepthleft] < sizedirmenu-1)
+				dir_on[menudepthleft]++;
 			S_StartSound(NULL, sfx_menu1);
 			break;
 		case KEY_UPARROW:
-			if (dir_on)
-				dir_on--;
+			if (dir_on[menudepthleft])
+				dir_on[menudepthleft]--;
 			S_StartSound(NULL, sfx_menu1);
 			break;
 		case KEY_ENTER:
-			if (dirmenu[dir_on][0] == 0) // folder
+			if (dirmenu[dir_on[menudepthleft]][0] == 0) // folder
 			{
 				S_StartSound(NULL, sfx_strpst);
-				strcpy(&menupath[menupathindex[menudepthleft--]],dirmenu[dir_on]+2);
-				menupathindex[menudepthleft] = strlen(menupath);
+				strcpy(&menupath[menupathindex[menudepthleft]],dirmenu[dir_on[menudepthleft]]+2);
+				menupathindex[--menudepthleft] = strlen(menupath);
 				menupath[menupathindex[menudepthleft]] = 0;
 
 				if (!preparefilemenu())
@@ -4519,11 +4521,13 @@ static void M_HandleAddons(INT32 choice)
 						return;
 					}
 				}
+				else
+					dir_on[menudepthleft] = 0;
 			}
-			else if (dirmenu[dir_on][0] >= 3) // wad/soc/lua
+			else if (dirmenu[dir_on[menudepthleft]][0] >= 3) // wad/soc/lua
 			{
 				S_StartSound(NULL, sfx_strpst);
-				COM_BufAddText(va("addfile %s%s", menupath, dirmenu[dir_on]+2));
+				COM_BufAddText(va("addfile %s%s", menupath, dirmenu[dir_on[menudepthleft]]+2));
 			}
 			else
 				S_StartSound(NULL, sfx_lose);
@@ -4540,6 +4544,7 @@ static void M_HandleAddons(INT32 choice)
 				}
 				break;
 			}
+			// intentional fallthrough
 		case KEY_ESCAPE:
 			exitmenu = true;
 			break;
@@ -4549,6 +4554,15 @@ static void M_HandleAddons(INT32 choice)
 	}
 	if (exitmenu)
 	{
+		for (; sizedirmenu > 0; sizedirmenu--)
+		{
+			Z_Free(dirmenu[sizedirmenu-1]);
+			dirmenu[sizedirmenu-1] = NULL;
+		}
+
+		Z_Free(dirmenu);
+		dirmenu = NULL;
+
 		if (currentMenu->prevMenu)
 			M_SetupNextMenu(currentMenu->prevMenu);
 		else

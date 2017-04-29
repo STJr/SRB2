@@ -31,7 +31,7 @@ extern size_t menudepthleft;
 
 extern char **dirmenu;
 extern size_t sizedirmenu;
-extern size_t dir_on;
+extern size_t dir_on[20];
 
 boolean preparefilemenu(void);
 
