@@ -4723,8 +4723,8 @@ static void M_HandleAddons(INT32 choice)
 								}
 								else
 								{
-									S_StartSound(NULL, sfx_strpst);
-									dir_on[menudepthleft] = 0;
+									S_StartSound(NULL, sfx_menu1);
+									dir_on[menudepthleft] = 1;
 								}
 								refresh = false;
 							}
@@ -4736,7 +4736,7 @@ static void M_HandleAddons(INT32 choice)
 							}
 							break;
 						case EXT_UP:
-							S_StartSound(NULL, sfx_skid);
+							S_StartSound(NULL, sfx_menu1);
 							menupath[menupathindex[++menudepthleft]] = 0;
 							break;
 						case EXT_TXT:
