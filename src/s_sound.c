@@ -1420,6 +1420,12 @@ void S_StopMusic(void)
 
 	music_data = NULL;
 	music_name[0] = 0;
+
+	if (cv_closedcaptioning.value)
+	{
+		if (closedcaptions[0].s-S_sfx == sfx_None)
+			closedcaptions[0].t = CAPTIONFADETICS;
+	}
 }
 
 void S_SetDigMusicVolume(INT32 volume)
