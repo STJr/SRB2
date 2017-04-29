@@ -1240,6 +1240,7 @@ int W_VerifyNMUSlumps(const char *filename)
 		{"TNYFN", 5}, // Tiny console font changes
 		{"STT", 3}, // Acceptable HUD changes (Score Time Rings)
 		{"YB_", 3}, // Intermission graphics, goes with the above
+		{"M_", 2}, // As does menu stuff
 
 		{NULL, 0},
 	};
