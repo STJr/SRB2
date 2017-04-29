@@ -22,8 +22,6 @@
 // mask used to indicate sound origin is player item pickup
 #define PICKUP_SOUND 0x8000
 
-void ResetCaptions(void);
-
 extern consvar_t stereoreverse;
 extern consvar_t cv_soundvolume, cv_closedcaptioning, cv_digmusicvolume, cv_midimusicvolume;
 extern consvar_t cv_numChannels;
@@ -92,6 +90,7 @@ typedef struct {
 
 extern caption_t closedcaptions[NUMCAPTIONS];
 void S_StartCaption(sfxenum_t sfx_id, INT32 cnum, UINT16 lifespan);
+void S_ResetCaptions(void);
 
 // register sound vars and commands at game startup
 void S_RegisterSoundStuff(void);

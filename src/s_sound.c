@@ -80,7 +80,7 @@ static consvar_t precachesound = {"precachesound", "Off", CV_SAVE, CV_OnOff, NUL
 
 // actual general (maximum) sound & music volume, saved into the config
 consvar_t cv_soundvolume = {"soundvolume", "31", CV_SAVE, soundvolume_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_closedcaptioning = {"closedcaptioning", "Off", CV_SAVE|CV_CALL, CV_OnOff, ResetCaptions, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_closedcaptioning = {"closedcaptioning", "Off", CV_SAVE|CV_CALL, CV_OnOff, S_ResetCaptions, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_digmusicvolume = {"digmusicvolume", "18", CV_SAVE, soundvolume_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_midimusicvolume = {"midimusicvolume", "18", CV_SAVE, soundvolume_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 // number of channels available
@@ -132,7 +132,7 @@ static INT32 numofchannels = 0;
 
 caption_t closedcaptions[NUMCAPTIONS];
 
-void ResetCaptions(void)
+void S_ResetCaptions(void)
 {
 	UINT8 i;
 	for (i = 0; i < NUMCAPTIONS; i++)
@@ -301,7 +301,7 @@ static void SetChannelsNum(void)
 	for (i = 0; i < numofchannels; i++)
 		channels[i].sfxinfo = 0;
 
-	ResetCaptions();
+	S_ResetCaptions();
 }
 
 
@@ -344,6 +344,8 @@ void S_StopSounds(void)
 	for (cnum = 0; cnum < numofchannels; cnum++)
 		if (channels[cnum].sfxinfo)
 			S_StopChannel(cnum);
+
+	S_ResetCaptions();
 }
 
 void S_StopSoundByID(void *origin, sfxenum_t sfx_id)

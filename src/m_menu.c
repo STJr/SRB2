@@ -8289,7 +8289,6 @@ static void M_ToggleSFX(INT32 choice)
 			sound_disabled = true;
 			S_StopSounds();
 			OP_SoundOptionsMenu[6].status = IT_GRAYEDOUT;
-			ResetCaptions();
 			//M_StartMessage(M_GetText("SFX Disabled\n"), NULL, MM_NOTHING);
 		}
 	}
@@ -8845,6 +8844,8 @@ void M_QuitResponse(INT32 ch)
 		return;
 	if (!(netgame || cv_debug))
 	{
+		S_ResetCaptions();
+
 		mrand = M_RandomKey(sizeof(quitsounds)/sizeof(INT32));
 		if (quitsounds[mrand]) S_StartSound(NULL, quitsounds[mrand]);
 
