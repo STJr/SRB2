@@ -1454,7 +1454,7 @@ menu_t MISC_AddonsDef =
 	&MainDef,
 	MISC_AddonsMenu,
 	M_DrawAddons,
-	48, 36,
+	50, 28,
 	0,
 	NULL
 };
@@ -4620,15 +4620,14 @@ static void M_DrawAddons(void)
 
 	M_DrawLevelPlatterHeader(y - 16, M_AddonsHeaderPath(), true);
 
-	V_DrawString(0, 0, V_ALLOWLOWERCASE, menusearch+1);
-
+#define numaddonsshown 5
 	// get bottom...
-	max = dir_on[menudepthleft] + 5;
+	max = dir_on[menudepthleft] + numaddonsshown;
 	if (max > (ssize_t)sizedirmenu)
 		max = sizedirmenu;
 
 	// then top...
-	i = max - 9;
+	i = max - (2*numaddonsshown - 1);
 
 	// then adjust!
 	if (i < 0)
@@ -4637,6 +4636,7 @@ static void M_DrawAddons(void)
 			max = sizedirmenu;
 		i = 0;
 	}
+#undef numaddonsshown
 
 	if (i != 0)
 		V_DrawCharacter(19, y+4, '\x1A', false);
@@ -4673,6 +4673,15 @@ static void M_DrawAddons(void)
 
 	if (max != (ssize_t)sizedirmenu)
 		V_DrawCharacter(19, y-12, '\x1B', false);
+
+	y = BASEVIDHEIGHT - currentMenu->y;
+
+	V_DrawSmallScaledPatch(x-(26 + 16), y + 4, 0, addonsp[EXT_SEARCH]);
+	M_DrawTextBox(x - 26, y, MAXSTRINGLENGTH, 1);
+	V_DrawString(x - 18, y + 8, V_ALLOWLOWERCASE, menusearch+1);
+	if (skullAnimCounter < 4)
+		V_DrawCharacter(x - 18 + V_StringWidth(menusearch+1, 0), y + 8,
+			'_' | 0x80, false);
 }
 
 static void M_AddonExec(INT32 ch)
