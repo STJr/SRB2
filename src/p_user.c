@@ -1134,8 +1134,10 @@ void P_PlayLivesJingle(player_t *player)
 	else
 	{
 		if (player)
-			player->powers[pw_extralife] = extralifetics + 1;
+			player->powers[pw_extralife] = extralifetics+1;
 		S_StopMusic(); // otherwise it won't restart if this is done twice in a row
+		strlcpy(S_sfx[sfx_None].caption, "One-up", 7);
+		S_StartCaption(sfx_None, -1, extralifetics+1);
 		S_ChangeMusicInternal("_1up", false);
 	}
 }
@@ -1156,9 +1158,15 @@ void P_RestoreMusic(player_t *player)
 	if (player->powers[pw_super] && !(mapheaderinfo[gamemap-1]->levelflags & LF_NOSSMUSIC))
 		S_ChangeMusicInternal("_super", true);
 	else if (player->powers[pw_invulnerability] > 1)
+	{
+		strlcpy(S_sfx[sfx_None].caption, "Invincibility", 14);
+		S_StartCaption(sfx_None, -1, player->powers[pw_invulnerability]);
 		S_ChangeMusicInternal((mariomode) ? "_minv" : "_inv", false);
+	}
 	else if (player->powers[pw_sneakers] > 1 && !player->powers[pw_super])
 	{
+		strlcpy(S_sfx[sfx_None].caption, "Speed shoes", 12);
+		S_StartCaption(sfx_None, -1, player->powers[pw_sneakers]);
 		if (mapheaderinfo[gamemap-1]->levelflags & LF_SPEEDMUSIC)
 		{
 			S_SpeedMusic(1.4f);
@@ -2341,7 +2349,7 @@ static void P_DoPlayerHeadSigns(player_t *player)
 		// If you're "IT", show a big "IT" over your head for others to see.
 		if (player->pflags & PF_TAGIT)
 		{
-			if (!(player == &players[consoleplayer] || player == &players[secondarydisplayplayer] || player == &players[displayplayer])) // Don't display it on your own view.
+			if (!P_IsLocalPlayer(player)) // Don't display it on your own view.
 			{
 				if (!(player->mo->eflags & MFE_VERTICALFLIP))
 					P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z + player->mo->height, MT_TAG);
@@ -3858,7 +3866,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 						mobj_t *lockon = P_LookForEnemies(player, false, true);
 						if (lockon)
 						{
-							if (player == &players[consoleplayer] || player == &players[secondarydisplayplayer] || player == &players[displayplayer]) // Only display it on your own view.
+							if (P_IsLocalPlayer(player)) // Only display it on your own view.
 							{
 								mobj_t *visual = P_SpawnMobj(lockon->x, lockon->y, lockon->z, MT_LOCKON); // positioning, flip handled in P_SceneryThinker
 								visual->target = lockon;
@@ -4126,7 +4134,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 
 	if ((player->charability == CA_HOMINGTHOK) && !player->homing && (player->pflags & PF_JUMPED) && (!(player->pflags & PF_THOKKED) || (player->charflags & SF_MULTIABILITY)) && (lockon = P_LookForEnemies(player, true, false)))
 	{
-		if (player == &players[consoleplayer] || player == &players[secondarydisplayplayer] || player == &players[displayplayer]) // Only display it on your own view.
+		if (P_IsLocalPlayer(player)) // Only display it on your own view.
 		{
 			mobj_t *visual = P_SpawnMobj(lockon->x, lockon->y, lockon->z, MT_LOCKON); // positioning, flip handled in P_SceneryThinker
 			visual->target = lockon;
@@ -7194,7 +7202,7 @@ static void P_MovePlayer(player_t *player)
 		{
 			if ((lockon = P_LookForEnemies(player, false, false)))
 			{
-				if (player == &players[consoleplayer] || player == &players[secondarydisplayplayer] || player == &players[displayplayer]) // Only display it on your own view.
+				if (P_IsLocalPlayer(player)) // Only display it on your own view.
 				{
 					mobj_t *visual = P_SpawnMobj(lockon->x, lockon->y, lockon->z, MT_LOCKON); // positioning, flip handled in P_SceneryThinker
 					visual->target = lockon;

@@ -140,6 +140,7 @@ void ResetCaptions(void)
 		closedcaptions[i].c = NULL;
 		closedcaptions[i].s = NULL;
 		closedcaptions[i].t = 0;
+		closedcaptions[i].b = 0;
 	}
 }
 
@@ -391,6 +392,92 @@ void S_StopSoundByNum(sfxenum_t sfxnum)
 	}
 }
 
+void S_StartCaption(sfxenum_t sfx_id, INT32 cnum, UINT16 lifespan)
+{
+	UINT8 i, set, moveup, start;
+	boolean same;
+	sfxinfo_t *sfx;
+
+	if (!cv_closedcaptioning.value) // no captions at all
+		return;
+
+	// check for bogus sound #
+	I_Assert(sfx_id >= 0); // allows sfx_None; this shouldn't be allowed directly if S_StartCaption is ever exposed to Lua by itself
+	I_Assert(sfx_id < NUMSFX);
+
+	sfx = &S_sfx[sfx_id];
+
+	if (sfx->caption[0] == '/') // no caption for this one
+		return;
+
+	start = ((closedcaptions[0].s && (closedcaptions[0].s-S_sfx == sfx_None)) ? 1 : 0);
+
+	if (sfx_id)
+	{
+		for (i = start; i < (set = NUMCAPTIONS-1); i++)
+		{
+			same = ((sfx == closedcaptions[i].s) || (closedcaptions[i].s && fastcmp(sfx->caption, closedcaptions[i].s->caption)));
+			if (same)
+			{
+				set = i;
+				break;
+			}
+		}
+	}
+	else
+	{
+		set = 0;
+		same = (closedcaptions[0].s == sfx);
+	}
+
+	moveup = 255;
+
+	if (!same)
+	{
+		for (i = start; i < set; i++)
+		{
+			if (!(closedcaptions[i].c || closedcaptions[i].s) || (sfx->priority >= closedcaptions[i].s->priority))
+			{
+				set = i;
+				if (closedcaptions[i].s && (sfx->priority >= closedcaptions[i].s->priority))
+					moveup = i;
+				break;
+			}
+		}
+		for (i = NUMCAPTIONS-1; i > set; i--)
+		{
+			if (sfx == closedcaptions[i].s)
+			{
+				closedcaptions[i].c = NULL;
+				closedcaptions[i].s = NULL;
+				closedcaptions[i].t = 0;
+				closedcaptions[i].b = 0;
+			}
+		}
+	}
+
+	if (moveup != 255)
+	{
+		for (i = moveup; i < NUMCAPTIONS-1; i++)
+		{
+			if (!(closedcaptions[i].c || closedcaptions[i].s))
+				break;
+		}
+		for (; i > set; i--)
+		{
+			closedcaptions[i].c = closedcaptions[i-1].c;
+			closedcaptions[i].s = closedcaptions[i-1].s;
+			closedcaptions[i].t = closedcaptions[i-1].t;
+			closedcaptions[i].b = closedcaptions[i-1].b;
+		}
+	}
+
+	closedcaptions[set].c = ((cnum == -1) ? NULL : &channels[cnum]);
+	closedcaptions[set].s = sfx;
+	closedcaptions[set].t = lifespan;
+	closedcaptions[set].b = 2; // bob
+}
+
 void S_StartSoundAtVolume(const void *origin_p, sfxenum_t sfx_id, INT32 volume)
 {
 	INT32 sep, pitch, priority, cnum;
@@ -532,62 +619,7 @@ void S_StartSoundAtVolume(const void *origin_p, sfxenum_t sfx_id, INT32 volume)
 #endif
 
 		// Handle closed caption input.
-		if (cv_closedcaptioning.value && sfx->caption[0] != '/')
-		{
-			UINT8 i, set = NUMCAPTIONS-1, moveup = 255;
-			boolean same = false;
-			for (i = 0; i < set; i++)
-			{
-				same = ((sfx == closedcaptions[i].s) || (closedcaptions[i].s && fastcmp(sfx->caption, closedcaptions[i].s->caption)));
-				if (same)
-				{
-					set = i;
-					break;
-				}
-			}
-
-			if (!same)
-			{
-				for (i = 0; i < set; i++)
-				{
-					if (!(closedcaptions[i].c || closedcaptions[i].s) || (sfx->priority >= closedcaptions[i].s->priority))
-					{
-						set = i;
-						if (closedcaptions[i].s && (sfx->priority >= closedcaptions[i].s->priority))
-							moveup = i;
-						break;
-					}
-				}
-				for (i = NUMCAPTIONS-1; i > set; i--)
-				{
-					if (sfx == closedcaptions[i].s)
-					{
-						closedcaptions[i].c = NULL;
-						closedcaptions[i].s = NULL;
-						closedcaptions[i].t = 0;
-					}
-				}
-			}
-
-			if (moveup != 255)
-			{
-				for (i = moveup; i < NUMCAPTIONS-1; i++)
-				{
-					if (!(closedcaptions[i].c || closedcaptions[i].s))
-						break;
-				}
-				for (; i > set; i--)
-				{
-					closedcaptions[i].c = closedcaptions[i-1].c;
-					closedcaptions[i].s = closedcaptions[i-1].s;
-					closedcaptions[i].t = closedcaptions[i-1].t;
-				}
-			}
-
-			closedcaptions[set].c = &channels[cnum];
-			closedcaptions[set].s = sfx;
-			closedcaptions[set].t = MAXCAPTIONTICS+2;
-		}
+		S_StartCaption(sfx_id, cnum, MAXCAPTIONTICS);
 
 		// Assigns the handle to one of the channels in the
 		// mix/output buffer.
@@ -640,62 +672,7 @@ dontplay:
 #endif
 
 	// Handle closed caption input.
-	if (cv_closedcaptioning.value && sfx->caption[0] != '/')
-	{
-		UINT8 i, set = NUMCAPTIONS-1, moveup = 255;
-		boolean same = false;
-		for (i = 0; i < set; i++)
-		{
-			same = ((sfx == closedcaptions[i].s) || (closedcaptions[i].s && fastcmp(sfx->caption, closedcaptions[i].s->caption)));
-			if (same)
-			{
-				set = i;
-				break;
-			}
-		}
-
-		if (!same)
-		{
-			for (i = 0; i < set; i++)
-			{
-				if (!(closedcaptions[i].c || closedcaptions[i].s) || (sfx->priority >= closedcaptions[i].s->priority))
-				{
-					set = i;
-					if (closedcaptions[i].s && (sfx->priority >= closedcaptions[i].s->priority))
-						moveup = i;
-					break;
-				}
-			}
-			for (i = NUMCAPTIONS-1; i > set; i--)
-			{
-				if (sfx == closedcaptions[i].s)
-				{
-					closedcaptions[i].c = NULL;
-					closedcaptions[i].s = NULL;
-					closedcaptions[i].t = 0;
-				}
-			}
-		}
-
-		if (moveup != 255)
-		{
-			for (i = moveup; i < NUMCAPTIONS-1; i++)
-			{
-				if (!(closedcaptions[i].c || closedcaptions[i].s))
-					break;
-			}
-			for (; i > set; i--)
-			{
-				closedcaptions[i].c = closedcaptions[i-1].c;
-				closedcaptions[i].s = closedcaptions[i-1].s;
-				closedcaptions[i].t = closedcaptions[i-1].t;
-			}
-		}
-
-		closedcaptions[set].c = &channels[cnum];
-		closedcaptions[set].s = sfx;
-		closedcaptions[set].t = MAXCAPTIONTICS+2;
-	}
+	S_StartCaption(sfx_id, cnum, MAXCAPTIONTICS);
 
 	// Assigns the handle to one of the channels in the
 	// mix/output buffer.
@@ -976,10 +953,7 @@ notinlevel:
 		if (!closedcaptions[i].s)
 			continue;
 
-		if (closedcaptions[i].t <= MAXCAPTIONTICS)
-			closedcaptions[i].t--;
-
-		if (!closedcaptions[i].t)
+		if (!(--closedcaptions[i].t))
 		{
 			closedcaptions[i].c = NULL;
 			closedcaptions[i].s = NULL;

@@ -82,7 +82,8 @@ typedef struct
 typedef struct {
 	channel_t *c;
 	sfxinfo_t *s;
-	UINT8 t;
+	UINT16 t;
+	UINT8 b;
 } caption_t;
 
 #define NUMCAPTIONS 8
@@ -90,6 +91,7 @@ typedef struct {
 #define CAPTIONFADETICS 20
 
 extern caption_t closedcaptions[NUMCAPTIONS];
+void S_StartCaption(sfxenum_t sfx_id, INT32 cnum, UINT16 lifespan);
 
 // register sound vars and commands at game startup
 void S_RegisterSoundStuff(void);

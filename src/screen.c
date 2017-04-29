@@ -448,15 +448,17 @@ void SCR_ClosedCaptions(void)
 		{
 			INT32 flags = V_NOSCALESTART|V_ALLOWLOWERCASE;
 			INT32 y = vid.height-((i + 2)*10*vid.dupy);
-			char dir = ' ';
+			char dot = ' ';
+			if (closedcaptions[i].b)
+				y -= (closedcaptions[i].b--)*vid.dupy;
 			if (closedcaptions[i].t < CAPTIONFADETICS)
 				flags |= (((CAPTIONFADETICS-closedcaptions[i].t)/2)*V_10TRANS);
-			else if (closedcaptions[i].t > MAXCAPTIONTICS)
-				y -= (closedcaptions[i].t-- - MAXCAPTIONTICS)*vid.dupy;
 			if (closedcaptions[i].c && closedcaptions[i].c->origin)
-				dir = '\x1E';
+				dot = '\x1E';
+			else if (closedcaptions[i].s-S_sfx == sfx_None)
+				dot = 'M';
 			V_DrawRightAlignedString(vid.width-(20*vid.dupx), y,
-			flags, va("%c [%s]", dir, (closedcaptions[i].s->caption[0] ? closedcaptions[i].s->caption : closedcaptions[i].s->name)));
+			flags, va("%c [%s]", dot, (closedcaptions[i].s->caption[0] ? closedcaptions[i].s->caption : closedcaptions[i].s->name)));
 		}
 	}
 }

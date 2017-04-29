@@ -773,8 +773,8 @@ static int lib_getSfxInfo(lua_State *L)
 	lua_remove(L, 1);
 
 	i = luaL_checkinteger(L, 1);
-	if (i >= NUMSFX)
-		return luaL_error(L, "sfxinfo[] index %d out of range (0 - %d)", i, NUMSFX-1);
+	if (i == 0 || i >= NUMSFX)
+		return luaL_error(L, "sfxinfo[] index %d out of range (1 - %d)", i, NUMSFX-1);
 	LUA_PushUserdata(L, &S_sfx[i], META_SFXINFO);
 	return 1;
 }
@@ -787,9 +787,9 @@ static int lib_setSfxInfo(lua_State *L)
 	lua_remove(L, 1);
 	{
 		UINT32 i = luaL_checkinteger(L, 1);
-		if (i >= NUMSFX)
-			return luaL_error(L, "sfxinfo[] index %d out of range (0 - %d)", i, NUMSFX-1);
-		info = &S_sfx[i]; // get the mobjinfo to assign to.
+		if (i == 0 || i >= NUMSFX)
+			return luaL_error(L, "sfxinfo[] index %d out of range (1 - %d)", i, NUMSFX-1);
+		info = &S_sfx[i]; // get the sfxinfo to assign to.
 	}
 	luaL_checktype(L, 2, LUA_TTABLE); // check that we've been passed a table.
 	lua_remove(L, 1); // pop mobjtype num, don't need it any more.

@@ -33,7 +33,7 @@ sfxinfo_t S_sfx[NUMSFX] =
 *****/
   // S_sfx[0] needs to be a dummy for odd reasons. (don't modify this comment)
 //  name, singularity, priority, pitch, volume, data, length, skinsound, usefulness, lumpnum, caption
-  {"none" ,  false,   0,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}, // maximum length
+  {"none" ,  false,   0,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "///////////////////////////////"}, // maximum length
 
   // Skin Sounds
   {"altdi1", false, 192, 16, -1, NULL, 0, SKSPLDET1,  -1, LUMPERROR, "Dying"},
@@ -198,7 +198,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"emfind", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Radar beep"},
   {"flgcap", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Flag captured"},
   {"menu1",   true,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Menu beep"},
-  {"oneup",   true, 192,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Extra life"},
+  {"oneup",   true, 192,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "One-up"},
   {"ptally",  true,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Tally"}, // Point tally is identical to menu for now
   {"radio",  false,  60,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Notification"},
   {"wepchg",  true,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Weapon change"}, // Weapon switch is identical to menu for now
@@ -237,7 +237,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"mario7", false,  32,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Fire"},
   {"mario8", false,  48,  8, -1, NULL, 0,        -1,  -1, LUMPERROR, "Hurt"},
   {"mario9",  true, 120,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Emerging"},
-  {"marioa",  true, 127,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Extra life"},
+  {"marioa",  true, 192,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "One-up"},
   {"thwomp",  true, 127,  8, -1, NULL, 0,        -1,  -1, LUMPERROR, "Thwomp"},
 
   // Black Eggman
@@ -294,7 +294,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3k44",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Bounce"},
   {"s3k45",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Lightning zap"},
   {"s3k46",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Transformation"},
-  {"s3k47",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Rising sand"},
+  {"s3k47",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Rising dust"},
   {"s3k48",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Metallic clink"},
   {"s3k49",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Falling rock"},
   {"s3k4a",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Grab"},
@@ -389,7 +389,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3ka3",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Lift"},
   {"s3ka4",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Powering up"},
   {"s3ka5",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
-  {"s3ka6",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Attraction failure"},
+  {"s3ka6",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Attraction fizzle"},
   {"s3ka7",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Countdown beep"},
   {"s3ka8",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Energy"},
   {"s3ka9",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Aquaphobia"},
@@ -513,7 +513,8 @@ void S_InitRuntimeSounds (void)
 		S_sfx[i].skinsound = -1;
 		S_sfx[i].usefulness = -1;
 		S_sfx[i].lumpnum = LUMPERROR;
-		strlcpy(S_sfx[i].caption, "", 9);
+		//strlcpy(S_sfx[i].caption, "", 1);
+		S_sfx[i].caption[0] = '\0';
 	}
 }
 
