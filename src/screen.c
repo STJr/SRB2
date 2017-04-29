@@ -449,10 +449,10 @@ void SCR_ClosedCaptions(void)
 			INT32 flags = V_NOSCALESTART|V_ALLOWLOWERCASE;
 			INT32 y = vid.height-((i + 2)*10*vid.dupy);
 			char dir = ' ';
-			if (closedcaptions[i].t < 20)
-				flags |= (((20-closedcaptions[i].t)/2)*V_10TRANS);
-			else if (closedcaptions[i].t > TICRATE)
-				y -= (closedcaptions[i].t-- - TICRATE)*vid.dupy;
+			if (closedcaptions[i].t < CAPTIONFADETICS)
+				flags |= (((CAPTIONFADETICS-closedcaptions[i].t)/2)*V_10TRANS);
+			else if (closedcaptions[i].t > MAXCAPTIONTICS)
+				y -= (closedcaptions[i].t-- - MAXCAPTIONTICS)*vid.dupy;
 			if (closedcaptions[i].c && closedcaptions[i].c->origin)
 				dir = '\x1E';
 			V_DrawRightAlignedString(vid.width-(20*vid.dupx), y,

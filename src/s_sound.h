@@ -86,6 +86,8 @@ typedef struct {
 } caption_t;
 
 #define NUMCAPTIONS 8
+#define MAXCAPTIONTICS (2*TICRATE)
+#define CAPTIONFADETICS 20
 
 extern caption_t closedcaptions[NUMCAPTIONS];
 

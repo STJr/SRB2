@@ -586,7 +586,7 @@ void S_StartSoundAtVolume(const void *origin_p, sfxenum_t sfx_id, INT32 volume)
 
 			closedcaptions[set].c = &channels[cnum];
 			closedcaptions[set].s = sfx;
-			closedcaptions[set].t = TICRATE+2;
+			closedcaptions[set].t = MAXCAPTIONTICS+2;
 		}
 
 		// Assigns the handle to one of the channels in the
@@ -694,7 +694,7 @@ dontplay:
 
 		closedcaptions[set].c = &channels[cnum];
 		closedcaptions[set].s = sfx;
-		closedcaptions[set].t = TICRATE+2;
+		closedcaptions[set].t = MAXCAPTIONTICS+2;
 	}
 
 	// Assigns the handle to one of the channels in the
@@ -973,21 +973,22 @@ notinlevel:
 
 	for (i = 0; i < NUMCAPTIONS; i++) // update captions
 	{
-		boolean cond = (closedcaptions[i].c && I_SoundIsPlaying(closedcaptions[i].c->handle));
+		if (!closedcaptions[i].s)
+			continue;
 
-		if (closedcaptions[i].t <= TICRATE)
+		if (closedcaptions[i].t <= MAXCAPTIONTICS)
 			closedcaptions[i].t--;
-		if (cond || (closedcaptions[i].s && closedcaptions[i].t))
-		{
-			if (!cond)
-				closedcaptions[i].c = NULL;
-		}
 
 		if (!closedcaptions[i].t)
 		{
 			closedcaptions[i].c = NULL;
 			closedcaptions[i].s = NULL;
-			closedcaptions[i].t = 0;
+		}
+		else if (closedcaptions[i].c && !I_SoundIsPlaying(closedcaptions[i].c->handle))
+		{
+			closedcaptions[i].c = NULL;
+			if (closedcaptions[i].t > CAPTIONFADETICS)
+				closedcaptions[i].t = CAPTIONFADETICS;
 		}
 	}
 }
