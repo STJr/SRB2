@@ -8632,6 +8632,16 @@ static void M_DrawColorMenu(void)
 	x = currentMenu->x;
 	y = currentMenu->y;
 
+	V_DrawFill(19       , y-4, 47, 1,  35);
+	V_DrawFill(19+(  47), y-4, 47, 1,  73);
+	V_DrawFill(19+(2*47), y-4, 47, 1, 112);
+	V_DrawFill(19+(3*47), y-4, 47, 1, 255);
+	V_DrawFill(19+(4*47), y-4, 47, 1, 152);
+	V_DrawFill(19+(5*47), y-4, 46, 1, 181);
+
+	V_DrawFill(300, y-4, 1, 1, 26);
+	V_DrawFill( 19, y-3, 282, 1, 26);
+
 	if ((currentMenu->menuitems[itemOn].alphaKey*2 - currentMenu->menuitems[0].alphaKey*2) <= scrollareaheight)
 		tempcentery = currentMenu->y - currentMenu->menuitems[0].alphaKey*2;
 	else if ((currentMenu->menuitems[currentMenu->numitems-1].alphaKey*2 - currentMenu->menuitems[itemOn].alphaKey*2) <= scrollareaheight)
