@@ -798,9 +798,7 @@ void R_SkyboxFrame(player_t *player)
 
 	viewx = viewmobj->x;
 	viewy = viewmobj->y;
-	viewz = 0;
-	if (viewmobj->spawnpoint)
-		viewz = ((fixed_t)viewmobj->spawnpoint->angle)<<FRACBITS;
+	viewz = viewmobj->z; // 26/04/17: use actual Z position instead of spawnpoint angle!
 
 	if (mapheaderinfo[gamemap-1])
 	{
