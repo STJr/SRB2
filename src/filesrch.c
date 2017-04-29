@@ -477,6 +477,8 @@ char exttable[NUM_EXT_TABLE][5] = {
 	".txt", ".cfg", // exec
 	".wad", ".soc", ".lua"}; // addfile
 
+char filenamebuf[MAX_WADFILES][MAX_WADPATH];
+
 boolean preparefilemenu(void)
 {
 	DIR *dirhandle;
@@ -567,7 +569,7 @@ boolean preparefilemenu(void)
 			char *temp;
 			size_t len = strlen(dent->d_name)+1;
 			UINT8 ext = EXT_FOLDER;
-			size_t folder;
+			UINT8 folder;
 
 			if (!S_ISDIR(fsstat.st_mode)) // file
 			{
@@ -575,6 +577,25 @@ boolean preparefilemenu(void)
 					if (!strcasecmp(exttable[ext], dent->d_name+len-5)) break;
 				if (ext == NUM_EXT_TABLE) continue; // not an addfile-able (or exec-able) file
 				ext += EXT_START; // moving to be appropriate position
+
+				if (ext >= EXT_MD5)
+				{
+					size_t i;
+					for (i = 0; i < numwadfiles; i++)
+					{
+						if (!filenamebuf[i][0])
+						{
+							strncpy(filenamebuf[i], wadfiles[i]->filename, MAX_WADPATH);
+							filenamebuf[i][MAX_WADPATH - 1] = '\0';
+							nameonly(filenamebuf[i]);
+						}
+						if (strcasecmp(dent->d_name, filenamebuf[i]))
+							continue;
+						if (checkfilemd5(menupath, wadfiles[i]->md5sum))
+							ext |= EXT_LOADED;
+					}
+				}
+
 				folder = 0;
 			}
 			else

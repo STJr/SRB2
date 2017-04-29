@@ -4480,8 +4480,15 @@ static void M_DrawAddons(void)
 
 	for (i = dir_on[menudepthleft]; i < sizedirmenu; i++)
 	{
+		UINT32 flags = 0;
 		if (y > BASEVIDHEIGHT) break;
-		V_DrawString(x, y, ((dirmenu[dir_on[menudepthleft]][0] == EXT_UP) ? 0 : V_ALLOWLOWERCASE), dirmenu[i]+2);
+
+		if ((dirmenu[i][0] & ~EXT_LOADED) != EXT_UP)
+			flags = V_ALLOWLOWERCASE;
+		if (dirmenu[i][0] & EXT_LOADED)
+		flags |= V_TRANSLUCENT;
+
+		V_DrawString(x, y, flags, dirmenu[i]+2);
 		y += SMALLLINEHEIGHT;
 	}
 }
@@ -4492,7 +4499,7 @@ static void M_AddonExec(INT32 ch)
 		return;
 
 	S_StartSound(NULL, sfx_strpst);
-	COM_BufAddText(va("exec %s%s", menupath, dirmenu[dir_on[menudepthleft]]+2));
+	COM_ImmedExecute(va("exec %s%s", menupath, dirmenu[dir_on[menudepthleft]]+2));
 }
 
 static void M_HandleAddons(INT32 choice)
@@ -4562,7 +4569,7 @@ static void M_HandleAddons(INT32 choice)
 					case EXT_WAD:
 					case EXT_SOC:
 						S_StartSound(NULL, sfx_strpst);
-						COM_BufAddText(va("addfile %s%s", menupath, dirmenu[dir_on[menudepthleft]]+2));
+						COM_ImmedExecute(va("addfile %s%s", menupath, dirmenu[dir_on[menudepthleft]]+2));
 						break;
 					default:
 						S_StartSound(NULL, sfx_lose);

@@ -42,11 +42,21 @@ typedef enum
 	EXT_START,
 	EXT_TXT = EXT_START,
 	EXT_CFG,
-	EXT_WAD,
+	EXT_MD5,
+	EXT_WAD = EXT_MD5,
 	EXT_SOC,
 	EXT_LUA, // allowed even if not HAVE_BLUA so that we can yell on load attempt
 	NUM_EXT,
-	NUM_EXT_TABLE = NUM_EXT-EXT_START
+	NUM_EXT_TABLE = NUM_EXT-EXT_START,
+	EXT_LOADED = 0x80
+	/*
+	obviously there can only be 0x7F supported extensions in
+	addons menu because we're cramming this into a char out of
+	laziness/easy memory allocation (what's the difference?)
+	and have stolen a bit to show whether it's loaded or not
+	in practice the size of the data type is probably overkill
+	toast 02/05/17
+	*/
 } ext_enum;
 
 boolean preparefilemenu(void);
