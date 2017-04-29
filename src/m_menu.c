@@ -485,11 +485,11 @@ static consvar_t cv_dummymares = {"dummymares", "Overall", CV_HIDEN|CV_CALL, dum
 // ---------
 static menuitem_t MainMenu[] =
 {
-	{IT_CALL   |IT_STRING, NULL, "Secrets",     M_SecretsMenu,      84},
-	{IT_CALL   |IT_STRING, NULL, "1  player",   M_SinglePlayerMenu, 92},
-	{IT_SUBMENU|IT_STRING, NULL, "multiplayer", &MP_MainDef,       100},
-	{IT_CALL   |IT_STRING, NULL, "options",     M_Options,         108},
-	//{IT_CALL   |IT_STRING, NULL, "addons",      M_Addons,          108},
+	{IT_CALL   |IT_STRING, NULL, "Secrets",     M_SecretsMenu,      76},
+	{IT_CALL   |IT_STRING, NULL, "1  player",   M_SinglePlayerMenu, 84},
+	{IT_SUBMENU|IT_STRING, NULL, "multiplayer", &MP_MainDef,        92},
+	{IT_CALL   |IT_STRING, NULL, "options",     M_Options,         100},
+	{IT_CALL   |IT_STRING, NULL, "addons",      M_Addons,          108},
 	{IT_CALL   |IT_STRING, NULL, "quit  game",  M_QuitSRB2,        116},
 };
 
@@ -499,7 +499,7 @@ typedef enum
 	singleplr,
 	multiplr,
 	options,
-	//addons,
+	addons,
 	quitdoom
 } main_e;
 
@@ -530,27 +530,29 @@ typedef enum
 // ---------------------
 static menuitem_t MPauseMenu[] =
 {
-	{IT_STRING  | IT_SUBMENU, NULL, "Scramble Teams...",        &MISC_ScrambleTeamDef, 16},
-	{IT_STRING  | IT_CALL,    NULL, "Switch Gametype/Level...", M_GameTypeChange,      24},
+	{IT_STRING | IT_SUBMENU, NULL, "Scramble Teams...",         &MISC_ScrambleTeamDef,  8},
+	{IT_STRING | IT_CALL,    NULL, "Switch Gametype/Level...",  M_GameTypeChange,      16},
+	{IT_STRING | IT_CALL,    NULL, "Add-ons...",                M_Addons,              24},
 
-	{IT_CALL | IT_STRING,    NULL, "Continue",                  M_SelectableClearMenus,40},
-	{IT_CALL | IT_STRING,    NULL, "Player 1 Setup",            M_SetupMultiPlayer,    48}, // splitscreen
-	{IT_CALL | IT_STRING,    NULL, "Player 2 Setup",            M_SetupMultiPlayer2,   56}, // splitscreen
+	{IT_STRING | IT_CALL,    NULL, "Continue",                  M_SelectableClearMenus,40},
+	{IT_STRING | IT_CALL,    NULL, "Player 1 Setup",            M_SetupMultiPlayer,    48}, // splitscreen
+	{IT_STRING | IT_CALL,    NULL, "Player 2 Setup",            M_SetupMultiPlayer2,   56}, // splitscreen
 
 	{IT_STRING | IT_CALL,    NULL, "Spectate",                  M_ConfirmSpectate,     48},
 	{IT_STRING | IT_CALL,    NULL, "Enter Game",                M_ConfirmEnterGame,    48},
 	{IT_STRING | IT_SUBMENU, NULL, "Switch Team...",            &MISC_ChangeTeamDef,   48},
-	{IT_CALL | IT_STRING,    NULL, "Player Setup",              M_SetupMultiPlayer,    56}, // alone
-	{IT_CALL | IT_STRING,    NULL, "Options",                   M_Options,             64},
+	{IT_STRING | IT_CALL,    NULL, "Player Setup",              M_SetupMultiPlayer,    56}, // alone
+	{IT_STRING | IT_CALL,    NULL, "Options",                   M_Options,             64},
 
-	{IT_CALL | IT_STRING,    NULL, "Return to Title",           M_EndGame,             80},
-	{IT_CALL | IT_STRING,    NULL, "Quit Game",                 M_QuitSRB2,            88},
+	{IT_STRING | IT_CALL,    NULL, "Return to Title",           M_EndGame,             80},
+	{IT_STRING | IT_CALL,    NULL, "Quit Game",                 M_QuitSRB2,            88},
 };
 
 typedef enum
 {
 	mpause_scramble = 0,
 	mpause_switchmap,
+	mpause_addons,
 
 	mpause_continue,
 	mpause_psetupsplit,
@@ -592,6 +594,7 @@ typedef enum
 	spause_continue,
 	spause_retry,
 	spause_options,
+
 	spause_title,
 	spause_quit
 } spause_e;
@@ -1040,7 +1043,6 @@ static menuitem_t OP_MainMenu[] =
 
 	{IT_SUBMENU | IT_STRING, NULL, "Game Options...",   &OP_GameOptionsDef,   70},
 	{IT_CALL | IT_STRING,    NULL, "Server Options...", M_ServerOptions,      80},
-	{IT_CALL | IT_STRING, NULL, "Add-ons...", M_Addons, 90},
 };
 
 static menuitem_t OP_ControlsMenu[] =
@@ -2684,6 +2686,7 @@ void M_StartControlPanel(void)
 	else // multiplayer
 	{
 		MPauseMenu[mpause_switchmap].status = IT_DISABLED;
+		MPauseMenu[mpause_addons].status = IT_DISABLED;
 		MPauseMenu[mpause_scramble].status = IT_DISABLED;
 		MPauseMenu[mpause_psetupsplit].status = IT_DISABLED;
 		MPauseMenu[mpause_psetupsplit2].status = IT_DISABLED;
@@ -2695,6 +2698,7 @@ void M_StartControlPanel(void)
 		if ((server || adminplayer == consoleplayer))
 		{
 			MPauseMenu[mpause_switchmap].status = IT_STRING | IT_CALL;
+			MPauseMenu[mpause_addons].status = IT_STRING | IT_CALL;
 			if (G_GametypeHasTeams())
 				MPauseMenu[mpause_scramble].status = IT_STRING | IT_SUBMENU;
 		}
@@ -4605,6 +4609,9 @@ static void M_DrawAddons(void)
 	if (refreshdirmenu & M_AddonsRefresh())
 		return M_DrawMessageMenu();
 
+	if (Playing())
+		V_DrawCenteredString(BASEVIDWIDTH/2, 4, V_REDMAP, "Adding files mid-game may cause problems.");
+
 	if (numwadfiles >= MAX_WADFILES) // difficult to happen with current limits, but still worth thinking of
 		x = FRACUNIT;
 	else
@@ -4679,7 +4686,10 @@ static void M_DrawAddons(void)
 
 	V_DrawSmallScaledPatch(x-(26 + 16), y + 4, 0, addonsp[NUM_EXT+3]);
 	M_DrawTextBox(x - 26, y, MAXSTRINGLENGTH, 1);
-	V_DrawString(x - 18, y + 8, V_ALLOWLOWERCASE, menusearch+1);
+	if (menusearch[0])
+		V_DrawString(x - 18, y + 8, V_ALLOWLOWERCASE, menusearch+1);
+	else
+		V_DrawString(x - 18, y + 8, V_ALLOWLOWERCASE|V_TRANSLUCENT, "Type to search...");
 	if (skullAnimCounter < 4)
 		V_DrawCharacter(x - 18 + V_StringWidth(menusearch+1, 0), y + 8,
 			'_' | 0x80, false);
