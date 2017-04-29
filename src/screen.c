@@ -444,21 +444,32 @@ void SCR_ClosedCaptions(void)
 
 	for (i = 0; i < NUMCAPTIONS; i++)
 	{
-		if (closedcaptions[i].s)
-		{
-			INT32 flags = V_NOSCALESTART|V_ALLOWLOWERCASE;
-			INT32 y = vid.height-((i + 2)*10*vid.dupy);
-			char dot = ' ';
-			if (closedcaptions[i].b)
-				y -= (closedcaptions[i].b--)*vid.dupy;
-			if (closedcaptions[i].t < CAPTIONFADETICS)
-				flags |= (((CAPTIONFADETICS-closedcaptions[i].t)/2)*V_10TRANS);
-			if (closedcaptions[i].c && closedcaptions[i].c->origin)
-				dot = '\x1E';
-			else if (closedcaptions[i].s-S_sfx == sfx_None)
-				dot = '\x19';
-			V_DrawRightAlignedString(vid.width-(20*vid.dupx), y,
-			flags, va("%c [%s]", dot, (closedcaptions[i].s->caption[0] ? closedcaptions[i].s->caption : closedcaptions[i].s->name)));
-		}
+		INT32 flags, y;
+		char dot;
+		boolean music;
+
+		if (!closedcaptions[i].s)
+			continue;
+
+		if ((music = (closedcaptions[i].s-S_sfx == sfx_None)) && (closedcaptions[i].t < flashingtics) && (closedcaptions[i].t & 1))
+			continue;
+
+		flags = V_NOSCALESTART|V_ALLOWLOWERCASE;
+		y = vid.height-((i + 2)*10*vid.dupy);
+		dot = ' ';
+
+		if (closedcaptions[i].b)
+			y -= (closedcaptions[i].b--)*vid.dupy;
+
+		if (closedcaptions[i].t < CAPTIONFADETICS)
+			flags |= (((CAPTIONFADETICS-closedcaptions[i].t)/2)*V_10TRANS);
+
+		if (music)
+			dot = '\x19';
+		else if (closedcaptions[i].c && closedcaptions[i].c->origin)
+			dot = '\x1E';
+
+		V_DrawRightAlignedString(vid.width-(20*vid.dupx), y,
+		flags, va("%c [%s]", dot, (closedcaptions[i].s->caption[0] ? closedcaptions[i].s->caption : closedcaptions[i].s->name)));
 	}
 }
