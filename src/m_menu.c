@@ -334,7 +334,9 @@ static void M_ScreenshotOptions(INT32 choice);
 static void M_EraseData(INT32 choice);
 
 static void M_Addons(INT32 choice);
-static patch_t *addonsp[NUM_EXT+3];
+static patch_t *addonsp[NUM_EXT+4];
+
+#define numaddonsshown 4
 
 // Drawing functions
 static void M_DrawGenericMenu(void);
@@ -4468,21 +4470,22 @@ static void M_Addons(INT32 choice)
 	if (addonsp[0]) // never going to have some provided but not all, saves individually checking
 	{
 		size_t i;
-		for (i = 0; i < NUM_EXT+3; i++)
+		for (i = 0; i < NUM_EXT+4; i++)
 			W_UnlockCachedPatch(addonsp[i]);
 	}
 
 	addonsp[EXT_FOLDER] = W_CachePatchName("M_FFLDR", PU_STATIC);
 	addonsp[EXT_UP] = W_CachePatchName("M_FBACK", PU_STATIC);
-	addonsp[EXT_SEARCH] = W_CachePatchName("M_FSRCH", PU_STATIC);
+	addonsp[EXT_NORESULTS] = W_CachePatchName("M_FNOPE", PU_STATIC);
 	addonsp[EXT_TXT] = W_CachePatchName("M_FTXT", PU_STATIC);
 	addonsp[EXT_CFG] = W_CachePatchName("M_FCFG", PU_STATIC);
 	addonsp[EXT_WAD] = W_CachePatchName("M_FWAD", PU_STATIC);
 	addonsp[EXT_SOC] = W_CachePatchName("M_FSOC", PU_STATIC);
 	addonsp[EXT_LUA] = W_CachePatchName("M_FLUA", PU_STATIC);
-	addonsp[NUM_EXT] = W_CachePatchName("M_FLOAD", PU_STATIC);
-	addonsp[NUM_EXT+1] = W_CachePatchName("M_FSEL1", PU_STATIC);
-	addonsp[NUM_EXT+2] = W_CachePatchName("M_FSEL2", PU_STATIC);
+	addonsp[NUM_EXT] = W_CachePatchName("M_FSEL1", PU_STATIC);
+	addonsp[NUM_EXT+1] = W_CachePatchName("M_FSEL2", PU_STATIC);
+	addonsp[NUM_EXT+2] = W_CachePatchName("M_FLOAD", PU_STATIC);
+	addonsp[NUM_EXT+3] = W_CachePatchName("M_FSRCH", PU_STATIC);
 
 	MISC_AddonsDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&MISC_AddonsDef);
@@ -4620,14 +4623,13 @@ static void M_DrawAddons(void)
 
 	M_DrawLevelPlatterHeader(y - 16, M_AddonsHeaderPath(), true);
 
-#define numaddonsshown 5
 	// get bottom...
-	max = dir_on[menudepthleft] + numaddonsshown;
+	max = dir_on[menudepthleft] + numaddonsshown + 1;
 	if (max > (ssize_t)sizedirmenu)
 		max = sizedirmenu;
 
 	// then top...
-	i = max - (2*numaddonsshown - 1);
+	i = max - (2*numaddonsshown + 1);
 
 	// then adjust!
 	if (i < 0)
@@ -4636,7 +4638,6 @@ static void M_DrawAddons(void)
 			max = sizedirmenu;
 		i = 0;
 	}
-#undef numaddonsshown
 
 	if (i != 0)
 		V_DrawCharacter(19, y+4, '\x1A', false);
@@ -4653,11 +4654,11 @@ static void M_DrawAddons(void)
 			V_DrawSmallScaledPatch(x-(16+4), y, (flags & V_TRANSLUCENT), addonsp[((UINT8)(dirmenu[i][DIR_TYPE]) & ~EXT_LOADED)]);
 
 			if (dirmenu[i][DIR_TYPE] & EXT_LOADED)
-				V_DrawSmallScaledPatch(x-(16+4), y, 0, addonsp[NUM_EXT]);
+				V_DrawSmallScaledPatch(x-(16+4), y, 0, addonsp[NUM_EXT+2]);
 
 			if ((size_t)i == dir_on[menudepthleft])
 			{
-				tic_t flash = ((skullAnimCounter & 4) ? 2 : 1);
+				tic_t flash = ((skullAnimCounter/4) ? 1 : 0);
 				V_DrawSmallScaledPatch(x-(16+4), y, 0, addonsp[NUM_EXT+flash]);
 			}
 
@@ -4676,7 +4677,7 @@ static void M_DrawAddons(void)
 
 	y = BASEVIDHEIGHT - currentMenu->y;
 
-	V_DrawSmallScaledPatch(x-(26 + 16), y + 4, 0, addonsp[EXT_SEARCH]);
+	V_DrawSmallScaledPatch(x-(26 + 16), y + 4, 0, addonsp[NUM_EXT+3]);
 	M_DrawTextBox(x - 26, y, MAXSTRINGLENGTH, 1);
 	V_DrawString(x - 18, y + 8, V_ALLOWLOWERCASE, menusearch+1);
 	if (skullAnimCounter < 4)
@@ -4747,6 +4748,22 @@ static void M_HandleAddons(INT32 choice)
 		case KEY_UPARROW:
 			if (dir_on[menudepthleft])
 				dir_on[menudepthleft]--;
+			S_StartSound(NULL, sfx_menu1);
+			break;
+		case KEY_PGDN:
+			{
+				UINT8 i;
+				for (i = numaddonsshown; i && (dir_on[menudepthleft] < sizedirmenu-1); i--)
+					dir_on[menudepthleft]++;
+			}
+			S_StartSound(NULL, sfx_menu1);
+			break;
+		case KEY_PGUP:
+			{
+				UINT8 i;
+				for (i = numaddonsshown; i && (dir_on[menudepthleft]); i--)
+					dir_on[menudepthleft]--;
+			}
 			S_StartSound(NULL, sfx_menu1);
 			break;
 		case KEY_ENTER:

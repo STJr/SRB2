@@ -588,10 +588,11 @@ boolean preparefilemenu(boolean samedepth)
 		return false;
 	}
 
-	if (menusearch[0] || menudepthleft != menudepth-1) // Make room for UP... or search entry
+	if ((menusearch[0] && !sizedirmenu)
+		|| (!menusearch[0] && menudepthleft != menudepth-1)) // Make room for UP... or search entry
 	{
-		numfolders++;
 		sizedirmenu++;
+		numfolders++;
 		folderpos++;
 	}
 
@@ -683,7 +684,10 @@ boolean preparefilemenu(boolean samedepth)
 	}
 
 	if (menusearch[0])
-		dirmenu[0] = Z_StrDup(va("%c\14Search results", EXT_SEARCH));
+	{
+		if (!pos && folderpos == 1)
+			dirmenu[0] = Z_StrDup(va("%c\13No results...", EXT_NORESULTS));
+	}
 	else if (menudepthleft != menudepth-1) // now for UP... entry
 		dirmenu[0] = Z_StrDup(va("%c\5UP...", EXT_UP));
 

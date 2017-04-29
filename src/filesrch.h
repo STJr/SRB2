@@ -46,7 +46,7 @@ typedef enum
 {
 	EXT_FOLDER = 0,
 	EXT_UP,
-	EXT_SEARCH,
+	EXT_NORESULTS,
 	EXT_START,
 	EXT_TXT = EXT_START,
 	EXT_CFG,
