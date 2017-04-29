@@ -156,6 +156,7 @@ UINT8 stagefailed; // Used for GEMS BONUS? Also to see if you beat the stage.
 UINT16 emeralds;
 UINT32 token; // Number of tokens collected in a level
 UINT32 tokenlist; // List of tokens collected
+boolean gottoken; // Did you get a token? Used for end of act
 INT32 tokenbits; // Used for setting token bits
 
 // Old Special Stage
@@ -1011,13 +1012,13 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 		if (turnleft)
 			cmd->angleturn = (INT16)(cmd->angleturn + angleturn[tspeed]);
 	}
-	if (cv_analog.value || twodlevel
+	if (twodlevel
 		|| (player->mo && (player->mo->flags2 & MF2_TWOD))
 		|| (!demoplayback && (player->climbing
 		|| (player->powers[pw_carry] == CR_NIGHTSMODE)
 		|| (player->pflags & (PF_SLIDING|PF_FORCESTRAFE))))) // Analog
 			forcestrafe = true;
-	if (forcestrafe) // Analog
+	if (forcestrafe)
 	{
 		if (turnright)
 			side += sidemove[speed];
@@ -1029,6 +1030,13 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 			// JOYAXISRANGE is supposed to be 1023 (divide by 1024)
 			side += ((axis * sidemove[1]) >> 10);
 		}
+	}
+	else if (cv_analog.value) // Analog
+	{
+		if (turnright)
+			cmd->buttons |= BT_CAMRIGHT;
+		if (turnleft)
+			cmd->buttons |= BT_CAMLEFT;
 	}
 	else
 	{
@@ -1117,15 +1125,6 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	if (PLAYER1INPUTDOWN(gc_use))
 		cmd->buttons |= BT_USE;
 
-	// Camera Controls
-	if (cv_debug || cv_analog.value || demoplayback || objectplacing || player->powers[pw_carry] == CR_NIGHTSMODE)
-	{
-		if (PLAYER1INPUTDOWN(gc_camleft))
-			cmd->buttons |= BT_CAMLEFT;
-		if (PLAYER1INPUTDOWN(gc_camright))
-			cmd->buttons |= BT_CAMRIGHT;
-	}
-
 	if (PLAYER1INPUTDOWN(gc_camreset))
 	{
 		if (camera.chase && !resetdown)
@@ -1187,10 +1186,19 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	if (!mouseaiming && cv_mousemove.value)
 		forward += mousey;
 
-	if (cv_analog.value ||
-		(!demoplayback && (player->climbing
+	if ((!demoplayback && (player->climbing
 		|| (player->pflags & PF_SLIDING)))) // Analog for mouse
 		side += mousex*2;
+	else if (cv_analog.value)
+	{
+		if (mousex)
+		{
+			if (mousex > 0)
+				cmd->buttons |= BT_CAMRIGHT;
+			else
+				cmd->buttons |= BT_CAMLEFT;
+		}
+	}
 	else
 		cmd->angleturn = (INT16)(cmd->angleturn - (mousex*8));
 
@@ -1225,9 +1233,10 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	cmd->sidemove = (SINT8)(cmd->sidemove + side);
 
 	if (cv_analog.value) {
-		cmd->angleturn = (INT16)(thiscam->angle >> 16);
 		if (player->awayviewtics)
 			cmd->angleturn = (INT16)(player->awayviewmobj->angle >> 16);
+		else
+			cmd->angleturn = (INT16)(thiscam->angle >> 16);
 	}
 	else
 	{
@@ -1301,7 +1310,7 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 		if (turnleft)
 			cmd->angleturn = (INT16)(cmd->angleturn + angleturn[tspeed]);
 	}
-	if (cv_analog2.value || twodlevel
+	if (twodlevel
 		|| (player->mo && (player->mo->flags2 & MF2_TWOD))
 		|| player->climbing
 		|| (player->powers[pw_carry] == CR_NIGHTSMODE)
@@ -1319,6 +1328,13 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 			// JOYAXISRANGE is supposed to be 1023 (divide by 1024)
 			side += ((axis * sidemove[1]) >> 10);
 		}
+	}
+	else if (cv_analog2.value) // Analog
+	{
+		if (turnright)
+			cmd->buttons |= BT_CAMRIGHT;
+		if (turnleft)
+			cmd->buttons |= BT_CAMLEFT;
 	}
 	else
 	{
@@ -1404,15 +1420,6 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 	if (PLAYER2INPUTDOWN(gc_use))
 		cmd->buttons |= BT_USE;
 
-	// Camera Controls
-	if (cv_debug || cv_analog2.value || player->powers[pw_carry] == CR_NIGHTSMODE)
-	{
-		if (PLAYER2INPUTDOWN(gc_camleft))
-			cmd->buttons |= BT_CAMLEFT;
-		if (PLAYER2INPUTDOWN(gc_camright))
-			cmd->buttons |= BT_CAMRIGHT;
-	}
-
 	if (PLAYER2INPUTDOWN(gc_camreset))
 	{
 		if (camera2.chase && !resetdown)
@@ -1474,9 +1481,19 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 	if (!mouseaiming && cv_mousemove2.value)
 		forward += mouse2y;
 
-	if (cv_analog2.value || player->climbing
+	if (player->climbing
 		|| (player->pflags & PF_SLIDING)) // Analog for mouse
 		side += mouse2x*2;
+	else if (cv_analog2.value)
+	{
+		if (mouse2x)
+		{
+			if (mouse2x > 0)
+				cmd->buttons |= BT_CAMRIGHT;
+			else
+				cmd->buttons |= BT_CAMLEFT;
+		}
+	}
 	else
 		cmd->angleturn = (INT16)(cmd->angleturn - (mouse2x*8));
 
@@ -1524,9 +1541,10 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 	}
 
 	if (cv_analog2.value) {
-		cmd->angleturn = (INT16)(thiscam->angle >> 16);
 		if (player->awayviewtics)
 			cmd->angleturn = (INT16)(player->awayviewmobj->angle >> 16);
+		else
+			cmd->angleturn = (INT16)(thiscam->angle >> 16);
 	}
 	else
 	{
@@ -2763,7 +2781,6 @@ static INT16 RandMap(INT16 tolflags, INT16 pprevmap)
 static void G_DoCompleted(void)
 {
 	INT32 i;
-	boolean gottoken = false;
 
 	tokenlist = 0; // Reset the list
 
@@ -2849,10 +2866,9 @@ static void G_DoCompleted(void)
 	if (nextmap >= 1100-1 && nextmap <= 1102-1 && (gametype == GT_RACE || gametype == GT_COMPETITION))
 		nextmap = (INT16)(spstage_start-1);
 
-	if (gametype == GT_COOP && token)
+	if ((gottoken = (gametype == GT_COOP && token)))
 	{
 		token--;
-		gottoken = true;
 
 		if (!(emeralds & EMERALD1))
 			nextmap = (INT16)(sstage_start - 1); // Special Stage 1
@@ -3645,6 +3661,9 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 char *G_BuildMapTitle(INT32 mapnum)
 {
 	char *title = NULL;
+
+	if (!mapheaderinfo[mapnum-1])
+		P_AllocMapHeader(mapnum-1);
 
 	if (strcmp(mapheaderinfo[mapnum-1]->lvlttl, ""))
 	{
