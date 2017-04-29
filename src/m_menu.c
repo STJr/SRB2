@@ -213,14 +213,13 @@ menu_t SPauseDef;
 
 // Level Select
 static levelselect_t levelselect = {0, NULL};
-static UINT8 levelselectselect[4];
+static UINT8 levelselectselect[3];
 static patch_t *levselp[2][3];
 static INT32 lsoffs[2];
 
 #define lsrow levelselectselect[0]
 #define lscol levelselectselect[1]
-#define lstic levelselectselect[2]
-#define lshli levelselectselect[3]
+#define lshli levelselectselect[2]
 
 #define lshseperation 101
 #define lsbasevseperation 62
@@ -337,7 +336,9 @@ static void M_ScreenshotOptions(INT32 choice);
 static void M_EraseData(INT32 choice);
 
 static void M_Addons(INT32 choice);
-static patch_t *addonsp[NUM_EXT+4];
+static void M_AddonsOptions(INT32 choice);
+static patch_t *addonsp[NUM_EXT+5];
+static UINT8 addonsresponselimit = 0;
 
 #define numaddonsshown 4
 
@@ -1336,9 +1337,11 @@ static menuitem_t OP_SoundOptionsMenu[] =
 
 static menuitem_t OP_DataOptionsMenu[] =
 {
-	{IT_STRING | IT_CALL, NULL, "Screenshot Options...", M_ScreenshotOptions, 10},
+	{IT_STRING | IT_CALL,    NULL, "Add-on Options...",     M_AddonsOptions,     10},
 
-	{IT_STRING | IT_SUBMENU, NULL, "\x85" "Erase Data...", &OP_EraseDataDef, 20},
+	{IT_STRING | IT_CALL,    NULL, "Screenshot Options...", M_ScreenshotOptions, 30},
+
+	{IT_STRING | IT_SUBMENU, NULL, "\x85" "Erase Data...",  &OP_EraseDataDef,    50},
 };
 
 static menuitem_t OP_ScreenshotOptionsMenu[] =
@@ -1383,6 +1386,20 @@ static menuitem_t OP_EraseDataMenu[] =
 	{IT_STRING | IT_CALL, NULL, "Erase Secrets Data", M_EraseData, 20},
 
 	{IT_STRING | IT_CALL, NULL, "\x85" "Erase ALL Data", M_EraseData, 40},
+};
+
+static menuitem_t OP_AddonsOptionsMenu[] =
+{
+	{IT_HEADER,                      NULL, "Menu",                        NULL,                0},
+	{IT_STRING|IT_CVAR,              NULL, "Location",                    &cv_addons_option,   6},
+	{IT_STRING|IT_CVAR|IT_CV_STRING, NULL, "Custom Folder",               &cv_addons_folder,  11},
+	{IT_STRING|IT_CVAR,              NULL, "Identify loaded files via",   &cv_addons_md5,     25},
+	{IT_STRING|IT_CVAR,              NULL, "Show unsupported file types", &cv_addons_showall, 30},
+};
+
+enum
+{
+	op_addons_folder = 2,
 };
 
 static menuitem_t OP_ServerOptionsMenu[] =
@@ -1834,17 +1851,7 @@ menu_t OP_SoundOptionsDef =
 	NULL
 };
 
-menu_t OP_ServerOptionsDef =
-{
-	"M_SERVER",
-	sizeof (OP_ServerOptionsMenu)/sizeof (menuitem_t),
-	&OP_MainDef,
-	OP_ServerOptionsMenu,
-	M_DrawGenericScrollMenu,
-	30, 30,
-	0,
-	NULL
-};
+menu_t OP_ServerOptionsDef = DEFAULTSCROLLMENUSTYLE("M_SERVER", OP_ServerOptionsMenu, &OP_MainDef, 30, 30);
 
 menu_t OP_MonitorToggleDef =
 {
@@ -1886,7 +1893,7 @@ menu_t OP_OpenGLColorDef =
 	NULL
 };
 #endif
-menu_t OP_DataOptionsDef = DEFAULTMENUSTYLE("M_DATA", OP_DataOptionsMenu, &OP_MainDef, 30, 30);
+menu_t OP_DataOptionsDef = DEFAULTMENUSTYLE("M_DATA", OP_DataOptionsMenu, &OP_MainDef, 60, 30);
 
 menu_t OP_ScreenshotOptionsDef =
 {
@@ -1899,6 +1906,8 @@ menu_t OP_ScreenshotOptionsDef =
 	0,
 	NULL
 };
+
+menu_t OP_AddonsOptionsDef = DEFAULTSCROLLMENUSTYLE("M_ADDONS", OP_AddonsOptionsMenu, &OP_DataOptionsDef, 30, 30);
 
 menu_t OP_EraseDataDef = DEFAULTMENUSTYLE("M_DATA", OP_EraseDataMenu, &OP_DataOptionsDef, 60, 30);
 
@@ -2116,6 +2125,12 @@ void Moviemode_mode_Onchange(void)
 	}
 	for (i = cstart; i <= cend; ++i)
 		OP_ScreenshotOptionsMenu[i].status = IT_STRING|IT_CVAR;
+}
+
+void Addons_option_Onchange(void)
+{
+	OP_AddonsOptionsMenu[op_addons_folder].status =
+		(cv_addons_option.value == 3 ? IT_CVAR|IT_STRING|IT_CV_STRING : IT_DISABLED);
 }
 
 // ==========================================================================
@@ -3945,7 +3960,7 @@ static boolean M_PrepareLevelPlatter(INT32 gt)
 		I_Error("Insufficient memory to prepare level platter");
 
 	// done here so lsrow and lscol can be set if cv_nextmap is on the platter
-	lsrow = lscol = lstic = lshli = lsoffs[0] = lsoffs[1] = 0;
+	lsrow = lscol = lshli = lsoffs[0] = lsoffs[1] = 0;
 
 	while (mapnum < NUMMAPS)
 	{
@@ -4216,9 +4231,7 @@ void M_DrawLevelPlatterHeader(INT32 y, const char *header, boolean headerhighlig
 	}
 	y++;
 	if ((y >= 0) && (y < 200))
-	{
 		V_DrawFill(19, y, 282, 1, 26);
-	}
 }
 
 static void M_DrawLevelPlatterWideMap(UINT8 row, UINT8 col, INT32 x, INT32 y, boolean highlight)
@@ -4331,9 +4344,6 @@ static void M_DrawLevelPlatterMenu(void)
 	INT32 y = lsbasey + lsoffs[0] - getheadingoffset(lsrow);
 	const INT32 cursorx = (sizeselect ? 0 : (lscol*lshseperation));
 
-	if (++lstic == 32)
-		lstic = 0;
-
 	if (gamestate == GS_TIMEATTACK)
 		V_DrawPatchFill(W_CachePatchName("SRB2BACK", PU_CACHE));
 
@@ -4353,7 +4363,7 @@ static void M_DrawLevelPlatterMenu(void)
 	}
 
 	// draw cursor box
-	V_DrawSmallScaledPatch(lsbasex + cursorx + lsoffs[1], lsbasey, 0, ((lstic & 8) ? levselp[sizeselect][0] : levselp[sizeselect][1]));
+	V_DrawSmallScaledPatch(lsbasex + cursorx + lsoffs[1], lsbasey, 0, (levselp[sizeselect][((skullAnimCounter/4) ? 1 : 0)]));
 
 	if (levelselect.rows[lsrow].maplist[lscol])
 		V_DrawScaledPatch(lsbasex + cursorx-17, lsbasey+50+lsoffs[0], 0, W_CachePatchName("M_CURSOR", PU_CACHE));
@@ -4653,11 +4663,31 @@ static void M_HandleImageDef(INT32 choice)
 // MISC MAIN MENU OPTIONS
 // ======================
 
-static void M_Addons(INT32 choice)
+static void M_AddonsOptions(INT32 choice)
 {
 	(void)choice;
+	Addons_option_Onchange();
 
-	strlcpy(menupath, srb2home, 1024);
+	M_SetupNextMenu(&OP_AddonsOptionsDef);
+}
+
+static void M_Addons(INT32 choice)
+{
+	const char *pathname = ".";
+
+	(void)choice;
+
+	/*if (cv_addons_option.value == 0)
+		pathname = srb2home; usehome ? srb2home : srb2path;
+	else if (cv_addons_option.value == 1)
+		pathname = srb2home;
+	else if (cv_addons_option.value == 2)
+		pathname = srb2path;
+	else*/
+	if (cv_addons_option.value == 3 && *cv_addons_folder.string != '\0')
+		pathname = cv_addons_folder.string;
+
+	strlcpy(menupath, pathname, 1024);
 	menupathindex[(menudepthleft = menudepth-1)] = strlen(menupath) + 1;
 
 	if (menupath[menupathindex[menudepthleft]-2] != '/')
@@ -4679,7 +4709,7 @@ static void M_Addons(INT32 choice)
 	if (addonsp[0]) // never going to have some provided but not all, saves individually checking
 	{
 		size_t i;
-		for (i = 0; i < NUM_EXT+4; i++)
+		for (i = 0; i < NUM_EXT+5; i++)
 			W_UnlockCachedPatch(addonsp[i]);
 	}
 
@@ -4691,10 +4721,11 @@ static void M_Addons(INT32 choice)
 	addonsp[EXT_WAD] = W_CachePatchName("M_FWAD", PU_STATIC);
 	addonsp[EXT_SOC] = W_CachePatchName("M_FSOC", PU_STATIC);
 	addonsp[EXT_LUA] = W_CachePatchName("M_FLUA", PU_STATIC);
-	addonsp[NUM_EXT] = W_CachePatchName("M_FSEL1", PU_STATIC);
-	addonsp[NUM_EXT+1] = W_CachePatchName("M_FSEL2", PU_STATIC);
-	addonsp[NUM_EXT+2] = W_CachePatchName("M_FLOAD", PU_STATIC);
-	addonsp[NUM_EXT+3] = W_CachePatchName("M_FSRCH", PU_STATIC);
+	addonsp[NUM_EXT] = W_CachePatchName("M_FUNKN", PU_STATIC);
+	addonsp[NUM_EXT+1] = W_CachePatchName("M_FSEL1", PU_STATIC);
+	addonsp[NUM_EXT+2] = W_CachePatchName("M_FSEL2", PU_STATIC);
+	addonsp[NUM_EXT+3] = W_CachePatchName("M_FLOAD", PU_STATIC);
+	addonsp[NUM_EXT+4] = W_CachePatchName("M_FSRCH", PU_STATIC);
 
 	MISC_AddonsDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&MISC_AddonsDef);
@@ -4754,9 +4785,9 @@ static char *M_AddonsHeaderPath(void)
 		strcpy(header, menupath);
 
 	len = strlen(header);
-	if (len > 35)
+	if (len > 34)
 	{
-		len = len-35;
+		len = len-34;
 		header[len] = header[len+1] = header[len+2] = '.';
 	}
 	else
@@ -4814,6 +4845,9 @@ static void M_DrawAddons(void)
 	if (refreshdirmenu & M_AddonsRefresh())
 		return M_DrawMessageMenu();
 
+	if (addonsresponselimit)
+		addonsresponselimit--;
+
 	if (Playing())
 		V_DrawCenteredString(BASEVIDWIDTH/2, 4, V_REDMAP, "Adding files mid-game may cause problems.");
 
@@ -4827,13 +4861,17 @@ static void M_DrawAddons(void)
 	}
 
 	V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-8, V_TRANSLUCENT, va("%d%%", (100*x)>>FRACBITS));
-	M_DrawTemperature(BASEVIDWIDTH - 12, x);
+	M_DrawTemperature(BASEVIDWIDTH - 16, x);
 
 	// DRAW MENU
 	x = currentMenu->x;
 	y = currentMenu->y;
 
-	M_DrawLevelPlatterHeader(y - 16, M_AddonsHeaderPath(), true, true);
+	//M_DrawLevelPlatterHeader(y - 16, M_AddonsHeaderPath(), true, true); -- wanted different width
+	V_DrawString(x-21, (y - 16) + (lsheadingheight - 12), V_YELLOWMAP|V_ALLOWLOWERCASE, M_AddonsHeaderPath());
+	V_DrawFill(x-21, (y - 16) + (lsheadingheight - 3), (MAXSTRINGLENGTH*8+6 - 1), 1, yellowmap[3]);
+	V_DrawFill(x-21 + (MAXSTRINGLENGTH*8+6 - 1), (y - 16) + (lsheadingheight - 3), 1, 1, 26);
+	V_DrawFill(x-21, (y - 16) + (lsheadingheight - 2), MAXSTRINGLENGTH*8+6, 1, 26);
 
 	V_DrawFill(x - 21, y - 1, MAXSTRINGLENGTH*8+6, (BASEVIDHEIGHT - currentMenu->y + 1) - (y - 1), 159);
 
@@ -4868,12 +4906,11 @@ static void M_DrawAddons(void)
 			V_DrawSmallScaledPatch(x-(16+4), y, (flags & V_TRANSLUCENT), addonsp[((UINT8)(dirmenu[i][DIR_TYPE]) & ~EXT_LOADED)]);
 
 			if (dirmenu[i][DIR_TYPE] & EXT_LOADED)
-				V_DrawSmallScaledPatch(x-(16+4), y, 0, addonsp[NUM_EXT+2]);
+				V_DrawSmallScaledPatch(x-(16+4), y, 0, addonsp[NUM_EXT+3]);
 
 			if ((size_t)i == dir_on[menudepthleft])
 			{
-				tic_t flash = ((skullAnimCounter/4) ? 1 : 0);
-				V_DrawSmallScaledPatch(x-(16+4), y, 0, addonsp[NUM_EXT+flash]);
+				V_DrawSmallScaledPatch(x-(16+4), y, 0, addonsp[NUM_EXT+1+((skullAnimCounter/4) ? 1 : 0)]);
 				flags = V_ALLOWLOWERCASE|V_YELLOWMAP;
 			}
 
@@ -4892,7 +4929,7 @@ static void M_DrawAddons(void)
 
 	y = BASEVIDHEIGHT - currentMenu->y;
 
-	V_DrawSmallScaledPatch(x-(21 + 5 + 16), y + 4, 0, addonsp[NUM_EXT+3]);
+	V_DrawSmallScaledPatch(x-(21 + 5 + 16), y + 4, 0, addonsp[NUM_EXT+4]);
 	M_DrawTextBox(x - (21 + 5), y, MAXSTRINGLENGTH, 1);
 	if (menusearch[0])
 		V_DrawString(x - 18, y + 8, V_ALLOWLOWERCASE, menusearch+1);
@@ -4910,6 +4947,7 @@ static void M_AddonExec(INT32 ch)
 
 	S_StartSound(NULL, sfx_strpst);
 	COM_BufAddText(va("exec %s%s", menupath, dirmenu[dir_on[menudepthleft]]+DIR_STRING));
+	addonsresponselimit = 5;
 }
 
 #define len menusearch[0]
@@ -4953,6 +4991,9 @@ static boolean M_ChangeStringAddons(INT32 choice)
 static void M_HandleAddons(INT32 choice)
 {
 	boolean exitmenu = false; // exit to previous menu
+
+	if (addonsresponselimit)
+		return;
 
 	if (M_ChangeStringAddons(choice))
 	{
@@ -5053,6 +5094,7 @@ static void M_HandleAddons(INT32 choice)
 						case EXT_SOC:
 						case EXT_WAD:
 							COM_BufAddText(va("addfile %s%s", menupath, dirmenu[dir_on[menudepthleft]]+DIR_STRING));
+							addonsresponselimit = 5;
 							break;
 						default:
 							S_StartSound(NULL, sfx_lose);

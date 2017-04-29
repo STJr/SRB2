@@ -8,6 +8,8 @@
 #include "d_netfil.h"
 #include "m_menu.h" // MAXSTRINGLENGTH
 
+extern consvar_t cv_addons_option, cv_addons_folder, cv_addons_md5, cv_addons_showall;
+
 /**	\brief	The filesearch function
 
 	This function search files, manly WADs and return back the status of the file

@@ -32,7 +32,7 @@
 #include "d_netfil.h"
 #include "m_misc.h"
 #include "z_zone.h"
-#include "doomtype.h"
+#include "m_menu.h" // Addons_option_Onchange
 
 #if (defined (_WIN32) && !defined (_WIN32_WCE)) && defined (_MSC_VER) && !defined (_XBOX)
 
@@ -309,6 +309,15 @@ closedir (DIR * dirp)
   return rc;
 }
 #endif
+
+static CV_PossibleValue_t addons_cons_t[] = {{0, "SRB2 Folder"}, /*{1, "HOME"}, {2, "SRB2 Folder"},*/ {3, "CUSTOM"}, {0, NULL}};
+consvar_t cv_addons_option = {"addons_option", "SRB2 Folder", CV_SAVE|CV_CALL, addons_cons_t, Addons_option_Onchange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_addons_folder = {"addons_folder", "./", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+static CV_PossibleValue_t addons_md5_cons_t[] = {{0, "Name"}, {1, "Checksum"}, {0, NULL}};
+consvar_t cv_addons_md5 = {"addons_md5", "Name", CV_SAVE, addons_md5_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+consvar_t cv_addons_showall = {"addons_showall", "No", CV_SAVE, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 char menupath[1024];
 size_t menupathindex[menudepth];
@@ -590,11 +599,14 @@ boolean preparefilemenu(boolean samedepth)
 		{
 			if (!S_ISDIR(fsstat.st_mode)) // file
 			{
-				size_t len = strlen(dent->d_name)+1;
-				UINT8 ext;
-				for (ext = 0; ext < NUM_EXT_TABLE; ext++)
-					if (!strcasecmp(exttable[ext], dent->d_name+len-5)) break;
-				if (ext == NUM_EXT_TABLE) continue; // not an addfile-able (or exec-able) file
+				if (!cv_addons_showall.value)
+				{
+					size_t len = strlen(dent->d_name)+1;
+					UINT8 ext;
+					for (ext = 0; ext < NUM_EXT_TABLE; ext++)
+						if (!strcasecmp(exttable[ext], dent->d_name+len-5)) break;
+					if (ext == NUM_EXT_TABLE) continue; // not an addfile-able (or exec-able) file
+				}
 				searchdir;
 			}
 			else // directory
@@ -660,7 +672,7 @@ boolean preparefilemenu(boolean samedepth)
 				if (!((numfolders+pos) < sizedirmenu)) continue; // crash prevention
 				for (; ext < NUM_EXT_TABLE; ext++)
 					if (!strcasecmp(exttable[ext], dent->d_name+len-5)) break;
-				if (ext == NUM_EXT_TABLE) continue; // not an addfile-able (or exec-able) file
+				if (ext == NUM_EXT_TABLE && !cv_addons_showall.value) continue; // not an addfile-able (or exec-able) file
 				ext += EXT_START; // moving to be appropriate position
 
 				searchdir;
@@ -676,10 +688,13 @@ boolean preparefilemenu(boolean samedepth)
 							filenamebuf[i][MAX_WADPATH - 1] = '\0';
 							nameonly(filenamebuf[i]);
 						}
+
 						if (strcmp(dent->d_name, filenamebuf[i]))
 							continue;
-						if (checkfilemd5(menupath, wadfiles[i]->md5sum))
-							ext |= EXT_LOADED;
+						if (cv_addons_md5.value && !checkfilemd5(menupath, wadfiles[i]->md5sum))
+							continue;
+
+						ext |= EXT_LOADED;
 					}
 				}
 
