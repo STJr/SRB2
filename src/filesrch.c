@@ -510,7 +510,19 @@ char exttable[NUM_EXT_TABLE][5] = {
 
 char filenamebuf[MAX_WADFILES][MAX_WADPATH];
 
-#define searchdir if (menusearch[0] && !stristr(dent->d_name, menusearch+1))\
+#ifdef _WIN32
+static char *strsystemstr(char *haystack, char *needle)
+{
+	char uprhaystack[128];
+	strlcpy(uprhaystack, haystack, 128);
+	strupr(uprhaystack);
+	return strstr(uprhaystack, needle);
+}
+#else
+#define strsystemstr(haystack, needle) strstr(haystack, needle)
+#endif
+
+#define searchdir if (menusearch[0] && !strsystemstr(dent->d_name, localmenusearch))\
 					{\
 						rejected++;\
 						continue;\
@@ -524,6 +536,7 @@ boolean preparefilemenu(boolean samedepth)
 	size_t pos = 0, folderpos = 0, numfolders = 0, rejected = 0;
 	char *tempname = NULL;
 	boolean noresults = false;
+	char localmenusearch[MAXSTRINGLENGTH] = "";
 
 	if (samedepth)
 	{
@@ -543,6 +556,14 @@ boolean preparefilemenu(boolean samedepth)
 
 	if (dirhandle == NULL)
 		return false;
+
+	if (menusearch[0])
+	{
+		strcpy(localmenusearch, menusearch+1);
+#ifdef _WIN32
+		strupr(localmenusearch);
+#endif
+	}
 
 	while (true)
 	{
@@ -651,7 +672,7 @@ boolean preparefilemenu(boolean samedepth)
 							filenamebuf[i][MAX_WADPATH - 1] = '\0';
 							nameonly(filenamebuf[i]);
 						}
-						if (strcasecmp(dent->d_name, filenamebuf[i]))
+						if (strcmp(dent->d_name, filenamebuf[i]))
 							continue;
 						if (checkfilemd5(menupath, wadfiles[i]->md5sum))
 							ext |= EXT_LOADED;

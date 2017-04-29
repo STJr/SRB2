@@ -170,10 +170,6 @@ size_t strlcat(char *dst, const char *src, size_t siz);
 size_t strlcpy(char *dst, const char *src, size_t siz);
 #endif
 
-#if 1 // don't know what systems don't have this
-char* stristr(char* haystack, const char* needle);
-#endif
-
 // Macro for use with char foo[FOOSIZE+1] type buffers.
 // Never use this with a buffer that is a "char *" or passed
 // into the function as an argument.
