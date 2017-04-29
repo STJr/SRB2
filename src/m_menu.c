@@ -1338,10 +1338,9 @@ static menuitem_t OP_SoundOptionsMenu[] =
 static menuitem_t OP_DataOptionsMenu[] =
 {
 	{IT_STRING | IT_CALL,    NULL, "Add-on Options...",     M_AddonsOptions,     10},
+	{IT_STRING | IT_CALL,    NULL, "Screenshot Options...", M_ScreenshotOptions, 20},
 
-	{IT_STRING | IT_CALL,    NULL, "Screenshot Options...", M_ScreenshotOptions, 30},
-
-	{IT_STRING | IT_SUBMENU, NULL, "\x85" "Erase Data...",  &OP_EraseDataDef,    50},
+	{IT_STRING | IT_SUBMENU, NULL, "\x85" "Erase Data...",  &OP_EraseDataDef,    40},
 };
 
 static menuitem_t OP_ScreenshotOptionsMenu[] =
@@ -5232,7 +5231,7 @@ static void M_Options(INT32 choice)
 	OP_MainMenu[5].status = (Playing() && !(server || adminplayer == consoleplayer)) ? (IT_GRAYEDOUT) : (IT_STRING|IT_CALL);
 
 	// if the player is playing _at all_, disable the erase data options
-	OP_DataOptionsMenu[1].status = (Playing()) ? (IT_GRAYEDOUT) : (IT_STRING|IT_SUBMENU);
+	OP_DataOptionsMenu[2].status = (Playing()) ? (IT_GRAYEDOUT) : (IT_STRING|IT_SUBMENU);
 
 	OP_MainDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&OP_MainDef);
