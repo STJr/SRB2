@@ -78,6 +78,6 @@ typedef enum
 	REFRESHDIR_MAX = 16
 } refreshdir_enum;
 
-boolean preparefilemenu(boolean samemenu);
+boolean preparefilemenu(boolean samedepth);
 
 #endif // __FILESRCH_H__

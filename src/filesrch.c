@@ -332,8 +332,9 @@ filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *want
 	return FS_NOTFOUND;
 }
 
-boolean preparefilemenu(void)
+boolean preparefilemenu(boolean samedepth)
 {
+	(void)samedepth;
 	return false;
 }
 
@@ -388,8 +389,9 @@ filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *want
 	return FS_NOTFOUND;
 }
 
-boolean preparefilemenu(void)
+boolean preparefilemenu(boolean samedepth)
 {
+	(void)samedepth;
 	return false;
 }
 #else
@@ -504,7 +506,7 @@ char exttable[NUM_EXT_TABLE][5] = {
 
 char filenamebuf[MAX_WADFILES][MAX_WADPATH];
 
-boolean preparefilemenu(boolean samemenu)
+boolean preparefilemenu(boolean samedepth)
 {
 	DIR *dirhandle;
 	struct dirent *dent;
@@ -512,7 +514,7 @@ boolean preparefilemenu(boolean samemenu)
 	size_t pos = 0, folderpos = 0, numfolders = 0;
 	char *tempname = NULL;
 
-	if (samemenu && dirmenu && dirmenu[dir_on[menudepthleft]])
+	if (samedepth && dirmenu && dirmenu[dir_on[menudepthleft]])
 		tempname = Z_StrDup(dirmenu[dir_on[menudepthleft]]+DIR_STRING); // don't need to I_Error if can't make - not important, just QoL
 
 	for (; sizedirmenu > 0; sizedirmenu--)
@@ -567,7 +569,7 @@ boolean preparefilemenu(boolean samemenu)
 		return false;
 	}
 
-	if (menudepthleft != menudepth-1)
+	if (menudepthleft != menudepth-1) // Make room for UP... entry
 	{
 		numfolders++;
 		sizedirmenu++;
@@ -655,7 +657,7 @@ boolean preparefilemenu(boolean samemenu)
 		}
 	}
 
-	if (menudepthleft != menudepth-1)
+	if (menudepthleft != menudepth-1) // now for UP... entry
 		dirmenu[0] = Z_StrDup("\1\5UP...");
 
 	menupath[menupathindex[menudepthleft]] = 0;
