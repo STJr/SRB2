@@ -9594,7 +9594,8 @@ void P_SpawnMapThing(mapthing_t *mthing)
 	if (ultimatemode)
 	{
 		if (i == MT_PITY_BOX || i == MT_ELEMENTAL_BOX || i == MT_ATTRACT_BOX
-		 || i == MT_FORCE_BOX || i == MT_ARMAGEDDON_BOX || i == MT_WHIRLWIND_BOX)
+		 || i == MT_FORCE_BOX || i == MT_ARMAGEDDON_BOX || i == MT_WHIRLWIND_BOX
+		 || i == MT_FLAMEAURA_BOX || i == MT_BUBBLEWRAP_BOX || i == MT_THUNDERCOIN_BOX)
 			return; // No shields in Ultimate mode
 
 		if (i == MT_RING_BOX && !G_IsSpecialStage(gamemap))
