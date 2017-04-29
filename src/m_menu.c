@@ -1103,7 +1103,7 @@ static menuitem_t OP_ChangeControlsMenu[] =
 	{IT_CALL | IT_STRING2, NULL, "Grenade",          M_ChangeControl, gc_wepslot5    },
 	{IT_CALL | IT_STRING2, NULL, "Explosion",        M_ChangeControl, gc_wepslot6    },
 	{IT_CALL | IT_STRING2, NULL, "Rail",             M_ChangeControl, gc_wepslot7    },
-	{IT_HEADER, NULL, "Modifications", NULL, 0},
+	{IT_HEADER, NULL, "Add-ons", NULL, 0},
 	{IT_SPACE, NULL, NULL, NULL, 0}, // padding
 	{IT_CALL | IT_STRING2, NULL, "Custom Action 1",  M_ChangeControl, gc_custom1     },
 	{IT_CALL | IT_STRING2, NULL, "Custom Action 2",  M_ChangeControl, gc_custom2     },
@@ -8014,15 +8014,17 @@ static void M_Setup1PControlsMenu(INT32 choice)
 	setupcontrols = gamecontrol;        // was called from main Options (for console player, then)
 	currentMenu->lastOn = itemOn;
 
-	// Unhide the three non-P2 controls
-	//OP_ChangeControlsMenu[18+0].status = IT_HEADER;
-	//OP_ChangeControlsMenu[18+1].status = IT_SPACE;
+	// Unhide the five non-P2 controls and their headers
+	OP_ChangeControlsMenu[18+0].status = IT_HEADER;
+	OP_ChangeControlsMenu[18+1].status = IT_SPACE;
+	// ...
 	OP_ChangeControlsMenu[18+2].status = IT_CALL|IT_STRING2;
 	OP_ChangeControlsMenu[18+3].status = IT_CALL|IT_STRING2;
 	OP_ChangeControlsMenu[18+4].status = IT_CALL|IT_STRING2;
-	// Unhide the pause/console controls too
-	//OP_ChangeControlsMenu[23+0].status = IT_HEADER;
-	//OP_ChangeControlsMenu[23+1].status = IT_SPACE;
+	// ...
+	OP_ChangeControlsMenu[23+0].status = IT_HEADER;
+	OP_ChangeControlsMenu[23+1].status = IT_SPACE;
+	// ...
 	OP_ChangeControlsMenu[23+2].status = IT_CALL|IT_STRING2;
 	OP_ChangeControlsMenu[23+3].status = IT_CALL|IT_STRING2;
 
@@ -8037,15 +8039,17 @@ static void M_Setup2PControlsMenu(INT32 choice)
 	setupcontrols = gamecontrolbis;
 	currentMenu->lastOn = itemOn;
 
-	// Hide the three non-P2 controls
-	//OP_ChangeControlsMenu[18+0].status = IT_DISABLED;
-	//OP_ChangeControlsMenu[18+1].status = IT_DISABLED;
+	// Hide the five non-P2 controls and their headers
+	OP_ChangeControlsMenu[18+0].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[18+1].status = IT_GRAYEDOUT2;
+	// ...
 	OP_ChangeControlsMenu[18+2].status = IT_GRAYEDOUT2;
 	OP_ChangeControlsMenu[18+3].status = IT_GRAYEDOUT2;
 	OP_ChangeControlsMenu[18+4].status = IT_GRAYEDOUT2;
-	// Hide the pause/console controls too
-	//OP_ChangeControlsMenu[23+0].status = IT_DISABLED;
-	//OP_ChangeControlsMenu[23+1].status = IT_DISABLED;
+	// ...
+	OP_ChangeControlsMenu[23+0].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[23+1].status = IT_GRAYEDOUT2;
+	// ...
 	OP_ChangeControlsMenu[23+2].status = IT_GRAYEDOUT2;
 	OP_ChangeControlsMenu[23+3].status = IT_GRAYEDOUT2;
 
@@ -8059,17 +8063,44 @@ static void M_Setup2PControlsMenu(INT32 choice)
 static void M_DrawControl(void)
 {
 	char     tmp[50];
-	INT32    x, y, i, max, cursory = 0;
+	INT32    x, y, i, max, cursory = 0, iter;
 	INT32    keys[2];
 
 	x = currentMenu->x;
 	y = currentMenu->y;
 
-	i = itemOn - (controlheight/2);
+	/*i = itemOn - (controlheight/2);
 	if (i < 0)
 		i = 0;
+	*/
 
-	max = i + controlheight;
+	iter = (controlheight/2);
+	for (i = itemOn; ((iter || currentMenu->menuitems[i].status == IT_GRAYEDOUT2) && i > 0); i--)
+	{
+		if (currentMenu->menuitems[i].status != IT_GRAYEDOUT2)
+			iter--;
+	}
+	if (currentMenu->menuitems[i].status == IT_GRAYEDOUT2)
+		i--;
+
+	iter += (controlheight/2);
+	for (max = itemOn; (iter && max < currentMenu->numitems); max++)
+	{
+		if (currentMenu->menuitems[max].status != IT_GRAYEDOUT2)
+			iter--;
+	}
+
+	if (iter)
+	{
+		iter += (controlheight/2);
+		for (i = itemOn; ((iter || currentMenu->menuitems[i].status == IT_GRAYEDOUT2) && i > 0); i--)
+		{
+			if (currentMenu->menuitems[i].status != IT_GRAYEDOUT2)
+				iter--;
+		}
+	}
+
+	/*max = i + controlheight;
 	if (max > currentMenu->numitems)
 	{
 		max = currentMenu->numitems;
@@ -8077,7 +8108,7 @@ static void M_DrawControl(void)
 			i = 0;
 		else
 			i = max - controlheight;
-	}
+	}*/
 
 	// draw title (or big pic)
 	M_DrawMenuTitle();
@@ -8089,10 +8120,13 @@ static void M_DrawControl(void)
 	if (i)
 		V_DrawString(currentMenu->x - 16, y, V_YELLOWMAP, "\x1A"); // up arrow
 	if (max != currentMenu->numitems)
-		V_DrawString(currentMenu->x - 16, y+(SMALLLINEHEIGHT*(max-i-1)), V_YELLOWMAP, "\x1B"); // down arrow
+		V_DrawString(currentMenu->x - 16, y+(SMALLLINEHEIGHT*(controlheight-1)), V_YELLOWMAP, "\x1B"); // down arrow
 
 	for (; i < max; i++)
 	{
+		if (currentMenu->menuitems[i].status == IT_GRAYEDOUT2)
+			continue;
+
 		if (i == itemOn)
 			cursory = y;
 
@@ -8122,8 +8156,8 @@ static void M_DrawControl(void)
 			}
 			V_DrawRightAlignedString(BASEVIDWIDTH-currentMenu->x, y, V_YELLOWMAP, tmp);
 		}
-		else if (currentMenu->menuitems[i].status == IT_GRAYEDOUT2)
-			V_DrawString(x, y, V_TRANSLUCENT, currentMenu->menuitems[i].text);
+		/*else if (currentMenu->menuitems[i].status == IT_GRAYEDOUT2)
+			V_DrawString(x, y, V_TRANSLUCENT, currentMenu->menuitems[i].text);*/
 		else if ((currentMenu->menuitems[i].status == IT_HEADER) && (i != max-1))
 			M_DrawLevelPlatterHeader(y, currentMenu->menuitems[i].text, true);
 
