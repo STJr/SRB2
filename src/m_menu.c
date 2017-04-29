@@ -4510,19 +4510,17 @@ static void M_DrawTemperature(INT32 x, fixed_t t)
 #undef h
 #undef NUMCOLOURS
 
-static void M_DrawAddons(void)
+// returns whether to stop addons draw and go to message draw (true), or not (false)
+static boolean M_AddonsRefresh(void)
 {
-	INT32 x, y;
-	size_t i;
-
-	// hack - need to refresh at end of frame to handle addfile...
 	if ((refreshdirmenu & REFRESHDIR_NORMAL) && !preparefilemenu(true))
 	{
 		S_StartSound(NULL, sfx_lose);
 		M_SetupNextMenu(MISC_AddonsDef.prevMenu);
 		M_StartMessage(va("\x82%s\x80\nThis folder no longer exists!\nAborting to main menu.\n\n(Press a key)\n", menupath),NULL,MM_NOTHING);
-		return M_DrawMessageMenu();
+		return true;
 	}
+
 	if (refreshdirmenu & REFRESHDIR_ADDFILE)
 	{
 		if (!(dirmenu[dir_on[menudepthleft]][DIR_TYPE] & EXT_LOADED))
@@ -4534,21 +4532,34 @@ static void M_DrawAddons(void)
 			else
 				message = va("\x82%s\x80\nThe file was not loaded.\nCheck the console log for more information.\n\n(Press a key)\n", dirmenu[dir_on[menudepthleft]]+DIR_STRING);
 			M_StartMessage(message,NULL,MM_NOTHING);
-			return M_DrawMessageMenu();
+			return true;
 		}
 
 		if (refreshdirmenu & (REFRESHDIR_WARNING|REFRESHDIR_ERROR))
 		{
 			S_StartSound(NULL, sfx_skid);
 			M_StartMessage(va("\x82%s\x80\nThe file was loaded with %s.\nCheck the console log for more information.\n\n(Press a key)\n", dirmenu[dir_on[menudepthleft]]+DIR_STRING, ((refreshdirmenu & REFRESHDIR_ERROR) ? "errors" : "warnings")),NULL,MM_NOTHING);
-			return M_DrawMessageMenu();
+			return true;
 		}
 
 		S_StartSound(NULL, sfx_strpst);
 	}
 
+	return false;
+}
+
+static void M_DrawAddons(void)
+{
+	INT32 x, y;
+	size_t i;
+
+	// hack - need to refresh at end of frame to handle addfile...
+	if (refreshdirmenu & M_AddonsRefresh())
+		return M_DrawMessageMenu();
+
 	x = FixedDiv((packetsizetally<<FRACBITS), ((MAXFILENEEDED*sizeof(UINT8)-(5+22))<<FRACBITS)); // 5+22 = (a.ext + checksum length) is minimum addition to packet size tally
-	if (x > FRACUNIT)
+	if (x > FRACUNIT // happens because of how we're shrinkin' it a little
+	|| (numwadfiles >= MAX_WADFILES)) // shouldn't happen unless MAX_WADFILES gets set lower
 		x = FRACUNIT;
 
 	V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-8, V_TRANSLUCENT, va("%d%%", (100*x)>>FRACBITS));
