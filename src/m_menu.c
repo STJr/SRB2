@@ -77,7 +77,6 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 #define SMALLLINEHEIGHT 8
 #define SLIDER_RANGE 10
 #define SLIDER_WIDTH (8*SLIDER_RANGE+6)
-#define MAXSTRINGLENGTH 32
 #define SERVERS_PER_PAGE 11
 
 typedef enum
@@ -2134,8 +2133,11 @@ static void M_ChangeCvar(INT32 choice)
 static boolean M_ChangeStringCvar(INT32 choice)
 {
 	consvar_t *cv = (consvar_t *)currentMenu->menuitems[itemOn].itemaction;
-	char buf[255];
+	char buf[MAXSTRINGLENGTH];
 	size_t len;
+
+	if (shiftdown && choice >= 32 && choice <= 127)
+		choice = shiftxform[choice];
 
 	switch (choice)
 	{
@@ -2434,8 +2436,6 @@ boolean M_Responder(event_t *ev)
 	{
 		if ((currentMenu->menuitems[itemOn].status & IT_CVARTYPE) == IT_CV_STRING)
 		{
-			if (shiftdown && ch >= 32 && ch <= 127)
-				ch = shiftxform[ch];
 			if (M_ChangeStringCvar(ch))
 				return true;
 			else
@@ -4474,6 +4474,7 @@ static void M_Addons(INT32 choice)
 
 	addonsp[EXT_FOLDER] = W_CachePatchName("M_FFLDR", PU_STATIC);
 	addonsp[EXT_UP] = W_CachePatchName("M_FBACK", PU_STATIC);
+	addonsp[EXT_SEARCH] = W_CachePatchName("M_FSRCH", PU_STATIC);
 	addonsp[EXT_TXT] = W_CachePatchName("M_FTXT", PU_STATIC);
 	addonsp[EXT_CFG] = W_CachePatchName("M_FCFG", PU_STATIC);
 	addonsp[EXT_WAD] = W_CachePatchName("M_FWAD", PU_STATIC);
@@ -4552,14 +4553,16 @@ static char *M_AddonsHeaderPath(void)
 	return header+len;
 }
 
+#define UNEXIST S_StartSound(NULL, sfx_lose);\
+		M_SetupNextMenu(MISC_AddonsDef.prevMenu);\
+		M_StartMessage(va("\x82%s\x80\nThis folder no longer exists!\nAborting to main menu.\n\n(Press a key)\n", M_AddonsHeaderPath()),NULL,MM_NOTHING)
+
 // returns whether to do message draw
 static boolean M_AddonsRefresh(void)
 {
 	if ((refreshdirmenu & REFRESHDIR_NORMAL) && !preparefilemenu(true))
 	{
-		S_StartSound(NULL, sfx_lose);
-		M_SetupNextMenu(MISC_AddonsDef.prevMenu);
-		M_StartMessage(va("\x82%s\x80\nThis folder no longer exists!\nAborting to main menu.\n\n(Press a key)\n", M_AddonsHeaderPath()),NULL,MM_NOTHING);
+		UNEXIST;
 		return true;
 	}
 
@@ -4616,6 +4619,8 @@ static void M_DrawAddons(void)
 	y = currentMenu->y;
 
 	M_DrawLevelPlatterHeader(y - 16, M_AddonsHeaderPath(), true);
+
+	V_DrawString(0, 0, V_ALLOWLOWERCASE, menusearch+1);
 
 	// get bottom...
 	max = dir_on[menudepthleft] + 5;
@@ -4679,9 +4684,49 @@ static void M_AddonExec(INT32 ch)
 	COM_BufAddText(va("exec %s%s", menupath, dirmenu[dir_on[menudepthleft]]+DIR_STRING));
 }
 
+#define len menusearch[0]
+static boolean M_ChangeStringAddons(INT32 choice)
+{
+	if (shiftdown && choice >= 32 && choice <= 127)
+		choice = shiftxform[choice];
+
+	switch (choice)
+	{
+		case KEY_DEL:
+			len = menusearch[1] = 0;
+			return true;
+		case KEY_BACKSPACE:
+			if (len > 0)
+				menusearch[1+--len] = 0;
+			return true;
+		default:
+			if (choice >= 32 && choice <= 127)
+			{
+				if (len < MAXSTRINGLENGTH - 1)
+				{
+					menusearch[1+len++] = (char)choice;
+					menusearch[1+len] = 0;
+				}
+				return true;
+			}
+			break;
+	}
+	return false;
+}
+#undef len
+
 static void M_HandleAddons(INT32 choice)
 {
 	boolean exitmenu = false; // exit to previous menu
+
+	if (M_ChangeStringAddons(choice))
+	{
+		if (!preparefilemenu(true))
+		{
+			UNEXIST;
+			return;
+		}
+	}
 
 	switch (choice)
 	{
@@ -4719,9 +4764,7 @@ static void M_HandleAddons(INT32 choice)
 
 									if (!preparefilemenu(true))
 									{
-										S_StartSound(NULL, sfx_lose);
-										M_SetupNextMenu(MISC_AddonsDef.prevMenu);
-										M_StartMessage(va("\x82%s\x80\nThis folder no longer exists!\nAborting to main menu.\n\n(Press a key)\n", M_AddonsHeaderPath()),NULL,MM_NOTHING);
+										UNEXIST;
 										return;
 									}
 								}

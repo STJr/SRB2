@@ -6,6 +6,7 @@
 
 #include "doomdef.h"
 #include "d_netfil.h"
+#include "m_menu.h" // MAXSTRINGLENGTH
 
 /**	\brief	The filesearch function
 
@@ -31,6 +32,8 @@ extern char menupath[1024];
 extern size_t menupathindex[menudepth];
 extern size_t menudepthleft;
 
+extern char menusearch[MAXSTRINGLENGTH+1];
+
 extern char **dirmenu;
 extern size_t sizedirmenu;
 extern size_t dir_on[menudepth];
@@ -43,6 +46,7 @@ typedef enum
 {
 	EXT_FOLDER = 0,
 	EXT_UP,
+	EXT_SEARCH,
 	EXT_START,
 	EXT_TXT = EXT_START,
 	EXT_CFG,

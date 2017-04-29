@@ -124,6 +124,8 @@ boolean M_CanShowLevelInList(INT32 mapnum, INT32 gt);
 #define IT_HEADER      (IT_SPACE  +IT_HEADERTEXT)
 #define IT_SECRET      (IT_SPACE  +IT_QUESTIONMARKS)
 
+#define MAXSTRINGLENGTH 32
+
 typedef union
 {
 	struct menu_s *submenu;      // IT_SUBMENU

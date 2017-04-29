@@ -32,6 +32,7 @@
 #include "d_netfil.h"
 #include "m_misc.h"
 #include "z_zone.h"
+#include "doomtype.h"
 
 #if (defined (_WIN32) && !defined (_WIN32_WCE)) && defined (_MSC_VER) && !defined (_XBOX)
 
@@ -313,6 +314,8 @@ char menupath[1024];
 size_t menupathindex[menudepth];
 size_t menudepthleft = menudepth;
 
+char menusearch[MAXSTRINGLENGTH+1];
+
 char **dirmenu;
 size_t sizedirmenu;
 size_t dir_on[menudepth];
@@ -507,16 +510,27 @@ char exttable[NUM_EXT_TABLE][5] = {
 
 char filenamebuf[MAX_WADFILES][MAX_WADPATH];
 
+#define searchdir if (menusearch[0] && !stristr(dent->d_name, menusearch+1))\
+					{\
+						rejected++;\
+						continue;\
+					}\
+
 boolean preparefilemenu(boolean samedepth)
 {
 	DIR *dirhandle;
 	struct dirent *dent;
 	struct stat fsstat;
-	size_t pos = 0, folderpos = 0, numfolders = 0;
+	size_t pos = 0, folderpos = 0, numfolders = 0, rejected = 0;
 	char *tempname = NULL;
 
-	if (samedepth && dirmenu && dirmenu[dir_on[menudepthleft]])
-		tempname = Z_StrDup(dirmenu[dir_on[menudepthleft]]+DIR_STRING); // don't need to I_Error if can't make - not important, just QoL
+	if (samedepth)
+	{
+		if (dirmenu && dirmenu[dir_on[menudepthleft]])
+			tempname = Z_StrDup(dirmenu[dir_on[menudepthleft]]+DIR_STRING); // don't need to I_Error if can't make - not important, just QoL
+	}
+	else
+		menusearch[0] = menusearch[1] = 0; // clear search
 
 	for (; sizedirmenu > 0; sizedirmenu--)
 	{
@@ -555,14 +569,18 @@ boolean preparefilemenu(boolean samedepth)
 				for (ext = 0; ext < NUM_EXT_TABLE; ext++)
 					if (!strcasecmp(exttable[ext], dent->d_name+len-5)) break;
 				if (ext == NUM_EXT_TABLE) continue; // not an addfile-able (or exec-able) file
+				searchdir;
 			}
 			else // directory
+			{
+				searchdir;
 				numfolders++;
+			}
 			sizedirmenu++;
 		}
 	}
 
-	if (!sizedirmenu)
+	if (!rejected && !sizedirmenu)
 	{
 		if (tempname)
 			Z_Free(tempname);
@@ -570,7 +588,7 @@ boolean preparefilemenu(boolean samedepth)
 		return false;
 	}
 
-	if (menudepthleft != menudepth-1) // Make room for UP... entry
+	if (menusearch[0] || menudepthleft != menudepth-1) // Make room for UP... or search entry
 	{
 		numfolders++;
 		sizedirmenu++;
@@ -583,6 +601,7 @@ boolean preparefilemenu(boolean samedepth)
 		I_Error("Ran out of memory whilst preparing add-ons menu");
 	}
 
+	rejected = 0;
 	rewinddir(dirhandle);
 
 	while ((pos+folderpos) < sizedirmenu)
@@ -617,6 +636,8 @@ boolean preparefilemenu(boolean samedepth)
 				if (ext == NUM_EXT_TABLE) continue; // not an addfile-able (or exec-able) file
 				ext += EXT_START; // moving to be appropriate position
 
+				searchdir;
+
 				if (ext >= EXT_MD5)
 				{
 					size_t i;
@@ -638,7 +659,10 @@ boolean preparefilemenu(boolean samedepth)
 				folder = 0;
 			}
 			else // directory
+			{
+				searchdir;
 				len += (folder = 1);
+			}
 
 			if (len > 255)
 				len = 255;
@@ -658,8 +682,10 @@ boolean preparefilemenu(boolean samedepth)
 		}
 	}
 
-	if (menudepthleft != menudepth-1) // now for UP... entry
-		dirmenu[0] = Z_StrDup("\1\5UP...");
+	if (menusearch[0])
+		dirmenu[0] = Z_StrDup(va("%c\14Search results", EXT_SEARCH));
+	else if (menudepthleft != menudepth-1) // now for UP... entry
+		dirmenu[0] = Z_StrDup(va("%c\5UP...", EXT_UP));
 
 	menupath[menupathindex[menudepthleft]] = 0;
 	sizedirmenu = (numfolders+pos); // just in case things shrink between opening and rewind
