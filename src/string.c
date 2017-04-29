@@ -56,8 +56,8 @@ size_t strlcpy(char *dst, const char *src, size_t siz)
 // stack overflow, eep...
 char* stristr(char* haystack, const char* needle)
 {
-    char* p1 = haystack ;
-    const char* p2 = needle ;
+    char* p1 = haystack;
+    const char* p2 = needle;
     char* r = ((*p2 == 0) ? haystack : 0);
 
     while (*p1 != 0 && *p2 != 0)
