@@ -3995,7 +3995,7 @@ static void M_HandleLevelPlatter(INT32 choice)
 static void M_DrawLevelPlatterHeader(INT32 y, const char *header, boolean headerhighlight)
 {
 	y += lsheadingheight - 12;
-	V_DrawString(19, y, (headerhighlight ? V_YELLOWMAP : 0), header);
+	V_DrawString(19, y, V_ALLOWLOWERCASE|(headerhighlight ? V_YELLOWMAP : 0), header);
 	y += 9;
 	if ((y >= 0) && (y < 200))
 	{
@@ -4530,14 +4530,36 @@ static void M_DrawTemperature(INT32 x, fixed_t t)
 #undef h
 #undef NUMCOLOURS
 
-// returns whether to stop addons draw and go to message draw (true), or not (false)
+static char *M_AddonsHeaderPath(void)
+{
+	UINT32 len;
+	static char header[1024];
+
+	if (menupath[0] == '.')
+		strlcpy(header, va("SRB2 folder%s", menupath+1), 1024);
+	else
+		strcpy(header, menupath);
+
+	len = strlen(header);
+	if (len > 35)
+	{
+		len = len-35;
+		header[len] = header[len+1] = header[len+2] = '.';
+	}
+	else
+		len = 0;
+
+	return header+len;
+}
+
+// returns whether to do message draw
 static boolean M_AddonsRefresh(void)
 {
 	if ((refreshdirmenu & REFRESHDIR_NORMAL) && !preparefilemenu(true))
 	{
 		S_StartSound(NULL, sfx_lose);
 		M_SetupNextMenu(MISC_AddonsDef.prevMenu);
-		M_StartMessage(va("\x82%s\x80\nThis folder no longer exists!\nAborting to main menu.\n\n(Press a key)\n", menupath),NULL,MM_NOTHING);
+		M_StartMessage(va("\x82%s\x80\nThis folder no longer exists!\nAborting to main menu.\n\n(Press a key)\n", M_AddonsHeaderPath()),NULL,MM_NOTHING);
 		return true;
 	}
 
@@ -4583,13 +4605,13 @@ static void M_DrawAddons(void)
 		x = FRACUNIT;
 
 	V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-8, V_TRANSLUCENT, va("%d%%", (100*x)>>FRACBITS));
-	M_DrawTemperature(BASEVIDWIDTH - 10, x);
+	M_DrawTemperature(BASEVIDWIDTH - 12, x);
 
 	// DRAW MENU
 	x = currentMenu->x;
 	y = currentMenu->y;
 
-	M_DrawLevelPlatterHeader(y - 16, menupath, true);
+	M_DrawLevelPlatterHeader(y - 16, M_AddonsHeaderPath(), true);
 
 	// get bottom...
 	max = dir_on[menudepthleft] + 5;
@@ -4612,12 +4634,10 @@ static void M_DrawAddons(void)
 
 	for (; i < max; i++)
 	{
-		UINT32 flags = 0;
+		UINT32 flags = V_ALLOWLOWERCASE;
 		if (y > BASEVIDHEIGHT) break;
 		if (dirmenu[i])
 		{
-			if ((UINT8)(dirmenu[i][DIR_TYPE]) != EXT_UP)
-				flags = V_ALLOWLOWERCASE;
 			if (dirmenu[i][DIR_TYPE] & EXT_LOADED)
 			flags |= V_TRANSLUCENT;
 
@@ -4632,7 +4652,7 @@ static void M_DrawAddons(void)
 				V_DrawSmallScaledPatch(x-(16+4), y, 0, addonsp[NUM_EXT+flash]);
 			}
 
-#define charsonside 8
+#define charsonside 14
 			if (dirmenu[i][DIR_LEN] > (charsonside*2 + 3))
 				V_DrawString(x, y+4, flags, va("%.*s...%s", charsonside, dirmenu[i]+DIR_STRING, dirmenu[i]+DIR_STRING+dirmenu[i][DIR_LEN]-(charsonside+1)));
 #undef charsonside
@@ -4681,23 +4701,23 @@ static void M_HandleAddons(INT32 choice)
 					switch (dirmenu[dir_on[menudepthleft]][DIR_TYPE])
 					{
 						case EXT_FOLDER:
+							strcpy(&menupath[menupathindex[menudepthleft]],dirmenu[dir_on[menudepthleft]]+DIR_STRING);
 							if (menudepthleft)
 							{
-								strcpy(&menupath[menupathindex[menudepthleft]],dirmenu[dir_on[menudepthleft]]+DIR_STRING);
 								menupathindex[--menudepthleft] = strlen(menupath);
 								menupath[menupathindex[menudepthleft]] = 0;
 
 								if (!preparefilemenu(false))
 								{
 									S_StartSound(NULL, sfx_skid);
-									M_StartMessage(va("\x82%s\x80\nThis folder is empty.\n\n(Press a key)\n", menupath),NULL,MM_NOTHING);
+									M_StartMessage(va("\x82%s\x80\nThis folder is empty.\n\n(Press a key)\n", M_AddonsHeaderPath()),NULL,MM_NOTHING);
 									menupath[menupathindex[++menudepthleft]] = 0;
 
 									if (!preparefilemenu(true))
 									{
 										S_StartSound(NULL, sfx_lose);
 										M_SetupNextMenu(MISC_AddonsDef.prevMenu);
-										M_StartMessage(va("\x82%s\x80\nThis folder no longer exists!\nAborting to main menu.\n\n(Press a key)\n", menupath),NULL,MM_NOTHING);
+										M_StartMessage(va("\x82%s\x80\nThis folder no longer exists!\nAborting to main menu.\n\n(Press a key)\n", M_AddonsHeaderPath()),NULL,MM_NOTHING);
 										return;
 									}
 								}
@@ -4711,7 +4731,8 @@ static void M_HandleAddons(INT32 choice)
 							else
 							{
 								S_StartSound(NULL, sfx_lose);
-								M_StartMessage(va("\x82%s%s\x80\nThis folder is too deep to navigate to!\n\n(Press a key)\n", menupath, dirmenu[dir_on[menudepthleft]]+DIR_STRING),NULL,MM_NOTHING);
+								M_StartMessage(va("\x82%s\x80\nThis folder is too deep to navigate to!\n\n(Press a key)\n", M_AddonsHeaderPath()),NULL,MM_NOTHING);
+								menupath[menupathindex[menudepthleft]] = 0;
 							}
 							break;
 						case EXT_UP:
