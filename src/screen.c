@@ -456,7 +456,7 @@ void SCR_ClosedCaptions(void)
 			if (closedcaptions[i].c && closedcaptions[i].c->origin)
 				dot = '\x1E';
 			else if (closedcaptions[i].s-S_sfx == sfx_None)
-				dot = 'M';
+				dot = '\x19';
 			V_DrawRightAlignedString(vid.width-(20*vid.dupx), y,
 			flags, va("%c [%s]", dot, (closedcaptions[i].s->caption[0] ? closedcaptions[i].s->caption : closedcaptions[i].s->name)));
 		}
