@@ -1376,43 +1376,42 @@ static menuitem_t OP_ServerOptionsMenu[] =
 	{IT_STRING | IT_CVAR,    NULL, "Allow WAD Downloading",            &cv_downloading,         26},
 	{IT_STRING | IT_CVAR,    NULL, "Allow players to join",            &cv_allownewplayer,      31},
 #endif
+	{IT_STRING | IT_CVAR,    NULL, "Map progression",                  &cv_advancemap,          36},
+	{IT_STRING | IT_CVAR,    NULL, "Intermission Timer",               &cv_inttime,             41},
 
-	{IT_STRING | IT_CVAR,    NULL, "Map progression",                  &cv_advancemap,          41},
-	{IT_STRING | IT_CVAR,    NULL, "Intermission Timer",               &cv_inttime,             46},
+	{IT_HEADER, NULL, "Characters", NULL, 50},
+	{IT_STRING | IT_CVAR,    NULL, "Force a character",                &cv_forceskin,           56},
+	{IT_STRING | IT_CVAR,    NULL, "Restrict character changes",       &cv_restrictskinchange,  61},
 
-	{IT_HEADER, NULL, "Characters", NULL, 55},
-	{IT_STRING | IT_CVAR,    NULL, "Force a character",                &cv_forceskin,           61},
-	{IT_STRING | IT_CVAR,    NULL, "Restrict character changes",       &cv_restrictskinchange,  66},
+	{IT_HEADER, NULL, "Items", NULL, 70},
+	{IT_STRING | IT_CVAR,    NULL, "Item respawn delay",               &cv_itemrespawntime,     76},
+	{IT_STRING | IT_SUBMENU, NULL, "Random Item Box Toggles...",       &OP_MonitorToggleDef,    81},
 
-	{IT_HEADER, NULL, "Items", NULL, 75},
-	{IT_STRING | IT_CVAR,    NULL, "Item respawn delay",               &cv_itemrespawntime,     81},
-	{IT_STRING | IT_SUBMENU, NULL, "Random Item Box Toggles...",       &OP_MonitorToggleDef,    86},
+	{IT_HEADER, NULL, "Platform (Coop, Race, Competition)", NULL, 90},
+	{IT_STRING | IT_CVAR,    NULL, "Players required for exit",        &cv_playersforexit,      96},
+	{IT_STRING | IT_CVAR,    NULL, "Level completion countdown",       &cv_countdowntime,      101},
+	{IT_STRING | IT_CVAR,    NULL, "Item Boxes",                       &cv_competitionboxes,   106},
 
-	{IT_HEADER, NULL, "Platform (Coop, Race, Competition)", NULL, 95},
-	{IT_STRING | IT_CVAR,    NULL, "Players required for exit",        &cv_playersforexit,     101},
-	{IT_STRING | IT_CVAR,    NULL, "Level completion countdown",       &cv_countdowntime,      106},
-	{IT_STRING | IT_CVAR,    NULL, "Item Boxes",                       &cv_competitionboxes,   111},
+	{IT_HEADER, NULL, "Ringslinger (Match, CTF, Tag, H&S)", NULL, 115},
+	{IT_STRING | IT_CVAR,    NULL, "Time Limit",                       &cv_timelimit,          121},
+	{IT_STRING | IT_CVAR,    NULL, "Score Limit",                      &cv_pointlimit,         126},
+	{IT_STRING | IT_CVAR,    NULL, "Overtime on Tie",                  &cv_overtime,           131},
+	{IT_STRING | IT_CVAR,    NULL, "Player respawn delay",             &cv_respawntime,        136},
 
-	{IT_HEADER, NULL, "Ringslinger (Match, CTF, Tag, H&S)", NULL, 120},
-	{IT_STRING | IT_CVAR,    NULL, "Time Limit",                       &cv_timelimit,          126},
-	{IT_STRING | IT_CVAR,    NULL, "Score Limit",                      &cv_pointlimit,         131},
-	{IT_STRING | IT_CVAR,    NULL, "Overtime on Tie",                  &cv_overtime,           136},
-	{IT_STRING | IT_CVAR,    NULL, "Player respawn delay",             &cv_respawntime,        141},
+	{IT_STRING | IT_CVAR,    NULL, "Item Boxes",                       &cv_matchboxes,         146},
+	{IT_STRING | IT_CVAR,    NULL, "Weapon Rings",                     &cv_specialrings,       151},
+	{IT_STRING | IT_CVAR,    NULL, "Power Stones",                     &cv_powerstones,        156},
 
-	{IT_STRING | IT_CVAR,    NULL, "Item Boxes",                       &cv_matchboxes,         151},
-	{IT_STRING | IT_CVAR,    NULL, "Weapon Rings",                     &cv_specialrings,       156},
-	{IT_STRING | IT_CVAR,    NULL, "Power Stones",                     &cv_powerstones,        161},
+	{IT_STRING | IT_CVAR,    NULL, "Flag respawn delay",               &cv_flagtime,           166},
+	{IT_STRING | IT_CVAR,    NULL, "Hiding time",                      &cv_hidetime,           171},
 
-	{IT_STRING | IT_CVAR,    NULL, "Flag respawn delay",               &cv_flagtime,           171},
-	{IT_STRING | IT_CVAR,    NULL, "Hiding time",                      &cv_hidetime,           176},
-
-	{IT_STRING | IT_CVAR,    NULL, "Autobalance Teams",                &cv_autobalance,        186},
-	{IT_STRING | IT_CVAR,    NULL, "Scramble Teams on Map Change",     &cv_scrambleonchange,   191},
+	{IT_STRING | IT_CVAR,    NULL, "Autobalance Teams",                &cv_autobalance,        181},
+	{IT_STRING | IT_CVAR,    NULL, "Scramble Teams on Map Change",     &cv_scrambleonchange,   186},
 
 #ifndef NONET
-	{IT_HEADER, NULL, "Advanced", NULL, 200},
-	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "Master server",        &cv_masterserver,        206},
-	{IT_STRING | IT_CVAR,    NULL, "Attempts to resynchronise",        &cv_resynchattempts,     220},
+	{IT_HEADER, NULL, "Advanced", NULL, 195},
+	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "Master server",        &cv_masterserver,        201},
+	{IT_STRING | IT_CVAR,    NULL, "Attempts to resynchronise",        &cv_resynchattempts,     215},
 #endif
 };
 
@@ -3288,7 +3287,7 @@ static void M_DrawGenericMenu(void)
 // note that alphakey is multiplied by 2 for scrolling menus to allow greater usage in UINT8 range.
 static void M_DrawGenericScrollMenu(void)
 {
-	INT32 x, y, i, max, tempcentery, cursory = 0;
+	INT32 x, y, i, max, bottom, tempcentery, cursory = 0;
 
 	// DRAW MENU
 	x = currentMenu->x;
@@ -3307,15 +3306,21 @@ static void M_DrawGenericScrollMenu(void)
 			break;
 	}
 
-	for (max = currentMenu->numitems; max > 0; max--)
+	for (bottom = currentMenu->numitems; bottom > 0; bottom--)
 	{
-		if (currentMenu->menuitems[max-1].alphaKey*2 + tempcentery <= (currentMenu->y + 2*scrollareaheight))
+		if (currentMenu->menuitems[bottom-1].status != IT_DISABLED)
+			break;
+	}
+
+	for (max = bottom; max > 0; max--)
+	{
+		if (currentMenu->menuitems[max-1].status != IT_DISABLED && currentMenu->menuitems[max-1].alphaKey*2 + tempcentery <= (currentMenu->y + 2*scrollareaheight))
 			break;
 	}
 
 	if (i)
 		V_DrawString(currentMenu->x - 20, currentMenu->y, V_YELLOWMAP, "\x1A"); // up arrow
-	if (max != currentMenu->numitems)
+	if (max != bottom)
 		V_DrawString(currentMenu->x - 20, currentMenu->y + 2*scrollareaheight, V_YELLOWMAP, "\x1B"); // down arrow
 
 	// draw title (or big pic)
@@ -3359,6 +3364,7 @@ static void M_DrawGenericScrollMenu(void)
 							case IT_CV_INVISSLIDER: // monitor toggles use this
 								break;
 							case IT_CV_STRING:
+#if 1
 								if (y + 12 > (currentMenu->y + 2*scrollareaheight))
 									break;
 								M_DrawTextBox(x, y + 4, MAXSTRINGLENGTH, 1);
@@ -3366,7 +3372,18 @@ static void M_DrawGenericScrollMenu(void)
 								if (skullAnimCounter < 4 && i == itemOn)
 									V_DrawCharacter(x + 8 + V_StringWidth(cv->string, 0), y + 12,
 										'_' | 0x80, false);
-								y += 16;
+#else // cool new string type stuff, not ready for limelight
+								if (i == itemOn)
+								{
+									V_DrawFill(x-2, y-1, MAXSTRINGLENGTH*8 + 4, 8+3, 159);
+									V_DrawString(x, y, V_ALLOWLOWERCASE, cv->string);
+									if (skullAnimCounter < 4)
+										V_DrawCharacter(x + V_StringWidth(cv->string, 0), y, '_' | 0x80, false);
+								}
+								else
+									V_DrawRightAlignedString(BASEVIDWIDTH - x, y,
+									V_YELLOWMAP|V_ALLOWLOWERCASE, cv->string);
+#endif
 								break;
 							default:
 								V_DrawRightAlignedString(BASEVIDWIDTH - x, y,
