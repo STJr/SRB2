@@ -380,10 +380,12 @@ UINT16 W_LoadWadFile(const char *filename)
 #endif
 	else if (!stricmp(&filename[strlen(filename) - 4], ".pk3"))
 	{
-		long centralDirPos;
-		long handlePos;
-		long size;
+		unsigned long centralDirPos;
+		unsigned long handlePos;
+		unsigned long size;
 		char *sigBuffer;
+
+		numlumps = 0;
 
 		//wadfile->restype = RET_PK3;
 		CONS_Alert(CONS_NOTICE, "PK3 file detected.\n");
@@ -423,23 +425,63 @@ UINT16 W_LoadWadFile(const char *filename)
 		for (handlePos = centralDirPos; handlePos < size - 3; handlePos++)
 		{
 			fread(sigBuffer, 1, 4, handle);
-			if (!memcmp(sigBuffer, "\x50\x4b\x01\x02", 4)) // Got a central dir file header.
+			if (!memcmp(sigBuffer, "\x50\x4b\x01\x02", 4)) // Found a central dir file header.
 			{
 				char *eName;
-				unsigned short int eNameLen = 0;
+				unsigned short int eNameLen = 8;
 				unsigned short int eXFieldLen = 0;
 				unsigned short int eCommentLen = 0;
-				CONS_Printf("Entry at %ld:\n", handlePos);
-				// We get the variable length fields.
-				fseek(handle, 24, SEEK_CUR);
-				fscanf(handle, "%hu %hu %hu", &eNameLen, &eXFieldLen, &eCommentLen);
-				CONS_Printf("Name length is %u.\n", eNameLen);
+				unsigned int eSize = 0;
+				unsigned int eCompSize = 0;
+				unsigned int eLocalHeaderOffset = 0;
 
-				// We jump straight to the name field now.
-				fseek(handle, 10, SEEK_CUR);
+				fseek(handle, 16, SEEK_CUR);
+				fread(&eSize, 1, 4, handle);
+				fread(&eCompSize, 1, 4, handle);
+
+				// We get the variable length fields.
+				fread(&eNameLen, 1, 2, handle);
+				fread(&eXFieldLen, 1, 2, handle);
+				fread(&eCommentLen, 1, 2, handle);
+				fseek(handle, 8, SEEK_CUR);
+				fread(&eLocalHeaderOffset, 1, 4, handle); // Get the offset.
+
 				eName = malloc(sizeof(char)*(eNameLen + 1));
-				fgets(eName, eNameLen, handle);
-				CONS_Printf("%s\n", eName);
+				fgets(eName, eNameLen + 1, handle);
+				if (eSize == 0) // Is this entry a folder?
+				{
+					CONS_Printf("Folder %s at %ld:\n", eName, handlePos);
+				}
+				else // If not, then it is a normal file. Let's arrange its lumpinfo structure then!
+				{
+					CONS_Printf("File %s at %ld:\n", eName, handlePos);
+
+					if (numlumps == 0) // First lump? Let's allocate the first lumpinfo block.
+						lumpinfo = Z_Malloc(sizeof(*lumpinfo), PU_STATIC, NULL);
+					else // Otherwise, reallocate and increase by 1. Might not be optimal, though...
+						lumpinfo = (lumpinfo_t*) Z_Realloc(lumpinfo, (numlumps + 1)*sizeof(*lumpinfo), PU_STATIC, NULL);
+
+					lumpinfo[numlumps].position = eLocalHeaderOffset + 30 + eNameLen + eXFieldLen;
+					lumpinfo[numlumps].disksize = eCompSize;
+
+					strncpy(lumpinfo[numlumps].name, eName + eNameLen - 8, 8);
+					lumpinfo[numlumps].name[8] = '\0';
+
+					lumpinfo[numlumps].name2 = Z_Malloc((eNameLen+1)*sizeof(char), PU_STATIC, NULL);
+					strncpy(lumpinfo[numlumps].name2, eName, eNameLen);
+					lumpinfo[numlumps].name2[eNameLen] = '\0';
+
+					lumpinfo[numlumps].size = eSize;
+
+					lumpinfo[numlumps].compressed = 0;
+
+					lumpinfo[numlumps].compression = CM_NONE;
+
+					//CONS_Printf("The lump's current long name is %s\n", lumpinfo[numlumps].name2);
+					//CONS_Printf("The lump's current short name is %s\n", lumpinfo[numlumps].name);
+					numlumps++;
+				}
+
 				free(eName);
 			}
 			else if (!memcmp(sigBuffer, "\x50\x4b\x05\x06", 4)) // Found the central dir end signature, stop seeking.
@@ -457,8 +499,12 @@ UINT16 W_LoadWadFile(const char *filename)
 			free(sigBuffer);
 			return INT16_MAX;
 		}
+
+		// If we've reached this far, then it means our dynamically stored lumpinfo has to be ready.
+		// Now we finally build our... incorrectly called wadfile.
+		// TODO: Maybe we should give them more generalized names, like resourcefile or resfile or something.
+		// Mostly for clarity and better understanding when reading the code.
 		free(sigBuffer);
-		return INT16_MAX;
 	}
 	// assume wad file
 	else
