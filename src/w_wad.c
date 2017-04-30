@@ -293,6 +293,7 @@ UINT16 W_LoadWadFile(const char *filename)
 	FILE *handle;
 	lumpinfo_t *lumpinfo;
 	wadfile_t *wadfile;
+	enum restype type;
 	UINT32 numlumps;
 	size_t i;
 	INT32 compressed = 0;
@@ -342,7 +343,7 @@ UINT16 W_LoadWadFile(const char *filename)
 		// This code emulates a wadfile with one lump name "OBJCTCFG"
 		// at position 0 and size of the whole file.
 		// This allows soc files to be like all wads, copied by network and loaded at the console.
-		//wadfile->restype = RET_WAD;
+		type = RET_WAD;
 
 		numlumps = 1;
 		lumpinfo = Z_Calloc(sizeof (*lumpinfo), PU_STATIC, NULL);
@@ -363,7 +364,7 @@ UINT16 W_LoadWadFile(const char *filename)
 		// This code emulates a wadfile with one lump name "LUA_INIT"
 		// at position 0 and size of the whole file.
 		// This allows soc files to be like all wads, copied by network and loaded at the console.
-		//wadfile->restype = RET_WAD;
+		type = RET_WAD;
 
 		numlumps = 1;
 		lumpinfo = Z_Calloc(sizeof (*lumpinfo), PU_STATIC, NULL);
@@ -387,7 +388,7 @@ UINT16 W_LoadWadFile(const char *filename)
 
 		numlumps = 0;
 
-		//wadfile->restype = RET_PK3;
+		type = RET_PK3;
 		CONS_Alert(CONS_NOTICE, "PK3 file detected.\n");
 
 		// Obtain the file's size.
@@ -454,6 +455,7 @@ UINT16 W_LoadWadFile(const char *filename)
 				}
 				else // If not, then it is a normal file. Let's arrange its lumpinfo structure then!
 				{
+					int namePos = eNameLen - 1;
 					CONS_Printf("File %s at %ld:\n", eName, handlePos);
 
 					if (numlumps == 0) // First lump? Let's allocate the first lumpinfo block.
@@ -464,7 +466,16 @@ UINT16 W_LoadWadFile(const char *filename)
 					lumpinfo[numlumps].position = eLocalHeaderOffset + 30 + eNameLen + eXFieldLen;
 					lumpinfo[numlumps].disksize = eCompSize;
 
-					strncpy(lumpinfo[numlumps].name, eName + eNameLen - 8, 8);
+					// We will trim the file's full name so that only the filename is left.
+					while(namePos--)
+					{
+						if(eName[namePos] == '/')
+						{
+							namePos++;
+							break;
+						}
+					}
+					strncpy(lumpinfo[numlumps].name, eName + namePos, 8);
 					lumpinfo[numlumps].name[8] = '\0';
 
 					lumpinfo[numlumps].name2 = Z_Malloc((eNameLen+1)*sizeof(char), PU_STATIC, NULL);
@@ -509,7 +520,7 @@ UINT16 W_LoadWadFile(const char *filename)
 	// assume wad file
 	else
 	{
-		//wadfile->restype = RET_WAD;
+		type = RET_WAD;
 
 		wadinfo_t header;
 		lumpinfo_t *lump_p;
@@ -621,6 +632,7 @@ UINT16 W_LoadWadFile(const char *filename)
 	//
 	wadfile = Z_Malloc(sizeof (*wadfile), PU_STATIC, NULL);
 	wadfile->filename = Z_StrDup(filename);
+	wadfile->type = type;
 	wadfile->handle = handle;
 	wadfile->numlumps = (UINT16)numlumps;
 	wadfile->lumpinfo = lumpinfo;

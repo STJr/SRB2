@@ -69,7 +69,7 @@ enum restype {RET_WAD, RET_PK3};
 typedef struct wadfile_s
 {
 	char *filename;
-	enum restype restype;
+	enum restype type;
 	lumpinfo_t *lumpinfo;
 	lumpcache_t *lumpcache;
 #ifdef HWRENDER

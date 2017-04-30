@@ -3027,8 +3027,8 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 	UINT16 numlumps, wadnum;
 	INT16 firstmapreplaced = 0, num;
 	char *name;
+	char *fullName;
 	lumpinfo_t *lumpinfo;
-	boolean texturechange = false;
 	boolean replacedcurrentmap = false;
 
 	if ((numlumps = W_LoadWadFile(wadfilename)) == INT16_MAX)
@@ -3036,49 +3036,72 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 		CONS_Printf(M_GetText("Errors occured while loading %s; not added.\n"), wadfilename);
 		return false;
 	}
-	else wadnum = (UINT16)(numwadfiles-1);
+	else
+		wadnum = (UINT16)(numwadfiles-1);
+
+	lumpinfo = wadfiles[wadnum]->lumpinfo;
 
 	//
 	// search for sound replacements
 	//
-	lumpinfo = wadfiles[wadnum]->lumpinfo;
-	for (i = 0; i < numlumps; i++, lumpinfo++)
+	switch(wadfiles[wadnum]->type)
 	{
-		name = lumpinfo->name;
-		if (name[0] == 'D')
+	case RET_PK3:
+		for (i = 0; i < numlumps; i++, lumpinfo++)
 		{
-			if (name[1] == 'S') for (j = 1; j < NUMSFX; j++)
+			name = lumpinfo->name;
+			fullName = lumpinfo->name2;
+			if (!strnicmp(fullName, "sounds", 6))
 			{
-				if (S_sfx[j].name && !strnicmp(S_sfx[j].name, name + 2, 6))
+				// We found a sound. Let's check whether it's replacing an existing sound or it's a brand new one.
+				for (j = 1; j < NUMSFX; j++)
 				{
-					// the sound will be reloaded when needed,
-					// since sfx->data will be NULL
-					CONS_Debug(DBG_SETUP, "Sound %.8s replaced\n", name);
+					if (S_sfx[j].name && !strnicmp(S_sfx[j].name, name, 6))
+					{
+						// the sound will be reloaded when needed,
+						// since sfx->data will be NULL
+						CONS_Debug(DBG_SETUP, "Sound %.8s replaced\n", name);
 
-					I_FreeSfx(&S_sfx[j]);
+						I_FreeSfx(&S_sfx[j]);
 
-					sreplaces++;
+						sreplaces++;
+					}
 				}
 			}
-			else if (name[1] == '_')
+		}
+		break;
+	default:
+		for (i = 0; i < numlumps; i++, lumpinfo++)
+		{
+			name = lumpinfo->name;
+			if (name[0] == 'D')
+			{
+				if (name[1] == 'S') for (j = 1; j < NUMSFX; j++)
+				{
+					if (S_sfx[j].name && !strnicmp(S_sfx[j].name, name + 2, 6))
+					{
+						// the sound will be reloaded when needed,
+						// since sfx->data will be NULL
+						CONS_Debug(DBG_SETUP, "Sound %.8s replaced\n", name);
+
+						I_FreeSfx(&S_sfx[j]);
+
+						sreplaces++;
+					}
+				}
+				else if (name[1] == '_')
+				{
+					CONS_Debug(DBG_SETUP, "Music %.8s replaced\n", name);
+					mreplaces++;
+				}
+			}
+			else if (name[0] == 'O' && name[1] == '_')
 			{
 				CONS_Debug(DBG_SETUP, "Music %.8s replaced\n", name);
-				mreplaces++;
+				digmreplaces++;
 			}
 		}
-		else if (name[0] == 'O' && name[1] == '_')
-		{
-			CONS_Debug(DBG_SETUP, "Music %.8s replaced\n", name);
-			digmreplaces++;
-		}
-#if 0
-		//
-		// search for texturechange replacements
-		//
-		else if (!memcmp(name, "TEXTURE1", 8) || !memcmp(name, "TEXTURE2", 8)
-			|| !memcmp(name, "PNAMES", 6))
-#endif
-			texturechange = true;
+		break;
 	}
 	if (!devparm && sreplaces)
 		CONS_Printf(M_GetText("%s sounds replaced\n"), sizeu1(sreplaces));
@@ -3095,10 +3118,7 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 	// Reload it all anyway, just in case they
 	// added some textures but didn't insert a
 	// TEXTURE1/PNAMES/etc. list.
-	if (texturechange) // initialized in the sound check
-		R_LoadTextures(); // numtexture changes
-	else
-		R_FlushTextureCache(); // just reload it from file
+	R_LoadTextures(); // numtexture changes
 
 	// Reload ANIMATED / ANIMDEFS
 	P_InitPicAnims();
