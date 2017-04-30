@@ -12,6 +12,7 @@
 
 #include "doomdef.h"
 #ifdef HAVE_BLUA
+#include "fastcmp.h"
 #include "r_defs.h"
 #include "r_local.h"
 #include "st_stuff.h" // hudinfo[]
@@ -343,6 +344,122 @@ static int libd_cachePatch(lua_State *L)
 	return 1;
 }
 
+static int libd_getSpritePatch(lua_State *L)
+{
+	UINT32 i; // sprite prefix
+	UINT32 frame = 0; // 'A'
+	UINT8 angle = 0;
+	spritedef_t *sprdef;
+	spriteframe_t *sprframe;
+	HUDONLY
+
+	if (lua_isnumber(L, 1)) // sprite number given, e.g. SPR_THOK
+	{
+		i = lua_tonumber(L, 1);
+		if (i >= NUMSPRITES)
+			return 0;
+	}
+	else if (lua_isstring(L, 1)) // sprite prefix name given, e.g. "THOK"
+	{
+		const char *name = lua_tostring(L, 1);
+		for (i = 0; i < NUMSPRITES; i++)
+			if (fastcmp(name, sprnames[i]))
+				break;
+		if (i >= NUMSPRITES)
+			return 0;
+	}
+	else
+		return 0;
+
+	if (i == SPR_PLAY) // Use getSprite2Patch instead!
+		return 0;
+
+	sprdef = &sprites[i];
+
+	// set frame number
+	frame = (luaL_optinteger(L, 2, 0);
+	frame &= FF_FRAMEMASK; // ignore any bits that are not the actual frame, just in case
+	if (frame >= sprdef->numframes)
+		return 0;
+	// set angle number
+	sprframe = sprdef->spriteframes[frame];
+	angle = luaL_optinteger(L, 3, 0);
+	if (angle >= 8)
+		return 0;
+
+	// push both the patch and it's "flip" value
+	LUA_PushUserdata(L, W_CachePatchNum(sprframe->lumppat[angle], PU_STATIC), META_PATCH);
+	lua_pushboolean(L, (sprframe->flip & (1<<angle)) != 0);
+	return 2;
+}
+
+static int libd_getSprite2Patch(lua_State *L)
+{
+	UINT32 i, j; // skin number, sprite2 prefix
+	UINT32 frame = 0; // 'A'
+	UINT8 angle = 0;
+	spritedef_t *sprdef;
+	spriteframe_t *sprframe;
+	HUDONLY
+
+	// get skin first!
+	if (lua_isnumber(L, 1)) // find skin by number
+	{
+		i = lua_tonumber(L, 1);
+		if (i >= MAXSKINS)
+			return luaL_error(L, "skin number %d out of range (0 - %d)", i, MAXSKINS-1);
+		if (i >= numskins)
+			return 0;
+	}
+	else // find skin by name
+	{
+		const char *name = luaL_checkstring(L, 1);
+		for (i = 0; i < numskins; i++)
+			if (fastcmp(skins[i].name, field))
+				break;
+		if (i >= numskins)
+			return 0;
+	}
+
+	lua_remove(L, 1); // remove skin now
+
+	if (lua_isnumber(L, 1)) // sprite number given, e.g. SPR2_STND
+	{
+		j = lua_tonumber(L, 1);
+		if (j >= free_spr2)
+			return 0;
+	}
+	else if (lua_isstring(L, 1)) // sprite prefix name given, e.g. "STND"
+	{
+		const char *name = lua_tostring(L, 1);
+		for (j = 0; j < free_spr2; j++)
+			if (fastcmp(name, sprnames[j]))
+				break;
+		if (j >= free_spr2)
+			return 0;
+	}
+	else
+		return 0;
+
+	sprdef = &skins[i].sprites[j];
+
+	// set frame number
+	frame = (luaL_optinteger(L, 2, 0);
+	frame &= FF_FRAMEMASK; // ignore any bits that are not the actual frame, just in case
+	if (frame >= sprdef->numframes)
+		return 0;
+	// set angle number
+	sprframe = sprdef->spriteframes[frame];
+	angle = luaL_optinteger(L, 3, 0);
+	if (angle >= 8)
+		return 0;
+
+	// push both the patch and it's "flip" value
+	LUA_PushUserdata(L, W_CachePatchNum(sprframe->lumppat[angle], PU_STATIC), META_PATCH);
+	lua_pushboolean(L, (sprframe->flip & (1<<angle)) != 0);
+	return 2;
+}
+
 static int libd_draw(lua_State *L)
 {
 	INT32 x, y, flags;
@@ -568,6 +685,8 @@ static int libd_renderer(lua_State *L)
 static luaL_Reg lib_draw[] = {
 	{"patchExists", libd_patchExists},
 	{"cachePatch", libd_cachePatch},
+	{"getSpritePatch", libd_getSpritePatch},
+	{"getSprite2Patch", libd_getSprite2Patch},
 	{"draw", libd_draw},
 	{"drawScaled", libd_drawScaled},
 	{"drawNum", libd_drawNum},
