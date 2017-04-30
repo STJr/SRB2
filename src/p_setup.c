@@ -2881,7 +2881,7 @@ boolean P_SetupLevel(boolean skipprecip)
 				camera.angle = FixedAngle((fixed_t)thing->angle << FRACBITS);
 			}
 		}
-		
+
 		// Salt: CV_ClearChangedFlags() messes with your settings :(
 		/*if (!cv_cam_height.changed)
 			CV_Set(&cv_cam_height, cv_cam_height.defaultvalue);

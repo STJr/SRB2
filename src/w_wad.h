@@ -34,14 +34,19 @@ typedef struct
 	UINT32 infotableofs; // the 'directory' of resources
 } wadinfo_t;
 
+// Available compression methods for lumps.
+enum compmethod{CM_NONE, CM_LZF};
+
 //  a memory entry of the wad directory
 typedef struct
 {
 	unsigned long position; // filelump_t filepos
 	unsigned long disksize; // filelump_t size
 	char name[9]; // filelump_t name[]
+	char *name2; // Dynamically allocated name.
 	size_t size; // real (uncompressed) size
 	INT32 compressed; // i
+	enum compmethod compression; // lump compression method
 } lumpinfo_t;
 
 // =========================================================================
@@ -58,9 +63,13 @@ typedef struct
 #include "m_aatree.h"
 #endif
 
+// Resource type of the WAD. Yeah, I know this sounds dumb, but I'll leave it like this until I clean up the code further.
+enum restype {RET_WAD, RET_PK3};
+
 typedef struct wadfile_s
 {
 	char *filename;
+	enum restype restype;
 	lumpinfo_t *lumpinfo;
 	lumpcache_t *lumpcache;
 #ifdef HWRENDER
