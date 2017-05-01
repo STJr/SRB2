@@ -337,6 +337,24 @@ UINT16 W_LoadWadFile(const char *filename)
 		return INT16_MAX;
 	}
 
+#ifndef NOMD5
+	//
+	// w-waiiiit!
+	// Let's not add a wad file if the MD5 matches
+	// an MD5 of an already added WAD file!
+	//
+	W_MakeFileMD5(filename, md5sum);
+
+	for (i = 0; i < numwadfiles; i++)
+	{
+		if (!memcmp(wadfiles[i]->md5sum, md5sum, 16))
+		{
+			CONS_Alert(CONS_ERROR, M_GetText("%s is already loaded\n"), filename);
+			return INT16_MAX;
+		}
+	}
+#endif
+
 	// detect dehacked file with the "soc" extension
 	if (!stricmp(&filename[strlen(filename) - 4], ".soc"))
 	{
@@ -381,11 +399,13 @@ UINT16 W_LoadWadFile(const char *filename)
 #endif
 	else if (!stricmp(&filename[strlen(filename) - 4], ".pk3"))
 	{
-		unsigned long centralDirPos;
-		unsigned long handlePos;
+		char curHeader[4];
 		unsigned long size;
-		char *sigBuffer;
-
+		char seekPat[] = {0x50, 0x4b, 0x01, 0x02, 0x00};
+		char endPat[] = {0x50, 0x4b, 0x05, 0x06, 0xff};
+		char *s;
+		int c;
+		boolean matched = FALSE;
 		numlumps = 0;
 
 		type = RET_PK3;
@@ -397,49 +417,63 @@ UINT16 W_LoadWadFile(const char *filename)
 		CONS_Printf("PK3 size is: %ld\n", size);
 
 		// We must look for the central directory through the file.
+		// All of the central directory entry headers have a signature of 0x50 0x4b 0x01 0x02.
+		// The first entry found means the beginning of the central directory.
 		rewind(handle);
-		sigBuffer = malloc(sizeof(char)*4);
-		for (centralDirPos = 0; centralDirPos < size - 4; centralDirPos++)
+		s = seekPat;
+		while((c = fgetc(handle)) != EOF)
 		{
-			fread(sigBuffer, 1, 4, handle);
-			if (memcmp(sigBuffer, "\x50\x4b\x01\x02", 4) == 0)
+			if (*s != c && s > seekPat) // No match?
+				s = seekPat; // We "reset" the counter by sending the s pointer back to the start of the array.
+			if (*s == c)
 			{
-				CONS_Printf("Found PK3 central directory at position %ld.\n", centralDirPos);
-				fseek(handle, -4, SEEK_CUR);
-				break;
+				s++;
+				if (*s == 0x00) // The array pointer has reached the key char which marks the end. It means we have matched the signature.
+				{
+					matched = TRUE;
+					fseek(handle, -4, SEEK_CUR);
+					CONS_Printf("Found PK3 central directory at position %ld.\n", ftell(handle));
+					break;
+				}
 			}
-			else
-				fseek(handle, -3, SEEK_CUR); // Backwards 3 steps, since fread advances after giving the data.
 		}
 
 		// Error if we couldn't find the central directory at all. It likely means this is not a ZIP/PK3 file.
-		if (centralDirPos + 4 == size)
+		if (matched == FALSE)
 		{
 			CONS_Alert(CONS_ERROR, "No central directory inside PK3! File may be corrupted or incomplete.\n");
-			free(sigBuffer);
 			return INT16_MAX;
 		}
 
 		// Since we found the central directory, now we can map our lumpinfo table.
 		// We will look for file headers inside it, until we reach the central directory end signature.
+		// We exactly know what data to expect this time, so now we don't need to do a byte-by-byte search.
 		CONS_Printf("Now finding central directory file headers...\n");
-		for (handlePos = centralDirPos; handlePos < size - 3; handlePos++)
+		while(ftell(handle) < size - 4) // Make sure we don't go past the file size!
 		{
-			fread(sigBuffer, 1, 4, handle);
-			if (!memcmp(sigBuffer, "\x50\x4b\x01\x02", 4)) // Found a central dir file header.
+			fread(curHeader, 1, 4, handle);
+
+			// We found a central directory entry signature?
+			if (!strncmp(curHeader, seekPat, 3))
 			{
+				// Let's fill in the fields that we actually need.
+				// (Declaring all those vars might not be the optimal way to do this, sorry.)
 				char *eName;
 				unsigned short int eNameLen = 8;
 				unsigned short int eXFieldLen = 0;
 				unsigned short int eCommentLen = 0;
+				unsigned short int eCompression = 0;
 				unsigned int eSize = 0;
 				unsigned int eCompSize = 0;
 				unsigned int eLocalHeaderOffset = 0;
 
-				fseek(handle, 16, SEEK_CUR);
+				// We get the compression type indicator value.
+				fseek(handle, 6, SEEK_CUR);
+				fread(&eCompression, 1, 2, handle);
+				// Get the
+				fseek(handle, 8, SEEK_CUR);
 				fread(&eSize, 1, 4, handle);
 				fread(&eCompSize, 1, 4, handle);
-
 				// We get the variable length fields.
 				fread(&eNameLen, 1, 2, handle);
 				fread(&eXFieldLen, 1, 2, handle);
@@ -449,15 +483,14 @@ UINT16 W_LoadWadFile(const char *filename)
 
 				eName = malloc(sizeof(char)*(eNameLen + 1));
 				fgets(eName, eNameLen + 1, handle);
-				if (eSize == 0) // Is this entry a folder?
+				if (0)//(eSize == 0) // Is this entry a folder?
 				{
-					CONS_Printf("Folder %s at %ld:\n", eName, handlePos);
+					CONS_Printf("Folder %s at %ld:\n", eName, ftell(handle));
 				}
 				else // If not, then it is a normal file. Let's arrange its lumpinfo structure then!
 				{
 					int namePos = eNameLen - 1;
-					CONS_Printf("File %s at %ld:\n", eName, handlePos);
-
+					CONS_Printf("File %s at: %ld\n", eName, ftell(handle));
 					if (numlumps == 0) // First lump? Let's allocate the first lumpinfo block.
 						lumpinfo = Z_Malloc(sizeof(*lumpinfo), PU_STATIC, NULL);
 					else // Otherwise, reallocate and increase by 1. Might not be optimal, though...
@@ -465,7 +498,8 @@ UINT16 W_LoadWadFile(const char *filename)
 
 					lumpinfo[numlumps].position = eLocalHeaderOffset + 30 + eNameLen + eXFieldLen;
 					lumpinfo[numlumps].disksize = eCompSize;
-
+					lumpinfo[numlumps].size = eSize;
+					CONS_Printf("Address: %ld, Full: %ld, Comp: %ld\n", lumpinfo[numlumps].position, lumpinfo[numlumps].size, lumpinfo[numlumps].disksize);
 					// We will trim the file's full name so that only the filename is left.
 					while(namePos--)
 					{
@@ -475,47 +509,65 @@ UINT16 W_LoadWadFile(const char *filename)
 							break;
 						}
 					}
+					memset(lumpinfo[numlumps].name, '\0', 9)
 					strncpy(lumpinfo[numlumps].name, eName + namePos, 8);
-					lumpinfo[numlumps].name[8] = '\0';
 
 					lumpinfo[numlumps].name2 = Z_Malloc((eNameLen+1)*sizeof(char), PU_STATIC, NULL);
 					strncpy(lumpinfo[numlumps].name2, eName, eNameLen);
 					lumpinfo[numlumps].name2[eNameLen] = '\0';
 
-					lumpinfo[numlumps].size = eSize;
-
-					lumpinfo[numlumps].compressed = 0;
-
-					lumpinfo[numlumps].compression = CM_NONE;
-
-					//CONS_Printf("The lump's current long name is %s\n", lumpinfo[numlumps].name2);
-					//CONS_Printf("The lump's current short name is %s\n", lumpinfo[numlumps].name);
+					// We set the compression type from what we're supporting so far.
+					switch(eCompression)
+					{
+					case 0:
+						lumpinfo[numlumps].compression = CM_NONE;
+						break;
+					case 8:
+						lumpinfo[numlumps].compression = CM_DEFLATE;
+						break;
+					case 14:
+						lumpinfo[numlumps].compression = CM_LZF;
+						break;
+					default:
+						CONS_Alert(CONS_WARNING, "Lump has an unsupported compression type!\n");
+						lumpinfo[numlumps].compression = CM_NONE;
+						break;
+					}
+					fseek(handle, eXFieldLen + eCommentLen, SEEK_CUR); // We skip to where we expect the next central directory entry or end marker to be.
 					numlumps++;
 				}
-
 				free(eName);
 			}
-			else if (!memcmp(sigBuffer, "\x50\x4b\x05\x06", 4)) // Found the central dir end signature, stop seeking.
+			// We found the central directory end signature?
+			else if (!strncmp(curHeader, endPat, 4))
 			{
-				CONS_Printf("Found central directory end at position %ld.\n", handlePos);
+				CONS_Printf("Central directory end signature found at: %ld\n", ftell(handle));
+
+				// We will create a "virtual" marker lump at the very end of lumpinfo for convenience.
+				// This marker will be used by the different lump-seeking (eg. textures, sprites, etc.) in PK3-specific cases in an auxiliary way.
+				lumpinfo = (lumpinfo_t*) Z_Realloc(lumpinfo, (numlumps + 1)*sizeof(*lumpinfo), PU_STATIC, NULL);
+				strcpy(lumpinfo[numlumps].name, "PK3_ENDM\0");
+				lumpinfo[numlumps].name2 = Z_Malloc(14 * sizeof(char), PU_STATIC, NULL);
+				strcpy(lumpinfo[numlumps].name2, "PK3_ENDMARKER\0");
+				lumpinfo[numlumps].position = 0;
+				lumpinfo[numlumps].size = 0;
+				lumpinfo[numlumps].disksize = 0;
+				lumpinfo[numlumps].compression = CM_NONE;
+				numlumps++;
 				break;
 			}
-			fseek(handle, -3, SEEK_CUR);
+			// ... None of them? We're only expecting either a central directory signature entry or the central directory end signature.
+			// The file may be broken or incomplete...
+			else
+			{
+				CONS_Alert(CONS_WARNING, "Expected central directory header signature, got something else!");
+				return INT16_MAX;
+			}
 		}
-		// We reached way past beyond the file size.
-		// This means we couldn't find the central directory end signature, and thus the file might be broken.
-		if (handlePos + 3 == size)
-		{
-			CONS_Alert(CONS_ERROR, "No central dir end inside PK3! File may be corrupted or incomplete.\n");
-			free(sigBuffer);
-			return INT16_MAX;
-		}
-
 		// If we've reached this far, then it means our dynamically stored lumpinfo has to be ready.
 		// Now we finally build our... incorrectly called wadfile.
 		// TODO: Maybe we should give them more generalized names, like resourcefile or resfile or something.
 		// Mostly for clarity and better understanding when reading the code.
-		free(sigBuffer);
 	}
 	// assume wad file
 	else
@@ -581,13 +633,11 @@ UINT16 W_LoadWadFile(const char *filename)
 				if (realsize != 0)
 				{
 					lump_p->size = realsize;
-					lump_p->compressed = 1;
 					lump_p->compression = CM_LZF;
 				}
 				else
 				{
 					lump_p->size -= 4;
-					lump_p->compressed = 0;
 					lump_p->compression = CM_NONE;
 				}
 
@@ -596,7 +646,6 @@ UINT16 W_LoadWadFile(const char *filename)
 			}
 			else
 			{
-				lump_p->compressed = 0;
 				lump_p->compression = CM_NONE;
 			}
 			memset(lump_p->name, 0x00, 9);
@@ -608,24 +657,6 @@ UINT16 W_LoadWadFile(const char *filename)
 		}
 		free(fileinfov);
 	}
-
-#ifndef NOMD5
-	//
-	// w-waiiiit!
-	// Let's not add a wad file if the MD5 matches
-	// an MD5 of an already added WAD file!
-	//
-	W_MakeFileMD5(filename, md5sum);
-
-	for (i = 0; i < numwadfiles; i++)
-	{
-		if (!memcmp(wadfiles[i]->md5sum, md5sum, 16))
-		{
-			CONS_Alert(CONS_ERROR, M_GetText("%s is already loaded\n"), filename);
-			return INT16_MAX;
-		}
-	}
-#endif
 
 	//
 	// link wad file to search files
@@ -794,6 +825,41 @@ UINT16 W_CheckNumForNamePwad(const char *name, UINT16 wad, UINT16 startlump)
 	}
 
 	// not found.
+	return INT16_MAX;
+}
+
+// In a PK3 type of resource file, it looks for the next lumpinfo entry that doesn't share the specified pathfile.
+// Useful for finding folder ends.
+// Returns the position of the lumpinfo entry.
+UINT16 W_CheckNumForFolderEndPK3(const char *name, UINT16 wad, UINT16 startlump)
+{
+	INT32 i;
+	lumpinfo_t *lump_p = wadfiles[wad]->lumpinfo + startlump;
+	for (i = startlump; i < wadfiles[wad]->numlumps; i++, lump_p++)
+	{
+		if (strnicmp(name, lump_p->name2, strlen(name)))
+			break;
+	}
+	// Not found at all?
+	CONS_Printf("W_CheckNumForFolderEndPK3: Folder %s end at %d.\n", name, i);
+	return i;
+}
+
+// In a PK3 type of resource file, it looks for
+// Returns lump position in PK3's lumpinfo, or INT16_MAX if not found.
+UINT16 W_CheckNumForFullNamePK3(const char *name, UINT16 wad, UINT16 startlump)
+{
+	INT32 i;
+	lumpinfo_t *lump_p = wadfiles[wad]->lumpinfo + startlump;
+	for (i = startlump; i < wadfiles[wad]->numlumps; i++, lump_p++)
+	{
+		if (!strnicmp(name, lump_p->name2, strlen(name)))
+		{
+			CONS_Printf("W_CheckNumForNamePK3: Found %s at %d.\n", name, i);
+			return i;
+		}
+	}
+	// Not found at all?
 	return INT16_MAX;
 }
 
@@ -1010,7 +1076,7 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 		size = lumpsize - offset;
 
 	//
-	switch(wadfiles[wad]->lumpinfo[lump].compressed)
+	switch(wadfiles[wad]->lumpinfo[lump].compression)
 	{
 	case CM_LZF:
 		{

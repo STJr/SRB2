@@ -567,8 +567,16 @@ void R_LoadTextures(void)
 	// but the alternative is to spend a ton of time checking and re-checking all previous entries just to skip any potentially patched textures.
 	for (w = 0, numtextures = 0; w < numwadfiles; w++)
 	{
-		texstart = W_CheckNumForNamePwad(TX_START, (UINT16)w, 0) + 1;
-		texend = W_CheckNumForNamePwad(TX_END, (UINT16)w, 0);
+		if (wadfiles[w]->type == RET_PK3)
+		{
+			texstart = W_CheckNumForFullNamePK3("txturs/", (UINT16)w, 0) + 1;
+			texend = W_CheckNumForFolderEndPK3("txturs/", (UINT16)w, texstart);
+		}
+		else
+		{
+			texstart = W_CheckNumForNamePwad(TX_START, (UINT16)w, 0) + 1;
+			texend = W_CheckNumForNamePwad(TX_END, (UINT16)w, 0);
+		}
 		texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, 0);
 
 		if (texturesLumpPos != INT16_MAX)
@@ -588,7 +596,7 @@ void R_LoadTextures(void)
 			I_Error("No textures detected in any WADs!\n");
 		}
 	}
-
+	CONS_Printf("We got a number of %d textures.\n", numtextures);
 	// Allocate memory and initialize to 0 for all the textures we are initialising.
 	// There are actually 5 buffers allocated in one for convenience.
 	textures = Z_Calloc((numtextures * sizeof(void *)) * 5, PU_STATIC, NULL);
@@ -610,8 +618,16 @@ void R_LoadTextures(void)
 	for (i = 0, w = 0; w < numwadfiles; w++)
 	{
 		// Get the lump numbers for the markers in the WAD, if they exist.
-		texstart = W_CheckNumForNamePwad(TX_START, (UINT16)w, 0) + 1;
-		texend = W_CheckNumForNamePwad(TX_END, (UINT16)w, 0);
+		if (wadfiles[w]->type == RET_PK3)
+		{
+			texstart = W_CheckNumForFullNamePK3("txturs/", (UINT16)w, 0) + 1;
+			texend = W_CheckNumForFolderEndPK3("txturs/", (UINT16)w, texstart);
+		}
+		else
+		{
+			texstart = W_CheckNumForNamePwad(TX_START, (UINT16)w, 0) + 1;
+			texend = W_CheckNumForNamePwad(TX_END, (UINT16)w, 0);
+		}
 		texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, 0);
 
 		if (texturesLumpPos != INT16_MAX)

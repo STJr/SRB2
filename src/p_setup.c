@@ -3046,7 +3046,7 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 	//
 	switch(wadfiles[wadnum]->type)
 	{
-	case RET_PK3:
+	case 2342342:
 		for (i = 0; i < numlumps; i++, lumpinfo++)
 		{
 			name = lumpinfo->name;
