@@ -462,11 +462,14 @@ UINT16 W_LoadWadFile(const char *filename)
 				int namePos;
 				unsigned short int eNameLen = 8;
 				unsigned short int eXFieldLen = 0;
+				unsigned short int lNameLen = 0;
+				unsigned short int lXFieldLen = 0;
 				unsigned short int eCommentLen = 0;
 				unsigned short int eCompression = 0;
 				unsigned int eSize = 0;
 				unsigned int eCompSize = 0;
 				unsigned int eLocalHeaderOffset = 0;
+				unsigned long int rememberPos = 0;
 
 				// We get the compression type indicator value.
 				fseek(handle, 6, SEEK_CUR);
@@ -490,7 +493,15 @@ UINT16 W_LoadWadFile(const char *filename)
 				else // Otherwise, reallocate and increase by 1. Might not be optimal, though...
 					lumpinfo = (lumpinfo_t*) Z_Realloc(lumpinfo, (numlumps + 1)*sizeof(*lumpinfo), PU_STATIC, NULL);
 
-				lumpinfo[numlumps].position = eLocalHeaderOffset + 30 + eNameLen + eXFieldLen;
+				// We must calculate the position for the actual data.
+				// Why not eLocalHeaderOffset + 30 + eNameLen + eXFieldLen? That's because the extra field and name lengths MAY be different in the local headers.
+				rememberPos = ftell(handle);
+				fseek(handle, eLocalHeaderOffset + 26, SEEK_SET);
+				fread(&lNameLen, 1, 2, handle);
+				fread(&lXFieldLen, 1, 2, handle);
+				lumpinfo[numlumps].position = ftell(handle) + lNameLen + lXFieldLen;
+
+				fseek(handle, rememberPos, SEEK_SET); // Let's go back to the central dir.
 				lumpinfo[numlumps].disksize = eCompSize;
 				lumpinfo[numlumps].size = eSize;
 				CONS_Printf("Address: %ld, Full: %ld, Comp: %ld\n", lumpinfo[numlumps].position, lumpinfo[numlumps].size, lumpinfo[numlumps].disksize);
