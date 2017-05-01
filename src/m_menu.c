@@ -4450,6 +4450,7 @@ static void M_ChangeLevel(INT32 choice)
 static void M_ConfirmSpectate(INT32 choice)
 {
 	(void)choice;
+	// We allow switching to spectator even if team changing is not allowed
 	M_ClearMenus(true);
 	COM_ImmedExecute("changeteam spectator");
 }
@@ -4457,6 +4458,11 @@ static void M_ConfirmSpectate(INT32 choice)
 static void M_ConfirmEnterGame(INT32 choice)
 {
 	(void)choice;
+	if (!cv_allowteamchange.value)
+	{
+		M_StartMessage(M_GetText("The server is not allowing\nteam changes at this time.\nPress a key.\n"), NULL, MM_NOTHING);
+		return;
+	}
 	M_ClearMenus(true);
 	COM_ImmedExecute("changeteam playing");
 }
