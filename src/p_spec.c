@@ -3167,22 +3167,31 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				INT32 viewid = sides[line->sidenum[0]].textureoffset>>FRACBITS;
 				INT32 centerid = sides[line->sidenum[0]].rowoffset>>FRACBITS;
 
-				// set viewpoint mobj
-				if (!(line->flags & ML_EFFECT4))
+				if ((line->flags & (ML_EFFECT4|ML_BLOCKMONSTERS)) == ML_EFFECT4) // Solid Midtexture is on but Block Enemies is off?
 				{
-					if (viewid >= 0 && viewid < 16)
-						skyboxmo[0] = skyboxviewpnts[viewid];
-					else
-						skyboxmo[0] = NULL;
+					CONS_Alert(CONS_WARNING,
+					M_GetText("Skybox switch linedef (tag %d) doesn't have anything to do.\nConsider changing the linedef's flag configuration or removing it entirely.\n"),
+					line->tag);
 				}
-
-				// set centerpoint mobj
-				if (line->flags & ML_BLOCKMONSTERS)
+				else
 				{
-					if (centerid >= 0 && centerid < 16)
-						skyboxmo[1] = skyboxcenterpnts[centerid];
-					else
-						skyboxmo[1] = NULL;
+					// set viewpoint mobj
+					if (!(line->flags & ML_EFFECT4)) // Solid Midtexture turns off viewpoint setting
+					{
+						if (viewid >= 0 && viewid < 16)
+							skyboxmo[0] = skyboxviewpnts[viewid];
+						else
+							skyboxmo[0] = NULL;
+					}
+
+					// set centerpoint mobj
+					if (line->flags & ML_BLOCKMONSTERS) // Block Enemies turns ON centerpoint setting
+					{
+						if (centerid >= 0 && centerid < 16)
+							skyboxmo[1] = skyboxcenterpnts[centerid];
+						else
+							skyboxmo[1] = NULL;
+					}
 				}
 
 				CONS_Debug(DBG_GAMELOGIC, "Line type 448 Executor: viewid = %d, centerid = %d, viewpoint? = %s, centerpoint? = %s\n",
