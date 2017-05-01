@@ -46,7 +46,9 @@
 #include <errno.h>
 #endif
 
-mobj_t *skyboxmo[2];
+mobj_t *skyboxmo[2]; // current skybox mobjs: 0 = viewpoint, 1 = centerpoint
+mobj_t *skyboxviewpnts[16]; // array of MT_SKYBOX viewpoint mobjs
+mobj_t *skyboxcenterpnts[16]; // array of MT_SKYBOX centerpoint mobjs
 
 // Amount (dx, dy) vector linedef is shifted right to get scroll amount
 #define SCROLL_SHIFT 5
@@ -3156,6 +3158,47 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 					EV_StartCrumble(rover->master->frontsector, rover, (rover->flags & FF_FLOATBOB), player, rover->alpha, respawn);
 				}
+			}
+			break;
+
+		case 448: // Change skybox viewpoint/centerpoint
+			if ((mo && mo->player && P_IsLocalPlayer(mo->player)) || (line->flags & ML_NOCLIMB))
+			{
+				INT32 viewid = sides[line->sidenum[0]].textureoffset>>FRACBITS;
+				INT32 centerid = sides[line->sidenum[0]].rowoffset>>FRACBITS;
+
+				if ((line->flags & (ML_EFFECT4|ML_BLOCKMONSTERS)) == ML_EFFECT4) // Solid Midtexture is on but Block Enemies is off?
+				{
+					CONS_Alert(CONS_WARNING,
+					M_GetText("Skybox switch linedef (tag %d) doesn't have anything to do.\nConsider changing the linedef's flag configuration or removing it entirely.\n"),
+					line->tag);
+				}
+				else
+				{
+					// set viewpoint mobj
+					if (!(line->flags & ML_EFFECT4)) // Solid Midtexture turns off viewpoint setting
+					{
+						if (viewid >= 0 && viewid < 16)
+							skyboxmo[0] = skyboxviewpnts[viewid];
+						else
+							skyboxmo[0] = NULL;
+					}
+
+					// set centerpoint mobj
+					if (line->flags & ML_BLOCKMONSTERS) // Block Enemies turns ON centerpoint setting
+					{
+						if (centerid >= 0 && centerid < 16)
+							skyboxmo[1] = skyboxcenterpnts[centerid];
+						else
+							skyboxmo[1] = NULL;
+					}
+				}
+
+				CONS_Debug(DBG_GAMELOGIC, "Line type 448 Executor: viewid = %d, centerid = %d, viewpoint? = %s, centerpoint? = %s\n",
+						viewid,
+						centerid,
+						((line->flags & ML_EFFECT4) ? "no" : "yes"),
+						((line->flags & ML_BLOCKMONSTERS) ? "yes" : "no"));
 			}
 			break;
 
