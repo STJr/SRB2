@@ -459,6 +459,7 @@ UINT16 W_LoadWadFile(const char *filename)
 				// Let's fill in the fields that we actually need.
 				// (Declaring all those vars might not be the optimal way to do this, sorry.)
 				char *eName;
+				int namePos;
 				unsigned short int eNameLen = 8;
 				unsigned short int eXFieldLen = 0;
 				unsigned short int eCommentLen = 0;
@@ -466,7 +467,6 @@ UINT16 W_LoadWadFile(const char *filename)
 				unsigned int eSize = 0;
 				unsigned int eCompSize = 0;
 				unsigned int eLocalHeaderOffset = 0;
-				int namePos;
 
 				// We get the compression type indicator value.
 				fseek(handle, 6, SEEK_CUR);
@@ -482,20 +482,20 @@ UINT16 W_LoadWadFile(const char *filename)
 				fseek(handle, 8, SEEK_CUR);
 				fread(&eLocalHeaderOffset, 1, 4, handle); // Get the offset.
 
+				eName = malloc(sizeof(char)*(eNameLen + 1));
+				fgets(eName, eNameLen + 1, handle);
+				CONS_Printf("File %s at: %ld\n", eName, ftell(handle));
 				if (numlumps == 0) // First lump? Let's allocate the first lumpinfo block.
 					lumpinfo = Z_Malloc(sizeof(*lumpinfo), PU_STATIC, NULL);
 				else // Otherwise, reallocate and increase by 1. Might not be optimal, though...
 					lumpinfo = (lumpinfo_t*) Z_Realloc(lumpinfo, (numlumps + 1)*sizeof(*lumpinfo), PU_STATIC, NULL);
 
-				eName = malloc(sizeof(char)*(eNameLen + 1));
-				fgets(eName, eNameLen + 1, handle);
-				namePos = eNameLen - 1;
 				lumpinfo[numlumps].position = eLocalHeaderOffset + 30 + eNameLen + eXFieldLen;
 				lumpinfo[numlumps].disksize = eCompSize;
 				lumpinfo[numlumps].size = eSize;
-				CONS_Printf("File %s at: %ld\n", eName, ftell(handle));
 				CONS_Printf("Address: %ld, Full: %ld, Comp: %ld\n", lumpinfo[numlumps].position, lumpinfo[numlumps].size, lumpinfo[numlumps].disksize);
 				// We will trim the file's full name so that only the filename is left.
+				namePos = eNameLen - 1;
 				while(namePos--)
 				{
 					if(eName[namePos] == '/')
@@ -839,7 +839,7 @@ UINT16 W_CheckNumForFolderEndPK3(const char *name, UINT16 wad, UINT16 startlump)
 	return i;
 }
 
-// In a PK3 type of resource file, it looks for
+// In a PK3 type of resource file, it looks for an entry with the specified full name.
 // Returns lump position in PK3's lumpinfo, or INT16_MAX if not found.
 UINT16 W_CheckNumForFullNamePK3(const char *name, UINT16 wad, UINT16 startlump)
 {
