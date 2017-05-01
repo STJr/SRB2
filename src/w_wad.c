@@ -459,6 +459,7 @@ UINT16 W_LoadWadFile(const char *filename)
 				// Let's fill in the fields that we actually need.
 				// (Declaring all those vars might not be the optimal way to do this, sorry.)
 				char *eName;
+				int namePos;
 				unsigned short int eNameLen = 8;
 				unsigned short int eXFieldLen = 0;
 				unsigned short int eCommentLen = 0;
@@ -483,59 +484,52 @@ UINT16 W_LoadWadFile(const char *filename)
 
 				eName = malloc(sizeof(char)*(eNameLen + 1));
 				fgets(eName, eNameLen + 1, handle);
-				if (0)//(eSize == 0) // Is this entry a folder?
+				CONS_Printf("File %s at: %ld\n", eName, ftell(handle));
+				if (numlumps == 0) // First lump? Let's allocate the first lumpinfo block.
+					lumpinfo = Z_Malloc(sizeof(*lumpinfo), PU_STATIC, NULL);
+				else // Otherwise, reallocate and increase by 1. Might not be optimal, though...
+					lumpinfo = (lumpinfo_t*) Z_Realloc(lumpinfo, (numlumps + 1)*sizeof(*lumpinfo), PU_STATIC, NULL);
+
+				lumpinfo[numlumps].position = eLocalHeaderOffset + 30 + eNameLen + eXFieldLen;
+				lumpinfo[numlumps].disksize = eCompSize;
+				lumpinfo[numlumps].size = eSize;
+				CONS_Printf("Address: %ld, Full: %ld, Comp: %ld\n", lumpinfo[numlumps].position, lumpinfo[numlumps].size, lumpinfo[numlumps].disksize);
+				// We will trim the file's full name so that only the filename is left.
+				namePos = eNameLen - 1;
+				while(namePos--)
 				{
-					CONS_Printf("Folder %s at %ld:\n", eName, ftell(handle));
-				}
-				else // If not, then it is a normal file. Let's arrange its lumpinfo structure then!
-				{
-					int namePos = eNameLen - 1;
-					CONS_Printf("File %s at: %ld\n", eName, ftell(handle));
-					if (numlumps == 0) // First lump? Let's allocate the first lumpinfo block.
-						lumpinfo = Z_Malloc(sizeof(*lumpinfo), PU_STATIC, NULL);
-					else // Otherwise, reallocate and increase by 1. Might not be optimal, though...
-						lumpinfo = (lumpinfo_t*) Z_Realloc(lumpinfo, (numlumps + 1)*sizeof(*lumpinfo), PU_STATIC, NULL);
-
-					lumpinfo[numlumps].position = eLocalHeaderOffset + 30 + eNameLen + eXFieldLen;
-					lumpinfo[numlumps].disksize = eCompSize;
-					lumpinfo[numlumps].size = eSize;
-					CONS_Printf("Address: %ld, Full: %ld, Comp: %ld\n", lumpinfo[numlumps].position, lumpinfo[numlumps].size, lumpinfo[numlumps].disksize);
-					// We will trim the file's full name so that only the filename is left.
-					while(namePos--)
+					if(eName[namePos] == '/')
 					{
-						if(eName[namePos] == '/')
-						{
-							namePos++;
-							break;
-						}
-					}
-					memset(lumpinfo[numlumps].name, '\0', 9);
-					strncpy(lumpinfo[numlumps].name, eName + namePos, 8);
-
-					lumpinfo[numlumps].name2 = Z_Malloc((eNameLen+1)*sizeof(char), PU_STATIC, NULL);
-					strncpy(lumpinfo[numlumps].name2, eName, eNameLen);
-					lumpinfo[numlumps].name2[eNameLen] = '\0';
-
-					// We set the compression type from what we're supporting so far.
-					switch(eCompression)
-					{
-					case 0:
-						lumpinfo[numlumps].compression = CM_NONE;
-						break;
-					case 8:
-						lumpinfo[numlumps].compression = CM_DEFLATE;
-						break;
-					case 14:
-						lumpinfo[numlumps].compression = CM_LZF;
-						break;
-					default:
-						CONS_Alert(CONS_WARNING, "Lump has an unsupported compression type!\n");
-						lumpinfo[numlumps].compression = CM_NONE;
+						namePos++;
 						break;
 					}
-					fseek(handle, eXFieldLen + eCommentLen, SEEK_CUR); // We skip to where we expect the next central directory entry or end marker to be.
-					numlumps++;
 				}
+				memset(lumpinfo[numlumps].name, '\0', 9);
+				strncpy(lumpinfo[numlumps].name, eName + namePos, 8);
+
+				lumpinfo[numlumps].name2 = Z_Malloc((eNameLen+1)*sizeof(char), PU_STATIC, NULL);
+				strncpy(lumpinfo[numlumps].name2, eName, eNameLen);
+				lumpinfo[numlumps].name2[eNameLen] = '\0';
+
+				// We set the compression type from what we're supporting so far.
+				switch(eCompression)
+				{
+				case 0:
+					lumpinfo[numlumps].compression = CM_NONE;
+					break;
+				case 8:
+					lumpinfo[numlumps].compression = CM_DEFLATE;
+					break;
+				case 14:
+					lumpinfo[numlumps].compression = CM_LZF;
+					break;
+				default:
+					CONS_Alert(CONS_WARNING, "Lump has an unsupported compression type!\n");
+					lumpinfo[numlumps].compression = CM_NONE;
+					break;
+				}
+				fseek(handle, eXFieldLen + eCommentLen, SEEK_CUR); // We skip to where we expect the next central directory entry or end marker to be.
+				numlumps++;
 				free(eName);
 			}
 			// We found the central directory end signature?
@@ -845,7 +839,7 @@ UINT16 W_CheckNumForFolderEndPK3(const char *name, UINT16 wad, UINT16 startlump)
 	return i;
 }
 
-// In a PK3 type of resource file, it looks for
+// In a PK3 type of resource file, it looks for an entry with the specified full name.
 // Returns lump position in PK3's lumpinfo, or INT16_MAX if not found.
 UINT16 W_CheckNumForFullNamePK3(const char *name, UINT16 wad, UINT16 startlump)
 {
