@@ -509,7 +509,7 @@ UINT16 W_LoadWadFile(const char *filename)
 							break;
 						}
 					}
-					memset(lumpinfo[numlumps].name, '\0', 9)
+					memset(lumpinfo[numlumps].name, '\0', 9);
 					strncpy(lumpinfo[numlumps].name, eName + namePos, 8);
 
 					lumpinfo[numlumps].name2 = Z_Malloc((eNameLen+1)*sizeof(char), PU_STATIC, NULL);
