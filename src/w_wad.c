@@ -25,6 +25,9 @@
 #endif
 #include "lzf.h"
 #endif
+//#ifdef HAVE_ZLIB
+#include "zlib.h"
+//#endif // HAVE_ZLIB
 
 #include "doomdef.h"
 #include "doomstat.h"
@@ -504,7 +507,6 @@ UINT16 W_LoadWadFile(const char *filename)
 				fseek(handle, rememberPos, SEEK_SET); // Let's go back to the central dir.
 				lumpinfo[numlumps].disksize = eCompSize;
 				lumpinfo[numlumps].size = eSize;
-				CONS_Printf("Address: %ld, Full: %ld, Comp: %ld\n", lumpinfo[numlumps].position, lumpinfo[numlumps].size, lumpinfo[numlumps].disksize);
 				// We will trim the file's full name so that only the filename is left.
 				namePos = eNameLen - 1;
 				while(namePos--)
@@ -997,7 +999,6 @@ size_t W_LumpLength(lumpnum_t lumpnum)
 size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, size_t offset)
 {
 	size_t lumpsize;
-	size_t bytesread;
 	lumpinfo_t *l;
 	FILE *handle;
 
@@ -1019,16 +1020,17 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 	handle = wadfiles[wad]->handle;
 	fseek(handle, (long)(l->position + offset), SEEK_SET);
 
+	// But let's not copy it yet. We support different compression formats on lumps, so we need to take that into account.
 	switch(wadfiles[wad]->lumpinfo[lump].compression)
 	{
 	case CM_NONE:		// If it's uncompressed, we directly write the data into our destination, and return the bytes read.
 		return fread(dest, 1, size, handle);
-	case CM_LZF:		// Is it LZF compressed?
+	case CM_LZF:		// Is it LZF compressed? Used by ZWADs.
 		{
 #ifdef ZWAD
 			char *rawData; // The lump's raw data.
 			char *decData; // Lump's decompressed real data.
-			size_t retval; // Helper var, lzf_decompress 0 when an error occurs.
+			size_t retval; // Helper var, lzf_decompress returns 0 when an error occurs.
 
 			rawData = Z_Malloc(l->disksize, PU_STATIC, NULL);
 			decData = Z_Malloc(l->size, PU_STATIC, NULL);
@@ -1062,8 +1064,65 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 			Z_Free(decData);
 			return size;
 		}
+	case CM_DEFLATE: // Is it compressed via DEFLATE? Very common in ZIPs/PK3s, also what most doom-related editors support.
+		{
+			int ret;
+			unsigned have;
+			z_stream strm;
+			unsigned char in[16384];
+			unsigned char out[16384];
+
+			/* allocate inflate state */
+			strm.zalloc = Z_NULL;
+			strm.zfree = Z_NULL;
+			strm.opaque = Z_NULL;
+			strm.avail_in = 0;
+			strm.next_in = Z_NULL;
+			ret = inflateInit(&strm);
+			if (ret != Z_OK)
+				return ret;
+
+			/* decompress until deflate stream ends or end of file */
+			do {
+				strm.avail_in = fread(in, 1, 16384, handle);
+				if (ferror(handle)) {
+					(void)inflateEnd(&strm);
+					return Z_ERRNO;
+				}
+				if (strm.avail_in == 0)
+					break;
+				strm.next_in = in;
+
+					/* run inflate() on input until output buffer not full */
+				do {
+
+					strm.avail_out = 16384;
+					strm.next_out = out;
+
+					ret = inflate(&strm, Z_NO_FLUSH);
+					//assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
+					switch (ret) {
+					case Z_NEED_DICT:
+						ret = Z_DATA_ERROR;     /* and fall through */
+					case Z_DATA_ERROR:
+					case Z_MEM_ERROR:
+						(void)inflateEnd(&strm);
+						return ret;
+					}
+
+					have = 16384 - strm.avail_out;
+					memcpy(dest, out, have);
+				} while (strm.avail_out == 0);
+
+				/* done when inflate() says it's done */
+			} while (ret != Z_STREAM_END);
+
+			/* clean up and return */
+			(void)inflateEnd(&strm);
+			return size;
+		}
 	default:
-		return fread(dest, 1, size, handle);
+		return 0;
 	}
 }
 
