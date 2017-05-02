@@ -983,80 +983,10 @@ size_t W_LumpLength(lumpnum_t lumpnum)
 	return W_LumpLengthPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum));
 }
 
-/** Reads bytes from the head of a lump, without doing decompression.
-  *
-  * \param wad Wad number to read from.
-  * \param lump Lump number to read from, within wad.
-  * \param dest Buffer in memory to serve as destination.
-  * \param size Number of bytes to read.
-  * \param offest Number of bytes to offset.
-  * \return Number of bytes read (should equal size).
-  * \sa W_ReadLumpHeader
-  */
-static size_t W_RawReadLumpHeader(UINT16 wad, UINT16 lump, void *dest, size_t size, size_t offset)
-{
-	size_t bytesread;
-	lumpinfo_t *l;
-	FILE *handle;
-
-	l = wadfiles[wad]->lumpinfo + lump;
-
-	handle = wadfiles[wad]->handle;
-
-	fseek(handle, (long)(l->position + offset), SEEK_SET);
-	bytesread = fread(dest, 1, size, handle);
-
-	return bytesread;
-}
-
-// Read a compressed lump; return it in newly Z_Malloc'd memory.
-// wad is number of wad file, lump is number of lump in wad.
-static void *W_ReadCompressedLump(UINT16 wad, UINT16 lump)
-{
-#ifdef ZWAD
-	char *compressed, *data;
-	const lumpinfo_t *l = &wadfiles[wad]->lumpinfo[lump];
-	size_t retval;
-
-	compressed = Z_Malloc(l->disksize, PU_STATIC, NULL);
-	data = Z_Malloc(l->size, PU_STATIC, NULL);
-	if (W_RawReadLumpHeader(wad, lump, compressed, l->disksize, 0)
-		< l->disksize)
-	{
-		I_Error("wad %d, lump %d: cannot read compressed data",
-			wad, lump);
-	}
-
-	retval = lzf_decompress(compressed, l->disksize, data, l->size);
-#ifndef AVOID_ERRNO
-	if (retval == 0 && errno == E2BIG)
-	{
-		I_Error("wad %d, lump %d: compressed data too big "
-			"(bigger than %s)", wad, lump, sizeu1(l->size));
-	}
-	else if (retval == 0 && errno == EINVAL)
-		I_Error("wad %d, lump %d: invalid compressed data", wad, lump);
-	else
-#endif
-	if (retval != l->size)
-	{
-		I_Error("wad %d, lump %d: decompressed to wrong number of "
-			"bytes (expected %s, got %s)", wad, lump,
-			sizeu1(l->size), sizeu2(retval));
-	}
-	Z_Free(compressed);
-	return data;
-#else
-	(void)wad;
-	(void)lump;
-	//I_Error("ZWAD files not supported on this platform.");
-	return NULL;
-#endif
-}
-
 /** Reads bytes from the head of a lump.
   * Note: If the lump is compressed, the whole thing has to be read anyway.
   *
+  * \param wad Wad number to read from.
   * \param lump Lump number to read from.
   * \param dest Buffer in memory to serve as destination.
   * \param size Number of bytes to read.
@@ -1067,6 +997,9 @@ static void *W_ReadCompressedLump(UINT16 wad, UINT16 lump)
 size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, size_t offset)
 {
 	size_t lumpsize;
+	size_t bytesread;
+	lumpinfo_t *l;
+	FILE *handle;
 
 	if (!TestValidLump(wad,lump))
 		return 0;
@@ -1080,20 +1013,57 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 	if (!size || size+offset > lumpsize)
 		size = lumpsize - offset;
 
-	//
+	// Let's get the raw lump data.
+	// We setup the desired file handle to read the lump data.
+	l = wadfiles[wad]->lumpinfo + lump;
+	handle = wadfiles[wad]->handle;
+	fseek(handle, (long)(l->position + offset), SEEK_SET);
+
 	switch(wadfiles[wad]->lumpinfo[lump].compression)
 	{
-	case CM_LZF:
+	case CM_NONE:		// If it's uncompressed, we directly write the data into our destination, and return the bytes read.
+		return fread(dest, 1, size, handle);
+	case CM_LZF:		// Is it LZF compressed?
 		{
-			UINT8 *data;
-			data = W_ReadCompressedLump(wad, lump);
-			if (!data) return 0;
-			M_Memcpy(dest, data+offset, size);
-			Z_Free(data);
+#ifdef ZWAD
+			char *rawData; // The lump's raw data.
+			char *decData; // Lump's decompressed real data.
+			size_t retval; // Helper var, lzf_decompress 0 when an error occurs.
+
+			rawData = Z_Malloc(l->disksize, PU_STATIC, NULL);
+			decData = Z_Malloc(l->size, PU_STATIC, NULL);
+
+			if (fread(rawData, 1, l->disksize, handle) < l->disksize)
+				I_Error("wad %d, lump %d: cannot read compressed data", wad, lump);
+			retval = lzf_decompress(rawData, l->disksize, decData, l->size);
+#ifndef AVOID_ERRNO
+			if (retval == 0 && errno == E2BIG) // errno is a global var set by the lzf functions when something goes wrong.
+			{
+				I_Error("wad %d, lump %d: compressed data too big (bigger than %s)", wad, lump, sizeu1(l->size));
+			}
+			else if (retval == 0 && errno == EINVAL)
+				I_Error("wad %d, lump %d: invalid compressed data", wad, lump);
+			else
+#endif
+			if (retval != l->size)
+			{
+				I_Error("wad %d, lump %d: decompressed to wrong number of bytes (expected %s, got %s)", wad, lump, sizeu1(l->size), sizeu2(retval));
+			}
+#else
+			(void)wad;
+			(void)lump;
+			//I_Error("ZWAD files not supported on this platform.");
+			return NULL;
+#endif
+			if (!decData) // Did we get no data at all?
+				return 0;
+			M_Memcpy(dest, decData + offset, size);
+			Z_Free(rawData);
+			Z_Free(decData);
 			return size;
 		}
 	default:
-		return W_RawReadLumpHeader(wad, lump, dest, size, offset);
+		return fread(dest, 1, size, handle);
 	}
 }
 
