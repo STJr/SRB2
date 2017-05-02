@@ -35,7 +35,7 @@ typedef struct
 } wadinfo_t;
 
 // Available compression methods for lumps.
-enum compmethod{CM_NONE, CM_DEFLATE, CM_LZF};
+enum compmethod{CM_NONE, CM_DEFLATE, CM_LZF, CM_UNSUPPORTED};
 
 //  a memory entry of the wad directory
 typedef struct

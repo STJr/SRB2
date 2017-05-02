@@ -538,7 +538,7 @@ UINT16 W_LoadWadFile(const char *filename)
 					break;
 				default:
 					CONS_Alert(CONS_WARNING, "Lump has an unsupported compression type!\n");
-					lumpinfo[numlumps].compression = CM_NONE;
+					lumpinfo[numlumps].compression = CM_UNSUPPORTED;
 					break;
 				}
 				fseek(handle, eXFieldLen + eCommentLen, SEEK_CUR); // We skip to where we expect the next central directory entry or end marker to be.
@@ -1122,7 +1122,7 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 			return size;
 		}
 	default:
-		return 0;
+		I_Error("wad %d, lump %d: unsupported compression type!", wad, lump);
 	}
 }
 
