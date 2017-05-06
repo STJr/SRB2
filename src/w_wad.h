@@ -99,6 +99,8 @@ UINT16 W_LoadWadFile(const char *filename);
 void W_UnloadWadFile(UINT16 num);
 #endif
 
+static inline void W_LoadDehackedLumps(UINT16 wadnum);
+
 // W_InitMultipleFiles returns 1 if all is okay, 0 otherwise,
 // so that it stops with a message if a file was not found, but not if all is okay.
 INT32 W_InitMultipleFiles(char **filenames);

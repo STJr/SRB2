@@ -696,7 +696,10 @@ UINT16 W_LoadWadFile(const char *filename)
 	CONS_Printf(M_GetText("Added file %s (%u lumps)\n"), filename, numlumps);
 	wadfiles[numwadfiles] = wadfile;
 	numwadfiles++; // must come BEFORE W_LoadDehackedLumps, so any addfile called by COM_BufInsertText called by Lua doesn't overwrite what we just loaded
-	W_LoadDehackedLumps(numwadfiles-1);
+
+	// TODO: HACK ALERT - Load Lua & SOC stuff right here for WADs. Avoids crash on startup since WADs are loaded using W_InitMultipleFiles.
+	if (wadfile->type == RET_WAD)
+		W_LoadDehackedLumps(numwadfiles - 1);
 
 	W_InvalidateLumpnumCache();
 

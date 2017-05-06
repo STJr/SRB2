@@ -569,8 +569,8 @@ void R_LoadTextures(void)
 	{
 		if (wadfiles[w]->type == RET_PK3)
 		{
-			texstart = W_CheckNumForFullNamePK3("txturs/", (UINT16)w, 0) + 1;
-			texend = W_CheckNumForFolderEndPK3("txturs/", (UINT16)w, texstart);
+			texstart = W_CheckNumForFullNamePK3("textures/", (UINT16)w, 0) + 1;
+			texend = W_CheckNumForFolderEndPK3("textures/", (UINT16)w, texstart);
 		}
 		else
 		{
@@ -620,8 +620,8 @@ void R_LoadTextures(void)
 		// Get the lump numbers for the markers in the WAD, if they exist.
 		if (wadfiles[w]->type == RET_PK3)
 		{
-			texstart = W_CheckNumForFullNamePK3("txturs/", (UINT16)w, 0) + 1;
-			texend = W_CheckNumForFolderEndPK3("txturs/", (UINT16)w, texstart);
+			texstart = W_CheckNumForFullNamePK3("textures/", (UINT16)w, 0) + 1;
+			texend = W_CheckNumForFolderEndPK3("textures/", (UINT16)w, texstart);
 		}
 		else
 		{

@@ -50,6 +50,8 @@ void R_SortVisSprites(void);
 //faB: find sprites in wadfile, replace existing, add new ones
 //     (only sprites from namelist are added or replaced)
 void R_AddSpriteDefs(UINT16 wadnum);
+void R_AddSpriteDefsRange(UINT16 wadnum, UINT16 start, UINT16 end);
+
 
 #ifdef DELFILE
 void R_DelSpriteDefs(UINT16 wadnum);
