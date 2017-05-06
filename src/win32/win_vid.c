@@ -362,6 +362,10 @@ void I_FinishUpdate(void)
 	if (I_SkipFrame())
 		return;
 
+	// draw captions if enabled
+	if (cv_closedcaptioning.value)
+		SCR_ClosedCaptions();
+
 	// display a graph of ticrate
 	if (cv_ticrate.value)
 		SCR_DisplayTicRate();

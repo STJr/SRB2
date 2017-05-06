@@ -22,7 +22,7 @@
 #include "w_wad.h"
 #include "z_zone.h"
 #include "p_setup.h" // levelflats
-#include "v_video.h" // pLocalPalette
+#include "v_video.h" // pMasterPalette
 #include "dehacked.h"
 
 #if defined (_WIN32) || defined (_WIN32_WCE)
@@ -1410,9 +1410,9 @@ INT32 R_CreateColormap(char *p1, char *p2, char *p3)
 	{
 		for (i = 0; i < 256; i++)
 		{
-			r = pLocalPalette[i].s.red;
-			g = pLocalPalette[i].s.green;
-			b = pLocalPalette[i].s.blue;
+			r = pMasterPalette[i].s.red;
+			g = pMasterPalette[i].s.green;
+			b = pMasterPalette[i].s.blue;
 			cbrightness = sqrt((r*r) + (g*g) + (b*b));
 
 			map[i][0] = (cbrightness * cmaskr) + (r * othermask);
@@ -1553,9 +1553,9 @@ void R_CreateColormap2(char *p1, char *p2, char *p3)
 	{
 		for (i = 0; i < 256; i++)
 		{
-			r = pLocalPalette[i].s.red;
-			g = pLocalPalette[i].s.green;
-			b = pLocalPalette[i].s.blue;
+			r = pMasterPalette[i].s.red;
+			g = pMasterPalette[i].s.green;
+			b = pMasterPalette[i].s.blue;
 			cbrightness = sqrt((r*r) + (g*g) + (b*b));
 
 			map[i][0] = (cbrightness * cmaskr) + (r * othermask);
@@ -1635,9 +1635,9 @@ static UINT8 NearestColor(UINT8 r, UINT8 g, UINT8 b)
 
 	for (i = 0; i < 256; i++)
 	{
-		dr = r - pLocalPalette[i].s.red;
-		dg = g - pLocalPalette[i].s.green;
-		db = b - pLocalPalette[i].s.blue;
+		dr = r - pMasterPalette[i].s.red;
+		dg = g - pMasterPalette[i].s.green;
+		db = b - pMasterPalette[i].s.blue;
 		distortion = dr*dr + dg*dg + db*db;
 		if (distortion < bestdistortion)
 		{

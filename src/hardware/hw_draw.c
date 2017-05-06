@@ -789,7 +789,7 @@ boolean HWR_Screenshot(const char *lbmname)
 	HWD.pfnReadRect(0, 0, vid.width, vid.height, vid.width * 3, (void *)buf);
 
 #ifdef USE_PNG
-	ret = M_SavePNG(lbmname, buf, vid.width, vid.height, NULL);
+	ret = M_SavePNG(lbmname, buf, vid.width, vid.height, false);
 #else
 	ret = saveTGA(lbmname, buf, vid.width, vid.height);
 #endif

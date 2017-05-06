@@ -1341,6 +1341,10 @@ void I_FinishUpdate(void)
 	if (I_SkipFrame())
 		return;
 
+	// draw captions if enabled
+	if (cv_closedcaptioning.value)
+		SCR_ClosedCaptions();
+
 	if (cv_ticrate.value)
 		SCR_DisplayTicRate();
 
