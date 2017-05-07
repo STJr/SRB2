@@ -43,7 +43,7 @@ typedef struct
 	unsigned long position; // filelump_t filepos
 	unsigned long disksize; // filelump_t size
 	char name[9]; // filelump_t name[]
-	char *name2; // Dynamically allocated name.
+	char *name2; // Used by PK3s. Dynamically allocated name.
 	size_t size; // real (uncompressed) size
 	INT32 compressed; // i
 	enum compmethod compression; // lump compression method
@@ -94,7 +94,7 @@ void W_Shutdown(void);
 // Opens a WAD file. Returns the FILE * handle for the file, or NULL if not found or could not be opened
 FILE *W_OpenWadFile(const char **filename, boolean useerrors);
 // Load and add a wadfile to the active wad files, returns numbers of lumps, INT16_MAX on error
-UINT16 W_LoadWadFile(const char *filename);
+UINT16 W_InitFile(const char *filename);
 #ifdef DELFILE
 void W_UnloadWadFile(UINT16 num);
 #endif

@@ -291,7 +291,7 @@ static void W_InvalidateLumpnumCache(void)
 //
 // Can now load dehacked files (.soc)
 //
-UINT16 W_LoadWadFile(const char *filename)
+UINT16 W_InitFile(const char *filename)
 {
 	FILE *handle;
 	lumpinfo_t *lumpinfo;
@@ -412,12 +412,11 @@ UINT16 W_LoadWadFile(const char *filename)
 		numlumps = 0;
 
 		type = RET_PK3;
-		CONS_Alert(CONS_NOTICE, "PK3 file detected.\n");
 
 		// Obtain the file's size.
 		fseek(handle, 0, SEEK_END);
 		size = ftell(handle);
-		CONS_Printf("PK3 size is: %ld\n", size);
+		CONS_Debug(DBG_SETUP, "PK3 size is: %ld\n", size);
 
 		// We must look for the central directory through the file.
 		// All of the central directory entry headers have a signature of 0x50 0x4b 0x01 0x02.
@@ -435,7 +434,7 @@ UINT16 W_LoadWadFile(const char *filename)
 				{
 					matched = TRUE;
 					fseek(handle, -4, SEEK_CUR);
-					CONS_Printf("Found PK3 central directory at position %ld.\n", ftell(handle));
+					CONS_Debug(DBG_SETUP, "Found PK3 central directory at position %ld.\n", ftell(handle));
 					break;
 				}
 			}
@@ -451,7 +450,7 @@ UINT16 W_LoadWadFile(const char *filename)
 		// Since we found the central directory, now we can map our lumpinfo table.
 		// We will look for file headers inside it, until we reach the central directory end signature.
 		// We exactly know what data to expect this time, so now we don't need to do a byte-by-byte search.
-		CONS_Printf("Now finding central directory file headers...\n");
+		CONS_Debug(DBG_SETUP, "Now finding central directory file headers...\n");
 		while(ftell(handle) < size - 4) // Make sure we don't go past the file size!
 		{
 			fread(curHeader, 1, 4, handle);
@@ -477,10 +476,10 @@ UINT16 W_LoadWadFile(const char *filename)
 				// We get the compression type indicator value.
 				fseek(handle, 6, SEEK_CUR);
 				fread(&eCompression, 1, 2, handle);
-				// Get the
+				// Get the size
 				fseek(handle, 8, SEEK_CUR);
-				fread(&eSize, 1, 4, handle);
 				fread(&eCompSize, 1, 4, handle);
+				fread(&eSize, 1, 4, handle);
 				// We get the variable length fields.
 				fread(&eNameLen, 1, 2, handle);
 				fread(&eXFieldLen, 1, 2, handle);
@@ -490,7 +489,6 @@ UINT16 W_LoadWadFile(const char *filename)
 
 				eName = malloc(sizeof(char)*(eNameLen + 1));
 				fgets(eName, eNameLen + 1, handle);
-				CONS_Printf("File %s at: %ld\n", eName, ftell(handle));
 				if (numlumps == 0) // First lump? Let's allocate the first lumpinfo block.
 					lumpinfo = Z_Malloc(sizeof(*lumpinfo), PU_STATIC, NULL);
 				else // Otherwise, reallocate and increase by 1. Might not be optimal, though...
@@ -541,6 +539,7 @@ UINT16 W_LoadWadFile(const char *filename)
 					lumpinfo[numlumps].compression = CM_UNSUPPORTED;
 					break;
 				}
+				CONS_Debug(DBG_SETUP, "File %s, data begins at: %ld\n", eName, lumpinfo[numlumps].position);
 				fseek(handle, eXFieldLen + eCommentLen, SEEK_CUR); // We skip to where we expect the next central directory entry or end marker to be.
 				numlumps++;
 				free(eName);
@@ -548,7 +547,7 @@ UINT16 W_LoadWadFile(const char *filename)
 			// We found the central directory end signature?
 			else if (!strncmp(curHeader, endPat, 4))
 			{
-				CONS_Printf("Central directory end signature found at: %ld\n", ftell(handle));
+				CONS_Debug(DBG_SETUP, "Central directory end signature found at: %ld\n", ftell(handle));
 
 				// We will create a "virtual" marker lump at the very end of lumpinfo for convenience.
 				// This marker will be used by the different lump-seeking (eg. textures, sprites, etc.) in PK3-specific cases in an auxiliary way.
@@ -760,7 +759,7 @@ INT32 W_InitMultipleFiles(char **filenames)
 	for (; *filenames; filenames++)
 	{
 		//CONS_Debug(DBG_SETUP, "Loading %s\n", *filenames);
-		rc &= (W_LoadWadFile(*filenames) != INT16_MAX) ? 1 : 0;
+		rc &= (W_InitFile(*filenames) != INT16_MAX) ? 1 : 0;
 	}
 
 	if (!numwadfiles)
@@ -850,8 +849,6 @@ UINT16 W_CheckNumForFolderEndPK3(const char *name, UINT16 wad, UINT16 startlump)
 		if (strnicmp(name, lump_p->name2, strlen(name)))
 			break;
 	}
-	// Not found at all?
-	CONS_Printf("W_CheckNumForFolderEndPK3: Folder %s end at %d.\n", name, i);
 	return i;
 }
 
@@ -865,7 +862,6 @@ UINT16 W_CheckNumForFullNamePK3(const char *name, UINT16 wad, UINT16 startlump)
 	{
 		if (!strnicmp(name, lump_p->name2, strlen(name)))
 		{
-			CONS_Printf("W_CheckNumForNamePK3: Found %s at %d.\n", name, i);
 			return i;
 		}
 	}
@@ -943,15 +939,20 @@ lumpnum_t W_CheckNumForNameInBlock(const char *name, const char *blockstart, con
 	// scan wad files backwards so patch lump files take precedence
 	for (i = numwadfiles - 1; i >= 0; i--)
 	{
-		bsid = W_CheckNumForNamePwad(blockstart,(UINT16)i,0);
-		if (bsid == INT16_MAX)
-			continue; // block doesn't exist, keep going
-		beid = W_CheckNumForNamePwad(blockend,(UINT16)i,0);
-		// if block end doesn't exist, just search through everything
+		if (wadfiles[i]->type == RET_WAD)
+		{
+			bsid = W_CheckNumForNamePwad(blockstart, (UINT16)i, 0);
+			if (bsid == INT16_MAX)
+				continue; // Start block doesn't exist?
+			beid = W_CheckNumForNamePwad(blockend, (UINT16)i, 0);
+			if (beid == INT16_MAX)
+				continue; // End block doesn't exist?
 
-		check = W_CheckNumForNamePwad(name,(UINT16)i,bsid);
-		if (check < beid)
-			return (i<<16)+check; // found it, in our constraints
+			check = W_CheckNumForNamePwad(name, (UINT16)i, bsid);
+			if (check < beid)
+				return (i<<16)+check; // found it, in our constraints
+		}
+
 	}
 	return LUMPERROR;
 }
@@ -986,6 +987,31 @@ size_t W_LumpLengthPwad(UINT16 wad, UINT16 lump)
 size_t W_LumpLength(lumpnum_t lumpnum)
 {
 	return W_LumpLengthPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum));
+}
+
+/* report a zlib or i/o error */
+void zerr(int ret)
+{
+    CONS_Printf("zpipe: ", stderr);
+    switch (ret) {
+    case Z_ERRNO:
+        if (ferror(stdin))
+            CONS_Printf("error reading stdin\n", stderr);
+        if (ferror(stdout))
+            CONS_Printf("error writing stdout\n", stderr);
+        break;
+    case Z_STREAM_ERROR:
+        CONS_Printf("invalid compression level\n", stderr);
+        break;
+    case Z_DATA_ERROR:
+        CONS_Printf("invalid or incomplete deflate data\n", stderr);
+        break;
+    case Z_MEM_ERROR:
+        CONS_Printf("out of memory\n", stderr);
+        break;
+    case Z_VERSION_ERROR:
+        CONS_Printf("zlib version mismatch!\n", stderr);
+    }
 }
 
 /** Reads bytes from the head of a lump.
@@ -1069,59 +1095,55 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 		}
 	case CM_DEFLATE: // Is it compressed via DEFLATE? Very common in ZIPs/PK3s, also what most doom-related editors support.
 		{
-			int ret;
-			unsigned have;
-			z_stream strm;
-			unsigned char in[16384];
-			unsigned char out[16384];
+			char *rawData; // The lump's raw data.
+			char *decData; // Lump's decompressed real data.
 
-			/* allocate inflate state */
+			int zErr; // Helper var.
+			z_stream strm;
+			unsigned long rawSize = l->disksize;
+			unsigned long decSize = l->size;
+
+			rawData = Z_Malloc(rawSize, PU_STATIC, NULL);
+			decData = Z_Malloc(decSize, PU_STATIC, NULL);
+
+			if (fread(rawData, 1, rawSize, handle) < rawSize)
+				I_Error("wad %d, lump %d: cannot read compressed data", wad, lump);
+
 			strm.zalloc = Z_NULL;
 			strm.zfree = Z_NULL;
 			strm.opaque = Z_NULL;
-			strm.avail_in = 0;
-			strm.next_in = Z_NULL;
-			ret = inflateInit(&strm);
-			if (ret != Z_OK)
-				return ret;
 
-			/* decompress until deflate stream ends or end of file */
-			do {
-				strm.avail_in = fread(in, 1, 16384, handle);
-				if (ferror(handle)) {
-					(void)inflateEnd(&strm);
-					return Z_ERRNO;
+			strm.total_in = strm.avail_in = rawSize;
+			strm.total_out = strm.avail_out = decSize;
+
+			strm.next_in = rawData;
+			strm.next_out = decData;
+
+			zErr = inflateInit2(&strm, -15);
+			if (zErr == Z_OK)
+			{
+				zErr = inflate(&strm, Z_FINISH);
+				if (zErr == Z_STREAM_END)
+				{
+					M_Memcpy(dest, decData, size);
 				}
-				if (strm.avail_in == 0)
-					break;
-				strm.next_in = in;
+				else
+				{
+					size = 0;
+					zerr(zErr);
+					(void)inflateEnd(&strm);
+				}
+			}
+			else
+			{
+				CONS_Printf("whopet\n");
+				size = 0;
+				zerr(zErr);
+			}
 
-					/* run inflate() on input until output buffer not full */
-				do {
+			Z_Free(rawData);
+			Z_Free(decData);
 
-					strm.avail_out = 16384;
-					strm.next_out = out;
-
-					ret = inflate(&strm, Z_NO_FLUSH);
-					//assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
-					switch (ret) {
-					case Z_NEED_DICT:
-						ret = Z_DATA_ERROR;     /* and fall through */
-					case Z_DATA_ERROR:
-					case Z_MEM_ERROR:
-						(void)inflateEnd(&strm);
-						return ret;
-					}
-
-					have = 16384 - strm.avail_out;
-					memcpy(dest, out, have);
-				} while (strm.avail_out == 0);
-
-				/* done when inflate() says it's done */
-			} while (ret != Z_STREAM_END);
-
-			/* clean up and return */
-			(void)inflateEnd(&strm);
 			return size;
 		}
 	default:

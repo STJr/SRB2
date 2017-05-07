@@ -3105,9 +3105,7 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 //	UINT16 flaPos, flaNum = 0;
 //	UINT16 mapPos, mapNum = 0;
 
-
-
-	if ((numlumps = W_LoadWadFile(wadfilename)) == INT16_MAX)
+	if ((numlumps = W_InitFile(wadfilename)) == INT16_MAX)
 	{
 		CONS_Printf(M_GetText("Errors occured while loading %s; not added.\n"), wadfilename);
 		return false;
@@ -3126,7 +3124,7 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 				{
 					lumpinfo++;
 					*start = ++i;
-					for (i; i < numlumps; i++, lumpinfo++)
+					for (; i < numlumps; i++, lumpinfo++)
 					{
 						if (strnicmp(lumpinfo->name2, folName, strlen(folName)))
 						{
@@ -3172,6 +3170,8 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 				R_LoadSpritsRange(wadnum, sprPos, sprNum);
 			if (texNum) // Textures. TODO: R_LoadTextures() does the folder positioning once again. New function maybe?
 				R_LoadTextures();
+//			if (mapNum) // Maps. TODO: Actually implement the map WAD loading code, lulz.
+//				P_LoadWadMapRange();
 		}
 		break;
 	default:

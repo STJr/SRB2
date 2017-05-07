@@ -571,13 +571,14 @@ void R_LoadTextures(void)
 		{
 			texstart = W_CheckNumForFullNamePK3("textures/", (UINT16)w, 0) + 1;
 			texend = W_CheckNumForFolderEndPK3("textures/", (UINT16)w, texstart);
+			texturesLumpPos = W_CheckNumForFullNamePK3("textures", (UINT16)w, 0);
 		}
 		else
 		{
 			texstart = W_CheckNumForNamePwad(TX_START, (UINT16)w, 0) + 1;
 			texend = W_CheckNumForNamePwad(TX_END, (UINT16)w, 0);
+			texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, 0);
 		}
-		texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, 0);
 
 		if (texturesLumpPos != INT16_MAX)
 		{
@@ -1190,12 +1191,64 @@ static void R_InitExtraColormaps(void)
 	CONS_Printf(M_GetText("Number of Extra Colormaps: %s\n"), sizeu1(numcolormaplumps));
 }
 
-// 12/14/14 -- only take flats in F_START/F_END
+// Search for flat name through all
 lumpnum_t R_GetFlatNumForName(const char *name)
 {
-	lumpnum_t lump = W_CheckNumForNameInBlock(name, "F_START", "F_END");
-	if (lump == LUMPERROR)
-		lump = W_CheckNumForNameInBlock(name, "FF_START", "FF_END"); // deutex, some other old things
+	INT32 i;
+	lumpnum_t lump;
+	lumpnum_t start;
+	lumpnum_t end;
+
+	// Scan wad files backwards so patched flats take preference.
+	for (i = numwadfiles - 1; i >= 0; i--)
+	{
+		// WAD type? use markers.
+		if (wadfiles[i]->type == RET_WAD)
+		{
+			// Find the ranges to work with.
+			start = W_CheckNumForNamePwad("F_START", (UINT16)i, 0);
+			if (start == INT16_MAX)
+			{
+				start = W_CheckNumForNamePwad("FF_START", (UINT16)i, 0);
+				if (start == INT16_MAX)
+				{
+					continue;
+				}
+				else
+				{
+					end = W_CheckNumForNamePwad("FF_END", (UINT16)i, start);
+					if (end == INT16_MAX)
+					{
+						continue;
+					}
+				}
+			}
+			else
+			{
+				end = W_CheckNumForNamePwad("F_END", (UINT16)i, start);
+				if (end == INT16_MAX)
+					continue;
+			}
+		}
+		else if (wadfiles[i]->type == RET_PK3)
+		{
+			start = W_CheckNumForFullNamePK3("Flats/", i, 0);
+			if (start == INT16_MAX)
+				continue;
+			end = W_CheckNumForFolderEndPK3("Flats/", i, start);
+			if (end == INT16_MAX)
+				continue;
+		}
+		// Now find lump with specified name in that range.
+		lump = W_CheckNumForNamePwad(name, (UINT16)i, start);
+		if (lump < end)
+		{
+			lump += (i<<16); // found it, in our constraints
+			break;
+		}
+		lump = LUMPERROR;
+	}
+
 	if (lump == LUMPERROR)
 	{
 		if (strcmp(name, SKYFLATNAME))
