@@ -9765,20 +9765,16 @@ void P_SpawnMapThing(mapthing_t *mthing)
 		mobjtype_t macetype = MT_SMALLMACE;
 		boolean firsttime;
 		mobj_t *spawnee;
-		size_t line;
+		INT32 line;
 		const size_t mthingi = (size_t)(mthing - mapthings);
 
-		// Why does P_FindSpecialLineFromTag not work here?!?
-		// Monster Iestyn: tag lists haven't been initialised yet for the map, that's why
-		for (line = 0; line < numlines; line++)
-		{
-			if (lines[line].special == 9 && lines[line].tag == mthing->angle)
-				break;
-		}
+		// Find the corresponding linedef special, using angle as tag
+		// P_FindSpecialLineFromTag works here now =D
+		line = P_FindSpecialLineFromTag(9, mthing->angle, -1);
 
-		if (line == numlines)
+		if (line == -1)
 		{
-			CONS_Debug(DBG_GAMELOGIC, "Mace chain (mapthing #%s) needs tagged to a #9 parameter line (trying to find tag %d).\n", sizeu1(mthingi), mthing->angle);
+			CONS_Debug(DBG_GAMELOGIC, "Mace chain (mapthing #%s) needs to be tagged to a #9 parameter line (trying to find tag %d).\n", sizeu1(mthingi), mthing->angle);
 			return;
 		}
 /*
@@ -9876,18 +9872,15 @@ ML_NOCLIMB : Direction not controllable
 		fixed_t radius, speed, bottomheight, topheight;
 		INT32 type, numdivisions, time, anglespeed;
 		angle_t angledivision;
-		size_t line;
+		INT32 line;
 		const size_t mthingi = (size_t)(mthing - mapthings);
 
-		for (line = 0; line < numlines; line++)
-		{
-			if (lines[line].special == 15 && lines[line].tag == mthing->angle)
-				break;
-		}
+		// Find the corresponding linedef special, using angle as tag
+		line = P_FindSpecialLineFromTag(15, mthing->angle, -1);
 
-		if (line == numlines)
+		if (line == -1)
 		{
-			CONS_Debug(DBG_GAMELOGIC, "Particle generator (mapthing #%s) needs tagged to a #15 parameter line (trying to find tag %d).\n", sizeu1(mthingi), mthing->angle);
+			CONS_Debug(DBG_GAMELOGIC, "Particle generator (mapthing #%s) needs to be tagged to a #15 parameter line (trying to find tag %d).\n", sizeu1(mthingi), mthing->angle);
 			return;
 		}
 
