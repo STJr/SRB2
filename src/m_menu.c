@@ -4900,13 +4900,14 @@ static void M_DrawAddons(void)
 		UINT32 flags = V_ALLOWLOWERCASE;
 		if (y > BASEVIDHEIGHT) break;
 		if (dirmenu[i])
+#define type (UINT8)(dirmenu[i][DIR_TYPE])
 		{
-			if (dirmenu[i][DIR_TYPE] & EXT_LOADED)
+			if (type & EXT_LOADED)
 			flags |= V_TRANSLUCENT;
 
 			V_DrawSmallScaledPatch(x-(16+4), y, (flags & V_TRANSLUCENT), addonsp[((UINT8)(dirmenu[i][DIR_TYPE]) & ~EXT_LOADED)]);
 
-			if ((dirmenu[i][DIR_TYPE] & EXT_LOADED) && dirmenu[i][DIR_TYPE] >= EXT_LOADSTART)
+			if ((type & EXT_LOADED) && ((type &~ EXT_LOADED) >= EXT_LOADSTART))
 				V_DrawSmallScaledPatch(x-(16+4), y, 0, addonsp[NUM_EXT+3]);
 
 			if ((size_t)i == dir_on[menudepthleft])
@@ -4922,6 +4923,7 @@ static void M_DrawAddons(void)
 			else
 				V_DrawString(x, y+4, flags, dirmenu[i]+DIR_STRING);
 		}
+#undef type
 		y += 16;
 	}
 
