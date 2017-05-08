@@ -541,9 +541,9 @@ typedef enum
 // ---------------------
 static menuitem_t MPauseMenu[] =
 {
-	{IT_STRING | IT_SUBMENU, NULL, "Scramble Teams...",         &MISC_ScrambleTeamDef,  8},
-	{IT_STRING | IT_CALL,    NULL, "Switch Gametype/Level...",  M_GameTypeChange,      16},
-	{IT_STRING | IT_CALL,    NULL, "Add-ons...",                M_Addons,              24},
+	{IT_STRING | IT_CALL,    NULL, "Add-ons...",                M_Addons,               8},
+	{IT_STRING | IT_SUBMENU, NULL, "Scramble Teams...",         &MISC_ScrambleTeamDef, 16},
+	{IT_STRING | IT_CALL,    NULL, "Switch Gametype/Level...",  M_GameTypeChange,      24},
 
 	{IT_STRING | IT_CALL,    NULL, "Continue",                  M_SelectableClearMenus,40},
 	{IT_STRING | IT_CALL,    NULL, "Player 1 Setup",            M_SetupMultiPlayer,    48}, // splitscreen
@@ -561,9 +561,9 @@ static menuitem_t MPauseMenu[] =
 
 typedef enum
 {
-	mpause_scramble = 0,
+	mpause_addons = 0,
+	mpause_scramble,
 	mpause_switchmap,
-	mpause_addons,
 
 	mpause_continue,
 	mpause_psetupsplit,
