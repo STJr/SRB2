@@ -4906,7 +4906,7 @@ static void M_DrawAddons(void)
 
 			V_DrawSmallScaledPatch(x-(16+4), y, (flags & V_TRANSLUCENT), addonsp[((UINT8)(dirmenu[i][DIR_TYPE]) & ~EXT_LOADED)]);
 
-			if (dirmenu[i][DIR_TYPE] & EXT_LOADED)
+			if ((dirmenu[i][DIR_TYPE] & EXT_LOADED) && dirmenu[i][DIR_TYPE] >= EXT_LOADSTART)
 				V_DrawSmallScaledPatch(x-(16+4), y, 0, addonsp[NUM_EXT+3]);
 
 			if ((size_t)i == dir_on[menudepthleft])
