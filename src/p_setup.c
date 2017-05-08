@@ -2643,7 +2643,11 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	// As oddly named as this is, this handles music only.
 	// We should be fine starting it here.
-	S_Start();
+	/// ... as long as this isn't a titlemap transition, that is
+	if (!titlemapinaction)
+		S_Start();
+	else
+		S_ChangeMusicInternal("_title", looptitle);
 
 	// Let's fade to black here
 	// But only if we didn't do the special stage wipe
@@ -2657,7 +2661,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	}
 
 	// Print "SPEEDING OFF TO [ZONE] [ACT 1]..."
-	if (rendermode != render_none)
+	if (!titlemapinaction && rendermode != render_none)
 	{
 		// Don't include these in the fade!
 		char tx[64];

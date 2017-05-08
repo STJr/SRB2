@@ -62,6 +62,7 @@ void F_ContinueDrawer(void);
 
 extern INT32 titlescrollspeed;
 extern boolean titlemapinaction;
+extern boolean titlemaptransition;
 
 //
 // WIPE

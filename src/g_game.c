@@ -1635,6 +1635,12 @@ void G_DoLoadLevel(boolean resetplayer)
 	if (gamestate == GS_INTERMISSION)
 		Y_EndIntermission();
 
+	// cleanup
+	if (titlemaptransition)
+		titlemaptransition = false;
+	else
+		titlemapinaction = false;
+
 	G_SetGamestate(GS_LEVEL);
 
 	for (i = 0; i < MAXPLAYERS; i++)
