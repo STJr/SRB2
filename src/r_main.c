@@ -60,7 +60,6 @@ fixed_t projectiony; // aspect ratio
 // just for profiling purposes
 size_t framecount;
 
-size_t sscount;
 size_t loopcount;
 
 fixed_t viewx, viewy, viewz;
@@ -491,9 +490,6 @@ static void R_InitTextureMapping(void)
 	// Take out the fencepost cases from viewangletox.
 	for (i = 0; i < FINEANGLES/2; i++)
 	{
-		t = FixedMul(FINETANGENT(i), focallength);
-		t = centerx - t;
-
 		if (viewangletox[i] == -1)
 			viewangletox[i] = 0;
 		else if (viewangletox[i] == viewwidth+1)
@@ -802,157 +798,77 @@ void R_SkyboxFrame(player_t *player)
 
 	viewx = viewmobj->x;
 	viewy = viewmobj->y;
-	viewz = 0;
-	if (viewmobj->spawnpoint)
-		viewz = ((fixed_t)viewmobj->spawnpoint->angle)<<FRACBITS;
-
-	viewx += quake.x;
-	viewy += quake.y;
-	viewz += quake.z;
+	viewz = viewmobj->z; // 26/04/17: use actual Z position instead of spawnpoint angle!
 
 	if (mapheaderinfo[gamemap-1])
 	{
 		mapheader_t *mh = mapheaderinfo[gamemap-1];
-		if (player->awayviewtics)
-		{
-			if (skyboxmo[1])
-			{
-				fixed_t x = 0, y = 0;
-				if (mh->skybox_scalex > 0)
-					x = (player->awayviewmobj->x - skyboxmo[1]->x) / mh->skybox_scalex;
-				else if (mh->skybox_scalex < 0)
-					x = (player->awayviewmobj->x - skyboxmo[1]->x) * -mh->skybox_scalex;
+		vector3_t campos = {0,0,0}; // Position of player's actual view point
 
-				if (mh->skybox_scaley > 0)
-					y = (player->awayviewmobj->y - skyboxmo[1]->y) / mh->skybox_scaley;
-				else if (mh->skybox_scaley < 0)
-					y = (player->awayviewmobj->y - skyboxmo[1]->y) * -mh->skybox_scaley;
-
-				if (viewmobj->angle == 0)
-				{
-					viewx += x;
-					viewy += y;
-				}
-				else if (viewmobj->angle == ANGLE_90)
-				{
-					viewx -= y;
-					viewy += x;
-				}
-				else if (viewmobj->angle == ANGLE_180)
-				{
-					viewx -= x;
-					viewy -= y;
-				}
-				else if (viewmobj->angle == ANGLE_270)
-				{
-					viewx += y;
-					viewy -= x;
-				}
-				else
-				{
-					angle_t ang = viewmobj->angle>>ANGLETOFINESHIFT;
-					viewx += FixedMul(x,FINECOSINE(ang)) - FixedMul(y,  FINESINE(ang));
-					viewy += FixedMul(x,  FINESINE(ang)) + FixedMul(y,FINECOSINE(ang));
-				}
-			}
-			if (mh->skybox_scalez > 0)
-				viewz += (player->awayviewmobj->z + 20*FRACUNIT) / mh->skybox_scalez;
-			else if (mh->skybox_scalez < 0)
-				viewz += (player->awayviewmobj->z + 20*FRACUNIT) * -mh->skybox_scalez;
+		if (player->awayviewtics) {
+			campos.x = player->awayviewmobj->x;
+			campos.y = player->awayviewmobj->y;
+			campos.z = player->awayviewmobj->z + 20*FRACUNIT;
+		} else if (thiscam->chase) {
+			campos.x = thiscam->x;
+			campos.y = thiscam->y;
+			campos.z = thiscam->z + (thiscam->height>>1);
+		} else {
+			campos.x = player->mo->x;
+			campos.y = player->mo->y;
+			campos.z = player->viewz;
 		}
-		else if (thiscam->chase)
+
+		// Earthquake effects should be scaled in the skybox
+		// (if an axis isn't used, the skybox won't shake in that direction)
+		campos.x += quake.x;
+		campos.y += quake.y;
+		campos.z += quake.z;
+
+		if (skyboxmo[1]) // Is there a viewpoint?
 		{
-			if (skyboxmo[1])
+			fixed_t x = 0, y = 0;
+			if (mh->skybox_scalex > 0)
+				x = (campos.x - skyboxmo[1]->x) / mh->skybox_scalex;
+			else if (mh->skybox_scalex < 0)
+				x = (campos.x - skyboxmo[1]->x) * -mh->skybox_scalex;
+
+			if (mh->skybox_scaley > 0)
+				y = (campos.y - skyboxmo[1]->y) / mh->skybox_scaley;
+			else if (mh->skybox_scaley < 0)
+				y = (campos.y - skyboxmo[1]->y) * -mh->skybox_scaley;
+
+			if (viewmobj->angle == 0)
 			{
-				fixed_t x = 0, y = 0;
-				if (mh->skybox_scalex > 0)
-					x = (thiscam->x - skyboxmo[1]->x) / mh->skybox_scalex;
-				else if (mh->skybox_scalex < 0)
-					x = (thiscam->x - skyboxmo[1]->x) * -mh->skybox_scalex;
-
-				if (mh->skybox_scaley > 0)
-					y = (thiscam->y - skyboxmo[1]->y) / mh->skybox_scaley;
-				else if (mh->skybox_scaley < 0)
-					y = (thiscam->y - skyboxmo[1]->y) * -mh->skybox_scaley;
-
-				if (viewmobj->angle == 0)
-				{
-					viewx += x;
-					viewy += y;
-				}
-				else if (viewmobj->angle == ANGLE_90)
-				{
-					viewx -= y;
-					viewy += x;
-				}
-				else if (viewmobj->angle == ANGLE_180)
-				{
-					viewx -= x;
-					viewy -= y;
-				}
-				else if (viewmobj->angle == ANGLE_270)
-				{
-					viewx += y;
-					viewy -= x;
-				}
-				else
-				{
-					angle_t ang = viewmobj->angle>>ANGLETOFINESHIFT;
-					viewx += FixedMul(x,FINECOSINE(ang)) - FixedMul(y,  FINESINE(ang));
-					viewy += FixedMul(x,  FINESINE(ang)) + FixedMul(y,FINECOSINE(ang));
-				}
+				viewx += x;
+				viewy += y;
 			}
-			if (mh->skybox_scalez > 0)
-				viewz += (thiscam->z + (thiscam->height>>1)) / mh->skybox_scalez;
-			else if (mh->skybox_scalez < 0)
-				viewz += (thiscam->z + (thiscam->height>>1)) * -mh->skybox_scalez;
-		}
-		else
-		{
-			if (skyboxmo[1])
+			else if (viewmobj->angle == ANGLE_90)
 			{
-				fixed_t x = 0, y = 0;
-				if (mh->skybox_scalex > 0)
-					x = (player->mo->x - skyboxmo[1]->x) / mh->skybox_scalex;
-				else if (mh->skybox_scalex < 0)
-					x = (player->mo->x - skyboxmo[1]->x) * -mh->skybox_scalex;
-				if (mh->skybox_scaley > 0)
-					y = (player->mo->y - skyboxmo[1]->y) / mh->skybox_scaley;
-				else if (mh->skybox_scaley < 0)
-					y = (player->mo->y - skyboxmo[1]->y) * -mh->skybox_scaley;
-
-				if (viewmobj->angle == 0)
-				{
-					viewx += x;
-					viewy += y;
-				}
-				else if (viewmobj->angle == ANGLE_90)
-				{
-					viewx -= y;
-					viewy += x;
-				}
-				else if (viewmobj->angle == ANGLE_180)
-				{
-					viewx -= x;
-					viewy -= y;
-				}
-				else if (viewmobj->angle == ANGLE_270)
-				{
-					viewx += y;
-					viewy -= x;
-				}
-				else
-				{
-					angle_t ang = viewmobj->angle>>ANGLETOFINESHIFT;
-					viewx += FixedMul(x,FINECOSINE(ang)) - FixedMul(y,  FINESINE(ang));
-					viewy += FixedMul(x,  FINESINE(ang)) + FixedMul(y,FINECOSINE(ang));
-				}
+				viewx -= y;
+				viewy += x;
 			}
-			if (mh->skybox_scalez > 0)
-				viewz += player->viewz / mh->skybox_scalez;
-			else if (mh->skybox_scalez < 0)
-				viewz += player->viewz * -mh->skybox_scalez;
+			else if (viewmobj->angle == ANGLE_180)
+			{
+				viewx -= x;
+				viewy -= y;
+			}
+			else if (viewmobj->angle == ANGLE_270)
+			{
+				viewx += y;
+				viewy -= x;
+			}
+			else
+			{
+				angle_t ang = viewmobj->angle>>ANGLETOFINESHIFT;
+				viewx += FixedMul(x,FINECOSINE(ang)) - FixedMul(y,  FINESINE(ang));
+				viewy += FixedMul(x,  FINESINE(ang)) + FixedMul(y,FINECOSINE(ang));
+			}
 		}
+		if (mh->skybox_scalez > 0)
+			viewz += campos.z / mh->skybox_scalez;
+		else if (mh->skybox_scalez < 0)
+			viewz += campos.z * -mh->skybox_scalez;
 	}
 
 	if (viewmobj->subsector)
@@ -962,8 +878,6 @@ void R_SkyboxFrame(player_t *player)
 
 	viewsin = FINESINE(viewangle>>ANGLETOFINESHIFT);
 	viewcos = FINECOSINE(viewangle>>ANGLETOFINESHIFT);
-
-	sscount = 0;
 
 	// recalc necessary stuff for mouseaiming
 	// slopes are already calculated for the full possible view (which is 4*viewheight).
@@ -1000,7 +914,7 @@ void R_SetupFrame(player_t *player, boolean skybox)
 		chasecam = (cv_chasecam.value != 0);
 	}
 
-	if (player->climbing || (player->pflags & PF_NIGHTSMODE) || player->playerstate == PST_DEAD || gamestate == GS_TITLESCREEN)
+	if (player->climbing || (player->powers[pw_carry] == CR_NIGHTSMODE) || player->playerstate == PST_DEAD || gamestate == GS_TITLESCREEN)
 		chasecam = true; // force chasecam on
 	else if (player->spectator) // no spectator chasecam
 		chasecam = false; // force chasecam off
@@ -1087,8 +1001,6 @@ void R_SetupFrame(player_t *player, boolean skybox)
 
 	viewsin = FINESINE(viewangle>>ANGLETOFINESHIFT);
 	viewcos = FINECOSINE(viewangle>>ANGLETOFINESHIFT);
-
-	sscount = 0;
 
 	// recalc necessary stuff for mouseaiming
 	// slopes are already calculated for the full possible view (which is 4*viewheight).

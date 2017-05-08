@@ -32,19 +32,21 @@
 // Extra abilities/settings for skins (combinable stuff)
 typedef enum
 {
-	SF_SUPER            = 1, // Can turn super in singleplayer/co-op mode.
-	SF_SUPERANIMS       = 1<<1, // If super, use the super sonic animations
-	SF_SUPERSPIN        = 1<<2, // Should spin frames be played while super?
-	SF_HIRES            = 1<<3, // Draw the sprite 2x as small?
+	SF_SUPER            = 1,    // Can turn super in singleplayer/co-op mode?
+	SF_NOSUPERSPIN      = 1<<1, // Should spin frames be played while super?
+	SF_NOSPINDASHDUST   = 1<<2, // Spawn dust particles when charging a spindash?
+	SF_HIRES            = 1<<3, // Draw the sprite at different size?
 	SF_NOSKID           = 1<<4, // No skid particles etc
 	SF_NOSPEEDADJUST    = 1<<5, // Skin-specific version of disablespeedadjust
 	SF_RUNONWATER       = 1<<6, // Run on top of water FOFs?
-	SF_NOJUMPSPIN       = 1<<7, // SPR2_JUMP defaults to SPR2_SPRG instead of SPR2_SPIN, falling states used, and player height is full when jumping?
+	SF_NOJUMPSPIN       = 1<<7, // SPR2_JUMP defaults to SPR2_SPRG instead of SPR2_ROLL, falling states used, and player height is full when jumping?
 	SF_NOJUMPDAMAGE     = 1<<8, // Don't damage enemies, etc whilst jumping?
 	SF_STOMPDAMAGE      = 1<<9, // Always damage enemies, etc by landing on them, no matter your vunerability?
 	SF_MARIODAMAGE      = SF_NOJUMPDAMAGE|SF_STOMPDAMAGE, // The Mario method of being able to damage enemies, etc.
 	SF_MACHINE          = 1<<10, // Beep boop. Are you a robot?
-	SF_NOSPINDASHDUST   = 1<<11, // Don't spawn dust particles when charging a spindash
+	SF_DASHMODE         = 1<<11, // Sonic Advance 2 style top speed increase?
+	SF_FASTEDGE         = 1<<12, // Faster edge teeter?
+	SF_MULTIABILITY     = 1<<13, // Revenge of Final Demo.
 	// free up to and including 1<<31
 } skinflags_t;
 
@@ -65,7 +67,7 @@ typedef enum
 	CA_JUMPBOOST,
 	CA_AIRDRILL,
 	CA_JUMPTHOK,
-	CA_DASHMODE,
+	CA_BOUNCE,
 	CA_TWINSPIN
 } charability_t;
 
@@ -74,7 +76,7 @@ typedef enum
 {
 	CA2_NONE=0,
 	CA2_SPINDASH,
-	CA2_MULTIABILITY,
+	CA2_GUNSLINGER,
 	CA2_MELEE
 } charability2_t;
 
@@ -118,10 +120,8 @@ typedef enum
 	// Did you get a time-over?
 	PF_TIMEOVER = 1<<10,
 
-	// Ready for Super?
-	PF_SUPERREADY = 1<<11,
-
 	// Character action status
+	PF_STARTJUMP = 1<<11,
 	PF_JUMPED    = 1<<12,
 	PF_SPINNING  = 1<<13,
 	PF_STARTDASH = 1<<14,
@@ -133,12 +133,11 @@ typedef enum
 	// Sliding (usually in water) like Labyrinth/Oil Ocean
 	PF_SLIDING   = 1<<17,
 
-	/*** NIGHTS STUFF ***/
-	// Is the player in NiGHTS mode?
-	PF_NIGHTSMODE        = 1<<18,
-	PF_TRANSFERTOCLOSEST = 1<<19,
+	// Bouncing
+	PF_BOUNCING  = 1<<18,
 
-	// Spill rings after falling
+	/*** NIGHTS STUFF ***/
+	PF_TRANSFERTOCLOSEST = 1<<19,
 	PF_NIGHTSFALL        = 1<<20,
 	PF_DRILLING          = 1<<21,
 	PF_SKIDDOWN          = 1<<22,
@@ -157,10 +156,10 @@ typedef enum
 	// Used shield ability
 	PF_SHIELDABILITY     = 1<<28,
 
-	// Force jump damage?
-	PF_FORCEJUMPDAMAGE        = 1<<29
+	// Jump damage?
+	PF_NOJUMPDAMAGE   = 1<<29,
 
-	// free up to and including 1<<31
+	// up to 1<<31 is free
 } pflags_t;
 
 typedef enum
@@ -171,7 +170,7 @@ typedef enum
 	PA_EDGE,
 	PA_WALK,
 	PA_RUN,
-	PA_PEEL,
+	PA_DASH,
 	PA_PAIN,
 	PA_ROLL,
 	PA_JUMP,
@@ -223,6 +222,10 @@ typedef enum
 	CR_GENERIC,
 	// Tails carry.
 	CR_PLAYER,
+	// NiGHTS mode. Not technically a CARRYING, but doesn't stack with any of the others, so might as well go here.
+	CR_NIGHTSMODE,
+	// Old Brak sucks hard, but this gimmick could be used for something better, so we might as well continue supporting it.
+	CR_BRAKGOOP,
 	// Specific level gimmicks.
 	CR_ZOOMTUBE,
 	CR_ROPEHANG,
@@ -262,9 +265,7 @@ typedef enum
 	pw_nights_helper,
 	pw_nights_linkfreeze,
 
-	//for linedef exec 427
-	pw_nocontrol,
-	pw_ingoop, // In goop
+	pw_nocontrol, //for linedef exec 427
 
 	NUMPOWERS
 } powertype_t;
@@ -340,6 +341,7 @@ typedef struct player_s
 	UINT8 skincolor;
 
 	INT32 skin;
+	UINT32 availabilities;
 
 	UINT32 score; // player score
 	fixed_t dashspeed; // dashing speed
@@ -377,7 +379,6 @@ typedef struct player_s
 	UINT8 gotcontinue; // Got continue from this stage?
 
 	fixed_t speed; // Player's speed (distance formula of MOMX and MOMY values)
-	UINT8 jumping; // Holding down jump button
 	UINT8 secondjump; // Jump counter
 
 	UINT8 fly1; // Tails flying

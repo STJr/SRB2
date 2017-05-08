@@ -19,6 +19,7 @@
 #include "tables.h"
 
 #include "d_event.h" // Screenshot responder
+#include "command.h"
 
 typedef enum {
 	MM_OFF = 0,
@@ -27,6 +28,12 @@ typedef enum {
 	MM_SCREENSHOT
 } moviemode_t;
 extern moviemode_t moviemode;
+
+extern consvar_t cv_screenshot_option, cv_screenshot_folder, cv_screenshot_colorprofile;
+extern consvar_t cv_moviemode;
+extern consvar_t cv_zlib_memory, cv_zlib_level, cv_zlib_strategy, cv_zlib_window_bits;
+extern consvar_t cv_zlib_memorya, cv_zlib_levela, cv_zlib_strategya, cv_zlib_window_bitsa;
+extern consvar_t cv_apng_delay;
 
 void M_StartMovie(void);
 void M_SaveFrame(void);
@@ -57,7 +64,7 @@ void FIL_ForceExtension(char *path, const char *extension);
 boolean FIL_CheckExtension(const char *in);
 
 #ifdef HAVE_PNG
-boolean M_SavePNG(const char *filename, void *data, int width, int height, const UINT8 *palette);
+boolean M_SavePNG(const char *filename, void *data, int width, int height, const boolean palette);
 #endif
 
 extern boolean takescreenshot;

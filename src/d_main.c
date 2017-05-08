@@ -727,7 +727,6 @@ void D_StartTitle(void)
 	maptol = 0;
 
 	gameaction = ga_nothing;
-	playerdeadview = false;
 	displayplayer = consoleplayer = 0;
 	//demosequence = -1;
 	gametype = GT_COOP;

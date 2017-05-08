@@ -1311,7 +1311,7 @@ static inline boolean I_SkipFrame(void)
 		case GS_LEVEL:
 			if (!paused)
 				return false;
-		case GS_TIMEATTACK:
+		//case GS_TIMEATTACK: -- sorry optimisation but now we have a cool level platter and that being laggardly looks terrible
 		case GS_WAITINGPLAYERS:
 			return skip; // Skip odd frames
 		default:
@@ -1340,6 +1340,10 @@ void I_FinishUpdate(void)
 
 	if (I_SkipFrame())
 		return;
+
+	// draw captions if enabled
+	if (cv_closedcaptioning.value)
+		SCR_ClosedCaptions();
 
 	if (cv_ticrate.value)
 		SCR_DisplayTicRate();

@@ -3170,6 +3170,8 @@ void A_Invincibility(mobj_t *actor)
 		S_StopMusic();
 		if (mariomode)
 			G_GhostAddColor(GHC_INVINCIBLE);
+		strlcpy(S_sfx[sfx_None].caption, "Invincibility", 14);
+		S_StartCaption(sfx_None, -1, player->powers[pw_invulnerability]);
 		S_ChangeMusicInternal((mariomode) ? "_minv" : "_inv", false);
 	}
 }
@@ -3208,6 +3210,8 @@ void A_SuperSneakers(mobj_t *actor)
 			S_StopMusic();
 			S_ChangeMusicInternal("_shoes", false);
 		}
+		strlcpy(S_sfx[sfx_None].caption, "Speed shoes", 12);
+		S_StartCaption(sfx_None, -1, player->powers[pw_sneakers]);
 	}
 }
 
@@ -4182,12 +4186,15 @@ void A_SignPlayer(mobj_t *actor)
 		actor->frame += Color_Opposite[actor->target->player->skincolor*2+1];
 	}
 
-	// spawn an overlay of the player's face.
-	ov = P_SpawnMobj(actor->x, actor->y, actor->z, MT_OVERLAY);
-	P_SetTarget(&ov->target, actor);
-	ov->color = actor->target->player->skincolor;
-	ov->skin = skin;
-	P_SetMobjState(ov, actor->info->seestate); // S_PLAY_SIGN
+	if (skin->sprites[SPR2_SIGN].numframes)
+	{
+		// spawn an overlay of the player's face.
+		ov = P_SpawnMobj(actor->x, actor->y, actor->z, MT_OVERLAY);
+		P_SetTarget(&ov->target, actor);
+		ov->color = actor->target->player->skincolor;
+		ov->skin = skin;
+		P_SetMobjState(ov, actor->info->seestate); // S_PLAY_SIGN
+	}
 }
 
 // Function: A_OverlayThink
@@ -4517,7 +4524,7 @@ void A_MinusDigging(mobj_t *actor)
 
 	// If we're close enough to our target, pop out of the ground
 	if (P_AproxDistance(actor->target->x-actor->x, actor->target->y-actor->y) < actor->radius
-		&& abs(actor->target->z - actor->z) < actor->height)
+		&& abs(actor->target->z - actor->z) < 2*actor->height)
 		P_SetMobjState(actor, actor->info->missilestate);
 
 	// Snap to ground
@@ -5599,7 +5606,10 @@ void A_MixUp(mobj_t *actor)
 	// No mix-up monitors in hide and seek or time only race.
 	// The random factor is okay for other game modes, but in these, it is cripplingly unfair.
 	if (gametype == GT_HIDEANDSEEK || gametype == GT_RACE)
+	{
+		S_StartSound(actor, sfx_lose);
 		return;
+	}
 
 	numplayers = 0;
 	memset(teleported, 0, sizeof (teleported));
@@ -5608,7 +5618,7 @@ void A_MixUp(mobj_t *actor)
 	// and grab their xyz coords
 	for (i = 0; i < MAXPLAYERS; i++)
 		if (playeringame[i] && players[i].mo && players[i].mo->health > 0 && players[i].playerstate == PST_LIVE
-			&& !players[i].exiting && !players[i].powers[pw_super])
+			&& !players[i].exiting && !players[i].powers[pw_super] && players[i].powers[pw_carry] != CR_NIGHTSMODE)
 		{
 			if ((netgame || multiplayer) && players[i].spectator) // Ignore spectators
 				continue;
@@ -5727,7 +5737,7 @@ void A_MixUp(mobj_t *actor)
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
 			if (playeringame[i] && players[i].playerstate == PST_LIVE
-				&& players[i].mo && players[i].mo->health > 0 && !players[i].exiting && !players[i].powers[pw_super])
+				&& players[i].mo && players[i].mo->health > 0 && !players[i].exiting && !players[i].powers[pw_super] && players[i].powers[pw_carry] != CR_NIGHTSMODE)
 			{
 				if ((netgame || multiplayer) && players[i].spectator)// Ignore spectators
 					continue;
@@ -5777,7 +5787,7 @@ void A_MixUp(mobj_t *actor)
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
 			if (playeringame[i] && players[i].playerstate == PST_LIVE
-				&& players[i].mo && players[i].mo->health > 0 && !players[i].exiting && !players[i].powers[pw_super])
+				&& players[i].mo && players[i].mo->health > 0 && !players[i].exiting && !players[i].powers[pw_super] && players[i].powers[pw_carry] != CR_NIGHTSMODE)
 			{
 				if ((netgame || multiplayer) && players[i].spectator)// Ignore spectators
 					continue;
@@ -5807,7 +5817,7 @@ void A_MixUp(mobj_t *actor)
 		if (teleported[i])
 		{
 			if (playeringame[i] && players[i].playerstate == PST_LIVE
-				&& players[i].mo && players[i].mo->health > 0 && !players[i].exiting && !players[i].powers[pw_super])
+				&& players[i].mo && players[i].mo->health > 0 && !players[i].exiting && !players[i].powers[pw_super] && players[i].powers[pw_carry] != CR_NIGHTSMODE)
 			{
 				if ((netgame || multiplayer) && players[i].spectator)// Ignore spectators
 					continue;
@@ -5949,7 +5959,7 @@ void A_RecyclePowers(mobj_t *actor)
 
 		for (j = 0; j < NUMPOWERS; j++)
 		{
-			if (j == pw_flashing || j == pw_underwater || j == pw_spacetime
+			if (j == pw_flashing || j == pw_underwater || j == pw_spacetime || j == pw_carry
 			    || j == pw_tailsfly || j == pw_extralife || j == pw_nocontrol || j == pw_super)
 				continue;
 			players[recv_pl].powers[j] = powers[send_pl][j];
@@ -8235,7 +8245,7 @@ void A_OrbitNights(mobj_t* actor)
 #endif
 
 	if (!actor->target || !actor->target->player ||
-	    !(actor->target->player->pflags & PF_NIGHTSMODE) || !actor->target->player->nightstime
+	    !(actor->target->player->powers[pw_carry] == CR_NIGHTSMODE) || !actor->target->player->nightstime
 	    // Also remove this object if they no longer have a NiGHTS helper
 		|| (ishelper && !actor->target->player->powers[pw_nights_helper]))
 	{

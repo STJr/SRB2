@@ -1776,9 +1776,9 @@ static mobj_t *SearchMarioNode(msecnode_t *node)
 		case MT_SCORE:
 		case MT_DROWNNUMBERS:
 		case MT_GOTEMERALD:
+		case MT_LOCKON:
 		case MT_TAG:
 		case MT_GOTFLAG:
-		case MT_GOTFLAG2:
 		case MT_HOOP:
 		case MT_HOOPCOLLIDE:
 		case MT_NIGHTSCORE:
@@ -2556,6 +2556,12 @@ void T_PlaneDisplace(planedisplace_t *pd)
 
 	direction = (control->floorheight > pd->last_height) ? 1 : -1;
 	diff = FixedMul(control->floorheight-pd->last_height, pd->speed);
+
+	if (pd->reverse) // reverse direction?
+	{
+		direction *= -1;
+		diff *= -1;
+	}
 
 	if (pd->type == pd_floor || pd->type == pd_both)
 		T_MovePlane(target, INT32_MAX/2, target->floorheight+diff, 0, 0, direction); // move floor

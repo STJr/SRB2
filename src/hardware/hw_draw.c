@@ -152,7 +152,9 @@ void HWR_DrawFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 	float pdupx = FIXED_TO_FLOAT(vid.fdupx)*2.0f*FIXED_TO_FLOAT(pscale);
 	float pdupy = FIXED_TO_FLOAT(vid.fdupy)*2.0f*FIXED_TO_FLOAT(pscale);
 
-	if (alphalevel >= 10 && alphalevel < 13)
+	if (alphalevel == 12)
+		alphalevel = 0;
+	else if (alphalevel >= 10 && alphalevel < 13)
 		return;
 
 	// make patch ready in hardware cache
@@ -252,7 +254,9 @@ void HWR_DrawCroppedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscal
 	float pdupx = FIXED_TO_FLOAT(vid.fdupx)*2.0f*FIXED_TO_FLOAT(pscale);
 	float pdupy = FIXED_TO_FLOAT(vid.fdupy)*2.0f*FIXED_TO_FLOAT(pscale);
 
-	if (alphalevel >= 10 && alphalevel < 13)
+	if (alphalevel == 12)
+		alphalevel = 0;
+	else if (alphalevel >= 10 && alphalevel < 13)
 		return;
 
 	// make patch ready in hardware cache
@@ -785,7 +789,7 @@ boolean HWR_Screenshot(const char *lbmname)
 	HWD.pfnReadRect(0, 0, vid.width, vid.height, vid.width * 3, (void *)buf);
 
 #ifdef USE_PNG
-	ret = M_SavePNG(lbmname, buf, vid.width, vid.height, NULL);
+	ret = M_SavePNG(lbmname, buf, vid.width, vid.height, false);
 #else
 	ret = saveTGA(lbmname, buf, vid.width, vid.height);
 #endif

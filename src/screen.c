@@ -28,6 +28,9 @@
 #include "d_main.h"
 #include "d_clisrv.h"
 #include "f_finale.h"
+#include "i_sound.h" // closed captions
+#include "s_sound.h" // ditto
+#include "g_game.h" // ditto
 
 
 #if defined (USEASM) && !defined (NORUSEASM)//&& (!defined (_MSC_VER) || (_MSC_VER <= 1200))
@@ -436,4 +439,40 @@ void SCR_DisplayTicRate(void)
 		ticcntcolor|V_NOSCALESTART, va("%02d/%02u", totaltics, TICRATE));
 
 	lasttic = ontic;
+}
+
+void SCR_ClosedCaptions(void)
+{
+	UINT8 i;
+
+	for (i = 0; i < NUMCAPTIONS; i++)
+	{
+		INT32 flags, y;
+		char dot;
+		boolean music;
+
+		if (!closedcaptions[i].s)
+			continue;
+
+		if ((music = (closedcaptions[i].s-S_sfx == sfx_None)) && (closedcaptions[i].t < flashingtics) && (closedcaptions[i].t & 1))
+			continue;
+
+		flags = V_NOSCALESTART|V_ALLOWLOWERCASE;
+		y = vid.height-((i + 2)*10*vid.dupy);
+		dot = ' ';
+
+		if (closedcaptions[i].b)
+			y -= (closedcaptions[i].b--)*vid.dupy;
+
+		if (closedcaptions[i].t < CAPTIONFADETICS)
+			flags |= (((CAPTIONFADETICS-closedcaptions[i].t)/2)*V_10TRANS);
+
+		if (music)
+			dot = '\x19';
+		else if (closedcaptions[i].c && closedcaptions[i].c->origin)
+			dot = '\x1E';
+
+		V_DrawRightAlignedString(vid.width-(20*vid.dupx), y,
+		flags, va("%c [%s]", dot, (closedcaptions[i].s->caption[0] ? closedcaptions[i].s->caption : closedcaptions[i].s->name)));
+	}
 }

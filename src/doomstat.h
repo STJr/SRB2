@@ -244,6 +244,8 @@ typedef struct
 	UINT8 levelflags;     ///< LF_flags:  merged eight booleans into one UINT8 for space, see below
 	UINT8 menuflags;      ///< LF2_flags: options that affect record attack / nights mode menus
 
+	char selectheading[22]; ///< Level select heading. Allows for controllable grouping.
+
 	// Freed animals stuff.
 	UINT8 numFlickies;     ///< Internal. For freed flicky support.
 	mobjtype_t *flickies;  ///< List of freeable flickies in this level. Allocated dynamically for space reasons. Be careful.
@@ -270,6 +272,7 @@ typedef struct
 #define LF2_RECORDATTACK   4 ///< Show this map in Time Attack
 #define LF2_NIGHTSATTACK   8 ///< Show this map in NiGHTS mode menu
 #define LF2_NOVISITNEEDED 16 ///< Available in time attack/nights mode without visiting the level
+#define LF2_WIDEICON      32 ///< If you're in a circumstance where it fits, use a wide map icon
 
 extern mapheader_t* mapheaderinfo[NUMMAPS];
 
@@ -314,7 +317,7 @@ enum GameType
 
 	NUMGAMETYPES
 };
-// If you alter this list, update gametype_cons_t in m_menu.c
+// If you alter this list, update dehacked.c, and gametype_cons_t and MISC_ChangeGameTypeMenu in m_menu.c
 
 extern tic_t totalplaytime;
 
@@ -379,6 +382,7 @@ nightsdata_t ntemprecords;
 
 extern UINT32 token; ///< Number of tokens collected in a level
 extern UINT32 tokenlist; ///< List of tokens collected
+extern boolean gottoken; ///< Did you get a token? Used for end of act
 extern INT32 tokenbits; ///< Used for setting token bits
 extern INT32 sstimer; ///< Time allotted in the special stage
 extern UINT32 bluescore; ///< Blue Team Scores
@@ -452,19 +456,17 @@ extern mapthing_t *redctfstarts[MAXPLAYERS]; // CTF
 
 #if defined (macintosh)
 #define DEBFILE(msg) I_OutputMsg(msg)
-extern FILE *debugfile;
 #else
 #define DEBUGFILE
 #ifdef DEBUGFILE
 #define DEBFILE(msg) { if (debugfile) { fputs(msg, debugfile); fflush(debugfile); } }
-extern FILE *debugfile;
 #else
 #define DEBFILE(msg) {}
-extern FILE *debugfile;
 #endif
 #endif
 
 #ifdef DEBUGFILE
+extern FILE *debugfile;
 extern INT32 debugload;
 #endif
 

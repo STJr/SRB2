@@ -528,6 +528,7 @@ static inline void resynch_write_player(resynch_pak *rsp, const size_t i)
 
 	rsp->skincolor = players[i].skincolor;
 	rsp->skin = LONG(players[i].skin);
+	rsp->availabilities = LONG(players[i].availabilities);
 	// Just in case Lua does something like
 	// modify these at runtime
 	rsp->camerascale = (fixed_t)LONG(players[i].camerascale);
@@ -551,7 +552,6 @@ static inline void resynch_write_player(resynch_pak *rsp, const size_t i)
 	rsp->playerspinheight = (fixed_t)LONG(players[i].spinheight);
 
 	rsp->speed = (fixed_t)LONG(players[i].speed);
-	rsp->jumping = players[i].jumping;
 	rsp->secondjump = players[i].secondjump;
 	rsp->fly1 = players[i].fly1;
 	rsp->glidetime = (tic_t)LONG(players[i].glidetime);
@@ -657,6 +657,7 @@ static void resynch_read_player(resynch_pak *rsp)
 
 	players[i].skincolor = rsp->skincolor;
 	players[i].skin = LONG(rsp->skin);
+	players[i].availabilities = LONG(rsp->availabilities);
 	// Just in case Lua does something like
 	// modify these at runtime
 	players[i].camerascale = (fixed_t)LONG(rsp->camerascale);
@@ -680,7 +681,6 @@ static void resynch_read_player(resynch_pak *rsp)
 	players[i].spinheight = (fixed_t)LONG(rsp->playerspinheight);
 
 	players[i].speed = (fixed_t)LONG(rsp->speed);
-	players[i].jumping = rsp->jumping;
 	players[i].secondjump = rsp->secondjump;
 	players[i].fly1 = rsp->fly1;
 	players[i].glidetime = (tic_t)LONG(rsp->glidetime);
@@ -1364,6 +1364,7 @@ static boolean SV_SendServerConfig(INT32 node)
 	// which is nice and easy for us to detect
 	memset(netbuffer->u.servercfg.playerskins, 0xFF, sizeof(netbuffer->u.servercfg.playerskins));
 	memset(netbuffer->u.servercfg.playercolor, 0xFF, sizeof(netbuffer->u.servercfg.playercolor));
+	memset(netbuffer->u.servercfg.playeravailabilities, 0xFF, sizeof(netbuffer->u.servercfg.playeravailabilities));
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
@@ -1371,6 +1372,7 @@ static boolean SV_SendServerConfig(INT32 node)
 			continue;
 		netbuffer->u.servercfg.playerskins[i] = (UINT8)players[i].skin;
 		netbuffer->u.servercfg.playercolor[i] = (UINT8)players[i].skincolor;
+		netbuffer->u.servercfg.playeravailabilities[i] = (UINT32)LONG(players[i].availabilities);
 	}
 
 	memcpy(netbuffer->u.servercfg.server_context, server_context, 8);
@@ -1561,8 +1563,6 @@ static void CL_LoadReceivedSavegame(void)
 	automapactive = false;
 
 	// load a base level
-	playerdeadview = false;
-
 	if (P_LoadNetGame())
 	{
 		const INT32 actnum = mapheaderinfo[gamemap-1]->actnum;
@@ -2308,12 +2308,7 @@ static void ResetNode(INT32 node);
 void CL_ClearPlayer(INT32 playernum)
 {
 	if (players[playernum].mo)
-	{
-		// Don't leave a NiGHTS ghost!
-		if ((players[playernum].pflags & PF_NIGHTSMODE) && players[playernum].mo->tracer)
-			P_RemoveMobj(players[playernum].mo->tracer);
 		P_RemoveMobj(players[playernum].mo);
-	}
 	memset(&players[playernum], 0, sizeof (player_t));
 }
 
@@ -2538,7 +2533,7 @@ static void Command_Ban(void)
 			return;
 		else
 			WRITEUINT8(p, pn);
-		if (I_Ban && !I_Ban(node))
+		if (server && I_Ban && !I_Ban(node)) // only the server is allowed to do this right now
 		{
 			CONS_Alert(CONS_WARNING, M_GetText("Too many bans! Geez, that's a lot of people you're excluding...\n"));
 			WRITEUINT8(p, KICK_MSG_GO_AWAY);
@@ -2546,7 +2541,8 @@ static void Command_Ban(void)
 		}
 		else
 		{
-			Ban_Add(COM_Argv(2));
+			if (server) // only the server is allowed to do this right now
+				Ban_Add(COM_Argv(2));
 
 			if (COM_Argc() == 2)
 			{
@@ -2703,12 +2699,14 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 
 	// If a verified admin banned someone, the server needs to know about it.
 	// If the playernum isn't zero (the server) then the server needs to record the ban.
-	if (server && playernum && msg == KICK_MSG_BANNED)
+	if (server && playernum && (msg == KICK_MSG_BANNED || msg == KICK_MSG_CUSTOM_BAN))
 	{
 		if (I_Ban && !I_Ban(playernode[(INT32)pnum]))
-		{
 			CONS_Alert(CONS_WARNING, M_GetText("Too many bans! Geez, that's a lot of people you're excluding...\n"));
-		}
+#ifndef NONET
+		else
+			Ban_Add(reason);
+#endif
 	}
 
 	switch (msg)
@@ -3497,10 +3495,12 @@ static void HandlePacketFromAwayNode(SINT8 node)
 			for (j = 0; j < MAXPLAYERS; j++)
 			{
 				if (netbuffer->u.servercfg.playerskins[j] == 0xFF
-				 && netbuffer->u.servercfg.playercolor[j] == 0xFF)
+				 && netbuffer->u.servercfg.playercolor[j] == 0xFF
+				 && netbuffer->u.servercfg.playeravailabilities[j] == 0xFFFFFFFF)
 					continue; // not in game
 
 				playeringame[j] = true;
+				players[j].availabilities = (UINT32)LONG(netbuffer->u.servercfg.playeravailabilities[j]);
 				SetPlayerSkinByNum(j, (INT32)netbuffer->u.servercfg.playerskins[j]);
 				players[j].skincolor = netbuffer->u.servercfg.playercolor[j];
 			}

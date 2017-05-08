@@ -432,22 +432,20 @@ static void readAnimTex(MYFILE *f, INT32 num)
 }
 */
 
-static boolean findFreeSlot(INT32 *num, UINT16 wadnum)
+static boolean findFreeSlot(INT32 *num)
 {
 	// Send the character select entry to a free slot.
-	while (*num < 32 && (!(PlayerMenu[*num].status & IT_DISABLED) || description[*num].wadnum == wadnum)) // Will kill hidden characters from other files, but that's okay.
+	while (*num < 32 && (description[*num].used))
 		*num = *num+1;
 
 	// No more free slots. :(
 	if (*num >= 32)
 		return false;
 
-	PlayerMenu[*num].status = IT_CALL;
-	description[*num].wadnum = wadnum;
 	description[*num].picname[0] = '\0'; // Redesign your logo. (See M_DrawSetupChoosePlayerMenu in m_menu.c...)
 
 	// Found one! ^_^
-	return true;
+	return (description[*num].used = true);
 }
 
 // Reads a player.
@@ -479,7 +477,7 @@ static void readPlayer(MYFILE *f, INT32 num)
 			{
 				char *playertext = NULL;
 
-				if (!slotfound && (slotfound = findFreeSlot(&num, f->wad)) == false)
+				if (!slotfound && (slotfound = findFreeSlot(&num)) == false)
 					goto done;
 
 				for (i = 0; i < MAXLINELEN-3; i++)
@@ -528,7 +526,7 @@ static void readPlayer(MYFILE *f, INT32 num)
 
 			if (fastcmp(word, "PICNAME"))
 			{
-				if (!slotfound && (slotfound = findFreeSlot(&num, f->wad)) == false)
+				if (!slotfound && (slotfound = findFreeSlot(&num)) == false)
 					goto done;
 				DEH_WriteUndoline(word, &description[num].picname[0], UNDO_NONE);
 
@@ -536,12 +534,6 @@ static void readPlayer(MYFILE *f, INT32 num)
 			}
 			else if (fastcmp(word, "STATUS"))
 			{
-				// Limit the status to only IT_DISABLED and IT_CALL
-				if (i)
-					i = IT_CALL;
-				else
-					i = IT_DISABLED;
-
 				/*
 					You MAY disable previous entries if you so desire...
 					But try to enable something that's already enabled and you will be sent to a free slot.
@@ -549,15 +541,15 @@ static void readPlayer(MYFILE *f, INT32 num)
 					Because of this, you are allowed to edit any previous entries you like, but only if you
 					signal that you are purposely doing so by disabling and then reenabling the slot.
 				*/
-				if (i != IT_DISABLED && !slotfound && (slotfound = findFreeSlot(&num, f->wad)) == false)
+				if (i && !slotfound && (slotfound = findFreeSlot(&num)) == false)
 					goto done;
-				DEH_WriteUndoline(word, va("%d", PlayerMenu[num].status), UNDO_NONE);
-				PlayerMenu[num].status = (INT16)i;
+				DEH_WriteUndoline(word, va("%d", description[num].used), UNDO_NONE);
+				description[num].used = (!!i);
 			}
 			else if (fastcmp(word, "SKINNAME"))
 			{
 				// Send to free slot.
-				if (!slotfound && (slotfound = findFreeSlot(&num, f->wad)) == false)
+				if (!slotfound && (slotfound = findFreeSlot(&num)) == false)
 					goto done;
 				DEH_WriteUndoline(word, description[num].skinname, UNDO_NONE);
 
@@ -1211,6 +1203,12 @@ static void readlevelheader(MYFILE *f, INT32 num)
 			{
 				deh_strlcpy(mapheaderinfo[num-1]->lvlttl, word2,
 					sizeof(mapheaderinfo[num-1]->lvlttl), va("Level header %d: levelname", num));
+				strlcpy(mapheaderinfo[num-1]->selectheading, word2, sizeof(mapheaderinfo[num-1]->selectheading)); // not deh_ so only complains once
+			}
+			else if (fastcmp(word, "SELECTHEADING"))
+			{
+				deh_strlcpy(mapheaderinfo[num-1]->selectheading, word2,
+					sizeof(mapheaderinfo[num-1]->selectheading), va("Level header %d: selectheading", num));
 			}
 			else if (fastcmp(word, "SCRIPTNAME"))
 			{
@@ -1417,6 +1415,13 @@ static void readlevelheader(MYFILE *f, INT32 num)
 					mapheaderinfo[num-1]->menuflags |= LF2_NOVISITNEEDED;
 				else
 					mapheaderinfo[num-1]->menuflags &= ~LF2_NOVISITNEEDED;
+			}
+			else if (fastcmp(word, "WIDEICON"))
+			{
+				if (i || word2[0] == 'T' || word2[0] == 'Y')
+					mapheaderinfo[num-1]->menuflags |= LF2_WIDEICON;
+				else
+					mapheaderinfo[num-1]->menuflags &= ~LF2_WIDEICON;
 			}
 			else
 				deh_warning("Level header %d: unknown word '%s'", num, word);
@@ -2105,6 +2110,7 @@ static void readsound(MYFILE *f, INT32 num, const char *savesfxnames[])
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
 	char *word;
+	char *word2;
 	char *tmp;
 	INT32 value;
 
@@ -2118,14 +2124,23 @@ static void readsound(MYFILE *f, INT32 num, const char *savesfxnames[])
 			tmp = strchr(s, '#');
 			if (tmp)
 				*tmp = '\0';
-
-			value = searchvalue(s);
+			if (s == tmp)
+				continue; // Skip comment lines, but don't break.
 
 			word = strtok(s, " ");
 			if (word)
 				strupr(word);
 			else
 				break;
+
+			word2 = strtok(NULL, " ");
+			if (word2)
+				value = atoi(word2);
+			else
+			{
+				deh_warning("No value for token %s", word);
+				continue;
+			}
 
 /*			if (fastcmp(word, "OFFSET"))
 			{
@@ -2155,6 +2170,11 @@ static void readsound(MYFILE *f, INT32 num, const char *savesfxnames[])
 			{
 				DEH_WriteUndoline(word, va("%d", S_sfx[num].pitch), UNDO_NONE);
 				S_sfx[num].pitch = value;
+			}
+			else if (fastcmp(word, "CAPTION") || fastcmp(word, "DESCRIPTION"))
+			{
+				deh_strlcpy(S_sfx[num].caption, word2,
+					sizeof(S_sfx[num].caption), va("Sound effect %d: caption", num));
 			}
 			else
 				deh_warning("Sound %d : unknown word '%s'",num,word);
@@ -2277,6 +2297,8 @@ static void reademblemdata(MYFILE *f, INT32 num)
 					emblemlocations[num-1].type = ET_NGRADE;
 				else if (fastcmp(word2, "NTIME"))
 					emblemlocations[num-1].type = ET_NTIME;
+				else if (fastcmp(word2, "MAP"))
+					emblemlocations[num-1].type = ET_MAP;
 				else
 					emblemlocations[num-1].type = (UINT8)value;
 			}
@@ -2447,6 +2469,7 @@ static void readunlockable(MYFILE *f, INT32 num)
 	DEH_WriteUndoline("VAR", va("%d", unlockables[num].variable), UNDO_NONE);
 
 	memset(&unlockables[num], 0, sizeof(unlockable_t));
+	unlockables[num].objective[0] = '/';
 
 	do
 	{
@@ -3627,11 +3650,11 @@ static void DEH_LoadDehackedFile(MYFILE *f, UINT16 wad)
 				{
 					if (i == 0 && word2[0] != '0') // If word2 isn't a number
 						i = get_sfx(word2); // find a sound by name
-					if (i < NUMSFX && i >= 0)
+					if (i < NUMSFX && i > 0)
 						readsound(f, i, savesfxnames);
 					else
 					{
-						deh_warning("Sound %d out of range (0 - %d)", i, NUMSFX-1);
+						deh_warning("Sound %d out of range (1 - %d)", i, NUMSFX-1);
 						ignorelines(f);
 					}
 					DEH_WriteUndoline(word, word2, UNDO_HEADER);
@@ -3929,18 +3952,21 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PLAY_WAIT",
 	"S_PLAY_WALK",
 	"S_PLAY_RUN",
-	"S_PLAY_PEEL",
+	"S_PLAY_DASH",
 	"S_PLAY_PAIN",
+	"S_PLAY_STUN",
 	"S_PLAY_DEAD",
 	"S_PLAY_DRWN",
-	"S_PLAY_SPIN",
-	"S_PLAY_DASH",
+	"S_PLAY_ROLL",
 	"S_PLAY_GASP",
 	"S_PLAY_JUMP",
 	"S_PLAY_SPRING",
 	"S_PLAY_FALL",
 	"S_PLAY_EDGE",
 	"S_PLAY_RIDE",
+
+	// CA2_SPINDASH
+	"S_PLAY_SPINDASH",
 
 	// CA_FLY/SWIM
 	"S_PLAY_FLY",
@@ -3952,30 +3978,25 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PLAY_CLING",
 	"S_PLAY_CLIMB",
 
+	// CA_FLOAT/CA_SLOWFALL
+	"S_PLAY_FLOAT",
+	"S_PLAY_FLOAT_RUN",
+
+	// CA_BOUNCE
+	"S_PLAY_BOUNCE",
+	"S_PLAY_BOUNCE_LANDING",
+
+	// CA2_GUNSLINGER
+	"S_PLAY_FIRE",
+	"S_PLAY_FIRE_FINISH",
+
 	// CA_TWINSPIN
 	"S_PLAY_TWINSPIN",
 
 	// CA2_MELEE
 	"S_PLAY_MELEE",
 	"S_PLAY_MELEE_FINISH",
-
-	// SF_SUPERANIMS
-	"S_PLAY_SUPER_STND",
-	"S_PLAY_SUPER_WALK",
-	"S_PLAY_SUPER_RUN",
-	"S_PLAY_SUPER_PEEL",
-	"S_PLAY_SUPER_PAIN",
-	"S_PLAY_SUPER_STUN",
-	"S_PLAY_SUPER_DEAD",
-	"S_PLAY_SUPER_DRWN",
-	"S_PLAY_SUPER_SPIN",
-	"S_PLAY_SUPER_GASP",
-	"S_PLAY_SUPER_JUMP",
-	"S_PLAY_SUPER_SPRING",
-	"S_PLAY_SUPER_FALL",
-	"S_PLAY_SUPER_EDGE",
-	"S_PLAY_SUPER_RIDE",
-	"S_PLAY_SUPER_FLOAT",
+	"S_PLAY_MELEE_LANDING",
 
 	// SF_SUPER
 	"S_PLAY_SUPERTRANS1",
@@ -4014,7 +4035,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	"S_PLAY_NIGHTS_STAND",
 	"S_PLAY_NIGHTS_FLOAT",
-	"S_PLAY_NIGHTS_PAIN",
+	"S_PLAY_NIGHTS_STUN",
 	"S_PLAY_NIGHTS_PULL",
 	"S_PLAY_NIGHTS_ATTACK",
 
@@ -5194,6 +5215,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Deep Sea Gargoyle
 	"S_GARGOYLE",
+	"S_BIGGARGOYLE",
 
 	// DSZ Seaweed
 	"S_SEAWEED1",
@@ -5352,7 +5374,14 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	// Xmas-specific stuff
 	"S_XMASPOLE",
 	"S_CANDYCANE",
-	"S_SNOWMAN",
+	"S_SNOWMAN",    // normal
+	"S_SNOWMANHAT", // with hat + scarf
+	"S_LAMPPOST1",  // normal
+	"S_LAMPPOST2",  // with snow
+	"S_HANGSTAR",
+	// Xmas GFZ bushes
+	"S_XMASBERRYBUSH",
+	"S_XMASBUSH",
 
 	// Botanic Serenity's loads of scenery states
 	"S_BSZTALLFLOWER_RED",
@@ -5544,10 +5573,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PITY4",
 	"S_PITY5",
 	"S_PITY6",
-	"S_PITY7",
-	"S_PITY8",
-	"S_PITY9",
-	"S_PITY10",
 
 	"S_FIRS1",
 	"S_FIRS2",
@@ -5939,14 +5964,18 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FOUR2",
 	"S_FIVE2",
 
+	"S_LOCKON1",
+	"S_LOCKON2",
+
 	// Tag Sign
-	"S_TTAG1",
+	"S_TTAG",
 
 	// Got Flag Sign
-	"S_GOTFLAG1",
-	"S_GOTFLAG2",
-	"S_GOTFLAG3",
-	"S_GOTFLAG4",
+	"S_GOTFLAG",
+	"S_GOTREDFLAG",
+	"S_GOTBLUEFLAG",
+
+	"S_CORK",
 
 	// Red Ring
 	"S_RRNG1",
@@ -6562,6 +6591,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 
 	// Deep Sea Scenery
 	"MT_GARGOYLE", // Deep Sea Gargoyle
+	"MT_BIGGARGOYLE", // Deep Sea Gargoyle (Big)
 	"MT_SEAWEED", // DSZ Seaweed
 	"MT_WATERDRIP", // Dripping Water source
 	"MT_WATERDROP", // Water drop from dripping water
@@ -6630,7 +6660,14 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	// Christmas Scenery
 	"MT_XMASPOLE",
 	"MT_CANDYCANE",
-	"MT_SNOWMAN",
+	"MT_SNOWMAN",    // normal
+	"MT_SNOWMANHAT", // with hat + scarf
+	"MT_LAMPPOST1",  // normal
+	"MT_LAMPPOST2",  // with snow
+	"MT_HANGSTAR",
+	// Xmas GFZ bushes
+	"MT_XMASBERRYBUSH",
+	"MT_XMASBUSH",
 
 	// Botanic Serenity
 	"MT_BSZTALLFLOWER_RED",
@@ -6737,9 +6774,9 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_SCORE", // score logo
 	"MT_DROWNNUMBERS", // Drowning Timer
 	"MT_GOTEMERALD", // Chaos Emerald (intangible)
+	"MT_LOCKON", // Target
 	"MT_TAG", // Tag Sign
 	"MT_GOTFLAG", // Got Flag sign
-	"MT_GOTFLAG2", // Got Flag sign
 
 	// Ambient Sounds
 	"MT_AWATERA", // Ambient Water Sound 1
@@ -6752,6 +6789,8 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_AWATERH", // Ambient Water Sound 8
 	"MT_RANDOMAMBIENT",
 	"MT_RANDOMAMBIENT2",
+
+	"MT_CORK",
 
 	// Ring Weapons
 	"MT_REDRING",
@@ -6976,10 +7015,8 @@ static const char *const PLAYERFLAG_LIST[] = {
 	// Did you get a time-over?
 	"TIMEOVER",
 
-	// Ready for Super?
-	"SUPERREADY",
-
 	// Character action status
+	"STARTJUMP",
 	"JUMPED",
 	"SPINNING",
 	"STARTDASH",
@@ -6991,12 +7028,11 @@ static const char *const PLAYERFLAG_LIST[] = {
 	// Sliding (usually in water) like Labyrinth/Oil Ocean
 	"SLIDING",
 
-	/*** NIGHTS STUFF ***/
-	// Is the player in NiGHTS mode?
-	"NIGHTSMODE",
-	"TRANSFERTOCLOSEST",
+	// Bouncing
+	"BOUNCING",
 
-	// Spill rings after falling
+	/*** NIGHTS STUFF ***/
+	"TRANSFERTOCLOSEST",
 	"NIGHTSFALL",
 	"DRILLING",
 	"SKIDDOWN",
@@ -7010,7 +7046,7 @@ static const char *const PLAYERFLAG_LIST[] = {
 	"ANALOGMODE", // Analog mode?
 	"CANCARRY", // Can carry?
 	"SHIELDABILITY", // Thokked with shield ability
-	"FORCEJUMPDAMAGE", // Force jump damage
+	"NOJUMPDAMAGE", // No jump damage
 
 	NULL // stop loop here.
 };
@@ -7159,8 +7195,7 @@ static const char *const POWERS_LIST[] = {
 	"NIGHTS_LINKFREEZE",
 
 	//for linedef exec 427
-	"NOCONTROL",
-	"INGOOP" // In goop
+	"NOCONTROL"
 };
 
 static const char *const HUDITEMS_LIST[] = {
@@ -7252,14 +7287,15 @@ struct {
 
 	// Frame settings
 	{"FF_FRAMEMASK",FF_FRAMEMASK},
-	{"FF_VERTICALFLIP",FF_VERTICALFLIP},
-	{"FF_PAPERSPRITE",FF_PAPERSPRITE},
+	{"FF_SPR2SUPER",FF_SPR2SUPER},
 	{"FF_SPR2ENDSTATE",FF_SPR2ENDSTATE},
 	{"FF_SPR2MIDSTART",FF_SPR2MIDSTART},
 	{"FF_ANIMATE",FF_ANIMATE},
 	{"FF_RANDOMANIM",FF_RANDOMANIM},
 	{"FF_GLOBALANIM",FF_GLOBALANIM},
 	{"FF_FULLBRIGHT",FF_FULLBRIGHT},
+	{"FF_VERTICALFLIP",FF_VERTICALFLIP},
+	{"FF_PAPERSPRITE",FF_PAPERSPRITE},
 	{"FF_TRANSMASK",FF_TRANSMASK},
 	{"FF_TRANSSHIFT",FF_TRANSSHIFT},
 	// new preshifted translucency (used in source)
@@ -7322,6 +7358,7 @@ struct {
 	{"LF2_RECORDATTACK",LF2_RECORDATTACK},
 	{"LF2_NIGHTSATTACK",LF2_NIGHTSATTACK},
 	{"LF2_NOVISITNEEDED",LF2_NOVISITNEEDED},
+	{"LF2_WIDEICON",LF2_WIDEICON},
 
 	// NiGHTS grades
 	{"GRADE_F",GRADE_F},
@@ -7383,6 +7420,8 @@ struct {
 	{"CR_NONE",CR_NONE},
 	{"CR_GENERIC",CR_GENERIC},
 	{"CR_PLAYER",CR_PLAYER},
+	{"CR_NIGHTSMODE",CR_NIGHTSMODE},
+	{"CR_BRAKGOOP",CR_BRAKGOOP},
 	{"CR_ZOOMTUBE",CR_ZOOMTUBE},
 	{"CR_ROPEHANG",CR_ROPEHANG},
 	{"CR_MACESPIN",CR_MACESPIN},
@@ -7398,8 +7437,8 @@ struct {
 
 	// Character flags (skinflags_t)
 	{"SF_SUPER",SF_SUPER},
-	{"SF_SUPERANIMS",SF_SUPERANIMS},
-	{"SF_SUPERSPIN",SF_SUPERSPIN},
+	{"SF_NOSUPERSPIN",SF_NOSUPERSPIN},
+	{"SF_NOSPINDASHDUST",SF_NOSPINDASHDUST},
 	{"SF_HIRES",SF_HIRES},
 	{"SF_NOSKID",SF_NOSKID},
 	{"SF_NOSPEEDADJUST",SF_NOSPEEDADJUST},
@@ -7409,7 +7448,9 @@ struct {
 	{"SF_STOMPDAMAGE",SF_STOMPDAMAGE},
 	{"SF_MARIODAMAGE",SF_MARIODAMAGE},
 	{"SF_MACHINE",SF_MACHINE},
-	{"SF_NOSPINDASHDUST",SF_NOSPINDASHDUST},
+	{"SF_DASHMODE",SF_DASHMODE},
+	{"SF_FASTEDGE",SF_FASTEDGE},
+	{"SF_MULTIABILITY",SF_MULTIABILITY},
 
 	// Character abilities!
 	// Primary
@@ -7427,12 +7468,12 @@ struct {
 	{"CA_JUMPBOOST",CA_JUMPBOOST},
 	{"CA_AIRDRILL",CA_AIRDRILL},
 	{"CA_JUMPTHOK",CA_JUMPTHOK},
-	{"CA_DASHMODE",CA_DASHMODE},
+	{"CA_BOUNCE",CA_BOUNCE},
 	{"CA_TWINSPIN",CA_TWINSPIN},
 	// Secondary
 	{"CA2_NONE",CA2_NONE}, // now slot 0!
 	{"CA2_SPINDASH",CA2_SPINDASH},
-	{"CA2_MULTIABILITY",CA2_MULTIABILITY},
+	{"CA2_GUNSLINGER",CA2_GUNSLINGER},
 	{"CA2_MELEE",CA2_MELEE},
 
 	// Sound flags
@@ -7443,7 +7484,12 @@ struct {
 	{"SF_X8AWAYSOUND",SF_X8AWAYSOUND},
 	{"SF_NOINTERRUPT",SF_NOINTERRUPT},
 	{"SF_X2AWAYSOUND",SF_X2AWAYSOUND},
-
+	
+	// Map emblem var flags
+	{"ME_ALLEMERALDS",ME_ALLEMERALDS},
+	{"ME_ULTIMATE",ME_ULTIMATE},
+	{"ME_PERFECT",ME_PERFECT},
+	
 #ifdef HAVE_BLUA
 	// p_local.h constants
 	{"FLOATSPEED",FLOATSPEED},
@@ -7496,7 +7542,7 @@ struct {
 	{"PA_EDGE",PA_EDGE},
 	{"PA_WALK",PA_WALK},
 	{"PA_RUN",PA_RUN},
-	{"PA_PEEL",PA_PEEL},
+	{"PA_DASH",PA_DASH},
 	{"PA_PAIN",PA_PAIN},
 	{"PA_ROLL",PA_ROLL},
 	{"PA_JUMP",PA_JUMP},
@@ -7685,6 +7731,7 @@ struct {
 	{"V_70TRANS",V_70TRANS},
 	{"V_80TRANS",V_80TRANS},
 	{"V_90TRANS",V_90TRANS},
+	{"V_STATIC",V_STATIC},
 	{"V_HUDTRANSHALF",V_HUDTRANSHALF},
 	{"V_HUDTRANS",V_HUDTRANS},
 	{"V_HUDTRANSDOUBLE",V_HUDTRANSDOUBLE},

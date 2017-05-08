@@ -425,9 +425,11 @@ typedef enum sprite
 	// Egg Rock Scenery
 
 	// Christmas Scenery
-	SPR_XMS1,
-	SPR_XMS2,
-	SPR_XMS3,
+	SPR_XMS1, // Christmas Pole
+	SPR_XMS2, // Candy Cane
+	SPR_XMS3, // Snowman
+	SPR_XMS4, // Lamppost
+	SPR_XMS5, // Hanging Star
 
 	// Botanic Serenity Scenery
 	SPR_BSZ1, // Tall flowers
@@ -450,7 +452,7 @@ typedef enum sprite
 	SPR_ARMB, // Armageddon Shield Ring, Back
 	SPR_WIND, // Whirlwind Shield Orb
 	SPR_MAGN, // Attract Shield Orb
-	SPR_ELEM, // Elemental Shield Orb and Fire
+	SPR_ELEM, // Elemental Shield Orb
 	SPR_FORC, // Force Shield Orb
 	SPR_PITY, // Pity Shield Orb
 	SPR_FIRS, // Flame Shield Orb
@@ -507,8 +509,11 @@ typedef enum sprite
 	// Game Indicators
 	SPR_SCOR, // Score logo
 	SPR_DRWN, // Drowning Timer
+	SPR_LCKN, // Target
 	SPR_TTAG, // Tag Sign
 	SPR_GFLG, // Got Flag sign
+
+	SPR_CORK,
 
 	// Ring Weapons
 	SPR_RRNG, // Red Ring
@@ -594,21 +599,21 @@ typedef enum sprite
 	NUMSPRITES
 } spritenum_t;
 
-// Make sure to be conscious of FF_FRAMEMASK whenever you change this table.
-// Currently, FF_FRAMEMASK is 0x1ff, or 511 - and NUMSPRITEFREESLOTS is 256.
-// Since this is zero-based, there can be at most 256 different SPR2_'s without changing that.
+// Make sure to be conscious of FF_FRAMEMASK and the fact sprite2 is stored as a UINT8 whenever you change this table.
+// Currently, FF_FRAMEMASK is 0xff, or 255 - but the second half is used by FF_SPR2SUPER, so the limitation is 0x7f.
+// Since this is zero-based, there can be at most 128 different SPR2_'s without changing that.
 enum playersprite
 {
 	SPR2_STND = 0,
 	SPR2_WAIT,
 	SPR2_WALK,
 	SPR2_RUN ,
-	SPR2_PEEL,
+	SPR2_DASH,
 	SPR2_PAIN,
+	SPR2_STUN,
 	SPR2_DEAD,
 	SPR2_DRWN, // drown
-	SPR2_SPIN,
-	SPR2_DASH, // spindash charge
+	SPR2_ROLL,
 	SPR2_GASP,
 	SPR2_JUMP,
 	SPR2_SPNG, // spring
@@ -616,8 +621,7 @@ enum playersprite
 	SPR2_EDGE,
 	SPR2_RIDE,
 
-	SPR2_SIGN, // end sign head
-	SPR2_LIFE, // life monitor icon
+	SPR2_SPIN, // spindash
 
 	SPR2_FLY ,
 	SPR2_SWIM,
@@ -627,36 +631,28 @@ enum playersprite
 	SPR2_CLNG, // cling
 	SPR2_CLMB, // climb
 
+	SPR2_FLT , // float
+	SPR2_FRUN, // float run
+
+	SPR2_BNCE, // bounce
+	SPR2_BLND, // bounce landing
+
+	SPR2_FIRE, // fire
+
 	SPR2_TWIN, // twinspin
 
 	SPR2_MLEE, // melee
+	SPR2_MLEL, // melee land
 
-	SPR2_TRNS, // super transformation
-	SPR2_SSTD, // super stand
-	SPR2_SWLK, // super walk
-	SPR2_SRUN, // super run
-	SPR2_SPEE, // super peelout
-	SPR2_SPAN, // super pain
-	SPR2_SSTN, // super stun
-	SPR2_SDTH, // super death
-	SPR2_SDRN, // super drown
-	SPR2_SSPN, // super spin
-	SPR2_SGSP, // super gasp
-	SPR2_SJMP, // super jump
-	SPR2_SSPG, // super spring
-	SPR2_SFAL, // super fall
-	SPR2_SEDG, // super edge
-	SPR2_SRID, // super ride
-	SPR2_SFLT, // super float
+	SPR2_TRNS, // transformation
 
-	SPR2_NTRN, // NiGHTS transformation
 	SPR2_NSTD, // NiGHTS stand
 	SPR2_NFLT, // NiGHTS float
-	SPR2_NPAN, // NiGHTS pain
+	SPR2_NSTN, // NiGHTS stun
 	SPR2_NPUL, // NiGHTS pull
 	SPR2_NATK, // NiGHTS attack
 
-	// NiGHTS flight.
+	// NiGHTS flight
 	SPR2_NGT0,
 	SPR2_NGT1,
 	SPR2_NGT2,
@@ -671,7 +667,7 @@ enum playersprite
 	SPR2_NGTB,
 	SPR2_NGTC,
 
-	// NiGHTS drill.
+	// NiGHTS drill
 	SPR2_DRL0,
 	SPR2_DRL1,
 	SPR2_DRL2,
@@ -686,8 +682,11 @@ enum playersprite
 	SPR2_DRLB,
 	SPR2_DRLC,
 
+	SPR2_SIGN, // end sign head
+	SPR2_LIFE, // life monitor icon
+
 	SPR2_FIRSTFREESLOT,
-	SPR2_LASTFREESLOT = SPR2_FIRSTFREESLOT + NUMSPRITEFREESLOTS - 1,
+	SPR2_LASTFREESLOT = 0x7f,
 	NUMPLAYERSPRITES
 };
 
@@ -713,18 +712,21 @@ typedef enum state
 	S_PLAY_WAIT,
 	S_PLAY_WALK,
 	S_PLAY_RUN,
-	S_PLAY_PEEL,
+	S_PLAY_DASH,
 	S_PLAY_PAIN,
+	S_PLAY_STUN,
 	S_PLAY_DEAD,
 	S_PLAY_DRWN,
-	S_PLAY_SPIN,
-	S_PLAY_DASH,
+	S_PLAY_ROLL,
 	S_PLAY_GASP,
-	S_PLAY_JUMP, // spin jump
+	S_PLAY_JUMP,
 	S_PLAY_SPRING,
 	S_PLAY_FALL,
 	S_PLAY_EDGE,
 	S_PLAY_RIDE,
+
+	// CA2_SPINDASH
+	S_PLAY_SPINDASH,
 
 	// CA_FLY/SWIM
 	S_PLAY_FLY,
@@ -736,30 +738,25 @@ typedef enum state
 	S_PLAY_CLING,
 	S_PLAY_CLIMB,
 
+	// CA_FLOAT/CA_SLOWFALL
+	S_PLAY_FLOAT,
+	S_PLAY_FLOAT_RUN,
+
+	// CA_BOUNCE
+	S_PLAY_BOUNCE,
+	S_PLAY_BOUNCE_LANDING,
+
+	// CA2_GUNSLINGER
+	S_PLAY_FIRE,
+	S_PLAY_FIRE_FINISH,
+
 	// CA_TWINSPIN
 	S_PLAY_TWINSPIN,
 
 	// CA2_MELEE
 	S_PLAY_MELEE,
 	S_PLAY_MELEE_FINISH,
-
-	// SF_SUPERANIMS
-	S_PLAY_SUPER_STND,
-	S_PLAY_SUPER_WALK,
-	S_PLAY_SUPER_RUN,
-	S_PLAY_SUPER_PEEL,
-	S_PLAY_SUPER_PAIN,
-	S_PLAY_SUPER_STUN,
-	S_PLAY_SUPER_DEAD,
-	S_PLAY_SUPER_DRWN,
-	S_PLAY_SUPER_SPIN,
-	S_PLAY_SUPER_GASP,
-	S_PLAY_SUPER_JUMP, // see note above
-	S_PLAY_SUPER_SPRING,
-	S_PLAY_SUPER_FALL,
-	S_PLAY_SUPER_EDGE,
-	S_PLAY_SUPER_RIDE,
-	S_PLAY_SUPER_FLOAT,
+	S_PLAY_MELEE_LANDING,
 
 	// SF_SUPER
 	S_PLAY_SUPER_TRANS,
@@ -798,7 +795,7 @@ typedef enum state
 
 	S_PLAY_NIGHTS_STAND,
 	S_PLAY_NIGHTS_FLOAT,
-	S_PLAY_NIGHTS_PAIN,
+	S_PLAY_NIGHTS_STUN,
 	S_PLAY_NIGHTS_PULL,
 	S_PLAY_NIGHTS_ATTACK,
 
@@ -1980,6 +1977,7 @@ typedef enum state
 
 	// Deep Sea Gargoyle
 	S_GARGOYLE,
+	S_BIGGARGOYLE,
 
 	// DSZ Seaweed
 	S_SEAWEED1,
@@ -2138,7 +2136,14 @@ typedef enum state
 	// Xmas-specific stuff
 	S_XMASPOLE,
 	S_CANDYCANE,
-	S_SNOWMAN,
+	S_SNOWMAN,    // normal
+	S_SNOWMANHAT, // with hat + scarf
+	S_LAMPPOST1,  // normal
+	S_LAMPPOST2,  // with snow
+	S_HANGSTAR,
+	// Xmas GFZ bushes
+	S_XMASBERRYBUSH,
+	S_XMASBUSH,
 
 	// Botanic Serenity's loads of scenery states
 	S_BSZTALLFLOWER_RED,
@@ -2330,10 +2335,6 @@ typedef enum state
 	S_PITY4,
 	S_PITY5,
 	S_PITY6,
-	S_PITY7,
-	S_PITY8,
-	S_PITY9,
-	S_PITY10,
 
 	S_FIRS1,
 	S_FIRS2,
@@ -2725,14 +2726,18 @@ typedef enum state
 	S_FOUR2,
 	S_FIVE2,
 
+	S_LOCKON1,
+	S_LOCKON2,
+
 	// Tag Sign
-	S_TTAG1,
+	S_TTAG,
 
 	// Got Flag Sign
-	S_GOTFLAG1,
-	S_GOTFLAG2,
-	S_GOTFLAG3,
-	S_GOTFLAG4,
+	S_GOTFLAG,
+	S_GOTREDFLAG,
+	S_GOTBLUEFLAG,
+
+	S_CORK,
 
 	// Red Ring
 	S_RRNG1,
@@ -3367,6 +3372,7 @@ typedef enum mobj_type
 
 	// Deep Sea Scenery
 	MT_GARGOYLE, // Deep Sea Gargoyle
+	MT_BIGGARGOYLE, // Deep Sea Gargoyle (Big)
 	MT_SEAWEED, // DSZ Seaweed
 	MT_WATERDRIP, // Dripping Water source
 	MT_WATERDROP, // Water drop from dripping water
@@ -3435,7 +3441,14 @@ typedef enum mobj_type
 	// Christmas Scenery
 	MT_XMASPOLE,
 	MT_CANDYCANE,
-	MT_SNOWMAN,
+	MT_SNOWMAN,    // normal
+	MT_SNOWMANHAT, // with hat + scarf
+	MT_LAMPPOST1,  // normal
+	MT_LAMPPOST2,  // with snow
+	MT_HANGSTAR,
+	// Xmas GFZ bushes
+	MT_XMASBERRYBUSH,
+	MT_XMASBUSH,
 
 	// Botanic Serenity scenery
 	MT_BSZTALLFLOWER_RED,
@@ -3542,9 +3555,9 @@ typedef enum mobj_type
 	MT_SCORE, // score logo
 	MT_DROWNNUMBERS, // Drowning Timer
 	MT_GOTEMERALD, // Chaos Emerald (intangible)
+	MT_LOCKON, // Target
 	MT_TAG, // Tag Sign
 	MT_GOTFLAG, // Got Flag sign
-	MT_GOTFLAG2, // Got Flag sign
 
 	// Ambient Sounds
 	MT_AWATERA, // Ambient Water Sound 1
@@ -3557,6 +3570,8 @@ typedef enum mobj_type
 	MT_AWATERH, // Ambient Water Sound 8
 	MT_RANDOMAMBIENT,
 	MT_RANDOMAMBIENT2,
+
+	MT_CORK,
 
 	// Ring Weapons
 	MT_REDRING,
