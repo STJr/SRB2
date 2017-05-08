@@ -5123,6 +5123,9 @@ static void M_HandleAddons(INT32 choice)
 		Z_Free(dirmenu);
 		dirmenu = NULL;
 
+		// secrets disabled by addfile...
+		MainMenu[secrets].status = (M_AnySecretUnlocked()) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
+
 		if (currentMenu->prevMenu)
 			M_SetupNextMenu(currentMenu->prevMenu);
 		else
