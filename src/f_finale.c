@@ -1429,6 +1429,8 @@ void F_StartTitleScreen(void)
 
 	if (titlemap)
 	{
+		mapthing_t *startpos;
+
 		gamestate_t prevwipegamestate = wipegamestate;
 		titlemapinaction = true;
 		gamemap = titlemap;
@@ -1444,7 +1446,6 @@ void F_StartTitleScreen(void)
 		//camera.subsector = NULL; // toast is filthy too
 
 		// Set Default Position
-		mapthing_t *startpos;
 		if (playerstarts[0])
 			startpos = playerstarts[0];
 		else if (deathmatchstarts[0])
@@ -1576,12 +1577,12 @@ void F_TitleScreenTicker(boolean run)
 	if (gameaction != ga_nothing || gamestate != GS_TITLESCREEN)
 		return;
 
-	thinker_t *th;
-	mobj_t *mo2;
-	mobj_t *cameraref = NULL;
-
 	// Execute the titlemap camera settings
-	if (titlemapinaction) {
+	if (titlemapinaction)
+	{
+		thinker_t *th;
+		mobj_t *mo2;
+		mobj_t *cameraref = NULL;
 
 		for (th = thinkercap.next; th != &thinkercap; th = th->next)
 		{
