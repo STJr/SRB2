@@ -82,7 +82,8 @@ typedef enum
 	REFRESHDIR_ADDFILE = 2,
 	REFRESHDIR_WARNING = 4,
 	REFRESHDIR_ERROR = 8,
-	REFRESHDIR_MAX = 16
+	REFRESHDIR_NOTLOADED = 16,
+	REFRESHDIR_MAX = 32
 } refreshdir_enum;
 
 boolean preparefilemenu(boolean samedepth);

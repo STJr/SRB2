@@ -4810,7 +4810,9 @@ static boolean M_AddonsRefresh(void)
 
 	if (refreshdirmenu & REFRESHDIR_ADDFILE)
 	{
-		if (!(dirmenu[dir_on[menudepthleft]][DIR_TYPE] & EXT_LOADED))
+		addonsresponselimit = 0;
+
+		if (refreshdirmenu & REFRESHDIR_NOTLOADED)
 		{
 			char *message = NULL;
 			S_StartSound(NULL, sfx_lose);
@@ -4946,7 +4948,6 @@ static void M_AddonExec(INT32 ch)
 
 	S_StartSound(NULL, sfx_strpst);
 	COM_BufAddText(va("exec %s%s", menupath, dirmenu[dir_on[menudepthleft]]+DIR_STRING));
-	addonsresponselimit = 5;
 }
 
 #define len menusearch[0]
