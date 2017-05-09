@@ -2929,7 +2929,7 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 	fixed_t leftx, rightx;
 	fixed_t topy, bottomy;
 	fixed_t topz, bottomz;
-	fixed_t widthfactor, heightfactor;
+	fixed_t widthfactor = FRACUNIT, heightfactor = FRACUNIT;
 	fixed_t a, b, c;
 	mobjtype_t type = MT_ROCKCRUMBLE1;
 	fixed_t spacing = (32<<FRACBITS);

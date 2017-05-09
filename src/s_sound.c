@@ -406,14 +406,14 @@ void S_StopSoundByNum(sfxenum_t sfxnum)
 void S_StartCaption(sfxenum_t sfx_id, INT32 cnum, UINT16 lifespan)
 {
 	UINT8 i, set, moveup, start;
-	boolean same;
+	boolean same = false;
 	sfxinfo_t *sfx;
 
 	if (!cv_closedcaptioning.value) // no captions at all
 		return;
 
 	// check for bogus sound #
-	I_Assert(sfx_id >= 0); // allows sfx_None; this shouldn't be allowed directly if S_StartCaption is ever exposed to Lua by itself
+	// I_Assert(sfx_id >= 0); -- allowing sfx_None; this shouldn't be allowed directly if S_StartCaption is ever exposed to Lua by itself
 	I_Assert(sfx_id < NUMSFX);
 
 	sfx = &S_sfx[sfx_id];
