@@ -406,7 +406,7 @@ void S_StopSoundByNum(sfxenum_t sfxnum)
 void S_StartCaption(sfxenum_t sfx_id, INT32 cnum, UINT16 lifespan)
 {
 	UINT8 i, set, moveup, start;
-	boolean same;
+	boolean same = false;
 	sfxinfo_t *sfx;
 
 	if (!cv_closedcaptioning.value) // no captions at all
