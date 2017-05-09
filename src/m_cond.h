@@ -66,17 +66,17 @@ typedef struct
 } conditionset_t;
 
 // Emblem information
-#define ET_GLOBAL  0 // Emblem with a position in space
-#define ET_SKIN    1 // Skin specific emblem with a position in space, var == skin
-#define ET_MAP     2 // Beat the map
-#define ET_SCORE   3 // Get the score
-#define ET_TIME    4 // Get the time
-#define ET_RINGS   5 // Get the rings
-#define ET_NGRADE  6 // Get the grade
-#define ET_NTIME   7 // Get the time (NiGHTS mode)
+#define ET_GLOBAL 0 // Emblem with a position in space
+#define ET_SKIN   1 // Skin specific emblem with a position in space, var == skin
+#define ET_MAP    2 // Beat the map
+#define ET_SCORE  3 // Get the score
+#define ET_TIME   4 // Get the time
+#define ET_RINGS  5 // Get the rings
+#define ET_NGRADE 6 // Get the grade
+#define ET_NTIME  7 // Get the time (NiGHTS mode)
 
 // Global emblem flags
-#define GE_NIGHTSPULL   1 // sun off the nights track - loop it
+#define GE_NIGHTSPULL 1 // sun off the nights track - loop it
 #define GE_NIGHTSITEM 2 // moon on the nights track - find it
 
 // Map emblem flags
