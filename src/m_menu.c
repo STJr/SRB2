@@ -358,6 +358,7 @@ static void M_DrawMainVideoMenu(void);
 static void M_DrawVideoMode(void);
 static void M_DrawColorMenu(void);
 static void M_DrawSoundMenu(void);
+static void M_DrawScreenshotMenu(void);
 static void M_DrawMonitorToggles(void);
 #ifdef HWRENDER
 static void M_OGL_DrawFogMenu(void);
