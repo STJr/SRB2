@@ -881,7 +881,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 						if (!(mo2->flags & MF_SPECIAL) && mo2->health)
 						{
-							P_SetMobjState(mo2, mo2->info->seestate);
+							mo2->flags2 &= ~MF2_DONTDRAW;
 							mo2->flags |= MF_SPECIAL;
 							mo2->flags &= ~MF_NIGHTSITEM;
 							S_StartSound(toucher, sfx_hidden);
@@ -890,7 +890,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					}
 
 					if (!(mo2->type == MT_NIGHTSWING || mo2->type == MT_RING || mo2->type == MT_COIN
-					   || mo2->type == MT_BLUEBALL))
+					   || mo2->type == MT_BLUEBALL
+					   || ((mo2->type == MT_EMBLEM) && (mo2->reactiontime & GE_NIGHTSPULL))))
 						continue;
 
 					// Yay! The thing's in reach! Pull it in!

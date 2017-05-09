@@ -7778,6 +7778,10 @@ void P_MobjThinker(mobj_t *mobj)
 			if (mobj->flags2 & MF2_NIGHTSPULL)
 				P_NightsItemChase(mobj);
 			break;
+		case MT_EMBLEM:
+			if (mobj->flags2 & MF2_NIGHTSPULL)
+				P_NightsItemChase(mobj);
+			break;
 		case MT_SHELL:
 			if (mobj->threshold && mobj->threshold != TICRATE)
 				mobj->threshold--;
@@ -10166,7 +10170,6 @@ ML_NOCLIMB : Direction not controllable
 				// Spawn already displayed
 				mobj->flags |= MF_SPECIAL;
 				mobj->flags &= ~MF_NIGHTSITEM;
-				P_SetMobjState(mobj, mobj->info->seestate);
 			}
 
 			if (mobj->flags & MF_PUSHABLE)
@@ -10218,6 +10221,10 @@ ML_NOCLIMB : Direction not controllable
 		mobj->eflags |= MFE_VERTICALFLIP;
 		mobj->flags2 |= MF2_OBJECTFLIP;
 	}
+
+	// Final set of not being able to draw nightsitems.
+	if (mobj->flags & MF_NIGHTSITEM)
+		mobj->flags2 |= MF2_DONTDRAW;
 
 	mthing->mobj = mobj;
 }
