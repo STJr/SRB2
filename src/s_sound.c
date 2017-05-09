@@ -413,7 +413,7 @@ void S_StartCaption(sfxenum_t sfx_id, INT32 cnum, UINT16 lifespan)
 		return;
 
 	// check for bogus sound #
-	I_Assert(sfx_id >= 0); // allows sfx_None; this shouldn't be allowed directly if S_StartCaption is ever exposed to Lua by itself
+	// I_Assert(sfx_id >= 0); -- allowing sfx_None; this shouldn't be allowed directly if S_StartCaption is ever exposed to Lua by itself
 	I_Assert(sfx_id < NUMSFX);
 
 	sfx = &S_sfx[sfx_id];
