@@ -5084,6 +5084,11 @@ static void M_HandleAddons(INT32 choice)
 						case EXT_UP:
 							S_StartSound(NULL, sfx_menu1);
 							menupath[menupathindex[++menudepthleft]] = 0;
+							if (!preparefilemenu(false))
+							{
+								UNEXIST;
+								return;
+							}
 							break;
 						case EXT_TXT:
 							M_StartMessage(va("\x82%s\x80\nThis file may not be a console script.\nAttempt to run anyways? \n\n(Press 'Y' to confirm)\n", dirmenu[dir_on[menudepthleft]]+DIR_STRING),M_AddonExec,MM_YESNO);
