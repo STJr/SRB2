@@ -702,11 +702,9 @@ boolean preparefilemenu(boolean samedepth)
 					if (!strcmp(dent->d_name, "log.txt") || !strcmp(dent->d_name, "errorlog.txt"))
 						ext |= EXT_LOADED;
 				}
-				else if (ext == EXT_CFG)
-				{
-					if (!strcmp(dent->d_name, "config.cfg"))
-						ext |= EXT_LOADED;
-				}
+
+				if (!strcmp(dent->d_name, configfile))
+					ext |= EXT_LOADED;
 
 				folder = 0;
 			}
