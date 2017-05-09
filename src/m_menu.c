@@ -1389,11 +1389,15 @@ static menuitem_t OP_EraseDataMenu[] =
 
 static menuitem_t OP_AddonsOptionsMenu[] =
 {
-	{IT_HEADER,                      NULL, "Menu",                        NULL,                0},
-	{IT_STRING|IT_CVAR,              NULL, "Location",                    &cv_addons_option,   6},
-	{IT_STRING|IT_CVAR|IT_CV_STRING, NULL, "Custom Folder",               &cv_addons_folder,  11},
-	{IT_STRING|IT_CVAR,              NULL, "Identify loaded files via",   &cv_addons_md5,     25},
-	{IT_STRING|IT_CVAR,              NULL, "Show unsupported file types", &cv_addons_showall, 30},
+	{IT_HEADER,                      NULL, "Menu",                        NULL,                     0},
+	{IT_STRING|IT_CVAR,              NULL, "Location",                    &cv_addons_option,       12},
+	{IT_STRING|IT_CVAR|IT_CV_STRING, NULL, "Custom Folder",               &cv_addons_folder,       22},
+	{IT_STRING|IT_CVAR,              NULL, "Identify loaded files via",   &cv_addons_md5,          50},
+	{IT_STRING|IT_CVAR,              NULL, "Show unsupported file types", &cv_addons_showall,      60},
+
+	{IT_HEADER,                      NULL, "Search",                      NULL,                    78},
+	{IT_STRING|IT_CVAR,              NULL, "Matching",                    &cv_addons_search_type,  90},
+	{IT_STRING|IT_CVAR,              NULL, "Case-sensitive",              &cv_addons_search_case, 100},
 };
 
 enum
@@ -1906,7 +1910,7 @@ menu_t OP_ScreenshotOptionsDef =
 	NULL
 };
 
-menu_t OP_AddonsOptionsDef = DEFAULTSCROLLMENUSTYLE("M_ADDONS", OP_AddonsOptionsMenu, &OP_DataOptionsDef, 30, 30);
+menu_t OP_AddonsOptionsDef = DEFAULTMENUSTYLE("M_ADDONS", OP_AddonsOptionsMenu, &OP_DataOptionsDef, 30, 30);
 
 menu_t OP_EraseDataDef = DEFAULTMENUSTYLE("M_DATA", OP_EraseDataMenu, &OP_DataOptionsDef, 60, 30);
 

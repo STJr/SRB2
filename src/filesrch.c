@@ -41,7 +41,7 @@
 #include <tchar.h>
 
 #define SUFFIX	"*"
-#define	SLASH	PATHSEP
+#define	SLASH	"\\"
 #define	S_ISDIR(m)	(((m) & S_IFMT) == S_IFDIR)
 
 #ifndef INVALID_FILE_ATTRIBUTES
@@ -319,6 +319,11 @@ consvar_t cv_addons_md5 = {"addons_md5", "Name", CV_SAVE, addons_md5_cons_t, NUL
 
 consvar_t cv_addons_showall = {"addons_showall", "No", CV_SAVE, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
 
+consvar_t cv_addons_search_case = {"addons_search_case", "No", CV_SAVE, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+static CV_PossibleValue_t addons_search_type_cons_t[] = {{0, "Start"}, {1, "Anywhere"}, {0, NULL}};
+consvar_t cv_addons_search_type = {"addons_search_type", "Anywhere", CV_SAVE, addons_search_type_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+
 char menupath[1024];
 size_t menupathindex[menudepth];
 size_t menudepthleft = menudepth;
@@ -519,23 +524,19 @@ char exttable[NUM_EXT_TABLE][5] = {
 
 char filenamebuf[MAX_WADFILES][MAX_WADPATH];
 
-#if defined(_WIN32) || defined(_WINDOWS)
-#define CASEINSENSITIVE_FILESYSTEM
-#endif
 
-#ifdef CASEINSENSITIVE_FILESYSTEM
-static char *strsystemstr(char *haystack, char *needle)
+static boolean filemenusearch(char *haystack, char *needle)
 {
-	char uprhaystack[128];
-	strlcpy(uprhaystack, haystack, 128);
-	strupr(uprhaystack);
-	return strstr(uprhaystack, needle);
+	static char localhaystack[128];
+	strlcpy(localhaystack, haystack, 128);
+	if (!cv_addons_search_case.value)
+		strupr(localhaystack);
+	return ((cv_addons_search_type.value)
+		? (strstr(localhaystack, needle) != 0)
+		: (!strncmp(localhaystack, needle, menusearch[0])));
 }
-#else
-#define strsystemstr(haystack, needle) strstr(haystack, needle)
-#endif
 
-#define searchdir if (menusearch[0] && !strsystemstr(dent->d_name, localmenusearch))\
+#define searchdir if (menusearch[0] && !filemenusearch(dent->d_name, localmenusearch))\
 					{\
 						rejected++;\
 						continue;\
@@ -573,9 +574,8 @@ boolean preparefilemenu(boolean samedepth)
 	if (menusearch[0])
 	{
 		strcpy(localmenusearch, menusearch+1);
-#ifdef CASEINSENSITIVE_FILESYSTEM
-		strupr(localmenusearch);
-#endif
+		if (!cv_addons_search_case.value)
+			strupr(localmenusearch);
 	}
 
 	while (true)

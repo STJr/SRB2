@@ -720,6 +720,8 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_addons_folder);
 	CV_RegisterVar(&cv_addons_md5);
 	CV_RegisterVar(&cv_addons_showall);
+	CV_RegisterVar(&cv_addons_search_type);
+	CV_RegisterVar(&cv_addons_search_case);
 
 	// WARNING: the order is important when initialising mouse2
 	// we need the mouse2port
