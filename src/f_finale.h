@@ -61,8 +61,15 @@ void F_ContinueTicker(void);
 void F_ContinueDrawer(void);
 
 extern INT32 titlescrollspeed;
-extern boolean titlemapinaction;
-extern boolean titlemaptransition;
+
+typedef enum
+{
+	TITLEMAP_OFF = 0,
+	TITLEMAP_LOADING,
+	TITLEMAP_RUNNING
+} titlemap_enum;
+
+extern UINT8 titlemapinaction;
 
 //
 // WIPE
