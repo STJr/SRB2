@@ -17,7 +17,9 @@
 #ifndef __P_SPEC__
 #define __P_SPEC__
 
-extern mobj_t *skyboxmo[2];
+extern mobj_t *skyboxmo[2]; // current skybox mobjs: 0 = viewpoint, 1 = centerpoint
+extern mobj_t *skyboxviewpnts[16]; // array of MT_SKYBOX viewpoint mobjs
+extern mobj_t *skyboxcenterpnts[16]; // array of MT_SKYBOX centerpoint mobjs
 
 // GETSECSPECIAL (specialval, section)
 //
@@ -32,6 +34,7 @@ void P_InitPicAnims(void);
 void P_SetupLevelFlatAnims(void);
 
 // at map load
+void P_InitSpecials(void);
 void P_SpawnSpecials(INT32 fromnetsave);
 
 // every tic
@@ -458,6 +461,7 @@ typedef struct
 	INT32 control;       ///< Control sector used to control plane positions.
 	fixed_t last_height; ///< Last known height of control sector.
 	fixed_t speed;       ///< Plane movement speed.
+	UINT8 reverse;       ///< Move in reverse direction to control sector?
 	/** Types of plane displacement effects.
 	*/
 	enum

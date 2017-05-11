@@ -2557,6 +2557,12 @@ void T_PlaneDisplace(planedisplace_t *pd)
 	direction = (control->floorheight > pd->last_height) ? 1 : -1;
 	diff = FixedMul(control->floorheight-pd->last_height, pd->speed);
 
+	if (pd->reverse) // reverse direction?
+	{
+		direction *= -1;
+		diff *= -1;
+	}
+
 	if (pd->type == pd_floor || pd->type == pd_both)
 		T_MovePlane(target, INT32_MAX/2, target->floorheight+diff, 0, 0, direction); // move floor
 	if (pd->type == pd_ceiling || pd->type == pd_both)
@@ -2923,7 +2929,7 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 	fixed_t leftx, rightx;
 	fixed_t topy, bottomy;
 	fixed_t topz, bottomz;
-	fixed_t widthfactor, heightfactor;
+	fixed_t widthfactor = FRACUNIT, heightfactor = FRACUNIT;
 	fixed_t a, b, c;
 	mobjtype_t type = MT_ROCKCRUMBLE1;
 	fixed_t spacing = (32<<FRACBITS);

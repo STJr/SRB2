@@ -82,6 +82,8 @@ extern wadfile_t *wadfiles[MAX_WADFILES];
 
 void W_Shutdown(void);
 
+// Opens a WAD file. Returns the FILE * handle for the file, or NULL if not found or could not be opened
+FILE *W_OpenWadFile(const char **filename, boolean useerrors);
 // Load and add a wadfile to the active wad files, returns numbers of lumps, INT16_MAX on error
 UINT16 W_LoadWadFile(const char *filename);
 

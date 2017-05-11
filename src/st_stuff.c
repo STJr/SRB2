@@ -78,12 +78,6 @@ static patch_t *race3;
 static patch_t *racego;
 static patch_t *ttlnum;
 static patch_t *nightslink;
-static patch_t *count5;
-static patch_t *count4;
-static patch_t *count3;
-static patch_t *count2;
-static patch_t *count1;
-static patch_t *count0;
 static patch_t *curweapon;
 static patch_t *normring;
 static patch_t *bouncering;
@@ -137,25 +131,25 @@ hudinfo_t hudinfo[NUMHUDITEMS] =
 
 	{  16,  42}, // HUD_RINGS
 	{ 220,  10}, // HUD_RINGSSPLIT
-	{ 112,  42}, // HUD_RINGSNUM
-	{ 288,  10}, // HUD_RINGSNUMSPLIT
+	{ 120,  42}, // HUD_RINGSNUM
+	{ 296,  10}, // HUD_RINGSNUMSPLIT
 
 	{  16,  10}, // HUD_SCORE
-	{ 128,  10}, // HUD_SCORENUM
+	{ 120,  10}, // HUD_SCORENUM
 
 	{  16,  26}, // HUD_TIME
-	{ 136,  10}, // HUD_TIMESPLIT
-	{  88,  26}, // HUD_MINUTES
+	{ 128,  10}, // HUD_TIMESPLIT
+	{  96,  26}, // HUD_MINUTES
 	{ 188,  10}, // HUD_MINUTESSPLIT
-	{  88,  26}, // HUD_TIMECOLON
+	{  96,  26}, // HUD_TIMECOLON
 	{ 188,  10}, // HUD_TIMECOLONSPLIT
-	{ 112,  26}, // HUD_SECONDS
+	{ 120,  26}, // HUD_SECONDS
 	{ 212,  10}, // HUD_SECONDSSPLIT
-	{ 112,  26}, // HUD_TIMETICCOLON
-	{ 136,  26}, // HUD_TICS
+	{ 120,  26}, // HUD_TIMETICCOLON
+	{ 144,  26}, // HUD_TICS
 
-	{ 112,  56}, // HUD_SS_TOTALRINGS
-	{ 288,  40}, // HUD_SS_TOTALRINGS_SPLIT
+	{ 120,  56}, // HUD_SS_TOTALRINGS
+	{ 296,  40}, // HUD_SS_TOTALRINGS_SPLIT
 
 	{ 110,  93}, // HUD_GETRINGS
 	{ 160,  93}, // HUD_GETRINGSNUM
@@ -272,12 +266,6 @@ void ST_LoadGraphics(void)
 	race3 = W_CachePatchName("RACE3", PU_HUDGFX);
 	racego = W_CachePatchName("RACEGO", PU_HUDGFX);
 	nightslink = W_CachePatchName("NGHTLINK", PU_HUDGFX);
-	count5 = W_CachePatchName("DRWNF0", PU_HUDGFX);
-	count4 = W_CachePatchName("DRWNE0", PU_HUDGFX);
-	count3 = W_CachePatchName("DRWND0", PU_HUDGFX);
-	count2 = W_CachePatchName("DRWNC0", PU_HUDGFX);
-	count1 = W_CachePatchName("DRWNB0", PU_HUDGFX);
-	count0 = W_CachePatchName("DRWNA0", PU_HUDGFX);
 
 	for (i = 0; i < 6; ++i)
 	{
@@ -809,8 +797,15 @@ static void ST_drawFirstPersonHUD(void)
 	// Graue 06-18-2004: no V_NOSCALESTART, no SCX, no SCY, snap to right
 	if ((player->powers[pw_shield] & SH_NOSTACK & ~SH_FORCEHP) == SH_FORCE)
 	{
-		if ((player->powers[pw_shield] & SH_FORCEHP) > 0 || leveltime & 1)
-			p = forceshield;
+		UINT8 i, max = (player->powers[pw_shield] & SH_FORCEHP);
+		for (i = 0; i <= max; i++)
+		{
+			INT32 flags = (V_SNAPTORIGHT|V_SNAPTOTOP)|((i == max) ? V_HUDTRANS : V_HUDTRANSHALF);
+			if (splitscreen)
+				V_DrawSmallScaledPatch(312-(3*i), STRINGY(24)+(3*i), flags, forceshield);
+			else
+				V_DrawScaledPatch(304-(3*i), 24+(3*i), flags, forceshield);
+		}
 	}
 	else switch (player->powers[pw_shield] & SH_NOSTACK)
 	{
@@ -853,50 +848,48 @@ static void ST_drawFirstPersonHUD(void)
 
 	p = NULL;
 
-	// Display the countdown drown numbers!
-	if ((player->powers[pw_underwater] <= 11*TICRATE + 1
-		&& player->powers[pw_underwater] >= 10*TICRATE + 1)
-		|| (player->powers[pw_spacetime] <= 11*TICRATE + 1
-		&& player->powers[pw_spacetime] >= 10*TICRATE + 1))
 	{
-		p = count5;
-	}
-	else if ((player->powers[pw_underwater] <= 9*TICRATE + 1
-		&& player->powers[pw_underwater] >= 8*TICRATE + 1)
-		|| (player->powers[pw_spacetime] <= 9*TICRATE + 1
-		&& player->powers[pw_spacetime] >= 8*TICRATE + 1))
-	{
-		p = count4;
-	}
-	else if ((player->powers[pw_underwater] <= 7*TICRATE + 1
-		&& player->powers[pw_underwater] >= 6*TICRATE + 1)
-		|| (player->powers[pw_spacetime] <= 7*TICRATE + 1
-		&& player->powers[pw_spacetime] >= 6*TICRATE + 1))
-	{
-		p = count3;
-	}
-	else if ((player->powers[pw_underwater] <= 5*TICRATE + 1
-		&& player->powers[pw_underwater] >= 4*TICRATE + 1)
-		|| (player->powers[pw_spacetime] <= 5*TICRATE + 1
-		&& player->powers[pw_spacetime] >= 4*TICRATE + 1))
-	{
-		p = count2;
-	}
-	else if ((player->powers[pw_underwater] <= 3*TICRATE + 1
-		&& player->powers[pw_underwater] >= 2*TICRATE + 1)
-		|| (player->powers[pw_spacetime] <= 3*TICRATE + 1
-		&& player->powers[pw_spacetime] >= 2*TICRATE + 1))
-	{
-		p = count1;
-	}
-	else if ((player->powers[pw_underwater] <= 1*TICRATE + 1
-		&& player->powers[pw_underwater] > 1)
-		|| (player->powers[pw_spacetime] <= 1*TICRATE + 1
-		&& player->powers[pw_spacetime] > 1))
-	{
-		p = count0;
+		UINT32 airtime;
+		UINT32 frame = 0;
+		spriteframe_t *sprframe;
+		// If both air timers are active, use the air timer with the least time left
+		if (player->powers[pw_underwater] && player->powers[pw_spacetime])
+			airtime = min(player->powers[pw_underwater], player->powers[pw_spacetime]);
+		else // Use whichever one is active otherwise
+			airtime = (player->powers[pw_spacetime]) ? player->powers[pw_spacetime] : player->powers[pw_underwater];
+
+		if (!airtime)
+			return; // No air timers are active, nothing would be drawn anyway
+
+		airtime--; // The original code was all n*TICRATE + 1, so let's remove 1 tic for simplicity
+
+		if (airtime > 11*TICRATE)
+			return; // Not time to draw any drown numbers yet
+		// Choose which frame to use based on time left
+		if (airtime <= 11*TICRATE && airtime >= 10*TICRATE)
+			frame = 5;
+		else if (airtime <= 9*TICRATE && airtime >= 8*TICRATE)
+			frame = 4;
+		else if (airtime <= 7*TICRATE && airtime >= 6*TICRATE)
+			frame = 3;
+		else if (airtime <= 5*TICRATE && airtime >= 4*TICRATE)
+			frame = 2;
+		else if (airtime <= 3*TICRATE && airtime >= 2*TICRATE)
+			frame = 1;
+		else if (airtime <= 1*TICRATE && airtime > 0)
+			frame = 0;
+		else
+			return; // Don't draw anything between numbers
+
+		if (player->charflags & SF_MACHINE)
+			frame += 6;  // Robots use different drown numbers
+
+		// Get the front angle patch for the frame
+		sprframe = &sprites[SPR_DRWN].spriteframes[frame];
+		p = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
 	}
 
+	// Display the countdown drown numbers!
 	if (p)
 		V_DrawScaledPatch(SCX((BASEVIDWIDTH/2) - (SHORT(p->width)/2) + SHORT(p->leftoffset)), SCY(60 - SHORT(p->topoffset)),
 			V_NOSCALESTART|V_OFFSET|V_TRANSLUCENT, p);
@@ -1479,7 +1472,7 @@ static inline void ST_drawRaceHUD(void)
 {
 	if (leveltime >= TICRATE && leveltime < 5*TICRATE)
 	{
-		INT32 height = (BASEVIDHEIGHT/2);
+		INT32 height = ((3*BASEVIDHEIGHT)>>2) - 8;
 		INT32 bounce = (leveltime % TICRATE);
 		patch_t *racenum;
 		switch (leveltime/TICRATE)
@@ -1498,7 +1491,11 @@ static inline void ST_drawRaceHUD(void)
 				break;
 		}
 		if (bounce < 3)
+		{
 			height -= (2 - bounce);
+			if (!bounce)
+					S_StartSound(0, ((racenum == racego) ? sfx_s3kad : sfx_s3ka7));
+		}
 		V_DrawScaledPatch(SCX((BASEVIDWIDTH - SHORT(racenum->width))/2), (INT32)(SCY(height)), V_NOSCALESTART, racenum);
 	}
 
