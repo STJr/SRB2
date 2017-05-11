@@ -2614,6 +2614,13 @@ static UINT16 W_CheckForSkinMarkerInPwad(UINT16 wadid, UINT16 startlump)
 #define HUDNAMEWRITE(value) STRBUFCPY(skin->hudname, value)
 #endif
 
+// turn _ into spaces and . into katana dot
+#define SYMBOLCONVERT(name) for (value = name; *value; value++)\
+					{\
+						if (*value == '_') *value = ' ';\
+						else if (*value == '.') *value = '\x1E';\
+					}
+
 //
 // Patch skins from a pwad, each skin preceded by 'P_SKIN' marker
 //
@@ -2889,22 +2896,14 @@ void R_AddSkins(UINT16 wadnum)
 				{
 					HUDNAMEWRITE(skin->name);
 					strupr(skin->hudname);
-					for (value = skin->hudname; *value; value++)
-					{
-						if (*value == '_') *value = ' '; // turn _ into spaces.
-						else if (*value == '.') *value = '\x1E'; // turn . into katana dot.
-					}
+					SYMBOLCONVERT(skin->hudname)
 				}
 			}
 			else if (!stricmp(stoken, "realname"))
 			{ // Display name (eg. "Knuckles")
 				realname = true;
 				STRBUFCPY(skin->realname, value);
-				for (value = skin->realname; *value; value++)
-				{
-					if (*value == '_') *value = ' '; // turn _ into spaces.
-					else if (*value == '.') *value = '\x1E'; // turn . into katana dot.
-				}
+				SYMBOLCONVERT(skin->realname)
 				if (!hudname)
 					HUDNAMEWRITE(skin->realname);
 			}
@@ -2912,11 +2911,7 @@ void R_AddSkins(UINT16 wadnum)
 			{ // Life icon name (eg. "K.T.E")
 				hudname = true;
 				HUDNAMEWRITE(value);
-				for (value = skin->hudname; *value; value++)
-				{
-					if (*value == '_') *value = ' '; // turn _ into spaces.
-					else if (*value == '.') *value = '\x1E'; // turn . into katana dot.
-				}
+				SYMBOLCONVERT(skin->hudname)
 				if (!realname)
 					STRBUFCPY(skin->realname, skin->hudname);
 			}
@@ -3058,8 +3053,7 @@ void R_PatchSkins(UINT16 wadnum)
 				{ // Display name (eg. "Knuckles")
 					realname = true;
 					STRBUFCPY(skin->realname, value);
-					for (value = skin->realname; *value; value++)
-						if (*value == '_') *value = ' '; // turn _ into spaces.
+					SYMBOLCONVERT(skin->realname)
 					if (!hudname)
 						HUDNAMEWRITE(skin->realname);
 				}
@@ -3067,8 +3061,7 @@ void R_PatchSkins(UINT16 wadnum)
 				{ // Life icon name (eg. "K.T.E")
 					hudname = true;
 					HUDNAMEWRITE(value);
-					for (value = skin->hudname; *value; value++)
-						if (*value == '_') *value = ' '; // turn _ into spaces.
+					SYMBOLCONVERT(skin->hudname)
 					if (!realname)
 						STRBUFCPY(skin->realname, skin->hudname);
 				}
@@ -3099,4 +3092,6 @@ next_token:
 	}
 	return;
 }
+
 #undef HUDNAMEWRITE
+#undef SYMBOLCONVERT
