@@ -4223,6 +4223,7 @@ static void HWR_DrawSprite(gr_vissprite_t *spr)
 	GLPatch_t *gpatch; // sprite patch converted to hardware
 	FSurfaceInfo Surf;
 	const boolean hires = (spr->mobj && spr->mobj->skin && ((skin_t *)spr->mobj->skin)->flags & SF_HIRES);
+	//const boolean papersprite = (spr->mobj && (spr->mobj->frame & FF_PAPERSPRITE));
 	if (spr->mobj)
 		this_scale = FIXED_TO_FLOAT(spr->mobj->scale);
 	if (hires)
@@ -4266,7 +4267,8 @@ static void HWR_DrawSprite(gr_vissprite_t *spr)
 
 	// make a wall polygon (with 2 triangles), using the floor/ceiling heights,
 	// and the 2d map coords of start/end vertices
-	wallVerts[0].z = wallVerts[1].z = wallVerts[2].z = wallVerts[3].z = spr->tz;
+	wallVerts[0].z = wallVerts[3].z = spr->z1;
+	wallVerts[2].z = wallVerts[1].z = spr->z2;
 
 	// transform
 	wv = wallVerts;
@@ -5042,6 +5044,10 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	UINT8 flip;
 	angle_t ang;
 	INT32 heightsec, phs;
+	const boolean papersprite = (thing->frame & FF_PAPERSPRITE);
+	float offset;
+	float ang_scale = 1.0f, ang_scalez = 0.0f;
+	float z1, z2;
 
 	if (!thing)
 		return;
@@ -5056,7 +5062,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	tz = (tr_x * gr_viewcos) + (tr_y * gr_viewsin);
 
 	// thing is behind view plane?
-	if (tz < ZCLIP_PLANE && (!cv_grmd2.value || md2_models[thing->sprite].notfound == true)) //Yellow: Only MD2's dont disappear
+	if (tz < ZCLIP_PLANE && !papersprite && (!cv_grmd2.value || md2_models[thing->sprite].notfound == true)) //Yellow: Only MD2's dont disappear
 		return;
 
 	tx = (tr_x * gr_viewsin) - (tr_y * gr_viewcos);
@@ -5094,6 +5100,16 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		I_Error("sprframes NULL for sprite %d\n", thing->sprite);
 #endif
 
+	if (sprframe->rotate != SRF_SINGLE || papersprite)
+	{
+		ang = R_PointToAngle (thing->x, thing->y) - thing->angle;
+		if (papersprite)
+		{
+			ang_scale = FIXED_TO_FLOAT(FINESINE(ang>>ANGLETOFINESHIFT));
+			ang_scalez = FIXED_TO_FLOAT(FINECOSINE(ang>>ANGLETOFINESHIFT));
+		}
+	}
+
 	if (sprframe->rotate == SRF_SINGLE)
 	{
 		// use single rotation for all views
@@ -5104,8 +5120,6 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	else
 	{
 		// choose a different rotation based on player view
-		ang = R_PointToAngle (thing->x, thing->y) - thing->angle;
-
 		if ((ang < ANGLE_180) && (sprframe->rotate & SRF_RIGHT)) // See from right
 			rot = 6; // F7 slot
 		else if ((ang >= ANGLE_180) && (sprframe->rotate & SRF_LEFT)) // See from left
@@ -5123,9 +5137,20 @@ static void HWR_ProjectSprite(mobj_t *thing)
 
 	// calculate edges of the shape
 	if (flip)
-		tx -= FIXED_TO_FLOAT(spritecachedinfo[lumpoff].width - spritecachedinfo[lumpoff].offset) * this_scale;
+		offset = FIXED_TO_FLOAT(spritecachedinfo[lumpoff].width - spritecachedinfo[lumpoff].offset) * this_scale;
 	else
-		tx -= FIXED_TO_FLOAT(spritecachedinfo[lumpoff].offset) * this_scale;
+		offset = FIXED_TO_FLOAT(spritecachedinfo[lumpoff].offset) * this_scale;
+
+	if (ang_scale < 0)
+	{
+		z1 = tz + offset * ang_scalez;
+		tx += offset * ang_scale;
+	}
+	else
+	{
+		z1 = tz - offset * ang_scalez;
+		tx -= offset * ang_scale;
+	}
 
 	// project x
 	x1 = gr_windowcenterx + (tx * gr_centerx / tz);
@@ -5136,7 +5161,20 @@ static void HWR_ProjectSprite(mobj_t *thing)
 
 	x1 = tx;
 
-	tx += FIXED_TO_FLOAT(spritecachedinfo[lumpoff].width) * this_scale;
+	offset = FIXED_TO_FLOAT(spritecachedinfo[lumpoff].width) * this_scale;
+	if (ang_scale < 0)
+	{
+		z2 = z1 - offset * ang_scalez;
+		tx -= offset * ang_scale;
+	}
+	else
+	{
+		z2 = z1 + offset * ang_scalez;
+		tx += offset * ang_scale;
+	}
+	if (papersprite && max(z1, z2) < ZCLIP_PLANE)
+		return;
+
 	x2 = gr_windowcenterx + (tx * gr_centerx / tz);
 
 	if (thing->eflags & MFE_VERTICALFLIP)
@@ -5185,6 +5223,8 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	vis->patchlumpnum = sprframe->lumppat[rot];
 	vis->flip = flip;
 	vis->mobj = thing;
+	vis->z1 = z1;
+	vis->z2 = z2;
 
 	//Hurdler: 25/04/2000: now support colormap in hardware mode
 	if ((vis->mobj->flags & MF_BOSS) && (vis->mobj->flags2 & MF2_FRET) && (leveltime & 1)) // Bosses "flash"
