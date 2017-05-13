@@ -126,6 +126,7 @@ extern INT16 sstage_end;
 
 extern INT16 titlemap;
 extern boolean hidetitlepics;
+extern INT16 bootmap; //bootmap for loading a map on startup
 
 extern boolean looptitle;
 extern boolean useNightsSS;

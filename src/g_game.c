@@ -122,6 +122,7 @@ INT16 sstage_end;
 
 INT16 titlemap = 0;
 boolean hidetitlepics = false;
+INT16 bootmap; //bootmap for loading a map on startup
 
 boolean looptitle = false;
 boolean useNightsSS = false;
