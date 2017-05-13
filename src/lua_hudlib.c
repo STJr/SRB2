@@ -434,7 +434,7 @@ static int libd_getSprite2Patch(lua_State *L)
 	{
 		const char *name = lua_tostring(L, 1);
 		for (j = 0; j < free_spr2; j++)
-			if (fastcmp(name, sprnames[j]))
+			if (fastcmp(name, spr2names[j]))
 				break;
 		if (j >= free_spr2)
 			return 0;
