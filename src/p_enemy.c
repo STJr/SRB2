@@ -1145,7 +1145,7 @@ void A_JetJawChomp(mobj_t *actor)
 	if (!actor->target || !(actor->target->flags & MF_SHOOTABLE)
 		|| actor->target->health <= 0 || !P_CheckSight(actor, actor->target))
 	{
-		P_SetMobjState(actor, actor->info->spawnstate);
+		P_SetMobjStateNF(actor, actor->info->spawnstate);
 		return;
 	}
 
@@ -3170,6 +3170,8 @@ void A_Invincibility(mobj_t *actor)
 		S_StopMusic();
 		if (mariomode)
 			G_GhostAddColor(GHC_INVINCIBLE);
+		strlcpy(S_sfx[sfx_None].caption, "Invincibility", 14);
+		S_StartCaption(sfx_None, -1, player->powers[pw_invulnerability]);
 		S_ChangeMusicInternal((mariomode) ? "_minv" : "_inv", false);
 	}
 }
@@ -3208,6 +3210,8 @@ void A_SuperSneakers(mobj_t *actor)
 			S_StopMusic();
 			S_ChangeMusicInternal("_shoes", false);
 		}
+		strlcpy(S_sfx[sfx_None].caption, "Speed shoes", 12);
+		S_StartCaption(sfx_None, -1, player->powers[pw_sneakers]);
 	}
 }
 
@@ -5602,7 +5606,10 @@ void A_MixUp(mobj_t *actor)
 	// No mix-up monitors in hide and seek or time only race.
 	// The random factor is okay for other game modes, but in these, it is cripplingly unfair.
 	if (gametype == GT_HIDEANDSEEK || gametype == GT_RACE)
+	{
+		S_StartSound(actor, sfx_lose);
 		return;
+	}
 
 	numplayers = 0;
 	memset(teleported, 0, sizeof (teleported));
