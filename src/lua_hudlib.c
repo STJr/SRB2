@@ -377,12 +377,12 @@ static int libd_getSpritePatch(lua_State *L)
 	sprdef = &sprites[i];
 
 	// set frame number
-	frame = (luaL_optinteger(L, 2, 0);
+	frame = luaL_optinteger(L, 2, 0);
 	frame &= FF_FRAMEMASK; // ignore any bits that are not the actual frame, just in case
 	if (frame >= sprdef->numframes)
 		return 0;
 	// set angle number
-	sprframe = sprdef->spriteframes[frame];
+	sprframe = &sprdef->spriteframes[frame];
 	angle = luaL_optinteger(L, 3, 0);
 	if (angle >= 8)
 		return 0;
@@ -395,7 +395,8 @@ static int libd_getSpritePatch(lua_State *L)
 
 static int libd_getSprite2Patch(lua_State *L)
 {
-	UINT32 i, j; // skin number, sprite2 prefix
+	INT32 i; // skin number
+	UINT32 j; // sprite2 prefix
 	UINT32 frame = 0; // 'A'
 	UINT8 angle = 0;
 	spritedef_t *sprdef;
@@ -406,7 +407,7 @@ static int libd_getSprite2Patch(lua_State *L)
 	if (lua_isnumber(L, 1)) // find skin by number
 	{
 		i = lua_tonumber(L, 1);
-		if (i >= MAXSKINS)
+		if (i < 0 || i >= MAXSKINS)
 			return luaL_error(L, "skin number %d out of range (0 - %d)", i, MAXSKINS-1);
 		if (i >= numskins)
 			return 0;
@@ -415,7 +416,7 @@ static int libd_getSprite2Patch(lua_State *L)
 	{
 		const char *name = luaL_checkstring(L, 1);
 		for (i = 0; i < numskins; i++)
-			if (fastcmp(skins[i].name, field))
+			if (fastcmp(skins[i].name, name))
 				break;
 		if (i >= numskins)
 			return 0;
@@ -444,12 +445,12 @@ static int libd_getSprite2Patch(lua_State *L)
 	sprdef = &skins[i].sprites[j];
 
 	// set frame number
-	frame = (luaL_optinteger(L, 2, 0);
+	frame = luaL_optinteger(L, 2, 0);
 	frame &= FF_FRAMEMASK; // ignore any bits that are not the actual frame, just in case
 	if (frame >= sprdef->numframes)
 		return 0;
 	// set angle number
-	sprframe = sprdef->spriteframes[frame];
+	sprframe = &sprdef->spriteframes[frame];
 	angle = luaL_optinteger(L, 3, 0);
 	if (angle >= 8)
 		return 0;
