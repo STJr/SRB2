@@ -63,21 +63,21 @@ after_build:
 
 test: off
 
-deploy:
-  - provider: FTP
-    protocol: ftps
-    host: 
-      secure: NsLJEPIBvmwCOj8Tg8RoRQ==
-    username:
-      secure: ejxi5mvk7oLYu7QtbYojajEPigMy0mokaKhuEVuDZcA=
-    password:
-      secure: Hbn6Uy3lT0YZ88yFJ3aW4w==
-    folder: appveyor
-    application:
-    active_mode: false
-    on:
-      branch: master
-      appveyor_repo_tag: true
+#deploy:
+#  - provider: FTP
+#    protocol: ftps
+#    host: 
+#      secure: NsLJEPIBvmwCOj8Tg8RoRQ==
+#    username:
+#      secure: ejxi5mvk7oLYu7QtbYojajEPigMy0mokaKhuEVuDZcA=
+#    password:
+#      secure: Hbn6Uy3lT0YZ88yFJ3aW4w==
+#    folder: appveyor
+#    application:
+#    active_mode: false
+#    on:
+#      branch: master
+#      appveyor_repo_tag: true
 
 
 on_finish:
