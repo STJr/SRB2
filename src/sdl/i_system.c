@@ -2647,6 +2647,47 @@ INT32 I_PutEnv(char *variable)
 #endif
 }
 
+INT32 I_ClipboardCopy(const char *data, size_t size)
+{
+	char storage[256];
+	if (size > 255)
+		size = 255;
+	memcpy(storage, data, size);
+	storage[size] = 0;
+
+	if (SDL_SetClipboardText(storage))
+		return 0;
+	return -1;
+}
+
+const char *I_ClipboardPaste(void)
+{
+	static char clipboard_modified[256];
+	char *clipboard_contents, *i = clipboard_modified;
+
+	if (!SDL_HasClipboardText())
+		return NULL;
+	clipboard_contents = SDL_GetClipboardText();
+	memcpy(clipboard_modified, clipboard_contents, 255);
+	SDL_free(clipboard_contents);
+	clipboard_modified[255] = 0;
+
+	while (*i)
+	{
+		if (*i == '\n' || *i == '\r')
+		{ // End on newline
+			*i = 0;
+			break;
+		}
+		else if (*i == '\t')
+			*i = ' '; // Tabs become spaces
+		else if (*i < 32 || (unsigned)*i > 127)
+			*i = '?'; // Nonprintable chars become question marks
+		++i;
+	}
+	return (const char *)&clipboard_modified;
+}
+
 /**	\brief	The isWadPathOk function
 
 	\param	path	string path to check

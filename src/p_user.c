@@ -1692,6 +1692,7 @@ static void P_CheckBustableBlocks(player_t *player)
 		if (node->m_sector->ffloors)
 		{
 			ffloor_t *rover;
+			fixed_t topheight, bottomheight;
 
 			for (rover = node->m_sector->ffloors; rover; rover = rover->next)
 			{
@@ -1717,42 +1718,45 @@ static void P_CheckBustableBlocks(player_t *player)
 					if (!(rover->flags & FF_SHATTER) && (rover->flags & FF_ONLYKNUX) && !(player->charability == CA_GLIDEANDCLIMB))
 						continue;
 
+					topheight = P_GetFOFTopZ(player->mo, node->m_sector, rover, player->mo->x, player->mo->y, NULL);
+					bottomheight = P_GetFOFBottomZ(player->mo, node->m_sector, rover, player->mo->x, player->mo->y, NULL);
+
 					// Height checks
 					if (rover->flags & FF_SHATTERBOTTOM)
 					{
-						if (player->mo->z+player->mo->momz + player->mo->height < *rover->bottomheight)
+						if (player->mo->z+player->mo->momz + player->mo->height < bottomheight)
 							continue;
 
-						if (player->mo->z+player->mo->height > *rover->bottomheight)
+						if (player->mo->z+player->mo->height > bottomheight)
 							continue;
 					}
 					else if (rover->flags & FF_SPINBUST)
 					{
-						if (player->mo->z+player->mo->momz > *rover->topheight)
+						if (player->mo->z+player->mo->momz > topheight)
 							continue;
 
-						if (player->mo->z + player->mo->height < *rover->bottomheight)
+						if (player->mo->z + player->mo->height < bottomheight)
 							continue;
 					}
 					else if (rover->flags & FF_SHATTER)
 					{
-						if (player->mo->z + player->mo->momz > *rover->topheight)
+						if (player->mo->z + player->mo->momz > topheight)
 							continue;
 
-						if (player->mo->z+player->mo->momz + player->mo->height < *rover->bottomheight)
+						if (player->mo->z+player->mo->momz + player->mo->height < bottomheight)
 							continue;
 					}
 					else
 					{
-						if (player->mo->z >= *rover->topheight)
+						if (player->mo->z >= topheight)
 							continue;
 
-						if (player->mo->z + player->mo->height < *rover->bottomheight)
+						if (player->mo->z + player->mo->height < bottomheight)
 							continue;
 					}
 
 					// Impede the player's fall a bit
-					if (((rover->flags & FF_SPINBUST) || (rover->flags & FF_SHATTER)) && player->mo->z >= *rover->topheight)
+					if (((rover->flags & FF_SPINBUST) || (rover->flags & FF_SHATTER)) && player->mo->z >= topheight)
 						player->mo->momz >>= 1;
 					else if (rover->flags & FF_SHATTER)
 					{
@@ -2284,17 +2288,15 @@ static void P_DoClimbing(player_t *player)
 
 	if (!glidesector || glidesector->sector != player->mo->subsector->sector)
 	{
-		boolean floorclimb;
-		boolean thrust;
-		boolean boostup;
-		boolean skyclimber;
+		boolean floorclimb = false;
+		boolean thrust = false;
+		boolean boostup = false;
+		boolean skyclimber = false;
 		fixed_t floorheight, ceilingheight; // ESLOPE
-		thrust = false;
-		floorclimb = false;
-		boostup = false;
-		skyclimber = false;
 
-		if (glidesector)
+		if (!glidesector)
+			floorclimb = true;
+		else
 		{
 #ifdef ESLOPE
 			floorheight = glidesector->sector->f_slope ? P_GetZAt(glidesector->sector->f_slope, player->mo->x, player->mo->y)
@@ -2589,8 +2591,6 @@ static void P_DoClimbing(player_t *player)
 				}
 			}
 		}
-		else
-			floorclimb = true;
 
 		if (player->lastsidehit != -1 && player->lastlinehit != -1)
 		{
@@ -6979,6 +6979,7 @@ static void P_MovePlayer(player_t *player)
 		msecnode_t *node; // only place it's being used in P_MovePlayer now
 		fixed_t oldx;
 		fixed_t oldy;
+		fixed_t floorz, ceilingz;
 
 		oldx = player->mo->x;
 		oldy = player->mo->y;
@@ -6996,31 +6997,34 @@ static void P_MovePlayer(player_t *player)
 			if (node->m_sector->ffloors)
 			{
 				ffloor_t *rover;
+				fixed_t topheight, bottomheight;
 
 				for (rover = node->m_sector->ffloors; rover; rover = rover->next)
 				{
-					if (!(rover->flags & FF_EXISTS)) continue;
+					if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_BLOCKPLAYER))
+						continue;
 
-					if ((rover->flags & FF_BLOCKPLAYER))
+					topheight = P_GetFOFTopZ(player->mo, node->m_sector, rover, player->mo->x, player->mo->y, NULL);
+					bottomheight = P_GetFOFBottomZ(player->mo, node->m_sector, rover, player->mo->x, player->mo->y, NULL);
+					if (topheight > player->mo->z && bottomheight < player->mo->z)
 					{
-						if (*rover->topheight > player->mo->z && *rover->bottomheight < player->mo->z)
-						{
-							P_ResetPlayer(player);
-							S_StartSound(player->mo, sfx_s3k4a);
-							player->climbing = 5;
-							player->mo->momx = player->mo->momy = player->mo->momz = 0;
-							break;
-						}
+						P_ResetPlayer(player);
+						S_StartSound(player->mo, sfx_s3k4a);
+						player->climbing = 5;
+						player->mo->momx = player->mo->momy = player->mo->momz = 0;
+						break;
 					}
 				}
 			}
 
-			if (player->mo->z+player->mo->height > node->m_sector->ceilingheight
+			floorz = P_GetFloorZ(player->mo, node->m_sector, player->mo->x, player->mo->y, NULL);
+			ceilingz = P_GetCeilingZ(player->mo, node->m_sector, player->mo->x, player->mo->y, NULL);
+
+			if (player->mo->z+player->mo->height > ceilingz
 				&& node->m_sector->ceilingpic == skyflatnum)
 				continue;
 
-			if (node->m_sector->floorheight > player->mo->z
-				|| node->m_sector->ceilingheight < player->mo->z)
+			if (floorz > player->mo->z || ceilingz < player->mo->z)
 			{
 				P_ResetPlayer(player);
 				S_StartSound(player->mo, sfx_s3k4a);
@@ -7053,7 +7057,6 @@ static void P_DoZoomTube(player_t *player)
 	mobj_t *waypoint = NULL;
 	fixed_t dist;
 	boolean reverse;
-	fixed_t speedx,speedy,speedz;
 
 	player->mo->height = P_GetPlayerSpinHeight(player);
 
@@ -7074,17 +7077,17 @@ static void P_DoZoomTube(player_t *player)
 	if (dist < 1)
 		dist = 1;
 
-	speedx = FixedMul(FixedDiv(player->mo->tracer->x - player->mo->x, dist), (speed));
-	speedy = FixedMul(FixedDiv(player->mo->tracer->y - player->mo->y, dist), (speed));
-	speedz = FixedMul(FixedDiv(player->mo->tracer->z - player->mo->z, dist), (speed));
+	player->mo->momx = FixedMul(FixedDiv(player->mo->tracer->x - player->mo->x, dist), (speed));
+	player->mo->momy = FixedMul(FixedDiv(player->mo->tracer->y - player->mo->y, dist), (speed));
+	player->mo->momz = FixedMul(FixedDiv(player->mo->tracer->z - player->mo->z, dist), (speed));
 
 	// Calculate the distance between the player and the waypoint
 	// 'dist' already equals this.
 
-	// Will the player be FURTHER away if the momx/momy/momz is added to
-	// his current coordinates, or closer? (shift down to fracunits to avoid approximation errors)
-	if (dist>>FRACBITS <= P_AproxDistance(P_AproxDistance(player->mo->tracer->x - player->mo->x - speedx, player->mo->tracer->y - player->mo->y - speedy), player->mo->tracer->z - player->mo->z - speedz)>>FRACBITS)
+	// Will the player go past the waypoint?
+	if (speed > dist)
 	{
+		speed -= dist;
 		// If further away, set XYZ of player to waypoint location
 		P_UnsetThingPosition(player->mo);
 		player->mo->x = player->mo->tracer->x;
@@ -7124,14 +7127,9 @@ static void P_DoZoomTube(player_t *player)
 		{
 			CONS_Debug(DBG_GAMELOGIC, "Found waypoint (sequence %d, number %d).\n", waypoint->threshold, waypoint->health);
 
-			// calculate MOMX/MOMY/MOMZ for next waypoint
-			// change angle
-			player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, player->mo->tracer->x, player->mo->tracer->y);
+			P_SetTarget(&player->mo->tracer, waypoint);
 
-			if (player == &players[consoleplayer])
-				localangle = player->mo->angle;
-			else if (player == &players[secondarydisplayplayer])
-				localangle2 = player->mo->angle;
+			// calculate MOMX/MOMY/MOMZ for next waypoint
 
 			// change slope
 			dist = P_AproxDistance(P_AproxDistance(player->mo->tracer->x - player->mo->x, player->mo->tracer->y - player->mo->y), player->mo->tracer->z - player->mo->z);
@@ -7142,21 +7140,13 @@ static void P_DoZoomTube(player_t *player)
 			player->mo->momx = FixedMul(FixedDiv(player->mo->tracer->x - player->mo->x, dist), (speed));
 			player->mo->momy = FixedMul(FixedDiv(player->mo->tracer->y - player->mo->y, dist), (speed));
 			player->mo->momz = FixedMul(FixedDiv(player->mo->tracer->z - player->mo->z, dist), (speed));
-
-			P_SetTarget(&player->mo->tracer, waypoint);
 		}
 		else
 		{
-			P_SetTarget(&player->mo->tracer, NULL); // Else, we just let him fly.
+			P_SetTarget(&player->mo->tracer, NULL); // Else, we just let them fly.
 
 			CONS_Debug(DBG_GAMELOGIC, "Next waypoint not found, releasing from track...\n");
 		}
-	}
-	else
-	{
-		player->mo->momx = speedx;
-		player->mo->momy = speedy;
-		player->mo->momz = speedz;
 	}
 
 	// change angle
@@ -7185,23 +7175,9 @@ static void P_DoRopeHang(player_t *player)
 	mobj_t *mo2;
 	mobj_t *waypoint = NULL;
 	fixed_t dist;
-	fixed_t speedx,speedy,speedz;
 	fixed_t playerz;
 
 	player->mo->height = P_GetPlayerHeight(player);
-
-	if (player->cmd.buttons & BT_USE && !(player->pflags & PF_STASIS)) // Drop off of the rope
-	{
-		P_SetTarget(&player->mo->tracer, NULL);
-
-		player->pflags |= PF_JUMPED;
-		player->pflags &= ~PF_ROPEHANG;
-
-		if (!(player->pflags & PF_SLIDING) && (player->pflags & PF_JUMPED)
-		&& !(player->panim == PA_ROLL) && player->charability2 == CA2_SPINDASH)
-			P_SetPlayerMobjState(player->mo, S_PLAY_ATK1);
-		return;
-	}
 
 	// Play the 'clink' sound only if the player is moving.
 	if (!(leveltime & 7) && player->speed)
@@ -7219,9 +7195,22 @@ static void P_DoRopeHang(player_t *player)
 	if (dist < 1)
 		dist = 1;
 
-	speedx = FixedMul(FixedDiv(player->mo->tracer->x - player->mo->x, dist), (speed));
-	speedy = FixedMul(FixedDiv(player->mo->tracer->y - player->mo->y, dist), (speed));
-	speedz = FixedMul(FixedDiv(player->mo->tracer->z - playerz, dist), (speed));
+	player->mo->momx = FixedMul(FixedDiv(player->mo->tracer->x - player->mo->x, dist), (speed));
+	player->mo->momy = FixedMul(FixedDiv(player->mo->tracer->y - player->mo->y, dist), (speed));
+	player->mo->momz = FixedMul(FixedDiv(player->mo->tracer->z - playerz, dist), (speed));
+
+	if (player->cmd.buttons & BT_USE && !(player->pflags & PF_STASIS)) // Drop off of the rope
+	{
+		P_SetTarget(&player->mo->tracer, NULL);
+
+		player->pflags |= PF_JUMPED;
+		player->pflags &= ~PF_ROPEHANG;
+
+		if (!(player->pflags & PF_SLIDING) && (player->pflags & PF_JUMPED)
+		&& !(player->panim == PA_ROLL) && player->charability2 == CA2_SPINDASH)
+			P_SetPlayerMobjState(player->mo, S_PLAY_ATK1);
+		return;
+	}
 
 	// If not allowed to move, we're done here.
 	if (!speed)
@@ -7230,15 +7219,16 @@ static void P_DoRopeHang(player_t *player)
 	// Calculate the distance between the player and the waypoint
 	// 'dist' already equals this.
 
-	// Will the player be FURTHER away if the momx/momy/momz is added to
-	// his current coordinates, or closer? (shift down to fracunits to avoid approximation errors)
-	if (dist>>FRACBITS <= P_AproxDistance(P_AproxDistance(player->mo->tracer->x - player->mo->x - speedx, player->mo->tracer->y - player->mo->y - speedy), player->mo->tracer->z - playerz - speedz)>>FRACBITS)
+	// Will the player go past the waypoint?
+	if (speed > dist)
 	{
+		speed -= dist;
 		// If further away, set XYZ of player to waypoint location
 		P_UnsetThingPosition(player->mo);
 		player->mo->x = player->mo->tracer->x;
 		player->mo->y = player->mo->tracer->y;
 		player->mo->z = player->mo->tracer->z - player->mo->height;
+		playerz = player->mo->tracer->z;
 		P_SetThingPosition(player->mo);
 
 		CONS_Debug(DBG_GAMELOGIC, "Looking for next waypoint...\n");
@@ -7294,6 +7284,8 @@ static void P_DoRopeHang(player_t *player)
 		{
 			CONS_Debug(DBG_GAMELOGIC, "Found waypoint (sequence %d, number %d).\n", waypoint->threshold, waypoint->health);
 
+			P_SetTarget(&player->mo->tracer, waypoint);
+
 			// calculate MOMX/MOMY/MOMZ for next waypoint
 			// change slope
 			dist = P_AproxDistance(P_AproxDistance(player->mo->tracer->x - player->mo->x, player->mo->tracer->y - player->mo->y), player->mo->tracer->z - playerz);
@@ -7304,8 +7296,6 @@ static void P_DoRopeHang(player_t *player)
 			player->mo->momx = FixedMul(FixedDiv(player->mo->tracer->x - player->mo->x, dist), (speed));
 			player->mo->momy = FixedMul(FixedDiv(player->mo->tracer->y - player->mo->y, dist), (speed));
 			player->mo->momz = FixedMul(FixedDiv(player->mo->tracer->z - playerz, dist), (speed));
-
-			P_SetTarget(&player->mo->tracer, waypoint);
 		}
 		else
 		{
@@ -7323,12 +7313,6 @@ static void P_DoRopeHang(player_t *player)
 
 			CONS_Debug(DBG_GAMELOGIC, "Next waypoint not found!\n");
 		}
-	}
-	else
-	{
-		player->mo->momx = speedx;
-		player->mo->momy = speedy;
-		player->mo->momz = speedz;
 	}
 }
 

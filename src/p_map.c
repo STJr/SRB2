@@ -1052,18 +1052,24 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				return true;
 			}
 
-			topz = thing->z - FixedMul(FRACUNIT, thing->scale);
+			topz = thing->z - thing->scale; // FixedMul(FRACUNIT, thing->scale), but thing->scale == FRACUNIT in base scale anyways
 
 			// block only when jumping not high enough,
 			// (dont climb max. 24units while already in air)
-			// if not in air, let P_TryMove() decide if it's not too high
+			// since return false doesn't handle momentum properly,
+			// we lie to P_TryMove() so it's always too high
 			if (tmthing->player && tmthing->z + tmthing->height > topz
 				&& tmthing->z + tmthing->height < tmthing->ceilingz)
-				return false; // block while in air
-
-			if (thing->flags & MF_SPRING)
+			{
+				tmfloorz = tmceilingz = topz; // block while in air
+#ifdef ESLOPE
+				tmceilingslope = NULL;
+#endif
+				tmfloorthing = thing; // needed for side collision
+			}
+			else if (thing->flags & MF_SPRING)
 				;
-			else if (topz < tmceilingz && tmthing->z+tmthing->height <= thing->z+thing->height)
+			else if (topz < tmceilingz && tmthing->z <= thing->z+thing->height)
 			{
 				tmceilingz = topz;
 #ifdef ESLOPE
@@ -1089,17 +1095,24 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				return true;
 			}
 
-			topz = thing->z + thing->height + FixedMul(FRACUNIT, thing->scale);
+			topz = thing->z + thing->height + thing->scale; // FixedMul(FRACUNIT, thing->scale), but thing->scale == FRACUNIT in base scale anyways
 
 			// block only when jumping not high enough,
 			// (dont climb max. 24units while already in air)
-			// if not in air, let P_TryMove() decide if it's not too high
-			if (tmthing->player && tmthing->z < topz && tmthing->z > tmthing->floorz)
-				return false; // block while in air
-
-			if (thing->flags & MF_SPRING)
+			// since return false doesn't handle momentum properly,
+			// we lie to P_TryMove() so it's always too high
+			if (tmthing->player && tmthing->z < topz
+				&& tmthing->z > tmthing->floorz)
+			{
+				tmfloorz = tmceilingz = topz; // block while in air
+#ifdef ESLOPE
+				tmfloorslope = NULL;
+#endif
+				tmfloorthing = thing; // needed for side collision
+			}
+			else if (thing->flags & MF_SPRING)
 				;
-			else if (topz > tmfloorz && tmthing->z >= thing->z)
+			else if (topz > tmfloorz && tmthing->z+tmthing->height >= thing->z)
 			{
 				tmfloorz = topz;
 #ifdef ESLOPE
@@ -1231,7 +1244,7 @@ if (tmthing->flags & MF_PAPERCOLLISION) // Caution! Turning whilst up against a 
 	}
 
 	// set openrange, opentop, openbottom
-	P_LineOpening(ld);
+	P_LineOpening(ld, tmthing);
 
 	// adjust floor / ceiling heights
 	if (opentop < tmceilingz)
@@ -1349,7 +1362,7 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 			topheight = P_GetFOFTopZ(thing, newsubsec->sector, rover, x, y, NULL);
 			bottomheight = P_GetFOFBottomZ(thing, newsubsec->sector, rover, x, y, NULL);
 
-			if (rover->flags & FF_GOOWATER && !(thing->flags & MF_NOGRAVITY))
+			if ((rover->flags & (FF_SWIMMABLE|FF_GOOWATER)) == (FF_SWIMMABLE|FF_GOOWATER) && !(thing->flags & MF_NOGRAVITY))
 			{
 				// If you're inside goowater and slowing down
 				fixed_t sinklevel = FixedMul(thing->info->height/6, thing->scale);
@@ -2048,8 +2061,12 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 			}
 
 			// Ramp test
-			if (thing->player && maxstep > 0
-			&& !(P_PlayerTouchingSectorSpecial(thing->player, 1, 14) || GETSECSPECIAL(R_PointInSubsector(x, y)->sector->special, 1) == 14))
+			if (maxstep > 0 && !(
+				thing->player && (
+				P_PlayerTouchingSectorSpecial(thing->player, 1, 14)
+				|| GETSECSPECIAL(R_PointInSubsector(x, y)->sector->special, 1) == 14)
+				)
+			)
 			{
 				// If the floor difference is MAXSTEPMOVE or less, and the sector isn't Section1:14, ALWAYS
 				// step down! Formerly required a Section1:13 sector for the full MAXSTEPMOVE, but no more.
@@ -2659,7 +2676,7 @@ static boolean PTR_SlideTraverse(intercept_t *in)
 	}
 
 	// set openrange, opentop, openbottom
-	P_LineOpening(li);
+	P_LineOpening(li, slidemo);
 
 	if (openrange < slidemo->height)
 		goto isblocking; // doesn't fit
@@ -2735,7 +2752,7 @@ isblocking:
 		// see about climbing on the wall
 		if (!(checkline->flags & ML_NOCLIMB))
 		{
-			boolean canclimb; // FUCK C90
+			boolean canclimb;
 			angle_t climbangle, climbline;
 			INT32 whichside = P_PointOnLineSide(slidemo->x, slidemo->y, li);
 

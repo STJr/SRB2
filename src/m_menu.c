@@ -182,9 +182,6 @@ static INT32 vidm_selected = 0;
 static INT32 vidm_nummodes;
 static INT32 vidm_column_size;
 
-// what a headache.
-static boolean shiftdown = false;
-
 //
 // PROTOTYPES
 //
@@ -705,7 +702,7 @@ static menuitem_t SP_TimeAttackMenu[] =
 	{IT_DISABLED,              NULL, "Guest Option...", &SP_GuestReplayDef, 100},
 	{IT_DISABLED,              NULL, "Replay...",     &SP_ReplayDef,        110},
 	{IT_DISABLED,              NULL, "Ghosts...",     &SP_GhostDef,         120},
-	{IT_WHITESTRING|IT_CALL,   NULL, "Start",         M_ChooseTimeAttack,   130},
+	{IT_WHITESTRING|IT_CALL|IT_CALL_NOTMODIFIED,   NULL, "Start",         M_ChooseTimeAttack,   130},
 };
 
 enum
@@ -797,7 +794,7 @@ static menuitem_t SP_NightsAttackMenu[] =
 	{IT_DISABLED,              NULL, "Guest Option...",  &SP_NightsGuestReplayDef,   108},
 	{IT_DISABLED,              NULL, "Replay...",        &SP_NightsReplayDef,        118},
 	{IT_DISABLED,              NULL, "Ghosts...",        &SP_NightsGhostDef,         128},
-	{IT_WHITESTRING|IT_CALL,   NULL, "Start",            M_ChooseNightsAttack, 138},
+	{IT_WHITESTRING|IT_CALL|IT_CALL_NOTMODIFIED,   NULL, "Start",            M_ChooseNightsAttack, 138},
 };
 
 enum
@@ -2080,11 +2077,6 @@ boolean M_Responder(event_t *ev)
 	|| gamestate == GS_CREDITS || gamestate == GS_EVALUATION)
 		return false;
 
-	if (ev->type == ev_keyup && (ev->data1 == KEY_LSHIFT || ev->data1 == KEY_RSHIFT))
-	{
-		shiftdown = false;
-		return false;
-	}
 	if (noFurtherInput)
 	{
 		// Ignore input after enter/escape/other buttons
@@ -2098,10 +2090,6 @@ boolean M_Responder(event_t *ev)
 		// added 5-2-98 remap virtual keys (mouse & joystick buttons)
 		switch (ch)
 		{
-			case KEY_LSHIFT:
-			case KEY_RSHIFT:
-				shiftdown = true;
-				break; //return false;
 			case KEY_MOUSE1:
 			case KEY_JOY1:
 			case KEY_JOY1 + 2:
@@ -3702,6 +3690,11 @@ static void M_DrawMessageMenu(void)
 
 	mlines = currentMenu->lastOn>>8;
 	max = (INT16)((UINT8)(currentMenu->lastOn & 0xFF)*8);
+
+	// hack: draw RA background in RA menus
+	if (gamestate == GS_TIMEATTACK)
+		V_DrawPatchFill(W_CachePatchName("SRB2BACK", PU_CACHE));
+
 	M_DrawTextBox(currentMenu->x, y - 8, (max+7)>>3, mlines);
 
 	while (*(msg+start))
@@ -3856,6 +3849,7 @@ static void M_ChangeLevel(INT32 choice)
 static void M_ConfirmSpectate(INT32 choice)
 {
 	(void)choice;
+	// We allow switching to spectator even if team changing is not allowed
 	M_ClearMenus(true);
 	COM_ImmedExecute("changeteam spectator");
 }
@@ -3863,6 +3857,11 @@ static void M_ConfirmSpectate(INT32 choice)
 static void M_ConfirmEnterGame(INT32 choice)
 {
 	(void)choice;
+	if (!cv_allowteamchange.value)
+	{
+		M_StartMessage(M_GetText("The server is not allowing\nteam changes at this time.\nPress a key.\n"), NULL, MM_NOTHING);
+		return;
+	}
 	M_ClearMenus(true);
 	COM_ImmedExecute("changeteam playing");
 }
@@ -4310,9 +4309,9 @@ static void M_SinglePlayerMenu(INT32 choice)
 {
 	(void)choice;
 	SP_MainMenu[sprecordattack].status =
-		(M_SecretUnlocked(SECRET_RECORDATTACK)) ? IT_CALL|IT_STRING|IT_CALL_NOTMODIFIED : IT_SECRET;
+		(M_SecretUnlocked(SECRET_RECORDATTACK)) ? IT_CALL|IT_STRING : IT_SECRET;
 	SP_MainMenu[spnightsmode].status =
-		(M_SecretUnlocked(SECRET_NIGHTSMODE)) ? IT_CALL|IT_STRING|IT_CALL_NOTMODIFIED : IT_SECRET;
+		(M_SecretUnlocked(SECRET_NIGHTSMODE)) ? IT_CALL|IT_STRING : IT_SECRET;
 
 	M_SetupNextMenu(&SP_MainDef);
 }

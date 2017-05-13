@@ -82,6 +82,7 @@ static void AutoBalance_OnChange(void);
 static void TeamScramble_OnChange(void);
 
 static void NetTimeout_OnChange(void);
+static void JoinTimeout_OnChange(void);
 
 static void Ringslinger_OnChange(void);
 static void Gravity_OnChange(void);
@@ -340,7 +341,9 @@ consvar_t cv_killingdead = {"killingdead", "Off", CV_NETVAR, CV_OnOff, NULL, 0, 
 
 consvar_t cv_netstat = {"netstat", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL}; // show bandwidth statistics
 static CV_PossibleValue_t nettimeout_cons_t[] = {{TICRATE/7, "MIN"}, {60*TICRATE, "MAX"}, {0, NULL}};
-consvar_t cv_nettimeout = {"nettimeout", "525", CV_CALL|CV_SAVE, nettimeout_cons_t, NetTimeout_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_nettimeout = {"nettimeout", "350", CV_CALL|CV_SAVE, nettimeout_cons_t, NetTimeout_OnChange, 0, NULL, NULL, 0, 0, NULL};
+static CV_PossibleValue_t jointimeout_cons_t[] = {{5*TICRATE, "MIN"}, {60*TICRATE, "MAX"}, {0, NULL}};
+consvar_t cv_jointimeout = {"jointimeout", "350", CV_CALL|CV_SAVE, jointimeout_cons_t, JoinTimeout_OnChange, 0, NULL, NULL, 0, 0, NULL};
 #ifdef NEWPING
 consvar_t cv_maxping = {"maxping", "0", CV_SAVE, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
 #endif
@@ -364,6 +367,35 @@ INT16 gametype = GT_COOP;
 boolean splitscreen = false;
 boolean circuitmap = false;
 INT32 adminplayer = -1;
+
+/// \warning Keep this up-to-date if you add/remove/rename net text commands
+const char *netxcmdnames[MAXNETXCMD - 1] =
+{
+	"NAMEANDCOLOR",
+	"WEAPONPREF",
+	"KICK",
+	"NETVAR",
+	"SAY",
+	"MAP",
+	"EXITLEVEL",
+	"ADDFILE",
+	"PAUSE",
+	"ADDPLAYER",
+	"TEAMCHANGE",
+	"CLEARSCORES",
+	"LOGIN",
+	"VERIFIED",
+	"RANDOMSEED",
+	"RUNSOC",
+	"REQADDFILE",
+	"DELFILE",
+	"SETMOTD",
+	"SUICIDE",
+#ifdef HAVE_BLUA
+	"LUACMD",
+	"LUAVAR"
+#endif
+};
 
 // =========================================================================
 //                           SERVER STARTUP
@@ -517,9 +549,12 @@ void D_RegisterServerCommands(void)
 	// d_clisrv
 	CV_RegisterVar(&cv_maxplayers);
 	CV_RegisterVar(&cv_maxsend);
+	CV_RegisterVar(&cv_noticedownload);
+	CV_RegisterVar(&cv_downloadspeed);
 
 	COM_AddCommand("ping", Command_Ping_f);
 	CV_RegisterVar(&cv_nettimeout);
+	CV_RegisterVar(&cv_jointimeout);
 
 	CV_RegisterVar(&cv_skipmapcheck);
 	CV_RegisterVar(&cv_sleep);
@@ -976,7 +1011,7 @@ UINT8 CanChangeSkin(INT32 playernum)
 		return true;
 
 	// Force skin in effect.
-	if (!server && (cv_forceskin.value != -1) && !(adminplayer == playernum && serverplayer == -1))
+	if (client && (cv_forceskin.value != -1) && !(adminplayer == playernum && serverplayer == -1))
 		return false;
 
 	// Can change skin in intermission and whatnot.
@@ -1587,7 +1622,7 @@ static void Command_Map_f(void)
 		return;
 	}
 
-	if (!server && !(adminplayer == consoleplayer))
+	if (client && !(adminplayer == consoleplayer))
 	{
 		CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
 		return;
@@ -1914,7 +1949,7 @@ static void Got_Suicide(UINT8 **cp, INT32 playernum)
 	// You can't suicide someone else.  Nice try, there.
 	if (suicideplayer != playernum || (!G_PlatformGametype()))
 	{
-		CONS_Alert(CONS_WARNING, M_GetText("Illegal suicide command recieved from %s\n"), player_names[playernum]);
+		CONS_Alert(CONS_WARNING, M_GetText("Illegal suicide command received from %s\n"), player_names[playernum]);
 		if (server)
 		{
 			XBOXSTATIC UINT8 buf[2];
@@ -2081,7 +2116,7 @@ static void Command_Teamchange_f(void)
 		return;
 	}
 
-	if (!cv_allowteamchange.value && !NetPacket.packet.newteam) // allow swapping to spectator even in locked teams.
+	if (!cv_allowteamchange.value && NetPacket.packet.newteam) // allow swapping to spectator even in locked teams.
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("The server is not allowing team changes at the moment.\n"));
 		return;
@@ -2178,7 +2213,7 @@ static void Command_Teamchange2_f(void)
 		return;
 	}
 
-	if (!cv_allowteamchange.value && !NetPacket.packet.newteam) // allow swapping to spectator even in locked teams.
+	if (!cv_allowteamchange.value && NetPacket.packet.newteam) // allow swapping to spectator even in locked teams.
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("The server is not allowing team changes at the moment.\n"));
 		return;
@@ -2629,7 +2664,7 @@ static void Command_Changepassword_f(void)
 	// If we have no MD5 support then completely disable XD_LOGIN responses for security.
 	CONS_Alert(CONS_NOTICE, "Remote administration commands are not supported in this build.\n");
 #else
-	if (!server) // cannot change remotely
+	if (client) // cannot change remotely
 	{
 		CONS_Printf(M_GetText("Only the server can use this.\n"));
 		return;
@@ -2688,7 +2723,7 @@ static void Got_Login(UINT8 **cp, INT32 playernum)
 
 	READMEM(*cp, sentmd5, 16);
 
-	if (!server)
+	if (client)
 		return;
 
 	// Do the final pass to compare with the sent md5
@@ -2710,7 +2745,7 @@ static void Command_Verify_f(void)
 	char *temp;
 	INT32 playernum;
 
-	if (!server)
+	if (client)
 	{
 		CONS_Printf(M_GetText("Only the server can use this.\n"));
 		return;
@@ -2794,7 +2829,7 @@ static void Command_MotD_f(void)
 			return;
 		}
 
-	if ((netgame || multiplayer) && !server)
+	if ((netgame || multiplayer) && client)
 		SendNetXCmd(XD_SETMOTD, mymotd, sizeof(motd));
 	else
 	{
@@ -2932,6 +2967,7 @@ static void Command_Addfile(void)
 	XBOXSTATIC char buf[256];
 	char *buf_p = buf;
 	INT32 i;
+	int musiconly; // W_VerifyNMUSlumps isn't boolean
 
 	if (COM_Argc() != 2)
 	{
@@ -2946,7 +2982,9 @@ static void Command_Addfile(void)
 		if (!isprint(fn[i]) || fn[i] == ';')
 			return;
 
-	if (!W_VerifyNMUSlumps(fn))
+	musiconly = W_VerifyNMUSlumps(fn);
+
+	if (!musiconly)
 	{
 		// ... But only so long as they contain nothing more then music and sprites.
 		if (netgame && !(server || adminplayer == consoleplayer))
@@ -2958,7 +2996,7 @@ static void Command_Addfile(void)
 	}
 
 	// Add file on your client directly if it is trivial, or you aren't in a netgame.
-	if (!(netgame || multiplayer) || W_VerifyNMUSlumps(fn))
+	if (!(netgame || multiplayer) || musiconly)
 	{
 		P_AddWadFile(fn, NULL);
 		return;
@@ -2978,9 +3016,7 @@ static void Command_Addfile(void)
 #else
 		FILE *fhandle;
 
-		fhandle = fopen(fn, "rb");
-
-		if (fhandle)
+		if ((fhandle = W_OpenWadFile(&fn, true)) != NULL)
 		{
 			tic_t t = I_GetTime();
 			CONS_Debug(DBG_SETUP, "Making MD5 for %s\n",fn);
@@ -2988,11 +3024,8 @@ static void Command_Addfile(void)
 			CONS_Debug(DBG_SETUP, "MD5 calc for %s took %f second\n", fn, (float)(I_GetTime() - t)/TICRATE);
 			fclose(fhandle);
 		}
-		else
-		{
-			CONS_Printf(M_GetText("File %s not found.\n"), fn);
+		else // file not found
 			return;
-		}
 #endif
 		WRITEMEM(buf_p, md5sum, 16);
 	}
@@ -3051,7 +3084,7 @@ static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum)
 	READMEM(*cp, md5sum, 16);
 
 	// Only the server processes this message.
-	if (!server)
+	if (client)
 		return;
 
 	// Disallow non-printing characters and semicolons.
@@ -3316,6 +3349,11 @@ static void NumLaps_OnChange(void)
 static void NetTimeout_OnChange(void)
 {
 	connectiontimeout = (tic_t)cv_nettimeout.value;
+}
+
+static void JoinTimeout_OnChange(void)
+{
+	jointimeout = (tic_t)cv_jointimeout.value;
 }
 
 UINT32 timelimitintics = 0;
@@ -3960,7 +3998,7 @@ static void Command_Archivetest_f(void)
 	}
 
 	// assign mobjnum
-	i = 0;
+	i = 1;
 	for (th = thinkercap.next; th != &thinkercap; th = th->next)
 		if (th->function.acp1 == (actionf_p1)P_MobjThinker)
 			((mobj_t *)th)->mobjnum = i++;
@@ -4063,7 +4101,7 @@ static void Skin_OnChange(void)
 		return; // do whatever you want
 
 	if (!(cv_debug || devparm) && !(multiplayer || netgame) // In single player.
-		&& (gamestate == GS_LEVEL || gamestate == GS_INTERMISSION || gamestate == GS_CONTINUING))
+		&& (gamestate != GS_WAITINGPLAYERS)) // allows command line -warp x +skin y
 	{
 		CV_StealthSet(&cv_skin, skins[players[consoleplayer].skin].name);
 		return;
@@ -4106,8 +4144,7 @@ static void Color_OnChange(void)
 	if (!Playing())
 		return; // do whatever you want
 
-	if (!(cv_debug || devparm) && !(multiplayer || netgame) // In single player.
-		&& (gamestate == GS_LEVEL || gamestate == GS_INTERMISSION || gamestate == GS_CONTINUING))
+	if (!(cv_debug || devparm) && !(multiplayer || netgame)) // In single player.
 	{
 		CV_StealthSet(&cv_skin, skins[players[consoleplayer].skin].name);
 		return;

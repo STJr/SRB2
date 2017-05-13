@@ -585,7 +585,7 @@ static const char *Newsnapshotfile(const char *pathname, const char *ext)
 
 		i += add * result;
 
-		if (add < 0 || add > 9999)
+		if (i < 0 || i > 9999)
 			return NULL;
 	}
 
@@ -1675,6 +1675,7 @@ char *M_GetToken(const char *inputString)
 			|| stringToUse[startPos] == '\r'
 			|| stringToUse[startPos] == '\n'
 			|| stringToUse[startPos] == '\0'
+			|| stringToUse[startPos] == '"' // we're treating this as whitespace because SLADE likes adding it for no good reason
 			|| inComment != 0)
 			&& startPos < stringLength)
 	{
@@ -1742,6 +1743,7 @@ char *M_GetToken(const char *inputString)
 			&& stringToUse[endPos] != ','
 			&& stringToUse[endPos] != '{'
 			&& stringToUse[endPos] != '}'
+			&& stringToUse[endPos] != '"' // see above
 			&& inComment == 0)
 			&& endPos < stringLength)
 	{
