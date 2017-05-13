@@ -2110,6 +2110,7 @@ static void readsound(MYFILE *f, INT32 num, const char *savesfxnames[])
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
 	char *word;
+	char *word2;
 	char *tmp;
 	INT32 value;
 
@@ -2123,14 +2124,23 @@ static void readsound(MYFILE *f, INT32 num, const char *savesfxnames[])
 			tmp = strchr(s, '#');
 			if (tmp)
 				*tmp = '\0';
-
-			value = searchvalue(s);
+			if (s == tmp)
+				continue; // Skip comment lines, but don't break.
 
 			word = strtok(s, " ");
 			if (word)
 				strupr(word);
 			else
 				break;
+
+			word2 = strtok(NULL, " ");
+			if (word2)
+				value = atoi(word2);
+			else
+			{
+				deh_warning("No value for token %s", word);
+				continue;
+			}
 
 /*			if (fastcmp(word, "OFFSET"))
 			{
@@ -2160,6 +2170,11 @@ static void readsound(MYFILE *f, INT32 num, const char *savesfxnames[])
 			{
 				DEH_WriteUndoline(word, va("%d", S_sfx[num].pitch), UNDO_NONE);
 				S_sfx[num].pitch = value;
+			}
+			else if (fastcmp(word, "CAPTION") || fastcmp(word, "DESCRIPTION"))
+			{
+				deh_strlcpy(S_sfx[num].caption, word2,
+					sizeof(S_sfx[num].caption), va("Sound effect %d: caption", num));
 			}
 			else
 				deh_warning("Sound %d : unknown word '%s'",num,word);
@@ -2454,6 +2469,7 @@ static void readunlockable(MYFILE *f, INT32 num)
 	DEH_WriteUndoline("VAR", va("%d", unlockables[num].variable), UNDO_NONE);
 
 	memset(&unlockables[num], 0, sizeof(unlockable_t));
+	unlockables[num].objective[0] = '/';
 
 	do
 	{
@@ -3615,11 +3631,11 @@ static void DEH_LoadDehackedFile(MYFILE *f, UINT16 wad)
 				{
 					if (i == 0 && word2[0] != '0') // If word2 isn't a number
 						i = get_sfx(word2); // find a sound by name
-					if (i < NUMSFX && i >= 0)
+					if (i < NUMSFX && i > 0)
 						readsound(f, i, savesfxnames);
 					else
 					{
-						deh_warning("Sound %d out of range (0 - %d)", i, NUMSFX-1);
+						deh_warning("Sound %d out of range (1 - %d)", i, NUMSFX-1);
 						ignorelines(f);
 					}
 					DEH_WriteUndoline(word, word2, UNDO_HEADER);

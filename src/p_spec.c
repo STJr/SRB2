@@ -46,7 +46,9 @@
 #include <errno.h>
 #endif
 
-mobj_t *skyboxmo[2];
+mobj_t *skyboxmo[2]; // current skybox mobjs: 0 = viewpoint, 1 = centerpoint
+mobj_t *skyboxviewpnts[16]; // array of MT_SKYBOX viewpoint mobjs
+mobj_t *skyboxcenterpnts[16]; // array of MT_SKYBOX centerpoint mobjs
 
 // Amount (dx, dy) vector linedef is shifted right to get scroll amount
 #define SCROLL_SHIFT 5
@@ -3159,6 +3161,47 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			}
 			break;
 
+		case 448: // Change skybox viewpoint/centerpoint
+			if ((mo && mo->player && P_IsLocalPlayer(mo->player)) || (line->flags & ML_NOCLIMB))
+			{
+				INT32 viewid = sides[line->sidenum[0]].textureoffset>>FRACBITS;
+				INT32 centerid = sides[line->sidenum[0]].rowoffset>>FRACBITS;
+
+				if ((line->flags & (ML_EFFECT4|ML_BLOCKMONSTERS)) == ML_EFFECT4) // Solid Midtexture is on but Block Enemies is off?
+				{
+					CONS_Alert(CONS_WARNING,
+					M_GetText("Skybox switch linedef (tag %d) doesn't have anything to do.\nConsider changing the linedef's flag configuration or removing it entirely.\n"),
+					line->tag);
+				}
+				else
+				{
+					// set viewpoint mobj
+					if (!(line->flags & ML_EFFECT4)) // Solid Midtexture turns off viewpoint setting
+					{
+						if (viewid >= 0 && viewid < 16)
+							skyboxmo[0] = skyboxviewpnts[viewid];
+						else
+							skyboxmo[0] = NULL;
+					}
+
+					// set centerpoint mobj
+					if (line->flags & ML_BLOCKMONSTERS) // Block Enemies turns ON centerpoint setting
+					{
+						if (centerid >= 0 && centerid < 16)
+							skyboxmo[1] = skyboxcenterpnts[centerid];
+						else
+							skyboxmo[1] = NULL;
+					}
+				}
+
+				CONS_Debug(DBG_GAMELOGIC, "Line type 448 Executor: viewid = %d, centerid = %d, viewpoint? = %s, centerpoint? = %s\n",
+						viewid,
+						centerid,
+						((line->flags & ML_EFFECT4) ? "no" : "yes"),
+						((line->flags & ML_BLOCKMONSTERS) ? "yes" : "no"));
+			}
+			break;
+
 		case 450: // Execute Linedef Executor - for recursion
 			P_LinedefExecute(line->tag, mo, NULL);
 			break;
@@ -5546,6 +5589,45 @@ static void P_RunLevelLoadExecutors(void)
 	}
 }
 
+/** Before things are loaded, initialises certain stuff in case they're needed
+  * by P_ResetDynamicSlopes or P_LoadThings. This was split off from
+  * P_SpawnSpecials, in case you couldn't tell.
+  *
+  * \sa P_SpawnSpecials, P_InitTagLists
+  * \author Monster Iestyn
+  */
+void P_InitSpecials(void)
+{
+	// Set the default gravity. Custom gravity overrides this setting.
+	gravity = FRACUNIT/2;
+
+	// Defaults in case levels don't have them set.
+	sstimer = 90*TICRATE + 6;
+	totalrings = 1;
+
+	CheckForBustableBlocks = CheckForBouncySector = CheckForQuicksand = CheckForMarioBlocks = CheckForFloatBob = CheckForReverseGravity = false;
+
+	// Set curWeather
+	switch (mapheaderinfo[gamemap-1]->weather)
+	{
+		case PRECIP_SNOW: // snow
+		case PRECIP_RAIN: // rain
+		case PRECIP_STORM: // storm
+		case PRECIP_STORM_NORAIN: // storm w/o rain
+		case PRECIP_STORM_NOSTRIKES: // storm w/o lightning
+			curWeather = mapheaderinfo[gamemap-1]->weather;
+			break;
+		default: // blank/none
+			curWeather = PRECIP_NONE;
+			break;
+	}
+
+	// Set globalweather
+	globalweather = mapheaderinfo[gamemap-1]->weather;
+
+	P_InitTagLists();   // Create xref tables for tags
+}
+
 /** After the map has loaded, scans for specials that spawn 3Dfloors and
   * thinkers.
   *
@@ -5566,15 +5648,6 @@ void P_SpawnSpecials(INT32 fromnetsave)
 	// This used to be used, and *should* be used in the future,
 	// but currently isn't.
 	(void)fromnetsave;
-
-	// Set the default gravity. Custom gravity overrides this setting.
-	gravity = FRACUNIT/2;
-
-	// Defaults in case levels don't have them set.
-	sstimer = 90*TICRATE + 6;
-	totalrings = 1;
-
-	CheckForBustableBlocks = CheckForBouncySector = CheckForQuicksand = CheckForMarioBlocks = CheckForFloatBob = CheckForReverseGravity = false;
 
 	// Init special SECTORs.
 	sector = sectors;
@@ -5624,20 +5697,6 @@ void P_SpawnSpecials(INT32 fromnetsave)
 		}
 	}
 
-	if (mapheaderinfo[gamemap-1]->weather == 2) // snow
-		curWeather = PRECIP_SNOW;
-	else if (mapheaderinfo[gamemap-1]->weather == 3) // rain
-		curWeather = PRECIP_RAIN;
-	else if (mapheaderinfo[gamemap-1]->weather == 1) // storm
-		curWeather = PRECIP_STORM;
-	else if (mapheaderinfo[gamemap-1]->weather == 5) // storm w/o rain
-		curWeather = PRECIP_STORM_NORAIN;
-	else if (mapheaderinfo[gamemap-1]->weather == 6) // storm w/o lightning
-		curWeather = PRECIP_STORM_NOSTRIKES;
-	else
-		curWeather = PRECIP_NONE;
-
-	P_InitTagLists();   // Create xref tables for tags
 	P_SearchForDisableLinedefs(); // Disable linedefs are now allowed to disable *any* line
 
 	P_SpawnScrollers(); // Add generalized scrollers

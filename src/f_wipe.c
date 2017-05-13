@@ -86,7 +86,7 @@ INT32 lastwipetic = 0;
 static UINT8 *wipe_scr_start; //screen 3
 static UINT8 *wipe_scr_end; //screen 4
 static UINT8 *wipe_scr; //screen 0 (main drawing)
-static fixed_t paldiv;
+static fixed_t paldiv = 0;
 
 /** Create fademask_t from lump
   *
@@ -145,7 +145,7 @@ static fademask_t *F_GetFadeMask(UINT8 masknum, UINT8 scrnnum) {
 	while (lsize--)
 	{
 		// Determine pixel to use from fademask
-		pcolor = &pLocalPalette[*lump++];
+		pcolor = &pMasterPalette[*lump++];
 		*mask++ = FixedDiv((pcolor->s.red+1)<<FRACBITS, paldiv)>>FRACBITS;
 	}
 
@@ -337,7 +337,8 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 	UINT8 wipeframe = 0;
 	fademask_t *fmask;
 
-	paldiv = FixedDiv(257<<FRACBITS, 11<<FRACBITS);
+	if (!paldiv)
+		paldiv = FixedDiv(257<<FRACBITS, 11<<FRACBITS);
 
 	// Init the wipe
 	WipeInAction = true;

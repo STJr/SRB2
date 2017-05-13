@@ -131,25 +131,25 @@ hudinfo_t hudinfo[NUMHUDITEMS] =
 
 	{  16,  42}, // HUD_RINGS
 	{ 220,  10}, // HUD_RINGSSPLIT
-	{ 112,  42}, // HUD_RINGSNUM
-	{ 288,  10}, // HUD_RINGSNUMSPLIT
+	{ 120,  42}, // HUD_RINGSNUM
+	{ 296,  10}, // HUD_RINGSNUMSPLIT
 
 	{  16,  10}, // HUD_SCORE
-	{ 128,  10}, // HUD_SCORENUM
+	{ 120,  10}, // HUD_SCORENUM
 
 	{  16,  26}, // HUD_TIME
-	{ 136,  10}, // HUD_TIMESPLIT
-	{  88,  26}, // HUD_MINUTES
+	{ 128,  10}, // HUD_TIMESPLIT
+	{  96,  26}, // HUD_MINUTES
 	{ 188,  10}, // HUD_MINUTESSPLIT
-	{  88,  26}, // HUD_TIMECOLON
+	{  96,  26}, // HUD_TIMECOLON
 	{ 188,  10}, // HUD_TIMECOLONSPLIT
-	{ 112,  26}, // HUD_SECONDS
+	{ 120,  26}, // HUD_SECONDS
 	{ 212,  10}, // HUD_SECONDSSPLIT
-	{ 112,  26}, // HUD_TIMETICCOLON
-	{ 136,  26}, // HUD_TICS
+	{ 120,  26}, // HUD_TIMETICCOLON
+	{ 144,  26}, // HUD_TICS
 
-	{ 112,  56}, // HUD_SS_TOTALRINGS
-	{ 288,  40}, // HUD_SS_TOTALRINGS_SPLIT
+	{ 120,  56}, // HUD_SS_TOTALRINGS
+	{ 296,  40}, // HUD_SS_TOTALRINGS_SPLIT
 
 	{ 110,  93}, // HUD_GETRINGS
 	{ 160,  93}, // HUD_GETRINGSNUM
@@ -806,8 +806,15 @@ static void ST_drawFirstPersonHUD(void)
 	// Graue 06-18-2004: no V_NOSCALESTART, no SCX, no SCY, snap to right
 	if ((player->powers[pw_shield] & SH_NOSTACK & ~SH_FORCEHP) == SH_FORCE)
 	{
-		if ((player->powers[pw_shield] & SH_FORCEHP) > 0 || leveltime & 1)
-			p = forceshield;
+		UINT8 i, max = (player->powers[pw_shield] & SH_FORCEHP);
+		for (i = 0; i <= max; i++)
+		{
+			INT32 flags = (V_SNAPTORIGHT|V_SNAPTOTOP)|((i == max) ? V_HUDTRANS : V_HUDTRANSHALF);
+			if (splitscreen)
+				V_DrawSmallScaledPatch(312-(3*i), STRINGY(24)+(3*i), flags, forceshield);
+			else
+				V_DrawScaledPatch(304-(3*i), 24+(3*i), flags, forceshield);
+		}
 	}
 	else switch (player->powers[pw_shield] & SH_NOSTACK)
 	{
@@ -1474,7 +1481,7 @@ static inline void ST_drawRaceHUD(void)
 {
 	if (leveltime >= TICRATE && leveltime < 5*TICRATE)
 	{
-		INT32 height = (BASEVIDHEIGHT/2);
+		INT32 height = ((3*BASEVIDHEIGHT)>>2) - 8;
 		INT32 bounce = (leveltime % TICRATE);
 		patch_t *racenum;
 		switch (leveltime/TICRATE)
@@ -1493,7 +1500,11 @@ static inline void ST_drawRaceHUD(void)
 				break;
 		}
 		if (bounce < 3)
+		{
 			height -= (2 - bounce);
+			if (!bounce)
+					S_StartSound(0, ((racenum == racego) ? sfx_s3kad : sfx_s3ka7));
+		}
 		V_DrawScaledPatch(SCX((BASEVIDWIDTH - SHORT(racenum->width))/2), (INT32)(SCY(height)), V_NOSCALESTART, racenum);
 	}
 

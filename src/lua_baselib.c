@@ -462,7 +462,7 @@ static int lib_pSpawnLockOn(lua_State *L)
 		return LUA_ErrInvalid(L, "mobj_t");
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
-	if (player == &players[consoleplayer] || player == &players[secondarydisplayplayer] || player == &players[displayplayer]) // Only display it on your own view.
+	if (P_IsLocalPlayer(player)) // Only display it on your own view.
 	{
 		mobj_t *visual = P_SpawnMobj(lockon->x, lockon->y, lockon->z, MT_LOCKON); // positioning, flip handled in P_SceneryThinker
 		visual->target = lockon;
@@ -2181,6 +2181,31 @@ static int lib_sSoundPlaying(lua_State *L)
 	return 1;
 }
 
+// This doesn't really exist, but we're providing it as a handy netgame-safe wrapper for stuff that should be locally handled.
+
+static int lib_sStartMusicCaption(lua_State *L)
+{
+	player_t *player = NULL;
+	const char *caption = luaL_checkstring(L, 1);
+	UINT16 lifespan = (UINT16)luaL_checkinteger(L, 2);
+	//HUDSAFE
+	INLEVEL
+
+	if (!lua_isnone(L, 3) && lua_isuserdata(L, 3))
+	{
+		player = *((player_t **)luaL_checkudata(L, 3, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+
+	if (lifespan && (!player || P_IsLocalPlayer(player)))
+	{
+		strlcpy(S_sfx[sfx_None].caption, caption, sizeof(S_sfx[sfx_None].caption));
+		S_StartCaption(sfx_None, -1, lifespan);
+	}
+	return 0;
+}
+
 // G_GAME
 ////////////
 
@@ -2493,6 +2518,7 @@ static luaL_Reg lib[] = {
 	{"S_OriginPlaying",lib_sOriginPlaying},
 	{"S_IdPlaying",lib_sIdPlaying},
 	{"S_SoundPlaying",lib_sSoundPlaying},
+	{"S_StartMusicCaption", lib_sStartMusicCaption},
 
 	// g_game
 	{"G_BuildMapName",lib_gBuildMapName},
