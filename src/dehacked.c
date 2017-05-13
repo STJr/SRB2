@@ -8154,7 +8154,7 @@ static inline int lib_freeslot(lua_State *L)
 		return luaL_error(L, "This function cannot be called from within a hook or coroutine!");
 
 	while (n-- > 0)
-  {
+	{
 		s = Z_StrDup(luaL_checkstring(L,1));
 		type = strtok(s, "_");
 		if (type)
