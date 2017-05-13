@@ -105,8 +105,6 @@ typedef enum
 	gc_tossflag,
 	gc_use,
 	gc_camtoggle,
-	gc_camleft,
-	gc_camright,
 	gc_camreset,
 	gc_lookup,
 	gc_lookdown,
