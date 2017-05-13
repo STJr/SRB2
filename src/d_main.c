@@ -1341,6 +1341,19 @@ void D_SRB2Main(void)
 		ultimatemode = true;
 	}
 
+	// rei/miru: bootmap (Idea: starts the game on a predefined map)
+	if (bootmap && !(M_CheckParm("-warp") && M_IsNextParm()))
+	{
+		pstartmap = bootmap;
+
+		if (pstartmap < 1 || pstartmap > NUMMAPS)
+			I_Error("Cannot warp to map %d (out of range)\n", pstartmap);
+		else
+		{
+			autostart = true;
+		}
+	}
+
 	if (autostart || netgame || M_CheckParm("+connect") || M_CheckParm("-connect"))
 	{
 		gameaction = ga_nothing;

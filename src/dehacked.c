@@ -3241,6 +3241,20 @@ static void readmaincfg(MYFILE *f)
 				DEH_WriteUndoline(word, customversionstring, UNDO_NONE);
 				strlcpy(customversionstring, word2, sizeof (customversionstring));
 			}
+			else if (fastcmp(word, "BOOTMAP"))
+			{
+				// Support using the actual map name,
+				// i.e., Level AB, Level FZ, etc.
+
+				// Convert to map number
+				if (word2[0] >= 'A' && word2[0] <= 'Z')
+					value = M_MapNumber(word2[0], word2[1]);
+				else
+					value = get_number(word2);
+
+				DEH_WriteUndoline(word, va("%d", bootmap), UNDO_NONE);
+				bootmap = (INT16)value;
+			}
 			else
 				deh_warning("Maincfg: unknown word '%s'", word);
 		}
