@@ -58,8 +58,11 @@ after_build:
 - cmd: git rev-parse --short %APPVEYOR_REPO_COMMIT%>%TMP%/gitshort.txt
 - cmd: set /P GITSHORT=<%TMP%/gitshort.txt
 - set BUILD_ARCHIVE=%APPVEYOR_REPO_BRANCH%-%GITSHORT%-%CONFIGURATION%.7z
+- set BUILDSARCHIVE=%APPVEYOR_REPO_BRANCH%-%CONFIGURATION%.7z
 - cmd: 7z a %BUILD_ARCHIVE% bin\Mingw\Release -xr!.gitignore
 - appveyor PushArtifact %BUILD_ARCHIVE%
+- cmd: copy %BUILD_ARCHIVE% %BUILDSARCHIVE%
+- appveyor PushArtifact %BUILDSARCHIVE%
 
 test: off
 
