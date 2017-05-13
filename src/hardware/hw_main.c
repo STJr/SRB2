@@ -5123,15 +5123,26 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		I_Error("sprframes NULL for sprite %d\n", thing->sprite);
 #endif
 
-	if (sprframe->rotate != SRF_SINGLE || papersprite)
+	if (papersprite)
 	{
-		ang = R_PointToAngle (thing->x, thing->y) - thing->angle;
-		if (papersprite)
+		// Use the actual view angle, rather than the angle formed
+		// between the view point and the thing
+		// this makes sure paper sprites always appear at the right angle!
+		// Note: DO NOT do this in software mode version, it actually
+		// makes papersprites look WORSE there (I know, I've tried)
+		// Monster Iestyn - 13/05/17
+		ang = dup_viewangle - thing->angle;
+		ang_scale = FIXED_TO_FLOAT(FINESINE(ang>>ANGLETOFINESHIFT));
+		ang_scalez = FIXED_TO_FLOAT(FINECOSINE(ang>>ANGLETOFINESHIFT));
+
+		if (ang_scale < 0)
 		{
-			ang_scale = FIXED_TO_FLOAT(FINESINE(ang>>ANGLETOFINESHIFT));
-			ang_scalez = FIXED_TO_FLOAT(FINECOSINE(ang>>ANGLETOFINESHIFT));
+			ang_scale = -ang_scale;
+			ang_scalez = -ang_scalez;
 		}
 	}
+	else if (sprframe->rotate != SRF_SINGLE)
+		ang = R_PointToAngle (thing->x, thing->y) - thing->angle;
 
 	if (sprframe->rotate == SRF_SINGLE)
 	{
@@ -5164,16 +5175,8 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	else
 		offset = FIXED_TO_FLOAT(spritecachedinfo[lumpoff].offset) * this_scale;
 
-	if (ang_scale < 0)
-	{
-		z1 = tz + offset * ang_scalez;
-		tx += offset * ang_scale;
-	}
-	else
-	{
-		z1 = tz - offset * ang_scalez;
-		tx -= offset * ang_scale;
-	}
+	z1 = tz - (offset * ang_scalez);
+	tx -= offset * ang_scale;
 
 	// project x
 	x1 = gr_windowcenterx + (tx * gr_centerx / tz);
@@ -5185,16 +5188,10 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	x1 = tx;
 
 	offset = FIXED_TO_FLOAT(spritecachedinfo[lumpoff].width) * this_scale;
-	if (ang_scale < 0)
-	{
-		z2 = z1 - offset * ang_scalez;
-		tx -= offset * ang_scale;
-	}
-	else
-	{
-		z2 = z1 + offset * ang_scalez;
-		tx += offset * ang_scale;
-	}
+
+	z2 = z1 + (offset * ang_scalez);
+	tx += offset * ang_scale;
+
 	if (papersprite && max(z1, z2) < ZCLIP_PLANE)
 		return;
 
