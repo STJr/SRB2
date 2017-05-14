@@ -227,7 +227,8 @@ static void F_SkyScroll(INT32 scrollspeed)
 
 	pat = W_CachePatchName("TITLESKY", PU_CACHE);
 
-	animtimer = ((finalecount*scrollspeed)/16) % SHORT(pat->width);
+	fakedwidth = SHORT(pat->width);
+	animtimer = ((finalecount*scrollspeed)/16 + fakedwidth) % fakedwidth;
 
 	fakedwidth = vid.width / vid.dupx;
 
