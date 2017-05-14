@@ -224,18 +224,19 @@ static void F_SkyScroll(INT32 scrollspeed)
 {
 	INT32 scrolled, x, mx, fakedwidth;
 	patch_t *pat;
+	INT16 patwidth;
 
 	pat = W_CachePatchName("TITLESKY", PU_CACHE);
 
-	fakedwidth = SHORT(pat->width);
-	animtimer = ((finalecount*scrollspeed)/16 + fakedwidth) % fakedwidth;
+	patwidth = SHORT(pat->width);
+	animtimer = ((finalecount*scrollspeed)/16 + patwidth) % patwidth;
 
 	fakedwidth = vid.width / vid.dupx;
 
 	if (rendermode == render_soft)
 	{ // if only hardware rendering could be this elegant and complete
-		scrolled = (SHORT(pat->width) - animtimer) - 1;
-		for (x = 0, mx = scrolled; x < fakedwidth; x++, mx = (mx+1)%SHORT(pat->width))
+		scrolled = (patwidth - animtimer) - 1;
+		for (x = 0, mx = scrolled; x < fakedwidth; x++, mx = (mx+1)%patwidth)
 			F_DrawPatchCol(x, pat, mx);
 	}
 #ifdef HWRENDER
@@ -243,8 +244,8 @@ static void F_SkyScroll(INT32 scrollspeed)
 	{ // if only software rendering could be this simple and retarded
 		scrolled = animtimer;
 		if (scrolled > 0)
-			V_DrawScaledPatch(scrolled - SHORT(pat->width), 0, 0, pat);
-		for (x = 0; x < fakedwidth; x += SHORT(pat->width))
+			V_DrawScaledPatch(scrolled - patwidth, 0, 0, pat);
+		for (x = 0; x < fakedwidth; x += patwidth)
 			V_DrawScaledPatch(x + scrolled, 0, 0, pat);
 	}
 #endif
