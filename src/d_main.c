@@ -683,6 +683,9 @@ void D_AdvanceDemo(void)
 void D_StartTitle(void)
 {
 	INT32 i;
+
+	S_StopMusic();
+
 	if (netgame)
 	{
 		if (gametype == GT_COOP)
