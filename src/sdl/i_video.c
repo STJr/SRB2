@@ -1209,30 +1209,20 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 	int flags = 0;
 
 	if (rendermode == render_none) // dedicated
-	{
 		return SDL_TRUE; // Monster Iestyn -- not sure if it really matters what we return here tbh
-	}
 
 	if (window != NULL)
-	{
 		return SDL_FALSE;
-	}
 
 	if (fullscreen)
-	{
 		flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
-	}
 
 	if (borderlesswindow)
-	{
 		flags |= SDL_WINDOW_BORDERLESS;
-	}
 
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
-	{
 		flags |= SDL_WINDOW_OPENGL;
-	}
 #endif
 
 	// Create a window
@@ -1261,7 +1251,13 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 #endif
 	if (rendermode == render_soft)
 	{
-		renderer = SDL_CreateRenderer(window, -1, (usesdl2soft ? SDL_RENDERER_SOFTWARE : 0) | (cv_vidwait.value && !usesdl2soft ? SDL_RENDERER_PRESENTVSYNC : 0));
+		flags = 0; // Use this to set SDL_RENDERER_* flags now
+		if (usesdl2soft)
+			flags |= SDL_RENDERER_SOFTWARE;
+		else if (cv_vidwait.value)
+			flags |= SDL_RENDERER_PRESENTVSYNC;
+
+		renderer = SDL_CreateRenderer(window, -1, flags);
 		if (renderer == NULL)
 		{
 			CONS_Printf(M_GetText("Couldn't create rendering context: %s\n"), SDL_GetError());
