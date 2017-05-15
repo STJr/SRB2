@@ -899,7 +899,7 @@ static inline boolean I_SkipFrame(void)
 {
 	static boolean skip = false;
 
-	if (render_soft != rendermode)
+	if (rendermode != render_soft)
 		return false;
 
 	skip = !skip;
@@ -1190,7 +1190,7 @@ INT32 VID_SetMode(INT32 modeNum)
 
 	SDLSetMode(vid.width, vid.height, USE_FULLSCREEN);
 
-	if (render_soft == rendermode)
+	if (rendermode == render_soft)
 	{
 		if (bufSurface)
 		{
@@ -1483,7 +1483,7 @@ void I_ShutdownGraphics(void)
 	rendermode = render_none;
 	if (icoSurface) SDL_FreeSurface(icoSurface);
 	icoSurface = NULL;
-	if (render_soft == oldrendermode)
+	if (oldrendermode == render_soft)
 	{
 		if (vidSurface) SDL_FreeSurface(vidSurface);
 		vidSurface = NULL;
