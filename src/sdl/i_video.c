@@ -181,15 +181,13 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 			wasfullscreen = SDL_TRUE;
 			SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
 		}
-		else if (wasfullscreen)
+		else // windowed mode
 		{
-			wasfullscreen = SDL_FALSE;
-			SDL_SetWindowFullscreen(window, 0);
-			SDL_SetWindowSize(window, width, height);
-			SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED_DISPLAY(1), SDL_WINDOWPOS_CENTERED_DISPLAY(1));
-		}
-		else
-		{
+			if (wasfullscreen)
+			{
+				wasfullscreen = SDL_FALSE;
+				SDL_SetWindowFullscreen(window, 0);
+			}
 			// Reposition window only in windowed mode
 			SDL_SetWindowSize(window, width, height);
 			SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED_DISPLAY(1), SDL_WINDOWPOS_CENTERED_DISPLAY(1));
