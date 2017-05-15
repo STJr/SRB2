@@ -931,7 +931,7 @@ void I_FinishUpdate(void)
 	if (cv_ticrate.value)
 		SCR_DisplayTicRate();
 
-	if (render_soft == rendermode && screens[0])
+	if (rendermode == render_soft && screens[0])
 	{
 		SDL_Rect rect;
 
@@ -958,7 +958,7 @@ void I_FinishUpdate(void)
 	}
 
 #ifdef HWRENDER
-	else
+	else if (rendermode == render_opengl)
 	{
 		OglSdlFinishUpdate(cv_vidwait.value);
 	}
