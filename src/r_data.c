@@ -944,12 +944,12 @@ static void R_InitExtraColormaps(void)
 	for (cfile = clump = 0; cfile < numwadfiles; cfile++, clump = 0)
 	{
 		startnum = W_CheckNumForNamePwad("C_START", cfile, clump);
-		if (startnum == LUMPERROR)
+		if (startnum == INT16_MAX)
 			continue;
 
 		endnum = W_CheckNumForNamePwad("C_END", cfile, clump);
 
-		if (endnum == LUMPERROR)
+		if (endnum == INT16_MAX)
 			I_Error("R_InitExtraColormaps: C_START without C_END\n");
 
 		if (WADFILENUM(startnum) != WADFILENUM(endnum))
