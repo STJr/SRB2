@@ -952,15 +952,16 @@ static void R_InitExtraColormaps(void)
 		if (endnum == INT16_MAX)
 			I_Error("R_InitExtraColormaps: C_START without C_END\n");
 
-		if (WADFILENUM(startnum) != WADFILENUM(endnum))
-			I_Error("R_InitExtraColormaps: C_START and C_END in different wad files!\n");
+		// This shouldn't be possible when you use the Pwad function, silly
+		//if (WADFILENUM(startnum) != WADFILENUM(endnum))
+			//I_Error("R_InitExtraColormaps: C_START and C_END in different wad files!\n");
 
 		if (numcolormaplumps >= maxcolormaplumps)
 			maxcolormaplumps *= 2;
 		colormaplumps = Z_Realloc(colormaplumps,
 			sizeof (*colormaplumps) * maxcolormaplumps, PU_STATIC, NULL);
-		colormaplumps[numcolormaplumps].wadfile = WADFILENUM(startnum);
-		colormaplumps[numcolormaplumps].firstlump = LUMPNUM(startnum+1);
+		colormaplumps[numcolormaplumps].wadfile = cfile;
+		colormaplumps[numcolormaplumps].firstlump = startnum+1;
 		colormaplumps[numcolormaplumps].numlumps = endnum - (startnum + 1);
 		numcolormaplumps++;
 	}
