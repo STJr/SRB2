@@ -34,6 +34,14 @@ typedef struct
 	UINT32 infotableofs; // the 'directory' of resources
 } wadinfo_t;
 
+// a raw entry of the wad directory
+typedef struct
+{
+	UINT32 filepos; // file offset of the resource
+	UINT32 size; // size of the resource
+	char name[8]; // name of the resource
+} ATTRPACK filelump_t;
+
 // Available compression methods for lumps.
 enum compmethod{CM_NONE, CM_DEFLATE, CM_LZF, CM_UNSUPPORTED};
 
@@ -98,8 +106,6 @@ UINT16 W_InitFile(const char *filename);
 #ifdef DELFILE
 void W_UnloadWadFile(UINT16 num);
 #endif
-
-static inline void W_LoadDehackedLumps(UINT16 wadnum);
 
 // W_InitMultipleFiles returns 1 if all is okay, 0 otherwise,
 // so that it stops with a message if a file was not found, but not if all is okay.

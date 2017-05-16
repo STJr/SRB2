@@ -70,14 +70,6 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 #pragma pack(1)
 #endif
 
-// a raw entry of the wad directory
-typedef struct
-{
-	UINT32 filepos; // file offset of the resource
-	UINT32 size; // size of the resource
-	char name[8]; // name of the resource
-} ATTRPACK filelump_t;
-
 #if defined(_MSC_VER)
 #pragma pack()
 #endif
@@ -177,6 +169,26 @@ FILE *W_OpenWadFile(const char **filename, boolean useerrors)
 		}
 	}
 	return handle;
+}
+
+// Look for all DEHACKED and Lua scripts inside a PK3 archive.
+static inline void W_LoadDehackedLumpsPK3(UINT16 wadnum)
+{
+	UINT16 posStart, posEnd;
+	posStart = W_CheckNumForFullNamePK3("Lua/", wadnum, 0);
+	if (posStart != INT16_MAX)
+	{
+		posEnd = W_CheckNumForFolderEndPK3("Lua/", wadnum, posStart);
+		for (++posStart; posStart < posEnd; posStart++)
+			LUA_LoadLump(wadnum, posStart);
+	}
+	posStart = W_CheckNumForFullNamePK3("SOCs/", wadnum, 0);
+	if (posStart != INT16_MAX)
+	{
+		posEnd = W_CheckNumForFolderEndPK3("SOCs/", wadnum, posStart);
+		for(++posStart; posStart < posEnd; posStart++)
+			DEH_LoadDehackedLumpPwad(wadnum, posStart);
+	}
 }
 
 // search for all DEHACKED lump in all wads and load it
@@ -539,6 +551,7 @@ UINT16 W_InitFile(const char *filename)
 					lumpinfo[numlumps].compression = CM_UNSUPPORTED;
 					break;
 				}
+				CONS_Printf("File %s, Shortname %s, data begins at: %ld\n", eName, lumpinfo[numlumps].name, lumpinfo[numlumps].position);
 				CONS_Debug(DBG_SETUP, "File %s, data begins at: %ld\n", eName, lumpinfo[numlumps].position);
 				fseek(handle, eXFieldLen + eCommentLen, SEEK_CUR); // We skip to where we expect the next central directory entry or end marker to be.
 				numlumps++;
@@ -696,9 +709,12 @@ UINT16 W_InitFile(const char *filename)
 	wadfiles[numwadfiles] = wadfile;
 	numwadfiles++; // must come BEFORE W_LoadDehackedLumps, so any addfile called by COM_BufInsertText called by Lua doesn't overwrite what we just loaded
 
-	// TODO: HACK ALERT - Load Lua & SOC stuff right here for WADs. Avoids crash on startup since WADs are loaded using W_InitMultipleFiles.
+	// TODO: HACK ALERT - Load Lua & SOC stuff right here. I feel like this should be out of this place, but... Let's stick with this for now.
 	if (wadfile->type == RET_WAD)
 		W_LoadDehackedLumps(numwadfiles - 1);
+	else if (wadfile->type == RET_PK3)
+		W_LoadDehackedLumpsPK3(numwadfiles - 1);
+
 
 	W_InvalidateLumpnumCache();
 
@@ -827,10 +843,8 @@ UINT16 W_CheckNumForNamePwad(const char *name, UINT16 wad, UINT16 startlump)
 	{
 		lumpinfo_t *lump_p = wadfiles[wad]->lumpinfo + startlump;
 		for (i = startlump; i < wadfiles[wad]->numlumps; i++, lump_p++)
-		{
 			if (memcmp(lump_p->name,uname,8) == 0)
 				return i;
-		}
 	}
 
 	// not found.
@@ -992,25 +1006,25 @@ size_t W_LumpLength(lumpnum_t lumpnum)
 /* report a zlib or i/o error */
 void zerr(int ret)
 {
-    CONS_Printf("zpipe: ", stderr);
+    CONS_Printf("zpipe: ");
     switch (ret) {
     case Z_ERRNO:
         if (ferror(stdin))
-            CONS_Printf("error reading stdin\n", stderr);
+            CONS_Printf("error reading stdin\n");
         if (ferror(stdout))
-            CONS_Printf("error writing stdout\n", stderr);
+            CONS_Printf("error writing stdout\n");
         break;
     case Z_STREAM_ERROR:
-        CONS_Printf("invalid compression level\n", stderr);
+        CONS_Printf("invalid compression level\n");
         break;
     case Z_DATA_ERROR:
-        CONS_Printf("invalid or incomplete deflate data\n", stderr);
+        CONS_Printf("invalid or incomplete deflate data\n");
         break;
     case Z_MEM_ERROR:
-        CONS_Printf("out of memory\n", stderr);
+        CONS_Printf("out of memory\n");
         break;
     case Z_VERSION_ERROR:
-        CONS_Printf("zlib version mismatch!\n", stderr);
+        CONS_Printf("zlib version mismatch!\n");
     }
 }
 
@@ -1095,8 +1109,8 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 		}
 	case CM_DEFLATE: // Is it compressed via DEFLATE? Very common in ZIPs/PK3s, also what most doom-related editors support.
 		{
-			char *rawData; // The lump's raw data.
-			char *decData; // Lump's decompressed real data.
+			z_const Bytef *rawData; // The lump's raw data.
+			Bytef *decData; // Lump's decompressed real data.
 
 			int zErr; // Helper var.
 			z_stream strm;

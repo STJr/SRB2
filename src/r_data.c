@@ -528,8 +528,8 @@ void R_FlushTextureCache(void)
 }
 
 // Need these prototypes for later; defining them here instead of r_data.h so they're "private"
-int R_CountTexturesInTEXTURESLump(UINT16 wadNum);
-void R_ParseTEXTURESLump(UINT16 wadNum, INT32 *index);
+int R_CountTexturesInTEXTURESLump(UINT16 wadNum, UINT16 lumpNum);
+void R_ParseTEXTURESLump(UINT16 wadNum, UINT16 lumpNum, INT32 *index);
 
 //
 // R_LoadTextures
@@ -582,7 +582,7 @@ void R_LoadTextures(void)
 
 		if (texturesLumpPos != INT16_MAX)
 		{
-			numtextures += R_CountTexturesInTEXTURESLump((UINT16)w);
+			numtextures += R_CountTexturesInTEXTURESLump((UINT16)w, (UINT16)texturesLumpPos);
 		}
 
 		// Add all the textures between TX_START and TX_END
@@ -623,16 +623,17 @@ void R_LoadTextures(void)
 		{
 			texstart = W_CheckNumForFullNamePK3("textures/", (UINT16)w, 0) + 1;
 			texend = W_CheckNumForFolderEndPK3("textures/", (UINT16)w, texstart);
+			texturesLumpPos = W_CheckNumForFullNamePK3("textures", (UINT16)w, 0);
 		}
 		else
 		{
 			texstart = W_CheckNumForNamePwad(TX_START, (UINT16)w, 0) + 1;
 			texend = W_CheckNumForNamePwad(TX_END, (UINT16)w, 0);
+			texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, 0);
 		}
-		texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, 0);
 
 		if (texturesLumpPos != INT16_MAX)
-			R_ParseTEXTURESLump(w,&i);
+			R_ParseTEXTURESLump(w, texturesLumpPos, &i);
 
 		if (texstart == INT16_MAX || texend == INT16_MAX)
 			continue;
@@ -1041,7 +1042,7 @@ static texture_t *R_ParseTexture(boolean actuallyLoadTexture)
 }
 
 // Parses the TEXTURES lump... but just to count the number of textures.
-int R_CountTexturesInTEXTURESLump(UINT16 wadNum)
+int R_CountTexturesInTEXTURESLump(UINT16 wadNum, UINT16 lumpNum)
 {
 	char *texturesLump;
 	size_t texturesLumpLength;
@@ -1052,11 +1053,11 @@ int R_CountTexturesInTEXTURESLump(UINT16 wadNum)
 	// Since lumps AREN'T \0-terminated like I'd assumed they should be, I'll
 	// need to make a space of memory where I can ensure that it will terminate
 	// correctly. Start by loading the relevant data from the WAD.
-	texturesLump = (char *)W_CacheLumpNumPwad(wadNum,W_CheckNumForNamePwad("TEXTURES", wadNum, 0),PU_STATIC);
+	texturesLump = (char *)W_CacheLumpNumPwad(wadNum, lumpNum, PU_STATIC);
 	// If that didn't exist, we have nothing to do here.
 	if (texturesLump == NULL) return 0;
 	// If we're still here, then it DOES exist; figure out how long it is, and allot memory accordingly.
-	texturesLumpLength = W_LumpLengthPwad(wadNum,W_CheckNumForNamePwad("TEXTURES",wadNum,0));
+	texturesLumpLength = W_LumpLengthPwad(wadNum, lumpNum);
 	texturesText = (char *)Z_Malloc((texturesLumpLength+1)*sizeof(char),PU_STATIC,NULL);
 	// Now move the contents of the lump into this new location.
 	memmove(texturesText,texturesLump,texturesLumpLength);
@@ -1088,7 +1089,7 @@ int R_CountTexturesInTEXTURESLump(UINT16 wadNum)
 }
 
 // Parses the TEXTURES lump... for real, this time.
-void R_ParseTEXTURESLump(UINT16 wadNum, INT32 *texindex)
+void R_ParseTEXTURESLump(UINT16 wadNum, UINT16 lumpNum, INT32 *texindex)
 {
 	char *texturesLump;
 	size_t texturesLumpLength;
@@ -1101,11 +1102,11 @@ void R_ParseTEXTURESLump(UINT16 wadNum, INT32 *texindex)
 	// Since lumps AREN'T \0-terminated like I'd assumed they should be, I'll
 	// need to make a space of memory where I can ensure that it will terminate
 	// correctly. Start by loading the relevant data from the WAD.
-	texturesLump = (char *)W_CacheLumpNumPwad(wadNum,W_CheckNumForNamePwad("TEXTURES", wadNum, 0),PU_STATIC);
+	texturesLump = (char *)W_CacheLumpNumPwad(wadNum, lumpNum, PU_STATIC);
 	// If that didn't exist, we have nothing to do here.
 	if (texturesLump == NULL) return;
 	// If we're still here, then it DOES exist; figure out how long it is, and allot memory accordingly.
-	texturesLumpLength = W_LumpLengthPwad(wadNum,W_CheckNumForNamePwad("TEXTURES",wadNum,0));
+	texturesLumpLength = W_LumpLengthPwad(wadNum, lumpNum);
 	texturesText = (char *)Z_Malloc((texturesLumpLength+1)*sizeof(char),PU_STATIC,NULL);
 	// Now move the contents of the lump into this new location.
 	memmove(texturesText,texturesLump,texturesLumpLength);
@@ -1211,16 +1212,12 @@ lumpnum_t R_GetFlatNumForName(const char *name)
 			{
 				start = W_CheckNumForNamePwad("FF_START", (UINT16)i, 0);
 				if (start == INT16_MAX)
-				{
 					continue;
-				}
 				else
 				{
 					end = W_CheckNumForNamePwad("FF_END", (UINT16)i, start);
 					if (end == INT16_MAX)
-					{
 						continue;
-					}
 				}
 			}
 			else
@@ -1297,7 +1294,7 @@ void R_ReInitColormaps(UINT16 num)
 {
 	char colormap[9] = "COLORMAP";
 	lumpnum_t lump;
-
+	CONS_Printf("Reinitting colormaps...\n");
 	if (num > 0 && num <= 10000)
 		snprintf(colormap, 8, "CLM%04u", num-1);
 

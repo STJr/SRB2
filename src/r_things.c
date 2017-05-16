@@ -409,30 +409,41 @@ void R_AddSpriteDefs(UINT16 wadnum)
 	UINT16 start, end;
 	char wadname[MAX_WADPATH];
 
-	// find the sprites section in this pwad
-	// we need at least the S_END
-	// (not really, but for speedup)
+	// Find the sprites section in this resource file.
+	if (wadfiles[wadnum]->type == RET_WAD)
+	{
+		start = W_CheckNumForNamePwad("S_START", wadnum, 0);
+		if (start == UINT16_MAX)
+			start = W_CheckNumForNamePwad("SS_START", wadnum, 0); //deutex compatib.
+	}
+	else if (wadfiles[wadnum]->type == RET_PK3)
+		start = W_CheckNumForFullNamePK3("Sprites/", wadnum, 0);
 
-	start = W_CheckNumForNamePwad("S_START", wadnum, 0);
-	if (start == INT16_MAX)
-		start = W_CheckNumForNamePwad("SS_START", wadnum, 0); //deutex compatib.
-	if (start == INT16_MAX)
+	if (start == UINT16_MAX)
 		start = 0; //let say S_START is lump 0
 	else
 		start++;   // just after S_START
 
+
 	// ignore skin wads (we don't want skin sprites interfering with vanilla sprites)
-	if (start == 0 && W_CheckNumForNamePwad("S_SKIN", wadnum, 0) != INT16_MAX)
+	if (start == 0 && W_CheckNumForNamePwad("S_SKIN", wadnum, 0) != UINT16_MAX)
 		return;
 
-	end = W_CheckNumForNamePwad("S_END",wadnum,start);
-	if (end == INT16_MAX)
-		end = W_CheckNumForNamePwad("SS_END",wadnum,start);     //deutex compatib.
-	if (end == INT16_MAX)
+	if (wadfiles[wadnum]->type == RET_WAD)
+	{
+		end = W_CheckNumForNamePwad("S_END",wadnum,start);
+		if (end == UINT16_MAX)
+			end = W_CheckNumForNamePwad("SS_END",wadnum,start);     //deutex compatib.
+	}
+	else if (wadfiles[wadnum]->type == RET_PK3)
+		end = W_CheckNumForFolderEndPK3("Sprites/", wadnum, start);
+
+	if (end == UINT16_MAX)
 	{
 		CONS_Debug(DBG_SETUP, "no sprites in pwad %d\n", wadnum);
 		return;
 	}
+
 
 	//
 	// scan through lumps, for each sprite, find all the sprite frames

@@ -284,7 +284,10 @@ void P_InitPicAnims(void)
 			}
 
 			// Now find ANIMDEFS
-			animdefsLumpNum = W_CheckNumForNamePwad("ANIMDEFS", w, 0);
+			if (wadfiles[w]->type == RET_WAD)
+				animdefsLumpNum = W_CheckNumForNamePwad("ANIMDEFS", w, 0);
+			else if (wadfiles[w]->type == RET_PK3)
+				animdefsLumpNum = W_CheckNumForFullNamePK3("ANIMDEFS", w, 0);
 			if (animdefsLumpNum != INT16_MAX)
 				P_ParseANIMDEFSLump(w, animdefsLumpNum);
 		}
