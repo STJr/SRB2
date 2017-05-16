@@ -9137,8 +9137,9 @@ void P_PlayerThink(player_t *player)
 		if (player->panim != PA_ABILITY)
 			P_SetPlayerMobjState(player->mo, S_PLAY_GLIDE);
 	}
-	else if ((player->pflags & PF_JUMPED && !(player->pflags & PF_NOJUMPDAMAGE))
-	&& ((player->charflags & SF_NOJUMPSPIN && player->panim != PA_ROLL)
+	else if ((player->pflags & PF_JUMPED && !(player->pflags & PF_NOJUMPDAMAGE)
+	&& (player->mo->state-states != S_PLAY_FLOAT && player->mo->state-states != S_PLAY_FLOAT_RUN))
+	&& ((((player->charflags & (SF_NOJUMPSPIN|SF_NOJUMPDAMAGE)) == (SF_NOJUMPSPIN|SF_NOJUMPDAMAGE)) && player->panim != PA_ROLL)
 	|| (!(player->charflags & SF_NOJUMPSPIN) && player->panim != PA_JUMP)))
 	{
 		if (!(player->charflags & SF_NOJUMPSPIN))
