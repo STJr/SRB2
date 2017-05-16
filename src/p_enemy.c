@@ -1145,7 +1145,7 @@ void A_JetJawChomp(mobj_t *actor)
 	if (!actor->target || !(actor->target->flags & MF_SHOOTABLE)
 		|| actor->target->health <= 0 || !P_CheckSight(actor, actor->target))
 	{
-		P_SetMobjState(actor, actor->info->spawnstate);
+		P_SetMobjStateNF(actor, actor->info->spawnstate);
 		return;
 	}
 
