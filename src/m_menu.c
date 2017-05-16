@@ -4675,6 +4675,8 @@ static void M_AddonsOptions(INT32 choice)
 	M_SetupNextMenu(&OP_AddonsOptionsDef);
 }
 
+#define LOCATIONSTRING "Visit \x83SRB2.ORG/MODS\x80 to get & make add-ons!"
+
 static void M_Addons(INT32 choice)
 {
 	const char *pathname = ".";
@@ -4704,7 +4706,7 @@ static void M_Addons(INT32 choice)
 
 	if (!preparefilemenu(false))
 	{
-		M_StartMessage(M_GetText("No files/folders found.\n\n(Press a key)\n"),NULL,MM_NOTHING);
+		M_StartMessage(M_GetText("No files/folders found.\n\n"LOCATIONSTRING"\n\n(Press a key)\n"),NULL,MM_NOTHING);
 		return;
 	}
 	else
@@ -4854,8 +4856,9 @@ static void M_DrawAddons(void)
 	if (addonsresponselimit)
 		addonsresponselimit--;
 
-	if (Playing())
-		V_DrawCenteredString(BASEVIDWIDTH/2, 4, V_REDMAP, "Adding files mid-game may cause problems.");
+	V_DrawCenteredString(BASEVIDWIDTH/2, 4, 0, (Playing()
+	? "\x85""Adding files mid-game may cause problems."
+	: LOCATIONSTRING));
 
 	if (numwadfiles >= MAX_WADFILES) // difficult to happen with current limits, but still worth thinking of
 		x = FRACUNIT;
