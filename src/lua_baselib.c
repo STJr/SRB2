@@ -131,6 +131,8 @@ static const struct {
 	{META_PATCH,        "patch_t"},
 	{META_COLORMAP,     "colormap"},
 	{META_CAMERA,       "camera_t"},
+
+	{META_ACTION,       "action"},
 	{NULL,              NULL}
 };
 

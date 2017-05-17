@@ -8263,11 +8263,11 @@ static inline int lib_freeslot(lua_State *L)
 }
 
 // Wrapper for ALL A_Action functions.
-// Upvalue: actionf_t to represent
 // Arguments: mobj_t actor, int var1, int var2
-static inline int lib_action(lua_State *L)
+static int action_call(lua_State *L)
 {
-	actionf_t *action = lua_touserdata(L,lua_upvalueindex(1));
+	//actionf_t *action = lua_touserdata(L,lua_upvalueindex(1));
+	actionf_t *action = *((actionf_t **)luaL_checkudata(L, 1, META_ACTION));
 	mobj_t *actor = *((mobj_t **)luaL_checkudata(L,1,META_MOBJ));
 	var1 = (INT32)luaL_optinteger(L,2,0);
 	var2 = (INT32)luaL_optinteger(L,3,0);
@@ -8547,9 +8547,8 @@ static inline int lib_getenum(lua_State *L)
 		// Retrieving them from this metatable allows them to be case-insensitive!
 		for (i = 0; actionpointers[i].name; i++)
 			if (fasticmp(word, actionpointers[i].name)) {
-				// push lib_action as a C closure with the actionf_t* as an upvalue.
-				lua_pushlightuserdata(L, &actionpointers[i].action);
-				lua_pushcclosure(L, lib_action, 1);
+				// We push the actionf_t* itself as userdata!
+				LUA_PushUserdata(L, &actionpointers[i].action, META_ACTION);
 				return 1;
 			}
 		return 0;
@@ -8563,8 +8562,7 @@ static inline int lib_getenum(lua_State *L)
 		}
 		for (i = 0; actionpointers[i].name; i++)
 			if (fasticmp(superactions[superstack-1], actionpointers[i].name)) {
-				lua_pushlightuserdata(L, &actionpointers[i].action);
-				lua_pushcclosure(L, lib_action, 1);
+				LUA_PushUserdata(L, &actionpointers[i].action, META_ACTION);
 				return 1;
 			}
 		return 0;
@@ -8688,9 +8686,30 @@ int LUA_EnumLib(lua_State *L)
 	return 0;
 }
 
+// getActionName(action) -> return action's string name
+static int lib_getActionName(lua_State *L)
+{
+	actionf_t *action = *((actionf_t **)luaL_checkudata(L, 1, META_ACTION));
+	const char *name = NULL;
+	if (!action)
+		return 0; // insert error here (or not?)
+	name = LUA_GetActionName(action);
+	if (!name) // that can't be right?
+		return 0;
+	lua_pushstring(L, name);
+	return 1;
+}
+
 int LUA_SOCLib(lua_State *L)
 {
 	lua_register(L,"freeslot",lib_freeslot);
+	lua_register(L,"getActionName",lib_getActionName);
+
+	luaL_newmetatable(L, META_ACTION);
+		lua_pushcfunction(L, action_call);
+		lua_setfield(L, -2, "__call");
+	lua_pop(L, 1);
+
 	return 0;
 }
 
