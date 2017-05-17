@@ -181,15 +181,13 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 			wasfullscreen = SDL_TRUE;
 			SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
 		}
-		else if (wasfullscreen)
+		else // windowed mode
 		{
-			wasfullscreen = SDL_FALSE;
-			SDL_SetWindowFullscreen(window, 0);
-			SDL_SetWindowSize(window, width, height);
-			SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED_DISPLAY(1), SDL_WINDOWPOS_CENTERED_DISPLAY(1));
-		}
-		else
-		{
+			if (wasfullscreen)
+			{
+				wasfullscreen = SDL_FALSE;
+				SDL_SetWindowFullscreen(window, 0);
+			}
 			// Reposition window only in windowed mode
 			SDL_SetWindowSize(window, width, height);
 			SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED_DISPLAY(1), SDL_WINDOWPOS_CENTERED_DISPLAY(1));
@@ -899,7 +897,7 @@ static inline boolean I_SkipFrame(void)
 {
 	static boolean skip = false;
 
-	if (render_soft != rendermode)
+	if (rendermode != render_soft)
 		return false;
 
 	skip = !skip;
@@ -931,7 +929,7 @@ void I_FinishUpdate(void)
 	if (cv_ticrate.value)
 		SCR_DisplayTicRate();
 
-	if (render_soft == rendermode && screens[0])
+	if (rendermode == render_soft && screens[0])
 	{
 		SDL_Rect rect;
 
@@ -958,7 +956,7 @@ void I_FinishUpdate(void)
 	}
 
 #ifdef HWRENDER
-	else
+	else if (rendermode == render_opengl)
 	{
 		OglSdlFinishUpdate(cv_vidwait.value);
 	}
@@ -1188,9 +1186,9 @@ INT32 VID_SetMode(INT32 modeNum)
 	}
 	Impl_SetWindowName("SRB2 "VERSIONSTRING);
 
-	SDLSetMode(windowedModes[modeNum][0], windowedModes[modeNum][1], USE_FULLSCREEN);
+	SDLSetMode(vid.width, vid.height, USE_FULLSCREEN);
 
-	if (render_soft == rendermode)
+	if (rendermode == render_soft)
 	{
 		if (bufSurface)
 		{
@@ -1209,30 +1207,20 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 	int flags = 0;
 
 	if (rendermode == render_none) // dedicated
-	{
 		return SDL_TRUE; // Monster Iestyn -- not sure if it really matters what we return here tbh
-	}
 
 	if (window != NULL)
-	{
 		return SDL_FALSE;
-	}
 
 	if (fullscreen)
-	{
 		flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
-	}
 
 	if (borderlesswindow)
-	{
 		flags |= SDL_WINDOW_BORDERLESS;
-	}
 
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
-	{
 		flags |= SDL_WINDOW_OPENGL;
-	}
 #endif
 
 	// Create a window
@@ -1261,7 +1249,13 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 #endif
 	if (rendermode == render_soft)
 	{
-		renderer = SDL_CreateRenderer(window, -1, (usesdl2soft ? SDL_RENDERER_SOFTWARE : 0) | (cv_vidwait.value && !usesdl2soft ? SDL_RENDERER_PRESENTVSYNC : 0));
+		flags = 0; // Use this to set SDL_RENDERER_* flags now
+		if (usesdl2soft)
+			flags |= SDL_RENDERER_SOFTWARE;
+		else if (cv_vidwait.value)
+			flags |= SDL_RENDERER_PRESENTVSYNC;
+
+		renderer = SDL_CreateRenderer(window, -1, flags);
 		if (renderer == NULL)
 		{
 			CONS_Printf(M_GetText("Couldn't create rendering context: %s\n"), SDL_GetError());
@@ -1483,7 +1477,7 @@ void I_ShutdownGraphics(void)
 	rendermode = render_none;
 	if (icoSurface) SDL_FreeSurface(icoSurface);
 	icoSurface = NULL;
-	if (render_soft == oldrendermode)
+	if (oldrendermode == render_soft)
 	{
 		if (vidSurface) SDL_FreeSurface(vidSurface);
 		vidSurface = NULL;
