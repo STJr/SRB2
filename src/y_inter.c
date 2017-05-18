@@ -1834,21 +1834,10 @@ static void Y_FollowIntermission(void)
 		return;
 	}
 
-	if (nextmap < 1100-1)
-	{
-		// normal level
-		G_AfterIntermission();
-		return;
-	}
-
-	// Start a custom cutscene if there is one.
-	if (mapheaderinfo[gamemap-1]->cutscenenum && !modeattacking)
-	{
-		F_StartCustomCutscene(mapheaderinfo[gamemap-1]->cutscenenum-1, false, false);
-		return;
-	}
-
-	G_EndGame();
+	// This handles whether to play a post-level cutscene, end the game,
+	// or simply go to the next level.
+	// No need to duplicate the code here!
+	G_AfterIntermission();
 }
 
 #define UNLOAD(x) Z_ChangeTag(x, PU_CACHE); x = NULL

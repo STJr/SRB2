@@ -3015,10 +3015,10 @@ static void G_DoContinued(void)
 
 //
 // G_EndGame (formerly Y_EndGame)
-// Franky this function fits better in g_game.c than it does in y_inter.c
+// Frankly this function fits better in g_game.c than it does in y_inter.c
 //
 // ...Gee, (why) end the game?
-// Because Y_FollowIntermission and F_EndCutscene would
+// Because G_AfterIntermission and F_EndCutscene would
 // both do this exact same thing *in different ways* otherwise,
 // which made it so that you could only unlock Ultimate mode
 // if you had a cutscene after the final level and crap like that.
