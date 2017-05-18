@@ -482,58 +482,6 @@ static inline float P_SegLengthf(seg_t *seg)
   * \param lump Lump number of the SEGS resource.
   * \sa ::ML_SEGS
   */
-static void P_LoadSegs(lumpnum_t lumpnum)
-{
-	UINT8 *data;
-	size_t i;
-	INT32 linedef, side;
-	mapseg_t *ml;
-	seg_t *li;
-	line_t *ldef;
-
-	numsegs = W_LumpLength(lumpnum) / sizeof (mapseg_t);
-	if (numsegs <= 0)
-		I_Error("Level has no segs"); // instead of crashing
-	segs = Z_Calloc(numsegs * sizeof (*segs), PU_LEVEL, NULL);
-	data = W_CacheLumpNum(lumpnum, PU_STATIC);
-
-	ml = (mapseg_t *)data;
-	li = segs;
-	for (i = 0; i < numsegs; i++, li++, ml++)
-	{
-		li->v1 = &vertexes[SHORT(ml->v1)];
-		li->v2 = &vertexes[SHORT(ml->v2)];
-
-#ifdef HWRENDER // not win32 only 19990829 by Kin
-		// used for the hardware render
-		if (rendermode != render_soft && rendermode != render_none)
-		{
-			li->flength = P_SegLengthf(li);
-			//Hurdler: 04/12/2000: for now, only used in hardware mode
-			li->lightmaps = NULL; // list of static lightmap for this seg
-		}
-#endif
-
-		li->angle = (SHORT(ml->angle))<<FRACBITS;
-		li->offset = (SHORT(ml->offset))<<FRACBITS;
-		linedef = SHORT(ml->linedef);
-		ldef = &lines[linedef];
-		li->linedef = ldef;
-		li->side = side = SHORT(ml->side);
-		li->sidedef = &sides[ldef->sidenum[side]];
-		li->frontsector = sides[ldef->sidenum[side]].sector;
-		if (ldef-> flags & ML_TWOSIDED)
-			li->backsector = sides[ldef->sidenum[side^1]].sector;
-		else
-			li->backsector = 0;
-
-		li->numlights = 0;
-		li->rlights = NULL;
-	}
-
-	Z_Free(data);
-}
-
 static void P_LoadRawSegs(UINT8 *data, size_t i)
 {
 	INT32 linedef, side;
@@ -581,41 +529,19 @@ static void P_LoadRawSegs(UINT8 *data, size_t i)
 	}
 }
 
+static void P_LoadSegs(lumpnum_t lumpnum)
+{
+	UINT8 *data = W_CacheLumpNum(lumpnum, PU_STATIC);
+	P_LoadRawSegs(data, W_LumpLength(lumpnum));
+	Z_Free(data);
+}
+
 
 /** Loads the SSECTORS resource from a level.
   *
   * \param lump Lump number of the SSECTORS resource.
   * \sa ::ML_SSECTORS
   */
-static inline void P_LoadSubsectors(lumpnum_t lumpnum)
-{
-	void *data;
-	size_t i;
-	mapsubsector_t *ms;
-	subsector_t *ss;
-
-	numsubsectors = W_LumpLength(lumpnum) / sizeof (mapsubsector_t);
-	if (numsubsectors <= 0)
-		I_Error("Level has no subsectors (did you forget to run it through a nodesbuilder?)");
-	ss = subsectors = Z_Calloc(numsubsectors * sizeof (*subsectors), PU_LEVEL, NULL);
-	data = W_CacheLumpNum(lumpnum,PU_STATIC);
-
-	ms = (mapsubsector_t *)data;
-
-	for (i = 0; i < numsubsectors; i++, ss++, ms++)
-	{
-		ss->sector = NULL;
-		ss->numlines = SHORT(ms->numsegs);
-		ss->firstline = SHORT(ms->firstseg);
-#ifdef FLOORSPLATS
-		ss->splats = NULL;
-#endif
-		ss->validcount = 0;
-	}
-
-	Z_Free(data);
-}
-
 static inline void P_LoadRawSubsectors(void *data, size_t i)
 {
 	mapsubsector_t *ms;
@@ -638,6 +564,13 @@ static inline void P_LoadRawSubsectors(void *data, size_t i)
 #endif
 		ss->validcount = 0;
 	}
+}
+
+static void P_LoadSubsectors(lumpnum_t lumpnum)
+{
+	UINT8 *data = W_CacheLumpNum(lumpnum, PU_STATIC);
+	P_LoadRawSubsectors(data, W_LumpLength(lumpnum));
+	Z_Free(data);
 }
 
 //
@@ -765,118 +698,6 @@ INT32 P_CheckLevelFlat(const char *flatname)
 
 // Sets up the ingame sectors structures.
 // Lumpnum is the lumpnum of a SECTORS lump.
-static void P_LoadSectors(lumpnum_t lumpnum)
-{
-	UINT8 *data;
-	size_t i;
-	mapsector_t *ms;
-	sector_t *ss;
-	levelflat_t *foundflats;
-
-	// We count how many sectors we got.
-	numsectors = W_LumpLength(lumpnum) / sizeof (mapsector_t);
-	if (numsectors <= 0)
-		I_Error("Level has no sectors");
-
-	// Allocate as much memory as we need into the global sectors table.
-	sectors = Z_Calloc(numsectors*sizeof (*sectors), PU_LEVEL, NULL);
-
-	// Cache the data from the lump.
-	data = W_CacheLumpNum(lumpnum, PU_STATIC);
-
-	// Allocate a big chunk of memory as big as our MAXLEVELFLATS limit.
-	//Fab : FIXME: allocate for whatever number of flats - 512 different flats per level should be plenty
-	foundflats = calloc(MAXLEVELFLATS, sizeof (*foundflats));
-	if (foundflats == NULL)
-		I_Error("Ran out of memory while loading sectors\n");
-
-	numlevelflats = 0;
-
-	// For each counted sector, copy the sector raw data from our cache pointer ms, to the global table pointer ss.
-	ms = (mapsector_t *)data;
-	ss = sectors;
-	for (i = 0; i < numsectors; i++, ss++, ms++)
-	{
-		ss->floorheight = SHORT(ms->floorheight)<<FRACBITS;
-		ss->ceilingheight = SHORT(ms->ceilingheight)<<FRACBITS;
-
-		ss->floorpic = P_AddLevelFlat(ms->floorpic, foundflats);
-		ss->ceilingpic = P_AddLevelFlat(ms->ceilingpic, foundflats);
-
-		ss->lightlevel = SHORT(ms->lightlevel);
-		ss->special = SHORT(ms->special);
-		ss->tag = SHORT(ms->tag);
-		ss->nexttag = ss->firsttag = -1;
-		ss->spawn_nexttag = ss->spawn_firsttag = -1;
-
-		memset(&ss->soundorg, 0, sizeof(ss->soundorg));
-		ss->validcount = 0;
-
-		ss->thinglist = NULL;
-		ss->touching_thinglist = NULL;
-		ss->preciplist = NULL;
-		ss->touching_preciplist = NULL;
-
-		ss->floordata = NULL;
-		ss->ceilingdata = NULL;
-		ss->lightingdata = NULL;
-
-		ss->linecount = 0;
-		ss->lines = NULL;
-
-		ss->heightsec = -1;
-		ss->camsec = -1;
-		ss->floorlightsec = -1;
-		ss->ceilinglightsec = -1;
-		ss->crumblestate = 0;
-		ss->ffloors = NULL;
-		ss->lightlist = NULL;
-		ss->numlights = 0;
-		ss->attached = NULL;
-		ss->attachedsolid = NULL;
-		ss->numattached = 0;
-		ss->maxattached = 1;
-		ss->moved = true;
-
-		ss->extra_colormap = NULL;
-
-		ss->floor_xoffs = ss->ceiling_xoffs = ss->floor_yoffs = ss->ceiling_yoffs = 0;
-		ss->spawn_flr_xoffs = ss->spawn_ceil_xoffs = ss->spawn_flr_yoffs = ss->spawn_ceil_yoffs = 0;
-		ss->floorpic_angle = ss->ceilingpic_angle = 0;
-		ss->spawn_flrpic_angle = ss->spawn_ceilpic_angle = 0;
-		ss->bottommap = ss->midmap = ss->topmap = -1;
-		ss->gravity = NULL;
-		ss->cullheight = NULL;
-		ss->verticalflip = false;
-		ss->flags = 0;
-		ss->flags |= SF_FLIPSPECIAL_FLOOR;
-
-		ss->floorspeed = 0;
-		ss->ceilspeed = 0;
-
-#ifdef HWRENDER // ----- for special tricks with HW renderer -----
-		ss->pseudoSector = false;
-		ss->virtualFloor = false;
-		ss->virtualCeiling = false;
-		ss->sectorLines = NULL;
-		ss->stackList = NULL;
-		ss->lineoutLength = -1.0l;
-#endif // ----- end special tricks -----
-	}
-
-	Z_Free(data);
-
-	// set the sky flat num
-	skyflatnum = P_AddLevelFlat(SKYFLATNAME, foundflats);
-
-	// copy table for global usage
-	levelflats = M_Memcpy(Z_Calloc(numlevelflats * sizeof (*levelflats), PU_LEVEL, NULL), foundflats, numlevelflats * sizeof (levelflat_t));
-	free(foundflats);
-
-	// search for animated flats and set up
-	P_SetupLevelFlatAnims();
-}
-
 static void P_LoadRawSectors(UINT8 *data, size_t i)
 {
 	mapsector_t *ms;
@@ -982,43 +803,16 @@ static void P_LoadRawSectors(UINT8 *data, size_t i)
 	P_SetupLevelFlatAnims();
 }
 
-//
-// P_LoadNodes
-//
-static void P_LoadNodes(lumpnum_t lumpnum)
+static void P_LoadSectors(lumpnum_t lumpnum)
 {
-	UINT8 *data;
-	size_t i;
-	UINT8 j, k;
-	mapnode_t *mn;
-	node_t *no;
-
-	numnodes = W_LumpLength(lumpnum) / sizeof (mapnode_t);
-	if (numnodes <= 0)
-		I_Error("Level has no nodes");
-	nodes = Z_Calloc(numnodes * sizeof (*nodes), PU_LEVEL, NULL);
-	data = W_CacheLumpNum(lumpnum, PU_STATIC);
-
-	mn = (mapnode_t *)data;
-	no = nodes;
-
-	for (i = 0; i < numnodes; i++, no++, mn++)
-	{
-		no->x = SHORT(mn->x)<<FRACBITS;
-		no->y = SHORT(mn->y)<<FRACBITS;
-		no->dx = SHORT(mn->dx)<<FRACBITS;
-		no->dy = SHORT(mn->dy)<<FRACBITS;
-		for (j = 0; j < 2; j++)
-		{
-			no->children[j] = SHORT(mn->children[j]);
-			for (k = 0; k < 4; k++)
-				no->bbox[j][k] = SHORT(mn->bbox[j][k])<<FRACBITS;
-		}
-	}
-
+	UINT8 *data = W_CacheLumpNum(lumpnum, PU_STATIC);
+	P_LoadRawSectors(data, W_LumpLength(lumpnum));
 	Z_Free(data);
 }
 
+//
+// P_LoadNodes
+//
 static void P_LoadRawNodes(UINT8 *data, size_t i)
 {
 	UINT8 j, k;
@@ -1048,6 +842,12 @@ static void P_LoadRawNodes(UINT8 *data, size_t i)
 	}
 }
 
+static void P_LoadNodes(lumpnum_t lumpnum)
+{
+	UINT8 *data = W_CacheLumpNum(lumpnum, PU_STATIC);
+	P_LoadRawNodes(data, W_LumpLength(lumpnum));
+	Z_Free(data);
+}
 
 //
 // P_ReloadRings
@@ -1180,57 +980,16 @@ void P_ScanThings(INT16 mapnum, INT16 wadnum, INT16 lumpnum)
 //
 // P_LoadThings
 //
-static void P_PrepareThings(lumpnum_t lumpnum)
-{
-	size_t i;
-	mapthing_t *mt;
-	UINT8 *data, *datastart;
-
-	nummapthings = W_LumpLength(lumpnum) / (5 * sizeof (INT16));
-	mapthings = Z_Calloc(nummapthings * sizeof (*mapthings), PU_LEVEL, NULL);
-
-	// Spawn axis points first so they are
-	// at the front of the list for fast searching.
-	data = datastart = W_CacheLumpNum(lumpnum, PU_LEVEL);
-	mt = mapthings;
-	for (i = 0; i < nummapthings; i++, mt++)
-	{
-		mt->x = READINT16(data);
-		mt->y = READINT16(data);
-		mt->angle = READINT16(data);
-		mt->type = READUINT16(data);
-		mt->options = READUINT16(data);
-		mt->extrainfo = (UINT8)(mt->type >> 12);
-
-		mt->type &= 4095;
-
-		switch (mt->type)
-		{
-			case 1700: // MT_AXIS
-			case 1701: // MT_AXISTRANSFER
-			case 1702: // MT_AXISTRANSFERLINE
-				mt->mobj = NULL;
-				P_SpawnMapThing(mt);
-				break;
-			default:
-				break;
-		}
-	}
-	Z_Free(datastart);
-
-}
 
 static void P_PrepareRawThings(UINT8 *data, size_t i)
 {
 	mapthing_t *mt;
-	UINT8 *datastart;
 
 	nummapthings = i / (5 * sizeof (INT16));
 	mapthings = Z_Calloc(nummapthings * sizeof (*mapthings), PU_LEVEL, NULL);
 
 	// Spawn axis points first so they are
 	// at the front of the list for fast searching.
-	datastart = data;
 	mt = mapthings;
 	for (i = 0; i < nummapthings; i++, mt++)
 	{
@@ -1255,6 +1014,13 @@ static void P_PrepareRawThings(UINT8 *data, size_t i)
 				break;
 		}
 	}
+}
+
+static void P_PrepareThings(lumpnum_t lumpnum)
+{
+	UINT8 *data = W_CacheLumpNum(lumpnum, PU_STATIC);
+	P_PrepareRawThings(data, W_LumpLength(lumpnum));
+	Z_Free(data);
 }
 
 static void P_LoadThings(void)
@@ -1441,121 +1207,6 @@ void P_WriteThings(lumpnum_t lumpnum)
 	CONS_Printf(M_GetText("newthings%d.lmp saved.\n"), gamemap);
 }
 
-//
-// P_LoadLineDefs
-//
-static void P_LoadLineDefs(lumpnum_t lumpnum)
-{
-	UINT8 *data;
-	size_t i;
-	maplinedef_t *mld;
-	line_t *ld;
-	vertex_t *v1, *v2;
-
-	numlines = W_LumpLength(lumpnum) / sizeof (maplinedef_t);
-	if (numlines <= 0)
-		I_Error("Level has no linedefs");
-	lines = Z_Calloc(numlines * sizeof (*lines), PU_LEVEL, NULL);
-	data = W_CacheLumpNum(lumpnum, PU_STATIC);
-
-	mld = (maplinedef_t *)data;
-	ld = lines;
-	for (i = 0; i < numlines; i++, mld++, ld++)
-	{
-		ld->flags = SHORT(mld->flags);
-		ld->special = SHORT(mld->special);
-		ld->tag = SHORT(mld->tag);
-		v1 = ld->v1 = &vertexes[SHORT(mld->v1)];
-		v2 = ld->v2 = &vertexes[SHORT(mld->v2)];
-		ld->dx = v2->x - v1->x;
-		ld->dy = v2->y - v1->y;
-
-#ifdef WALLSPLATS
-		ld->splats = NULL;
-#endif
-
-		if (!ld->dx)
-			ld->slopetype = ST_VERTICAL;
-		else if (!ld->dy)
-			ld->slopetype = ST_HORIZONTAL;
-		else if (FixedDiv(ld->dy, ld->dx) > 0)
-			ld->slopetype = ST_POSITIVE;
-		else
-			ld->slopetype = ST_NEGATIVE;
-
-		if (v1->x < v2->x)
-		{
-			ld->bbox[BOXLEFT] = v1->x;
-			ld->bbox[BOXRIGHT] = v2->x;
-		}
-		else
-		{
-			ld->bbox[BOXLEFT] = v2->x;
-			ld->bbox[BOXRIGHT] = v1->x;
-		}
-
-		if (v1->y < v2->y)
-		{
-			ld->bbox[BOXBOTTOM] = v1->y;
-			ld->bbox[BOXTOP] = v2->y;
-		}
-		else
-		{
-			ld->bbox[BOXBOTTOM] = v2->y;
-			ld->bbox[BOXTOP] = v1->y;
-		}
-
-		ld->sidenum[0] = SHORT(mld->sidenum[0]);
-		ld->sidenum[1] = SHORT(mld->sidenum[1]);
-
-		{
-			// cph 2006/09/30 - fix sidedef errors right away.
-			// cph 2002/07/20 - these errors are fatal if not fixed, so apply them
-			UINT8 j;
-
-			for (j=0; j < 2; j++)
-			{
-				if (ld->sidenum[j] != 0xffff && ld->sidenum[j] >= (UINT16)numsides)
-				{
-					ld->sidenum[j] = 0xffff;
-					CONS_Debug(DBG_SETUP, "P_LoadLineDefs: linedef %s has out-of-range sidedef number\n", sizeu1(numlines-i-1));
-				}
-			}
-		}
-
-		ld->frontsector = ld->backsector = NULL;
-		ld->validcount = 0;
-		ld->firsttag = ld->nexttag = -1;
-		ld->callcount = 0;
-		// killough 11/98: fix common wad errors (missing sidedefs):
-
-		if (ld->sidenum[0] == 0xffff)
-		{
-			ld->sidenum[0] = 0;  // Substitute dummy sidedef for missing right side
-			// cph - print a warning about the bug
-			CONS_Debug(DBG_SETUP, "P_LoadLineDefs: linedef %s missing first sidedef\n", sizeu1(numlines-i-1));
-		}
-
-		if ((ld->sidenum[1] == 0xffff) && (ld->flags & ML_TWOSIDED))
-		{
-			ld->flags &= ~ML_TWOSIDED;  // Clear 2s flag for missing left side
-			// cph - print a warning about the bug
-			CONS_Debug(DBG_SETUP, "P_LoadLineDefs: linedef %s has two-sided flag set, but no second sidedef\n", sizeu1(numlines-i-1));
-		}
-
-		if (ld->sidenum[0] != 0xffff && ld->special)
-			sides[ld->sidenum[0]].special = ld->special;
-		if (ld->sidenum[1] != 0xffff && ld->special)
-			sides[ld->sidenum[1]].special = ld->special;
-
-#ifdef POLYOBJECTS
-		ld->polyobj = NULL;
-#endif
-	}
-
-	Z_Free(data);
-}
-
 static void P_LoadRawLineDefs(UINT8 *data, size_t i)
 {
 	maplinedef_t *mld;
@@ -1663,6 +1314,13 @@ static void P_LoadRawLineDefs(UINT8 *data, size_t i)
 	}
 }
 
+static void P_LoadLineDefs(lumpnum_t lumpnum)
+{
+	UINT8 *data = W_CacheLumpNum(lumpnum, PU_STATIC);
+	P_LoadRawLineDefs(data, W_LumpLength(lumpnum));
+	Z_Free(data);
+}
+
 static void P_LoadLineDefs2(void)
 {
 	size_t i = numlines;
@@ -1761,16 +1419,7 @@ static void P_LoadLineDefs2(void)
 	}
 }
 
-//
-// P_LoadSideDefs
-//
-static inline void P_LoadSideDefs(lumpnum_t lumpnum)
-{
-	numsides = W_LumpLength(lumpnum) / sizeof (mapsidedef_t);
-	if (numsides <= 0)
-		I_Error("Level has no sidedefs");
-	sides = Z_Calloc(numsides * sizeof (*sides), PU_LEVEL, NULL);
-}
+
 
 static inline void P_LoadRawSideDefs(size_t i)
 {
@@ -1780,247 +1429,12 @@ static inline void P_LoadRawSideDefs(size_t i)
 	sides = Z_Calloc(numsides * sizeof (*sides), PU_LEVEL, NULL);
 }
 
-// Delay loading texture names until after loaded linedefs.
-
-static void P_LoadSideDefs2(lumpnum_t lumpnum)
+static inline void P_LoadSideDefs(lumpnum_t lumpnum)
 {
-	UINT8 *data = W_CacheLumpNum(lumpnum, PU_STATIC);
-	UINT16 i;
-	INT32 num;
-
-	for (i = 0; i < numsides; i++)
-	{
-		register mapsidedef_t *msd = (mapsidedef_t *)data + i;
-		register side_t *sd = sides + i;
-		register sector_t *sec;
-
-		sd->textureoffset = SHORT(msd->textureoffset)<<FRACBITS;
-		sd->rowoffset = SHORT(msd->rowoffset)<<FRACBITS;
-
-		{ /* cph 2006/09/30 - catch out-of-range sector numbers; use sector 0 instead */
-			UINT16 sector_num = SHORT(msd->sector);
-
-			if (sector_num >= numsectors)
-			{
-				CONS_Debug(DBG_SETUP, "P_LoadSideDefs2: sidedef %u has out-of-range sector num %u\n", i, sector_num);
-				sector_num = 0;
-			}
-			sd->sector = sec = &sectors[sector_num];
-		}
-
-		// refined to allow colormaps to work as wall textures if invalid as colormaps
-		// but valid as textures.
-
-		sd->sector = sec = &sectors[SHORT(msd->sector)];
-
-		// Colormaps!
-		switch (sd->special)
-		{
-			case 63: // variable colormap via 242 linedef
-			case 606: //SoM: 4/4/2000: Just colormap transfer
-				// SoM: R_CreateColormap will only create a colormap in software mode...
-				// Perhaps we should just call it instead of doing the calculations here.
-				if (rendermode == render_soft || rendermode == render_none)
-				{
-					if (msd->toptexture[0] == '#' || msd->bottomtexture[0] == '#')
-					{
-						sec->midmap = R_CreateColormap(msd->toptexture, msd->midtexture,
-							msd->bottomtexture);
-						sd->toptexture = sd->bottomtexture = 0;
-					}
-					else
-					{
-						if ((num = R_CheckTextureNumForName(msd->toptexture)) == -1)
-							sd->toptexture = 0;
-						else
-							sd->toptexture = num;
-						if ((num = R_CheckTextureNumForName(msd->midtexture)) == -1)
-							sd->midtexture = 0;
-						else
-							sd->midtexture = num;
-						if ((num = R_CheckTextureNumForName(msd->bottomtexture)) == -1)
-							sd->bottomtexture = 0;
-						else
-							sd->bottomtexture = num;
-					}
-					break;
-				}
-#ifdef HWRENDER
-				else
-				{
-					// for now, full support of toptexture only
-					if ((msd->toptexture[0] == '#' && msd->toptexture[1] && msd->toptexture[2] && msd->toptexture[3] && msd->toptexture[4] && msd->toptexture[5] && msd->toptexture[6])
-						|| (msd->bottomtexture[0] == '#' && msd->bottomtexture[1] && msd->bottomtexture[2] && msd->bottomtexture[3] && msd->bottomtexture[4] && msd->bottomtexture[5] && msd->bottomtexture[6]))
-					{
-						char *col;
-
-						sec->midmap = R_CreateColormap(msd->toptexture, msd->midtexture,
-							msd->bottomtexture);
-						sd->toptexture = sd->bottomtexture = 0;
-#define HEX2INT(x) (x >= '0' && x <= '9' ? x - '0' : x >= 'a' && x <= 'f' ? x - 'a' + 10 : x >= 'A' && x <= 'F' ? x - 'A' + 10 : 0)
-#define ALPHA2INT(x) (x >= 'a' && x <= 'z' ? x - 'a' : x >= 'A' && x <= 'Z' ? x - 'A' : x >= '0' && x <= '9' ? 25 : 0)
-						sec->extra_colormap = &extra_colormaps[sec->midmap];
-
-						if (msd->toptexture[0] == '#' && msd->toptexture[1] && msd->toptexture[2] && msd->toptexture[3] && msd->toptexture[4] && msd->toptexture[5] && msd->toptexture[6])
-						{
-							col = msd->toptexture;
-
-							sec->extra_colormap->rgba =
-								(HEX2INT(col[1]) << 4) + (HEX2INT(col[2]) << 0) +
-								(HEX2INT(col[3]) << 12) + (HEX2INT(col[4]) << 8) +
-								(HEX2INT(col[5]) << 20) + (HEX2INT(col[6]) << 16);
-
-							// alpha
-							if (msd->toptexture[7])
-								sec->extra_colormap->rgba += (ALPHA2INT(col[7]) << 24);
-							else
-								sec->extra_colormap->rgba += (25 << 24);
-						}
-						else
-							sec->extra_colormap->rgba = 0;
-
-						if (msd->bottomtexture[0] == '#' && msd->bottomtexture[1] && msd->bottomtexture[2] && msd->bottomtexture[3] && msd->bottomtexture[4] && msd->bottomtexture[5] && msd->bottomtexture[6])
-						{
-							col = msd->bottomtexture;
-
-							sec->extra_colormap->fadergba =
-								(HEX2INT(col[1]) << 4) + (HEX2INT(col[2]) << 0) +
-								(HEX2INT(col[3]) << 12) + (HEX2INT(col[4]) << 8) +
-								(HEX2INT(col[5]) << 20) + (HEX2INT(col[6]) << 16);
-
-							// alpha
-							if (msd->bottomtexture[7])
-								sec->extra_colormap->fadergba += (ALPHA2INT(col[7]) << 24);
-							else
-								sec->extra_colormap->fadergba += (25 << 24);
-						}
-						else
-							sec->extra_colormap->fadergba = 0x19000000; // default alpha, (25 << 24)
-#undef ALPHA2INT
-#undef HEX2INT
-					}
-					else
-					{
-						if ((num = R_CheckTextureNumForName(msd->toptexture)) == -1)
-							sd->toptexture = 0;
-						else
-							sd->toptexture = num;
-
-						if ((num = R_CheckTextureNumForName(msd->midtexture)) == -1)
-							sd->midtexture = 0;
-						else
-							sd->midtexture = num;
-
-						if ((num = R_CheckTextureNumForName(msd->bottomtexture)) == -1)
-							sd->bottomtexture = 0;
-						else
-							sd->bottomtexture = num;
-					}
-					break;
-				}
-#endif
-
-			case 413: // Change music
-			{
-				char process[8+1];
-
-				sd->toptexture = sd->midtexture = sd->bottomtexture = 0;
-				if (msd->bottomtexture[0] != '-' || msd->bottomtexture[1] != '\0')
-				{
-					M_Memcpy(process,msd->bottomtexture,8);
-					process[8] = '\0';
-					sd->bottomtexture = get_number(process)-1;
-				}
-				M_Memcpy(process,msd->toptexture,8);
-				process[8] = '\0';
-				sd->text = Z_Malloc(7, PU_LEVEL, NULL);
-
-				// If they type in O_ or D_ and their music name, just shrug,
-				// then copy the rest instead.
-				if ((process[0] == 'O' || process[0] == 'D') && process[7])
-					M_Memcpy(sd->text, process+2, 6);
-				else // Assume it's a proper music name.
-					M_Memcpy(sd->text, process, 6);
-				sd->text[6] = 0;
-				break;
-			}
-
-			case 4: // Speed pad parameters
-			case 414: // Play SFX
-			{
-				sd->toptexture = sd->midtexture = sd->bottomtexture = 0;
-				if (msd->toptexture[0] != '-' || msd->toptexture[1] != '\0')
-				{
-					char process[8+1];
-					M_Memcpy(process,msd->toptexture,8);
-					process[8] = '\0';
-					sd->toptexture = get_number(process);
-				}
-				break;
-			}
-
-			case 14: // Bustable block parameters
-			case 15: // Fan particle spawner parameters
-			case 425: // Calls P_SetMobjState on calling mobj
-			case 434: // Custom Power
-			case 442: // Calls P_SetMobjState on mobjs of a given type in the tagged sectors
-			{
-				char process[8*3+1];
-				memset(process,0,8*3+1);
-				sd->toptexture = sd->midtexture = sd->bottomtexture = 0;
-				if (msd->toptexture[0] == '-' && msd->toptexture[1] == '\0')
-					break;
-				else
-					M_Memcpy(process,msd->toptexture,8);
-				if (msd->midtexture[0] != '-' || msd->midtexture[1] != '\0')
-					M_Memcpy(process+strlen(process), msd->midtexture, 8);
-				if (msd->bottomtexture[0] != '-' || msd->bottomtexture[1] != '\0')
-					M_Memcpy(process+strlen(process), msd->bottomtexture, 8);
-				sd->toptexture = get_number(process);
-				break;
-			}
-
-			case 443: // Calls a named Lua function
-			{
-				char process[8*3+1];
-				memset(process,0,8*3+1);
-				sd->toptexture = sd->midtexture = sd->bottomtexture = 0;
-				if (msd->toptexture[0] == '-' && msd->toptexture[1] == '\0')
-					break;
-				else
-					M_Memcpy(process,msd->toptexture,8);
-				if (msd->midtexture[0] != '-' || msd->midtexture[1] != '\0')
-					M_Memcpy(process+strlen(process), msd->midtexture, 8);
-				if (msd->bottomtexture[0] != '-' || msd->bottomtexture[1] != '\0')
-					M_Memcpy(process+strlen(process), msd->bottomtexture, 8);
-				sd->text = Z_Malloc(strlen(process)+1, PU_LEVEL, NULL);
-				M_Memcpy(sd->text, process, strlen(process)+1);
-				break;
-			}
-
-			default: // normal cases
-				if (msd->toptexture[0] == '#')
-				{
-					char *col = msd->toptexture;
-					sd->toptexture = sd->bottomtexture =
-						((col[1]-'0')*100 + (col[2]-'0')*10 + col[3]-'0') + 1;
-					sd->midtexture = R_TextureNumForName(msd->midtexture);
-				}
-				else
-				{
-					sd->midtexture = R_TextureNumForName(msd->midtexture);
-					sd->toptexture = R_TextureNumForName(msd->toptexture);
-					sd->bottomtexture = R_TextureNumForName(msd->bottomtexture);
-				}
-				break;
-		}
-	}
-
-	Z_Free(data);
-	R_ClearTextureNumCache(true);
+	P_LoadRawSideDefs(W_LumpLength(lumpnum));
 }
 
-// I'm sorry about all this duplicity with little change :( -Nev3r
+
 static void P_LoadRawSideDefs2(void *data)
 {
 	UINT16 i;
@@ -2253,7 +1667,15 @@ static void P_LoadRawSideDefs2(void *data)
 				break;
 		}
 	}
+	R_ClearTextureNumCache(true);
+}
 
+// Delay loading texture names until after loaded linedefs.
+static void P_LoadSideDefs2(lumpnum_t lumpnum)
+{
+	UINT8 *data = W_CacheLumpNum(lumpnum, PU_STATIC);
+	P_LoadRawSideDefs2(data);
+	Z_Free(data);
 	R_ClearTextureNumCache(true);
 }
 
@@ -3146,7 +2568,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	// use gamemap to get map number.
 	// 99% of the things already did, so.
 	// Map header should always be in place at this point
-	boolean isLumpWad = false; // Is the lump a marker or actually a WAD file of its own? (For PK3s)
+	char *lumpfullName;
 	INT32 i, loadprecip = 1, ranspecialwipe = 0;
 	INT32 loademblems = 1;
 	INT32 fromnetsave = 0;
@@ -3309,50 +2731,8 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	// internal game map
 	maplumpname = G_BuildMapName(gamemap);
-	lastloadedmaplumpnum = LUMPERROR;
-
-	// Look for valid map data through all added files in descendant order.
-	// Get a map marker for WADs, and a standalone WAD file lump inside PK3s.
-	// TODO: Make it search through cache first, maybe...?
-	// TODO: Also move it to w_wad.c as a function...?
-	for (i = numwadfiles - 1; i >= 0; i--)
-	{
-		if (wadfiles[i]->type == RET_WAD)
-		{
-			UINT16 lumpNum;
-			for (lumpNum = 0; lumpNum < wadfiles[i]->numlumps; lumpNum++)
-			{
-				if (!strncmp(maplumpname, (wadfiles[i]->lumpinfo + lumpNum)->name, 8))
-				{
-					lastloadedmaplumpnum = (i<<16) + lumpNum;
-					CONS_Printf("WAD %s has a map marker named %s.\n", wadfiles[i]->filename, maplumpname);
-					break;
-				}
-			}
-		}
-		else if (wadfiles[i]->type == RET_PK3)
-		{
-			// Look for the maps folder.
-			UINT16 lumpNum, end;
-			lumpNum = W_CheckNumForFullNamePK3("maps/", i, 0);
-			if (lumpNum != INT16_MAX)
-				end = W_CheckNumForFolderEndPK3("maps/", i, lumpNum);
-			else
-				continue;
-
-			// Now look for the specified map.
-			for (++lumpNum; lumpNum < end; lumpNum++)
-				if (!strnicmp(maplumpname, (wadfiles[i]->lumpinfo + lumpNum)->name, 5))
-				{
-					isLumpWad = true;
-					lastloadedmaplumpnum = (i<<16) + lumpNum;
-					CONS_Printf("PK3 %s has a map WAD named %s.\n", wadfiles[i]->filename, maplumpname);
-					break;
-				}
-		}
-		if (!(lastloadedmaplumpnum == LUMPERROR)) // Stop looking if we found a valid lump.
-			break;
-	}
+	//lastloadedmaplumpnum = LUMPERROR;
+	lastloadedmaplumpnum = W_CheckNumForName(maplumpname);
 
 	if (lastloadedmaplumpnum == INT16_MAX)
 		I_Error("Map %s not found.\n", maplumpname);
@@ -3370,24 +2750,12 @@ boolean P_SetupLevel(boolean skipprecip)
 	// As it is implemented right now, we're assuming an uncompressed WAD.
 	// (As in, a normal PWAD, not ZWAD or anything. The lump itself can be compressed.)
 	// Basically this is a nerfed&modified version of W_InitFile from w_wad.
-	if (isLumpWad)
+	lumpfullName = (wadfiles[WADFILENUM(lastloadedmaplumpnum)]->lumpinfo + LUMPNUM(lastloadedmaplumpnum))->name2;
+	if (!strnicmp(lumpfullName + strlen(lumpfullName) - 4, ".wad", 4))
 	{
-		UINT16 i;
-		wadinfo_t *header;
-		filelump_t *fileinfo;
+		// Remember that we're assuming that the WAD will have a specific set of lumps in a specific order.
 		UINT8 *wadData = W_CacheLumpNum(lastloadedmaplumpnum, PU_STATIC);
-		header = (wadinfo_t *)wadData;
-		CONS_Printf("This map WAD contains %lu lumps.\n", header->numlumps);
-
-		fileinfo = wadData + header->infotableofs;
-		for(i = 0; i < header->numlumps; i++, fileinfo++)
-		{
-			char name[9];
-			memcpy(name, fileinfo->name, 8);
-			name[8] = '\0';
-			CONS_Printf("%s, size %lu\n", name, fileinfo->size);
-		}
-		fileinfo = wadData + header->infotableofs;
+		filelump_t *fileinfo = wadData + ((wadinfo_t *)wadData)->infotableofs;
 
 		P_LoadRawVertexes(wadData + (fileinfo + ML_VERTEXES)->filepos, (fileinfo + ML_VERTEXES)->size);
 		P_LoadRawSectors(wadData + (fileinfo + ML_SECTORS)->filepos, (fileinfo + ML_SECTORS)->size);
@@ -3803,32 +3171,6 @@ void P_LoadMusicsRange(UINT16 wadnum, UINT16 first, UINT16 num)
 	return;
 }
 
-// Auxiliary function for PK3 loading - adds extra lumps
-// NOTE: does nothing but print debug messages.
-/*void P_LoadWadMapRange(UINT16 wadnum, UINT16 first, UINT16 num)
-{
-	lumpinfo_t *lumpinfo = wadfiles[wadnum]->lumpinfo + first;
-	CONS_Printf("First %s\n", lumpinfo->name2);
-	for (; num > 0; num--, first++, lumpinfo++)
-	{
-		wadinfo_t header;
-		void* wadCache = Z_Malloc(W_LumpLengthPwad(wadnum, first), PU_STATIC, NULL);
-		W_ReadLumpHeaderPwad(wadnum, first, wadCache, 0, 0);
-		// We put the header info into our header var.
-		memcpy(header, wadCache, sizeof header);
-
-		header.numlumps = LONG(header.numlumps);
-		header.infotableofs = LONG(header.infotableofs);
-		lumpinfo = (lumpinfo_t*) Z_Realloc(lumpinfo, (numlumps + 1)*sizeof(*lumpinfo), PU_STATIC, NULL);
-
-
-		Z_Free(wadCache);
-		CONS_Printf("Decached map WAD stuff.\n");
-	}
-	return;
-}*/
-
-
 //
 // Add a wadfile to the active wad files,
 // replace sounds, musics, patches, textures, sprites and maps
@@ -3962,12 +3304,6 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 		//
 		R_AddSpriteDefs(wadnum);
 
-		// Reload it all anyway, just in case they
-		// added some textures but didn't insert a
-		// TEXTURE1/PNAMES/etc. list.
-		R_LoadTextures(); // numtexture changes
-
-
 		break;
 	}
 	if (!devparm && sreplaces)
@@ -3976,6 +3312,11 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 		CONS_Printf(M_GetText("%s midi musics replaced\n"), sizeu1(mreplaces));
 	if (!devparm && digmreplaces)
 		CONS_Printf(M_GetText("%s digital musics replaced\n"), sizeu1(digmreplaces));
+
+	// Reload it all anyway, just in case they
+	// added some textures but didn't insert a
+	// TEXTURE1/PNAMES/etc. list.
+	R_LoadTextures(); // numtexture changes
 
 	// Reload ANIMATED / ANIMDEFS
 	P_InitPicAnims();

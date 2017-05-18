@@ -474,6 +474,7 @@ UINT16 W_InitFile(const char *filename)
 				// (Declaring all those vars might not be the optimal way to do this, sorry.)
 				char *eName;
 				int namePos;
+				int nameEnd;
 				unsigned short int eNameLen = 8;
 				unsigned short int eXFieldLen = 0;
 				unsigned short int lNameLen = 0;
@@ -527,8 +528,14 @@ UINT16 W_InitFile(const char *filename)
 						break;
 					}
 				}
+				// We will remove the file extension too.
+				nameEnd = 0;
+				while(nameEnd++ < 8)
+					if(eName[namePos + nameEnd] == '.')
+						break;
+
 				memset(lumpinfo[numlumps].name, '\0', 9);
-				strncpy(lumpinfo[numlumps].name, eName + namePos, 8);
+				strncpy(lumpinfo[numlumps].name, eName + namePos, nameEnd);
 
 				lumpinfo[numlumps].name2 = Z_Malloc((eNameLen+1)*sizeof(char), PU_STATIC, NULL);
 				strncpy(lumpinfo[numlumps].name2, eName, eNameLen);
@@ -921,6 +928,37 @@ lumpnum_t W_CheckNumForName(const char *name)
 
 		return lumpnumcache[lumpnumcacheindex].lumpnum;
 	}
+}
+
+// Look for valid map data through all added files in descendant order.
+// Get a map marker for WADs, and a standalone WAD file lump inside PK3s.
+// TODO: Make it search through cache first, maybe...?
+lumpnum_t W_CheckNumForMap(const char *name)
+{
+	UINT16 lumpNum, end;
+	UINT32 i;
+	for (i = numwadfiles - 1; i >= 0; i--)
+	{
+		if (wadfiles[i]->type == RET_WAD)
+		{
+			for (lumpNum = 0; lumpNum < wadfiles[i]->numlumps; lumpNum++)
+				if (!strncmp(name, (wadfiles[i]->lumpinfo + lumpNum)->name, 8))
+					return (i<<16) + lumpNum;
+		}
+		else if (wadfiles[i]->type == RET_PK3)
+		{
+			lumpNum = W_CheckNumForFullNamePK3("maps/", i, 0);
+			if (lumpNum != INT16_MAX)
+				end = W_CheckNumForFolderEndPK3("maps/", i, lumpNum);
+			else
+				continue;
+			// Now look for the specified map.
+			for (++lumpNum; lumpNum < end; lumpNum++)
+				if (!strnicmp(name, (wadfiles[i]->lumpinfo + lumpNum)->name, 8))
+					return (i<<16) + lumpNum;
+		}
+	}
+	return LUMPERROR;
 }
 
 //
