@@ -1824,37 +1824,6 @@ void Y_EndIntermission(void)
 }
 
 //
-// Y_EndGame
-//
-// Why end the game?
-// Because Y_FollowIntermission and F_EndCutscene would
-// both do this exact same thing *in different ways* otherwise,
-// which made it so that you could only unlock Ultimate mode
-// if you had a cutscene after the final level and crap like that.
-// This function simplifies it so only one place has to be updated
-// when something new is added.
-void Y_EndGame(void)
-{
-	// Only do evaluation and credits in coop games.
-	if (gametype == GT_COOP)
-	{
-		if (nextmap == 1102-1) // end game with credits
-		{
-			F_StartCredits();
-			return;
-		}
-		if (nextmap == 1101-1) // end game with evaluation
-		{
-			F_StartGameEvaluation();
-			return;
-		}
-	}
-
-	// 1100 or competitive multiplayer, so go back to title screen.
-	D_StartTitle();
-}
-
-//
 // Y_FollowIntermission
 //
 static void Y_FollowIntermission(void)
@@ -1879,7 +1848,7 @@ static void Y_FollowIntermission(void)
 		return;
 	}
 
-	Y_EndGame();
+	G_EndGame();
 }
 
 #define UNLOAD(x) Z_ChangeTag(x, PU_CACHE); x = NULL
