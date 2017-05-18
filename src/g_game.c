@@ -2615,7 +2615,7 @@ void G_ExitLevel(void)
 			CONS_Printf(M_GetText("The round has ended.\n"));
 
 		// Remove CEcho text on round end.
-		HU_DoCEcho("");
+		HU_ClearCEcho();
 	}
 }
 
