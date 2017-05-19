@@ -711,6 +711,10 @@ void Net_CloseConnection(INT32 node)
 #else
 	INT32 i;
 	boolean forceclose = (node & FORCECLOSE) != 0;
+
+	if (node == -1)
+		return; // nope, just ignore it
+
 	node &= ~FORCECLOSE;
 
 	if (!node)
@@ -718,7 +722,7 @@ void Net_CloseConnection(INT32 node)
 
 	if (node < 0 || node >= MAXNETNODES) // prevent invalid nodes from crashing the game
 	{
-		CONS_Alert(CONS_WARNING, M_GetText("Net_CloseConnection: invalid node %d detected!\n"), node);
+		//CONS_Alert(CONS_WARNING, M_GetText("Net_CloseConnection: invalid node %d detected!\n"), node);
 		return;
 	}
 
@@ -1128,6 +1132,9 @@ boolean HGetPacket(void)
 			doomcom->remotenode = 0;
 
 		rebound_tail = (rebound_tail+1) % MAXREBOUND;
+
+		if (doomcom->remotenode == -1) // wait hang on what?
+			return true; // there might still be packets from others though, so don't return false
 #ifdef DEBUGFILE
 		if (debugfile)
 			DebugPrintpacket("GETLOCAL");

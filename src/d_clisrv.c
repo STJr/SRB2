@@ -3936,6 +3936,9 @@ FILESTAMP
 
 	while (HGetPacket())
 	{
+		if (doomcom->remotenode == -1) // ...this should have been ignored already
+			continue; // might come from PT_NODETIMEOUT somehow though
+
 		node = (SINT8)doomcom->remotenode;
 
 		if (netbuffer->packettype == PT_CLIENTJOIN && server)
@@ -3968,8 +3971,10 @@ FILESTAMP
 		if (netbuffer->packettype == PT_PLAYERINFO)
 			continue; // We do nothing with PLAYERINFO, that's for the MS browser.
 
+		if (node < 0 || node >= MAXNETNODES) // THIS SHOULDN'T EVEN BE POSSIBLE
+			; //CONS_Printf("Received packet from node %d!\n", (int)node);
 		// Packet received from someone already playing
-		if (nodeingame[node])
+		else if (nodeingame[node])
 			HandlePacketFromPlayer(node);
 		// Packet received from someone not playing
 		else
