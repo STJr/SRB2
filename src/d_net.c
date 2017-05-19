@@ -1124,22 +1124,27 @@ boolean HGetPacket(void)
 	// Get a packet from self
 	if (rebound_tail != rebound_head)
 	{
-		M_Memcpy(netbuffer, &reboundstore[rebound_tail], reboundsize[rebound_tail]);
-		doomcom->datalength = reboundsize[rebound_tail];
-		if (netbuffer->packettype == PT_NODETIMEOUT)
-			doomcom->remotenode = netbuffer->u.textcmd[0];
-		else
-			doomcom->remotenode = 0;
+		while (true) // loop until we found a valid packet, or we ran out of packets
+		{ // provided MAXREBOUND is not all that large this shouldn't take too long
+			if (rebound_tail == rebound_head)
+				break; // just give up, none of them were any good somehow
+			M_Memcpy(netbuffer, &reboundstore[rebound_tail], reboundsize[rebound_tail]);
+			doomcom->datalength = reboundsize[rebound_tail];
+			if (netbuffer->packettype == PT_NODETIMEOUT)
+				doomcom->remotenode = netbuffer->u.textcmd[0];
+			else
+				doomcom->remotenode = 0;
 
-		rebound_tail = (rebound_tail+1) % MAXREBOUND;
+			rebound_tail = (rebound_tail+1) % MAXREBOUND;
 
-		if (doomcom->remotenode == -1) // wait hang on what?
-			return true; // there might still be packets from others though, so don't return false
+			if (doomcom->remotenode == -1) // wait hang on what?
+				continue; // ignore it, look for the next packet
 #ifdef DEBUGFILE
-		if (debugfile)
-			DebugPrintpacket("GETLOCAL");
+			if (debugfile)
+				DebugPrintpacket("GETLOCAL");
 #endif
-		return true;
+			return true;
+		}
 	}
 
 	if (!netgame)
