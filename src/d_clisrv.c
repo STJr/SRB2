@@ -3433,13 +3433,18 @@ static void HandlePacketFromAwayNode(SINT8 node)
 			{
 				SV_SendServerInfo(node, (tic_t)LONG(netbuffer->u.askinfo.time));
 				SV_SendPlayerInfo(node); // Send extra info
-				Net_CloseConnection(node);
 			}
+			Net_CloseConnection(node);
 			break;
 
 		case PT_SERVERREFUSE: // Negative response of client join request
 			if (server && serverrunning)
 			{ // But wait I thought I'm the server?
+				Net_CloseConnection(node);
+				break;
+			}
+			if (node != servernode) // nope you're not the server
+			{
 				Net_CloseConnection(node);
 				break;
 			}
@@ -3471,6 +3476,11 @@ static void HandlePacketFromAwayNode(SINT8 node)
 
 			if (server && serverrunning && node != servernode)
 			{ // but wait I thought I'm the server?
+				Net_CloseConnection(node);
+				break;
+			}
+			if (node != servernode) // nope you're not the server
+			{
 				Net_CloseConnection(node);
 				break;
 			}
@@ -3537,11 +3547,20 @@ static void HandlePacketFromAwayNode(SINT8 node)
 				Net_CloseConnection(node);
 				break;
 			}
-			else
-				Got_Filetxpak();
+			if (node != servernode) // nope you're not the server
+			{
+				Net_CloseConnection(node);
+				break;
+			}
+			Got_Filetxpak();
 			break;
 
 		case PT_REQUESTFILE:
+			if (node != servernode) // nope you're not the server
+			{
+				Net_CloseConnection(node);
+				break;
+			}
 			if (server)
 				Got_RequestFilePak(node);
 			break;
@@ -3926,6 +3945,21 @@ FILESTAMP
 		case PT_SERVERCFG:
 			break;
 		case PT_FILEFRAGMENT:
+			// Only accept PT_FILEFRAGMENT from the server.
+			if (node != servernode)
+			{
+				CONS_Alert(CONS_WARNING, M_GetText("%s received from non-host %d\n"), "PT_FILEFRAGMENT", node);
+
+				if (server)
+				{
+					XBOXSTATIC UINT8 buf[2];
+					buf[0] = (UINT8)node;
+					buf[1] = KICK_MSG_CON_FAIL;
+					SendNetXCmd(XD_KICK, &buf, 2);
+				}
+
+				break;
+			}
 			if (client)
 				Got_Filetxpak();
 			break;
