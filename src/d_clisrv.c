@@ -3405,7 +3405,6 @@ static void HandlePacketFromAwayNode(SINT8 node)
 	switch (netbuffer->packettype)
 	{
 		case PT_ASKINFOVIAMS:
-
 			if (server && serverrunning)
 			{
 				INT32 clientnode;
