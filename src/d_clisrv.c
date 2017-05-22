@@ -3556,11 +3556,6 @@ static void HandlePacketFromAwayNode(SINT8 node)
 			break;
 
 		case PT_REQUESTFILE:
-			if (node != servernode) // nope you're not the server
-			{
-				Net_CloseConnection(node);
-				break;
-			}
 			if (server)
 				Got_RequestFilePak(node);
 			break;
