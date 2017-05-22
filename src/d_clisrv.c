@@ -3405,13 +3405,23 @@ static void HandlePacketFromAwayNode(SINT8 node)
 	switch (netbuffer->packettype)
 	{
 		case PT_ASKINFOVIAMS:
+			if (ms_RoomId < 0) // ignore if we're not actually on the MS right now
+			{
+				Net_CloseConnection(node); // and yes, close connection
+				break;
+			}
 			if (server && serverrunning)
 			{
 				INT32 clientnode = I_NetMakeNode(netbuffer->u.msaskinfo.clientaddr);
-				SV_SendServerInfo(clientnode, (tic_t)LONG(netbuffer->u.msaskinfo.time));
-				SV_SendPlayerInfo(clientnode); // Send extra info
-				Net_CloseConnection(clientnode);
-				// Don't close connection to MS.
+				if (clientnode != -1)
+				{
+					SV_SendServerInfo(clientnode, (tic_t)LONG(netbuffer->u.msaskinfo.time));
+					SV_SendPlayerInfo(clientnode); // Send extra info
+					Net_CloseConnection(clientnode);
+					// Don't close connection to MS...
+				}
+				else
+					Net_CloseConnection(node); // ...unless the IP address is not valid
 			}
 			break;
 
