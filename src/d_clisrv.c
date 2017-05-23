@@ -3677,7 +3677,8 @@ FILESTAMP
 			}
 
 			// Splitscreen cmd
-			if (netbuffer->packettype == PT_CLIENT2CMD && nodetoplayer2[node] >= 0)
+			if ((netbuffer->packettype == PT_CLIENT2CMD || netbuffer->packettype == PT_CLIENT2MIS)
+				&& nodetoplayer2[node] >= 0)
 				G_MoveTiccmd(&netcmds[maketic%BACKUPTICS][(UINT8)nodetoplayer2[node]],
 					&netbuffer->u.client2pak.cmd2, 1);
 
