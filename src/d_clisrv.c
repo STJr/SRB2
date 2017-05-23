@@ -3737,6 +3737,15 @@ FILESTAMP
 				tic_t tic = maketic;
 				UINT8 *textcmd;
 
+				// ignore if the textcmd size var is actually larger than it should be
+				if (BASEPACKETSIZE + netbuffer->u.textcmd[0] > (size_t)doomcom->datalength)
+				{
+					DEBFILE(va("GetPacket: Bad Textcmd packet size! (expected %d, actual %d)\n",
+					BASEPACKETSIZE + netbuffer->u.textcmd[0], doomcom->datalength));
+					Net_UnAcknowledgePacket(node);
+					break;
+				}
+
 				// check if tic that we are making isn't too large else we cannot send it :(
 				// doomcom->numslots+1 "+1" since doomcom->numslots can change within this time and sent time
 				j = software_MAXPACKETLENGTH
