@@ -3609,6 +3609,8 @@ FILESTAMP
 	{
 // -------------------------------------------- SERVER RECEIVE ----------
 		case PT_RESYNCHGET:
+			if (client)
+				break;
 			SV_AcknowledgeResynchAck(netconsole, netbuffer->u.resynchgot);
 			break;
 		case PT_CLIENTCMD:
