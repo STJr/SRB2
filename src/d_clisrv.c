@@ -3402,6 +3402,14 @@ static void HandlePacketFromAwayNode(SINT8 node)
 	if (node != servernode)
 		DEBFILE(va("Received packet from unknown host %d\n", node));
 
+// macro for packets that should only be sent by the server
+// if it is NOT from the server, bail out and close the connection!
+#define SERVERONLY \
+			if (node != servernode) \
+			{ \
+				Net_CloseConnection(node); \
+				break; \
+			}
 	switch (netbuffer->packettype)
 	{
 		case PT_ASKINFOVIAMS:
@@ -3443,11 +3451,7 @@ static void HandlePacketFromAwayNode(SINT8 node)
 				Net_CloseConnection(node);
 				break;
 			}
-			if (node != servernode) // nope you're not the server
-			{
-				Net_CloseConnection(node);
-				break;
-			}
+			SERVERONLY
 			if (cl_mode == CL_WAITJOINRESPONSE)
 			{
 				// Save the reason so it can be displayed after quitting the netgame
@@ -3479,11 +3483,7 @@ static void HandlePacketFromAwayNode(SINT8 node)
 				Net_CloseConnection(node);
 				break;
 			}
-			if (node != servernode) // nope you're not the server
-			{
-				Net_CloseConnection(node);
-				break;
-			}
+			SERVERONLY
 			/// \note how would this happen? and is it doing the right thing if it does?
 			if (cl_mode != CL_WAITJOINRESPONSE)
 				break;
@@ -3547,11 +3547,7 @@ static void HandlePacketFromAwayNode(SINT8 node)
 				Net_CloseConnection(node);
 				break;
 			}
-			if (node != servernode) // nope you're not the server
-			{
-				Net_CloseConnection(node);
-				break;
-			}
+			SERVERONLY
 			Got_Filetxpak();
 			break;
 
@@ -3580,6 +3576,7 @@ static void HandlePacketFromAwayNode(SINT8 node)
 			break; // Ignore it
 
 	}
+#undef SERVERONLY
 }
 
 /** Handles a packet received from a node that is in game
