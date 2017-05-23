@@ -3736,11 +3736,23 @@ FILESTAMP
 				tic_t tic = maketic;
 				UINT8 *textcmd;
 
-				// ignore if the textcmd size var is actually larger than it should be
-				if (BASEPACKETSIZE + netbuffer->u.textcmd[0] > (size_t)doomcom->datalength)
+				// ignore if the textcmd has a reported size of zero
+				// this shouldn't be sent at all
+				if (!netbuffer->u.textcmd[0])
 				{
-					DEBFILE(va("GetPacket: Bad Textcmd packet size! (expected %d, actual %d)\n",
-					BASEPACKETSIZE + netbuffer->u.textcmd[0], doomcom->datalength));
+					DEBFILE(va("GetPacket: Textcmd with size 0 detected! (node %u, player %d)\n",
+						node, netconsole));
+					Net_UnAcknowledgePacket(node);
+					break;
+				}
+
+				// ignore if the textcmd size var is actually larger than it should be
+				// BASEPACKETSIZE + 1 (for size) + textcmd[0] should == datalength
+				if (netbuffer->u.textcmd[0] > (size_t)doomcom->datalength-BASEPACKETSIZE-1)
+				{
+					DEBFILE(va("GetPacket: Bad Textcmd packet size! (expected %d, actual %d, node %u, player %d)\n",
+					netbuffer->u.textcmd[0], (size_t)doomcom->datalength-BASEPACKETSIZE-1,
+						node, netconsole));
 					Net_UnAcknowledgePacket(node);
 					break;
 				}
