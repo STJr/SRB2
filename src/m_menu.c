@@ -4753,7 +4753,8 @@ static void M_DrawTemperature(INT32 x, fixed_t t)
 		t = 0;*/
 
 	// scale
-	t = (FixedMul(h<<FRACBITS, FRACUNIT - t)>>FRACBITS);
+	if (t > 1)
+		t = (FixedMul(h<<FRACBITS, t)>>FRACBITS);
 
 	// border
 	V_DrawFill(x - 1, vpadding, 1, h, 3);
@@ -4762,17 +4763,19 @@ static void M_DrawTemperature(INT32 x, fixed_t t)
 	V_DrawFill(x - 1, vpadding+h, width+2, 1, 3);
 
 	// bar itself
-	for (y = h; y > 0; y--)
-	{
-		UINT8 colours[NUMCOLOURS] = {42, 40, 58, 222, 65, 90, 97, 98};
-		UINT8 c;
-		if (y <= t) break;
-		if (y+vpadding >= BASEVIDHEIGHT/2)
-			c = 113;
-		else
-			c = colours[(NUMCOLOURS*(y-1))/(h/2)];
-		V_DrawFill(x, y-1 + vpadding, width, 1, c);
-	}
+	y = h;
+	if (t)
+		for (t = h - t; y > 0; y--)
+		{
+			UINT8 colours[NUMCOLOURS] = {42, 40, 58, 222, 65, 90, 97, 98};
+			UINT8 c;
+			if (y <= t) break;
+			if (y+vpadding >= BASEVIDHEIGHT/2)
+				c = 113;
+			else
+				c = colours[(NUMCOLOURS*(y-1))/(h/2)];
+			V_DrawFill(x, y-1 + vpadding, width, 1, c);
+		}
 
 	// fill the rest of the backing
 	if (y)
@@ -4865,11 +4868,13 @@ static void M_DrawAddons(void)
 	? "\x85""Adding files mid-game may cause problems."
 	: LOCATIONSTRING));
 
-	if (numwadfiles >= MAX_WADFILES) // difficult to happen with current limits, but still worth thinking of
+	if (!numwadfiles)
+		y = 0;
+	else if (numwadfiles >= MAX_WADFILES) // difficult to happen with current limits, but still worth thinking of
 		y = FRACUNIT;
 	else
 	{
-		y = FixedDiv(((packetsizetally-mainwadstally)<<FRACBITS), (((MAXFILENEEDED*sizeof(UINT8)-mainwadstally)-(5+22))<<FRACBITS)); // 5+22 = (a.ext + checksum length) is minimum addition to packet size tally
+		y = FixedDiv(((packetsizetally-mainwadstally)<<FRACBITS), (((MAXFILENEEDED*sizeof(UINT8)-mainwadstally)-(5+22))<<FRACBITS)) + 1; // 5+22 = (a.ext + checksum length) is minimum addition to packet size tally
 		if (y > FRACUNIT) // happens because of how we're shrinkin' it a little
 			y = FRACUNIT;
 	}
