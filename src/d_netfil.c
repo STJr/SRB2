@@ -59,6 +59,7 @@
 #include "m_menu.h"
 #include "md5.h"
 #include "filesrch.h"
+#include "d_clisrv.h"
 
 #include <errno.h>
 
@@ -103,6 +104,7 @@ INT32 lastfilenum = -1;
 /** Fills a serverinfo packet with information about wad files loaded.
   *
   * \todo Give this function a better name since it is in global scope.
+  * Used to have size limiting built in - now handled via W_LoadWadFile in w_wad.c
   *
   */
 UINT8 *PutFileNeeded(void)
@@ -111,7 +113,6 @@ UINT8 *PutFileNeeded(void)
 	UINT8 *p = netbuffer->u.serverinfo.fileneeded;
 	char wadfilename[MAX_WADPATH] = "";
 	UINT8 filestatus;
-	size_t bytesused = 0;
 
 	for (i = 0; i < numwadfiles; i++)
 	{
@@ -128,12 +129,6 @@ UINT8 *PutFileNeeded(void)
 			filestatus += (0 << 4); // Won't send
 		else
 			filestatus += (1 << 4); // Will send if requested
-
-		bytesused += (nameonlylength(wadfilename) + 22);
-
-		// Don't write too far...
-		if (bytesused > sizeof(netbuffer->u.serverinfo.fileneeded))
-			I_Error("Too many wad files added to host a game. (%s, stopped on %s)\n", sizeu1(bytesused), wadfilename);
 
 		WRITEUINT8(p, filestatus);
 

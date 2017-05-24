@@ -319,21 +319,24 @@ UINT16 W_LoadWadFile(const char *filename)
 
 	// Check if wad files will overflow fileneededbuffer. Only the filename part
 	// is send in the packet; cf.
-	packetsize = packetsizetally;
-
-	packetsize += nameonlylength(filename);
-	packetsize += 22;
-
-	if (packetsize > MAXFILENEEDED*sizeof(UINT8))
+	// see PutFileNeeded in d_netfil.c
+	if (!W_VerifyNMUSlumps(filename))
 	{
-		CONS_Alert(CONS_ERROR, M_GetText("Maximum wad files reached\n"));
-		refreshdirmenu |= REFRESHDIR_MAX;
-		if (handle)
-			fclose(handle);
-		return INT16_MAX;
-	}
+		packetsize = packetsizetally;
 
-	packetsizetally = packetsize;
+		packetsize += nameonlylength(filename) + 22;
+
+		if (packetsize > MAXFILENEEDED*sizeof(UINT8))
+		{
+			CONS_Alert(CONS_ERROR, M_GetText("Maximum wad files reached\n"));
+			refreshdirmenu |= REFRESHDIR_MAX;
+			if (handle)
+				fclose(handle);
+			return INT16_MAX;
+		}
+
+		packetsizetally = packetsize;
+	}
 
 	// detect dehacked file with the "soc" extension
 	if (!stricmp(&filename[strlen(filename) - 4], ".soc"))
