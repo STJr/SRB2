@@ -59,7 +59,6 @@
 #include "m_menu.h"
 #include "md5.h"
 #include "filesrch.h"
-#include "d_clisrv.h"
 
 #include <errno.h>
 
