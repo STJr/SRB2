@@ -337,7 +337,7 @@ static void M_EraseData(INT32 choice);
 
 static void M_Addons(INT32 choice);
 static void M_AddonsOptions(INT32 choice);
-static patch_t *addonsp[NUM_EXT+5];
+static patch_t *addonsp[NUM_EXT+6];
 static UINT8 addonsresponselimit = 0;
 
 #define numaddonsshown 4
@@ -4715,7 +4715,7 @@ static void M_Addons(INT32 choice)
 	if (addonsp[0]) // never going to have some provided but not all, saves individually checking
 	{
 		size_t i;
-		for (i = 0; i < NUM_EXT+5; i++)
+		for (i = 0; i < NUM_EXT+6; i++)
 			W_UnlockCachedPatch(addonsp[i]);
 	}
 
@@ -4732,13 +4732,15 @@ static void M_Addons(INT32 choice)
 	addonsp[NUM_EXT+2] = W_CachePatchName("M_FSEL2", PU_STATIC);
 	addonsp[NUM_EXT+3] = W_CachePatchName("M_FLOAD", PU_STATIC);
 	addonsp[NUM_EXT+4] = W_CachePatchName("M_FSRCH", PU_STATIC);
+	addonsp[NUM_EXT+5] = W_CachePatchName("M_FSAVE", PU_STATIC);
 
 	MISC_AddonsDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&MISC_AddonsDef);
 }
 
-#define padding 16
-#define h (BASEVIDHEIGHT-(2*padding))
+#define width 4
+#define vpadding 27
+#define h (BASEVIDHEIGHT-(2*vpadding))
 #define NUMCOLOURS 8 // when toast's coding it's british english hacker fucker
 static void M_DrawTemperature(INT32 x, fixed_t t)
 {
@@ -4754,29 +4756,30 @@ static void M_DrawTemperature(INT32 x, fixed_t t)
 	t = (FixedMul(h<<FRACBITS, FRACUNIT - t)>>FRACBITS);
 
 	// border
-	V_DrawFill(x - 1, padding, 1, h, 3);
-	V_DrawFill(x + padding/4, padding, 1, h, 3);
-	V_DrawFill(x - 1, padding-1, padding/4+2, 1, 3);
-	V_DrawFill(x - 1, padding+h, padding/4+2, 1, 3);
+	V_DrawFill(x - 1, vpadding, 1, h, 3);
+	V_DrawFill(x + width, vpadding, 1, h, 3);
+	V_DrawFill(x - 1, vpadding-1, width+2, 1, 3);
+	V_DrawFill(x - 1, vpadding+h, width+2, 1, 3);
 
 	// bar itself
 	for (y = h; y > 0; y--)
 	{
 		UINT8 colours[NUMCOLOURS] = {42, 40, 58, 222, 65, 90, 97, 98};
 		UINT8 c;
-		if (y < t) break;
-		if (y+padding > BASEVIDHEIGHT/2)
+		if (y <= t) break;
+		if (y+vpadding >= BASEVIDHEIGHT/2)
 			c = 113;
 		else
 			c = colours[(NUMCOLOURS*(y-1))/(h/2)];
-		V_DrawFill(x, y-1 + padding, padding/4, 1, c);
+		V_DrawFill(x, y-1 + vpadding, width, 1, c);
 	}
 
 	// fill the rest of the backing
 	if (y)
-		V_DrawFill(x, padding, padding/4, y, 27);
+		V_DrawFill(x, vpadding, width, y, 27);
 }
-#undef padding
+#undef width
+#undef vpadding
 #undef h
 #undef NUMCOLOURS
 
@@ -4844,6 +4847,8 @@ static boolean M_AddonsRefresh(void)
 	return false;
 }
 
+#define offs 1
+
 static void M_DrawAddons(void)
 {
 	INT32 x, y;
@@ -4856,25 +4861,24 @@ static void M_DrawAddons(void)
 	if (addonsresponselimit)
 		addonsresponselimit--;
 
-	V_DrawCenteredString(BASEVIDWIDTH/2, 4, 0, (Playing()
+	V_DrawCenteredString(BASEVIDWIDTH/2, 4+offs, 0, (Playing()
 	? "\x85""Adding files mid-game may cause problems."
 	: LOCATIONSTRING));
 
 	if (numwadfiles >= MAX_WADFILES) // difficult to happen with current limits, but still worth thinking of
-		x = FRACUNIT;
+		y = FRACUNIT;
 	else
 	{
-		x = FixedDiv(((packetsizetally-mainwadstally)<<FRACBITS), (((MAXFILENEEDED*sizeof(UINT8)-mainwadstally)-(5+22))<<FRACBITS)); // 5+22 = (a.ext + checksum length) is minimum addition to packet size tally
-		if (x > FRACUNIT) // happens because of how we're shrinkin' it a little
-			x = FRACUNIT;
+		y = FixedDiv(((packetsizetally-mainwadstally)<<FRACBITS), (((MAXFILENEEDED*sizeof(UINT8)-mainwadstally)-(5+22))<<FRACBITS)); // 5+22 = (a.ext + checksum length) is minimum addition to packet size tally
+		if (y > FRACUNIT) // happens because of how we're shrinkin' it a little
+			y = FRACUNIT;
 	}
 
-	V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-8, V_TRANSLUCENT, va("%d%%", (100*x)>>FRACBITS));
-	M_DrawTemperature(BASEVIDWIDTH - 16, x);
+	M_DrawTemperature(BASEVIDWIDTH - 19 - 5, y);
 
 	// DRAW MENU
 	x = currentMenu->x;
-	y = currentMenu->y;
+	y = currentMenu->y + offs;
 
 	//M_DrawLevelPlatterHeader(y - 16, M_AddonsHeaderPath(), true, true); -- wanted different width
 	V_DrawString(x-21, (y - 16) + (lsheadingheight - 12), V_YELLOWMAP|V_ALLOWLOWERCASE, M_AddonsHeaderPath());
@@ -4882,7 +4886,7 @@ static void M_DrawAddons(void)
 	V_DrawFill(x-21 + (MAXSTRINGLENGTH*8+6 - 1), (y - 16) + (lsheadingheight - 3), 1, 1, 26);
 	V_DrawFill(x-21, (y - 16) + (lsheadingheight - 2), MAXSTRINGLENGTH*8+6, 1, 26);
 
-	V_DrawFill(x - 21, y - 1, MAXSTRINGLENGTH*8+6, (BASEVIDHEIGHT - currentMenu->y + 1) - (y - 1), 159);
+	V_DrawFill(x - 21, y - 1, MAXSTRINGLENGTH*8+6, (BASEVIDHEIGHT - currentMenu->y + 1 + offs) - (y - 1), 159);
 
 	// get bottom...
 	max = dir_on[menudepthleft] + numaddonsshown + 1;
@@ -4938,9 +4942,8 @@ static void M_DrawAddons(void)
 	if (max != (ssize_t)sizedirmenu)
 		V_DrawString(19, y-12, V_YELLOWMAP, "\x1B");
 
-	y = BASEVIDHEIGHT - currentMenu->y;
+	y = BASEVIDHEIGHT - currentMenu->y + offs;
 
-	V_DrawSmallScaledPatch(x-(21 + 5 + 16), y + 4, 0, addonsp[NUM_EXT+4]);
 	M_DrawTextBox(x - (21 + 5), y, MAXSTRINGLENGTH, 1);
 	if (menusearch[0])
 		V_DrawString(x - 18, y + 8, V_ALLOWLOWERCASE, menusearch+1);
@@ -4949,7 +4952,20 @@ static void M_DrawAddons(void)
 	if (skullAnimCounter < 4)
 		V_DrawCharacter(x - 18 + V_StringWidth(menusearch+1, 0), y + 8,
 			'_' | 0x80, false);
+
+	x -= (21 + 5 + 16);
+	V_DrawSmallScaledPatch(x, y + 4, (menusearch[0] ? 0 : V_TRANSLUCENT), addonsp[NUM_EXT+4]);
+
+#define CANSAVE (!modifiedgame || savemoddata)
+	x = BASEVIDWIDTH - x - 16;
+	V_DrawSmallScaledPatch(x, y + 4, (CANSAVE ? 0 : V_TRANSLUCENT), addonsp[NUM_EXT+5]);
+
+	if CANSAVE
+		V_DrawSmallScaledPatch(x, y + 4, 0, addonsp[NUM_EXT+3]);
+#undef CANSAVE
 }
+
+#undef offs
 
 static void M_AddonExec(INT32 ch)
 {
