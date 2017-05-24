@@ -560,15 +560,13 @@ boolean preparefilemenu(boolean samedepth)
 	else
 		menusearch[0] = menusearch[1] = 0; // clear search
 
-	for (; sizedirmenu > 0; sizedirmenu--)
+	for (; sizedirmenu > 0; sizedirmenu--) // clear out existing items
 	{
 		Z_Free(dirmenu[sizedirmenu-1]);
 		dirmenu[sizedirmenu-1] = NULL;
 	}
 
-	dirhandle = opendir(menupath);
-
-	if (dirhandle == NULL)
+	if (!(dirhandle = opendir(menupath))) // get directory
 		return false;
 
 	if (menusearch[0])
@@ -604,7 +602,7 @@ boolean preparefilemenu(boolean samedepth)
 					size_t len = strlen(dent->d_name)+1;
 					UINT8 ext;
 					for (ext = 0; ext < NUM_EXT_TABLE; ext++)
-						if (!strcasecmp(exttable[ext], dent->d_name+len-5)) break;
+						if (!strcasecmp(exttable[ext], dent->d_name+len-5)) break; // extension comparison
 					if (ext == NUM_EXT_TABLE) continue; // not an addfile-able (or exec-able) file
 				}
 				searchdir;
@@ -671,7 +669,7 @@ boolean preparefilemenu(boolean samedepth)
 			{
 				if (!((numfolders+pos) < sizedirmenu)) continue; // crash prevention
 				for (; ext < NUM_EXT_TABLE; ext++)
-					if (!strcasecmp(exttable[ext], dent->d_name+len-5)) break;
+					if (!strcasecmp(exttable[ext], dent->d_name+len-5)) break; // extension comparison
 				if (ext == NUM_EXT_TABLE && !cv_addons_showall.value) continue; // not an addfile-able (or exec-able) file
 				ext += EXT_START; // moving to be appropriate position
 
@@ -732,6 +730,8 @@ boolean preparefilemenu(boolean samedepth)
 		}
 	}
 
+	closedir(dirhandle);
+
 	if (noresults) // no results
 		dirmenu[0] = Z_StrDup(va("%c\13No results...", EXT_NORESULTS));
 	else if (!menusearch[0] &&menudepthleft != menudepth-1) // now for UP... entry
@@ -754,16 +754,14 @@ boolean preparefilemenu(boolean samedepth)
 		Z_Free(tempname);
 	}
 
-	if (dir_on[menudepthleft] >= sizedirmenu)
-		dir_on[menudepthleft] = sizedirmenu-1;
-
-	closedir(dirhandle);
-
 	if (!sizedirmenu)
 	{
+		dir_on[menudepthleft] = 0;
 		Z_Free(dirmenu);
 		return false;
 	}
+	else if (dir_on[menudepthleft] >= sizedirmenu)
+		dir_on[menudepthleft] = sizedirmenu-1;
 
 	return true;
 }
