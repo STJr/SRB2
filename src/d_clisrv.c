@@ -3751,8 +3751,8 @@ FILESTAMP
 				// BASEPACKETSIZE + 1 (for size) + textcmd[0] should == datalength
 				if (netbuffer->u.textcmd[0] > (size_t)doomcom->datalength-BASEPACKETSIZE-1)
 				{
-					DEBFILE(va("GetPacket: Bad Textcmd packet size! (expected %d, actual %d, node %u, player %d)\n",
-					netbuffer->u.textcmd[0], (size_t)doomcom->datalength-BASEPACKETSIZE-1,
+					DEBFILE(va("GetPacket: Bad Textcmd packet size! (expected %d, actual %s, node %u, player %d)\n",
+					netbuffer->u.textcmd[0], sizeu1((size_t)doomcom->datalength-BASEPACKETSIZE-1),
 						node, netconsole));
 					Net_UnAcknowledgePacket(node);
 					break;
