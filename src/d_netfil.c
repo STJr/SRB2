@@ -115,19 +115,19 @@ UINT8 *PutFileNeeded(void)
 
 	for (i = 0; i < numwadfiles; i++)
 	{
-		// If it has only music/sound lumps, mark it as unimportant
+		// If it has only music/sound lumps, don't put it in the list
 		if (W_VerifyNMUSlumps(wadfiles[i]->filename))
-			filestatus = 0;
+			continue;
 		else
-			filestatus = 1; // Important
+			filestatus = 1; // Importance - not really used any more, holds 1 by default for backwards compat with MS
 
 		// Store in the upper four bits
 		if (!cv_downloading.value)
 			filestatus += (2 << 4); // Won't send
-		else if ((wadfiles[i]->filesize > (UINT32)cv_maxsend.value * 1024))
-			filestatus += (0 << 4); // Won't send
-		else
+		else if ((wadfiles[i]->filesize <= (UINT32)cv_maxsend.value * 1024))
 			filestatus += (1 << 4); // Will send if requested
+		// else
+			// filestatus += (0 << 4); -- Won't send, too big
 
 		WRITEUINT8(p, filestatus);
 
@@ -160,7 +160,6 @@ void D_ParseFileneeded(INT32 fileneedednum_parm, UINT8 *fileneededstr)
 	{
 		fileneeded[i].status = FS_NOTFOUND; // We haven't even started looking for the file yet
 		filestatus = READUINT8(p); // The first byte is the file status
-		fileneeded[i].important = (UINT8)(filestatus & 3);
 		fileneeded[i].willsend = (UINT8)(filestatus >> 4);
 		fileneeded[i].totalsize = READUINT32(p); // The four next bytes are the file size
 		fileneeded[i].file = NULL; // The file isn't open yet
@@ -190,7 +189,7 @@ boolean CL_CheckDownloadable(void)
 	UINT8 i,dlstatus = 0;
 
 	for (i = 0; i < fileneedednum; i++)
-		if (fileneeded[i].status != FS_FOUND && fileneeded[i].status != FS_OPEN && fileneeded[i].important)
+		if (fileneeded[i].status != FS_FOUND && fileneeded[i].status != FS_OPEN)
 		{
 			if (fileneeded[i].willsend == 1)
 				continue;
@@ -211,7 +210,7 @@ boolean CL_CheckDownloadable(void)
 	// not downloadable, put reason in console
 	CONS_Alert(CONS_NOTICE, M_GetText("You need additional files to connect to this server:\n"));
 	for (i = 0; i < fileneedednum; i++)
-		if (fileneeded[i].status != FS_FOUND && fileneeded[i].status != FS_OPEN && fileneeded[i].important)
+		if (fileneeded[i].status != FS_FOUND && fileneeded[i].status != FS_OPEN)
 		{
 			CONS_Printf(" * \"%s\" (%dK)", fileneeded[i].filename, fileneeded[i].totalsize >> 10);
 
@@ -264,7 +263,7 @@ boolean CL_SendRequestFile(void)
 
 	for (i = 0; i < fileneedednum; i++)
 		if (fileneeded[i].status != FS_FOUND && fileneeded[i].status != FS_OPEN
-			&& fileneeded[i].important && (fileneeded[i].willsend == 0 || fileneeded[i].willsend == 2))
+			&& (fileneeded[i].willsend == 0 || fileneeded[i].willsend == 2))
 		{
 			I_Error("Attempted to download files that were not sendable");
 		}
@@ -273,8 +272,7 @@ boolean CL_SendRequestFile(void)
 	netbuffer->packettype = PT_REQUESTFILE;
 	p = (char *)netbuffer->u.textcmd;
 	for (i = 0; i < fileneedednum; i++)
-		if ((fileneeded[i].status == FS_NOTFOUND || fileneeded[i].status == FS_MD5SUMBAD)
-			&& fileneeded[i].important)
+		if ((fileneeded[i].status == FS_NOTFOUND || fileneeded[i].status == FS_MD5SUMBAD))
 		{
 			totalfreespaceneeded += fileneeded[i].totalsize;
 			nameonly(fileneeded[i].filename);
@@ -341,15 +339,9 @@ INT32 CL_CheckFiles(void)
 		CONS_Debug(DBG_NETPLAY, "game is modified; only doing basic checks\n");
 		for (i = 1, j = 1; i < fileneedednum || j < numwadfiles;)
 		{
-			if (i < fileneedednum && !fileneeded[i].important)
-			{
-				// Eh whatever, don't care
-				++i;
-				continue;
-			}
 			if (j < numwadfiles && W_VerifyNMUSlumps(wadfiles[j]->filename))
 			{
-				// Unimportant on our side. still don't care.
+				// Unimportant on our side.
 				++j;
 				continue;
 			}
@@ -388,7 +380,7 @@ INT32 CL_CheckFiles(void)
 				break;
 			}
 		}
-		if (fileneeded[i].status != FS_NOTFOUND || !fileneeded[i].important)
+		if (fileneeded[i].status != FS_NOTFOUND)
 			continue;
 
 		fileneeded[i].status = findfile(fileneeded[i].filename, fileneeded[i].md5sum, true);
@@ -418,27 +410,8 @@ void CL_LoadServerFiles(void)
 			fileneeded[i].status = FS_OPEN;
 		}
 		else if (fileneeded[i].status == FS_MD5SUMBAD)
-		{
-			// If the file is marked important, don't even bother proceeding.
-			if (fileneeded[i].important)
-				I_Error("Wrong version of important file %s", fileneeded[i].filename);
-
-			// If it isn't, no need to worry the user with a console message,
-			// although it can't hurt to put something in the debug file.
-
-			// ...but wait a second. What if the local version is "important"?
-			if (!W_VerifyNMUSlumps(fileneeded[i].filename))
-				I_Error("File %s should only contain music and sound effects!",
-					fileneeded[i].filename);
-
-			// Okay, NOW we know it's safe. Whew.
-			P_AddWadFile(fileneeded[i].filename, NULL);
-			if (fileneeded[i].important)
-				G_SetGameModified(true);
-			fileneeded[i].status = FS_OPEN;
-			DEBFILE(va("File %s found but with different md5sum\n", fileneeded[i].filename));
-		}
-		else if (fileneeded[i].important)
+			I_Error("Wrong version of file %s", fileneeded[i].filename);
+		else
 		{
 			const char *s;
 			switch(fileneeded[i].status)
