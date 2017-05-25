@@ -330,6 +330,11 @@ INT32 CL_CheckFiles(void)
 	INT32 i, j;
 	char wadfilename[MAX_WADPATH];
 	INT32 ret = 1;
+	size_t packetsize = 0;
+	serverinfo_pak *dummycheck = NULL;
+
+	// Shut the compiler up.
+	(void)dummycheck;
 
 //	if (M_CheckParm("-nofiles"))
 //		return 1;
@@ -378,6 +383,10 @@ INT32 CL_CheckFiles(void)
 		return 1;
 	}
 
+	// See W_LoadWadFile in w_wad.c
+	for (i = 0; i < numwadfiles; i++)
+		packetsize += nameonlylength(wadfiles[i]->filename) + 22;
+
 	for (i = 1; i < fileneedednum; i++)
 	{
 		CONS_Debug(DBG_NETPLAY, "searching for '%s' ", fileneeded[i].filename);
@@ -396,6 +405,12 @@ INT32 CL_CheckFiles(void)
 		}
 		if (fileneeded[i].status != FS_NOTFOUND || !fileneeded[i].important)
 			continue;
+
+		packetsize += nameonlylength(fileneeded[i].filename) + 22;
+
+		if ((numwadfiles >= MAX_WADFILES)
+		|| (packetsize > sizeof(dummycheck->fileneeded)))
+			return 3;
 
 		fileneeded[i].status = findfile(fileneeded[i].filename, fileneeded[i].md5sum, true);
 		CONS_Debug(DBG_NETPLAY, "found %d\n", fileneeded[i].status);
