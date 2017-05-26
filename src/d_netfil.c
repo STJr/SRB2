@@ -64,7 +64,6 @@
 
 // Prototypes
 static boolean SV_SendFile(INT32 node, const char *filename, UINT8 fileid);
-static void SV_RemoveFileSendList(INT32 node);
 
 // Sender structure
 typedef struct filetx_s
@@ -319,7 +318,7 @@ boolean Got_RequestFilePak(INT32 node)
 		READSTRINGN(p, wad, MAX_WADPATH);
 		if (!SV_SendFile(node, wad, id))
 		{
-			SV_RemoveFileSendList(node);
+			SV_AbortSendFiles(node);
 			return false; // don't read the rest of the files
 		}
 	}
@@ -605,50 +604,6 @@ void SV_SendRam(INT32 node, void *data, size_t size, freemethod_t freemethod, UI
 	DEBFILE(va("Sending ram %p(size:%u) to %d (id=%u)\n",p->id.ram,p->size,node,fileid));
 
 	filestosend++;
-}
-
-/** Removes all file requests for a node
-  * This is needed only if a PT_REQUESTFILE's content gave you something that shouldn't be there
-  *
-  * \param node The destination
-  * \sa Got_RequestFilePak
-  *
-  */
-static void SV_RemoveFileSendList(INT32 node)
-{
-	filetx_t *p = transfer[node].txlist;
-
-	if (p == NULL)
-		return; // ...well, that was easy
-
-	while (p)
-	{
-		// Free the file request according to the freemethod parameter used with SV_SendFile/Ram
-		switch (p->ram)
-		{
-			case SF_FILE: // It's a file, close it and free its filename
-				if (cv_noticedownload.value)
-					CONS_Printf("Cancelling file transfer for node %d\n", node);
-				if (transfer[node].currentfile)
-					fclose(transfer[node].currentfile);
-				free(p->id.filename);
-				break;
-			case SF_Z_RAM: // It's a memory block allocated with Z_Alloc or the likes, use Z_Free
-				Z_Free(p->id.ram);
-				break;
-			case SF_RAM: // It's a memory block allocated with malloc, use free
-				free(p->id.ram);
-			case SF_NOFREERAM: // Nothing to free
-				break;
-		}
-		// Remove the file request from the list
-		transfer[node].txlist = p->next;
-		free(p);
-		p = transfer[node].txlist;
-		// Indicate that the transmission is over (if for some reason it had started)
-		transfer[node].currentfile = NULL;
-		filestosend--;
-	}
 }
 
 /** Stops sending a file for a node, and removes the file request from the list,
