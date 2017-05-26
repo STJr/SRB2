@@ -4868,7 +4868,7 @@ static void M_DrawAddons(void)
 	? "\x85""Adding files mid-game may cause problems."
 	: LOCATIONSTRING));
 
-	if (!numwadfiles)
+	if (numwadfiles <= mainwads+1)
 		y = 0;
 	else if (numwadfiles >= MAX_WADFILES) // difficult to happen with current limits, but still worth thinking of
 		y = FRACUNIT;
