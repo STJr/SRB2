@@ -6648,6 +6648,18 @@ void P_MobjThinker(mobj_t *mobj)
 		}
 	else switch (mobj->type)
 	{
+		case MT_FALLINGROCK:
+			// Despawn rocks here in case zmovement code can't do so (blame slopes)
+			if (!mobj->momx && !mobj->momy && !mobj->momz
+			&& ((mobj->eflags & MFE_VERTICALFLIP) ?
+				  mobj->z + mobj->height >= mobj->ceilingz
+				: mobj->z <= mobj->floorz))
+			{
+				P_RemoveMobj(mobj);
+				return;
+			}
+			P_MobjCheckWater(mobj);
+			break;
 		case MT_EMERALDSPAWN:
 			if (mobj->threshold)
 			{

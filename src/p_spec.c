@@ -3039,7 +3039,10 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 		case 443: // Calls a named Lua function
 #ifdef HAVE_BLUA
-			LUAh_LinedefExecute(line, mo, callsec);
+			if (line->text)
+				LUAh_LinedefExecute(line, mo, callsec);
+			else
+				CONS_Alert(CONS_WARNING, "Linedef %s is missing the hook name of the Lua function to call! (This should be given in the front texture fields)\n", sizeu1(line-lines));
 #else
 			CONS_Alert(CONS_ERROR, "The map is trying to run a Lua script, but this exe was not compiled with Lua support!\n");
 #endif

@@ -62,7 +62,8 @@
 
 #include <errno.h>
 
-static void SV_SendFile(INT32 node, const char *filename, UINT8 fileid);
+// Prototypes
+static boolean SV_SendFile(INT32 node, const char *filename, UINT8 fileid);
 
 // Sender structure
 typedef struct filetx_s
@@ -303,7 +304,8 @@ boolean CL_SendRequestFile(void)
 }
 
 // get request filepak and put it on the send queue
-void Got_RequestFilePak(INT32 node)
+// returns false if a requested file was not found or cannot be sent
+boolean Got_RequestFilePak(INT32 node)
 {
 	char wad[MAX_WADPATH+1];
 	UINT8 *p = netbuffer->u.textcmd;
@@ -314,8 +316,13 @@ void Got_RequestFilePak(INT32 node)
 		if (id == 0xFF)
 			break;
 		READSTRINGN(p, wad, MAX_WADPATH);
-		SV_SendFile(node, wad, id);
+		if (!SV_SendFile(node, wad, id))
+		{
+			SV_AbortSendFiles(node);
+			return false; // don't read the rest of the files
+		}
 	}
+	return true; // no problems with any files
 }
 
 /** Checks if the files needed aren't already loaded or on the disk
@@ -480,7 +487,7 @@ static INT32 filestosend = 0;
   * \sa SV_SendRam
   *
   */
-static void SV_SendFile(INT32 node, const char *filename, UINT8 fileid)
+static boolean SV_SendFile(INT32 node, const char *filename, UINT8 fileid)
 {
 	filetx_t **q; // A pointer to the "next" field of the last file in the list
 	filetx_t *p; // The new file request
@@ -488,7 +495,7 @@ static void SV_SendFile(INT32 node, const char *filename, UINT8 fileid)
 	char wadfilename[MAX_WADPATH];
 
 	if (cv_noticedownload.value)
-		CONS_Printf("Sending file \"%s\" to node %d\n", filename, node);
+		CONS_Printf("Sending file \"%s\" to node %d (%s)\n", filename, node, I_GetNodeAddress(node));
 
 	// Find the last file in the list and set a pointer to its "next" field
 	q = &transfer[node].txlist;
@@ -537,7 +544,7 @@ static void SV_SendFile(INT32 node, const char *filename, UINT8 fileid)
 		free(p->id.filename);
 		free(p);
 		*q = NULL;
-		return;
+		return false; // cancel the rest of the requests
 	}
 
 	// Handle huge file requests (i.e. bigger than cv_maxsend.value KB)
@@ -549,7 +556,7 @@ static void SV_SendFile(INT32 node, const char *filename, UINT8 fileid)
 		free(p->id.filename);
 		free(p);
 		*q = NULL;
-		return;
+		return false; // cancel the rest of the requests
 	}
 
 	DEBFILE(va("Sending file %s (id=%d) to %d\n", filename, fileid, node));
@@ -557,6 +564,7 @@ static void SV_SendFile(INT32 node, const char *filename, UINT8 fileid)
 	p->fileid = fileid;
 	p->next = NULL; // End of list
 	filestosend++;
+	return true;
 }
 
 /** Adds a memory block to the file list for a node
