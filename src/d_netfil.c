@@ -331,6 +331,7 @@ INT32 CL_CheckFiles(void)
 	char wadfilename[MAX_WADPATH];
 	INT32 ret = 1;
 	size_t packetsize = 0;
+	size_t filestoget = 0;
 	serverinfo_pak *dummycheck = NULL;
 
 	// Shut the compiler up.
@@ -408,9 +409,11 @@ INT32 CL_CheckFiles(void)
 
 		packetsize += nameonlylength(fileneeded[i].filename) + 22;
 
-		if ((numwadfiles >= MAX_WADFILES)
+		if ((numwadfiles+filestoget >= MAX_WADFILES)
 		|| (packetsize > sizeof(dummycheck->fileneeded)))
 			return 3;
+
+		filestoget++;
 
 		fileneeded[i].status = findfile(fileneeded[i].filename, fileneeded[i].md5sum, true);
 		CONS_Debug(DBG_NETPLAY, "found %d\n", fileneeded[i].status);
