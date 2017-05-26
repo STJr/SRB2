@@ -1133,8 +1133,6 @@ boolean HGetPacket(void)
 
 		rebound_tail = (rebound_tail+1) % MAXREBOUND;
 
-		if (doomcom->remotenode == -1) // wait hang on what?
-			return true; // there might still be packets from others though, so don't return false
 #ifdef DEBUGFILE
 		if (debugfile)
 			DebugPrintpacket("GETLOCAL");
