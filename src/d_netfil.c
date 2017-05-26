@@ -62,7 +62,9 @@
 
 #include <errno.h>
 
-static void SV_SendFile(INT32 node, const char *filename, UINT8 fileid);
+// Prototypes
+static boolean SV_SendFile(INT32 node, const char *filename, UINT8 fileid);
+static void SV_RemoveFileSendList(INT32 node);
 
 // Sender structure
 typedef struct filetx_s
@@ -303,7 +305,8 @@ boolean CL_SendRequestFile(void)
 }
 
 // get request filepak and put it on the send queue
-void Got_RequestFilePak(INT32 node)
+// returns false if a requested file was not found or cannot be sent
+boolean Got_RequestFilePak(INT32 node)
 {
 	char wad[MAX_WADPATH+1];
 	UINT8 *p = netbuffer->u.textcmd;
@@ -314,8 +317,13 @@ void Got_RequestFilePak(INT32 node)
 		if (id == 0xFF)
 			break;
 		READSTRINGN(p, wad, MAX_WADPATH);
-		SV_SendFile(node, wad, id);
+		if (!SV_SendFile(node, wad, id))
+		{
+			SV_RemoveFileSendList(node);
+			return false; // don't read the rest of the files
+		}
 	}
+	return true; // no problems with any files
 }
 
 /** Checks if the files needed aren't already loaded or on the disk
@@ -480,7 +488,7 @@ static INT32 filestosend = 0;
   * \sa SV_SendRam
   *
   */
-static void SV_SendFile(INT32 node, const char *filename, UINT8 fileid)
+static boolean SV_SendFile(INT32 node, const char *filename, UINT8 fileid)
 {
 	filetx_t **q; // A pointer to the "next" field of the last file in the list
 	filetx_t *p; // The new file request
@@ -537,7 +545,7 @@ static void SV_SendFile(INT32 node, const char *filename, UINT8 fileid)
 		free(p->id.filename);
 		free(p);
 		*q = NULL;
-		return;
+		return false; // cancel the rest of the requests
 	}
 
 	// Handle huge file requests (i.e. bigger than cv_maxsend.value KB)
@@ -549,7 +557,7 @@ static void SV_SendFile(INT32 node, const char *filename, UINT8 fileid)
 		free(p->id.filename);
 		free(p);
 		*q = NULL;
-		return;
+		return false; // cancel the rest of the requests
 	}
 
 	DEBFILE(va("Sending file %s (id=%d) to %d\n", filename, fileid, node));
@@ -557,6 +565,7 @@ static void SV_SendFile(INT32 node, const char *filename, UINT8 fileid)
 	p->fileid = fileid;
 	p->next = NULL; // End of list
 	filestosend++;
+	return true;
 }
 
 /** Adds a memory block to the file list for a node
@@ -596,6 +605,49 @@ void SV_SendRam(INT32 node, void *data, size_t size, freemethod_t freemethod, UI
 	DEBFILE(va("Sending ram %p(size:%u) to %d (id=%u)\n",p->id.ram,p->size,node,fileid));
 
 	filestosend++;
+}
+
+/** Removes all file requests for a node
+  * This is needed only if a PT_REQUESTFILE's content gave you something that shouldn't be there
+  *
+  * \param node The destination
+  * \sa Got_RequestFilePak
+  *
+  */
+static void SV_RemoveFileSendList(INT32 node)
+{
+	filetx_t *p = transfer[node].txlist;
+
+	if (p == NULL)
+		return; // ...well, that was easy
+
+	while (p)
+	{
+		// Free the file request according to the freemethod parameter used with SV_SendFile/Ram
+		switch (p->ram)
+		{
+			case SF_FILE: // It's a file, close it and free its filename
+				if (cv_noticedownload.value)
+					CONS_Printf("Cancelling file transfer for node %d\n", node);
+				if (transfer[node].currentfile)
+					fclose(transfer[node].currentfile);
+				free(p->id.filename);
+				break;
+			case SF_Z_RAM: // It's a memory block allocated with Z_Alloc or the likes, use Z_Free
+				Z_Free(p->id.ram);
+				break;
+			case SF_RAM: // It's a memory block allocated with malloc, use free
+				free(p->id.ram);
+			case SF_NOFREERAM: // Nothing to free
+				break;
+		}
+		// Remove the file request from the list
+		transfer[node].txlist = p->next;
+		free(p);
+		// Indicate that the transmission is over (if for some reason it had started)
+		transfer[node].currentfile = NULL;
+		filestosend--;
+	}
 }
 
 /** Stops sending a file for a node, and removes the file request from the list,

@@ -3553,7 +3553,12 @@ static void HandlePacketFromAwayNode(SINT8 node)
 
 		case PT_REQUESTFILE:
 			if (server)
-				Got_RequestFilePak(node);
+			{
+				if (!cv_downloading.value || !Got_RequestFilePak(node))
+					Net_CloseConnection(node); // close connection if one of the requested files could not be sent, or you disabled downloading anyway
+			}
+			else
+				Net_CloseConnection(node); // nope
 			break;
 
 		case PT_NODETIMEOUT:
