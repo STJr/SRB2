@@ -644,6 +644,7 @@ static void SV_RemoveFileSendList(INT32 node)
 		// Remove the file request from the list
 		transfer[node].txlist = p->next;
 		free(p);
+		p = transfer[node].txlist;
 		// Indicate that the transmission is over (if for some reason it had started)
 		transfer[node].currentfile = NULL;
 		filestosend--;
