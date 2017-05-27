@@ -4870,11 +4870,14 @@ static void M_DrawAddons(void)
 
 	if (numwadfiles <= mainwads+1)
 		y = 0;
-	else if (numwadfiles >= MAX_WADFILES) // difficult to happen with current limits, but still worth thinking of
+	else if (numwadfiles >= MAX_WADFILES)
 		y = FRACUNIT;
 	else
 	{
+		x = FixedDiv((numwadfiles - mainwads+1)<<FRACBITS, (MAX_WADFILES - mainwads+1)<<FRACBITS);
 		y = FixedDiv(((packetsizetally-mainwadstally)<<FRACBITS), (((MAXFILENEEDED*sizeof(UINT8)-mainwadstally)-(5+22))<<FRACBITS)) + 1; // 5+22 = (a.ext + checksum length) is minimum addition to packet size tally
+		if (x > y)
+			y = x;
 		if (y > FRACUNIT) // happens because of how we're shrinkin' it a little
 			y = FRACUNIT;
 	}
