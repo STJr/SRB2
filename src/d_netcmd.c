@@ -380,6 +380,7 @@ const char *netxcmdnames[MAXNETXCMD - 1] =
 	"RANDOMSEED",
 	"RUNSOC",
 	"REQADDFILE",
+	"DELFILE", // replace next time we add an XD
 	"SETMOTD",
 	"SUICIDE",
 #ifdef HAVE_BLUA
