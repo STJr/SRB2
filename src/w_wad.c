@@ -298,6 +298,7 @@ UINT16 W_LoadWadFile(const char *filename)
 	INT32 compressed = 0;
 	size_t packetsize;
 	UINT8 md5sum[16];
+	boolean important;
 
 	if (!(refreshdirmenu & REFRESHDIR_ADDFILE))
 		refreshdirmenu = REFRESHDIR_NORMAL|REFRESHDIR_ADDFILE; // clean out cons_alerts that happened earlier
@@ -320,7 +321,7 @@ UINT16 W_LoadWadFile(const char *filename)
 	// Check if wad files will overflow fileneededbuffer. Only the filename part
 	// is send in the packet; cf.
 	// see PutFileNeeded in d_netfil.c
-	if (!W_VerifyNMUSlumps(filename))
+	if ((important = !W_VerifyNMUSlumps(filename)))
 	{
 		packetsize = packetsizetally;
 
@@ -474,6 +475,7 @@ UINT16 W_LoadWadFile(const char *filename)
 	wadfile->handle = handle;
 	wadfile->numlumps = (UINT16)numlumps;
 	wadfile->lumpinfo = lumpinfo;
+	wadfile->important = important;
 	fseek(handle, 0, SEEK_END);
 	wadfile->filesize = (unsigned)ftell(handle);
 

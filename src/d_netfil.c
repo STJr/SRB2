@@ -116,7 +116,7 @@ UINT8 *PutFileNeeded(void)
 	for (i = 0; i < numwadfiles; i++)
 	{
 		// If it has only music/sound lumps, don't put it in the list
-		if (W_VerifyNMUSlumps(wadfiles[i]->filename))
+		if (!wadfiles[i]->important)
 			continue;
 		else
 			filestatus = 1; // Importance - not really used any more, holds 1 by default for backwards compat with MS
@@ -339,7 +339,7 @@ INT32 CL_CheckFiles(void)
 		CONS_Debug(DBG_NETPLAY, "game is modified; only doing basic checks\n");
 		for (i = 1, j = 1; i < fileneedednum || j < numwadfiles;)
 		{
-			if (j < numwadfiles && W_VerifyNMUSlumps(wadfiles[j]->filename))
+			if (j < numwadfiles && !wadfiles[j]->important)
 			{
 				// Unimportant on our side.
 				++j;
