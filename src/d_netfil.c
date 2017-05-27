@@ -118,8 +118,8 @@ UINT8 *PutFileNeeded(void)
 		// If it has only music/sound lumps, don't put it in the list
 		if (!wadfiles[i]->important)
 			continue;
-		else
-			filestatus = 1; // Importance - not really used any more, holds 1 by default for backwards compat with MS
+
+		filestatus = 1; // Importance - not really used any more, holds 1 by default for backwards compat with MS
 
 		// Store in the upper four bits
 		if (!cv_downloading.value)
