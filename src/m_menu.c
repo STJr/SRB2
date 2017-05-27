@@ -4875,7 +4875,7 @@ static void M_DrawAddons(void)
 	else
 	{
 		x = FixedDiv((numwadfiles - mainwads+1)<<FRACBITS, (MAX_WADFILES - mainwads+1)<<FRACBITS);
-		y = FixedDiv(((packetsizetally-mainwadstally)<<FRACBITS), (((MAXFILENEEDED*sizeof(UINT8)-mainwadstally)-(5+22))<<FRACBITS)) + 1; // 5+22 = (a.ext + checksum length) is minimum addition to packet size tally
+		y = FixedDiv(((packetsizetally-mainwadstally)<<FRACBITS), (((MAXFILENEEDED*sizeof(UINT8)-mainwadstally)-(5+22))<<FRACBITS)); // 5+22 = (a.ext + checksum length) is minimum addition to packet size tally
 		if (x > y)
 			y = x;
 		if (y > FRACUNIT) // happens because of how we're shrinkin' it a little
