@@ -3413,6 +3413,7 @@ static void HandlePacketFromAwayNode(SINT8 node)
 	switch (netbuffer->packettype)
 	{
 		case PT_ASKINFOVIAMS:
+#if 0
 			if (server && serverrunning)
 			{
 				INT32 clientnode;
@@ -3434,6 +3435,9 @@ static void HandlePacketFromAwayNode(SINT8 node)
 			}
 			else
 				Net_CloseConnection(node); // you're not supposed to get it, so ignore it
+#else
+			Net_CloseConnection(node);
+#endif
 			break;
 
 		case PT_ASKINFO:
