@@ -2363,7 +2363,7 @@ static boolean P_ZMovement(mobj_t *mo)
 			mo->z = mo->floorz;
 
 #ifdef ESLOPE
-		if (mo->standingslope) // You're still on the ground; why are we here?
+		if (!(mo->flags & MF_MISSILE) && mo->standingslope) // You're still on the ground; why are we here?
 		{
 			mo->momz = 0;
 			return true;
@@ -6648,6 +6648,18 @@ void P_MobjThinker(mobj_t *mobj)
 		}
 	else switch (mobj->type)
 	{
+		case MT_FALLINGROCK:
+			// Despawn rocks here in case zmovement code can't do so (blame slopes)
+			if (!mobj->momx && !mobj->momy && !mobj->momz
+			&& ((mobj->eflags & MFE_VERTICALFLIP) ?
+				  mobj->z + mobj->height >= mobj->ceilingz
+				: mobj->z <= mobj->floorz))
+			{
+				P_RemoveMobj(mobj);
+				return;
+			}
+			P_MobjCheckWater(mobj);
+			break;
 		case MT_EMERALDSPAWN:
 			if (mobj->threshold)
 			{
@@ -7795,6 +7807,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			break;
 		case MT_EGGCAPSULE:
 			mobj->extravalue1 = -1; // timer for how long a player has been at the capsule
+			break;
 		case MT_REDTEAMRING:
 			mobj->color = skincolor_redteam;
 			break;

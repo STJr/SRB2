@@ -1569,8 +1569,13 @@ void D_MapChange(INT32 mapnum, INT32 newgametype, boolean pultmode, boolean rese
 		mapchangepending = 0;
 		// spawn the server if needed
 		// reset players if there is a new one
-		if (!(adminplayer == consoleplayer) && SV_SpawnServer())
-			buf[0] &= ~(1<<1);
+		if (!(adminplayer == consoleplayer))
+		{
+			if (SV_SpawnServer())
+				buf[0] &= ~(1<<1);
+			if (!Playing()) // you failed to start a server somehow, so cancel the map change
+				return;
+		}
 
 		// Kick bot from special stages
 		if (botskin)
@@ -2116,7 +2121,7 @@ static void Command_Teamchange_f(void)
 		return;
 	}
 
-	if (!cv_allowteamchange.value && !NetPacket.packet.newteam) // allow swapping to spectator even in locked teams.
+	if (!cv_allowteamchange.value && NetPacket.packet.newteam) // allow swapping to spectator even in locked teams.
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("The server is not allowing team changes at the moment.\n"));
 		return;
@@ -2213,7 +2218,7 @@ static void Command_Teamchange2_f(void)
 		return;
 	}
 
-	if (!cv_allowteamchange.value && !NetPacket.packet.newteam) // allow swapping to spectator even in locked teams.
+	if (!cv_allowteamchange.value && NetPacket.packet.newteam) // allow swapping to spectator even in locked teams.
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("The server is not allowing team changes at the moment.\n"));
 		return;
@@ -2967,6 +2972,7 @@ static void Command_Addfile(void)
 	XBOXSTATIC char buf[256];
 	char *buf_p = buf;
 	INT32 i;
+	int musiconly; // W_VerifyNMUSlumps isn't boolean
 
 	if (COM_Argc() != 2)
 	{
@@ -2981,7 +2987,9 @@ static void Command_Addfile(void)
 		if (!isprint(fn[i]) || fn[i] == ';')
 			return;
 
-	if (!W_VerifyNMUSlumps(fn))
+	musiconly = W_VerifyNMUSlumps(fn);
+
+	if (!musiconly)
 	{
 		// ... But only so long as they contain nothing more then music and sprites.
 		if (netgame && !(server || adminplayer == consoleplayer))
@@ -2993,7 +3001,7 @@ static void Command_Addfile(void)
 	}
 
 	// Add file on your client directly if it is trivial, or you aren't in a netgame.
-	if (!(netgame || multiplayer) || W_VerifyNMUSlumps(fn))
+	if (!(netgame || multiplayer) || musiconly)
 	{
 		P_AddWadFile(fn, NULL);
 		return;
@@ -3013,9 +3021,7 @@ static void Command_Addfile(void)
 #else
 		FILE *fhandle;
 
-		fhandle = fopen(fn, "rb");
-
-		if (fhandle)
+		if ((fhandle = W_OpenWadFile(&fn, true)) != NULL)
 		{
 			tic_t t = I_GetTime();
 			CONS_Debug(DBG_SETUP, "Making MD5 for %s\n",fn);
@@ -3023,11 +3029,8 @@ static void Command_Addfile(void)
 			CONS_Debug(DBG_SETUP, "MD5 calc for %s took %f second\n", fn, (float)(I_GetTime() - t)/TICRATE);
 			fclose(fhandle);
 		}
-		else
-		{
-			CONS_Printf(M_GetText("File %s not found.\n"), fn);
+		else // file not found
 			return;
-		}
 #endif
 		WRITEMEM(buf_p, md5sum, 16);
 	}
@@ -3080,7 +3083,13 @@ static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum)
 	filestatus_t ncs = FS_NOTFOUND;
 	UINT8 md5sum[16];
 	boolean kick = false;
+	boolean toomany = false;
 	INT32 i;
+	size_t packetsize = 0;
+	serverinfo_pak *dummycheck = NULL;
+
+	// Shut the compiler up.
+	(void)dummycheck;
 
 	READSTRINGN(*cp, filename, 240);
 	READMEM(*cp, md5sum, 16);
@@ -3106,13 +3115,25 @@ static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum)
 		return;
 	}
 
-	ncs = findfile(filename,md5sum,true);
+	// See W_LoadWadFile in w_wad.c
+	for (i = 0; i < numwadfiles; i++)
+		packetsize += nameonlylength(wadfiles[i]->filename) + 22;
 
-	if (ncs != FS_FOUND)
+	packetsize += nameonlylength(filename) + 22;
+
+	if ((numwadfiles >= MAX_WADFILES)
+	|| (packetsize > sizeof(dummycheck->fileneeded)))
+		toomany = true;
+	else
+		ncs = findfile(filename,md5sum,true);
+
+	if (ncs != FS_FOUND || toomany)
 	{
 		char message[256];
 
-		if (ncs == FS_NOTFOUND)
+		if (toomany)
+			sprintf(message, M_GetText("Too many files loaded to add %s\n"), filename);
+		else if (ncs == FS_NOTFOUND)
 			sprintf(message, M_GetText("The server doesn't have %s\n"), filename);
 		else if (ncs == FS_MD5SUMBAD)
 			sprintf(message, M_GetText("Checksum mismatch on %s\n"), filename);
@@ -3182,10 +3203,15 @@ static void Got_Addfilecmd(UINT8 **cp, INT32 playernum)
 
 	ncs = findfile(filename,md5sum,true);
 
-	if (ncs != FS_FOUND)
+	if (ncs != FS_FOUND || !P_AddWadFile(filename, NULL))
 	{
 		Command_ExitGame_f();
-		if (ncs == FS_NOTFOUND)
+		if (ncs == FS_FOUND)
+		{
+			CONS_Printf(M_GetText("The server tried to add %s,\nbut you have too many files added.\nRestart the game to clear loaded files\nand play on this server."), filename);
+			M_StartMessage(va("The server added a file \n(%s)\nbut you have too many files added.\nRestart the game to clear loaded files.\n\nPress ESC\n",filename), NULL, MM_NOTHING);
+		}
+		else if (ncs == FS_NOTFOUND)
 		{
 			CONS_Printf(M_GetText("The server tried to add %s,\nbut you don't have this file.\nYou need to find it in order\nto play on this server."), filename);
 			M_StartMessage(va("The server added a file \n(%s)\nthat you do not have.\n\nPress ESC\n",filename), NULL, MM_NOTHING);
@@ -3203,7 +3229,6 @@ static void Got_Addfilecmd(UINT8 **cp, INT32 playernum)
 		return;
 	}
 
-	P_AddWadFile(filename, NULL);
 	G_SetGameModified(true);
 }
 
