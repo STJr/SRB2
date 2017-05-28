@@ -2547,11 +2547,8 @@ void G_DoReborn(INT32 playernum)
 		if (!countdowntimeup && (mapheaderinfo[gamemap-1]->levelflags & LF_NORELOAD))
 		{
 			INT32 i;
-
 			player->playerstate = PST_REBORN;
-
 			P_LoadThingsOnly();
-
 			P_ClearStarPost(player->starpostnum);
 
 			// Do a wipe
@@ -2567,7 +2564,7 @@ void G_DoReborn(INT32 playernum)
 
 			// clear cmd building stuff
 			memset(gamekeydown, 0, sizeof (gamekeydown));
-			for (i = 0;i < JOYAXISSET; i++)
+			for (i = 0; i < JOYAXISSET; i++)
 			{
 				joyxmove[i] = joyymove[i] = 0;
 				joy2xmove[i] = joy2ymove[i] = 0;
@@ -2600,10 +2597,10 @@ void G_DoReborn(INT32 playernum)
 			INT32 i;
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
-				if (!(playeringame[i] && players[i].mo && players[i].mo->health && players[i].playerstate == PST_LIVE))
+				if (!(playeringame[i] && players[i].playerstate == PST_LIVE))
 					continue;
 
-				if ((netgame || multiplayer) && players[i].spectator) // Ignore spectators
+				if (players[i].spectator) // Ignore spectators
 					continue;
 
 				if (players[i].bot) // ignore dumb, stupid tails
@@ -2612,7 +2609,57 @@ void G_DoReborn(INT32 playernum)
 				break;
 			}
 			if (i == MAXPLAYERS)
-				RESETMAP;
+			{
+				if (mapheaderinfo[gamemap-1]->levelflags & LF_NORELOAD)
+				{
+					INT32 j;
+
+					for (i = 0; i < MAXPLAYERS; i++)
+					{
+						if (!playeringame[i])
+							continue;
+
+						players[i].playerstate = PST_REBORN;
+					}
+
+					P_LoadThingsOnly();
+					P_ClearStarPost(player->starpostnum);
+
+					// Do a wipe
+					wipegamestate = -1;
+
+					if (camera.chase)
+						P_ResetCamera(&players[displayplayer], &camera);
+					if (camera2.chase && splitscreen)
+						P_ResetCamera(&players[secondarydisplayplayer], &camera2);
+
+					// clear cmd building stuff
+					memset(gamekeydown, 0, sizeof (gamekeydown));
+					for (j = 0; j < JOYAXISSET; j++)
+					{
+						joyxmove[j] = joyymove[j] = 0;
+						joy2xmove[j] = joy2ymove[j] = 0;
+					}
+					mousex = mousey = 0;
+					mouse2x = mouse2y = 0;
+
+					// clear hud messages remains (usually from game startup)
+					CON_ClearHUD();
+
+					// Starpost support
+					for (i = 0; i < MAXPLAYERS; i++)
+					{
+						if (!playeringame[i])
+							continue;
+
+						G_SpawnPlayer(i, (players[i].starposttime != 0));
+					}
+
+					return;
+				}
+				else
+					RESETMAP;
+			}
 		}
 
 		if (player->starposttime)
