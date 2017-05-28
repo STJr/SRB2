@@ -7473,8 +7473,8 @@ static void M_ServerOptions(INT32 choice)
 		OP_ServerOptionsMenu[ 2].status = IT_GRAYEDOUT; // Max players
 		OP_ServerOptionsMenu[ 3].status = IT_GRAYEDOUT; // Allow WAD downloading
 		OP_ServerOptionsMenu[ 4].status = IT_GRAYEDOUT; // Allow players to join
-		OP_ServerOptionsMenu[30].status = IT_GRAYEDOUT; // Master server
-		OP_ServerOptionsMenu[31].status = IT_GRAYEDOUT; // Attempts to resynchronise
+		OP_ServerOptionsMenu[33].status = IT_GRAYEDOUT; // Master server
+		OP_ServerOptionsMenu[34].status = IT_GRAYEDOUT; // Attempts to resynchronise
 	}
 	else
 	{
@@ -7483,10 +7483,10 @@ static void M_ServerOptions(INT32 choice)
 		OP_ServerOptionsMenu[ 3].status = IT_STRING | IT_CVAR;
 		OP_ServerOptionsMenu[ 4].status = IT_STRING | IT_CVAR;
 		if (netgame)
-			OP_ServerOptionsMenu[30].status = IT_GRAYEDOUT;
+			OP_ServerOptionsMenu[33].status = IT_GRAYEDOUT;
 		else
-			OP_ServerOptionsMenu[30].status = IT_STRING | IT_CVAR | IT_CV_STRING;
-		OP_ServerOptionsMenu[31].status = IT_STRING | IT_CVAR;
+			OP_ServerOptionsMenu[33].status = IT_STRING | IT_CVAR | IT_CV_STRING;
+		OP_ServerOptionsMenu[34].status = IT_STRING | IT_CVAR;
 	}
 #endif
 

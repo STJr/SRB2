@@ -1309,7 +1309,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 						players[i].starpostangle = special->angle;
 						players[i].starpostnum = special->health;
 
-						if (cv_respawntype.value == 1 && && players[i].lives > 0 && players[i].playerstate == PST_DEAD)
+						if (cv_respawntype.value == 1 && players[i].lives > 0 && players[i].playerstate == PST_DEAD)
 							players[i].playerstate = PST_REBORN;
 					}
 				}
