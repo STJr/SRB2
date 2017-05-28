@@ -8099,6 +8099,51 @@ void P_FindEmerald(void)
 }
 
 //
+// P_GetLives
+// Steal lives if you're allowed to.
+//
+
+boolean P_GetLives(player_t *player)
+{
+	INT32 i, maxlivesplayer = -1, livescheck = 1;
+	if (!(cv_steallives.value
+	&& (gametype == GT_COOP)
+	&& (netgame || multiplayer)))
+		return true;
+
+	if (player->lives > 0)
+		return true;
+
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (!playeringame[i])
+			continue;
+
+		if (players[i].spectator) // Ignore spectators
+			continue;
+
+		if (players[i].lives > livescheck)
+		{
+			maxlivesplayer = i;
+			livescheck = players[i].lives;
+		}
+	}
+	if (maxlivesplayer != -1)
+	{
+		if (players[maxlivesplayer].mo)
+			S_StartSound(players[maxlivesplayer].mo, sfx_jshard); // placeholder
+		P_GivePlayerLives(&players[maxlivesplayer], -1);
+		P_GivePlayerLives(player, 1);
+		if (netgame && P_IsLocalPlayer(player))
+			S_ChangeMusic(mapmusname, mapmusflags, true);
+		else if (player == &players[displayplayer] || player == &players[secondarydisplayplayer])
+			P_RestoreMusic(player);
+		return true;
+	}
+	return false;
+}
+
+//
 // P_DeathThink
 // Fall on your face when dying.
 // Decrease POV height to floor height.
@@ -8106,6 +8151,8 @@ void P_FindEmerald(void)
 
 static void P_DeathThink(player_t *player)
 {
+	INT32 j = MAXPLAYERS;
+
 	ticcmd_t *cmd = &player->cmd;
 	player->deltaviewheight = 0;
 
@@ -8121,10 +8168,31 @@ static void P_DeathThink(player_t *player)
 			G_UseContinue(); // Even if we don't have one this handles ending the game
 	}
 
+	if (cv_steallives.value
+	&& (gametype == GT_COOP)
+	&& (netgame || multiplayer)
+	&& (player->lives <= 0))
+	{
+		for (j = 0; j < MAXPLAYERS; j++)
+		{
+			if (!playeringame[j])
+				continue;
+
+			if (players[j].spectator) // Ignore spectators
+				continue;
+
+			if (players[j].bot) // ignore dumb, stupid tails
+				continue;
+
+			if (players[j].lives > 1)
+				break;
+		}
+	}
+
 	// Force respawn if idle for more than 30 seconds in shooter modes.
 	if (player->deadtimer > 30*TICRATE && !G_PlatformGametype())
 		player->playerstate = PST_REBORN;
-	else if (player->lives > 0 && !G_IsSpecialStage(gamemap)) // Don't allow "click to respawn" in special stages!
+	else if ((player->lives > 0 || j != MAXPLAYERS) && !G_IsSpecialStage(gamemap)) // Don't allow "click to respawn" in special stages!
 	{
 		if (gametype == GT_COOP && (netgame || multiplayer) && cv_respawntype.value == 1) // Shamelessly lifted from TD. Thanks, Sryder!
 		{
@@ -8162,6 +8230,9 @@ static void P_DeathThink(player_t *player)
 					player->playerstate = PST_REBORN;
 				else switch(gametype) {
 					case GT_COOP:
+						if (player->deadtimer > TICRATE && P_GetLives(player))
+							player->playerstate = PST_REBORN;
+						break;
 					case GT_COMPETITION:
 						if (player->deadtimer > TICRATE)
 							player->playerstate = PST_REBORN;

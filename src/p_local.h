@@ -198,6 +198,7 @@ void P_PlayLivesJingle(player_t *player);
 #define P_PlayDeathSound(s)		S_StartSound(s, sfx_altdi1 + P_RandomKey(4));
 #define P_PlayVictorySound(s)	S_StartSound(s, sfx_victr1 + P_RandomKey(4));
 
+boolean P_GetLives(player_t *player);
 
 //
 // P_MOBJ

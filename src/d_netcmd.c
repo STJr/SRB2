@@ -354,6 +354,8 @@ consvar_t cv_sharedstarposts = {"sharedstarposts", "On", CV_NETVAR, CV_OnOff, NU
 static CV_PossibleValue_t respawntype_cons_t[] = {{0, "Request"}, {1, "Starpost"}, {0, NULL}};
 consvar_t cv_respawntype = {"respawntype", "Starpost", CV_NETVAR|CV_CHEAT, respawntype_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
+consvar_t cv_steallives = {"steallives", "On", CV_NETVAR, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+
 static CV_PossibleValue_t advancemap_cons_t[] = {{0, "Off"}, {1, "Next"}, {2, "Random"}, {0, NULL}};
 consvar_t cv_advancemap = {"advancemap", "Next", CV_NETVAR, advancemap_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 static CV_PossibleValue_t playersforexit_cons_t[] = {{0, "One"}, {1, "All"}, {0, NULL}};
@@ -505,14 +507,16 @@ void D_RegisterServerCommands(void)
 	CV_RegisterVar(&cv_hidetime);
 
 	CV_RegisterVar(&cv_inttime);
-	CV_RegisterVar(&cv_sharedstarposts);
-	CV_RegisterVar(&cv_respawntype);
 	CV_RegisterVar(&cv_advancemap);
 	CV_RegisterVar(&cv_playersforexit);
 	CV_RegisterVar(&cv_timelimit);
 	CV_RegisterVar(&cv_playbackspeed);
 	CV_RegisterVar(&cv_forceskin);
 	CV_RegisterVar(&cv_downloading);
+
+	CV_RegisterVar(&cv_sharedstarposts);
+	CV_RegisterVar(&cv_respawntype);
+	CV_RegisterVar(&cv_steallives);
 
 	CV_RegisterVar(&cv_specialrings);
 	CV_RegisterVar(&cv_powerstones);

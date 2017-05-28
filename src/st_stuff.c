@@ -731,6 +731,31 @@ static void ST_drawLives(void)
 	// lives
 	V_DrawRightAlignedString(hudinfo[HUD_LIVESNUM].x, hudinfo[HUD_LIVESNUM].y + (v_splitflag ? -4 : 0),
 		V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS|v_splitflag, va("%d",stplyr->lives));
+
+	if (cv_steallives.value
+	&& (gametype == GT_COOP)
+	&& (netgame || multiplayer))
+	{
+		INT32 i, sum = 0;
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			if (!playeringame[i])
+				continue;
+
+			if (players[i].spectator) // Ignore spectators
+				continue;
+
+			if (&players[i] == stplyr)
+				continue;
+
+			if (players[i].lives < 2)
+				continue;
+
+			sum += (players[i].lives - 1);
+		}
+		V_DrawString(hudinfo[HUD_LIVESNUM].x, hudinfo[HUD_LIVESNUM].y + (v_splitflag ? -4 : 0),
+		V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANSHALF|v_splitflag, va("/%d",sum));
+	}
 }
 
 static void ST_drawLevelTitle(void)
@@ -1826,6 +1851,30 @@ static void ST_overlayDrawer(void)
 			p = sboover;
 
 		V_DrawScaledPatch((BASEVIDWIDTH - SHORT(p->width))/2, STRINGY(BASEVIDHEIGHT/2 - (SHORT(p->height)/2)), 0, p);
+
+		if (cv_steallives.value
+		&& (gametype == GT_COOP)
+		&& (netgame || multiplayer))
+		{
+			INT32 i;
+			for (i = 0; i < MAXPLAYERS; i++)
+			{
+				if (!playeringame[i])
+					continue;
+
+				if (players[i].spectator) // Ignore spectators
+					continue;
+
+				if (&players[i] == stplyr)
+					continue;
+
+				if (players[i].lives > 1)
+					break;
+			}
+
+			if (i != MAXPLAYERS)
+				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(BASEVIDHEIGHT/2 + (SHORT(p->height)/2)) + 15, 0, M_GetText("You'll steal a life on respawn."));
+		}
 	}
 
 
