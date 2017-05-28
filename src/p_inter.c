@@ -1293,13 +1293,40 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if (player->starpostnum >= special->health)
 				return; // Already hit this post
 
-			// Save the player's time and position.
-			player->starposttime = leveltime;
-			player->starpostx = toucher->x>>FRACBITS;
-			player->starposty = toucher->y>>FRACBITS;
-			player->starpostz = special->z>>FRACBITS;
-			player->starpostangle = special->angle;
-			player->starpostnum = special->health;
+			if (cv_sharedstarposts.value && gametype == GT_COOP && (netgame || multiplayer))
+			{
+				for (i = 0; i < MAXPLAYERS; i++)
+				{
+					if (playeringame[i])
+					{
+						if (players[i].bot) // ignore dumb, stupid tails
+							continue;
+
+						players[i].starposttime = leveltime;
+						players[i].starpostx = player->mo->x>>FRACBITS;
+						players[i].starposty = player->mo->y>>FRACBITS;
+						players[i].starpostz = special->z>>FRACBITS;
+						players[i].starpostangle = special->angle;
+						players[i].starpostnum = special->health;
+
+						if (cv_respawntype.value == 1 && players[i].playerstate == PST_DEAD)
+							players[i].playerstate = PST_REBORN;
+					}
+				}
+				S_StartSound(NULL, special->info->painsound);
+			}
+			else
+			{
+				// Save the player's time and position.
+				player->starposttime = leveltime;
+				player->starpostx = toucher->x>>FRACBITS;
+				player->starposty = toucher->y>>FRACBITS;
+				player->starpostz = special->z>>FRACBITS;
+				player->starpostangle = special->angle;
+				player->starpostnum = special->health;
+				S_StartSound(toucher, special->info->painsound);
+			}
+
 			P_ClearStarPost(special->health);
 
 			// Find all starposts in the level with this value.

@@ -2835,8 +2835,8 @@ void A_BossDeath(mobj_t *mo)
 
 	// make sure there is a player alive for victory
 	for (i = 0; i < MAXPLAYERS; i++)
-		if (playeringame[i] && ((players[i].mo && players[i].mo->health > 0)
-			|| ((netgame || multiplayer) && (players[i].lives > 0 || players[i].continues > 0))))
+		if (playeringame[i] && ((players[i].mo && players[i].mo->health)
+			|| ((netgame || multiplayer) && (players[i].lives || players[i].continues))))
 			break;
 
 	if (i == MAXPLAYERS)
@@ -3280,10 +3280,28 @@ void A_ExtraLife(mobj_t *actor)
 
 	// In shooter gametypes, give the player 100 rings instead of an extra life.
 	if (gametype != GT_COOP && gametype != GT_COMPETITION)
+	{
 		P_GivePlayerRings(player, 100);
+		P_PlayLivesJingle(player);
+	}
 	else
-		P_GivePlayerLives(player, 1);
-	P_PlayLivesJingle(player);
+	{
+		INT32 i;
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			if (!playeringame[i])
+				continue;
+
+			if ((netgame || multiplayer) && players[i].spectator) // Ignore spectators
+				continue;
+
+			if (players[i].bot)
+				continue;
+
+			P_GivePlayerLives(&players[i], 1);
+			P_PlayLivesJingle(&players[i]);
+		}
+	}
 }
 
 // Function: A_BombShield
@@ -9389,8 +9407,8 @@ void A_ForceWin(mobj_t *actor)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (playeringame[i] && ((players[i].mo && players[i].mo->health > 0)
-		    || ((netgame || multiplayer) && (players[i].lives > 0 || players[i].continues > 0))))
+		if (playeringame[i] && ((players[i].mo && players[i].mo->health)
+		    || ((netgame || multiplayer) && (players[i].lives || players[i].continues))))
 			break;
 	}
 

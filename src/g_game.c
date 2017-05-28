@@ -2486,6 +2486,19 @@ void G_ChangePlayerReferences(mobj_t *oldmo, mobj_t *newmo)
 	}
 }
 
+#ifdef HAVE_BLUA
+#define RESETMAP {\
+			LUAh_MapChange();\
+			G_DoLoadLevel(true);\
+			return;\
+		}
+#else
+#define RESETMAP {\
+			G_DoLoadLevel(true);\
+			return;\
+		}
+#endif
+
 //
 // G_DoReborn
 //
@@ -2575,19 +2588,32 @@ void G_DoReborn(INT32 playernum)
 			}
 		}
 		else
-#ifdef HAVE_BLUA
-		{
-			LUAh_MapChange();
-#endif
-			G_DoLoadLevel(true);
-#ifdef HAVE_BLUA
-		}
-#endif
+			RESETMAP;
 	}
 	else
 	{
 		// respawn at the start
 		mobj_t *oldmo = NULL;
+
+		if (gametype == GT_COOP && (netgame || multiplayer) && cv_respawntype.value == 1)
+		{
+			INT32 i;
+			for (i = 0; i < MAXPLAYERS; i++)
+			{
+				if (!(playeringame[i] && players[i].mo && players[i].mo->health && players[i].playerstate == PST_LIVE))
+					continue;
+
+				if ((netgame || multiplayer) && players[i].spectator) // Ignore spectators
+					continue;
+
+				if (players[i].bot) // ignore dumb, stupid tails
+					continue;
+
+				break;
+			}
+			if (i == MAXPLAYERS)
+				RESETMAP;
+		}
 
 		if (player->starposttime)
 			starpost = true;
@@ -2608,10 +2634,44 @@ void G_DoReborn(INT32 playernum)
 
 void G_AddPlayer(INT32 playernum)
 {
+	INT32 countplayers = 0, notexiting = 0;
+
 	player_t *p = &players[playernum];
+
+	// Go through the current players and make sure you have the latest starpost set
+	if (G_PlatformGametype() && (netgame || multiplayer))
+	{
+		INT32 i;
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			if (!playeringame[i])
+				continue;
+
+			if (players[i].bot) // ignore dumb, stupid tails
+				continue;
+
+			countplayers++;
+
+			if (!players->exiting)
+				notexiting++;
+
+			if (!(cv_sharedstarposts.value && (gametype == GT_COOP) && (p->starpostnum < players[i].starpostnum)))
+				continue;
+
+			p->starposttime = players[i].starposttime;
+			p->starpostx = players[i].starpostx;
+			p->starposty = players[i].starposty;
+			p->starpostz = players[i].starpostz;
+			p->starpostangle = players[i].starpostangle;
+			p->starpostnum = players[i].starpostnum;
+		}
+	}
 
 	p->jointime = 0;
 	p->playerstate = PST_REBORN;
+
+	if (countplayers && !notexiting)
+		P_DoPlayerExit(p);
 }
 
 void G_ExitLevel(void)

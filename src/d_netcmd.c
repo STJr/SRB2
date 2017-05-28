@@ -347,7 +347,12 @@ consvar_t cv_maxping = {"maxping", "0", CV_SAVE, CV_Unsigned, NULL, 0, NULL, NUL
 #endif
 // Intermission time Tails 04-19-2002
 static CV_PossibleValue_t inttime_cons_t[] = {{0, "MIN"}, {3600, "MAX"}, {0, NULL}};
-consvar_t cv_inttime = {"inttime", "20", CV_NETVAR, inttime_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_inttime = {"inttime", "10", CV_NETVAR, inttime_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+consvar_t cv_sharedstarposts = {"sharedstarposts", "On", CV_NETVAR, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+static CV_PossibleValue_t respawntype_cons_t[] = {{0, "Request"}, {1, "Starpost"}, {0, NULL}};
+consvar_t cv_respawntype = {"respawntype", "Starpost", CV_NETVAR|CV_CHEAT, respawntype_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 static CV_PossibleValue_t advancemap_cons_t[] = {{0, "Off"}, {1, "Next"}, {2, "Random"}, {0, NULL}};
 consvar_t cv_advancemap = {"advancemap", "Next", CV_NETVAR, advancemap_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -500,6 +505,8 @@ void D_RegisterServerCommands(void)
 	CV_RegisterVar(&cv_hidetime);
 
 	CV_RegisterVar(&cv_inttime);
+	CV_RegisterVar(&cv_sharedstarposts);
+	CV_RegisterVar(&cv_respawntype);
 	CV_RegisterVar(&cv_advancemap);
 	CV_RegisterVar(&cv_playersforexit);
 	CV_RegisterVar(&cv_timelimit);

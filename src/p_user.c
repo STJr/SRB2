@@ -8105,22 +8105,60 @@ static void P_DeathThink(player_t *player)
 		player->playerstate = PST_REBORN;
 	else if (player->lives > 0 && !G_IsSpecialStage(gamemap)) // Don't allow "click to respawn" in special stages!
 	{
-		// Respawn with jump button, force respawn time (3 second default, cheat protected) in shooter modes.
-		if ((cmd->buttons & BT_JUMP) && player->deadtimer > cv_respawntime.value*TICRATE
-			&& gametype != GT_RACE && gametype != GT_COOP)
-			player->playerstate = PST_REBORN;
+		if (gametype == GT_COOP && (netgame || multiplayer) && cv_respawntype.value == 1) // Shamelessly lifted from TD. Thanks, Sryder!
+		{
+			INT32 i, lastdeadplayer = -1, deadtimercheck = INT32_MAX;
+			for (i = 0; i < MAXPLAYERS; i++)
+			{
+				if (!playeringame[i])
+					continue;
 
-		// Instant respawn in race or if you're spectating.
-		if ((cmd->buttons & BT_JUMP) && (gametype == GT_RACE || player->spectator))
-			player->playerstate = PST_REBORN;
+				if (players[i].spectator) // Ignore spectators
+					continue;
 
-		// One second respawn in coop.
-		if ((cmd->buttons & BT_JUMP) && player->deadtimer > TICRATE && (gametype == GT_COOP || gametype == GT_COMPETITION))
-			player->playerstate = PST_REBORN;
+				if (players[i].bot) // ignore dumb, stupid tails
+					continue;
 
-		// Single player auto respawn
-		if (!(netgame || multiplayer) && player->deadtimer > 5*TICRATE)
-			player->playerstate = PST_REBORN;
+				if (players[i].playerstate != PST_DEAD)
+					break;
+
+				if (players[i].lives && players[i].deadtimer < deadtimercheck)
+				{
+					lastdeadplayer = i;
+					deadtimercheck = players[i].deadtimer;
+				}
+			}
+
+			if (i == MAXPLAYERS && lastdeadplayer != -1 && deadtimercheck > 2*TICRATE) // the last killed player will reset the level in G_DoReborn
+				players[lastdeadplayer].playerstate = PST_REBORN;
+		}
+		else
+		{
+			// Respawn with jump button, force respawn time (3 second default, cheat protected) in shooter modes.
+			if (cmd->buttons & BT_JUMP)
+			{
+				if (player->spectator)
+					player->playerstate = PST_REBORN;
+				else switch(gametype) {
+					case GT_COOP:
+					case GT_COMPETITION:
+						if (player->deadtimer > TICRATE)
+							player->playerstate = PST_REBORN;
+						break;
+					case GT_RACE:
+						player->playerstate = PST_REBORN;
+						break;
+					default:
+						if (player->deadtimer > cv_respawntime.value*TICRATE)
+							player->playerstate = PST_REBORN;
+						break;
+				}
+			}
+
+			// Single player auto respawn
+			if (!(netgame || multiplayer) && player->deadtimer > 5*TICRATE)
+				player->playerstate = PST_REBORN;
+		}
 	}
 	else if ((netgame || multiplayer) && player->deadtimer == 8*TICRATE)
 	{
@@ -8130,7 +8168,7 @@ static void P_DeathThink(player_t *player)
 			INT32 i;
 
 			for (i = 0; i < MAXPLAYERS; i++)
-				if (playeringame[i] && !players[i].exiting && players[i].lives > 0)
+				if (playeringame[i] && !players[i].exiting && players[i].lives)
 					break;
 
 			if (i == MAXPLAYERS)
@@ -8147,7 +8185,7 @@ static void P_DeathThink(player_t *player)
 			INT32 i;
 
 			for (i = 0; i < MAXPLAYERS; i++)
-				if (playeringame[i] && (players[i].exiting || players[i].lives > 0))
+				if (playeringame[i] && (players[i].exiting || players[i].lives))
 					break;
 
 			if (i == MAXPLAYERS)
