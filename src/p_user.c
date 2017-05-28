@@ -8194,7 +8194,7 @@ static void P_DeathThink(player_t *player)
 		player->playerstate = PST_REBORN;
 	else if ((player->lives > 0 || j != MAXPLAYERS) && !G_IsSpecialStage(gamemap)) // Don't allow "click to respawn" in special stages!
 	{
-		if (gametype == GT_COOP && (netgame || multiplayer) && cv_respawntype.value == 1) // Shamelessly lifted from TD. Thanks, Sryder!
+		if (gametype == GT_COOP && (netgame || multiplayer) && cv_playstyle.value == 2) // Shamelessly lifted from TD. Thanks, Sryder!
 		{
 			INT32 i, lastdeadplayer = -1, deadtimercheck = INT32_MAX;
 			for (i = 0; i < MAXPLAYERS; i++)

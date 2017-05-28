@@ -1873,7 +1873,7 @@ static void ST_overlayDrawer(void)
 			}
 
 			if (i != MAXPLAYERS)
-				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(BASEVIDHEIGHT/2 + (SHORT(p->height)/2)) + 15, 0, M_GetText("You'll steal a life on respawn."));
+				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(BASEVIDHEIGHT/2 + (SHORT(p->height)/2)) + 14, 0, M_GetText("You'll steal a life on respawn."));
 		}
 	}
 

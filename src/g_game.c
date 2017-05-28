@@ -2592,7 +2592,7 @@ void G_DoReborn(INT32 playernum)
 		// respawn at the start
 		mobj_t *oldmo = NULL;
 
-		if (gametype == GT_COOP && (netgame || multiplayer) && cv_respawntype.value == 1)
+		if (gametype == GT_COOP && (netgame || multiplayer) && cv_playstyle.value == 2)
 		{
 			INT32 i;
 			for (i = 0; i < MAXPLAYERS; i++)
@@ -2702,7 +2702,7 @@ void G_AddPlayer(INT32 playernum)
 			if (!players->exiting)
 				notexiting++;
 
-			if (!(cv_sharedstarposts.value && (gametype == GT_COOP) && (p->starpostnum < players[i].starpostnum)))
+			if (!(cv_playstyle.value && (gametype == GT_COOP) && (p->starpostnum < players[i].starpostnum)))
 				continue;
 
 			p->starposttime = players[i].starposttime;

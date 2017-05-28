@@ -349,12 +349,10 @@ consvar_t cv_maxping = {"maxping", "0", CV_SAVE, CV_Unsigned, NULL, 0, NULL, NUL
 static CV_PossibleValue_t inttime_cons_t[] = {{0, "MIN"}, {3600, "MAX"}, {0, NULL}};
 consvar_t cv_inttime = {"inttime", "10", CV_NETVAR, inttime_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
-consvar_t cv_sharedstarposts = {"sharedstarposts", "On", CV_NETVAR, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+static CV_PossibleValue_t playstyle_cons_t[] = {{0, "Individual"}, {1, "Sharing"}, {2, "Together"}, {0, NULL}};
+consvar_t cv_playstyle = {"playstyle", "Together", CV_NETVAR|CV_CHEAT, playstyle_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
-static CV_PossibleValue_t respawntype_cons_t[] = {{0, "Request"}, {1, "Starpost"}, {0, NULL}};
-consvar_t cv_respawntype = {"respawntype", "Starpost", CV_NETVAR|CV_CHEAT, respawntype_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-
-consvar_t cv_steallives = {"steallives", "On", CV_NETVAR, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_steallives = {"steallives", "Yes", CV_NETVAR, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 static CV_PossibleValue_t advancemap_cons_t[] = {{0, "Off"}, {1, "Next"}, {2, "Random"}, {0, NULL}};
 consvar_t cv_advancemap = {"advancemap", "Next", CV_NETVAR, advancemap_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -514,8 +512,7 @@ void D_RegisterServerCommands(void)
 	CV_RegisterVar(&cv_forceskin);
 	CV_RegisterVar(&cv_downloading);
 
-	CV_RegisterVar(&cv_sharedstarposts);
-	CV_RegisterVar(&cv_respawntype);
+	CV_RegisterVar(&cv_playstyle);
 	CV_RegisterVar(&cv_steallives);
 
 	CV_RegisterVar(&cv_specialrings);
