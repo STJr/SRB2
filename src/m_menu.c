@@ -1388,31 +1388,35 @@ static menuitem_t OP_ServerOptionsMenu[] =
 	{IT_STRING | IT_CVAR,    NULL, "Item respawn delay",               &cv_itemrespawntime,     76},
 	{IT_STRING | IT_SUBMENU, NULL, "Random Item Box Toggles...",       &OP_MonitorToggleDef,    81},
 
-	{IT_HEADER, NULL, "Platform (Coop, Race, Competition)", NULL, 90},
+	{IT_HEADER, NULL, "Cooperative", NULL, 90},
 	{IT_STRING | IT_CVAR,    NULL, "Players required for exit",        &cv_playersforexit,      96},
-	{IT_STRING | IT_CVAR,    NULL, "Level completion countdown",       &cv_countdowntime,      101},
-	{IT_STRING | IT_CVAR,    NULL, "Item Boxes",                       &cv_competitionboxes,   106},
+	{IT_STRING | IT_CVAR,    NULL, "Respawn mechanic",                 &cv_respawntype,        101},
+	{IT_STRING | IT_CVAR,    NULL, "Shared starposts",                 &cv_sharedstarposts,    106},
 
-	{IT_HEADER, NULL, "Ringslinger (Match, CTF, Tag, H&S)", NULL, 115},
-	{IT_STRING | IT_CVAR,    NULL, "Time Limit",                       &cv_timelimit,          121},
-	{IT_STRING | IT_CVAR,    NULL, "Score Limit",                      &cv_pointlimit,         126},
-	{IT_STRING | IT_CVAR,    NULL, "Overtime on Tie",                  &cv_overtime,           131},
-	{IT_STRING | IT_CVAR,    NULL, "Player respawn delay",             &cv_respawntime,        136},
+	{IT_HEADER, NULL, "Race, Competition", NULL, 115},
+	{IT_STRING | IT_CVAR,    NULL, "Level completion countdown",       &cv_countdowntime,      121},
+	{IT_STRING | IT_CVAR,    NULL, "Item Boxes",                       &cv_competitionboxes,   126},
 
-	{IT_STRING | IT_CVAR,    NULL, "Item Boxes",                       &cv_matchboxes,         146},
-	{IT_STRING | IT_CVAR,    NULL, "Weapon Rings",                     &cv_specialrings,       151},
-	{IT_STRING | IT_CVAR,    NULL, "Power Stones",                     &cv_powerstones,        156},
+	{IT_HEADER, NULL, "Ringslinger (Match, CTF, Tag, H&S)", NULL, 135},
+	{IT_STRING | IT_CVAR,    NULL, "Time Limit",                       &cv_timelimit,          141},
+	{IT_STRING | IT_CVAR,    NULL, "Score Limit",                      &cv_pointlimit,         146},
+	{IT_STRING | IT_CVAR,    NULL, "Overtime on Tie",                  &cv_overtime,           151},
+	{IT_STRING | IT_CVAR,    NULL, "Player respawn delay",             &cv_respawntime,        156},
 
-	{IT_STRING | IT_CVAR,    NULL, "Flag respawn delay",               &cv_flagtime,           166},
-	{IT_STRING | IT_CVAR,    NULL, "Hiding time",                      &cv_hidetime,           171},
+	{IT_STRING | IT_CVAR,    NULL, "Item Boxes",                       &cv_matchboxes,         166},
+	{IT_STRING | IT_CVAR,    NULL, "Weapon Rings",                     &cv_specialrings,       171},
+	{IT_STRING | IT_CVAR,    NULL, "Power Stones",                     &cv_powerstones,        176},
 
-	{IT_STRING | IT_CVAR,    NULL, "Autobalance Teams",                &cv_autobalance,        181},
-	{IT_STRING | IT_CVAR,    NULL, "Scramble Teams on Map Change",     &cv_scrambleonchange,   186},
+	{IT_STRING | IT_CVAR,    NULL, "Flag respawn delay",               &cv_flagtime,           186},
+	{IT_STRING | IT_CVAR,    NULL, "Hiding time",                      &cv_hidetime,           191},
+
+	{IT_STRING | IT_CVAR,    NULL, "Autobalance Teams",                &cv_autobalance,        201},
+	{IT_STRING | IT_CVAR,    NULL, "Scramble Teams on Map Change",     &cv_scrambleonchange,   206},
 
 #ifndef NONET
-	{IT_HEADER, NULL, "Advanced", NULL, 195},
-	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "Master server",        &cv_masterserver,        201},
-	{IT_STRING | IT_CVAR,    NULL, "Attempts to resynchronise",        &cv_resynchattempts,     215},
+	{IT_HEADER, NULL, "Advanced", NULL, 215},
+	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "Master server",        &cv_masterserver,        221},
+	{IT_STRING | IT_CVAR,    NULL, "Attempts to resynchronise",        &cv_resynchattempts,     235},
 #endif
 };
 
