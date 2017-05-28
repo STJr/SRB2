@@ -933,11 +933,14 @@ void P_GivePlayerRings(player_t *player, INT32 num_rings)
 
 		if (gainlives)
 		{
-			INT32 i;
 			if (!((netgame || multiplayer) && gametype == GT_COOP))
+			{
 				P_GivePlayerLives(player, gainlives);
 				P_PlayLivesJingle(player);
+			}
 			else
+			{
+				INT32 i;
 				for (i = 0; i < MAXPLAYERS; i++)
 				{
 					if (!playeringame[i])
@@ -952,6 +955,7 @@ void P_GivePlayerRings(player_t *player, INT32 num_rings)
 					P_GivePlayerLives(&players[i], gainlives);
 					P_PlayLivesJingle(&players[i]);
 				}
+			}
 		}
 	}
 }

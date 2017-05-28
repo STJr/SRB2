@@ -3287,8 +3287,10 @@ void A_ExtraLife(mobj_t *actor)
 	else
 	{
 		if (!((netgame || multiplayer) && gametype == GT_COOP))
+		{
 			P_GivePlayerLives(player, 1);
 			P_PlayLivesJingle(player);
+		}
 		else
 		{
 			INT32 i;
