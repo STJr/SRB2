@@ -933,8 +933,25 @@ void P_GivePlayerRings(player_t *player, INT32 num_rings)
 
 		if (gainlives)
 		{
-			P_GivePlayerLives(player, gainlives);
-			P_PlayLivesJingle(player);
+			INT32 i;
+			if (!((netgame || multiplayer) && gametype == GT_COOP))
+				P_GivePlayerLives(player, gainlives);
+				P_PlayLivesJingle(player);
+			else
+				for (i = 0; i < MAXPLAYERS; i++)
+				{
+					if (!playeringame[i])
+						continue;
+
+					if ((netgame || multiplayer) && players[i].spectator) // Ignore spectators
+						continue;
+
+					if (players[i].bot)
+						continue;
+
+					P_GivePlayerLives(&players[i], gainlives);
+					P_PlayLivesJingle(&players[i]);
+				}
 		}
 	}
 }
