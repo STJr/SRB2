@@ -1733,9 +1733,7 @@ static boolean CL_ServerConnectionSearchTicker(boolean viams, tic_t *asksent)
 {
 #ifndef NONET
 	INT32 i;
-#endif
 
-#ifndef NONET
 	// serverlist is updated by GetPacket function
 	if (serverlistcount > 0)
 	{
@@ -1769,7 +1767,20 @@ static boolean CL_ServerConnectionSearchTicker(boolean viams, tic_t *asksent)
 				serverlist[i].info.fileneeded);
 			CONS_Printf(M_GetText("Checking files...\n"));
 			i = CL_CheckFiles();
-			if (i == 2) // cannot join for some reason
+			if (i == 3) // too many files
+			{
+				D_QuitNetGame();
+				CL_Reset();
+				D_StartTitle();
+				M_StartMessage(M_GetText(
+					"You have too many WAD files loaded\n"
+					"to add ones the server is using.\n"
+					"Please restart SRB2 before connecting.\n\n"
+					"Press ESC\n"
+				), NULL, MM_NOTHING);
+				return false;
+			}
+			else if (i == 2) // cannot join for some reason
 			{
 				D_QuitNetGame();
 				CL_Reset();
