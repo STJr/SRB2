@@ -117,6 +117,7 @@ const char *W_CheckNameForNum(lumpnum_t lumpnum);
 UINT16 W_CheckNumForNamePwad(const char *name, UINT16 wad, UINT16 startlump); // checks only in one pwad
 
 UINT16 W_CheckNumForFullNamePK3(const char *name, UINT16 wad, UINT16 startlump);
+UINT16 W_CheckNumForFolderStartPK3(const char *name, UINT16 wad, UINT16 startlump);
 UINT16 W_CheckNumForFolderEndPK3(const char *name, UINT16 wad, UINT16 startlump);
 
 lumpnum_t W_CheckNumForMap(const char *name);

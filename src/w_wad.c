@@ -175,18 +175,18 @@ FILE *W_OpenWadFile(const char **filename, boolean useerrors)
 static inline void W_LoadDehackedLumpsPK3(UINT16 wadnum)
 {
 	UINT16 posStart, posEnd;
-	posStart = W_CheckNumForFullNamePK3("Lua/", wadnum, 0);
+	posStart = W_CheckNumForFolderStartPK3("Lua/", wadnum, 0);
 	if (posStart != INT16_MAX)
 	{
 		posEnd = W_CheckNumForFolderEndPK3("Lua/", wadnum, posStart);
-		for (++posStart; posStart < posEnd; posStart++)
+		for (posStart; posStart < posEnd; posStart++)
 			LUA_LoadLump(wadnum, posStart);
 	}
-	posStart = W_CheckNumForFullNamePK3("SOCs/", wadnum, 0);
+	posStart = W_CheckNumForFolderStartPK3("SOCs/", wadnum, 0);
 	if (posStart != INT16_MAX)
 	{
 		posEnd = W_CheckNumForFolderEndPK3("SOCs/", wadnum, posStart);
-		for(++posStart; posStart < posEnd; posStart++)
+		for(posStart; posStart < posEnd; posStart++)
 			DEH_LoadDehackedLumpPwad(wadnum, posStart);
 	}
 }
@@ -430,7 +430,7 @@ UINT16 W_InitFile(const char *filename)
 		size = ftell(handle);
 		CONS_Debug(DBG_SETUP, "PK3 size is: %ld\n", size);
 
-		// We must look for the central directory through the file.
+		// We must look for the central directory through the file. (Thanks to JTE for this algorithm.)
 		// All of the central directory entry headers have a signature of 0x50 0x4b 0x01 0x02.
 		// The first entry found means the beginning of the central directory.
 		rewind(handle);
@@ -502,6 +502,11 @@ UINT16 W_InitFile(const char *filename)
 
 				eName = malloc(sizeof(char)*(eNameLen + 1));
 				fgets(eName, eNameLen + 1, handle);
+
+				// Don't load lump if folder.
+				if (*(eName + eNameLen - 1) == '/')
+					continue;
+
 				if (numlumps == 0) // First lump? Let's allocate the first lumpinfo block.
 					lumpinfo = Z_Malloc(sizeof(*lumpinfo), PU_STATIC, NULL);
 				else // Otherwise, reallocate and increase by 1. Might not be optimal, though...
@@ -558,7 +563,6 @@ UINT16 W_InitFile(const char *filename)
 					lumpinfo[numlumps].compression = CM_UNSUPPORTED;
 					break;
 				}
-				CONS_Printf("File %s, Shortname %s, data begins at: %ld\n", eName, lumpinfo[numlumps].name, lumpinfo[numlumps].position);
 				CONS_Debug(DBG_SETUP, "File %s, data begins at: %ld\n", eName, lumpinfo[numlumps].position);
 				fseek(handle, eXFieldLen + eCommentLen, SEEK_CUR); // We skip to where we expect the next central directory entry or end marker to be.
 				numlumps++;
@@ -569,7 +573,7 @@ UINT16 W_InitFile(const char *filename)
 			{
 				CONS_Debug(DBG_SETUP, "Central directory end signature found at: %ld\n", ftell(handle));
 
-				// We will create a "virtual" marker lump at the very end of lumpinfo for convenience.
+				/*// We will create a "virtual" marker lump at the very end of lumpinfo for convenience.
 				// This marker will be used by the different lump-seeking (eg. textures, sprites, etc.) in PK3-specific cases in an auxiliary way.
 				lumpinfo = (lumpinfo_t*) Z_Realloc(lumpinfo, (numlumps + 1)*sizeof(*lumpinfo), PU_STATIC, NULL);
 				strcpy(lumpinfo[numlumps].name, "PK3_ENDM\0");
@@ -579,7 +583,7 @@ UINT16 W_InitFile(const char *filename)
 				lumpinfo[numlumps].size = 0;
 				lumpinfo[numlumps].disksize = 0;
 				lumpinfo[numlumps].compression = CM_NONE;
-				numlumps++;
+				numlumps++;*/
 				break;
 			}
 			// ... None of them? We're only expecting either a central directory signature entry or the central directory end signature.
@@ -858,6 +862,19 @@ UINT16 W_CheckNumForNamePwad(const char *name, UINT16 wad, UINT16 startlump)
 	return INT16_MAX;
 }
 
+// Look for the first lump from a folder.
+UINT16 W_CheckNumForFolderStartPK3(const char *name, UINT16 wad, UINT16 startlump)
+{
+	INT32 i;
+	lumpinfo_t *lump_p = wadfiles[wad]->lumpinfo + startlump;
+	for (i = startlump; i < wadfiles[wad]->numlumps; i++, lump_p++)
+	{
+		if (strnicmp(name, lump_p->name2, strlen(name)) == 0)
+			break;
+	}
+	return i;
+}
+
 // In a PK3 type of resource file, it looks for the next lumpinfo entry that doesn't share the specified pathfile.
 // Useful for finding folder ends.
 // Returns the position of the lumpinfo entry.
@@ -947,7 +964,7 @@ lumpnum_t W_CheckNumForMap(const char *name)
 		}
 		else if (wadfiles[i]->type == RET_PK3)
 		{
-			lumpNum = W_CheckNumForFullNamePK3("maps/", i, 0);
+			lumpNum = W_CheckNumForFolderStartPK3("maps/", i, 0);
 			if (lumpNum != INT16_MAX)
 				end = W_CheckNumForFolderEndPK3("maps/", i, lumpNum);
 			else

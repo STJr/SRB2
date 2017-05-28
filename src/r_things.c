@@ -415,15 +415,13 @@ void R_AddSpriteDefs(UINT16 wadnum)
 		start = W_CheckNumForNamePwad("S_START", wadnum, 0);
 		if (start == UINT16_MAX)
 			start = W_CheckNumForNamePwad("SS_START", wadnum, 0); //deutex compatib.
+		if (start == UINT16_MAX)
+			start = 0; //let say S_START is lump 0
+		else
+			start++;   // just after S_START
 	}
 	else if (wadfiles[wadnum]->type == RET_PK3)
-		start = W_CheckNumForFullNamePK3("Sprites/", wadnum, 0);
-
-	if (start == UINT16_MAX)
-		start = 0; //let say S_START is lump 0
-	else
-		start++;   // just after S_START
-
+		start = W_CheckNumForFolderStartPK3("Sprites/", wadnum, 0);
 
 	// ignore skin wads (we don't want skin sprites interfering with vanilla sprites)
 	if (start == 0 && W_CheckNumForNamePwad("S_SKIN", wadnum, 0) != UINT16_MAX)

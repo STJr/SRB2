@@ -569,20 +569,23 @@ void R_LoadTextures(void)
 	{
 		if (wadfiles[w]->type == RET_PK3)
 		{
-			texstart = W_CheckNumForFullNamePK3("textures/", (UINT16)w, 0) + 1;
+			texstart = W_CheckNumForFolderStartPK3("textures/", (UINT16)w, 0);
 			texend = W_CheckNumForFolderEndPK3("textures/", (UINT16)w, texstart);
-			texturesLumpPos = W_CheckNumForFullNamePK3("textures", (UINT16)w, 0);
+			texturesLumpPos = W_CheckNumForFullNamePK3("TEXTURES", (UINT16)w, 0);
+			while (texturesLumpPos != INT16_MAX)
+			{
+				CONS_Printf("AAA\n");
+				numtextures += R_CountTexturesInTEXTURESLump((UINT16)w, (UINT16)texturesLumpPos);
+				texturesLumpPos = W_CheckNumForFullNamePK3("TEXTURES", (UINT16)w, texturesLumpPos + 1);
+			}
 		}
 		else
 		{
 			texstart = W_CheckNumForNamePwad(TX_START, (UINT16)w, 0) + 1;
 			texend = W_CheckNumForNamePwad(TX_END, (UINT16)w, 0);
 			texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, 0);
-		}
-
-		if (texturesLumpPos != INT16_MAX)
-		{
-			numtextures += R_CountTexturesInTEXTURESLump((UINT16)w, (UINT16)texturesLumpPos);
+			if (texturesLumpPos != INT16_MAX)
+				numtextures += R_CountTexturesInTEXTURESLump((UINT16)w, (UINT16)texturesLumpPos);
 		}
 
 		// Add all the textures between TX_START and TX_END
@@ -597,7 +600,6 @@ void R_LoadTextures(void)
 			I_Error("No textures detected in any WADs!\n");
 		}
 	}
-	CONS_Printf("We got a number of %d textures.\n", numtextures);
 	// Allocate memory and initialize to 0 for all the textures we are initialising.
 	// There are actually 5 buffers allocated in one for convenience.
 	textures = Z_Calloc((numtextures * sizeof(void *)) * 5, PU_STATIC, NULL);
@@ -621,19 +623,23 @@ void R_LoadTextures(void)
 		// Get the lump numbers for the markers in the WAD, if they exist.
 		if (wadfiles[w]->type == RET_PK3)
 		{
-			texstart = W_CheckNumForFullNamePK3("textures/", (UINT16)w, 0) + 1;
+			texstart = W_CheckNumForFolderStartPK3("textures/", (UINT16)w, 0);
 			texend = W_CheckNumForFolderEndPK3("textures/", (UINT16)w, texstart);
-			texturesLumpPos = W_CheckNumForFullNamePK3("textures", (UINT16)w, 0);
+			texturesLumpPos = W_CheckNumForFullNamePK3("TEXTURES", (UINT16)w, 0);
+			while (texturesLumpPos != INT16_MAX)
+			{
+				R_ParseTEXTURESLump(w, texturesLumpPos, &i);
+				texturesLumpPos = W_CheckNumForFullNamePK3("TEXTURES", (UINT16)w, texturesLumpPos + 1);
+			}
 		}
 		else
 		{
 			texstart = W_CheckNumForNamePwad(TX_START, (UINT16)w, 0) + 1;
 			texend = W_CheckNumForNamePwad(TX_END, (UINT16)w, 0);
 			texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, 0);
+			if (texturesLumpPos != INT16_MAX)
+				R_ParseTEXTURESLump(w, texturesLumpPos, &i);
 		}
-
-		if (texturesLumpPos != INT16_MAX)
-			R_ParseTEXTURESLump(w, texturesLumpPos, &i);
 
 		if (texstart == INT16_MAX || texend == INT16_MAX)
 			continue;
@@ -1229,7 +1235,7 @@ lumpnum_t R_GetFlatNumForName(const char *name)
 		}
 		else if (wadfiles[i]->type == RET_PK3)
 		{
-			start = W_CheckNumForFullNamePK3("Flats/", i, 0);
+			start = W_CheckNumForFolderStartPK3("Flats/", i, 0);
 			if (start == INT16_MAX)
 				continue;
 			end = W_CheckNumForFolderEndPK3("Flats/", i, start);
