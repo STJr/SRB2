@@ -8199,7 +8199,7 @@ static void P_DeathThink(player_t *player)
 	&& (netgame || multiplayer)
 	&& (player->lives <= 0))
 	{
-		for (; j < MAXPLAYERS; j++)
+		for (j = 0; j < MAXPLAYERS; j++)
 		{
 			if (!playeringame[j])
 				continue;
