@@ -3216,7 +3216,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 					}
 				}
 
-				if (mo->health && !P_CheckDeathPitCollide(mo))
+				if (mo->health && !mo->player->spectator && !P_CheckDeathPitCollide(mo))
 				{
 					if (mo->player->pflags & PF_GLIDING) // ground gliding
 					{
