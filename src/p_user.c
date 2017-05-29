@@ -955,11 +955,11 @@ void P_GivePlayerLives(player_t *player, INT32 numlives)
 		player->lives = 1;
 }
 
-void P_GiveCoopLives(player_t player, INT32 numlives, boolean sound)
+void P_GiveCoopLives(player_t *player, INT32 numlives, boolean sound)
 {
 	if (!((netgame || multiplayer) && gametype == GT_COOP && cv_playstyle.value))
 	{
-		P_GivePlayerLives(player, 1);
+		P_GivePlayerLives(player, numlives);
 		if (sound)
 			P_PlayLivesJingle(player);
 	}
@@ -971,7 +971,7 @@ void P_GiveCoopLives(player_t player, INT32 numlives, boolean sound)
 			if (!playeringame[i])
 				continue;
 
-			P_GivePlayerLives(&players[i], 1);
+			P_GivePlayerLives(&players[i], numlives);
 			if (sound)
 				P_PlayLivesJingle(&players[i]);
 		}
