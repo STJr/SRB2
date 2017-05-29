@@ -244,6 +244,7 @@ FUNCPRINTF void DBG_Printf(const char *lpFmt, ...)
 #define pglMaterialfv glMaterialfv
 
 /* Raster functions */
+#define pglPixelStorei glPixelStorei
 #define pglReadPixels glReadPixels
 
 /* Texture mapping */
@@ -365,6 +366,8 @@ typedef void (APIENTRY * PFNglMaterialfv) (GLint face, GLenum pname, GLfloat *pa
 static PFNglMaterialfv pglMaterialfv;
 
 /* Raster functions */
+typedef void (APIENTRY * PFNglPixelStorei) (GLenum pname, GLint param);
+static PFNglPixelStorei pglPixelStorei;
 typedef void (APIENTRY  * PFNglReadPixels) (GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, GLvoid *pixels);
 static PFNglReadPixels pglReadPixels;
 
@@ -494,6 +497,7 @@ boolean SetupGLfunc(void)
 	GETOPENGLFUNC(pglLightModelfv , glLightModelfv)
 	GETOPENGLFUNC(pglMaterialfv , glMaterialfv)
 
+	GETOPENGLFUNC(pglPixelStorei , glPixelStorei)
 	GETOPENGLFUNC(pglReadPixels , glReadPixels)
 
 	GETOPENGLFUNC(pglTexEnvi , glTexEnvi)
@@ -897,7 +901,9 @@ EXPORT void HWRAPI(ReadRect) (INT32 x, INT32 y, INT32 width, INT32 height,
 		GLubyte*top = (GLvoid*)dst_data, *bottom = top + dst_stride * (height - 1);
 		GLubyte *row = malloc(dst_stride);
 		if (!row) return;
+		pglPixelStorei(GL_PACK_ALIGNMENT, 1);
 		pglReadPixels(x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, dst_data);
+		pglPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 		for(i = 0; i < height/2; i++)
 		{
 			memcpy(row, top, dst_stride);
@@ -913,7 +919,9 @@ EXPORT void HWRAPI(ReadRect) (INT32 x, INT32 y, INT32 width, INT32 height,
 		INT32 j;
 		GLubyte *image = malloc(width*height*3*sizeof (*image));
 		if (!image) return;
+		pglPixelStorei(GL_PACK_ALIGNMENT, 1);
 		pglReadPixels(x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, image);
+		pglPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 		for (i = height-1; i >= 0; i--)
 		{
 			for (j = 0; j < width; j++)
