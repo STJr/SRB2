@@ -9086,7 +9086,9 @@ void P_SpawnPlayer(INT32 playernum)
 	{
 		// Special case for (NiGHTS) special stages!
 		// if stage has already started, force players to become spectators until the next stage
-		if (multiplayer && netgame && G_IsSpecialStage(gamemap) && useNightsSS && leveltime > 0)
+		if (((multiplayer || netgame) && leveltime > 0)
+		&& ((G_IsSpecialStage(gamemap) && useNightsSS)
+		|| (gametype == GT_COOP && cv_playstyle.value == 2 && (p->jointime < 1 || p->spectator))))
 			p->spectator = true;
 		else
 			p->spectator = false;
@@ -9133,6 +9135,9 @@ void P_SpawnPlayer(INT32 playernum)
 		else if (p->ctfteam == 2)
 			p->skincolor = skincolor_blueteam;
 	}
+
+	if ((netgame || multiplayer) && !p->spectator)
+		p->powers[pw_flashing] = flashingtics-1; // Babysitting deterrent
 
 	mobj = P_SpawnMobj(0, 0, 0, MT_PLAYER);
 	(mobj->player = p)->mo = mobj;

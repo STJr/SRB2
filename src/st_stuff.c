@@ -742,9 +742,6 @@ static void ST_drawLives(void)
 			if (!playeringame[i])
 				continue;
 
-			if (players[i].spectator) // Ignore spectators
-				continue;
-
 			if (&players[i] == stplyr)
 				continue;
 
@@ -1862,9 +1859,6 @@ static void ST_overlayDrawer(void)
 				if (!playeringame[i])
 					continue;
 
-				if (players[i].spectator) // Ignore spectators
-					continue;
-
 				if (&players[i] == stplyr)
 					continue;
 
@@ -1988,7 +1982,7 @@ static void ST_overlayDrawer(void)
 				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132), V_HUDTRANSHALF, M_GetText("Press Fire to be assigned to a team."));
 			else if (G_IsSpecialStage(gamemap) && useNightsSS)
 				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132), V_HUDTRANSHALF, M_GetText("You cannot join the game until the stage has ended."));
-			else
+			else if (!gametype == GT_COOP)
 				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132), V_HUDTRANSHALF, M_GetText("Press Fire to enter the game."));
 			V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(148), V_HUDTRANSHALF, M_GetText("Press F12 to watch another player."));
 			V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(164), V_HUDTRANSHALF, M_GetText("Press Jump to float and Spin to sink."));

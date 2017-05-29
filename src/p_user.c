@@ -946,12 +946,6 @@ void P_GivePlayerRings(player_t *player, INT32 num_rings)
 					if (!playeringame[i])
 						continue;
 
-					if ((netgame || multiplayer) && players[i].spectator) // Ignore spectators
-						continue;
-
-					if (players[i].bot)
-						continue;
-
 					P_GivePlayerLives(&players[i], gainlives);
 					P_PlayLivesJingle(&players[i]);
 				}
@@ -8119,9 +8113,6 @@ boolean P_GetLives(player_t *player)
 		if (!playeringame[i])
 			continue;
 
-		if (players[i].spectator) // Ignore spectators
-			continue;
-
 		if (players[i].lives > livescheck)
 		{
 			maxlivesplayer = i;
@@ -8141,6 +8132,41 @@ boolean P_GetLives(player_t *player)
 		return true;
 	}
 	return false;
+}
+
+//
+// P_ConsiderAllGone
+// Shamelessly lifted from TD. Thanks, Sryder!
+//
+
+static void P_ConsiderAllGone(void)
+{
+	INT32 i, lastdeadplayer = -1, deadtimercheck = INT32_MAX;
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (!playeringame[i])
+			continue;
+
+		if (players[i].playerstate != PST_DEAD && !players[i].spectator && players[i].mo && players[i].mo->health)
+			break;
+
+		if (players[i].lives > 0)
+		{
+			if (players[i].spectator && lastdeadplayer == -1)
+				;
+			else if (players[i].deadtimer < deadtimercheck)
+				deadtimercheck = players[i].deadtimer;
+			else
+				continue;
+			lastdeadplayer = i;
+		}
+	}
+
+	if (i == MAXPLAYERS && lastdeadplayer != -1 && deadtimercheck > 2*TICRATE) // the last killed player will reset the level in G_DoReborn
+	{
+		players[lastdeadplayer].spectator = true;
+		players[lastdeadplayer].playerstate = PST_REBORN;
+	}
 }
 
 //
@@ -8173,15 +8199,9 @@ static void P_DeathThink(player_t *player)
 	&& (netgame || multiplayer)
 	&& (player->lives <= 0))
 	{
-		for (j = 0; j < MAXPLAYERS; j++)
+		for (; j < MAXPLAYERS; j++)
 		{
 			if (!playeringame[j])
-				continue;
-
-			if (players[j].spectator) // Ignore spectators
-				continue;
-
-			if (players[j].bot) // ignore dumb, stupid tails
 				continue;
 
 			if (players[j].lives > 1)
@@ -8195,38 +8215,18 @@ static void P_DeathThink(player_t *player)
 	else if ((player->lives > 0 || j != MAXPLAYERS) && !G_IsSpecialStage(gamemap)) // Don't allow "click to respawn" in special stages!
 	{
 		if (gametype == GT_COOP && (netgame || multiplayer) && cv_playstyle.value == 2) // Shamelessly lifted from TD. Thanks, Sryder!
-		{
-			INT32 i, lastdeadplayer = -1, deadtimercheck = INT32_MAX;
-			for (i = 0; i < MAXPLAYERS; i++)
+			P_ConsiderAllGone();
+			if ((player->deadtimer > 5*TICRATE) || ((cmd->buttons & BT_JUMP) && (player->deadtimer > TICRATE)))
 			{
-				if (!playeringame[i])
-					continue;
-
-				if (players[i].spectator) // Ignore spectators
-					continue;
-
-				if (players[i].bot) // ignore dumb, stupid tails
-					continue;
-
-				if (players[i].playerstate != PST_DEAD)
-					break;
-
-				if (players[i].lives && players[i].deadtimer < deadtimercheck)
-				{
-					lastdeadplayer = i;
-					deadtimercheck = players[i].deadtimer;
-				}
+				player->spectator = true;
+				player->playerstate = PST_REBORN;
 			}
-
-			if (i == MAXPLAYERS && lastdeadplayer != -1 && deadtimercheck > 2*TICRATE) // the last killed player will reset the level in G_DoReborn
-				players[lastdeadplayer].playerstate = PST_REBORN;
-		}
 		else
 		{
 			// Respawn with jump button, force respawn time (3 second default, cheat protected) in shooter modes.
 			if (cmd->buttons & BT_JUMP)
 			{
-				if (player->spectator)
+				if (gametype != GT_COOP && player->spectator)
 					player->playerstate = PST_REBORN;
 				else switch(gametype) {
 					case GT_COOP:
@@ -8254,33 +8254,39 @@ static void P_DeathThink(player_t *player)
 	}
 	else if ((netgame || multiplayer) && player->deadtimer == 8*TICRATE)
 	{
+
+		INT32 i, deadtimercheck = INT32_MAX;
+
 		// In a net/multiplayer game, and out of lives
 		if (gametype == GT_COMPETITION)
 		{
-			INT32 i;
-
 			for (i = 0; i < MAXPLAYERS; i++)
+			{
 				if (playeringame[i] && !players[i].exiting && players[i].lives)
 					break;
+				if (players[i].deadtimer < deadtimercheck)
+					deadtimercheck = players[i].deadtimer;
+			}
 
-			if (i == MAXPLAYERS)
+			if (i == MAXPLAYERS && deadtimercheck == 8*TICRATE)
 			{
 				// Everyone's either done with the race, or dead.
 				if (!countdown2 || countdown2 > 1*TICRATE)
 					countdown2 = 1*TICRATE;
 			}
 		}
-
 		// In a coop game, and out of lives
-		if (gametype == GT_COOP)
+		else if (gametype == GT_COOP)
 		{
-			INT32 i;
-
 			for (i = 0; i < MAXPLAYERS; i++)
+			{
 				if (playeringame[i] && (players[i].exiting || players[i].lives))
 					break;
+				if (players[i].deadtimer < deadtimercheck)
+					deadtimercheck = players[i].deadtimer;
+			}
 
-			if (i == MAXPLAYERS)
+			if (i == MAXPLAYERS && deadtimercheck == 8*TICRATE)
 			{
 				// They're dead, Jim.
 				//nextmapoverride = spstage_start;
@@ -8991,16 +8997,9 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	return (x == thiscam->x && y == thiscam->y && z == thiscam->z && angle == thiscam->aiming);
 }
 
-static boolean P_SpectatorJoinGame(player_t *player)
+boolean P_SpectatorJoinGame(player_t *player)
 {
-	if (!G_GametypeHasSpectators() && G_IsSpecialStage(gamemap) && useNightsSS) // Special Stage spectators should NEVER be allowed to rejoin the game
-	{
-		if (P_IsLocalPlayer(player))
-			CONS_Printf(M_GetText("You cannot enter the game while a special stage is in progress.\n"));
-		player->powers[pw_flashing] += 2*TICRATE; //to prevent message spam.
-	}
-
-	else if (!cv_allowteamchange.value)
+	if (gametype != GT_COOP && !cv_allowteamchange.value)
 	{
 		if (P_IsLocalPlayer(player))
 			CONS_Printf(M_GetText("Server does not allow team change.\n"));
@@ -9088,7 +9087,8 @@ static boolean P_SpectatorJoinGame(player_t *player)
 			if (P_IsLocalPlayer(player) && displayplayer != consoleplayer)
 				displayplayer = consoleplayer;
 
-			CONS_Printf(M_GetText("%s entered the game.\n"), player_names[player-players]);
+			if (gametype != GT_COOP)
+				CONS_Printf(M_GetText("%s entered the game.\n"), player_names[player-players]);
 			return true; // no more player->mo, cannot continue.
 		}
 		else
@@ -9401,6 +9401,8 @@ void P_PlayerThink(player_t *player)
 
 	if (!player->spectator)
 		P_PlayerInSpecialSector(player);
+	else if (gametype == GT_COOP && (netgame || multiplayer) && cv_playstyle.value == 2)
+		P_ConsiderAllGone();
 
 	if (player->playerstate == PST_DEAD)
 	{
@@ -9446,7 +9448,11 @@ void P_PlayerThink(player_t *player)
 			player->realtime = leveltime;
 	}
 
-	if ((netgame || splitscreen) && player->spectator && cmd->buttons & BT_ATTACK && !player->powers[pw_flashing])
+	if ((netgame || splitscreen) && player->spectator && cmd->buttons & BT_ATTACK && !player->powers[pw_flashing]
+	&& (G_GametypeHasSpectators()
+	|| !((G_IsSpecialStage(gamemap) && useNightsSS)
+	|| (gametype == GT_COOP && cv_playstyle.value == 2)
+	)))
 	{
 		if (P_SpectatorJoinGame(player))
 			return; // player->mo was removed.

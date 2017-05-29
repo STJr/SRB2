@@ -3299,12 +3299,6 @@ void A_ExtraLife(mobj_t *actor)
 				if (!playeringame[i])
 					continue;
 
-				if ((netgame || multiplayer) && players[i].spectator) // Ignore spectators
-					continue;
-
-				if (players[i].bot)
-					continue;
-
 				P_GivePlayerLives(&players[i], 1);
 				P_PlayLivesJingle(&players[i]);
 			}

@@ -199,6 +199,7 @@ void P_PlayLivesJingle(player_t *player);
 #define P_PlayVictorySound(s)	S_StartSound(s, sfx_victr1 + P_RandomKey(4));
 
 boolean P_GetLives(player_t *player);
+boolean P_SpectatorJoinGame(player_t *player);
 
 //
 // P_MOBJ

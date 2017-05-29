@@ -1309,8 +1309,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 						players[i].starpostangle = special->angle;
 						players[i].starpostnum = special->health;
 
-						if (cv_playstyle.value == 2 && (P_GetLives(&players[i]) || players[i].lives > 0) && players[i].playerstate == PST_DEAD)
-							players[i].playerstate = PST_REBORN;
+						if (cv_playstyle.value == 2 && (P_GetLives(&players[i]) || players[i].lives > 0) && (players[i].playerstate == PST_DEAD || players[i].spectator))
+							P_SpectatorJoinGame(&players[i]); //players[i].playerstate = PST_REBORN;
 					}
 				}
 				S_StartSound(NULL, special->info->painsound);

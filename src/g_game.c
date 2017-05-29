@@ -2205,8 +2205,8 @@ void G_PlayerReborn(INT32 player)
 	p->rings = 0; // 0 rings
 	p->panim = PA_IDLE; // standing animation
 
-	if ((netgame || multiplayer) && !p->spectator)
-		p->powers[pw_flashing] = flashingtics-1; // Babysitting deterrent
+	//if ((netgame || multiplayer) && !p->spectator) -- moved into P_SpawnPlayer to account for forced changes there
+		//p->powers[pw_flashing] = flashingtics-1; // Babysitting deterrent
 
 	if (p-players == consoleplayer)
 	{
@@ -2597,16 +2597,11 @@ void G_DoReborn(INT32 playernum)
 			INT32 i;
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
-				if (!(playeringame[i] && players[i].playerstate == PST_LIVE))
+				if (!playeringame[i])
 					continue;
 
-				if (players[i].spectator) // Ignore spectators
-					continue;
-
-				if (players[i].bot) // ignore dumb, stupid tails
-					continue;
-
-				break;
+				if (players[i].playerstate != PST_DEAD && !players[i].spectator && players[i].mo && players[i].mo->health)
+					break;
 			}
 			if (i == MAXPLAYERS)
 			{
