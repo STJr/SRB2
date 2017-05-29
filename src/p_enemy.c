@@ -3285,25 +3285,7 @@ void A_ExtraLife(mobj_t *actor)
 		P_PlayLivesJingle(player);
 	}
 	else
-	{
-		if (!((netgame || multiplayer) && gametype == GT_COOP))
-		{
-			P_GivePlayerLives(player, 1);
-			P_PlayLivesJingle(player);
-		}
-		else
-		{
-			INT32 i;
-			for (i = 0; i < MAXPLAYERS; i++)
-			{
-				if (!playeringame[i])
-					continue;
-
-				P_GivePlayerLives(&players[i], 1);
-				P_PlayLivesJingle(&players[i]);
-			}
-		}
-	}
+		P_GiveCoopLives(player, 1, true);
 }
 
 // Function: A_BombShield

@@ -933,23 +933,8 @@ void P_GivePlayerRings(player_t *player, INT32 num_rings)
 
 		if (gainlives)
 		{
-			if (!((netgame || multiplayer) && gametype == GT_COOP))
-			{
-				P_GivePlayerLives(player, gainlives);
-				P_PlayLivesJingle(player);
-			}
-			else
-			{
-				INT32 i;
-				for (i = 0; i < MAXPLAYERS; i++)
-				{
-					if (!playeringame[i])
-						continue;
-
-					P_GivePlayerLives(&players[i], gainlives);
-					P_PlayLivesJingle(&players[i]);
-				}
-			}
+			P_GivePlayerLives(player, gainlives);
+			P_PlayLivesJingle(player);
 		}
 	}
 }
@@ -968,6 +953,29 @@ void P_GivePlayerLives(player_t *player, INT32 numlives)
 		player->lives = 99;
 	else if (player->lives < 1)
 		player->lives = 1;
+}
+
+void P_GiveCoopLives(player_t player, INT32 numlives, boolean sound)
+{
+	if (!((netgame || multiplayer) && gametype == GT_COOP && cv_playstyle.value))
+	{
+		P_GivePlayerLives(player, 1);
+		if (sound)
+			P_PlayLivesJingle(player);
+	}
+	else
+	{
+		INT32 i;
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			if (!playeringame[i])
+				continue;
+
+			P_GivePlayerLives(&players[i], 1);
+			if (sound)
+				P_PlayLivesJingle(&players[i]);
+		}
+	}
 }
 
 //
