@@ -8123,8 +8123,8 @@ boolean P_GetLives(player_t *player)
 	{
 		if (players[maxlivesplayer].mo)
 			S_StartSound(players[maxlivesplayer].mo, sfx_jshard); // placeholder
-		P_GivePlayerLives(&players[maxlivesplayer], -1);
-		P_GivePlayerLives(player, 1);
+		players[maxlivesplayer].lives--;
+		player->lives++;
 		if (netgame && P_IsLocalPlayer(player))
 			S_ChangeMusic(mapmusname, mapmusflags, true);
 		else if (player == &players[displayplayer] || player == &players[secondarydisplayplayer])
