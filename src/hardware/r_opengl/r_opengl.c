@@ -263,15 +263,8 @@ FUNCPRINTF void DBG_Printf(const char *lpFmt, ...)
 /* texture mapping */ //GL_EXT_copy_texture
 #ifndef KOS_GL_COMPATIBILITY
 #define pglCopyTexImage2D glCopyTexImage2D
+#endif
 
-/* GLU functions */
-#define pgluBuild2DMipmaps gluBuild2DMipmaps
-#endif
-#ifndef MINI_GL_COMPATIBILITY
-/* 1.3 functions for multitexturing */
-#define pglActiveTexture glActiveTexture
-#define pglMultiTexCoord2f glMultiTexCoord2f
-#endif
 #else //!STATIC_OPENGL
 
 /* 1.0 functions */
@@ -394,7 +387,7 @@ static PFNglBindTexture pglBindTexture;
 /* texture mapping */ //GL_EXT_copy_texture
 typedef void (APIENTRY * PFNglCopyTexImage2D) (GLenum target, GLint level, GLenum internalformat, GLint x, GLint y, GLsizei width, GLsizei height, GLint border);
 static PFNglCopyTexImage2D pglCopyTexImage2D;
-
+#endif
 /* GLU functions */
 typedef GLint (APIENTRY * PFNgluBuild2DMipmaps) (GLenum target, GLint internalFormat, GLsizei width, GLsizei height, GLenum format, GLenum type, const void *data);
 static PFNgluBuild2DMipmaps pgluBuild2DMipmaps;
@@ -405,7 +398,6 @@ typedef void (APIENTRY *PFNglActiveTexture) (GLenum);
 static PFNglActiveTexture pglActiveTexture;
 typedef void (APIENTRY *PFNglMultiTexCoord2f) (GLenum, GLfloat, GLfloat);
 static PFNglMultiTexCoord2f pglMultiTexCoord2f;
-#endif
 #endif
 
 #ifndef MINI_GL_COMPATIBILITY
@@ -523,17 +515,13 @@ boolean SetupGLfunc(void)
 // This has to be done after the context is created so the version number can be obtained
 boolean SetupGLFunc13(void)
 {
+#ifdef MINI_GL_COMPATIBILITY
+	return false;
+#else
 	const GLubyte *version = pglGetString(GL_VERSION);
 	int glmajor, glminor;
 
 	gl13 = false;
-#ifdef MINI_GL_COMPATIBILITY
-	return false;
-#else
-#ifdef STATIC_OPENGL
-	gl13 = true;
-#else
-
 	// Parse the GL version
 	if (version != NULL)
 	{
@@ -572,9 +560,6 @@ boolean SetupGLFunc13(void)
 	}
 	else
 		DBG_Printf("GL_ARB_multitexture support: disabled\n");
-#undef GETOPENGLFUNC
-
-#endif
 	return true;
 #endif
 }
@@ -1823,13 +1808,11 @@ EXPORT void HWRAPI(SetSpecialState) (hwdspecialstate_t IdState, INT32 Value)
 					min_filter = GL_NEAREST;
 #endif
 			}
-#ifndef STATIC_OPENGL
 			if (!pgluBuild2DMipmaps)
 			{
 				MipMap = GL_FALSE;
 				min_filter = GL_LINEAR;
 			}
-#endif
 			Flush(); //??? if we want to change filter mode by texture, remove this
 			break;
 
