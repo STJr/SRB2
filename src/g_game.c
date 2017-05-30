@@ -2592,68 +2592,104 @@ void G_DoReborn(INT32 playernum)
 		// respawn at the start
 		mobj_t *oldmo = NULL;
 
-		if (gametype == GT_COOP && (netgame || multiplayer) && cv_playstyle.value == 2)
+		if (gametype == GT_COOP && (netgame || multiplayer))
 		{
 			INT32 i;
-			for (i = 0; i < MAXPLAYERS; i++)
+			if (player->lives <= 0) // consider game over first
 			{
-				if (!playeringame[i])
-					continue;
-
-				if (players[i].playerstate != PST_DEAD && !players[i].spectator && players[i].mo && players[i].mo->health)
-					break;
-			}
-			if (i == MAXPLAYERS)
-			{
-				if (mapheaderinfo[gamemap-1]->levelflags & LF_NORELOAD)
+				INT32 deadtimercheck = INT32_MAX;
+				for (i = 0; i < MAXPLAYERS; i++)
 				{
-					INT32 j;
-
-					for (i = 0; i < MAXPLAYERS; i++)
-					{
-						if (!playeringame[i])
-							continue;
-
-						players[i].playerstate = PST_REBORN;
-					}
-
-					P_LoadThingsOnly();
-					P_ClearStarPost(player->starpostnum);
-
-					// Do a wipe
-					wipegamestate = -1;
-
-					if (camera.chase)
-						P_ResetCamera(&players[displayplayer], &camera);
-					if (camera2.chase && splitscreen)
-						P_ResetCamera(&players[secondarydisplayplayer], &camera2);
-
-					// clear cmd building stuff
-					memset(gamekeydown, 0, sizeof (gamekeydown));
-					for (j = 0; j < JOYAXISSET; j++)
-					{
-						joyxmove[j] = joyymove[j] = 0;
-						joy2xmove[j] = joy2ymove[j] = 0;
-					}
-					mousex = mousey = 0;
-					mouse2x = mouse2y = 0;
-
-					// clear hud messages remains (usually from game startup)
-					CON_ClearHUD();
-
-					// Starpost support
-					for (i = 0; i < MAXPLAYERS; i++)
-					{
-						if (!playeringame[i])
-							continue;
-
-						G_SpawnPlayer(i, (players[i].starposttime != 0));
-					}
-
-					return;
+					if (!playeringame[i])
+						continue;
+					if (players[i].exiting || players[i].lives)
+						break;
+					if (players[i].playerstate == PST_DEAD && players[i].deadtimer < deadtimercheck)
+						deadtimercheck = players[i].deadtimer;
 				}
-				else
-					RESETMAP;
+
+				if (i == MAXPLAYERS && deadtimercheck >= 8*TICRATE)
+				{
+					// They're dead, Jim.
+					//nextmapoverride = spstage_start;
+					nextmapoverride = gamemap;
+					countdown2 = 1*TICRATE;
+					skipstats = true;
+
+					for (i = 0; i < MAXPLAYERS; i++)
+					{
+						if (playeringame[i])
+							players[i].score = 0;
+					}
+
+					//emeralds = 0;
+					tokenbits = 0;
+					tokenlist = 0;
+					token = 0;
+				}
+			}
+			if (cv_playstyle.value == 2)
+			{
+				for (i = 0; i < MAXPLAYERS; i++)
+				{
+					if (!playeringame[i])
+						continue;
+
+					if (players[i].playerstate != PST_DEAD && !players[i].spectator && players[i].mo && players[i].mo->health)
+						break;
+				}
+				if (i == MAXPLAYERS)
+				{
+					if (mapheaderinfo[gamemap-1]->levelflags & LF_NORELOAD)
+					{
+						INT32 j;
+
+						for (i = 0; i < MAXPLAYERS; i++)
+						{
+							if (!playeringame[i])
+								continue;
+
+							players[i].playerstate = PST_REBORN;
+						}
+
+						P_LoadThingsOnly();
+						P_ClearStarPost(player->starpostnum);
+
+						// Do a wipe
+						wipegamestate = -1;
+
+						if (camera.chase)
+							P_ResetCamera(&players[displayplayer], &camera);
+						if (camera2.chase && splitscreen)
+							P_ResetCamera(&players[secondarydisplayplayer], &camera2);
+
+						// clear cmd building stuff
+						memset(gamekeydown, 0, sizeof (gamekeydown));
+						for (j = 0; j < JOYAXISSET; j++)
+						{
+							joyxmove[j] = joyymove[j] = 0;
+							joy2xmove[j] = joy2ymove[j] = 0;
+						}
+						mousex = mousey = 0;
+						mouse2x = mouse2y = 0;
+
+						// clear hud messages remains (usually from game startup)
+						CON_ClearHUD();
+
+						// Starpost support
+						for (i = 0; i < MAXPLAYERS; i++)
+						{
+							if (!playeringame[i])
+								continue;
+
+							G_SpawnPlayer(i, (players[i].starposttime != 0));
+						}
+
+						return;
+					}
+					else
+						RESETMAP;
+				}
 			}
 		}
 

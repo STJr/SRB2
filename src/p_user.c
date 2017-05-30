@@ -8222,7 +8222,7 @@ static void P_DeathThink(player_t *player)
 		player->playerstate = PST_REBORN;
 	else if ((player->lives > 0 || j != MAXPLAYERS) && !G_IsSpecialStage(gamemap)) // Don't allow "click to respawn" in special stages!
 	{
-		if (gametype == GT_COOP && (netgame || multiplayer) && cv_playstyle.value == 2) // Shamelessly lifted from TD. Thanks, Sryder!
+		if (gametype == GT_COOP && (netgame || multiplayer) && cv_playstyle.value == 2)
 			P_ConsiderAllGone();
 			if ((player->deadtimer > 5*TICRATE) || ((cmd->buttons & BT_JUMP) && (player->deadtimer > TICRATE)))
 			{
@@ -8286,7 +8286,7 @@ static void P_DeathThink(player_t *player)
 			}
 		}
 		// In a coop game, and out of lives
-		else if (gametype == GT_COOP)
+		/*else if (gametype == GT_COOP)
 		{
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
@@ -8294,7 +8294,7 @@ static void P_DeathThink(player_t *player)
 					continue;
 				if (players[i].exiting || players[i].lives)
 					break;
-				if (players[i].deadtimer < deadtimercheck)
+				if (players[i].playerstate == PST_DEAD && players[i].deadtimer < deadtimercheck)
 					deadtimercheck = players[i].deadtimer;
 			}
 
@@ -8317,7 +8317,13 @@ static void P_DeathThink(player_t *player)
 				tokenlist = 0;
 				token = 0;
 			}
-		}
+		}*/
+	}
+
+	if (gametype == GT_COOP && (player->lives <= 0) && (player->deadtimer > gameovertics || ((cmd->buttons & BT_JUMP) && (player->deadtimer > TICRATE))))
+	{
+		player->spectator = true;
+		player->playerstate = PST_REBORN;
 	}
 
 	if (gametype == GT_RACE || gametype == GT_COMPETITION || (gametype == GT_COOP && (multiplayer || netgame)))
@@ -9427,16 +9433,27 @@ void P_PlayerThink(player_t *player)
 	// Make sure spectators always have a score and ring count of 0.
 	if (player->spectator)
 	{
-		player->score = 0;
+		if (gametype != GT_COOP)
+			player->score = 0;
 		player->mo->health = 1;
 		player->rings = 0;
 	}
-
-	if ((netgame || multiplayer) && player->lives <= 0)
+	else if ((netgame || multiplayer) && player->lives <= 0)
 	{
-		// In Co-Op, replenish a user's lives if they are depleted.
-		// of course, this is just a cheap hack, meh...
-		player->lives = cv_startinglives.value;
+		if (gametype == GT_COOP)
+		{
+			if (!cv_steallives.value || !P_GetLives(player))
+			{
+				player->spectator = true;
+				player->playerstate = PST_REBORN;
+			}
+		}
+		else
+		{
+			// Outside of Co-Op, replenish a user's lives if they are depleted.
+			// of course, this is just a cheap hack, meh...
+			player->lives = cv_startinglives.value;
+		}
 	}
 
 	if ((gametype == GT_RACE || gametype == GT_COMPETITION) && leveltime < 4*TICRATE)
