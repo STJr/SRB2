@@ -528,18 +528,10 @@ boolean SetupGLFunc13(void)
 		if (sscanf((const char*)version, "%d.%d", &glmajor, &glminor) == 2)
 		{
 			// Look, we gotta prepare for the inevitable arrival of GL 2.0 code...
-			switch (glmajor)
-			{
-				case 1:
-					if (glminor == 3) gl13 = true;
-					break;
-				case 2:
-				case 3:
-				case 4:
-					gl13 = true;
-				default:
-					break;
-			}
+			if (glmajor == 1 && glminor >= 3)
+				gl13 = true;
+			else if (glmajor > 1)
+				gl13 = true;
 		}
 	}
 
