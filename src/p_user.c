@@ -8260,7 +8260,7 @@ static void P_DeathThink(player_t *player)
 				player->playerstate = PST_REBORN;
 		}
 	}
-	else if ((netgame || multiplayer) && player->deadtimer == 8*TICRATE)
+	else if ((netgame || multiplayer) && player->deadtimer >= 8*TICRATE)
 	{
 
 		INT32 i, deadtimercheck = INT32_MAX;
@@ -8270,7 +8270,9 @@ static void P_DeathThink(player_t *player)
 		{
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
-				if (playeringame[i] && !players[i].exiting && players[i].lives)
+				if (!playeringame[i])
+					continue;
+				if (!players[i].exiting && players[i].lives)
 					break;
 				if (players[i].deadtimer < deadtimercheck)
 					deadtimercheck = players[i].deadtimer;
@@ -8288,7 +8290,9 @@ static void P_DeathThink(player_t *player)
 		{
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
-				if (playeringame[i] && (players[i].exiting || players[i].lives))
+				if (!playeringame[i])
+					continue;
+				if (players[i].exiting || players[i].lives)
 					break;
 				if (players[i].deadtimer < deadtimercheck)
 					deadtimercheck = players[i].deadtimer;
