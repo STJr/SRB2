@@ -69,7 +69,7 @@ boolean SV_SendingFile(INT32 node);
 
 boolean CL_CheckDownloadable(void);
 boolean CL_SendRequestFile(void);
-void Got_RequestFilePak(INT32 node);
+boolean Got_RequestFilePak(INT32 node);
 
 void SV_AbortSendFiles(INT32 node);
 void CloseNetFile(void);
