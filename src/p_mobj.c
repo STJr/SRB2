@@ -2802,7 +2802,7 @@ static boolean P_ZMovement(mobj_t *mo)
 			mo->z = mo->floorz;
 
 #ifdef ESLOPE
-		if (mo->standingslope) // You're still on the ground; why are we here?
+		if (!(mo->flags & MF_MISSILE) && mo->standingslope) // You're still on the ground; why are we here?
 		{
 			mo->momz = 0;
 			return true;
@@ -8515,6 +8515,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			break;
 		case MT_EGGCAPSULE:
 			mobj->extravalue1 = -1; // timer for how long a player has been at the capsule
+			break;
 		case MT_REDTEAMRING:
 			mobj->color = skincolor_redteam;
 			break;

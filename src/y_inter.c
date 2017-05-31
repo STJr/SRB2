@@ -1008,7 +1008,8 @@ void Y_StartIntermission(void)
 	}
 
 	// We couldn't display the intermission even if we wanted to.
-	if (dedicated) return;
+	// But we still need to give the players their score bonuses, dummy.
+	//if (dedicated) return;
 
 	// This should always exist, but just in case...
 	if(!mapheaderinfo[prevmap])
