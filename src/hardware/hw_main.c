@@ -3060,7 +3060,7 @@ static void HWR_AddLine(seg_t * line)
 	// Identical floor and ceiling on both sides,
 	//  identical light levels on both sides,
 	//  and no middle texture.
-	if (R_IsEmptyLine(curline, frontsector, backsector))
+	if (R_IsEmptyLine(gr_curline, gr_frontsector, gr_backsector))
 		return;
 
 clippass:
