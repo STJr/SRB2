@@ -1,4 +1,4 @@
-version: 2.1.17.{branch}-{build}
+version: 2.1.19.{branch}-{build}
 os: MinGW
 
 environment:
@@ -58,26 +58,29 @@ after_build:
 - cmd: git rev-parse --short %APPVEYOR_REPO_COMMIT%>%TMP%/gitshort.txt
 - cmd: set /P GITSHORT=<%TMP%/gitshort.txt
 - set BUILD_ARCHIVE=%APPVEYOR_REPO_BRANCH%-%GITSHORT%-%CONFIGURATION%.7z
+- set BUILDSARCHIVE=%APPVEYOR_REPO_BRANCH%-%CONFIGURATION%.7z
 - cmd: 7z a %BUILD_ARCHIVE% bin\Mingw\Release -xr!.gitignore
 - appveyor PushArtifact %BUILD_ARCHIVE%
+- cmd: copy %BUILD_ARCHIVE% %BUILDSARCHIVE%
+- appveyor PushArtifact %BUILDSARCHIVE%
 
 test: off
 
-deploy:
-  - provider: FTP
-    protocol: ftps
-    host: 
-      secure: NsLJEPIBvmwCOj8Tg8RoRQ==
-    username:
-      secure: ejxi5mvk7oLYu7QtbYojajEPigMy0mokaKhuEVuDZcA=
-    password:
-      secure: Hbn6Uy3lT0YZ88yFJ3aW4w==
-    folder: appveyor
-    application:
-    active_mode: false
-    on:
-      branch: master
-      appveyor_repo_tag: true
+#deploy:
+#  - provider: FTP
+#    protocol: ftps
+#    host: 
+#      secure: NsLJEPIBvmwCOj8Tg8RoRQ==
+#    username:
+#      secure: ejxi5mvk7oLYu7QtbYojajEPigMy0mokaKhuEVuDZcA=
+#    password:
+#      secure: Hbn6Uy3lT0YZ88yFJ3aW4w==
+#    folder: appveyor
+#    application:
+#    active_mode: false
+#    on:
+#      branch: master
+#      appveyor_repo_tag: true
 
 
 on_finish:

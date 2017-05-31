@@ -1030,7 +1030,7 @@ void P_AddPlayerScore(player_t *player, UINT32 amount)
 						players[i].continues += 1;
 						players[i].gotcontinue = true;
 						if (P_IsLocalPlayer(player))
-							S_StartSound(NULL, sfx_flgcap);
+							S_StartSound(NULL, sfx_s3kac);
 					} */
 				}
 		}
@@ -1050,7 +1050,7 @@ void P_AddPlayerScore(player_t *player, UINT32 amount)
 				player->continues += 1;
 				player->gotcontinue = true;
 				if (P_IsLocalPlayer(player))
-					S_StartSound(NULL, sfx_flgcap);
+					S_StartSound(NULL, sfx_s3kac);
 			}
 		}
 
@@ -1134,8 +1134,10 @@ void P_PlayLivesJingle(player_t *player)
 	else
 	{
 		if (player)
-			player->powers[pw_extralife] = extralifetics + 1;
+			player->powers[pw_extralife] = extralifetics+1;
 		S_StopMusic(); // otherwise it won't restart if this is done twice in a row
+		strlcpy(S_sfx[sfx_None].caption, "One-up", 7);
+		S_StartCaption(sfx_None, -1, extralifetics+1);
 		S_ChangeMusicInternal("_1up", false);
 	}
 }
@@ -1156,9 +1158,15 @@ void P_RestoreMusic(player_t *player)
 	if (player->powers[pw_super] && !(mapheaderinfo[gamemap-1]->levelflags & LF_NOSSMUSIC))
 		S_ChangeMusicInternal("_super", true);
 	else if (player->powers[pw_invulnerability] > 1)
+	{
+		strlcpy(S_sfx[sfx_None].caption, "Invincibility", 14);
+		S_StartCaption(sfx_None, -1, player->powers[pw_invulnerability]);
 		S_ChangeMusicInternal((mariomode) ? "_minv" : "_inv", false);
+	}
 	else if (player->powers[pw_sneakers] > 1 && !player->powers[pw_super])
 	{
+		strlcpy(S_sfx[sfx_None].caption, "Speed shoes", 12);
+		S_StartCaption(sfx_None, -1, player->powers[pw_sneakers]);
 		if (mapheaderinfo[gamemap-1]->levelflags & LF_SPEEDMUSIC)
 		{
 			S_SpeedMusic(1.4f);
@@ -2341,7 +2349,7 @@ static void P_DoPlayerHeadSigns(player_t *player)
 		// If you're "IT", show a big "IT" over your head for others to see.
 		if (player->pflags & PF_TAGIT)
 		{
-			if (!(player == &players[consoleplayer] || player == &players[secondarydisplayplayer] || player == &players[displayplayer])) // Don't display it on your own view.
+			if (!P_IsLocalPlayer(player)) // Don't display it on your own view.
 			{
 				if (!(player->mo->eflags & MFE_VERTICALFLIP))
 					P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z + player->mo->height, MT_TAG);
@@ -3858,7 +3866,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 						mobj_t *lockon = P_LookForEnemies(player, false, true);
 						if (lockon)
 						{
-							if (player == &players[consoleplayer] || player == &players[secondarydisplayplayer] || player == &players[displayplayer]) // Only display it on your own view.
+							if (P_IsLocalPlayer(player)) // Only display it on your own view.
 							{
 								mobj_t *visual = P_SpawnMobj(lockon->x, lockon->y, lockon->z, MT_LOCKON); // positioning, flip handled in P_SceneryThinker
 								visual->target = lockon;
@@ -4126,7 +4134,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 
 	if ((player->charability == CA_HOMINGTHOK) && !player->homing && (player->pflags & PF_JUMPED) && (!(player->pflags & PF_THOKKED) || (player->charflags & SF_MULTIABILITY)) && (lockon = P_LookForEnemies(player, true, false)))
 	{
-		if (player == &players[consoleplayer] || player == &players[secondarydisplayplayer] || player == &players[displayplayer]) // Only display it on your own view.
+		if (P_IsLocalPlayer(player)) // Only display it on your own view.
 		{
 			mobj_t *visual = P_SpawnMobj(lockon->x, lockon->y, lockon->z, MT_LOCKON); // positioning, flip handled in P_SceneryThinker
 			visual->target = lockon;
@@ -7194,7 +7202,7 @@ static void P_MovePlayer(player_t *player)
 		{
 			if ((lockon = P_LookForEnemies(player, false, false)))
 			{
-				if (player == &players[consoleplayer] || player == &players[secondarydisplayplayer] || player == &players[displayplayer]) // Only display it on your own view.
+				if (P_IsLocalPlayer(player)) // Only display it on your own view.
 				{
 					mobj_t *visual = P_SpawnMobj(lockon->x, lockon->y, lockon->z, MT_LOCKON); // positioning, flip handled in P_SceneryThinker
 					visual->target = lockon;
@@ -8451,46 +8459,24 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		thiscam->angle = angle;
 	}
 
-	if (!objectplacing && !(twodlevel || (mo->flags2 & MF2_TWOD)) && (player->powers[pw_carry] != CR_NIGHTSMODE) && displayplayer == consoleplayer)
+	if ((((thiscam == &camera) && cv_analog.value) || ((thiscam != &camera) && cv_analog2.value) || demoplayback) && !objectplacing && !(twodlevel || (mo->flags2 & MF2_TWOD)) && (player->powers[pw_carry] != CR_NIGHTSMODE) && displayplayer == consoleplayer)
 	{
 #ifdef REDSANALOG
 		if ((player->cmd.buttons & (BT_CAMLEFT|BT_CAMRIGHT)) == (BT_CAMLEFT|BT_CAMRIGHT)); else
 #endif
-		if (player->cmd.buttons & BT_CAMLEFT)
+		if (player->cmd.buttons & BT_CAMRIGHT)
 		{
 			if (thiscam == &camera)
-			{
-				if (cv_analog.value || demoplayback)
-					angle -= FixedAngle(cv_cam_rotspeed.value*FRACUNIT);
-				else
-					CV_SetValue(&cv_cam_rotate, camrotate == 0 ? 358
-						: camrotate - 2);
-			}
+				angle -= FixedAngle(cv_cam_rotspeed.value*FRACUNIT);
 			else
-			{
-				if (cv_analog2.value)
-					angle -= FixedAngle(cv_cam2_rotspeed.value*FRACUNIT);
-				else
-					CV_SetValue(&cv_cam2_rotate, camrotate == 0 ? 358
-						: camrotate - 2);
-			}
+				angle -= FixedAngle(cv_cam2_rotspeed.value*FRACUNIT);
 		}
-		else if (player->cmd.buttons & BT_CAMRIGHT)
+		else if (player->cmd.buttons & BT_CAMLEFT)
 		{
 			if (thiscam == &camera)
-			{
-				if (cv_analog.value || demoplayback)
-					angle += FixedAngle(cv_cam_rotspeed.value*FRACUNIT);
-				else
-					CV_SetValue(&cv_cam_rotate, camrotate + 2);
-			}
+				angle += FixedAngle(cv_cam_rotspeed.value*FRACUNIT);
 			else
-			{
-				if (cv_analog2.value)
-					angle += FixedAngle(cv_cam2_rotspeed.value*FRACUNIT);
-				else
-					CV_SetValue(&cv_cam2_rotate, camrotate + 2);
-			}
+				angle += FixedAngle(cv_cam2_rotspeed.value*FRACUNIT);
 		}
 	}
 
@@ -9151,8 +9137,9 @@ void P_PlayerThink(player_t *player)
 		if (player->panim != PA_ABILITY)
 			P_SetPlayerMobjState(player->mo, S_PLAY_GLIDE);
 	}
-	else if ((player->pflags & PF_JUMPED && !(player->pflags & PF_NOJUMPDAMAGE))
-	&& ((player->charflags & SF_NOJUMPSPIN && player->panim != PA_ROLL)
+	else if ((player->pflags & PF_JUMPED && !(player->pflags & PF_NOJUMPDAMAGE)
+	&& (player->mo->state-states != S_PLAY_FLOAT && player->mo->state-states != S_PLAY_FLOAT_RUN))
+	&& ((((player->charflags & (SF_NOJUMPSPIN|SF_NOJUMPDAMAGE)) == (SF_NOJUMPSPIN|SF_NOJUMPDAMAGE)) && player->panim != PA_ROLL)
 	|| (!(player->charflags & SF_NOJUMPSPIN) && player->panim != PA_JUMP)))
 	{
 		if (!(player->charflags & SF_NOJUMPSPIN))
