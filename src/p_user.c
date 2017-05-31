@@ -8132,7 +8132,7 @@ boolean P_GetLives(player_t *player)
 		if (players[maxlivesplayer].mo)
 			S_StartSound(players[maxlivesplayer].mo, sfx_jshard); // placeholder
 		players[maxlivesplayer].lives--;
-		player->lives++;
+		player->lives = 1;
 		if (netgame && P_IsLocalPlayer(player))
 			S_ChangeMusic(mapmusname, mapmusflags, true);
 		else if (player == &players[displayplayer] || player == &players[secondarydisplayplayer])
@@ -8223,12 +8223,14 @@ static void P_DeathThink(player_t *player)
 	else if ((player->lives > 0 || j != MAXPLAYERS) && !G_IsSpecialStage(gamemap)) // Don't allow "click to respawn" in special stages!
 	{
 		if (gametype == GT_COOP && (netgame || multiplayer) && cv_playstyle.value == 2)
+		{
 			P_ConsiderAllGone();
 			if ((player->deadtimer > 5*TICRATE) || ((cmd->buttons & BT_JUMP) && (player->deadtimer > TICRATE)))
 			{
 				player->spectator = true;
 				player->playerstate = PST_REBORN;
 			}
+		}
 		else
 		{
 			// Respawn with jump button, force respawn time (3 second default, cheat protected) in shooter modes.
@@ -8238,7 +8240,7 @@ static void P_DeathThink(player_t *player)
 					player->playerstate = PST_REBORN;
 				else switch(gametype) {
 					case GT_COOP:
-						if (player->deadtimer > TICRATE && P_GetLives(player))
+						if (player->deadtimer > TICRATE)
 							player->playerstate = PST_REBORN;
 						break;
 					case GT_COMPETITION:
@@ -9438,22 +9440,11 @@ void P_PlayerThink(player_t *player)
 		player->mo->health = 1;
 		player->rings = 0;
 	}
-	else if ((netgame || multiplayer) && player->lives <= 0)
+	else if ((netgame || multiplayer) && player->lives <= 0 && gametype != GT_COOP)
 	{
-		if (gametype == GT_COOP)
-		{
-			if (!cv_steallives.value || !P_GetLives(player))
-			{
-				player->spectator = true;
-				player->playerstate = PST_REBORN;
-			}
-		}
-		else
-		{
-			// Outside of Co-Op, replenish a user's lives if they are depleted.
-			// of course, this is just a cheap hack, meh...
-			player->lives = cv_startinglives.value;
-		}
+		// Outside of Co-Op, replenish a user's lives if they are depleted.
+		// of course, this is just a cheap hack, meh...
+		player->lives = cv_startinglives.value;
 	}
 
 	if ((gametype == GT_RACE || gametype == GT_COMPETITION) && leveltime < 4*TICRATE)

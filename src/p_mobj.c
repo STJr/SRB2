@@ -9084,10 +9084,10 @@ void P_SpawnPlayer(INT32 playernum)
 	// spawn as spectator determination
 	if (!G_GametypeHasSpectators())
 	{
-		if (((multiplayer || netgame) && gametype == GT_COOP && leveltime > 0)
+		if ( ((multiplayer || netgame) && gametype == GT_COOP && leveltime > 0)
 		&& ((G_IsSpecialStage(gamemap) && useNightsSS) // late join special stage
 		|| (cv_playstyle.value == 2 && (p->jointime < 1 || p->spectator)) // late join or die in new coop
-		|| (p->jointime > 0 && p->lives <= 0))) // game over
+		|| (p->lives <= 0 && (!cv_steallives.value || !P_GetLives(p)))) ) // game over
 			p->spectator = true;
 		else
 			p->spectator = false;
