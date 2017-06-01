@@ -2592,6 +2592,10 @@ void G_DoReborn(INT32 playernum)
 		// respawn at the start
 		mobj_t *oldmo = NULL;
 
+		// Return to level music
+		if (player->lives <= 0)
+			P_RestoreMultiMusic(player);
+
 		if (gametype == GT_COOP && (netgame || multiplayer))
 		{
 			INT32 i;

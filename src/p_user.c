@@ -8132,11 +8132,9 @@ boolean P_GetLives(player_t *player)
 		if (players[maxlivesplayer].mo)
 			S_StartSound(players[maxlivesplayer].mo, sfx_jshard); // placeholder
 		players[maxlivesplayer].lives--;
-		player->lives = 1;
-		if (netgame && P_IsLocalPlayer(player))
-			S_ChangeMusic(mapmusname, mapmusflags, true);
-		else if (player == &players[displayplayer] || player == &players[secondarydisplayplayer])
-			P_RestoreMusic(player);
+		player->lives++;
+		if (player->lives < 1)
+			player->lives = 1;
 		return true;
 	}
 	return false;
@@ -8174,6 +8172,24 @@ static void P_ConsiderAllGone(void)
 	{
 		players[lastdeadplayer].spectator = true;
 		players[lastdeadplayer].playerstate = PST_REBORN;
+	}
+}
+
+void P_RestoreMultiMusic(player_t *player)
+{
+	if (netgame)
+	{
+		if (P_IsLocalPlayer(player))
+			S_ChangeMusic(mapmusname, mapmusflags, true);
+	}
+	else if (multiplayer) // local multiplayer only
+	{
+		// Restore the other player's music once we're dead for long enough
+		// -- that is, as long as they aren't dead too
+		if (player == &players[displayplayer] && players[secondarydisplayplayer].lives > 0)
+			P_RestoreMusic(&players[secondarydisplayplayer]);
+		else if (player == &players[secondarydisplayplayer] && players[displayplayer].lives > 0)
+			P_RestoreMusic(&players[displayplayer]);
 	}
 }
 
@@ -8287,42 +8303,10 @@ static void P_DeathThink(player_t *player)
 					countdown2 = 1*TICRATE;
 			}
 		}
-		// In a coop game, and out of lives
-		/*else if (gametype == GT_COOP)
-		{
-			for (i = 0; i < MAXPLAYERS; i++)
-			{
-				if (!playeringame[i])
-					continue;
-				if (players[i].exiting || players[i].lives)
-					break;
-				if (players[i].playerstate == PST_DEAD && players[i].deadtimer < deadtimercheck)
-					deadtimercheck = players[i].deadtimer;
-			}
-
-			if (i == MAXPLAYERS && deadtimercheck == 8*TICRATE)
-			{
-				// They're dead, Jim.
-				//nextmapoverride = spstage_start;
-				nextmapoverride = gamemap;
-				countdown2 = 1*TICRATE;
-				skipstats = true;
-
-				for (i = 0; i < MAXPLAYERS; i++)
-				{
-					if (playeringame[i])
-						players[i].score = 0;
-				}
-
-				//emeralds = 0;
-				tokenbits = 0;
-				tokenlist = 0;
-				token = 0;
-			}
-		}*/
+		//else if (gametype == GT_COOP) -- moved to G_DoReborn
 	}
 
-	if (gametype == GT_COOP && (player->lives <= 0) && (player->deadtimer > gameovertics || ((cmd->buttons & BT_JUMP) && (player->deadtimer > TICRATE))))
+	if (gametype == GT_COOP && (player->lives <= 0) && (player->deadtimer >= 8*TICRATE || ((cmd->buttons & BT_JUMP) && (player->deadtimer > TICRATE))))
 	{
 		player->spectator = true;
 		player->playerstate = PST_REBORN;
@@ -8345,25 +8329,8 @@ static void P_DeathThink(player_t *player)
 		}
 
 		// Return to level music
-		if (player->lives <= 0)
-		{
-			if (netgame)
-			{
-				if (player->deadtimer == gameovertics && P_IsLocalPlayer(player))
-					S_ChangeMusic(mapmusname, mapmusflags, true);
-			}
-			else if (multiplayer) // local multiplayer only
-			{
-				if (player->deadtimer != gameovertics)
-					;
-				// Restore the other player's music once we're dead for long enough
-				// -- that is, as long as they aren't dead too
-				else if (player == &players[displayplayer] && players[secondarydisplayplayer].lives > 0)
-					P_RestoreMusic(&players[secondarydisplayplayer]);
-				else if (player == &players[secondarydisplayplayer] && players[displayplayer].lives > 0)
-					P_RestoreMusic(&players[displayplayer]);
-			}
-		}
+		if (player->lives <= 0 && player->deadtimer == gameovertics)
+			P_RestoreMultiMusic(player);
 	}
 
 	if (!player->mo)

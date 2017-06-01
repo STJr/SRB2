@@ -85,6 +85,7 @@ static void NetTimeout_OnChange(void);
 static void JoinTimeout_OnChange(void);
 
 static void PlayStyle_OnChange(void);
+static void StealLives_OnChange(void);
 
 static void Ringslinger_OnChange(void);
 static void Gravity_OnChange(void);
@@ -352,9 +353,9 @@ static CV_PossibleValue_t inttime_cons_t[] = {{0, "MIN"}, {3600, "MAX"}, {0, NUL
 consvar_t cv_inttime = {"inttime", "10", CV_NETVAR, inttime_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 static CV_PossibleValue_t playstyle_cons_t[] = {{0, "Individual"}, {1, "Sharing"}, {2, "Together"}, {0, NULL}};
-consvar_t cv_playstyle = {"playstyle", "Together", CV_NETVAR|CV_CHEAT|CV_CALL, playstyle_cons_t, PlayStyle_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_playstyle = {"playstyle", "Together", CV_NETVAR|CV_CALL|CV_CHEAT, playstyle_cons_t, PlayStyle_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
-consvar_t cv_steallives = {"steallives", "Yes", CV_NETVAR, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_steallives = {"steallives", "Yes", CV_NETVAR|CV_CALL, CV_YesNo, StealLives_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 static CV_PossibleValue_t advancemap_cons_t[] = {{0, "Off"}, {1, "Next"}, {2, "Random"}, {0, NULL}};
 consvar_t cv_advancemap = {"advancemap", "Next", CV_NETVAR, advancemap_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -3419,7 +3420,30 @@ static void PlayStyle_OnChange(void)
 			if (!players[i].spectator)
 				continue;
 
-			if (players[i].lives <= 0)
+			if (players[i].lives <= 0 && !cv_steallives.value)
+				continue;
+
+			players[i].playerstate = PST_REBORN;
+		}
+	}
+}
+
+static void StealLives_OnChange(void)
+{
+	if (!(netgame || multiplayer) || gametype != GT_COOP)
+		return;
+	if (cv_playstyle.value != 2 && cv_steallives.value)
+	{
+		INT32 i;
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			if (!playeringame[i])
+				continue;
+
+			if (!players[i].spectator)
+				continue;
+
+			if (players[i].lives > 0)
 				continue;
 
 			players[i].playerstate = PST_REBORN;

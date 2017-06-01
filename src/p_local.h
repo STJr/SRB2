@@ -201,6 +201,7 @@ void P_PlayLivesJingle(player_t *player);
 
 boolean P_GetLives(player_t *player);
 boolean P_SpectatorJoinGame(player_t *player);
+void P_RestoreMultiMusic(player_t *player);
 
 //
 // P_MOBJ
