@@ -3971,7 +3971,7 @@ FILESTAMP
 			if (client)
 			{
 				INT32 i;
-				for (i = 0; i < MAXNETNODES; i++)
+				for (i = 0; i < MAXPLAYERS; i++)
 					if (playeringame[i])
 						playerpingtable[i] = (tic_t)netbuffer->u.pingtable[i];
 			}
