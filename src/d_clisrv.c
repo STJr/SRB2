@@ -4560,16 +4560,11 @@ void NetUpdate(void)
 
 	gametime = nowtime;
 
-	if (!(gametime % 255) && netgame && server)
-	{
-#ifdef NEWPING
-		PingUpdate();
-#endif
-	}
-
 #ifdef NEWPING
 	if (server)
 	{
+		if (netgame && !(gametime % 255))
+			PingUpdate();
 		// update node latency values so we can take an average later.
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i])
