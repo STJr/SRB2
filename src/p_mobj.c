@@ -9135,7 +9135,7 @@ void P_SpawnPlayer(INT32 playernum)
 			p->skincolor = skincolor_blueteam;
 	}
 
-	if ((netgame || multiplayer) && !p->spectator)
+	if ((netgame || multiplayer) && !p->spectator && (gametype != GT_COOP || ((p->jointime < 1) && !(G_IsSpecialStage(gamemap) && useNightsSS))))
 		p->powers[pw_flashing] = flashingtics-1; // Babysitting deterrent
 
 	mobj = P_SpawnMobj(0, 0, 0, MT_PLAYER);
