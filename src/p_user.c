@@ -666,7 +666,8 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 	if (skins[player->skin].sprites[SPR2_NGT0].numframes == 0) // If you don't have a sprite for flying horizontally, use the default NiGHTS skin.
 	{
 		player->mo->skin = &skins[DEFAULTNIGHTSSKIN];
-		player->mo->color = ((skin_t *)(player->mo->skin))->prefcolor;
+		player->mo->color = skins[DEFAULTNIGHTSSKIN].prefcolor;
+		player->mo->radius = FixedMul(skins[DEFAULTNIGHTSSKIN].radius, player->mo->scale);
 	}
 
 	player->nightstime = player->startedtime = nighttime*TICRATE;
