@@ -2754,6 +2754,8 @@ void G_AddPlayer(INT32 playernum)
 	p->jointime = 0;
 	p->playerstate = PST_REBORN;
 
+	p->height = mobjinfo[MT_PLAYER].height;
+
 	if (G_GametypeUsesLives())
 		p->lives = cv_startinglives.value;
 
