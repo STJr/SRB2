@@ -748,7 +748,7 @@ static void ST_drawLives(void)
 						sum += (players[i].lives);
 					}
 					V_DrawRightAlignedString(hudinfo[HUD_LIVESNUM].x, hudinfo[HUD_LIVESNUM].y + (v_splitflag ? -4 : 0),
-						V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS|v_splitflag,
+						V_SNAPTOLEFT|V_SNAPTOBOTTOM|((stplyr->lives > 0) ? V_HUDTRANS : V_HUDTRANSHALF)|v_splitflag,
 						va("%d",(sum)));
 					return;
 				}
@@ -2030,7 +2030,7 @@ static void ST_overlayDrawer(void)
 					}
 
 					if (i != MAXPLAYERS)
-						V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132)-(splitscreen ? 8 : 0), V_HUDTRANSHALF, M_GetText("You'll steal a life on respawn."));
+						V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132)-(splitscreen ? 12 : 0), V_HUDTRANSHALF, M_GetText("You'll steal a life on respawn."));
 				}
 			}
 			else if (!gametype == GT_COOP)
@@ -2041,7 +2041,7 @@ static void ST_overlayDrawer(void)
 				V_DrawCenteredString(BASEVIDWIDTH/2, 164, V_HUDTRANSHALF, M_GetText("Press Jump to float and Spin to sink."));
 			}
 			else
-				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(144), V_HUDTRANSHALF, M_GetText("Press Jump to float and Spin to sink."));
+				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(128), V_HUDTRANSHALF, M_GetText("Press Jump to float and Spin to sink."));
 		}
 	}
 
