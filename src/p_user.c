@@ -4310,11 +4310,6 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 							player->mo->momy /= 3;
 						}
 
-						if (player->mo->info->attacksound && !player->spectator)
-							S_StartSound(player->mo, player->mo->info->attacksound); // Play the THOK sound
-
-						P_SpawnThokMobj(player);
-
 						if (player->charability == CA_HOMINGTHOK)
 						{
 							P_SetTarget(&player->mo->target, P_SetTarget(&player->mo->tracer, lockon));
@@ -4327,9 +4322,15 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 							{
 								P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
 								player->pflags &= ~PF_JUMPED;
+								player->mo->height = P_GetPlayerHeight(player);
 							}
 							player->pflags &= ~PF_NOJUMPDAMAGE;
 						}
+
+						if (player->mo->info->attacksound && !player->spectator)
+							S_StartSound(player->mo, player->mo->info->attacksound); // Play the THOK sound
+
+						P_SpawnThokMobj(player);
 
 						player->pflags &= ~(PF_SPINNING|PF_STARTDASH);
 						player->pflags |= PF_THOKKED;
