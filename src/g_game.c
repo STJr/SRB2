@@ -2592,10 +2592,6 @@ void G_DoReborn(INT32 playernum)
 		// respawn at the start
 		mobj_t *oldmo = NULL;
 
-		// Return to level music
-		if (player->lives <= 0)
-			P_RestoreMultiMusic(player);
-
 		if (gametype == GT_COOP && (netgame || multiplayer))
 		{
 			INT32 i;
@@ -2606,18 +2602,18 @@ void G_DoReborn(INT32 playernum)
 				{
 					if (!playeringame[i])
 						continue;
-					if (players[i].exiting || players[i].lives)
+					if (players[i].exiting || players[i].lives > 0)
 						break;
 					if (players[i].playerstate == PST_DEAD && players[i].deadtimer < deadtimercheck)
 						deadtimercheck = players[i].deadtimer;
 				}
 
-				if (i == MAXPLAYERS && deadtimercheck >= 8*TICRATE)
+				if (!countdown2 && i == MAXPLAYERS && deadtimercheck >= 8*TICRATE)
 				{
 					// They're dead, Jim.
 					//nextmapoverride = spstage_start;
 					nextmapoverride = gamemap;
-					countdown2 = 1*TICRATE;
+					countdown2 = TICRATE;
 					skipstats = true;
 
 					for (i = 0; i < MAXPLAYERS; i++)
@@ -2696,6 +2692,12 @@ void G_DoReborn(INT32 playernum)
 				}
 			}
 		}
+
+		// Not resetting map, so return to level music
+		if (!countdown2
+		&& player->lives <= 0
+		&& !cv_lifedistribution.value) // not allowed for life steal because no way to come back from zero group lives without addons, which should call this anyways
+			P_RestoreMultiMusic(player);
 
 		if (player->starposttime)
 			starpost = true;

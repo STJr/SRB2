@@ -958,7 +958,7 @@ void P_GivePlayerLives(player_t *player, INT32 numlives)
 
 void P_GiveCoopLives(player_t *player, INT32 numlives, boolean sound)
 {
-	if (!((netgame || multiplayer) && gametype == GT_COOP && cv_playstyle.value))
+	if (!((netgame || multiplayer) && gametype == GT_COOP))
 	{
 		P_GivePlayerLives(player, numlives);
 		if (sound)
@@ -8109,12 +8109,12 @@ void P_FindEmerald(void)
 boolean P_GetLives(player_t *player)
 {
 	INT32 i, maxlivesplayer = -1, livescheck = 1;
-	if (!(cv_steallives.value
+	if (!(cv_lifedistribution.value
 	&& (gametype == GT_COOP)
 	&& (netgame || multiplayer)))
 		return true;
 
-	if (player->lives > 0)
+	if (cv_lifedistribution.value == 1 && player->lives > 0)
 		return true;
 
 	for (i = 0; i < MAXPLAYERS; i++)
@@ -8128,17 +8128,17 @@ boolean P_GetLives(player_t *player)
 			livescheck = players[i].lives;
 		}
 	}
-	if (maxlivesplayer != -1)
+	if (maxlivesplayer != -1 && &players[maxlivesplayer] != player)
 	{
-		if (players[maxlivesplayer].mo)
-			S_StartSound(players[maxlivesplayer].mo, sfx_jshard); // placeholder
+		if (cv_lifedistribution.value == 1 && P_IsLocalPlayer(&players[maxlivesplayer]))
+			S_StartSound(NULL, sfx_jshard); // placeholder
 		players[maxlivesplayer].lives--;
 		player->lives++;
 		if (player->lives < 1)
 			player->lives = 1;
 		return true;
 	}
-	return false;
+	return (player->lives > 0);
 }
 
 //
@@ -8219,7 +8219,7 @@ static void P_DeathThink(player_t *player)
 			G_UseContinue(); // Even if we don't have one this handles ending the game
 	}
 
-	if (cv_steallives.value
+	if (cv_lifedistribution.value
 	&& (gametype == GT_COOP)
 	&& (netgame || multiplayer)
 	&& (player->lives <= 0))
@@ -8330,7 +8330,7 @@ static void P_DeathThink(player_t *player)
 		}
 
 		// Return to level music
-		if (player->lives <= 0 && player->deadtimer == gameovertics)
+		if (gametype != GT_COOP && player->lives <= 0 && player->deadtimer == gameovertics)
 			P_RestoreMultiMusic(player);
 	}
 
@@ -9436,11 +9436,7 @@ void P_PlayerThink(player_t *player)
 			player->realtime = leveltime;
 	}
 
-	if ((netgame || splitscreen) && player->spectator && cmd->buttons & BT_ATTACK && !player->powers[pw_flashing]
-	&& (G_GametypeHasSpectators()
-	|| !((G_IsSpecialStage(gamemap) && useNightsSS)
-	|| (gametype == GT_COOP && cv_playstyle.value == 2)
-	)))
+	if (player->spectator && cmd->buttons & BT_ATTACK && !player->powers[pw_flashing] && G_GametypeHasSpectators())
 	{
 		if (P_SpectatorJoinGame(player))
 			return; // player->mo was removed.

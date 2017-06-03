@@ -728,31 +728,59 @@ static void ST_drawLives(void)
 	// x
 	V_DrawScaledPatch(hudinfo[HUD_LIVESX].x, hudinfo[HUD_LIVESX].y + (v_splitflag ? -4 : 0),
 		V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS|v_splitflag, stlivex);
-	// lives
-	V_DrawRightAlignedString(hudinfo[HUD_LIVESNUM].x, hudinfo[HUD_LIVESNUM].y + (v_splitflag ? -4 : 0),
-		V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS|v_splitflag, va("%d",stplyr->lives));
 
-	if (cv_steallives.value
-	&& (gametype == GT_COOP)
-	&& (netgame || multiplayer))
+	// lives number
+	if ((netgame || multiplayer) && gametype == GT_COOP)
 	{
-		INT32 i, sum = 0;
-		for (i = 0; i < MAXPLAYERS; i++)
+		switch (cv_lifedistribution.value)
 		{
-			if (!playeringame[i])
-				continue;
+			case 2:
+				{
+					INT32 i, sum = 0;
+					for (i = 0; i < MAXPLAYERS; i++)
+					{
+						if (!playeringame[i])
+							continue;
 
-			if (&players[i] == stplyr)
-				continue;
+						if (players[i].lives < 1)
+							continue;
 
-			if (players[i].lives < 2)
-				continue;
+						sum += (players[i].lives);
+					}
+					V_DrawRightAlignedString(hudinfo[HUD_LIVESNUM].x, hudinfo[HUD_LIVESNUM].y + (v_splitflag ? -4 : 0),
+						V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS|v_splitflag,
+						va("%d",(sum)));
+					return;
+				}
+			case 1:
+				{
+					INT32 i, sum = 0;
+					for (i = 0; i < MAXPLAYERS; i++)
+					{
+						if (!playeringame[i])
+							continue;
 
-			sum += (players[i].lives - 1);
+						if (&players[i] == stplyr)
+							continue;
+
+						if (players[i].lives < 2)
+							continue;
+
+						sum += (players[i].lives - 1);
+					}
+					V_DrawString(hudinfo[HUD_LIVESNUM].x, hudinfo[HUD_LIVESNUM].y + (v_splitflag ? -4 : 0),
+						V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANSHALF|v_splitflag, va("/%d",sum));
+				}
+				// intentional fallthrough
+			default:
+				// don't return so the SP one can be drawn below
+				break;
 		}
-		V_DrawString(hudinfo[HUD_LIVESNUM].x, hudinfo[HUD_LIVESNUM].y + (v_splitflag ? -4 : 0),
-		V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANSHALF|v_splitflag, va("/%d",sum));
 	}
+
+	V_DrawRightAlignedString(hudinfo[HUD_LIVESNUM].x, hudinfo[HUD_LIVESNUM].y + (v_splitflag ? -4 : 0),
+		V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS|v_splitflag,
+		va("%d",stplyr->lives));
 }
 
 static void ST_drawLevelTitle(void)
@@ -1847,11 +1875,8 @@ static void ST_overlayDrawer(void)
 		else
 			p = sboover;
 
-		V_DrawScaledPatch((BASEVIDWIDTH - SHORT(p->width))/2, STRINGY(BASEVIDHEIGHT/2 - (SHORT(p->height)/2)), 0, p);
-
-		if (cv_steallives.value
-		&& (gametype == GT_COOP)
-		&& (netgame || multiplayer))
+		if (cv_lifedistribution.value
+		&& gametype == GT_COOP)
 		{
 			INT32 i;
 			for (i = 0; i < MAXPLAYERS; i++)
@@ -1862,13 +1887,16 @@ static void ST_overlayDrawer(void)
 				if (&players[i] == stplyr)
 					continue;
 
-				if (players[i].lives > 1)
+				if (players[i].lives > 0)
+				{
+					p = NULL;
 					break;
+				}
 			}
-
-			if (i != MAXPLAYERS)
-				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(BASEVIDHEIGHT/2 + (SHORT(p->height)/2)) + 14, 0, M_GetText("You'll steal a life on respawn."));
 		}
+
+		if (p)
+			V_DrawScaledPatch((BASEVIDWIDTH - SHORT(p->width))/2, STRINGY(BASEVIDHEIGHT/2 - (SHORT(p->height)/2)), (stplyr->spectator ? V_HUDTRANSHALF : V_HUDTRANS), p);
 	}
 
 
@@ -1953,15 +1981,16 @@ static void ST_overlayDrawer(void)
 	)
 		ST_drawLevelTitle();
 
-	if (!hu_showscores && !splitscreen && netgame && displayplayer == consoleplayer)
+	if (!hu_showscores && (netgame || multiplayer) && displayplayer == consoleplayer)
 	{
-		if (G_GametypeUsesLives() && stplyr->lives <= 0 && countdown != 1)
-			V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132), 0, M_GetText("Press F12 to watch another player."));
+		if (!splitscreen && G_GametypeUsesLives() && stplyr->lives <= 0 && countdown != 1)
+			V_DrawCenteredString(BASEVIDWIDTH/2, 132, 0, M_GetText("Press F12 to watch another player."));
 		else if (gametype == GT_HIDEANDSEEK &&
 		 (!stplyr->spectator && !(stplyr->pflags & PF_TAGIT)) && (leveltime > hidetime * TICRATE))
 		{
 			V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(116), 0, M_GetText("You cannot move while hiding."));
-			V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132), 0, M_GetText("Press F12 to watch another player."));
+			if (!splitscreen)
+				V_DrawCenteredString(BASEVIDWIDTH/2, 132, 0, M_GetText("Press F12 to watch another player."));
 		}
 		else if (!G_PlatformGametype() && stplyr->playerstate == PST_DEAD && stplyr->lives) //Death overrides spectator text.
 		{
@@ -1971,20 +2000,20 @@ static void ST_overlayDrawer(void)
 			else
 				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132), V_HUDTRANSHALF, M_GetText("Press Jump to respawn."));
 		}
-		else if (stplyr->spectator
+		else if (stplyr->spectator && (gametype != GT_COOP || stplyr->playerstate == PST_LIVE)
 #ifdef HAVE_BLUA
 		&& LUA_HudEnabled(hud_textspectator)
 #endif
 		)
 		{
-			V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(60), V_HUDTRANSHALF, M_GetText("You are a spectator."));
+			V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(60)+(splitscreen ? 4 : 0), V_HUDTRANSHALF, M_GetText("You are a spectator."));
 			if (G_GametypeHasTeams())
 				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132), V_HUDTRANSHALF, M_GetText("Press Fire to be assigned to a team."));
 			else if (G_IsSpecialStage(gamemap) && useNightsSS)
 				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132), V_HUDTRANSHALF, M_GetText("You cannot join the game until the stage has ended."));
 			else if (gametype == GT_COOP)
 			{
-				if (cv_steallives.value
+				if (cv_lifedistribution.value == 1
 				&& (netgame || multiplayer))
 				{
 					INT32 i;
@@ -2001,13 +2030,18 @@ static void ST_overlayDrawer(void)
 					}
 
 					if (i != MAXPLAYERS)
-						V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132), V_HUDTRANSHALF, M_GetText("You'll steal a life on respawn."));
+						V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132)-(splitscreen ? 8 : 0), V_HUDTRANSHALF, M_GetText("You'll steal a life on respawn."));
 				}
 			}
 			else if (!gametype == GT_COOP)
 				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132), V_HUDTRANSHALF, M_GetText("Press Fire to enter the game."));
-			V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(148), V_HUDTRANSHALF, M_GetText("Press F12 to watch another player."));
-			V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(164), V_HUDTRANSHALF, M_GetText("Press Jump to float and Spin to sink."));
+			if (!splitscreen)
+			{
+				V_DrawCenteredString(BASEVIDWIDTH/2, 148, V_HUDTRANSHALF, M_GetText("Press F12 to watch another player."));
+				V_DrawCenteredString(BASEVIDWIDTH/2, 164, V_HUDTRANSHALF, M_GetText("Press Jump to float and Spin to sink."));
+			}
+			else
+				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(144), V_HUDTRANSHALF, M_GetText("Press Jump to float and Spin to sink."));
 		}
 	}
 

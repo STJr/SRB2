@@ -1309,7 +1309,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 						players[i].starpostangle = special->angle;
 						players[i].starpostnum = special->health;
 
-						if (cv_playstyle.value == 2 && (P_GetLives(&players[i]) || players[i].lives > 0) && (players[i].playerstate == PST_DEAD || players[i].spectator))
+						if (cv_playstyle.value == 2 && (players[i].playerstate == PST_DEAD || players[i].spectator) && P_GetLives(&players[i]))
 							P_SpectatorJoinGame(&players[i]); //players[i].playerstate = PST_REBORN;
 					}
 				}
@@ -2253,7 +2253,25 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 
 			if (target->player->lives <= 0) // Tails 03-14-2000
 			{
-				if (P_IsLocalPlayer(target->player)/* && target->player == &players[consoleplayer] */)
+				boolean gameovermus = false;
+				if ((netgame || multiplayer) && (gametype == GT_COOP) && cv_lifedistribution.value)
+				{
+					INT32 i;
+					for (i = 0; i < MAXPLAYERS; i++)
+					{
+						if (!playeringame[i])
+							continue;
+
+						if (players[i].lives > 0)
+							break;
+					}
+					if (i == MAXPLAYERS)
+						gameovermus = true;
+				}
+				else if (P_IsLocalPlayer(target->player))
+					gameovermus = true;
+
+				if (gameovermus)
 				{
 					S_StopMusic(); // Stop the Music! Tails 03-14-2000
 					S_ChangeMusicInternal("_gover", false); // Yousa dead now, Okieday? Tails 03-14-2000

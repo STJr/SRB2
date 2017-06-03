@@ -89,7 +89,7 @@ extern consvar_t cv_recycler;
 
 extern consvar_t cv_itemfinder;
 
-extern consvar_t cv_inttime, cv_playstyle, cv_steallives, cv_advancemap, cv_playersforexit;
+extern consvar_t cv_inttime, cv_playstyle, cv_lifedistribution, cv_advancemap, cv_playersforexit;
 extern consvar_t cv_overtime;
 extern consvar_t cv_startinglives;
 
