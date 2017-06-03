@@ -2221,7 +2221,7 @@ static void P_LevelInitStuff(void)
 	// earthquake camera
 	memset(&quake,0,sizeof(struct quake));
 
-	if ((netgame || multiplayer) && gametype == GT_COOP && cv_playstyle.value == 2)
+	if ((netgame || multiplayer) && gametype == GT_COOP && cv_coopstarposts.value == 2)
 	{
 		for (i = 0; i < MAXPLAYERS; i++)
 		{

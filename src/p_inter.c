@@ -1293,7 +1293,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if (player->starpostnum >= special->health)
 				return; // Already hit this post
 
-			if (cv_playstyle.value && gametype == GT_COOP && (netgame || multiplayer))
+			if (cv_coopstarposts.value && gametype == GT_COOP && (netgame || multiplayer))
 			{
 				for (i = 0; i < MAXPLAYERS; i++)
 				{
@@ -1309,7 +1309,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 						players[i].starpostangle = special->angle;
 						players[i].starpostnum = special->health;
 
-						if (cv_playstyle.value == 2 && (players[i].playerstate == PST_DEAD || players[i].spectator) && P_GetLives(&players[i]))
+						if (cv_coopstarposts.value == 2 && (players[i].playerstate == PST_DEAD || players[i].spectator) && P_GetLives(&players[i]))
 							P_SpectatorJoinGame(&players[i]); //players[i].playerstate = PST_REBORN;
 					}
 				}
@@ -2254,7 +2254,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			if (target->player->lives <= 0) // Tails 03-14-2000
 			{
 				boolean gameovermus = false;
-				if ((netgame || multiplayer) && (gametype == GT_COOP) && cv_lifedistribution.value)
+				if ((netgame || multiplayer) && (gametype == GT_COOP) && cv_cooplives.value)
 				{
 					INT32 i;
 					for (i = 0; i < MAXPLAYERS; i++)

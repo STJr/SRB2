@@ -84,8 +84,8 @@ static void TeamScramble_OnChange(void);
 static void NetTimeout_OnChange(void);
 static void JoinTimeout_OnChange(void);
 
-static void PlayStyle_OnChange(void);
-static void LifeDistribution_OnChange(void);
+static void CoopStarposts_OnChange(void);
+static void CoopLives_OnChange(void);
 
 static void Ringslinger_OnChange(void);
 static void Gravity_OnChange(void);
@@ -352,11 +352,11 @@ consvar_t cv_maxping = {"maxping", "0", CV_SAVE, CV_Unsigned, NULL, 0, NULL, NUL
 static CV_PossibleValue_t inttime_cons_t[] = {{0, "MIN"}, {3600, "MAX"}, {0, NULL}};
 consvar_t cv_inttime = {"inttime", "10", CV_NETVAR, inttime_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
-static CV_PossibleValue_t playstyle_cons_t[] = {{0, "Individual"}, {1, "Sharing"}, {2, "Together"}, {0, NULL}};
-consvar_t cv_playstyle = {"playstyle", "Together", CV_NETVAR|CV_CALL|CV_CHEAT, playstyle_cons_t, PlayStyle_OnChange, 0, NULL, NULL, 0, 0, NULL};
+static CV_PossibleValue_t coopstarposts_cons_t[] = {{0, "Individual"}, {1, "Sharing"}, {2, "Together"}, {0, NULL}};
+consvar_t cv_coopstarposts = {"coopstarposts", "Together", CV_NETVAR|CV_CALL|CV_CHEAT, coopstarposts_cons_t, CoopStarposts_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
-static CV_PossibleValue_t lifedistribution_cons_t[] = {{0, "Individual"}, {1, "Stealing"}, {2, "Sharing"}, {0, NULL}};
-consvar_t cv_lifedistribution = {"lifedistribution", "Stealing", CV_NETVAR|CV_CALL, lifedistribution_cons_t, LifeDistribution_OnChange, 0, NULL, NULL, 0, 0, NULL};
+static CV_PossibleValue_t cooplives_cons_t[] = {{0, "Individual"}, {1, "Stealing"}, {2, "Sharing"}, {0, NULL}};
+consvar_t cv_cooplives = {"cooplives", "Stealing", CV_NETVAR|CV_CALL, cooplives_cons_t, CoopLives_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 static CV_PossibleValue_t advancemap_cons_t[] = {{0, "Off"}, {1, "Next"}, {2, "Random"}, {0, NULL}};
 consvar_t cv_advancemap = {"advancemap", "Next", CV_NETVAR, advancemap_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -516,8 +516,8 @@ void D_RegisterServerCommands(void)
 	CV_RegisterVar(&cv_forceskin);
 	CV_RegisterVar(&cv_downloading);
 
-	CV_RegisterVar(&cv_playstyle);
-	CV_RegisterVar(&cv_lifedistribution);
+	CV_RegisterVar(&cv_coopstarposts);
+	CV_RegisterVar(&cv_cooplives);
 
 	CV_RegisterVar(&cv_specialrings);
 	CV_RegisterVar(&cv_powerstones);
@@ -3406,11 +3406,11 @@ static void JoinTimeout_OnChange(void)
 	jointimeout = (tic_t)cv_jointimeout.value;
 }
 
-static void PlayStyle_OnChange(void)
+static void CoopStarposts_OnChange(void)
 {
 	INT32 i;
 
-	if (!(netgame || multiplayer) || gametype != GT_COOP || cv_playstyle.value == 2 || G_IsSpecialStage(gamemap))
+	if (!(netgame || multiplayer) || gametype != GT_COOP || cv_coopstarposts.value == 2 || G_IsSpecialStage(gamemap))
 		return;
 
 	for (i = 0; i < MAXPLAYERS; i++)
@@ -3421,18 +3421,18 @@ static void PlayStyle_OnChange(void)
 		if (!players[i].spectator)
 			continue;
 
-		if (players[i].lives <= 0 && !cv_lifedistribution.value)
+		if (players[i].lives <= 0 && !cv_cooplives.value)
 			continue;
 
 		P_SpectatorJoinGame(&players[i]);
 	}
 }
 
-static void LifeDistribution_OnChange(void)
+static void CoopLives_OnChange(void)
 {
-	if (!(netgame || multiplayer) || gametype != GT_COOP || cv_playstyle.value == 2)
+	if (!(netgame || multiplayer) || gametype != GT_COOP || cv_coopstarposts.value == 2)
 		return;
-	if (cv_lifedistribution.value)
+	if (cv_cooplives.value)
 	{
 		INT32 i;
 		for (i = 0; i < MAXPLAYERS; i++)

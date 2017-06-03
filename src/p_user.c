@@ -8110,12 +8110,12 @@ void P_FindEmerald(void)
 boolean P_GetLives(player_t *player)
 {
 	INT32 i, maxlivesplayer = -1, livescheck = 1;
-	if (!(cv_lifedistribution.value
+	if (!(cv_cooplives.value
 	&& (gametype == GT_COOP)
 	&& (netgame || multiplayer)))
 		return true;
 
-	if (cv_lifedistribution.value == 1 && player->lives > 0)
+	if (cv_cooplives.value == 1 && player->lives > 0)
 		return true;
 
 	for (i = 0; i < MAXPLAYERS; i++)
@@ -8131,7 +8131,7 @@ boolean P_GetLives(player_t *player)
 	}
 	if (maxlivesplayer != -1 && &players[maxlivesplayer] != player)
 	{
-		if (cv_lifedistribution.value == 1 && P_IsLocalPlayer(&players[maxlivesplayer]))
+		if (cv_cooplives.value == 1 && P_IsLocalPlayer(&players[maxlivesplayer]))
 			S_StartSound(NULL, sfx_jshard); // placeholder
 		players[maxlivesplayer].lives--;
 		player->lives++;
@@ -8220,7 +8220,7 @@ static void P_DeathThink(player_t *player)
 			G_UseContinue(); // Even if we don't have one this handles ending the game
 	}
 
-	if (cv_lifedistribution.value
+	if (cv_cooplives.value
 	&& (gametype == GT_COOP)
 	&& (netgame || multiplayer)
 	&& (player->lives <= 0))
@@ -8240,7 +8240,7 @@ static void P_DeathThink(player_t *player)
 		player->playerstate = PST_REBORN;
 	else if ((player->lives > 0 || j != MAXPLAYERS) && !G_IsSpecialStage(gamemap)) // Don't allow "click to respawn" in special stages!
 	{
-		if (gametype == GT_COOP && (netgame || multiplayer) && cv_playstyle.value == 2)
+		if (gametype == GT_COOP && (netgame || multiplayer) && cv_coopstarposts.value == 2)
 		{
 			P_ConsiderAllGone();
 			if ((player->deadtimer > 5*TICRATE) || ((cmd->buttons & BT_JUMP) && (player->deadtimer > TICRATE)))
@@ -9390,7 +9390,7 @@ void P_PlayerThink(player_t *player)
 
 	if (!player->spectator)
 		P_PlayerInSpecialSector(player);
-	else if (gametype == GT_COOP && (netgame || multiplayer) && cv_playstyle.value == 2)
+	else if (gametype == GT_COOP && (netgame || multiplayer) && cv_coopstarposts.value == 2)
 		P_ConsiderAllGone();
 
 	if (player->playerstate == PST_DEAD)

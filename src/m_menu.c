@@ -1390,8 +1390,8 @@ static menuitem_t OP_ServerOptionsMenu[] =
 
 	{IT_HEADER, NULL, "Cooperative", NULL, 90},
 	{IT_STRING | IT_CVAR,    NULL, "Players required for exit",        &cv_playersforexit,      96},
-	{IT_STRING | IT_CVAR,    NULL, "Play style",                       &cv_playstyle,        101},
-	{IT_STRING | IT_CVAR,    NULL, "Life distribution",                &cv_lifedistribution,         106},
+	{IT_STRING | IT_CVAR,    NULL, "Starposts",                        &cv_coopstarposts,      101},
+	{IT_STRING | IT_CVAR,    NULL, "Life distribution",                &cv_cooplives,          106},
 
 	{IT_HEADER, NULL, "Race, Competition", NULL, 115},
 	{IT_STRING | IT_CVAR,    NULL, "Level completion countdown",       &cv_countdowntime,      121},

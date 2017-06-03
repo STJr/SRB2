@@ -2628,7 +2628,7 @@ void G_DoReborn(INT32 playernum)
 					token = 0;
 				}
 			}
-			if (cv_playstyle.value == 2)
+			if (cv_coopstarposts.value == 2)
 			{
 				for (i = 0; i < MAXPLAYERS; i++)
 				{
@@ -2696,7 +2696,7 @@ void G_DoReborn(INT32 playernum)
 		// Not resetting map, so return to level music
 		if (!countdown2
 		&& player->lives <= 0
-		&& !cv_lifedistribution.value) // not allowed for life steal because no way to come back from zero group lives without addons, which should call this anyways
+		&& !cv_cooplives.value) // not allowed for life steal because no way to come back from zero group lives without addons, which should call this anyways
 			P_RestoreMultiMusic(player);
 
 		if (player->starposttime)
@@ -2739,7 +2739,7 @@ void G_AddPlayer(INT32 playernum)
 			if (!players->exiting)
 				notexiting++;
 
-			if (!(cv_playstyle.value && (gametype == GT_COOP) && (p->starpostnum < players[i].starpostnum)))
+			if (!(cv_coopstarposts.value && (gametype == GT_COOP) && (p->starpostnum < players[i].starpostnum)))
 				continue;
 
 			p->starposttime = players[i].starposttime;

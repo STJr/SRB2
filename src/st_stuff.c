@@ -732,7 +732,7 @@ static void ST_drawLives(void)
 	// lives number
 	if ((netgame || multiplayer) && gametype == GT_COOP)
 	{
-		switch (cv_lifedistribution.value)
+		switch (cv_cooplives.value)
 		{
 			case 2:
 				{
@@ -1875,7 +1875,7 @@ static void ST_overlayDrawer(void)
 		else
 			p = sboover;
 
-		if (cv_lifedistribution.value
+		if (cv_cooplives.value
 		&& gametype == GT_COOP)
 		{
 			INT32 i;
@@ -2013,7 +2013,7 @@ static void ST_overlayDrawer(void)
 				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132), V_HUDTRANSHALF, M_GetText("You cannot join the game until the stage has ended."));
 			else if (gametype == GT_COOP)
 			{
-				if (cv_lifedistribution.value == 1
+				if (cv_cooplives.value == 1
 				&& (netgame || multiplayer))
 				{
 					INT32 i;
