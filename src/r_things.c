@@ -2669,16 +2669,17 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 
 		if (player->mo)
 		{
+			fixed_t radius = FixedMul(skin->radius, player->mo->scale);
 			if ((player->powers[pw_carry] == CR_NIGHTSMODE) && (skin->sprites[SPR2_NGT0].numframes == 0)) // If you don't have a sprite for flying horizontally, use the default NiGHTS skin.
 			{
 				skin = &skins[DEFAULTNIGHTSSKIN];
-				newcolor = ((skin->flags & SF_SUPER) ? skin->supercolor : skin->prefcolor);
+				newcolor = skin->prefcolor; // will be updated in thinker to flashing
 			}
 			player->mo->skin = skin;
 			if (newcolor)
 				player->mo->color = newcolor;
 			P_SetScale(player->mo, player->mo->scale);
-			player->mo->radius = FixedMul(skin->radius, player->mo->scale);
+			player->mo->radius = radius;
 
 			P_SetPlayerMobjState(player->mo, player->mo->state-states); // Prevent visual errors when switching between skins with differing number of frames
 		}

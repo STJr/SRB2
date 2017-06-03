@@ -667,7 +667,6 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 	{
 		player->mo->skin = &skins[DEFAULTNIGHTSSKIN];
 		player->mo->color = skins[DEFAULTNIGHTSSKIN].prefcolor;
-		player->mo->radius = FixedMul(skins[DEFAULTNIGHTSSKIN].radius, player->mo->scale);
 	}
 
 	player->nightstime = player->startedtime = nighttime*TICRATE;
