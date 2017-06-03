@@ -507,6 +507,14 @@ static boolean areToptexturesMissing(sector_t *thisSector)
 		if (!frontSector || !backSector)
 			continue;
 
+#ifdef ESLOPE
+		if (frontSector->c_slope || backSector->c_slope) // the slope's height can be completely different from original ceiling height
+		{
+			nomiss++;
+			break;
+		}
+#endif
+
 		sider = &sides[thisElem->line->sidenum[0]];
 		sidel = &sides[thisElem->line->sidenum[1]];
 
@@ -554,6 +562,14 @@ static boolean areBottomtexturesMissing(sector_t *thisSector)
 
 		if (frontSector == NULL || backSector == NULL)
 			continue;
+
+#ifdef ESLOPE
+		if (frontSector->f_slope || backSector->f_slope) // the slope's height can be completely different from original floor height
+		{
+			nomiss++;
+			break;
+		}
+#endif
 
 		sider = &sides[thisElem->line->sidenum[0]];
 		sidel = &sides[thisElem->line->sidenum[1]];
