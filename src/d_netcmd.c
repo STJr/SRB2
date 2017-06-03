@@ -3410,7 +3410,23 @@ static void CoopStarposts_OnChange(void)
 {
 	INT32 i;
 
-	if (!(netgame || multiplayer) || gametype != GT_COOP || cv_coopstarposts.value == 2 || G_IsSpecialStage(gamemap))
+	if (!(netgame || multiplayer) || gametype != GT_COOP)
+		return;
+
+	switch (cv_coopstarposts.value)
+	{
+		case 0:
+			CONS_Printf(M_GetText("Starposts are now per-player.\n"));
+			break;
+		case 1:
+			CONS_Printf(M_GetText("Starposts are now shared between players.\n"));
+			break;
+		case 2:
+			CONS_Printf(M_GetText("Players now only spawn when starposts are hit.\n"));
+			return;
+	}
+
+	if (G_IsSpecialStage(gamemap))
 		return;
 
 	for (i = 0; i < MAXPLAYERS; i++)
@@ -3430,24 +3446,39 @@ static void CoopStarposts_OnChange(void)
 
 static void CoopLives_OnChange(void)
 {
-	if (!(netgame || multiplayer) || gametype != GT_COOP || cv_coopstarposts.value == 2)
+	INT32 i;
+
+	if (!(netgame || multiplayer) || gametype != GT_COOP)
 		return;
-	if (cv_cooplives.value)
+
+	switch (cv_cooplives.value)
 	{
-		INT32 i;
-		for (i = 0; i < MAXPLAYERS; i++)
-		{
-			if (!playeringame[i])
-				continue;
+		case 0:
+			CONS_Printf(M_GetText("Lives are now per-player.\n"));
+			return;
+		case 1:
+			CONS_Printf(M_GetText("Players can now steal lives to avoid game over.\n"));
+			break;
+		case 2:
+			CONS_Printf(M_GetText("Lives are now shared between players.\n"));
+			break;
+	}
 
-			if (!players[i].spectator)
-				continue;
+	if (cv_coopstarposts.value == 2)
+		return;
 
-			if (players[i].lives > 0)
-				continue;
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (!playeringame[i])
+			continue;
 
-			P_SpectatorJoinGame(&players[i]);
-		}
+		if (!players[i].spectator)
+			continue;
+
+		if (players[i].lives > 0)
+			continue;
+
+		P_SpectatorJoinGame(&players[i]);
 	}
 }
 
