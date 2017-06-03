@@ -9084,9 +9084,10 @@ void P_SpawnPlayer(INT32 playernum)
 	// spawn as spectator determination
 	if (!G_GametypeHasSpectators())
 	{
-		if ( ( (multiplayer || netgame) && gametype == GT_COOP && leveltime > 0) // only question status in coop
-		&& ( (G_IsSpecialStage(gamemap) && useNightsSS) // late join special stage
-		|| (cv_coopstarposts.value == 2 && (p->jointime < 1 || p->spectator) ) // late join or die in new coop
+		if (((multiplayer || netgame) && gametype == GT_COOP) // only question status in coop
+		&& ((leveltime > 0
+		&& ((G_IsSpecialStage(gamemap) && useNightsSS) // late join special stage
+		|| (cv_coopstarposts.value == 2 && (p->jointime < 1 || p->spectator)))) // late join or die in new coop
 		|| ((!cv_cooplives.value || !P_GetLives(p)) && p->lives <= 0))) // game over and can't redistribute lives
 			p->spectator = true;
 		else
@@ -9135,7 +9136,7 @@ void P_SpawnPlayer(INT32 playernum)
 			p->skincolor = skincolor_blueteam;
 	}
 
-	if ((netgame || multiplayer) && !p->spectator && (gametype != GT_COOP || ((p->jointime < 1) && !(G_IsSpecialStage(gamemap) && useNightsSS))))
+	if ((netgame || multiplayer) && !p->spectator)
 		p->powers[pw_flashing] = flashingtics-1; // Babysitting deterrent
 
 	mobj = P_SpawnMobj(0, 0, 0, MT_PLAYER);

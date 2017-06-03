@@ -1983,7 +1983,7 @@ static void ST_overlayDrawer(void)
 
 	if (!hu_showscores && (netgame || multiplayer) && displayplayer == consoleplayer)
 	{
-		if (!splitscreen && G_GametypeUsesLives() && stplyr->lives <= 0 && countdown != 1)
+		if (!splitscreen && gametype != GT_COOP && G_GametypeUsesLives() && stplyr->lives <= 0 && countdown != 1)
 			V_DrawCenteredString(BASEVIDWIDTH/2, 132, 0, M_GetText("Press F12 to watch another player."));
 		else if (gametype == GT_HIDEANDSEEK &&
 		 (!stplyr->spectator && !(stplyr->pflags & PF_TAGIT)) && (leveltime > hidetime * TICRATE))
@@ -2010,8 +2010,8 @@ static void ST_overlayDrawer(void)
 			if (G_GametypeHasTeams())
 				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132), V_HUDTRANSHALF, M_GetText("Press Fire to be assigned to a team."));
 			else if (G_IsSpecialStage(gamemap) && useNightsSS)
-				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132), V_HUDTRANSHALF, M_GetText("You cannot join the game until the stage has ended."));
-			else if (gametype == GT_COOP)
+				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132), V_HUDTRANSHALF, M_GetText("You cannot play until the stage has ended."));
+			else if (gametype == GT_COOP && stplyr->lives <= 0)
 			{
 				if (cv_cooplives.value == 1
 				&& (netgame || multiplayer))

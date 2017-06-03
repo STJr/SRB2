@@ -2754,6 +2754,9 @@ void G_AddPlayer(INT32 playernum)
 	p->jointime = 0;
 	p->playerstate = PST_REBORN;
 
+	if (G_GametypeUsesLives())
+		p->lives = cv_startinglives.value;
+
 	if (countplayers && !notexiting)
 		P_DoPlayerExit(p);
 }
