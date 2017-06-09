@@ -4077,7 +4077,7 @@ static INT16 Consistancy(void)
 	mobj_t *mo;
 #endif
 
-	DEBFILE(va("TIC %u ", gametic));
+	DEBFILE(va("TIC %u\n", gametic));
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
