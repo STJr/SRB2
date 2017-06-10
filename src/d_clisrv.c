@@ -4077,7 +4077,7 @@ static INT16 Consistancy(void)
 	mobj_t *mo;
 #endif
 
-	DEBFILE(va("TIC %u\n", gametic));
+	DEBFILE(va("TIC %u ", gametic));
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
@@ -4099,7 +4099,10 @@ static INT16 Consistancy(void)
 
 #ifdef MOBJCONSISTANCY
 	if (!thinkercap.next)
+	{
+		DEBFILE(va("Consistancy = %u\n", ret));
 		return ret;
+	}
 	for (th = thinkercap.next; th != &thinkercap; th = th->next)
 	{
 		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
@@ -4167,6 +4170,8 @@ static INT16 Consistancy(void)
 		}
 	}
 #endif
+
+	DEBFILE(va("Consistancy = %u\n", (ret & 0xFFFF)));
 
 	return (INT16)(ret & 0xFFFF);
 }
