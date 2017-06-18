@@ -87,6 +87,15 @@ typedef off_t off64_t;
  #if (PNG_LIBPNG_VER_MAJOR > 1) || (PNG_LIBPNG_VER_MAJOR == 1 && PNG_LIBPNG_VER_MINOR >= 4)
   #define NO_PNG_DEBUG // 1.4.0 move png_debug to pngpriv.h
  #endif
+ #if (PNG_LIBPNG_VER_MAJOR > 1) || (PNG_LIBPNG_VER_MAJOR == 1 && PNG_LIBPNG_VER_MINOR >= 5)
+  #define USE_NEW_PNG_EXPORT // PNG_EXPORT is different from 1.5.0 onwards
+ #endif
+ #if (PNG_LIBPNG_VER_MAJOR > 1) || (PNG_LIBPNG_VER_MAJOR == 1 && PNG_LIBPNG_VER_MINOR >= 6)
+  // 1.6.0 removes these (1.5.0 made them private)
+  #define png_memcmp  memcmp
+  #define png_memcpy  memcpy
+ #endif
+
  #ifdef PNG_WRITE_SUPPORTED
   #define USE_PNG // Only actually use PNG if write is supported.
   #if defined (PNG_WRITE_APNG_SUPPORTED) //|| !defined(PNG_STATIC)
@@ -779,8 +788,28 @@ static png_byte    acTL_cn[5] = { 97,  99,  84,  76, '\0'};
 #endif
 
 #endif
+
+#ifdef USE_NEW_PNG_EXPORT // use newer four-argument PNG_EXPORT (1.5.0 onwards)
+// PNG_APNG_SUPPORTED
+typedef PNG_EXPORT(247, png_uint_32, (*P_png_set_acTL), (png_structp png_ptr,
+   png_infop info_ptr, png_uint_32 num_frames, png_uint_32 num_plays));
+
+// PNG_WRITE_APNG_SUPPORTED
+typedef PNG_EXPORT(264, void, (*P_png_write_frame_head), (png_structp png_ptr,
+   png_infop info_ptr, png_bytepp row_pointers,
+   png_uint_32 width, png_uint_32 height,
+   png_uint_32 x_offset, png_uint_32 y_offset,
+   png_uint_16 delay_num, png_uint_16 delay_den, png_byte dispose_op,
+   png_byte blend_op));
+
+typedef PNG_EXPORT(265, void, (*P_png_write_frame_tail), (png_structp png_ptr,
+   png_infop info_ptr));
+#else // use old two-argument PNG_EXPORT
+// PNG_APNG_SUPPORTED
 typedef PNG_EXPORT(png_uint_32, (*P_png_set_acTL)) PNGARG((png_structp png_ptr,
    png_infop info_ptr, png_uint_32 num_frames, png_uint_32 num_plays));
+
+// PNG_WRITE_APNG_SUPPORTED
 typedef PNG_EXPORT (void, (*P_png_write_frame_head)) PNGARG((png_structp png_ptr,
    png_infop info_ptr, png_bytepp row_pointers,
    png_uint_32 width, png_uint_32 height,
@@ -790,6 +819,7 @@ typedef PNG_EXPORT (void, (*P_png_write_frame_head)) PNGARG((png_structp png_ptr
 
 typedef PNG_EXPORT (void, (*P_png_write_frame_tail)) PNGARG((png_structp png_ptr,
    png_infop info_ptr));
+#endif
 static P_png_set_acTL apng_set_acTL = NULL;
 static P_png_write_frame_head apng_write_frame_head = NULL;
 static P_png_write_frame_tail apng_write_frame_tail = NULL;
