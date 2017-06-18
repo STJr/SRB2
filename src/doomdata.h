@@ -74,14 +74,14 @@ typedef struct
 	INT16 textureoffset, rowoffset;
 	char toptexture[8], bottomtexture[8], midtexture[8];
 	// Front sector, towards viewer.
-	INT16 sector;
+	UINT16 sector;
 } ATTRPACK mapsidedef_t;
 
 // A LineDef, as used for editing, and as input
 // to the BSP builder.
 typedef struct
 {
-	INT16 v1, v2;
+	UINT16 v1, v2;
 	INT16 flags;
 	INT16 special;
 	INT16 tag;
@@ -163,9 +163,9 @@ typedef struct
 // using partition lines selected by BSP builder.
 typedef struct
 {
-	INT16 v1, v2;
+	UINT16 v1, v2;
 	INT16 angle;
-	INT16 linedef;
+	UINT16 linedef;
 	INT16 side;
 	INT16 offset;
 } ATTRPACK mapseg_t;

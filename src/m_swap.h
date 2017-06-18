@@ -39,4 +39,8 @@
 #define LONG(x)	((INT32)(x))
 #endif
 
+// Unsigned versions
+#define USHORT(x) (UINT16)SHORT(x)
+#define ULONG(x) (UINT32)LONG(x)
+
 #endif
