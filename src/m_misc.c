@@ -853,8 +853,7 @@ static inline boolean M_PNGLib(void)
 	apng_set_acTL = hwSym("png_set_acTL", pnglib);
 	apng_write_frame_head = hwSym("png_write_frame_head", pnglib);
 	apng_write_frame_tail = hwSym("png_write_frame_tail", pnglib);
-#endif
-#ifdef _WIN32
+#elif defined (_WIN32)
 	apng_set_acTL = GetProcAddress("png_set_acTL", pnglib);
 	apng_write_frame_head = GetProcAddress("png_write_frame_head", pnglib);
 	apng_write_frame_tail = GetProcAddress("png_write_frame_tail", pnglib);
