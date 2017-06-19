@@ -89,9 +89,8 @@ typedef off_t off64_t;
  #endif
  #if (PNG_LIBPNG_VER_MAJOR > 1) || (PNG_LIBPNG_VER_MAJOR == 1 && PNG_LIBPNG_VER_MINOR >= 5)
   #define USE_NEW_PNG_EXPORT // PNG_EXPORT is different from 1.5.0 onwards
- #endif
- #if (PNG_LIBPNG_VER_MAJOR > 1) || (PNG_LIBPNG_VER_MAJOR == 1 && PNG_LIBPNG_VER_MINOR >= 6)
-  // 1.6.0 removes these (1.5.0 made them private)
+
+  // 1.5.0 moved these to pngpriv.h (they were later removed in 1.6.0)
   #define png_memcmp  memcmp
   #define png_memcpy  memcpy
  #endif
