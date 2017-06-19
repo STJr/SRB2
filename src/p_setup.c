@@ -441,8 +441,8 @@ static void P_LoadSegs(lumpnum_t lumpnum)
 	li = segs;
 	for (i = 0; i < numsegs; i++, li++, ml++)
 	{
-		li->v1 = &vertexes[USHORT(ml->v1)];
-		li->v2 = &vertexes[USHORT(ml->v2)];
+		li->v1 = &vertexes[(UINT16)SHORT(ml->v1)];
+		li->v2 = &vertexes[(UINT16)SHORT(ml->v2)];
 
 #ifdef HWRENDER // not win32 only 19990829 by Kin
 		// used for the hardware render
@@ -456,7 +456,7 @@ static void P_LoadSegs(lumpnum_t lumpnum)
 
 		li->angle = (SHORT(ml->angle))<<FRACBITS;
 		li->offset = (SHORT(ml->offset))<<FRACBITS;
-		linedef = USHORT(ml->linedef);
+		linedef = (UINT16)SHORT(ml->linedef);
 		ldef = &lines[linedef];
 		li->linedef = ldef;
 		li->side = side = SHORT(ml->side);
@@ -497,8 +497,8 @@ static inline void P_LoadSubsectors(lumpnum_t lumpnum)
 	for (i = 0; i < numsubsectors; i++, ss++, ms++)
 	{
 		ss->sector = NULL;
-		ss->numlines = USHORT(ms->numsegs);
-		ss->firstline = USHORT(ms->firstseg);
+		ss->numlines = (UINT16)SHORT(ms->numsegs);
+		ss->firstline = (UINT16)SHORT(ms->firstseg);
 #ifdef FLOORSPLATS
 		ss->splats = NULL;
 #endif
@@ -776,7 +776,7 @@ static void P_LoadNodes(lumpnum_t lumpnum)
 		no->dy = SHORT(mn->dy)<<FRACBITS;
 		for (j = 0; j < 2; j++)
 		{
-			no->children[j] = USHORT(mn->children[j]);
+			no->children[j] = (UINT16)SHORT(mn->children[j]);
 			for (k = 0; k < 4; k++)
 				no->bbox[j][k] = SHORT(mn->bbox[j][k])<<FRACBITS;
 		}
@@ -1164,8 +1164,8 @@ static void P_LoadLineDefs(lumpnum_t lumpnum)
 		ld->flags = SHORT(mld->flags);
 		ld->special = SHORT(mld->special);
 		ld->tag = SHORT(mld->tag);
-		v1 = ld->v1 = &vertexes[USHORT(mld->v1)];
-		v2 = ld->v2 = &vertexes[USHORT(mld->v2)];
+		v1 = ld->v1 = &vertexes[(UINT16)SHORT(mld->v1)];
+		v2 = ld->v2 = &vertexes[(UINT16)SHORT(mld->v2)];
 		ld->dx = v2->x - v1->x;
 		ld->dy = v2->y - v1->y;
 
@@ -1204,8 +1204,8 @@ static void P_LoadLineDefs(lumpnum_t lumpnum)
 			ld->bbox[BOXTOP] = v1->y;
 		}
 
-		ld->sidenum[0] = USHORT(mld->sidenum[0]);
-		ld->sidenum[1] = USHORT(mld->sidenum[1]);
+		ld->sidenum[0] = (UINT16)SHORT(mld->sidenum[0]);
+		ld->sidenum[1] = (UINT16)SHORT(mld->sidenum[1]);
 
 		{
 			// cph 2006/09/30 - fix sidedef errors right away.
@@ -1382,7 +1382,7 @@ static void P_LoadSideDefs2(lumpnum_t lumpnum)
 		sd->rowoffset = SHORT(msd->rowoffset)<<FRACBITS;
 
 		{ /* cph 2006/09/30 - catch out-of-range sector numbers; use sector 0 instead */
-			UINT16 sector_num = USHORT(msd->sector);
+			UINT16 sector_num = (UINT16)SHORT(msd->sector);
 
 			if (sector_num >= numsectors)
 			{
@@ -1395,7 +1395,7 @@ static void P_LoadSideDefs2(lumpnum_t lumpnum)
 		// refined to allow colormaps to work as wall textures if invalid as colormaps
 		// but valid as textures.
 
-		sd->sector = sec = &sectors[USHORT(msd->sector)];
+		sd->sector = sec = &sectors[(UINT16)SHORT(msd->sector)];
 
 		// Colormaps!
 		switch (sd->special)
