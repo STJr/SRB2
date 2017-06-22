@@ -150,9 +150,9 @@ extern FILE *logstream;
 // we use comprevision and compbranch instead.
 #else
 #define VERSION    201 // Game version
-#define SUBVERSION 18  // more precise version number
-#define VERSIONSTRING "v2.1.18"
-#define VERSIONSTRINGW L"v2.1.18"
+#define SUBVERSION 19  // more precise version number
+#define VERSIONSTRING "v2.1.19"
+#define VERSIONSTRINGW L"v2.1.19"
 // Hey! If you change this, add 1 to the MODVERSION below!
 // Otherwise we can't force updates!
 #endif
@@ -214,7 +214,7 @@ extern FILE *logstream;
 // it's only for detection of the version the player is using so the MS can alert them of an update.
 // Only set it higher, not lower, obviously.
 // Note that we use this to help keep internal testing in check; this is why v2.1.0 is not version "1".
-#define MODVERSION 23
+#define MODVERSION 24
 
 // =========================================================================
 
@@ -497,5 +497,9 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 /// Backwards compatibility with musicslots.
 /// \note	You should leave this enabled unless you're working with a future SRB2 version.
 #define MUSICSLOT_COMPATIBILITY
+
+/// Handle touching sector specials in P_PlayerAfterThink instead of P_PlayerThink.
+/// \note   Required for proper collision with moving sloped surfaces that have sector specials on them.
+//#define SECTORSPECIALSAFTERTHINK
 
 #endif // __DOOMDEF__
