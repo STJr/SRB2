@@ -2437,73 +2437,81 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 		case 414: // Play SFX
 			{
-				fixed_t sfxnum;
+				INT32 sfxnum;
 
 				sfxnum = sides[line->sidenum[0]].toptexture; //P_AproxDistance(line->dx, line->dy)>>FRACBITS;
 
-				if (line->tag != 0 && line->flags & ML_EFFECT5)
+				if (sfxnum == sfx_None)
+					return; // Do nothing!
+				if (sfxnum < sfx_None || sfxnum >= NUMSFX)
 				{
-					sector_t *sec;
-
-					while ((secnum = P_FindSectorFromLineTag(line, secnum)) >= 0)
+					CONS_Debug(DBG_GAMELOGIC, "Line type 414 Executor: sfx number %d is invalid!\n", sfxnum);
+					return;
+				}
+				if (line->tag != 0) // Do special stuff only if a non-zero linedef tag is set
+				{
+					if (line->flags & ML_EFFECT5) // Repeat Midtexture
 					{
-						sec = &sectors[secnum];
-						S_StartSound(&sec->soundorg, sfxnum);
+						// Additionally play the sound from tagged sectors' soundorgs
+						sector_t *sec;
+
+						while ((secnum = P_FindSectorFromLineTag(line, secnum)) >= 0)
+						{
+							sec = &sectors[secnum];
+							S_StartSound(&sec->soundorg, sfxnum);
+						}
+					}
+					else if (mo) // A mobj must have triggered the executor
+					{
+						// Only trigger if mobj is touching the tag
+						ffloor_t *rover;
+						boolean foundit = false;
+
+						for(rover = mo->subsector->sector->ffloors; rover; rover = rover->next)
+						{
+							if (rover->master->frontsector->tag != line->tag)
+								continue;
+
+							if (mo->z > P_GetSpecialTopZ(mo, sectors + rover->secnum, mo->subsector->sector))
+								continue;
+
+							if (mo->z + mo->height < P_GetSpecialBottomZ(mo, sectors + rover->secnum, mo->subsector->sector))
+								continue;
+
+							foundit = true;
+						}
+
+						if (mo->subsector->sector->tag == line->tag)
+							foundit = true;
+
+						if (!foundit)
+							return;
 					}
 				}
-				else if (line->tag != 0 && mo)
+
+				if (line->flags & ML_NOCLIMB)
 				{
-					// Only trigger if mobj is touching the tag
-					ffloor_t *rover;
-					boolean foundit = false;
-
-					for(rover = mo->subsector->sector->ffloors; rover; rover = rover->next)
-					{
-						if (rover->master->frontsector->tag != line->tag)
-							continue;
-
-						if (mo->z > P_GetSpecialTopZ(mo, sectors + rover->secnum, mo->subsector->sector))
-							continue;
-
-						if (mo->z + mo->height < P_GetSpecialBottomZ(mo, sectors + rover->secnum, mo->subsector->sector))
-							continue;
-
-						foundit = true;
-					}
-
-					if (mo->subsector->sector->tag == line->tag)
-						foundit = true;
-
-					if (!foundit)
-						return;
-				}
-
-				if (sfxnum < NUMSFX && sfxnum > sfx_None)
-				{
-					if (line->flags & ML_NOCLIMB)
-					{
-						// play the sound from nowhere, but only if display player triggered it
-						if (mo && mo->player && (mo->player == &players[displayplayer] || mo->player == &players[secondarydisplayplayer]))
-							S_StartSound(NULL, sfxnum);
-					}
-					else if (line->flags & ML_EFFECT4)
-					{
-						// play the sound from nowhere
+					// play the sound from nowhere, but only if display player triggered it
+					if (mo && mo->player && (mo->player == &players[displayplayer] || mo->player == &players[secondarydisplayplayer]))
 						S_StartSound(NULL, sfxnum);
-					}
-					else if (line->flags & ML_BLOCKMONSTERS)
-					{
-						// play the sound from calling sector's soundorg
-						if (callsec)
-							S_StartSound(&callsec->soundorg, sfxnum);
-						else if (mo)
-							S_StartSound(&mo->subsector->sector->soundorg, sfxnum);
-					}
+				}
+				else if (line->flags & ML_EFFECT4)
+				{
+					// play the sound from nowhere
+					S_StartSound(NULL, sfxnum);
+				}
+				else if (line->flags & ML_BLOCKMONSTERS)
+				{
+					// play the sound from calling sector's soundorg
+					if (callsec)
+						S_StartSound(&callsec->soundorg, sfxnum);
 					else if (mo)
-					{
-						// play the sound from mobj that triggered it
-						S_StartSound(mo, sfxnum);
-					}
+						S_StartSound(&mo->subsector->sector->soundorg, sfxnum);
+				}
+				else if (mo)
+				{
+					// play the sound from mobj that triggered it
+					S_StartSound(mo, sfxnum);
 				}
 			}
 			break;
@@ -3476,7 +3484,7 @@ static boolean P_ThingIsOnThe3DFloor(mobj_t *mo, sector_t *sector, sector_t *tar
 //
 // Is player standing on the sector's "ground"?
 //
-static inline boolean P_MobjReadyToTrigger(mobj_t *mo, sector_t *sec)
+static boolean P_MobjReadyToTrigger(mobj_t *mo, sector_t *sec)
 {
 	if (mo->eflags & MFE_VERTICALFLIP)
 		return (mo->z+mo->height == P_GetSpecialTopZ(mo, sec, sec) && sec->flags & SF_FLIPSPECIAL_CEILING);
