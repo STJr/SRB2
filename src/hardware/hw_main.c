@@ -1084,9 +1084,9 @@ static void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, INT32 texnum,
 	float endheight = 0.0f, endbheight = 0.0f;
 
 	fixed_t v1x = FLOAT_TO_FIXED(wallVerts[0].x);
-	fixed_t v1y = FLOAT_TO_FIXED(wallVerts[0].y);
+	fixed_t v1y = FLOAT_TO_FIXED(wallVerts[0].z); // not a typo
 	fixed_t v2x = FLOAT_TO_FIXED(wallVerts[1].x);
-	fixed_t v2y = FLOAT_TO_FIXED(wallVerts[1].y);
+	fixed_t v2y = FLOAT_TO_FIXED(wallVerts[1].z); // not a typo
 	// compiler complains when P_GetZAt is used in FLOAT_TO_FIXED directly
 	// use this as a temp var to store P_GetZAt's return value each time
 	fixed_t temp;
@@ -3722,6 +3722,9 @@ static void HWR_Subsector(size_t num)
 
 		while (count--)
 		{
+#ifdef POLYOBJECTS
+				if (!line->polyseg) // ignore segs that belong to polyobjects
+#endif
 				HWR_AddLine(line);
 				line++;
 		}
