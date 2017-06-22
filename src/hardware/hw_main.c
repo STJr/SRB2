@@ -3722,6 +3722,9 @@ static void HWR_Subsector(size_t num)
 
 		while (count--)
 		{
+#ifdef POLYOBJECTS
+				if (!line->polyseg) // ignore segs that belong to polyobjects
+#endif
 				HWR_AddLine(line);
 				line++;
 		}
