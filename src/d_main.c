@@ -917,8 +917,8 @@ static inline void D_MakeTitleString(char *s)
 
 static inline void D_Titlebar(void)
 {
-	char srb2[82]; // srb2 title banner
-	char title[82];
+	char title1[82]; // srb2 title banner
+	char title2[82];
 
 	strcpy(title1, "Sonic Robo Blast 2");
 	strcpy(title2, "Sonic Robo Blast 2");
