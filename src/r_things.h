@@ -129,7 +129,8 @@ typedef enum
 {
 	SC_NONE = 0,
 	SC_TOP = 1,
-	SC_BOTTOM = 2
+	SC_BOTTOM = 2,
+	SC_LINKDRAW = 4
 } spritecut_e;
 
 // A vissprite_t is a thing that will be drawn during a refresh,
@@ -139,6 +140,9 @@ typedef struct vissprite_s
 	// Doubly linked list.
 	struct vissprite_s *prev;
 	struct vissprite_s *next;
+
+	// Bonus Linkdraw pointer.
+	struct vissprite_s *linkdraw;
 
 	mobj_t *mobj; // for easy access
 
