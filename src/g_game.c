@@ -2640,6 +2640,38 @@ void G_ExitLevel(void)
 	}
 }
 
+// See also the enum GameType in doomstat.h
+const char *Gametype_Names[NUMGAMETYPES] =
+{
+	"Co-op", // GT_COOP
+	"Competition", // GT_COMPETITION
+	"Race", // GT_RACE
+
+	"Match", // GT_MATCH
+	"Team Match", // GT_TEAMMATCH
+
+	"Tag", // GT_TAG
+	"Hide & Seek", // GT_HIDEANDSEEK
+
+	"CTF" // GT_CTF
+};
+
+//
+// G_GetGametypeByName
+//
+// Returns the number for the given gametype name string, or -1 if not valid.
+//
+INT32 G_GetGametypeByName(const char *gametypestr)
+{
+	INT32 i;
+
+	for (i = 0; i < NUMGAMETYPES; i++)
+		if (!stricmp(gametypestr, Gametype_Names[i]))
+			return i;
+
+	return -1; // unknown gametype
+}
+
 //
 // G_IsSpecialStage
 //

@@ -1351,13 +1351,9 @@ void D_SRB2Main(void)
 			INT16 newgametype = -1;
 			const char *sgametype = M_GetNextParm();
 
-			for (j = 0; gametype_cons_t[j].strvalue; j++)
-				if (!strcasecmp(gametype_cons_t[j].strvalue, sgametype))
-				{
-					newgametype = (INT16)gametype_cons_t[j].value;
-					break;
-				}
-			if (!gametype_cons_t[j].strvalue) // reached end of the list with no match
+			newgametype = G_GetGametypeByName(sgametype);
+
+			if (newgametype == -1) // reached end of the list with no match
 			{
 				j = atoi(sgametype); // assume they gave us a gametype number, which is okay too
 				if (j >= 0 && j < NUMGAMETYPES)
