@@ -819,7 +819,7 @@ static void IdentifyVersion(void)
 	if (srb2wad1 == NULL && srb2wad2 == NULL)
 		I_Error("No more free memory to look in %s", srb2waddir);
 	if (srb2wad1 != NULL)
-		sprintf(srb2wad1, pandf, srb2waddir, "srb2.srb");
+		sprintf(srb2wad1, pandf, srb2waddir, "srb2.pk3");
 	if (srb2wad2 != NULL)
 		sprintf(srb2wad2, pandf, srb2waddir, "srb2.wad");
 

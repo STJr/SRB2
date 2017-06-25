@@ -309,7 +309,7 @@ UINT16 W_InitFile(const char *filename)
 	lumpinfo_t *lumpinfo;
 	wadfile_t *wadfile;
 	enum restype type;
-	UINT32 numlumps;
+	UINT16 numlumps;
 	size_t i;
 	INT32 compressed = 0;
 	size_t packetsize = 0;
@@ -417,11 +417,12 @@ UINT16 W_InitFile(const char *filename)
 		char curHeader[4];
 		unsigned long size;
 		char seekPat[] = {0x50, 0x4b, 0x01, 0x02, 0x00};
-		char endPat[] = {0x50, 0x4b, 0x05, 0x06, 0xff};
+		char endPat[] = {0x50, 0x4b, 0x05, 0x06, 0x00};
 		char *s;
 		int c;
+		UINT32 position;
 		boolean matched = FALSE;
-		numlumps = 0;
+		lumpinfo_t *lump_p;
 
 		type = RET_PK3;
 
@@ -433,19 +434,18 @@ UINT16 W_InitFile(const char *filename)
 		// We must look for the central directory through the file. (Thanks to JTE for this algorithm.)
 		// All of the central directory entry headers have a signature of 0x50 0x4b 0x01 0x02.
 		// The first entry found means the beginning of the central directory.
-		rewind(handle);
-		s = seekPat;
+		fseek(handle, -min(size, (22 + 65536)), SEEK_CUR);
+		s = endPat;
 		while((c = fgetc(handle)) != EOF)
 		{
-			if (*s != c && s > seekPat) // No match?
-				s = seekPat; // We "reset" the counter by sending the s pointer back to the start of the array.
+			if (*s != c && s > endPat) // No match?
+				s = endPat; // We "reset" the counter by sending the s pointer back to the start of the array.
 			if (*s == c)
 			{
 				s++;
 				if (*s == 0x00) // The array pointer has reached the key char which marks the end. It means we have matched the signature.
 				{
 					matched = TRUE;
-					fseek(handle, -4, SEEK_CUR);
 					CONS_Debug(DBG_SETUP, "Found PK3 central directory at position %ld.\n", ftell(handle));
 					break;
 				}
@@ -459,11 +459,18 @@ UINT16 W_InitFile(const char *filename)
 			return INT16_MAX;
 		}
 
+		fseek(handle, 4, SEEK_CUR);
+		fread(&numlumps, 1, 2, handle);
+		fseek(handle, 6, SEEK_CUR);
+		fread(&position, 1, 4, handle);
+		lump_p = lumpinfo = Z_Malloc(numlumps * sizeof (*lumpinfo), PU_STATIC, NULL);
+		fseek(handle, position, SEEK_SET);
+
 		// Since we found the central directory, now we can map our lumpinfo table.
 		// We will look for file headers inside it, until we reach the central directory end signature.
 		// We exactly know what data to expect this time, so now we don't need to do a byte-by-byte search.
 		CONS_Debug(DBG_SETUP, "Now finding central directory file headers...\n");
-		while(ftell(handle) < size - 4) // Make sure we don't go past the file size!
+		for (i = 0; i < numlumps; i++, lump_p++)
 		{
 			fread(curHeader, 1, 4, handle);
 
@@ -504,13 +511,8 @@ UINT16 W_InitFile(const char *filename)
 				fgets(eName, eNameLen + 1, handle);
 
 				// Don't load lump if folder.
-				if (*(eName + eNameLen - 1) == '/')
-					continue;
-
-				if (numlumps == 0) // First lump? Let's allocate the first lumpinfo block.
-					lumpinfo = Z_Malloc(sizeof(*lumpinfo), PU_STATIC, NULL);
-				else // Otherwise, reallocate and increase by 1. Might not be optimal, though...
-					lumpinfo = (lumpinfo_t*) Z_Realloc(lumpinfo, (numlumps + 1)*sizeof(*lumpinfo), PU_STATIC, NULL);
+//				if (*(eName + eNameLen - 1) == '/')
+//					continue;
 
 				// We must calculate the position for the actual data.
 				// Why not eLocalHeaderOffset + 30 + eNameLen + eXFieldLen? That's because the extra field and name lengths MAY be different in the local headers.
@@ -518,11 +520,11 @@ UINT16 W_InitFile(const char *filename)
 				fseek(handle, eLocalHeaderOffset + 26, SEEK_SET);
 				fread(&lNameLen, 1, 2, handle);
 				fread(&lXFieldLen, 1, 2, handle);
-				lumpinfo[numlumps].position = ftell(handle) + lNameLen + lXFieldLen;
+				lump_p->position = ftell(handle) + lNameLen + lXFieldLen;
 
 				fseek(handle, rememberPos, SEEK_SET); // Let's go back to the central dir.
-				lumpinfo[numlumps].disksize = eCompSize;
-				lumpinfo[numlumps].size = eSize;
+				lump_p->disksize = eCompSize;
+				lump_p->size = eSize;
 
 				// We will trim the file's full name so that only the filename is left.
 				namePos = eNameLen - 1;
@@ -535,33 +537,32 @@ UINT16 W_InitFile(const char *filename)
 				while(nameEnd++ < 8)
 					if(eName[namePos + nameEnd] == '.')
 						break;
-				memset(lumpinfo[numlumps].name, '\0', 9);
-				strncpy(lumpinfo[numlumps].name, eName + namePos, nameEnd);
+				memset(lump_p->name, '\0', 9);
+				strncpy(lump_p->name, eName + namePos, nameEnd);
 
-				lumpinfo[numlumps].name2 = Z_Malloc((eNameLen+1)*sizeof(char), PU_STATIC, NULL);
-				strncpy(lumpinfo[numlumps].name2, eName, eNameLen);
-				lumpinfo[numlumps].name2[eNameLen] = '\0';
+				lump_p->name2 = Z_Malloc((eNameLen+1)*sizeof(char), PU_STATIC, NULL);
+				strncpy(lump_p->name2, eName, eNameLen);
+				lump_p->name2[eNameLen] = '\0';
 
 				// We set the compression type from what we're supporting so far.
 				switch(eCompression)
 				{
 				case 0:
-					lumpinfo[numlumps].compression = CM_NONE;
+					lump_p->compression = CM_NONE;
 					break;
 				case 8:
-					lumpinfo[numlumps].compression = CM_DEFLATE;
+					lump_p->compression = CM_DEFLATE;
 					break;
 				case 14:
-					lumpinfo[numlumps].compression = CM_LZF;
+					lump_p->compression = CM_LZF;
 					break;
 				default:
 					CONS_Alert(CONS_WARNING, "Lump has an unsupported compression type!\n");
-					lumpinfo[numlumps].compression = CM_UNSUPPORTED;
+					lump_p->compression = CM_UNSUPPORTED;
 					break;
 				}
-				CONS_Debug(DBG_SETUP, "File %s, data begins at: %ld\n", eName, lumpinfo[numlumps].position);
+				CONS_Debug(DBG_SETUP, "File %s, data begins at: %ld\n", eName, lump_p->position);
 				fseek(handle, eXFieldLen + eCommentLen, SEEK_CUR); // We skip to where we expect the next central directory entry or end marker to be.
-				numlumps++;
 				free(eName);
 			}
 			// We found the central directory end signature?
