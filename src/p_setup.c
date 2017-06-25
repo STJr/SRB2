@@ -2781,6 +2781,9 @@ boolean P_SetupLevel(boolean skipprecip)
 		for (i = 0; i < 2; i++)
 			skyboxmo[i] = NULL;
 
+		for (i = 0; i < 16; i++)
+			skyboxviewpnts[i] = skyboxcenterpnts[i] = NULL;
+
 		P_MapStart();
 
 		P_PrepareRawThings(wadData + (fileinfo + ML_THINGS)->filepos, (fileinfo + ML_THINGS)->size);
@@ -2815,16 +2818,25 @@ boolean P_SetupLevel(boolean skipprecip)
 		for (i = 0; i < 2; i++)
 			skyboxmo[i] = NULL;
 
+		for (i = 0; i < 16; i++)
+			skyboxviewpnts[i] = skyboxcenterpnts[i] = NULL;
+
 		P_MapStart();
 
 		P_PrepareThings(lastloadedmaplumpnum + ML_THINGS);
 	}
+
+	// init gravity, tag lists,
+	// anything that P_ResetDynamicSlopes/P_LoadThings needs to know
+	P_InitSpecials();
 
 #ifdef ESLOPE
 	P_ResetDynamicSlopes();
 #endif
 
 	P_LoadThings();
+	skyboxmo[0] = skyboxviewpnts[0];
+	skyboxmo[1] = skyboxcenterpnts[0];
 
 	P_SpawnSecretItems(loademblems);
 
