@@ -523,22 +523,18 @@ UINT16 W_InitFile(const char *filename)
 				fseek(handle, rememberPos, SEEK_SET); // Let's go back to the central dir.
 				lumpinfo[numlumps].disksize = eCompSize;
 				lumpinfo[numlumps].size = eSize;
+
 				// We will trim the file's full name so that only the filename is left.
 				namePos = eNameLen - 1;
 				while(namePos--)
-				{
 					if(eName[namePos] == '/')
-					{
-						namePos++;
 						break;
-					}
-				}
+				namePos++;
 				// We will remove the file extension too.
 				nameEnd = 0;
 				while(nameEnd++ < 8)
 					if(eName[namePos + nameEnd] == '.')
 						break;
-
 				memset(lumpinfo[numlumps].name, '\0', 9);
 				strncpy(lumpinfo[numlumps].name, eName + namePos, nameEnd);
 

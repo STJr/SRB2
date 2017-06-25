@@ -571,12 +571,11 @@ void R_LoadTextures(void)
 		{
 			texstart = W_CheckNumForFolderStartPK3("textures/", (UINT16)w, 0);
 			texend = W_CheckNumForFolderEndPK3("textures/", (UINT16)w, texstart);
-			texturesLumpPos = W_CheckNumForFullNamePK3("TEXTURES", (UINT16)w, 0);
+			texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, 0);
 			while (texturesLumpPos != INT16_MAX)
 			{
-				CONS_Printf("AAA\n");
 				numtextures += R_CountTexturesInTEXTURESLump((UINT16)w, (UINT16)texturesLumpPos);
-				texturesLumpPos = W_CheckNumForFullNamePK3("TEXTURES", (UINT16)w, texturesLumpPos + 1);
+				texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, texturesLumpPos + 1);
 			}
 		}
 		else
@@ -625,11 +624,11 @@ void R_LoadTextures(void)
 		{
 			texstart = W_CheckNumForFolderStartPK3("textures/", (UINT16)w, 0);
 			texend = W_CheckNumForFolderEndPK3("textures/", (UINT16)w, texstart);
-			texturesLumpPos = W_CheckNumForFullNamePK3("TEXTURES", (UINT16)w, 0);
+			texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, 0);
 			while (texturesLumpPos != INT16_MAX)
 			{
 				R_ParseTEXTURESLump(w, texturesLumpPos, &i);
-				texturesLumpPos = W_CheckNumForFullNamePK3("TEXTURES", (UINT16)w, texturesLumpPos + 1);
+				texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, texturesLumpPos + 1);
 			}
 		}
 		else
@@ -1300,7 +1299,6 @@ void R_ReInitColormaps(UINT16 num)
 {
 	char colormap[9] = "COLORMAP";
 	lumpnum_t lump;
-	CONS_Printf("Reinitting colormaps...\n");
 	if (num > 0 && num <= 10000)
 		snprintf(colormap, 8, "CLM%04u", num-1);
 

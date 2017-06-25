@@ -2746,10 +2746,10 @@ boolean P_SetupLevel(boolean skipprecip)
 	P_MakeMapMD5(lastloadedmaplumpnum, &mapmd5);
 
 
-	// HACK ALERT: Cache the WAD, get the map data into the table, free memory.
+	// HACK ALERT: Cache the WAD, get the map data into the tables, free memory.
 	// As it is implemented right now, we're assuming an uncompressed WAD.
 	// (As in, a normal PWAD, not ZWAD or anything. The lump itself can be compressed.)
-	// Basically this is a nerfed&modified version of W_InitFile from w_wad.
+	// We're not accounting for extra lumps and scrambled lump positions. Any additional data will cause an error.
 	lumpfullName = (wadfiles[WADFILENUM(lastloadedmaplumpnum)]->lumpinfo + LUMPNUM(lastloadedmaplumpnum))->name2;
 	if (!strnicmp(lumpfullName + strlen(lumpfullName) - 4, ".wad", 4))
 	{
@@ -2765,7 +2765,6 @@ boolean P_SetupLevel(boolean skipprecip)
 		P_LoadRawSubsectors(wadData + (fileinfo + ML_SSECTORS)->filepos, (fileinfo + ML_SSECTORS)->size);
 		P_LoadRawNodes(wadData + (fileinfo + ML_NODES)->filepos, (fileinfo + ML_NODES)->size);
 		P_LoadRawSegs(wadData + (fileinfo + ML_SEGS)->filepos, (fileinfo + ML_SEGS)->size);
-//		P_LoadReject(lastloadedmaplumpnum + ML_REJECT);
 
 		// Important: take care of the ordering of the next functions.
 		if (!loadedbm)
@@ -3106,27 +3105,6 @@ boolean P_RunSOC(const char *socfilename)
 	return true;
 }
 
-#ifdef HAVE_BLUA
-// Auxiliary function for PK3 loading - runs Lua scripts from range.
-void P_LoadLuaScrRange(UINT16 wadnum, UINT16 first, UINT16 num)
-{
-	for (; num > 0; num--, first++)
-	{
-		LUA_LoadLump(wadnum, first);
-	}
-}
-#endif
-
-// Auxiliary function for PK3 loading - runs SOCs from range.
-void P_LoadDehackRange(UINT16 wadnum, UINT16 first, UINT16 num)
-{
-	for (; num > 0; num--, first++)
-	{
-		CONS_Printf(M_GetText("Loading SOC from %s\n"), wadfiles[wadnum]->filename);
-		DEH_LoadDehackedLumpPwad(wadnum, first);
-	}
-}
-
 // Auxiliary function for PK3 loading - looks for sound replacements.
 // NOTE: it does not really add any new sound entry or anything.
 void P_LoadSoundsRange(UINT16 wadnum, UINT16 first, UINT16 num)
@@ -3150,8 +3128,8 @@ void P_LoadSoundsRange(UINT16 wadnum, UINT16 first, UINT16 num)
 	}
 }
 
-// Auxiliary function for PK3 loading - looks for sound replacements.
-// NOTE: does nothing but print debug messages.
+// Auxiliary function for PK3 loading - looks for music and music replacements.
+// NOTE: does nothing but print debug messages. The code is handled somewhere else.
 void P_LoadMusicsRange(UINT16 wadnum, UINT16 first, UINT16 num)
 {
 	lumpinfo_t *lumpinfo = wadfiles[wadnum]->lumpinfo + first;
@@ -3195,7 +3173,7 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 	UINT16 texPos, texNum = 0;
 //	UINT16 patPos, patNum = 0;
 //	UINT16 flaPos, flaNum = 0;
-	UINT16 mapPos, mapNum = 0;
+//	UINT16 mapPos, mapNum = 0;
 
 	// Init file.
 	if ((numlumps = W_InitFile(wadfilename)) == INT16_MAX)
@@ -3218,12 +3196,8 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 					lumpinfo++;
 					*start = ++i;
 					for (; i < numlumps; i++, lumpinfo++)
-					{
 						if (strnicmp(lumpinfo->name2, folName, strlen(folName)))
-						{
 							break;
-						}
-					}
 					lumpinfo--;
 					*end = i-- - *start;
 					return;
@@ -3243,7 +3217,7 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 				FindFolder("Textures/",	&texPos, &texNum);
 //				FindFolder("Patches/",	&patPos, &patNum);
 //				FindFolder("Flats/",	&flaPos, &flaNum);
-				FindFolder("Maps/",		&mapPos, &mapNum);
+//				FindFolder("Maps/",		&mapPos, &mapNum);
 			}
 
 			// Update the detected resources.
