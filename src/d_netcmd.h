@@ -51,7 +51,6 @@ extern consvar_t cv_itemrespawntime;
 extern consvar_t cv_itemrespawn;
 
 extern consvar_t cv_flagtime;
-extern consvar_t cv_suddendeath;
 
 extern consvar_t cv_touchtag;
 extern consvar_t cv_hidetime;
@@ -91,7 +90,6 @@ extern consvar_t cv_recycler;
 extern consvar_t cv_itemfinder;
 
 extern consvar_t cv_inttime, cv_advancemap, cv_playersforexit;
-extern consvar_t cv_match_scoring;
 extern consvar_t cv_overtime;
 extern consvar_t cv_startinglives;
 

@@ -22,7 +22,7 @@
 #include "w_wad.h"
 #include "z_zone.h"
 #include "p_setup.h" // levelflats
-#include "v_video.h" // pLocalPalette
+#include "v_video.h" // pMasterPalette
 #include "dehacked.h"
 
 #if defined (_WIN32) || defined (_WIN32_WCE)
@@ -1174,23 +1174,24 @@ static void R_InitExtraColormaps(void)
 	for (cfile = clump = 0; cfile < numwadfiles; cfile++, clump = 0)
 	{
 		startnum = W_CheckNumForNamePwad("C_START", cfile, clump);
-		if (startnum == LUMPERROR)
+		if (startnum == INT16_MAX)
 			continue;
 
 		endnum = W_CheckNumForNamePwad("C_END", cfile, clump);
 
-		if (endnum == LUMPERROR)
+		if (endnum == INT16_MAX)
 			I_Error("R_InitExtraColormaps: C_START without C_END\n");
 
-		if (WADFILENUM(startnum) != WADFILENUM(endnum))
-			I_Error("R_InitExtraColormaps: C_START and C_END in different wad files!\n");
+		// This shouldn't be possible when you use the Pwad function, silly
+		//if (WADFILENUM(startnum) != WADFILENUM(endnum))
+			//I_Error("R_InitExtraColormaps: C_START and C_END in different wad files!\n");
 
 		if (numcolormaplumps >= maxcolormaplumps)
 			maxcolormaplumps *= 2;
 		colormaplumps = Z_Realloc(colormaplumps,
 			sizeof (*colormaplumps) * maxcolormaplumps, PU_STATIC, NULL);
-		colormaplumps[numcolormaplumps].wadfile = WADFILENUM(startnum);
-		colormaplumps[numcolormaplumps].firstlump = LUMPNUM(startnum+1);
+		colormaplumps[numcolormaplumps].wadfile = cfile;
+		colormaplumps[numcolormaplumps].firstlump = startnum+1;
 		colormaplumps[numcolormaplumps].numlumps = endnum - (startnum + 1);
 		numcolormaplumps++;
 	}
@@ -1480,9 +1481,9 @@ INT32 R_CreateColormap(char *p1, char *p2, char *p3)
 	{
 		for (i = 0; i < 256; i++)
 		{
-			r = pLocalPalette[i].s.red;
-			g = pLocalPalette[i].s.green;
-			b = pLocalPalette[i].s.blue;
+			r = pMasterPalette[i].s.red;
+			g = pMasterPalette[i].s.green;
+			b = pMasterPalette[i].s.blue;
 			cbrightness = sqrt((r*r) + (g*g) + (b*b));
 
 			map[i][0] = (cbrightness * cmaskr) + (r * othermask);
@@ -1623,9 +1624,9 @@ void R_CreateColormap2(char *p1, char *p2, char *p3)
 	{
 		for (i = 0; i < 256; i++)
 		{
-			r = pLocalPalette[i].s.red;
-			g = pLocalPalette[i].s.green;
-			b = pLocalPalette[i].s.blue;
+			r = pMasterPalette[i].s.red;
+			g = pMasterPalette[i].s.green;
+			b = pMasterPalette[i].s.blue;
 			cbrightness = sqrt((r*r) + (g*g) + (b*b));
 
 			map[i][0] = (cbrightness * cmaskr) + (r * othermask);
@@ -1705,9 +1706,9 @@ static UINT8 NearestColor(UINT8 r, UINT8 g, UINT8 b)
 
 	for (i = 0; i < 256; i++)
 	{
-		dr = r - pLocalPalette[i].s.red;
-		dg = g - pLocalPalette[i].s.green;
-		db = b - pLocalPalette[i].s.blue;
+		dr = r - pMasterPalette[i].s.red;
+		dg = g - pMasterPalette[i].s.green;
+		db = b - pMasterPalette[i].s.blue;
 		distortion = dr*dr + dg*dg + db*db;
 		if (distortion < bestdistortion)
 		{

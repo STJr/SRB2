@@ -2852,14 +2852,20 @@ void R_AddSkins(UINT16 wadnum)
 				{
 					STRBUFCPY(skin->realname, skin->name);
 					for (value = skin->realname; *value; value++)
+					{
 						if (*value == '_') *value = ' '; // turn _ into spaces.
+						else if (*value == '.') *value = '\x1E'; // turn . into katana dot.
+					}
 				}
 				if (!hudname)
 				{
 					HUDNAMEWRITE(skin->name);
 					strupr(skin->hudname);
 					for (value = skin->hudname; *value; value++)
+					{
 						if (*value == '_') *value = ' '; // turn _ into spaces.
+						else if (*value == '.') *value = '\x1E'; // turn . into katana dot.
+					}
 				}
 			}
 			else if (!stricmp(stoken, "realname"))
@@ -2867,7 +2873,10 @@ void R_AddSkins(UINT16 wadnum)
 				realname = true;
 				STRBUFCPY(skin->realname, value);
 				for (value = skin->realname; *value; value++)
+				{
 					if (*value == '_') *value = ' '; // turn _ into spaces.
+					else if (*value == '.') *value = '\x1E'; // turn . into katana dot.
+				}
 				if (!hudname)
 					HUDNAMEWRITE(skin->realname);
 			}
@@ -2876,7 +2885,10 @@ void R_AddSkins(UINT16 wadnum)
 				hudname = true;
 				HUDNAMEWRITE(value);
 				for (value = skin->hudname; *value; value++)
+				{
 					if (*value == '_') *value = ' '; // turn _ into spaces.
+					else if (*value == '.') *value = '\x1E'; // turn . into katana dot.
+				}
 				if (!realname)
 					STRBUFCPY(skin->realname, skin->hudname);
 			}

@@ -1740,9 +1740,7 @@ static boolean CL_ServerConnectionSearchTicker(boolean viams, tic_t *asksent)
 {
 #ifndef NONET
 	INT32 i;
-#endif
 
-#ifndef NONET
 	// serverlist is updated by GetPacket function
 	if (serverlistcount > 0)
 	{
@@ -1776,7 +1774,20 @@ static boolean CL_ServerConnectionSearchTicker(boolean viams, tic_t *asksent)
 				serverlist[i].info.fileneeded);
 			CONS_Printf(M_GetText("Checking files...\n"));
 			i = CL_CheckFiles();
-			if (i == 2) // cannot join for some reason
+			if (i == 3) // too many files
+			{
+				D_QuitNetGame();
+				CL_Reset();
+				D_StartTitle();
+				M_StartMessage(M_GetText(
+					"You have too many WAD files loaded\n"
+					"to add ones the server is using.\n"
+					"Please restart SRB2 before connecting.\n\n"
+					"Press ESC\n"
+				), NULL, MM_NOTHING);
+				return false;
+			}
+			else if (i == 2) // cannot join for some reason
 			{
 				D_QuitNetGame();
 				CL_Reset();
@@ -2533,7 +2544,7 @@ static void Command_Ban(void)
 			return;
 		else
 			WRITEUINT8(p, pn);
-		if (I_Ban && !I_Ban(node))
+		if (server && I_Ban && !I_Ban(node)) // only the server is allowed to do this right now
 		{
 			CONS_Alert(CONS_WARNING, M_GetText("Too many bans! Geez, that's a lot of people you're excluding...\n"));
 			WRITEUINT8(p, KICK_MSG_GO_AWAY);
@@ -2541,7 +2552,8 @@ static void Command_Ban(void)
 		}
 		else
 		{
-			Ban_Add(COM_Argv(2));
+			if (server) // only the server is allowed to do this right now
+				Ban_Add(COM_Argv(2));
 
 			if (COM_Argc() == 2)
 			{
@@ -2698,12 +2710,14 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 
 	// If a verified admin banned someone, the server needs to know about it.
 	// If the playernum isn't zero (the server) then the server needs to record the ban.
-	if (server && playernum && msg == KICK_MSG_BANNED)
+	if (server && playernum && (msg == KICK_MSG_BANNED || msg == KICK_MSG_CUSTOM_BAN))
 	{
 		if (I_Ban && !I_Ban(playernode[(INT32)pnum]))
-		{
 			CONS_Alert(CONS_WARNING, M_GetText("Too many bans! Geez, that's a lot of people you're excluding...\n"));
-		}
+#ifndef NONET
+		else
+			Ban_Add(reason);
+#endif
 	}
 
 	switch (msg)
@@ -3401,17 +3415,42 @@ static void HandlePacketFromAwayNode(SINT8 node)
 	if (node != servernode)
 		DEBFILE(va("Received packet from unknown host %d\n", node));
 
+// macro for packets that should only be sent by the server
+// if it is NOT from the server, bail out and close the connection!
+#define SERVERONLY \
+			if (node != servernode) \
+			{ \
+				Net_CloseConnection(node); \
+				break; \
+			}
 	switch (netbuffer->packettype)
 	{
 		case PT_ASKINFOVIAMS:
+#if 0
 			if (server && serverrunning)
 			{
-				INT32 clientnode = I_NetMakeNode(netbuffer->u.msaskinfo.clientaddr);
-				SV_SendServerInfo(clientnode, (tic_t)LONG(netbuffer->u.msaskinfo.time));
-				SV_SendPlayerInfo(clientnode); // Send extra info
-				Net_CloseConnection(clientnode);
-				// Don't close connection to MS.
+				INT32 clientnode;
+				if (ms_RoomId < 0) // ignore if we're not actually on the MS right now
+				{
+					Net_CloseConnection(node); // and yes, close connection
+					return;
+				}
+				clientnode = I_NetMakeNode(netbuffer->u.msaskinfo.clientaddr);
+				if (clientnode != -1)
+				{
+					SV_SendServerInfo(clientnode, (tic_t)LONG(netbuffer->u.msaskinfo.time));
+					SV_SendPlayerInfo(clientnode); // Send extra info
+					Net_CloseConnection(clientnode);
+					// Don't close connection to MS...
+				}
+				else
+					Net_CloseConnection(node); // ...unless the IP address is not valid
 			}
+			else
+				Net_CloseConnection(node); // you're not supposed to get it, so ignore it
+#else
+			Net_CloseConnection(node);
+#endif
 			break;
 
 		case PT_ASKINFO:
@@ -3419,8 +3458,8 @@ static void HandlePacketFromAwayNode(SINT8 node)
 			{
 				SV_SendServerInfo(node, (tic_t)LONG(netbuffer->u.askinfo.time));
 				SV_SendPlayerInfo(node); // Send extra info
-				Net_CloseConnection(node);
 			}
+			Net_CloseConnection(node);
 			break;
 
 		case PT_SERVERREFUSE: // Negative response of client join request
@@ -3429,6 +3468,7 @@ static void HandlePacketFromAwayNode(SINT8 node)
 				Net_CloseConnection(node);
 				break;
 			}
+			SERVERONLY
 			if (cl_mode == CL_WAITJOINRESPONSE)
 			{
 				// Save the reason so it can be displayed after quitting the netgame
@@ -3460,6 +3500,7 @@ static void HandlePacketFromAwayNode(SINT8 node)
 				Net_CloseConnection(node);
 				break;
 			}
+			SERVERONLY
 			/// \note how would this happen? and is it doing the right thing if it does?
 			if (cl_mode != CL_WAITJOINRESPONSE)
 				break;
@@ -3525,13 +3566,18 @@ static void HandlePacketFromAwayNode(SINT8 node)
 				Net_CloseConnection(node);
 				break;
 			}
-			else
-				Got_Filetxpak();
+			SERVERONLY
+			Got_Filetxpak();
 			break;
 
 		case PT_REQUESTFILE:
 			if (server)
-				Got_RequestFilePak(node);
+			{
+				if (!cv_downloading.value || !Got_RequestFilePak(node))
+					Net_CloseConnection(node); // close connection if one of the requested files could not be sent, or you disabled downloading anyway
+			}
+			else
+				Net_CloseConnection(node); // nope
 			break;
 
 		case PT_NODETIMEOUT:
@@ -3554,6 +3600,7 @@ static void HandlePacketFromAwayNode(SINT8 node)
 			break; // Ignore it
 
 	}
+#undef SERVERONLY
 }
 
 /** Handles a packet received from a node that is in game
@@ -3586,6 +3633,8 @@ FILESTAMP
 	{
 // -------------------------------------------- SERVER RECEIVE ----------
 		case PT_RESYNCHGET:
+			if (client)
+				break;
 			SV_AcknowledgeResynchAck(netconsole, netbuffer->u.resynchgot);
 			break;
 		case PT_CLIENTCMD:
@@ -3652,7 +3701,8 @@ FILESTAMP
 			}
 
 			// Splitscreen cmd
-			if (netbuffer->packettype == PT_CLIENT2CMD && nodetoplayer2[node] >= 0)
+			if ((netbuffer->packettype == PT_CLIENT2CMD || netbuffer->packettype == PT_CLIENT2MIS)
+				&& nodetoplayer2[node] >= 0)
 				G_MoveTiccmd(&netcmds[maketic%BACKUPTICS][(UINT8)nodetoplayer2[node]],
 					&netbuffer->u.client2pak.cmd2, 1);
 
@@ -3710,6 +3760,27 @@ FILESTAMP
 				size_t j;
 				tic_t tic = maketic;
 				UINT8 *textcmd;
+
+				// ignore if the textcmd has a reported size of zero
+				// this shouldn't be sent at all
+				if (!netbuffer->u.textcmd[0])
+				{
+					DEBFILE(va("GetPacket: Textcmd with size 0 detected! (node %u, player %d)\n",
+						node, netconsole));
+					Net_UnAcknowledgePacket(node);
+					break;
+				}
+
+				// ignore if the textcmd size var is actually larger than it should be
+				// BASEPACKETSIZE + 1 (for size) + textcmd[0] should == datalength
+				if (netbuffer->u.textcmd[0] > (size_t)doomcom->datalength-BASEPACKETSIZE-1)
+				{
+					DEBFILE(va("GetPacket: Bad Textcmd packet size! (expected %d, actual %s, node %u, player %d)\n",
+					netbuffer->u.textcmd[0], sizeu1((size_t)doomcom->datalength-BASEPACKETSIZE-1),
+						node, netconsole));
+					Net_UnAcknowledgePacket(node);
+					break;
+				}
 
 				// check if tic that we are making isn't too large else we cannot send it :(
 				// doomcom->numslots+1 "+1" since doomcom->numslots can change within this time and sent time
@@ -3904,7 +3975,7 @@ FILESTAMP
 			if (client)
 			{
 				INT32 i;
-				for (i = 0; i < MAXNETNODES; i++)
+				for (i = 0; i < MAXPLAYERS; i++)
 					if (playeringame[i])
 						playerpingtable[i] = (tic_t)netbuffer->u.pingtable[i];
 			}
@@ -3914,6 +3985,21 @@ FILESTAMP
 		case PT_SERVERCFG:
 			break;
 		case PT_FILEFRAGMENT:
+			// Only accept PT_FILEFRAGMENT from the server.
+			if (node != servernode)
+			{
+				CONS_Alert(CONS_WARNING, M_GetText("%s received from non-host %d\n"), "PT_FILEFRAGMENT", node);
+
+				if (server)
+				{
+					XBOXSTATIC UINT8 buf[2];
+					buf[0] = (UINT8)node;
+					buf[1] = KICK_MSG_CON_FAIL;
+					SendNetXCmd(XD_KICK, &buf, 2);
+				}
+
+				break;
+			}
 			if (client)
 				Got_Filetxpak();
 			break;
@@ -4447,8 +4533,8 @@ static inline void PingUpdate(void)
 	}
 
 	//send out our ping packets
-	for (i = 0; i < MAXPLAYERS; i++)
-		if (playeringame[i])
+	for (i = 0; i < MAXNETNODES; i++)
+		if (nodeingame[i])
 			HSendPacket(i, true, 0, sizeof(INT32) * MAXPLAYERS);
 
 	pingmeasurecount = 1; //Reset count
@@ -4478,20 +4564,15 @@ void NetUpdate(void)
 
 	gametime = nowtime;
 
-	if (!(gametime % 255) && netgame && server)
-	{
-#ifdef NEWPING
-		PingUpdate();
-#endif
-	}
-
 #ifdef NEWPING
 	if (server)
 	{
+		if (netgame && !(gametime % 255))
+			PingUpdate();
 		// update node latency values so we can take an average later.
-		for (i = 0; i < MAXNETNODES; i++)
+		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i])
-				realpingtable[i] += G_TicsToMilliseconds(GetLag(i));
+				realpingtable[i] += G_TicsToMilliseconds(GetLag(playernode[i]));
 		pingmeasurecount++;
 	}
 #endif

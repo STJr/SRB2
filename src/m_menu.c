@@ -72,8 +72,8 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 #define STRINGHEIGHT 8
 #define FONTBHEIGHT 20
 #define SMALLLINEHEIGHT 8
-#define SLIDER_RANGE 10
-#define SLIDER_WIDTH (8*SLIDER_RANGE+6)
+#define SLIDER_RANGE 9
+#define SLIDER_WIDTH 78
 #define MAXSTRINGLENGTH 32
 #define SERVERS_PER_PAGE 11
 
@@ -241,7 +241,10 @@ static void M_LevelSelectWarp(INT32 choice);
 static void M_Credits(INT32 choice);
 static void M_PandorasBox(INT32 choice);
 static void M_EmblemHints(INT32 choice);
+static void M_HandleChecklist(INT32 choice);
 menu_t SR_MainDef, SR_UnlockChecklistDef;
+
+static UINT8 check_on;
 
 // Misc. Main Menu
 static void M_SinglePlayerMenu(INT32 choice);
@@ -277,7 +280,7 @@ static void M_ModeAttackEndGame(INT32 choice);
 static void M_SetGuestReplay(INT32 choice);
 static void M_HandleChoosePlayerMenu(INT32 choice);
 static void M_ChoosePlayer(INT32 choice);
-menu_t SP_GameStatsDef, SP_LevelStatsDef;
+menu_t SP_LevelStatsDef;
 static menu_t SP_TimeAttackDef, SP_ReplayDef, SP_GuestReplayDef, SP_GhostDef;
 static menu_t SP_NightsAttackDef, SP_NightsReplayDef, SP_NightsGuestReplayDef, SP_NightsGhostDef;
 
@@ -301,11 +304,12 @@ static void M_SetupMultiPlayer2(INT32 choice);
 // Options
 // Split into multiple parts due to size
 // Controls
-menu_t OP_ControlsDef, OP_ControlListDef, OP_MoveControlsDef;
+menu_t OP_ChangeControlsDef;
 menu_t OP_MPControlsDef, OP_CameraControlsDef, OP_MiscControlsDef;
 menu_t OP_P1ControlsDef, OP_P2ControlsDef, OP_MouseOptionsDef;
 menu_t OP_Mouse2OptionsDef, OP_Joystick1Def, OP_Joystick2Def;
 static void M_VideoModeMenu(INT32 choice);
+static void M_SoundMenu(INT32 choice);
 static void M_Setup1PControlsMenu(INT32 choice);
 static void M_Setup2PControlsMenu(INT32 choice);
 static void M_Setup1PJoystickMenu(INT32 choice);
@@ -314,25 +318,27 @@ static void M_AssignJoystick(INT32 choice);
 static void M_ChangeControl(INT32 choice);
 
 // Video & Sound
-menu_t OP_VideoOptionsDef, OP_VideoModeDef;
+menu_t OP_VideoOptionsDef, OP_VideoModeDef, OP_ColorOptionsDef;
 #ifdef HWRENDER
 menu_t OP_OpenGLOptionsDef, OP_OpenGLFogDef, OP_OpenGLColorDef;
 #endif
 menu_t OP_SoundOptionsDef;
-static void M_ToggleSFX(void);
-static void M_ToggleDigital(void);
-static void M_ToggleMIDI(void);
+static void M_ToggleSFX(INT32 choice);
+static void M_ToggleDigital(INT32 choice);
+static void M_ToggleMIDI(INT32 choice);
 
 //Misc
 menu_t OP_DataOptionsDef, OP_ScreenshotOptionsDef, OP_EraseDataDef;
-menu_t OP_GameOptionsDef, OP_ServerOptionsDef;
-menu_t OP_NetgameOptionsDef, OP_GametypeOptionsDef;
+menu_t OP_ServerOptionsDef;
 menu_t OP_MonitorToggleDef;
 static void M_ScreenshotOptions(INT32 choice);
 static void M_EraseData(INT32 choice);
 
+static void M_DrawLevelPlatterHeader(INT32 y, const char *header, boolean headerhighlight);
+
 // Drawing functions
 static void M_DrawGenericMenu(void);
+static void M_DrawGenericScrollMenu(void);
 static void M_DrawCenteredMenu(void);
 static void M_DrawSkyRoom(void);
 static void M_DrawChecklist(void);
@@ -344,18 +350,22 @@ static void M_DrawLevelPlatterMenu(void);
 static void M_DrawImageDef(void);
 static void M_DrawLoad(void);
 static void M_DrawLevelStats(void);
-static void M_DrawGameStats(void);
 static void M_DrawTimeAttackMenu(void);
 static void M_DrawNightsAttackMenu(void);
 static void M_DrawSetupChoosePlayerMenu(void);
 static void M_DrawControl(void);
+static void M_DrawMainVideoMenu(void);
 static void M_DrawVideoMode(void);
+static void M_DrawColorMenu(void);
+static void M_DrawSoundMenu(void);
+static void M_DrawScreenshotMenu(void);
 static void M_DrawMonitorToggles(void);
 #ifdef HWRENDER
 static void M_OGL_DrawFogMenu(void);
 static void M_OGL_DrawColorMenu(void);
 #endif
 #ifndef NONET
+static void M_DrawScreenshotMenu(void);
 static void M_DrawConnectMenu(void);
 static void M_DrawConnectIPMenu(void);
 static void M_DrawRoomMenu(void);
@@ -373,7 +383,6 @@ static void M_HandleLevelPlatter(INT32 choice);
 static void M_HandleSoundTest(INT32 choice);
 static void M_HandleImageDef(INT32 choice);
 static void M_HandleLoadSave(INT32 choice);
-static void M_HandleGameStats(INT32 choice);
 static void M_HandleLevelStats(INT32 choice);
 #ifndef NONET
 static void M_HandleConnectIP(INT32 choice);
@@ -383,6 +392,8 @@ static void M_HandleSetupMultiPlayer(INT32 choice);
 static void M_HandleFogColor(INT32 choice);
 #endif
 static void M_HandleVideoMode(INT32 choice);
+
+static void M_ResetCvars(void);
 
 // Consvar onchange functions
 static void Newgametype_OnChange(void);
@@ -705,7 +716,7 @@ static menuitem_t SR_LevelSelectMenu[] =
 
 static menuitem_t SR_UnlockChecklistMenu[] =
 {
-	{IT_SUBMENU | IT_STRING,         NULL, "NEXT", &SR_MainDef, 192},
+	{IT_KEYHANDLER | IT_STRING, NULL, "", M_HandleChecklist, 0},
 };
 
 static menuitem_t SR_EmblemHintMenu[] =
@@ -876,11 +887,6 @@ enum
 };
 
 // Statistics
-static menuitem_t SP_GameStatsMenu[] =
-{
-	{IT_KEYHANDLER | IT_NOTHING, NULL, "", M_HandleGameStats, 0},     // dummy menuitem for the control func
-};
-
 static menuitem_t SP_LevelStatsMenu[] =
 {
 	{IT_KEYHANDLER | IT_NOTHING, NULL, "", M_HandleLevelStats, 0},     // dummy menuitem for the control func
@@ -905,8 +911,8 @@ static menuitem_t MP_MainMenu[] =
 #endif
 	{IT_CALL | IT_STRING, NULL, "TWO PLAYER GAME",        M_StartSplitServerMenu, 60},
 
-	{IT_CALL | IT_STRING, NULL, "SETUP PLAYER 1",         M_SetupMultiPlayer,     80},
-	{IT_CALL | IT_STRING, NULL, "SETUP PLAYER 2",         M_SetupMultiPlayer2,    90},
+	{IT_CALL | IT_STRING, NULL, "PLAYER 1 SETUP",         M_SetupMultiPlayer,     80},
+	{IT_CALL | IT_STRING, NULL, "PLAYER 2 SETUP",         M_SetupMultiPlayer2,    90},
 };
 
 static menuitem_t MP_ServerMenu[] =
@@ -1016,22 +1022,16 @@ static menuitem_t MP_PlayerSetupMenu[] =
 // Prefix: OP_
 static menuitem_t OP_MainMenu[] =
 {
-	{IT_SUBMENU | IT_STRING, NULL, "Setup Controls...", &OP_ControlsDef,      10},
+	{IT_SUBMENU | IT_STRING, NULL, "Player 1 Controls...", &OP_P1ControlsDef,   10},
+	{IT_SUBMENU | IT_STRING, NULL, "Player 2 Controls...", &OP_P2ControlsDef,   20},
+	{IT_CVAR    | IT_STRING, NULL, "Controls per key",     &cv_controlperkey,   30},
 
-	{IT_SUBMENU | IT_STRING, NULL, "Video Options...",  &OP_VideoOptionsDef,  30},
-	{IT_SUBMENU | IT_STRING, NULL, "Sound Options...",  &OP_SoundOptionsDef,  40},
-	{IT_SUBMENU | IT_STRING, NULL, "Data Options...",   &OP_DataOptionsDef,   50},
+	{IT_SUBMENU | IT_STRING, NULL, "Video Options...",     &OP_VideoOptionsDef, 50},
+	{IT_CALL    | IT_STRING, NULL, "Sound Options...",     M_SoundMenu,         60},
 
-	{IT_SUBMENU | IT_STRING, NULL, "Game Options...",   &OP_GameOptionsDef,   70},
-	{IT_CALL | IT_STRING,    NULL, "Server Options...", M_ServerOptions,      80},
-};
+	{IT_CALL    | IT_STRING, NULL, "Server Options...",    M_ServerOptions,     80},
 
-static menuitem_t OP_ControlsMenu[] =
-{
-	{IT_SUBMENU | IT_STRING, NULL, "Player 1 Controls...", &OP_P1ControlsDef,  10},
-	{IT_SUBMENU | IT_STRING, NULL, "Player 2 Controls...", &OP_P2ControlsDef,  20},
-
-	{IT_STRING  | IT_CVAR, NULL, "Controls per key", &cv_controlperkey, 40},
+	{IT_SUBMENU | IT_STRING, NULL, "Data Options...",      &OP_DataOptionsDef, 100},
 };
 
 static menuitem_t OP_P1ControlsMenu[] =
@@ -1040,10 +1040,11 @@ static menuitem_t OP_P1ControlsMenu[] =
 	{IT_SUBMENU | IT_STRING, NULL, "Mouse Options...", &OP_MouseOptionsDef, 20},
 	{IT_SUBMENU | IT_STRING, NULL, "Joystick Options...", &OP_Joystick1Def  ,  30},
 
-	{IT_STRING  | IT_CVAR, NULL, "Camera"  , &cv_chasecam  ,  50},
-	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair , 60},
+	{IT_STRING  | IT_CVAR, NULL, "Third-person Camera"  , &cv_chasecam , 50},
+	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam , 60},
+	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair, 70},
 
-	{IT_STRING  | IT_CVAR, NULL, "Analog Control", &cv_useranalog,  80},
+	{IT_STRING  | IT_CVAR, NULL, "Analog Control", &cv_useranalog,  90},
 };
 
 static menuitem_t OP_P2ControlsMenu[] =
@@ -1052,93 +1053,84 @@ static menuitem_t OP_P2ControlsMenu[] =
 	{IT_SUBMENU | IT_STRING, NULL, "Second Mouse Options...", &OP_Mouse2OptionsDef, 20},
 	{IT_SUBMENU | IT_STRING, NULL, "Second Joystick Options...", &OP_Joystick2Def  ,  30},
 
-	{IT_STRING  | IT_CVAR, NULL, "Camera"  , &cv_chasecam2 , 50},
-	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair2, 60},
+	{IT_STRING  | IT_CVAR, NULL, "Third-person Camera"  , &cv_chasecam2 , 50},
+	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam2 , 60},
+	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair2, 70},
 
-	{IT_STRING  | IT_CVAR, NULL, "Analog Control", &cv_useranalog2,  80},
+	{IT_STRING  | IT_CVAR, NULL, "Analog Control", &cv_useranalog2,  90},
 };
 
-static menuitem_t OP_ControlListMenu[] =
+static menuitem_t OP_ChangeControlsMenu[] =
 {
-	{IT_SUBMENU | IT_STRING, NULL, "Movement Controls...",      &OP_MoveControlsDef,   10},
-	{IT_SUBMENU | IT_STRING, NULL, "Multiplayer Controls...",   &OP_MPControlsDef,     20},
-	{IT_SUBMENU | IT_STRING, NULL, "Camera Controls...",        &OP_CameraControlsDef, 30},
-	{IT_SUBMENU | IT_STRING, NULL, "Miscellaneous Controls...", &OP_MiscControlsDef,   40},
-};
-
-static menuitem_t OP_MoveControlsMenu[] =
-{
-	{IT_CALL | IT_STRING2, NULL, "Forward",      M_ChangeControl, gc_forward    },
-	{IT_CALL | IT_STRING2, NULL, "Reverse",      M_ChangeControl, gc_backward   },
-	{IT_CALL | IT_STRING2, NULL, "Turn Left",    M_ChangeControl, gc_turnleft   },
-	{IT_CALL | IT_STRING2, NULL, "Turn Right",   M_ChangeControl, gc_turnright  },
-	{IT_CALL | IT_STRING2, NULL, "Jump",         M_ChangeControl, gc_jump       },
-	{IT_CALL | IT_STRING2, NULL, "Spin",         M_ChangeControl, gc_use        },
-	{IT_CALL | IT_STRING2, NULL, "Strafe Left",  M_ChangeControl, gc_strafeleft },
-	{IT_CALL | IT_STRING2, NULL, "Strafe Right", M_ChangeControl, gc_straferight},
-};
-
-static menuitem_t OP_MPControlsMenu[] =
-{
-	{IT_CALL | IT_STRING2, NULL, "Talk key",         M_ChangeControl, gc_talkkey      },
-	{IT_CALL | IT_STRING2, NULL, "Team-Talk key",    M_ChangeControl, gc_teamkey      },
-	{IT_CALL | IT_STRING2, NULL, "Rankings/Scores",  M_ChangeControl, gc_scores       },
-	{IT_CALL | IT_STRING2, NULL, "Toss Flag",        M_ChangeControl, gc_tossflag     },
-	{IT_CALL | IT_STRING2, NULL, "Next Weapon",      M_ChangeControl, gc_weaponnext   },
-	{IT_CALL | IT_STRING2, NULL, "Prev Weapon",      M_ChangeControl, gc_weaponprev   },
-	{IT_CALL | IT_STRING2, NULL, "Weapon Slot 1",    M_ChangeControl, gc_wepslot1     },
-	{IT_CALL | IT_STRING2, NULL, "Weapon Slot 2",    M_ChangeControl, gc_wepslot2     },
-	{IT_CALL | IT_STRING2, NULL, "Weapon Slot 3",    M_ChangeControl, gc_wepslot3     },
-	{IT_CALL | IT_STRING2, NULL, "Weapon Slot 4",    M_ChangeControl, gc_wepslot4     },
-	{IT_CALL | IT_STRING2, NULL, "Weapon Slot 5",    M_ChangeControl, gc_wepslot5     },
-	{IT_CALL | IT_STRING2, NULL, "Weapon Slot 6",    M_ChangeControl, gc_wepslot6     },
-	{IT_CALL | IT_STRING2, NULL, "Weapon Slot 7",    M_ChangeControl, gc_wepslot7     },
-	{IT_CALL | IT_STRING2, NULL, "Ring Toss",        M_ChangeControl, gc_fire         },
-	{IT_CALL | IT_STRING2, NULL, "Ring Toss Normal", M_ChangeControl, gc_firenormal   },
-};
-
-static menuitem_t OP_CameraControlsMenu[] =
-{
-	{IT_CALL | IT_STRING2, NULL, "Look Up",          M_ChangeControl, gc_lookup       },
-	{IT_CALL | IT_STRING2, NULL, "Look Down",        M_ChangeControl, gc_lookdown     },
-	{IT_CALL | IT_STRING2, NULL, "Rotate Camera L",  M_ChangeControl, gc_camleft      },
-	{IT_CALL | IT_STRING2, NULL, "Rotate Camera R",  M_ChangeControl, gc_camright     },
-	{IT_CALL | IT_STRING2, NULL, "Center View",      M_ChangeControl, gc_centerview   },
-	{IT_CALL | IT_STRING2, NULL, "Mouselook",        M_ChangeControl, gc_mouseaiming  },
-	{IT_CALL | IT_STRING2, NULL, "Reset Camera",     M_ChangeControl, gc_camreset     },
-	{IT_CALL | IT_STRING2, NULL, "Toggle Chasecam",  M_ChangeControl, gc_camtoggle    },
-};
-
-static menuitem_t OP_MiscControlsMenu[] =
-{
-	{IT_CALL | IT_STRING2, NULL, "Custom Action 1",  M_ChangeControl, gc_custom1      },
-	{IT_CALL | IT_STRING2, NULL, "Custom Action 2",  M_ChangeControl, gc_custom2      },
-	{IT_CALL | IT_STRING2, NULL, "Custom Action 3",  M_ChangeControl, gc_custom3      },
-
-	{IT_CALL | IT_STRING2, NULL, "Pause",            M_ChangeControl, gc_pause        },
-	{IT_CALL | IT_STRING2, NULL, "Console",          M_ChangeControl, gc_console      },
+	{IT_HEADER, NULL, "Movement", NULL, 0},
+	{IT_SPACE, NULL, NULL, NULL, 0}, // padding
+	{IT_CALL | IT_STRING2, NULL, "Move Forward",     M_ChangeControl, gc_forward     },
+	{IT_CALL | IT_STRING2, NULL, "Move Backward",    M_ChangeControl, gc_backward    },
+	{IT_CALL | IT_STRING2, NULL, "Move Left",        M_ChangeControl, gc_strafeleft  },
+	{IT_CALL | IT_STRING2, NULL, "Move Right",       M_ChangeControl, gc_straferight },
+	{IT_CALL | IT_STRING2, NULL, "Jump / Main Action", M_ChangeControl, gc_jump      },
+	{IT_CALL | IT_STRING2, NULL, "Spin / Shield Action", M_ChangeControl, gc_use     },
+	{IT_HEADER, NULL, "Camera", NULL, 0},
+	{IT_SPACE, NULL, NULL, NULL, 0}, // padding
+	{IT_CALL | IT_STRING2, NULL, "Camera Up",        M_ChangeControl, gc_lookup      },
+	{IT_CALL | IT_STRING2, NULL, "Camera Down",      M_ChangeControl, gc_lookdown    },
+	{IT_CALL | IT_STRING2, NULL, "Camera Left",      M_ChangeControl, gc_turnleft    },
+	{IT_CALL | IT_STRING2, NULL, "Camera Right",     M_ChangeControl, gc_turnright   },
+	{IT_CALL | IT_STRING2, NULL, "Center View",      M_ChangeControl, gc_centerview  },
+	{IT_CALL | IT_STRING2, NULL, "Toggle Mouselook", M_ChangeControl, gc_mouseaiming },
+	{IT_CALL | IT_STRING2, NULL, "Toggle Third-Person", M_ChangeControl, gc_camtoggle},
+	{IT_CALL | IT_STRING2, NULL, "Reset Camera",     M_ChangeControl, gc_camreset    },
+	{IT_HEADER, NULL, "Meta", NULL, 0},
+	{IT_SPACE, NULL, NULL, NULL, 0}, // padding
+	{IT_CALL | IT_STRING2, NULL, "Game Status",
+    M_ChangeControl, gc_scores      },
+	{IT_CALL | IT_STRING2, NULL, "Pause",            M_ChangeControl, gc_pause       },
+	{IT_CALL | IT_STRING2, NULL, "Console",          M_ChangeControl, gc_console     },
+	{IT_HEADER, NULL, "Multiplayer", NULL, 0},
+	{IT_SPACE, NULL, NULL, NULL, 0}, // padding
+	{IT_CALL | IT_STRING2, NULL, "Talk",             M_ChangeControl, gc_talkkey     },
+	{IT_CALL | IT_STRING2, NULL, "Talk (Team only)", M_ChangeControl, gc_teamkey     },
+	{IT_HEADER, NULL, "Ringslinger (Match, CTF, Tag, H&S)", NULL, 0},
+	{IT_SPACE, NULL, NULL, NULL, 0}, // padding
+	{IT_CALL | IT_STRING2, NULL, "Fire",             M_ChangeControl, gc_fire        },
+	{IT_CALL | IT_STRING2, NULL, "Fire Normal",      M_ChangeControl, gc_firenormal  },
+	{IT_CALL | IT_STRING2, NULL, "Toss Flag",        M_ChangeControl, gc_tossflag    },
+	{IT_CALL | IT_STRING2, NULL, "Next Weapon",      M_ChangeControl, gc_weaponnext  },
+	{IT_CALL | IT_STRING2, NULL, "Prev Weapon",      M_ChangeControl, gc_weaponprev  },
+	{IT_CALL | IT_STRING2, NULL, "Normal / Infinity",   M_ChangeControl, gc_wepslot1    },
+	{IT_CALL | IT_STRING2, NULL, "Automatic",        M_ChangeControl, gc_wepslot2    },
+	{IT_CALL | IT_STRING2, NULL, "Bounce",           M_ChangeControl, gc_wepslot3    },
+	{IT_CALL | IT_STRING2, NULL, "Scatter",          M_ChangeControl, gc_wepslot4    },
+	{IT_CALL | IT_STRING2, NULL, "Grenade",          M_ChangeControl, gc_wepslot5    },
+	{IT_CALL | IT_STRING2, NULL, "Explosion",        M_ChangeControl, gc_wepslot6    },
+	{IT_CALL | IT_STRING2, NULL, "Rail",             M_ChangeControl, gc_wepslot7    },
+	{IT_HEADER, NULL, "Add-ons", NULL, 0},
+	{IT_SPACE, NULL, NULL, NULL, 0}, // padding
+	{IT_CALL | IT_STRING2, NULL, "Custom Action 1",  M_ChangeControl, gc_custom1     },
+	{IT_CALL | IT_STRING2, NULL, "Custom Action 2",  M_ChangeControl, gc_custom2     },
+	{IT_CALL | IT_STRING2, NULL, "Custom Action 3",  M_ChangeControl, gc_custom3     },
 };
 
 static menuitem_t OP_Joystick1Menu[] =
 {
 	{IT_STRING | IT_CALL,  NULL, "Select Joystick...", M_Setup1PJoystickMenu,  10},
-	{IT_STRING | IT_CVAR,  NULL, "Axis For Turning"  , &cv_turnaxis         ,  30},
-	{IT_STRING | IT_CVAR,  NULL, "Axis For Moving"   , &cv_moveaxis         ,  40},
-	{IT_STRING | IT_CVAR,  NULL, "Axis For Strafe"   , &cv_sideaxis         ,  50},
-	{IT_STRING | IT_CVAR,  NULL, "Axis For Looking"  , &cv_lookaxis         ,  60},
-	{IT_STRING | IT_CVAR,  NULL, "Axis For Firing"   , &cv_fireaxis         ,  70},
-	{IT_STRING | IT_CVAR,  NULL, "Axis For NFiring"  , &cv_firenaxis        ,  80},
+	{IT_STRING | IT_CVAR,  NULL, "Move \x1A \x1B Axis"    , &cv_moveaxis         , 30},
+	{IT_STRING | IT_CVAR,  NULL, "Move \x1C \x1D Axis"    , &cv_sideaxis         , 40},
+	{IT_STRING | IT_CVAR,  NULL, "Camera \x1A \x1B Axis"  , &cv_lookaxis         , 50},
+	{IT_STRING | IT_CVAR,  NULL, "Camera \x1C \x1D Axis"  , &cv_turnaxis         , 60},
+	{IT_STRING | IT_CVAR,  NULL, "Fire Axis"              , &cv_fireaxis         , 70},
+	{IT_STRING | IT_CVAR,  NULL, "Fire Normal Axis"       , &cv_firenaxis        , 80},
 };
 
 static menuitem_t OP_Joystick2Menu[] =
 {
 	{IT_STRING | IT_CALL,  NULL, "Select Joystick...", M_Setup2PJoystickMenu, 10},
-	{IT_STRING | IT_CVAR,  NULL, "Axis For Turning"  , &cv_turnaxis2        , 30},
-	{IT_STRING | IT_CVAR,  NULL, "Axis For Moving"   , &cv_moveaxis2        , 40},
-	{IT_STRING | IT_CVAR,  NULL, "Axis For Strafe"   , &cv_sideaxis2        , 50},
-	{IT_STRING | IT_CVAR,  NULL, "Axis For Looking"  , &cv_lookaxis2        , 60},
-	{IT_STRING | IT_CVAR,  NULL, "Axis For Firing"   , &cv_fireaxis2        , 70},
-	{IT_STRING | IT_CVAR,  NULL, "Axis For NFiring"  , &cv_firenaxis2       , 80},
+	{IT_STRING | IT_CVAR,  NULL, "Move \x1A \x1B Axis"    , &cv_moveaxis2        , 30},
+	{IT_STRING | IT_CVAR,  NULL, "Move \x1C \x1D Axis"    , &cv_sideaxis2        , 40},
+	{IT_STRING | IT_CVAR,  NULL, "Camera \x1A \x1B Axis"  , &cv_lookaxis2        , 50},
+	{IT_STRING | IT_CVAR,  NULL, "Camera \x1C \x1D Axis"  , &cv_turnaxis2        , 60},
+	{IT_STRING | IT_CVAR,  NULL, "Fire Axis"              , &cv_fireaxis2        , 70},
+	{IT_STRING | IT_CVAR,  NULL, "Fire Normal Axis"       , &cv_firenaxis2       , 80},
 };
 
 static menuitem_t OP_JoystickSetMenu[] =
@@ -1148,8 +1140,6 @@ static menuitem_t OP_JoystickSetMenu[] =
 	{IT_CALL | IT_NOTHING, "", NULL, M_AssignJoystick, '2'},
 	{IT_CALL | IT_NOTHING, "", NULL, M_AssignJoystick, '3'},
 	{IT_CALL | IT_NOTHING, "", NULL, M_AssignJoystick, '4'},
-	{IT_CALL | IT_NOTHING, "", NULL, M_AssignJoystick, '5'},
-	{IT_CALL | IT_NOTHING, "", NULL, M_AssignJoystick, '6'},
 };
 
 static menuitem_t OP_MouseOptionsMenu[] =
@@ -1157,13 +1147,13 @@ static menuitem_t OP_MouseOptionsMenu[] =
 	{IT_STRING | IT_CVAR, NULL, "Use Mouse",        &cv_usemouse,         10},
 
 
-	{IT_STRING | IT_CVAR, NULL, "Always MouseLook", &cv_alwaysfreelook,   30},
+	{IT_STRING | IT_CVAR, NULL, "Always Mouselook", &cv_alwaysfreelook,   30},
 	{IT_STRING | IT_CVAR, NULL, "Mouse Move",       &cv_mousemove,        40},
-	{IT_STRING | IT_CVAR, NULL, "Invert Mouse",     &cv_invertmouse,      50},
+	{IT_STRING | IT_CVAR, NULL, "Invert Y Axis",     &cv_invertmouse,      50},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
-	                      NULL, "Mouse X Speed",    &cv_mousesens,        60},
+	                      NULL, "Mouse X Sensitivity",    &cv_mousesens,        60},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
-	                      NULL, "Mouse Y Speed",    &cv_mouseysens,        70},
+	                      NULL, "Mouse Y Sensitivity",    &cv_mouseysens,        70},
 };
 
 static menuitem_t OP_Mouse2OptionsMenu[] =
@@ -1171,42 +1161,102 @@ static menuitem_t OP_Mouse2OptionsMenu[] =
 	{IT_STRING | IT_CVAR, NULL, "Use Mouse 2",      &cv_usemouse2,        10},
 	{IT_STRING | IT_CVAR, NULL, "Second Mouse Serial Port",
 	                                                &cv_mouse2port,       20},
-	{IT_STRING | IT_CVAR, NULL, "Always MouseLook", &cv_alwaysfreelook2,  30},
+	{IT_STRING | IT_CVAR, NULL, "Always Mouselook", &cv_alwaysfreelook2,  30},
 	{IT_STRING | IT_CVAR, NULL, "Mouse Move",       &cv_mousemove2,       40},
-	{IT_STRING | IT_CVAR, NULL, "Invert Mouse",     &cv_invertmouse2,     50},
+	{IT_STRING | IT_CVAR, NULL, "Invert Y Axis",     &cv_invertmouse2,     50},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
-	                      NULL, "Mouse X Speed",    &cv_mousesens2,       60},
+	                      NULL, "Mouse X Sensitivity",    &cv_mousesens2,       60},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
-	                      NULL, "Mouse Y Speed",    &cv_mouseysens2,      70},
+	                      NULL, "Mouse Y Sensitivity",    &cv_mouseysens2,      70},
 };
 
 static menuitem_t OP_VideoOptionsMenu[] =
 {
-	{IT_STRING | IT_CALL,  NULL,   "Video Modes...",      M_VideoModeMenu,     10},
-
-#ifdef HWRENDER
-	{IT_SUBMENU|IT_STRING, NULL,   "3D Card Options...",  &OP_OpenGLOptionsDef,    20},
-#endif
+	{IT_HEADER, NULL, "Screen", NULL, 0},
+	{IT_STRING | IT_CALL,  NULL, "Set Resolution...",       M_VideoModeMenu,          6},
 
 #if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
-	{IT_STRING|IT_CVAR,      NULL, "Fullscreen",          &cv_fullscreen,    30},
+	{IT_STRING|IT_CVAR,      NULL, "Fullscreen",             &cv_fullscreen,         11},
+#endif
+	{IT_STRING | IT_CVAR, NULL, "Vertical Sync",                &cv_vidwait,         16},
+
+#ifdef HWRENDER
+	{IT_SUBMENU|IT_STRING, NULL, "OpenGL Options...", &OP_OpenGLOptionsDef,          21},
 #endif
 
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
-	                         NULL, "Brightness",          &cv_usegamma,      50},
-	{IT_STRING | IT_CVAR,    NULL, "Draw Distance",       &cv_drawdist, 60},
-	{IT_STRING | IT_CVAR,    NULL, "NiGHTS Draw Dist",    &cv_drawdist_nights, 70},
-	{IT_STRING | IT_CVAR,    NULL, "Precip Draw Dist",    &cv_drawdist_precip, 80},
-	{IT_STRING | IT_CVAR,    NULL, "Precip Density",      &cv_precipdensity, 90},
+	{IT_HEADER, NULL, "Color Profile", NULL, 30},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Brightness (F11)", &cv_globalgamma,      36},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Saturation", &cv_globalsaturation, 41},
+	{IT_SUBMENU|IT_STRING, NULL, "Advanced Settings...",     &OP_ColorOptionsDef,  46},
 
-	{IT_STRING | IT_CVAR,    NULL, "Show FPS",            &cv_ticrate,    110},
-	{IT_STRING | IT_CVAR,    NULL, "Clear Before Redraw", &cv_homremoval, 120},
-	{IT_STRING | IT_CVAR,    NULL, "Vertical Sync",       &cv_vidwait,    130},
+	{IT_HEADER, NULL, "Heads-Up Display", NULL, 55},
+	{IT_STRING | IT_CVAR, NULL, "Show HUD",                  &cv_showhud,          61},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
+	                      NULL, "HUD Transparency",          &cv_translucenthud,   66},
+	{IT_STRING | IT_CVAR, NULL, "Time Display",              &cv_timetic,          71},
+#ifdef SEENAMES
+	{IT_STRING | IT_CVAR, NULL, "Show player names",         &cv_seenames,         76},
+#endif
+
+	{IT_HEADER, NULL, "Console", NULL, 85},
+	{IT_STRING | IT_CVAR, NULL, "Background color",          &cons_backcolor,      91},
+	{IT_STRING | IT_CVAR, NULL, "Text Size",                 &cv_constextsize,     96},
+
+	{IT_HEADER, NULL, "Level", NULL, 105},
+	{IT_STRING | IT_CVAR, NULL, "Draw Distance",             &cv_drawdist,        111},
+	{IT_STRING | IT_CVAR, NULL, "NiGHTS Draw Dist.",         &cv_drawdist_nights, 116},
+	{IT_STRING | IT_CVAR, NULL, "Weather Draw Dist.",        &cv_drawdist_precip, 121},
+	{IT_STRING | IT_CVAR, NULL, "Weather Density",           &cv_precipdensity,   126},
+
+	{IT_HEADER, NULL, "Diagnostic", NULL, 135},
+	{IT_STRING | IT_CVAR, NULL, "Show FPS",                  &cv_ticrate,         141},
+	{IT_STRING | IT_CVAR, NULL, "Clear Before Redraw",       &cv_homremoval,      146},
 };
 
 static menuitem_t OP_VideoModeMenu[] =
 {
 	{IT_KEYHANDLER | IT_NOTHING, NULL, "", M_HandleVideoMode, 0},     // dummy menuitem for the control func
+};
+
+static menuitem_t OP_ColorOptionsMenu[] =
+{
+	{IT_STRING | IT_CALL, NULL, "Reset to defaults", M_ResetCvars, 0},
+
+	{IT_HEADER, NULL, "Red", NULL, 9},
+	{IT_DISABLED, NULL, NULL, NULL, 35},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Hue",          &cv_rhue,         15},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Saturation",   &cv_rsaturation,  20},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Brightness",   &cv_rgamma,       25},
+
+	{IT_HEADER, NULL, "Yellow", NULL, 34},
+	{IT_DISABLED, NULL, NULL, NULL, 73},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Hue",          &cv_yhue,         40},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Saturation",   &cv_ysaturation,  45},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Brightness",   &cv_ygamma,       50},
+
+	{IT_HEADER, NULL, "Green", NULL, 59},
+	{IT_DISABLED, NULL, NULL, NULL, 112},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Hue",          &cv_ghue,         65},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Saturation",   &cv_gsaturation,  70},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Brightness",   &cv_ggamma,       75},
+
+	{IT_HEADER, NULL, "Cyan", NULL, 84},
+	{IT_DISABLED, NULL, NULL, NULL, 255},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Hue",          &cv_chue,         90},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Saturation",   &cv_csaturation,  95},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Brightness",   &cv_cgamma,      100},
+
+	{IT_HEADER, NULL, "Blue", NULL, 109},
+	{IT_DISABLED, NULL, NULL, NULL, 152},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Hue",          &cv_bhue,        115},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Saturation",   &cv_bsaturation, 120},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Brightness",   &cv_bgamma,      125},
+
+	{IT_HEADER, NULL, "Magenta", NULL, 134},
+	{IT_DISABLED, NULL, NULL, NULL, 181},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Hue",          &cv_mhue,        140},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Saturation",   &cv_msaturation, 145},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Brightness",   &cv_mgamma,      150},
 };
 
 #ifdef HWRENDER
@@ -1216,7 +1266,7 @@ static menuitem_t OP_OpenGLOptionsMenu[] =
 	{IT_STRING|IT_CVAR,         NULL, "Quality",         &cv_scr_depth,        20},
 	{IT_STRING|IT_CVAR,         NULL, "Texture Filter",  &cv_grfiltermode,     30},
 	{IT_STRING|IT_CVAR,         NULL, "Anisotropic",     &cv_granisotropicmode,40},
-#ifdef _WINDOWS
+#if defined (_WINDOWS) && (!((defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)))
 	{IT_STRING|IT_CVAR,         NULL, "Fullscreen",      &cv_fullscreen,       50},
 #endif
 #ifdef ALAM_LIGHTING
@@ -1254,60 +1304,59 @@ static menuitem_t OP_OpenGLColorMenu[] =
 
 static menuitem_t OP_SoundOptionsMenu[] =
 {
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
-                              NULL, "Sound Volume" , &cv_soundvolume,     10},
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
-                              NULL, "Music Volume" , &cv_digmusicvolume,  20},
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
-                              NULL, "MIDI Volume"  , &cv_midimusicvolume, 30},
-#ifdef PC_DOS
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
-                              NULL, "CD Volume"    , &cd_volume,          40},
-#endif
+	{IT_STRING | IT_KEYHANDLER,  NULL,  "Sound Effects", M_ToggleSFX, 10},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Sound Volume", &cv_soundvolume, 20},
 
-	{IT_STRING    | IT_CALL,  NULL,  "Toggle SFX"   , M_ToggleSFX,        50},
-	{IT_STRING    | IT_CALL,  NULL,  "Toggle Digital Music", M_ToggleDigital,     60},
-	{IT_STRING    | IT_CALL,  NULL,  "Toggle MIDI Music", M_ToggleMIDI,        70},
+	{IT_STRING | IT_KEYHANDLER,  NULL,  "Digital Music", M_ToggleDigital, 40},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Digital Music Volume", &cv_digmusicvolume,  50},
+
+	{IT_STRING | IT_KEYHANDLER,  NULL,  "MIDI Music", M_ToggleMIDI, 70},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "MIDI Music Volume", &cv_midimusicvolume, 80},
+
+	{IT_STRING | IT_CVAR, NULL, "Closed Captioning", &cv_closedcaptioning, 100},
 };
 
 static menuitem_t OP_DataOptionsMenu[] =
 {
 	{IT_STRING | IT_CALL, NULL, "Screenshot Options...", M_ScreenshotOptions, 10},
 
-	{IT_STRING | IT_SUBMENU, NULL, "Erase Data...", &OP_EraseDataDef, 30},
+	{IT_STRING | IT_SUBMENU, NULL, "\x85" "Erase Data...", &OP_EraseDataDef, 20},
 };
 
 static menuitem_t OP_ScreenshotOptionsMenu[] =
 {
-	{IT_STRING|IT_CVAR, NULL, "Storage Location", &cv_screenshot_option, 10},
-	{IT_STRING|IT_CVAR|IT_CV_STRING, NULL, "Custom Folder", &cv_screenshot_folder, 20},
+	{IT_HEADER, NULL, "General", NULL, 0},
+	{IT_STRING|IT_CVAR, NULL, "Use color profile", &cv_screenshot_colorprofile,     6},
+	{IT_STRING|IT_CVAR, NULL, "Storage Location",  &cv_screenshot_option,          11},
+	{IT_STRING|IT_CVAR|IT_CV_STRING, NULL, "Custom Folder", &cv_screenshot_folder, 16},
 
-	{IT_HEADER, NULL, "Screenshots (F8)", NULL, 50},
-	{IT_STRING|IT_CVAR, NULL, "Memory Level",      &cv_zlib_memory,      60},
-	{IT_STRING|IT_CVAR, NULL, "Compression Level", &cv_zlib_level,       70},
-	{IT_STRING|IT_CVAR, NULL, "Strategy",          &cv_zlib_strategy,    80},
-	{IT_STRING|IT_CVAR, NULL, "Window Size",       &cv_zlib_window_bits, 90},
+	{IT_HEADER, NULL, "Screenshots (F8)", NULL, 30},
+	{IT_STRING|IT_CVAR, NULL, "Memory Level",      &cv_zlib_memory,                36},
+	{IT_STRING|IT_CVAR, NULL, "Compression Level", &cv_zlib_level,                 41},
+	{IT_STRING|IT_CVAR, NULL, "Strategy",          &cv_zlib_strategy,              46},
+	{IT_STRING|IT_CVAR, NULL, "Window Size",       &cv_zlib_window_bits,           51},
 
-	{IT_HEADER, NULL, "Movie Mode (F9)", NULL, 105},
-	{IT_STRING|IT_CVAR, NULL, "Capture Mode", &cv_moviemode, 115},
+	{IT_HEADER, NULL, "Movie Mode (F9)", NULL, 60},
+	{IT_STRING|IT_CVAR, NULL, "Capture Mode",      &cv_moviemode,                  66},
 
-	{IT_STRING|IT_CVAR, NULL, "Region Optimizing", &cv_gif_optimize,  125},
-	{IT_STRING|IT_CVAR, NULL, "Downscaling",       &cv_gif_downscale, 135},
+	{IT_STRING|IT_CVAR, NULL, "Region Optimizing", &cv_gif_optimize,               71},
+	{IT_STRING|IT_CVAR, NULL, "Downscaling",       &cv_gif_downscale,              76},
 
-	{IT_STRING|IT_CVAR, NULL, "Memory Level",      &cv_zlib_memorya,      125},
-	{IT_STRING|IT_CVAR, NULL, "Compression Level", &cv_zlib_levela,       135},
-	{IT_STRING|IT_CVAR, NULL, "Strategy",          &cv_zlib_strategya,    145},
-	{IT_STRING|IT_CVAR, NULL, "Window Size",       &cv_zlib_window_bitsa, 155},
+	{IT_STRING|IT_CVAR, NULL, "Memory Level",      &cv_zlib_memorya,               71},
+	{IT_STRING|IT_CVAR, NULL, "Compression Level", &cv_zlib_levela,                76},
+	{IT_STRING|IT_CVAR, NULL, "Strategy",          &cv_zlib_strategya,             81},
+	{IT_STRING|IT_CVAR, NULL, "Window Size",       &cv_zlib_window_bitsa,          86},
 };
 
 enum
 {
-	op_screenshot_folder = 1,
-	op_screenshot_capture = 8,
-	op_screenshot_gif_start = 9,
-	op_screenshot_gif_end = 10,
-	op_screenshot_apng_start = 11,
-	op_screenshot_apng_end = 14,
+	op_screenshot_colorprofile = 1,
+	op_screenshot_folder = 3,
+	op_screenshot_capture = 10,
+	op_screenshot_gif_start = 11,
+	op_screenshot_gif_end = 12,
+	op_screenshot_apng_start = 13,
+	op_screenshot_apng_end = 16,
 };
 
 static menuitem_t OP_EraseDataMenu[] =
@@ -1318,111 +1367,71 @@ static menuitem_t OP_EraseDataMenu[] =
 	{IT_STRING | IT_CALL, NULL, "\x85" "Erase ALL Data", M_EraseData, 40},
 };
 
-static menuitem_t OP_GameOptionsMenu[] =
-{
-#ifndef NONET
-	{IT_STRING | IT_CVAR | IT_CV_STRING,
-	                      NULL, "Master server",          &cv_masterserver,     10},
-#endif
-	{IT_STRING | IT_CVAR, NULL, "Show HUD",               &cv_showhud,     40},
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
-	                      NULL, "HUD Visibility",         &cv_translucenthud, 50},
-	{IT_STRING | IT_CVAR, NULL, "Timer Display",          &cv_timetic,     60},
-#ifdef SEENAMES
-	{IT_STRING | IT_CVAR, NULL, "HUD Player Names",       &cv_seenames,    80},
-#endif
-	{IT_STRING | IT_CVAR, NULL, "Log Hazard Damage",      &cv_hazardlog,   90},
-
-	{IT_STRING | IT_CVAR, NULL, "Console Back Color",     &cons_backcolor, 100},
-	{IT_STRING | IT_CVAR, NULL, "Console Text Size",      &cv_constextsize,110},
-	{IT_STRING | IT_CVAR, NULL, "Uppercase Console",      &cv_allcaps,     120},
-
-	{IT_STRING | IT_CVAR, NULL, "Title Screen Demos",     &cv_rollingdemos, 140},
-};
-
 static menuitem_t OP_ServerOptionsMenu[] =
 {
-	{IT_STRING | IT_SUBMENU, NULL, "General netgame options...",  &OP_NetgameOptionsDef,  10},
-	{IT_STRING | IT_SUBMENU, NULL, "Gametype options...",         &OP_GametypeOptionsDef, 20},
-	{IT_STRING | IT_SUBMENU, NULL, "Random Monitor Toggles...",   &OP_MonitorToggleDef,   30},
-
+	{IT_HEADER, NULL, "General", NULL, 0},
 #ifndef NONET
 	{IT_STRING | IT_CVAR | IT_CV_STRING,
-	                         NULL, "Server name",                 &cv_servername,         50},
+	                         NULL, "Server name",                      &cv_servername,          7},
+	{IT_STRING | IT_CVAR,    NULL, "Max Players",                      &cv_maxplayers,          21},
+	{IT_STRING | IT_CVAR,    NULL, "Allow WAD Downloading",            &cv_downloading,         26},
+	{IT_STRING | IT_CVAR,    NULL, "Allow players to join",            &cv_allownewplayer,      31},
 #endif
+	{IT_STRING | IT_CVAR,    NULL, "Map progression",                  &cv_advancemap,          36},
+	{IT_STRING | IT_CVAR,    NULL, "Intermission Timer",               &cv_inttime,             41},
 
-	{IT_STRING | IT_CVAR,    NULL, "Intermission Timer",          &cv_inttime,            80},
-	{IT_STRING | IT_CVAR,    NULL, "Advance to next map",         &cv_advancemap,         90},
+	{IT_HEADER, NULL, "Characters", NULL, 50},
+	{IT_STRING | IT_CVAR,    NULL, "Force a character",                &cv_forceskin,           56},
+	{IT_STRING | IT_CVAR,    NULL, "Restrict character changes",       &cv_restrictskinchange,  61},
+
+	{IT_HEADER, NULL, "Items", NULL, 70},
+	{IT_STRING | IT_CVAR,    NULL, "Item respawn delay",               &cv_itemrespawntime,     76},
+	{IT_STRING | IT_SUBMENU, NULL, "Random Item Box Toggles...",       &OP_MonitorToggleDef,    81},
+
+	{IT_HEADER, NULL, "Platform (Coop, Race, Competition)", NULL, 90},
+	{IT_STRING | IT_CVAR,    NULL, "Players required for exit",        &cv_playersforexit,      96},
+	{IT_STRING | IT_CVAR,    NULL, "Level completion countdown",       &cv_countdowntime,      101},
+	{IT_STRING | IT_CVAR,    NULL, "Item Boxes",                       &cv_competitionboxes,   106},
+
+	{IT_HEADER, NULL, "Ringslinger (Match, CTF, Tag, H&S)", NULL, 115},
+	{IT_STRING | IT_CVAR,    NULL, "Time Limit",                       &cv_timelimit,          121},
+	{IT_STRING | IT_CVAR,    NULL, "Score Limit",                      &cv_pointlimit,         126},
+	{IT_STRING | IT_CVAR,    NULL, "Overtime on Tie",                  &cv_overtime,           131},
+	{IT_STRING | IT_CVAR,    NULL, "Player respawn delay",             &cv_respawntime,        136},
+
+	{IT_STRING | IT_CVAR,    NULL, "Item Boxes",                       &cv_matchboxes,         146},
+	{IT_STRING | IT_CVAR,    NULL, "Weapon Rings",                     &cv_specialrings,       151},
+	{IT_STRING | IT_CVAR,    NULL, "Power Stones",                     &cv_powerstones,        156},
+
+	{IT_STRING | IT_CVAR,    NULL, "Flag respawn delay",               &cv_flagtime,           166},
+	{IT_STRING | IT_CVAR,    NULL, "Hiding time",                      &cv_hidetime,           171},
+
+	{IT_STRING | IT_CVAR,    NULL, "Autobalance Teams",                &cv_autobalance,        181},
+	{IT_STRING | IT_CVAR,    NULL, "Scramble Teams on Map Change",     &cv_scrambleonchange,   186},
 
 #ifndef NONET
-	{IT_STRING | IT_CVAR,    NULL, "Max Players",                 &cv_maxplayers,        110},
-	{IT_STRING | IT_CVAR,    NULL, "Allow players to join",       &cv_allownewplayer,    120},
-	{IT_STRING | IT_CVAR,    NULL, "Allow WAD Downloading",       &cv_downloading,       130},
-	{IT_STRING | IT_CVAR,    NULL, "Attempts to Resynch",         &cv_resynchattempts,   140},
+	{IT_HEADER, NULL, "Advanced", NULL, 195},
+	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "Master server",        &cv_masterserver,        201},
+	{IT_STRING | IT_CVAR,    NULL, "Attempts to resynchronise",        &cv_resynchattempts,     215},
 #endif
-};
-
-static menuitem_t OP_NetgameOptionsMenu[] =
-{
-	{IT_STRING | IT_CVAR, NULL, "Time Limit",            &cv_timelimit,        10},
-	{IT_STRING | IT_CVAR, NULL, "Point Limit",           &cv_pointlimit,       18},
-	{IT_STRING | IT_CVAR, NULL, "Overtime Tie-Breaker",  &cv_overtime,         26},
-
-	{IT_STRING | IT_CVAR, NULL, "Special Ring Weapons",  &cv_specialrings,     42},
-	{IT_STRING | IT_CVAR, NULL, "Emeralds",              &cv_powerstones,      50},
-	{IT_STRING | IT_CVAR, NULL, "Item Boxes",            &cv_matchboxes,       58},
-	{IT_STRING | IT_CVAR, NULL, "Item Respawn",          &cv_itemrespawn,      66},
-	{IT_STRING | IT_CVAR, NULL, "Item Respawn time",     &cv_itemrespawntime,  74},
-
-	{IT_STRING | IT_CVAR, NULL, "Sudden Death",          &cv_suddendeath,      90},
-	{IT_STRING | IT_CVAR, NULL, "Player respawn delay",  &cv_respawntime,      98},
-
-	{IT_STRING | IT_CVAR, NULL, "Force Skin",            &cv_forceskin,          114},
-	{IT_STRING | IT_CVAR, NULL, "Restrict skin changes", &cv_restrictskinchange, 122},
-
-	{IT_STRING | IT_CVAR, NULL, "Autobalance Teams",            &cv_autobalance,      138},
-	{IT_STRING | IT_CVAR, NULL, "Scramble Teams on Map Change", &cv_scrambleonchange, 146},
-};
-
-static menuitem_t OP_GametypeOptionsMenu[] =
-{
-	{IT_HEADER,           NULL, "CO-OP",                 NULL,                  2},
-	{IT_STRING | IT_CVAR, NULL, "Players for exit",      &cv_playersforexit,   10},
-	{IT_STRING | IT_CVAR, NULL, "Starting Lives",        &cv_startinglives,    18},
-
-	{IT_HEADER,           NULL, "COMPETITION",           NULL,                 34},
-	{IT_STRING | IT_CVAR, NULL, "Item Boxes",            &cv_competitionboxes, 42},
-	{IT_STRING | IT_CVAR, NULL, "Countdown Time",        &cv_countdowntime,    50},
-
-	{IT_HEADER,           NULL, "RACE",                  NULL,                 66},
-	{IT_STRING | IT_CVAR, NULL, "Number of Laps",        &cv_numlaps,          74},
-	{IT_STRING | IT_CVAR, NULL, "Use Map Lap Counts",    &cv_usemapnumlaps,    82},
-
-	{IT_HEADER,           NULL, "MATCH",                 NULL,                 98},
-	{IT_STRING | IT_CVAR, NULL, "Scoring Type",          &cv_match_scoring,   106},
-
-	{IT_HEADER,           NULL, "TAG",                   NULL,                122},
-	{IT_STRING | IT_CVAR, NULL, "Hide Time",             &cv_hidetime,        130},
-
-	{IT_HEADER,           NULL, "CTF",                   NULL,                146},
-	{IT_STRING | IT_CVAR, NULL, "Flag Respawn Time",     &cv_flagtime,        154},
 };
 
 static menuitem_t OP_MonitorToggleMenu[] =
 {
 	// Printing handled by drawing function
-	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Recycler",          &cv_recycler,      20},
-	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Teleporters",       &cv_teleporters,   30},
-	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Super Ring",        &cv_superring,     40},
-	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Super Sneakers",    &cv_supersneakers, 50},
-	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Invincibility",     &cv_invincibility, 60},
-	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Jump Shield",       &cv_jumpshield,    70},
-	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Elemental Shield",  &cv_watershield,   80},
-	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Attraction Shield", &cv_ringshield,    90},
-	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Force Shield",      &cv_forceshield,  100},
-	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Armageddon Shield", &cv_bombshield,   110},
-	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "1 Up",              &cv_1up,          120},
-	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Eggman Box",        &cv_eggmanbox,    130},
+	{IT_STRING|IT_CALL, NULL, "Reset to defaults", M_ResetCvars, 15},
+	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Recycler",          &cv_recycler,      30},
+	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Teleporters",       &cv_teleporters,   40},
+	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Super Ring",        &cv_superring,     50},
+	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Super Sneakers",    &cv_supersneakers, 60},
+	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Invincibility",     &cv_invincibility, 70},
+	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Jump Shield",       &cv_jumpshield,    80},
+	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Elemental Shield",  &cv_watershield,   90},
+	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Attraction Shield", &cv_ringshield,   100},
+	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Force Shield",      &cv_forceshield,  110},
+	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Armageddon Shield", &cv_bombshield,   120},
+	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "1 Up",              &cv_1up,          130},
+	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Eggman Box",        &cv_eggmanbox,    140},
 };
 
 // ==========================================================================
@@ -1494,12 +1503,12 @@ menu_t SR_LevelSelectDef = MAPPLATTERMENUSTYLE(NULL, SR_LevelSelectMenu);
 
 menu_t SR_UnlockChecklistDef =
 {
-	NULL,
+	"M_SECRET",
 	1,
 	&SR_MainDef,
 	SR_UnlockChecklistMenu,
 	M_DrawChecklist,
-	280, 185,
+	30, 30,
 	0,
 	NULL
 };
@@ -1531,17 +1540,6 @@ menu_t SP_LoadDef =
 
 menu_t SP_LevelSelectDef = MAPPLATTERMENUSTYLE(NULL, SP_LevelSelectMenu);
 
-menu_t SP_GameStatsDef =
-{
-	"M_STATS",
-	1,
-	&SP_MainDef,
-	SP_GameStatsMenu,
-	M_DrawGameStats,
-	280, 185,
-	0,
-	NULL
-};
 menu_t SP_LevelStatsDef =
 {
 	"M_STATS",
@@ -1742,16 +1740,11 @@ menu_t MP_PlayerSetupDef =
 
 // Options
 menu_t OP_MainDef = DEFAULTMENUSTYLE("M_OPTTTL", OP_MainMenu, &MainDef, 60, 30);
-menu_t OP_ControlsDef = DEFAULTMENUSTYLE("M_CONTRO", OP_ControlsMenu, &OP_MainDef, 60, 30);
-menu_t OP_ControlListDef = DEFAULTMENUSTYLE("M_CONTRO", OP_ControlListMenu, &OP_ControlsDef, 60, 30);
-menu_t OP_MoveControlsDef = CONTROLMENUSTYLE(OP_MoveControlsMenu, &OP_ControlListDef);
-menu_t OP_MPControlsDef = CONTROLMENUSTYLE(OP_MPControlsMenu, &OP_ControlListDef);
-menu_t OP_CameraControlsDef = CONTROLMENUSTYLE(OP_CameraControlsMenu, &OP_ControlListDef);
-menu_t OP_MiscControlsDef = CONTROLMENUSTYLE(OP_MiscControlsMenu, &OP_ControlListDef);
-menu_t OP_P1ControlsDef = DEFAULTMENUSTYLE("M_CONTRO", OP_P1ControlsMenu, &OP_ControlsDef, 60, 30);
-menu_t OP_P2ControlsDef = DEFAULTMENUSTYLE("M_CONTRO", OP_P2ControlsMenu, &OP_ControlsDef, 60, 30);
-menu_t OP_MouseOptionsDef = DEFAULTMENUSTYLE("M_CONTRO", OP_MouseOptionsMenu, &OP_P1ControlsDef, 60, 30);
-menu_t OP_Mouse2OptionsDef = DEFAULTMENUSTYLE("M_CONTRO", OP_Mouse2OptionsMenu, &OP_P2ControlsDef, 60, 30);
+menu_t OP_ChangeControlsDef = CONTROLMENUSTYLE(OP_ChangeControlsMenu, &OP_MainDef);
+menu_t OP_P1ControlsDef = DEFAULTMENUSTYLE("M_CONTRO", OP_P1ControlsMenu, &OP_MainDef, 50, 30);
+menu_t OP_P2ControlsDef = DEFAULTMENUSTYLE("M_CONTRO", OP_P2ControlsMenu, &OP_MainDef, 50, 30);
+menu_t OP_MouseOptionsDef = DEFAULTMENUSTYLE("M_CONTRO", OP_MouseOptionsMenu, &OP_P1ControlsDef, 35, 30);
+menu_t OP_Mouse2OptionsDef = DEFAULTMENUSTYLE("M_CONTRO", OP_Mouse2OptionsMenu, &OP_P2ControlsDef, 35, 30);
 menu_t OP_Joystick1Def = DEFAULTMENUSTYLE("M_CONTRO", OP_Joystick1Menu, &OP_P1ControlsDef, 60, 30);
 menu_t OP_Joystick2Def = DEFAULTMENUSTYLE("M_CONTRO", OP_Joystick2Menu, &OP_P2ControlsDef, 60, 30);
 menu_t OP_JoystickSetDef =
@@ -1761,12 +1754,22 @@ menu_t OP_JoystickSetDef =
 	&OP_Joystick1Def,
 	OP_JoystickSetMenu,
 	M_DrawJoystick,
-	50, 40,
+	60, 40,
 	0,
 	NULL
 };
 
-menu_t OP_VideoOptionsDef = DEFAULTMENUSTYLE("M_VIDEO", OP_VideoOptionsMenu, &OP_MainDef, 60, 30);
+menu_t OP_VideoOptionsDef =
+{
+	"M_VIDEO",
+	sizeof (OP_VideoOptionsMenu)/sizeof (menuitem_t),
+	&OP_MainDef,
+	OP_VideoOptionsMenu,
+	M_DrawMainVideoMenu,
+	30, 30,
+	0,
+	NULL
+};
 menu_t OP_VideoModeDef =
 {
 	"M_VIDEO",
@@ -1778,12 +1781,41 @@ menu_t OP_VideoModeDef =
 	0,
 	NULL
 };
-menu_t OP_SoundOptionsDef = DEFAULTMENUSTYLE("M_SOUND", OP_SoundOptionsMenu, &OP_MainDef, 60, 30);
-menu_t OP_GameOptionsDef = DEFAULTMENUSTYLE("M_GAME", OP_GameOptionsMenu, &OP_MainDef, 30, 30);
-menu_t OP_ServerOptionsDef = DEFAULTMENUSTYLE("M_SERVER", OP_ServerOptionsMenu, &OP_MainDef, 30, 30);
+menu_t OP_ColorOptionsDef =
+{
+	"M_VIDEO",
+	sizeof (OP_ColorOptionsMenu)/sizeof (menuitem_t),
+	&OP_VideoOptionsDef,
+	OP_ColorOptionsMenu,
+	M_DrawColorMenu,
+	30, 30,
+	0,
+	NULL
+};
+menu_t OP_SoundOptionsDef =
+{
+	"M_SOUND",
+	sizeof (OP_SoundOptionsMenu)/sizeof (menuitem_t),
+	&OP_MainDef,
+	OP_SoundOptionsMenu,
+	M_DrawSoundMenu,
+	30, 30,
+	0,
+	NULL
+};
 
-menu_t OP_NetgameOptionsDef = DEFAULTMENUSTYLE("M_SERVER", OP_NetgameOptionsMenu, &OP_ServerOptionsDef, 30, 30);
-menu_t OP_GametypeOptionsDef = DEFAULTMENUSTYLE("M_SERVER", OP_GametypeOptionsMenu, &OP_ServerOptionsDef, 30, 30);
+menu_t OP_ServerOptionsDef =
+{
+	"M_SERVER",
+	sizeof (OP_ServerOptionsMenu)/sizeof (menuitem_t),
+	&OP_MainDef,
+	OP_ServerOptionsMenu,
+	M_DrawGenericScrollMenu,
+	30, 30,
+	0,
+	NULL
+};
+
 menu_t OP_MonitorToggleDef =
 {
 	"M_SERVER",
@@ -1824,8 +1856,20 @@ menu_t OP_OpenGLColorDef =
 	NULL
 };
 #endif
-menu_t OP_DataOptionsDef = DEFAULTMENUSTYLE("M_DATA", OP_DataOptionsMenu, &OP_MainDef, 60, 30);
-menu_t OP_ScreenshotOptionsDef = DEFAULTMENUSTYLE("M_DATA", OP_ScreenshotOptionsMenu, &OP_DataOptionsDef, 30, 30);
+menu_t OP_DataOptionsDef = DEFAULTMENUSTYLE("M_DATA", OP_DataOptionsMenu, &OP_MainDef, 30, 30);
+
+menu_t OP_ScreenshotOptionsDef =
+{
+	"M_DATA",
+	sizeof (OP_ScreenshotOptionsMenu)/sizeof (menuitem_t),
+	&OP_DataOptionsDef,
+	OP_ScreenshotOptionsMenu,
+	M_DrawScreenshotMenu,
+	30, 30,
+	0,
+	NULL
+};
+
 menu_t OP_EraseDataDef = DEFAULTMENUSTYLE("M_DATA", OP_EraseDataMenu, &OP_DataOptionsDef, 60, 30);
 
 // ==========================================================================
@@ -2138,6 +2182,19 @@ static boolean M_ChangeStringCvar(INT32 choice)
 	return false;
 }
 
+// resets all cvars on a menu - assumes that all that have itemactions are cvars
+static void M_ResetCvars(void)
+{
+	INT32 i;
+	consvar_t *cv;
+	for (i = 0; i < currentMenu->numitems; i++)
+	{
+		if (!(currentMenu->menuitems[i].status & IT_CVAR) || !(cv = (consvar_t *)currentMenu->menuitems[i].itemaction))
+			continue;
+		CV_SetValue(cv, atoi(cv->defaultvalue));
+	}
+}
+
 static void M_NextOpt(void)
 {
 	INT16 oldItemOn = itemOn; // prevent infinite loop
@@ -2342,7 +2399,7 @@ boolean M_Responder(event_t *ev)
 				return true;
 
 			case KEY_F11: // Gamma Level
-				CV_AddValue(&cv_usegamma, 1);
+				CV_AddValue(&cv_globalgamma, 1);
 				return true;
 
 			// Spymode on F12 handled in game logic
@@ -2444,8 +2501,7 @@ boolean M_Responder(event_t *ev)
 			if (routine && ((currentMenu->menuitems[itemOn].status & IT_TYPE) == IT_ARROWS
 				|| (currentMenu->menuitems[itemOn].status & IT_TYPE) == IT_CVAR))
 			{
-				if (currentMenu != &OP_SoundOptionsDef)
-					S_StartSound(NULL, sfx_menu1);
+				S_StartSound(NULL, sfx_menu1);
 				routine(0);
 			}
 			return true;
@@ -2454,8 +2510,7 @@ boolean M_Responder(event_t *ev)
 			if (routine && ((currentMenu->menuitems[itemOn].status & IT_TYPE) == IT_ARROWS
 				|| (currentMenu->menuitems[itemOn].status & IT_TYPE) == IT_CVAR))
 			{
-				if (currentMenu != &OP_SoundOptionsDef)
-					S_StartSound(NULL, sfx_menu1);
+				S_StartSound(NULL, sfx_menu1);
 				routine(1);
 			}
 			return true;
@@ -2507,6 +2562,7 @@ boolean M_Responder(event_t *ev)
 			{
 				// detach any keys associated with the game control
 				G_ClearControlKeys(setupcontrols, currentMenu->menuitems[itemOn].alphaKey);
+				S_StartSound(NULL, sfx_shldls);
 				return true;
 			}
 			// Why _does_ backspace go back anyway?
@@ -2670,10 +2726,14 @@ void M_StartControlPanel(void)
 		}
 
 		if (splitscreen)
+		{
 			MPauseMenu[mpause_psetupsplit].status = MPauseMenu[mpause_psetupsplit2].status = IT_STRING | IT_CALL;
+			MPauseMenu[mpause_psetup].text = "Player 1 Setup";
+		}
 		else
 		{
 			MPauseMenu[mpause_psetup].status = IT_STRING | IT_CALL;
+			MPauseMenu[mpause_psetup].text = "Player Setup";
 
 			if (G_GametypeHasTeams())
 				MPauseMenu[mpause_switchteam].status = IT_STRING | IT_SUBMENU;
@@ -2822,15 +2882,14 @@ void M_Init(void)
 #ifdef HWRENDER
 	// Permanently hide some options based on render mode
 	if (rendermode == render_soft)
-		OP_VideoOptionsMenu[1].status = IT_DISABLED;
+		OP_VideoOptionsMenu[4].status = IT_DISABLED;
+	else if (rendermode == render_opengl)
+		OP_ScreenshotOptionsMenu[op_screenshot_colorprofile].status = IT_GRAYEDOUT;
 #endif
 
 #ifndef NONET
 	CV_RegisterVar(&cv_serversort);
 #endif
-
-	//todo put this somewhere better...
-	CV_RegisterVar(&cv_allcaps);
 }
 
 // ==========================================================================
@@ -2895,30 +2954,44 @@ static void M_DrawSlider(INT32 x, INT32 y, const consvar_t *cv)
 	INT32 range;
 	patch_t *p;
 
+	x = BASEVIDWIDTH - x - SLIDER_WIDTH;
+
+	V_DrawScaledPatch(x, y, 0, W_CachePatchName("M_SLIDEL", PU_CACHE));
+
+	p =  W_CachePatchName("M_SLIDEM", PU_CACHE);
+	for (i = 1; i < SLIDER_RANGE; i++)
+		V_DrawScaledPatch (x+i*8, y, 0,p);
+
+	p = W_CachePatchName("M_SLIDER", PU_CACHE);
+	V_DrawScaledPatch(x+i*8, y, 0, p);
+
+	// draw the slider cursor
+	p = W_CachePatchName("M_SLIDEC", PU_CACHE);
+
 	for (i = 0; cv->PossibleValue[i+1].strvalue; i++);
+
+	if ((range = atoi(cv->defaultvalue)) != cv->value)
+	{
+		range = ((range - cv->PossibleValue[0].value) * 100 /
+		 (cv->PossibleValue[i].value - cv->PossibleValue[0].value));
+
+		if (range < 0)
+			range = 0;
+		else if (range > 100)
+			range = 100;
+
+		V_DrawMappedPatch(x + 2 + (SLIDER_RANGE*8*range)/100, y, V_TRANSLUCENT, p, yellowmap);
+	}
 
 	range = ((cv->value - cv->PossibleValue[0].value) * 100 /
 	 (cv->PossibleValue[i].value - cv->PossibleValue[0].value));
 
 	if (range < 0)
 		range = 0;
-	if (range > 100)
+	else if (range > 100)
 		range = 100;
 
-	x = BASEVIDWIDTH - x - SLIDER_WIDTH;
-
-	V_DrawScaledPatch(x - 8, y, 0, W_CachePatchName("M_SLIDEL", PU_CACHE));
-
-	p =  W_CachePatchName("M_SLIDEM", PU_CACHE);
-	for (i = 0; i < SLIDER_RANGE; i++)
-		V_DrawScaledPatch (x+i*8, y, 0,p);
-
-	p = W_CachePatchName("M_SLIDER", PU_CACHE);
-	V_DrawScaledPatch(x+SLIDER_RANGE*8, y, 0, p);
-
-	// draw the slider cursor
-	p = W_CachePatchName("M_SLIDEC", PU_CACHE);
-	V_DrawMappedPatch(x + ((SLIDER_RANGE-1)*8*range)/100, y, 0, p, yellowmap);
+	V_DrawMappedPatch(x + 2 + (SLIDER_RANGE*8*range)/100, y, 0, p, yellowmap);
 }
 
 //
@@ -3151,7 +3224,7 @@ static void M_DrawGenericMenu(void)
 								y += 16;
 								break;
 							default:
-								V_DrawString(BASEVIDWIDTH - x - V_StringWidth(cv->string, 0), y,
+								V_DrawRightAlignedString(BASEVIDWIDTH - x, y,
 									((cv->flags & CV_CHEAT) && !CV_IsSetToDefault(cv) ? V_REDMAP : V_YELLOWMAP), cv->string);
 								break;
 						}
@@ -3188,7 +3261,8 @@ static void M_DrawGenericMenu(void)
 				if (currentMenu->menuitems[i].alphaKey)
 					y = currentMenu->y+currentMenu->menuitems[i].alphaKey;
 
-				V_DrawString(x-16, y, V_YELLOWMAP, currentMenu->menuitems[i].text);
+				//V_DrawString(x-16, y, V_YELLOWMAP, currentMenu->menuitems[i].text);
+				M_DrawLevelPlatterHeader(y - (lsheadingheight - 12), currentMenu->menuitems[i].text, true);
 				y += SMALLLINEHEIGHT;
 				break;
 		}
@@ -3207,6 +3281,135 @@ static void M_DrawGenericMenu(void)
 			W_CachePatchName("M_CURSOR", PU_CACHE));
 		V_DrawString(currentMenu->x, cursory, V_YELLOWMAP, currentMenu->menuitems[itemOn].text);
 	}
+}
+
+#define scrollareaheight 72
+
+// note that alphakey is multiplied by 2 for scrolling menus to allow greater usage in UINT8 range.
+static void M_DrawGenericScrollMenu(void)
+{
+	INT32 x, y, i, max, bottom, tempcentery, cursory = 0;
+
+	// DRAW MENU
+	x = currentMenu->x;
+	y = currentMenu->y;
+
+	if ((currentMenu->menuitems[itemOn].alphaKey*2 - currentMenu->menuitems[0].alphaKey*2) <= scrollareaheight)
+		tempcentery = currentMenu->y - currentMenu->menuitems[0].alphaKey*2;
+	else if ((currentMenu->menuitems[currentMenu->numitems-1].alphaKey*2 - currentMenu->menuitems[itemOn].alphaKey*2) <= scrollareaheight)
+		tempcentery = currentMenu->y - currentMenu->menuitems[currentMenu->numitems-1].alphaKey*2 + 2*scrollareaheight;
+	else
+		tempcentery = currentMenu->y - currentMenu->menuitems[itemOn].alphaKey*2 + scrollareaheight;
+
+	for (i = 0; i < currentMenu->numitems; i++)
+	{
+		if (currentMenu->menuitems[i].status != IT_DISABLED && currentMenu->menuitems[i].alphaKey*2 + tempcentery >= currentMenu->y)
+			break;
+	}
+
+	for (bottom = currentMenu->numitems; bottom > 0; bottom--)
+	{
+		if (currentMenu->menuitems[bottom-1].status != IT_DISABLED)
+			break;
+	}
+
+	for (max = bottom; max > 0; max--)
+	{
+		if (currentMenu->menuitems[max-1].status != IT_DISABLED && currentMenu->menuitems[max-1].alphaKey*2 + tempcentery <= (currentMenu->y + 2*scrollareaheight))
+			break;
+	}
+
+	if (i)
+		V_DrawString(currentMenu->x - 20, currentMenu->y, V_YELLOWMAP, "\x1A"); // up arrow
+	if (max != bottom)
+		V_DrawString(currentMenu->x - 20, currentMenu->y + 2*scrollareaheight, V_YELLOWMAP, "\x1B"); // down arrow
+
+	// draw title (or big pic)
+	M_DrawMenuTitle();
+
+	for (; i < max; i++)
+	{
+		y = currentMenu->menuitems[i].alphaKey*2 + tempcentery;
+		if (i == itemOn)
+			cursory = y;
+		switch (currentMenu->menuitems[i].status & IT_DISPLAY)
+		{
+			case IT_PATCH:
+			case IT_DYBIGSPACE:
+			case IT_BIGSLIDER:
+			case IT_STRING2:
+			case IT_DYLITLSPACE:
+			case IT_GRAYPATCH:
+			case IT_TRANSTEXT2:
+				// unsupported
+				break;
+			case IT_NOTHING:
+				break;
+			case IT_STRING:
+			case IT_WHITESTRING:
+				if (i != itemOn && (currentMenu->menuitems[i].status & IT_DISPLAY)==IT_STRING)
+					V_DrawString(x, y, 0, currentMenu->menuitems[i].text);
+				else
+					V_DrawString(x, y, V_YELLOWMAP, currentMenu->menuitems[i].text);
+
+				// Cvar specific handling
+				switch (currentMenu->menuitems[i].status & IT_TYPE)
+					case IT_CVAR:
+					{
+						consvar_t *cv = (consvar_t *)currentMenu->menuitems[i].itemaction;
+						switch (currentMenu->menuitems[i].status & IT_CVARTYPE)
+						{
+							case IT_CV_SLIDER:
+								M_DrawSlider(x, y, cv);
+							case IT_CV_NOPRINT: // color use this
+							case IT_CV_INVISSLIDER: // monitor toggles use this
+								break;
+							case IT_CV_STRING:
+#if 1
+								if (y + 12 > (currentMenu->y + 2*scrollareaheight))
+									break;
+								M_DrawTextBox(x, y + 4, MAXSTRINGLENGTH, 1);
+								V_DrawString(x + 8, y + 12, V_ALLOWLOWERCASE, cv->string);
+								if (skullAnimCounter < 4 && i == itemOn)
+									V_DrawCharacter(x + 8 + V_StringWidth(cv->string, 0), y + 12,
+										'_' | 0x80, false);
+#else // cool new string type stuff, not ready for limelight
+								if (i == itemOn)
+								{
+									V_DrawFill(x-2, y-1, MAXSTRINGLENGTH*8 + 4, 8+3, 159);
+									V_DrawString(x, y, V_ALLOWLOWERCASE, cv->string);
+									if (skullAnimCounter < 4)
+										V_DrawCharacter(x + V_StringWidth(cv->string, 0), y, '_' | 0x80, false);
+								}
+								else
+									V_DrawRightAlignedString(BASEVIDWIDTH - x, y,
+									V_YELLOWMAP|V_ALLOWLOWERCASE, cv->string);
+#endif
+								break;
+							default:
+								V_DrawRightAlignedString(BASEVIDWIDTH - x, y,
+									((cv->flags & CV_CHEAT) && !CV_IsSetToDefault(cv) ? V_REDMAP : V_YELLOWMAP), cv->string);
+								break;
+						}
+						break;
+					}
+					break;
+			case IT_TRANSTEXT:
+				V_DrawString(x, y, V_TRANSLUCENT, currentMenu->menuitems[i].text);
+				break;
+			case IT_QUESTIONMARKS:
+				V_DrawString(x, y, V_TRANSLUCENT|V_OLDSPACING, M_CreateSecretMenuOption(currentMenu->menuitems[i].text));
+				break;
+			case IT_HEADERTEXT:
+				//V_DrawString(x-16, y, V_YELLOWMAP, currentMenu->menuitems[i].text);
+				M_DrawLevelPlatterHeader(y - (lsheadingheight - 12), currentMenu->menuitems[i].text, true);
+				break;
+		}
+	}
+
+	// DRAW THE SKULL CURSOR
+	V_DrawScaledPatch(currentMenu->x - 24, cursory, 0,
+		W_CachePatchName("M_CURSOR", PU_CACHE));
 }
 
 static void M_DrawPauseMenu(void)
@@ -3932,6 +4135,8 @@ static void M_HandleLevelPlatter(INT32 choice)
 						M_SetupNextMenu(currentMenu->prevMenu->prevMenu);
 					else
 						M_ChangeLevel(0);
+					Z_Free(levelselect.rows);
+					levelselect.rows = NULL;
 				}
 				else
 					M_LevelSelectWarp(0);
@@ -3961,10 +4166,12 @@ static void M_HandleLevelPlatter(INT32 choice)
 		}
 		else
 			M_ClearMenus(true);
+		Z_Free(levelselect.rows);
+		levelselect.rows = NULL;
 	}
 }
 
-static void M_DrawLevelPlatterHeader(INT32 y, const char *header, boolean headerhighlight)
+void M_DrawLevelPlatterHeader(INT32 y, const char *header, boolean headerhighlight)
 {
 	y += lsheadingheight - 12;
 	V_DrawString(19, y, (headerhighlight ? V_YELLOWMAP : 0), header);
@@ -3979,7 +4186,6 @@ static void M_DrawLevelPlatterHeader(INT32 y, const char *header, boolean header
 	{
 		V_DrawFill(19, y, 282, 1, 26);
 	}
-	y += 2;
 }
 
 static void M_DrawLevelPlatterWideMap(UINT8 row, UINT8 col, INT32 x, INT32 y, boolean highlight)
@@ -4450,6 +4656,7 @@ static void M_ChangeLevel(INT32 choice)
 static void M_ConfirmSpectate(INT32 choice)
 {
 	(void)choice;
+	// We allow switching to spectator even if team changing is not allowed
 	M_ClearMenus(true);
 	COM_ImmedExecute("changeteam spectator");
 }
@@ -4457,6 +4664,11 @@ static void M_ConfirmSpectate(INT32 choice)
 static void M_ConfirmEnterGame(INT32 choice)
 {
 	(void)choice;
+	if (!cv_allowteamchange.value)
+	{
+		M_StartMessage(M_GetText("The server is not allowing\nteam changes at this time.\nPress a key.\n"), NULL, MM_NOTHING);
+		return;
+	}
 	M_ClearMenus(true);
 	COM_ImmedExecute("changeteam playing");
 }
@@ -4609,27 +4821,323 @@ static void M_LevelSelectWarp(INT32 choice)
 
 UINT8 skyRoomMenuTranslations[MAXUNLOCKABLES];
 
-#define NUMCHECKLIST 8
+static boolean checklist_cangodown; // uuuueeerggghhhh HACK
+
+static void M_HandleChecklist(INT32 choice)
+{
+	INT32 j;
+	switch (choice)
+	{
+		case KEY_DOWNARROW:
+			S_StartSound(NULL, sfx_menu1);
+			if (checklist_cangodown)
+			{
+				for (j = check_on+1; j < MAXUNLOCKABLES; j++)
+				{
+					if (!(unlockables[j].name[0] == 0 //|| unlockables[j].nochecklist
+					|| !unlockables[j].conditionset || unlockables[j].conditionset > MAXCONDITIONSETS))
+						break;
+				}
+				if (j != MAXUNLOCKABLES)
+					check_on = j;
+			}
+			return;
+
+		case KEY_UPARROW:
+			S_StartSound(NULL, sfx_menu1);
+			for (j = check_on-1; j > -1; j--)
+			{
+				if (!(unlockables[j].name[0] == 0 //|| unlockables[j].nochecklist
+				|| !unlockables[j].conditionset || unlockables[j].conditionset > MAXCONDITIONSETS))
+					break;
+			}
+			if (j != -1)
+				check_on = j;
+			return;
+
+		case KEY_ESCAPE:
+			if (currentMenu->prevMenu)
+				M_SetupNextMenu(currentMenu->prevMenu);
+			else
+				M_ClearMenus(true);
+			return;
+		default:
+			break;
+	}
+}
+
+#define addy(add) { y += add; if ((y - currentMenu->y) > (scrollareaheight*2)) goto finishchecklist; }
+
 static void M_DrawChecklist(void)
 {
-	INT32 i, j = 0;
+	INT32 i = check_on, j = 0, y = currentMenu->y;
+	UINT32 condnum, previd, maxcond;
+	condition_t *cond;
 
-	for (i = 0; i < MAXUNLOCKABLES; i++)
+	// draw title (or big pic)
+	M_DrawMenuTitle();
+
+	if (check_on)
+		V_DrawString(10, y, V_YELLOWMAP, "\x1A");
+
+	while (i < MAXUNLOCKABLES)
 	{
-		if (unlockables[i].name[0] == 0 || unlockables[i].nochecklist
+		if (unlockables[i].name[0] == 0 //|| unlockables[i].nochecklist
 		|| !unlockables[i].conditionset || unlockables[i].conditionset > MAXCONDITIONSETS)
 			continue;
 
-		V_DrawString(8, 8+(24*j), V_RETURN8, unlockables[i].name);
-		V_DrawString(160, 8+(24*j), V_RETURN8, V_WordWrap(160, 292, 0, unlockables[i].objective));
+		V_DrawString(currentMenu->x, y, ((unlockables[i].unlocked) ? V_GREENMAP : V_TRANSLUCENT), ((unlockables[i].unlocked || !unlockables[i].nochecklist) ? unlockables[i].name : M_CreateSecretMenuOption(unlockables[i].name)));
+
+		for (j = i+1; j < MAXUNLOCKABLES; j++)
+		{
+			if (!(unlockables[j].name[0] == 0 //|| unlockables[j].nochecklist
+			|| !unlockables[j].conditionset || unlockables[j].conditionset > MAXCONDITIONSETS))
+				break;
+		}
+		if ((j != MAXUNLOCKABLES) && (unlockables[i].conditionset == unlockables[j].conditionset))
+			addy(8)
+		else
+		{
+			if ((maxcond = conditionSets[unlockables[i].conditionset-1].numconditions))
+			{
+				cond = conditionSets[unlockables[i].conditionset-1].condition;
+				previd = cond[0].id;
+				addy(2);
+
+				if (unlockables[i].objective[0] != '/')
+				{
+					addy(8);
+					V_DrawString(currentMenu->x, y,
+						V_ALLOWLOWERCASE,
+						va("\x1E %s", unlockables[i].objective));
+				}
+				else
+				{
+					for (condnum = 0; condnum < maxcond; condnum++)
+					{
+						const char *beat = "!";
+
+						if (cond[condnum].id != previd)
+						{
+							addy(8);
+							V_DrawString(currentMenu->x + 4, y, V_YELLOWMAP, "OR");
+						}
+
+						addy(8);
+
+						switch (cond[condnum].type)
+						{
+							case UC_PLAYTIME:
+								{
+									UINT32 hours = G_TicsToHours(cond[condnum].requirement);
+									UINT32 minutes = G_TicsToMinutes(cond[condnum].requirement, false);
+									UINT32 seconds = G_TicsToSeconds(cond[condnum].requirement);
+
+#define getplural(field) ((field == 1) ? "" : "s")
+									if (hours)
+									{
+										if (minutes)
+											beat = va("Play the game for %d hour%s %d minute%s", hours, getplural(hours), minutes, getplural(minutes));
+										else
+											beat = va("Play the game for %d hour%s", hours, getplural(hours));
+									}
+									else
+									{
+										if (minutes && seconds)
+											beat = va("Play the game for %d minute%s %d second%s", minutes, getplural(minutes), seconds, getplural(seconds));
+										else if (minutes)
+											beat = va("Play the game for %d minute%s", minutes, getplural(minutes));
+										else
+											beat = va("Play the game for %d second%s", seconds, getplural(seconds));
+									}
+#undef getplural
+								}
+								break;
+							case UC_MAPVISITED:
+							case UC_MAPBEATEN:
+							case UC_MAPALLEMERALDS:
+							case UC_MAPULTIMATE:
+							case UC_MAPPERFECT:
+								{
+									char *title = G_BuildMapTitle(cond[condnum].requirement);
+
+									if (title)
+									{
+										const char *level = ((M_MapLocked(cond[condnum].requirement) || !((mapheaderinfo[cond[condnum].requirement-1]->menuflags & LF2_NOVISITNEEDED) || mapvisited[cond[condnum].requirement-1])) ? M_CreateSecretMenuOption(title) : title);
+
+										switch (cond[condnum].type)
+										{
+											case UC_MAPVISITED:
+												beat = va("Visit %s", level);
+												break;
+											case UC_MAPALLEMERALDS:
+												beat = va("Beat %s with all emeralds", level);
+												break;
+											case UC_MAPULTIMATE:
+												beat = va("Beat %s in Ultimate mode", level);
+												break;
+											case UC_MAPPERFECT:
+												beat = va("Get all rings in %s", level);
+												break;
+											case UC_MAPBEATEN:
+											default:
+												beat = va("Beat %s", level);
+												break;
+										}
+										Z_Free(title);
+									}
+								}
+								break;
+							case UC_MAPSCORE:
+							case UC_MAPTIME:
+							case UC_MAPRINGS:
+								{
+									char *title = G_BuildMapTitle(cond[condnum].extrainfo1);
+
+									if (title)
+									{
+										const char *level = ((M_MapLocked(cond[condnum].extrainfo1) || !((mapheaderinfo[cond[condnum].extrainfo1-1]->menuflags & LF2_NOVISITNEEDED) || mapvisited[cond[condnum].extrainfo1-1])) ? M_CreateSecretMenuOption(title) : title);
+
+										switch (cond[condnum].type)
+										{
+											case UC_MAPSCORE:
+												beat = va("Get %d points in %s", cond[condnum].requirement, level);
+												break;
+											case UC_MAPTIME:
+												beat = va("Beat %s in %d:%d.%d", level,
+												G_TicsToMinutes(cond[condnum].requirement, true),
+												G_TicsToSeconds(cond[condnum].requirement),
+												G_TicsToCentiseconds(cond[condnum].requirement));
+												break;
+											case UC_MAPRINGS:
+												beat = va("Get %d rings in %s", cond[condnum].requirement, level);
+												break;
+											default:
+												break;
+										}
+										Z_Free(title);
+									}
+								}
+								break;
+							case UC_OVERALLSCORE:
+							case UC_OVERALLTIME:
+							case UC_OVERALLRINGS:
+								{
+									switch (cond[condnum].type)
+									{
+										case UC_OVERALLSCORE:
+											beat = va("Get %d points over all maps", cond[condnum].requirement);
+											break;
+										case UC_OVERALLTIME:
+											beat = va("Get a total time of less than %d:%d.%d",
+											G_TicsToMinutes(cond[condnum].requirement, true),
+											G_TicsToSeconds(cond[condnum].requirement),
+											G_TicsToCentiseconds(cond[condnum].requirement));
+											break;
+										case UC_OVERALLRINGS:
+											beat = va("Get %d rings over all maps", cond[condnum].requirement);
+											break;
+										default:
+											break;
+									}
+								}
+								break;
+							case UC_GAMECLEAR:
+							case UC_ALLEMERALDS:
+								{
+									const char *emeraldtext = ((cond[condnum].type == UC_ALLEMERALDS) ? " with all emeralds" : "");
+									if (cond[condnum].requirement != 1)
+										beat = va("Beat the game %d times%s",
+										cond[condnum].requirement, emeraldtext);
+									else
+										beat = va("Beat the game%s",
+										emeraldtext);
+								}
+								break;
+							case UC_TOTALEMBLEMS:
+								beat = va("Collect %s%d emblems", ((numemblems+numextraemblems == cond[condnum].requirement) ? "all " : ""), cond[condnum].requirement);
+								break;
+							case UC_NIGHTSTIME:
+							case UC_NIGHTSSCORE:
+							case UC_NIGHTSGRADE:
+								{
+									char *title = G_BuildMapTitle(cond[condnum].extrainfo1);
+
+									if (title)
+									{
+										const char *level = ((M_MapLocked(cond[condnum].extrainfo1) || !((mapheaderinfo[cond[condnum].extrainfo1-1]->menuflags & LF2_NOVISITNEEDED) || mapvisited[cond[condnum].extrainfo1-1])) ? M_CreateSecretMenuOption(title) : title);
+
+										switch (cond[condnum].type)
+										{
+											case UC_NIGHTSSCORE:
+												if (cond[condnum].extrainfo2)
+													beat = va("Get %d points in %s, mare %d", cond[condnum].requirement, level, cond[condnum].extrainfo2);
+												else
+													beat = va("Get %d points in %s", cond[condnum].requirement, level);
+												break;
+											case UC_NIGHTSTIME:
+												if (cond[condnum].extrainfo2)
+													beat = va("Beat %s, mare %d in %d:%d.%d", level, cond[condnum].extrainfo2,
+													G_TicsToMinutes(cond[condnum].requirement, true),
+													G_TicsToSeconds(cond[condnum].requirement),
+													G_TicsToCentiseconds(cond[condnum].requirement));
+												else
+													beat = va("Beat %s in %d:%d.%d",
+													level,
+													G_TicsToMinutes(cond[condnum].requirement, true),
+													G_TicsToSeconds(cond[condnum].requirement),
+													G_TicsToCentiseconds(cond[condnum].requirement));
+												break;
+											case UC_NIGHTSGRADE:
+												{
+													char grade = ('F' - (char)cond[condnum].requirement);
+													if (grade < 'A')
+														grade = 'A';
+													if (cond[condnum].extrainfo2)
+														beat = va("Get grade %c in %s, mare %d", grade, level, cond[condnum].extrainfo2);
+													else
+														beat = va("Get grade %c in %s", grade, level);
+												}
+											break;
+											default:
+												break;
+										}
+										Z_Free(title);
+									}
+								}
+								break;
+							case UC_TRIGGER:
+							case UC_EMBLEM:
+							case UC_CONDITIONSET:
+							default:
+								y -= 8; // Nope, not showing this.
+								break;
+						}
+						if (beat[0] != '!')
+						{
+							V_DrawString(currentMenu->x, y, 0, "\x1E");
+							V_DrawString(currentMenu->x+12, y, V_ALLOWLOWERCASE, beat);
+						}
+						previd = cond[condnum].id;
+					}
+				}
+			}
+			addy(12);
+		}
+		i = j;
+
+		/*V_DrawString(160, 8+(24*j), V_RETURN8, V_WordWrap(160, 292, 0, unlockables[i].objective));
 
 		if (unlockables[i].unlocked)
 			V_DrawString(308, 8+(24*j), V_YELLOWMAP, "Y");
 		else
-			V_DrawString(308, 8+(24*j), V_YELLOWMAP, "N");
+			V_DrawString(308, 8+(24*j), V_YELLOWMAP, "N");*/
+	}
 
-		if (++j >= NUMCHECKLIST)
-			break;
+finishchecklist:
+	if ((checklist_cangodown = ((y - currentMenu->y) > (scrollareaheight*2)))) // haaaaaaacks.
+	{
+		V_DrawString(10, currentMenu->y+(scrollareaheight*2), V_YELLOWMAP, "\x1B");
 	}
 }
 
@@ -5608,6 +6116,10 @@ static void M_ChoosePlayer(INT32 choice)
 
 	G_DeferedInitNew(ultmode, G_BuildMapName(startmap), (UINT8)skinnum, false, fromlevelselect);
 	COM_BufAddText("dummyconsvar 1\n"); // G_DeferedInitNew doesn't do this
+
+	if (levelselect.rows)
+		Z_Free(levelselect.rows);
+	levelselect.rows = NULL;
 }
 
 // ===============
@@ -5640,23 +6152,24 @@ static void M_Statistics(INT32 choice)
 		statsMapList[j++] = i;
 	}
 	statsMapList[j] = -1;
-	statsMax = j - 13 + numextraemblems;
+	statsMax = j - 11 + numextraemblems;
 	statsLocation = 0;
 
 	if (statsMax < 0)
 		statsMax = 0;
 
-	M_SetupNextMenu(&SP_GameStatsDef);
+	M_SetupNextMenu(&SP_LevelStatsDef);
 }
 
 static void M_DrawStatsMaps(int location)
 {
-	INT32 y = 76, i = -1;
+	INT32 y = 80, i = -1;
 	INT16 mnum;
 	extraemblem_t *exemblem;
+	boolean dotopname = true, dobottomarrow = (location < statsMax);
 
-	V_DrawString(20,  y-12, 0, "LEVEL NAME");
-	V_DrawString(248, y-12, 0, "EMBLEMS");
+	if (location)
+		V_DrawString(10, y, V_YELLOWMAP, "\x1A");
 
 	while (statsMapList[++i] != -1)
 	{
@@ -5664,6 +6177,13 @@ static void M_DrawStatsMaps(int location)
 		{
 			--location;
 			continue;
+		}
+		else if (dotopname)
+		{
+			V_DrawString(20,  y, V_GREENMAP, "LEVEL NAME");
+			V_DrawString(248, y, V_GREENMAP, "EMBLEMS");
+			y += 8;
+			dotopname = false;
 		}
 
 		mnum = statsMapList[i];
@@ -5677,21 +6197,36 @@ static void M_DrawStatsMaps(int location)
 		y += 8;
 
 		if (y >= BASEVIDHEIGHT-8)
-			return;
+			goto bottomarrow;
 	}
+	if (dotopname && !location)
+	{
+		V_DrawString(20,  y, V_GREENMAP, "LEVEL NAME");
+		V_DrawString(248, y, V_GREENMAP, "EMBLEMS");
+		y += 8;
+	}
+	else if (location)
+		--location;
 
 	// Extra Emblems
 	for (i = -2; i < numextraemblems; ++i)
 	{
+		if (i == -1)
+		{
+			V_DrawString(20, y, V_GREENMAP, "EXTRA EMBLEMS");
+			if (location)
+			{
+				y += 8;
+				location++;
+			}
+		}
 		if (location)
 		{
 			--location;
 			continue;
 		}
 
-		if (i == -1)
-			V_DrawString(20, y, V_GREENMAP, "EXTRA EMBLEMS");
-		else if (i >= 0)
+		if (i >= 0)
 		{
 			exemblem = &extraemblems[i];
 
@@ -5707,17 +6242,87 @@ static void M_DrawStatsMaps(int location)
 		y += 8;
 
 		if (y >= BASEVIDHEIGHT-8)
-			return;
+			goto bottomarrow;
 	}
+bottomarrow:
+	if (dobottomarrow)
+		V_DrawString(10, y-8, V_YELLOWMAP, "\x1B");
 }
 
 static void M_DrawLevelStats(void)
 {
-	M_DrawMenuTitle();
-	V_DrawCenteredString(BASEVIDWIDTH/2, 24, V_YELLOWMAP, "PAGE 2 OF 2");
+	char beststr[40];
 
-	V_DrawString(72, 48, 0, va("x %d/%d", M_CountEmblems(), numemblems+numextraemblems));
-	V_DrawScaledPatch(40, 48-4, 0, W_CachePatchName("EMBLICON", PU_STATIC));
+	tic_t besttime = 0;
+	UINT32 bestscore = 0;
+	UINT32 bestrings = 0;
+
+	INT32 i;
+	INT32 mapsunfinished = 0;
+	boolean bestunfinished[3] = {false, false, false};
+
+	M_DrawMenuTitle();
+
+	V_DrawString(20, 24, V_YELLOWMAP, "Total Play Time:");
+	V_DrawCenteredString(BASEVIDWIDTH/2, 32, 0, va("%i hours, %i minutes, %i seconds",
+	                         G_TicsToHours(totalplaytime),
+	                         G_TicsToMinutes(totalplaytime, false),
+	                         G_TicsToSeconds(totalplaytime)));
+
+	for (i = 0; i < NUMMAPS; i++)
+	{
+		boolean mapunfinished = false;
+
+		if (!mapheaderinfo[i] || !(mapheaderinfo[i]->menuflags & LF2_RECORDATTACK))
+			continue;
+
+		if (!mainrecords[i])
+		{
+			mapsunfinished++;
+			bestunfinished[0] = bestunfinished[1] = bestunfinished[2] = true;
+			continue;
+		}
+
+		if (mainrecords[i]->score > 0)
+			bestscore += mainrecords[i]->score;
+		else
+			mapunfinished = bestunfinished[0] = true;
+
+		if (mainrecords[i]->time > 0)
+			besttime += mainrecords[i]->time;
+		else
+			mapunfinished = bestunfinished[1] = true;
+
+		if (mainrecords[i]->rings > 0)
+			bestrings += mainrecords[i]->rings;
+		else
+			mapunfinished = bestunfinished[2] = true;
+
+		if (mapunfinished)
+			mapsunfinished++;
+	}
+
+	V_DrawString(20, 48, 0, "Combined records:");
+
+	if (mapsunfinished)
+		V_DrawString(20, 56, V_REDMAP, va("(%d unfinished)", mapsunfinished));
+	else
+		V_DrawString(20, 56, V_GREENMAP, "(complete)");
+
+	V_DrawString(36, 64, 0, va("x %d/%d", M_CountEmblems(), numemblems+numextraemblems));
+	V_DrawSmallScaledPatch(20, 64, 0, W_CachePatchName("EMBLICON", PU_STATIC));
+
+	sprintf(beststr, "%u", bestscore);
+	V_DrawString(BASEVIDWIDTH/2, 48, V_YELLOWMAP, "SCORE:");
+	V_DrawRightAlignedString(BASEVIDWIDTH-16, 48, (bestunfinished[0] ? V_REDMAP : 0), beststr);
+
+	sprintf(beststr, "%i:%02i:%02i.%02i", G_TicsToHours(besttime), G_TicsToMinutes(besttime, false), G_TicsToSeconds(besttime), G_TicsToCentiseconds(besttime));
+	V_DrawString(BASEVIDWIDTH/2, 56, V_YELLOWMAP, "TIME:");
+	V_DrawRightAlignedString(BASEVIDWIDTH-16, 56, (bestunfinished[1] ? V_REDMAP : 0), beststr);
+
+	sprintf(beststr, "%u", bestrings);
+	V_DrawString(BASEVIDWIDTH/2, 64, V_YELLOWMAP, "RINGS:");
+	V_DrawRightAlignedString(BASEVIDWIDTH-16, 64, (bestunfinished[2] ? V_REDMAP : 0), beststr);
 
 	M_DrawStatsMaps(statsLocation);
 }
@@ -5741,119 +6346,18 @@ static void M_HandleLevelStats(INT32 choice)
 				--statsLocation;
 			break;
 
-		case KEY_RIGHTARROW:
+		case KEY_PGDN:
 			S_StartSound(NULL, sfx_menu1);
-			statsLocation += (statsLocation+15 >= statsMax) ? statsMax-statsLocation : 15;
+			statsLocation += (statsLocation+13 >= statsMax) ? statsMax-statsLocation : 13;
 			break;
 
-		case KEY_LEFTARROW:
+		case KEY_PGUP:
 			S_StartSound(NULL, sfx_menu1);
-			statsLocation -= (statsLocation < 15) ? statsLocation : 15;
+			statsLocation -= (statsLocation < 13) ? statsLocation : 13;
 			break;
 
 		case KEY_ESCAPE:
 			exitmenu = true;
-			break;
-
-		case KEY_ENTER:
-			S_StartSound(NULL, sfx_menu1);
-			M_SetupNextMenu(&SP_GameStatsDef);
-			break;
-	}
-	if (exitmenu)
-	{
-		if (currentMenu->prevMenu)
-			M_SetupNextMenu(currentMenu->prevMenu);
-		else
-			M_ClearMenus(true);
-	}
-}
-
-// Handle GAME statistics.
-static void M_DrawGameStats(void)
-{
-	char beststr[40];
-
-	tic_t besttime = 0;
-	UINT32 bestscore = 0;
-	UINT32 bestrings = 0;
-
-	INT32 i;
-	INT32 mapsunfinished[3] = {0, 0, 0};
-
-	M_DrawMenuTitle();
-	V_DrawCenteredString(BASEVIDWIDTH/2, 24, V_YELLOWMAP, "PAGE 1 OF 2");
-
-	V_DrawString(32, 60, V_YELLOWMAP, "Total Play Time:");
-	V_DrawRightAlignedString(BASEVIDWIDTH-32, 70, 0, va("%i hours, %i minutes, %i seconds",
-	                         G_TicsToHours(totalplaytime),
-	                         G_TicsToMinutes(totalplaytime, false),
-	                         G_TicsToSeconds(totalplaytime)));
-
-	for (i = 0; i < NUMMAPS; i++)
-	{
-		if (!mapheaderinfo[i] || !(mapheaderinfo[i]->menuflags & LF2_RECORDATTACK))
-			continue;
-
-		if (!mainrecords[i])
-		{
-			mapsunfinished[0]++;
-			mapsunfinished[1]++;
-			mapsunfinished[2]++;
-			continue;
-		}
-
-		if (mainrecords[i]->score > 0)
-			bestscore += mainrecords[i]->score;
-		else
-			mapsunfinished[0]++;
-
-		if (mainrecords[i]->time > 0)
-			besttime += mainrecords[i]->time;
-		else
-			mapsunfinished[1]++;
-
-		if (mainrecords[i]->rings > 0)
-			bestrings += mainrecords[i]->rings;
-		else
-			mapsunfinished[2]++;
-
-	}
-
-	V_DrawCenteredString(BASEVIDWIDTH/2, 90, 0, "* COMBINED RECORDS *");
-
-	sprintf(beststr, "%u", bestscore);
-	V_DrawString(32, 100, V_YELLOWMAP, "SCORE:");
-	V_DrawRightAlignedString(BASEVIDWIDTH-32, 100, 0, beststr);
-	if (mapsunfinished[0])
-		V_DrawRightAlignedString(BASEVIDWIDTH-32, 108, V_REDMAP, va("(%d unfinished)", mapsunfinished[0]));
-
-	sprintf(beststr, "%i:%02i:%02i.%02i", G_TicsToHours(besttime), G_TicsToMinutes(besttime, false), G_TicsToSeconds(besttime), G_TicsToCentiseconds(besttime));
-	V_DrawString(32, 120, V_YELLOWMAP, "TIME:");
-	V_DrawRightAlignedString(BASEVIDWIDTH-32, 120, 0, beststr);
-	if (mapsunfinished[1])
-		V_DrawRightAlignedString(BASEVIDWIDTH-32, 128, V_REDMAP, va("(%d unfinished)", mapsunfinished[1]));
-
-	sprintf(beststr, "%u", bestrings);
-	V_DrawString(32, 140, V_YELLOWMAP, "RINGS:");
-	V_DrawRightAlignedString(BASEVIDWIDTH-32, 140, 0, beststr);
-	if (mapsunfinished[2])
-		V_DrawRightAlignedString(BASEVIDWIDTH-32, 148, V_REDMAP, va("(%d unfinished)", mapsunfinished[2]));
-}
-
-static void M_HandleGameStats(INT32 choice)
-{
-	boolean exitmenu = false; // exit to previous menu
-
-	switch (choice)
-	{
-		case KEY_ESCAPE:
-			exitmenu = true;
-			break;
-
-		case KEY_ENTER:
-			S_StartSound(NULL, sfx_menu1);
-			M_SetupNextMenu(&SP_LevelStatsDef);
 			break;
 	}
 	if (exitmenu)
@@ -6958,6 +7462,30 @@ static void M_ServerOptions(INT32 choice)
 {
 	(void)choice;
 
+#ifndef NONET
+	if ((splitscreen && !netgame) || currentMenu == &MP_SplitServerDef)
+	{
+		OP_ServerOptionsMenu[ 1].status = IT_GRAYEDOUT; // Server name
+		OP_ServerOptionsMenu[ 2].status = IT_GRAYEDOUT; // Max players
+		OP_ServerOptionsMenu[ 3].status = IT_GRAYEDOUT; // Allow WAD downloading
+		OP_ServerOptionsMenu[ 4].status = IT_GRAYEDOUT; // Allow players to join
+		OP_ServerOptionsMenu[30].status = IT_GRAYEDOUT; // Master server
+		OP_ServerOptionsMenu[31].status = IT_GRAYEDOUT; // Attempts to resynchronise
+	}
+	else
+	{
+		OP_ServerOptionsMenu[ 1].status = IT_STRING | IT_CVAR | IT_CV_STRING;
+		OP_ServerOptionsMenu[ 2].status = IT_STRING | IT_CVAR;
+		OP_ServerOptionsMenu[ 3].status = IT_STRING | IT_CVAR;
+		OP_ServerOptionsMenu[ 4].status = IT_STRING | IT_CVAR;
+		if (netgame)
+			OP_ServerOptionsMenu[30].status = IT_GRAYEDOUT;
+		else
+			OP_ServerOptionsMenu[30].status = IT_STRING | IT_CVAR | IT_CV_STRING;
+		OP_ServerOptionsMenu[31].status = IT_STRING | IT_CVAR;
+	}
+#endif
+
 	OP_ServerOptionsDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&OP_ServerOptionsDef);
 }
@@ -7383,6 +7911,7 @@ static void M_EraseDataResponse(INT32 ch)
 		totalplaytime = 0;
 		F_StartIntro();
 	}
+	S_StartSound(NULL, sfx_bewar1+M_RandomKey(4)); // Bweh heh he
 	M_ClearMenus(true);
 }
 
@@ -7422,17 +7951,24 @@ static void M_DrawJoystick(void)
 {
 	INT32 i;
 
-	M_DrawGenericMenu();
+	// draw title (or big pic)
+	M_DrawMenuTitle();
 
-	for (i = 0;i < 8; i++)
+	for (i = 0; i <= 4; i++) // See MAX_JOYSTICKS
 	{
-		M_DrawSaveLoadBorder(OP_JoystickSetDef.x, OP_JoystickSetDef.y+LINEHEIGHT*i);
+		M_DrawSaveLoadBorder(OP_JoystickSetDef.x+4, OP_JoystickSetDef.y+1+LINEHEIGHT*i);
 
 		if ((setupcontrols_secondaryplayer && (i == cv_usejoystick2.value))
 			|| (!setupcontrols_secondaryplayer && (i == cv_usejoystick.value)))
 			V_DrawString(OP_JoystickSetDef.x, OP_JoystickSetDef.y+LINEHEIGHT*i,V_GREENMAP,joystickInfo[i]);
 		else
 			V_DrawString(OP_JoystickSetDef.x, OP_JoystickSetDef.y+LINEHEIGHT*i,0,joystickInfo[i]);
+
+		if (i == itemOn)
+		{
+			V_DrawScaledPatch(currentMenu->x - 24, OP_JoystickSetDef.y+LINEHEIGHT*i, 0,
+				W_CachePatchName("M_CURSOR", PU_CACHE));
+		}
 	}
 }
 
@@ -7493,16 +8029,22 @@ static void M_Setup1PControlsMenu(INT32 choice)
 	setupcontrols = gamecontrol;        // was called from main Options (for console player, then)
 	currentMenu->lastOn = itemOn;
 
-	// Unhide the three non-P2 controls
-	OP_MPControlsMenu[0].status = IT_CALL|IT_STRING2;
-	OP_MPControlsMenu[1].status = IT_CALL|IT_STRING2;
-	OP_MPControlsMenu[2].status = IT_CALL|IT_STRING2;
-	// Unide the pause/console controls too
-	OP_MiscControlsMenu[3].status = IT_CALL|IT_STRING2;
-	OP_MiscControlsMenu[4].status = IT_CALL|IT_STRING2;
+	// Unhide the five non-P2 controls and their headers
+	OP_ChangeControlsMenu[18+0].status = IT_HEADER;
+	OP_ChangeControlsMenu[18+1].status = IT_SPACE;
+	// ...
+	OP_ChangeControlsMenu[18+2].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[18+3].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[18+4].status = IT_CALL|IT_STRING2;
+	// ...
+	OP_ChangeControlsMenu[23+0].status = IT_HEADER;
+	OP_ChangeControlsMenu[23+1].status = IT_SPACE;
+	// ...
+	OP_ChangeControlsMenu[23+2].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[23+3].status = IT_CALL|IT_STRING2;
 
-	OP_ControlListDef.prevMenu = &OP_P1ControlsDef;
-	M_SetupNextMenu(&OP_ControlListDef);
+	OP_ChangeControlsDef.prevMenu = &OP_P1ControlsDef;
+	M_SetupNextMenu(&OP_ChangeControlsDef);
 }
 
 static void M_Setup2PControlsMenu(INT32 choice)
@@ -7512,61 +8054,136 @@ static void M_Setup2PControlsMenu(INT32 choice)
 	setupcontrols = gamecontrolbis;
 	currentMenu->lastOn = itemOn;
 
-	// Hide the three non-P2 controls
-	OP_MPControlsMenu[0].status = IT_GRAYEDOUT2;
-	OP_MPControlsMenu[1].status = IT_GRAYEDOUT2;
-	OP_MPControlsMenu[2].status = IT_GRAYEDOUT2;
-	// Hide the pause/console controls too
-	OP_MiscControlsMenu[3].status = IT_GRAYEDOUT2;
-	OP_MiscControlsMenu[4].status = IT_GRAYEDOUT2;
+	// Hide the five non-P2 controls and their headers
+	OP_ChangeControlsMenu[18+0].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[18+1].status = IT_GRAYEDOUT2;
+	// ...
+	OP_ChangeControlsMenu[18+2].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[18+3].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[18+4].status = IT_GRAYEDOUT2;
+	// ...
+	OP_ChangeControlsMenu[23+0].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[23+1].status = IT_GRAYEDOUT2;
+	// ...
+	OP_ChangeControlsMenu[23+2].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[23+3].status = IT_GRAYEDOUT2;
 
-	OP_ControlListDef.prevMenu = &OP_P2ControlsDef;
-	M_SetupNextMenu(&OP_ControlListDef);
+	OP_ChangeControlsDef.prevMenu = &OP_P2ControlsDef;
+	M_SetupNextMenu(&OP_ChangeControlsDef);
 }
+
+#define controlheight 18
 
 // Draws the Customise Controls menu
 static void M_DrawControl(void)
 {
 	char     tmp[50];
-	INT32    i;
+	INT32    x, y, i, max, cursory = 0, iter;
 	INT32    keys[2];
 
-	// draw title, strings and submenu
-	M_DrawGenericMenu();
+	x = currentMenu->x;
+	y = currentMenu->y;
+
+	/*i = itemOn - (controlheight/2);
+	if (i < 0)
+		i = 0;
+	*/
+
+	iter = (controlheight/2);
+	for (i = itemOn; ((iter || currentMenu->menuitems[i].status == IT_GRAYEDOUT2) && i > 0); i--)
+	{
+		if (currentMenu->menuitems[i].status != IT_GRAYEDOUT2)
+			iter--;
+	}
+	if (currentMenu->menuitems[i].status == IT_GRAYEDOUT2)
+		i--;
+
+	iter += (controlheight/2);
+	for (max = itemOn; (iter && max < currentMenu->numitems); max++)
+	{
+		if (currentMenu->menuitems[max].status != IT_GRAYEDOUT2)
+			iter--;
+	}
+
+	if (iter)
+	{
+		iter += (controlheight/2);
+		for (i = itemOn; ((iter || currentMenu->menuitems[i].status == IT_GRAYEDOUT2) && i > 0); i--)
+		{
+			if (currentMenu->menuitems[i].status != IT_GRAYEDOUT2)
+				iter--;
+		}
+	}
+
+	/*max = i + controlheight;
+	if (max > currentMenu->numitems)
+	{
+		max = currentMenu->numitems;
+		if (max < controlheight)
+			i = 0;
+		else
+			i = max - controlheight;
+	}*/
+
+	// draw title (or big pic)
+	M_DrawMenuTitle();
 
 	M_CentreText(30,
 		 (setupcontrols_secondaryplayer ? "SET CONTROLS FOR SECONDARY PLAYER" :
 		                                  "PRESS ENTER TO CHANGE, BACKSPACE TO CLEAR"));
 
-	for (i = 0;i < currentMenu->numitems;i++)
+	if (i)
+		V_DrawString(currentMenu->x - 16, y, V_YELLOWMAP, "\x1A"); // up arrow
+	if (max != currentMenu->numitems)
+		V_DrawString(currentMenu->x - 16, y+(SMALLLINEHEIGHT*(controlheight-1)), V_YELLOWMAP, "\x1B"); // down arrow
+
+	for (; i < max; i++)
 	{
-		if (currentMenu->menuitems[i].status != IT_CONTROL)
+		if (currentMenu->menuitems[i].status == IT_GRAYEDOUT2)
 			continue;
 
-		keys[0] = setupcontrols[currentMenu->menuitems[i].alphaKey][0];
-		keys[1] = setupcontrols[currentMenu->menuitems[i].alphaKey][1];
+		if (i == itemOn)
+			cursory = y;
 
-		tmp[0] ='\0';
-		if (keys[0] == KEY_NULL && keys[1] == KEY_NULL)
+		if (currentMenu->menuitems[i].status == IT_CONTROL)
 		{
-			strcpy(tmp, "---");
+			V_DrawString(x, y, ((i == itemOn) ? V_YELLOWMAP : 0), currentMenu->menuitems[i].text);
+			keys[0] = setupcontrols[currentMenu->menuitems[i].alphaKey][0];
+			keys[1] = setupcontrols[currentMenu->menuitems[i].alphaKey][1];
+
+			tmp[0] ='\0';
+			if (keys[0] == KEY_NULL && keys[1] == KEY_NULL)
+			{
+				strcpy(tmp, "---");
+			}
+			else
+			{
+				if (keys[0] != KEY_NULL)
+					strcat (tmp, G_KeynumToString (keys[0]));
+
+				if (keys[0] != KEY_NULL && keys[1] != KEY_NULL)
+					strcat(tmp," or ");
+
+				if (keys[1] != KEY_NULL)
+					strcat (tmp, G_KeynumToString (keys[1]));
+
+
+			}
+			V_DrawRightAlignedString(BASEVIDWIDTH-currentMenu->x, y, V_YELLOWMAP, tmp);
 		}
-		else
-		{
-			if (keys[0] != KEY_NULL)
-				strcat (tmp, G_KeynumToString (keys[0]));
+		/*else if (currentMenu->menuitems[i].status == IT_GRAYEDOUT2)
+			V_DrawString(x, y, V_TRANSLUCENT, currentMenu->menuitems[i].text);*/
+		else if ((currentMenu->menuitems[i].status == IT_HEADER) && (i != max-1))
+			M_DrawLevelPlatterHeader(y, currentMenu->menuitems[i].text, true);
 
-			if (keys[0] != KEY_NULL && keys[1] != KEY_NULL)
-				strcat(tmp," or ");
-
-			if (keys[1] != KEY_NULL)
-				strcat (tmp, G_KeynumToString (keys[1]));
-
-
-		}
-		V_DrawRightAlignedString(BASEVIDWIDTH-currentMenu->x, currentMenu->y + i*8, V_YELLOWMAP, tmp);
+		y += SMALLLINEHEIGHT;
 	}
+	
+	V_DrawScaledPatch(currentMenu->x - 20, cursory, 0,
+		W_CachePatchName("M_CURSOR", PU_CACHE));
 }
+
+#undef controlbuffer
 
 static INT32 controltochange;
 
@@ -7636,8 +8253,10 @@ static void M_ChangecontrolResponse(event_t *ev)
 			G_CheckDoubleUsage(ch);
 			setupcontrols[control][found] = ch;
 		}
-
+		S_StartSound(NULL, sfx_strpst);
 	}
+	else
+		S_StartSound(NULL, sfx_skid);
 
 	M_StopMessage(0);
 }
@@ -7657,35 +8276,114 @@ static void M_ChangeControl(INT32 choice)
 // SOUND
 // =====
 
-// Toggles sound systems in-game.
-static void M_ToggleSFX(void)
+static void M_SoundMenu(INT32 choice)
 {
+	(void)choice;
+
+	OP_SoundOptionsMenu[6].status = ((nosound || sound_disabled) ? IT_GRAYEDOUT : (IT_STRING | IT_CVAR));
+	M_SetupNextMenu(&OP_SoundOptionsDef);
+}
+
+void M_DrawSoundMenu(void)
+{
+	const char* onstring = "ON";
+	const char* offstring = "OFF";
+	M_DrawGenericMenu();
+
+	V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x,
+		currentMenu->y+currentMenu->menuitems[0].alphaKey,
+		(nosound ? V_REDMAP : V_YELLOWMAP),
+		((nosound || sound_disabled) ? offstring : onstring));
+
+	V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x,
+		currentMenu->y+currentMenu->menuitems[2].alphaKey,
+		(nodigimusic ? V_REDMAP : V_YELLOWMAP),
+		((nodigimusic || digital_disabled) ? offstring : onstring));
+
+	V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x,
+		currentMenu->y+currentMenu->menuitems[4].alphaKey,
+		(nomidimusic ? V_REDMAP : V_YELLOWMAP),
+		((nomidimusic || music_disabled) ? offstring : onstring));
+}
+
+// Toggles sound systems in-game.
+static void M_ToggleSFX(INT32 choice)
+{
+	switch (choice)
+	{
+		case KEY_DOWNARROW:
+			S_StartSound(NULL, sfx_menu1);
+			itemOn++;
+			return;
+
+		case KEY_UPARROW:
+			S_StartSound(NULL, sfx_menu1);
+			itemOn = currentMenu->numitems-1;
+			return;
+
+		case KEY_ESCAPE:
+			if (currentMenu->prevMenu)
+				M_SetupNextMenu(currentMenu->prevMenu);
+			else
+				M_ClearMenus(true);
+			return;
+		default:
+			break;
+	}
+
 	if (nosound)
 	{
 		nosound = false;
 		I_StartupSound();
 		if (nosound) return;
 		S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
-		M_StartMessage(M_GetText("SFX Enabled\n"), NULL, MM_NOTHING);
+		S_StartSound(NULL, sfx_strpst);
+		OP_SoundOptionsMenu[6].status = IT_STRING | IT_CVAR;
+		//M_StartMessage(M_GetText("SFX Enabled\n"), NULL, MM_NOTHING);
 	}
 	else
 	{
 		if (sound_disabled)
 		{
 			sound_disabled = false;
-			M_StartMessage(M_GetText("SFX Enabled\n"), NULL, MM_NOTHING);
+			S_StartSound(NULL, sfx_strpst);
+			OP_SoundOptionsMenu[6].status = IT_STRING | IT_CVAR;
+			//M_StartMessage(M_GetText("SFX Enabled\n"), NULL, MM_NOTHING);
 		}
 		else
 		{
 			sound_disabled = true;
 			S_StopSounds();
-			M_StartMessage(M_GetText("SFX Disabled\n"), NULL, MM_NOTHING);
+			OP_SoundOptionsMenu[6].status = IT_GRAYEDOUT;
+			//M_StartMessage(M_GetText("SFX Disabled\n"), NULL, MM_NOTHING);
 		}
 	}
 }
 
-static void M_ToggleDigital(void)
+static void M_ToggleDigital(INT32 choice)
 {
+	switch (choice)
+	{
+		case KEY_DOWNARROW:
+			S_StartSound(NULL, sfx_menu1);
+			itemOn++;
+			return;
+
+		case KEY_UPARROW:
+			S_StartSound(NULL, sfx_menu1);
+			itemOn--;
+			return;
+
+		case KEY_ESCAPE:
+			if (currentMenu->prevMenu)
+				M_SetupNextMenu(currentMenu->prevMenu);
+			else
+				M_ClearMenus(true);
+			return;
+		default:
+			break;
+	}
+
 	if (nodigimusic)
 	{
 		nodigimusic = false;
@@ -7694,26 +8392,49 @@ static void M_ToggleDigital(void)
 		S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
 		S_StopMusic();
 		S_ChangeMusicInternal("_clear", false);
-		M_StartMessage(M_GetText("Digital Music Enabled\n"), NULL, MM_NOTHING);
+		//M_StartMessage(M_GetText("Digital Music Enabled\n"), NULL, MM_NOTHING);
 	}
 	else
 	{
 		if (digital_disabled)
 		{
 			digital_disabled = false;
-			M_StartMessage(M_GetText("Digital Music Enabled\n"), NULL, MM_NOTHING);
+			S_ChangeMusicInternal("_clear", false);
+			//M_StartMessage(M_GetText("Digital Music Enabled\n"), NULL, MM_NOTHING);
 		}
 		else
 		{
 			digital_disabled = true;
 			S_StopMusic();
-			M_StartMessage(M_GetText("Digital Music Disabled\n"), NULL, MM_NOTHING);
+			//M_StartMessage(M_GetText("Digital Music Disabled\n"), NULL, MM_NOTHING);
 		}
 	}
 }
 
-static void M_ToggleMIDI(void)
+static void M_ToggleMIDI(INT32 choice)
 {
+	switch (choice)
+	{
+		case KEY_DOWNARROW:
+			S_StartSound(NULL, sfx_menu1);
+			itemOn++;
+			return;
+
+		case KEY_UPARROW:
+			S_StartSound(NULL, sfx_menu1);
+			itemOn--;
+			return;
+
+		case KEY_ESCAPE:
+			if (currentMenu->prevMenu)
+				M_SetupNextMenu(currentMenu->prevMenu);
+			else
+				M_ClearMenus(true);
+			return;
+		default:
+			break;
+	}
+
 	if (nomidimusic)
 	{
 		nomidimusic = false;
@@ -7721,20 +8442,21 @@ static void M_ToggleMIDI(void)
 		if (nomidimusic) return;
 		S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
 		S_ChangeMusicInternal("_clear", false);
-		M_StartMessage(M_GetText("MIDI Music Enabled\n"), NULL, MM_NOTHING);
+		//M_StartMessage(M_GetText("MIDI Music Enabled\n"), NULL, MM_NOTHING);
 	}
 	else
 	{
 		if (music_disabled)
 		{
 			music_disabled = false;
-			M_StartMessage(M_GetText("MIDI Music Enabled\n"), NULL, MM_NOTHING);
+			S_ChangeMusicInternal("_clear", false);
+			//M_StartMessage(M_GetText("MIDI Music Enabled\n"), NULL, MM_NOTHING);
 		}
 		else
 		{
 			music_disabled = true;
 			S_StopMusic();
-			M_StartMessage(M_GetText("MIDI Music Disabled\n"), NULL, MM_NOTHING);
+			//M_StartMessage(M_GetText("MIDI Music Disabled\n"), NULL, MM_NOTHING);
 		}
 	}
 }
@@ -7829,6 +8551,21 @@ static void M_VideoModeMenu(INT32 choice)
 	M_SetupNextMenu(&OP_VideoModeDef);
 }
 
+static void M_DrawMainVideoMenu(void)
+{
+
+	M_DrawGenericScrollMenu();
+	if (itemOn < 8) // where it starts to go offscreen; change this number if you change the layout of the video menu
+	{
+		INT32 y = currentMenu->y+currentMenu->menuitems[1].alphaKey*2;
+		if (itemOn == 7)
+			y -= 10;
+		V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, y,
+		(SCR_IsAspectCorrect(vid.width, vid.height) ? V_GREENMAP : V_YELLOWMAP),
+			va("%dx%d", vid.width, vid.height));
+	}
+}
+
 // Draw the video modes list, a-la-Quake
 static void M_DrawVideoMode(void)
 {
@@ -7887,10 +8624,10 @@ static void M_DrawVideoMode(void)
 
 		V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y + 138,
 			V_GREENMAP, "Green modes are recommended.");
-		V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y + 150,
+		V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y + 146,
 			V_YELLOWMAP, "Other modes may have visual errors.");
 		V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y + 158,
-			V_YELLOWMAP, "Use at own risk.");
+			V_YELLOWMAP, "Larger modes may have performance issues.");
 	}
 
 	// Draw the cursor for the VidMode menu
@@ -7898,6 +8635,127 @@ static void M_DrawVideoMode(void)
 	j = OP_VideoModeDef.y + 14 + ((vidm_selected % vidm_column_size)*8);
 
 	V_DrawScaledPatch(i - 8, j, 0,
+		W_CachePatchName("M_CURSOR", PU_CACHE));
+}
+
+// Just M_DrawGenericScrollMenu but showing a backing behind the headers.
+static void M_DrawColorMenu(void)
+{
+	INT32 x, y, i, max, tempcentery, cursory = 0;
+
+	// DRAW MENU
+	x = currentMenu->x;
+	y = currentMenu->y;
+
+	V_DrawFill(19       , y-4, 47, 1,  35);
+	V_DrawFill(19+(  47), y-4, 47, 1,  73);
+	V_DrawFill(19+(2*47), y-4, 47, 1, 112);
+	V_DrawFill(19+(3*47), y-4, 47, 1, 255);
+	V_DrawFill(19+(4*47), y-4, 47, 1, 152);
+	V_DrawFill(19+(5*47), y-4, 46, 1, 181);
+
+	V_DrawFill(300, y-4, 1, 1, 26);
+	V_DrawFill( 19, y-3, 282, 1, 26);
+
+	if ((currentMenu->menuitems[itemOn].alphaKey*2 - currentMenu->menuitems[0].alphaKey*2) <= scrollareaheight)
+		tempcentery = currentMenu->y - currentMenu->menuitems[0].alphaKey*2;
+	else if ((currentMenu->menuitems[currentMenu->numitems-1].alphaKey*2 - currentMenu->menuitems[itemOn].alphaKey*2) <= scrollareaheight)
+		tempcentery = currentMenu->y - currentMenu->menuitems[currentMenu->numitems-1].alphaKey*2 + 2*scrollareaheight;
+	else
+		tempcentery = currentMenu->y - currentMenu->menuitems[itemOn].alphaKey*2 + scrollareaheight;
+
+	for (i = 0; i < currentMenu->numitems; i++)
+	{
+		if (currentMenu->menuitems[i].status != IT_DISABLED && currentMenu->menuitems[i].alphaKey*2 + tempcentery >= currentMenu->y)
+			break;
+	}
+
+	for (max = currentMenu->numitems; max > 0; max--)
+	{
+		if (currentMenu->menuitems[max].status != IT_DISABLED && currentMenu->menuitems[max-1].alphaKey*2 + tempcentery <= (currentMenu->y + 2*scrollareaheight))
+			break;
+	}
+
+	if (i)
+		V_DrawString(currentMenu->x - 20, currentMenu->y, V_YELLOWMAP, "\x1A"); // up arrow
+	if (max != currentMenu->numitems)
+		V_DrawString(currentMenu->x - 20, currentMenu->y + 2*scrollareaheight, V_YELLOWMAP, "\x1B"); // down arrow
+
+	// draw title (or big pic)
+	M_DrawMenuTitle();
+
+	for (; i < max; i++)
+	{
+		y = currentMenu->menuitems[i].alphaKey*2 + tempcentery;
+		if (i == itemOn)
+			cursory = y;
+		switch (currentMenu->menuitems[i].status & IT_DISPLAY)
+		{
+			case IT_PATCH:
+			case IT_DYBIGSPACE:
+			case IT_BIGSLIDER:
+			case IT_STRING2:
+			case IT_DYLITLSPACE:
+			case IT_GRAYPATCH:
+			case IT_TRANSTEXT2:
+				// unsupported
+				break;
+			case IT_NOTHING:
+				break;
+			case IT_STRING:
+			case IT_WHITESTRING:
+				if (i != itemOn && (currentMenu->menuitems[i].status & IT_DISPLAY)==IT_STRING)
+					V_DrawString(x, y, 0, currentMenu->menuitems[i].text);
+				else
+					V_DrawString(x, y, V_YELLOWMAP, currentMenu->menuitems[i].text);
+
+				// Cvar specific handling
+				switch (currentMenu->menuitems[i].status & IT_TYPE)
+					case IT_CVAR:
+					{
+						consvar_t *cv = (consvar_t *)currentMenu->menuitems[i].itemaction;
+						switch (currentMenu->menuitems[i].status & IT_CVARTYPE)
+						{
+							case IT_CV_SLIDER:
+								M_DrawSlider(x, y, cv);
+							case IT_CV_NOPRINT: // color use this
+							case IT_CV_INVISSLIDER: // monitor toggles use this
+								break;
+							case IT_CV_STRING:
+								if (y + 12 > (currentMenu->y + 2*scrollareaheight))
+									break;
+								M_DrawTextBox(x, y + 4, MAXSTRINGLENGTH, 1);
+								V_DrawString(x + 8, y + 12, V_ALLOWLOWERCASE, cv->string);
+								if (skullAnimCounter < 4 && i == itemOn)
+									V_DrawCharacter(x + 8 + V_StringWidth(cv->string, 0), y + 12,
+										'_' | 0x80, false);
+								y += 16;
+								break;
+							default:
+								V_DrawRightAlignedString(BASEVIDWIDTH - x, y,
+									((cv->flags & CV_CHEAT) && !CV_IsSetToDefault(cv) ? V_REDMAP : V_YELLOWMAP), cv->string);
+								break;
+						}
+						break;
+					}
+					break;
+			case IT_TRANSTEXT:
+				V_DrawString(x, y, V_TRANSLUCENT, currentMenu->menuitems[i].text);
+				break;
+			case IT_QUESTIONMARKS:
+				V_DrawString(x, y, V_TRANSLUCENT|V_OLDSPACING, M_CreateSecretMenuOption(currentMenu->menuitems[i].text));
+				break;
+			case IT_HEADERTEXT:
+				//V_DrawString(x-16, y, V_YELLOWMAP, currentMenu->menuitems[i].text);
+				V_DrawFill(19, y, 281, 9, currentMenu->menuitems[i+1].alphaKey);
+				V_DrawFill(300, y, 1, 9, 26);
+				M_DrawLevelPlatterHeader(y - (lsheadingheight - 12), currentMenu->menuitems[i].text, false);
+				break;
+		}
+	}
+
+	// DRAW THE SKULL CURSOR
+	V_DrawScaledPatch(currentMenu->x - 24, cursory, 0,
 		W_CachePatchName("M_CURSOR", PU_CACHE));
 }
 
@@ -7974,6 +8832,21 @@ static void M_HandleVideoMode(INT32 ch)
 	}
 }
 
+static void M_DrawScreenshotMenu(void)
+{
+
+	M_DrawGenericScrollMenu();
+#ifdef HWRENDER
+	if ((rendermode == render_opengl) && (itemOn < 7)) // where it starts to go offscreen; change this number if you change the layout of the screenshot menu
+	{
+		INT32 y = currentMenu->y+currentMenu->menuitems[op_screenshot_colorprofile].alphaKey*2;
+		if (itemOn == 6)
+			y -= 10;
+		V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, y, V_REDMAP, "ON");
+	}
+#endif
+}
+
 // ===============
 // Monitor Toggles
 // ===============
@@ -7989,7 +8862,8 @@ static void M_DrawMonitorToggles(void)
 	// Assumes all are cvar type.
 	for (i = 0; i < currentMenu->numitems; ++i)
 	{
-		cv = (consvar_t *)currentMenu->menuitems[i].itemaction;
+		if (!(currentMenu->menuitems[i].status & IT_CVAR) || !(cv = (consvar_t *)currentMenu->menuitems[i].itemaction))
+			continue;
 		sum += cv->value;
 
 		if (!CV_IsSetToDefault(cv))
@@ -7998,7 +8872,8 @@ static void M_DrawMonitorToggles(void)
 
 	for (i = 0; i < currentMenu->numitems; ++i)
 	{
-		cv = (consvar_t *)currentMenu->menuitems[i].itemaction;
+		if (!(currentMenu->menuitems[i].status & IT_CVAR) || !(cv = (consvar_t *)currentMenu->menuitems[i].itemaction))
+			continue;
 		y = currentMenu->y + currentMenu->menuitems[i].alphaKey;
 
 		M_DrawSlider(currentMenu->x + 20, y, cv);
@@ -8045,6 +8920,8 @@ void M_QuitResponse(INT32 ch)
 		return;
 	if (!(netgame || cv_debug))
 	{
+		S_ResetCaptions();
+
 		mrand = M_RandomKey(sizeof(quitsounds)/sizeof(INT32));
 		if (quitsounds[mrand]) S_StartSound(NULL, quitsounds[mrand]);
 
@@ -8128,7 +9005,6 @@ static void M_HandleFogColor(INT32 choice)
 			break;
 
 		case KEY_ESCAPE:
-			S_StartSound(NULL, sfx_menu1);
 			exitmenu = true;
 			break;
 
