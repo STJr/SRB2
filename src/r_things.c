@@ -1845,11 +1845,16 @@ void R_SortVisSprites(void)
 			&& dsfirst->sz < ds->sz)
 				continue;
 
-			// remove from chain
-			ds->next->prev = ds->prev;
-			ds->prev->next = ds->next;
-			linkedvissprites++;
+			break;
+		}
 
+		// remove from chain
+		ds->next->prev = ds->prev;
+		ds->prev->next = ds->next;
+		linkedvissprites++;
+
+		if (dsfirst != &unsorted)
+		{
 			if (!(ds->cut & SC_FULLBRIGHT))
 				ds->colormap = dsfirst->colormap;
 			ds->extra_colormap = dsfirst->extra_colormap;
@@ -1870,8 +1875,6 @@ void R_SortVisSprites(void)
 				ds->next = dsnext->next;
 				dsnext->next = ds;
 			}
-
-			break;
 		}
 	}
 
@@ -1882,8 +1885,10 @@ void R_SortVisSprites(void)
 		bestscale = bestdispoffset = INT32_MAX;
 		for (ds = unsorted.next; ds != &unsorted; ds = ds->next)
 		{
+#ifdef PARANOIA
 			if (ds->cut & SC_LINKDRAW)
-				I_Error("No link made!"); // testing
+				I_Error("R_SortVisSprites: no link or discardal made for linkdraw!");
+#endif
 
 			if (ds->sortscale < bestscale)
 			{
