@@ -107,17 +107,17 @@ static void releaseLineChains(void)
 
 	for (i = 0; i < numsectors; i++)
 	{
-	sector = &sectors[i];
-	nextElem = sector->sectorLines;
+		sector = &sectors[i];
+		nextElem = sector->sectorLines;
 
-	while (nextElem)
-	{
-		thisElem = nextElem;
-		nextElem = thisElem->next;
-		free(thisElem);
-	}
+		while (nextElem)
+		{
+			thisElem = nextElem;
+			nextElem = thisElem->next;
+			free(thisElem);
+		}
 
-	sector->sectorLines = NULL;
+		sector->sectorLines = NULL;
 	}
 }
 
@@ -397,7 +397,7 @@ static void sortStacklist(sector_t *sector)
 		i = 0;
 		finished = true;
 
-		while (NULL != *(list+i+1))
+		while (*(list+i+1))
 		{
 			sec1 = *(list+i);
 			sec2 = *(list+i+1);
@@ -438,7 +438,7 @@ static double calcLineoutLength(sector_t *sector)
 	double length = 0.0L;
 	chain = sector->sectorLines;
 
-	while (NULL != chain) // sum up lengths of all lines
+	while (chain) // sum up lengths of all lines
 	{
 		length += lineLength(chain->line);
 		chain = chain->next;
@@ -454,7 +454,7 @@ static void calcLineouts(sector_t *sector)
 	size_t secCount = 0;
 	sector_t *encSector = *(sector->stackList);
 
-	while (NULL != encSector)
+	while (encSector)
 	{
 		if (encSector->lineoutLength < 0.0L) // if length has not yet been calculated
 		{
@@ -552,7 +552,7 @@ static boolean areBottomtexturesMissing(sector_t *thisSector)
 		if (frontSector == backSector) // skip damn renderer tricks here
 			continue;
 
-		if (frontSector == NULL || backSector == NULL)
+		if (!frontSector || !backSector)
 			continue;
 
 		sider = &sides[thisElem->line->sidenum[0]];
@@ -645,7 +645,7 @@ static boolean isFloorFloating(sector_t *thisSector)
 	if (!thisSector)
 		return false;
 
-	nextElem  = thisSector->sectorLines;
+	nextElem = thisSector->sectorLines;
 
 	while (nextElem) // walk through chain
 	{
@@ -693,14 +693,12 @@ static fixed_t estimateCeilHeight(sector_t *thisSector)
 {
 	sector_t *adjSector;
 
-	if (!thisSector ||
-	 !thisSector->sectorLines ||
-	  !thisSector->sectorLines->line)
+	if (!thisSector || !thisSector->sectorLines || !thisSector->sectorLines->line)
 		return 0;
 
 	adjSector = thisSector->sectorLines->line->frontsector;
 	if (adjSector == thisSector)
-	adjSector = thisSector->sectorLines->line->backsector;
+		adjSector = thisSector->sectorLines->line->backsector;
 
 	if (!adjSector)
 		return 0;
@@ -715,17 +713,15 @@ static fixed_t estimateFloorHeight(sector_t *thisSector)
 {
 	sector_t *adjSector;
 
-	if (!thisSector ||
-	 !thisSector->sectorLines ||
-	  !thisSector->sectorLines->line)
-	return 0;
+	if (!thisSector || !thisSector->sectorLines || !thisSector->sectorLines->line)
+		return 0;
 
 	adjSector = thisSector->sectorLines->line->frontsector;
 	if (adjSector == thisSector)
-	adjSector = thisSector->sectorLines->line->backsector;
+		adjSector = thisSector->sectorLines->line->backsector;
 
-	if (NULL == adjSector)
-	return 0;
+	if (!adjSector)
+		return 0;
 
 	return adjSector->floorheight;
 }
@@ -831,18 +827,12 @@ void HWR_CorrectSWTricks(void)
 		// correct height of floating sectors
 		if (isCeilingFloating(floatSector))
 		{
-			fixed_t corrheight;
-
-			corrheight = estimateCeilHeight(floatSector);
-			floatSector->virtualCeilingheight = corrheight;
+			floatSector->virtualCeilingheight = estimateCeilHeight(floatSector);
 			floatSector->virtualCeiling = true;
 		}
 		if (isFloorFloating(floatSector))
 		{
-			fixed_t corrheight;
-
-			corrheight = estimateFloorHeight(floatSector);
-			floatSector->virtualFloorheight = corrheight;
+			floatSector->virtualFloorheight = estimateFloorHeight(floatSector);
 			floatSector->virtualFloor = true;
 		}
 	}
