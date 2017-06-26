@@ -887,12 +887,12 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		this_scale = 1;
 	if (this_scale != FRACUNIT)
 	{
-		if (!vis->isScaled)
+		if (!(vis->cut & SC_ISSCALED))
 		{
 			vis->scale = FixedMul(vis->scale, this_scale);
 			vis->scalestep = FixedMul(vis->scalestep, this_scale);
 			vis->xiscale = FixedDiv(vis->xiscale,this_scale);
-			vis->isScaled = true;
+			vis->cut |= SC_ISSCALED;
 		}
 		dc_texturemid = FixedDiv(dc_texturemid,this_scale);
 	}
@@ -934,7 +934,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 			sprtopscreen = (centeryfrac - FixedMul(dc_texturemid, spryscale));
 			dc_iscale = (0xffffffffu / (unsigned)spryscale);
 		}
-		if (vis->vflip)
+		if (vis->cut & SC_VFLIP)
 			R_DrawFlippedMaskedColumn(column, patch->height);
 		else
 			R_DrawMaskedColumn(column);
@@ -1013,7 +1013,7 @@ static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 //
 // R_SplitSprite
 // runs through a sector's lightlist and
-static void R_SplitSprite(vissprite_t *sprite, mobj_t *thing)
+static void R_SplitSprite(vissprite_t *sprite)
 {
 	INT32 i, lightnum, lindex;
 	INT16 cutfrac;
@@ -1049,7 +1049,7 @@ static void R_SplitSprite(vissprite_t *sprite, mobj_t *thing)
 		// adjust the heights.
 		newsprite = M_Memcpy(R_NewVisSprite(), sprite, sizeof (vissprite_t));
 
-		newsprite->cut |= (sprite->cut & SC_LINKDRAW);
+		newsprite->cut |= (sprite->cut & SC_FLAGMASK);
 
 		sprite->cut |= SC_BOTTOM;
 		sprite->gz = testheight;
@@ -1083,15 +1083,7 @@ static void R_SplitSprite(vissprite_t *sprite, mobj_t *thing)
 
 			newsprite->extra_colormap = sector->lightlist[i].extra_colormap;
 
-/*
-			if (thing->frame & FF_TRANSMASK)
-				;
-			else if (thing->flags2 & MF2_SHADOW)
-				;
-			else
-*/
-			if (!((thing->frame & (FF_FULLBRIGHT|FF_TRANSMASK) || thing->flags2 & MF2_SHADOW)
-				&& (!newsprite->extra_colormap || !newsprite->extra_colormap->fog)))
+			if (!(newsprite->cut & SC_FULLBRIGHT))
 			{
 				lindex = FixedMul(sprite->xscale, FixedDiv(640, vid.width))>>(LIGHTSCALESHIFT);
 
@@ -1333,6 +1325,10 @@ static void R_ProjectSprite(mobj_t *thing)
 		fixed_t linkscale;
 
 		thing = thing->tracer;
+
+		if (thing->sprite == SPR_NULL || thing->flags2 & MF2_DONTDRAW)
+			return;
+
 		tr_x = thing->x - viewx;
 		tr_y = thing->y - viewy;
 		gxt = FixedMul(tr_x, viewcos);
@@ -1377,7 +1373,7 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	if (thing->subsector->sector->cullheight)
 	{
-		if (R_DoCulling(oldthing->subsector->sector->cullheight, viewsector->cullheight, viewz, gz, gzt))
+		if (R_DoCulling(thing->subsector->sector->cullheight, viewsector->cullheight, viewz, gz, gzt))
 			return;
 	}
 
@@ -1508,6 +1504,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	{
 		// full bright: goggles
 		vis->colormap = colormaps;
+		vis->cut |= SC_FULLBRIGHT;
 	}
 	else
 	{
@@ -1520,14 +1517,11 @@ static void R_ProjectSprite(mobj_t *thing)
 		vis->colormap = spritelights[lindex];
 	}
 
-	vis->precip = false;
-
-	vis->vflip = vflip;
-
-	vis->isScaled = false;
+	if (vflip)
+		vis->cut |= SC_VFLIP;
 
 	if (thing->subsector->sector->numlights)
-		R_SplitSprite(vis, oldthing);
+		R_SplitSprite(vis);
 
 	// Debug
 	++objectsdrawn;
@@ -1688,15 +1682,12 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 		vis->transmap = NULL;
 
 	vis->mobjflags = 0;
-	vis->cut = SC_NONE;
+	vis->cut = SC_PRECIP;
 	vis->extra_colormap = thing->subsector->sector->extra_colormap;
 	vis->heightsec = thing->subsector->sector->heightsec;
 
 	// Fullbright
 	vis->colormap = colormaps;
-	vis->precip = true;
-	vis->vflip = false;
-	vis->isScaled = false;
 }
 
 // R_AddSprites
@@ -1789,7 +1780,7 @@ static vissprite_t vsprsortedhead;
 
 void R_SortVisSprites(void)
 {
-	UINT32       i;
+	UINT32       i, linkedvissprites = 0;
 	vissprite_t *ds, *dsprev, *dsnext, *dsfirst;
 	vissprite_t *best = NULL;
 	vissprite_t  unsorted;
@@ -1826,42 +1817,14 @@ void R_SortVisSprites(void)
 	}
 	unsorted.prev = ds;
 
-	// pull the vissprites out by scale
-	vsprsortedhead.next = vsprsortedhead.prev = &vsprsortedhead;
-	for (i = 0; i < visspritecount; i++)
-	{
-		bestscale = bestdispoffset = INT32_MAX;
-		for (ds = unsorted.next; ds != &unsorted; ds = ds->next)
-		{
-			if (ds->sortscale < bestscale)
-			{
-				bestscale = ds->sortscale;
-				bestdispoffset = ds->dispoffset;
-				best = ds;
-			}
-			// order visprites of same scale by dispoffset, smallest first
-			else if (ds->sortscale == bestscale && ds->dispoffset < bestdispoffset)
-			{
-				bestdispoffset = ds->dispoffset;
-				best = ds;
-			}
-		}
-		best->next->prev = best->prev;
-		best->prev->next = best->next;
-		best->next = &vsprsortedhead;
-		best->prev = vsprsortedhead.prev;
-		vsprsortedhead.prev->next = best;
-		vsprsortedhead.prev = best;
-	}
-
 	// bundle linkdraw
-	for (ds = vsprsortedhead.prev; ds != &vsprsortedhead; ds = ds->prev)
+	for (ds = unsorted.prev; ds != &unsorted; ds = ds->prev)
 	{
 		if (!(ds->cut & SC_LINKDRAW))
 			continue;
 
 		// reuse dsfirst...
-		for (dsfirst = vsprsortedhead.prev; dsfirst != &vsprsortedhead; dsfirst = dsfirst->prev)
+		for (dsfirst = unsorted.prev; dsfirst != &unsorted; dsfirst = dsfirst->prev)
 		{
 			// don't connect if it's also a link
 			if (dsfirst->cut & SC_LINKDRAW)
@@ -1881,18 +1844,65 @@ void R_SortVisSprites(void)
 			&& dsfirst->sz < ds->sz)
 				continue;
 
+			// remove from chain
+			ds->next->prev = ds->prev;
+			ds->prev->next = ds->next;
+			linkedvissprites++;
+
+			if (!(ds->cut & SC_FULLBRIGHT))
+				ds->colormap = dsfirst->colormap;
+			ds->extra_colormap = dsfirst->extra_colormap;
+
+			// reusing dsnext...
+			dsnext = dsfirst->linkdraw;
+
+			if (!dsnext || ds->dispoffset < dsnext->dispoffset)
+			{
+				ds->next = dsnext;
+				dsfirst->linkdraw = ds;
+			}
+			else
+			{
+				for (; dsnext->next != NULL; dsnext = dsnext->next)
+					if (ds->dispoffset < dsnext->next->dispoffset)
+						break;
+				ds->next = dsnext->next;
+				dsnext->next = ds;
+			}
+
 			break;
 		}
+	}
 
-		// remove from chain
-		ds->next->prev = ds->prev;
-		ds->prev->next = ds->next;
-
-		if (dsfirst != &vsprsortedhead)
+	// pull the vissprites out by scale
+	vsprsortedhead.next = vsprsortedhead.prev = &vsprsortedhead;
+	for (i = 0; i < visspritecount-linkedvissprites; i++)
+	{
+		bestscale = bestdispoffset = INT32_MAX;
+		for (ds = unsorted.next; ds != &unsorted; ds = ds->next)
 		{
-			ds->next = dsfirst->linkdraw;
-			dsfirst->linkdraw = ds;
+			if (ds->cut & SC_LINKDRAW)
+				I_Error("No link made!"); // testing
+
+			if (ds->sortscale < bestscale)
+			{
+				bestscale = ds->sortscale;
+				bestdispoffset = ds->dispoffset;
+				best = ds;
+			}
+			// order visprites of same scale by dispoffset, smallest first
+			else if (ds->sortscale == bestscale && ds->dispoffset < bestdispoffset)
+			{
+				bestdispoffset = ds->dispoffset;
+				best = ds;
+			}
 		}
+		best->next->prev = best->prev;
+		best->prev->next = best->next;
+		best->next = &vsprsortedhead;
+		best->prev = vsprsortedhead.prev;
+		vsprsortedhead.prev->next = best;
+		vsprsortedhead.prev = best;
 	}
 }
 
@@ -2267,7 +2277,7 @@ static void R_DrawPrecipitationSprite(vissprite_t *spr)
 void R_ClipSprites(void)
 {
 	vissprite_t *spr;
-	for (;clippedvissprites < visspritecount; clippedvissprites++)
+	for (; clippedvissprites < visspritecount; clippedvissprites++)
 	{
 		drawseg_t *ds;
 		INT32		x;
@@ -2488,29 +2498,22 @@ void R_DrawMasked(void)
 			next = r2->prev;
 
 			// Tails 08-18-2002
-			if (r2->sprite->precip == true)
+			if (r2->sprite->cut & SC_PRECIP)
 				R_DrawPrecipitationSprite(r2->sprite);
 			else if (!r2->sprite->linkdraw)
 				R_DrawSprite(r2->sprite);
 			else // unbundle linkdraw
 			{
-				vissprite_t *ds = ds = r2->sprite->linkdraw;
+				vissprite_t *ds = r2->sprite->linkdraw;
 
-				if (r2->sprite->dispoffset < ds->dispoffset)
-				{
-					r2->sprite->next = r2->sprite->linkdraw;
-					r2->sprite->linkdraw = r2->sprite;
-				}
-				else
-				{
-					for (; ds->next != NULL; ds = ds->next)
-						if (r2->sprite->dispoffset < ds->next->dispoffset)
-							break;
-					r2->sprite->next = ds->next;
-					ds->next = r2->sprite;
-				}
+				for (;
+				(ds != NULL && r2->sprite->dispoffset > ds->dispoffset);
+				ds = ds->next)
+					R_DrawSprite(ds);
 
-				for (ds = r2->sprite->linkdraw; ds != NULL; ds = ds->next)
+				R_DrawSprite(r2->sprite);
+
+				for (; ds != NULL; ds = ds->next)
 					R_DrawSprite(ds);
 			}
 

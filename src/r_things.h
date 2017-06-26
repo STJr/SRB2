@@ -127,10 +127,19 @@ typedef struct
 // -----------
 typedef enum
 {
+	// actual cuts
 	SC_NONE = 0,
 	SC_TOP = 1,
-	SC_BOTTOM = 2,
-	SC_LINKDRAW = 4
+	SC_BOTTOM = 1<<1,
+	// other flags
+	SC_PRECIP = 1<<2,
+	SC_LINKDRAW = 1<<3,
+	SC_FULLBRIGHT = 1<<4,
+	SC_VFLIP = 1<<5,
+	SC_ISSCALED = 1>>6,
+	// masks
+	SC_CUTMASK = SC_TOP|SC_BOTTOM,
+	SC_FLAGMASK = ~SC_CUTMASK
 } spritecut_e;
 
 // A vissprite_t is a thing that will be drawn during a refresh,
@@ -141,7 +150,7 @@ typedef struct vissprite_s
 	struct vissprite_s *prev;
 	struct vissprite_s *next;
 
-	// Bonus Linkdraw pointer.
+	// Bonus linkdraw pointer.
 	struct vissprite_s *linkdraw;
 
 	mobj_t *mobj; // for easy access
@@ -182,9 +191,6 @@ typedef struct vissprite_s
 
 	INT16 clipbot[MAXVIDWIDTH], cliptop[MAXVIDWIDTH];
 
-	boolean precip;
-	boolean vflip; // Flip vertically
-	boolean isScaled;
 	INT32 dispoffset; // copy of info->dispoffset, affects ordering but not drawing
 } vissprite_t;
 
