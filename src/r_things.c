@@ -817,7 +817,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 
 	colfunc = basecolfunc; // hack: this isn't resetting properly somewhere.
 	dc_colormap = vis->colormap;
-	if ((vis->mobj->flags & MF_BOSS) && (vis->mobj->flags2 & MF2_FRET) && (leveltime & 1)) // Bosses "flash"
+	if (!(vis->cut & SC_PRECIP) && (vis->mobj->flags & MF_BOSS) && (vis->mobj->flags2 & MF2_FRET) && (leveltime & 1)) // Bosses "flash"
 	{
 		// translate certain pixels to white
 		colfunc = transcolfunc;
@@ -832,7 +832,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	{
 		colfunc = transtransfunc;
 		dc_transmap = vis->transmap;
-		if (vis->mobj->skin && vis->mobj->sprite == SPR_PLAY) // MT_GHOST LOOKS LIKE A PLAYER SO USE THE PLAYER TRANSLATION TABLES. >_>
+		if (!(vis->cut & SC_PRECIP) && vis->mobj->skin && vis->mobj->sprite == SPR_PLAY) // MT_GHOST LOOKS LIKE A PLAYER SO USE THE PLAYER TRANSLATION TABLES. >_>
 		{
 			size_t skinnum = (skin_t*)vis->mobj->skin-skins;
 			dc_translation = R_GetTranslationColormap((INT32)skinnum, vis->mobj->color, GTC_CACHE);
@@ -851,7 +851,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		colfunc = transcolfunc;
 
 		// New colormap stuff for skins Tails 06-07-2002
-		if (vis->mobj->skin && vis->mobj->sprite == SPR_PLAY) // This thing is a player!
+		if (!(vis->cut & SC_PRECIP) && vis->mobj->skin && vis->mobj->sprite == SPR_PLAY) // This thing is a player!
 		{
 			size_t skinnum = (skin_t*)vis->mobj->skin-skins;
 			dc_translation = R_GetTranslationColormap((INT32)skinnum, vis->mobj->color, GTC_CACHE);
@@ -881,7 +881,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	frac = vis->startfrac;
 	windowtop = windowbottom = sprbotscreen = INT32_MAX;
 
-	if (vis->mobj->skin && ((skin_t *)vis->mobj->skin)->flags & SF_HIRES)
+	if (!(vis->cut & SC_PRECIP) && vis->mobj->skin && ((skin_t *)vis->mobj->skin)->flags & SF_HIRES)
 		this_scale = FixedMul(this_scale, ((skin_t *)vis->mobj->skin)->highresscale);
 	if (this_scale <= 0)
 		this_scale = 1;
@@ -1681,6 +1681,7 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	else
 		vis->transmap = NULL;
 
+	vis->mobj = (mobj_t *)thing;
 	vis->mobjflags = 0;
 	vis->cut = SC_PRECIP;
 	vis->extra_colormap = thing->subsector->sector->extra_colormap;
@@ -2137,20 +2138,6 @@ static void R_CreateDrawNodes(void)
 			}
 			else if (r2->seg)
 			{
-#if 0 //#ifdef POLYOBJECTS_PLANES
-				if (r2->seg->curline->polyseg && rover->mobj && P_MobjInsidePolyobj(r2->seg->curline->polyseg, rover->mobj)) {
-					// Determine if we need to sort in front of the polyobj, based on the planes. This fixes the issue where
-					// polyobject planes render above the object standing on them. (A bit hacky... but it works.) -Red
-					mobj_t *mo = rover->mobj;
-					sector_t *po = r2->seg->curline->backsector;
-
-					if (po->ceilingheight < viewz && mo->z+mo->height > po->ceilingheight)
-						continue;
-
-					if (po->floorheight > viewz && mo->z < po->floorheight)
-						continue;
-				}
-#endif
 				if (rover->x1 > r2->seg->x2 || rover->x2 < r2->seg->x1)
 					continue;
 
