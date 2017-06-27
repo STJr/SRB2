@@ -9775,10 +9775,10 @@ void P_SpawnMapThing(mapthing_t *mthing)
 	case MT_HANGMACEPOINT:
 	case MT_SPINMACEPOINT:
 	{
-		fixed_t mlength, mspeed, mxspeed, mzspeed, mstartangle, mmaxspeed;
+		fixed_t mlength, mspeed, mxspeed, mzspeed, mstartangle, mmaxspeed, movecountset, thresholdset, radiusfactor = 1;
 		mobjtype_t chainlink = MT_SMALLMACECHAIN;
 		mobjtype_t macetype = MT_SMALLMACE;
-		boolean firsttime;
+		const boolean hazard = (mobj->type == MT_MACEPOINT || mobj->type == MT_SWINGMACEPOINT);
 		mobj_t *spawnee;
 		INT32 line;
 		const size_t mthingi = (size_t)(mthing - mapthings);
@@ -9820,15 +9820,10 @@ ML_NOCLIMB : Direction not controllable
 
 		mobj->lastlook = mspeed << 4;
 		mobj->movecount = mobj->lastlook;
-		mobj->health = (FixedAngle(mzspeed*FRACUNIT)>>ANGLETOFINESHIFT) + (FixedAngle(mstartangle*FRACUNIT)>>ANGLETOFINESHIFT);
-		mobj->threshold = (FixedAngle(mxspeed*FRACUNIT)>>ANGLETOFINESHIFT) + (FixedAngle(mstartangle*FRACUNIT)>>ANGLETOFINESHIFT);
+		mobj->health = (FixedAngle(((mzspeed+mstartangle)%360)*FRACUNIT)>>ANGLETOFINESHIFT);
+		mobj->threshold = (FixedAngle(mstartangle*FRACUNIT)>>ANGLETOFINESHIFT);
 		mobj->movefactor = mobj->threshold;
 		mobj->friction = mmaxspeed;
-
-		if (lines[line].flags & ML_NOCLIMB)
-			mobj->flags |= MF_SLIDEME;
-
-		mobj->reactiontime = 0;
 
 		if (mthing->options & MTF_AMBUSH)
 		{
@@ -9836,50 +9831,60 @@ ML_NOCLIMB : Direction not controllable
 			macetype = MT_BIGMACE;
 		}
 
+		if (lines[line].flags & ML_NOCLIMB)
+		{
+			if (hazard)
+			{
+				chainlink = macetype;
+				radiusfactor = 2; // Double the radius.
+			}
+			else
+				mobj->flags |= MF_SLIDEME;
+		}
+
+		mobj->reactiontime = 0;
+
 		if (mthing->options & MTF_OBJECTSPECIAL)
 			mobj->flags2 |= MF2_BOSSNOTRAP; // shut up maces.
 
-		if (mobj->type == MT_HANGMACEPOINT || mobj->type == MT_SPINMACEPOINT)
-			firsttime = true;
+		if (mobj->type == MT_HANGMACEPOINT || mobj->type == MT_SWINGMACEPOINT)
+			movecountset = FixedAngle(mstartangle*FRACUNIT)>>ANGLETOFINESHIFT;
 		else
-		{
-			firsttime = false;
+			movecountset = 0;
 
+		thresholdset = FixedAngle(((mxspeed + mstartangle)%360)*FRACUNIT)>>ANGLETOFINESHIFT;
+
+		if (hazard) // outermost mace
+		{
 			spawnee = P_SpawnMobj(mobj->x, mobj->y, mobj->z, macetype);
 			P_SetTarget(&spawnee->target, mobj);
 
-			if (mobj->type == MT_SWINGMACEPOINT)
-				spawnee->movecount = FixedAngle(mstartangle*FRACUNIT)>>ANGLETOFINESHIFT;
-			else
-				spawnee->movecount = 0;
+			spawnee->movecount = movecountset;
+			spawnee->threshold = thresholdset;
+			spawnee->reactiontime = radiusfactor*(mlength+1);
+		}
+		else if (mlength) // outermost link
+		{
+			spawnee = P_SpawnMobj(mobj->x, mobj->y, mobj->z, chainlink);
+			P_SetTarget(&spawnee->target, mobj);
 
-			spawnee->threshold = FixedAngle(mstartangle*FRACUNIT)>>ANGLETOFINESHIFT;
-			spawnee->reactiontime = mlength+1;
+			spawnee->movecount = movecountset;
+			spawnee->threshold = thresholdset;
+			spawnee->reactiontime = radiusfactor*(mlength--);
+
+			spawnee->flags2 |= MF2_AMBUSH;
 		}
 
 		while (mlength > 0)
 		{
 			spawnee = P_SpawnMobj(mobj->x, mobj->y, mobj->z, chainlink);
-
 			P_SetTarget(&spawnee->target, mobj);
 
-			if (mobj->type == MT_HANGMACEPOINT || mobj->type == MT_SWINGMACEPOINT)
-				spawnee->movecount = FixedAngle(mstartangle*FRACUNIT)>>ANGLETOFINESHIFT;
-			else
-				spawnee->movecount = 0;
-
-			spawnee->threshold = FixedAngle(mstartangle*FRACUNIT)>>ANGLETOFINESHIFT;
-			spawnee->reactiontime = mlength;
-
-			if (firsttime)
-			{
-				// This is the outermost link in the chain
-				spawnee->flags2 |= MF2_AMBUSH;
-				firsttime = false;
-			}
-
-			mlength--;
+			spawnee->movecount = movecountset;
+			spawnee->threshold = thresholdset;
+			spawnee->reactiontime = radiusfactor*(mlength--);
 		}
+
 		break;
 	}
 	case MT_PARTICLEGEN:
