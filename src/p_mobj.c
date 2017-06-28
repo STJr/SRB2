@@ -9775,9 +9775,10 @@ void P_SpawnMapThing(mapthing_t *mthing)
 	case MT_HANGMACEPOINT:
 	case MT_SPINMACEPOINT:
 	{
-		fixed_t mlength, mspeed, mxspeed, mzspeed, mstartangle, mmaxspeed, movecountset, thresholdset, radiusfactor = 1;
+		fixed_t mlength, mspeed, mxspeed, mzspeed, mstartangle, mmaxspeed, thresholdset, radiusfactor = 1;
 		mobjtype_t chainlink = MT_SMALLMACECHAIN;
 		mobjtype_t macetype = MT_SMALLMACE;
+		mobjtype_t firsttype;
 		const boolean hazard = (mobj->type == MT_MACEPOINT || mobj->type == MT_SWINGMACEPOINT);
 		mobj_t *spawnee;
 		INT32 line;
@@ -9793,10 +9794,12 @@ void P_SpawnMapThing(mapthing_t *mthing)
 			return;
 		}
 /*
-No deaf - small mace
-Deaf - big mace
+No deaf - small
+Deaf - big
 
-ML_NOCLIMB : Direction not controllable
+ML_NOCLIMB :
+SPINMACEPOINT - Direction not controllable
+MACEPOINT, SWINGMACEPOINT - Chain links are replaced with maces
 */
 		mlength = abs(lines[line].dx >> FRACBITS);
 		mspeed = abs(lines[line].dy >> FRACBITS);
@@ -9809,18 +9812,18 @@ ML_NOCLIMB : Direction not controllable
 		mxspeed %= 360;
 		mzspeed %= 360;
 
-		CONS_Debug(DBG_GAMELOGIC, "Mace Chain (mapthing #%s):\n"
+		CONS_Debug(DBG_GAMELOGIC, "Mace/Chain (mapthing #%s):\n"
 				"Length is %d\n"
 				"Speed is %d\n"
-				"Xspeed is %d\n"
-				"Zspeed is %d\n"
-				"startangle is %d\n"
-				"maxspeed is %d\n",
+				"Phase is %d\n"
+				"Angle is %d\n"
+				"Tilt is %d\n"
+				"Max. speed is %d\n",
 				sizeu1(mthingi), mlength, mspeed, mxspeed, mzspeed, mstartangle, mmaxspeed);
 
 		mobj->lastlook = mspeed << 4;
 		mobj->movecount = mobj->lastlook;
-		mobj->health = (FixedAngle(((mzspeed+mstartangle)%360)*FRACUNIT)>>ANGLETOFINESHIFT);
+		mobj->health = (FixedAngle(mzspeed*FRACUNIT)>>ANGLETOFINESHIFT);
 		mobj->threshold = (FixedAngle(mstartangle*FRACUNIT)>>ANGLETOFINESHIFT);
 		mobj->movefactor = mobj->threshold;
 		mobj->friction = mmaxspeed;
@@ -9844,31 +9847,24 @@ ML_NOCLIMB : Direction not controllable
 
 		mobj->reactiontime = 0;
 
-		if (mthing->options & MTF_OBJECTSPECIAL)
+		if (!mspeed || mthing->options & MTF_OBJECTSPECIAL)
 			mobj->flags2 |= MF2_BOSSNOTRAP; // shut up maces.
 
-		if (mobj->type == MT_HANGMACEPOINT || mobj->type == MT_SWINGMACEPOINT)
-			movecountset = FixedAngle(mstartangle*FRACUNIT)>>ANGLETOFINESHIFT;
-		else
-			movecountset = 0;
-
-		thresholdset = FixedAngle(((mxspeed + mstartangle)%360)*FRACUNIT)>>ANGLETOFINESHIFT;
+		thresholdset = FixedAngle(mxspeed*FRACUNIT)>>ANGLETOFINESHIFT;
 
 		if (hazard) // outermost mace
 		{
-			spawnee = P_SpawnMobj(mobj->x, mobj->y, mobj->z, macetype);
-			P_SetTarget(&spawnee->target, mobj);
-
-			spawnee->movecount = movecountset;
-			spawnee->threshold = thresholdset;
-			spawnee->reactiontime = radiusfactor*(mlength+1);
+			firsttype = macetype;
+			mlength++;
 		}
-		else if (mlength) // outermost link
+		else
+			firsttype = chainlink;
+
+		if (mlength) // outermost mace/link
 		{
-			spawnee = P_SpawnMobj(mobj->x, mobj->y, mobj->z, chainlink);
+			spawnee = P_SpawnMobj(mobj->x, mobj->y, mobj->z, firsttype);
 			P_SetTarget(&spawnee->target, mobj);
 
-			spawnee->movecount = movecountset;
 			spawnee->threshold = thresholdset;
 			spawnee->reactiontime = radiusfactor*(mlength--);
 
@@ -9880,7 +9876,6 @@ ML_NOCLIMB : Direction not controllable
 			spawnee = P_SpawnMobj(mobj->x, mobj->y, mobj->z, chainlink);
 			P_SetTarget(&spawnee->target, mobj);
 
-			spawnee->movecount = movecountset;
 			spawnee->threshold = thresholdset;
 			spawnee->reactiontime = radiusfactor*(mlength--);
 		}

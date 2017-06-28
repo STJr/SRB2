@@ -5188,6 +5188,7 @@ void A_MaceRotate(mobj_t *actor)
 	TVector v;
 	TVector *res;
 	fixed_t radius;
+	INT32 prevswing;
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_MaceRotate", actor))
 		return;
@@ -5238,10 +5239,16 @@ void A_MaceRotate(mobj_t *actor)
 	// Swinging Chain.
 	if (actor->target->type == MT_HANGMACEPOINT || actor->target->type == MT_SWINGMACEPOINT)
 	{
-		actor->movecount += actor->target->lastlook;
-		actor->movecount &= FINEMASK;
+		actor->threshold += actor->target->lastlook;
+		actor->threshold &= FINEMASK;
 
-		actor->threshold = FixedMul(FINECOSINE(actor->movecount), actor->target->lastlook << FRACBITS);
+		prevswing = actor->movecount;
+		actor->movecount = FixedMul(FINECOSINE(actor->threshold), actor->target->lastlook << FRACBITS);
+
+		if ((actor->flags2 & MF2_AMBUSH) // at the end of the chain
+		&& !(actor->target->flags2 & MF2_BOSSNOTRAP) // flag that makes 'em shut up on request
+		&& ((prevswing > 0) != (actor->movecount > 0))) // just passed its lowest point
+			S_StartSound(actor, actor->info->activesound);
 
 		v[0] = FRACUNIT;
 		v[1] = 0;
@@ -5249,7 +5256,7 @@ void A_MaceRotate(mobj_t *actor)
 		v[3] = FRACUNIT;
 
 		// Calculate the angle matrixes for the link.
-		res = VectorMatrixMultiply(v, *RotateXMatrix(FixedAngle(actor->threshold)));
+		res = VectorMatrixMultiply(v, *RotateXMatrix(FixedAngle(actor->movecount)));
 		M_Memcpy(&v, res, sizeof(v));
 		res = VectorMatrixMultiply(v, *RotateZMatrix(actor->target->health << ANGLETOFINESHIFT));
 		M_Memcpy(&v, res, sizeof(v));
@@ -5257,15 +5264,18 @@ void A_MaceRotate(mobj_t *actor)
 	// Rotating Chain.
 	else
 	{
-		angle_t fa;
-
+		prevswing = actor->threshold;
 		actor->threshold += actor->target->lastlook;
 		actor->threshold &= FINEMASK;
 
-		fa = actor->threshold;
-		v[0] = FixedMul(FINECOSINE(fa), radius);
+		if ((actor->flags2 & MF2_AMBUSH) // at the end of the chain
+		&& !(actor->target->flags2 & MF2_BOSSNOTRAP) // flag that makes 'em shut up on request
+		&& (!(prevswing > (FINEMASK/2)) && (actor->threshold > (FINEMASK/2)))) // completed a full swing
+			S_StartSound(actor, actor->info->activesound);
+
+		v[0] = FixedMul(FINECOSINE((angle_t)actor->threshold), radius);
 		v[1] = 0;
-		v[2] = FixedMul(FINESINE(fa), radius);
+		v[2] = FixedMul(FINESINE((angle_t)actor->threshold), radius);
 		v[3] = FRACUNIT;
 
 		// Calculate the angle matrixes for the link.
@@ -5281,10 +5291,6 @@ void A_MaceRotate(mobj_t *actor)
 	actor->z += v[2];
 
 	P_SetThingPosition(actor);
-
-	if (!(actor->target->flags2 & MF2_BOSSNOTRAP) // flag that makes maces shut up on request
-	&& !(leveltime & 63) && (actor->type == MT_BIGMACE || actor->type == MT_SMALLMACE) && actor->target->type == MT_MACEPOINT)
-		S_StartSound(actor, actor->info->activesound);
 }
 
 // Function: A_SetFuse
