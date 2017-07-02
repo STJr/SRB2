@@ -456,7 +456,8 @@ void P_ParseAnimationDefintion(SINT8 istexture)
 
 	// Search for existing animdef
 	for (i = 0; i < maxanims; i++)
-		if (stricmp(animdefsToken, animdefs[i].startname) == 0)
+		if (animdefs[i].istexture == istexture // Check if it's the same type!
+		&& stricmp(animdefsToken, animdefs[i].startname) == 0)
 		{
 			//CONS_Alert(CONS_NOTICE, "Duplicate animation: %s\n", animdefsToken);
 
