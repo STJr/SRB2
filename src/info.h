@@ -84,7 +84,6 @@ void A_DetonChase(); // Deton Chaser
 void A_CapeChase(); // Fake little Super Sonic cape
 void A_RotateSpikeBall(); // Spike ball rotation
 void A_SlingAppear();
-void A_MaceRotate();
 void A_UnidusBall();
 void A_RockSpawn();
 void A_SetFuse();
@@ -410,6 +409,10 @@ typedef enum sprite
 	SPR_BMCH, // Big Mace Chain
 	SPR_SMCE, // Small Mace
 	SPR_BMCE, // Big Mace
+	SPR_YSPB, // Yellow spring on a ball
+	SPR_RSPB, // Red spring on a ball
+	SPR_SFBR, // Small Firebar
+	SPR_BFBR, // Big Firebar
 
 	// Arid Canyon Scenery
 	SPR_BTBL, // Big tumbleweed
@@ -2029,17 +2032,61 @@ typedef enum state
 	S_SLING1,
 	S_SLING2,
 
-	// CEZ Small Mace Chain
+	// CEZ maces and chains
 	S_SMALLMACECHAIN,
-
-	// CEZ Big Mace Chain
 	S_BIGMACECHAIN,
-
-	// CEZ Small Mace
 	S_SMALLMACE,
-
-	// CEZ Big Mace
 	S_BIGMACE,
+
+	// Yellow spring on a ball
+	S_YELLOWSPRINGBALL,
+	S_YELLOWSPRINGBALL2,
+	S_YELLOWSPRINGBALL3,
+	S_YELLOWSPRINGBALL4,
+	S_YELLOWSPRINGBALL5,
+
+	// Red spring on a ball
+	S_REDSPRINGBALL,
+	S_REDSPRINGBALL2,
+	S_REDSPRINGBALL3,
+	S_REDSPRINGBALL4,
+	S_REDSPRINGBALL5,
+
+	// Small Firebar
+	S_SMALLFIREBAR1,
+	S_SMALLFIREBAR2,
+	S_SMALLFIREBAR3,
+	S_SMALLFIREBAR4,
+	S_SMALLFIREBAR5,
+	S_SMALLFIREBAR6,
+	S_SMALLFIREBAR7,
+	S_SMALLFIREBAR8,
+	S_SMALLFIREBAR9,
+	S_SMALLFIREBAR10,
+	S_SMALLFIREBAR11,
+	S_SMALLFIREBAR12,
+	S_SMALLFIREBAR13,
+	S_SMALLFIREBAR14,
+	S_SMALLFIREBAR15,
+	S_SMALLFIREBAR16,
+
+	// Big Firebar
+	S_BIGFIREBAR1,
+	S_BIGFIREBAR2,
+	S_BIGFIREBAR3,
+	S_BIGFIREBAR4,
+	S_BIGFIREBAR5,
+	S_BIGFIREBAR6,
+	S_BIGFIREBAR7,
+	S_BIGFIREBAR8,
+	S_BIGFIREBAR9,
+	S_BIGFIREBAR10,
+	S_BIGFIREBAR11,
+	S_BIGFIREBAR12,
+	S_BIGFIREBAR13,
+	S_BIGFIREBAR14,
+	S_BIGFIREBAR15,
+	S_BIGFIREBAR16,
 
 	S_CEZFLOWER1,
 
@@ -3387,14 +3434,20 @@ typedef enum mobj_type
 	MT_FLAMEPARTICLE,
 	MT_EGGSTATUE, // Eggman Statue
 	MT_MACEPOINT, // Mace rotation point
-	MT_SWINGMACEPOINT, // Mace swinging point
-	MT_HANGMACEPOINT, // Hangable mace chain
-	MT_SPINMACEPOINT, // Spin/Controllable mace chain
+	MT_CHAINMACEPOINT, // Combination of chains and maces point
+	MT_SPRINGBALLPOINT, // Spring ball point
+	MT_CHAINPOINT, // Mace chain
 	MT_HIDDEN_SLING, // Spin mace chain (activatable)
+	MT_FIREBARPOINT, // Firebar
+	MT_CUSTOMMACEPOINT, // Custom mace
 	MT_SMALLMACECHAIN, // Small Mace Chain
 	MT_BIGMACECHAIN, // Big Mace Chain
 	MT_SMALLMACE, // Small Mace
 	MT_BIGMACE, // Big Mace
+	MT_YELLOWSPRINGBALL, // Yellow spring on a ball
+	MT_REDSPRINGBALL, // Red spring on a ball
+	MT_SMALLFIREBAR, // Small Firebar
+	MT_BIGFIREBAR, // Big Firebar
 	MT_CEZFLOWER,
 
 	// Arid Canyon Scenery

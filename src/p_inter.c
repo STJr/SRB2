@@ -1474,7 +1474,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			P_ResetPlayer(player);
 			P_SetTarget(&toucher->tracer, special);
 
-			if (special->target && (special->target->type == MT_SPINMACEPOINT || special->target->type == MT_HIDDEN_SLING))
+			if (special->tracer && !(special->tracer->flags2 & MF2_STRONGBOX))
 			{
 				player->powers[pw_carry] = CR_MACESPIN;
 				S_StartSound(toucher, sfx_spin);
@@ -1485,6 +1485,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 			// Can't jump first frame
 			player->pflags |= PF_JUMPSTASIS;
+
 			return;
 		case MT_BIGMINE:
 		case MT_BIGAIRMINE:
