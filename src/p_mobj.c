@@ -9729,6 +9729,16 @@ void P_SpawnMapThing(mapthing_t *mthing)
 	mobj = P_SpawnMobj(x, y, z, i);
 	mobj->spawnpoint = mthing;
 
+#ifdef HAVE_BLUA
+	if (LUAh_MapThingSpawn(mobj, mthing))
+	{
+		if (P_MobjWasRemoved(mobj))
+			return;
+	}
+	else if (P_MobjWasRemoved(mobj))
+		return;
+	else
+#endif
 	switch(mobj->type)
 	{
 	case MT_SKYBOX:
