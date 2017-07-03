@@ -8214,7 +8214,8 @@ static void P_ConsiderAllGone(void)
 
 	if (i == MAXPLAYERS && lastdeadplayer != -1 && deadtimercheck > 2*TICRATE) // the last killed player will reset the level in G_DoReborn
 	{
-		players[lastdeadplayer].spectator = true;
+		//players[lastdeadplayer].spectator = true;
+		players[lastdeadplayer].outofcoop = true;
 		players[lastdeadplayer].playerstate = PST_REBORN;
 	}
 }
@@ -8287,7 +8288,8 @@ static void P_DeathThink(player_t *player)
 			P_ConsiderAllGone();
 			if ((player->deadtimer > 5*TICRATE) || ((cmd->buttons & BT_JUMP) && (player->deadtimer > TICRATE)))
 			{
-				player->spectator = true;
+				//player->spectator = true;
+				player->outofcoop = true;
 				player->playerstate = PST_REBORN;
 			}
 		}
@@ -8352,7 +8354,8 @@ static void P_DeathThink(player_t *player)
 
 	if (gametype == GT_COOP && (player->lives <= 0) && (player->deadtimer >= 8*TICRATE || ((cmd->buttons & BT_JUMP) && (player->deadtimer > TICRATE))))
 	{
-		player->spectator = true;
+		//player->spectator = true;
+		player->outofcoop = true;
 		player->playerstate = PST_REBORN;
 	}
 
@@ -9099,7 +9102,7 @@ boolean P_SpectatorJoinGame(player_t *player)
 				P_RemoveMobj(player->mo);
 				player->mo = NULL;
 			}
-			player->spectator = false;
+			player->spectator = player->outofcoop = false;
 			player->playerstate = PST_REBORN;
 
 			if (gametype == GT_TAG)

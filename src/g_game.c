@@ -2090,6 +2090,7 @@ void G_PlayerReborn(INT32 player)
 	UINT32 availabilities;
 	tic_t jointime;
 	boolean spectator;
+	boolean outofcoop;
 	INT16 bot;
 	SINT8 pity;
 
@@ -2100,6 +2101,7 @@ void G_PlayerReborn(INT32 player)
 	exiting = players[player].exiting;
 	jointime = players[player].jointime;
 	spectator = players[player].spectator;
+	outofcoop = players[player].outofcoop;
 	pflags = (players[player].pflags & (PF_TIMEOVER|PF_FLIPCAM|PF_TAGIT|PF_TAGGED|PF_ANALOGMODE));
 
 	// As long as we're not in multiplayer, carry over cheatcodes from map to map
@@ -2154,6 +2156,7 @@ void G_PlayerReborn(INT32 player)
 	p->ctfteam = ctfteam;
 	p->jointime = jointime;
 	p->spectator = spectator;
+	p->outofcoop = outofcoop;
 
 	// save player config truth reborn
 	p->skincolor = skincolor;
@@ -2489,26 +2492,13 @@ void G_ChangePlayerReferences(mobj_t *oldmo, mobj_t *newmo)
 	}
 }
 
-#ifdef HAVE_BLUA
-#define RESETMAP {\
-			LUAh_MapChange();\
-			G_DoLoadLevel(true);\
-			return;\
-		}
-#else
-#define RESETMAP {\
-			G_DoLoadLevel(true);\
-			return;\
-		}
-#endif
-
 //
 // G_DoReborn
 //
 void G_DoReborn(INT32 playernum)
 {
 	player_t *player = &players[playernum];
-	boolean starpost = false;
+	boolean resetlevel = false;
 
 	if (modeattacking)
 	{
@@ -2534,8 +2524,64 @@ void G_DoReborn(INT32 playernum)
 		B_RespawnBot(playernum);
 		if (oldmo)
 			G_ChangePlayerReferences(oldmo, players[playernum].mo);
+
+		return;
 	}
-	else if (countdowntimeup || (!multiplayer && gametype == GT_COOP))
+
+	if (countdowntimeup || (!multiplayer && gametype == GT_COOP))
+		resetlevel = true;
+	else if (gametype == GT_COOP && (netgame || multiplayer))
+	{
+		INT32 i;
+		if (player->lives <= 0) // consider game over first
+		{
+			INT32 deadtimercheck = INT32_MAX;
+			for (i = 0; i < MAXPLAYERS; i++)
+			{
+				if (!playeringame[i])
+					continue;
+				if (players[i].exiting || players[i].lives > 0)
+					break;
+				if (players[i].playerstate == PST_DEAD && players[i].deadtimer < deadtimercheck)
+					deadtimercheck = players[i].deadtimer;
+			}
+
+			if (!countdown2 && i == MAXPLAYERS && deadtimercheck >= 8*TICRATE)
+			{
+				// They're dead, Jim.
+				//nextmapoverride = spstage_start;
+				nextmapoverride = gamemap;
+				countdown2 = TICRATE;
+				skipstats = true;
+
+				for (i = 0; i < MAXPLAYERS; i++)
+				{
+					if (playeringame[i])
+						players[i].score = 0;
+				}
+
+				//emeralds = 0;
+				tokenbits = 0;
+				tokenlist = 0;
+				token = 0;
+			}
+		}
+		if (cv_coopstarposts.value == 2)
+		{
+			for (i = 0; i < MAXPLAYERS; i++)
+			{
+				if (!playeringame[i])
+					continue;
+
+				if (players[i].playerstate != PST_DEAD && !players[i].spectator && players[i].mo && players[i].mo->health)
+					break;
+			}
+			if (i == MAXPLAYERS)
+				resetlevel = true;
+		}
+	}
+
+	if (resetlevel)
 	{
 		// reload the level from scratch
 		if (countdowntimeup)
@@ -2557,9 +2603,6 @@ void G_DoReborn(INT32 playernum)
 			// Do a wipe
 			wipegamestate = -1;
 
-			if (player->starposttime)
-				starpost = true;
-
 			if (camera.chase)
 				P_ResetCamera(&players[displayplayer], &camera);
 			if (camera2.chase && splitscreen)
@@ -2579,7 +2622,7 @@ void G_DoReborn(INT32 playernum)
 			CON_ClearHUD();
 
 			// Starpost support
-			G_SpawnPlayer(playernum, starpost);
+			G_SpawnPlayer(playernum, (player->starposttime));
 
 			if (botingame)
 			{ // Bots respawn next to their master.
@@ -2588,122 +2631,24 @@ void G_DoReborn(INT32 playernum)
 			}
 		}
 		else
-			RESETMAP;
+		{
+#ifdef HAVE_BLUA
+			LUAh_MapChange();
+#endif
+			G_DoLoadLevel(true);
+			return;
+		}
 	}
 	else
 	{
 		// respawn at the start
 		mobj_t *oldmo = NULL;
 
-		if (gametype == GT_COOP && (netgame || multiplayer))
-		{
-			INT32 i;
-			if (player->lives <= 0) // consider game over first
-			{
-				INT32 deadtimercheck = INT32_MAX;
-				for (i = 0; i < MAXPLAYERS; i++)
-				{
-					if (!playeringame[i])
-						continue;
-					if (players[i].exiting || players[i].lives > 0)
-						break;
-					if (players[i].playerstate == PST_DEAD && players[i].deadtimer < deadtimercheck)
-						deadtimercheck = players[i].deadtimer;
-				}
-
-				if (!countdown2 && i == MAXPLAYERS && deadtimercheck >= 8*TICRATE)
-				{
-					// They're dead, Jim.
-					//nextmapoverride = spstage_start;
-					nextmapoverride = gamemap;
-					countdown2 = TICRATE;
-					skipstats = true;
-
-					for (i = 0; i < MAXPLAYERS; i++)
-					{
-						if (playeringame[i])
-							players[i].score = 0;
-					}
-
-					//emeralds = 0;
-					tokenbits = 0;
-					tokenlist = 0;
-					token = 0;
-				}
-			}
-			if (cv_coopstarposts.value == 2)
-			{
-				for (i = 0; i < MAXPLAYERS; i++)
-				{
-					if (!playeringame[i])
-						continue;
-
-					if (players[i].playerstate != PST_DEAD && !players[i].spectator && players[i].mo && players[i].mo->health)
-						break;
-				}
-				if (i == MAXPLAYERS)
-				{
-					if (mapheaderinfo[gamemap-1]->levelflags & LF_NORELOAD)
-					{
-						INT32 j;
-
-						for (i = 0; i < MAXPLAYERS; i++)
-						{
-							if (!playeringame[i])
-								continue;
-
-							players[i].playerstate = PST_REBORN;
-						}
-
-						P_LoadThingsOnly();
-						P_ClearStarPost(player->starpostnum);
-
-						// Do a wipe
-						wipegamestate = -1;
-
-						if (camera.chase)
-							P_ResetCamera(&players[displayplayer], &camera);
-						if (camera2.chase && splitscreen)
-							P_ResetCamera(&players[secondarydisplayplayer], &camera2);
-
-						// clear cmd building stuff
-						memset(gamekeydown, 0, sizeof (gamekeydown));
-						for (j = 0; j < JOYAXISSET; j++)
-						{
-							joyxmove[j] = joyymove[j] = 0;
-							joy2xmove[j] = joy2ymove[j] = 0;
-						}
-						mousex = mousey = 0;
-						mouse2x = mouse2y = 0;
-
-						// clear hud messages remains (usually from game startup)
-						CON_ClearHUD();
-
-						// Starpost support
-						for (i = 0; i < MAXPLAYERS; i++)
-						{
-							if (!playeringame[i])
-								continue;
-
-							G_SpawnPlayer(i, (players[i].starposttime != 0));
-						}
-
-						return;
-					}
-					else
-						RESETMAP;
-				}
-			}
-		}
-
 		// Not resetting map, so return to level music
 		if (!countdown2
 		&& player->lives <= 0
 		&& !cv_cooplives.value) // not allowed for life steal because no way to come back from zero group lives without addons, which should call this anyways
 			P_RestoreMultiMusic(player);
-
-		if (player->starposttime)
-			starpost = true;
 
 		// first dissasociate the corpse
 		if (player->mo)
@@ -2713,7 +2658,7 @@ void G_DoReborn(INT32 playernum)
 			P_RemoveMobj(player->mo);
 		}
 
-		G_SpawnPlayer(playernum, starpost);
+		G_SpawnPlayer(playernum, (player->starposttime));
 		if (oldmo)
 			G_ChangePlayerReferences(oldmo, players[playernum].mo);
 	}

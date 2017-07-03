@@ -9099,14 +9099,12 @@ void P_SpawnPlayer(INT32 playernum)
 	// spawn as spectator determination
 	if (!G_GametypeHasSpectators())
 	{
-		if (((multiplayer || netgame) && gametype == GT_COOP) // only question status in coop
+		p->spectator = p->outofcoop =
+		(((multiplayer || netgame) && gametype == GT_COOP) // only question status in coop
 		&& ((leveltime > 0
 		&& ((G_IsSpecialStage(gamemap) && useNightsSS) // late join special stage
-		|| (cv_coopstarposts.value == 2 && (p->jointime < 1 || p->spectator)))) // late join or die in new coop
-		|| ((!cv_cooplives.value || !P_GetLives(p)) && p->lives <= 0))) // game over and can't redistribute lives
-			p->spectator = true;
-		else
-			p->spectator = false;
+		|| (cv_coopstarposts.value == 2 && (p->jointime < 1 || p->outofcoop)))) // late join or die in new coop
+		|| ((!cv_cooplives.value || !P_GetLives(p)) && p->lives <= 0))); // game over and can't redistribute lives
 	}
 	else if (netgame && p->jointime < 1)
 		p->spectator = true;
