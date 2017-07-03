@@ -3464,6 +3464,23 @@ static void CoopStarposts_OnChange(void)
 		if (!players[i].spectator)
 			continue;
 
+		if (players[i].lives <= 0)
+			continue;
+
+		break;
+	}
+
+	if (i == MAXPLAYERS)
+		return;
+
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (!playeringame[i])
+			continue;
+
+		if (!players[i].spectator)
+			continue;
+
 		if (players[i].lives <= 0 && !cv_cooplives.value)
 			continue;
 

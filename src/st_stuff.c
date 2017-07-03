@@ -501,12 +501,12 @@ static INT32 SCR(INT32 r)
 #define ST_DrawPaddedOverlayNum(x,y,n,d)   V_DrawPaddedTallNum(x, y, V_NOSCALESTART|V_HUDTRANS, n, d)
 #define ST_DrawOverlayPatch(x,y,p)         V_DrawScaledPatch(x, y, V_NOSCALESTART|V_HUDTRANS, p)
 #define ST_DrawMappedOverlayPatch(x,y,p,c) V_DrawMappedScaledPatch(x, y, V_NOSCALESTART|V_HUDTRANS, p, c)
-#define ST_DrawNumFromHud(h,n)        V_DrawTallNum(SCX(hudinfo[h].x), SCY(hudinfo[h].y), V_NOSCALESTART|V_HUDTRANS, n)
-#define ST_DrawPadNumFromHud(h,n,q)   V_DrawPaddedTallNum(SCX(hudinfo[h].x), SCY(hudinfo[h].y), V_NOSCALESTART|V_HUDTRANS, n, q)
-#define ST_DrawPatchFromHud(h,p)      V_DrawScaledPatch(SCX(hudinfo[h].x), SCY(hudinfo[h].y), V_NOSCALESTART|V_HUDTRANS, p)
-#define ST_DrawNumFromHudWS(h,n)      V_DrawTallNum(SCX(hudinfo[h+!!splitscreen].x), SCY(hudinfo[h+!!splitscreen].y), V_NOSCALESTART|V_HUDTRANS, n)
-#define ST_DrawPadNumFromHudWS(h,n,q) V_DrawPaddedTallNum(SCX(hudinfo[h+!!splitscreen].x), SCY(hudinfo[h+!!splitscreen].y), V_NOSCALESTART|V_HUDTRANS, n, q)
-#define ST_DrawPatchFromHudWS(h,p)    V_DrawScaledPatch(SCX(hudinfo[h+!!splitscreen].x), SCY(hudinfo[h+!!splitscreen].y), V_NOSCALESTART|V_HUDTRANS, p)
+#define ST_DrawNumFromHud(h,n,f)        V_DrawTallNum(SCX(hudinfo[h].x), SCY(hudinfo[h].y), V_NOSCALESTART|f, n)
+#define ST_DrawPadNumFromHud(h,n,q,f)   V_DrawPaddedTallNum(SCX(hudinfo[h].x), SCY(hudinfo[h].y), V_NOSCALESTART|f, n, q)
+#define ST_DrawPatchFromHud(h,p,f)      V_DrawScaledPatch(SCX(hudinfo[h].x), SCY(hudinfo[h].y), V_NOSCALESTART|f, p)
+#define ST_DrawNumFromHudWS(h,n,f)      V_DrawTallNum(SCX(hudinfo[h+!!splitscreen].x), SCY(hudinfo[h+!!splitscreen].y), V_NOSCALESTART|f, n)
+#define ST_DrawPadNumFromHudWS(h,n,q,f) V_DrawPaddedTallNum(SCX(hudinfo[h+!!splitscreen].x), SCY(hudinfo[h+!!splitscreen].y), V_NOSCALESTART|f, n, q)
+#define ST_DrawPatchFromHudWS(h,p,f)    V_DrawScaledPatch(SCX(hudinfo[h+!!splitscreen].x), SCY(hudinfo[h+!!splitscreen].y), V_NOSCALESTART|f, p)
 
 // Draw a number, scaled, over the view, maybe with set translucency
 // Always draw the number completely since it's overlay
@@ -618,16 +618,16 @@ static void ST_drawDebugInfo(void)
 static void ST_drawScore(void)
 {
 	// SCORE:
-	ST_DrawPatchFromHud(HUD_SCORE, sboscore);
+	ST_DrawPatchFromHud(HUD_SCORE, sboscore, V_HUDTRANS);
 	if (objectplacing)
 	{
 		if (op_displayflags > UINT16_MAX)
 			ST_DrawOverlayPatch(SCX(hudinfo[HUD_SCORENUM].x-tallminus->width), SCY(hudinfo[HUD_SCORENUM].y), tallminus);
 		else
-			ST_DrawNumFromHud(HUD_SCORENUM, op_displayflags);
+			ST_DrawNumFromHud(HUD_SCORENUM, op_displayflags, V_HUDTRANS);
 	}
 	else
-		ST_DrawNumFromHud(HUD_SCORENUM, stplyr->score);
+		ST_DrawNumFromHud(HUD_SCORENUM, stplyr->score,V_HUDTRANS);
 }
 
 static void ST_drawTime(void)
@@ -635,7 +635,7 @@ static void ST_drawTime(void)
 	INT32 seconds, minutes, tictrn, tics;
 
 	// TIME:
-	ST_DrawPatchFromHudWS(HUD_TIME, sbotime);
+	ST_DrawPatchFromHudWS(HUD_TIME, sbotime, V_HUDTRANS);
 
 	if (objectplacing)
 	{
@@ -653,17 +653,17 @@ static void ST_drawTime(void)
 	}
 
 	if (cv_timetic.value == 1) // Tics only -- how simple is this?
-		ST_DrawNumFromHudWS(HUD_SECONDS, tics);
+		ST_DrawNumFromHudWS(HUD_SECONDS, tics, V_HUDTRANS);
 	else
 	{
-		ST_DrawNumFromHudWS(HUD_MINUTES, minutes); // Minutes
-		ST_DrawPatchFromHudWS(HUD_TIMECOLON, sbocolon); // Colon
-		ST_DrawPadNumFromHudWS(HUD_SECONDS, seconds, 2); // Seconds
+		ST_DrawNumFromHudWS(HUD_MINUTES, minutes, V_HUDTRANS); // Minutes
+		ST_DrawPatchFromHudWS(HUD_TIMECOLON, sbocolon, V_HUDTRANS); // Colon
+		ST_DrawPadNumFromHudWS(HUD_SECONDS, seconds, 2, V_HUDTRANS); // Seconds
 
 		if (!splitscreen && (cv_timetic.value == 2 || modeattacking)) // there's not enough room for tics in splitscreen, don't even bother trying!
 		{
-			ST_DrawPatchFromHud(HUD_TIMETICCOLON, sboperiod); // Period
-			ST_DrawPadNumFromHud(HUD_TICS, tictrn, 2); // Tics
+			ST_DrawPatchFromHud(HUD_TIMETICCOLON, sboperiod, V_HUDTRANS); // Period
+			ST_DrawPadNumFromHud(HUD_TICS, tictrn, 2, V_HUDTRANS); // Tics
 		}
 	}
 }
@@ -672,7 +672,7 @@ static inline void ST_drawRings(void)
 {
 	INT32 ringnum = max(stplyr->rings, 0);
 
-	ST_DrawPatchFromHudWS(HUD_RINGS, ((stplyr->rings <= 0 && leveltime/5 & 1) ? sboredrings : sborings));
+	ST_DrawPatchFromHudWS(HUD_RINGS, ((!stplyr->spectator && stplyr->rings <= 0 && leveltime/5 & 1) ? sboredrings : sborings), ((stplyr->spectator) ? V_HUDTRANSHALF : V_HUDTRANS));
 
 	if (objectplacing)
 		ringnum = op_currentdoomednum;
@@ -685,7 +685,7 @@ static inline void ST_drawRings(void)
 				ringnum += players[i].rings;
 	}
 
-	ST_DrawNumFromHudWS(HUD_RINGSNUM, ringnum);
+	ST_DrawNumFromHudWS(HUD_RINGSNUM, ringnum, ((stplyr->spectator) ? V_HUDTRANSHALF : V_HUDTRANS));
 }
 
 static void ST_drawLives(void)
@@ -1689,21 +1689,21 @@ static inline void ST_drawTeamName(void)
 static void ST_drawSpecialStageHUD(void)
 {
 	if (totalrings > 0)
-		ST_DrawNumFromHudWS(HUD_SS_TOTALRINGS, totalrings);
+		ST_DrawNumFromHudWS(HUD_SS_TOTALRINGS, totalrings, V_HUDTRANS);
 
 	if (leveltime < 5*TICRATE && totalrings > 0)
 	{
-		ST_DrawPatchFromHud(HUD_GETRINGS, getall);
-		ST_DrawNumFromHud(HUD_GETRINGSNUM, totalrings);
+		ST_DrawPatchFromHud(HUD_GETRINGS, getall, V_HUDTRANS);
+		ST_DrawNumFromHud(HUD_GETRINGSNUM, totalrings, V_HUDTRANS);
 	}
 
 	if (sstimer)
 	{
 		V_DrawString(hudinfo[HUD_TIMELEFT].x, STRINGY(hudinfo[HUD_TIMELEFT].y), V_HUDTRANS, M_GetText("TIME LEFT"));
-		ST_DrawNumFromHud(HUD_TIMELEFTNUM, sstimer/TICRATE);
+		ST_DrawNumFromHud(HUD_TIMELEFTNUM, sstimer/TICRATE, V_HUDTRANS);
 	}
 	else
-		ST_DrawPatchFromHud(HUD_TIMEUP, timeup);
+		ST_DrawPatchFromHud(HUD_TIMEUP, timeup, V_HUDTRANS);
 }
 
 static INT32 ST_drawEmeraldHuntIcon(mobj_t *hunt, patch_t **patches, INT32 offset)
@@ -1896,7 +1896,7 @@ static void ST_overlayDrawer(void)
 		}
 
 		if (p)
-			V_DrawScaledPatch((BASEVIDWIDTH - SHORT(p->width))/2, STRINGY(BASEVIDHEIGHT/2 - (SHORT(p->height)/2)), (stplyr->spectator ? V_HUDTRANSHALF : V_HUDTRANS), p);
+			V_DrawScaledPatch((BASEVIDWIDTH - SHORT(p->width))/2, STRINGY(BASEVIDHEIGHT/2 - (SHORT(p->height)/2)) - (splitscreen ? 4 : 0), (stplyr->spectator ? V_HUDTRANSHALF : V_HUDTRANS), p);
 	}
 
 
@@ -2006,7 +2006,7 @@ static void ST_overlayDrawer(void)
 #endif
 		)
 		{
-			V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(60)+(splitscreen ? 4 : 0), V_HUDTRANSHALF, M_GetText("You are a spectator."));
+			V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(60), V_HUDTRANSHALF, M_GetText("You are a spectator."));
 			if (G_GametypeHasTeams())
 				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(132), V_HUDTRANSHALF, M_GetText("Press Fire to be assigned to a team."));
 			else if (G_IsSpecialStage(gamemap) && useNightsSS)
@@ -2041,7 +2041,7 @@ static void ST_overlayDrawer(void)
 				V_DrawCenteredString(BASEVIDWIDTH/2, 164, V_HUDTRANSHALF, M_GetText("Press Jump to float and Spin to sink."));
 			}
 			else
-				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(128), V_HUDTRANSHALF, M_GetText("Press Jump to float and Spin to sink."));
+				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(136), V_HUDTRANSHALF, M_GetText("Press Jump to float and Spin to sink."));
 		}
 	}
 
