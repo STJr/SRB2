@@ -6488,10 +6488,6 @@ static void P_MaceRotate(mobj_t *mobj)
 
 maceretry:
 
-	// Set the top speed for the link if it happens to be over that speed.
-	if (mobj->tracer->lastlook > mobj->tracer->friction)
-		mobj->tracer->lastlook = mobj->tracer->friction;
-
 	fa = (FixedAngle(mobj->tracer->movefactor*FRACUNIT) >> ANGLETOFINESHIFT);
 	radius = FixedMul(FINECOSINE(fa), radius);
 	v[1] = -FixedMul(FINESINE(fa), radius)
@@ -9951,7 +9947,7 @@ ML_EFFECT4 : Don't clip inside the ground
 		mlength = abs(lines[line].dx >> FRACBITS);
 		mspeed = abs(lines[line].dy >> (FRACBITS - 4));
 		mphase = (sides[lines[line].sidenum[0]].textureoffset >> FRACBITS) % 360;
-		if ((mmaxspeed = sides[lines[line].sidenum[0]].rowoffset >> FRACBITS) < mspeed)
+		if ((mmaxspeed = sides[lines[line].sidenum[0]].rowoffset >> (FRACBITS - 4)) < mspeed)
 			mmaxspeed = mspeed << 1;
 		mpitch = (lines[line].frontsector->floorheight >> FRACBITS) % 360;
 		myaw = (lines[line].frontsector->ceilingheight >> FRACBITS) % 360;

@@ -9985,9 +9985,15 @@ void P_PlayerAfterThink(player_t *player)
 			player->pflags &= ~PF_THOKKED;
 
 			if (cmd->forwardmove > 0)
-				player->mo->tracer->tracer->lastlook += 2;
-			else if (cmd->forwardmove < 0 && player->mo->tracer->tracer->lastlook > player->mo->tracer->tracer->movecount)
-				player->mo->tracer->tracer->lastlook -= 2;
+			{
+				if ((player->mo->tracer->tracer->lastlook += 2) > player->mo->tracer->tracer->friction)
+					player->mo->tracer->tracer->lastlook = player->mo->tracer->tracer->friction;
+			}
+			else if (cmd->forwardmove < 0)
+			{
+				if ((player->mo->tracer->tracer->lastlook -= 2) < player->mo->tracer->tracer->movecount)
+					player->mo->tracer->tracer->lastlook = player->mo->tracer->tracer->movecount;
+			}
 
 			if ((player->mo->tracer->tracer->flags & MF_SLIDEME) // Noclimb on chain parameters gives this
 			&& !(twodlevel || player->mo->flags2 & MF2_TWOD)) // why on earth would you want to turn them in 2D mode?
