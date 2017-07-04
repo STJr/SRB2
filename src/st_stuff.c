@@ -68,6 +68,7 @@ static patch_t *sboover;
 static patch_t *timeover;
 static patch_t *stlivex;
 static patch_t *sboredrings;
+static patch_t *sboredtime;
 static patch_t *getall; // Special Stage HUD
 static patch_t *timeup; // Special Stage HUD
 static patch_t *hunthoming[6];
@@ -251,6 +252,7 @@ void ST_LoadGraphics(void)
 	sboredrings = W_CachePatchName("STTRRING", PU_HUDGFX);
 	sboscore = W_CachePatchName("STTSCORE", PU_HUDGFX);
 	sbotime = W_CachePatchName("STTTIME", PU_HUDGFX); // Time logo
+	sboredtime = W_CachePatchName("STTRTIME", PU_HUDGFX);
 	sbocolon = W_CachePatchName("STTCOLON", PU_HUDGFX); // Colon for time
 	sboperiod = W_CachePatchName("STTPERIO", PU_HUDGFX); // Period for time centiseconds
 
@@ -635,7 +637,7 @@ static void ST_drawTime(void)
 	INT32 seconds, minutes, tictrn, tics;
 
 	// TIME:
-	ST_DrawPatchFromHudWS(HUD_TIME, sbotime, V_HUDTRANS);
+	ST_DrawPatchFromHudWS(HUD_TIME, ((mapheaderinfo[gamemap-1]->countdown && countdowntimer < 11*TICRATE && leveltime/5 & 1) ? sboredtime : sbotime), V_HUDTRANS);
 
 	if (objectplacing)
 	{
@@ -646,7 +648,7 @@ static void ST_drawTime(void)
 	}
 	else
 	{
-		tics = stplyr->realtime;
+		tics = (mapheaderinfo[gamemap-1]->countdown ? countdowntimer : stplyr->realtime);
 		seconds = G_TicsToSeconds(tics);
 		minutes = G_TicsToMinutes(tics, true);
 		tictrn  = G_TicsToCentiseconds(tics);
