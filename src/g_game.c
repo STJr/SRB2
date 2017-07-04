@@ -2528,7 +2528,7 @@ void G_DoReborn(INT32 playernum)
 		return;
 	}
 
-	if (countdowntimeup || (!multiplayer && gametype == GT_COOP))
+	if (countdowntimeup || (!(netgame || multiplayer) && gametype == GT_COOP))
 		resetlevel = true;
 	else if (gametype == GT_COOP && (netgame || multiplayer))
 	{

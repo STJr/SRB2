@@ -8358,7 +8358,7 @@ static void P_DeathThink(player_t *player)
 		//else if (gametype == GT_COOP) -- moved to G_DoReborn
 	}
 
-	if (gametype == GT_COOP && (player->lives <= 0) && (player->deadtimer >= 8*TICRATE || ((cmd->buttons & BT_JUMP) && (player->deadtimer > TICRATE))))
+	if (gametype == GT_COOP && (multiplayer || netgame) && (player->lives <= 0) && (player->deadtimer >= 8*TICRATE || ((cmd->buttons & BT_JUMP) && (player->deadtimer > TICRATE))))
 	{
 		//player->spectator = true;
 		player->outofcoop = true;
