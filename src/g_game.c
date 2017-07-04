@@ -2499,6 +2499,7 @@ void G_DoReborn(INT32 playernum)
 {
 	player_t *player = &players[playernum];
 	boolean resetlevel = false;
+	INT32 i;
 
 	if (modeattacking)
 	{
@@ -2532,7 +2533,6 @@ void G_DoReborn(INT32 playernum)
 		resetlevel = true;
 	else if (gametype == GT_COOP && (netgame || multiplayer))
 	{
-		INT32 i;
 		if (cv_cooplives.value == 0)
 			;
 		else if (player->lives <= 0) // consider game over first
@@ -2588,16 +2588,18 @@ void G_DoReborn(INT32 playernum)
 		// reload the level from scratch
 		if (countdowntimeup)
 		{
-			player->starpostangle = 0;
-			player->starposttime = 0;
-			player->starpostx = 0;
-			player->starposty = 0;
-			player->starpostz = 0;
-			player->starpostnum = 0;
+			for (i = 0; i < MAXPLAYERS; i++)
+			{
+				players[i].starpostangle = 0;
+				players[i].starposttime = 0;
+				players[i].starpostx = 0;
+				players[i].starposty = 0;
+				players[i].starpostz = 0;
+				players[i].starpostnum = 0;
+			}
 		}
 		if (!countdowntimeup && (mapheaderinfo[gamemap-1]->levelflags & LF_NORELOAD))
 		{
-			INT32 i;
 			player->playerstate = PST_REBORN;
 			P_LoadThingsOnly();
 			P_ClearStarPost(player->starpostnum);

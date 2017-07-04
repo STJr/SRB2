@@ -6690,9 +6690,6 @@ static void P_MovePlayer(player_t *player)
 
 	fixed_t runspd;
 
-	if (countdowntimeup)
-		return;
-
 	if (player->mo->state >= &states[S_PLAY_SUPER_TRANS] && player->mo->state <= &states[S_PLAY_SUPER_TRANS9])
 	{
 		player->mo->momx = player->mo->momy = player->mo->momz = 0;

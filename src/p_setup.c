@@ -2199,7 +2199,18 @@ static void P_LevelInitStuff(void)
 
 	// map time limit
 	if (mapheaderinfo[gamemap-1]->countdown)
+	{
+		tic_t maxtime = 0;
 		countdowntimer = mapheaderinfo[gamemap-1]->countdown * TICRATE;
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			if (!playeringame[i])
+				continue;
+			if (players[i].starposttime > maxtime)
+				maxtime = players[i].starposttime;
+		}
+		countdowntimer -= maxtime;
+	}
 	else
 		countdowntimer = 0;
 	countdowntimeup = false;

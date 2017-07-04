@@ -650,7 +650,7 @@ void P_Ticker(boolean run)
 
 	if (run)
 	{
-		if (countdowntimer && --countdowntimer <= 0)
+		if (countdowntimer && G_PlatformGametype() && (gametype == GT_COOP || leveltime >= 4*TICRATE) && --countdowntimer <= 0)
 		{
 			countdowntimer = 0;
 			countdowntimeup = true;
@@ -662,6 +662,8 @@ void P_Ticker(boolean run)
 				if (!players[i].mo)
 					continue;
 
+				if (multiplayer || netgame)
+					players[i].exiting = 0;
 				P_DamageMobj(players[i].mo, NULL, NULL, 1, DMG_INSTAKILL);
 			}
 		}
