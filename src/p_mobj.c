@@ -9106,33 +9106,37 @@ void P_SpawnPlayer(INT32 playernum)
 		|| (cv_coopstarposts.value == 2 && (p->jointime < 1 || p->outofcoop)))) // late join or die in new coop
 		|| (((cv_cooplives.value == 1) || !P_GetLives(p)) && p->lives <= 0))); // game over and can't redistribute lives
 	}
-	else if (netgame && p->jointime < 1)
-		p->spectator = true;
-	else if (multiplayer && !netgame)
+	else
 	{
-		// If you're in a team game and you don't have a team assigned yet...
-		if (G_GametypeHasTeams() && p->ctfteam == 0)
-		{
-			changeteam_union NetPacket;
-			UINT16 usvalue;
-			NetPacket.value.l = NetPacket.value.b = 0;
-
-			// Spawn as a spectator,
-			// yes even in splitscreen mode
+		p->outofcoop = false;
+		if (netgame && p->jointime < 1)
 			p->spectator = true;
-			if (playernum&1) p->skincolor = skincolor_redteam;
-			else             p->skincolor = skincolor_blueteam;
+		else if (multiplayer && !netgame)
+		{
+			// If you're in a team game and you don't have a team assigned yet...
+			if (G_GametypeHasTeams() && p->ctfteam == 0)
+			{
+				changeteam_union NetPacket;
+				UINT16 usvalue;
+				NetPacket.value.l = NetPacket.value.b = 0;
 
-			// but immediately send a team change packet.
-			NetPacket.packet.playernum = playernum;
-			NetPacket.packet.verification = true;
-			NetPacket.packet.newteam = !(playernum&1) + 1;
+				// Spawn as a spectator,
+				// yes even in splitscreen mode
+				p->spectator = true;
+				if (playernum&1) p->skincolor = skincolor_redteam;
+				else             p->skincolor = skincolor_blueteam;
 
-			usvalue = SHORT(NetPacket.value.l|NetPacket.value.b);
-			SendNetXCmd(XD_TEAMCHANGE, &usvalue, sizeof(usvalue));
+				// but immediately send a team change packet.
+				NetPacket.packet.playernum = playernum;
+				NetPacket.packet.verification = true;
+				NetPacket.packet.newteam = !(playernum&1) + 1;
+
+				usvalue = SHORT(NetPacket.value.l|NetPacket.value.b);
+				SendNetXCmd(XD_TEAMCHANGE, &usvalue, sizeof(usvalue));
+			}
+			else // Otherwise, never spectator.
+				p->spectator = false;
 		}
-		else // Otherwise, never spectator.
-			p->spectator = false;
 	}
 
 	if (G_GametypeHasTeams())
