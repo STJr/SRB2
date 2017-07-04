@@ -1993,7 +1993,7 @@ static void ST_overlayDrawer(void)
 
 	if (!hu_showscores && (netgame || multiplayer) && displayplayer == consoleplayer)
 	{
-		if (!splitscreen && gametype != GT_COOP && G_GametypeUsesLives() && stplyr->lives <= 0 && countdown != 1)
+		if (!splitscreen && ((stplyr->exiting && (gametype != GT_COOP || cv_playersforexit.value)) || (gametype != GT_COOP && G_GametypeUsesLives() && stplyr->lives <= 0)) && countdown != 1)
 			V_DrawCenteredString(BASEVIDWIDTH/2, 132, 0, M_GetText("Press F12 to watch another player."));
 		else if (gametype == GT_HIDEANDSEEK &&
 		 (!stplyr->spectator && !(stplyr->pflags & PF_TAGIT)) && (leveltime > hidetime * TICRATE))
