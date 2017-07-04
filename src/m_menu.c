@@ -1386,16 +1386,16 @@ static menuitem_t OP_ServerOptionsMenu[] =
 
 	{IT_HEADER, NULL, "Items", NULL, 70},
 	{IT_STRING | IT_CVAR,    NULL, "Item respawn delay",               &cv_itemrespawntime,     76},
-	{IT_STRING | IT_SUBMENU, NULL, "Random Item Box Toggles...",       &OP_MonitorToggleDef,    81},
+	{IT_STRING | IT_SUBMENU, NULL, "Unknown Item Monitor Toggles...",  &OP_MonitorToggleDef,    81},
 
 	{IT_HEADER, NULL, "Cooperative", NULL, 90},
 	{IT_STRING | IT_CVAR,    NULL, "Players required for exit",        &cv_playersforexit,      96},
 	{IT_STRING | IT_CVAR,    NULL, "Starposts",                        &cv_coopstarposts,      101},
-	{IT_STRING | IT_CVAR,    NULL, "Life distribution",                &cv_cooplives,          106},
+	{IT_STRING | IT_CVAR,    NULL, "Life sharing",                     &cv_cooplives,          106},
 
 	{IT_HEADER, NULL, "Race, Competition", NULL, 115},
 	{IT_STRING | IT_CVAR,    NULL, "Level completion countdown",       &cv_countdowntime,      121},
-	{IT_STRING | IT_CVAR,    NULL, "Item Boxes",                       &cv_competitionboxes,   126},
+	{IT_STRING | IT_CVAR,    NULL, "Item Monitors",                    &cv_competitionboxes,   126},
 
 	{IT_HEADER, NULL, "Ringslinger (Match, CTF, Tag, H&S)", NULL, 135},
 	{IT_STRING | IT_CVAR,    NULL, "Time Limit",                       &cv_timelimit,          141},
@@ -1403,7 +1403,7 @@ static menuitem_t OP_ServerOptionsMenu[] =
 	{IT_STRING | IT_CVAR,    NULL, "Overtime on Tie",                  &cv_overtime,           151},
 	{IT_STRING | IT_CVAR,    NULL, "Player respawn delay",             &cv_respawntime,        156},
 
-	{IT_STRING | IT_CVAR,    NULL, "Item Boxes",                       &cv_matchboxes,         166},
+	{IT_STRING | IT_CVAR,    NULL, "Item Monitors",                    &cv_matchboxes,         166},
 	{IT_STRING | IT_CVAR,    NULL, "Weapon Rings",                     &cv_specialrings,       171},
 	{IT_STRING | IT_CVAR,    NULL, "Power Stones",                     &cv_powerstones,        176},
 
