@@ -1426,11 +1426,11 @@ static menuitem_t OP_MonitorToggleMenu[] =
 	// Printing handled by drawing function
 	{IT_STRING|IT_CALL, NULL, "Reset to defaults", M_ResetCvars, 15},
 	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Recycler",          &cv_recycler,      30},
-	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Teleporters",       &cv_teleporters,   40},
+	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Teleport",          &cv_teleporters,   40},
 	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Super Ring",        &cv_superring,     50},
 	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Super Sneakers",    &cv_supersneakers, 60},
 	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Invincibility",     &cv_invincibility, 70},
-	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Jump Shield",       &cv_jumpshield,    80},
+	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Whirlwind Shield",  &cv_jumpshield,    80},
 	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Elemental Shield",  &cv_watershield,   90},
 	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Attraction Shield", &cv_ringshield,   100},
 	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Force Shield",      &cv_forceshield,  110},
@@ -5262,6 +5262,13 @@ static void M_DrawSkyRoom(void)
 		return;
 
 	V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, currentMenu->y + y, V_YELLOWMAP, cv_soundtest.string);
+	if (i == itemOn)
+	{
+		V_DrawCharacter(BASEVIDWIDTH - currentMenu->x - 10 - V_StringWidth(cv_soundtest.string, 0) - (skullAnimCounter/5), currentMenu->y + y,
+			'\x1C' | V_YELLOWMAP, false);
+		V_DrawCharacter(BASEVIDWIDTH - currentMenu->x + 2 + (skullAnimCounter/5), currentMenu->y + y,
+			'\x1D' | V_YELLOWMAP, false);
+			}
 	if (cv_soundtest.value)
 		V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, currentMenu->y + y + 8, V_YELLOWMAP, S_sfx[cv_soundtest.value].name);
 }
