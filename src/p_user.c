@@ -8146,19 +8146,25 @@ void P_FindEmerald(void)
 
 //
 // P_GetLives
-// Steal lives if you're allowed to.
+// Get extra lives in new co-op if you're allowed to.
 //
 
 boolean P_GetLives(player_t *player)
 {
 	INT32 i, maxlivesplayer = -1, livescheck = 1;
-	if (!(cv_cooplives.value
-	&& (gametype == GT_COOP)
-	&& (netgame || multiplayer)))
+	if (!(netgame || multiplayer)
+	|| (gametype != GT_COOP)
+	|| (cv_cooplives.value == 1))
 		return true;
 
-	if (cv_cooplives.value == 1 && player->lives > 0)
+	if ((cv_cooplives.value == 2 || cv_cooplives.value == 0) && player->lives > 0)
 		return true;
+
+	if (cv_cooplives.value == 0) // infinite lives
+	{
+		player->lives++;
+		return true;
+	}
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
@@ -8173,7 +8179,7 @@ boolean P_GetLives(player_t *player)
 	}
 	if (maxlivesplayer != -1 && &players[maxlivesplayer] != player)
 	{
-		if (cv_cooplives.value == 1 && P_IsLocalPlayer(&players[maxlivesplayer]))
+		if (cv_cooplives.value == 2 && P_IsLocalPlayer(&players[maxlivesplayer]))
 			S_StartSound(NULL, sfx_jshard); // placeholder
 		players[maxlivesplayer].lives--;
 		player->lives++;
@@ -8263,7 +8269,7 @@ static void P_DeathThink(player_t *player)
 			G_UseContinue(); // Even if we don't have one this handles ending the game
 	}
 
-	if (cv_cooplives.value
+	if ((cv_cooplives.value != 1)
 	&& (gametype == GT_COOP)
 	&& (netgame || multiplayer)
 	&& (player->lives <= 0))

@@ -9104,7 +9104,7 @@ void P_SpawnPlayer(INT32 playernum)
 		&& ((leveltime > 0
 		&& ((G_IsSpecialStage(gamemap) && useNightsSS) // late join special stage
 		|| (cv_coopstarposts.value == 2 && (p->jointime < 1 || p->outofcoop)))) // late join or die in new coop
-		|| ((!cv_cooplives.value || !P_GetLives(p)) && p->lives <= 0))); // game over and can't redistribute lives
+		|| (((cv_cooplives.value == 1) || !P_GetLives(p)) && p->lives <= 0))); // game over and can't redistribute lives
 	}
 	else if (netgame && p->jointime < 1)
 		p->spectator = true;

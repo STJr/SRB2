@@ -359,7 +359,7 @@ static void P_DoAutobalanceTeams(void)
 	totalred = red + redflagcarrier;
 	totalblue = blue + blueflagcarrier;
 
-	if ((abs(totalred - totalblue) > cv_autobalance.value))
+	if ((abs(totalred - totalblue) > max(1, (totalred + totalblue) / 8)))
 	{
 		if (totalred > totalblue)
 		{
@@ -372,8 +372,7 @@ static void P_DoAutobalanceTeams(void)
 			usvalue  = SHORT(NetPacket.value.l|NetPacket.value.b);
 			SendNetXCmd(XD_TEAMCHANGE, &usvalue, sizeof(usvalue));
 		}
-
-		if (totalblue > totalred)
+		else //if (totalblue > totalred)
 		{
 			i = M_RandomKey(blue);
 			NetPacket.packet.newteam = 1;

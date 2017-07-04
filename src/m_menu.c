@@ -922,7 +922,7 @@ static menuitem_t MP_ServerMenu[] =
 	{IT_STRING|IT_CALL,              NULL, "Room...",                  M_RoomMenu,        10},
 	{IT_STRING|IT_CVAR|IT_CV_STRING, NULL, "Server Name",              &cv_servername,    20},
 	{IT_STRING|IT_CVAR,              NULL, "Max Players",              &cv_maxplayers,    46},
-	{IT_STRING|IT_CVAR,              NULL, "Allow WAD Downloading",    &cv_downloading,   56},
+	{IT_STRING|IT_CVAR,              NULL, "Allow Add-on Downloading", &cv_downloading,   56},
 #endif
 	{IT_STRING|IT_CALL,              NULL, "Select Gametype/Level...", M_GameTypeChange, 100},
 	{IT_STRING|IT_CALL,              NULL, "More Options...",          M_ServerOptions,  130},
@@ -1114,23 +1114,23 @@ static menuitem_t OP_ChangeControlsMenu[] =
 static menuitem_t OP_Joystick1Menu[] =
 {
 	{IT_STRING | IT_CALL,  NULL, "Select Joystick...", M_Setup1PJoystickMenu,  10},
-	{IT_STRING | IT_CVAR,  NULL, "Move \x1A \x1B Axis"    , &cv_moveaxis         , 30},
-	{IT_STRING | IT_CVAR,  NULL, "Move \x1C \x1D Axis"    , &cv_sideaxis         , 40},
-	{IT_STRING | IT_CVAR,  NULL, "Camera \x1A \x1B Axis"  , &cv_lookaxis         , 50},
-	{IT_STRING | IT_CVAR,  NULL, "Camera \x1C \x1D Axis"  , &cv_turnaxis         , 60},
-	{IT_STRING | IT_CVAR,  NULL, "Fire Axis"              , &cv_fireaxis         , 70},
-	{IT_STRING | IT_CVAR,  NULL, "Fire Normal Axis"       , &cv_firenaxis        , 80},
+	{IT_STRING | IT_CVAR,  NULL, "Move \x17 Axis"    , &cv_moveaxis         , 30},
+	{IT_STRING | IT_CVAR,  NULL, "Move \x18 Axis"    , &cv_sideaxis         , 40},
+	{IT_STRING | IT_CVAR,  NULL, "Camera \x17 Axis"  , &cv_lookaxis         , 50},
+	{IT_STRING | IT_CVAR,  NULL, "Camera \x18 Axis"  , &cv_turnaxis         , 60},
+	{IT_STRING | IT_CVAR,  NULL, "Fire Axis"         , &cv_fireaxis         , 70},
+	{IT_STRING | IT_CVAR,  NULL, "Fire Normal Axis"  , &cv_firenaxis        , 80},
 };
 
 static menuitem_t OP_Joystick2Menu[] =
 {
 	{IT_STRING | IT_CALL,  NULL, "Select Joystick...", M_Setup2PJoystickMenu, 10},
-	{IT_STRING | IT_CVAR,  NULL, "Move \x1A \x1B Axis"    , &cv_moveaxis2        , 30},
-	{IT_STRING | IT_CVAR,  NULL, "Move \x1C \x1D Axis"    , &cv_sideaxis2        , 40},
-	{IT_STRING | IT_CVAR,  NULL, "Camera \x1A \x1B Axis"  , &cv_lookaxis2        , 50},
-	{IT_STRING | IT_CVAR,  NULL, "Camera \x1C \x1D Axis"  , &cv_turnaxis2        , 60},
-	{IT_STRING | IT_CVAR,  NULL, "Fire Axis"              , &cv_fireaxis2        , 70},
-	{IT_STRING | IT_CVAR,  NULL, "Fire Normal Axis"       , &cv_firenaxis2       , 80},
+	{IT_STRING | IT_CVAR,  NULL, "Move \x17 Axis"    , &cv_moveaxis2        , 30},
+	{IT_STRING | IT_CVAR,  NULL, "Move \x18 Axis"    , &cv_sideaxis2        , 40},
+	{IT_STRING | IT_CVAR,  NULL, "Camera \x17 Axis"  , &cv_lookaxis2        , 50},
+	{IT_STRING | IT_CVAR,  NULL, "Camera \x18 Axis"  , &cv_turnaxis2        , 60},
+	{IT_STRING | IT_CVAR,  NULL, "Fire Axis"         , &cv_fireaxis2        , 70},
+	{IT_STRING | IT_CVAR,  NULL, "Fire Normal Axis"  , &cv_firenaxis2       , 80},
 };
 
 static menuitem_t OP_JoystickSetMenu[] =
@@ -1374,7 +1374,7 @@ static menuitem_t OP_ServerOptionsMenu[] =
 	{IT_STRING | IT_CVAR | IT_CV_STRING,
 	                         NULL, "Server name",                      &cv_servername,          7},
 	{IT_STRING | IT_CVAR,    NULL, "Max Players",                      &cv_maxplayers,          21},
-	{IT_STRING | IT_CVAR,    NULL, "Allow WAD Downloading",            &cv_downloading,         26},
+	{IT_STRING | IT_CVAR,    NULL, "Allow Add-on Downloading",          &cv_downloading,         26},
 	{IT_STRING | IT_CVAR,    NULL, "Allow players to join",            &cv_allownewplayer,      31},
 #endif
 	{IT_STRING | IT_CVAR,    NULL, "Map progression",                  &cv_advancemap,          36},
@@ -1410,13 +1410,14 @@ static menuitem_t OP_ServerOptionsMenu[] =
 	{IT_STRING | IT_CVAR,    NULL, "Flag respawn delay",               &cv_flagtime,           186},
 	{IT_STRING | IT_CVAR,    NULL, "Hiding time",                      &cv_hidetime,           191},
 
-	{IT_STRING | IT_CVAR,    NULL, "Autobalance Teams",                &cv_autobalance,        201},
-	{IT_STRING | IT_CVAR,    NULL, "Scramble Teams on Map Change",     &cv_scrambleonchange,   206},
+	{IT_HEADER, NULL, "Teams", NULL, 200},
+	{IT_STRING | IT_CVAR,    NULL, "Autobalance sizes",                &cv_autobalance,        206},
+	{IT_STRING | IT_CVAR,    NULL, "Scramble on Map Change",           &cv_scrambleonchange,   211},
 
 #ifndef NONET
-	{IT_HEADER, NULL, "Advanced", NULL, 215},
-	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "Master server",        &cv_masterserver,        221},
-	{IT_STRING | IT_CVAR,    NULL, "Attempts to resynchronise",        &cv_resynchattempts,     235},
+	{IT_HEADER, NULL, "Advanced", NULL, 220},
+	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "Master server",        &cv_masterserver,        226},
+	{IT_STRING | IT_CVAR,    NULL, "Attempts to resynchronise",        &cv_resynchattempts,     240},
 #endif
 };
 
@@ -2952,7 +2953,7 @@ static void M_DrawThermo(INT32 x, INT32 y, consvar_t *cv)
 }
 
 //  A smaller 'Thermo', with range given as percents (0-100)
-static void M_DrawSlider(INT32 x, INT32 y, const consvar_t *cv)
+static void M_DrawSlider(INT32 x, INT32 y, const consvar_t *cv, boolean ontop)
 {
 	INT32 i;
 	INT32 range;
@@ -2965,6 +2966,14 @@ static void M_DrawSlider(INT32 x, INT32 y, const consvar_t *cv)
 	p =  W_CachePatchName("M_SLIDEM", PU_CACHE);
 	for (i = 1; i < SLIDER_RANGE; i++)
 		V_DrawScaledPatch (x+i*8, y, 0,p);
+
+	if (ontop)
+	{
+		V_DrawCharacter(x - 6 - (skullAnimCounter/5), y,
+			'\x1C' | V_YELLOWMAP, false);
+		V_DrawCharacter(x+i*8 + 8 + (skullAnimCounter/5), y,
+			'\x1D' | V_YELLOWMAP, false);
+	}
 
 	p = W_CachePatchName("M_SLIDER", PU_CACHE);
 	V_DrawScaledPatch(x+i*8, y, 0, p);
@@ -3215,7 +3224,7 @@ static void M_DrawGenericMenu(void)
 						switch (currentMenu->menuitems[i].status & IT_CVARTYPE)
 						{
 							case IT_CV_SLIDER:
-								M_DrawSlider(x, y, cv);
+								M_DrawSlider(x, y, cv, (i == itemOn));
 							case IT_CV_NOPRINT: // color use this
 							case IT_CV_INVISSLIDER: // monitor toggles use this
 								break;
@@ -3230,6 +3239,13 @@ static void M_DrawGenericMenu(void)
 							default:
 								V_DrawRightAlignedString(BASEVIDWIDTH - x, y,
 									((cv->flags & CV_CHEAT) && !CV_IsSetToDefault(cv) ? V_REDMAP : V_YELLOWMAP), cv->string);
+								if (i == itemOn)
+								{
+									V_DrawCharacter(BASEVIDWIDTH - x - 10 - V_StringWidth(cv->string, 0) - (skullAnimCounter/5), y,
+											'\x1C' | V_YELLOWMAP, false);
+									V_DrawCharacter(BASEVIDWIDTH - x + 2 + (skullAnimCounter/5), y,
+											'\x1D' | V_YELLOWMAP, false);
+								}
 								break;
 						}
 						break;
@@ -3324,9 +3340,9 @@ static void M_DrawGenericScrollMenu(void)
 	}
 
 	if (i)
-		V_DrawString(currentMenu->x - 20, currentMenu->y, V_YELLOWMAP, "\x1A"); // up arrow
+		V_DrawString(currentMenu->x - 20, currentMenu->y - (skullAnimCounter/5), V_YELLOWMAP, "\x1A"); // up arrow
 	if (max != bottom)
-		V_DrawString(currentMenu->x - 20, currentMenu->y + 2*scrollareaheight, V_YELLOWMAP, "\x1B"); // down arrow
+		V_DrawString(currentMenu->x - 20, currentMenu->y + 2*scrollareaheight + (skullAnimCounter/5), V_YELLOWMAP, "\x1B"); // down arrow
 
 	// draw title (or big pic)
 	M_DrawMenuTitle();
@@ -3364,7 +3380,7 @@ static void M_DrawGenericScrollMenu(void)
 						switch (currentMenu->menuitems[i].status & IT_CVARTYPE)
 						{
 							case IT_CV_SLIDER:
-								M_DrawSlider(x, y, cv);
+								M_DrawSlider(x, y, cv, (i == itemOn));
 							case IT_CV_NOPRINT: // color use this
 							case IT_CV_INVISSLIDER: // monitor toggles use this
 								break;
@@ -3393,6 +3409,13 @@ static void M_DrawGenericScrollMenu(void)
 							default:
 								V_DrawRightAlignedString(BASEVIDWIDTH - x, y,
 									((cv->flags & CV_CHEAT) && !CV_IsSetToDefault(cv) ? V_REDMAP : V_YELLOWMAP), cv->string);
+								if (i == itemOn)
+								{
+									V_DrawCharacter(BASEVIDWIDTH - x - 10 - V_StringWidth(cv->string, 0) - (skullAnimCounter/5), y,
+											'\x1C' | V_YELLOWMAP, false);
+									V_DrawCharacter(BASEVIDWIDTH - x + 2 + (skullAnimCounter/5), y,
+											'\x1D' | V_YELLOWMAP, false);
+								}
 								break;
 						}
 						break;
@@ -3620,7 +3643,7 @@ static void M_DrawCenteredMenu(void)
 						switch(currentMenu->menuitems[i].status & IT_CVARTYPE)
 						{
 							case IT_CV_SLIDER:
-								M_DrawSlider(x, y, cv);
+								M_DrawSlider(x, y, cv, (i == itemOn));
 							case IT_CV_NOPRINT: // color use this
 								break;
 							case IT_CV_STRING:
@@ -3634,6 +3657,13 @@ static void M_DrawCenteredMenu(void)
 							default:
 								V_DrawString(BASEVIDWIDTH - x - V_StringWidth(cv->string, 0), y,
 									((cv->flags & CV_CHEAT) && !CV_IsSetToDefault(cv) ? V_REDMAP : V_YELLOWMAP), cv->string);
+								if (i == itemOn)
+								{
+									V_DrawCharacter(BASEVIDWIDTH - x - 10 - V_StringWidth(cv->string, 0) - (skullAnimCounter/5), y,
+											'\x1C' | V_YELLOWMAP, false);
+									V_DrawCharacter(BASEVIDWIDTH - x + 2 + (skullAnimCounter/5), y,
+											'\x1D' | V_YELLOWMAP, false);
+								}
 								break;
 						}
 						break;
@@ -4834,13 +4864,21 @@ static void M_HandleChecklist(INT32 choice)
 	{
 		case KEY_DOWNARROW:
 			S_StartSound(NULL, sfx_menu1);
-			if (checklist_cangodown)
+			if ((check_on != MAXUNLOCKABLES) && checklist_cangodown)
 			{
 				for (j = check_on+1; j < MAXUNLOCKABLES; j++)
 				{
-					if (!(unlockables[j].name[0] == 0 //|| unlockables[j].nochecklist
-					|| !unlockables[j].conditionset || unlockables[j].conditionset > MAXCONDITIONSETS))
-						break;
+					if (!unlockables[j].name[0])
+						continue;
+					// if (unlockables[j].nochecklist)
+					//	continue;
+					if (!unlockables[j].conditionset)
+						continue;
+					if (unlockables[j].conditionset > MAXCONDITIONSETS)
+						continue;
+					if (unlockables[j].conditionset == unlockables[check_on].conditionset)
+						continue;
+					break;
 				}
 				if (j != MAXUNLOCKABLES)
 					check_on = j;
@@ -4849,14 +4887,25 @@ static void M_HandleChecklist(INT32 choice)
 
 		case KEY_UPARROW:
 			S_StartSound(NULL, sfx_menu1);
-			for (j = check_on-1; j > -1; j--)
+			if (check_on)
 			{
-				if (!(unlockables[j].name[0] == 0 //|| unlockables[j].nochecklist
-				|| !unlockables[j].conditionset || unlockables[j].conditionset > MAXCONDITIONSETS))
+				for (j = check_on-1; j > -1; j--)
+				{
+					if (!unlockables[j].name[0])
+						continue;
+					// if (unlockables[j].nochecklist)
+					//	continue;
+					if (!unlockables[j].conditionset)
+						continue;
+					if (unlockables[j].conditionset > MAXCONDITIONSETS)
+						continue;
+					if (j && unlockables[j].conditionset == unlockables[j-1].conditionset)
+						continue;
 					break;
+				}
+				if (j != -1)
+					check_on = j;
 			}
-			if (j != -1)
-				check_on = j;
 			return;
 
 		case KEY_ESCAPE:
@@ -4882,7 +4931,7 @@ static void M_DrawChecklist(void)
 	M_DrawMenuTitle();
 
 	if (check_on)
-		V_DrawString(10, y, V_YELLOWMAP, "\x1A");
+		V_DrawString(10, y-(skullAnimCounter/5), V_YELLOWMAP, "\x1A");
 
 	while (i < MAXUNLOCKABLES)
 	{
@@ -5141,7 +5190,7 @@ static void M_DrawChecklist(void)
 finishchecklist:
 	if ((checklist_cangodown = ((y - currentMenu->y) > (scrollareaheight*2)))) // haaaaaaacks.
 	{
-		V_DrawString(10, currentMenu->y+(scrollareaheight*2), V_YELLOWMAP, "\x1B");
+		V_DrawString(10, currentMenu->y+(scrollareaheight*2)+(skullAnimCounter/5), V_YELLOWMAP, "\x1B");
 	}
 }
 
@@ -6173,7 +6222,7 @@ static void M_DrawStatsMaps(int location)
 	boolean dotopname = true, dobottomarrow = (location < statsMax);
 
 	if (location)
-		V_DrawString(10, y, V_YELLOWMAP, "\x1A");
+		V_DrawString(10, y-(skullAnimCounter/5), V_YELLOWMAP, "\x1A");
 
 	while (statsMapList[++i] != -1)
 	{
@@ -6250,7 +6299,7 @@ static void M_DrawStatsMaps(int location)
 	}
 bottomarrow:
 	if (dobottomarrow)
-		V_DrawString(10, y-8, V_YELLOWMAP, "\x1B");
+		V_DrawString(10, y-8 + (skullAnimCounter/5), V_YELLOWMAP, "\x1B");
 }
 
 static void M_DrawLevelStats(void)
@@ -6419,6 +6468,13 @@ void M_DrawTimeAttackMenu(void)
 
 			// Should see nothing but strings
 			V_DrawString(BASEVIDWIDTH - x - soffset - V_StringWidth(cv->string, 0), y, V_YELLOWMAP, cv->string);
+			if (i == itemOn)
+			{
+				V_DrawCharacter(BASEVIDWIDTH - x - soffset - 10 - V_StringWidth(cv->string, 0) - (skullAnimCounter/5), y,
+					'\x1C' | V_YELLOWMAP, false);
+				V_DrawCharacter(BASEVIDWIDTH - x - soffset + 2 + (skullAnimCounter/5), y,
+					'\x1D' | V_YELLOWMAP, false);
+			}
 		}
 	}
 
@@ -6601,6 +6657,13 @@ void M_DrawNightsAttackMenu(void)
 
 			// Should see nothing but strings
 			V_DrawString(BASEVIDWIDTH - x - soffset - V_StringWidth(cv->string, 0), y, V_YELLOWMAP, cv->string);
+			if (i == itemOn)
+			{
+				V_DrawCharacter(BASEVIDWIDTH - x - soffset - 10 - V_StringWidth(cv->string, 0) - (skullAnimCounter/5), y,
+					'\x1C' | V_YELLOWMAP, false);
+				V_DrawCharacter(BASEVIDWIDTH - x - soffset + 2 + (skullAnimCounter/5), y,
+					'\x1D' | V_YELLOWMAP, false);
+			}
 		}
 	}
 
@@ -7471,10 +7534,10 @@ static void M_ServerOptions(INT32 choice)
 	{
 		OP_ServerOptionsMenu[ 1].status = IT_GRAYEDOUT; // Server name
 		OP_ServerOptionsMenu[ 2].status = IT_GRAYEDOUT; // Max players
-		OP_ServerOptionsMenu[ 3].status = IT_GRAYEDOUT; // Allow WAD downloading
+		OP_ServerOptionsMenu[ 3].status = IT_GRAYEDOUT; // Allow add-on downloading
 		OP_ServerOptionsMenu[ 4].status = IT_GRAYEDOUT; // Allow players to join
-		OP_ServerOptionsMenu[33].status = IT_GRAYEDOUT; // Master server
-		OP_ServerOptionsMenu[34].status = IT_GRAYEDOUT; // Attempts to resynchronise
+		OP_ServerOptionsMenu[34].status = IT_GRAYEDOUT; // Master server
+		OP_ServerOptionsMenu[35].status = IT_GRAYEDOUT; // Attempts to resynchronise
 	}
 	else
 	{
@@ -7482,11 +7545,10 @@ static void M_ServerOptions(INT32 choice)
 		OP_ServerOptionsMenu[ 2].status = IT_STRING | IT_CVAR;
 		OP_ServerOptionsMenu[ 3].status = IT_STRING | IT_CVAR;
 		OP_ServerOptionsMenu[ 4].status = IT_STRING | IT_CVAR;
-		if (netgame)
-			OP_ServerOptionsMenu[33].status = IT_GRAYEDOUT;
-		else
-			OP_ServerOptionsMenu[33].status = IT_STRING | IT_CVAR | IT_CV_STRING;
-		OP_ServerOptionsMenu[34].status = IT_STRING | IT_CVAR;
+		OP_ServerOptionsMenu[34].status = (netgame
+			? IT_GRAYEDOUT
+			: (IT_STRING | IT_CVAR | IT_CV_STRING));
+		OP_ServerOptionsMenu[35].status = IT_STRING | IT_CVAR;
 	}
 #endif
 
@@ -8137,9 +8199,9 @@ static void M_DrawControl(void)
 		                                  "PRESS ENTER TO CHANGE, BACKSPACE TO CLEAR"));
 
 	if (i)
-		V_DrawString(currentMenu->x - 16, y, V_YELLOWMAP, "\x1A"); // up arrow
+		V_DrawString(currentMenu->x - 16, y-(skullAnimCounter/5), V_YELLOWMAP, "\x1A"); // up arrow
 	if (max != currentMenu->numitems)
-		V_DrawString(currentMenu->x - 16, y+(SMALLLINEHEIGHT*(controlheight-1)), V_YELLOWMAP, "\x1B"); // down arrow
+		V_DrawString(currentMenu->x - 16, y+(SMALLLINEHEIGHT*(controlheight-1))+(skullAnimCounter/5), V_YELLOWMAP, "\x1B"); // down arrow
 
 	for (; i < max; i++)
 	{
@@ -8292,6 +8354,7 @@ void M_DrawSoundMenu(void)
 {
 	const char* onstring = "ON";
 	const char* offstring = "OFF";
+	INT32 lengthstring;
 	M_DrawGenericMenu();
 
 	V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x,
@@ -8308,6 +8371,20 @@ void M_DrawSoundMenu(void)
 		currentMenu->y+currentMenu->menuitems[4].alphaKey,
 		(nomidimusic ? V_REDMAP : V_YELLOWMAP),
 		((nomidimusic || music_disabled) ? offstring : onstring));
+
+	if (itemOn == 0)
+		lengthstring = ((nosound || sound_disabled) ? 3 : 2);
+	else if (itemOn == 2)
+		lengthstring = ((nodigimusic || digital_disabled) ? 3 : 2);
+	else if (itemOn == 4)
+		lengthstring = ((nomidimusic || music_disabled) ? 3 : 2);
+	else
+		return;
+
+	V_DrawCharacter(BASEVIDWIDTH - currentMenu->x - 10 - (lengthstring*8) - (skullAnimCounter/5), currentMenu->y+currentMenu->menuitems[itemOn].alphaKey,
+		'\x1C' | V_YELLOWMAP, false);
+	V_DrawCharacter(BASEVIDWIDTH - currentMenu->x + 2 + (skullAnimCounter/5), currentMenu->y+currentMenu->menuitems[itemOn].alphaKey,
+		'\x1D' | V_YELLOWMAP, false);
 }
 
 // Toggles sound systems in-game.
@@ -8681,9 +8758,9 @@ static void M_DrawColorMenu(void)
 	}
 
 	if (i)
-		V_DrawString(currentMenu->x - 20, currentMenu->y, V_YELLOWMAP, "\x1A"); // up arrow
+		V_DrawString(currentMenu->x - 20, currentMenu->y - (skullAnimCounter/5), V_YELLOWMAP, "\x1A"); // up arrow
 	if (max != currentMenu->numitems)
-		V_DrawString(currentMenu->x - 20, currentMenu->y + 2*scrollareaheight, V_YELLOWMAP, "\x1B"); // down arrow
+		V_DrawString(currentMenu->x - 20, currentMenu->y + 2*scrollareaheight + (skullAnimCounter/5), V_YELLOWMAP, "\x1B"); // down arrow
 
 	// draw title (or big pic)
 	M_DrawMenuTitle();
@@ -8721,7 +8798,7 @@ static void M_DrawColorMenu(void)
 						switch (currentMenu->menuitems[i].status & IT_CVARTYPE)
 						{
 							case IT_CV_SLIDER:
-								M_DrawSlider(x, y, cv);
+								M_DrawSlider(x, y, cv, (i == itemOn));
 							case IT_CV_NOPRINT: // color use this
 							case IT_CV_INVISSLIDER: // monitor toggles use this
 								break;
@@ -8738,6 +8815,13 @@ static void M_DrawColorMenu(void)
 							default:
 								V_DrawRightAlignedString(BASEVIDWIDTH - x, y,
 									((cv->flags & CV_CHEAT) && !CV_IsSetToDefault(cv) ? V_REDMAP : V_YELLOWMAP), cv->string);
+								if (i == itemOn)
+								{
+									V_DrawCharacter(BASEVIDWIDTH - x - 10 - V_StringWidth(cv->string, 0) - (skullAnimCounter/5), y,
+											'\x1C' | V_YELLOWMAP, false);
+									V_DrawCharacter(BASEVIDWIDTH - x + 2 + (skullAnimCounter/5), y,
+											'\x1D' | V_YELLOWMAP, false);
+								}
 								break;
 						}
 						break;
@@ -8880,7 +8964,7 @@ static void M_DrawMonitorToggles(void)
 			continue;
 		y = currentMenu->y + currentMenu->menuitems[i].alphaKey;
 
-		M_DrawSlider(currentMenu->x + 20, y, cv);
+		M_DrawSlider(currentMenu->x + 20, y, cv, (i == itemOn));
 
 		if (!cv->value)
 			V_DrawRightAlignedString(312, y, V_OLDSPACING|((i == itemOn) ? V_YELLOWMAP : 0), "None");

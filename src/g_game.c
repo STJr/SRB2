@@ -2533,7 +2533,9 @@ void G_DoReborn(INT32 playernum)
 	else if (gametype == GT_COOP && (netgame || multiplayer))
 	{
 		INT32 i;
-		if (player->lives <= 0) // consider game over first
+		if (cv_cooplives.value == 0)
+			;
+		else if (player->lives <= 0) // consider game over first
 		{
 			INT32 deadtimercheck = INT32_MAX;
 			for (i = 0; i < MAXPLAYERS; i++)
@@ -2647,7 +2649,7 @@ void G_DoReborn(INT32 playernum)
 		// Not resetting map, so return to level music
 		if (!countdown2
 		&& player->lives <= 0
-		&& !cv_cooplives.value) // not allowed for life steal because no way to come back from zero group lives without addons, which should call this anyways
+		&& cv_cooplives.value == 1) // not allowed for life steal because no way to come back from zero group lives without addons, which should call this anyways
 			P_RestoreMultiMusic(player);
 
 		// first dissasociate the corpse

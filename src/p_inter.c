@@ -2246,7 +2246,9 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 		target->flags |= MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY;
 		P_SetThingPosition(target);
 
-		if (!target->player->bot && !target->player->spectator && !G_IsSpecialStage(gamemap)
+		if ((target->player->lives <= 1) && (netgame || multiplayer) && (gametype == GT_COOP) && (cv_cooplives.value == 0))
+			;
+		else if (!target->player->bot && !target->player->spectator && !G_IsSpecialStage(gamemap)
 		 && G_GametypeUsesLives())
 		{
 			target->player->lives -= 1; // Lose a life Tails 03-11-2000
@@ -2254,7 +2256,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			if (target->player->lives <= 0) // Tails 03-14-2000
 			{
 				boolean gameovermus = false;
-				if ((netgame || multiplayer) && (gametype == GT_COOP) && cv_cooplives.value)
+				if ((netgame || multiplayer) && (gametype == GT_COOP) && (cv_cooplives.value != 1))
 				{
 					INT32 i;
 					for (i = 0; i < MAXPLAYERS; i++)

@@ -187,7 +187,6 @@ static CV_PossibleValue_t joyport_cons_t[] = {{1, "/dev/js0"}, {2, "/dev/js1"}, 
 #define usejoystick_cons_t NULL
 #endif
 
-static CV_PossibleValue_t autobalance_cons_t[] = {{0, "MIN"}, {4, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t teamscramble_cons_t[] = {{0, "Off"}, {1, "Random"}, {2, "Points"}, {0, NULL}};
 
 static CV_PossibleValue_t startingliveslimit_cons_t[] = {{1, "MIN"}, {99, "MAX"}, {0, NULL}};
@@ -305,7 +304,7 @@ consvar_t cv_countdowntime = {"countdowntime", "60", CV_NETVAR|CV_CHEAT, minitim
 consvar_t cv_touchtag = {"touchtag", "Off", CV_NETVAR, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_hidetime = {"hidetime", "30", CV_NETVAR|CV_CALL, minitimelimit_cons_t, Hidetime_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
-consvar_t cv_autobalance = {"autobalance", "0", CV_NETVAR|CV_CALL, autobalance_cons_t, AutoBalance_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_autobalance = {"autobalance", "Off", CV_NETVAR|CV_CALL, CV_OnOff, AutoBalance_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_teamscramble = {"teamscramble", "Off", CV_NETVAR|CV_CALL|CV_NOINIT, teamscramble_cons_t, TeamScramble_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_scrambleonchange = {"scrambleonchange", "Off", CV_NETVAR, teamscramble_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
@@ -355,8 +354,8 @@ consvar_t cv_inttime = {"inttime", "10", CV_NETVAR, inttime_cons_t, NULL, 0, NUL
 static CV_PossibleValue_t coopstarposts_cons_t[] = {{0, "Individual"}, {1, "Sharing"}, {2, "Together"}, {0, NULL}};
 consvar_t cv_coopstarposts = {"coopstarposts", "Together", CV_NETVAR|CV_CALL|CV_CHEAT, coopstarposts_cons_t, CoopStarposts_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
-static CV_PossibleValue_t cooplives_cons_t[] = {{0, "Individual"}, {1, "Stealing"}, {2, "Sharing"}, {0, NULL}};
-consvar_t cv_cooplives = {"cooplives", "Stealing", CV_NETVAR|CV_CALL, cooplives_cons_t, CoopLives_OnChange, 0, NULL, NULL, 0, 0, NULL};
+static CV_PossibleValue_t cooplives_cons_t[] = {{0, "Infinite"}, {1, "Individual"}, {2, "Stealing"}, {3, "Sharing"}, {0, NULL}};
+consvar_t cv_cooplives = {"cooplives", "Stealing", CV_NETVAR|CV_CALL|CV_CHEAT, cooplives_cons_t, CoopLives_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 static CV_PossibleValue_t advancemap_cons_t[] = {{0, "Off"}, {1, "Next"}, {2, "Random"}, {0, NULL}};
 consvar_t cv_advancemap = {"advancemap", "Next", CV_NETVAR, advancemap_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -3481,7 +3480,7 @@ static void CoopStarposts_OnChange(void)
 		if (!players[i].spectator)
 			continue;
 
-		if (players[i].lives <= 0 && !cv_cooplives.value)
+		if (players[i].lives <= 0 && (cv_cooplives.value == 1))
 			continue;
 
 		P_SpectatorJoinGame(&players[i]);
@@ -3498,12 +3497,15 @@ static void CoopLives_OnChange(void)
 	switch (cv_cooplives.value)
 	{
 		case 0:
-			CONS_Printf(M_GetText("Lives are now per-player.\n"));
+			CONS_Printf(M_GetText("Players can now respawn indefinitely.\n"));
 			return;
 		case 1:
+			CONS_Printf(M_GetText("Lives are now per-player.\n"));
+			return;
+		case 2:
 			CONS_Printf(M_GetText("Players can now steal lives to avoid game over.\n"));
 			break;
-		case 2:
+		case 3:
 			CONS_Printf(M_GetText("Lives are now shared between players.\n"));
 			break;
 	}
@@ -3816,7 +3818,7 @@ retryscramble:
 			{
 				if (red == maxcomposition)
 					newteam = 2;
-				else if (blue == maxcomposition)
+				else //if (blue == maxcomposition)
 					newteam = 1;
 
 				repick = false;
@@ -3857,14 +3859,11 @@ retryscramble:
 				newteam = (INT16)((M_RandomByte() % 2) + 1);
 				repick = false;
 			}
-			else
+			else if (i != 2) // Mystic's secret sauce - ABBA is better than ABAB, so team B doesn't get worse players all around
 			{
 				// We will only randomly pick the team for the first guy.
 				// Otherwise, just alternate back and forth, distributing players.
-				if (newteam == 1)
-					newteam = 2;
-				else
-					newteam = 1;
+				newteam = 3 - newteam;
 			}
 
 			scrambleteams[i] = newteam;

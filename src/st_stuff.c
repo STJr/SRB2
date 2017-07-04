@@ -734,7 +734,10 @@ static void ST_drawLives(void)
 	{
 		switch (cv_cooplives.value)
 		{
-			case 2:
+			case 0:
+				V_DrawCharacter(hudinfo[HUD_LIVESNUM].x - 8, hudinfo[HUD_LIVESNUM].y + (v_splitflag ? -4 : 0), '\x16' | 0x80 | V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS|v_splitflag, false);
+				return;
+			case 3:
 				{
 					INT32 i, sum = 0;
 					for (i = 0; i < MAXPLAYERS; i++)
@@ -752,7 +755,7 @@ static void ST_drawLives(void)
 						va("%d",(sum)));
 					return;
 				}
-			case 1:
+			case 2:
 				{
 					INT32 i, sum = 0;
 					for (i = 0; i < MAXPLAYERS; i++)
@@ -1866,7 +1869,11 @@ static void ST_overlayDrawer(void)
 	}
 
 	// GAME OVER pic
-	if (G_GametypeUsesLives() && stplyr->lives <= 0 && !(hu_showscores && (netgame || multiplayer)))
+	if ((gametype == GT_COOP)
+		&& (netgame || multiplayer)
+		&& (cv_cooplives.value == 0))
+	;
+	else if (G_GametypeUsesLives() && stplyr->lives <= 0 && !(hu_showscores && (netgame || multiplayer)))
 	{
 		patch_t *p;
 
@@ -1875,8 +1882,9 @@ static void ST_overlayDrawer(void)
 		else
 			p = sboover;
 
-		if (cv_cooplives.value
-		&& gametype == GT_COOP)
+		if ((gametype == GT_COOP)
+		&& (netgame || multiplayer)
+		&& (cv_cooplives.value != 1))
 		{
 			INT32 i;
 			for (i = 0; i < MAXPLAYERS; i++)
