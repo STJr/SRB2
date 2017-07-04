@@ -9419,7 +9419,7 @@ void P_PlayerThink(player_t *player)
 	{
 		if (cv_playersforexit.value) // Count to be sure everyone's exited
 		{
-			INT32 i;
+			INT32 i, total = 0, exiting = 0;
 
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
@@ -9428,11 +9428,12 @@ void P_PlayerThink(player_t *player)
 				if (players[i].lives <= 0)
 					continue;
 
+				total++;
 				if (!players[i].exiting || players[i].exiting > 3)
-					break;
+					exiting++;
 			}
 
-			if (i == MAXPLAYERS)
+			if (((4*exiting)/total) >= cv_playersforexit.value)
 			{
 				if (server)
 					SendNetXCmd(XD_EXITLEVEL, NULL, 0);
