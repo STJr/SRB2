@@ -9429,7 +9429,7 @@ void P_PlayerThink(player_t *player)
 					continue;
 
 				total++;
-				if (!players[i].exiting || players[i].exiting > 3)
+				if (players[i].exiting && players[i].exiting < 4)
 					exiting++;
 			}
 
