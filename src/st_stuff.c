@@ -742,6 +742,7 @@ static void ST_drawLives(void)
 			case 3:
 				{
 					INT32 i, sum = 0;
+					boolean canrespawn = (stplyr->lives > 0);
 					for (i = 0; i < MAXPLAYERS; i++)
 					{
 						if (!playeringame[i])
@@ -750,11 +751,14 @@ static void ST_drawLives(void)
 						if (players[i].lives < 1)
 							continue;
 
+						if (players[i].lives > 1)
+							canrespawn = true;
+
 						sum += (players[i].lives);
 					}
 					V_DrawRightAlignedString(hudinfo[HUD_LIVESNUM].x, hudinfo[HUD_LIVESNUM].y + (v_splitflag ? -4 : 0),
-						V_SNAPTOLEFT|V_SNAPTOBOTTOM|((stplyr->lives > 0) ? V_HUDTRANS : V_HUDTRANSHALF)|v_splitflag,
-						va("%d",(sum)));
+						V_SNAPTOLEFT|V_SNAPTOBOTTOM|(canrespawn ? V_HUDTRANS : V_HUDTRANSHALF)|v_splitflag,
+						va("%d",sum));
 					return;
 				}
 			case 2:
@@ -1993,7 +1997,37 @@ static void ST_overlayDrawer(void)
 
 	if (!hu_showscores && (netgame || multiplayer) && displayplayer == consoleplayer)
 	{
-		if (!splitscreen && ((stplyr->exiting && (gametype != GT_COOP || cv_playersforexit.value)) || (gametype != GT_COOP && G_GametypeUsesLives() && stplyr->lives <= 0)) && countdown != 1)
+		if (stplyr->exiting && cv_playersforexit.value && gametype == GT_COOP)
+		{
+			INT32 i, total = 0, exiting = 0;
+
+			for (i = 0; i < MAXPLAYERS; i++)
+			{
+				if (!playeringame[i] || players[i].spectator)
+					continue;
+				if (players[i].lives <= 0)
+					continue;
+
+				total++;
+				if (players[i].exiting)
+					exiting++;
+			}
+
+			total *= cv_playersforexit.value;
+			if (total % 4) total += 4; // round up
+			total /= 4;
+
+			if (exiting >= total)
+				;
+			else
+			{
+				total -= exiting;
+				V_DrawCenteredString(BASEVIDWIDTH/2, STRINGY(124), 0, va(M_GetText("%d more player%s required to exit."), total, ((total == 1) ? "" : "s")));
+				if (!splitscreen)
+					V_DrawCenteredString(BASEVIDWIDTH/2, 132, 0, M_GetText("Press F12 to watch another player."));
+			}
+		}
+		else if (!splitscreen && gametype != GT_COOP && (stplyr->exiting || (G_GametypeUsesLives() && stplyr->lives <= 0 && countdown != 1)))
 			V_DrawCenteredString(BASEVIDWIDTH/2, 132, 0, M_GetText("Press F12 to watch another player."));
 		else if (gametype == GT_HIDEANDSEEK &&
 		 (!stplyr->spectator && !(stplyr->pflags & PF_TAGIT)) && (leveltime > hidetime * TICRATE))

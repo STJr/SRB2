@@ -360,7 +360,7 @@ consvar_t cv_cooplives = {"cooplives", "Avoid Game Over", CV_NETVAR|CV_CALL|CV_C
 static CV_PossibleValue_t advancemap_cons_t[] = {{0, "Off"}, {1, "Next"}, {2, "Random"}, {0, NULL}};
 consvar_t cv_advancemap = {"advancemap", "Next", CV_NETVAR, advancemap_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 static CV_PossibleValue_t playersforexit_cons_t[] = {{0, "One"}, {1, "1/4"}, {2, "Half"}, {3, "3/4"}, {4, "All"}, {0, NULL}};
-consvar_t cv_playersforexit = {"playersforexit", "One", CV_NETVAR, playersforexit_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_playersforexit = {"playersforexit", "All", CV_NETVAR, playersforexit_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 consvar_t cv_runscripts = {"runscripts", "Yes", 0, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
 
