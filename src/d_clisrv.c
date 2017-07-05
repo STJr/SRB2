@@ -2587,6 +2587,9 @@ static void Command_Kick(void)
 	XBOXSTATIC UINT8 buf[3 + MAX_REASONLENGTH];
 	UINT8 *p = buf;
 
+	if (!netgame) // Don't kick Tails in splitscreen!
+		return;
+
 	if (COM_Argc() == 1)
 	{
 		CONS_Printf(M_GetText("kick <playername/playernum> <reason>: kick a player\n"));
@@ -2596,9 +2599,10 @@ static void Command_Kick(void)
 	if (server || adminplayer == consoleplayer)
 	{
 		const SINT8 pn = nametonum(COM_Argv(1));
-		WRITESINT8(p, pn);
+
 		if (pn == -1 || pn == 0)
 			return;
+
 		// Special case if we are trying to kick a player who is downloading the game state:
 		// trigger a timeout instead of kicking them, because a kick would only
 		// take effect after they have finished downloading
@@ -2607,6 +2611,9 @@ static void Command_Kick(void)
 			Net_ConnectionTimeout(playernode[pn]);
 			return;
 		}
+
+		WRITESINT8(p, pn);
+
 		if (COM_Argc() == 2)
 		{
 			WRITEUINT8(p, KICK_MSG_GO_AWAY);
