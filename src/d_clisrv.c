@@ -2525,6 +2525,9 @@ static void Command_Nodes(void)
 
 static void Command_Ban(void)
 {
+	if (!netgame) // Don't kick Tails in splitscreen!
+		return;
+
 	if (COM_Argc() == 1)
 	{
 		CONS_Printf(M_GetText("Ban <playername/playernum> <reason>: ban and kick a player\n"));
@@ -2540,8 +2543,9 @@ static void Command_Ban(void)
 
 		if (pn == -1 || pn == 0)
 			return;
-		else
-			WRITEUINT8(p, pn);
+
+		WRITEUINT8(p, pn);
+
 		if (server && I_Ban && !I_Ban(node)) // only the server is allowed to do this right now
 		{
 			CONS_Alert(CONS_WARNING, M_GetText("Too many bans! Geez, that's a lot of people you're excluding...\n"));
