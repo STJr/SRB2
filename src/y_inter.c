@@ -230,7 +230,7 @@ void Y_IntermissionDrawer(void)
 			INT32 seconds, minutes, tictrn;
 
 			seconds = G_TicsToSeconds(data.coop.tics);
-			minutes = G_TicsToMinutes(data.coop.tics, false);
+			minutes = G_TicsToMinutes(data.coop.tics, true);
 			tictrn  = G_TicsToCentiseconds(data.coop.tics);
 
 			ST_DrawNumFromHud(HUD_MINUTES, minutes); // Minutes
