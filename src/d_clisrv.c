@@ -2525,12 +2525,15 @@ static void Command_Nodes(void)
 
 static void Command_Ban(void)
 {
-	if (!netgame) // Don't kick Tails in splitscreen!
-		return;
-
-	if (COM_Argc() == 1)
+	if (COM_Argc() < 2)
 	{
 		CONS_Printf(M_GetText("Ban <playername/playernum> <reason>: ban and kick a player\n"));
+		return;
+	}
+
+	if (!netgame) // Don't kick Tails in splitscreen!
+	{
+		CONS_Printf(M_GetText("This only works in a netgame.\n"));
 		return;
 	}
 
@@ -2588,20 +2591,22 @@ static void Command_Ban(void)
 
 static void Command_Kick(void)
 {
-	XBOXSTATIC UINT8 buf[3 + MAX_REASONLENGTH];
-	UINT8 *p = buf;
-
-	if (!netgame) // Don't kick Tails in splitscreen!
-		return;
-
-	if (COM_Argc() == 1)
+	if (COM_Argc() < 2)
 	{
 		CONS_Printf(M_GetText("kick <playername/playernum> <reason>: kick a player\n"));
 		return;
 	}
 
+	if (!netgame) // Don't kick Tails in splitscreen!
+	{
+		CONS_Printf(M_GetText("This only works in a netgame.\n"));
+		return;
+	}
+
 	if (server || adminplayer == consoleplayer)
 	{
+		XBOXSTATIC UINT8 buf[3 + MAX_REASONLENGTH];
+		UINT8 *p = buf;
 		const SINT8 pn = nametonum(COM_Argv(1));
 
 		if (pn == -1 || pn == 0)
