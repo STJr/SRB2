@@ -2708,7 +2708,7 @@ void G_AddPlayer(INT32 playernum)
 
 	p->height = mobjinfo[MT_PLAYER].height;
 
-	if (G_GametypeUsesLives())
+	if (G_GametypeUsesLives() || ((netgame || multiplayer) && gametype == GT_COOP))
 		p->lives = cv_startinglives.value;
 
 	if (countplayers && !notexiting)
@@ -3710,7 +3710,7 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 
 			if (netgame || multiplayer)
 			{
-				if (!FLS || (players[i].lives < cv_startinglives.value))
+				if (!FLS || (players[i].lives < 1))
 					players[i].lives = cv_startinglives.value;
 				players[i].continues = 0;
 			}

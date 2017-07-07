@@ -5629,7 +5629,10 @@ void A_MixUp(mobj_t *actor)
 		}
 
 	if (numplayers <= 1) // Not enough players to mix up.
+	{
+		S_StartSound(actor, sfx_lose);
 		return;
+	}
 	else if (numplayers == 2) // Special case -- simple swap
 	{
 		fixed_t x, y, z;
@@ -5875,7 +5878,10 @@ void A_RecyclePowers(mobj_t *actor)
 #endif
 
 	if (!multiplayer)
+	{
+		S_StartSound(actor, sfx_lose);
 		return;
+	}
 
 	numplayers = 0;
 
@@ -5911,7 +5917,10 @@ void A_RecyclePowers(mobj_t *actor)
 	}
 
 	if (numplayers <= 1)
+	{
+		S_StartSound(actor, sfx_lose);
 		return; //nobody to touch!
+	}
 
 	//shuffle the post scramble list, whee!
 	// hardcoded 0-1 to 1-0 for two players

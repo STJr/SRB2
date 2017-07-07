@@ -1150,7 +1150,9 @@ void P_PlayLivesJingle(player_t *player)
 	if (player && !P_IsLocalPlayer(player))
 		return;
 
-	if (use1upSound)
+	if (gametype == GT_COOP && (netgame || multiplayer) && cv_cooplives.value == 0)
+		S_StartSound(NULL, sfx_lose);
+	else if (use1upSound)
 		S_StartSound(NULL, sfx_oneup);
 	else if (mariomode)
 		S_StartSound(NULL, sfx_marioa);
@@ -2335,7 +2337,7 @@ static void P_DoBubbleBreath(player_t *player)
 
 	if (player->charflags & SF_MACHINE)
 	{
-		if (P_RandomChance((128-(player->powers[pw_underwater]/4))*FRACUNIT/256))
+		if (player->powers[pw_underwater] && P_RandomChance((128-(player->powers[pw_underwater]/4))*FRACUNIT/256))
 		{
 			fixed_t r = player->mo->radius>>FRACBITS;
 			x += (P_RandomRange(r, -r)<<FRACBITS);

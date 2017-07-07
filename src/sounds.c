@@ -346,7 +346,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3k78",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Magnet"},
   {"s3k79",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Electric charge"},
   {"s3k7a",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Rising from lava"},
-  {"s3k7b",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Organic bounce"},
+  {"s3k7b",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Soft bounce"},
   {"s3k7c",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Magnet"},
   {"s3k7d",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
   {"s3k7e",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Eating dirt"},

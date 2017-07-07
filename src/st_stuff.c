@@ -1356,7 +1356,7 @@ static void ST_drawNiGHTSHUD(void)
 			realnightstime = lowest_time/TICRATE;
 		}
 
-		if (stplyr->powers[pw_flashing] > TICRATE ) // was hit
+		if (stplyr->powers[pw_flashing] > TICRATE) // was hit
 		{
 			UINT16 flashingLeft = stplyr->powers[pw_flashing]-(TICRATE);
 			if (flashingLeft < TICRATE/2) // Start fading out
@@ -1995,7 +1995,7 @@ static void ST_overlayDrawer(void)
 	)
 		ST_drawLevelTitle();
 
-	if (!hu_showscores && (netgame || multiplayer) && displayplayer == consoleplayer)
+	if (!hu_showscores && (netgame || multiplayer) && displayplayer == consoleplayer && (!stplyr->spectator || gametype == GT_COOP))
 	{
 		if (stplyr->exiting && cv_playersforexit.value && gametype == GT_COOP)
 		{
