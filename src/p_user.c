@@ -5207,15 +5207,15 @@ static void P_SpectatorMovement(player_t *player)
 	if (!(cmd->angleturn & TICCMD_RECEIVED))
 		ticmiss++;
 
-	if (player->mo->z > player->mo->ceilingz - player->mo->height)
-		player->mo->z = player->mo->ceilingz - player->mo->height;
-	if (player->mo->z < player->mo->floorz)
-		player->mo->z = player->mo->floorz;
-
 	if (cmd->buttons & BT_JUMP)
 		player->mo->z += FRACUNIT*16;
 	else if (cmd->buttons & BT_USE)
 		player->mo->z -= FRACUNIT*16;
+
+	if (player->mo->z > player->mo->ceilingz - player->mo->height)
+		player->mo->z = player->mo->ceilingz - player->mo->height;
+	if (player->mo->z < player->mo->floorz)
+		player->mo->z = player->mo->floorz;
 
 	// Aiming needed for SEENAMES, etc.
 	// We may not need to fire as a spectator, but this is still handy!
@@ -6752,6 +6752,7 @@ static void P_MovePlayer(player_t *player)
 
 	if (player->spectator)
 	{
+		player->mo->eflags &= ~MFE_VERTICALFLIP; // deflip...
 		P_SpectatorMovement(player);
 		return;
 	}
