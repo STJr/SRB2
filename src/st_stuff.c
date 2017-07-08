@@ -2013,9 +2013,12 @@ static void ST_overlayDrawer(void)
 					exiting++;
 			}
 
-			total *= cv_playersforexit.value;
-			if (total % 4) total += 4; // round up
-			total /= 4;
+			if (cv_playersforexit.value != 4)
+			{
+				total *= cv_playersforexit.value;
+				if (total % 4) total += 4; // round up
+				total /= 4;
+			}
 
 			if (exiting >= total)
 				;

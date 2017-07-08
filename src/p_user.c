@@ -9435,7 +9435,7 @@ void P_PlayerThink(player_t *player)
 					exiting++;
 			}
 
-			if (((4*exiting)/total) >= cv_playersforexit.value)
+			if (!total || ((4*exiting)/total) >= cv_playersforexit.value)
 			{
 				if (server)
 					SendNetXCmd(XD_EXITLEVEL, NULL, 0);
