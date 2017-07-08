@@ -299,7 +299,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3k49",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Falling rock"},
   {"s3k4a",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Grab"},
   {"s3k4b",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Water splash"},
-  {"s3k4c",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Heavy landing"},
+  {"s3k4c",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Heavy hit"},
   {"s3k4d",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Firing bullet"},
   {"s3k4e",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Bomb explosion"},
   {"s3k4f",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Flamethrower"},

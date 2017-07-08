@@ -9505,7 +9505,7 @@ void A_Repeat(mobj_t *actor)
 		return;
 #endif
 
-	if ((!(actor->extravalue2)) || actor->extravalue2 > locvar1)
+	if (locvar1 && (!actor->extravalue2 || actor->extravalue2 > locvar1))
 		actor->extravalue2 = locvar1;
 
 	if (--actor->extravalue2 > 0)
@@ -10893,8 +10893,6 @@ void A_Boss5Jump(mobj_t *actor)
  
 	// Okay, complicated math done. Let's make this object jump already.
 	A_FaceTracer(actor);
-	if (actor->info->activesound)
-		S_StartSound(actor, actor->info->activesound);
 
 	if (actor->eflags & MFE_VERTICALFLIP)
 		actor->z--;
