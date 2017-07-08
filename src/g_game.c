@@ -2533,42 +2533,44 @@ void G_DoReborn(INT32 playernum)
 		resetlevel = true;
 	else if (gametype == GT_COOP && (netgame || multiplayer))
 	{
-		if (cv_cooplives.value == 0)
-			;
-		else if (player->lives <= 0) // consider game over first
+		boolean notgameover = true;
+
+		if (cv_cooplives.value != 0 && player->lives <= 0) // consider game over first
 		{
-			INT32 deadtimercheck = INT32_MAX;
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
 				if (!playeringame[i])
 					continue;
 				if (players[i].exiting || players[i].lives > 0)
 					break;
-				if (players[i].playerstate == PST_DEAD && players[i].deadtimer < deadtimercheck)
-					deadtimercheck = players[i].deadtimer;
 			}
 
-			if (!countdown2 && i == MAXPLAYERS && deadtimercheck >= 8*TICRATE)
+			if (i == MAXPLAYERS)
 			{
-				// They're dead, Jim.
-				//nextmapoverride = spstage_start;
-				nextmapoverride = gamemap;
-				countdown2 = TICRATE;
-				skipstats = true;
-
-				for (i = 0; i < MAXPLAYERS; i++)
+				notgameover = false;
+				if (!countdown2)
 				{
-					if (playeringame[i])
-						players[i].score = 0;
-				}
+					// They're dead, Jim.
+					//nextmapoverride = spstage_start;
+					nextmapoverride = gamemap;
+					countdown2 = TICRATE;
+					skipstats = true;
 
-				//emeralds = 0;
-				tokenbits = 0;
-				tokenlist = 0;
-				token = 0;
+					for (i = 0; i < MAXPLAYERS; i++)
+					{
+						if (playeringame[i])
+							players[i].score = 0;
+					}
+
+					//emeralds = 0;
+					tokenbits = 0;
+					tokenlist = 0;
+					token = 0;
+				}
 			}
 		}
-		if (cv_coopstarposts.value == 2)
+
+		if (notgameover && cv_coopstarposts.value == 2)
 		{
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
