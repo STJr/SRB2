@@ -154,7 +154,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"gravch", false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Recycler"},
   {"itemup",  true, 255,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Sparkle"},
   {"jet",    false,   8,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Jet engine"},
-  {"jshard",  true, 167,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Got shard"},
+  {"jshard",  true, 167,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Life transfer"}, // placeholder repurpose; original string was "Got Shard"
   {"lose" ,  false, 127,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Failure"},
   {"lvpass", false,  96,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Spinning signpost"},
   {"mindig", false,   8, 64, -1, NULL, 0,        -1,  -1, LUMPERROR, "Tunnelling"},

@@ -8179,7 +8179,7 @@ boolean P_GetLives(player_t *player)
 	}
 	if (maxlivesplayer != -1 && &players[maxlivesplayer] != player)
 	{
-		if (cv_cooplives.value == 2 && P_IsLocalPlayer(&players[maxlivesplayer]))
+		if (cv_cooplives.value == 2 && (P_IsLocalPlayer(player) || P_IsLocalPlayer(&players[maxlivesplayer])))
 			S_StartSound(NULL, sfx_jshard); // placeholder
 		players[maxlivesplayer].lives--;
 		player->lives++;
