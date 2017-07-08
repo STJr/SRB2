@@ -9546,9 +9546,9 @@ void P_SpawnMapThing(mapthing_t *mthing)
 		if (gametype == GT_COMPETITION || gametype == GT_RACE)
 		{
 			// Set powerup boxes to user settings for competition.
-			if (cv_competitionboxes.value == 1) // Random
+			if (cv_competitionboxes.value == 1) // Mystery
 				i = MT_MYSTERY_BOX;
-			else if (cv_competitionboxes.value == 2) // Teleports
+			else if (cv_competitionboxes.value == 2) // Teleport
 				i = MT_MIXUP_BOX;
 			else if (cv_competitionboxes.value == 3) // None
 				return; // Don't spawn!
@@ -9557,12 +9557,12 @@ void P_SpawnMapThing(mapthing_t *mthing)
 		// Set powerup boxes to user settings for other netplay modes
 		else if (gametype != GT_COOP)
 		{
-			if (cv_matchboxes.value == 1) // Random
+			if (cv_matchboxes.value == 1) // Mystery
 				i = MT_MYSTERY_BOX;
-			else if (cv_matchboxes.value == 2) // Non-Random
+			else if (cv_matchboxes.value == 2) // Unchanging
 			{
 				if (i == MT_MYSTERY_BOX)
-					return; // don't spawn in Non-Random
+					return; // don't spawn
 				mthing->options &= ~(MTF_AMBUSH|MTF_OBJECTSPECIAL); // no random respawning!
 			}
 			else if (cv_matchboxes.value == 3) // Don't spawn

@@ -1374,7 +1374,7 @@ static menuitem_t OP_ServerOptionsMenu[] =
 	{IT_STRING | IT_CVAR | IT_CV_STRING,
 	                         NULL, "Server name",                      &cv_servername,          7},
 	{IT_STRING | IT_CVAR,    NULL, "Max Players",                      &cv_maxplayers,          21},
-	{IT_STRING | IT_CVAR,    NULL, "Allow Add-on Downloading",          &cv_downloading,         26},
+	{IT_STRING | IT_CVAR,    NULL, "Allow Add-on Downloading",         &cv_downloading,         26},
 	{IT_STRING | IT_CVAR,    NULL, "Allow players to join",            &cv_allownewplayer,      31},
 #endif
 	{IT_STRING | IT_CVAR,    NULL, "Map progression",                  &cv_advancemap,          36},
@@ -1386,7 +1386,7 @@ static menuitem_t OP_ServerOptionsMenu[] =
 
 	{IT_HEADER, NULL, "Items", NULL, 70},
 	{IT_STRING | IT_CVAR,    NULL, "Item respawn delay",               &cv_itemrespawntime,     76},
-	{IT_STRING | IT_SUBMENU, NULL, "Unknown Item Monitor Toggles...",  &OP_MonitorToggleDef,    81},
+	{IT_STRING | IT_SUBMENU, NULL, "Mystery Item Monitor Toggles...",  &OP_MonitorToggleDef,    81},
 
 	{IT_HEADER, NULL, "Cooperative", NULL, 90},
 	{IT_STRING | IT_CVAR,    NULL, "Players required for exit",        &cv_playersforexit,      96},

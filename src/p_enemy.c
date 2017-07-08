@@ -841,6 +841,34 @@ static mobjtype_t P_DoRandomBoxChances(void)
 	mobjtype_t spawnchance[256];
 	INT32 numchoices = 0, i = 0;
 
+	if (!(netgame || multiplayer))
+	{
+		switch (P_RandomKey(10))
+		{
+			case 0:
+				return MT_RING_ICON;
+			case 1:
+				return MT_SNEAKERS_ICON;
+			case 2:
+				return MT_INVULN_ICON;
+			case 3:
+				return MT_WHIRLWIND_ICON;
+			case 4:
+				return MT_ELEMENTAL_ICON;
+			case 5:
+				return MT_ATTRACT_ICON;
+			case 6:
+				return MT_FORCE_ICON;
+			case 7:
+				return MT_ARMAGEDDON_ICON;
+			case 8:
+				return MT_1UP_ICON;
+			case 9:
+				return MT_EGGMAN_ICON;
+		}
+		return MT_NULL;
+	}
+
 #define QUESTIONBOXCHANCES(type, cvar) \
 for (i = cvar.value; i; --i) spawnchance[numchoices++] = type
 	QUESTIONBOXCHANCES(MT_RING_ICON,       cv_superring);
