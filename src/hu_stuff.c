@@ -92,6 +92,7 @@ patch_t *emeraldpics[7];
 patch_t *tinyemeraldpics[7];
 static patch_t *emblemicon;
 patch_t *tokenicon;
+static patch_t *exiticon;
 
 //-------------------------------------------
 //              misc vars
@@ -245,6 +246,7 @@ void HU_LoadGraphics(void)
 
 	emblemicon = W_CachePatchName("EMBLICON", PU_HUDGFX);
 	tokenicon = W_CachePatchName("TOKNICON", PU_HUDGFX);
+	exiticon = W_CachePatchName("EXITICON", PU_HUDGFX);
 
 	emeraldpics[0] = W_CachePatchName("CHAOS1", PU_HUDGFX);
 	emeraldpics[1] = W_CachePatchName("CHAOS2", PU_HUDGFX);
@@ -1258,6 +1260,9 @@ void HU_DrawTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, I
 				V_DrawSmallScaledPatch(x-32, y-4, 0, tagico);
 		}
 
+		if (players[tab[i].num].exiting)
+			V_DrawSmallScaledPatch(x - SHORT(exiticon->width)/2 - 1, y-3, 0, exiticon);
+
 		if (gametype == GT_RACE)
 		{
 			if (circuitmap)
@@ -1387,6 +1392,9 @@ void HU_DrawDualTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scoreline
 			V_DrawRightAlignedString(x, y+4, V_ALLOWLOWERCASE, va("%dx", players[tab[i].num].lives));
 		else if (G_TagGametype() && players[tab[i].num].pflags & PF_TAGIT)
 			V_DrawSmallScaledPatch(x-28, y-4, 0, tagico);
+
+		if (players[tab[i].num].exiting)
+			V_DrawSmallScaledPatch(x - SHORT(exiticon->width)/2 - 1, y-3, 0, exiticon);
 
 		// Draw emeralds
 		if (!players[tab[i].num].powers[pw_super]
