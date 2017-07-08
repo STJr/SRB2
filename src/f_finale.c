@@ -434,7 +434,6 @@ void F_StartIntro(void)
 
 	G_SetGamestate(GS_INTRO);
 	gameaction = ga_nothing;
-	playerdeadview = false;
 	paused = false;
 	CON_ToggleOff();
 	CON_ClearHUD();
@@ -559,7 +558,7 @@ static void F_IntroDrawScene(void)
 				if (finalecount < 4)
 					S_StopMusic();
 				if (finalecount == 4)
-					S_ChangeMusicInternal("stjr", false);
+					S_ChangeMusicInternal("_stjr", false);
 				x = (BASEVIDWIDTH<<FRACBITS)/2 - FixedMul(334<<FRACBITS, aspect)/2;
 				y = (BASEVIDHEIGHT<<FRACBITS)/2 - FixedMul(358<<FRACBITS, aspect)/2;
 				V_DrawSciencePatch(x, y, 0, (patch = W_CachePatchName("WAHH1", PU_CACHE)), aspect);
@@ -771,7 +770,7 @@ void F_IntroDrawer(void)
 				F_RunWipe(99,true);
 			}
 
-			S_ChangeMusicInternal("read_m", false);
+			S_ChangeMusicInternal("_intro", false);
 		}
 		else if (intro_scenenum == 3)
 			roidtics = BASEVIDWIDTH - 64;
@@ -974,7 +973,7 @@ static const char *credits[] = {
 	"Scott \"Graue\" Feeney",
 	"Nathan \"Jazz\" Giroux",
 	"Thomas \"Shadow Hog\" Igoe",
-	"\"Monster\" Iestyn Jealous",
+	"Iestyn \"Monster Iestyn\" Jealous",
 	"Ronald \"Furyhunter\" Kinard", // The SDL2 port
 	"John \"JTE\" Muniz",
 	"Ehab \"Wolfy\" Saeed",
@@ -986,6 +985,7 @@ static const char *credits[] = {
 	"\"chi.miru\"", // Red's secret weapon, the REAL reason slopes exist (also helped port drawing code from ZDoom)
 	"Andrew \"orospakr\" Clunis",
 	"Gregor \"Oogaland\" Dick",
+	"Louis-Antoine \"LJSonic\" de Moulins", // for fixing 2.1's netcode (de Rochefort doesn't quite fit on the screen sorry lol)
 	"Vivian \"toaster\" Grannell",
 	"Julio \"Chaos Zero 64\" Guir",
 	"\"Kalaron\"", // Coded some of Sryder13's collection of OpenGL fixes, especially fog
@@ -1021,7 +1021,7 @@ static const char *credits[] = {
 	"Paul \"Boinciel\" Clempson",
 	"Cyan Helkaraxe",
 	"Kepa \"Nev3r\" Iceta",
-	"\"Monster\" Iestyn Jealous",
+	"Iestyn \"Monster Iestyn\" Jealous",
 	"Jarel \"Arrow\" Jones",
 	"Stefan \"Stuf\" Rimalia",
 	"Shane Mychal Sexton",
@@ -1124,13 +1124,12 @@ void F_StartCredits(void)
 	}
 
 	gameaction = ga_nothing;
-	playerdeadview = false;
 	paused = false;
 	CON_ToggleOff();
 	CON_ClearHUD();
 	S_StopMusic();
 
-	S_ChangeMusicInternal("credit", false);
+	S_ChangeMusicInternal("_creds", false);
 
 	finalecount = 0;
 	animtimer = 0;
@@ -1271,7 +1270,6 @@ void F_StartGameEvaluation(void)
 		G_SaveGame((UINT32)cursaveslot);
 
 	gameaction = ga_nothing;
-	playerdeadview = false;
 	paused = false;
 	CON_ToggleOff();
 	CON_ClearHUD();
@@ -1382,7 +1380,6 @@ void F_StartGameEnd(void)
 	G_SetGamestate(GS_GAMEEND);
 
 	gameaction = ga_nothing;
-	playerdeadview = false;
 	paused = false;
 	CON_ToggleOff();
 	CON_ClearHUD();
@@ -1427,7 +1424,7 @@ void F_StartTitleScreen(void)
 
 	// IWAD dependent stuff.
 
-	S_ChangeMusicInternal("titles", looptitle);
+	S_ChangeMusicInternal("_title", looptitle);
 
 	animtimer = 0;
 
@@ -1585,7 +1582,6 @@ void F_StartContinue(void)
 	gameaction = ga_nothing;
 
 	keypressed = false;
-	playerdeadview = false;
 	paused = false;
 	CON_ToggleOff();
 	CON_ClearHUD();
@@ -1593,7 +1589,7 @@ void F_StartContinue(void)
 	// In case menus are still up?!!
 	M_ClearMenus(true);
 
-	S_ChangeMusicInternal("contsc", false);
+	S_ChangeMusicInternal("_conti", false);
 	S_StopSounds();
 
 	timetonext = TICRATE*11;
@@ -1727,7 +1723,7 @@ static void F_AdvanceToNextScene(void)
 
 void F_EndCutScene(void)
 {
-	cutsceneover = true; // do this first, just in case Y_EndGame or something wants to turn it back false later
+	cutsceneover = true; // do this first, just in case G_EndGame or something wants to turn it back false later
 	if (runningprecutscene)
 	{
 		if (server)
@@ -1742,7 +1738,7 @@ void F_EndCutScene(void)
 		else if (nextmap < 1100-1)
 			G_NextLevel();
 		else
-			Y_EndGame();
+			G_EndGame();
 	}
 }
 
@@ -1754,7 +1750,6 @@ void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean reset
 	G_SetGamestate(GS_CUTSCENE);
 
 	gameaction = ga_nothing;
-	playerdeadview = false;
 	paused = false;
 	CON_ToggleOff();
 

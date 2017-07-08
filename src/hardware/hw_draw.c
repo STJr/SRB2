@@ -152,7 +152,9 @@ void HWR_DrawFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 	float pdupx = FIXED_TO_FLOAT(vid.fdupx)*2.0f*FIXED_TO_FLOAT(pscale);
 	float pdupy = FIXED_TO_FLOAT(vid.fdupy)*2.0f*FIXED_TO_FLOAT(pscale);
 
-	if (alphalevel >= 10 && alphalevel < 13)
+	if (alphalevel == 12)
+		alphalevel = 0;
+	else if (alphalevel >= 10 && alphalevel < 13)
 		return;
 
 	// make patch ready in hardware cache
@@ -252,7 +254,9 @@ void HWR_DrawCroppedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscal
 	float pdupx = FIXED_TO_FLOAT(vid.fdupx)*2.0f*FIXED_TO_FLOAT(pscale);
 	float pdupy = FIXED_TO_FLOAT(vid.fdupy)*2.0f*FIXED_TO_FLOAT(pscale);
 
-	if (alphalevel >= 10 && alphalevel < 13)
+	if (alphalevel == 12)
+		alphalevel = 0;
+	else if (alphalevel >= 10 && alphalevel < 13)
 		return;
 
 	// make patch ready in hardware cache
@@ -656,6 +660,7 @@ void HWR_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color)
 {
 	FOutVector v[4];
 	FSurfaceInfo Surf;
+	float sdupx, sdupy;
 
 	if (w < 0 || h < 0)
 		return; // consistency w/ software
@@ -664,10 +669,16 @@ void HWR_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color)
 //  | /|
 //  |/ |
 //  0--1
-	v[0].x = v[3].x = (x - 160.0f)/160.0f;
-	v[2].x = v[1].x = ((x+w) - 160.0f)/160.0f;
-	v[0].y = v[1].y = -(y - 100.0f)/100.0f;
-	v[2].y = v[3].y = -((y+h) - 100.0f)/100.0f;
+	sdupx = FIXED_TO_FLOAT(vid.fdupx)*2.0f;
+	sdupy = FIXED_TO_FLOAT(vid.fdupy)*2.0f;
+
+	if (color & V_NOSCALESTART)
+		sdupx = sdupy = 2.0f;
+
+	v[0].x = v[3].x = (x*sdupx)/vid.width - 1;
+	v[2].x = v[1].x = (x*sdupx + w*sdupx)/vid.width - 1;
+	v[0].y = v[1].y = 1-(y*sdupy)/vid.height;
+	v[2].y = v[3].y = 1-(y*sdupy + h*sdupy)/vid.height;
 
 	//Hurdler: do we still use this argb color? if not, we should remove it
 	v[0].argb = v[1].argb = v[2].argb = v[3].argb = 0xff00ff00; //;
@@ -778,7 +789,7 @@ boolean HWR_Screenshot(const char *lbmname)
 	HWD.pfnReadRect(0, 0, vid.width, vid.height, vid.width * 3, (void *)buf);
 
 #ifdef USE_PNG
-	ret = M_SavePNG(lbmname, buf, vid.width, vid.height, NULL);
+	ret = M_SavePNG(lbmname, buf, vid.width, vid.height, false);
 #else
 	ret = saveTGA(lbmname, buf, vid.width, vid.height);
 #endif

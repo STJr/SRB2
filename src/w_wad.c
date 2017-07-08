@@ -133,6 +133,47 @@ void W_Shutdown(void)
 
 static char filenamebuf[MAX_WADPATH];
 
+// W_OpenWadFile
+// Helper function for opening the WAD file.
+// Returns the FILE * handle for the file, or NULL if not found or could not be opened
+// If "useerrors" is true then print errors in the console, else just don't bother
+// "filename" may be modified to have the correct path the actual file is located in, if necessary
+FILE *W_OpenWadFile(const char **filename, boolean useerrors)
+{
+	FILE *handle;
+
+	strncpy(filenamebuf, *filename, MAX_WADPATH);
+	filenamebuf[MAX_WADPATH - 1] = '\0';
+	*filename = filenamebuf;
+
+	// open wad file
+	if ((handle = fopen(*filename, "rb")) == NULL)
+	{
+		// If we failed to load the file with the path as specified by
+		// the user, strip the directories and search for the file.
+		nameonly(filenamebuf);
+
+		// If findfile finds the file, the full path will be returned
+		// in filenamebuf == *filename.
+		if (findfile(filenamebuf, NULL, true))
+		{
+			if ((handle = fopen(*filename, "rb")) == NULL)
+			{
+				if (useerrors)
+					CONS_Alert(CONS_ERROR, M_GetText("Can't open %s\n"), *filename);
+				return NULL;
+			}
+		}
+		else
+		{
+			if (useerrors)
+				CONS_Alert(CONS_ERROR, M_GetText("File %s not found.\n"), *filename);
+			return NULL;
+		}
+	}
+	return handle;
+}
+
 // search for all DEHACKED lump in all wads and load it
 static inline void W_LoadDehackedLumps(UINT16 wadnum)
 {
@@ -234,7 +275,6 @@ static void W_InvalidateLumpnumCache(void)
 	memset(lumpnumcache, 0, sizeof (lumpnumcache));
 }
 
-
 //  Allocate a wadfile, setup the lumpinfo (directory) and
 //  lumpcache, add the wadfile to the current active wadfiles
 //
@@ -271,33 +311,9 @@ UINT16 W_LoadWadFile(const char *filename)
 		return INT16_MAX;
 	}
 
-	strncpy(filenamebuf, filename, MAX_WADPATH);
-	filenamebuf[MAX_WADPATH - 1] = '\0';
-	filename = filenamebuf;
-
 	// open wad file
-	if ((handle = fopen(filename, "rb")) == NULL)
-	{
-		// If we failed to load the file with the path as specified by
-		// the user, strip the directories and search for the file.
-		nameonly(filenamebuf);
-
-		// If findfile finds the file, the full path will be returned
-		// in filenamebuf == filename.
-		if (findfile(filenamebuf, NULL, true))
-		{
-			if ((handle = fopen(filename, "rb")) == NULL)
-			{
-				CONS_Alert(CONS_ERROR, M_GetText("Can't open %s\n"), filename);
-				return INT16_MAX;
-			}
-		}
-		else
-		{
-			CONS_Alert(CONS_ERROR, M_GetText("File %s not found.\n"), filename);
-			return INT16_MAX;
-		}
-	}
+	if ((handle = W_OpenWadFile(&filename, true)) == NULL)
+		return INT16_MAX;
 
 	// Check if wad files will overflow fileneededbuffer. Only the filename part
 	// is send in the packet; cf.
@@ -1115,21 +1131,11 @@ static int W_VerifyFile(const char *filename, lumpchecklist_t *checklist,
 	size_t i, j;
 	int goodfile = false;
 
-	if (!checklist) I_Error("No checklist for %s\n", filename);
-	strlcpy(filenamebuf, filename, MAX_WADPATH);
-	filename = filenamebuf;
+	if (!checklist)
+		I_Error("No checklist for %s\n", filename);
 	// open wad file
-	if ((handle = fopen(filename, "rb")) == NULL)
-	{
-		nameonly(filenamebuf); // leave full path here
-		if (findfile(filenamebuf, NULL, true))
-		{
-			if ((handle = fopen(filename, "rb")) == NULL)
-				return -1;
-		}
-		else
-			return -1;
-	}
+	if ((handle = W_OpenWadFile(&filename, false)) == NULL)
+		return -1;
 
 	// detect dehacked file with the "soc" extension
 	if (stricmp(&filename[strlen(filename) - 4], ".soc") != 0
@@ -1215,14 +1221,25 @@ int W_VerifyNMUSlumps(const char *filename)
 	// ENDOOM text and palette lumps
 	lumpchecklist_t NMUSlist[] =
 	{
-		{"D_", 2},
-		{"O_", 2},
-		{"DS", 2},
-		{"ENDOOM", 6},
-		{"PLAYPAL", 7},
-		{"COLORMAP", 8},
-		{"PAL", 3},
-		{"CLM", 3},
+		{"D_", 2}, // MIDI music
+		{"O_", 2}, // Digital music
+		{"DS", 2}, // Sound effects
+
+		{"ENDOOM", 6}, // ENDOOM text lump
+
+		{"PLAYPAL", 7}, // Palette changes
+		{"PAL", 3}, // Palette changes
+		{"COLORMAP", 8}, // Colormap changes
+		{"CLM", 3}, // Colormap changes
+		{"TRANS", 5}, // Translucency map changes
+
+		{"LTFNT", 5}, // Level title font changes
+		{"TTL", 3}, // Act number changes
+		{"STCFN", 5}, // Console font changes
+		{"TNYFN", 5}, // Tiny console font changes
+		{"STT", 3}, // Acceptable HUD changes (Score Time Rings)
+		{"YB_", 3}, // Intermission graphics, goes with the above
+
 		{NULL, 0},
 	};
 	return W_VerifyFile(filename, NMUSlist, false);

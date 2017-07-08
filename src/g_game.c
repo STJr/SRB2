@@ -88,6 +88,7 @@ UINT8 modeattacking = ATTACKING_NONE;
 boolean disableSpeedAdjust = false;
 boolean imcontinuing = false;
 boolean runemeraldmanager = false;
+UINT16 emeraldspawndelay = 60*TICRATE;
 
 // menu demo things
 UINT8  numDemos      = 3;
@@ -155,6 +156,7 @@ UINT8 stagefailed; // Used for GEMS BONUS? Also to see if you beat the stage.
 UINT16 emeralds;
 UINT32 token; // Number of tokens collected in a level
 UINT32 tokenlist; // List of tokens collected
+boolean gottoken; // Did you get a token? Used for end of act
 INT32 tokenbits; // Used for setting token bits
 
 // Old Special Stage
@@ -696,8 +698,7 @@ void G_SetNightsRecords(void)
 	free(gpath);
 
 	// If the mare count changed, this will update the score display
-	CV_AddValue(&cv_nextmap, 1);
-	CV_AddValue(&cv_nextmap, -1);
+	Nextmap_OnChange();
 }
 
 // for consistency among messages: this modifies the game and removes savemoddata.
@@ -1011,14 +1012,13 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 		if (turnleft)
 			cmd->angleturn = (INT16)(cmd->angleturn + angleturn[tspeed]);
 	}
-	if (cv_analog.value || twodlevel
+	if (twodlevel
 		|| (player->mo && (player->mo->flags2 & MF2_TWOD))
 		|| (!demoplayback && (player->climbing
-		|| (player->pflags & PF_NIGHTSMODE)
-		|| (player->pflags & PF_SLIDING)
-		|| (player->pflags & PF_FORCESTRAFE)))) // Analog
+		|| (player->powers[pw_carry] == CR_NIGHTSMODE)
+		|| (player->pflags & (PF_SLIDING|PF_FORCESTRAFE))))) // Analog
 			forcestrafe = true;
-	if (forcestrafe) // Analog
+	if (forcestrafe)
 	{
 		if (turnright)
 			side += sidemove[speed];
@@ -1030,6 +1030,13 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 			// JOYAXISRANGE is supposed to be 1023 (divide by 1024)
 			side += ((axis * sidemove[1]) >> 10);
 		}
+	}
+	else if (cv_analog.value) // Analog
+	{
+		if (turnright)
+			cmd->buttons |= BT_CAMRIGHT;
+		if (turnleft)
+			cmd->buttons |= BT_CAMLEFT;
 	}
 	else
 	{
@@ -1118,15 +1125,6 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	if (PLAYER1INPUTDOWN(gc_use))
 		cmd->buttons |= BT_USE;
 
-	// Camera Controls
-	if (cv_debug || cv_analog.value || demoplayback || objectplacing || player->pflags & PF_NIGHTSMODE)
-	{
-		if (PLAYER1INPUTDOWN(gc_camleft))
-			cmd->buttons |= BT_CAMLEFT;
-		if (PLAYER1INPUTDOWN(gc_camright))
-			cmd->buttons |= BT_CAMRIGHT;
-	}
-
 	if (PLAYER1INPUTDOWN(gc_camreset))
 	{
 		if (camera.chase && !resetdown)
@@ -1188,10 +1186,19 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	if (!mouseaiming && cv_mousemove.value)
 		forward += mousey;
 
-	if (cv_analog.value ||
-		(!demoplayback && (player->climbing
+	if ((!demoplayback && (player->climbing
 		|| (player->pflags & PF_SLIDING)))) // Analog for mouse
 		side += mousex*2;
+	else if (cv_analog.value)
+	{
+		if (mousex)
+		{
+			if (mousex > 0)
+				cmd->buttons |= BT_CAMRIGHT;
+			else
+				cmd->buttons |= BT_CAMLEFT;
+		}
+	}
 	else
 		cmd->angleturn = (INT16)(cmd->angleturn - (mousex*8));
 
@@ -1226,9 +1233,10 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	cmd->sidemove = (SINT8)(cmd->sidemove + side);
 
 	if (cv_analog.value) {
-		cmd->angleturn = (INT16)(thiscam->angle >> 16);
 		if (player->awayviewtics)
 			cmd->angleturn = (INT16)(player->awayviewmobj->angle >> 16);
+		else
+			cmd->angleturn = (INT16)(thiscam->angle >> 16);
 	}
 	else
 	{
@@ -1302,12 +1310,11 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 		if (turnleft)
 			cmd->angleturn = (INT16)(cmd->angleturn + angleturn[tspeed]);
 	}
-	if (cv_analog2.value || twodlevel
+	if (twodlevel
 		|| (player->mo && (player->mo->flags2 & MF2_TWOD))
 		|| player->climbing
-		|| (player->pflags & PF_NIGHTSMODE)
-		|| (player->pflags & PF_SLIDING)
-		|| (player->pflags & PF_FORCESTRAFE)) // Analog
+		|| (player->powers[pw_carry] == CR_NIGHTSMODE)
+		|| (player->pflags & (PF_SLIDING|PF_FORCESTRAFE))) // Analog
 			forcestrafe = true;
 	if (forcestrafe) // Analog
 	{
@@ -1321,6 +1328,13 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 			// JOYAXISRANGE is supposed to be 1023 (divide by 1024)
 			side += ((axis * sidemove[1]) >> 10);
 		}
+	}
+	else if (cv_analog2.value) // Analog
+	{
+		if (turnright)
+			cmd->buttons |= BT_CAMRIGHT;
+		if (turnleft)
+			cmd->buttons |= BT_CAMLEFT;
 	}
 	else
 	{
@@ -1406,15 +1420,6 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 	if (PLAYER2INPUTDOWN(gc_use))
 		cmd->buttons |= BT_USE;
 
-	// Camera Controls
-	if (cv_debug || cv_analog2.value || player->pflags & PF_NIGHTSMODE)
-	{
-		if (PLAYER2INPUTDOWN(gc_camleft))
-			cmd->buttons |= BT_CAMLEFT;
-		if (PLAYER2INPUTDOWN(gc_camright))
-			cmd->buttons |= BT_CAMRIGHT;
-	}
-
 	if (PLAYER2INPUTDOWN(gc_camreset))
 	{
 		if (camera2.chase && !resetdown)
@@ -1476,9 +1481,19 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 	if (!mouseaiming && cv_mousemove2.value)
 		forward += mouse2y;
 
-	if (cv_analog2.value || player->climbing
+	if (player->climbing
 		|| (player->pflags & PF_SLIDING)) // Analog for mouse
 		side += mouse2x*2;
+	else if (cv_analog2.value)
+	{
+		if (mouse2x)
+		{
+			if (mouse2x > 0)
+				cmd->buttons |= BT_CAMRIGHT;
+			else
+				cmd->buttons |= BT_CAMLEFT;
+		}
+	}
 	else
 		cmd->angleturn = (INT16)(cmd->angleturn - (mouse2x*8));
 
@@ -1526,9 +1541,10 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 	}
 
 	if (cv_analog2.value) {
-		cmd->angleturn = (INT16)(thiscam->angle >> 16);
 		if (player->awayviewtics)
 			cmd->angleturn = (INT16)(player->awayviewmobj->angle >> 16);
+		else
+			cmd->angleturn = (INT16)(thiscam->angle >> 16);
 	}
 	else
 	{
@@ -1565,11 +1581,6 @@ static void Analog_OnChange(void)
 
 	// cameras are not initialized at this point
 
-	if (leveltime > 1)
-		CV_SetValue(&cv_cam_dist, 128);
-	if (cv_analog.value || demoplayback)
-		CV_SetValue(&cv_cam_dist, 192);
-
 	if (!cv_chasecam.value && cv_analog.value) {
 		CV_SetValue(&cv_analog, 0);
 		return;
@@ -1589,11 +1600,6 @@ static void Analog2_OnChange(void)
 		return;
 
 	// cameras are not initialized at this point
-
-	if (leveltime > 1)
-		CV_SetValue(&cv_cam2_dist, 128);
-	if (cv_analog2.value)
-		CV_SetValue(&cv_cam2_dist, 192);
 
 	if (!cv_chasecam2.value && cv_analog2.value) {
 		CV_SetValue(&cv_analog2, 0);
@@ -2081,6 +2087,7 @@ void G_PlayerReborn(INT32 player)
 	UINT8 mare;
 	UINT8 skincolor;
 	INT32 skin;
+	UINT32 availabilities;
 	tic_t jointime;
 	boolean spectator;
 	INT16 bot;
@@ -2105,6 +2112,7 @@ void G_PlayerReborn(INT32 player)
 
 	skincolor = players[player].skincolor;
 	skin = players[player].skin;
+	availabilities = players[player].availabilities;
 	camerascale = players[player].camerascale;
 	shieldscale = players[player].shieldscale;
 	charability = players[player].charability;
@@ -2150,6 +2158,7 @@ void G_PlayerReborn(INT32 player)
 	// save player config truth reborn
 	p->skincolor = skincolor;
 	p->skin = skin;
+	p->availabilities = availabilities;
 	p->camerascale = camerascale;
 	p->shieldscale = shieldscale;
 	p->charability = charability;
@@ -2193,7 +2202,7 @@ void G_PlayerReborn(INT32 player)
 	p->pflags |= PF_JUMPDOWN;
 
 	p->playerstate = PST_LIVE;
-	p->health = 1; // 0 rings
+	p->rings = 0; // 0 rings
 	p->panim = PA_IDLE; // standing animation
 
 	if ((netgame || multiplayer) && !p->spectator)
@@ -2300,6 +2309,9 @@ void G_SpawnPlayer(INT32 playernum, boolean starpost)
 	if (starpost) //Don't even bother with looking for a place to spawn.
 	{
 		P_MovePlayerToStarpost(playernum);
+#ifdef HAVE_BLUA
+		LUAh_PlayerSpawn(&players[playernum]); // Lua hook for player spawning :)
+#endif
 		return;
 	}
 
@@ -2624,7 +2636,7 @@ void G_ExitLevel(void)
 			CONS_Printf(M_GetText("The round has ended.\n"));
 
 		// Remove CEcho text on round end.
-		HU_DoCEcho("");
+		HU_ClearCEcho();
 	}
 }
 
@@ -2772,7 +2784,6 @@ static INT16 RandMap(INT16 tolflags, INT16 pprevmap)
 static void G_DoCompleted(void)
 {
 	INT32 i;
-	boolean gottoken = false;
 
 	tokenlist = 0; // Reset the list
 
@@ -2858,10 +2869,9 @@ static void G_DoCompleted(void)
 	if (nextmap >= 1100-1 && nextmap <= 1102-1 && (gametype == GT_RACE || gametype == GT_COMPETITION))
 		nextmap = (INT16)(spstage_start-1);
 
-	if (gametype == GT_COOP && token)
+	if ((gottoken = (gametype == GT_COOP && token)))
 	{
 		token--;
-		gottoken = true;
 
 		if (!(emeralds & EMERALD1))
 			nextmap = (INT16)(sstage_start - 1); // Special Stage 1
@@ -2900,7 +2910,7 @@ static void G_DoCompleted(void)
 	if (nextmap < NUMMAPS && !mapheaderinfo[nextmap])
 		P_AllocMapHeader(nextmap);
 
-	if (skipstats)
+	if (skipstats && !modeattacking) // Don't skip stats if we're in record attack
 		G_AfterIntermission();
 	else
 	{
@@ -2920,7 +2930,7 @@ void G_AfterIntermission(void)
 		if (nextmap < 1100-1)
 			G_NextLevel();
 		else
-			Y_EndGame();
+			G_EndGame();
 	}
 }
 
@@ -3004,6 +3014,38 @@ static void G_DoContinued(void)
 	D_MapChange(gamemap, gametype, ultimatemode, false, 0, false, false);
 
 	gameaction = ga_nothing;
+}
+
+//
+// G_EndGame (formerly Y_EndGame)
+// Frankly this function fits better in g_game.c than it does in y_inter.c
+//
+// ...Gee, (why) end the game?
+// Because G_AfterIntermission and F_EndCutscene would
+// both do this exact same thing *in different ways* otherwise,
+// which made it so that you could only unlock Ultimate mode
+// if you had a cutscene after the final level and crap like that.
+// This function simplifies it so only one place has to be updated
+// when something new is added.
+void G_EndGame(void)
+{
+	// Only do evaluation and credits in coop games.
+	if (gametype == GT_COOP)
+	{
+		if (nextmap == 1102-1) // end game with credits
+		{
+			F_StartCredits();
+			return;
+		}
+		if (nextmap == 1101-1) // end game with evaluation
+		{
+			F_StartGameEvaluation();
+			return;
+		}
+	}
+
+	// 1100 or competitive multiplayer, so go back to title screen.
+	D_StartTitle();
 }
 
 //
@@ -3540,7 +3582,7 @@ void G_DeferedInitNew(boolean pultmode, const char *mapname, INT32 pickedchar, b
 // This is the map command interpretation something like Command_Map_f
 //
 // called at: map cmd execution, doloadgame, doplaydemo
-void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean skipprecutscene)
+void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean skipprecutscene, boolean FLS)
 {
 	INT32 i;
 
@@ -3570,7 +3612,8 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 
 			if (netgame || multiplayer)
 			{
-				players[i].lives = cv_startinglives.value;
+				if (!FLS || (players[i].lives < cv_startinglives.value))
+					players[i].lives = cv_startinglives.value;
 				players[i].continues = 0;
 			}
 			else if (pultmode)
@@ -3584,13 +3627,16 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 				players[i].continues = 1;
 			}
 
+			if (!((netgame || multiplayer) && (FLS)))
+				players[i].score = 0;
+
 			// The latter two should clear by themselves, but just in case
 			players[i].pflags &= ~(PF_TAGIT|PF_TAGGED|PF_FULLSTASIS);
 
 			// Clear cheatcodes too, just in case.
 			players[i].pflags &= ~(PF_GODMODE|PF_NOCLIP|PF_INVIS);
 
-			players[i].score = players[i].xtralife = 0;
+			players[i].xtralife = 0;
 		}
 
 		// Reset unlockable triggers
@@ -3624,7 +3670,6 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 	mapmusflags |= MUSIC_RELOADRESET;
 
 	ultimatemode = pultmode;
-	playerdeadview = false;
 	automapactive = false;
 	imcontinuing = false;
 
@@ -3651,6 +3696,9 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 char *G_BuildMapTitle(INT32 mapnum)
 {
 	char *title = NULL;
+
+	if (!mapheaderinfo[mapnum-1])
+		P_AllocMapHeader(mapnum-1);
 
 	if (strcmp(mapheaderinfo[mapnum-1]->lvlttl, ""))
 	{
@@ -3885,7 +3933,7 @@ void G_GhostAddColor(ghostcolor_t color)
 	ghostext.color = (UINT8)color;
 }
 
-void G_GhostAddScale(UINT16 scale)
+void G_GhostAddScale(fixed_t scale)
 {
 	if (!demorecording || !(demoflags & DF_GHOST))
 		return;
@@ -3919,12 +3967,8 @@ void G_WriteGhostTic(mobj_t *ghost)
 	if (!(demoflags & DF_GHOST))
 		return; // No ghost data to write.
 
-	if (ghost->player && ghost->player->pflags & PF_NIGHTSMODE && ghost->tracer)
-	{
-		// We're talking about the NiGHTS thing, not the normal platforming thing!
+	if (ghost->player && ghost->player->powers[pw_carry] == CR_NIGHTSMODE) // We're talking about the NiGHTS thing, not the normal platforming thing!
 		ziptic |= GZT_NIGHTS;
-		ghost = ghost->tracer;
-	}
 
 	ziptic_p = demo_p++; // the ziptic, written at the end of this function
 
@@ -4106,11 +4150,9 @@ void G_ConsGhostTic(void)
 		demo_p++;
 	if (ziptic & GZT_SPR2)
 		demo_p++;
-	if(ziptic & GZT_NIGHTS) {
-		if (!testmo->player || !(testmo->player->pflags & PF_NIGHTSMODE) || !testmo->tracer)
+	if (ziptic & GZT_NIGHTS) {
+		if (!testmo->player || !(testmo->player->powers[pw_carry] == CR_NIGHTSMODE))
 			nightsfail = true;
-		else
-			testmo = testmo->tracer;
 	}
 
 	if (ziptic & GZT_EXTRA)
@@ -4727,7 +4769,7 @@ void G_BeginRecording(void)
 	// Don't do it.
 	WRITEFIXED(demo_p, player->jumpfactor);
 
-	// Save netvar data (SONICCD, etc)
+	// Save netvar data
 	CV_SaveNetVars(&demo_p);
 
 	memset(&oldcmd,0,sizeof(oldcmd));
@@ -5141,7 +5183,7 @@ void G_DoPlayDemo(char *defdemoname)
 	memset(playeringame,0,sizeof(playeringame));
 	playeringame[0] = true;
 	P_SetRandSeed(randseed);
-	G_InitNew(false, G_BuildMapName(gamemap), true, true);
+	G_InitNew(false, G_BuildMapName(gamemap), true, true, false);
 
 	// Set skin
 	SetPlayerSkin(0, skin);
@@ -5621,7 +5663,7 @@ boolean G_CheckDemoStatus(void)
 		WRITEUINT8(demo_p, DEMOMARKER); // add the demo end marker
 		md5_buffer((char *)p+16, demo_p - (p+16), p); // make a checksum of everything after the checksum in the file.
 #endif
-		saved = FIL_WriteFile(demoname, demobuffer, demo_p - demobuffer); // finally output the file.
+		saved = FIL_WriteFile(va(pandf, srb2home, demoname), demobuffer, demo_p - demobuffer); // finally output the file.
 		free(demobuffer);
 		demorecording = false;
 

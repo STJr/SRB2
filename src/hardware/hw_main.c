@@ -45,7 +45,7 @@
 #include "hw_md2.h"
 
 #define R_FAKEFLOORS
-//#define HWPRECIP
+#define HWPRECIP
 #define SORTING
 //#define POLYSKY
 
@@ -1084,9 +1084,9 @@ static void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, INT32 texnum,
 	float endheight = 0.0f, endbheight = 0.0f;
 
 	fixed_t v1x = FLOAT_TO_FIXED(wallVerts[0].x);
-	fixed_t v1y = FLOAT_TO_FIXED(wallVerts[0].y);
+	fixed_t v1y = FLOAT_TO_FIXED(wallVerts[0].z); // not a typo
 	fixed_t v2x = FLOAT_TO_FIXED(wallVerts[1].x);
-	fixed_t v2y = FLOAT_TO_FIXED(wallVerts[1].y);
+	fixed_t v2y = FLOAT_TO_FIXED(wallVerts[1].z); // not a typo
 	// compiler complains when P_GetZAt is used in FLOAT_TO_FIXED directly
 	// use this as a temp var to store P_GetZAt's return value each time
 	fixed_t temp;
@@ -1558,6 +1558,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 
 	if (gr_backsector)
 	{
+		INT32 gr_toptexture, gr_bottomtexture;
 		// two sided line
 		if (gr_backsector->heightsec != -1)
 		{
@@ -1608,19 +1609,22 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 #endif
 		}
 
+		gr_toptexture = R_GetTextureNum(gr_sidedef->toptexture);
+		gr_bottomtexture = R_GetTextureNum(gr_sidedef->bottomtexture);
+
 		// check TOP TEXTURE
 		if ((
 #ifdef ESLOPE
 			worldhighslope < worldtopslope ||
 #endif
             worldhigh < worldtop
-            ) && texturetranslation[gr_sidedef->toptexture])
+            ) && gr_toptexture)
 		{
 			if (drawtextured)
 			{
 				fixed_t texturevpegtop; // top
 
-				grTex = HWR_GetTexture(texturetranslation[gr_sidedef->toptexture]);
+				grTex = HWR_GetTexture(gr_toptexture);
 
 				// PEGGING
 				if (gr_linedef->flags & ML_DONTPEGTOP)
@@ -1638,7 +1642,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				texturevpegtop += gr_sidedef->rowoffset;
 
 				// This is so that it doesn't overflow and screw up the wall, it doesn't need to go higher than the texture's height anyway
-				texturevpegtop %= SHORT(textures[texturetranslation[gr_sidedef->toptexture]]->height)<<FRACBITS;
+				texturevpegtop %= SHORT(textures[gr_toptexture]->height)<<FRACBITS;
 
 				wallVerts[3].t = wallVerts[2].t = texturevpegtop * grTex->scaleY;
 				wallVerts[0].t = wallVerts[1].t = (texturevpegtop + gr_frontsector->ceilingheight - gr_backsector->ceilingheight) * grTex->scaleY;
@@ -1683,9 +1687,9 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 #endif
 
 			if (gr_frontsector->numlights)
-				HWR_SplitWall(gr_frontsector, wallVerts, texturetranslation[gr_sidedef->toptexture], &Surf, FF_CUTSOLIDS);
+				HWR_SplitWall(gr_frontsector, wallVerts, gr_toptexture, &Surf, FF_CUTSOLIDS);
 			else if (grTex->mipmap.flags & TF_TRANSPARENT)
-				HWR_AddTransparentWall(wallVerts, &Surf, texturetranslation[gr_sidedef->toptexture], PF_Environment, false, lightnum, colormap);
+				HWR_AddTransparentWall(wallVerts, &Surf, gr_toptexture, PF_Environment, false, lightnum, colormap);
 			else
 				HWR_ProjectWall(wallVerts, &Surf, PF_Masked, lightnum, colormap);
 		}
@@ -1695,13 +1699,13 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 #ifdef ESLOPE
 			worldlowslope > worldbottomslope ||
 #endif
-            worldlow > worldbottom) && texturetranslation[gr_sidedef->bottomtexture]) //only if VISIBLE!!!
+            worldlow > worldbottom) && gr_bottomtexture) //only if VISIBLE!!!
 		{
 			if (drawtextured)
 			{
 				fixed_t texturevpegbottom = 0; // bottom
 
-				grTex = HWR_GetTexture(texturetranslation[gr_sidedef->bottomtexture]);
+				grTex = HWR_GetTexture(gr_bottomtexture);
 
 				// PEGGING
 #ifdef ESLOPE
@@ -1721,7 +1725,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				texturevpegbottom += gr_sidedef->rowoffset;
 
 				// This is so that it doesn't overflow and screw up the wall, it doesn't need to go higher than the texture's height anyway
-				texturevpegbottom %= SHORT(textures[texturetranslation[gr_sidedef->bottomtexture]]->height)<<FRACBITS;
+				texturevpegbottom %= SHORT(textures[gr_bottomtexture]->height)<<FRACBITS;
 
 				wallVerts[3].t = wallVerts[2].t = texturevpegbottom * grTex->scaleY;
 				wallVerts[0].t = wallVerts[1].t = (texturevpegbottom + gr_backsector->floorheight - gr_frontsector->floorheight) * grTex->scaleY;
@@ -1766,13 +1770,13 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 #endif
 
 			if (gr_frontsector->numlights)
-				HWR_SplitWall(gr_frontsector, wallVerts, texturetranslation[gr_sidedef->bottomtexture], &Surf, FF_CUTSOLIDS);
+				HWR_SplitWall(gr_frontsector, wallVerts, gr_bottomtexture, &Surf, FF_CUTSOLIDS);
 			else if (grTex->mipmap.flags & TF_TRANSPARENT)
-				HWR_AddTransparentWall(wallVerts, &Surf, texturetranslation[gr_sidedef->bottomtexture], PF_Environment, false, lightnum, colormap);
+				HWR_AddTransparentWall(wallVerts, &Surf, gr_bottomtexture, PF_Environment, false, lightnum, colormap);
 			else
 				HWR_ProjectWall(wallVerts, &Surf, PF_Masked, lightnum, colormap);
 		}
-		gr_midtexture = texturetranslation[gr_sidedef->midtexture];
+		gr_midtexture = R_GetTextureNum(gr_sidedef->midtexture);
 		if (gr_midtexture)
 		{
 			FBITFIELD blendmode;
@@ -2134,7 +2138,7 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 	else
 	{
 		// Single sided line... Deal only with the middletexture (if one exists)
-		gr_midtexture = texturetranslation[gr_sidedef->midtexture];
+		gr_midtexture = R_GetTextureNum(gr_sidedef->midtexture);
 		if (gr_midtexture)
 		{
 			if (drawtextured)
@@ -2232,13 +2236,13 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				if (*rover->topheight < lowcut || *rover->bottomheight > highcut)
 					continue;
 
-				texnum = texturetranslation[sides[rover->master->sidenum[0]].midtexture];
+				texnum = R_GetTextureNum(sides[rover->master->sidenum[0]].midtexture);
 
 				if (rover->master->flags & ML_TFERLINE)
 				{
 					size_t linenum = gr_curline->linedef-gr_backsector->lines[0];
 					newline = rover->master->frontsector->lines[0] + linenum;
-					texnum = texturetranslation[sides[newline->sidenum[0]].midtexture];
+					texnum = R_GetTextureNum(sides[newline->sidenum[0]].midtexture);
 				}
 
 #ifdef ESLOPE
@@ -2366,13 +2370,13 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				if (*rover->topheight < lowcut || *rover->bottomheight > highcut)
 					continue;
 
-				texnum = texturetranslation[sides[rover->master->sidenum[0]].midtexture];
+				texnum = R_GetTextureNum(sides[rover->master->sidenum[0]].midtexture);
 
 				if (rover->master->flags & ML_TFERLINE)
 				{
 					size_t linenum = gr_curline->linedef-gr_backsector->lines[0];
 					newline = rover->master->frontsector->lines[0] + linenum;
-					texnum = texturetranslation[sides[newline->sidenum[0]].midtexture];
+					texnum = R_GetTextureNum(sides[newline->sidenum[0]].midtexture);
 				}
 #ifdef ESLOPE //backsides
 				h  = *rover->t_slope ? P_GetZAt(*rover->t_slope, v1x, v1y) : *rover->topheight;
@@ -3363,7 +3367,6 @@ static void HWR_Subsector(size_t num)
 
 	if (num < numsubsectors)
 	{
-		sscount++;
 		// subsector
 		sub = &subsectors[num];
 		// sector
@@ -3718,6 +3721,9 @@ static void HWR_Subsector(size_t num)
 
 		while (count--)
 		{
+#ifdef POLYOBJECTS
+				if (!line->polyseg) // ignore segs that belong to polyobjects
+#endif
 				HWR_AddLine(line);
 				line++;
 		}
@@ -4223,6 +4229,7 @@ static void HWR_DrawSprite(gr_vissprite_t *spr)
 	GLPatch_t *gpatch; // sprite patch converted to hardware
 	FSurfaceInfo Surf;
 	const boolean hires = (spr->mobj && spr->mobj->skin && ((skin_t *)spr->mobj->skin)->flags & SF_HIRES);
+	//const boolean papersprite = (spr->mobj && (spr->mobj->frame & FF_PAPERSPRITE));
 	if (spr->mobj)
 		this_scale = FIXED_TO_FLOAT(spr->mobj->scale);
 	if (hires)
@@ -4266,7 +4273,8 @@ static void HWR_DrawSprite(gr_vissprite_t *spr)
 
 	// make a wall polygon (with 2 triangles), using the floor/ceiling heights,
 	// and the 2d map coords of start/end vertices
-	wallVerts[0].z = wallVerts[1].z = wallVerts[2].z = wallVerts[3].z = spr->tz;
+	wallVerts[0].z = wallVerts[3].z = spr->z1;
+	wallVerts[2].z = wallVerts[1].z = spr->z2;
 
 	// transform
 	wv = wallVerts;
@@ -4401,7 +4409,6 @@ static inline void HWR_DrawPrecipitationSprite(gr_vissprite_t *spr)
 	FOutVector *wv;
 	GLPatch_t *gpatch; // sprite patch converted to hardware
 	FSurfaceInfo Surf;
-	sector_t *sector;
 
 	if (!spr->mobj)
 		return;
@@ -4455,19 +4462,38 @@ static inline void HWR_DrawPrecipitationSprite(gr_vissprite_t *spr)
 	//Hurdler: 25/04/2000: now support colormap in hardware mode
 	HWR_GetMappedPatch(gpatch, spr->colormap);
 
-	sector = spr->mobj->subsector->sector;
-
-	if (sector->ffloors)
+	// colormap test
 	{
-		ffloor_t *caster = sector->lightlist[R_GetPlaneLight(sector, spr->mobj->z, false)].caster;
-		sector = caster ? &sectors[caster->secnum] : sector;
-	}
+		sector_t *sector = spr->mobj->subsector->sector;
+		UINT8 lightlevel = 255;
+		extracolormap_t *colormap = sector->extra_colormap;
 
-	// sprite lighting by modulating the RGB components
-	if (sector->extra_colormap)
-			Surf.FlatColor.rgba = HWR_Lighting(spr->sectorlight,sector->extra_colormap->rgba,sector->extra_colormap->fadergba, false, false);
+		if (sector->numlights)
+		{
+			INT32 light;
+
+			light = R_GetPlaneLight(sector, spr->mobj->z + spr->mobj->height, false); // Always use the light at the top instead of whatever I was doing before
+
+			if (!(spr->mobj->frame & FF_FULLBRIGHT))
+				lightlevel = *sector->lightlist[light].lightlevel;
+
+			if (sector->lightlist[light].extra_colormap)
+				colormap = sector->lightlist[light].extra_colormap;
+		}
 		else
-			Surf.FlatColor.rgba = HWR_Lighting(spr->sectorlight,NORMALFOG,FADEFOG, false, false);
+		{
+			if (!(spr->mobj->frame & FF_FULLBRIGHT))
+				lightlevel = sector->lightlevel;
+
+			if (sector->extra_colormap)
+				colormap = sector->extra_colormap;
+		}
+
+		if (colormap)
+			Surf.FlatColor.rgba = HWR_Lighting(lightlevel, colormap->rgba, colormap->fadergba, false, false);
+		else
+			Surf.FlatColor.rgba = HWR_Lighting(lightlevel, NORMALFOG, FADEFOG, false, false);
+	}
 
 	if (spr->mobj->flags2 & MF2_SHADOW)
 	{
@@ -4501,8 +4527,8 @@ static void HWR_SortVisSprites(void)
 	gr_vissprite_t *ds, *dsprev, *dsnext, *dsfirst;
 	gr_vissprite_t *best = NULL;
 	gr_vissprite_t unsorted;
-	float bestdist;
-	INT32 bestdispoffset;
+	float bestdist = 0.0f;
+	INT32 bestdispoffset = 0;
 
 	if (!gr_visspritecount)
 		return;
@@ -5040,8 +5066,14 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	size_t lumpoff;
 	unsigned rot;
 	UINT8 flip;
+	boolean vflip = (!(thing->eflags & MFE_VERTICALFLIP) != !(thing->frame & FF_VERTICALFLIP));
+
 	angle_t ang;
 	INT32 heightsec, phs;
+	const boolean papersprite = (thing->frame & FF_PAPERSPRITE);
+	float offset;
+	float ang_scale = 1.0f, ang_scalez = 0.0f;
+	float z1, z2;
 
 	if (!thing)
 		return;
@@ -5056,7 +5088,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	tz = (tr_x * gr_viewcos) + (tr_y * gr_viewsin);
 
 	// thing is behind view plane?
-	if (tz < ZCLIP_PLANE && (!cv_grmd2.value || md2_models[thing->sprite].notfound == true)) //Yellow: Only MD2's dont disappear
+	if (tz < ZCLIP_PLANE && !papersprite && (!cv_grmd2.value || md2_models[thing->sprite].notfound == true)) //Yellow: Only MD2's dont disappear
 		return;
 
 	tx = (tr_x * gr_viewsin) - (tr_y * gr_viewcos);
@@ -5094,6 +5126,27 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		I_Error("sprframes NULL for sprite %d\n", thing->sprite);
 #endif
 
+	if (papersprite)
+	{
+		// Use the actual view angle, rather than the angle formed
+		// between the view point and the thing
+		// this makes sure paper sprites always appear at the right angle!
+		// Note: DO NOT do this in software mode version, it actually
+		// makes papersprites look WORSE there (I know, I've tried)
+		// Monster Iestyn - 13/05/17
+		ang = dup_viewangle - thing->angle;
+		ang_scale = FIXED_TO_FLOAT(FINESINE(ang>>ANGLETOFINESHIFT));
+		ang_scalez = FIXED_TO_FLOAT(FINECOSINE(ang>>ANGLETOFINESHIFT));
+
+		if (ang_scale < 0)
+		{
+			ang_scale = -ang_scale;
+			ang_scalez = -ang_scalez;
+		}
+	}
+	else if (sprframe->rotate != SRF_SINGLE)
+		ang = R_PointToAngle (thing->x, thing->y) - thing->angle;
+
 	if (sprframe->rotate == SRF_SINGLE)
 	{
 		// use single rotation for all views
@@ -5104,8 +5157,6 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	else
 	{
 		// choose a different rotation based on player view
-		ang = R_PointToAngle (thing->x, thing->y) - thing->angle;
-
 		if ((sprframe->rotate & SRF_RIGHT) && (ang < ANGLE_180)) // See from right
 			rot = 6; // F7 slot
 		else if ((sprframe->rotate & SRF_LEFT) && (ang >= ANGLE_180)) // See from left
@@ -5123,9 +5174,12 @@ static void HWR_ProjectSprite(mobj_t *thing)
 
 	// calculate edges of the shape
 	if (flip)
-		tx -= FIXED_TO_FLOAT(spritecachedinfo[lumpoff].width - spritecachedinfo[lumpoff].offset) * this_scale;
+		offset = FIXED_TO_FLOAT(spritecachedinfo[lumpoff].width - spritecachedinfo[lumpoff].offset) * this_scale;
 	else
-		tx -= FIXED_TO_FLOAT(spritecachedinfo[lumpoff].offset) * this_scale;
+		offset = FIXED_TO_FLOAT(spritecachedinfo[lumpoff].offset) * this_scale;
+
+	z1 = tz - (offset * ang_scalez);
+	tx -= offset * ang_scale;
 
 	// project x
 	x1 = gr_windowcenterx + (tx * gr_centerx / tz);
@@ -5136,10 +5190,17 @@ static void HWR_ProjectSprite(mobj_t *thing)
 
 	x1 = tx;
 
-	tx += FIXED_TO_FLOAT(spritecachedinfo[lumpoff].width) * this_scale;
+	offset = FIXED_TO_FLOAT(spritecachedinfo[lumpoff].width) * this_scale;
+
+	z2 = z1 + (offset * ang_scalez);
+	tx += offset * ang_scale;
+
+	if (papersprite && max(z1, z2) < ZCLIP_PLANE)
+		return;
+
 	x2 = gr_windowcenterx + (tx * gr_centerx / tz);
 
-	if (thing->eflags & MFE_VERTICALFLIP)
+	if (vflip)
 	{
 		gz = FIXED_TO_FLOAT(thing->z+thing->height) - FIXED_TO_FLOAT(spritecachedinfo[lumpoff].topoffset) * this_scale;
 		gzt = gz + FIXED_TO_FLOAT(spritecachedinfo[lumpoff].height) * this_scale;
@@ -5185,6 +5246,8 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	vis->patchlumpnum = sprframe->lumppat[rot];
 	vis->flip = flip;
 	vis->mobj = thing;
+	vis->z1 = z1;
+	vis->z2 = z2;
 
 	//Hurdler: 25/04/2000: now support colormap in hardware mode
 	if ((vis->mobj->flags & MF_BOSS) && (vis->mobj->flags2 & MF2_FRET) && (leveltime & 1)) // Bosses "flash"
@@ -5216,10 +5279,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	//CONS_Debug(DBG_RENDER, "------------------\nH: sprite  : %d\nH: frame   : %x\nH: type    : %d\nH: sname   : %s\n\n",
 	//            thing->sprite, thing->frame, thing->type, sprnames[thing->sprite]);
 
-	if (thing->eflags & MFE_VERTICALFLIP)
-		vis->vflip = true;
-	else
-		vis->vflip = false;
+	vis->vflip = vflip;
 
 	vis->precip = false;
 }
@@ -5296,6 +5356,11 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 	//
 	vis = HWR_NewVisSprite();
 	vis->x1 = x1;
+#if 0
+	vis->x2 = x2;
+#else
+	(void)x2;
+#endif
 	vis->x2 = tx;
 	vis->tz = tz;
 	vis->dispoffset = 0; // Monster Iestyn: 23/11/15: HARDWARE SUPPORT AT LAST
@@ -5308,7 +5373,6 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 	// set top/bottom coords
 	vis->ty = FIXED_TO_FLOAT(thing->z + spritecachedinfo[lumpoff].topoffset) - gr_viewz;
 
-	vis->sectorlight = 0xff;
 	vis->precip = true;
 }
 #endif
@@ -5330,7 +5394,7 @@ static void HWR_DrawSkyBackground(player_t *player)
 //  0--1
 
 	(void)player;
-	HWR_GetTexture(skytexture);
+	HWR_GetTexture(texturetranslation[skytexture]);
 
 	//Hurdler: the sky is the only texture who need 4.0f instead of 1.0
 	//         because it's called just after clearing the screen
@@ -5350,7 +5414,7 @@ static void HWR_DrawSkyBackground(player_t *player)
 
 	angle = (dup_viewangle + gr_xtoviewangle[0]);
 
-	dimensionmultiply = ((float)textures[skytexture]->width/256.0f);
+	dimensionmultiply = ((float)textures[texturetranslation[skytexture]]->width/256.0f);
 
 	v[0].sow = v[3].sow = ((float) angle / ((ANGLE_90-1)*dimensionmultiply));
 	v[2].sow = v[1].sow = (-1.0f/dimensionmultiply)+((float) angle / ((ANGLE_90-1)*dimensionmultiply));
@@ -5359,7 +5423,7 @@ static void HWR_DrawSkyBackground(player_t *player)
 	angle = aimingangle;
 
 	aspectratio = (float)vid.width/(float)vid.height;
-	dimensionmultiply = ((float)textures[skytexture]->height/(128.0f*aspectratio));
+	dimensionmultiply = ((float)textures[texturetranslation[skytexture]]->height/(128.0f*aspectratio));
 	angleturn = (((float)ANGLE_45-1.0f)*aspectratio)*dimensionmultiply;
 
 	// Middle of the sky should always be at angle 0

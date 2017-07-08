@@ -91,7 +91,7 @@ patch_t *tallminus;
 patch_t *emeraldpics[7];
 patch_t *tinyemeraldpics[7];
 static patch_t *emblemicon;
-static patch_t *tokenicon;
+patch_t *tokenicon;
 
 //-------------------------------------------
 //              misc vars
@@ -197,21 +197,6 @@ void HU_LoadGraphics(void)
 		else
 			tny_font[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
 	}
-
-	// cache the level title font for entire game execution
-	lt_font[0] = (patch_t *)W_CachePatchName("LTFNT039", PU_HUDGFX); /// \note fake start hack
-
-	// Number support
-	lt_font[9] = (patch_t *)W_CachePatchName("LTFNT048", PU_HUDGFX);
-	lt_font[10] = (patch_t *)W_CachePatchName("LTFNT049", PU_HUDGFX);
-	lt_font[11] = (patch_t *)W_CachePatchName("LTFNT050", PU_HUDGFX);
-	lt_font[12] = (patch_t *)W_CachePatchName("LTFNT051", PU_HUDGFX);
-	lt_font[13] = (patch_t *)W_CachePatchName("LTFNT052", PU_HUDGFX);
-	lt_font[14] = (patch_t *)W_CachePatchName("LTFNT053", PU_HUDGFX);
-	lt_font[15] = (patch_t *)W_CachePatchName("LTFNT054", PU_HUDGFX);
-	lt_font[16] = (patch_t *)W_CachePatchName("LTFNT055", PU_HUDGFX);
-	lt_font[17] = (patch_t *)W_CachePatchName("LTFNT056", PU_HUDGFX);
-	lt_font[18] = (patch_t *)W_CachePatchName("LTFNT057", PU_HUDGFX);
 
 	j = LT_FONTSTART;
 	for (i = 0; i < LT_FONTSIZE; i++)
@@ -470,7 +455,7 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 	boolean action = false;
 	char *ptr;
 
-	CONS_Debug(DBG_NETPLAY,"Recieved SAY cmd from Player %d (%s)\n", playernum+1, player_names[playernum]);
+	CONS_Debug(DBG_NETPLAY,"Received SAY cmd from Player %d (%s)\n", playernum+1, player_names[playernum]);
 
 	target = READSINT8(*p);
 	flags = READUINT8(*p);
@@ -757,14 +742,7 @@ void HU_clearChatChars(void)
 //
 boolean HU_Responder(event_t *ev)
 {
-	static boolean shiftdown = false;
 	UINT8 c;
-
-	if (ev->data1 == KEY_LSHIFT || ev->data1 == KEY_RSHIFT)
-	{
-		shiftdown = (ev->type == ev_keydown);
-		return chat_on;
-	}
 
 	if (ev->type != ev_keydown)
 		return false;
@@ -797,6 +775,14 @@ boolean HU_Responder(event_t *ev)
 	}
 	else // if chat_on
 	{
+		// Ignore modifier keys
+		// Note that we do this here so users can still set
+		// their chat keys to one of these, if they so desire.
+		if (ev->data1 == KEY_LSHIFT || ev->data1 == KEY_RSHIFT
+		 || ev->data1 == KEY_LCTRL || ev->data1 == KEY_RCTRL
+		 || ev->data1 == KEY_LALT || ev->data1 == KEY_RALT)
+			return true;
+
 		c = (UINT8)ev->data1;
 
 		// use console translations
@@ -854,7 +840,7 @@ static void HU_DrawChat(void)
 		else
 		{
 			//charwidth = SHORT(hu_font[talk[i]-HU_FONTSTART]->width) * con_scalefactor;
-			V_DrawCharacter(HU_INPUTX + c, y, talk[i++] | cv_constextsize.value | V_NOSCALESTART, !cv_allcaps.value);
+			V_DrawCharacter(HU_INPUTX + c, y, talk[i++] | cv_constextsize.value | V_NOSCALESTART, true);
 		}
 		c += charwidth;
 	}
@@ -871,7 +857,7 @@ static void HU_DrawChat(void)
 		else
 		{
 			//charwidth = SHORT(hu_font[w_chat[i]-HU_FONTSTART]->width) * con_scalefactor;
-			V_DrawCharacter(HU_INPUTX + c, y, w_chat[i++] | cv_constextsize.value | V_NOSCALESTART | t, !cv_allcaps.value);
+			V_DrawCharacter(HU_INPUTX + c, y, w_chat[i++] | cv_constextsize.value | V_NOSCALESTART | t, true);
 		}
 
 		c += charwidth;
@@ -883,7 +869,7 @@ static void HU_DrawChat(void)
 	}
 
 	if (hu_tick < 4)
-		V_DrawCharacter(HU_INPUTX + c, y, '_' | cv_constextsize.value |V_NOSCALESTART|t, !cv_allcaps.value);
+		V_DrawCharacter(HU_INPUTX + c, y, '_' | cv_constextsize.value |V_NOSCALESTART|t, true);
 }
 
 
@@ -1101,7 +1087,19 @@ void HU_Drawer(void)
 
 	// draw desynch text
 	if (hu_resynching)
-		V_DrawCenteredString(BASEVIDWIDTH/2, 180, V_YELLOWMAP, "Resynching...");
+	{
+		static UINT32 resynch_ticker = 0;
+		char resynch_text[14];
+		UINT32 i;
+
+		// Animate the dots
+		resynch_ticker++;
+		strcpy(resynch_text, "Resynching");
+		for (i = 0; i < (resynch_ticker / 16) % 4; i++)
+			strcat(resynch_text, ".");
+
+		V_DrawCenteredString(BASEVIDWIDTH/2, 180, V_YELLOWMAP | V_ALLOWLOWERCASE, resynch_text);
+	}
 }
 
 //======================================================================
@@ -1198,7 +1196,7 @@ void HU_DrawTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, I
 
 		V_DrawString(x + 20, y,
 		             ((tab[i].num == whiteplayer) ? V_YELLOWMAP : 0)
-		             | ((players[tab[i].num].health > 0) ? 0 : V_60TRANS)
+		             | ((players[tab[i].num].mo && players[tab[i].num].mo->health > 0) ? 0 : V_60TRANS)
 		             | V_ALLOWLOWERCASE, tab[i].name);
 
 		// Draw emeralds
@@ -1208,7 +1206,7 @@ void HU_DrawTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, I
 			HU_DrawEmeralds(x-12,y+2,tab[i].emeralds);
 		}
 
-		if (players[tab[i].num].health <= 0)
+		if (players[tab[i].num].mo && players[tab[i].num].mo->health <= 0)
 			V_DrawSmallTranslucentPatch (x, y-4, V_80TRANS, livesback);
 		else
 			V_DrawSmallScaledPatch (x, y-4, 0, livesback);
@@ -1220,7 +1218,7 @@ void HU_DrawTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, I
 				V_DrawSmallScaledPatch(x, y-4, 0, superprefix[players[tab[i].num].skin]);
 			else
 			{
-				if (players[tab[i].num].health <= 0)
+				if (players[tab[i].num].mo && players[tab[i].num].mo->health <= 0)
 					V_DrawSmallTranslucentPatch(x, y-4, V_80TRANS, faceprefix[players[tab[i].num].skin]);
 				else
 					V_DrawSmallScaledPatch(x, y-4, 0, faceprefix[players[tab[i].num].skin]);
@@ -1228,15 +1226,15 @@ void HU_DrawTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, I
 		}
 		else
 		{
-			if (players[tab[i].num].powers[pw_super])
+			if (players[tab[i].num].powers[pw_super] && players[tab[i].num].mo && (players[tab[i].num].mo->state < &states[S_PLAY_SUPER_TRANS] || players[tab[i].num].mo->state > &states[S_PLAY_SUPER_TRANS9]))
 			{
-				colormap = R_GetTranslationColormap(players[tab[i].num].skin, players[tab[i].num].mo ? players[tab[i].num].mo->color : tab[i].color, GTC_CACHE);
+				colormap = R_GetTranslationColormap(players[tab[i].num].skin, players[tab[i].num].mo->color, GTC_CACHE);
 				V_DrawSmallMappedPatch (x, y-4, 0, superprefix[players[tab[i].num].skin], colormap);
 			}
 			else
 			{
 				colormap = R_GetTranslationColormap(players[tab[i].num].skin, players[tab[i].num].mo ? players[tab[i].num].mo->color : tab[i].color, GTC_CACHE);
-				if (players[tab[i].num].health <= 0)
+				if (players[tab[i].num].mo && players[tab[i].num].mo->health <= 0)
 					V_DrawSmallTranslucentMappedPatch (x, y-4, V_80TRANS, faceprefix[players[tab[i].num].skin], colormap);
 				else
 					V_DrawSmallMappedPatch (x, y-4, 0, faceprefix[players[tab[i].num].skin], colormap);
@@ -1244,10 +1242,10 @@ void HU_DrawTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, I
 		}
 
 		if (G_GametypeUsesLives()) //show lives
-			V_DrawRightAlignedString(x, y+4, V_ALLOWLOWERCASE|((players[tab[i].num].health > 0) ? 0 : V_60TRANS), va("%dx", players[tab[i].num].lives));
+			V_DrawRightAlignedString(x, y+4, V_ALLOWLOWERCASE|((players[tab[i].num].mo && players[tab[i].num].mo->health > 0) ? 0 : V_60TRANS), va("%dx", players[tab[i].num].lives));
 		else if (G_TagGametype() && players[tab[i].num].pflags & PF_TAGIT)
 		{
-			if (players[tab[i].num].health <= 0)
+			if (players[tab[i].num].mo && players[tab[i].num].mo->health <= 0)
 				V_DrawSmallTranslucentPatch(x-32, y-4, V_60TRANS, tagico);
 			else
 				V_DrawSmallScaledPatch(x-32, y-4, 0, tagico);
@@ -1260,13 +1258,13 @@ void HU_DrawTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, I
 				if (players[tab[i].num].exiting)
 					V_DrawRightAlignedString(x+240, y, 0, va("%i:%02i.%02i", G_TicsToMinutes(players[tab[i].num].realtime,true), G_TicsToSeconds(players[tab[i].num].realtime), G_TicsToCentiseconds(players[tab[i].num].realtime)));
 				else
-					V_DrawRightAlignedString(x+240, y, ((players[tab[i].num].health > 0) ? 0 : V_60TRANS), va("%u", tab[i].count));
+					V_DrawRightAlignedString(x+240, y, ((players[tab[i].num].mo && players[tab[i].num].mo->health > 0) ? 0 : V_60TRANS), va("%u", tab[i].count));
 			}
 			else
-				V_DrawRightAlignedString(x+240, y, ((players[tab[i].num].health > 0) ? 0 : V_60TRANS), va("%i:%02i.%02i", G_TicsToMinutes(tab[i].count,true), G_TicsToSeconds(tab[i].count), G_TicsToCentiseconds(tab[i].count)));
+				V_DrawRightAlignedString(x+240, y, ((players[tab[i].num].mo && players[tab[i].num].mo->health > 0) ? 0 : V_60TRANS), va("%i:%02i.%02i", G_TicsToMinutes(tab[i].count,true), G_TicsToSeconds(tab[i].count), G_TicsToCentiseconds(tab[i].count)));
 		}
 		else
-			V_DrawRightAlignedString(x+240, y, ((players[tab[i].num].health > 0) ? 0 : V_60TRANS), va("%u", tab[i].count));
+			V_DrawRightAlignedString(x+240, y, ((players[tab[i].num].mo && players[tab[i].num].mo->health > 0) ? 0 : V_60TRANS), va("%u", tab[i].count));
 
 		y += 16;
 	}
@@ -1311,7 +1309,7 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 		strlcpy(name, tab[i].name, 9);
 		V_DrawString(x + 20, y,
 		             ((tab[i].num == whiteplayer) ? V_YELLOWMAP : 0)
-		             | ((players[tab[i].num].health > 0) ? 0 : V_TRANSLUCENT)
+		             | ((players[tab[i].num].mo && players[tab[i].num].mo->health > 0) ? 0 : V_TRANSLUCENT)
 		             | V_ALLOWLOWERCASE, name);
 
 		if (gametype == GT_CTF)
@@ -1337,12 +1335,12 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 		else
 		{
 			colormap = R_GetTranslationColormap(players[tab[i].num].skin, players[tab[i].num].mo ? players[tab[i].num].mo->color : tab[i].color, GTC_CACHE);
-			if (players[tab[i].num].health <= 0)
+			if (players[tab[i].num].mo && players[tab[i].num].mo->health <= 0)
 				V_DrawSmallTranslucentMappedPatch (x, y-4, 0, faceprefix[players[tab[i].num].skin], colormap);
 			else
 				V_DrawSmallMappedPatch (x, y-4, 0, faceprefix[players[tab[i].num].skin], colormap);
 		}
-		V_DrawRightAlignedThinString(x+120, y, ((players[tab[i].num].health > 0) ? 0 : V_TRANSLUCENT), va("%u", tab[i].count));
+		V_DrawRightAlignedThinString(x+120, y, ((players[tab[i].num].mo && players[tab[i].num].mo->health > 0) ? 0 : V_TRANSLUCENT), va("%u", tab[i].count));
 	}
 }
 
@@ -1367,7 +1365,7 @@ void HU_DrawDualTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scoreline
 		strlcpy(name, tab[i].name, 9);
 		V_DrawString(x + 20, y,
 		             ((tab[i].num == whiteplayer) ? V_YELLOWMAP : 0)
-		             | ((players[tab[i].num].health > 0) ? 0 : V_TRANSLUCENT)
+		             | ((players[tab[i].num].mo && players[tab[i].num].mo->health > 0) ? 0 : V_TRANSLUCENT)
 		             | V_ALLOWLOWERCASE, name);
 
 		if (G_GametypeUsesLives()) //show lives
@@ -1390,7 +1388,7 @@ void HU_DrawDualTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scoreline
 				V_DrawSmallScaledPatch (x, y-4, 0, superprefix[players[tab[i].num].skin]);
 			else
 			{
-				if (players[tab[i].num].health <= 0)
+				if (players[tab[i].num].mo && players[tab[i].num].mo->health <= 0)
 					V_DrawSmallTranslucentPatch (x, y-4, 0, faceprefix[players[tab[i].num].skin]);
 				else
 					V_DrawSmallScaledPatch (x, y-4, 0, faceprefix[players[tab[i].num].skin]);
@@ -1406,7 +1404,7 @@ void HU_DrawDualTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scoreline
 			else
 			{
 				colormap = R_GetTranslationColormap(players[tab[i].num].skin, players[tab[i].num].mo ? players[tab[i].num].mo->color : tab[i].color, GTC_CACHE);
-				if (players[tab[i].num].health <= 0)
+				if (players[tab[i].num].mo && players[tab[i].num].mo->health <= 0)
 					V_DrawSmallTranslucentMappedPatch (x, y-4, 0, faceprefix[players[tab[i].num].skin], colormap);
 				else
 					V_DrawSmallMappedPatch (x, y-4, 0, faceprefix[players[tab[i].num].skin], colormap);
@@ -1421,13 +1419,13 @@ void HU_DrawDualTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scoreline
 				if (players[tab[i].num].exiting)
 					V_DrawRightAlignedThinString(x+156, y, 0, va("%i:%02i.%02i", G_TicsToMinutes(players[tab[i].num].realtime,true), G_TicsToSeconds(players[tab[i].num].realtime), G_TicsToCentiseconds(players[tab[i].num].realtime)));
 				else
-					V_DrawRightAlignedThinString(x+156, y, ((players[tab[i].num].health > 0) ? 0 : V_TRANSLUCENT), va("%u", tab[i].count));
+					V_DrawRightAlignedThinString(x+156, y, ((players[tab[i].num].mo && players[tab[i].num].mo->health > 0) ? 0 : V_TRANSLUCENT), va("%u", tab[i].count));
 			}
 			else
-				V_DrawRightAlignedThinString(x+156, y, ((players[tab[i].num].health > 0) ? 0 : V_TRANSLUCENT), va("%i:%02i.%02i", G_TicsToMinutes(tab[i].count,true), G_TicsToSeconds(tab[i].count), G_TicsToCentiseconds(tab[i].count)));
+				V_DrawRightAlignedThinString(x+156, y, ((players[tab[i].num].mo && players[tab[i].num].mo->health > 0) ? 0 : V_TRANSLUCENT), va("%i:%02i.%02i", G_TicsToMinutes(tab[i].count,true), G_TicsToSeconds(tab[i].count), G_TicsToCentiseconds(tab[i].count)));
 		}
 		else
-			V_DrawRightAlignedThinString(x+120, y, ((players[tab[i].num].health > 0) ? 0 : V_TRANSLUCENT), va("%u", tab[i].count));
+			V_DrawRightAlignedThinString(x+120, y, ((players[tab[i].num].mo && players[tab[i].num].mo->health > 0) ? 0 : V_TRANSLUCENT), va("%u", tab[i].count));
 
 		y += 16;
 		if (y > 160)

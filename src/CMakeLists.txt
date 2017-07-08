@@ -231,6 +231,7 @@ if(${SRB2_CONFIG_HAVE_BLUA})
 	add_definitions(-DHAVE_BLUA)
 	set(SRB2_LUA_SOURCES
 		lua_baselib.c
+		lua_blockmaplib.c
 		lua_consolelib.c
 		lua_hooklib.c
 		lua_hudlib.c
@@ -390,18 +391,25 @@ if(${SRB2_CONFIG_HWRENDER} AND ${SRB2_CONFIG_STATIC_OPENGL})
 endif()
 
 if(${SRB2_CONFIG_USEASM})
+	#SRB2_ASM_FLAGS can be used to pass flags to either nasm or yasm.
+	if(${CMAKE_SYSTEM} MATCHES "Linux")
+		set(SRB2_ASM_FLAGS "-DLINUX ${SRB2_ASM_FLAGS}")
+	endif()
+
 	if(${SRB2_CONFIG_YASM})
 		set(CMAKE_ASM_YASM_SOURCE_FILE_EXTENSIONS ${CMAKE_ASM_YASM_SOURCE_FILE_EXTENSIONS} nas)
+		set(CMAKE_ASM_YASM_FLAGS "${SRB2_ASM_FLAGS}" CACHE STRING "Flags used by the assembler during all build types.")
 		enable_language(ASM_YASM)
 	else()
 		set(CMAKE_ASM_NASM_SOURCE_FILE_EXTENSIONS ${CMAKE_ASM_NASM_SOURCE_FILE_EXTENSIONS} nas)
+		set(CMAKE_ASM_NASM_FLAGS "${SRB2_ASM_FLAGS}" CACHE STRING "Flags used by the assembler during all build types.")
 		enable_language(ASM_NASM)
 	endif()
 	set(SRB2_USEASM ON)
 	add_definitions(-DUSEASM)
 else()
 	set(SRB2_USEASM OFF)
-	add_definitions(-DNOASM -DNONX86)
+	add_definitions(-DNONX86 -DNORUSEASM)
 endif()
 
 # Targets

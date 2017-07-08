@@ -226,7 +226,12 @@ static int hudinfo_num(lua_State *L)
 
 static int colormap_get(lua_State *L)
 {
-	return luaL_error(L, "colormap is not a struct.");
+	const UINT8 *colormap = *((UINT8 **)luaL_checkudata(L, 1, META_COLORMAP));
+	UINT32 i = luaL_checkinteger(L, 2);
+	if (i >= 256)
+		return luaL_error(L, "colormap index %d out of range (0 - %d)", i, 255);
+	lua_pushinteger(L, colormap[i]);
+	return 1;
 }
 
 static int patch_get(lua_State *L)
@@ -369,6 +374,8 @@ static int libd_drawScaled(lua_State *L)
 	x = luaL_checkinteger(L, 1);
 	y = luaL_checkinteger(L, 2);
 	scale = luaL_checkinteger(L, 3);
+	if (scale < 0)
+		return luaL_error(L, "negative scale");
 	patch = *((patch_t **)luaL_checkudata(L, 4, META_PATCH));
 	flags = luaL_optinteger(L, 5, 0);
 	if (!lua_isnoneornil(L, 6))

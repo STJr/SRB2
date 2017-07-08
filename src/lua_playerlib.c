@@ -25,6 +25,8 @@
 static int lib_iteratePlayers(lua_State *L)
 {
 	INT32 i = -1;
+	if (gamestate != GS_LEVEL)
+		return luaL_error(L, "This function can only be used in a level!");
 	if (lua_gettop(L) < 2)
 	{
 		//return luaL_error(L, "Don't call players.iterate() directly, use it as 'for player in players.iterate do <block> end'.");
@@ -51,6 +53,8 @@ static int lib_getPlayer(lua_State *L)
 {
 	const char *field;
 	// i -> players[i]
+	if (gamestate != GS_LEVEL)
+		return luaL_error(L, "You cannot access this outside of a level!");
 	if (lua_type(L, 2) == LUA_TNUMBER)
 	{
 		lua_Integer i = luaL_checkinteger(L, 2);
@@ -122,8 +126,8 @@ static int player_get(lua_State *L)
 		lua_pushfixed(L, plr->bob);
 	else if (fastcmp(field,"aiming"))
 		lua_pushangle(L, plr->aiming);
-	else if (fastcmp(field,"health"))
-		lua_pushinteger(L, plr->health);
+	else if (fastcmp(field,"rings"))
+		lua_pushinteger(L, plr->rings);
 	else if (fastcmp(field,"pity"))
 		lua_pushinteger(L, plr->pity);
 	else if (fastcmp(field,"currentweapon"))
@@ -190,8 +194,6 @@ static int player_get(lua_State *L)
 		lua_pushinteger(L, plr->gotcontinue);
 	else if (fastcmp(field,"speed"))
 		lua_pushfixed(L, plr->speed);
-	else if (fastcmp(field,"jumping"))
-		lua_pushboolean(L, plr->jumping);
 	else if (fastcmp(field,"secondjump"))
 		lua_pushinteger(L, plr->secondjump);
 	else if (fastcmp(field,"fly1"))
@@ -382,8 +384,8 @@ static int player_set(lua_State *L)
 		else if (plr == &players[secondarydisplayplayer])
 			localaiming2 = plr->aiming;
 	}
-	else if (fastcmp(field,"health"))
-		plr->health = (INT32)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"rings"))
+		plr->rings = (INT32)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"pity"))
 		plr->pity = (SINT8)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"currentweapon"))
@@ -455,8 +457,6 @@ static int player_set(lua_State *L)
 		plr->gotcontinue = (UINT8)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"speed"))
 		plr->speed = luaL_checkfixed(L, 3);
-	else if (fastcmp(field,"jumping"))
-		plr->jumping = luaL_checkboolean(L, 3);
 	else if (fastcmp(field,"secondjump"))
 		plr->secondjump = (UINT8)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"fly1"))

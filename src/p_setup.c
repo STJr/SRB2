@@ -160,6 +160,33 @@ FUNCNORETURN static ATTRNORETURN void CorruptMapError(const char *msg)
 	I_Error("Invalid or corrupt map.\nLook in log file or text console for technical details.");
 }
 
+/** Sets a header's flickies to be equivalent to the original Freed Animals
+  *
+  * \param i The header to set flickies for
+  */
+void P_SetDemoFlickies(INT16 i)
+{
+	mapheaderinfo[i]->numFlickies = 5;
+	mapheaderinfo[i]->flickies = Z_Realloc(mapheaderinfo[i]->flickies, 5*sizeof(mobjtype_t), PU_STATIC, NULL);
+	mapheaderinfo[i]->flickies[0] = MT_FLICKY_02/*MT_BUNNY*/;
+	mapheaderinfo[i]->flickies[1] = MT_FLICKY_01/*MT_BIRD*/;
+	mapheaderinfo[i]->flickies[2] = MT_FLICKY_12/*MT_MOUSE*/;
+	mapheaderinfo[i]->flickies[3] = MT_FLICKY_11/*MT_COW*/;
+	mapheaderinfo[i]->flickies[4] = MT_FLICKY_03/*MT_CHICKEN*/;
+}
+
+/** Clears a header's flickies
+  *
+  * \param i The header to clear flickies for
+  */
+void P_DeleteFlickies(INT16 i)
+{
+	if (mapheaderinfo[i]->flickies)
+		Z_Free(mapheaderinfo[i]->flickies);
+	mapheaderinfo[i]->flickies = NULL;
+	mapheaderinfo[i]->numFlickies = 0;
+}
+
 #define NUMLAPS_DEFAULT 4
 
 /** Clears the data from a single map header.
@@ -172,6 +199,8 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	const INT16 num = (INT16)(i-1);
 	DEH_WriteUndoline("LEVELNAME", mapheaderinfo[num]->lvlttl, UNDO_NONE);
 	mapheaderinfo[num]->lvlttl[0] = '\0';
+	DEH_WriteUndoline("SELECTHEADING", mapheaderinfo[num]->selectheading, UNDO_NONE);
+	mapheaderinfo[num]->selectheading[0] = '\0';
 	DEH_WriteUndoline("SUBTITLE", mapheaderinfo[num]->subttl, UNDO_NONE);
 	mapheaderinfo[num]->subttl[0] = '\0';
 	DEH_WriteUndoline("ACT", va("%d", mapheaderinfo[num]->actnum), UNDO_NONE);
@@ -223,6 +252,12 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->levelflags = 0;
 	DEH_WriteUndoline("MENUFLAGS", va("%d", mapheaderinfo[num]->menuflags), UNDO_NONE);
 	mapheaderinfo[num]->menuflags = 0;
+	// Flickies. Nope, no delfile support here either
+#if 1 // equivalent to "FlickyList = DEMO"
+	P_SetDemoFlickies(num);
+#else // equivalent to "FlickyList = NONE"
+	P_DeleteFlickies(num);
+#endif
 	// TODO grades support for delfile (pfft yeah right)
 	P_DeleteGrades(num);
 	// an even further impossibility, delfile custom opts support
@@ -241,6 +276,7 @@ void P_AllocMapHeader(INT16 i)
 	if (!mapheaderinfo[i])
 	{
 		mapheaderinfo[i] = Z_Malloc(sizeof(mapheader_t), PU_STATIC, NULL);
+		mapheaderinfo[i]->flickies = NULL;
 		mapheaderinfo[i]->grades = NULL;
 	}
 	P_ClearSingleMapHeaderInfo(i + 1);
@@ -574,6 +610,69 @@ INT32 P_AddLevelFlat(const char *flatname, levelflat_t *levelflat)
 	return (INT32)i;
 }
 
+// help function for Lua and $$$.sav reading
+// same as P_AddLevelFlat, except this is not setup so we must realloc levelflats to fit in the new flat
+// no longer a static func in lua_maplib.c because p_saveg.c also needs it
+//
+INT32 P_AddLevelFlatRuntime(const char *flatname)
+{
+	size_t i;
+	levelflat_t *levelflat = levelflats;
+
+	//
+	//  first scan through the already found flats
+	//
+	for (i = 0; i < numlevelflats; i++, levelflat++)
+		if (strnicmp(levelflat->name,flatname,8)==0)
+			break;
+
+	// that flat was already found in the level, return the id
+	if (i == numlevelflats)
+	{
+		// allocate new flat memory
+		levelflats = Z_Realloc(levelflats, (numlevelflats + 1) * sizeof(*levelflats), PU_LEVEL, NULL);
+		levelflat = levelflats+i;
+
+		// store the name
+		strlcpy(levelflat->name, flatname, sizeof (levelflat->name));
+		strupr(levelflat->name);
+
+		// store the flat lump number
+		levelflat->lumpnum = R_GetFlatNumForName(flatname);
+
+#ifndef ZDEBUG
+		CONS_Debug(DBG_SETUP, "flat #%03d: %s\n", atoi(sizeu1(numlevelflats)), levelflat->name);
+#endif
+
+		numlevelflats++;
+	}
+
+	// level flat id
+	return (INT32)i;
+}
+
+// help function for $$$.sav checking
+// this simply returns the flat # for the name given
+//
+INT32 P_CheckLevelFlat(const char *flatname)
+{
+	size_t i;
+	levelflat_t *levelflat = levelflats;
+
+	//
+	//  scan through the already found flats
+	//
+	for (i = 0; i < numlevelflats; i++, levelflat++)
+		if (strnicmp(levelflat->name,flatname,8)==0)
+			break;
+
+	if (i == numlevelflats)
+		return 0; // ??? flat was not found, this should not happen!
+
+	// level flat id
+	return (INT32)i;
+}
+
 static void P_LoadSectors(lumpnum_t lumpnum)
 {
 	UINT8 *data;
@@ -614,6 +713,7 @@ static void P_LoadSectors(lumpnum_t lumpnum)
 		ss->special = SHORT(ms->special);
 		ss->tag = SHORT(ms->tag);
 		ss->nexttag = ss->firsttag = -1;
+		ss->spawn_nexttag = ss->spawn_firsttag = -1;
 
 		memset(&ss->soundorg, 0, sizeof(ss->soundorg));
 		ss->validcount = 0;
@@ -1463,6 +1563,8 @@ static void P_LoadSideDefs2(lumpnum_t lumpnum)
 				sd->text[6] = 0;
 				break;
 			}
+
+			case 4: // Speed pad parameters
 			case 414: // Play SFX
 			{
 				sd->toptexture = sd->midtexture = sd->bottomtexture = 0;
@@ -1476,6 +1578,8 @@ static void P_LoadSideDefs2(lumpnum_t lumpnum)
 				break;
 			}
 
+			case 14: // Bustable block parameters
+			case 15: // Fan particle spawner parameters
 			case 425: // Calls P_SetMobjState on calling mobj
 			case 434: // Custom Power
 			case 442: // Calls P_SetMobjState on mobjs of a given type in the tagged sectors
@@ -2086,6 +2190,7 @@ static void P_LevelInitStuff(void)
 	// special stage tokens, emeralds, and ring total
 	tokenbits = 0;
 	runemeraldmanager = false;
+	emeraldspawndelay = 60*TICRATE;
 	nummaprings = 0;
 
 	// emerald hunt
@@ -2128,7 +2233,7 @@ static void P_LevelInitStuff(void)
 		players[i].gotcontinue = false;
 
 		players[i].xtralife = players[i].deadtimer = players[i].numboxes = players[i].totalring = players[i].laps = 0;
-		players[i].health = 1;
+		players[i].rings = 0;
 		players[i].aiming = 0;
 		players[i].pflags &= ~PF_TIMEOVER;
 
@@ -2171,6 +2276,17 @@ void P_LoadThingsOnly(void)
 	// Search through all the thinkers.
 	mobj_t *mo;
 	thinker_t *think;
+	INT32 i, viewid = -1, centerid = -1; // for skyboxes
+
+	// check if these are any of the normal viewpoint/centerpoint mobjs in the level or not
+	if (skyboxmo[0] || skyboxmo[1])
+		for (i = 0; i < 16; i++)
+		{
+			if (skyboxmo[0] && skyboxmo[0] == skyboxviewpnts[i])
+				viewid = i; // save id just in case
+			if (skyboxmo[1] && skyboxmo[1] == skyboxcenterpnts[i])
+				centerid = i; // save id just in case
+		}
 
 	for (think = thinkercap.next; think != &thinkercap; think = think->next)
 	{
@@ -2187,6 +2303,10 @@ void P_LoadThingsOnly(void)
 
 	P_PrepareThings(lastloadedmaplumpnum + ML_THINGS);
 	P_LoadThings();
+
+	// restore skybox viewpoint/centerpoint if necessary, set them to defaults if we can't do that
+	skyboxmo[0] = skyboxviewpnts[(viewid >= 0) ? viewid : 0];
+	skyboxmo[1] = skyboxcenterpnts[(centerid >= 0) ? centerid : 0];
 
 	P_SpawnSecretItems(true);
 }
@@ -2469,8 +2589,7 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	postimgtype = postimgtype2 = postimg_none;
 
-	if (mapheaderinfo[gamemap-1]->forcecharacter[0] != '\0'
-	&& atoi(mapheaderinfo[gamemap-1]->forcecharacter) != 255)
+	if (mapheaderinfo[gamemap-1]->forcecharacter[0] != '\0')
 		P_ForceCharacter(mapheaderinfo[gamemap-1]->forcecharacter);
 
 	// chasecam on in chaos, race, coop
@@ -2480,8 +2599,9 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	if (!dedicated)
 	{
-		if (!cv_cam_speed.changed)
-			CV_Set(&cv_cam_speed, cv_cam_speed.defaultvalue);
+		// Salt: CV_ClearChangedFlags() messes with your settings :(
+		/*if (!cv_cam_speed.changed)
+			CV_Set(&cv_cam_speed, cv_cam_speed.defaultvalue);*/
 
 		if (!cv_chasecam.changed)
 			CV_SetValue(&cv_chasecam, chase);
@@ -2585,11 +2705,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	lastloadedmaplumpnum = W_GetNumForName(maplumpname = G_BuildMapName(gamemap));
 
 	R_ReInitColormaps(mapheaderinfo[gamemap-1]->palette);
-	CON_ReSetupBackColormap(mapheaderinfo[gamemap-1]->palette);
-
-	// now part of level loading since in future each level may have
-	// its own anim texture sequences, switches etc.
-	P_InitPicAnims();
+	CON_SetupBackColormap();
 
 	// SRB2 determines the sky texture to be used depending on the map header.
 	P_SetupLevelSky(mapheaderinfo[gamemap-1]->skynum, true);
@@ -2626,15 +2742,25 @@ boolean P_SetupLevel(boolean skipprecip)
 	for (i = 0; i < 2; i++)
 		skyboxmo[i] = NULL;
 
+	for (i = 0; i < 16; i++)
+		skyboxviewpnts[i] = skyboxcenterpnts[i] = NULL;
+
 	P_MapStart();
 
 	P_PrepareThings(lastloadedmaplumpnum + ML_THINGS);
+
+	// init gravity, tag lists,
+	// anything that P_ResetDynamicSlopes/P_LoadThings needs to know
+	P_InitSpecials();
 
 #ifdef ESLOPE
 	P_ResetDynamicSlopes();
 #endif
 
 	P_LoadThings();
+	// skybox mobj defaults
+	skyboxmo[0] = skyboxviewpnts[0];
+	skyboxmo[1] = skyboxcenterpnts[0];
 
 	P_SpawnSecretItems(loademblems);
 
@@ -2647,8 +2773,6 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	if (loadprecip) //  ugly hack for P_NetUnArchiveMisc (and P_LoadNetGame)
 		P_SpawnPrecipitation();
-
-	globalweather = mapheaderinfo[gamemap-1]->weather;
 
 #ifdef HWRENDER // not win32 only 19990829 by Kin
 	if (rendermode != render_soft && rendermode != render_none)
@@ -2675,8 +2799,6 @@ boolean P_SetupLevel(boolean skipprecip)
 	for (i = 0; i < MAXPLAYERS; i++)
 		if (playeringame[i])
 		{
-			players[i].pflags &= ~PF_NIGHTSMODE;
-
 			// Start players with pity shields if possible
 			players[i].pity = -1;
 
@@ -2781,22 +2903,21 @@ boolean P_SetupLevel(boolean skipprecip)
 				camera.angle = FixedAngle((fixed_t)thing->angle << FRACBITS);
 			}
 		}
-
-		if (!cv_cam_height.changed)
+		
+		// Salt: CV_ClearChangedFlags() messes with your settings :(
+		/*if (!cv_cam_height.changed)
 			CV_Set(&cv_cam_height, cv_cam_height.defaultvalue);
-
-		if (!cv_cam_dist.changed)
-			CV_Set(&cv_cam_dist, cv_cam_dist.defaultvalue);
-
-		if (!cv_cam_rotate.changed)
-			CV_Set(&cv_cam_rotate, cv_cam_rotate.defaultvalue);
-
 		if (!cv_cam2_height.changed)
 			CV_Set(&cv_cam2_height, cv_cam2_height.defaultvalue);
 
+		if (!cv_cam_dist.changed)
+			CV_Set(&cv_cam_dist, cv_cam_dist.defaultvalue);
 		if (!cv_cam2_dist.changed)
-			CV_Set(&cv_cam2_dist, cv_cam2_dist.defaultvalue);
+			CV_Set(&cv_cam2_dist, cv_cam2_dist.defaultvalue);*/
 
+		// Though, I don't think anyone would care about cam_rotate being reset back to the only value that makes sense :P
+		if (!cv_cam_rotate.changed)
+			CV_Set(&cv_cam_rotate, cv_cam_rotate.defaultvalue);
 		if (!cv_cam2_rotate.changed)
 			CV_Set(&cv_cam2_rotate, cv_cam2_rotate.defaultvalue);
 
@@ -3000,6 +3121,9 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 		R_LoadTextures(); // numtexture changes
 	else
 		R_FlushTextureCache(); // just reload it from file
+
+	// Reload ANIMATED / ANIMDEFS
+	P_InitPicAnims();
 
 	// Flush and reload HUD graphics
 	ST_UnloadGraphics();

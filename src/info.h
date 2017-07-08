@@ -28,6 +28,9 @@ void A_Explode();
 void A_Pain();
 void A_Fall();
 void A_MonitorPop();
+void A_GoldMonitorPop();
+void A_GoldMonitorRestore();
+void A_GoldMonitorSparkle();
 void A_Look();
 void A_Chase();
 void A_FaceStabChase();
@@ -53,6 +56,9 @@ void A_BombShield(); // Obtained Bomb Shield
 void A_WaterShield(); // Obtained Water Shield
 void A_ForceShield(); // Obtained Force Shield
 void A_PityShield(); // Obtained Pity Shield. We're... sorry.
+void A_FlameShield(); // Obtained Flame Shield
+void A_BubbleShield(); // Obtained Bubble Shield
+void A_ThunderShield(); // Obtained Thunder Shield
 void A_GravityBox();
 void A_ScoreRise(); // Rise the score logo
 void A_ParticleSpawn();
@@ -208,6 +214,17 @@ void A_BrakFireShot();
 void A_BrakLobShot();
 void A_NapalmScatter();
 void A_SpawnFreshCopy();
+void A_FlickySpawn();
+void A_FlickyAim();
+void A_FlickyFly();
+void A_FlickySoar();
+void A_FlickyCoast();
+void A_FlickyHop();
+void A_FlickyFlounder();
+void A_FlickyCheck();
+void A_FlickyHeightCheck();
+void A_FlickyFlutter();
+void A_FlameParticle();
 void A_Boss5Jump();
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
@@ -325,27 +342,33 @@ typedef enum sprite
 	SPR_BMNE, // Big floating mine
 
 	// Monitor Boxes
-	SPR_SRBX,
-	SPR_RRBX,
-	SPR_BRBX,
-	SPR_SHTV,
-	SPR_PINV,
-	SPR_YLTV,
-	SPR_BLTV, // Force shield
-	SPR_BKTV, // Bomb shield TV
-	SPR_WHTV, // Jump shield TV
-	SPR_GRTV, // Pity shield TV
-	SPR_ELTV, // Elemental shield TV
-	SPR_EGGB, // Eggman box
-	SPR_MIXU, // Player mixing monitor
-	SPR_RECY, // Recycler (power mixing) monitor
-	SPR_QUES, // Random monitor
-	SPR_GBTV, // Gravity boots TV
-	SPR_PRUP, // 1up
-	SPR_PTTV, // Score TVs
+	SPR_MSTV, // MiSc TV sprites
+	SPR_XLTV, // eXtra Large TV sprites
 
-	// Monitor Miscellany
-	SPR_MTEX, // Exploding monitor
+	SPR_TRRI, // Red team:  10 RIngs
+	SPR_TBRI, // Blue team: 10 RIngs
+
+	SPR_TVRI, // 10 RIng
+	SPR_TVPI, // PIty shield
+	SPR_TVAT, // ATtraction shield
+	SPR_TVFO, // FOrce shield
+	SPR_TVAR, // ARmageddon shield
+	SPR_TVWW, // WhirlWind shield
+	SPR_TVEL, // ELemental shield
+	SPR_TVSS, // Super Sneakers
+	SPR_TVIV, // InVincibility
+	SPR_TV1U, // 1Up
+	SPR_TV1P, // 1uP (textless)
+	SPR_TVEG, // EGgman
+	SPR_TVMX, // MiXup
+	SPR_TVMY, // MYstery
+	SPR_TVGV, // GraVity boots
+	SPR_TVRC, // ReCycler
+	SPR_TV1K, // 1,000 points  (1 K)
+	SPR_TVTK, // 10,000 points (Ten K)
+	SPR_TVFL, // FLame shield
+	SPR_TVBB, // BuBble shield
+	SPR_TVZP, // Thunder shield (ZaP)
 
 	// Projectiles
 	SPR_MISL,
@@ -367,7 +390,8 @@ typedef enum sprite
 	SPR_BUS2, // GFZ Bush w/o berries
 
 	// Techno Hill Scenery
-	SPR_THZP, // Techno Hill Zone Plant
+	SPR_THZP, // THZ1 Flower
+	SPR_FWR5, // Another flower
 	SPR_ALRM, // THZ2 Alarm
 
 	// Deep Sea Scenery
@@ -402,9 +426,11 @@ typedef enum sprite
 	// Egg Rock Scenery
 
 	// Christmas Scenery
-	SPR_XMS1,
-	SPR_XMS2,
-	SPR_XMS3,
+	SPR_XMS1, // Christmas Pole
+	SPR_XMS2, // Candy Cane
+	SPR_XMS3, // Snowman
+	SPR_XMS4, // Lamppost
+	SPR_XMS5, // Hanging Star
 
 	// Botanic Serenity Scenery
 	SPR_BSZ1, // Tall flowers
@@ -427,21 +453,35 @@ typedef enum sprite
 	SPR_ARMB, // Armageddon Shield Ring, Back
 	SPR_WIND, // Whirlwind Shield Orb
 	SPR_MAGN, // Attract Shield Orb
-	SPR_ELEM, // Elemental Shield Orb and Fire
+	SPR_ELEM, // Elemental Shield Orb
 	SPR_FORC, // Force Shield Orb
 	SPR_PITY, // Pity Shield Orb
+	SPR_FIRS, // Flame Shield Orb
+	SPR_BUBS, // Bubble Shield Orb
+	SPR_ZAPS, // Thunder Shield Orb
 	SPR_IVSP, // invincibility sparkles
 	SPR_SSPK, // Super Sonic Spark
 
 	SPR_GOAL, // Special Stage goal (here because lol NiGHTS)
 
-	// Freed Animals
-	SPR_BIRD, // Birdie freed!
-	SPR_BUNY, // Bunny freed!
-	SPR_MOUS, // Mouse
-	SPR_CHIC, // Chicken
-	SPR_COWZ, // Cow
-	SPR_RBRD, // Red Birdie in Bubble
+	// Flickies
+	SPR_FBUB, // Flicky-sized bubble
+	SPR_FL01, // Bluebird
+	SPR_FL02, // Rabbit
+	SPR_FL03, // Chicken
+	SPR_FL04, // Seal
+	SPR_FL05, // Pig
+	SPR_FL06, // Chipmunk
+	SPR_FL07, // Penguin
+	SPR_FL08, // Fish
+	SPR_FL09, // Ram
+	SPR_FL10, // Puffin
+	SPR_FL11, // Cow
+	SPR_FL12, // Rat
+	SPR_FL13, // Bear
+	SPR_FL14, // Dove
+	SPR_FL15, // Cat
+	SPR_FL16, // Canary
 
 	// Springs
 	SPR_SPRY, // yellow spring
@@ -461,6 +501,8 @@ typedef enum sprite
 	SPR_SMOK,
 	SPR_BUBL, // Bubble
 	SPR_WZAP,
+	SPR_DUST, // Spindash dust
+	SPR_FPRT, // Spindash dust (flame)
 	SPR_TFOG, // Teleport Fog
 	SPR_SEED, // Sonic CD flower seed
 	SPR_PRTL, // Particle (for fans, etc.)
@@ -468,8 +510,11 @@ typedef enum sprite
 	// Game Indicators
 	SPR_SCOR, // Score logo
 	SPR_DRWN, // Drowning Timer
+	SPR_LCKN, // Target
 	SPR_TTAG, // Tag Sign
 	SPR_GFLG, // Got Flag sign
+
+	SPR_CORK,
 
 	// Ring Weapons
 	SPR_RRNG, // Red Ring
@@ -550,43 +595,26 @@ typedef enum sprite
 	SPR_GWLG,
 	SPR_GWLR,
 
-	// SRB1 Sprites
-	SPR_SRBA,
-	SPR_SRBB,
-	SPR_SRBC,
-	SPR_SRBD,
-	SPR_SRBE,
-	SPR_SRBF,
-	SPR_SRBG,
-	SPR_SRBH,
-	SPR_SRBI,
-	SPR_SRBJ,
-	SPR_SRBK,
-	SPR_SRBL,
-	SPR_SRBM,
-	SPR_SRBN,
-	SPR_SRBO,
-
 	SPR_FIRSTFREESLOT,
 	SPR_LASTFREESLOT = SPR_FIRSTFREESLOT + NUMSPRITEFREESLOTS - 1,
 	NUMSPRITES
 } spritenum_t;
 
-// Make sure to be conscious of FF_FRAMEMASK whenever you change this table.
-// Currently, FF_FRAMEMASK is 0x1ff, or 511 - and NUMSPRITEFREESLOTS is 256.
-// Since this is zero-based, there can be at most 256 different SPR2_'s without changing that.
+// Make sure to be conscious of FF_FRAMEMASK and the fact sprite2 is stored as a UINT8 whenever you change this table.
+// Currently, FF_FRAMEMASK is 0xff, or 255 - but the second half is used by FF_SPR2SUPER, so the limitation is 0x7f.
+// Since this is zero-based, there can be at most 128 different SPR2_'s without changing that.
 enum playersprite
 {
 	SPR2_STND = 0,
 	SPR2_WAIT,
 	SPR2_WALK,
 	SPR2_RUN ,
-	SPR2_PEEL,
+	SPR2_DASH,
 	SPR2_PAIN,
+	SPR2_STUN,
 	SPR2_DEAD,
 	SPR2_DRWN, // drown
-	SPR2_SPIN,
-	SPR2_DASH, // spindash charge
+	SPR2_ROLL,
 	SPR2_GASP,
 	SPR2_JUMP,
 	SPR2_SPNG, // spring
@@ -594,8 +622,7 @@ enum playersprite
 	SPR2_EDGE,
 	SPR2_RIDE,
 
-	SPR2_SIGN, // end sign head
-	SPR2_LIFE, // life monitor icon
+	SPR2_SPIN, // spindash
 
 	SPR2_FLY ,
 	SPR2_SWIM,
@@ -605,36 +632,28 @@ enum playersprite
 	SPR2_CLNG, // cling
 	SPR2_CLMB, // climb
 
+	SPR2_FLT , // float
+	SPR2_FRUN, // float run
+
+	SPR2_BNCE, // bounce
+	SPR2_BLND, // bounce landing
+
+	SPR2_FIRE, // fire
+
 	SPR2_TWIN, // twinspin
 
 	SPR2_MLEE, // melee
+	SPR2_MLEL, // melee land
 
-	SPR2_TRNS, // super transformation
-	SPR2_SSTD, // super stand
-	SPR2_SWLK, // super walk
-	SPR2_SRUN, // super run
-	SPR2_SPEE, // super peelout
-	SPR2_SPAN, // super pain
-	SPR2_SSTN, // super stun
-	SPR2_SDTH, // super death
-	SPR2_SDRN, // super drown
-	SPR2_SSPN, // super spin
-	SPR2_SGSP, // super gasp
-	SPR2_SJMP, // super jump
-	SPR2_SSPG, // super spring
-	SPR2_SFAL, // super fall
-	SPR2_SEDG, // super edge
-	SPR2_SRID, // super ride
-	SPR2_SFLT, // super float
+	SPR2_TRNS, // transformation
 
-	SPR2_NTRN, // NiGHTS transformation
 	SPR2_NSTD, // NiGHTS stand
 	SPR2_NFLT, // NiGHTS float
-	SPR2_NPAN, // NiGHTS pain
+	SPR2_NSTN, // NiGHTS stun
 	SPR2_NPUL, // NiGHTS pull
 	SPR2_NATK, // NiGHTS attack
 
-	// NiGHTS flight.
+	// NiGHTS flight
 	SPR2_NGT0,
 	SPR2_NGT1,
 	SPR2_NGT2,
@@ -649,7 +668,7 @@ enum playersprite
 	SPR2_NGTB,
 	SPR2_NGTC,
 
-	// NiGHTS drill.
+	// NiGHTS drill
 	SPR2_DRL0,
 	SPR2_DRL1,
 	SPR2_DRL2,
@@ -664,8 +683,11 @@ enum playersprite
 	SPR2_DRLB,
 	SPR2_DRLC,
 
+	SPR2_SIGN, // end sign head
+	SPR2_LIFE, // life monitor icon
+
 	SPR2_FIRSTFREESLOT,
-	SPR2_LASTFREESLOT = SPR2_FIRSTFREESLOT + NUMSPRITEFREESLOTS - 1,
+	SPR2_LASTFREESLOT = 0x7f,
 	NUMPLAYERSPRITES
 };
 
@@ -691,18 +713,21 @@ typedef enum state
 	S_PLAY_WAIT,
 	S_PLAY_WALK,
 	S_PLAY_RUN,
-	S_PLAY_PEEL,
+	S_PLAY_DASH,
 	S_PLAY_PAIN,
+	S_PLAY_STUN,
 	S_PLAY_DEAD,
 	S_PLAY_DRWN,
-	S_PLAY_SPIN,
-	S_PLAY_DASH,
+	S_PLAY_ROLL,
 	S_PLAY_GASP,
-	S_PLAY_JUMP, // spin jump
+	S_PLAY_JUMP,
 	S_PLAY_SPRING,
 	S_PLAY_FALL,
 	S_PLAY_EDGE,
 	S_PLAY_RIDE,
+
+	// CA2_SPINDASH
+	S_PLAY_SPINDASH,
 
 	// CA_FLY/SWIM
 	S_PLAY_FLY,
@@ -714,30 +739,25 @@ typedef enum state
 	S_PLAY_CLING,
 	S_PLAY_CLIMB,
 
+	// CA_FLOAT/CA_SLOWFALL
+	S_PLAY_FLOAT,
+	S_PLAY_FLOAT_RUN,
+
+	// CA_BOUNCE
+	S_PLAY_BOUNCE,
+	S_PLAY_BOUNCE_LANDING,
+
+	// CA2_GUNSLINGER
+	S_PLAY_FIRE,
+	S_PLAY_FIRE_FINISH,
+
 	// CA_TWINSPIN
 	S_PLAY_TWINSPIN,
 
 	// CA2_MELEE
 	S_PLAY_MELEE,
 	S_PLAY_MELEE_FINISH,
-
-	// SF_SUPERANIMS
-	S_PLAY_SUPER_STND,
-	S_PLAY_SUPER_WALK,
-	S_PLAY_SUPER_RUN,
-	S_PLAY_SUPER_PEEL,
-	S_PLAY_SUPER_PAIN,
-	S_PLAY_SUPER_STUN,
-	S_PLAY_SUPER_DEAD,
-	S_PLAY_SUPER_DRWN,
-	S_PLAY_SUPER_SPIN,
-	S_PLAY_SUPER_GASP,
-	S_PLAY_SUPER_JUMP, // see note above
-	S_PLAY_SUPER_SPRING,
-	S_PLAY_SUPER_FALL,
-	S_PLAY_SUPER_EDGE,
-	S_PLAY_SUPER_RIDE,
-	S_PLAY_SUPER_FLOAT,
+	S_PLAY_MELEE_LANDING,
 
 	// SF_SUPER
 	S_PLAY_SUPER_TRANS,
@@ -776,7 +796,7 @@ typedef enum state
 
 	S_PLAY_NIGHTS_STAND,
 	S_PLAY_NIGHTS_FLOAT,
-	S_PLAY_NIGHTS_PAIN,
+	S_PLAY_NIGHTS_STUN,
 	S_PLAY_NIGHTS_PULL,
 	S_PLAY_NIGHTS_ATTACK,
 
@@ -1180,6 +1200,7 @@ typedef enum state
 	S_GOOP1,
 	S_GOOP2,
 	S_GOOP3,
+	S_GOOPTRAIL,
 
 	// Boss 3
 	S_EGGMOBILE3_STND,
@@ -1552,11 +1573,11 @@ typedef enum state
 	S_METALSONIC_FLOAT,
 	S_METALSONIC_VECTOR,
 	S_METALSONIC_STUN,
-	S_METALSONIC_BLOCK,
 	S_METALSONIC_RAISE,
 	S_METALSONIC_GATHER,
 	S_METALSONIC_DASH,
 	S_METALSONIC_BOUNCE,
+	S_METALSONIC_BADBOUNCE,
 	S_METALSONIC_SHOOT,
 	S_METALSONIC_PAIN,
 	S_METALSONIC_DEATH,
@@ -1735,7 +1756,7 @@ typedef enum state
 	S_SPIKEBALL7,
 	S_SPIKEBALL8,
 
-	// Fire Shield's Spawn
+	// Elemental Shield's Spawn
 	S_SPINFIRE1,
 	S_SPINFIRE2,
 	S_SPINFIRE3,
@@ -1756,7 +1777,9 @@ typedef enum state
 	// Starpost
 	S_STARPOST_IDLE,
 	S_STARPOST_FLASH,
+	S_STARPOST_STARTSPIN,
 	S_STARPOST_SPIN,
+	S_STARPOST_ENDSPIN,
 
 	// Big floating mine
 	S_BIGMINE1,
@@ -1773,170 +1796,131 @@ typedef enum state
 	S_CANNONLAUNCHER2,
 	S_CANNONLAUNCHER3,
 
-	// Super Ring Box
-	S_SUPERRINGBOX,
-	S_SUPERRINGBOX1,
-	S_SUPERRINGBOX2,
-	S_SUPERRINGBOX3,
-	S_SUPERRINGBOX4,
-	S_SUPERRINGBOX5,
-	S_SUPERRINGBOX6,
+	// Monitor Miscellany
+	S_BOXSPARKLE1,
+	S_BOXSPARKLE2,
+	S_BOXSPARKLE3,
 
-	// Red Team Ring Box
-	S_REDRINGBOX,
-	S_REDRINGBOX1,
+	S_BOX_FLICKER,
+	S_BOX_POP1,
+	S_BOX_POP2,
 
-	// Blue Team Ring Box
-	S_BLUERINGBOX,
-	S_BLUERINGBOX1,
+	S_GOLDBOX_FLICKER,
+	S_GOLDBOX_OFF1,
+	S_GOLDBOX_OFF2,
+	S_GOLDBOX_OFF3,
+	S_GOLDBOX_OFF4,
+	S_GOLDBOX_OFF5,
+	S_GOLDBOX_OFF6,
+	S_GOLDBOX_OFF7,
 
-	// Super Sneakers Box
-	S_SHTV,
-	S_SHTV1,
-	S_SHTV2,
-	S_SHTV3,
-	S_SHTV4,
-	S_SHTV5,
-	S_SHTV6,
+	// Monitor States (one per box)
+	S_MYSTERY_BOX,
+	S_RING_BOX,
+	S_PITY_BOX,
+	S_ATTRACT_BOX,
+	S_FORCE_BOX,
+	S_ARMAGEDDON_BOX,
+	S_WHIRLWIND_BOX,
+	S_ELEMENTAL_BOX,
+	S_SNEAKERS_BOX,
+	S_INVULN_BOX,
+	S_1UP_BOX,
+	S_EGGMAN_BOX,
+	S_MIXUP_BOX,
+	S_GRAVITY_BOX,
+	S_RECYCLER_BOX,
+	S_SCORE1K_BOX,
+	S_SCORE10K_BOX,
+	S_FLAMEAURA_BOX,
+	S_BUBBLEWRAP_BOX,
+	S_THUNDERCOIN_BOX,
 
-	// Invincibility Box
-	S_PINV,
-	S_PINV1,
-	S_PINV2,
-	S_PINV3,
-	S_PINV4,
-	S_PINV5,
-	S_PINV6,
+	// Gold Repeat Monitor States (one per box)
+	S_PITY_GOLDBOX,
+	S_ATTRACT_GOLDBOX,
+	S_FORCE_GOLDBOX,
+	S_ARMAGEDDON_GOLDBOX,
+	S_WHIRLWIND_GOLDBOX,
+	S_ELEMENTAL_GOLDBOX,
+	S_SNEAKERS_GOLDBOX,
+	S_INVULN_GOLDBOX,
+	S_EGGMAN_GOLDBOX,
+	S_GRAVITY_GOLDBOX,
+	S_FLAMEAURA_GOLDBOX,
+	S_BUBBLEWRAP_GOLDBOX,
+	S_THUNDERCOIN_GOLDBOX,
 
-	// 1up Box
-	S_PRUP,
-	S_PRUP1,
-	S_PRUP2,
-	S_PRUP3,
-	S_PRUP4,
-	S_PRUP5,
-	S_PRUP6,
+	// Team Ring Boxes (these are special)
+	S_RING_REDBOX1,
+	S_RING_REDBOX2,
+	S_REDBOX_POP1,
+	S_REDBOX_POP2,
 
-	// Ring Shield Box
-	S_YLTV,
-	S_YLTV1,
-	S_YLTV2,
-	S_YLTV3,
-	S_YLTV4,
-	S_YLTV5,
-	S_YLTV6,
+	S_RING_BLUEBOX1,
+	S_RING_BLUEBOX2,
+	S_BLUEBOX_POP1,
+	S_BLUEBOX_POP2,
 
-	// Force Shield Box
-	S_BLTV1,
-	S_BLTV2,
-	S_BLTV3,
-	S_BLTV4,
-	S_BLTV5,
-	S_BLTV6,
-	S_BLTV7,
+	// Box Icons -- 2 states each, animation and action
+	S_RING_ICON1,
+	S_RING_ICON2,
 
-	// Bomb Shield Box
-	S_BKTV1,
-	S_BKTV2,
-	S_BKTV3,
-	S_BKTV4,
-	S_BKTV5,
-	S_BKTV6,
-	S_BKTV7,
+	S_PITY_ICON1,
+	S_PITY_ICON2,
 
-	// Jump Shield Box
-	S_WHTV1,
-	S_WHTV2,
-	S_WHTV3,
-	S_WHTV4,
-	S_WHTV5,
-	S_WHTV6,
-	S_WHTV7,
+	S_ATTRACT_ICON1,
+	S_ATTRACT_ICON2,
 
-	// Water Shield Box
-	S_GRTV,
-	S_GRTV1,
-	S_GRTV2,
-	S_GRTV3,
-	S_GRTV4,
-	S_GRTV5,
-	S_GRTV6,
+	S_FORCE_ICON1,
+	S_FORCE_ICON2,
 
-	// Pity Shield Box
-	S_PITV1,
-	S_PITV2,
-	S_PITV3,
-	S_PITV4,
-	S_PITV5,
-	S_PITV6,
-	S_PITV7,
+	S_ARMAGEDDON_ICON1,
+	S_ARMAGEDDON_ICON2,
 
-	// Eggman Box
-	S_EGGTV1,
-	S_EGGTV2,
-	S_EGGTV3,
-	S_EGGTV4,
-	S_EGGTV5,
-	S_EGGTV6,
-	S_EGGTV7,
+	S_WHIRLWIND_ICON1,
+	S_WHIRLWIND_ICON2,
 
-	// Teleport Box
-	S_MIXUPBOX1,
-	S_MIXUPBOX2,
-	S_MIXUPBOX3,
-	S_MIXUPBOX4,
-	S_MIXUPBOX5,
-	S_MIXUPBOX6,
-	S_MIXUPBOX7,
+	S_ELEMENTAL_ICON1,
+	S_ELEMENTAL_ICON2,
 
-	// Recycler Box
-	S_RECYCLETV1,
-	S_RECYCLETV2,
-	S_RECYCLETV3,
-	S_RECYCLETV4,
-	S_RECYCLETV5,
-	S_RECYCLETV6,
-	S_RECYCLETV7,
+	S_SNEAKERS_ICON1,
+	S_SNEAKERS_ICON2,
 
-	// Question Box
-	S_RANDOMBOX1,
-	S_RANDOMBOX2,
-	S_RANDOMBOX3,
+	S_INVULN_ICON1,
+	S_INVULN_ICON2,
 
-	// Gravity Boots Box
-	S_GBTV1,
-	S_GBTV2,
-	S_GBTV3,
-	S_GBTV4,
-	S_GBTV5,
-	S_GBTV6,
-	S_GBTV7,
+	S_1UP_ICON1,
+	S_1UP_ICON2,
 
-	// Score boxes
-	S_SCORETVA1,
-	S_SCORETVA2,
-	S_SCORETVA3,
-	S_SCORETVA4,
-	S_SCORETVA5,
-	S_SCORETVA6,
-	S_SCORETVA7,
-	S_SCORETVB1,
-	S_SCORETVB2,
-	S_SCORETVB3,
-	S_SCORETVB4,
-	S_SCORETVB5,
-	S_SCORETVB6,
-	S_SCORETVB7,
+	S_EGGMAN_ICON1,
+	S_EGGMAN_ICON2,
 
-	// Monitor Explosion
-	S_MONITOREXPLOSION1,
-	S_MONITOREXPLOSION2,
+	S_MIXUP_ICON1,
+	S_MIXUP_ICON2,
 
-	S_REDMONITOREXPLOSION1,
-	S_REDMONITOREXPLOSION2,
+	S_GRAVITY_ICON1,
+	S_GRAVITY_ICON2,
 
-	S_BLUEMONITOREXPLOSION1,
-	S_BLUEMONITOREXPLOSION2,
+	S_RECYCLER_ICON1,
+	S_RECYCLER_ICON2,
+
+	S_SCORE1K_ICON1,
+	S_SCORE1K_ICON2,
+
+	S_SCORE10K_ICON1,
+	S_SCORE10K_ICON2,
+
+	S_FLAMEAURA_ICON1,
+	S_FLAMEAURA_ICON2,
+
+	S_BUBBLEWRAP_ICON1,
+	S_BUBBLEWRAP_ICON2,
+
+	S_THUNDERCOIN_ICON1,
+	S_THUNDERCOIN_ICON2,
+
+	// ---
 
 	S_ROCKET,
 
@@ -1979,27 +1963,22 @@ typedef enum state
 	S_DEMONFIRE6,
 
 	S_GFZFLOWERA,
-	S_GFZFLOWERA2,
-
-	S_GFZFLOWERB1,
-	S_GFZFLOWERB2,
-
-	S_GFZFLOWERC1,
+	S_GFZFLOWERB,
+	S_GFZFLOWERC,
 
 	S_BERRYBUSH,
 	S_BUSH,
 
 	// THZ Plant
-	S_THZPLANT1,
-	S_THZPLANT2,
-	S_THZPLANT3,
-	S_THZPLANT4,
+	S_THZFLOWERA,
+	S_THZFLOWERB,
 
 	// THZ Alarm
 	S_ALARM1,
 
 	// Deep Sea Gargoyle
 	S_GARGOYLE,
+	S_BIGGARGOYLE,
 
 	// DSZ Seaweed
 	S_SEAWEED1,
@@ -2038,6 +2017,11 @@ typedef enum state
 	S_FLAME2,
 	S_FLAME3,
 	S_FLAME4,
+	S_FLAME5,
+	S_FLAME6,
+	S_FLAMEPARTICLE,
+
+	S_FLAMEREST,
 
 	// Eggman Statue
 	S_EGGSTATUE1,
@@ -2099,36 +2083,13 @@ typedef enum state
 	// Spinning flame jets
 	S_FJSPINAXISA1, // Counter-clockwise
 	S_FJSPINAXISA2,
-	S_FJSPINAXISA3,
-	S_FJSPINAXISA4,
-	S_FJSPINAXISA5,
-	S_FJSPINAXISA6,
-	S_FJSPINAXISA7,
-	S_FJSPINAXISA8,
-	S_FJSPINAXISA9,
-	S_FJSPINHELPERA1,
-	S_FJSPINHELPERA2,
-	S_FJSPINHELPERA3,
 	S_FJSPINAXISB1, // Clockwise
 	S_FJSPINAXISB2,
-	S_FJSPINAXISB3,
-	S_FJSPINAXISB4,
-	S_FJSPINAXISB5,
-	S_FJSPINAXISB6,
-	S_FJSPINAXISB7,
-	S_FJSPINAXISB8,
-	S_FJSPINAXISB9,
-	S_FJSPINHELPERB1,
-	S_FJSPINHELPERB2,
-	S_FJSPINHELPERB3,
 
 	// Blade's flame
 	S_FLAMEJETFLAMEB1,
 	S_FLAMEJETFLAMEB2,
 	S_FLAMEJETFLAMEB3,
-	S_FLAMEJETFLAMEB4,
-	S_FLAMEJETFLAMEB5,
-	S_FLAMEJETFLAMEB6,
 
 	// Trapgoyles
 	S_TRAPGOYLE,
@@ -2176,7 +2137,14 @@ typedef enum state
 	// Xmas-specific stuff
 	S_XMASPOLE,
 	S_CANDYCANE,
-	S_SNOWMAN,
+	S_SNOWMAN,    // normal
+	S_SNOWMANHAT, // with hat + scarf
+	S_LAMPPOST1,  // normal
+	S_LAMPPOST2,  // with snow
+	S_HANGSTAR,
+	// Xmas GFZ bushes
+	S_XMASBERRYBUSH,
+	S_XMASBUSH,
 
 	// Botanic Serenity's loads of scenery states
 	S_BSZTALLFLOWER_RED,
@@ -2223,8 +2191,10 @@ typedef enum state
 	S_BSZVINE_ORANGE,
 	S_BSZSHRUB,
 	S_BSZCLOVER,
-	S_BSZFISH,
-	S_BSZSUNFLOWER,
+	S_BIG_PALMTREE_TRUNK,
+	S_BIG_PALMTREE_TOP,
+	S_PALMTREE_TRUNK,
+	S_PALMTREE_TOP,
 
 	S_DBALL1,
 	S_DBALL2,
@@ -2307,6 +2277,7 @@ typedef enum state
 	S_MAGN10,
 	S_MAGN11,
 	S_MAGN12,
+	S_MAGN13,
 
 	S_FORC1,
 	S_FORC2,
@@ -2330,6 +2301,8 @@ typedef enum state
 	S_FORC19,
 	S_FORC20,
 
+	S_FORC21,
+
 	S_ELEM1,
 	S_ELEM2,
 	S_ELEM3,
@@ -2343,6 +2316,9 @@ typedef enum state
 	S_ELEM11,
 	S_ELEM12,
 
+	S_ELEM13,
+	S_ELEM14,
+
 	S_ELEMF1,
 	S_ELEMF2,
 	S_ELEMF3,
@@ -2351,6 +2327,8 @@ typedef enum state
 	S_ELEMF6,
 	S_ELEMF7,
 	S_ELEMF8,
+	S_ELEMF9,
+	S_ELEMF10,
 
 	S_PITY1,
 	S_PITY2,
@@ -2358,10 +2336,84 @@ typedef enum state
 	S_PITY4,
 	S_PITY5,
 	S_PITY6,
-	S_PITY7,
-	S_PITY8,
-	S_PITY9,
-	S_PITY10,
+
+	S_FIRS1,
+	S_FIRS2,
+	S_FIRS3,
+	S_FIRS4,
+	S_FIRS5,
+	S_FIRS6,
+	S_FIRS7,
+	S_FIRS8,
+	S_FIRS9,
+
+	S_FIRS10,
+	S_FIRS11,
+
+	S_FIRSB1,
+	S_FIRSB2,
+	S_FIRSB3,
+	S_FIRSB4,
+	S_FIRSB5,
+	S_FIRSB6,
+	S_FIRSB7,
+	S_FIRSB8,
+	S_FIRSB9,
+
+	S_FIRSB10,
+
+	S_BUBS1,
+	S_BUBS2,
+	S_BUBS3,
+	S_BUBS4,
+	S_BUBS5,
+	S_BUBS6,
+	S_BUBS7,
+	S_BUBS8,
+	S_BUBS9,
+
+	S_BUBS10,
+	S_BUBS11,
+
+	S_BUBSB1,
+	S_BUBSB2,
+	S_BUBSB3,
+	S_BUBSB4,
+
+	S_BUBSB5,
+	S_BUBSB6,
+
+	S_ZAPS1,
+	S_ZAPS2,
+	S_ZAPS3,
+	S_ZAPS4,
+	S_ZAPS5,
+	S_ZAPS6,
+	S_ZAPS7,
+	S_ZAPS8,
+	S_ZAPS9,
+	S_ZAPS10,
+	S_ZAPS11,
+	S_ZAPS12,
+	S_ZAPS13, // blank frame
+	S_ZAPS14,
+	S_ZAPS15,
+	S_ZAPS16,
+
+	S_ZAPSB1, // blank frame
+	S_ZAPSB2,
+	S_ZAPSB3,
+	S_ZAPSB4,
+	S_ZAPSB5,
+	S_ZAPSB6,
+	S_ZAPSB7,
+	S_ZAPSB8,
+	S_ZAPSB9,
+	S_ZAPSB10,
+	S_ZAPSB11, // blank frame
+
+	//Thunder spark
+	S_THUNDERCOIN_SPARK,
 
 	// Invincibility Sparkles
 	S_IVSP,
@@ -2373,43 +2425,133 @@ typedef enum state
 	S_SSPK4,
 	S_SSPK5,
 
-	// Freed Birdie
-	S_BIRD1,
-	S_BIRD2,
-	S_BIRD3,
+	// Flicky-sized bubble
+	S_FLICKY_BUBBLE,
 
-	// Freed Bunny
-	S_BUNNY1,
-	S_BUNNY2,
-	S_BUNNY3,
-	S_BUNNY4,
-	S_BUNNY5,
-	S_BUNNY6,
-	S_BUNNY7,
-	S_BUNNY8,
-	S_BUNNY9,
-	S_BUNNY10,
+	// Bluebird
+	S_FLICKY_01_OUT,
+	S_FLICKY_01_FLAP1,
+	S_FLICKY_01_FLAP2,
+	S_FLICKY_01_FLAP3,
 
-	// Freed Mouse
-	S_MOUSE1,
-	S_MOUSE2,
+	// Rabbit
+	S_FLICKY_02_OUT,
+	S_FLICKY_02_AIM,
+	S_FLICKY_02_HOP,
+	S_FLICKY_02_UP,
+	S_FLICKY_02_DOWN,
 
-	// Freed Chicken
-	S_CHICKEN1,
-	S_CHICKENHOP,
-	S_CHICKENFLY1,
-	S_CHICKENFLY2,
+	// Chicken
+	S_FLICKY_03_OUT,
+	S_FLICKY_03_AIM,
+	S_FLICKY_03_HOP,
+	S_FLICKY_03_UP,
+	S_FLICKY_03_FLAP1,
+	S_FLICKY_03_FLAP2,
 
-	// Freed Cow
-	S_COW1,
-	S_COW2,
-	S_COW3,
-	S_COW4,
+	// Seal
+	S_FLICKY_04_OUT,
+	S_FLICKY_04_AIM,
+	S_FLICKY_04_HOP,
+	S_FLICKY_04_UP,
+	S_FLICKY_04_DOWN,
+	S_FLICKY_04_SWIM1,
+	S_FLICKY_04_SWIM2,
+	S_FLICKY_04_SWIM3,
+	S_FLICKY_04_SWIM4,
 
-	// Red Birdie in Bubble
-	S_RBIRD1,
-	S_RBIRD2,
-	S_RBIRD3,
+	// Pig
+	S_FLICKY_05_OUT,
+	S_FLICKY_05_AIM,
+	S_FLICKY_05_HOP,
+	S_FLICKY_05_UP,
+	S_FLICKY_05_DOWN,
+
+	// Chipmunk
+	S_FLICKY_06_OUT,
+	S_FLICKY_06_AIM,
+	S_FLICKY_06_HOP,
+	S_FLICKY_06_UP,
+	S_FLICKY_06_DOWN,
+
+	// Penguin
+	S_FLICKY_07_OUT,
+	S_FLICKY_07_AIML,
+	S_FLICKY_07_HOPL,
+	S_FLICKY_07_UPL,
+	S_FLICKY_07_DOWNL,
+	S_FLICKY_07_AIMR,
+	S_FLICKY_07_HOPR,
+	S_FLICKY_07_UPR,
+	S_FLICKY_07_DOWNR,
+	S_FLICKY_07_SWIM1,
+	S_FLICKY_07_SWIM2,
+	S_FLICKY_07_SWIM3,
+
+	// Fish
+	S_FLICKY_08_OUT,
+	S_FLICKY_08_AIM,
+	S_FLICKY_08_HOP,
+	S_FLICKY_08_FLAP1,
+	S_FLICKY_08_FLAP2,
+	S_FLICKY_08_FLAP3,
+	S_FLICKY_08_FLAP4,
+	S_FLICKY_08_SWIM1,
+	S_FLICKY_08_SWIM2,
+	S_FLICKY_08_SWIM3,
+	S_FLICKY_08_SWIM4,
+
+	// Ram
+	S_FLICKY_09_OUT,
+	S_FLICKY_09_AIM,
+	S_FLICKY_09_HOP,
+	S_FLICKY_09_UP,
+	S_FLICKY_09_DOWN,
+
+	// Puffin
+	S_FLICKY_10_OUT,
+	S_FLICKY_10_FLAP1,
+	S_FLICKY_10_FLAP2,
+
+	// Cow
+	S_FLICKY_11_OUT,
+	S_FLICKY_11_AIM,
+	S_FLICKY_11_RUN1,
+	S_FLICKY_11_RUN2,
+	S_FLICKY_11_RUN3,
+
+	// Rat
+	S_FLICKY_12_OUT,
+	S_FLICKY_12_AIM,
+	S_FLICKY_12_RUN1,
+	S_FLICKY_12_RUN2,
+	S_FLICKY_12_RUN3,
+
+	// Bear
+	S_FLICKY_13_OUT,
+	S_FLICKY_13_AIM,
+	S_FLICKY_13_HOP,
+	S_FLICKY_13_UP,
+	S_FLICKY_13_DOWN,
+
+	// Dove
+	S_FLICKY_14_OUT,
+	S_FLICKY_14_FLAP1,
+	S_FLICKY_14_FLAP2,
+	S_FLICKY_14_FLAP3,
+
+	// Cat
+	S_FLICKY_15_OUT,
+	S_FLICKY_15_AIM,
+	S_FLICKY_15_HOP,
+	S_FLICKY_15_UP,
+	S_FLICKY_15_DOWN,
+
+	// Canary
+	S_FLICKY_16_OUT,
+	S_FLICKY_16_FLAP1,
+	S_FLICKY_16_FLAP2,
+	S_FLICKY_16_FLAP3,
 
 	S_YELLOWSPRING,
 	S_YELLOWSPRING2,
@@ -2523,6 +2665,20 @@ typedef enum state
 
 	S_WATERZAP,
 
+	// Spindash dust
+	S_SPINDUST1,
+	S_SPINDUST2,
+	S_SPINDUST3,
+	S_SPINDUST4,
+	S_SPINDUST_BUBBLE1,
+	S_SPINDUST_BUBBLE2,
+	S_SPINDUST_BUBBLE3,
+	S_SPINDUST_BUBBLE4,
+	S_SPINDUST_FIRE1,
+	S_SPINDUST_FIRE2,
+	S_SPINDUST_FIRE3,
+	S_SPINDUST_FIRE4,
+
 	S_FOG1,
 	S_FOG2,
 	S_FOG3,
@@ -2571,14 +2727,18 @@ typedef enum state
 	S_FOUR2,
 	S_FIVE2,
 
+	S_LOCKON1,
+	S_LOCKON2,
+
 	// Tag Sign
-	S_TTAG1,
+	S_TTAG,
 
 	// Got Flag Sign
-	S_GOTFLAG1,
-	S_GOTFLAG2,
-	S_GOTFLAG3,
-	S_GOTFLAG4,
+	S_GOTFLAG,
+	S_GOTREDFLAG,
+	S_GOTBLUEFLAG,
+
+	S_CORK,
 
 	// Red Ring
 	S_RRNG1,
@@ -2753,20 +2913,19 @@ typedef enum state
 	S_FIREBALLEXP2,
 	S_FIREBALLEXP3,
 	S_SHELL,
-	S_SHELL1,
-	S_SHELL2,
-	S_SHELL3,
-	S_SHELL4,
-	S_PUMA1,
-	S_PUMA2,
-	S_PUMA3,
-	S_PUMA4,
-	S_PUMA5,
-	S_PUMA6,
-	S_HAMMER1,
-	S_HAMMER2,
-	S_HAMMER3,
-	S_HAMMER4,
+	S_PUMA_START1,
+	S_PUMA_START2,
+	S_PUMA_UP1,
+	S_PUMA_UP2,
+	S_PUMA_UP3,
+	S_PUMA_DOWN1,
+	S_PUMA_DOWN2,
+	S_PUMA_DOWN3,
+	S_PUMATRAIL1,
+	S_PUMATRAIL2,
+	S_PUMATRAIL3,
+	S_PUMATRAIL4,
+	S_HAMMER,
 	S_KOOPA1,
 	S_KOOPA2,
 	S_KOOPAFLAME1,
@@ -2895,6 +3054,7 @@ typedef enum state
 	S_NIGHTOPIANHELPER6,
 	S_NIGHTOPIANHELPER7,
 	S_NIGHTOPIANHELPER8,
+	S_NIGHTOPIANHELPER9,
 
 	S_CRUMBLE1,
 	S_CRUMBLE2,
@@ -2918,10 +3078,10 @@ typedef enum state
 	S_SPRK16,
 
 	// Robot Explosion
+	S_XPLD_FLICKY,
 	S_XPLD1,
 	S_XPLD2,
-	S_XPLD3,
-	S_XPLD4,
+	S_XPLD_EGGTRAP,
 
 	// Underwater Explosion
 	S_WPLD1,
@@ -2949,70 +3109,6 @@ typedef enum state
 	S_ROCKCRUMBLEN,
 	S_ROCKCRUMBLEO,
 	S_ROCKCRUMBLEP,
-
-	S_SRB1_CRAWLA1,
-	S_SRB1_CRAWLA2,
-	S_SRB1_CRAWLA3,
-	S_SRB1_CRAWLA4,
-
-	S_SRB1_BAT1,
-	S_SRB1_BAT2,
-	S_SRB1_BAT3,
-	S_SRB1_BAT4,
-
-	S_SRB1_ROBOFISH1,
-	S_SRB1_ROBOFISH2,
-	S_SRB1_ROBOFISH3,
-
-	S_SRB1_VOLCANOGUY1,
-	S_SRB1_VOLCANOGUY2,
-
-	S_SRB1_HOPPY1,
-	S_SRB1_HOPPY2,
-
-	S_SRB1_HOPPYWATER1,
-	S_SRB1_HOPPYWATER2,
-
-	S_SRB1_HOPPYSKYLAB1,
-
-	S_SRB1_MMZFLYING1,
-	S_SRB1_MMZFLYING2,
-	S_SRB1_MMZFLYING3,
-	S_SRB1_MMZFLYING4,
-	S_SRB1_MMZFLYING5,
-
-	S_SRB1_UFO1,
-	S_SRB1_UFO2,
-
-	S_SRB1_GRAYBOT1,
-	S_SRB1_GRAYBOT2,
-	S_SRB1_GRAYBOT3,
-	S_SRB1_GRAYBOT4,
-	S_SRB1_GRAYBOT5,
-	S_SRB1_GRAYBOT6,
-
-	S_SRB1_ROBOTOPOLIS1,
-	S_SRB1_ROBOTOPOLIS2,
-
-	S_SRB1_RBZBUZZ1,
-	S_SRB1_RBZBUZZ2,
-
-	S_SRB1_RBZSPIKES1,
-	S_SRB1_RBZSPIKES2,
-
-	S_SRB1_METALSONIC1,
-	S_SRB1_METALSONIC2,
-	S_SRB1_METALSONIC3,
-
-	S_SRB1_GOLDBOT1,
-	S_SRB1_GOLDBOT2,
-	S_SRB1_GOLDBOT3,
-	S_SRB1_GOLDBOT4,
-	S_SRB1_GOLDBOT5,
-	S_SRB1_GOLDBOT6,
-
-	S_SRB1_GENREX1,
-	S_SRB1_GENREX2,
 
 #ifdef SEENAMES
 	S_NAMECHECK,
@@ -3101,6 +3197,7 @@ typedef enum mobj_type
 	MT_BOSSTANK2,
 	MT_BOSSSPIGOT,
 	MT_GOOP,
+	MT_GOOPTRAIL,
 
 	// Boss 3
 	MT_EGGMOBILE3,
@@ -3183,47 +3280,70 @@ typedef enum mobj_type
 	MT_BIGAIRMINE,
 	MT_CANNONLAUNCHER,
 
-	// Monitor Boxes
-	MT_SUPERRINGBOX,
-	MT_REDRINGBOX,
-	MT_BLUERINGBOX,
-	MT_SNEAKERTV,
-	MT_INV,
-	MT_PRUP, // 1up Box
-	MT_YELLOWTV,
-	MT_BLUETV,
-	MT_BLACKTV, // Bomb shield TV
-	MT_WHITETV, // Jump shield TV
-	MT_GREENTV,
-	MT_PITYTV, // Pity Shield TV
-	MT_EGGMANBOX,
-	MT_MIXUPBOX,
-	MT_RECYCLETV,
-	MT_RECYCLEICO,
-	MT_QUESTIONBOX,
-	MT_GRAVITYBOX,
-	MT_SCORETVSMALL,
-	MT_SCORETVLARGE,
-
 	// Monitor miscellany
-	MT_MONITOREXPLOSION,
-	MT_REDMONITOREXPLOSION,
-	MT_BLUEMONITOREXPLOSION,
-	MT_RINGICO,
-	MT_SHOESICO,
-	MT_INVCICO,
-	MT_1UPICO,
-	MT_YSHIELDICO,
-	MT_BSHIELDICO,
-	MT_KSHIELDICO,
-	MT_WSHIELDICO,
-	MT_GSHIELDICO,
-	MT_PITYSHIELDICO,
-	MT_EGGMANICO,
-	MT_MIXUPICO,
-	MT_GRAVITYICO,
-	MT_SCOREICOSMALL,
-	MT_SCOREICOLARGE,
+	MT_BOXSPARKLE,
+
+	// Monitor boxes -- regular
+	MT_RING_BOX,
+	MT_PITY_BOX,
+	MT_ATTRACT_BOX,
+	MT_FORCE_BOX,
+	MT_ARMAGEDDON_BOX,
+	MT_WHIRLWIND_BOX,
+	MT_ELEMENTAL_BOX,
+	MT_SNEAKERS_BOX,
+	MT_INVULN_BOX,
+	MT_1UP_BOX,
+	MT_EGGMAN_BOX,
+	MT_MIXUP_BOX,
+	MT_MYSTERY_BOX,
+	MT_GRAVITY_BOX,
+	MT_RECYCLER_BOX,
+	MT_SCORE1K_BOX,
+	MT_SCORE10K_BOX,
+	MT_FLAMEAURA_BOX,
+	MT_BUBBLEWRAP_BOX,
+	MT_THUNDERCOIN_BOX,
+
+	// Monitor boxes -- repeating (big) boxes
+	MT_PITY_GOLDBOX,
+	MT_ATTRACT_GOLDBOX,
+	MT_FORCE_GOLDBOX,
+	MT_ARMAGEDDON_GOLDBOX,
+	MT_WHIRLWIND_GOLDBOX,
+	MT_ELEMENTAL_GOLDBOX,
+	MT_SNEAKERS_GOLDBOX,
+	MT_INVULN_GOLDBOX,
+	MT_EGGMAN_GOLDBOX,
+	MT_GRAVITY_GOLDBOX,
+	MT_FLAMEAURA_GOLDBOX,
+	MT_BUBBLEWRAP_GOLDBOX,
+	MT_THUNDERCOIN_GOLDBOX,
+
+	// Monitor boxes -- special
+	MT_RING_REDBOX,
+	MT_RING_BLUEBOX,
+
+	// Monitor icons
+	MT_RING_ICON,
+	MT_PITY_ICON,
+	MT_ATTRACT_ICON,
+	MT_FORCE_ICON,
+	MT_ARMAGEDDON_ICON,
+	MT_WHIRLWIND_ICON,
+	MT_ELEMENTAL_ICON,
+	MT_SNEAKERS_ICON,
+	MT_INVULN_ICON,
+	MT_1UP_ICON,
+	MT_EGGMAN_ICON,
+	MT_MIXUP_ICON,
+	MT_GRAVITY_ICON,
+	MT_RECYCLER_ICON,
+	MT_SCORE1K_ICON,
+	MT_SCORE10K_ICON,
+	MT_FLAMEAURA_ICON,
+	MT_BUBBLEWRAP_ICON,
+	MT_THUNDERCOIN_ICON,
 
 	// Projectiles
 	MT_ROCKET,
@@ -3247,11 +3367,13 @@ typedef enum mobj_type
 	MT_BUSH,
 
 	// Techno Hill Scenery
-	MT_THZPLANT, // THZ Plant
+	MT_THZFLOWER1,
+	MT_THZFLOWER2,
 	MT_ALARM,
 
 	// Deep Sea Scenery
 	MT_GARGOYLE, // Deep Sea Gargoyle
+	MT_BIGGARGOYLE, // Deep Sea Gargoyle (Big)
 	MT_SEAWEED, // DSZ Seaweed
 	MT_WATERDRIP, // Dripping Water source
 	MT_WATERDROP, // Water drop from dripping water
@@ -3263,6 +3385,7 @@ typedef enum mobj_type
 	// Castle Eggman Scenery
 	MT_CHAIN, // CEZ Chain
 	MT_FLAME, // Flame (has corona)
+	MT_FLAMEPARTICLE,
 	MT_EGGSTATUE, // Eggman Statue
 	MT_MACEPOINT, // Mace rotation point
 	MT_SWINGMACEPOINT, // Mace swinging point
@@ -3289,9 +3412,7 @@ typedef enum mobj_type
 	MT_FLAMEJETFLAME,
 
 	MT_FJSPINAXISA, // Counter-clockwise
-	MT_FJSPINHELPERA,
 	MT_FJSPINAXISB, // Clockwise
-	MT_FJSPINHELPERB,
 
 	MT_FLAMEJETFLAMEB, // Blade's flame
 
@@ -3321,7 +3442,14 @@ typedef enum mobj_type
 	// Christmas Scenery
 	MT_XMASPOLE,
 	MT_CANDYCANE,
-	MT_SNOWMAN,
+	MT_SNOWMAN,    // normal
+	MT_SNOWMANHAT, // with hat + scarf
+	MT_LAMPPOST1,  // normal
+	MT_LAMPPOST2,  // with snow
+	MT_HANGSTAR,
+	// Xmas GFZ bushes
+	MT_XMASBERRYBUSH,
+	MT_XMASBUSH,
 
 	// Botanic Serenity scenery
 	MT_BSZTALLFLOWER_RED,
@@ -3368,30 +3496,46 @@ typedef enum mobj_type
 	MT_BSZVINE_ORANGE,
 	MT_BSZSHRUB,
 	MT_BSZCLOVER,
-	MT_BSZFISH,
-	MT_BSZSUNFLOWER,
+	MT_BIG_PALMTREE_TRUNK,
+	MT_BIG_PALMTREE_TOP,
+	MT_PALMTREE_TRUNK,
+	MT_PALMTREE_TOP,
 
 	// Misc scenery
 	MT_DBALL,
 	MT_EGGSTATUE2,
 
 	// Powerup Indicators
-	MT_GREENORB, // Elemental shield mobj
-	MT_YELLOWORB, // Attract shield mobj
-	MT_BLUEORB, // Force shield mobj
-	MT_BLACKORB, // Armageddon shield mobj
-	MT_WHITEORB, // Whirlwind shield mobj
-	MT_PITYORB, // Pity shield mobj
-	MT_IVSP, // invincibility sparkles
+	MT_ELEMENTAL_ORB, // Elemental shield mobj
+	MT_ATTRACT_ORB, // Attract shield mobj
+	MT_FORCE_ORB, // Force shield mobj
+	MT_ARMAGEDDON_ORB, // Armageddon shield mobj
+	MT_WHIRLWIND_ORB, // Whirlwind shield mobj
+	MT_PITY_ORB, // Pity shield mobj
+	MT_FLAMEAURA_ORB, // Flame shield mobj
+	MT_BUBBLEWRAP_ORB, // Bubble shield mobj
+	MT_THUNDERCOIN_ORB, // Thunder shield mobj
+	MT_THUNDERCOIN_SPARK, // Thunder spark
+	MT_IVSP, // Invincibility sparkles
 	MT_SUPERSPARK, // Super Sonic Spark
 
-	// Freed Animals
-	MT_BIRD, // Birdie freed!
-	MT_BUNNY, // Bunny freed!
-	MT_MOUSE, // Mouse
-	MT_CHICKEN, // Chicken
-	MT_COW, // Cow
-	MT_REDBIRD, // Red Birdie in Bubble
+	// Flickies
+	MT_FLICKY_01, // Bluebird
+	MT_FLICKY_02, // Rabbit
+	MT_FLICKY_03, // Chicken
+	MT_FLICKY_04, // Seal
+	MT_FLICKY_05, // Pig
+	MT_FLICKY_06, // Chipmunk
+	MT_FLICKY_07, // Penguin
+	MT_FLICKY_08, // Fish
+	MT_FLICKY_09, // Ram
+	MT_FLICKY_10, // Puffin
+	MT_FLICKY_11, // Cow
+	MT_FLICKY_12, // Rat
+	MT_FLICKY_13, // Bear
+	MT_FLICKY_14, // Dove
+	MT_FLICKY_15, // Cat
+	MT_FLICKY_16, // Canary
 
 	// Environmental Effects
 	MT_RAIN, // Rain
@@ -3402,6 +3546,7 @@ typedef enum mobj_type
 	MT_MEDIUMBUBBLE, // medium bubble
 	MT_EXTRALARGEBUBBLE, // extra large bubble
 	MT_WATERZAP,
+	MT_SPINDUST, // Spindash dust
 	MT_TFOG,
 	MT_SEED,
 	MT_PARTICLE,
@@ -3411,9 +3556,9 @@ typedef enum mobj_type
 	MT_SCORE, // score logo
 	MT_DROWNNUMBERS, // Drowning Timer
 	MT_GOTEMERALD, // Chaos Emerald (intangible)
+	MT_LOCKON, // Target
 	MT_TAG, // Tag Sign
 	MT_GOTFLAG, // Got Flag sign
-	MT_GOTFLAG2, // Got Flag sign
 
 	// Ambient Sounds
 	MT_AWATERA, // Ambient Water Sound 1
@@ -3426,6 +3571,8 @@ typedef enum mobj_type
 	MT_AWATERH, // Ambient Water Sound 8
 	MT_RANDOMAMBIENT,
 	MT_RANDOMAMBIENT2,
+
+	MT_CORK,
 
 	// Ring Weapons
 	MT_REDRING,
@@ -3460,6 +3607,7 @@ typedef enum mobj_type
 	MT_FIREBALL,
 	MT_SHELL,
 	MT_PUMA,
+	MT_PUMATRAIL,
 	MT_HAMMER,
 	MT_KOOPA,
 	MT_KOOPAFLAME,
@@ -3529,22 +3677,6 @@ typedef enum mobj_type
 	MT_ROCKCRUMBLE15,
 	MT_ROCKCRUMBLE16,
 
-	MT_SRB1_CRAWLA,
-	MT_SRB1_BAT,
-	MT_SRB1_ROBOFISH,
-	MT_SRB1_VOLCANOGUY,
-	MT_SRB1_HOPPY,
-	MT_SRB1_HOPPYWATER,
-	MT_SRB1_HOPPYSKYLAB,
-	MT_SRB1_MMZFLYING,
-	MT_SRB1_UFO,
-	MT_SRB1_GRAYBOT,
-	MT_SRB1_ROBOTOPOLIS,
-	MT_SRB1_RBZBUZZ,
-	MT_SRB1_RBZSPIKES,
-	MT_SRB1_METALSONIC,
-	MT_SRB1_GOLDBOT,
-	MT_SRB1_GENREX,
 #ifdef SEENAMES
 	MT_NAMECHECK,
 #endif

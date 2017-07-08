@@ -565,7 +565,7 @@ extraemblem_t extraemblems[MAXEXTRAEMBLEMS] =
 	{"Game Complete",  "Complete 1P Mode",                    10, 'X', SKINCOLOR_BLUE, 0},
 	{"All Emeralds",   "Complete 1P Mode with all Emeralds",  11, 'V', SKINCOLOR_GREY, 0},
 	{"Perfect Bonus",  "Perfect Bonus on a non-secret stage", 30, 'P', SKINCOLOR_GOLD, 0},
-	{"SRB1 Remake",    "Complete SRB1 Remake",                21, 'O', SKINCOLOR_RUST, 0},
+	{"PLACEHOLDER", "PLACEHOLDER", 0, 'O', SKINCOLOR_RUST, 0},
 	{"NiGHTS Mastery", "Show your mastery of NiGHTS!",        22, 'W', SKINCOLOR_TEAL, 0},
 };
 
@@ -573,31 +573,31 @@ extraemblem_t extraemblems[MAXEXTRAEMBLEMS] =
 unlockable_t unlockables[MAXUNLOCKABLES] =
 {
 	// Name, Objective, Menu Height, ConditionSet, Unlock Type, Variable, NoCecho, NoChecklist
-	/* 01 */ {"Record Attack",     "Complete Greenflower Zone, Act 1", 0, 1, SECRET_RECORDATTACK,  0,  true,  true, 0},
-	/* 02 */ {"NiGHTS Mode",       "Complete Floral Field",            0, 2, SECRET_NIGHTSMODE,    0,  true,  true, 0},
+	/* 01 */ {"Record Attack",     "/", 0, 1, SECRET_RECORDATTACK,  0,  true,  true, 0},
+	/* 02 */ {"NiGHTS Mode",       "/",            0, 2, SECRET_NIGHTSMODE,    0,  true,  true, 0},
 
-	/* 03 */ {"Play Credits",      "Complete 1P Mode", 30, 10, SECRET_CREDITS,   0,  true,  true, 0},
-	/* 04 */ {"Sound Test",        "Complete 1P Mode", 40, 10, SECRET_SOUNDTEST, 0, false, false, 0},
+	/* 03 */ {"Play Credits",      "/", 30, 10, SECRET_CREDITS,   0,  true,  true, 0},
+	/* 04 */ {"Sound Test",        "/", 40, 10, SECRET_SOUNDTEST, 0, false, false, 0},
 
-	/* 05 */ {"EXTRA LEVELS", "", 60, 0, SECRET_HEADER, 0, true, true, 0},
+	/* 05 */ {"EXTRA LEVELS", "/", 58, 0, SECRET_HEADER, 0, true, true, 0},
 
-	/* 06 */ {"Aerial Garden Zone", "Complete 1P Mode w/ all emeralds", 70, 11, SECRET_WARP, 40, false, false, 0},
-	/* 07 */ {"Azure Temple Zone",  "Complete Aerial Garden Zone",      80, 20, SECRET_WARP, 41, false, false, 0},
+	/* 06 */ {"Aerial Garden Zone", "/", 70, 11, SECRET_WARP, 40, false, false, 0},
+	/* 07 */ {"Azure Temple Zone",  "/",      80, 20, SECRET_WARP, 41, false, false, 0},
 
-	/* 08 */ {"BONUS LEVELS", "", 100, 0, SECRET_HEADER, 0, true, true, 0},
+	/* 08 */ {"BONUS LEVELS", "/", 98, 0, SECRET_HEADER, 0, true, true, 0},
 
-	/* 09 */ {"SRB1 Remake",       "Collect 20 Emblems",   130, 40, SECRET_WARP,        101, false, false, 0},
-	/* 10 */ {"Mario Koopa Blast", "Collect 60 Emblems",   110, 42, SECRET_WARP,         30, false, false, 0},
-	/* 11 */ {"SRB1 Level Select", "Complete SRB1 Remake", 140, 21, SECRET_LEVELSELECT,   2, false,  true, 0},
+	/* 09 */ {"PLACEHOLDER", "/", 0, 0, SECRET_NONE, 0, true, true, 0},
+	/* 10 */ {"Mario Koopa Blast", "/",   110, 42, SECRET_WARP,         30, false, false, 0},
+	/* 11 */ {"PLACEHOLDER", "/", 0, 0, SECRET_NONE, 0, true, true, 0},
 
-	/* 12 */ {"Spring Hill Zone", "Collect 100 Emblems",          0, 44, SECRET_NONE, 0, false, false, 0},
-	/* 13 */ {"Black Hole",       "A Rank in all Special Stages", 0, 50, SECRET_NONE, 0, false, true, 0},
+	/* 12 */ {"Spring Hill Zone", "/",          0, 44, SECRET_NONE, 0, false, false, 0},
+	/* 13 */ {"Black Hole",       "Get grade A in all Special Stages", 0, 50, SECRET_NONE, 0, false, true, 0},
 
-	/* 14 */ {"Emblem Hints", "Collect 40 Emblems", 0, 41, SECRET_EMBLEMHINTS, 0, false,  true, 0},
-	/* 15 */ {"Emblem Radar", "Collect 80 Emblems", 0, 43, SECRET_ITEMFINDER,  0, false,  true, 0},
+	/* 14 */ {"Emblem Hints", "/", 0, 41, SECRET_EMBLEMHINTS, 0, false,  true, 0},
+	/* 15 */ {"Emblem Radar", "/", 0, 43, SECRET_ITEMFINDER,  0, false,  true, 0},
 
-	/* 16 */ {"Pandora's Box", "Collect All Emblems",  0, 45, SECRET_PANDORA,     0, false, false, 0},
-	/* 17 */ {"Level Select",  "Collect All Emblems", 20, 45, SECRET_LEVELSELECT, 1, false,  true, 0},
+	/* 16 */ {"Pandora's Box", "/",  0, 45, SECRET_PANDORA,     0, false, false, 0},
+	/* 17 */ {"Level Select",  "/", 20, 45, SECRET_LEVELSELECT, 1, false,  true, 0},
 };
 
 // Default number of emblems and extra emblems
@@ -623,9 +623,6 @@ void M_SetupDefaultConditionSets(void)
 
 	// --  20: Beat AGZ
 	M_AddRawCondition(20, 1, UC_MAPBEATEN, 40, 0, 0);
-
-	// --  21: Beat SRB1 Remake
-	M_AddRawCondition(21, 1, UC_MAPBEATEN, 132, 0, 0);
 
 	// --  22: Beat Black Hole
 	M_AddRawCondition(22, 1, UC_MAPBEATEN, 57, 0, 0);
@@ -932,7 +929,7 @@ UINT8 M_CheckLevelEmblems(void)
 	// Update Score, Time, Rings emblems
 	for (i = 0; i < numemblems; ++i)
 	{
-		if (emblemlocations[i].type <= ET_SKIN || emblemlocations[i].collected)
+		if (emblemlocations[i].type <= ET_SKIN || emblemlocations[i].type == ET_MAP || emblemlocations[i].collected)
 			continue;
 
 		levelnum = emblemlocations[i].level;
@@ -959,6 +956,42 @@ UINT8 M_CheckLevelEmblems(void)
 				continue;
 		}
 
+		emblemlocations[i].collected = res;
+		if (res)
+			++somethingUnlocked;
+	}
+	return somethingUnlocked;
+}
+
+UINT8 M_CompletionEmblems(void) // Bah! Duplication sucks, but it's for a separate print when awarding emblems and it's sorta different enough.
+{
+	INT32 i;
+	INT32 embtype;
+	INT16 levelnum;
+	UINT8 res;
+	UINT8 somethingUnlocked = 0;
+	UINT8 flags;
+
+	for (i = 0; i < numemblems; ++i)
+	{
+		if (emblemlocations[i].type != ET_MAP || emblemlocations[i].collected)
+			continue;
+
+		levelnum = emblemlocations[i].level;
+		embtype = emblemlocations[i].var;
+		flags = MV_BEATEN;
+		
+		if (embtype & ME_ALLEMERALDS)
+			flags |= MV_ALLEMERALDS;
+		
+		if (embtype & ME_ULTIMATE)
+			flags |= MV_ULTIMATE;
+		
+		if (embtype & ME_PERFECT)
+			flags |= MV_PERFECT;
+		
+		res = ((mapvisited[levelnum - 1] & flags) == flags);
+		
 		emblemlocations[i].collected = res;
 		if (res)
 			++somethingUnlocked;

@@ -247,27 +247,33 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_BMNE
 
 	// Monitor Boxes
-	&lspr[NOLIGHT],     // SPR_SRBX
-	&lspr[NOLIGHT],     // SPR_RRBX
-	&lspr[NOLIGHT],     // SPR_BRBX
-	&lspr[NOLIGHT],     // SPR_SHTV
-	&lspr[NOLIGHT],     // SPR_PINV
-	&lspr[NOLIGHT],     // SPR_YLTV
-	&lspr[NOLIGHT],     // SPR_BLTV
-	&lspr[NOLIGHT],     // SPR_BKTV
-	&lspr[NOLIGHT],     // SPR_WHTV
-	&lspr[NOLIGHT],     // SPR_GRTV
-	&lspr[NOLIGHT],     // SPR_ELTV
-	&lspr[NOLIGHT],     // SPR_EGGB
-	&lspr[NOLIGHT],     // SPR_MIXU
-	&lspr[NOLIGHT],     // SPR_RECY
-	&lspr[NOLIGHT],     // SPR_QUES
-	&lspr[NOLIGHT],     // SPR_GBTV
-	&lspr[NOLIGHT],     // SPR_PRUP
-	&lspr[NOLIGHT],     // SPR_PTTV
+	&lspr[NOLIGHT],     // SPR_MSTV
+	&lspr[NOLIGHT],     // SPR_XLTV
 
-	// Monitor Miscellany
-	&lspr[NOLIGHT],     // SPR_MTEX
+	&lspr[NOLIGHT],     // SPR_TRRI
+	&lspr[NOLIGHT],     // SPR_TBRI
+
+	&lspr[NOLIGHT],     // SPR_TVRI
+	&lspr[NOLIGHT],     // SPR_TVPI
+	&lspr[NOLIGHT],     // SPR_TVAT
+	&lspr[NOLIGHT],     // SPR_TVFO
+	&lspr[NOLIGHT],     // SPR_TVAR
+	&lspr[NOLIGHT],     // SPR_TVWW
+	&lspr[NOLIGHT],     // SPR_TVEL
+	&lspr[NOLIGHT],     // SPR_TVSS
+	&lspr[NOLIGHT],     // SPR_TVIV
+	&lspr[NOLIGHT],     // SPR_TV1U
+	&lspr[NOLIGHT],     // SPR_TV1P
+	&lspr[NOLIGHT],     // SPR_TVEG
+	&lspr[NOLIGHT],     // SPR_TVMX
+	&lspr[NOLIGHT],     // SPR_TVMY
+	&lspr[NOLIGHT],     // SPR_TVGV
+	&lspr[NOLIGHT],     // SPR_TVRC
+	&lspr[NOLIGHT],     // SPR_TV1K
+	&lspr[NOLIGHT],     // SPR_TVTK
+	&lspr[NOLIGHT],     // SPR_TVFL
+	&lspr[NOLIGHT],     // SPR_TVBB
+	&lspr[NOLIGHT],     // SPR_TVZP
 
 	// Projectiles
 	&lspr[NOLIGHT],     // SPR_MISL
@@ -290,6 +296,7 @@ light_t *t_lspr[NUMSPRITES] =
 
 	// Techno Hill Scenery
 	&lspr[NOLIGHT],     // SPR_THZP
+	&lspr[NOLIGHT],     // SPR_FWR5
 	&lspr[REDBALL_L],     // SPR_ALRM
 
 	// Deep Sea Scenery
@@ -356,18 +363,32 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_ELEM
 	&lspr[NOLIGHT],     // SPR_FORC
 	&lspr[NOLIGHT],     // SPR_PITY
+	&lspr[NOLIGHT],     // SPR_FIRS
+	&lspr[NOLIGHT],     // SPR_BUBS
+	&lspr[NOLIGHT],     // SPR_ZAPS
 	&lspr[INVINCIBLE_L],     // SPR_IVSP
 	&lspr[SUPERSPARK_L],     // SPR_SSPK
 
 	&lspr[NOLIGHT],     // SPR_GOAL
 
-	// Freed Animals
-	&lspr[NOLIGHT],     // SPR_BIRD
-	&lspr[NOLIGHT],     // SPR_BUNY
-	&lspr[NOLIGHT],     // SPR_MOUS
-	&lspr[NOLIGHT],     // SPR_CHIC
-	&lspr[NOLIGHT],     // SPR_COWZ
-	&lspr[NOLIGHT],     // SPR_RBRD
+	// Flickies
+	&lspr[NOLIGHT],     // SPR_FBUB
+	&lspr[NOLIGHT],     // SPR_FL01
+	&lspr[NOLIGHT],     // SPR_FL02
+	&lspr[NOLIGHT],     // SPR_FL03
+	&lspr[NOLIGHT],     // SPR_FL04
+	&lspr[NOLIGHT],     // SPR_FL05
+	&lspr[NOLIGHT],     // SPR_FL06
+	&lspr[NOLIGHT],     // SPR_FL07
+	&lspr[NOLIGHT],     // SPR_FL08
+	&lspr[NOLIGHT],     // SPR_FL09
+	&lspr[NOLIGHT],     // SPR_FL10
+	&lspr[NOLIGHT],     // SPR_FL11
+	&lspr[NOLIGHT],     // SPR_FL12
+	&lspr[NOLIGHT],     // SPR_FL13
+	&lspr[NOLIGHT],     // SPR_FL14
+	&lspr[NOLIGHT],     // SPR_FL15
+	&lspr[NOLIGHT],     // SPR_FL16
 
 	// Springs
 	&lspr[NOLIGHT],     // SPR_SPRY
@@ -383,7 +404,7 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_SPLA
 	&lspr[NOLIGHT],     // SPR_SMOK
 	&lspr[NOLIGHT],     // SPR_BUBL
-	&lspr[SUPERSPARK_L], // SPR_WZAP
+	&lspr[RINGLIGHT_L], // SPR_WZAP
 	&lspr[SUPERSPARK_L], // SPR_TFOG
 	&lspr[NIGHTSLIGHT_L],     // SPR_SEED // Sonic CD flower seed
 	&lspr[NOLIGHT],     // SPR_PRTL
@@ -391,8 +412,11 @@ light_t *t_lspr[NUMSPRITES] =
 	// Game Indicators
 	&lspr[NOLIGHT],     // SPR_SCOR
 	&lspr[NOLIGHT],     // SPR_DRWN
+	&lspr[NOLIGHT],     // SPR_LCKN
 	&lspr[NOLIGHT],     // SPR_TTAG
 	&lspr[NOLIGHT],     // SPR_GFLG
+
+	&lspr[NOLIGHT],     // SPR_CORK
 
 	// Ring Weapons
 	&lspr[RINGLIGHT_L],     // SPR_RRNG
@@ -472,23 +496,6 @@ light_t *t_lspr[NUMSPRITES] =
 	// Gravity Well Objects
 	&lspr[NOLIGHT],     // SPR_GWLG
 	&lspr[NOLIGHT],     // SPR_GWLR
-
-	// SRB1 Sprites
-	&lspr[NOLIGHT],     // SPR_SRBA
-	&lspr[NOLIGHT],     // SPR_SRBB
-	&lspr[NOLIGHT],     // SPR_SRBC
-	&lspr[NOLIGHT],     // SPR_SRBD
-	&lspr[NOLIGHT],     // SPR_SRBE
-	&lspr[NOLIGHT],     // SPR_SRBF
-	&lspr[NOLIGHT],     // SPR_SRBG
-	&lspr[NOLIGHT],     // SPR_SRBH
-	&lspr[NOLIGHT],     // SPR_SRBI
-	&lspr[NOLIGHT],     // SPR_SRBJ
-	&lspr[NOLIGHT],     // SPR_SRBK
-	&lspr[NOLIGHT],     // SPR_SRBL
-	&lspr[NOLIGHT],     // SPR_SRBM
-	&lspr[NOLIGHT],     // SPR_SRBN
-	&lspr[NOLIGHT],     // SPR_SRBO
 
 	// Free slots
 	&lspr[NOLIGHT],

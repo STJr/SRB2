@@ -82,6 +82,7 @@ static void AutoBalance_OnChange(void);
 static void TeamScramble_OnChange(void);
 
 static void NetTimeout_OnChange(void);
+static void JoinTimeout_OnChange(void);
 
 static void Ringslinger_OnChange(void);
 static void Gravity_OnChange(void);
@@ -188,14 +189,13 @@ static CV_PossibleValue_t teamscramble_cons_t[] = {{0, "Off"}, {1, "Random"}, {2
 
 static CV_PossibleValue_t startingliveslimit_cons_t[] = {{1, "MIN"}, {99, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t sleeping_cons_t[] = {{-1, "MIN"}, {1000/TICRATE, "MAX"}, {0, NULL}};
-static CV_PossibleValue_t competitionboxes_cons_t[] = {{0, "Normal"}, {1, "Random"}, {2, "Teleports"},
+static CV_PossibleValue_t competitionboxes_cons_t[] = {{0, "Normal"}, {1, "Random"}, //{2, "Teleports"},
 	{3, "None"}, {0, NULL}};
 
 static CV_PossibleValue_t matchboxes_cons_t[] = {{0, "Normal"}, {1, "Random"}, {2, "Non-Random"},
 	{3, "None"}, {0, NULL}};
 
 static CV_PossibleValue_t chances_cons_t[] = {{0, "MIN"}, {9, "MAX"}, {0, NULL}};
-static CV_PossibleValue_t match_scoring_cons_t[] = {{0, "Normal"}, {1, "Classic"}, {0, NULL}};
 static CV_PossibleValue_t pause_cons_t[] = {{0, "Server"}, {1, "All"}, {0, NULL}};
 
 static CV_PossibleValue_t timetic_cons_t[] = {{0, "Normal"}, {1, "Tics"}, {2, "Centiseconds"}, {0, NULL}};
@@ -310,7 +310,6 @@ consvar_t cv_friendlyfire = {"friendlyfire", "Off", CV_NETVAR, CV_OnOff, NULL, 0
 consvar_t cv_itemfinder = {"itemfinder", "Off", CV_CALL, CV_OnOff, ItemFinder_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 // Scoring type options
-consvar_t cv_match_scoring = {"matchscoring", "Normal", CV_NETVAR|CV_CHEAT, match_scoring_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_overtime = {"overtime", "Yes", CV_NETVAR, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 consvar_t cv_rollingdemos = {"rollingdemos", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -340,7 +339,9 @@ consvar_t cv_killingdead = {"killingdead", "Off", CV_NETVAR, CV_OnOff, NULL, 0, 
 
 consvar_t cv_netstat = {"netstat", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL}; // show bandwidth statistics
 static CV_PossibleValue_t nettimeout_cons_t[] = {{TICRATE/7, "MIN"}, {60*TICRATE, "MAX"}, {0, NULL}};
-consvar_t cv_nettimeout = {"nettimeout", "525", CV_CALL|CV_SAVE, nettimeout_cons_t, NetTimeout_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_nettimeout = {"nettimeout", "350", CV_CALL|CV_SAVE, nettimeout_cons_t, NetTimeout_OnChange, 0, NULL, NULL, 0, 0, NULL};
+static CV_PossibleValue_t jointimeout_cons_t[] = {{5*TICRATE, "MIN"}, {60*TICRATE, "MAX"}, {0, NULL}};
+consvar_t cv_jointimeout = {"jointimeout", "350", CV_CALL|CV_SAVE, jointimeout_cons_t, JoinTimeout_OnChange, 0, NULL, NULL, 0, 0, NULL};
 #ifdef NEWPING
 consvar_t cv_maxping = {"maxping", "0", CV_SAVE, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
 #endif
@@ -364,6 +365,35 @@ INT16 gametype = GT_COOP;
 boolean splitscreen = false;
 boolean circuitmap = false;
 INT32 adminplayer = -1;
+
+/// \warning Keep this up-to-date if you add/remove/rename net text commands
+const char *netxcmdnames[MAXNETXCMD - 1] =
+{
+	"NAMEANDCOLOR",
+	"WEAPONPREF",
+	"KICK",
+	"NETVAR",
+	"SAY",
+	"MAP",
+	"EXITLEVEL",
+	"ADDFILE",
+	"PAUSE",
+	"ADDPLAYER",
+	"TEAMCHANGE",
+	"CLEARSCORES",
+	"LOGIN",
+	"VERIFIED",
+	"RANDOMSEED",
+	"RUNSOC",
+	"REQADDFILE",
+	"DELFILE",
+	"SETMOTD",
+	"SUICIDE",
+#ifdef HAVE_BLUA
+	"LUACMD",
+	"LUAVAR"
+#endif
+};
 
 // =========================================================================
 //                           SERVER STARTUP
@@ -453,7 +483,6 @@ void D_RegisterServerCommands(void)
 	CV_RegisterVar(&cv_itemrespawntime);
 	CV_RegisterVar(&cv_itemrespawn);
 	CV_RegisterVar(&cv_flagtime);
-	CV_RegisterVar(&cv_suddendeath);
 
 	// misc
 	CV_RegisterVar(&cv_friendlyfire);
@@ -501,7 +530,6 @@ void D_RegisterServerCommands(void)
 	CV_RegisterVar(&cv_startinglives);
 	CV_RegisterVar(&cv_countdowntime);
 	CV_RegisterVar(&cv_runscripts);
-	CV_RegisterVar(&cv_match_scoring);
 	CV_RegisterVar(&cv_overtime);
 	CV_RegisterVar(&cv_pause);
 	CV_RegisterVar(&cv_mute);
@@ -517,9 +545,12 @@ void D_RegisterServerCommands(void)
 	// d_clisrv
 	CV_RegisterVar(&cv_maxplayers);
 	CV_RegisterVar(&cv_maxsend);
+	CV_RegisterVar(&cv_noticedownload);
+	CV_RegisterVar(&cv_downloadspeed);
 
 	COM_AddCommand("ping", Command_Ping_f);
 	CV_RegisterVar(&cv_nettimeout);
+	CV_RegisterVar(&cv_jointimeout);
 
 	CV_RegisterVar(&cv_skipmapcheck);
 	CV_RegisterVar(&cv_sleep);
@@ -581,6 +612,7 @@ void D_RegisterClientCommands(void)
 
 	CV_RegisterVar(&cv_screenshot_option);
 	CV_RegisterVar(&cv_screenshot_folder);
+	CV_RegisterVar(&cv_screenshot_colorprofile);
 	CV_RegisterVar(&cv_moviemode);
 	// PNG variables
 	CV_RegisterVar(&cv_zlib_level);
@@ -638,7 +670,29 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_resetmusic);
 
 	// FIXME: not to be here.. but needs be done for config loading
-	CV_RegisterVar(&cv_usegamma);
+	CV_RegisterVar(&cv_globalgamma);
+	CV_RegisterVar(&cv_globalsaturation);
+
+	CV_RegisterVar(&cv_rhue);
+	CV_RegisterVar(&cv_yhue);
+	CV_RegisterVar(&cv_ghue);
+	CV_RegisterVar(&cv_chue);
+	CV_RegisterVar(&cv_bhue);
+	CV_RegisterVar(&cv_mhue);
+
+	CV_RegisterVar(&cv_rgamma);
+	CV_RegisterVar(&cv_ygamma);
+	CV_RegisterVar(&cv_ggamma);
+	CV_RegisterVar(&cv_cgamma);
+	CV_RegisterVar(&cv_bgamma);
+	CV_RegisterVar(&cv_mgamma);
+
+	CV_RegisterVar(&cv_rsaturation);
+	CV_RegisterVar(&cv_ysaturation);
+	CV_RegisterVar(&cv_gsaturation);
+	CV_RegisterVar(&cv_csaturation);
+	CV_RegisterVar(&cv_bsaturation);
+	CV_RegisterVar(&cv_msaturation);
 
 	// m_menu.c
 	CV_RegisterVar(&cv_crosshair);
@@ -696,6 +750,7 @@ void D_RegisterClientCommands(void)
 
 	// s_sound.c
 	CV_RegisterVar(&cv_soundvolume);
+	CV_RegisterVar(&cv_closedcaptioning);
 	CV_RegisterVar(&cv_digmusicvolume);
 	CV_RegisterVar(&cv_midimusicvolume);
 	CV_RegisterVar(&cv_numChannels);
@@ -976,7 +1031,7 @@ UINT8 CanChangeSkin(INT32 playernum)
 		return true;
 
 	// Force skin in effect.
-	if (!server && (cv_forceskin.value != -1) && !(adminplayer == playernum && serverplayer == -1))
+	if ((cv_forceskin.value != -1) || (mapheaderinfo[gamemap-1] && mapheaderinfo[gamemap-1]->forcecharacter[0] != '\0'))
 		return false;
 
 	// Can change skin in intermission and whatnot.
@@ -1074,6 +1129,8 @@ static void SendNameAndColor(void)
 	if (!Playing())
 		return;
 
+	players[consoleplayer].availabilities = R_GetSkinAvailabilities();
+
 	// If you're not in a netgame, merely update the skin, color, and name.
 	if (!netgame)
 	{
@@ -1092,7 +1149,7 @@ static void SendNameAndColor(void)
 			SetPlayerSkinByNum(consoleplayer, 0);
 			CV_StealthSet(&cv_skin, skins[0].name);
 		}
-		else if ((foundskin = R_SkinAvailable(cv_skin.string)) != -1 && R_SkinUnlock(foundskin))
+		else if ((foundskin = R_SkinAvailable(cv_skin.string)) != -1 && R_SkinUsable(consoleplayer, foundskin))
 		{
 			boolean notsame;
 
@@ -1139,7 +1196,7 @@ static void SendNameAndColor(void)
 	// check if player has the skin loaded (cv_skin may have
 	// the name of a skin that was available in the previous game)
 	cv_skin.value = R_SkinAvailable(cv_skin.string);
-	if ((cv_skin.value < 0) || !R_SkinUnlock(cv_skin.value))
+	if ((cv_skin.value < 0) || !R_SkinUsable(consoleplayer, cv_skin.value))
 	{
 		CV_StealthSet(&cv_skin, DEFAULTSKIN);
 		cv_skin.value = 0;
@@ -1147,6 +1204,7 @@ static void SendNameAndColor(void)
 
 	// Finally write out the complete packet and send it off.
 	WRITESTRINGN(p, cv_playername.zstring, MAXPLAYERNAME);
+	WRITEUINT32(p, (UINT32)players[consoleplayer].availabilities);
 	WRITEUINT8(p, (UINT8)cv_playercolor.value);
 	WRITEUINT8(p, (UINT8)cv_skin.value);
 	SendNetXCmd(XD_NAMEANDCOLOR, buf, p - buf);
@@ -1189,6 +1247,8 @@ static void SendNameAndColor2(void)
 	if (!Playing())
 		return;
 
+	players[secondplaya].availabilities = R_GetSkinAvailabilities();
+
 	// If you're not in a netgame, merely update the skin, color, and name.
 	if (botingame)
 	{
@@ -1217,7 +1277,7 @@ static void SendNameAndColor2(void)
 			SetPlayerSkinByNum(secondplaya, forcedskin);
 			CV_StealthSet(&cv_skin2, skins[forcedskin].name);
 		}
-		else if ((foundskin = R_SkinAvailable(cv_skin2.string)) != -1 && R_SkinUnlock(foundskin))
+		else if ((foundskin = R_SkinAvailable(cv_skin2.string)) != -1 && R_SkinUsable(secondplaya, foundskin))
 		{
 			boolean notsame;
 
@@ -1272,6 +1332,7 @@ static void Got_NameAndColor(UINT8 **cp, INT32 playernum)
 #endif
 
 	READSTRINGN(*cp, name, MAXPLAYERNAME);
+	p->availabilities = READUINT32(*cp);
 	color = READUINT8(*cp);
 	skin = READUINT8(*cp);
 
@@ -1288,6 +1349,7 @@ static void Got_NameAndColor(UINT8 **cp, INT32 playernum)
 	if (server && (p != &players[consoleplayer] && p != &players[secondarydisplayplayer]))
 	{
 		boolean kick = false;
+		INT32 s;
 
 		// team colors
 		if (G_GametypeHasTeams())
@@ -1301,6 +1363,16 @@ static void Got_NameAndColor(UINT8 **cp, INT32 playernum)
 		// don't allow color "none"
 		if (!p->skincolor)
 			kick = true;
+
+		// availabilities
+		for (s = 0; s < MAXSKINS; s++)
+		{
+			if (!skins[s].availability && (p->availabilities & (1 << s)))
+			{
+				kick = true;
+				break;
+			}
+		}
 
 		if (kick)
 		{
@@ -1497,10 +1569,13 @@ void D_MapChange(INT32 mapnum, INT32 newgametype, boolean pultmode, boolean rese
 	// The supplied data are assumed to be good.
 	I_Assert(delay >= 0 && delay <= 2);
 
+	if (mapnum != -1)
+		CV_SetValue(&cv_nextmap, mapnum);
+
 	CONS_Debug(DBG_GAMELOGIC, "Map change: mapnum=%d gametype=%d ultmode=%d resetplayers=%d delay=%d skipprecutscene=%d\n",
 	           mapnum, newgametype, pultmode, resetplayers, delay, skipprecutscene);
 
-	if (netgame || multiplayer)
+	if ((netgame || multiplayer) && !((gametype == newgametype) && (newgametype == GT_COOP)))
 		FLS = false;
 
 	if (delay != 2)
@@ -1534,8 +1609,13 @@ void D_MapChange(INT32 mapnum, INT32 newgametype, boolean pultmode, boolean rese
 		mapchangepending = 0;
 		// spawn the server if needed
 		// reset players if there is a new one
-		if (!(adminplayer == consoleplayer) && SV_SpawnServer())
-			buf[0] &= ~(1<<1);
+		if (!(adminplayer == consoleplayer))
+		{
+			if (SV_SpawnServer())
+				buf[0] &= ~(1<<1);
+			if (!Playing()) // you failed to start a server somehow, so cancel the map change
+				return;
+		}
 
 		// Kick bot from special stages
 		if (botskin)
@@ -1587,7 +1667,7 @@ static void Command_Map_f(void)
 		return;
 	}
 
-	if (!server && !(adminplayer == consoleplayer))
+	if (client && !(adminplayer == consoleplayer))
 	{
 		CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
 		return;
@@ -1666,9 +1746,19 @@ static void Command_Map_f(void)
 		}
 	}
 
+	// Prevent warping to locked levels
+	// ... unless you're in a dedicated server.  Yes, technically this means you can view any level by
+	// running a dedicated server and joining it yourself, but that's better than making dedicated server's
+	// lives hell.
+	if (!dedicated && M_MapLocked(newmapnum))
+	{
+		CONS_Alert(CONS_NOTICE, M_GetText("You need to unlock this level before you can warp to it!\n"));
+		return;
+	}
+
 	// don't use a gametype the map doesn't support
 	if (cv_debug || COM_CheckParm("-force") || cv_skipmapcheck.value)
-		; // The player wants us to trek on anyway.  Do so.
+		fromlevelselect = false; // The player wants us to trek on anyway.  Do so.
 	// G_TOLFlag handles both multiplayer gametype and ignores it for !multiplayer
 	// Alternatively, bail if the map header is completely missing anyway.
 	else if (!mapheaderinfo[newmapnum-1]
@@ -1687,19 +1777,10 @@ static void Command_Map_f(void)
 		CONS_Alert(CONS_WARNING, M_GetText("%s doesn't support %s mode!\n(Use -force to override)\n"), mapname, gametypestring);
 		return;
 	}
+	else
+		fromlevelselect = ((netgame || multiplayer) && ((gametype == newgametype) && (newgametype == GT_COOP)));
 
-	// Prevent warping to locked levels
-	// ... unless you're in a dedicated server.  Yes, technically this means you can view any level by
-	// running a dedicated server and joining it yourself, but that's better than making dedicated server's
-	// lives hell.
-	if (!dedicated && M_MapLocked(newmapnum))
-	{
-		CONS_Alert(CONS_NOTICE, M_GetText("You need to unlock this level before you can warp to it!\n"));
-		return;
-	}
-
-	fromlevelselect = false;
-	D_MapChange(newmapnum, newgametype, false, newresetplayers, 0, false, false);
+	D_MapChange(newmapnum, newgametype, false, newresetplayers, 0, false, fromlevelselect);
 }
 
 /** Receives a map command and changes the map.
@@ -1765,17 +1846,14 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	if (demoplayback && !timingdemo)
 		precache = false;
 
-	if (resetplayer)
-	{
-		if (!FLS || (netgame || multiplayer))
-			emeralds = 0;
-	}
+	if (resetplayer && !FLS)
+		emeralds = 0;
 
 #ifdef HAVE_BLUA
 	LUAh_MapChange();
 #endif
 
-	G_InitNew(ultimatemode, mapname, resetplayer, skipprecutscene);
+	G_InitNew(ultimatemode, mapname, resetplayer, skipprecutscene, FLS);
 	if (demoplayback && !timingdemo)
 		precache = true;
 	CON_ToggleOff();
@@ -1914,7 +1992,7 @@ static void Got_Suicide(UINT8 **cp, INT32 playernum)
 	// You can't suicide someone else.  Nice try, there.
 	if (suicideplayer != playernum || (!G_PlatformGametype()))
 	{
-		CONS_Alert(CONS_WARNING, M_GetText("Illegal suicide command recieved from %s\n"), player_names[playernum]);
+		CONS_Alert(CONS_WARNING, M_GetText("Illegal suicide command received from %s\n"), player_names[playernum]);
 		if (server)
 		{
 			XBOXSTATIC UINT8 buf[2];
@@ -2081,7 +2159,7 @@ static void Command_Teamchange_f(void)
 		return;
 	}
 
-	if (!cv_allowteamchange.value && !NetPacket.packet.newteam) // allow swapping to spectator even in locked teams.
+	if (!cv_allowteamchange.value && NetPacket.packet.newteam) // allow swapping to spectator even in locked teams.
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("The server is not allowing team changes at the moment.\n"));
 		return;
@@ -2178,7 +2256,7 @@ static void Command_Teamchange2_f(void)
 		return;
 	}
 
-	if (!cv_allowteamchange.value && !NetPacket.packet.newteam) // allow swapping to spectator even in locked teams.
+	if (!cv_allowteamchange.value && NetPacket.packet.newteam) // allow swapping to spectator even in locked teams.
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("The server is not allowing team changes at the moment.\n"));
 		return;
@@ -2574,7 +2652,7 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 	if (players[playernum].spectator)
 	{
 		players[playernum].score = 0;
-		players[playernum].health = 1;
+		players[playernum].rings = 0;
 		if (players[playernum].mo)
 			players[playernum].mo->health = 1;
 	}
@@ -2629,7 +2707,7 @@ static void Command_Changepassword_f(void)
 	// If we have no MD5 support then completely disable XD_LOGIN responses for security.
 	CONS_Alert(CONS_NOTICE, "Remote administration commands are not supported in this build.\n");
 #else
-	if (!server) // cannot change remotely
+	if (client) // cannot change remotely
 	{
 		CONS_Printf(M_GetText("Only the server can use this.\n"));
 		return;
@@ -2688,7 +2766,7 @@ static void Got_Login(UINT8 **cp, INT32 playernum)
 
 	READMEM(*cp, sentmd5, 16);
 
-	if (!server)
+	if (client)
 		return;
 
 	// Do the final pass to compare with the sent md5
@@ -2710,7 +2788,7 @@ static void Command_Verify_f(void)
 	char *temp;
 	INT32 playernum;
 
-	if (!server)
+	if (client)
 	{
 		CONS_Printf(M_GetText("Only the server can use this.\n"));
 		return;
@@ -2794,7 +2872,7 @@ static void Command_MotD_f(void)
 			return;
 		}
 
-	if ((netgame || multiplayer) && !server)
+	if ((netgame || multiplayer) && client)
 		SendNetXCmd(XD_SETMOTD, mymotd, sizeof(motd));
 	else
 	{
@@ -2932,6 +3010,7 @@ static void Command_Addfile(void)
 	XBOXSTATIC char buf[256];
 	char *buf_p = buf;
 	INT32 i;
+	int musiconly; // W_VerifyNMUSlumps isn't boolean
 
 	if (COM_Argc() != 2)
 	{
@@ -2946,7 +3025,9 @@ static void Command_Addfile(void)
 		if (!isprint(fn[i]) || fn[i] == ';')
 			return;
 
-	if (!W_VerifyNMUSlumps(fn))
+	musiconly = W_VerifyNMUSlumps(fn);
+
+	if (!musiconly)
 	{
 		// ... But only so long as they contain nothing more then music and sprites.
 		if (netgame && !(server || adminplayer == consoleplayer))
@@ -2958,7 +3039,7 @@ static void Command_Addfile(void)
 	}
 
 	// Add file on your client directly if it is trivial, or you aren't in a netgame.
-	if (!(netgame || multiplayer) || W_VerifyNMUSlumps(fn))
+	if (!(netgame || multiplayer) || musiconly)
 	{
 		P_AddWadFile(fn, NULL);
 		return;
@@ -2978,9 +3059,7 @@ static void Command_Addfile(void)
 #else
 		FILE *fhandle;
 
-		fhandle = fopen(fn, "rb");
-
-		if (fhandle)
+		if ((fhandle = W_OpenWadFile(&fn, true)) != NULL)
 		{
 			tic_t t = I_GetTime();
 			CONS_Debug(DBG_SETUP, "Making MD5 for %s\n",fn);
@@ -2988,11 +3067,8 @@ static void Command_Addfile(void)
 			CONS_Debug(DBG_SETUP, "MD5 calc for %s took %f second\n", fn, (float)(I_GetTime() - t)/TICRATE);
 			fclose(fhandle);
 		}
-		else
-		{
-			CONS_Printf(M_GetText("File %s not found.\n"), fn);
+		else // file not found
 			return;
-		}
 #endif
 		WRITEMEM(buf_p, md5sum, 16);
 	}
@@ -3045,13 +3121,19 @@ static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum)
 	filestatus_t ncs = FS_NOTFOUND;
 	UINT8 md5sum[16];
 	boolean kick = false;
+	boolean toomany = false;
 	INT32 i;
+	size_t packetsize = 0;
+	serverinfo_pak *dummycheck = NULL;
+
+	// Shut the compiler up.
+	(void)dummycheck;
 
 	READSTRINGN(*cp, filename, 240);
 	READMEM(*cp, md5sum, 16);
 
 	// Only the server processes this message.
-	if (!server)
+	if (client)
 		return;
 
 	// Disallow non-printing characters and semicolons.
@@ -3071,13 +3153,25 @@ static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum)
 		return;
 	}
 
-	ncs = findfile(filename,md5sum,true);
+	// See W_LoadWadFile in w_wad.c
+	for (i = 0; i < numwadfiles; i++)
+		packetsize += nameonlylength(wadfiles[i]->filename) + 22;
 
-	if (ncs != FS_FOUND)
+	packetsize += nameonlylength(filename) + 22;
+
+	if ((numwadfiles >= MAX_WADFILES)
+	|| (packetsize > sizeof(dummycheck->fileneeded)))
+		toomany = true;
+	else
+		ncs = findfile(filename,md5sum,true);
+
+	if (ncs != FS_FOUND || toomany)
 	{
 		char message[256];
 
-		if (ncs == FS_NOTFOUND)
+		if (toomany)
+			sprintf(message, M_GetText("Too many files loaded to add %s\n"), filename);
+		else if (ncs == FS_NOTFOUND)
 			sprintf(message, M_GetText("The server doesn't have %s\n"), filename);
 		else if (ncs == FS_MD5SUMBAD)
 			sprintf(message, M_GetText("Checksum mismatch on %s\n"), filename);
@@ -3147,10 +3241,15 @@ static void Got_Addfilecmd(UINT8 **cp, INT32 playernum)
 
 	ncs = findfile(filename,md5sum,true);
 
-	if (ncs != FS_FOUND)
+	if (ncs != FS_FOUND || !P_AddWadFile(filename, NULL))
 	{
 		Command_ExitGame_f();
-		if (ncs == FS_NOTFOUND)
+		if (ncs == FS_FOUND)
+		{
+			CONS_Printf(M_GetText("The server tried to add %s,\nbut you have too many files added.\nRestart the game to clear loaded files\nand play on this server."), filename);
+			M_StartMessage(va("The server added a file \n(%s)\nbut you have too many files added.\nRestart the game to clear loaded files.\n\nPress ESC\n",filename), NULL, MM_NOTHING);
+		}
+		else if (ncs == FS_NOTFOUND)
 		{
 			CONS_Printf(M_GetText("The server tried to add %s,\nbut you don't have this file.\nYou need to find it in order\nto play on this server."), filename);
 			M_StartMessage(va("The server added a file \n(%s)\nthat you do not have.\n\nPress ESC\n",filename), NULL, MM_NOTHING);
@@ -3168,7 +3267,6 @@ static void Got_Addfilecmd(UINT8 **cp, INT32 playernum)
 		return;
 	}
 
-	P_AddWadFile(filename, NULL);
 	G_SetGameModified(true);
 }
 
@@ -3316,6 +3414,11 @@ static void NumLaps_OnChange(void)
 static void NetTimeout_OnChange(void)
 {
 	connectiontimeout = (tic_t)cv_nettimeout.value;
+}
+
+static void JoinTimeout_OnChange(void)
+{
+	jointimeout = (tic_t)cv_jointimeout.value;
 }
 
 UINT32 timelimitintics = 0;
@@ -3960,7 +4063,7 @@ static void Command_Archivetest_f(void)
 	}
 
 	// assign mobjnum
-	i = 0;
+	i = 1;
 	for (th = thinkercap.next; th != &thinkercap; th = th->next)
 		if (th->function.acp1 == (actionf_p1)P_MobjThinker)
 			((mobj_t *)th)->mobjnum = i++;
@@ -4002,13 +4105,6 @@ static void Command_Archivetest_f(void)
   */
 static void ForceSkin_OnChange(void)
 {
-	if ((server || adminplayer == consoleplayer) && ((cv_forceskin.value == -1 && stricmp(cv_forceskin.string, "None")) || !(R_SkinUnlock(cv_forceskin.value))))
-	{
-		CONS_Printf("Please provide a valid skin name (\"None\" disables).\n");
-		CV_SetValue(&cv_forceskin, -1);
-		return;
-	}
-
 	// NOT in SP, silly!
 	if (!(netgame || multiplayer))
 		return;
@@ -4017,7 +4113,7 @@ static void ForceSkin_OnChange(void)
 		CONS_Printf("The server has lifted the forced skin restrictions.\n");
 	else
 	{
-		CONS_Printf("The server is restricting all players to skin \"%s\".\n",skins[cv_forceskin.value].realname);
+		CONS_Printf("The server is restricting all players to skin \"%s\".\n",skins[cv_forceskin.value].name);
 		ForceAllSkins(cv_forceskin.value);
 	}
 }
@@ -4056,7 +4152,7 @@ static void Skin_OnChange(void)
 		return; // do whatever you want
 
 	if (!(cv_debug || devparm) && !(multiplayer || netgame) // In single player.
-		&& (gamestate == GS_LEVEL || gamestate == GS_INTERMISSION || gamestate == GS_CONTINUING))
+		&& (gamestate != GS_WAITINGPLAYERS)) // allows command line -warp x +skin y
 	{
 		CV_StealthSet(&cv_skin, skins[players[consoleplayer].skin].name);
 		return;
@@ -4099,8 +4195,7 @@ static void Color_OnChange(void)
 	if (!Playing())
 		return; // do whatever you want
 
-	if (!(cv_debug || devparm) && !(multiplayer || netgame) // In single player.
-		&& (gamestate == GS_LEVEL || gamestate == GS_INTERMISSION || gamestate == GS_CONTINUING))
+	if (!(cv_debug || devparm) && !(multiplayer || netgame)) // In single player.
 	{
 		CV_StealthSet(&cv_skin, skins[players[consoleplayer].skin].name);
 		return;

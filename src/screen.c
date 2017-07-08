@@ -28,9 +28,12 @@
 #include "d_main.h"
 #include "d_clisrv.h"
 #include "f_finale.h"
+#include "i_sound.h" // closed captions
+#include "s_sound.h" // ditto
+#include "g_game.h" // ditto
 
 
-#if defined (USEASM) //&& (!defined (_MSC_VER) || (_MSC_VER <= 1200))
+#if defined (USEASM) && !defined (NORUSEASM)//&& (!defined (_MSC_VER) || (_MSC_VER <= 1200))
 #define RUSEASM //MSC.NET can't patch itself
 #endif
 
@@ -49,6 +52,7 @@ void (*splatfunc)(void); // span drawer w/ transparency
 void (*basespanfunc)(void); // default span func for color mode
 void (*transtransfunc)(void); // translucent translated column drawer
 void (*twosmultipatchfunc)(void); // for cols with transparent pixels
+void (*twosmultipatchtransfunc)(void); // for cols with transparent pixels AND translucency
 
 // ------------------
 // global video state
@@ -127,6 +131,7 @@ void SCR_SetMode(void)
 		fuzzcolfunc = R_DrawTranslucentColumn_8;
 		walldrawerfunc = R_DrawWallColumn_8;
 		twosmultipatchfunc = R_Draw2sMultiPatchColumn_8;
+		twosmultipatchtransfunc = R_Draw2sMultiPatchTranslucentColumn_8;
 #ifdef RUSEASM
 		if (R_ASM)
 		{
@@ -411,6 +416,7 @@ void SCR_DisplayTicRate(void)
 	tic_t ontic = I_GetTime();
 	tic_t totaltics = 0;
 	INT32 ticcntcolor = 0;
+	INT32 offs = (cv_debug ? 8 : 0);
 
 	for (i = lasttic + 1; i < TICRATE+lasttic && i < ontic; ++i)
 		fpsgraph[i % TICRATE] = false;
@@ -424,10 +430,46 @@ void SCR_DisplayTicRate(void)
 	if (totaltics <= TICRATE/2) ticcntcolor = V_REDMAP;
 	else if (totaltics == TICRATE) ticcntcolor = V_GREENMAP;
 
-	V_DrawString(vid.width-(24*vid.dupx), vid.height-(16*vid.dupy),
+	V_DrawString(vid.width-((24+(6*offs))*vid.dupx), vid.height-((16-offs)*vid.dupy),
 		V_YELLOWMAP|V_NOSCALESTART, "FPS");
-	V_DrawString(vid.width-(40*vid.dupx), vid.height-( 8*vid.dupy),
+	V_DrawString(vid.width-(40*vid.dupx), vid.height-(8*vid.dupy),
 		ticcntcolor|V_NOSCALESTART, va("%02d/%02u", totaltics, TICRATE));
 
 	lasttic = ontic;
+}
+
+void SCR_ClosedCaptions(void)
+{
+	UINT8 i;
+
+	for (i = 0; i < NUMCAPTIONS; i++)
+	{
+		INT32 flags, y;
+		char dot;
+		boolean music;
+
+		if (!closedcaptions[i].s)
+			continue;
+
+		if ((music = (closedcaptions[i].s-S_sfx == sfx_None)) && (closedcaptions[i].t < flashingtics) && (closedcaptions[i].t & 1))
+			continue;
+
+		flags = V_NOSCALESTART|V_ALLOWLOWERCASE;
+		y = vid.height-((i + 2)*10*vid.dupy);
+		dot = ' ';
+
+		if (closedcaptions[i].b)
+			y -= (closedcaptions[i].b--)*vid.dupy;
+
+		if (closedcaptions[i].t < CAPTIONFADETICS)
+			flags |= (((CAPTIONFADETICS-closedcaptions[i].t)/2)*V_10TRANS);
+
+		if (music)
+			dot = '\x19';
+		else if (closedcaptions[i].c && closedcaptions[i].c->origin)
+			dot = '\x1E';
+
+		V_DrawRightAlignedString(vid.width-(20*vid.dupx), y,
+		flags, va("%c [%s]", dot, (closedcaptions[i].s->caption[0] ? closedcaptions[i].s->caption : closedcaptions[i].s->name)));
+	}
 }

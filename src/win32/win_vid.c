@@ -322,7 +322,7 @@ static inline boolean I_SkipFrame(void)
 		case GS_LEVEL:
 			if (!paused)
 				return false;
-		case GS_TIMEATTACK:
+		//case GS_TIMEATTACK: -- sorry optimisation but now we have a cool level platter and that being laggardly looks terrible
 #ifndef CLIENT_LOADINGSCREEN
 		case GS_WAITINGPLAYERS:
 #endif
@@ -361,6 +361,10 @@ void I_FinishUpdate(void)
 
 	if (I_SkipFrame())
 		return;
+
+	// draw captions if enabled
+	if (cv_closedcaptioning.value)
+		SCR_ClosedCaptions();
 
 	// display a graph of ticrate
 	if (cv_ticrate.value)

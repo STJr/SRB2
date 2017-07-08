@@ -67,7 +67,7 @@ static patch_t *sborings;
 static patch_t *sboover;
 static patch_t *timeover;
 static patch_t *stlivex;
-static patch_t *rrings;
+static patch_t *sboredrings;
 static patch_t *getall; // Special Stage HUD
 static patch_t *timeup; // Special Stage HUD
 static patch_t *hunthoming[6];
@@ -78,12 +78,6 @@ static patch_t *race3;
 static patch_t *racego;
 static patch_t *ttlnum;
 static patch_t *nightslink;
-static patch_t *count5;
-static patch_t *count4;
-static patch_t *count3;
-static patch_t *count2;
-static patch_t *count1;
-static patch_t *count0;
 static patch_t *curweapon;
 static patch_t *normring;
 static patch_t *bouncering;
@@ -99,6 +93,9 @@ static patch_t *ringshield;
 static patch_t *watershield;
 static patch_t *bombshield;
 static patch_t *pityshield;
+static patch_t *flameshield;
+static patch_t *bubbleshield;
+static patch_t *thundershield;
 static patch_t *invincibility;
 static patch_t *sneakers;
 static patch_t *gravboots;
@@ -134,25 +131,25 @@ hudinfo_t hudinfo[NUMHUDITEMS] =
 
 	{  16,  42}, // HUD_RINGS
 	{ 220,  10}, // HUD_RINGSSPLIT
-	{ 112,  42}, // HUD_RINGSNUM
-	{ 288,  10}, // HUD_RINGSNUMSPLIT
+	{ 120,  42}, // HUD_RINGSNUM
+	{ 296,  10}, // HUD_RINGSNUMSPLIT
 
 	{  16,  10}, // HUD_SCORE
-	{ 128,  10}, // HUD_SCORENUM
+	{ 120,  10}, // HUD_SCORENUM
 
-	{  17,  26}, // HUD_TIME
-	{ 136,  10}, // HUD_TIMESPLIT
-	{  88,  26}, // HUD_MINUTES
+	{  16,  26}, // HUD_TIME
+	{ 128,  10}, // HUD_TIMESPLIT
+	{  96,  26}, // HUD_MINUTES
 	{ 188,  10}, // HUD_MINUTESSPLIT
-	{  88,  26}, // HUD_TIMECOLON
+	{  96,  26}, // HUD_TIMECOLON
 	{ 188,  10}, // HUD_TIMECOLONSPLIT
-	{ 112,  26}, // HUD_SECONDS
+	{ 120,  26}, // HUD_SECONDS
 	{ 212,  10}, // HUD_SECONDSSPLIT
-	{ 112,  26}, // HUD_TIMETICCOLON
-	{ 136,  26}, // HUD_TICS
+	{ 120,  26}, // HUD_TIMETICCOLON
+	{ 144,  26}, // HUD_TICS
 
-	{ 112,  56}, // HUD_SS_TOTALRINGS
-	{ 288,  40}, // HUD_SS_TOTALRINGS_SPLIT
+	{ 120,  56}, // HUD_SS_TOTALRINGS
+	{ 296,  40}, // HUD_SS_TOTALRINGS_SPLIT
 
 	{ 110,  93}, // HUD_GETRINGS
 	{ 160,  93}, // HUD_GETRINGSNUM
@@ -248,16 +245,19 @@ void ST_LoadGraphics(void)
 	//                   but load them in R_AddSkins, that gets called
 	//                   first anyway
 	// cache the status bar overlay icons (fullscreen mode)
-	sborings = W_CachePatchName("SBORINGS", PU_HUDGFX);
-	sboscore = W_CachePatchName("SBOSCORE", PU_HUDGFX);
+
+	// Prefix "STT" is whitelisted (doesn't trigger ISGAMEMODIFIED), btw
+	sborings = W_CachePatchName("STTRINGS", PU_HUDGFX);
+	sboredrings = W_CachePatchName("STTRRING", PU_HUDGFX);
+	sboscore = W_CachePatchName("STTSCORE", PU_HUDGFX);
+	sbotime = W_CachePatchName("STTTIME", PU_HUDGFX); // Time logo
+	sbocolon = W_CachePatchName("STTCOLON", PU_HUDGFX); // Colon for time
+	sboperiod = W_CachePatchName("STTPERIO", PU_HUDGFX); // Period for time centiseconds
+
 	sboover = W_CachePatchName("SBOOVER", PU_HUDGFX);
 	timeover = W_CachePatchName("TIMEOVER", PU_HUDGFX);
 	stlivex = W_CachePatchName("STLIVEX", PU_HUDGFX);
 	livesback = W_CachePatchName("STLIVEBK", PU_HUDGFX);
-	rrings = W_CachePatchName("RRINGS", PU_HUDGFX);
-	sbotime = W_CachePatchName("SBOTIME", PU_HUDGFX); // Time logo
-	sbocolon = W_CachePatchName("SBOCOLON", PU_HUDGFX); // Colon for time
-	sboperiod = W_CachePatchName("SBOPERIO", PU_HUDGFX); // Period for time centiseconds
 	nrec_timer = W_CachePatchName("NGRTIMER", PU_HUDGFX); // Timer for NiGHTS
 	getall = W_CachePatchName("GETALL", PU_HUDGFX); // Special Stage HUD
 	timeup = W_CachePatchName("TIMEUP", PU_HUDGFX); // Special Stage HUD
@@ -266,12 +266,6 @@ void ST_LoadGraphics(void)
 	race3 = W_CachePatchName("RACE3", PU_HUDGFX);
 	racego = W_CachePatchName("RACEGO", PU_HUDGFX);
 	nightslink = W_CachePatchName("NGHTLINK", PU_HUDGFX);
-	count5 = W_CachePatchName("DRWNF0", PU_HUDGFX);
-	count4 = W_CachePatchName("DRWNE0", PU_HUDGFX);
-	count3 = W_CachePatchName("DRWND0", PU_HUDGFX);
-	count2 = W_CachePatchName("DRWNC0", PU_HUDGFX);
-	count1 = W_CachePatchName("DRWNB0", PU_HUDGFX);
-	count0 = W_CachePatchName("DRWNA0", PU_HUDGFX);
 
 	for (i = 0; i < 6; ++i)
 	{
@@ -288,15 +282,18 @@ void ST_LoadGraphics(void)
 	scatterring = W_CachePatchName("SCATIND", PU_HUDGFX);
 	grenadering = W_CachePatchName("GRENIND", PU_HUDGFX);
 	railring = W_CachePatchName("RAILIND", PU_HUDGFX);
-	jumpshield = W_CachePatchName("WHTVB0", PU_HUDGFX);
-	forceshield = W_CachePatchName("BLTVB0", PU_HUDGFX);
-	ringshield = W_CachePatchName("YLTVB0", PU_HUDGFX);
-	watershield = W_CachePatchName("ELTVB0", PU_HUDGFX);
-	bombshield = W_CachePatchName("BKTVB0", PU_HUDGFX);
-	pityshield = W_CachePatchName("GRTVB0", PU_HUDGFX);
-	invincibility = W_CachePatchName("PINVB0", PU_HUDGFX);
-	sneakers = W_CachePatchName("SHTVB0", PU_HUDGFX);
-	gravboots = W_CachePatchName("GBTVB0", PU_HUDGFX);
+	jumpshield = W_CachePatchName("TVWWC0", PU_HUDGFX);
+	forceshield = W_CachePatchName("TVFOC0", PU_HUDGFX);
+	ringshield = W_CachePatchName("TVATC0", PU_HUDGFX);
+	watershield = W_CachePatchName("TVELC0", PU_HUDGFX);
+	bombshield = W_CachePatchName("TVARC0", PU_HUDGFX);
+	pityshield = W_CachePatchName("TVPIC0", PU_HUDGFX);
+	flameshield = W_CachePatchName("TVFLC0", PU_HUDGFX);
+	bubbleshield = W_CachePatchName("TVBBC0", PU_HUDGFX);
+	thundershield = W_CachePatchName("TVZPC0", PU_HUDGFX);
+	invincibility = W_CachePatchName("TVIVC0", PU_HUDGFX);
+	sneakers = W_CachePatchName("TVSSC0", PU_HUDGFX);
+	gravboots = W_CachePatchName("TVGVC0", PU_HUDGFX);
 
 	tagico = W_CachePatchName("TAGICO", PU_HUDGFX);
 	rflagico = W_CachePatchName("RFLAGICO", PU_HUDGFX);
@@ -546,34 +543,43 @@ static void ST_DrawNightsOverlayNum(INT32 x /* right border */, INT32 y, INT32 a
 static void ST_drawDebugInfo(void)
 {
 	INT32 height = 192;
+	INT32 dist = 8;
 
-	if (!stplyr->mo)
+	if (!(stplyr->mo && cv_debug))
 		return;
+
+	if (cv_ticrate.value)
+	{
+		height -= 12;
+		dist >>= 1;
+	}
 
 	if (cv_debug & DBG_BASIC)
 	{
 		const fixed_t d = AngleFixed(stplyr->mo->angle);
-		V_DrawRightAlignedString(320, 168, V_MONOSPACE, va("X: %6d", stplyr->mo->x>>FRACBITS));
-		V_DrawRightAlignedString(320, 176, V_MONOSPACE, va("Y: %6d", stplyr->mo->y>>FRACBITS));
-		V_DrawRightAlignedString(320, 184, V_MONOSPACE, va("Z: %6d", stplyr->mo->z>>FRACBITS));
-		V_DrawRightAlignedString(320, 192, V_MONOSPACE, va("A: %6d", FixedInt(d)));
+		V_DrawRightAlignedString(320, height - 24, V_MONOSPACE, va("X: %6d", stplyr->mo->x>>FRACBITS));
+		V_DrawRightAlignedString(320, height - 16, V_MONOSPACE, va("Y: %6d", stplyr->mo->y>>FRACBITS));
+		V_DrawRightAlignedString(320, height - 8,  V_MONOSPACE, va("Z: %6d", stplyr->mo->z>>FRACBITS));
+		V_DrawRightAlignedString(320, height,      V_MONOSPACE, va("A: %6d", FixedInt(d)));
 
-		height = 152;
+		height -= (32+dist);
 	}
 
 	if (cv_debug & DBG_DETAILED)
 	{
 		V_DrawRightAlignedString(320, height - 104, V_MONOSPACE, va("SHIELD: %5x", stplyr->powers[pw_shield]));
 		V_DrawRightAlignedString(320, height - 96,  V_MONOSPACE, va("SCALE: %5d%%", (stplyr->mo->scale*100)/FRACUNIT));
-		V_DrawRightAlignedString(320, height - 88,  V_MONOSPACE, va("DASH: %3d/%3d", stplyr->dashspeed>>FRACBITS, stplyr->maxdash>>FRACBITS));
+		V_DrawRightAlignedString(320, height - 88,  V_MONOSPACE, va("CARRY: %5x", stplyr->powers[pw_carry]));
 		V_DrawRightAlignedString(320, height - 80,  V_MONOSPACE, va("AIR: %4d, %3d", stplyr->powers[pw_underwater], stplyr->powers[pw_spacetime]));
 
 		// Flags
-		V_DrawRightAlignedString(304-64, height - 72, V_MONOSPACE, "Flags:");
-		V_DrawString(304-60,             height - 72, (stplyr->jumping) ? V_GREENMAP : V_REDMAP, "JM");
-		V_DrawString(304-40,             height - 72, (stplyr->pflags & PF_JUMPED) ? V_GREENMAP : V_REDMAP, "JD");
-		V_DrawString(304-20,             height - 72, (stplyr->pflags & PF_SPINNING) ? V_GREENMAP : V_REDMAP, "SP");
-		V_DrawString(304,                height - 72, (stplyr->pflags & PF_STARTDASH) ? V_GREENMAP : V_REDMAP, "ST");
+		V_DrawRightAlignedString(304-92, height - 72, V_MONOSPACE, "PF:");
+		V_DrawString(304-90,             height - 72, (stplyr->pflags & PF_STARTJUMP) ? V_GREENMAP : V_REDMAP, "SJ");
+		V_DrawString(304-72,             height - 72, (stplyr->pflags & PF_JUMPED) ? V_GREENMAP : V_REDMAP, "JD");
+		V_DrawString(304-54,             height - 72, (stplyr->pflags & PF_SPINNING) ? V_GREENMAP : V_REDMAP, "SP");
+		V_DrawString(304-36,             height - 72, (stplyr->pflags & PF_STARTDASH) ? V_GREENMAP : V_REDMAP, "ST");
+		V_DrawString(304-18,             height - 72, (stplyr->pflags & PF_THOKKED) ? V_GREENMAP : V_REDMAP, "TH");
+		V_DrawString(304,                height - 72, (stplyr->pflags & PF_SHIELDABILITY) ? V_GREENMAP : V_REDMAP, "SH");
 
 		V_DrawRightAlignedString(320, height - 64, V_MONOSPACE, va("CEILZ: %6d", stplyr->mo->ceilingz>>FRACBITS));
 		V_DrawRightAlignedString(320, height - 56, V_MONOSPACE, va("FLOORZ: %6d", stplyr->mo->floorz>>FRACBITS));
@@ -587,7 +593,7 @@ static void ST_drawDebugInfo(void)
 		V_DrawRightAlignedString(320, height - 8,  V_MONOSPACE, va("MOMZ: %6d", stplyr->mo->momz>>FRACBITS));
 		V_DrawRightAlignedString(320, height,      V_MONOSPACE, va("SPEED: %6d", stplyr->speed>>FRACBITS));
 
-		height -= 120;
+		height -= (112+dist);
 	}
 
 	if (cv_debug & DBG_RANDOMIZER) // randomizer testing
@@ -600,12 +606,12 @@ static void ST_drawDebugInfo(void)
 		V_DrawRightAlignedString(320, height - 8,  V_MONOSPACE, va("Seed: %08x", P_GetRandSeed()));
 		V_DrawRightAlignedString(320, height,      V_MONOSPACE, va("==  :    .%04d", peekres));
 
-		height -= 32;
+		height -= (24+dist);
 	}
 
 	if (cv_debug & DBG_MEMORY)
 	{
-		V_DrawRightAlignedString(320, height,     V_MONOSPACE, va("Heap used: %7sKB", sizeu1(Z_TagsUsage(0, INT32_MAX)>>10)));
+		V_DrawRightAlignedString(320, height,     V_MONOSPACE, va("Heap: %7sKB", sizeu1(Z_TagsUsage(0, INT32_MAX)>>10)));
 	}
 }
 
@@ -664,9 +670,9 @@ static void ST_drawTime(void)
 
 static inline void ST_drawRings(void)
 {
-	INT32 ringnum = max(stplyr->health-1, 0);
+	INT32 ringnum = max(stplyr->rings, 0);
 
-	ST_DrawPatchFromHudWS(HUD_RINGS, ((stplyr->health <= 1 && leveltime/5 & 1) ? rrings : sborings));
+	ST_DrawPatchFromHudWS(HUD_RINGS, ((stplyr->rings <= 0 && leveltime/5 & 1) ? sboredrings : sborings));
 
 	if (objectplacing)
 		ringnum = op_currentdoomednum;
@@ -675,8 +681,8 @@ static inline void ST_drawRings(void)
 		INT32 i;
 		ringnum = 0;
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] && players[i].mo && players[i].mo->health > 1)
-				ringnum += players[i].mo->health - 1;
+			if (playeringame[i] && players[i].mo && players[i].rings > 0)
+				ringnum += players[i].rings;
 	}
 
 	ST_DrawNumFromHudWS(HUD_RINGSNUM, ringnum);
@@ -699,7 +705,7 @@ static void ST_drawLives(void)
 		// skincolor face/super
 		UINT8 *colormap = R_GetTranslationColormap(stplyr->skin, stplyr->mo->color, GTC_CACHE);
 		patch_t *face = faceprefix[stplyr->skin];
-		if (stplyr->powers[pw_super] || stplyr->pflags & PF_NIGHTSMODE)
+		if ((stplyr->powers[pw_super] && (stplyr->mo->state < &states[S_PLAY_SUPER_TRANS] || stplyr->mo->state > &states[S_PLAY_SUPER_TRANS9])) || (stplyr->powers[pw_carry] == CR_NIGHTSMODE && skins[stplyr->skin].flags & SF_SUPER))
 			face = superprefix[stplyr->skin];
 		V_DrawSmallMappedPatch(hudinfo[HUD_LIVESPIC].x, hudinfo[HUD_LIVESPIC].y + (v_splitflag ? -12 : 0),
 			V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS|v_splitflag,face, colormap);
@@ -798,18 +804,28 @@ static void ST_drawFirstPersonHUD(void)
 		return;
 
 	// Graue 06-18-2004: no V_NOSCALESTART, no SCX, no SCY, snap to right
-	if (player->powers[pw_shield] & SH_FORCE)
+	if ((player->powers[pw_shield] & SH_NOSTACK & ~SH_FORCEHP) == SH_FORCE)
 	{
-		if ((player->powers[pw_shield] & 0xFF) > 0 || leveltime & 1)
-			p = forceshield;
+		UINT8 i, max = (player->powers[pw_shield] & SH_FORCEHP);
+		for (i = 0; i <= max; i++)
+		{
+			INT32 flags = (V_SNAPTORIGHT|V_SNAPTOTOP)|((i == max) ? V_HUDTRANS : V_HUDTRANSHALF);
+			if (splitscreen)
+				V_DrawSmallScaledPatch(312-(3*i), STRINGY(24)+(3*i), flags, forceshield);
+			else
+				V_DrawScaledPatch(304-(3*i), 24+(3*i), flags, forceshield);
+		}
 	}
 	else switch (player->powers[pw_shield] & SH_NOSTACK)
 	{
-	case SH_JUMP:      p = jumpshield;  break;
-	case SH_ELEMENTAL: p = watershield; break;
-	case SH_BOMB:      p = bombshield;  break;
-	case SH_ATTRACT:   p = ringshield;  break;
-	case SH_PITY:      p = pityshield;  break;
+	case SH_WHIRLWIND:   p = jumpshield;    break;
+	case SH_ELEMENTAL:   p = watershield;   break;
+	case SH_ARMAGEDDON:  p = bombshield;    break;
+	case SH_ATTRACT:     p = ringshield;    break;
+	case SH_PITY:        p = pityshield;    break;
+	case SH_FLAMEAURA:   p = flameshield;   break;
+	case SH_BUBBLEWRAP:  p = bubbleshield;  break;
+	case SH_THUNDERCOIN: p = thundershield; break;
 	default: break;
 	}
 
@@ -841,50 +857,48 @@ static void ST_drawFirstPersonHUD(void)
 
 	p = NULL;
 
-	// Display the countdown drown numbers!
-	if ((player->powers[pw_underwater] <= 11*TICRATE + 1
-		&& player->powers[pw_underwater] >= 10*TICRATE + 1)
-		|| (player->powers[pw_spacetime] <= 11*TICRATE + 1
-		&& player->powers[pw_spacetime] >= 10*TICRATE + 1))
 	{
-		p = count5;
-	}
-	else if ((player->powers[pw_underwater] <= 9*TICRATE + 1
-		&& player->powers[pw_underwater] >= 8*TICRATE + 1)
-		|| (player->powers[pw_spacetime] <= 9*TICRATE + 1
-		&& player->powers[pw_spacetime] >= 8*TICRATE + 1))
-	{
-		p = count4;
-	}
-	else if ((player->powers[pw_underwater] <= 7*TICRATE + 1
-		&& player->powers[pw_underwater] >= 6*TICRATE + 1)
-		|| (player->powers[pw_spacetime] <= 7*TICRATE + 1
-		&& player->powers[pw_spacetime] >= 6*TICRATE + 1))
-	{
-		p = count3;
-	}
-	else if ((player->powers[pw_underwater] <= 5*TICRATE + 1
-		&& player->powers[pw_underwater] >= 4*TICRATE + 1)
-		|| (player->powers[pw_spacetime] <= 5*TICRATE + 1
-		&& player->powers[pw_spacetime] >= 4*TICRATE + 1))
-	{
-		p = count2;
-	}
-	else if ((player->powers[pw_underwater] <= 3*TICRATE + 1
-		&& player->powers[pw_underwater] >= 2*TICRATE + 1)
-		|| (player->powers[pw_spacetime] <= 3*TICRATE + 1
-		&& player->powers[pw_spacetime] >= 2*TICRATE + 1))
-	{
-		p = count1;
-	}
-	else if ((player->powers[pw_underwater] <= 1*TICRATE + 1
-		&& player->powers[pw_underwater] > 1)
-		|| (player->powers[pw_spacetime] <= 1*TICRATE + 1
-		&& player->powers[pw_spacetime] > 1))
-	{
-		p = count0;
+		UINT32 airtime;
+		UINT32 frame = 0;
+		spriteframe_t *sprframe;
+		// If both air timers are active, use the air timer with the least time left
+		if (player->powers[pw_underwater] && player->powers[pw_spacetime])
+			airtime = min(player->powers[pw_underwater], player->powers[pw_spacetime]);
+		else // Use whichever one is active otherwise
+			airtime = (player->powers[pw_spacetime]) ? player->powers[pw_spacetime] : player->powers[pw_underwater];
+
+		if (!airtime)
+			return; // No air timers are active, nothing would be drawn anyway
+
+		airtime--; // The original code was all n*TICRATE + 1, so let's remove 1 tic for simplicity
+
+		if (airtime > 11*TICRATE)
+			return; // Not time to draw any drown numbers yet
+		// Choose which frame to use based on time left
+		if (airtime <= 11*TICRATE && airtime >= 10*TICRATE)
+			frame = 5;
+		else if (airtime <= 9*TICRATE && airtime >= 8*TICRATE)
+			frame = 4;
+		else if (airtime <= 7*TICRATE && airtime >= 6*TICRATE)
+			frame = 3;
+		else if (airtime <= 5*TICRATE && airtime >= 4*TICRATE)
+			frame = 2;
+		else if (airtime <= 3*TICRATE && airtime >= 2*TICRATE)
+			frame = 1;
+		else if (airtime <= 1*TICRATE && airtime > 0)
+			frame = 0;
+		else
+			return; // Don't draw anything between numbers
+
+		if (player->charflags & SF_MACHINE)
+			frame += 6;  // Robots use different drown numbers
+
+		// Get the front angle patch for the frame
+		sprframe = &sprites[SPR_DRWN].spriteframes[frame];
+		p = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
 	}
 
+	// Display the countdown drown numbers!
 	if (p)
 		V_DrawScaledPatch(SCX((BASEVIDWIDTH/2) - (SHORT(p->width)/2) + SHORT(p->leftoffset)), SCY(60 - SHORT(p->topoffset)),
 			V_NOSCALESTART|V_OFFSET|V_TRANSLUCENT, p);
@@ -1059,7 +1073,7 @@ static void ST_drawNiGHTSHUD(void)
 #ifdef HAVE_BLUA
 	LUA_HudEnabled(hud_nightsdrill) &&
 #endif
-	stplyr->pflags & PF_NIGHTSMODE)
+	stplyr->powers[pw_carry] == CR_NIGHTSMODE)
 	{
 		INT32 locx, locy;
 		INT32 dfill;
@@ -1145,11 +1159,11 @@ static void ST_drawNiGHTSHUD(void)
 		INT32 i;
 		total_ringcount = 0;
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] /*&& players[i].pflags & PF_NIGHTSMODE*/ && players[i].health)
-				total_ringcount += players[i].health - 1;
+			if (playeringame[i] /*&& players[i].powers[pw_carry] == CR_NIGHTSMODE*/ && players[i].rings)
+				total_ringcount += players[i].rings;
 	}
 	else
-		total_ringcount = stplyr->health-1;
+		total_ringcount = stplyr->rings;
 
 	if (stplyr->capsule)
 	{
@@ -1278,7 +1292,7 @@ static void ST_drawNiGHTSHUD(void)
 			tic_t lowest_time = stplyr->nightstime;
 			INT32 i;
 			for (i = 0; i < MAXPLAYERS; i++)
-				if (playeringame[i] && players[i].pflags & PF_NIGHTSMODE && players[i].nightstime < lowest_time)
+				if (playeringame[i] && players[i].powers[pw_carry] == CR_NIGHTSMODE && players[i].nightstime < lowest_time)
 					lowest_time = players[i].nightstime;
 			realnightstime = lowest_time/TICRATE;
 		}
@@ -1361,7 +1375,7 @@ static void ST_drawWeaponRing(powertype_t weapon, INT32 rwflag, INT32 wepflag, I
 			txtflags |= V_YELLOWMAP;
 
 		if (weapon == pw_infinityring
-		|| (stplyr->ringweapons & rwflag && stplyr->health > 1))
+		|| (stplyr->ringweapons & rwflag))
 			txtflags |= V_20TRANS;
 		else
 		{
@@ -1399,7 +1413,7 @@ static void ST_drawMatchHUD(void)
 
 	if (stplyr->powers[pw_infinityring])
 		ST_drawWeaponRing(pw_infinityring, 0, 0, offset, infinityring);
-	else if (stplyr->health > 1)
+	else if (stplyr->rings > 0)
 		V_DrawScaledPatch(8 + offset, STRINGY(162), V_SNAPTOLEFT, normring);
 	else
 		V_DrawTranslucentPatch(8 + offset, STRINGY(162), V_SNAPTOLEFT|V_80TRANS, normring);
@@ -1465,14 +1479,34 @@ static void ST_drawMatchHUD(void)
 
 static inline void ST_drawRaceHUD(void)
 {
-	if (leveltime > TICRATE && leveltime <= 2*TICRATE)
-		V_DrawScaledPatch(SCX((BASEVIDWIDTH - SHORT(race3->width))/2), (INT32)(SCY(BASEVIDHEIGHT/2)), V_NOSCALESTART, race3);
-	else if (leveltime > 2*TICRATE && leveltime <= 3*TICRATE)
-		V_DrawScaledPatch(SCX((BASEVIDWIDTH - SHORT(race2->width))/2), (INT32)(SCY(BASEVIDHEIGHT/2)), V_NOSCALESTART, race2);
-	else if (leveltime > 3*TICRATE && leveltime <= 4*TICRATE)
-		V_DrawScaledPatch(SCX((BASEVIDWIDTH - SHORT(race1->width))/2), (INT32)(SCY(BASEVIDHEIGHT/2)), V_NOSCALESTART, race1);
-	else if (leveltime > 4*TICRATE && leveltime <= 5*TICRATE)
-		V_DrawScaledPatch(SCX((BASEVIDWIDTH - SHORT(racego->width))/2), (INT32)(SCY(BASEVIDHEIGHT/2)), V_NOSCALESTART, racego);
+	if (leveltime >= TICRATE && leveltime < 5*TICRATE)
+	{
+		INT32 height = ((3*BASEVIDHEIGHT)>>2) - 8;
+		INT32 bounce = (leveltime % TICRATE);
+		patch_t *racenum;
+		switch (leveltime/TICRATE)
+		{
+			case 1:
+				racenum = race3;
+				break;
+			case 2:
+				racenum = race2;
+				break;
+			case 3:
+				racenum = race1;
+				break;
+			default:
+				racenum = racego;
+				break;
+		}
+		if (bounce < 3)
+		{
+			height -= (2 - bounce);
+			if (!bounce)
+					S_StartSound(0, ((racenum == racego) ? sfx_s3kad : sfx_s3ka7));
+		}
+		V_DrawScaledPatch(SCX((BASEVIDWIDTH - SHORT(racenum->width))/2), (INT32)(SCY(height)), V_NOSCALESTART, racenum);
+	}
 
 	if (circuitmap)
 	{

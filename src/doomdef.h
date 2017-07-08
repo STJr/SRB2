@@ -214,7 +214,7 @@ extern FILE *logstream;
 // it's only for detection of the version the player is using so the MS can alert them of an update.
 // Only set it higher, not lower, obviously.
 // Note that we use this to help keep internal testing in check; this is why v2.1.0 is not version "1".
-#define MODVERSION 21
+#define MODVERSION 24
 
 // =========================================================================
 
@@ -222,7 +222,7 @@ extern FILE *logstream;
 // NOTE: it needs more than this to increase the number of players...
 
 #define MAXPLAYERS 32
-#define MAXSKINS MAXPLAYERS
+#define MAXSKINS 32
 #define PLAYERSMASK (MAXPLAYERS-1)
 #define MAXPLAYERNAME 21
 
@@ -407,6 +407,7 @@ void M_StartupLocale(void);
 extern void *(*M_Memcpy)(void* dest, const void* src, size_t n) FUNCNONNULL;
 char *va(const char *format, ...) FUNCPRINTF;
 char *M_GetToken(const char *inputString);
+void M_UnGetToken(void);
 char *sizeu1(size_t num);
 char *sizeu2(size_t num);
 char *sizeu3(size_t num);
@@ -434,6 +435,9 @@ extern INT32 cv_debug;
 // =======================
 // Misc stuff for later...
 // =======================
+
+// Modifier key variables, accessible anywhere
+extern UINT8 shiftdown, ctrldown, altdown;
 
 // if we ever make our alloc stuff...
 #define ZZ_Alloc(x) Z_Malloc(x, PU_STATIC, NULL)
@@ -535,5 +539,15 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 /// Backwards compatibility with musicslots.
 /// \note	You should leave this enabled unless you're working with a future SRB2 version.
 #define MUSICSLOT_COMPATIBILITY
+
+/// Experimental attempts at preventing MF_PAPERCOLLISION objects from getting stuck in walls.
+//#define PAPER_COLLISIONCORRECTION
+
+/// Hudname padding.
+#define SKINNAMEPADDING
+
+/// Handle touching sector specials in P_PlayerAfterThink instead of P_PlayerThink.
+/// \note   Required for proper collision with moving sloped surfaces that have sector specials on them.
+//#define SECTORSPECIALSAFTERTHINK
 
 #endif // __DOOMDEF__

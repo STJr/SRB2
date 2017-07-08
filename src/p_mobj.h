@@ -107,8 +107,8 @@ typedef enum
 	MF_NOSECTOR         = 1<<3,
 	// Don't use the blocklinks (inert but displayable)
 	MF_NOBLOCKMAP       = 1<<4,
-	// Not to be activated by sound, deaf monster.
-	MF_AMBUSH           = 1<<5,
+	// Thin, paper-like collision bound (for visual equivalent, see FF_PAPERSPRITE)
+	MF_PAPERCOLLISION            = 1<<5,
 	// You can push this object. It can activate switches and things by pushing it on top.
 	MF_PUSHABLE         = 1<<6,
 	// Object is a boss.
@@ -151,10 +151,9 @@ typedef enum
 	MF_PAIN             = 1<<24,
 	// This mobj will stick to any surface or solid object it touches.
 	MF_STICKY           = 1<<25,
-	// NiGHTS hidden item.  Goes to seestate and turns MF_SPECIAL when paralooped.
+	// NiGHTS hidden item. Goes to seestate and turns MF_SPECIAL when paralooped.
 	MF_NIGHTSITEM       = 1<<26,
 	// for chase camera, don't be blocked by things (partial clipping)
-	// (need comma at end of this for SOC editor)
 	MF_NOCLIPTHING      = 1<<27,
 	// Missile bounces like a grenade.
 	MF_GRENADEBOUNCE    = 1<<28,
@@ -192,6 +191,9 @@ typedef enum
 	MF2_BOSSNOTRAP     = 1<<24, // No Egg Trap after boss
 	MF2_BOSSFLEE       = 1<<25, // Boss is fleeing!
 	MF2_BOSSDEAD       = 1<<26, // Boss is dead! (Not necessarily fleeing, if a fleeing point doesn't exist.)
+	MF2_AMBUSH         = 1<<27, // Alternate behaviour typically set by MTF_AMBUSH
+	MF2_LINKDRAW       = 1<<28, // Draw vissprite of mobj immediately before/after tracer's vissprite (dependent on dispoffset and position)
+	MF2_SHIELD         = 1<<29, // Thinker calls P_AddShield/P_ShieldLook (must be partnered with MF_SCENERY to use)
 	// free: to and including 1<<31
 } mobjflag2_t;
 
@@ -452,5 +454,6 @@ void P_EmeraldManager(void);
 extern mapthing_t *huntemeralds[MAXHUNTEMERALDS];
 extern INT32 numhuntemeralds;
 extern boolean runemeraldmanager;
+extern UINT16 emeraldspawndelay;
 extern INT32 numstarposts;
 #endif

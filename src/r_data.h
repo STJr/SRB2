@@ -21,6 +21,9 @@
 #pragma interface
 #endif
 
+// Possible alpha types for a patch.
+enum patchalphastyle {AST_COPY, AST_TRANSLUCENT}; // , AST_ADD, AST_SUBTRACT, AST_REVERSESUBTRACT, AST_MODULATE, AST_OVERLAY};
+
 // moved here for r_sky.c (texpatch_t is used)
 
 // A single patch from a texture definition,
@@ -31,6 +34,9 @@ typedef struct
 	// Block origin (always UL), which has already accounted for the internal origin of the patch.
 	INT16 originx, originy;
 	UINT16 wad, lump;
+	UINT8 flip; // 1 = flipx, 2 = flipy, 3 = both
+	UINT8 alpha; // Translucency value
+	enum patchalphastyle style;
 } texpatch_t;
 
 // A maptexturedef_t describes a rectangular texture,
@@ -42,6 +48,7 @@ typedef struct
 	char name[8];
 	INT16 width, height;
 	boolean holes;
+	UINT8 flip; // 1 = flipx, 2 = flipy, 3 = both
 
 	// All the patches[patchcount] are drawn back to front into the cached texture.
 	INT16 patchcount;
@@ -64,6 +71,9 @@ extern CV_PossibleValue_t Color_cons_t[];
 // Load TEXTURE1/TEXTURE2/PNAMES definitions, create lookup tables
 void R_LoadTextures(void);
 void R_FlushTextureCache(void);
+
+INT32 R_GetTextureNum(INT32 texnum);
+void R_CheckTextureCache(INT32 tex);
 
 // Retrieve column data for span blitting.
 UINT8 *R_GetColumn(fixed_t tex, INT32 col);

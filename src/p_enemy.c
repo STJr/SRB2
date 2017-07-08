@@ -86,6 +86,9 @@ void A_Scream(mobj_t *actor);
 void A_Pain(mobj_t *actor);
 void A_1upThinker(mobj_t *actor);
 void A_MonitorPop(mobj_t *actor);
+void A_GoldMonitorPop(mobj_t *actor);
+void A_GoldMonitorRestore(mobj_t *actor);
+void A_GoldMonitorSparkle(mobj_t *actor);
 void A_Explode(mobj_t *actor);
 void A_BossDeath(mobj_t *actor);
 void A_CustomPower(mobj_t *actor);
@@ -101,6 +104,9 @@ void A_BombShield(mobj_t *actor);
 void A_WaterShield(mobj_t *actor);
 void A_ForceShield(mobj_t *actor);
 void A_PityShield(mobj_t *actor);
+void A_FlameShield(mobj_t *actor);
+void A_BubbleShield(mobj_t *actor);
+void A_ThunderShield(mobj_t *actor);
 void A_GravityBox(mobj_t *actor);
 void A_ScoreRise(mobj_t *actor);
 void A_ParticleSpawn(mobj_t *actor);
@@ -236,6 +242,17 @@ void A_BrakFireShot(mobj_t *actor);
 void A_BrakLobShot(mobj_t *actor);
 void A_NapalmScatter(mobj_t *actor);
 void A_SpawnFreshCopy(mobj_t *actor);
+void A_FlickySpawn(mobj_t *actor);
+void A_FlickyAim(mobj_t *actor);
+void A_FlickyFly(mobj_t *actor);
+void A_FlickySoar(mobj_t *actor);
+void A_FlickyCoast(mobj_t *actor);
+void A_FlickyHop(mobj_t *actor);
+void A_FlickyFlounder(mobj_t *actor);
+void A_FlickyCheck(mobj_t *actor);
+void A_FlickyHeightCheck(mobj_t *actor);
+void A_FlickyFlutter(mobj_t *actor);
+void A_FlameParticle(mobj_t *actor);
 //
 void A_Boss5Jump(mobj_t *actor);
 
@@ -657,14 +674,14 @@ boolean P_LookForPlayers(mobj_t *actor, boolean allaround, boolean tracer, fixed
 		if ((netgame || multiplayer) && player->spectator)
 			continue;
 
-		if (player->health <= 0)
-			continue; // dead
-
 		if (player->pflags & PF_INVIS)
 			continue; // ignore notarget
 
 		if (!player->mo || P_MobjWasRemoved(player->mo))
 			continue;
+
+		if (player->mo->health <= 0)
+			continue; // dead
 
 		if (dist > 0
 			&& P_AproxDistance(P_AproxDistance(player->mo->x - actor->x, player->mo->y - actor->y), player->mo->z - actor->z) > dist)
@@ -729,7 +746,7 @@ static boolean P_LookForShield(mobj_t *actor)
 
 		player = &players[actor->lastlook];
 
-		if (player->health <= 0 || !player->mo)
+		if (!player->mo || player->mo->health <= 0)
 			continue; // dead
 
 		//When in CTF, don't pull rings that you cannot pick up.
@@ -737,7 +754,7 @@ static boolean P_LookForShield(mobj_t *actor)
 			(actor->type == MT_BLUETEAMRING && player->ctfteam != 2))
 			continue;
 
-		if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT
+		if ((player->powers[pw_shield] & SH_PROTECTELECTRIC)
 			&& (P_AproxDistance(P_AproxDistance(actor->x-player->mo->x, actor->y-player->mo->y), actor->z-player->mo->z) < FixedMul(RING_DIST, player->mo->scale)))
 		{
 			P_SetTarget(&actor->tracer, player->mo);
@@ -819,6 +836,32 @@ static int P_RecycleCompare(const void *p1, const void *p2)
 	return 0;
 }
 #endif
+
+// Handles random monitor weights via console.
+static mobjtype_t P_DoRandomBoxChances(void)
+{
+	mobjtype_t spawnchance[256];
+	INT32 numchoices = 0, i = 0;
+
+#define QUESTIONBOXCHANCES(type, cvar) \
+for (i = cvar.value; i; --i) spawnchance[numchoices++] = type
+	QUESTIONBOXCHANCES(MT_RING_ICON,       cv_superring);
+	QUESTIONBOXCHANCES(MT_SNEAKERS_ICON,   cv_supersneakers);
+	QUESTIONBOXCHANCES(MT_INVULN_ICON,     cv_invincibility);
+	QUESTIONBOXCHANCES(MT_WHIRLWIND_ICON,  cv_jumpshield);
+	QUESTIONBOXCHANCES(MT_ELEMENTAL_ICON,  cv_watershield);
+	QUESTIONBOXCHANCES(MT_ATTRACT_ICON,    cv_ringshield);
+	QUESTIONBOXCHANCES(MT_FORCE_ICON,      cv_forceshield);
+	QUESTIONBOXCHANCES(MT_ARMAGEDDON_ICON, cv_bombshield);
+	QUESTIONBOXCHANCES(MT_1UP_ICON,        cv_1up);
+	QUESTIONBOXCHANCES(MT_EGGMAN_ICON,     cv_eggmanbox);
+	QUESTIONBOXCHANCES(MT_MIXUP_ICON,      cv_teleporters);
+	QUESTIONBOXCHANCES(MT_RECYCLER_ICON,   cv_recycler);
+#undef QUESTIONBOXCHANCES
+
+	if (numchoices == 0) return MT_NULL;
+	return spawnchance[P_RandomKey(numchoices)];
+}
 
 //
 // ACTION ROUTINES
@@ -1104,7 +1147,7 @@ void A_JetJawChomp(mobj_t *actor)
 	if (!actor->target || !(actor->target->flags & MF_SHOOTABLE)
 		|| actor->target->health <= 0 || !P_CheckSight(actor, actor->target))
 	{
-		P_SetMobjState(actor, actor->info->spawnstate);
+		P_SetMobjStateNF(actor, actor->info->spawnstate);
 		return;
 	}
 
@@ -2094,13 +2137,15 @@ void A_Boss1Laser(mobj_t *actor)
 		if (!(actor->spawnpoint && actor->spawnpoint->options & MTF_AMBUSH))
 		{
 			point = P_SpawnMobj(x + P_ReturnThrustX(actor, actor->angle, actor->radius), y + P_ReturnThrustY(actor, actor->angle, actor->radius), actor->z - actor->height / 2, MT_EGGMOBILE_TARGET);
+			point->angle = actor->angle;
 			point->fuse = actor->tics+1;
 			P_SetTarget(&point->target, actor->target);
 			P_SetTarget(&actor->target, point);
 		}
 	}
+	/* -- the following was relevant when the MT_EGGMOBILE_TARGET was allowed to move left and right from its path
 	else if (actor->target && !(actor->spawnpoint && actor->spawnpoint->options & MTF_AMBUSH))
-		actor->angle = R_PointToAngle2(x, y, actor->target->x, actor->target->y);
+		actor->angle = R_PointToAngle2(x, y, actor->target->x, actor->target->y);*/
 
 	if (actor->spawnpoint && actor->spawnpoint->options & MTF_AMBUSH)
 		angle = FixedAngle(FixedDiv(actor->tics*160*FRACUNIT, actor->state->tics*FRACUNIT) + 10*FRACUNIT);
@@ -2150,11 +2195,16 @@ void A_Boss1Laser(mobj_t *actor)
 // var1:
 //		0 - accelerative focus with friction
 //		1 - steady focus with fixed movement speed
-// var2 = unused
+//      anything else - don't move
+// var2:
+//		0 - don't trace target, just move forwards
+//      & 1 - change horizontal angle
+//      & 2 - change vertical angle
 //
 void A_FocusTarget(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_FocusTarget", actor))
 		return;
@@ -2163,9 +2213,9 @@ void A_FocusTarget(mobj_t *actor)
 	if (actor->target)
 	{
 		fixed_t speed = FixedMul(actor->info->speed, actor->scale);
-		fixed_t dist = R_PointToDist2(actor->x, actor->y, actor->target->x, actor->target->y);
-		angle_t vangle = R_PointToAngle2(actor->z , 0, actor->target->z + (actor->target->height>>1), dist);
-		angle_t hangle = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y);
+		fixed_t dist = (locvar2 ? R_PointToDist2(actor->x, actor->y, actor->target->x, actor->target->y) : speed+1);
+		angle_t hangle = ((locvar2 & 1) ? R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y) : actor->angle);
+		angle_t vangle = ((locvar2 & 2) ? R_PointToAngle2(actor->z , 0, actor->target->z + (actor->target->height>>1), dist) : ANGLE_90);
 		switch(locvar1)
 		{
 		case 0:
@@ -2512,7 +2562,6 @@ void A_1upThinker(mobj_t *actor)
 
 	if (closestplayer == -1 || skins[players[closestplayer].skin].sprites[SPR2_LIFE].numframes == 0)
 	{ // Closest player not found (no players in game?? may be empty dedicated server!), or does not have correct sprite.
-		actor->frame = 0;
 		if (actor->tracer) {
 			P_RemoveMobj(actor->tracer);
 			actor->tracer = NULL;
@@ -2520,11 +2569,20 @@ void A_1upThinker(mobj_t *actor)
 		return;
 	}
 
+	// We're using the overlay, so use the overlay 1up box (no text)
+	actor->sprite = SPR_TV1P;
+
 	if (!actor->tracer)
 	{
 		P_SetTarget(&actor->tracer, P_SpawnMobj(actor->x, actor->y, actor->z, MT_OVERLAY));
 		P_SetTarget(&actor->tracer->target, actor);
+		actor->tracer->skin = &skins[players[closestplayer].skin]; // required here to prevent spr2 default showing stand for a single frame
 		P_SetMobjState(actor->tracer, actor->info->seestate);
+
+		// The overlay is going to be one tic early turning off and on
+		// because it's going to get its thinker run the frame we spawned it.
+		// So make it take one tic longer if it just spawned.
+		++actor->tracer->tics;
 	}
 
 	actor->tracer->color = players[closestplayer].mo->color;
@@ -2540,139 +2598,200 @@ void A_1upThinker(mobj_t *actor)
 //
 void A_MonitorPop(mobj_t *actor)
 {
-	mobj_t *remains;
-	mobjtype_t explode;
 	mobjtype_t item = 0;
-	mobjtype_t newbox;
+	mobj_t *newmobj;
 
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_MonitorPop", actor))
 		return;
 #endif
 
-	// de-solidify
+	// Spawn the "pop" explosion.
+	if (actor->info->deathsound)
+		S_StartSound(actor, actor->info->deathsound);
+	P_SpawnMobjFromMobj(actor, 0, 0, actor->height/4, MT_EXPLODE);
+
+	// We're dead now. De-solidify.
 	actor->health = 0;
 	P_UnsetThingPosition(actor);
 	actor->flags &= ~MF_SOLID;
 	actor->flags |= MF_NOCLIP;
 	P_SetThingPosition(actor);
 
-	// Monitor explosion
-	explode = mobjinfo[actor->info->speed].mass;
-	remains = P_SpawnMobj(actor->x, actor->y,
-		((actor->eflags & MFE_VERTICALFLIP) ? (actor->z + 3*(actor->height/4) - FixedMul(mobjinfo[explode].height, actor->scale)) : (actor->z + actor->height/4)), explode);
-	if (actor->eflags & MFE_VERTICALFLIP)
+	if (actor->info->damage == MT_UNKNOWN)
 	{
-		remains->eflags |= MFE_VERTICALFLIP;
-		remains->flags2 |= MF2_OBJECTFLIP;
-	}
-	remains->destscale = actor->destscale;
-	P_SetScale(remains, actor->scale);
+		// MT_UNKNOWN is random. Because it's unknown to us... get it?
+		item = P_DoRandomBoxChances();
 
-	remains = P_SpawnMobj(actor->x, actor->y,
-		((actor->eflags & MFE_VERTICALFLIP) ? (actor->z + actor->height - FixedMul(mobjinfo[actor->info->speed].height, actor->scale)) : actor->z),
-		actor->info->speed);
-	remains->type = actor->type; // Transfer type information
-	P_UnsetThingPosition(remains);
-	if (sector_list)
-	{
-		P_DelSeclist(sector_list);
-		sector_list = NULL;
-	}
-	P_SetThingPosition(remains);
-	remains->destscale = actor->destscale;
-	P_SetScale(remains, actor->scale);
-	remains->flags = actor->flags; // Transfer flags
-	remains->flags2 = actor->flags2; // Transfer flags2
-	remains->fuse = actor->fuse; // Transfer respawn timer
-	remains->threshold = 68;
-	remains->skin = NULL;
-
-	P_SetTarget(&tmthing, remains);
-
-	if (actor->info->deathsound)
-		S_StartSound(remains, actor->info->deathsound);
-
-	switch (actor->type)
-	{
-		case MT_QUESTIONBOX: // Random!
+		if (item == MT_NULL)
 		{
-			mobjtype_t spawnchance[256];
-			INT32 numchoices = 0, i = 0;
-
-#define QUESTIONBOXCHANCES(type, cvar) \
-for (i = cvar.value; i; --i) spawnchance[numchoices++] = type
-
-			QUESTIONBOXCHANCES(MT_SUPERRINGBOX,	cv_superring);
-			QUESTIONBOXCHANCES(MT_SNEAKERTV,	cv_supersneakers);
-			QUESTIONBOXCHANCES(MT_INV,			cv_invincibility);
-			QUESTIONBOXCHANCES(MT_WHITETV,		cv_jumpshield);
-			QUESTIONBOXCHANCES(MT_GREENTV,		cv_watershield);
-			QUESTIONBOXCHANCES(MT_YELLOWTV,		cv_ringshield);
-			QUESTIONBOXCHANCES(MT_BLUETV,		cv_forceshield);
-			QUESTIONBOXCHANCES(MT_BLACKTV,		cv_bombshield);
-			QUESTIONBOXCHANCES(MT_PRUP,			cv_1up);
-			QUESTIONBOXCHANCES(MT_EGGMANBOX,	cv_eggmanbox);
-			QUESTIONBOXCHANCES(MT_MIXUPBOX,		cv_teleporters);
-			QUESTIONBOXCHANCES(MT_RECYCLETV,	cv_recycler);
-
-#undef QUESTIONBOXCHANCES
-
-			if (numchoices == 0)
-			{
-				CONS_Alert(CONS_WARNING, M_GetText("All monitors turned off.\n"));
-				return;
-			}
-
-			newbox = spawnchance[P_RandomKey(numchoices)];
-			item = mobjinfo[newbox].damage;
-
-			remains->flags &= ~MF_AMBUSH;
-			break;
-		}
-		default:
-			item = actor->info->damage;
-			break;
-	}
-
-	if (item != 0)
-	{
-		mobj_t *newmobj;
-
-		if (actor->eflags & MFE_VERTICALFLIP)
-		{
-			newmobj = P_SpawnMobj(actor->x, actor->y, actor->z + actor->height - FixedMul(13*FRACUNIT + mobjinfo[item].height, actor->scale), item);
-			newmobj->eflags |= MFE_VERTICALFLIP;
-		}
-		else
-			newmobj = P_SpawnMobj(actor->x, actor->y, actor->z + FixedMul(13*FRACUNIT, actor->scale), item);
-
-		newmobj->destscale = actor->destscale;
-		P_SetScale(newmobj, actor->scale);
-		P_SetTarget(&newmobj->target, actor->target); // Transfer target
-		if (item == MT_1UPICO && newmobj->target->player)
-		{
-			if (actor->tracer) // Remove the old lives icon.
-				P_RemoveMobj(actor->tracer);
-
-			if (!newmobj->target->skin || ((skin_t *)newmobj->target->skin)->sprites[SPR2_LIFE].numframes == 0)
-				newmobj->frame -= 2; // No lives icon for this player, use the default.
-			else
-			{ // Spawn the lives icon.
-				remains = P_SpawnMobj(newmobj->x, newmobj->y, newmobj->z, MT_OVERLAY);
-				P_SetTarget(&remains->target, newmobj);
-				P_SetTarget(&newmobj->tracer, remains);
-
-				remains->color = newmobj->target->player->mo->color;
-				remains->skin = &skins[newmobj->target->player->skin];
-				P_SetMobjState(remains, newmobj->info->seestate);
-			}
+			CONS_Alert(CONS_WARNING, M_GetText("All monitors turned off.\n"));
+			return;
 		}
 	}
 	else
-		CONS_Debug(DBG_GAMELOGIC, "Powerup item not defined in 'damage' field for A_MonitorPop\n");
+		item = actor->info->damage;
 
-	P_RemoveMobj(actor);
+	if (item == 0)
+	{
+		CONS_Debug(DBG_GAMELOGIC, "Powerup item not defined in 'damage' field for A_MonitorPop\n");
+		return;
+	}
+
+	newmobj = P_SpawnMobjFromMobj(actor, 0, 0, 13*FRACUNIT, item);
+	P_SetTarget(&newmobj->target, actor->target); // Transfer target
+
+	if (item == MT_1UP_ICON)
+	{
+		if (actor->tracer) // Remove the old lives icon.
+			P_RemoveMobj(actor->tracer);
+
+		if (!newmobj->target
+		 || !newmobj->target->player
+		 || !newmobj->target->skin
+		 || ((skin_t *)newmobj->target->skin)->sprites[SPR2_LIFE].numframes == 0)
+			{} // No lives icon for this player, use the default.
+		else
+		{ // Spawn the lives icon.
+			mobj_t *livesico = P_SpawnMobjFromMobj(newmobj, 0, 0, 0, MT_OVERLAY);
+			P_SetTarget(&livesico->target, newmobj);
+			P_SetTarget(&newmobj->tracer, livesico);
+
+			livesico->color = newmobj->target->player->mo->color;
+			livesico->skin = &skins[newmobj->target->player->skin];
+			P_SetMobjState(livesico, newmobj->info->seestate);
+
+			// We're using the overlay, so use the overlay 1up sprite (no text)
+			newmobj->sprite = SPR_TV1P;
+		}
+	}
+}
+
+// Function: A_GoldMonitorPop
+//
+// Description: Used by repeating monitors when they turn off. They don't really pop, but, you know...
+//
+// var1 = unused
+// var2 = unused
+//
+void A_GoldMonitorPop(mobj_t *actor)
+{
+	mobjtype_t item = 0;
+	mobj_t *newmobj;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_GoldMonitorPop", actor))
+		return;
+#endif
+
+	// Don't spawn the "pop" explosion, because the monitor isn't broken.
+	if (actor->info->deathsound)
+		S_StartSound(actor, actor->info->deathsound);
+	//P_SpawnMobjFromMobj(actor, 0, 0, actor.height/4, MT_EXPLODE);
+
+	// Remove our flags for a bit.
+	// Players can now stand on top of us.
+	P_UnsetThingPosition(actor);
+	actor->flags  &= ~(MF_MONITOR|MF_SHOOTABLE);
+	actor->flags2 |= MF2_STANDONME;
+	P_SetThingPosition(actor);
+
+	// Don't count this box in statistics. Sorry.
+	if (actor->target && actor->target->player)
+		--actor->target->player->numboxes;
+	actor->fuse = 0; // Don't let the monitor code screw us up.
+
+	if (actor->info->damage == MT_UNKNOWN)
+	{
+		// MT_UNKNOWN is random. Because it's unknown to us... get it?
+		item = P_DoRandomBoxChances();
+
+		if (item == MT_NULL)
+		{
+			CONS_Alert(CONS_WARNING, M_GetText("All monitors turned off.\n"));
+			return;
+		}
+	}
+	else
+		item = actor->info->damage;
+
+	if (item == 0)
+	{
+		CONS_Debug(DBG_GAMELOGIC, "Powerup item not defined in 'damage' field for A_GoldMonitorPop\n");
+		return;
+	}
+
+	// Note: the icon spawns 1 fracunit higher
+	newmobj = P_SpawnMobjFromMobj(actor, 0, 0, 14*FRACUNIT, item);
+	P_SetTarget(&newmobj->target, actor->target); // Transfer target
+
+	if (item == MT_1UP_ICON)
+	{
+		if (actor->tracer) // Remove the old lives icon.
+			P_RemoveMobj(actor->tracer);
+
+		if (!newmobj->target
+		 || !newmobj->target->player
+		 || !newmobj->target->skin
+		 || ((skin_t *)newmobj->target->skin)->sprites[SPR2_LIFE].numframes == 0)
+			{} // No lives icon for this player, use the default.
+		else
+		{ // Spawn the lives icon.
+			mobj_t *livesico = P_SpawnMobjFromMobj(newmobj, 0, 0, 0, MT_OVERLAY);
+			P_SetTarget(&livesico->target, newmobj);
+			P_SetTarget(&newmobj->tracer, livesico);
+
+			livesico->color = newmobj->target->player->mo->color;
+			livesico->skin = &skins[newmobj->target->player->skin];
+			P_SetMobjState(livesico, newmobj->info->seestate);
+
+			// We're using the overlay, so use the overlay 1up sprite (no text)
+			newmobj->sprite = SPR_TV1P;
+		}
+	}
+}
+
+// Function: A_GoldMonitorRestore
+//
+// Description: A repeating monitor is coming back to life. Reset monitor flags, etc.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_GoldMonitorRestore(mobj_t *actor)
+{
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_GoldMonitorRestore", actor))
+		return;
+#endif
+
+	actor->flags |= MF_MONITOR|MF_SHOOTABLE;
+	actor->flags2 &= ~MF2_STANDONME;
+	actor->health = 1; // Just in case.
+}
+
+// Function: A_GoldMonitorSparkle
+//
+// Description: Spawns the little sparkly effect around big monitors. Looks pretty, doesn't it?
+//
+// var1 = unused
+// var2 = unused
+//
+void A_GoldMonitorSparkle(mobj_t *actor)
+{
+	fixed_t i, ngangle, xofs, yofs;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_GoldMonitorSparkle", actor))
+		return;
+#endif
+
+	ngangle = FixedAngle(((leveltime * 21) % 360) << FRACBITS);
+	xofs = FINESINE((ngangle>>ANGLETOFINESHIFT) & FINEMASK)   * (actor->radius>>FRACBITS);
+	yofs = FINECOSINE((ngangle>>ANGLETOFINESHIFT) & FINEMASK) * (actor->radius>>FRACBITS);
+
+	for (i = FRACUNIT*2; i <= FRACUNIT*3; i += FRACUNIT/2)
+		P_SetObjectMomZ(P_SpawnMobjFromMobj(actor, xofs, yofs, 0, MT_BOXSPARKLE), i, false);
 }
 
 // Function: A_Explode
@@ -2718,7 +2837,7 @@ void A_BossDeath(mobj_t *mo)
 
 	// make sure there is a player alive for victory
 	for (i = 0; i < MAXPLAYERS; i++)
-		if (playeringame[i] && (players[i].health > 0
+		if (playeringame[i] && ((players[i].mo && players[i].mo->health > 0)
 			|| ((netgame || multiplayer) && (players[i].lives > 0 || players[i].continues > 0))))
 			break;
 
@@ -2963,11 +3082,7 @@ void A_JumpShield(mobj_t *actor)
 
 	player = actor->target->player;
 
-	if ((player->powers[pw_shield] & SH_NOSTACK) != SH_JUMP)
-	{
-		player->powers[pw_shield] = SH_JUMP|(player->powers[pw_shield] & SH_STACK);
-		P_SpawnShieldOrb(player);
-	}
+	P_SwitchShield(player, SH_WHIRLWIND);
 
 	S_StartSound(player->mo, actor->info->seesound);
 }
@@ -2995,11 +3110,7 @@ void A_RingShield(mobj_t *actor)
 
 	player = actor->target->player;
 
-	if ((player->powers[pw_shield] & SH_NOSTACK) != SH_ATTRACT)
-	{
-		player->powers[pw_shield] = SH_ATTRACT|(player->powers[pw_shield] & SH_STACK);
-		P_SpawnShieldOrb(player);
-	}
+	P_SwitchShield(player, SH_ATTRACT);
 
 	S_StartSound(player->mo, actor->info->seesound);
 }
@@ -3061,7 +3172,9 @@ void A_Invincibility(mobj_t *actor)
 		S_StopMusic();
 		if (mariomode)
 			G_GhostAddColor(GHC_INVINCIBLE);
-		S_ChangeMusicInternal((mariomode) ? "minvnc" : "invinc", false);
+		strlcpy(S_sfx[sfx_None].caption, "Invincibility", 14);
+		S_StartCaption(sfx_None, -1, player->powers[pw_invulnerability]);
+		S_ChangeMusicInternal((mariomode) ? "_minv" : "_inv", false);
 	}
 }
 
@@ -3097,8 +3210,10 @@ void A_SuperSneakers(mobj_t *actor)
 		else
 		{
 			S_StopMusic();
-			S_ChangeMusicInternal("shoes", false);
+			S_ChangeMusicInternal("_shoes", false);
 		}
+		strlcpy(S_sfx[sfx_None].caption, "Speed shoes", 12);
+		S_StartCaption(sfx_None, -1, player->powers[pw_sneakers]);
 	}
 }
 
@@ -3153,8 +3268,11 @@ void A_ExtraLife(mobj_t *actor)
 
 	player = actor->target->player;
 
-	if (actor->type == MT_1UPICO && !actor->tracer)
-		actor->frame -= 2; // No lives icon for this player, use the default.
+	if (actor->type == MT_1UP_ICON && actor->tracer)
+	{
+		// We're using the overlay, so use the overlay 1up sprite (no text)
+		actor->sprite = SPR_TV1P;
+	}
 
 	if (ultimatemode) //I don't THINK so!
 	{
@@ -3193,11 +3311,12 @@ void A_BombShield(mobj_t *actor)
 
 	player = actor->target->player;
 
-	if ((player->powers[pw_shield] & SH_NOSTACK) != SH_BOMB)
-	{
-		player->powers[pw_shield] = SH_BOMB|(player->powers[pw_shield] & SH_STACK);
-		P_SpawnShieldOrb(player);
-	}
+	// If you already have a bomb shield, use it!
+	if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ARMAGEDDON)
+		P_BlackOw(player);
+
+	// Now we know for certain that we don't have a bomb shield, so add one. :3
+	P_SwitchShield(player, SH_ARMAGEDDON);
 
 	S_StartSound(player->mo, actor->info->seesound);
 }
@@ -3225,22 +3344,8 @@ void A_WaterShield(mobj_t *actor)
 
 	player = actor->target->player;
 
-	if ((player->powers[pw_shield] & SH_NOSTACK) != SH_ELEMENTAL)
-	{
-		player->powers[pw_shield] = SH_ELEMENTAL|(player->powers[pw_shield] & SH_STACK);
-		P_SpawnShieldOrb(player);
-	}
+	P_SwitchShield(player, SH_ELEMENTAL);
 
-	if (player->powers[pw_underwater] && player->powers[pw_underwater] <= 12*TICRATE + 1)
-		P_RestoreMusic(player);
-
-	player->powers[pw_underwater] = 0;
-
-	if (player->powers[pw_spacetime] > 1)
-	{
-		player->powers[pw_spacetime] = 0;
-		P_RestoreMusic(player);
-	}
 	S_StartSound(player->mo, actor->info->seesound);
 }
 
@@ -3248,12 +3353,13 @@ void A_WaterShield(mobj_t *actor)
 //
 // Description: Awards the player a force shield.
 //
-// var1 = unused
+// var1 = Number of additional hitpoints to give
 // var2 = unused
 //
 void A_ForceShield(mobj_t *actor)
 {
 	player_t *player;
+	INT32 locvar1 = var1;
 
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_ForceShield", actor))
@@ -3265,15 +3371,15 @@ void A_ForceShield(mobj_t *actor)
 		return;
 	}
 
+	if (locvar1 & ~SH_FORCEHP)
+	{
+		CONS_Debug(DBG_GAMELOGIC, "Invalid number of additional hitpoints.\n");
+		return;
+	}
+
 	player = actor->target->player;
 
-	if (!(player->powers[pw_shield] & SH_FORCE))
-	{
-		player->powers[pw_shield] = SH_FORCE|(player->powers[pw_shield] & SH_STACK)|0x01;
-		P_SpawnShieldOrb(player);
-	}
-	else
-		player->powers[pw_shield] = SH_FORCE|(player->powers[pw_shield] & SH_STACK)|0x01;
+	P_SwitchShield(player, SH_FORCE|locvar1);
 
 	S_StartSound(player->mo, actor->info->seesound);
 }
@@ -3305,11 +3411,91 @@ void A_PityShield(mobj_t *actor)
 
 	player = actor->target->player;
 
-	if ((player->powers[pw_shield] & SH_NOSTACK) != SH_PITY)
+	P_SwitchShield(player, SH_PITY);
+
+	S_StartSound(player->mo, actor->info->seesound);
+}
+
+// Function: A_FlameShield
+//
+// Description: Awards the player a flame shield.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_FlameShield(mobj_t *actor)
+{
+	player_t *player;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FlameShield", actor))
+		return;
+#endif
+	if (!actor->target || !actor->target->player)
 	{
-		player->powers[pw_shield] = SH_PITY+(player->powers[pw_shield] & SH_STACK);
-		P_SpawnShieldOrb(player);
+		CONS_Debug(DBG_GAMELOGIC, "Powerup has no target.\n");
+		return;
 	}
+
+	player = actor->target->player;
+
+	P_SwitchShield(player, SH_FLAMEAURA);
+
+	S_StartSound(player->mo, actor->info->seesound);
+}
+
+// Function: A_BubbleShield
+//
+// Description: Awards the player a bubble shield.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_BubbleShield(mobj_t *actor)
+{
+	player_t *player;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_BubbleShield", actor))
+		return;
+#endif
+	if (!actor->target || !actor->target->player)
+	{
+		CONS_Debug(DBG_GAMELOGIC, "Powerup has no target.\n");
+		return;
+	}
+
+	player = actor->target->player;
+
+	P_SwitchShield(player, SH_BUBBLEWRAP);
+
+	S_StartSound(player->mo, actor->info->seesound);
+}
+
+// Function: A_ThunderShield
+//
+// Description: Awards the player a thunder shield.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_ThunderShield(mobj_t *actor)
+{
+	player_t *player;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_ThunderShield", actor))
+		return;
+#endif
+	if (!actor->target || !actor->target->player)
+	{
+		CONS_Debug(DBG_GAMELOGIC, "Powerup has no target.\n");
+		return;
+	}
+
+	player = actor->target->player;
+
+	P_SwitchShield(player, SH_THUNDERCOIN);
 
 	S_StartSound(player->mo, actor->info->seesound);
 }
@@ -3337,9 +3523,10 @@ void A_GravityBox(mobj_t *actor)
 	}
 
 	player = actor->target->player;
-	player->powers[pw_gravityboots] = (UINT16)(actor->info->reactiontime + 1);
 
 	S_StartSound(player, actor->info->activesound);
+
+	player->powers[pw_gravityboots] = (UINT16)(actor->info->reactiontime + 1);
 }
 
 // Function: A_ScoreRise
@@ -3361,41 +3548,49 @@ void A_ScoreRise(mobj_t *actor)
 
 // Function: A_ParticleSpawn
 //
-// Description: Spawns a particle at a specified interval
+// Description: Hyper-specialised function for spawning a particle for MT_PARTICLEGEN.
 //
-// var1 = type (if 0, defaults to MT_PARTICLE)
+// var1 = unused
 // var2 = unused
 //
 void A_ParticleSpawn(mobj_t *actor)
 {
-	INT32 locvar1 = var1;
-	fixed_t speed;
-	mobjtype_t type;
+	INT32 i = 0;
 	mobj_t *spawn;
 
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_ParticleSpawn", actor))
 		return;
 #endif
-	if (!actor->spawnpoint)
-	{
-		P_RemoveMobj(actor);
+	if (!actor->health)
 		return;
+
+	if (!actor->lastlook)
+		return;
+
+	if (!actor->threshold)
+		return;
+
+	for (i = 0; i < actor->lastlook; i++)
+	{
+		spawn = P_SpawnMobj(
+			actor->x + FixedMul(FixedMul(actor->friction, actor->scale), FINECOSINE(actor->angle>>ANGLETOFINESHIFT)),
+			actor->y + FixedMul(FixedMul(actor->friction, actor->scale), FINESINE(actor->angle>>ANGLETOFINESHIFT)),
+			actor->z,
+			(mobjtype_t)actor->threshold);
+		P_SetScale(spawn, actor->scale);
+		spawn->momz = FixedMul(actor->movefactor, spawn->scale);
+		spawn->destscale = spawn->scale/100;
+		spawn->scalespeed = spawn->scale/actor->health;
+		spawn->tics = (tic_t)actor->health;
+		spawn->flags2 |= (actor->flags2 & MF2_OBJECTFLIP);
+		spawn->angle += P_RandomKey(36)*ANG10; // irrelevant for default objects but might make sense for some custom ones
+		if (spawn->frame & FF_ANIMATE)
+			spawn->frame += P_RandomKey(spawn->state->var1);
+
+		actor->angle += actor->movedir;
 	}
-
-	if (locvar1)
-		type = (mobjtype_t)locvar1;
-	else
-		type = MT_PARTICLE;
-
-	speed = FixedMul((actor->spawnpoint->angle >> 12)<<FRACBITS, actor->scale);
-
-	spawn = P_SpawnMobj(actor->x, actor->y, actor->z, type);
-	P_SetScale(spawn, actor->scale);
-	spawn->momz = speed;
-	spawn->destscale = FixedDiv(spawn->scale<<FRACBITS, 100<<FRACBITS);
-	spawn->scalespeed = FixedDiv(((actor->spawnpoint->angle >> 8) & 63) << FRACBITS, 100<<FRACBITS);
-	actor->tics = actor->spawnpoint->extrainfo + 1;
+	actor->angle += (angle_t)actor->movecount;
 }
 
 // Function: A_BunnyHop
@@ -3446,7 +3641,7 @@ void A_BubbleSpawn(mobj_t *actor)
 	}
 	actor->flags2 &= ~MF2_DONTDRAW;
 
-	if (!(actor->flags & MF_AMBUSH))
+	if (!(actor->flags2 & MF2_AMBUSH))
 	{
 		// Quick! Look through players!
 		// Don't spawn bubbles unless a player is relatively close by (var2).
@@ -3494,7 +3689,7 @@ void A_FanBubbleSpawn(mobj_t *actor)
 	if (!(actor->eflags & MFE_UNDERWATER))
 		return;
 
-	if (!(actor->flags & MF_AMBUSH))
+	if (!(actor->flags2 & MF2_AMBUSH))
 	{
 	// Quick! Look through players!
 	// Don't spawn bubbles unless a player is relatively close by (var2).
@@ -3605,7 +3800,7 @@ void A_AttractChase(mobj_t *actor)
 
 	// Turn flingrings back into regular rings if attracted.
 	if (actor->tracer && actor->tracer->player
-		&& (actor->tracer->player->powers[pw_shield] & SH_NOSTACK) != SH_ATTRACT && actor->info->reactiontime && actor->type != (mobjtype_t)actor->info->reactiontime)
+		&& !(actor->tracer->player->powers[pw_shield] & SH_PROTECTELECTRIC) && actor->info->reactiontime && actor->type != (mobjtype_t)actor->info->reactiontime)
 	{
 		mobj_t *newring;
 		newring = P_SpawnMobj(actor->x, actor->y, actor->z, actor->info->reactiontime);
@@ -3709,10 +3904,17 @@ void A_DropMine(mobj_t *actor)
 void A_FishJump(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_FishJump", actor))
 		return;
 #endif
+
+	if (locvar2)
+	{
+		fixed_t rad = actor->radius>>FRACBITS;
+		P_SpawnMobjFromMobj(actor, P_RandomRange(rad, -rad)<<FRACBITS, P_RandomRange(rad, -rad)<<FRACBITS, 0, (mobjtype_t)locvar2);
+	}
 
 	if ((actor->z <= actor->floorz) || (actor->z <= actor->watertop - FixedMul((64 << FRACBITS), actor->scale)))
 	{
@@ -3810,7 +4012,7 @@ void A_ThrownRing(mobj_t *actor)
 		// A non-homing ring getting attracted by a
 		// magnetic player. If he gets too far away, make
 		// sure to stop the attraction!
-		if ((!actor->tracer->health) || (actor->tracer->player && (actor->tracer->player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT
+		if ((!actor->tracer->health) || (actor->tracer->player && (actor->tracer->player->powers[pw_shield] & SH_PROTECTELECTRIC)
 		    && P_AproxDistance(P_AproxDistance(actor->tracer->x-actor->x,
 		    actor->tracer->y-actor->y), actor->tracer->z-actor->z) > FixedMul(RING_DIST/4, actor->tracer->scale)))
 		{
@@ -3818,7 +4020,7 @@ void A_ThrownRing(mobj_t *actor)
 		}
 
 		if (actor->tracer && (actor->tracer->health)
-			&& (actor->tracer->player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT)// Already found someone to follow.
+			&& (actor->tracer->player->powers[pw_shield] & SH_PROTECTELECTRIC))// Already found someone to follow.
 		{
 			const INT32 temp = actor->threshold;
 			actor->threshold = 32000;
@@ -3886,7 +4088,7 @@ void A_ThrownRing(mobj_t *actor)
 		if (!P_CheckSight(actor, player->mo))
 			continue; // out of sight
 
-		if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT
+		if ((player->powers[pw_shield] & SH_PROTECTELECTRIC)
 			&& dist < FixedMul(RING_DIST/4, player->mo->scale))
 			P_SetTarget(&actor->tracer, player->mo);
 		return;
@@ -3986,12 +4188,15 @@ void A_SignPlayer(mobj_t *actor)
 		actor->frame += Color_Opposite[actor->target->player->skincolor*2+1];
 	}
 
-	// spawn an overlay of the player's face.
-	ov = P_SpawnMobj(actor->x, actor->y, actor->z, MT_OVERLAY);
-	P_SetTarget(&ov->target, actor);
-	ov->color = actor->target->player->skincolor;
-	ov->skin = skin;
-	P_SetMobjState(ov, actor->info->seestate); // S_PLAY_SIGN
+	if (skin->sprites[SPR2_SIGN].numframes)
+	{
+		// spawn an overlay of the player's face.
+		ov = P_SpawnMobj(actor->x, actor->y, actor->z, MT_OVERLAY);
+		P_SetTarget(&ov->target, actor);
+		ov->color = actor->target->player->skincolor;
+		ov->skin = skin;
+		P_SetMobjState(ov, actor->info->seestate); // S_PLAY_SIGN
+	}
 }
 
 // Function: A_OverlayThink
@@ -4061,7 +4266,7 @@ void A_JetChase(mobj_t *actor)
 		return;
 #endif
 
-	if (actor->flags & MF_AMBUSH)
+	if (actor->flags2 & MF2_AMBUSH)
 		return;
 
 	if (actor->z >= actor->waterbottom && actor->watertop > actor->floorz
@@ -4321,7 +4526,7 @@ void A_MinusDigging(mobj_t *actor)
 
 	// If we're close enough to our target, pop out of the ground
 	if (P_AproxDistance(actor->target->x-actor->x, actor->target->y-actor->y) < actor->radius
-		&& abs(actor->target->z - actor->z) < actor->height)
+		&& abs(actor->target->z - actor->z) < 2*actor->height)
 		P_SetMobjState(actor, actor->info->missilestate);
 
 	// Snap to ground
@@ -4954,7 +5159,7 @@ void A_SlingAppear(mobj_t *actor)
 		if (firsttime)
 		{
 			// This is the outermost link in the chain
-			spawnee->flags |= MF_AMBUSH;
+			spawnee->flags2 |= MF2_AMBUSH;
 			firsttime = false;
 		}
 
@@ -5403,7 +5608,10 @@ void A_MixUp(mobj_t *actor)
 	// No mix-up monitors in hide and seek or time only race.
 	// The random factor is okay for other game modes, but in these, it is cripplingly unfair.
 	if (gametype == GT_HIDEANDSEEK || gametype == GT_RACE)
+	{
+		S_StartSound(actor, sfx_lose);
 		return;
+	}
 
 	numplayers = 0;
 	memset(teleported, 0, sizeof (teleported));
@@ -5412,7 +5620,7 @@ void A_MixUp(mobj_t *actor)
 	// and grab their xyz coords
 	for (i = 0; i < MAXPLAYERS; i++)
 		if (playeringame[i] && players[i].mo && players[i].mo->health > 0 && players[i].playerstate == PST_LIVE
-			&& !players[i].exiting && !players[i].powers[pw_super])
+			&& !players[i].exiting && !players[i].powers[pw_super] && players[i].powers[pw_carry] != CR_NIGHTSMODE)
 		{
 			if ((netgame || multiplayer) && players[i].spectator) // Ignore spectators
 				continue;
@@ -5531,7 +5739,7 @@ void A_MixUp(mobj_t *actor)
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
 			if (playeringame[i] && players[i].playerstate == PST_LIVE
-				&& players[i].mo && players[i].mo->health > 0 && !players[i].exiting && !players[i].powers[pw_super])
+				&& players[i].mo && players[i].mo->health > 0 && !players[i].exiting && !players[i].powers[pw_super] && players[i].powers[pw_carry] != CR_NIGHTSMODE)
 			{
 				if ((netgame || multiplayer) && players[i].spectator)// Ignore spectators
 					continue;
@@ -5581,7 +5789,7 @@ void A_MixUp(mobj_t *actor)
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
 			if (playeringame[i] && players[i].playerstate == PST_LIVE
-				&& players[i].mo && players[i].mo->health > 0 && !players[i].exiting && !players[i].powers[pw_super])
+				&& players[i].mo && players[i].mo->health > 0 && !players[i].exiting && !players[i].powers[pw_super] && players[i].powers[pw_carry] != CR_NIGHTSMODE)
 			{
 				if ((netgame || multiplayer) && players[i].spectator)// Ignore spectators
 					continue;
@@ -5611,7 +5819,7 @@ void A_MixUp(mobj_t *actor)
 		if (teleported[i])
 		{
 			if (playeringame[i] && players[i].playerstate == PST_LIVE
-				&& players[i].mo && players[i].mo->health > 0 && !players[i].exiting && !players[i].powers[pw_super])
+				&& players[i].mo && players[i].mo->health > 0 && !players[i].exiting && !players[i].powers[pw_super] && players[i].powers[pw_carry] != CR_NIGHTSMODE)
 			{
 				if ((netgame || multiplayer) && players[i].spectator)// Ignore spectators
 					continue;
@@ -5753,7 +5961,7 @@ void A_RecyclePowers(mobj_t *actor)
 
 		for (j = 0; j < NUMPOWERS; j++)
 		{
-			if (j == pw_flashing || j == pw_underwater || j == pw_spacetime
+			if (j == pw_flashing || j == pw_underwater || j == pw_spacetime || j == pw_carry
 			    || j == pw_tailsfly || j == pw_extralife || j == pw_nocontrol || j == pw_super)
 				continue;
 			players[recv_pl].powers[j] = powers[send_pl][j];
@@ -5937,7 +6145,7 @@ void A_Boss2Chase(mobj_t *actor)
 	{
 		actor->watertop = -actor->watertop;
 		actor->extravalue1 = 18;
-		if (actor->flags & MF_AMBUSH)
+		if (actor->flags2 & MF2_AMBUSH)
 			actor->extravalue1 -= (actor->info->spawnhealth - actor->health)*2;
 		actor->extravalue2 = actor->extravalue1;
 	}
@@ -5963,7 +6171,7 @@ void A_Boss2Chase(mobj_t *actor)
 	else
 	{
 		// Only speed up if you have the 'Deaf' flag.
-		if (actor->flags & MF_AMBUSH)
+		if (actor->flags2 & MF2_AMBUSH)
 			speedvar = actor->health;
 		else
 			speedvar = actor->info->spawnhealth;
@@ -6554,7 +6762,7 @@ void A_BuzzFly(mobj_t *actor)
 	if (LUA_CallAction("A_BuzzFly", actor))
 		return;
 #endif
-	if (actor->flags & MF_AMBUSH)
+	if (actor->flags2 & MF2_AMBUSH)
 		return;
 
 	if (actor->reactiontime)
@@ -6694,7 +6902,7 @@ void A_GuardChase(mobj_t *actor)
 		return; // got a new target
 
 	// chase towards player
-	if (--actor->movecount < 0 || !P_Move(actor, (actor->flags & MF_AMBUSH) ? actor->info->speed * 2 : actor->info->speed))
+	if (--actor->movecount < 0 || !P_Move(actor, (actor->flags2 & MF2_AMBUSH) ? actor->info->speed * 2 : actor->info->speed))
 	{
 		P_NewChaseDir(actor);
 		actor->movecount += 5; // Increase tics before change in direction allowed.
@@ -7665,7 +7873,7 @@ void A_SetObjectFlags(mobj_t *actor)
 	else if (locvar2 == 1)
 		locvar1 = actor->flags & ~locvar1;
 
-	if ((locvar1 & (MF_NOBLOCKMAP|MF_NOSECTOR)) != (actor->flags & (MF_NOBLOCKMAP|MF_NOSECTOR))) // Blockmap/sector status has changed, so reset the links
+	if ((UINT32)(locvar1 & (MF_NOBLOCKMAP|MF_NOSECTOR)) != (actor->flags & (MF_NOBLOCKMAP|MF_NOSECTOR))) // Blockmap/sector status has changed, so reset the links
 		unlinkthings = true;
 
 	if (unlinkthings) {
@@ -8039,7 +8247,7 @@ void A_OrbitNights(mobj_t* actor)
 #endif
 
 	if (!actor->target || !actor->target->player ||
-	    !(actor->target->player->pflags & PF_NIGHTSMODE) || !actor->target->player->nightstime
+	    !(actor->target->player->powers[pw_carry] == CR_NIGHTSMODE) || !actor->target->player->nightstime
 	    // Also remove this object if they no longer have a NiGHTS helper
 		|| (ishelper && !actor->target->player->powers[pw_nights_helper]))
 	{
@@ -8281,7 +8489,7 @@ void A_RingDrain(mobj_t *actor)
 	}
 
 	player = actor->target->player;
-	P_GivePlayerRings(player, -min(locvar1, player->mo->health-1));
+	P_GivePlayerRings(player, -min(locvar1, player->rings));
 }
 
 // Function: A_SplitShot
@@ -8589,7 +8797,7 @@ void A_CheckTargetRings(mobj_t *actor)
 	if (!(actor->target) || !(actor->target->player))
 	   return;
 
-	if (actor->target->player->health >= locvar1)
+	if (actor->target->player->rings >= locvar1)
 		P_SetMobjState(actor, locvar2);
 }
 
@@ -8611,7 +8819,7 @@ void A_CheckRings(mobj_t *actor)
 #endif
 
 	for (i = 0; i < MAXPLAYERS; i++)
-		cntr += players[i].health-1;
+		cntr += players[i].rings;
 
 	if (cntr >= locvar1)
 		P_SetMobjState(actor, locvar2);
@@ -9183,7 +9391,7 @@ void A_ForceWin(mobj_t *actor)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (playeringame[i] && (players[i].health > 0
+		if (playeringame[i] && ((players[i].mo && players[i].mo->health > 0)
 		    || ((netgame || multiplayer) && (players[i].lives > 0 || players[i].continues > 0))))
 			break;
 	}
@@ -9450,14 +9658,19 @@ void A_HomingChase(mobj_t *actor)
 //        lower 16 bits = object # to fire
 //        upper 16 bits = front offset
 // var2:
-//        lower 16 bits = vertical angle
+//        lower 15 bits = vertical angle variable
+//        16th bit:
+//			- 0: use vertical angle variable as vertical angle in degrees
+//			- 1: mimic P_SpawnXYZMissile
+//				use z of actor minus z of missile as vertical distance to cover during momz calculation
+//				use vertical angle variable as horizontal distance to cover during momz calculation
 //        upper 16 bits = height offset
 //
 void A_TrapShot(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
-	angle_t vertang = FixedAngle(((INT16)(locvar2 & 65535))*FRACUNIT);
+	boolean oldstyle = (locvar2 & 32768) ? true : false;
 	mobjtype_t type = (mobjtype_t)(locvar1 & 65535);
 	mobj_t *missile;
 	INT16 frontoff = (INT16)(locvar1 >> 16);
@@ -9473,10 +9686,7 @@ void A_TrapShot(mobj_t *actor)
 	y = actor->y + P_ReturnThrustY(actor, actor->angle, FixedMul(frontoff*FRACUNIT, actor->scale));
 
 	if (actor->eflags & MFE_VERTICALFLIP)
-	{
 		z = actor->z + actor->height - FixedMul(vertoff*FRACUNIT, actor->scale) - FixedMul(mobjinfo[type].height, actor->scale);
-		vertang = InvAngle(vertang); // flip firing angle
-	}
 	else
 		z = actor->z + FixedMul(vertoff*FRACUNIT, actor->scale);
 
@@ -9487,20 +9697,35 @@ void A_TrapShot(mobj_t *actor)
 
 	if (actor->eflags & MFE_VERTICALFLIP)
 		missile->flags2 |= MF2_OBJECTFLIP;
-	missile->destscale = actor->destscale;
-	P_SetScale(missile, missile->destscale);
+
+	missile->destscale = actor->scale;
+	P_SetScale(missile, actor->scale);
 
 	if (missile->info->seesound)
-		S_StartSound(actor, missile->info->seesound);
+		S_StartSound(missile, missile->info->seesound);
 
 	P_SetTarget(&missile->target, actor);
 	missile->angle = actor->angle;
 
 	speed = FixedMul(missile->info->speed, missile->scale);
 
-	missile->momx = FixedMul(FINECOSINE(vertang>>ANGLETOFINESHIFT), FixedMul(FINECOSINE(missile->angle>>ANGLETOFINESHIFT), speed));
-	missile->momy = FixedMul(FINECOSINE(vertang>>ANGLETOFINESHIFT), FixedMul(FINESINE(missile->angle>>ANGLETOFINESHIFT), speed));
-	missile->momz = FixedMul(FINESINE(vertang>>ANGLETOFINESHIFT), speed);
+	if (oldstyle)
+	{
+		missile->momx = FixedMul(FINECOSINE(missile->angle>>ANGLETOFINESHIFT), speed);
+		missile->momy = FixedMul(FINESINE(missile->angle>>ANGLETOFINESHIFT), speed);
+		// The below line basically mimics P_SpawnXYZMissile's momz calculation.
+		missile->momz = (actor->z + ((actor->eflags & MFE_VERTICALFLIP) ? actor->height : 0) - z) / ((fixed_t)(locvar2 & 32767)*FRACUNIT / speed);
+		P_CheckMissileSpawn(missile);
+	}
+	else
+	{
+		angle_t vertang = FixedAngle(((INT16)(locvar2 & 32767))*FRACUNIT);
+		if (actor->eflags & MFE_VERTICALFLIP)
+				vertang = InvAngle(vertang); // flip firing angle
+		missile->momx = FixedMul(FINECOSINE(vertang>>ANGLETOFINESHIFT), FixedMul(FINECOSINE(missile->angle>>ANGLETOFINESHIFT), speed));
+		missile->momy = FixedMul(FINECOSINE(vertang>>ANGLETOFINESHIFT), FixedMul(FINESINE(missile->angle>>ANGLETOFINESHIFT), speed));
+		missile->momz = FixedMul(FINESINE(vertang>>ANGLETOFINESHIFT), speed);
+	}
 }
 
 // Function: A_VileTarget
@@ -10172,6 +10397,424 @@ void A_SpawnFreshCopy(mobj_t *actor)
 
 	if (newObject->info->seesound)
 		S_StartSound(newObject, newObject->info->seesound);
+}
+
+// Internal Flicky spawning function.
+mobj_t *P_InternalFlickySpawn(mobj_t *actor, mobjtype_t flickytype, fixed_t momz, boolean lookforplayers)
+{
+	mobj_t *flicky;
+
+	if (!flickytype)
+	{
+		if (!mapheaderinfo[gamemap-1] || !mapheaderinfo[gamemap-1]->numFlickies) // No mapheader, no shoes, no service.
+			return NULL;
+		else
+		{
+			INT32 prandom = P_RandomKey(mapheaderinfo[gamemap-1]->numFlickies);
+			flickytype = mapheaderinfo[gamemap-1]->flickies[prandom];
+		}
+	}
+
+	flicky = P_SpawnMobjFromMobj(actor, 0, 0, 0, flickytype);
+	flicky->angle = actor->angle;
+
+	if (flickytype == MT_SEED)
+		flicky->z += P_MobjFlip(actor)*(actor->height - flicky->height)/2;
+
+	if (actor->eflags & MFE_UNDERWATER)
+		momz = FixedDiv(momz, FixedSqrt(3*FRACUNIT));
+
+	P_SetObjectMomZ(flicky, momz, false);
+	flicky->movedir = (P_RandomChance(FRACUNIT/2) ?  -1 : 1);
+	flicky->fuse = P_RandomRange(595, 700);	// originally 300, 350
+	flicky->threshold = 0;
+
+	if (lookforplayers)
+		P_LookForPlayers(flicky, true, false, 0);
+
+	return flicky;
+}
+
+// Function: A_FlickySpawn
+//
+// Description: Flicky spawning function.
+//
+// var1:
+//		lower 16 bits: if 0, spawns random flicky based on level header. Else, spawns the designated thing type.
+//		upper 16 bits: if 0, no sound is played. Else, A_Scream is called.
+// var2 = upwards thrust for spawned flicky. If zero, default value is provided.
+//
+void A_FlickySpawn(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FlickySpawn", actor))
+		return;
+#endif
+
+	if (locvar1 >> 16) {
+		A_Scream(actor); // A shortcut for the truly lazy.
+		locvar1 &= 65535;
+	}
+
+	P_InternalFlickySpawn(actor, locvar1, ((locvar2) ? locvar2 : 8*FRACUNIT), true);
+}
+
+// Internal Flicky bubbling function.
+void P_InternalFlickyBubble(mobj_t *actor)
+{
+	if (actor->eflags & MFE_UNDERWATER)
+	{
+		mobj_t *overlay;
+
+		if (!((actor->z + 3*actor->height/2) < actor->watertop) || !mobjinfo[actor->type].raisestate || actor->tracer)
+			return;
+
+		overlay = P_SpawnMobj(actor->x, actor->y, actor->z, MT_OVERLAY);
+		P_SetMobjStateNF(overlay, mobjinfo[actor->type].raisestate);
+		P_SetTarget(&actor->tracer, overlay);
+		P_SetTarget(&overlay->target, actor);
+		return;
+	}
+
+	if (!actor->tracer || P_MobjWasRemoved(actor->tracer))
+		return;
+
+	P_RemoveMobj(actor->tracer);
+	P_SetTarget(&actor->tracer, NULL);
+}
+
+// Function: A_FlickyAim
+//
+// Description: Flicky aiming function.
+//
+// var1 = how far around the target (in angle constants) the flicky should look
+// var2 = distance from target to aim for
+//
+void A_FlickyAim(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	boolean flickyhitwall = false;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FlickyAim", actor))
+		return;
+#endif
+
+	if (actor->momx == actor->momy && actor->momy == 0)
+		flickyhitwall = true;
+
+	P_InternalFlickyBubble(actor);
+	P_InstaThrust(actor, 0, 0);
+
+	if (!actor->target)
+	{
+		P_LookForPlayers(actor, true, false, 0);
+		actor->angle = P_RandomKey(36)*ANG10;
+		return;
+	}
+
+	if (actor->fuse > 2*TICRATE)
+	{
+		angle_t posvar;
+		fixed_t chasevar, chasex, chasey;
+		
+		if (flickyhitwall)
+			actor->movedir *= -1;
+
+		posvar = ((R_PointToAngle2(actor->target->x, actor->target->y, actor->x, actor->y) + actor->movedir*locvar1) >> ANGLETOFINESHIFT) & FINEMASK;
+		chasevar = FixedSqrt(max(FRACUNIT, P_AproxDistance(actor->target->x - actor->x, actor->target->y - actor->y) - locvar2)) + locvar2;
+
+		chasex = actor->target->x + FixedMul(FINECOSINE(posvar), chasevar);
+		chasey = actor->target->y + FixedMul(FINESINE(posvar), chasevar);
+
+		if (P_AproxDistance(chasex - actor->x, chasey - actor->y))
+			actor->angle = R_PointToAngle2(actor->x, actor->y, chasex, chasey);
+	}
+	else if (flickyhitwall)
+	{
+		actor->angle += ANGLE_180;
+		actor->threshold = 0;
+	}
+}
+
+//Internal Flicky flying function. Also usuable as an underwater swim thrust.
+void P_InternalFlickyFly(mobj_t *actor, fixed_t flyspeed, fixed_t targetdist, fixed_t chasez)
+{
+	angle_t vertangle;
+
+	flyspeed = FixedMul(flyspeed, actor->scale);
+	actor->flags |= MF_NOGRAVITY;
+
+	var1 = ANG30;
+	var2 = 32*FRACUNIT;
+	A_FlickyAim(actor);
+
+	chasez *= 8;
+	if (!actor->target || !(actor->fuse > 2*TICRATE))
+		chasez += ((actor->eflags & MFE_VERTICALFLIP) ? actor->ceilingz - 24*FRACUNIT : actor->floorz + 24*FRACUNIT);
+	else
+	{
+		fixed_t add = actor->target->z + (actor->target->height - actor->height)/2;
+		if (add > (actor->ceilingz - 24*actor->scale - actor->height))
+			add = actor->ceilingz - 24*actor->scale - actor->height;
+		else if (add < (actor->floorz + 24*actor->scale))
+			add = actor->floorz + 24*actor->scale;
+		chasez += add;
+	}
+
+	if (!targetdist)
+		targetdist = 16*FRACUNIT; //Default!
+
+	if (actor->target && abs(chasez - actor->z) > targetdist)
+		targetdist = P_AproxDistance(actor->target->x - actor->x, actor->target->y - actor->y);
+
+	vertangle = (R_PointToAngle2(0, actor->z, targetdist, chasez) >> ANGLETOFINESHIFT) & FINEMASK;
+	P_InstaThrust(actor, actor->angle, FixedMul(FINECOSINE(vertangle), flyspeed));
+	actor->momz = FixedMul(FINESINE(vertangle), flyspeed);
+}
+
+// Function: A_FlickyFly
+//
+// Description: Flicky flying function.
+//
+// var1 = how fast to fly
+// var2 = how far ahead the target should be considered
+//
+void A_FlickyFly(mobj_t *actor)
+{
+	// We're not setting up locvars here - it passes var1 and var2 through to P_InternalFlickyFly instead.
+	//INT32 locvar1 = var1;
+	//INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FlickyFly", actor))
+		return;
+#endif
+	P_InternalFlickyFly(actor, var1, var2,
+	FINECOSINE((((actor->fuse % 36) * ANG10) >> ANGLETOFINESHIFT) & FINEMASK)
+	);
+}
+
+// Function: A_FlickySoar
+//
+// Description: Flicky soaring function - specific to puffin.
+//
+// var1 = how fast to fly
+// var2 = how far ahead the target should be considered
+//
+void A_FlickySoar(mobj_t *actor)
+{
+	// We're not setting up locvars here - it passes var1 and var2 through to P_InternalFlickyFly instead.
+	//INT32 locvar1 = var1;
+	//INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FlickySoar", actor))
+		return;
+#endif
+	P_InternalFlickyFly(actor, var1, var2,
+	2*(FRACUNIT/2 - abs(FINECOSINE((((actor->fuse % 144) * 5*ANG1/2) >> ANGLETOFINESHIFT) & FINEMASK)))
+	);
+
+	if (P_MobjFlip(actor)*actor->momz > 0 && actor->frame == 1 && actor->sprite == SPR_FL10)
+		actor->frame = 3;
+}
+
+//Function: A_FlickyCoast
+//
+// Description: Flicky swim-coasting function.
+//
+// var1 = speed to change state upon reaching
+// var2 = state to change to upon slowing down
+// the spawnstate of the mobj = state to change to when above water
+//
+void A_FlickyCoast(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FlickyCoast", actor))
+		return;
+#endif
+	if (actor->eflags & MFE_UNDERWATER)
+	{
+		actor->momx = (11*actor->momx)/12;
+		actor->momy = (11*actor->momy)/12;
+		actor->momz = (11*actor->momz)/12;
+
+		if (P_AproxDistance(P_AproxDistance(actor->momx, actor->momy), actor->momz) < locvar1)
+			P_SetMobjState(actor, locvar2);
+
+		return;
+	}
+
+	actor->flags &= ~MF_NOGRAVITY;
+	P_SetMobjState(actor, mobjinfo[actor->type].spawnstate);
+}
+
+// Internal Flicky hopping function.
+void P_InternalFlickyHop(mobj_t *actor, fixed_t momz, fixed_t momh, angle_t angle)
+{
+	if (((!(actor->eflags & MFE_VERTICALFLIP) && actor->z <= actor->floorz)
+	|| ((actor->eflags & MFE_VERTICALFLIP) && actor->z + actor->height >= actor->ceilingz)))
+	{
+		if (momz)
+		{
+			if (actor->eflags & MFE_UNDERWATER)
+				momz = FixedDiv(momz, FixedSqrt(3*FRACUNIT));
+			P_SetObjectMomZ(actor, momz, false);
+		}
+		P_InstaThrust(actor, angle, FixedMul(momh, actor->scale));
+	}
+}
+
+// Function: A_FlickyHop
+//
+// Description: Flicky hopping function.
+//
+// var1 = vertical thrust
+// var2 = horizontal thrust
+//
+void A_FlickyHop(mobj_t *actor)
+{
+	// We're not setting up locvars here - it passes var1 and var2 through to P_InternalFlickyHop instead.
+	//INT32 locvar1 = var1;
+	//INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FlickyHop", actor))
+		return;
+#endif
+	P_InternalFlickyHop(actor, var1, var2, actor->angle);
+}
+
+// Function: A_FlickyFlounder
+//
+// Description: Flicky floundering function.
+//
+// var1 = intended vertical thrust
+// var2 = intended horizontal thrust
+//
+void A_FlickyFlounder(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	angle_t hopangle;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FlickyFlounder", actor))
+		return;
+#endif
+	locvar1 *= (P_RandomKey(2) + 1);
+	locvar2 *= (P_RandomKey(2) + 1);
+	hopangle = (actor->angle + (P_RandomKey(9) - 4)*ANG2);
+	P_InternalFlickyHop(actor, locvar1, locvar2, hopangle);
+}
+
+// Function: A_FlickyCheck
+//
+// Description: Flicky airtime check function.
+//
+// var1 = state to change to upon touching the floor
+// var2 = state to change to upon falling
+// the meleestate of the mobj = state to change to when underwater
+//
+void A_FlickyCheck(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FlickyCheck", actor))
+		return;
+#endif
+	if (locvar2 && P_MobjFlip(actor)*actor->momz < 1)
+		P_SetMobjState(actor, locvar2);
+	else if (locvar1 && ((!(actor->eflags & MFE_VERTICALFLIP) && actor->z <= actor->floorz)
+	|| ((actor->eflags & MFE_VERTICALFLIP) && actor->z + actor->height >= actor->ceilingz)))
+		P_SetMobjState(actor, locvar1);
+	else if (mobjinfo[actor->type].meleestate && (actor->eflags & MFE_UNDERWATER))
+		P_SetMobjState(actor, mobjinfo[actor->type].meleestate);
+	P_InternalFlickyBubble(actor);
+}
+
+// Function: A_FlickyHeightCheck
+//
+// Description: Flicky height check function.
+//
+// var1 = state to change to when falling below height relative to target
+// var2 = height relative to target to change state at
+//
+void A_FlickyHeightCheck(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FlickyHeightCheck", actor))
+		return;
+#endif
+	if (locvar1 && actor->target && P_MobjFlip(actor)*actor->momz < 1
+	&& ((P_MobjFlip(actor)*((actor->z + actor->height/2) - (actor->target->z + actor->target->height/2)) < locvar2)
+	|| (actor->z - actor->height < actor->floorz) || (actor->z + 2*actor->height > actor->ceilingz)))
+		P_SetMobjState(actor, locvar1);
+	P_InternalFlickyBubble(actor);
+}
+
+// Function: A_FlickyFlutter
+//
+// Description: Flicky fluttering function - specific to chicken.
+//
+// var1 = state to change to upon touching the floor
+// var2 = state to change to upon falling
+// the meleestate of the mobj = state to change to when underwater
+//
+void A_FlickyFlutter(mobj_t *actor)
+{
+	// We're not setting up locvars here - it passes var1 and var2 through to A_FlickyCheck instead.
+	//INT32 locvar1 = var1;
+	//INT32 locvar2 = var2;
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FlickyFlutter", actor))
+		return;
+#endif
+	A_FlickyCheck(actor);
+
+	var1 = ANG30;
+	var2 = 32*FRACUNIT;
+	A_FlickyAim(actor);
+
+	P_InstaThrust(actor, actor->angle, 2*actor->scale);
+	if (P_MobjFlip(actor)*actor->momz < -FRACUNIT/2)
+		actor->momz = -P_MobjFlip(actor)*actor->scale/2;
+}
+
+#undef FLICKYHITWALL
+
+// Function: A_FlameParticle
+//
+// Description: Creates the mobj's painchance at a random position around the object's radius.
+//
+// var1 = momz of particle.
+//
+void A_FlameParticle(mobj_t *actor)
+{
+	mobjtype_t type = (mobjtype_t)(mobjinfo[actor->type].painchance);
+	INT32 locvar1 = var1;
+
+#ifdef HAVE_BLUA
+	if (LUA_CallAction("A_FlameParticle", actor))
+		return;
+#endif
+
+	if (type)
+	{
+		fixed_t rad = 2*actor->radius>>FRACBITS;
+		fixed_t hei = actor->height>>FRACBITS;
+		mobj_t *particle = P_SpawnMobjFromMobj(actor,
+			P_RandomRange(rad, -rad)<<FRACBITS,
+			P_RandomRange(rad, -rad)<<FRACBITS,
+			P_RandomRange(hei/2, hei)<<FRACBITS,
+			type);
+		P_SetObjectMomZ(particle, locvar1<<FRACBITS, false);
+	}
 }
 
 // Function: A_Boss5Jump

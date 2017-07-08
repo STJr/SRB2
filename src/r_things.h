@@ -29,8 +29,6 @@
 #define VISSPRITESPERCHUNK (1 << VISSPRITECHUNKBITS)
 #define VISSPRITEINDEXMASK (VISSPRITESPERCHUNK - 1)
 
-#define DEFAULTNIGHTSSKIN 0
-
 // Constant arrays used for psprite clipping
 //  and initializing clipping.
 extern INT16 negonearray[MAXVIDWIDTH];
@@ -46,6 +44,7 @@ extern fixed_t windowtop;
 extern fixed_t windowbottom;
 
 void R_DrawMaskedColumn(column_t *column);
+void R_DrawFlippedMaskedColumn(column_t *column, INT32 texheight);
 void R_SortVisSprites(void);
 
 //faB: find sprites in wadfile, replace existing, add new ones
@@ -70,6 +69,7 @@ void R_DrawMasked(void);
 // should be all lowercase!! S_SKIN processing does a strlwr
 #define DEFAULTSKIN "sonic"
 #define DEFAULTSKIN2 "tails" // secondary player
+#define DEFAULTNIGHTSSKIN 0
 
 typedef struct
 {
@@ -117,7 +117,7 @@ typedef struct
 	// specific sounds per skin
 	sfxenum_t soundsid[NUMSKINSOUNDS]; // sound # in S_sfx table
 
-	spritedef_t sprites[NUMPLAYERSPRITES];
+	spritedef_t sprites[NUMPLAYERSPRITES*2]; // contains super versions too
 
 	UINT8 availability; // lock?
 } skin_t;
@@ -149,7 +149,8 @@ typedef struct vissprite_s
 	fixed_t pz, pzt; // physical bottom/top for sorting with 3D floors
 
 	fixed_t startfrac; // horizontal position of x1
-	fixed_t scale;
+	fixed_t scale, sortscale; // sortscale only differs from scale for paper sprites and MF2_LINKDRAW
+	fixed_t scalestep; // only for paper sprites, 0 otherwise
 	fixed_t xiscale; // negative if flipped
 
 	fixed_t texturemid;
@@ -202,7 +203,8 @@ extern skin_t skins[MAXSKINS + 1];
 
 void SetPlayerSkin(INT32 playernum,const char *skinname);
 void SetPlayerSkinByNum(INT32 playernum,INT32 skinnum); // Tails 03-16-2002
-boolean R_SkinUnlock(INT32 skinnum);
+boolean R_SkinUsable(INT32 playernum, INT32 skinnum);
+UINT32 R_GetSkinAvailabilities(void);
 INT32 R_SkinAvailable(const char *name);
 void R_AddSkins(UINT16 wadnum);
 

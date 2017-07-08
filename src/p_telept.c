@@ -163,6 +163,7 @@ boolean P_Teleport(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z, angle_t angle
 				if (playeringame[p] && players[p].mo && players[p].powers[pw_carry] == CR_PLAYER && players[p].mo->tracer == thing)
 				{
 					players[p].powers[pw_carry] = CR_NONE;
+					P_SetTarget(&players[p].mo->tracer, NULL);
 					break;
 				}
 			thing->player->cmomx = thing->player->cmomy = 0;

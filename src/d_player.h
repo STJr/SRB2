@@ -32,18 +32,21 @@
 // Extra abilities/settings for skins (combinable stuff)
 typedef enum
 {
-	SF_SUPER            = 1, // Can turn super in singleplayer/co-op mode.
-	SF_SUPERANIMS       = 1<<1, // If super, use the super sonic animations
-	SF_SUPERSPIN        = 1<<2, // Should spin frames be played while super?
-	SF_HIRES            = 1<<3, // Draw the sprite 2x as small?
+	SF_SUPER            = 1,    // Can turn super in singleplayer/co-op mode?
+	SF_NOSUPERSPIN      = 1<<1, // Should spin frames be played while super?
+	SF_NOSPINDASHDUST   = 1<<2, // Spawn dust particles when charging a spindash?
+	SF_HIRES            = 1<<3, // Draw the sprite at different size?
 	SF_NOSKID           = 1<<4, // No skid particles etc
 	SF_NOSPEEDADJUST    = 1<<5, // Skin-specific version of disablespeedadjust
 	SF_RUNONWATER       = 1<<6, // Run on top of water FOFs?
-	SF_NOJUMPSPIN       = 1<<7, // SPR2_JUMP defaults to SPR2_SPRG instead of SPR2_SPIN, falling states used, and player height is full when jumping?
+	SF_NOJUMPSPIN       = 1<<7, // SPR2_JUMP defaults to SPR2_SPRG instead of SPR2_ROLL, falling states used, and player height is full when jumping?
 	SF_NOJUMPDAMAGE     = 1<<8, // Don't damage enemies, etc whilst jumping?
 	SF_STOMPDAMAGE      = 1<<9, // Always damage enemies, etc by landing on them, no matter your vunerability?
 	SF_MARIODAMAGE      = SF_NOJUMPDAMAGE|SF_STOMPDAMAGE, // The Mario method of being able to damage enemies, etc.
 	SF_MACHINE          = 1<<10, // Beep boop. Are you a robot?
+	SF_DASHMODE         = 1<<11, // Sonic Advance 2 style top speed increase?
+	SF_FASTEDGE         = 1<<12, // Faster edge teeter?
+	SF_MULTIABILITY     = 1<<13, // Revenge of Final Demo.
 	// free up to and including 1<<31
 } skinflags_t;
 
@@ -64,7 +67,7 @@ typedef enum
 	CA_JUMPBOOST,
 	CA_AIRDRILL,
 	CA_JUMPTHOK,
-	CA_DASHMODE,
+	CA_BOUNCE,
 	CA_TWINSPIN
 } charability_t;
 
@@ -73,7 +76,7 @@ typedef enum
 {
 	CA2_NONE=0,
 	CA2_SPINDASH,
-	CA2_MULTIABILITY,
+	CA2_GUNSLINGER,
 	CA2_MELEE
 } charability2_t;
 
@@ -117,10 +120,8 @@ typedef enum
 	// Did you get a time-over?
 	PF_TIMEOVER = 1<<10,
 
-	// Ready for Super?
-	PF_SUPERREADY = 1<<11,
-
 	// Character action status
+	PF_STARTJUMP = 1<<11,
 	PF_JUMPED    = 1<<12,
 	PF_SPINNING  = 1<<13,
 	PF_STARTDASH = 1<<14,
@@ -132,12 +133,11 @@ typedef enum
 	// Sliding (usually in water) like Labyrinth/Oil Ocean
 	PF_SLIDING   = 1<<17,
 
-	/*** NIGHTS STUFF ***/
-	// Is the player in NiGHTS mode?
-	PF_NIGHTSMODE        = 1<<18,
-	PF_TRANSFERTOCLOSEST = 1<<19,
+	// Bouncing
+	PF_BOUNCING  = 1<<18,
 
-	// Spill rings after falling
+	/*** NIGHTS STUFF ***/
+	PF_TRANSFERTOCLOSEST = 1<<19,
 	PF_NIGHTSFALL        = 1<<20,
 	PF_DRILLING          = 1<<21,
 	PF_SKIDDOWN          = 1<<22,
@@ -151,9 +151,15 @@ typedef enum
 	PF_ANALOGMODE        = 1<<26, // Analog mode?
 
 	// Can carry another player?
-	PF_CANCARRY          = 1<<27
+	PF_CANCARRY          = 1<<27,
 
-	// free up to and including 1<<31
+	// Used shield ability
+	PF_SHIELDABILITY     = 1<<28,
+
+	// Jump damage?
+	PF_NOJUMPDAMAGE   = 1<<29,
+
+	// up to 1<<31 is free
 } pflags_t;
 
 typedef enum
@@ -164,7 +170,7 @@ typedef enum
 	PA_EDGE,
 	PA_WALK,
 	PA_RUN,
-	PA_PEEL,
+	PA_DASH,
 	PA_PAIN,
 	PA_ROLL,
 	PA_JUMP,
@@ -178,23 +184,34 @@ typedef enum
 typedef enum
 {
 	SH_NONE = 0,
-	// Standard shields
-	SH_JUMP,
-	SH_ATTRACT,
-	SH_ELEMENTAL,
-	SH_BOMB,
-	// Stupid useless unimplimented Sonic 3 shields
-	SH_BUBBLEWRAP,
-	SH_THUNDERCOIN,
-	SH_FLAMEAURA,
-	// Pity shield: the world's most basic shield ever, given to players who suck at Match
-	SH_PITY,
-	// The fireflower is special, it combines with other shields.
-	SH_FIREFLOWER = 0x100,
-	// The force shield uses the lower 8 bits to count how many hits are left.
-	SH_FORCE = 0x200,
 
-	SH_STACK = SH_FIREFLOWER,
+	// Shield flags
+	SH_PROTECTFIRE = 0x400,
+	SH_PROTECTWATER = 0x800,
+	SH_PROTECTELECTRIC = 0x1000,
+
+	// Indivisible shields
+	SH_PITY = 1, // the world's most basic shield ever, given to players who suck at Match
+	SH_WHIRLWIND,
+	SH_ARMAGEDDON,
+
+	// normal shields that use flags
+	SH_ATTRACT = SH_PROTECTELECTRIC,
+	SH_ELEMENTAL = SH_PROTECTFIRE|SH_PROTECTWATER,
+
+	// Sonic 3 shields
+	SH_FLAMEAURA = SH_PROTECTFIRE,
+	SH_BUBBLEWRAP = SH_PROTECTWATER,
+	SH_THUNDERCOIN = SH_WHIRLWIND|SH_PROTECTELECTRIC,
+
+	// The force shield uses the lower 8 bits to count how many extra hits are left.
+	SH_FORCE = 0x100,
+	SH_FORCEHP = 0xFF, // to be used as a bitmask only
+
+	// Mostly for use with Mario mode.
+	SH_FIREFLOWER = 0x200,
+
+	SH_STACK = SH_FIREFLOWER, // second-layer shields
 	SH_NOSTACK = ~SH_STACK
 } shieldtype_t; // pw_shield
 
@@ -205,6 +222,10 @@ typedef enum
 	CR_GENERIC,
 	// Tails carry.
 	CR_PLAYER,
+	// NiGHTS mode. Not technically a CARRYING, but doesn't stack with any of the others, so might as well go here.
+	CR_NIGHTSMODE,
+	// Old Brak sucks hard, but this gimmick could be used for something better, so we might as well continue supporting it.
+	CR_BRAKGOOP,
 	// Specific level gimmicks.
 	CR_ZOOMTUBE,
 	CR_ROPEHANG,
@@ -244,9 +265,7 @@ typedef enum
 	pw_nights_helper,
 	pw_nights_linkfreeze,
 
-	//for linedef exec 427
-	pw_nocontrol,
-	pw_ingoop, // In goop
+	pw_nocontrol, //for linedef exec 427
 
 	NUMPOWERS
 } powertype_t;
@@ -297,10 +316,8 @@ typedef struct player_s
 	// It is updated with cmd->aiming.
 	angle_t aiming;
 
-	// This is only used between levels,
-	// mo->health is used during levels.
-	/// \todo Remove this.  We don't need a second health definition for players.
-	INT32 health;
+	// player's ring count
+	INT32 rings;
 
 	SINT8 pity; // i pity the fool.
 	INT32 currentweapon; // current weapon selected.
@@ -324,6 +341,7 @@ typedef struct player_s
 	UINT8 skincolor;
 
 	INT32 skin;
+	UINT32 availabilities;
 
 	UINT32 score; // player score
 	fixed_t dashspeed; // dashing speed
@@ -361,8 +379,7 @@ typedef struct player_s
 	UINT8 gotcontinue; // Got continue from this stage?
 
 	fixed_t speed; // Player's speed (distance formula of MOMX and MOMY values)
-	UINT8 jumping; // Jump counter
-	UINT8 secondjump;
+	UINT8 secondjump; // Jump counter
 
 	UINT8 fly1; // Tails flying
 	UINT8 scoreadd; // Used for multiple enemy attack bonus

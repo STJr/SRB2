@@ -27,8 +27,11 @@
 
 extern UINT8 *screens[5];
 
-extern const UINT8 gammatable[5][256];
-extern consvar_t cv_ticrate, cv_usegamma, cv_allcaps, cv_constextsize;
+extern consvar_t cv_ticrate, cv_constextsize,\
+cv_globalgamma, cv_globalsaturation, \
+cv_rhue, cv_yhue, cv_ghue, cv_chue, cv_bhue, cv_mhue,\
+cv_rgamma, cv_ygamma, cv_ggamma, cv_cgamma, cv_bgamma, cv_mgamma, \
+cv_rsaturation, cv_ysaturation, cv_gsaturation, cv_csaturation, cv_bsaturation, cv_msaturation;
 
 // Allocates buffer screens, call before R_Init.
 void V_Init(void);
@@ -42,6 +45,7 @@ const char *R_GetPalname(UINT16 num);
 const char *GetPalette(void);
 
 extern RGBA_t *pLocalPalette;
+extern RGBA_t *pMasterPalette;
 
 // Retrieve the ARGB value from a palette color index
 #define V_GetColor(color) (pLocalPalette[color&0xFF])
@@ -90,6 +94,7 @@ extern RGBA_t *pLocalPalette;
 #define V_70TRANS            0x00070000
 #define V_80TRANS            0x00080000 // used to be V_8020TRANS
 #define V_90TRANS            0x00090000
+#define V_STATIC             0x000C0000 // ogl unsupported kthnxbai
 #define V_HUDTRANSHALF       0x000D0000
 #define V_HUDTRANS           0x000E0000 // draw the hud translucent
 #define V_HUDTRANSDOUBLE     0x000F0000
@@ -145,7 +150,7 @@ void V_DrawFlatFill(INT32 x, INT32 y, INT32 w, INT32 h, lumpnum_t flatnum);
 // fade down the screen buffer before drawing the menu over
 void V_DrawFadeScreen(void);
 
-void V_DrawFadeConsBack(INT32 plines, INT32 pcolor);
+void V_DrawFadeConsBack(INT32 plines);
 
 // draw a single character
 void V_DrawCharacter(INT32 x, INT32 y, INT32 c, boolean lowercaseallowed);

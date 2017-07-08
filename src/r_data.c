@@ -22,7 +22,7 @@
 #include "w_wad.h"
 #include "z_zone.h"
 #include "p_setup.h" // levelflats
-#include "v_video.h" // pLocalPalette
+#include "v_video.h" // pMasterPalette
 #include "dehacked.h"
 
 #if defined (_WIN32) || defined (_WIN32_WCE)
@@ -141,11 +141,14 @@ static INT32 tidcachelen = 0;
 // R_DrawColumnInCache
 // Clip and draw a column from a patch into a cached post.
 //
-static inline void R_DrawColumnInCache(column_t *patch, UINT8 *cache, INT32 originy, INT32 cacheheight)
+static inline void R_DrawColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
 {
 	INT32 count, position;
 	UINT8 *source;
 	INT32 topdelta, prevdelta = -1;
+	INT32 originy = originPatch->originy;
+
+	(void)patchheight; // This parameter is unused
 
 	while (patch->topdelta != 0xff)
 	{
@@ -160,6 +163,7 @@ static inline void R_DrawColumnInCache(column_t *patch, UINT8 *cache, INT32 orig
 		if (position < 0)
 		{
 			count += position;
+			source -= position; // start further down the column
 			position = 0;
 		}
 
@@ -168,6 +172,138 @@ static inline void R_DrawColumnInCache(column_t *patch, UINT8 *cache, INT32 orig
 
 		if (count > 0)
 			M_Memcpy(cache + position, source, count);
+
+		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
+	}
+}
+
+//
+// R_DrawFlippedColumnInCache
+// Similar to R_DrawColumnInCache; it draws the column inverted, however.
+//
+static inline void R_DrawFlippedColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
+{
+	INT32 count, position;
+	UINT8 *source, *dest;
+	INT32 topdelta, prevdelta = -1;
+	INT32 originy = originPatch->originy;
+
+	while (patch->topdelta != 0xff)
+	{
+		topdelta = patch->topdelta;
+		if (topdelta <= prevdelta)
+			topdelta += prevdelta;
+		prevdelta = topdelta;
+		topdelta = patchheight-patch->length-topdelta;
+		source = (UINT8 *)patch + 2 + patch->length; // patch + 3 + (patch->length-1)
+		count = patch->length;
+		position = originy + topdelta;
+
+		if (position < 0)
+		{
+			count += position;
+			source += position; // start further UP the column
+			position = 0;
+		}
+
+		if (position + count > cacheheight)
+			count = cacheheight - position;
+
+		dest = cache + position;
+		if (count > 0)
+		{
+			for (; dest < cache + position + count; --source)
+				*dest++ = *source;
+		}
+
+		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
+	}
+}
+
+//
+// R_DrawTransColumnInCache
+// Draws a translucent column into the cache, applying a half-cooked equation to get a proper translucency value (Needs code in R_GenerateTexture()).
+//
+static inline void R_DrawTransColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
+{
+	INT32 count, position;
+	UINT8 *source, *dest;
+	UINT8 *mytransmap = transtables + ((8*(originPatch->alpha) + 255/8)/(255 - 255/11) << FF_TRANSSHIFT); // The equation's not exact but it works as intended. I'll call it a day for now.
+	INT32 topdelta, prevdelta = -1;
+	INT32 originy = originPatch->originy;
+
+	(void)patchheight; // This parameter is unused
+
+	while (patch->topdelta != 0xff)
+	{
+		topdelta = patch->topdelta;
+		if (topdelta <= prevdelta)
+			topdelta += prevdelta;
+		prevdelta = topdelta;
+		source = (UINT8 *)patch + 3;
+		count = patch->length;
+		position = originy + topdelta;
+
+		if (position < 0)
+		{
+			count += position;
+			source -= position; // start further down the column
+			position = 0;
+		}
+
+		if (position + count > cacheheight)
+			count = cacheheight - position;
+
+		dest = cache + position;
+		if (count > 0)
+		{
+			for (; dest < cache + position + count; source++, dest++)
+				if (*dest != 0xFF) *dest = *(mytransmap + ((*dest)<<8) + (*source));
+		}
+
+		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
+	}
+}
+
+//
+// R_DrawTransColumnInCache
+// Similar to the one above except that the column is inverted.
+//
+static inline void R_DrawTransFlippedColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
+{
+	INT32 count, position;
+	UINT8 *source, *dest;
+	UINT8 *mytransmap = transtables + ((8*(originPatch->alpha) + 255/8)/(255 - 255/11) << FF_TRANSSHIFT); // The equation's not exact but it works as intended. I'll call it a day for now.
+	INT32 topdelta, prevdelta = -1;
+	INT32 originy = originPatch->originy;
+
+	while (patch->topdelta != 0xff)
+	{
+		topdelta = patch->topdelta;
+		if (topdelta <= prevdelta)
+			topdelta += prevdelta;
+		prevdelta = topdelta;
+		topdelta = patchheight-patch->length-topdelta;
+		source = (UINT8 *)patch + 2 + patch->length; // patch + 3 + (patch->length-1)
+		count = patch->length;
+		position = originy + topdelta;
+
+		if (position < 0)
+		{
+			count += position;
+			source += position; // start further UP the column
+			position = 0;
+		}
+
+		if (position + count > cacheheight)
+			count = cacheheight - position;
+
+		dest = cache + position;
+		if (count > 0)
+		{
+			for (; dest < cache + position + count; --source, dest++)
+				if (*dest != 0xFF) *dest = *(mytransmap + ((*dest)<<8) + (*source));
+		}
 
 		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
 	}
@@ -191,7 +327,7 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	texture_t *texture;
 	texpatch_t *patch;
 	patch_t *realpatch;
-	int x, x1, x2, i;
+	int x, x1, x2, i, width, height;
 	size_t blocksize;
 	column_t *patchcol;
 	UINT32 *colofs;
@@ -239,6 +375,7 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 		if (holey)
 		{
 			texture->holes = true;
+			texture->flip = patch->flip;
 			blocksize = W_LumpLengthPwad(patch->wad, patch->lump);
 			block = Z_Calloc(blocksize, PU_STATIC, // will change tag at end of this function
 				&texturecache[texnum]);
@@ -249,6 +386,14 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 			colofs = (UINT32 *)(void *)(block + 8);
 			texturecolumnofs[texnum] = colofs;
 			blocktex = block;
+			if (patch->flip & 1) // flip the patch horizontally
+			{
+				UINT32 *realcolofs = (UINT32 *)realpatch->columnofs;
+				for (x = 0; x < texture->width; x++)
+					colofs[x] = realcolofs[texture->width-1-x]; // swap with the offset of the other side of the texture
+			}
+			// we can't as easily flip the patch vertically sadly though,
+			//  we have wait until the texture itself is drawn to do that
 			for (x = 0; x < texture->width; x++)
 				colofs[x] = LONG(LONG(colofs[x]) + 3);
 			goto done;
@@ -259,11 +404,12 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 
 	// multi-patch textures (or 'composite')
 	texture->holes = false;
+	texture->flip = 0;
 	blocksize = (texture->width * 4) + (texture->width * texture->height);
 	texturememory += blocksize;
 	block = Z_Malloc(blocksize+1, PU_STATIC, &texturecache[texnum]);
 
-	memset(block, 0xF7, blocksize+1); // Transparency hack
+	memset(block, 0xFF, blocksize+1); // Transparency hack
 
 	// columns lookup table
 	colofs = (UINT32 *)(void *)block;
@@ -275,9 +421,23 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	// Composite the columns together.
 	for (i = 0, patch = texture->patches; i < texture->patchcount; i++, patch++)
 	{
+		static void (*ColumnDrawerPointer)(column_t *, UINT8 *, texpatch_t *, INT32, INT32); // Column drawing function pointer.
+		if ((patch->style == AST_TRANSLUCENT) && (patch->alpha <= (10*255/11))) // Alpha style set to translucent? Is the alpha small enough for translucency?
+		{
+			if (patch->alpha < 255/11) // Is the patch way too translucent? Don't render then.
+				continue;
+			ColumnDrawerPointer = (patch->flip & 2) ? R_DrawTransFlippedColumnInCache : R_DrawTransColumnInCache;
+		}
+		else
+		{
+			ColumnDrawerPointer = (patch->flip & 2) ? R_DrawFlippedColumnInCache : R_DrawColumnInCache;
+		}
+
 		realpatch = W_CacheLumpNumPwad(patch->wad, patch->lump, PU_CACHE);
 		x1 = patch->originx;
-		x2 = x1 + SHORT(realpatch->width);
+		width = SHORT(realpatch->width);
+		height = SHORT(realpatch->height);
+		x2 = x1 + width;
 
 		if (x1 < 0)
 			x = 0;
@@ -289,11 +449,14 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 
 		for (; x < x2; x++)
 		{
-			patchcol = (column_t *)((UINT8 *)realpatch + LONG(realpatch->columnofs[x-x1]));
+			if (patch->flip & 1)
+				patchcol = (column_t *)((UINT8 *)realpatch + LONG(realpatch->columnofs[(x1+width-1)-x]));
+			else
+				patchcol = (column_t *)((UINT8 *)realpatch + LONG(realpatch->columnofs[x-x1]));
 
 			// generate column ofset lookup
 			colofs[x] = LONG((x * texture->height) + (texture->width*4));
-			R_DrawColumnInCache(patchcol, block + LONG(colofs[x]), patch->originy, texture->height);
+			ColumnDrawerPointer(patchcol, block + LONG(colofs[x]), patch, texture->height, height);
 		}
 	}
 
@@ -301,6 +464,32 @@ done:
 	// Now that the texture has been built in column cache, it is purgable from zone memory.
 	Z_ChangeTag(block, PU_CACHE);
 	return blocktex;
+}
+
+//
+// R_GetTextureNum
+//
+// Returns the actual texture id that we should use.
+// This can either be texnum, the current frame for texnum's anim (if animated),
+// or 0 if not valid.
+//
+INT32 R_GetTextureNum(INT32 texnum)
+{
+	if (texnum < 0 || texnum >= numtextures)
+		return 0;
+	return texturetranslation[texnum];
+}
+
+//
+// R_CheckTextureCache
+//
+// Use this if you need to make sure the texture is cached before R_GetColumn calls
+// e.g.: midtextures and FOF walls
+//
+void R_CheckTextureCache(INT32 tex)
+{
+	if (!texturecache[tex])
+		R_GenerateTexture(tex);
 }
 
 //
@@ -407,11 +596,11 @@ void R_LoadTextures(void)
 	// Allocate texture column offset table.
 	texturecolumnofs = (void *)((UINT8 *)textures + (numtextures * sizeof(void *)));
 	// Allocate texture referencing cache.
-	texturecache     = (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 2));
+	texturecache	 = (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 2));
 	// Allocate texture width mask table.
 	texturewidthmask = (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 3));
 	// Allocate texture height mask table.
-	textureheight    = (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 4));
+	textureheight	= (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 4));
 	// Create translation table for global animation.
 	texturetranslation = Z_Malloc((numtextures + 1) * sizeof(*texturetranslation), PU_STATIC, NULL);
 
@@ -446,40 +635,24 @@ void R_LoadTextures(void)
 			}
 			else
 			{
-				UINT16 patchcount = 1;
 				//CONS_Printf("\n\"%s\" is a single patch, dimensions %d x %d",W_CheckNameForNumPwad((UINT16)w,texstart+j),patchlump->width, patchlump->height);
-				if (SHORT(patchlump->width) == 64
-				&& SHORT(patchlump->height) == 64)
-				{ // 64x64 patch
-					const column_t *column;
-					for (k = 0; k < SHORT(patchlump->width); k++)
-					{ // Find use of transparency.
-						column = (const column_t *)((const UINT8 *)patchlump + LONG(patchlump->columnofs[k]));
-						if (column->length != SHORT(patchlump->height))
-							break;
-					}
-					if (k == SHORT(patchlump->width))
-						patchcount = 2; // No transparency? 64x128 texture.
-				}
-				texture = textures[i] = Z_Calloc(sizeof(texture_t) + (sizeof(texpatch_t) * patchcount), PU_STATIC, NULL);
+				texture = textures[i] = Z_Calloc(sizeof(texture_t) + sizeof(texpatch_t), PU_STATIC, NULL);
 
 				// Set texture properties.
 				M_Memcpy(texture->name, W_CheckNameForNumPwad((UINT16)w, texstart + j), sizeof(texture->name));
 				texture->width = SHORT(patchlump->width);
-				texture->height = SHORT(patchlump->height)*patchcount;
-				texture->patchcount = patchcount;
+				texture->height = SHORT(patchlump->height);
+				texture->patchcount = 1;
 				texture->holes = false;
+				texture->flip = 0;
 
 				// Allocate information for the texture's patches.
-				for (k = 0; k < patchcount; k++)
-				{
-					patch = &texture->patches[k];
+				patch = &texture->patches[0];
 
-					patch->originx = 0;
-					patch->originy = (INT16)(k*patchlump->height);
-					patch->wad = (UINT16)w;
-					patch->lump = texstart + j;
-				}
+				patch->originx = patch->originy = 0;
+				patch->wad = (UINT16)w;
+				patch->lump = texstart + j;
+				patch->flip = 0;
 
 				Z_Unlock(patchlump);
 
@@ -502,6 +675,9 @@ static texpatch_t *R_ParsePatch(boolean actuallyLoadPatch)
 	char *patchName = NULL;
 	INT16 patchXPos;
 	INT16 patchYPos;
+	UINT8 flip = 0;
+	UINT8 alpha = 255;
+	enum patchalphastyle style = AST_COPY;
 	texpatch_t *resultPatch = NULL;
 	lumpnum_t patchLumpNum;
 
@@ -598,6 +774,60 @@ static texpatch_t *R_ParsePatch(boolean actuallyLoadPatch)
 	}
 	Z_Free(texturesToken);
 
+	// Patch parameters block (OPTIONAL)
+	// added by Monster Iestyn (22/10/16)
+
+	// Left Curly Brace
+	texturesToken = M_GetToken(NULL);
+	if (texturesToken == NULL)
+		; // move on and ignore, R_ParseTextures will deal with this
+	else
+	{
+		if (strcmp(texturesToken,"{")==0)
+		{
+			Z_Free(texturesToken);
+			texturesToken = M_GetToken(NULL);
+			if (texturesToken == NULL)
+			{
+				I_Error("Error parsing TEXTURES lump: Unexpected end of file where patch \"%s\"'s parameters should be",patchName);
+			}
+			while (strcmp(texturesToken,"}")!=0)
+			{
+				if (stricmp(texturesToken, "ALPHA")==0)
+				{
+					Z_Free(texturesToken);
+					texturesToken = M_GetToken(NULL);
+					alpha = 255*strtof(texturesToken, NULL);
+				}
+				else if (stricmp(texturesToken, "STYLE")==0)
+				{
+					Z_Free(texturesToken);
+					texturesToken = M_GetToken(NULL);
+					if(stricmp(texturesToken, "TRANSLUCENT")==0)
+						style = AST_TRANSLUCENT;
+				}
+				else if (stricmp(texturesToken, "FLIPX")==0)
+					flip |= 1;
+				else if (stricmp(texturesToken, "FLIPY")==0)
+					flip |= 2;
+				Z_Free(texturesToken);
+
+				texturesToken = M_GetToken(NULL);
+				if (texturesToken == NULL)
+				{
+					I_Error("Error parsing TEXTURES lump: Unexpected end of file where patch \"%s\"'s parameters or right curly brace should be",patchName);
+				}
+			}
+		}
+		else
+		{
+			 // this is not what we wanted...
+			 // undo last read so R_ParseTextures can re-get the token for its own purposes
+			M_UnGetToken();
+		}
+		Z_Free(texturesToken);
+	}
+
 	if (actuallyLoadPatch == true)
 	{
 		// Check lump exists
@@ -608,6 +838,9 @@ static texpatch_t *R_ParsePatch(boolean actuallyLoadPatch)
 		resultPatch->originy = patchYPos;
 		resultPatch->lump = patchLumpNum & 65535;
 		resultPatch->wad = patchLumpNum>>16;
+		resultPatch->flip = flip;
+		resultPatch->alpha = alpha;
+		resultPatch->style = style;
 		// Clean up a little after ourselves
 		Z_Free(patchName);
 		// Then return it
@@ -918,23 +1151,24 @@ static void R_InitExtraColormaps(void)
 	for (cfile = clump = 0; cfile < numwadfiles; cfile++, clump = 0)
 	{
 		startnum = W_CheckNumForNamePwad("C_START", cfile, clump);
-		if (startnum == LUMPERROR)
+		if (startnum == INT16_MAX)
 			continue;
 
 		endnum = W_CheckNumForNamePwad("C_END", cfile, clump);
 
-		if (endnum == LUMPERROR)
+		if (endnum == INT16_MAX)
 			I_Error("R_InitExtraColormaps: C_START without C_END\n");
 
-		if (WADFILENUM(startnum) != WADFILENUM(endnum))
-			I_Error("R_InitExtraColormaps: C_START and C_END in different wad files!\n");
+		// This shouldn't be possible when you use the Pwad function, silly
+		//if (WADFILENUM(startnum) != WADFILENUM(endnum))
+			//I_Error("R_InitExtraColormaps: C_START and C_END in different wad files!\n");
 
 		if (numcolormaplumps >= maxcolormaplumps)
 			maxcolormaplumps *= 2;
 		colormaplumps = Z_Realloc(colormaplumps,
 			sizeof (*colormaplumps) * maxcolormaplumps, PU_STATIC, NULL);
-		colormaplumps[numcolormaplumps].wadfile = WADFILENUM(startnum);
-		colormaplumps[numcolormaplumps].firstlump = LUMPNUM(startnum+1);
+		colormaplumps[numcolormaplumps].wadfile = cfile;
+		colormaplumps[numcolormaplumps].firstlump = startnum+1;
 		colormaplumps[numcolormaplumps].numlumps = endnum - (startnum + 1);
 		numcolormaplumps++;
 	}
@@ -1177,9 +1411,9 @@ INT32 R_CreateColormap(char *p1, char *p2, char *p3)
 	{
 		for (i = 0; i < 256; i++)
 		{
-			r = pLocalPalette[i].s.red;
-			g = pLocalPalette[i].s.green;
-			b = pLocalPalette[i].s.blue;
+			r = pMasterPalette[i].s.red;
+			g = pMasterPalette[i].s.green;
+			b = pMasterPalette[i].s.blue;
 			cbrightness = sqrt((r*r) + (g*g) + (b*b));
 
 			map[i][0] = (cbrightness * cmaskr) + (r * othermask);
@@ -1320,9 +1554,9 @@ void R_CreateColormap2(char *p1, char *p2, char *p3)
 	{
 		for (i = 0; i < 256; i++)
 		{
-			r = pLocalPalette[i].s.red;
-			g = pLocalPalette[i].s.green;
-			b = pLocalPalette[i].s.blue;
+			r = pMasterPalette[i].s.red;
+			g = pMasterPalette[i].s.green;
+			b = pMasterPalette[i].s.blue;
 			cbrightness = sqrt((r*r) + (g*g) + (b*b));
 
 			map[i][0] = (cbrightness * cmaskr) + (r * othermask);
@@ -1402,9 +1636,9 @@ static UINT8 NearestColor(UINT8 r, UINT8 g, UINT8 b)
 
 	for (i = 0; i < 256; i++)
 	{
-		dr = r - pLocalPalette[i].s.red;
-		dg = g - pLocalPalette[i].s.green;
-		db = b - pLocalPalette[i].s.blue;
+		dr = r - pMasterPalette[i].s.red;
+		dg = g - pMasterPalette[i].s.green;
+		db = b - pMasterPalette[i].s.blue;
 		distortion = dr*dr + dg*dg + db*db;
 		if (distortion < bestdistortion)
 		{
@@ -1498,6 +1732,9 @@ void R_InitData(void)
 
 	CONS_Printf("R_LoadTextures()...\n");
 	R_LoadTextures();
+
+	CONS_Printf("P_InitPicAnims()...\n");
+	P_InitPicAnims();
 
 	CONS_Printf("R_InitSprites()...\n");
 	R_InitSpriteLumps();

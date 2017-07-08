@@ -73,6 +73,7 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 #include "dehacked.h" // Dehacked list test
 #include "m_cond.h" // condition initialization
 #include "fastcmp.h"
+#include "keys.h"
 
 #ifdef CMAKECONFIG
 #include "config.h"
@@ -106,8 +107,6 @@ UINT8 window_notinfocus = false;
 //
 // DEMO LOOP
 //
-//static INT32 demosequence;
-static const char *pagename = "MAP1PIC";
 static char *startupwadfiles[MAX_WADFILES];
 
 boolean devparm = false; // started game with -devparm
@@ -176,6 +175,38 @@ void D_PostEvent(const event_t *ev)
 void D_PostEvent_end(void) {};
 #endif
 
+// modifier keys
+UINT8 shiftdown = 0; // 0x1 left, 0x2 right
+UINT8 ctrldown = 0; // 0x1 left, 0x2 right
+UINT8 altdown = 0; // 0x1 left, 0x2 right
+//
+// D_ModifierKeyResponder
+// Sets global shift/ctrl/alt variables, never actually eats events
+//
+static inline void D_ModifierKeyResponder(event_t *ev)
+{
+	if (ev->type == ev_keydown || ev->type == ev_console) switch (ev->data1)
+	{
+		case KEY_LSHIFT: shiftdown |= 0x1; return;
+		case KEY_RSHIFT: shiftdown |= 0x2; return;
+		case KEY_LCTRL: ctrldown |= 0x1; return;
+		case KEY_RCTRL: ctrldown |= 0x2; return;
+		case KEY_LALT: altdown |= 0x1; return;
+		case KEY_RALT: altdown |= 0x2; return;
+		default: return;
+	}
+	else if (ev->type == ev_keyup) switch (ev->data1)
+	{
+		case KEY_LSHIFT: shiftdown &= ~0x1; return;
+		case KEY_RSHIFT: shiftdown &= ~0x2; return;
+		case KEY_LCTRL: ctrldown &= ~0x1; return;
+		case KEY_RCTRL: ctrldown &= ~0x2; return;
+		case KEY_LALT: altdown &= ~0x1; return;
+		case KEY_RALT: altdown &= ~0x2; return;
+		default: return;
+	}
+}
+
 //
 // D_ProcessEvents
 // Send all the events of the given timestamp down the responder chain
@@ -187,6 +218,9 @@ void D_ProcessEvents(void)
 	for (; eventtail != eventhead; eventtail = (eventtail+1) & (MAXEVENTS-1))
 	{
 		ev = &events[eventtail];
+
+		// Set global shift/ctrl/alt down variables
+		D_ModifierKeyResponder(ev); // never eats events
 
 		// Screenshots over everything so that they can be taken anywhere.
 		if (M_ScreenshotResponder(ev))
@@ -684,9 +718,7 @@ void D_StartTitle(void)
 	maptol = 0;
 
 	gameaction = ga_nothing;
-	playerdeadview = false;
 	displayplayer = consoleplayer = 0;
-	//demosequence = -1;
 	gametype = GT_COOP;
 	paused = false;
 	advancedemo = false;
@@ -837,29 +869,24 @@ static void IdentifyVersion(void)
 			I_Error("File %s has been modified with non-music lumps",musicfile);
 	}
 #endif
-}
 
-/* ======================================================================== */
-// Just print the nice red titlebar like the original SRB2 for DOS.
-/* ======================================================================== */
-#ifdef PC_DOS
-static inline void D_Titlebar(char *title1, char *title2)
-{
-	// SRB2 banner
-	clrscr();
-	textattr((BLUE<<4)+WHITE);
-	clreol();
-	cputs(title1);
-
-	// standard srb2 banner
-	textattr((RED<<4)+WHITE);
-	clreol();
-	gotoxy((80-strlen(title2))/2, 2);
-	cputs(title2);
-	normvideo();
-	gotoxy(1,3);
-}
+#if 1 // This section can be deleted when music_new is merged with music.dta
+	{
+		const char *musicfile = "music_new.dta";
+		const char *musicpath = va(pandf,srb2waddir,musicfile);
+		int ms = W_VerifyNMUSlumps(musicpath); // Don't forget the music!
+		if (ms == 1)
+			D_AddFile(musicpath);
+		else if (ms == 0)
+			I_Error("File %s has been modified with non-music lumps",musicfile);
+	}
 #endif
+}
+
+#ifdef PC_DOS
+/* ======================================================================== */
+// Code for printing SRB2's title bar in DOS
+/* ======================================================================== */
 
 //
 // Center the title string, then add the date and time of compilation.
@@ -888,6 +915,31 @@ static inline void D_MakeTitleString(char *s)
 	strcpy(s, temp);
 }
 
+static inline void D_Titlebar(void)
+{
+	char title1[82]; // srb2 title banner
+	char title2[82];
+
+	strcpy(title1, "Sonic Robo Blast 2");
+	strcpy(title2, "Sonic Robo Blast 2");
+
+	D_MakeTitleString(title1);
+
+	// SRB2 banner
+	clrscr();
+	textattr((BLUE<<4)+WHITE);
+	clreol();
+	cputs(title1);
+
+	// standard srb2 banner
+	textattr((RED<<4)+WHITE);
+	clreol();
+	gotoxy((80-strlen(title2))/2, 2);
+	cputs(title2);
+	normvideo();
+	gotoxy(1,3);
+}
+#endif
 
 //
 // D_SRB2Main
@@ -895,8 +947,6 @@ static inline void D_MakeTitleString(char *s)
 void D_SRB2Main(void)
 {
 	INT32 p;
-	char srb2[82]; // srb2 title banner
-	char title[82];
 
 	INT32 pstartmap = 1;
 	boolean autostart = false;
@@ -939,20 +989,8 @@ void D_SRB2Main(void)
 	dedicated = M_CheckParm("-dedicated") != 0;
 #endif
 
-	strcpy(title, "Sonic Robo Blast 2");
-	strcpy(srb2, "Sonic Robo Blast 2");
-	D_MakeTitleString(srb2);
-
 #ifdef PC_DOS
-	D_Titlebar(srb2, title);
-#endif
-
-#if defined (__OS2__) && !defined (HAVE_SDL)
-	// set PM window title
-	snprintf(pmData->title, sizeof (pmData->title),
-		"Sonic Robo Blast 2" VERSIONSTRING ": %s",
-		title);
-	pmData->title[sizeof (pmData->title) - 1] = '\0';
+	D_Titlebar();
 #endif
 
 	if (devparm)
@@ -1352,7 +1390,6 @@ void D_SRB2Main(void)
 
 	if (dedicated && server)
 	{
-		pagename = "TITLESKY";
 		levelstarttic = gametic;
 		G_SetGamestate(GS_LEVEL);
 		if (!P_SetupLevel(false))
