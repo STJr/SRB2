@@ -344,6 +344,7 @@ static int libd_cachePatch(lua_State *L)
 	return 1;
 }
 
+// v.getSpritePatch(sprite, [frame, [angle]])
 static int libd_getSpritePatch(lua_State *L)
 {
 	UINT32 i; // sprite prefix
@@ -393,6 +394,7 @@ static int libd_getSpritePatch(lua_State *L)
 	return 2;
 }
 
+// v.getSprite2Patch(skin, sprite, [super?,] [frame, [angle]])
 static int libd_getSprite2Patch(lua_State *L)
 {
 	INT32 i; // skin number
@@ -401,6 +403,7 @@ static int libd_getSprite2Patch(lua_State *L)
 	UINT8 angle = 0;
 	spritedef_t *sprdef;
 	spriteframe_t *sprframe;
+	boolean super = false; // add FF_SPR2SUPER to sprite2 if true
 	HUDONLY
 
 	// get skin first!
@@ -427,6 +430,11 @@ static int libd_getSprite2Patch(lua_State *L)
 	if (lua_isnumber(L, 1)) // sprite number given, e.g. SPR2_STND
 	{
 		j = lua_tonumber(L, 1);
+		if (j & FF_SPR2SUPER) // e.g. SPR2_STND|FF_SPR2SUPER
+		{
+			super = true;
+			j &= ~FF_SPR2SUPER; // remove flag so the next check doesn't fail
+		}
 		if (j >= free_spr2)
 			return 0;
 	}
@@ -436,11 +444,22 @@ static int libd_getSprite2Patch(lua_State *L)
 		for (j = 0; j < free_spr2; j++)
 			if (fastcmp(name, spr2names[j]))
 				break;
+		// if you want super flags you'll have to use the optional boolean following this
 		if (j >= free_spr2)
 			return 0;
 	}
 	else
 		return 0;
+
+	if (lua_isboolean(L, 2)) // optional boolean for superness
+	{
+		super = lua_toboolean(L, 2); // note: this can override FF_SPR2SUPER from sprite number
+		lua_remove(L, 2); // remove
+	}
+	// if it's not boolean then just assume it's the frame number
+
+	if (super)
+		j |= FF_SPR2SUPER;
 
 	sprdef = &skins[i].sprites[j];
 
