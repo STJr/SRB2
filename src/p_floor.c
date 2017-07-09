@@ -2113,6 +2113,7 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 	boolean inAndOut = false;
 	boolean floortouch = false;
 	fixed_t bottomheight, topheight;
+	msecnode_t *node;
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
@@ -2174,7 +2175,23 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 					if ((netgame || multiplayer) && players[j].spectator)
 						continue;
 
-					if (players[j].mo->subsector->sector != targetsec)
+					if (players[j].mo->subsector->sector == targetsec)
+						;
+					else if (sec->flags & SF_TRIGGERSPECIAL_TOUCH)
+					{
+						boolean insector = false;
+						for (node = players[j].mo->touching_sectorlist; node; node = node->m_sectorlist_next)
+						{
+							if (node->m_sector == targetsec)
+							{
+								insector = true;
+								break;
+							}
+						}
+						if (!insector)
+							continue;
+					}
+					else
 						continue;
 
 					topheight = P_GetSpecialTopZ(players[j].mo, sec, targetsec);
@@ -2224,7 +2241,27 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 				if ((netgame || multiplayer) && players[i].spectator)
 					continue;
 
-				if (players[i].mo->subsector->sector != sec)
+				if (players[i].mo->subsector->sector == sec)
+					;
+				else if (sec->flags & SF_TRIGGERSPECIAL_TOUCH)
+				{
+					boolean insector = false;
+					for (node = players[i].mo->touching_sectorlist; node; node = node->m_sectorlist_next)
+					{
+						if (node->m_sector == sec)
+						{
+							insector = true;
+							break;
+						}
+					}
+					if (!insector)
+						continue;
+				}
+				else
+					continue;
+
+				if (!(players[i].mo->subsector->sector == sec
+					|| P_PlayerTouchingSectorSpecial(&players[i], 2, (GETSECSPECIAL(sec->special, 2))) == sec))
 					continue;
 
 				if (floortouch == true && P_IsObjectOnGroundIn(players[i].mo, sec))
