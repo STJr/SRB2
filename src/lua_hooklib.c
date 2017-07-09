@@ -57,6 +57,7 @@ const char *const hookNames[hook_MAX+1] = {
 	"ShieldSpawn",
 	"ShieldSpecial",
 	"MobjMoveBlocked",
+	"MapThingSpawn",
 	NULL
 };
 
@@ -128,6 +129,7 @@ static int lib_addHook(lua_State *L)
 	case hook_MobjRemoved:
 	case hook_HurtMsg:
 	case hook_MobjMoveBlocked:
+	case hook_MapThingSpawn:
 		hook.s.mt = MT_NULL;
 		if (lua_isnumber(L, 2))
 			hook.s.mt = lua_tonumber(L, 2);
@@ -187,6 +189,7 @@ static int lib_addHook(lua_State *L)
 	case hook_BossDeath:
 	case hook_MobjRemoved:
 	case hook_MobjMoveBlocked:
+	case hook_MapThingSpawn:
 		lastp = &mobjhooks[hook.s.mt];
 		break;
 	case hook_JumpSpecial:
@@ -1071,6 +1074,68 @@ void LUAh_NetArchiveHook(lua_CFunction archFunc)
 
 	lua_pop(gL, 1); // pop archFunc
 	// stack: tables
+}
+
+boolean LUAh_MapThingSpawn(mobj_t *mo, mapthing_t *mthing)
+{
+	hook_p hookp;
+	boolean hooked = false;
+	if (!gL || !(hooksAvailable[hook_MapThingSpawn/8] & (1<<(hook_MapThingSpawn%8))))
+		return false;
+
+	lua_settop(gL, 0);
+
+	// Look for all generic mobj map thing spawn hooks
+	for (hookp = mobjhooks[MT_NULL]; hookp; hookp = hookp->next)
+		if (hookp->type == hook_MapThingSpawn)
+		{
+			if (lua_gettop(gL) == 0)
+			{
+				LUA_PushUserdata(gL, mo, META_MOBJ);
+				LUA_PushUserdata(gL, mthing, META_MAPTHING);
+			}
+			lua_pushfstring(gL, FMT_HOOKID, hookp->id);
+			lua_gettable(gL, LUA_REGISTRYINDEX);
+			lua_pushvalue(gL, -3);
+			lua_pushvalue(gL, -3);
+			if (lua_pcall(gL, 2, 1, 0)) {
+				if (!hookp->error || cv_debug & DBG_LUA)
+					CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+				lua_pop(gL, 1);
+				hookp->error = true;
+				continue;
+			}
+			if (lua_toboolean(gL, -1))
+				hooked = true;
+			lua_pop(gL, 1);
+		}
+
+	for (hookp = mobjhooks[mo->type]; hookp; hookp = hookp->next)
+		if (hookp->type == hook_MapThingSpawn)
+		{
+			if (lua_gettop(gL) == 0)
+			{
+				LUA_PushUserdata(gL, mo, META_MOBJ);
+				LUA_PushUserdata(gL, mthing, META_MAPTHING);
+			}
+			lua_pushfstring(gL, FMT_HOOKID, hookp->id);
+			lua_gettable(gL, LUA_REGISTRYINDEX);
+			lua_pushvalue(gL, -3);
+			lua_pushvalue(gL, -3);
+			if (lua_pcall(gL, 2, 1, 0)) {
+				if (!hookp->error || cv_debug & DBG_LUA)
+					CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+				lua_pop(gL, 1);
+				hookp->error = true;
+				continue;
+			}
+			if (lua_toboolean(gL, -1))
+				hooked = true;
+			lua_pop(gL, 1);
+		}
+
+	lua_settop(gL, 0);
+	return hooked;
 }
 
 #endif

@@ -1117,6 +1117,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		if (iwassprung) // this spring caused you to gain MFE_SPRUNG just now...
 			return false; // "cancel" P_TryMove via blocking so you keep your current position
 	}
+	else if (tmthing->flags & MF_SPRING && (thing->player || thing->flags & MF_PUSHABLE))
+		; // Fix a few nasty spring-jumping bugs that happen sometimes.
 	// Monitors are not treated as solid to players who are jumping, spinning or gliding,
 	// unless it's a CTF team monitor and you're on the wrong team
 	else if (thing->flags & MF_MONITOR && tmthing->player
@@ -1155,11 +1157,13 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 			topz = thing->z - thing->scale; // FixedMul(FRACUNIT, thing->scale), but thing->scale == FRACUNIT in base scale anyways
 
+			if (thing->flags & MF_SPRING)
+				;
 			// block only when jumping not high enough,
 			// (dont climb max. 24units while already in air)
 			// since return false doesn't handle momentum properly,
 			// we lie to P_TryMove() so it's always too high
-			if (tmthing->player && tmthing->z + tmthing->height > topz
+			else if (tmthing->player && tmthing->z + tmthing->height > topz
 				&& tmthing->z + tmthing->height < tmthing->ceilingz)
 			{
 				if (thing->flags & MF_GRENADEBOUNCE && (thing->flags & MF_MONITOR || thing->flags2 & MF2_STANDONME)) // Gold monitor hack...
@@ -1171,8 +1175,6 @@ static boolean PIT_CheckThing(mobj_t *thing)
 #endif
 				tmfloorthing = thing; // needed for side collision
 			}
-			else if (thing->flags & MF_SPRING)
-				;
 			else if (topz < tmceilingz && tmthing->z <= thing->z+thing->height)
 			{
 				tmceilingz = topz;
@@ -1201,11 +1203,13 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 			topz = thing->z + thing->height + thing->scale; // FixedMul(FRACUNIT, thing->scale), but thing->scale == FRACUNIT in base scale anyways
 
+			if (thing->flags & MF_SPRING)
+				;
 			// block only when jumping not high enough,
 			// (dont climb max. 24units while already in air)
 			// since return false doesn't handle momentum properly,
 			// we lie to P_TryMove() so it's always too high
-			if (tmthing->player && tmthing->z < topz
+			else if (tmthing->player && tmthing->z < topz
 				&& tmthing->z > tmthing->floorz)
 			{
 				if (thing->flags & MF_GRENADEBOUNCE && (thing->flags & MF_MONITOR || thing->flags2 & MF2_STANDONME)) // Gold monitor hack...
@@ -1217,8 +1221,6 @@ static boolean PIT_CheckThing(mobj_t *thing)
 #endif
 				tmfloorthing = thing; // needed for side collision
 			}
-			else if (thing->flags & MF_SPRING)
-				;
 			else if (topz > tmfloorz && tmthing->z+tmthing->height >= thing->z)
 			{
 				tmfloorz = topz;
