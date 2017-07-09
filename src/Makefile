@@ -511,12 +511,10 @@ OBJS:=$(i_main_o) \
 # For reference, this is the command I use to build a srb2.pot file from the source code.
 # (The listed source files are the ones containing translated strings).
 # FILES=""; for file in `find ./ | grep "\.c" | grep -v svn`; do [ "`grep "M_GetText(" $file`" ] && FILES="$FILES $file"; done; xgettext -d srb2 -o locale/srb2.pot -kM_GetText -F --no-wrap $FILES
-ifndef NOGETTEXT
 ifdef GETTEXT
 POS:=$(BIN)/en.mo
 
 OPTS+=-DGETTEXT
-endif
 endif
 
 ifdef DJGPPDOS

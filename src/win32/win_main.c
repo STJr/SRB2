@@ -470,7 +470,7 @@ static inline BOOL tlErrorMessage(const TCHAR *err)
 	//
 	// warn user if there is one
 	//
-	printf("Error %Ts..\n", err);
+	printf("Error %s..\n", err);
 	fflush(stdout);
 
 	MessageBox(hWndMain, err, TEXT("ERROR"), MB_OK);

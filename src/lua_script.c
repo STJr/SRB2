@@ -603,14 +603,14 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 		{
 			mobjinfo_t *info = *((mobjinfo_t **)lua_touserdata(gL, myindex));
 			WRITEUINT8(save_p, ARCH_MOBJINFO);
-			WRITEUINT8(save_p, info - mobjinfo);
+			WRITEUINT16(save_p, info - mobjinfo);
 			break;
 		}
 		case ARCH_STATE:
 		{
 			state_t *state = *((state_t **)lua_touserdata(gL, myindex));
 			WRITEUINT8(save_p, ARCH_STATE);
-			WRITEUINT8(save_p, state - states);
+			WRITEUINT16(save_p, state - states);
 			break;
 		}
 		case ARCH_MOBJ:

@@ -713,6 +713,13 @@ void Net_CloseConnection(INT32 node)
 #else
 	INT32 i;
 	boolean forceclose = (node & FORCECLOSE) != 0;
+
+	if (node == -1)
+	{
+		DEBFILE(M_GetText("Net_CloseConnection: node -1 detected!\n"));
+		return; // nope, just ignore it
+	}
+
 	node &= ~FORCECLOSE;
 
 	if (!node)
@@ -720,7 +727,7 @@ void Net_CloseConnection(INT32 node)
 
 	if (node < 0 || node >= MAXNETNODES) // prevent invalid nodes from crashing the game
 	{
-		CONS_Alert(CONS_WARNING, M_GetText("Net_CloseConnection: invalid node %d detected!\n"), node);
+		DEBFILE(va(M_GetText("Net_CloseConnection: invalid node %d detected!\n"), node));
 		return;
 	}
 
