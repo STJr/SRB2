@@ -8460,6 +8460,9 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 		case MT_SPIKE:
 			mobj->flags2 |= MF2_STANDONME;
 			break;
+		case MT_GFZTREE:
+		case MT_GFZBERRYTREE:
+		case MT_GFZCHERRYTREE:
 		case MT_LAMPPOST1:
 		case MT_LAMPPOST2:
 			mobj->flags2 |= MF2_STANDONME;

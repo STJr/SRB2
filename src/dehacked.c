@@ -4863,12 +4863,25 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_DEMONFIRE5",
 	"S_DEMONFIRE6",
 
+	// GFZ flowers
 	"S_GFZFLOWERA",
 	"S_GFZFLOWERB",
 	"S_GFZFLOWERC",
 
 	"S_BERRYBUSH",
 	"S_BUSH",
+
+	// Trees (both GFZ and misc)
+	"S_GFZTREE",
+	"S_GFZBERRYTREE",
+	"S_GFZCHERRYTREE",
+	"S_CHECKERTREE",
+	"S_CHECKERSUNSETTREE",
+	"S_FHZTREE", // Frozen Hillside
+	"S_FHZPINKTREE",
+	"S_POLYGONTREE",
+	"S_BUSHTREE",
+	"S_BUSHREDTREE",
 
 	// THZ Plant
 	"S_THZFLOWERA",
@@ -6247,6 +6260,17 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_GFZFLOWER3",
 	"MT_BERRYBUSH",
 	"MT_BUSH",
+	// Trees (both GFZ and misc)
+	"MT_GFZTREE",
+	"MT_GFZBERRYTREE",
+	"MT_GFZCHERRYTREE",
+	"MT_CHECKERTREE",
+	"MT_CHECKERSUNSETTREE",
+	"MT_FHZTREE", // Frozen Hillside
+	"MT_FHZPINKTREE",
+	"MT_POLYGONTREE",
+	"MT_BUSHTREE",
+	"MT_BUSHREDTREE",
 
 	// Techno Hill Scenery
 	"MT_THZFLOWER1",
