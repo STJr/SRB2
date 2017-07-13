@@ -7373,6 +7373,22 @@ void P_MobjThinker(mobj_t *mobj)
 		}
 	else switch (mobj->type)
 	{
+		case MT_WALLSPIKEBASE:
+			if (!mobj->target) {
+				P_RemoveMobj(mobj);
+				return;
+			}
+			mobj->frame = (mobj->frame & ~FF_FRAMEMASK)|(mobj->target->frame & FF_FRAMEMASK);
+			if (mobj->angle != mobj->target->angle + ANGLE_90) // reposition if not the correct angle
+			{
+				mobj_t *target = mobj->target;
+				P_UnsetThingPosition(mobj);
+				mobj->x = target->x - P_ReturnThrustX(target, target->angle, target->radius/2 - FixedMul(FRACUNIT, target->scale));
+				mobj->y = target->y - P_ReturnThrustY(target, target->angle, target->radius/2 - FixedMul(FRACUNIT, target->scale));
+				P_SetThingPosition(mobj);
+				mobj->angle = target->angle + ANGLE_90;
+			}
+			break;
 		case MT_FALLINGROCK:
 			// Despawn rocks here in case zmovement code can't do so (blame slopes)
 			if (!mobj->momx && !mobj->momy && !mobj->momz
@@ -8066,6 +8082,10 @@ for (i = ((mobj->flags2 & MF2_STRONGBOX) ? strongboxamt : weakboxamt); i; --i) s
 					if (mobj->spawnpoint)
 						mobj->fuse += mobj->spawnpoint->angle;
 					break;
+				case MT_WALLSPIKE:
+					P_SetMobjState(mobj, mobj->state->nextstate);
+					mobj->fuse = mobj->info->speed;
+					break;
 				case MT_NIGHTSCORE:
 					P_RemoveMobj(mobj);
 					return;
@@ -8457,6 +8477,18 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			// Collision helper can be stood on but not pushed
 			mobj->flags2 |= MF2_STANDONME;
 			break;
+		case MT_WALLSPIKE:
+			{
+				mobj_t *base = P_SpawnMobj(
+						mobj->x - P_ReturnThrustX(mobj, mobj->angle, mobj->radius/2 - FixedMul(FRACUNIT, mobj->scale)),
+						mobj->y - P_ReturnThrustY(mobj, mobj->angle, mobj->radius/2 - FixedMul(FRACUNIT, mobj->scale)),
+						mobj->z, MT_WALLSPIKEBASE);
+				base->angle = mobj->angle + ANGLE_90;
+				P_SetScale(base, mobj->scale);
+				P_SetTarget(&base->target, mobj);
+				P_SetTarget(&mobj->tracer, base);
+			}
+			// fall through to give standonme flag
 		case MT_SPIKE:
 			mobj->flags2 |= MF2_STANDONME;
 			break;
@@ -10118,6 +10150,23 @@ ML_NOCLIMB : Direction not controllable
 		{
 			P_UnsetThingPosition(mobj);
 			mobj->flags &= ~(MF_NOBLOCKMAP|MF_NOGRAVITY|MF_NOCLIPHEIGHT);
+			mobj->flags |= MF_SOLID;
+			P_SetThingPosition(mobj);
+		}
+	}
+	else if (i == MT_WALLSPIKE)
+	{
+		// Pop up spikes!
+		if (mthing->options & MTF_OBJECTSPECIAL)
+		{
+			mobj->flags &= ~MF_SCENERY;
+			mobj->fuse = mobj->info->speed;
+		}
+		// Use per-thing collision for spikes if the deaf flag is checked.
+		if (mthing->options & MTF_AMBUSH && !metalrecording)
+		{
+			P_UnsetThingPosition(mobj);
+			mobj->flags &= ~(MF_NOBLOCKMAP|MF_NOCLIPHEIGHT);
 			mobj->flags |= MF_SOLID;
 			P_SetThingPosition(mobj);
 		}
