@@ -4677,6 +4677,15 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SPIKED1",
 	"S_SPIKED2",
 
+	// Wall spikes
+	"S_WALLSPIKE1",
+	"S_WALLSPIKE2",
+	"S_WALLSPIKE3",
+	"S_WALLSPIKE4",
+	"S_WALLSPIKE5",
+	"S_WALLSPIKE6",
+	"S_WALLSPIKEBASE",
+
 	// Starpost
 	"S_STARPOST_IDLE",
 	"S_STARPOST_FLASH",
@@ -6170,6 +6179,8 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_SPECIALSPIKEBALL",
 	"MT_SPINFIRE",
 	"MT_SPIKE",
+	"MT_WALLSPIKE",
+	"MT_WALLSPIKEBASE",
 	"MT_STARPOST",
 	"MT_BIGMINE",
 	"MT_BIGAIRMINE",

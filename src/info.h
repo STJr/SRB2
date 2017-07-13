@@ -337,6 +337,8 @@ typedef enum sprite
 	SPR_SPIK, // Spike Ball
 	SPR_SFLM, // Spin fire
 	SPR_USPK, // Floor spike
+	SPR_WSPK, // Wall spike
+	SPR_WSPB, // Wall spike base
 	SPR_STPT, // Starpost
 	SPR_BMNE, // Big floating mine
 
@@ -1778,6 +1780,15 @@ typedef enum state
 	S_SPIKE6,
 	S_SPIKED1,
 	S_SPIKED2,
+
+	// Wall spikes
+	S_WALLSPIKE1,
+	S_WALLSPIKE2,
+	S_WALLSPIKE3,
+	S_WALLSPIKE4,
+	S_WALLSPIKE5,
+	S_WALLSPIKE6,
+	S_WALLSPIKEBASE,
 
 	// Starpost
 	S_STARPOST_IDLE,
@@ -3293,6 +3304,8 @@ typedef enum mobj_type
 	MT_SPECIALSPIKEBALL,
 	MT_SPINFIRE,
 	MT_SPIKE,
+	MT_WALLSPIKE,
+	MT_WALLSPIKEBASE,
 	MT_STARPOST,
 	MT_BIGMINE,
 	MT_BIGAIRMINE,
