@@ -7381,10 +7381,11 @@ void P_MobjThinker(mobj_t *mobj)
 			mobj->frame = (mobj->frame & ~FF_FRAMEMASK)|(mobj->target->frame & FF_FRAMEMASK);
 			if (mobj->angle != mobj->target->angle + ANGLE_90) // reposition if not the correct angle
 			{
-				mobj_t *target = mobj->target;
+				mobj_t *target = mobj->target; // shortcut
+				const fixed_t baseradius = target->radius/2 - FixedMul(FRACUNIT, target->scale);
 				P_UnsetThingPosition(mobj);
-				mobj->x = target->x - P_ReturnThrustX(target, target->angle, target->radius/2 - FixedMul(FRACUNIT, target->scale));
-				mobj->y = target->y - P_ReturnThrustY(target, target->angle, target->radius/2 - FixedMul(FRACUNIT, target->scale));
+				mobj->x = target->x - P_ReturnThrustX(target, target->angle, baseradius);
+				mobj->y = target->y - P_ReturnThrustY(target, target->angle, baseradius);
 				P_SetThingPosition(mobj);
 				mobj->angle = target->angle + ANGLE_90;
 			}
@@ -8478,18 +8479,6 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			mobj->flags2 |= MF2_STANDONME;
 			break;
 		case MT_WALLSPIKE:
-			{
-				mobj_t *base = P_SpawnMobj(
-						mobj->x - P_ReturnThrustX(mobj, mobj->angle, mobj->radius/2 - FixedMul(FRACUNIT, mobj->scale)),
-						mobj->y - P_ReturnThrustY(mobj, mobj->angle, mobj->radius/2 - FixedMul(FRACUNIT, mobj->scale)),
-						mobj->z, MT_WALLSPIKEBASE);
-				base->angle = mobj->angle + ANGLE_90;
-				base->destscale = mobj->destscale;
-				P_SetScale(base, mobj->scale);
-				P_SetTarget(&base->target, mobj);
-				P_SetTarget(&mobj->tracer, base);
-			}
-			// fall through to give standonme flag
 		case MT_SPIKE:
 			mobj->flags2 |= MF2_STANDONME;
 			break;
@@ -10170,6 +10159,21 @@ ML_NOCLIMB : Direction not controllable
 			mobj->flags &= ~(MF_NOBLOCKMAP|MF_NOCLIPHEIGHT);
 			mobj->flags |= MF_SOLID;
 			P_SetThingPosition(mobj);
+		}
+
+		// spawn base
+		{
+			const angle_t mobjangle = FixedAngle(mthing->angle*FRACUNIT); // the mobj's own angle hasn't been set quite yet so...
+			const fixed_t baseradius = mobj->radius/2 - FixedMul(FRACUNIT, mobj->scale);
+			mobj_t *base = P_SpawnMobj(
+					mobj->x - P_ReturnThrustX(mobj, mobjangle, baseradius),
+					mobj->y - P_ReturnThrustY(mobj, mobjangle, baseradius),
+					mobj->z, MT_WALLSPIKEBASE);
+			base->angle = mobjangle + ANGLE_90;
+			base->destscale = mobj->destscale;
+			P_SetScale(base, mobj->scale);
+			P_SetTarget(&base->target, mobj);
+			P_SetTarget(&mobj->tracer, base);
 		}
 	}
 
