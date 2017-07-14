@@ -969,7 +969,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		else
 			topz += FixedMul(FRACUNIT, tmthing->scale);
 
-		if (thing->z + thing->height >= bottomz // above bottom
+		if (thing->z + thing->height > bottomz // above bottom
 		&&  thing->z < topz) // below top
 		{ // don't check angle, the player was clearly in the way in this case
 			P_DamageMobj(thing, tmthing, tmthing, 1, DMG_SPIKE);
@@ -985,7 +985,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		else
 			topz += FixedMul(FRACUNIT, thing->scale);
 
-		if (tmthing->z + tmthing->height >= bottomz // above bottom
+		if (tmthing->z + tmthing->height > bottomz // above bottom
 		&&  tmthing->z < topz // below top
 		&& !P_MobjWasRemoved(thing->tracer)) // this probably wouldn't work if we didn't have a tracer
 		{ // use base as a reference point to determine what angle you touched the spike at

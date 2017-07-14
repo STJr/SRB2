@@ -8484,6 +8484,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 						mobj->y - P_ReturnThrustY(mobj, mobj->angle, mobj->radius/2 - FixedMul(FRACUNIT, mobj->scale)),
 						mobj->z, MT_WALLSPIKEBASE);
 				base->angle = mobj->angle + ANGLE_90;
+				base->destscale = mobj->destscale;
 				P_SetScale(base, mobj->scale);
 				P_SetTarget(&base->target, mobj);
 				P_SetTarget(&mobj->tracer, base);
