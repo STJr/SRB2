@@ -367,7 +367,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"s3k8d",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
   {"s3k8e",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, ""},
   {"s3k8f",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Opening"},
-  {"s3k90",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Closing"},
+  {"s3k90",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Impact"},
   {"s3k91",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Closed"},
   {"s3k92",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Ghost"},
   {"s3k93",  false,  64,  0, -1, NULL, 0,        -1,  -1, LUMPERROR, "Rebuilding"},
