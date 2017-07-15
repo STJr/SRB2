@@ -8146,12 +8146,12 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // deathsound
 		0,              // speed
 		20*FRACUNIT,    // radius
-		90*FRACUNIT,    // height
+		128*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_SOLID, // flags
+		MF_SOLID|MF_SCENERY, // flags
 		S_NULL          // raisestate
 	},
 
@@ -8173,12 +8173,12 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // deathsound
 		0,              // speed
 		20*FRACUNIT,    // radius
-		90*FRACUNIT,    // height
+		128*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_SOLID, // flags
+		MF_SOLID|MF_SCENERY, // flags
 		S_NULL          // raisestate
 	},
 
@@ -8200,12 +8200,12 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // deathsound
 		0,              // speed
 		20*FRACUNIT,    // radius
-		90*FRACUNIT,    // height
+		128*FRACUNIT,    // height
 		0,              // display offset
 		100,            // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_SOLID, // flags
+		MF_SOLID|MF_SCENERY, // flags
 		S_NULL          // raisestate
 	},
 
