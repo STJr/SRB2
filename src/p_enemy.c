@@ -8035,7 +8035,7 @@ void A_BossJetFume(mobj_t *actor)
 
 // Function: A_RandomState
 //
-// Description: Chooses one of either two or three state numbers supplied randomly.
+// Description: Chooses one of the two state numbers supplied randomly.
 //
 // nextstate = state number 0
 // var1 = state number 1
@@ -8045,25 +8045,12 @@ void A_RandomState(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
-	UINT8 rand;
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_RandomState", actor))
 		return;
 #endif
 
-	rand = (var2 ? P_RandomKey(3) : P_RandomKey(2));
-	switch (rand)
-	{
-		case 0:
-			P_SetMobjState(actor, actor->state->nextstate);
-			return;
-		case 1:
-			P_SetMobjState(actor, locvar1);
-			return;
-		case 2:
-			P_SetMobjState(actor, locvar2);
-			return;
-	}
+	P_SetMobjState(actor, P_RandomChance(FRACUNIT/2) ? locvar1 : locvar2);
 }
 
 // Function: A_RandomStateRange
