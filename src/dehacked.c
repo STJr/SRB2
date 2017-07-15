@@ -1917,7 +1917,7 @@ static actionpointer_t actionpointers[] =
 	{{A_FlickyHeightCheck},    "A_FLICKYHEIGHTCHECK"},
 	{{A_FlickyFlutter},        "A_FLICKYFLUTTER"},
 	{{A_FlameParticle},        "A_FLAMEPARTICLE"},
-	{{A_Boss5Jump},       		"A_BOSS5JUMP"},
+	{{A_Boss5Jump},            "A_BOSS5JUMP"},
 
 	{{NULL},                   "NONE"},
 
