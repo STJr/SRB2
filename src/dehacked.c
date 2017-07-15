@@ -4522,11 +4522,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_TEAMRING",
 
 	// Special Stage Token
-	"S_EMMY",
-
-	// Special Stage Token
 	"S_TOKEN",
-	"S_MOVINGTOKEN",
 
 	// CTF Flags
 	"S_REDFLAG",
@@ -6144,8 +6140,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_BLUEBALL",  // Blue sphere replacement for special stages
 	"MT_REDTEAMRING",  //Rings collectable by red team.
 	"MT_BLUETEAMRING", //Rings collectable by blue team.
-	"MT_EMMY", // emerald token for special stage
-	"MT_TOKEN", // Special Stage Token (uncollectible part)
+	"MT_TOKEN", // Special Stage Token
 	"MT_REDFLAG", // Red CTF Flag
 	"MT_BLUEFLAG", // Blue CTF Flag
 	"MT_EMBLEM",

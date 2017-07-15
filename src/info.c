@@ -114,7 +114,6 @@ char sprnames[NUMSPRITES + 1][5] =
 	// Collectible Items
 	"RING",
 	"TRNG", // Team Rings
-	"EMMY", // emerald test
 	"TOKE", // Special Stage Token
 	"RFLG", // Red CTF Flag
 	"BFLG", // Blue CTF Flag
@@ -1417,14 +1416,10 @@ state_t states[NUMSTATES] =
 	{SPR_GWLR, 2, 1, {NULL}, 0, 0, S_GRAVWELLRED},    // S_GRAVWELLRED3
 
 	// Individual Team Rings (now with shield attracting action! =P)
-	{SPR_TRNG, FF_ANIMATE|FF_GLOBALANIM, -1, {NULL}, 23, 1, S_TEAMRING},  // S_TEAMRING1
+	{SPR_TRNG, FF_ANIMATE|FF_GLOBALANIM, -1, {NULL}, 23, 1, S_TEAMRING},  // S_TEAMRING
 
 	// Special Stage Token
-	{SPR_EMMY, FF_ANIMATE|FF_FULLBRIGHT, -1, {NULL}, 6, 2, S_EMMY}, // S_EMMY
-
-	// Special Stage Token
-	{SPR_TOKE, FF_TRANS50|FF_FULLBRIGHT, -1, {NULL}, 0, 0, S_NULL}, // S_TOKEN
-	{SPR_TOKE, FF_TRANS50|FF_FULLBRIGHT,  1, {A_CapeChase}, 0, 0, S_MOVINGTOKEN}, // S_MOVINGTOKEN
+	{SPR_TOKE, FF_ANIMATE|FF_FULLBRIGHT, -1, {NULL}, 19, 1, S_TOKEN}, // S_TOKEN
 
 	// CTF Flags
 	{SPR_RFLG, 0, -1, {NULL}, 0, 0, S_NULL}, // S_REDFLAG
@@ -5191,9 +5186,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
-	{           // MT_EMMY
+	{           // MT_TOKEN
 		312,            // doomednum
-		S_EMMY,         // spawnstate
+		S_TOKEN,         // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -5215,33 +5210,6 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		1,              // damage
 		sfx_None,       // activesound
 		MF_SPECIAL|MF_NOGRAVITY|MF_NOCLIPHEIGHT, // flags
-		S_NULL          // raisestate
-	},
-
-	{           // MT_TOKEN
-		-1,             // doomednum
-		S_TOKEN,        // spawnstate
-		1000,           // spawnhealth
-		S_MOVINGTOKEN,  // seestate
-		sfx_None,       // seesound
-		8,              // reactiontime
-		sfx_None,       // attacksound
-		S_NULL,         // painstate
-		0,              // painchance
-		sfx_None,       // painsound
-		S_NULL,         // meleestate
-		S_NULL,         // missilestate
-		S_NULL,         // deathstate
-		S_NULL,         // xdeathstate
-		sfx_None,       // deathsound
-		8,              // speed
-		8*FRACUNIT,     // radius
-		16*FRACUNIT,    // height
-		0,              // display offset
-		100,            // mass
-		0,              // damage
-		sfx_None,       // activesound
-		MF_NOGRAVITY|MF_NOBLOCKMAP|MF_NOCLIP, // flags
 		S_NULL          // raisestate
 	},
 

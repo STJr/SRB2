@@ -9503,7 +9503,7 @@ void P_SpawnMapThing(mapthing_t *mthing)
 	}
 
 	if (metalrecording) // Metal Sonic can't use these things.
-		if (mobjinfo[i].flags & (MF_ENEMY|MF_BOSS) || i == MT_EMMY || i == MT_STARPOST)
+		if (mobjinfo[i].flags & (MF_ENEMY|MF_BOSS) || i == MT_TOKEN || i == MT_STARPOST)
 			return;
 
 	if (i >= MT_EMERALD1 && i <= MT_EMERALD7) // Pickupable Emeralds
@@ -9617,7 +9617,7 @@ void P_SpawnMapThing(mapthing_t *mthing)
 			return;
 
 		// Emerald Tokens -->> Score Tokens
-		else if (i == MT_EMMY)
+		else if (i == MT_TOKEN)
 			return; /// \todo
 
 		// 1UPs -->> Score TVs
@@ -9645,7 +9645,7 @@ void P_SpawnMapThing(mapthing_t *mthing)
 		// They're likely facets of the level's design and therefore required to progress.
 	}
 
-	if (i == MT_EMMY && (gametype != GT_COOP || ultimatemode || tokenbits == 30 || tokenlist & (1 << tokenbits++)))
+	if (i == MT_TOKEN && (gametype != GT_COOP || ultimatemode || tokenbits == 30 || tokenlist & (1 << tokenbits++)))
 		return; // you already got this token, or there are too many, or the gametype's not right
 
 	// Objectplace landing point
@@ -9664,7 +9664,7 @@ void P_SpawnMapThing(mapthing_t *mthing)
 			ss->sector->floorheight) + ((mthing->options >> ZSHIFT) << FRACBITS);
 	else if (i == MT_AXIS || i == MT_AXISTRANSFER || i == MT_AXISTRANSFERLINE)
 		z = ONFLOORZ;
-	else if (i == MT_SPECIALSPIKEBALL || P_WeaponOrPanel(i) || i == MT_EMERALDSPAWN || i == MT_EMMY)
+	else if (i == MT_SPECIALSPIKEBALL || P_WeaponOrPanel(i) || i == MT_EMERALDSPAWN || i == MT_TOKEN)
 	{
 		if (mthing->options & MTF_OBJECTFLIP)
 		{
@@ -10063,28 +10063,10 @@ ML_NOCLIMB : Direction not controllable
 				mobj->radius = (mthing->angle & 16383)*FRACUNIT;
 		}
 	}
-	else if (i == MT_EMMY)
+	else if (i == MT_TOKEN)
 	{
 		if (mthing->options & MTF_OBJECTSPECIAL) // Mario Block version
 			mobj->flags &= ~(MF_NOGRAVITY|MF_NOCLIPHEIGHT);
-		else
-		{
-			fixed_t zheight = mobj->z;
-			mobj_t *tokenobj;
-
-			if (mthing->options & MTF_OBJECTFLIP)
-				zheight += mobj->height-FixedMul(mobjinfo[MT_TOKEN].height, mobj->scale); // align with emmy properly!
-
-			tokenobj = P_SpawnMobj(x, y, zheight, MT_TOKEN);
-			P_SetTarget(&mobj->tracer, tokenobj);
-			tokenobj->destscale = mobj->scale;
-			P_SetScale(tokenobj, mobj->scale);
-			if (mthing->options & MTF_OBJECTFLIP) // flip token to match emmy
-			{
-				tokenobj->eflags |= MFE_VERTICALFLIP;
-				tokenobj->flags2 |= MF2_OBJECTFLIP;
-			}
-		}
 
 		// We advanced tokenbits earlier due to the return check.
 		// Subtract 1 here for the correct value.
