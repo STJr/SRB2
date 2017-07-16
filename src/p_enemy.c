@@ -8037,9 +8037,8 @@ void A_BossJetFume(mobj_t *actor)
 //
 // Description: Chooses one of the two state numbers supplied randomly.
 //
-// nextstate = state number 0
 // var1 = state number 1
-// var2 = state number 2 (can be ommitted for binary chance)
+// var2 = state number 2
 //
 void A_RandomState(mobj_t *actor)
 {
