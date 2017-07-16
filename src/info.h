@@ -320,7 +320,6 @@ typedef enum sprite
 	// Collectible Items
 	SPR_RING,
 	SPR_TRNG, // Team Rings
-	SPR_EMMY, // emerald test
 	SPR_TOKE, // Special Stage Token
 	SPR_RFLG, // Red CTF Flag
 	SPR_BFLG, // Blue CTF Flag
@@ -337,6 +336,8 @@ typedef enum sprite
 	SPR_SPIK, // Spike Ball
 	SPR_SFLM, // Spin fire
 	SPR_USPK, // Floor spike
+	SPR_WSPK, // Wall spike
+	SPR_WSPB, // Wall spike base
 	SPR_STPT, // Starpost
 	SPR_BMNE, // Big floating mine
 
@@ -387,6 +388,12 @@ typedef enum sprite
 	SPR_FWR4,
 	SPR_BUS1, // GFZ Bush w/ berries
 	SPR_BUS2, // GFZ Bush w/o berries
+	// Trees (both GFZ and misc)
+	SPR_TRE1, // GFZ
+	SPR_TRE2, // Checker
+	SPR_TRE3, // Frozen Hillside
+	SPR_TRE4, // Polygon
+	SPR_TRE5, // Bush tree
 
 	// Techno Hill Scenery
 	SPR_THZP, // THZ1 Flower
@@ -1618,11 +1625,7 @@ typedef enum state
 	S_TEAMRING,
 
 	// Special Stage Token
-	S_EMMY,
-
-	// Special Stage Token
 	S_TOKEN,
-	S_MOVINGTOKEN,
 
 	// CTF Flags
 	S_REDFLAG,
@@ -1772,6 +1775,15 @@ typedef enum state
 	S_SPIKE6,
 	S_SPIKED1,
 	S_SPIKED2,
+
+	// Wall spikes
+	S_WALLSPIKE1,
+	S_WALLSPIKE2,
+	S_WALLSPIKE3,
+	S_WALLSPIKE4,
+	S_WALLSPIKE5,
+	S_WALLSPIKE6,
+	S_WALLSPIKEBASE,
 
 	// Starpost
 	S_STARPOST_IDLE,
@@ -1961,12 +1973,25 @@ typedef enum state
 	S_DEMONFIRE5,
 	S_DEMONFIRE6,
 
+	// GFZ flowers
 	S_GFZFLOWERA,
 	S_GFZFLOWERB,
 	S_GFZFLOWERC,
 
 	S_BERRYBUSH,
 	S_BUSH,
+
+	// Trees (both GFZ and misc)
+	S_GFZTREE,
+	S_GFZBERRYTREE,
+	S_GFZCHERRYTREE,
+	S_CHECKERTREE,
+	S_CHECKERSUNSETTREE,
+	S_FHZTREE, // Frozen Hillside
+	S_FHZPINKTREE,
+	S_POLYGONTREE,
+	S_BUSHTREE,
+	S_BUSHREDTREE,
 
 	// THZ Plant
 	S_THZFLOWERA,
@@ -3239,8 +3264,7 @@ typedef enum mobj_type
 	MT_BLUEBALL,  // Blue sphere replacement for special stages
 	MT_REDTEAMRING,  //Rings collectable by red team.
 	MT_BLUETEAMRING, //Rings collectable by blue team.
-	MT_EMMY, // emerald token for special stage
-	MT_TOKEN, // Special Stage Token (uncollectible part)
+	MT_TOKEN, // Special Stage token for special stage
 	MT_REDFLAG, // Red CTF Flag
 	MT_BLUEFLAG, // Blue CTF Flag
 	MT_EMBLEM,
@@ -3274,6 +3298,8 @@ typedef enum mobj_type
 	MT_SPECIALSPIKEBALL,
 	MT_SPINFIRE,
 	MT_SPIKE,
+	MT_WALLSPIKE,
+	MT_WALLSPIKEBASE,
 	MT_STARPOST,
 	MT_BIGMINE,
 	MT_BIGAIRMINE,
@@ -3364,6 +3390,17 @@ typedef enum mobj_type
 	MT_GFZFLOWER3,
 	MT_BERRYBUSH,
 	MT_BUSH,
+	// Trees (both GFZ and misc)
+	MT_GFZTREE,
+	MT_GFZBERRYTREE,
+	MT_GFZCHERRYTREE,
+	MT_CHECKERTREE,
+	MT_CHECKERSUNSETTREE,
+	MT_FHZTREE, // Frozen Hillside
+	MT_FHZPINKTREE,
+	MT_POLYGONTREE,
+	MT_BUSHTREE,
+	MT_BUSHREDTREE,
 
 	// Techno Hill Scenery
 	MT_THZFLOWER1,
