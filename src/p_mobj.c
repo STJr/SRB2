@@ -7373,6 +7373,23 @@ void P_MobjThinker(mobj_t *mobj)
 		}
 	else switch (mobj->type)
 	{
+		case MT_WALLSPIKEBASE:
+			if (!mobj->target) {
+				P_RemoveMobj(mobj);
+				return;
+			}
+			mobj->frame = (mobj->frame & ~FF_FRAMEMASK)|(mobj->target->frame & FF_FRAMEMASK);
+			if (mobj->angle != mobj->target->angle + ANGLE_90) // reposition if not the correct angle
+			{
+				mobj_t *target = mobj->target; // shortcut
+				const fixed_t baseradius = target->radius/2 - FixedMul(FRACUNIT, target->scale);
+				P_UnsetThingPosition(mobj);
+				mobj->x = target->x - P_ReturnThrustX(target, target->angle, baseradius);
+				mobj->y = target->y - P_ReturnThrustY(target, target->angle, baseradius);
+				P_SetThingPosition(mobj);
+				mobj->angle = target->angle + ANGLE_90;
+			}
+			break;
 		case MT_FALLINGROCK:
 			// Despawn rocks here in case zmovement code can't do so (blame slopes)
 			if (!mobj->momx && !mobj->momy && !mobj->momz
@@ -8066,6 +8083,10 @@ for (i = ((mobj->flags2 & MF2_STRONGBOX) ? strongboxamt : weakboxamt); i; --i) s
 					if (mobj->spawnpoint)
 						mobj->fuse += mobj->spawnpoint->angle;
 					break;
+				case MT_WALLSPIKE:
+					P_SetMobjState(mobj, mobj->state->nextstate);
+					mobj->fuse = mobj->info->speed;
+					break;
 				case MT_NIGHTSCORE:
 					P_RemoveMobj(mobj);
 					return;
@@ -8457,9 +8478,13 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			// Collision helper can be stood on but not pushed
 			mobj->flags2 |= MF2_STANDONME;
 			break;
+		case MT_WALLSPIKE:
 		case MT_SPIKE:
 			mobj->flags2 |= MF2_STANDONME;
 			break;
+		case MT_GFZTREE:
+		case MT_GFZBERRYTREE:
+		case MT_GFZCHERRYTREE:
 		case MT_LAMPPOST1:
 		case MT_LAMPPOST2:
 			mobj->flags2 |= MF2_STANDONME;
@@ -9478,7 +9503,7 @@ void P_SpawnMapThing(mapthing_t *mthing)
 	}
 
 	if (metalrecording) // Metal Sonic can't use these things.
-		if (mobjinfo[i].flags & (MF_ENEMY|MF_BOSS) || i == MT_EMMY || i == MT_STARPOST)
+		if (mobjinfo[i].flags & (MF_ENEMY|MF_BOSS) || i == MT_TOKEN || i == MT_STARPOST)
 			return;
 
 	if (i >= MT_EMERALD1 && i <= MT_EMERALD7) // Pickupable Emeralds
@@ -9592,7 +9617,7 @@ void P_SpawnMapThing(mapthing_t *mthing)
 			return;
 
 		// Emerald Tokens -->> Score Tokens
-		else if (i == MT_EMMY)
+		else if (i == MT_TOKEN)
 			return; /// \todo
 
 		// 1UPs -->> Score TVs
@@ -9620,7 +9645,7 @@ void P_SpawnMapThing(mapthing_t *mthing)
 		// They're likely facets of the level's design and therefore required to progress.
 	}
 
-	if (i == MT_EMMY && (gametype != GT_COOP || ultimatemode || tokenbits == 30 || tokenlist & (1 << tokenbits++)))
+	if (i == MT_TOKEN && (gametype != GT_COOP || ultimatemode || tokenbits == 30 || tokenlist & (1 << tokenbits++)))
 		return; // you already got this token, or there are too many, or the gametype's not right
 
 	// Objectplace landing point
@@ -9639,7 +9664,7 @@ void P_SpawnMapThing(mapthing_t *mthing)
 			ss->sector->floorheight) + ((mthing->options >> ZSHIFT) << FRACBITS);
 	else if (i == MT_AXIS || i == MT_AXISTRANSFER || i == MT_AXISTRANSFERLINE)
 		z = ONFLOORZ;
-	else if (i == MT_SPECIALSPIKEBALL || P_WeaponOrPanel(i) || i == MT_EMERALDSPAWN || i == MT_EMMY)
+	else if (i == MT_SPECIALSPIKEBALL || P_WeaponOrPanel(i) || i == MT_EMERALDSPAWN || i == MT_TOKEN)
 	{
 		if (mthing->options & MTF_OBJECTFLIP)
 		{
@@ -10038,28 +10063,10 @@ ML_NOCLIMB : Direction not controllable
 				mobj->radius = (mthing->angle & 16383)*FRACUNIT;
 		}
 	}
-	else if (i == MT_EMMY)
+	else if (i == MT_TOKEN)
 	{
 		if (mthing->options & MTF_OBJECTSPECIAL) // Mario Block version
 			mobj->flags &= ~(MF_NOGRAVITY|MF_NOCLIPHEIGHT);
-		else
-		{
-			fixed_t zheight = mobj->z;
-			mobj_t *tokenobj;
-
-			if (mthing->options & MTF_OBJECTFLIP)
-				zheight += mobj->height-FixedMul(mobjinfo[MT_TOKEN].height, mobj->scale); // align with emmy properly!
-
-			tokenobj = P_SpawnMobj(x, y, zheight, MT_TOKEN);
-			P_SetTarget(&mobj->tracer, tokenobj);
-			tokenobj->destscale = mobj->scale;
-			P_SetScale(tokenobj, mobj->scale);
-			if (mthing->options & MTF_OBJECTFLIP) // flip token to match emmy
-			{
-				tokenobj->eflags |= MFE_VERTICALFLIP;
-				tokenobj->flags2 |= MF2_OBJECTFLIP;
-			}
-		}
 
 		// We advanced tokenbits earlier due to the return check.
 		// Subtract 1 here for the correct value.
@@ -10117,6 +10124,38 @@ ML_NOCLIMB : Direction not controllable
 			mobj->flags &= ~(MF_NOBLOCKMAP|MF_NOGRAVITY|MF_NOCLIPHEIGHT);
 			mobj->flags |= MF_SOLID;
 			P_SetThingPosition(mobj);
+		}
+	}
+	else if (i == MT_WALLSPIKE)
+	{
+		// Pop up spikes!
+		if (mthing->options & MTF_OBJECTSPECIAL)
+		{
+			mobj->flags &= ~MF_SCENERY;
+			mobj->fuse = mobj->info->speed;
+		}
+		// Use per-thing collision for spikes if the deaf flag is checked.
+		if (mthing->options & MTF_AMBUSH && !metalrecording)
+		{
+			P_UnsetThingPosition(mobj);
+			mobj->flags &= ~(MF_NOBLOCKMAP|MF_NOCLIPHEIGHT);
+			mobj->flags |= MF_SOLID;
+			P_SetThingPosition(mobj);
+		}
+
+		// spawn base
+		{
+			const angle_t mobjangle = FixedAngle(mthing->angle*FRACUNIT); // the mobj's own angle hasn't been set quite yet so...
+			const fixed_t baseradius = mobj->radius/2 - FixedMul(FRACUNIT, mobj->scale);
+			mobj_t *base = P_SpawnMobj(
+					mobj->x - P_ReturnThrustX(mobj, mobjangle, baseradius),
+					mobj->y - P_ReturnThrustY(mobj, mobjangle, baseradius),
+					mobj->z, MT_WALLSPIKEBASE);
+			base->angle = mobjangle + ANGLE_90;
+			base->destscale = mobj->destscale;
+			P_SetScale(base, mobj->scale);
+			P_SetTarget(&base->target, mobj);
+			P_SetTarget(&mobj->tracer, base);
 		}
 	}
 
