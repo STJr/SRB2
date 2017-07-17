@@ -570,7 +570,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 // Gameplay related collectibles //
 // ***************************** //
 		// Special Stage Token
-		case MT_EMMY:
+		case MT_TOKEN:
 			if (player->bot)
 				return;
 			tokenlist += special->health;
@@ -589,9 +589,6 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			}
 			else
 				token++;
-
-			if (special->tracer) // token BG
-				P_RemoveMobj(special->tracer);
 			break;
 
 		// Emerald Hunt
