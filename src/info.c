@@ -5992,7 +5992,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_WALLSPIKE
 		522,            // doomednum
-		S_WALLSPIKE1,       // spawnstate
+		S_WALLSPIKE1,   // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -6005,9 +6005,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // missilestate
 		S_NULL,         // deathstate
 		S_NULL,         // xdeathstate
-		sfx_None,        // deathsound
+		sfx_None,       // deathsound
 		2*TICRATE,      // speed
-		32*FRACUNIT,     // radius
+		16*FRACUNIT,    // radius
 		14*FRACUNIT,    // height
 		0,              // display offset
 		4,              // mass
@@ -6019,7 +6019,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_WALLSPIKEBASE
 		-1,            // doomednum
-		S_WALLSPIKEBASE,       // spawnstate
+		S_WALLSPIKEBASE, // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -6034,7 +6034,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
 		0,              // speed
-		7*FRACUNIT,     // radius
+		FRACUNIT/4,     // radius
 		14*FRACUNIT,    // height
 		0,              // display offset
 		4,              // mass

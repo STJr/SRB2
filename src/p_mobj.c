@@ -10146,7 +10146,7 @@ ML_NOCLIMB : Direction not controllable
 		// spawn base
 		{
 			const angle_t mobjangle = FixedAngle(mthing->angle*FRACUNIT); // the mobj's own angle hasn't been set quite yet so...
-			const fixed_t baseradius = mobj->radius/2 - FixedMul(FRACUNIT, mobj->scale);
+			const fixed_t baseradius = mobj->radius - FixedMul(mobjinfo[MT_WALLSPIKEBASE].radius, mobj->scale);
 			mobj_t *base = P_SpawnMobj(
 					mobj->x - P_ReturnThrustX(mobj, mobjangle, baseradius),
 					mobj->y - P_ReturnThrustY(mobj, mobjangle, baseradius),
