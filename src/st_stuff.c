@@ -1995,7 +1995,7 @@ static void ST_overlayDrawer(void)
 	)
 		ST_drawLevelTitle();
 
-	if (!hu_showscores && (netgame || multiplayer) && displayplayer == consoleplayer && (!stplyr->spectator || gametype == GT_COOP))
+	if (!hu_showscores && (netgame || multiplayer) && displayplayer == consoleplayer)
 	{
 		if (stplyr->exiting && cv_playersforexit.value && gametype == GT_COOP)
 		{
