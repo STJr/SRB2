@@ -384,8 +384,15 @@ static int libd_getSpritePatch(lua_State *L)
 		return 0;
 	// set angle number
 	sprframe = &sprdef->spriteframes[frame];
-	angle = luaL_optinteger(L, 3, 0);
-	if (angle >= 8)
+	angle = luaL_optinteger(L, 3, 1);
+
+	// convert WAD editor angle numbers (1-8) to internal angle numbers (0-7)
+	// keep 0 the same since we'll make it default to angle 1 (which is internally 0)
+	// in case somebody didn't know that angle 0 really just maps all 8 angles to the same patch
+	if (angle != 0)
+		angle--;
+
+	if (angle >= 8) // out of range?
 		return 0;
 
 	// push both the patch and it's "flip" value
@@ -470,8 +477,15 @@ static int libd_getSprite2Patch(lua_State *L)
 		return 0;
 	// set angle number
 	sprframe = &sprdef->spriteframes[frame];
-	angle = luaL_optinteger(L, 3, 0);
-	if (angle >= 8)
+	angle = luaL_optinteger(L, 3, 1);
+
+	// convert WAD editor angle numbers (1-8) to internal angle numbers (0-7)
+	// keep 0 the same since we'll make it default to angle 1 (which is internally 0)
+	// in case somebody didn't know that angle 0 really just maps all 8 angles to the same patch
+	if (angle != 0)
+		angle--;
+
+	if (angle >= 8) // out of range?
 		return 0;
 
 	// push both the patch and it's "flip" value
