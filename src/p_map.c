@@ -990,10 +990,15 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		&& !P_MobjWasRemoved(thing->tracer)) // this probably wouldn't work if we didn't have a tracer
 		{ // use base as a reference point to determine what angle you touched the spike at
 			angle_t touchangle = R_PointToAngle2(thing->tracer->x, thing->tracer->y, tmthing->x, tmthing->y);
-			angle_t diffangle = thing->angle - touchangle;
-			if (diffangle > ANGLE_180)
-				diffangle = InvAngle(diffangle);
-			if (diffangle <= ANGLE_22h) // if you touched it at this close an angle, you get poked!
+
+			if (P_PlayerInPain(tmthing->player)
+			&& (R_PointToAngle2(0, 0, tmthing->momx, tmthing->momy) - touchangle) > ANGLE_180)
+				return true;
+
+			touchangle = thing->angle - touchangle;
+			if (touchangle > ANGLE_180)
+				touchangle = InvAngle(touchangle);
+			if (touchangle <= ANGLE_22h) // if you touched it at this close an angle, you get poked!
 				P_DamageMobj(tmthing, thing, thing, 1, DMG_SPIKE);
 		}
 	}
@@ -3094,7 +3099,10 @@ void P_SlideMove(mobj_t *mo)
 	fixed_t leadx, leady, trailx, traily, newx, newy;
 	INT16 hitcount = 0;
 	boolean success = false;
+
 	boolean papercol = false;
+	vertex_t v1, v2; // fake vertexes
+	line_t junk; // fake linedef
 
 	if (tmhitthing && mo->z + mo->height > tmhitthing->z && mo->z < tmhitthing->z + tmhitthing->height)
 	{
@@ -3104,11 +3112,7 @@ void P_SlideMove(mobj_t *mo)
 
 		if (tmhitthing->flags & MF_PAPERCOLLISION)
 		{
-			fixed_t cosradius, sinradius;
-			vertex_t v1, v2; // fake vertexes
-			line_t junk; // fake linedef - does this need to be static? toast does not know
-
-			fixed_t num, den;
+			fixed_t cosradius, sinradius, num, den;
 
 			// trace along the three leading corners
 			if (mo->momx > 0)
