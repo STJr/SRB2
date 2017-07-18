@@ -992,6 +992,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			angle_t touchangle = R_PointToAngle2(thing->tracer->x, thing->tracer->y, tmthing->x, tmthing->y);
 
 			if (P_PlayerInPain(tmthing->player)
+			&& (tmthing->momx || tmthing->momy)
 			&& (R_PointToAngle2(0, 0, tmthing->momx, tmthing->momy) - touchangle) > ANGLE_180)
 				return true;
 
