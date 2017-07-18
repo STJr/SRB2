@@ -971,15 +971,15 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 		if (thing->z + thing->height > bottomz // above bottom
 		&&  thing->z < topz) // below top
-		{ // don't check angle, the player was clearly in the way in this case
+		// don't check angle, the player was clearly in the way in this case
 			P_DamageMobj(thing, tmthing, tmthing, 1, DMG_SPIKE);
-		}
 	}
 	else if (thing->type == MT_WALLSPIKE && thing->flags & MF_SOLID && tmthing->player)
 	{
 		fixed_t bottomz, topz;
 		bottomz = thing->z;
 		topz = thing->z + thing->height;
+
 		if (thing->eflags & MFE_VERTICALFLIP)
 			bottomz -= FixedMul(FRACUNIT, thing->scale);
 		else
@@ -1151,12 +1151,14 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		}
 	}
 
-	if (thing->flags & MF_SPRING && (tmthing->player || tmthing->flags & MF_PUSHABLE))
+	if (!(tmthing->player) && (thing->player))
+		; // no solid thing should ever be able to step up onto a player
+	else if (thing->flags & MF_SPRING && (tmthing->player || tmthing->flags & MF_PUSHABLE))
 	{
 		if (iwassprung) // this spring caused you to gain MFE_SPRUNG just now...
 			return false; // "cancel" P_TryMove via blocking so you keep your current position
 	}
-	else if (tmthing->flags & MF_SPRING && (thing->player || thing->flags & MF_PUSHABLE))
+	else if (tmthing->flags & MF_SPRING && (thing->flags & MF_PUSHABLE))
 		; // Fix a few nasty spring-jumping bugs that happen sometimes.
 	// Monitors are not treated as solid to players who are jumping, spinning or gliding,
 	// unless it's a CTF team monitor and you're on the wrong team
@@ -3092,12 +3094,87 @@ void P_SlideMove(mobj_t *mo)
 	fixed_t leadx, leady, trailx, traily, newx, newy;
 	INT16 hitcount = 0;
 	boolean success = false;
+	boolean papercol = false;
 
 	if (tmhitthing && mo->z + mo->height > tmhitthing->z && mo->z < tmhitthing->z + tmhitthing->height)
 	{
 		// Don't mess with your momentum if it's a pushable object. Pushables do their own crazy things already.
 		if (tmhitthing->flags & MF_PUSHABLE)
 			return;
+
+		if (tmhitthing->flags & MF_PAPERCOLLISION)
+		{
+			fixed_t cosradius, sinradius;
+			vertex_t v1, v2; // fake vertexes
+			line_t junk; // fake linedef - does this need to be static? toast does not know
+
+			fixed_t num, den;
+
+			// trace along the three leading corners
+			if (mo->momx > 0)
+			{
+				leadx = mo->x + mo->radius;
+				trailx = mo->x - mo->radius;
+			}
+			else
+			{
+				leadx = mo->x - mo->radius;
+				trailx = mo->x + mo->radius;
+			}
+
+			if (mo->momy > 0)
+			{
+				leady = mo->y + mo->radius;
+				traily = mo->y - mo->radius;
+			}
+			else
+			{
+				leady = mo->y - mo->radius;
+				traily = mo->y + mo->radius;
+			}
+
+			papercol = true;
+			slidemo = mo;
+			bestslideline = &junk;
+
+			cosradius = FixedMul(tmhitthing->radius, FINECOSINE(tmhitthing->angle>>ANGLETOFINESHIFT));
+			sinradius = FixedMul(tmhitthing->radius, FINESINE(tmhitthing->angle>>ANGLETOFINESHIFT));
+
+			v1.x = tmhitthing->x - cosradius;
+			v1.y = tmhitthing->y - sinradius;
+			v2.x = tmhitthing->x + cosradius;
+			v2.y = tmhitthing->y + sinradius;
+
+			junk.v1 = &v1;
+			junk.v2 = &v2;
+			junk.dx = 2*cosradius; // v2.x - v1.x;
+			junk.dy = 2*sinradius; // v2.y - v1.y;
+
+			junk.slopetype = !cosradius ? ST_VERTICAL : !sinradius ? ST_HORIZONTAL :
+			((sinradius > 0) == (cosradius > 0)) ? ST_POSITIVE : ST_NEGATIVE;
+
+			bestslidefrac = FRACUNIT+1;
+
+			den = FixedMul(junk.dy>>8, mo->momx) - FixedMul(junk.dx>>8, mo->momy);
+
+			if (!den)
+				bestslidefrac = 0;
+			else
+			{
+				fixed_t frac;
+#define P_PaperTraverse(startx, starty) \
+				num = FixedMul((v1.x - leadx)>>8, junk.dy) + FixedMul((leady - v1.y)>>8, junk.dx); \
+				frac = FixedDiv(num, den); \
+				if (frac < bestslidefrac) \
+					bestslidefrac = frac
+				P_PaperTraverse(leadx, leady);
+				P_PaperTraverse(trailx, leady);
+				P_PaperTraverse(leadx, traily);
+#undef dowork
+			}
+
+			goto papercollision;
+		}
 
 		// Thankfully box collisions are a lot simpler than arbitrary lines. There's only four possible cases.
 		if (mo->y + mo->radius <= tmhitthing->y - tmhitthing->radius)
@@ -3129,7 +3206,7 @@ void P_SlideMove(mobj_t *mo)
 	bestslideline = NULL;
 
 retry:
-	if (++hitcount == 3)
+	if ((++hitcount == 3) || papercol)
 		goto stairstep; // don't loop forever
 
 	// trace along the three leading corners
@@ -3171,6 +3248,7 @@ retry:
 		return;
 	}
 
+papercollision:
 	// move up to the wall
 	if (bestslidefrac == FRACUNIT+1)
 	{

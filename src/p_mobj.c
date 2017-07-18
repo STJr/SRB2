@@ -7383,7 +7383,7 @@ void P_MobjThinker(mobj_t *mobj)
 			if (mobj->angle != mobj->target->angle + ANGLE_90) // reposition if not the correct angle
 			{
 				mobj_t *target = mobj->target; // shortcut
-				const fixed_t baseradius = target->radius - (target->scale/4); //FixedMul(FRACUNIT/4, target->scale);
+				const fixed_t baseradius = target->radius - (target->scale/2); //FixedMul(FRACUNIT/2, target->scale);
 				P_UnsetThingPosition(mobj);
 				mobj->x = target->x - P_ReturnThrustX(target, target->angle, baseradius);
 				mobj->y = target->y - P_ReturnThrustY(target, target->angle, baseradius);
@@ -10148,7 +10148,7 @@ ML_NOCLIMB : Direction not controllable
 		// spawn base
 		{
 			const angle_t mobjangle = FixedAngle(mthing->angle*FRACUNIT); // the mobj's own angle hasn't been set quite yet so...
-			const fixed_t baseradius = mobj->radius - (mobj->scale/4); //FixedMul(FRACUNIT/4, mobj->scale);
+			const fixed_t baseradius = mobj->radius - (mobj->scale/2); //FixedMul(FRACUNIT/2, mobj->scale);
 			mobj_t *base = P_SpawnMobj(
 					mobj->x - P_ReturnThrustX(mobj, mobjangle, baseradius),
 					mobj->y - P_ReturnThrustY(mobj, mobjangle, baseradius),
