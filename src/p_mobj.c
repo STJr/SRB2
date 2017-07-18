@@ -2739,8 +2739,9 @@ static boolean P_ZMovement(mobj_t *mo)
 				return true;
 			break;
 		case MT_SPIKE:
+		case MT_WALLSPIKE:
 			// Dead spike particles disappear upon ground contact
-			if ((mo->z <= mo->floorz || mo->z + mo->height >= mo->ceilingz) && mo->health <= 0)
+			if (!mo->health && (mo->z <= mo->floorz || mo->z + mo->height >= mo->ceilingz))
 			{
 				P_RemoveMobj(mo);
 				return false;
@@ -10148,7 +10149,7 @@ ML_NOCLIMB : Direction not controllable
 		// spawn base
 		{
 			const angle_t mobjangle = FixedAngle(mthing->angle*FRACUNIT); // the mobj's own angle hasn't been set quite yet so...
-			const fixed_t baseradius = mobj->radius - (mobj->scale/2); //FixedMul(FRACUNIT/2, mobj->scale);
+			const fixed_t baseradius = mobj->radius - mobj->scale;
 			mobj_t *base = P_SpawnMobj(
 					mobj->x - P_ReturnThrustX(mobj, mobjangle, baseradius),
 					mobj->y - P_ReturnThrustY(mobj, mobjangle, baseradius),

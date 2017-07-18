@@ -4681,6 +4681,8 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_WALLSPIKE5",
 	"S_WALLSPIKE6",
 	"S_WALLSPIKEBASE",
+	"S_WALLSPIKED1",
+	"S_WALLSPIKED2",
 
 	// Starpost
 	"S_STARPOST_IDLE",

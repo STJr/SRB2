@@ -439,7 +439,9 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 	// Metal Sonic destroys tiny baby objects.
 	if (tmthing->type == MT_METALSONIC_RACE
-	&& (thing->flags & (MF_MISSILE|MF_ENEMY|MF_BOSS) || thing->type == MT_SPIKE))
+	&& (thing->flags & (MF_MISSILE|MF_ENEMY|MF_BOSS)
+	|| (thing->type == MT_SPIKE
+	|| thing->type == MT_WALLSPIKE)))
 	{
 		if ((thing->flags & (MF_ENEMY|MF_BOSS)) && (thing->health <= 0 || !(thing->flags & MF_SHOOTABLE)))
 			return true;
@@ -451,12 +453,14 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			return true; // overhead
 		if (tmthing->z + tmthing->height < thing->z)
 			return true; // underneath
-		if (thing->type == MT_SPIKE)
+		if (thing->type == MT_SPIKE
+		|| thing->type == MT_WALLSPIKE)
 		{
+			mobjtype_t type = thing->type;
 			if (thing->flags & MF_SOLID)
 				S_StartSound(tmthing, thing->info->deathsound);
 			for (thing = thing->subsector->sector->thinglist; thing; thing = thing->snext)
-				if (thing->type == MT_SPIKE && thing->health > 0 && thing->flags & MF_SOLID && P_AproxDistance(thing->x - tmthing->x, thing->y - tmthing->y) < FixedMul(56*FRACUNIT, thing->scale))
+				if (thing->type == type && thing->health > 0 && thing->flags & MF_SOLID && P_AproxDistance(P_AproxDistance(thing->x - tmthing->x, thing->y - tmthing->y), thing->z - tmthing->z) < 56*thing->scale)//FixedMul(56*FRACUNIT, thing->scale))
 					P_KillMobj(thing, tmthing, tmthing, 0);
 		}
 		else
@@ -470,10 +474,13 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	// SF_DASHMODE users destroy spikes and monitors, CA_TWINSPIN users and CA2_MELEE users destroy spikes.
 	if ((tmthing->player)
 		&& (((tmthing->player->charflags & SF_DASHMODE) && (tmthing->player->dashmode >= 3*TICRATE)
-		&& (thing->flags & (MF_MONITOR) || thing->type == MT_SPIKE))
+		&& (thing->flags & (MF_MONITOR)
+		|| (thing->type == MT_SPIKE
+		|| thing->type == MT_WALLSPIKE)))
 	|| ((((tmthing->player->charability == CA_TWINSPIN) && (tmthing->player->panim == PA_ABILITY))
 	|| (tmthing->player->charability2 == CA2_MELEE && tmthing->player->panim == PA_ABILITY2))
-		&& (thing->type == MT_SPIKE))))
+		&& (thing->type == MT_SPIKE
+		|| thing->type == MT_WALLSPIKE))))
 	{
 		if ((thing->flags & (MF_MONITOR)) && (thing->health <= 0 || !(thing->flags & MF_SHOOTABLE)))
 			return true;
@@ -485,12 +492,14 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			return true; // overhead
 		if (tmthing->z + tmthing->height < thing->z)
 			return true; // underneath
-		if (thing->type == MT_SPIKE)
+		if (thing->type == MT_SPIKE
+		|| thing->type == MT_WALLSPIKE)
 		{
+			mobjtype_t type = thing->type;
 			if (thing->flags & MF_SOLID)
 				S_StartSound(tmthing, thing->info->deathsound);
 			for (thing = thing->subsector->sector->thinglist; thing; thing = thing->snext)
-				if (thing->type == MT_SPIKE && thing->health > 0 && thing->flags & MF_SOLID && P_AproxDistance(thing->x - tmthing->x, thing->y - tmthing->y) < FixedMul(56*FRACUNIT, thing->scale))
+				if (thing->type == type && thing->health > 0 && thing->flags & MF_SOLID && P_AproxDistance(P_AproxDistance(thing->x - tmthing->x, thing->y - tmthing->y), thing->z - tmthing->z) < 56*thing->scale)//FixedMul(56*FRACUNIT, thing->scale))
 					P_KillMobj(thing, tmthing, tmthing, 0);
 		}
 		else
@@ -937,12 +946,12 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			if (thing->z + thing->height <= tmthing->z + FixedMul(FRACUNIT, tmthing->scale)
 			&& thing->z + thing->height + thing->momz  >= tmthing->z + FixedMul(FRACUNIT, tmthing->scale) + tmthing->momz
 			&& !(thing->player->charability == CA_BOUNCE && thing->player->panim == PA_ABILITY && thing->eflags & MFE_VERTICALFLIP))
-				P_DamageMobj(thing, tmthing, tmthing, 1, 0);
+				P_DamageMobj(thing, tmthing, tmthing, 1, DMG_SPIKE);
 		}
 		else if (thing->z >= tmthing->z + tmthing->height - FixedMul(FRACUNIT, tmthing->scale)
 		&& thing->z + thing->momz <= tmthing->z + tmthing->height - FixedMul(FRACUNIT, tmthing->scale) + tmthing->momz
 		&& !(thing->player->charability == CA_BOUNCE && thing->player->panim == PA_ABILITY && !(thing->eflags & MFE_VERTICALFLIP)))
-			P_DamageMobj(thing, tmthing, tmthing, 1, 0);
+			P_DamageMobj(thing, tmthing, tmthing, 1, DMG_SPIKE);
 	}
 	else if (thing->type == MT_SPIKE && thing->flags & MF_SOLID && tmthing->player) // unfortunate player falls into spike?!
 	{
@@ -951,12 +960,12 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			if (tmthing->z + tmthing->height <= thing->z - FixedMul(FRACUNIT, thing->scale)
 			&& tmthing->z + tmthing->height + tmthing->momz >= thing->z - FixedMul(FRACUNIT, thing->scale)
 			&& !(tmthing->player->charability == CA_BOUNCE && tmthing->player->panim == PA_ABILITY && tmthing->eflags & MFE_VERTICALFLIP))
-				P_DamageMobj(tmthing, thing, thing, 1, 0);
+				P_DamageMobj(tmthing, thing, thing, 1, DMG_SPIKE);
 		}
 		else if (tmthing->z >= thing->z + thing->height + FixedMul(FRACUNIT, thing->scale)
 		&& tmthing->z + tmthing->momz <= thing->z + thing->height + FixedMul(FRACUNIT, thing->scale)
 		&& !(tmthing->player->charability == CA_BOUNCE && tmthing->player->panim == PA_ABILITY && !(tmthing->eflags & MFE_VERTICALFLIP)))
-			P_DamageMobj(tmthing, thing, thing, 1, 0);
+			P_DamageMobj(tmthing, thing, thing, 1, DMG_SPIKE);
 	}
 
 	if (tmthing->type == MT_WALLSPIKE && tmthing->flags & MF_SOLID && thing->player) // wall spike impales player
