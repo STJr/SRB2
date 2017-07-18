@@ -10120,8 +10120,8 @@ ML_NOCLIMB : Direction not controllable
 			mobj->flags &= ~MF_SCENERY;
 			mobj->fuse = mthing->angle + mobj->info->speed;
 		}
-		// Use per-thing collision for spikes if the deaf flag is checked.
-		if (mthing->options & MTF_AMBUSH && !metalrecording)
+		// Use per-thing collision for spikes if the deaf flag isn't checked.
+		if (!(mthing->options & MTF_AMBUSH) && !metalrecording)
 		{
 			P_UnsetThingPosition(mobj);
 			mobj->flags &= ~(MF_NOBLOCKMAP|MF_NOGRAVITY|MF_NOCLIPHEIGHT);
@@ -10137,8 +10137,8 @@ ML_NOCLIMB : Direction not controllable
 			mobj->flags &= ~MF_SCENERY;
 			mobj->fuse = mobj->info->speed;
 		}
-		// Use per-thing collision for spikes if the deaf flag is checked.
-		if (mthing->options & MTF_AMBUSH && !metalrecording)
+		// Use per-thing collision for spikes if the deaf flag isn't checked.
+		if (!(mthing->options & MTF_AMBUSH) && !metalrecording)
 		{
 			P_UnsetThingPosition(mobj);
 			mobj->flags &= ~(MF_NOBLOCKMAP|MF_NOCLIPHEIGHT);
