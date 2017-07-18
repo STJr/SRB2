@@ -7379,16 +7379,18 @@ void P_MobjThinker(mobj_t *mobj)
 				return;
 			}
 			mobj->frame = (mobj->frame & ~FF_FRAMEMASK)|(mobj->target->frame & FF_FRAMEMASK);
+#if 0
 			if (mobj->angle != mobj->target->angle + ANGLE_90) // reposition if not the correct angle
 			{
 				mobj_t *target = mobj->target; // shortcut
-				const fixed_t baseradius = target->radius/2 - FixedMul(FRACUNIT, target->scale);
+				const fixed_t baseradius = target->radius - (target->scale/4); //FixedMul(FRACUNIT/4, target->scale);
 				P_UnsetThingPosition(mobj);
 				mobj->x = target->x - P_ReturnThrustX(target, target->angle, baseradius);
 				mobj->y = target->y - P_ReturnThrustY(target, target->angle, baseradius);
 				P_SetThingPosition(mobj);
 				mobj->angle = target->angle + ANGLE_90;
 			}
+#endif
 			break;
 		case MT_FALLINGROCK:
 			// Despawn rocks here in case zmovement code can't do so (blame slopes)
@@ -10146,7 +10148,7 @@ ML_NOCLIMB : Direction not controllable
 		// spawn base
 		{
 			const angle_t mobjangle = FixedAngle(mthing->angle*FRACUNIT); // the mobj's own angle hasn't been set quite yet so...
-			const fixed_t baseradius = mobj->radius - FixedMul(mobjinfo[MT_WALLSPIKEBASE].radius, mobj->scale);
+			const fixed_t baseradius = mobj->radius - (mobj->scale/4); //FixedMul(FRACUNIT/4, mobj->scale);
 			mobj_t *base = P_SpawnMobj(
 					mobj->x - P_ReturnThrustX(mobj, mobjangle, baseradius),
 					mobj->y - P_ReturnThrustY(mobj, mobjangle, baseradius),
