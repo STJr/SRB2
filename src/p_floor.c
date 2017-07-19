@@ -2022,6 +2022,33 @@ foundenemy:
 }
 
 //
+// P_IsObjectOnRealGround
+//
+// Helper function for T_EachTimeThinker
+// Like P_IsObjectOnGroundIn, except ONLY THE REAL GROUND IS CONSIDERED, NOT FOFS
+// I'll consider whether to make this a more globally accessible function or whatever in future
+// -- Monster Iestyn
+//
+static boolean P_IsObjectOnRealGround(mobj_t *mo, sector_t *sec)
+{
+	// Is the object in reverse gravity?
+	if (mo->eflags & MFE_VERTICALFLIP)
+	{
+		// Detect if the player is on the ceiling.
+		if (mo->z+mo->height >= P_GetSpecialTopZ(mo, sec, sec))
+			return true;
+	}
+	// Nope!
+	else
+	{
+		// Detect if the player is on the floor.
+		if (mo->z <= P_GetSpecialBottomZ(mo, sec, sec))
+			return true;
+	}
+	return false;
+}
+
+//
 // P_HavePlayersEnteredArea
 //
 // Helper function for T_EachTimeThinker
@@ -2224,7 +2251,7 @@ void T_EachTimeThinker(levelspecthink_t *eachtime)
 					|| P_PlayerTouchingSectorSpecial(&players[i], 2, (GETSECSPECIAL(sec->special, 2))) == sec))
 					continue;
 
-				if (floortouch == true && P_IsObjectOnGroundIn(players[i].mo, sec))
+				if (floortouch == true && P_IsObjectOnRealGround(players[i].mo, sec))
 				{
 					if (i & 1)
 						eachtime->var2s[i/2] |= 1;
