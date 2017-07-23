@@ -269,7 +269,7 @@ const char *Color_Names[MAXSKINCOLORS + NUMSUPERCOLORS] =
 	// Greyscale ranges
 	"White",     	// SKINCOLOR_WHITE,
 	"Bone",     	// SKINCOLOR_BONE,
-	"Siler",     	// SKINCOLOR_SILVER,
+	"Silver",     	// SKINCOLOR_SILVER,
 	"Grey",     	// SKINCOLOR_GREY,
 	"Cloudy",     	// SKINCOLOR_CLOUDY,
 	"Carbon",     	// SKINCOLOR_CARBON,

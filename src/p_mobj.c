@@ -186,195 +186,6 @@ static void P_CyclePlayerMobjState(mobj_t *mobj)
 }
 
 //
-// P_GetMobjSprite2
-// For non-super players, tries each sprite2's immediate predecessor until it finds one with a number of frames or ends up at standing.
-// For super players, does the same as above - but tries the super equivalent for each sprite2 before the non-super version.
-//
-
-UINT8 P_GetMobjSprite2(mobj_t *mobj, UINT8 spr2)
-{
-	player_t *player = mobj->player;
-	skin_t *skin = ((skin_t *)mobj->skin);
-	UINT8 super = (spr2 & FF_SPR2SUPER);
-
-	if (!skin)
-		return 0;
-
-	while (!(skin->sprites[spr2].numframes)
-		&& spr2 != SPR2_STND)
-	{
-		if (spr2 & FF_SPR2SUPER)
-		{
-			spr2 &= ~FF_SPR2SUPER;
-			continue;
-		}
-
-		switch(spr2)
-		{
-		case SPR2_RUN:
-			spr2 = SPR2_WALK;
-			break;
-		case SPR2_STUN:
-			spr2 = SPR2_PAIN;
-			break;
-		case SPR2_DRWN:
-			spr2 = SPR2_DEAD;
-			break;
-		case SPR2_SPIN:
-			spr2 = SPR2_ROLL;
-			break;
-		case SPR2_GASP:
-			spr2 = SPR2_SPNG;
-			break;
-		case SPR2_JUMP:
-			spr2 = ((player
-					? player->charflags
-					: skin->flags)
-					& SF_NOJUMPSPIN) ? SPR2_SPNG : SPR2_ROLL;
-			break;
-		case SPR2_SPNG: // spring
-			spr2 = SPR2_FALL;
-			break;
-		case SPR2_FALL:
-			spr2 = SPR2_WALK;
-			break;
-		case SPR2_RIDE:
-			spr2 = SPR2_FALL;
-			break;
-
-		case SPR2_FLY :
-			spr2 = SPR2_SPNG;
-			break;
-		case SPR2_SWIM:
-			spr2 = SPR2_FLY ;
-			break;
-		case SPR2_TIRE:
-			spr2 = (player && player->charability == CA_SWIM) ? SPR2_SWIM : SPR2_FLY;
-			break;
-
-		case SPR2_GLID:
-			spr2 = SPR2_FLY;
-			break;
-		case SPR2_CLMB:
-			spr2 = SPR2_ROLL;
-			break;
-		case SPR2_CLNG:
-			spr2 = SPR2_CLMB;
-			break;
-
-		case SPR2_FLT :
-			spr2 = SPR2_WALK;
-			break;
-		case SPR2_FRUN:
-			spr2 = SPR2_RUN ;
-			break;
-
-		case SPR2_DASH:
-			spr2 = SPR2_FRUN;
-			break;
-
-		case SPR2_BNCE:
-			spr2 = SPR2_FALL;
-			break;
-		case SPR2_BLND:
-			spr2 = SPR2_ROLL;
-			break;
-
-		case SPR2_TWIN:
-			spr2 = SPR2_ROLL;
-			break;
-
-		case SPR2_MLEE:
-			spr2 = SPR2_TWIN;
-			break;
-
-		// NiGHTS sprites.
-		case SPR2_NSTD:
-			spr2 = SPR2_STND;
-			super = FF_SPR2SUPER;
-			break;
-		case SPR2_NFLT:
-			spr2 = SPR2_FLT ;
-			super = FF_SPR2SUPER;
-			break;
-		case SPR2_NSTN:
-			spr2 = SPR2_STUN;
-			break;
-		case SPR2_NPUL:
-			spr2 = SPR2_NSTN;
-			break;
-		case SPR2_NATK:
-			spr2 = SPR2_ROLL;
-			super = FF_SPR2SUPER;
-			break;
-		/*case SPR2_NGT0:
-			spr2 = SPR2_NFLT;
-			break;*/
-		case SPR2_NGT1:
-		case SPR2_NGT7:
-		case SPR2_DRL0:
-			spr2 = SPR2_NGT0;
-			break;
-		case SPR2_NGT2:
-		case SPR2_DRL1:
-			spr2 = SPR2_NGT1;
-			break;
-		case SPR2_NGT3:
-		case SPR2_DRL2:
-			spr2 = SPR2_NGT2;
-			break;
-		case SPR2_NGT4:
-		case SPR2_DRL3:
-			spr2 = SPR2_NGT3;
-			break;
-		case SPR2_NGT5:
-		case SPR2_DRL4:
-			spr2 = SPR2_NGT4;
-			break;
-		case SPR2_NGT6:
-		case SPR2_DRL5:
-			spr2 = SPR2_NGT5;
-			break;
-		case SPR2_DRL6:
-			spr2 = SPR2_NGT6;
-			break;
-		case SPR2_NGT8:
-		case SPR2_DRL7:
-			spr2 = SPR2_NGT7;
-			break;
-		case SPR2_NGT9:
-		case SPR2_DRL8:
-			spr2 = SPR2_NGT8;
-			break;
-		case SPR2_NGTA:
-		case SPR2_DRL9:
-			spr2 = SPR2_NGT9;
-			break;
-		case SPR2_NGTB:
-		case SPR2_DRLA:
-			spr2 = SPR2_NGTA;
-			break;
-		case SPR2_NGTC:
-		case SPR2_DRLB:
-			spr2 = SPR2_NGTB;
-			break;
-		case SPR2_DRLC:
-			spr2 = SPR2_NGTC;
-			break;
-
-		// Dunno? Just go to standing then.
-		default:
-			spr2 = SPR2_STND;
-			break;
-		}
-
-		spr2 |= super;
-	}
-
-	return spr2;
-}
-
-//
 // P_SetPlayerMobjState
 // Returns true if the mobj is still present.
 //
@@ -574,14 +385,16 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		{
 			skin_t *skin = ((skin_t *)mobj->skin);
 			UINT16 frame = (mobj->frame & FF_FRAMEMASK)+1;
-			UINT8 numframes;
-
-			UINT8 spr2 = P_GetMobjSprite2(mobj, (((player->powers[pw_super]) ? FF_SPR2SUPER : 0)|st->frame) & FF_FRAMEMASK);
+			UINT8 numframes, spr2;
 
 			if (skin)
+			{
+				spr2 = P_GetSkinSprite2(skin, (((player->powers[pw_super]) ? FF_SPR2SUPER : 0)|st->frame) & FF_FRAMEMASK, mobj->player);
 				numframes = skin->sprites[spr2].numframes;
+			}
 			else
 			{
+				spr2 = 0;
 				frame = 0;
 				numframes = 0;
 			}
@@ -700,14 +513,16 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 		{
 			skin_t *skin = ((skin_t *)mobj->skin);
 			UINT16 frame = (mobj->frame & FF_FRAMEMASK)+1;
-			UINT8 numframes;
-
-			UINT8 spr2 = P_GetMobjSprite2(mobj, st->frame & FF_FRAMEMASK);
+			UINT8 numframes, spr2;
 
 			if (skin)
+			{
+				spr2 = P_GetSkinSprite2(skin, st->frame & FF_FRAMEMASK, mobj->player);
 				numframes = skin->sprites[spr2].numframes;
+			}
 			else
 			{
+				spr2 = 0;
 				frame = 0;
 				numframes = 0;
 			}

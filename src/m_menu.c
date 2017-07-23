@@ -1012,8 +1012,8 @@ static menuitem_t MP_ConnectIPMenu[] =
 static menuitem_t MP_PlayerSetupMenu[] =
 {
 	{IT_KEYHANDLER | IT_STRING,   NULL, "Your name",   M_HandleSetupMultiPlayer,   0},
-	{IT_KEYHANDLER | IT_STRING,   NULL, "Your color",  M_HandleSetupMultiPlayer,  16},
-	{IT_KEYHANDLER | IT_STRING,   NULL, "Your player", M_HandleSetupMultiPlayer,  96}, // Tails 01-18-2001
+	{IT_KEYHANDLER | IT_STRING,   NULL, "Your player", M_HandleSetupMultiPlayer,  0}, // Tails 01-18-2001
+	{IT_KEYHANDLER | IT_STRING,   NULL, "Your color",  M_HandleSetupMultiPlayer,  0},
 };
 
 // ------------------------------------
@@ -1738,7 +1738,7 @@ menu_t MP_PlayerSetupDef =
 	&MP_MainDef,
 	MP_PlayerSetupMenu,
 	M_DrawSetupMultiPlayerMenu,
-	27, 40,
+	19, 26,
 	0,
 	M_QuitMultiPlayerMenu
 };
@@ -5268,7 +5268,7 @@ static void M_DrawSkyRoom(void)
 			'\x1C' | V_YELLOWMAP, false);
 		V_DrawCharacter(BASEVIDWIDTH - currentMenu->x + 2 + (skullAnimCounter/5), currentMenu->y + y,
 			'\x1D' | V_YELLOWMAP, false);
-			}
+	}
 	if (cv_soundtest.value)
 		V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, currentMenu->y + y + 8, V_YELLOWMAP, S_sfx[cv_soundtest.value].name);
 }
@@ -7681,11 +7681,9 @@ static void M_HandleConnectIP(INT32 choice)
 // ========================
 // Tails 03-02-2002
 
-#define PLBOXW    8
-#define PLBOXH    9
-
 static UINT8      multi_tics;
 static UINT8      multi_frame;
+static UINT8      multi_spr2;
 
 // this is set before entering the MultiPlayer setup menu,
 // for either player 1 or 2
@@ -7699,33 +7697,54 @@ static INT32      setupm_fakecolor;
 
 static void M_DrawSetupMultiPlayerMenu(void)
 {
-	INT32 mx, my, flags = 0;
+	INT32 x, y, cursory = 0, flags = 0;
 	spritedef_t *sprdef;
 	spriteframe_t *sprframe;
 	patch_t *patch;
+	UINT8 *colormap;
 
-	mx = MP_PlayerSetupDef.x;
-	my = MP_PlayerSetupDef.y;
+	x = MP_PlayerSetupDef.x;
+	y = MP_PlayerSetupDef.y;
 
 	// use generic drawer for cursor, items and title
-	M_DrawGenericMenu();
+	//M_DrawGenericMenu();
+
+	// draw title (or big pic)
+	M_DrawMenuTitle();
+
+	M_DrawLevelPlatterHeader(y - (lsheadingheight - 12), "Name", true);
+	if (itemOn == 0)
+		cursory = y;
+	y += 11;
 
 	// draw name string
-	M_DrawTextBox(mx + 90, my - 8, MAXPLAYERNAME, 1);
-	V_DrawString(mx + 98, my, V_ALLOWLOWERCASE, setupm_name);
+	V_DrawFill(x, y, 282/*(MAXPLAYERNAME+1)*8+6*/, 14, 159);
+	V_DrawString(x + 8, y + 3, V_ALLOWLOWERCASE, setupm_name);
+	if (skullAnimCounter < 4 && itemOn == 0)
+		V_DrawCharacter(x + 8 + V_StringWidth(setupm_name, V_ALLOWLOWERCASE), y + 3,
+			'_' | 0x80, false);
+
+	y += 20;
+
+	M_DrawLevelPlatterHeader(y - (lsheadingheight - 12), "Character", true);
+	if (itemOn == 1)
+		cursory = y;
 
 	// draw skin string
-	V_DrawString(mx + 90, my + 96,
-	             ((MP_PlayerSetupMenu[2].status & IT_TYPE) == IT_SPACE ? V_TRANSLUCENT : 0)|V_YELLOWMAP|V_ALLOWLOWERCASE,
+	V_DrawRightAlignedString(BASEVIDWIDTH - x, y,
+	             ((MP_PlayerSetupMenu[2].status & IT_TYPE) == IT_SPACE ? V_TRANSLUCENT : 0)|(itemOn == 1 ? V_YELLOWMAP : 0)|V_ALLOWLOWERCASE,
 	             skins[setupm_fakeskin].realname);
 
-	// draw the name of the color you have chosen
-	// Just so people don't go thinking that "Default" is Green.
-	V_DrawString(208, 72, V_YELLOWMAP|V_ALLOWLOWERCASE, Color_Names[setupm_fakecolor]);
+	if (itemOn == 1 && (MP_PlayerSetupMenu[2].status & IT_TYPE) != IT_SPACE)
+	{
+		V_DrawCharacter(BASEVIDWIDTH - x - 10 - V_StringWidth(skins[setupm_fakeskin].realname, V_ALLOWLOWERCASE) - (skullAnimCounter/5), y,
+			'\x1C' | V_YELLOWMAP, false);
+		V_DrawCharacter(BASEVIDWIDTH - x + 2 + (skullAnimCounter/5), y,
+			'\x1D' | V_YELLOWMAP, false);
+	}
 
-	// draw text cursor for name
-	if (!itemOn && skullAnimCounter < 4) // blink cursor
-		V_DrawCharacter(mx + 98 + V_StringWidth(setupm_name, 0), my, '_',false);
+	x = BASEVIDWIDTH/2;
+	y += 11;
 
 	// anim the player in the box
 	if (--multi_tics <= 0)
@@ -7734,14 +7753,18 @@ static void M_DrawSetupMultiPlayerMenu(void)
 		multi_tics = 4;
 	}
 
-	// skin 0 is default player sprite
-	if (R_SkinAvailable(skins[setupm_fakeskin].name) != -1)
-		sprdef = &skins[R_SkinAvailable(skins[setupm_fakeskin].name)].sprites[SPR2_WALK];
-	else
-		sprdef = &skins[0].sprites[SPR2_WALK];
+#define charw 74
 
-	if (!sprdef->numframes) // No frames ??
-		return; // Can't render!
+	// draw box around character
+	V_DrawFill(x-(charw/2), y, charw, 84, 159);
+
+	sprdef = &skins[setupm_fakeskin].sprites[multi_spr2];
+
+	if (!setupm_fakecolor || !sprdef->numframes) // should never happen but hey, who knows
+		goto faildraw;
+
+	// ok, draw player sprite for sure now
+	colormap = R_GetTranslationColormap(setupm_fakeskin, setupm_fakecolor, 0);
 
 	if (multi_frame >= sprdef->numframes)
 		multi_frame = 0;
@@ -7751,38 +7774,82 @@ static void M_DrawSetupMultiPlayerMenu(void)
 	if (sprframe->flip & 1) // Only for first sprite
 		flags |= V_FLIP; // This sprite is left/right flipped!
 
-	// draw box around guy
-	M_DrawTextBox(mx + 90, my + 8, PLBOXW, PLBOXH);
+#define chary (y+64)
 
-	// draw player sprite
-	if (!setupm_fakecolor) // should never happen but hey, who knows
+	V_DrawFixedPatch(
+		x<<FRACBITS,
+		chary<<FRACBITS,
+		FixedDiv(skins[setupm_fakeskin].highresscale, skins[setupm_fakeskin].shieldscale),
+		flags, patch, colormap);
+
+	Z_Free(colormap);
+	goto colordraw;
+
+faildraw:
+	sprdef = &sprites[SPR_UNKN];
+	if (!sprdef->numframes) // No frames ??
+		return; // Can't render!
+
+	sprframe = &sprdef->spriteframes[0];
+	patch = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
+	if (sprframe->flip & 1) // Only for first sprite
+		flags |= V_FLIP; // This sprite is left/right flipped!
+
+	V_DrawScaledPatch(x, chary, flags, patch);
+
+#undef chary
+
+colordraw:
+	x = MP_PlayerSetupDef.x;
+	y += 75;
+
+	M_DrawLevelPlatterHeader(y - (lsheadingheight - 12), "Color", true);
+	if (itemOn == 2)
+		cursory = y;
+
+	// draw color string
+	V_DrawRightAlignedString(BASEVIDWIDTH - x, y,
+	             (itemOn == 2 ? V_YELLOWMAP : 0)|V_ALLOWLOWERCASE,
+	             Color_Names[setupm_fakecolor]);
+
+	if (itemOn == 2 && (MP_PlayerSetupMenu[2].status & IT_TYPE) != IT_SPACE)
 	{
-		if (skins[setupm_fakeskin].flags & SF_HIRES)
-		{
-			V_DrawSciencePatch((mx+98+(PLBOXW*8/2))<<FRACBITS,
-						(my+16+(PLBOXH*8)-12)<<FRACBITS,
-						flags, patch,
-						skins[setupm_fakeskin].highresscale);
-		}
-		else
-			V_DrawScaledPatch(mx + 98 + (PLBOXW*8/2), my + 16 + (PLBOXH*8) - 12, flags, patch);
+		V_DrawCharacter(BASEVIDWIDTH - x - 10 - V_StringWidth(Color_Names[setupm_fakecolor], V_ALLOWLOWERCASE) - (skullAnimCounter/5), y,
+			'\x1C' | V_YELLOWMAP, false);
+		V_DrawCharacter(BASEVIDWIDTH - x + 2 + (skullAnimCounter/5), y,
+			'\x1D' | V_YELLOWMAP, false);
 	}
-	else
+
+	y += 11;
+
+#define indexwidth 8
 	{
-		UINT8 *colormap = R_GetTranslationColormap(setupm_fakeskin, setupm_fakecolor, 0);
+		const INT32 colwidth = (282-charw)/(2*indexwidth);
+		INT32 i = -colwidth;
+		INT16 col = setupm_fakecolor - colwidth;
+		INT32 w = indexwidth;
+		UINT8 h;
 
-		if (skins[setupm_fakeskin].flags & SF_HIRES)
+		while (col < 1)
+			col += MAXSKINCOLORS-1;
+		while (i <= colwidth)
 		{
-			V_DrawFixedPatch((mx+98+(PLBOXW*8/2))<<FRACBITS,
-						(my+16+(PLBOXH*8)-12)<<FRACBITS,
-						skins[setupm_fakeskin].highresscale,
-						flags, patch, colormap);
+			if (!(i++))
+				w = charw;
+			else
+				w = indexwidth;
+			for (h = 0; h < 16; h++)
+				V_DrawFill(x, y+h, w, 1, Color_Index[col-1][h]);
+			if (++col >= MAXSKINCOLORS)
+				col -= MAXSKINCOLORS-1;
+			x += w;
 		}
-		else
-			V_DrawMappedPatch(mx + 98 + (PLBOXW*8/2), my + 16 + (PLBOXH*8) - 12, flags, patch, colormap);
-
-		Z_Free(colormap);
 	}
+#undef charw
+#undef indexwidth
+
+	V_DrawScaledPatch(currentMenu->x - 17, cursory, 0,
+		W_CachePatchName("M_CURSOR", PU_CACHE));
 }
 
 // Handle 1P/2P MP Setup
@@ -7805,7 +7872,7 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 			break;
 
 		case KEY_LEFTARROW:
-			if (itemOn == 2)       //player skin
+			if (itemOn == 1)       //player skin
 			{
 				S_StartSound(NULL,sfx_menu1); // Tails
 				prev_setupm_fakeskin = setupm_fakeskin;
@@ -7816,16 +7883,18 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 						setupm_fakeskin = numskins-1;
 				}
 				while ((prev_setupm_fakeskin != setupm_fakeskin) && !(R_SkinUsable(-1, setupm_fakeskin)));
+				multi_spr2 = P_GetSkinSprite2(&skins[setupm_fakeskin], SPR2_WALK, NULL);
 			}
-			else if (itemOn == 1) // player color
+			else if (itemOn == 2) // player color
 			{
 				S_StartSound(NULL,sfx_menu1); // Tails
 				setupm_fakecolor--;
 			}
 			break;
 
+		case KEY_ENTER:
 		case KEY_RIGHTARROW:
-			if (itemOn == 2)       //player skin
+			if (itemOn == 1)       //player skin
 			{
 				S_StartSound(NULL,sfx_menu1); // Tails
 				prev_setupm_fakeskin = setupm_fakeskin;
@@ -7836,8 +7905,9 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 						setupm_fakeskin = 0;
 				}
 				while ((prev_setupm_fakeskin != setupm_fakeskin) && !(R_SkinUsable(-1, setupm_fakeskin)));
+				multi_spr2 = P_GetSkinSprite2(&skins[setupm_fakeskin], SPR2_WALK, NULL);
 			}
-			else if (itemOn == 1) // player color
+			else if (itemOn == 2) // player color
 			{
 				S_StartSound(NULL,sfx_menu1); // Tails
 				setupm_fakecolor++;
@@ -7849,22 +7919,30 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 			break;
 
 		case KEY_BACKSPACE:
-			if ((l = strlen(setupm_name))!=0 && itemOn == 0)
+			if (itemOn == 0 && (l = strlen(setupm_name))!=0)
 			{
 				S_StartSound(NULL,sfx_menu1); // Tails
-				setupm_name[l-1] =0;
+				setupm_name[l-1] = 0;
+			}
+			break;
+
+		case KEY_DEL:
+			if (itemOn == 0 && (l = strlen(setupm_name))!=0)
+			{
+				S_StartSound(NULL,sfx_menu1); // Tails
+				setupm_name[0] = 0;
 			}
 			break;
 
 		default:
-			if (choice < 32 || choice > 127 || itemOn != 0)
+			if (itemOn != 0 || choice < 32 || choice > 127)
 				break;
+			S_StartSound(NULL,sfx_menu1); // Tails
 			l = strlen(setupm_name);
 			if (l < MAXPLAYERNAME-1)
 			{
-				S_StartSound(NULL,sfx_menu1); // Tails
-				setupm_name[l] =(char)choice;
-				setupm_name[l+1] =0;
+				setupm_name[l] = (char)choice;
+				setupm_name[l+1] = 0;
 			}
 			break;
 	}
@@ -7907,9 +7985,11 @@ static void M_SetupMultiPlayer(INT32 choice)
 
 	// disable skin changes if we can't actually change skins
 	if (!CanChangeSkin(consoleplayer))
-		MP_PlayerSetupMenu[2].status = (IT_GRAYEDOUT);
+		MP_PlayerSetupMenu[1].status = (IT_GRAYEDOUT);
 	else
-		MP_PlayerSetupMenu[2].status = (IT_KEYHANDLER|IT_STRING);
+		MP_PlayerSetupMenu[1].status = (IT_KEYHANDLER|IT_STRING);
+
+	multi_spr2 = P_GetSkinSprite2(&skins[setupm_fakeskin], SPR2_WALK, NULL);
 
 	MP_PlayerSetupDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&MP_PlayerSetupDef);
@@ -7938,9 +8018,11 @@ static void M_SetupMultiPlayer2(INT32 choice)
 
 	// disable skin changes if we can't actually change skins
 	if (splitscreen && !CanChangeSkin(secondarydisplayplayer))
-		MP_PlayerSetupMenu[2].status = (IT_GRAYEDOUT);
+		MP_PlayerSetupMenu[1].status = (IT_GRAYEDOUT);
 	else
-		MP_PlayerSetupMenu[2].status = (IT_KEYHANDLER | IT_STRING);
+		MP_PlayerSetupMenu[1].status = (IT_KEYHANDLER | IT_STRING);
+
+	multi_spr2 = P_GetSkinSprite2(&skins[setupm_fakeskin], SPR2_WALK, NULL);
 
 	MP_PlayerSetupDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&MP_PlayerSetupDef);
