@@ -1749,7 +1749,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 		case 305: // continuous
 		case 306: // each time
 		case 307: // once
-			if (!(actor && actor->player && actor->player->charability != dist/10))
+			if (!(actor && actor->player && actor->player->charability == dist/10))
 				return false;
 			break;
 		case 309: // continuous

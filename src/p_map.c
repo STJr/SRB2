@@ -959,6 +959,45 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			P_DamageMobj(tmthing, thing, thing, 1, 0);
 	}
 
+	if (tmthing->type == MT_WALLSPIKE && tmthing->flags & MF_SOLID && thing->player) // wall spike impales player
+	{
+		fixed_t bottomz, topz;
+		bottomz = tmthing->z;
+		topz = tmthing->z + tmthing->height;
+		if (tmthing->eflags & MFE_VERTICALFLIP)
+			bottomz -= FixedMul(FRACUNIT, tmthing->scale);
+		else
+			topz += FixedMul(FRACUNIT, tmthing->scale);
+
+		if (thing->z + thing->height > bottomz // above bottom
+		&&  thing->z < topz) // below top
+		{ // don't check angle, the player was clearly in the way in this case
+			P_DamageMobj(thing, tmthing, tmthing, 1, DMG_SPIKE);
+		}
+	}
+	else if (thing->type == MT_WALLSPIKE && thing->flags & MF_SOLID && tmthing->player)
+	{
+		fixed_t bottomz, topz;
+		bottomz = thing->z;
+		topz = thing->z + thing->height;
+		if (thing->eflags & MFE_VERTICALFLIP)
+			bottomz -= FixedMul(FRACUNIT, thing->scale);
+		else
+			topz += FixedMul(FRACUNIT, thing->scale);
+
+		if (tmthing->z + tmthing->height > bottomz // above bottom
+		&&  tmthing->z < topz // below top
+		&& !P_MobjWasRemoved(thing->tracer)) // this probably wouldn't work if we didn't have a tracer
+		{ // use base as a reference point to determine what angle you touched the spike at
+			angle_t touchangle = R_PointToAngle2(thing->tracer->x, thing->tracer->y, tmthing->x, tmthing->y);
+			angle_t diffangle = thing->angle - touchangle;
+			if (diffangle > ANGLE_180)
+				diffangle = InvAngle(diffangle);
+			if (diffangle <= ANGLE_22h) // if you touched it at this close an angle, you get poked!
+				P_DamageMobj(tmthing, thing, thing, 1, DMG_SPIKE);
+		}
+	}
+
 	if (thing->flags & MF_PUSHABLE)
 	{
 		if (tmthing->type == MT_FAN || tmthing->type == MT_STEAM)
