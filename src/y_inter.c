@@ -236,7 +236,7 @@ void Y_IntermissionDrawer(void)
 			ST_DrawNumFromHud(HUD_MINUTES, minutes); // Minutes
 			ST_DrawPatchFromHud(HUD_TIMECOLON, sbocolon); // Colon
 			ST_DrawPadNumFromHud(HUD_SECONDS, seconds, 2); // Seconds
-			
+
 			// we should show centiseconds on the intermission screen too, if the conditions are right.
 			if (modeattacking || cv_timetic.value == 2)
 			{
