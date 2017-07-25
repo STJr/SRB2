@@ -382,56 +382,6 @@ static void clear_levels(void)
 	P_AllocMapHeader(gamemap-1);
 }
 
-/*
-// Edits an animated texture slot on the array
-// Tails 12-27-2003
-static void readAnimTex(MYFILE *f, INT32 num)
-{
-	char s[MAXLINELEN];
-	char *word;
-	char *word2;
-	INT32 i;
-
-	do {
-		if (myfgets(s, sizeof s, f) != NULL)
-		{
-			if (s[0] == '\n') break;
-
-			tmp = strchr(s, '#');
-			if (tmp)
-				*tmp = '\0';
-			// set the value in the appropriate field
-
-			word = strtok(s, " ");
-			if (word)
-				strupr(word);
-			else
-				break;
-
-			word2 = strtok(NULL, " = ");
-			if (word2)
-				strupr(word2);
-			else
-				break;
-
-			if (word2[strlen(word2)-1] == '\n')
-				word2[strlen(word2)-1] = '\0';
-
-			i = atoi(word2);
-
-			if (fastcmp(word, "START"))
-				strncpy(harddefs[num].startname, word2, 8);
-			if (fastcmp(word, "END"))
-				strncpy(harddefs[num].endname, word2, 8);
-			else if (fastcmp(word, "SPEED")) harddefs[num].speed = i;
-			else if (fastcmp(word, "ISTEXTURE")) harddefs[num].istexture = i;
-
-			else deh_warning("readAnimTex %d: unknown word '%s'", num, word);
-		}
-	} while (s[0] != '\n' && !myfeof(f)); //finish when the line is empty
-}
-*/
-
 static boolean findFreeSlot(INT32 *num)
 {
 	// Send the character select entry to a free slot.
@@ -2106,7 +2056,7 @@ static void readframe(MYFILE *f, INT32 num)
 	Z_Free(s);
 }
 
-static void readsound(MYFILE *f, INT32 num, const char *savesfxnames[])
+static void readsound(MYFILE *f, INT32 num)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
 	char *word;
@@ -2142,21 +2092,7 @@ static void readsound(MYFILE *f, INT32 num, const char *savesfxnames[])
 				continue;
 			}
 
-/*			if (fastcmp(word, "OFFSET"))
-			{
-				value -= 150360;
-				if (value <= 64)
-					value /= 8;
-				else if (value <= 260)
-					value = (value+4)/8;
-				else
-					value = (value+8)/8;
-				if (value >= -1 && value < sfx_freeslot0 - 1)
-					S_sfx[num].name = savesfxnames[value+1];
-				else
-					deh_warning("Sound %d: offset out of bounds", num);
-			}
-			else */if (fastcmp(word, "SINGULAR"))
+			if (fastcmp(word, "SINGULAR"))
 			{
 				DEH_WriteUndoline(word, va("%d", S_sfx[num].singularity), UNDO_NONE);
 				S_sfx[num].singularity = value;
@@ -2182,8 +2118,6 @@ static void readsound(MYFILE *f, INT32 num, const char *savesfxnames[])
 	} while (!myfeof(f));
 
 	Z_Free(s);
-
-	(void)savesfxnames;
 }
 
 /** Checks if a game data file name for a mod is good.
@@ -2811,190 +2745,6 @@ static void readconditionset(MYFILE *f, UINT8 setnum)
 	Z_Free(s);
 }
 
-static void readtexture(MYFILE *f, const char *name)
-{
-	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
-	char *word;
-	char *word2;
-	char *tmp;
-	INT32 i, j, value;
-	UINT16 width = 0, height = 0;
-	INT16 patchcount = 0;
-	texture_t *texture;
-
-	do
-	{
-		if (myfgets(s, MAXLINELEN, f))
-		{
-			if (s[0] == '\n')
-				break;
-
-			tmp = strchr(s, '#');
-			if (tmp)
-				*tmp = '\0';
-
-			value = searchvalue(s);
-			word = strtok(s, " ");
-			if (word)
-				strupr(word);
-			else
-				break;
-
-			word2 = strtok(NULL, " ");
-			if (word2)
-				strupr(word2);
-			else
-				break;
-
-			// Width of the texture.
-			if (fastcmp(word, "WIDTH"))
-			{
-				DEH_WriteUndoline(word, va("%d", width), UNDO_NONE);
-				width = SHORT((UINT16)value);
-			}
-			// Height of the texture.
-			else if (fastcmp(word, "HEIGHT"))
-			{
-				DEH_WriteUndoline(word, va("%d", height), UNDO_NONE);
-				height = SHORT((UINT16)value);
-			}
-			// Number of patches the texture has.
-			else if (fastcmp(word, "NUMPATCHES"))
-			{
-				DEH_WriteUndoline(word, va("%d", patchcount), UNDO_NONE);
-				patchcount = SHORT((UINT16)value);
-			}
-			else
-				deh_warning("readtexture: unknown word '%s'", word);
-		}
-	} while (!myfeof(f));
-
-	// Error checking.
-	if (!width)
-		I_Error("Texture %s has no width!\n", name);
-
-	if (!height)
-		I_Error("Texture %s has no height!\n", name);
-
-	if (!patchcount)
-		I_Error("Texture %s has no patches!\n", name);
-
-	// Allocate memory for the texture, and fill in information.
-	texture = Z_Calloc(sizeof(texture_t) + (sizeof(texpatch_t) * SHORT(patchcount)), PU_STATIC, NULL);
-	M_Memcpy(texture->name, name, sizeof(texture->name));
-	texture->width = width;
-	texture->height = height;
-	texture->patchcount = patchcount;
-	texture->holes = false;
-	// Fill out the texture patches, to allow them to be detected
-	// accurately by readpatch.
-	for (i = 0; i < patchcount; i++)
-	{
-		texture->patches[i].originx = 0;
-		texture->patches[i].originy = 0;
-		texture->patches[i].wad = UINT16_MAX;
-		texture->patches[i].lump = UINT16_MAX;
-	}
-
-	// Jump to the next empty texture entry.
-	i = 0;
-	while (textures[i])
-		i++;
-
-	// Fill the global texture buffer entries.
-	j = 1;
-	while (j << 1 <= texture->width)
-		j <<= 1;
-
-	textures[i] = texture;
-	texturewidthmask[i] = j - 1;
-	textureheight[i] = texture->height << FRACBITS;
-
-	// Clean up.
-	Z_Free(s);
-}
-
-static void readpatch(MYFILE *f, const char *name, UINT16 wad)
-{
-	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
-	char *word;
-	char *word2;
-	char *tmp;
-	INT32 i = 0, j = 0, value;
-	texpatch_t patch = {0, 0, UINT16_MAX, UINT16_MAX, 0, 255, AST_COPY};
-
-	// Jump to the texture this patch belongs to, which,
-	// coincidentally, is always the last one on the buffer cache.
-	while (textures[i+1])
-		i++;
-
-	// Jump to the next empty patch entry.
-	while (memcmp(&(textures[i]->patches[j]), &patch, sizeof(patch)))
-		j++;
-
-	patch.wad = wad;
-	// Set the texture number, but only if the lump exists.
-	if ((patch.lump = W_CheckNumForNamePwad(name, wad, 0)) == INT16_MAX)
-		I_Error("readpatch: Missing patch in texture %s", textures[i]->name);
-
-	// note: undoing this patch will be done by other means
-	do
-	{
-		if (myfgets(s, MAXLINELEN, f))
-		{
-			if (s[0] == '\n')
-				break;
-
-			tmp = strchr(s, '#');
-			if (tmp)
-				*tmp = '\0';
-
-			value = searchvalue(s);
-			word = strtok(s, " ");
-			if (word)
-				strupr(word);
-			else
-				break;
-
-			word2 = strtok(NULL, " ");
-			if (word2)
-				strupr(word2);
-			else
-				break;
-
-			// X position of the patch in the texture.
-			if (fastcmp(word, "X"))
-			{
-				//DEH_WriteUndoline(word, va("%d", patch->originx), UNDO_NONE);
-				patch.originx = (INT16)value;
-			}
-			// Y position of the patch in the texture.
-			else if (fastcmp(word, "Y"))
-			{
-				//DEH_WriteUndoline(word, va("%d", patch->originy), UNDO_NONE);
-				patch.originy = (INT16)value;
-			}
-			else
-				deh_warning("readpatch: unknown word '%s'", word);
-		}
-	} while (!myfeof(f));
-
-	// Error checking.
-	/* // Irrelevant. Origins cannot be unsigned.
-	if (patch.originx == UINT16_MAX)
-		I_Error("Patch %s on texture %s has no X position!\n", name, textures[i]->name);
-
-	if (patch.originy == UINT16_MAX)
-		I_Error("Patch %s on texture %s has no Y position!\n", name, textures[i]->name);
-*/
-
-	// Set the patch as that patch number.
-	textures[i]->patches[j] = patch;
-
-	// Clean up.
-	Z_Free(s);
-}
-
 static void readmaincfg(MYFILE *f)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
@@ -3405,30 +3155,17 @@ static void ignorelines(MYFILE *f)
 	Z_Free(s);
 }
 
-static void DEH_LoadDehackedFile(MYFILE *f, UINT16 wad)
+static void DEH_LoadDehackedFile(MYFILE *f)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
 	char *word;
 	char *word2;
 	INT32 i;
-	// do a copy of this for cross references probleme
-	//XBOXSTATIC actionf_t saveactions[NUMSTATES];
-	//XBOXSTATIC const char *savesprnames[NUMSPRITES];
-	XBOXSTATIC const char *savesfxnames[NUMSFX];
 
 	if (!deh_loaded)
 		initfreeslots();
 
 	deh_num_warning = 0;
-	// save values for cross reference
-	/*
-	for (i = 0; i < NUMSTATES; i++)
-		saveactions[i] = states[i].action;
-	for (i = 0; i < NUMSPRITES; i++)
-		savesprnames[i] = sprnames[i];
-	*/
-	for (i = 0; i < NUMSFX; i++)
-		savesfxnames[i] = S_sfx[i].name;
 
 	gamedataadded = false;
 
@@ -3505,19 +3242,7 @@ static void DEH_LoadDehackedFile(MYFILE *f, UINT16 wad)
 				if (word2[strlen(word2)-1] == '\n')
 					word2[strlen(word2)-1] = '\0';
 				i = atoi(word2);
-				if (fastcmp(word, "TEXTURE"))
-				{
-					// Read texture from spec file.
-					readtexture(f, word2);
-					DEH_WriteUndoline(word, word2, UNDO_HEADER);
-				}
-				else if (fastcmp(word, "PATCH"))
-				{
-					// Read patch from spec file.
-					readpatch(f, word2, wad);
-					DEH_WriteUndoline(word, word2, UNDO_HEADER);
-				}
-				else if (fastcmp(word, "THING") || fastcmp(word, "MOBJ") || fastcmp(word, "OBJECT"))
+				if (fastcmp(word, "THING") || fastcmp(word, "MOBJ") || fastcmp(word, "OBJECT"))
 				{
 					if (i == 0 && word2[0] != '0') // If word2 isn't a number
 						i = get_mobjtype(word2); // find a thing by name
@@ -3530,10 +3255,6 @@ static void DEH_LoadDehackedFile(MYFILE *f, UINT16 wad)
 					}
 					DEH_WriteUndoline(word, word2, UNDO_HEADER);
 				}
-/*				else if (fastcmp(word, "ANIMTEX"))
-				{
-					readAnimTex(f, i);
-				}*/
 				else if (fastcmp(word, "LIGHT"))
 				{
 #ifdef HWRENDER
@@ -3605,34 +3326,12 @@ static void DEH_LoadDehackedFile(MYFILE *f, UINT16 wad)
 					}
 					DEH_WriteUndoline(word, word2, UNDO_HEADER);
 				}
-				// <Callum> Added translations to this just in case its re-enabled
-/*				else if (fastcmp(word, "POINTER"))
-				{
-					word = strtok(NULL, " "); // get frame
-					word = strtok(NULL, ")");
-					if (word)
-					{
-						i = atoi(word);
-						if (i < NUMSTATES && i >= 0)
-						{
-							if (myfgets(s, MAXLINELEN, f))
-								states[i].action = saveactions[searchvalue(s)];
-						}
-						else
-						{
-							deh_warning("Pointer: Frame %d doesn't exist", i);
-							ignorelines(f);
-						}
-					}
-					else
-						deh_warning("pointer (Frame %d) : missing ')'", i);
-				}*/
 				else if (fastcmp(word, "SOUND"))
 				{
 					if (i == 0 && word2[0] != '0') // If word2 isn't a number
 						i = get_sfx(word2); // find a sound by name
 					if (i < NUMSFX && i > 0)
-						readsound(f, i, savesfxnames);
+						readsound(f, i);
 					else
 					{
 						deh_warning("Sound %d out of range (1 - %d)", i, NUMSFX-1);
@@ -3640,26 +3339,6 @@ static void DEH_LoadDehackedFile(MYFILE *f, UINT16 wad)
 					}
 					DEH_WriteUndoline(word, word2, UNDO_HEADER);
 				}
-/*				else if (fastcmp(word, "SPRITE"))
-				{
-					if (i < NUMSPRITES && i >= 0)
-					{
-						if (myfgets(s, MAXLINELEN, f))
-						{
-							INT32 k;
-							k = (searchvalue(s) - 151328)/8;
-							if (k >= 0 && k < NUMSPRITES)
-								sprnames[i] = savesprnames[k];
-							else
-							{
-								deh_warning("Sprite %d: offset out of bounds", i);
-								ignorelines(f);
-							}
-						}
-					}
-					else
-						deh_warning("Sprite %d doesn't exist",i);
-				}*/
 				else if (fastcmp(word, "HUDITEM"))
 				{
 					if (i == 0 && word2[0] != '0') // If word2 isn't a number
@@ -3746,7 +3425,10 @@ static void DEH_LoadDehackedFile(MYFILE *f, UINT16 wad)
 					// no undo support for this insanity yet
 					//DEH_WriteUndoline(word, word2, UNDO_HEADER);
 				}
-				else if (fastcmp(word, "SRB2"))
+				// Last I heard this crashes the game if you try to use it
+				// so this is disabled for now
+				// -- Monster Iestyn
+/*				else if (fastcmp(word, "SRB2"))
 				{
 					INT32 ver = searchvalue(strtok(NULL, "\n"));
 					if (ver != PATCHVERSION)
@@ -3757,6 +3439,7 @@ static void DEH_LoadDehackedFile(MYFILE *f, UINT16 wad)
 				// Unless you REALLY want to piss people off,
 				// define a custom gamedata /before/ doing this!!
 				// (then again, modifiedgame will prevent game data saving anyway)
+*/
 				else if (fastcmp(word, "CLEAR"))
 				{
 					boolean clearall = (fastcmp(word2, "ALL"));
@@ -3830,7 +3513,7 @@ void DEH_LoadDehackedLumpPwad(UINT16 wad, UINT16 lump)
 	W_ReadLumpPwad(wad, lump, f.data);
 	f.curpos = f.data;
 	f.data[f.size] = 0;
-	DEH_LoadDehackedFile(&f, wad);
+	DEH_LoadDehackedFile(&f);
 	DEH_WriteUndoline(va("# uload for wad: %u, lump: %u", wad, lump), NULL, UNDO_DONE);
 	Z_Free(f.data);
 }
@@ -4839,11 +4522,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_TEAMRING",
 
 	// Special Stage Token
-	"S_EMMY",
-
-	// Special Stage Token
 	"S_TOKEN",
-	"S_MOVINGTOKEN",
 
 	// CTF Flags
 	"S_REDFLAG",
@@ -4993,6 +4672,15 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SPIKE6",
 	"S_SPIKED1",
 	"S_SPIKED2",
+
+	// Wall spikes
+	"S_WALLSPIKE1",
+	"S_WALLSPIKE2",
+	"S_WALLSPIKE3",
+	"S_WALLSPIKE4",
+	"S_WALLSPIKE5",
+	"S_WALLSPIKE6",
+	"S_WALLSPIKEBASE",
 
 	// Starpost
 	"S_STARPOST_IDLE",
@@ -5180,12 +4868,25 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_DEMONFIRE5",
 	"S_DEMONFIRE6",
 
+	// GFZ flowers
 	"S_GFZFLOWERA",
 	"S_GFZFLOWERB",
 	"S_GFZFLOWERC",
 
 	"S_BERRYBUSH",
 	"S_BUSH",
+
+	// Trees (both GFZ and misc)
+	"S_GFZTREE",
+	"S_GFZBERRYTREE",
+	"S_GFZCHERRYTREE",
+	"S_CHECKERTREE",
+	"S_CHECKERSUNSETTREE",
+	"S_FHZTREE", // Frozen Hillside
+	"S_FHZPINKTREE",
+	"S_POLYGONTREE",
+	"S_BUSHTREE",
+	"S_BUSHREDTREE",
 
 	// THZ Plant
 	"S_THZFLOWERA",
@@ -6439,8 +6140,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_BLUEBALL",  // Blue sphere replacement for special stages
 	"MT_REDTEAMRING",  //Rings collectable by red team.
 	"MT_BLUETEAMRING", //Rings collectable by blue team.
-	"MT_EMMY", // emerald token for special stage
-	"MT_TOKEN", // Special Stage Token (uncollectible part)
+	"MT_TOKEN", // Special Stage Token
 	"MT_REDFLAG", // Red CTF Flag
 	"MT_BLUEFLAG", // Blue CTF Flag
 	"MT_EMBLEM",
@@ -6474,6 +6174,8 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_SPECIALSPIKEBALL",
 	"MT_SPINFIRE",
 	"MT_SPIKE",
+	"MT_WALLSPIKE",
+	"MT_WALLSPIKEBASE",
 	"MT_STARPOST",
 	"MT_BIGMINE",
 	"MT_BIGAIRMINE",
@@ -6564,6 +6266,17 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_GFZFLOWER3",
 	"MT_BERRYBUSH",
 	"MT_BUSH",
+	// Trees (both GFZ and misc)
+	"MT_GFZTREE",
+	"MT_GFZBERRYTREE",
+	"MT_GFZCHERRYTREE",
+	"MT_CHECKERTREE",
+	"MT_CHECKERSUNSETTREE",
+	"MT_FHZTREE", // Frozen Hillside
+	"MT_FHZPINKTREE",
+	"MT_POLYGONTREE",
+	"MT_BUSHTREE",
+	"MT_BUSHREDTREE",
 
 	// Techno Hill Scenery
 	"MT_THZFLOWER1",

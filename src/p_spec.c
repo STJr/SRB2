@@ -456,7 +456,8 @@ void P_ParseAnimationDefintion(SINT8 istexture)
 
 	// Search for existing animdef
 	for (i = 0; i < maxanims; i++)
-		if (stricmp(animdefsToken, animdefs[i].startname) == 0)
+		if (animdefs[i].istexture == istexture // Check if it's the same type!
+		&& stricmp(animdefsToken, animdefs[i].startname) == 0)
 		{
 			//CONS_Alert(CONS_NOTICE, "Duplicate animation: %s\n", animdefsToken);
 
@@ -1748,7 +1749,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 		case 305: // continuous
 		case 306: // each time
 		case 307: // once
-			if (!(actor && actor->player && actor->player->charability != dist/10))
+			if (!(actor && actor->player && actor->player->charability == dist/10))
 				return false;
 			break;
 		case 309: // continuous
