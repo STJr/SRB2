@@ -25,6 +25,13 @@ extern consvar_t cv_skin;
 extern consvar_t cv_playername2;
 extern consvar_t cv_playercolor2;
 extern consvar_t cv_skin2;
+// saved versions of the above six
+extern consvar_t cv_defaultplayername;
+extern consvar_t cv_defaultplayercolor;
+extern consvar_t cv_defaultskin;
+extern consvar_t cv_defaultplayername2;
+extern consvar_t cv_defaultplayercolor2;
+extern consvar_t cv_defaultskin2;
 
 #ifdef SEENAMES
 extern consvar_t cv_seenames, cv_allowseenames;

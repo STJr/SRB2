@@ -224,15 +224,23 @@ consvar_t cv_seenames = {"seenames", "Ally/Foe", CV_SAVE, seenames_cons_t, 0, 0,
 consvar_t cv_allowseenames = {"allowseenames", "Yes", CV_NETVAR, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
 #endif
 
-// these are just meant to be saved to the config
-consvar_t cv_playername = {"name", "Sonic", CV_SAVE|CV_CALL|CV_NOINIT, NULL, Name_OnChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_playername2 = {"name2", "Tails", CV_SAVE|CV_CALL|CV_NOINIT, NULL, Name2_OnChange, 0, NULL, NULL, 0, 0, NULL};
+// names
+consvar_t cv_playername = {"name", "Sonic", CV_CALL|CV_NOINIT, NULL, Name_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_playername2 = {"name2", "Tails", CV_CALL|CV_NOINIT, NULL, Name2_OnChange, 0, NULL, NULL, 0, 0, NULL};
 // player colors
 consvar_t cv_playercolor = {"color", "Blue", CV_CALL|CV_NOINIT, Color_cons_t, Color_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_playercolor2 = {"color2", "Orange", CV_CALL|CV_NOINIT, Color_cons_t, Color2_OnChange, 0, NULL, NULL, 0, 0, NULL};
 // player's skin, saved for commodity, when using a favorite skins wad..
 consvar_t cv_skin = {"skin", DEFAULTSKIN, CV_CALL|CV_NOINIT, NULL, Skin_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_skin2 = {"skin2", DEFAULTSKIN2, CV_CALL|CV_NOINIT, NULL, Skin2_OnChange, 0, NULL, NULL, 0, 0, NULL};
+
+// saved versions of the above six
+consvar_t cv_defaultplayername = {"defaultname", "Sonic", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_defaultplayername2 = {"defaultname2", "Tails", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_defaultplayercolor = {"defaultcolor", "Blue", CV_SAVE, Color_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_defaultplayercolor2 = {"defaultcolor2", "Orange", CV_SAVE, Color_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_defaultskin = {"defaultskin", DEFAULTSKIN, CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_defaultskin2 = {"defaultskin2", DEFAULTSKIN2, CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 consvar_t cv_skipmapcheck = {"skipmapcheck", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
@@ -654,6 +662,13 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_playername2);
 	CV_RegisterVar(&cv_playercolor2);
 	CV_RegisterVar(&cv_skin2);
+	// saved versions of the above six
+	CV_RegisterVar(&cv_defaultplayername);
+	CV_RegisterVar(&cv_defaultplayercolor);
+	CV_RegisterVar(&cv_defaultskin);
+	CV_RegisterVar(&cv_defaultplayername2);
+	CV_RegisterVar(&cv_defaultplayercolor2);
+	CV_RegisterVar(&cv_defaultskin2);
 
 #ifdef SEENAMES
 	CV_RegisterVar(&cv_seenames);

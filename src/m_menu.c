@@ -262,7 +262,7 @@ static void M_ConfirmTeamChange(INT32 choice);
 static void M_SecretsMenu(INT32 choice);
 static void M_SetupChoosePlayer(INT32 choice);
 static void M_QuitSRB2(INT32 choice);
-menu_t SP_MainDef, MP_MainDef, OP_MainDef;
+menu_t SP_MainDef, OP_MainDef;
 menu_t MISC_ScrambleTeamDef, MISC_ChangeTeamDef;
 
 // Single Player
@@ -285,21 +285,19 @@ static menu_t SP_TimeAttackDef, SP_ReplayDef, SP_GuestReplayDef, SP_GhostDef;
 static menu_t SP_NightsAttackDef, SP_NightsReplayDef, SP_NightsGuestReplayDef, SP_NightsGhostDef;
 
 // Multiplayer
-#ifndef NONET
-static void M_StartServerMenu(INT32 choice);
-static void M_ConnectMenu(INT32 choice);
-static void M_ConnectIPMenu(INT32 choice);
-#endif
+static void M_SetupMultiPlayer(INT32 choice);
+static void M_SetupMultiPlayer2(INT32 choice);
 static void M_StartSplitServerMenu(INT32 choice);
 static void M_StartServer(INT32 choice);
 static void M_ServerOptions(INT32 choice);
 #ifndef NONET
+static void M_StartServerMenu(INT32 choice);
+static void M_ConnectMenu(INT32 choice);
 static void M_Refresh(INT32 choice);
 static void M_Connect(INT32 choice);
 static void M_ChooseRoom(INT32 choice);
+menu_t MP_MainDef;
 #endif
-static void M_SetupMultiPlayer(INT32 choice);
-static void M_SetupMultiPlayer2(INT32 choice);
 
 // Options
 // Split into multiple parts due to size
@@ -367,16 +365,13 @@ static void M_OGL_DrawColorMenu(void);
 #ifndef NONET
 static void M_DrawScreenshotMenu(void);
 static void M_DrawConnectMenu(void);
-static void M_DrawConnectIPMenu(void);
+static void M_DrawMPMainMenu(void);
 static void M_DrawRoomMenu(void);
 #endif
 static void M_DrawJoystick(void);
 static void M_DrawSetupMultiPlayerMenu(void);
 
 // Handling functions
-#ifndef NONET
-static boolean M_CancelConnect(void);
-#endif
 static boolean M_ExitPandorasBox(void);
 static boolean M_QuitMultiPlayerMenu(void);
 static void M_HandleLevelPlatter(INT32 choice);
@@ -385,6 +380,7 @@ static void M_HandleImageDef(INT32 choice);
 static void M_HandleLoadSave(INT32 choice);
 static void M_HandleLevelStats(INT32 choice);
 #ifndef NONET
+static boolean M_CancelConnect(void);
 static void M_HandleConnectIP(INT32 choice);
 #endif
 static void M_HandleSetupMultiPlayer(INT32 choice);
@@ -487,11 +483,15 @@ static consvar_t cv_dummymares = {"dummymares", "Overall", CV_HIDEN|CV_CALL, dum
 // ---------
 static menuitem_t MainMenu[] =
 {
-	{IT_CALL   |IT_STRING, NULL, "Secrets",     M_SecretsMenu,      84},
-	{IT_CALL   |IT_STRING, NULL, "1  player",   M_SinglePlayerMenu, 92},
-	{IT_SUBMENU|IT_STRING, NULL, "multiplayer", &MP_MainDef,       100},
-	{IT_CALL   |IT_STRING, NULL, "options",     M_Options,         108},
-	{IT_CALL   |IT_STRING, NULL, "quit  game",  M_QuitSRB2,        116},
+	{IT_STRING|IT_CALL,    NULL, "Secrets",     M_SecretsMenu,           84},
+	{IT_STRING|IT_CALL,    NULL, "1  player",   M_SinglePlayerMenu,      92},
+#ifndef NONET
+	{IT_STRING|IT_SUBMENU, NULL, "multiplayer", &MP_MainDef,            100},
+#else
+	{IT_STRING|IT_CALL,    NULL, "multiplayer", M_StartSplitServerMenu, 100},
+#endif
+	{IT_STRING|IT_CALL,    NULL, "options",     M_Options,              108},
+	{IT_STRING|IT_CALL,    NULL, "quit  game",  M_QuitSRB2,             116},
 };
 
 typedef enum
@@ -902,56 +902,56 @@ static menuitem_t SP_PlayerMenu[] =
 // Multiplayer and all of its submenus
 // -----------------------------------
 // Prefix: MP_
+
+// Separated splitscreen and normal servers.
+static menuitem_t MP_SplitServerMenu[] =
+{
+	{IT_STRING|IT_CALL,              NULL, "Select Gametype/Level...", M_GameTypeChange,    100},
+#ifdef NONET // In order to keep player setup accessible.
+	{IT_STRING|IT_CALL,              NULL, "Player 1 setup...",        M_SetupMultiPlayer,  110},
+	{IT_STRING|IT_CALL,              NULL, "Player 2 setup...",        M_SetupMultiPlayer2, 120},
+#endif
+	{IT_STRING|IT_CALL,              NULL, "More Options...",          M_ServerOptions,     130},
+	{IT_WHITESTRING|IT_CALL,         NULL, "Start",                    M_StartServer,       140},
+};
+
+#ifndef NONET
+
 static menuitem_t MP_MainMenu[] =
 {
-#ifndef NONET
-	{IT_CALL | IT_STRING, NULL, "HOST GAME",              M_StartServerMenu,      10},
-	{IT_CALL | IT_STRING, NULL, "JOIN GAME (Search)",	  M_ConnectMenu,		  30},
-	{IT_CALL | IT_STRING, NULL, "JOIN GAME (Specify IP)", M_ConnectIPMenu,        40},
-#endif
-	{IT_CALL | IT_STRING, NULL, "TWO PLAYER GAME",        M_StartSplitServerMenu, 60},
-
-	{IT_CALL | IT_STRING, NULL, "PLAYER 1 SETUP",         M_SetupMultiPlayer,     80},
-	{IT_CALL | IT_STRING, NULL, "PLAYER 2 SETUP",         M_SetupMultiPlayer2,    90},
+	{IT_HEADER, NULL, "Host a game", NULL, 0},
+	{IT_STRING|IT_CALL,       NULL, "Internet/LAN...",       M_StartServerMenu,      12},
+	{IT_STRING|IT_CALL,       NULL, "Splitscreen...",        M_StartSplitServerMenu, 22},
+	{IT_HEADER, NULL, "Join a game", NULL, 40},
+	{IT_STRING|IT_CALL,       NULL, "Server browser...",     M_ConnectMenu,          52},
+	{IT_STRING|IT_KEYHANDLER, NULL, "Specify IPv4 address:", M_HandleConnectIP,      62},
+	{IT_HEADER, NULL, "Player setup", NULL, 94},
+	{IT_STRING|IT_CALL,       NULL, "Player 1...",           M_SetupMultiPlayer,    106},
+	{IT_STRING|IT_CALL,       NULL, "Player 2... ",          M_SetupMultiPlayer2,   116},
 };
 
 static menuitem_t MP_ServerMenu[] =
 {
-	{IT_DISABLED|IT_NOTHING, NULL, "", NULL, 0},
-#ifndef NONET
-	{IT_STRING|IT_CALL,              NULL, "Room...",                  M_RoomMenu,        10},
-	{IT_STRING|IT_CVAR|IT_CV_STRING, NULL, "Server Name",              &cv_servername,    20},
-	{IT_STRING|IT_CVAR,              NULL, "Max Players",              &cv_maxplayers,    46},
-	{IT_STRING|IT_CVAR,              NULL, "Allow Add-on Downloading", &cv_downloading,   56},
-#endif
-	{IT_STRING|IT_CALL,              NULL, "Select Gametype/Level...", M_GameTypeChange, 100},
-	{IT_STRING|IT_CALL,              NULL, "More Options...",          M_ServerOptions,  130},
-	{IT_WHITESTRING|IT_CALL,         NULL, "Start",                    M_StartServer,    140},
+	{IT_STRING|IT_CALL,              NULL, "Room...",                  M_RoomMenu,          10},
+	{IT_STRING|IT_CVAR|IT_CV_STRING, NULL, "Server Name",              &cv_servername,      20},
+	{IT_STRING|IT_CVAR,              NULL, "Max Players",              &cv_maxplayers,      46},
+	{IT_STRING|IT_CVAR,              NULL, "Allow Add-on Downloading", &cv_downloading,     56},
+	{IT_STRING|IT_CALL,              NULL, "Select Gametype/Level...", M_GameTypeChange,   100},
+	{IT_STRING|IT_CALL,              NULL, "More Options...",          M_ServerOptions,    130},
+	{IT_WHITESTRING|IT_CALL,         NULL, "Start",                    M_StartServer,      140},
 };
 
 enum
 {
-	mp_server_dummy = 0, // exists solely so zero-indexed in both NONET and not NONET
-#ifndef NONET
-	mp_server_room,
+	mp_server_room = 0,
 	mp_server_name,
 	mp_server_maxpl,
 	mp_server_waddl,
-#endif
 	mp_server_levelgt,
 	mp_server_options,
 	mp_server_start
 };
 
-// Separated splitscreen and normal servers.
-static menuitem_t MP_SplitServerMenu[] =
-{
-	{IT_STRING|IT_CALL,              NULL, "Select Gametype/Level...", M_GameTypeChange, 100},
-	{IT_STRING|IT_CALL,              NULL, "More Options...",          M_ServerOptions,  130},
-	{IT_WHITESTRING|IT_CALL,         NULL, "Start",                    M_StartServer,    140},
-};
-
-#ifndef NONET
 static menuitem_t MP_ConnectMenu[] =
 {
 	{IT_STRING | IT_CALL,       NULL, "Room...",  M_RoomMenu,         4},
@@ -1003,17 +1003,14 @@ static menuitem_t MP_RoomMenu[] =
 	{IT_DISABLED,         NULL, "",               M_ChooseRoom, 162},
 };
 
-static menuitem_t MP_ConnectIPMenu[] =
-{
-	{IT_KEYHANDLER | IT_STRING, NULL, "  IP Address:", M_HandleConnectIP, 0},
-};
 #endif
 
 static menuitem_t MP_PlayerSetupMenu[] =
 {
-	{IT_KEYHANDLER | IT_STRING,   NULL, "Your name",   M_HandleSetupMultiPlayer,   0},
-	{IT_KEYHANDLER | IT_STRING,   NULL, "Your player", M_HandleSetupMultiPlayer,  0}, // Tails 01-18-2001
-	{IT_KEYHANDLER | IT_STRING,   NULL, "Your color",  M_HandleSetupMultiPlayer,  0},
+	{IT_KEYHANDLER, NULL, "", M_HandleSetupMultiPlayer, 0}, // name
+	{IT_KEYHANDLER, NULL, "", M_HandleSetupMultiPlayer, 0}, // skin
+	{IT_KEYHANDLER, NULL, "", M_HandleSetupMultiPlayer, 0}, // colour
+	{IT_KEYHANDLER, NULL, "", M_HandleSetupMultiPlayer, 0}, // default
 };
 
 // ------------------------------------
@@ -1665,29 +1662,16 @@ menu_t SP_PlayerDef =
 };
 
 // Multiplayer
-menu_t MP_MainDef = DEFAULTMENUSTYLE("M_MULTI", MP_MainMenu, &MainDef, 60, 40);
-
-menu_t MP_ServerDef =
-{
-	"M_MULTI",
-	sizeof (MP_ServerMenu)/sizeof (menuitem_t),
-	&MP_MainDef,
-	MP_ServerMenu,
-	M_DrawServerMenu,
-	27, 30
-#ifdef NONET
-	- 50
-#endif
-	,
-	0,
-	NULL
-};
 
 menu_t MP_SplitServerDef =
 {
 	"M_MULTI",
 	sizeof (MP_SplitServerMenu)/sizeof (menuitem_t),
+#ifndef NONET
 	&MP_MainDef,
+#else
+	&MainDef,
+#endif
 	MP_SplitServerMenu,
 	M_DrawServerMenu,
 	27, 30 - 50,
@@ -1696,6 +1680,31 @@ menu_t MP_SplitServerDef =
 };
 
 #ifndef NONET
+
+menu_t MP_MainDef =
+{
+	"M_MULTI",
+	sizeof (MP_MainMenu)/sizeof (menuitem_t),
+	&MainDef,
+	MP_MainMenu,
+	M_DrawMPMainMenu,
+	27, 40,
+	0,
+	M_CancelConnect
+};
+
+menu_t MP_ServerDef =
+{
+	"M_MULTI",
+	sizeof (MP_ServerMenu)/sizeof (menuitem_t),
+	&MP_MainDef,
+	MP_ServerMenu,
+	M_DrawServerMenu,
+	27, 30,
+	0,
+	NULL
+};
+
 menu_t MP_ConnectDef =
 {
 	"M_MULTI",
@@ -1707,17 +1716,7 @@ menu_t MP_ConnectDef =
 	0,
 	M_CancelConnect
 };
-menu_t MP_ConnectIPDef =
-{
-	"M_MULTI",
-	sizeof (MP_ConnectIPMenu)/sizeof (menuitem_t),
-	&MP_MainDef,
-	MP_ConnectIPMenu,
-	M_DrawConnectIPMenu,
-	27,40,
-	0,
-	M_CancelConnect
-};
+
 menu_t MP_RoomDef =
 {
 	"M_MULTI",
@@ -1735,23 +1734,23 @@ menu_t MP_PlayerSetupDef =
 {
 	"M_SPLAYR",
 	sizeof (MP_PlayerSetupMenu)/sizeof (menuitem_t),
-	&MP_MainDef,
+	&MainDef, // doesn't matter
 	MP_PlayerSetupMenu,
 	M_DrawSetupMultiPlayerMenu,
-	19, 26,
+	19, 22,
 	0,
 	M_QuitMultiPlayerMenu
 };
 
 // Options
-menu_t OP_MainDef = DEFAULTMENUSTYLE("M_OPTTTL", OP_MainMenu, &MainDef, 60, 30);
+menu_t OP_MainDef = DEFAULTMENUSTYLE("M_OPTTTL", OP_MainMenu, &MainDef, 50, 30);
 menu_t OP_ChangeControlsDef = CONTROLMENUSTYLE(OP_ChangeControlsMenu, &OP_MainDef);
 menu_t OP_P1ControlsDef = DEFAULTMENUSTYLE("M_CONTRO", OP_P1ControlsMenu, &OP_MainDef, 50, 30);
 menu_t OP_P2ControlsDef = DEFAULTMENUSTYLE("M_CONTRO", OP_P2ControlsMenu, &OP_MainDef, 50, 30);
 menu_t OP_MouseOptionsDef = DEFAULTMENUSTYLE("M_CONTRO", OP_MouseOptionsMenu, &OP_P1ControlsDef, 35, 30);
 menu_t OP_Mouse2OptionsDef = DEFAULTMENUSTYLE("M_CONTRO", OP_Mouse2OptionsMenu, &OP_P2ControlsDef, 35, 30);
-menu_t OP_Joystick1Def = DEFAULTMENUSTYLE("M_CONTRO", OP_Joystick1Menu, &OP_P1ControlsDef, 60, 30);
-menu_t OP_Joystick2Def = DEFAULTMENUSTYLE("M_CONTRO", OP_Joystick2Menu, &OP_P2ControlsDef, 60, 30);
+menu_t OP_Joystick1Def = DEFAULTMENUSTYLE("M_CONTRO", OP_Joystick1Menu, &OP_P1ControlsDef, 50, 30);
+menu_t OP_Joystick2Def = DEFAULTMENUSTYLE("M_CONTRO", OP_Joystick2Menu, &OP_P2ControlsDef, 50, 30);
 menu_t OP_JoystickSetDef =
 {
 	"M_CONTRO",
@@ -7460,13 +7459,18 @@ static void M_DrawServerMenu(void)
 
 	if (cv_nextmap.value)
 	{
+#ifndef NONET
+#define imgheight MP_ServerMenu[mp_server_levelgt].alphaKey
+#else
+#define imgheight 100
+#endif
 		patch_t *PictureOfLevel;
 		lumpnum_t lumpnum;
 		char headerstr[40];
 
 		sprintf(headerstr, "%s - %s", cv_newgametype.string, cv_nextmap.string);
 
-		M_DrawLevelPlatterHeader(currentMenu->y + MP_ServerMenu[mp_server_levelgt].alphaKey - 10 - lsheadingheight/2, (const char *)headerstr, true);
+		M_DrawLevelPlatterHeader(currentMenu->y + imgheight - 10 - lsheadingheight/2, (const char *)headerstr, true);
 
 		//  A 160x100 image of the level as entry MAPxxP
 		lumpnum = W_CheckNumForName(va("%sP", G_BuildMapName(cv_nextmap.value)));
@@ -7476,7 +7480,7 @@ static void M_DrawServerMenu(void)
 		else
 			PictureOfLevel = W_CachePatchName("BLANKLVL", PU_CACHE);
 
-		V_DrawSmallScaledPatch(319 - (currentMenu->x + (SHORT(PictureOfLevel->width)/2)), currentMenu->y + MP_ServerMenu[mp_server_levelgt].alphaKey, 0, PictureOfLevel);
+		V_DrawSmallScaledPatch(319 - (currentMenu->x + (SHORT(PictureOfLevel->width)/2)), currentMenu->y + imgheight, 0, PictureOfLevel);
 	}
 }
 
@@ -7580,30 +7584,40 @@ static void M_StartServerMenu(INT32 choice)
 
 static char setupm_ip[16];
 
-// Connect using IP address Tails 11-19-2002
-static void M_ConnectIPMenu(INT32 choice)
-{
-	(void)choice;
-	// modified game check: no longer handled
-	// we don't request a restart unless the filelist differs
-
-	M_SetupNextMenu(&MP_ConnectIPDef);
-}
-
 // Draw the funky Connect IP menu. Tails 11-19-2002
 // So much work for such a little thing!
-static void M_DrawConnectIPMenu(void)
+static void M_DrawMPMainMenu(void)
 {
+	INT32 x = currentMenu->x;
+	INT32 y = currentMenu->y;
+
 	// use generic drawer for cursor, items and title
 	M_DrawGenericMenu();
 
+#if MAXPLAYERS == 32
+	V_DrawRightAlignedString(BASEVIDWIDTH-x, y+12,
+		((itemOn == 1) ? V_YELLOWMAP : 0), "(2-32 players)");
+#else
+Update the maxplayers label...
+#endif
+
+	V_DrawRightAlignedString(BASEVIDWIDTH-x, y+22,
+		((itemOn == 2) ? V_YELLOWMAP : 0), "(2 players)");
+
+	V_DrawRightAlignedString(BASEVIDWIDTH-x, y+116,
+		((itemOn == 8) ? V_YELLOWMAP : 0), "(splitscreen)");
+
+	y += 62;
+
+	V_DrawFill(x+5, y+4+5, /*16*8 + 6,*/ BASEVIDWIDTH - 2*(x+5), 8+6, 159);
+
 	// draw name string
-	V_DrawString(128,40, V_MONOSPACE, setupm_ip);
+	V_DrawString(x+8,y+12, V_MONOSPACE, setupm_ip);
 
 	// draw text cursor for name
-	if (itemOn == 0 &&
-	    skullAnimCounter < 4)   //blink cursor
-		V_DrawCharacter(128+V_StringWidth(setupm_ip, V_MONOSPACE),40,'_',false);
+	if (itemOn == 5 //0
+	    && skullAnimCounter < 4)   //blink cursor
+		V_DrawCharacter(x+8+V_StringWidth(setupm_ip, V_MONOSPACE),y+12,'_',false);
 }
 
 // Tails 11-19-2002
@@ -7624,11 +7638,21 @@ static void M_ConnectIP(INT32 choice)
 // Tails 11-19-2002
 static void M_HandleConnectIP(INT32 choice)
 {
-	size_t   l;
-	boolean  exitmenu = false;  // exit to previous menu and send name change
+	size_t l;
+	boolean exitmenu = false;  // exit to previous menu and send name change
 
 	switch (choice)
 	{
+		case KEY_DOWNARROW:
+			M_NextOpt();
+			S_StartSound(NULL,sfx_menu1); // Tails
+			break;
+
+		case KEY_UPARROW:
+			M_PrevOpt();
+			S_StartSound(NULL,sfx_menu1); // Tails
+			break;
+
 		case KEY_ENTER:
 			S_StartSound(NULL,sfx_menu1); // Tails
 			M_ClearMenus(true);
@@ -7640,29 +7664,41 @@ static void M_HandleConnectIP(INT32 choice)
 			break;
 
 		case KEY_BACKSPACE:
-			if ((l = strlen(setupm_ip))!=0 && itemOn == 0)
+			if ((l = strlen(setupm_ip)) != 0)
 			{
 				S_StartSound(NULL,sfx_menu1); // Tails
-				setupm_ip[l-1] =0;
+				setupm_ip[l-1] = 0;
+			}
+			break;
+
+		case KEY_DEL:
+			if (setupm_ip[0])
+			{
+				S_StartSound(NULL,sfx_menu1); // Tails
+				setupm_ip[0] = 0;
 			}
 			break;
 
 		default:
 			l = strlen(setupm_ip);
-			if (l < 16-1 && (choice == 46 || (choice >= 48 && choice <= 57))) // Rudimentary number and period enforcing
+			if (l >= 16-1)
+				break;
+
+			if (choice == 46 || (choice >= 48 && choice <= 57)) // Rudimentary number and period enforcing
 			{
 				S_StartSound(NULL,sfx_menu1); // Tails
-				setupm_ip[l] =(char)choice;
-				setupm_ip[l+1] =0;
+				setupm_ip[l] = (char)choice;
+				setupm_ip[l+1] = 0;
 			}
-			else if (l < 16-1 && choice >= 199 && choice <= 211 && choice != 202 && choice != 206) //numpad too!
+			else if (choice >= 199 && choice <= 211 && choice != 202 && choice != 206) //numpad too!
 			{
 				XBOXSTATIC char keypad_translation[] = {'7','8','9','-','4','5','6','+','1','2','3','0','.'};
 				choice = keypad_translation[choice - 199];
 				S_StartSound(NULL,sfx_menu1); // Tails
-				setupm_ip[l] =(char)choice;
-				setupm_ip[l+1] =0;
+				setupm_ip[l] = (char)choice;
+				setupm_ip[l+1] = 0;
 			}
+
 			break;
 	}
 
@@ -7692,6 +7728,9 @@ static player_t  *setupm_player;
 static consvar_t *setupm_cvskin;
 static consvar_t *setupm_cvcolor;
 static consvar_t *setupm_cvname;
+static consvar_t *setupm_cvdefaultskin;
+static consvar_t *setupm_cvdefaultcolor;
+static consvar_t *setupm_cvdefaultname;
 static INT32      setupm_fakeskin;
 static INT32      setupm_fakecolor;
 
@@ -7848,7 +7887,21 @@ colordraw:
 #undef charw
 #undef indexwidth
 
-	V_DrawScaledPatch(currentMenu->x - 17, cursory, 0,
+	x = MP_PlayerSetupDef.x;
+	y += 20;
+
+	V_DrawString(x, y,
+		((R_SkinAvailable(setupm_cvdefaultskin->string) != setupm_fakeskin
+		|| setupm_cvdefaultcolor->value != setupm_fakecolor
+		|| strcmp(setupm_name, setupm_cvdefaultname->string))
+			? 0
+			: V_TRANSLUCENT)
+		| ((itemOn == 3) ? V_YELLOWMAP : 0),
+		"Save as default");
+	if (itemOn == 3)
+		cursory = y;
+
+	V_DrawScaledPatch(x - 17, cursory, 0,
 		W_CachePatchName("M_CURSOR", PU_CACHE));
 }
 
@@ -7893,6 +7946,18 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 			break;
 
 		case KEY_ENTER:
+			if (itemOn == 3
+			&& (R_SkinAvailable(setupm_cvdefaultskin->string) != setupm_fakeskin
+			|| setupm_cvdefaultcolor->value != setupm_fakecolor
+			|| strcmp(setupm_name, setupm_cvdefaultname->string)))
+			{
+				S_StartSound(NULL,sfx_strpst);
+				// you know what? always putting these in the buffer won't hurt anything.
+				COM_BufAddText (va("%s \"%s\"\n",setupm_cvdefaultskin->name,skins[setupm_fakeskin].name));
+				COM_BufAddText (va("%s %d\n",setupm_cvdefaultcolor->name,setupm_fakecolor));
+				COM_BufAddText (va("%s %s\n",setupm_cvdefaultname->name,setupm_name));
+				break;
+			}
 		case KEY_RIGHTARROW:
 			if (itemOn == 1)       //player skin
 			{
@@ -7976,6 +8041,9 @@ static void M_SetupMultiPlayer(INT32 choice)
 	setupm_cvskin = &cv_skin;
 	setupm_cvcolor = &cv_playercolor;
 	setupm_cvname = &cv_playername;
+	setupm_cvdefaultskin = &cv_defaultskin;
+	setupm_cvdefaultcolor = &cv_defaultplayercolor;
+	setupm_cvdefaultname = &cv_defaultplayername;
 
 	// For whatever reason this doesn't work right if you just use ->value
 	setupm_fakeskin = R_SkinAvailable(setupm_cvskin->string);
@@ -8009,6 +8077,9 @@ static void M_SetupMultiPlayer2(INT32 choice)
 	setupm_cvskin = &cv_skin2;
 	setupm_cvcolor = &cv_playercolor2;
 	setupm_cvname = &cv_playername2;
+	setupm_cvdefaultskin = &cv_defaultskin2;
+	setupm_cvdefaultcolor = &cv_defaultplayercolor2;
+	setupm_cvdefaultname = &cv_defaultplayername2;
 
 	// For whatever reason this doesn't work right if you just use ->value
 	setupm_fakeskin = R_SkinAvailable(setupm_cvskin->string);
