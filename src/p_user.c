@@ -1267,11 +1267,12 @@ boolean P_IsObjectOnGroundIn(mobj_t *mo, sector_t *sec)
 				if (!(rover->flags & FF_EXISTS))
 					continue;
 
-				// If the FOF is configured to let players through, continue.
-				if (!(rover->flags & FF_BLOCKPLAYER) && (rover->flags & FF_BLOCKOTHERS))
+				// If the FOF is configured to let the object through, continue.
+				if (!((rover->flags & FF_BLOCKPLAYER && mo->player)
+					|| (rover->flags & FF_BLOCKOTHERS && !mo->player)))
 					continue;
 
-				// If the the platform is intangile from below, continue.
+				// If the the platform is intangible from below, continue.
 				if (rover->flags & FF_PLATFORM)
 					continue;
 
@@ -1300,11 +1301,12 @@ boolean P_IsObjectOnGroundIn(mobj_t *mo, sector_t *sec)
 				if (!(rover->flags & FF_EXISTS))
 					continue;
 
-				// If the FOF is configured to let players through, continue.
-				if (!(rover->flags & FF_BLOCKPLAYER) && (rover->flags & FF_BLOCKOTHERS))
+				// If the FOF is configured to let the object through, continue.
+				if (!((rover->flags & FF_BLOCKPLAYER && mo->player)
+					|| (rover->flags & FF_BLOCKOTHERS && !mo->player)))
 					continue;
 
-				// If the the platform is intangile from above, continue.
+				// If the the platform is intangible from above, continue.
 				if (rover->flags & FF_REVERSEPLATFORM)
 					continue;
 
