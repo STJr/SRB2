@@ -761,6 +761,7 @@ static void ST_drawLives(void)
 						va("%d",sum));
 					return;
 				}
+#if 0 // render the number of lives you COULD steal
 			case 2:
 				{
 					INT32 i, sum = 0;
@@ -781,6 +782,7 @@ static void ST_drawLives(void)
 						V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANSHALF|v_splitflag, va("/%d",sum));
 				}
 				// intentional fallthrough
+#endif
 			default:
 				// don't return so the SP one can be drawn below
 				break;
@@ -1997,7 +1999,7 @@ static void ST_overlayDrawer(void)
 
 	if (!hu_showscores && (netgame || multiplayer) && displayplayer == consoleplayer)
 	{
-		if (stplyr->exiting && cv_playersforexit.value && gametype == GT_COOP)
+		if (!stplyr->spectator && stplyr->exiting && cv_playersforexit.value && gametype == GT_COOP)
 		{
 			INT32 i, total = 0, exiting = 0;
 

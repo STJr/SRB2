@@ -4837,7 +4837,7 @@ static void P_3dMovement(player_t *player)
 	angle_t dangle; // replaces old quadrants bits
 	fixed_t normalspd = FixedMul(player->normalspeed, player->mo->scale);
 	boolean analogmove = false;
-	boolean spin = (player->pflags & PF_SPINNING && (player->rmomx || player->rmomy) && !(player->pflags & PF_STARTDASH));
+	boolean spin = ((onground = P_IsObjectOnGround(player->mo)) && player->pflags & PF_SPINNING && (player->rmomx || player->rmomy) && !(player->pflags & PF_STARTDASH));
 	fixed_t oldMagnitude, newMagnitude;
 #ifdef ESLOPE
 	vector3_t totalthrust;
@@ -4927,9 +4927,6 @@ static void P_3dMovement(player_t *player)
 	if (player->pflags & PF_SLIDING)
 		cmd->forwardmove = 0;
 
-	// Do not let the player control movement if not onground.
-	onground = P_IsObjectOnGround(player->mo);
-
 	player->aiming = cmd->aiming<<FRACBITS;
 
 	// Set the player speeds.
@@ -4990,10 +4987,7 @@ static void P_3dMovement(player_t *player)
 	if (spin) // Prevent gaining speed whilst rolling!
 	{
 		const fixed_t ns = FixedDiv(549*ORIG_FRICTION,500*FRACUNIT); // P_XYFriction
-		if (onground)
-			topspeed = FixedMul(oldMagnitude, ns);
-		else
-			topspeed = oldMagnitude;
+		topspeed = FixedMul(oldMagnitude, ns);
 	}
 
 	// Better maneuverability while flying
@@ -5037,15 +5031,14 @@ static void P_3dMovement(player_t *player)
 		// allow very small movement while in air for gameplay
 		if (!onground)
 			movepushforward >>= 2; // proper air movement
-
 		// Allow a bit of movement while spinning
-		if (player->pflags & PF_SPINNING)
+		else if (player->pflags & PF_SPINNING)
 		{
 			if ((mforward && cmd->forwardmove > 0) || (mbackward && cmd->forwardmove < 0)
 			|| (player->pflags & PF_STARTDASH))
 				movepushforward = 0;
 			else
-				movepushforward = FixedDiv(movepushforward, 16*FRACUNIT);
+				movepushforward >>= 4;
 		}
 
 		movepushforward = FixedMul(movepushforward, player->mo->scale);
@@ -5077,17 +5070,14 @@ static void P_3dMovement(player_t *player)
 			// allow very small movement while in air for gameplay
 			if (!onground)
 				movepushforward >>= 2; // proper air movement
-
 			// Allow a bit of movement while spinning
-			if (player->pflags & PF_SPINNING)
+			else if (player->pflags & PF_SPINNING)
 			{
-				// Stupid little movement prohibitor hack
-				// that REALLY shouldn't belong in analog code.
 				if ((mforward && cmd->forwardmove > 0) || (mbackward && cmd->forwardmove < 0)
 				|| (player->pflags & PF_STARTDASH))
 					movepushforward = 0;
 				else
-					movepushforward = FixedDiv(movepushforward, 16*FRACUNIT);
+					movepushforward >>= 4;
 			}
 
 			movepushsideangle = controldirection;
@@ -8198,6 +8188,10 @@ boolean P_GetLives(player_t *player)
 static void P_ConsiderAllGone(void)
 {
 	INT32 i, lastdeadplayer = -1, deadtimercheck = INT32_MAX;
+
+	if (countdown2)
+		return;
+
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
 		if (!playeringame[i])
@@ -8206,15 +8200,16 @@ static void P_ConsiderAllGone(void)
 		if (players[i].playerstate != PST_DEAD && !players[i].spectator && players[i].mo && players[i].mo->health)
 			break;
 
-		if (players[i].lives > 0)
+		if (players[i].spectator)
 		{
-			if (players[i].spectator && lastdeadplayer == -1)
-				;
-			else if (players[i].deadtimer < deadtimercheck)
-				deadtimercheck = players[i].deadtimer;
-			else
-				continue;
+			if (lastdeadplayer == -1)
+				lastdeadplayer = i;
+		}
+		else if (players[i].lives > 0)
+		{
 			lastdeadplayer = i;
+			if (players[i].deadtimer < deadtimercheck)
+				deadtimercheck = players[i].deadtimer;
 		}
 	}
 

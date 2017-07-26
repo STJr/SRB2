@@ -3041,6 +3041,15 @@ static void P_PlayerZMovement(mobj_t *mo)
 
 				if (mo->health && !mo->player->spectator && !P_CheckDeathPitCollide(mo))
 				{
+					if ((mo->player->charability2 == CA2_SPINDASH) && !(mo->player->pflags & PF_THOKKED) && (mo->player->cmd.buttons & BT_USE) && (FixedHypot(mo->momx, mo->momy) > (5*mo->scale)))
+					{
+						mo->player->pflags |= PF_SPINNING;
+						P_SetPlayerMobjState(mo, S_PLAY_ROLL);
+						S_StartSound(mo, sfx_spin);
+					}
+					else
+						mo->player->pflags &= ~PF_SPINNING;
+
 					if (mo->player->pflags & PF_GLIDING) // ground gliding
 					{
 						mo->player->skidtime = TICRATE;
@@ -3053,7 +3062,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 						S_StartSound(mo, sfx_s3k8b);
 						mo->player->pflags |= PF_FULLSTASIS;
 					}
-					else if (mo->player->pflags & PF_JUMPED || (mo->player->pflags & (PF_SPINNING|PF_USEDOWN)) != (PF_SPINNING|PF_USEDOWN)
+					else if (mo->player->pflags & PF_JUMPED || !(mo->player->pflags & PF_SPINNING)
 					|| mo->player->powers[pw_tailsfly] || mo->state-states == S_PLAY_FLY_TIRED)
 					{
 						if (mo->player->cmomx || mo->player->cmomy)
@@ -3083,15 +3092,6 @@ static void P_PlayerZMovement(mobj_t *mo)
 								P_SetPlayerMobjState(mo, S_PLAY_STND);
 						}
 					}
-
-					if ((mo->player->charability2 == CA2_SPINDASH) && !(mo->player->pflags & PF_THOKKED) && (mo->player->cmd.buttons & BT_USE) && (FixedHypot(mo->momx, mo->momy) > (5*mo->scale)))
-					{
-						mo->player->pflags |= PF_SPINNING;
-						P_SetPlayerMobjState(mo, S_PLAY_ROLL);
-						S_StartSound(mo, sfx_spin);
-					}
-					else
-						mo->player->pflags &= ~PF_SPINNING;
 
 					if (!(mo->player->pflags & PF_GLIDING))
 						mo->player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE);
