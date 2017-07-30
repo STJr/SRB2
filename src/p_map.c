@@ -988,10 +988,14 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		fixed_t bottomz, topz;
 		angle_t touchangle = R_PointToAngle2(thing->tracer->x, thing->tracer->y, tmthing->x, tmthing->y);
 
-		if (P_PlayerInPain(tmthing->player)
-		&& (tmthing->momx || tmthing->momy)
-		&& (R_PointToAngle2(0, 0, tmthing->momx, tmthing->momy) - touchangle) > ANGLE_180)
-			return true; // Yes, this is intentionally outside the z-height check. No standing on spikes whilst moving away from them.
+		if (P_PlayerInPain(tmthing->player) && (tmthing->momx || tmthing->momy))
+		{
+			angle_t playerangle = R_PointToAngle2(0, 0, tmthing->momx, tmthing->momy) - touchangle;
+			if (playerangle > ANGLE_180)
+				playerangle = InvAngle(playerangle);
+			if (playerangle < ANGLE_90)
+				return true; // Yes, this is intentionally outside the z-height check. No standing on spikes whilst moving away from them.
+		}
 
 		bottomz = thing->z;
 		topz = thing->z + thing->height;
