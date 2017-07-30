@@ -986,6 +986,13 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	else if (thing->type == MT_WALLSPIKE && thing->flags & MF_SOLID && tmthing->player)
 	{
 		fixed_t bottomz, topz;
+		angle_t touchangle = R_PointToAngle2(thing->tracer->x, thing->tracer->y, tmthing->x, tmthing->y);
+
+		if (P_PlayerInPain(tmthing->player)
+		&& (tmthing->momx || tmthing->momy)
+		&& (R_PointToAngle2(0, 0, tmthing->momx, tmthing->momy) - touchangle) > ANGLE_180)
+			return true; // Yes, this is intentionally outside the z-height check. No standing on spikes whilst moving away from them.
+
 		bottomz = thing->z;
 		topz = thing->z + thing->height;
 
@@ -998,13 +1005,6 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		&&  tmthing->z < topz // below top
 		&& !P_MobjWasRemoved(thing->tracer)) // this probably wouldn't work if we didn't have a tracer
 		{ // use base as a reference point to determine what angle you touched the spike at
-			angle_t touchangle = R_PointToAngle2(thing->tracer->x, thing->tracer->y, tmthing->x, tmthing->y);
-
-			if (P_PlayerInPain(tmthing->player)
-			&& (tmthing->momx || tmthing->momy)
-			&& (R_PointToAngle2(0, 0, tmthing->momx, tmthing->momy) - touchangle) > ANGLE_180)
-				return true;
-
 			touchangle = thing->angle - touchangle;
 			if (touchangle > ANGLE_180)
 				touchangle = InvAngle(touchangle);
