@@ -226,8 +226,7 @@ light_t *t_lspr[NUMSPRITES] =
 	// Collectible Items
 	&lspr[NOLIGHT],     // SPR_RING
 	&lspr[NOLIGHT],     // SPR_TRNG
-	&lspr[NOLIGHT],     // SPR_EMMY
-	&lspr[BLUEBALL_L],     // SPR_TOKE
+	&lspr[NOLIGHT],     // SPR_TOKE
 	&lspr[REDBALL_L],     // SPR_RFLG
 	&lspr[BLUEBALL_L],     // SPR_BFLG
 	&lspr[NOLIGHT],     // SPR_NWNG
@@ -243,6 +242,8 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_SPIK
 	&lspr[NOLIGHT],     // SPR_SFLM
 	&lspr[NOLIGHT],     // SPR_USPK
+	&lspr[NOLIGHT],     // SPR_WSPK
+	&lspr[NOLIGHT],     // SPR_WSPB
 	&lspr[NOLIGHT],     // SPR_STPT
 	&lspr[NOLIGHT],     // SPR_BMNE
 
@@ -293,6 +294,12 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_FWR4
 	&lspr[NOLIGHT],     // SPR_BUS1
 	&lspr[NOLIGHT],     // SPR_BUS2
+	// Trees (both GFZ and misc)
+	&lspr[NOLIGHT],     // SPR_TRE1
+	&lspr[NOLIGHT],     // SPR_TRE2
+	&lspr[NOLIGHT],     // SPR_TRE3
+	&lspr[NOLIGHT],     // SPR_TRE4
+	&lspr[NOLIGHT],     // SPR_TRE5
 
 	// Techno Hill Scenery
 	&lspr[NOLIGHT],     // SPR_THZP
@@ -334,6 +341,8 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_XMS1
 	&lspr[NOLIGHT],     // SPR_XMS2
 	&lspr[NOLIGHT],     // SPR_XMS3
+	&lspr[NOLIGHT],     // SPR_XMS4
+	&lspr[NOLIGHT],     // SPR_XMS5
 
 	// Botanic Serenity Scenery
 	&lspr[NOLIGHT],     // SPR_BSZ1
@@ -345,13 +354,9 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_BSZ7
 	&lspr[NOLIGHT],     // SPR_BSZ8
 
-	// Stalagmites
+	// Misc Scenery
 	&lspr[NOLIGHT],     // SPR_STLG
-
-	// Disco Ball
 	&lspr[NOLIGHT],     // SPR_DBAL
-
-	// ATZ Red Crystal
 	&lspr[NOLIGHT],     // SPR_RCRY
 
 	// Powerup Indicators
@@ -396,15 +401,20 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_SPRB Graue
 	&lspr[NOLIGHT],     // SPR_YSPR
 	&lspr[NOLIGHT],     // SPR_RSPR
+	&lspr[NOLIGHT],     // SPR_SSWY
+	&lspr[NOLIGHT],     // SPR_SSWR
+	&lspr[NOLIGHT],     // SPR_SSWB
 
-	// Environmentals Effects
+	// Environmental Effects
 	&lspr[NOLIGHT],     // SPR_RAIN
 	&lspr[NOLIGHT],     // SPR_SNO1
 	&lspr[NOLIGHT],     // SPR_SPLH
 	&lspr[NOLIGHT],     // SPR_SPLA
 	&lspr[NOLIGHT],     // SPR_SMOK
 	&lspr[NOLIGHT],     // SPR_BUBL
-	&lspr[SUPERSPARK_L], // SPR_WZAP
+	&lspr[RINGLIGHT_L], // SPR_WZAP
+	&lspr[NOLIGHT],     // SPR_DUST
+	&lspr[NOLIGHT],     // SPR_FPRT
 	&lspr[SUPERSPARK_L], // SPR_TFOG
 	&lspr[NIGHTSLIGHT_L],     // SPR_SEED // Sonic CD flower seed
 	&lspr[NOLIGHT],     // SPR_PRTL
@@ -412,8 +422,11 @@ light_t *t_lspr[NUMSPRITES] =
 	// Game Indicators
 	&lspr[NOLIGHT],     // SPR_SCOR
 	&lspr[NOLIGHT],     // SPR_DRWN
+	&lspr[NOLIGHT],     // SPR_LCKN
 	&lspr[NOLIGHT],     // SPR_TTAG
 	&lspr[NOLIGHT],     // SPR_GFLG
+
+	&lspr[NOLIGHT],     // SPR_CORK
 
 	// Ring Weapons
 	&lspr[RINGLIGHT_L],     // SPR_RRNG

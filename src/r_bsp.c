@@ -210,7 +210,7 @@ void R_PortalClearClipSegs(INT32 start, INT32 end)
 //
 // It assumes that Doom has already ruled out a door being closed because
 // of front-back closure (e.g. front floor is taller than back ceiling).
-static inline INT32 R_DoorClosed(void)
+static INT32 R_DoorClosed(void)
 {
 	return
 
@@ -1222,6 +1222,9 @@ static void R_Subsector(size_t num)
 	while (count--)
 	{
 //		CONS_Debug(DBG_GAMELOGIC, "Adding normal line %d...(%d)\n", line->linedef-lines, leveltime);
+#ifdef POLYOBJECTS
+		if (!line->polyseg) // ignore segs that belong to polyobjects
+#endif
 		R_AddLine(line);
 		line++;
 		curline = NULL; /* cph 2001/11/18 - must clear curline now we're done with it, so stuff doesn't try using it for other things */

@@ -115,7 +115,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 	fixed_t offx, offy;
 	fixed_t vertispeed = spring->info->mass;
 	fixed_t horizspeed = spring->info->damage;
-	UINT8 jumping, secondjump;
+	UINT8 secondjump;
 
 	if (object->eflags & MFE_SPRUNG) // Object was already sprung this tic
 		return false;
@@ -124,20 +124,25 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 	if (object->player && object->player->spectator)
 		return false;
 
-	if (object->player && (object->player->pflags & PF_NIGHTSMODE))
+	if (object->player && (object->player->powers[pw_carry] == CR_NIGHTSMODE))
 	{
 		/*Someone want to make these work like bumpers?*/
 		return false;
 	}
 
-#ifdef ESLOPE
-	object->standingslope = NULL; // Okay, now we can't return - no launching off at silly angles for you.
-#endif
+	if (object->player
+	&& ((object->player->charability == CA_TWINSPIN && object->player->panim == PA_ABILITY)
+	|| (object->player->charability2 == CA2_MELEE && object->player->panim == PA_ABILITY2)))
+	{
+		S_StartSound(object, sfx_s3k8b);
+		horizspeed = FixedMul(horizspeed, (4*FRACUNIT)/3);
+		vertispeed = FixedMul(vertispeed, (6*FRACUNIT)/5); // aprox square root of above
+	}
 
 	object->eflags |= MFE_SPRUNG; // apply this flag asap!
 	spring->flags &= ~(MF_SOLID|MF_SPECIAL); // De-solidify
 
-	if (horizspeed && vertispeed) // Mimic SA
+	if ((horizspeed && vertispeed) || (object->player && object->player->homing)) // Mimic SA
 	{
 		object->momx = object->momy = 0;
 		P_TryMove(object, spring->x, spring->y, true);
@@ -203,32 +208,36 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 			}
 		}
 
-		pflags = object->player->pflags & (PF_JUMPED|PF_SPINNING|PF_THOKKED|PF_SHIELDABILITY); // I still need these.
-		jumping = object->player->jumping;
+		pflags = object->player->pflags & (PF_STARTJUMP|PF_JUMPED|PF_NOJUMPDAMAGE|PF_SPINNING|PF_THOKKED|PF_SHIELDABILITY|PF_BOUNCING); // I still need these.
 		secondjump = object->player->secondjump;
 		P_ResetPlayer(object->player);
 
 		if (spring->info->painchance)
 		{
-			object->player->pflags |= PF_JUMPED;
+			object->player->pflags |= P_GetJumpFlags(object->player);
 			P_SetPlayerMobjState(object, S_PLAY_JUMP);
 		}
-		else if (P_MobjFlip(object)*vertispeed > 0)
-			P_SetPlayerMobjState(object, S_PLAY_SPRING);
-		else if (P_MobjFlip(object)*vertispeed < 0)
-			P_SetPlayerMobjState(object, S_PLAY_FALL);
-		else // horizontal spring
+		else if (!vertispeed || (pflags & PF_BOUNCING)) // horizontal spring or bouncing
 		{
-			if (pflags & (PF_JUMPED|PF_SPINNING) && (object->player->panim == PA_ROLL || object->player->panim == PA_JUMP || object->player->panim == PA_FALL))
+			if ((pflags & PF_BOUNCING)
+			|| (pflags & (PF_JUMPED|PF_SPINNING) && (object->player->panim == PA_ROLL || object->player->panim == PA_JUMP || object->player->panim == PA_FALL)))
 			{
 				object->player->pflags |= pflags;
-				object->player->jumping = jumping;
 				object->player->secondjump = secondjump;
 			}
 			else
 				P_SetPlayerMobjState(object, S_PLAY_WALK);
 		}
+		else if (P_MobjFlip(object)*vertispeed > 0)
+			P_SetPlayerMobjState(object, S_PLAY_SPRING);
+		else
+			P_SetPlayerMobjState(object, S_PLAY_FALL);
 	}
+
+#ifdef ESLOPE
+	object->standingslope = NULL; // Okay, now we know it's not going to be relevant - no launching off at silly angles for you.
+#endif
+
 	return true;
 }
 
@@ -324,9 +333,6 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 	if (tails->bot == 1)
 		return;
 
-	if (sonic->pflags & PF_NIGHTSMODE)
-		return;
-
 	if ((sonic->mo->eflags & MFE_VERTICALFLIP) != (tails->mo->eflags & MFE_VERTICALFLIP))
 		return; // Both should be in same gravity
 
@@ -377,6 +383,7 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 	else {
 		if (sonic-players == consoleplayer && botingame)
 			CV_SetValue(&cv_analog2, true);
+		P_SetTarget(&sonic->mo->tracer, NULL);
 		sonic->powers[pw_carry] = CR_NONE;
 	}
 }
@@ -460,9 +467,9 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		return true;
 	}
 
-	// CA_DASHMODE users destroy spikes and monitors, CA_TWINSPIN users and CA2_MELEE users destroy spikes.
+	// SF_DASHMODE users destroy spikes and monitors, CA_TWINSPIN users and CA2_MELEE users destroy spikes.
 	if ((tmthing->player)
-		&& (((tmthing->player->charability == CA_DASHMODE) && (tmthing->player->dashmode >= 3*TICRATE)
+		&& (((tmthing->player->charflags & SF_DASHMODE) && (tmthing->player->dashmode >= 3*TICRATE)
 		&& (thing->flags & (MF_MONITOR) || thing->type == MT_SPIKE))
 	|| ((((tmthing->player->charability == CA_TWINSPIN) && (tmthing->player->panim == PA_ABILITY))
 	|| (tmthing->player->charability2 == CA2_MELEE && tmthing->player->panim == PA_ABILITY2))
@@ -499,7 +506,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 	// Don't collide with your buddies while NiGHTS-flying.
 	if (tmthing->player && thing->player && (maptol & TOL_NIGHTS)
-		&& ((tmthing->player->pflags & PF_NIGHTSMODE) || (thing->player->pflags & PF_NIGHTSMODE)))
+		&& ((tmthing->player->powers[pw_carry] == CR_NIGHTSMODE) || (thing->player->powers[pw_carry] == CR_NIGHTSMODE)))
 		return true;
 
 	blockdist = thing->radius + tmthing->radius;
@@ -785,7 +792,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		{
 			// Hop on the missile for a ride!
 			thing->player->powers[pw_carry] = CR_GENERIC;
-			thing->player->pflags &= ~PF_JUMPED;
+			thing->player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE);
 			P_SetTarget(&thing->tracer, tmthing);
 			P_SetTarget(&tmthing->target, thing); // Set owner to the player
 			P_SetTarget(&tmthing->tracer, NULL); // Disable homing-ness
@@ -896,7 +903,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		// must be flying in the SAME DIRECTION as the last time you came through.
 		// not (your direction) xor (stored direction)
 		// In other words, you can't u-turn and respawn rings near the drone.
-		if (pl->bonustime && (pl->pflags & PF_NIGHTSMODE) && (INT32)leveltime > droneobj->extravalue2 && (
+		if (pl->bonustime && (pl->powers[pw_carry] == CR_NIGHTSMODE) && (INT32)leveltime > droneobj->extravalue2 && (
 		   !(pl->anotherflyangle >= 90 &&   pl->anotherflyangle <= 270)
 		^ (droneobj->extravalue1 >= 90 && droneobj->extravalue1 <= 270)
 		))
@@ -928,11 +935,13 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		if (tmthing->eflags & MFE_VERTICALFLIP)
 		{
 			if (thing->z + thing->height <= tmthing->z + FixedMul(FRACUNIT, tmthing->scale)
-			&& thing->z + thing->height + thing->momz  >= tmthing->z + FixedMul(FRACUNIT, tmthing->scale) + tmthing->momz)
+			&& thing->z + thing->height + thing->momz  >= tmthing->z + FixedMul(FRACUNIT, tmthing->scale) + tmthing->momz
+			&& !(thing->player->charability == CA_BOUNCE && thing->player->panim == PA_ABILITY && thing->eflags & MFE_VERTICALFLIP))
 				P_DamageMobj(thing, tmthing, tmthing, 1, 0);
 		}
 		else if (thing->z >= tmthing->z + tmthing->height - FixedMul(FRACUNIT, tmthing->scale)
-		&& thing->z + thing->momz <= tmthing->z + tmthing->height - FixedMul(FRACUNIT, tmthing->scale) + tmthing->momz)
+		&& thing->z + thing->momz <= tmthing->z + tmthing->height - FixedMul(FRACUNIT, tmthing->scale) + tmthing->momz
+		&& !(thing->player->charability == CA_BOUNCE && thing->player->panim == PA_ABILITY && !(thing->eflags & MFE_VERTICALFLIP)))
 			P_DamageMobj(thing, tmthing, tmthing, 1, 0);
 	}
 	else if (thing->type == MT_SPIKE && thing->flags & MF_SOLID && tmthing->player) // unfortunate player falls into spike?!
@@ -940,12 +949,53 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		if (thing->eflags & MFE_VERTICALFLIP)
 		{
 			if (tmthing->z + tmthing->height <= thing->z - FixedMul(FRACUNIT, thing->scale)
-			&& tmthing->z + tmthing->height + tmthing->momz >= thing->z - FixedMul(FRACUNIT, thing->scale))
+			&& tmthing->z + tmthing->height + tmthing->momz >= thing->z - FixedMul(FRACUNIT, thing->scale)
+			&& !(tmthing->player->charability == CA_BOUNCE && tmthing->player->panim == PA_ABILITY && tmthing->eflags & MFE_VERTICALFLIP))
 				P_DamageMobj(tmthing, thing, thing, 1, 0);
 		}
 		else if (tmthing->z >= thing->z + thing->height + FixedMul(FRACUNIT, thing->scale)
-		&& tmthing->z + tmthing->momz <= thing->z + thing->height + FixedMul(FRACUNIT, thing->scale))
+		&& tmthing->z + tmthing->momz <= thing->z + thing->height + FixedMul(FRACUNIT, thing->scale)
+		&& !(tmthing->player->charability == CA_BOUNCE && tmthing->player->panim == PA_ABILITY && !(tmthing->eflags & MFE_VERTICALFLIP)))
 			P_DamageMobj(tmthing, thing, thing, 1, 0);
+	}
+
+	if (tmthing->type == MT_WALLSPIKE && tmthing->flags & MF_SOLID && thing->player) // wall spike impales player
+	{
+		fixed_t bottomz, topz;
+		bottomz = tmthing->z;
+		topz = tmthing->z + tmthing->height;
+		if (tmthing->eflags & MFE_VERTICALFLIP)
+			bottomz -= FixedMul(FRACUNIT, tmthing->scale);
+		else
+			topz += FixedMul(FRACUNIT, tmthing->scale);
+
+		if (thing->z + thing->height > bottomz // above bottom
+		&&  thing->z < topz) // below top
+		{ // don't check angle, the player was clearly in the way in this case
+			P_DamageMobj(thing, tmthing, tmthing, 1, DMG_SPIKE);
+		}
+	}
+	else if (thing->type == MT_WALLSPIKE && thing->flags & MF_SOLID && tmthing->player)
+	{
+		fixed_t bottomz, topz;
+		bottomz = thing->z;
+		topz = thing->z + thing->height;
+		if (thing->eflags & MFE_VERTICALFLIP)
+			bottomz -= FixedMul(FRACUNIT, thing->scale);
+		else
+			topz += FixedMul(FRACUNIT, thing->scale);
+
+		if (tmthing->z + tmthing->height > bottomz // above bottom
+		&&  tmthing->z < topz // below top
+		&& !P_MobjWasRemoved(thing->tracer)) // this probably wouldn't work if we didn't have a tracer
+		{ // use base as a reference point to determine what angle you touched the spike at
+			angle_t touchangle = R_PointToAngle2(thing->tracer->x, thing->tracer->y, tmthing->x, tmthing->y);
+			angle_t diffangle = thing->angle - touchangle;
+			if (diffangle > ANGLE_180)
+				diffangle = InvAngle(diffangle);
+			if (diffangle <= ANGLE_22h) // if you touched it at this close an angle, you get poked!
+				P_DamageMobj(tmthing, thing, thing, 1, DMG_SPIKE);
+		}
 	}
 
 	if (thing->flags & MF_PUSHABLE)
@@ -1005,7 +1055,10 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		if (thing->player-players == consoleplayer && botingame)
 			CV_SetValue(&cv_analog2, true);
 		if (thing->player->powers[pw_carry] == CR_PLAYER)
+		{
+			P_SetTarget(&thing->tracer, NULL);
 			thing->player->powers[pw_carry] = CR_NONE;
+		}
 	}
 
 	if (thing->player)
@@ -1063,11 +1116,10 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			if (thing->flags & MF_MONITOR
 				&& (tmthing->player->pflags & (PF_SPINNING|PF_GLIDING)
 				|| ((tmthing->player->pflags & PF_JUMPED)
-					&& (tmthing->player->pflags & PF_FORCEJUMPDAMAGE
-					|| !(tmthing->player->charflags & SF_NOJUMPSPIN)
+					&& (!(tmthing->player->pflags & PF_NOJUMPDAMAGE)
 					|| (tmthing->player->charability == CA_TWINSPIN && tmthing->player->panim == PA_ABILITY)))
 				|| (tmthing->player->charability2 == CA2_MELEE && tmthing->player->panim == PA_ABILITY2)
-				|| ((tmthing->player->charflags & SF_STOMPDAMAGE)
+				|| ((tmthing->player->charflags & SF_STOMPDAMAGE || tmthing->player->pflags & PF_BOUNCING)
 					&& (P_MobjFlip(tmthing)*(tmthing->z - (thing->z + thing->height/2)) > 0) && (P_MobjFlip(tmthing)*tmthing->momz < 0))
 				|| elementalpierce))
 			{
@@ -1084,11 +1136,15 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				{
 					if (elementalpierce == 2)
 						P_DoBubbleBounce(player);
-					else
+					else if (!(player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2))
 						*momz = -*momz; // Therefore, you should be thrust in the opposite direction, vertically.
 				}
 				if (!(elementalpierce == 1 && thing->flags & MF_GRENADEBOUNCE)) // prevent gold monitor clipthrough.
+				{
+					if (player->pflags & PF_BOUNCING)
+						P_DoAbilityBounce(player, false);
 					return false;
+				}
 				else
 					*z -= *momz; // to ensure proper collision.
 			}
@@ -1100,16 +1156,17 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		if (iwassprung) // this spring caused you to gain MFE_SPRUNG just now...
 			return false; // "cancel" P_TryMove via blocking so you keep your current position
 	}
+	else if (tmthing->flags & MF_SPRING && (thing->player || thing->flags & MF_PUSHABLE))
+		; // Fix a few nasty spring-jumping bugs that happen sometimes.
 	// Monitors are not treated as solid to players who are jumping, spinning or gliding,
 	// unless it's a CTF team monitor and you're on the wrong team
 	else if (thing->flags & MF_MONITOR && tmthing->player
 	&& (tmthing->player->pflags & (PF_SPINNING|PF_GLIDING)
 		|| ((tmthing->player->pflags & PF_JUMPED)
-			&& (tmthing->player->pflags & PF_FORCEJUMPDAMAGE
-			|| !(tmthing->player->charflags & SF_NOJUMPSPIN)
+			&& (!(tmthing->player->pflags & PF_NOJUMPDAMAGE)
 			|| (tmthing->player->charability == CA_TWINSPIN && tmthing->player->panim == PA_ABILITY)))
 		|| (tmthing->player->charability2 == CA2_MELEE && tmthing->player->panim == PA_ABILITY2)
-		|| ((tmthing->player->charflags & SF_STOMPDAMAGE)
+		|| ((tmthing->player->charflags & SF_STOMPDAMAGE || tmthing->player->pflags & PF_BOUNCING)
 			&& (P_MobjFlip(tmthing)*(tmthing->z - (thing->z + thing->height/2)) > 0) && (P_MobjFlip(tmthing)*tmthing->momz < 0)))
 	&& !((thing->type == MT_RING_REDBOX && tmthing->player->ctfteam != 1) || (thing->type == MT_RING_BLUEBOX && tmthing->player->ctfteam != 2)))
 		;
@@ -1139,11 +1196,13 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 			topz = thing->z - thing->scale; // FixedMul(FRACUNIT, thing->scale), but thing->scale == FRACUNIT in base scale anyways
 
+			if (thing->flags & MF_SPRING)
+				;
 			// block only when jumping not high enough,
 			// (dont climb max. 24units while already in air)
 			// since return false doesn't handle momentum properly,
 			// we lie to P_TryMove() so it's always too high
-			if (tmthing->player && tmthing->z + tmthing->height > topz
+			else if (tmthing->player && tmthing->z + tmthing->height > topz
 				&& tmthing->z + tmthing->height < tmthing->ceilingz)
 			{
 				if (thing->flags & MF_GRENADEBOUNCE && (thing->flags & MF_MONITOR || thing->flags2 & MF2_STANDONME)) // Gold monitor hack...
@@ -1155,8 +1214,6 @@ static boolean PIT_CheckThing(mobj_t *thing)
 #endif
 				tmfloorthing = thing; // needed for side collision
 			}
-			else if (thing->flags & MF_SPRING)
-				;
 			else if (topz < tmceilingz && tmthing->z <= thing->z+thing->height)
 			{
 				tmceilingz = topz;
@@ -1185,11 +1242,13 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 			topz = thing->z + thing->height + thing->scale; // FixedMul(FRACUNIT, thing->scale), but thing->scale == FRACUNIT in base scale anyways
 
+			if (thing->flags & MF_SPRING)
+				;
 			// block only when jumping not high enough,
 			// (dont climb max. 24units while already in air)
 			// since return false doesn't handle momentum properly,
 			// we lie to P_TryMove() so it's always too high
-			if (tmthing->player && tmthing->z < topz
+			else if (tmthing->player && tmthing->z < topz
 				&& tmthing->z > tmthing->floorz)
 			{
 				if (thing->flags & MF_GRENADEBOUNCE && (thing->flags & MF_MONITOR || thing->flags2 & MF2_STANDONME)) // Gold monitor hack...
@@ -1201,8 +1260,6 @@ static boolean PIT_CheckThing(mobj_t *thing)
 #endif
 				tmfloorthing = thing; // needed for side collision
 			}
-			else if (thing->flags & MF_SPRING)
-				;
 			else if (topz > tmfloorz && tmthing->z+tmthing->height >= thing->z)
 			{
 				tmfloorz = topz;
@@ -1512,7 +1569,7 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 			else if (thing->type == MT_SKIM && (rover->flags & FF_SWIMMABLE))
 				;
 			else if (!((rover->flags & FF_BLOCKPLAYER && thing->player)
-				|| (rover->flags & FF_BLOCKOTHERS && !thing->player)
+			    || (rover->flags & FF_BLOCKOTHERS && !thing->player)
 				|| rover->flags & FF_QUICKSAND))
 				continue;
 
@@ -2890,7 +2947,7 @@ isblocking:
 					slidemo->player->climbing = 5;
 				}
 
-				slidemo->player->pflags &= ~(PF_GLIDING|PF_SPINNING|PF_JUMPED|PF_THOKKED);
+				slidemo->player->pflags &= ~(PF_GLIDING|PF_SPINNING|PF_JUMPED|PF_NOJUMPDAMAGE|PF_THOKKED);
 				slidemo->player->glidetime = 0;
 				slidemo->player->secondjump = 0;
 
