@@ -2534,6 +2534,31 @@ static void P_LoadNightsGhosts(void)
 	free(gpath);
 }
 
+static boolean CanSaveLevel(INT32 mapnum)
+{
+	if (ultimatemode) // never save in ultimate (probably redundant with cursaveslot also being checked)
+		return false;
+
+	if (G_IsSpecialStage(mapnum) // don't save in special stages
+		|| mapnum == lastmaploaded) // don't save if the last map loaded was this one
+		return false;
+
+	 // Determine whether the map should save or not from map header's "savemode" option
+	switch (mapheaderinfo[mapnum-1]->savemode) {
+		case 1:  return true;  // ALWAYS - always save, override conditions below
+		case 2:  return false; // NEVER - never save
+		default: break;        // DEFAULT - just do whatever's normal for this kind of map
+	}
+
+	// Don't save if Hidden = 1 is set in map header
+	if (mapheaderinfo[mapnum-1]->menuflags & LF2_HIDEINMENU)
+		return false;
+
+	 // Only act 1 levels (or levels with no act number) can save normally.
+	 // If the game is complete for this save slot, any level can save!
+	return (mapheaderinfo[mapnum-1]->actnum < 2 || gamecomplete);
+}
+
 /** Loads a level from a lump or external wad.
   *
   * \param skipprecip If true, don't spawn precipitation.
@@ -2983,9 +3008,8 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	P_RunCachedActions();
 
-	if (!(netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking || players[consoleplayer].lives <= 0)
-		&& (!modifiedgame || savemoddata) && cursaveslot >= 0 && !ultimatemode && !(G_IsSpecialStage(gamemap)) && (gamemap != lastmaploaded) && !(mapheaderinfo[gamemap-1]->savemode == 2)
-		&& ((mapheaderinfo[gamemap-1]->savemode == 1) || (!(mapheaderinfo[gamemap-1]->menuflags & LF2_HIDEINMENU) && (mapheaderinfo[gamemap-1]->actnum < 2 || gamecomplete))))
+	if (!(netgame || multiplayer|| demoplayback || demorecording || metalrecording || modeattacking || players[consoleplayer].lives <= 0)
+		&& (!modifiedgame || savemoddata) && cursaveslot >= 0 && CanSaveLevel(gamemap))
 		G_SaveGame((UINT32)cursaveslot);
 
 	lastmaploaded = gamemap; // HAS to be set after saving!!
