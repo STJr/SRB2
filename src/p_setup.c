@@ -3008,7 +3008,7 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	P_RunCachedActions();
 
-	if (!(netgame || multiplayer|| demoplayback || demorecording || metalrecording || modeattacking || players[consoleplayer].lives <= 0)
+	if (!(netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking || players[consoleplayer].lives <= 0)
 		&& (!modifiedgame || savemoddata) && cursaveslot >= 0 && CanSaveLevel(gamemap))
 		G_SaveGame((UINT32)cursaveslot);
 
