@@ -3160,7 +3160,8 @@ static inline void P_ArchiveMisc(void)
 		WRITEINT16(save_p, gamemap);
 
 	lastmapsaved = gamemap;
-
+	lastmaploaded = gamemap;
+	
 	WRITEUINT16(save_p, (botskin ? (emeralds|(1<<10)) : emeralds)+357);
 	WRITESTRINGN(save_p, timeattackfolder, sizeof(timeattackfolder));
 }
@@ -3185,7 +3186,8 @@ static inline void P_UnArchiveSPGame(INT16 mapoverride)
 		P_AllocMapHeader(gamemap-1);
 
 	lastmapsaved = gamemap;
-
+	lastmaploaded = gamemap;
+	
 	tokenlist = 0;
 	token = 0;
 

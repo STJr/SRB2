@@ -2984,10 +2984,12 @@ boolean P_SetupLevel(boolean skipprecip)
 	P_RunCachedActions();
 
 	if (!(netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking || players[consoleplayer].lives <= 0)
-		&& (!modifiedgame || savemoddata) && cursaveslot >= 0 && !ultimatemode && !(G_IsSpecialStage(gamemap)) && !(mapheaderinfo[gamemap-1]->savemode == 2)
-		&& ((mapheaderinfo[gamemap-1]->savemode == 1) || (!(mapheaderinfo[gamemap-1]->menuflags & LF2_HIDEINMENU) && gamemap != lastmapsaved && (mapheaderinfo[gamemap-1]->actnum < 2 || gamecomplete))))
+		&& (!modifiedgame || savemoddata) && cursaveslot >= 0 && !ultimatemode && !(G_IsSpecialStage(gamemap)) && (gamemap != lastmaploaded) && !(mapheaderinfo[gamemap-1]->savemode == 2)
+		&& ((mapheaderinfo[gamemap-1]->savemode == 1) || (!(mapheaderinfo[gamemap-1]->menuflags & LF2_HIDEINMENU) && (mapheaderinfo[gamemap-1]->actnum < 2 || gamecomplete))))
 		G_SaveGame((UINT32)cursaveslot);
 
+	lastmaploaded = gamemap; // HAS to be set after saving!!
+	
 	if (savedata.lives > 0)
 	{
 		players[consoleplayer].continues = savedata.continues;
@@ -3014,7 +3016,7 @@ boolean P_SetupLevel(boolean skipprecip)
 		LUAh_MapLoad();
 #endif
 	}
-
+	
 	return true;
 }
 
