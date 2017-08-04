@@ -6111,7 +6111,7 @@ static void M_ChoosePlayer(INT32 choice)
 	if (startmap != spstage_start)
 		cursaveslot = -1;
 
-	lastmapsaved = 0;
+	//lastmapsaved = 0;
 	gamecomplete = false;
 
 	G_DeferedInitNew(ultmode, G_BuildMapName(startmap), (UINT8)skinnum, false, fromlevelselect);

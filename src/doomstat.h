@@ -41,7 +41,7 @@ extern INT16 maptol;
 extern UINT8 globalweather;
 extern INT32 curWeather;
 extern INT32 cursaveslot;
-extern INT16 lastmapsaved;
+//extern INT16 lastmapsaved;
 extern INT16 lastmaploaded;
 extern boolean gamecomplete;
 
