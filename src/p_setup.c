@@ -2860,6 +2860,7 @@ boolean P_SetupLevel(boolean skipprecip)
 			}
 		}
 
+	// restore time in netgame (see also g_game.c)
 	if ((netgame || multiplayer) && gametype == GT_COOP && cv_coopstarposts.value == 2)
 	{
 		// is this a hack? maybe

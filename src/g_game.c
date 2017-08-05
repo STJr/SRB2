@@ -2592,6 +2592,8 @@ void G_DoReborn(INT32 playernum)
 		{
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
+				if (!playeringame[i])
+					continue;
 				players[i].starpostangle = 0;
 				players[i].starposttime = 0;
 				players[i].starpostx = 0;
@@ -2602,9 +2604,15 @@ void G_DoReborn(INT32 playernum)
 		}
 		if (!countdowntimeup && (mapheaderinfo[gamemap-1]->levelflags & LF_NORELOAD))
 		{
-			player->playerstate = PST_REBORN;
 			P_LoadThingsOnly();
-			P_ClearStarPost(player->starpostnum);
+
+			for (i = 0; i < MAXPLAYERS; i++)
+			{
+				if (!playeringame[i])
+					continue;
+				players[i].playerstate = PST_REBORN;
+				P_ClearStarPost(players[i].starpostnum);
+			}
 
 			// Do a wipe
 			wipegamestate = -1;
@@ -2628,12 +2636,24 @@ void G_DoReborn(INT32 playernum)
 			CON_ClearHUD();
 
 			// Starpost support
-			G_SpawnPlayer(playernum, (player->starposttime));
+			for (i = 0; i < MAXPLAYERS; i++)
+			{
+				if (!playeringame[i])
+					continue;
+				G_SpawnPlayer(i, (players[i].starposttime));
+			}
 
-			if (botingame)
-			{ // Bots respawn next to their master.
-				players[secondarydisplayplayer].playerstate = PST_REBORN;
-				G_SpawnPlayer(secondarydisplayplayer, false);
+			// restore time in netgame (see also p_setup.c)
+			if ((netgame || multiplayer) && gametype == GT_COOP && cv_coopstarposts.value == 2)
+			{
+				// is this a hack? maybe
+				tic_t maxstarposttime = 0;
+				for (i = 0; i < MAXPLAYERS; i++)
+				{
+					if (playeringame[i] && players[i].starposttime > maxstarposttime)
+						maxstarposttime = players[i].starposttime;
+				}
+				leveltime = maxstarposttime;
 			}
 		}
 		else
