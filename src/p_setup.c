@@ -2845,6 +2845,18 @@ boolean P_SetupLevel(boolean skipprecip)
 			}
 		}
 
+	if ((netgame || multiplayer) && gametype == GT_COOP && cv_coopstarposts.value == 2)
+	{
+		// is this a hack? maybe
+		tic_t maxstarposttime = 0;
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			if (playeringame[i] && players[i].starposttime > maxstarposttime)
+				maxstarposttime = players[i].starposttime;
+		}
+		leveltime = maxstarposttime;
+	}
+
 	if (modeattacking == ATTACKING_RECORD && !demoplayback)
 		P_LoadRecordGhosts();
 	else if (modeattacking == ATTACKING_NIGHTS && !demoplayback)
