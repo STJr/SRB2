@@ -1118,7 +1118,20 @@ static inline void P_SpawnEmblems(void)
 			P_SetThingPosition(emblemmobj);
 		}
 		else
+		{
 			emblemmobj->frame &= ~FF_TRANSMASK;
+
+			if (emblemlocations[i].type == ET_GLOBAL)
+			{
+				emblemmobj->reactiontime = emblemlocations[i].var;
+				if (emblemlocations[i].var & GE_NIGHTSITEM)
+				{
+					emblemmobj->flags |= MF_NIGHTSITEM;
+					emblemmobj->flags &= ~MF_SPECIAL;
+					emblemmobj->flags2 |= MF2_DONTDRAW;
+				}
+			}
+		}
 	}
 }
 
