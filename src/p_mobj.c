@@ -2554,8 +2554,9 @@ static boolean P_ZMovement(mobj_t *mo)
 				return true;
 			break;
 		case MT_SPIKE:
+		case MT_WALLSPIKE:
 			// Dead spike particles disappear upon ground contact
-			if ((mo->z <= mo->floorz || mo->z + mo->height >= mo->ceilingz) && mo->health <= 0)
+			if (!mo->health && (mo->z <= mo->floorz || mo->z + mo->height >= mo->ceilingz))
 			{
 				P_RemoveMobj(mo);
 				return false;
@@ -7194,16 +7195,18 @@ void P_MobjThinker(mobj_t *mobj)
 				return;
 			}
 			mobj->frame = (mobj->frame & ~FF_FRAMEMASK)|(mobj->target->frame & FF_FRAMEMASK);
+#if 0
 			if (mobj->angle != mobj->target->angle + ANGLE_90) // reposition if not the correct angle
 			{
 				mobj_t *target = mobj->target; // shortcut
-				const fixed_t baseradius = target->radius/2 - FixedMul(FRACUNIT, target->scale);
+				const fixed_t baseradius = target->radius - (target->scale/2); //FixedMul(FRACUNIT/2, target->scale);
 				P_UnsetThingPosition(mobj);
 				mobj->x = target->x - P_ReturnThrustX(target, target->angle, baseradius);
 				mobj->y = target->y - P_ReturnThrustY(target, target->angle, baseradius);
 				P_SetThingPosition(mobj);
 				mobj->angle = target->angle + ANGLE_90;
 			}
+#endif
 			break;
 		case MT_FALLINGROCK:
 			// Despawn rocks here in case zmovement code can't do so (blame slopes)
@@ -9939,8 +9942,8 @@ ML_NOCLIMB : Direction not controllable
 			mobj->flags &= ~MF_SCENERY;
 			mobj->fuse = mthing->angle + mobj->info->speed;
 		}
-		// Use per-thing collision for spikes if the deaf flag is checked.
-		if (mthing->options & MTF_AMBUSH && !metalrecording)
+		// Use per-thing collision for spikes if the deaf flag isn't checked.
+		if (!(mthing->options & MTF_AMBUSH) && !metalrecording)
 		{
 			P_UnsetThingPosition(mobj);
 			mobj->flags &= ~(MF_NOBLOCKMAP|MF_NOGRAVITY|MF_NOCLIPHEIGHT);
@@ -9956,8 +9959,8 @@ ML_NOCLIMB : Direction not controllable
 			mobj->flags &= ~MF_SCENERY;
 			mobj->fuse = mobj->info->speed;
 		}
-		// Use per-thing collision for spikes if the deaf flag is checked.
-		if (mthing->options & MTF_AMBUSH && !metalrecording)
+		// Use per-thing collision for spikes if the deaf flag isn't checked.
+		if (!(mthing->options & MTF_AMBUSH) && !metalrecording)
 		{
 			P_UnsetThingPosition(mobj);
 			mobj->flags &= ~(MF_NOBLOCKMAP|MF_NOCLIPHEIGHT);
@@ -9968,7 +9971,7 @@ ML_NOCLIMB : Direction not controllable
 		// spawn base
 		{
 			const angle_t mobjangle = FixedAngle(mthing->angle*FRACUNIT); // the mobj's own angle hasn't been set quite yet so...
-			const fixed_t baseradius = mobj->radius/2 - FixedMul(FRACUNIT, mobj->scale);
+			const fixed_t baseradius = mobj->radius - mobj->scale;
 			mobj_t *base = P_SpawnMobj(
 					mobj->x - P_ReturnThrustX(mobj, mobjangle, baseradius),
 					mobj->y - P_ReturnThrustY(mobj, mobjangle, baseradius),

@@ -821,7 +821,10 @@ void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor)
 
 		if (inflictor)
 		{
-			ang = R_PointToAngle2(inflictor->x-inflictor->momx, inflictor->y - inflictor->momy, player->mo->x - player->mo->momx, player->mo->y - player->mo->momy);
+			if (inflictor->type == MT_WALLSPIKE)
+				ang = inflictor->angle;
+			else
+				ang = R_PointToAngle2(inflictor->x-inflictor->momx, inflictor->y - inflictor->momy, player->mo->x - player->mo->momx, player->mo->y - player->mo->momy);
 
 			// explosion and rail rings send you farther back, making it more difficult
 			// to recover
