@@ -315,6 +315,7 @@ typedef struct
 } ATTRPACK clientconfig_pak;
 
 #define MAXSERVERNAME 32
+#define MAXFILENEEDED 915
 // This packet is too large
 typedef struct
 {
@@ -336,7 +337,7 @@ typedef struct
 	unsigned char mapmd5[16];
 	UINT8 actnum;
 	UINT8 iszone;
-	UINT8 fileneeded[915]; // is filled with writexxx (byteptr.h)
+	UINT8 fileneeded[MAXFILENEEDED]; // is filled with writexxx (byteptr.h)
 } ATTRPACK serverinfo_pak;
 
 typedef struct

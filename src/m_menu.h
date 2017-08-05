@@ -124,6 +124,8 @@ boolean M_CanShowLevelInList(INT32 mapnum, INT32 gt);
 #define IT_HEADER      (IT_SPACE  +IT_HEADERTEXT)
 #define IT_SECRET      (IT_SPACE  +IT_QUESTIONMARKS)
 
+#define MAXSTRINGLENGTH 32
+
 typedef union
 {
 	struct menu_s *submenu;      // IT_SUBMENU
@@ -249,6 +251,9 @@ void Nextmap_OnChange(void);
 void Moviemode_mode_Onchange(void);
 void Screenshot_option_Onchange(void);
 
+// Addons menu updating
+void Addons_option_Onchange(void);
+
 // These defines make it a little easier to make menus
 #define DEFAULTMENUSTYLE(header, source, prev, x, y)\
 {\
@@ -257,6 +262,18 @@ void Screenshot_option_Onchange(void);
 	prev,\
 	source,\
 	M_DrawGenericMenu,\
+	x, y,\
+	0,\
+	NULL\
+}
+
+#define DEFAULTSCROLLMENUSTYLE(header, source, prev, x, y)\
+{\
+	header,\
+	sizeof(source)/sizeof(menuitem_t),\
+	prev,\
+	source,\
+	M_DrawGenericScrollMenu,\
 	x, y,\
 	0,\
 	NULL\
