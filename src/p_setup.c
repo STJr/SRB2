@@ -54,6 +54,8 @@
 
 #include "v_video.h"
 
+#include "filesrch.h" // refreshdirmenu
+
 // wipes
 #include "f_finale.h"
 
@@ -1118,7 +1120,20 @@ static inline void P_SpawnEmblems(void)
 			P_SetThingPosition(emblemmobj);
 		}
 		else
+		{
 			emblemmobj->frame &= ~FF_TRANSMASK;
+
+			if (emblemlocations[i].type == ET_GLOBAL)
+			{
+				emblemmobj->reactiontime = emblemlocations[i].var;
+				if (emblemlocations[i].var & GE_NIGHTSITEM)
+				{
+					emblemmobj->flags |= MF_NIGHTSITEM;
+					emblemmobj->flags &= ~MF_SPECIAL;
+					emblemmobj->flags2 |= MF2_DONTDRAW;
+				}
+			}
+		}
 	}
 }
 
@@ -3091,6 +3106,7 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 
 	if ((numlumps = W_LoadWadFile(wadfilename)) == INT16_MAX)
 	{
+		refreshdirmenu |= REFRESHDIR_NOTLOADED;
 		CONS_Printf(M_GetText("Errors occured while loading %s; not added.\n"), wadfilename);
 		return false;
 	}

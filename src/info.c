@@ -2896,16 +2896,11 @@ state_t states[NUMSTATES] =
 	{SPR_NWNG, 1, -1, {NULL}, 0, 0, S_NULL}, // S_NIGHTSWING_XMAS
 
 	// NiGHTS Paraloop Powerups
-	{SPR_NULL, 0, -1, {NULL}, 0, 0, S_NULL}, // S_NIGHTSPOWERUP1
-	{SPR_NPRU, 0, -1, {NULL}, 0, 0, S_NULL}, // S_NIGHTSPOWERUP2
-	{SPR_NULL, 0, -1, {NULL}, 0, 0, S_NULL}, // S_NIGHTSPOWERUP3
-	{SPR_NPRU, 1, -1, {NULL}, 0, 0, S_NULL}, // S_NIGHTSPOWERUP4
-	{SPR_NULL, 0, -1, {NULL}, 0, 0, S_NULL}, // S_NIGHTSPOWERUP5
-	{SPR_NPRU, 2, -1, {NULL}, 0, 0, S_NULL}, // S_NIGHTSPOWERUP6
-	{SPR_NULL, 0, -1, {NULL}, 0, 0, S_NULL}, // S_NIGHTSPOWERUP7
-	{SPR_NPRU, 3, -1, {NULL}, 0, 0, S_NULL}, // S_NIGHTSPOWERUP8
-	{SPR_NULL, 0, -1, {NULL}, 0, 0, S_NULL}, // S_NIGHTSPOWERUP9
-	{SPR_NPRU, 4, -1, {NULL}, 0, 0, S_NULL}, // S_NIGHTSPOWERUP10
+	{SPR_NPRU, 0, -1, {NULL}, 0, 0, S_NULL}, // S_NIGHTSSUPERLOOP
+	{SPR_NPRU, 1, -1, {NULL}, 0, 0, S_NULL}, // S_NIGHTSDRILLREFILL
+	{SPR_NPRU, 2, -1, {NULL}, 0, 0, S_NULL}, // S_NIGHTSHELPER
+	{SPR_NPRU, 3, -1, {NULL}, 0, 0, S_NULL}, // S_NIGHTSEXTRATIME
+	{SPR_NPRU, 4, -1, {NULL}, 0, 0, S_NULL}, // S_NIGHTSLINKFREEZE
 
 	{SPR_CAPS, 0, -1, {NULL}, 0, 0, S_NULL}, // S_EGGCAPSULE
 
@@ -14296,9 +14291,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_NIGHTSSUPERLOOP
 		1707,           // doomednum
-		S_NIGHTSPOWERUP1, // spawnstate
+		S_NIGHTSSUPERLOOP, // spawnstate
 		1000,           // spawnhealth
-		S_NIGHTSPOWERUP2, // seestate
+		S_NULL,         // seestate
 		sfx_None,       // seesound
 		0,              // reactiontime
 		sfx_None,       // attacksound
@@ -14323,9 +14318,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_NIGHTSDRILLREFILL
 		1708,           // doomednum
-		S_NIGHTSPOWERUP3, // spawnstate
+		S_NIGHTSDRILLREFILL, // spawnstate
 		1000,           // spawnhealth
-		S_NIGHTSPOWERUP4, // seestate
+		S_NULL,         // seestate
 		sfx_None,       // seesound
 		0,              // reactiontime
 		sfx_None,       // attacksound
@@ -14350,9 +14345,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_NIGHTSHELPER
 		1709,           // doomednum
-		S_NIGHTSPOWERUP5, // spawnstate
+		S_NIGHTSHELPER, // spawnstate
 		1000,           // spawnhealth
-		S_NIGHTSPOWERUP6, // seestate
+		S_NULL,         // seestate
 		sfx_None,       // seesound
 		0,              // reactiontime
 		sfx_None,       // attacksound
@@ -14377,9 +14372,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_NIGHTSEXTRATIME
 		1711,           // doomednum
-		S_NIGHTSPOWERUP7, // spawnstate
+		S_NIGHTSEXTRATIME, // spawnstate
 		1000,           // spawnhealth
-		S_NIGHTSPOWERUP8, // seestate
+		S_NULL,         // seestate
 		sfx_None,       // seesound
 		0,              // reactiontime
 		sfx_None,       // attacksound
@@ -14404,9 +14399,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_NIGHTSLINKFREEZE
 		1712,           // doomednum
-		S_NIGHTSPOWERUP9, // spawnstate
+		S_NIGHTSLINKFREEZE, // spawnstate
 		1000,           // spawnhealth
-		S_NIGHTSPOWERUP10, // seestate
+		S_NULL,         // seestate
 		sfx_None,       // seesound
 		0,              // reactiontime
 		sfx_None,       // attacksound

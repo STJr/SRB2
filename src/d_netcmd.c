@@ -37,6 +37,7 @@
 #include "d_main.h"
 #include "m_random.h"
 #include "f_finale.h"
+#include "filesrch.h"
 #include "mserv.h"
 #include "md5.h"
 #include "z_zone.h"
@@ -739,6 +740,14 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_fireaxis2);
 	CV_RegisterVar(&cv_firenaxis);
 	CV_RegisterVar(&cv_firenaxis2);
+
+	// filesrch.c
+	CV_RegisterVar(&cv_addons_option);
+	CV_RegisterVar(&cv_addons_folder);
+	CV_RegisterVar(&cv_addons_md5);
+	CV_RegisterVar(&cv_addons_showall);
+	CV_RegisterVar(&cv_addons_search_type);
+	CV_RegisterVar(&cv_addons_search_case);
 
 	// WARNING: the order is important when initialising mouse2
 	// we need the mouse2port
