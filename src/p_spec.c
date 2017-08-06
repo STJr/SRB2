@@ -3660,31 +3660,14 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 				S_StartSound(player->mo, sfx_itemup);
 			}
 			break;
-		case 11: // Special Stage Damage - Kind of like a mini-P_DamageMobj()
-			if (player->powers[pw_invulnerability] || player->powers[pw_flashing] || player->powers[pw_super] || player->exiting || player->bot)
+		case 11: // Special Stage Damage
+			if (player->exiting || player->bot) // Don't do anything for bots or players who have just finished
 				break;
 
 			if (!(player->powers[pw_shield] || player->rings > 0)) // Don't do anything if no shield or rings anyway
 				break;
 
-			if (player->powers[pw_shield])
-			{
-				P_RemoveShield(player);
-				S_StartSound(player->mo, sfx_shldls); // Ba-Dum! Shield loss.
-			}
-			else if (player->rings > 0)
-			{
-				P_PlayRinglossSound(player->mo);
-				if (player->rings >= 10)
-					player->rings -= 10;
-				else
-					player->rings = 0;
-			}
-
-			P_DoPlayerPain(player, NULL, NULL); // this does basically everything that was here before
-
-			if (gametype == GT_CTF && player->gotflag & (GF_REDFLAG|GF_BLUEFLAG))
-				P_PlayerFlagBurst(player, false);
+			P_SpecialStageDamage(player, NULL, NULL);
 			break;
 		case 12: // Space Countdown
 			if (!(player->powers[pw_shield] & SH_PROTECTWATER) && !player->powers[pw_spacetime])
