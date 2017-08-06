@@ -74,6 +74,7 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 #include "m_cond.h" // condition initialization
 #include "fastcmp.h"
 #include "keys.h"
+#include "filesrch.h" // refreshdirmenu, mainwadstally
 
 #ifdef CMAKECONFIG
 #include "config.h"
@@ -584,6 +585,8 @@ void D_SRB2Loop(void)
 		realtics = entertic - oldentertics;
 		oldentertics = entertic;
 
+		refreshdirmenu = 0; // not sure where to put this, here as good as any?
+
 #ifdef DEBUGFILE
 		if (!realtics)
 			if (debugload)
@@ -871,7 +874,7 @@ static void IdentifyVersion(void)
 	}
 #endif
 
-#if 1 // This section can be deleted when music_new is merged with music.dta
+#ifdef DEVELOP // This section can be deleted when music_new is merged with music.dta
 	{
 		const char *musicfile = "music_new.dta";
 		const char *musicpath = va(pandf,srb2waddir,musicfile);
@@ -1163,6 +1166,11 @@ void D_SRB2Main(void)
 #ifdef USE_PATCH_DTA
 	++mainwads; // patch.dta adds one more
 #endif
+#ifdef DEVELOP
+	++mainwads; // music_new, too
+#endif
+
+	mainwadstally = packetsizetally;
 
 	cht_Init();
 
