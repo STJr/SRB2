@@ -250,8 +250,6 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->levelselect = 0;
 	DEH_WriteUndoline("BONUSTYPE", va("%d", mapheaderinfo[num]->bonustype), UNDO_NONE);
 	mapheaderinfo[num]->bonustype = 0;
-	DEH_WriteUndoline("SAVEMODE", va("%d", mapheaderinfo[num]->savemode), UNDO_NONE);
-	mapheaderinfo[num]->savemode = 0;
 	DEH_WriteUndoline("LEVELFLAGS", va("%d", mapheaderinfo[num]->levelflags), UNDO_NONE);
 	mapheaderinfo[num]->levelflags = 0;
 	DEH_WriteUndoline("MENUFLAGS", va("%d", mapheaderinfo[num]->menuflags), UNDO_NONE);
@@ -2557,21 +2555,11 @@ static boolean CanSaveLevel(INT32 mapnum)
 	if (G_IsSpecialStage(mapnum) // don't save in special stages
 		|| mapnum == lastmaploaded) // don't save if the last map loaded was this one
 		return false;
-
-	 // Determine whether the map should save or not from map header's "savemode" option
-	switch (mapheaderinfo[mapnum-1]->savemode) {
-		case 1:  return true;  // ALWAYS - always save, override conditions below
-		case 2:  return false; // NEVER - never save
-		default: break;        // DEFAULT - just do whatever's normal for this kind of map
-	}
-
-	// Don't save if Hidden = 1 is set in map header
-	if (mapheaderinfo[mapnum-1]->menuflags & LF2_HIDEINMENU)
-		return false;
-
-	 // Only act 1 levels (or levels with no act number) can save normally.
-	 // If the game is complete for this save slot, any level can save!
-	return (mapheaderinfo[mapnum-1]->actnum < 2 || gamecomplete);
+	
+	// Any levels that have the savegame flag can save normally.
+	// If the game is complete for this save slot, then any level can save!
+	// On the other side of the spectrum, if lastmaploaded is 0, then the save file has only just been created and needs to save ASAP!
+	return (mapheaderinfo[mapnum-1]->levelflags & LF_SAVEGAME || gamecomplete || !lastmaploaded);
 }
 
 /** Loads a level from a lump or external wad.

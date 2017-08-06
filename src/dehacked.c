@@ -1288,18 +1288,6 @@ static void readlevelheader(MYFILE *f, INT32 num)
 					deh_warning("Level header %d: invalid bonus type number %d", num, i);
 			}
 			
-			else if (fastcmp(word, "SAVEMODE"))
-			{
-				if (fastcmp(word2, "DEFAULT"))     i = 0;
-				else if (fastcmp(word2, "ALWAYS")) i = 1;
-				else if (fastcmp(word2, "NEVER"))  i = 2;
-
-				if (i >= 0 && i <= 2)
-					mapheaderinfo[num-1]->savemode = (UINT8)i;
-				else
-					deh_warning("Level header %d: invalid save mode number %d", num, i);
-			}
-			
 			else if (fastcmp(word, "LEVELFLAGS"))
 				mapheaderinfo[num-1]->levelflags = (UINT8)i;
 			else if (fastcmp(word, "MENUFLAGS"))
@@ -1341,7 +1329,14 @@ static void readlevelheader(MYFILE *f, INT32 num)
 				else
 					mapheaderinfo[num-1]->levelflags &= ~LF_NOZONE;
 			}
-
+			else if (fastcmp(word, "SAVEGAME"))
+			{
+				if (i || word2[0] == 'T' || word2[0] == 'Y')
+					mapheaderinfo[num-1]->levelflags |= LF_SAVEGAME;
+				else
+					mapheaderinfo[num-1]->levelflags &= ~LF_SAVEGAME;
+			}
+			
 			// Individual triggers for menu flags
 			else if (fastcmp(word, "HIDDEN"))
 			{
