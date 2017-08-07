@@ -74,7 +74,7 @@ typedef struct
 #endif
 
 /** Animated texture definition.
-  * Used for ::harddefs and for loading an ANIMATED lump from a wad.
+  * Used for ::harddefs and for loading an ANIMDEFS lump from a wad.
   *
   * Animations are defined by the first and last frame (i.e., flat or texture).
   * The animation sequence uses all flats between the start and end entry, in
@@ -125,7 +125,7 @@ static size_t maxanims;
 // P_InitPicAnims
 //
 /** Hardcoded animation sequences.
-  * Used if no ANIMATED lump is found in a loaded wad.
+  * Used if no ANIMDEFS lump is found in a loaded wad.
   */
 static animdef_t harddefs[] =
 {
@@ -244,48 +244,17 @@ void P_InitPicAnims(void)
 {
 	// Init animation
 	INT32 w; // WAD
-	UINT8 *animatedLump;
-	UINT8 *currentPos;
 	size_t i;
 
 	I_Assert(animdefs == NULL);
 
-	if (W_CheckNumForName("ANIMATED") != LUMPERROR || W_CheckNumForName("ANIMDEFS") != LUMPERROR)
+	if (W_CheckNumForName("ANIMDEFS") != LUMPERROR)
 	{
 		for (w = numwadfiles-1, maxanims = 0; w >= 0; w--)
 		{
-			UINT16 animatedLumpNum;
 			UINT16 animdefsLumpNum;
 
-			// Find ANIMATED lump in the WAD
-			animatedLumpNum = W_CheckNumForNamePwad("ANIMATED", w, 0);
-			if (animatedLumpNum != INT16_MAX)
-			{
-				animatedLump = (UINT8 *)W_CacheLumpNumPwad(w, animatedLumpNum, PU_STATIC);
-
-				// Get the number of animations in the file
-				i = maxanims;
-				for (currentPos = animatedLump; *currentPos != UINT8_MAX; maxanims++, currentPos+=23);
-
-				// Resize animdefs (or if it hasn't been created, create it)
-				animdefs = (animdef_t *)Z_Realloc(animdefs, sizeof(animdef_t)*(maxanims + 1), PU_STATIC, NULL);
-				// Sanity check it
-				if (!animdefs)
-					I_Error("Not enough free memory for ANIMATED data");
-
-				// Populate the new array
-				for (currentPos = animatedLump; *currentPos != UINT8_MAX; i++, currentPos+=23)
-				{
-					M_Memcpy(&(animdefs[i].istexture), currentPos, 1); // istexture, 1 byte
-					M_Memcpy(animdefs[i].endname, (currentPos + 1), 9); // endname, 9 bytes
-					M_Memcpy(animdefs[i].startname, (currentPos + 10), 9); // startname, 9 bytes
-					M_Memcpy(&(animdefs[i].speed), (currentPos + 19), 4); // speed, 4 bytes
-				}
-
-				Z_Free(animatedLump);
-			}
-
-			// Now find ANIMDEFS
+			// Find ANIMDEFS lump in the WAD
 			animdefsLumpNum = W_CheckNumForNamePwad("ANIMDEFS", w, 0);
 			if (animdefsLumpNum != INT16_MAX)
 				P_ParseANIMDEFSLump(w, animdefsLumpNum);
@@ -307,7 +276,7 @@ void P_InitPicAnims(void)
 
 	anims = (anim_t *)malloc(sizeof (*anims)*(maxanims + 1));
 	if (!anims)
-		I_Error("Not enough free memory for ANIMATED data");
+		I_Error("Not enough free memory for ANIMDEFS data");
 
 	lastanim = anims;
 	for (i = 0; animdefs[i].istexture != -1; i++)
