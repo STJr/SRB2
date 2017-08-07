@@ -3582,12 +3582,12 @@ void A_ParticleSpawn(mobj_t *actor)
 		spawn->tics = (tic_t)actor->health;
 		spawn->flags2 |= (actor->flags2 & MF2_OBJECTFLIP);
 		spawn->angle += P_RandomKey(36)*ANG10; // irrelevant for default objects but might make sense for some custom ones
-		if (spawn->frame & FF_ANIMATE)
-			spawn->frame += P_RandomKey(spawn->state->var1);
 
 		actor->angle += actor->movedir;
 	}
+
 	actor->angle += (angle_t)actor->movecount;
+	actor->tics = (tic_t)actor->reactiontime;
 }
 
 // Function: A_BunnyHop

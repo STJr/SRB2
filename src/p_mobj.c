@@ -10209,7 +10209,7 @@ domaceagain:
 	case MT_PARTICLEGEN:
 	{
 		fixed_t radius, speed, bottomheight, topheight;
-		INT32 type, numdivisions, time, anglespeed;
+		INT32 type, numdivisions, time, anglespeed, ticcount;
 		angle_t angledivision;
 		INT32 line;
 		const size_t mthingi = (size_t)(mthing - mapthings);
@@ -10231,6 +10231,10 @@ domaceagain:
 		speed = abs(sides[lines[line].sidenum[0]].textureoffset);
 		bottomheight = lines[line].frontsector->floorheight;
 		topheight = lines[line].frontsector->ceilingheight - mobjinfo[(mobjtype_t)type].height;
+
+		if (!lines[line].backsector
+		|| (ticcount = (sides[lines[line].sidenum[1]].textureoffset >> FRACBITS)) < 1)
+			ticcount = states[S_PARTICLEGEN].tics;
 
 		numdivisions = (mthing->options >> ZSHIFT);
 
@@ -10268,8 +10272,9 @@ domaceagain:
 				"Numdivisions is %d\n"
 				"Angledivision is %d\n"
 				"Time is %d\n"
-				"Type is %d\n",
-				sizeu1(mthingi), radius, speed, anglespeed, numdivisions, angledivision, time, type);
+				"Type is %d\n"
+				"Tic seperation is %d\n",
+				sizeu1(mthingi), radius, speed, anglespeed, numdivisions, angledivision, time, type, ticcount);
 
 		mobj->angle = 0;
 		mobj->movefactor = speed;
@@ -10279,6 +10284,7 @@ domaceagain:
 		mobj->health = time;
 		mobj->friction = radius;
 		mobj->threshold = type;
+		mobj->reactiontime = ticcount;
 
 		break;
 	}
