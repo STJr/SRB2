@@ -1104,30 +1104,12 @@ static void R_Subsector(size_t num)
 				&& polysec->floorheight >= floorcenterz
 				&& (viewz < polysec->floorheight))
 			{
-				fixed_t xoff, yoff;
-				xoff = polysec->floor_xoffs;
-				yoff = polysec->floor_yoffs;
-
-				if (po->angle != 0) {
-					angle_t fineshift = po->angle >> ANGLETOFINESHIFT;
-
-					xoff -= FixedMul(FINECOSINE(fineshift), po->centerPt.x)+FixedMul(FINESINE(fineshift), po->centerPt.y);
-					yoff -= FixedMul(FINESINE(fineshift), po->centerPt.x)-FixedMul(FINECOSINE(fineshift), po->centerPt.y);
-				} else {
-					xoff -= po->centerPt.x;
-					yoff += po->centerPt.y;
-				}
-
 				light = R_GetPlaneLight(frontsector, polysec->floorheight, viewz < polysec->floorheight);
 				light = 0;
 				ffloor[numffloors].plane = R_FindPlane(polysec->floorheight, polysec->floorpic,
-						polysec->lightlevel, xoff, yoff,
-						polysec->floorpic_angle-po->angle,
-						NULL,
-						NULL
-#ifdef POLYOBJECTS_PLANES
-					, po
-#endif
+					polysec->lightlevel, polysec->floor_xoffs, polysec->floor_yoffs,
+					polysec->floorpic_angle-po->angle,
+					NULL, NULL, po
 #ifdef ESLOPE
 					, NULL // will ffloors be slopable eventually?
 #endif
@@ -1152,28 +1134,11 @@ static void R_Subsector(size_t num)
 				&& polysec->ceilingheight <= ceilingcenterz
 				&& (viewz > polysec->ceilingheight))
 			{
-				fixed_t xoff, yoff;
-				xoff = polysec->ceiling_xoffs;
-				yoff = polysec->ceiling_yoffs;
-
-				if (po->angle != 0) {
-					angle_t fineshift = po->angle >> ANGLETOFINESHIFT;
-
-					xoff -= FixedMul(FINECOSINE(fineshift), po->centerPt.x)+FixedMul(FINESINE(fineshift), po->centerPt.y);
-					yoff -= FixedMul(FINESINE(fineshift), po->centerPt.x)-FixedMul(FINECOSINE(fineshift), po->centerPt.y);
-				} else {
-					xoff -= po->centerPt.x;
-					yoff += po->centerPt.y;
-				}
-
 				light = R_GetPlaneLight(frontsector, polysec->ceilingheight, viewz < polysec->ceilingheight);
 				light = 0;
 				ffloor[numffloors].plane = R_FindPlane(polysec->ceilingheight, polysec->ceilingpic,
-					polysec->lightlevel, xoff, yoff, polysec->ceilingpic_angle-po->angle,
-					NULL, NULL
-#ifdef POLYOBJECTS_PLANES
-					, po
-#endif
+					polysec->lightlevel, polysec->ceiling_xoffs, polysec->ceiling_yoffs, polysec->ceilingpic_angle-po->angle,
+					NULL, NULL, po
 #ifdef ESLOPE
 					, NULL // will ffloors be slopable eventually?
 #endif
