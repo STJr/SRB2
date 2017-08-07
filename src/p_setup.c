@@ -489,6 +489,7 @@ static void P_LoadSegs(lumpnum_t lumpnum)
 			//Hurdler: 04/12/2000: for now, only used in hardware mode
 			li->lightmaps = NULL; // list of static lightmap for this seg
 		}
+		li->pv1 = li->pv2 = NULL;
 #endif
 
 		li->angle = (SHORT(ml->angle))<<FRACBITS;
@@ -1593,6 +1594,7 @@ static void P_LoadSideDefs2(lumpnum_t lumpnum)
 				break;
 			}
 
+			case 9: // Mace parameters
 			case 14: // Bustable block parameters
 			case 15: // Fan particle spawner parameters
 			case 425: // Calls P_SetMobjState on calling mobj
@@ -2571,6 +2573,21 @@ static void P_LoadNightsGhosts(void)
 	free(gpath);
 }
 
+static boolean CanSaveLevel(INT32 mapnum)
+{
+	if (ultimatemode) // never save in ultimate (probably redundant with cursaveslot also being checked)
+		return false;
+
+	if (G_IsSpecialStage(mapnum) // don't save in special stages
+		|| mapnum == lastmaploaded) // don't save if the last map loaded was this one
+		return false;
+	
+	// Any levels that have the savegame flag can save normally.
+	// If the game is complete for this save slot, then any level can save!
+	// On the other side of the spectrum, if lastmaploaded is 0, then the save file has only just been created and needs to save ASAP!
+	return (mapheaderinfo[mapnum-1]->levelflags & LF_SAVEGAME || gamecomplete || !lastmaploaded);
+}
+
 /** Loads a level from a lump or external wad.
   *
   * \param skipprecip If true, don't spawn precipitation.
@@ -3034,10 +3051,10 @@ boolean P_SetupLevel(boolean skipprecip)
 	P_RunCachedActions();
 
 	if (!(netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking || players[consoleplayer].lives <= 0)
-		&& (!modifiedgame || savemoddata) && cursaveslot >= 0 && !ultimatemode
-		&& !(mapheaderinfo[gamemap-1]->menuflags & LF2_HIDEINMENU)
-		&& (!G_IsSpecialStage(gamemap)) && gamemap != lastmapsaved && (mapheaderinfo[gamemap-1]->actnum < 2 || gamecomplete))
+		&& (!modifiedgame || savemoddata) && cursaveslot >= 0 && CanSaveLevel(gamemap))
 		G_SaveGame((UINT32)cursaveslot);
+
+	lastmaploaded = gamemap; // HAS to be set after saving!!
 
 	if (savedata.lives > 0)
 	{

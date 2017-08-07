@@ -1329,6 +1329,13 @@ static void readlevelheader(MYFILE *f, INT32 num)
 				else
 					mapheaderinfo[num-1]->levelflags &= ~LF_NOZONE;
 			}
+			else if (fastcmp(word, "SAVEGAME"))
+			{
+				if (i || word2[0] == 'T' || word2[0] == 'Y')
+					mapheaderinfo[num-1]->levelflags |= LF_SAVEGAME;
+				else
+					mapheaderinfo[num-1]->levelflags &= ~LF_SAVEGAME;
+			}
 
 			// Individual triggers for menu flags
 			else if (fastcmp(word, "HIDDEN"))
@@ -1776,7 +1783,6 @@ static actionpointer_t actionpointers[] =
 	{{A_CapeChase},            "A_CAPECHASE"},
 	{{A_RotateSpikeBall},      "A_ROTATESPIKEBALL"},
 	{{A_SlingAppear},          "A_SLINGAPPEAR"},
-	{{A_MaceRotate},           "A_MACEROTATE"},
 	{{A_UnidusBall},           "A_UNIDUSBALL"},
 	{{A_RockSpawn},            "A_ROCKSPAWN"},
 	{{A_SetFuse},              "A_SETFUSE"},
@@ -4951,17 +4957,61 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SLING1",
 	"S_SLING2",
 
-	// CEZ Small Mace Chain
+	// CEZ maces and chains
 	"S_SMALLMACECHAIN",
-
-	// CEZ Big Mace Chain
 	"S_BIGMACECHAIN",
-
-	// CEZ Small Mace
 	"S_SMALLMACE",
-
-	// CEZ Big Mace
 	"S_BIGMACE",
+
+	// Yellow spring on a ball
+	"S_YELLOWSPRINGBALL",
+	"S_YELLOWSPRINGBALL2",
+	"S_YELLOWSPRINGBALL3",
+	"S_YELLOWSPRINGBALL4",
+	"S_YELLOWSPRINGBALL5",
+
+	// Red spring on a ball
+	"S_REDSPRINGBALL",
+	"S_REDSPRINGBALL2",
+	"S_REDSPRINGBALL3",
+	"S_REDSPRINGBALL4",
+	"S_REDSPRINGBALL5",
+
+	// Small Firebar
+	"S_SMALLFIREBAR1",
+	"S_SMALLFIREBAR2",
+	"S_SMALLFIREBAR3",
+	"S_SMALLFIREBAR4",
+	"S_SMALLFIREBAR5",
+	"S_SMALLFIREBAR6",
+	"S_SMALLFIREBAR7",
+	"S_SMALLFIREBAR8",
+	"S_SMALLFIREBAR9",
+	"S_SMALLFIREBAR10",
+	"S_SMALLFIREBAR11",
+	"S_SMALLFIREBAR12",
+	"S_SMALLFIREBAR13",
+	"S_SMALLFIREBAR14",
+	"S_SMALLFIREBAR15",
+	"S_SMALLFIREBAR16",
+
+	// Big Firebar
+	"S_BIGFIREBAR1",
+	"S_BIGFIREBAR2",
+	"S_BIGFIREBAR3",
+	"S_BIGFIREBAR4",
+	"S_BIGFIREBAR5",
+	"S_BIGFIREBAR6",
+	"S_BIGFIREBAR7",
+	"S_BIGFIREBAR8",
+	"S_BIGFIREBAR9",
+	"S_BIGFIREBAR10",
+	"S_BIGFIREBAR11",
+	"S_BIGFIREBAR12",
+	"S_BIGFIREBAR13",
+	"S_BIGFIREBAR14",
+	"S_BIGFIREBAR15",
+	"S_BIGFIREBAR16",
 
 	"S_CEZFLOWER1",
 
@@ -6297,14 +6347,20 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_FLAMEPARTICLE",
 	"MT_EGGSTATUE", // Eggman Statue
 	"MT_MACEPOINT", // Mace rotation point
-	"MT_SWINGMACEPOINT", // Mace swinging point
-	"MT_HANGMACEPOINT", // Hangable mace chain
-	"MT_SPINMACEPOINT", // Spin/Controllable mace chain
+	"MT_CHAINMACEPOINT", // Combination of chains and maces point
+	"MT_SPRINGBALLPOINT", // Spring ball point
+	"MT_CHAINPOINT", // Mace chain
 	"MT_HIDDEN_SLING", // Spin mace chain (activatable)
+	"MT_FIREBARPOINT", // Firebar
+	"MT_CUSTOMMACEPOINT", // Custom mace
 	"MT_SMALLMACECHAIN", // Small Mace Chain
 	"MT_BIGMACECHAIN", // Big Mace Chain
 	"MT_SMALLMACE", // Small Mace
 	"MT_BIGMACE", // Big Mace
+	"MT_YELLOWSPRINGBALL", // Yellow spring on a ball
+	"MT_REDSPRINGBALL", // Red spring on a ball
+	"MT_SMALLFIREBAR", // Small Firebar
+	"MT_BIGFIREBAR", // Big Firebar
 	"MT_CEZFLOWER",
 
 	// Arid Canyon Scenery
@@ -6657,6 +6713,7 @@ static const char *const MOBJFLAG2_LIST[] = {
 	"AMBUSH",         // Alternate behaviour typically set by MTF_AMBUSH
 	"LINKDRAW",       // Draw vissprite of mobj immediately before/after tracer's vissprite (dependent on dispoffset and position)
 	"SHIELD",         // Thinker calls P_AddShield/P_ShieldLook (must be partnered with MF_SCENERY to use)
+	"MACEROTATE",     // Thinker calls P_MaceRotate around tracer
 	NULL
 };
 
@@ -7082,6 +7139,7 @@ struct {
 	{"LF_NOSSMUSIC",LF_NOSSMUSIC},
 	{"LF_NORELOAD",LF_NORELOAD},
 	{"LF_NOZONE",LF_NOZONE},
+	{"LF_SAVEGAME",LF_SAVEGAME},
 	// And map flags
 	{"LF2_HIDEINMENU",LF2_HIDEINMENU},
 	{"LF2_HIDEINSTATS",LF2_HIDEINSTATS},
@@ -7900,11 +7958,14 @@ void FUNCMATH DEH_Check(void)
 static inline int lib_freeslot(lua_State *L)
 {
 	int n = lua_gettop(L);
-  int r = 0; // args returned
+	int r = 0; // args returned
 	char *s, *type,*word;
 
-  while (n-- > 0)
-  {
+	if (!lua_lumploading)
+		return luaL_error(L, "This function cannot be called from within a hook or coroutine!");
+
+	while (n-- > 0)
+	{
 		s = Z_StrDup(luaL_checkstring(L,1));
 		type = strtok(s, "_");
 		if (type)

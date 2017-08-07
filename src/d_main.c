@@ -419,10 +419,13 @@ static void D_Display(void)
 			}
 
 			// Image postprocessing effect
-			if (postimgtype)
-				V_DoPostProcessor(0, postimgtype, postimgparam);
-			if (postimgtype2)
-				V_DoPostProcessor(1, postimgtype2, postimgparam2);
+			if (rendermode == render_soft)
+			{
+				if (postimgtype)
+					V_DoPostProcessor(0, postimgtype, postimgparam);
+				if (postimgtype2)
+					V_DoPostProcessor(1, postimgtype2, postimgparam2);
+			}
 		}
 
 		if (lastdraw)
@@ -712,6 +715,7 @@ void D_StartTitle(void)
 	botskin = 0;
 	cv_debug = 0;
 	emeralds = 0;
+	lastmaploaded = 0;
 
 	// In case someone exits out at the same time they start a time attack run,
 	// reset modeattacking

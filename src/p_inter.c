@@ -1496,10 +1496,19 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if (player->powers[pw_flashing])
 				return;
 
+			if (special->movefactor && special->tracer && (angle_t)special->tracer->health != ANGLE_90 && (angle_t)special->tracer->health != ANGLE_270)
+			{ // I don't expect you to understand this, Mr Bond...
+				angle_t ang = R_PointToAngle2(special->x, special->y, toucher->x, toucher->y) - special->tracer->threshold;
+				if ((special->movefactor > 0) == ((angle_t)special->tracer->health > ANGLE_90 && (angle_t)special->tracer->health < ANGLE_270))
+					ang += ANGLE_180;
+				if (ang < ANGLE_180)
+					return; // I expect you to die.
+			}
+
 			P_ResetPlayer(player);
 			P_SetTarget(&toucher->tracer, special);
 
-			if (special->target && (special->target->type == MT_SPINMACEPOINT || special->target->type == MT_HIDDEN_SLING))
+			if (special->tracer && !(special->tracer->flags2 & MF2_STRONGBOX))
 			{
 				player->powers[pw_carry] = CR_MACESPIN;
 				S_StartSound(toucher, sfx_spin);
@@ -1510,6 +1519,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 			// Can't jump first frame
 			player->pflags |= PF_JUMPSTASIS;
+
 			return;
 		case MT_BIGMINE:
 		case MT_BIGAIRMINE:
