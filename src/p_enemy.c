@@ -137,7 +137,6 @@ void A_DetonChase(mobj_t *actor);
 void A_CapeChase(mobj_t *actor);
 void A_RotateSpikeBall(mobj_t *actor);
 void A_SlingAppear(mobj_t *actor);
-void A_MaceRotate(mobj_t *actor);
 void A_UnidusBall(mobj_t *actor);
 void A_RockSpawn(mobj_t *actor);
 void A_SetFuse(mobj_t *actor);
@@ -5145,15 +5144,12 @@ void A_SlingAppear(mobj_t *actor)
 	actor->movefactor = actor->threshold;
 	actor->friction = 128;
 
-	actor->flags |= MF_SLIDEME;
-
 	while (mlength > 0)
 	{
 		spawnee = P_SpawnMobj(actor->x, actor->y, actor->z, MT_SMALLMACECHAIN);
 
 		P_SetTarget(&spawnee->target, actor);
 
-		spawnee->movecount = 0;
 		spawnee->threshold = 0;
 		spawnee->reactiontime = mlength;
 
@@ -5166,129 +5162,6 @@ void A_SlingAppear(mobj_t *actor)
 
 		mlength--;
 	}
-}
-
-//
-// Function: A_MaceRotate
-//
-// Spins an object around its target, or, swings it from side to side.
-//
-// var1 = unused
-// var2 = unused
-//
-// So NOBODY forgets:
-// actor->
-// threshold - X tilt
-// movecount - Z tilt
-// reactiontime - link # in the chain (1 is closest)
-// lastlook - speed
-// friction - top speed
-// movedir - current angle holder
-// extravalue1 - smoothly move link into place
-//
-void A_MaceRotate(mobj_t *actor)
-{
-	TVector v;
-	TVector *res;
-	fixed_t radius;
-#ifdef HAVE_BLUA
-	if (LUA_CallAction("A_MaceRotate", actor))
-		return;
-#endif
-
-	// Target was removed.
-	if (!actor->target)
-	{
-		P_RemoveMobj(actor);
-		return;
-	}
-
-	P_UnsetThingPosition(actor);
-
-	// Radius of the link's rotation.
-	radius = FixedMul(actor->info->speed * actor->reactiontime, actor->target->scale);
-
-	// Double the radius if the chain links are made up of maces.
-	if (actor->target->type == MT_AXIS && (actor->type == MT_SMALLMACE || actor->type == MT_BIGMACE))
-		radius *= 2;
-
-	// Axis offset for the axis.
-	radius += actor->target->extravalue1;
-
-	// Smoothly move the link into position.
-	if (actor->extravalue1)
-	{
-		radius = FixedMul(radius, FixedDiv(actor->extravalue1, 100));
-		actor->extravalue1 += 1;
-		if (actor->extravalue1 >= 100)
-			actor->extravalue1 = 0;
-	}
-
-	actor->x = actor->target->x;
-	actor->y = actor->target->y;
-	actor->z = actor->target->z;
-
-	// Cut the height to align the link with the axis.
-	if (actor->type == MT_SMALLMACECHAIN || actor->type == MT_BIGMACECHAIN)
-		actor->z -= actor->height/4;
-	else
-		actor->z -= actor->height/2;
-
-	// Set the top speed for the link if it happens to be over that speed.
-	if (actor->target->lastlook > actor->target->friction)
-		actor->target->lastlook = actor->target->friction;
-
-	// Swinging Chain.
-	if (actor->target->type == MT_HANGMACEPOINT || actor->target->type == MT_SWINGMACEPOINT)
-	{
-		actor->movecount += actor->target->lastlook;
-		actor->movecount &= FINEMASK;
-
-		actor->threshold = FixedMul(FINECOSINE(actor->movecount), actor->target->lastlook << FRACBITS);
-
-		v[0] = FRACUNIT;
-		v[1] = 0;
-		v[2] = -radius;
-		v[3] = FRACUNIT;
-
-		// Calculate the angle matrixes for the link.
-		res = VectorMatrixMultiply(v, *RotateXMatrix(FixedAngle(actor->threshold)));
-		M_Memcpy(&v, res, sizeof(v));
-		res = VectorMatrixMultiply(v, *RotateZMatrix(actor->target->health << ANGLETOFINESHIFT));
-		M_Memcpy(&v, res, sizeof(v));
-	}
-	// Rotating Chain.
-	else
-	{
-		angle_t fa;
-
-		actor->threshold += actor->target->lastlook;
-		actor->threshold &= FINEMASK;
-		actor->target->health &= FINEMASK;
-
-		fa = actor->threshold;
-		v[0] = FixedMul(FINECOSINE(fa), radius);
-		v[1] = 0;
-		v[2] = FixedMul(FINESINE(fa), radius);
-		v[3] = FRACUNIT;
-
-		// Calculate the angle matrixes for the link.
-		res = VectorMatrixMultiply(v, *RotateXMatrix(actor->target->threshold << ANGLETOFINESHIFT));
-		M_Memcpy(&v, res, sizeof(v));
-		res = VectorMatrixMultiply(v, *RotateZMatrix(actor->target->health << ANGLETOFINESHIFT));
-		M_Memcpy(&v, res, sizeof(v));
-	}
-
-	// Add on the appropriate distances to the actor's co-ordinates.
-	actor->x += v[0];
-	actor->y += v[1];
-	actor->z += v[2];
-
-	P_SetThingPosition(actor);
-
-	if (!(actor->target->flags2 & MF2_BOSSNOTRAP) // flag that makes maces shut up on request
-	&& !(leveltime & 63) && (actor->type == MT_BIGMACE || actor->type == MT_SMALLMACE) && actor->target->type == MT_MACEPOINT)
-		S_StartSound(actor, actor->info->activesound);
 }
 
 // Function: A_SetFuse
@@ -10794,26 +10667,33 @@ void A_FlickyFlutter(mobj_t *actor)
 // Description: Creates the mobj's painchance at a random position around the object's radius.
 //
 // var1 = momz of particle.
+// var2 = chance of particle spawn
 //
 void A_FlameParticle(mobj_t *actor)
 {
 	mobjtype_t type = (mobjtype_t)(mobjinfo[actor->type].painchance);
+	fixed_t rad, hei;
+	mobj_t *particle;
 	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
 
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_FlameParticle", actor))
 		return;
 #endif
 
-	if (type)
-	{
-		fixed_t rad = 2*actor->radius>>FRACBITS;
-		fixed_t hei = actor->height>>FRACBITS;
-		mobj_t *particle = P_SpawnMobjFromMobj(actor,
-			P_RandomRange(rad, -rad)<<FRACBITS,
-			P_RandomRange(rad, -rad)<<FRACBITS,
-			P_RandomRange(hei/2, hei)<<FRACBITS,
-			type);
-		P_SetObjectMomZ(particle, locvar1<<FRACBITS, false);
-	}
+	if (!P_RandomChance(locvar2))
+		return;
+
+	if (!type)
+		return;
+
+	rad = 2*actor->radius>>FRACBITS;
+	hei = actor->height>>FRACBITS;
+	particle = P_SpawnMobjFromMobj(actor,
+		P_RandomRange(rad, -rad)<<FRACBITS,
+		P_RandomRange(rad, -rad)<<FRACBITS,
+		P_RandomRange(hei/2, hei)<<FRACBITS,
+		type);
+	P_SetObjectMomZ(particle, locvar1<<FRACBITS, false);
 }

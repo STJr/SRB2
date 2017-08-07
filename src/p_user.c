@@ -9974,7 +9974,7 @@ void P_PlayerAfterThink(player_t *player)
 			}
 		}
 	}
-	else if (player->powers[pw_carry] == CR_MACESPIN && player->mo->tracer && player->mo->tracer->target)
+	else if (player->powers[pw_carry] == CR_MACESPIN && player->mo->tracer && player->mo->tracer->tracer)
 	{
 		player->mo->height = P_GetPlayerSpinHeight(player);
 		// tracer is what you're hanging onto....
@@ -9990,14 +9990,20 @@ void P_PlayerAfterThink(player_t *player)
 			player->pflags &= ~PF_THOKKED;
 
 			if (cmd->forwardmove > 0)
-				player->mo->tracer->target->lastlook += 2;
-			else if (cmd->forwardmove < 0 && player->mo->tracer->target->lastlook > player->mo->tracer->target->movecount)
-				player->mo->tracer->target->lastlook -= 2;
+			{
+				if ((player->mo->tracer->tracer->lastlook += 2) > player->mo->tracer->tracer->friction)
+					player->mo->tracer->tracer->lastlook = player->mo->tracer->tracer->friction;
+			}
+			else if (cmd->forwardmove < 0)
+			{
+				if ((player->mo->tracer->tracer->lastlook -= 2) < player->mo->tracer->tracer->movecount)
+					player->mo->tracer->tracer->lastlook = player->mo->tracer->tracer->movecount;
+			}
 
-			if (!(player->mo->tracer->target->flags & MF_SLIDEME) // Noclimb on chain parameters gives this
+			if ((player->mo->tracer->tracer->flags & MF_SLIDEME) // Noclimb on chain parameters gives this
 			&& !(twodlevel || player->mo->flags2 & MF2_TWOD)) // why on earth would you want to turn them in 2D mode?
 			{
-				player->mo->tracer->target->health += cmd->sidemove;
+				player->mo->tracer->tracer->health += cmd->sidemove;
 				player->mo->angle += cmd->sidemove<<ANGLETOFINESHIFT; // 2048 --> ANGLE_MAX
 
 				if (!demoplayback || P_AnalogMove(player))

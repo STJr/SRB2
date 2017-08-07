@@ -1594,6 +1594,7 @@ static void P_LoadSideDefs2(lumpnum_t lumpnum)
 				break;
 			}
 
+			case 9: // Mace parameters
 			case 14: // Bustable block parameters
 			case 15: // Fan particle spawner parameters
 			case 425: // Calls P_SetMobjState on calling mobj
