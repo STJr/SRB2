@@ -966,9 +966,11 @@ void CV_RegisterVar(consvar_t *variable)
 	// check net variables
 	if (variable->flags & CV_NETVAR)
 	{
+		const consvar_t *netvar;
 		variable->netid = CV_ComputeNetid(variable->name);
-		if (CV_FindNetVar(variable->netid))
-			I_Error("Variables %s and %s have same netid\n", variable->name, CV_FindNetVar(variable->netid)->name);
+		netvar = CV_FindNetVar(variable->netid);
+		if (netvar)
+			I_Error("Variables %s and %s have same netid\n", variable->name, netvar->name);
 	}
 
 	// link the variable in

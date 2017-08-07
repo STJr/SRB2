@@ -590,70 +590,78 @@ static BOOL I_ReadyConsole(HANDLE ci)
 
 static boolean entering_con_command = false;
 
+static void Impl_HandleKeyboardConsoleEvent(KEY_EVENT_RECORD evt, HANDLE co)
+{
+	event_t event;
+	CONSOLE_SCREEN_BUFFER_INFO CSBI;
+	DWORD t;
+
+	memset(&event,0x00,sizeof (event));
+
+	if (evt.bKeyDown)
+	{
+		event.type = ev_console;
+		entering_con_command = true;
+		switch (evt.wVirtualKeyCode)
+		{
+			case VK_ESCAPE:
+			case VK_TAB:
+				event.data1 = KEY_NULL;
+				break;
+			case VK_SHIFT:
+				event.data1 = KEY_LSHIFT;
+				break;
+			case VK_RETURN:
+				entering_con_command = false;
+				// Fall through.
+			default:
+				event.data1 = MapVirtualKey(evt.wVirtualKeyCode,2); // convert in to char
+		}
+		if (co != INVALID_HANDLE_VALUE && GetFileType(co) == FILE_TYPE_CHAR && GetConsoleMode(co, &t))
+		{
+			if (event.data1 && event.data1 != KEY_LSHIFT && event.data1 != KEY_RSHIFT)
+			{
+#ifdef _UNICODE
+				WriteConsole(co, &evt.uChar.UnicodeChar, 1, &t, NULL);
+#else
+				WriteConsole(co, &evt.uChar.AsciiChar, 1 , &t, NULL);
+#endif
+			}
+			if (evt.wVirtualKeyCode == VK_BACK
+				&& GetConsoleScreenBufferInfo(co,&CSBI))
+			{
+				WriteConsoleOutputCharacterA(co, " ",1, CSBI.dwCursorPosition, &t);
+			}
+		}
+	}
+	else
+	{
+		event.type = ev_keyup;
+		switch (evt.wVirtualKeyCode)
+		{
+			case VK_SHIFT:
+				event.data1 = KEY_LSHIFT;
+				break;
+			default:
+				break;
+		}
+	}
+	if (event.data1) D_PostEvent(&event);
+}
+
 void I_GetConsoleEvents(void)
 {
-	event_t ev = {0,0,0,0};
 	HANDLE ci = GetStdHandle(STD_INPUT_HANDLE);
 	HANDLE co = GetStdHandle(STD_OUTPUT_HANDLE);
-	CONSOLE_SCREEN_BUFFER_INFO CSBI;
 	INPUT_RECORD input;
 	DWORD t;
 
 	while (I_ReadyConsole(ci) && ReadConsoleInput(ci, &input, 1, &t) && t)
 	{
-		memset(&ev,0x00,sizeof (ev));
 		switch (input.EventType)
 		{
 			case KEY_EVENT:
-				if (input.Event.KeyEvent.bKeyDown)
-				{
-					ev.type = ev_console;
-					entering_con_command = true;
-					switch (input.Event.KeyEvent.wVirtualKeyCode)
-					{
-						case VK_ESCAPE:
-						case VK_TAB:
-							ev.data1 = KEY_NULL;
-							break;
-						case VK_SHIFT:
-							ev.data1 = KEY_LSHIFT;
-							break;
-						case VK_RETURN:
-							entering_con_command = false;
-							// Fall through.
-						default:
-							ev.data1 = MapVirtualKey(input.Event.KeyEvent.wVirtualKeyCode,2); // convert in to char
-					}
-					if (co != INVALID_HANDLE_VALUE && GetFileType(co) == FILE_TYPE_CHAR && GetConsoleMode(co, &t))
-					{
-						if (ev.data1 && ev.data1 != KEY_LSHIFT && ev.data1 != KEY_RSHIFT)
-						{
-#ifdef _UNICODE
-							WriteConsole(co, &input.Event.KeyEvent.uChar.UnicodeChar, 1, &t, NULL);
-#else
-							WriteConsole(co, &input.Event.KeyEvent.uChar.AsciiChar, 1 , &t, NULL);
-#endif
-						}
-						if (input.Event.KeyEvent.wVirtualKeyCode == VK_BACK
-							&& GetConsoleScreenBufferInfo(co,&CSBI))
-						{
-							WriteConsoleOutputCharacterA(co, " ",1, CSBI.dwCursorPosition, &t);
-						}
-					}
-				}
-				else
-				{
-					ev.type = ev_keyup;
-					switch (input.Event.KeyEvent.wVirtualKeyCode)
-					{
-						case VK_SHIFT:
-							ev.data1 = KEY_LSHIFT;
-							break;
-						default:
-							break;
-					}
-				}
-				if (ev.data1) D_PostEvent(&ev);
+				Impl_HandleKeyboardConsoleEvent(input.Event.KeyEvent, co);
 				break;
 			case MOUSE_EVENT:
 			case WINDOW_BUFFER_SIZE_EVENT:
@@ -2049,14 +2057,14 @@ void I_StartupMouse2(void)
 //
 // I_Tactile
 //
-void I_Tactile(FFType pFFType, const JoyFF_t *FFEffect)
+FUNCMATH void I_Tactile(FFType pFFType, const JoyFF_t *FFEffect)
 {
 	// UNUSED.
 	(void)pFFType;
 	(void)FFEffect;
 }
 
-void I_Tactile2(FFType pFFType, const JoyFF_t *FFEffect)
+FUNCMATH void I_Tactile2(FFType pFFType, const JoyFF_t *FFEffect)
 {
 	// UNUSED.
 	(void)pFFType;
@@ -2067,7 +2075,7 @@ void I_Tactile2(FFType pFFType, const JoyFF_t *FFEffect)
 */
 static ticcmd_t emptycmd;
 
-ticcmd_t *I_BaseTiccmd(void)
+FUNCMATH ticcmd_t *I_BaseTiccmd(void)
 {
 	return &emptycmd;
 }
@@ -2076,7 +2084,7 @@ ticcmd_t *I_BaseTiccmd(void)
 */
 static ticcmd_t emptycmd2;
 
-ticcmd_t *I_BaseTiccmd2(void)
+FUNCMATH ticcmd_t *I_BaseTiccmd2(void)
 {
 	return &emptycmd2;
 }
@@ -2179,7 +2187,7 @@ tic_t I_GetTime (void)
 //
 //I_StartupTimer
 //
-void I_StartupTimer(void)
+FUNCMATH void I_StartupTimer(void)
 {
 #if (defined (_WIN32) && !defined (_WIN32_WCE)) && !defined (_XBOX)
 	// for win2k time bug
@@ -2313,11 +2321,11 @@ void I_WaitVBL(INT32 count)
 	SDL_Delay(count);
 }
 
-void I_BeginRead(void)
+FUNCMATH void I_BeginRead(void)
 {
 }
 
-void I_EndRead(void)
+FUNCMATH void I_EndRead(void)
 {
 }
 
@@ -2645,6 +2653,47 @@ INT32 I_PutEnv(char *variable)
 #else
 	return putenv(variable);
 #endif
+}
+
+INT32 I_ClipboardCopy(const char *data, size_t size)
+{
+	char storage[256];
+	if (size > 255)
+		size = 255;
+	memcpy(storage, data, size);
+	storage[size] = 0;
+
+	if (SDL_SetClipboardText(storage))
+		return 0;
+	return -1;
+}
+
+const char *I_ClipboardPaste(void)
+{
+	static char clipboard_modified[256];
+	char *clipboard_contents, *i = clipboard_modified;
+
+	if (!SDL_HasClipboardText())
+		return NULL;
+	clipboard_contents = SDL_GetClipboardText();
+	memcpy(clipboard_modified, clipboard_contents, 255);
+	SDL_free(clipboard_contents);
+	clipboard_modified[255] = 0;
+
+	while (*i)
+	{
+		if (*i == '\n' || *i == '\r')
+		{ // End on newline
+			*i = 0;
+			break;
+		}
+		else if (*i == '\t')
+			*i = ' '; // Tabs become spaces
+		else if (*i < 32 || (unsigned)*i > 127)
+			*i = '?'; // Nonprintable chars become question marks
+		++i;
+	}
+	return (const char *)&clipboard_modified;
 }
 
 /**	\brief	The isWadPathOk function
@@ -3067,5 +3116,5 @@ const CPUInfoFlags *I_CPUInfo(void)
 }
 
 // note CPUAFFINITY code used to reside here
-void I_RegisterSysCommands(void) {}
+FUNCMATH void I_RegisterSysCommands(void) {}
 #endif

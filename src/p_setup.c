@@ -574,6 +574,69 @@ INT32 P_AddLevelFlat(const char *flatname, levelflat_t *levelflat)
 	return (INT32)i;
 }
 
+// help function for Lua and $$$.sav reading
+// same as P_AddLevelFlat, except this is not setup so we must realloc levelflats to fit in the new flat
+// no longer a static func in lua_maplib.c because p_saveg.c also needs it
+//
+INT32 P_AddLevelFlatRuntime(const char *flatname)
+{
+	size_t i;
+	levelflat_t *levelflat = levelflats;
+
+	//
+	//  first scan through the already found flats
+	//
+	for (i = 0; i < numlevelflats; i++, levelflat++)
+		if (strnicmp(levelflat->name,flatname,8)==0)
+			break;
+
+	// that flat was already found in the level, return the id
+	if (i == numlevelflats)
+	{
+		// allocate new flat memory
+		levelflats = Z_Realloc(levelflats, (numlevelflats + 1) * sizeof(*levelflats), PU_LEVEL, NULL);
+		levelflat = levelflats+i;
+
+		// store the name
+		strlcpy(levelflat->name, flatname, sizeof (levelflat->name));
+		strupr(levelflat->name);
+
+		// store the flat lump number
+		levelflat->lumpnum = R_GetFlatNumForName(flatname);
+
+#ifndef ZDEBUG
+		CONS_Debug(DBG_SETUP, "flat #%03d: %s\n", atoi(sizeu1(numlevelflats)), levelflat->name);
+#endif
+
+		numlevelflats++;
+	}
+
+	// level flat id
+	return (INT32)i;
+}
+
+// help function for $$$.sav checking
+// this simply returns the flat # for the name given
+//
+INT32 P_CheckLevelFlat(const char *flatname)
+{
+	size_t i;
+	levelflat_t *levelflat = levelflats;
+
+	//
+	//  scan through the already found flats
+	//
+	for (i = 0; i < numlevelflats; i++, levelflat++)
+		if (strnicmp(levelflat->name,flatname,8)==0)
+			break;
+
+	if (i == numlevelflats)
+		return 0; // ??? flat was not found, this should not happen!
+
+	// level flat id
+	return (INT32)i;
+}
+
 static void P_LoadSectors(lumpnum_t lumpnum)
 {
 	UINT8 *data;
@@ -614,6 +677,7 @@ static void P_LoadSectors(lumpnum_t lumpnum)
 		ss->special = SHORT(ms->special);
 		ss->tag = SHORT(ms->tag);
 		ss->nexttag = ss->firsttag = -1;
+		ss->spawn_nexttag = ss->spawn_firsttag = -1;
 
 		memset(&ss->soundorg, 0, sizeof(ss->soundorg));
 		ss->validcount = 0;
@@ -1931,10 +1995,18 @@ static void P_GroupLines(void)
 	// allocate linebuffers for each sector
 	for (i = 0, sector = sectors; i < numsectors; i++, sector++)
 	{
-		sector->lines = Z_Calloc(sector->linecount * sizeof(line_t*), PU_LEVEL, NULL);
+		if (sector->linecount == 0) // no lines found?
+		{
+			sector->lines = NULL;
+			CONS_Debug(DBG_SETUP, "P_GroupLines: sector %s has no lines\n", sizeu1(i));
+		}
+		else
+		{
+			sector->lines = Z_Calloc(sector->linecount * sizeof(line_t*), PU_LEVEL, NULL);
 
-		// zero the count, since we'll later use this to track how many we've recorded
-		sector->linecount = 0;
+			// zero the count, since we'll later use this to track how many we've recorded
+			sector->linecount = 0;
+		}
 	}
 
 	// iterate through lines, assigning them to sectors' linebuffers,
@@ -1952,11 +2024,14 @@ static void P_GroupLines(void)
 	{
 		M_ClearBox(bbox);
 
-		for (j = 0; j < sector->linecount; j++)
+		if (sector->linecount != 0)
 		{
-			li = sector->lines[j];
-			M_AddToBox(bbox, li->v1->x, li->v1->y);
-			M_AddToBox(bbox, li->v2->x, li->v2->y);
+			for (j = 0; j < sector->linecount; j++)
+			{
+				li = sector->lines[j];
+				M_AddToBox(bbox, li->v1->x, li->v1->y);
+				M_AddToBox(bbox, li->v2->x, li->v2->y);
+			}
 		}
 
 		// set the degenmobj_t to the middle of the bounding box
@@ -1964,6 +2039,35 @@ static void P_GroupLines(void)
 		sector->soundorg.y = (((bbox[BOXTOP]>>FRACBITS) + (bbox[BOXBOTTOM]>>FRACBITS))/2)<<FRACBITS;
 		sector->soundorg.z = sector->floorheight; // default to sector's floor height
 	}
+}
+
+//
+// P_LoadReject
+//
+// Detect if the REJECT lump is valid,
+// if not, rejectmatrix will be NULL
+static void P_LoadReject(lumpnum_t lumpnum)
+{
+	size_t count;
+	const char *lumpname = W_CheckNameForNum(lumpnum);
+
+	// Check if the lump exists, and if it's named "REJECT"
+	if (!lumpname || memcmp(lumpname, "REJECT\0\0", 8) != 0)
+	{
+		rejectmatrix = NULL;
+		CONS_Debug(DBG_SETUP, "P_LoadReject: No valid REJECT lump found\n");
+		return;
+	}
+
+	count = W_LumpLength(lumpnum);
+
+	if (!count) // zero length, someone probably used ZDBSP
+	{
+		rejectmatrix = NULL;
+		CONS_Debug(DBG_SETUP, "P_LoadReject: REJECT lump has size 0, will not be loaded\n");
+	}
+	else
+		rejectmatrix = W_CacheLumpNum(lumpnum, PU_LEVEL);
 }
 
 #if 0
@@ -2545,11 +2649,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	lastloadedmaplumpnum = W_GetNumForName(maplumpname = G_BuildMapName(gamemap));
 
 	R_ReInitColormaps(mapheaderinfo[gamemap-1]->palette);
-	CON_ReSetupBackColormap(mapheaderinfo[gamemap-1]->palette);
-
-	// now part of level loading since in future each level may have
-	// its own anim texture sequences, switches etc.
-	P_InitPicAnims();
+	CON_SetupBackColormap();
 
 	// SRB2 determines the sky texture to be used depending on the map header.
 	P_SetupLevelSky(mapheaderinfo[gamemap-1]->skynum, true);
@@ -2574,7 +2674,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	P_LoadSubsectors(lastloadedmaplumpnum + ML_SSECTORS);
 	P_LoadNodes(lastloadedmaplumpnum + ML_NODES);
 	P_LoadSegs(lastloadedmaplumpnum + ML_SEGS);
-	rejectmatrix = W_CacheLumpNum(lastloadedmaplumpnum + ML_REJECT, PU_LEVEL);
+	P_LoadReject(lastloadedmaplumpnum + ML_REJECT);
 	P_GroupLines();
 
 	numdmstarts = numredctfstarts = numbluectfstarts = 0;
@@ -2960,6 +3060,9 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 		R_LoadTextures(); // numtexture changes
 	else
 		R_FlushTextureCache(); // just reload it from file
+
+	// Reload ANIMATED / ANIMDEFS
+	P_InitPicAnims();
 
 	// Flush and reload HUD graphics
 	ST_UnloadGraphics();

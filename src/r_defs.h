@@ -203,6 +203,7 @@ typedef struct r_lightlist_s
 	fixed_t heightstep;
 	fixed_t botheight;
 	fixed_t botheightstep;
+	fixed_t startheight; // for repeating midtextures
 	INT16 lightlevel;
 	extracolormap_t *extra_colormap;
 	lighttable_t *rcolormap;
@@ -223,15 +224,6 @@ typedef struct linechain_s
 // ----- end special tricks -----
 
 
-
-// ZDoom C++ to Legacy C conversion Tails 04-29-2002 (for slopes)
-typedef struct secplane_t
-{
-	// the plane is defined as a*x + b*y + c*z + d = 0
-	// ic is 1/c, for faster Z calculations
-
-	fixed_t a, b, c, d, ic;
-} secplane_t;
 
 // Slopes
 #ifdef ESLOPE
@@ -392,6 +384,7 @@ typedef struct sector_s
 #endif
 
 	// these are saved for netgames, so do not let Lua touch these!
+	INT32 spawn_nexttag, spawn_firsttag; // the actual nexttag/firsttag values may differ if the sector's tag was changed
 
 	// offsets sector spawned with (via linedef type 7)
 	fixed_t spawn_flr_xoffs, spawn_flr_yoffs;
@@ -500,10 +493,10 @@ typedef struct subsector_s
 // Sector list node showing all sectors an object appears in.
 //
 // There are two threads that flow through these nodes. The first thread
-// starts at touching_thinglist in a sector_t and flows through the m_snext
+// starts at touching_thinglist in a sector_t and flows through the m_thinglist_next
 // links to find all mobjs that are entirely or partially in the sector.
 // The second thread starts at touching_sectorlist in an mobj_t and flows
-// through the m_tnext links to find all sectors a thing touches. This is
+// through the m_sectorlist_next links to find all sectors a thing touches. This is
 // useful when applying friction or push effects to sectors. These effects
 // can be done as thinkers that act upon all objects touching their sectors.
 // As an mobj moves through the world, these nodes are created and
@@ -515,10 +508,10 @@ typedef struct msecnode_s
 {
 	sector_t *m_sector; // a sector containing this object
 	struct mobj_s *m_thing;  // this object
-	struct msecnode_s *m_tprev;  // prev msecnode_t for this thing
-	struct msecnode_s *m_tnext;  // next msecnode_t for this thing
-	struct msecnode_s *m_sprev;  // prev msecnode_t for this sector
-	struct msecnode_s *m_snext;  // next msecnode_t for this sector
+	struct msecnode_s *m_sectorlist_prev;  // prev msecnode_t for this thing
+	struct msecnode_s *m_sectorlist_next;  // next msecnode_t for this thing
+	struct msecnode_s *m_thinglist_prev;  // prev msecnode_t for this sector
+	struct msecnode_s *m_thinglist_next;  // next msecnode_t for this sector
 	boolean visited; // used in search algorithms
 } msecnode_t;
 
@@ -526,10 +519,10 @@ typedef struct mprecipsecnode_s
 {
 	sector_t *m_sector; // a sector containing this object
 	struct precipmobj_s *m_thing;  // this object
-	struct mprecipsecnode_s *m_tprev;  // prev msecnode_t for this thing
-	struct mprecipsecnode_s *m_tnext;  // next msecnode_t for this thing
-	struct mprecipsecnode_s *m_sprev;  // prev msecnode_t for this sector
-	struct mprecipsecnode_s *m_snext;  // next msecnode_t for this sector
+	struct mprecipsecnode_s *m_sectorlist_prev;  // prev msecnode_t for this thing
+	struct mprecipsecnode_s *m_sectorlist_next;  // next msecnode_t for this thing
+	struct mprecipsecnode_s *m_thinglist_prev;  // prev msecnode_t for this sector
+	struct mprecipsecnode_s *m_thinglist_next;  // next msecnode_t for this sector
 	boolean visited; // used in search algorithms
 } mprecipsecnode_t;
 

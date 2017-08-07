@@ -280,7 +280,7 @@ static boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef,
 		{
 			case 0xff:
 			// no rotations were found for that frame at all
-			I_Error("R_AddSingleSpriteDef: No patches found for %s frame %c", sprname, R_Frame2Char(frame));
+			I_Error("R_AddSingleSpriteDef: No patches found for %.4s frame %c", sprname, R_Frame2Char(frame));
 			break;
 
 			case 0:
@@ -293,7 +293,7 @@ static boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef,
 				// we test the patch lump, or the id lump whatever
 				// if it was not loaded the two are LUMPERROR
 				if (sprtemp[frame].lumppat[rotation] == LUMPERROR)
-					I_Error("R_AddSingleSpriteDef: Sprite %s frame %c is missing rotations",
+					I_Error("R_AddSingleSpriteDef: Sprite %.4s frame %c is missing rotations",
 					        sprname, R_Frame2Char(frame));
 			break;
 		}
@@ -891,11 +891,17 @@ static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 #endif
 	fixed_t frac;
 	patch_t *patch;
+	INT64 overflow_test;
 
 	//Fab : R_InitSprites now sets a wad lump number
 	patch = W_CacheLumpNum(vis->patch, PU_CACHE);
 	if (!patch)
 		return;
+
+	// Check for overflow
+	overflow_test = (INT64)centeryfrac - (((INT64)vis->texturemid*vis->scale)>>FRACBITS);
+	if (overflow_test < 0) overflow_test = -overflow_test;
+	if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) return; // fixed point mult would overflow
 
 	if (vis->transmap)
 	{
@@ -1634,7 +1640,8 @@ void R_SortVisSprites(void)
 	// Fix first and last. ds still points to the last one after the loop
 	dsfirst->prev = &unsorted;
 	unsorted.next = dsfirst;
-	ds->next = &unsorted;
+	if (ds)
+		ds->next = &unsorted;
 	unsorted.prev = ds;
 
 	// pull the vissprites out by scale
@@ -1698,21 +1705,25 @@ static void R_CreateDrawNodes(void)
 				entry->ffloor = ds->thicksides[i];
 			}
 		}
+#ifdef POLYOBJECTS_PLANES
+		// Check for a polyobject plane, but only if this is a front line
+		if (ds->curline->polyseg && ds->curline->polyseg->visplane && !ds->curline->side) {
+			plane = ds->curline->polyseg->visplane;
+			R_PlaneBounds(plane);
+
+			if (plane->low < con_clipviewtop || plane->high > vid.height || plane->high > plane->low)
+				;
+			else {
+				// Put it in!
+				entry = R_CreateDrawNode(&nodehead);
+				entry->plane = plane;
+				entry->seg = ds;
+			}
+			ds->curline->polyseg->visplane = NULL;
+		}
+#endif
 		if (ds->maskedtexturecol)
 		{
-#ifdef POLYOBJECTS_PLANES
-			// Check for a polyobject plane, but only if this is a front line
-			if (ds->curline->polyseg && ds->curline->polyseg->visplane && !ds->curline->side) {
-				// Put it in!
-
-				entry = R_CreateDrawNode(&nodehead);
-				entry->plane = ds->curline->polyseg->visplane;
-				entry->seg = ds;
-				ds->curline->polyseg->visplane->polyobj = ds->curline->polyseg;
-				ds->curline->polyseg->visplane = NULL;
-			}
-#endif
-
 			entry = R_CreateDrawNode(&nodehead);
 			entry->seg = ds;
 		}
@@ -1754,6 +1765,29 @@ static void R_CreateDrawNodes(void)
 			}
 		}
 	}
+
+#ifdef POLYOBJECTS_PLANES
+	// find all the remaining polyobject planes and add them on the end of the list
+	// probably this is a terrible idea if we wanted them to be sorted properly
+	// but it works getting them in for now
+	for (i = 0; i < numPolyObjects; i++)
+	{
+		if (!PolyObjects[i].visplane)
+			continue;
+		plane = PolyObjects[i].visplane;
+		R_PlaneBounds(plane);
+
+		if (plane->low < con_clipviewtop || plane->high > vid.height || plane->high > plane->low)
+		{
+			PolyObjects[i].visplane = NULL;
+			continue;
+		}
+		entry = R_CreateDrawNode(&nodehead);
+		entry->plane = plane;
+		// note: no seg is set, for what should be obvious reasons
+		PolyObjects[i].visplane = NULL;
+	}
+#endif
 
 	if (visspritecount == 0)
 		return;
@@ -1811,13 +1845,16 @@ static void R_CreateDrawNodes(void)
 				if (x1 < r2->plane->minx) x1 = r2->plane->minx;
 				if (x2 > r2->plane->maxx) x2 = r2->plane->maxx;
 
-				for (i = x1; i <= x2; i++)
+				if (r2->seg) // if no seg set, assume the whole thing is in front or something stupid
 				{
-					if (r2->seg->frontscale[i] > rover->scale)
-						break;
+					for (i = x1; i <= x2; i++)
+					{
+						if (r2->seg->frontscale[i] > rover->scale)
+							break;
+					}
+					if (i > x2)
+						continue;
 				}
-				if (i > x2)
-					continue;
 
 				entry = R_CreateDrawNode(NULL);
 				(entry->prev = r2->prev)->next = entry;

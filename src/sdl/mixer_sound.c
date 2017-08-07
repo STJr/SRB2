@@ -126,7 +126,7 @@ void I_ShutdownSound(void)
 #endif
 }
 
-void I_UpdateSound(void)
+FUNCMATH void I_UpdateSound(void)
 {
 }
 
@@ -220,7 +220,7 @@ static Mix_Chunk *ds2chunk(void *stream)
 		break;
 	default: // convert arbitrary hz to 44100.
 		step = 0;
-		frac = ((UINT32)freq << FRACBITS) / 44100;
+		frac = ((UINT32)freq << FRACBITS) / 44100 + 1; //Add 1 to counter truncation.
 		while (i < samples)
 		{
 			o = (INT16)(*s+0x80)<<8; // changed signedness and shift up to 16 bits
@@ -464,7 +464,7 @@ static void mix_gme(void *udata, Uint8 *stream, int len)
 }
 #endif
 
-void I_InitMusic(void)
+FUNCMATH void I_InitMusic(void)
 {
 }
 
@@ -769,7 +769,7 @@ boolean I_SetSongTrack(int track)
 // MIDI Music
 //
 
-void I_InitMIDIMusic(void)
+FUNCMATH void I_InitMIDIMusic(void)
 {
 }
 

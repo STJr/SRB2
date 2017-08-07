@@ -30,7 +30,7 @@
 #include "f_finale.h"
 
 
-#if defined (USEASM) //&& (!defined (_MSC_VER) || (_MSC_VER <= 1200))
+#if defined (USEASM) && !defined (NORUSEASM)//&& (!defined (_MSC_VER) || (_MSC_VER <= 1200))
 #define RUSEASM //MSC.NET can't patch itself
 #endif
 
@@ -69,6 +69,13 @@ consvar_t cv_scr_height = {"scr_height", "800", CV_SAVE, CV_Unsigned, NULL, 0, N
 consvar_t cv_scr_depth = {"scr_depth", "16 bits", CV_SAVE, scr_depth_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 #endif
 consvar_t cv_renderview = {"renderview", "On", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+#ifdef DIRECTFULLSCREEN
+static FUNCMATH void SCR_ChangeFullscreen (void);
+#else
+static void SCR_ChangeFullscreen (void);
+#endif
+
 consvar_t cv_fullscreen = {"fullscreen", "Yes", CV_SAVE|CV_CALL, CV_YesNo, SCR_ChangeFullscreen, 0, NULL, NULL, 0, 0, NULL};
 
 // =========================================================================

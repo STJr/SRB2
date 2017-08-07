@@ -69,7 +69,7 @@ static HCURSOR windowCursor = NULL; // main window cursor
 
 static LPCSTR wClassName = "SRB2WC";
 
-boolean appActive = false; // app window is active
+INT appActive = false; // app window is active
 
 #ifdef LOGMESSAGES
 FILE *logstream;
@@ -470,7 +470,7 @@ static inline BOOL tlErrorMessage(const TCHAR *err)
 	//
 	// warn user if there is one
 	//
-	printf("Error %Ts..\n", err);
+	printf("Error %s..\n", err);
 	fflush(stdout);
 
 	MessageBox(hWndMain, err, TEXT("ERROR"), MB_OK);

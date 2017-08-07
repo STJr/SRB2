@@ -60,6 +60,7 @@
 #endif
 
 #ifdef _WINDOWS
+#define NONET
 #if !defined (HWRENDER) && !defined (NOHW)
 #define HWRENDER
 #endif
@@ -149,9 +150,9 @@ extern FILE *logstream;
 // we use comprevision and compbranch instead.
 #else
 #define VERSION    201 // Game version
-#define SUBVERSION 15  // more precise version number
-#define VERSIONSTRING "v2.1.15"
-#define VERSIONSTRINGW L"v2.1.15"
+#define SUBVERSION 19  // more precise version number
+#define VERSIONSTRING "v2.1.19"
+#define VERSIONSTRINGW L"v2.1.19"
 // Hey! If you change this, add 1 to the MODVERSION below!
 // Otherwise we can't force updates!
 #endif
@@ -213,7 +214,7 @@ extern FILE *logstream;
 // it's only for detection of the version the player is using so the MS can alert them of an update.
 // Only set it higher, not lower, obviously.
 // Note that we use this to help keep internal testing in check; this is why v2.1.0 is not version "1".
-#define MODVERSION 20
+#define MODVERSION 24
 
 // =========================================================================
 
@@ -393,6 +394,9 @@ extern INT32 cv_debug;
 // Misc stuff for later...
 // =======================
 
+// Modifier key variables, accessible anywhere
+extern UINT8 shiftdown, ctrldown, altdown;
+
 // if we ever make our alloc stuff...
 #define ZZ_Alloc(x) Z_Malloc(x, PU_STATIC, NULL)
 
@@ -430,6 +434,12 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 
 /// Kalaron/Eternity Engine slope code (SRB2CB ported)
 #define ESLOPE
+
+#ifdef ESLOPE
+/// Backwards compatibility with SRB2CB's slope linedef types.
+///	\note	A simple shim that prints a warning.
+#define ESLOPE_TYPESHIM
+#endif
 
 ///	Delete file while the game is running.
 ///	\note	EXTREMELY buggy, tends to crash game.

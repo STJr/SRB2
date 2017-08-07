@@ -129,6 +129,10 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 		return false;
 	}
 
+#ifdef ESLOPE
+	object->standingslope = NULL; // Okay, now we can't return - no launching off at silly angles for you.
+#endif
+
 	object->eflags |= MFE_SPRUNG; // apply this flag asap!
 	spring->flags &= ~(MF_SOLID|MF_SPECIAL); // De-solidify
 
@@ -232,19 +236,23 @@ static void P_DoFanAndGasJet(mobj_t *spring, mobj_t *object)
 	if (p && object->state == &states[object->info->painstate]) // can't use fans and gas jets when player is in pain!
 		return;
 
-	// is object below thruster's position? if not, calculate distance between their bottoms
+	// is object's top below thruster's position? if not, calculate distance between their bottoms
 	if (spring->eflags & MFE_VERTICALFLIP)
 	{
-		if (object->z + object->height > spring->z + spring->height)
+		if (object->z > spring->z + spring->height)
 			return;
 		zdist = (spring->z + spring->height) - (object->z + object->height);
 	}
 	else
 	{
-		if (object->z < spring->z)
+		if (object->z + object->height < spring->z)
 			return;
 		zdist = object->z - spring->z;
 	}
+
+#ifdef ESLOPE
+	object->standingslope = NULL; // No launching off at silly angles for you.
+#endif
 
 	switch (spring->type)
 	{
@@ -977,18 +985,24 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				return true;
 			}
 
-			topz = thing->z - FixedMul(FRACUNIT, thing->scale);
+			topz = thing->z - thing->scale; // FixedMul(FRACUNIT, thing->scale), but thing->scale == FRACUNIT in base scale anyways
 
 			// block only when jumping not high enough,
 			// (dont climb max. 24units while already in air)
-			// if not in air, let P_TryMove() decide if it's not too high
+			// since return false doesn't handle momentum properly,
+			// we lie to P_TryMove() so it's always too high
 			if (tmthing->player && tmthing->z + tmthing->height > topz
 				&& tmthing->z + tmthing->height < tmthing->ceilingz)
-				return false; // block while in air
-
-			if (thing->flags & MF_SPRING)
+			{
+				tmfloorz = tmceilingz = topz; // block while in air
+#ifdef ESLOPE
+				tmceilingslope = NULL;
+#endif
+				tmfloorthing = thing; // needed for side collision
+			}
+			else if (thing->flags & MF_SPRING)
 				;
-			else if (topz < tmceilingz && tmthing->z+tmthing->height <= thing->z+thing->height)
+			else if (topz < tmceilingz && tmthing->z <= thing->z+thing->height)
 			{
 				tmceilingz = topz;
 #ifdef ESLOPE
@@ -1014,17 +1028,24 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				return true;
 			}
 
-			topz = thing->z + thing->height + FixedMul(FRACUNIT, thing->scale);
+			topz = thing->z + thing->height + thing->scale; // FixedMul(FRACUNIT, thing->scale), but thing->scale == FRACUNIT in base scale anyways
 
 			// block only when jumping not high enough,
 			// (dont climb max. 24units while already in air)
-			// if not in air, let P_TryMove() decide if it's not too high
-			if (tmthing->player && tmthing->z < topz && tmthing->z > tmthing->floorz)
-				return false; // block while in air
-
-			if (thing->flags & MF_SPRING)
+			// since return false doesn't handle momentum properly,
+			// we lie to P_TryMove() so it's always too high
+			if (tmthing->player && tmthing->z < topz
+				&& tmthing->z > tmthing->floorz)
+			{
+				tmfloorz = tmceilingz = topz; // block while in air
+#ifdef ESLOPE
+				tmfloorslope = NULL;
+#endif
+				tmfloorthing = thing; // needed for side collision
+			}
+			else if (thing->flags & MF_SPRING)
 				;
-			else if (topz > tmfloorz && tmthing->z >= thing->z)
+			else if (topz > tmfloorz && tmthing->z+tmthing->height >= thing->z)
 			{
 				tmfloorz = topz;
 #ifdef ESLOPE
@@ -1145,7 +1166,7 @@ static boolean PIT_CheckLine(line_t *ld)
 	}
 
 	// set openrange, opentop, openbottom
-	P_LineOpening(ld);
+	P_LineOpening(ld, tmthing);
 
 	// adjust floor / ceiling heights
 	if (opentop < tmceilingz)
@@ -1263,7 +1284,7 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 			topheight = P_GetFOFTopZ(thing, newsubsec->sector, rover, x, y, NULL);
 			bottomheight = P_GetFOFBottomZ(thing, newsubsec->sector, rover, x, y, NULL);
 
-			if (rover->flags & FF_GOOWATER && !(thing->flags & MF_NOGRAVITY))
+			if ((rover->flags & (FF_SWIMMABLE|FF_GOOWATER)) == (FF_SWIMMABLE|FF_GOOWATER) && !(thing->flags & MF_NOGRAVITY))
 			{
 				// If you're inside goowater and slowing down
 				fixed_t sinklevel = FixedMul(thing->info->height/6, thing->scale);
@@ -1962,8 +1983,12 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 			}
 
 			// Ramp test
-			if (thing->player && maxstep > 0
-			&& !(P_PlayerTouchingSectorSpecial(thing->player, 1, 14) || GETSECSPECIAL(R_PointInSubsector(x, y)->sector->special, 1) == 14))
+			if (maxstep > 0 && !(
+				thing->player && (
+				P_PlayerTouchingSectorSpecial(thing->player, 1, 14)
+				|| GETSECSPECIAL(R_PointInSubsector(x, y)->sector->special, 1) == 14)
+				)
+			)
 			{
 				// If the floor difference is MAXSTEPMOVE or less, and the sector isn't Section1:14, ALWAYS
 				// step down! Formerly required a Section1:13 sector for the full MAXSTEPMOVE, but no more.
@@ -2423,6 +2448,8 @@ isblocking:
 //
 // P_IsClimbingValid
 //
+// Unlike P_DoClimbing, don't use when up against a one-sided linedef.
+//
 static boolean P_IsClimbingValid(player_t *player, angle_t angle)
 {
 	fixed_t platx, platy;
@@ -2571,7 +2598,7 @@ static boolean PTR_SlideTraverse(intercept_t *in)
 	}
 
 	// set openrange, opentop, openbottom
-	P_LineOpening(li);
+	P_LineOpening(li, slidemo);
 
 	if (openrange < slidemo->height)
 		goto isblocking; // doesn't fit
@@ -2647,6 +2674,7 @@ isblocking:
 		// see about climbing on the wall
 		if (!(checkline->flags & ML_NOCLIMB))
 		{
+			boolean canclimb;
 			angle_t climbangle, climbline;
 			INT32 whichside = P_PointOnLineSide(slidemo->x, slidemo->y, li);
 
@@ -2657,9 +2685,11 @@ isblocking:
 
 			climbangle += (ANGLE_90 * (whichside ? -1 : 1));
 
+			canclimb = (li->backsector ? P_IsClimbingValid(slidemo->player, climbangle) : true);
+
 			if (((!slidemo->player->climbing && abs((signed)(slidemo->angle - ANGLE_90 - climbline)) < ANGLE_45)
 			|| (slidemo->player->climbing == 1 && abs((signed)(slidemo->angle - climbline)) < ANGLE_135))
-			&& P_IsClimbingValid(slidemo->player, climbangle))
+			&& canclimb)
 			{
 				slidemo->angle = climbangle;
 				if (!demoplayback || P_AnalogMove(slidemo->player))
@@ -3365,7 +3395,7 @@ boolean P_CheckSector(sector_t *sector, boolean crunch)
 		for (i = 0; i < sector->numattached; i++)
 		{
 			sec = &sectors[sector->attached[i]];
-			for (n = sec->touching_thinglist; n; n = n->m_snext)
+			for (n = sec->touching_thinglist; n; n = n->m_thinglist_next)
 				n->visited = false;
 
 			sec->moved = true;
@@ -3377,7 +3407,7 @@ boolean P_CheckSector(sector_t *sector, boolean crunch)
 
 			do
 			{
-				for (n = sec->touching_thinglist; n; n = n->m_snext)
+				for (n = sec->touching_thinglist; n; n = n->m_thinglist_next)
 				if (!n->visited)
 				{
 					n->visited = true;
@@ -3398,12 +3428,12 @@ boolean P_CheckSector(sector_t *sector, boolean crunch)
 	// Mark all things invalid
 	sector->moved = true;
 
-	for (n = sector->touching_thinglist; n; n = n->m_snext)
+	for (n = sector->touching_thinglist; n; n = n->m_thinglist_next)
 		n->visited = false;
 
 	do
 	{
-		for (n = sector->touching_thinglist; n; n = n->m_snext) // go through list
+		for (n = sector->touching_thinglist; n; n = n->m_thinglist_next) // go through list
 			if (!n->visited) // unprocessed thing found
 			{
 				n->visited = true; // mark thing as processed
@@ -3427,7 +3457,7 @@ boolean P_CheckSector(sector_t *sector, boolean crunch)
 		for (i = 0; i < sector->numattached; i++)
 		{
 			sec = &sectors[sector->attached[i]];
-			for (n = sec->touching_thinglist; n; n = n->m_snext)
+			for (n = sec->touching_thinglist; n; n = n->m_thinglist_next)
 				n->visited = false;
 
 			sec->moved = true;
@@ -3439,7 +3469,7 @@ boolean P_CheckSector(sector_t *sector, boolean crunch)
 
 			do
 			{
-				for (n = sec->touching_thinglist; n; n = n->m_snext)
+				for (n = sec->touching_thinglist; n; n = n->m_thinglist_next)
 				if (!n->visited)
 				{
 					n->visited = true;
@@ -3457,12 +3487,12 @@ boolean P_CheckSector(sector_t *sector, boolean crunch)
 	// Mark all things invalid
 	sector->moved = true;
 
-	for (n = sector->touching_thinglist; n; n = n->m_snext)
+	for (n = sector->touching_thinglist; n; n = n->m_thinglist_next)
 		n->visited = false;
 
 	do
 	{
-		for (n = sector->touching_thinglist; n; n = n->m_snext) // go through list
+		for (n = sector->touching_thinglist; n; n = n->m_thinglist_next) // go through list
 			if (!n->visited) // unprocessed thing found
 			{
 				n->visited = true; // mark thing as processed
@@ -3502,7 +3532,7 @@ static msecnode_t *P_GetSecnode(void)
 	if (headsecnode)
 	{
 		node = headsecnode;
-		headsecnode = headsecnode->m_snext;
+		headsecnode = headsecnode->m_thinglist_next;
 	}
 	else
 		node = Z_Calloc(sizeof (*node), PU_LEVEL, NULL);
@@ -3516,7 +3546,7 @@ static mprecipsecnode_t *P_GetPrecipSecnode(void)
 	if (headprecipsecnode)
 	{
 		node = headprecipsecnode;
-		headprecipsecnode = headprecipsecnode->m_snext;
+		headprecipsecnode = headprecipsecnode->m_thinglist_next;
 	}
 	else
 		node = Z_Calloc(sizeof (*node), PU_LEVEL, NULL);
@@ -3527,14 +3557,14 @@ static mprecipsecnode_t *P_GetPrecipSecnode(void)
 
 static inline void P_PutSecnode(msecnode_t *node)
 {
-	node->m_snext = headsecnode;
+	node->m_thinglist_next = headsecnode;
 	headsecnode = node;
 }
 
 // Tails 08-25-2002
 static inline void P_PutPrecipSecnode(mprecipsecnode_t *node)
 {
-	node->m_snext = headprecipsecnode;
+	node->m_thinglist_next = headprecipsecnode;
 	headprecipsecnode = node;
 }
 
@@ -3555,7 +3585,7 @@ static msecnode_t *P_AddSecnode(sector_t *s, mobj_t *thing, msecnode_t *nextnode
 			node->m_thing = thing; // Yes. Setting m_thing says 'keep it'.
 			return nextnode;
 		}
-		node = node->m_tnext;
+		node = node->m_sectorlist_next;
 	}
 
 	// Couldn't find an existing node for this sector. Add one at the head
@@ -3568,17 +3598,17 @@ static msecnode_t *P_AddSecnode(sector_t *s, mobj_t *thing, msecnode_t *nextnode
 
 	node->m_sector = s; // sector
 	node->m_thing = thing; // mobj
-	node->m_tprev = NULL; // prev node on Thing thread
-	node->m_tnext = nextnode; // next node on Thing thread
+	node->m_sectorlist_prev = NULL; // prev node on Thing thread
+	node->m_sectorlist_next = nextnode; // next node on Thing thread
 	if (nextnode)
-		nextnode->m_tprev = node; // set back link on Thing
+		nextnode->m_sectorlist_prev = node; // set back link on Thing
 
 	// Add new node at head of sector thread starting at s->touching_thinglist
 
-	node->m_sprev = NULL; // prev node on sector thread
-	node->m_snext = s->touching_thinglist; // next node on sector thread
+	node->m_thinglist_prev = NULL; // prev node on sector thread
+	node->m_thinglist_next = s->touching_thinglist; // next node on sector thread
 	if (s->touching_thinglist)
-		node->m_snext->m_sprev = node;
+		node->m_thinglist_next->m_thinglist_prev = node;
 	s->touching_thinglist = node;
 	return node;
 }
@@ -3596,7 +3626,7 @@ static mprecipsecnode_t *P_AddPrecipSecnode(sector_t *s, precipmobj_t *thing, mp
 			node->m_thing = thing; // Yes. Setting m_thing says 'keep it'.
 			return nextnode;
 		}
-		node = node->m_tnext;
+		node = node->m_sectorlist_next;
 	}
 
 	// Couldn't find an existing node for this sector. Add one at the head
@@ -3609,17 +3639,17 @@ static mprecipsecnode_t *P_AddPrecipSecnode(sector_t *s, precipmobj_t *thing, mp
 
 	node->m_sector = s; // sector
 	node->m_thing = thing; // mobj
-	node->m_tprev = NULL; // prev node on Thing thread
-	node->m_tnext = nextnode; // next node on Thing thread
+	node->m_sectorlist_prev = NULL; // prev node on Thing thread
+	node->m_sectorlist_next = nextnode; // next node on Thing thread
 	if (nextnode)
-		nextnode->m_tprev = node; // set back link on Thing
+		nextnode->m_sectorlist_prev = node; // set back link on Thing
 
 	// Add new node at head of sector thread starting at s->touching_thinglist
 
-	node->m_sprev = NULL; // prev node on sector thread
-	node->m_snext = s->touching_preciplist; // next node on sector thread
+	node->m_thinglist_prev = NULL; // prev node on sector thread
+	node->m_thinglist_next = s->touching_preciplist; // next node on sector thread
 	if (s->touching_preciplist)
-		node->m_snext->m_sprev = node;
+		node->m_thinglist_next->m_thinglist_prev = node;
 	s->touching_preciplist = node;
 	return node;
 }
@@ -3641,24 +3671,24 @@ static msecnode_t *P_DelSecnode(msecnode_t *node)
 	// Unlink from the Thing thread. The Thing thread begins at
 	// sector_list and not from mobj_t->touching_sectorlist.
 
-	tp = node->m_tprev;
-	tn = node->m_tnext;
+	tp = node->m_sectorlist_prev;
+	tn = node->m_sectorlist_next;
 	if (tp)
-		tp->m_tnext = tn;
+		tp->m_sectorlist_next = tn;
 	if (tn)
-		tn->m_tprev = tp;
+		tn->m_sectorlist_prev = tp;
 
 	// Unlink from the sector thread. This thread begins at
 	// sector_t->touching_thinglist.
 
-	sp = node->m_sprev;
-	sn = node->m_snext;
+	sp = node->m_thinglist_prev;
+	sn = node->m_thinglist_next;
 	if (sp)
-		sp->m_snext = sn;
+		sp->m_thinglist_next = sn;
 	else
 		node->m_sector->touching_thinglist = sn;
 	if (sn)
-		sn->m_sprev = sp;
+		sn->m_thinglist_prev = sp;
 
 	// Return this node to the freelist
 
@@ -3680,24 +3710,24 @@ static mprecipsecnode_t *P_DelPrecipSecnode(mprecipsecnode_t *node)
 	// Unlink from the Thing thread. The Thing thread begins at
 	// sector_list and not from mobj_t->touching_sectorlist.
 
-	tp = node->m_tprev;
-	tn = node->m_tnext;
+	tp = node->m_sectorlist_prev;
+	tn = node->m_sectorlist_next;
 	if (tp)
-		tp->m_tnext = tn;
+		tp->m_sectorlist_next = tn;
 	if (tn)
-		tn->m_tprev = tp;
+		tn->m_sectorlist_prev = tp;
 
 	// Unlink from the sector thread. This thread begins at
 	// sector_t->touching_thinglist.
 
-	sp = node->m_sprev;
-	sn = node->m_snext;
+	sp = node->m_thinglist_prev;
+	sn = node->m_thinglist_next;
 	if (sp)
-		sp->m_snext = sn;
+		sp->m_thinglist_next = sn;
 	else
 		node->m_sector->touching_preciplist = sn;
 	if (sn)
-		sn->m_sprev = sp;
+		sn->m_thinglist_prev = sp;
 
 	// Return this node to the freelist
 
@@ -3812,7 +3842,7 @@ void P_CreateSecNodeList(mobj_t *thing, fixed_t x, fixed_t y)
 	while (node)
 	{
 		node->m_thing = NULL;
-		node = node->m_tnext;
+		node = node->m_sectorlist_next;
 	}
 
 	P_SetTarget(&tmthing, thing);
@@ -3850,11 +3880,11 @@ void P_CreateSecNodeList(mobj_t *thing, fixed_t x, fixed_t y)
 		if (!node->m_thing)
 		{
 			if (node == sector_list)
-				sector_list = node->m_tnext;
+				sector_list = node->m_sectorlist_next;
 			node = P_DelSecnode(node);
 		}
 		else
-			node = node->m_tnext;
+			node = node->m_sectorlist_next;
 	}
 
 	/* cph -
@@ -3895,7 +3925,7 @@ void P_CreatePrecipSecNodeList(precipmobj_t *thing,fixed_t x,fixed_t y)
 	while (node)
 	{
 		node->m_thing = NULL;
-		node = node->m_tnext;
+		node = node->m_sectorlist_next;
 	}
 
 	tmprecipthing = thing;
@@ -3929,11 +3959,11 @@ void P_CreatePrecipSecNodeList(precipmobj_t *thing,fixed_t x,fixed_t y)
 		if (!node->m_thing)
 		{
 			if (node == precipsector_list)
-				precipsector_list = node->m_tnext;
+				precipsector_list = node->m_sectorlist_next;
 			node = P_DelPrecipSecnode(node);
 		}
 		else
-			node = node->m_tnext;
+			node = node->m_sectorlist_next;
 	}
 
 	/* cph -

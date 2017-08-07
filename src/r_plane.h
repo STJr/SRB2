@@ -87,7 +87,7 @@ extern lighttable_t **planezlight;
 extern fixed_t *yslope;
 extern fixed_t distscale[MAXVIDWIDTH];
 
-void R_InitPlanes(void);
+FUNCMATH void R_InitPlanes(void);
 void R_PortalStoreClipValues(INT32 start, INT32 end, INT16 *ceil, INT16 *floor, fixed_t *scale);
 void R_PortalRestoreClipValues(INT32 start, INT32 end, INT16 *ceil, INT16 *floor, fixed_t *scale);
 void R_ClearPlanes(void);
@@ -97,6 +97,9 @@ void R_MakeSpans(INT32 x, INT32 t1, INT32 b1, INT32 t2, INT32 b2);
 void R_DrawPlanes(void);
 visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel, fixed_t xoff, fixed_t yoff, angle_t plangle,
 	extracolormap_t *planecolormap, ffloor_t *ffloor
+#ifdef POLYOBJECTS_PLANES
+	, polyobj_t *polyobj
+#endif
 #ifdef ESLOPE
 	, pslope_t *slope
 #endif
