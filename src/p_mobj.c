@@ -7585,7 +7585,8 @@ void P_MobjThinker(mobj_t *mobj)
 				}
 			}
 			break;
-		case MT_FIREBARPOINT:
+		case MT_CHAINPOINT:
+		case MT_CHAINMACEPOINT:
 			if (leveltime & 1)
 			{
 				if (mobj->lastlook > mobj->movecount)
