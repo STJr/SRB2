@@ -3016,7 +3016,7 @@ boolean P_SetupLevel(boolean skipprecip)
 		G_SaveGame((UINT32)cursaveslot);
 
 	lastmaploaded = gamemap; // HAS to be set after saving!!
-	
+
 	if (savedata.lives > 0)
 	{
 		players[consoleplayer].continues = savedata.continues;
@@ -3043,7 +3043,7 @@ boolean P_SetupLevel(boolean skipprecip)
 		LUAh_MapLoad();
 #endif
 	}
-	
+
 	return true;
 }
 

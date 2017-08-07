@@ -713,7 +713,7 @@ void D_StartTitle(void)
 	cv_debug = 0;
 	emeralds = 0;
 	lastmaploaded = 0;
-	
+
 	// In case someone exits out at the same time they start a time attack run,
 	// reset modeattacking
 	modeattacking = ATTACKING_NONE;
