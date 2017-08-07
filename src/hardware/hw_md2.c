@@ -298,8 +298,8 @@ static md2_model_t *md2_readModel(const char *filename)
 	// initialize model and read header
 
 	if (fread(&model->header, sizeof (model->header), 1, file) != 1
-		|| model->header.magic !=
-		(INT32)(('2' << 24) + ('P' << 16) + ('D' << 8) + 'I'))
+		|| model->header.magic != MD2_IDENT
+		|| model->header.version != MD2_VERSION)
 	{
 		fclose(file);
 		free(model);
@@ -313,6 +313,7 @@ static md2_model_t *md2_readModel(const char *filename)
 	{ \
 		CONS_Alert(CONS_ERROR, "md2_readModel: %s has too many " msgname " (# found: %d, maximum: %d)\n", filename, field, max); \
 		md2_freeModel (model); \
+		fclose(file); \
 		return 0; \
 	}
 
@@ -334,6 +335,7 @@ static md2_model_t *md2_readModel(const char *filename)
 			fread(model->skins, sizeof (md2_skin_t), model->header.numSkins, file))
 		{
 			md2_freeModel (model);
+			fclose(file);
 			return 0;
 		}
 	}
@@ -347,6 +349,7 @@ static md2_model_t *md2_readModel(const char *filename)
 			fread(model->texCoords, sizeof (md2_textureCoordinate_t), model->header.numTexCoords, file))
 		{
 			md2_freeModel (model);
+			fclose(file);
 			return 0;
 		}
 	}
@@ -360,6 +363,7 @@ static md2_model_t *md2_readModel(const char *filename)
 			fread(model->triangles, sizeof (md2_triangle_t), model->header.numTriangles, file))
 		{
 			md2_freeModel (model);
+			fclose(file);
 			return 0;
 		}
 	}
@@ -372,6 +376,7 @@ static md2_model_t *md2_readModel(const char *filename)
 		if (!model->frames)
 		{
 			md2_freeModel (model);
+			fclose(file);
 			return 0;
 		}
 
@@ -385,6 +390,7 @@ static md2_model_t *md2_readModel(const char *filename)
 				fread(frame, 1, model->header.frameSize, file))
 			{
 				md2_freeModel (model);
+				fclose(file);
 				return 0;
 			}
 
@@ -410,6 +416,7 @@ static md2_model_t *md2_readModel(const char *filename)
 			fread(model->glCommandBuffer, sizeof (INT32), model->header.numGlCommands, file))
 		{
 			md2_freeModel (model);
+			fclose(file);
 			return 0;
 		}
 	}
@@ -938,6 +945,7 @@ static void HWR_CreateBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, 
 {
 	UINT16 w = gpatch->width, h = gpatch->height;
 	UINT32 size = w*h;
+	UINT8 c = 255;
 	RGBA_t *image, *blendimage, *cur, blendcolor;
 
 	if (grmip->width == 0)
@@ -961,244 +969,59 @@ static void HWR_CreateBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, 
 	image = gpatch->mipmap.grInfo.data;
 	blendimage = blendgpatch->mipmap.grInfo.data;
 
+#define SUPERCOLORBLEND(name, c1, c2, c3, c4, c5) \
+		case SKINCOLOR_SUPER ## name ## 1: c = c1; break; \
+		case SKINCOLOR_SUPER ## name ## 2: c = c2; break; \
+		case SKINCOLOR_SUPER ## name ## 3: c = c3; break; \
+		case SKINCOLOR_SUPER ## name ## 4: c = c4; break; \
+		case SKINCOLOR_SUPER ## name ## 5: c = c5; break;
+
 	switch (color)
 	{
-		case SKINCOLOR_WHITE:
-			blendcolor = V_GetColor(3);
-			break;
-		case SKINCOLOR_SILVER:
-			blendcolor = V_GetColor(10);
-			break;
-		case SKINCOLOR_GREY:
-			blendcolor = V_GetColor(15);
-			break;
-		case SKINCOLOR_BLACK:
-			blendcolor = V_GetColor(27);
-			break;
-		case SKINCOLOR_BEIGE:
-			blendcolor = V_GetColor(247);
-			break;
-		case SKINCOLOR_PEACH:
-			blendcolor = V_GetColor(218);
-			break;
-		case SKINCOLOR_BROWN:
-			blendcolor = V_GetColor(234);
-			break;
-		case SKINCOLOR_RED:
-			blendcolor = V_GetColor(38);
-			break;
-		case SKINCOLOR_CRIMSON:
-			blendcolor = V_GetColor(45);
-			break;
-		case SKINCOLOR_ORANGE:
-			blendcolor = V_GetColor(54);
-			break;
-		case SKINCOLOR_RUST:
-			blendcolor = V_GetColor(60);
-			break;
-		case SKINCOLOR_GOLD:
-			blendcolor = V_GetColor(67);
-			break;
-		case SKINCOLOR_YELLOW:
-			blendcolor = V_GetColor(73);
-			break;
-		case SKINCOLOR_TAN:
-			blendcolor = V_GetColor(85);
-			break;
-		case SKINCOLOR_MOSS:
-			blendcolor = V_GetColor(92);
-			break;
-		case SKINCOLOR_PERIDOT:
-			blendcolor = V_GetColor(188);
-			break;
-		case SKINCOLOR_GREEN:
-			blendcolor = V_GetColor(101);
-			break;
-		case SKINCOLOR_EMERALD:
-			blendcolor = V_GetColor(112);
-			break;
-		case SKINCOLOR_AQUA:
-			blendcolor = V_GetColor(122);
-			break;
-		case SKINCOLOR_TEAL:
-			blendcolor = V_GetColor(141);
-			break;
-		case SKINCOLOR_CYAN:
-			blendcolor = V_GetColor(131);
-			break;
-		case SKINCOLOR_BLUE:
-			blendcolor = V_GetColor(152);
-			break;
-		case SKINCOLOR_AZURE:
-			blendcolor = V_GetColor(171);
-			break;
-		case SKINCOLOR_PASTEL:
-			blendcolor = V_GetColor(161);
-			break;
-		case SKINCOLOR_PURPLE:
-			blendcolor = V_GetColor(165);
-			break;
-		case SKINCOLOR_LAVENDER:
-			blendcolor = V_GetColor(195);
-			break;
-		case SKINCOLOR_MAGENTA:
-			blendcolor = V_GetColor(183);
-			break;
-		case SKINCOLOR_PINK:
-			blendcolor = V_GetColor(211);
-			break;
-		case SKINCOLOR_ROSY:
-			blendcolor = V_GetColor(202);
-			break;
+		case SKINCOLOR_WHITE:    c = 3; break;
+		case SKINCOLOR_SILVER:   c = 10; break;
+		case SKINCOLOR_GREY:     c = 15; break;
+		case SKINCOLOR_BLACK:    c = 27; break;
+		case SKINCOLOR_BEIGE:    c = 247; break;
+		case SKINCOLOR_PEACH:    c = 218; break;
+		case SKINCOLOR_BROWN:    c = 234; break;
+		case SKINCOLOR_RED:      c = 38; break;
+		case SKINCOLOR_CRIMSON:  c = 45; break;
+		case SKINCOLOR_ORANGE:   c = 54; break;
+		case SKINCOLOR_RUST:     c = 60; break;
+		case SKINCOLOR_GOLD:     c = 67; break;
+		case SKINCOLOR_YELLOW:   c = 73; break;
+		case SKINCOLOR_TAN:      c = 85; break;
+		case SKINCOLOR_MOSS:     c = 92; break;
+		case SKINCOLOR_PERIDOT:  c = 188; break;
+		case SKINCOLOR_GREEN:    c = 101; break;
+		case SKINCOLOR_EMERALD:  c = 112; break;
+		case SKINCOLOR_AQUA:     c = 122; break;
+		case SKINCOLOR_TEAL:     c = 141; break;
+		case SKINCOLOR_CYAN:     c = 131; break;
+		case SKINCOLOR_BLUE:     c = 152; break;
+		case SKINCOLOR_AZURE:    c = 171; break;
+		case SKINCOLOR_PASTEL:   c = 161; break;
+		case SKINCOLOR_PURPLE:   c = 165; break;
+		case SKINCOLOR_LAVENDER: c = 195; break;
+		case SKINCOLOR_MAGENTA:  c = 183; break;
+		case SKINCOLOR_PINK:     c = 211; break;
+		case SKINCOLOR_ROSY:     c = 202; break;
 
-		case SKINCOLOR_SUPERSILVER1: // Super silver
-			blendcolor = V_GetColor(0);
-			break;
-		case SKINCOLOR_SUPERSILVER2:
-			blendcolor = V_GetColor(2);
-			break;
-		case SKINCOLOR_SUPERSILVER3:
-			blendcolor = V_GetColor(4);
-			break;
-		case SKINCOLOR_SUPERSILVER4:
-			blendcolor = V_GetColor(7);
-			break;
-		case SKINCOLOR_SUPERSILVER5:
-			blendcolor = V_GetColor(10);
-			break;
-
-		case SKINCOLOR_SUPERRED1: // Super red
-			blendcolor = V_GetColor(208);
-			break;
-		case SKINCOLOR_SUPERRED2:
-			blendcolor = V_GetColor(210);
-			break;
-		case SKINCOLOR_SUPERRED3:
-			blendcolor = V_GetColor(32);
-			break;
-		case SKINCOLOR_SUPERRED4:
-			blendcolor = V_GetColor(33);
-			break;
-		case SKINCOLOR_SUPERRED5:
-			blendcolor = V_GetColor(35);
-			break;
-
-		case SKINCOLOR_SUPERORANGE1: // Super orange
-			blendcolor = V_GetColor(208);
-			break;
-		case SKINCOLOR_SUPERORANGE2:
-			blendcolor = V_GetColor(48);
-			break;
-		case SKINCOLOR_SUPERORANGE3:
-			blendcolor = V_GetColor(50);
-			break;
-		case SKINCOLOR_SUPERORANGE4:
-			blendcolor = V_GetColor(54);
-			break;
-		case SKINCOLOR_SUPERORANGE5:
-			blendcolor = V_GetColor(58);
-			break;
-
-		case SKINCOLOR_SUPERGOLD1: // Super gold
-			blendcolor = V_GetColor(80);
-			break;
-		case SKINCOLOR_SUPERGOLD2:
-			blendcolor = V_GetColor(83);
-			break;
-		case SKINCOLOR_SUPERGOLD3:
-			blendcolor = V_GetColor(73);
-			break;
-		case SKINCOLOR_SUPERGOLD4:
-			blendcolor = V_GetColor(64);
-			break;
-		case SKINCOLOR_SUPERGOLD5:
-			blendcolor = V_GetColor(67);
-			break;
-
-		case SKINCOLOR_SUPERPERIDOT1: // Super peridot
-			blendcolor = V_GetColor(88);
-			break;
-		case SKINCOLOR_SUPERPERIDOT2:
-			blendcolor = V_GetColor(188);
-			break;
-		case SKINCOLOR_SUPERPERIDOT3:
-			blendcolor = V_GetColor(189);
-			break;
-		case SKINCOLOR_SUPERPERIDOT4:
-			blendcolor = V_GetColor(190);
-			break;
-		case SKINCOLOR_SUPERPERIDOT5:
-			blendcolor = V_GetColor(191);
-			break;
-
-		case SKINCOLOR_SUPERCYAN1: // Super cyan
-			blendcolor = V_GetColor(128);
-			break;
-		case SKINCOLOR_SUPERCYAN2:
-			blendcolor = V_GetColor(131);
-			break;
-		case SKINCOLOR_SUPERCYAN3:
-			blendcolor = V_GetColor(133);
-			break;
-		case SKINCOLOR_SUPERCYAN4:
-			blendcolor = V_GetColor(134);
-			break;
-		case SKINCOLOR_SUPERCYAN5:
-			blendcolor = V_GetColor(136);
-			break;
-
-		case SKINCOLOR_SUPERPURPLE1: // Super purple
-			blendcolor = V_GetColor(144);
-			break;
-		case SKINCOLOR_SUPERPURPLE2:
-			blendcolor = V_GetColor(162);
-			break;
-		case SKINCOLOR_SUPERPURPLE3:
-			blendcolor = V_GetColor(164);
-			break;
-		case SKINCOLOR_SUPERPURPLE4:
-			blendcolor = V_GetColor(166);
-			break;
-		case SKINCOLOR_SUPERPURPLE5:
-			blendcolor = V_GetColor(168);
-			break;
-
-		case SKINCOLOR_SUPERRUST1: // Super rust
-			blendcolor = V_GetColor(51);
-			break;
-		case SKINCOLOR_SUPERRUST2:
-			blendcolor = V_GetColor(54);
-			break;
-		case SKINCOLOR_SUPERRUST3:
-			blendcolor = V_GetColor(68);
-			break;
-		case SKINCOLOR_SUPERRUST4:
-			blendcolor = V_GetColor(70);
-			break;
-		case SKINCOLOR_SUPERRUST5:
-			blendcolor = V_GetColor(234);
-			break;
-
-		case SKINCOLOR_SUPERTAN1: // Super tan
-			blendcolor = V_GetColor(80);
-			break;
-		case SKINCOLOR_SUPERTAN2:
-			blendcolor = V_GetColor(82);
-			break;
-		case SKINCOLOR_SUPERTAN3:
-			blendcolor = V_GetColor(84);
-			break;
-		case SKINCOLOR_SUPERTAN4:
-			blendcolor = V_GetColor(87);
-			break;
-		case SKINCOLOR_SUPERTAN5:
-			blendcolor = V_GetColor(247);
-			break;
-
-		default:
-			blendcolor = V_GetColor(255);
-			break;
+		SUPERCOLORBLEND(SILVER,    0,   2,   4,   7,  10) // Super silver
+		SUPERCOLORBLEND(RED,     208, 210,  32,  33,  35) // Super red
+		SUPERCOLORBLEND(ORANGE,  208,  48,  50,  54,  58) // Super orange
+		SUPERCOLORBLEND(GOLD,     80,  83,  73,  64,  67) // Super gold
+		SUPERCOLORBLEND(PERIDOT,  88, 188, 189, 190, 191) // Super peridot
+		SUPERCOLORBLEND(CYAN,    128, 131, 133, 134, 136) // Super cyan
+		SUPERCOLORBLEND(PURPLE,  144, 162, 164, 166, 168) // Super purple
+		SUPERCOLORBLEND(RUST,     51,  54,  68,  70, 234) // Super rust
+		SUPERCOLORBLEND(TAN,      80,  82,  84,  87, 247) // Super tan
+		default: c = 255; break;
 	}
+	blendcolor = V_GetColor(c);
+
+#undef SUPERCOLORBLEND
 
 	while (size--)
 	{

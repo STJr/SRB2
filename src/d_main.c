@@ -419,10 +419,13 @@ static void D_Display(void)
 			}
 
 			// Image postprocessing effect
-			if (postimgtype)
-				V_DoPostProcessor(0, postimgtype, postimgparam);
-			if (postimgtype2)
-				V_DoPostProcessor(1, postimgtype2, postimgparam2);
+			if (rendermode == render_soft)
+			{
+				if (postimgtype)
+					V_DoPostProcessor(0, postimgtype, postimgparam);
+				if (postimgtype2)
+					V_DoPostProcessor(1, postimgtype2, postimgparam2);
+			}
 		}
 
 		if (lastdraw)
