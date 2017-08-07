@@ -6546,7 +6546,7 @@ maceretry:
 
 	P_SetThingPosition(mobj);
 
-	if (donetwice)
+	if (donetwice || P_MobjWasRemoved(mobj))
 		return;
 
 	if (mobj->flags & (MF_NOCLIP|MF_NOCLIPHEIGHT))
