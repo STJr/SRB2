@@ -624,7 +624,7 @@ static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
 		if (SDL_GetRelativeMouseMode())
 		{
 			event.data2 = evt.xrel;
-			event.data3 = evt.yrel;
+			event.data3 = -evt.yrel;
 		}
 		else if ((evt.x == realwidth/2) && (evt.y == realheight/2))
 		{
