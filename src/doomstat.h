@@ -41,7 +41,8 @@ extern INT16 maptol;
 extern UINT8 globalweather;
 extern INT32 curWeather;
 extern INT32 cursaveslot;
-extern INT16 lastmapsaved;
+//extern INT16 lastmapsaved;
+extern INT16 lastmaploaded;
 extern boolean gamecomplete;
 
 #define PRECIP_NONE  0
@@ -263,6 +264,7 @@ typedef struct
 #define LF_NOSSMUSIC      4 ///< Disable Super Sonic music
 #define LF_NORELOAD       8 ///< Don't reload level on death
 #define LF_NOZONE        16 ///< Don't include "ZONE" on level title
+#define LF_SAVEGAME      32 ///< Save the game upon loading this level
 
 #define LF2_HIDEINMENU     1 ///< Hide in the multiplayer menu
 #define LF2_HIDEINSTATS    2 ///< Hide in the statistics screen
