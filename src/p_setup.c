@@ -54,6 +54,8 @@
 
 #include "v_video.h"
 
+#include "filesrch.h" // refreshdirmenu
+
 // wipes
 #include "f_finale.h"
 
@@ -509,6 +511,7 @@ static void P_LoadRawSegs(UINT8 *data, size_t i)
 			//Hurdler: 04/12/2000: for now, only used in hardware mode
 			li->lightmaps = NULL; // list of static lightmap for this seg
 		}
+		li->pv1 = li->pv2 = NULL;
 #endif
 
 		li->angle = (SHORT(ml->angle))<<FRACBITS;
@@ -1150,7 +1153,20 @@ static inline void P_SpawnEmblems(void)
 			P_SetThingPosition(emblemmobj);
 		}
 		else
+		{
 			emblemmobj->frame &= ~FF_TRANSMASK;
+
+			if (emblemlocations[i].type == ET_GLOBAL)
+			{
+				emblemmobj->reactiontime = emblemlocations[i].var;
+				if (emblemlocations[i].var & GE_NIGHTSITEM)
+				{
+					emblemmobj->flags |= MF_NIGHTSITEM;
+					emblemmobj->flags &= ~MF_SPECIAL;
+					emblemmobj->flags2 |= MF2_DONTDRAW;
+				}
+			}
+		}
 	}
 }
 
@@ -1238,7 +1254,7 @@ static void P_LoadRawLineDefs(UINT8 *data, size_t i)
 			ld->slopetype = ST_VERTICAL;
 		else if (!ld->dy)
 			ld->slopetype = ST_HORIZONTAL;
-		else if (FixedDiv(ld->dy, ld->dx) > 0)
+		else if ((ld->dy > 0) == (ld->dx > 0))
 			ld->slopetype = ST_POSITIVE;
 		else
 			ld->slopetype = ST_NEGATIVE;
@@ -1611,6 +1627,7 @@ static void P_LoadRawSideDefs2(void *data)
 				break;
 			}
 
+			case 9: // Mace parameters
 			case 14: // Bustable block parameters
 			case 15: // Fan particle spawner parameters
 			case 425: // Calls P_SetMobjState on calling mobj
@@ -2574,6 +2591,21 @@ static void P_LoadNightsGhosts(void)
 	free(gpath);
 }
 
+static boolean CanSaveLevel(INT32 mapnum)
+{
+	if (ultimatemode) // never save in ultimate (probably redundant with cursaveslot also being checked)
+		return false;
+
+	if (G_IsSpecialStage(mapnum) // don't save in special stages
+		|| mapnum == lastmaploaded) // don't save if the last map loaded was this one
+		return false;
+	
+	// Any levels that have the savegame flag can save normally.
+	// If the game is complete for this save slot, then any level can save!
+	// On the other side of the spectrum, if lastmaploaded is 0, then the save file has only just been created and needs to save ASAP!
+	return (mapheaderinfo[mapnum-1]->levelflags & LF_SAVEGAME || gamecomplete || !lastmaploaded);
+}
+
 /** Loads a level from a lump or external wad.
   *
   * \param skipprecip If true, don't spawn precipitation.
@@ -3073,10 +3105,10 @@ boolean P_SetupLevel(boolean skipprecip)
 	P_RunCachedActions();
 
 	if (!(netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking || players[consoleplayer].lives <= 0)
-		&& (!modifiedgame || savemoddata) && cursaveslot >= 0 && !ultimatemode
-		&& !(mapheaderinfo[gamemap-1]->menuflags & LF2_HIDEINMENU)
-		&& (!G_IsSpecialStage(gamemap)) && gamemap != lastmapsaved && (mapheaderinfo[gamemap-1]->actnum < 2 || gamecomplete))
+		&& (!modifiedgame || savemoddata) && cursaveslot >= 0 && CanSaveLevel(gamemap))
 		G_SaveGame((UINT32)cursaveslot);
+
+	lastmaploaded = gamemap; // HAS to be set after saving!!
 
 	if (savedata.lives > 0)
 	{
@@ -3203,6 +3235,7 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 	// Init file.
 	if ((numlumps = W_InitFile(wadfilename)) == INT16_MAX)
 	{
+		refreshdirmenu |= REFRESHDIR_NOTLOADED;
 		CONS_Printf(M_GetText("Errors occured while loading %s; not added.\n"), wadfilename);
 		return false;
 	}

@@ -37,6 +37,8 @@
 #include "z_zone.h"
 #include "fastcmp.h"
 
+#include "filesrch.h"
+
 #include "i_video.h" // rendermode
 #include "d_netfil.h"
 #include "dehacked.h"
@@ -312,12 +314,12 @@ UINT16 W_InitFile(const char *filename)
 	UINT16 numlumps;
 	size_t i;
 	INT32 compressed = 0;
-	size_t packetsize = 0;
-	serverinfo_pak *dummycheck = NULL;
+	size_t packetsize;
 	UINT8 md5sum[16];
+	boolean important;
 
-	// Shut the compiler up.
-	(void)dummycheck;
+	if (!(refreshdirmenu & REFRESHDIR_ADDFILE))
+		refreshdirmenu = REFRESHDIR_NORMAL|REFRESHDIR_ADDFILE; // clean out cons_alerts that happened earlier
 
 	//CONS_Debug(DBG_SETUP, "Loading %s\n", filename);
 	//
@@ -326,6 +328,7 @@ UINT16 W_InitFile(const char *filename)
 	if (numwadfiles >= MAX_WADFILES)
 	{
 		CONS_Alert(CONS_ERROR, M_GetText("Maximum wad files reached\n"));
+		refreshdirmenu |= REFRESHDIR_MAX;
 		return INT16_MAX;
 	}
 
@@ -335,21 +338,23 @@ UINT16 W_InitFile(const char *filename)
 
 	// Check if wad files will overflow fileneededbuffer. Only the filename part
 	// is send in the packet; cf.
-	for (i = 0; i < numwadfiles; i++)
+	// see PutFileNeeded in d_netfil.c
+	if ((important = !W_VerifyNMUSlumps(filename)))
 	{
-		packetsize += nameonlylength(wadfiles[i]->filename);
-		packetsize += 22; // MD5, etc.
-	}
+		packetsize = packetsizetally;
 
-	packetsize += nameonlylength(filename);
-	packetsize += 22;
+		packetsize += nameonlylength(filename) + 22;
 
-	if (packetsize > sizeof(dummycheck->fileneeded))
-	{
-		CONS_Alert(CONS_ERROR, M_GetText("Maximum wad files reached\n"));
-		if (handle)
-			fclose(handle);
-		return INT16_MAX;
+		if (packetsize > MAXFILENEEDED*sizeof(UINT8))
+		{
+			CONS_Alert(CONS_ERROR, M_GetText("Maximum wad files reached\n"));
+			refreshdirmenu |= REFRESHDIR_MAX;
+			if (handle)
+				fclose(handle);
+			return INT16_MAX;
+		}
+
+		packetsizetally = packetsize;
 	}
 
 #ifndef NOMD5
@@ -694,6 +699,7 @@ UINT16 W_InitFile(const char *filename)
 	wadfile->handle = handle;
 	wadfile->numlumps = (UINT16)numlumps;
 	wadfile->lumpinfo = lumpinfo;
+	wadfile->important = important;
 	fseek(handle, 0, SEEK_END);
 	wadfile->filesize = (unsigned)ftell(handle);
 
@@ -1600,6 +1606,7 @@ int W_VerifyNMUSlumps(const char *filename)
 		{"TNYFN", 5}, // Tiny console font changes
 		{"STT", 3}, // Acceptable HUD changes (Score Time Rings)
 		{"YB_", 3}, // Intermission graphics, goes with the above
+		{"M_", 2}, // As does menu stuff
 
 		{NULL, 0},
 	};

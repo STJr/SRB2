@@ -23,6 +23,11 @@
 
 #include "hw_glob.h"
 
+// magic number "IDP2" or 844121161
+#define MD2_IDENT                       (INT32)(('2' << 24) + ('P' << 16) + ('D' << 8) + 'I')
+// model version
+#define MD2_VERSION                     8
+
 #define MD2_MAX_TRIANGLES               8192
 #define MD2_MAX_VERTICES                4096
 #define MD2_MAX_TEXCOORDS               4096
