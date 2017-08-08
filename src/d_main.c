@@ -849,9 +849,6 @@ static void IdentifyVersion(void)
 	// Add the players
 	D_AddFile(va(pandf,srb2waddir, "player.dta"));
 
-	// Add the weapons
-	D_AddFile(va(pandf,srb2waddir,"rings.dta"));
-
 #ifdef USE_PATCH_DTA
 	// Add our crappy patches to fix our bugs
 	D_AddFile(va(pandf,srb2waddir,"patch.dta"));
@@ -1158,7 +1155,6 @@ void D_SRB2Main(void)
 	//W_VerifyFileMD5(0, ASSET_HASH_SRB2_SRB); // srb2.srb/srb2.wad
 	//W_VerifyFileMD5(1, ASSET_HASH_ZONES_DTA); // zones.dta
 	//W_VerifyFileMD5(2, ASSET_HASH_PLAYER_DTA); // player.dta
-	//W_VerifyFileMD5(3, ASSET_HASH_RINGS_DTA); // rings.dta
 #ifdef USE_PATCH_DTA
 	W_VerifyFileMD5(4, ASSET_HASH_PATCH_DTA); // patch.dta
 #endif

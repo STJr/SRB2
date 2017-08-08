@@ -793,11 +793,10 @@ void Got_Filetxpak(void)
 	char *filename = file->filename;
 	static INT32 filetime = 0;
 
-	if (!(strcmp(filename, "srb2.srb")
+	if (!(strcmp(filename, "srb2.pk3")
 		&& strcmp(filename, "srb2.wad")
 		&& strcmp(filename, "zones.dta")
 		&& strcmp(filename, "player.dta")
-		&& strcmp(filename, "rings.dta")
 		&& strcmp(filename, "patch.dta")
 		&& strcmp(filename, "music.dta")
 		))

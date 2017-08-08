@@ -224,7 +224,7 @@ void __set_fpscr(long); // in libgcc / kernel's startup.s?
 
 /**	\brief WAD file to look for
 */
-#define WADKEYWORD1 "srb2.srb"
+#define WADKEYWORD1 "srb2.pk3"
 #define WADKEYWORD2 "srb2.wad"
 /**	\brief holds wad path
 */
