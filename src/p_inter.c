@@ -414,13 +414,15 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		////////////////////////////////////////////////////////
 		if (special->type == MT_GSNAPPER && !(((player->powers[pw_carry] == CR_NIGHTSMODE) && (player->pflags & PF_DRILLING))
 		|| player->powers[pw_invulnerability] || player->powers[pw_super] || elementalpierce)
-		&& toucher->z < special->z + special->height && toucher->z + toucher->height > special->z)
+		&& toucher->z < special->z + special->height && toucher->z + toucher->height > special->z
+		&& !(player->powers[pw_shield] & SH_PROTECTSPIKE))
 		{
 			// Can only hit snapper from above
-			P_DamageMobj(toucher, special, special, 1, 0);
+			P_DamageMobj(toucher, special, special, 1, DMG_SPIKE);
 		}
 		else if (special->type == MT_SHARP
-		&& ((special->state == &states[special->info->xdeathstate]) || (toucher->z > special->z + special->height/2)))
+		&& ((special->state == &states[special->info->xdeathstate]) || (toucher->z > special->z + special->height/2))
+		&& !(player->powers[pw_shield] & SH_PROTECTSPIKE))
 		{
 			if (player->pflags & PF_BOUNCING)
 			{
@@ -428,7 +430,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				P_DoAbilityBounce(player, false);
 			}
 			else // Cannot hit sharp from above or when red and angry
-				P_DamageMobj(toucher, special, special, 1, 0);
+				P_DamageMobj(toucher, special, special, 1, DMG_SPIKE);
 		}
 		else if (((player->powers[pw_carry] == CR_NIGHTSMODE) && (player->pflags & PF_DRILLING))
 		|| ((player->pflags & PF_JUMPED) && (!(player->pflags & PF_NOJUMPDAMAGE) || (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)))
@@ -3164,18 +3166,16 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 
 			switch (damagetype)
 			{
-				case DMG_WATER:
-					if (player->powers[pw_shield] & SH_PROTECTWATER)
-						return false; // Invincible to water damage
-					break;
-				case DMG_FIRE:
-					if (player->powers[pw_shield] & SH_PROTECTFIRE)
-						return false; // Invincible to fire damage
-					break;
-				case DMG_ELECTRIC:
-					if (player->powers[pw_shield] & SH_PROTECTELECTRIC)
-						return false; // Invincible to electric damage
-					break;
+#define DAMAGECASE(type)\
+				case DMG_##type:\
+					if (player->powers[pw_shield] & SH_PROTECT##type)\
+						return false;\
+					break
+				DAMAGECASE(WATER);
+				DAMAGECASE(FIRE);
+				DAMAGECASE(ELECTRIC);
+				DAMAGECASE(SPIKE);
+#undef DAMAGECASE
 				default:
 					break;
 			}
