@@ -368,38 +368,6 @@ static boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef,
 	return true;
 }
 
-// Auxiliary function for PK3 loading - Loads sprites from a specified range.
-void R_LoadSpritsRange(UINT16 wadnum, UINT16 first, UINT16 num)
-{
-	size_t i, addsprites = 0;
-	char wadname[MAX_WADPATH];
-	//
-	// scan through lumps, for each sprite, find all the sprite frames
-	//
-	for (i = 0; i < numsprites; i++)
-	{
-		spritename = sprnames[i];
-		if (spritename[4] && wadnum >= (UINT16)spritename[4])
-			continue;
-
-		if (R_AddSingleSpriteDef(spritename, &sprites[i], wadnum, first, first + num + 1))
-		{
-#ifdef HWRENDER
-			if (rendermode == render_opengl)
-				HWR_AddSpriteMD2(i);
-#endif
-			// if a new sprite was added (not just replaced)
-			addsprites++;
-#ifndef ZDEBUG
-			CONS_Debug(DBG_SETUP, "sprite %s set in pwad %d\n", spritename, wadnum);
-#endif
-		}
-	}
-
-	nameonly(strcpy(wadname, wadfiles[wadnum]->filename));
-	CONS_Printf(M_GetText("%s added %d frames in %s sprites\n"), wadname, num, sizeu1(addsprites));
-}
-
 //
 // Search for sprites replacements in a wad whose names are in namelist
 //

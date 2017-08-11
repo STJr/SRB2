@@ -2599,7 +2599,7 @@ static boolean CanSaveLevel(INT32 mapnum)
 	if (G_IsSpecialStage(mapnum) // don't save in special stages
 		|| mapnum == lastmaploaded) // don't save if the last map loaded was this one
 		return false;
-	
+
 	// Any levels that have the savegame flag can save normally.
 	// If the game is complete for this save slot, then any level can save!
 	// On the other side of the spectrum, if lastmaploaded is 0, then the save file has only just been created and needs to save ASAP!
@@ -3271,7 +3271,7 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 //				FindFolder("SOCs/",		&socPos, &socNum);
 				FindFolder("Sounds/",	&sfxPos, &sfxNum);
 				FindFolder("Music/",	&musPos, &musNum);
-				FindFolder("Sprites/",	&sprPos, &sprNum);
+//				FindFolder("Sprites/",	&sprPos, &sprNum);
 				FindFolder("Textures/",	&texPos, &texNum);
 //				FindFolder("Patches/",	&patPos, &patNum);
 //				FindFolder("Flats/",	&flaPos, &flaNum);
@@ -3290,8 +3290,8 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 				P_LoadSoundsRange(wadnum, sfxPos, sfxNum);
 			if (musNum) // Music. TODO: Useless function right now.
 				P_LoadMusicsRange(wadnum, musPos, musNum);
-			if (sprNum) // Sprites.
-				R_LoadSpritsRange(wadnum, sprPos, sprNum);
+//			if (sprNum) // Sprites.
+//				R_LoadSpritsRange(wadnum, sprPos, sprNum);
 //			if (texNum) // Textures. TODO: R_LoadTextures() does the folder positioning once again. New function maybe?
 //				R_LoadTextures();
 //			if (mapNum) // Maps. TODO: Actually implement the map WAD loading code, lulz.
@@ -3330,12 +3330,6 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 				digmreplaces++;
 			}
 		}
-
-		//
-		// search for sprite replacements
-		//
-		R_AddSpriteDefs(wadnum);
-
 		break;
 	}
 	if (!devparm && sreplaces)
@@ -3358,6 +3352,9 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 	HU_LoadGraphics();
 	ST_LoadGraphics();
 	ST_ReloadSkinFaceGraphics();
+
+	// Search for sprite replacements.
+	R_AddSpriteDefs(wadnum);
 
 	//
 	// look for skins
