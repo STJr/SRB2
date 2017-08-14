@@ -142,7 +142,7 @@ void G_GhostAddSpin(void);
 void G_GhostAddRev(void);
 void G_GhostAddColor(ghostcolor_t color);
 void G_GhostAddFlip(void);
-void G_GhostAddScale(UINT16 scale);
+void G_GhostAddScale(fixed_t scale);
 void G_GhostAddHit(mobj_t *victim);
 void G_WriteGhostTic(mobj_t *ghost);
 void G_ConsGhostTic(void);
@@ -174,6 +174,7 @@ void G_NextLevel(void);
 void G_Continue(void);
 void G_UseContinue(void);
 void G_AfterIntermission(void);
+void G_EndGame(void); // moved from y_inter.c/h and renamed
 
 void G_Ticker(boolean run);
 boolean G_Responder(event_t *ev);

@@ -2560,10 +2560,18 @@ boolean P_CheckSolidLava(mobj_t *mo, ffloor_t *rover)
 	I_Assert(mo != NULL);
 	I_Assert(!P_MobjWasRemoved(mo));
 
-	if (rover->flags & FF_SWIMMABLE && GETSECSPECIAL(rover->master->frontsector->special, 1) == 3
-		&& !(rover->master->flags & ML_BLOCKMONSTERS)
-		&& ((rover->master->flags & ML_EFFECT3) || mo->z-mo->momz > *rover->topheight - FixedMul(16*FRACUNIT, mo->scale)))
-			return true;
+	{
+		fixed_t topheight =
+	#ifdef ESLOPE
+			*rover->t_slope ? P_GetZAt(*rover->t_slope, mo->x, mo->y) :
+	#endif
+			*rover->topheight;
+
+		if (rover->flags & FF_SWIMMABLE && GETSECSPECIAL(rover->master->frontsector->special, 1) == 3
+			&& !(rover->master->flags & ML_BLOCKMONSTERS)
+			&& ((rover->master->flags & ML_EFFECT3) || mo->z-mo->momz > topheight - FixedMul(16*FRACUNIT, mo->scale)))
+				return true;
+	}
 
 	return false;
 }
@@ -2731,8 +2739,9 @@ static boolean P_ZMovement(mobj_t *mo)
 				return true;
 			break;
 		case MT_SPIKE:
+		case MT_WALLSPIKE:
 			// Dead spike particles disappear upon ground contact
-			if ((mo->z <= mo->floorz || mo->z + mo->height >= mo->ceilingz) && mo->health <= 0)
+			if (!mo->health && (mo->z <= mo->floorz || mo->z + mo->height >= mo->ceilingz))
 			{
 				P_RemoveMobj(mo);
 				return false;
@@ -2802,7 +2811,7 @@ static boolean P_ZMovement(mobj_t *mo)
 			mo->z = mo->floorz;
 
 #ifdef ESLOPE
-		if (mo->standingslope) // You're still on the ground; why are we here?
+		if (!(mo->flags & MF_MISSILE) && mo->standingslope) // You're still on the ground; why are we here?
 		{
 			mo->momz = 0;
 			return true;
@@ -3578,11 +3587,17 @@ static boolean P_SceneryZMovement(mobj_t *mo)
 //
 boolean P_CanRunOnWater(player_t *player, ffloor_t *rover)
 {
+	fixed_t topheight =
+#ifdef ESLOPE
+		*rover->t_slope ? P_GetZAt(*rover->t_slope, player->mo->x, player->mo->y) :
+#endif
+		*rover->topheight;
+
 	if (!player->powers[pw_carry] && !player->homing
-		&& ((player->powers[pw_super] || player->charflags & SF_RUNONWATER || player->dashmode >= 3*TICRATE) && player->mo->ceilingz-*rover->topheight >= player->mo->height)
+		&& ((player->powers[pw_super] || player->charflags & SF_RUNONWATER || player->dashmode >= 3*TICRATE) && player->mo->ceilingz-topheight >= player->mo->height)
 		&& (rover->flags & FF_SWIMMABLE) && !(player->pflags & PF_SPINNING) && player->speed > FixedMul(player->runspeed, player->mo->scale)
 		&& !(player->pflags & PF_SLIDING)
-		&& abs(player->mo->z - *rover->topheight) < FixedMul(30*FRACUNIT, player->mo->scale))
+		&& abs(player->mo->z - topheight) < FixedMul(30*FRACUNIT, player->mo->scale))
 		return true;
 
 	return false;
@@ -6439,6 +6454,128 @@ static void P_NightsItemChase(mobj_t *thing)
 	P_Attract(thing, thing->tracer, true);
 }
 
+//
+// P_MaceRotate
+// Spins an object around its target, or, swings it from side to side.
+//
+static void P_MaceRotate(mobj_t *mobj)
+{
+	TVector v;
+	TVector *res;
+	fixed_t radius, dist;
+	angle_t fa;
+	INT32 prevswing;
+	boolean donetwice = false;
+
+	// Tracer was removed.
+	if (!mobj->health)
+		return;
+	else if (!mobj->tracer)
+	{
+		P_KillMobj(mobj, NULL, NULL, 0);
+		return;
+	}
+
+	mobj->momx = mobj->momy = mobj->momz = 0;
+
+	prevswing = mobj->threshold;
+	mobj->threshold += mobj->tracer->lastlook;
+	mobj->threshold &= FINEMASK;
+
+	dist = ((mobj->info->speed) ? mobj->info->speed : mobjinfo[MT_SMALLMACECHAIN].speed);
+
+	// Radius of the link's rotation.
+	radius = FixedMul(dist * mobj->movecount, mobj->tracer->scale) + mobj->tracer->extravalue1;
+
+maceretry:
+
+	fa = (FixedAngle(mobj->tracer->movefactor*FRACUNIT) >> ANGLETOFINESHIFT);
+	radius = FixedMul(FINECOSINE(fa), radius);
+	v[1] = -FixedMul(FINESINE(fa), radius)
+	+ FixedMul(dist * mobj->movefactor, mobj->tracer->scale);
+	v[3] = FRACUNIT;
+
+	// Swinging Chain.
+	if (mobj->tracer->flags2 & MF2_STRONGBOX)
+	{
+		fixed_t swingmagnitude = FixedMul(FINECOSINE(mobj->threshold), mobj->tracer->lastlook << FRACBITS);
+		prevswing = FINECOSINE(prevswing);
+
+		if (!donetwice
+		&& (mobj->flags2 & MF2_BOSSNOTRAP) // at the end of the chain and can play a sound
+		&& ((prevswing > 0) != (swingmagnitude > 0))) // just passed its lowest point
+			S_StartSound(mobj, mobj->info->activesound);
+
+		fa = ((FixedAngle(swingmagnitude) >> ANGLETOFINESHIFT) + mobj->friction) & FINEMASK;
+
+		v[0] = FixedMul(FINESINE(fa), -radius);
+		v[2] = FixedMul(FINECOSINE(fa), -radius);
+	}
+	// Rotating Chain.
+	else
+	{
+		prevswing = (prevswing + mobj->friction) & FINEMASK;
+		fa = (mobj->threshold + mobj->friction) & FINEMASK;
+
+		if (!donetwice
+		&& (mobj->flags2 & MF2_BOSSNOTRAP) // at the end of the chain and can play a sound
+		&& (!(prevswing > (FINEMASK/2)) && (fa > (FINEMASK/2)))) // completed a full swing
+			S_StartSound(mobj, mobj->info->activesound);
+
+		v[0] = FixedMul(FINECOSINE(fa), radius);
+		v[2] = FixedMul(FINESINE(fa), radius);
+	}
+
+	// Calculate the angle matrixes for the link.
+	res = VectorMatrixMultiply(v, *RotateXMatrix(mobj->tracer->threshold << ANGLETOFINESHIFT));
+	M_Memcpy(&v, res, sizeof(v));
+	res = VectorMatrixMultiply(v, *RotateZMatrix(mobj->tracer->health << ANGLETOFINESHIFT));
+	M_Memcpy(&v, res, sizeof(v));
+
+	// Cut the height to align the link with the axis.
+	if (mobj->type == MT_SMALLMACECHAIN || mobj->type == MT_BIGMACECHAIN)
+		v[2] -= P_MobjFlip(mobj)*mobj->height/4;
+	else
+		v[2] -= P_MobjFlip(mobj)*mobj->height/2;
+
+	P_UnsetThingPosition(mobj);
+
+	// Add on the appropriate distances to the center's co-ordinates.
+	mobj->x = mobj->tracer->x + v[0];
+	mobj->y = mobj->tracer->y + v[1];
+	mobj->z = mobj->tracer->z + v[2];
+
+	P_SetThingPosition(mobj);
+
+	if (donetwice || P_MobjWasRemoved(mobj))
+		return;
+
+	if (mobj->flags & (MF_NOCLIP|MF_NOCLIPHEIGHT))
+		return;
+
+	if ((fa = ((mobj->tracer->threshold & (FINEMASK/2)) << ANGLETOFINESHIFT)) > ANGLE_45 && fa < ANGLE_135) // only move towards center when the motion is towards/away from the ground, rather than alongside it
+		return;
+
+	if (mobj->subsector->sector->ffloors)
+		P_AdjustMobjFloorZ_FFloors(mobj, mobj->subsector->sector, 2);
+
+	// Variable reuse
+	if (mobj->floorz > mobj->z)
+		dist = (mobj->floorz - mobj->tracer->z);
+	else if (mobj->ceilingz < mobj->z)
+		dist = (mobj->ceilingz - mobj->tracer->z);
+	else
+		return;
+
+	if ((dist = FixedDiv(dist, v[2])) > FRACUNIT)
+		return;
+
+	radius = FixedMul(radius, dist);
+	donetwice = true;
+	dist = ((mobj->info->speed) ? mobj->info->speed : mobjinfo[MT_SMALLMACECHAIN].speed);
+	goto maceretry;
+}
+
 static boolean P_ShieldLook(mobj_t *thing, shieldtype_t shield)
 {
 	if (!thing->target || thing->target->health <= 0 || !thing->target->player
@@ -6795,6 +6932,13 @@ void P_MobjThinker(mobj_t *mobj)
 	&& (signed)(mobj->frame >> FF_TRANSSHIFT) < (NUMTRANSMAPS-1) - mobj->fuse / 2)
 		// fade out when nearing the end of fuse...
 		mobj->frame = (mobj->frame & ~FF_TRANSMASK) | (((NUMTRANSMAPS-1) - mobj->fuse / 2) << FF_TRANSSHIFT);
+
+	if (mobj->flags2 & MF2_MACEROTATE)
+	{
+		P_MaceRotate(mobj);
+		if (P_MobjWasRemoved(mobj))
+			return;
+	}
 
 	// Special thinker for scenery objects
 	if (mobj->flags & MF_SCENERY)
@@ -7359,6 +7503,25 @@ void P_MobjThinker(mobj_t *mobj)
 		}
 	else switch (mobj->type)
 	{
+		case MT_WALLSPIKEBASE:
+			if (!mobj->target) {
+				P_RemoveMobj(mobj);
+				return;
+			}
+			mobj->frame = (mobj->frame & ~FF_FRAMEMASK)|(mobj->target->frame & FF_FRAMEMASK);
+#if 0
+			if (mobj->angle != mobj->target->angle + ANGLE_90) // reposition if not the correct angle
+			{
+				mobj_t *target = mobj->target; // shortcut
+				const fixed_t baseradius = target->radius - (target->scale/2); //FixedMul(FRACUNIT/2, target->scale);
+				P_UnsetThingPosition(mobj);
+				mobj->x = target->x - P_ReturnThrustX(target, target->angle, baseradius);
+				mobj->y = target->y - P_ReturnThrustY(target, target->angle, baseradius);
+				P_SetThingPosition(mobj);
+				mobj->angle = target->angle + ANGLE_90;
+			}
+#endif
+			break;
 		case MT_FALLINGROCK:
 			// Despawn rocks here in case zmovement code can't do so (blame slopes)
 			if (!mobj->momx && !mobj->momy && !mobj->momz
@@ -7442,7 +7605,8 @@ void P_MobjThinker(mobj_t *mobj)
 				}
 			}
 			break;
-		case MT_SPINMACEPOINT:
+		case MT_CHAINPOINT:
+		case MT_CHAINMACEPOINT:
 			if (leveltime & 1)
 			{
 				if (mobj->lastlook > mobj->movecount)
@@ -7778,6 +7942,10 @@ void P_MobjThinker(mobj_t *mobj)
 			if (mobj->flags2 & MF2_NIGHTSPULL)
 				P_NightsItemChase(mobj);
 			break;
+		case MT_EMBLEM:
+			if (mobj->flags2 & MF2_NIGHTSPULL)
+				P_NightsItemChase(mobj);
+			break;
 		case MT_SHELL:
 			if (mobj->threshold && mobj->threshold != TICRATE)
 				mobj->threshold--;
@@ -8051,6 +8219,10 @@ for (i = ((mobj->flags2 & MF2_STRONGBOX) ? strongboxamt : weakboxamt); i; --i) s
 					mobj->fuse = mobj->info->speed;
 					if (mobj->spawnpoint)
 						mobj->fuse += mobj->spawnpoint->angle;
+					break;
+				case MT_WALLSPIKE:
+					P_SetMobjState(mobj, mobj->state->nextstate);
+					mobj->fuse = mobj->info->speed;
 					break;
 				case MT_NIGHTSCORE:
 					P_RemoveMobj(mobj);
@@ -8443,9 +8615,13 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			// Collision helper can be stood on but not pushed
 			mobj->flags2 |= MF2_STANDONME;
 			break;
+		case MT_WALLSPIKE:
 		case MT_SPIKE:
 			mobj->flags2 |= MF2_STANDONME;
 			break;
+		case MT_GFZTREE:
+		case MT_GFZBERRYTREE:
+		case MT_GFZCHERRYTREE:
 		case MT_LAMPPOST1:
 		case MT_LAMPPOST2:
 			mobj->flags2 |= MF2_STANDONME;
@@ -8515,6 +8691,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			break;
 		case MT_EGGCAPSULE:
 			mobj->extravalue1 = -1; // timer for how long a player has been at the capsule
+			break;
 		case MT_REDTEAMRING:
 			mobj->color = skincolor_redteam;
 			break;
@@ -9463,7 +9640,7 @@ void P_SpawnMapThing(mapthing_t *mthing)
 	}
 
 	if (metalrecording) // Metal Sonic can't use these things.
-		if (mobjinfo[i].flags & (MF_ENEMY|MF_BOSS) || i == MT_EMMY || i == MT_STARPOST)
+		if (mobjinfo[i].flags & (MF_ENEMY|MF_BOSS) || i == MT_TOKEN || i == MT_STARPOST)
 			return;
 
 	if (i >= MT_EMERALD1 && i <= MT_EMERALD7) // Pickupable Emeralds
@@ -9577,7 +9754,7 @@ void P_SpawnMapThing(mapthing_t *mthing)
 			return;
 
 		// Emerald Tokens -->> Score Tokens
-		else if (i == MT_EMMY)
+		else if (i == MT_TOKEN)
 			return; /// \todo
 
 		// 1UPs -->> Score TVs
@@ -9605,7 +9782,7 @@ void P_SpawnMapThing(mapthing_t *mthing)
 		// They're likely facets of the level's design and therefore required to progress.
 	}
 
-	if (i == MT_EMMY && (gametype != GT_COOP || ultimatemode || tokenbits == 30 || tokenlist & (1 << tokenbits++)))
+	if (i == MT_TOKEN && (gametype != GT_COOP || ultimatemode || tokenbits == 30 || tokenlist & (1 << tokenbits++)))
 		return; // you already got this token, or there are too many, or the gametype's not right
 
 	// Objectplace landing point
@@ -9624,7 +9801,7 @@ void P_SpawnMapThing(mapthing_t *mthing)
 			ss->sector->floorheight) + ((mthing->options >> ZSHIFT) << FRACBITS);
 	else if (i == MT_AXIS || i == MT_AXISTRANSFER || i == MT_AXISTRANSFERLINE)
 		z = ONFLOORZ;
-	else if (i == MT_SPECIALSPIKEBALL || P_WeaponOrPanel(i) || i == MT_EMERALDSPAWN || i == MT_EMMY)
+	else if (i == MT_SPECIALSPIKEBALL || P_WeaponOrPanel(i) || i == MT_EMERALDSPAWN || i == MT_TOKEN)
 	{
 		if (mthing->options & MTF_OBJECTFLIP)
 		{
@@ -9714,6 +9891,16 @@ void P_SpawnMapThing(mapthing_t *mthing)
 	mobj = P_SpawnMobj(x, y, z, i);
 	mobj->spawnpoint = mthing;
 
+#ifdef HAVE_BLUA
+	if (LUAh_MapThingSpawn(mobj, mthing))
+	{
+		if (P_MobjWasRemoved(mobj))
+			return;
+	}
+	else if (P_MobjWasRemoved(mobj))
+		return;
+	else
+#endif
 	switch(mobj->type)
 	{
 	case MT_SKYBOX:
@@ -9756,15 +9943,20 @@ void P_SpawnMapThing(mapthing_t *mthing)
 		mobj->movedir = mthing->extrainfo;
 		break;
 	case MT_MACEPOINT:
-	case MT_SWINGMACEPOINT:
-	case MT_HANGMACEPOINT:
-	case MT_SPINMACEPOINT:
+	case MT_CHAINMACEPOINT:
+	case MT_SPRINGBALLPOINT:
+	case MT_CHAINPOINT:
+	case MT_FIREBARPOINT:
+	case MT_CUSTOMMACEPOINT:
 	{
-		fixed_t mlength, mspeed, mxspeed, mzspeed, mstartangle, mmaxspeed;
-		mobjtype_t chainlink = MT_SMALLMACECHAIN;
-		mobjtype_t macetype = MT_SMALLMACE;
-		boolean firsttime;
+		fixed_t mlength, mlengthset, mspeed, mphase, myaw, mpitch, mmaxspeed, mnumspokes, mnumspokesset, mpinch, mroll, mnumnospokes, mwidth, mmin, msound, radiusfactor;
+		angle_t mspokeangle;
+		mobjtype_t chainlink, macetype, firsttype, linktype;
+		boolean mdoall = true;
 		mobj_t *spawnee;
+		mobjflag_t mflagsapply;
+		mobjflag2_t mflags2apply;
+		mobjeflag_t meflagsapply;
 		INT32 line;
 		const size_t mthingi = (size_t)(mthing - mapthings);
 
@@ -9778,93 +9970,240 @@ void P_SpawnMapThing(mapthing_t *mthing)
 			return;
 		}
 /*
-No deaf - small mace
-Deaf - big mace
+mapthing -
+MTF_AMBUSH :
+	MT_SPRINGBALLPOINT - upgrade from yellow to red spring
+	anything else - bigger mace/chain theory
+MTF_OBJECTSPECIAL - force silent
+MTF_GRAVFLIP - flips objects, doesn't affect chain arrangements
+Parameter value : number of "spokes"
 
-ML_NOCLIMB : Direction not controllable
+linedef -
+ML_NOCLIMB :
+	MT_CHAINPOINT/MT_CHAINMACEPOINT with ML_EFFECT1 applied - Direction not controllable
+	anything else - no functionality
+ML_EFFECT1 : Swings instead of spins
+ML_EFFECT2 : Linktype is replaced with macetype for all spokes not ending in chains (inverted for MT_FIREBARPOINT)
+ML_EFFECT3 : Spawn a bonus macetype at the hinge point
+ML_EFFECT4 : Don't clip inside the ground
 */
 		mlength = abs(lines[line].dx >> FRACBITS);
-		mspeed = abs(lines[line].dy >> FRACBITS);
-		mxspeed = sides[lines[line].sidenum[0]].textureoffset >> FRACBITS;
-		mzspeed = sides[lines[line].sidenum[0]].rowoffset >> FRACBITS;
-		mstartangle = lines[line].frontsector->floorheight >> FRACBITS;
-		mmaxspeed = lines[line].frontsector->ceilingheight >> FRACBITS;
+		mspeed = abs(lines[line].dy >> (FRACBITS - 4));
+		mphase = (sides[lines[line].sidenum[0]].textureoffset >> FRACBITS) % 360;
+		if ((mmaxspeed = sides[lines[line].sidenum[0]].rowoffset >> (FRACBITS - 4)) < mspeed)
+			mmaxspeed = mspeed << 1;
+		mpitch = (lines[line].frontsector->floorheight >> FRACBITS) % 360;
+		myaw = (lines[line].frontsector->ceilingheight >> FRACBITS) % 360;
 
-		mstartangle %= 360;
-		mxspeed %= 360;
-		mzspeed %= 360;
+		mnumspokes = mthing->extrainfo + 1;
+		mspokeangle = FixedAngle((360*FRACUNIT)/mnumspokes)>>ANGLETOFINESHIFT;
 
-		CONS_Debug(DBG_GAMELOGIC, "Mace Chain (mapthing #%s):\n"
+		if (lines[line].backsector)
+		{
+			mpinch = (lines[line].backsector->floorheight >> FRACBITS) % 360;
+			mroll = (lines[line].backsector->ceilingheight >> FRACBITS) % 360;
+			mnumnospokes = (sides[lines[line].sidenum[1]].textureoffset >> FRACBITS);
+			if ((mwidth = sides[lines[line].sidenum[1]].rowoffset >> FRACBITS) < 0)
+				mwidth = 0;
+		}
+		else
+			mpinch = mroll = mnumnospokes = mwidth = 0;
+
+		CONS_Debug(DBG_GAMELOGIC, "Mace/Chain (mapthing #%s):\n"
 				"Length is %d\n"
 				"Speed is %d\n"
-				"Xspeed is %d\n"
-				"Zspeed is %d\n"
-				"startangle is %d\n"
-				"maxspeed is %d\n",
-				sizeu1(mthingi), mlength, mspeed, mxspeed, mzspeed, mstartangle, mmaxspeed);
+				"Phase is %d\n"
+				"Yaw is %d\n"
+				"Pitch is %d\n"
+				"Max. speed is %d\n"
+				"No. of spokes is %d\n"
+				"Pinch is %d\n"
+				"Roll is %d\n"
+				"No. of antispokes is %d\n"
+				"Width is %d\n",
+				sizeu1(mthingi), mlength, mspeed, mphase, myaw, mpitch, mmaxspeed, mnumspokes, mpinch, mroll, mnumnospokes, mwidth);
 
-		mobj->lastlook = mspeed << 4;
+		if (mnumnospokes > 0 && (mnumnospokes < mnumspokes))
+			mnumnospokes = mnumspokes/mnumnospokes;
+		else
+			mnumnospokes = ((mobj->type == MT_CHAINMACEPOINT) ? (mnumspokes - 1) : 0);
+
+		mobj->lastlook = mspeed;
 		mobj->movecount = mobj->lastlook;
-		mobj->health = (FixedAngle(mzspeed*FRACUNIT)>>ANGLETOFINESHIFT) + (FixedAngle(mstartangle*FRACUNIT)>>ANGLETOFINESHIFT);
-		mobj->threshold = (FixedAngle(mxspeed*FRACUNIT)>>ANGLETOFINESHIFT) + (FixedAngle(mstartangle*FRACUNIT)>>ANGLETOFINESHIFT);
-		mobj->movefactor = mobj->threshold;
+		mobj->health = (FixedAngle(myaw*FRACUNIT)>>ANGLETOFINESHIFT);
+		mobj->threshold = (FixedAngle(mpitch*FRACUNIT)>>ANGLETOFINESHIFT);
 		mobj->friction = mmaxspeed;
+		mobj->movefactor = mpinch;
 
+		// Mobjtype selection
+		switch(mobj->type)
+		{
+			case MT_SPRINGBALLPOINT:
+				macetype = ((mthing->options & MTF_AMBUSH)
+					? MT_REDSPRINGBALL
+					: MT_YELLOWSPRINGBALL);
+				chainlink = MT_SMALLMACECHAIN;
+				break;
+			case MT_FIREBARPOINT:
+				macetype = ((mthing->options & MTF_AMBUSH)
+						? MT_BIGFIREBAR
+						: MT_SMALLFIREBAR);
+				chainlink = MT_NULL;
+				break;
+			case MT_CUSTOMMACEPOINT:
+				macetype = (mobjtype_t)sides[lines[line].sidenum[0]].toptexture;
+				if (lines[line].backsector)
+					chainlink = (mobjtype_t)sides[lines[line].sidenum[1]].toptexture;
+				else
+					chainlink = MT_NULL;
+				break;
+			default:
+				if (mthing->options & MTF_AMBUSH)
+				{
+					macetype = MT_BIGMACE;
+					chainlink = MT_BIGMACECHAIN;
+				}
+				else
+				{
+					macetype = MT_SMALLMACE;
+					chainlink = MT_SMALLMACECHAIN;
+				}
+				break;
+		}
+
+		if (!macetype)
+			break;
+
+		if (mobj->type != MT_CHAINPOINT)
+		{
+			firsttype = macetype;
+			mlength++;
+		}
+		else
+		{
+			if (!mlength)
+				break;
+			firsttype = chainlink;
+		}
+
+		// Adjustable direction
 		if (lines[line].flags & ML_NOCLIMB)
 			mobj->flags |= MF_SLIDEME;
 
-		mobj->reactiontime = 0;
-
-		if (mthing->options & MTF_AMBUSH)
+		// Swinging
+		if (lines[line].flags & ML_EFFECT1)
 		{
-			chainlink = MT_BIGMACECHAIN;
-			macetype = MT_BIGMACE;
+			mobj->flags2 |= MF2_STRONGBOX;
+			mmin = ((mnumnospokes > 1) ? 1 : 0);
 		}
-
-		if (mthing->options & MTF_OBJECTSPECIAL)
-			mobj->flags2 |= MF2_BOSSNOTRAP; // shut up maces.
-
-		if (mobj->type == MT_HANGMACEPOINT || mobj->type == MT_SPINMACEPOINT)
-			firsttime = true;
 		else
+			mmin = mnumspokes;
+
+		// Make the links the same type as the end - repeated below
+		if ((mobj->type != MT_CHAINPOINT) && (!(lines[line].flags & ML_EFFECT2) == (mobj->type == MT_FIREBARPOINT))) // exclusive or
 		{
-			firsttime = false;
-
-			spawnee = P_SpawnMobj(mobj->x, mobj->y, mobj->z, macetype);
-			P_SetTarget(&spawnee->target, mobj);
-
-			if (mobj->type == MT_SWINGMACEPOINT)
-				spawnee->movecount = FixedAngle(mstartangle*FRACUNIT)>>ANGLETOFINESHIFT;
-			else
-				spawnee->movecount = 0;
-
-			spawnee->threshold = FixedAngle(mstartangle*FRACUNIT)>>ANGLETOFINESHIFT;
-			spawnee->reactiontime = mlength+1;
+			linktype = macetype;
+			radiusfactor = 2; // Double the radius.
 		}
+		else
+			radiusfactor = (((linktype = chainlink) == MT_NULL) ? 2 : 1);
 
-		while (mlength > 0)
+		mflagsapply = ((lines[line].flags & ML_EFFECT4) ? 0 : (MF_NOCLIP|MF_NOCLIPHEIGHT));
+		mflags2apply = (MF2_MACEROTATE|((mthing->options & MTF_OBJECTFLIP) ? MF2_OBJECTFLIP : 0));
+		meflagsapply = ((mthing->options & MTF_OBJECTFLIP) ? MFE_VERTICALFLIP : 0);
+
+		msound = ((firsttype == chainlink) ? 0 : (mwidth & 1));
+
+		// Quick and easy preparatory variable setting
+		mphase = (FixedAngle(mphase*FRACUNIT)>>ANGLETOFINESHIFT);
+		mroll = (FixedAngle(mroll*FRACUNIT)>>ANGLETOFINESHIFT);
+
+#define makemace(mobjtype, dist, moreflags2) P_SpawnMobj(mobj->x, mobj->y, mobj->z, mobjtype);\
+				P_SetTarget(&spawnee->tracer, mobj);\
+				spawnee->threshold = mphase;\
+				spawnee->friction = mroll;\
+				spawnee->movefactor = mwidth;\
+				spawnee->movecount = dist;\
+				spawnee->angle = myaw;\
+				spawnee->flags |= (MF_NOGRAVITY|mflagsapply);\
+				spawnee->flags2 |= (mflags2apply|moreflags2);\
+				spawnee->eflags |= meflagsapply
+
+domaceagain:
+		mnumspokesset = mnumspokes;
+
+		if (mdoall && lines[line].flags & ML_EFFECT3) // Innermost mace/link
+			{ spawnee = makemace(macetype, 0, MF2_AMBUSH); }
+
+		// The actual spawning of spokes
+		while (mnumspokesset-- > 0)
 		{
-			spawnee = P_SpawnMobj(mobj->x, mobj->y, mobj->z, chainlink);
+			// Offsets
+			if (lines[line].flags & ML_EFFECT1) // Swinging
+				mroll = (mroll - mspokeangle) & FINEMASK;
+			else // Spinning
+				mphase = (mphase - mspokeangle) & FINEMASK;
 
-			P_SetTarget(&spawnee->target, mobj);
-
-			if (mobj->type == MT_HANGMACEPOINT || mobj->type == MT_SWINGMACEPOINT)
-				spawnee->movecount = FixedAngle(mstartangle*FRACUNIT)>>ANGLETOFINESHIFT;
-			else
-				spawnee->movecount = 0;
-
-			spawnee->threshold = FixedAngle(mstartangle*FRACUNIT)>>ANGLETOFINESHIFT;
-			spawnee->reactiontime = mlength;
-
-			if (firsttime)
+			if (mnumnospokes && !(mnumspokesset % mnumnospokes)) // Skipping a "missing" spoke
 			{
-				// This is the outermost link in the chain
-				spawnee->flags2 |= MF2_AMBUSH;
-				firsttime = false;
+				if (mobj->type != MT_CHAINMACEPOINT)
+					continue;
+
+				firsttype = linktype = chainlink;
+				mlengthset = 1 + (mlength - 1)*radiusfactor;
+				radiusfactor = 1;
+			}
+			else
+			{
+				if (mobj->type == MT_CHAINMACEPOINT)
+				{
+					// Make the links the same type as the end - repeated above
+					if (lines[line].flags & ML_EFFECT2)
+					{
+						linktype = macetype;
+						radiusfactor = 2;
+					}
+					else
+					{
+						linktype = chainlink;
+						radiusfactor = (((linktype = chainlink) == MT_NULL) ? 2 : 1);
+					}
+
+					firsttype = macetype;
+				}
+
+				mlengthset = mlength;
 			}
 
-			mlength--;
+			// Outermost mace/link
+			spawnee = makemace(firsttype, radiusfactor*(mlengthset--), MF2_AMBUSH);
+
+			if (mspeed && (mwidth == msound) && !(mthing->options & MTF_OBJECTSPECIAL) && mnumspokesset <= mmin) // Can it make a sound?
+				spawnee->flags2 |= MF2_BOSSNOTRAP;
+
+			if (!mdoall || !linktype)
+				continue;
+
+			// The rest of the links
+			while (mlengthset > 0)
+				{ spawnee = makemace(linktype, radiusfactor*(mlengthset--), 0); }
 		}
+
+		if (mwidth > 0)
+		{
+			mwidth *= -1;
+			goto domaceagain;
+		}
+		else if (mwidth != 0)
+		{
+			if ((mwidth = -(mwidth + ((firsttype == chainlink) ? 1 : 2))) < 0)
+				break;
+			mdoall = false;
+			goto domaceagain;
+		}
+
+#undef makemace
+
 		break;
 	}
 	case MT_PARTICLEGEN:
@@ -10013,28 +10352,10 @@ ML_NOCLIMB : Direction not controllable
 				mobj->radius = (mthing->angle & 16383)*FRACUNIT;
 		}
 	}
-	else if (i == MT_EMMY)
+	else if (i == MT_TOKEN)
 	{
 		if (mthing->options & MTF_OBJECTSPECIAL) // Mario Block version
 			mobj->flags &= ~(MF_NOGRAVITY|MF_NOCLIPHEIGHT);
-		else
-		{
-			fixed_t zheight = mobj->z;
-			mobj_t *tokenobj;
-
-			if (mthing->options & MTF_OBJECTFLIP)
-				zheight += mobj->height-FixedMul(mobjinfo[MT_TOKEN].height, mobj->scale); // align with emmy properly!
-
-			tokenobj = P_SpawnMobj(x, y, zheight, MT_TOKEN);
-			P_SetTarget(&mobj->tracer, tokenobj);
-			tokenobj->destscale = mobj->scale;
-			P_SetScale(tokenobj, mobj->scale);
-			if (mthing->options & MTF_OBJECTFLIP) // flip token to match emmy
-			{
-				tokenobj->eflags |= MFE_VERTICALFLIP;
-				tokenobj->flags2 |= MF2_OBJECTFLIP;
-			}
-		}
 
 		// We advanced tokenbits earlier due to the return check.
 		// Subtract 1 here for the correct value.
@@ -10085,13 +10406,45 @@ ML_NOCLIMB : Direction not controllable
 			mobj->flags &= ~MF_SCENERY;
 			mobj->fuse = mthing->angle + mobj->info->speed;
 		}
-		// Use per-thing collision for spikes if the deaf flag is checked.
-		if (mthing->options & MTF_AMBUSH && !metalrecording)
+		// Use per-thing collision for spikes if the deaf flag isn't checked.
+		if (!(mthing->options & MTF_AMBUSH) && !metalrecording)
 		{
 			P_UnsetThingPosition(mobj);
 			mobj->flags &= ~(MF_NOBLOCKMAP|MF_NOGRAVITY|MF_NOCLIPHEIGHT);
 			mobj->flags |= MF_SOLID;
 			P_SetThingPosition(mobj);
+		}
+	}
+	else if (i == MT_WALLSPIKE)
+	{
+		// Pop up spikes!
+		if (mthing->options & MTF_OBJECTSPECIAL)
+		{
+			mobj->flags &= ~MF_SCENERY;
+			mobj->fuse = mobj->info->speed;
+		}
+		// Use per-thing collision for spikes if the deaf flag isn't checked.
+		if (!(mthing->options & MTF_AMBUSH) && !metalrecording)
+		{
+			P_UnsetThingPosition(mobj);
+			mobj->flags &= ~(MF_NOBLOCKMAP|MF_NOCLIPHEIGHT);
+			mobj->flags |= MF_SOLID;
+			P_SetThingPosition(mobj);
+		}
+
+		// spawn base
+		{
+			const angle_t mobjangle = FixedAngle(mthing->angle*FRACUNIT); // the mobj's own angle hasn't been set quite yet so...
+			const fixed_t baseradius = mobj->radius - mobj->scale;
+			mobj_t *base = P_SpawnMobj(
+					mobj->x - P_ReturnThrustX(mobj, mobjangle, baseradius),
+					mobj->y - P_ReturnThrustY(mobj, mobjangle, baseradius),
+					mobj->z, MT_WALLSPIKEBASE);
+			base->angle = mobjangle + ANGLE_90;
+			base->destscale = mobj->destscale;
+			P_SetScale(base, mobj->scale);
+			P_SetTarget(&base->target, mobj);
+			P_SetTarget(&mobj->tracer, base);
 		}
 	}
 
@@ -10166,7 +10519,6 @@ ML_NOCLIMB : Direction not controllable
 				// Spawn already displayed
 				mobj->flags |= MF_SPECIAL;
 				mobj->flags &= ~MF_NIGHTSITEM;
-				P_SetMobjState(mobj, mobj->info->seestate);
 			}
 
 			if (mobj->flags & MF_PUSHABLE)
@@ -10218,6 +10570,10 @@ ML_NOCLIMB : Direction not controllable
 		mobj->eflags |= MFE_VERTICALFLIP;
 		mobj->flags2 |= MF2_OBJECTFLIP;
 	}
+
+	// Final set of not being able to draw nightsitems.
+	if (mobj->flags & MF_NIGHTSITEM)
+		mobj->flags2 |= MF2_DONTDRAW;
 
 	mthing->mobj = mobj;
 }

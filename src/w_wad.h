@@ -70,6 +70,7 @@ typedef struct wadfile_s
 	FILE *handle;
 	UINT32 filesize; // for network
 	UINT8 md5sum[16];
+	boolean important; // also network - !W_VerifyNMUSlumps
 } wadfile_t;
 
 #define WADFILENUM(lumpnum) (UINT16)((lumpnum)>>16) // wad flumpnum>>16) // wad file number in upper word

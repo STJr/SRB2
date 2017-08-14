@@ -708,7 +708,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 
 	colfunc = basecolfunc; // hack: this isn't resetting properly somewhere.
 	dc_colormap = vis->colormap;
-	if ((vis->mobj->flags & MF_BOSS) && (vis->mobj->flags2 & MF2_FRET) && (leveltime & 1)) // Bosses "flash"
+	if (!(vis->cut & SC_PRECIP) && (vis->mobj->flags & MF_BOSS) && (vis->mobj->flags2 & MF2_FRET) && (leveltime & 1)) // Bosses "flash"
 	{
 		// translate certain pixels to white
 		colfunc = transcolfunc;
@@ -723,7 +723,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	{
 		colfunc = transtransfunc;
 		dc_transmap = vis->transmap;
-		if (vis->mobj->skin && vis->mobj->sprite == SPR_PLAY) // MT_GHOST LOOKS LIKE A PLAYER SO USE THE PLAYER TRANSLATION TABLES. >_>
+		if (!(vis->cut & SC_PRECIP) && vis->mobj->skin && vis->mobj->sprite == SPR_PLAY) // MT_GHOST LOOKS LIKE A PLAYER SO USE THE PLAYER TRANSLATION TABLES. >_>
 		{
 			size_t skinnum = (skin_t*)vis->mobj->skin-skins;
 			dc_translation = R_GetTranslationColormap((INT32)skinnum, vis->mobj->color, GTC_CACHE);
@@ -742,7 +742,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		colfunc = transcolfunc;
 
 		// New colormap stuff for skins Tails 06-07-2002
-		if (vis->mobj->skin && vis->mobj->sprite == SPR_PLAY) // This thing is a player!
+		if (!(vis->cut & SC_PRECIP) && vis->mobj->skin && vis->mobj->sprite == SPR_PLAY) // This thing is a player!
 		{
 			size_t skinnum = (skin_t*)vis->mobj->skin-skins;
 			dc_translation = R_GetTranslationColormap((INT32)skinnum, vis->mobj->color, GTC_CACHE);
@@ -772,18 +772,18 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	frac = vis->startfrac;
 	windowtop = windowbottom = sprbotscreen = INT32_MAX;
 
-	if (vis->mobj->skin && ((skin_t *)vis->mobj->skin)->flags & SF_HIRES)
+	if (!(vis->cut & SC_PRECIP) && vis->mobj->skin && ((skin_t *)vis->mobj->skin)->flags & SF_HIRES)
 		this_scale = FixedMul(this_scale, ((skin_t *)vis->mobj->skin)->highresscale);
 	if (this_scale <= 0)
 		this_scale = 1;
 	if (this_scale != FRACUNIT)
 	{
-		if (!vis->isScaled)
+		if (!(vis->cut & SC_ISSCALED))
 		{
 			vis->scale = FixedMul(vis->scale, this_scale);
 			vis->scalestep = FixedMul(vis->scalestep, this_scale);
 			vis->xiscale = FixedDiv(vis->xiscale,this_scale);
-			vis->isScaled = true;
+			vis->cut |= SC_ISSCALED;
 		}
 		dc_texturemid = FixedDiv(dc_texturemid,this_scale);
 	}
@@ -825,7 +825,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 			sprtopscreen = (centeryfrac - FixedMul(dc_texturemid, spryscale));
 			dc_iscale = (0xffffffffu / (unsigned)spryscale);
 		}
-		if (vis->vflip)
+		if (vis->cut & SC_VFLIP)
 			R_DrawFlippedMaskedColumn(column, patch->height);
 		else
 			R_DrawMaskedColumn(column);
@@ -904,7 +904,7 @@ static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 //
 // R_SplitSprite
 // runs through a sector's lightlist and
-static void R_SplitSprite(vissprite_t *sprite, mobj_t *thing)
+static void R_SplitSprite(vissprite_t *sprite)
 {
 	INT32 i, lightnum, lindex;
 	INT16 cutfrac;
@@ -940,6 +940,8 @@ static void R_SplitSprite(vissprite_t *sprite, mobj_t *thing)
 		// adjust the heights.
 		newsprite = M_Memcpy(R_NewVisSprite(), sprite, sizeof (vissprite_t));
 
+		newsprite->cut |= (sprite->cut & SC_FLAGMASK);
+
 		sprite->cut |= SC_BOTTOM;
 		sprite->gz = testheight;
 
@@ -972,15 +974,7 @@ static void R_SplitSprite(vissprite_t *sprite, mobj_t *thing)
 
 			newsprite->extra_colormap = sector->lightlist[i].extra_colormap;
 
-/*
-			if (thing->frame & FF_TRANSMASK)
-				;
-			else if (thing->flags2 & MF2_SHADOW)
-				;
-			else
-*/
-			if (!((thing->frame & (FF_FULLBRIGHT|FF_TRANSMASK) || thing->flags2 & MF2_SHADOW)
-				&& (!newsprite->extra_colormap || !newsprite->extra_colormap->fog)))
+			if (!((newsprite->cut & SC_FULLBRIGHT) && (!newsprite->extra_colormap || !newsprite->extra_colormap->fog)))
 			{
 				lindex = FixedMul(sprite->xscale, FixedDiv(640, vid.width))>>(LIGHTSCALESHIFT);
 
@@ -1000,6 +994,7 @@ static void R_SplitSprite(vissprite_t *sprite, mobj_t *thing)
 //
 static void R_ProjectSprite(mobj_t *thing)
 {
+	mobj_t *oldthing = thing;
 	fixed_t tr_x, tr_y;
 	fixed_t gxt, gyt;
 	fixed_t tx, tz;
@@ -1018,6 +1013,8 @@ static void R_ProjectSprite(mobj_t *thing)
 	INT32 lindex;
 
 	vissprite_t *vis;
+
+	spritecut_e cut = SC_NONE;
 
 	angle_t ang = 0; // compiler complaints
 	fixed_t iscale;
@@ -1217,24 +1214,14 @@ static void R_ProjectSprite(mobj_t *thing)
 	if ((thing->flags2 & MF2_LINKDRAW) && thing->tracer) // toast 16/09/16 (SYMMETRY)
 	{
 		fixed_t linkscale;
-#if 0 // support for chains of linkdraw - probably not network safe to modify mobjs during rendering
-		mobj_t *link, *link2;
 
-		for (link = thing->tracer; (link->tracer && (link->flags2 & MF2_LINKDRAW)); link = link->tracer)
-			link->flags2 &= ~MF2_LINKDRAW; // to prevent infinite loops, otherwise would just be a ;
+		thing = thing->tracer;
 
-		for (link2 = thing->tracer; (link2->tracer && (link2 != link)); link2 = link2->tracer)
-			link->flags2 |= MF2_LINKDRAW; // only needed for correction of the above
+		if (thing->sprite == SPR_NULL || thing->flags2 & MF2_DONTDRAW)
+			return;
 
-		if (link->flags2 & MF2_LINKDRAW)
-			link->flags2 &= ~MF2_LINKDRAW; // let's try and make sure this doesn't happen again...
-
-		tr_x = link->x - viewx;
-		tr_y = link->y - viewy;
-#else
-		tr_x = thing->tracer->x - viewx;
-		tr_y = thing->tracer->y - viewy;
-#endif
+		tr_x = thing->x - viewx;
+		tr_y = thing->y - viewy;
 		gxt = FixedMul(tr_x, viewcos);
 		gyt = -FixedMul(tr_y, viewsin);
 		tz = gxt-gyt;
@@ -1247,6 +1234,7 @@ static void R_ProjectSprite(mobj_t *thing)
 			dispoffset *= -1; // if it's physically behind, make sure it's ordered behind (if dispoffset > 0)
 
 		sortscale = linkscale; // now make sure it's linked
+		cut = SC_LINKDRAW;
 	}
 
 	// PORTAL SPRITE CLIPPING
@@ -1265,12 +1253,12 @@ static void R_ProjectSprite(mobj_t *thing)
 		// When vertical flipped, draw sprites from the top down, at least as far as offsets are concerned.
 		// sprite height - sprite topoffset is the proper inverse of the vertical offset, of course.
 		// remember gz and gzt should be seperated by sprite height, not thing height - thing height can be shorter than the sprite itself sometimes!
-		gz = thing->z + thing->height - FixedMul(spritecachedinfo[lump].topoffset, this_scale);
+		gz = oldthing->z + oldthing->height - FixedMul(spritecachedinfo[lump].topoffset, this_scale);
 		gzt = gz + FixedMul(spritecachedinfo[lump].height, this_scale);
 	}
 	else
 	{
-		gzt = thing->z + FixedMul(spritecachedinfo[lump].topoffset, this_scale);
+		gzt = oldthing->z + FixedMul(spritecachedinfo[lump].topoffset, this_scale);
 		gz = gzt - FixedMul(spritecachedinfo[lump].height, this_scale);
 	}
 
@@ -1360,7 +1348,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	vis->sector = thing->subsector->sector;
 	vis->szt = (INT16)((centeryfrac - FixedMul(vis->gzt - viewz, sortscale))>>FRACBITS);
 	vis->sz = (INT16)((centeryfrac - FixedMul(vis->gz - viewz, sortscale))>>FRACBITS);
-	vis->cut = SC_NONE;
+	vis->cut = cut;
 	if (thing->subsector->sector->numlights)
 		vis->extra_colormap = thing->subsector->sector->lightlist[light].extra_colormap;
 	else
@@ -1397,12 +1385,15 @@ static void R_ProjectSprite(mobj_t *thing)
 	// specific translucency
 	if (!cv_translucency.value)
 		; // no translucency
-	else if (thing->flags2 & MF2_SHADOW) // actually only the player should use this (temporary invisibility)
+	else if (oldthing->flags2 & MF2_SHADOW) // actually only the player should use this (temporary invisibility)
 		vis->transmap = transtables + ((tr_trans80-1)<<FF_TRANSSHIFT); // because now the translucency is set through FF_TRANSMASK
-	else if (thing->frame & FF_TRANSMASK)
-		vis->transmap = transtables + (thing->frame & FF_TRANSMASK) - 0x10000;
+	else if (oldthing->frame & FF_TRANSMASK)
+		vis->transmap = transtables + (oldthing->frame & FF_TRANSMASK) - 0x10000;
 
-	if (((thing->frame & FF_FULLBRIGHT) || (thing->flags2 & MF2_SHADOW))
+	if ((oldthing->frame & FF_FULLBRIGHT) || (oldthing->flags2 & MF2_SHADOW))
+		vis->cut |= SC_FULLBRIGHT;
+
+	if (vis->cut & SC_FULLBRIGHT
 		&& (!vis->extra_colormap || !vis->extra_colormap->fog))
 	{
 		// full bright: goggles
@@ -1419,14 +1410,11 @@ static void R_ProjectSprite(mobj_t *thing)
 		vis->colormap = spritelights[lindex];
 	}
 
-	vis->precip = false;
-
-	vis->vflip = vflip;
-
-	vis->isScaled = false;
+	if (vflip)
+		vis->cut |= SC_VFLIP;
 
 	if (thing->subsector->sector->numlights)
-		R_SplitSprite(vis, thing);
+		R_SplitSprite(vis);
 
 	// Debug
 	++objectsdrawn;
@@ -1450,7 +1438,7 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	fixed_t iscale;
 
 	//SoM: 3/17/2000
-	fixed_t gz ,gzt;
+	fixed_t gz, gzt;
 
 	// transform the origin point
 	tr_x = thing->x - viewx;
@@ -1586,16 +1574,14 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	else
 		vis->transmap = NULL;
 
+	vis->mobj = (mobj_t *)thing;
 	vis->mobjflags = 0;
-	vis->cut = SC_NONE;
+	vis->cut = SC_PRECIP;
 	vis->extra_colormap = thing->subsector->sector->extra_colormap;
 	vis->heightsec = thing->subsector->sector->heightsec;
 
 	// Fullbright
 	vis->colormap = colormaps;
-	vis->precip = true;
-	vis->vflip = false;
-	vis->isScaled = false;
 }
 
 // R_AddSprites
@@ -1688,7 +1674,7 @@ static vissprite_t vsprsortedhead;
 
 void R_SortVisSprites(void)
 {
-	UINT32       i;
+	UINT32       i, linkedvissprites = 0;
 	vissprite_t *ds, *dsprev, *dsnext, *dsfirst;
 	vissprite_t *best = NULL;
 	vissprite_t  unsorted;
@@ -1712,22 +1698,91 @@ void R_SortVisSprites(void)
 
 		ds->next = dsnext;
 		ds->prev = dsprev;
+		ds->linkdraw = NULL;
 	}
 
 	// Fix first and last. ds still points to the last one after the loop
 	dsfirst->prev = &unsorted;
 	unsorted.next = dsfirst;
 	if (ds)
+	{
 		ds->next = &unsorted;
+		ds->linkdraw = NULL;
+	}
 	unsorted.prev = ds;
+
+	// bundle linkdraw
+	for (ds = unsorted.prev; ds != &unsorted; ds = ds->prev)
+	{
+		if (!(ds->cut & SC_LINKDRAW))
+			continue;
+
+		// reuse dsfirst...
+		for (dsfirst = unsorted.prev; dsfirst != &unsorted; dsfirst = dsfirst->prev)
+		{
+			// don't connect if it's also a link
+			if (dsfirst->cut & SC_LINKDRAW)
+				continue;
+
+			// don't connect if it's not the tracer
+			if (dsfirst->mobj != ds->mobj)
+				continue;
+
+			// don't connect if the tracer's top is cut off, but lower than the link's top
+			if ((dsfirst->cut & SC_TOP)
+			&& dsfirst->szt > ds->szt)
+				continue;
+
+			// don't connect if the tracer's bottom is cut off, but higher than the link's bottom
+			if ((dsfirst->cut & SC_BOTTOM)
+			&& dsfirst->sz < ds->sz)
+				continue;
+
+			break;
+		}
+
+		// remove from chain
+		ds->next->prev = ds->prev;
+		ds->prev->next = ds->next;
+		linkedvissprites++;
+
+		if (dsfirst != &unsorted)
+		{
+			if (!(ds->cut & SC_FULLBRIGHT))
+				ds->colormap = dsfirst->colormap;
+			ds->extra_colormap = dsfirst->extra_colormap;
+
+			// reusing dsnext...
+			dsnext = dsfirst->linkdraw;
+
+			if (!dsnext || ds->dispoffset < dsnext->dispoffset)
+			{
+				ds->next = dsnext;
+				dsfirst->linkdraw = ds;
+			}
+			else
+			{
+				for (; dsnext->next != NULL; dsnext = dsnext->next)
+					if (ds->dispoffset < dsnext->next->dispoffset)
+						break;
+				ds->next = dsnext->next;
+				dsnext->next = ds;
+			}
+		}
+	}
 
 	// pull the vissprites out by scale
 	vsprsortedhead.next = vsprsortedhead.prev = &vsprsortedhead;
-	for (i = 0; i < visspritecount; i++)
+	for (i = 0; i < visspritecount-linkedvissprites; i++)
 	{
 		bestscale = bestdispoffset = INT32_MAX;
 		for (ds = unsorted.next; ds != &unsorted; ds = ds->next)
 		{
+#ifdef PARANOIA
+			if (ds->cut & SC_LINKDRAW)
+				I_Error("R_SortVisSprites: no link or discardal made for linkdraw!");
+#endif
+
 			if (ds->sortscale < bestscale)
 			{
 				bestscale = ds->sortscale;
@@ -1981,20 +2036,6 @@ static void R_CreateDrawNodes(void)
 			}
 			else if (r2->seg)
 			{
-#if 0 //#ifdef POLYOBJECTS_PLANES
-				if (r2->seg->curline->polyseg && rover->mobj && P_MobjInsidePolyobj(r2->seg->curline->polyseg, rover->mobj)) {
-					// Determine if we need to sort in front of the polyobj, based on the planes. This fixes the issue where
-					// polyobject planes render above the object standing on them. (A bit hacky... but it works.) -Red
-					mobj_t *mo = rover->mobj;
-					sector_t *po = r2->seg->curline->backsector;
-
-					if (po->ceilingheight < viewz && mo->z+mo->height > po->ceilingheight)
-						continue;
-
-					if (po->floorheight > viewz && mo->z < po->floorheight)
-						continue;
-				}
-#endif
 				if (rover->x1 > r2->seg->x2 || rover->x2 < r2->seg->x1)
 					continue;
 
@@ -2121,7 +2162,7 @@ static void R_DrawPrecipitationSprite(vissprite_t *spr)
 void R_ClipSprites(void)
 {
 	vissprite_t *spr;
-	for (;clippedvissprites < visspritecount; clippedvissprites++)
+	for (; clippedvissprites < visspritecount; clippedvissprites++)
 	{
 		drawseg_t *ds;
 		INT32		x;
@@ -2342,10 +2383,24 @@ void R_DrawMasked(void)
 			next = r2->prev;
 
 			// Tails 08-18-2002
-			if (r2->sprite->precip == true)
+			if (r2->sprite->cut & SC_PRECIP)
 				R_DrawPrecipitationSprite(r2->sprite);
-			else
+			else if (!r2->sprite->linkdraw)
 				R_DrawSprite(r2->sprite);
+			else // unbundle linkdraw
+			{
+				vissprite_t *ds = r2->sprite->linkdraw;
+
+				for (;
+				(ds != NULL && r2->sprite->dispoffset > ds->dispoffset);
+				ds = ds->next)
+					R_DrawSprite(ds);
+
+				R_DrawSprite(r2->sprite);
+
+				for (; ds != NULL; ds = ds->next)
+					R_DrawSprite(ds);
+			}
 
 			R_DoneWithNode(r2);
 			r2 = next;

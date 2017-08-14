@@ -62,7 +62,8 @@
 
 #include <errno.h>
 
-static void SV_SendFile(INT32 node, const char *filename, UINT8 fileid);
+// Prototypes
+static boolean SV_SendFile(INT32 node, const char *filename, UINT8 fileid);
 
 // Sender structure
 typedef struct filetx_s
@@ -103,6 +104,7 @@ INT32 lastfilenum = -1;
 /** Fills a serverinfo packet with information about wad files loaded.
   *
   * \todo Give this function a better name since it is in global scope.
+  * Used to have size limiting built in - now handled via W_LoadWadFile in w_wad.c
   *
   */
 UINT8 *PutFileNeeded(void)
@@ -111,29 +113,22 @@ UINT8 *PutFileNeeded(void)
 	UINT8 *p = netbuffer->u.serverinfo.fileneeded;
 	char wadfilename[MAX_WADPATH] = "";
 	UINT8 filestatus;
-	size_t bytesused = 0;
 
 	for (i = 0; i < numwadfiles; i++)
 	{
-		// If it has only music/sound lumps, mark it as unimportant
-		if (W_VerifyNMUSlumps(wadfiles[i]->filename))
-			filestatus = 0;
-		else
-			filestatus = 1; // Important
+		// If it has only music/sound lumps, don't put it in the list
+		if (!wadfiles[i]->important)
+			continue;
+
+		filestatus = 1; // Importance - not really used any more, holds 1 by default for backwards compat with MS
 
 		// Store in the upper four bits
 		if (!cv_downloading.value)
 			filestatus += (2 << 4); // Won't send
-		else if ((wadfiles[i]->filesize > (UINT32)cv_maxsend.value * 1024))
-			filestatus += (0 << 4); // Won't send
-		else
+		else if ((wadfiles[i]->filesize <= (UINT32)cv_maxsend.value * 1024))
 			filestatus += (1 << 4); // Will send if requested
-
-		bytesused += (nameonlylength(wadfilename) + 22);
-
-		// Don't write too far...
-		if (bytesused > sizeof(netbuffer->u.serverinfo.fileneeded))
-			I_Error("Too many wad files added to host a game. (%s, stopped on %s)\n", sizeu1(bytesused), wadfilename);
+		// else
+			// filestatus += (0 << 4); -- Won't send, too big
 
 		WRITEUINT8(p, filestatus);
 
@@ -166,7 +161,6 @@ void D_ParseFileneeded(INT32 fileneedednum_parm, UINT8 *fileneededstr)
 	{
 		fileneeded[i].status = FS_NOTFOUND; // We haven't even started looking for the file yet
 		filestatus = READUINT8(p); // The first byte is the file status
-		fileneeded[i].important = (UINT8)(filestatus & 3);
 		fileneeded[i].willsend = (UINT8)(filestatus >> 4);
 		fileneeded[i].totalsize = READUINT32(p); // The four next bytes are the file size
 		fileneeded[i].file = NULL; // The file isn't open yet
@@ -196,7 +190,7 @@ boolean CL_CheckDownloadable(void)
 	UINT8 i,dlstatus = 0;
 
 	for (i = 0; i < fileneedednum; i++)
-		if (fileneeded[i].status != FS_FOUND && fileneeded[i].status != FS_OPEN && fileneeded[i].important)
+		if (fileneeded[i].status != FS_FOUND && fileneeded[i].status != FS_OPEN)
 		{
 			if (fileneeded[i].willsend == 1)
 				continue;
@@ -217,7 +211,7 @@ boolean CL_CheckDownloadable(void)
 	// not downloadable, put reason in console
 	CONS_Alert(CONS_NOTICE, M_GetText("You need additional files to connect to this server:\n"));
 	for (i = 0; i < fileneedednum; i++)
-		if (fileneeded[i].status != FS_FOUND && fileneeded[i].status != FS_OPEN && fileneeded[i].important)
+		if (fileneeded[i].status != FS_FOUND && fileneeded[i].status != FS_OPEN)
 		{
 			CONS_Printf(" * \"%s\" (%dK)", fileneeded[i].filename, fileneeded[i].totalsize >> 10);
 
@@ -270,7 +264,7 @@ boolean CL_SendRequestFile(void)
 
 	for (i = 0; i < fileneedednum; i++)
 		if (fileneeded[i].status != FS_FOUND && fileneeded[i].status != FS_OPEN
-			&& fileneeded[i].important && (fileneeded[i].willsend == 0 || fileneeded[i].willsend == 2))
+			&& (fileneeded[i].willsend == 0 || fileneeded[i].willsend == 2))
 		{
 			I_Error("Attempted to download files that were not sendable");
 		}
@@ -279,8 +273,7 @@ boolean CL_SendRequestFile(void)
 	netbuffer->packettype = PT_REQUESTFILE;
 	p = (char *)netbuffer->u.textcmd;
 	for (i = 0; i < fileneedednum; i++)
-		if ((fileneeded[i].status == FS_NOTFOUND || fileneeded[i].status == FS_MD5SUMBAD)
-			&& fileneeded[i].important)
+		if ((fileneeded[i].status == FS_NOTFOUND || fileneeded[i].status == FS_MD5SUMBAD))
 		{
 			totalfreespaceneeded += fileneeded[i].totalsize;
 			nameonly(fileneeded[i].filename);
@@ -303,7 +296,8 @@ boolean CL_SendRequestFile(void)
 }
 
 // get request filepak and put it on the send queue
-void Got_RequestFilePak(INT32 node)
+// returns false if a requested file was not found or cannot be sent
+boolean Got_RequestFilePak(INT32 node)
 {
 	char wad[MAX_WADPATH+1];
 	UINT8 *p = netbuffer->u.textcmd;
@@ -314,8 +308,13 @@ void Got_RequestFilePak(INT32 node)
 		if (id == 0xFF)
 			break;
 		READSTRINGN(p, wad, MAX_WADPATH);
-		SV_SendFile(node, wad, id);
+		if (!SV_SendFile(node, wad, id))
+		{
+			SV_AbortSendFiles(node);
+			return false; // don't read the rest of the files
+		}
 	}
+	return true; // no problems with any files
 }
 
 /** Checks if the files needed aren't already loaded or on the disk
@@ -330,6 +329,12 @@ INT32 CL_CheckFiles(void)
 	INT32 i, j;
 	char wadfilename[MAX_WADPATH];
 	INT32 ret = 1;
+	size_t packetsize = 0;
+	size_t filestoget = 0;
+	serverinfo_pak *dummycheck = NULL;
+
+	// Shut the compiler up.
+	(void)dummycheck;
 
 //	if (M_CheckParm("-nofiles"))
 //		return 1;
@@ -347,15 +352,9 @@ INT32 CL_CheckFiles(void)
 		CONS_Debug(DBG_NETPLAY, "game is modified; only doing basic checks\n");
 		for (i = 1, j = 1; i < fileneedednum || j < numwadfiles;)
 		{
-			if (i < fileneedednum && !fileneeded[i].important)
+			if (j < numwadfiles && !wadfiles[j]->important)
 			{
-				// Eh whatever, don't care
-				++i;
-				continue;
-			}
-			if (j < numwadfiles && W_VerifyNMUSlumps(wadfiles[j]->filename))
-			{
-				// Unimportant on our side. still don't care.
+				// Unimportant on our side.
 				++j;
 				continue;
 			}
@@ -378,6 +377,10 @@ INT32 CL_CheckFiles(void)
 		return 1;
 	}
 
+	// See W_LoadWadFile in w_wad.c
+	for (i = 0; i < numwadfiles; i++)
+		packetsize += nameonlylength(wadfiles[i]->filename) + 22;
+
 	for (i = 1; i < fileneedednum; i++)
 	{
 		CONS_Debug(DBG_NETPLAY, "searching for '%s' ", fileneeded[i].filename);
@@ -394,8 +397,16 @@ INT32 CL_CheckFiles(void)
 				break;
 			}
 		}
-		if (fileneeded[i].status != FS_NOTFOUND || !fileneeded[i].important)
+		if (fileneeded[i].status != FS_NOTFOUND)
 			continue;
+
+		packetsize += nameonlylength(fileneeded[i].filename) + 22;
+
+		if ((numwadfiles+filestoget >= MAX_WADFILES)
+		|| (packetsize > sizeof(dummycheck->fileneeded)))
+			return 3;
+
+		filestoget++;
 
 		fileneeded[i].status = findfile(fileneeded[i].filename, fileneeded[i].md5sum, true);
 		CONS_Debug(DBG_NETPLAY, "found %d\n", fileneeded[i].status);
@@ -424,27 +435,8 @@ void CL_LoadServerFiles(void)
 			fileneeded[i].status = FS_OPEN;
 		}
 		else if (fileneeded[i].status == FS_MD5SUMBAD)
-		{
-			// If the file is marked important, don't even bother proceeding.
-			if (fileneeded[i].important)
-				I_Error("Wrong version of important file %s", fileneeded[i].filename);
-
-			// If it isn't, no need to worry the user with a console message,
-			// although it can't hurt to put something in the debug file.
-
-			// ...but wait a second. What if the local version is "important"?
-			if (!W_VerifyNMUSlumps(fileneeded[i].filename))
-				I_Error("File %s should only contain music and sound effects!",
-					fileneeded[i].filename);
-
-			// Okay, NOW we know it's safe. Whew.
-			P_AddWadFile(fileneeded[i].filename, NULL);
-			if (fileneeded[i].important)
-				G_SetGameModified(true);
-			fileneeded[i].status = FS_OPEN;
-			DEBFILE(va("File %s found but with different md5sum\n", fileneeded[i].filename));
-		}
-		else if (fileneeded[i].important)
+			I_Error("Wrong version of file %s", fileneeded[i].filename);
+		else
 		{
 			const char *s;
 			switch(fileneeded[i].status)
@@ -480,7 +472,7 @@ static INT32 filestosend = 0;
   * \sa SV_SendRam
   *
   */
-static void SV_SendFile(INT32 node, const char *filename, UINT8 fileid)
+static boolean SV_SendFile(INT32 node, const char *filename, UINT8 fileid)
 {
 	filetx_t **q; // A pointer to the "next" field of the last file in the list
 	filetx_t *p; // The new file request
@@ -488,7 +480,7 @@ static void SV_SendFile(INT32 node, const char *filename, UINT8 fileid)
 	char wadfilename[MAX_WADPATH];
 
 	if (cv_noticedownload.value)
-		CONS_Printf("Sending file \"%s\" to node %d\n", filename, node);
+		CONS_Printf("Sending file \"%s\" to node %d (%s)\n", filename, node, I_GetNodeAddress(node));
 
 	// Find the last file in the list and set a pointer to its "next" field
 	q = &transfer[node].txlist;
@@ -537,7 +529,7 @@ static void SV_SendFile(INT32 node, const char *filename, UINT8 fileid)
 		free(p->id.filename);
 		free(p);
 		*q = NULL;
-		return;
+		return false; // cancel the rest of the requests
 	}
 
 	// Handle huge file requests (i.e. bigger than cv_maxsend.value KB)
@@ -549,7 +541,7 @@ static void SV_SendFile(INT32 node, const char *filename, UINT8 fileid)
 		free(p->id.filename);
 		free(p);
 		*q = NULL;
-		return;
+		return false; // cancel the rest of the requests
 	}
 
 	DEBFILE(va("Sending file %s (id=%d) to %d\n", filename, fileid, node));
@@ -557,6 +549,7 @@ static void SV_SendFile(INT32 node, const char *filename, UINT8 fileid)
 	p->fileid = fileid;
 	p->next = NULL; // End of list
 	filestosend++;
+	return true;
 }
 
 /** Adds a memory block to the file list for a node

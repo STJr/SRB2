@@ -77,7 +77,8 @@ INT16 maptol;
 UINT8 globalweather = 0;
 INT32 curWeather = PRECIP_NONE;
 INT32 cursaveslot = -1; // Auto-save 1p savegame slot
-INT16 lastmapsaved = 0; // Last map we auto-saved at
+//INT16 lastmapsaved = 0; // Last map we auto-saved at
+INT16 lastmaploaded = 0; // Last map the game loaded
 boolean gamecomplete = false;
 
 UINT16 mainwads = 0;
@@ -2309,6 +2310,9 @@ void G_SpawnPlayer(INT32 playernum, boolean starpost)
 	if (starpost) //Don't even bother with looking for a place to spawn.
 	{
 		P_MovePlayerToStarpost(playernum);
+#ifdef HAVE_BLUA
+		LUAh_PlayerSpawn(&players[playernum]); // Lua hook for player spawning :)
+#endif
 		return;
 	}
 
@@ -2633,7 +2637,7 @@ void G_ExitLevel(void)
 			CONS_Printf(M_GetText("The round has ended.\n"));
 
 		// Remove CEcho text on round end.
-		HU_DoCEcho("");
+		HU_ClearCEcho();
 	}
 }
 
@@ -2927,7 +2931,7 @@ void G_AfterIntermission(void)
 		if (nextmap < 1100-1)
 			G_NextLevel();
 		else
-			Y_EndGame();
+			G_EndGame();
 	}
 }
 
@@ -3011,6 +3015,38 @@ static void G_DoContinued(void)
 	D_MapChange(gamemap, gametype, ultimatemode, false, 0, false, false);
 
 	gameaction = ga_nothing;
+}
+
+//
+// G_EndGame (formerly Y_EndGame)
+// Frankly this function fits better in g_game.c than it does in y_inter.c
+//
+// ...Gee, (why) end the game?
+// Because G_AfterIntermission and F_EndCutscene would
+// both do this exact same thing *in different ways* otherwise,
+// which made it so that you could only unlock Ultimate mode
+// if you had a cutscene after the final level and crap like that.
+// This function simplifies it so only one place has to be updated
+// when something new is added.
+void G_EndGame(void)
+{
+	// Only do evaluation and credits in coop games.
+	if (gametype == GT_COOP)
+	{
+		if (nextmap == 1102-1) // end game with credits
+		{
+			F_StartCredits();
+			return;
+		}
+		if (nextmap == 1101-1) // end game with evaluation
+		{
+			F_StartGameEvaluation();
+			return;
+		}
+	}
+
+	// 1100 or competitive multiplayer, so go back to title screen.
+	D_StartTitle();
 }
 
 //
@@ -3898,7 +3934,7 @@ void G_GhostAddColor(ghostcolor_t color)
 	ghostext.color = (UINT8)color;
 }
 
-void G_GhostAddScale(UINT16 scale)
+void G_GhostAddScale(fixed_t scale)
 {
 	if (!demorecording || !(demoflags & DF_GHOST))
 		return;
