@@ -51,10 +51,6 @@ void R_SortVisSprites(void);
 //     (only sprites from namelist are added or replaced)
 void R_AddSpriteDefs(UINT16 wadnum);
 
-#ifdef DELFILE
-void R_DelSpriteDefs(UINT16 wadnum);
-#endif
-
 //SoM: 6/5/2000: Light sprites correctly!
 void R_AddSprites(sector_t *sec, INT32 lightlevel);
 void R_InitSprites(void);
@@ -127,9 +123,19 @@ typedef struct
 // -----------
 typedef enum
 {
+	// actual cuts
 	SC_NONE = 0,
 	SC_TOP = 1,
-	SC_BOTTOM = 2
+	SC_BOTTOM = 1<<1,
+	// other flags
+	SC_PRECIP = 1<<2,
+	SC_LINKDRAW = 1<<3,
+	SC_FULLBRIGHT = 1<<4,
+	SC_VFLIP = 1<<5,
+	SC_ISSCALED = 1>>6,
+	// masks
+	SC_CUTMASK = SC_TOP|SC_BOTTOM,
+	SC_FLAGMASK = ~SC_CUTMASK
 } spritecut_e;
 
 // A vissprite_t is a thing that will be drawn during a refresh,
@@ -139,6 +145,9 @@ typedef struct vissprite_s
 	// Doubly linked list.
 	struct vissprite_s *prev;
 	struct vissprite_s *next;
+
+	// Bonus linkdraw pointer.
+	struct vissprite_s *linkdraw;
 
 	mobj_t *mobj; // for easy access
 
@@ -178,9 +187,6 @@ typedef struct vissprite_s
 
 	INT16 clipbot[MAXVIDWIDTH], cliptop[MAXVIDWIDTH];
 
-	boolean precip;
-	boolean vflip; // Flip vertically
-	boolean isScaled;
 	INT32 dispoffset; // copy of info->dispoffset, affects ordering but not drawing
 } vissprite_t;
 
@@ -206,11 +212,10 @@ void SetPlayerSkinByNum(INT32 playernum,INT32 skinnum); // Tails 03-16-2002
 boolean R_SkinUsable(INT32 playernum, INT32 skinnum);
 UINT32 R_GetSkinAvailabilities(void);
 INT32 R_SkinAvailable(const char *name);
+void R_PatchSkins(UINT16 wadnum);
 void R_AddSkins(UINT16 wadnum);
 
-#ifdef DELFILE
-void R_DelSkins(UINT16 wadnum);
-#endif
+UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player);
 
 void R_InitDrawNodes(void);
 

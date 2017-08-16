@@ -359,7 +359,7 @@ static void P_DoAutobalanceTeams(void)
 	totalred = red + redflagcarrier;
 	totalblue = blue + blueflagcarrier;
 
-	if ((abs(totalred - totalblue) > cv_autobalance.value))
+	if ((abs(totalred - totalblue) > max(1, (totalred + totalblue) / 8)))
 	{
 		if (totalred > totalblue)
 		{
@@ -372,8 +372,7 @@ static void P_DoAutobalanceTeams(void)
 			usvalue  = SHORT(NetPacket.value.l|NetPacket.value.b);
 			SendNetXCmd(XD_TEAMCHANGE, &usvalue, sizeof(usvalue));
 		}
-
-		if (totalblue > totalred)
+		else //if (totalblue > totalred)
 		{
 			i = M_RandomKey(blue);
 			NetPacket.packet.newteam = 1;
@@ -651,7 +650,7 @@ void P_Ticker(boolean run)
 
 	if (run)
 	{
-		if (countdowntimer && --countdowntimer <= 0)
+		if (countdowntimer && G_PlatformGametype() && (gametype == GT_COOP || leveltime >= 4*TICRATE) && --countdowntimer <= 0)
 		{
 			countdowntimer = 0;
 			countdowntimeup = true;
@@ -663,6 +662,8 @@ void P_Ticker(boolean run)
 				if (!players[i].mo)
 					continue;
 
+				if (multiplayer || netgame)
+					players[i].exiting = 0;
 				P_DamageMobj(players[i].mo, NULL, NULL, 1, DMG_INSTAKILL);
 			}
 		}

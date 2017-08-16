@@ -40,8 +40,6 @@ void A_Scream();
 void A_BossDeath();
 void A_CustomPower(); // Use this for a custom power
 void A_GiveWeapon(); // Gives the player weapon(s)
-void A_JumpShield(); // Obtained Jump Shield
-void A_RingShield(); // Obtained Ring Shield
 void A_RingBox(); // Obtained Ring Box Tails
 void A_Invincibility(); // Obtained Invincibility Box
 void A_SuperSneakers(); // Obtained Super Sneakers Box
@@ -52,13 +50,7 @@ void A_BubbleRise(); // Bubbles float to surface
 void A_BubbleCheck(); // Don't draw if not underwater
 void A_AwardScore();
 void A_ExtraLife(); // Extra Life
-void A_BombShield(); // Obtained Bomb Shield
-void A_WaterShield(); // Obtained Water Shield
-void A_ForceShield(); // Obtained Force Shield
-void A_PityShield(); // Obtained Pity Shield. We're... sorry.
-void A_FlameShield(); // Obtained Flame Shield
-void A_BubbleShield(); // Obtained Bubble Shield
-void A_ThunderShield(); // Obtained Thunder Shield
+void A_GiveShield(); // Obtained Shield
 void A_GravityBox();
 void A_ScoreRise(); // Rise the score logo
 void A_ParticleSpawn();
@@ -84,7 +76,6 @@ void A_DetonChase(); // Deton Chaser
 void A_CapeChase(); // Fake little Super Sonic cape
 void A_RotateSpikeBall(); // Spike ball rotation
 void A_SlingAppear();
-void A_MaceRotate();
 void A_UnidusBall();
 void A_RockSpawn();
 void A_SetFuse();
@@ -417,6 +408,10 @@ typedef enum sprite
 	SPR_BMCH, // Big Mace Chain
 	SPR_SMCE, // Small Mace
 	SPR_BMCE, // Big Mace
+	SPR_YSPB, // Yellow spring on a ball
+	SPR_RSPB, // Red spring on a ball
+	SPR_SFBR, // Small Firebar
+	SPR_BFBR, // Big Firebar
 
 	// Arid Canyon Scenery
 	SPR_BTBL, // Big tumbleweed
@@ -1784,6 +1779,8 @@ typedef enum state
 	S_WALLSPIKE5,
 	S_WALLSPIKE6,
 	S_WALLSPIKEBASE,
+	S_WALLSPIKED1,
+	S_WALLSPIKED2,
 
 	// Starpost
 	S_STARPOST_IDLE,
@@ -2054,17 +2051,61 @@ typedef enum state
 	S_SLING1,
 	S_SLING2,
 
-	// CEZ Small Mace Chain
+	// CEZ maces and chains
 	S_SMALLMACECHAIN,
-
-	// CEZ Big Mace Chain
 	S_BIGMACECHAIN,
-
-	// CEZ Small Mace
 	S_SMALLMACE,
-
-	// CEZ Big Mace
 	S_BIGMACE,
+
+	// Yellow spring on a ball
+	S_YELLOWSPRINGBALL,
+	S_YELLOWSPRINGBALL2,
+	S_YELLOWSPRINGBALL3,
+	S_YELLOWSPRINGBALL4,
+	S_YELLOWSPRINGBALL5,
+
+	// Red spring on a ball
+	S_REDSPRINGBALL,
+	S_REDSPRINGBALL2,
+	S_REDSPRINGBALL3,
+	S_REDSPRINGBALL4,
+	S_REDSPRINGBALL5,
+
+	// Small Firebar
+	S_SMALLFIREBAR1,
+	S_SMALLFIREBAR2,
+	S_SMALLFIREBAR3,
+	S_SMALLFIREBAR4,
+	S_SMALLFIREBAR5,
+	S_SMALLFIREBAR6,
+	S_SMALLFIREBAR7,
+	S_SMALLFIREBAR8,
+	S_SMALLFIREBAR9,
+	S_SMALLFIREBAR10,
+	S_SMALLFIREBAR11,
+	S_SMALLFIREBAR12,
+	S_SMALLFIREBAR13,
+	S_SMALLFIREBAR14,
+	S_SMALLFIREBAR15,
+	S_SMALLFIREBAR16,
+
+	// Big Firebar
+	S_BIGFIREBAR1,
+	S_BIGFIREBAR2,
+	S_BIGFIREBAR3,
+	S_BIGFIREBAR4,
+	S_BIGFIREBAR5,
+	S_BIGFIREBAR6,
+	S_BIGFIREBAR7,
+	S_BIGFIREBAR8,
+	S_BIGFIREBAR9,
+	S_BIGFIREBAR10,
+	S_BIGFIREBAR11,
+	S_BIGFIREBAR12,
+	S_BIGFIREBAR13,
+	S_BIGFIREBAR14,
+	S_BIGFIREBAR15,
+	S_BIGFIREBAR16,
 
 	S_CEZFLOWER1,
 
@@ -3039,16 +3080,11 @@ typedef enum state
 	S_NIGHTSWING_XMAS,
 
 	// NiGHTS Paraloop Powerups
-	S_NIGHTSPOWERUP1,
-	S_NIGHTSPOWERUP2,
-	S_NIGHTSPOWERUP3,
-	S_NIGHTSPOWERUP4,
-	S_NIGHTSPOWERUP5,
-	S_NIGHTSPOWERUP6,
-	S_NIGHTSPOWERUP7,
-	S_NIGHTSPOWERUP8,
-	S_NIGHTSPOWERUP9,
-	S_NIGHTSPOWERUP10,
+	S_NIGHTSSUPERLOOP,
+	S_NIGHTSDRILLREFILL,
+	S_NIGHTSHELPER,
+	S_NIGHTSEXTRATIME,
+	S_NIGHTSLINKFREEZE,
 	S_EGGCAPSULE,
 
 	// Orbiting Chaos Emeralds
@@ -3424,14 +3460,20 @@ typedef enum mobj_type
 	MT_FLAMEPARTICLE,
 	MT_EGGSTATUE, // Eggman Statue
 	MT_MACEPOINT, // Mace rotation point
-	MT_SWINGMACEPOINT, // Mace swinging point
-	MT_HANGMACEPOINT, // Hangable mace chain
-	MT_SPINMACEPOINT, // Spin/Controllable mace chain
+	MT_CHAINMACEPOINT, // Combination of chains and maces point
+	MT_SPRINGBALLPOINT, // Spring ball point
+	MT_CHAINPOINT, // Mace chain
 	MT_HIDDEN_SLING, // Spin mace chain (activatable)
+	MT_FIREBARPOINT, // Firebar
+	MT_CUSTOMMACEPOINT, // Custom mace
 	MT_SMALLMACECHAIN, // Small Mace Chain
 	MT_BIGMACECHAIN, // Big Mace Chain
 	MT_SMALLMACE, // Small Mace
 	MT_BIGMACE, // Big Mace
+	MT_YELLOWSPRINGBALL, // Yellow spring on a ball
+	MT_REDSPRINGBALL, // Red spring on a ball
+	MT_SMALLFIREBAR, // Small Firebar
+	MT_BIGFIREBAR, // Big Firebar
 	MT_CEZFLOWER,
 
 	// Arid Canyon Scenery

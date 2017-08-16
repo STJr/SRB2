@@ -93,20 +93,12 @@ void A_Explode(mobj_t *actor);
 void A_BossDeath(mobj_t *actor);
 void A_CustomPower(mobj_t *actor);
 void A_GiveWeapon(mobj_t *actor);
-void A_JumpShield(mobj_t *actor);
-void A_RingShield(mobj_t *actor);
 void A_RingBox(mobj_t *actor);
 void A_Invincibility(mobj_t *actor);
 void A_SuperSneakers(mobj_t *actor);
 void A_AwardScore(mobj_t *actor);
 void A_ExtraLife(mobj_t *actor);
-void A_BombShield(mobj_t *actor);
-void A_WaterShield(mobj_t *actor);
-void A_ForceShield(mobj_t *actor);
-void A_PityShield(mobj_t *actor);
-void A_FlameShield(mobj_t *actor);
-void A_BubbleShield(mobj_t *actor);
-void A_ThunderShield(mobj_t *actor);
+void A_GiveShield(mobj_t *actor);
 void A_GravityBox(mobj_t *actor);
 void A_ScoreRise(mobj_t *actor);
 void A_ParticleSpawn(mobj_t *actor);
@@ -137,7 +129,6 @@ void A_DetonChase(mobj_t *actor);
 void A_CapeChase(mobj_t *actor);
 void A_RotateSpikeBall(mobj_t *actor);
 void A_SlingAppear(mobj_t *actor);
-void A_MaceRotate(mobj_t *actor);
 void A_UnidusBall(mobj_t *actor);
 void A_RockSpawn(mobj_t *actor);
 void A_SetFuse(mobj_t *actor);
@@ -840,6 +831,34 @@ static mobjtype_t P_DoRandomBoxChances(void)
 {
 	mobjtype_t spawnchance[256];
 	INT32 numchoices = 0, i = 0;
+
+	if (!(netgame || multiplayer))
+	{
+		switch (P_RandomKey(10))
+		{
+			case 0:
+				return MT_RING_ICON;
+			case 1:
+				return MT_SNEAKERS_ICON;
+			case 2:
+				return MT_INVULN_ICON;
+			case 3:
+				return MT_WHIRLWIND_ICON;
+			case 4:
+				return MT_ELEMENTAL_ICON;
+			case 5:
+				return MT_ATTRACT_ICON;
+			case 6:
+				return MT_FORCE_ICON;
+			case 7:
+				return MT_ARMAGEDDON_ICON;
+			case 8:
+				return MT_1UP_ICON;
+			case 9:
+				return MT_EGGMAN_ICON;
+		}
+		return MT_NULL;
+	}
 
 #define QUESTIONBOXCHANCES(type, cvar) \
 for (i = cvar.value; i; --i) spawnchance[numchoices++] = type
@@ -2835,8 +2854,8 @@ void A_BossDeath(mobj_t *mo)
 
 	// make sure there is a player alive for victory
 	for (i = 0; i < MAXPLAYERS; i++)
-		if (playeringame[i] && ((players[i].mo && players[i].mo->health > 0)
-			|| ((netgame || multiplayer) && (players[i].lives > 0 || players[i].continues > 0))))
+		if (playeringame[i] && ((players[i].mo && players[i].mo->health)
+			|| ((netgame || multiplayer) && (players[i].lives || players[i].continues))))
 			break;
 
 	if (i == MAXPLAYERS)
@@ -3057,62 +3076,6 @@ void A_GiveWeapon(mobj_t *actor)
 		S_StartSound(player->mo, actor->info->seesound);
 }
 
-// Function: A_JumpShield
-//
-// Description: Awards the player a jump shield.
-//
-// var1 = unused
-// var2 = unused
-//
-void A_JumpShield(mobj_t *actor)
-{
-	player_t *player;
-
-#ifdef HAVE_BLUA
-	if (LUA_CallAction("A_JumpShield", actor))
-		return;
-#endif
-	if (!actor->target || !actor->target->player)
-	{
-		CONS_Debug(DBG_GAMELOGIC, "Powerup has no target.\n");
-		return;
-	}
-
-	player = actor->target->player;
-
-	P_SwitchShield(player, SH_WHIRLWIND);
-
-	S_StartSound(player->mo, actor->info->seesound);
-}
-
-// Function: A_RingShield
-//
-// Description: Awards the player a ring shield.
-//
-// var1 = unused
-// var2 = unused
-//
-void A_RingShield(mobj_t *actor)
-{
-	player_t *player;
-
-#ifdef HAVE_BLUA
-	if (LUA_CallAction("A_RingShield", actor))
-		return;
-#endif
-	if (!actor->target || !actor->target->player)
-	{
-		CONS_Debug(DBG_GAMELOGIC, "Powerup has no target.\n");
-		return;
-	}
-
-	player = actor->target->player;
-
-	P_SwitchShield(player, SH_ATTRACT);
-
-	S_StartSound(player->mo, actor->info->seesound);
-}
-
 // Function: A_RingBox
 //
 // Description: Awards the player 10 rings.
@@ -3280,25 +3243,28 @@ void A_ExtraLife(mobj_t *actor)
 
 	// In shooter gametypes, give the player 100 rings instead of an extra life.
 	if (gametype != GT_COOP && gametype != GT_COMPETITION)
+	{
 		P_GivePlayerRings(player, 100);
+		P_PlayLivesJingle(player);
+	}
 	else
-		P_GivePlayerLives(player, 1);
-	P_PlayLivesJingle(player);
+		P_GiveCoopLives(player, 1, true);
 }
 
-// Function: A_BombShield
+// Function: A_GiveShield
 //
-// Description: Awards the player a bomb shield.
+// Description: Awards the player a specified shield.
 //
-// var1 = unused
+// var1 = Shield type (make with SH_ constants)
 // var2 = unused
 //
-void A_BombShield(mobj_t *actor)
+void A_GiveShield(mobj_t *actor)
 {
 	player_t *player;
+	UINT16 locvar1 = var1;
 
 #ifdef HAVE_BLUA
-	if (LUA_CallAction("A_BombShield", actor))
+	if (LUA_CallAction("A_GiveShield", actor))
 		return;
 #endif
 	if (!actor->target || !actor->target->player)
@@ -3309,195 +3275,9 @@ void A_BombShield(mobj_t *actor)
 
 	player = actor->target->player;
 
-	// If you already have a bomb shield, use it!
-	if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ARMAGEDDON)
-		P_BlackOw(player);
-
-	// Now we know for certain that we don't have a bomb shield, so add one. :3
-	P_SwitchShield(player, SH_ARMAGEDDON);
-
+	P_SwitchShield(player, locvar1);
 	S_StartSound(player->mo, actor->info->seesound);
 }
-
-// Function: A_WaterShield
-//
-// Description: Awards the player a water shield.
-//
-// var1 = unused
-// var2 = unused
-//
-void A_WaterShield(mobj_t *actor)
-{
-	player_t *player;
-
-#ifdef HAVE_BLUA
-	if (LUA_CallAction("A_WaterShield", actor))
-		return;
-#endif
-	if (!actor->target || !actor->target->player)
-	{
-		CONS_Debug(DBG_GAMELOGIC, "Powerup has no target.\n");
-		return;
-	}
-
-	player = actor->target->player;
-
-	P_SwitchShield(player, SH_ELEMENTAL);
-
-	S_StartSound(player->mo, actor->info->seesound);
-}
-
-// Function: A_ForceShield
-//
-// Description: Awards the player a force shield.
-//
-// var1 = Number of additional hitpoints to give
-// var2 = unused
-//
-void A_ForceShield(mobj_t *actor)
-{
-	player_t *player;
-	INT32 locvar1 = var1;
-
-#ifdef HAVE_BLUA
-	if (LUA_CallAction("A_ForceShield", actor))
-		return;
-#endif
-	if (!actor->target || !actor->target->player)
-	{
-		CONS_Debug(DBG_GAMELOGIC, "Powerup has no target.\n");
-		return;
-	}
-
-	if (locvar1 & ~SH_FORCEHP)
-	{
-		CONS_Debug(DBG_GAMELOGIC, "Invalid number of additional hitpoints.\n");
-		return;
-	}
-
-	player = actor->target->player;
-
-	P_SwitchShield(player, SH_FORCE|locvar1);
-
-	S_StartSound(player->mo, actor->info->seesound);
-}
-
-// Function: A_PityShield
-//
-// Description: Awards the player a pity shield.
-// Because you fail it.
-// Your skill is not enough.
-// See you next time.
-// Bye-bye.
-//
-// var1 = unused
-// var2 = unused
-//
-void A_PityShield(mobj_t *actor)
-{
-	player_t *player;
-
-#ifdef HAVE_BLUA
-	if (LUA_CallAction("A_PityShield", actor))
-		return;
-#endif
-	if (!actor->target || !actor->target->player)
-	{
-		CONS_Debug(DBG_GAMELOGIC, "Powerup has no target.\n");
-		return;
-	}
-
-	player = actor->target->player;
-
-	P_SwitchShield(player, SH_PITY);
-
-	S_StartSound(player->mo, actor->info->seesound);
-}
-
-// Function: A_FlameShield
-//
-// Description: Awards the player a flame shield.
-//
-// var1 = unused
-// var2 = unused
-//
-void A_FlameShield(mobj_t *actor)
-{
-	player_t *player;
-
-#ifdef HAVE_BLUA
-	if (LUA_CallAction("A_FlameShield", actor))
-		return;
-#endif
-	if (!actor->target || !actor->target->player)
-	{
-		CONS_Debug(DBG_GAMELOGIC, "Powerup has no target.\n");
-		return;
-	}
-
-	player = actor->target->player;
-
-	P_SwitchShield(player, SH_FLAMEAURA);
-
-	S_StartSound(player->mo, actor->info->seesound);
-}
-
-// Function: A_BubbleShield
-//
-// Description: Awards the player a bubble shield.
-//
-// var1 = unused
-// var2 = unused
-//
-void A_BubbleShield(mobj_t *actor)
-{
-	player_t *player;
-
-#ifdef HAVE_BLUA
-	if (LUA_CallAction("A_BubbleShield", actor))
-		return;
-#endif
-	if (!actor->target || !actor->target->player)
-	{
-		CONS_Debug(DBG_GAMELOGIC, "Powerup has no target.\n");
-		return;
-	}
-
-	player = actor->target->player;
-
-	P_SwitchShield(player, SH_BUBBLEWRAP);
-
-	S_StartSound(player->mo, actor->info->seesound);
-}
-
-// Function: A_ThunderShield
-//
-// Description: Awards the player a thunder shield.
-//
-// var1 = unused
-// var2 = unused
-//
-void A_ThunderShield(mobj_t *actor)
-{
-	player_t *player;
-
-#ifdef HAVE_BLUA
-	if (LUA_CallAction("A_ThunderShield", actor))
-		return;
-#endif
-	if (!actor->target || !actor->target->player)
-	{
-		CONS_Debug(DBG_GAMELOGIC, "Powerup has no target.\n");
-		return;
-	}
-
-	player = actor->target->player;
-
-	P_SwitchShield(player, SH_THUNDERCOIN);
-
-	S_StartSound(player->mo, actor->info->seesound);
-}
-
 
 // Function: A_GravityBox
 //
@@ -3583,12 +3363,12 @@ void A_ParticleSpawn(mobj_t *actor)
 		spawn->tics = (tic_t)actor->health;
 		spawn->flags2 |= (actor->flags2 & MF2_OBJECTFLIP);
 		spawn->angle += P_RandomKey(36)*ANG10; // irrelevant for default objects but might make sense for some custom ones
-		if (spawn->frame & FF_ANIMATE)
-			spawn->frame += P_RandomKey(spawn->state->var1);
 
 		actor->angle += actor->movedir;
 	}
+
 	actor->angle += (angle_t)actor->movecount;
+	actor->tics = (tic_t)actor->reactiontime;
 }
 
 // Function: A_BunnyHop
@@ -4110,15 +3890,18 @@ void A_SetSolidSteam(mobj_t *actor)
 #endif
 	actor->flags &= ~MF_NOCLIP;
 	actor->flags |= MF_SOLID;
-	if (P_RandomChance(FRACUNIT/8))
+	if (!(actor->flags2 & MF2_AMBUSH))
 	{
-		if (actor->info->deathsound)
-			S_StartSound(actor, actor->info->deathsound); // Hiss!
-	}
-	else
-	{
-		if (actor->info->painsound)
-			S_StartSound(actor, actor->info->painsound);
+		if (P_RandomChance(FRACUNIT/8))
+		{
+			if (actor->info->deathsound)
+				S_StartSound(actor, actor->info->deathsound); // Hiss!
+		}
+		else
+		{
+			if (actor->info->painsound)
+				S_StartSound(actor, actor->info->painsound);
+		}
 	}
 
 	P_SetObjectMomZ (actor, 1, true);
@@ -4178,12 +3961,12 @@ void A_SignPlayer(mobj_t *actor)
 		of in the name. If you have a better idea, feel free
 		to let me know. ~toast 2016/07/20
 		*/
-		actor->frame += Color_Opposite[Color_Opposite[skin->prefoppositecolor*2]*2+1];
+		actor->frame += (15 - Color_Opposite[(Color_Opposite[(skin->prefoppositecolor - 1)*2] - 1)*2 + 1]);
 	}
-	else // Set the sign to be an appropriate background color for this player's skincolor.
+	else if (actor->target->player->skincolor) // Set the sign to be an appropriate background color for this player's skincolor.
 	{
-		actor->color = Color_Opposite[actor->target->player->skincolor*2];
-		actor->frame += Color_Opposite[actor->target->player->skincolor*2+1];
+		actor->color = Color_Opposite[(actor->target->player->skincolor - 1)*2];
+		actor->frame += (15 - Color_Opposite[(actor->target->player->skincolor - 1)*2 + 1]);
 	}
 
 	if (skin->sprites[SPR2_SIGN].numframes)
@@ -5142,15 +4925,12 @@ void A_SlingAppear(mobj_t *actor)
 	actor->movefactor = actor->threshold;
 	actor->friction = 128;
 
-	actor->flags |= MF_SLIDEME;
-
 	while (mlength > 0)
 	{
 		spawnee = P_SpawnMobj(actor->x, actor->y, actor->z, MT_SMALLMACECHAIN);
 
 		P_SetTarget(&spawnee->target, actor);
 
-		spawnee->movecount = 0;
 		spawnee->threshold = 0;
 		spawnee->reactiontime = mlength;
 
@@ -5163,129 +4943,6 @@ void A_SlingAppear(mobj_t *actor)
 
 		mlength--;
 	}
-}
-
-//
-// Function: A_MaceRotate
-//
-// Spins an object around its target, or, swings it from side to side.
-//
-// var1 = unused
-// var2 = unused
-//
-// So NOBODY forgets:
-// actor->
-// threshold - X tilt
-// movecount - Z tilt
-// reactiontime - link # in the chain (1 is closest)
-// lastlook - speed
-// friction - top speed
-// movedir - current angle holder
-// extravalue1 - smoothly move link into place
-//
-void A_MaceRotate(mobj_t *actor)
-{
-	TVector v;
-	TVector *res;
-	fixed_t radius;
-#ifdef HAVE_BLUA
-	if (LUA_CallAction("A_MaceRotate", actor))
-		return;
-#endif
-
-	// Target was removed.
-	if (!actor->target)
-	{
-		P_RemoveMobj(actor);
-		return;
-	}
-
-	P_UnsetThingPosition(actor);
-
-	// Radius of the link's rotation.
-	radius = FixedMul(actor->info->speed * actor->reactiontime, actor->target->scale);
-
-	// Double the radius if the chain links are made up of maces.
-	if (actor->target->type == MT_AXIS && (actor->type == MT_SMALLMACE || actor->type == MT_BIGMACE))
-		radius *= 2;
-
-	// Axis offset for the axis.
-	radius += actor->target->extravalue1;
-
-	// Smoothly move the link into position.
-	if (actor->extravalue1)
-	{
-		radius = FixedMul(radius, FixedDiv(actor->extravalue1, 100));
-		actor->extravalue1 += 1;
-		if (actor->extravalue1 >= 100)
-			actor->extravalue1 = 0;
-	}
-
-	actor->x = actor->target->x;
-	actor->y = actor->target->y;
-	actor->z = actor->target->z;
-
-	// Cut the height to align the link with the axis.
-	if (actor->type == MT_SMALLMACECHAIN || actor->type == MT_BIGMACECHAIN)
-		actor->z -= actor->height/4;
-	else
-		actor->z -= actor->height/2;
-
-	// Set the top speed for the link if it happens to be over that speed.
-	if (actor->target->lastlook > actor->target->friction)
-		actor->target->lastlook = actor->target->friction;
-
-	// Swinging Chain.
-	if (actor->target->type == MT_HANGMACEPOINT || actor->target->type == MT_SWINGMACEPOINT)
-	{
-		actor->movecount += actor->target->lastlook;
-		actor->movecount &= FINEMASK;
-
-		actor->threshold = FixedMul(FINECOSINE(actor->movecount), actor->target->lastlook << FRACBITS);
-
-		v[0] = FRACUNIT;
-		v[1] = 0;
-		v[2] = -radius;
-		v[3] = FRACUNIT;
-
-		// Calculate the angle matrixes for the link.
-		res = VectorMatrixMultiply(v, *RotateXMatrix(FixedAngle(actor->threshold)));
-		M_Memcpy(&v, res, sizeof(v));
-		res = VectorMatrixMultiply(v, *RotateZMatrix(actor->target->health << ANGLETOFINESHIFT));
-		M_Memcpy(&v, res, sizeof(v));
-	}
-	// Rotating Chain.
-	else
-	{
-		angle_t fa;
-
-		actor->threshold += actor->target->lastlook;
-		actor->threshold &= FINEMASK;
-		actor->target->health &= FINEMASK;
-
-		fa = actor->threshold;
-		v[0] = FixedMul(FINECOSINE(fa), radius);
-		v[1] = 0;
-		v[2] = FixedMul(FINESINE(fa), radius);
-		v[3] = FRACUNIT;
-
-		// Calculate the angle matrixes for the link.
-		res = VectorMatrixMultiply(v, *RotateXMatrix(actor->target->threshold << ANGLETOFINESHIFT));
-		M_Memcpy(&v, res, sizeof(v));
-		res = VectorMatrixMultiply(v, *RotateZMatrix(actor->target->health << ANGLETOFINESHIFT));
-		M_Memcpy(&v, res, sizeof(v));
-	}
-
-	// Add on the appropriate distances to the actor's co-ordinates.
-	actor->x += v[0];
-	actor->y += v[1];
-	actor->z += v[2];
-
-	P_SetThingPosition(actor);
-
-	if (!(actor->target->flags2 & MF2_BOSSNOTRAP) // flag that makes maces shut up on request
-	&& !(leveltime & 63) && (actor->type == MT_BIGMACE || actor->type == MT_SMALLMACE) && actor->target->type == MT_MACEPOINT)
-		S_StartSound(actor, actor->info->activesound);
 }
 
 // Function: A_SetFuse
@@ -5627,7 +5284,10 @@ void A_MixUp(mobj_t *actor)
 		}
 
 	if (numplayers <= 1) // Not enough players to mix up.
+	{
+		S_StartSound(actor, sfx_lose);
 		return;
+	}
 	else if (numplayers == 2) // Special case -- simple swap
 	{
 		fixed_t x, y, z;
@@ -5873,7 +5533,10 @@ void A_RecyclePowers(mobj_t *actor)
 #endif
 
 	if (!multiplayer)
+	{
+		S_StartSound(actor, sfx_lose);
 		return;
+	}
 
 	numplayers = 0;
 
@@ -5909,7 +5572,10 @@ void A_RecyclePowers(mobj_t *actor)
 	}
 
 	if (numplayers <= 1)
+	{
+		S_StartSound(actor, sfx_lose);
 		return; //nobody to touch!
+	}
 
 	//shuffle the post scramble list, whee!
 	// hardcoded 0-1 to 1-0 for two players
@@ -9389,8 +9055,8 @@ void A_ForceWin(mobj_t *actor)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (playeringame[i] && ((players[i].mo && players[i].mo->health > 0)
-		    || ((netgame || multiplayer) && (players[i].lives > 0 || players[i].continues > 0))))
+		if (playeringame[i] && ((players[i].mo && players[i].mo->health)
+		    || ((netgame || multiplayer) && (players[i].lives || players[i].continues))))
 			break;
 	}
 
@@ -10791,26 +10457,33 @@ void A_FlickyFlutter(mobj_t *actor)
 // Description: Creates the mobj's painchance at a random position around the object's radius.
 //
 // var1 = momz of particle.
+// var2 = chance of particle spawn
 //
 void A_FlameParticle(mobj_t *actor)
 {
 	mobjtype_t type = (mobjtype_t)(mobjinfo[actor->type].painchance);
+	fixed_t rad, hei;
+	mobj_t *particle;
 	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
 
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_FlameParticle", actor))
 		return;
 #endif
 
-	if (type)
-	{
-		fixed_t rad = 2*actor->radius>>FRACBITS;
-		fixed_t hei = actor->height>>FRACBITS;
-		mobj_t *particle = P_SpawnMobjFromMobj(actor,
-			P_RandomRange(rad, -rad)<<FRACBITS,
-			P_RandomRange(rad, -rad)<<FRACBITS,
-			P_RandomRange(hei/2, hei)<<FRACBITS,
-			type);
-		P_SetObjectMomZ(particle, locvar1<<FRACBITS, false);
-	}
+	if (!P_RandomChance(locvar2))
+		return;
+
+	if (!type)
+		return;
+
+	rad = 2*actor->radius>>FRACBITS;
+	hei = actor->height>>FRACBITS;
+	particle = P_SpawnMobjFromMobj(actor,
+		P_RandomRange(rad, -rad)<<FRACBITS,
+		P_RandomRange(rad, -rad)<<FRACBITS,
+		P_RandomRange(hei/2, hei)<<FRACBITS,
+		type);
+	P_SetObjectMomZ(particle, locvar1<<FRACBITS, false);
 }

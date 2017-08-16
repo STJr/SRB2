@@ -109,8 +109,8 @@ static int lib_addHook(lua_State *L)
 
 	luaL_checktype(L, 1, LUA_TFUNCTION);
 
-	if (hud_running)
-		return luaL_error(L, "HUD rendering code should not call this function!");
+	if (!lua_lumploading)
+		return luaL_error(L, "This function cannot be called from within a hook or coroutine!");
 
 	switch(hook.type)
 	{

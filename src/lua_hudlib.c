@@ -765,6 +765,9 @@ static int lib_hudadd(lua_State *L)
 	luaL_checktype(L, 1, LUA_TFUNCTION);
 	field = luaL_checkoption(L, 2, "game", hudhook_opt);
 
+	if (!lua_lumploading)
+		return luaL_error(L, "This function cannot be called from within a hook or coroutine!");
+
 	lua_getfield(L, LUA_REGISTRYINDEX, "HUD");
 	I_Assert(lua_istable(L, -1));
 	lua_rawgeti(L, -1, field+2); // HUD[2+]
