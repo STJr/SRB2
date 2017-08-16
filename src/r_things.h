@@ -215,6 +215,8 @@ INT32 R_SkinAvailable(const char *name);
 void R_PatchSkins(UINT16 wadnum);
 void R_AddSkins(UINT16 wadnum);
 
+UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player);
+
 void R_InitDrawNodes(void);
 
 char *GetPlayerFacePic(INT32 skinnum);

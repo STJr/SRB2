@@ -2166,6 +2166,7 @@ lumpnum_t lastloadedmaplumpnum; // for comparative savegame
 static void P_LevelInitStuff(void)
 {
 	INT32 i;
+	boolean canresetlives = true;
 
 	leveltime = 0;
 
@@ -2183,7 +2184,18 @@ static void P_LevelInitStuff(void)
 
 	// map time limit
 	if (mapheaderinfo[gamemap-1]->countdown)
+	{
+		tic_t maxtime = 0;
 		countdowntimer = mapheaderinfo[gamemap-1]->countdown * TICRATE;
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			if (!playeringame[i])
+				continue;
+			if (players[i].starposttime > maxtime)
+				maxtime = players[i].starposttime;
+		}
+		countdowntimer -= maxtime;
+	}
 	else
 		countdowntimer = 0;
 	countdowntimeup = false;
@@ -2205,9 +2217,21 @@ static void P_LevelInitStuff(void)
 	// earthquake camera
 	memset(&quake,0,sizeof(struct quake));
 
+	if ((netgame || multiplayer) && gametype == GT_COOP && cv_coopstarposts.value == 2)
+	{
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			if (playeringame[i] && players[i].lives > 0)
+			{
+				canresetlives = false;
+				break;
+			}
+		}
+	}
+
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if ((netgame || multiplayer) && (gametype == GT_COMPETITION || players[i].lives <= 0))
+		if (canresetlives && (netgame || multiplayer) && playeringame[i] && (gametype == GT_COMPETITION || players[i].lives <= 0))
 		{
 			// In Co-Op, replenish a user's lives if they are depleted.
 			players[i].lives = cv_startinglives.value;
@@ -2820,6 +2844,19 @@ boolean P_SetupLevel(boolean skipprecip)
 					G_SpawnPlayer(i, false);
 			}
 		}
+
+	// restore time in netgame (see also g_game.c)
+	if ((netgame || multiplayer) && gametype == GT_COOP && cv_coopstarposts.value == 2)
+	{
+		// is this a hack? maybe
+		tic_t maxstarposttime = 0;
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			if (playeringame[i] && players[i].starposttime > maxstarposttime)
+				maxstarposttime = players[i].starposttime;
+		}
+		leveltime = maxstarposttime;
+	}
 
 	if (modeattacking == ATTACKING_RECORD && !demoplayback)
 		P_LoadRecordGhosts();

@@ -768,8 +768,16 @@ static void resynch_read_player(resynch_pak *rsp)
 	players[i].mo->scalespeed = LONG(rsp->scalespeed);
 
 	// And finally, SET THE MOBJ SKIN damn it.
-	players[i].mo->skin = &skins[players[i].skin];
-	players[i].mo->color = players[i].skincolor;
+	if ((players[i].powers[pw_carry] == CR_NIGHTSMODE) && (skins[players[i].skin].sprites[SPR2_NGT0].numframes == 0))
+	{
+		players[i].mo->skin = &skins[DEFAULTNIGHTSSKIN];
+		players[i].mo->color = skins[DEFAULTNIGHTSSKIN].prefcolor; // this will be corrected by thinker to super flash
+	}
+	else
+	{
+		players[i].mo->skin = &skins[players[i].skin];
+		players[i].mo->color = players[i].skincolor; // this will be corrected by thinker to super flash/mario star
+	}
 
 	P_SetThingPosition(players[i].mo);
 }
@@ -883,6 +891,7 @@ static inline void resynch_write_others(resynchend_pak *rst)
 	UINT8 i;
 
 	rst->ingame = 0;
+	rst->outofcoop = 0;
 
 	for (i = 0; i < MAXPLAYERS; ++i)
 	{
@@ -899,6 +908,8 @@ static inline void resynch_write_others(resynchend_pak *rst)
 
 		if (!players[i].spectator)
 			rst->ingame |= (1<<i);
+		if (players[i].outofcoop)
+			rst->outofcoop |= (1<<i);
 		rst->ctfteam[i] = (INT32)LONG(players[i].ctfteam);
 		rst->score[i] = (UINT32)LONG(players[i].score);
 		rst->numboxes[i] = SHORT(players[i].numboxes);
@@ -915,11 +926,13 @@ static inline void resynch_read_others(resynchend_pak *p)
 {
 	UINT8 i;
 	UINT32 loc_ingame = (UINT32)LONG(p->ingame);
+	UINT32 loc_outofcoop = (UINT32)LONG(p->outofcoop);
 
 	for (i = 0; i < MAXPLAYERS; ++i)
 	{
 		// We don't care if they're in the game or not, just write all the data.
 		players[i].spectator = !(loc_ingame & (1<<i));
+		players[i].outofcoop = (loc_outofcoop & (1<<i));
 		players[i].ctfteam = (INT32)LONG(p->ctfteam[i]); // no, 0 does not mean spectator, at least not in Match
 		players[i].score = (UINT32)LONG(p->score[i]);
 		players[i].numboxes = SHORT(p->numboxes[i]);
@@ -1319,7 +1332,7 @@ static void SV_SendPlayerInfo(INT32 node)
 		netbuffer->u.playerinfo[i].skin = (UINT8)players[i].skin;
 
 		// Extra data
-		netbuffer->u.playerinfo[i].data = players[i].skincolor;
+		netbuffer->u.playerinfo[i].data = 0; //players[i].skincolor;
 
 		if (players[i].pflags & PF_TAGIT)
 			netbuffer->u.playerinfo[i].data |= 0x20;

@@ -136,6 +136,7 @@ typedef struct
 	fixed_t flagz[2];
 
 	UINT32 ingame;  // Spectator bit for each player
+	UINT32 outofcoop;  // outofcoop bit for each player
 	INT32 ctfteam[MAXPLAYERS]; // Which team? (can't be 1 bit, since in regular Match there are no teams)
 
 	// Resynch game scores and the like all at once

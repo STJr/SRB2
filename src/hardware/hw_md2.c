@@ -945,7 +945,6 @@ static void HWR_CreateBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, 
 {
 	UINT16 w = gpatch->width, h = gpatch->height;
 	UINT32 size = w*h;
-	UINT8 c = 255;
 	RGBA_t *image, *blendimage, *cur, blendcolor;
 
 	if (grmip->width == 0)
@@ -969,59 +968,10 @@ static void HWR_CreateBlendedTexture(GLPatch_t *gpatch, GLPatch_t *blendgpatch, 
 	image = gpatch->mipmap.grInfo.data;
 	blendimage = blendgpatch->mipmap.grInfo.data;
 
-#define SUPERCOLORBLEND(name, c1, c2, c3, c4, c5) \
-		case SKINCOLOR_SUPER ## name ## 1: c = c1; break; \
-		case SKINCOLOR_SUPER ## name ## 2: c = c2; break; \
-		case SKINCOLOR_SUPER ## name ## 3: c = c3; break; \
-		case SKINCOLOR_SUPER ## name ## 4: c = c4; break; \
-		case SKINCOLOR_SUPER ## name ## 5: c = c5; break;
-
-	switch (color)
-	{
-		case SKINCOLOR_WHITE:    c = 3; break;
-		case SKINCOLOR_SILVER:   c = 10; break;
-		case SKINCOLOR_GREY:     c = 15; break;
-		case SKINCOLOR_BLACK:    c = 27; break;
-		case SKINCOLOR_BEIGE:    c = 247; break;
-		case SKINCOLOR_PEACH:    c = 218; break;
-		case SKINCOLOR_BROWN:    c = 234; break;
-		case SKINCOLOR_RED:      c = 38; break;
-		case SKINCOLOR_CRIMSON:  c = 45; break;
-		case SKINCOLOR_ORANGE:   c = 54; break;
-		case SKINCOLOR_RUST:     c = 60; break;
-		case SKINCOLOR_GOLD:     c = 67; break;
-		case SKINCOLOR_YELLOW:   c = 73; break;
-		case SKINCOLOR_TAN:      c = 85; break;
-		case SKINCOLOR_MOSS:     c = 92; break;
-		case SKINCOLOR_PERIDOT:  c = 188; break;
-		case SKINCOLOR_GREEN:    c = 101; break;
-		case SKINCOLOR_EMERALD:  c = 112; break;
-		case SKINCOLOR_AQUA:     c = 122; break;
-		case SKINCOLOR_TEAL:     c = 141; break;
-		case SKINCOLOR_CYAN:     c = 131; break;
-		case SKINCOLOR_BLUE:     c = 152; break;
-		case SKINCOLOR_AZURE:    c = 171; break;
-		case SKINCOLOR_PASTEL:   c = 161; break;
-		case SKINCOLOR_PURPLE:   c = 165; break;
-		case SKINCOLOR_LAVENDER: c = 195; break;
-		case SKINCOLOR_MAGENTA:  c = 183; break;
-		case SKINCOLOR_PINK:     c = 211; break;
-		case SKINCOLOR_ROSY:     c = 202; break;
-
-		SUPERCOLORBLEND(SILVER,    0,   2,   4,   7,  10) // Super silver
-		SUPERCOLORBLEND(RED,     208, 210,  32,  33,  35) // Super red
-		SUPERCOLORBLEND(ORANGE,  208,  48,  50,  54,  58) // Super orange
-		SUPERCOLORBLEND(GOLD,     80,  83,  73,  64,  67) // Super gold
-		SUPERCOLORBLEND(PERIDOT,  88, 188, 189, 190, 191) // Super peridot
-		SUPERCOLORBLEND(CYAN,    128, 131, 133, 134, 136) // Super cyan
-		SUPERCOLORBLEND(PURPLE,  144, 162, 164, 166, 168) // Super purple
-		SUPERCOLORBLEND(RUST,     51,  54,  68,  70, 234) // Super rust
-		SUPERCOLORBLEND(TAN,      80,  82,  84,  87, 247) // Super tan
-		default: c = 255; break;
-	}
-	blendcolor = V_GetColor(c);
-
-#undef SUPERCOLORBLEND
+	if (color == SKINCOLOR_NONE || color >= MAXTRANSLATIONS)
+		blendcolor = V_GetColor(0xff);
+	else
+		blendcolor = V_GetColor(Color_Index[color-1][4]);
 
 	while (size--)
 	{

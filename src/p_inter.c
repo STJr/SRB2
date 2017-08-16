@@ -1293,13 +1293,40 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if (player->starpostnum >= special->health)
 				return; // Already hit this post
 
-			// Save the player's time and position.
-			player->starposttime = leveltime;
-			player->starpostx = toucher->x>>FRACBITS;
-			player->starposty = toucher->y>>FRACBITS;
-			player->starpostz = special->z>>FRACBITS;
-			player->starpostangle = special->angle;
-			player->starpostnum = special->health;
+			if (cv_coopstarposts.value && gametype == GT_COOP && (netgame || multiplayer))
+			{
+				for (i = 0; i < MAXPLAYERS; i++)
+				{
+					if (playeringame[i])
+					{
+						if (players[i].bot) // ignore dumb, stupid tails
+							continue;
+
+						players[i].starposttime = leveltime;
+						players[i].starpostx = player->mo->x>>FRACBITS;
+						players[i].starposty = player->mo->y>>FRACBITS;
+						players[i].starpostz = special->z>>FRACBITS;
+						players[i].starpostangle = special->angle;
+						players[i].starpostnum = special->health;
+
+						if (cv_coopstarposts.value == 2 && (players[i].playerstate == PST_DEAD || players[i].spectator) && P_GetLives(&players[i]))
+							P_SpectatorJoinGame(&players[i]); //players[i].playerstate = PST_REBORN;
+					}
+				}
+				S_StartSound(NULL, special->info->painsound);
+			}
+			else
+			{
+				// Save the player's time and position.
+				player->starposttime = leveltime;
+				player->starpostx = toucher->x>>FRACBITS;
+				player->starposty = toucher->y>>FRACBITS;
+				player->starpostz = special->z>>FRACBITS;
+				player->starpostangle = special->angle;
+				player->starpostnum = special->health;
+				S_StartSound(toucher, special->info->painsound);
+			}
+
 			P_ClearStarPost(special->health);
 
 			// Find all starposts in the level with this value.
@@ -2230,14 +2257,34 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 		target->flags |= MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY;
 		P_SetThingPosition(target);
 
-		if (!target->player->bot && !G_IsSpecialStage(gamemap)
+		if ((target->player->lives <= 1) && (netgame || multiplayer) && (gametype == GT_COOP) && (cv_cooplives.value == 0))
+			;
+		else if (!target->player->bot && !target->player->spectator && !G_IsSpecialStage(gamemap)
 		 && G_GametypeUsesLives())
 		{
 			target->player->lives -= 1; // Lose a life Tails 03-11-2000
 
 			if (target->player->lives <= 0) // Tails 03-14-2000
 			{
-				if (P_IsLocalPlayer(target->player)/* && target->player == &players[consoleplayer] */)
+				boolean gameovermus = false;
+				if ((netgame || multiplayer) && (gametype == GT_COOP) && (cv_cooplives.value != 1))
+				{
+					INT32 i;
+					for (i = 0; i < MAXPLAYERS; i++)
+					{
+						if (!playeringame[i])
+							continue;
+
+						if (players[i].lives > 0)
+							break;
+					}
+					if (i == MAXPLAYERS)
+						gameovermus = true;
+				}
+				else if (P_IsLocalPlayer(target->player))
+					gameovermus = true;
+
+				if (gameovermus)
 				{
 					S_StopMusic(); // Stop the Music! Tails 03-14-2000
 					S_ChangeMusicInternal("_gover", false); // Yousa dead now, Okieday? Tails 03-14-2000
