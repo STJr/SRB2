@@ -344,15 +344,6 @@ void ST_LoadFaceGraphics(char *facestr, char *superstr, INT32 skinnum)
 	facefreed[skinnum] = false;
 }
 
-#ifdef DELFILE
-void ST_UnLoadFaceGraphics(INT32 skinnum)
-{
-	Z_Free(faceprefix[skinnum]);
-	Z_Free(superprefix[skinnum]);
-	facefreed[skinnum] = true;
-}
-#endif
-
 void ST_ReloadSkinFaceGraphics(void)
 {
 	INT32 i;

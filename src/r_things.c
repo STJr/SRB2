@@ -20,6 +20,7 @@
 #include "z_zone.h"
 #include "m_menu.h" // character select
 #include "m_misc.h"
+#include "info.h" // spr2names
 #include "i_video.h" // rendermode
 #include "r_things.h"
 #include "r_plane.h"
@@ -30,6 +31,7 @@
 #include "d_netfil.h" // blargh. for nameonly().
 #include "m_cheat.h" // objectplace
 #include "m_cond.h"
+#include "fastcmp.h"
 #ifdef HWRENDER
 #include "hardware/hw_md2.h"
 #endif
@@ -428,117 +430,6 @@ void R_AddSpriteDefs(UINT16 wadnum)
 	nameonly(strcpy(wadname, wadfiles[wadnum]->filename));
 	CONS_Printf(M_GetText("%s added %d frames in %s sprites\n"), wadname, end-start, sizeu1(addsprites));
 }
-
-#ifdef DELFILE
-static void R_RemoveSpriteLump(UINT16 wad,            // graphics patch
-                               UINT16 lump,
-                               size_t lumpid,      // identifier
-                               UINT8 frame,
-                               UINT8 rotation,
-                               UINT8 flipped)
-{
-	(void)wad; /// \todo: how do I remove sprites?
-	(void)lump;
-	(void)lumpid;
-	(void)frame;
-	(void)rotation;
-	(void)flipped;
-}
-
-static boolean R_DelSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16 wadnum, UINT16 startlump, UINT16 endlump)
-{
-	UINT16 l;
-	UINT8 frame;
-	UINT8 rotation;
-	lumpinfo_t *lumpinfo;
-
-	maxframe = (size_t)-1;
-
-	// scan the lumps,
-	//  filling in the frames for whatever is found
-	lumpinfo = wadfiles[wadnum]->lumpinfo;
-	if (endlump > wadfiles[wadnum]->numlumps)
-		endlump = wadfiles[wadnum]->numlumps;
-
-	for (l = startlump; l < endlump; l++)
-	{
-		if (memcmp(lumpinfo[l].name,sprname,4)==0)
-		{
-			frame = (UINT8)(lumpinfo[l].name[4] - 'A');
-			rotation = (UINT8)(lumpinfo[l].name[5] - '0');
-
-			// skip NULL sprites from very old dmadds pwads
-			if (W_LumpLengthPwad(wadnum,l)<=8)
-				continue;
-
-			//----------------------------------------------------
-
-			R_RemoveSpriteLump(wadnum, l, numspritelumps, frame, rotation, 0);
-
-			if (lumpinfo[l].name[6])
-			{
-				frame = (UINT8)(lumpinfo[l].name[6] - 'A');
-				rotation = (UINT8)(lumpinfo[l].name[7] - '0');
-				R_RemoveSpriteLump(wadnum, l, numspritelumps, frame, rotation, 1);
-			}
-		}
-	}
-
-	if (maxframe == (size_t)-1)
-		return false;
-
-	spritedef->numframes = 0;
-	Z_Free(spritedef->spriteframes);
-	spritedef->spriteframes = NULL;
-	return true;
-}
-
-void R_DelSpriteDefs(UINT16 wadnum)
-{
-	size_t i, delsprites = 0;
-	UINT16 start, end;
-
-	// find the sprites section in this pwad
-	// we need at least the S_END
-	// (not really, but for speedup)
-
-	start = W_CheckNumForNamePwad("S_START", wadnum, 0);
-	if (start == INT16_MAX)
-		start = W_CheckNumForNamePwad("SS_START", wadnum, 0); //deutex compatib.
-	if (start == INT16_MAX)
-		start = 0; //let say S_START is lump 0
-	else
-		start++;   // just after S_START
-
-	end = W_CheckNumForNamePwad("S_END",wadnum,start);
-	if (end == INT16_MAX)
-		end = W_CheckNumForNamePwad("SS_END",wadnum,start);     //deutex compatib.
-	if (end == INT16_MAX)
-	{
-		CONS_Debug(DBG_SETUP, "no sprites in pwad %d\n", wadnum);
-		return;
-		//I_Error("R_DelSpriteDefs: S_END, or SS_END missing for sprites "
-		//         "in pwad %d\n",wadnum);
-	}
-
-	//
-	// scan through lumps, for each sprite, find all the sprite frames
-	//
-	for (i = 0; i < numsprites; i++)
-	{
-		spritename = sprnames[i];
-
-		if (R_DelSingleSpriteDef(spritename, &sprites[i], wadnum, start, end))
-		{
-			// if a new sprite was removed (not just replaced)
-			delsprites++;
-			CONS_Debug(DBG_SETUP, "sprite %s set in pwad %d\n", spritename, wadnum);
-		}
-	}
-
-	CONS_Printf(M_GetText("%s sprites removed from file %s\n"), sizeu1(delsprites), wadfiles[wadnum]->filename);
-}
-#endif
 
 //
 // GAME FUNCTIONS
@@ -2778,6 +2669,189 @@ static UINT16 W_CheckForSkinMarkerInPwad(UINT16 wadid, UINT16 startlump)
 #define HUDNAMEWRITE(value) STRBUFCPY(skin->hudname, value)
 #endif
 
+// turn _ into spaces and . into katana dot
+#define SYMBOLCONVERT(name) for (value = name; *value; value++)\
+					{\
+						if (*value == '_') *value = ' ';\
+						else if (*value == '.') *value = '\x1E';\
+					}
+
+//
+// Patch skins from a pwad, each skin preceded by 'P_SKIN' marker
+//
+
+// Does the same is in w_wad, but check only for
+// the first 6 characters (this is so we can have P_SKIN1, P_SKIN2..
+// for wad editors that don't like multiple resources of the same name)
+//
+static UINT16 W_CheckForPatchSkinMarkerInPwad(UINT16 wadid, UINT16 startlump)
+{
+	UINT16 i;
+	const char *P_SKIN = "P_SKIN";
+	lumpinfo_t *lump_p;
+
+	// scan forward, start at <startlump>
+	if (startlump < wadfiles[wadid]->numlumps)
+	{
+		lump_p = wadfiles[wadid]->lumpinfo + startlump;
+		for (i = startlump; i < wadfiles[wadid]->numlumps; i++, lump_p++)
+			if (memcmp(lump_p->name,P_SKIN,6)==0)
+				return i;
+	}
+	return INT16_MAX; // not found
+}
+
+static void R_LoadSkinSprites(UINT16 wadnum, UINT16 *lump, UINT16 *lastlump, skin_t *skin)
+{
+	UINT16 newlastlump;
+	UINT8 sprite2;
+
+	*lump += 1; // start after S_SKIN
+	*lastlump = W_CheckNumForNamePwad("S_END",wadnum,*lump); // stop at S_END
+
+	// old wadding practices die hard -- stop at S_SKIN (or P_SKIN) or S_START if they come before S_END.
+	newlastlump = W_CheckForSkinMarkerInPwad(wadnum,*lump);
+	if (newlastlump < *lastlump) *lastlump = newlastlump;
+	newlastlump = W_CheckForPatchSkinMarkerInPwad(wadnum,*lump);
+	if (newlastlump < *lastlump) *lastlump = newlastlump;
+	newlastlump = W_CheckNumForNamePwad("S_START",wadnum,*lump);
+	if (newlastlump < *lastlump) *lastlump = newlastlump;
+
+	// ...and let's handle super, too
+	newlastlump = W_CheckNumForNamePwad("S_SUPER",wadnum,*lump);
+	if (newlastlump < *lastlump)
+	{
+		newlastlump++;
+		// load all sprite sets we are aware of... for super!
+		for (sprite2 = 0; sprite2 < free_spr2; sprite2++)
+			R_AddSingleSpriteDef((spritename = spr2names[sprite2]), &skin->sprites[FF_SPR2SUPER|sprite2], wadnum, newlastlump, *lastlump);
+
+		newlastlump--;
+		*lastlump = newlastlump; // okay, make the normal sprite set loading end there
+	}
+
+	// load all sprite sets we are aware of... for normal stuff.
+	for (sprite2 = 0; sprite2 < free_spr2; sprite2++)
+		R_AddSingleSpriteDef((spritename = spr2names[sprite2]), &skin->sprites[sprite2], wadnum, *lump, *lastlump);
+
+}
+
+// returns whether found appropriate property
+static boolean R_ProcessPatchableFields(skin_t *skin, char *stoken, char *value)
+{
+	// custom translation table
+	if (!stricmp(stoken, "startcolor"))
+		skin->starttranscolor = atoi(value);
+
+#define FULLPROCESS(field) else if (!stricmp(stoken, #field)) skin->field = get_number(value);
+	// character type identification
+	FULLPROCESS(flags)
+	FULLPROCESS(ability)
+	FULLPROCESS(ability2)
+
+	FULLPROCESS(thokitem)
+	FULLPROCESS(spinitem)
+	FULLPROCESS(revitem)
+#undef FULLPROCESS
+
+#define GETFRACBITS(field) else if (!stricmp(stoken, #field)) skin->field = atoi(value)<<FRACBITS;
+	GETFRACBITS(normalspeed)
+	GETFRACBITS(runspeed)
+
+	GETFRACBITS(mindash)
+	GETFRACBITS(maxdash)
+	GETFRACBITS(actionspd)
+
+	GETFRACBITS(radius)
+	GETFRACBITS(height)
+	GETFRACBITS(spinheight)
+#undef GETFRACBITS
+
+#define GETINT(field) else if (!stricmp(stoken, #field)) skin->field = atoi(value);
+	GETINT(thrustfactor)
+	GETINT(accelstart)
+	GETINT(acceleration)
+#undef GETINT
+
+#define GETSKINCOLOR(field) else if (!stricmp(stoken, #field)) skin->field = R_GetColorByName(value);
+	GETSKINCOLOR(prefcolor)
+	GETSKINCOLOR(prefoppositecolor)
+#undef GETSKINCOLOR
+	else if (!stricmp(stoken, "supercolor"))
+		skin->supercolor = R_GetSuperColorByName(value);
+
+#define GETFLOAT(field) else if (!stricmp(stoken, #field)) skin->field = FLOAT_TO_FIXED(atof(value));
+	GETFLOAT(jumpfactor)
+	GETFLOAT(highresscale)
+	GETFLOAT(shieldscale)
+	GETFLOAT(camerascale)
+#undef GETFLOAT
+
+#define GETFLAG(field) else if (!stricmp(stoken, #field)) { \
+	strupr(value); \
+	if (atoi(value) || value[0] == 'T' || value[0] == 'Y') \
+		skin->flags |= (SF_##field); \
+	else \
+		skin->flags &= ~(SF_##field); \
+}
+	// parameters for individual character flags
+	// these are uppercase so they can be concatenated with SF_
+	// 1, true, yes are all valid values
+	GETFLAG(SUPER)
+	GETFLAG(NOSUPERSPIN)
+	GETFLAG(NOSPINDASHDUST)
+	GETFLAG(HIRES)
+	GETFLAG(NOSKID)
+	GETFLAG(NOSPEEDADJUST)
+	GETFLAG(RUNONWATER)
+	GETFLAG(NOJUMPSPIN)
+	GETFLAG(NOJUMPDAMAGE)
+	GETFLAG(STOMPDAMAGE)
+	GETFLAG(MARIODAMAGE)
+	GETFLAG(MACHINE)
+	GETFLAG(DASHMODE)
+	GETFLAG(FASTEDGE)
+	GETFLAG(MULTIABILITY)
+#undef GETFLAG
+
+	else // let's check if it's a sound, otherwise error out
+	{
+		boolean found = false;
+		sfxenum_t i;
+		size_t stokenadjust;
+
+		// Remove the prefix. (We need to affect an adjusting variable so that we can print error messages if it's not actually a sound.)
+		if ((stoken[0] == 'D' || stoken[0] == 'd') && (stoken[1] == 'S' || stoken[1] == 's')) // DS*
+			stokenadjust = 2;
+		else // sfx_*
+			stokenadjust = 4;
+
+		// Remove the prefix. (We can affect this directly since we're not going to use it again.)
+		if ((value[0] == 'D' || value[0] == 'd') && (value[1] == 'S' || value[1] == 's')) // DS*
+			value += 2;
+		else // sfx_*
+			value += 4;
+
+		// copy name of sounds that are remapped
+		// for this skin
+		for (i = 0; i < sfx_skinsoundslot0; i++)
+		{
+			if (!S_sfx[i].name)
+				continue;
+			if (S_sfx[i].skinsound != -1
+				&& !stricmp(S_sfx[i].name,
+					stoken + stokenadjust))
+			{
+				skin->soundsid[S_sfx[i].skinsound] =
+					S_AddSoundFx(value, S_sfx[i].singularity, S_sfx[i].pitch, true);
+				found = true;
+			}
+		}
+		return found;
+	}
+	return true;
+}
+
 //
 // Find skin sprites, sounds & optional status bar face, & add them
 //
@@ -2837,6 +2911,8 @@ void R_AddSkins(UINT16 wadnum)
 			if (!value)
 				I_Error("R_AddSkins: syntax error in S_SKIN lump# %d(%s) in WAD %s\n", lump, W_CheckNameForNumPwad(wadnum,lump), wadfiles[wadnum]->filename);
 
+			// Some of these can't go in R_ProcessPatchableFields because they have side effects for future lines.
+			// Others can't go in there because we don't want them to be patchable.
 			if (!stricmp(stoken, "name"))
 			{
 				INT32 skinnum = R_SkinAvailable(value);
@@ -2875,22 +2951,14 @@ void R_AddSkins(UINT16 wadnum)
 				{
 					HUDNAMEWRITE(skin->name);
 					strupr(skin->hudname);
-					for (value = skin->hudname; *value; value++)
-					{
-						if (*value == '_') *value = ' '; // turn _ into spaces.
-						else if (*value == '.') *value = '\x1E'; // turn . into katana dot.
-					}
+					SYMBOLCONVERT(skin->hudname)
 				}
 			}
 			else if (!stricmp(stoken, "realname"))
 			{ // Display name (eg. "Knuckles")
 				realname = true;
 				STRBUFCPY(skin->realname, value);
-				for (value = skin->realname; *value; value++)
-				{
-					if (*value == '_') *value = ' '; // turn _ into spaces.
-					else if (*value == '.') *value = '\x1E'; // turn . into katana dot.
-				}
+				SYMBOLCONVERT(skin->realname)
 				if (!hudname)
 					HUDNAMEWRITE(skin->realname);
 			}
@@ -2898,15 +2966,10 @@ void R_AddSkins(UINT16 wadnum)
 			{ // Life icon name (eg. "K.T.E")
 				hudname = true;
 				HUDNAMEWRITE(value);
-				for (value = skin->hudname; *value; value++)
-				{
-					if (*value == '_') *value = ' '; // turn _ into spaces.
-					else if (*value == '.') *value = '\x1E'; // turn . into katana dot.
-				}
+				SYMBOLCONVERT(skin->hudname)
 				if (!realname)
 					STRBUFCPY(skin->realname, skin->hudname);
 			}
-
 			else if (!stricmp(stoken, "charsel"))
 			{
 				strupr(value);
@@ -2925,37 +2988,6 @@ void R_AddSkins(UINT16 wadnum)
 				strupr(value);
 				strncpy(skin->superface, value, sizeof skin->superface);
 			}
-
-#define FULLPROCESS(field) else if (!stricmp(stoken, #field)) skin->field = get_number(value);
-			// character type identification
-			FULLPROCESS(flags)
-			FULLPROCESS(ability)
-			FULLPROCESS(ability2)
-
-			FULLPROCESS(thokitem)
-			FULLPROCESS(spinitem)
-			FULLPROCESS(revitem)
-#undef FULLPROCESS
-
-#define GETFRACBITS(field) else if (!stricmp(stoken, #field)) skin->field = atoi(value)<<FRACBITS;
-			GETFRACBITS(normalspeed)
-			GETFRACBITS(runspeed)
-
-			GETFRACBITS(mindash)
-			GETFRACBITS(maxdash)
-			GETFRACBITS(actionspd)
-
-			GETFRACBITS(radius)
-			GETFRACBITS(height)
-			GETFRACBITS(spinheight)
-#undef GETFRACBITS
-
-#define GETINT(field) else if (!stricmp(stoken, #field)) skin->field = atoi(value);
-			GETINT(thrustfactor)
-			GETINT(accelstart)
-			GETINT(acceleration)
-#undef GETINT
-
 			else if (!stricmp(stoken, "availability"))
 			{
 				skin->availability = atoi(value);
@@ -2964,125 +2996,16 @@ void R_AddSkins(UINT16 wadnum)
 				if (skin->availability)
 					STRBUFCPY(unlockables[skin->availability - 1].name, skin->realname);
 			}
+			else if (!R_ProcessPatchableFields(skin, stoken, value))
+				CONS_Debug(DBG_SETUP, "R_AddSkins: Unknown keyword '%s' in S_SKIN lump #%d (WAD %s)\n", stoken, lump, wadfiles[wadnum]->filename);
 
-			// custom translation table
-			else if (!stricmp(stoken, "startcolor"))
-				skin->starttranscolor = atoi(value);
-
-#define GETSKINCOLOR(field) else if (!stricmp(stoken, #field)) skin->field = R_GetColorByName(value);
-			GETSKINCOLOR(prefcolor)
-			GETSKINCOLOR(prefoppositecolor)
-#undef GETSKINCOLOR
-			else if (!stricmp(stoken, "supercolor"))
-				skin->supercolor = R_GetSuperColorByName(value);
-
-#define GETFLOAT(field) else if (!stricmp(stoken, #field)) skin->field = FLOAT_TO_FIXED(atof(value));
-			GETFLOAT(jumpfactor)
-			GETFLOAT(highresscale)
-			GETFLOAT(shieldscale)
-			GETFLOAT(camerascale)
-#undef GETFLOAT
-
-#define GETFLAG(field) else if (!stricmp(stoken, #field)) { \
-	strupr(value); \
-	if (atoi(value) || value[0] == 'T' || value[0] == 'Y') \
-		skin->flags |= (SF_##field); \
-	else \
-		skin->flags &= ~(SF_##field); \
-}
-			// parameters for individual character flags
-			// these are uppercase so they can be concatenated with SF_
-			// 1, true, yes are all valid values
-			GETFLAG(SUPER)
-			GETFLAG(NOSUPERSPIN)
-			GETFLAG(NOSPINDASHDUST)
-			GETFLAG(HIRES)
-			GETFLAG(NOSKID)
-			GETFLAG(NOSPEEDADJUST)
-			GETFLAG(RUNONWATER)
-			GETFLAG(NOJUMPSPIN)
-			GETFLAG(NOJUMPDAMAGE)
-			GETFLAG(STOMPDAMAGE)
-			GETFLAG(MARIODAMAGE)
-			GETFLAG(MACHINE)
-			GETFLAG(DASHMODE)
-			GETFLAG(FASTEDGE)
-			GETFLAG(MULTIABILITY)
-#undef GETFLAG
-
-			else // let's check if it's a sound, otherwise error out
-			{
-				boolean found = false;
-				sfxenum_t i;
-				size_t stokenadjust;
-
-				// Remove the prefix. (We need to affect an adjusting variable so that we can print error messages if it's not actually a sound.)
-				if ((stoken[0] == 'D' || stoken[0] == 'd') && (stoken[1] == 'S' || stoken[1] == 's')) // DS*
-					stokenadjust = 2;
-				else // sfx_*
-					stokenadjust = 4;
-
-				// Remove the prefix. (We can affect this directly since we're not going to use it again.)
-				if ((value[0] == 'D' || value[0] == 'd') && (value[1] == 'S' || value[1] == 's')) // DS*
-					value += 2;
-				else // sfx_*
-					value += 4;
-
-				// copy name of sounds that are remapped
-				// for this skin
-				for (i = 0; i < sfx_skinsoundslot0; i++)
-				{
-					if (!S_sfx[i].name)
-						continue;
-					if (S_sfx[i].skinsound != -1
-						&& !stricmp(S_sfx[i].name,
-							stoken + stokenadjust))
-					{
-						skin->soundsid[S_sfx[i].skinsound] =
-							S_AddSoundFx(value, S_sfx[i].singularity, S_sfx[i].pitch, true);
-						found = true;
-					}
-				}
-				if (!found)
-					CONS_Debug(DBG_SETUP, "R_AddSkins: Unknown keyword '%s' in S_SKIN lump #%d (WAD %s)\n", stoken, lump, wadfiles[wadnum]->filename);
-			}
 next_token:
 			stoken = strtok(NULL, "\r\n= ");
 		}
 		free(buf2);
 
 		// Add sprites
-		{
-			UINT16 newlastlump;
-			UINT8 sprite2;
-
-			lump++; // start after S_SKIN
-			lastlump = W_CheckNumForNamePwad("S_END",wadnum,lump); // stop at S_END
-
-			// old wadding practices die hard -- stop at S_SKIN or S_START if they come before S_END.
-			newlastlump = W_CheckNumForNamePwad("S_SKIN",wadnum,lump);
-			if (newlastlump < lastlump) lastlump = newlastlump;
-			newlastlump = W_CheckNumForNamePwad("S_START",wadnum,lump);
-			if (newlastlump < lastlump) lastlump = newlastlump;
-
-			// ...and let's handle super, too
-			newlastlump = W_CheckNumForNamePwad("S_SUPER",wadnum,lump);
-			if (newlastlump < lastlump)
-			{
-				newlastlump++;
-				// load all sprite sets we are aware of... for super!
-				for (sprite2 = 0; sprite2 < free_spr2; sprite2++)
-					R_AddSingleSpriteDef(spr2names[sprite2], &skin->sprites[FF_SPR2SUPER|sprite2], wadnum, newlastlump, lastlump);
-
-				newlastlump--;
-				lastlump = newlastlump; // okay, make the normal sprite set loading end there
-			}
-
-			// load all sprite sets we are aware of... for normal stuff.
-			for (sprite2 = 0; sprite2 < free_spr2; sprite2++)
-				R_AddSingleSpriteDef(spr2names[sprite2], &skin->sprites[sprite2], wadnum, lump, lastlump);
-
-		}
+		R_LoadSkinSprites(wadnum, &lump, &lastlump, skin);
 
 		R_FlushTranslationColormapCache();
 
@@ -3106,50 +3029,124 @@ next_token:
 	return;
 }
 
-#undef HUDNAMEWRITE
-
-#ifdef DELFILE
-void R_DelSkins(UINT16 wadnum)
+//
+// Patch skin sprites
+//
+void R_PatchSkins(UINT16 wadnum)
 {
 	UINT16 lump, lastlump = 0;
-	while ((lump = W_CheckForSkinMarkerInPwad(wadnum, lastlump)) != INT16_MAX)
+	char *buf;
+	char *buf2;
+	char *stoken;
+	char *value;
+	size_t size;
+	skin_t *skin;
+	boolean noskincomplain, realname, hudname;
+
+	//
+	// search for all skin patch markers in pwad
+	//
+
+	while ((lump = W_CheckForPatchSkinMarkerInPwad(wadnum, lastlump)) != INT16_MAX)
 	{
-		if (skins[numskins].wadnum != wadnum)
-			break;
-		numskins--;
-		ST_UnLoadFaceGraphics(numskins); // only used by DELFILE
-		if (skins[numskins].sprite[0] != '\0')
-		{
-			const char *csprname = W_CheckNameForNumPwad(wadnum, lump);
+		INT32 skinnum = 0;
 
-			// skip to end of this skin's frames
-			lastlump = lump;
-			while (W_CheckNameForNumPwad(wadnum,lastlump) && memcmp(W_CheckNameForNumPwad(wadnum, lastlump),csprname,4)==0)
-				lastlump++;
-			// allocate (or replace) sprite frames, and set spritedef
-			R_DelSingleSpriteDef(csprname, &skins[numskins].spritedef, wadnum, lump, lastlump);
-		}
-		else
+		// advance by default
+		lastlump = lump + 1;
+
+		buf = W_CacheLumpNumPwad(wadnum, lump, PU_CACHE);
+		size = W_LumpLengthPwad(wadnum, lump);
+
+		// for strtok
+		buf2 = malloc(size+1);
+		if (!buf2)
+			I_Error("R_PatchSkins: No more free memory\n");
+		M_Memcpy(buf2,buf,size);
+		buf2[size] = '\0';
+
+		skin = NULL;
+		noskincomplain = realname = hudname = false;
+
+		/*
+		Parse. Has more phases than the parser in R_AddSkins because it needs to have the patching name first (no default skin name is acceptible for patching, unlike skin creation)
+		*/
+
+		stoken = strtok(buf2, "\r\n= ");
+		while (stoken)
 		{
-			// search in the normal sprite tables
-			size_t name;
-			boolean found = false;
-			const char *sprname = skins[numskins].sprite;
-			for (name = 0;sprnames[name][0] != '\0';name++)
-				if (strcmp(sprnames[name], sprname) == 0)
+			if ((stoken[0] == '/' && stoken[1] == '/')
+				|| (stoken[0] == '#'))// skip comments
+			{
+				stoken = strtok(NULL, "\r\n"); // skip end of line
+				goto next_token;              // find the real next token
+			}
+
+			value = strtok(NULL, "\r\n= ");
+
+			if (!value)
+				I_Error("R_PatchSkins: syntax error in P_SKIN lump# %d(%s) in WAD %s\n", lump, W_CheckNameForNumPwad(wadnum,lump), wadfiles[wadnum]->filename);
+
+			if (!skin) // Get the name!
+			{
+				if (!stricmp(stoken, "name"))
 				{
-					found = true;
-					skins[numskins].spritedef = sprites[name];
+					strlwr(value);
+					skinnum = R_SkinAvailable(value);
+					if (skinnum != -1)
+						skin = &skins[skinnum];
+					else
+					{
+						CONS_Debug(DBG_SETUP, "R_PatchSkins: unknown skin name in P_SKIN lump# %d(%s) in WAD %s\n", lump, W_CheckNameForNumPwad(wadnum,lump), wadfiles[wadnum]->filename);
+						noskincomplain = true;
+					}
 				}
+			}
+			else // Get the properties!
+			{
+				// Some of these can't go in R_ProcessPatchableFields because they have side effects for future lines.
+				if (!stricmp(stoken, "realname"))
+				{ // Display name (eg. "Knuckles")
+					realname = true;
+					STRBUFCPY(skin->realname, value);
+					SYMBOLCONVERT(skin->realname)
+					if (!hudname)
+						HUDNAMEWRITE(skin->realname);
+				}
+				else if (!stricmp(stoken, "hudname"))
+				{ // Life icon name (eg. "K.T.E")
+					hudname = true;
+					HUDNAMEWRITE(value);
+					SYMBOLCONVERT(skin->hudname)
+					if (!realname)
+						STRBUFCPY(skin->realname, skin->hudname);
+				}
+				else if (!R_ProcessPatchableFields(skin, stoken, value))
+					CONS_Debug(DBG_SETUP, "R_PatchSkins: Unknown keyword '%s' in P_SKIN lump #%d (WAD %s)\n", stoken, lump, wadfiles[wadnum]->filename);
+			}
 
-			// not found so make a new one
-			if (!found)
-				R_DelSingleSpriteDef(sprname, &skins[numskins].spritedef, wadnum, 0, INT16_MAX);
+			if (!skin)
+				break;
 
-			while (W_CheckNameForNumPwad(wadnum,lastlump) && memcmp(W_CheckNameForNumPwad(wadnum, lastlump),sprname,4)==0)
-				lastlump++;
+next_token:
+			stoken = strtok(NULL, "\r\n= ");
 		}
-		CONS_Printf(M_GetText("Removed skin '%s'\n"), skins[numskins].name);
+		free(buf2);
+
+		if (!skin) // Didn't include a name parameter? What a waste.
+		{
+			if (!noskincomplain)
+				CONS_Debug(DBG_SETUP, "R_PatchSkins: no skin name given in P_SKIN lump #%d (WAD %s)\n", lump, wadfiles[wadnum]->filename);
+			continue;
+		}
+
+		// Patch sprites
+		R_LoadSkinSprites(wadnum, &lump, &lastlump, skin);
+
+		if (!skin->availability) // Safe to print...
+			CONS_Printf(M_GetText("Patched skin '%s'\n"), skin->name);
 	}
+	return;
 }
-#endif
+
+#undef HUDNAMEWRITE
+#undef SYMBOLCONVERT
