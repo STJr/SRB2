@@ -1183,6 +1183,18 @@ static int lib_pTelekinesis(lua_State *L)
 	return 0;
 }
 
+static int lib_pSwitchShield(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	UINT16 shield = luaL_checkinteger(L, 2);
+	NOHUD
+	INLEVEL
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	P_SwitchShield(player, shield);
+	return 0;
+}
+
 // P_MAP
 ///////////
 
@@ -2445,6 +2457,7 @@ static luaL_Reg lib[] = {
 	{"P_SpawnThokMobj",lib_pSpawnThokMobj},
 	{"P_SpawnSpinMobj",lib_pSpawnSpinMobj},
 	{"P_Telekinesis",lib_pTelekinesis},
+	{"P_SwitchShield",lib_pSwitchShield},
 
 	// p_map
 	{"P_CheckPosition",lib_pCheckPosition},

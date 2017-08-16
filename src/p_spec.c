@@ -74,7 +74,7 @@ typedef struct
 #endif
 
 /** Animated texture definition.
-  * Used for ::harddefs and for loading an ANIMATED lump from a wad.
+  * Used for loading an ANIMDEFS lump from a wad.
   *
   * Animations are defined by the first and last frame (i.e., flat or texture).
   * The animation sequence uses all flats between the start and end entry, in
@@ -121,104 +121,6 @@ static anim_t *lastanim;
 static anim_t *anims = NULL; /// \todo free leak
 static size_t maxanims;
 
-//
-// P_InitPicAnims
-//
-/** Hardcoded animation sequences.
-  * Used if no ANIMATED lump is found in a loaded wad.
-  */
-static animdef_t harddefs[] =
-{
-	// flat animations.
-	{false,     "LITEY3",       "LITEY1",       4},
-	{false,     "FWATER16",     "FWATER1",      4},
-	{false,     "BWATER16",     "BWATER01",     4},
-	{false,     "LWATER16",     "LWATER1",      4},
-	{false,     "WATER7",       "WATER0",       4},
-	{false,     "LAVA4",        "LAVA1",        8},
-	{false,     "DLAVA4",       "DLAVA1",       8},
-	{false,     "RLAVA8",       "RLAVA1",       8},
-	{false,     "LITER3",       "LITER1",       8},
-	{false,     "SURF08",       "SURF01",       4},
-
-	{false,     "CHEMG16",      "CHEMG01",      4}, // THZ Chemical gunk
-	{false,     "GOOP16",       "GOOP01",       4}, // Green chemical gunk
-	{false,     "OIL16",        "OIL01",        4}, // Oil
-	{false,     "THZBOXF4",     "THZBOXF1",     2}, // Moved up with the flats
-	{false,     "ALTBOXF4",     "ALTBOXF1",     2},
-
-	{false,     "LITEB3",       "LITEB1",       4},
-	{false,     "LITEN3",       "LITEN1",       4},
-	{false,     "ACZRFL1H",     "ACZRFL1A",     4},
-	{false,     "ACZRFL2H",     "ACZRFL2A",     4},
-	{false,     "EGRIDF3",      "EGRIDF1",      4},
-	{false,     "ERZFAN4",      "ERZFAN1",      1},
-	{false,     "ERZFANR4",     "ERZFANR1",     1},
-	{false,     "DISCO4",       "DISCO1",      15},
-
-	// animated textures
-	{true,      "GFALL4",       "GFALL1",       2}, // Short waterfall
-	{true,      "CFALL4",       "CFALL1",       2}, // Long waterfall
-	{true,      "TFALL4",       "TFALL1",       2}, // THZ Chemical fall
-	{true,      "AFALL4",       "AFALL1",       2}, // Green Chemical fall
-	{true,      "QFALL4",       "QFALL1",       2}, // Quicksand fall
-	{true,      "Q2FALL4",      "Q2FALL1",      2},
-	{true,      "Q3FALL4",      "Q3FALL1",      2},
-	{true,      "Q4FALL4",      "Q4FALL1",      2},
-	{true,      "Q5FALL4",      "Q5FALL1",      2},
-	{true,      "Q6FALL4",      "Q6FALL1",      2},
-	{true,      "Q7FALL4",      "Q7FALL1",      2},
-	{true,      "LFALL4",       "LFALL1",       2},
-	{true,      "MFALL4",       "MFALL1",       2},
-	{true,      "OFALL4",       "OFALL1",       2},
-	{true,      "DLAVA4",       "DLAVA1",       8},
-	{true,      "ERZLASA2",     "ERZLASA1",     1},
-	{true,      "ERZLASB4",     "ERZLASB1",     1},
-	{true,      "ERZLASC4",     "ERZLASC1",     1},
-	{true,      "THZBOX04",     "THZBOX01",     2},
-	{true,      "ALTBOX04",     "ALTBOX01",     2},
-	{true,      "SFALL4",       "SFALL1",       4}, // Lava fall
-	{true,      "RVZFALL8",     "RVZFALL1",     4},
-	{true,      "BFALL4",       "BFALL1",       2}, // HPZ waterfall
-	{true,      "GREYW3",       "GREYW1",       4},
-	{true,      "BLUEW3",       "BLUEW1",       4},
-	{true,      "COMP6",        "COMP4",        4},
-	{true,      "RED3",         "RED1",         4},
-	{true,      "YEL3",         "YEL1",         4},
-	{true,      "ACWRFL1D",     "ACWRFL1A",     1},
-	{true,      "ACWRFL2D",     "ACWRFL2A",     1},
-	{true,      "ACWRFL3D",     "ACWRFL3A",     1},
-	{true,      "ACWRFL4D",     "ACWRFL4A",     1},
-	{true,      "ACWRP1D",      "ACWRP1A",      1},
-	{true,      "ACWRP2D",      "ACWRP2A",      1},
-	{true,      "ACZRP1D",      "ACZRP1A",      1},
-	{true,      "ACZRP2D",      "ACZRP2A",      1},
-	{true,      "OILFALL4",     "OILFALL1",     2},
-	{true,      "SOLFALL4",     "SOLFALL1",     2},
-	{true,      "DOWN1C",       "DOWN1A",       4},
-	{true,      "DOWN2C",       "DOWN2A",       4},
-	{true,      "DOWN3D",       "DOWN3A",       4},
-	{true,      "DOWN4C",       "DOWN4A",       4},
-	{true,      "DOWN5C",       "DOWN5A",       4},
-	{true,      "UP1C",         "UP1A",         4},
-	{true,      "UP2C",         "UP2A",         4},
-	{true,      "UP3D",         "UP3A",         4},
-	{true,      "UP4C",         "UP4A",         4},
-	{true,      "UP5C",         "UP5A",         4},
-	{true,      "EGRID3",       "EGRID1",       4},
-	{true,      "ERFANW4",      "ERFANW1",      1},
-	{true,      "ERFANX4",      "ERFANX1",      1},
-	{true,      "DISCOD4",      "DISCOD1",     15},
-	{true,      "DANCE4",       "DANCE1",       8},
-	{true,      "SKY135",       "SKY132",       2},
-	{true,      "APPLMS4",      "APPLMS1",      2},
-	{true,      "APBOXW3",      "APBOXW1",      2},
-	{true,      "ERZLAZC4",     "ERZLAZC1",     4},
-
-	// End of line
-	{   -1,             "",            "",    0},
-};
-
 // Animating line specials
 
 // Init animated textures
@@ -232,7 +134,7 @@ void P_ParseAnimationDefintion(SINT8 istexture);
 
 /** Sets up texture and flat animations.
   *
-  * Converts an ::animdef_t array loaded from ::harddefs or a lump into
+  * Converts an ::animdef_t array loaded from a lump into
   * ::anim_t format.
   *
   * Issues an error if any animation cycles are invalid.
@@ -244,70 +146,37 @@ void P_InitPicAnims(void)
 {
 	// Init animation
 	INT32 w; // WAD
-	UINT8 *animatedLump;
-	UINT8 *currentPos;
 	size_t i;
 
 	I_Assert(animdefs == NULL);
 
-	if (W_CheckNumForName("ANIMATED") != LUMPERROR || W_CheckNumForName("ANIMDEFS") != LUMPERROR)
+	maxanims = 0;
+
+	if (W_CheckNumForName("ANIMDEFS") != LUMPERROR)
 	{
-		for (w = numwadfiles-1, maxanims = 0; w >= 0; w--)
+		for (w = numwadfiles-1; w >= 0; w--)
 		{
-			UINT16 animatedLumpNum;
 			UINT16 animdefsLumpNum;
 
-			// Find ANIMATED lump in the WAD
-			animatedLumpNum = W_CheckNumForNamePwad("ANIMATED", w, 0);
-			if (animatedLumpNum != INT16_MAX)
-			{
-				animatedLump = (UINT8 *)W_CacheLumpNumPwad(w, animatedLumpNum, PU_STATIC);
-
-				// Get the number of animations in the file
-				i = maxanims;
-				for (currentPos = animatedLump; *currentPos != UINT8_MAX; maxanims++, currentPos+=23);
-
-				// Resize animdefs (or if it hasn't been created, create it)
-				animdefs = (animdef_t *)Z_Realloc(animdefs, sizeof(animdef_t)*(maxanims + 1), PU_STATIC, NULL);
-				// Sanity check it
-				if (!animdefs)
-					I_Error("Not enough free memory for ANIMATED data");
-
-				// Populate the new array
-				for (currentPos = animatedLump; *currentPos != UINT8_MAX; i++, currentPos+=23)
-				{
-					M_Memcpy(&(animdefs[i].istexture), currentPos, 1); // istexture, 1 byte
-					M_Memcpy(animdefs[i].endname, (currentPos + 1), 9); // endname, 9 bytes
-					M_Memcpy(animdefs[i].startname, (currentPos + 10), 9); // startname, 9 bytes
-					M_Memcpy(&(animdefs[i].speed), (currentPos + 19), 4); // speed, 4 bytes
-				}
-
-				Z_Free(animatedLump);
-			}
-
-			// Now find ANIMDEFS
+			// Find ANIMDEFS lump in the WAD
 			animdefsLumpNum = W_CheckNumForNamePwad("ANIMDEFS", w, 0);
 			if (animdefsLumpNum != INT16_MAX)
 				P_ParseANIMDEFSLump(w, animdefsLumpNum);
 		}
-		// Define the last one
-		animdefs[maxanims].istexture = -1;
-		strncpy(animdefs[maxanims].endname, "", 9);
-		strncpy(animdefs[maxanims].startname, "", 9);
-		animdefs[maxanims].speed = 0;
 	}
-	else
-	{
-		animdefs = harddefs;
-		for (maxanims = 0; animdefs[maxanims].istexture != -1; maxanims++);
-	}
+
+	// Define the last one
+	animdefs[maxanims].istexture = -1;
+	strncpy(animdefs[maxanims].endname, "", 9);
+	strncpy(animdefs[maxanims].startname, "", 9);
+	animdefs[maxanims].speed = 0;
 
 	if (anims)
 		free(anims);
 
 	anims = (anim_t *)malloc(sizeof (*anims)*(maxanims + 1));
 	if (!anims)
-		I_Error("Not enough free memory for ANIMATED data");
+		I_Error("Not enough free memory for ANIMDEFS data");
 
 	lastanim = anims;
 	for (i = 0; animdefs[i].istexture != -1; i++)
@@ -339,10 +208,7 @@ void P_InitPicAnims(void)
 				animdefs[i].startname, animdefs[i].endname);
 		}
 
-		if (animdefs == harddefs)
-			lastanim->speed = animdefs[i].speed;
-		else
-			lastanim->speed = LONG(animdefs[i].speed);
+		lastanim->speed = LONG(animdefs[i].speed);
 		lastanim++;
 	}
 	lastanim->istexture = -1;
@@ -350,8 +216,7 @@ void P_InitPicAnims(void)
 
 	// Clear animdefs now that we're done with it.
 	// We'll only be using anims from now on.
-	if (animdefs != harddefs)
-		Z_Free(animdefs);
+	Z_Free(animdefs);
 	animdefs = NULL;
 }
 

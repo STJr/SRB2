@@ -3050,7 +3050,6 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 	INT16 firstmapreplaced = 0, num;
 	char *name;
 	lumpinfo_t *lumpinfo;
-	boolean texturechange = false;
 	boolean replacedcurrentmap = false;
 
 	if ((numlumps = W_LoadWadFile(wadfilename)) == INT16_MAX)
@@ -3094,14 +3093,6 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 			CONS_Debug(DBG_SETUP, "Music %.8s replaced\n", name);
 			digmreplaces++;
 		}
-#if 0
-		//
-		// search for texturechange replacements
-		//
-		else if (!memcmp(name, "TEXTURE1", 8) || !memcmp(name, "TEXTURE2", 8)
-			|| !memcmp(name, "PNAMES", 6))
-#endif
-			texturechange = true;
 	}
 	if (!devparm && sreplaces)
 		CONS_Printf(M_GetText("%s sounds replaced\n"), sizeu1(sreplaces));
@@ -3117,13 +3108,10 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 
 	// Reload it all anyway, just in case they
 	// added some textures but didn't insert a
-	// TEXTURE1/PNAMES/etc. list.
-	if (texturechange) // initialized in the sound check
-		R_LoadTextures(); // numtexture changes
-	else
-		R_FlushTextureCache(); // just reload it from file
+	// TEXTURES/etc. list.
+	R_LoadTextures(); // numtexture changes
 
-	// Reload ANIMATED / ANIMDEFS
+	// Reload ANIMDEFS
 	P_InitPicAnims();
 
 	// Flush and reload HUD graphics

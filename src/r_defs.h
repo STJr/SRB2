@@ -688,7 +688,7 @@ typedef enum
 // Patches.
 // A patch holds one or more columns.
 // Patches are used for sprites and all masked pictures, and we compose
-// textures from the TEXTURE1 list of patches.
+// textures from the TEXTURES list of patches.
 //
 // WARNING: this structure is cloned in GLPatch_t
 typedef struct

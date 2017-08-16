@@ -1473,9 +1473,15 @@ void P_SpawnShieldOrb(player_t *player)
 //
 void P_SwitchShield(player_t *player, UINT16 shieldtype)
 {
-	boolean donthavealready = (shieldtype & SH_FORCE)
-	? (!(player->powers[pw_shield] & SH_FORCE) || (player->powers[pw_shield] & SH_FORCEHP) < (shieldtype & ~SH_FORCE))
-	: ((player->powers[pw_shield] & SH_NOSTACK) != shieldtype);
+	boolean donthavealready;
+
+	// If you already have a bomb shield, use it!
+	if ((shieldtype == SH_ARMAGEDDON) && (player->powers[pw_shield] & SH_NOSTACK) == SH_ARMAGEDDON)
+		P_BlackOw(player);
+
+	donthavealready = (shieldtype & SH_FORCE)
+		? (!(player->powers[pw_shield] & SH_FORCE) || (player->powers[pw_shield] & SH_FORCEHP) < (shieldtype & ~SH_FORCE))
+		: ((player->powers[pw_shield] & SH_NOSTACK) != shieldtype);
 
 	if (donthavealready)
 	{
