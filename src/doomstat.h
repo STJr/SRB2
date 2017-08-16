@@ -41,7 +41,8 @@ extern INT16 maptol;
 extern UINT8 globalweather;
 extern INT32 curWeather;
 extern INT32 cursaveslot;
-extern INT16 lastmapsaved;
+//extern INT16 lastmapsaved;
+extern INT16 lastmaploaded;
 extern boolean gamecomplete;
 
 #define PRECIP_NONE  0
@@ -263,6 +264,7 @@ typedef struct
 #define LF_NOSSMUSIC      4 ///< Disable Super Sonic music
 #define LF_NORELOAD       8 ///< Don't reload level on death
 #define LF_NOZONE        16 ///< Don't include "ZONE" on level title
+#define LF_SAVEGAME      32 ///< Save the game upon loading this level
 
 #define LF2_HIDEINMENU     1 ///< Hide in the multiplayer menu
 #define LF2_HIDEINSTATS    2 ///< Hide in the statistics screen
@@ -379,6 +381,7 @@ nightsdata_t ntemprecords;
 
 extern UINT32 token; ///< Number of tokens collected in a level
 extern UINT32 tokenlist; ///< List of tokens collected
+extern boolean gottoken; ///< Did you get a token? Used for end of act
 extern INT32 tokenbits; ///< Used for setting token bits
 extern INT32 sstimer; ///< Time allotted in the special stage
 extern UINT32 bluescore; ///< Blue Team Scores
@@ -452,19 +455,17 @@ extern mapthing_t *redctfstarts[MAXPLAYERS]; // CTF
 
 #if defined (macintosh)
 #define DEBFILE(msg) I_OutputMsg(msg)
-extern FILE *debugfile;
 #else
 #define DEBUGFILE
 #ifdef DEBUGFILE
 #define DEBFILE(msg) { if (debugfile) { fputs(msg, debugfile); fflush(debugfile); } }
-extern FILE *debugfile;
 #else
 #define DEBFILE(msg) {}
-extern FILE *debugfile;
 #endif
 #endif
 
 #ifdef DEBUGFILE
+extern FILE *debugfile;
 extern INT32 debugload;
 #endif
 

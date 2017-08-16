@@ -56,6 +56,9 @@ extern INT16 rw_maximums[NUM_WEAPONS];
 // used in game menu
 extern consvar_t cv_crosshair, cv_crosshair2;
 extern consvar_t cv_invertmouse, cv_alwaysfreelook, cv_mousemove;
+extern consvar_t cv_invertmouse2, cv_alwaysfreelook2, cv_mousemove2;
+extern consvar_t cv_useranalog, cv_useranalog2;
+extern consvar_t cv_analog, cv_analog2;
 extern consvar_t cv_sideaxis,cv_turnaxis,cv_moveaxis,cv_lookaxis,cv_fireaxis,cv_firenaxis;
 extern consvar_t cv_sideaxis2,cv_turnaxis2,cv_moveaxis2,cv_lookaxis2,cv_fireaxis2,cv_firenaxis2;
 extern consvar_t cv_ghost_bestscore, cv_ghost_besttime, cv_ghost_bestrings, cv_ghost_last, cv_ghost_guest;
@@ -139,7 +142,7 @@ void G_GhostAddSpin(void);
 void G_GhostAddRev(void);
 void G_GhostAddColor(ghostcolor_t color);
 void G_GhostAddFlip(void);
-void G_GhostAddScale(UINT16 scale);
+void G_GhostAddScale(fixed_t scale);
 void G_GhostAddHit(mobj_t *victim);
 void G_WriteGhostTic(mobj_t *ghost);
 void G_ConsGhostTic(void);
@@ -171,6 +174,7 @@ void G_NextLevel(void);
 void G_Continue(void);
 void G_UseContinue(void);
 void G_AfterIntermission(void);
+void G_EndGame(void); // moved from y_inter.c/h and renamed
 
 void G_Ticker(boolean run);
 boolean G_Responder(event_t *ev);

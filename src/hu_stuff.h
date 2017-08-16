@@ -21,7 +21,7 @@
 //------------------------------------
 //           heads up font
 //------------------------------------
-#define HU_FONTSTART '\x1F' // the first font character
+#define HU_FONTSTART '\x16' // the first font character
 #define HU_FONTEND '~'
 
 #define HU_FONTSIZE (HU_FONTEND - HU_FONTSTART + 1)
@@ -71,15 +71,13 @@ extern patch_t *rmatcico;
 extern patch_t *bmatcico;
 extern patch_t *tagico;
 extern patch_t *tallminus;
+extern patch_t *tokenicon;
 
 // set true when entering a chat message
 extern boolean chat_on;
 
 // set true whenever the tab rankings are being shown for any reason
 extern boolean hu_showscores;
-
-// P_DeathThink sets this true to show scores while dead, in multiplayer
-extern boolean playerdeadview;
 
 // init heads up data at game startup.
 void HU_Init(void);

@@ -161,6 +161,11 @@ void LUA_ClearExtVars(void)
 }
 #endif
 
+// Use this variable to prevent certain functions from running
+// if they were not called on lump load
+// (i.e. they were called in hooks or coroutines etc)
+boolean lua_lumploading = false;
+
 // Load a script from a MYFILE
 static inline void LUA_LoadFile(MYFILE *f, char *name)
 {
@@ -198,7 +203,9 @@ void LUA_LoadLump(UINT16 wad, UINT16 lump)
 		name[strlen(wadfiles[wad]->filename)+9] = '\0';
 	}
 
-	LUA_LoadFile(&f, name);
+	lua_lumploading = true; // turn on loading flag
+	LUA_LoadFile(&f, name); // actually load file!
+	lua_lumploading = false; // turn off again
 
 	free(name);
 	Z_Free(f.data);
@@ -596,14 +603,14 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 		{
 			mobjinfo_t *info = *((mobjinfo_t **)lua_touserdata(gL, myindex));
 			WRITEUINT8(save_p, ARCH_MOBJINFO);
-			WRITEUINT8(save_p, info - mobjinfo);
+			WRITEUINT16(save_p, info - mobjinfo);
 			break;
 		}
 		case ARCH_STATE:
 		{
 			state_t *state = *((state_t **)lua_touserdata(gL, myindex));
 			WRITEUINT8(save_p, ARCH_STATE);
-			WRITEUINT8(save_p, state - states);
+			WRITEUINT16(save_p, state - states);
 			break;
 		}
 		case ARCH_MOBJ:

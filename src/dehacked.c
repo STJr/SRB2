@@ -78,97 +78,6 @@ static int dbg_line;
 
 static boolean gamedataadded = false;
 
-#ifdef DELFILE
-typedef struct undehacked_s
-{
-	char *undata;
-	struct undehacked_s *next;
-} undehacked_t;
-
-static UINT16 unsocwad;
-static undehacked_t *unsocdata[MAX_WADFILES];
-static boolean disableundo = false;
-
-void DEH_WriteUndoline(const char *value, const char *data, undotype_f flags)
-{
-	const char *eqstr = " = ";
-	const char *space = " ";
-	const char *pader = eqstr;
-	undehacked_t *newdata;
-
-	if (disableundo || !unsocwad)
-		return;
-
-	if ((newdata = malloc(sizeof(*newdata))) == NULL)
-		I_Error("Out of memory for unsoc line");
-
-	if (flags & UNDO_SPACE)
-		pader = space;
-
-	if (flags & UNDO_ENDTEXT && !data)
-		data = space;
-
-	if (value)
-	{
-		const size_t plen = strlen(pader);
-		const char *pound = "#";
-		char *undata = NULL;
-		const size_t elen = strlen(pound);
-		size_t vlen = strlen(value), dlen = 0, len = 1;
-
-		if (*(value+vlen-1) == '\n')
-			vlen--; // lnet not copy the ending \n
-
-		if (flags & UNDO_ENDTEXT)
-			len += elen; // let malloc more space
-
-		if (flags & UNDO_NEWLINE)
-			len++; // more space for the beginning \n
-
-		if (data)
-		{
-			dlen = strlen(data);
-			if (flags & UNDO_CUTLINE && *(data+dlen-1) == '\n')
-				dlen--; // let not copy the ending \n
-			newdata->undata = malloc(vlen+plen+dlen+len);
-			newdata->undata[vlen+plen+dlen+len-1] = '\0';
-		}
-		else
-		{
-			newdata->undata = malloc(vlen+len);
-			newdata->undata[vlen+len-1] = '\0';
-		}
-
-		if (newdata->undata)
-		{
-			undata = newdata->undata;
-			*undata = '\0';
-		}
-		else
-		{
-			free(newdata);
-			I_Error("Out of memory for unsoc data");
-		}
-
-		if (flags & UNDO_NEWLINE) // let start with \n
-			strcat(undata, "\n");
-
-		strncat(undata, value, vlen);
-
-		if (data) // value+pader+data
-			strncat(strncat(undata, pader, plen), data, dlen);
-
-		if (flags & UNDO_ENDTEXT) // let end the text
-			strncat(undata, pound, elen);
-	}
-	else
-		newdata->undata = NULL;
-
-	newdata->next = unsocdata[unsocwad];
-	unsocdata[unsocwad] = newdata;
-}
-#endif
-
 ATTRINLINE static FUNCINLINE char myfget_color(MYFILE *f)
 {
 	char c = *f->curpos++;
@@ -382,56 +291,6 @@ static void clear_levels(void)
 	P_AllocMapHeader(gamemap-1);
 }
 
-/*
-// Edits an animated texture slot on the array
-// Tails 12-27-2003
-static void readAnimTex(MYFILE *f, INT32 num)
-{
-	char s[MAXLINELEN];
-	char *word;
-	char *word2;
-	INT32 i;
-
-	do {
-		if (myfgets(s, sizeof s, f) != NULL)
-		{
-			if (s[0] == '\n') break;
-
-			tmp = strchr(s, '#');
-			if (tmp)
-				*tmp = '\0';
-			// set the value in the appropriate field
-
-			word = strtok(s, " ");
-			if (word)
-				strupr(word);
-			else
-				break;
-
-			word2 = strtok(NULL, " = ");
-			if (word2)
-				strupr(word2);
-			else
-				break;
-
-			if (word2[strlen(word2)-1] == '\n')
-				word2[strlen(word2)-1] = '\0';
-
-			i = atoi(word2);
-
-			if (fastcmp(word, "START"))
-				strncpy(harddefs[num].startname, word2, 8);
-			if (fastcmp(word, "END"))
-				strncpy(harddefs[num].endname, word2, 8);
-			else if (fastcmp(word, "SPEED")) harddefs[num].speed = i;
-			else if (fastcmp(word, "ISTEXTURE")) harddefs[num].istexture = i;
-
-			else deh_warning("readAnimTex %d: unknown word '%s'", num, word);
-		}
-	} while (s[0] != '\n' && !myfeof(f)); //finish when the line is empty
-}
-*/
-
 static boolean findFreeSlot(INT32 *num)
 {
 	// Send the character select entry to a free slot.
@@ -457,8 +316,6 @@ static void readPlayer(MYFILE *f, INT32 num)
 	char *word2;
 	INT32 i;
 	boolean slotfound = false;
-
-	DEH_WriteUndoline("PLAYERTEXT", description[num].notes, UNDO_ENDTEXT);
 
 	do
 	{
@@ -528,7 +385,6 @@ static void readPlayer(MYFILE *f, INT32 num)
 			{
 				if (!slotfound && (slotfound = findFreeSlot(&num)) == false)
 					goto done;
-				DEH_WriteUndoline(word, &description[num].picname[0], UNDO_NONE);
 
 				strncpy(description[num].picname, word2, 8);
 			}
@@ -543,7 +399,7 @@ static void readPlayer(MYFILE *f, INT32 num)
 				*/
 				if (i && !slotfound && (slotfound = findFreeSlot(&num)) == false)
 					goto done;
-				DEH_WriteUndoline(word, va("%d", description[num].used), UNDO_NONE);
+
 				description[num].used = (!!i);
 			}
 			else if (fastcmp(word, "SKINNAME"))
@@ -551,7 +407,6 @@ static void readPlayer(MYFILE *f, INT32 num)
 				// Send to free slot.
 				if (!slotfound && (slotfound = findFreeSlot(&num)) == false)
 					goto done;
-				DEH_WriteUndoline(word, description[num].skinname, UNDO_NONE);
 
 				strlcpy(description[num].skinname, word2, sizeof description[num].skinname);
 				strlwr(description[num].skinname);
@@ -560,11 +415,6 @@ static void readPlayer(MYFILE *f, INT32 num)
 				deh_warning("readPlayer %d: unknown word '%s'", num, word);
 		}
 	} while (!myfeof(f)); // finish when the line is empty
-
-#ifdef DELFILE
-	if (slotfound)
-		DEH_WriteUndoline("MENUPOSITION", va("%d", num), UNDO_NONE);
-#endif
 
 done:
 	Z_Free(s);
@@ -703,122 +553,98 @@ static void readthing(MYFILE *f, INT32 num)
 
 			if (fastcmp(word, "MAPTHINGNUM") || fastcmp(word, "DOOMEDNUM"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].doomednum), UNDO_NONE);
 				mobjinfo[num].doomednum = (INT32)atoi(word2);
 			}
 			else if (fastcmp(word, "SPAWNSTATE"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].spawnstate), UNDO_NONE);
 				mobjinfo[num].spawnstate = get_number(word2);
 			}
 			else if (fastcmp(word, "SPAWNHEALTH"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].spawnhealth), UNDO_NONE);
 				mobjinfo[num].spawnhealth = (INT32)get_number(word2);
 			}
 			else if (fastcmp(word, "SEESTATE"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].seestate), UNDO_NONE);
 				mobjinfo[num].seestate = get_number(word2);
 			}
 			else if (fastcmp(word, "SEESOUND"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].seesound), UNDO_NONE);
 				mobjinfo[num].seesound = get_number(word2);
 			}
 			else if (fastcmp(word, "REACTIONTIME"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].reactiontime), UNDO_NONE);
 				mobjinfo[num].reactiontime = (INT32)get_number(word2);
 			}
 			else if (fastcmp(word, "ATTACKSOUND"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].attacksound), UNDO_NONE);
 				mobjinfo[num].attacksound = get_number(word2);
 			}
 			else if (fastcmp(word, "PAINSTATE"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].painstate), UNDO_NONE);
 				mobjinfo[num].painstate = get_number(word2);
 			}
 			else if (fastcmp(word, "PAINCHANCE"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].painchance), UNDO_NONE);
 				mobjinfo[num].painchance = (INT32)get_number(word2);
 			}
 			else if (fastcmp(word, "PAINSOUND"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].painsound), UNDO_NONE);
 				mobjinfo[num].painsound = get_number(word2);
 			}
 			else if (fastcmp(word, "MELEESTATE"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].meleestate), UNDO_NONE);
 				mobjinfo[num].meleestate = get_number(word2);
 			}
 			else if (fastcmp(word, "MISSILESTATE"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].missilestate), UNDO_NONE);
 				mobjinfo[num].missilestate = get_number(word2);
 			}
 			else if (fastcmp(word, "DEATHSTATE"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].deathstate), UNDO_NONE);
 				mobjinfo[num].deathstate = get_number(word2);
 			}
 			else if (fastcmp(word, "DEATHSOUND"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].deathsound), UNDO_NONE);
 				mobjinfo[num].deathsound = get_number(word2);
 			}
 			else if (fastcmp(word, "XDEATHSTATE"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].xdeathstate), UNDO_NONE);
 				mobjinfo[num].xdeathstate = get_number(word2);
 			}
 			else if (fastcmp(word, "SPEED"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].speed), UNDO_NONE);
 				mobjinfo[num].speed = get_number(word2);
 			}
 			else if (fastcmp(word, "RADIUS"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].radius), UNDO_NONE);
 				mobjinfo[num].radius = get_number(word2);
 			}
 			else if (fastcmp(word, "HEIGHT"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].height), UNDO_NONE);
 				mobjinfo[num].height = get_number(word2);
 			}
 			else if (fastcmp(word, "DISPOFFSET"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].dispoffset), UNDO_NONE);
 				mobjinfo[num].dispoffset = get_number(word2);
 			}
 			else if (fastcmp(word, "MASS"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].mass), UNDO_NONE);
 				mobjinfo[num].mass = (INT32)get_number(word2);
 			}
 			else if (fastcmp(word, "DAMAGE"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].damage), UNDO_NONE);
 				mobjinfo[num].damage = (INT32)get_number(word2);
 			}
 			else if (fastcmp(word, "ACTIVESOUND"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].activesound), UNDO_NONE);
 				mobjinfo[num].activesound = get_number(word2);
 			}
 			else if (fastcmp(word, "FLAGS"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].flags), UNDO_NONE);
 				mobjinfo[num].flags = (INT32)get_number(word2);
 			}
 			else if (fastcmp(word, "RAISESTATE"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].raisestate), UNDO_NONE);
 				mobjinfo[num].raisestate = get_number(word2);
 			}
 			else
@@ -862,37 +688,30 @@ static void readlight(MYFILE *f, INT32 num)
 
 			if (fastcmp(word, "TYPE"))
 			{
-				DEH_WriteUndoline(word, va("%d", lspr[num].type), UNDO_NONE);
 				lspr[num].type = (UINT16)value;
 			}
 			else if (fastcmp(word, "OFFSETX"))
 			{
-				DEH_WriteUndoline(word, va("%f", lspr[num].light_xoffset), UNDO_NONE);
 				lspr[num].light_xoffset = fvalue;
 			}
 			else if (fastcmp(word, "OFFSETY"))
 			{
-				DEH_WriteUndoline(word, va("%f", lspr[num].light_yoffset), UNDO_NONE);
 				lspr[num].light_yoffset = fvalue;
 			}
 			else if (fastcmp(word, "CORONACOLOR"))
 			{
-				DEH_WriteUndoline(word, va("%u", lspr[num].corona_color), UNDO_NONE);
 				lspr[num].corona_color = value;
 			}
 			else if (fastcmp(word, "CORONARADIUS"))
 			{
-				DEH_WriteUndoline(word, va("%f", lspr[num].corona_radius), UNDO_NONE);
 				lspr[num].corona_radius = fvalue;
 			}
 			else if (fastcmp(word, "DYNAMICCOLOR"))
 			{
-				DEH_WriteUndoline(word, va("%u", lspr[num].dynamic_color), UNDO_NONE);
 				lspr[num].dynamic_color = value;
 			}
 			else if (fastcmp(word, "DYNAMICRADIUS"))
 			{
-				DEH_WriteUndoline(word, va("%f", lspr[num].dynamic_radius), UNDO_NONE);
 				lspr[num].dynamic_radius = fvalue;
 
 				/// \note Update the sqrradius! unnecessary?
@@ -939,7 +758,6 @@ static void readspritelight(MYFILE *f, INT32 num)
 				INT32 oldvar;
 				for (oldvar = 0; t_lspr[num] != &lspr[oldvar]; oldvar++)
 					;
-				DEH_WriteUndoline(word, va("%d", oldvar), UNDO_NONE);
 				t_lspr[num] = &lspr[value];
 			}
 			else
@@ -1022,8 +840,6 @@ static void readlevelheader(MYFILE *f, INT32 num)
 	INT32 i;
 
 	// Reset all previous map header information
-	// This call automatically saves all previous information when DELFILE is defined.
-	// We don't need to do it ourselves.
 	P_AllocMapHeader((INT16)(num-1));
 
 	do
@@ -1379,6 +1195,13 @@ static void readlevelheader(MYFILE *f, INT32 num)
 				else
 					mapheaderinfo[num-1]->levelflags &= ~LF_NOZONE;
 			}
+			else if (fastcmp(word, "SAVEGAME"))
+			{
+				if (i || word2[0] == 'T' || word2[0] == 'Y')
+					mapheaderinfo[num-1]->levelflags |= LF_SAVEGAME;
+				else
+					mapheaderinfo[num-1]->levelflags &= ~LF_SAVEGAME;
+			}
 
 			// Individual triggers for menu flags
 			else if (fastcmp(word, "HIDDEN"))
@@ -1441,8 +1264,6 @@ static void readcutscenescene(MYFILE *f, INT32 num, INT32 scenenum)
 	INT32 i;
 	UINT16 usi;
 	UINT8 picid;
-
-	DEH_WriteUndoline("SCENETEXT", cutscenes[num]->scene[scenenum].text, UNDO_ENDTEXT);
 
 	do
 	{
@@ -1520,7 +1341,6 @@ static void readcutscenescene(MYFILE *f, INT32 num, INT32 scenenum)
 
 			if (fastcmp(word, "NUMBEROFPICS"))
 			{
-				DEH_WriteUndoline(word, va("%d", cutscenes[num]->scene[scenenum].numpics), UNDO_NONE);
 				cutscenes[num]->scene[scenenum].numpics = (UINT8)i;
 			}
 			else if (fastncmp(word, "PIC", 3))
@@ -1535,27 +1355,22 @@ static void readcutscenescene(MYFILE *f, INT32 num, INT32 scenenum)
 
 				if (fastcmp(word+4, "NAME"))
 				{
-					DEH_WriteUndoline(word, cutscenes[num]->scene[scenenum].picname[picid], UNDO_NONE);
 					strncpy(cutscenes[num]->scene[scenenum].picname[picid], word2, 8);
 				}
 				else if (fastcmp(word+4, "HIRES"))
 				{
-					DEH_WriteUndoline(word, va("%d", cutscenes[num]->scene[scenenum].pichires[picid]), UNDO_NONE);
 					cutscenes[num]->scene[scenenum].pichires[picid] = (UINT8)(i || word2[0] == 'T' || word2[0] == 'Y');
 				}
 				else if (fastcmp(word+4, "DURATION"))
 				{
-					DEH_WriteUndoline(word, va("%u", cutscenes[num]->scene[scenenum].picduration[picid]), UNDO_NONE);
 					cutscenes[num]->scene[scenenum].picduration[picid] = usi;
 				}
 				else if (fastcmp(word+4, "XCOORD"))
 				{
-					DEH_WriteUndoline(word, va("%u", cutscenes[num]->scene[scenenum].xcoord[picid]), UNDO_NONE);
 					cutscenes[num]->scene[scenenum].xcoord[picid] = usi;
 				}
 				else if (fastcmp(word+4, "YCOORD"))
 				{
-					DEH_WriteUndoline(word, va("%u", cutscenes[num]->scene[scenenum].ycoord[picid]), UNDO_NONE);
 					cutscenes[num]->scene[scenenum].ycoord[picid] = usi;
 				}
 				else
@@ -1563,14 +1378,12 @@ static void readcutscenescene(MYFILE *f, INT32 num, INT32 scenenum)
 			}
 			else if (fastcmp(word, "MUSIC"))
 			{
-				DEH_WriteUndoline(word, cutscenes[num]->scene[scenenum].musswitch, UNDO_NONE);
 				strncpy(cutscenes[num]->scene[scenenum].musswitch, word2, 7);
 				cutscenes[num]->scene[scenenum].musswitch[6] = 0;
 			}
 #ifdef MUSICSLOT_COMPATIBILITY
 			else if (fastcmp(word, "MUSICSLOT"))
 			{
-				DEH_WriteUndoline(word, cutscenes[num]->scene[scenenum].musswitch, UNDO_NONE);
 				i = get_mus(word2, true);
 				if (i && i <= 1035)
 					snprintf(cutscenes[num]->scene[scenenum].musswitch, 7, "%sM", G_BuildMapName(i));
@@ -1583,37 +1396,30 @@ static void readcutscenescene(MYFILE *f, INT32 num, INT32 scenenum)
 #endif
 			else if (fastcmp(word, "MUSICTRACK"))
 			{
-				DEH_WriteUndoline(word, va("%u", cutscenes[num]->scene[scenenum].musswitchflags), UNDO_NONE);
 				cutscenes[num]->scene[scenenum].musswitchflags = ((UINT16)i) & MUSIC_TRACKMASK;
 			}
 			else if (fastcmp(word, "MUSICLOOP"))
 			{
-				DEH_WriteUndoline(word, va("%u", cutscenes[num]->scene[scenenum].musicloop), UNDO_NONE);
 				cutscenes[num]->scene[scenenum].musicloop = (UINT8)(i || word2[0] == 'T' || word2[0] == 'Y');
 			}
 			else if (fastcmp(word, "TEXTXPOS"))
 			{
-				DEH_WriteUndoline(word, va("%u", cutscenes[num]->scene[scenenum].textxpos), UNDO_NONE);
 				cutscenes[num]->scene[scenenum].textxpos = usi;
 			}
 			else if (fastcmp(word, "TEXTYPOS"))
 			{
-				DEH_WriteUndoline(word, va("%u", cutscenes[num]->scene[scenenum].textypos), UNDO_NONE);
 				cutscenes[num]->scene[scenenum].textypos = usi;
 			}
 			else if (fastcmp(word, "FADEINID"))
 			{
-				DEH_WriteUndoline(word, va("%u", cutscenes[num]->scene[scenenum].fadenum), UNDO_NONE);
 				cutscenes[num]->scene[scenenum].fadeinid = (UINT8)i;
 			}
 			else if (fastcmp(word, "FADEOUTID"))
 			{
-				DEH_WriteUndoline(word, va("%u", cutscenes[num]->scene[scenenum].fadenum), UNDO_NONE);
 				cutscenes[num]->scene[scenenum].fadeoutid = (UINT8)i;
 			}
 			else if (fastcmp(word, "FADECOLOR"))
 			{
-				DEH_WriteUndoline(word, va("%u", cutscenes[num]->scene[scenenum].fadenum), UNDO_NONE);
 				cutscenes[num]->scene[scenenum].fadecolor = (UINT8)i;
 			}
 			else
@@ -1631,9 +1437,6 @@ static void readcutscene(MYFILE *f, INT32 num)
 	char *word2;
 	char *tmp;
 	INT32 value;
-#ifdef DELFILE
-	const INT32 oldnumscenes = cutscenes[num]->numscenes;
-#endif
 
 	// Allocate memory for this cutscene if we don't yet have any
 	if (!cutscenes[num])
@@ -1676,8 +1479,6 @@ static void readcutscene(MYFILE *f, INT32 num)
 				if (1 <= value && value <= 128)
 				{
 					readcutscenescene(f, num, value - 1);
-					DEH_WriteUndoline(word, word2, UNDO_SPACE|UNDO_CUTLINE);
-					DEH_WriteUndoline("NUMSCENES", va("%d", oldnumscenes), UNDO_SPACE);
 				}
 				else
 					deh_warning("Scene number %d out of range (1 - 128)", value);
@@ -1730,12 +1531,10 @@ static void readhuditem(MYFILE *f, INT32 num)
 
 			if (fastcmp(word, "X"))
 			{
-				DEH_WriteUndoline(word, va("%d", hudinfo[num].x), UNDO_NONE);
 				hudinfo[num].x = i;
 			}
 			else if (fastcmp(word, "Y"))
 			{
-				DEH_WriteUndoline(word, va("%d", hudinfo[num].y), UNDO_NONE);
 				hudinfo[num].y = i;
 			}
 			else
@@ -1782,7 +1581,6 @@ static actionpointer_t actionpointers[] =
 	{{A_BossDeath},            "A_BOSSDEATH"},
 	{{A_CustomPower},          "A_CUSTOMPOWER"},
 	{{A_GiveWeapon},           "A_GIVEWEAPON"},
-	{{A_RingShield},           "A_RINGSHIELD"},
 	{{A_RingBox},              "A_RINGBOX"},
 	{{A_Invincibility},        "A_INVINCIBILITY"},
 	{{A_SuperSneakers},        "A_SUPERSNEAKERS"},
@@ -1793,14 +1591,7 @@ static actionpointer_t actionpointers[] =
 	{{A_BubbleCheck},          "A_BUBBLECHECK"},
 	{{A_AwardScore},           "A_AWARDSCORE"},
 	{{A_ExtraLife},            "A_EXTRALIFE"},
-	{{A_BombShield},           "A_BOMBSHIELD"},
-	{{A_JumpShield},           "A_JUMPSHIELD"},
-	{{A_WaterShield},          "A_WATERSHIELD"},
-	{{A_ForceShield},          "A_FORCESHIELD"},
-	{{A_PityShield},           "A_PITYSHIELD"},
-	{{A_FlameShield},          "A_FLAMESHIELD"},
-	{{A_BubbleShield},         "A_BUBBLESHIELD"},
-	{{A_ThunderShield},        "A_THUNDERSHIELD"},
+	{{A_GiveShield},           "A_GIVESHIELD"},
 	{{A_GravityBox},           "A_GRAVITYBOX"},
 	{{A_ScoreRise},            "A_SCORERISE"},
 	{{A_ParticleSpawn},        "A_PARTICLESPAWN"},
@@ -1826,7 +1617,6 @@ static actionpointer_t actionpointers[] =
 	{{A_CapeChase},            "A_CAPECHASE"},
 	{{A_RotateSpikeBall},      "A_ROTATESPIKEBALL"},
 	{{A_SlingAppear},          "A_SLINGAPPEAR"},
-	{{A_MaceRotate},           "A_MACEROTATE"},
 	{{A_UnidusBall},           "A_UNIDUSBALL"},
 	{{A_RockSpawn},            "A_ROCKSPAWN"},
 	{{A_SetFuse},              "A_SETFUSE"},
@@ -2021,32 +1811,26 @@ static void readframe(MYFILE *f, INT32 num)
 
 			if (fastcmp(word1, "SPRITENUMBER") || fastcmp(word1, "SPRITENAME"))
 			{
-				DEH_WriteUndoline(word1, va("%u", states[num].sprite), UNDO_NONE);
 				states[num].sprite = get_sprite(word2);
 			}
 			else if (fastcmp(word1, "SPRITESUBNUMBER") || fastcmp(word1, "SPRITEFRAME"))
 			{
-				DEH_WriteUndoline(word1, va("%d", states[num].frame), UNDO_NONE);
 				states[num].frame = (INT32)get_number(word2); // So the FF_ flags get calculated
 			}
 			else if (fastcmp(word1, "DURATION"))
 			{
-				DEH_WriteUndoline(word1, va("%u", states[num].tics), UNDO_NONE);
 				states[num].tics = (INT32)get_number(word2); // So TICRATE can be used
 			}
 			else if (fastcmp(word1, "NEXT"))
 			{
-				DEH_WriteUndoline(word1, va("%d", states[num].nextstate), UNDO_NONE);
 				states[num].nextstate = get_state(word2);
 			}
 			else if (fastcmp(word1, "VAR1"))
 			{
-				DEH_WriteUndoline(word1, va("%d", states[num].var1), UNDO_NONE);
 				states[num].var1 = (INT32)get_number(word2);
 			}
 			else if (fastcmp(word1, "VAR2"))
 			{
-				DEH_WriteUndoline(word1, va("%d", states[num].var2), UNDO_NONE);
 				states[num].var2 = (INT32)get_number(word2);
 			}
 			else if (fastcmp(word1, "ACTION"))
@@ -2071,10 +1855,7 @@ static void readframe(MYFILE *f, INT32 num)
 				for (z = 0; actionpointers[z].name; z++)
 				{
 					if (actionpointers[z].action.acv == states[num].action.acv)
-					{
-						DEH_WriteUndoline(word1, actionpointers[z].name, UNDO_NONE);
 						break;
-					}
 				}
 
 				z = 0;
@@ -2106,10 +1887,11 @@ static void readframe(MYFILE *f, INT32 num)
 	Z_Free(s);
 }
 
-static void readsound(MYFILE *f, INT32 num, const char *savesfxnames[])
+static void readsound(MYFILE *f, INT32 num)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
 	char *word;
+	char *word2;
 	char *tmp;
 	INT32 value;
 
@@ -2123,8 +1905,8 @@ static void readsound(MYFILE *f, INT32 num, const char *savesfxnames[])
 			tmp = strchr(s, '#');
 			if (tmp)
 				*tmp = '\0';
-
-			value = searchvalue(s);
+			if (s == tmp)
+				continue; // Skip comment lines, but don't break.
 
 			word = strtok(s, " ");
 			if (word)
@@ -2132,34 +1914,31 @@ static void readsound(MYFILE *f, INT32 num, const char *savesfxnames[])
 			else
 				break;
 
-/*			if (fastcmp(word, "OFFSET"))
+			word2 = strtok(NULL, " ");
+			if (word2)
+				value = atoi(word2);
+			else
 			{
-				value -= 150360;
-				if (value <= 64)
-					value /= 8;
-				else if (value <= 260)
-					value = (value+4)/8;
-				else
-					value = (value+8)/8;
-				if (value >= -1 && value < sfx_freeslot0 - 1)
-					S_sfx[num].name = savesfxnames[value+1];
-				else
-					deh_warning("Sound %d: offset out of bounds", num);
+				deh_warning("No value for token %s", word);
+				continue;
 			}
-			else */if (fastcmp(word, "SINGULAR"))
+
+			if (fastcmp(word, "SINGULAR"))
 			{
-				DEH_WriteUndoline(word, va("%d", S_sfx[num].singularity), UNDO_NONE);
 				S_sfx[num].singularity = value;
 			}
 			else if (fastcmp(word, "PRIORITY"))
 			{
-				DEH_WriteUndoline(word, va("%d", S_sfx[num].priority), UNDO_NONE);
 				S_sfx[num].priority = value;
 			}
 			else if (fastcmp(word, "FLAGS"))
 			{
-				DEH_WriteUndoline(word, va("%d", S_sfx[num].pitch), UNDO_NONE);
 				S_sfx[num].pitch = value;
+			}
+			else if (fastcmp(word, "CAPTION") || fastcmp(word, "DESCRIPTION"))
+			{
+				deh_strlcpy(S_sfx[num].caption, word2,
+					sizeof(S_sfx[num].caption), va("Sound effect %d: caption", num));
 			}
 			else
 				deh_warning("Sound %d : unknown word '%s'",num,word);
@@ -2167,8 +1946,6 @@ static void readsound(MYFILE *f, INT32 num, const char *savesfxnames[])
 	} while (!myfeof(f));
 
 	Z_Free(s);
-
-	(void)savesfxnames;
 }
 
 /** Checks if a game data file name for a mod is good.
@@ -2199,11 +1976,7 @@ static boolean GoodDataFileName(const char *s)
 	p = s + strlen(s) - strlen(tail);
 	if (p <= s) return false; // too short
 	if (!fasticmp(p, tail)) return false; // doesn't end in .dat
-#ifdef DELFILE
-	if (fasticmp(s, "gamedata.dat") && !disableundo) return false;
-#else
 	if (fasticmp(s, "gamedata.dat")) return false;
-#endif
 
 	return true;
 }
@@ -2215,17 +1988,6 @@ static void reademblemdata(MYFILE *f, INT32 num)
 	char *word2;
 	char *tmp;
 	INT32 value;
-
-	// Reset all data initially
-	DEH_WriteUndoline("TYPE", va("%d", emblemlocations[num-1].type), UNDO_NONE);
-	DEH_WriteUndoline("X", va("%d", emblemlocations[num-1].x), UNDO_NONE);
-	DEH_WriteUndoline("Y", va("%d", emblemlocations[num-1].y), UNDO_NONE);
-	DEH_WriteUndoline("Z", va("%d", emblemlocations[num-1].z), UNDO_NONE);
-	DEH_WriteUndoline("MAPNUM", va("%d", emblemlocations[num-1].level), UNDO_NONE);
-	DEH_WriteUndoline("VAR", va("%d", emblemlocations[num-1].var), UNDO_NONE);
-	DEH_WriteUndoline("SPRITE", va("%d", emblemlocations[num-1].sprite), UNDO_NONE);
-	DEH_WriteUndoline("COLOR", va("%d", emblemlocations[num-1].color), UNDO_NONE);
-	DEH_WriteUndoline("HINT", extraemblems[num-1].hint, UNDO_NONE);
 
 	memset(&emblemlocations[num-1], 0, sizeof(emblem_t));
 
@@ -2278,12 +2040,12 @@ static void reademblemdata(MYFILE *f, INT32 num)
 					emblemlocations[num-1].type = ET_TIME;
 				else if (fastcmp(word2, "RINGS"))
 					emblemlocations[num-1].type = ET_RINGS;
+				else if (fastcmp(word2, "MAP"))
+					emblemlocations[num-1].type = ET_MAP;
 				else if (fastcmp(word2, "NGRADE"))
 					emblemlocations[num-1].type = ET_NGRADE;
 				else if (fastcmp(word2, "NTIME"))
 					emblemlocations[num-1].type = ET_NTIME;
-				else if (fastcmp(word2, "MAP"))
-					emblemlocations[num-1].type = ET_MAP;
 				else
 					emblemlocations[num-1].type = (UINT8)value;
 			}
@@ -2362,13 +2124,6 @@ static void readextraemblemdata(MYFILE *f, INT32 num)
 	char *tmp;
 	INT32 value;
 
-	// Reset all data initially
-	DEH_WriteUndoline("NAME", extraemblems[num-1].name, UNDO_NONE);
-	DEH_WriteUndoline("OBJECTIVE", extraemblems[num-1].description, UNDO_NONE);
-	DEH_WriteUndoline("CONDITIONSET", va("%d", extraemblems[num-1].conditionset), UNDO_NONE);
-	DEH_WriteUndoline("SPRITE", va("%d", extraemblems[num-1].sprite), UNDO_NONE);
-	DEH_WriteUndoline("COLOR", va("%d", extraemblems[num-1].color), UNDO_NONE);
-
 	memset(&extraemblems[num-1], 0, sizeof(extraemblem_t));
 
 	do
@@ -2443,17 +2198,8 @@ static void readunlockable(MYFILE *f, INT32 num)
 	char *tmp;
 	INT32 i;
 
-	// Same deal with unlockables, clear all first
-	DEH_WriteUndoline("NAME", unlockables[num].name, UNDO_NONE);
-	DEH_WriteUndoline("OBJECTIVE", unlockables[num].objective, UNDO_NONE);
-	DEH_WriteUndoline("HEIGHT", va("%d", unlockables[num].height), UNDO_NONE);
-	DEH_WriteUndoline("CONDITIONSET", va("%d", unlockables[num].conditionset), UNDO_NONE);
-	DEH_WriteUndoline("TYPE", va("%d", unlockables[num].type), UNDO_NONE);
-	DEH_WriteUndoline("NOCECHO", va("%d", unlockables[num].nocecho), UNDO_NONE);
-	DEH_WriteUndoline("NOCHECKLIST", va("%d", unlockables[num].nochecklist), UNDO_NONE);
-	DEH_WriteUndoline("VAR", va("%d", unlockables[num].variable), UNDO_NONE);
-
 	memset(&unlockables[num], 0, sizeof(unlockable_t));
+	unlockables[num].objective[0] = '/';
 
 	do
 	{
@@ -2795,190 +2541,6 @@ static void readconditionset(MYFILE *f, UINT8 setnum)
 	Z_Free(s);
 }
 
-static void readtexture(MYFILE *f, const char *name)
-{
-	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
-	char *word;
-	char *word2;
-	char *tmp;
-	INT32 i, j, value;
-	UINT16 width = 0, height = 0;
-	INT16 patchcount = 0;
-	texture_t *texture;
-
-	do
-	{
-		if (myfgets(s, MAXLINELEN, f))
-		{
-			if (s[0] == '\n')
-				break;
-
-			tmp = strchr(s, '#');
-			if (tmp)
-				*tmp = '\0';
-
-			value = searchvalue(s);
-			word = strtok(s, " ");
-			if (word)
-				strupr(word);
-			else
-				break;
-
-			word2 = strtok(NULL, " ");
-			if (word2)
-				strupr(word2);
-			else
-				break;
-
-			// Width of the texture.
-			if (fastcmp(word, "WIDTH"))
-			{
-				DEH_WriteUndoline(word, va("%d", width), UNDO_NONE);
-				width = SHORT((UINT16)value);
-			}
-			// Height of the texture.
-			else if (fastcmp(word, "HEIGHT"))
-			{
-				DEH_WriteUndoline(word, va("%d", height), UNDO_NONE);
-				height = SHORT((UINT16)value);
-			}
-			// Number of patches the texture has.
-			else if (fastcmp(word, "NUMPATCHES"))
-			{
-				DEH_WriteUndoline(word, va("%d", patchcount), UNDO_NONE);
-				patchcount = SHORT((UINT16)value);
-			}
-			else
-				deh_warning("readtexture: unknown word '%s'", word);
-		}
-	} while (!myfeof(f));
-
-	// Error checking.
-	if (!width)
-		I_Error("Texture %s has no width!\n", name);
-
-	if (!height)
-		I_Error("Texture %s has no height!\n", name);
-
-	if (!patchcount)
-		I_Error("Texture %s has no patches!\n", name);
-
-	// Allocate memory for the texture, and fill in information.
-	texture = Z_Calloc(sizeof(texture_t) + (sizeof(texpatch_t) * SHORT(patchcount)), PU_STATIC, NULL);
-	M_Memcpy(texture->name, name, sizeof(texture->name));
-	texture->width = width;
-	texture->height = height;
-	texture->patchcount = patchcount;
-	texture->holes = false;
-	// Fill out the texture patches, to allow them to be detected
-	// accurately by readpatch.
-	for (i = 0; i < patchcount; i++)
-	{
-		texture->patches[i].originx = 0;
-		texture->patches[i].originy = 0;
-		texture->patches[i].wad = UINT16_MAX;
-		texture->patches[i].lump = UINT16_MAX;
-	}
-
-	// Jump to the next empty texture entry.
-	i = 0;
-	while (textures[i])
-		i++;
-
-	// Fill the global texture buffer entries.
-	j = 1;
-	while (j << 1 <= texture->width)
-		j <<= 1;
-
-	textures[i] = texture;
-	texturewidthmask[i] = j - 1;
-	textureheight[i] = texture->height << FRACBITS;
-
-	// Clean up.
-	Z_Free(s);
-}
-
-static void readpatch(MYFILE *f, const char *name, UINT16 wad)
-{
-	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
-	char *word;
-	char *word2;
-	char *tmp;
-	INT32 i = 0, j = 0, value;
-	texpatch_t patch = {0, 0, UINT16_MAX, UINT16_MAX, 0, 255, AST_COPY};
-
-	// Jump to the texture this patch belongs to, which,
-	// coincidentally, is always the last one on the buffer cache.
-	while (textures[i+1])
-		i++;
-
-	// Jump to the next empty patch entry.
-	while (memcmp(&(textures[i]->patches[j]), &patch, sizeof(patch)))
-		j++;
-
-	patch.wad = wad;
-	// Set the texture number, but only if the lump exists.
-	if ((patch.lump = W_CheckNumForNamePwad(name, wad, 0)) == INT16_MAX)
-		I_Error("readpatch: Missing patch in texture %s", textures[i]->name);
-
-	// note: undoing this patch will be done by other means
-	do
-	{
-		if (myfgets(s, MAXLINELEN, f))
-		{
-			if (s[0] == '\n')
-				break;
-
-			tmp = strchr(s, '#');
-			if (tmp)
-				*tmp = '\0';
-
-			value = searchvalue(s);
-			word = strtok(s, " ");
-			if (word)
-				strupr(word);
-			else
-				break;
-
-			word2 = strtok(NULL, " ");
-			if (word2)
-				strupr(word2);
-			else
-				break;
-
-			// X position of the patch in the texture.
-			if (fastcmp(word, "X"))
-			{
-				//DEH_WriteUndoline(word, va("%d", patch->originx), UNDO_NONE);
-				patch.originx = (INT16)value;
-			}
-			// Y position of the patch in the texture.
-			else if (fastcmp(word, "Y"))
-			{
-				//DEH_WriteUndoline(word, va("%d", patch->originy), UNDO_NONE);
-				patch.originy = (INT16)value;
-			}
-			else
-				deh_warning("readpatch: unknown word '%s'", word);
-		}
-	} while (!myfeof(f));
-
-	// Error checking.
-	/* // Irrelevant. Origins cannot be unsigned.
-	if (patch.originx == UINT16_MAX)
-		I_Error("Patch %s on texture %s has no X position!\n", name, textures[i]->name);
-
-	if (patch.originy == UINT16_MAX)
-		I_Error("Patch %s on texture %s has no Y position!\n", name, textures[i]->name);
-*/
-
-	// Set the patch as that patch number.
-	textures[i]->patches[j] = patch;
-
-	// Clean up.
-	Z_Free(s);
-}
-
 static void readmaincfg(MYFILE *f)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
@@ -3030,7 +2592,6 @@ static void readmaincfg(MYFILE *f)
 				else
 					value = get_number(word2);
 
-				DEH_WriteUndoline(word, va("%d", spstage_start), UNDO_NONE);
 				spstage_start = (INT16)value;
 			}
 			else if (fastcmp(word, "SSTAGE_START"))
@@ -3044,79 +2605,64 @@ static void readmaincfg(MYFILE *f)
 				else
 					value = get_number(word2);
 
-				DEH_WriteUndoline(word, va("%d", sstage_start), UNDO_NONE);
 				sstage_start = (INT16)value;
 				sstage_end = (INT16)(sstage_start+6); // 7 special stages total
 			}
 			else if (fastcmp(word, "USENIGHTSSS"))
 			{
-				DEH_WriteUndoline(word, va("%d", useNightsSS), UNDO_NONE);
 				useNightsSS = (UINT8)(value || word2[0] == 'T' || word2[0] == 'Y');
 			}
 			else if (fastcmp(word, "REDTEAM"))
 			{
-				DEH_WriteUndoline(word, va("%d", skincolor_redteam), UNDO_NONE);
 				skincolor_redteam = (UINT8)get_number(word2);
 			}
 			else if (fastcmp(word, "BLUETEAM"))
 			{
-				DEH_WriteUndoline(word, va("%d", skincolor_blueteam), UNDO_NONE);
 				skincolor_blueteam = (UINT8)get_number(word2);
 			}
 			else if (fastcmp(word, "REDRING"))
 			{
-				DEH_WriteUndoline(word, va("%d", skincolor_redring), UNDO_NONE);
 				skincolor_redring = (UINT8)get_number(word2);
 			}
 			else if (fastcmp(word, "BLUERING"))
 			{
-				DEH_WriteUndoline(word, va("%d", skincolor_bluering), UNDO_NONE);
 				skincolor_bluering = (UINT8)get_number(word2);
 			}
 			else if (fastcmp(word, "INVULNTICS"))
 			{
-				DEH_WriteUndoline(word, va("%u", invulntics), UNDO_NONE);
 				invulntics = (UINT16)get_number(word2);
 			}
 			else if (fastcmp(word, "SNEAKERTICS"))
 			{
-				DEH_WriteUndoline(word, va("%u", sneakertics), UNDO_NONE);
 				sneakertics = (UINT16)get_number(word2);
 			}
 			else if (fastcmp(word, "FLASHINGTICS"))
 			{
-				DEH_WriteUndoline(word, va("%u", flashingtics), UNDO_NONE);
 				flashingtics = (UINT16)get_number(word2);
 			}
 			else if (fastcmp(word, "TAILSFLYTICS"))
 			{
-				DEH_WriteUndoline(word, va("%u", tailsflytics), UNDO_NONE);
 				tailsflytics = (UINT16)get_number(word2);
 			}
 			else if (fastcmp(word, "UNDERWATERTICS"))
 			{
-				DEH_WriteUndoline(word, va("%u", underwatertics), UNDO_NONE);
 				underwatertics = (UINT16)get_number(word2);
 			}
 			else if (fastcmp(word, "SPACETIMETICS"))
 			{
-				DEH_WriteUndoline(word, va("%u", spacetimetics), UNDO_NONE);
 				spacetimetics = (UINT16)get_number(word2);
 			}
 			else if (fastcmp(word, "EXTRALIFETICS"))
 			{
-				DEH_WriteUndoline(word, va("%u", extralifetics), UNDO_NONE);
 				extralifetics = (UINT16)get_number(word2);
 			}
 			else if (fastcmp(word, "GAMEOVERTICS"))
 			{
-				DEH_WriteUndoline(word, va("%u", gameovertics), UNDO_NONE);
 				gameovertics = get_number(word2);
 			}
 
 			else if (fastcmp(word, "INTROTOPLAY"))
 			{
-				DEH_WriteUndoline(word, va("%d", introtoplay), UNDO_NONE);
 				introtoplay = (UINT8)get_number(word2);
 				// range check, you morons.
 				if (introtoplay > 128)
@@ -3124,17 +2670,14 @@ static void readmaincfg(MYFILE *f)
 			}
 			else if (fastcmp(word, "LOOPTITLE"))
 			{
-				DEH_WriteUndoline(word, va("%d", looptitle), UNDO_NONE);
 				looptitle = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
 			}
 			else if (fastcmp(word, "TITLESCROLLSPEED"))
 			{
-				DEH_WriteUndoline(word, va("%d", titlescrollspeed), UNDO_NONE);
 				titlescrollspeed = get_number(word2);
 			}
 			else if (fastcmp(word, "CREDITSCUTSCENE"))
 			{
-				DEH_WriteUndoline(word, va("%d", creditscutscene), UNDO_NONE);
 				creditscutscene = (UINT8)get_number(word2);
 				// range check, you morons.
 				if (creditscutscene > 128)
@@ -3142,32 +2685,26 @@ static void readmaincfg(MYFILE *f)
 			}
 			else if (fastcmp(word, "DISABLESPEEDADJUST"))
 			{
-				DEH_WriteUndoline(word, va("%d", disableSpeedAdjust), UNDO_NONE);
 				disableSpeedAdjust = (UINT8)get_number(word2);
 			}
 			else if (fastcmp(word, "NUMDEMOS"))
 			{
-				DEH_WriteUndoline(word, va("%d", numDemos), UNDO_NONE);
 				numDemos = (UINT8)get_number(word2);
 			}
 			else if (fastcmp(word, "DEMODELAYTIME"))
 			{
-				DEH_WriteUndoline(word, va("%d", demoDelayTime), UNDO_NONE);
 				demoDelayTime = get_number(word2);
 			}
 			else if (fastcmp(word, "DEMOIDLETIME"))
 			{
-				DEH_WriteUndoline(word, va("%d", demoIdleTime), UNDO_NONE);
 				demoIdleTime = get_number(word2);
 			}
 			else if (fastcmp(word, "USE1UPSOUND"))
 			{
-				DEH_WriteUndoline(word, va("%u", use1upSound), UNDO_NONE);
 				use1upSound = (UINT8)(value || word2[0] == 'T' || word2[0] == 'Y');
 			}
 			else if (fastcmp(word, "MAXXTRALIFE"))
 			{
-				DEH_WriteUndoline(word, va("%u", maxXtraLife), UNDO_NONE);
 				maxXtraLife = (UINT8)get_number(word2);
 			}
 
@@ -3181,7 +2718,6 @@ static void readmaincfg(MYFILE *f)
 					I_Error("Maincfg: bad data file name '%s'\n", word2);
 
 				G_SaveGameData();
-				DEH_WriteUndoline(word, gamedatafilename, UNDO_NONE);
 				strlcpy(gamedatafilename, word2, sizeof (gamedatafilename));
 				strlwr(gamedatafilename);
 				savemoddata = true;
@@ -3198,12 +2734,10 @@ static void readmaincfg(MYFILE *f)
 			}
 			else if (fastcmp(word, "RESETDATA"))
 			{
-				DEH_WriteUndoline(word, "0", UNDO_TODO); /// \todo
 				P_ResetData(value);
 			}
 			else if (fastcmp(word, "CUSTOMVERSION"))
 			{
-				DEH_WriteUndoline(word, customversionstring, UNDO_NONE);
 				strlcpy(customversionstring, word2, sizeof (customversionstring));
 			}
 			else
@@ -3389,30 +2923,17 @@ static void ignorelines(MYFILE *f)
 	Z_Free(s);
 }
 
-static void DEH_LoadDehackedFile(MYFILE *f, UINT16 wad)
+static void DEH_LoadDehackedFile(MYFILE *f)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
 	char *word;
 	char *word2;
 	INT32 i;
-	// do a copy of this for cross references probleme
-	//XBOXSTATIC actionf_t saveactions[NUMSTATES];
-	//XBOXSTATIC const char *savesprnames[NUMSPRITES];
-	XBOXSTATIC const char *savesfxnames[NUMSFX];
 
 	if (!deh_loaded)
 		initfreeslots();
 
 	deh_num_warning = 0;
-	// save values for cross reference
-	/*
-	for (i = 0; i < NUMSTATES; i++)
-		saveactions[i] = states[i].action;
-	for (i = 0; i < NUMSPRITES; i++)
-		savesprnames[i] = sprnames[i];
-	*/
-	for (i = 0; i < NUMSFX; i++)
-		savesfxnames[i] = S_sfx[i].name;
 
 	gamedataadded = false;
 
@@ -3454,13 +2975,11 @@ static void DEH_LoadDehackedFile(MYFILE *f, UINT16 wad)
 			else if (fastcmp(word, "MAINCFG"))
 			{
 				readmaincfg(f);
-				DEH_WriteUndoline(word, "", UNDO_HEADER);
 				continue;
 			}
 			else if (fastcmp(word, "WIPES"))
 			{
 				readwipes(f);
-				DEH_WriteUndoline(word, "", UNDO_HEADER);
 				continue;
 			}
 			word2 = strtok(NULL, " ");
@@ -3480,7 +2999,6 @@ static void DEH_LoadDehackedFile(MYFILE *f, UINT16 wad)
 					deh_warning("Character %d out of range (0 - 31)", i);
 					ignorelines(f);
 				}
-				DEH_WriteUndoline(word, word2, UNDO_HEADER);
 				continue;
 			}
 			if (word2)
@@ -3489,19 +3007,8 @@ static void DEH_LoadDehackedFile(MYFILE *f, UINT16 wad)
 				if (word2[strlen(word2)-1] == '\n')
 					word2[strlen(word2)-1] = '\0';
 				i = atoi(word2);
-				if (fastcmp(word, "TEXTURE"))
-				{
-					// Read texture from spec file.
-					readtexture(f, word2);
-					DEH_WriteUndoline(word, word2, UNDO_HEADER);
-				}
-				else if (fastcmp(word, "PATCH"))
-				{
-					// Read patch from spec file.
-					readpatch(f, word2, wad);
-					DEH_WriteUndoline(word, word2, UNDO_HEADER);
-				}
-				else if (fastcmp(word, "THING") || fastcmp(word, "MOBJ") || fastcmp(word, "OBJECT"))
+
+				if (fastcmp(word, "THING") || fastcmp(word, "MOBJ") || fastcmp(word, "OBJECT"))
 				{
 					if (i == 0 && word2[0] != '0') // If word2 isn't a number
 						i = get_mobjtype(word2); // find a thing by name
@@ -3512,12 +3019,7 @@ static void DEH_LoadDehackedFile(MYFILE *f, UINT16 wad)
 						deh_warning("Thing %d out of range (1 - %d)", i, NUMMOBJTYPES-1);
 						ignorelines(f);
 					}
-					DEH_WriteUndoline(word, word2, UNDO_HEADER);
 				}
-/*				else if (fastcmp(word, "ANIMTEX"))
-				{
-					readAnimTex(f, i);
-				}*/
 				else if (fastcmp(word, "LIGHT"))
 				{
 #ifdef HWRENDER
@@ -3529,7 +3031,6 @@ static void DEH_LoadDehackedFile(MYFILE *f, UINT16 wad)
 						deh_warning("Light number %d out of range (1 - %d)", i, NUMLIGHTS-1);
 						ignorelines(f);
 					}
-					DEH_WriteUndoline(word, word2, UNDO_HEADER);
 #endif
 				}
 				else if (fastcmp(word, "SPRITE"))
@@ -3544,7 +3045,6 @@ static void DEH_LoadDehackedFile(MYFILE *f, UINT16 wad)
 						deh_warning("Sprite number %d out of range (0 - %d)", i, NUMSPRITES-1);
 						ignorelines(f);
 					}
-					DEH_WriteUndoline(word, word2, UNDO_HEADER);
 #endif
 				}
 				else if (fastcmp(word, "LEVEL"))
@@ -3563,7 +3063,6 @@ static void DEH_LoadDehackedFile(MYFILE *f, UINT16 wad)
 						deh_warning("Level number %d out of range (1 - %d)", i, NUMMAPS);
 						ignorelines(f);
 					}
-					DEH_WriteUndoline(word, word2, UNDO_HEADER);
 				}
 				else if (fastcmp(word, "CUTSCENE"))
 				{
@@ -3574,7 +3073,6 @@ static void DEH_LoadDehackedFile(MYFILE *f, UINT16 wad)
 						deh_warning("Cutscene number %d out of range (1 - 128)", i);
 						ignorelines(f);
 					}
-					DEH_WriteUndoline(word, word2, UNDO_HEADER);
 				}
 				else if (fastcmp(word, "FRAME") || fastcmp(word, "STATE"))
 				{
@@ -3587,63 +3085,19 @@ static void DEH_LoadDehackedFile(MYFILE *f, UINT16 wad)
 						deh_warning("Frame %d out of range (0 - %d)", i, NUMSTATES-1);
 						ignorelines(f);
 					}
-					DEH_WriteUndoline(word, word2, UNDO_HEADER);
 				}
-				// <Callum> Added translations to this just in case its re-enabled
-/*				else if (fastcmp(word, "POINTER"))
-				{
-					word = strtok(NULL, " "); // get frame
-					word = strtok(NULL, ")");
-					if (word)
-					{
-						i = atoi(word);
-						if (i < NUMSTATES && i >= 0)
-						{
-							if (myfgets(s, MAXLINELEN, f))
-								states[i].action = saveactions[searchvalue(s)];
-						}
-						else
-						{
-							deh_warning("Pointer: Frame %d doesn't exist", i);
-							ignorelines(f);
-						}
-					}
-					else
-						deh_warning("pointer (Frame %d) : missing ')'", i);
-				}*/
 				else if (fastcmp(word, "SOUND"))
 				{
 					if (i == 0 && word2[0] != '0') // If word2 isn't a number
 						i = get_sfx(word2); // find a sound by name
-					if (i < NUMSFX && i >= 0)
-						readsound(f, i, savesfxnames);
+					if (i < NUMSFX && i > 0)
+						readsound(f, i);
 					else
 					{
-						deh_warning("Sound %d out of range (0 - %d)", i, NUMSFX-1);
+						deh_warning("Sound %d out of range (1 - %d)", i, NUMSFX-1);
 						ignorelines(f);
 					}
-					DEH_WriteUndoline(word, word2, UNDO_HEADER);
 				}
-/*				else if (fastcmp(word, "SPRITE"))
-				{
-					if (i < NUMSPRITES && i >= 0)
-					{
-						if (myfgets(s, MAXLINELEN, f))
-						{
-							INT32 k;
-							k = (searchvalue(s) - 151328)/8;
-							if (k >= 0 && k < NUMSPRITES)
-								sprnames[i] = savesprnames[k];
-							else
-							{
-								deh_warning("Sprite %d: offset out of bounds", i);
-								ignorelines(f);
-							}
-						}
-					}
-					else
-						deh_warning("Sprite %d doesn't exist",i);
-				}*/
 				else if (fastcmp(word, "HUDITEM"))
 				{
 					if (i == 0 && word2[0] != '0') // If word2 isn't a number
@@ -3655,7 +3109,6 @@ static void DEH_LoadDehackedFile(MYFILE *f, UINT16 wad)
 						deh_warning("HUD item number %d out of range (0 - %d)", i, NUMHUDITEMS-1);
 						ignorelines(f);
 					}
-					DEH_WriteUndoline(word, word2, UNDO_HEADER);
 				}
 				else if (fastcmp(word, "EMBLEM"))
 				{
@@ -3675,7 +3128,6 @@ static void DEH_LoadDehackedFile(MYFILE *f, UINT16 wad)
 						deh_warning("Emblem number %d out of range (1 - %d)", i, MAXEMBLEMS);
 						ignorelines(f);
 					}
-					DEH_WriteUndoline(word, word2, UNDO_HEADER);
 				}
 				else if (fastcmp(word, "EXTRAEMBLEM"))
 				{
@@ -3695,7 +3147,6 @@ static void DEH_LoadDehackedFile(MYFILE *f, UINT16 wad)
 						deh_warning("Extra emblem number %d out of range (1 - %d)", i, MAXEXTRAEMBLEMS);
 						ignorelines(f);
 					}
-					DEH_WriteUndoline(word, word2, UNDO_HEADER);
 				}
 				else if (fastcmp(word, "UNLOCKABLE"))
 				{
@@ -3711,7 +3162,6 @@ static void DEH_LoadDehackedFile(MYFILE *f, UINT16 wad)
 						deh_warning("Unlockable number %d out of range (1 - %d)", i, MAXUNLOCKABLES);
 						ignorelines(f);
 					}
-					DEH_WriteUndoline(word, word2, UNDO_HEADER);
 				}
 				else if (fastcmp(word, "CONDITIONSET"))
 				{
@@ -3727,20 +3177,21 @@ static void DEH_LoadDehackedFile(MYFILE *f, UINT16 wad)
 						deh_warning("Condition set number %d out of range (1 - %d)", i, MAXCONDITIONSETS);
 						ignorelines(f);
 					}
-					// no undo support for this insanity yet
-					//DEH_WriteUndoline(word, word2, UNDO_HEADER);
 				}
-				else if (fastcmp(word, "SRB2"))
+				// Last I heard this crashes the game if you try to use it
+				// so this is disabled for now
+				// -- Monster Iestyn
+/*				else if (fastcmp(word, "SRB2"))
 				{
 					INT32 ver = searchvalue(strtok(NULL, "\n"));
 					if (ver != PATCHVERSION)
 						deh_warning("Patch is for SRB2 version %d,\nonly version %d is supported", ver, PATCHVERSION);
-					//DEH_WriteUndoline(word, va("%d", ver), UNDO_NONE);
 				}
 				// Clear all data in certain locations (mostly for unlocks)
 				// Unless you REALLY want to piss people off,
 				// define a custom gamedata /before/ doing this!!
 				// (then again, modifiedgame will prevent game data saving anyway)
+*/
 				else if (fastcmp(word, "CLEAR"))
 				{
 					boolean clearall = (fastcmp(word2, "ALL"));
@@ -3805,17 +3256,13 @@ static void DEH_LoadDehackedFile(MYFILE *f, UINT16 wad)
 void DEH_LoadDehackedLumpPwad(UINT16 wad, UINT16 lump)
 {
 	MYFILE f;
-#ifdef DELFILE
-	unsocwad = wad;
-#endif
 	f.wad = wad;
 	f.size = W_LumpLengthPwad(wad, lump);
 	f.data = Z_Malloc(f.size + 1, PU_STATIC, NULL);
 	W_ReadLumpPwad(wad, lump, f.data);
 	f.curpos = f.data;
 	f.data[f.size] = 0;
-	DEH_LoadDehackedFile(&f, wad);
-	DEH_WriteUndoline(va("# uload for wad: %u, lump: %u", wad, lump), NULL, UNDO_DONE);
+	DEH_LoadDehackedFile(&f);
 	Z_Free(f.data);
 }
 
@@ -3823,67 +3270,6 @@ void DEH_LoadDehackedLump(lumpnum_t lumpnum)
 {
 	DEH_LoadDehackedLumpPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum));
 }
-
-#ifdef DELFILE
-#define DUMPUNDONE
-
-// read (un)dehacked lump in wad's memory
-void DEH_UnloadDehackedWad(UINT16 wad)
-{
-	undehacked_t *tmp, *curundo = unsocdata[wad];
-	MYFILE f;
-	size_t len = 0;
-	char *data;
-#ifdef DUMPUNDONE
-	FILE *UNDO = fopen("undo.soc", "wt");
-#endif
-	CONS_Printf(M_GetText("Unloading WAD SOC edits\n"));
-	while (curundo)
-	{
-		data = curundo->undata;
-		curundo = curundo->next;
-		if (data)
-			len += strlen(data);
-		len += 1;
-#ifdef DUMPUNDONE
-		if (UNDO)
-		{
-			if (data)
-				fprintf(UNDO, "%s\n", data);
-			else
-				fprintf(UNDO, "\n");
-		}
-#endif
-	}
-#ifndef DUMPUNDONE
-	if (UNDO) fclose(UNDO);
-#endif
-	if (!len) return;
-	f.size = len;
-	data = f.data = Z_Malloc(f.size + 1, PU_STATIC, NULL);
-	curundo = unsocdata[wad];
-	unsocdata[wad] = NULL;
-	while (curundo)
-	{
-		tmp = curundo;
-		curundo = curundo->next;
-		if (tmp->undata)
-			data += sprintf(data, "%s\n", tmp->undata);
-		else
-			data += sprintf(data, "\n");
-		if (tmp->undata) free(tmp->undata);
-		free(tmp);
-	}
-	f.wad = wad;
-	f.curpos = f.data;
-	f.data[f.size] = 0;
-	disableundo = true;
-	DEH_LoadDehackedFile(&f);
-	disableundo = false;
-	Z_Free(f.data);
-}
-#endif //DELFILE
-
 
 ////////////////////////////////////////////////////////////////////////////////
 // CRAZY LIST OF STATE NAMES AND ALL FROM HERE DOWN
@@ -4823,11 +4209,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_TEAMRING",
 
 	// Special Stage Token
-	"S_EMMY",
-
-	// Special Stage Token
 	"S_TOKEN",
-	"S_MOVINGTOKEN",
 
 	// CTF Flags
 	"S_REDFLAG",
@@ -4977,6 +4359,17 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SPIKE6",
 	"S_SPIKED1",
 	"S_SPIKED2",
+
+	// Wall spikes
+	"S_WALLSPIKE1",
+	"S_WALLSPIKE2",
+	"S_WALLSPIKE3",
+	"S_WALLSPIKE4",
+	"S_WALLSPIKE5",
+	"S_WALLSPIKE6",
+	"S_WALLSPIKEBASE",
+	"S_WALLSPIKED1",
+	"S_WALLSPIKED2",
 
 	// Starpost
 	"S_STARPOST_IDLE",
@@ -5164,12 +4557,25 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_DEMONFIRE5",
 	"S_DEMONFIRE6",
 
+	// GFZ flowers
 	"S_GFZFLOWERA",
 	"S_GFZFLOWERB",
 	"S_GFZFLOWERC",
 
 	"S_BERRYBUSH",
 	"S_BUSH",
+
+	// Trees (both GFZ and misc)
+	"S_GFZTREE",
+	"S_GFZBERRYTREE",
+	"S_GFZCHERRYTREE",
+	"S_CHECKERTREE",
+	"S_CHECKERSUNSETTREE",
+	"S_FHZTREE", // Frozen Hillside
+	"S_FHZPINKTREE",
+	"S_POLYGONTREE",
+	"S_BUSHTREE",
+	"S_BUSHREDTREE",
 
 	// THZ Plant
 	"S_THZFLOWERA",
@@ -5180,6 +4586,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Deep Sea Gargoyle
 	"S_GARGOYLE",
+	"S_BIGGARGOYLE",
 
 	// DSZ Seaweed
 	"S_SEAWEED1",
@@ -5231,17 +4638,61 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SLING1",
 	"S_SLING2",
 
-	// CEZ Small Mace Chain
+	// CEZ maces and chains
 	"S_SMALLMACECHAIN",
-
-	// CEZ Big Mace Chain
 	"S_BIGMACECHAIN",
-
-	// CEZ Small Mace
 	"S_SMALLMACE",
-
-	// CEZ Big Mace
 	"S_BIGMACE",
+
+	// Yellow spring on a ball
+	"S_YELLOWSPRINGBALL",
+	"S_YELLOWSPRINGBALL2",
+	"S_YELLOWSPRINGBALL3",
+	"S_YELLOWSPRINGBALL4",
+	"S_YELLOWSPRINGBALL5",
+
+	// Red spring on a ball
+	"S_REDSPRINGBALL",
+	"S_REDSPRINGBALL2",
+	"S_REDSPRINGBALL3",
+	"S_REDSPRINGBALL4",
+	"S_REDSPRINGBALL5",
+
+	// Small Firebar
+	"S_SMALLFIREBAR1",
+	"S_SMALLFIREBAR2",
+	"S_SMALLFIREBAR3",
+	"S_SMALLFIREBAR4",
+	"S_SMALLFIREBAR5",
+	"S_SMALLFIREBAR6",
+	"S_SMALLFIREBAR7",
+	"S_SMALLFIREBAR8",
+	"S_SMALLFIREBAR9",
+	"S_SMALLFIREBAR10",
+	"S_SMALLFIREBAR11",
+	"S_SMALLFIREBAR12",
+	"S_SMALLFIREBAR13",
+	"S_SMALLFIREBAR14",
+	"S_SMALLFIREBAR15",
+	"S_SMALLFIREBAR16",
+
+	// Big Firebar
+	"S_BIGFIREBAR1",
+	"S_BIGFIREBAR2",
+	"S_BIGFIREBAR3",
+	"S_BIGFIREBAR4",
+	"S_BIGFIREBAR5",
+	"S_BIGFIREBAR6",
+	"S_BIGFIREBAR7",
+	"S_BIGFIREBAR8",
+	"S_BIGFIREBAR9",
+	"S_BIGFIREBAR10",
+	"S_BIGFIREBAR11",
+	"S_BIGFIREBAR12",
+	"S_BIGFIREBAR13",
+	"S_BIGFIREBAR14",
+	"S_BIGFIREBAR15",
+	"S_BIGFIREBAR16",
 
 	"S_CEZFLOWER1",
 
@@ -5338,7 +4789,14 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	// Xmas-specific stuff
 	"S_XMASPOLE",
 	"S_CANDYCANE",
-	"S_SNOWMAN",
+	"S_SNOWMAN",    // normal
+	"S_SNOWMANHAT", // with hat + scarf
+	"S_LAMPPOST1",  // normal
+	"S_LAMPPOST2",  // with snow
+	"S_HANGSTAR",
+	// Xmas GFZ bushes
+	"S_XMASBERRYBUSH",
+	"S_XMASBUSH",
 
 	// Botanic Serenity's loads of scenery states
 	"S_BSZTALLFLOWER_RED",
@@ -5530,10 +4988,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PITY4",
 	"S_PITY5",
 	"S_PITY6",
-	"S_PITY7",
-	"S_PITY8",
-	"S_PITY9",
-	"S_PITY10",
 
 	"S_FIRS1",
 	"S_FIRS2",
@@ -6213,16 +5667,11 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_NIGHTSWING_XMAS",
 
 	// NiGHTS Paraloop Powerups
-	"S_NIGHTSPOWERUP1",
-	"S_NIGHTSPOWERUP2",
-	"S_NIGHTSPOWERUP3",
-	"S_NIGHTSPOWERUP4",
-	"S_NIGHTSPOWERUP5",
-	"S_NIGHTSPOWERUP6",
-	"S_NIGHTSPOWERUP7",
-	"S_NIGHTSPOWERUP8",
-	"S_NIGHTSPOWERUP9",
-	"S_NIGHTSPOWERUP10",
+	"S_NIGHTSSUPERLOOP",
+	"S_NIGHTSDRILLREFILL",
+	"S_NIGHTSHELPER",
+	"S_NIGHTSEXTRATIME",
+	"S_NIGHTSLINKFREEZE",
 	"S_EGGCAPSULE",
 
 	// Orbiting Chaos Emeralds
@@ -6419,8 +5868,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_BLUEBALL",  // Blue sphere replacement for special stages
 	"MT_REDTEAMRING",  //Rings collectable by red team.
 	"MT_BLUETEAMRING", //Rings collectable by blue team.
-	"MT_EMMY", // emerald token for special stage
-	"MT_TOKEN", // Special Stage Token (uncollectible part)
+	"MT_TOKEN", // Special Stage Token
 	"MT_REDFLAG", // Red CTF Flag
 	"MT_BLUEFLAG", // Blue CTF Flag
 	"MT_EMBLEM",
@@ -6454,6 +5902,8 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_SPECIALSPIKEBALL",
 	"MT_SPINFIRE",
 	"MT_SPIKE",
+	"MT_WALLSPIKE",
+	"MT_WALLSPIKEBASE",
 	"MT_STARPOST",
 	"MT_BIGMINE",
 	"MT_BIGAIRMINE",
@@ -6544,6 +5994,17 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_GFZFLOWER3",
 	"MT_BERRYBUSH",
 	"MT_BUSH",
+	// Trees (both GFZ and misc)
+	"MT_GFZTREE",
+	"MT_GFZBERRYTREE",
+	"MT_GFZCHERRYTREE",
+	"MT_CHECKERTREE",
+	"MT_CHECKERSUNSETTREE",
+	"MT_FHZTREE", // Frozen Hillside
+	"MT_FHZPINKTREE",
+	"MT_POLYGONTREE",
+	"MT_BUSHTREE",
+	"MT_BUSHREDTREE",
 
 	// Techno Hill Scenery
 	"MT_THZFLOWER1",
@@ -6552,6 +6013,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 
 	// Deep Sea Scenery
 	"MT_GARGOYLE", // Deep Sea Gargoyle
+	"MT_BIGGARGOYLE", // Deep Sea Gargoyle (Big)
 	"MT_SEAWEED", // DSZ Seaweed
 	"MT_WATERDRIP", // Dripping Water source
 	"MT_WATERDROP", // Water drop from dripping water
@@ -6566,14 +6028,20 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_FLAMEPARTICLE",
 	"MT_EGGSTATUE", // Eggman Statue
 	"MT_MACEPOINT", // Mace rotation point
-	"MT_SWINGMACEPOINT", // Mace swinging point
-	"MT_HANGMACEPOINT", // Hangable mace chain
-	"MT_SPINMACEPOINT", // Spin/Controllable mace chain
+	"MT_CHAINMACEPOINT", // Combination of chains and maces point
+	"MT_SPRINGBALLPOINT", // Spring ball point
+	"MT_CHAINPOINT", // Mace chain
 	"MT_HIDDEN_SLING", // Spin mace chain (activatable)
+	"MT_FIREBARPOINT", // Firebar
+	"MT_CUSTOMMACEPOINT", // Custom mace
 	"MT_SMALLMACECHAIN", // Small Mace Chain
 	"MT_BIGMACECHAIN", // Big Mace Chain
 	"MT_SMALLMACE", // Small Mace
 	"MT_BIGMACE", // Big Mace
+	"MT_YELLOWSPRINGBALL", // Yellow spring on a ball
+	"MT_REDSPRINGBALL", // Red spring on a ball
+	"MT_SMALLFIREBAR", // Small Firebar
+	"MT_BIGFIREBAR", // Big Firebar
 	"MT_CEZFLOWER",
 
 	// Arid Canyon Scenery
@@ -6620,7 +6088,14 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	// Christmas Scenery
 	"MT_XMASPOLE",
 	"MT_CANDYCANE",
-	"MT_SNOWMAN",
+	"MT_SNOWMAN",    // normal
+	"MT_SNOWMANHAT", // with hat + scarf
+	"MT_LAMPPOST1",  // normal
+	"MT_LAMPPOST2",  // with snow
+	"MT_HANGSTAR",
+	// Xmas GFZ bushes
+	"MT_XMASBERRYBUSH",
+	"MT_XMASBUSH",
 
 	// Botanic Serenity
 	"MT_BSZTALLFLOWER_RED",
@@ -6919,6 +6394,7 @@ static const char *const MOBJFLAG2_LIST[] = {
 	"AMBUSH",         // Alternate behaviour typically set by MTF_AMBUSH
 	"LINKDRAW",       // Draw vissprite of mobj immediately before/after tracer's vissprite (dependent on dispoffset and position)
 	"SHIELD",         // Thinker calls P_AddShield/P_ShieldLook (must be partnered with MF_SCENERY to use)
+	"MACEROTATE",     // Thinker calls P_MaceRotate around tracer
 	NULL
 };
 
@@ -7029,91 +6505,130 @@ static const char *const ML_LIST[16] = {
 // This DOES differ from r_draw's Color_Names, unfortunately.
 // Also includes Super colors
 static const char *COLOR_ENUMS[] = {
-	"NONE",     	// SKINCOLOR_NONE
-	"WHITE",    	// SKINCOLOR_WHITE
-	"SILVER",   	// SKINCOLOR_SILVER
-	"GREY",	    	// SKINCOLOR_GREY
-	"BLACK",    	// SKINCOLOR_BLACK
-	"BEIGE",    	// SKINCOLOR_BEIGE
-	"PEACH",    	// SKINCOLOR_PEACH
-	"BROWN",    	// SKINCOLOR_BROWN
-	"RED",      	// SKINCOLOR_RED
-	"CRIMSON",     	// SKINCOLOR_CRIMSON
-	"ORANGE",   	// SKINCOLOR_ORANGE
-	"RUST",     	// SKINCOLOR_RUST
-	"GOLD",      	// SKINCOLOR_GOLD
-	"YELLOW",   	// SKINCOLOR_YELLOW
-	"TAN",      	// SKINCOLOR_TAN
-	"MOSS",      	// SKINCOLOR_MOSS
-	"PERIDOT",    	// SKINCOLOR_PERIDOT
-	"GREEN",    	// SKINCOLOR_GREEN
-	"EMERALD",  	// SKINCOLOR_EMERALD
-	"AQUA",     	// SKINCOLOR_AQUA
-	"TEAL",     	// SKINCOLOR_TEAL
-	"CYAN",     	// SKINCOLOR_CYAN
-	"BLUE",     	// SKINCOLOR_BLUE
-	"AZURE",    	// SKINCOLOR_AZURE
-	"PASTEL",		// SKINCOLOR_PASTEL
-	"PURPLE",   	// SKINCOLOR_PURPLE
-	"LAVENDER", 	// SKINCOLOR_LAVENDER
-	"MAGENTA",   	// SKINCOLOR_MAGENTA
-	"PINK",     	// SKINCOLOR_PINK
-	"ROSY",     	// SKINCOLOR_ROSY
+	"NONE",			// SKINCOLOR_NONE,
+
+	// Greyscale ranges
+	"WHITE",     	// SKINCOLOR_WHITE,
+	"BONE",     	// SKINCOLOR_BONE,
+	"CLOUDY",     	// SKINCOLOR_CLOUDY,
+	"GREY",     	// SKINCOLOR_GREY,
+	"SILVER",     	// SKINCOLOR_SILVER,
+	"CARBON",     	// SKINCOLOR_CARBON,
+	"JET",     		// SKINCOLOR_JET,
+	"BLACK",     	// SKINCOLOR_BLACK,
+
+	// Desaturated
+	"AETHER",     	// SKINCOLOR_AETHER,
+	"SLATE",     	// SKINCOLOR_SLATE,
+	"PINK",     	// SKINCOLOR_PINK,
+	"YOGURT",     	// SKINCOLOR_YOGURT,
+	"BROWN",     	// SKINCOLOR_BROWN,
+	"TAN",     		// SKINCOLOR_TAN,
+	"BEIGE",     	// SKINCOLOR_BEIGE,
+	"MOSS",     	// SKINCOLOR_MOSS,
+	"AZURE",     	// SKINCOLOR_AZURE,
+	"LAVENDER",     // SKINCOLOR_LAVENDER,
+
+	// Viv's vivid colours (toast 21/07/17)
+	"RUBY",     	// SKINCOLOR_RUBY,
+	"SALMON",     	// SKINCOLOR_SALMON,
+	"RED",     		// SKINCOLOR_RED,
+	"CRIMSON",     	// SKINCOLOR_CRIMSON,
+	"FLAME",     	// SKINCOLOR_FLAME,
+	"PEACHY",     	// SKINCOLOR_PEACHY,
+	"QUAIL",     	// SKINCOLOR_QUAIL,
+	"SUNSET",     	// SKINCOLOR_SUNSET,
+	"APRICOT",     	// SKINCOLOR_APRICOT,
+	"ORANGE",     	// SKINCOLOR_ORANGE,
+	"RUST",     	// SKINCOLOR_RUST,
+	"GOLD",     	// SKINCOLOR_GOLD,
+	"SANDY",     	// SKINCOLOR_SANDY,
+	"YELLOW",     	// SKINCOLOR_YELLOW,
+	"OLIVE",     	// SKINCOLOR_OLIVE,
+	"LIME",     	// SKINCOLOR_LIME,
+	"PERIDOT",     	// SKINCOLOR_PERIDOT,
+	"GREEN",     	// SKINCOLOR_GREEN,
+	"FOREST",     	// SKINCOLOR_FOREST,
+	"EMERALD",     	// SKINCOLOR_EMERALD,
+	"MINT",     	// SKINCOLOR_MINT,
+	"SEAFOAM",     	// SKINCOLOR_SEAFOAM,
+	"AQUA",     	// SKINCOLOR_AQUA,
+	"TEAL",     	// SKINCOLOR_TEAL,
+	"WAVE",     	// SKINCOLOR_WAVE,
+	"CYAN",     	// SKINCOLOR_CYAN,
+	"SKY",     		// SKINCOLOR_SKY,
+	"CERULEAN",     // SKINCOLOR_CERULEAN,
+	"ICY",     		// SKINCOLOR_ICY,
+	"SAPPHIRE",     // SKINCOLOR_SAPPHIRE,
+	"CORNFLOWER",   // SKINCOLOR_CORNFLOWER,
+	"BLUE",     	// SKINCOLOR_BLUE,
+	"COBALT",     	// SKINCOLOR_COBALT,
+	"VAPOR",     	// SKINCOLOR_VAPOR,
+	"DUSK",     	// SKINCOLOR_DUSK,
+	"PASTEL",     	// SKINCOLOR_PASTEL,
+	"PURPLE",     	// SKINCOLOR_PURPLE,
+	"BUBBLEGUM",    // SKINCOLOR_BUBBLEGUM,
+	"MAGENTA",     	// SKINCOLOR_MAGENTA,
+	"NEON",     	// SKINCOLOR_NEON,
+	"VIOLET",     	// SKINCOLOR_VIOLET,
+	"LILAC",     	// SKINCOLOR_LILAC,
+	"PLUM",     	// SKINCOLOR_PLUM,
+	"ROSY",     	// SKINCOLOR_ROSY,
 
 	// Super special awesome Super flashing colors!
-	"SUPERSILVER1", // SKINCOLOR_SUPERSILVER1
-	"SUPERSILVER2", // SKINCOLOR_SUPERSILVER2,
-	"SUPERSILVER3", // SKINCOLOR_SUPERSILVER3,
-	"SUPERSILVER4", // SKINCOLOR_SUPERSILVER4,
-	"SUPERSILVER5", // SKINCOLOR_SUPERSILVER5,
+	"SUPERSILVER1",	// SKINCOLOR_SUPERSILVER1
+	"SUPERSILVER2",	// SKINCOLOR_SUPERSILVER2,
+	"SUPERSILVER3",	// SKINCOLOR_SUPERSILVER3,
+	"SUPERSILVER4",	// SKINCOLOR_SUPERSILVER4,
+	"SUPERSILVER5",	// SKINCOLOR_SUPERSILVER5,
 
-	"SUPERRED1", // SKINCOLOR_SUPERRED1
-	"SUPERRED2", // SKINCOLOR_SUPERRED2,
-	"SUPERRED3", // SKINCOLOR_SUPERRED3,
-	"SUPERRED4", // SKINCOLOR_SUPERRED4,
-	"SUPERRED5", // SKINCOLOR_SUPERRED5,
+	"SUPERRED1",	// SKINCOLOR_SUPERRED1
+	"SUPERRED2",	// SKINCOLOR_SUPERRED2,
+	"SUPERRED3",	// SKINCOLOR_SUPERRED3,
+	"SUPERRED4",	// SKINCOLOR_SUPERRED4,
+	"SUPERRED5",	// SKINCOLOR_SUPERRED5,
 
-	"SUPERORANGE1", // SKINCOLOR_SUPERORANGE1
-	"SUPERORANGE2", // SKINCOLOR_SUPERORANGE2,
-	"SUPERORANGE3", // SKINCOLOR_SUPERORANGE3,
-	"SUPERORANGE4", // SKINCOLOR_SUPERORANGE4,
-	"SUPERORANGE5", // SKINCOLOR_SUPERORANGE5,
+	"SUPERORANGE1",	// SKINCOLOR_SUPERORANGE1
+	"SUPERORANGE2",	// SKINCOLOR_SUPERORANGE2,
+	"SUPERORANGE3",	// SKINCOLOR_SUPERORANGE3,
+	"SUPERORANGE4",	// SKINCOLOR_SUPERORANGE4,
+	"SUPERORANGE5",	// SKINCOLOR_SUPERORANGE5,
 
-	"SUPERGOLD1", // SKINCOLOR_SUPERGOLD1
-	"SUPERGOLD2", // SKINCOLOR_SUPERGOLD2,
-	"SUPERGOLD3", // SKINCOLOR_SUPERGOLD3,
-	"SUPERGOLD4", // SKINCOLOR_SUPERGOLD4,
-	"SUPERGOLD5", // SKINCOLOR_SUPERGOLD5,
+	"SUPERGOLD1",	// SKINCOLOR_SUPERGOLD1
+	"SUPERGOLD2",	// SKINCOLOR_SUPERGOLD2,
+	"SUPERGOLD3",	// SKINCOLOR_SUPERGOLD3,
+	"SUPERGOLD4",	// SKINCOLOR_SUPERGOLD4,
+	"SUPERGOLD5",	// SKINCOLOR_SUPERGOLD5,
 
-	"SUPERPERIDOT1", // SKINCOLOR_SUPERPERIDOT1
-	"SUPERPERIDOT2", // SKINCOLOR_SUPERPERIDOT2,
-	"SUPERPERIDOT3", // SKINCOLOR_SUPERPERIDOT3,
-	"SUPERPERIDOT4", // SKINCOLOR_SUPERPERIDOT4,
-	"SUPERPERIDOT5", // SKINCOLOR_SUPERPERIDOT5,
+	"SUPERPERIDOT1",	// SKINCOLOR_SUPERPERIDOT1
+	"SUPERPERIDOT2",	// SKINCOLOR_SUPERPERIDOT2,
+	"SUPERPERIDOT3",	// SKINCOLOR_SUPERPERIDOT3,
+	"SUPERPERIDOT4",	// SKINCOLOR_SUPERPERIDOT4,
+	"SUPERPERIDOT5",	// SKINCOLOR_SUPERPERIDOT5,
 
-	"SUPERCYAN1", // SKINCOLOR_SUPERCYAN1
-	"SUPERCYAN2", // SKINCOLOR_SUPERCYAN2,
-	"SUPERCYAN3", // SKINCOLOR_SUPERCYAN3,
-	"SUPERCYAN4", // SKINCOLOR_SUPERCYAN4,
-	"SUPERCYAN5", // SKINCOLOR_SUPERCYAN5,
+	"SUPERSKY1",	// SKINCOLOR_SUPERSKY1
+	"SUPERSKY2",	// SKINCOLOR_SUPERSKY2,
+	"SUPERSKY3",	// SKINCOLOR_SUPERSKY3,
+	"SUPERSKY4",	// SKINCOLOR_SUPERSKY4,
+	"SUPERSKY5",	// SKINCOLOR_SUPERSKY5,
 
-	"SUPERPURPLE1",  	// SKINCOLOR_SUPERPURPLE1,
-	"SUPERPURPLE2",  	// SKINCOLOR_SUPERPURPLE2,
-	"SUPERPURPLE3",  	// SKINCOLOR_SUPERPURPLE3,
-	"SUPERPURPLE4",  	// SKINCOLOR_SUPERPURPLE4,
-	"SUPERPURPLE5",   	// SKINCOLOR_SUPERPURPLE5,
+	"SUPERPURPLE1",	// SKINCOLOR_SUPERPURPLE1,
+	"SUPERPURPLE2",	// SKINCOLOR_SUPERPURPLE2,
+	"SUPERPURPLE3",	// SKINCOLOR_SUPERPURPLE3,
+	"SUPERPURPLE4",	// SKINCOLOR_SUPERPURPLE4,
+	"SUPERPURPLE5",	// SKINCOLOR_SUPERPURPLE5,
 
-	"SUPERRUST1", // SKINCOLOR_SUPERRUST1
-	"SUPERRUST2", // SKINCOLOR_SUPERRUST2,
-	"SUPERRUST3", // SKINCOLOR_SUPERRUST3,
-	"SUPERRUST4", // SKINCOLOR_SUPERRUST4,
-	"SUPERRUST5", // SKINCOLOR_SUPERRUST5,
+	"SUPERRUST1",	// SKINCOLOR_SUPERRUST1
+	"SUPERRUST2",	// SKINCOLOR_SUPERRUST2,
+	"SUPERRUST3",	// SKINCOLOR_SUPERRUST3,
+	"SUPERRUST4",	// SKINCOLOR_SUPERRUST4,
+	"SUPERRUST5",	// SKINCOLOR_SUPERRUST5,
 
-	"SUPERTAN1", // SKINCOLOR_SUPERTAN1
-	"SUPERTAN2", // SKINCOLOR_SUPERTAN2,
-	"SUPERTAN3", // SKINCOLOR_SUPERTAN3,
-	"SUPERTAN4", // SKINCOLOR_SUPERTAN4,
-	"SUPERTAN5" // SKINCOLOR_SUPERTAN5,
+	"SUPERTAN1",	// SKINCOLOR_SUPERTAN1
+	"SUPERTAN2",	// SKINCOLOR_SUPERTAN2,
+	"SUPERTAN3",	// SKINCOLOR_SUPERTAN3,
+	"SUPERTAN4",	// SKINCOLOR_SUPERTAN4,
+	"SUPERTAN5"		// SKINCOLOR_SUPERTAN5,
 };
 
 static const char *const POWERS_LIST[] = {
@@ -7306,6 +6821,7 @@ struct {
 	{"LF_NOSSMUSIC",LF_NOSSMUSIC},
 	{"LF_NORELOAD",LF_NORELOAD},
 	{"LF_NOZONE",LF_NOZONE},
+	{"LF_SAVEGAME",LF_SAVEGAME},
 	// And map flags
 	{"LF2_HIDEINMENU",LF2_HIDEINMENU},
 	{"LF2_HIDEINSTATS",LF2_HIDEINSTATS},
@@ -7351,6 +6867,7 @@ struct {
 	{"SH_PROTECTFIRE",SH_PROTECTFIRE},
 	{"SH_PROTECTWATER",SH_PROTECTWATER},
 	{"SH_PROTECTELECTRIC",SH_PROTECTELECTRIC},
+	{"SH_PROTECTSPIKE",SH_PROTECTSPIKE},
 	// Indivisible shields
 	{"SH_PITY",SH_PITY},
 	{"SH_WHIRLWIND",SH_WHIRLWIND},
@@ -7438,7 +6955,11 @@ struct {
 	{"SF_X8AWAYSOUND",SF_X8AWAYSOUND},
 	{"SF_NOINTERRUPT",SF_NOINTERRUPT},
 	{"SF_X2AWAYSOUND",SF_X2AWAYSOUND},
-	
+
+	// Global emblem var flags
+	{"GE_NIGHTSPULL",GE_NIGHTSPULL},
+	{"GE_NIGHTSITEM",GE_NIGHTSITEM},
+
 	// Map emblem var flags
 	{"ME_ALLEMERALDS",ME_ALLEMERALDS},
 	{"ME_ULTIMATE",ME_ULTIMATE},
@@ -8120,11 +7641,14 @@ void FUNCMATH DEH_Check(void)
 static inline int lib_freeslot(lua_State *L)
 {
 	int n = lua_gettop(L);
-  int r = 0; // args returned
+	int r = 0; // args returned
 	char *s, *type,*word;
 
-  while (n-- > 0)
-  {
+	if (!lua_lumploading)
+		return luaL_error(L, "This function cannot be called from within a hook or coroutine!");
+
+	while (n-- > 0)
+	{
 		s = Z_StrDup(luaL_checkstring(L,1));
 		type = strtok(s, "_");
 		if (type)

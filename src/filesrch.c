@@ -31,6 +31,8 @@
 #include "filesrch.h"
 #include "d_netfil.h"
 #include "m_misc.h"
+#include "z_zone.h"
+#include "m_menu.h" // Addons_option_Onchange
 
 #if (defined (_WIN32) && !defined (_WIN32_WCE)) && defined (_MSC_VER) && !defined (_XBOX)
 
@@ -256,6 +258,28 @@ readdir (DIR * dirp)
 }
 
 /*
+ * rewinddir
+ *
+ * Makes the next readdir start from the beginning.
+ */
+int
+rewinddir (DIR * dirp)
+{
+  errno = 0;
+
+  /* Check for valid DIR struct. */
+  if (!dirp)
+    {
+      errno = EFAULT;
+      return -1;
+    }
+
+  dirp->dd_stat = 0;
+
+  return 0;
+}
+
+/*
  * closedir
  *
  * Frees up resources allocated by opendir.
@@ -285,6 +309,35 @@ closedir (DIR * dirp)
   return rc;
 }
 #endif
+
+static CV_PossibleValue_t addons_cons_t[] = {{0, "SRB2 Folder"}, /*{1, "HOME"}, {2, "SRB2 Folder"},*/ {3, "CUSTOM"}, {0, NULL}};
+consvar_t cv_addons_option = {"addons_option", "SRB2 Folder", CV_SAVE|CV_CALL, addons_cons_t, Addons_option_Onchange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_addons_folder = {"addons_folder", "./", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+static CV_PossibleValue_t addons_md5_cons_t[] = {{0, "Name"}, {1, "Contents"}, {0, NULL}};
+consvar_t cv_addons_md5 = {"addons_md5", "Name", CV_SAVE, addons_md5_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+consvar_t cv_addons_showall = {"addons_showall", "No", CV_SAVE, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+consvar_t cv_addons_search_case = {"addons_search_case", "No", CV_SAVE, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+static CV_PossibleValue_t addons_search_type_cons_t[] = {{0, "Start"}, {1, "Anywhere"}, {0, NULL}};
+consvar_t cv_addons_search_type = {"addons_search_type", "Anywhere", CV_SAVE, addons_search_type_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+
+char menupath[1024];
+size_t menupathindex[menudepth];
+size_t menudepthleft = menudepth;
+
+char menusearch[MAXSTRINGLENGTH+1];
+
+char **dirmenu;
+size_t sizedirmenu;
+size_t dir_on[menudepth];
+UINT8 refreshdirmenu = 0;
+
+size_t packetsizetally = 0;
+size_t mainwadstally = 0;
+
 #if defined (_XBOX) && defined (_MSC_VER)
 filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *wantedmd5sum,
 	boolean completepath, int maxsearchdepth)
@@ -296,6 +349,13 @@ filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *want
 	completepath = false;
 	return FS_NOTFOUND;
 }
+
+boolean preparefilemenu(boolean samedepth)
+{
+	(void)samedepth;
+	return false;
+}
+
 #elif defined (_WIN32_WCE)
 filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *wantedmd5sum,
 	boolean completepath, int maxsearchdepth)
@@ -346,6 +406,12 @@ filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *want
 #endif
 	return FS_NOTFOUND;
 }
+
+boolean preparefilemenu(boolean samedepth)
+{
+	(void)samedepth;
+	return false;
+}
 #else
 filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *wantedmd5sum, boolean completepath, int maxsearchdepth)
 {
@@ -387,25 +453,29 @@ filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *want
 	{
 		searchpath[searchpathindex[depthleft]]=0;
 		dent = readdir(dirhandle[depthleft]);
-		if (dent)
-			strcpy(&searchpath[searchpathindex[depthleft]],dent->d_name);
 
 		if (!dent)
+		{
 			closedir(dirhandle[depthleft++]);
-		else if (dent->d_name[0]=='.' &&
+			continue;
+		}
+
+		if (dent->d_name[0]=='.' &&
 				(dent->d_name[1]=='\0' ||
 					(dent->d_name[1]=='.' &&
 						dent->d_name[2]=='\0')))
 		{
 			// we don't want to scan uptree
+			continue;
 		}
-		else if (stat(searchpath,&fsstat) < 0) // do we want to follow symlinks? if not: change it to lstat
-		{
-			// was the file (re)moved? can't stat it
-		}
+
+		// okay, now we actually want searchpath to incorporate d_name
+		strcpy(&searchpath[searchpathindex[depthleft]],dent->d_name);
+
+		if (stat(searchpath,&fsstat) < 0) // do we want to follow symlinks? if not: change it to lstat
+			; // was the file (re)moved? can't stat it
 		else if (S_ISDIR(fsstat.st_mode) && depthleft)
 		{
-			strcpy(&searchpath[searchpathindex[depthleft]],dent->d_name);
 			searchpathindex[--depthleft] = strlen(searchpath) + 1;
 			dirhandle[depthleft] = opendir(searchpath);
 			if (!dirhandle[depthleft])
@@ -444,6 +514,255 @@ filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *want
 	free(searchname);
 	free(searchpathindex);
 	free(dirhandle);
+
 	return retval;
+}
+
+char exttable[NUM_EXT_TABLE][5] = {
+	".txt", ".cfg", // exec
+	".wad", ".soc", ".lua"}; // addfile
+
+char filenamebuf[MAX_WADFILES][MAX_WADPATH];
+
+
+static boolean filemenusearch(char *haystack, char *needle)
+{
+	static char localhaystack[128];
+	strlcpy(localhaystack, haystack, 128);
+	if (!cv_addons_search_case.value)
+		strupr(localhaystack);
+	return ((cv_addons_search_type.value)
+		? (strstr(localhaystack, needle) != 0)
+		: (!strncmp(localhaystack, needle, menusearch[0])));
+}
+
+#define searchdir if (menusearch[0] && !filemenusearch(dent->d_name, localmenusearch))\
+					{\
+						rejected++;\
+						continue;\
+					}\
+
+boolean preparefilemenu(boolean samedepth)
+{
+	DIR *dirhandle;
+	struct dirent *dent;
+	struct stat fsstat;
+	size_t pos = 0, folderpos = 0, numfolders = 0, rejected = 0;
+	char *tempname = NULL;
+	boolean noresults = false;
+	char localmenusearch[MAXSTRINGLENGTH] = "";
+
+	if (samedepth)
+	{
+		if (dirmenu && dirmenu[dir_on[menudepthleft]])
+			tempname = Z_StrDup(dirmenu[dir_on[menudepthleft]]+DIR_STRING); // don't need to I_Error if can't make - not important, just QoL
+	}
+	else
+		menusearch[0] = menusearch[1] = 0; // clear search
+
+	for (; sizedirmenu > 0; sizedirmenu--) // clear out existing items
+	{
+		Z_Free(dirmenu[sizedirmenu-1]);
+		dirmenu[sizedirmenu-1] = NULL;
+	}
+
+	if (!(dirhandle = opendir(menupath))) // get directory
+		return false;
+
+	if (menusearch[0])
+	{
+		strcpy(localmenusearch, menusearch+1);
+		if (!cv_addons_search_case.value)
+			strupr(localmenusearch);
+	}
+
+	while (true)
+	{
+		menupath[menupathindex[menudepthleft]] = 0;
+		dent = readdir(dirhandle);
+
+		if (!dent)
+			break;
+		else if (dent->d_name[0]=='.' &&
+				(dent->d_name[1]=='\0' ||
+					(dent->d_name[1]=='.' &&
+						dent->d_name[2]=='\0')))
+			continue; // we don't want to scan uptree
+
+		strcpy(&menupath[menupathindex[menudepthleft]],dent->d_name);
+
+		if (stat(menupath,&fsstat) < 0) // do we want to follow symlinks? if not: change it to lstat
+			; // was the file (re)moved? can't stat it
+		else // is a file or directory
+		{
+			if (!S_ISDIR(fsstat.st_mode)) // file
+			{
+				if (!cv_addons_showall.value)
+				{
+					size_t len = strlen(dent->d_name)+1;
+					UINT8 ext;
+					for (ext = 0; ext < NUM_EXT_TABLE; ext++)
+						if (!strcasecmp(exttable[ext], dent->d_name+len-5)) break; // extension comparison
+					if (ext == NUM_EXT_TABLE) continue; // not an addfile-able (or exec-able) file
+				}
+				searchdir;
+			}
+			else // directory
+			{
+				searchdir;
+				numfolders++;
+			}
+			sizedirmenu++;
+		}
+	}
+
+	if (!rejected && !sizedirmenu)
+	{
+		if (tempname)
+			Z_Free(tempname);
+		closedir(dirhandle);
+		return false;
+	}
+
+	if (((noresults = (menusearch[0] && !sizedirmenu)))
+		|| (!menusearch[0] && menudepthleft != menudepth-1)) // Make room for UP... or search entry
+	{
+		sizedirmenu++;
+		numfolders++;
+		folderpos++;
+	}
+
+	if (!(dirmenu = Z_Realloc(dirmenu, sizedirmenu*sizeof(char *), PU_STATIC, NULL)))
+	{
+		closedir(dirhandle); // just in case
+		I_Error("Ran out of memory whilst preparing add-ons menu");
+	}
+
+	rejected = 0;
+	rewinddir(dirhandle);
+
+	while ((pos+folderpos) < sizedirmenu)
+	{
+		menupath[menupathindex[menudepthleft]] = 0;
+		dent = readdir(dirhandle);
+
+		if (!dent)
+			break;
+		else if (dent->d_name[0]=='.' &&
+				(dent->d_name[1]=='\0' ||
+					(dent->d_name[1]=='.' &&
+						dent->d_name[2]=='\0')))
+			continue; // we don't want to scan uptree
+
+		strcpy(&menupath[menupathindex[menudepthleft]],dent->d_name);
+
+		if (stat(menupath,&fsstat) < 0) // do we want to follow symlinks? if not: change it to lstat
+			; // was the file (re)moved? can't stat it
+		else // is a file or directory
+		{
+			char *temp;
+			size_t len = strlen(dent->d_name)+1;
+			UINT8 ext = EXT_FOLDER;
+			UINT8 folder;
+
+			if (!S_ISDIR(fsstat.st_mode)) // file
+			{
+				if (!((numfolders+pos) < sizedirmenu)) continue; // crash prevention
+				for (; ext < NUM_EXT_TABLE; ext++)
+					if (!strcasecmp(exttable[ext], dent->d_name+len-5)) break; // extension comparison
+				if (ext == NUM_EXT_TABLE && !cv_addons_showall.value) continue; // not an addfile-able (or exec-able) file
+				ext += EXT_START; // moving to be appropriate position
+
+				searchdir;
+
+				if (ext >= EXT_LOADSTART)
+				{
+					size_t i;
+					for (i = 0; i < numwadfiles; i++)
+					{
+						if (!filenamebuf[i][0])
+						{
+							strncpy(filenamebuf[i], wadfiles[i]->filename, MAX_WADPATH);
+							filenamebuf[i][MAX_WADPATH - 1] = '\0';
+							nameonly(filenamebuf[i]);
+						}
+
+						if (strcmp(dent->d_name, filenamebuf[i]))
+							continue;
+						if (cv_addons_md5.value && !checkfilemd5(menupath, wadfiles[i]->md5sum))
+							continue;
+
+						ext |= EXT_LOADED;
+					}
+				}
+				else if (ext == EXT_TXT)
+				{
+					if (!strcmp(dent->d_name, "log.txt") || !strcmp(dent->d_name, "errorlog.txt"))
+						ext |= EXT_LOADED;
+				}
+
+				if (!strcmp(dent->d_name, configfile))
+					ext |= EXT_LOADED;
+
+				folder = 0;
+			}
+			else // directory
+			{
+				searchdir;
+				len += (folder = 1);
+			}
+
+			if (len > 255)
+				len = 255;
+
+			if (!(temp = Z_Malloc((len+DIR_STRING+folder) * sizeof (char), PU_STATIC, NULL)))
+				I_Error("Ran out of memory whilst preparing add-ons menu");
+			temp[DIR_TYPE] = ext;
+			temp[DIR_LEN] = (UINT8)(len);
+			strlcpy(temp+DIR_STRING, dent->d_name, len);
+			if (folder)
+			{
+				strcpy(temp+len, "/");
+				dirmenu[folderpos++] = temp;
+			}
+			else
+				dirmenu[numfolders + pos++] = temp;
+		}
+	}
+
+	closedir(dirhandle);
+
+	if (noresults) // no results
+		dirmenu[0] = Z_StrDup(va("%c\13No results...", EXT_NORESULTS));
+	else if (!menusearch[0] &&menudepthleft != menudepth-1) // now for UP... entry
+		dirmenu[0] = Z_StrDup(va("%c\5UP...", EXT_UP));
+
+	menupath[menupathindex[menudepthleft]] = 0;
+	sizedirmenu = (numfolders+pos); // just in case things shrink between opening and rewind
+
+	if (tempname)
+	{
+		size_t i;
+		for (i = 0; i < sizedirmenu; i++)
+		{
+			if (!strcmp(dirmenu[i]+DIR_STRING, tempname))
+			{
+				dir_on[menudepthleft] = i;
+				break;
+			}
+		}
+		Z_Free(tempname);
+	}
+
+	if (!sizedirmenu)
+	{
+		dir_on[menudepthleft] = 0;
+		Z_Free(dirmenu);
+		return false;
+	}
+	else if (dir_on[menudepthleft] >= sizedirmenu)
+		dir_on[menudepthleft] = sizedirmenu-1;
+
+	return true;
 }
 #endif

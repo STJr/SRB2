@@ -977,8 +977,6 @@ static const char *gamecontrolname[num_gamecontrols] =
 	"tossflag",
 	"use",
 	"camtoggle",
-	"camleft",
-	"camright",
 	"camreset",
 	"lookup",
 	"lookdown",
@@ -1074,8 +1072,6 @@ void G_Controldefault(void)
 	gamecontrol[gc_use        ][0] = KEY_JOY1+1; //B
 	gamecontrol[gc_use        ][1] = '.';
 	gamecontrol[gc_camtoggle  ][1] = ',';
-	gamecontrol[gc_camleft    ][0] = 'o';
-	gamecontrol[gc_camright   ][0] = 'p';
 	gamecontrol[gc_camreset   ][0] = 'c';
 	gamecontrol[gc_lookup     ][0] = KEY_PGUP;
 	gamecontrol[gc_lookdown   ][0] = KEY_PGDN;
@@ -1178,8 +1174,6 @@ void G_Controldefault(void)
 	gamecontrol[gc_tossflag   ][0] = '\'';
 	gamecontrol[gc_use        ][0] = KEY_LSHIFT;
 	gamecontrol[gc_camtoggle  ][0] = 'v';
-	gamecontrol[gc_camleft    ][0] = '[';
-	gamecontrol[gc_camright   ][0] = ']';
 	gamecontrol[gc_camreset   ][0] = 'r';
 	gamecontrol[gc_lookup     ][0] = KEY_UPARROW;
 	gamecontrol[gc_lookdown   ][0] = KEY_DOWNARROW;

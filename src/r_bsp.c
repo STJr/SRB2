@@ -365,6 +365,36 @@ sector_t *R_FakeFlat(sector_t *sec, sector_t *tempsec, INT32 *floorlightlevel,
 	return sec;
 }
 
+boolean R_IsEmptyLine(seg_t *line, sector_t *front, sector_t *back)
+{
+	return (
+#ifdef POLYOBJECTS
+		!line->polyseg &&
+#endif
+		back->ceilingpic == front->ceilingpic
+		&& back->floorpic == front->floorpic
+#ifdef ESLOPE
+		&& back->f_slope == front->f_slope
+		&& back->c_slope == front->c_slope
+#endif
+		&& back->lightlevel == front->lightlevel
+		&& !line->sidedef->midtexture
+		// Check offsets too!
+		&& back->floor_xoffs == front->floor_xoffs
+		&& back->floor_yoffs == front->floor_yoffs
+		&& back->floorpic_angle == front->floorpic_angle
+		&& back->ceiling_xoffs == front->ceiling_xoffs
+		&& back->ceiling_yoffs == front->ceiling_yoffs
+		&& back->ceilingpic_angle == front->ceilingpic_angle
+		// Consider altered lighting.
+		&& back->floorlightsec == front->floorlightsec
+		&& back->ceilinglightsec == front->ceilinglightsec
+		// Consider colormaps
+		&& back->extra_colormap == front->extra_colormap
+		&& ((!front->ffloors && !back->ffloors)
+		|| front->tag == back->tag));
+}
+
 //
 // R_AddLine
 // Clips the given segment and adds any visible pieces to the line list.
@@ -526,36 +556,8 @@ static void R_AddLine(seg_t *line)
 	// Identical floor and ceiling on both sides, identical light levels on both sides,
 	// and no middle texture.
 
-	if (
-#ifdef POLYOBJECTS
-		!line->polyseg &&
-#endif
-		backsector->ceilingpic == frontsector->ceilingpic
-		&& backsector->floorpic == frontsector->floorpic
-#ifdef ESLOPE
-		&& backsector->f_slope == frontsector->f_slope
-		&& backsector->c_slope == frontsector->c_slope
-#endif
-		&& backsector->lightlevel == frontsector->lightlevel
-		&& !curline->sidedef->midtexture
-		// Check offsets too!
-		&& backsector->floor_xoffs == frontsector->floor_xoffs
-		&& backsector->floor_yoffs == frontsector->floor_yoffs
-		&& backsector->floorpic_angle == frontsector->floorpic_angle
-		&& backsector->ceiling_xoffs == frontsector->ceiling_xoffs
-		&& backsector->ceiling_yoffs == frontsector->ceiling_yoffs
-		&& backsector->ceilingpic_angle == frontsector->ceilingpic_angle
-		// Consider altered lighting.
-		&& backsector->floorlightsec == frontsector->floorlightsec
-		&& backsector->ceilinglightsec == frontsector->ceilinglightsec
-		// Consider colormaps
-		&& backsector->extra_colormap == frontsector->extra_colormap
-		&& ((!frontsector->ffloors && !backsector->ffloors)
-		|| frontsector->tag == backsector->tag))
-	{
+	if (R_IsEmptyLine(line, frontsector, backsector))
 		return;
-	}
-
 
 clippass:
 	R_ClipPassWallSegment(x1, x2 - 1);
@@ -1102,30 +1104,12 @@ static void R_Subsector(size_t num)
 				&& polysec->floorheight >= floorcenterz
 				&& (viewz < polysec->floorheight))
 			{
-				fixed_t xoff, yoff;
-				xoff = polysec->floor_xoffs;
-				yoff = polysec->floor_yoffs;
-
-				if (po->angle != 0) {
-					angle_t fineshift = po->angle >> ANGLETOFINESHIFT;
-
-					xoff -= FixedMul(FINECOSINE(fineshift), po->centerPt.x)+FixedMul(FINESINE(fineshift), po->centerPt.y);
-					yoff -= FixedMul(FINESINE(fineshift), po->centerPt.x)-FixedMul(FINECOSINE(fineshift), po->centerPt.y);
-				} else {
-					xoff -= po->centerPt.x;
-					yoff += po->centerPt.y;
-				}
-
 				light = R_GetPlaneLight(frontsector, polysec->floorheight, viewz < polysec->floorheight);
 				light = 0;
 				ffloor[numffloors].plane = R_FindPlane(polysec->floorheight, polysec->floorpic,
-						polysec->lightlevel, xoff, yoff,
-						polysec->floorpic_angle-po->angle,
-						NULL,
-						NULL
-#ifdef POLYOBJECTS_PLANES
-					, po
-#endif
+					polysec->lightlevel, polysec->floor_xoffs, polysec->floor_yoffs,
+					polysec->floorpic_angle-po->angle,
+					NULL, NULL, po
 #ifdef ESLOPE
 					, NULL // will ffloors be slopable eventually?
 #endif
@@ -1150,28 +1134,11 @@ static void R_Subsector(size_t num)
 				&& polysec->ceilingheight <= ceilingcenterz
 				&& (viewz > polysec->ceilingheight))
 			{
-				fixed_t xoff, yoff;
-				xoff = polysec->ceiling_xoffs;
-				yoff = polysec->ceiling_yoffs;
-
-				if (po->angle != 0) {
-					angle_t fineshift = po->angle >> ANGLETOFINESHIFT;
-
-					xoff -= FixedMul(FINECOSINE(fineshift), po->centerPt.x)+FixedMul(FINESINE(fineshift), po->centerPt.y);
-					yoff -= FixedMul(FINESINE(fineshift), po->centerPt.x)-FixedMul(FINECOSINE(fineshift), po->centerPt.y);
-				} else {
-					xoff -= po->centerPt.x;
-					yoff += po->centerPt.y;
-				}
-
 				light = R_GetPlaneLight(frontsector, polysec->ceilingheight, viewz < polysec->ceilingheight);
 				light = 0;
 				ffloor[numffloors].plane = R_FindPlane(polysec->ceilingheight, polysec->ceilingpic,
-					polysec->lightlevel, xoff, yoff, polysec->ceilingpic_angle-po->angle,
-					NULL, NULL
-#ifdef POLYOBJECTS_PLANES
-					, po
-#endif
+					polysec->lightlevel, polysec->ceiling_xoffs, polysec->ceiling_yoffs, polysec->ceilingpic_angle-po->angle,
+					NULL, NULL, po
 #ifdef ESLOPE
 					, NULL // will ffloors be slopable eventually?
 #endif
@@ -1222,6 +1189,9 @@ static void R_Subsector(size_t num)
 	while (count--)
 	{
 //		CONS_Debug(DBG_GAMELOGIC, "Adding normal line %d...(%d)\n", line->linedef-lines, leveltime);
+#ifdef POLYOBJECTS
+		if (!line->polyseg) // ignore segs that belong to polyobjects
+#endif
 		R_AddLine(line);
 		line++;
 		curline = NULL; /* cph 2001/11/18 - must clear curline now we're done with it, so stuff doesn't try using it for other things */

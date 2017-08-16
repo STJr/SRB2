@@ -33,6 +33,7 @@
 #include "i_system.h"
 #include "d_main.h"
 #include "m_menu.h"
+#include "filesrch.h"
 
 #ifdef _WINDOWS
 #include "win32/win_main.h"
@@ -1275,12 +1276,15 @@ void CONS_Alert(alerttype_t level, const char *fmt, ...)
 	switch (level)
 	{
 		case CONS_NOTICE:
+			// no notice for notices, hehe
 			CONS_Printf("\x83" "%s" "\x80 ", M_GetText("NOTICE:"));
 			break;
 		case CONS_WARNING:
+			refreshdirmenu |= REFRESHDIR_WARNING;
 			CONS_Printf("\x82" "%s" "\x80 ", M_GetText("WARNING:"));
 			break;
 		case CONS_ERROR:
+			refreshdirmenu |= REFRESHDIR_ERROR;
 			CONS_Printf("\x85" "%s" "\x80 ", M_GetText("ERROR:"));
 			break;
 	}
@@ -1394,32 +1398,32 @@ static void CON_DrawInput(void)
 		if (input_sel < c)
 			V_DrawFill(x, y, charwidth*3, (10 * con_scalefactor), 77 | V_NOSCALESTART);
 		for (i = 0; i < 3; ++i, x += charwidth)
-			V_DrawCharacter(x, y, '.' | cv_constextsize.value | V_GRAYMAP | V_NOSCALESTART, !cv_allcaps.value);
+			V_DrawCharacter(x, y, '.' | cv_constextsize.value | V_GRAYMAP | V_NOSCALESTART, true);
 	}
 	else
-		V_DrawCharacter(x-charwidth, y, CON_PROMPTCHAR | cv_constextsize.value | V_GRAYMAP | V_NOSCALESTART, !cv_allcaps.value);
+		V_DrawCharacter(x-charwidth, y, CON_PROMPTCHAR | cv_constextsize.value | V_GRAYMAP | V_NOSCALESTART, true);
 
 	for (cend = c + clen; c < cend; ++c, x += charwidth)
 	{
 		if ((input_sel > c && input_cur <= c) || (input_sel <= c && input_cur > c))
 		{
 			V_DrawFill(x, y, charwidth, (10 * con_scalefactor), 77 | V_NOSCALESTART);
-			V_DrawCharacter(x, y, p[c] | cv_constextsize.value | V_YELLOWMAP | V_NOSCALESTART, !cv_allcaps.value);
+			V_DrawCharacter(x, y, p[c] | cv_constextsize.value | V_YELLOWMAP | V_NOSCALESTART, true);
 		}
 		else
-			V_DrawCharacter(x, y, p[c] | cv_constextsize.value | V_NOSCALESTART, !cv_allcaps.value);
+			V_DrawCharacter(x, y, p[c] | cv_constextsize.value | V_NOSCALESTART, true);
 
 		if (c == input_cur && con_tick >= 4)
-			V_DrawCharacter(x, y + (con_scalefactor*2), '_' | cv_constextsize.value | V_NOSCALESTART, !cv_allcaps.value);
+			V_DrawCharacter(x, y + (con_scalefactor*2), '_' | cv_constextsize.value | V_NOSCALESTART, true);
 	}
 	if (cend == input_cur && con_tick >= 4)
-		V_DrawCharacter(x, y + (con_scalefactor*2), '_' | cv_constextsize.value | V_NOSCALESTART, !cv_allcaps.value);
+		V_DrawCharacter(x, y + (con_scalefactor*2), '_' | cv_constextsize.value | V_NOSCALESTART, true);
 	if (rellip)
 	{
 		if (input_sel > cend)
 			V_DrawFill(x, y, charwidth*3, (10 * con_scalefactor), 77 | V_NOSCALESTART);
 		for (i = 0; i < 3; ++i, x += charwidth)
-			V_DrawCharacter(x, y, '.' | cv_constextsize.value | V_GRAYMAP | V_NOSCALESTART, !cv_allcaps.value);
+			V_DrawCharacter(x, y, '.' | cv_constextsize.value | V_GRAYMAP | V_NOSCALESTART, true);
 	}
 }
 
@@ -1465,11 +1469,11 @@ static void CON_DrawHudlines(void)
 			else
 			{
 				//charwidth = SHORT(hu_font['A'-HU_FONTSTART]->width) * con_scalefactor;
-				V_DrawCharacter(x, y, (INT32)(*p) | charflags | cv_constextsize.value | V_NOSCALESTART, !cv_allcaps.value);
+				V_DrawCharacter(x, y, (INT32)(*p) | charflags | cv_constextsize.value | V_NOSCALESTART, true);
 			}
 		}
 
-		//V_DrawCharacter(x, y, (p[c]&0xff) | cv_constextsize.value | V_NOSCALESTART, !cv_allcaps.value);
+		//V_DrawCharacter(x, y, (p[c]&0xff) | cv_constextsize.value | V_NOSCALESTART, true);
 		y += charheight;
 	}
 
@@ -1607,7 +1611,7 @@ static void CON_DrawConsole(void)
 				charflags = (*p & 0x7f) << V_CHARCOLORSHIFT;
 				p++;
 			}
-			V_DrawCharacter(x, y, (INT32)(*p) | charflags | cv_constextsize.value | V_NOSCALESTART, !cv_allcaps.value);
+			V_DrawCharacter(x, y, (INT32)(*p) | charflags | cv_constextsize.value | V_NOSCALESTART, true);
 		}
 	}
 

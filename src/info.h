@@ -40,8 +40,6 @@ void A_Scream();
 void A_BossDeath();
 void A_CustomPower(); // Use this for a custom power
 void A_GiveWeapon(); // Gives the player weapon(s)
-void A_JumpShield(); // Obtained Jump Shield
-void A_RingShield(); // Obtained Ring Shield
 void A_RingBox(); // Obtained Ring Box Tails
 void A_Invincibility(); // Obtained Invincibility Box
 void A_SuperSneakers(); // Obtained Super Sneakers Box
@@ -52,13 +50,7 @@ void A_BubbleRise(); // Bubbles float to surface
 void A_BubbleCheck(); // Don't draw if not underwater
 void A_AwardScore();
 void A_ExtraLife(); // Extra Life
-void A_BombShield(); // Obtained Bomb Shield
-void A_WaterShield(); // Obtained Water Shield
-void A_ForceShield(); // Obtained Force Shield
-void A_PityShield(); // Obtained Pity Shield. We're... sorry.
-void A_FlameShield(); // Obtained Flame Shield
-void A_BubbleShield(); // Obtained Bubble Shield
-void A_ThunderShield(); // Obtained Thunder Shield
+void A_GiveShield(); // Obtained Shield
 void A_GravityBox();
 void A_ScoreRise(); // Rise the score logo
 void A_ParticleSpawn();
@@ -84,7 +76,6 @@ void A_DetonChase(); // Deton Chaser
 void A_CapeChase(); // Fake little Super Sonic cape
 void A_RotateSpikeBall(); // Spike ball rotation
 void A_SlingAppear();
-void A_MaceRotate();
 void A_UnidusBall();
 void A_RockSpawn();
 void A_SetFuse();
@@ -320,7 +311,6 @@ typedef enum sprite
 	// Collectible Items
 	SPR_RING,
 	SPR_TRNG, // Team Rings
-	SPR_EMMY, // emerald test
 	SPR_TOKE, // Special Stage Token
 	SPR_RFLG, // Red CTF Flag
 	SPR_BFLG, // Blue CTF Flag
@@ -337,6 +327,8 @@ typedef enum sprite
 	SPR_SPIK, // Spike Ball
 	SPR_SFLM, // Spin fire
 	SPR_USPK, // Floor spike
+	SPR_WSPK, // Wall spike
+	SPR_WSPB, // Wall spike base
 	SPR_STPT, // Starpost
 	SPR_BMNE, // Big floating mine
 
@@ -387,6 +379,12 @@ typedef enum sprite
 	SPR_FWR4,
 	SPR_BUS1, // GFZ Bush w/ berries
 	SPR_BUS2, // GFZ Bush w/o berries
+	// Trees (both GFZ and misc)
+	SPR_TRE1, // GFZ
+	SPR_TRE2, // Checker
+	SPR_TRE3, // Frozen Hillside
+	SPR_TRE4, // Polygon
+	SPR_TRE5, // Bush tree
 
 	// Techno Hill Scenery
 	SPR_THZP, // THZ1 Flower
@@ -410,6 +408,10 @@ typedef enum sprite
 	SPR_BMCH, // Big Mace Chain
 	SPR_SMCE, // Small Mace
 	SPR_BMCE, // Big Mace
+	SPR_YSPB, // Yellow spring on a ball
+	SPR_RSPB, // Red spring on a ball
+	SPR_SFBR, // Small Firebar
+	SPR_BFBR, // Big Firebar
 
 	// Arid Canyon Scenery
 	SPR_BTBL, // Big tumbleweed
@@ -425,9 +427,11 @@ typedef enum sprite
 	// Egg Rock Scenery
 
 	// Christmas Scenery
-	SPR_XMS1,
-	SPR_XMS2,
-	SPR_XMS3,
+	SPR_XMS1, // Christmas Pole
+	SPR_XMS2, // Candy Cane
+	SPR_XMS3, // Snowman
+	SPR_XMS4, // Lamppost
+	SPR_XMS5, // Hanging Star
 
 	// Botanic Serenity Scenery
 	SPR_BSZ1, // Tall flowers
@@ -1616,11 +1620,7 @@ typedef enum state
 	S_TEAMRING,
 
 	// Special Stage Token
-	S_EMMY,
-
-	// Special Stage Token
 	S_TOKEN,
-	S_MOVINGTOKEN,
 
 	// CTF Flags
 	S_REDFLAG,
@@ -1770,6 +1770,17 @@ typedef enum state
 	S_SPIKE6,
 	S_SPIKED1,
 	S_SPIKED2,
+
+	// Wall spikes
+	S_WALLSPIKE1,
+	S_WALLSPIKE2,
+	S_WALLSPIKE3,
+	S_WALLSPIKE4,
+	S_WALLSPIKE5,
+	S_WALLSPIKE6,
+	S_WALLSPIKEBASE,
+	S_WALLSPIKED1,
+	S_WALLSPIKED2,
 
 	// Starpost
 	S_STARPOST_IDLE,
@@ -1959,12 +1970,25 @@ typedef enum state
 	S_DEMONFIRE5,
 	S_DEMONFIRE6,
 
+	// GFZ flowers
 	S_GFZFLOWERA,
 	S_GFZFLOWERB,
 	S_GFZFLOWERC,
 
 	S_BERRYBUSH,
 	S_BUSH,
+
+	// Trees (both GFZ and misc)
+	S_GFZTREE,
+	S_GFZBERRYTREE,
+	S_GFZCHERRYTREE,
+	S_CHECKERTREE,
+	S_CHECKERSUNSETTREE,
+	S_FHZTREE, // Frozen Hillside
+	S_FHZPINKTREE,
+	S_POLYGONTREE,
+	S_BUSHTREE,
+	S_BUSHREDTREE,
 
 	// THZ Plant
 	S_THZFLOWERA,
@@ -1975,6 +1999,7 @@ typedef enum state
 
 	// Deep Sea Gargoyle
 	S_GARGOYLE,
+	S_BIGGARGOYLE,
 
 	// DSZ Seaweed
 	S_SEAWEED1,
@@ -2026,17 +2051,61 @@ typedef enum state
 	S_SLING1,
 	S_SLING2,
 
-	// CEZ Small Mace Chain
+	// CEZ maces and chains
 	S_SMALLMACECHAIN,
-
-	// CEZ Big Mace Chain
 	S_BIGMACECHAIN,
-
-	// CEZ Small Mace
 	S_SMALLMACE,
-
-	// CEZ Big Mace
 	S_BIGMACE,
+
+	// Yellow spring on a ball
+	S_YELLOWSPRINGBALL,
+	S_YELLOWSPRINGBALL2,
+	S_YELLOWSPRINGBALL3,
+	S_YELLOWSPRINGBALL4,
+	S_YELLOWSPRINGBALL5,
+
+	// Red spring on a ball
+	S_REDSPRINGBALL,
+	S_REDSPRINGBALL2,
+	S_REDSPRINGBALL3,
+	S_REDSPRINGBALL4,
+	S_REDSPRINGBALL5,
+
+	// Small Firebar
+	S_SMALLFIREBAR1,
+	S_SMALLFIREBAR2,
+	S_SMALLFIREBAR3,
+	S_SMALLFIREBAR4,
+	S_SMALLFIREBAR5,
+	S_SMALLFIREBAR6,
+	S_SMALLFIREBAR7,
+	S_SMALLFIREBAR8,
+	S_SMALLFIREBAR9,
+	S_SMALLFIREBAR10,
+	S_SMALLFIREBAR11,
+	S_SMALLFIREBAR12,
+	S_SMALLFIREBAR13,
+	S_SMALLFIREBAR14,
+	S_SMALLFIREBAR15,
+	S_SMALLFIREBAR16,
+
+	// Big Firebar
+	S_BIGFIREBAR1,
+	S_BIGFIREBAR2,
+	S_BIGFIREBAR3,
+	S_BIGFIREBAR4,
+	S_BIGFIREBAR5,
+	S_BIGFIREBAR6,
+	S_BIGFIREBAR7,
+	S_BIGFIREBAR8,
+	S_BIGFIREBAR9,
+	S_BIGFIREBAR10,
+	S_BIGFIREBAR11,
+	S_BIGFIREBAR12,
+	S_BIGFIREBAR13,
+	S_BIGFIREBAR14,
+	S_BIGFIREBAR15,
+	S_BIGFIREBAR16,
 
 	S_CEZFLOWER1,
 
@@ -2133,7 +2202,14 @@ typedef enum state
 	// Xmas-specific stuff
 	S_XMASPOLE,
 	S_CANDYCANE,
-	S_SNOWMAN,
+	S_SNOWMAN,    // normal
+	S_SNOWMANHAT, // with hat + scarf
+	S_LAMPPOST1,  // normal
+	S_LAMPPOST2,  // with snow
+	S_HANGSTAR,
+	// Xmas GFZ bushes
+	S_XMASBERRYBUSH,
+	S_XMASBUSH,
 
 	// Botanic Serenity's loads of scenery states
 	S_BSZTALLFLOWER_RED,
@@ -2325,10 +2401,6 @@ typedef enum state
 	S_PITY4,
 	S_PITY5,
 	S_PITY6,
-	S_PITY7,
-	S_PITY8,
-	S_PITY9,
-	S_PITY10,
 
 	S_FIRS1,
 	S_FIRS2,
@@ -3008,16 +3080,11 @@ typedef enum state
 	S_NIGHTSWING_XMAS,
 
 	// NiGHTS Paraloop Powerups
-	S_NIGHTSPOWERUP1,
-	S_NIGHTSPOWERUP2,
-	S_NIGHTSPOWERUP3,
-	S_NIGHTSPOWERUP4,
-	S_NIGHTSPOWERUP5,
-	S_NIGHTSPOWERUP6,
-	S_NIGHTSPOWERUP7,
-	S_NIGHTSPOWERUP8,
-	S_NIGHTSPOWERUP9,
-	S_NIGHTSPOWERUP10,
+	S_NIGHTSSUPERLOOP,
+	S_NIGHTSDRILLREFILL,
+	S_NIGHTSHELPER,
+	S_NIGHTSEXTRATIME,
+	S_NIGHTSLINKFREEZE,
 	S_EGGCAPSULE,
 
 	// Orbiting Chaos Emeralds
@@ -3233,8 +3300,7 @@ typedef enum mobj_type
 	MT_BLUEBALL,  // Blue sphere replacement for special stages
 	MT_REDTEAMRING,  //Rings collectable by red team.
 	MT_BLUETEAMRING, //Rings collectable by blue team.
-	MT_EMMY, // emerald token for special stage
-	MT_TOKEN, // Special Stage Token (uncollectible part)
+	MT_TOKEN, // Special Stage token for special stage
 	MT_REDFLAG, // Red CTF Flag
 	MT_BLUEFLAG, // Blue CTF Flag
 	MT_EMBLEM,
@@ -3268,6 +3334,8 @@ typedef enum mobj_type
 	MT_SPECIALSPIKEBALL,
 	MT_SPINFIRE,
 	MT_SPIKE,
+	MT_WALLSPIKE,
+	MT_WALLSPIKEBASE,
 	MT_STARPOST,
 	MT_BIGMINE,
 	MT_BIGAIRMINE,
@@ -3358,6 +3426,17 @@ typedef enum mobj_type
 	MT_GFZFLOWER3,
 	MT_BERRYBUSH,
 	MT_BUSH,
+	// Trees (both GFZ and misc)
+	MT_GFZTREE,
+	MT_GFZBERRYTREE,
+	MT_GFZCHERRYTREE,
+	MT_CHECKERTREE,
+	MT_CHECKERSUNSETTREE,
+	MT_FHZTREE, // Frozen Hillside
+	MT_FHZPINKTREE,
+	MT_POLYGONTREE,
+	MT_BUSHTREE,
+	MT_BUSHREDTREE,
 
 	// Techno Hill Scenery
 	MT_THZFLOWER1,
@@ -3366,6 +3445,7 @@ typedef enum mobj_type
 
 	// Deep Sea Scenery
 	MT_GARGOYLE, // Deep Sea Gargoyle
+	MT_BIGGARGOYLE, // Deep Sea Gargoyle (Big)
 	MT_SEAWEED, // DSZ Seaweed
 	MT_WATERDRIP, // Dripping Water source
 	MT_WATERDROP, // Water drop from dripping water
@@ -3380,14 +3460,20 @@ typedef enum mobj_type
 	MT_FLAMEPARTICLE,
 	MT_EGGSTATUE, // Eggman Statue
 	MT_MACEPOINT, // Mace rotation point
-	MT_SWINGMACEPOINT, // Mace swinging point
-	MT_HANGMACEPOINT, // Hangable mace chain
-	MT_SPINMACEPOINT, // Spin/Controllable mace chain
+	MT_CHAINMACEPOINT, // Combination of chains and maces point
+	MT_SPRINGBALLPOINT, // Spring ball point
+	MT_CHAINPOINT, // Mace chain
 	MT_HIDDEN_SLING, // Spin mace chain (activatable)
+	MT_FIREBARPOINT, // Firebar
+	MT_CUSTOMMACEPOINT, // Custom mace
 	MT_SMALLMACECHAIN, // Small Mace Chain
 	MT_BIGMACECHAIN, // Big Mace Chain
 	MT_SMALLMACE, // Small Mace
 	MT_BIGMACE, // Big Mace
+	MT_YELLOWSPRINGBALL, // Yellow spring on a ball
+	MT_REDSPRINGBALL, // Red spring on a ball
+	MT_SMALLFIREBAR, // Small Firebar
+	MT_BIGFIREBAR, // Big Firebar
 	MT_CEZFLOWER,
 
 	// Arid Canyon Scenery
@@ -3434,7 +3520,14 @@ typedef enum mobj_type
 	// Christmas Scenery
 	MT_XMASPOLE,
 	MT_CANDYCANE,
-	MT_SNOWMAN,
+	MT_SNOWMAN,    // normal
+	MT_SNOWMANHAT, // with hat + scarf
+	MT_LAMPPOST1,  // normal
+	MT_LAMPPOST2,  // with snow
+	MT_HANGSTAR,
+	// Xmas GFZ bushes
+	MT_XMASBERRYBUSH,
+	MT_XMASBUSH,
 
 	// Botanic Serenity scenery
 	MT_BSZTALLFLOWER_RED,

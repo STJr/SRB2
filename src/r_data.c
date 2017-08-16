@@ -22,7 +22,7 @@
 #include "w_wad.h"
 #include "z_zone.h"
 #include "p_setup.h" // levelflats
-#include "v_video.h" // pLocalPalette
+#include "v_video.h" // pMasterPalette
 #include "dehacked.h"
 
 #if defined (_WIN32) || defined (_WIN32_WCE)
@@ -625,62 +625,33 @@ void R_LoadTextures(void)
 		{
 			patchlump = W_CacheLumpNumPwad((UINT16)w, texstart + j, PU_CACHE);
 
-			// Then, check the lump directly to see if it's a texture SOC,
-			// and if it is, load it using dehacked instead.
-			if (strstr((const char *)patchlump, "TEXTURE"))
-			{
-				CONS_Alert(CONS_WARNING, "%s is a Texture SOC.\n", W_CheckNameForNumPwad((UINT16)w,texstart+j));
-				Z_Unlock(patchlump);
-				DEH_LoadDehackedLumpPwad((UINT16)w, texstart + j);
-			}
-			else
-			{
-				UINT16 patchcount = 1;
-				//CONS_Printf("\n\"%s\" is a single patch, dimensions %d x %d",W_CheckNameForNumPwad((UINT16)w,texstart+j),patchlump->width, patchlump->height);
-				if (SHORT(patchlump->width) == 64
-				&& SHORT(patchlump->height) == 64)
-				{ // 64x64 patch
-					const column_t *column;
-					for (k = 0; k < SHORT(patchlump->width); k++)
-					{ // Find use of transparency.
-						column = (const column_t *)((const UINT8 *)patchlump + LONG(patchlump->columnofs[k]));
-						if (column->length != SHORT(patchlump->height))
-							break;
-					}
-					if (k == SHORT(patchlump->width))
-						patchcount = 2; // No transparency? 64x128 texture.
-				}
-				texture = textures[i] = Z_Calloc(sizeof(texture_t) + (sizeof(texpatch_t) * patchcount), PU_STATIC, NULL);
+			//CONS_Printf("\n\"%s\" is a single patch, dimensions %d x %d",W_CheckNameForNumPwad((UINT16)w,texstart+j),patchlump->width, patchlump->height);
+			texture = textures[i] = Z_Calloc(sizeof(texture_t) + sizeof(texpatch_t), PU_STATIC, NULL);
 
-				// Set texture properties.
-				M_Memcpy(texture->name, W_CheckNameForNumPwad((UINT16)w, texstart + j), sizeof(texture->name));
-				texture->width = SHORT(patchlump->width);
-				texture->height = SHORT(patchlump->height)*patchcount;
-				texture->patchcount = patchcount;
-				texture->holes = false;
-				texture->flip = 0;
+			// Set texture properties.
+			M_Memcpy(texture->name, W_CheckNameForNumPwad((UINT16)w, texstart + j), sizeof(texture->name));
+			texture->width = SHORT(patchlump->width);
+			texture->height = SHORT(patchlump->height);
+			texture->patchcount = 1;
+			texture->holes = false;
+			texture->flip = 0;
 
-				// Allocate information for the texture's patches.
-				for (k = 0; k < patchcount; k++)
-				{
-					patch = &texture->patches[k];
+			// Allocate information for the texture's patches.
+			patch = &texture->patches[0];
 
-					patch->originx = 0;
-					patch->originy = (INT16)(k*patchlump->height);
-					patch->wad = (UINT16)w;
-					patch->lump = texstart + j;
-					patch->flip = 0;
-				}
+			patch->originx = patch->originy = 0;
+			patch->wad = (UINT16)w;
+			patch->lump = texstart + j;
+			patch->flip = 0;
 
-				Z_Unlock(patchlump);
+			Z_Unlock(patchlump);
 
-				k = 1;
-				while (k << 1 <= texture->width)
-					k <<= 1;
+			k = 1;
+			while (k << 1 <= texture->width)
+				k <<= 1;
 
-				texturewidthmask[i] = k - 1;
-				textureheight[i] = texture->height << FRACBITS;
-			}
+			texturewidthmask[i] = k - 1;
+			textureheight[i] = texture->height << FRACBITS;
 		}
 	}
 }
@@ -1169,23 +1140,24 @@ static void R_InitExtraColormaps(void)
 	for (cfile = clump = 0; cfile < numwadfiles; cfile++, clump = 0)
 	{
 		startnum = W_CheckNumForNamePwad("C_START", cfile, clump);
-		if (startnum == LUMPERROR)
+		if (startnum == INT16_MAX)
 			continue;
 
 		endnum = W_CheckNumForNamePwad("C_END", cfile, clump);
 
-		if (endnum == LUMPERROR)
+		if (endnum == INT16_MAX)
 			I_Error("R_InitExtraColormaps: C_START without C_END\n");
 
-		if (WADFILENUM(startnum) != WADFILENUM(endnum))
-			I_Error("R_InitExtraColormaps: C_START and C_END in different wad files!\n");
+		// This shouldn't be possible when you use the Pwad function, silly
+		//if (WADFILENUM(startnum) != WADFILENUM(endnum))
+			//I_Error("R_InitExtraColormaps: C_START and C_END in different wad files!\n");
 
 		if (numcolormaplumps >= maxcolormaplumps)
 			maxcolormaplumps *= 2;
 		colormaplumps = Z_Realloc(colormaplumps,
 			sizeof (*colormaplumps) * maxcolormaplumps, PU_STATIC, NULL);
-		colormaplumps[numcolormaplumps].wadfile = WADFILENUM(startnum);
-		colormaplumps[numcolormaplumps].firstlump = LUMPNUM(startnum+1);
+		colormaplumps[numcolormaplumps].wadfile = cfile;
+		colormaplumps[numcolormaplumps].firstlump = startnum+1;
 		colormaplumps[numcolormaplumps].numlumps = endnum - (startnum + 1);
 		numcolormaplumps++;
 	}
@@ -1428,9 +1400,9 @@ INT32 R_CreateColormap(char *p1, char *p2, char *p3)
 	{
 		for (i = 0; i < 256; i++)
 		{
-			r = pLocalPalette[i].s.red;
-			g = pLocalPalette[i].s.green;
-			b = pLocalPalette[i].s.blue;
+			r = pMasterPalette[i].s.red;
+			g = pMasterPalette[i].s.green;
+			b = pMasterPalette[i].s.blue;
 			cbrightness = sqrt((r*r) + (g*g) + (b*b));
 
 			map[i][0] = (cbrightness * cmaskr) + (r * othermask);
@@ -1571,9 +1543,9 @@ void R_CreateColormap2(char *p1, char *p2, char *p3)
 	{
 		for (i = 0; i < 256; i++)
 		{
-			r = pLocalPalette[i].s.red;
-			g = pLocalPalette[i].s.green;
-			b = pLocalPalette[i].s.blue;
+			r = pMasterPalette[i].s.red;
+			g = pMasterPalette[i].s.green;
+			b = pMasterPalette[i].s.blue;
 			cbrightness = sqrt((r*r) + (g*g) + (b*b));
 
 			map[i][0] = (cbrightness * cmaskr) + (r * othermask);
@@ -1653,9 +1625,9 @@ static UINT8 NearestColor(UINT8 r, UINT8 g, UINT8 b)
 
 	for (i = 0; i < 256; i++)
 	{
-		dr = r - pLocalPalette[i].s.red;
-		dg = g - pLocalPalette[i].s.green;
-		db = b - pLocalPalette[i].s.blue;
+		dr = r - pMasterPalette[i].s.red;
+		dg = g - pMasterPalette[i].s.green;
+		db = b - pMasterPalette[i].s.blue;
 		distortion = dr*dr + dg*dg + db*db;
 		if (distortion < bestdistortion)
 		{

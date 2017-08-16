@@ -147,6 +147,7 @@ static boolean useinterpic;
 static INT32 timer;
 
 static INT32 intertic;
+static INT32 tallydonetic = -1;
 static INT32 endtic = -1;
 
 intertype_t intertype = int_none;
@@ -158,6 +159,54 @@ static void Y_CalculateTimeRaceWinners(void);
 static void Y_CalculateMatchWinners(void);
 static void Y_FollowIntermission(void);
 static void Y_UnloadData(void);
+
+// Stuff copy+pasted from st_stuff.c
+static INT32 SCX(INT32 x)
+{
+	return FixedInt(FixedMul(x<<FRACBITS, vid.fdupx));
+}
+static INT32 SCY(INT32 z)
+{
+	return FixedInt(FixedMul(z<<FRACBITS, vid.fdupy));
+}
+
+#define ST_DrawNumFromHud(h,n)        V_DrawTallNum(SCX(hudinfo[h].x), SCY(hudinfo[h].y), V_NOSCALESTART, n)
+#define ST_DrawPadNumFromHud(h,n,q)   V_DrawPaddedTallNum(SCX(hudinfo[h].x), SCY(hudinfo[h].y), V_NOSCALESTART, n, q)
+#define ST_DrawPatchFromHud(h,p)      V_DrawScaledPatch(SCX(hudinfo[h].x), SCY(hudinfo[h].y), V_NOSCALESTART, p)
+
+static void Y_IntermissionTokenDrawer(void)
+{
+	INT32 y;
+	INT32 offs = 0;
+	UINT32 tokencount;
+	INT32 lowy = BASEVIDHEIGHT - 32;
+	INT16 temp = SHORT(tokenicon->height)/2;
+	INT32 calc;
+
+	if (tallydonetic != -1)
+	{
+		offs = (intertic - tallydonetic)*2;
+		if (offs > 10)
+			offs = 8;
+	}
+
+	V_DrawFill(32, lowy-1, 16, 1, 31); // slot
+
+	y = (lowy + offs + 1) - (temp + (token + 1)*8);
+
+	for (tokencount = token; tokencount; tokencount--)
+	{
+		if (y >= -temp)
+			V_DrawSmallScaledPatch(32, y, 0, tokenicon);
+		y += 8;
+	}
+
+	y += (offs*(temp - 1)/8);
+	calc = (lowy - y)*2;
+
+	if (calc > 0)
+		V_DrawCroppedPatch(32<<FRACBITS, y<<FRACBITS, FRACUNIT/2, 0, tokenicon, 32*FRACUNIT, y<<FRACBITS, SHORT(tokenicon->width), calc);
+}
 
 //
 // Y_IntermissionDrawer
@@ -203,29 +252,35 @@ void Y_IntermissionDrawer(void)
 	{
 		INT32 bonusy;
 
+		if (gottoken) // first to be behind everything else
+			Y_IntermissionTokenDrawer();
+
 		// draw score
-		V_DrawScaledPatch(hudinfo[HUD_SCORE].x, hudinfo[HUD_SCORE].y, V_SNAPTOLEFT, sboscore);
-		V_DrawTallNum(hudinfo[HUD_SCORENUM].x, hudinfo[HUD_SCORENUM].y, V_SNAPTOLEFT, data.coop.score);
+		ST_DrawPatchFromHud(HUD_SCORE, sboscore);
+		ST_DrawNumFromHud(HUD_SCORENUM, data.coop.score);
 
 		// draw time
-		V_DrawScaledPatch(hudinfo[HUD_TIME].x, hudinfo[HUD_TIME].y, V_SNAPTOLEFT, sbotime);
+		ST_DrawPatchFromHud(HUD_TIME, sbotime);
 		if (cv_timetic.value == 1)
-			V_DrawTallNum(hudinfo[HUD_SECONDS].x, hudinfo[HUD_SECONDS].y, V_SNAPTOLEFT, data.coop.tics);
+			ST_DrawNumFromHud(HUD_SECONDS, data.coop.tics);
 		else
 		{
+			INT32 seconds, minutes, tictrn;
+
+			seconds = G_TicsToSeconds(data.coop.tics);
+			minutes = G_TicsToMinutes(data.coop.tics, true);
+			tictrn  = G_TicsToCentiseconds(data.coop.tics);
+
+			ST_DrawNumFromHud(HUD_MINUTES, minutes); // Minutes
+			ST_DrawPatchFromHud(HUD_TIMECOLON, sbocolon); // Colon
+			ST_DrawPadNumFromHud(HUD_SECONDS, seconds, 2); // Seconds
+
 			// we should show centiseconds on the intermission screen too, if the conditions are right.
 			if (modeattacking || cv_timetic.value == 2)
 			{
-				V_DrawPaddedTallNum(hudinfo[HUD_TICS].x, hudinfo[HUD_TICS].y, V_SNAPTOLEFT,
-					G_TicsToCentiseconds(data.coop.tics), 2);
-				V_DrawScaledPatch(hudinfo[HUD_TIMETICCOLON].x, hudinfo[HUD_TIMETICCOLON].y, V_SNAPTOLEFT, sboperiod);
+				ST_DrawPatchFromHud(HUD_TIMETICCOLON, sboperiod); // Period
+				ST_DrawPadNumFromHud(HUD_TICS, tictrn, 2); // Tics
 			}
-
-			V_DrawPaddedTallNum(hudinfo[HUD_SECONDS].x, hudinfo[HUD_SECONDS].y, V_SNAPTOLEFT,
-				G_TicsToSeconds(data.coop.tics), 2);
-			V_DrawScaledPatch(hudinfo[HUD_TIMECOLON].x, hudinfo[HUD_TIMECOLON].y, V_SNAPTOLEFT, sbocolon);
-			V_DrawTallNum(hudinfo[HUD_MINUTES].x, hudinfo[HUD_MINUTES].y, V_SNAPTOLEFT,
-				G_TicsToMinutes(data.coop.tics, false));
 		}
 
 		// draw the "got through act" lines and act number
@@ -260,6 +315,9 @@ void Y_IntermissionDrawer(void)
 		INT32 xoffset2 = 0; // Line 2 x offset
 		INT32 xoffset3 = 0; // Line 3 x offset
 		UINT8 drawsection = 0;
+
+		if (gottoken) // first to be behind everything else
+			Y_IntermissionTokenDrawer();
 
 		// draw the header
 		if (intertic <= TICRATE)
@@ -679,7 +737,10 @@ void Y_Ticker(void)
 		boolean anybonuses = false;
 
 		if (!intertic) // first time only
+		{
 			S_ChangeMusicInternal("_clear", false); // don't loop it
+			tallydonetic = -1;
+		}
 
 		if (intertic < TICRATE) // one second pause before tally begins
 			return;
@@ -709,6 +770,7 @@ void Y_Ticker(void)
 
 		if (!anybonuses)
 		{
+			tallydonetic = intertic;
 			endtic = intertic + 3*TICRATE; // 3 second pause after end of tally
 			S_StartSound(NULL, sfx_chchng); // cha-ching!
 
@@ -736,12 +798,11 @@ void Y_Ticker(void)
 		INT32 i;
 		UINT32 oldscore = data.spec.score;
 		boolean skip = false;
-		static INT32 tallydonetic = 0;
 
 		if (!intertic) // first time only
 		{
 			S_ChangeMusicInternal("_clear", false); // don't loop it
-			tallydonetic = 0;
+			tallydonetic = -1;
 		}
 
 		if (intertic < TICRATE) // one second pause before tally begins
@@ -751,12 +812,12 @@ void Y_Ticker(void)
 			if (playeringame[i] && (players[i].cmd.buttons & BT_USE))
 				skip = true;
 
-		if (tallydonetic != 0)
+		if ((data.spec.continues & 0x80) && tallydonetic != -1)
 		{
-			if (intertic > tallydonetic)
+			if ((intertic - tallydonetic) > (3*TICRATE)/2)
 			{
 				endtic = intertic + 4*TICRATE; // 4 second pause after end of tally
-				S_StartSound(NULL, sfx_flgcap); // cha-ching!
+				S_StartSound(NULL, sfx_s3kac); // cha-ching!
 			}
 			return;
 		}
@@ -772,9 +833,8 @@ void Y_Ticker(void)
 
 		if (!data.spec.bonus.points)
 		{
-			if (data.spec.continues & 0x80) // don't set endtic yet!
-				tallydonetic = intertic + (3*TICRATE)/2;
-			else // okay we're good.
+			tallydonetic = intertic;
+			if (!(data.spec.continues & 0x80)) // don't set endtic yet!
 				endtic = intertic + 4*TICRATE; // 4 second pause after end of tally
 
 			S_StartSound(NULL, sfx_chchng); // cha-ching!
@@ -965,7 +1025,8 @@ void Y_StartIntermission(void)
 	}
 
 	// We couldn't display the intermission even if we wanted to.
-	if (dedicated) return;
+	// But we still need to give the players their score bonuses, dummy.
+	//if (dedicated) return;
 
 	// This should always exist, but just in case...
 	if(!mapheaderinfo[prevmap])
@@ -1556,8 +1617,7 @@ static void Y_SetTimeBonus(player_t *player, y_bonus_t *bstruct)
 
 	// calculate time bonus
 	secs = player->realtime / TICRATE;
-	if      (secs <  30) /*   :30 */ bonus = 100000;
-	else if (secs <  45) /*   :45 */ bonus = 50000;
+	if      (secs <  30) /*   :30 */ bonus = 50000;
 	else if (secs <  60) /*  1:00 */ bonus = 10000;
 	else if (secs <  90) /*  1:30 */ bonus = 5000;
 	else if (secs < 120) /*  2:00 */ bonus = 4000;
@@ -1782,37 +1842,6 @@ void Y_EndIntermission(void)
 }
 
 //
-// Y_EndGame
-//
-// Why end the game?
-// Because Y_FollowIntermission and F_EndCutscene would
-// both do this exact same thing *in different ways* otherwise,
-// which made it so that you could only unlock Ultimate mode
-// if you had a cutscene after the final level and crap like that.
-// This function simplifies it so only one place has to be updated
-// when something new is added.
-void Y_EndGame(void)
-{
-	// Only do evaluation and credits in coop games.
-	if (gametype == GT_COOP)
-	{
-		if (nextmap == 1102-1) // end game with credits
-		{
-			F_StartCredits();
-			return;
-		}
-		if (nextmap == 1101-1) // end game with evaluation
-		{
-			F_StartGameEvaluation();
-			return;
-		}
-	}
-
-	// 1100 or competitive multiplayer, so go back to title screen.
-	D_StartTitle();
-}
-
-//
 // Y_FollowIntermission
 //
 static void Y_FollowIntermission(void)
@@ -1823,21 +1852,10 @@ static void Y_FollowIntermission(void)
 		return;
 	}
 
-	if (nextmap < 1100-1)
-	{
-		// normal level
-		G_AfterIntermission();
-		return;
-	}
-
-	// Start a custom cutscene if there is one.
-	if (mapheaderinfo[gamemap-1]->cutscenenum && !modeattacking)
-	{
-		F_StartCustomCutscene(mapheaderinfo[gamemap-1]->cutscenenum-1, false, false);
-		return;
-	}
-
-	Y_EndGame();
+	// This handles whether to play a post-level cutscene, end the game,
+	// or simply go to the next level.
+	// No need to duplicate the code here!
+	G_AfterIntermission();
 }
 
 #define UNLOAD(x) Z_ChangeTag(x, PU_CACHE); x = NULL

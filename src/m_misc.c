@@ -100,6 +100,8 @@ static CV_PossibleValue_t screenshot_cons_t[] = {{0, "Default"}, {1, "HOME"}, {2
 consvar_t cv_screenshot_option = {"screenshot_option", "Default", CV_SAVE|CV_CALL, screenshot_cons_t, Screenshot_option_Onchange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_screenshot_folder = {"screenshot_folder", "", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
 
+consvar_t cv_screenshot_colorprofile = {"screenshot_colorprofile", "Yes", CV_SAVE, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
+
 static CV_PossibleValue_t moviemode_cons_t[] = {{MM_GIF, "GIF"}, {MM_APNG, "aPNG"}, {MM_SCREENSHOT, "Screenshots"}, {0, NULL}};
 consvar_t cv_moviemode = {"moviemode_mode", "GIF", CV_SAVE|CV_CALL, moviemode_cons_t, Moviemode_mode_Onchange, 0, NULL, NULL, 0, 0, NULL};
 
@@ -610,20 +612,25 @@ static void PNG_warn(png_structp PNG, png_const_charp pngtext)
 	CONS_Debug(DBG_RENDER, "libpng warning at %p: %s", PNG, pngtext);
 }
 
-static void M_PNGhdr(png_structp png_ptr, png_infop png_info_ptr, PNG_CONST png_uint_32 width, PNG_CONST png_uint_32 height, PNG_CONST png_byte *palette)
+static void M_PNGhdr(png_structp png_ptr, png_infop png_info_ptr, PNG_CONST png_uint_32 width, PNG_CONST png_uint_32 height, const boolean palette)
 {
 	const png_byte png_interlace = PNG_INTERLACE_NONE; //PNG_INTERLACE_ADAM7
 	if (palette)
 	{
 		png_colorp png_PLTE = png_malloc(png_ptr, sizeof(png_color)*256); //palette
-		const png_byte *pal = palette;
 		png_uint_16 i;
+
+		RGBA_t *pal = ((cv_screenshot_colorprofile.value)
+		? pLocalPalette
+		: pMasterPalette);
+
 		for (i = 0; i < 256; i++)
 		{
-			png_PLTE[i].red   = *pal; pal++;
-			png_PLTE[i].green = *pal; pal++;
-			png_PLTE[i].blue  = *pal; pal++;
+			png_PLTE[i].red   = pal[i].s.red;
+			png_PLTE[i].green = pal[i].s.green;
+			png_PLTE[i].blue  = pal[i].s.blue;
 		}
+
 		png_set_IHDR(png_ptr, png_info_ptr, width, height, 8, PNG_COLOR_TYPE_PALETTE,
 		 png_interlace, PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
 		png_write_info_before_PLTE(png_ptr, png_info_ptr);
@@ -924,7 +931,7 @@ static void M_PNGfix_acTL(png_structp png_ptr, png_infop png_info_ptr)
 	fseek(apng_FILE, oldpos, SEEK_SET);
 }
 
-static boolean M_SetupaPNG(png_const_charp filename, png_bytep pal)
+static boolean M_SetupaPNG(png_const_charp filename, boolean palette)
 {
 	apng_FILE = fopen(filename,"wb+"); // + mode for reading
 	if (!apng_FILE)
@@ -966,7 +973,7 @@ static boolean M_SetupaPNG(png_const_charp filename, png_bytep pal)
 	png_set_compression_strategy(apng_ptr, cv_zlib_strategya.value);
 	png_set_compression_window_bits(apng_ptr, cv_zlib_window_bitsa.value);
 
-	M_PNGhdr(apng_ptr, apng_info_ptr, vid.width, vid.height, pal);
+	M_PNGhdr(apng_ptr, apng_info_ptr, vid.width, vid.height, palette);
 
 	M_PNGText(apng_ptr, apng_info_ptr, true);
 
@@ -1007,9 +1014,9 @@ static inline moviemode_t M_StartMovieAPNG(const char *pathname)
 	}
 
 	if (rendermode == render_soft)
-		ret = M_SetupaPNG(va(pandf,pathname,freename), W_CacheLumpName(GetPalette(), PU_CACHE));
+		ret = M_SetupaPNG(va(pandf,pathname,freename), true);
 	else
-		ret = M_SetupaPNG(va(pandf,pathname,freename), NULL);
+		ret = M_SetupaPNG(va(pandf,pathname,freename), false);
 
 	if (!ret)
 	{
@@ -1215,11 +1222,10 @@ void M_StopMovie(void)
   * \param palette  Palette of image data
   *  \note if palette is NULL, BGR888 format
   */
-boolean M_SavePNG(const char *filename, void *data, int width, int height, const UINT8 *palette)
+boolean M_SavePNG(const char *filename, void *data, int width, int height, const boolean palette)
 {
 	png_structp png_ptr;
 	png_infop png_info_ptr;
-	PNG_CONST png_byte *PLTE = (const png_byte *)palette;
 #ifdef PNG_SETJMP_SUPPORTED
 #ifdef USE_FAR_KEYWORD
 	jmp_buf jmpbuf;
@@ -1282,7 +1288,7 @@ boolean M_SavePNG(const char *filename, void *data, int width, int height, const
 	png_set_compression_strategy(png_ptr, cv_zlib_strategy.value);
 	png_set_compression_window_bits(png_ptr, cv_zlib_window_bits.value);
 
-	M_PNGhdr(png_ptr, png_info_ptr, width, height, PLTE);
+	M_PNGhdr(png_ptr, png_info_ptr, width, height, palette);
 
 	M_PNGText(png_ptr, png_info_ptr, false);
 
@@ -1329,7 +1335,7 @@ typedef struct
   * \param palette  Palette of image data
   */
 #if NUMSCREENS > 2
-static boolean WritePCXfile(const char *filename, const UINT8 *data, int width, int height, const UINT8 *palette)
+static boolean WritePCXfile(const char *filename, const UINT8 *data, int width, int height)
 {
 	int i;
 	size_t length;
@@ -1370,8 +1376,20 @@ static boolean WritePCXfile(const char *filename, const UINT8 *data, int width, 
 
 	// write the palette
 	*pack++ = 0x0c; // palette ID byte
-	for (i = 0; i < 768; i++)
-		*pack++ = *palette++;
+
+	// write color table
+	{
+		RGBA_t *pal = ((cv_screenshot_colorprofile.value)
+		? pLocalPalette
+		: pMasterPalette);
+
+		for (i = 0; i < 256; i++)
+		{
+			*pack++ = pal[i].s.red;
+			*pack++ = pal[i].s.green;
+			*pack++ = pal[i].s.blue;
+		}
+	}
 
 	// write output file
 	length = pack - (UINT8 *)pcx;
@@ -1445,11 +1463,9 @@ void M_DoScreenShot(void)
 	if (rendermode != render_none)
 	{
 #ifdef USE_PNG
-		ret = M_SavePNG(va(pandf,pathname,freename), linear, vid.width, vid.height,
-			W_CacheLumpName(GetPalette(), PU_CACHE));
+		ret = M_SavePNG(va(pandf,pathname,freename), linear, vid.width, vid.height, true);
 #else
-		ret = WritePCXfile(va(pandf,pathname,freename), linear, vid.width, vid.height,
-			W_CacheLumpName(GetPalette(), PU_CACHE));
+		ret = WritePCXfile(va(pandf,pathname,freename), linear, vid.width, vid.height);
 #endif
 	}
 

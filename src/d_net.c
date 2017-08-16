@@ -49,7 +49,9 @@ doomcom_t *doomcom = NULL;
 /// \brief network packet data, points inside doomcom
 doomdata_t *netbuffer = NULL;
 
+#ifdef DEBUGFILE
 FILE *debugfile = NULL; // put some net info in a file during the game
+#endif
 
 #define MAXREBOUND 8
 static doomdata_t reboundstore[MAXREBOUND];
@@ -711,10 +713,23 @@ void Net_CloseConnection(INT32 node)
 #else
 	INT32 i;
 	boolean forceclose = (node & FORCECLOSE) != 0;
+
+	if (node == -1)
+	{
+		DEBFILE(M_GetText("Net_CloseConnection: node -1 detected!\n"));
+		return; // nope, just ignore it
+	}
+
 	node &= ~FORCECLOSE;
 
 	if (!node)
 		return;
+
+	if (node < 0 || node >= MAXNETNODES) // prevent invalid nodes from crashing the game
+	{
+		DEBFILE(va(M_GetText("Net_CloseConnection: invalid node %d detected!\n"), node));
+		return;
+	}
 
 	nodes[node].flags |= NF_CLOSE;
 
