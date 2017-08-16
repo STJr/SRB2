@@ -27,13 +27,6 @@ typedef enum
 	UNDO_DONE = 0,
 } undotype_f;
 
-#ifdef DELFILE
-void DEH_WriteUndoline(const char *value, const char *data, undotype_f flags);
-void DEH_UnloadDehackedWad(UINT16 wad);
-#else // null the undo lines
-#define DEH_WriteUndoline(a,b,c)
-#endif
-
 void DEH_LoadDehackedLump(lumpnum_t lumpnum);
 void DEH_LoadDehackedLumpPwad(UINT16 wad, UINT16 lump);
 

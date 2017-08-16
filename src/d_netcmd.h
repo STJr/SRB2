@@ -136,7 +136,7 @@ typedef enum
 	XD_RANDOMSEED,  // 15
 	XD_RUNSOC,      // 16
 	XD_REQADDFILE,  // 17
-	XD_DELFILE,     // 18
+	XD_DELFILE,     // 18 - replace next time we add an XD
 	XD_SETMOTD,     // 19
 	XD_SUICIDE,     // 20
 #ifdef HAVE_BLUA
