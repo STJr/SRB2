@@ -9805,6 +9805,11 @@ void P_PlayerThink(player_t *player)
 				factor = 4;
 #endif
 			}
+			else if (player->pflags & PF_STARTDASH)
+			{
+				diff = (player->mo->angle - player->drawangle);
+				factor = 4;
+			}
 			else if (cmd->forwardmove || cmd->sidemove) // only when you're pressing movement keys
 			{
 				diff = ((player->mo->angle + R_PointToAngle2(0, 0, cmd->forwardmove<<FRACBITS, -cmd->sidemove<<FRACBITS)) - player->drawangle);
@@ -9815,7 +9820,7 @@ void P_PlayerThink(player_t *player)
 			else
 			{
 				diff = (player->mo->angle - player->drawangle);
-				factor = ((player->pflags & PF_STARTDASH) ? 4 : 8);
+				factor = 8;
 			}
 
 			if (diff)
