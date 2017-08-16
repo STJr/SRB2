@@ -468,6 +468,8 @@ static int libd_getSprite2Patch(lua_State *L)
 	if (super)
 		j |= FF_SPR2SUPER;
 
+	j = P_GetSkinSprite2(&skins[i], j, NULL); // feed skin and current sprite2 through to change sprite2 used if necessary
+
 	sprdef = &skins[i].sprites[j];
 
 	// set frame number
