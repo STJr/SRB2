@@ -6097,7 +6097,10 @@ static void M_DrawLoadGameData(void)
 
 	// Use the big face pic for lives, duh. :3
 	V_DrawScaledPatch(ecks + 12, 175, 0, W_CachePatchName("STLIVEX", PU_HUDGFX));
-	V_DrawTallNum(ecks + 40, 172, 0, savegameinfo[saveSlotSelected].lives);
+	if (savegameinfo[saveSlotSelected].lives == 0x7F)
+		V_DrawScaledPatch(ecks + 40 - 18, 172, 0, tallinfin);
+	else
+		V_DrawTallNum(ecks + 40, 172, 0, savegameinfo[saveSlotSelected].lives);
 
 	// Absolute ridiculousness, condensed into another function.
 	V_DrawContinueIcon(ecks + 58, 182, 0, savegameinfo[saveSlotSelected].skinnum, savegameinfo[saveSlotSelected].skincolor);
@@ -6291,10 +6294,11 @@ static void M_ReadSavegameInfo(UINT32 slot)
 	savegameinfo[slot].skinnum = READUINT8(save_p);
 
 	CHECKPOS
-	(void)READINT32(save_p); // Score
-
+	(void)READUINT8(save_p); // numgameovers
 	CHECKPOS
-	savegameinfo[slot].lives = READINT32(save_p); // lives
+	savegameinfo[slot].lives = READSINT8(save_p); // lives
+	CHECKPOS
+	(void)READINT32(save_p); // Score
 	CHECKPOS
 	savegameinfo[slot].continues = READINT32(save_p); // continues
 

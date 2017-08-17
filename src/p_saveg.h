@@ -38,6 +38,7 @@ typedef struct
 	INT32 lives;
 	INT32 continues;
 	UINT16 emeralds;
+	UINT8 numgameovers;
 } savedata_t;
 
 extern savedata_t savedata;

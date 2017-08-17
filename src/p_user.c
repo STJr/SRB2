@@ -950,6 +950,8 @@ void P_GivePlayerRings(player_t *player, INT32 num_rings)
 //
 void P_GivePlayerLives(player_t *player, INT32 numlives)
 {
+	if (player->lives == 0x7f) return;
+
 	player->lives += numlives;
 
 	if (player->lives > 99)
@@ -1153,7 +1155,9 @@ void P_PlayLivesJingle(player_t *player)
 	if (player && !P_IsLocalPlayer(player))
 		return;
 
-	if (gametype == GT_COOP && (netgame || multiplayer) && cv_cooplives.value == 0)
+	if ((player && player->lives == 0x7f)
+	|| (!player && &players[consoleplayer] && players[consoleplayer].lives == 0x7f)
+	|| (gametype == GT_COOP && (netgame || multiplayer) && cv_cooplives.value == 0))
 		S_StartSound(NULL, sfx_lose);
 	else if (use1upSound)
 		S_StartSound(NULL, sfx_oneup);
@@ -8160,7 +8164,8 @@ boolean P_GetLives(player_t *player)
 	INT32 i, maxlivesplayer = -1, livescheck = 1;
 	if (!(netgame || multiplayer)
 	|| (gametype != GT_COOP)
-	|| (cv_cooplives.value == 1))
+	|| (cv_cooplives.value == 1)
+	|| (player->lives == 0x7f))
 		return true;
 
 	if ((cv_cooplives.value == 2 || cv_cooplives.value == 0) && player->lives > 0)
@@ -8187,7 +8192,8 @@ boolean P_GetLives(player_t *player)
 	{
 		if (cv_cooplives.value == 2 && (P_IsLocalPlayer(player) || P_IsLocalPlayer(&players[maxlivesplayer])))
 			S_StartSound(NULL, sfx_jshard); // placeholder
-		players[maxlivesplayer].lives--;
+		if (players[maxlivesplayer].lives != 0x7f)
+			players[maxlivesplayer].lives--;
 		player->lives++;
 		if (player->lives < 1)
 			player->lives = 1;

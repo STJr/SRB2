@@ -3026,6 +3026,7 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	if (savedata.lives > 0)
 	{
+		numgameovers = savedata.numgameovers;
 		players[consoleplayer].continues = savedata.continues;
 		players[consoleplayer].lives = savedata.lives;
 		players[consoleplayer].score = savedata.score;

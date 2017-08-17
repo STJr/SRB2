@@ -226,7 +226,6 @@ typedef struct
 	INT32 lives;
 	INT32 continues;
 	INT32 gamemap;
-	UINT8 netgame;
 } saveinfo_t;
 
 extern description_t description[32];

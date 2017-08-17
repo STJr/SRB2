@@ -81,6 +81,9 @@ INT32 cursaveslot = -1; // Auto-save 1p savegame slot
 INT16 lastmaploaded = 0; // Last map the game loaded
 boolean gamecomplete = false;
 
+UINT8 numgameovers = 0; // for startinglives balance
+SINT8 startinglivesbalance[maxgameovers+1] = {3, 5, 7, 9, 12, 15, 20, 25, 30, 40, 50, 75, 99, 0x7F};
+
 UINT16 mainwads = 0;
 boolean modifiedgame; // Set if homebrew PWAD stuff has been added.
 boolean savemoddata = false;
@@ -3130,7 +3133,7 @@ static void G_DoContinued(void)
 	token = 0;
 
 	// Reset # of lives
-	pl->lives = (ultimatemode) ? 1 : 3;
+	pl->lives = (ultimatemode) ? 1 : startinglivesbalance[numgameovers];
 
 	D_MapChange(gamemap, gametype, ultimatemode, false, 0, false, false);
 
@@ -3614,13 +3617,13 @@ void G_LoadGame(UINT32 slot, INT16 mapoverride)
 // G_SaveGame
 // Saves your game.
 //
-void G_SaveGame(UINT32 savegameslot)
+void G_SaveGame(UINT32 slot)
 {
 	boolean saved;
 	char savename[256] = "";
 	const char *backup;
 
-	sprintf(savename, savegamename, savegameslot);
+	sprintf(savename, savegamename, slot);
 	backup = va("%s",savename);
 
 	// save during evaluation or credits? game's over, folks!
@@ -3656,8 +3659,102 @@ void G_SaveGame(UINT32 savegameslot)
 	if (cv_debug && saved)
 		CONS_Printf(M_GetText("Game saved.\n"));
 	else if (!saved)
-		CONS_Alert(CONS_ERROR, M_GetText("Error while writing to %s for save slot %u, base: %s\n"), backup, savegameslot, savegamename);
+		CONS_Alert(CONS_ERROR, M_GetText("Error while writing to %s for save slot %u, base: %s\n"), backup, slot, savegamename);
 }
+
+#define BADSAVE goto cleanup;
+#define CHECKPOS if (save_p >= end_p) BADSAVE
+void G_SaveGameOver(UINT32 slot)
+{
+	boolean saved = false;
+	size_t length;
+	char vcheck[VERSIONSIZE];
+	char savename[255];
+	const char *backup;
+
+	sprintf(savename, savegamename, slot);
+	backup = va("%s",savename);
+
+	length = FIL_ReadFile(savename, &savebuffer);
+	if (!length)
+	{
+		CONS_Printf(M_GetText("Couldn't read file %s\n"), savename);
+		return;
+	}
+
+	{
+		char temp[sizeof(timeattackfolder)];
+		INT32 fake; // Dummy variable
+		UINT8 *end_p = savebuffer + length;
+		UINT8 *lives_p;
+		SINT8 pllives;
+
+		save_p = savebuffer;
+		// Version check
+		memset(vcheck, 0, sizeof (vcheck));
+		sprintf(vcheck, "version %d", VERSION);
+#ifndef SAVEGAMES_OTHERVERSIONS
+		if (strcmp((const char *)save_p, (const char *)vcheck))
+			BADSAVE;
+#endif
+		save_p += VERSIONSIZE;
+
+		// P_UnArchiveMisc()
+		fake = READINT16(save_p);
+		CHECKPOS
+		(void)READUINT16(save_p); // emeralds
+		CHECKPOS
+		READSTRINGN(save_p, temp, sizeof(temp)); // mod it belongs to
+		if (strcmp(temp, timeattackfolder)) BADSAVE
+		CHECKPOS
+		(void)READUINT8(save_p);
+		CHECKPOS
+		(void)READUINT8(save_p);
+		CHECKPOS
+
+		WRITEUINT8(save_p, numgameovers);
+		CHECKPOS
+
+		lives_p = save_p;
+		pllives = READSINT8(save_p); // lives
+		CHECKPOS
+		if (pllives < startinglivesbalance[numgameovers])
+		{
+			pllives = startinglivesbalance[numgameovers];
+			WRITESINT8(lives_p, pllives);
+		}
+
+		(void)READINT32(save_p); // Score
+		CHECKPOS
+		(void)READINT32(save_p); // continues
+
+		if (fake & (1<<10))
+		{
+			CHECKPOS
+			(void)READUINT8(save_p);
+			CHECKPOS
+			(void)READUINT8(save_p); // because why not.
+		}
+
+		// File end marker check
+		CHECKPOS
+		if (READUINT8(save_p) != 0x1d) BADSAVE;
+
+		// done
+		saved = FIL_WriteFile(backup, savebuffer, length);
+	}
+
+cleanup:
+	if (cv_debug && saved)
+		CONS_Printf(M_GetText("Game saved.\n"));
+	else if (!saved)
+		CONS_Alert(CONS_ERROR, M_GetText("Error while writing to %s for save slot %u, base: %s\n"), backup, slot, savegamename);
+	Z_Free(savebuffer);
+	save_p = savebuffer = NULL;
+
+}
+#undef CHECKPOS
+#undef BADSAVE
 
 //
 // G_DeferedInitNew
@@ -3722,7 +3819,7 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 	if (resetplayer)
 	{
 		// Clear a bunch of variables
-		tokenlist = token = sstimer = redscore = bluescore = lastmap = 0;
+		numgameovers = tokenlist = token = sstimer = redscore = bluescore = lastmap = 0;
 		countdown = countdown2 = 0;
 
 		for (i = 0; i < MAXPLAYERS; i++)
@@ -3737,15 +3834,10 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 					players[i].lives = cv_startinglives.value;
 				players[i].continues = 0;
 			}
-			else if (pultmode)
-			{
-				players[i].lives = 1;
-				players[i].continues = 0;
-			}
 			else
 			{
-				players[i].lives = 3;
-				players[i].continues = 1;
+				players[i].lives = (pultmode) ? 1 : startinglivesbalance[0];
+				players[i].continues = (pultmode) ? 0 : 1;
 			}
 
 			if (!((netgame || multiplayer) && (FLS)))

@@ -116,6 +116,8 @@ void G_SaveGameData(void);
 
 void G_SaveGame(UINT32 slot);
 
+void G_SaveGameOver(UINT32 slot);
+
 // Only called by startup code.
 void G_RecordDemo(const char *name);
 void G_RecordMetal(void);

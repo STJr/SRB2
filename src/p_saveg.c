@@ -64,15 +64,16 @@ typedef enum
 static inline void P_ArchivePlayer(void)
 {
 	const player_t *player = &players[consoleplayer];
-	INT32 pllives = player->lives;
-	if (pllives < 3) // Bump up to 3 lives if the player
-		pllives = 3; // has less than that.
+	SINT8 pllives = player->lives;
+	if (pllives < startinglivesbalance[numgameovers]) // Bump up to 3 lives if the player
+		pllives = startinglivesbalance[numgameovers]; // has less than that.
 
 	WRITEUINT8(save_p, player->skincolor);
 	WRITEUINT8(save_p, player->skin);
 
+	WRITEUINT8(save_p, numgameovers);
+	WRITESINT8(save_p, pllives);
 	WRITEUINT32(save_p, player->score);
-	WRITEINT32(save_p, pllives);
 	WRITEINT32(save_p, player->continues);
 
 	if (botskin)
@@ -90,8 +91,9 @@ static inline void P_UnArchivePlayer(void)
 	savedata.skincolor = READUINT8(save_p);
 	savedata.skin = READUINT8(save_p);
 
-	savedata.score = READINT32(save_p);
-	savedata.lives = READINT32(save_p);
+	savedata.numgameovers = READUINT8(save_p);
+	savedata.lives = READSINT8(save_p);
+	savedata.score = READUINT32(save_p);
 	savedata.continues = READINT32(save_p);
 
 	if (savedata.botcolor)
