@@ -419,10 +419,13 @@ static void D_Display(void)
 			}
 
 			// Image postprocessing effect
-			if (postimgtype)
-				V_DoPostProcessor(0, postimgtype, postimgparam);
-			if (postimgtype2)
-				V_DoPostProcessor(1, postimgtype2, postimgparam2);
+			if (rendermode == render_soft)
+			{
+				if (postimgtype)
+					V_DoPostProcessor(0, postimgtype, postimgparam);
+				if (postimgtype2)
+					V_DoPostProcessor(1, postimgtype2, postimgparam2);
+			}
 		}
 
 		if (lastdraw)
@@ -712,6 +715,7 @@ void D_StartTitle(void)
 	botskin = 0;
 	cv_debug = 0;
 	emeralds = 0;
+	lastmaploaded = 0;
 
 	// In case someone exits out at the same time they start a time attack run,
 	// reset modeattacking
@@ -719,6 +723,14 @@ void D_StartTitle(void)
 
 	// empty maptol so mario/etc sounds don't play in sound test when they shouldn't
 	maptol = 0;
+
+	// reset to default player stuff
+	COM_BufAddText (va("%s \"%s\"\n",cv_playername.name,cv_defaultplayername.string));
+	COM_BufAddText (va("%s \"%s\"\n",cv_skin.name,cv_defaultskin.string));
+	COM_BufAddText (va("%s \"%s\"\n",cv_playercolor.name,cv_defaultplayercolor.string));
+	COM_BufAddText (va("%s \"%s\"\n",cv_playername2.name,cv_defaultplayername2.string));
+	COM_BufAddText (va("%s \"%s\"\n",cv_skin2.name,cv_defaultskin2.string));
+	COM_BufAddText (va("%s \"%s\"\n",cv_playercolor2.name,cv_defaultplayercolor2.string));
 
 	gameaction = ga_nothing;
 	displayplayer = consoleplayer = 0;

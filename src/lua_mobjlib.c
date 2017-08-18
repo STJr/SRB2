@@ -417,7 +417,7 @@ static int mobj_set(lua_State *L)
 		mo->frame = (UINT32)luaL_checkinteger(L, 3);
 		break;
 	case mobj_sprite2:
-		mo->sprite2 = P_GetMobjSprite2(mo, (UINT8)luaL_checkinteger(L, 3));
+		mo->sprite2 = P_GetSkinSprite2(((skin_t *)mo->skin), (UINT8)luaL_checkinteger(L, 3), mo->player);
 		break;
 	case mobj_anim_duration:
 		mo->anim_duration = (UINT16)luaL_checkinteger(L, 3);

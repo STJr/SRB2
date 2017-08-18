@@ -414,13 +414,15 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		////////////////////////////////////////////////////////
 		if (special->type == MT_GSNAPPER && !(((player->powers[pw_carry] == CR_NIGHTSMODE) && (player->pflags & PF_DRILLING))
 		|| player->powers[pw_invulnerability] || player->powers[pw_super] || elementalpierce)
-		&& toucher->z < special->z + special->height && toucher->z + toucher->height > special->z)
+		&& toucher->z < special->z + special->height && toucher->z + toucher->height > special->z
+		&& !(player->powers[pw_shield] & SH_PROTECTSPIKE))
 		{
 			// Can only hit snapper from above
-			P_DamageMobj(toucher, special, special, 1, 0);
+			P_DamageMobj(toucher, special, special, 1, DMG_SPIKE);
 		}
 		else if (special->type == MT_SHARP
-		&& ((special->state == &states[special->info->xdeathstate]) || (toucher->z > special->z + special->height/2)))
+		&& ((special->state == &states[special->info->xdeathstate]) || (toucher->z > special->z + special->height/2))
+		&& !(player->powers[pw_shield] & SH_PROTECTSPIKE))
 		{
 			if (player->pflags & PF_BOUNCING)
 			{
@@ -428,7 +430,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				P_DoAbilityBounce(player, false);
 			}
 			else // Cannot hit sharp from above or when red and angry
-				P_DamageMobj(toucher, special, special, 1, 0);
+				P_DamageMobj(toucher, special, special, 1, DMG_SPIKE);
 		}
 		else if (((player->powers[pw_carry] == CR_NIGHTSMODE) && (player->pflags & PF_DRILLING))
 		|| ((player->pflags & PF_JUMPED) && (!(player->pflags & PF_NOJUMPDAMAGE) || (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)))
@@ -1291,13 +1293,40 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if (player->starpostnum >= special->health)
 				return; // Already hit this post
 
-			// Save the player's time and position.
-			player->starposttime = leveltime;
-			player->starpostx = toucher->x>>FRACBITS;
-			player->starposty = toucher->y>>FRACBITS;
-			player->starpostz = special->z>>FRACBITS;
-			player->starpostangle = special->angle;
-			player->starpostnum = special->health;
+			if (cv_coopstarposts.value && gametype == GT_COOP && (netgame || multiplayer))
+			{
+				for (i = 0; i < MAXPLAYERS; i++)
+				{
+					if (playeringame[i])
+					{
+						if (players[i].bot) // ignore dumb, stupid tails
+							continue;
+
+						players[i].starposttime = leveltime;
+						players[i].starpostx = player->mo->x>>FRACBITS;
+						players[i].starposty = player->mo->y>>FRACBITS;
+						players[i].starpostz = special->z>>FRACBITS;
+						players[i].starpostangle = special->angle;
+						players[i].starpostnum = special->health;
+
+						if (cv_coopstarposts.value == 2 && (players[i].playerstate == PST_DEAD || players[i].spectator) && P_GetLives(&players[i]))
+							P_SpectatorJoinGame(&players[i]); //players[i].playerstate = PST_REBORN;
+					}
+				}
+				S_StartSound(NULL, special->info->painsound);
+			}
+			else
+			{
+				// Save the player's time and position.
+				player->starposttime = leveltime;
+				player->starpostx = toucher->x>>FRACBITS;
+				player->starposty = toucher->y>>FRACBITS;
+				player->starpostz = special->z>>FRACBITS;
+				player->starpostangle = special->angle;
+				player->starpostnum = special->health;
+				S_StartSound(toucher, special->info->painsound);
+			}
+
 			P_ClearStarPost(special->health);
 
 			// Find all starposts in the level with this value.
@@ -1469,10 +1498,19 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if (player->powers[pw_flashing])
 				return;
 
+			if (special->movefactor && special->tracer && (angle_t)special->tracer->health != ANGLE_90 && (angle_t)special->tracer->health != ANGLE_270)
+			{ // I don't expect you to understand this, Mr Bond...
+				angle_t ang = R_PointToAngle2(special->x, special->y, toucher->x, toucher->y) - special->tracer->threshold;
+				if ((special->movefactor > 0) == ((angle_t)special->tracer->health > ANGLE_90 && (angle_t)special->tracer->health < ANGLE_270))
+					ang += ANGLE_180;
+				if (ang < ANGLE_180)
+					return; // I expect you to die.
+			}
+
 			P_ResetPlayer(player);
 			P_SetTarget(&toucher->tracer, special);
 
-			if (special->target && (special->target->type == MT_SPINMACEPOINT || special->target->type == MT_HIDDEN_SLING))
+			if (special->tracer && !(special->tracer->flags2 & MF2_STRONGBOX))
 			{
 				player->powers[pw_carry] = CR_MACESPIN;
 				S_StartSound(toucher, sfx_spin);
@@ -1483,6 +1521,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 			// Can't jump first frame
 			player->pflags |= PF_JUMPSTASIS;
+
 			return;
 		case MT_BIGMINE:
 		case MT_BIGAIRMINE:
@@ -2198,14 +2237,34 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 		target->flags |= MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY;
 		P_SetThingPosition(target);
 
-		if (!target->player->bot && !G_IsSpecialStage(gamemap)
+		if ((target->player->lives <= 1) && (netgame || multiplayer) && (gametype == GT_COOP) && (cv_cooplives.value == 0))
+			;
+		else if (!target->player->bot && !target->player->spectator && !G_IsSpecialStage(gamemap)
 		 && G_GametypeUsesLives())
 		{
 			target->player->lives -= 1; // Lose a life Tails 03-11-2000
 
 			if (target->player->lives <= 0) // Tails 03-14-2000
 			{
-				if (P_IsLocalPlayer(target->player)/* && target->player == &players[consoleplayer] */)
+				boolean gameovermus = false;
+				if ((netgame || multiplayer) && (gametype == GT_COOP) && (cv_cooplives.value != 1))
+				{
+					INT32 i;
+					for (i = 0; i < MAXPLAYERS; i++)
+					{
+						if (!playeringame[i])
+							continue;
+
+						if (players[i].lives > 0)
+							break;
+					}
+					if (i == MAXPLAYERS)
+						gameovermus = true;
+				}
+				else if (P_IsLocalPlayer(target->player))
+					gameovermus = true;
+
+				if (gameovermus)
 				{
 					S_StopMusic(); // Stop the Music! Tails 03-14-2000
 					S_ChangeMusicInternal("_gover", false); // Yousa dead now, Okieday? Tails 03-14-2000
@@ -3169,18 +3228,16 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 
 			switch (damagetype)
 			{
-				case DMG_WATER:
-					if (player->powers[pw_shield] & SH_PROTECTWATER)
-						return false; // Invincible to water damage
-					break;
-				case DMG_FIRE:
-					if (player->powers[pw_shield] & SH_PROTECTFIRE)
-						return false; // Invincible to fire damage
-					break;
-				case DMG_ELECTRIC:
-					if (player->powers[pw_shield] & SH_PROTECTELECTRIC)
-						return false; // Invincible to electric damage
-					break;
+#define DAMAGECASE(type)\
+				case DMG_##type:\
+					if (player->powers[pw_shield] & SH_PROTECT##type)\
+						return false;\
+					break
+				DAMAGECASE(WATER);
+				DAMAGECASE(FIRE);
+				DAMAGECASE(ELECTRIC);
+				DAMAGECASE(SPIKE);
+#undef DAMAGECASE
 				default:
 					break;
 			}
