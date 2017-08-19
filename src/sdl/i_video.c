@@ -606,7 +606,7 @@ static void Impl_HandleKeyboardEvent(SDL_KeyboardEvent evt, Uint32 type)
 	if (event.data1) D_PostEvent(&event);
 }
 
-static int mousemovex, mousemovey;
+static INT32 mousemovex, mousemovey;
 
 static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
 {
@@ -629,8 +629,8 @@ static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
 			//event.data3 = -evt.yrel;
 			if (SDL_GetMouseFocus() == window && SDL_GetKeyboardFocus() == window)
 			{
-				mousemovex += evt.xrel;
-				mousemovey += -evt.yrel;
+				mousemovex += (INT32)lround( evt.xrel * ((float)wwidth / (float)realwidth));
+				mousemovey += (INT32)lround(-evt.yrel * ((float)wheight / (float)realheight));
 				SDL_SetWindowGrab(window, SDL_TRUE);
 			}
 			return;
