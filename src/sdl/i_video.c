@@ -606,6 +606,8 @@ static void Impl_HandleKeyboardEvent(SDL_KeyboardEvent evt, Uint32 type)
 	if (event.data1) D_PostEvent(&event);
 }
 
+static int mousemovex, mousemovey;
+
 static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
 {
 	event_t event;
@@ -623,10 +625,20 @@ static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
 
 		if (SDL_GetRelativeMouseMode())
 		{
-			event.data2 = evt.xrel;
-			event.data3 = -evt.yrel;
+			//event.data2 = evt.xrel;
+			//event.data3 = -evt.yrel;
+			if (SDL_GetMouseFocus() == window && SDL_GetKeyboardFocus() == window)
+			{
+				mousemovex += evt.xrel;
+				mousemovey += -evt.yrel;
+				SDL_SetWindowGrab(window, SDL_TRUE);
+			}
+			return;
 		}
-		else if ((evt.x == realwidth/2) && (evt.y == realheight/2))
+
+		SDL_memset(&event, 0, sizeof(event_t));
+
+		if ((evt.x == realwidth/2) && (evt.y == realheight/2))
 		{
 			return;
 		}
@@ -792,7 +804,8 @@ void I_GetEvent(void)
 	SDL_Event evt;
 	// We only want the first motion event,
 	// otherwise we'll end up catching the warp back to center.
-	int mouseMotionOnce = 0;
+	//int mouseMotionOnce = 0;
+	mousemovex = mousemovey = 0;
 
 	if (!graphics_started)
 	{
@@ -811,8 +824,9 @@ void I_GetEvent(void)
 				Impl_HandleKeyboardEvent(evt.key, evt.type);
 				break;
 			case SDL_MOUSEMOTION:
-				if (!mouseMotionOnce) Impl_HandleMouseMotionEvent(evt.motion);
-				mouseMotionOnce = 1;
+				//if (!mouseMotionOnce)
+				Impl_HandleMouseMotionEvent(evt.motion);
+				//mouseMotionOnce = 1;
 				break;
 			case SDL_MOUSEBUTTONUP:
 			case SDL_MOUSEBUTTONDOWN:
@@ -833,6 +847,17 @@ void I_GetEvent(void)
 				M_QuitResponse('y');
 				break;
 		}
+	}
+
+	if (mousemovex || mousemovey)
+	{
+		event_t event;
+		SDL_memset(&event, 0, sizeof(event_t));
+		event.type = ev_mouse;
+		event.data1 = 0;
+		event.data2 = mousemovex;
+		event.data3 = mousemovey;
+		D_PostEvent(&event);
 	}
 
 	// In order to make wheels act like buttons, we have to set their state to Up.
