@@ -116,7 +116,7 @@ void G_SaveGameData(void);
 
 void G_SaveGame(UINT32 slot);
 
-void G_SaveGameOver(UINT32 slot);
+void G_SaveGameOver(UINT32 slot, boolean modifylives);
 
 // Only called by startup code.
 void G_RecordDemo(const char *name);

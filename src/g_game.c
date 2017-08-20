@@ -3132,6 +3132,9 @@ static void G_DoContinued(void)
 	tokenlist = 0;
 	token = 0;
 
+	if (!(netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking) && (!modifiedgame || savemoddata) && cursaveslot >= 0)
+		G_SaveGameOver((UINT32)cursaveslot, true);
+
 	// Reset # of lives
 	pl->lives = (ultimatemode) ? 1 : startinglivesbalance[numgameovers];
 
@@ -3664,7 +3667,7 @@ void G_SaveGame(UINT32 slot)
 
 #define BADSAVE goto cleanup;
 #define CHECKPOS if (save_p >= end_p) BADSAVE
-void G_SaveGameOver(UINT32 slot)
+void G_SaveGameOver(UINT32 slot, boolean modifylives)
 {
 	boolean saved = false;
 	size_t length;
@@ -3700,12 +3703,14 @@ void G_SaveGameOver(UINT32 slot)
 		save_p += VERSIONSIZE;
 
 		// P_UnArchiveMisc()
-		fake = READINT16(save_p);
+		(void)READINT16(save_p);
 		CHECKPOS
-		(void)READUINT16(save_p); // emeralds
+		fake = READUINT16(save_p)-357; // emeralds
 		CHECKPOS
 		READSTRINGN(save_p, temp, sizeof(temp)); // mod it belongs to
 		if (strcmp(temp, timeattackfolder)) BADSAVE
+
+		// P_UnArchivePlayer()
 		CHECKPOS
 		(void)READUINT8(save_p);
 		CHECKPOS
@@ -3718,7 +3723,7 @@ void G_SaveGameOver(UINT32 slot)
 		lives_p = save_p;
 		pllives = READSINT8(save_p); // lives
 		CHECKPOS
-		if (pllives < startinglivesbalance[numgameovers])
+		if (modifylives && pllives < startinglivesbalance[numgameovers])
 		{
 			pllives = startinglivesbalance[numgameovers];
 			WRITESINT8(lives_p, pllives);

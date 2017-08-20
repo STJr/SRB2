@@ -6098,7 +6098,7 @@ static void M_DrawLoadGameData(void)
 	// Use the big face pic for lives, duh. :3
 	V_DrawScaledPatch(ecks + 12, 175, 0, W_CachePatchName("STLIVEX", PU_HUDGFX));
 	if (savegameinfo[saveSlotSelected].lives == 0x7F)
-		V_DrawScaledPatch(ecks + 40 - 18, 172, 0, tallinfin);
+		V_DrawScaledPatch(ecks + 40 - 17, 172, 0, tallinfin);
 	else
 		V_DrawTallNum(ecks + 40, 172, 0, savegameinfo[saveSlotSelected].lives);
 
@@ -6290,8 +6290,10 @@ static void M_ReadSavegameInfo(UINT32 slot)
 	// P_UnArchivePlayer()
 	CHECKPOS
 	savegameinfo[slot].skincolor = READUINT8(save_p);
+
 	CHECKPOS
 	savegameinfo[slot].skinnum = READUINT8(save_p);
+	if (savegameinfo[slot].skinnum >= numskins) BADSAVE
 
 	CHECKPOS
 	(void)READUINT8(save_p); // numgameovers

@@ -2294,7 +2294,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 				{
 					numgameovers++;
 					if ((!modifiedgame || savemoddata) && cursaveslot >= 0)
-						G_SaveGameOver((UINT32)cursaveslot);
+						G_SaveGameOver((UINT32)cursaveslot, (target->player->continues <= 0));
 				}
 			}
 		}
