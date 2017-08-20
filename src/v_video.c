@@ -1422,9 +1422,9 @@ void V_DrawString(INT32 x, INT32 y, INT32 option, const char *string)
 		else
 			w = SHORT(hu_font[c]->width) * dupx;
 
-		if (cx + w > scrwidth)
+		if (cx > scrwidth)
 			break;
-		if (cx < 0) //left boundary check
+		if (cx + w < 0) //left boundary check
 		{
 			cx += w;
 			continue;
@@ -1628,9 +1628,9 @@ void V_DrawThinString(INT32 x, INT32 y, INT32 option, const char *string)
 		else
 			w = (SHORT(tny_font[c]->width) * dupx);
 
-		if (cx + w > scrwidth)
+		if (cx > scrwidth)
 			break;
-		if (cx < 0) //left boundary check
+		if (cx + w < 0) //left boundary check
 		{
 			cx += w;
 			continue;

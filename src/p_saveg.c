@@ -64,23 +64,16 @@ typedef enum
 static inline void P_ArchivePlayer(void)
 {
 	const player_t *player = &players[consoleplayer];
+	INT16 skininfo = player->skin + (botskin<<5);
 	SINT8 pllives = player->lives;
 	if (pllives < startinglivesbalance[numgameovers]) // Bump up to 3 lives if the player
 		pllives = startinglivesbalance[numgameovers]; // has less than that.
 
-	WRITEUINT8(save_p, player->skincolor);
-	WRITEUINT8(save_p, player->skin);
-
+	WRITEUINT16(save_p, skininfo);
 	WRITEUINT8(save_p, numgameovers);
 	WRITESINT8(save_p, pllives);
 	WRITEUINT32(save_p, player->score);
 	WRITEINT32(save_p, player->continues);
-
-	if (botskin)
-	{
-		WRITEUINT8(save_p, botskin);
-		WRITEUINT8(save_p, botcolor);
-	}
 }
 
 //
@@ -88,23 +81,14 @@ static inline void P_ArchivePlayer(void)
 //
 static inline void P_UnArchivePlayer(void)
 {
-	savedata.skincolor = READUINT8(save_p);
-	savedata.skin = READUINT8(save_p);
+	INT16 skininfo = READUINT16(save_p);
+	savedata.skin = skininfo & ((1<<5) - 1);
+	savedata.botskin = skininfo >> 5;
 
 	savedata.numgameovers = READUINT8(save_p);
 	savedata.lives = READSINT8(save_p);
 	savedata.score = READUINT32(save_p);
 	savedata.continues = READINT32(save_p);
-
-	if (savedata.botcolor)
-	{
-		savedata.botskin = READUINT8(save_p);
-		if (savedata.botskin-1 >= numskins)
-			savedata.botskin = 0;
-		savedata.botcolor = READUINT8(save_p);
-	}
-	else
-		savedata.botskin = 0;
 }
 
 //
@@ -3164,7 +3148,7 @@ static inline void P_ArchiveMisc(void)
 	//lastmapsaved = gamemap;
 	lastmaploaded = gamemap;
 
-	WRITEUINT16(save_p, (botskin ? (emeralds|(1<<10)) : emeralds)+357);
+	WRITEUINT16(save_p, emeralds+357);
 	WRITESTRINGN(save_p, timeattackfolder, sizeof(timeattackfolder));
 }
 
@@ -3194,9 +3178,6 @@ static inline void P_UnArchiveSPGame(INT16 mapoverride)
 	token = 0;
 
 	savedata.emeralds = READUINT16(save_p)-357;
-	if (savedata.emeralds & (1<<10))
-		savedata.botcolor = 0xFF;
-	savedata.emeralds &= 0xff;
 
 	READSTRINGN(save_p, testname, sizeof(testname));
 

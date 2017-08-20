@@ -215,13 +215,10 @@ typedef struct
 // savegame struct for save game menu
 typedef struct
 {
-	char playername[32];
 	char levelname[32];
 	UINT8 actnum;
-	UINT8 skincolor;
 	UINT8 skinnum;
 	UINT8 botskin;
-	UINT8 botcolor;
 	UINT8 numemeralds;
 	INT32 lives;
 	INT32 continues;
@@ -237,7 +234,7 @@ extern INT16 startmap;
 extern INT32 ultimate_selectable;
 
 #define MAXSAVEGAMES 31 //note: last save game is "no save"
-#define NOSAVESLOT MAXSAVEGAMES-1 //slot where Play Without Saving appears
+#define NOSAVESLOT 0 //slot where Play Without Saving appears
 
 void M_ForceSaveSlotSelected(INT32 sslot);
 

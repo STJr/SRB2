@@ -76,7 +76,7 @@ INT16 gamemap = 1;
 INT16 maptol;
 UINT8 globalweather = 0;
 INT32 curWeather = PRECIP_NONE;
-INT32 cursaveslot = -1; // Auto-save 1p savegame slot
+INT32 cursaveslot = 0; // Auto-save 1p savegame slot
 //INT16 lastmapsaved = 0; // Last map we auto-saved at
 INT16 lastmaploaded = 0; // Last map the game loaded
 boolean gamecomplete = false;
@@ -3132,7 +3132,7 @@ static void G_DoContinued(void)
 	tokenlist = 0;
 	token = 0;
 
-	if (!(netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking) && (!modifiedgame || savemoddata) && cursaveslot >= 0)
+	if (!(netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking) && (!modifiedgame || savemoddata) && cursaveslot > 0)
 		G_SaveGameOver((UINT32)cursaveslot, true);
 
 	// Reset # of lives
@@ -3475,59 +3475,6 @@ void G_SaveGameData(void)
 
 #define VERSIONSIZE 16
 
-#ifdef SAVEGAMES_OTHERVERSIONS
-static INT16 startonmapnum = 0;
-
-//
-// User wants to load a savegame from a different version?
-//
-static void M_ForceLoadGameResponse(INT32 ch)
-{
-	if (ch != 'y' && ch != KEY_ENTER)
-	{
-		//refused
-		Z_Free(savebuffer);
-		save_p = savebuffer = NULL;
-		startonmapnum = 0;
-		M_SetupNextMenu(&SP_LoadDef);
-		return;
-	}
-
-	// pick up where we left off.
-	save_p += VERSIONSIZE;
-	if (!P_LoadGame(startonmapnum))
-	{
-		M_ClearMenus(true); // so ESC backs out to title
-		M_StartMessage(M_GetText("Savegame file corrupted\n\nPress ESC\n"), NULL, MM_NOTHING);
-		Command_ExitGame_f();
-		Z_Free(savebuffer);
-		save_p = savebuffer = NULL;
-		startonmapnum = 0;
-
-		// no cheating!
-		memset(&savedata, 0, sizeof(savedata));
-		return;
-	}
-
-	// done
-	Z_Free(savebuffer);
-	save_p = savebuffer = NULL;
-	startonmapnum = 0;
-
-	//set cursaveslot to -1 so nothing gets saved.
-	cursaveslot = -1;
-
-	displayplayer = consoleplayer;
-	multiplayer = splitscreen = false;
-
-	if (setsizeneeded)
-		R_ExecuteSetViewSize();
-
-	M_ClearMenus(true);
-	CON_ToggleOff();
-}
-#endif
-
 //
 // G_InitFromSavegame
 // Can be called by the startup code or the menu task.
@@ -3687,7 +3634,6 @@ void G_SaveGameOver(UINT32 slot, boolean modifylives)
 
 	{
 		char temp[sizeof(timeattackfolder)];
-		INT32 fake; // Dummy variable
 		UINT8 *end_p = savebuffer + length;
 		UINT8 *lives_p;
 		SINT8 pllives;
@@ -3696,25 +3642,20 @@ void G_SaveGameOver(UINT32 slot, boolean modifylives)
 		// Version check
 		memset(vcheck, 0, sizeof (vcheck));
 		sprintf(vcheck, "version %d", VERSION);
-#ifndef SAVEGAMES_OTHERVERSIONS
-		if (strcmp((const char *)save_p, (const char *)vcheck))
-			BADSAVE;
-#endif
+		if (strcmp((const char *)save_p, (const char *)vcheck)) BADSAVE
 		save_p += VERSIONSIZE;
 
 		// P_UnArchiveMisc()
 		(void)READINT16(save_p);
 		CHECKPOS
-		fake = READUINT16(save_p)-357; // emeralds
+		(void)READUINT16(save_p); // emeralds
 		CHECKPOS
 		READSTRINGN(save_p, temp, sizeof(temp)); // mod it belongs to
 		if (strcmp(temp, timeattackfolder)) BADSAVE
 
 		// P_UnArchivePlayer()
 		CHECKPOS
-		(void)READUINT8(save_p);
-		CHECKPOS
-		(void)READUINT8(save_p);
+		(void)READUINT16(save_p);
 		CHECKPOS
 
 		WRITEUINT8(save_p, numgameovers);
@@ -3732,14 +3673,6 @@ void G_SaveGameOver(UINT32 slot, boolean modifylives)
 		(void)READINT32(save_p); // Score
 		CHECKPOS
 		(void)READINT32(save_p); // continues
-
-		if (fake & (1<<10))
-		{
-			CHECKPOS
-			(void)READUINT8(save_p);
-			CHECKPOS
-			(void)READUINT8(save_p); // because why not.
-		}
 
 		// File end marker check
 		CHECKPOS
@@ -3768,7 +3701,7 @@ cleanup:
 //
 void G_DeferedInitNew(boolean pultmode, const char *mapname, INT32 pickedchar, boolean SSSG, boolean FLS)
 {
-	UINT8 color = 0;
+	UINT8 color = skins[pickedchar].prefcolor;
 	paused = false;
 
 	if (demoplayback)
@@ -3780,10 +3713,8 @@ void G_DeferedInitNew(boolean pultmode, const char *mapname, INT32 pickedchar, b
 
 	if (savedata.lives > 0)
 	{
-		color = savedata.skincolor;
-		botskin = savedata.botskin;
-		botcolor = savedata.botcolor;
-		botingame = (botskin != 0);
+		if ((botingame = ((botskin = savedata.botskin) != 0)))
+			botcolor = skins[botskin-1].prefcolor;
 	}
 	else if (splitscreen != SSSG)
 	{
@@ -3791,8 +3722,7 @@ void G_DeferedInitNew(boolean pultmode, const char *mapname, INT32 pickedchar, b
 		SplitScreen_OnChange();
 	}
 
-	if (!color)
-		color = skins[pickedchar].prefcolor;
+	color = skins[pickedchar].prefcolor;
 	SetPlayerSkinByNum(consoleplayer, pickedchar);
 	CV_StealthSet(&cv_skin, skins[pickedchar].name);
 	CV_StealthSetValue(&cv_playercolor, color);
