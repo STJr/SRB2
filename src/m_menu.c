@@ -4094,6 +4094,24 @@ static boolean M_PrepareLevelPlatter(INT32 gt)
 		mapnum++;
 	}
 
+#ifdef SYMMETRICAL_PLATTER
+	// horizontally space out rows with missing right sides
+	for (; row >= 0; row--)
+	{
+		if (!levelselect.rows[row].maplist[2] // no right side
+		&& levelselect.rows[row].maplist[0] && levelselect.rows[row].maplist[1]) // all the left filled in
+		{
+			levelselect.rows[row].maplist[2] = levelselect.rows[row].maplist[1];
+			STRBUFCPY(levelselect.rows[row].mapnames[2], levelselect.rows[row].mapnames[1]);
+			levelselect.rows[row].mapavailable[2] = levelselect.rows[row].mapavailable[1];
+
+			levelselect.rows[row].maplist[1] = -1; // diamond
+			levelselect.rows[row].mapnames[1][0] = '\0';
+			levelselect.rows[row].mapavailable[1] = false;
+		}
+	}
+#endif
+
 	if (levselp[0][0]) // never going to have some provided but not all, saves individually checking
 	{
 		W_UnlockCachedPatch(levselp[0][0]);
@@ -4231,7 +4249,7 @@ static void M_HandleLevelPlatter(INT32 choice)
 			else if (!lsoffs[0]) //  prevent sound spam
 			{
 				lsoffs[0] = -8;
-				S_StartSound(NULL,sfx_s3kb2);
+				S_StartSound(NULL,sfx_lose);
 			}
 			break;
 
@@ -4277,7 +4295,7 @@ static void M_DrawLevelPlatterWideMap(UINT8 row, UINT8 col, INT32 x, INT32 y, bo
 	patch_t *patch;
 
 	INT32 map = levelselect.rows[row].maplist[col];
-	if (!map)
+	if (map <= 0)
 		return;
 
 	//  A 564x100 image of the level as entry MAPxxW
@@ -4318,7 +4336,7 @@ static void M_DrawLevelPlatterMap(UINT8 row, UINT8 col, INT32 x, INT32 y, boolea
 	patch_t *patch;
 
 	INT32 map = levelselect.rows[row].maplist[col];
-	if (!map)
+	if (map <= 0)
 		return;
 
 	//  A 160x100 image of the level as entry MAPxxP
@@ -4403,7 +4421,7 @@ static void M_DrawLevelPlatterMenu(void)
 	// draw cursor box
 	V_DrawSmallScaledPatch(lsbasex + cursorx + lsoffs[1], lsbasey, 0, (levselp[sizeselect][((skullAnimCounter/4) ? 1 : 0)]));
 
-	if (levelselect.rows[lsrow].maplist[lscol])
+	if (levelselect.rows[lsrow].maplist[lscol] > 0)
 		V_DrawScaledPatch(lsbasex + cursorx-17, lsbasey+50+lsoffs[0], 0, W_CachePatchName("M_CURSOR", PU_CACHE));
 
 	// handle movement of cursor box
@@ -6057,7 +6075,7 @@ static void M_DrawLoadGameData(void)
 		if (savetodraw == 0)
 		{
 			V_DrawSmallScaledPatch(x, y, 0,
-				W_CachePatchName("SAVENONE", PU_CACHE));
+				W_CachePatchName(((ultimate_selectable) ? "ULTIMATE" : "SAVENONE"), PU_CACHE));
 			x += 2;
 			y += 1;
 			V_DrawString(x, y,
@@ -6067,7 +6085,7 @@ static void M_DrawLoadGameData(void)
 				V_DrawFill(x, y+9, 80, 1, yellowmap[3]);
 			y += 11;
 			V_DrawSmallScaledPatch(x, y, V_STATIC,
-				W_CachePatchName("BLACKLVL", PU_CACHE));
+				W_CachePatchName("BLACXLVL", PU_CACHE));
 			y += 41;
 			if (ultimate_selectable)
 				V_DrawRightAlignedThinString(x + 79, y, V_REDMAP, "ULTIMATE.");
@@ -6078,25 +6096,33 @@ static void M_DrawLoadGameData(void)
 
 		savetodraw--;
 
+		if (savegameinfo[savetodraw].lives > 0)
+			charskin = &skins[savegameinfo[savetodraw].skinnum];
+
 		// signpost background
 		{
 			UINT8 col;
-			if (savegameinfo[savetodraw].botskin == 3) // & knuckles
-				col = 105;
-			else if (savegameinfo[savetodraw].botskin) // tailsbot or custom
-				col = 134;
-			else if (savegameinfo[savetodraw].lives == -42)
-				col = 26;
-			else if (savegameinfo[savetodraw].lives == -666)
-				col = 47;
+			if (savegameinfo[savetodraw].lives == -666)
+			{
+				V_DrawSmallScaledPatch(x+2, y+64, 0,
+					W_CachePatchName("BLANKLVL", PU_CACHE));
+			}
 			else
 			{
-				charskin = &skins[savegameinfo[savetodraw].skinnum];
-				col = (charskin->prefcolor - 1)*2;
-				col = Color_Index[Color_Opposite[col]-1][Color_Opposite[col+1]];
-			}
+				if (savegameinfo[savetodraw].lives == -42)
+					col = 26;
+				else if (savegameinfo[savetodraw].botskin == 3) // & knuckles
+					col = 105;
+				else if (savegameinfo[savetodraw].botskin) // tailsbot or custom
+					col = 134;
+				else
+				{
+					col = (charskin->prefcolor - 1)*2;
+					col = Color_Index[Color_Opposite[col]-1][Color_Opposite[col+1]];
+				}
 
-			V_DrawFill(x+6, y+64, 72, 50, col);
+				V_DrawFill(x+6, y+64, 72, 50, col);
+			}
 		}
 			
 		V_DrawSmallScaledPatch(x, y, 0,
@@ -6150,7 +6176,20 @@ static void M_DrawLoadGameData(void)
 		|| (savegameinfo[savetodraw].lives == -666))
 			continue;
 
-		y += 51;
+		y += 64;
+
+		// tiny emeralds
+		{
+			INT32 j, workx = x + 6;
+			for (j = 0; j < 7; ++j)
+			{
+				if (savegameinfo[savetodraw].numemeralds & (1 << j))
+					V_DrawScaledPatch(workx, y, 0, tinyemeraldpics[j]);
+				workx += 10;
+			}
+		}
+
+		y -= 13;
 
 		// character heads, lives, and continues
 		{
@@ -6159,7 +6198,7 @@ static void M_DrawLoadGameData(void)
 			patch_t *patch;
 			UINT8 *colormap = NULL;
 
-			INT32 tempx = (x+40)<<FRACBITS, tempy = y<<FRACBITS, flip = 0;
+			INT32 tempx = (x+40)<<FRACBITS, tempy = y<<FRACBITS, flip = 0, calc;
 
 			// botskin first
 			if (savegameinfo[savetodraw].botskin)
@@ -6193,6 +6232,8 @@ skipbot:
 				goto skipsign;
 			sprframe = &sprdef->spriteframes[0];
 			patch = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
+			if ((calc = SHORT(patch->topoffset) - 42) > 0)
+				tempy += ((4+calc)<<FRACBITS);
 
 			V_DrawFixedPatch(
 				tempx,
@@ -6252,20 +6293,6 @@ skiplife:
 				V_DrawSmallScaledPatch(tempx, y, 0, W_CachePatchName("CONTNONE", PU_CACHE));
 				V_DrawScaledPatch(tempx + 9, y + 2, 0, W_CachePatchName("STNONEX", PU_CACHE));
 				V_DrawString(tempx + 16, y, V_GRAYMAP, "0");
-			}
-		}
-
-		x += 6;
-		y -= 12;
-
-		// tiny emeralds
-		{
-			INT32 j;
-			for (j = 0; j < 7; ++j)
-			{
-				if (savegameinfo[savetodraw].numemeralds & (1 << j))
-					V_DrawScaledPatch(x, y, 0, tinyemeraldpics[j]);
-				x += 10;
 			}
 		}
 	}
@@ -6479,7 +6506,7 @@ static void M_SaveGameDeleteResponse(INT32 ch)
 	name[sizeof name - 1] = '\0';
 	remove(name);
 
-	S_StartSound(NULL, sfx_bewar1+M_RandomKey(4)); // Bweh heh he
+	BwehHehHe();
 	M_ReadSaveStrings(); // reload the menu
 }
 
@@ -6513,7 +6540,7 @@ static void M_HandleLoadSave(INT32 choice)
 			}
 			else if (!loadgameoffset)
 			{
-				S_StartSound(NULL, sfx_s3kb2);
+				S_StartSound(NULL, sfx_lose);
 				loadgameoffset = 14;
 			}
 			break;
@@ -6533,7 +6560,13 @@ static void M_HandleLoadSave(INT32 choice)
 			}
 			else if (!loadgameoffset)
 			{
-				S_StartSound(NULL, sfx_s3kb2);
+				if (saveSlotSelected == NOSAVESLOT && ultimate_selectable)
+				{
+					ultimate_selectable = false;
+					BwehHehHe();
+				}
+				else
+					S_StartSound(NULL, sfx_lose);
 				loadgameoffset = 14;
 			}
 			break;
@@ -8816,7 +8849,7 @@ static void M_EraseDataResponse(INT32 ch)
 		totalplaytime = 0;
 		F_StartIntro();
 	}
-	S_StartSound(NULL, sfx_bewar1+M_RandomKey(4)); // Bweh heh he
+	BwehHehHe();
 	M_ClearMenus(true);
 }
 

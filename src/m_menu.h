@@ -236,6 +236,8 @@ extern INT32 ultimate_selectable;
 #define MAXSAVEGAMES 31 //note: last save game is "no save"
 #define NOSAVESLOT 0 //slot where Play Without Saving appears
 
+#define BwehHehHe() S_StartSound(NULL, sfx_bewar1+M_RandomKey(4)) // Bweh heh he
+
 void M_ForceSaveSlotSelected(INT32 sslot);
 
 void M_CheatActivationResponder(INT32 ch);
