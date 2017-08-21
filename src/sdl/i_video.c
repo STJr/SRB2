@@ -107,6 +107,9 @@ static SDL_bool disable_mouse = SDL_FALSE;
 // first entry in the modelist which is not bigger than MAXVIDWIDTHxMAXVIDHEIGHT
 static      INT32          firstEntry = 0;
 
+// Total mouse motion X/Y offsets
+static      INT32        mousemovex = 0, mousemovey = 0;
+
 // SDL vars
 static      SDL_Surface *vidSurface = NULL;
 static      SDL_Surface *bufSurface = NULL;
@@ -606,8 +609,6 @@ static void Impl_HandleKeyboardEvent(SDL_KeyboardEvent evt, Uint32 type)
 	if (event.data1) D_PostEvent(&event);
 }
 
-static INT32 mousemovex, mousemovey;
-
 static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
 {
 	event_t event;
@@ -623,30 +624,34 @@ static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
 			return;
 		}
 
+		// If using relative mouse mode, don't post an event_t just now,
+		// add on the offsets so we can make an overall event later.
 		if (SDL_GetRelativeMouseMode())
 		{
 			//event.data2 = evt.xrel;
 			//event.data3 = -evt.yrel;
 			if (SDL_GetMouseFocus() == window && SDL_GetKeyboardFocus() == window)
 			{
-				mousemovex += (INT32)lround( evt.xrel * ((float)wwidth / (float)realwidth));
-				mousemovey += (INT32)lround(-evt.yrel * ((float)wheight / (float)realheight));
+				mousemovex +=  evt.xrel; //(INT32)lround( evt.xrel * ((float)wwidth / (float)realwidth));
+				mousemovey += -evt.yrel; //(INT32)lround(-evt.yrel * ((float)wheight / (float)realheight));
 				SDL_SetWindowGrab(window, SDL_TRUE);
 			}
 			return;
 		}
 
-		SDL_memset(&event, 0, sizeof(event_t));
-
+		// If the event is from warping the pointer back to middle
+		// of the screen then ignore it.
 		if ((evt.x == realwidth/2) && (evt.y == realheight/2))
 		{
 			return;
 		}
-		else
-		{
-			event.data2 = (INT32)lround((evt.xrel) * ((float)wwidth / (float)realwidth));
-			event.data3 = (INT32)lround(-evt.yrel * ((float)wheight / (float)realheight));
-		}
+
+		SDL_memset(&event, 0, sizeof(event_t));
+
+		event.type = ev_mouse;
+
+		event.data2 = (INT32)lround( evt.xrel * ((float)wwidth / (float)realwidth));
+		event.data3 = (INT32)lround(-evt.yrel * ((float)wheight / (float)realheight));
 
 		event.type = ev_mouse;
 
@@ -805,12 +810,13 @@ void I_GetEvent(void)
 	// We only want the first motion event,
 	// otherwise we'll end up catching the warp back to center.
 	//int mouseMotionOnce = 0;
-	mousemovex = mousemovey = 0;
 
 	if (!graphics_started)
 	{
 		return;
 	}
+
+	mousemovex = mousemovey = 0;
 
 	while (SDL_PollEvent(&evt))
 	{
@@ -849,14 +855,17 @@ void I_GetEvent(void)
 		}
 	}
 
+	// Send all relative mouse movement as one single mouse event.
 	if (mousemovex || mousemovey)
 	{
 		event_t event;
-		SDL_memset(&event, 0, sizeof(event_t));
+		int wwidth, wheight;
+		SDL_GetWindowSize(window, &wwidth, &wheight);
+		//SDL_memset(&event, 0, sizeof(event_t));
 		event.type = ev_mouse;
 		event.data1 = 0;
-		event.data2 = mousemovex;
-		event.data3 = mousemovey;
+		event.data2 = (INT32)lround(mousemovex * ((float)wwidth / (float)realwidth));
+		event.data3 = (INT32)lround(mousemovey * ((float)wheight / (float)realheight));
 		D_PostEvent(&event);
 	}
 
