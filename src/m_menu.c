@@ -174,6 +174,7 @@ static UINT32 serverlistpage;
 
 static UINT8 numsaves = 0;
 static saveinfo_t* savegameinfo = NULL; // Extra info about the save games.
+static patch_t *savselp[7];
 
 INT16 startmap; // Mario, NiGHTS, or just a plain old normal game?
 
@@ -223,7 +224,7 @@ static INT32 lsoffs[2];
 #define lshli levelselectselect[2]
 
 #define lshseperation 101
-#define lsbasevseperation 62
+#define lsbasevseperation (62*vid.height)/(BASEVIDHEIGHT*vid.dupy) //62
 #define lsheadingheight 16
 #define getheadingoffset(row) (levelselect.rows[row].header[0] ? lsheadingheight : 0)
 #define lsvseperation(row) lsbasevseperation + getheadingoffset(row)
@@ -4280,14 +4281,10 @@ void M_DrawLevelPlatterHeader(INT32 y, const char *header, boolean headerhighlig
 	y += lsheadingheight - 12;
 	V_DrawString(19, y, (headerhighlight ? V_YELLOWMAP : 0)|(allowlowercase ? V_ALLOWLOWERCASE : 0), header);
 	y += 9;
-	if ((y >= 0) && (y < 200))
-	{
-		V_DrawFill(19, y, 281, 1, (headerhighlight ? yellowmap[3] : 3));
-		V_DrawFill(300, y, 1, 1, 26);
-	}
+	V_DrawFill(19, y, 281, 1, (headerhighlight ? yellowmap[3] : 3));
+	V_DrawFill(300, y, 1, 1, 26);
 	y++;
-	if ((y >= 0) && (y < 200))
-		V_DrawFill(19, y, 282, 1, 26);
+	V_DrawFill(19, y, 282, 1, 26);
 }
 
 static void M_DrawLevelPlatterWideMap(UINT8 row, UINT8 col, INT32 x, INT32 y, boolean highlight)
@@ -4311,22 +4308,9 @@ static void M_DrawLevelPlatterWideMap(UINT8 row, UINT8 col, INT32 x, INT32 y, bo
 		V_DrawSmallScaledPatch(x, y, 0, patch);
 	}
 
-	if ((y+50) < 200)
-	{
-		INT32 topy = (y+50), h = 8;
-
-		if (topy < 0)
-		{
-			h += topy;
-			topy = 0;
-		}
-		else if (topy + h >= 200)
-			h = 200 - y;
-		if (h > 0)
-			V_DrawFill(x, topy, 282, h,
-			((mapheaderinfo[map-1]->unlockrequired < 0)
-			? 159 : 63));
-	}
+	V_DrawFill(x, y+50, 282, 8,
+		((mapheaderinfo[map-1]->unlockrequired < 0)
+		? 159 : 63));
 
 	V_DrawString(x, y+50, (highlight ? V_YELLOWMAP : 0), levelselect.rows[row].mapnames[col]);
 }
@@ -4352,22 +4336,9 @@ static void M_DrawLevelPlatterMap(UINT8 row, UINT8 col, INT32 x, INT32 y, boolea
 		V_DrawSmallScaledPatch(x, y, 0, patch);
 	}
 
-	if ((y+50) < 200)
-	{
-		INT32 topy = (y+50), h = 8;
-
-		if (topy < 0)
-		{
-			h += topy;
-			topy = 0;
-		}
-		else if (topy + h >= 200)
-			h = 200 - y;
-		if (h > 0)
-			V_DrawFill(x, topy, 80, h,
-			((mapheaderinfo[map-1]->unlockrequired < 0)
-			? 159 : 63));
-	}
+	V_DrawFill(x, y+50, 80, 8,
+		((mapheaderinfo[map-1]->unlockrequired < 0)
+		? 159 : 63));
 
 	if (strlen(levelselect.rows[row].mapnames[col]) > 6) // "AERIAL GARDEN" vs "ACT 18" - "THE ACT" intentionally compressed
 		V_DrawThinString(x, y+50, (highlight ? V_YELLOWMAP : 0), levelselect.rows[row].mapnames[col]);
@@ -6053,13 +6024,16 @@ static UINT8 loadgameoffset = 0;
 
 static void M_DrawLoadGameData(void)
 {
-	INT32 i, savetodraw, x, y;
+	INT32 i, savetodraw, x, y, hsep = 90;
 	skin_t *charskin = NULL;
+
+	if (vid.width != BASEVIDWIDTH*vid.dupx)
+		hsep = (hsep*vid.width)/(BASEVIDWIDTH*vid.dupx);
 
 	for (i = -2; i <= 2; i++)
 	{
 		savetodraw = (saveSlotSelected + i + numsaves)%numsaves;
-		x = (BASEVIDWIDTH/2 - 42 + loadgamescroll) + (i*90);
+		x = (BASEVIDWIDTH/2 - 42 + loadgamescroll) + (i*hsep);
 		y = 33 + 9;
 
 		{
@@ -6075,7 +6049,7 @@ static void M_DrawLoadGameData(void)
 		if (savetodraw == 0)
 		{
 			V_DrawSmallScaledPatch(x, y, 0,
-				W_CachePatchName(((ultimate_selectable) ? "ULTIMATE" : "SAVENONE"), PU_CACHE));
+				savselp[((ultimate_selectable) ? 2 : 1)]);
 			x += 2;
 			y += 1;
 			V_DrawString(x, y,
@@ -6084,8 +6058,7 @@ static void M_DrawLoadGameData(void)
 			if (savetodraw == saveSlotSelected)
 				V_DrawFill(x, y+9, 80, 1, yellowmap[3]);
 			y += 11;
-			V_DrawSmallScaledPatch(x, y, V_STATIC,
-				W_CachePatchName("BLACXLVL", PU_CACHE));
+			V_DrawSmallScaledPatch(x, y, V_STATIC, savselp[4]);
 			y += 41;
 			if (ultimate_selectable)
 				V_DrawRightAlignedThinString(x + 79, y, V_REDMAP, "ULTIMATE.");
@@ -6104,8 +6077,7 @@ static void M_DrawLoadGameData(void)
 			UINT8 col;
 			if (savegameinfo[savetodraw].lives == -666)
 			{
-				V_DrawSmallScaledPatch(x+2, y+64, 0,
-					W_CachePatchName("BLANKLVL", PU_CACHE));
+				V_DrawSmallScaledPatch(x+2, y+64, 0, savselp[5]);
 			}
 			else
 			{
@@ -6125,8 +6097,7 @@ static void M_DrawLoadGameData(void)
 			}
 		}
 			
-		V_DrawSmallScaledPatch(x, y, 0,
-			W_CachePatchName("SAVEBACK", PU_CACHE));
+		V_DrawSmallScaledPatch(x, y, 0, savselp[0]);
 		x += 2;
 		y += 1;
 		V_DrawString(x, y,
@@ -6144,18 +6115,18 @@ static void M_DrawLoadGameData(void)
 			if ((savegameinfo[savetodraw].lives == -42)
 			|| (savegameinfo[savetodraw].lives == -666))
 			{
-				patch = W_CachePatchName("BLACKLVL", PU_CACHE);
+				patch = savselp[3];
 				flags = V_STATIC;
 			}
 			else if (savegameinfo[savetodraw].gamemap & 8192)
-				patch = W_CachePatchName("GAMEDONE", PU_CACHE);
+				patch = savselp[6];
 			else
 			{
 				lumpnum_t lumpnum = W_CheckNumForName(va("%sP", G_BuildMapName((savegameinfo[savetodraw].gamemap) & 8191)));
 				if (lumpnum != LUMPERROR)
 					patch = W_CachePatchNum(lumpnum, PU_CACHE);
 				else
-					patch = W_CachePatchName("BLANKLVL", PU_CACHE);
+					patch = savselp[5];
 			}
 				
 			V_DrawSmallScaledPatch(x, y, flags, patch);
@@ -6451,29 +6422,41 @@ static void M_ReadSaveStrings(void)
 	SINT8 i;
 	char name[256];
 	boolean nofile[MAXSAVEGAMES-1];
-	UINT8 tolerance = 0;
+	SINT8 tolerance = 3; // empty slots at any time
+	UINT8 lastseen = 0;
 
 	loadgamescroll = 0;
 	loadgameoffset = 14;
 
-	for (i = 1; ((i < MAXSAVEGAMES) && ((i <= saveSlotSelected) || (tolerance < 3))); i++) // slot 0 is no save
+	for (i = 1; (i < MAXSAVEGAMES); i++) // slot 0 is no save
 	{
 		snprintf(name, sizeof name, savegamename, i);
 		name[sizeof name - 1] = '\0';
 
 		handle = fopen(name, "rb");
 		if ((nofile[i-1] = (handle == NULL)))
-		{
-			tolerance++;
 			continue;
-		}
 		fclose(handle);
-		tolerance = 0;
+		lastseen = i;
 	}
 
 	if (savegameinfo)
 		Z_Free(savegameinfo);
 	savegameinfo = NULL;
+
+	if (lastseen < saveSlotSelected)
+		lastseen = saveSlotSelected;
+
+	i = lastseen;
+
+	for (; (lastseen > 0 && tolerance); lastseen--)
+	{
+		if (nofile[lastseen-1])
+			tolerance--;
+	}
+
+	if ((i += tolerance+1) > MAXSAVEGAMES) // show 3 empty slots at minimum
+		i = MAXSAVEGAMES;
 
 	numsaves = i;
 	savegameinfo = Z_Realloc(savegameinfo, numsaves*sizeof(saveinfo_t), PU_STATIC, NULL);
@@ -6489,6 +6472,27 @@ static void M_ReadSaveStrings(void)
 		}
 		M_ReadSavegameInfo(i);
 	}
+
+	if (savselp[0]) // never going to have some provided but not all, saves individually checking
+	{
+		W_UnlockCachedPatch(savselp[0]);
+		W_UnlockCachedPatch(savselp[1]);
+		W_UnlockCachedPatch(savselp[2]);
+
+		W_UnlockCachedPatch(savselp[3]);
+		W_UnlockCachedPatch(savselp[4]);
+		W_UnlockCachedPatch(savselp[5]);
+		W_UnlockCachedPatch(savselp[6]);
+	}
+
+	savselp[0] = W_CachePatchName("SAVEBACK", PU_STATIC);
+	savselp[1] = W_CachePatchName("SAVENONE", PU_STATIC);
+	savselp[2] = W_CachePatchName("ULTIMATE", PU_STATIC);
+
+	savselp[3] = W_CachePatchName("BLACKLVL", PU_STATIC);
+	savselp[4] = W_CachePatchName("BLACXLVL", PU_STATIC);
+	savselp[5] = W_CachePatchName("BLANKLVW", PU_STATIC);
+	savselp[6] = W_CachePatchName("GAMEDONE", PU_STATIC);
 }
 
 //
