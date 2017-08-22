@@ -574,6 +574,9 @@ typedef struct seg_s
 	sector_t *backsector;
 
 #ifdef HWRENDER
+	// new pointers so that AdjustSegs doesn't mess with v1/v2
+	void *pv1; // polyvertex_t
+	void *pv2; // polyvertex_t
 	float flength; // length of the seg, used by hardware renderer
 
 	lightmap_t *lightmaps; // for static lightmap
@@ -685,7 +688,7 @@ typedef enum
 // Patches.
 // A patch holds one or more columns.
 // Patches are used for sprites and all masked pictures, and we compose
-// textures from the TEXTURE1 list of patches.
+// textures from the TEXTURES list of patches.
 //
 // WARNING: this structure is cloned in GLPatch_t
 typedef struct

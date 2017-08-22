@@ -499,63 +499,63 @@ emblem_t emblemlocations[MAXEMBLEMS] =
 	// FLORAL FIELD
 	// ---
 	{0, 5394, -996, 160, 50, 'N', SKINCOLOR_RUST, 0, "", 0},
-	{ET_NGRADE, 0,0,0,   50, 'Q', SKINCOLOR_TEAL,     GRADE_A, "", 0},
+	{ET_NGRADE, 0,0,0,   50, 'Q', SKINCOLOR_CYAN,     GRADE_A, "", 0},
 	{ET_NTIME,  0,0,0,   50, 'T', SKINCOLOR_GREY,  40*TICRATE, "", 0},
 
 
 	// TOXIC PLATEAU
 	// ---
 	{0, 780, -1664, 32, 51, 'N', SKINCOLOR_RUST, 0, "", 0},
-	{ET_NGRADE, 0,0,0,  51, 'Q', SKINCOLOR_TEAL,     GRADE_A, "", 0},
+	{ET_NGRADE, 0,0,0,  51, 'Q', SKINCOLOR_CYAN,     GRADE_A, "", 0},
 	{ET_NTIME,  0,0,0,  51, 'T', SKINCOLOR_GREY,  50*TICRATE, "", 0},
 
 
 	// FLOODED COVE
 	// ---
 	{0, 1824, -1888, 2448, 52, 'N', SKINCOLOR_RUST, 0, "", 0},
-	{ET_NGRADE, 0,0,0,     52, 'Q', SKINCOLOR_TEAL,     GRADE_A, "", 0},
+	{ET_NGRADE, 0,0,0,     52, 'Q', SKINCOLOR_CYAN,     GRADE_A, "", 0},
 	{ET_NTIME,  0,0,0,     52, 'T', SKINCOLOR_GREY,  90*TICRATE, "", 0},
 
 
 	// CAVERN FORTRESS
 	// ---
 	{0, -3089, -431, 1328, 53, 'N', SKINCOLOR_RUST, 0, "", 0},
-	{ET_NGRADE, 0,0,0,     53, 'Q', SKINCOLOR_TEAL,     GRADE_A, "", 0},
+	{ET_NGRADE, 0,0,0,     53, 'Q', SKINCOLOR_CYAN,     GRADE_A, "", 0},
 	{ET_NTIME,  0,0,0,     53, 'T', SKINCOLOR_GREY,  75*TICRATE, "", 0},
 
 
 	// DUSTY WASTELAND
 	// ---
 	{0, 957, 924, 2956, 54, 'N', SKINCOLOR_RUST, 0, "", 0},
-	{ET_NGRADE, 0,0,0,  54, 'Q', SKINCOLOR_TEAL,     GRADE_A, "", 0},
+	{ET_NGRADE, 0,0,0,  54, 'Q', SKINCOLOR_CYAN,     GRADE_A, "", 0},
 	{ET_NTIME,  0,0,0,  54, 'T', SKINCOLOR_GREY,  65*TICRATE, "", 0},
 
 
 	// MAGMA CAVES
 	// ---
 	{0, -2752, 3104, 1800, 55, 'N', SKINCOLOR_RUST, 0, "", 0},
-	{ET_NGRADE, 0,0,0,     55, 'Q', SKINCOLOR_TEAL,     GRADE_A, "", 0},
+	{ET_NGRADE, 0,0,0,     55, 'Q', SKINCOLOR_CYAN,     GRADE_A, "", 0},
 	{ET_NTIME,  0,0,0,     55, 'T', SKINCOLOR_GREY,  80*TICRATE, "", 0},
 
 
 	// EGG SATELLITE
 	// ---
 	{0, 5334, -609, 3426, 56, 'N', SKINCOLOR_RUST, 0, "", 0},
-	{ET_NGRADE, 0,0,0,    56, 'Q', SKINCOLOR_TEAL,     GRADE_A, "", 0},
+	{ET_NGRADE, 0,0,0,    56, 'Q', SKINCOLOR_CYAN,     GRADE_A, "", 0},
 	{ET_NTIME,  0,0,0,    56, 'T', SKINCOLOR_GREY, 120*TICRATE, "", 0},
 
 
 	// BLACK HOLE
 	// ---
 	{0, 2108, 3776, 32, 57, 'N', SKINCOLOR_RUST, 0, "", 0},
-	{ET_NGRADE, 0,0,0,  57, 'Q', SKINCOLOR_TEAL,     GRADE_A, "", 0},
+	{ET_NGRADE, 0,0,0,  57, 'Q', SKINCOLOR_CYAN,     GRADE_A, "", 0},
 	{ET_NTIME,  0,0,0,  57, 'T', SKINCOLOR_GREY, 150*TICRATE, "", 0},
 
 
 	// SPRING HILL
 	// ---
 	{0, -1840, -1024, 1644, 58, 'N', SKINCOLOR_RUST, 0, "", 0},
-	{ET_NGRADE, 0,0,0,      58, 'Q', SKINCOLOR_TEAL,     GRADE_A, "", 0},
+	{ET_NGRADE, 0,0,0,      58, 'Q', SKINCOLOR_CYAN,     GRADE_A, "", 0},
 	{ET_NTIME,  0,0,0,      58, 'T', SKINCOLOR_GREY,  60*TICRATE, "", 0},
 };
 
@@ -566,7 +566,7 @@ extraemblem_t extraemblems[MAXEXTRAEMBLEMS] =
 	{"All Emeralds",   "Complete 1P Mode with all Emeralds",  11, 'V', SKINCOLOR_GREY, 0},
 	{"Perfect Bonus",  "Perfect Bonus on a non-secret stage", 30, 'P', SKINCOLOR_GOLD, 0},
 	{"PLACEHOLDER", "PLACEHOLDER", 0, 'O', SKINCOLOR_RUST, 0},
-	{"NiGHTS Mastery", "Show your mastery of NiGHTS!",        22, 'W', SKINCOLOR_TEAL, 0},
+	{"NiGHTS Mastery", "Show your mastery of NiGHTS!",        22, 'W', SKINCOLOR_CYAN, 0},
 };
 
 // Default Unlockables

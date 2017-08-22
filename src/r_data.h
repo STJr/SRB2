@@ -68,7 +68,7 @@ extern INT16 *hicolormaps; // remap high colors to high colors..
 
 extern CV_PossibleValue_t Color_cons_t[];
 
-// Load TEXTURE1/TEXTURE2/PNAMES definitions, create lookup tables
+// Load TEXTURES definitions, create lookup tables
 void R_LoadTextures(void);
 void R_FlushTextureCache(void);
 

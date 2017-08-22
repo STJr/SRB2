@@ -35,7 +35,6 @@ typedef enum
 
 typedef struct
 {
-	UINT8 important;
 	UINT8 willsend; // Is the server willing to send it?
 	char filename[MAX_WADPATH];
 	UINT8 md5sum[16];
@@ -69,7 +68,7 @@ boolean SV_SendingFile(INT32 node);
 
 boolean CL_CheckDownloadable(void);
 boolean CL_SendRequestFile(void);
-void Got_RequestFilePak(INT32 node);
+boolean Got_RequestFilePak(INT32 node);
 
 void SV_AbortSendFiles(INT32 node);
 void CloseNetFile(void);
