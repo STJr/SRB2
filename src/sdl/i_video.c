@@ -611,13 +611,8 @@ static void Impl_HandleKeyboardEvent(SDL_KeyboardEvent evt, Uint32 type)
 
 static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
 {
-	event_t event;
-	int wwidth, wheight;
-
 	if (USE_MOUSEINPUT)
 	{
-		SDL_GetWindowSize(window, &wwidth, &wheight);
-
 		if ((SDL_GetMouseFocus() != window && SDL_GetKeyboardFocus() != window))
 		{
 			SDLdoUngrabMouse();
@@ -628,40 +623,31 @@ static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
 		// add on the offsets so we can make an overall event later.
 		if (SDL_GetRelativeMouseMode())
 		{
-			//event.data2 = evt.xrel;
-			//event.data3 = -evt.yrel;
 			if (SDL_GetMouseFocus() == window && SDL_GetKeyboardFocus() == window)
 			{
-				mousemovex +=  evt.xrel; //(INT32)lround( evt.xrel * ((float)wwidth / (float)realwidth));
-				mousemovey += -evt.yrel; //(INT32)lround(-evt.yrel * ((float)wheight / (float)realheight));
+				mousemovex +=  evt.xrel;
+				mousemovey += -evt.yrel;
 				SDL_SetWindowGrab(window, SDL_TRUE);
 			}
 			return;
 		}
 
-		// If the event is from warping the pointer back to middle
+		// If the event is from warping the pointer to middle
 		// of the screen then ignore it.
 		if ((evt.x == realwidth/2) && (evt.y == realheight/2))
 		{
 			return;
 		}
 
-		SDL_memset(&event, 0, sizeof(event_t));
-
-		event.type = ev_mouse;
-
-		event.data2 = (INT32)lround( evt.xrel * ((float)wwidth / (float)realwidth));
-		event.data3 = (INT32)lround(-evt.yrel * ((float)wheight / (float)realheight));
-
-		event.type = ev_mouse;
-
+		// Don't send an event_t if not in relative mouse mode anymore,
+		// just grab and set relative mode
+		// this fixes the stupid camera jerk on mouse entering bug
+		// -- Monster Iestyn
 		if (SDL_GetMouseFocus() == window && SDL_GetKeyboardFocus() == window)
 		{
-			D_PostEvent(&event);
 			SDL_SetWindowGrab(window, SDL_TRUE);
-			if (SDL_SetRelativeMouseMode(SDL_TRUE) == 0)
-				wrapmouseok = SDL_TRUE;
-			HalfWarpMouse(wwidth, wheight);
+			if (SDL_SetRelativeMouseMode(SDL_TRUE) == 0) // already warps mouse if successful
+				wrapmouseok = SDL_TRUE; // TODO: is wrapmouseok or HalfWarpMouse needed anymore?
 		}
 	}
 }
