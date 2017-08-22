@@ -525,19 +525,20 @@ static inline UINT8 transmappedpdraw(const UINT8 *dest, const UINT8 *source, fix
 	return *(v_translevel + (((*(v_colormap + source[ofs>>FRACBITS]))<<8)&0xff00) + (*dest&0xff));
 }
 
-static UINT8 staticstep[2] = {0, 0};
+static UINT8 staticstep = 0;
+static fixed_t staticval = 0;
 
 static inline UINT8 staticpdraw(const UINT8 *dest, const UINT8 *source, fixed_t ofs)
 {
 	UINT8 val = source[ofs>>FRACBITS];
 	(void)dest;
-	if ((++staticstep[1]) >= 4)
+	if ((++staticstep) >= 4)
 	{
-		staticstep[1] = 0;
-		staticstep[0] = M_RandomFixed();
+		staticstep = 0;
+		staticval = M_RandomFixed();
 	}
 	if (val < 7) return val;
-	return ((staticstep[0]>>staticstep[1])&7)+(val-7);
+	return ((staticval>>staticstep)&7)+(val-7);
 }
 
 // Draws a patch scaled to arbitrary size.
