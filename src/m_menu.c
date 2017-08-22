@@ -6514,6 +6514,17 @@ static void M_SaveGameDeleteResponse(INT32 ch)
 	M_ReadSaveStrings(); // reload the menu
 }
 
+static void M_SaveGameUltimateResponse(INT32 ch)
+{
+	if (ch != 'y' && ch != KEY_ENTER)
+		return;
+
+	S_StartSound(NULL, sfx_menu1);
+	M_LoadSelect(saveSlotSelected);
+	SP_PlayerDef.prevMenu = MessageDef.prevMenu;
+	MessageDef.prevMenu = &SP_PlayerDef;
+}
+
 static void M_HandleLoadSave(INT32 choice)
 {
 	boolean exitmenu = false; // exit to previous menu
@@ -6537,8 +6548,15 @@ static void M_HandleLoadSave(INT32 choice)
 			break;
 
 		case KEY_ENTER:
-			if (savegameinfo[saveSlotSelected-1].lives != -666) // don't allow loading of "bad saves"
+			if (ultimate_selectable && saveSlotSelected == NOSAVESLOT)
 			{
+				loadgamescroll = 0;
+				S_StartSound(NULL, sfx_skid);
+				M_StartMessage("Are you sure you want to play\n\x85ultimate mode\x80? It isn't remotely fair,\nand you don't even get an emblem for it.\n\n(Press 'Y' to confirm)\n",M_SaveGameUltimateResponse,MM_YESNO);
+			}
+			else if (savegameinfo[saveSlotSelected-1].lives != -666) // don't allow loading of "bad saves"
+			{
+				loadgamescroll = 0;
 				S_StartSound(NULL, sfx_menu1);
 				M_LoadSelect(saveSlotSelected);
 			}
@@ -6560,14 +6578,14 @@ static void M_HandleLoadSave(INT32 choice)
 			{
 				loadgamescroll = 0;
 				S_StartSound(NULL, sfx_skid);
-				M_StartMessage(M_GetText("Are you sure you want to delete\nthis save game?\n\n(Press 'Y' to confirm)\n"),M_SaveGameDeleteResponse,MM_YESNO);
+				M_StartMessage(va("Are you sure you want to delete\nsave file %d?\n\n(Press 'Y' to confirm)\n", saveSlotSelected),M_SaveGameDeleteResponse,MM_YESNO);
 			}
 			else if (!loadgameoffset)
 			{
 				if (saveSlotSelected == NOSAVESLOT && ultimate_selectable)
 				{
 					ultimate_selectable = false;
-					BwehHehHe();
+					S_StartSound(NULL, sfx_strpst);
 				}
 				else
 					S_StartSound(NULL, sfx_lose);
@@ -6602,14 +6620,15 @@ static void M_LoadGame(INT32 choice)
 //
 void M_ForceSaveSlotSelected(INT32 sslot)
 {
-	// Already there? Out of bounds? Whatever, then!
-	if (sslot == saveSlotSelected || sslot >= MAXSAVEGAMES)
+	loadgameoffset = 14;
+
+	// Already there? Whatever, then!
+	if (sslot == saveSlotSelected)
 		return;
 
-	// Figure out whether to display up movement or down movement
-	/*menumovedir = (saveSlotSelected - sslot) > 0 ? -1 : 1;
-	if (abs(saveSlotSelected - sslot) > (MAXSAVEGAMES>>1))
-		menumovedir *= -1;*/
+	loadgamescroll = 90;
+	if (saveSlotSelected <= numsaves/2)
+		loadgamescroll = -loadgamescroll;
 
 	saveSlotSelected = sslot;
 }

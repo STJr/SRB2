@@ -61,7 +61,7 @@ static UINT8 cheatf_ultimate(void)
 	if (menuactive && (currentMenu != &MainDef && currentMenu != &SP_LoadDef))
 		return 0; // Only on the main menu, or the save select!
 
-	S_StartSound(0, sfx_itemup);
+	BwehHehHe();
 	ultimate_selectable = (!ultimate_selectable);
 
 	// If on the save select, move to what is now Ultimate Mode!
