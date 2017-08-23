@@ -6079,6 +6079,18 @@ static void M_DrawLoadGameData(void)
 			{
 				V_DrawSmallScaledPatch(x+2, y+64, 0, savselp[5]);
 			}
+#ifndef PERFECTSAVE // disabled, don't touch
+			else if ((savegameinfo[savetodraw].skinnum == 1)
+			&& (savegameinfo[savetodraw].lives == 99)
+			&& (savegameinfo[savetodraw].gamemap & 8192)
+			&& (savegameinfo[savetodraw].numgameovers == 0)
+			&& (savegameinfo[savetodraw].numemeralds == (1<<7 - 1)) // perfect save
+			{
+				V_DrawFill(x+6, y+64, 72, 50, 134);
+				V_DrawFill(x+6, y+74, 72, 30, 201);
+				V_DrawFill(x+6, y+84, 72, 10, 1);
+			}
+#endif
 			else
 			{
 				if (savegameinfo[savetodraw].lives == -42)
@@ -6360,15 +6372,9 @@ static void M_ReadSavegameInfo(UINT32 slot)
 	if (((fake-1) & 8191) >= NUMMAPS) BADSAVE
 
 	if(!mapheaderinfo[(fake-1) & 8191])
-	{
 		savegameinfo[slot].levelname[0] = '\0';
-		savegameinfo[slot].actnum = 0;
-	}
 	else
-	{
 		strcpy(savegameinfo[slot].levelname, mapheaderinfo[(fake-1) & 8191]->lvlttl);
-		savegameinfo[slot].actnum = mapheaderinfo[(fake-1) & 8191]->actnum;
-	}
 
 	savegameinfo[slot].gamemap = fake;
 
@@ -6390,10 +6396,10 @@ static void M_ReadSavegameInfo(UINT32 slot)
 	savegameinfo[slot].botskin = fake >> 5;
 	if (savegameinfo[slot].botskin-1 >= numskins
 	|| !R_SkinUsable(-1, savegameinfo[slot].botskin-1))
-		savegameinfo[slot].botskin = 0;
+		BADSAVE
 
 	CHECKPOS
-	(void)READUINT8(save_p); // numgameovers
+	savegameinfo[slot].numgameovers = READUINT8(save_p); // numgameovers
 	CHECKPOS
 	savegameinfo[slot].lives = READSINT8(save_p); // lives
 	CHECKPOS

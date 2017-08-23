@@ -216,10 +216,10 @@ typedef struct
 typedef struct
 {
 	char levelname[32];
-	UINT8 actnum;
 	UINT8 skinnum;
 	UINT8 botskin;
 	UINT8 numemeralds;
+	UINT8 numgameovers;
 	INT32 lives;
 	INT32 continues;
 	INT32 gamemap;
