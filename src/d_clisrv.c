@@ -2525,9 +2525,15 @@ static void Command_Nodes(void)
 
 static void Command_Ban(void)
 {
-	if (COM_Argc() == 1)
+	if (COM_Argc() < 2)
 	{
 		CONS_Printf(M_GetText("Ban <playername/playernum> <reason>: ban and kick a player\n"));
+		return;
+	}
+
+	if (!netgame) // Don't kick Tails in splitscreen!
+	{
+		CONS_Printf(M_GetText("This only works in a netgame.\n"));
 		return;
 	}
 
@@ -2540,8 +2546,9 @@ static void Command_Ban(void)
 
 		if (pn == -1 || pn == 0)
 			return;
-		else
-			WRITEUINT8(p, pn);
+
+		WRITEUINT8(p, pn);
+
 		if (server && I_Ban && !I_Ban(node)) // only the server is allowed to do this right now
 		{
 			CONS_Alert(CONS_WARNING, M_GetText("Too many bans! Geez, that's a lot of people you're excluding...\n"));
@@ -2584,21 +2591,27 @@ static void Command_Ban(void)
 
 static void Command_Kick(void)
 {
-	XBOXSTATIC UINT8 buf[3 + MAX_REASONLENGTH];
-	UINT8 *p = buf;
-
-	if (COM_Argc() == 1)
+	if (COM_Argc() < 2)
 	{
 		CONS_Printf(M_GetText("kick <playername/playernum> <reason>: kick a player\n"));
 		return;
 	}
 
+	if (!netgame) // Don't kick Tails in splitscreen!
+	{
+		CONS_Printf(M_GetText("This only works in a netgame.\n"));
+		return;
+	}
+
 	if (server || adminplayer == consoleplayer)
 	{
+		XBOXSTATIC UINT8 buf[3 + MAX_REASONLENGTH];
+		UINT8 *p = buf;
 		const SINT8 pn = nametonum(COM_Argv(1));
-		WRITESINT8(p, pn);
+
 		if (pn == -1 || pn == 0)
 			return;
+
 		// Special case if we are trying to kick a player who is downloading the game state:
 		// trigger a timeout instead of kicking them, because a kick would only
 		// take effect after they have finished downloading
@@ -2607,6 +2620,9 @@ static void Command_Kick(void)
 			Net_ConnectionTimeout(playernode[pn]);
 			return;
 		}
+
+		WRITESINT8(p, pn);
+
 		if (COM_Argc() == 2)
 		{
 			WRITEUINT8(p, KICK_MSG_GO_AWAY);
@@ -3971,7 +3987,7 @@ FILESTAMP
 			if (client)
 			{
 				INT32 i;
-				for (i = 0; i < MAXNETNODES; i++)
+				for (i = 0; i < MAXPLAYERS; i++)
 					if (playeringame[i])
 						playerpingtable[i] = (tic_t)netbuffer->u.pingtable[i];
 			}
@@ -4534,8 +4550,8 @@ static inline void PingUpdate(void)
 	}
 
 	//send out our ping packets
-	for (i = 0; i < MAXPLAYERS; i++)
-		if (playeringame[i])
+	for (i = 0; i < MAXNETNODES; i++)
+		if (nodeingame[i])
 			HSendPacket(i, true, 0, sizeof(INT32) * MAXPLAYERS);
 
 	pingmeasurecount = 1; //Reset count
@@ -4565,20 +4581,15 @@ void NetUpdate(void)
 
 	gametime = nowtime;
 
-	if (!(gametime % 255) && netgame && server)
-	{
-#ifdef NEWPING
-		PingUpdate();
-#endif
-	}
-
 #ifdef NEWPING
 	if (server)
 	{
+		if (netgame && !(gametime % 255))
+			PingUpdate();
 		// update node latency values so we can take an average later.
-		for (i = 0; i < MAXNETNODES; i++)
+		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i])
-				realpingtable[i] += G_TicsToMilliseconds(GetLag(i));
+				realpingtable[i] += G_TicsToMilliseconds(GetLag(playernode[i]));
 		pingmeasurecount++;
 	}
 #endif
