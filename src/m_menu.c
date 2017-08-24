@@ -4063,10 +4063,10 @@ static boolean M_PrepareLevelPlatter(INT32 gt)
 					if (actnum)
 						sprintf(mapname, "%s %d", mapheaderinfo[mapnum]->lvlttl, actnum);
 					else
-						sprintf(mapname, "%s", mapheaderinfo[mapnum]->lvlttl);
+						strcpy(mapname, mapheaderinfo[mapnum]->lvlttl);
 
 					if (strlen(mapname) >= 17)
-						sprintf(mapname+17-3, "...");
+						strcpy(mapname+17-3, "...");
 
 					strcpy(levelselect.rows[row].mapnames[col], (const char *)mapname);
 				}
@@ -6374,7 +6374,12 @@ static void M_ReadSavegameInfo(UINT32 slot)
 	if(!mapheaderinfo[(fake-1) & 8191])
 		savegameinfo[slot].levelname[0] = '\0';
 	else
-		strcpy(savegameinfo[slot].levelname, mapheaderinfo[(fake-1) & 8191]->lvlttl);
+	{
+		strlcpy(savegameinfo[slot].levelname, mapheaderinfo[(fake-1) & 8191]->lvlttl, 17+1);
+
+		if (strlen(mapheaderinfo[(fake-1) & 8191]->lvlttl) >= 17)
+			strcpy(savegameinfo[slot].levelname+17-3, "...");
+	}
 
 	savegameinfo[slot].gamemap = fake;
 
@@ -6497,7 +6502,7 @@ static void M_ReadSaveStrings(void)
 
 	savselp[3] = W_CachePatchName("BLACKLVL", PU_STATIC);
 	savselp[4] = W_CachePatchName("BLACXLVL", PU_STATIC);
-	savselp[5] = W_CachePatchName("BLANKLVW", PU_STATIC);
+	savselp[5] = W_CachePatchName("BLANKLVL", PU_STATIC);
 	savselp[6] = W_CachePatchName("GAMEDONE", PU_STATIC);
 }
 
