@@ -6084,7 +6084,7 @@ static void M_DrawLoadGameData(void)
 			&& (savegameinfo[savetodraw].lives == 99)
 			&& (savegameinfo[savetodraw].gamemap & 8192)
 			&& (savegameinfo[savetodraw].numgameovers == 0)
-			&& (savegameinfo[savetodraw].numemeralds == (1<<7 - 1)) // perfect save
+			&& (savegameinfo[savetodraw].numemeralds == ((1<<7) - 1))) // perfect save
 			{
 				V_DrawFill(x+6, y+64, 72, 50, 134);
 				V_DrawFill(x+6, y+74, 72, 30, 201);
