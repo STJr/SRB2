@@ -2431,13 +2431,14 @@ CV_PossibleValue_t skin_cons_t[MAXSKINS+1];
 
 UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player)
 {
-	UINT8 super = (spr2 & FF_SPR2SUPER);
+	UINT8 super = (spr2 & FF_SPR2SUPER), i = 0;
 
 	if (!skin)
 		return 0;
 
 	while (!(skin->sprites[spr2].numframes)
-		&& spr2 != SPR2_STND)
+		&& spr2 != SPR2_STND
+		&& ++i != 32) // recursion limiter
 	{
 		if (spr2 & FF_SPR2SUPER)
 		{
@@ -2447,81 +2448,16 @@ UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player)
 
 		switch(spr2)
 		{
-		case SPR2_RUN:
-			spr2 = SPR2_WALK;
-			break;
-		case SPR2_STUN:
-			spr2 = SPR2_PAIN;
-			break;
-		case SPR2_DRWN:
-			spr2 = SPR2_DEAD;
-			break;
-		case SPR2_SPIN:
-			spr2 = SPR2_ROLL;
-			break;
-		case SPR2_GASP:
-			spr2 = SPR2_SPNG;
-			break;
+
+		// Normal special cases.
 		case SPR2_JUMP:
 			spr2 = ((player
 					? player->charflags
 					: skin->flags)
 					& SF_NOJUMPSPIN) ? SPR2_SPNG : SPR2_ROLL;
 			break;
-		case SPR2_SPNG: // spring
-			spr2 = SPR2_FALL;
-			break;
-		case SPR2_FALL:
-			spr2 = SPR2_WALK;
-			break;
-		case SPR2_RIDE:
-			spr2 = SPR2_FALL;
-			break;
-
-		case SPR2_FLY :
-			spr2 = SPR2_SPNG;
-			break;
-		case SPR2_SWIM:
-			spr2 = SPR2_FLY ;
-			break;
 		case SPR2_TIRE:
 			spr2 = (player && player->charability == CA_SWIM) ? SPR2_SWIM : SPR2_FLY;
-			break;
-
-		case SPR2_GLID:
-			spr2 = SPR2_FLY;
-			break;
-		case SPR2_CLMB:
-			spr2 = SPR2_ROLL;
-			break;
-		case SPR2_CLNG:
-			spr2 = SPR2_CLMB;
-			break;
-
-		case SPR2_FLT :
-			spr2 = SPR2_WALK;
-			break;
-		case SPR2_FRUN:
-			spr2 = SPR2_RUN ;
-			break;
-
-		case SPR2_DASH:
-			spr2 = SPR2_FRUN;
-			break;
-
-		case SPR2_BNCE:
-			spr2 = SPR2_FALL;
-			break;
-		case SPR2_BLND:
-			spr2 = SPR2_ROLL;
-			break;
-
-		case SPR2_TWIN:
-			spr2 = SPR2_ROLL;
-			break;
-
-		case SPR2_MLEE:
-			spr2 = SPR2_TWIN;
 			break;
 
 		// NiGHTS sprites.
@@ -2535,72 +2471,16 @@ UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player)
 			break;
 		case SPR2_NSTN:
 			spr2 = SPR2_STUN;
-			break;
-		case SPR2_NPUL:
-			spr2 = SPR2_NSTN;
+			super = FF_SPR2SUPER;
 			break;
 		case SPR2_NATK:
 			spr2 = SPR2_ROLL;
 			super = FF_SPR2SUPER;
 			break;
-		/*case SPR2_NGT0:
-			spr2 = SPR2_NFLT;
-			break;*/
-		case SPR2_NGT1:
-		case SPR2_NGT7:
-		case SPR2_DRL0:
-			spr2 = SPR2_NGT0;
-			break;
-		case SPR2_NGT2:
-		case SPR2_DRL1:
-			spr2 = SPR2_NGT1;
-			break;
-		case SPR2_NGT3:
-		case SPR2_DRL2:
-			spr2 = SPR2_NGT2;
-			break;
-		case SPR2_NGT4:
-		case SPR2_DRL3:
-			spr2 = SPR2_NGT3;
-			break;
-		case SPR2_NGT5:
-		case SPR2_DRL4:
-			spr2 = SPR2_NGT4;
-			break;
-		case SPR2_NGT6:
-		case SPR2_DRL5:
-			spr2 = SPR2_NGT5;
-			break;
-		case SPR2_DRL6:
-			spr2 = SPR2_NGT6;
-			break;
-		case SPR2_NGT8:
-		case SPR2_DRL7:
-			spr2 = SPR2_NGT7;
-			break;
-		case SPR2_NGT9:
-		case SPR2_DRL8:
-			spr2 = SPR2_NGT8;
-			break;
-		case SPR2_NGTA:
-		case SPR2_DRL9:
-			spr2 = SPR2_NGT9;
-			break;
-		case SPR2_NGTB:
-		case SPR2_DRLA:
-			spr2 = SPR2_NGTA;
-			break;
-		case SPR2_NGTC:
-		case SPR2_DRLB:
-			spr2 = SPR2_NGTB;
-			break;
-		case SPR2_DRLC:
-			spr2 = SPR2_NGTC;
-			break;
 
-		// Dunno? Just go to standing then.
+		// Use the handy list, that's what it's there for!
 		default:
-			spr2 = SPR2_STND;
+			spr2 = spr2defaults[spr2];
 			break;
 		}
 

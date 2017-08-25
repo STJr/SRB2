@@ -481,7 +481,88 @@ char spr2names[NUMPLAYERSPRITES][5] =
 	"SIGN",
 	"LIFE"
 };
-enum playersprite free_spr2 = SPR2_FIRSTFREESLOT;
+playersprite_t free_spr2 = SPR2_FIRSTFREESLOT;
+
+playersprite_t spr2defaults[NUMPLAYERSPRITES] = {
+	0, // SPR2_STND,
+	0, // SPR2_WAIT,
+	0, // SPR2_WALK,
+	SPR2_WALK, // SPR2_RUN ,
+	SPR2_FRUN, // SPR2_DASH,
+	0, // SPR2_PAIN,
+	SPR2_PAIN, // SPR2_STUN,
+	0, // SPR2_DEAD,
+	SPR2_DEAD, // SPR2_DRWN,
+	0, // SPR2_ROLL,
+	SPR2_SPNG, // SPR2_GASP,
+	0, // SPR2_JUMP, (conditional)
+	SPR2_FALL, // SPR2_SPNG,
+	SPR2_WALK, // SPR2_FALL,
+	0, // SPR2_EDGE,
+	SPR2_FALL, // SPR2_RIDE,
+
+	SPR2_ROLL, // SPR2_SPIN,
+
+	SPR2_SPNG, // SPR2_FLY ,
+	SPR2_FLY , // SPR2_SWIM,
+	0, // SPR2_TIRE, (conditional)
+
+	SPR2_FLY , // SPR2_GLID,
+	SPR2_CLMB, // SPR2_CLNG,
+	SPR2_ROLL, // SPR2_CLMB,
+
+	SPR2_WALK, // SPR2_FLT ,
+	SPR2_RUN , // SPR2_FRUN,
+
+	SPR2_FALL, // SPR2_BNCE,
+	SPR2_ROLL, // SPR2_BLND,
+
+	0, // SPR2_FIRE,
+
+	SPR2_ROLL, // SPR2_TWIN,
+
+	SPR2_TWIN, // SPR2_MLEE,
+	0, // SPR2_MLEL,
+
+	0, // SPR2_TRNS,
+
+	0, // SPR2_NSTD,
+	0, // SPR2_NFLT,
+	0, // SPR2_NSTN,
+	SPR2_NSTN, // SPR2_NPUL,
+	0, // SPR2_NATK,
+
+	0, // SPR2_NGT0, (should never be referenced)
+	SPR2_NGT0, // SPR2_NGT1,
+	SPR2_NGT1, // SPR2_NGT2,
+	SPR2_NGT2, // SPR2_NGT3,
+	SPR2_NGT3, // SPR2_NGT4,
+	SPR2_NGT4, // SPR2_NGT5,
+	SPR2_NGT5, // SPR2_NGT6,
+	SPR2_NGT0, // SPR2_NGT7,
+	SPR2_NGT7, // SPR2_NGT8,
+	SPR2_NGT8, // SPR2_NGT9,
+	SPR2_NGT9, // SPR2_NGTA,
+	SPR2_NGTA, // SPR2_NGTB,
+	SPR2_NGTB, // SPR2_NGTC,
+
+	SPR2_NGT0, // SPR2_DRL0,
+	SPR2_NGT1, // SPR2_DRL1,
+	SPR2_NGT2, // SPR2_DRL2,
+	SPR2_NGT3, // SPR2_DRL3,
+	SPR2_NGT4, // SPR2_DRL4,
+	SPR2_NGT5, // SPR2_DRL5,
+	SPR2_NGT6, // SPR2_DRL6,
+	SPR2_NGT7, // SPR2_DRL7,
+	SPR2_NGT8, // SPR2_DRL8,
+	SPR2_NGT9, // SPR2_DRL9,
+	SPR2_NGTA, // SPR2_DRLA,
+	SPR2_NGTB, // SPR2_DRLB,
+	SPR2_NGTC, // SPR2_DRLC,
+
+	0, // SPR2_SIGN,
+	0, // SPR2_LIFE
+};
 
 // Doesn't work with g++, needs actionf_p1 (don't modify this comment)
 state_t states[NUMSTATES] =

@@ -64,6 +64,7 @@ memset(used_spr,0,sizeof(UINT8) * ((NUMSPRITEFREESLOTS / 8) + 1));\
 static mobjtype_t get_mobjtype(const char *word);
 static statenum_t get_state(const char *word);
 static spritenum_t get_sprite(const char *word);
+static playersprite_t get_sprite2(const char *word);
 static sfxenum_t get_sfx(const char *word);
 #ifdef MUSICSLOT_COMPATIBILITY
 static UINT16 get_mus(const char *word, UINT8 dehacked_mode);
@@ -768,6 +769,49 @@ static void readspritelight(MYFILE *f, INT32 num)
 	Z_Free(s);
 }
 #endif // HWRENDER
+
+static void readsprite2(MYFILE *f, INT32 num)
+{
+	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
+	char *word, *word2;
+	char *tmp;
+
+	do
+	{
+		if (myfgets(s, MAXLINELEN, f))
+		{
+			if (s[0] == '\n')
+				break;
+
+			tmp = strchr(s, '#');
+			if (tmp)
+				*tmp = '\0';
+			if (s == tmp)
+				continue; // Skip comment lines, but don't break.
+
+			word = strtok(s, " ");
+			if (word)
+				strupr(word);
+			else
+				break;
+
+			word2 = strtok(NULL, " = ");
+			if (word2)
+				strupr(word2);
+			else
+				break;
+			if (word2[strlen(word2)-1] == '\n')
+				word2[strlen(word2)-1] = '\0';
+
+			if (fastcmp(word, "DEFAULT"))
+				spr2defaults[num] = get_number(word2);
+			else
+				deh_warning("Sprite2 %s: unknown word '%s'", spr2names[num], word);
+		}
+	} while (!myfeof(f)); // finish when the line is empty
+
+	Z_Free(s);
+}
 
 static const struct {
 	const char *name;
@@ -3020,9 +3064,21 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 						ignorelines(f);
 					}
 				}
+				else if (fastcmp(word, "SPRITE2"))
+				{
+					if (i == 0 && word2[0] != '0') // If word2 isn't a number
+						i = get_sprite2(word2); // find a sprite by name
+					if (i < (INT32)free_spr2 && i >= (INT32)SPR2_FIRSTFREESLOT)
+						readsprite2(f, i);
+					else
+					{
+						deh_warning("Sprite2 number %d out of range (%d - %d)", i, SPR2_FIRSTFREESLOT, free_spr2-1);
+						ignorelines(f);
+					}
+				}
+#ifdef HWRENDER
 				else if (fastcmp(word, "LIGHT"))
 				{
-#ifdef HWRENDER
 					// TODO: Read lights by name
 					if (i > 0 && i < NUMLIGHTS)
 						readlight(f, i);
@@ -3031,22 +3087,20 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 						deh_warning("Light number %d out of range (1 - %d)", i, NUMLIGHTS-1);
 						ignorelines(f);
 					}
-#endif
 				}
 				else if (fastcmp(word, "SPRITE"))
 				{
-#ifdef HWRENDER
 					if (i == 0 && word2[0] != '0') // If word2 isn't a number
 						i = get_sprite(word2); // find a sprite by name
-					if (i < NUMSPRITES && i >= 0)
+					if (i < NUMSPRITES && i > 0)
 						readspritelight(f, i);
 					else
 					{
 						deh_warning("Sprite number %d out of range (0 - %d)", i, NUMSPRITES-1);
 						ignorelines(f);
 					}
-#endif
 				}
+#endif
 				else if (fastcmp(word, "LEVEL"))
 				{
 					// Support using the actual map name,
@@ -7290,6 +7344,20 @@ static spritenum_t get_sprite(const char *word)
 	return SPR_NULL;
 }
 
+static playersprite_t get_sprite2(const char *word)
+{ // Returns the value of SPR2_ enumerations
+	playersprite_t i;
+	if (*word >= '0' && *word <= '9')
+		return atoi(word);
+	if (fastncmp("SPR2_",word,5))
+		word += 5; // take off the SPR2_
+	for (i = 0; i < NUMPLAYERSPRITES; i++)
+		if (!spr2names[i][4] && memcmp(word,spr2names[i],4)==0)
+			return i;
+	deh_warning("Couldn't find sprite named 'SPR2_%s'",word);
+	return SPR2_STND;
+}
+
 static sfxenum_t get_sfx(const char *word)
 { // Returns the value of SFX_ enumerations
 	sfxenum_t i;
@@ -7735,7 +7803,7 @@ static inline int lib_freeslot(lua_State *L)
 		else if (fastcmp(type, "SPR2"))
 		{
 			// Search if we already have an SPR2 by that name...
-			enum playersprite i;
+			playersprite_t i;
 			for (i = SPR2_FIRSTFREESLOT; i < free_spr2; i++)
 				if (memcmp(spr2names[i],word,4) == 0)
 					break;

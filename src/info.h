@@ -604,7 +604,7 @@ typedef enum sprite
 // Make sure to be conscious of FF_FRAMEMASK and the fact sprite2 is stored as a UINT8 whenever you change this table.
 // Currently, FF_FRAMEMASK is 0xff, or 255 - but the second half is used by FF_SPR2SUPER, so the limitation is 0x7f.
 // Since this is zero-based, there can be at most 128 different SPR2_'s without changing that.
-enum playersprite
+typedef enum playersprite
 {
 	SPR2_STND = 0,
 	SPR2_WAIT,
@@ -690,7 +690,7 @@ enum playersprite
 	SPR2_FIRSTFREESLOT,
 	SPR2_LASTFREESLOT = 0x7f,
 	NUMPLAYERSPRITES
-};
+} playersprite_t;
 
 typedef enum state
 {
@@ -3193,8 +3193,9 @@ typedef struct
 extern state_t states[NUMSTATES];
 extern char sprnames[NUMSPRITES + 1][5];
 extern char spr2names[NUMPLAYERSPRITES][5];
+extern playersprite_t spr2defaults[NUMPLAYERSPRITES];
 extern state_t *astate;
-extern enum playersprite free_spr2;
+extern playersprite_t free_spr2;
 
 typedef enum mobj_type
 {
