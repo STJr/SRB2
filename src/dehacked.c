@@ -7982,7 +7982,7 @@ static inline int lib_getenum(lua_State *L)
 		if (mathlib) return luaL_error(L, "sprite '%s' could not be found.\n", word);
 		return 0;
 	}
-	else if (fastncmp("SPR2_",word,4)) {
+	else if (fastncmp("SPR2_",word,5)) {
 		p = word+5;
 		for (i = 0; i < (fixed_t)free_spr2; i++)
 			if (!spr2names[i][4])

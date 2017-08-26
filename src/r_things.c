@@ -2431,7 +2431,7 @@ CV_PossibleValue_t skin_cons_t[MAXSKINS+1];
 
 UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player)
 {
-	UINT8 super = (spr2 & FF_SPR2SUPER), i = 0;
+	UINT8 super = 0, i = 0;
 
 	if (!skin)
 		return 0;
@@ -2442,6 +2442,7 @@ UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player)
 	{
 		if (spr2 & FF_SPR2SUPER)
 		{
+			super = FF_SPR2SUPER;
 			spr2 &= ~FF_SPR2SUPER;
 			continue;
 		}
@@ -2458,24 +2459,6 @@ UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player)
 			break;
 		case SPR2_TIRE:
 			spr2 = (player && player->charability == CA_SWIM) ? SPR2_SWIM : SPR2_FLY;
-			break;
-
-		// NiGHTS sprites.
-		case SPR2_NSTD:
-			spr2 = SPR2_STND;
-			super = FF_SPR2SUPER;
-			break;
-		case SPR2_NFLT:
-			spr2 = SPR2_FLT ;
-			super = FF_SPR2SUPER;
-			break;
-		case SPR2_NSTN:
-			spr2 = SPR2_STUN;
-			super = FF_SPR2SUPER;
-			break;
-		case SPR2_NATK:
-			spr2 = SPR2_ROLL;
-			super = FF_SPR2SUPER;
 			break;
 
 		// Use the handy list, that's what it's there for!
