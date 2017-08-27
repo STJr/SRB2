@@ -1322,16 +1322,20 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 				if (durs > INTERPOLERATION_LIMIT)
 					durs = INTERPOLERATION_LIMIT;
 
-				if (spr->mobj->frame & FF_ANIMATE
+				if (spr->mobj->player && spr->mobj->player->skidtime && spr->mobj->state-states == S_PLAY_WALK) // temporary hack
+					;
+				else if (spr->mobj->frame & FF_ANIMATE
 					|| (spr->mobj->state->nextstate != S_NULL
 					&& states[spr->mobj->state->nextstate].sprite == spr->mobj->sprite
 					&& (states[spr->mobj->state->nextstate].frame & FF_FRAMEMASK) == spr->mobj->sprite2))
 				{
 					UINT32 nextframe = (spr->mobj->frame & FF_FRAMEMASK) + 1;
-					if (nextframe >= (UINT32)((skin_t*)spr->mobj->skin)->sprites[spr->mobj->sprite2].numframes)
-						nextframe = 0;
-					nextframe = md2->model->spr2frames[spr2*2] + (nextframe % mod);
-					next = &md2->model->frames[nextframe];
+					nextframe %= mod;
+					if (nextframe || !(spr->mobj->state->frame & FF_SPR2ENDSTATE))
+					{
+						nextframe += md2->model->spr2frames[spr2*2];
+						next = &md2->model->frames[nextframe];
+					}
 				}
 			}
 		}
