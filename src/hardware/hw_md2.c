@@ -266,6 +266,9 @@ static void md2_freeModel (md2_model_t *model)
 			free(model->frames);
 		}
 
+		if (model->spr2frames)
+			free(model->spr2frames);
+
 		if (model->glCommandBuffer)
 			free(model->glCommandBuffer);
 
@@ -411,11 +414,21 @@ static md2_model_t *md2_readModel(const char *filename)
 
 					if (spr2 < free_spr2)
 					{
+						if (!model->spr2frames)
+						{
+							model->spr2frames = calloc(sizeof (size_t), 2*NUMPLAYERSPRITES*2);
+							if (!model->spr2frames)
+							{
+								md2_freeModel (model);
+								fclose(file);
+								return 0;
+							}
+						}
 						if (super)
 							spr2 |= FF_SPR2SUPER;
-						if (model->spr2frames[spr2][1]++ == 0) // numspr2frames
-							model->spr2frames[spr2][0] = i; // starting frame
-						CONS_Debug(DBG_RENDER, "frame %s, sprite2 %s - starting frame %d, number of frames %d\n", frame->name, spr2names[spr2 & ~FF_SPR2SUPER], model->spr2frames[spr2][0], model->spr2frames[spr2][1]);
+						if (model->spr2frames[spr2*2 + 1]++ == 0) // numspr2frames
+							model->spr2frames[spr2*2] = i; // starting frame
+						CONS_Debug(DBG_RENDER, "frame %s, sprite2 %s - starting frame %d, number of frames %d\n", frame->name, spr2names[spr2 & ~FF_SPR2SUPER], model->spr2frames[spr2*2], model->spr2frames[spr2*2 + 1]);
 					}
 				}
 			}
@@ -1110,7 +1123,7 @@ static UINT8 P_GetModelSprite2(md2_t *md2, skin_t *skin, UINT8 spr2, player_t *p
 	if (!md2 || !skin)
 		return 0;
 
-	while (!(md2->model->spr2frames[spr2][1])
+	while (!(md2->model->spr2frames[spr2*2 + 1])
 		&& spr2 != SPR2_STND
 		&& ++i != 32) // recursion limiter
 	{
@@ -1296,12 +1309,12 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 
 #define INTERPOLERATION_LIMIT TICRATE/4
 
-		if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)
+		if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY && md2->model->spr2frames)
 		{
 			UINT8 spr2 = P_GetModelSprite2(md2, spr->mobj->skin, spr->mobj->sprite2, spr->mobj->player);
-			UINT8 mod = md2->model->spr2frames[spr2][1] ? md2->model->spr2frames[spr2][1] : md2->model->header.numFrames;
+			UINT8 mod = md2->model->spr2frames[spr2*2 + 1] ? md2->model->spr2frames[spr2*2 + 1] : md2->model->header.numFrames;
 			//FIXME: this is not yet correct
-			frame = md2->model->spr2frames[spr2][0] + ((spr->mobj->frame & FF_FRAMEMASK) % mod);
+			frame = md2->model->spr2frames[spr2*2] + ((spr->mobj->frame & FF_FRAMEMASK) % mod);
 			buff = md2->model->glCommandBuffer;
 			curr = &md2->model->frames[frame];
 			if (cv_grmd2.value == 1 && tics <= INTERPOLERATION_LIMIT)
@@ -1317,7 +1330,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 					UINT32 nextframe = (spr->mobj->frame & FF_FRAMEMASK) + 1;
 					if (nextframe >= (UINT32)((skin_t*)spr->mobj->skin)->sprites[spr->mobj->sprite2].numframes)
 						nextframe = 0;
-					nextframe = md2->model->spr2frames[spr2][0] + (nextframe % md2->model->spr2frames[spr2][1]);
+					nextframe = md2->model->spr2frames[spr2*2] + (nextframe % mod);
 					next = &md2->model->frames[nextframe];
 				}
 			}

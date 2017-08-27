@@ -112,7 +112,7 @@ typedef struct
 	md2_textureCoordinate_t *texCoords;
 	md2_triangle_t          *triangles;
 	md2_frame_t             *frames;
-	size_t                  spr2frames[2*NUMPLAYERSPRITES][2];
+	size_t                  *spr2frames; // size_t spr2frames[2*NUMPLAYERSPRITES][2];
 	INT32                   *glCommandBuffer;
 } ATTRPACK md2_model_t;
 
