@@ -86,7 +86,7 @@ void P_AddCachedAction(mobj_t *mobj, INT32 statenum)
 //
 FUNCINLINE static ATTRINLINE void P_SetupStateAnimation(mobj_t *mobj, state_t *st)
 {
-	INT32 animlength = (mobj->skin && mobj->sprite == SPR_PLAY)
+	INT32 animlength = (mobj->sprite == SPR_PLAY && mobj->skin)
 		? (INT32)(((skin_t *)mobj->skin)->sprites[mobj->sprite2].numframes) - 1
 		: st->var1;
 
@@ -183,195 +183,6 @@ static void P_CyclePlayerMobjState(mobj_t *mobj)
 			if (!P_SetPlayerMobjState(mobj, mobj->state->nextstate))
 				return; // freed itself
 	}
-}
-
-//
-// P_GetMobjSprite2
-// For non-super players, tries each sprite2's immediate predecessor until it finds one with a number of frames or ends up at standing.
-// For super players, does the same as above - but tries the super equivalent for each sprite2 before the non-super version.
-//
-
-UINT8 P_GetMobjSprite2(mobj_t *mobj, UINT8 spr2)
-{
-	player_t *player = mobj->player;
-	skin_t *skin = ((skin_t *)mobj->skin);
-	UINT8 super = (spr2 & FF_SPR2SUPER);
-
-	if (!skin)
-		return 0;
-
-	while (!(skin->sprites[spr2].numframes)
-		&& spr2 != SPR2_STND)
-	{
-		if (spr2 & FF_SPR2SUPER)
-		{
-			spr2 &= ~FF_SPR2SUPER;
-			continue;
-		}
-
-		switch(spr2)
-		{
-		case SPR2_RUN:
-			spr2 = SPR2_WALK;
-			break;
-		case SPR2_STUN:
-			spr2 = SPR2_PAIN;
-			break;
-		case SPR2_DRWN:
-			spr2 = SPR2_DEAD;
-			break;
-		case SPR2_SPIN:
-			spr2 = SPR2_ROLL;
-			break;
-		case SPR2_GASP:
-			spr2 = SPR2_SPNG;
-			break;
-		case SPR2_JUMP:
-			spr2 = ((player
-					? player->charflags
-					: skin->flags)
-					& SF_NOJUMPSPIN) ? SPR2_SPNG : SPR2_ROLL;
-			break;
-		case SPR2_SPNG: // spring
-			spr2 = SPR2_FALL;
-			break;
-		case SPR2_FALL:
-			spr2 = SPR2_WALK;
-			break;
-		case SPR2_RIDE:
-			spr2 = SPR2_FALL;
-			break;
-
-		case SPR2_FLY :
-			spr2 = SPR2_SPNG;
-			break;
-		case SPR2_SWIM:
-			spr2 = SPR2_FLY ;
-			break;
-		case SPR2_TIRE:
-			spr2 = (player && player->charability == CA_SWIM) ? SPR2_SWIM : SPR2_FLY;
-			break;
-
-		case SPR2_GLID:
-			spr2 = SPR2_FLY;
-			break;
-		case SPR2_CLMB:
-			spr2 = SPR2_ROLL;
-			break;
-		case SPR2_CLNG:
-			spr2 = SPR2_CLMB;
-			break;
-
-		case SPR2_FLT :
-			spr2 = SPR2_WALK;
-			break;
-		case SPR2_FRUN:
-			spr2 = SPR2_RUN ;
-			break;
-
-		case SPR2_DASH:
-			spr2 = SPR2_FRUN;
-			break;
-
-		case SPR2_BNCE:
-			spr2 = SPR2_FALL;
-			break;
-		case SPR2_BLND:
-			spr2 = SPR2_ROLL;
-			break;
-
-		case SPR2_TWIN:
-			spr2 = SPR2_ROLL;
-			break;
-
-		case SPR2_MLEE:
-			spr2 = SPR2_TWIN;
-			break;
-
-		// NiGHTS sprites.
-		case SPR2_NSTD:
-			spr2 = SPR2_STND;
-			super = FF_SPR2SUPER;
-			break;
-		case SPR2_NFLT:
-			spr2 = SPR2_FLT ;
-			super = FF_SPR2SUPER;
-			break;
-		case SPR2_NSTN:
-			spr2 = SPR2_STUN;
-			break;
-		case SPR2_NPUL:
-			spr2 = SPR2_NSTN;
-			break;
-		case SPR2_NATK:
-			spr2 = SPR2_ROLL;
-			super = FF_SPR2SUPER;
-			break;
-		/*case SPR2_NGT0:
-			spr2 = SPR2_NFLT;
-			break;*/
-		case SPR2_NGT1:
-		case SPR2_NGT7:
-		case SPR2_DRL0:
-			spr2 = SPR2_NGT0;
-			break;
-		case SPR2_NGT2:
-		case SPR2_DRL1:
-			spr2 = SPR2_NGT1;
-			break;
-		case SPR2_NGT3:
-		case SPR2_DRL2:
-			spr2 = SPR2_NGT2;
-			break;
-		case SPR2_NGT4:
-		case SPR2_DRL3:
-			spr2 = SPR2_NGT3;
-			break;
-		case SPR2_NGT5:
-		case SPR2_DRL4:
-			spr2 = SPR2_NGT4;
-			break;
-		case SPR2_NGT6:
-		case SPR2_DRL5:
-			spr2 = SPR2_NGT5;
-			break;
-		case SPR2_DRL6:
-			spr2 = SPR2_NGT6;
-			break;
-		case SPR2_NGT8:
-		case SPR2_DRL7:
-			spr2 = SPR2_NGT7;
-			break;
-		case SPR2_NGT9:
-		case SPR2_DRL8:
-			spr2 = SPR2_NGT8;
-			break;
-		case SPR2_NGTA:
-		case SPR2_DRL9:
-			spr2 = SPR2_NGT9;
-			break;
-		case SPR2_NGTB:
-		case SPR2_DRLA:
-			spr2 = SPR2_NGTA;
-			break;
-		case SPR2_NGTC:
-		case SPR2_DRLB:
-			spr2 = SPR2_NGTB;
-			break;
-		case SPR2_DRLC:
-			spr2 = SPR2_NGTC;
-			break;
-
-		// Dunno? Just go to standing then.
-		default:
-			spr2 = SPR2_STND;
-			break;
-		}
-
-		spr2 |= super;
-	}
-
-	return spr2;
 }
 
 //
@@ -574,14 +385,16 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		{
 			skin_t *skin = ((skin_t *)mobj->skin);
 			UINT16 frame = (mobj->frame & FF_FRAMEMASK)+1;
-			UINT8 numframes;
-
-			UINT8 spr2 = P_GetMobjSprite2(mobj, (((player->powers[pw_super]) ? FF_SPR2SUPER : 0)|st->frame) & FF_FRAMEMASK);
+			UINT8 numframes, spr2;
 
 			if (skin)
+			{
+				spr2 = P_GetSkinSprite2(skin, (((player->powers[pw_super]) ? FF_SPR2SUPER : 0)|st->frame) & FF_FRAMEMASK, mobj->player);
 				numframes = skin->sprites[spr2].numframes;
+			}
 			else
 			{
+				spr2 = 0;
 				frame = 0;
 				numframes = 0;
 			}
@@ -700,14 +513,16 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 		{
 			skin_t *skin = ((skin_t *)mobj->skin);
 			UINT16 frame = (mobj->frame & FF_FRAMEMASK)+1;
-			UINT8 numframes;
-
-			UINT8 spr2 = P_GetMobjSprite2(mobj, st->frame & FF_FRAMEMASK);
+			UINT8 numframes, spr2;
 
 			if (skin)
+			{
+				spr2 = P_GetSkinSprite2(skin, st->frame & FF_FRAMEMASK, mobj->player);
 				numframes = skin->sprites[spr2].numframes;
+			}
 			else
 			{
+				spr2 = 0;
 				frame = 0;
 				numframes = 0;
 			}
@@ -3225,8 +3040,17 @@ static void P_PlayerZMovement(mobj_t *mo)
 					}
 				}
 
-				if (mo->health && !P_CheckDeathPitCollide(mo))
+				if (mo->health && !mo->player->spectator && !P_CheckDeathPitCollide(mo))
 				{
+					if ((mo->player->charability2 == CA2_SPINDASH) && !(mo->player->pflags & PF_THOKKED) && (mo->player->cmd.buttons & BT_USE) && (FixedHypot(mo->momx, mo->momy) > (5*mo->scale)))
+					{
+						mo->player->pflags |= PF_SPINNING;
+						P_SetPlayerMobjState(mo, S_PLAY_ROLL);
+						S_StartSound(mo, sfx_spin);
+					}
+					else
+						mo->player->pflags &= ~PF_SPINNING;
+
 					if (mo->player->pflags & PF_GLIDING) // ground gliding
 					{
 						mo->player->skidtime = TICRATE;
@@ -3239,7 +3063,7 @@ static void P_PlayerZMovement(mobj_t *mo)
 						S_StartSound(mo, sfx_s3k8b);
 						mo->player->pflags |= PF_FULLSTASIS;
 					}
-					else if (mo->player->pflags & PF_JUMPED || (mo->player->pflags & (PF_SPINNING|PF_USEDOWN)) != (PF_SPINNING|PF_USEDOWN)
+					else if (mo->player->pflags & PF_JUMPED || !(mo->player->pflags & PF_SPINNING)
 					|| mo->player->powers[pw_tailsfly] || mo->state-states == S_PLAY_FLY_TIRED)
 					{
 						if (mo->player->cmomx || mo->player->cmomy)
@@ -3269,15 +3093,6 @@ static void P_PlayerZMovement(mobj_t *mo)
 								P_SetPlayerMobjState(mo, S_PLAY_STND);
 						}
 					}
-
-					if ((mo->player->charability2 == CA2_SPINDASH) && !(mo->player->pflags & PF_THOKKED) && (mo->player->cmd.buttons & BT_USE) && (FixedHypot(mo->momx, mo->momy) > (5*mo->scale)))
-					{
-						mo->player->pflags |= PF_SPINNING;
-						P_SetPlayerMobjState(mo, S_PLAY_ROLL);
-						S_StartSound(mo, sfx_spin);
-					}
-					else
-						mo->player->pflags &= ~PF_SPINNING;
 
 					if (!(mo->player->pflags & PF_GLIDING))
 						mo->player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE);
@@ -9261,40 +9076,44 @@ void P_SpawnPlayer(INT32 playernum)
 	// spawn as spectator determination
 	if (!G_GametypeHasSpectators())
 	{
-		// Special case for (NiGHTS) special stages!
-		// if stage has already started, force players to become spectators until the next stage
-		if (multiplayer && netgame && G_IsSpecialStage(gamemap) && useNightsSS && leveltime > 0)
-			p->spectator = true;
-		else
-			p->spectator = false;
+		p->spectator = p->outofcoop =
+		(((multiplayer || netgame) && gametype == GT_COOP) // only question status in coop
+		&& ((leveltime > 0
+		&& ((G_IsSpecialStage(gamemap) && useNightsSS) // late join special stage
+		|| (cv_coopstarposts.value == 2 && (p->jointime < 1 || p->outofcoop)))) // late join or die in new coop
+		|| (((cv_cooplives.value == 1) || !P_GetLives(p)) && p->lives <= 0))); // game over and can't redistribute lives
 	}
-	else if (netgame && p->jointime < 1)
-		p->spectator = true;
-	else if (multiplayer && !netgame)
+	else
 	{
-		// If you're in a team game and you don't have a team assigned yet...
-		if (G_GametypeHasTeams() && p->ctfteam == 0)
-		{
-			changeteam_union NetPacket;
-			UINT16 usvalue;
-			NetPacket.value.l = NetPacket.value.b = 0;
-
-			// Spawn as a spectator,
-			// yes even in splitscreen mode
+		p->outofcoop = false;
+		if (netgame && p->jointime < 1)
 			p->spectator = true;
-			if (playernum&1) p->skincolor = skincolor_redteam;
-			else             p->skincolor = skincolor_blueteam;
+		else if (multiplayer && !netgame)
+		{
+			// If you're in a team game and you don't have a team assigned yet...
+			if (G_GametypeHasTeams() && p->ctfteam == 0)
+			{
+				changeteam_union NetPacket;
+				UINT16 usvalue;
+				NetPacket.value.l = NetPacket.value.b = 0;
 
-			// but immediately send a team change packet.
-			NetPacket.packet.playernum = playernum;
-			NetPacket.packet.verification = true;
-			NetPacket.packet.newteam = !(playernum&1) + 1;
+				// Spawn as a spectator,
+				// yes even in splitscreen mode
+				p->spectator = true;
+				if (playernum&1) p->skincolor = skincolor_redteam;
+				else             p->skincolor = skincolor_blueteam;
 
-			usvalue = SHORT(NetPacket.value.l|NetPacket.value.b);
-			SendNetXCmd(XD_TEAMCHANGE, &usvalue, sizeof(usvalue));
+				// but immediately send a team change packet.
+				NetPacket.packet.playernum = playernum;
+				NetPacket.packet.verification = true;
+				NetPacket.packet.newteam = !(playernum&1) + 1;
+
+				usvalue = SHORT(NetPacket.value.l|NetPacket.value.b);
+				SendNetXCmd(XD_TEAMCHANGE, &usvalue, sizeof(usvalue));
+			}
+			else // Otherwise, never spectator.
+				p->spectator = false;
 		}
-		else // Otherwise, never spectator.
-			p->spectator = false;
 	}
 
 	if (G_GametypeHasTeams())
@@ -9310,6 +9129,9 @@ void P_SpawnPlayer(INT32 playernum)
 		else if (p->ctfteam == 2)
 			p->skincolor = skincolor_blueteam;
 	}
+
+	if ((netgame || multiplayer) && (gametype != GT_COOP || leveltime) && !p->spectator && !(maptol & TOL_NIGHTS))
+		p->powers[pw_flashing] = flashingtics-1; // Babysitting deterrent
 
 	mobj = P_SpawnMobj(0, 0, 0, MT_PLAYER);
 	(mobj->player = p)->mo = mobj;
@@ -9701,9 +9523,9 @@ void P_SpawnMapThing(mapthing_t *mthing)
 		if (gametype == GT_COMPETITION || gametype == GT_RACE)
 		{
 			// Set powerup boxes to user settings for competition.
-			if (cv_competitionboxes.value == 1) // Random
+			if (cv_competitionboxes.value == 1) // Mystery
 				i = MT_MYSTERY_BOX;
-			else if (cv_competitionboxes.value == 2) // Teleports
+			else if (cv_competitionboxes.value == 2) // Teleport
 				i = MT_MIXUP_BOX;
 			else if (cv_competitionboxes.value == 3) // None
 				return; // Don't spawn!
@@ -9712,12 +9534,12 @@ void P_SpawnMapThing(mapthing_t *mthing)
 		// Set powerup boxes to user settings for other netplay modes
 		else if (gametype != GT_COOP)
 		{
-			if (cv_matchboxes.value == 1) // Random
+			if (cv_matchboxes.value == 1) // Mystery
 				i = MT_MYSTERY_BOX;
-			else if (cv_matchboxes.value == 2) // Non-Random
+			else if (cv_matchboxes.value == 2) // Unchanging
 			{
 				if (i == MT_MYSTERY_BOX)
-					return; // don't spawn in Non-Random
+					return; // don't spawn
 				mthing->options &= ~(MTF_AMBUSH|MTF_OBJECTSPECIAL); // no random respawning!
 			}
 			else if (cv_matchboxes.value == 3) // Don't spawn

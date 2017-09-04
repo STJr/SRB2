@@ -78,97 +78,6 @@ static int dbg_line;
 
 static boolean gamedataadded = false;
 
-#ifdef DELFILE
-typedef struct undehacked_s
-{
-	char *undata;
-	struct undehacked_s *next;
-} undehacked_t;
-
-static UINT16 unsocwad;
-static undehacked_t *unsocdata[MAX_WADFILES];
-static boolean disableundo = false;
-
-void DEH_WriteUndoline(const char *value, const char *data, undotype_f flags)
-{
-	const char *eqstr = " = ";
-	const char *space = " ";
-	const char *pader = eqstr;
-	undehacked_t *newdata;
-
-	if (disableundo || !unsocwad)
-		return;
-
-	if ((newdata = malloc(sizeof(*newdata))) == NULL)
-		I_Error("Out of memory for unsoc line");
-
-	if (flags & UNDO_SPACE)
-		pader = space;
-
-	if (flags & UNDO_ENDTEXT && !data)
-		data = space;
-
-	if (value)
-	{
-		const size_t plen = strlen(pader);
-		const char *pound = "#";
-		char *undata = NULL;
-		const size_t elen = strlen(pound);
-		size_t vlen = strlen(value), dlen = 0, len = 1;
-
-		if (*(value+vlen-1) == '\n')
-			vlen--; // lnet not copy the ending \n
-
-		if (flags & UNDO_ENDTEXT)
-			len += elen; // let malloc more space
-
-		if (flags & UNDO_NEWLINE)
-			len++; // more space for the beginning \n
-
-		if (data)
-		{
-			dlen = strlen(data);
-			if (flags & UNDO_CUTLINE && *(data+dlen-1) == '\n')
-				dlen--; // let not copy the ending \n
-			newdata->undata = malloc(vlen+plen+dlen+len);
-			newdata->undata[vlen+plen+dlen+len-1] = '\0';
-		}
-		else
-		{
-			newdata->undata = malloc(vlen+len);
-			newdata->undata[vlen+len-1] = '\0';
-		}
-
-		if (newdata->undata)
-		{
-			undata = newdata->undata;
-			*undata = '\0';
-		}
-		else
-		{
-			free(newdata);
-			I_Error("Out of memory for unsoc data");
-		}
-
-		if (flags & UNDO_NEWLINE) // let start with \n
-			strcat(undata, "\n");
-
-		strncat(undata, value, vlen);
-
-		if (data) // value+pader+data
-			strncat(strncat(undata, pader, plen), data, dlen);
-
-		if (flags & UNDO_ENDTEXT) // let end the text
-			strncat(undata, pound, elen);
-	}
-	else
-		newdata->undata = NULL;
-
-	newdata->next = unsocdata[unsocwad];
-	unsocdata[unsocwad] = newdata;
-}
-#endif
-
 ATTRINLINE static FUNCINLINE char myfget_color(MYFILE *f)
 {
 	char c = *f->curpos++;
@@ -408,8 +317,6 @@ static void readPlayer(MYFILE *f, INT32 num)
 	INT32 i;
 	boolean slotfound = false;
 
-	DEH_WriteUndoline("PLAYERTEXT", description[num].notes, UNDO_ENDTEXT);
-
 	do
 	{
 		if (myfgets(s, MAXLINELEN, f))
@@ -478,7 +385,6 @@ static void readPlayer(MYFILE *f, INT32 num)
 			{
 				if (!slotfound && (slotfound = findFreeSlot(&num)) == false)
 					goto done;
-				DEH_WriteUndoline(word, &description[num].picname[0], UNDO_NONE);
 
 				strncpy(description[num].picname, word2, 8);
 			}
@@ -493,7 +399,7 @@ static void readPlayer(MYFILE *f, INT32 num)
 				*/
 				if (i && !slotfound && (slotfound = findFreeSlot(&num)) == false)
 					goto done;
-				DEH_WriteUndoline(word, va("%d", description[num].used), UNDO_NONE);
+
 				description[num].used = (!!i);
 			}
 			else if (fastcmp(word, "SKINNAME"))
@@ -501,7 +407,6 @@ static void readPlayer(MYFILE *f, INT32 num)
 				// Send to free slot.
 				if (!slotfound && (slotfound = findFreeSlot(&num)) == false)
 					goto done;
-				DEH_WriteUndoline(word, description[num].skinname, UNDO_NONE);
 
 				strlcpy(description[num].skinname, word2, sizeof description[num].skinname);
 				strlwr(description[num].skinname);
@@ -510,11 +415,6 @@ static void readPlayer(MYFILE *f, INT32 num)
 				deh_warning("readPlayer %d: unknown word '%s'", num, word);
 		}
 	} while (!myfeof(f)); // finish when the line is empty
-
-#ifdef DELFILE
-	if (slotfound)
-		DEH_WriteUndoline("MENUPOSITION", va("%d", num), UNDO_NONE);
-#endif
 
 done:
 	Z_Free(s);
@@ -653,122 +553,98 @@ static void readthing(MYFILE *f, INT32 num)
 
 			if (fastcmp(word, "MAPTHINGNUM") || fastcmp(word, "DOOMEDNUM"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].doomednum), UNDO_NONE);
 				mobjinfo[num].doomednum = (INT32)atoi(word2);
 			}
 			else if (fastcmp(word, "SPAWNSTATE"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].spawnstate), UNDO_NONE);
 				mobjinfo[num].spawnstate = get_number(word2);
 			}
 			else if (fastcmp(word, "SPAWNHEALTH"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].spawnhealth), UNDO_NONE);
 				mobjinfo[num].spawnhealth = (INT32)get_number(word2);
 			}
 			else if (fastcmp(word, "SEESTATE"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].seestate), UNDO_NONE);
 				mobjinfo[num].seestate = get_number(word2);
 			}
 			else if (fastcmp(word, "SEESOUND"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].seesound), UNDO_NONE);
 				mobjinfo[num].seesound = get_number(word2);
 			}
 			else if (fastcmp(word, "REACTIONTIME"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].reactiontime), UNDO_NONE);
 				mobjinfo[num].reactiontime = (INT32)get_number(word2);
 			}
 			else if (fastcmp(word, "ATTACKSOUND"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].attacksound), UNDO_NONE);
 				mobjinfo[num].attacksound = get_number(word2);
 			}
 			else if (fastcmp(word, "PAINSTATE"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].painstate), UNDO_NONE);
 				mobjinfo[num].painstate = get_number(word2);
 			}
 			else if (fastcmp(word, "PAINCHANCE"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].painchance), UNDO_NONE);
 				mobjinfo[num].painchance = (INT32)get_number(word2);
 			}
 			else if (fastcmp(word, "PAINSOUND"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].painsound), UNDO_NONE);
 				mobjinfo[num].painsound = get_number(word2);
 			}
 			else if (fastcmp(word, "MELEESTATE"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].meleestate), UNDO_NONE);
 				mobjinfo[num].meleestate = get_number(word2);
 			}
 			else if (fastcmp(word, "MISSILESTATE"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].missilestate), UNDO_NONE);
 				mobjinfo[num].missilestate = get_number(word2);
 			}
 			else if (fastcmp(word, "DEATHSTATE"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].deathstate), UNDO_NONE);
 				mobjinfo[num].deathstate = get_number(word2);
 			}
 			else if (fastcmp(word, "DEATHSOUND"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].deathsound), UNDO_NONE);
 				mobjinfo[num].deathsound = get_number(word2);
 			}
 			else if (fastcmp(word, "XDEATHSTATE"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].xdeathstate), UNDO_NONE);
 				mobjinfo[num].xdeathstate = get_number(word2);
 			}
 			else if (fastcmp(word, "SPEED"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].speed), UNDO_NONE);
 				mobjinfo[num].speed = get_number(word2);
 			}
 			else if (fastcmp(word, "RADIUS"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].radius), UNDO_NONE);
 				mobjinfo[num].radius = get_number(word2);
 			}
 			else if (fastcmp(word, "HEIGHT"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].height), UNDO_NONE);
 				mobjinfo[num].height = get_number(word2);
 			}
 			else if (fastcmp(word, "DISPOFFSET"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].dispoffset), UNDO_NONE);
 				mobjinfo[num].dispoffset = get_number(word2);
 			}
 			else if (fastcmp(word, "MASS"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].mass), UNDO_NONE);
 				mobjinfo[num].mass = (INT32)get_number(word2);
 			}
 			else if (fastcmp(word, "DAMAGE"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].damage), UNDO_NONE);
 				mobjinfo[num].damage = (INT32)get_number(word2);
 			}
 			else if (fastcmp(word, "ACTIVESOUND"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].activesound), UNDO_NONE);
 				mobjinfo[num].activesound = get_number(word2);
 			}
 			else if (fastcmp(word, "FLAGS"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].flags), UNDO_NONE);
 				mobjinfo[num].flags = (INT32)get_number(word2);
 			}
 			else if (fastcmp(word, "RAISESTATE"))
 			{
-				DEH_WriteUndoline(word, va("%d", mobjinfo[num].raisestate), UNDO_NONE);
 				mobjinfo[num].raisestate = get_number(word2);
 			}
 			else
@@ -812,37 +688,30 @@ static void readlight(MYFILE *f, INT32 num)
 
 			if (fastcmp(word, "TYPE"))
 			{
-				DEH_WriteUndoline(word, va("%d", lspr[num].type), UNDO_NONE);
 				lspr[num].type = (UINT16)value;
 			}
 			else if (fastcmp(word, "OFFSETX"))
 			{
-				DEH_WriteUndoline(word, va("%f", lspr[num].light_xoffset), UNDO_NONE);
 				lspr[num].light_xoffset = fvalue;
 			}
 			else if (fastcmp(word, "OFFSETY"))
 			{
-				DEH_WriteUndoline(word, va("%f", lspr[num].light_yoffset), UNDO_NONE);
 				lspr[num].light_yoffset = fvalue;
 			}
 			else if (fastcmp(word, "CORONACOLOR"))
 			{
-				DEH_WriteUndoline(word, va("%u", lspr[num].corona_color), UNDO_NONE);
 				lspr[num].corona_color = value;
 			}
 			else if (fastcmp(word, "CORONARADIUS"))
 			{
-				DEH_WriteUndoline(word, va("%f", lspr[num].corona_radius), UNDO_NONE);
 				lspr[num].corona_radius = fvalue;
 			}
 			else if (fastcmp(word, "DYNAMICCOLOR"))
 			{
-				DEH_WriteUndoline(word, va("%u", lspr[num].dynamic_color), UNDO_NONE);
 				lspr[num].dynamic_color = value;
 			}
 			else if (fastcmp(word, "DYNAMICRADIUS"))
 			{
-				DEH_WriteUndoline(word, va("%f", lspr[num].dynamic_radius), UNDO_NONE);
 				lspr[num].dynamic_radius = fvalue;
 
 				/// \note Update the sqrradius! unnecessary?
@@ -889,7 +758,6 @@ static void readspritelight(MYFILE *f, INT32 num)
 				INT32 oldvar;
 				for (oldvar = 0; t_lspr[num] != &lspr[oldvar]; oldvar++)
 					;
-				DEH_WriteUndoline(word, va("%d", oldvar), UNDO_NONE);
 				t_lspr[num] = &lspr[value];
 			}
 			else
@@ -972,8 +840,6 @@ static void readlevelheader(MYFILE *f, INT32 num)
 	INT32 i;
 
 	// Reset all previous map header information
-	// This call automatically saves all previous information when DELFILE is defined.
-	// We don't need to do it ourselves.
 	P_AllocMapHeader((INT16)(num-1));
 
 	do
@@ -1399,8 +1265,6 @@ static void readcutscenescene(MYFILE *f, INT32 num, INT32 scenenum)
 	UINT16 usi;
 	UINT8 picid;
 
-	DEH_WriteUndoline("SCENETEXT", cutscenes[num]->scene[scenenum].text, UNDO_ENDTEXT);
-
 	do
 	{
 		if (myfgets(s, MAXLINELEN, f))
@@ -1477,7 +1341,6 @@ static void readcutscenescene(MYFILE *f, INT32 num, INT32 scenenum)
 
 			if (fastcmp(word, "NUMBEROFPICS"))
 			{
-				DEH_WriteUndoline(word, va("%d", cutscenes[num]->scene[scenenum].numpics), UNDO_NONE);
 				cutscenes[num]->scene[scenenum].numpics = (UINT8)i;
 			}
 			else if (fastncmp(word, "PIC", 3))
@@ -1492,27 +1355,22 @@ static void readcutscenescene(MYFILE *f, INT32 num, INT32 scenenum)
 
 				if (fastcmp(word+4, "NAME"))
 				{
-					DEH_WriteUndoline(word, cutscenes[num]->scene[scenenum].picname[picid], UNDO_NONE);
 					strncpy(cutscenes[num]->scene[scenenum].picname[picid], word2, 8);
 				}
 				else if (fastcmp(word+4, "HIRES"))
 				{
-					DEH_WriteUndoline(word, va("%d", cutscenes[num]->scene[scenenum].pichires[picid]), UNDO_NONE);
 					cutscenes[num]->scene[scenenum].pichires[picid] = (UINT8)(i || word2[0] == 'T' || word2[0] == 'Y');
 				}
 				else if (fastcmp(word+4, "DURATION"))
 				{
-					DEH_WriteUndoline(word, va("%u", cutscenes[num]->scene[scenenum].picduration[picid]), UNDO_NONE);
 					cutscenes[num]->scene[scenenum].picduration[picid] = usi;
 				}
 				else if (fastcmp(word+4, "XCOORD"))
 				{
-					DEH_WriteUndoline(word, va("%u", cutscenes[num]->scene[scenenum].xcoord[picid]), UNDO_NONE);
 					cutscenes[num]->scene[scenenum].xcoord[picid] = usi;
 				}
 				else if (fastcmp(word+4, "YCOORD"))
 				{
-					DEH_WriteUndoline(word, va("%u", cutscenes[num]->scene[scenenum].ycoord[picid]), UNDO_NONE);
 					cutscenes[num]->scene[scenenum].ycoord[picid] = usi;
 				}
 				else
@@ -1520,14 +1378,12 @@ static void readcutscenescene(MYFILE *f, INT32 num, INT32 scenenum)
 			}
 			else if (fastcmp(word, "MUSIC"))
 			{
-				DEH_WriteUndoline(word, cutscenes[num]->scene[scenenum].musswitch, UNDO_NONE);
 				strncpy(cutscenes[num]->scene[scenenum].musswitch, word2, 7);
 				cutscenes[num]->scene[scenenum].musswitch[6] = 0;
 			}
 #ifdef MUSICSLOT_COMPATIBILITY
 			else if (fastcmp(word, "MUSICSLOT"))
 			{
-				DEH_WriteUndoline(word, cutscenes[num]->scene[scenenum].musswitch, UNDO_NONE);
 				i = get_mus(word2, true);
 				if (i && i <= 1035)
 					snprintf(cutscenes[num]->scene[scenenum].musswitch, 7, "%sM", G_BuildMapName(i));
@@ -1540,37 +1396,30 @@ static void readcutscenescene(MYFILE *f, INT32 num, INT32 scenenum)
 #endif
 			else if (fastcmp(word, "MUSICTRACK"))
 			{
-				DEH_WriteUndoline(word, va("%u", cutscenes[num]->scene[scenenum].musswitchflags), UNDO_NONE);
 				cutscenes[num]->scene[scenenum].musswitchflags = ((UINT16)i) & MUSIC_TRACKMASK;
 			}
 			else if (fastcmp(word, "MUSICLOOP"))
 			{
-				DEH_WriteUndoline(word, va("%u", cutscenes[num]->scene[scenenum].musicloop), UNDO_NONE);
 				cutscenes[num]->scene[scenenum].musicloop = (UINT8)(i || word2[0] == 'T' || word2[0] == 'Y');
 			}
 			else if (fastcmp(word, "TEXTXPOS"))
 			{
-				DEH_WriteUndoline(word, va("%u", cutscenes[num]->scene[scenenum].textxpos), UNDO_NONE);
 				cutscenes[num]->scene[scenenum].textxpos = usi;
 			}
 			else if (fastcmp(word, "TEXTYPOS"))
 			{
-				DEH_WriteUndoline(word, va("%u", cutscenes[num]->scene[scenenum].textypos), UNDO_NONE);
 				cutscenes[num]->scene[scenenum].textypos = usi;
 			}
 			else if (fastcmp(word, "FADEINID"))
 			{
-				DEH_WriteUndoline(word, va("%u", cutscenes[num]->scene[scenenum].fadenum), UNDO_NONE);
 				cutscenes[num]->scene[scenenum].fadeinid = (UINT8)i;
 			}
 			else if (fastcmp(word, "FADEOUTID"))
 			{
-				DEH_WriteUndoline(word, va("%u", cutscenes[num]->scene[scenenum].fadenum), UNDO_NONE);
 				cutscenes[num]->scene[scenenum].fadeoutid = (UINT8)i;
 			}
 			else if (fastcmp(word, "FADECOLOR"))
 			{
-				DEH_WriteUndoline(word, va("%u", cutscenes[num]->scene[scenenum].fadenum), UNDO_NONE);
 				cutscenes[num]->scene[scenenum].fadecolor = (UINT8)i;
 			}
 			else
@@ -1588,9 +1437,6 @@ static void readcutscene(MYFILE *f, INT32 num)
 	char *word2;
 	char *tmp;
 	INT32 value;
-#ifdef DELFILE
-	const INT32 oldnumscenes = cutscenes[num]->numscenes;
-#endif
 
 	// Allocate memory for this cutscene if we don't yet have any
 	if (!cutscenes[num])
@@ -1633,8 +1479,6 @@ static void readcutscene(MYFILE *f, INT32 num)
 				if (1 <= value && value <= 128)
 				{
 					readcutscenescene(f, num, value - 1);
-					DEH_WriteUndoline(word, word2, UNDO_SPACE|UNDO_CUTLINE);
-					DEH_WriteUndoline("NUMSCENES", va("%d", oldnumscenes), UNDO_SPACE);
 				}
 				else
 					deh_warning("Scene number %d out of range (1 - 128)", value);
@@ -1687,12 +1531,10 @@ static void readhuditem(MYFILE *f, INT32 num)
 
 			if (fastcmp(word, "X"))
 			{
-				DEH_WriteUndoline(word, va("%d", hudinfo[num].x), UNDO_NONE);
 				hudinfo[num].x = i;
 			}
 			else if (fastcmp(word, "Y"))
 			{
-				DEH_WriteUndoline(word, va("%d", hudinfo[num].y), UNDO_NONE);
 				hudinfo[num].y = i;
 			}
 			else
@@ -1969,32 +1811,26 @@ static void readframe(MYFILE *f, INT32 num)
 
 			if (fastcmp(word1, "SPRITENUMBER") || fastcmp(word1, "SPRITENAME"))
 			{
-				DEH_WriteUndoline(word1, va("%u", states[num].sprite), UNDO_NONE);
 				states[num].sprite = get_sprite(word2);
 			}
 			else if (fastcmp(word1, "SPRITESUBNUMBER") || fastcmp(word1, "SPRITEFRAME"))
 			{
-				DEH_WriteUndoline(word1, va("%d", states[num].frame), UNDO_NONE);
 				states[num].frame = (INT32)get_number(word2); // So the FF_ flags get calculated
 			}
 			else if (fastcmp(word1, "DURATION"))
 			{
-				DEH_WriteUndoline(word1, va("%u", states[num].tics), UNDO_NONE);
 				states[num].tics = (INT32)get_number(word2); // So TICRATE can be used
 			}
 			else if (fastcmp(word1, "NEXT"))
 			{
-				DEH_WriteUndoline(word1, va("%d", states[num].nextstate), UNDO_NONE);
 				states[num].nextstate = get_state(word2);
 			}
 			else if (fastcmp(word1, "VAR1"))
 			{
-				DEH_WriteUndoline(word1, va("%d", states[num].var1), UNDO_NONE);
 				states[num].var1 = (INT32)get_number(word2);
 			}
 			else if (fastcmp(word1, "VAR2"))
 			{
-				DEH_WriteUndoline(word1, va("%d", states[num].var2), UNDO_NONE);
 				states[num].var2 = (INT32)get_number(word2);
 			}
 			else if (fastcmp(word1, "ACTION"))
@@ -2019,10 +1855,7 @@ static void readframe(MYFILE *f, INT32 num)
 				for (z = 0; actionpointers[z].name; z++)
 				{
 					if (actionpointers[z].action.acv == states[num].action.acv)
-					{
-						DEH_WriteUndoline(word1, actionpointers[z].name, UNDO_NONE);
 						break;
-					}
 				}
 
 				z = 0;
@@ -2092,17 +1925,14 @@ static void readsound(MYFILE *f, INT32 num)
 
 			if (fastcmp(word, "SINGULAR"))
 			{
-				DEH_WriteUndoline(word, va("%d", S_sfx[num].singularity), UNDO_NONE);
 				S_sfx[num].singularity = value;
 			}
 			else if (fastcmp(word, "PRIORITY"))
 			{
-				DEH_WriteUndoline(word, va("%d", S_sfx[num].priority), UNDO_NONE);
 				S_sfx[num].priority = value;
 			}
 			else if (fastcmp(word, "FLAGS"))
 			{
-				DEH_WriteUndoline(word, va("%d", S_sfx[num].pitch), UNDO_NONE);
 				S_sfx[num].pitch = value;
 			}
 			else if (fastcmp(word, "CAPTION") || fastcmp(word, "DESCRIPTION"))
@@ -2146,11 +1976,7 @@ static boolean GoodDataFileName(const char *s)
 	p = s + strlen(s) - strlen(tail);
 	if (p <= s) return false; // too short
 	if (!fasticmp(p, tail)) return false; // doesn't end in .dat
-#ifdef DELFILE
-	if (fasticmp(s, "gamedata.dat") && !disableundo) return false;
-#else
 	if (fasticmp(s, "gamedata.dat")) return false;
-#endif
 
 	return true;
 }
@@ -2162,17 +1988,6 @@ static void reademblemdata(MYFILE *f, INT32 num)
 	char *word2;
 	char *tmp;
 	INT32 value;
-
-	// Reset all data initially
-	DEH_WriteUndoline("TYPE", va("%d", emblemlocations[num-1].type), UNDO_NONE);
-	DEH_WriteUndoline("X", va("%d", emblemlocations[num-1].x), UNDO_NONE);
-	DEH_WriteUndoline("Y", va("%d", emblemlocations[num-1].y), UNDO_NONE);
-	DEH_WriteUndoline("Z", va("%d", emblemlocations[num-1].z), UNDO_NONE);
-	DEH_WriteUndoline("MAPNUM", va("%d", emblemlocations[num-1].level), UNDO_NONE);
-	DEH_WriteUndoline("VAR", va("%d", emblemlocations[num-1].var), UNDO_NONE);
-	DEH_WriteUndoline("SPRITE", va("%d", emblemlocations[num-1].sprite), UNDO_NONE);
-	DEH_WriteUndoline("COLOR", va("%d", emblemlocations[num-1].color), UNDO_NONE);
-	DEH_WriteUndoline("HINT", extraemblems[num-1].hint, UNDO_NONE);
 
 	memset(&emblemlocations[num-1], 0, sizeof(emblem_t));
 
@@ -2309,13 +2124,6 @@ static void readextraemblemdata(MYFILE *f, INT32 num)
 	char *tmp;
 	INT32 value;
 
-	// Reset all data initially
-	DEH_WriteUndoline("NAME", extraemblems[num-1].name, UNDO_NONE);
-	DEH_WriteUndoline("OBJECTIVE", extraemblems[num-1].description, UNDO_NONE);
-	DEH_WriteUndoline("CONDITIONSET", va("%d", extraemblems[num-1].conditionset), UNDO_NONE);
-	DEH_WriteUndoline("SPRITE", va("%d", extraemblems[num-1].sprite), UNDO_NONE);
-	DEH_WriteUndoline("COLOR", va("%d", extraemblems[num-1].color), UNDO_NONE);
-
 	memset(&extraemblems[num-1], 0, sizeof(extraemblem_t));
 
 	do
@@ -2389,16 +2197,6 @@ static void readunlockable(MYFILE *f, INT32 num)
 	char *word2;
 	char *tmp;
 	INT32 i;
-
-	// Same deal with unlockables, clear all first
-	DEH_WriteUndoline("NAME", unlockables[num].name, UNDO_NONE);
-	DEH_WriteUndoline("OBJECTIVE", unlockables[num].objective, UNDO_NONE);
-	DEH_WriteUndoline("HEIGHT", va("%d", unlockables[num].height), UNDO_NONE);
-	DEH_WriteUndoline("CONDITIONSET", va("%d", unlockables[num].conditionset), UNDO_NONE);
-	DEH_WriteUndoline("TYPE", va("%d", unlockables[num].type), UNDO_NONE);
-	DEH_WriteUndoline("NOCECHO", va("%d", unlockables[num].nocecho), UNDO_NONE);
-	DEH_WriteUndoline("NOCHECKLIST", va("%d", unlockables[num].nochecklist), UNDO_NONE);
-	DEH_WriteUndoline("VAR", va("%d", unlockables[num].variable), UNDO_NONE);
 
 	memset(&unlockables[num], 0, sizeof(unlockable_t));
 	unlockables[num].objective[0] = '/';
@@ -2794,7 +2592,6 @@ static void readmaincfg(MYFILE *f)
 				else
 					value = get_number(word2);
 
-				DEH_WriteUndoline(word, va("%d", spstage_start), UNDO_NONE);
 				spstage_start = (INT16)value;
 			}
 			else if (fastcmp(word, "SSTAGE_START"))
@@ -2808,79 +2605,64 @@ static void readmaincfg(MYFILE *f)
 				else
 					value = get_number(word2);
 
-				DEH_WriteUndoline(word, va("%d", sstage_start), UNDO_NONE);
 				sstage_start = (INT16)value;
 				sstage_end = (INT16)(sstage_start+6); // 7 special stages total
 			}
 			else if (fastcmp(word, "USENIGHTSSS"))
 			{
-				DEH_WriteUndoline(word, va("%d", useNightsSS), UNDO_NONE);
 				useNightsSS = (UINT8)(value || word2[0] == 'T' || word2[0] == 'Y');
 			}
 			else if (fastcmp(word, "REDTEAM"))
 			{
-				DEH_WriteUndoline(word, va("%d", skincolor_redteam), UNDO_NONE);
 				skincolor_redteam = (UINT8)get_number(word2);
 			}
 			else if (fastcmp(word, "BLUETEAM"))
 			{
-				DEH_WriteUndoline(word, va("%d", skincolor_blueteam), UNDO_NONE);
 				skincolor_blueteam = (UINT8)get_number(word2);
 			}
 			else if (fastcmp(word, "REDRING"))
 			{
-				DEH_WriteUndoline(word, va("%d", skincolor_redring), UNDO_NONE);
 				skincolor_redring = (UINT8)get_number(word2);
 			}
 			else if (fastcmp(word, "BLUERING"))
 			{
-				DEH_WriteUndoline(word, va("%d", skincolor_bluering), UNDO_NONE);
 				skincolor_bluering = (UINT8)get_number(word2);
 			}
 			else if (fastcmp(word, "INVULNTICS"))
 			{
-				DEH_WriteUndoline(word, va("%u", invulntics), UNDO_NONE);
 				invulntics = (UINT16)get_number(word2);
 			}
 			else if (fastcmp(word, "SNEAKERTICS"))
 			{
-				DEH_WriteUndoline(word, va("%u", sneakertics), UNDO_NONE);
 				sneakertics = (UINT16)get_number(word2);
 			}
 			else if (fastcmp(word, "FLASHINGTICS"))
 			{
-				DEH_WriteUndoline(word, va("%u", flashingtics), UNDO_NONE);
 				flashingtics = (UINT16)get_number(word2);
 			}
 			else if (fastcmp(word, "TAILSFLYTICS"))
 			{
-				DEH_WriteUndoline(word, va("%u", tailsflytics), UNDO_NONE);
 				tailsflytics = (UINT16)get_number(word2);
 			}
 			else if (fastcmp(word, "UNDERWATERTICS"))
 			{
-				DEH_WriteUndoline(word, va("%u", underwatertics), UNDO_NONE);
 				underwatertics = (UINT16)get_number(word2);
 			}
 			else if (fastcmp(word, "SPACETIMETICS"))
 			{
-				DEH_WriteUndoline(word, va("%u", spacetimetics), UNDO_NONE);
 				spacetimetics = (UINT16)get_number(word2);
 			}
 			else if (fastcmp(word, "EXTRALIFETICS"))
 			{
-				DEH_WriteUndoline(word, va("%u", extralifetics), UNDO_NONE);
 				extralifetics = (UINT16)get_number(word2);
 			}
 			else if (fastcmp(word, "GAMEOVERTICS"))
 			{
-				DEH_WriteUndoline(word, va("%u", gameovertics), UNDO_NONE);
 				gameovertics = get_number(word2);
 			}
 
 			else if (fastcmp(word, "INTROTOPLAY"))
 			{
-				DEH_WriteUndoline(word, va("%d", introtoplay), UNDO_NONE);
 				introtoplay = (UINT8)get_number(word2);
 				// range check, you morons.
 				if (introtoplay > 128)
@@ -2888,17 +2670,14 @@ static void readmaincfg(MYFILE *f)
 			}
 			else if (fastcmp(word, "LOOPTITLE"))
 			{
-				DEH_WriteUndoline(word, va("%d", looptitle), UNDO_NONE);
 				looptitle = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
 			}
 			else if (fastcmp(word, "TITLESCROLLSPEED"))
 			{
-				DEH_WriteUndoline(word, va("%d", titlescrollspeed), UNDO_NONE);
 				titlescrollspeed = get_number(word2);
 			}
 			else if (fastcmp(word, "CREDITSCUTSCENE"))
 			{
-				DEH_WriteUndoline(word, va("%d", creditscutscene), UNDO_NONE);
 				creditscutscene = (UINT8)get_number(word2);
 				// range check, you morons.
 				if (creditscutscene > 128)
@@ -2906,32 +2685,26 @@ static void readmaincfg(MYFILE *f)
 			}
 			else if (fastcmp(word, "DISABLESPEEDADJUST"))
 			{
-				DEH_WriteUndoline(word, va("%d", disableSpeedAdjust), UNDO_NONE);
 				disableSpeedAdjust = (UINT8)get_number(word2);
 			}
 			else if (fastcmp(word, "NUMDEMOS"))
 			{
-				DEH_WriteUndoline(word, va("%d", numDemos), UNDO_NONE);
 				numDemos = (UINT8)get_number(word2);
 			}
 			else if (fastcmp(word, "DEMODELAYTIME"))
 			{
-				DEH_WriteUndoline(word, va("%d", demoDelayTime), UNDO_NONE);
 				demoDelayTime = get_number(word2);
 			}
 			else if (fastcmp(word, "DEMOIDLETIME"))
 			{
-				DEH_WriteUndoline(word, va("%d", demoIdleTime), UNDO_NONE);
 				demoIdleTime = get_number(word2);
 			}
 			else if (fastcmp(word, "USE1UPSOUND"))
 			{
-				DEH_WriteUndoline(word, va("%u", use1upSound), UNDO_NONE);
 				use1upSound = (UINT8)(value || word2[0] == 'T' || word2[0] == 'Y');
 			}
 			else if (fastcmp(word, "MAXXTRALIFE"))
 			{
-				DEH_WriteUndoline(word, va("%u", maxXtraLife), UNDO_NONE);
 				maxXtraLife = (UINT8)get_number(word2);
 			}
 
@@ -2945,7 +2718,6 @@ static void readmaincfg(MYFILE *f)
 					I_Error("Maincfg: bad data file name '%s'\n", word2);
 
 				G_SaveGameData();
-				DEH_WriteUndoline(word, gamedatafilename, UNDO_NONE);
 				strlcpy(gamedatafilename, word2, sizeof (gamedatafilename));
 				strlwr(gamedatafilename);
 				savemoddata = true;
@@ -2962,12 +2734,10 @@ static void readmaincfg(MYFILE *f)
 			}
 			else if (fastcmp(word, "RESETDATA"))
 			{
-				DEH_WriteUndoline(word, "0", UNDO_TODO); /// \todo
 				P_ResetData(value);
 			}
 			else if (fastcmp(word, "CUSTOMVERSION"))
 			{
-				DEH_WriteUndoline(word, customversionstring, UNDO_NONE);
 				strlcpy(customversionstring, word2, sizeof (customversionstring));
 			}
 			else
@@ -3205,13 +2975,11 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 			else if (fastcmp(word, "MAINCFG"))
 			{
 				readmaincfg(f);
-				DEH_WriteUndoline(word, "", UNDO_HEADER);
 				continue;
 			}
 			else if (fastcmp(word, "WIPES"))
 			{
 				readwipes(f);
-				DEH_WriteUndoline(word, "", UNDO_HEADER);
 				continue;
 			}
 			word2 = strtok(NULL, " ");
@@ -3231,7 +2999,6 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 					deh_warning("Character %d out of range (0 - 31)", i);
 					ignorelines(f);
 				}
-				DEH_WriteUndoline(word, word2, UNDO_HEADER);
 				continue;
 			}
 			if (word2)
@@ -3240,6 +3007,7 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 				if (word2[strlen(word2)-1] == '\n')
 					word2[strlen(word2)-1] = '\0';
 				i = atoi(word2);
+
 				if (fastcmp(word, "THING") || fastcmp(word, "MOBJ") || fastcmp(word, "OBJECT"))
 				{
 					if (i == 0 && word2[0] != '0') // If word2 isn't a number
@@ -3251,7 +3019,6 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 						deh_warning("Thing %d out of range (1 - %d)", i, NUMMOBJTYPES-1);
 						ignorelines(f);
 					}
-					DEH_WriteUndoline(word, word2, UNDO_HEADER);
 				}
 				else if (fastcmp(word, "LIGHT"))
 				{
@@ -3264,7 +3031,6 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 						deh_warning("Light number %d out of range (1 - %d)", i, NUMLIGHTS-1);
 						ignorelines(f);
 					}
-					DEH_WriteUndoline(word, word2, UNDO_HEADER);
 #endif
 				}
 				else if (fastcmp(word, "SPRITE"))
@@ -3279,7 +3045,6 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 						deh_warning("Sprite number %d out of range (0 - %d)", i, NUMSPRITES-1);
 						ignorelines(f);
 					}
-					DEH_WriteUndoline(word, word2, UNDO_HEADER);
 #endif
 				}
 				else if (fastcmp(word, "LEVEL"))
@@ -3298,7 +3063,6 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 						deh_warning("Level number %d out of range (1 - %d)", i, NUMMAPS);
 						ignorelines(f);
 					}
-					DEH_WriteUndoline(word, word2, UNDO_HEADER);
 				}
 				else if (fastcmp(word, "CUTSCENE"))
 				{
@@ -3309,7 +3073,6 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 						deh_warning("Cutscene number %d out of range (1 - 128)", i);
 						ignorelines(f);
 					}
-					DEH_WriteUndoline(word, word2, UNDO_HEADER);
 				}
 				else if (fastcmp(word, "FRAME") || fastcmp(word, "STATE"))
 				{
@@ -3322,7 +3085,6 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 						deh_warning("Frame %d out of range (0 - %d)", i, NUMSTATES-1);
 						ignorelines(f);
 					}
-					DEH_WriteUndoline(word, word2, UNDO_HEADER);
 				}
 				else if (fastcmp(word, "SOUND"))
 				{
@@ -3335,7 +3097,6 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 						deh_warning("Sound %d out of range (1 - %d)", i, NUMSFX-1);
 						ignorelines(f);
 					}
-					DEH_WriteUndoline(word, word2, UNDO_HEADER);
 				}
 				else if (fastcmp(word, "HUDITEM"))
 				{
@@ -3348,7 +3109,6 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 						deh_warning("HUD item number %d out of range (0 - %d)", i, NUMHUDITEMS-1);
 						ignorelines(f);
 					}
-					DEH_WriteUndoline(word, word2, UNDO_HEADER);
 				}
 				else if (fastcmp(word, "EMBLEM"))
 				{
@@ -3368,7 +3128,6 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 						deh_warning("Emblem number %d out of range (1 - %d)", i, MAXEMBLEMS);
 						ignorelines(f);
 					}
-					DEH_WriteUndoline(word, word2, UNDO_HEADER);
 				}
 				else if (fastcmp(word, "EXTRAEMBLEM"))
 				{
@@ -3388,7 +3147,6 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 						deh_warning("Extra emblem number %d out of range (1 - %d)", i, MAXEXTRAEMBLEMS);
 						ignorelines(f);
 					}
-					DEH_WriteUndoline(word, word2, UNDO_HEADER);
 				}
 				else if (fastcmp(word, "UNLOCKABLE"))
 				{
@@ -3404,7 +3162,6 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 						deh_warning("Unlockable number %d out of range (1 - %d)", i, MAXUNLOCKABLES);
 						ignorelines(f);
 					}
-					DEH_WriteUndoline(word, word2, UNDO_HEADER);
 				}
 				else if (fastcmp(word, "CONDITIONSET"))
 				{
@@ -3420,8 +3177,6 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 						deh_warning("Condition set number %d out of range (1 - %d)", i, MAXCONDITIONSETS);
 						ignorelines(f);
 					}
-					// no undo support for this insanity yet
-					//DEH_WriteUndoline(word, word2, UNDO_HEADER);
 				}
 				// Last I heard this crashes the game if you try to use it
 				// so this is disabled for now
@@ -3431,7 +3186,6 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 					INT32 ver = searchvalue(strtok(NULL, "\n"));
 					if (ver != PATCHVERSION)
 						deh_warning("Patch is for SRB2 version %d,\nonly version %d is supported", ver, PATCHVERSION);
-					//DEH_WriteUndoline(word, va("%d", ver), UNDO_NONE);
 				}
 				// Clear all data in certain locations (mostly for unlocks)
 				// Unless you REALLY want to piss people off,
@@ -3502,9 +3256,6 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 void DEH_LoadDehackedLumpPwad(UINT16 wad, UINT16 lump)
 {
 	MYFILE f;
-#ifdef DELFILE
-	unsocwad = wad;
-#endif
 	f.wad = wad;
 	f.size = W_LumpLengthPwad(wad, lump);
 	f.data = Z_Malloc(f.size + 1, PU_STATIC, NULL);
@@ -3512,7 +3263,6 @@ void DEH_LoadDehackedLumpPwad(UINT16 wad, UINT16 lump)
 	f.curpos = f.data;
 	f.data[f.size] = 0;
 	DEH_LoadDehackedFile(&f);
-	DEH_WriteUndoline(va("# uload for wad: %u, lump: %u", wad, lump), NULL, UNDO_DONE);
 	Z_Free(f.data);
 }
 
@@ -3520,67 +3270,6 @@ void DEH_LoadDehackedLump(lumpnum_t lumpnum)
 {
 	DEH_LoadDehackedLumpPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum));
 }
-
-#ifdef DELFILE
-#define DUMPUNDONE
-
-// read (un)dehacked lump in wad's memory
-void DEH_UnloadDehackedWad(UINT16 wad)
-{
-	undehacked_t *tmp, *curundo = unsocdata[wad];
-	MYFILE f;
-	size_t len = 0;
-	char *data;
-#ifdef DUMPUNDONE
-	FILE *UNDO = fopen("undo.soc", "wt");
-#endif
-	CONS_Printf(M_GetText("Unloading WAD SOC edits\n"));
-	while (curundo)
-	{
-		data = curundo->undata;
-		curundo = curundo->next;
-		if (data)
-			len += strlen(data);
-		len += 1;
-#ifdef DUMPUNDONE
-		if (UNDO)
-		{
-			if (data)
-				fprintf(UNDO, "%s\n", data);
-			else
-				fprintf(UNDO, "\n");
-		}
-#endif
-	}
-#ifndef DUMPUNDONE
-	if (UNDO) fclose(UNDO);
-#endif
-	if (!len) return;
-	f.size = len;
-	data = f.data = Z_Malloc(f.size + 1, PU_STATIC, NULL);
-	curundo = unsocdata[wad];
-	unsocdata[wad] = NULL;
-	while (curundo)
-	{
-		tmp = curundo;
-		curundo = curundo->next;
-		if (tmp->undata)
-			data += sprintf(data, "%s\n", tmp->undata);
-		else
-			data += sprintf(data, "\n");
-		if (tmp->undata) free(tmp->undata);
-		free(tmp);
-	}
-	f.wad = wad;
-	f.curpos = f.data;
-	f.data[f.size] = 0;
-	disableundo = true;
-	DEH_LoadDehackedFile(&f);
-	disableundo = false;
-	Z_Free(f.data);
-}
-#endif //DELFILE
-
 
 ////////////////////////////////////////////////////////////////////////////////
 // CRAZY LIST OF STATE NAMES AND ALL FROM HERE DOWN
@@ -6816,91 +6505,130 @@ static const char *const ML_LIST[16] = {
 // This DOES differ from r_draw's Color_Names, unfortunately.
 // Also includes Super colors
 static const char *COLOR_ENUMS[] = {
-	"NONE",     	// SKINCOLOR_NONE
-	"WHITE",    	// SKINCOLOR_WHITE
-	"SILVER",   	// SKINCOLOR_SILVER
-	"GREY",	    	// SKINCOLOR_GREY
-	"BLACK",    	// SKINCOLOR_BLACK
-	"BEIGE",    	// SKINCOLOR_BEIGE
-	"PEACH",    	// SKINCOLOR_PEACH
-	"BROWN",    	// SKINCOLOR_BROWN
-	"RED",      	// SKINCOLOR_RED
-	"CRIMSON",     	// SKINCOLOR_CRIMSON
-	"ORANGE",   	// SKINCOLOR_ORANGE
-	"RUST",     	// SKINCOLOR_RUST
-	"GOLD",      	// SKINCOLOR_GOLD
-	"YELLOW",   	// SKINCOLOR_YELLOW
-	"TAN",      	// SKINCOLOR_TAN
-	"MOSS",      	// SKINCOLOR_MOSS
-	"PERIDOT",    	// SKINCOLOR_PERIDOT
-	"GREEN",    	// SKINCOLOR_GREEN
-	"EMERALD",  	// SKINCOLOR_EMERALD
-	"AQUA",     	// SKINCOLOR_AQUA
-	"TEAL",     	// SKINCOLOR_TEAL
-	"CYAN",     	// SKINCOLOR_CYAN
-	"BLUE",     	// SKINCOLOR_BLUE
-	"AZURE",    	// SKINCOLOR_AZURE
-	"PASTEL",		// SKINCOLOR_PASTEL
-	"PURPLE",   	// SKINCOLOR_PURPLE
-	"LAVENDER", 	// SKINCOLOR_LAVENDER
-	"MAGENTA",   	// SKINCOLOR_MAGENTA
-	"PINK",     	// SKINCOLOR_PINK
-	"ROSY",     	// SKINCOLOR_ROSY
+	"NONE",			// SKINCOLOR_NONE,
+
+	// Greyscale ranges
+	"WHITE",     	// SKINCOLOR_WHITE,
+	"BONE",     	// SKINCOLOR_BONE,
+	"CLOUDY",     	// SKINCOLOR_CLOUDY,
+	"GREY",     	// SKINCOLOR_GREY,
+	"SILVER",     	// SKINCOLOR_SILVER,
+	"CARBON",     	// SKINCOLOR_CARBON,
+	"JET",     		// SKINCOLOR_JET,
+	"BLACK",     	// SKINCOLOR_BLACK,
+
+	// Desaturated
+	"AETHER",     	// SKINCOLOR_AETHER,
+	"SLATE",     	// SKINCOLOR_SLATE,
+	"PINK",     	// SKINCOLOR_PINK,
+	"YOGURT",     	// SKINCOLOR_YOGURT,
+	"BROWN",     	// SKINCOLOR_BROWN,
+	"TAN",     		// SKINCOLOR_TAN,
+	"BEIGE",     	// SKINCOLOR_BEIGE,
+	"MOSS",     	// SKINCOLOR_MOSS,
+	"AZURE",     	// SKINCOLOR_AZURE,
+	"LAVENDER",     // SKINCOLOR_LAVENDER,
+
+	// Viv's vivid colours (toast 21/07/17)
+	"RUBY",     	// SKINCOLOR_RUBY,
+	"SALMON",     	// SKINCOLOR_SALMON,
+	"RED",     		// SKINCOLOR_RED,
+	"CRIMSON",     	// SKINCOLOR_CRIMSON,
+	"FLAME",     	// SKINCOLOR_FLAME,
+	"PEACHY",     	// SKINCOLOR_PEACHY,
+	"QUAIL",     	// SKINCOLOR_QUAIL,
+	"SUNSET",     	// SKINCOLOR_SUNSET,
+	"APRICOT",     	// SKINCOLOR_APRICOT,
+	"ORANGE",     	// SKINCOLOR_ORANGE,
+	"RUST",     	// SKINCOLOR_RUST,
+	"GOLD",     	// SKINCOLOR_GOLD,
+	"SANDY",     	// SKINCOLOR_SANDY,
+	"YELLOW",     	// SKINCOLOR_YELLOW,
+	"OLIVE",     	// SKINCOLOR_OLIVE,
+	"LIME",     	// SKINCOLOR_LIME,
+	"PERIDOT",     	// SKINCOLOR_PERIDOT,
+	"GREEN",     	// SKINCOLOR_GREEN,
+	"FOREST",     	// SKINCOLOR_FOREST,
+	"EMERALD",     	// SKINCOLOR_EMERALD,
+	"MINT",     	// SKINCOLOR_MINT,
+	"SEAFOAM",     	// SKINCOLOR_SEAFOAM,
+	"AQUA",     	// SKINCOLOR_AQUA,
+	"TEAL",     	// SKINCOLOR_TEAL,
+	"WAVE",     	// SKINCOLOR_WAVE,
+	"CYAN",     	// SKINCOLOR_CYAN,
+	"SKY",     		// SKINCOLOR_SKY,
+	"CERULEAN",     // SKINCOLOR_CERULEAN,
+	"ICY",     		// SKINCOLOR_ICY,
+	"SAPPHIRE",     // SKINCOLOR_SAPPHIRE,
+	"CORNFLOWER",   // SKINCOLOR_CORNFLOWER,
+	"BLUE",     	// SKINCOLOR_BLUE,
+	"COBALT",     	// SKINCOLOR_COBALT,
+	"VAPOR",     	// SKINCOLOR_VAPOR,
+	"DUSK",     	// SKINCOLOR_DUSK,
+	"PASTEL",     	// SKINCOLOR_PASTEL,
+	"PURPLE",     	// SKINCOLOR_PURPLE,
+	"BUBBLEGUM",    // SKINCOLOR_BUBBLEGUM,
+	"MAGENTA",     	// SKINCOLOR_MAGENTA,
+	"NEON",     	// SKINCOLOR_NEON,
+	"VIOLET",     	// SKINCOLOR_VIOLET,
+	"LILAC",     	// SKINCOLOR_LILAC,
+	"PLUM",     	// SKINCOLOR_PLUM,
+	"ROSY",     	// SKINCOLOR_ROSY,
 
 	// Super special awesome Super flashing colors!
-	"SUPERSILVER1", // SKINCOLOR_SUPERSILVER1
-	"SUPERSILVER2", // SKINCOLOR_SUPERSILVER2,
-	"SUPERSILVER3", // SKINCOLOR_SUPERSILVER3,
-	"SUPERSILVER4", // SKINCOLOR_SUPERSILVER4,
-	"SUPERSILVER5", // SKINCOLOR_SUPERSILVER5,
+	"SUPERSILVER1",	// SKINCOLOR_SUPERSILVER1
+	"SUPERSILVER2",	// SKINCOLOR_SUPERSILVER2,
+	"SUPERSILVER3",	// SKINCOLOR_SUPERSILVER3,
+	"SUPERSILVER4",	// SKINCOLOR_SUPERSILVER4,
+	"SUPERSILVER5",	// SKINCOLOR_SUPERSILVER5,
 
-	"SUPERRED1", // SKINCOLOR_SUPERRED1
-	"SUPERRED2", // SKINCOLOR_SUPERRED2,
-	"SUPERRED3", // SKINCOLOR_SUPERRED3,
-	"SUPERRED4", // SKINCOLOR_SUPERRED4,
-	"SUPERRED5", // SKINCOLOR_SUPERRED5,
+	"SUPERRED1",	// SKINCOLOR_SUPERRED1
+	"SUPERRED2",	// SKINCOLOR_SUPERRED2,
+	"SUPERRED3",	// SKINCOLOR_SUPERRED3,
+	"SUPERRED4",	// SKINCOLOR_SUPERRED4,
+	"SUPERRED5",	// SKINCOLOR_SUPERRED5,
 
-	"SUPERORANGE1", // SKINCOLOR_SUPERORANGE1
-	"SUPERORANGE2", // SKINCOLOR_SUPERORANGE2,
-	"SUPERORANGE3", // SKINCOLOR_SUPERORANGE3,
-	"SUPERORANGE4", // SKINCOLOR_SUPERORANGE4,
-	"SUPERORANGE5", // SKINCOLOR_SUPERORANGE5,
+	"SUPERORANGE1",	// SKINCOLOR_SUPERORANGE1
+	"SUPERORANGE2",	// SKINCOLOR_SUPERORANGE2,
+	"SUPERORANGE3",	// SKINCOLOR_SUPERORANGE3,
+	"SUPERORANGE4",	// SKINCOLOR_SUPERORANGE4,
+	"SUPERORANGE5",	// SKINCOLOR_SUPERORANGE5,
 
-	"SUPERGOLD1", // SKINCOLOR_SUPERGOLD1
-	"SUPERGOLD2", // SKINCOLOR_SUPERGOLD2,
-	"SUPERGOLD3", // SKINCOLOR_SUPERGOLD3,
-	"SUPERGOLD4", // SKINCOLOR_SUPERGOLD4,
-	"SUPERGOLD5", // SKINCOLOR_SUPERGOLD5,
+	"SUPERGOLD1",	// SKINCOLOR_SUPERGOLD1
+	"SUPERGOLD2",	// SKINCOLOR_SUPERGOLD2,
+	"SUPERGOLD3",	// SKINCOLOR_SUPERGOLD3,
+	"SUPERGOLD4",	// SKINCOLOR_SUPERGOLD4,
+	"SUPERGOLD5",	// SKINCOLOR_SUPERGOLD5,
 
-	"SUPERPERIDOT1", // SKINCOLOR_SUPERPERIDOT1
-	"SUPERPERIDOT2", // SKINCOLOR_SUPERPERIDOT2,
-	"SUPERPERIDOT3", // SKINCOLOR_SUPERPERIDOT3,
-	"SUPERPERIDOT4", // SKINCOLOR_SUPERPERIDOT4,
-	"SUPERPERIDOT5", // SKINCOLOR_SUPERPERIDOT5,
+	"SUPERPERIDOT1",	// SKINCOLOR_SUPERPERIDOT1
+	"SUPERPERIDOT2",	// SKINCOLOR_SUPERPERIDOT2,
+	"SUPERPERIDOT3",	// SKINCOLOR_SUPERPERIDOT3,
+	"SUPERPERIDOT4",	// SKINCOLOR_SUPERPERIDOT4,
+	"SUPERPERIDOT5",	// SKINCOLOR_SUPERPERIDOT5,
 
-	"SUPERCYAN1", // SKINCOLOR_SUPERCYAN1
-	"SUPERCYAN2", // SKINCOLOR_SUPERCYAN2,
-	"SUPERCYAN3", // SKINCOLOR_SUPERCYAN3,
-	"SUPERCYAN4", // SKINCOLOR_SUPERCYAN4,
-	"SUPERCYAN5", // SKINCOLOR_SUPERCYAN5,
+	"SUPERSKY1",	// SKINCOLOR_SUPERSKY1
+	"SUPERSKY2",	// SKINCOLOR_SUPERSKY2,
+	"SUPERSKY3",	// SKINCOLOR_SUPERSKY3,
+	"SUPERSKY4",	// SKINCOLOR_SUPERSKY4,
+	"SUPERSKY5",	// SKINCOLOR_SUPERSKY5,
 
-	"SUPERPURPLE1",  	// SKINCOLOR_SUPERPURPLE1,
-	"SUPERPURPLE2",  	// SKINCOLOR_SUPERPURPLE2,
-	"SUPERPURPLE3",  	// SKINCOLOR_SUPERPURPLE3,
-	"SUPERPURPLE4",  	// SKINCOLOR_SUPERPURPLE4,
-	"SUPERPURPLE5",   	// SKINCOLOR_SUPERPURPLE5,
+	"SUPERPURPLE1",	// SKINCOLOR_SUPERPURPLE1,
+	"SUPERPURPLE2",	// SKINCOLOR_SUPERPURPLE2,
+	"SUPERPURPLE3",	// SKINCOLOR_SUPERPURPLE3,
+	"SUPERPURPLE4",	// SKINCOLOR_SUPERPURPLE4,
+	"SUPERPURPLE5",	// SKINCOLOR_SUPERPURPLE5,
 
-	"SUPERRUST1", // SKINCOLOR_SUPERRUST1
-	"SUPERRUST2", // SKINCOLOR_SUPERRUST2,
-	"SUPERRUST3", // SKINCOLOR_SUPERRUST3,
-	"SUPERRUST4", // SKINCOLOR_SUPERRUST4,
-	"SUPERRUST5", // SKINCOLOR_SUPERRUST5,
+	"SUPERRUST1",	// SKINCOLOR_SUPERRUST1
+	"SUPERRUST2",	// SKINCOLOR_SUPERRUST2,
+	"SUPERRUST3",	// SKINCOLOR_SUPERRUST3,
+	"SUPERRUST4",	// SKINCOLOR_SUPERRUST4,
+	"SUPERRUST5",	// SKINCOLOR_SUPERRUST5,
 
-	"SUPERTAN1", // SKINCOLOR_SUPERTAN1
-	"SUPERTAN2", // SKINCOLOR_SUPERTAN2,
-	"SUPERTAN3", // SKINCOLOR_SUPERTAN3,
-	"SUPERTAN4", // SKINCOLOR_SUPERTAN4,
-	"SUPERTAN5" // SKINCOLOR_SUPERTAN5,
+	"SUPERTAN1",	// SKINCOLOR_SUPERTAN1
+	"SUPERTAN2",	// SKINCOLOR_SUPERTAN2,
+	"SUPERTAN3",	// SKINCOLOR_SUPERTAN3,
+	"SUPERTAN4",	// SKINCOLOR_SUPERTAN4,
+	"SUPERTAN5"		// SKINCOLOR_SUPERTAN5,
 };
 
 static const char *const POWERS_LIST[] = {

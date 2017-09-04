@@ -2091,6 +2091,7 @@ void G_PlayerReborn(INT32 player)
 	UINT32 availabilities;
 	tic_t jointime;
 	boolean spectator;
+	boolean outofcoop;
 	INT16 bot;
 	SINT8 pity;
 
@@ -2101,6 +2102,7 @@ void G_PlayerReborn(INT32 player)
 	exiting = players[player].exiting;
 	jointime = players[player].jointime;
 	spectator = players[player].spectator;
+	outofcoop = players[player].outofcoop;
 	pflags = (players[player].pflags & (PF_TIMEOVER|PF_FLIPCAM|PF_TAGIT|PF_TAGGED|PF_ANALOGMODE));
 
 	// As long as we're not in multiplayer, carry over cheatcodes from map to map
@@ -2155,6 +2157,7 @@ void G_PlayerReborn(INT32 player)
 	p->ctfteam = ctfteam;
 	p->jointime = jointime;
 	p->spectator = spectator;
+	p->outofcoop = outofcoop;
 
 	// save player config truth reborn
 	p->skincolor = skincolor;
@@ -2206,8 +2209,8 @@ void G_PlayerReborn(INT32 player)
 	p->rings = 0; // 0 rings
 	p->panim = PA_IDLE; // standing animation
 
-	if ((netgame || multiplayer) && !p->spectator)
-		p->powers[pw_flashing] = flashingtics-1; // Babysitting deterrent
+	//if ((netgame || multiplayer) && !p->spectator) -- moved into P_SpawnPlayer to account for forced changes there
+		//p->powers[pw_flashing] = flashingtics-1; // Babysitting deterrent
 
 	if (p-players == consoleplayer)
 	{
@@ -2496,7 +2499,8 @@ void G_ChangePlayerReferences(mobj_t *oldmo, mobj_t *newmo)
 void G_DoReborn(INT32 playernum)
 {
 	player_t *player = &players[playernum];
-	boolean starpost = false;
+	boolean resetlevel = false;
+	INT32 i;
 
 	if (modeattacking)
 	{
@@ -2522,34 +2526,97 @@ void G_DoReborn(INT32 playernum)
 		B_RespawnBot(playernum);
 		if (oldmo)
 			G_ChangePlayerReferences(oldmo, players[playernum].mo);
+
+		return;
 	}
-	else if (countdowntimeup || (!multiplayer && gametype == GT_COOP))
+
+	if (countdowntimeup || (!(netgame || multiplayer) && gametype == GT_COOP))
+		resetlevel = true;
+	else if (gametype == GT_COOP && (netgame || multiplayer))
+	{
+		boolean notgameover = true;
+
+		if (cv_cooplives.value != 0 && player->lives <= 0) // consider game over first
+		{
+			for (i = 0; i < MAXPLAYERS; i++)
+			{
+				if (!playeringame[i])
+					continue;
+				if (players[i].exiting || players[i].lives > 0)
+					break;
+			}
+
+			if (i == MAXPLAYERS)
+			{
+				notgameover = false;
+				if (!countdown2)
+				{
+					// They're dead, Jim.
+					//nextmapoverride = spstage_start;
+					nextmapoverride = gamemap;
+					countdown2 = TICRATE;
+					skipstats = true;
+
+					for (i = 0; i < MAXPLAYERS; i++)
+					{
+						if (playeringame[i])
+							players[i].score = 0;
+					}
+
+					//emeralds = 0;
+					tokenbits = 0;
+					tokenlist = 0;
+					token = 0;
+				}
+			}
+		}
+
+		if (notgameover && cv_coopstarposts.value == 2)
+		{
+			for (i = 0; i < MAXPLAYERS; i++)
+			{
+				if (!playeringame[i])
+					continue;
+
+				if (players[i].playerstate != PST_DEAD && !players[i].spectator && players[i].mo && players[i].mo->health)
+					break;
+			}
+			if (i == MAXPLAYERS)
+				resetlevel = true;
+		}
+	}
+
+	if (resetlevel)
 	{
 		// reload the level from scratch
 		if (countdowntimeup)
 		{
-			player->starpostangle = 0;
-			player->starposttime = 0;
-			player->starpostx = 0;
-			player->starposty = 0;
-			player->starpostz = 0;
-			player->starpostnum = 0;
+			for (i = 0; i < MAXPLAYERS; i++)
+			{
+				if (!playeringame[i])
+					continue;
+				players[i].starpostangle = 0;
+				players[i].starposttime = 0;
+				players[i].starpostx = 0;
+				players[i].starposty = 0;
+				players[i].starpostz = 0;
+				players[i].starpostnum = 0;
+			}
 		}
 		if (!countdowntimeup && (mapheaderinfo[gamemap-1]->levelflags & LF_NORELOAD))
 		{
-			INT32 i;
-
-			player->playerstate = PST_REBORN;
-
 			P_LoadThingsOnly();
 
-			P_ClearStarPost(player->starpostnum);
+			for (i = 0; i < MAXPLAYERS; i++)
+			{
+				if (!playeringame[i])
+					continue;
+				players[i].playerstate = PST_REBORN;
+				P_ClearStarPost(players[i].starpostnum);
+			}
 
 			// Do a wipe
 			wipegamestate = -1;
-
-			if (player->starposttime)
-				starpost = true;
 
 			if (camera.chase)
 				P_ResetCamera(&players[displayplayer], &camera);
@@ -2558,7 +2625,7 @@ void G_DoReborn(INT32 playernum)
 
 			// clear cmd building stuff
 			memset(gamekeydown, 0, sizeof (gamekeydown));
-			for (i = 0;i < JOYAXISSET; i++)
+			for (i = 0; i < JOYAXISSET; i++)
 			{
 				joyxmove[i] = joyymove[i] = 0;
 				joy2xmove[i] = joy2ymove[i] = 0;
@@ -2570,31 +2637,45 @@ void G_DoReborn(INT32 playernum)
 			CON_ClearHUD();
 
 			// Starpost support
-			G_SpawnPlayer(playernum, starpost);
+			for (i = 0; i < MAXPLAYERS; i++)
+			{
+				if (!playeringame[i])
+					continue;
+				G_SpawnPlayer(i, (players[i].starposttime));
+			}
 
-			if (botingame)
-			{ // Bots respawn next to their master.
-				players[secondarydisplayplayer].playerstate = PST_REBORN;
-				G_SpawnPlayer(secondarydisplayplayer, false);
+			// restore time in netgame (see also p_setup.c)
+			if ((netgame || multiplayer) && gametype == GT_COOP && cv_coopstarposts.value == 2)
+			{
+				// is this a hack? maybe
+				tic_t maxstarposttime = 0;
+				for (i = 0; i < MAXPLAYERS; i++)
+				{
+					if (playeringame[i] && players[i].starposttime > maxstarposttime)
+						maxstarposttime = players[i].starposttime;
+				}
+				leveltime = maxstarposttime;
 			}
 		}
 		else
-#ifdef HAVE_BLUA
 		{
+#ifdef HAVE_BLUA
 			LUAh_MapChange();
 #endif
 			G_DoLoadLevel(true);
-#ifdef HAVE_BLUA
+			return;
 		}
-#endif
 	}
 	else
 	{
 		// respawn at the start
 		mobj_t *oldmo = NULL;
 
-		if (player->starposttime)
-			starpost = true;
+		// Not resetting map, so return to level music
+		if (!countdown2
+		&& player->lives <= 0
+		&& cv_cooplives.value == 1) // not allowed for life steal because no way to come back from zero group lives without addons, which should call this anyways
+			P_RestoreMultiMusic(player);
 
 		// first dissasociate the corpse
 		if (player->mo)
@@ -2604,7 +2685,7 @@ void G_DoReborn(INT32 playernum)
 			P_RemoveMobj(player->mo);
 		}
 
-		G_SpawnPlayer(playernum, starpost);
+		G_SpawnPlayer(playernum, (player->starposttime));
 		if (oldmo)
 			G_ChangePlayerReferences(oldmo, players[playernum].mo);
 	}
@@ -2612,10 +2693,49 @@ void G_DoReborn(INT32 playernum)
 
 void G_AddPlayer(INT32 playernum)
 {
+	INT32 countplayers = 0, notexiting = 0;
+
 	player_t *p = &players[playernum];
+
+	// Go through the current players and make sure you have the latest starpost set
+	if (G_PlatformGametype() && (netgame || multiplayer))
+	{
+		INT32 i;
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			if (!playeringame[i])
+				continue;
+
+			if (players[i].bot) // ignore dumb, stupid tails
+				continue;
+
+			countplayers++;
+
+			if (!players->exiting)
+				notexiting++;
+
+			if (!(cv_coopstarposts.value && (gametype == GT_COOP) && (p->starpostnum < players[i].starpostnum)))
+				continue;
+
+			p->starposttime = players[i].starposttime;
+			p->starpostx = players[i].starpostx;
+			p->starposty = players[i].starposty;
+			p->starpostz = players[i].starpostz;
+			p->starpostangle = players[i].starpostangle;
+			p->starpostnum = players[i].starpostnum;
+		}
+	}
 
 	p->jointime = 0;
 	p->playerstate = PST_REBORN;
+
+	p->height = mobjinfo[MT_PLAYER].height;
+
+	if (G_GametypeUsesLives() || ((netgame || multiplayer) && gametype == GT_COOP))
+		p->lives = cv_startinglives.value;
+
+	if (countplayers && !notexiting)
+		P_DoPlayerExit(p);
 }
 
 void G_ExitLevel(void)
@@ -3613,7 +3733,7 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 
 			if (netgame || multiplayer)
 			{
-				if (!FLS || (players[i].lives < cv_startinglives.value))
+				if (!FLS || (players[i].lives < 1))
 					players[i].lives = cv_startinglives.value;
 				players[i].continues = 0;
 			}
@@ -4415,7 +4535,7 @@ void G_GhostTicker(void)
 			g->mo->color += abs( ( (signed)( (unsigned)leveltime >> 1 ) % 9) - 4);
 			break;
 		case GHC_INVINCIBLE: // Mario invincibility (P_CheckInvincibilityTimer)
-			g->mo->color = (UINT8)(SKINCOLOR_RED + (leveltime % (MAXSKINCOLORS - SKINCOLOR_RED))); // Passes through all saturated colours
+			g->mo->color = (UINT8)(SKINCOLOR_RUBY + (leveltime % (MAXSKINCOLORS - SKINCOLOR_RUBY))); // Passes through all saturated colours
 			break;
 		default:
 			break;

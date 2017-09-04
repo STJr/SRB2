@@ -832,6 +832,34 @@ static mobjtype_t P_DoRandomBoxChances(void)
 	mobjtype_t spawnchance[256];
 	INT32 numchoices = 0, i = 0;
 
+	if (!(netgame || multiplayer))
+	{
+		switch (P_RandomKey(10))
+		{
+			case 0:
+				return MT_RING_ICON;
+			case 1:
+				return MT_SNEAKERS_ICON;
+			case 2:
+				return MT_INVULN_ICON;
+			case 3:
+				return MT_WHIRLWIND_ICON;
+			case 4:
+				return MT_ELEMENTAL_ICON;
+			case 5:
+				return MT_ATTRACT_ICON;
+			case 6:
+				return MT_FORCE_ICON;
+			case 7:
+				return MT_ARMAGEDDON_ICON;
+			case 8:
+				return MT_1UP_ICON;
+			case 9:
+				return MT_EGGMAN_ICON;
+		}
+		return MT_NULL;
+	}
+
 #define QUESTIONBOXCHANCES(type, cvar) \
 for (i = cvar.value; i; --i) spawnchance[numchoices++] = type
 	QUESTIONBOXCHANCES(MT_RING_ICON,       cv_superring);
@@ -2826,8 +2854,8 @@ void A_BossDeath(mobj_t *mo)
 
 	// make sure there is a player alive for victory
 	for (i = 0; i < MAXPLAYERS; i++)
-		if (playeringame[i] && ((players[i].mo && players[i].mo->health > 0)
-			|| ((netgame || multiplayer) && (players[i].lives > 0 || players[i].continues > 0))))
+		if (playeringame[i] && ((players[i].mo && players[i].mo->health)
+			|| ((netgame || multiplayer) && (players[i].lives || players[i].continues))))
 			break;
 
 	if (i == MAXPLAYERS)
@@ -3215,10 +3243,12 @@ void A_ExtraLife(mobj_t *actor)
 
 	// In shooter gametypes, give the player 100 rings instead of an extra life.
 	if (gametype != GT_COOP && gametype != GT_COMPETITION)
+	{
 		P_GivePlayerRings(player, 100);
+		P_PlayLivesJingle(player);
+	}
 	else
-		P_GivePlayerLives(player, 1);
-	P_PlayLivesJingle(player);
+		P_GiveCoopLives(player, 1, true);
 }
 
 // Function: A_GiveShield
@@ -3931,12 +3961,12 @@ void A_SignPlayer(mobj_t *actor)
 		of in the name. If you have a better idea, feel free
 		to let me know. ~toast 2016/07/20
 		*/
-		actor->frame += Color_Opposite[Color_Opposite[skin->prefoppositecolor*2]*2+1];
+		actor->frame += (15 - Color_Opposite[(Color_Opposite[(skin->prefoppositecolor - 1)*2] - 1)*2 + 1]);
 	}
-	else // Set the sign to be an appropriate background color for this player's skincolor.
+	else if (actor->target->player->skincolor) // Set the sign to be an appropriate background color for this player's skincolor.
 	{
-		actor->color = Color_Opposite[actor->target->player->skincolor*2];
-		actor->frame += Color_Opposite[actor->target->player->skincolor*2+1];
+		actor->color = Color_Opposite[(actor->target->player->skincolor - 1)*2];
+		actor->frame += (15 - Color_Opposite[(actor->target->player->skincolor - 1)*2 + 1]);
 	}
 
 	if (skin->sprites[SPR2_SIGN].numframes)
@@ -5254,7 +5284,10 @@ void A_MixUp(mobj_t *actor)
 		}
 
 	if (numplayers <= 1) // Not enough players to mix up.
+	{
+		S_StartSound(actor, sfx_lose);
 		return;
+	}
 	else if (numplayers == 2) // Special case -- simple swap
 	{
 		fixed_t x, y, z;
@@ -5500,7 +5533,10 @@ void A_RecyclePowers(mobj_t *actor)
 #endif
 
 	if (!multiplayer)
+	{
+		S_StartSound(actor, sfx_lose);
 		return;
+	}
 
 	numplayers = 0;
 
@@ -5536,7 +5572,10 @@ void A_RecyclePowers(mobj_t *actor)
 	}
 
 	if (numplayers <= 1)
+	{
+		S_StartSound(actor, sfx_lose);
 		return; //nobody to touch!
+	}
 
 	//shuffle the post scramble list, whee!
 	// hardcoded 0-1 to 1-0 for two players
@@ -9016,8 +9055,8 @@ void A_ForceWin(mobj_t *actor)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (playeringame[i] && ((players[i].mo && players[i].mo->health > 0)
-		    || ((netgame || multiplayer) && (players[i].lives > 0 || players[i].continues > 0))))
+		if (playeringame[i] && ((players[i].mo && players[i].mo->health)
+		    || ((netgame || multiplayer) && (players[i].lives || players[i].continues))))
 			break;
 	}
 

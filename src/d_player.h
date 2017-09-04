@@ -481,6 +481,7 @@ typedef struct player_s
 	angle_t awayviewaiming; // Used for cut-away view
 
 	boolean spectator;
+	boolean outofcoop;
 	UINT8 bot;
 
 	tic_t jointime; // Timer when player joins game to change skin/color
