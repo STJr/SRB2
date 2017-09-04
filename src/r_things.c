@@ -933,7 +933,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		texturecolumn = frac>>FRACBITS;
 
 		if (texturecolumn < 0 || texturecolumn >= SHORT(patch->width))
-			I_Error("R_DrawSpriteRange: bad texturecolumn");
+			I_Error("R_DrawSpriteRange: bad texturecolumn at %d from end", vis->x2 - dc_x);
 		column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[texturecolumn]));
 #else
 		column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[frac>>FRACBITS]));
@@ -1271,7 +1271,7 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	offset2 = FixedMul(spritecachedinfo[lump].width, this_scale);
 	tx += FixedMul(offset2, ang_scale);
-	x2 = ((centerxfrac + FixedMul (tx,xscale)) >>FRACBITS) - 1;
+	x2 = ((centerxfrac + FixedMul (tx,xscale)) >> FRACBITS) - (papersprite ? 2 : 1);
 
 	// off the left side
 	if (x2 < 0)

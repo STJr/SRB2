@@ -1155,7 +1155,7 @@ UINT8 R_GetColorByName(const char *name)
 	for (color = 1; color < MAXSKINCOLORS; color++)
 		if (!stricmp(Color_Names[color], name))
 			return color;
-	return 0;
+	return SKINCOLOR_GREEN;
 }
 
 UINT8 R_GetSuperColorByName(const char *name)
@@ -1166,7 +1166,7 @@ UINT8 R_GetSuperColorByName(const char *name)
 	for (color = 0; color < NUMSUPERCOLORS; color++)
 		if (!stricmp(Color_Names[color + MAXSKINCOLORS], name))
 			return ((color*5) + MAXSKINCOLORS);
-	return 0;
+	return SKINCOLOR_SUPERGOLD1;
 }
 
 // ==========================================================================

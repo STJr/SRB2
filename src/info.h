@@ -40,8 +40,6 @@ void A_Scream();
 void A_BossDeath();
 void A_CustomPower(); // Use this for a custom power
 void A_GiveWeapon(); // Gives the player weapon(s)
-void A_JumpShield(); // Obtained Jump Shield
-void A_RingShield(); // Obtained Ring Shield
 void A_RingBox(); // Obtained Ring Box Tails
 void A_Invincibility(); // Obtained Invincibility Box
 void A_SuperSneakers(); // Obtained Super Sneakers Box
@@ -52,13 +50,7 @@ void A_BubbleRise(); // Bubbles float to surface
 void A_BubbleCheck(); // Don't draw if not underwater
 void A_AwardScore();
 void A_ExtraLife(); // Extra Life
-void A_BombShield(); // Obtained Bomb Shield
-void A_WaterShield(); // Obtained Water Shield
-void A_ForceShield(); // Obtained Force Shield
-void A_PityShield(); // Obtained Pity Shield. We're... sorry.
-void A_FlameShield(); // Obtained Flame Shield
-void A_BubbleShield(); // Obtained Bubble Shield
-void A_ThunderShield(); // Obtained Thunder Shield
+void A_GiveShield(); // Obtained Shield
 void A_GravityBox();
 void A_ScoreRise(); // Rise the score logo
 void A_ParticleSpawn();

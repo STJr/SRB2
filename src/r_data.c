@@ -648,44 +648,33 @@ void R_LoadTextures(void)
 		{
 			patchlump = W_CacheLumpNumPwad((UINT16)w, texstart + j, PU_CACHE);
 
-			// Then, check the lump directly to see if it's a texture SOC,
-			// and if it is, load it using dehacked instead.
-			if (strstr((const char *)patchlump, "TEXTURE"))
-			{
-				CONS_Alert(CONS_WARNING, "%s is a Texture SOC.\n", W_CheckNameForNumPwad((UINT16)w,texstart+j));
-				Z_Unlock(patchlump);
-				DEH_LoadDehackedLumpPwad((UINT16)w, texstart + j);
-			}
-			else
-			{
-				//CONS_Printf("\n\"%s\" is a single patch, dimensions %d x %d",W_CheckNameForNumPwad((UINT16)w,texstart+j),patchlump->width, patchlump->height);
-				texture = textures[i] = Z_Calloc(sizeof(texture_t) + sizeof(texpatch_t), PU_STATIC, NULL);
+			//CONS_Printf("\n\"%s\" is a single patch, dimensions %d x %d",W_CheckNameForNumPwad((UINT16)w,texstart+j),patchlump->width, patchlump->height);
+			texture = textures[i] = Z_Calloc(sizeof(texture_t) + sizeof(texpatch_t), PU_STATIC, NULL);
 
-				// Set texture properties.
-				M_Memcpy(texture->name, W_CheckNameForNumPwad((UINT16)w, texstart + j), sizeof(texture->name));
-				texture->width = SHORT(patchlump->width);
-				texture->height = SHORT(patchlump->height);
-				texture->patchcount = 1;
-				texture->holes = false;
-				texture->flip = 0;
+			// Set texture properties.
+			M_Memcpy(texture->name, W_CheckNameForNumPwad((UINT16)w, texstart + j), sizeof(texture->name));
+			texture->width = SHORT(patchlump->width);
+			texture->height = SHORT(patchlump->height);
+			texture->patchcount = 1;
+			texture->holes = false;
+			texture->flip = 0;
 
-				// Allocate information for the texture's patches.
-				patch = &texture->patches[0];
+			// Allocate information for the texture's patches.
+			patch = &texture->patches[0];
 
-				patch->originx = patch->originy = 0;
-				patch->wad = (UINT16)w;
-				patch->lump = texstart + j;
-				patch->flip = 0;
+			patch->originx = patch->originy = 0;
+			patch->wad = (UINT16)w;
+			patch->lump = texstart + j;
+			patch->flip = 0;
 
-				Z_Unlock(patchlump);
+			Z_Unlock(patchlump);
 
-				k = 1;
-				while (k << 1 <= texture->width)
-					k <<= 1;
+			k = 1;
+			while (k << 1 <= texture->width)
+				k <<= 1;
 
-				texturewidthmask[i] = k - 1;
-				textureheight[i] = texture->height << FRACBITS;
-			}
+			texturewidthmask[i] = k - 1;
+			textureheight[i] = texture->height << FRACBITS;
 		}
 	}
 }

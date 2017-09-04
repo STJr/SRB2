@@ -459,6 +459,23 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 		}
 	}
 
+#ifdef POLYOBJECTS_PLANES
+	if (polyobj)
+	{
+		if (polyobj->angle != 0)
+		{
+			angle_t fineshift = polyobj->angle >> ANGLETOFINESHIFT;
+			xoff -= FixedMul(FINECOSINE(fineshift), polyobj->centerPt.x)+FixedMul(FINESINE(fineshift), polyobj->centerPt.y);
+			yoff -= FixedMul(FINESINE(fineshift), polyobj->centerPt.x)-FixedMul(FINECOSINE(fineshift), polyobj->centerPt.y);
+		}
+		else
+		{
+			xoff -= polyobj->centerPt.x;
+			yoff += polyobj->centerPt.y;
+		}
+	}
+#endif
+
 	// This appears to fix the Nimbus Ruins sky bug.
 	if (picnum == skyflatnum && pfloor)
 	{

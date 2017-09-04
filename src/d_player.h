@@ -181,6 +181,14 @@ typedef enum
 	PA_RIDE
 } panim_t;
 
+//
+// All of the base srb2 shields are either a single constant,
+// or use damagetype-protecting flags applied to a constant,
+// or are the force shield (which does everything weirdly).
+//
+// Base flags by themselves aren't used so modders can make
+// abstract, ability-less shields should they so choose.
+//
 typedef enum
 {
 	SH_NONE = 0,
@@ -189,19 +197,21 @@ typedef enum
 	SH_PROTECTFIRE = 0x400,
 	SH_PROTECTWATER = 0x800,
 	SH_PROTECTELECTRIC = 0x1000,
+	SH_PROTECTSPIKE = 0x2000, // cactus shield one day? thanks, subarashii
+	//SH_PROTECTNUKE = 0x4000, // intentionally no hardcoded defense against nukes
 
 	// Indivisible shields
 	SH_PITY = 1, // the world's most basic shield ever, given to players who suck at Match
 	SH_WHIRLWIND,
 	SH_ARMAGEDDON,
 
-	// normal shields that use flags
-	SH_ATTRACT = SH_PROTECTELECTRIC,
-	SH_ELEMENTAL = SH_PROTECTFIRE|SH_PROTECTWATER,
+	// Normal shields that use flags
+	SH_ATTRACT = SH_PITY|SH_PROTECTELECTRIC,
+	SH_ELEMENTAL = SH_PITY|SH_PROTECTFIRE|SH_PROTECTWATER,
 
 	// Sonic 3 shields
-	SH_FLAMEAURA = SH_PROTECTFIRE,
-	SH_BUBBLEWRAP = SH_PROTECTWATER,
+	SH_FLAMEAURA = SH_PITY|SH_PROTECTFIRE,
+	SH_BUBBLEWRAP = SH_PITY|SH_PROTECTWATER,
 	SH_THUNDERCOIN = SH_WHIRLWIND|SH_PROTECTELECTRIC,
 
 	// The force shield uses the lower 8 bits to count how many extra hits are left.

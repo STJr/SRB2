@@ -93,20 +93,12 @@ void A_Explode(mobj_t *actor);
 void A_BossDeath(mobj_t *actor);
 void A_CustomPower(mobj_t *actor);
 void A_GiveWeapon(mobj_t *actor);
-void A_JumpShield(mobj_t *actor);
-void A_RingShield(mobj_t *actor);
 void A_RingBox(mobj_t *actor);
 void A_Invincibility(mobj_t *actor);
 void A_SuperSneakers(mobj_t *actor);
 void A_AwardScore(mobj_t *actor);
 void A_ExtraLife(mobj_t *actor);
-void A_BombShield(mobj_t *actor);
-void A_WaterShield(mobj_t *actor);
-void A_ForceShield(mobj_t *actor);
-void A_PityShield(mobj_t *actor);
-void A_FlameShield(mobj_t *actor);
-void A_BubbleShield(mobj_t *actor);
-void A_ThunderShield(mobj_t *actor);
+void A_GiveShield(mobj_t *actor);
 void A_GravityBox(mobj_t *actor);
 void A_ScoreRise(mobj_t *actor);
 void A_ParticleSpawn(mobj_t *actor);
@@ -3056,62 +3048,6 @@ void A_GiveWeapon(mobj_t *actor)
 		S_StartSound(player->mo, actor->info->seesound);
 }
 
-// Function: A_JumpShield
-//
-// Description: Awards the player a jump shield.
-//
-// var1 = unused
-// var2 = unused
-//
-void A_JumpShield(mobj_t *actor)
-{
-	player_t *player;
-
-#ifdef HAVE_BLUA
-	if (LUA_CallAction("A_JumpShield", actor))
-		return;
-#endif
-	if (!actor->target || !actor->target->player)
-	{
-		CONS_Debug(DBG_GAMELOGIC, "Powerup has no target.\n");
-		return;
-	}
-
-	player = actor->target->player;
-
-	P_SwitchShield(player, SH_WHIRLWIND);
-
-	S_StartSound(player->mo, actor->info->seesound);
-}
-
-// Function: A_RingShield
-//
-// Description: Awards the player a ring shield.
-//
-// var1 = unused
-// var2 = unused
-//
-void A_RingShield(mobj_t *actor)
-{
-	player_t *player;
-
-#ifdef HAVE_BLUA
-	if (LUA_CallAction("A_RingShield", actor))
-		return;
-#endif
-	if (!actor->target || !actor->target->player)
-	{
-		CONS_Debug(DBG_GAMELOGIC, "Powerup has no target.\n");
-		return;
-	}
-
-	player = actor->target->player;
-
-	P_SwitchShield(player, SH_ATTRACT);
-
-	S_StartSound(player->mo, actor->info->seesound);
-}
-
 // Function: A_RingBox
 //
 // Description: Awards the player 10 rings.
@@ -3285,19 +3221,20 @@ void A_ExtraLife(mobj_t *actor)
 	P_PlayLivesJingle(player);
 }
 
-// Function: A_BombShield
+// Function: A_GiveShield
 //
-// Description: Awards the player a bomb shield.
+// Description: Awards the player a specified shield.
 //
-// var1 = unused
+// var1 = Shield type (make with SH_ constants)
 // var2 = unused
 //
-void A_BombShield(mobj_t *actor)
+void A_GiveShield(mobj_t *actor)
 {
 	player_t *player;
+	UINT16 locvar1 = var1;
 
 #ifdef HAVE_BLUA
-	if (LUA_CallAction("A_BombShield", actor))
+	if (LUA_CallAction("A_GiveShield", actor))
 		return;
 #endif
 	if (!actor->target || !actor->target->player)
@@ -3308,195 +3245,9 @@ void A_BombShield(mobj_t *actor)
 
 	player = actor->target->player;
 
-	// If you already have a bomb shield, use it!
-	if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ARMAGEDDON)
-		P_BlackOw(player);
-
-	// Now we know for certain that we don't have a bomb shield, so add one. :3
-	P_SwitchShield(player, SH_ARMAGEDDON);
-
+	P_SwitchShield(player, locvar1);
 	S_StartSound(player->mo, actor->info->seesound);
 }
-
-// Function: A_WaterShield
-//
-// Description: Awards the player a water shield.
-//
-// var1 = unused
-// var2 = unused
-//
-void A_WaterShield(mobj_t *actor)
-{
-	player_t *player;
-
-#ifdef HAVE_BLUA
-	if (LUA_CallAction("A_WaterShield", actor))
-		return;
-#endif
-	if (!actor->target || !actor->target->player)
-	{
-		CONS_Debug(DBG_GAMELOGIC, "Powerup has no target.\n");
-		return;
-	}
-
-	player = actor->target->player;
-
-	P_SwitchShield(player, SH_ELEMENTAL);
-
-	S_StartSound(player->mo, actor->info->seesound);
-}
-
-// Function: A_ForceShield
-//
-// Description: Awards the player a force shield.
-//
-// var1 = Number of additional hitpoints to give
-// var2 = unused
-//
-void A_ForceShield(mobj_t *actor)
-{
-	player_t *player;
-	INT32 locvar1 = var1;
-
-#ifdef HAVE_BLUA
-	if (LUA_CallAction("A_ForceShield", actor))
-		return;
-#endif
-	if (!actor->target || !actor->target->player)
-	{
-		CONS_Debug(DBG_GAMELOGIC, "Powerup has no target.\n");
-		return;
-	}
-
-	if (locvar1 & ~SH_FORCEHP)
-	{
-		CONS_Debug(DBG_GAMELOGIC, "Invalid number of additional hitpoints.\n");
-		return;
-	}
-
-	player = actor->target->player;
-
-	P_SwitchShield(player, SH_FORCE|locvar1);
-
-	S_StartSound(player->mo, actor->info->seesound);
-}
-
-// Function: A_PityShield
-//
-// Description: Awards the player a pity shield.
-// Because you fail it.
-// Your skill is not enough.
-// See you next time.
-// Bye-bye.
-//
-// var1 = unused
-// var2 = unused
-//
-void A_PityShield(mobj_t *actor)
-{
-	player_t *player;
-
-#ifdef HAVE_BLUA
-	if (LUA_CallAction("A_PityShield", actor))
-		return;
-#endif
-	if (!actor->target || !actor->target->player)
-	{
-		CONS_Debug(DBG_GAMELOGIC, "Powerup has no target.\n");
-		return;
-	}
-
-	player = actor->target->player;
-
-	P_SwitchShield(player, SH_PITY);
-
-	S_StartSound(player->mo, actor->info->seesound);
-}
-
-// Function: A_FlameShield
-//
-// Description: Awards the player a flame shield.
-//
-// var1 = unused
-// var2 = unused
-//
-void A_FlameShield(mobj_t *actor)
-{
-	player_t *player;
-
-#ifdef HAVE_BLUA
-	if (LUA_CallAction("A_FlameShield", actor))
-		return;
-#endif
-	if (!actor->target || !actor->target->player)
-	{
-		CONS_Debug(DBG_GAMELOGIC, "Powerup has no target.\n");
-		return;
-	}
-
-	player = actor->target->player;
-
-	P_SwitchShield(player, SH_FLAMEAURA);
-
-	S_StartSound(player->mo, actor->info->seesound);
-}
-
-// Function: A_BubbleShield
-//
-// Description: Awards the player a bubble shield.
-//
-// var1 = unused
-// var2 = unused
-//
-void A_BubbleShield(mobj_t *actor)
-{
-	player_t *player;
-
-#ifdef HAVE_BLUA
-	if (LUA_CallAction("A_BubbleShield", actor))
-		return;
-#endif
-	if (!actor->target || !actor->target->player)
-	{
-		CONS_Debug(DBG_GAMELOGIC, "Powerup has no target.\n");
-		return;
-	}
-
-	player = actor->target->player;
-
-	P_SwitchShield(player, SH_BUBBLEWRAP);
-
-	S_StartSound(player->mo, actor->info->seesound);
-}
-
-// Function: A_ThunderShield
-//
-// Description: Awards the player a thunder shield.
-//
-// var1 = unused
-// var2 = unused
-//
-void A_ThunderShield(mobj_t *actor)
-{
-	player_t *player;
-
-#ifdef HAVE_BLUA
-	if (LUA_CallAction("A_ThunderShield", actor))
-		return;
-#endif
-	if (!actor->target || !actor->target->player)
-	{
-		CONS_Debug(DBG_GAMELOGIC, "Powerup has no target.\n");
-		return;
-	}
-
-	player = actor->target->player;
-
-	P_SwitchShield(player, SH_THUNDERCOIN);
-
-	S_StartSound(player->mo, actor->info->seesound);
-}
-
 
 // Function: A_GravityBox
 //
@@ -3582,12 +3333,12 @@ void A_ParticleSpawn(mobj_t *actor)
 		spawn->tics = (tic_t)actor->health;
 		spawn->flags2 |= (actor->flags2 & MF2_OBJECTFLIP);
 		spawn->angle += P_RandomKey(36)*ANG10; // irrelevant for default objects but might make sense for some custom ones
-		if (spawn->frame & FF_ANIMATE)
-			spawn->frame += P_RandomKey(spawn->state->var1);
 
 		actor->angle += actor->movedir;
 	}
+
 	actor->angle += (angle_t)actor->movecount;
+	actor->tics = (tic_t)actor->reactiontime;
 }
 
 // Function: A_BunnyHop
