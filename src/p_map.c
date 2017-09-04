@@ -4328,6 +4328,11 @@ fixed_t P_FloorzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height)
 	sector_t *sec = R_PointInSubsector(x, y)->sector;
 	fixed_t floorz = sec->floorheight;
 
+#ifdef ESLOPE
+	if (sec->f_slope)
+		floorz = P_GetZAt(sec->f_slope, x, y);
+#endif
+
 	// Intercept the stupid 'fall through 3dfloors' bug Tails 03-17-2002
 	if (sec->ffloors)
 	{
