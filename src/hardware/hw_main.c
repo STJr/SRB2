@@ -4914,7 +4914,8 @@ static void HWR_CreateDrawNodes(void)
 //  Draw all vissprites
 // --------------------------------------------------------------------------
 #ifdef SORTING
-static void HWR_DrawSprites(void)
+// added the stransform so they can be switched as drawing happenes so MD2s and sprites are sorted correctly with each other
+static void HWR_DrawSprites(FTransform *stransform)
 {
 	if (gr_visspritecount > 0)
 	{
@@ -4933,45 +4934,33 @@ static void HWR_DrawSprites(void)
 				if (spr->mobj && spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)
 				{
 					if (!cv_grmd2.value || md2_playermodels[(skin_t*)spr->mobj->skin-skins].notfound || md2_playermodels[(skin_t*)spr->mobj->skin-skins].scale < 0.0f)
+					{
+						HWD.pfnSetTransform(stransform);
 						HWR_DrawSprite(spr);
-				}
-				else if (!cv_grmd2.value || md2_models[spr->mobj->sprite].notfound || md2_models[spr->mobj->sprite].scale < 0.0f)
-					HWR_DrawSprite(spr);
-		}
-	}
-}
-#endif
-// --------------------------------------------------------------------------
-//  Draw all MD2
-// --------------------------------------------------------------------------
-static void HWR_DrawMD2S(void)
-{
-	if (gr_visspritecount > 0)
-	{
-		gr_vissprite_t *spr;
-
-		// draw all MD2 back to front
-		for (spr = gr_vsprsortedhead.next;
-			spr != &gr_vsprsortedhead;
-			spr = spr->next)
-		{
-#ifdef HWPRECIP
-			if (!spr->precip)
-			{
-#endif
-				if (spr->mobj && spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)
-				{
-					if (md2_playermodels[(skin_t*)spr->mobj->skin-skins].notfound == false && md2_playermodels[(skin_t*)spr->mobj->skin-skins].scale > 0.0f)
+					}
+					else
+					{
+						HWD.pfnSetTransform(&atransform);
 						HWR_DrawMD2(spr);
+					}
 				}
-				else if (md2_models[spr->mobj->sprite].notfound == false && md2_models[spr->mobj->sprite].scale > 0.0f)
-					HWR_DrawMD2(spr);
-#ifdef HWPRECIP
-			}
-#endif
+				else
+				{
+					if (!cv_grmd2.value || md2_models[spr->mobj->sprite].notfound || md2_models[spr->mobj->sprite].scale < 0.0f)
+					{
+						HWD.pfnSetTransform(stransform);
+						HWR_DrawSprite(spr);
+					}
+					else
+					{
+						HWD.pfnSetTransform(&atransform);
+						HWR_DrawMD2(spr);
+					}
+				}
 		}
 	}
 }
+#endif
 
 // --------------------------------------------------------------------------
 // HWR_AddSprites
@@ -5644,12 +5633,9 @@ if (0)
 #ifdef SORTING
 	HWR_SortVisSprites();
 #endif
-	HWR_DrawMD2S();
 
-	// Draw the sprites with trivial transform
-	HWD.pfnSetTransform(&stransform);
 #ifdef SORTING
-	HWR_DrawSprites();
+	HWR_DrawSprites(&stransform);
 #endif
 #ifdef NEWCORONAS
 	//Hurdler: they must be drawn before translucent planes, what about gl fog?
@@ -5874,12 +5860,9 @@ if (0)
 #ifdef SORTING
 	HWR_SortVisSprites();
 #endif
-	HWR_DrawMD2S();
 
-	// Draw the sprites with trivial transform
-	HWD.pfnSetTransform(&stransform);
 #ifdef SORTING
-	HWR_DrawSprites();
+	HWR_DrawSprites(&stransform);
 #endif
 #ifdef NEWCORONAS
 	//Hurdler: they must be drawn before translucent planes, what about gl fog?
