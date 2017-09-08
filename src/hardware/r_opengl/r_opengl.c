@@ -1056,11 +1056,17 @@ EXPORT void HWRAPI(SetBlend) (FBITFIELD PolyFlags)
 			switch (PolyFlags & PF_Blending) {
 				case PF_Translucent & PF_Blending:
 					pglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // alpha = level of transparency
+#ifndef KOS_GL_COMPATIBILITY
+					pglAlphaFunc(GL_NOTEQUAL, 0.0f);
+#endif
 					break;
 				case PF_Masked & PF_Blending:
 					// Hurdler: does that mean lighting is only made by alpha src?
 					// it sounds ok, but not for polygonsmooth
 					pglBlendFunc(GL_SRC_ALPHA, GL_ZERO);                // 0 alpha = holes in texture
+#ifndef KOS_GL_COMPATIBILITY
+					pglAlphaFunc(GL_GREATER, 0.5f);
+#endif
 					break;
 				case PF_Additive & PF_Blending:
 #ifdef ATI_RAGE_PRO_COMPATIBILITY
@@ -1068,18 +1074,30 @@ EXPORT void HWRAPI(SetBlend) (FBITFIELD PolyFlags)
 #else
 					pglBlendFunc(GL_SRC_ALPHA, GL_ONE);                 // src * alpha + dest
 #endif
+#ifndef KOS_GL_COMPATIBILITY
+					pglAlphaFunc(GL_NOTEQUAL, 0.0f);
+#endif
 					break;
 				case PF_Environment & PF_Blending:
 					pglBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+#ifndef KOS_GL_COMPATIBILITY
+					pglAlphaFunc(GL_NOTEQUAL, 0.0f);
+#endif
 					break;
 				case PF_Substractive & PF_Blending:
 					// good for shadow
 					// not realy but what else ?
 					pglBlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
+#ifndef KOS_GL_COMPATIBILITY
+					pglAlphaFunc(GL_NOTEQUAL, 0.0f);
+#endif
 					break;
 				default : // must be 0, otherwise it's an error
 					// No blending
 					pglBlendFunc(GL_ONE, GL_ZERO);   // the same as no blending
+#ifndef KOS_GL_COMPATIBILITY
+					pglAlphaFunc(GL_GREATER, 0.5f);
+#endif
 					break;
 			}
 		}
@@ -1339,6 +1357,7 @@ EXPORT void HWRAPI(SetTexture) (FTextureInfo *pTexInfo)
 						tex[w*j+i].s.green = 0;
 						tex[w*j+i].s.blue  = 0;
 						tex[w*j+i].s.alpha = 0;
+						pTexInfo->flags |= TF_TRANSPARENT; // there is a hole in it
 					}
 					else
 					{
@@ -1409,8 +1428,22 @@ EXPORT void HWRAPI(SetTexture) (FTextureInfo *pTexInfo)
 		tex_downloaded = pTexInfo->downloaded;
 		pglBindTexture(GL_TEXTURE_2D, pTexInfo->downloaded);
 
-		pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, mag_filter);
-		pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, min_filter);
+		// disable texture filtering on any texture that has holes so there's no dumb borders or blending issues
+		if (pTexInfo->flags & TF_TRANSPARENT)
+		{
+#ifdef KOS_GL_COMPATIBILITY
+			pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NONE);
+			pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NONE);
+#else
+			pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+#endif
+		}
+		else
+		{
+			pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, mag_filter);
+			pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, min_filter);
+		}
 
 #ifdef KOS_GL_COMPATIBILITY
 		pglTexImage2D(GL_TEXTURE_2D, 0, GL_ARGB4444, w, h, 0, GL_ARGB4444, GL_UNSIGNED_BYTE, ptex);
@@ -1865,12 +1898,6 @@ static  void DrawMD2Ex(INT32 *gl_cmd_buffer, md2_frame_t *frame, UINT32 duration
 			ambient[1] = 0.75f;
 		if (ambient[2] > 0.75f)
 			ambient[2] = 0.75f;
-
-		if (color[3] < 255)
-		{
-			pglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-			pglDepthMask(GL_FALSE);
-		}
 	}
 
 	pglEnable(GL_CULL_FACE);
@@ -1897,9 +1924,11 @@ static  void DrawMD2Ex(INT32 *gl_cmd_buffer, md2_frame_t *frame, UINT32 duration
 		pglMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, ambient);
 		pglMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, diffuse);
 #endif
+		if (color[3] < 255)
+			SetBlend(PF_Translucent|PF_Modulated|PF_Clip);
+		else
+			SetBlend(PF_Masked|PF_Modulated|PF_Occlude|PF_Clip);
 	}
-
-	DrawPolygon(NULL, NULL, 0, PF_Masked|PF_Modulated|PF_Occlude|PF_Clip);
 
 	pglPushMatrix(); // should be the same as glLoadIdentity
 	//Hurdler: now it seems to work
@@ -1908,14 +1937,6 @@ static  void DrawMD2Ex(INT32 *gl_cmd_buffer, md2_frame_t *frame, UINT32 duration
 		scaley = -scaley;
 	pglRotatef(pos->angley, 0.0f, -1.0f, 0.0f);
 	pglRotatef(pos->anglex, -1.0f, 0.0f, 0.0f);
-	//pglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // alpha = level of transparency
-
-	// Remove depth mask when the model is transparent so it doesn't cut thorugh sprites // SRB2CBTODO: For all stuff too?!
-	if (color && color[3] < 255)
-	{
-		pglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // alpha = level of transparency
-		pglDepthMask(GL_FALSE);
-	}
 
 	val = *gl_cmd_buffer++;
 

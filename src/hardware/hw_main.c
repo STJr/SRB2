@@ -1072,7 +1072,6 @@ static void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, INT32 texnum,
 	/* SoM: split up and light walls according to the
 	 lightlist. This may also include leaving out parts
 	 of the wall that can't be seen */
-	GLTexture_t * glTex;
 
 	float realtop, realbot, top, bot;
 	float pegt, pegb, pegmul;
@@ -1238,11 +1237,9 @@ static void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, INT32 texnum,
 		wallVerts[0].y = wallVerts[1].y = bot;
 #endif
 
-		glTex = HWR_GetTexture(texnum);
+		//glTex = HWR_GetTexture(texnum);
 		if (cutflag & FF_TRANSLUCENT)
 			HWR_AddTransparentWall(wallVerts, Surf, texnum, PF_Translucent, false, lightnum, colormap);
-		else if (glTex->mipmap.flags & TF_TRANSPARENT)
-			HWR_AddTransparentWall(wallVerts, Surf, texnum, PF_Environment, false, lightnum, colormap);
 		else
 			HWR_ProjectWall(wallVerts, Surf, PF_Masked, lightnum, colormap);
 
@@ -1298,11 +1295,9 @@ static void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, INT32 texnum,
     wallVerts[0].y = wallVerts[1].y = bot;
 #endif
 
-	glTex = HWR_GetTexture(texnum);
+	//glTex = HWR_GetTexture(texnum);
 	if (cutflag & FF_TRANSLUCENT)
 		HWR_AddTransparentWall(wallVerts, Surf, texnum, PF_Translucent, false, lightnum, colormap);
-	else if (glTex->mipmap.flags & TF_TRANSPARENT)
-		HWR_AddTransparentWall(wallVerts, Surf, texnum, PF_Environment, false, lightnum, colormap);
 	else
 		HWR_ProjectWall(wallVerts, Surf, PF_Masked, lightnum, colormap);
 }
@@ -2033,15 +2028,14 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 			}
 #endif
 
-			if (grTex->mipmap.flags & TF_TRANSPARENT)
-				blendmode = PF_Translucent;
-
 			if (gr_frontsector->numlights)
 			{
 				if (!(blendmode & PF_Masked))
 					HWR_SplitWall(gr_frontsector, wallVerts, gr_midtexture, &Surf, FF_TRANSLUCENT);
 				else
+				{
 					HWR_SplitWall(gr_frontsector, wallVerts, gr_midtexture, &Surf, FF_CUTSOLIDS);
+				}
 			}
 			else if (!(blendmode & PF_Masked))
 				HWR_AddTransparentWall(wallVerts, &Surf, gr_midtexture, blendmode, false, lightnum, colormap);
@@ -2338,14 +2332,10 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				{
 					FBITFIELD blendmode = PF_Masked;
 
-					if (rover->flags & FF_TRANSLUCENT)
+					if (rover->flags & FF_TRANSLUCENT && rover->alpha < 256)
 					{
 						blendmode = PF_Translucent;
 						Surf.FlatColor.s.alpha = (UINT8)rover->alpha-1 > 255 ? 255 : rover->alpha-1;
-					}
-					else if (grTex->mipmap.flags & TF_TRANSPARENT)
-					{
-						blendmode = PF_Environment;
 					}
 
 					if (gr_frontsector->numlights)
@@ -2461,14 +2451,10 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
 				{
 					FBITFIELD blendmode = PF_Masked;
 
-					if (rover->flags & FF_TRANSLUCENT)
+					if (rover->flags & FF_TRANSLUCENT && rover->alpha < 256)
 					{
 						blendmode = PF_Translucent;
 						Surf.FlatColor.s.alpha = (UINT8)rover->alpha-1 > 255 ? 255 : rover->alpha-1;
-					}
-					else if (grTex->mipmap.flags & TF_TRANSPARENT)
-					{
-						blendmode = PF_Environment;
 					}
 
 					if (gr_backsector->numlights)
@@ -3575,7 +3561,7 @@ static void HWR_Subsector(size_t num)
 					                       alpha, rover->master->frontsector, PF_Translucent|PF_NoTexture,
 										   true, rover->master->frontsector->extra_colormap);
 				}
-				else if (rover->flags & FF_TRANSLUCENT) // SoM: Flags are more efficient
+				else if (rover->flags & FF_TRANSLUCENT && rover->alpha < 256) // SoM: Flags are more efficient
 				{
 					light = R_GetPlaneLight(gr_frontsector, centerHeight, dup_viewz < cullHeight ? true : false);
 #ifndef SORTING
@@ -3638,7 +3624,7 @@ static void HWR_Subsector(size_t num)
 					                       alpha, rover->master->frontsector, PF_Translucent|PF_NoTexture,
 										   true, rover->master->frontsector->extra_colormap);
 				}
-				else if (rover->flags & FF_TRANSLUCENT)
+				else if (rover->flags & FF_TRANSLUCENT && rover->alpha < 256)
 				{
 					light = R_GetPlaneLight(gr_frontsector, centerHeight, dup_viewz < cullHeight ? true : false);
 #ifndef SORTING
