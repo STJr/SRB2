@@ -1313,29 +1313,28 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		{
 			UINT8 spr2 = P_GetModelSprite2(md2, spr->mobj->skin, spr->mobj->sprite2, spr->mobj->player);
 			UINT8 mod = md2->model->spr2frames[spr2*2 + 1] ? md2->model->spr2frames[spr2*2 + 1] : md2->model->header.numFrames;
+			if (mod > ((skin_t *)spr->mobj->skin)->sprites[spr2].numframes)
+				mod = ((skin_t *)spr->mobj->skin)->sprites[spr2].numframes;
 			//FIXME: this is not yet correct
-			frame = md2->model->spr2frames[spr2*2] + ((spr->mobj->frame & FF_FRAMEMASK) % mod);
+			frame = (spr->mobj->frame & FF_FRAMEMASK);
+			if (frame >= mod)
+				frame = 0;
 			buff = md2->model->glCommandBuffer;
-			curr = &md2->model->frames[frame];
+			curr = &md2->model->frames[md2->model->spr2frames[spr2*2] + frame];
 			if (cv_grmd2.value == 1 && tics <= INTERPOLERATION_LIMIT)
 			{
 				if (durs > INTERPOLERATION_LIMIT)
 					durs = INTERPOLERATION_LIMIT;
 
-				if (spr->mobj->player && spr->mobj->player->skidtime && spr->mobj->state-states == S_PLAY_WALK) // temporary hack
-					;
-				else if (spr->mobj->frame & FF_ANIMATE
+				if (spr->mobj->frame & FF_ANIMATE
 					|| (spr->mobj->state->nextstate != S_NULL
 					&& states[spr->mobj->state->nextstate].sprite == spr->mobj->sprite
 					&& (states[spr->mobj->state->nextstate].frame & FF_FRAMEMASK) == spr->mobj->sprite2))
 				{
-					UINT32 nextframe = (spr->mobj->frame & FF_FRAMEMASK) + 1;
-					nextframe %= mod;
-					if (nextframe || !(spr->mobj->state->frame & FF_SPR2ENDSTATE))
-					{
-						nextframe += md2->model->spr2frames[spr2*2];
-						next = &md2->model->frames[nextframe];
-					}
+					if (++frame >= mod)
+						frame = 0;
+					if (frame || !(spr->mobj->state->frame & FF_SPR2ENDSTATE))
+						next = &md2->model->frames[md2->model->spr2frames[spr2*2] + frame];
 				}
 			}
 		}

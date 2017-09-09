@@ -3356,6 +3356,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PLAY_STND",
 	"S_PLAY_WAIT",
 	"S_PLAY_WALK",
+	"S_PLAY_SKID",
 	"S_PLAY_RUN",
 	"S_PLAY_DASH",
 	"S_PLAY_PAIN",

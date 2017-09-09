@@ -405,6 +405,7 @@ char spr2names[NUMPLAYERSPRITES][5] =
 	"STND",
 	"WAIT",
 	"WALK",
+	"SKID",
 	"RUN_",
 	"DASH",
 	"PAIN",
@@ -487,6 +488,7 @@ playersprite_t spr2defaults[NUMPLAYERSPRITES] = {
 	0, // SPR2_STND,
 	0, // SPR2_WAIT,
 	0, // SPR2_WALK,
+	SPR2_WALK, // SPR2_SKID,
 	SPR2_WALK, // SPR2_RUN ,
 	SPR2_FRUN, // SPR2_DASH,
 	0, // SPR2_PAIN,
@@ -593,6 +595,7 @@ state_t states[NUMSTATES] =
 	{SPR_PLAY, SPR2_STND|FF_ANIMATE,    105, {NULL}, 0,  7, S_PLAY_WAIT}, // S_PLAY_STND
 	{SPR_PLAY, SPR2_WAIT|FF_ANIMATE,     -1, {NULL}, 0, 16, S_NULL},      // S_PLAY_WAIT
 	{SPR_PLAY, SPR2_WALK,                 4, {NULL}, 0,  0, S_PLAY_WALK}, // S_PLAY_WALK
+	{SPR_PLAY, SPR2_SKID,                 1, {NULL}, 0,  0, S_PLAY_WALK}, // S_PLAY_SKID
 	{SPR_PLAY, SPR2_RUN ,                 2, {NULL}, 0,  0, S_PLAY_RUN},  // S_PLAY_RUN
 	{SPR_PLAY, SPR2_DASH,                 2, {NULL}, 0,  0, S_PLAY_DASH}, // S_PLAY_DASH
 	{SPR_PLAY, SPR2_PAIN|FF_ANIMATE,    350, {NULL}, 0,  4, S_PLAY_FALL}, // S_PLAY_PAIN

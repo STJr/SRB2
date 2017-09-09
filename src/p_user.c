@@ -4370,6 +4370,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 							P_SetTarget(&player->mo->target, P_SetTarget(&player->mo->tracer, lockon));
 							if (lockon)
 							{
+								P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 								player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, lockon->x, lockon->y);
 								player->homing = 3*TICRATE;
 							}
@@ -6674,8 +6675,8 @@ static void P_SkidStuff(player_t *player)
 			// If your push angle is more than this close to a full 180 degrees, trigger a skid.
 			if (dang > ANGLE_157h)
 			{
-				if (player->panim != PA_WALK)
-					P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
+				if (player->mo->state-states != S_PLAY_SKID)
+					P_SetPlayerMobjState(player->mo, S_PLAY_SKID);
 				player->mo->tics = player->skidtime = (player->mo->movefactor == FRACUNIT) ? TICRATE/2 : (FixedDiv(35<<(FRACBITS-1), FixedSqrt(player->mo->movefactor)))>>FRACBITS;
 				S_StartSound(player->mo, sfx_skid);
 			}
@@ -7418,6 +7419,8 @@ static void P_MovePlayer(player_t *player)
 
 				if (!(player->mo->tracer->flags & MF_BOSS))
 					player->pflags &= ~PF_THOKKED;
+
+				// P_SetPlayerMobjState(player->mo, S_PLAY_SPRING); -- Speed didn't like it, RIP
 			}
 		}
 
