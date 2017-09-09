@@ -4049,14 +4049,14 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 
 	if (onground && player->pflags & PF_STARTDASH)
 	{
-		if (player->mo->state-states != S_PLAY_SPINDASH)
-			P_SetPlayerMobjState(player->mo, S_PLAY_SPINDASH);
+		//if (player->mo->state-states != S_PLAY_SPINDASH)
+			//P_SetPlayerMobjState(player->mo, S_PLAY_SPINDASH);
 		// Spawn spin dash dust
 		if (!(player->charflags & SF_NOSPINDASHDUST) && !(player->mo->eflags & MFE_GOOWATER))
 			P_DoSpinDashDust(player);
 	}
-	else if (onground && player->pflags & PF_SPINNING && !(player->panim == PA_ROLL))
-		P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
+	//else if (onground && player->pflags & PF_SPINNING && !(player->panim == PA_ROLL))
+		//P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 }
 
 //
@@ -4115,6 +4115,8 @@ void P_DoBubbleBounce(player_t *player)
 	P_DoJump(player, false);
 	if (player->charflags & SF_NOJUMPSPIN)
 		P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
+	else
+		P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 	player->pflags |= PF_THOKKED;
 	player->pflags &= ~PF_STARTJUMP;
 	player->secondjump = UINT8_MAX;
@@ -9333,20 +9335,20 @@ void P_PlayerThink(player_t *player)
 #endif
 	if (!player->mo->health)
 		;
-	else if (player->pflags & PF_GLIDING)
+	/*else if (player->pflags & PF_GLIDING)
 	{
 		if (player->panim != PA_ABILITY)
 			P_SetPlayerMobjState(player->mo, S_PLAY_GLIDE);
-	}
+	}*/
 	else if ((player->pflags & PF_JUMPED && !(player->pflags & PF_NOJUMPDAMAGE)
 	&& (player->mo->state-states != S_PLAY_FLOAT && player->mo->state-states != S_PLAY_FLOAT_RUN))
 	&& ((((player->charflags & (SF_NOJUMPSPIN|SF_NOJUMPDAMAGE)) == (SF_NOJUMPSPIN|SF_NOJUMPDAMAGE)) && player->panim != PA_ROLL)
 	|| (!(player->charflags & SF_NOJUMPSPIN) && player->panim != PA_JUMP)))
 	{
-		if (!(player->charflags & SF_NOJUMPSPIN))
+		/*if (!(player->charflags & SF_NOJUMPSPIN))
 			P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 		else if (!(player->pflags & PF_NOJUMPDAMAGE))
-			P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
+			P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);*/
 	}
 
 	if (player->flashcount)
@@ -10011,12 +10013,13 @@ void P_PlayerAfterThink(player_t *player)
 	if (P_IsLocalPlayer(player) && (player->pflags & PF_WPNDOWN) && player->currentweapon != oldweapon)
 		S_StartSound(NULL, sfx_wepchg);
 
-	if (player->pflags & PF_GLIDING)
+	/*if (player->pflags & PF_GLIDING)
 	{
 		if (player->panim != PA_ABILITY)
 			P_SetPlayerMobjState(player->mo, S_PLAY_GLIDE);
 	}
-	else if (player->pflags & PF_SLIDING)
+	else if (player->pflags & PF_SLIDING)*/
+	if (player->pflags & PF_SLIDING)
 		P_SetPlayerMobjState(player->mo, player->mo->info->painstate);
 
 	/* if (player->powers[pw_carry] == CR_NONE && player->mo->tracer && !player->homing)
