@@ -21,7 +21,7 @@
 #endif
 
 #ifdef _WIN32_WCE
-#include "sdl/SRB2CE/cehelp.h"
+#include "sdl12/SRB2CE/cehelp.h"
 #endif
 
 /*!
