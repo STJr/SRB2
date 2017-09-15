@@ -9756,12 +9756,14 @@ void P_PlayerThink(player_t *player)
 				case CR_PLAYER:
 					player->drawangle = (player->mo->tracer->player ? player->mo->tracer->player->drawangle : player->mo->tracer->angle);
 					break;
-				/* -- in case we wanted to have the camera freely movable during zoom tube style stuff
-				case CR_ZOOMTUBE:
+				/* -- in case we wanted to have the camera freely movable during zoom tubes
+				case CR_ZOOMTUBE:*/
 				case CR_ROPEHANG:
-					player->drawangle = R_PointToAngle2(0, 0, player->mo->momx, player->mo->momy);
-					break;
-				*/
+					if (player->mo->momx || player->mo->momy)
+					{
+						player->drawangle = R_PointToAngle2(0, 0, player->mo->momx, player->mo->momy);
+						break;
+					}
 				default:
 					player->drawangle = player->mo->angle;
 					break;
@@ -9831,6 +9833,9 @@ void P_PlayerThink(player_t *player)
 				if (!currentlyonground)
 					acceleration /= 2;
 
+				if (player->mo->movefactor != FRACUNIT) // Friction-scaled acceleration...
+					acceleration = FixedMul(acceleration<<FRACBITS, player->mo->movefactor)>>FRACBITS;
+
 				P_Thrust(player->mo, moveAngle, -acceleration);
 			}
 
@@ -9847,6 +9852,7 @@ void P_PlayerThink(player_t *player)
 
 	if (player->powers[pw_pushing])
 		player->powers[pw_pushing]--;
+
 	player->mo->movefactor = FRACUNIT; // We're not going to do any more with this, so let's change it back for the next frame.
 
 	// Unset statis flags after moving.
