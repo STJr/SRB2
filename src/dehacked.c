@@ -2731,13 +2731,11 @@ static void readmaincfg(MYFILE *f)
 				else
 					value = get_number(word2);
 
-				DEH_WriteUndoline(word, va("%d", titlemap), UNDO_NONE);
 				titlemap = (INT16)value;
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "HIDETITLEPICS"))
 			{
-				DEH_WriteUndoline(word, va("%d", hidetitlepics), UNDO_NONE);
 				hidetitlepics = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
 				titlechanged = true;
 			}
@@ -2827,7 +2825,6 @@ static void readmaincfg(MYFILE *f)
 				else
 					value = get_number(word2);
 
-				DEH_WriteUndoline(word, va("%d", bootmap), UNDO_NONE);
 				bootmap = (INT16)value;
 				//titlechanged = true;
 			}
