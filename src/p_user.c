@@ -3789,7 +3789,7 @@ void P_DoJump(player_t *player, boolean soundandstate)
 		else
 			player->mo->momz = 15*(FRACUNIT/4);
 
-		player->mo->angle = player->mo->angle - ANGLE_180; // Turn around from the wall you were climbing.
+		player->drawangle = player->mo->angle = player->mo->angle - ANGLE_180; // Turn around from the wall you were climbing.
 
 		if (!demoplayback || P_AnalogMove(player))
 		{
@@ -9823,7 +9823,8 @@ void P_PlayerThink(player_t *player)
 		{
 			boolean currentlyonground = P_IsObjectOnGround(player->mo);
 
-			if (((player->pflags & (PF_AUTOBRAKE|PF_APPLYAUTOBRAKE)) == (PF_AUTOBRAKE|PF_APPLYAUTOBRAKE))
+			if (!player->powers[pw_carry]
+			&& ((player->pflags & (PF_AUTOBRAKE|PF_APPLYAUTOBRAKE)) == (PF_AUTOBRAKE|PF_APPLYAUTOBRAKE))
 			&& !(cmd->forwardmove || cmd->sidemove)
 			&& (player->rmomx || player->rmomy))
 			{
@@ -9840,10 +9841,12 @@ void P_PlayerThink(player_t *player)
 			}
 
 			if (!(player->pflags & PF_AUTOBRAKE)
+			|| player->powers[pw_carry]
 			|| player->panim == PA_SPRING
 			|| player->panim == PA_PAIN
 			|| !player->mo->health
-			|| player->pflags & PF_SPINNING)
+			|| player->climbing
+			|| player->pflags & (PF_SPINNING|PF_SLIDING))
 				player->pflags &= ~PF_APPLYAUTOBRAKE;
 			else if (currentlyonground)
 				player->pflags |= PF_APPLYAUTOBRAKE;
