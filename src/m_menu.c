@@ -3827,24 +3827,22 @@ static boolean M_LevelAvailableOnPlatter(INT32 mapnum)
 	switch (levellistmode)
 	{
 		case LLM_CREATESERVER:
-			if (mapheaderinfo[mapnum]->menuflags & LF2_NOVISITNEEDED)
+			if (!(mapheaderinfo[mapnum]->typeoflevel & TOL_COOP))
 				return true;
 
-			if (!mapvisited[mapnum]
-			&& (mapheaderinfo[mapnum]->typeoflevel & TOL_COOP)
-			&& (mapnum+1) > lastcoop)
-				return false;
-
-			return true;
-		case LLM_RECORDATTACK:
-		case LLM_NIGHTSATTACK:
-			if (mapheaderinfo[mapnum]->menuflags & LF2_NOVISITNEEDED)
+			if (mapvisited[mapnum]) // MV_MP
 				return true;
-
-			if (!mapvisited[mapnum])
-				return false;
 
 			// intentional fallthrough
+		case LLM_RECORDATTACK:
+		case LLM_NIGHTSATTACK:
+			if (mapvisited[mapnum] & MV_MAX)
+				return true;
+
+			if (mapheaderinfo[mapnum]->menuflags & LF2_NOVISITNEEDED)
+				return true;
+
+			return false;
 		case LLM_LEVELSELECT:
 		default:
 			return true;
@@ -5598,7 +5596,7 @@ static void M_DrawChecklist(void)
 
 									if (title)
 									{
-										const char *level = ((M_MapLocked(cond[condnum].requirement) || !((mapheaderinfo[cond[condnum].requirement-1]->menuflags & LF2_NOVISITNEEDED) || mapvisited[cond[condnum].requirement-1])) ? M_CreateSecretMenuOption(title) : title);
+										const char *level = ((M_MapLocked(cond[condnum].requirement) || !((mapheaderinfo[cond[condnum].requirement-1]->menuflags & LF2_NOVISITNEEDED) || (mapvisited[cond[condnum].requirement-1] & MV_MAX))) ? M_CreateSecretMenuOption(title) : title);
 
 										switch (cond[condnum].type)
 										{
@@ -5631,7 +5629,7 @@ static void M_DrawChecklist(void)
 
 									if (title)
 									{
-										const char *level = ((M_MapLocked(cond[condnum].extrainfo1) || !((mapheaderinfo[cond[condnum].extrainfo1-1]->menuflags & LF2_NOVISITNEEDED) || mapvisited[cond[condnum].extrainfo1-1])) ? M_CreateSecretMenuOption(title) : title);
+										const char *level = ((M_MapLocked(cond[condnum].extrainfo1) || !((mapheaderinfo[cond[condnum].extrainfo1-1]->menuflags & LF2_NOVISITNEEDED) || (mapvisited[cond[condnum].extrainfo1-1] & MV_MAX))) ? M_CreateSecretMenuOption(title) : title);
 
 										switch (cond[condnum].type)
 										{
@@ -5700,7 +5698,7 @@ static void M_DrawChecklist(void)
 
 									if (title)
 									{
-										const char *level = ((M_MapLocked(cond[condnum].extrainfo1) || !((mapheaderinfo[cond[condnum].extrainfo1-1]->menuflags & LF2_NOVISITNEEDED) || mapvisited[cond[condnum].extrainfo1-1])) ? M_CreateSecretMenuOption(title) : title);
+										const char *level = ((M_MapLocked(cond[condnum].extrainfo1) || !((mapheaderinfo[cond[condnum].extrainfo1-1]->menuflags & LF2_NOVISITNEEDED) || (mapvisited[cond[condnum].extrainfo1-1] & MV_MAX))) ? M_CreateSecretMenuOption(title) : title);
 
 										switch (cond[condnum].type)
 										{
@@ -6786,7 +6784,7 @@ static void M_Statistics(INT32 choice)
 		if (!(mapheaderinfo[i]->typeoflevel & TOL_SP) || (mapheaderinfo[i]->menuflags & LF2_HIDEINSTATS))
 			continue;
 
-		if (!mapvisited[i])
+		if (!(mapvisited[i] & MV_MAX))
 			continue;
 
 		statsMapList[j++] = i;

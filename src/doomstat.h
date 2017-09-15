@@ -44,7 +44,6 @@ extern INT32 cursaveslot;
 //extern INT16 lastmapsaved;
 extern INT16 lastmaploaded;
 extern boolean gamecomplete;
-extern INT16 lastcoop;
 
 #define PRECIP_NONE  0
 #define PRECIP_STORM 1
@@ -375,6 +374,7 @@ extern recorddata_t *mainrecords[NUMMAPS];
 #define MV_ULTIMATE     8
 #define MV_PERFECT     16
 #define MV_MAX         31 // used in gamedata check
+#define MV_MP         128
 extern UINT8 mapvisited[NUMMAPS];
 
 // Temporary holding place for nights data for the current map
