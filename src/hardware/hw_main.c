@@ -1237,7 +1237,6 @@ static void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, INT32 texnum,
 		wallVerts[0].y = wallVerts[1].y = bot;
 #endif
 
-		//glTex = HWR_GetTexture(texnum);
 		if (cutflag & FF_TRANSLUCENT)
 			HWR_AddTransparentWall(wallVerts, Surf, texnum, PF_Translucent, false, lightnum, colormap);
 		else
@@ -1295,7 +1294,6 @@ static void HWR_SplitWall(sector_t *sector, wallVert3D *wallVerts, INT32 texnum,
     wallVerts[0].y = wallVerts[1].y = bot;
 #endif
 
-	//glTex = HWR_GetTexture(texnum);
 	if (cutflag & FF_TRANSLUCENT)
 		HWR_AddTransparentWall(wallVerts, Surf, texnum, PF_Translucent, false, lightnum, colormap);
 	else
