@@ -236,6 +236,7 @@ static void M_CustomLevelSelect(INT32 choice);
 static void M_CustomWarp(INT32 choice);
 FUNCNORETURN static ATTRNORETURN void M_UltimateCheat(INT32 choice);
 static void M_LoadGameLevelSelect(INT32 choice);
+static void M_AllowSuper(INT32 choice);
 static void M_GetAllEmeralds(INT32 choice);
 static void M_DestroyRobots(INT32 choice);
 static void M_LevelSelectWarp(INT32 choice);
@@ -677,17 +678,20 @@ static menuitem_t MISC_HelpMenu[] =
 // Pause Menu Pandora's Box Options
 static menuitem_t SR_PandorasBox[] =
 {
-	{IT_STRING | IT_CVAR, NULL, "Rings",              &cv_dummyrings,      20},
-	{IT_STRING | IT_CVAR, NULL, "Lives",              &cv_dummylives,      30},
-	{IT_STRING | IT_CVAR, NULL, "Continues",          &cv_dummycontinues,  40},
+	{IT_STRING | IT_CALL, NULL, "Mid-game add-ons...", M_Addons,             0},
 
-	{IT_STRING | IT_CVAR, NULL, "Gravity",            &cv_gravity,         60},
-	{IT_STRING | IT_CVAR, NULL, "Throw Rings",        &cv_ringslinger,     70},
+	{IT_STRING | IT_CVAR, NULL, "Rings",               &cv_dummyrings,      20},
+	{IT_STRING | IT_CVAR, NULL, "Lives",               &cv_dummylives,      30},
+	{IT_STRING | IT_CVAR, NULL, "Continues",           &cv_dummycontinues,  40},
 
-	{IT_STRING | IT_CALL, NULL, "Get All Emeralds",   M_GetAllEmeralds,    90},
-	{IT_STRING | IT_CALL, NULL, "Destroy All Robots", M_DestroyRobots,    100},
+	{IT_STRING | IT_CVAR, NULL, "Gravity",             &cv_gravity,         60},
+	{IT_STRING | IT_CVAR, NULL, "Throw Rings",         &cv_ringslinger,     70},
 
-	{IT_STRING | IT_CALL, NULL, "Ultimate Cheat",     M_UltimateCheat,    130},
+	{IT_STRING | IT_CALL, NULL, "Enable Super form",   M_AllowSuper,        90},
+	{IT_STRING | IT_CALL, NULL, "Get All Emeralds",    M_GetAllEmeralds,   100},
+	{IT_STRING | IT_CALL, NULL, "Destroy All Robots",  M_DestroyRobots,    110},
+
+	{IT_STRING | IT_CALL, NULL, "Ultimate Cheat",      M_UltimateCheat,    130},
 };
 
 // Sky Room Custom Unlocks
@@ -1536,7 +1540,7 @@ menu_t SR_PandoraDef =
 	&SPauseDef,
 	SR_PandorasBox,
 	M_DrawGenericMenu,
-	60, 40,
+	60, 30,
 	0,
 	M_ExitPandorasBox
 };
@@ -3822,6 +3826,16 @@ static boolean M_LevelAvailableOnPlatter(INT32 mapnum)
 
 	switch (levellistmode)
 	{
+		case LLM_CREATESERVER:
+			if (mapheaderinfo[mapnum]->menuflags & LF2_NOVISITNEEDED)
+				return true;
+
+			if (!mapvisited[mapnum]
+			&& (mapheaderinfo[mapnum]->typeoflevel & TOL_COOP)
+			&& (mapnum+1) > lastcoop)
+				return false;
+
+			return true;
 		case LLM_RECORDATTACK:
 		case LLM_NIGHTSATTACK:
 			if (mapheaderinfo[mapnum]->menuflags & LF2_NOVISITNEEDED)
@@ -3831,7 +3845,6 @@ static boolean M_LevelAvailableOnPlatter(INT32 mapnum)
 				return false;
 
 			// intentional fallthrough
-		case LLM_CREATESERVER:
 		case LLM_LEVELSELECT:
 		default:
 			return true;
@@ -5211,6 +5224,12 @@ static void M_PandorasBox(INT32 choice)
 	CV_StealthSetValue(&cv_dummyrings, max(players[consoleplayer].rings, 0));
 	CV_StealthSetValue(&cv_dummylives, players[consoleplayer].lives);
 	CV_StealthSetValue(&cv_dummycontinues, players[consoleplayer].continues);
+	SR_PandorasBox[6].status = ((players[consoleplayer].charflags & SF_SUPER)
+#ifndef DEVELOP
+	|| cv_skin.value == 1
+#endif
+	) ? (IT_GRAYEDOUT) : (IT_STRING | IT_CALL);
+	SR_PandorasBox[7].status = (emeralds == ((EMERALD7)*2)-1) ? (IT_GRAYEDOUT) : (IT_STRING | IT_CALL);
 	M_SetupNextMenu(&SR_PandoraDef);
 }
 
@@ -5347,12 +5366,24 @@ static void M_UltimateCheat(INT32 choice)
 	I_Quit();
 }
 
+static void M_AllowSuper(INT32 choice)
+{
+	(void)choice;
+
+	players[consoleplayer].charflags |= SF_SUPER;
+	M_StartMessage(M_GetText("You are now capable of turning super.\nRemember to get all the emeralds!\n"),NULL,MM_NOTHING);
+	SR_PandorasBox[6].status = IT_GRAYEDOUT;
+
+	G_SetGameModified(multiplayer);
+}
+
 static void M_GetAllEmeralds(INT32 choice)
 {
 	(void)choice;
 
 	emeralds = ((EMERALD7)*2)-1;
 	M_StartMessage(M_GetText("You now have all 7 emeralds.\nUse them wisely.\nWith great power comes great ring drain.\n"),NULL,MM_NOTHING);
+	SR_PandorasBox[7].status = IT_GRAYEDOUT;
 
 	G_SetGameModified(multiplayer);
 }

@@ -44,6 +44,7 @@ extern INT32 cursaveslot;
 //extern INT16 lastmapsaved;
 extern INT16 lastmaploaded;
 extern boolean gamecomplete;
+extern INT16 lastcoop;
 
 #define PRECIP_NONE  0
 #define PRECIP_STORM 1

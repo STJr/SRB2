@@ -3014,6 +3014,9 @@ boolean P_SetupLevel(boolean skipprecip)
 	if (!(netgame || multiplayer) && (!modifiedgame || savemoddata))
 		mapvisited[gamemap-1] |= MV_VISITED;
 
+	if ((maptol & TOL_COOP) && lastcoop < gamemap)
+		lastcoop = gamemap;
+
 	levelloading = false;
 
 	P_RunCachedActions();

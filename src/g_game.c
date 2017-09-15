@@ -80,6 +80,7 @@ INT32 cursaveslot = -1; // Auto-save 1p savegame slot
 //INT16 lastmapsaved = 0; // Last map we auto-saved at
 INT16 lastmaploaded = 0; // Last map the game loaded
 boolean gamecomplete = false;
+INT16 lastcoop = 0;
 
 UINT16 mainwads = 0;
 boolean modifiedgame; // Set if homebrew PWAD stuff has been added.
