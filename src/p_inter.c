@@ -1871,7 +1871,7 @@ void P_CheckTimeLimit(void)
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
 				if (!playeringame[i] || players[i].spectator
-				 || (players[i].pflags & PF_TAGGED) || (players[i].pflags & PF_TAGIT))
+				 || (players[i].pflags & PF_GAMETYPEOVER) || (players[i].pflags & PF_TAGIT))
 					continue;
 
 				CONS_Printf(M_GetText("%s received double points for surviving the round.\n"), player_names[i]);
@@ -2018,7 +2018,7 @@ void P_CheckSurvivors(void)
 				spectators++;
 			else if (players[i].pflags & PF_TAGIT)
 				taggers++;
-			else if (!(players[i].pflags & PF_TAGGED))
+			else if (!(players[i].pflags & PF_GAMETYPEOVER))
 			{
 				survivorarray[survivors] = i;
 				survivors++;
@@ -2325,7 +2325,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 				}
 				else
 				{
-					if (!(target->player->pflags & PF_TAGGED))
+					if (!(target->player->pflags & PF_GAMETYPEOVER))
 					{
 						//otherwise, increment the tagger's score.
 						//in hide and seek, suiciding players are counted as found.
@@ -2337,7 +2337,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 								P_AddPlayerScore(&players[w], 100);
 						}
 
-						target->player->pflags |= PF_TAGGED;
+						target->player->pflags |= PF_GAMETYPEOVER;
 						CONS_Printf(M_GetText("%s was found!\n"), player_names[target->player-players]);
 						P_CheckSurvivors();
 					}
@@ -2793,7 +2793,7 @@ static inline boolean P_TagDamage(mobj_t *target, mobj_t *inflictor, mobj_t *sou
 		}
 		else
 		{
-			player->pflags |= PF_TAGGED; //in hide and seek, the player is tagged and stays stationary.
+			player->pflags |= PF_GAMETYPEOVER; //in hide and seek, the player is tagged and stays stationary.
 			CONS_Printf(M_GetText("%s was found!\n"), player_names[player-players]); // Tell everyone who is it!
 		}
 
@@ -3208,7 +3208,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			if (player->pflags & PF_GODMODE)
 				return false;
 
-			if (!(target->player->powers[pw_carry] == CR_NIGHTSMODE || target->player->pflags & PF_NIGHTSFALL) && (maptol & TOL_NIGHTS))
+			if ((maptol & TOL_NIGHTS) && target->player->powers[pw_carry] != CR_NIGHTSMODE && target->player->powers[pw_carry] != CR_NIGHTSFALL)
 				return false;
 
 			switch (damagetype)
@@ -3409,7 +3409,7 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 	if (player->rings <= 0)
 		num_rings = 0;
 
-	if (num_rings > 32 && !(player->pflags & PF_NIGHTSFALL))
+	if (num_rings > 32 && player->powers[pw_carry] != CR_NIGHTSFALL)
 		num_rings = 32;
 
 	if (player->powers[pw_emeralds])
@@ -3441,7 +3441,7 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 
 		// Make rings spill out around the player in 16 directions like SA, but spill like Sonic 2.
 		// Technically a non-SA way of spilling rings. They just so happen to be a little similar.
-		if (player->pflags & PF_NIGHTSFALL)
+		if (player->powers[pw_carry] == CR_NIGHTSFALL)
 		{
 			ns = FixedMul(((i*FRACUNIT)/16)+2*FRACUNIT, mo->scale);
 			mo->momx = FixedMul(FINECOSINE(fa),ns);
@@ -3481,12 +3481,12 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 		}
 		if (player->mo->eflags & MFE_VERTICALFLIP)
 			mo->momz *= -1;
+
+		if (P_IsObjectOnGround(player->mo))
+			player->powers[pw_carry] = CR_NONE;
 	}
 
 	player->losstime += 10*TICRATE;
-
-	if (P_IsObjectOnGround(player->mo))
-		player->pflags &= ~PF_NIGHTSFALL;
 
 	return;
 }

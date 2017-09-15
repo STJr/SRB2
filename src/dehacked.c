@@ -6422,8 +6422,12 @@ static const char *const MAPTHINGFLAG_LIST[4] = {
 #endif
 
 static const char *const PLAYERFLAG_LIST[] = {
-	// Flip camera angle with gravity flip prefrence.
-	"FLIPCAM",
+
+	// Cvars
+	"FLIPCAM", // Flip camera angle with gravity flip prefrence.
+	"ANALOGMODE", // Analog mode?
+	"DIRECTIONCHAR", // Directional character sprites?
+	"AUTOBRAKE", // Autobrake?
 
 	// Cheats
 	"GODMODE",
@@ -6441,41 +6445,36 @@ static const char *const PLAYERFLAG_LIST[] = {
 	"JUMPSTASIS", // and that includes jumping.
 	// (we don't include FULLSTASIS here I guess because it's just those two together...?)
 
-	// Did you get a time-over?
-	"TIMEOVER",
+	// Applying autobrake?
+	"APPLYAUTOBRAKE",
 
 	// Character action status
 	"STARTJUMP",
 	"JUMPED",
+	"NOJUMPDAMAGE",
+
 	"SPINNING",
 	"STARTDASH",
-	"THOKKED",
 
-	// Are you gliding?
+	"THOKKED",
+	"SHIELDABILITY",
 	"GLIDING",
+	"BOUNCING",
 
 	// Sliding (usually in water) like Labyrinth/Oil Ocean
 	"SLIDING",
 
-	// Bouncing
-	"BOUNCING",
-
-	/*** NIGHTS STUFF ***/
+	// NiGHTS stuff
 	"TRANSFERTOCLOSEST",
-	"NIGHTSFALL",
 	"DRILLING",
-	"SKIDDOWN",
 
-	/*** TAG STUFF ***/
-	"TAGGED", // Player has been tagged and awaits the next round in hide and seek.
+	// Gametype-specific stuff
+	"GAMETYPEOVER", // Race time over, or H&S out-of-game
 	"TAGIT", // The player is it! For Tag Mode
 
 	/*** misc ***/
 	"FORCESTRAFE", // Translate turn inputs into strafe inputs
-	"ANALOGMODE", // Analog mode?
 	"CANCARRY", // Can carry?
-	"SHIELDABILITY", // Thokked with shield ability
-	"NOJUMPDAMAGE", // No jump damage
 
 	NULL // stop loop here.
 };
@@ -6892,6 +6891,7 @@ struct {
 	{"CR_GENERIC",CR_GENERIC},
 	{"CR_PLAYER",CR_PLAYER},
 	{"CR_NIGHTSMODE",CR_NIGHTSMODE},
+	{"CR_NIGHTSFALL",CR_NIGHTSFALL},
 	{"CR_BRAKGOOP",CR_BRAKGOOP},
 	{"CR_ZOOMTUBE",CR_ZOOMTUBE},
 	{"CR_ROPEHANG",CR_ROPEHANG},

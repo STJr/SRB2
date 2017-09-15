@@ -475,7 +475,7 @@ void Y_IntermissionDrawer(void)
 						V_DrawRightAlignedString(x+152, y, 0, va("%i", data.match.scores[i]));
 					else if (intertype == int_race)
 					{
-						if (players[data.match.num[i]].pflags & PF_TIMEOVER)
+						if (players[data.match.num[i]].pflags & PF_GAMETYPEOVER)
 							snprintf(strtime, sizeof strtime, "DNF");
 						else
 							snprintf(strtime, sizeof strtime,
@@ -493,7 +493,7 @@ void Y_IntermissionDrawer(void)
 						V_DrawRightAlignedString(x+152+BASEVIDWIDTH/2, y, 0, va("%u", data.match.scores[i]));
 					else if (intertype == int_race)
 					{
-						if (players[data.match.num[i]].pflags & PF_TIMEOVER)
+						if (players[data.match.num[i]].pflags & PF_GAMETYPEOVER)
 							snprintf(strtime, sizeof strtime, "DNF");
 						else
 							snprintf(strtime, sizeof strtime, "%i:%02i.%02i", G_TicsToMinutes(data.match.scores[i], true),
@@ -643,7 +643,7 @@ void Y_IntermissionDrawer(void)
 				// already constrained to 8 characters
 				V_DrawString(x+36, y, V_ALLOWLOWERCASE, data.competition.name[i]);
 
-				if (players[data.competition.num[i]].pflags & PF_TIMEOVER)
+				if (players[data.competition.num[i]].pflags & PF_GAMETYPEOVER)
 					snprintf(sstrtime, sizeof sstrtime, "Time Over");
 				else if (players[data.competition.num[i]].lives <= 0)
 					snprintf(sstrtime, sizeof sstrtime, "Game Over");

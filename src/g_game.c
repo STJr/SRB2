@@ -286,6 +286,10 @@ static void UserAnalog_OnChange(void);
 static void UserAnalog2_OnChange(void);
 static void Analog_OnChange(void);
 static void Analog2_OnChange(void);
+static void DirectionChar_OnChange(void);
+static void DirectionChar2_OnChange(void);
+static void AutoBrake_OnChange(void);
+static void AutoBrake2_OnChange(void);
 void SendWeaponPref(void);
 void SendWeaponPref2(void);
 
@@ -367,6 +371,14 @@ consvar_t cv_useranalog2 = {"useranalog2", "On", CV_SAVE|CV_CALL, CV_OnOff, User
 consvar_t cv_useranalog = {"useranalog", "Off", CV_SAVE|CV_CALL, CV_OnOff, UserAnalog_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_useranalog2 = {"useranalog2", "Off", CV_SAVE|CV_CALL, CV_OnOff, UserAnalog2_OnChange, 0, NULL, NULL, 0, 0, NULL};
 #endif
+
+static CV_PossibleValue_t directionchar_cons_t[] = {{0, "Camera"}, {1, "Movement"}, {0, NULL}};
+
+// deez New User eXperiences
+consvar_t cv_directionchar = {"directionchar", "Movement", CV_SAVE|CV_CALL, directionchar_cons_t, DirectionChar_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_directionchar2 = {"directionchar2", "Movement", CV_SAVE|CV_CALL, directionchar_cons_t, DirectionChar2_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_autobrake = {"autobrake", "On", CV_SAVE|CV_CALL, CV_OnOff, AutoBrake_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_autobrake2 = {"autobrake2", "On", CV_SAVE|CV_CALL, CV_OnOff, AutoBrake2_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 typedef enum
 {
@@ -1615,6 +1627,46 @@ static void Analog2_OnChange(void)
 	SendWeaponPref2();
 }
 
+static void DirectionChar_OnChange(void)
+{
+	if (cv_directionchar.value)
+		players[consoleplayer].pflags |= PF_DIRECTIONCHAR;
+	else
+		players[consoleplayer].pflags &= ~PF_DIRECTIONCHAR;
+
+	SendWeaponPref();
+}
+
+static void DirectionChar2_OnChange(void)
+{
+	if (cv_directionchar2.value)
+		players[secondarydisplayplayer].pflags |= PF_DIRECTIONCHAR;
+	else
+		players[secondarydisplayplayer].pflags &= ~PF_DIRECTIONCHAR;
+
+	SendWeaponPref2();
+}
+
+static void AutoBrake_OnChange(void)
+{
+	if (cv_autobrake.value)
+		players[consoleplayer].pflags |= PF_AUTOBRAKE;
+	else
+		players[consoleplayer].pflags &= ~PF_AUTOBRAKE;
+
+	SendWeaponPref();
+}
+
+static void AutoBrake2_OnChange(void)
+{
+	if (cv_autobrake2.value)
+		players[secondarydisplayplayer].pflags |= PF_AUTOBRAKE;
+	else
+		players[secondarydisplayplayer].pflags &= ~PF_AUTOBRAKE;
+
+	SendWeaponPref2();
+}
+
 //
 // G_DoLoadLevel
 //
@@ -2103,7 +2155,7 @@ void G_PlayerReborn(INT32 player)
 	jointime = players[player].jointime;
 	spectator = players[player].spectator;
 	outofcoop = players[player].outofcoop;
-	pflags = (players[player].pflags & (PF_TIMEOVER|PF_FLIPCAM|PF_TAGIT|PF_TAGGED|PF_ANALOGMODE));
+	pflags = (players[player].pflags & (PF_FLIPCAM|PF_ANALOGMODE|PF_DIRECTIONCHAR|PF_AUTOBRAKE|PF_TAGIT|PF_GAMETYPEOVER));
 
 	// As long as we're not in multiplayer, carry over cheatcodes from map to map
 	if (!(netgame || multiplayer))
@@ -3752,7 +3804,7 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 				players[i].score = 0;
 
 			// The latter two should clear by themselves, but just in case
-			players[i].pflags &= ~(PF_TAGIT|PF_TAGGED|PF_FULLSTASIS);
+			players[i].pflags &= ~(PF_TAGIT|PF_GAMETYPEOVER|PF_FULLSTASIS);
 
 			// Clear cheatcodes too, just in case.
 			players[i].pflags &= ~(PF_GODMODE|PF_NOCLIP|PF_INVIS);

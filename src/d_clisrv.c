@@ -3097,11 +3097,15 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 			secondarydisplayplayer = newplayernum;
 			DEBFILE("spawning me\n");
 			// Apply player flags as soon as possible!
-			players[newplayernum].pflags &= ~(PF_FLIPCAM|PF_ANALOGMODE);
+			players[newplayernum].pflags &= ~(PF_FLIPCAM|PF_ANALOGMODE|PF_DIRECTIONCHAR|PF_AUTOBRAKE);
 			if (cv_flipcam.value)
 				players[newplayernum].pflags |= PF_FLIPCAM;
 			if (cv_analog.value)
 				players[newplayernum].pflags |= PF_ANALOGMODE;
+			if (cv_directionchar.value)
+				players[newplayernum].pflags |= PF_DIRECTIONCHAR;
+			if (cv_autobrake.value)
+				players[newplayernum].pflags |= PF_AUTOBRAKE;
 		}
 		else
 		{
@@ -3110,11 +3114,15 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 			if (botingame)
 				players[newplayernum].bot = 1;
 			// Same goes for player 2 when relevant
-			players[newplayernum].pflags &= ~(PF_FLIPCAM|PF_ANALOGMODE);
+			players[newplayernum].pflags &= ~(PF_FLIPCAM|PF_ANALOGMODE|PF_DIRECTIONCHAR|PF_AUTOBRAKE);
 			if (cv_flipcam2.value)
 				players[newplayernum].pflags |= PF_FLIPCAM;
 			if (cv_analog2.value)
 				players[newplayernum].pflags |= PF_ANALOGMODE;
+			if (cv_directionchar2.value)
+				players[newplayernum].pflags |= PF_DIRECTIONCHAR;
+			if (cv_autobrake2.value)
+				players[newplayernum].pflags |= PF_AUTOBRAKE;
 		}
 		D_SendPlayerConfig();
 		addedtogame = true;
