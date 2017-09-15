@@ -9825,7 +9825,7 @@ void P_PlayerThink(player_t *player)
 			&& !(cmd->forwardmove || cmd->sidemove)
 			&& (player->rmomx || player->rmomy))
 			{
-				fixed_t acceleration = player->accelstart + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * player->acceleration * player->thrustfactor * 20;
+				fixed_t acceleration = (player->accelstart + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * player->acceleration) * player->thrustfactor * 20;
 				angle_t moveAngle = R_PointToAngle2(0, 0, player->rmomx, player->rmomy);
 
 				if (!currentlyonground)
