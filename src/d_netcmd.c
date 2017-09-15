@@ -3895,7 +3895,28 @@ static void Command_ExitLevel_f(void)
 	else if (gamestate != GS_LEVEL || demoplayback)
 		CONS_Printf(M_GetText("You must be in a level to use this.\n"));
 	else
+	{
+		if ((netgame || multiplayer)
+		&& ((mapheaderinfo[gamemap-1]->nextlevel <= 0)
+		|| (mapheaderinfo[gamemap-1]->nextlevel > NUMMAPS)
+		|| !(mapvisited[mapheaderinfo[gamemap-1]->nextlevel-1])))
+		{
+			UINT8 i;
+			for (i = 0; i < MAXPLAYERS; i++)
+			{
+				if (playeringame[i] && players[i].exiting)
+					break;
+			}
+
+			if (i == MAXPLAYERS)
+			{
+				CONS_Printf(M_GetText("Someone must finish the level for you to use this.\n"));
+				return;
+			}
+		}
+
 		SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+	}
 }
 
 static void Got_ExitLevelcmd(UINT8 **cp, INT32 playernum)

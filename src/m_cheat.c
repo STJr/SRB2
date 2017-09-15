@@ -131,6 +131,10 @@ static cheatseq_t cheat_ultimate_joy = {
 	  SCRAMBLE(KEY_ENTER), 0xff }
 };
 
+#ifndef DEVELOP
+Probably time to change these cheats?
+#endif
+
 static cheatseq_t cheat_warp = {
 	0, cheatf_warp,
 	{ SCRAMBLE('r'), SCRAMBLE('e'), SCRAMBLE('d'), SCRAMBLE('x'), SCRAMBLE('v'), SCRAMBLE('i'), 0xff }
