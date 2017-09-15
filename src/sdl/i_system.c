@@ -2252,9 +2252,9 @@ INT32 I_StartupSystem(void)
 	I_OutputMsg("Linked with SDL version: %d.%d.%d\n",
 	 SDLlinked.major, SDLlinked.minor, SDLlinked.patch);
 #if 0 //#ifdef GP2X //start up everything
-	if (SDL_Init(SDL_INIT_NOPARACHUTE|SDL_INIT_EVERYTHING) < 0)
+	if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
 #else
-	if (SDL_Init(SDL_INIT_NOPARACHUTE) < 0)
+	if (SDL_Init(0) < 0)
 #endif
 		I_Error("SRB2: SDL System Error: %s", SDL_GetError()); //Alam: Oh no....
 #ifndef NOMUMBLE
