@@ -88,8 +88,8 @@ void __set_fpscr(long); // in libgcc / kernel's startup.s?
 #pragma warning(default : 4214 4244)
 #endif
 
-#if SDL_VERSION_ATLEAST(1,2,7) && !defined (DC)
-#include "SDL_cpuinfo.h" // 1.2.7 or greater
+#ifndef DC
+#include "SDL_cpuinfo.h"
 #define HAVE_SDLCPUINFO
 #endif
 

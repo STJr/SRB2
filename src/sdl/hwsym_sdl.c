@@ -41,10 +41,8 @@
 #define NOLOADSO
 #endif
 
-#if SDL_VERSION_ATLEAST(1,2,6) && !defined (NOLOADSO)
-#include "SDL_loadso.h" // 1.2.6+
-#elif !defined (NOLOADSO)
-#define NOLOADSO
+#ifndef NOLOADSO
+#include "SDL_loadso.h"
 #endif
 
 #define  _CREATE_DLL_  // necessary for Unix AND Windows
