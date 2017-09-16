@@ -37,10 +37,6 @@
 #pragma warning(default : 4214 4244)
 #endif
 
-#if defined (_XBOX) || defined (_arch_dreamcast) || defined(GP2X)
-#define NOLOADSO
-#endif
-
 #ifndef NOLOADSO
 #include "SDL_loadso.h"
 #endif
