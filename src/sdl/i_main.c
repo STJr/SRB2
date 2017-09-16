@@ -143,11 +143,11 @@ int main(int argc, char **argv)
 			&& !InitBugTrap()
 #endif
 			)
+#endif
 		{
 			LoadLibraryA("exchndl.dll");
 		}
 	}
-#endif
 	prevExceptionFilter = SetUnhandledExceptionFilter(RecordExceptionInfo);
 	MakeCodeWritable();
 #endif
