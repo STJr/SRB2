@@ -2244,7 +2244,7 @@ static void P_LevelInitStuff(void)
 		players[i].xtralife = players[i].deadtimer = players[i].numboxes = players[i].totalring = players[i].laps = 0;
 		players[i].rings = 0;
 		players[i].aiming = 0;
-		players[i].pflags &= ~PF_TIMEOVER;
+		players[i].pflags &= ~PF_GAMETYPEOVER;
 
 		players[i].losstime = 0;
 		players[i].timeshit = 0;

@@ -271,6 +271,12 @@ void B_RespawnBot(INT32 playernum)
 	player->powers[pw_spacetime] = sonic->player->powers[pw_spacetime];
 	player->powers[pw_gravityboots] = sonic->player->powers[pw_gravityboots];
 	player->powers[pw_nocontrol] = sonic->player->powers[pw_nocontrol];
+	player->acceleration = sonic->player->acceleration;
+	player->accelstart = sonic->player->accelstart;
+	player->thrustfactor = sonic->player->thrustfactor;
+	player->normalspeed = sonic->player->normalspeed;
+	player->pflags |= PF_AUTOBRAKE;
+	player->pflags &= ~PF_DIRECTIONCHAR;
 
 	P_TeleportMove(tails, x, y, z);
 	if (player->charability == CA_FLY)

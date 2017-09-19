@@ -195,16 +195,20 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 		if (spring->flags & MF_ENEMY) // Spring shells
 			P_SetTarget(&spring->target, object);
 
-		if (horizspeed && object->player->cmd.forwardmove == 0 && object->player->cmd.sidemove == 0)
+		if (horizspeed)
 		{
-			object->angle = spring->angle;
-
-			if (!demoplayback || P_AnalogMove(object->player))
+			object->player->drawangle = spring->angle;
+			if (object->player->cmd.forwardmove == 0 && object->player->cmd.sidemove == 0)
 			{
-				if (object->player == &players[consoleplayer])
-					localangle = spring->angle;
-				else if (object->player == &players[secondarydisplayplayer])
-					localangle2 = spring->angle;
+				object->angle = spring->angle;
+
+				if (!demoplayback || P_AnalogMove(object->player))
+				{
+					if (object->player == &players[consoleplayer])
+						localangle = spring->angle;
+					else if (object->player == &players[secondarydisplayplayer])
+						localangle2 = spring->angle;
+				}
 			}
 		}
 
