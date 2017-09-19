@@ -45,6 +45,10 @@ extern INT32 cursaveslot;
 extern INT16 lastmaploaded;
 extern boolean gamecomplete;
 
+#define maxgameovers 13
+extern UINT8 numgameovers;
+extern SINT8 startinglivesbalance[maxgameovers+1];
+
 #define PRECIP_NONE  0
 #define PRECIP_STORM 1
 #define PRECIP_SNOW  2

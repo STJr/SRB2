@@ -3021,19 +3021,19 @@ boolean P_SetupLevel(boolean skipprecip)
 	P_RunCachedActions();
 
 	if (!(netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking || players[consoleplayer].lives <= 0)
-		&& (!modifiedgame || savemoddata) && cursaveslot >= 0 && CanSaveLevel(gamemap))
+		&& (!modifiedgame || savemoddata) && cursaveslot > 0 && CanSaveLevel(gamemap))
 		G_SaveGame((UINT32)cursaveslot);
 
 	lastmaploaded = gamemap; // HAS to be set after saving!!
 
 	if (savedata.lives > 0)
 	{
+		numgameovers = savedata.numgameovers;
 		players[consoleplayer].continues = savedata.continues;
 		players[consoleplayer].lives = savedata.lives;
 		players[consoleplayer].score = savedata.score;
-		botskin = savedata.botskin;
-		botcolor = savedata.botcolor;
-		botingame = (savedata.botskin != 0);
+		if ((botingame = ((botskin = savedata.botskin) != 0)))
+			botcolor = skins[botskin-1].prefcolor;
 		emeralds = savedata.emeralds;
 		savedata.lives = 0;
 	}
@@ -3202,8 +3202,8 @@ boolean P_AddWadFile(const char *wadfilename, char **firstmapname)
 		ST_Start();
 
 	// Prevent savefile cheating
-	if (cursaveslot >= 0)
-		cursaveslot = -1;
+	if (cursaveslot > 0)
+		cursaveslot = 0;
 
 	if (replacedcurrentmap && gamestate == GS_LEVEL && (netgame || multiplayer))
 	{

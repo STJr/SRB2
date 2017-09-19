@@ -1125,7 +1125,7 @@ void F_StartCredits(void)
 	M_ClearMenus(true);
 
 	// Save the second we enter the credits
-	if ((!modifiedgame || savemoddata) && !(netgame || multiplayer) && cursaveslot >= 0)
+	if ((!modifiedgame || savemoddata) && !(netgame || multiplayer) && cursaveslot > 0)
 		G_SaveGame((UINT32)cursaveslot);
 
 	if (creditscutscene)
@@ -1263,7 +1263,7 @@ static boolean drawemblem = false, drawchaosemblem = false;
 void F_StartGameEvaluation(void)
 {
 	// Credits option in secrets menu
-	if (cursaveslot == -2)
+	if (cursaveslot == -1)
 	{
 		F_StartGameEnd();
 		return;
@@ -1277,7 +1277,7 @@ void F_StartGameEvaluation(void)
 	// Save the second we enter the evaluation
 	// We need to do this again!  Remember, it's possible a mod designed skipped
 	// the credits sequence!
-	if ((!modifiedgame || savemoddata) && !(netgame || multiplayer) && cursaveslot >= 0)
+	if ((!modifiedgame || savemoddata) && !(netgame || multiplayer) && cursaveslot > 0)
 		G_SaveGame((UINT32)cursaveslot);
 
 	gameaction = ga_nothing;
