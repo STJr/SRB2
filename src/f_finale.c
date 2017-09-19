@@ -31,11 +31,18 @@
 #include "m_random.h"
 #include "y_inter.h"
 #include "m_cond.h"
+#include "p_local.h"
+#include "p_setup.h"
+
+#ifdef HAVE_BLUA
+#include "lua_hud.h"
+#endif
 
 // Stage of animation:
 // 0 = text, 1 = art screen
 static INT32 finalecount;
 INT32 titlescrollspeed = 80;
+UINT8 titlemapinaction = TITLEMAP_OFF;
 
 static INT32 timetonext; // Delay between screen changes
 static INT32 continuetime; // Short delay when continuing
@@ -217,17 +224,19 @@ static void F_SkyScroll(INT32 scrollspeed)
 {
 	INT32 scrolled, x, mx, fakedwidth;
 	patch_t *pat;
+	INT16 patwidth;
 
 	pat = W_CachePatchName("TITLESKY", PU_CACHE);
 
-	animtimer = ((finalecount*scrollspeed)/16) % SHORT(pat->width);
+	patwidth = SHORT(pat->width);
+	animtimer = ((finalecount*scrollspeed)/16 + patwidth) % patwidth;
 
 	fakedwidth = vid.width / vid.dupx;
 
 	if (rendermode == render_soft)
 	{ // if only hardware rendering could be this elegant and complete
-		scrolled = (SHORT(pat->width) - animtimer) - 1;
-		for (x = 0, mx = scrolled; x < fakedwidth; x++, mx = (mx+1)%SHORT(pat->width))
+		scrolled = (patwidth - animtimer) - 1;
+		for (x = 0, mx = scrolled; x < fakedwidth; x++, mx = (mx+1)%patwidth)
 			F_DrawPatchCol(x, pat, mx);
 	}
 #ifdef HWRENDER
@@ -235,8 +244,8 @@ static void F_SkyScroll(INT32 scrollspeed)
 	{ // if only software rendering could be this simple and retarded
 		scrolled = animtimer;
 		if (scrolled > 0)
-			V_DrawScaledPatch(scrolled - SHORT(pat->width), 0, 0, pat);
-		for (x = 0; x < fakedwidth; x += SHORT(pat->width))
+			V_DrawScaledPatch(scrolled - patwidth, 0, 0, pat);
+		for (x = 0; x < fakedwidth; x += patwidth)
 			V_DrawScaledPatch(x + scrolled, 0, 0, pat);
 	}
 #endif
@@ -278,6 +287,8 @@ void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean reset
 
 void F_StartIntro(void)
 {
+	S_StopMusic();
+
 	if (introtoplay)
 	{
 		if (!cutscenes[introtoplay - 1])
@@ -998,7 +1009,7 @@ static const char *credits[] = {
 	"",
 	"\1Sprite Artists",
 	"Odi \"Iceman404\" Atunzu",
-	"Victor \"VAdaPEGA\" Ara\x1Fjo", // Araújo -- sorry for our limited font! D:
+	"Victor \"VAdaPEGA\" Ara\x1Fjo", // AraÃºjo -- sorry for our limited font! D:
 	"Jim \"MotorRoach\" DeMello",
 	"Desmond \"Blade\" DesJardins",
 	"Sherman \"CoatRack\" DesJardins",
@@ -1415,16 +1426,71 @@ void F_GameEndTicker(void)
 // ==============
 void F_StartTitleScreen(void)
 {
+	S_ChangeMusicInternal("_title", looptitle);
+
 	if (gamestate != GS_TITLESCREEN && gamestate != GS_WAITINGPLAYERS)
 		finalecount = 0;
 	else
 		wipegamestate = GS_TITLESCREEN;
+
+	if (titlemap)
+	{
+		mapthing_t *startpos;
+
+		gamestate_t prevwipegamestate = wipegamestate;
+		titlemapinaction = TITLEMAP_LOADING;
+		gamemap = titlemap;
+
+		if (!mapheaderinfo[gamemap-1])
+			P_AllocMapHeader(gamemap-1);
+
+		maptol = mapheaderinfo[gamemap-1]->typeoflevel;
+		globalweather = mapheaderinfo[gamemap-1]->weather;
+
+		G_DoLoadLevel(true);
+		if (!titlemap)
+			return;
+
+		players[displayplayer].playerstate = PST_DEAD; // Don't spawn the player in dummy (I'm still a filthy cheater)
+
+		// Set Default Position
+		if (playerstarts[0])
+			startpos = playerstarts[0];
+		else if (deathmatchstarts[0])
+			startpos = deathmatchstarts[0];
+		else
+			startpos = NULL;
+
+		if (startpos)
+		{
+			camera.x = startpos->x << FRACBITS;
+			camera.y = startpos->y << FRACBITS;
+			camera.subsector = R_PointInSubsector(camera.x, camera.y);
+			camera.z = camera.subsector->sector->floorheight + ((startpos->options >> ZSHIFT) << FRACBITS);
+			camera.angle = (startpos->angle % 360)*ANG1;
+			camera.aiming = 0;
+		}
+		else
+		{
+			camera.x = camera.y = camera.z = camera.angle = camera.aiming = 0;
+			camera.subsector = NULL; // toast is filthy too
+		}
+
+		camera.chase = true;
+		camera.height = 0;
+
+		wipegamestate = prevwipegamestate;
+	}
+	else
+	{
+		titlemapinaction = TITLEMAP_OFF;
+		gamemap = 1; // g_game.c
+		CON_ClearHUD();
+	}
+
 	G_SetGamestate(GS_TITLESCREEN);
-	CON_ClearHUD();
 
 	// IWAD dependent stuff.
-
-	S_ChangeMusicInternal("_title", looptitle);
 
 	animtimer = 0;
 
@@ -1455,11 +1521,20 @@ void F_TitleScreenDrawer(void)
 		return; // We likely came here from retrying. Don't do a damn thing.
 
 	// Draw that sky!
-	F_SkyScroll(titlescrollspeed);
+	if (!titlemapinaction)
+		F_SkyScroll(titlescrollspeed);
 
 	// Don't draw outside of the title screewn, or if the patch isn't there.
 	if (!ttwing || (gamestate != GS_TITLESCREEN && gamestate != GS_WAITINGPLAYERS))
 		return;
+
+	// rei|miru: use title pics?
+	if (hidetitlepics)
+#ifdef HAVE_BLUA
+		goto luahook;
+#else
+		return;
+#endif
 
 	V_DrawScaledPatch(30, 14, 0, ttwing);
 
@@ -1497,6 +1572,11 @@ void F_TitleScreenDrawer(void)
 	}
 
 	V_DrawScaledPatch(48, 142, 0,ttbanner);
+
+#ifdef HAVE_BLUA
+luahook:
+	LUAh_TitleHUD();
+#endif
 }
 
 // (no longer) De-Demo'd Title Screen
@@ -1508,6 +1588,46 @@ void F_TitleScreenTicker(boolean run)
 	// don't trigger if doing anything besides idling on title
 	if (gameaction != ga_nothing || gamestate != GS_TITLESCREEN)
 		return;
+
+	// Execute the titlemap camera settings
+	if (titlemapinaction)
+	{
+		thinker_t *th;
+		mobj_t *mo2;
+		mobj_t *cameraref = NULL;
+
+		for (th = thinkercap.next; th != &thinkercap; th = th->next)
+		{
+			if (th->function.acp1 != (actionf_p1)P_MobjThinker) // Not a mobj thinker
+				continue;
+
+			mo2 = (mobj_t *)th;
+
+			 if (!mo2)
+				continue;
+
+			if (mo2->type != MT_ALTVIEWMAN)
+				continue;
+
+			cameraref = mo2;
+			break;
+		}
+
+		if (cameraref)
+		{
+			camera.x = cameraref->x;
+			camera.y = cameraref->y;
+			camera.z = cameraref->z;
+			camera.angle = cameraref->angle;
+			camera.aiming = cameraref->cusval;
+			camera.subsector = cameraref->subsector;
+		}
+		else
+		{
+			// Default behavior: Do a lil' camera spin if a title map is loaded;
+			camera.angle += titlescrollspeed*ANG1/64;
+		}
+	}
 
 	// no demos to play? or, are they disabled?
 	if (!cv_rollingdemos.value || !numDemos)

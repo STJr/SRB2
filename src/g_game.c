@@ -121,6 +121,10 @@ INT16 spstage_start;
 INT16 sstage_start;
 INT16 sstage_end;
 
+INT16 titlemap = 0;
+boolean hidetitlepics = false;
+INT16 bootmap; //bootmap for loading a map on startup
+
 boolean looptitle = false;
 boolean useNightsSS = false;
 
@@ -1633,6 +1637,21 @@ void G_DoLoadLevel(boolean resetplayer)
 	if (gamestate == GS_INTERMISSION)
 		Y_EndIntermission();
 
+	// cleanup
+	if (titlemapinaction == TITLEMAP_LOADING)
+	{
+		if (W_CheckNumForName(G_BuildMapName(gamemap)) == LUMPERROR)
+		{
+			titlemap = 0; // let's not infinite recursion ok
+			Command_ExitGame_f();
+			return;
+		}
+
+		titlemapinaction = TITLEMAP_RUNNING;
+	}
+	else
+		titlemapinaction = TITLEMAP_OFF;
+
 	G_SetGamestate(GS_LEVEL);
 
 	for (i = 0; i < MAXPLAYERS; i++)
@@ -1642,7 +1661,7 @@ void G_DoLoadLevel(boolean resetplayer)
 	}
 
 	// Setup the level.
-	if (!P_SetupLevel(false))
+	if (!P_SetupLevel(false)) // this never returns false?
 	{
 		// fail so reset game stuff
 		Command_ExitGame_f();
@@ -1991,6 +2010,7 @@ void G_Ticker(boolean run)
 			break;
 
 		case GS_TITLESCREEN:
+			if (titlemapinaction) P_Ticker(run); // then intentionally fall through
 		case GS_WAITINGPLAYERS:
 			F_TitleScreenTicker(run);
 			break;

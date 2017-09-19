@@ -77,6 +77,8 @@ boolean deh_loaded = false;
 static int dbg_line;
 
 static boolean gamedataadded = false;
+static boolean titlechanged = false;
+static boolean introchanged = false;
 
 ATTRINLINE static FUNCINLINE char myfget_color(MYFILE *f)
 {
@@ -2667,14 +2669,38 @@ static void readmaincfg(MYFILE *f)
 				// range check, you morons.
 				if (introtoplay > 128)
 					introtoplay = 128;
+				introchanged = true;
 			}
 			else if (fastcmp(word, "LOOPTITLE"))
 			{
 				looptitle = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "TITLEMAP"))
+			{
+				// Support using the actual map name,
+				// i.e., Level AB, Level FZ, etc.
+
+				// Convert to map number
+				if (word2[0] >= 'A' && word2[0] <= 'Z')
+					value = M_MapNumber(word2[0], word2[1]);
+				else
+					value = get_number(word2);
+
+				DEH_WriteUndoline(word, va("%d", titlemap), UNDO_NONE);
+				titlemap = (INT16)value;
+				titlechanged = true;
+			}
+			else if (fastcmp(word, "HIDETITLEPICS"))
+			{
+				DEH_WriteUndoline(word, va("%d", hidetitlepics), UNDO_NONE);
+				hidetitlepics = (boolean)(value || word2[0] == 'T' || word2[0] == 'Y');
+				titlechanged = true;
 			}
 			else if (fastcmp(word, "TITLESCROLLSPEED"))
 			{
 				titlescrollspeed = get_number(word2);
+				titlechanged = true;
 			}
 			else if (fastcmp(word, "CREDITSCUTSCENE"))
 			{
@@ -2690,14 +2716,17 @@ static void readmaincfg(MYFILE *f)
 			else if (fastcmp(word, "NUMDEMOS"))
 			{
 				numDemos = (UINT8)get_number(word2);
+				titlechanged = true;
 			}
 			else if (fastcmp(word, "DEMODELAYTIME"))
 			{
 				demoDelayTime = get_number(word2);
+				titlechanged = true;
 			}
 			else if (fastcmp(word, "DEMOIDLETIME"))
 			{
 				demoIdleTime = get_number(word2);
+				titlechanged = true;
 			}
 			else if (fastcmp(word, "USE1UPSOUND"))
 			{
@@ -2731,14 +2760,32 @@ static void readmaincfg(MYFILE *f)
 				strlcat(savegamename, "%u.ssg", sizeof(savegamename));
 
 				gamedataadded = true;
+				titlechanged = true;
 			}
 			else if (fastcmp(word, "RESETDATA"))
 			{
 				P_ResetData(value);
+				titlechanged = true;
 			}
 			else if (fastcmp(word, "CUSTOMVERSION"))
 			{
 				strlcpy(customversionstring, word2, sizeof (customversionstring));
+				//titlechanged = true;
+			}
+			else if (fastcmp(word, "BOOTMAP"))
+			{
+				// Support using the actual map name,
+				// i.e., Level AB, Level FZ, etc.
+
+				// Convert to map number
+				if (word2[0] >= 'A' && word2[0] <= 'Z')
+					value = M_MapNumber(word2[0], word2[1]);
+				else
+					value = get_number(word2);
+
+				DEH_WriteUndoline(word, va("%d", bootmap), UNDO_NONE);
+				bootmap = (INT16)value;
+				//titlechanged = true;
 			}
 			else
 				deh_warning("Maincfg: unknown word '%s'", word);
@@ -2935,7 +2982,7 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 
 	deh_num_warning = 0;
 
-	gamedataadded = false;
+	gamedataadded = titlechanged = introchanged = false;
 
 	// it doesn't test the version of SRB2 and version of dehacked file
 	dbg_line = -1; // start at -1 so the first line is 0.
@@ -3235,6 +3282,14 @@ static void DEH_LoadDehackedFile(MYFILE *f)
 
 	if (gamedataadded)
 		G_LoadGameData();
+
+	if (gamestate == GS_TITLESCREEN)
+	{
+		if (introchanged)
+			COM_BufAddText("playintro");
+		else if (titlechanged)
+			COM_BufAddText("exitgame"); // Command_ExitGame_f() but delayed
+	}
 
 	dbg_line = -1;
 	if (deh_num_warning)
@@ -8118,6 +8173,12 @@ static inline int lib_getenum(lua_State *L)
 		return 1;
 	} else if (fastcmp(word,"paused")) {
 		lua_pushboolean(L, paused);
+		return 1;
+	} else if (fastcmp(word,"titlemap")) {
+		lua_pushinteger(L, titlemap);
+		return 1;
+	} else if (fastcmp(word,"titlemapinaction")) {
+		lua_pushboolean(L, (titlemapinaction != TITLEMAP_OFF));
 		return 1;
 	} else if (fastcmp(word,"gametype")) {
 		lua_pushinteger(L, gametype);
