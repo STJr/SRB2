@@ -2253,7 +2253,8 @@ static void Command_connect(void)
 		CONS_Printf(M_GetText(
 			"Connect <serveraddress> (port): connect to a server\n"
 			"Connect ANY: connect to the first lan server found\n"
-			"Connect SELF: connect to your own server.\n"));
+			//"Connect SELF: connect to your own server.\n"
+			));
 		return;
 	}
 
@@ -2267,7 +2268,7 @@ static void Command_connect(void)
 	// we don't request a restart unless the filelist differs
 
 	server = false;
-
+/*
 	if (!stricmp(COM_Argv(1), "self"))
 	{
 		servernode = 0;
@@ -2276,6 +2277,7 @@ static void Command_connect(void)
 		//SV_SpawnServer();
 	}
 	else
+*/
 	{
 		// used in menu to connect to a server in the list
 		if (netgame && !stricmp(COM_Argv(1), "node"))
@@ -2299,10 +2301,13 @@ static void Command_connect(void)
 
 			if (!stricmp(COM_Argv(1), "any"))
 				servernode = BROADCASTADDR;
-			else if (I_NetMakeNodewPort && COM_Argc() >= 3)
-				servernode = I_NetMakeNodewPort(COM_Argv(1), COM_Argv(2));
 			else if (I_NetMakeNodewPort)
-				servernode = I_NetMakeNode(COM_Argv(1));
+			{
+				if (COM_Argc() >= 3) // address AND port
+					servernode = I_NetMakeNodewPort(COM_Argv(1), COM_Argv(2));
+				else // address only, or address:port
+					servernode = I_NetMakeNode(COM_Argv(1));
+			}
 			else
 			{
 				CONS_Alert(CONS_ERROR, M_GetText("There is no server identification with this network driver\n"));

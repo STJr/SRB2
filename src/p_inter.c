@@ -1532,30 +1532,10 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			P_SetMobjState(special, special->info->deathstate);
 			return;
 		case MT_SPECIALSPIKEBALL:
-			if (!(!useNightsSS && G_IsSpecialStage(gamemap))) // Only for old special stages
-			{
-				P_DamageMobj(toucher, special, special, 1, 0);
-				return;
-			}
-
-			if (player->powers[pw_invulnerability] || player->powers[pw_flashing]
-			|| player->powers[pw_super])
-				return;
-			if (player->powers[pw_shield] || player->bot)  //If One-Hit Shield
-			{
-				P_RemoveShield(player);
-				S_StartSound(toucher, sfx_shldls); // Ba-Dum! Shield loss.
-			}
+			if (!useNightsSS && G_IsSpecialStage(gamemap)) // Only for old special stages
+				P_SpecialStageDamage(player, special, NULL);
 			else
-			{
-				P_PlayRinglossSound(toucher);
-				if (player->rings >= 10)
-					player->rings -= 10;
-				else
-					player->rings = 0;
-			}
-
-			P_DoPlayerPain(player, special, NULL);
+				P_DamageMobj(toucher, special, special, 1, 0);
 			return;
 		case MT_EGGMOBILE2_POGO:
 			// sanity checks
@@ -2979,7 +2959,17 @@ void P_RemoveShield(player_t *player)
 		else
 			player->powers[pw_shield] &= SH_STACK;
 	}
-	else if ((player->powers[pw_shield] & SH_NOSTACK) == SH_NONE)
+	else if (player->powers[pw_shield] & SH_NOSTACK)
+	{ // First layer shields
+		if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ARMAGEDDON) // Give them what's coming to them!
+		{
+			P_BlackOw(player); // BAM!
+			player->pflags |= PF_JUMPDOWN;
+		}
+		else
+			player->powers[pw_shield] &= SH_STACK;
+	}
+	else
 	{ // Second layer shields
 		if (((player->powers[pw_shield] & SH_STACK) == SH_FIREFLOWER) && !(player->powers[pw_super] || (mariomode && player->powers[pw_invulnerability])))
 		{
@@ -2988,13 +2978,6 @@ void P_RemoveShield(player_t *player)
 		}
 		player->powers[pw_shield] = SH_NONE;
 	}
-	else if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ARMAGEDDON) // Give them what's coming to them!
-	{
-		P_BlackOw(player); // BAM!
-		player->pflags |= PF_JUMPDOWN;
-	}
-	else
-		player->powers[pw_shield] = player->powers[pw_shield] & SH_STACK;
 }
 
 static void P_ShieldDamage(player_t *player, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype)
@@ -3062,6 +3045,38 @@ static void P_RingDamage(player_t *player, mobj_t *inflictor, mobj_t *source, IN
 	player->rings -= damage;
 	if (player->rings < 0)
 		player->rings = 0;
+}
+
+//
+// P_SpecialStageDamage
+//
+// Do old special stage-style damaging
+// Removes 10 rings from the player, or knocks off their shield if they have one.
+// If they don't have anything, just knock the player back anyway (this doesn't kill them).
+//
+void P_SpecialStageDamage(player_t *player, mobj_t *inflictor, mobj_t *source)
+{
+	if (player->powers[pw_invulnerability] || player->powers[pw_flashing] || player->powers[pw_super])
+		return;
+
+	if (player->powers[pw_shield] || player->bot)  //If One-Hit Shield
+	{
+		P_RemoveShield(player);
+		S_StartSound(player->mo, sfx_shldls); // Ba-Dum! Shield loss.
+	}
+	else
+	{
+		P_PlayRinglossSound(player->mo);
+		if (player->rings >= 10)
+			player->rings -= 10;
+		else
+			player->rings = 0;
+	}
+
+	P_DoPlayerPain(player, inflictor, source);
+
+	if (gametype == GT_CTF && player->gotflag & (GF_REDFLAG|GF_BLUEFLAG))
+		P_PlayerFlagBurst(player, false);
 }
 
 /** Damages an object, which may or may not be a player.

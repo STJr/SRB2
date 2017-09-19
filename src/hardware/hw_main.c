@@ -4753,8 +4753,6 @@ static polyplaneinfo_t *polyplaneinfo = NULL;
 #ifndef SORTING
 size_t numfloors = 0;
 #else
-//static floorinfo_t *floorinfo = NULL;
-//static size_t numfloors = 0;
 //Hurdler: 3D water sutffs
 typedef struct gr_drawnode_s
 {
