@@ -533,7 +533,7 @@ static inline void P_DoTagStuff(void)
 		for (i=0; i < MAXPLAYERS; i++)
 		{
 			if (playeringame[i] && !players[i].spectator && players[i].playerstate == PST_LIVE
-			&& !(players[i].pflags & (PF_TAGIT|PF_TAGGED)))
+			&& !(players[i].pflags & (PF_TAGIT|PF_GAMETYPEOVER)))
 				//points given is the number of participating players divided by two.
 				P_AddPlayerScore(&players[i], participants/2);
 		}

@@ -71,6 +71,7 @@ extern patch_t *rmatcico;
 extern patch_t *bmatcico;
 extern patch_t *tagico;
 extern patch_t *tallminus;
+extern patch_t *tallinfin;
 extern patch_t *tokenicon;
 
 // set true when entering a chat message
