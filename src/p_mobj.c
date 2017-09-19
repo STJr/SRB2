@@ -251,6 +251,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		player->panim = PA_EDGE;
 		break;
 	case S_PLAY_WALK:
+	case S_PLAY_SKID:
 	case S_PLAY_FLOAT:
 		player->panim = PA_WALK;
 		break;
