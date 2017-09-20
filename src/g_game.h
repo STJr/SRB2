@@ -61,8 +61,8 @@ extern consvar_t cv_useranalog, cv_useranalog2;
 extern consvar_t cv_analog, cv_analog2;
 extern consvar_t cv_directionchar, cv_directionchar2;
 extern consvar_t cv_autobrake, cv_autobrake2;
-extern consvar_t cv_sideaxis,cv_turnaxis,cv_moveaxis,cv_lookaxis,cv_jumpaxis,cv_spinaxis,cv_fireaxis,cv_firenaxis;
-extern consvar_t cv_sideaxis2,cv_turnaxis2,cv_moveaxis2,cv_lookaxis2,cv_jumpaxis2,cv_spinaxis2,cv_fireaxis2,cv_firenaxis2;
+extern consvar_t cv_sideaxis, cv_turnaxis, cv_moveaxis, cv_lookaxis, cv_jumpaxis, cv_spinaxis, cv_fireaxis, cv_firenaxis;
+extern consvar_t cv_sideaxis2, cv_turnaxis2, cv_moveaxis2, cv_lookaxis2, cv_jumpaxis2, cv_spinaxis2, cv_fireaxis2, cv_firenaxis2;
 extern consvar_t cv_ghost_bestscore, cv_ghost_besttime, cv_ghost_bestrings, cv_ghost_last, cv_ghost_guest;
 
 // mouseaiming (looking up/down with the mouse or keyboard)
