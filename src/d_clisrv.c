@@ -4115,7 +4115,10 @@ static INT16 Consistancy(void)
 
 #ifdef MOBJCONSISTANCY
 	if (!thinkercap.next)
+	{
+		DEBFILE(va("Consistancy = %u\n", ret));
 		return ret;
+	}
 	for (th = thinkercap.next; th != &thinkercap; th = th->next)
 	{
 		if (th->function.acp1 != (actionf_p1)P_MobjThinker)
@@ -4183,6 +4186,8 @@ static INT16 Consistancy(void)
 		}
 	}
 #endif
+
+	DEBFILE(va("Consistancy = %u\n", (ret & 0xFFFF)));
 
 	return (INT16)(ret & 0xFFFF);
 }
