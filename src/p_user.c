@@ -8632,7 +8632,7 @@ void P_ResetCamera(player_t *player, camera_t *thiscam)
 boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcalled)
 {
 	angle_t angle = 0, focusangle = 0, focusaiming = 0;
-	fixed_t x, y, z, dist, checkdist, viewpointx, viewpointy, camspeed, camdist, camheight, pviewheight;
+	fixed_t x, y, z, dist, height, checkdist, viewpointx, viewpointy, camspeed, camdist, camheight, pviewheight;
 	INT32 camrotate;
 	boolean camstill, cameranoclip;
 	mobj_t *mo;
@@ -8805,6 +8805,8 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		}
 	}
 
+	height = camheight;
+
 	// sets ideal cam pos
 	if (twodlevel || (mo->flags2 & MF2_TWOD))
 		dist = 480<<FRACBITS;
@@ -8814,10 +8816,20 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	{
 		dist = camdist;
 
+		// x1.5 dist for splitscreen
+		if (splitscreen)
+		{
+			dist = FixedMul(dist, 3*FRACUNIT/2);
+			height = FixedMul(height, 3*FRACUNIT/2);
+		}
+
 		// x1.2 dist for analog
 		if (P_AnalogMove(player))
+		{
 			dist = FixedMul(dist, 6*FRACUNIT/5);
-		
+			height = FixedMul(height, 6*FRACUNIT/5);
+		}
+
 		if (player->climbing || player->exiting || player->playerstate == PST_DEAD || (player->powers[pw_carry] == CR_ROPEHANG || player->powers[pw_carry] == CR_GENERIC || player->powers[pw_carry] == CR_MACESPIN))
 			dist <<= 1;
 	}
@@ -8865,9 +8877,9 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	pviewheight = FixedMul(cv_viewheight.value<<FRACBITS, mo->scale);
 
 	if (mo->eflags & MFE_VERTICALFLIP)
-		z = mo->z + mo->height - pviewheight - camheight;
+		z = mo->z + mo->height - pviewheight - height;
 	else
-		z = mo->z + pviewheight + camheight;
+		z = mo->z + pviewheight + height;
 
 	// move camera down to move under lower ceilings
 	newsubsec = R_IsPointInSubsector(((mo->x>>FRACBITS) + (thiscam->x>>FRACBITS))<<(FRACBITS-1), ((mo->y>>FRACBITS) + (thiscam->y>>FRACBITS))<<(FRACBITS-1));
@@ -9065,7 +9077,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	}
 
 	if (mo->type == MT_EGGTRAP)
-		z = mo->z + 128*FRACUNIT + pviewheight + camheight;
+		z = mo->z + 128*FRACUNIT + pviewheight + height;
 
 	if (thiscam->z < thiscam->floorz && !cameranoclip)
 		thiscam->z = thiscam->floorz;
