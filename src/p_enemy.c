@@ -7969,7 +7969,7 @@ void A_GhostMe(mobj_t *actor)
 		return;
 #endif
 	ghost = P_SpawnGhostMobj(actor);
-	if (ghost && locvar1 > 1)
+	if (ghost && locvar1 > 0)
 		ghost->fuse = locvar1;
 }
 
