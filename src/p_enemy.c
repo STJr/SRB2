@@ -7957,16 +7957,20 @@ void A_OrbitNights(mobj_t* actor)
 //
 // Description: Spawns a "ghost" mobj of this actor, ala spindash trails and the minus's digging "trails"
 //
-// var1 = unused
+// var1 = duration in tics
 // var2 = unused
 //
 void A_GhostMe(mobj_t *actor)
 {
+	INT32 locvar1 = var1;
+	mobj_t *ghost;
 #ifdef HAVE_BLUA
 	if (LUA_CallAction("A_GhostMe", actor))
 		return;
 #endif
-	P_SpawnGhostMobj(actor);
+	ghost = P_SpawnGhostMobj(actor);
+	if (ghost && locvar1 > 1)
+		ghost->fuse = locvar1;
 }
 
 // Function: A_SetObjectState

@@ -1801,48 +1801,50 @@ boolean P_PlayerHitFloor(player_t *player)
 			S_StartSound(player->mo, sfx_spin);
 		}
 		else
+		{
 			player->pflags &= ~PF_SPINNING;
 
-		if (player->pflags & PF_GLIDING) // ground gliding
-		{
-			player->skidtime = TICRATE;
-			player->mo->tics = -1;
-		}
-		else if (player->charability2 == CA2_MELEE && (player->panim == PA_ABILITY2 && player->mo->state-states != S_PLAY_MELEE_LANDING))
-		{
-			P_SetPlayerMobjState(player->mo, S_PLAY_MELEE_LANDING);
-			player->mo->tics = (player->mo->movefactor == FRACUNIT) ? TICRATE/2 : (FixedDiv(35<<(FRACBITS-1), FixedSqrt(player->mo->movefactor)))>>FRACBITS;
-			S_StartSound(player->mo, sfx_s3k8b);
-			player->pflags |= PF_FULLSTASIS;
-		}
-		else if ((player->pflags & PF_JUMPED || player->powers[pw_tailsfly]
-		|| player->mo->state-states == S_PLAY_FLY_TIRED) && !(player->pflags & PF_SPINNING))
-		{
-			if (player->cmomx || player->cmomy)
+			if (player->pflags & PF_GLIDING) // ground gliding
 			{
-				if (player->charflags & SF_DASHMODE && player->dashmode >= 3*TICRATE && player->panim != PA_DASH)
-					P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
-				else if (player->speed >= FixedMul(player->runspeed, player->mo->scale)
-				&& (player->panim != PA_RUN || player->mo->state-states == S_PLAY_FLOAT_RUN))
-					P_SetPlayerMobjState(player->mo, S_PLAY_RUN);
-				else if ((player->rmomx || player->rmomy)
-				&& (player->panim != PA_WALK || player->mo->state-states == S_PLAY_FLOAT))
-					P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
-				else if (!player->rmomx && !player->rmomy && player->panim != PA_IDLE)
-					P_SetPlayerMobjState(player->mo, S_PLAY_STND);
+				player->skidtime = TICRATE;
+				player->mo->tics = -1;
 			}
-			else
+			else if (player->charability2 == CA2_MELEE && (player->panim == PA_ABILITY2 && player->mo->state-states != S_PLAY_MELEE_LANDING))
 			{
-				if (player->charflags & SF_DASHMODE && player->dashmode >= 3*TICRATE && player->panim != PA_DASH)
-					P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
-				else if (player->speed >= FixedMul(player->runspeed, player->mo->scale)
-				&& (player->panim != PA_RUN || player->mo->state-states == S_PLAY_FLOAT_RUN))
-					P_SetPlayerMobjState(player->mo, S_PLAY_RUN);
-				else if ((player->mo->momx || player->mo->momy)
-				&& (player->panim != PA_WALK || player->mo->state-states == S_PLAY_FLOAT))
-					P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
-				else if (!player->mo->momx && !player->mo->momy && player->panim != PA_IDLE)
-					P_SetPlayerMobjState(player->mo, S_PLAY_STND);
+				P_SetPlayerMobjState(player->mo, S_PLAY_MELEE_LANDING);
+				player->mo->tics = (player->mo->movefactor == FRACUNIT) ? TICRATE/2 : (FixedDiv(35<<(FRACBITS-1), FixedSqrt(player->mo->movefactor)))>>FRACBITS;
+				S_StartSound(player->mo, sfx_s3k8b);
+				player->pflags |= PF_FULLSTASIS;
+			}
+			else if (player->pflags & PF_JUMPED || !(player->pflags & PF_SPINNING)
+			|| player->powers[pw_tailsfly] || player->mo->state-states == S_PLAY_FLY_TIRED)
+			{
+				if (player->cmomx || player->cmomy)
+				{
+					if (player->charflags & SF_DASHMODE && player->dashmode >= 3*TICRATE && player->panim != PA_DASH)
+						P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
+					else if (player->speed >= FixedMul(player->runspeed, player->mo->scale)
+					&& (player->panim != PA_RUN || player->mo->state-states == S_PLAY_FLOAT_RUN))
+						P_SetPlayerMobjState(player->mo, S_PLAY_RUN);
+					else if ((player->rmomx || player->rmomy)
+					&& (player->panim != PA_WALK || player->mo->state-states == S_PLAY_FLOAT))
+						P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
+					else if (!player->rmomx && !player->rmomy && player->panim != PA_IDLE)
+						P_SetPlayerMobjState(player->mo, S_PLAY_STND);
+				}
+				else
+				{
+					if (player->charflags & SF_DASHMODE && player->dashmode >= 3*TICRATE && player->panim != PA_DASH)
+						P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
+					else if (player->speed >= FixedMul(player->runspeed, player->mo->scale)
+					&& (player->panim != PA_RUN || player->mo->state-states == S_PLAY_FLOAT_RUN))
+						P_SetPlayerMobjState(player->mo, S_PLAY_RUN);
+					else if ((player->mo->momx || player->mo->momy)
+					&& (player->panim != PA_WALK || player->mo->state-states == S_PLAY_FLOAT))
+						P_SetPlayerMobjState(player->mo, S_PLAY_WALK);
+					else if (!player->mo->momx && !player->mo->momy && player->panim != PA_IDLE)
+						P_SetPlayerMobjState(player->mo, S_PLAY_STND);
+				}
 			}
 		}
 
