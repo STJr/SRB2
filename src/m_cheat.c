@@ -61,7 +61,7 @@ static UINT8 cheatf_ultimate(void)
 	if (menuactive && (currentMenu != &MainDef && currentMenu != &SP_LoadDef))
 		return 0; // Only on the main menu, or the save select!
 
-	S_StartSound(0, sfx_itemup);
+	BwehHehHe();
 	ultimate_selectable = (!ultimate_selectable);
 
 	// If on the save select, move to what is now Ultimate Mode!
@@ -1093,7 +1093,7 @@ void OP_ObjectplaceMovement(player_t *player)
 	ticcmd_t *cmd = &player->cmd;
 
 	if (!player->climbing && (netgame || !cv_analog.value || (player->pflags & PF_SPINNING)))
-		player->mo->angle = (cmd->angleturn<<16 /* not FRACBITS */);
+		player->drawangle = player->mo->angle = (cmd->angleturn<<16 /* not FRACBITS */);
 
 	ticruned++;
 	if (!(cmd->angleturn & TICCMD_RECEIVED))

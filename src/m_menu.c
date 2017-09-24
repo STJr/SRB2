@@ -172,7 +172,9 @@ static char joystickInfo[8][25];
 static UINT32 serverlistpage;
 #endif
 
-static saveinfo_t savegameinfo[MAXSAVEGAMES]; // Extra info about the save games.
+static UINT8 numsaves = 0;
+static saveinfo_t* savegameinfo = NULL; // Extra info about the save games.
+static patch_t *savselp[7];
 
 INT16 startmap; // Mario, NiGHTS, or just a plain old normal game?
 
@@ -222,7 +224,7 @@ static INT32 lsoffs[2];
 #define lshli levelselectselect[2]
 
 #define lshseperation 101
-#define lsbasevseperation 62
+#define lsbasevseperation (62*vid.height)/(BASEVIDHEIGHT*vid.dupy) //62
 #define lsheadingheight 16
 #define getheadingoffset(row) (levelselect.rows[row].header[0] ? lsheadingheight : 0)
 #define lsvseperation(row) lsbasevseperation + getheadingoffset(row)
@@ -1061,7 +1063,9 @@ static menuitem_t OP_P1ControlsMenu[] =
 	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam , 60},
 	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair, 70},
 
-	{IT_STRING  | IT_CVAR, NULL, "Analog Control", &cv_useranalog,  90},
+	//{IT_STRING  | IT_CVAR, NULL, "Analog Control", &cv_useranalog,  90},
+	{IT_STRING  | IT_CVAR, NULL, "Character angle", &cv_directionchar,  90},
+	{IT_STRING  | IT_CVAR, NULL, "Automatic braking", &cv_autobrake,  100},
 };
 
 static menuitem_t OP_P2ControlsMenu[] =
@@ -1074,7 +1078,9 @@ static menuitem_t OP_P2ControlsMenu[] =
 	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam2 , 60},
 	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair2, 70},
 
-	{IT_STRING  | IT_CVAR, NULL, "Analog Control", &cv_useranalog2,  90},
+	//{IT_STRING  | IT_CVAR, NULL, "Analog Control", &cv_useranalog2,  90},
+	{IT_STRING  | IT_CVAR, NULL, "Character angle", &cv_directionchar2,  90},
+	{IT_STRING  | IT_CVAR, NULL, "Automatic braking", &cv_autobrake2,  100},
 };
 
 static menuitem_t OP_ChangeControlsMenu[] =
@@ -2580,7 +2586,7 @@ boolean M_Responder(event_t *ev)
 				{
 					if (((currentMenu->menuitems[itemOn].status & IT_CALLTYPE) & IT_CALL_NOTMODIFIED) && modifiedgame && !savemoddata)
 					{
-						S_StartSound(NULL, sfx_menu1);
+						S_StartSound(NULL, sfx_skid);
 						M_StartMessage(M_GetText("This cannot be done in a modified game.\n\n(Press a key)\n"), NULL, MM_NOTHING);
 						return true;
 					}
@@ -4061,10 +4067,10 @@ static boolean M_PrepareLevelPlatter(INT32 gt)
 					if (actnum)
 						sprintf(mapname, "%s %d", mapheaderinfo[mapnum]->lvlttl, actnum);
 					else
-						sprintf(mapname, "%s", mapheaderinfo[mapnum]->lvlttl);
+						strcpy(mapname, mapheaderinfo[mapnum]->lvlttl);
 
 					if (strlen(mapname) >= 17)
-						sprintf(mapname+17-3, "...");
+						strcpy(mapname+17-3, "...");
 
 					strcpy(levelselect.rows[row].mapnames[col], (const char *)mapname);
 				}
@@ -4092,6 +4098,24 @@ static boolean M_PrepareLevelPlatter(INT32 gt)
 
 		mapnum++;
 	}
+
+#ifdef SYMMETRICAL_PLATTER
+	// horizontally space out rows with missing right sides
+	for (; row >= 0; row--)
+	{
+		if (!levelselect.rows[row].maplist[2] // no right side
+		&& levelselect.rows[row].maplist[0] && levelselect.rows[row].maplist[1]) // all the left filled in
+		{
+			levelselect.rows[row].maplist[2] = levelselect.rows[row].maplist[1];
+			STRBUFCPY(levelselect.rows[row].mapnames[2], levelselect.rows[row].mapnames[1]);
+			levelselect.rows[row].mapavailable[2] = levelselect.rows[row].mapavailable[1];
+
+			levelselect.rows[row].maplist[1] = -1; // diamond
+			levelselect.rows[row].mapnames[1][0] = '\0';
+			levelselect.rows[row].mapavailable[1] = false;
+		}
+	}
+#endif
 
 	if (levselp[0][0]) // never going to have some provided but not all, saves individually checking
 	{
@@ -4230,7 +4254,7 @@ static void M_HandleLevelPlatter(INT32 choice)
 			else if (!lsoffs[0]) //  prevent sound spam
 			{
 				lsoffs[0] = -8;
-				S_StartSound(NULL,sfx_s3kb2);
+				S_StartSound(NULL,sfx_lose);
 			}
 			break;
 
@@ -4261,14 +4285,10 @@ void M_DrawLevelPlatterHeader(INT32 y, const char *header, boolean headerhighlig
 	y += lsheadingheight - 12;
 	V_DrawString(19, y, (headerhighlight ? V_YELLOWMAP : 0)|(allowlowercase ? V_ALLOWLOWERCASE : 0), header);
 	y += 9;
-	if ((y >= 0) && (y < 200))
-	{
-		V_DrawFill(19, y, 281, 1, (headerhighlight ? yellowmap[3] : 3));
-		V_DrawFill(300, y, 1, 1, 26);
-	}
+	V_DrawFill(19, y, 281, 1, (headerhighlight ? yellowmap[3] : 3));
+	V_DrawFill(300, y, 1, 1, 26);
 	y++;
-	if ((y >= 0) && (y < 200))
-		V_DrawFill(19, y, 282, 1, 26);
+	V_DrawFill(19, y, 282, 1, 26);
 }
 
 static void M_DrawLevelPlatterWideMap(UINT8 row, UINT8 col, INT32 x, INT32 y, boolean highlight)
@@ -4276,7 +4296,7 @@ static void M_DrawLevelPlatterWideMap(UINT8 row, UINT8 col, INT32 x, INT32 y, bo
 	patch_t *patch;
 
 	INT32 map = levelselect.rows[row].maplist[col];
-	if (!map)
+	if (map <= 0)
 		return;
 
 	//  A 564x100 image of the level as entry MAPxxW
@@ -4292,22 +4312,9 @@ static void M_DrawLevelPlatterWideMap(UINT8 row, UINT8 col, INT32 x, INT32 y, bo
 		V_DrawSmallScaledPatch(x, y, 0, patch);
 	}
 
-	if ((y+50) < 200)
-	{
-		INT32 topy = (y+50), h = 8;
-
-		if (topy < 0)
-		{
-			h += topy;
-			topy = 0;
-		}
-		else if (topy + h >= 200)
-			h = 200 - y;
-		if (h > 0)
-			V_DrawFill(x, topy, 282, h,
-			((mapheaderinfo[map-1]->unlockrequired < 0)
-			? 159 : 63));
-	}
+	V_DrawFill(x, y+50, 282, 8,
+		((mapheaderinfo[map-1]->unlockrequired < 0)
+		? 159 : 63));
 
 	V_DrawString(x, y+50, (highlight ? V_YELLOWMAP : 0), levelselect.rows[row].mapnames[col]);
 }
@@ -4317,7 +4324,7 @@ static void M_DrawLevelPlatterMap(UINT8 row, UINT8 col, INT32 x, INT32 y, boolea
 	patch_t *patch;
 
 	INT32 map = levelselect.rows[row].maplist[col];
-	if (!map)
+	if (map <= 0)
 		return;
 
 	//  A 160x100 image of the level as entry MAPxxP
@@ -4333,22 +4340,9 @@ static void M_DrawLevelPlatterMap(UINT8 row, UINT8 col, INT32 x, INT32 y, boolea
 		V_DrawSmallScaledPatch(x, y, 0, patch);
 	}
 
-	if ((y+50) < 200)
-	{
-		INT32 topy = (y+50), h = 8;
-
-		if (topy < 0)
-		{
-			h += topy;
-			topy = 0;
-		}
-		else if (topy + h >= 200)
-			h = 200 - y;
-		if (h > 0)
-			V_DrawFill(x, topy, 80, h,
-			((mapheaderinfo[map-1]->unlockrequired < 0)
-			? 159 : 63));
-	}
+	V_DrawFill(x, y+50, 80, 8,
+		((mapheaderinfo[map-1]->unlockrequired < 0)
+		? 159 : 63));
 
 	if (strlen(levelselect.rows[row].mapnames[col]) > 6) // "AERIAL GARDEN" vs "ACT 18" - "THE ACT" intentionally compressed
 		V_DrawThinString(x, y+50, (highlight ? V_YELLOWMAP : 0), levelselect.rows[row].mapnames[col]);
@@ -4402,16 +4396,16 @@ static void M_DrawLevelPlatterMenu(void)
 	// draw cursor box
 	V_DrawSmallScaledPatch(lsbasex + cursorx + lsoffs[1], lsbasey, 0, (levselp[sizeselect][((skullAnimCounter/4) ? 1 : 0)]));
 
-	if (levelselect.rows[lsrow].maplist[lscol])
+	if (levelselect.rows[lsrow].maplist[lscol] > 0)
 		V_DrawScaledPatch(lsbasex + cursorx-17, lsbasey+50+lsoffs[0], 0, W_CachePatchName("M_CURSOR", PU_CACHE));
 
 	// handle movement of cursor box
-	if (abs(lsoffs[0]) > 1)
+	if (lsoffs[0] > 1 || lsoffs[0] < -1)
 		lsoffs[0] = 2*lsoffs[0]/3;
 	else
 		lsoffs[0] = 0;
 
-	if (abs(lsoffs[1]) > 1)
+	if (lsoffs[1] > 1 || lsoffs[1] < -1)
 		lsoffs[1] = 2*lsoffs[1]/3;
 	else
 		lsoffs[1] = 0;
@@ -5395,7 +5389,7 @@ static void M_LevelSelectWarp(INT32 choice)
 		G_LoadGame((UINT32)cursaveslot, startmap);
 	else
 	{
-		cursaveslot = -1;
+		cursaveslot = 0;
 		M_SetupChoosePlayer(0);
 	}
 }
@@ -5970,7 +5964,7 @@ static void M_CustomWarp(INT32 choice)
 static void M_Credits(INT32 choice)
 {
 	(void)choice;
-	cursaveslot = -2;
+	cursaveslot = -1;
 	M_ClearMenus(true);
 	F_StartCredits();
 }
@@ -6028,149 +6022,285 @@ static void M_LoadGameLevelSelect(INT32 choice)
 // LOAD GAME MENU
 // ==============
 
-static INT32 saveSlotSelected = 0;
-static short menumovedir = 0;
+static INT32 saveSlotSelected = 1;
+static INT32 loadgamescroll = 0;
+static UINT8 loadgameoffset = 0;
 
 static void M_DrawLoadGameData(void)
 {
-	INT32 ecks;
-	INT32 i;
+	INT32 i, savetodraw, x, y, hsep = 90;
+	skin_t *charskin = NULL;
 
-	ecks = SP_LoadDef.x + 24;
-	M_DrawTextBox(SP_LoadDef.x-12,144, 24, 4);
+	if (vid.width != BASEVIDWIDTH*vid.dupx)
+		hsep = (hsep*vid.width)/(BASEVIDWIDTH*vid.dupx);
 
-	if (saveSlotSelected == NOSAVESLOT) // last slot is play without saving
+	for (i = -2; i <= 2; i++)
 	{
-		if (ultimate_selectable)
+		savetodraw = (saveSlotSelected + i + numsaves)%numsaves;
+		x = (BASEVIDWIDTH/2 - 42 + loadgamescroll) + (i*hsep);
+		y = 33 + 9;
+
 		{
-			V_DrawCenteredString(ecks + 68, 144, V_ORANGEMAP, "ULTIMATE MODE");
-			V_DrawCenteredString(ecks + 68, 156, 0, "NO RINGS, NO ONE-UPS,");
-			V_DrawCenteredString(ecks + 68, 164, 0, "NO CONTINUES, ONE LIFE,");
-			V_DrawCenteredString(ecks + 68, 172, 0, "FINAL DESTINATION.");
+			INT32 diff = x - (BASEVIDWIDTH/2 - 42);
+			if (diff < 0)
+				diff = -diff;
+			diff = (42 - diff)/3 - loadgameoffset;
+			if (diff < 0)
+				diff = 0;
+			y -= diff;
 		}
-		else
+
+		if (savetodraw == 0)
 		{
-			V_DrawCenteredString(ecks + 68, 144, V_ORANGEMAP, "PLAY WITHOUT SAVING");
-			V_DrawCenteredString(ecks + 68, 156, 0, "THIS GAME WILL NOT BE");
-			V_DrawCenteredString(ecks + 68, 164, 0, "SAVED, BUT YOU CAN STILL");
-			V_DrawCenteredString(ecks + 68, 172, 0, "GET EMBLEMS AND SECRETS.");
-		}
-		return;
-	}
-
-	if (savegameinfo[saveSlotSelected].lives == -42) // Empty
-	{
-		V_DrawCenteredString(ecks + 68, 160, 0, "NO DATA");
-		return;
-	}
-
-	if (savegameinfo[saveSlotSelected].lives == -666) // savegame is bad
-	{
-		V_DrawCenteredString(ecks + 68, 144, V_REDMAP, "CORRUPT SAVE FILE");
-		V_DrawCenteredString(ecks + 68, 156, 0, "THIS SAVE FILE");
-		V_DrawCenteredString(ecks + 68, 164, 0, "CAN NOT BE LOADED.");
-		V_DrawCenteredString(ecks + 68, 172, 0, "DELETE USING BACKSPACE.");
-		return;
-	}
-
-	// Draw the back sprite, it looks ugly if we don't
-	V_DrawScaledPatch(SP_LoadDef.x, 144+8, 0, livesback);
-	if (savegameinfo[saveSlotSelected].skincolor == 0)
-		V_DrawScaledPatch(SP_LoadDef.x,144+8,0,W_CachePatchName(skins[savegameinfo[saveSlotSelected].skinnum].face, PU_CACHE));
-	else
-	{
-		UINT8 *colormap = R_GetTranslationColormap(savegameinfo[saveSlotSelected].skinnum, savegameinfo[saveSlotSelected].skincolor, 0);
-		V_DrawMappedPatch(SP_LoadDef.x,144+8,0,W_CachePatchName(skins[savegameinfo[saveSlotSelected].skinnum].face, PU_CACHE), colormap);
-	}
-
-	V_DrawString(ecks + 12, 152, 0, savegameinfo[saveSlotSelected].playername);
-
-#ifdef SAVEGAMES_OTHERVERSIONS
-	if (savegameinfo[saveSlotSelected].gamemap & 16384)
-		V_DrawCenteredString(ecks + 68, 144, V_REDMAP, "OUTDATED SAVE FILE!");
-#endif
-
-	if (savegameinfo[saveSlotSelected].gamemap & 8192)
-		V_DrawString(ecks + 12, 160, V_GREENMAP, "CLEAR!");
-	else
-		V_DrawString(ecks + 12, 160, 0, va("%s", savegameinfo[saveSlotSelected].levelname));
-
-	// Use the big face pic for lives, duh. :3
-	V_DrawScaledPatch(ecks + 12, 175, 0, W_CachePatchName("STLIVEX", PU_HUDGFX));
-	V_DrawTallNum(ecks + 40, 172, 0, savegameinfo[saveSlotSelected].lives);
-
-	// Absolute ridiculousness, condensed into another function.
-	V_DrawContinueIcon(ecks + 58, 182, 0, savegameinfo[saveSlotSelected].skinnum, savegameinfo[saveSlotSelected].skincolor);
-	V_DrawScaledPatch(ecks + 68, 175, 0, W_CachePatchName("STLIVEX", PU_HUDGFX));
-	V_DrawTallNum(ecks + 96, 172, 0, savegameinfo[saveSlotSelected].continues);
-
-	for (i = 0; i < 7; ++i)
-	{
-		if (savegameinfo[saveSlotSelected].numemeralds & (1 << i))
-			V_DrawScaledPatch(ecks + 104 + (i * 8), 172, 0, tinyemeraldpics[i]);
-	}
-}
-
-#define LOADBARHEIGHT SP_LoadDef.y + (LINEHEIGHT * (j+1)) + ymod
-#define CURSORHEIGHT  SP_LoadDef.y + (LINEHEIGHT*3) - 1
-static void M_DrawLoad(void)
-{
-	INT32 i, j;
-	INT32 ymod = 0, offset = 0;
-
-	M_DrawMenuTitle();
-
-	if (menumovedir != 0) //movement illusion
-	{
-		ymod = (-(LINEHEIGHT/4))*menumovedir;
-		offset = ((menumovedir > 0) ? -1 : 1);
-	}
-
-	V_DrawCenteredString(BASEVIDWIDTH/2, 40, 0, "Press backspace to delete a save.");
-
-	for (i = MAXSAVEGAMES + saveSlotSelected - 2 + offset, j = 0;i <= MAXSAVEGAMES + saveSlotSelected + 2 + offset; i++, j++)
-	{
-		if ((menumovedir < 0 && j == 4) || (menumovedir > 0 && j == 0))
-			continue; //this helps give the illusion of movement
-
-		M_DrawSaveLoadBorder(SP_LoadDef.x, LOADBARHEIGHT);
-
-		if ((i%MAXSAVEGAMES) == NOSAVESLOT) // play without saving
-		{
+			V_DrawSmallScaledPatch(x, y, 0,
+				savselp[((ultimate_selectable) ? 2 : 1)]);
+			x += 2;
+			y += 1;
+			V_DrawString(x, y,
+				((savetodraw == saveSlotSelected) ? V_YELLOWMAP : 0),
+				"NO FILE");
+			if (savetodraw == saveSlotSelected)
+				V_DrawFill(x, y+9, 80, 1, yellowmap[3]);
+			y += 11;
+			V_DrawSmallScaledPatch(x, y, V_STATIC, savselp[4]);
+			y += 41;
 			if (ultimate_selectable)
-				V_DrawCenteredString(SP_LoadDef.x+92, LOADBARHEIGHT - 1, V_ORANGEMAP, "ULTIMATE MODE");
+				V_DrawRightAlignedThinString(x + 79, y, V_REDMAP, "ULTIMATE.");
 			else
-				V_DrawCenteredString(SP_LoadDef.x+92, LOADBARHEIGHT - 1, V_ORANGEMAP, "PLAY WITHOUT SAVING");
+				V_DrawRightAlignedThinString(x + 79, y, V_GRAYMAP, "DON'T SAVE!");
 			continue;
 		}
 
-		if (savegameinfo[i%MAXSAVEGAMES].lives == -42)
-			V_DrawString(SP_LoadDef.x-6, LOADBARHEIGHT - 1, V_TRANSLUCENT, "NO DATA");
-		else if (savegameinfo[i%MAXSAVEGAMES].lives == -666)
-			V_DrawString(SP_LoadDef.x-6, LOADBARHEIGHT - 1, V_REDMAP, "CORRUPT SAVE FILE");
-		else if (savegameinfo[i%MAXSAVEGAMES].gamemap & 8192)
-			V_DrawString(SP_LoadDef.x-6, LOADBARHEIGHT - 1, V_GREENMAP, "CLEAR!");
-		else
-			V_DrawString(SP_LoadDef.x-6, LOADBARHEIGHT - 1, 0, va("%s", savegameinfo[i%MAXSAVEGAMES].levelname));
+		savetodraw--;
 
-		//Draw the save slot number on the right side
-		V_DrawRightAlignedString(SP_LoadDef.x+192, LOADBARHEIGHT - 1, 0, va("%d",(i%MAXSAVEGAMES) + 1));
+		if (savegameinfo[savetodraw].lives > 0)
+			charskin = &skins[savegameinfo[savetodraw].skinnum];
+
+		// signpost background
+		{
+			UINT8 col;
+			if (savegameinfo[savetodraw].lives == -666)
+			{
+				V_DrawSmallScaledPatch(x+2, y+64, 0, savselp[5]);
+			}
+#ifndef PERFECTSAVE // disabled, don't touch
+			else if ((savegameinfo[savetodraw].skinnum == 1)
+			&& (savegameinfo[savetodraw].lives == 99)
+			&& (savegameinfo[savetodraw].gamemap & 8192)
+			&& (savegameinfo[savetodraw].numgameovers == 0)
+			&& (savegameinfo[savetodraw].numemeralds == ((1<<7) - 1))) // perfect save
+			{
+				V_DrawFill(x+6, y+64, 72, 50, 134);
+				V_DrawFill(x+6, y+74, 72, 30, 201);
+				V_DrawFill(x+6, y+84, 72, 10, 1);
+			}
+#endif
+			else
+			{
+				if (savegameinfo[savetodraw].lives == -42)
+					col = 26;
+				else if (savegameinfo[savetodraw].botskin == 3) // & knuckles
+					col = 105;
+				else if (savegameinfo[savetodraw].botskin) // tailsbot or custom
+					col = 134;
+				else
+				{
+					col = (charskin->prefcolor - 1)*2;
+					col = Color_Index[Color_Opposite[col]-1][Color_Opposite[col+1]];
+				}
+
+				V_DrawFill(x+6, y+64, 72, 50, col);
+			}
+		}
+			
+		V_DrawSmallScaledPatch(x, y, 0, savselp[0]);
+		x += 2;
+		y += 1;
+		V_DrawString(x, y,
+			((savetodraw == saveSlotSelected-1) ? V_YELLOWMAP : 0),
+			va("FILE %d", savetodraw+1));
+		if (savetodraw == saveSlotSelected-1)
+				V_DrawFill(x, y+9, 80, 1, yellowmap[3]);
+		y += 11;
+
+		// level image area
+		{
+			patch_t *patch;
+			INT32 flags = 0;
+
+			if ((savegameinfo[savetodraw].lives == -42)
+			|| (savegameinfo[savetodraw].lives == -666))
+			{
+				patch = savselp[3];
+				flags = V_STATIC;
+			}
+			else if (savegameinfo[savetodraw].gamemap & 8192)
+				patch = savselp[6];
+			else
+			{
+				lumpnum_t lumpnum = W_CheckNumForName(va("%sP", G_BuildMapName((savegameinfo[savetodraw].gamemap) & 8191)));
+				if (lumpnum != LUMPERROR)
+					patch = W_CachePatchNum(lumpnum, PU_CACHE);
+				else
+					patch = savselp[5];
+			}
+				
+			V_DrawSmallScaledPatch(x, y, flags, patch);
+
+			y += 41;
+
+			if (savegameinfo[savetodraw].lives == -42)
+				V_DrawRightAlignedThinString(x + 79, y, V_GRAYMAP, "NEW GAME");
+			else if (savegameinfo[savetodraw].lives == -666)
+				V_DrawRightAlignedThinString(x + 79, y, V_REDMAP, "CAN'T LOAD!");
+			else if (savegameinfo[savetodraw].gamemap & 8192)
+				V_DrawRightAlignedThinString(x + 79, y, V_GREENMAP, "CLEAR!");
+			else
+				V_DrawRightAlignedThinString(x + 79, y, V_YELLOWMAP, savegameinfo[savetodraw].levelname);
+		}
+
+		if ((savegameinfo[savetodraw].lives == -42)
+		|| (savegameinfo[savetodraw].lives == -666))
+			continue;
+
+		y += 64;
+
+		// tiny emeralds
+		{
+			INT32 j, workx = x + 6;
+			for (j = 0; j < 7; ++j)
+			{
+				if (savegameinfo[savetodraw].numemeralds & (1 << j))
+					V_DrawScaledPatch(workx, y, 0, tinyemeraldpics[j]);
+				workx += 10;
+			}
+		}
+
+		y -= 13;
+
+		// character heads, lives, and continues
+		{
+			spritedef_t *sprdef;
+			spriteframe_t *sprframe;
+			patch_t *patch;
+			UINT8 *colormap = NULL;
+
+			INT32 tempx = (x+40)<<FRACBITS, tempy = y<<FRACBITS, flip = 0, calc;
+
+			// botskin first
+			if (savegameinfo[savetodraw].botskin)
+			{
+				skin_t *charbotskin = &skins[savegameinfo[savetodraw].botskin-1];
+				sprdef = &charbotskin->sprites[SPR2_SIGN];
+				if (!sprdef->numframes)
+					goto skipbot;
+				colormap = R_GetTranslationColormap(savegameinfo[savetodraw].botskin, charbotskin->prefcolor, 0);
+				sprframe = &sprdef->spriteframes[0];
+				patch = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
+
+				V_DrawFixedPatch(
+					tempx + (18<<FRACBITS),
+					tempy -  (4<<FRACBITS),
+					charbotskin->highresscale,
+					0, patch, colormap);
+
+				Z_Free(colormap);
+
+				tempx -= (15<<FRACBITS);
+				flip = V_FLIP;
+			}
+skipbot:
+			// signpost image
+			if (!charskin) // shut up compiler
+				goto skipsign;
+			sprdef = &charskin->sprites[SPR2_SIGN];
+			colormap = R_GetTranslationColormap(savegameinfo[savetodraw].skinnum, charskin->prefcolor, 0);
+			if (!sprdef->numframes)
+				goto skipsign;
+			sprframe = &sprdef->spriteframes[0];
+			patch = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
+			if ((calc = SHORT(patch->topoffset) - 42) > 0)
+				tempy += ((4+calc)<<FRACBITS);
+
+			V_DrawFixedPatch(
+				tempx,
+				tempy,
+				charskin->highresscale,
+				flip, patch, colormap);
+
+skipsign:
+			y += 25;
+
+			tempx = x + 10;
+			if (savegameinfo[savetodraw].lives != 0x7f
+			&& savegameinfo[savetodraw].lives > 9)
+				tempx -= 4;
+
+			if (!charskin) // shut up compiler
+				goto skiplife;
+
+			// lives
+			sprdef = &charskin->sprites[SPR2_LIFE];
+			if (!sprdef->numframes)
+				goto skiplife;
+			sprframe = &sprdef->spriteframes[0];
+			patch = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
+
+			V_DrawFixedPatch(
+				(tempx + 4)<<FRACBITS,
+				(y + 6)<<FRACBITS,
+				charskin->highresscale/2,
+				0, patch, colormap);
+skiplife:
+			if (colormap)
+				Z_Free(colormap);
+
+			patch = W_CachePatchName("STLIVEX", PU_CACHE);
+
+			V_DrawScaledPatch(tempx + 9, y + 2, 0, patch);
+			tempx += 16;
+			if (savegameinfo[savetodraw].lives == 0x7f)
+				V_DrawCharacter(tempx, y + 1, '\x16', false);
+			else
+				V_DrawString(tempx, y, 0, va("%d", savegameinfo[savetodraw].lives));
+
+			tempx = x + 47;
+			if (savegameinfo[savetodraw].continues > 9)
+				tempx -= 4;
+
+			// continues
+			if (savegameinfo[savetodraw].continues > 0)
+			{
+				V_DrawSmallScaledPatch(tempx, y, 0, W_CachePatchName("CONTSAVE", PU_CACHE));
+				V_DrawScaledPatch(tempx + 9, y + 2, 0, patch);
+				V_DrawString(tempx + 16, y, 0, va("%d", savegameinfo[savetodraw].continues));
+			}
+			else
+			{
+				V_DrawSmallScaledPatch(tempx, y, 0, W_CachePatchName("CONTNONE", PU_CACHE));
+				V_DrawScaledPatch(tempx + 9, y + 2, 0, W_CachePatchName("STNONEX", PU_CACHE));
+				V_DrawString(tempx + 16, y, V_GRAYMAP, "0");
+			}
+		}
 	}
+}
 
-	//Draw cursors on both sides.
-	V_DrawScaledPatch( 32, CURSORHEIGHT, 0, W_CachePatchName("M_CURSOR", PU_CACHE));
-	V_DrawScaledPatch(274, CURSORHEIGHT, 0, W_CachePatchName("M_CURSOR", PU_CACHE));
+static void M_DrawLoad(void)
+{
+	M_DrawMenuTitle();
+
+	if (loadgamescroll > 1 || loadgamescroll < -1)
+		loadgamescroll = 2*loadgamescroll/3;
+	else
+		loadgamescroll = 0;
+
+	if (loadgameoffset > 1)
+		loadgameoffset = 2*loadgameoffset/3;
+	else
+		loadgameoffset = 0;
 
 	M_DrawLoadGameData();
-
-	//finishing the movement illusion
-	if (menumovedir)
-		menumovedir += ((menumovedir > 0) ? 1 : -1);
-	if (abs(menumovedir) > 3)
-		menumovedir = 0;
 }
-#undef LOADBARHEIGHT
-#undef CURSORHEIGHT
 
 //
 // User wants to load this game
@@ -6182,7 +6312,7 @@ static void M_LoadSelect(INT32 choice)
 	if (saveSlotSelected == NOSAVESLOT) //last slot is play without saving
 	{
 		M_NewGame();
-		cursaveslot = -1;
+		cursaveslot = 0;
 		return;
 	}
 
@@ -6191,8 +6321,8 @@ static void M_LoadSelect(INT32 choice)
 		// This slot is empty, so start a new game here.
 		M_NewGame();
 	}
-	else if (savegameinfo[saveSlotSelected].gamemap & 8192) // Completed
-		M_LoadGameLevelSelect(saveSlotSelected + 1);
+	else if (savegameinfo[saveSlotSelected-1].gamemap & 8192) // Completed
+		M_LoadGameLevelSelect(0);
 	else
 		G_LoadGame((UINT32)saveSlotSelected, 0);
 
@@ -6214,11 +6344,10 @@ static void M_ReadSavegameInfo(UINT32 slot)
 	INT32 fake; // Dummy variable
 	char temp[sizeof(timeattackfolder)];
 	char vcheck[VERSIONSIZE];
-#ifdef SAVEGAMES_OTHERVERSIONS
-	boolean oldversion = false;
-#endif
 
 	sprintf(savename, savegamename, slot);
+
+	slot--;
 
 	length = FIL_ReadFile(savename, &savebuffer);
 	if (length == 0)
@@ -6235,14 +6364,7 @@ static void M_ReadSavegameInfo(UINT32 slot)
 	// Version check
 	memset(vcheck, 0, sizeof (vcheck));
 	sprintf(vcheck, "version %d", VERSION);
-	if (strcmp((const char *)save_p, (const char *)vcheck))
-	{
-#ifdef SAVEGAMES_OTHERVERSIONS
-		oldversion = true;
-#else
-		BADSAVE // Incompatible versions?
-#endif
-	}
+	if (strcmp((const char *)save_p, (const char *)vcheck)) BADSAVE
 	save_p += VERSIONSIZE;
 
 	// dearchive all the modifications
@@ -6254,30 +6376,19 @@ static void M_ReadSavegameInfo(UINT32 slot)
 	if (((fake-1) & 8191) >= NUMMAPS) BADSAVE
 
 	if(!mapheaderinfo[(fake-1) & 8191])
-	{
 		savegameinfo[slot].levelname[0] = '\0';
-		savegameinfo[slot].actnum = 0;
-	}
 	else
 	{
-		strcpy(savegameinfo[slot].levelname, mapheaderinfo[(fake-1) & 8191]->lvlttl);
-		savegameinfo[slot].actnum = mapheaderinfo[(fake-1) & 8191]->actnum;
+		strlcpy(savegameinfo[slot].levelname, mapheaderinfo[(fake-1) & 8191]->lvlttl, 17+1);
+
+		if (strlen(mapheaderinfo[(fake-1) & 8191]->lvlttl) >= 17)
+			strcpy(savegameinfo[slot].levelname+17-3, "...");
 	}
 
-#ifdef SAVEGAMES_OTHERVERSIONS
-	if (oldversion)
-	{
-		if (fake == 24) //meh, let's count old Clear! saves too
-			fake |= 8192;
-		fake |= 16384; // marker for outdated version
-	}
-#endif
 	savegameinfo[slot].gamemap = fake;
 
 	CHECKPOS
-	fake = READUINT16(save_p)-357; // emeralds
-
-	savegameinfo[slot].numemeralds = (UINT8)fake;
+	savegameinfo[slot].numemeralds = READUINT16(save_p)-357; // emeralds
 
 	CHECKPOS
 	READSTRINGN(save_p, temp, sizeof(temp)); // mod it belongs to
@@ -6286,38 +6397,24 @@ static void M_ReadSavegameInfo(UINT32 slot)
 
 	// P_UnArchivePlayer()
 	CHECKPOS
-	savegameinfo[slot].skincolor = READUINT8(save_p);
-	CHECKPOS
-	savegameinfo[slot].skinnum = READUINT8(save_p);
+	fake = READUINT16(save_p);
+	savegameinfo[slot].skinnum = fake & ((1<<5) - 1);
+	if (savegameinfo[slot].skinnum >= numskins
+	|| !R_SkinUsable(-1, savegameinfo[slot].skinnum))
+		BADSAVE
+	savegameinfo[slot].botskin = fake >> 5;
+	if (savegameinfo[slot].botskin-1 >= numskins
+	|| !R_SkinUsable(-1, savegameinfo[slot].botskin-1))
+		BADSAVE
 
+	CHECKPOS
+	savegameinfo[slot].numgameovers = READUINT8(save_p); // numgameovers
+	CHECKPOS
+	savegameinfo[slot].lives = READSINT8(save_p); // lives
 	CHECKPOS
 	(void)READINT32(save_p); // Score
-
-	CHECKPOS
-	savegameinfo[slot].lives = READINT32(save_p); // lives
 	CHECKPOS
 	savegameinfo[slot].continues = READINT32(save_p); // continues
-
-	if (fake & (1<<10))
-	{
-		CHECKPOS
-		savegameinfo[slot].botskin = READUINT8(save_p);
-		if (savegameinfo[slot].botskin-1 >= numskins)
-			savegameinfo[slot].botskin = 0;
-		CHECKPOS
-		savegameinfo[slot].botcolor = READUINT8(save_p); // because why not.
-	}
-	else
-		savegameinfo[slot].botskin = 0;
-
-	if (savegameinfo[slot].botskin)
-		snprintf(savegameinfo[slot].playername, 32, "%s & %s",
-			skins[savegameinfo[slot].skinnum].realname,
-			skins[savegameinfo[slot].botskin-1].realname);
-	else
-		strcpy(savegameinfo[slot].playername, skins[savegameinfo[slot].skinnum].realname);
-
-	savegameinfo[slot].playername[31] = 0;
 
 	// File end marker check
 	CHECKPOS
@@ -6337,23 +6434,80 @@ static void M_ReadSavegameInfo(UINT32 slot)
 static void M_ReadSaveStrings(void)
 {
 	FILE *handle;
-	UINT32 i;
+	SINT8 i;
 	char name[256];
+	boolean nofile[MAXSAVEGAMES-1];
+	SINT8 tolerance = 3; // empty slots at any time
+	UINT8 lastseen = 0;
 
-	for (i = 0; i < MAXSAVEGAMES; i++)
+	loadgamescroll = 0;
+	loadgameoffset = 14;
+
+	for (i = 1; (i < MAXSAVEGAMES); i++) // slot 0 is no save
 	{
 		snprintf(name, sizeof name, savegamename, i);
 		name[sizeof name - 1] = '\0';
 
 		handle = fopen(name, "rb");
-		if (handle == NULL)
+		if ((nofile[i-1] = (handle == NULL)))
+			continue;
+		fclose(handle);
+		lastseen = i;
+	}
+
+	if (savegameinfo)
+		Z_Free(savegameinfo);
+	savegameinfo = NULL;
+
+	if (lastseen < saveSlotSelected)
+		lastseen = saveSlotSelected;
+
+	i = lastseen;
+
+	for (; (lastseen > 0 && tolerance); lastseen--)
+	{
+		if (nofile[lastseen-1])
+			tolerance--;
+	}
+
+	if ((i += tolerance+1) > MAXSAVEGAMES) // show 3 empty slots at minimum
+		i = MAXSAVEGAMES;
+
+	numsaves = i;
+	savegameinfo = Z_Realloc(savegameinfo, numsaves*sizeof(saveinfo_t), PU_STATIC, NULL);
+	if (!savegameinfo)
+		I_Error("Insufficient memory to prepare save platter");
+
+	for (; i > 0; i--)
+	{
+		if (nofile[i-1] == true)
 		{
-			savegameinfo[i].lives = -42;
+			savegameinfo[i-1].lives = -42;
 			continue;
 		}
-		fclose(handle);
 		M_ReadSavegameInfo(i);
 	}
+
+	if (savselp[0]) // never going to have some provided but not all, saves individually checking
+	{
+		W_UnlockCachedPatch(savselp[0]);
+		W_UnlockCachedPatch(savselp[1]);
+		W_UnlockCachedPatch(savselp[2]);
+
+		W_UnlockCachedPatch(savselp[3]);
+		W_UnlockCachedPatch(savselp[4]);
+		W_UnlockCachedPatch(savselp[5]);
+		W_UnlockCachedPatch(savselp[6]);
+	}
+
+	savselp[0] = W_CachePatchName("SAVEBACK", PU_STATIC);
+	savselp[1] = W_CachePatchName("SAVENONE", PU_STATIC);
+	savselp[2] = W_CachePatchName("ULTIMATE", PU_STATIC);
+
+	savselp[3] = W_CachePatchName("BLACKLVL", PU_STATIC);
+	savselp[4] = W_CachePatchName("BLACXLVL", PU_STATIC);
+	savselp[5] = W_CachePatchName("BLANKLVL", PU_STATIC);
+	savselp[6] = W_CachePatchName("GAMEDONE", PU_STATIC);
 }
 
 //
@@ -6371,8 +6525,19 @@ static void M_SaveGameDeleteResponse(INT32 ch)
 	name[sizeof name - 1] = '\0';
 	remove(name);
 
-	// Refresh savegame menu info
-	M_ReadSaveStrings();
+	BwehHehHe();
+	M_ReadSaveStrings(); // reload the menu
+}
+
+static void M_SaveGameUltimateResponse(INT32 ch)
+{
+	if (ch != 'y' && ch != KEY_ENTER)
+		return;
+
+	S_StartSound(NULL, sfx_menu1);
+	M_LoadSelect(saveSlotSelected);
+	SP_PlayerDef.prevMenu = MessageDef.prevMenu;
+	MessageDef.prevMenu = &SP_PlayerDef;
 }
 
 static void M_HandleLoadSave(INT32 choice)
@@ -6381,26 +6546,46 @@ static void M_HandleLoadSave(INT32 choice)
 
 	switch (choice)
 	{
-		case KEY_DOWNARROW:
-			S_StartSound(NULL, sfx_menu1);
+		case KEY_RIGHTARROW:
+			S_StartSound(NULL, sfx_s3kb7);
 			++saveSlotSelected;
-			if (saveSlotSelected >= MAXSAVEGAMES)
-				saveSlotSelected -= MAXSAVEGAMES;
-			menumovedir = 1;
+			if (saveSlotSelected >= numsaves)
+				saveSlotSelected -= numsaves;
+			loadgamescroll = 90;
 			break;
 
-		case KEY_UPARROW:
-			S_StartSound(NULL, sfx_menu1);
+		case KEY_LEFTARROW:
+			S_StartSound(NULL, sfx_s3kb7);
 			--saveSlotSelected;
 			if (saveSlotSelected < 0)
-				saveSlotSelected += MAXSAVEGAMES;
-			menumovedir = -1;
+				saveSlotSelected += numsaves;
+			loadgamescroll = -90;
 			break;
 
 		case KEY_ENTER:
-			S_StartSound(NULL, sfx_menu1);
-			if (savegameinfo[saveSlotSelected].lives != -666) // don't allow loading of "bad saves"
+			if (ultimate_selectable && saveSlotSelected == NOSAVESLOT)
+			{
+				loadgamescroll = 0;
+				S_StartSound(NULL, sfx_skid);
+				M_StartMessage("Are you sure you want to play\n\x85ultimate mode\x80? It isn't remotely fair,\nand you don't even get an emblem for it.\n\n(Press 'Y' to confirm)\n",M_SaveGameUltimateResponse,MM_YESNO);
+			}
+			else if (saveSlotSelected != NOSAVESLOT && savegameinfo[saveSlotSelected-1].lives == -42 && !(!modifiedgame || savemoddata))
+			{
+				loadgamescroll = 0;
+				S_StartSound(NULL, sfx_skid);
+				M_StartMessage(M_GetText("This cannot be done in a modified game.\n\n(Press a key)\n"), NULL, MM_NOTHING);
+			}
+			else if (saveSlotSelected == NOSAVESLOT || savegameinfo[saveSlotSelected-1].lives != -666) // don't allow loading of "bad saves"
+			{
+				loadgamescroll = 0;
+				S_StartSound(NULL, sfx_menu1);
 				M_LoadSelect(saveSlotSelected);
+			}
+			else if (!loadgameoffset)
+			{
+				S_StartSound(NULL, sfx_lose);
+				loadgameoffset = 14;
+			}
 			break;
 
 		case KEY_ESCAPE:
@@ -6408,11 +6593,25 @@ static void M_HandleLoadSave(INT32 choice)
 			break;
 
 		case KEY_BACKSPACE:
-			S_StartSound(NULL, sfx_menu1);
 			// Don't allow people to 'delete' "Play without Saving."
 			// Nor allow people to 'delete' slots with no saves in them.
-			if (saveSlotSelected != NOSAVESLOT && savegameinfo[saveSlotSelected].lives != -42)
-				M_StartMessage(M_GetText("Are you sure you want to delete\nthis save game?\n\n(Press 'Y' to confirm)\n"),M_SaveGameDeleteResponse,MM_YESNO);
+			if (saveSlotSelected != NOSAVESLOT && savegameinfo[saveSlotSelected-1].lives != -42)
+			{
+				loadgamescroll = 0;
+				S_StartSound(NULL, sfx_skid);
+				M_StartMessage(va("Are you sure you want to delete\nsave file %d?\n\n(Press 'Y' to confirm)\n", saveSlotSelected),M_SaveGameDeleteResponse,MM_YESNO);
+			}
+			else if (!loadgameoffset)
+			{
+				if (saveSlotSelected == NOSAVESLOT && ultimate_selectable)
+				{
+					ultimate_selectable = false;
+					S_StartSound(NULL, sfx_strpst);
+				}
+				else
+					S_StartSound(NULL, sfx_lose);
+				loadgameoffset = 14;
+			}
 			break;
 	}
 	if (exitmenu)
@@ -6421,6 +6620,8 @@ static void M_HandleLoadSave(INT32 choice)
 			M_SetupNextMenu(currentMenu->prevMenu);
 		else
 			M_ClearMenus(true);
+		Z_Free(savegameinfo);
+		savegameinfo = NULL;
 	}
 }
 
@@ -6440,14 +6641,15 @@ static void M_LoadGame(INT32 choice)
 //
 void M_ForceSaveSlotSelected(INT32 sslot)
 {
-	// Already there? Out of bounds? Whatever, then!
-	if (sslot == saveSlotSelected || sslot >= MAXSAVEGAMES)
+	loadgameoffset = 14;
+
+	// Already there? Whatever, then!
+	if (sslot == saveSlotSelected)
 		return;
 
-	// Figure out whether to display up movement or down movement
-	menumovedir = (saveSlotSelected - sslot) > 0 ? -1 : 1;
-	if (abs(saveSlotSelected - sslot) > (MAXSAVEGAMES>>1))
-		menumovedir *= -1;
+	loadgamescroll = 90;
+	if (saveSlotSelected <= numsaves/2)
+		loadgamescroll = -loadgamescroll;
 
 	saveSlotSelected = sslot;
 }
@@ -6718,7 +6920,7 @@ static void M_ChoosePlayer(INT32 choice)
 	}
 
 	if (startmap != spstage_start)
-		cursaveslot = -1;
+		cursaveslot = 0;
 
 	//lastmapsaved = 0;
 	gamecomplete = false;
@@ -6729,6 +6931,10 @@ static void M_ChoosePlayer(INT32 choice)
 	if (levelselect.rows)
 		Z_Free(levelselect.rows);
 	levelselect.rows = NULL;
+
+	if (savegameinfo)
+		Z_Free(savegameinfo);
+	savegameinfo = NULL;
 }
 
 // ===============
@@ -8687,7 +8893,7 @@ static void M_EraseDataResponse(INT32 ch)
 		totalplaytime = 0;
 		F_StartIntro();
 	}
-	S_StartSound(NULL, sfx_bewar1+M_RandomKey(4)); // Bweh heh he
+	BwehHehHe();
 	M_ClearMenus(true);
 }
 

@@ -771,6 +771,12 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_useranalog);
 	CV_RegisterVar(&cv_useranalog2);
 
+	// deez New User eXperiences
+	CV_RegisterVar(&cv_directionchar);
+	CV_RegisterVar(&cv_directionchar2);
+	CV_RegisterVar(&cv_autobrake);
+	CV_RegisterVar(&cv_autobrake2);
+
 	// s_sound.c
 	CV_RegisterVar(&cv_soundvolume);
 	CV_RegisterVar(&cv_closedcaptioning);
@@ -1433,6 +1439,10 @@ void SendWeaponPref(void)
 		buf[0] |= 1;
 	if (players[consoleplayer].pflags & PF_ANALOGMODE)
 		buf[0] |= 2;
+	if (players[consoleplayer].pflags & PF_DIRECTIONCHAR)
+		buf[0] |= 4;
+	if (players[consoleplayer].pflags & PF_AUTOBRAKE)
+		buf[0] |= 8;
 	SendNetXCmd(XD_WEAPONPREF, buf, 1);
 }
 
@@ -1445,6 +1455,10 @@ void SendWeaponPref2(void)
 		buf[0] |= 1;
 	if (players[secondarydisplayplayer].pflags & PF_ANALOGMODE)
 		buf[0] |= 2;
+	if (players[secondarydisplayplayer].pflags & PF_DIRECTIONCHAR)
+		buf[0] |= 4;
+	if (players[secondarydisplayplayer].pflags & PF_AUTOBRAKE)
+		buf[0] |= 8;
 	SendNetXCmd2(XD_WEAPONPREF, buf, 1);
 }
 
@@ -1452,11 +1466,15 @@ static void Got_WeaponPref(UINT8 **cp,INT32 playernum)
 {
 	UINT8 prefs = READUINT8(*cp);
 
-	players[playernum].pflags &= ~(PF_FLIPCAM|PF_ANALOGMODE);
+	players[playernum].pflags &= ~(PF_FLIPCAM|PF_ANALOGMODE|PF_DIRECTIONCHAR|PF_AUTOBRAKE);
 	if (prefs & 1)
 		players[playernum].pflags |= PF_FLIPCAM;
 	if (prefs & 2)
 		players[playernum].pflags |= PF_ANALOGMODE;
+	if (prefs & 4)
+		players[playernum].pflags |= PF_DIRECTIONCHAR;
+	if (prefs & 8)
+		players[playernum].pflags |= PF_AUTOBRAKE;
 }
 
 void D_SendPlayerConfig(void)
@@ -2572,12 +2590,12 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 		{
 			players[playernum].spectator = true;
 			players[playernum].pflags &= ~PF_TAGIT;
-			players[playernum].pflags &= ~PF_TAGGED;
+			players[playernum].pflags &= ~PF_GAMETYPEOVER;
 		}
 		else if (NetPacket.packet.newteam != 3) // .newteam == 1 or 2.
 		{
 			players[playernum].spectator = false;
-			players[playernum].pflags &= ~PF_TAGGED;//Just in case.
+			players[playernum].pflags &= ~PF_GAMETYPEOVER; //Just in case.
 
 			if (NetPacket.packet.newteam == 1) //Make the player IT.
 				players[playernum].pflags |= PF_TAGIT;

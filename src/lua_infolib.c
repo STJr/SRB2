@@ -127,6 +127,74 @@ static int lib_getSpr2name(lua_State *L)
 	return 0;
 }
 
+static int lib_getSpr2default(lua_State *L)
+{
+	UINT32 i;
+
+	lua_remove(L, 1); // don't care about spr2defaults[] dummy userdata.
+
+	if (lua_isnumber(L, 1))
+		i = lua_tonumber(L, 1);
+	else if (lua_isstring(L, 1))
+	{
+		const char *name = lua_tostring(L, 1);
+		for (i = 0; i < free_spr2; i++)
+			if (fastcmp(name, spr2names[i]))
+				break;
+	}
+	else
+		return luaL_error(L, "spr2defaults[] invalid index");
+
+	if (i >= free_spr2)
+		return 0;
+
+	lua_pushinteger(L, spr2defaults[i]);
+	return 1;
+}
+
+static int lib_setSpr2default(lua_State *L)
+{
+	UINT32 i;
+	UINT8 j = 0;
+
+	lua_remove(L, 1); // don't care about spr2defaults[] dummy userdata.
+
+	if (lua_isnumber(L, 1))
+		i = lua_tonumber(L, 1);
+	else if (lua_isstring(L, 1))
+	{
+		const char *name = lua_tostring(L, 1);
+		for (i = 0; i < free_spr2; i++)
+			if (fastcmp(name, spr2names[i]))
+				break;
+			if (i == free_spr2)
+				return luaL_error(L, "spr2defaults[] invalid index");
+	}
+	else
+		return luaL_error(L, "spr2defaults[] invalid index");
+
+	if (i < SPR2_FIRSTFREESLOT || i >= free_spr2)
+		return luaL_error(L, "spr2defaults[] index %d out of range (%d - %d)", i, SPR2_FIRSTFREESLOT, free_spr2-1);
+
+	if (lua_isnumber(L, 2))
+		j = lua_tonumber(L, 2);
+	else if (lua_isstring(L, 2))
+	{
+		const char *name = lua_tostring(L, 2);
+		for (j = 0; j < free_spr2; j++)
+			if (fastcmp(name, spr2names[j]))
+				break;
+			if (j == free_spr2)
+				return luaL_error(L, "spr2defaults[] invalid index");
+	}
+
+	if (j >= free_spr2)
+		j = 0; // return luaL_error(L, "spr2defaults[] set %d out of range (%d - %d)", j, 0, free_spr2-1);
+
+	spr2defaults[i] = j;
+	return 0;
+}
+
 static int lib_spr2namelen(lua_State *L)
 {
 	lua_pushinteger(L, free_spr2);
@@ -983,6 +1051,19 @@ int LUA_InfoLib(lua_State *L)
 			lua_setfield(L, -2, "__len");
 		lua_setmetatable(L, -2);
 	lua_setglobal(L, "spr2names");
+
+	lua_newuserdata(L, 0);
+		lua_createtable(L, 0, 2);
+			lua_pushcfunction(L, lib_getSpr2default);
+			lua_setfield(L, -2, "__index");
+
+			lua_pushcfunction(L, lib_setSpr2default);
+			lua_setfield(L, -2, "__newindex");
+
+			lua_pushcfunction(L, lib_spr2namelen);
+			lua_setfield(L, -2, "__len");
+		lua_setmetatable(L, -2);
+	lua_setglobal(L, "spr2defaults");
 
 	lua_newuserdata(L, 0);
 		lua_createtable(L, 0, 2);
