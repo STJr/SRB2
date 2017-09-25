@@ -132,22 +132,23 @@ hudinfo_t hudinfo[NUMHUDITEMS] =
 
 	{  16,  42}, // HUD_RINGS
 	{ 220,  10}, // HUD_RINGSSPLIT
-	{ 120,  42}, // HUD_RINGSNUM
+	{ 104,  42}, // HUD_RINGSNUM
 	{ 296,  10}, // HUD_RINGSNUMSPLIT
+	{ 120,  42}, // HUD_RINGSNUMTICS
 
 	{  16,  10}, // HUD_SCORE
 	{ 120,  10}, // HUD_SCORENUM
 
 	{  16,  26}, // HUD_TIME
 	{ 128,  10}, // HUD_TIMESPLIT
-	{  96,  26}, // HUD_MINUTES
+	{  72,  26}, // HUD_MINUTES
 	{ 188,  10}, // HUD_MINUTESSPLIT
-	{  96,  26}, // HUD_TIMECOLON
+	{  72,  26}, // HUD_TIMECOLON
 	{ 188,  10}, // HUD_TIMECOLONSPLIT
-	{ 120,  26}, // HUD_SECONDS
+	{  96,  26}, // HUD_SECONDS
 	{ 212,  10}, // HUD_SECONDSSPLIT
-	{ 120,  26}, // HUD_TIMETICCOLON
-	{ 144,  26}, // HUD_TICS
+	{  96,  26}, // HUD_TIMETICCOLON
+	{ 120,  26}, // HUD_TICS
 
 	{ 120,  56}, // HUD_SS_TOTALRINGS
 	{ 296,  40}, // HUD_SS_TOTALRINGS_SPLIT
@@ -663,7 +664,7 @@ static void ST_drawTime(void)
 
 static inline void ST_drawRings(void)
 {
-	INT32 ringnum = max(stplyr->rings, 0);
+	INT32 ringnum;
 
 	ST_DrawPatchFromHudWS(HUD_RINGS, ((!stplyr->spectator && stplyr->rings <= 0 && leveltime/5 & 1) ? sboredrings : sborings), ((stplyr->spectator) ? V_HUDTRANSHALF : V_HUDTRANS));
 
@@ -677,8 +678,13 @@ static inline void ST_drawRings(void)
 			if (playeringame[i] && players[i].mo && players[i].rings > 0)
 				ringnum += players[i].rings;
 	}
+	else
+		ringnum = max(stplyr->rings, 0);
 
-	ST_DrawNumFromHudWS(HUD_RINGSNUM, ringnum, ((stplyr->spectator) ? V_HUDTRANSHALF : V_HUDTRANS));
+	if (!splitscreen && (cv_timetic.value == 2 || modeattacking))
+		ST_DrawNumFromHud(HUD_RINGSNUMTICS, ringnum, ((stplyr->spectator) ? V_HUDTRANSHALF : V_HUDTRANS));
+	else
+		ST_DrawNumFromHudWS(HUD_RINGSNUM, ringnum, ((stplyr->spectator) ? V_HUDTRANSHALF : V_HUDTRANS));
 }
 
 static void ST_drawLives(void)
