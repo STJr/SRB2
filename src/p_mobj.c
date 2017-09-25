@@ -1784,7 +1784,7 @@ static void P_PushableCheckBustables(mobj_t *mo)
 							continue;
 					}
 
-					EV_CrumbleChain(node->m_sector, rover);
+					EV_CrumbleChain(NULL, rover); // node->m_sector
 
 					// Run a linedef executor??
 					if (rover->master->flags & ML_EFFECT5)
@@ -3129,7 +3129,7 @@ nightsdone:
 						{
 							// DO THE MARIO!
 							if (rover->flags & FF_SHATTERBOTTOM) // Brick block!
-								EV_CrumbleChain(node->m_sector, rover);
+								EV_CrumbleChain(NULL, rover); // node->m_sector
 							else // Question block!
 								EV_MarioBlock(rover, node->m_sector, mo);
 						}

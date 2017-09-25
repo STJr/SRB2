@@ -2033,7 +2033,7 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 				player->skidtime = TICRATE;
 			player->mo->tics = -1;
 		}
-		else if (player->charability2 == CA2_MELEE && (player->panim == PA_ABILITY2 && player->mo->state-states != S_PLAY_MELEE_LANDING))
+		else if (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2 && player->mo->state-states != S_PLAY_MELEE_LANDING)
 		{
 			mobjtype_t type = player->revitem;
 			P_SetPlayerMobjState(player->mo, S_PLAY_MELEE_LANDING);
@@ -2324,7 +2324,7 @@ static void P_CheckBustableBlocks(player_t *player)
 					//if (metalrecording)
 					//	G_RecordBustup(rover);
 
-					EV_CrumbleChain(node->m_sector, rover);
+					EV_CrumbleChain(NULL, rover); // node->m_sector
 
 					// Run a linedef executor??
 					if (rover->master->flags & ML_EFFECT5)

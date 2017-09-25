@@ -2051,8 +2051,8 @@ static int lib_evCrumbleChain(lua_State *L)
 	ffloor_t *rover = *((ffloor_t **)luaL_checkudata(L, 2, META_FFLOOR));
 	NOHUD
 	INLEVEL
-	if (!sec)
-		return LUA_ErrInvalid(L, "sector_t");
+	/*if (!sec)
+		return LUA_ErrInvalid(L, "sector_t");*/
 	if (!rover)
 		return LUA_ErrInvalid(L, "ffloor_t");
 	EV_CrumbleChain(sec, rover);
