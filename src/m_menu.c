@@ -2151,6 +2151,8 @@ static void M_GoBack(INT32 choice)
 		if ((currentMenu->prevMenu == &MainDef) && (currentMenu == &SP_TimeAttackDef || currentMenu == &SP_NightsAttackDef))
 		{
 			// D_StartTitle does its own wipe, since GS_TIMEATTACK is now a complete gamestate.
+			Z_Free(levelselect.rows);
+			levelselect.rows = NULL;
 			menuactive = false;
 			D_StartTitle();
 		}
@@ -4279,6 +4281,12 @@ static void M_HandleLevelPlatter(INT32 choice)
 
 	if (exitmenu)
 	{
+		if (gamestate != GS_TIMEATTACK)
+		{
+			Z_Free(levelselect.rows);
+			levelselect.rows = NULL;
+		}
+
 		if (currentMenu->prevMenu)
 		{
 			M_SetupNextMenu(currentMenu->prevMenu);
@@ -4286,9 +4294,6 @@ static void M_HandleLevelPlatter(INT32 choice)
 		}
 		else
 			M_ClearMenus(true);
-
-		Z_Free(levelselect.rows);
-		levelselect.rows = NULL;
 
 		Z_Free(char_notes);
 		char_notes = NULL;
