@@ -9425,7 +9425,10 @@ static void M_ToggleDigital(INT32 choice)
 		if (nodigimusic) return;
 		S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
 		S_StopMusic();
-		S_ChangeMusicInternal("_clear", false);
+		if (Playing())
+			P_RestoreMusic(&players[consoleplayer]);
+		else
+			S_ChangeMusicInternal("_clear", false);
 		//M_StartMessage(M_GetText("Digital Music Enabled\n"), NULL, MM_NOTHING);
 	}
 	else
@@ -9433,7 +9436,10 @@ static void M_ToggleDigital(INT32 choice)
 		if (digital_disabled)
 		{
 			digital_disabled = false;
-			S_ChangeMusicInternal("_clear", false);
+			if (Playing())
+				P_RestoreMusic(&players[consoleplayer]);
+			else
+				S_ChangeMusicInternal("_clear", false);
 			//M_StartMessage(M_GetText("Digital Music Enabled\n"), NULL, MM_NOTHING);
 		}
 		else
@@ -9475,7 +9481,10 @@ static void M_ToggleMIDI(INT32 choice)
 		I_InitMIDIMusic();
 		if (nomidimusic) return;
 		S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
-		S_ChangeMusicInternal("_clear", false);
+		if (Playing())
+			P_RestoreMusic(&players[consoleplayer]);
+		else
+			S_ChangeMusicInternal("_clear", false);
 		//M_StartMessage(M_GetText("MIDI Music Enabled\n"), NULL, MM_NOTHING);
 	}
 	else
@@ -9483,7 +9492,10 @@ static void M_ToggleMIDI(INT32 choice)
 		if (music_disabled)
 		{
 			music_disabled = false;
-			S_ChangeMusicInternal("_clear", false);
+			if (Playing())
+				P_RestoreMusic(&players[consoleplayer]);
+			else
+				S_ChangeMusicInternal("_clear", false);
 			//M_StartMessage(M_GetText("MIDI Music Enabled\n"), NULL, MM_NOTHING);
 		}
 		else

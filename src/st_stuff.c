@@ -132,7 +132,7 @@ hudinfo_t hudinfo[NUMHUDITEMS] =
 
 	{  16,  42}, // HUD_RINGS
 	{ 220,  10}, // HUD_RINGSSPLIT
-	{ 104,  42}, // HUD_RINGSNUM
+	{  96,  42}, // HUD_RINGSNUM
 	{ 296,  10}, // HUD_RINGSNUMSPLIT
 	{ 120,  42}, // HUD_RINGSNUMTICS
 
