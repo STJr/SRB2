@@ -22,6 +22,7 @@
 #define _HW_MD2_H_
 
 #include "hw_glob.h"
+#include "../info.h"
 
 // magic number "IDP2" or 844121161
 #define MD2_IDENT                       (INT32)(('2' << 24) + ('P' << 16) + ('D' << 8) + 'I')
@@ -111,7 +112,8 @@ typedef struct
 	md2_textureCoordinate_t *texCoords;
 	md2_triangle_t          *triangles;
 	md2_frame_t             *frames;
-	INT32                     *glCommandBuffer;
+	size_t                  *spr2frames; // size_t spr2frames[2*NUMPLAYERSPRITES][2];
+	INT32                   *glCommandBuffer;
 } ATTRPACK md2_model_t;
 
 #if defined(_MSC_VER)
