@@ -959,21 +959,27 @@ void S_UpdateSounds(void)
 notinlevel:
 	I_UpdateSound();
 
-	for (i = 0; i < NUMCAPTIONS; i++) // update captions
 	{
-		if (!closedcaptions[i].s)
-			continue;
+		boolean gamestopped = (paused || P_AutoPause());
+		for (i = 0; i < NUMCAPTIONS; i++) // update captions
+		{
+			if (!closedcaptions[i].s)
+				continue;
 
-		if (!(--closedcaptions[i].t))
-		{
-			closedcaptions[i].c = NULL;
-			closedcaptions[i].s = NULL;
-		}
-		else if (closedcaptions[i].c && !I_SoundIsPlaying(closedcaptions[i].c->handle))
-		{
-			closedcaptions[i].c = NULL;
-			if (closedcaptions[i].t > CAPTIONFADETICS)
-				closedcaptions[i].t = CAPTIONFADETICS;
+			if (i == 0 && (closedcaptions[0].s-S_sfx == sfx_None) && gamestopped)
+				continue;
+
+			if (!(--closedcaptions[i].t))
+			{
+				closedcaptions[i].c = NULL;
+				closedcaptions[i].s = NULL;
+			}
+			else if (closedcaptions[i].c && !I_SoundIsPlaying(closedcaptions[i].c->handle))
+			{
+				closedcaptions[i].c = NULL;
+				if (closedcaptions[i].t > CAPTIONFADETICS)
+					closedcaptions[i].t = CAPTIONFADETICS;
+			}
 		}
 	}
 }

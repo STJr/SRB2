@@ -31,6 +31,7 @@
 #include "i_sound.h" // closed captions
 #include "s_sound.h" // ditto
 #include "g_game.h" // ditto
+#include "p_local.h" // P_AutoPause()
 
 
 #if defined (USEASM) && !defined (NORUSEASM)//&& (!defined (_MSC_VER) || (_MSC_VER <= 1200))
@@ -444,6 +445,7 @@ void SCR_DisplayTicRate(void)
 void SCR_ClosedCaptions(void)
 {
 	UINT8 i;
+	boolean gamestopped = (paused || P_AutoPause());
 
 	for (i = 0; i < NUMCAPTIONS; i++)
 	{
@@ -454,7 +456,9 @@ void SCR_ClosedCaptions(void)
 		if (!closedcaptions[i].s)
 			continue;
 
-		if ((music = (closedcaptions[i].s-S_sfx == sfx_None)) && (closedcaptions[i].t < flashingtics) && (closedcaptions[i].t & 1))
+		music = (closedcaptions[i].s-S_sfx == sfx_None);
+
+		if (music && !gamestopped && (closedcaptions[i].t < flashingtics) && (closedcaptions[i].t & 1))
 			continue;
 
 		flags = V_NOSCALESTART|V_ALLOWLOWERCASE;
