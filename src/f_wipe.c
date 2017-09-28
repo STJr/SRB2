@@ -94,7 +94,7 @@ static fixed_t paldiv;
   * \return	fademask_t for lump
   */
 static fademask_t *F_GetFadeMask(UINT8 masknum, UINT8 scrnnum) {
-	static char lumpname[9] = "FADEmmss";
+	static char lumpname[10] = "FADEmmss";
 	static fademask_t fm = {NULL,0,0,0,0,0};
 	lumpnum_t lumpnum;
 	UINT8 *lump, *mask;

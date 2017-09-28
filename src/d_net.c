@@ -1364,7 +1364,7 @@ boolean D_CheckNetGame(void)
 #else
 	if (M_CheckParm("-debugfile"))
 	{
-		char filename[20];
+		char filename[21];
 		INT32 k = doomcom->consoleplayer - 1;
 		if (M_IsNextParm())
 			k = atoi(M_GetNextParm()) - 1;
