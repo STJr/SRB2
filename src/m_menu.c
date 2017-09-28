@@ -4886,7 +4886,6 @@ static boolean M_AddonsRefresh(void)
 
 #ifdef __GNUC__
 #pragma GCC optimize ("0")
-#pragma GCC push_options
 #endif
 
 static void M_DrawAddons(void)
@@ -5011,7 +5010,7 @@ static void M_DrawAddons(void)
 }
 
 #ifdef __GNUC__
-#pragma GCC pop_options
+#pragma GCC reset_options
 #endif
 
 #undef offs
