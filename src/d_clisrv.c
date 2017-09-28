@@ -1883,6 +1883,7 @@ static boolean CL_ServerConnectionTicker(boolean viams, const char *tmpsave, tic
 				break; // exit the case
 
 			cl_mode = CL_ASKJOIN; // don't break case continue to cljoin request now
+			/* FALLTHRU */
 
 		case CL_ASKJOIN:
 			CL_LoadServerFiles();
@@ -3605,6 +3606,7 @@ static void HandlePacketFromAwayNode(SINT8 node)
 			// Do not remove my own server (we have just get a out of order packet)
 			if (node == servernode)
 				break;
+			/* FALLTHRU */
 
 		default:
 			DEBFILE(va("unknown packet received (%d) from unknown host\n",netbuffer->packettype));
@@ -3761,6 +3763,7 @@ FILESTAMP
 			break;
 		case PT_TEXTCMD2: // splitscreen special
 			netconsole = nodetoplayer2[node];
+			/* FALLTHRU */
 		case PT_TEXTCMD:
 			if (client)
 				break;
