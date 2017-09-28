@@ -8819,7 +8819,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		// x1.2 dist for analog
 		if (P_AnalogMove(player))
 			dist = FixedMul(dist, 6*FRACUNIT/5);
-		
+
 		if (player->climbing || player->exiting || player->playerstate == PST_DEAD || (player->powers[pw_carry] == CR_ROPEHANG || player->powers[pw_carry] == CR_GENERIC || player->powers[pw_carry] == CR_MACESPIN))
 			dist <<= 1;
 	}

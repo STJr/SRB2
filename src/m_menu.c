@@ -6117,7 +6117,7 @@ static void M_DrawLoadGameData(void)
 				V_DrawFill(x+6, y+64, 72, 50, col);
 			}
 		}
-			
+
 		V_DrawSmallScaledPatch(x, y, 0, savselp[0]);
 		x += 2;
 		y += 1;
@@ -6149,7 +6149,7 @@ static void M_DrawLoadGameData(void)
 				else
 					patch = savselp[5];
 			}
-				
+
 			V_DrawSmallScaledPatch(x, y, flags, patch);
 
 			y += 41;
@@ -9166,7 +9166,7 @@ static void M_DrawControl(void)
 
 		y += SMALLLINEHEIGHT;
 	}
-	
+
 	V_DrawScaledPatch(currentMenu->x - 20, cursory, 0,
 		W_CachePatchName("M_CURSOR", PU_CACHE));
 }

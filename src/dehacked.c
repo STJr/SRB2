@@ -7074,7 +7074,7 @@ struct {
 	{"ME_ALLEMERALDS",ME_ALLEMERALDS},
 	{"ME_ULTIMATE",ME_ULTIMATE},
 	{"ME_PERFECT",ME_PERFECT},
-	
+
 #ifdef HAVE_BLUA
 	// p_local.h constants
 	{"FLOATSPEED",FLOATSPEED},

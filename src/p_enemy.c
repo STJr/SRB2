@@ -10187,7 +10187,7 @@ void A_FlickyAim(mobj_t *actor)
 	{
 		angle_t posvar;
 		fixed_t chasevar, chasex, chasey;
-		
+
 		if (flickyhitwall)
 			actor->movedir *= -1;
 

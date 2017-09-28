@@ -254,7 +254,7 @@ static int lib_searchBlockmap(lua_State *L)
 			if (P_MobjWasRemoved(mobj)){ // ...unless the original object was removed
 				lua_pushboolean(L, false); // in which case we have to stop now regardless
 				return 1;
-			}	
+			}
 		}
 	lua_pushboolean(L, retval);
 	return 1;

@@ -972,7 +972,7 @@ void Y_StartIntermission(void)
 {
 	INT32 i;
 	UINT8 completionEmblems = M_CompletionEmblems();
-	
+
 	intertic = -1;
 
 #ifdef PARANOIA
@@ -1069,7 +1069,7 @@ void Y_StartIntermission(void)
 
 				if (modeattacking == ATTACKING_RECORD)
 					Y_UpdateRecordReplays();
-				
+
 				if (completionEmblems)
 					CONS_Printf(M_GetText("\x82" "Earned %hu emblem%s for level completion.\n"), (UINT16)completionEmblems, completionEmblems > 1 ? "s" : "");
 			}
@@ -1172,7 +1172,7 @@ void Y_StartIntermission(void)
 			{
 				if (!stagefailed)
 					mapvisited[gamemap-1] |= MV_BEATEN;
-				
+
 				// all emeralds/ultimate/perfect emblems won't be possible in ss, oh well?
 				if (completionEmblems)
 					CONS_Printf(M_GetText("\x82" "Earned %hu emblem%s for level completion.\n"), (UINT16)completionEmblems, completionEmblems > 1 ? "s" : "");

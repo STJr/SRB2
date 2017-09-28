@@ -2549,7 +2549,7 @@ static boolean CanSaveLevel(INT32 mapnum)
 	if (G_IsSpecialStage(mapnum) // don't save in special stages
 		|| mapnum == lastmaploaded) // don't save if the last map loaded was this one
 		return false;
-	
+
 	// Any levels that have the savegame flag can save normally.
 	// If the game is complete for this save slot, then any level can save!
 	// On the other side of the spectrum, if lastmaploaded is 0, then the save file has only just been created and needs to save ASAP!
@@ -2942,7 +2942,7 @@ boolean P_SetupLevel(boolean skipprecip)
 				camera.angle = FixedAngle((fixed_t)thing->angle << FRACBITS);
 			}
 		}
-		
+
 		// Salt: CV_ClearChangedFlags() messes with your settings :(
 		/*if (!cv_cam_height.changed)
 			CV_Set(&cv_cam_height, cv_cam_height.defaultvalue);
