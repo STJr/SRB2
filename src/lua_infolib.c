@@ -165,10 +165,12 @@ static int lib_setSpr2default(lua_State *L)
 	{
 		const char *name = lua_tostring(L, 1);
 		for (i = 0; i < free_spr2; i++)
+		{
 			if (fastcmp(name, spr2names[i]))
 				break;
-			if (i == free_spr2)
-				return luaL_error(L, "spr2defaults[] invalid index");
+		}
+		if (i == free_spr2)
+			return luaL_error(L, "spr2defaults[] invalid index");
 	}
 	else
 		return luaL_error(L, "spr2defaults[] invalid index");
@@ -182,10 +184,12 @@ static int lib_setSpr2default(lua_State *L)
 	{
 		const char *name = lua_tostring(L, 2);
 		for (j = 0; j < free_spr2; j++)
+		{
 			if (fastcmp(name, spr2names[j]))
 				break;
-			if (j == free_spr2)
-				return luaL_error(L, "spr2defaults[] invalid index");
+		}
+		if (j == free_spr2)
+			return luaL_error(L, "spr2defaults[] invalid index");
 	}
 
 	if (j >= free_spr2)

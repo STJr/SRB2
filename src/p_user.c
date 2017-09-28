@@ -9773,6 +9773,7 @@ void P_PlayerThink(player_t *player)
 						player->drawangle = R_PointToAngle2(0, 0, player->mo->momx, player->mo->momy);
 						break;
 					}
+					/* FALLTHRU */
 				default:
 					player->drawangle = player->mo->angle;
 					break;

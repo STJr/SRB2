@@ -8719,6 +8719,7 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 				COM_BufAddText (va("%s %s\n",setupm_cvdefaultname->name,setupm_name));
 				break;
 			}
+			/* FALLTHRU */
 		case KEY_RIGHTARROW:
 			if (itemOn == 1)       //player skin
 			{

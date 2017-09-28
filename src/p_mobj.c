@@ -6781,6 +6781,7 @@ void P_MobjThinker(mobj_t *mobj)
 					whoosh->momz = mobj->target->momz; // Stay reasonably centered for a few frames
 					mobj->target->player->pflags &= ~PF_SHIELDABILITY; // prevent eternal whoosh
 				}
+				/* FALLTHRU */
 			case MT_FLAMEAURA_ORB:
 				if (!(mobj->flags2 & MF2_SHIELD))
 					return;
@@ -7268,7 +7269,7 @@ void P_MobjThinker(mobj_t *mobj)
 			break;
 		case MT_AQUABUZZ:
 			P_MobjCheckWater(mobj); // solely for MFE_UNDERWATER for A_FlickySpawn
-			// no break here on purpose
+			/* FALLTHRU */
 		case MT_BIGAIRMINE:
 			{
 				if (mobj->tracer && mobj->tracer->player && mobj->tracer->health > 0
@@ -7752,6 +7753,7 @@ void P_MobjThinker(mobj_t *mobj)
 				else
 					mobj->z = mobj->floorz;
 			}
+			/* FALLTHRU */
 		default:
 			// check mobj against possible water content, before movement code
 			P_MobjCheckWater(mobj);
