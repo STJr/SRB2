@@ -4625,7 +4625,7 @@ static void M_ReadSavegameInfo(UINT32 slot)
 		savegameinfo[slot].botskin = 0;
 
 	if (savegameinfo[slot].botskin)
-		snprintf(savegameinfo[slot].playername, 32, "%s & %s",
+		snprintf(savegameinfo[slot].playername, 36, "%s & %s",
 			skins[savegameinfo[slot].skinnum].realname,
 			skins[savegameinfo[slot].botskin-1].realname);
 	else
