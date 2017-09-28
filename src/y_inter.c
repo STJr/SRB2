@@ -57,7 +57,7 @@ typedef union
 {
 	struct
 	{
-		char passed1[14]; // KNUCKLES GOT    / CRAWLA HONCHO
+		char passed1[21]; // KNUCKLES GOT    / CRAWLA HONCHO
 		char passed2[16]; // THROUGH THE ACT / PASSED THE ACT
 		INT32 passedx1;
 		INT32 passedx2;
@@ -77,7 +77,7 @@ typedef union
 
 	struct
 	{
-		char passed1[SKINNAMESIZE+1]; // KNUCKLES GOT    / CRAWLA HONCHO
+		char passed1[29]; // KNUCKLES GOT    / CRAWLA HONCHO
 		char passed2[17];             // A CHAOS EMERALD / GOT THEM ALL!
 		char passed3[15];             //                   CAN NOW BECOME
 		char passed4[SKINNAMESIZE+7]; //                   SUPER CRAWLA HONCHO

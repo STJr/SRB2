@@ -2066,6 +2066,7 @@ void G_Ticker(boolean run)
 
 		case GS_TITLESCREEN:
 			if (titlemapinaction) P_Ticker(run); // then intentionally fall through
+			/* FALLTHRU */
 		case GS_WAITINGPLAYERS:
 			F_TitleScreenTicker(run);
 			break;
