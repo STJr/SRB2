@@ -101,6 +101,21 @@ matrix:
           env: WFLAGS="-Wno-tautological-compare"
           #gcc-6 (Ubuntu 6.1.1-3ubuntu11~14.04.1) 6.1.1 20160511
         - os: linux
+          addons:
+            apt:
+              sources:
+              - ubuntu-toolchain-r-test
+              packages:
+              - libsdl2-mixer-dev
+              - libpng-dev
+              - libgl1-mesa-dev
+              - libgme-dev
+              - p7zip-full
+              - gcc-7
+          compiler: gcc-7
+          env: WFLAGS="-Wno-tautological-compare -Wno-error=implicit-fallthrough"
+          #gcc-7 (Ubuntu 7.2.0-1ubuntu1~14.04) 7.2.0 20170802
+        - os: linux
           compiler: clang
           #clang version 3.5.0 (tags/RELEASE_350/final)
         - os: linux

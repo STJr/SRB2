@@ -1189,7 +1189,10 @@ finish:
 		CONS_Printf(M_GetText("%s set to %s\n"), var->name, var->string);
 		var->flags &= ~CV_SHOWMODIFONETIME;
 	}
-	DEBFILE(va("%s set to %s\n", var->name, var->string));
+	else // display message in debug file only
+	{
+		DEBFILE(va("%s set to %s\n", var->name, var->string));
+	}
 	var->flags |= CV_MODIFIED;
 	// raise 'on change' code
 #ifdef HAVE_BLUA
