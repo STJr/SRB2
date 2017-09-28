@@ -190,7 +190,7 @@ typedef struct
 // savegame struct for save game menu
 typedef struct
 {
-	char playername[32];
+	char playername[37];
 	char levelname[32];
 	UINT8 actnum;
 	UINT8 skincolor;
