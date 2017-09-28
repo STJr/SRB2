@@ -4884,6 +4884,11 @@ static boolean M_AddonsRefresh(void)
 
 #define offs 1
 
+#ifdef __GNUC__
+#pragma GCC optimize ("0")
+#pragma GCC push_options
+#endif
+
 static void M_DrawAddons(void)
 {
 	INT32 x, y;
@@ -5004,6 +5009,10 @@ static void M_DrawAddons(void)
 		V_DrawSmallScaledPatch(x, y + 4, 0, addonsp[NUM_EXT+3]);
 #undef CANSAVE
 }
+
+#ifdef __GNUC__
+#pragma GCC pop_options
+#endif
 
 #undef offs
 
